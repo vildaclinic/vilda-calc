@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Kalkulator spalania kalorii – Vilda Clinic</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{
+  --primary:#00838d;
+  --secondary:#00b0a6;
+  --bg:#ffffff;
+  --card:#f5f9f9;
+  --text:#333;
+  --radius:8px;
+  --shadow:0 2px 6px rgba(0,0,0,.08);
+  --danger:#c62828;
+}
+*{box-sizing:border-box;}
+body{margin:0;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);}
+header{background:var(--primary);color:#fff;text-align:center;padding:1rem;}
+h1{margin:0;font-size:clamp(1.4rem,3vw,2rem);}  
+.container{max-width:960px;margin-inline:auto;padding:1rem;}
+fieldset{
+  border:1px solid #d0dede;
+  background:var(--card);
+  padding:1.4rem 1rem 1rem;
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  margin-bottom:1.5rem;
+  position:relative;
+}
+legend{
+  font-weight:600;
+  color:var(--primary);
+  background:var(--card);
+  padding:0 .6rem;
+  font-size:1rem;
+  position:absolute;
+  top:-0.7rem;
+  left:0;;
+}
+label{display:block;margin-top:0.7rem;font-size:0.95rem;}
+input,select,option{ font-family:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; width:100%;padding:0.45rem;border:1px solid #ccc;border-radius:4px;font-size:1rem;}
+.flex{display:flex;gap:1rem;flex-wrap:wrap;}
+.snack-row,.meal-row{display:grid;grid-template-columns:1fr 100px 34px;gap:0.5rem;align-items:center;margin-top:0.5rem;}
+button.icon{background:none;border:none;font-size:1.35rem;cursor:pointer;color:var(--danger);font-weight:900;line-height:1;}
+button.icon:hover{opacity:0.8;}
+button.add-row{background:var(--secondary);color:#fff;border:none;padding:0.45rem 0.9rem;border-radius:4px;cursor:pointer;margin-top:0.7rem;}
+button.add-row:hover{background:var(--primary);}  
+#results{display:none;flex-direction:column;gap:1.5rem;}
+.card{background:var(--card);padding:1rem;border-radius:var(--radius);box-shadow:var(--shadow);}  
+.activity-time{margin:0.4rem 0;font-size:1.25rem;font-weight:700;}
+table{width:100%;border-collapse:collapse;margin-top:0.6rem;}
+th,td{border:1px solid #ddd;padding:0.6rem;text-align:center;font-size:0.95rem;}
+th{background:var(--secondary);color:#fff;}
+footer{margin-top:2rem;text-align:center;font-size:0.85rem;color:#666;padding:1rem 0;background:#fafafa;}  
+@media(min-width:700px){
+  .grid-two{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+}
+
+/* center calorie burn block */
+#timesCard{ text-align:center; }
+
+/* Powiększone ramki wyników BMI i BMR */
+.result-box{
+  border:2px solid #ccc;
+  border-radius:8px;
+  padding:10px;
+  margin:12px 0;
+  font-size:1.3rem;
+  background:#f8f9fa;
+  text-align:center;
+}
+
+
+/* --- legenda wewnątrz ramek fieldset --- */
+fieldset{
+  position:relative;
+  padding-top:1.8rem;   /* miejsce na legendę */
+}
+legend{
+  position:absolute;
+  top:0;
+  left:0;;
+  font-size:1.1rem;
+  font-weight:600;
+  padding:0 .5rem;
+  background:var(--card); /* kolor karty, zakrywa linię ramki */
+  border-radius:var(--radius);
+}
+
+</style>
+</head>
+<body>
+<header><h1>Kalkulator spalania kalorii</h1></header>
+<div class="container">
+<form id="calcForm" class="flex" onsubmit="return false;">
+  <div style="flex:1 1 300px;">
+    <fieldset><legend>Dane użytkownika</legend>
+      <label>Wiek (lata):
+        <input type="number" id="age" min="1" max="100" oninput="update()" required></label>
+      <label>Płeć:
+        <select id="sex" onchange="update()">
+          <option value="M">Mężczyzna</option>
+          <option value="F">Kobieta</option>
+        </select></label>
+      <label>Waga (kg):
+        <input type="number" id="weight" min="10" max="300" oninput="update()" required></label>
+      <label>Wzrost (cm):
+        <input type="number" id="height" min="50" max="250" oninput="update()" required></label>
+    </fieldset>
+  </div>
+  <div style="flex:1 1 300px;">
+    <fieldset><legend>Przekąski</legend>
+      <div id="snackList"></div>
+      <button type="button" class="add-row" onclick="addSnackRow()">+ dodaj przekąskę</button>
+    </fieldset>
+    <fieldset><legend>Dania obiadowe</legend>
+      <div id="mealList"></div>
+      <button type="button" class="add-row" onclick="addMealRow()">+ dodaj danie</button>
+    </fieldset>
+  </div>
+</form>
+
+<div id="results" class="grid-two">
+  <div class="card" id="timesCard">
+    <h2 style="text-align:center;">Spalanie kalorii</h2>
+    <div id="times"></div>
+    <small>*Obliczenia oparte na wartościach MET – wyniki orientacyjne.</small>
+  </div>
+  <div class="card" id="bmiCard">
+    <h2 style="text-align:center;">Body Mass Index &amp; Basal Metabolic Rate</h2>
+    <div id="bmrInfo"></div>
+    <p style="font-size:0.9rem;margin-top:0.5rem;">
+      <strong>BMI</strong> (Body Mass Index) to wskaźnik masy ciała obliczany jako
+      stosunek masy (kg) do kwadratu wzrostu (m²). Pomaga ocenić, czy Twoja masa
+      ciała jest prawidłowa, z niedowagą, nadwagą czy otyłością.
+    </p>
+    <p style="font-size:0.9rem;margin-top:0.5rem;">
+      <strong>BMR</strong> (Basal Metabolic Rate) to ilość energii, jaką Twoje ciało zużywa w spoczynku
+      – kalorie niezbędne na podstawowe procesy życiowe (oddychanie, krążenie, termoregulacja).
+    </p>
+  </div>
+</div>
+</div>
+<footer>© <script>document.write(new Date().getFullYear())</script> Vilda Clinic</footer>
+
+<script>
+const snacks={
+  snickers:{name:'Snickers 50 g',kcal:244},
+  bounty:{name:'Bounty 57 g',kcal:268},
+  knoppers:{name:'Knoppers 25 g',kcal:140},
+  prince:{name:'Prince Polo 50 g',kcal:264},
+  banana:{name:'Banan 100 g',kcal:90},
+  cola:{name:'Napój gazowany 330 ml',kcal:139},
+  ice:{name:'Lody waniliowe 100 g',kcal:201},
+  chocolate:{name:'Czekolada mleczna 25 g',kcal:134},
+  watermelon:{name:'Arbuz 100 g',kcal:30},
+  cookie:{name:'Ciastko digestive 15 g',kcal:70},
+  twix:{name:'Twix 50 g',kcal:248},
+  kitkat:{name:'KitKat 45 g',kcal:233},
+  chips:{name:'Chipsy 30 g',kcal:160},
+  pretzel:{name:'Paluszki 50 g',kcal:170},
+  yogurt:{name:'Jogurt owocowy 150 g',kcal:135},
+};
+
+const meals={
+  burger:{name:'Burger z frytkami',kcal:900},
+  pizza:{name:'Pizza pepperoni (¼ 30 cm)',kcal:650},
+  pierogi:{name:'Pierogi ruskie (8 szt.)',kcal:560},
+  spaghetti:{name:'Spaghetti bolognese 350 g',kcal:600},
+  caesar:{name:'Sałatka Cezar z kurczakiem',kcal:450},
+  sushi:{name:'Sushi 10 kawałków',kcal:400},
+  kebab:{name:'Kebab (tortilla)',kcal:800},
+  pancake:{name:'Naleśniki z serem (2 szt.)',kcal:500},
+  schabowy:{name:'Schabowy + ziemniaki',kcal:800},
+  goulash:{name:'Zupa gulaszowa 500 ml',kcal:300}
+};
+
+const activities={
+  run:{name:'🏃 Bieganie 8 km/h',MET:8.3},
+  bike:{name:'🚴 Rower 16 km/h',MET:6.8},
+  swim:{name:'🏊 Pływanie rekreacyjne',MET:5.8},
+  walk:{name:'🚶 Spacer 5 km/h',MET:3.5}
+};
+
+let rowId=0;
+function addRow(containerId,optionsObj,className,defaultKey){
+  const row=document.createElement('div');
+  row.className=className;
+  row.dataset.id=rowId++;
+  row.innerHTML=`
+    <select onchange="update()">
+      ${Object.entries(optionsObj).map(([k,v])=>`<option value="${k}" ${k===defaultKey?'selected':''}>${v.name}</option>`).join('')}
+    </select>
+    <input type="number" value="1" min="1" onchange="update()" title="Ilość">
+    <button type="button" class="icon" aria-label="Usuń" onclick="this.parentElement.remove();update()">×</button>`;
+  document.getElementById(containerId).appendChild(row);
+  update();
+}
+function addSnackRow(){addRow('snackList',snacks,'snack-row','snickers');}
+function addMealRow(){addRow('mealList',meals,'meal-row','burger');}
+
+function calcTotal(obj,selector){
+  let kcal=0;
+  document.querySelectorAll(selector).forEach(r=>{
+    const key=r.querySelector('select').value;
+    const qty=parseFloat(r.querySelector('input').value)||0;
+    kcal+=obj[key].kcal*qty;
+  });
+  return kcal;
+}
+function BMR(weight,height,age,sex){
+  return Math.round(10*weight + 6.25*height - 5*age + (sex==='M'?5:-161));
+}
+function BMI(weight,height){
+  return weight/Math.pow(height/100,2);
+}
+
+function bmiCategory(bmi){
+  if(bmi<18.5) return 'Niedowaga';
+  if(bmi<25)   return 'Prawidłowa';
+  if(bmi<30)   return 'Nadwaga';
+  return 'Otyłość';
+}
+
+
+function update(){
+  const weight = parseFloat(document.getElementById('weight').value) || 0;
+  const age    = parseInt(document.getElementById('age').value)    || 0;
+  const height = parseFloat(document.getElementById('height').value)|| 0;
+  const sex    = document.getElementById('sex').value;
+
+  const bmiReady = weight > 0 && height > 0;        // bez wieku
+  const bmrReady = bmiReady && age > 0;             // BMR nadal wymaga wieku
+
+  const kcal = calcTotal(snacks,'.snack-row') + calcTotal(meals,'.meal-row');
+
+  const results   = document.getElementById('results');
+  const timesCard = document.getElementById('timesCard');
+  const timesDiv  = document.getElementById('times');
+  const bmrInfo   = document.getElementById('bmrInfo');
+
+  // reset
+  timesDiv.innerHTML = '';
+  bmrInfo.innerHTML  = '';
+  results.style.display   = 'none';
+  timesCard.style.display = 'none';
+
+  /* ---------- BMI i BMR ---------- */
+  if(bmiReady){
+    const bmi      = BMI(weight,height);
+    const bmiText  = bmi.toFixed(1);
+    const bmiCat   = bmiCategory(bmi);
+
+    let html = `<div class="result-box"><strong>BMI: ${bmiText} (${bmiCat})</strong></div>`;
+
+    if(bmrReady){
+      const bmr = BMR(weight,height,age,sex);
+
+      const factors = {
+        'Siedzący (x1.2)':1.2,
+        'Lekko aktywny (x1.375)':1.375,
+        'Średnio aktywny (x1.55)':1.55,
+        'Bardzo aktywny (x1.725)':1.725,
+        'Ekstremalnie aktywny (x1.9)':1.9
+      };
+      let rows='';
+      for(const [lvl,f] of Object.entries(factors)){
+        rows += `<tr><td>${lvl}</td><td>${Math.round(bmr*f)}</td></tr>`;
+      }
+      html += `<div class="result-box"><strong>BMR: ${bmr} kcal/dzień</strong>
+               <table style='margin-top:8px;width:100%;'><tr><th>Poziom aktywności</th><th>kcal/dzień</th></tr>${rows}</table></div>`;
+    }else{
+      html += `<p><em>Podaj wiek, aby obliczyć BMR.</em></p>`;
+    }
+
+    bmrInfo.innerHTML   = html;
+    results.style.display = 'grid';
+  }
+
+  /* ---------- Czas spalania ---------- */
+  if(bmiReady && kcal > 0){
+    const childFactor = (age > 0 && age < 14) ? 1.1 : 1;
+    Object.values(activities).forEach(act=>{
+      const burnPerMin = (act.MET * 3.5 * weight) / 200;
+      const minutes    = (kcal * childFactor) / burnPerMin;
+      const h = Math.floor(minutes/60);
+      const m = Math.round(minutes%60);
+      const timeStr = h > 0 ? `${h} h ${m} min` : `${m} min`;
+      timesDiv.innerHTML += `<p class="activity-time">${act.name}: ${timeStr}</p>`;
+    });
+    timesCard.style.display = 'block';
+  }
+}
+
+
+// init with no rows so user explicitly adds items
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('fieldset').forEach(fs => {
+    const legend = fs.querySelector('legend');
+    if(!legend) return;
+
+    // wybierz referencyjny element:
+    let reference = fs.querySelector('button.add-row');
+    if(!reference) reference = fs.querySelector('label');
+    if(!reference) return;
+
+    const fsRect = fs.getBoundingClientRect();
+    const refRect = reference.getBoundingClientRect();
+
+    // połowa drogi w pionie
+    const centerY = (refRect.top - fsRect.top) / 2;
+    legend.style.top = (centerY - legend.offsetHeight / 2) + 'px';
+
+    // wyrównaj lewą krawędź
+    const offsetX = refRect.left - fsRect.left;
+    legend.style.left = offsetX + 'px';
+  });
+});
+</script>
+
+</body>
+</html>
