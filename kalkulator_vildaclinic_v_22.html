@@ -1,0 +1,286 @@
+
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kalkulator Vilda Clinic</title>
+<style>
+:root{
+  --card:#fff;
+  --radius:8px;
+  --border:#ccc;
+  --shadow:0 2px 5px rgba(0,0,0,.1);
+  --font:"Inter",sans-serif;
+}
+*{box-sizing:border-box;}
+body{
+  font-family:var(--font);
+  background:#f2f3f7;
+  margin:0;padding:2rem;
+  color:#333;
+}
+h2{
+  margin:0 0 .5rem 0;
+  font-size:1.4rem;
+}
+fieldset{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:2.4rem 1.5rem 1.5rem;
+  margin-bottom:1.5rem;
+  position:relative;
+  box-shadow:var(--shadow);
+}
+legend{
+  position:absolute;
+  left:0;
+  top:0.6rem;
+  font-size:1.1rem;
+  font-weight:600;
+  background:var(--card);
+  padding:0 .6rem;
+  border-radius:var(--radius);
+}
+label{
+  display:block;
+  margin:.6rem 0 .2rem;
+  font-size:.9rem;
+}
+input,select{
+  width:100%;
+  padding:.5rem .6rem;
+  font-size:1rem;
+  border:1px solid #bbb;
+  border-radius:4px;
+}
+button{
+  padding:.45rem .9rem;
+  font-size:.9rem;
+  border:none;
+  border-radius:4px;
+  cursor:pointer;
+  background:#0074d9;
+  color:#fff;
+  transition:background .2s;
+}
+button:hover{background:#005fa3;}
+.add-row{
+  margin-top:1rem;
+  display:inline-block;
+}
+.table-like{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:.5rem;
+}
+.table-like th,
+.table-like td{
+  border:1px solid #ddd;
+  padding:.45rem;
+  text-align:left;
+}
+.table-like th{background:#f7f8fa;}
+/* powiększone ramki wyników */
+.result-box{
+  border:2px solid #ccc;
+  border-radius:8px;
+  padding:10px;
+  margin:12px 0;
+  font-size:1.3rem;
+  background:#f8f9fa;
+  text-align:center;
+}
+/* kartu „Spalanie kalorii” */
+#timesCard{
+  text-align:center;
+}
+/* Layout wyników */
+#results{
+  display:none;             /* włącza się w JS */
+  gap:1.5rem;
+}
+@media(min-width:680px){
+  #results{display:grid;grid-template-columns:1fr 1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- ========= DANE UŻYTKOWNIKA ========= -->
+<fieldset>
+  <legend>Dane użytkownika</legend>
+
+  <label for="weight">Waga (kg)</label>
+  <input id="weight" type="number" min="0" step="0.1" oninput="update()">
+
+  <label for="height">Wzrost (cm)</label>
+  <input id="height" type="number" min="0" step="0.1" oninput="update()">
+
+  <label for="age">Wiek (lata)</label>
+  <input id="age" type="number" min="0" step="1" oninput="update()">
+
+  <label for="sex">Płeć</label>
+  <select id="sex" onchange="update()">
+    <option value="female">Kobieta</option>
+    <option value="male">Mężczyzna</option>
+  </select>
+</fieldset>
+
+<!-- ========= PRZEKĄSKI ========= -->
+<fieldset id="snacksFieldset">
+  <legend>Przekąski</legend>
+
+  <table class="table-like" id="snacksTable">
+    <thead>
+      <tr><th>Nazwa</th><th>kcal</th><th></th></tr>
+    </thead>
+    <tbody id="snacksBody"></tbody>
+  </table>
+
+  <button class="add-row" onclick="addRow('snacks')">+ dodaj przekąskę</button>
+</fieldset>
+
+<!-- ========= DANIA OBIADOWE ========= -->
+<fieldset id="mealsFieldset">
+  <legend>Dania obiadowe</legend>
+
+  <table class="table-like" id="mealsTable">
+    <thead>
+      <tr><th>Nazwa</th><th>kcal</th><th></th></tr>
+    </thead>
+    <tbody id="mealsBody"></tbody>
+  </table>
+
+  <button class="add-row" onclick="addRow('meals')">+ dodaj danie</button>
+</fieldset>
+
+<!-- ========= WYNIKI ========= -->
+<div id="results">
+  <div id="bmrInfo"></div>
+
+  <div id="timesCard">
+    <h2>Spalanie kalorii</h2>
+    <div id="times"></div>
+  </div>
+</div>
+
+<script>
+// ---------- dane aktywności --------------
+const activities = {
+  walk:{name:'Spacer',MET:3.5},
+  run :{name:'Bieg',MET:7},
+  bike:{name:'Rower 16 km/h',MET:6},
+  bikeFast:{name:'Rower 20 km/h',MET:8},
+  swim:{name:'Pływanie',MET:8}
+};
+
+// ---------- dynamiczne tabele przekąsek / dań ----------
+function addRow(type){
+  const tbody=document.getElementById(type+'Body');
+  const row=document.createElement('tr');
+  row.className=type+'-row';
+  row.innerHTML=`
+    <td><input type="text" placeholder="produkt"></td>
+    <td><input type="number" min="0" step="1" placeholder="kcal"></td>
+    <td><button onclick="this.closest('tr').remove();update();" style="background:#e74c3c;">&#10005;</button></td>`;
+  tbody.appendChild(row);
+}
+function calcTotal(colClass, selector){
+  let total=0;
+  document.querySelectorAll(selector+' input[type="number"]').forEach(inp=>{
+    total+=parseFloat(inp.value)||0;
+  });
+  return total;
+}
+// ---------- BMI / BMR ----------
+const BMI=(w,h)=>w/Math.pow(h/100,2);
+const BMR=(w,h,a,s)=>s==='female'
+      ? Math.round(10*w+6.25*h-5*a-161)
+      : Math.round(10*w+6.25*h-5*a+5);
+function bmiCategory(bmi){
+  if(bmi<18.5) return 'niedowaga';
+  if(bmi<25)   return 'prawidłowa masa';
+  if(bmi<30)   return 'nadwaga';
+  return 'otyłość';
+}
+function update(){
+  const weight=parseFloat(weightInp.value)||0;
+  const age   =parseInt(ageInp.value)||0;
+  const height=parseFloat(heightInp.value)||0;
+  const sex   =sexSel.value;
+
+  const bmiReady=weight>0&&height>0;
+  const bmrReady=bmiReady&&age>0;
+
+  const kcal=calcTotal('snacks','.snack-row')+calcTotal('meals','.meal-row');
+  timesDiv.innerHTML='';
+  bmrInfo.innerHTML='';
+  results.style.display='none'; timesCard.style.display='none';
+
+  if(bmiReady){
+    const bmi= BMI(weight,height);
+    let html=`<div class="result-box"><strong>BMI: ${bmi.toFixed(1)} (${bmiCategory(bmi)})</strong></div>`;
+    if(bmrReady){
+      const bmr= BMR(weight,height,age,sex);
+      const factors={'Siedzący (x1.2)':1.2,'Lekko aktywny (x1.375)':1.375,'Średnio aktywny (x1.55)':1.55,'Bardzo aktywny (x1.725)':1.725,'Ekstremalnie aktywny (x1.9)':1.9};
+      let rows='';
+      Object.entries(factors).forEach(([lvl,f])=>{
+        rows+=`<tr><td>${lvl}</td><td>${Math.round(bmr*f)}</td></tr>`;
+      });
+      html+=`<div class="result-box"><strong>BMR: ${bmr} kcal/dzień</strong>
+             <table class="table-like"><tr><th>Poziom aktywności</th><th>kcal/dzień</th></tr>${rows}</table></div>`;
+    }else{
+      html+=`<p><em>Podaj wiek, aby obliczyć BMR.</em></p>`;
+    }
+    bmrInfo.innerHTML=html;
+    results.style.display='grid';
+  }
+  if(bmiReady&&kcal>0){
+    Object.values(activities).forEach(act=>{
+      const burnPerMin=(act.MET*3.5*weight)/200;
+      const minutes=kcal/burnPerMin;
+      const h=Math.floor(minutes/60);
+      const m=Math.round(minutes%60);
+      const timeStr=h>0?`${h} h ${m} min`:`${m} min`;
+      timesDiv.innerHTML+=`<p>${act.name}: ${timeStr}</p>`;
+    });
+    timesCard.style.display='block';
+  }
+}
+
+// cache elementy
+const weightInp=document.getElementById('weight');
+const heightInp=document.getElementById('height');
+const ageInp   =document.getElementById('age');
+const sexSel   =document.getElementById('sex');
+const bmrInfo  =document.getElementById('bmrInfo');
+const results  =document.getElementById('results');
+const timesDiv =document.getElementById('times');
+const timesCard=document.getElementById('timesCard');
+</script>
+
+<!-- ---------- automatyczne wyrównanie legend ---------- -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('fieldset').forEach(fs => {
+    const legend = fs.querySelector('legend');
+    if(!legend) return;
+
+    let ref = fs.querySelector('button.add-row');
+    if(!ref) ref = fs.querySelector('label');
+    if(!ref) return;
+
+    const fsRect  = fs.getBoundingClientRect();
+    const refRect = ref.getBoundingClientRect();
+
+    const centerY = (refRect.top - fsRect.top) / 2;
+    legend.style.top = (centerY - legend.offsetHeight/2) + 'px';
+    legend.style.left = (refRect.left - fsRect.left) + 'px';
+  });
+});
+</script>
+
+</body>
+</html>
