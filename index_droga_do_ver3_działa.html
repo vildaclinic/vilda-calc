@@ -261,25 +261,16 @@ function toNormalBMITarget(weight, height, age, sex) {
 }
 
 function kcalFor1km(activity, weight){
-  let speed_kmh = 1;
-  switch(activity){
-    case 'bike16': speed_kmh=16; break;
-    case 'bike20': speed_kmh=20; break;
-    case 'run':    speed_kmh=8;  break;
-    case 'swim':   speed_kmh=3;  break;
-    case 'walk':   speed_kmh=5;  break;
-  }
   let MET = 1;
   switch(activity){
-    case 'bike16': MET=6.0; break;
-    case 'bike20': MET=8.0; break;
-    case 'run':    MET=8.0; break;
-    case 'swim':   MET=7.5; break;
-    case 'walk':   MET=3.0; break;
+    case 'bike16': MET = 6.0; break;
+    case 'bike20': MET = 8.0; break;
+    case 'run':    MET = 8.0; break;
+    case 'swim':   MET = 7.5; break;
+    case 'walk':   MET = 3.0; break;
   }
-  let time_min = 60 / speed_kmh;
-  let burnPerMin = (MET * 3.5 * weight) / 200;
-  return burnPerMin * time_min;
+  // Wzór: kcal/km = MET * waga (kg) * 1.036
+  return MET * weight * 1.036;
 }
 
 function distanceToNormalBMI(weight, height, age, sex) {
