@@ -685,34 +685,7 @@ function kcalFor1km(activity, weight){
   let burnPerMin = (MET * 3.5 * weight) / 200;
   return burnPerMin * time_min;
 }
-// function distanceToNormalBMI(weight, height, age, sex) {
-  const currentBMI = BMI(weight, height);
-  const targetBMI  = toNormalBMITarget(weight, height, age, sex);
-  if(currentBMI <= targetBMI){
-    return null;
-  }
-  const targetWeight = targetBMI * Math.pow(height/100,2);
-  const kgToLose = weight - targetWeight;
-  const kcalToBurn = kgToLose * 7700;
-  const acts = [
-    { key:'bike16', label:'🚴 Rower 16 km/h',    },
-    { key:'bike20', label:'🚴‍♂️ Rower 20 km/h', },
-    { key:'run',    label:'🏃 Bieganie',         },
-    { key:'swim',   label:'🏊 Pływanie',         },
-    { key:'walk',   label:'🚶 Spacer',           }
-  ];
-  let results = acts.map(act=>{
-    const kcal_per_km = kcalFor1km(act.key, weight);
-    const km = kcalToBurn / kcal_per_km;
-    let value = km >= 1 ? `${km.toFixed(1)} km` : `${Math.round(km*1000)} m`;
-    return `<tr><td>${act.label}</td><td>${value}</td></tr>`;
-  }).join('');
-  return {
-    kgToLose: kgToLose,
-    kcalToBurn: kcalToBurn,
-    table: `<table style="margin-top:6px;width:100%;"><tr><th>Aktywność</th><th>Dystans do normy</th></tr>${results}</table>`
-  };
-// }
+
 function generujZaleceniaDoPDF() {
   const age = parseFloat(document.getElementById('age').value)||0;
   const weight = parseFloat(document.getElementById('weight').value)||0;
