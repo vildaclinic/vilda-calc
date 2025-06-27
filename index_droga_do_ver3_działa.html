@@ -260,17 +260,46 @@ function toNormalBMITarget(weight, height, age, sex) {
   return 24.9;
 }
 
+/**
+ * Zwraca kcal spalane na 1 km danej aktywności
+ * @param {string} activity – klucz aktywności ('bike16','bike20','run','swim','walk')
+ * @param {number} weight   – masa ciała w kg
+ * @returns {number} kcal na 1 km
+ */
 function kcalFor1km(activity, weight){
-  let MET = 1;
+  let met, speedKmh;
+
   switch(activity){
-    case 'bike16': MET = 6.0; break;
-    case 'bike20': MET = 8.0; break;
-    case 'run':    MET = 8.0; break;
-    case 'swim':   MET = 7.5; break;
-    case 'walk':   MET = 3.0; break;
+    case 'bike16':
+      met       = 6.0;
+      speedKmh  = 16;
+      break;
+    case 'bike20':
+      met       = 8.0;
+      speedKmh  = 20;
+      break;
+    case 'run':
+      met       = 8.0;
+      speedKmh  = 8;
+      break;
+    case 'swim':
+      met       = 7.5;
+      speedKmh  = 3;   // ok. 3 km/h rekreacyjnie
+      break;
+    case 'walk':
+      met       = 3.0;
+      speedKmh  = 5;
+      break;
+    default:
+      return 0;        // nieznana aktywność
   }
-  // Wzór: kcal/km = MET * waga (kg) * 1.036
-  return MET * weight * 1.036;
+
+  // 1) kcal na minutę: (MET × 3.5 × waga) / 200  
+  const kcalPerMin   = (met * 3.5 * weight) / 200;
+  // 2) ile minut zajmuje 1 km: 60 / prędkość (km/h)  
+  const minPerKm     = 60 / speedKmh;
+  // 3) kcal na km = kcal/min × min/km
+  return kcalPerMin * minPerKm;
 }
 
 function distanceToNormalBMI(weight, height, age, sex) {
