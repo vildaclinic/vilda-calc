@@ -302,33 +302,53 @@ function kcalFor1km(activity, weight){
   return kcalPerMin * minPerKm;
 }
 
+/**
+ * Oblicza, ile km i ile czasu potrzeba, by osiągnąć normę BMI
+ * @returns {object|null} {kgToLose, kcalToBurn, table} lub null gdy BMI ≤ norma
+ */
 function distanceToNormalBMI(weight, height, age, sex) {
   const currentBMI = BMI(weight, height);
   const targetBMI  = toNormalBMITarget(weight, height, age, sex);
-  if(currentBMI <= targetBMI){
-    return null;
-  }
-  const targetWeight = targetBMI * Math.pow(height/100,2);
-  const kgToLose = weight - targetWeight;
-  const kcalToBurn = kgToLose * 7700;
+  if (currentBMI <= targetBMI) return null;
+
+  // ile kg trzeba schudnąć i ile kcal to daje
+  const targetWeight = targetBMI * Math.pow(height/100, 2);
+  const kgToLose     = weight - targetWeight;
+  const kcalToBurn   = kgToLose * 7700;
+
+  // zestaw aktywności z MET i prędkością
   const acts = [
-    { key:'bike16', label:'🚴 Rower 16 km/h' },
-    { key:'bike20', label:'🚴‍♂️ Rower 20 km/h' },
-    { key:'run',    label:'🏃 Bieganie' },
-    { key:'swim',   label:'🏊 Pływanie' },
-    { key:'walk',   label:'🚶 Spacer' }
+    { label:'🚶 Spacer',                met:3.0,  speed:5   },
+    { label:'🚴 Rower 16 km/h',         met:6.0,  speed:16  },
+    { label:'🚴‍♂️ Rower 20 km/h',       met:8.0,  speed:20  },
+    { label:'🏃 Bieganie 8 km/h',        met:8.0,  speed:8   },
+    { label:'🏊 Pływanie rekreacyjne',   met:7.5,  speed:3   }
   ];
-  let results = acts.map(act=>{
-    const kcal_per_km = kcalFor1km(act.key, weight);
-    const km = kcalToBurn / kcal_per_km;
-    let value = km >= 1 ? `${km.toFixed(1)} km` : `${Math.round(km*1000)} m`;
-    return `<tr><td>${act.label}</td><td>${value}</td></tr>`;
+
+  // budujemy wiersze tabeli: dystans / czas
+  const rows = acts.map(act => {
+    // kcal spalane na minutę
+    const burnPerMin = (act.met * 3.5 * weight) / 200;
+    // ile minut potrzeba spalić kcalToBurn
+    const timeMin = kcalToBurn / burnPerMin;
+    const h = Math.floor(timeMin/60),
+          m = Math.round(timeMin%60);
+    const timeStr = h > 0 ? `${h} h ${m} min` : `${m} min`;
+
+    // kcal na 1 km = kcal/min × min/km
+    const km = kcalToBurn / (burnPerMin * (60/act.speed));
+    const distStr = km >= 1 ? `${km.toFixed(1)} km` : `${Math.round(km*1000)} m`;
+
+    return `<tr><td>${act.label}</td><td>${distStr} / ${timeStr}</td></tr>`;
   }).join('');
-  return {
-    kgToLose: kgToLose,
-    kcalToBurn: kcalToBurn,
-    table: `<table style="margin-top:6px;width:100%;"><tr><th>Aktywność</th><th>Dystans / Czas do normy</th></tr>${results}</table>`
-  };
+
+  const table = `
+    <table style="margin-top:6px;width:100%;">
+      <tr><th>Aktywność</th><th>Dystans / Czas do normy</th></tr>
+      ${rows}
+    </table>
+  `;
+  return { kgToLose, kcalToBurn, table };
 }
 // --- KONIEC: Funkcje Droga do normy BMI ---
 
