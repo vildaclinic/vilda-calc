@@ -685,7 +685,7 @@ function kcalFor1km(activity, weight){
   let burnPerMin = (MET * 3.5 * weight) / 200;
   return burnPerMin * time_min;
 }
-function distanceToNormalBMI(weight, height, age, sex) {
+// function distanceToNormalBMI(weight, height, age, sex) {
   const currentBMI = BMI(weight, height);
   const targetBMI  = toNormalBMITarget(weight, height, age, sex);
   if(currentBMI <= targetBMI){
@@ -712,7 +712,7 @@ function distanceToNormalBMI(weight, height, age, sex) {
     kcalToBurn: kcalToBurn,
     table: `<table style="margin-top:6px;width:100%;"><tr><th>Aktywność</th><th>Dystans do normy</th></tr>${results}</table>`
   };
-}
+// }
 function generujZaleceniaDoPDF() {
   const age = parseFloat(document.getElementById('age').value)||0;
   const weight = parseFloat(document.getElementById('weight').value)||0;
