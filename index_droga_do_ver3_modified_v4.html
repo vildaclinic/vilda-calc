@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Kalkulator spalania kalorii – Vilda Clinic</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{
+  --primary:#00838d;
+  --secondary:#00b0a6;
+  --bg:#ffffff;
+  --card:#f5f9f9;
+  --text:#333;
+  --radius:8px;
+  --shadow:0 2px 6px rgba(0,0,0,.08);
+  --danger:#c62828;
+}
+*{box-sizing:border-box;}
+body{margin:0;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);}
+header{background:var(--primary);color:#fff;text-align:center;padding:1rem;}
+h1{margin:0;font-size:clamp(1.4rem,3vw,2rem);}  
+.container{max-width:960px;margin-inline:auto;padding:1rem;}
+fieldset{
+  border:1px solid #d0dede;
+  background:var(--card);
+  padding:1.4rem 1rem 1rem;
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  margin-bottom:1.5rem;
+  position:relative;
+}
+legend{
+  font-weight:600;
+  color:var(--primary);
+  background:var(--card);
+  padding:0 .6rem;
+  font-size:1rem;
+  position:absolute;
+  top:-0.7rem;
+  left:0;;
+}
+label{display:block;margin-top:0.7rem;font-size:0.95rem;}
+input,select,option{ font-family:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; width:100%;padding:0.45rem;border:1px solid #ccc;border-radius:4px;font-size:1rem;}
+.flex{display:flex;gap:1rem;flex-wrap:wrap;}
+.snack-row,.meal-row{display:grid;grid-template-columns:1fr 100px 34px;gap:0.5rem;align-items:center;margin-top:0.5rem;}
+button.icon{background:none;border:none;font-size:1.35rem;cursor:pointer;color:var(--danger);font-weight:900;line-height:1;}
+button.icon:hover{opacity:0.8;}
+button.add-row{background:var(--secondary);color:#fff;border:none;padding:0.45rem 0.9rem;border-radius:4px;cursor:pointer;margin-top:0.7rem;}
+button.add-row:hover{background:var(--primary);}  
+#results{display:none;flex-direction:column;gap:1.5rem;}
+.card{background:var(--card);padding:1rem;border-radius:var(--radius);box-shadow:var(--shadow);}  
+.activity-time{margin:0.4rem 0;font-size:1.25rem;font-weight:700;}
+table{width:100%;border-collapse:collapse;margin-top:0.6rem;}
+th,td{border:1px solid #ddd;padding:0.6rem;text-align:center;font-size:0.95rem;}
+th{background:var(--secondary);color:#fff;}
+footer{margin-top:2rem;text-align:center;font-size:0.85rem;color:#666;padding:1rem 0;background:#fafafa;}  
+@media(min-width:700px){
+  .grid-two{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+}
+
+/* center calorie burn block */
+#timesCard{ text-align:center; }
+
+/* Powiększone ramki wyników BMI i BMR */
+.result-box{
+  border:2px solid #ccc;
+  border-radius:8px;
+  padding:10px;
+  margin:12px 0;
+  font-size:1.3rem;
+  background:#f8f9fa;
+  text-align:center;
+}
+
+
+/* --- legenda wewnątrz ramek fieldset --- */
+fieldset{
+  position:relative;
+  padding-top:1.8rem;   /* miejsce na legendę */
+}
+legend{
+  position:absolute;
+  top:0;
+  left:0;;
+  font-size:1.1rem;
+  font-weight:600;
+  padding:0 .5rem;
+  background:var(--card); /* kolor karty, zakrywa linię ramki */
+  border-radius:var(--radius);
+}
+/* zaokrąglone logo jak kontenery wyników */
+header img {
+  border-radius: var(--radius);
+  display: inline-block; /* opcjonalnie, żeby mieć pewność */
+}
+/* Wyśrodkowanie nagłówka w karcie "Droga do normy BMI" */
+#toNormCard h2 {
+  text-align: center;
+}
+
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+<header><img src="logo_vilda.jpeg" alt="Vilda Clinic logo" style="max-width:160px;margin-bottom:10px; border-radius:var(--radius);">
+  <h1>Kalkulator BMI &amp; Spalania kalorii</h1></header>
+<div class="container">
+<form id="calcForm" class="flex" onsubmit="return false;">
+  <div style="flex:1 1 300px;">
+    <fieldset><legend>Dane użytkownika</legend>
+      <label>Wiek (lata):
+        <input type="number" id="age" min="1" max="100" oninput="update()" required></label>
+      <label>Płeć:
+        <select id="sex" onchange="update()">
+          <option value="M">Mężczyzna</option>
+          <option value="F">Kobieta</option>
+        </select></label>
+      <label>Waga (kg):
+        <input type="number" id="weight" min="10" max="300" oninput="update()" required></label>
+      <label>Wzrost (cm):
+        <input type="number" id="height" min="50" max="250" oninput="update()" required></label>
+    </fieldset>
+  </div>
+  <div style="flex:1 1 300px;">
+    <fieldset><legend>Przekąski</legend>
+      <div id="snackList"></div>
+      <button type="button" class="add-row" onclick="addSnackRow()">+ dodaj przekąskę</button>
+    </fieldset>
+    <fieldset><legend>Dania obiadowe</legend>
+      <div id="mealList"></div>
+      <button type="button" class="add-row" onclick="addMealRow()">+ dodaj danie</button>
+    </fieldset>
+  </div>
+</form>
+
+<div id="results" class="grid-two">
+  <div class="card" id="timesCard">
+    <h2 style="text-align:center;">Spalanie kalorii</h2>
+    <div id="times"></div>
+    <small>*Obliczenia oparte na wartościach MET – wyniki orientacyjne.</small>
+  </div>
+  <div class="card" id="bmiCard">
+    <h2 style="text-align:center;">Body Mass Index &amp; Basal Metabolic Rate</h2>
+    <div id="bmrInfo"></div>
+    <p style="font-size:0.9rem;margin-top:0.5rem;">
+      <strong>BMI</strong> (Body Mass Index) to wskaźnik masy ciała obliczany jako
+      stosunek masy (kg) do kwadratu wzrostu (m²). Pomaga ocenić, czy Twoja masa
+      ciała jest prawidłowa, z niedowagą, nadwagą czy otyłością.
+    </p>
+    <p style="font-size:0.9rem;margin-top:0.5rem;">
+      <strong>BMR</strong> (Basal Metabolic Rate) to ilość energii, jaką Twoje ciało zużywa w spoczynku
+      – kalorie niezbędne na podstawowe procesy życiowe (oddychanie, krążenie, termoregulacja).
+    </p>
+  </div>
+  <div class="card" id="toNormCard" style="display:none;">
+    <h2>Droga do normy BMI</h2>
+    <div id="toNormInfo"></div>
+    <small>*Szacunkowa liczba km/metrów i czasu do przejścia/przejechania/przebiegnięcia, by BMI osiągnęło normę.</small>
+  </div>
+</div>
+    <!-- 6. Plan odchudzania – formularz i wyniki -->
+    <div class="card" id="planCard" style="display:none; margin-top:1.5rem;">
+  <h2 style="text-align:center;">Plan odchudzania</h2>
+
+  <!-- WYŚRODKOWANE POLA FORMULARZA -->
+  <div id="planInputs"
+       style="display:flex; gap:1rem; flex-wrap:wrap; justify-content:center; margin-bottom:1rem;">
+    <label>
+      Treningi tygodniowo:
+      <select id="sessionsPerWeek" onchange="update()">
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+        <option value="6">6</option>
+        <option value="7">7</option>
+      </select>
+    </label>
+
+    <label>
+      Intensywność:
+      <select id="intensity" onchange="update()">
+        <option value="4">Lekki</option>
+        <option value="6">Umiarkowany</option>
+        <option value="8">Ciężki</option>
+      </select>
+    </label>
+
+    <label>
+      Ile kalorii będę jadł mniej dziennie:
+      <select id="dailyDeficit" onchange="update()">
+        <option value="100">100</option>
+        <option value="200">200</option>
+        <option value="300">300</option>
+        <option value="400">400</option>
+        <option value="500">500</option>
+        <option value="600">600</option>
+        <option value="700">700</option>
+      </select>
+      kcal
+    </label>
+  </div>
+
+  <div id="planResults"></div>
+</div>
+    <!-- koniec Plan odchudzania -->
+</div>
+
+<button id="downloadPDF" style="margin-top:16px;" hidden>Pobierz raport PDF</button>
+
+<footer>© <script>document.write(new Date().getFullYear())</script> Vilda Clinic</footer>
+
+<script>
+const snacks={
+  snickers:{name:'Snickers 50 g',kcal:244},
+  bounty:{name:'Bounty 57 g',kcal:268},
+  knoppers:{name:'Knoppers 25 g',kcal:140},
+  prince:{name:'Prince Polo 50 g',kcal:264},
+  banana:{name:'Banan 100 g',kcal:90},
+  cola:{name:'Napój gazowany 330 ml',kcal:139},
+  ice:{name:'Lody waniliowe 100 g',kcal:201},
+  chocolate:{name:'Czekolada mleczna 25 g',kcal:134},
+  watermelon:{name:'Arbuz 100 g',kcal:30},
+  cookie:{name:'Ciastko digestive 15 g',kcal:70},
+  twix:{name:'Twix 50 g',kcal:248},
+  kitkat:{name:'KitKat 45 g',kcal:233},
+  chips:{name:'Chipsy 30 g',kcal:160},
+  pretzel:{name:'Paluszki 50 g',kcal:170},
+  yogurt:{name:'Jogurt owocowy 150 g',kcal:135},
+};
+
+const meals={
+  burger:{name:'Burger z frytkami',kcal:900},
+  pizza:{name:'Pizza pepperoni (¼ 30 cm)',kcal:650},
+  pierogi:{name:'Pierogi ruskie (8 szt.)',kcal:560},
+  spaghetti:{name:'Spaghetti bolognese 350 g',kcal:600},
+  caesar:{name:'Sałatka Cezar z kurczakiem',kcal:450},
+  sushi:{name:'Sushi 10 kawałków',kcal:400},
+  kebab:{name:'Kebab (tortilla)',kcal:800},
+  pancake:{name:'Naleśniki z serem (2 szt.)',kcal:500},
+  schabowy:{name:'Schabowy + ziemniaki',kcal:800},
+  goulash:{name:'Zupa gulaszowa 500 ml',kcal:300}
+};
+
+
+
+const activities = {
+  run:       { name: '🏃 Bieganie 8 km/h',         MET: 8.0 },
+  bike:      { name: '🚴 Rower 16 km/h',          MET: 6.0 },
+  swim:      { name: '🏊 Pływanie rekreacyjne',    MET: 7.5 },
+  walk:      { name: '🚶 Spacer 5 km/h',          MET: 3.0 },
+
+  // --- nowe kategorie ---
+  swimFast:  { name: '🏊‍♂️ Pływanie INTENSYWNE',  MET: 9.8 },
+  bike20:    { name: '🚴‍♂️ Rower 20 km/h',        MET: 8.0 },
+  elliptical:{ name: '🏃‍♂️ Orbitrek (średnie tempo)', MET: 5.0 },
+  gaming:    { name: '🎮 Granie na komputerze',   MET: 1.3 }
+};
+
+;
+
+let rowId=0;
+function addRow(containerId,optionsObj,className,defaultKey){
+  const row=document.createElement('div');
+  row.className=className;
+  row.dataset.id=rowId++;
+  row.innerHTML=`
+    <select onchange="update()">
+      ${Object.entries(optionsObj).map(([k,v])=>`<option value="${k}" ${k===defaultKey?'selected':''}>${v.name}</option>`).join('')}
+    </select>
+    <input type="number" value="1" min="1" onchange="update()" title="Ilość">
+    <button type="button" class="icon" aria-label="Usuń" onclick="this.parentElement.remove();update()">×</button>`;
+  document.getElementById(containerId).appendChild(row);
+  update();
+}
+function addSnackRow(){addRow('snackList',snacks,'snack-row','snickers');}
+function addMealRow(){addRow('mealList',meals,'meal-row','burger');}
+
+function calcTotal(obj,selector){
+  let kcal=0;
+  document.querySelectorAll(selector).forEach(r=>{
+    const key=r.querySelector('select').value;
+    const qty=parseFloat(r.querySelector('input').value)||0;
+    kcal+=obj[key].kcal*qty;
+  });
+  return kcal;
+}
+function BMR(weight,height,age,sex){
+  return Math.round(10*weight + 6.25*height - 5*age + (sex==='M'?5:-161));
+}
+function BMI(weight,height){
+  return weight/Math.pow(height/100,2);
+}
+
+function bmiCategory(bmi){
+  if(bmi<18.5) return 'Niedowaga';
+  if(bmi<25)   return 'Prawidłowa';
+  if(bmi<30)   return 'Nadwaga';
+  return 'Otyłość';
+}
+
+// --- POCZĄTEK: Funkcje obsługujące Drogę do normy BMI ---
+function toNormalBMITarget(weight, height, age, sex) {
+  // Dla dzieci: górny zakres normy BMI (P85 WHO)
+  if(age >= 2 && age <= 19){
+    const months = Math.round(age*12);
+    const dataMap = bmiPercentiles[sex==='M'?'boys':'girls'];
+    const data = dataMap[months];
+    if(data){
+      return data.P85;
+    }
+    return 18.5; // fallback
+  }
+  return 24.9;
+}
+
+/**
+ * Zwraca kcal spalane na 1 km danej aktywności
+ * @param {string} activity – klucz aktywności ('bike16','bike20','run','swim','walk')
+ * @param {number} weight   – masa ciała w kg
+ * @returns {number} kcal na 1 km
+ */
+function kcalFor1km(activity, weight){
+  let met, speedKmh;
+
+  switch(activity){
+    case 'bike16':
+      met       = 6.0;
+      speedKmh  = 16;
+      break;
+    case 'bike20':
+      met       = 8.0;
+      speedKmh  = 20;
+      break;
+    case 'run':
+      met       = 8.0;
+      speedKmh  = 8;
+      break;
+    case 'swim':
+      met       = 7.5;
+      speedKmh  = 3;   // ok. 3 km/h rekreacyjnie
+      break;
+    case 'walk':
+      met       = 3.0;
+      speedKmh  = 5;
+      break;
+    default:
+      return 0;        // nieznana aktywność
+  }
+
+  // 1) kcal na minutę: (MET × 3.5 × waga) / 200  
+  const kcalPerMin   = (met * 3.5 * weight) / 200;
+  // 2) ile minut zajmuje 1 km: 60 / prędkość (km/h)  
+  const minPerKm     = 60 / speedKmh;
+  // 3) kcal na km = kcal/min × min/km
+  return kcalPerMin * minPerKm;
+}
+
+/**
+ * Oblicza, ile km i ile czasu potrzeba, by osiągnąć normę BMI
+ * @returns {object|null} {kgToLose, kcalToBurn, table} lub null gdy BMI ≤ norma
+ */
+function distanceToNormalBMI(weight, height, age, sex) {
+  const currentBMI = BMI(weight, height);
+  const targetBMI  = toNormalBMITarget(weight, height, age, sex);
+  if (currentBMI <= targetBMI) return null;
+
+  // ile kg trzeba schudnąć i ile kcal to daje
+  const targetWeight = targetBMI * Math.pow(height/100, 2);
+  const kgToLose     = weight - targetWeight;
+  const kcalToBurn   = kgToLose * 7700;
+
+  // zestaw aktywności z MET i prędkością
+  const acts = [
+    { label:'🚶 Spacer',                met:3.0,  speed:5   },
+    { label:'🚴 Rower 16 km/h',         met:6.0,  speed:16  },
+    { label:'🚴‍♂️ Rower 20 km/h',       met:8.0,  speed:20  },
+    { label:'🏃 Bieganie 8 km/h',        met:8.0,  speed:8   },
+    { label:'🏊 Pływanie rekreacyjne',   met:7.5,  speed:3   }
+  ];
+
+  // budujemy wiersze tabeli: dystans / czas
+  const rows = acts.map(act => {
+    // kcal spalane na minutę
+    const burnPerMin = (act.met * 3.5 * weight) / 200;
+    // ile minut potrzeba spalić kcalToBurn
+    const timeMin = kcalToBurn / burnPerMin;
+    const h = Math.floor(timeMin/60),
+          m = Math.round(timeMin%60);
+    const timeStr = h > 0 ? `${h} h ${m} min` : `${m} min`;
+
+    // kcal na 1 km = kcal/min × min/km
+    const km = kcalToBurn / (burnPerMin * (60/act.speed));
+    const distStr = km >= 1 ? `${km.toFixed(1)} km` : `${Math.round(km*1000)} m`;
+
+    return `<tr><td>${act.label}</td><td>${distStr} / ${timeStr}</td></tr>`;
+  }).join('');
+
+  const table = `
+    <table style="margin-top:6px;width:100%;">
+      <tr><th>Aktywność</th><th>Dystans / Czas do normy</th></tr>
+      ${rows}
+    </table>
+  `;
+  return { kgToLose, kcalToBurn, table };
+}
+// --- KONIEC: Funkcje Droga do normy BMI ---
+
+function update(){
+  const weight = parseFloat(document.getElementById('weight').value) || 0;
+  const age    = parseFloat(document.getElementById('age').value)    || 0;
+  const height = parseFloat(document.getElementById('height').value)|| 0;
+  const sex    = document.getElementById('sex').value;
+
+// ---- RESET PLAN ODCHUDZANIA ----
+document.getElementById('planCard').style.display = 'none';
+document.getElementById('planResults').innerHTML = '';
+
+  const bmiReady = weight > 0 && height > 0;
+  const bmrReady = bmiReady && age > 0;
+
+  const kcal = calcTotal(snacks,'.snack-row') + calcTotal(meals,'.meal-row');
+
+  const results   = document.getElementById('results');
+  const timesCard = document.getElementById('timesCard');
+  const timesDiv  = document.getElementById('times');
+  const bmrInfo   = document.getElementById('bmrInfo');
+  const toNormCard = document.getElementById('toNormCard');
+  const toNormInfo = document.getElementById('toNormInfo');
+  toNormInfo.innerHTML = '';
+  toNormCard.style.display = 'none';
+
+  timesDiv.innerHTML = '';
+  bmrInfo.innerHTML  = '';
+  results.style.display   = 'none';
+  timesCard.style.display = 'none';
+
+  /* ---------- BMI i BMR ---------- */
+  if(bmiReady){
+    const bmi      = BMI(weight,height);
+    const bmiText  = bmi.toFixed(1);
+
+    const months = Math.round(age*12);
+    let bmiCat;
+    if(age>=2 && age<=19){
+      bmiCat = bmiCategoryChild(bmi, sex, months);
+    }else{
+      bmiCat = bmiCategory(bmi);
+    }
+
+    let bmiPercentile = null;
+    if(age>=2 && age<=19){
+      bmiPercentile = bmiPercentileChild(bmi, sex, months);
+      bmiCat = bmiCategoryChildExact(bmiPercentile);
+    }
+    const percText = bmiPercentile!==null?` – ${bmiPercentile.toFixed(1)} centyl`:'';
+    let html = `<div class="result-box"><strong>BMI: ${bmiText}${percText} (${bmiCat})</strong></div>`;
+
+    if(bmrReady){
+      const bmr = BMR(weight,height,age,sex);
+
+      const factors = {
+        'Siedzący (x1.2)':1.2,
+        'Lekko aktywny (x1.375)':1.375,
+        'Średnio aktywny (x1.55)':1.55,
+        'Bardzo aktywny (x1.725)':1.725,
+        'Ekstremalnie aktywny (x1.9)':1.9
+      };
+      let rows='';
+      for(const [lvl,f] of Object.entries(factors)){
+        rows += `<tr><td>${lvl}</td><td>${Math.round(bmr*f)}</td></tr>`;
+      }
+      html += `<div class="result-box"><strong>BMR: ${bmr} kcal/dzień</strong>
+                <table style='margin-top:8px;width:100%;'><tr><th>Poziom aktywności</th><th>kcal/dzień</th></tr>${rows}</table></div>`;
+    }else{
+      html += `<p><em>Podaj wiek, aby obliczyć BMR.</em></p>`;
+    }
+
+    bmrInfo.innerHTML   = html;
+    results.style.display = 'grid';
+  }
+
+  /* ---------- DROGA DO NORMY BMI ---------- */
+  if(bmiReady){
+    const toNorm = distanceToNormalBMI(weight, height, age, sex);
+    if(toNorm) {
+      toNormInfo.innerHTML = `
+        <div class="result-box">
+          <strong>Musisz zredukować masę o ${toNorm.kgToLose.toFixed(1)} kg<br>
+          (ok. ${Math.round(toNorm.kcalToBurn)} kcal)</strong>
+        </div>
+        ${toNorm.table}
+      `;
+      toNormCard.style.display = 'block';
+            // — jeśli Nadwaga lub Otyłość, pokaż Plan odchudzania —
+      const bmiVal = BMI(weight, height);
+      const cat = bmiCategory(bmiVal);
+      if (cat === 'Nadwaga' || cat === 'Otyłość') {        // planCard var already handled above
+planCard.style.display = 'block';
+
+        // pobierz dane z formularza
+        const sessions     = +document.getElementById('sessionsPerWeek').value;
+        const metIntensity = +document.getElementById('intensity').value;
+        const dailyDef     = +document.getElementById('dailyDeficit').value;
+
+        // liczymy kcal/trening (60 min każdy)
+        const burnPerMin   = (metIntensity * 3.5 * weight) / 200;
+        const perSession   = burnPerMin * 60;
+        const weeklyEx     = perSession * sessions;
+        const weeklyDiet   = dailyDef * 7;
+        const weeklyTotal  = weeklyEx + weeklyDiet;
+
+        // ile tygodni potrzebnych
+        const weeksNeeded  = Math.ceil(toNorm.kcalToBurn / weeklyTotal);
+        const monthsNeeded = (weeksNeeded / 4.345).toFixed(1);
+        const yearsNeeded  = (monthsNeeded / 12).toFixed(1);
+
+        // wyświetl wynik
+        document.getElementById('planResults').innerHTML = `
+          <table style="width:100%;border-collapse:collapse;">
+            <tr>
+              <th style="text-align:left;padding:4px">Parametr</th>
+              <th style="text-align:right;padding:4px">Wartość</th>
+            </tr>
+            <tr><td>Kalorie do spalenia</td><td>${Math.round(toNorm.kcalToBurn)} kcal</td></tr>
+            <tr><td>Ćwiczenia tygodniowo</td><td>${Math.round(weeklyEx)} kcal</td></tr>
+            <tr><td>Kalorie mniej z diety tygodniowo</td><td>${weeklyDiet} kcal</td></tr>
+            <tr><td>Łączny deficyt tygodniowy</td><td>${Math.round(weeklyTotal)} kcal</td></tr>
+            <tr>
+              <td>Szacowany czas</td>
+              <td>
+                ${weeksNeeded} tyg<br>
+                (${monthsNeeded} mies)<br>
+                (${yearsNeeded} lat)
+              </td>
+            </tr>
+          </table>`;
+      } else {
+        document.getElementById('planCard').style.display = 'none';
+      }
+
+    } else {
+      toNormInfo.innerHTML = `<div class="result-box" style="color:var(--primary)">
+        Twoje BMI jest już w normie! 🚀
+      </div>`;
+      toNormCard.style.display = 'block';
+    }
+  }
+
+  /* ---------- Czas spalania ---------- */
+if(bmiReady && kcal > 0){
+  const childFactor = (age > 0 && age < 14) ? 1.1 : 1;
+  let rows = '';
+  Object.values(activities).forEach(act=>{
+    const burnPerMin = (act.MET * 3.5 * weight) / 200;
+    const minutes    = (kcal * childFactor) / burnPerMin;
+    const h = Math.floor(minutes/60);
+    const m = Math.round(minutes%60);
+    const timeStr = h > 0 ? `${h} h ${m} min` : `${m} min`;
+    rows += `<tr><td>${act.name}</td><td>${timeStr}</td></tr>`;
+  });
+  timesDiv.innerHTML = `
+    <table style="width:100%;border-collapse:collapse;margin-top:0.6rem;">
+      <tr><th>Aktywność</th><th>Czas spalania</th></tr>
+      ${rows}
+    </table>`;
+  timesCard.style.display = 'block';
+}
+}
+
+
+
+// init with no rows so user explicitly adds items
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('fieldset').forEach(fs => {
+    const legend = fs.querySelector('legend');
+    if(!legend) return;
+
+    // wybierz referencyjny element:
+    let reference = fs.querySelector('button.add-row');
+    if(!reference) reference = fs.querySelector('label');
+    if(!reference) return;
+
+    const fsRect = fs.getBoundingClientRect();
+    const refRect = reference.getBoundingClientRect();
+
+    // połowa drogi w pionie
+    const centerY = (refRect.top - fsRect.top) / 2;
+    legend.style.top = (centerY - legend.offsetHeight / 2) + 'px';
+
+    // wyrównaj lewą krawędź
+    const offsetX = refRect.left - fsRect.left;
+    legend.style.left = offsetX + 'px';
+  });
+});
+</script>
+
+
+<script>
+const bmiPercentiles={"boys":{"24":{"P5":12.4,"P85":15.88,"P95":16.76},"25":{"P5":12.47,"P85":15.97,"P95":16.85},"26":{"P5":12.54,"P85":16.05,"P95":16.93},"27":{"P5":12.61,"P85":16.13,"P95":17.01},"28":{"P5":12.68,"P85":16.21,"P95":17.1},"29":{"P5":12.75,"P85":16.28,"P95":17.18},"30":{"P5":12.82,"P85":16.36,"P95":17.25},"31":{"P5":12.88,"P85":16.43,"P95":17.33},"32":{"P5":12.94,"P85":16.5,"P95":17.4},"33":{"P5":13.0,"P85":16.57,"P95":17.47},"34":{"P5":13.06,"P85":16.64,"P95":17.54},"35":{"P5":13.11,"P85":16.7,"P95":17.61},"36":{"P5":13.17,"P85":16.76,"P95":17.67},"37":{"P5":13.22,"P85":16.82,"P95":17.74},"38":{"P5":13.27,"P85":16.88,"P95":17.8},"39":{"P5":13.32,"P85":16.94,"P95":17.86},"40":{"P5":13.37,"P85":16.99,"P95":17.91},"41":{"P5":13.42,"P85":17.05,"P95":17.97},"42":{"P5":13.46,"P85":17.1,"P95":18.02},"43":{"P5":13.51,"P85":17.15,"P95":18.07},"44":{"P5":13.55,"P85":17.2,"P95":18.12},"45":{"P5":13.6,"P85":17.24,"P95":18.18},"46":{"P5":13.64,"P85":17.29,"P95":18.22},"47":{"P5":13.68,"P85":17.34,"P95":18.27},"48":{"P5":13.71,"P85":17.38,"P95":18.32},"49":{"P5":13.75,"P85":17.42,"P95":18.36},"50":{"P5":13.79,"P85":17.46,"P95":18.4},"51":{"P5":13.82,"P85":17.5,"P95":18.44},"52":{"P5":13.86,"P85":17.54,"P95":18.48},"53":{"P5":13.89,"P85":17.58,"P95":18.52},"54":{"P5":13.93,"P85":17.62,"P95":18.56},"55":{"P5":13.96,"P85":17.65,"P95":18.6},"56":{"P5":13.99,"P85":17.69,"P95":18.64},"57":{"P5":14.02,"P85":17.72,"P95":18.67},"58":{"P5":14.05,"P85":17.76,"P95":18.71},"59":{"P5":14.08,"P85":17.79,"P95":18.74},"60":{"P5":14.11,"P85":17.82,"P95":18.77},"61":{"P5":14.14,"P85":17.85,"P95":18.81},"62":{"P5":14.16,"P85":17.88,"P95":18.84},"63":{"P5":14.19,"P85":17.91,"P95":18.87},"64":{"P5":14.21,"P85":17.94,"P95":18.9},"65":{"P5":14.24,"P85":17.96,"P95":18.92},"66":{"P5":14.26,"P85":17.99,"P95":18.95},"67":{"P5":14.29,"P85":18.02,"P95":18.98},"68":{"P5":14.31,"P85":18.04,"P95":19.0},"69":{"P5":14.33,"P85":18.07,"P95":19.03},"70":{"P5":14.35,"P85":18.09,"P95":19.05},"71":{"P5":14.37,"P85":18.11,"P95":19.08},"72":{"P5":14.39,"P85":18.13,"P95":19.1},"73":{"P5":14.41,"P85":18.16,"P95":19.12},"74":{"P5":14.43,"P85":18.18,"P95":19.14},"75":{"P5":14.45,"P85":18.2,"P95":19.16},"76":{"P5":14.47,"P85":18.22,"P95":19.18},"77":{"P5":14.49,"P85":18.23,"P95":19.2},"78":{"P5":14.5,"P85":18.25,"P95":19.22},"79":{"P5":14.52,"P85":18.27,"P95":19.24},"80":{"P5":14.54,"P85":18.29,"P95":19.26},"81":{"P5":14.55,"P85":18.3,"P95":19.28},"82":{"P5":14.57,"P85":18.32,"P95":19.29},"83":{"P5":14.58,"P85":18.34,"P95":19.31},"84":{"P5":14.6,"P85":18.35,"P95":19.33},"85":{"P5":14.61,"P85":18.37,"P95":19.34},"86":{"P5":14.63,"P85":18.38,"P95":19.36},"87":{"P5":14.64,"P85":18.4,"P95":19.37},"88":{"P5":14.65,"P85":18.41,"P95":19.39},"89":{"P5":14.66,"P85":18.42,"P95":19.4},"90":{"P5":14.68,"P85":18.44,"P95":19.41},"91":{"P5":14.69,"P85":18.45,"P95":19.43},"92":{"P5":14.7,"P85":18.46,"P95":19.44},"93":{"P5":14.71,"P85":18.47,"P95":19.45},"94":{"P5":14.72,"P85":18.49,"P95":19.46},"95":{"P5":14.74,"P85":18.5,"P95":19.48},"96":{"P5":14.75,"P85":18.51,"P95":19.49},"97":{"P5":14.76,"P85":18.52,"P95":19.5},"98":{"P5":14.77,"P85":18.53,"P95":19.51},"99":{"P5":14.78,"P85":18.54,"P95":19.52},"100":{"P5":14.79,"P85":18.55,"P95":19.53},"101":{"P5":14.8,"P85":18.56,"P95":19.54},"102":{"P5":14.81,"P85":18.57,"P95":19.55},"103":{"P5":14.82,"P85":18.58,"P95":19.56},"104":{"P5":14.83,"P85":18.59,"P95":19.57},"105":{"P5":14.83,"P85":18.6,"P95":19.58},"106":{"P5":14.84,"P85":18.6,"P95":19.59},"107":{"P5":14.85,"P85":18.61,"P95":19.6},"108":{"P5":14.86,"P85":18.62,"P95":19.61},"109":{"P5":14.87,"P85":18.63,"P95":19.61},"110":{"P5":14.88,"P85":18.64,"P95":19.62},"111":{"P5":14.88,"P85":18.65,"P95":19.63},"112":{"P5":14.89,"P85":18.65,"P95":19.64},"113":{"P5":14.9,"P85":18.66,"P95":19.65},"114":{"P5":14.91,"P85":18.67,"P95":19.65},"115":{"P5":14.91,"P85":18.68,"P95":19.66},"116":{"P5":14.92,"P85":18.68,"P95":19.67},"117":{"P5":14.93,"P85":18.69,"P95":19.68},"118":{"P5":14.93,"P85":18.7,"P95":19.68},"119":{"P5":14.94,"P85":18.7,"P95":19.69},"120":{"P5":14.95,"P85":18.71,"P95":19.7},"121":{"P5":14.95,"P85":18.72,"P95":19.7},"122":{"P5":14.96,"P85":18.72,"P95":19.71},"123":{"P5":14.97,"P85":18.73,"P95":19.72},"124":{"P5":14.97,"P85":18.73,"P95":19.72},"125":{"P5":14.98,"P85":18.74,"P95":19.73},"126":{"P5":14.98,"P85":18.74,"P95":19.73},"127":{"P5":14.99,"P85":18.75,"P95":19.74},"128":{"P5":15.0,"P85":18.76,"P95":19.74},"129":{"P5":15.0,"P85":18.76,"P95":19.75},"130":{"P5":15.01,"P85":18.77,"P95":19.76},"131":{"P5":15.01,"P85":18.77,"P95":19.76},"132":{"P5":15.02,"P85":18.78,"P95":19.76},"133":{"P5":15.02,"P85":18.78,"P95":19.77},"134":{"P5":15.03,"P85":18.79,"P95":19.77},"135":{"P5":15.03,"P85":18.79,"P95":19.78},"136":{"P5":15.04,"P85":18.8,"P95":19.78},"137":{"P5":15.04,"P85":18.8,"P95":19.79},"138":{"P5":15.05,"P85":18.8,"P95":19.79},"139":{"P5":15.05,"P85":18.81,"P95":19.8},"140":{"P5":15.06,"P85":18.81,"P95":19.8},"141":{"P5":15.06,"P85":18.82,"P95":19.81},"142":{"P5":15.07,"P85":18.82,"P95":19.81},"143":{"P5":15.07,"P85":18.82,"P95":19.82},"144":{"P5":15.08,"P85":18.83,"P95":19.82},"145":{"P5":15.08,"P85":18.83,"P95":19.82},"146":{"P5":15.08,"P85":18.84,"P95":19.83},"147":{"P5":15.09,"P85":18.84,"P95":19.83},"148":{"P5":15.09,"P85":18.84,"P95":19.83},"149":{"P5":15.09,"P85":18.84,"P95":19.84},"150":{"P5":15.1,"P85":18.85,"P95":19.84},"151":{"P5":15.1,"P85":18.85,"P95":19.84},"152":{"P5":15.1,"P85":18.85,"P95":19.84},"153":{"P5":15.11,"P85":18.86,"P95":19.85},"154":{"P5":15.11,"P85":18.86,"P95":19.85},"155":{"P5":15.11,"P85":18.86,"P95":19.85},"156":{"P5":15.12,"P85":18.86,"P95":19.86},"157":{"P5":15.12,"P85":18.87,"P95":19.86},"158":{"P5":15.12,"P85":18.87,"P95":19.86},"159":{"P5":15.13,"P85":18.87,"P95":19.86},"160":{"P5":15.13,"P85":18.87,"P95":19.87},"161":{"P5":15.13,"P85":18.88,"P95":19.87},"162":{"P5":15.13,"P85":18.88,"P95":19.87},"163":{"P5":15.14,"P85":18.88,"P95":19.87},"164":{"P5":15.14,"P85":18.88,"P95":19.87},"165":{"P5":15.14,"P85":18.88,"P95":19.88},"166":{"P5":15.14,"P85":18.88,"P95":19.88},"167":{"P5":15.15,"P85":18.89,"P95":19.88},"168":{"P5":15.15,"P85":18.89,"P95":19.88},"169":{"P5":15.15,"P85":18.89,"P95":19.88},"170":{"P5":15.15,"P85":18.89,"P95":19.88},"171":{"P5":15.15,"P85":18.89,"P95":19.88},"172":{"P5":15.16,"P85":18.89,"P95":19.89},"173":{"P5":15.16,"P85":18.89,"P95":19.89},"174":{"P5":15.16,"P85":18.9,"P95":19.89},"175":{"P5":15.16,"P85":18.9,"P95":19.89},"176":{"P5":15.16,"P85":18.9,"P95":19.89},"177":{"P5":15.16,"P85":18.9,"P95":19.89},"178":{"P5":15.17,"P85":18.9,"P95":19.89},"179":{"P5":15.17,"P85":18.9,"P95":19.89},"180":{"P5":15.17,"P85":18.9,"P95":19.89},"181":{"P5":15.17,"P85":18.9,"P95":19.89},"182":{"P5":15.17,"P85":18.9,"P95":19.89},"183":{"P5":15.17,"P85":18.9,"P95":19.89},"184":{"P5":15.17,"P85":18.9,"P95":19.89},"185":{"P5":15.17,"P85":18.9,"P95":19.89},"186":{"P5":15.18,"P85":18.9,"P95":19.89},"187":{"P5":15.18,"P85":18.9,"P95":19.89},"188":{"P5":15.18,"P85":18.9,"P95":19.89},"189":{"P5":15.18,"P85":18.9,"P95":19.89},"190":{"P5":15.18,"P85":18.9,"P95":19.89},"191":{"P5":15.18,"P85":18.9,"P95":19.89},"192":{"P5":15.18,"P85":18.9,"P95":19.89},"193":{"P5":15.18,"P85":18.9,"P95":19.89},"194":{"P5":15.18,"P85":18.9,"P95":19.89},"195":{"P5":15.18,"P85":18.9,"P95":19.89},"196":{"P5":15.18,"P85":18.9,"P95":19.89},"197":{"P5":15.18,"P85":18.9,"P95":19.89},"198":{"P5":15.18,"P85":18.9,"P95":19.89},"199":{"P5":15.18,"P85":18.9,"P95":19.89},"200":{"P5":15.18,"P85":18.9,"P95":19.89},"201":{"P5":15.18,"P85":18.9,"P95":19.89},"202":{"P5":15.18,"P85":18.89,"P95":19.89},"203":{"P5":15.18,"P85":18.89,"P95":19.88},"204":{"P5":15.18,"P85":18.89,"P95":19.88},"205":{"P5":15.18,"P85":18.89,"P95":19.88},"206":{"P5":15.18,"P85":18.89,"P95":19.88},"207":{"P5":15.18,"P85":18.89,"P95":19.88},"208":{"P5":15.18,"P85":18.89,"P95":19.88},"209":{"P5":15.18,"P85":18.89,"P95":19.88},"210":{"P5":15.18,"P85":18.88,"P95":19.88},"211":{"P5":15.18,"P85":18.88,"P95":19.87},"212":{"P5":15.18,"P85":18.88,"P95":19.87},"213":{"P5":15.18,"P85":18.88,"P95":19.87},"214":{"P5":15.18,"P85":18.88,"P95":19.87},"215":{"P5":15.18,"P85":18.88,"P95":19.87},"216":{"P5":15.18,"P85":18.87,"P95":19.86},"217":{"P5":15.18,"P85":18.87,"P95":19.86},"218":{"P5":15.18,"P85":18.87,"P95":19.86},"219":{"P5":15.17,"P85":18.87,"P95":19.86},"220":{"P5":15.17,"P85":18.87,"P95":19.86},"221":{"P5":15.17,"P85":18.86,"P95":19.85},"222":{"P5":15.17,"P85":18.86,"P95":19.85},"223":{"P5":15.17,"P85":18.86,"P95":19.85},"224":{"P5":15.17,"P85":18.86,"P95":19.85},"225":{"P5":15.17,"P85":18.86,"P95":19.84},"226":{"P5":15.17,"P85":18.85,"P95":19.84},"227":{"P5":15.16,"P85":18.85,"P95":19.84},"228":{"P5":15.16,"P85":18.85,"P95":19.84}},"girls":{"24":{"P5":12.03,"P85":15.61,"P95":16.51},"25":{"P5":12.09,"P85":15.69,"P95":16.58},"26":{"P5":12.15,"P85":15.76,"P95":16.66},"27":{"P5":12.2,"P85":15.83,"P95":16.74},"28":{"P5":12.26,"P85":15.9,"P95":16.81},"29":{"P5":12.32,"P85":15.96,"P95":16.88},"30":{"P5":12.37,"P85":16.03,"P95":16.95},"31":{"P5":12.42,"P85":16.09,"P95":17.02},"32":{"P5":12.47,"P85":16.16,"P95":17.08},"33":{"P5":12.52,"P85":16.21,"P95":17.14},"34":{"P5":12.57,"P85":16.27,"P95":17.2},"35":{"P5":12.62,"P85":16.33,"P95":17.26},"36":{"P5":12.66,"P85":16.38,"P95":17.32},"37":{"P5":12.71,"P85":16.43,"P95":17.38},"38":{"P5":12.75,"P85":16.49,"P95":17.43},"39":{"P5":12.79,"P85":16.54,"P95":17.48},"40":{"P5":12.83,"P85":16.58,"P95":17.54},"41":{"P5":12.87,"P85":16.63,"P95":17.58},"42":{"P5":12.91,"P85":16.68,"P95":17.63},"43":{"P5":12.95,"P85":16.72,"P95":17.68},"44":{"P5":12.98,"P85":16.77,"P95":17.73},"45":{"P5":13.02,"P85":16.81,"P95":17.77},"46":{"P5":13.06,"P85":16.85,"P95":17.82},"47":{"P5":13.09,"P85":16.89,"P95":17.86},"48":{"P5":13.12,"P85":16.93,"P95":17.9},"49":{"P5":13.16,"P85":16.97,"P95":17.94},"50":{"P5":13.19,"P85":17.01,"P95":17.98},"51":{"P5":13.22,"P85":17.04,"P95":18.02},"52":{"P5":13.25,"P85":17.08,"P95":18.06},"53":{"P5":13.28,"P85":17.11,"P95":18.1},"54":{"P5":13.31,"P85":17.15,"P95":18.13},"55":{"P5":13.33,"P85":17.18,"P95":18.17},"56":{"P5":13.36,"P85":17.21,"P95":18.2},"57":{"P5":13.39,"P85":17.24,"P95":18.24},"58":{"P5":13.41,"P85":17.28,"P95":18.27},"59":{"P5":13.44,"P85":17.31,"P95":18.3},"60":{"P5":13.46,"P85":17.34,"P95":18.33},"61":{"P5":13.49,"P85":17.37,"P95":18.36},"62":{"P5":13.51,"P85":17.39,"P95":18.39},"63":{"P5":13.54,"P85":17.42,"P95":18.42},"64":{"P5":13.56,"P85":17.45,"P95":18.45},"65":{"P5":13.58,"P85":17.48,"P95":18.48},"66":{"P5":13.61,"P85":17.5,"P95":18.51},"67":{"P5":13.63,"P85":17.53,"P95":18.53},"68":{"P5":13.65,"P85":17.55,"P95":18.56},"69":{"P5":13.67,"P85":17.58,"P95":18.58},"70":{"P5":13.69,"P85":17.6,"P95":18.61},"71":{"P5":13.71,"P85":17.62,"P95":18.63},"72":{"P5":13.73,"P85":17.64,"P95":18.66},"73":{"P5":13.75,"P85":17.67,"P95":18.68},"74":{"P5":13.77,"P85":17.69,"P95":18.7},"75":{"P5":13.78,"P85":17.71,"P95":18.73},"76":{"P5":13.8,"P85":17.73,"P95":18.75},"77":{"P5":13.82,"P85":17.75,"P95":18.77},"78":{"P5":13.84,"P85":17.77,"P95":18.79},"79":{"P5":13.86,"P85":17.79,"P95":18.81},"80":{"P5":13.87,"P85":17.81,"P95":18.83},"81":{"P5":13.89,"P85":17.83,"P95":18.85},"82":{"P5":13.9,"P85":17.85,"P95":18.87},"83":{"P5":13.92,"P85":17.86,"P95":18.89},"84":{"P5":13.93,"P85":17.88,"P95":18.91},"85":{"P5":13.95,"P85":17.9,"P95":18.93},"86":{"P5":13.96,"P85":17.92,"P95":18.94},"87":{"P5":13.98,"P85":17.93,"P95":18.96},"88":{"P5":13.99,"P85":17.95,"P95":18.98},"89":{"P5":14.01,"P85":17.96,"P95":19.0},"90":{"P5":14.02,"P85":17.98,"P95":19.01},"91":{"P5":14.03,"P85":17.99,"P95":19.03},"92":{"P5":14.05,"P85":18.01,"P95":19.04},"93":{"P5":14.06,"P85":18.02,"P95":19.06},"94":{"P5":14.07,"P85":18.04,"P95":19.07},"95":{"P5":14.08,"P85":18.05,"P95":19.09},"96":{"P5":14.1,"P85":18.07,"P95":19.1},"97":{"P5":14.11,"P85":18.08,"P95":19.12},"98":{"P5":14.12,"P85":18.09,"P95":19.13},"99":{"P5":14.13,"P85":18.1,"P95":19.14},"100":{"P5":14.14,"P85":18.12,"P95":19.16},"101":{"P5":14.15,"P85":18.13,"P95":19.17},"102":{"P5":14.16,"P85":18.14,"P95":19.18},"103":{"P5":14.18,"P85":18.15,"P95":19.2},"104":{"P5":14.18,"P85":18.16,"P95":19.21},"105":{"P5":14.2,"P85":18.18,"P95":19.22},"106":{"P5":14.2,"P85":18.19,"P95":19.23},"107":{"P5":14.22,"P85":18.2,"P95":19.24},"108":{"P5":14.22,"P85":18.21,"P95":19.25},"109":{"P5":14.23,"P85":18.22,"P95":19.26},"110":{"P5":14.24,"P85":18.23,"P95":19.28},"111":{"P5":14.25,"P85":18.24,"P95":19.29},"112":{"P5":14.26,"P85":18.25,"P95":19.3},"113":{"P5":14.27,"P85":18.26,"P95":19.31},"114":{"P5":14.28,"P85":18.27,"P95":19.32},"115":{"P5":14.29,"P85":18.28,"P95":19.33},"116":{"P5":14.3,"P85":18.28,"P95":19.34},"117":{"P5":14.3,"P85":18.29,"P95":19.35},"118":{"P5":14.31,"P85":18.3,"P95":19.36},"119":{"P5":14.32,"P85":18.31,"P95":19.36},"120":{"P5":14.33,"P85":18.32,"P95":19.37},"121":{"P5":14.34,"P85":18.33,"P95":19.38},"122":{"P5":14.34,"P85":18.34,"P95":19.39},"123":{"P5":14.35,"P85":18.34,"P95":19.4},"124":{"P5":14.36,"P85":18.35,"P95":19.41},"125":{"P5":14.36,"P85":18.36,"P95":19.41},"126":{"P5":14.37,"P85":18.37,"P95":19.42},"127":{"P5":14.38,"P85":18.37,"P95":19.43},"128":{"P5":14.38,"P85":18.38,"P95":19.44},"129":{"P5":14.39,"P85":18.39,"P95":19.44},"130":{"P5":14.4,"P85":18.39,"P95":19.45},"131":{"P5":14.4,"P85":18.4,"P95":19.46},"132":{"P5":14.41,"P85":18.41,"P95":19.46},"133":{"P5":14.42,"P85":18.41,"P95":19.47},"134":{"P5":14.42,"P85":18.42,"P95":19.48},"135":{"P5":14.43,"P85":18.43,"P95":19.48},"136":{"P5":14.43,"P85":18.43,"P95":19.49},"137":{"P5":14.44,"P85":18.44,"P95":19.5},"138":{"P5":14.44,"P85":18.44,"P95":19.5},"139":{"P5":14.45,"P85":18.45,"P95":19.51},"140":{"P5":14.46,"P85":18.45,"P95":19.52},"141":{"P5":14.46,"P85":18.46,"P95":19.52},"142":{"P5":14.47,"P85":18.46,"P95":19.53},"143":{"P5":14.47,"P85":18.47,"P95":19.53},"144":{"P5":14.48,"P85":18.48,"P95":19.54},"145":{"P5":14.48,"P85":18.48,"P95":19.54},"146":{"P5":14.49,"P85":18.48,"P95":19.55},"147":{"P5":14.49,"P85":18.49,"P95":19.55},"148":{"P5":14.5,"P85":18.49,"P95":19.56},"149":{"P5":14.5,"P85":18.5,"P95":19.56},"150":{"P5":14.5,"P85":18.5,"P95":19.57},"151":{"P5":14.51,"P85":18.51,"P95":19.57},"152":{"P5":14.51,"P85":18.51,"P95":19.57},"153":{"P5":14.52,"P85":18.51,"P95":19.58},"154":{"P5":14.52,"P85":18.52,"P95":19.58},"155":{"P5":14.52,"P85":18.52,"P95":19.59},"156":{"P5":14.53,"P85":18.52,"P95":19.59},"157":{"P5":14.53,"P85":18.53,"P95":19.59},"158":{"P5":14.54,"P85":18.53,"P95":19.6},"159":{"P5":14.54,"P85":18.53,"P95":19.6},"160":{"P5":14.54,"P85":18.54,"P95":19.6},"161":{"P5":14.54,"P85":18.54,"P95":19.61},"162":{"P5":14.55,"P85":18.54,"P95":19.61},"163":{"P5":14.55,"P85":18.55,"P95":19.61},"164":{"P5":14.55,"P85":18.55,"P95":19.62},"165":{"P5":14.56,"P85":18.55,"P95":19.62},"166":{"P5":14.56,"P85":18.55,"P95":19.62},"167":{"P5":14.56,"P85":18.56,"P95":19.62},"168":{"P5":14.57,"P85":18.56,"P95":19.63},"169":{"P5":14.57,"P85":18.56,"P95":19.63},"170":{"P5":14.57,"P85":18.56,"P95":19.63},"171":{"P5":14.57,"P85":18.56,"P95":19.63},"172":{"P5":14.58,"P85":18.57,"P95":19.63},"173":{"P5":14.58,"P85":18.57,"P95":19.64},"174":{"P5":14.58,"P85":18.57,"P95":19.64},"175":{"P5":14.58,"P85":18.57,"P95":19.64},"176":{"P5":14.58,"P85":18.57,"P95":19.64},"177":{"P5":14.59,"P85":18.57,"P95":19.64},"178":{"P5":14.59,"P85":18.58,"P95":19.64},"179":{"P5":14.59,"P85":18.58,"P95":19.64},"180":{"P5":14.59,"P85":18.58,"P95":19.65},"181":{"P5":14.59,"P85":18.58,"P95":19.65},"182":{"P5":14.6,"P85":18.58,"P95":19.65},"183":{"P5":14.6,"P85":18.58,"P95":19.65},"184":{"P5":14.6,"P85":18.58,"P95":19.65},"185":{"P5":14.6,"P85":18.58,"P95":19.65},"186":{"P5":14.6,"P85":18.58,"P95":19.65},"187":{"P5":14.6,"P85":18.58,"P95":19.65},"188":{"P5":14.6,"P85":18.58,"P95":19.65},"189":{"P5":14.6,"P85":18.58,"P95":19.65},"190":{"P5":14.6,"P85":18.58,"P95":19.65},"191":{"P5":14.61,"P85":18.58,"P95":19.65},"192":{"P5":14.61,"P85":18.58,"P95":19.65},"193":{"P5":14.61,"P85":18.58,"P95":19.65},"194":{"P5":14.61,"P85":18.58,"P95":19.65},"195":{"P5":14.61,"P85":18.58,"P95":19.65},"196":{"P5":14.61,"P85":18.58,"P95":19.65},"197":{"P5":14.61,"P85":18.58,"P95":19.65},"198":{"P5":14.61,"P85":18.58,"P95":19.65},"199":{"P5":14.61,"P85":18.58,"P95":19.65},"200":{"P5":14.61,"P85":18.58,"P95":19.65},"201":{"P5":14.61,"P85":18.58,"P95":19.65},"202":{"P5":14.61,"P85":18.58,"P95":19.65},"203":{"P5":14.61,"P85":18.58,"P95":19.65},"204":{"P5":14.61,"P85":18.58,"P95":19.65},"205":{"P5":14.61,"P85":18.58,"P95":19.65},"206":{"P5":14.61,"P85":18.58,"P95":19.64},"207":{"P5":14.61,"P85":18.58,"P95":19.64},"208":{"P5":14.61,"P85":18.57,"P95":19.64},"209":{"P5":14.61,"P85":18.57,"P95":19.64},"210":{"P5":14.61,"P85":18.57,"P95":19.64},"211":{"P5":14.61,"P85":18.57,"P95":19.64},"212":{"P5":14.61,"P85":18.57,"P95":19.64},"213":{"P5":14.61,"P85":18.57,"P95":19.64},"214":{"P5":14.61,"P85":18.57,"P95":19.63},"215":{"P5":14.61,"P85":18.56,"P95":19.63},"216":{"P5":14.61,"P85":18.56,"P95":19.63},"217":{"P5":14.61,"P85":18.56,"P95":19.63},"218":{"P5":14.61,"P85":18.56,"P95":19.63},"219":{"P5":14.61,"P85":18.56,"P95":19.62},"220":{"P5":14.61,"P85":18.56,"P95":19.62},"221":{"P5":14.6,"P85":18.55,"P95":19.62},"222":{"P5":14.6,"P85":18.55,"P95":19.62},"223":{"P5":14.6,"P85":18.55,"P95":19.62},"224":{"P5":14.6,"P85":18.55,"P95":19.61},"225":{"P5":14.6,"P85":18.54,"P95":19.61},"226":{"P5":14.6,"P85":18.54,"P95":19.61},"227":{"P5":14.6,"P85":18.54,"P95":19.61},"228":{"P5":14.6,"P85":18.54,"P95":19.6}}};
+function bmiCategoryChild(bmi, sex, months){
+  const dataMap = bmiPercentiles[sex==='M'?'boys':'girls'];
+  const data = dataMap[months];
+  if(!data){ // fallback
+    return bmiCategory(bmi);
+  }
+  const {P5,P85,P95}=data;
+  if(bmi < P5) return 'Niedowaga';
+  if(bmi < P85) return 'Prawidłowa';
+  if(bmi < P95) return 'Nadwaga';
+  return 'Otyłość';
+}
+
+
+/* === BMI Percentile Enhancement === */
+const LMS_BOYS = {"24":[0.3191,14.4675,0.09156],"25":[0.311,14.5457,0.09134],"26":[0.3032,14.6225,0.09112],"27":[0.2955,14.6977,0.09092],"28":[0.2881,14.7714,0.09072],"29":[0.2809,14.8436,0.09053],"30":[0.2738,14.914,0.09035],"31":[0.2669,14.9822,0.09017],"32":[0.2602,15.0485,0.09],"33":[0.2536,15.1127,0.08984],"34":[0.2472,15.175,0.08968],"35":[0.2409,15.2355,0.08953],"36":[0.2348,15.2942,0.08938],"37":[0.2287,15.3511,0.08924],"38":[0.2228,15.4062,0.0891],"39":[0.217,15.4597,0.08897],"40":[0.2113,15.5115,0.08884],"41":[0.2058,15.5618,0.08871],"42":[0.2003,15.6107,0.08859],"43":[0.1949,15.6582,0.08847],"44":[0.1896,15.7043,0.08835],"45":[0.1844,15.7492,0.08824],"46":[0.1793,15.7929,0.08813],"47":[0.1743,15.8353,0.08802],"48":[0.1693,15.8767,0.08792],"49":[0.1645,15.9169,0.08782],"50":[0.1597,15.956,0.08772],"51":[0.155,15.9941,0.08762],"52":[0.1503,16.0311,0.08753],"53":[0.1457,16.0672,0.08743],"54":[0.1412,16.1023,0.08734],"55":[0.1368,16.1365,0.08725],"56":[0.1324,16.1698,0.08717],"57":[0.128,16.2021,0.08708],"58":[0.1238,16.2336,0.087],"59":[0.1196,16.2642,0.08692],"60":[0.1154,16.2941,0.08684],"61":[0.1113,16.3231,0.08676],"62":[0.1072,16.3513,0.08669],"63":[0.1032,16.3787,0.08661],"64":[0.0993,16.4053,0.08654],"65":[0.0954,16.4312,0.08646],"66":[0.0915,16.4562,0.08639],"67":[0.0877,16.4806,0.08632],"68":[0.084,16.5042,0.08626],"69":[0.0803,16.5271,0.08619],"70":[0.0766,16.5494,0.08612],"71":[0.0729,16.571,0.08606],"72":[0.0693,16.592,0.08599],"73":[0.0658,16.6124,0.08593],"74":[0.0623,16.6321,0.08587],"75":[0.0588,16.6514,0.08581],"76":[0.0554,16.67,0.08575],"77":[0.052,16.6882,0.08569],"78":[0.0486,16.7058,0.08564],"79":[0.0452,16.7229,0.08558],"80":[0.0419,16.7396,0.08552],"81":[0.0387,16.7557,0.08547],"82":[0.0354,16.7715,0.08541],"83":[0.0322,16.7867,0.08536],"84":[0.0291,16.8016,0.08531],"85":[0.0259,16.8161,0.08526],"86":[0.0228,16.8301,0.08521],"87":[0.0197,16.8438,0.08516],"88":[0.0167,16.8571,0.08511],"89":[0.0137,16.8701,0.08506],"90":[0.0107,16.8827,0.08501],"91":[0.0077,16.895,0.08496],"92":[0.0048,16.9069,0.08492],"93":[0.0018,16.9186,0.08487],"94":[-0.0011,16.9299,0.08483],"95":[-0.0039,16.941,0.08478],"96":[-0.0068,16.9518,0.08474],"97":[-0.0096,16.9623,0.0847],"98":[-0.0124,16.9725,0.08465],"99":[-0.0151,16.9825,0.08461],"100":[-0.0179,16.9923,0.08457],"101":[-0.0206,17.0018,0.08453],"102":[-0.0233,17.0111,0.08449],"103":[-0.026,17.0201,0.08445],"104":[-0.0287,17.029,0.08441],"105":[-0.0313,17.0376,0.08437],"106":[-0.0339,17.0461,0.08433],"107":[-0.0365,17.0544,0.08429],"108":[-0.0391,17.0624,0.08426],"109":[-0.0416,17.0704,0.08422],"110":[-0.0442,17.0781,0.08418],"111":[-0.0467,17.0857,0.08415],"112":[-0.0492,17.0931,0.08411],"113":[-0.0517,17.1003,0.08408],"114":[-0.0541,17.1074,0.08404],"115":[-0.0566,17.1144,0.08401],"116":[-0.059,17.1212,0.08397],"117":[-0.0614,17.1279,0.08394],"118":[-0.0638,17.1344,0.08391],"119":[-0.0662,17.1409,0.08387],"120":[-0.0686,17.1472,0.08384],"121":[-0.0709,17.1533,0.08381],"122":[-0.0732,17.1594,0.08378],"123":[-0.0756,17.1653,0.08375],"124":[-0.0779,17.1712,0.08371],"125":[-0.0801,17.1769,0.08368],"126":[-0.0824,17.1825,0.08365],"127":[-0.0847,17.188,0.08362],"128":[-0.0869,17.1934,0.08359],"129":[-0.0891,17.1987,0.08356],"130":[-0.0913,17.2038,0.08354],"131":[-0.0935,17.2089,0.08351],"132":[-0.0957,17.2138,0.08348],"133":[-0.0979,17.2187,0.08345],"134":[-0.1,17.2234,0.08342],"135":[-0.1022,17.2281,0.0834],"136":[-0.1043,17.2326,0.08337],"137":[-0.1064,17.237,0.08334],"138":[-0.1085,17.2414,0.08332],"139":[-0.1106,17.2456,0.08329],"140":[-0.1127,17.2497,0.08326],"141":[-0.1147,17.2537,0.08324],"142":[-0.1168,17.2576,0.08321],"143":[-0.1188,17.2615,0.08319],"144":[-0.1208,17.2652,0.08316],"145":[-0.1229,17.2688,0.08314],"146":[-0.1249,17.2723,0.08311],"147":[-0.1269,17.2757,0.08309],"148":[-0.1288,17.2791,0.08306],"149":[-0.1308,17.2823,0.08304],"150":[-0.1328,17.2854,0.08302],"151":[-0.1347,17.2885,0.08299],"152":[-0.1366,17.2914,0.08297],"153":[-0.1386,17.2943,0.08295],"154":[-0.1405,17.297,0.08292],"155":[-0.1424,17.2997,0.0829],"156":[-0.1443,17.3023,0.08288],"157":[-0.1462,17.3048,0.08285],"158":[-0.148,17.3072,0.08283],"159":[-0.1499,17.3095,0.08281],"160":[-0.1518,17.3117,0.08279],"161":[-0.1536,17.3139,0.08277],"162":[-0.1554,17.316,0.08275],"163":[-0.1573,17.318,0.08272],"164":[-0.1591,17.3199,0.0827],"165":[-0.1609,17.3218,0.08268],"166":[-0.1627,17.3235,0.08266],"167":[-0.1645,17.3252,0.08264],"168":[-0.1663,17.3268,0.08262],"169":[-0.168,17.3284,0.0826],"170":[-0.1698,17.3299,0.08258],"171":[-0.1715,17.3313,0.08256],"172":[-0.1733,17.3326,0.08254],"173":[-0.175,17.3338,0.08252],"174":[-0.1768,17.335,0.0825],"175":[-0.1785,17.3361,0.08248],"176":[-0.1802,17.3371,0.08246],"177":[-0.1819,17.3381,0.08244],"178":[-0.1836,17.339,0.08242],"179":[-0.1853,17.3398,0.08241],"180":[-0.187,17.3406,0.08239],"181":[-0.1886,17.3412,0.08237],"182":[-0.1903,17.3419,0.08235],"183":[-0.1919,17.3424,0.08233],"184":[-0.1936,17.3429,0.08231],"185":[-0.1952,17.3433,0.0823],"186":[-0.1969,17.3437,0.08228],"187":[-0.1985,17.3439,0.08226],"188":[-0.2001,17.3441,0.08224],"189":[-0.2017,17.3443,0.08222],"190":[-0.2033,17.3444,0.08221],"191":[-0.2049,17.3444,0.08219],"192":[-0.2065,17.3443,0.08217],"193":[-0.2081,17.3442,0.08216],"194":[-0.2097,17.344,0.08214],"195":[-0.2112,17.3438,0.08212],"196":[-0.2128,17.3434,0.0821],"197":[-0.2144,17.3431,0.08209],"198":[-0.2159,17.3426,0.08207],"199":[-0.2174,17.3421,0.08205],"200":[-0.219,17.3416,0.08204],"201":[-0.2205,17.3409,0.08202],"202":[-0.222,17.3402,0.08201],"203":[-0.2235,17.3395,0.08199],"204":[-0.2251,17.3387,0.08197],"205":[-0.2266,17.3378,0.08196],"206":[-0.2281,17.3369,0.08194],"207":[-0.2295,17.3359,0.08193],"208":[-0.231,17.3349,0.08191],"209":[-0.2325,17.3338,0.08189],"210":[-0.234,17.3326,0.08188],"211":[-0.2354,17.3314,0.08186],"212":[-0.2369,17.3302,0.08185],"213":[-0.2384,17.3289,0.08183],"214":[-0.2398,17.3275,0.08182],"215":[-0.2413,17.3261,0.0818],"216":[-0.2427,17.3246,0.08179],"217":[-0.2441,17.323,0.08177],"218":[-0.2456,17.3215,0.08176],"219":[-0.247,17.3198,0.08174],"220":[-0.2484,17.3181,0.08173],"221":[-0.2498,17.3164,0.08171],"222":[-0.2512,17.3146,0.0817],"223":[-0.2526,17.3127,0.08168],"224":[-0.254,17.3108,0.08167],"225":[-0.2554,17.3089,0.08165],"226":[-0.2568,17.3069,0.08164],"227":[-0.2581,17.3048,0.08163],"228":[-0.2595,17.3027,0.08161]};
+const LMS_GIRLS = {"24":[0.3977,14.1603,0.09615],"25":[0.3888,14.2276,0.09605],"26":[0.3802,14.2935,0.09595],"27":[0.3718,14.3579,0.09586],"28":[0.3637,14.4208,0.09577],"29":[0.3558,14.4824,0.09568],"30":[0.3481,14.5422,0.09559],"31":[0.3406,14.6003,0.09551],"32":[0.3333,14.6566,0.09543],"33":[0.3262,14.7112,0.09535],"34":[0.3192,14.7642,0.09527],"35":[0.3124,14.8157,0.0952],"36":[0.3058,14.8657,0.09513],"37":[0.2993,14.9142,0.09506],"38":[0.2929,14.9614,0.09499],"39":[0.2867,15.0073,0.09492],"40":[0.2806,15.052,0.09485],"41":[0.2747,15.0955,0.09479],"42":[0.2688,15.138,0.09472],"43":[0.263,15.1794,0.09466],"44":[0.2574,15.2198,0.0946],"45":[0.2519,15.2591,0.09454],"46":[0.2464,15.2974,0.09448],"47":[0.2411,15.3347,0.09442],"48":[0.2358,15.3709,0.09436],"49":[0.2306,15.4063,0.09431],"50":[0.2255,15.4408,0.09425],"51":[0.2205,15.4744,0.0942],"52":[0.2156,15.5072,0.09415],"53":[0.2107,15.5393,0.0941],"54":[0.2059,15.5706,0.09404],"55":[0.2012,15.6012,0.09399],"56":[0.1966,15.6311,0.09394],"57":[0.192,15.6604,0.09389],"58":[0.1875,15.689,0.09385],"59":[0.183,15.717,0.0938],"60":[0.1787,15.7444,0.09375],"61":[0.1743,15.7713,0.09371],"62":[0.17,15.7975,0.09366],"63":[0.1658,15.8232,0.09361],"64":[0.1617,15.8483,0.09357],"65":[0.1575,15.8729,0.09353],"66":[0.1535,15.8968,0.09348],"67":[0.1495,15.9202,0.09344],"68":[0.1455,15.9431,0.0934],"69":[0.1416,15.9655,0.09336],"70":[0.1377,15.9874,0.09332],"71":[0.1339,16.0087,0.09328],"72":[0.1301,16.0297,0.09324],"73":[0.1263,16.0501,0.0932],"74":[0.1226,16.0702,0.09316],"75":[0.119,16.0897,0.09312],"76":[0.1154,16.1089,0.09308],"77":[0.1118,16.1277,0.09304],"78":[0.1082,16.1461,0.093],"79":[0.1047,16.164,0.09297],"80":[0.1013,16.1817,0.09293],"81":[0.0978,16.1989,0.09289],"82":[0.0944,16.2158,0.09286],"83":[0.0911,16.2323,0.09282],"84":[0.0877,16.2485,0.09279],"85":[0.0844,16.2644,0.09275],"86":[0.0811,16.28,0.09272],"87":[0.0779,16.2952,0.09268],"88":[0.0747,16.3101,0.09265],"89":[0.0715,16.3247,0.09262],"90":[0.0684,16.339,0.09258],"91":[0.0652,16.3531,0.09255],"92":[0.0621,16.3668,0.09252],"93":[0.0591,16.3803,0.09249],"94":[0.056,16.3935,0.09245],"95":[0.053,16.4065,0.09242],"96":[0.05,16.4192,0.09239],"97":[0.0471,16.4316,0.09236],"98":[0.0442,16.4438,0.09233],"99":[0.0412,16.4557,0.0923],"100":[0.0384,16.4673,0.09227],"101":[0.0355,16.4788,0.09224],"102":[0.0327,16.49,0.09221],"103":[0.0298,16.5009,0.09218],"104":[0.027,16.5117,0.09215],"105":[0.0243,16.5222,0.09212],"106":[0.0215,16.5325,0.09209],"107":[0.0188,16.5426,0.09206],"108":[0.0161,16.5525,0.09203],"109":[0.0134,16.5622,0.09201],"110":[0.0107,16.5717,0.09198],"111":[0.0081,16.581,0.09195],"112":[0.0055,16.5901,0.09192],"113":[0.0029,16.5991,0.09189],"114":[0.0003,16.6078,0.09187],"115":[-0.0023,16.6164,0.09184],"116":[-0.0048,16.6249,0.09181],"117":[-0.0074,16.6331,0.09179],"118":[-0.0099,16.6412,0.09176],"119":[-0.0124,16.6492,0.09173],"120":[-0.0148,16.657,0.09171],"121":[-0.0173,16.6647,0.09168],"122":[-0.0197,16.6722,0.09166],"123":[-0.0222,16.6795,0.09163],"124":[-0.0246,16.6868,0.09161],"125":[-0.027,16.6939,0.09158],"126":[-0.0293,16.7009,0.09156],"127":[-0.0317,16.7077,0.09153],"128":[-0.034,16.7144,0.09151],"129":[-0.0364,16.721,0.09148],"130":[-0.0387,16.7274,0.09146],"131":[-0.041,16.7337,0.09143],"132":[-0.0433,16.7399,0.09141],"133":[-0.0455,16.746,0.09139],"134":[-0.0478,16.7519,0.09136],"135":[-0.05,16.7577,0.09134],"136":[-0.0522,16.7634,0.09131],"137":[-0.0545,16.7689,0.09129],"138":[-0.0566,16.7743,0.09127],"139":[-0.0588,16.7797,0.09125],"140":[-0.061,16.7848,0.09122],"141":[-0.0632,16.7899,0.0912],"142":[-0.0653,16.7948,0.09118],"143":[-0.0674,16.7997,0.09116],"144":[-0.0696,16.8044,0.09113],"145":[-0.0717,16.809,0.09111],"146":[-0.0737,16.8134,0.09109],"147":[-0.0758,16.8178,0.09107],"148":[-0.0779,16.822,0.09104],"149":[-0.08,16.8262,0.09102],"150":[-0.082,16.8302,0.091],"151":[-0.084,16.8341,0.09098],"152":[-0.086,16.8379,0.09096],"153":[-0.0881,16.8416,0.09094],"154":[-0.0901,16.8452,0.09092],"155":[-0.092,16.8487,0.0909],"156":[-0.094,16.8521,0.09088],"157":[-0.096,16.8554,0.09085],"158":[-0.0979,16.8586,0.09083],"159":[-0.0999,16.8617,0.09081],"160":[-0.1018,16.8648,0.09079],"161":[-0.1037,16.8677,0.09077],"162":[-0.1056,16.8705,0.09075],"163":[-0.1075,16.8732,0.09073],"164":[-0.1094,16.8759,0.09071],"165":[-0.1113,16.8784,0.09069],"166":[-0.1132,16.8808,0.09067],"167":[-0.115,16.8832,0.09065],"168":[-0.1169,16.8854,0.09063],"169":[-0.1187,16.8876,0.09061],"170":[-0.1206,16.8897,0.09059],"171":[-0.1224,16.8917,0.09058],"172":[-0.1242,16.8936,0.09056],"173":[-0.126,16.8954,0.09054],"174":[-0.1278,16.8971,0.09052],"175":[-0.1296,16.8987,0.0905],"176":[-0.1314,16.9002,0.09048],"177":[-0.1331,16.9017,0.09046],"178":[-0.1349,16.9031,0.09044],"179":[-0.1366,16.9043,0.09043],"180":[-0.1384,16.9055,0.09041],"181":[-0.1401,16.9066,0.09039],"182":[-0.1418,16.9077,0.09037],"183":[-0.1436,16.9086,0.09035],"184":[-0.1453,16.9095,0.09033],"185":[-0.147,16.9102,0.09032],"186":[-0.1487,16.9109,0.0903],"187":[-0.1503,16.9116,0.09028],"188":[-0.152,16.9121,0.09026],"189":[-0.1537,16.9125,0.09024],"190":[-0.1554,16.9129,0.09023],"191":[-0.157,16.9132,0.09021],"192":[-0.1587,16.9135,0.09019],"193":[-0.1603,16.9136,0.09017],"194":[-0.1619,16.9137,0.09016],"195":[-0.1635,16.9137,0.09014],"196":[-0.1652,16.9136,0.09012],"197":[-0.1668,16.9135,0.09011],"198":[-0.1684,16.9133,0.09009],"199":[-0.17,16.913,0.09007],"200":[-0.1715,16.9127,0.09006],"201":[-0.1731,16.9122,0.09004],"202":[-0.1747,16.9118,0.09002],"203":[-0.1763,16.9112,0.09001],"204":[-0.1778,16.9106,0.08999],"205":[-0.1794,16.9099,0.08997],"206":[-0.1809,16.9091,0.08996],"207":[-0.1824,16.9083,0.08994],"208":[-0.184,16.9074,0.08992],"209":[-0.1855,16.9065,0.08991],"210":[-0.187,16.9055,0.08989],"211":[-0.1885,16.9044,0.08988],"212":[-0.19,16.9033,0.08986],"213":[-0.1915,16.9021,0.08984],"214":[-0.193,16.9008,0.08983],"215":[-0.1945,16.8995,0.08981],"216":[-0.196,16.8981,0.0898],"217":[-0.1975,16.8967,0.08978],"218":[-0.1989,16.8952,0.08976],"219":[-0.2004,16.8937,0.08975],"220":[-0.2018,16.8921,0.08973],"221":[-0.2033,16.8905,0.08972],"222":[-0.2047,16.8888,0.0897],"223":[-0.2062,16.887,0.08969],"224":[-0.2076,16.8852,0.08967],"225":[-0.209,16.8834,0.08966],"226":[-0.2104,16.8814,0.08964],"227":[-0.2119,16.8795,0.08963],"228":[-0.2133,16.8775,0.08961]};
+
+function erf(x) {
+  // Abramowitz & Stegun formula 7.1.26
+  const sign = (x >= 0) ? 1 : -1;
+  x = Math.abs(x);
+  const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741,
+        a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911;
+  const t = 1 / (1 + p * x);
+  const y = 1 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+  return sign * y;
+}
+
+function normalCDF(x) {
+  return 0.5 * (1 + erf(x / Math.SQRT2));
+}
+
+function getLMS(sex, months) {
+  const m = Math.round(months);
+  return (sex === 'M' ? LMS_BOYS[m] : LMS_GIRLS[m]) || null;
+}
+
+function bmiPercentileChild(bmi, sex, months) {
+  const lms = getLMS(sex, months);
+  if(!lms) return null;
+  const [L, M, S] = lms;
+  const z = (L !== 0) ? (Math.pow(bmi / M, L) - 1) / (L * S) : Math.log(bmi / M) / S;
+  return normalCDF(z) * 100;
+}
+
+function bmiCategoryChildExact(percentile) {
+  if(percentile === null) return '';
+  if(percentile < 5)   return 'Niedowaga';
+  if(percentile < 85)  return 'Prawidłowa';
+  if(percentile < 95)  return 'Nadwaga';
+  return 'Otyłość';
+}
+
+function toNormalBMITarget(weight, height, age, sex) {
+  // dla dzieci: górny zakres normy BMI
+  if(age >= 2 && age <= 19){
+    const months = Math.round(age*12);
+    const dataMap = bmiPercentiles[sex==='M'?'boys':'girls'];
+    const data = dataMap[months];
+    if(data){
+      return data.P85;
+    }
+    return 18.5;
+  }
+  return 24.9;
+}
+function kcalFor1km(activity, weight){
+  let speed_kmh = 1;
+  switch(activity){
+    case 'bike16': speed_kmh=16; break;
+    case 'bike20': speed_kmh=20; break;
+    case 'run':    speed_kmh=8;  break;
+    case 'swim':   speed_kmh=3;  break;
+    case 'walk':   speed_kmh=5;  break;
+  }
+  let MET = 1;
+  switch(activity){
+    case 'bike16': MET=6.0; break;
+    case 'bike20': MET=8.0; break;
+    case 'run':    MET=8.0; break;
+    case 'swim':   MET=7.5; break;
+    case 'walk':   MET=3.0; break;
+  }
+  let time_min = 60 / speed_kmh;
+  let burnPerMin = (MET * 3.5 * weight) / 200;
+  return burnPerMin * time_min;
+}
+
+function generujZaleceniaDoPDF() {
+  const age = parseFloat(document.getElementById('age').value)||0;
+  const weight = parseFloat(document.getElementById('weight').value)||0;
+  const height = parseFloat(document.getElementById('height').value)||0;
+  const bmi = BMI(weight,height);
+  let grupa = '';
+  if(age<18) grupa = 'dziecko';
+  else if(age<60) grupa = 'dorosły';
+  else grupa = 'senior';
+  let zalecenia = '';
+  if(bmi<18.5) {
+    zalecenia = (grupa==='dziecko') ?
+      'Skonsultuj się z pediatrą lub dietetykiem dziecięcym. Niedowaga u dzieci wymaga indywidualnego podejścia.' :
+      'Zadbaj o zwiększenie kaloryczności posiłków, regularne zdrowe przekąski, a w razie utrzymującej się niedowagi – skonsultuj się z dietetykiem.';
+  }
+  else if(bmi<25) {
+    zalecenia = 'Gratulacje! Utrzymuj zbilansowaną dietę bogatą w warzywa, pełnoziarniste produkty oraz dbaj o codzienną aktywność fizyczną.';
+  }
+  else if(bmi<30) {
+    zalecenia = 'Zaleca się ograniczenie słodyczy, tłuszczów nasyconych, słodzonych napojów. Wprowadź więcej warzyw i owoców. Regularna aktywność fizyczna (30-60 min/dzień) jest wskazana. Warto rozważyć konsultację z dietetykiem.';
+  }
+  else {
+    zalecenia = (grupa==='senior') ?
+      'Otyłość u seniorów wymaga szczególnej ostrożności! Zwiększ warzywa, ogranicz kalorie, wybierz lekką aktywność (spacery). Wskazana konsultacja lekarska i dietetyczna.' :
+      'Ogranicz kalorie, unikaj słodyczy i fastfoodów, zwiększ warzywa i wodę w diecie, wdrażaj codzienny ruch (minimum 40 min/dzień). Zalecana konsultacja z dietetykiem.';
+  }
+  return zalecenia;
+}
+document.getElementById('downloadPDF').addEventListener('click', async function() {
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF('p', 'mm', 'a4');
+  const left = 18;
+  let y = 18;
+
+  // 1. Logo
+  const logo = document.querySelector('header img');
+  const toDataURL = url => fetch(url).then(r => r.blob()).then(blob => new Promise(res => {const reader=new FileReader();reader.onload=()=>res(reader.result);reader.readAsDataURL(blob);}));
+  let logoData = '';
+  try { logoData = await toDataURL(logo.src); } catch (e) { logoData = ''; }
+  if(logoData) pdf.addImage(logoData, 'JPEG', left, y, 36, 18);
+
+  // 2. Nagłówek
+  pdf.setFont('helvetica','bold');
+  pdf.setTextColor(0, 131, 141);
+  pdf.setFontSize(19);
+  pdf.text("VILDA CLINIC", left + 44, y + 10);
+  pdf.setFontSize(13);
+  pdf.setTextColor(66, 66, 66);
+  pdf.setFont('helvetica','normal');
+  pdf.text("Raport BMI & Metabolizmu", left + 44, y + 18);
+  y += 28;
+
+  // 3. Dane użytkownika – karta
+  pdf.setFillColor(230, 245, 246);
+  pdf.roundedRect(left, y, 174, 18, 4, 4, 'F');
+  pdf.setFont('helvetica','bold');
+  pdf.setFontSize(12);
+  pdf.setTextColor(0,131,141);
+  pdf.text("DANE PACJENTA", left + 3, y + 7);
+  pdf.setFont('helvetica','normal');
+  pdf.setTextColor(33,33,33);
+
+  const age = document.getElementById('age').value;
+  const weight = parseFloat(document.getElementById('weight').value);
+  const height = document.getElementById('height').value;
+  const sex = document.getElementById('sex').value === 'M' ? "Mężczyzna" : "Kobieta";
+  y += 12;
+  pdf.setFontSize(11);
+  pdf.text(`Płeć: ${sex}`, left + 4, y + 8);
+  pdf.text(`Wiek: ${age} lat`, left + 50, y + 8);
+  pdf.text(`Wzrost: ${height} cm`, left + 90, y + 8);
+  pdf.text(`Waga: ${weight} kg`, left + 140, y + 8);
+  y += 18;
+
+  // 4. BMI/BMR – karta
+  pdf.setFillColor(255,255,255);
+  pdf.roundedRect(left, y, 174, 26, 4, 4, 'F');
+  pdf.setFont('helvetica','bold');
+  pdf.setFontSize(12);
+  pdf.setTextColor(0,131,141);
+  pdf.text("WYNIKI BMI / BMR", left + 3, y + 7);
+  pdf.setFont('helvetica','normal');
+  pdf.setTextColor(40,40,40);
+
+  let bmrBox = document.getElementById('bmrInfo').innerText.replace(/\n+/g, '\n').trim();
+  let bmiLines = pdf.splitTextToSize(bmrBox, 170);
+  pdf.setFontSize(11);
+  pdf.text(bmiLines, left + 4, y + 14);
+  y += Math.max(26, 14 + bmiLines.length * 6);
+
+  // 5. Droga do normy BMI – karta i tabela
+  pdf.setFillColor(248, 251, 250);
+  pdf.roundedRect(left, y, 174, 56, 4, 4, 'F');
+  pdf.setFont('helvetica','bold');
+  pdf.setFontSize(12);
+  pdf.setTextColor(0,131,141);
+  pdf.text("DROGA DO NORMY BMI", left + 3, y + 7);
+
+  // Pobierz wyniki do normy
+  let toNormBox = document.getElementById('toNormInfo').innerText.replace(/\n+/g, '\n').trim();
+  let toNormHTML = document.getElementById('toNormInfo').innerHTML;
+
+  // Tabela aktywności – dystans + czas
+  let tbody = [];
+  let kmRower20 = null;
+  let acts = [
+    {label: '🚴 Rower 16 km/h', key: 'Rower 16 km/h', speed: 16 },
+    {label: '🚴‍♂️ Rower 20 km/h', key: 'Rower 20 km/h', speed: 20 },
+    {label: '🏃 Bieganie', key: 'Bieganie', speed: 8 },
+    {label: '🏊 Pływanie', key: 'Pływanie', speed: 3 },
+    {label: '🚶 Spacer', key: 'Spacer', speed: 5 }
+  ];
+  acts.forEach(act=>{
+    let regex = new RegExp(`${act.key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}.*?([\\d,.]+) (km|m)`);
+    let found = regex.exec(toNormHTML);
+    if(found){
+      let dystans = parseFloat(found[1].replace(',', '.'));
+      let jednostka = found[2];
+      if(act.key==='Rower 20 km/h') kmRower20 = jednostka==='km' ? dystans : dystans/1000;
+      // Czas
+      let km = jednostka==='km'? dystans : dystans/1000;
+      let time = km/act.speed;
+      let hours = Math.floor(time);
+      let mins = Math.round((time-hours)*60);
+      let czasStr = hours > 0 ? `${hours} h ${mins} min` : `${mins} min`;
+      tbody.push([act.label, `${found[1]} ${jednostka}`, czasStr]);
+    }
+  });
+
+  // Wydruk tekstowy podsumowania
+  pdf.setFont('helvetica','normal');
+  pdf.setFontSize(11);
+  pdf.setTextColor(45,45,45);
+  let drogaLines = pdf.splitTextToSize(toNormBox, 170);
+  pdf.text(drogaLines, left + 4, y + 14);
+
+  // Tabela
+  y += 18;
+  pdf.setFillColor(240,248,246);
+  pdf.setDrawColor(200,225,225);
+  pdf.roundedRect(left+2, y, 170, 7+tbody.length*7, 2,2,'F');
+  pdf.setFont('helvetica','bold');
+  pdf.setTextColor(0,131,141);
+  pdf.setFontSize(11);
+  pdf.text("Aktywność", left+7, y+5.5);
+  pdf.text("Dystans", left+64, y+5.5);
+  pdf.text("Czas", left+112, y+5.5);
+  pdf.setFont('helvetica','normal');
+  pdf.setTextColor(25,35,37);
+  tbody.forEach((row,idx)=>{
+    pdf.text(row[0], left+7, y+12+idx*7);
+    pdf.text(row[1], left+64, y+12+idx*7);
+    pdf.text(row[2], left+112, y+12+idx*7);
+  });
+  y += 7+tbody.length*7;
+
+  // Ciekawostka dystansowa (rower 20 km/h)
+  let trasy = [
+    { miasta: "Poznań – Berlin", km: 240 },
+    { miasta: "Kraków – Wiedeń", km: 330 },
+    { miasta: "Gdańsk – Wilno", km: 400 },
+    { miasta: "Wrocław – Budapeszt", km: 550 },
+    { miasta: "Warszawa – Praga", km: 680 },
+    { miasta: "Poznań – Paryż", km: 1200 },
+    { miasta: "Warszawa – Paryż", km: 1600 },
+    { miasta: "Kraków – Paryż", km: 1500 },
+    { miasta: "Wrocław – Amsterdam", km: 1100 },
+    { miasta: "Poznań – Barcelona", km: 2100 },
+    { miasta: "Warszawa – Barcelona", km: 2300 },
+    { miasta: "Warszawa – Rzym", km: 1800 }
+  ];
+  let przyklad = null;
+  if(kmRower20){
+    let found = trasy.find(t=>kmRower20 < t.km*1.15 && kmRower20 > t.km*0.85);
+    if(!found) found = trasy.reduce((a,b)=>Math.abs(b.km-kmRower20)<Math.abs(a.km-kmRower20)?b:a);
+    przyklad = found;
+    pdf.setFont('helvetica','bold');
+    pdf.setFontSize(12);
+    pdf.setTextColor(0,131,141);
+    pdf.text("Przykład:", left+3, y+10);
+    pdf.setFont('helvetica','normal');
+    pdf.setFontSize(11);
+    pdf.setTextColor(30,30,30);
+    pdf.text(`Aby osiągnąć BMI w normie, musisz przejechać rowerem (20 km/h) ok. ${kmRower20 ? kmRower20.toFixed(0) : "?"} km –`, left+3, y+16);
+    pdf.text(`to tyle, ile z ${przyklad.miasta}!`, left+3, y+22);
+    y += 22;
+  } else {
+    y += 6;
+  }
+
+  // 7. Sekcja spalania kalorii – karta
+  pdf.setFillColor(255,255,255);
+  pdf.roundedRect(left, y, 174, 24, 4, 4, 'F');
+  pdf.setFont('helvetica','bold');
+  pdf.setFontSize(12);
+  pdf.setTextColor(0,131,141);
+  pdf.text("SPALANIE KALORII (WYBRANE PRZEKĄSKI / POSIŁKI)", left + 3, y + 7);
+
+  // Wyciągamy ile kalorii do spalenia:
+  let kcal = 0;
+  document.querySelectorAll('.snack-row').forEach(r=>{
+    const key=r.querySelector('select').value;
+    const qty=parseFloat(r.querySelector('input').value)||0;
+    kcal += snacks[key]?.kcal*qty;
+  });
+  document.querySelectorAll('.meal-row').forEach(r=>{
+    const key=r.querySelector('select').value;
+    const qty=parseFloat(r.querySelector('input').value)||0;
+    kcal += meals[key]?.kcal*qty;
+  });
+
+  // Tabela spalania kalorii dla każdej aktywności
+  let spalanie = [];
+  acts.forEach(act=>{
+    let burnPerMin = (act.key==="Pływanie") ? (7.5 * 3.5 * weight) / 200 : (act.speed===3? (7.5 * 3.5 * weight)/200 : (act.speed>=5 ? (act.speed>=16? (6 + (act.speed-16)/4*2)*3.5*weight/200 : 3*3.5*weight/200) : 3*3.5*weight/200)); // uproszczone
+    let minutes = kcal / burnPerMin;
+    let h = Math.floor(minutes/60);
+    let m = Math.round(minutes%60);
+    let timeStr = h > 0 ? `${h} h ${m} min` : `${m} min`;
+    spalanie.push([act.label, timeStr]);
+  });
+
+  pdf.setFont('helvetica','normal');
+  pdf.setFontSize(11);
+  pdf.setTextColor(35,35,35);
+  pdf.text(`Całkowita ilość wybranych kalorii: ${Math.round(kcal)} kcal`, left + 4, y + 14);
+
+  // Mini tabela
+  y += 8;
+  pdf.setFillColor(240,248,246);
+  pdf.roundedRect(left+2, y, 170, 7+spalanie.length*7, 2,2,'F');
+  pdf.setFont('helvetica','bold');
+  pdf.setTextColor(0,131,141);
+  pdf.setFontSize(11);
+  pdf.text("Aktywność", left+7, y+5.5);
+  pdf.text("Czas do spalenia", left+74, y+5.5);
+  pdf.setFont('helvetica','normal');
+  pdf.setTextColor(25,35,37);
+  spalanie.forEach((row,idx)=>{
+    pdf.text(row[0], left+7, y+12+idx*7);
+    pdf.text(row[1], left+74, y+12+idx*7);
+  });
+  y += 7+spalanie.length*7;
+
+  // 8. Data i stopka
+  y = Math.max(y + 12, 270);
+  pdf.setFontSize(10);
+  pdf.setTextColor(140,160,165);
+  pdf.text("Wygenerowano automatycznie przez kalkulator Vilda Clinic", left, y + 10);
+  pdf.setFontSize(9);
+  pdf.text("vildaclinic.pl", left + 142, y + 10);
+
+  pdf.save("Raport_BMI_VildaClinic.pdf");
+});
+
+
+</script>
+<!-- Uruchamiamy update() po pełnym załadowaniu strony -->
+<script>
+  document.addEventListener('DOMContentLoaded', update);
+</script>
+
+</body>
+</html>
