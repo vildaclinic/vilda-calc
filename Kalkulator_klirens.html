@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Kalkulator klirensu kreatyniny – Vilda Clinic</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<!-- 1. IDENTYCZNA SZATA GRAFICZNA -->
+<style>
+:root {
+  --primary: #00838d;
+  --secondary: #00b0a6;
+  --bg: #ffffff;
+  --card: #f5f9f9;
+  --text: #333;
+  --radius: 8px;
+  --shadow: 0 2px 6px rgba(0,0,0,.08);
+  --danger: #c62828;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+header {
+  background: var(--primary);
+  color: #fff;
+  text-align: center;
+  padding: 1rem;
+}
+h1 { margin: 0; font-size: clamp(1.4rem,3vw,2rem); }
+.container { max-width: 960px; margin-inline: auto; padding: 1rem; }
+fieldset {
+  border: 1px solid #d0dede;
+  background: var(--card);
+  padding: 1.4rem 1rem 1rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+legend {
+  font-weight: 600;
+  color: var(--primary);
+  background: var(--card);
+  padding: 0 .6rem;
+  font-size: 1rem;
+  position: absolute;
+  top: -0.7rem;
+  left: 0;
+}
+label {
+  display: block;
+  margin-top: 0.7rem;
+  font-size: 0.95rem;
+}
+input, select, option {
+  font-family: system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  width: 100%;
+  padding: 0.45rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+.flex {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.snack-row, .meal-row {
+  display: grid;
+  grid-template-columns: 1fr 100px 34px;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+button.icon {
+  background: none;
+  border: none;
+  font-size: 1.35rem;
+  cursor: pointer;
+  color: var(--danger);
+  font-weight: 900;
+  line-height: 1;
+}
+button.icon:hover { opacity: 0.8; }
+button.add-row {
+  background: var(--secondary);
+  color: #fff;
+  border: none;
+  padding: 0.45rem 0.9rem;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 0.7rem;
+}
+button.add-row:hover { background: var(--primary); }
+#results {
+  display: none;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+.card {
+  background: var(--card);
+  padding: 1rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.activity-time {
+  margin: 0.4rem 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.6rem;
+}
+th, td {
+  border: 1px solid #ddd;
+  padding: 0.6rem;
+  text-align: center;
+  font-size: 0.95rem;
+}
+th {
+  background: var(--secondary);
+  color: #fff;
+}
+footer {
+  margin-top: 2rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: #666;
+  padding: 1rem 0;
+  background: #fafafa;
+}
+@media(min-width: 700px) {
+  .grid-two {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+}
+
+/* center calorie burn block */
+#timesCard { text-align: center; }
+
+/* Powiększone ramki wyników BMI i BMR */
+.result-box {
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  padding: 10px;
+  margin: 12px 0;
+  font-size: 1.3rem;
+  background: #f8f9fa;
+  text-align: center;
+}
+
+/* --- legenda wewnątrz ramek fieldset --- */
+fieldset {
+  position: relative;
+  padding-top: 1.0rem;   /* miejsce na legendę */
+}
+legend {
+  position: absolute;
+  top: 0;
+  left: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  padding: 0 .5rem;
+  background: var(--card); /* kolor karty, zakrywa linię ramki */
+  border-radius: var(--radius);
+}
+/* zaokrąglone logo jak kontenery wyników */
+header img {
+  border-radius: var(--radius);
+  display: inline-block; /* opcjonalnie, żeby mieć pewność */
+}
+/* Wyśrodkowanie nagłówka w karcie "Droga do normy BMI" */
+#toNormCard h2 {
+  text-align: center;
+}
+
+html, body {
+  height: 100%;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  scroll-behavior: smooth;
+}
+/* =====================  UI REFINEMENTS – 2025‑06‑29  ===================== */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+body {
+  font-size: 16px;
+  line-height: 1.5;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Buttons */
+button,
+input[type="button"],
+input[type="submit"] {
+  cursor: pointer;
+  font: inherit;
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.55rem 1.1rem;
+  background: var(--primary);
+  color: #fff;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+button:hover,
+input[type="button"]:hover,
+input[type="submit"]:hover {
+  background: var(--secondary);
+  box-shadow: var(--shadow);
+}
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Icon (×) buttons inside rows */
+button.icon {
+  background: transparent;
+  color: var(--danger);
+  font-size: 1.25rem;
+  padding: 0.25rem 0.5rem;
+  line-height: 1;
+}
+button.icon:hover {
+  background: rgba(198,40,40,0.1);
+}
+
+/* Inputs & selects */
+input[type="number"],
+input[type="text"],
+select {
+  width: 100%;
+  max-width: 100%;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid #d0d7da;
+  border-radius: var(--radius);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+input:focus,
+select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(0,131,141,0.25);
+}
+
+/* Table design */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+th, td {
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+}
+thead th {
+  background: var(--primary);
+  color: #fff;
+  font-weight: 600;
+}
+tbody tr:nth-child(odd) {
+  background: var(--card);
+}
+tbody tr:hover {
+  background: rgba(0,176,166,0.08);
+}
+
+/* Card shadow & radius unification */
+section.card,
+.result-box,
+#toNormCard {
+  border-radius: var(--radius);
+  background: var(--card);
+  box-shadow: var(--shadow);
+  padding: 1rem;
+}
+
+/* Responsive horizontal scrolling for wide tables */
+.table-scroll {
+  overflow-x: auto;
+}
+.table-scroll > table {
+  min-width: 520px;
+}
+
+/* Utility */
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+
+/* Mobile tweaks */
+@media(max-width: 600px) {
+  th, td { padding: 0.5rem; }
+  button, input[type="button"], input[type="submit"] {
+    width: 100%;
+    margin-top: 0.5rem;
+  }
+}
+
+/* ======================================================================== */
+
+/* === FORM GRID LAYOUT 2025‑07‑02 FIX === */
+#clcrForm {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-rows: auto 1fr;
+  gap: 1rem;
+}
+#clcrForm > div {
+  display: flex;
+  flex-direction: column;
+}
+#clcrForm > div fieldset {
+  flex: 1 1 auto;
+}
+#clcrForm > .patient-card {
+  grid-column: 1 / -1;
+  align-self: start;
+}
+#clcrForm > .patient-card fieldset {
+  height: auto;
+}
+
+/* === RESULT HIGHLIGHT 2025‑06‑29 ===================== */
+:root {
+  --brand: #00838d;
+  --brand-light: #00b0a6;
+  --card-bg: #ffffff;
+  --radius: 12px;
+  --shadow-s: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-l: 0 4px 22px rgba(0,0,0,0.14);
+  --anim-fast: 150ms ease;
+}
+
+button,
+input[type="submit"] {
+  transition: transform var(--anim-fast), box-shadow var(--anim-fast);
+}
+button:hover,
+input[type="submit"]:hover,
+button:focus-visible,
+input[type="submit"]:focus-visible {
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: var(--shadow-l);
+}
+
+.result-card {
+  background: var(--card-bg);
+  border: 2px solid var(--brand);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-s);
+  padding: 1.25rem 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+.result-card.--pulse::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--brand-light);
+  opacity: 0;
+  z-index: -1;
+  animation: pulseBG 1s ease-out forwards;
+}
+@keyframes pulseBG {
+  0% { opacity: 0.15; }
+  100% { opacity: 0; }
+}
+
+.result-number {
+  font: 600 2.75rem/1 "Inter", sans-serif;
+  letter-spacing: -0.02em;
+  color: var(--brand);
+  display: inline-flex;
+  align-items: flex-end;
+}
+.result-number small {
+  font-size: 0.45em;
+  margin-left: 0.1em;
+  color: #444;
+}
+
+@keyframes fadeSlideUp {
+  0% { opacity: 0; transform: translateY(12px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.animate-in {
+  animation: fadeSlideUp 0.45s cubic-bezier(0.4,0,0.2,1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+}
+
+/* === DATA CARDS 2025‑06‑29 ===================== */
+.data-card {
+  background: var(--card);
+  border: 2px solid var(--primary);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.25rem 1rem;
+  overflow: auto;
+}
+
+.data-card table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-card thead {
+  background: var(--primary);
+  color: #fff;
+}
+
+.data-card th,
+.data-card td {
+  padding: 0.4rem 0.6rem;
+  text-align: center;
+}
+
+.data-card tr:nth-child(even) {
+  background: rgba(0,0,0,0.03);
+}
+
+/* === PLAN RESULTS TWO-COLUMN LAYOUT 2025‑06‑30 === */
+#planResults {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+@media(max-width: 600px) {
+  #planResults {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* === BMI & BMR BLOCK FRAME PATCH 2025‑06‑30 === */
+#bmiCard {
+  border: 1px solid #d0dede;
+}
+
+/* === TIMES CARD FRAME PATCH 2025‑06‑30 === */
+#timesCard {
+  border: 1px solid #d0dede;
+}
+
+/* === UI TWEAKS – 50 centyl & Plan (2025‑06‑30) === */
+.bmi50-info {
+  font-size: 1.3rem !important;
+  font-weight: 600;
+  display: block;
+  margin-top: 6px;
+}
+.bmi50-info .bmi50-number {
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+.plan-time {
+  font-size: 1.5rem;
+  font-weight: 600;
+  display: inline-block;
+  margin-bottom: 2px;
+}
+
+/* === PATCH 2025‑07‑01 – PLAN & 50 centyl UI === */
+.small-50 { font-size: 0.1rem; font-weight: 500; }
+.plan-time, .plan-month, .plan-year {
+  font-size: 1.5rem;
+  font-weight: 600;
+  display: inline-block;
+  margin-bottom: 2px;
+}
+
+/* === PLAN CARD – override font size ONLY in plan columns (added 2025‑07‑01) === */
+.plan-col .result-number {
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+/* === PATCH 2025‑07‑01 – pełna szerokość karty Inne wskaźniki === */
+#elecCard { grid-column: 1 / -1; }
+#elecInfo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+#elecInfo .result-box {
+  flex: 1 1 220px;
+}
+
+/* === OUT-OF-RANGE HIGHLIGHT === */
+/* === STAGE HIGHLIGHT COLORS (KDIGO G3a/G3b) === */
+.result-box.warn-orange {
+  background: #fff3e0;   /* jasny pomarańczowy */
+  border-color: #ffa726; /* pomarańcz */
+}
+.result-box.warn-orange strong {
+  color: #ef6c00;
+}
+.result-box.warn-yellow {
+  background: #fffde7;   /* jasny żółty */
+  border-color: #fff176; /* żółty */
+}
+.result-box.warn-yellow strong {
+  color: #fbc02d;
+}
+
+.result-box.out-of-range {
+  background: #ffebee;
+  border-color: #e57373;
+}
+.result-box.out-of-range strong {
+  color: #c62828;
+}
+
+/* === EQUAL HEIGHT INPUT CARDS (2025-07-02) === */
+#clcrForm {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+  grid-auto-rows: 1fr;
+}
+#clcrForm > div {
+  display: flex;
+  flex-direction: column;
+}
+#clcrForm fieldset {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+/* helper boxes (optional) fill remaining flex space */
+.helper-box {
+  margin-top: auto;
+  font-size: 0.85rem;
+  color: #555;
+  background: #eef4f4;
+  border: 1px dashed var(--primary);
+  border-radius: var(--radius);
+  padding: 0.6rem;
+}
+
+/* === FORM GRID LAYOUT 2025-07-02 === */
+#clcrForm {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1rem;
+  grid-auto-rows: 1fr;
+}
+#clcrForm > div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;  /* avoid overflow */
+}
+#clcrForm > div.patient-card {
+  grid-column: 1 / -1;
+}
+/* two-column layout inside patient fieldset */
+#patientSet {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 1rem;
+}
+/* make labels stretch full width inside patient grid */
+#patientSet label {
+  margin-top: 0.7rem;
+}
+
+/* === FULL‑WIDTH “Klirens / eGFR” CARD (2025‑07‑02) === */
+#clcrCard {
+  grid-column: 1 / -1;  /* rozciąga się na obie kolumny kontenera #results */
+}
+</style>
+
+<!-- 2. BIBLIOTEKI -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.19.3/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+
+<body>
+<header>
+  <img src="logo_vilda.jpeg" alt="Vilda Clinic logo" style="max-width:160px;margin-bottom:10px;border-radius:var(--radius);">
+  <h1>Kalkulator klirensu kreatyniny / eGFR</h1>
+</header>
+
+<div class="container">
+
+  <!-- 3. FORMULARZ DANYCH PACJENTA -->
+  <form id="clcrForm" class="flex" onsubmit="return false;">
+    <div class="patient-card" style="flex:1 1 300px;">
+      <fieldset id="patientSet"><legend>Dane pacjenta</legend>
+        <label>Imię i nazwisko:
+          <input type="text" id="fullName"></label>
+        <label>Wiek (lata):
+          <input type="number" id="age" min="0" max="120" required></label>
+        <label>Płeć:
+          <select id="sex">
+            <option value="M">Mężczyzna</option>
+            <option value="F">Kobieta</option>
+          </select></label>
+        <label>Masa ciała (kg):
+          <input type="number" id="weight" min="2" max="300" required></label>
+        <label>Wzrost (cm):
+          <input type="number" id="height" min="30" max="250" required></label>
+      </fieldset>
+    </div>
+
+    <div style="flex:1 1 300px;">
+      <fieldset><legend>Parametry z surowicy</legend>
+        <label>Kreatynina w surowicy (mg/dl):
+          <input type="number" step="0.01" id="Scr" required></label>
+        <label>Kreatynina w moczu 24 h (mg/dl):
+          <input type="number" step="0.1" id="Ucr"></label>
+        <label>Objętość dobowej zbiórki moczu (ml):
+          <input type="number" id="V24" placeholder="np. 1500"></label>
+
+        <label>Sód (Na, mmol/L):
+          <input type="number" id="S_Na" step="0.1"></label>
+        <label>Potas (K, mmol/L):
+          <input type="number" id="S_K" step="0.1"></label>
+        <label>Chlorki (Cl, mmol/L):
+          <input type="number" id="S_Cl" step="0.1"></label>
+        <label>HCO₃⁻ (mmol/L):
+          <input type="number" id="S_HCO3" step="0.1"></label>
+        <label>Fosfor (PO₄, mg/dl):
+          <input type="number" id="S_PO4" step="0.1"></label>
+        <label>Kwas moczowy (mg/dl):
+          <input type="number" id="S_UA" step="0.1"></label>
+      </fieldset>
+    </div>
+
+    <div style="flex:1 1 300px;">
+      <fieldset><legend>Parametry z dobowej zbiórki moczu</legend>
+        <label>Sód (Na, mmol/L):
+          <input type="number" id="U_Na" step="0.1"></label>
+        <label>Potas (K, mmol/L):
+          <input type="number" id="U_K" step="0.1"></label>
+        <label>Chlorki (Cl, mmol/L):
+          <input type="number" id="U_Cl" step="0.1"></label>
+        <label>HCO₃⁻ (mmol/L):
+          <input type="number" id="U_HCO3" step="0.1"></label>
+        <label>Fosfor (PO₄, mg/dl):
+          <input type="number" id="U_PO4" step="0.1"></label>
+        <label>Kwas moczowy (mg/dl):
+          <input type="number" id="U_UA" step="0.1"></label>
+        <label>Wapń (Ca, mg/dl):
+          <input type="number" id="U_Ca" step="0.1"></label>
+        <label>Magnez (Mg, mg/dl):
+          <input type="number" id="U_Mg" step="0.1"></label>
+        <label>Białko całkowite (mg/dl):
+          <input type="number" id="U_Prot" step="1"></label>
+      </fieldset>
+    </div>
+  </form>
+
+  <!-- 4. WYNIKI -->
+  <div id="results" class="grid-two" style="display:none;">
+    <div class="card" id="clcrCard">
+      <h3 id="patientName" class="text-center" style="margin:0 0 0.4rem 0;"></h3>
+      <h2 class="text-center">Klirens / eGFR</h2>
+      <p class="text-center" style="font-size:1.2em;">w nawiasach podano zakres referencyjny dla płci i wieku</p>
+      <div id="clcrInfo"></div>
+      <small>*Klirens 24 h obliczany tylko, gdy podasz zarówno Ucr, V24 i Scr.</small>
+    </div>
+  </div>
+  <div class="card" id="elecCard" style="display:none;">
+    <h2 class="text-center">Inne wskaźniki</h2>
+    <p class="text-center" style="font-size:1.2em;">w nawiasach podano zakres referencyjny dla płci i wieku</p>
+    <div id="elecInfo"></div>
+  </div>
+
+</div> <!-- /.container -->
+
+<button id="downloadPDF" hidden style="display:block; margin:20px auto;">Pobierz raport PDF</button>
+<footer>© <script>document.write(new Date().getFullYear())</script> Vilda Clinic</footer>
+
+<!-- 5. LOGIKA JS -->
+<script>
+/* ---------- 5.1 ŁADOWANIE ARKUSZA Z NORMAMI ---------- */
+let normy = null;
+(async () => {
+  const wb = XLSX.read(await (await fetch('klirens.xlsx')).arrayBuffer());
+  // przyjmujemy, że normy i opisy są w pierwszym arkuszu
+  normy = XLSX.utils.sheet_to_json(wb.Sheets['Arkusz1'], {header: 1, raw: true});
+})();
+
+/* ---------- 5.2 FUNKCJE OBLICZENIOWE ---------- */
+function BSA_DuBois(weight, height) {
+  return 0.007184 * Math.pow(weight, 0.425) * Math.pow(height, 0.725);
+}
+
+/* 1) Klirens dobowy (ml/min/1.73 m²) */
+function clCr24h(Ucr_mg_dl, V24_ml, Scr_mg_dl, BSA) {
+  const cl = (Ucr_mg_dl * V24_ml) / (Scr_mg_dl * 1440);  // 1440 min = 24 h
+  return cl * (1.73 / BSA);
+}
+
+/* 2) Cockcroft–Gault (ml/min, *nie* znormalizowany do 1.73 m²) */
+function clCrCG(sex, age, weight, Scr) {
+  const k = sex === 'F' ? 0.85 : 1;
+  return ((140 - age) * weight * k) / (72 * Scr);
+}
+
+/* 3) eGFR CKD‑EPI 2021 (ml/min/1.73 m²) – uproszczona wersja */
+function eGFR_CKD_EPI(sex, age, Scr) {
+  const κ = sex === 'F' ? 0.7 : 0.9;
+  const α = sex === 'F' ? -0.241 : -0.302;
+  const β = sex === 'F' ? -0.241 : -0.302;
+  const min = Math.min(Scr/κ, 1), max = Math.max(Scr/κ, 1);
+  return 142 * Math.pow(min, α) * Math.pow(max, -1.200) * Math.pow(0.9938, age);
+}
+
+/* 4) Schwartz (dzieci, ml/min/1.73 m²) */
+function clCrSchwartz(height_cm, Scr) {
+  // K‑wartość w arkuszu (wiersz „Wskaźnik (wzór Schwartza)”)
+  const kRow = normy?.find(r => r[0]?.toString().toLowerCase().includes('schwartza'));
+  const k = parseFloat(kRow?.[1]) || 0.55; // fallback
+  return (k * height_cm) / Scr;
+}
+
+/* ===  NOWE OBLICZENIA  =============================================== */
+
+/* ---------- 5.2a  ZAKRESY REFERENCYJNE ---------- */
+const refRanges = {
+  UA_mgkg:  { child: {min: 0, max: 12}, adult: {min: 0, max: 13},  senior: {min: 0, max: 13} },
+  Ca_mgkg:  { child: {min: 0, max: 4},  adult: {min: 0, max: 3},   senior: {min: 0, max: 3} },
+  Mg_mgkg:  { child: {min: 0, max: 3.0}, adult: {min: 0, max: 2.0}, senior: {min: 0, max: 2.0} },
+  PO4_mgkg: { child: {min: 0, max: 40}, adult: {min: 0, max: 35},  senior: {min: 0, max: 35} },
+  Prot_mgkg:{ child: {min: 0, max: 100}, adult: {min: 0, max: 150}, senior: {min: 0, max: 150} },
+  Na_mmol_d:{ child: {min: 20, max: 180}, adult: {min: 40, max: 220}, senior: {min: 40, max: 220} },
+  K_mmol_d: { child: {min: 10, max: 80}, adult: {min: 25, max: 100}, senior: {min: 25, max: 100} },
+  KM_Cr:    { child: {min: 0, max: 0.8}, adult: {min: 0, max: 0.6}, senior: {min: 0, max: 0.6} },
+  Ca_Cr:    { child: {min: 0, max: 0.2}, adult: {min: 0, max: 0.11}, senior: {min: 0, max: 0.11} },
+  Mg_Ca:    { child: {min: 0.2, max: 0.6}, adult: {min: 0.2, max: 0.6}, senior: {min: 0.2, max: 0.6} },
+  PO4_Cr:   { child: {min: 0, max: 2.5}, adult: {min: 0, max: 2.5}, senior: {min: 0, max: 2.5} },
+  B_Cr:     { child: {min: 0, max: 0.15}, adult: {min: 0, max: 0.15}, senior: {min: 0, max: 0.15} },
+  TRPpct:   { child: {min: 90, max: 99}, adult: {min: 85, max: 99}, senior: {min: 80, max: 99} },
+  FENa_pct: { child: {min: 0, max: 1.5}, adult: {min: 0, max: 1},  senior: {min: 0, max: 1} },
+  FEHCO3_pct:{ child: {min: 0, max: 5},   adult: {min: 0, max: 5},   senior: {min: 0, max: 5} },
+  K_frac:   { child: {min: 30, max: 70}, adult: {min: 15, max: 80},  senior: {min: 15, max: 80} },
+  AGs:      { child: {min: 8, max: 16},  adult: {min: 8, max: 12},  senior: {min: 8, max: 14} },
+  AGu:      { child: {min: 30, max: 60}, adult: {min: 30, max: 50}, senior: {min: 30, max: 50} },
+  ktv:      { adult: {min: 1.2, max: 2.5}, senior: {min: 1.2, max: 2.5} }
+};
+
+const clRefRanges = {
+  cl24: { child: {min: 90, max: 140}, adult: {min: 90, max: 130}, senior: {min: 60, max: 120} },
+  cg:   { child: {min: 90, max: 140}, adult: {min: 90, max: 130}, senior: {min: 60, max: 120} },
+  egfr: { child: {min: 90, max: 140}, adult: {min: 90, max: 120}, senior: {min: 60, max: 120} },
+  sch:  { child: {min: 90, max: 140} }
+};
+
+/* uniwersalny wzór na wydalanie mg/kg/d (U mg/dl, V ml/24h, w kg) */
+const excr_mgkg = (U_mg_dl, V_ml, kg) => (U_mg_dl && V_ml && kg)
+       ? (U_mg_dl * V_ml) / (100 * kg) : null;
+
+/* wydalanie mmol/d (U mmol/L, V ml) */
+const excr_mmol_d = (U_mmol_L, V_ml) => (U_mmol_L && V_ml)
+       ? (U_mmol_L * V_ml) / 1000 : null;
+
+/* frakcja wydalnicza – generyczna (%, U_x, S_x, U_cr, S_cr) */
+const FE = (U_x, S_x, U_cr, S_cr) => (U_x && S_x && U_cr && S_cr)
+       ? (U_x * S_cr) / (S_x * U_cr) * 100 : null;
+
+/* wskaźnik X/Cr (U mg/dl : U_cr mg/dl) */
+const ratio = (U, U_cr) => (U && U_cr) ? U / U_cr : null;
+
+/* TRP – Tubular Reabsorption of Phosphate (%) */
+const TRP = (U_PO4, S_PO4, U_Cr, S_Cr) => (U_PO4 && S_PO4 && U_Cr && S_Cr)
+       ? (1 - (U_PO4 * S_Cr) / (S_PO4 * U_Cr)) * 100 : null;
+
+/* anion gap (serum) = Na + K – Cl – HCO3 [mmol/L] */
+const AG_serum = (Na, K, Cl, HCO3) => (Na && Cl && HCO3)
+       ? ((Na + (K || 0)) - Cl - HCO3) : null;
+
+/* anion gap (urine) = U_Na + U_K – U_Cl [mmol/L] */
+const AG_urine = (U_Na, U_K, U_Cl) => (U_Na && U_Cl)
+       ? ((U_Na + (U_K || 0)) - U_Cl) : null;
+
+/* wskaźnik K/(K+Na) w moczu (%) */
+const K_frac = (U_K, U_Na) => (U_K && U_Na) ? U_K / (U_K + U_Na) * 100 : null;
+
+/* KT/V (jedno-zabiegowy uproszczony dializacyjny): K – klirens mocznika,
+   t – czas dializy (h), V – TBW; tu przyjmujemy K = CG‑ClCr, t = 4 h,
+   V = 0.6 * kg; –> możesz dostosować wg ośrodka */
+const KT_V = (ClCr, kg, tHrs = 4) => (ClCr && kg)
+       ? (ClCr * tHrs * 60) / (0.6 * kg) : null;
+
+/* ---------- 5.3 PRZELICZANIE I WYŚWIETLANIE ---------- */
+const $ = id => document.getElementById(id);
+document.querySelectorAll('#clcrForm input, #clcrForm select')
+        .forEach(el => el.addEventListener('input', update));
+
+function update() {
+  const fullName = $('fullName').value.trim();
+  $('patientName').textContent = fullName || '';
+  const age    = +$('age').value;
+  const sex    = $('sex').value;
+  const weight = +$('weight').value;
+  const height = +$('height').value;
+  const Scr    = +$('Scr').value;
+  const Ucr    = +$('Ucr').value;
+  const V24    = +$('V24').value;
+
+  const coreReady = age && weight && height && Scr;  // baza do klirensu
+  const somethingReady = [...document.querySelectorAll('#clcrForm input')].some(el => el.value);
+  if (!somethingReady) {
+    $('results').style.display = 'none';
+    return; // nic nie wpisano
+  }
+
+  const BSA = BSA_DuBois(weight, height);
+  let clHtml = `<div class="result-box"><strong>Powierzchnia ciała</strong> ${BSA.toFixed(2)} m²</div>`;
+
+  /* === Funkcja do wstawiania wyników z normą i kolorem === */
+  function clBox(label, val, unit = '', code) {
+    if (val === null || isNaN(val)) return;
+    const ageGroup = age < 18 ? 'child' : (age < 65 ? 'adult' : 'senior');
+    const rangeSet = clRefRanges[code]?.[ageGroup] || null;
+    let inRange = true;
+    let rangeText = '';
+    if (rangeSet) {
+      const lo = (rangeSet.min !== undefined) ? rangeSet.min : '';
+      const hi = (rangeSet.max !== undefined) ? rangeSet.max : '';
+      rangeText = ` (<span class="range">${lo !== '' ? lo : '–'}‑${hi !== '' ? hi : '–'}${unit}</span>)`;
+      if ((rangeSet.min !== undefined && val < rangeSet.min) || (rangeSet.max !== undefined && val > rangeSet.max)) {
+        inRange = false;
+      }
+    }
+    clHtml += `<div class="result-box${inRange ? '' : ' out-of-range'}"><strong>${label}:</strong> ${val.toFixed(0)}${unit}${rangeText}</div>`;
+  }
+
+  /* — Klirens dobowy — */
+  /* — Cockcroft‑Gault — */
+  const cg = clCrCG(sex, age, weight, Scr);
+  clBox('Cockcroft–Gault', cg, ' ml/min', 'cg');
+
+  /* — eGFR CKD‑EPI — */
+  const egfr = eGFR_CKD_EPI(sex, age, Scr);
+  clBox('eGFR (CKD‑EPI 2021)', egfr, ' ml/min/1.73 m²', 'egfr');
+
+  /* — Klasyfikacja PChN (KDIGO) — */
+  let stageDesc = '', stageClass = '';
+  if (egfr >= 90) {
+    stageDesc = 'G1 – prawidłowa funkcja';
+  } else if (egfr >= 60) {
+    stageDesc = 'G2 – łagodne ↓';
+  } else if (egfr >= 45) {
+    stageDesc = 'G3a – umiarkowane ↓';
+    stageClass = 'warn-yellow';
+  } else if (egfr >= 30) {
+    stageDesc = 'G3b – umiark./ciężkie ↓';
+    stageClass = 'warn-orange';
+  } else if (egfr >= 15) {
+    stageDesc = 'G4 – ciężkie ↓';
+    stageClass = 'out-of-range';
+  } else {
+    stageDesc = 'G5 – niewydolność (dializa)';
+    stageClass = 'out-of-range';
+  }
+  clHtml += `<div class="result-box${stageClass ? ' ' + stageClass : ''}"><strong>Klasyfikacja PChN (KDIGO):</strong> ${stageDesc}</div>`;/* — Schwartz (jeśli <18 l.) — */
+  if (age < 18) {
+    const sch = clCrSchwartz(height, Scr);
+    clBox('Schwartz', sch, ' ml/min/1.73 m²', 'sch');
+  }
+  if (coreReady) {
+    $('clcrInfo').innerHTML = clHtml;
+  } else {
+    $('clcrInfo').innerHTML = '';
+  }
+  $('results').style.display = 'grid';
+
+  /* ----------  RACHUNEK ELEKTROLITÓW  ---------- */
+  const U_Cr = +$('Ucr').value;  // kreatynina w moczu (mg/dl)
+  // V24 already defined above
+  const kg = weight;
+
+  /* ––– wartości z nowych pól ––– */
+  const U_UA  = +$('U_UA').value,  S_UA  = +$('S_UA').value;
+  const U_Ca  = +$('U_Ca').value;
+  const U_Mg  = +$('U_Mg').value;
+  const U_PO4 = +$('U_PO4').value, S_PO4 = +$('S_PO4').value;
+  const U_Na  = +$('U_Na').value,  S_Na  = +$('S_Na').value;
+  const U_K   = +$('U_K').value,   S_K   = +$('S_K').value;
+  const U_Cl  = +$('U_Cl').value,  S_Cl  = +$('S_Cl').value;
+  const U_HCO3= +$('U_HCO3').value, S_HCO3 = +$('S_HCO3').value;
+  const U_Prot= +$('U_Prot').value;
+
+  /* --- WYDALANIA mg/kg/d --- */
+  const UA_mgkg  = excr_mgkg(U_UA, V24, kg);
+  const Ca_mgkg  = excr_mgkg(U_Ca, V24, kg);
+  const Mg_mgkg  = excr_mgkg(U_Mg, V24, kg);
+  const PO4_mgkg = excr_mgkg(U_PO4, V24, kg);
+  const Prot_mgkg= excr_mgkg(U_Prot, V24, kg);
+
+  /* --- WYDALANIA mmol/d --- */
+  const Na_mmol_d = excr_mmol_d(U_Na, V24);
+  const K_mmol_d  = excr_mmol_d(U_K, V24);
+
+  /* --- WSKAŹNIKI / RATIO --- */
+  const KM_Cr = ratio(U_UA, U_Cr);
+  const Ca_Cr = ratio(U_Ca, U_Cr);
+  const Mg_Ca = (U_Mg && U_Ca) ? U_Mg / U_Ca : null;
+  const PO4_Cr = ratio(U_PO4, U_Cr);
+  const B_Cr  = ratio(U_Prot, U_Cr);
+  const K_KNa = K_frac(U_K, U_Na);
+
+  /* --- FRAKCJE I LUKI --- */
+  const TRPpct    = TRP(U_PO4, S_PO4, U_Cr, Scr);
+  const FENa_pct  = FE(U_Na, S_Na, U_Cr, Scr);
+  const FEHCO3_pct= FE(U_HCO3, S_HCO3, U_Cr, Scr);
+  const AGs = AG_serum(S_Na, S_K, S_Cl, S_HCO3);
+  const AGu = AG_urine(U_Na, U_K, U_Cl);
+
+  /* --- KT/V (orientacyjnie) --- */
+  const ktv = KT_V(cg, kg);  // używamy Cockcroft‑Gault jako K
+
+  /* --- BUDUJEMY HTML --- */
+  let ehtml = '';
+
+  function box(label, val, unit = '', code) {
+    if (val === null || isNaN(val)) return;
+    const ageGroup = age < 18 ? 'child' : (age < 65 ? 'adult' : 'senior');
+    const rangeSet = refRanges[code]?.[ageGroup] || null;
+    let inRange = true;
+    let rangeText = '';
+    if (rangeSet) {
+      const lo = (rangeSet.min !== undefined) ? rangeSet.min : '';
+      const hi = (rangeSet.max !== undefined) ? rangeSet.max : '';
+      rangeText = ` (<span class="range">${lo !== '' ? lo : '–'}‑${hi !== '' ? hi : '–'}${unit}</span>)`;
+      if ((rangeSet.min !== undefined && val < rangeSet.min) || (rangeSet.max !== undefined && val > rangeSet.max)) {
+        inRange = false;
+      }
+    }
+    ehtml += `<div class="result-box${inRange ? '' : ' out-of-range'}"><strong>${label}:</strong> ${val.toFixed(1)} ${unit}${rangeText}</div>`;
+  }
+
+  box('Wydalanie kw. moczowego', UA_mgkg, 'mg/kg/d');
+  box('Wskaźnik KM/Cr', KM_Cr, '');
+  box('Wydalanie Ca', Ca_mgkg, 'mg/kg/d', 'Ca_mgkg');        box('Ca/Cr', Ca_Cr, '', 'Ca_Cr');
+  box('Wydalanie Mg', Mg_mgkg, 'mg/kg/d', 'Mg_mgkg');        box('Mg/Ca', Mg_Ca, '', 'Mg_Ca');
+  box('Wydalanie PO₄', PO4_mgkg, 'mg/kg/d', 'PO4_mgkg');     box('PO₄/Cr', PO4_Cr, '', 'PO4_Cr');
+  box('TRP (reabsorpcja PO₄)', TRPpct, '%', 'TRPpct');
+  box('Wydalanie Na', Na_mmol_d, 'mmol/d', 'Na_mmol_d');     box('FENa', FENa_pct, '%', 'FENa_pct');
+  box('Wydalanie K', K_mmol_d, 'mmol/d', 'K_mmol_d');        box('K/(K+Na)', K_KNa, '%', 'K_frac');
+  box('Luka anionowa (surowica)', AGs, 'mmol/L', 'AGs');
+  box('Luka anionowa (mocz)', AGu, 'mmol/L', 'AGu');
+  box('Frakc. HCO₃', FEHCO3_pct, '%', 'FEHCO3_pct');
+  box('Białkomocz', Prot_mgkg, 'mg/kg/d', 'Prot_mgkg');      box('B/Cr', B_Cr, '', 'B_Cr');
+  box('KT/V (orient.)', ktv, '', 'ktv');
+
+  /* wyświetl lub ukryj kartę */
+  $('elecInfo').innerHTML = ehtml;
+  $('elecCard').style.display = ehtml ? 'block' : 'none';
+}
+
+
+/* ---------- 5.4 EKSPORT PDF (wersja dopracowana – jedna strona) ---------- */
+$('downloadPDF').addEventListener('click', async () => {
+  const { jsPDF } = window.jspdf;
+  const margin = 10;                            // margines 10 mm z każdej strony
+  const page = { w: 210, h: 297 };              // A4 mm – orientacja pionowa
+  const avail = { w: page.w - margin * 2, h: page.h - margin * 2 };
+
+  /* 1. Przygotuj ostry zrzut (scale: 2) */
+  const container = document.querySelector('.container');
+  const clone = container.cloneNode(true);
+
+  /* Zamień pola formularza na tekst z wartościami */
+  clone.querySelectorAll('input, select').forEach(el => {
+    const val = (el.tagName === 'SELECT')
+      ? el.options[el.selectedIndex]?.text ?? ''
+      : (el.value ?? '');
+    el.parentNode.replaceChild(document.createTextNode(val), el);
+  });
+
+  /* Upewnij się, że karty wyników są widoczne */
+  clone.querySelector('#results')?.style && (clone.querySelector('#results').style.display = 'grid');
+  clone.querySelector('#elecCard')?.style && (clone.querySelector('#elecCard').style.display = 'block');
+
+  document.body.appendChild(Object.assign(clone, {style: 'position:fixed;left:-9999px;top:0;'}));
+  const canvas = await html2canvas(clone, { scale: 2, useCORS: true });
+  document.body.removeChild(clone);
+
+  /* 2. Oblicz wymiary obrazu w mm przy pełnej szerokości PDF‑a */
+  const pxPerMm = canvas.width / avail.w;
+  const imgHfull = canvas.height / pxPerMm;     // wysokość przy pełnej szerokości
+
+  /* 3. Skaluje tak, by całe płótno mieściło się w obszarze avail (w obie strony) */
+  const scale = imgHfull > avail.h ? avail.h / imgHfull : 1;
+  const imgWmm = avail.w * scale;
+  const imgHmm = imgHfull * scale;
+
+  /* 4. Tworzy PDF z kompresją */
+  const pdf = new jsPDF({
+    orientation: 'p',
+    unit: 'mm',
+    format: 'a4',
+    compress: true
+  });
+
+  const offsetX = margin + (avail.w - imgWmm) / 2;
+  const offsetY = margin + (avail.h - imgHmm) / 2;
+
+  /* 5. Wstaw jeden, skalowany obraz */
+  const imgData = canvas.toDataURL('image/jpeg', 0.8);  // JPEG 80 %
+  pdf.addImage(imgData, 'JPEG', offsetX, offsetY, imgWmm, imgHmm, undefined, 'FAST');
+
+  /* 6. Zapis */
+  const name = $('fullName').value.trim().replace(/\s+/g, '_');
+  const fileName = (name ? name + '_' : '') + 'Klirens_VildaClinic.pdf';
+  pdf.save(fileName);
+});
+
+/* ---------- 5.5 POKAŻ PRZYCISK PDF PO WYNIKACH ---------- */
+const observer = new MutationObserver(() => {
+  $('downloadPDF').hidden = $('results').style.display === 'none';
+});
+observer.observe($('results'), {attributes: true, attributeFilter: ['style']});
+observer.observe($('elecCard'), {attributes: true, attributeFilter: ['style']});
+</script>
+</body>
+</html>
