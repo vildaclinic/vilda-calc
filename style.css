@@ -347,8 +347,43 @@ input[type="submit"]:focus-visible{
 .small-50{font-size:.1rem;font-weight:500;}
 .plan-time,.plan-month,.plan-year{font-size:1.5rem;font-weight:600;display:inline-block;margin-bottom:2px;}
 
-/* === PLAN CARD – override font size ONLY in plan columns (added 2025‑07‑01) === */
-.plan-col .result-number{
-    font-size:1.4rem;   /* adjust as needed */
+/* === TIMES CARD – spójny wygląd z kartą BMI & BMR  (2025‑07‑01) === */
+#timesCard{
+    /* kasujemy globalne centrowanie – zostanie tylko w nagłówku */
+    text-align: initial;
+}
+
+#timesCard h2{
+    text-align:center;          /* nagłówek nadal pośrodku */
+    margin:0 0 .75rem;
     font-weight:600;
 }
+
+/* ramka i tło jak w .result-card / .data-card */
+#timesCard table{
+    width:100%;
+    border-collapse:collapse;
+    background:var(--card);
+    border:2px solid var(--primary);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow-s);
+    overflow:hidden;            /* żeby border-radius obciął tło nagłówka */
+}
+
+/* nagłówek identyczny jak w innych tabel wynikowych */
+#timesCard th{
+    background:var(--primary);
+    color:#fff;
+    font-weight:600;
+}
+
+/* wyrównanie treści do lewej dla czytelności (jak w BMI/BMR) */
+#timesCard td{
+    text-align:left;
+}
+
+/* delikatne paskowanie wierszy – zgodnie z .data-card */
+#timesCard tr:nth-child(even){
+    background:rgba(0,0,0,.03);
+}
+
