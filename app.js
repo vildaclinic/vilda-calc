@@ -615,7 +615,7 @@ function bmiCategoryChild(bmi, sex, months){
 
   const {P5,P85,P95}=data;
   if(bmi < P5) return 'Niedowaga';
-  if(bmi < P85) return 'Prawidłowa';
+  if(bmi < P85) return 'Prawidłowe';
   if(bmi < P95) return 'Nadwaga';
   return 'Otyłość';
 }
