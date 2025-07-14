@@ -83,7 +83,7 @@ function BMI(weight,height){
 
 function bmiCategory(bmi){
   if(bmi<18.5) return 'Niedowaga';
-  if(bmi<25)   return 'Prawidłowa';
+  if(bmi<25)   return 'Prawidłowe';
   if(bmi<30)   return 'Nadwaga';
   return 'Otyłość';
 }
