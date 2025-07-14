@@ -1229,7 +1229,7 @@ function bmiCategoryChild(bmi, sex, months){
   const p = bmiPercentileChild(bmi, sex, months);
   if(p===null) return bmiCategory(bmi); // fallback
   if(p<5) return 'Niedowaga';
-  if(p<85) return 'Prawidłowa';
+  if(p<85) return 'Prawidłowe';
   if(p<95) return 'Nadwaga';
   return 'Otyłość';
 }
