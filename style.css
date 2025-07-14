@@ -1,0 +1,386 @@
+﻿:root{
+  --primary:#00838d;
+  --secondary:#00b0a6;
+  --bg:#ffffff;
+  --card:#f5f9f9;
+  --text:#333;
+  --radius:8px;
+  --shadow:0 2px 6px rgba(0,0,0,.08);
+  --danger:#c62828;
+}
+*{box-sizing:border-box;}
+body{margin:0;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);}
+header{background:var(--primary);color:#fff;text-align:center;padding:1rem;}
+h1{margin:0;font-size:clamp(1.4rem,3vw,2rem);}  
+.container{max-width:960px;margin-inline:auto;padding:1rem;}
+fieldset{
+  border:1px solid #d0dede;
+  background:var(--card);
+  padding:1.4rem 1rem 1rem;
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  margin-bottom:1.5rem;
+  position:relative;
+}
+legend{
+  font-weight:600;
+  color:var(--primary);
+  background:var(--card);
+  padding:0 .6rem;
+  font-size:1rem;
+  position:absolute;
+  top:-0.7rem;
+  left:0;;
+}
+label{display:block;margin-top:0.7rem;font-size:0.95rem;}
+input,select,option{ font-family:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; width:100%;padding:0.45rem;border:1px solid #ccc;border-radius:4px;font-size:1rem;}
+.flex{display:flex;gap:1rem;flex-wrap:wrap;}
+.snack-row,.meal-row{display:grid;grid-template-columns:1fr 100px 34px;gap:0.5rem;align-items:center;margin-top:0.5rem;}
+button.icon{background:none;border:none;font-size:1.35rem;cursor:pointer;color:var(--danger);font-weight:900;line-height:1;}
+button.icon:hover{opacity:0.8;}
+button.add-row{background:var(--secondary);color:#fff;border:none;padding:0.45rem 0.9rem;border-radius:4px;cursor:pointer;margin-top:0.7rem;}
+button.add-row:hover{background:var(--primary);}  
+#results{display:none;flex-direction:column;gap:1.5rem;}
+.card{background:var(--card);padding:1rem;border-radius:var(--radius);box-shadow:var(--shadow);}  
+.activity-time{margin:0.4rem 0;font-size:1.25rem;font-weight:700;}
+table{width:100%;border-collapse:collapse;margin-top:0.6rem;}
+th,td{border:1px solid #ddd;padding:0.6rem;text-align:center;font-size:0.95rem;}
+th{background:var(--secondary);color:#fff;}
+footer{margin-top:2rem;text-align:center;font-size:0.85rem;color:#666;padding:1rem 0;background:#fafafa;}  
+@media(min-width:700px){
+  .grid-two{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+}
+
+/* center calorie burn block */
+#timesCard{ text-align:center; }
+
+/* Powiększone ramki wyników BMI i BMR */
+.result-box{
+  border:2px solid #ccc;
+  border-radius:8px;
+  padding:10px;
+  margin:12px 0;
+  font-size:1.3rem;
+  background:#f8f9fa;
+  text-align:center;
+}
+/* Jednolity wygląd wszystkich wartości liczbowych (BMI, centyle itp.) */
+.result-val {
+  color: var(--primary);
+  /* turkus #00838d – zgodny z nagłówkiem „Dane użytkownika” */
+  font-size: 1.1rem;
+  /* możesz zmieniać wg potrzeb */
+  font-weight: 600;
+}
+/* --- legenda wewnątrz ramek fieldset --- */
+fieldset{
+  position:relative;
+  padding-top:1.0rem;   /* miejsce na legendę */
+}
+legend{
+  position:absolute;
+  top:0;
+  left:0;;
+  font-size:1.1rem;
+  font-weight:600;
+  padding:0 .5rem;
+  background:var(--card); /* kolor karty, zakrywa linię ramki */
+  border-radius:var(--radius);
+}
+/* zaokrąglone logo jak kontenery wyników */
+header img {
+  border-radius: var(--radius);
+  display: inline-block; /* opcjonalnie, żeby mieć pewność */
+}
+/* Wyśrodkowanie nagłówka w karcie "Droga do normy BMI" */
+#toNormCard h2 {
+  text-align: center;
+}
+
+html, body{
+  height:100%;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior-y:contain;
+  scroll-behavior:smooth;
+}
+/* =====================  UI REFINEMENTS – 2025‑06‑29  ===================== */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+body{
+  font-size: 16px;
+  line-height: 1.5;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Buttons */
+button,
+input[type="button"],
+input[type="submit"]{
+  cursor:pointer;
+  font:inherit;
+  border:none;
+  border-radius: var(--radius);
+  padding: .55rem 1.1rem;
+  background: var(--primary);
+  color:#fff;
+  transition:background .2s ease, box-shadow .2s ease;
+}
+button:hover,
+input[type="button"]:hover,
+input[type="submit"]:hover{
+  background: var(--secondary);
+  box-shadow: var(--shadow);
+}
+button:disabled{
+  opacity:.45;
+  cursor:not-allowed;
+}
+
+/* Icon (×) buttons inside rows */
+button.icon{
+  background:transparent;
+  color:var(--danger);
+  font-size:1.25rem;
+  padding:.25rem .5rem;
+  line-height:1;
+}
+button.icon:hover{
+  background:rgba(198,40,40,.1);
+}
+
+/* Inputs & selects */
+input[type="number"],
+input[type="text"],
+select{
+  width:100%;
+  max-width:100%;
+  padding:.45rem .65rem;
+  border:1px solid #d0d7da;
+  border-radius:var(--radius);
+  transition:border-color .2s ease, box-shadow .2s ease;
+}
+input:focus,
+select:focus{
+  outline:none;
+  border-color:var(--primary);
+  box-shadow:0 0 0 2px rgba(0,131,141,.25);
+}
+
+/* Table design */
+table{
+  width:100%;
+  border-collapse:collapse;
+}
+th, td{
+  padding:.6rem .75rem;
+  text-align:left;
+}
+thead th{
+  background:var(--primary);
+  color:#fff;
+  font-weight:600;
+}
+tbody tr:nth-child(odd){
+  background:var(--card);
+}
+tbody tr:hover{
+  background:rgba(0,176,166,.08);
+}
+
+/* Card shadow & radius unification */
+section.card,
+.result-box,
+#toNormCard{
+  border-radius:var(--radius);
+  background:var(--card);
+  box-shadow:var(--shadow);
+  padding:1rem;
+}
+
+/* Responsive horizontal scrolling for wide tables */
+.table-scroll{
+  overflow-x:auto;
+}
+.table-scroll > table{
+  min-width:520px;
+}
+
+/* Utility */
+.text-center{ text-align:center; }
+.text-right{ text-align:right; }
+
+/* Mobile tweaks */
+@media(max-width:600px){
+  th,td{padding:.5rem;}
+  button, input[type="button"], input[type="submit"]{
+    width:100%;
+    margin-top:.5rem;
+  }
+}
+
+/* ======================================================================== */
+
+/* === RESULT HIGHLIGHT 2025‑06‑29 ===================== */
+:root{
+  --brand:#00838d;
+  --brand-light:#00b0a6;
+  --card-bg:#ffffff;
+  --radius:12px;
+  --shadow-s:0 1px 3px rgba(0,0,0,.08);
+  --shadow-l:0 4px 22px rgba(0,0,0,.14);
+  --anim-fast:150ms ease;
+}
+
+button,
+input[type="submit"]{
+  transition:transform var(--anim-fast),box-shadow var(--anim-fast);
+}
+button:hover,
+input[type="submit"]:hover,
+button:focus-visible,
+input[type="submit"]:focus-visible{
+  transform:translateY(-1px) scale(1.02);
+  box-shadow:var(--shadow-l);
+}
+
+.result-card{
+  background:var(--card-bg);
+  border:2px solid var(--brand);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow-s);
+  padding:1.25rem 1.5rem;
+  position:relative;
+  overflow:hidden;
+}
+.result-card.--pulse::after{
+  content:'';
+  position:absolute;inset:0;
+  background:var(--brand-light);
+  opacity:0;z-index:-1;
+  animation:pulseBG 1s ease-out forwards;
+}
+@keyframes pulseBG{
+  0%{opacity:.15;}
+  100%{opacity:0;}
+}
+
+.result-number{
+  font:600 2.75rem/1 "Inter",sans-serif;
+  letter-spacing:-.02em;
+  color:var(--brand);
+  display:inline-flex;
+  align-items:flex-end;
+}
+.result-number small{
+  font-size:.45em;margin-left:.1em;color:#444;
+}
+
+@keyframes fadeSlideUp{
+  0%{opacity:0;transform:translateY(12px);}
+  100%{opacity:1;transform:translateY(0);}
+}
+.animate-in{
+  animation:fadeSlideUp .45s cubic-bezier(.4,0,.2,1);
+}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:0.01ms !important;animation-iteration-count:1 !important;}
+}
+
+
+/* === DATA CARDS 2025‑06‑29 ===================== */
+.data-card{
+  background:var(--card);
+  border:2px solid var(--primary);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:1.25rem 1rem;
+  overflow:auto;
+}
+
+.data-card table{
+  width:100%;
+  border-collapse:collapse;
+}
+
+.data-card thead{
+  background:var(--primary);
+  color:#fff;
+}
+
+.data-card th,
+.data-card td{
+  padding:.4rem .6rem;
+  text-align:center;
+}
+
+.data-card tr:nth-child(even){
+  background:rgba(0,0,0,.03);
+}
+
+
+/* === PLAN RESULTS TWO-COLUMN LAYOUT 2025‑06‑30 === */
+#planResults{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:1rem;
+}
+@media(max-width:600px){
+  #planResults{
+    grid-template-columns:1fr;
+  }
+}
+
+
+/* === BMI & BMR BLOCK FRAME PATCH 2025‑06‑30 === */
+#bmiCard{
+  border:1px solid #d0dede;
+}
+
+
+/* === TIMES CARD FRAME PATCH 2025‑06‑30 === */
+#timesCard{
+  border:1px solid #d0dede;
+}
+
+
+/* === UI TWEAKS – 50 centyl & Plan (2025‑06‑30) === */
+.bmi50-info{font-size:1.3rem !important;font-weight:600;display:block;margin-top:6px;}
+.bmi50-info .bmi50-number{font-size:1.4rem;font-weight:600;}
+.plan-time{font-size:1.5rem;font-weight:600;display:inline-block;margin-bottom:2px;}
+
+
+/* === PATCH 2025‑07‑01 – PLAN & 50 centyl UI === */
+.small-50{font-size:.1rem;font-weight:500;}
+.plan-time,.plan-month,.plan-year{font-size:1.5rem;font-weight:600;display:inline-block;margin-bottom:2px;}
+
+/* === PLAN CARD – override font size ONLY in plan columns (added 2025‑07‑01) === */
+.plan-col .result-number{
+    font-size:1.4rem;   /* adjust as needed */
+    font-weight:600;
+}
+#errorBox {
+  color: var(--primary);
+  /* ten sam kolor co legendy */
+  font-weight: 600;
+  font-size: 1.4rem;
+  text-align: center;
+  /* wyśrodkowanie */
+  margin: 1rem 0;
+  display: none;
+}
+/* Fieldset ma zajmować najwyżej 50 % okna, ale na małych ekranach pełną szerokość */
+.half {
+  flex: 0 1 50%;
+  /* pod Flexboxem – zajmij max 50 % */
+  max-width: 50%;
+  margin: 0 auto;   /* ⬅︎  WYŚRODKOWANIE  */
+}
+@media (max-width: 600px) {
+  .half {
+    flex: 1 1 100%;
+    /* na telefonach / wąskich oknach – wróć do pełnej szerokości */
+    max-width: 100%;
+    margin: 0;       /* pełna szerokość – auto niepotrzebne */
+  }
+}
+#toNormCard.result-card{ border: none; }
