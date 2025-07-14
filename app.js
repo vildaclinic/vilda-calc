@@ -823,7 +823,7 @@ function bmiPercentileChild(bmi, sex, months) {
 function bmiCategoryChildExact(percentile) {
   if(percentile === null) return '';
   if(percentile < 5)   return 'Niedowaga';
-  if(percentile < 85)  return 'Prawidłowa';
+  if(percentile < 85)  return 'Prawidłowe';
   if(percentile < 97.7)  return 'Nadwaga';
   return 'Otyłość';
 }
