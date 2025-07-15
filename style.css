@@ -378,3 +378,30 @@ input[type="submit"]:focus-visible{
   }
 }
 #toNormCard.result-card{ border: 1px solid #d0dede;}
+
+/* === Ujednolicenie wyglądu formularza „Dane użytkownika” do kart wynikowych === */
+.user-card{
+  font-family: 'Inter', sans-serif;   /* ten sam krój co karty wyników */
+  font-size: 1.1rem;                  /* większa baza (karty mają ~1.1rem) */
+  line-height: 1.3;
+  box-shadow: var(--shadow);          /* ten sam cień co .result-card */
+  border: 1px solid #d0dede;          /* subtelna ramka jak karty */
+  border-radius: var(--radius);
+}
+
+/* legend jako nagłówek karty */
+.user-card legend{
+  font-size: 1.25rem;
+  font-weight: 600;
+  padding-inline: .4rem;
+}
+
+/* większe pola input/select wewnątrz .user-card */
+.user-card input,
+.user-card select{
+  font-family: 'Inter', sans-serif;
+  font-size: 1.05rem;
+  padding: .65rem .85rem;     /* było 0.45 / 0.65 – teraz jak w kartach */
+  border-radius: .4rem;
+  border: 1px solid #c0c8c8;
+}
