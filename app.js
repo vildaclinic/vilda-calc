@@ -503,7 +503,12 @@ if (age >= 3 && age <= 18) {
     }
 
     bmrInfo.innerHTML   = html;
-    results.style.display = 'grid';
+    if(window.innerWidth >= 700 && ('grid' in document.body.style)){
+      results.style.display = 'grid';   // desktop lub tablet – 2‑kolumnowy układ
+    }else{
+      results.style.display = 'block';  // telefon – wszystko w jednej kolumnie
+}
+
   }
 
   /* ---------- DROGA DO NORMY BMI ---------- */
