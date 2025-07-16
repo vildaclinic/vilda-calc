@@ -522,3 +522,13 @@ body.keyboard-space{
 }
 /* ← NOWA LINIA – unikamy ponownego „rozmnożenia” czcionki wewnątrz */
 .result-number--small .result-number{font-size:inherit;}
+
+/* === MOBILE FIX: #results ma być widoczny również bez CSS Grid === */
+@media (max-width: 699px){
+  #results{          /* sekcja wyników (Centyle, BMI, BMR …) */
+    display:block;   /* zamiast grid – kolumna jedna pod drugą  */
+  }
+  .grid-two{
+    display:block;   /* zerujemy ustawienie grid na wąskim viewporcie */
+  }
+}
