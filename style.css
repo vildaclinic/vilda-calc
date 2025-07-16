@@ -513,7 +513,7 @@ input[type="submit"]:focus-visible{
 }
 /* ===== Mobilna „podkładka” pod klawiaturę – włączana klasą ===== */
 body.keyboard-space{
-  padding-bottom: 60vh;   /* 60 % wysokości okna – sprawdzone na iOS/Android */
+  padding-bottom: 80vh;   /* 60 % wysokości okna – sprawdzone na iOS/Android */
 }
 /* mniejszy numer (½ rozmiaru BMI) */
 .result-number--small{
