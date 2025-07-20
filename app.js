@@ -2654,17 +2654,3 @@ function getLMS(sex, months){
   obs.observe(document.body,{childList:true,subtree:true});
   document.addEventListener('DOMContentLoaded',transformPlan);
 })();
-/* ==== KEEP FIELD IN VIEW ON MOBILE (Chrome Android / Safari iOS) ==== */
-(function(){
-  const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints>0;
-  if(!isTouch) return;   // desktop? – pomijamy
-
-  document.addEventListener('focusin', e=>{
-    const el = e.target;
-    if(!el.matches('input, select, textarea')) return;
-
-    setTimeout(()=>{      // czekamy aż klawiatura wyskoczy (≈300 ms)
-      el.scrollIntoView({behavior:'smooth', block:'center'});
-    }, 300);
-  });
-})();
