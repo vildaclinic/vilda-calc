@@ -155,7 +155,25 @@
 </div>
   <!-- karta dla dzieci <5 lat z nadwagą/otyłością – komunikat o konsultacji -->
   <div id="childConsultCard" class="plan-card" style="display:none;"></div>
-    <!-- koniec Plan odchudzania -->
+  <!-- koniec Plan odchudzania -->
+  <!--
+    Nowy blok źródeł i zastrzeżeń (2025‑07‑24)
+    Ten fieldset jest domyślnie ukryty i pojawia się dopiero po wykonaniu obliczeń.
+    Umieszczamy go wewnątrz kontenera, aby zachować spójny układ z innymi kartami.
+  -->
+  <fieldset id="sourceFieldset" style="display:none;">
+    <legend>Źródła danych i zastrzeżenia</legend>
+    <p style="margin-bottom:0.5rem;">Kalkulator korzysta z następujących źródeł danych antropometrycznych i norm rozwojowych:</p>
+    <ol style="padding-left:1.25rem;margin-top:0;">
+      <li>WHO Multicentre Growth Reference Study Group. <em>WHO Child Growth Standards based on length/height, weight and age.</em> Acta&nbsp;Paediatr&nbsp;Suppl. 2006 Apr;450:76‑85.</li>
+      <li>Kułaga&nbsp;Z, Litwin&nbsp;M, Tkaczyk&nbsp;M, Palczewska&nbsp;I, Zajączkowska&nbsp;M, Zwolińska&nbsp;D, Krynicki&nbsp;T, Wasilewska&nbsp;A, Moczulska&nbsp;A, Morawiec‑Knysak&nbsp;A, Barwicka&nbsp;K, Grajda&nbsp;A, Gurzkowska&nbsp;B, Napieralska&nbsp;E, Pan&nbsp;H. <em>Polish 2010 growth references for school‑aged children and adolescents.</em> Eur&nbsp;J&nbsp;Pediatr. 2011 May;170(5):599‑609.</li>
+      <li>Bloem&nbsp;M. <em>The 2006 WHO child growth standards.</em> BMJ. 2007 Apr 7;334(7596):705‑6.</li>
+      <li>Kułaga&nbsp;Z, Grajda&nbsp;A, Gurzkowska&nbsp;B, Góźdź&nbsp;M, Wojtyło&nbsp;M, Swiąder&nbsp;A, Różdżyńska‑Świątkowska&nbsp;A, Litwin&nbsp;M. <em>Polish 2012 growth references for preschool children.</em> Eur&nbsp;J&nbsp;Pediatr. 2013 Jun;172(6):753‑61.</li>
+    </ol>
+    <p style="margin-top:0.5rem;">
+      Zastosowane w kalkulatorze algorytmy dopasowują obliczenia do wieku, wzrostu i masy ciała, aby wyniki były możliwie najbardziej adekwatne do indywidualnych parametrów użytkownika. Narzędzie ma charakter wyłącznie poglądowy i edukacyjny – nie zastępuje ono porady lekarskiej. Na podstawie jego wyników nie należy podejmować decyzji terapeutycznych ani leczniczych; w przypadku wątpliwości należy skonsultować się z odpowiednim specjalistą.
+    </p>
+  </fieldset>
 </div>
 <button id="downloadPDF" style="margin-top:16px;" hidden>Pobierz raport PDF</button>
 <footer>
