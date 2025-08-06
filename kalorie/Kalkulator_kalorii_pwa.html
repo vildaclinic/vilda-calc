@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8" />
+<title>Kalkulator Centyli, BMI &amp; Spalania kalorii – Vilda Clinic</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link href="style.css" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <!-- Progressive Web App meta tags and manifest -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#00838d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Kalkulator kalorii">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="msapplication-TileColor" content="#00838d">
+  <meta name="msapplication-TileImage" content="icons/icon-144x144.png">
+  <!-- iOS touch icons -->
+  <link rel="apple-touch-icon" sizes="120x120" href="icons/icon-120x120.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152x152.png">
+  <link rel="apple-touch-icon" sizes="167x167" href="icons/icon-167x167.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180x180.png">
+</head>
+<body>
+
+<header>
+  <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">
+    <img src="logo_vilda.jpeg" alt="Vilda Clinic – strona główna"
+         style="max-width:160px;margin-bottom:10px; border-radius:var(--radius);">
+  </a>
+  <h1>Kalkulator Centyli, BMI &amp; Spalania kalorii</h1>
+</header>
+<div class="container">
+<form id="calcForm" class="flex" onsubmit="return false;">
+  <div class="half">
+    <fieldset class="user-card"><legend>Dane użytkownika</legend>
+      <label>Wiek (lata):
+        <input type="number" id="age" min="1" max="100" oninput="debouncedUpdate()" required></label>
+      <label>Płeć:
+        <select id="sex" onchange="debouncedUpdate()">
+          <option value="M">Mężczyzna</option>
+          <option value="F">Kobieta</option>
+        </select></label>
+      <label>Waga (kg):
+        <input type="number" id="weight" min="10" max="300" oninput="debouncedUpdate()" required></label>
+      <label>Wzrost (cm):
+        <input type="number" id="height" min="50" max="250" oninput="debouncedUpdate()" required></label>
+    </fieldset>
+  </div>
+</form>
+<div id="errorBox"></div>
+<div id="results" class="grid-two">
+  <div class="card" id="bmiCard">
+    <h2 style="text-align:center;">Centyle, BMI &amp; Basal Metabolic Rate</h2>
+    <div id="bmrInfo"></div>
+    <!-- OLAF / WHO Toggle (poprawiony) -->
+    <div id="dataToggleContainer" class="toggle-wrap">
+      <span class="label-left">OLAF 2010 Polska</span>
+      <label class="switch">
+        <input type="checkbox" id="dataToggle" checked>
+        <span class="slider"></span>
+      </label>
+      <span class="label-right">WHO 2007 - standard globalny</span>
+    </div>
+    <p style="font-size:0.9rem;margin-top:0.5rem;">
+      <strong>BMI</strong> (Body Mass Index) to wskaźnik masy ciała obliczany jako
+      stosunek masy (kg) do kwadratu wzrostu (m²). Pomaga ocenić, czy Twoja masa
+      ciała jest prawidłowa, z niedowagą, nadwagą czy otyłością.
+    </p>
+    <p style="font-size:0.9rem;margin-top:0.5rem;">
+      <strong>BMR</strong> (Basal Metabolic Rate) to ilość energii, jaką Twoje ciało zużywa w spoczynku
+      – kalorie niezbędne na podstawowe procesy życiowe (oddychanie, krążenie, termoregulacja).
+    </p>
+  </div>
+  <!-- Kontener grupujący kartę Wskaźnika Cole'a i drogę do normy BMI -->
+  <div id="normWrapper" class="norm-wrapper">
+    <!-- Karta Wskaźnika Cole'a – wypełniana dynamicznie w JS -->
+    <div class="card" id="coleCard" style="display:none;">
+      <!-- Wyśrodkowujemy nagłówek karty wskaźnika Cole'a poprzez style inline -->
+      <h2 style="text-align:center;">Wskaźnik Cole'a</h2>
+      <div id="coleInfo" class="result-box"></div>
+      <p id="coleExplanation" class="cole-explanation"></p>
+      <!-- Tabela norm wskaźnika Cole'a; wypełniana i wyświetlana przez JS -->
+      <div id="coleNormTable" style="display:none;"></div>
+    </div>
+    <!-- Karta „Droga do normy BMI” – zachowana oryginalna struktura -->
+    <div class="card" id="toNormCard" style="display:none;">
+      <h2>Droga do normy BMI</h2>
+      <div id="toNormInfo"></div>
+      <small>*Szacunkowa liczba km/metrów i czasu do przejścia/przejechania/przebiegnięcia, by BMI osiągnęło normę.</small>
+    </div>
+  </div>
+  <div style="flex:1 1 300px;">
+    <fieldset class="food-field">
+      <legend>Przekąski</legend>
+      <div id="snackList"></div>
+      <button type="button" class="add-row" onclick="addSnackRow()">+ dodaj przekąskę</button>
+    </fieldset>
+    <fieldset class="food-field">
+      <legend>Dania obiadowe</legend>
+      <div id="mealList"></div>
+      <button type="button" class="add-row" onclick="addMealRow()">+ dodaj danie</button>
+    </fieldset>
+    <!-- Karta sumy kalorii -->
+    <div id="totalCard" class="card total-card" style="display:none;">
+      <h2>Łączna kaloryczność
+        <span class="subhead">(tego co wybrałeś powyżej)</span>
+      </h2>
+    
+      <!-- Całkowite kcal – wypełnia JS -->
+      <div id="totalKcal" style="font-size:1.2rem;text-align:center;margin-top:4px;"></div>
+    
+      <!-- Lista pozycji – wypełnia JS -->
+      <div id="totalList"></div>
+    </div>
+  </div>
+  <div class="card" id="timesCard">
+    <h2 style="text-align:center;">Spalanie kalorii<span class="subhead">(czyli ile czasu zajmie mi<br>spalenie tego, co wybrałam/em)</span>
+</h2>
+    <div id="times"></div>
+    <small>*Obliczenia oparte na wartościach MET – wyniki orientacyjne.</small>
+  </div>
+</div>
+  <!-- 6. Plan odchudzania – formularz i wyniki -->
+  <div id="planCard" class="plan-card" style="display:none;">
+  <h2 style="text-align:center;">Plan odchudzania</h2>
+  <!-- ostrzeżenie dla dzieci <10 lat z nadwagą/otyłością (wyświetlane w planie) -->
+  <div id="planWarning" class="plan-warning-card" style="display:none;"></div>
+  <!-- WYŚRODKOWANE POLA FORMULARZA -->
+  <!--
+    Zmieniono strukturę formularza planu odchudzania na dwie wyraźne sekcje.
+    Każdy krok (wybór poziomu aktywności i wybór diety) posiada własny nagłówek,
+    co ułatwia orientację osobom korzystającym z kalkulatora po raz pierwszy.
+    Elementy opisowe (PAL oraz dieta) zostały przeniesione do dedykowanych kontenerów
+    wewnątrz sekcji kroków. Dodatkowe style przypisane klasom `.plan-steps`,
+    `.plan-step`, `.plan-desc` oraz `.calorie-info` są definiowane w pliku CSS.
+  -->
+  <div id="planInputs" class="plan-steps" style="margin-bottom:1rem;">
+    <!-- Krok pierwszy: wybór poziomu aktywności -->
+    <div class="plan-step">
+      <h3>Krok 1: Wybierz poziom aktywności&nbsp;(PAL)</h3>
+      <select id="palFactor" onchange="debouncedUpdate()">
+        <option value="1.2">1.2 – bardzo niska (osoby unieruchomione)</option>
+        <option value="1.4">1.4 – niska (praca siedząca, brak ćwiczeń)</option>
+        <option value="1.6" selected>
+          1.6 – umiarkowana (siedząca praca + 1‑3 treningi/tydz.)
+        </option>
+        <option value="1.8">1.8 – wysoka (fizyczna praca / sport 4‑5×/tydz.)</option>
+        <option value="2.0">2.0 – bardzo wysoka (wyczynowi sportowcy)</option>
+      </select>
+      <!-- Opis wybranego poziomu aktywności PAL – wypełniany przez JS -->
+      <div id="palDesc" class="plan-desc" style="display:none;"></div>
+    </div>
+    <!-- Krok drugi: wybór diety -->
+    <div class="plan-step" id="dietChoiceWrap" style="display:none;">
+      <h3>Krok 2: Wybierz rodzaj diety lub pozostaw rekomendowany</h3>
+      <select id="dietLevel" onchange="updatePlanFromDiet()">
+        <!-- opcje wypełnia JS -->
+      </select>
+      <!-- Opis wybranej diety – wypełniany przez JS -->
+      <div id="dietDesc" class="plan-desc" style="display:none;"></div>
+      <!-- Informacja o kaloryczności wybranej diety (zaokrąglona do 100 kcal) -->
+      <div id="dietCalorieInfo" class="calorie-info" style="display:none;"></div>
+    </div>
+  </div>
+  <div id="planResults"></div>
+</div>
+  <!-- karta dla dzieci <5 lat z nadwagą/otyłością – komunikat o konsultacji -->
+  <div id="childConsultCard" class="plan-card" style="display:none;"></div>
+  <!-- koniec Plan odchudzania -->
+  <!--
+    Nowy blok źródeł i zastrzeżeń (2025‑07‑24)
+    Ten fieldset jest domyślnie ukryty i pojawia się dopiero po wykonaniu obliczeń.
+    Umieszczamy go wewnątrz kontenera, aby zachować spójny układ z innymi kartami.
+  -->
+  <fieldset id="sourceFieldset" style="display:none;">
+    <legend>Źródła danych i zastrzeżenia</legend>
+    <p style="margin-bottom:0.5rem;">Kalkulator korzysta z następujących źródeł danych antropometrycznych i norm rozwojowych:</p>
+    <ol style="padding-left:1.25rem;margin-top:0;">
+      <li>WHO Multicentre Growth Reference Study Group. <em>WHO Child Growth Standards based on length/height, weight and age.</em> Acta&nbsp;Paediatr&nbsp;Suppl. 2006 Apr;450:76‑85.</li>
+      <li>Kułaga&nbsp;Z, Litwin&nbsp;M, Tkaczyk&nbsp;M, Palczewska&nbsp;I, Zajączkowska&nbsp;M, Zwolińska&nbsp;D, Krynicki&nbsp;T, Wasilewska&nbsp;A, Moczulska&nbsp;A, Morawiec‑Knysak&nbsp;A, Barwicka&nbsp;K, Grajda&nbsp;A, Gurzkowska&nbsp;B, Napieralska&nbsp;E, Pan&nbsp;H. <em>Polish 2010 growth references for school‑aged children and adolescents.</em> Eur&nbsp;J&nbsp;Pediatr. 2011 May;170(5):599‑609.</li>
+      <li>Bloem&nbsp;M. <em>The 2006 WHO child growth standards.</em> BMJ. 2007 Apr 7;334(7596):705‑6.</li>
+      <li>Kułaga&nbsp;Z, Grajda&nbsp;A, Gurzkowska&nbsp;B, Góźdź&nbsp;M, Wojtyło&nbsp;M, Swiąder&nbsp;A, Różdżyńska‑Świątkowska&nbsp;A, Litwin&nbsp;M. <em>Polish 2012 growth references for preschool children.</em> Eur&nbsp;J&nbsp;Pediatr. 2013 Jun;172(6):753‑61.</li>
+    </ol>
+    <p style="margin-top:0.5rem;">
+      Zastosowane w kalkulatorze algorytmy dopasowują obliczenia do wieku, wzrostu i masy ciała, aby wyniki były możliwie najbardziej adekwatne do indywidualnych parametrów użytkownika. Narzędzie ma charakter wyłącznie poglądowy i edukacyjny – nie zastępuje ono porady lekarskiej. Na podstawie jego wyników nie należy podejmować decyzji terapeutycznych ani leczniczych; w przypadku wątpliwości należy skonsultować się z odpowiednim specjalistą.
+    </p>
+  </fieldset>
+</div>
+<button id="downloadPDF" style="margin-top:16px;" hidden>Pobierz raport PDF</button>
+<footer>
+  <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">© Vilda Clinic sp. z o.o.</a>
+</footer>
+<!-- Uruchamiamy update() po pełnym załadowaniu strony -->
+<!-- === UI ENHANCEMENT SCRIPT 2025‑06‑29 === -->
+<!-- WHO patch merged automatically -->
+<!-- === WHO 2006 BMI-for-age (0–60 mies.) tables inserted 2025‑06‑30 === -->
+<!-- === BMI 50th percentile info patch – 2025‑06‑30 === -->
+<!-- === ENHANCEMENTS: bigger/animated plan time, bold kg reduction, bigger 50th centyl info === -->
+<!-- === PATCH 2025‑07‑01 – Small 50 and full time animation === -->
+
+<script src="app.js" defer></script>
+
+<!-- Register the service worker for offline support and updates -->
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('service-worker-kalorii.js')
+        .then(function(registration) {
+          console.log('Service worker registered with scope:', registration.scope);
+        })
+        .catch(function(error) {
+          console.error('Service worker registration failed:', error);
+        });
+    });
+  }
+</script>
+</body>
+</html>
