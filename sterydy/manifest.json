@@ -1,6 +1,6 @@
 {
   "name": "Kalkulator dawek steroidów – Vilda Clinic",
-  "short_name": "Dawki steroidów",
+  "short_name": "Steroidy",
   "description": "Kalkulator przeliczania dawek steroidów oraz model supresji osi HPTA. Pozwala konwertować dawki między różnymi sterydami i wizualizuje wpływ cyklu AAS.",
   "lang": "pl-PL",
   // Start the app at its main HTML file without a leading slash so that it
