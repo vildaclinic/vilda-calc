@@ -1,6 +1,6 @@
 {
   "name": "Kalkulator klirensu kreatyniny – Vilda Clinic",
-  "short_name": "Klirens Kalkulator",
+  "short_name": "Klirens/eGFR",
   "description": "Aplikacja PWA do obliczania klirensu kreatyniny i eGFR. Umożliwia obliczenia offline i szybką instalację na urządzeniach.",
   // Główny adres pliku PWA – wskazuje na naszą stronę startową. Dla poprawnej
   // instalacji na iOS usuwamy rozszerzenie .txt.
