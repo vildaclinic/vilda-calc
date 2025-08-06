@@ -1,6 +1,6 @@
 {
   "name": "Kalkulator Centyli, BMI i Spalania kalorii",
-  "short_name": "Kalkulator kalorii",
+  "short_name": "Waga i wzrost",
   "description": "Kalkulator percentyli, BMI i spalania kalorii – narzędzie Vilda Clinic",
   "start_url": "Kalkulator_kalorii_pwa.html",
   "scope": ".",
