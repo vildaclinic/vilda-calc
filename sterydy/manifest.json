@@ -12,7 +12,7 @@
   // the service worker (registered in the same folder) can control all
   // navigations defined by the start_url. Adjust accordingly for other apps.
   "scope": ".",
-  "display": "standalone",
+  "display": "fullscreen",
   "orientation": "portrait",
   "background_color": "#ffffff",
   "theme_color": "#00838d",
