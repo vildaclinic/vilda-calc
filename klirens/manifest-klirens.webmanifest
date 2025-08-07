@@ -1,0 +1,64 @@
+{
+  "name": "Kalkulator klirensu kreatyniny – Vilda Clinic",
+  "short_name": "Klirens",
+  "description": "Kalkulator klirensu kreatyniny dla pacjentów",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "theme_color": "#00838d",
+  "background_color": "#00838d",
+  "icons": [
+    {
+      "src": "icons-klirens/icon-57.png",
+      "sizes": "57x57",
+      "type": "image/png"
+    },
+    {
+      "src": "icons-klirens/icon-72.png",
+      "sizes": "72x72",
+      "type": "image/png"
+    },
+    {
+      "src": "icons-klirens/icon-76.png",
+      "sizes": "76x76",
+      "type": "image/png"
+    },
+    {
+      "src": "icons-klirens/icon-120.png",
+      "sizes": "120x120",
+      "type": "image/png"
+    },
+    {
+      "src": "icons-klirens/icon-144.png",
+      "sizes": "144x144",
+      "type": "image/png"
+    },
+    {
+      "src": "icons-klirens/icon-152.png",
+      "sizes": "152x152",
+      "type": "image/png"
+    },
+    {
+      "src": "icons-klirens/icon-180.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "icons-klirens/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons-klirens/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons-klirens/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
