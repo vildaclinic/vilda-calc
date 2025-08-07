@@ -2,7 +2,7 @@
   "name": "Kalkulator dawek steroidów – Vilda Clinic",
   "short_name": "Steroidy",
   "description": "Kalkulator przeliczania dawek steroidów",
-  "start_url": ".",
+  "start_url": "index.html",
   "scope": ".",
   "display": "standalone",
   "theme_color": "#00838d",
