@@ -2,7 +2,7 @@
   "name": "Kalkulator klirensu kreatyniny – Vilda Clinic",
   "short_name": "Klirens",
   "description": "Kalkulator klirensu kreatyniny dla pacjentów",
-  "start_url": ".",
+  "start_url": "Kalkulator_klirens_pwa.html",
   "scope": ".",
   "display": "standalone",
   "theme_color": "#00838d",
