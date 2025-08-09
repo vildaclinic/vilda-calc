@@ -3,10 +3,10 @@
   "short_name": "Klirens",
   "description": "Kalkulator klirensu kreatyniny dla pacjentów",
   
-  "start_url": "/Kalkulator_klirens_pwa.html",
+  "start_url": "klirens/Kalkulator_klirens_pwa.html",
 
   
-  "scope": "/",
+  "scope": "klirens/",
 
   
   "display": "standalone",
