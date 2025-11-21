@@ -1,0 +1,2180 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <title>Kalkulator dawek steroidów – Vilda Clinic (multi‑dose)</title>
+  <!-- Configure the viewport to allow the page to extend into the safe areas on devices with display cut‑outs (e.g. iPhone Dynamic Island) -->
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <!-- Usunięto meta tagi PWA (theme-color, apple-mobile-web-app-*) -->
+  <!-- skórka kliniki -->
+  <link rel="stylesheet" href="style.css">
+  <!-- Liquid Glass motyw inspirowany iOS 26 — spójny z resztą serwisu wagaiwzrost.pl -->
+  <link href="ios26-v2.css" rel="stylesheet" />
+  <!-- Usunięto link do manifestu PWA -->
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
+  <!-- Usunięto ikonę Apple (PWA) -->
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+  select.srcDrug { 
+    width: 100% !important; 
+    min-width: 0 !important;
+  }
+  /* ---------- Globalne zmienne ---------- */
+  :root {
+    /* szerokość list wyboru na desktop – liczona w JS;
+       na mobile nadpisujemy ją w media query poniżej */
+    --select-unified-width: auto;
+    --select-unified-width-mob: 100%;
+  }
+
+  /* ---------- Skalowanie typografii ---------- */
+  html {
+    /* Zwiększamy minimalny rozmiar bazowy czcionki, aby tekst był czytelny
+       na urządzeniach mobilnych. Wartość clamp(16px, 3vw, 20px) oznacza,
+       że domyślny rozmiar wynosi co najmniej 16 px, rośnie proporcjonalnie
+       do szerokości viewportu (3 % szerokości) i jest ograniczony do 20 px. */
+    font-size: clamp(16px, 3vw, 20px);
+    -webkit-text-size-adjust: 100%;      /* iOS Safari poprawa */
+  }
+  body {
+    margin: 0;
+    font-family: system-ui, Arial, sans-serif;
+    line-height: 1.4;
+  }
+
+  /* Domyślne rozmiary czcionek formularza – ujednolicone dla wszystkich
+     elementów, aby ułatwić czytanie zarówno na desktopie, jak i na
+     urządzeniach mobilnych */
+  label {
+    font-size: 0.95rem;
+  }
+  input,
+  select,
+  button {
+    font-size: 1rem;
+    line-height: 1.3;
+  }
+
+  /* ---------- Kontener ogólny ---------- */
+  .container {
+    padding: 1rem;
+    max-width: 900px;
+    margin-inline: auto;
+  }
+
+  /* Wariant kontenera dla kalkulatora steroidów: brak ograniczenia szerokości.
+     Dzięki tej regule formularz i wyniki mogą rozciągać się na pełen viewport,
+     co zapobiega ograniczeniu do jednej kolumny. */
+  .calc-container {
+    /* Nie ograniczaj szerokości kontenera – pozwól rozciągać się na 100% szerokości */
+    /* Pozwól rozciągać się na całą szerokość ekranu, ale ogranicz maksymalną
+       szerokość do 1200px, aby zachować czytelny układ na dużych monitorach.
+       Dzięki temu sekcja wyników może bez problemu tworzyć dwie kolumny,
+       a formularz pozostanie czytelny. */
+    /* Ograniczenie szerokości do 960 px tak, aby strona nie wykraczała
+       poza obszar wyznaczony przez dwie kolumny na głównej stronie i
+       była wyrównana z linią przycisku hamburgera w nawigacji. */
+    max-width: 960px;
+    width: 100%;
+    /* Wewnętrzne odstępy jak w głównym kontenerze z style.css */
+    padding: 1rem;
+    /* Wyśrodkuj cały blok kalkulatora; po prawej i lewej będzie taki sam
+       margines w zależności od szerokości okna, aby uniknąć pustej strefy
+       tylko z jednej strony. */
+    margin-inline: auto;
+  }
+
+  /* Zapewnij, że formularz z danymi wejściowymi wykorzystuje całą szerokość
+     kontenera. Bez tego element fieldset pozostawał węższy niż dostępna
+     przestrzeń, przez co lewa kolumna była szeroka, a prawa pusta. */
+  .calc-container form fieldset {
+    width: 100%;
+  }
+
+  /* Na tej stronie rezygnujemy z układu gridowego zdefiniowanego globalnie
+     dla formularza (#calcForm). Ustawiamy display: block, aby elementy
+     wewnątrz formularza zajmowały pełną szerokość kontenera i nie były
+     ograniczane do pojedynczej kolumny z pozostawioną pustą przestrzenią. */
+  .calc-container #calcForm {
+    display: block;
+  }
+
+  /* Dodatkowy odstęp poniżej formularza, aby oddzielić go od wyników. */
+  #calcForm {
+    margin-bottom: 1.5rem;
+  }
+
+
+  /* ---------- Wiersz dawki (formularz) ---------- */
+  .dose-row {
+    display: flex;
+    flex-wrap: wrap;       /* ważne dla układu na mobile */
+    gap: 0.75rem;
+  }
+  .dose-row > label {
+    flex: 1 1 150px;       /* każda „kolumna” min. 150px */
+  }
+  select.srcDrug {
+    width: var(--select-unified-width);
+    min-width: var(--select-unified-width);
+    max-width: 100%;       /* nie wystawaj poza widok */
+  }
+  /* Stała numeracja wierszy + separator */
+  #sourceRows { counter-reset: row; }  /* zerujemy licznik przed listą dawek */
+  .dose-row {
+    position: relative;
+    padding: 0.85rem 0 0.85rem 3rem;    /* odstęp z lewej na numerację */
+    border-top: 1px solid #e5e5e5;      /* delikatna linia oddzielająca */
+  }
+  .dose-row:first-child {
+    border-top: none;
+    padding-top: 0;
+  }
+  .dose-row::before {                  /* numer porządkowy przed wierszem */
+    counter-increment: row;
+    content: counter(row) ".";
+    position: absolute;
+    left: 0;
+    top: 0.9rem;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  @media (max-width: 640px) {
+    select.srcDrug {
+      /* na urządzeniach <640px stosujemy pełną szerokość */
+      width: var(--select-unified-width-mob) !important;
+      min-width: 0 !important;
+    }
+    /* Na wąskich ekranach zwiększamy odstępy i wielkość przycisków,
+       aby ułatwić obsługę dotykową. */
+    .add-row,
+    button[type="submit"] {
+      font-size: 1.2rem;
+      padding: 0.6rem 1rem;
+    }
+    .dose-row {
+      padding: 1rem 0 1rem 3rem;
+      gap: 1rem;
+      /* Na małych ekranach układamy pola w kolumnie, aby uniknąć
+         „łamania” linii przy większych czcionkach. */
+      flex-direction: column;
+    }
+
+    /* Każde pole zajmuje pełną szerokość wiersza na mobile */
+    .dose-row > label {
+      flex: 1 1 100%;
+    }
+  }
+
+  /* ---------- Waga i wzrost w jednym wierszu ---------- */
+  /* Grupuje pola masy ciała (waga) i wzrostu, aby układały się
+     obok siebie na szerokich ekranach. Na węższych ekranach (mobile)
+     elementy te zostaną ułożone pionowo dzięki regułom poniżej. */
+  .weight-height-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  .weight-height-row > div {
+    flex: 1 1 150px;
+  }
+
+  @media (max-width: 640px) {
+    /* W widoku mobilnym ustawiamy pola w kolumnie,
+       aby zapewnić wygodę użytkowania. */
+    .weight-height-row {
+      flex-direction: column;
+    }
+    .weight-height-row > div {
+      flex: 1 1 100%;
+    }
+  }
+
+  /* ---------- Przyciski ---------- */
+  .add-row { margin-top: 1rem; }
+  @media (max-width: 640px) {
+    .add-row { font-size: 1.125rem; } /* większe przyciski na mobile */
+  }
+
+  /* ---------- Sekcja wyników ---------- */
+  .grid-two {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  /* Wyrównujemy górne krawędzie kolumn w układzie grid */
+  align-items: start;
+  }
+  @media (max-width: 640px) {
+    .grid-two { grid-template-columns: 1fr; } /* jedna kolumna na mobile */
+  }
+  .result-box, .table-scroll {
+    overflow: auto;
+  }
+
+  /* ---------- Fieldsety wynikowe ---------- */
+  /* Używamy ich do prezentacji poszczególnych przeliczeń w formie spójnej z
+     podsumowaniem. Każdy fieldset otrzymuje obramowanie i odstępy. */
+  .result-fieldset {
+    border: 1px solid #ccc;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    border-radius: 6px;
+  }
+  
+  .result-fieldset p{
+  font-size:1.2rem;
+  }
+
+  .result-fieldset legend {
+    font-weight: bold;
+    padding: 0 0.5rem;
+    /* Wyśrodkuj legendy (nagłówki) w polach wynikowych */
+    display: table;
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  /* Ustawiamy domyślne wyrównanie tekstu w polach wynikowych na środek,
+     dzięki czemu nagłówki (legend) i elementy z klasą result-heading są
+     wyśrodkowane. Następnie wyśrodkowane ustawienie nadpisujemy w
+     akapitach wewnątrz fieldsetów tak, aby treść wyników pozostała
+     wyrównana do lewej. */
+  .result-fieldset {
+    text-align: center;
+  }
+  .result-fieldset p {
+    text-align: left;
+  }
+
+  /* Nagłówki sekcji wyników w polach wynikowych. Zastępują legend i są
+     wyświetlane w centrum karty. */
+  .result-heading {
+    display: block;
+    width: 100%;
+    font-weight: bold;
+    text-align: center;
+    margin: 0 0 0.5rem;
+  }
+
+  /* Dodatkowe wyrównanie – upewnia się, że wszystkie legendy w sekcji wyników
+     (w tym te dodawane dynamicznie) mają wyrównanie do środka */
+  #results legend {
+    text-align: center;
+    display: table;
+    margin: 0 auto;
+  }
+  /* Nagłówki fieldsetów wynikowych */
+  .result-title{
+    font-weight: 700;
+    font-size: 1.3rem;   /* ≈18 px przy root‑em = 16 px */
+    line-height: 1.25;
+    display: block;        /* aby działało margin:auto */
+    width: 100%;
+    text-align: center;
+    margin: 0 0 .5rem;
+  }
+
+  /* „Zerujemy” domyślny padding legendy, gdy ma naszą klasę */
+  .result-fieldset legend.result-title{ padding:0; }
+  /* ---------- Wykres HPTA ---------- */
+  #hptaInfo ul { margin-top:0; }
+  #hptaInfo li { margin-bottom:0.4rem; }
+  #hptaChart {
+    width: 100% !important;
+    height: auto;
+  }
+  /* === przełącznik suwak «Tylko HPTA» ================================= */
+  .hpta-switch{
+    margin:1.1rem 0 1.6rem;
+    display:flex;align-items:center;     /* pionowe wyśrodkowanie */
+    gap:.75rem;font-size:1rem;
+  }
+  .hpta-switch input{position:absolute;opacity:0;}  /* chowamy natywny */
+
+  .hpta-switch label{
+    display:flex;align-items:center;     /* tekst zrównany środkiem */
+    position:relative;
+    cursor:pointer;user-select:none;
+    line-height:1;                       /* bez wpływu line‑height */
+  }
+
+  /* ─── tor suwaka ─── */
+  .hpta-switch label::before{
+    content:'';position:relative;
+    flex:0 0 50px;height:24px;           /* szer. i wys. toru */
+    background:#c6c6c6;border-radius:12px;
+    transition:background .25s;
+  }
+
+  /* ─── kółko ─── */
+  .hpta-switch label::after{
+    content:'';position:absolute;
+    left:3px;top:50%;transform:translateY(-50%);
+    width:20px;height:20px;
+    background:#fff;border-radius:50%;
+    box-shadow:0 0 2px rgba(0,0,0,.4);
+    transition:transform .25s;
+  }
+
+  /* ─── stan ON – kolor z CSS‑a zmiennej --btn-color ─── */
+  .hpta-switch input:checked + label::before{
+    background:var(--btn-color,#1e7fc7);
+  }
+  .hpta-switch input:checked + label::after{
+    transform:translate(26px,-50%);
+  }
+
+  /* Mobile – ciut większy suwak */
+  @media(max-width:640px){
+    .hpta-switch label::before{flex:0 0 58px;height:28px;}
+    .hpta-switch label::after{width:24px;height:24px;}
+    .hpta-switch input:checked + label::after{transform:translate(30px,-50%);}
+  }
+
+  /*
+   * ================================================================
+   * Dostosowania graficzne (2025‑07‑26)
+   *
+   * Ujednolicamy kolor obramowania dla podsumowania („Łączna dawka równoważna”)
+   * oraz kontenera z indywidualnymi przeliczeniami. Używamy tej samej
+   * wartości co nagłówek i przycisk „Przelicz”, czyli CSS‑owej zmiennej
+   * `--btn-color`. Jeśli z jakiegoś powodu zmienna nie jest ustawiona,
+   * stosujemy kolor zapasowy #1e7fc7 (turkusowy/niebieski).
+   *
+   * Dodatkowo wyrównujemy odstępy – sekcja wyników ma teraz stały
+   * margines górny, aby obie kolumny (tekstowa i tabelaryczna) były
+   * równo odsunięte od poprzedzającego formularza wejściowego.
+   */
+  /* Kontenery w sekcji wyników (card) – border w kolorze turkusowym */
+  #results .card {
+    border-color: var(--btn-color, #1e7fc7);
+    /* Zeruj górny margines i wypełnienie, aby obie kolumny zaczynały się
+       w tej samej linii. Przy okazji poprawiamy zapis jednostek (1rem bez spacji). */
+    margin-top: 0;
+    padding-top: 1.0 rem;
+    /* Upewnij się, że elementy są wyrównane do górnej krawędzi w układzie grid */
+    align-self: start;
+  }
+  /* Fieldsety w sekcji wynikowej – identyczny kolor obramowania */
+  .result-fieldset {
+    border-color: var(--btn-color, #1e7fc7);
+  }
+  /* Stały odstęp nad sekcją wynikową */
+  #results {
+    /* Większy odstęp oddzielający formularz od wyników */
+    margin-top: 2rem;
+  }
+
+  /* Wyróżnienie etykiet „Steroid źródłowy” i „Steroid docelowy”
+     ------------------------------------------------------------
+     Wartość kolorystyczna przyjęta dla tych etykiet powinna być
+     spójna z nagłówkiem „Dawka równoważna” w sekcji wyników. Nagłówek
+     ten korzysta z domyślnego koloru legendy (zmienna CSS --primary),
+     dlatego poniższe reguły również używają tego samego koloru.  
+
+     Selekcja pierwszego labela w każdym wierszu .dose-row odpowiada
+     etykiecie „Steroid źródłowy”. Druga reguła dotyczy pola „Steroid
+     docelowy”, które ma atrybut for="targetDrug". Dzięki temu
+     zmiany są ograniczone do formularza #calcForm i nie wpływają na
+     inne etykiety na stronie. */
+  #calcForm .dose-row > label:first-child,
+  #calcForm label[for="targetDrug"] {
+    font-weight: 700;      /* pogrubienie tekstu */
+    color: var(--primary); /* kolor jak w nagłówku Dawka równoważna */
+  }
+
+  /* Centracja i poszerzenie przycisku „Przelicz”
+     ------------------------------------------------------------
+     Główny przycisk obliczający dawkę („Przelicz”) jest elementem
+     formularza o typie submit. Aby wyróżnić go wizualnie, ustawiamy go
+     jako blok z automatycznymi marginesami po bokach, dzięki czemu
+     pojawia się na środku kontenera. Szerokość przycisku została
+     zwiększona poprzez podwojenie poziomego wypełnienia względem
+     domyślnych ustawień w style.css, zachowując przy tym wysokość.
+
+     Selektor ogranicza regułę do formularza kalkulatora (#calcForm),
+     aby nie wpływać na inne potencjalne przyciski typu submit w
+     późniejszych sekcjach. */
+  #calcForm button[type="submit"] {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    /* Podwajamy poziomy padding (0.9rem → 1.8rem) dla większej szerokości */
+    padding-left: 1.8rem;
+    padding-right: 1.8rem;
+  }
+
+  /* Korekta wypełnienia górnego dla głównego fieldsetu formularza
+     ------------------------------------------------------------
+     Po usunięciu legendy „Dane wejściowe” pozostało standardowe
+     wypełnienie górne (padding-top) ustawione w style.css na 1.4rem,
+     co tworzyło pustą przestrzeń na górze formularza. Aby cała
+     zawartość była bliżej górnej krawędzi fieldsetu, zmniejszamy
+     górny padding o 1rem. Ostateczny padding-top wynosi 0.4rem.
+     Reguła ta jest zawężona do #calcForm, aby nie wpływać na
+     inne pola typu fieldset na stronie. */
+  #calcForm > fieldset {
+    padding-top: 0.4rem;
+  }
+  /* odsunięcie tekstu nagłówka od obramowania */
+  #textResult .result-fieldset .result-title {
+    padding: 0.25rem 0.75rem; /* góra/dół, lewo/prawo – im większe wartości, tym większy odstęp */
+  }
+  /* Center text inside the summary results fieldset */
+  #textResult .result-fieldset {
+    /* Ustawiamy flexbox, aby móc wyśrodkować treść w pionie.  */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    /* Wyśrodkuj tekst w osi X */
+    text-align: center;
+    padding-top: 2rem;    /* zwiększ tę wartość, aby powiększyć odstęp od górnej krawędzi */
+    padding-bottom: 1rem; /* analogicznie dla dolnej krawędzi */
+  }
+
+  /* --------------------------------------------------------------------
+   * Poprawki dla urządzeń mobilnych
+   *
+   * • Ukrycie przewijania poziomego: na niektórych smartfonach kliknięcie
+   *   w pola formularza (masa ciała, wzrost, dawka) powoduje delikatne
+   *   powiększenie strony, co z kolei umożliwia przewijanie kalkulatora
+   *   w poziomie. Aby temu zapobiec, blokujemy poziome przewijanie na całej
+   *   stronie. Przewijanie poziome pozostaje dostępne tylko w miejscach
+   *   zdefiniowanych lokalnie (np. tabele wyników, które mają własny
+   *   overflow).
+   * • Ustawienie minimalnej wielkości czcionki dla pól formularza na
+   *   urządzeniach mobilnych: przeglądarki mobilne Safari automatycznie
+   *   przybliżają stronę, gdy pole wejściowe ma czcionkę mniejszą niż 16 px.
+   *   Podnosząc rozmiar tekstu w polach input i select do 16 px, zapobiegamy
+   *   auto‑zoomowaniu.
+   */
+  body {
+    overflow-x: hidden;
+  }
+  @media (max-width: 640px) {
+    input[type="number"],
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"],
+    select,
+    textarea {
+      font-size: 16px;
+    }
+    /* Upewnij się, że kontener nie przekracza szerokości viewportu */
+    .container {
+      max-width: 100%;
+    }
+  }
+
+  /* Akapity w podsumowaniu: wyrównaj do środka i usuń nadmierne marginesy,
+     aby ułatwić pionowe wyśrodkowanie. */
+  #textResult .result-fieldset p {
+    text-align: center;
+    margin: 0.3rem 0;
+  }
+
+  /* Zwiększamy odstęp między ostrzeżeniem a wykresem supresji HPTA o 1 rem.
+     Gdy użytkownik przelicza steroidy z grupy AAS, po sekcji ostrzeżenia
+     (Uwaga: ...) pojawia się wykres „Supresja osi HPTA”.  Domyślnie oba
+     elementy są kartami (section.card) z tylko wewnętrznym wypełnieniem,
+     dlatego przestrzeń między nimi może być zbyt mała.  Poniższa reguła
+     dodaje dodatkowy margines górny dla wykresu, ale tylko wtedy, gdy
+     występuje bezpośrednio po ostrzeżeniu.  Dzięki temu zachowujemy
+     domyślne odstępy na innych podstronach, jednocześnie zwiększając
+     odległość między ostrzeżeniem a wykresem o 1 rem na stronie steroidy. */
+  #warningSection + #chartCard {
+    margin-top: 1rem;
+  }
+
+  /* Dodaj dodatkowy odstęp 1 rem pomiędzy wykresem a sekcją objaśniającą.
+     Gdy wykres supresji HPTA jest wyświetlany, poniżej znajduje się sekcja
+     „Jak czytać wykres supresji HPTA?”.  Domyślnie elementy te są kartami
+     ustawionymi jedna po drugiej z niewielkim odstępem wynikającym z
+     wewnętrznego wypełnienia.  Poniższa reguła stosuje dodatkowy
+     margines górny do sekcji objaśnienia, ale tylko wtedy, gdy występuje
+     bezpośrednio po sekcji z wykresem.  Dzięki temu odstęp między nimi
+     zostaje zwiększony o 1 rem. */
+  #chartCard + #hptaInfo {
+    margin-top: 1rem;
+  }
+
+  /* ---------- Stylowanie wyników ---------- */
+  /* Liniom z przelicznikiem i komentarzem nadajemy mniejszą czcionkę, aby były mniej dominujące */
+  .result-fieldset .convert-info {
+    /* Ustaw ten sam rozmiar czcionki co ostrzeżenie o charakterze poglądowym
+       (tekst „Uwaga: ...”), aby przelicznik i komentarze były spójne wizualnie */
+    font-size: 1rem;
+  }
+  /* Linie z głównym wynikiem (równoważnik), mg/kg i BSA wyróżniamy strzałką po lewej stronie */
+  .result-fieldset .highlight-row {
+    position: relative;
+    padding-left: 1.5rem;
+  }
+  .result-fieldset .highlight-row::before {
+    content: "➜";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1rem;
+    color: var(--primary);
+    animation: arrowMove 1s ease-in-out infinite;
+  }
+  @keyframes arrowMove {
+    0%   { transform: translate(-1px, -50%); opacity: 0.6; }
+    50%  { transform: translate(4px, -50%); opacity: 1; }
+    100% { transform: translate(-1px, -50%); opacity: 0.6; }
+  }
+
+  /*
+   * Stylowanie tabeli w widoku desktop dla wyników wielu dawek
+   * ----------------------------------------------------------
+   * Gdy użytkownik doda więcej niż jedną dawkę, wyniki poszczególnych
+   * przeliczeń są prezentowane w formie tabeli podsumowującej. Poniższe
+   * reguły zapewniają pełną szerokość tabeli, czytelne odstępy oraz
+   * prosty układ bez animowanych strzałek. Strzałki pozostają nadal
+   * widoczne w podsumowaniu (fieldset z „Łączna dawka równoważna”).
+   */
+  #tableResult .result-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  #tableResult .result-table th,
+  #tableResult .result-table td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid #e0e0e0;
+    text-align: left;
+    vertical-align: top;
+  }
+  #tableResult .result-table th {
+    font-weight: 600;
+  }
+
+  /*
+   * Zwiększ odstęp pod tabelą z przeliczeniami w przypadku wielu dawek.
+   * Po wyświetleniu tabeli (desktop) lub listy fieldsetów (mobile) sekcja z
+   * ostrzeżeniem powinna być wyraźnie oddzielona od wyników. Ustawiamy
+   * dolny margines na 2 rem dla kontenera tabeli/fieldsetów. Ponieważ
+   * #tableResult jest ukryty przy jednej dawce (display:none), ta reguła
+   * dotyczy tylko przypadków, gdy tabelę widać.
+   */
+  #tableResult {
+    margin-bottom: 1rem;
+  }
+
+  /* --------------------------------------------------------------------
+   * PWA/iOS dostosowania
+   *
+   * Na urządzeniach z iOS (zwłaszcza iPhone'y z Dynamic Island) konieczne
+   * jest uwzględnienie bezpiecznej strefy u góry ekranu. Dzięki temu logo
+   * kalkulatora nie zachodzi na wycięcie w ekranie. Używamy zmiennej
+   * env(safe-area-inset-top), która zwraca wysokość bezpiecznej strefy.
+   * Dodajemy ją do istniejącego marginesu górnego nagłówka; jeśli
+   * przeglądarka nie obsługuje env(), wartość domyślna wynosi 0.
+   */
+  header {
+    padding-top: calc(1rem + env(safe-area-inset-top));
+  }
+  </style>
+</head>
+
+<body class="liquid-ios26">
+  <header>
+    <div class="container">
+      <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">
+        <img src="logo_vilda.jpeg" alt="Vilda Clinic – strona główna" style="max-width:160px;margin-bottom:10px;border-radius:var(--radius);">
+      </a>
+      <h1>Kalkulator przeliczania dawek steroidów</h1>
+    </div>
+    <nav class="main-nav" aria-label="Główna nawigacja">
+      <ul>
+        <li class="menu-toggle">
+          <input type="checkbox" id="navToggle" class="nav-toggle">
+          <label for="navToggle" aria-label="Otwórz menu">
+            <span class="bar"></span>
+            <span class="bar"></span>
+            <span class="bar"></span>
+          </label>
+          <ul id="verticalMenu" class="vertical-menu">
+            <li><a href="/o-aplikacji.html">O aplikacji</a></li>
+            <li><a href="/instrukcja.html">Instrukcja</a></li>
+            <li><a href="https://www.vildaclinic.pl/kontakt" target="_blank" rel="noopener noreferrer">Kontakt</a></li>
+          </ul>
+        </li>
+        <li><a href="/kalkulator-klirens.html">Klirens</a></li>
+        <li><a href="/steroidy.html" aria-current="page">Steroidy</a></li>
+        <li><a href="/materialy-edukacyjne.html">Materiały edukacyjne</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <!--
+       Główny kontener formularza i wyników otrzymuje dodatkową klasę
+       „calc-container”, dzięki czemu możemy nadpisać szerokość zdefiniowaną
+       w plikach stylów. W efekcie część kalkulatora rozciąga się na całą
+       szerokość ekranu, co ułatwia prezentację większych tabel i wykresów.
+    -->
+  <div class="calc-container">
+    <!-- ===== Formularz ===== -->
+    <form id="calcForm">
+      <fieldset>
+        <!-- Usunięto etykietę „Dane wejściowe” z legendy -->
+
+        <!-- kontener na wiele dawek (dynamicznie dodawane pola) -->
+        <div id="sourceRows"></div>
+
+        <!-- przycisk dodający nowy wiersz dawki -->
+        <button type="button" id="addDoseBtn" class="add-row">+ Dodaj kolejną dawkę</button>
+
+        <!-- TRYB: tylko wykres supresji HPTA -->
+        <!-- Ukrywamy przełącznik HPTA‑only domyślnie. Będzie on pokazywany
+             przez funkcję updateAasFields() dopiero gdy użytkownik wybierze AAS
+             jako steryd źródłowy. -->
+        <div class="hpta-switch" style="display:none;">
+          <input type="checkbox" id="hptaOnly">
+          <label for="hptaOnly"><span>Tylko wykres supresji HPTA</span></label>
+        </div>
+
+        <!-- steroid docelowy -->
+        <label for="targetDrug">Steroid docelowy</label>
+        <select id="targetDrug" required></select>
+
+        <!-- Waga i wzrost: umieszczone obok siebie na szerokich ekranach,
+             a jeden pod drugim na urządzeniach mobilnych. -->
+        <div class="weight-height-row">
+          <div class="weight-field">
+            <label for="weight">Masa ciała [kg] <small>(opcjonalnie)</small></label>
+            <input type="number" id="weight" min="0" step="0.1" placeholder="np. 90">
+          </div>
+          <div class="height-field">
+            <label for="height">Wzrost [cm] <small>(opcjonalnie)</small></label>
+            <input type="number" id="height" max="250" step="1" placeholder="np. 180">
+          </div>
+        </div>
+
+        <!-- Pola dodatkowe AAS (pokazywane tylko gdy ≥1 dawka należy do grupy AAS) -->
+        <div id="aasFields" style="display:none;">
+          <label for="cycleLen">Długość cyklu [tygodnie]</label>
+          <input type="number" id="cycleLen" min="4" max="52" step="1" value="12">
+
+          <label for="compareDrugs">Porównaj supresję dla (Ctrl/⌘ + klik by zaznaczyć wiele):</label>
+          <select id="compareDrugs" multiple size="5"></select>
+        </div>
+
+        <!-- przycisk wykonujący obliczenie -->
+        <button type="submit" class="add-row" style="margin-top:1rem">Przelicz</button>
+      </fieldset>
+    </form>
+
+    <!-- ===== Wyniki ===== -->
+    <section id="results" class="grid-two" style="display:none;">
+      <div id="textResult" class="card result-box"><!-- Wynik tekstowy --></div>
+      <div id="tableResult" class="card table-scroll"><!-- Tabela przeliczeń --></div>
+    </section>
+
+    <!-- ===== Ostrzeżenie ===== -->
+    <!-- To ostrzeżenie jest wyświetlane po obliczeniu wyników. Informuje użytkownika,
+         że kalkulator ma charakter edukacyjny i nie zastępuje konsultacji lekarskiej. -->
+    <section id="warningSection" class="card" style="display:none;">
+      <p><strong>Uwaga:</strong> Informacje podawane przez ten kalkulator mają charakter poglądowy i nie stanowią porady medycznej. Nie powinny one służyć do podejmowania decyzji terapeutycznych. Dawkowanie leków należy zawsze konsultować z lekarzem.</p>
+      <!-- Przyciski i lista źródeł.  Dodano wyśrodkowane pozycjonowanie jak w index.html -->
+      <div style="text-align:center;margin-top:1rem;">
+        <button type="button" id="toggleSteroidSources" aria-expanded="false">Źródła</button>
+      </div>
+      <ol id="steroidSourceList" style="display:none;padding-left:1.25rem;margin-top:0.5rem;">
+        <li>National Adrenal Diseases Foundation. Corticosteroid comparison chart. 2021 [cited 2025 Nov 12]. Available from: <a href="https://www.nadf.us/uploads/1/3/0/1/130191972/corticosteroid_comparison_chart.pdf" target="_blank" rel="noopener noreferrer">https://www.nadf.us/uploads/1/3/0/1/130191972/corticosteroid_comparison_chart.pdf</a></li>
+        <li>Biggar WD, Skalsky A, McDonald CM. Comparing deflazacort and prednisone in Duchenne muscular dystrophy. <em>J Neuromuscul Dis.</em> 2022;9(4):463–476;</li>
+        <li>Tóth M, Zakár T. Relative binding affinities of testosterone, 19‑nortestosterone and their 5α‑reduced derivatives to the androgen receptor and to other androgen‑binding proteins: a suggested role of 5α‑reductive steroid metabolism in the dissociation of “myotropic” and “androgenic” activities of 19‑nortestosterone. <em>J Steroid Biochem.</em> 1982;17(6):653–660;</li>
+        <li>Yarrow JF, Conover CF, McCoy SC, Lipinska JA, Santillana CA, Hance JM, et al. 17β‑Hydroxyestra‑4,9,11‑trien‑3‑one (trenbolone) exhibits tissue selective anabolic activity: effects on muscle, bone, adiposity, hemoglobin, and prostate. <em>Am J Physiol Endocrinol Metab.</em> 2011;300(4):E650–E660;</li>
+        <li>Patanè FG, Liberto A, Maglitto ANM, Malandrino P, Esposito M, Amico F, et al. Nandrolone decanoate: use, abuse and side effects. <em>Medicina (Kaunas).</em> 2020;56(11):606;</li>
+        <li>National Heart, Lung, and Blood Institute. Expert Panel Report 3: Guidelines for the Diagnosis and Management of Asthma. Section 4; figure 4‑4b [Internet]. Bethesda (MD): National Institutes of Health; 2007 [cited 2025 Nov 12]. Comparative daily dosages for inhaled corticosteroids in children.</li>
+      </ol>
+    </section>
+
+    <!-- ===== Wykres HPTA ===== -->
+    <section id="chartCard" class="card" style="display:none;">
+      <h2 class="text-center">Supresja osi HPTA</h2>
+      <canvas id="hptaChart" height="200"></canvas>
+    </section>
+
+    <!-- ===== Objaśnienie wykresu HPTA i źródła ===== -->
+    <section id="hptaInfo" class="card" style="display:none;">
+      <h3>Jak czytać wykres supresji HPTA?</h3>
+      <p>
+        Krzywa logistyczna („S‑curve”) pokazuje, jak głęboko i jak szybko <strong>egzogenne sterydy anaboliczno‑androgenne</strong>
+        (AAS) blokują Twoją wewnętrzną produkcję hormonów (LH / FSH → testosteron).
+        <ul>
+          <li><em>Początek cyklu</em> – supresja narasta powoli, bo organizm potrzebuje czasu, aby wyczuć nadmiar hormonów.</li>
+          <li><em>Środek cyklu</em> – stroma część krzywej; blokada osi osiąga&nbsp;&gt; 50 % i rośnie do swojego maksimum.</li>
+          <li><em>Koniec cyklu</em> – plateau: oś jest niemal całkowicie wyłączona (≈ 100 %).</li>
+          <li><em>Po cyklu</em> – krzywa opada lustrzanie: na początku poprawa jest niewielka, potem przyspiesza,
+              a ostatnie % powrotu do pełnej funkcji zajmują najdłużej.</li>
+        </ul>
+        Wartości na osi&nbsp;<strong>Y</strong> są w % (0 % = pełna aktywność osi, 100 % = pełna blokada).
+        Model ma charakter <em>poglądowy</em> – nie zastąpi badań laboratoryjnych.
+      </p>
+        
+      <h4>Źródła</h4>
+      <ol id="hptaRefs">
+        <li><a href="https://pubmed.ncbi.nlm.nih.gov/37855241/" target="_blank">
+                        Solanki&nbsp;P et al.&nbsp;2023 – scoping review o&nbsp;regeneracji po AAS</a></li>
+        <li><a href="https://pubmed.ncbi.nlm.nih.gov/29436172/" target="_blank">
+                        Bi&nbsp;C et al.&nbsp;2018 – model PK/PD testosteronu vs.&nbsp;LH</a></li>
+      </ol>
+    </section>
+
+    <!-- ===== Sugestie PCT ===== -->
+    <!-- Sekcja z rekomendacjami Post‑Cycle Therapy (PCT) jest domyślnie ukryta. 
+         Dodajemy !important, aby nawet skrypty JS nie mogły jej ponownie wyświetlić. -->
+    <section id="pctCard" class="card" style="display:none !important;">
+      <h3>Sugestie Post‑Cycle Therapy (PCT)
+          <small id="pctInfo" style="font-weight:400;"></small>
+      </h3>
+      <div id="pctContent"></div>
+      <p class="small">
+        *Informacje mają charakter edukacyjny i nie zastępują porady lekarskiej.*
+      </p>
+    </section>
+  </div>
+
+  <!-- Spójny footer jak na stronie głównej -->
+  <footer>
+    <p><strong>Administrator serwisu:</strong>
+      Vilda Clinic sp. z o.o.&nbsp;•&nbsp;
+      <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">vildaclinic.pl</a>
+    </p>
+    <p><strong>Konsultacja merytoryczna:</strong>
+      dr&nbsp;n.&nbsp;med.&nbsp;Maciej&nbsp;Flader
+    </p>
+  </footer>
+
+  <!-- Usunięto rejestrację service workera (PWA) -->
+
+  <!-- ===== Szablon pojedynczej dawki (do klonowania) ===== -->
+  <template id="rowTpl">
+    <div class="dose-row flex gap">
+      <label>Steroid źródłowy
+        <select class="srcDrug" required></select>
+      </label>
+
+      <label>Dawka
+        <div class="flex">
+          <input type="number" class="srcDose" min="0" step="0.1" placeholder="np. 250">
+          <select class="srcUnit">
+            <option value="mg">mg</option>
+            <option value="ug">µg</option>
+          </select>
+        </div>
+      </label>
+
+      <button type="button" class="icon removeRow" title="Usuń dawkę">✕</button>
+    </div>
+  </template>
+
+  <script>
+    // ------------------------------------------------------------------
+    // 1. Baza danych sterydów + nazwy handlowe (PL)
+    // ------------------------------------------------------------------
+    const DRUGS = [
+      // ---------- GKS OGÓLNE ----------
+      { id: 'hydrokortyzon',   label: 'Hydrokortyzon',     group: 'GKS', potency: 0.25,
+        // W Polsce dostępne są preparaty zawierające hydrokortyzon takie jak Corhydron i Hydrocortisonum Jelfa【441567084375347†L6-L17】.
+        // Cortef nie jest już dostępny, dlatego został usunięty.
+        brands: ['Corhydron', 'Hydrocortisonum Jelfa'] },
+      { id: 'prednizon',       label: 'Prednizon',         group: 'GKS', potency: 1,
+        // Wg bazy Pharmindex jedynym zarejestrowanym preparatem prednizonu jest Encorton; Meticorten nie jest dostępny.
+        brands: ['Encorton'] },
+      { id: 'prednizolon',     label: 'Prednizolon',       group: 'GKS', potency: 1,
+        // Encortolon jest dostępny, natomiast preparat Prednisolonum nie występuje w polskich rejestrach.
+        brands: ['Encortolon'] },
+      { id: 'metylprednizolon',label: 'Metyloprednizolon', group: 'GKS', potency: 1.25,
+        brands: ['Metypred', 'Solu‑Medrol'] },
+      { id: 'triamcynolon',    label: 'Triamcynolon',      group: 'GKS', potency: 1.25,
+        // Polcortolon pozostaje dostępny. Kenalog nie jest dostępny; zamiast niego stosuje się Triamhexal – roztwór do wstrzyknięć zawierający triamcynolon【652615820472397†L12-L21】.
+        brands: ['Polcortolon', 'Triamhexal'] },
+      { id: 'deksametazon',    label: 'Deksametazon',      group: 'GKS', potency: 6.7,
+        // Dostępne są preparaty Dexaven i Dexamethasone Krka; Dexasone nie występuje na polskim rynku. W Receptariuszu Pharmindex wymieniono tabletki Dexamethasone Krka 4 mg, 8 mg i 20 mg【576575174867224†L5459-L5472】.
+        brands: ['Dexaven', 'Dexamethasone Krka'] },
+      { id: 'betametazon',     label: 'Betametazon',       group: 'GKS', potency: 8.33,
+        // Updated potency based on National Adrenal Diseases Foundation data: 0.6 mg betamethasone ≈ 20 mg hydrocortisone【269619246197732†L56-L66】,
+        // which equates to roughly 8.3 mg prednisone per 1 mg betamethasone.
+        brands: ['Diprophos', 'Celestone'] },
+
+      // Newly added common systemic corticosteroids (glucocorticoids)
+      // Cortisone acetate 25 mg is equivalent to 20 mg hydrocortisone【269619246197732†L24-L27】.  Because 5 mg prednisone ≈ 20 mg hydrocortisone, one mg cortisone corresponds to 0.2 mg prednisone.
+      { id: 'kortyzon',        label: 'Kortyzon',          group: 'GKS', potency: 0.2,
+        // Nie znaleziono dostępnych preparatów kortyzonu w Polsce.
+        brands: [] },
+      // Fludrokortyzon is primarily a mineralocorticoid but exhibits significant glucocorticoid activity.  The NADF comparison chart lists its glucocorticoid potency as about 15× that of hydrocortisone【269619246197732†L68-L73】.
+      // Given that 20 mg hydrocortisone ≈ 5 mg prednisone, this yields a prednisone-equivalent potency of 15 × 0.25 = 3.75.
+      { id: 'fludrokortyzon',  label: 'Fludrokortyzon',     group: 'GKS', potency: 3.75,
+        // Preparat Florinef nie jest dostępny; zamiast niego w Polsce stosowany jest Cortineff【613333367800036†L9-L16】.
+        brands: ['Cortineff'] },
+      // Deflazakort is slightly less potent than prednisone; clinical trials show that 8 mg deflazakort produces similar anti-inflammatory effects as 6 mg prednisone【772401851262586†L536-L539】.
+      // This results in a prednisone-equivalent potency of 6 / 8 ≈ 0.75.
+      { id: 'deflazakort',     label: 'Deflazakort',       group: 'GKS', potency: 0.75,
+        // W bazie Pharmindex zarejestrowany jest Calcort; Deflakort nie jest dostępny【228254972371767†L0-L7】.
+        brands: ['Calcort'] },
+
+      // ---------- GKS WZIEWNE ----------
+      { id: 'budezonid_neb',   label: 'Budezonid (nebuliz.)',      group: 'GKS‑wziewne',
+        potency: 1,
+        // Do nebulizacji dostępne są preparaty Pulmicort, Budixon Neb i Nebbud. Pulmicort w tej postaci jest stosowany zamiast wariantu Respules.
+        brands: ['Pulmicort', 'Budixon Neb', 'Nebbud'] },
+      { id: 'flutykazon',      label: 'Propionian flutykazonu',     group: 'GKS‑wziewne',
+        potency: 2,
+        brands: ['Flixotide', 'Flutixon'] },
+      { id: 'cyklezonid',      label: 'Cyklezonid',                group: 'GKS‑wziewne',
+        potency: 1.5,
+        // Cyklezonid dostępny jest w postaci aerozolu Alvesco oraz Cyxodil; marka Ciclesonide Teva nie figuruje w polskim rejestrze【120248638147813†L13-L20】【220327208797935†L2-L4】.
+        brands: ['Alvesco', 'Cyxodil'] },
+      { id: 'beklometazon',    label: 'Dipropionian beklometazonu',group: 'GKS‑wziewne',
+        potency: 1.3,
+        // Clenil i Qvar nie są dostępne; w ich miejsce stosuje się Soprobec (monoskładnikowy aerozol beklometazonu) oraz Fostex – inhalator zawierający beklometazon z formoterolem【567483100203984†L0-L4】【567483100203984†L6-L10】.
+        brands: ['Soprobec', 'Fostex'] },
+
+      // ---------- AAS (Anaboliczne Androgenne Steroidy) ----------
+      { id: 'testosteron',     label: 'Testosteron (base)', group: 'AAS', potency: 1,
+        bio: 1, hpta: 1, hl: 1,
+        // Testosteron Jelfa nie jest już dostępny; w Polsce dostępne są żele Androtop i Testavan oraz Androgel【7089308461203†L1-L2】【139159208059226†L1-L2】.
+        brands: ['Androgel', 'Androtop', 'Testavan'] },
+      { id: 'test_enan',       label: 'Enantan testosteronu',      group: 'AAS',
+        potency: 1, bio: 0.72, hpta: 1, hl: 5,
+        // Enantan testosteronu jest dostępny wyłącznie jako Testosteronum prolongatum; Omnadren 250 usunięto z listy, ponieważ użytkownik zdecydował się go nie uwzględniać.
+        brands: ['Testosteronum prolongatum'] },
+      { id: 'test_undec',      label: 'Undecylan testosteronu',    group: 'AAS',
+        potency: 1, bio: 0.63, hpta: 1, hl: 7,
+        // Dostępny jest preparat Nebido. Undestor został usunięty z listy marek na życzenie użytkownika.
+        brands: ['Nebido'] },
+      { id: 'nandrolon',       label: 'Nandrolon (Deca)',          group: 'AAS',
+        potency: 3, bio: 0.64, hpta: 1.3, hl: 7,
+        // W Polsce zarejestrowany jest preparat Deca‑Durabolin; Nandrolon Jelfa nie jest dostępny【773437548403301†L1-L2】.
+        brands: ['Deca‑Durabolin'] },
+      { id: 'trenbolon',       label: 'Trenbolon (acetat)',        group: 'AAS',
+        potency: 3.5, bio: 1,    hpta: 1.8, hl: 2,
+        // Nie znaleziono legalnie dostępnych preparatów trenbolonu; lista marek pozostaje pusta.
+        brands: [] }
+    ];
+
+    // ------------------------------------------------------------------
+    // 2. Funkcje pomocnicze interfejsu
+    // ------------------------------------------------------------------
+    function populateSelect(sel, filterGroup = null, showBrands = false) {
+      const groups = {};
+      DRUGS.forEach(d => {
+        if (filterGroup && d.group !== filterGroup) return;
+        if (!groups[d.group]) {
+          groups[d.group] = document.createElement('optgroup');
+          groups[d.group].label = d.group;
+        }
+        const o = document.createElement('option');
+        o.value = d.id;
+        o.textContent = showBrands && d.brands
+          ? `${d.label} – ${d.brands.slice(0, 2).join(', ')}`
+          : d.label;
+        groups[d.group].appendChild(o);
+      });
+      Object.values(groups).forEach(g => sel.appendChild(g));
+    }
+
+    function getDrug(id) {
+      return DRUGS.find(d => d.id === id);
+    }
+
+    /**
+     * Sprawdź, czy dany lek należy do grupy wziewnych glikokortykosteroidów.
+     * Używamy sprawdzenia ciągu "wziewne" w nazwie grupy zamiast
+     * startsWith("GKS‑wziewne"), aby uniknąć problemów z różnymi znakami
+     * łącznika (np. dywiz, półpauza) w definicjach grup.  Funkcja zwraca
+     * true, jeśli grupa zawiera słowo "wziewne".
+     *
+     * @param {Object|string} drugOrGroup  obiekt leku lub nazwa grupy
+     * @returns {boolean}
+     */
+    function isInhaled(drugOrGroup) {
+      const group = typeof drugOrGroup === 'string' ? drugOrGroup : (drugOrGroup?.group || '');
+      return group.includes('wziewne');
+    }
+
+    function defaultUnitForDrug(drugId) {
+      const g = getDrug(drugId)?.group || '';
+      return isInhaled(g) ? 'ug' : 'mg';
+    }
+
+    // ===== Ograniczenie przeliczania do tej samej grupy =====
+    // Wybrany steryd źródłowy definiuje grupę, w której można dokonywać
+    // przeliczeń (GKS → GKS, GKS‑wziewne → GKS‑wziewne, AAS → AAS). Na
+    // podstawie pierwszego wiersza źródłowego filtrujemy pozostałe listy
+    // (źródłowe i docelową) tak, aby zawierały tylko sterydy z tej samej
+    // grupy. Przechowujemy bieżącą grupę w zmiennej currentGroup.
+    let currentGroup = null;
+
+    function updateGroupFilters() {
+      // Ustal grupę na podstawie pierwszego selecta srcDrug (jeżeli jest)
+      const firstSel = document.querySelector('.srcDrug');
+      if (!firstSel) return;
+      const grp = getDrug(firstSel.value)?.group || null;
+      currentGroup = grp;
+      // Filtruj select docelowy
+      const tgt = document.getElementById('targetDrug');
+      if (tgt) {
+        const prev = tgt.value;
+        tgt.innerHTML = '';
+        populateSelect(tgt, currentGroup, true);
+        // Przywróć poprzedni wybór, jeśli należy do bieżącej grupy
+        if (prev && getDrug(prev)?.group === currentGroup) {
+          tgt.value = prev;
+        }
+      }
+      // Filtruj wszystkie selecty srcDrug poza pierwszym wierszem. Pierwszy wiersz
+      // pozostawiamy niezmieniony, aby użytkownik mógł zmienić grupę.
+      const srcSelects = Array.from(document.querySelectorAll('select.srcDrug'));
+      srcSelects.forEach((sel, idx) => {
+        if (idx === 0) return; // nie filtruj pierwszego selecta
+        const prevVal = sel.value;
+        sel.innerHTML = '';
+        populateSelect(sel, currentGroup, true);
+        // Przywróć poprzedni wybór, jeśli należy do bieżącej grupy
+        if (prevVal && getDrug(prevVal)?.group === currentGroup) {
+          sel.value = prevVal;
+        }
+      });
+      // Dopasuj szerokości list po zmianie grupy
+      if (typeof unifySelectWidths === 'function') {
+        unifySelectWidths();
+      }
+    }
+
+    // ---------- Pokaż/ukryj ikony usuwania przy dawkach ----------
+    function updateRemoveButtons() {
+      const rows = Array.from(document.querySelectorAll('.dose-row'));
+      rows.forEach((row, idx) => {
+        const btn = row.querySelector('.removeRow');
+        if (btn) {
+          // w pierwszym wierszu brak czerwonego ✕; w kolejnych jest widoczny
+          btn.style.display = (idx === 0) ? 'none' : 'inline-block';
+        }
+      });
+    }
+
+    // ---------- Ujednolicenie szerokości list wyboru ----------
+    function unifySelectWidths() {
+      /* Na wąskich ekranach (<641px) przywracamy listom naturalną szerokość */
+      if (window.innerWidth < 641) {
+        document.documentElement.style.setProperty('--select-unified-width', 'auto');
+        return;
+      }
+      const trg = document.getElementById('targetDrug');
+      if (!trg) return;
+      // Jeżeli select docelowy jest ukryty lub ma zerową szerokość, pomijamy
+      // unifikację, aby nie zawęzić list źródłowych do 0 px. offsetParent == null oznacza element niewidoczny.
+      if (trg.offsetParent === null) return;
+      const rect = trg.getBoundingClientRect();
+      if (!rect || rect.width < 50) return;
+      const w = rect.width + 'px';
+      document.documentElement.style.setProperty('--select-unified-width', w);
+      document.querySelectorAll('select.srcDrug').forEach(sel => {
+        sel.style.width = w;
+        sel.style.minWidth = w;
+      });
+    }
+
+    // ---------- Dynamiczne dodawanie/usuwanie wierszy dawek ----------
+    function createSourceRow() {
+      const tpl = document.getElementById('rowTpl').content.cloneNode(true);
+      const drugSel = tpl.querySelector('.srcDrug');
+      const unitSel = tpl.querySelector('.srcUnit');
+
+      // Wypełnij select dostępnymi sterydami. Jeśli currentGroup jest ustawiona
+      // (po wyborze pierwszego leku), ogranicz listę do tej grupy; w przeciwnym
+      // razie pokaż wszystkie sterydy.
+      populateSelect(drugSel, currentGroup || null, true);
+
+      // ——— zapamiętaj stan początkowy
+      drugSel.dataset.prev = drugSel.value;        // *** NEW ***
+
+      // ustaw domyślną jednostkę
+      unitSel.value = defaultUnitForDrug(drugSel.value);
+
+      // zmiana leku źródłowego
+      drugSel.addEventListener('change', e => {
+        const sel = e.target;
+        const newId = sel.value;
+        const prevId = sel.dataset.prev || '';
+        const isNewAAS = getDrug(newId)?.group === 'AAS';
+        const aasCount = Array.from(document.querySelectorAll('.srcDrug'))
+                              .filter(s => getDrug(s.value)?.group === 'AAS').length;
+
+        // --- BLOKADA: drugi AAS nie‑dozwolony --------------------- // *** NEW ***
+        if (isNewAAS && aasCount > 1) {
+          alert('Możesz wprowadzić tylko jeden steryd z grupy AAS jako dawkę źródłową.\n' +
+                'Jeśli chcesz go porównać, skorzystaj z listy „Porównaj supresję…”.');
+          sel.value = prevId;                       // przywróć poprzedni wybór
+          unitSel.value = defaultUnitForDrug(prevId);
+          return;                                   // przerwij obsługę zmiany
+        }
+
+        // aktualizuj domyślną jednostkę i zapisz stan
+        unitSel.value = defaultUnitForDrug(newId);
+        sel.dataset.prev = newId;                   // zapamiętaj nowy wybór
+        updateAasFields();
+        // Po zmianie dowolnego sterydu źródłowego zaktualizuj filtry grup,
+        // aby lista docelowa i pozostałe selecty pozostały w tej samej grupie.
+        if (typeof updateGroupFilters === 'function') updateGroupFilters();
+      });
+
+      // usunięcie wiersza
+      tpl.querySelector('.removeRow').onclick = e => {
+        e.target.closest('.dose-row').remove();
+        updateAasFields();
+        updateRemoveButtons();
+        unifySelectWidths();
+        // Po usunięciu wiersza może zmienić się wiodąca grupa – odśwież filtry
+        if (currentGroup && typeof updateGroupFilters === 'function') updateGroupFilters();
+      };
+
+      return tpl;
+    }
+
+    // Dodaj pierwszy wiersz dawki przy starcie
+    document.getElementById('sourceRows').appendChild(createSourceRow());
+    updateRemoveButtons();
+    // (Nie wywołujemy unifySelectWidths tutaj – zostanie wywołane po wypełnieniu list)
+
+    // Obsługa kliknięcia "+ Dodaj kolejną dawkę"
+    document.getElementById('addDoseBtn').addEventListener('click', () => {
+      document.getElementById('sourceRows').appendChild(createSourceRow());
+      updateRemoveButtons();
+      unifySelectWidths();
+      // Po dodaniu nowego wiersza zastosuj filtr grupy do wszystkich list
+      if (currentGroup && typeof updateGroupFilters === 'function') updateGroupFilters();
+    });
+
+    // Pokaż/ukryj sekcje pól AAS oraz przełącznik HPTA‑only w zależności od wyboru sterydów
+    function updateAasFields() {
+      // Sprawdź, czy którykolwiek z wierszy dawki jest lekiem z grupy AAS
+      const anyAAS = Array.from(document.querySelectorAll('.srcDrug'))
+                          .some(sel => getDrug(sel.value)?.group === 'AAS');
+      // sekcja dodatkowych pól (długość cyklu, wybór porównania) – tylko gdy jest AAS
+      const aasFields = document.getElementById('aasFields');
+      if (aasFields) aasFields.style.display = anyAAS ? 'block' : 'none';
+      // przełącznik trybu HPTA‑only – pokaż gdy jest AAS, ukryj w przeciwnym razie
+      const hptaSwitch = document.querySelector('.hpta-switch');
+      if (hptaSwitch) hptaSwitch.style.display = anyAAS ? 'block' : 'none';
+      // jeśli nie ma wybranego AAS, wyłącz tryb HPTA‑only i przywróć widoczność pól
+      const hptaBox = document.getElementById('hptaOnly');
+      if (!anyAAS && hptaBox) {
+        if (hptaBox.checked) {
+          hptaBox.checked = false;
+          // wywołaj przełącznik, aby przywrócić UI (ukryty target wraca) i zaktualizować szerokości
+          if (typeof toggleHptaMode === 'function') toggleHptaMode();
+        }
+      }
+      // po aktualizacji widoczności pól dopasuj szerokości selectów, jeśli tryb HPTA‑only jest wyłączony
+      if (hptaBox && !hptaBox.checked && typeof unifySelectWidths === 'function') {
+        unifySelectWidths();
+      }
+    }
+    // wywołaj na starcie, aby ustawić prawidłowy wygląd po wczytaniu strony
+    updateAasFields();
+
+    // ===== tryb „tylko HPTA” – przełączanie UI =====
+    const hptaOnlyBox = document.getElementById('hptaOnly');
+    const tgtLbl = document.querySelector('label[for="targetDrug"]');
+    const tgtSel = document.getElementById('targetDrug');
+    const wLbl = document.querySelector('label[for="weight"]');
+    const wInp = document.getElementById('weight');
+    const hLbl = document.querySelector('label[for="height"]');
+    const hInp = document.getElementById('height');
+    const addBtn = document.getElementById('addDoseBtn');
+
+    function toggleHptaMode() {
+      const on = hptaOnlyBox.checked;
+      // pola do ukrycia
+      [tgtLbl, tgtSel, wLbl, wInp, hLbl, hInp].forEach(el => {
+        el.style.display = on ? 'none' : '';
+      });
+      // wymaganie wyboru sterydu docelowego
+      tgtSel.required = !on;
+      // blokada dodawania kolejnych dawek
+      addBtn.disabled = on;
+      // ukryj wyniki tabeli, jeśli włączono tryb HPTA‑only
+      if (on) {
+        document.getElementById('results').style.display = 'none';
+      } else {
+        // po wyłączeniu trybu HPTA‑only dopasuj szerokości selectów
+        if (typeof unifySelectWidths === 'function') {
+          unifySelectWidths();
+        }
+      }
+    }
+    hptaOnlyBox.addEventListener('change', toggleHptaMode);
+    toggleHptaMode();                 // ← teraz jest BEZPIECZNIE
+
+    // Wypełnij listy docelowego sterydu i porównywanych sterydów (dla AAS)
+    // Wypełnij listę docelową. Początkowo wypełniamy wszystkie sterydy,
+    // ale zaraz potem updateGroupFilters przefiltruje ją zgodnie z bieżącą grupą.
+    populateSelect(document.getElementById('targetDrug'), null, true);
+    populateSelect(document.getElementById('compareDrugs'), 'AAS');
+    unifySelectWidths();  // ustal jednolitą szerokość selectów po wypełnieniu list
+    document.getElementById('targetDrug').addEventListener('change', () => {
+      unifySelectWidths();
+    });
+    window.addEventListener('resize', unifySelectWidths);
+
+    // Wywołaj updateGroupFilters na starcie, aby początkowo ograniczyć listę
+    // docelową i kolejne wiersze do grupy pierwszego sterydu. Nie filtrujemy
+    // pierwszego selecta źródłowego (idx === 0), więc użytkownik nadal może
+    // zmienić grupę wiodącą. Po zmianie aktualizujemy filtry ponownie.
+    if (typeof updateGroupFilters === 'function') {
+      updateGroupFilters();
+    }
+
+    // — ustal CSS‑ową zmienną --btn-color z koloru przycisku „Przelicz”
+    (function () {
+      const btn = document.querySelector('button[type="submit"]');
+      if (!btn) return;
+      const bg = getComputedStyle(btn).backgroundColor || '#1e7fc7';
+      document.documentElement.style.setProperty('--btn-color', bg);
+    })();
+
+    // ------------------------------------------------------------------
+    // 3. Logika przeliczeń dawek
+    // ------------------------------------------------------------------
+    function convertDose(srcId, srcDoseMg, trgId) {
+      const s = getDrug(srcId), t = getDrug(trgId);
+      if (!s || !t) return null;
+      if (s.group.startsWith('GKS') && t.group.startsWith('GKS')) {
+        const predEq = srcDoseMg * s.potency;
+        return predEq / t.potency;
+      }
+      if (s.group === 'AAS' && t.group === 'AAS') {
+        const srcHormone = srcDoseMg * (s.bio || 1);
+        const testEq = srcHormone * s.potency;
+        return (testEq / t.potency) / (t.bio || 1);
+      }
+      return null;
+    }
+
+    /**
+     * Oblicza zakres wartości docelowej dawki (w mg) przy konwersji,
+     * jeśli w przeliczeniu bierze udział betametazon.  Literatura
+     * podaje, że betametazon może być 25–40× silniejszy od hydrokortyzonu,
+     * co przekłada się na dwa potencjalne współczynniki: około 6.25 i 8.33.
+     * Dla betametazonu jako leku źródłowego lub docelowego zwracamy
+     * tablicę [wartośćMinimalna, wartośćMaksymalna].  W innych przypadkach
+     * zwracamy null.
+     *
+     * @param {string} srcId  id sterydu źródłowego
+     * @param {number} srcDoseMg  dawka źródłowa w mg
+     * @param {string} trgId  id sterydu docelowego
+     * @returns {Array|null}  tablica [minMg, maxMg] lub null
+     */
+    function convertDoseRange(srcId, srcDoseMg, trgId) {
+      const s = getDrug(srcId), t = getDrug(trgId);
+      if (!s || !t) return null;
+      // tylko dla GKS ogólnoustrojowych (nie obejmuje wziewnych)
+      // Jeżeli leki nie należą do grup GKS ogólnoustrojowych lub któryś z nich
+      // jest sterydem wziewnym, nie obliczamy zakresu dla betametazonu
+      if (!(s.group.startsWith('GKS') && t.group.startsWith('GKS')) ||
+          isInhaled(s.group) || isInhaled(t.group)) {
+        return null;
+      }
+      const betamId = 'betametazon';
+      // jeśli ani źródło, ani cel nie jest betametazonem, brak zakresu
+      if (s.id !== betamId && t.id !== betamId) {
+        return null;
+      }
+      // zdefiniuj potencje betametazonu
+      const potHigh = 8.33; // ~0.6 mg = 20 mg hydrokortyzonu
+      const potLow  = 6.25; // ~0.8 mg = 20 mg hydrokortyzonu
+      if (s.id === betamId && t.id === betamId) {
+        // konwersja betametazon → betametazon zwraca tę samą dawkę jako zakres
+        return [srcDoseMg, srcDoseMg];
+      }
+      if (s.id === betamId) {
+        // Betametazon jako źródło: przelicz na prednizon (potHigh/potLow), potem na cel
+        const predEqHigh = srcDoseMg * potHigh;
+        const predEqLow  = srcDoseMg * potLow;
+        const mgHigh = predEqHigh / t.potency;
+        const mgLow  = predEqLow / t.potency;
+        // zwróć [min, max]
+        return [Math.min(mgHigh, mgLow), Math.max(mgHigh, mgLow)];
+      }
+      if (t.id === betamId) {
+        // Betametazon jako cel: przelicz dawkę źródłową na prednizon, potem na betametazon (potHigh/potLow)
+        const predEq = srcDoseMg * s.potency;
+        const mgHigh = predEq / potHigh;
+        const mgLow  = predEq / potLow;
+        return [Math.min(mgHigh, mgLow), Math.max(mgHigh, mgLow)];
+      }
+      return null;
+    }
+
+    /**
+     * Oblicza współczynnik przeliczenia między parą sterydów.
+     * Zwraca liczbę odpowiadającą mg docelowego sterydu na 1 mg sterydu źródłowego.
+     * Jeśli leki należą do różnych grup (np. GKS vs AAS), zwraca null.
+     * Współczynnik uwzględnia także biodostępność (bio) w AAS.
+     *
+     * @param {string} srcId  id sterydu źródłowego
+     * @param {string} trgId  id sterydu docelowego
+     * @returns {number|null}
+     */
+    function conversionFactor(srcId, trgId) {
+      const s = getDrug(srcId), t = getDrug(trgId);
+      if (!s || !t) return null;
+      // grupa ogólnoustrojowa GKS
+      if (s.group.startsWith('GKS') && t.group.startsWith('GKS')) {
+        return s.potency / t.potency;
+      }
+      // grupa AAS
+      if (s.group === 'AAS' && t.group === 'AAS') {
+        const sPot = s.potency * (s.bio || 1);
+        const tPot = t.potency * (t.bio || 1);
+        return sPot / tPot;
+      }
+      return null;
+    }
+
+    /**
+     * Oblicz dawkę leku (w mg), która jest równoważna 5 mg prednizonu.
+     * @param {string} drugId  id leku
+     * @returns {number|null}  dawka w mg lub null, jeśli brak danych
+     */
+    function baseDose(drugId) {
+      const d = getDrug(drugId);
+      if (!d || !d.potency) return null;
+      // dawka równoważna 5 mg prednizonu = 5 / potency
+      return 5 / d.potency;
+    }
+
+    /**
+     * Zwraca bazową dawkę (w mg) jako pojedynczą wartość lub zakres.
+     * Dla większości glikokortykosteroidów zwraca pojedynczą dawkę
+     * równoważną 5 mg prednizonu (20 mg hydrokortyzonu).  Dla betametazonu
+     * literatura podaje, że jest on 25–40× silniejszy od hydrokortyzonu,
+     * co odpowiada zakresowi 0,6–0,8 mg betametazonu przy 20 mg hydrokortyzonu.
+     * Zwracamy zatem tablicę dwóch wartości: [0.6, 0.8] dla betametazonu.
+     *
+     * @param {string} drugId  id sterydu
+     * @returns {number|Array|null}  pojedyncza liczba lub tablica (zakres) mg
+     */
+    function baseDoseRange(drugId) {
+      if (!drugId) return null;
+      if (drugId === 'betametazon') {
+        // Zwróć zakres 0.6–0.8 mg (≈ 5 mg prednizonu)
+        return [0.6, 0.8];
+      }
+      const val = baseDose(drugId);
+      return val;
+    }
+
+    /**
+     * Generuje dynamiczny komunikat dot. betametazonu.
+     * Komunikat tłumaczy, że ze względu na różną siłę betametazonu (25–40× hydrokortyzonu)
+     * wyświetlany jest zakres dawek.  W treści podajemy równoważnik dla drugiego leku,
+     * aby użytkownik mógł powiązać wynik z aktualnie przelicanym sterydem.
+     *
+     * @param {Object} srcDrug  obiekt leku źródłowego
+     * @param {Object} trgDrug  obiekt leku docelowego
+     * @returns {string}  komunikat (bez otaczającego <p>)
+     */
+    function betamMessage(srcDrug, trgDrug) {
+      const betamId = 'betametazon';
+      // Jeśli w obliczeniach nie bierze udziału betametazon – nie generuj komunikatu.
+      if (srcDrug.id !== betamId && trgDrug.id !== betamId) return '';
+      // Jeśli przeliczamy betametazon na betametazon, również nie potrzebujemy komunikatu.
+      if (srcDrug.id === betamId && trgDrug.id === betamId) return '';
+      // Uniwersalny komunikat dotyczący zakresów betametazonu.  Nie podajemy
+      // szczegółów na temat przeliczanego leku, ponieważ wszystkie
+      // przeliczenia z udziałem betametazonu podlegają temu samemu
+      // wyjaśnieniu.  Pozostawiamy tekst w jednej linijce (bez znaku <p>),
+      // aby komponent wywołujący mógł sam zdecydować o otaczającym elemencie.
+      return 'Zakres dawek wynika z różnych sposobów obliczania siły betametazonu.';
+    }
+
+    /**
+     * Zwraca nazwę leku w dopełniaczu (dodaje "u" na końcu),
+     * wykorzystywane do prezentacji docelowego sterydu w wynikach.
+     * Jeśli nazwa już kończy się na "u", pozostaw ją bez zmian.
+     * @param {string} name  etykieta leku
+     * @returns {string}     etykieta w dopełniaczu
+     */
+    function toGenitive(name) {
+      /*
+       * Zwraca nazwę leku w dopełniaczu.  Domyślne podejście „dodaj u na końcu”
+       * działa dobrze dla większości jedno‑wyrazowych nazw (Prednizon → Prednizonu,
+       * Betametazon → Betametazonu, Hydrokortyzon → Hydrokortyzonu).  Jednak
+       * nie radzi sobie z nazwami złożonymi z dwóch słów (np. „Enantan testosteronu”)
+       * ani z nazwami zawierającymi doprecyzowanie w nawiasie (np. „Testosteron (base)”,
+       * „Budezonid (nebuliz.)”).  Poniższa implementacja rozdziela nazwę na
+       * część zasadniczą i ewentualny sufiks w nawiasie, a następnie dodaje
+       * końcówkę „u” do każdego członu zasadniczej części, który jej nie posiada.
+       */
+      if (!name) return name;
+      // Wydziel fragment w nawiasach, jeśli występuje (łącznie ze spacją poprzedzającą)
+      const parenIndex = name.indexOf(' (');
+      let basePart = name;
+      let suffix = '';
+      if (parenIndex !== -1) {
+        basePart = name.slice(0, parenIndex);
+        suffix = name.slice(parenIndex);
+      }
+      // Rozdziel część zasadniczą według spacji, aby przetwarzać każdy wyraz osobno.
+      const words = basePart.split(' ');
+      const genWords = words.map(w => {
+        // jeśli słowo już kończy się na „u”, pozostaw bez zmian
+        return w.endsWith('u') ? w : w + 'u';
+      });
+      return genWords.join(' ') + suffix;
+    }
+
+    /**
+     * Formatuj dawkę w mg lub µg w zależności od grupy leku.
+     * GKS‑wziewne prezentujemy w mikrogramach, pozostałe w miligramach.
+     * @param {Object} drug  obiekt leku
+     * @param {number} mgVal  dawka w mg
+     * @returns {string}      sformatowana wartość z jednostką
+     */
+    function formatDose(drug, mgVal) {
+      if (isInhaled(drug)) {
+        // Dla steroidów wziewnych wyświetl w mikrogramach z usunięciem zbędnych zer
+        const microVal = mgVal * 1000;
+        return formatMicrograms(microVal) + ' µg';
+      }
+      // Pozostałe w miligramach z dwoma miejscami po przecinku
+      return mgVal.toFixed(2) + ' mg';
+    }
+
+    /**
+     * Formatuje wartość w mikrogramach, usuwając zbędne zera po przecinku.
+     * Zwraca ciąg znaków bez części dziesiętnej, jeśli końcówka to „.00”.
+     * @param {number} val  wartość w mikrogramach
+     * @returns {string}
+     */
+    function formatMicrograms(val) {
+      /* Zaokrąglij do dwóch miejsc po przecinku i zwróć bez zbędnych zer po
+         przecinku. Używamy konwersji liczb do łańcucha, która automatycznie
+         usuwa niepotrzebne miejsca dziesiętne, np. 100.00 → "100", 66.70 → "66.7" */
+      const rounded = Math.round(val * 100) / 100;
+      return rounded.toString();
+    }
+
+    /**
+     * Supresja HPTA (0–100 %) w funkcji tygodni – wersja 2.0
+     * ------------------------------------------------------
+     * • uwzględnia biodostępność (bio) – przelicza dawkę na „czysty hormon”
+     * • próg 100 % supresji zależny od hpta (silniejsze AAS → niższy próg)
+     * • stromość krzywej (k) i jej przesunięcie (t0) skalowane okresem półtrwania
+     * • faza regeneracji ma tę samą wartość w tygodniu 0 po cyklu (ciągłość)
+     *
+     *  param drugId       id sterydu
+     *  param doseMgWeek   dawka mg / tydzień (podana na etykiecie)
+     *  param weightKg     masa ciała
+     *  param cycleWeeks   długość cyklu
+     *  param opts         {k,t0} – nadpisy, rzadko używane
+     */
+    function supressionProfile(drugId, doseMgWeek, weightKg, cycleWeeks, opts = {}) {
+      const d = getDrug(drugId);
+      if (!d || d.group !== 'AAS') return null;
+
+      /* 1. Efektywna dawka (mg substancji czynnej) – uwzględniamy bio/estr */
+      const doseEffMg = doseMgWeek * (d.bio ?? 1);
+      const mgPerKg = doseEffMg / (weightKg || 80);
+
+      /* 2. Próg nasycenia: przy jakiej dawce jest ~100 % supresji?        *
+       *    – dla testosteronu baza przyjmujemy 2.5 mg/kg,
+       *    – zmniejszamy próg odwrotnie do hpta (silniejszy steryd → mniejszy próg) */
+      const satMgKg = 2.5 / (d.hpta || 1);
+
+      /* 3. Maksymalna supresja osiągana podczas cyklu (0–1) */
+      const maxSup = Math.min(1, mgPerKg / satMgKg);
+
+      /* 4. Dynamiczne parametry krzywej logistycznej                      *
+       *    Im krótszy t½, tym mniejszy shift (wcześniejszy pik) i większy k */
+      const hlDays = d.hl || 5;
+      const hlWeeks = hlDays / 7;
+      /* skala czasu  ≈1 dla t½ 5 d,   0.6 dla 2 d,   1.4 dla 10 d */
+      const tScale = Math.max(0.6, Math.min(1.4, hlWeeks / 5));
+      const kBase = 4 / cycleWeeks;
+      const k = opts.k ?? (kBase * (1 / tScale));         // krótki ester = bardziej stromy
+      const t0 = opts.t0 ?? (cycleWeeks / 2 * tScale);      // przesunięcie środka
+
+      /* 5. Czas rekonwalescencji – dłuższy, jeśli długi ester             *
+       *    wzór:  12 tyg + 4 × t½      (≈ 3‑5 półokresów)                 */
+      const recWeeks = Math.round(12 + 4 * hlWeeks);
+
+      const totalW = cycleWeeks + recWeeks;
+      const data = [];
+
+      for (let w = 0; w <= totalW; w++) {
+        let s; // supresja (0–1)
+        if (w <= cycleWeeks) {
+          /* faza on‑cycle */
+          s = maxSup / (1 + Math.exp(-k * (w - t0)));
+        } else {
+          /* faza regeneracji – lustrzana funkcja, ale skalujemy kRec, t1  */
+          const t = w - cycleWeeks;
+          const kRec = k / 1.3;                     // zwykle łagodniejsza
+          const t1 = recWeeks / 2;
+          s = maxSup / (1 + Math.exp(kRec * (t - t1)));
+        }
+        data.push(Math.round(s * 100));
+      }
+
+      return {
+        label: `${d.label} ${doseMgWeek.toFixed(0)} mg/tydz`,
+        data
+      };
+    }
+
+    // ---------- PCT helper functions ---------------------------------
+
+    /**
+     * Zwraca numer tygodnia od KOŃCA cyklu, w którym supresja < 50 %.
+     * Jeśli nie spada poniżej 50 % w przewidywanym czasie → null.
+     */
+    function pctStartWeek(supData, cycleWeeks) {
+      for (let i = cycleWeeks; i < supData.length; i++) {
+        if (supData[i] < 50) return i - cycleWeeks;   // tygodnie po cyklu
+      }
+      return null;
+    }
+
+    /**
+     * Heurystyczna klasyfikacja cyklu.
+     * Zwraca 'mild' | 'moderate' | 'heavy'.
+     */
+    function cycleClass(drugId, supMax, cycleWeeks) {
+      const strongAas = ['nandrolon', 'trenbolon'];
+      if (supMax >= 90 && (cycleWeeks > 12 || strongAas.includes(drugId)))
+        return 'heavy';
+      if (supMax >= 70 || cycleWeeks > 8) return 'moderate';
+      return 'mild';
+    }
+
+    /**
+     * Generuje HTML z protokołem PCT i listą źródeł PubMed.
+     */
+    function generatePctHtml(classif, startAfterWeeks) {
+      const startTxt = (startAfterWeeks != null)
+        ? `Rozpocznij około <strong>${startAfterWeeks} tygodni</strong> po zakończeniu cyklu (gdy supresja spadnie < 50 %).`
+        : `Rozpocznij, gdy supresja spadnie poniżej 50 % (model nie przewidział dokładnej daty w zakresie symulacji).`;
+
+      // --- schematy zależne od klasy --------------------------------
+      const protos = {
+        mild: `
+          <ul>
+            <li><strong>Tamoksyfen</strong> 20 mg&nbsp;/ dobę – 4 tyg.</li>
+            <li>lub <strong>Klomifen</strong> 25 mg&nbsp;/ dobę – 4 tyg.</li>
+          </ul>`,
+        moderate: `
+          <ul>
+            <li><strong>Klomifen</strong> 50 mg&nbsp;2× / dobę – 2 tyg., potem 50 mg&nbsp;/ dobę – 2 tyg.</li>
+            <li><strong>Tamoksyfen</strong> 20 mg&nbsp;/ dobę równolegle – 4 tyg.</li>
+            <li><strong>hCG</strong> 500–1000 IU co 2. dzień – 2 tyg. (opcjonalnie, gdy zauważalna atrofia jąder).</li>
+          </ul>`,
+        heavy: `
+          <ul>
+            <li><strong>hCG</strong> 1500–2500 IU 2× / tydz. – 3 tyg.</li>
+            <li>Następnie <strong>Klomifen</strong> 100 mg&nbsp;/ dobę – 2 tyg.,<br>
+                potem 50 mg&nbsp;/ dobę – 2 tyg.</li>
+            <li>Równolegle <strong>Tamoksyfen</strong> 20 mg&nbsp;/ dobę – 6 tyg.</li>
+          </ul>`
+      };
+
+      // --- źródła PubMed --------------------------------------------
+      const sources = `
+        <ol>
+          <li><a href="https://pubmed.ncbi.nlm.nih.gov/37855241/" target="_blank">
+              Solanki P et al. 2023 – Recovery from anabolic‑steroid hypogonadism (scoping review)</a></li>
+          <li><a href="https://pubmed.ncbi.nlm.nih.gov/29436172/" target="_blank">
+              Bi Y et al. 2018 – PK/PD model: depot testosterone vs LH suppression</a></li>
+          <li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC8298654/#:~:text=A%20major%20effect%20of%20extended,of%20ASIH%20is%20highly%20dependent" target="_blank">
+              Bonnecaze AK, O'Connor T, Burns CA. Harm Reduction in Male Patients Actively Using Anabolic Androgenic Steroids (AAS) and Performance-Enhancing Drugs (PEDs): a Review</a></li>
+          <li><a href="https://pubmed.ncbi.nlm.nih.gov/37951896/#:~:text=but%2035.3,PCT%20should%20be%20prescribed%20under" target="_blank">
+              Grant B, Kean J, Vali N, Campbell J, Maden L, Bijral P, Dhillo WS, McVeigh J, Quinton R, Jayasena CN. The use of post-cycle therapy is associated with reduced withdrawal symptoms from anabolic-androgenic steroid use: a survey of 470 men</a></li>
+          <li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC9837614/#:~:text=mechanism%20of%20sex%20steroid,value%20of%20the%20nonusers%20group" target="_blank">
+              Bond P, Smit DL, de Ronde W. Anabolic-androgenic steroids: How do they work and what are the risks?</a></li>
+          <li><a href="https://pubmed.ncbi.nlm.nih.gov/24636400/#:~:text=replacement%20therapy%2C%20hCG%2C%20and%20selective,estrogen%20receptor%20modulators" target="_blank">
+              Rahnema CD, Lipshultz LI, Crosnoe LE, Kovac JR, Kim ED. Anabolic steroid-induced hypogonadism: diagnosis and treatment. Fertil Steril. 2014</a></li>
+        </ol>`;
+
+      return `
+        <p>${startTxt}</p>
+        <p>Proponowany schemat (<em>${classif}</em>):</p>
+        ${protos[classif]}
+        <h4>Źródła (PubMed)</h4>
+        ${sources}`;
+    }
+
+    /**
+     * Główna funkcja: pokazuje blok PCT pod wykresem.
+     */
+    function showPctRecommendations(refDrugId, refDataset, cycleWeeks) {
+      // ► maksymalna supresja WYŁĄCZNIE w okresie cyklu (tyg. 0 … cycleWeeks)
+      const supCycleMax = Math.max(...refDataset.data.slice(0, cycleWeeks + 1));
+
+      // Jeśli supresja ≤ 50 % → ukryj całą kartę PCT
+      if (supCycleMax <= 50) {
+        document.getElementById('pctCard').style.display = 'none';
+        document.getElementById('pctContent').innerHTML = '';
+        document.getElementById('pctInfo').textContent = '';
+        return;
+      }
+
+      // --- dotychczasowa logika ---
+      const startAfter = pctStartWeek(refDataset.data, cycleWeeks);  // tyg. po cyklu
+      const cls = cycleClass(refDrugId, supCycleMax, cycleWeeks);
+
+      // wypełnij treść + nagłówek
+      document.getElementById('pctContent').innerHTML =
+        generatePctHtml(cls, startAfter);
+      document.getElementById('pctInfo').textContent =
+        `— dla ${refDataset.label}`;           // np. „dla Testosteron 100 mg/tydz”
+
+      document.getElementById('pctCard').style.display = 'block';
+    }
+
+    let hptaChart = null;
+    function drawHptaChart(datasets) {
+      const maxLen = Math.max(...datasets.map(ds => ds.data.length));
+      const labels = Array.from({ length: maxLen }, (_, i) => i);
+      const ctx = document.getElementById('hptaChart').getContext('2d');
+      if (hptaChart) hptaChart.destroy();
+      hptaChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: datasets.map(ds => ({
+            label: ds.label,
+            data: ds.data,
+            borderWidth: 2,
+            tension: 0.3,
+            fill: false
+          }))
+        },
+        options: {
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: ctx => ctx.raw + '% supresji'
+              }
+            },
+            legend: { position: 'top' }
+          },
+          scales: {
+            x: { title: { display: true, text: 'Tydzień' } },
+            y: { title: { display: true, text: '% supresji HPTA' }, min: 0, max: 100 }
+          }
+        }
+      });
+      document.getElementById('chartCard').style.display = 'block';
+      document.getElementById('hptaInfo').style.display = 'block';   // <‑‑ NOWA
+    }
+
+    // ------------------------------------------------------------------
+    // 4. Obsługa formularza i wyświetlanie wyników
+    // ------------------------------------------------------------------
+    // Global storage for the last calculated result.  This object holds
+    // everything needed to re-render the results section when the viewport
+    // width changes (e.g. switching between mobile and desktop layouts).
+    let lastCalcResult = null;
+
+    // Helper to update the results layout based on the current viewport
+    // width.  When a calculation has been performed (lastCalcResult is
+    // non-null), this function will swap between a full-width table and
+    // stacked fieldsets depending on whether the viewport is wider than
+    // 640 px.  It also ensures the summary card is always rendered.
+    function updateResultsLayout() {
+      if (!lastCalcResult) return;
+      const isMobile = window.matchMedia('(max-width: 640px)').matches;
+      const txtResEl = document.getElementById('textResult');
+      const tblResEl = document.getElementById('tableResult');
+      const resultsSec = document.getElementById('results');
+      // Always set the summary HTML.  It remains the same regardless
+      // of viewport width, but applying it here helps recover if the
+      // element contents were cleared for some reason (e.g. page refresh).
+      txtResEl.innerHTML = lastCalcResult.summaryHtml;
+      // Show or hide the table/fieldset section depending on whether
+      // multiple rows were present in the last calculation.
+      if (lastCalcResult.multipleRows) {
+        // Choose between table view (desktop) and stacked fieldsets (mobile).
+        tblResEl.innerHTML = isMobile ? lastCalcResult.fieldsetRows
+                                      : lastCalcResult.tableHtml;
+        tblResEl.style.display = 'block';
+      } else {
+        // When there was only one input row, hide the table/fieldset area.
+        tblResEl.innerHTML = '';
+        tblResEl.style.display = 'none';
+      }
+      // Always make sure the results section is visible when we have
+      // calculated data.  Without this the results could disappear if
+      // toggled from HPTA-only mode previously.
+      resultsSec.style.display = 'block';
+    }
+
+    // Re-render results when the window is resized.  This allows the
+    // interface to dynamically switch between the desktop table layout and
+    // the mobile stacked fieldsets without requiring the user to
+    // re-submit the form.  The handler is attached once at load time.
+    window.addEventListener('resize', updateResultsLayout);
+
+    document.getElementById('calcForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const skipMode = document.getElementById('hptaOnly').checked;
+
+      // 4A. Pobierz wszystkie dawki źródłowe z formularza
+      const rows = Array.from(document.querySelectorAll('.dose-row'));
+      if (rows.length === 0) {
+        return alert('Dodaj co najmniej jedną dawkę.');
+      }
+      const inputs = rows.map(r => {
+        return {
+          drugId: r.querySelector('.srcDrug').value,
+          doseVal: parseFloat(r.querySelector('.srcDose').value),
+          unit: r.querySelector('.srcUnit').value
+        };
+      });
+      if (inputs.some(i => !i.doseVal || i.doseVal <= 0)) {
+        return alert('Upewnij się, że wszystkie dawki są liczbami > 0.');
+      }
+
+      // Pobierz identyfikator sterydu docelowego z selecta.  Nie polegamy na
+      // właściwościach formularza (np. e.target.targetDrug), ponieważ te
+      // odwołują się do atrybutu name, a nie id; w niektórych przeglądarkach
+      // mogą być zatem niezdefiniowane lub wskazywać na poprzednią wartość.
+      const trgSelect = document.getElementById('targetDrug');
+      const trgId   = trgSelect ? trgSelect.value : '';
+      // Zapisz nazwę sterydu docelowego raz, aby nie obliczać jej w każdej iteracji pętli.
+      const trgLabel = getDrug(trgId)?.label || '';
+      // Oblicz nazwę docelowego sterydu w dopełniaczu z wyprzedzeniem.
+      // Używamy jej w tabeli wyników dla wszystkich wierszy, aby nie wywoływać
+      // toGenitive() wielokrotnie w pętli.  Jeśli trgLabel jest pusty,
+      // wynik pozostanie pusty.
+      const trgLabelGen = trgLabel ? toGenitive(trgLabel) : trgLabel;
+      // Sprawdź, czy w obliczeniach bierze udział betametazon (jako źródło lub docelowy).
+      const hasBetam = (trgId === 'betametazon') || inputs.some(i => i.drugId === 'betametazon');
+      // Pobierz opcjonalną masę ciała i wzrost bezpośrednio z odpowiednich pól.
+      const weightInput = document.getElementById('weight');
+      const heightInput = document.getElementById('height');
+      const weight  = weightInput ? (parseFloat(weightInput.value) || null) : null;
+      const height  = heightInput ? (parseFloat(heightInput.value) || null) : null;
+      // Determine if the user has entered more than one source steroid row.
+      // Used to control whether individual conversion fieldsets are shown and to
+      // adjust labels in the summary.
+      const multipleRows = inputs.length > 1;
+
+      let tableRows = '', fieldsetRows = '';
+      // Suma docelowych dawek w mg; dla zakresów z betametazonem przechowujemy min i max
+      let sumTargetMgMin = 0;
+      let sumTargetMgMax = 0;
+
+      if (!skipMode) {                       // ← tylko gdy NIE pomijamy przeliczeń
+        inputs.forEach(inp => {
+          const srcDoseMg = (inp.unit === 'mg') ? inp.doseVal : inp.doseVal / 1000;
+          // Oblicz zakres wyniku, jeśli dotyczy betametazonu
+          const resRange = convertDoseRange(inp.drugId, srcDoseMg, trgId);
+          // Oblicz pojedynczą wartość w każdym przypadku
+          const resMgSingle = convertDose(inp.drugId, srcDoseMg, trgId);
+          if (resMgSingle == null) return;         // inna grupa – pomiń wiersz
+          // Sumuj zakresy lub pojedynczą wartość
+          if (Array.isArray(resRange)) {
+            const [rMin, rMax] = resRange;
+            sumTargetMgMin += rMin;
+            sumTargetMgMax += rMax;
+          } else {
+            sumTargetMgMin += resMgSingle;
+            sumTargetMgMax += resMgSingle;
+          }
+          // mg/kg (względem dawki docelowej) – dla zakresu podajemy zakres; domyślnie '-'
+          let mgPerKg = '-';
+          if (weight) {
+            if (Array.isArray(resRange)) {
+              const [rMin, rMax] = resRange;
+              const minPerKg = (rMin / weight).toFixed(3);
+              const maxPerKg = (rMax / weight).toFixed(3);
+              mgPerKg = `${minPerKg}–${maxPerKg}`;
+            } else {
+              mgPerKg = (resMgSingle / weight).toFixed(3);
+            }
+          }
+          // Przygotuj łańcuch dla równoważnika (zakres lub pojedyncza wartość) i dodaj nazwę sterydu docelowego.
+          const eqStr = Array.isArray(resRange)
+            ? `${resRange[0].toFixed(2)}–${resRange[1].toFixed(2)} mg`
+            : `${resMgSingle.toFixed(2)} mg`;
+          tableRows += `
+            <tr>
+              <td>${getDrug(inp.drugId).label}</td>
+              <td>${inp.doseVal} ${(inp.unit === 'ug') ? 'µg' : 'mg'}</td>
+              <td>${mgPerKg}</td>
+              <td>${eqStr} (${trgLabelGen})</td>
+            </tr>`;
+          // oblicz wyświetlaną równoważną dawkę (mg lub µg)
+          let rowDisp;
+          if (Array.isArray(resRange)) {
+            const [rMin, rMax] = resRange;
+            const isInhal = isInhaled(getDrug(trgId));
+            const minVal = isInhal ? (rMin * 1000) : rMin;
+            const maxVal = isInhal ? (rMax * 1000) : rMax;
+            const unit = isInhal ? 'µg' : 'mg';
+            rowDisp = `${minVal.toFixed(2)}–${maxVal.toFixed(2)} ${unit}`;
+          } else {
+            // Dla pojedynczego wyniku stosujemy jednostki zgodne z grupą docelową
+            if (isInhaled(getDrug(trgId))) {
+              rowDisp = formatMicrograms(resMgSingle * 1000) + ' µg';
+            } else {
+              rowDisp = resMgSingle.toFixed(2) + ' mg';
+            }
+          }
+          // przygotuj linię z przelicznikiem według przyjętego formatu
+          const srcDrug = getDrug(inp.drugId);
+          const trgDrug = getDrug(trgId);
+          let factorLine = '';
+          // jeśli oba leki są ogólnoustrojowymi GKS (nie wziewne) wyświetl bazową dawkę równoważną 5 mg prednizonu
+          if (
+            srcDrug.group && trgDrug.group &&
+            srcDrug.group.startsWith('GKS') && trgDrug.group.startsWith('GKS') &&
+            !isInhaled(srcDrug) && !isInhaled(trgDrug)
+          ) {
+            const baseS = baseDoseRange(inp.drugId);
+            const baseT = baseDoseRange(trgId);
+            if (baseS != null && baseT != null) {
+              // funkcja pomocnicza do formatowania wartości (pojedynczej lub zakresu)
+              const formatRange = (val, drug) => {
+                if (Array.isArray(val)) {
+                  return val.map(v => formatDose(drug, v)).join('–');
+                }
+                return formatDose(drug, val);
+              };
+              const baseSDisp = formatRange(baseS, srcDrug);
+              const baseTDisp = formatRange(baseT, trgDrug);
+              // Używaj nazw leków w dopełniaczu (np. "Testosteronu" zamiast "Testosteron")
+              factorLine = `<p class="convert-info"><strong>Przelicznik:</strong> ${baseSDisp} ${toGenitive(srcDrug.label)} ≈ ${baseTDisp} ${toGenitive(trgDrug.label)}</p>`;
+              // jeżeli w przeliczeniu występuje betametazon, dodaj dynamiczny komunikat
+              if (srcDrug.id === 'betametazon' || trgDrug.id === 'betametazon') {
+                const msg = betamMessage(srcDrug, trgDrug);
+                if (msg) {
+                  factorLine += `<p class="convert-info"><em>${msg}</em></p>`;
+                }
+              }
+            }
+          } else {
+            // w innych przypadkach użyj proporcji mg→mg (np. AAS, GKS‑wziewne → GKS‑wziewne, itp.)
+            const factor = conversionFactor(inp.drugId, trgId);
+            if (factor != null) {
+              let factorDisp;
+              let prefixStr;
+              // Jeśli oba leki są sterydami wziewnymi – stosujemy bazę 100 µg zamiast 1 mg
+              if (isInhaled(srcDrug) && isInhaled(trgDrug)) {
+                const micVal = factor * 100; // µg docelowego na 100 µg źródłowego
+                factorDisp = formatMicrograms(micVal) + ' µg';
+                prefixStr = '100 µg';
+              } else if (isInhaled(trgDrug)) {
+                // Konwersja z GKS (lub AAS, jeśli dozwolone) na steroid wziewny – 1 mg → µg
+                const micVal = factor * 1000; // µg docelowego na 1 mg źródłowego
+                factorDisp = formatMicrograms(micVal) + ' µg';
+                prefixStr = '1 mg';
+              } else {
+                // Standardowa konwersja mg→mg
+                factorDisp = factor.toFixed(4) + ' mg';
+                prefixStr = '1 mg';
+              }
+            // Używaj nazw leków w dopełniaczu przy standardowej konwersji mg→mg/µg
+            factorLine = `<p class="convert-info"><strong>Przelicznik:</strong> ${prefixStr} ${toGenitive(srcDrug.label)} ≈ ${factorDisp} ${toGenitive(trgDrug.label)}</p>`;
+              if (srcDrug.id === 'betametazon' || trgDrug.id === 'betametazon') {
+                const msg = betamMessage(srcDrug, trgDrug);
+                if (msg) {
+                  factorLine += `<p class="convert-info"><em>${msg}</em></p>`;
+                }
+              }
+            }
+          }
+          // buduj fieldset dla każdego przeliczenia i dołącz informację o przyjętym współczynniku
+          fieldsetRows += `
+            <fieldset class="result-fieldset card">
+              <legend class="result-title">${srcDrug.label}</legend>
+              <p><strong>Dawka:</strong> ${inp.doseVal} ${(inp.unit === 'ug') ? 'µg' : 'mg'}</p>
+              ${weight ? `<p class="highlight-row"><strong>mg/kg:</strong> ${mgPerKg}</p>` : ''}
+              <p class="highlight-row"><strong>Równoważnik:</strong> ${rowDisp} ${toGenitive(trgDrug.label)}</p>
+              ${factorLine}
+            </fieldset>`;
+        });
+      }
+
+      // 4C / 4D — obliczenia sum i tabela ---------------------------
+      // ⬇ START 4C/4D
+      if (!skipMode) {
+        const trgIsInhal = isInhaled(getDrug(trgId));
+        // Przygotuj tekst sumy dla zakresów; jeśli min i max są równe, pokazujemy pojedynczą wartość
+        let totalDisp;
+        if (trgIsInhal) {
+          if (sumTargetMgMin !== sumTargetMgMax) {
+            totalDisp = `${(sumTargetMgMin * 1000).toFixed(2)}–${(sumTargetMgMax * 1000).toFixed(2)} µg`;
+          } else {
+            totalDisp = (sumTargetMgMin * 1000).toFixed(2) + ' µg';
+          }
+        } else {
+          if (sumTargetMgMin !== sumTargetMgMax) {
+            totalDisp = `${sumTargetMgMin.toFixed(2)}–${sumTargetMgMax.toFixed(2)} mg`;
+          } else {
+            totalDisp = sumTargetMgMin.toFixed(2) + ' mg';
+          }
+        }
+        // mg/kg całkowite – zakres lub pojedyncza wartość
+        let mgPerKgTotal;
+        if (weight) {
+          if (sumTargetMgMin !== sumTargetMgMax) {
+            const minPerKg = (sumTargetMgMin / weight).toFixed(3);
+            const maxPerKg = (sumTargetMgMax / weight).toFixed(3);
+            mgPerKgTotal = `${minPerKg}–${maxPerKg}`;
+          } else {
+            mgPerKgTotal = (sumTargetMgMin / weight).toFixed(3);
+          }
+        } else {
+          mgPerKgTotal = '-';
+        }
+
+        let bsa = '-';
+        let mgM2Total = '-';
+        if (weight && height && getDrug(trgId).group === 'GKS') {
+          // wzór Haycocka
+          bsa = (0.024265 * Math.pow(weight, 0.5378) * Math.pow(height, 0.3964)).toFixed(2);
+          if (sumTargetMgMin !== sumTargetMgMax) {
+            const minPerM2 = (sumTargetMgMin / parseFloat(bsa)).toFixed(2);
+            const maxPerM2 = (sumTargetMgMax / parseFloat(bsa)).toFixed(2);
+            mgM2Total = `${minPerM2}–${maxPerM2}`;
+          } else {
+            mgM2Total = (sumTargetMgMin / parseFloat(bsa)).toFixed(2);
+          }
+        }
+
+        // ---- podsumowanie + przeliczenia w formie fieldsetów
+        // Przygotuj linię przelicznika w podsumowaniu (jeśli jest tylko jeden wiersz)
+        let summaryFactorLine = '';
+        if (!multipleRows && inputs.length === 1) {
+          const srcDrug0 = getDrug(inputs[0].drugId);
+          const trgDrug0 = getDrug(trgId);
+            if (
+            srcDrug0 && trgDrug0 &&
+            srcDrug0.group && trgDrug0.group &&
+            srcDrug0.group.startsWith('GKS') && trgDrug0.group.startsWith('GKS') &&
+            !isInhaled(srcDrug0) && !isInhaled(trgDrug0)
+          ) {
+            const baseS0 = baseDoseRange(inputs[0].drugId);
+            const baseT0 = baseDoseRange(trgId);
+            if (baseS0 != null && baseT0 != null) {
+              const formatRange0 = (val, drug) => {
+                if (Array.isArray(val)) {
+                  return val.map(v => formatDose(drug, v)).join('–');
+                }
+                return formatDose(drug, val);
+              };
+              const baseSDisp0 = formatRange0(baseS0, srcDrug0);
+              const baseTDisp0 = formatRange0(baseT0, trgDrug0);
+              // Używaj nazw leków w dopełniaczu w podsumowaniu (np. "Testosteronu" zamiast "Testosteron")
+              summaryFactorLine = `<p class="convert-info"><strong>Przelicznik:</strong> ${baseSDisp0} ${toGenitive(srcDrug0.label)} ≈ ${baseTDisp0} ${toGenitive(trgDrug0.label)}</p>`;
+                if (inputs[0].drugId === 'betametazon' || trgDrug0.id === 'betametazon') {
+                  const msgSum = betamMessage(srcDrug0, trgDrug0);
+                  if (msgSum) {
+                    summaryFactorLine += `<p class="convert-info"><em>${msgSum}</em></p>`;
+                  }
+                }
+            }
+          } else {
+            const factorTotal = conversionFactor(inputs[0].drugId, trgId);
+            if (factorTotal != null) {
+              let factorDispTotal;
+              let prefixStr;
+              // Jeśli oba leki są wziewne, stosujemy bazę 100 µg
+              if (isInhaled(srcDrug0) && isInhaled(trgDrug0)) {
+                const microVal = factorTotal * 100; // µg docelowego na 100 µg źródłowego
+                factorDispTotal = formatMicrograms(microVal) + ' µg';
+                prefixStr = '100 µg';
+              } else if (isInhaled(trgDrug0)) {
+                // Konwersja do steroidu wziewnego: 1 mg → µg
+                const microVal = factorTotal * 1000;
+                factorDispTotal = formatMicrograms(microVal) + ' µg';
+                prefixStr = '1 mg';
+              } else {
+                // Standardowa konwersja mg→mg
+                factorDispTotal = factorTotal.toFixed(4) + ' mg';
+                prefixStr = '1 mg';
+              }
+              // Stosuj nazwy leków w dopełniaczu dla przelicznika w podsumowaniu (mg→mg/µg)
+              summaryFactorLine = `<p class="convert-info"><strong>Przelicznik:</strong> ${prefixStr} ${toGenitive(srcDrug0.label)} ≈ ${factorDispTotal} ${toGenitive(trgDrug0.label)}</p>`;
+              if (inputs[0].drugId === 'betametazon' || trgDrug0.id === 'betametazon') {
+                const msgSum2 = betamMessage(srcDrug0, trgDrug0);
+                if (msgSum2) {
+                  summaryFactorLine += `<p class="convert-info"><em>${msgSum2}</em></p>`;
+                }
+              }
+            }
+          }
+        }
+        // === Generowanie podsumowania i tabeli wyników ===
+        const txtResEl   = document.getElementById('textResult');
+        const tblResEl   = document.getElementById('tableResult');
+        const resultsSec = document.getElementById('results');
+
+        // Buduj HTML podsumowania. Jeśli jest więcej niż jedna dawka, nazwa sekcji to
+        // „Łączna dawka równoważna”. W przeciwnym wypadku stosujemy „Dawka równoważna”.
+        const summaryTitle = multipleRows ? 'Łączna dawka równoważna' : 'Dawka równoważna';
+        let summaryHtml = `<fieldset class="result-fieldset card" style="text-align:center">`;
+        summaryHtml += `<legend class="result-title">${summaryTitle}</legend>`;
+        summaryHtml += `<p class="highlight-row"><strong>${totalDisp}</strong> ${toGenitive(getDrug(trgId).label)}</p>`;
+        // mg/kg (suma) – tylko gdy podano masę ciała
+        if (weight) {
+          summaryHtml += `<p class="highlight-row"><strong>mg/kg${multipleRows ? ' (suma)' : ''}:</strong> ${mgPerKgTotal}</p>`;
+        }
+        // mg/m² / BSA – tylko dla GKS i gdy mamy masę i wzrost
+        if (mgM2Total !== '-') {
+          summaryHtml += `<p class="highlight-row"><strong>BSA:</strong> ${bsa} m²; <strong>mg/m²${multipleRows ? ' (suma)' : ''}:</strong> ${mgM2Total}</p>`;
+        }
+        // Jeśli mamy wiele dawek i wśród nich (lub jako docelowy) występuje betametazon,
+        // dodaj uniwersalny komunikat wyjaśniający, że zakres wynika z różnych przeliczników betametazonu.
+        if (multipleRows && hasBetam) {
+          summaryHtml += `<p class="convert-info"><em>Zakres dawek wynika z różnych sposobów obliczania siły betametazonu.</em></p>`;
+        }
+        // Dodatkowa linia z przelicznikiem tylko w przypadku pojedynczej dawki
+        if (!multipleRows) {
+          summaryHtml += summaryFactorLine;
+        }
+        summaryHtml += `</fieldset>`;
+        // Bezpośrednio wstaw wynik do elementów DOM w zależności od liczby
+        // wierszy oraz szerokości okna.  To zapewnia natychmiastowe
+        // odświeżenie wyników po kliknięciu „Przelicz”, niezależnie od
+        // mechanizmu dynamicznego przełączania widoków.
+        txtResEl.innerHTML = summaryHtml;
+        if (multipleRows) {
+          if (window.matchMedia('(max-width: 640px)').matches) {
+            // W widoku mobilnym używamy fieldsetów z animowanymi strzałkami
+            tblResEl.innerHTML = fieldsetRows;
+          } else {
+            // W widoku desktopowym pokazujemy zbiorczą tabelę
+            tblResEl.innerHTML = `<table class="result-table">
+                <thead>
+                  <tr>
+                    <th>Steroid źródłowy</th>
+                    <th>Dawka</th>
+                    <th>mg/kg</th>
+                    <th>Równoważnik</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${tableRows}
+                </tbody>
+              </table>`;
+          }
+          tblResEl.style.display = 'block';
+        } else {
+          // Dla pojedynczej dawki nie wyświetlamy tabeli ani fieldsetów
+          tblResEl.innerHTML = '';
+          tblResEl.style.display = 'none';
+        }
+        // Upewnij się, że sekcja wyników jest widoczna
+        resultsSec.style.display = 'block';
+
+        // Zapamiętaj wynik tego obliczenia na potrzeby dynamicznego
+        // przełączania między widokiem mobilnym a desktopowym.  Zapisujemy
+        // zarówno wygenerowany HTML podsumowania, jak i treść tabeli
+        // (z nagłówkiem) oraz fieldsetów.  Dzięki temu handler resize
+        // będzie mógł odtworzyć odpowiedni widok bez ponownego liczenia.
+        lastCalcResult = {
+          multipleRows: multipleRows,
+          summaryHtml: summaryHtml,
+          // Pełna tabela HTML (nagłówek + wiersze) generowana na potrzeby
+          // desktopu.  Użyj tabeli nawet jeśli jesteśmy w widoku mobilnym,
+          // aby móc ją później wyświetlić po zmianie szerokości okna.
+          tableHtml: `<table class="result-table">
+                <thead>
+                  <tr>
+                    <th>Steroid źródłowy</th>
+                    <th>Dawka</th>
+                    <th>mg/kg</th>
+                    <th>Równoważnik</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${tableRows}
+                </tbody>
+              </table>`,
+          // Fieldsety z wynikami (używane w widoku mobilnym).  Przechowujemy
+          // je w całości bez zmian, aby móc je wstawić ponownie.
+          fieldsetRows: fieldsetRows
+        };
+
+        // Wywołaj funkcję aktualizującą układ w zależności od szerokości
+        // okna.  Spowoduje to wstawienie podsumowania i odpowiedniego
+        // elementu (tabeli lub fieldsetów) w sekcji wyników.
+        updateResultsLayout();
+
+        // Pokaż ostrzeżenie o charakterze poglądowym (w razie potrzeby)
+        const warnEl = document.getElementById('warningSection');
+        if (warnEl) warnEl.style.display = 'block';
+      } else {
+        // tryb „tylko HPTA” → ukryj wyniki konwersji i ostrzeżenie.  Usuwamy
+        // zapamiętany rezultat, aby ewentualny resize nie przywracał
+        // poprzednich danych.
+        lastCalcResult = null;
+        document.getElementById('results').style.display = 'none';
+        document.getElementById('textResult').innerHTML = '';
+        document.getElementById('tableResult').innerHTML = '';
+        document.getElementById('tableResult').style.display = 'none';
+        const warnOffEl = document.getElementById('warningSection');
+        if (warnOffEl) warnOffEl.style.display = 'none';
+      }
+      // ⬆ KONIEC 4C/4D
+
+      // 4E. Jeśli dotyczy – oblicz i pokaż wykres supresji HPTA
+      const aasInputs = inputs.filter(i => getDrug(i.drugId).group === 'AAS');
+
+      if (aasInputs.length) {
+        const cycleLen = parseInt(e.target.cycleLen.value) || 12;
+        const weightKg = weight || 80;
+
+        const refInp     = aasInputs[0];                     // 1‑szy AAS = wzorzec
+        const refDrugId  = refInp.drugId;
+        const refDoseMg  = (refInp.unit === 'mg')
+                          ? refInp.doseVal
+                          : refInp.doseVal / 1000;          // µg → mg
+
+        // lista AAS wybranych do porównań (z Select‑multiple)
+        const chosenIds = Array.from(
+                            document.getElementById('compareDrugs').selectedOptions
+                          ).map(o => o.value);
+
+        let datasets = [];
+
+        // ZAWSZE rysujemy linię referencyjną (realna dawka wejściowa)
+        datasets.push(
+          supressionProfile(refDrugId, refDoseMg, weightKg, cycleLen)
+        );
+
+        if (chosenIds.length) {
+          // --- TRYB PORÓWNANIA: dawki przeliczane względem sterydu referencyjnego
+          chosenIds.forEach(id => {
+            if (id === refDrugId) return; // unikamy duplikatu
+            const eqDose = convertDose(refDrugId, refDoseMg, id);  // mg/tydz
+            if (eqDose != null) {
+              datasets.push(
+                supressionProfile(id, eqDose, weightKg, cycleLen)
+              );
+            }
+          });
+        } else {
+          // --- BRAK ręcznie zaznaczonych AAS → rysujemy każdą realną dawkę z formularza
+          aasInputs.slice(1).forEach(i => { // slice(1) pomija już dodaną linię ref
+            const doseMg = (i.unit === 'mg') ? i.doseVal : i.doseVal / 1000;
+            datasets.push(
+              supressionProfile(i.drugId, doseMg, weightKg, cycleLen)
+            );
+          });
+        }
+
+        drawHptaChart(datasets);
+
+        // ▼ NOWO DODANE 3 LINIE ▼
+        //
+        // Tymczasowo wyłączamy wywołanie sugestii PCT (Post‑Cycle Therapy).
+        // Kod pozostawiamy zakomentowany, aby w przyszłości łatwo było go
+        // ponownie aktywować. Wystarczy usunąć prefiks „//” z poniższych linii.
+        // const refDataset = datasets[0];            // linia referencyjna (pierwszy AAS)
+        // showPctRecommendations(refDrugId, refDataset, cycleLen);
+        //
+        // ▲ NOWO DODANE ▲
+      } else {
+        // brak AAS → ukryj wykres
+        document.getElementById('chartCard').style.display = 'none';
+        document.getElementById('hptaInfo').style.display = 'none';
+        document.getElementById('pctCard').style.display = 'none';  // ukryj PCT
+        document.getElementById('pctInfo').textContent = '';
+      }
+    });
+  </script>
+  <!-- Liquid Glass interfejs: dodaje klasy szklanego wyglądu oraz mikrointerakcje.
+       Parametr wersji wymusza odświeżenie z cache w przeglądarkach. -->
+  <script src="ios26-ui.js?v=2" defer></script>
+
+  <!-- Baner cookies / lokalnego przechowywania danych -->
+  <div id="consent-banner" class="cookie-banner hidden">
+    <p>
+      Korzystając z aplikacji <strong>Vilda Clinic</strong> zapisujemy niewielkie ilości danych w Twojej przeglądarce:
+    </p>
+    <ul>
+      <li><strong>Pliki niezbędne:</strong> Service Worker zapisuje pliki aplikacji (HTML, CSS, JavaScript, grafiki) w Cache Storage, aby umożliwić działanie offline. Nie zbiera żadnych danych osobowych.</li>
+      <li><strong>Pamięć funkcjonalna:</strong> Po weryfikacji numeru PWZ możesz zdecydować, czy zapamiętać go w tej przeglądarce. Numer zostanie zapisany w localStorage wyłącznie w Twoim urządzeniu i nie jest nigdzie wysyłany.</li>
+      <li><strong>Analityka:</strong> Google Analytics (GA4) używa własnych plików cookie, aby tworzyć anonimowe statystyki odwiedzin. Nie zapisuje danych wpisywanych w aplikacji. Zgoda na analitykę jest dobrowolna i możesz ją wycofać.</li>
+    </ul>
+    <div class="cookie-buttons">
+      <button id="consent-accept">Akceptuję analitykę</button>
+      <button id="consent-decline">Odrzucam analitykę</button>
+    </div>
+  </div>
+
+  <!-- Skrypt obsługujący baner zgody na pliki cookie / analitykę.  
+       Kod jest uproszczoną wersją tego używanego w głównym kalkulatorze BMI.  
+       Ładuje Google Analytics po zaakceptowaniu zgody, zapisuje decyzję w localStorage  
+       i ukrywa baner. -->
+  <script>
+  (function() {
+    const banner     = document.getElementById('consent-banner');
+    const btnAccept  = document.getElementById('consent-accept');
+    const btnDecline = document.getElementById('consent-decline');
+
+    // Sprawdź, czy użytkownik podjął decyzję wcześniej
+    const consent = localStorage.getItem('analyticsConsent');
+
+    function loadGA() {
+      const gaScript = document.createElement('script');
+      gaScript.src = 'https://www.googletagmanager.com/gtag/js?id=G-EZZTNV8W07';
+      gaScript.async = true;
+      document.head.appendChild(gaScript);
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){ dataLayer.push(arguments); }
+      gtag('js', new Date());
+      gtag('config', 'G-EZZTNV8W07', { anonymize_ip: true });
+    }
+
+    if (!consent) {
+      // Jeśli brak decyzji – pokaż baner
+      banner.style.display = 'block';
+    } else if (consent === 'granted') {
+      // Użytkownik wcześniej zaakceptował analitykę – załaduj GA
+      loadGA();
+    }
+
+    btnAccept.addEventListener('click', function() {
+      localStorage.setItem('analyticsConsent', 'granted');
+      banner.style.display = 'none';
+      loadGA();
+    });
+    btnDecline.addEventListener('click', function() {
+      localStorage.setItem('analyticsConsent', 'denied');
+      banner.style.display = 'none';
+    });
+  })();
+  </script>
+
+  <!-- Skrypt do rozwijania listy źródeł w kalkulatorze sterydów.  Funkcja toggluje widoczność listy po kliknięciu przycisku. -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const toggleBtn = document.getElementById('toggleSteroidSources');
+      const srcList   = document.getElementById('steroidSourceList');
+      if (toggleBtn && srcList) {
+        toggleBtn.addEventListener('click', function() {
+          const isHidden = srcList.style.display === 'none' || srcList.style.display === '';
+          srcList.style.display = isHidden ? 'block' : 'none';
+          toggleBtn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+        });
+      }
+    });
+  </script>
+</body>
+</html>
