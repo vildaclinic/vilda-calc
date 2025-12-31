@@ -1,0 +1,572 @@
+/*
+ * ios26-v2.css — Liquid Glass theme for Vilda Clinic PWA
+ *
+ * This file is a revised version of ios26.css. It incorporates fixes for
+ * inputs becoming unresponsive when using backdrop-filter blur effects.
+ * Instead of applying blur directly to <input> elements, we set a
+ * semi‑opaque background and maintain border radius. Other styles are
+ * identical to the original ios26.css.
+ */
+
+/* Begin copy of ios26.css */
+/* ios26.css — Liquid Glass theme for Vilda Clinic PWA
+ *
+ * Ten arkusz stylów wprowadza wygląd inspirowany systemem iOS 26
+ * (tzw. Liquid Glass). Zastosowane klasy i zmienne są aktywne tylko,
+ * gdy element <body> posiada klasę `.liquid-ios26`. Dzięki temu
+ * można łatwo włączyć lub wyłączyć styl bez modyfikacji istniejących
+ * struktur HTML. Aby włączyć tryb, skrypt ios26-ui.js dodaje
+ * klasę .liquid-ios26 na body po załadowaniu strony.
+ */
+
+:root {
+  /* Domyślne kolory szkła w trybie jasnym */
+  --lg-surface-light: rgba(255, 255, 255, 0.18);
+  --lg-surface-dark: rgba(0, 0, 0, 0.18);
+  --lg-border: rgba(255, 255, 255, 0.32);
+  --lg-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
+  --lg-radius: 18px;
+  /* Akcent koloru – korzysta z istniejącej zmiennej --primary, jeśli jest zdefiniowana */
+  --lg-accent: var(--primary, #00838d);
+}
+
+/* Warianty ciemnego motywu */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --lg-surface-light: rgba(255, 255, 255, 0.14);
+    --lg-surface-dark: rgba(0, 0, 0, 0.22);
+    --lg-border: rgba(255, 255, 255, 0.28);
+  }
+}
+
+/* Podstawowe dostosowanie safe‑area dla iOS */
+body.liquid-ios26 {
+  padding-top: env(safe-area-inset-top);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+}
+
+/* Przyciemniona belka za paskiem statusu – poprawia kontrast białych ikon status bara */
+body.liquid-ios26::before {
+  content: "";
+  position: fixed;
+  inset: 0 auto auto 0;
+  height: env(safe-area-inset-top);
+  width: 100%;
+  background: rgba(0, 0, 0, 0.22);
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Szklane powierzchnie */
+.liquid-ios26 ._glass {
+  background: var(--lg-surface-light);
+  border: 1px solid var(--lg-border);
+  backdrop-filter: blur(16px) saturate(115%);
+  -webkit-backdrop-filter: blur(16px) saturate(115%);
+  border-radius: var(--lg-radius);
+  box-shadow: var(--lg-shadow);
+  position: relative;
+}
+
+/* Refleks świetlny w górnej części szkła */
+.liquid-ios26 ._glass::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 42px;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0));
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
+  pointer-events: none;
+}
+
+/* Fallback gdy blur nie jest obsługiwany */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .liquid-ios26 ._glass {
+    background: rgba(255, 255, 255, 0.5);
+  }
+}
+
+/* Nagłówek w trybie Liquid Glass */
+.liquid-ios26 header {
+  background: var(--lg-surface-light) !important;
+  color: #111 !important;
+  border-bottom: 1px solid var(--lg-border);
+  backdrop-filter: blur(18px) saturate(120%);
+  -webkit-backdrop-filter: blur(18px) saturate(120%);
+  border-radius: 0 0 var(--lg-radius) var(--lg-radius);
+  box-shadow: var(--lg-shadow);
+  position: sticky;
+  top: 0;
+  z-index: 900;
+}
+
+/* Cień dla logo w nagłówku */
+.liquid-ios26 header img {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+}
+
+/* Karty, sekcje i fieldsety – szklane tło */
+.liquid-ios26 .card,
+.liquid-ios26 .plan-card,
+.liquid-ios26 .result-card,
+.liquid-ios26 .data-card,
+.liquid-ios26 fieldset,
+.liquid-ios26 #timesCard,
+.liquid-ios26 #intakeCard {
+  background: var(--lg-surface-light) !important;
+  border: 1px solid var(--lg-border) !important;
+  box-shadow: var(--lg-shadow) !important;
+  border-radius: var(--lg-radius) !important;
+  backdrop-filter: blur(14px) saturate(115%) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(115%) !important;
+}
+
+/* Ramki wyników – lekko wypełnione szkło z akcentem */
+.liquid-ios26 .result-box {
+  background: rgba(255, 255, 255, 0.55);
+  border-color: var(--lg-accent) !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
+/* Przyciski bazowe – szklane kapsułki */
+.liquid-ios26 button,
+.liquid-ios26 input[type="button"],
+.liquid-ios26 input[type="submit"] {
+  background: rgba(255, 255, 255, 0.20) !important;
+  border: 1px solid var(--lg-border) !important;
+  color: #111 !important;
+  border-radius: 14px !important;
+  backdrop-filter: blur(10px) saturate(120%) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(120%) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.10) !important;
+  transition: transform 120ms ease, box-shadow 120ms ease, background-color 150ms ease !important;
+}
+
+/* Wersja akcentowa (przykład: główne CTA) – domieszka koloru akcentu */
+.liquid-ios26 .btn-accent {
+  background: color-mix(in srgb, var(--lg-accent) 40%, transparent) !important;
+  color: #fff !important;
+}
+
+/* Efekt przycisku wciśniętego */
+.liquid-ios26 button._pressed {
+  transform: scale(0.96);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Szklany wygląd przycisków IGF – nadpisuje dotychczasowy żółty kolor */
+.liquid-ios26 #toggleIgfTests,
+.liquid-ios26 #toggleSnp,
+.liquid-ios26 #toggleTurner,
+.liquid-ios26 #togglePws,
+.liquid-ios26 #toggleSga,
+.liquid-ios26 #toggleIgf1,
+.liquid-ios26 #toggleAbxTherapy {
+  background: rgba(255, 255, 255, 0.20) !important;
+  border: 1px solid var(--lg-border) !important;
+  color: #111 !important;
+  /*
+   * Center the label inside IGF buttons when Liquid Glass is active.
+   * These buttons receive the `.btn-icon` class dynamically (see ios26-ui.js),
+   * which changes their display to `inline‑flex` and leaves content left‑aligned
+   * by default. Without overriding the flex alignment, the long label
+   * “Leczenie hormonem wzrostu / IGF‑1” appears flush to the left edge.
+   * Setting `justify-content: center` ensures the text (and any optional icons)
+   * are centered within the button’s available width.
+   */
+  justify-content: center;
+}
+
+/* Szklany wygląd dla przycisku monitorowania GH w trybie Liquid Glass.
+ * Przycisk ten otrzymuje te same właściwości co pozostałe przyciski IGF/antybiotykoterapia.
+ */
+.liquid-ios26 #toggleGhMonitor {
+  background: rgba(255, 255, 255, 0.20) !important;
+  border: 1px solid var(--lg-border) !important;
+  color: #111 !important;
+  justify-content: center;
+}
+
+/* Aktywna ramka dla przycisku monitorowania GH w Liquid Glass.  Dodając klasę
+ * .active-toggle w kodzie JS umożliwiamy podkreślenie aktywnego stanu poprzez
+ * turkusowy kolor obramowania, podobnie jak dla innych przycisków.  */
+.liquid-ios26 #toggleGhMonitor.active-toggle {
+  border-color: var(--brand-light) !important;
+}
+
+/*
+ * Aktywna ramka dla przycisków rozwijających sekcje.
+ *
+ * W trybie Liquid Glass, kiedy użytkownik otwiera listę testów
+ * (np. „Testy w endokrynologii” lub poszczególne podlisty GH/OGTT/ACTH)
+ * albo kartę terapii GH/IGF‑1, chcemy podkreślić aktywny stan
+ * przycisku poprzez zmianę koloru jego ramki na delikatny turkusowy.
+ * Dodajemy do przycisku klasę `.active-toggle` w kodzie JS, a
+ * poniższe reguły ustawiają jasny kolor obramowania z wykorzystaniem
+ * zmiennej `--brand-light`, która definiuje jaśniejszy wariant
+ * firmowego turkusu. Użycie `!important` pozwala nadpisać
+ * domyślne ustawienia tła i obramowania przycisków Liquid Glass.
+ */
+.liquid-ios26 .active-toggle {
+  border-color: var(--brand-light) !important;
+}
+
+/*
+ * Specjalne nadpisanie koloru obramowania dla przycisku
+ * „Leczenie hormonem wzrostu / IGF‑1” (oraz jego podprzycisków) w trybie
+ * Liquid Glass. W bazowej definicji (.liquid-ios26 #toggleIgfTests) ustawiamy
+ * całe obramowanie z kolorem var(--lg-border) przy użyciu !important. Z tego
+ * powodu reguła .active-toggle (klasowa) nie jest wystarczająco specyficzna,
+ * aby nadpisać kolor ramki. Dodając poniższą regułę z selektorem ID oraz
+ * klasą .active-toggle zapewniamy wyższą specyficzność, dzięki czemu kolor
+ * turkusowy (var(--brand-light)) zostanie zastosowany, gdy przycisk lub
+ * jego podprzyciski są aktywne.
+ */
+.liquid-ios26 #toggleIgfTests.active-toggle,
+.liquid-ios26 #toggleSnp.active-toggle,
+.liquid-ios26 #toggleTurner.active-toggle,
+.liquid-ios26 #togglePws.active-toggle,
+.liquid-ios26 #toggleSga.active-toggle,
+.liquid-ios26 #toggleIgf1.active-toggle {
+  border-color: var(--brand-light) !important;
+}
+
+/*
+ * Dodatkowe style dla modułu antybiotykoterapii.
+ *
+ * Przyciski „Antybiotykoterapia”, „Nazwa handlowa”, „Zalecenia do wklejenia”
+ * oraz poszczególne nazwy handlowe leków powinny otrzymać takie same
+ * szklane obramowanie jak przyciski pozostałych modułów. Dodajemy
+ * odpowiednie reguły, aby ustawić domyślne obramowanie i kolor tła oraz
+ * zapewnić turkusową ramkę po dodaniu klasy `.active-toggle` w JavaScript.
+ */
+
+/* Szklany wygląd dla przycisków wyboru nazwy handlowej i kopiowania zaleceń
+   oraz dla listy nazw handlowych. Ustawiamy obramowanie i tło podobne do
+   przycisku głównego, ponieważ bez obramowania nie byłoby widać koloru
+   ramki po nadaniu klasy `.active-toggle`. */
+.liquid-ios26 #abxBrandToggle,
+.liquid-ios26 #abxCopyRec,
+.liquid-ios26 .abx-brand-option {
+  background: rgba(255, 255, 255, 0.20) !important;
+  border: 1px solid var(--lg-border) !important;
+  color: #111 !important;
+  border-radius: 14px !important;
+  backdrop-filter: blur(10px) saturate(120%) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(120%) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.10) !important;
+  transition: transform 120ms ease, box-shadow 120ms ease, background-color 150ms ease !important;
+}
+
+/* Podświetlenie turkusową ramką po wybraniu przycisku lub nazwy handlowej. */
+.liquid-ios26 #abxBrandToggle.active-toggle,
+.liquid-ios26 #abxCopyRec.active-toggle,
+.liquid-ios26 .abx-brand-option.active-toggle {
+  border-color: var(--brand-light) !important;
+}
+
+/*
+ * Nadpisanie koloru obramowania dla przycisku „Antybiotykoterapia” w trybie
+ * Liquid Glass. Podobnie jak w przypadku przycisku IGF, bazowa reguła
+ * #toggleAbxTherapy ustawia całe obramowanie z kolorem var(--lg-border)
+ * z użyciem !important. Aby umożliwić zmianę koloru ramki na turkusową,
+ * musimy dodać bardziej specyficzny selektor z klasą .active-toggle.
+ */
+.liquid-ios26 #toggleAbxTherapy.active-toggle {
+  border-color: var(--brand-light) !important;
+}
+
+/* Przycisk z ikoną – wyrównanie elementów i rozstawienie ikony od tekstu */
+.liquid-ios26 .btn-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.liquid-ios26 .btn-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  stroke-width: 1.75;
+}
+
+/* Animacje wejścia – używane przez ios26-ui.js */
+@keyframes ios-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes ios-pop {
+  0% {
+    transform: scale(0.96);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes ios-bounce-in {
+  0% {
+    transform: translateY(-16px);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(4px);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+/* Klasy animacji dla pojawiających się elementów */
+.liquid-ios26 ._enter {
+  animation: ios-enter 340ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.liquid-ios26 ._pop {
+  animation: ios-pop 240ms ease-out both;
+}
+
+.liquid-ios26 ._bounce {
+  animation: ios-bounce-in 360ms cubic-bezier(0.2, 1, 0.2, 1) both;
+}
+
+/* Wyłącz animacje dla użytkowników preferujących redukcję ruchu */
+@media (prefers-reduced-motion: reduce) {
+  .liquid-ios26 ._enter,
+  .liquid-ios26 ._pop,
+  .liquid-ios26 ._bounce {
+    animation: none !important;
+  }
+}
+
+/* Formularze – półprzezroczyste pola z lekkim rozmyciem
+ *
+ * UWAGA: W tej wersji rezygnujemy z blur na <input>ach, ponieważ
+ * niektóre przeglądarki miały problem z przyjmowaniem znaków w
+ * polach typu number/text, gdy była zastosowana właściwość
+ * backdrop-filter. Zamiast tego, dajemy solidne tło o delikatnej
+ * przezroczystości, aby nadal komponowały się z motywem. */
+.liquid-ios26 input[type="text"],
+.liquid-ios26 input[type="number"],
+.liquid-ios26 select {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 12px;
+  /* Nie stosujemy blur ani backdrop-filter na polach formularza */
+}
+
+/* Nagłówki – subtelne kerning */
+.liquid-ios26 h1,
+.liquid-ios26 h2,
+.liquid-ios26 h3 {
+  letter-spacing: -0.015em;
+}
+
+/* Dodatkowe zmiany dla card result numbers */
+.liquid-ios26 .result-number small {
+  opacity: 0.8;
+}
+/* End copy of ios26.css */
+
+/* === FIXES 2025-09-17 – Color and Visibility Adjustments === */
+/*
+ * Zapewnij spójny kolor dla przycisku „Generuj siatkę centylową” (#generateCentileChartAdv)
+ * w motywie Liquid Glass. Motyw domyślnie rozjaśnia przyciski do białego i ustawia czarny
+ * tekst; poniższa reguła wykorzystuje ID przycisku, aby nadać mu turkusowe tło
+ * (var(--primary)) i białą czcionkę, tak jak w przycisku rozwijającym sekcję.
+ * Użycie !important nadpisuje domyślne style Liquid Glass.
+ */
+.liquid-ios26 #generateCentileChartAdv{
+  background: var(--primary) !important;
+  color: #fff !important;
+  border-color: var(--primary) !important;
+}
+
+/*
+ * Zachowaj czerwony kolor ikon „×” (button.icon) również w trybie Liquid Glass.
+ * Domyślne style Liquid Glass zmieniają kolor tekstu przycisków na czarny,
+ * co powodowało, że znaki X były niewidoczne. Ta reguła wymusza kolor
+ * var(--danger) z priorytetem.
+ */
+.liquid-ios26 button.icon{
+  color: var(--danger) !important;
+}
+
+/* ==== Antibiotic Therapy Alerts – Force Red Color ==== */
+/* Zmiana koloru wszystkich alertów w module Antybiotykoterapia na czerwony.
+ * Element #abxNote (o klasie .muted) służy do wyświetlania komunikatów i ostrzeżeń.
+ * Nadpisujemy domyślny kolor klasy .muted, ustawiając go na var(--danger) czyli czerwony.
+ * !important zapewnia pierwszeństwo nad globalnymi stylami .muted. */
+#antibioticTherapyCard #abxNote,
+#antibioticTherapyCard .muted {
+  color: var(--danger) !important;
+  /* Wyśrodkuj tekst alertów w module antybiotykoterapii */
+  text-align: center;
+}
+
+/* ------------------------------------------------------------------- */
+/* Dostosowanie przycisków w rozwijanym menu (hamburger) do wyglądu
+   zwykłych linków.  W motywie Liquid Glass wszystkie przyciski
+   otrzymują półprzezroczyste tło, rozmycie szkła oraz zaokrąglone rogi,
+   co sprawia, że przyciski w menu wyglądały inaczej niż pozostałe
+   pozycje.  Poniższe reguły resetują te właściwości dla przycisków
+   znajdujących się wewnątrz .vertical-menu, dzięki czemu „Zapisz dane”
+   i „Wczytaj dane” wyglądają identycznie jak linki informacyjne. */
+.liquid-ios26 .vertical-menu button {
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  /* usuwamy efekt rozmycia szkła */
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-radius: 0 !important;
+  color: var(--primary) !important;
+  font-weight: 600 !important;
+  padding: 0.75rem 1rem !important;
+  width: 100% !important;
+  text-align: left !important;
+}
+.liquid-ios26 .vertical-menu button:hover {
+  background: var(--secondary) !important;
+  color: #fff !important;
+}
+.liquid-ios26 .vertical-menu button:disabled {
+  color: #9eb8bb !important;
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/*
+ * Gdy link w menu pionowym posiada atrybut `disabled` (niestandardowy dla
+ * elementu <a>), traktujemy go jak wyszarzony przycisk.  Ustawiamy
+ * kolor tekstu na jasnoszary, wyłączamy obsługę kliknięć oraz
+ * eliminujemy tło i rozmycia.  Używamy !important, aby nadpisać
+ * domyślne style Liquid Glass.
+ */
+ .liquid-ios26 .vertical-menu a[disabled] {
+   color: #9eb8bb !important;
+   /* Kluczowe: zezwalamy na hover/click, aby tooltip z JS mógł się pokazać */
+   pointer-events: auto !important;
+   background: none !important;
+   border: none !important;
+   box-shadow: none !important;
+   backdrop-filter: none !important;
+   -webkit-backdrop-filter: none !important;
+ }
+
+ .liquid-ios26 .vertical-menu a[disabled]:hover {
+   background: none !important;
+   color: #9eb8bb !important;
+ }
+
+/*
+ * GH therapy monitor buttons and editing row styles for Liquid Glass theme
+ *
+ * W motywie Liquid Glass przyciski mają półprzezroczyste tła oraz
+ * przyjmują domyślny kolor tekstu. Aby przyciski „Edytuj” i „Usuń” w
+ * tabeli monitorowania leczenia GH zachowały czerwone i turkusowe
+ * akcenty, nadpisujemy te właściwości w obrębie klasy .liquid-ios26.
+ * Analogicznie wyróżniamy wiersz będący w trybie edycji czerwonym
+ * obramowaniem.  Używamy !important, aby reguły miały pierwszeństwo.
+ */
+.liquid-ios26 .edit-gh-pt-btn {
+  background: var(--secondary) !important;
+  color: #ffffff !important;
+  border-radius: var(--radius) !important;
+  padding: 0.35rem 0.65rem !important;
+  font-size: 0.85rem !important;
+  border: none !important;
+}
+.liquid-ios26 .edit-gh-pt-btn:hover {
+  background: var(--primary) !important;
+  box-shadow: var(--shadow) !important;
+}
+.liquid-ios26 .delete-gh-pt-btn {
+  background: rgba(198, 40, 40, 0.1) !important;
+  color: var(--danger) !important;
+  border: 1px solid var(--danger) !important;
+  border-radius: var(--radius) !important;
+  padding: 0.35rem 0.65rem !important;
+  font-size: 0.85rem !important;
+}
+.liquid-ios26 .delete-gh-pt-btn:hover {
+  background: rgba(198, 40, 40, 0.2) !important;
+  box-shadow: var(--shadow) !important;
+}
+.liquid-ios26 .editing-gh-pt-row td {
+  /* Wyróżnij wiersz będący w trybie edycji w motywie Liquid Glass.
+   * Używamy delikatnego półprzezroczystego czerwonego tła oraz
+   * wewnętrznego box-shadow.  Dzięki temu wiersz jest wyraźnie
+   * zaznaczony, a obramowanie nie koliduje z efektami Liquid Glass. */
+  background: rgba(198, 40, 40, 0.08) !important;
+  box-shadow: 0 0 0 2px var(--danger) inset !important;
+}
+
+/*
+ * Custom overrides for the mini summary shortcut dropdown.
+ * These rules ensure the dropdown is tall, spacious and shows long
+ * labels in full, even in the Liquid Glass theme which loads after
+ * sidebar.css. By defining them here (the last stylesheet loaded),
+ * they take precedence over earlier declarations.  The !important
+ * qualifier ensures they override any global or component-specific
+ * rules defined elsewhere.
+ */
+.mini-summary .shortcut-dropdown {
+  /* Make the dropdown list taller and ensure it uses a solid white background
+     regardless of the current theme.  Using !important here overrides the
+     default card colour (var(--card)) and any Liquid Glass translucency. */
+  max-height: 24rem !important;
+  background: #ffffff !important;
+}
+.mini-summary .shortcut-option {
+  padding: 0.7rem 1.2rem !important;
+  line-height: 1.4 !important;
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+  text-overflow: unset !important;
+  overflow: visible !important;
+}
+
+/* Ensure that the cancel row in the shortcut dropdown uses the danger colour even in
+   Liquid Glass mode.  Without this override, the inherited black text from
+   .shortcut-option would apply, making the “Anuluj” label indistinguishable from
+   other options. */
+.mini-summary .cancel-option {
+  color: var(--danger) !important;
+}
+
+/*
+ * Custom overrides for the steroid shortcut dropdown.  These rules mirror
+ * the ones defined for the mini summary dropdown but target the steroid
+ * conversion calculator.  We ensure a solid white background and
+ * increased spacing so that the list of steroid options is easy to
+ * read, even when Liquid Glass applies translucent backgrounds.
+ */
+.steroid-summary .steroid-dropdown {
+  background: #ffffff !important;
+}
+
+/* Hide the steroid shortcut add button when the maximum count is
+   reached.  This class is added via JavaScript and must override
+   any Liquid Glass display settings. */
+.steroid-summary .hidden-shortcut-add-btn {
+  display: none !important;
+}
