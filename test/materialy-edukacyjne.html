@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <!-- Tytuł strony odzwierciedla zawartość i wspiera pozycjonowanie SEO. -->
+  <title>Materiały edukacyjne – Waga i wzrost</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <!-- Opis i słowa kluczowe pomagają wyszukiwarkom lepiej zrozumieć stronę. -->
+  <meta name="description" content="Materiały edukacyjne Vilda Clinic – instrukcje stosowania hormonów wzrostu u dzieci, w tym Omnitrope i Genotropin." />
+  <meta name="keywords" content="hormon wzrostu, Omnitrope, Genotropin, instrukcje stosowania, materiały edukacyjne" />
+  <!-- Dodajemy tag kanoniczny, aby wskazać oryginalny URL tej podstrony. 
+       Dzięki temu Google nie będzie traktował różnych wariantów adresów jako duplikatów. -->
+  <link rel="canonical" href="https://wagaiwzrost.pl/materialy-edukacyjne.html" />
+  <!-- Łączymy ten sam arkusz stylów i motyw iOS26 jak w głównej aplikacji, aby zachować spójny wygląd. -->
+  <link href="style.css" rel="stylesheet" />
+  <link href="ios26-v2.css" rel="stylesheet" />
+  <style>
+    /*  
+      Układ siatki wideo. Przy szerokim oknie przeglądarki filmy ustawiają się obok siebie,
+      a na węższych ekranach – jeden pod drugim.  
+      Używamy grid z dwiema kolumnami oraz media query, aby płynnie przechodzić do jednej kolumny.
+    */
+    .video-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+    @media (max-width: 700px) {
+      .video-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .video-item {
+      background: var(--card);
+      border: 1px solid #d0dede;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 1rem;
+    }
+    .video-item h2 {
+      margin-top: 0;
+      font-size: 1.15rem;
+      color: var(--primary);
+    }
+    .video-item video {
+      width: 100%;
+      height: auto;
+      border-radius: var(--radius);
+    }
+
+    /* Nagłówek dla sekcji prezentacji edukacyjnych.
+       Stosujemy tę samą wielkość czcionki co w nagłówku strony,
+       aby zachować spójny wygląd. */
+    .presentation-heading {
+      margin-top: 2rem;
+      margin-bottom: 0.5rem;
+      font-size: clamp(1.4rem, 3vw, 2rem);
+      color: var(--text);
+    }
+
+    /*  
+      Na tej podstronie nagłówek powinien przewijać się razem z treścią
+      (nie być przyklejony do górnej krawędzi).  
+      Nadpisujemy domyślne ustawienie pozycji sticky z motywu Liquid Glass,
+      ustawiając pozycjonowanie na static.  
+    */
+    .liquid-ios26 header {
+      position: static !important;
+    }
+  </style>
+
+  <!-- Rozszerzony opis strukturalny strony zgodny ze Schema.org. Skrypt poniżej definiuje stronę
+       jako typ MedicalWebPage z filmami VideoObject oraz prezentacjami CreativeWork, polami about,
+       speakable i breadcrumb. Uwzględniono również rozdziały (Clip) dla każdego filmu oraz akcję
+       SeekToAction. -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "MedicalWebPage",
+    "name": "Materiały edukacyjne – Preparaty hormonu wzrostu",
+    "url": "https://wagaiwzrost.pl/materialy-edukacyjne",
+    "inLanguage": "pl-PL",
+    "isAccessibleForFree": true,
+    "keywords": ["hormon wzrostu","somatotropina","somatropina","somatrogon","Ngenla","Genotropin","Omnitrope","instrukcja podawania","endokrynologia dziecięca"],
+    "description": "Materiały edukacyjne Vilda Clinic – filmy instruktażowe i prezentacje o prawidłowym stosowaniu preparatów hormonu wzrostu.",
+    "publisher": {
+      "@type": "MedicalOrganization",
+      "name": "Vilda Clinic sp. z o.o.",
+      "url": "https://vildaclinic.pl",
+      "logo": { "@type": "ImageObject", "url": "https://wagaiwzrost.pl/icons/vilda_logo.png" }
+    },
+    "medicalSpecialty": ["Endocrine","Pediatric"],
+    "audience": { "@type": "MedicalAudience", "audienceType": "Pacjenci i opiekunowie; lekarze i pielęgniarki" },
+    "speakable": { "@type": "SpeakableSpecification", "cssSelector": [".page-title", ".page-summary"] },
+    "about": [
+      { "@type": "MedicalEntity", "name": "Somatropina", "alternateName": "rhGH" },
+      { "@type": "MedicalEntity", "name": "Somatrogon", "alternateName": "Ngenla" },
+      { "@type": "MedicalEntity", "name": "Genotropin" },
+      { "@type": "MedicalEntity", "name": "Omnitrope" },
+      { "@type": "MedicalEntity", "name": "Ngenla" },
+      { "@type": "MedicalCondition", "name": "Niedobór hormonu wzrostu" },
+      { "@type": "MedicalCondition", "name": "Niski wzrost" },
+      { "@type": "MedicalCondition", "name": "Zespół Turnera" },
+      { "@type": "MedicalCondition", "name": "Zaburzenia wzrastania w przewlekłej chorobie nerek" },
+      { "@type": "MedicalCondition", "name": "Dzieci urodzone SGA z utrzymującym się niskim wzrostem" }
+    ],
+    "mainEntity": [
+      {
+        "@type": "VideoObject",
+        "name": "Instrukcja stosowania preparatu Genotropin",
+        "description": "Film edukacyjny pokazujący jak prawidłowo przygotować i podać lek Genotropin.",
+        "thumbnailUrl": "https://wagaiwzrost.pl/media/genotropin_thumb.jpg",
+        "uploadDate": "2025-11-06T09:00:00+01:00",
+        "duration": "PT4M15S",
+        "contentUrl": "https://wagaiwzrost.pl/media/genotropin.mp4",
+        "embedUrl": "https://wagaiwzrost.pl/embed/genotropin",
+        "inLanguage": "pl-PL",
+        "about": [ { "@type": "MedicalEntity", "name": "Genotropin" }, { "@type": "MedicalEntity", "name": "Somatropina" } ],
+        "publisher": { "@type": "Organization", "name": "Vilda Clinic" },
+        "hasPart": [
+          { "@type": "Clip", "position": 1, "name": "Wprowadzenie i bezpieczeństwo", "startOffset": 0, "endOffset": 45,  "url": "https://wagaiwzrost.pl/embed/genotropin?t=0" },
+          { "@type": "Clip", "position": 2, "name": "Przygotowanie pena i igły",     "startOffset": 46, "endOffset": 85,  "url": "https://wagaiwzrost.pl/embed/genotropin?t=46" },
+          { "@type": "Clip", "position": 3, "name": "Test przepływu / odpowietrzenie", "startOffset": 86, "endOffset": 120, "url": "https://wagaiwzrost.pl/embed/genotropin?t=86" },
+          { "@type": "Clip", "position": 4, "name": "Ustawienie dawki",              "startOffset": 121, "endOffset": 170, "url": "https://wagaiwzrost.pl/embed/genotropin?t=121" },
+          { "@type": "Clip", "position": 5, "name": "Technika wstrzyknięcia",        "startOffset": 171, "endOffset": 210, "url": "https://wagaiwzrost.pl/embed/genotropin?t=171" },
+          { "@type": "Clip", "position": 6, "name": "Rotacja miejsc i kontrola",     "startOffset": 211, "endOffset": 235, "url": "https://wagaiwzrost.pl/embed/genotropin?t=211" },
+          { "@type": "Clip", "position": 7, "name": "Utylizacja i przechowywanie",   "startOffset": 236, "endOffset": 255, "url": "https://wagaiwzrost.pl/embed/genotropin?t=236" }
+        ],
+        "potentialAction": {
+          "@type": "SeekToAction",
+          "target": "https://wagaiwzrost.pl/embed/genotropin?t={seek_to_second_number}",
+          "startOffset-input": "required name=seek_to_second_number"
+        }
+      },
+      {
+        "@type": "VideoObject",
+        "name": "Instrukcja stosowania preparatu Omnitrope",
+        "description": "Film instruktażowy pokazujący przygotowanie i podanie leku Omnitrope.",
+        "thumbnailUrl": "https://wagaiwzrost.pl/media/omnitrope_thumb.jpg",
+        "uploadDate": "2025-11-06T09:30:00+01:00",
+        "duration": "PT4M05S",
+        "contentUrl": "https://wagaiwzrost.pl/media/omnitrope.mp4",
+        "embedUrl": "https://wagaiwzrost.pl/embed/omnitrope",
+        "inLanguage": "pl-PL",
+        "about": [ { "@type": "MedicalEntity", "name": "Omnitrope" }, { "@type": "MedicalEntity", "name": "Somatropina" } ],
+        "publisher": { "@type": "Organization", "name": "Vilda Clinic" },
+        "hasPart": [
+          { "@type": "Clip", "position": 1, "name": "Wprowadzenie i BHP",        "startOffset": 0,   "endOffset": 35,  "url": "https://wagaiwzrost.pl/embed/omnitrope?t=0" },
+          { "@type": "Clip", "position": 2, "name": "Przygotowanie wkładu/pena", "startOffset": 36,  "endOffset": 80,  "url": "https://wagaiwzrost.pl/embed/omnitrope?t=36" },
+          { "@type": "Clip", "position": 3, "name": "Priming / odpowietrzenie",  "startOffset": 81,  "endOffset": 115, "url": "https://wagaiwzrost.pl/embed/omnitrope?t=81" },
+          { "@type": "Clip", "position": 4, "name": "Ustawienie dawki",          "startOffset": 116, "endOffset": 165, "url": "https://wagaiwzrost.pl/embed/omnitrope?t=116" },
+          { "@type": "Clip", "position": 5, "name": "Podanie leku",              "startOffset": 166, "endOffset": 210, "url": "https://wagaiwzrost.pl/embed/omnitrope?t=166" },
+          { "@type": "Clip", "position": 6, "name": "Utylizacja i przechowywanie", "startOffset": 211,"endOffset": 245, "url": "https://wagaiwzrost.pl/embed/omnitrope?t=211" }
+        ],
+        "potentialAction": {
+          "@type": "SeekToAction",
+          "target": "https://wagaiwzrost.pl/embed/omnitrope?t={seek_to_second_number}",
+          "startOffset-input": "required name=seek_to_second_number"
+        }
+      },
+      {
+        "@type": "VideoObject",
+        "name": "Instrukcja stosowania preparatu Ngenla",
+        "description": "Film instruktażowy demonstrujący sposób podawania leku Ngenla.",
+        "thumbnailUrl": "https://wagaiwzrost.pl/media/ngenla_thumb.jpg",
+        "uploadDate": "2025-11-06T10:00:00+01:00",
+        "duration": "PT5M10S",
+        "contentUrl": "https://wagaiwzrost.pl/media/ngenla.mp4",
+        "embedUrl": "https://wagaiwzrost.pl/embed/ngenla",
+        "inLanguage": "pl-PL",
+        "about": [ { "@type": "MedicalEntity", "name": "Ngenla" }, { "@type": "MedicalEntity", "name": "Somatrogon" } ],
+        "publisher": { "@type": "Organization", "name": "Vilda Clinic" },
+        "hasPart": [
+          { "@type": "Clip", "position": 1, "name": "Wprowadzenie i bezpieczeństwo", "startOffset": 0,   "endOffset": 50,  "url": "https://wagaiwzrost.pl/embed/ngenla?t=0" },
+          { "@type": "Clip", "position": 2, "name": "Przygotowanie zestawu",         "startOffset": 51,  "endOffset": 90,  "url": "https://wagaiwzrost.pl/embed/ngenla?t=51" },
+          { "@type": "Clip", "position": 3, "name": "Odpowietrzenie / priming",      "startOffset": 91,  "endOffset": 130, "url": "https://wagaiwzrost.pl/embed/ngenla?t=91" },
+          { "@type": "Clip", "position": 4, "name": "Wybór i dezynfekcja miejsca",   "startOffset": 131, "endOffset": 180, "url": "https://wagaiwzrost.pl/embed/ngenla?t=131" },
+          { "@type": "Clip", "position": 5, "name": "Wstrzyknięcie – krok po kroku", "startOffset": 181, "endOffset": 230, "url": "https://wagaiwzrost.pl/embed/ngenla?t=181" },
+          { "@type": "Clip", "position": 6, "name": "Po podaniu i kontrola",         "startOffset": 231, "endOffset": 270, "url": "https://wagaiwzrost.pl/embed/ngenla?t=231" },
+          { "@type": "Clip", "position": 7, "name": "Utylizacja materiałów",         "startOffset": 271, "endOffset": 295, "url": "https://wagaiwzrost.pl/embed/ngenla?t=271" },
+          { "@type": "Clip", "position": 8, "name": "Przechowywanie i harmonogram",  "startOffset": 296, "endOffset": 310, "url": "https://wagaiwzrost.pl/embed/ngenla?t=296" }
+        ],
+        "potentialAction": {
+          "@type": "SeekToAction",
+          "target": "https://wagaiwzrost.pl/embed/ngenla?t={seek_to_second_number}",
+          "startOffset-input": "required name=seek_to_second_number"
+        }
+      },
+      {
+        "@type": "CreativeWork",
+        "name": "Prezentacja edukacyjna – Genotropin",
+        "fileFormat": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "description": "Prezentacja edukacyjna omawiająca zasady stosowania leku Genotropin, dawkowanie i przechowywanie.",
+        "inLanguage": "pl-PL",
+        "about": [ { "@type": "MedicalEntity", "name": "Genotropin" }, { "@type": "MedicalEntity", "name": "Somatropina" } ],
+        "image": { "@type": "ImageObject", "url": "https://wagaiwzrost.pl/media/prezentacja-genotropin_thumb.jpg" },
+        "encoding": { "@type": "MediaObject", "contentUrl": "https://wagaiwzrost.pl/media/prezentacja-genotropin.pptx" }
+      },
+      {
+        "@type": "CreativeWork",
+        "name": "Prezentacja edukacyjna – Ngenla",
+        "fileFormat": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "description": "Prezentacja edukacyjna o preparacie Ngenla – wskazania, sposób podawania, przechowywanie i bezpieczeństwo terapii.",
+        "inLanguage": "pl-PL",
+        "about": [ { "@type": "MedicalEntity", "name": "Ngenla" }, { "@type": "MedicalEntity", "name": "Somatrogon" } ],
+        "image": { "@type": "ImageObject", "url": "https://wagaiwzrost.pl/media/prezentacja-ngenla_thumb.jpg" },
+        "encoding": { "@type": "MediaObject", "contentUrl": "https://wagaiwzrost.pl/media/prezentacja-ngenla.pptx" }
+      }
+    ],
+    "breadcrumb": {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Strona główna", "item": "https://wagaiwzrost.pl" },
+        { "@type": "ListItem", "position": 2, "name": "Materiały edukacyjne", "item": "https://wagaiwzrost.pl/materialy-edukacyjne" }
+      ]
+    }
+  }
+  </script>
+
+  <!-- FAQPage z pytaniami i odpowiedziami, pomagający w generowaniu rich snippets w wynikach wyszukiwania. -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Czy mogę podawać hormon wzrostu o dowolnej porze dnia?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Zalecamy stałą porę, najlepiej wieczorem. Najważniejsza jest regularność zgodna z zaleceniem lekarza prowadzącego."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Co zrobić, jeśli pominę dawkę?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Jeżeli minęło niewiele czasu, podaj dawkę jak najszybciej. Jeśli zbliża się pora kolejnej – nie dubluj. W razie wątpliwości skontaktuj się z lekarzem."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Jak rotować miejsca wstrzyknięć?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Zmieniaj miejsce każdego podania w obrębie brzucha, ud lub pośladków, unikając poprzedniego punktu wkłucia. To zmniejsza ryzyko lipodystrofii i bolesności."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Jak przechowywać preparaty Omnitrope, Genotropin i Ngenla?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Przechowuj zgodnie z Charakterystyką Produktu Leczniczego danego preparatu. Zwykle wymagają chłodzenia i ochrony przed światłem. Nie zamrażaj. Sprawdź temperatury w ulotce."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Jak bezpiecznie utylizować igły i materiały po wstrzyknięciu?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Wrzucaj igły do zamykanego pojemnika na odpady medyczne i oddawaj w punkcie odbioru zgodnie z lokalnymi przepisami. Nigdy nie wyrzucaj igieł do odpadów zmieszanych."
+        }
+      }
+    ]
+  }
+  </script>
+
+  <!-- Style dla sekcji FAQ w stylu Liquid Glass. Zapewnia efekt zmrożonego szkła oraz przejścia dla odpowiedzi. -->
+  <style>
+    .faq-section {
+      margin: 2rem auto;
+      padding: 1rem;
+      max-width: 800px;
+      color: #ffffff;
+      font-family: system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+      /* Tymczasowo ukrywamy sekcję FAQ przez ustawienie display: none. */
+      display: none;
+    }
+    .faq-container {
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 20px;
+      box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+      padding: 1.5rem;
+    }
+    .faq-item + .faq-item {
+      margin-top: 1rem;
+    }
+    .faq-question {
+      all: unset;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 600;
+      padding: 0.75rem 1rem;
+      border-radius: 12px;
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.05);
+      transition: background 0.3s ease;
+    }
+    .faq-question:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    .faq-question::after {
+      content: '+';
+      font-size: 1.25rem;
+      transition: transform 0.3s;
+    }
+    .faq-item.open .faq-question::after {
+      content: '-';
+    }
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.5s;
+      padding: 0 1rem;
+      color: #e0e0e0;
+    }
+    .faq-item.open .faq-answer {
+      max-height: 300px;
+      margin-top: 0.5rem;
+    }
+  </style>
+</head>
+<!--  
+  Klasa liquid-ios26 na elemencie body powoduje natychmiastowe zastosowanie motywu
+  Liquid Glass, co eliminuje efekt błysku podstawowego układu przy ładowaniu strony.
+-->
+<body class="liquid-ios26">
+<header>
+  <div class="container">
+    <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">
+      <img src="logo_vilda.jpeg" alt="Vilda Clinic – strona główna" style="max-width:160px;margin-bottom:10px; border-radius:var(--radius);">
+    </a>
+    <h1>Waga i wzrost</h1>
+  </div>
+  <nav class="main-nav" aria-label="Główna nawigacja">
+    <ul>
+      <li><a href="/">Strona główna</a></li>
+      <li><a href="/o-aplikacji.html">O aplikacji</a></li>
+      <li><a href="/instrukcja.html">Instrukcja</a></li>
+      <!-- Dodajemy atrybut aria-current="page", aby poinformować technologie asystujące,
+           że jest to aktywna strona. -->
+      <li><a href="/materialy-edukacyjne.html" aria-current="page">Materiały edukacyjne</a></li>
+      <li><a href="https://www.vildaclinic.pl/kontakt" target="_blank" rel="noopener noreferrer">Kontakt</a></li>
+    </ul>
+  </nav>
+</header>
+<main class="container">
+  <!-- Zmieniamy nagłówek i wstęp, dodając klasy page-title i page-summary, które są wykorzystywane w JSON-LD (speakable). Teksty zostały zaktualizowane, aby dokładniej odzwierciedlać zawartość podstrony. -->
+  <h1 class="page-title">Materiały edukacyjne – preparaty hormonu wzrostu</h1>
+  <p class="page-summary">Zobacz krótkie filmy instruktażowe o prawidłowym podawaniu leków: Omnitrope, Genotropin i Ngenla. Poniżej pobierzesz też prezentacje do samodzielnej nauki.</p>
+  <div class="video-grid">
+    <div class="video-item">
+      <h2>Instrukcja stosowania preparatu Omnitrope</h2>
+      <!--
+        Atrybut controls umożliwia start/stop, a controlsList="nodownload" ukrywa opcję pobierania.
+        W plikach źródłowych zastąp „videos/omnitrope.mp4” odpowiednią ścieżką
+        do wgranego na serwer pliku. Preload ustawiony na metadata powoduje wczytanie jedynie
+        niezbędnych danych (np. długości filmu) bez pobierania pełnej zawartości przy starcie.
+      -->
+      <video controls controlsList="nodownload" preload="metadata" poster="posters/omnitrope_poster.png">
+        <source src="videos/omnitrope.mp4" type="video/mp4">
+        Twoja przeglądarka nie obsługuje elementu wideo.
+      </video>
+    </div>
+    <div class="video-item">
+      <h2>Instrukcja stosowania preparatu Genotropin</h2>
+      <video controls controlsList="nodownload" preload="metadata" poster="posters/genotropin_poster.png">
+        <source src="videos/genotropin.mp4" type="video/mp4">
+        Twoja przeglądarka nie obsługuje elementu wideo.
+      </video>
+    </div>
+    <!-- Trzecie okno wideo z instrukcją preparatu Ngenla.  
+         Umieszczamy je jako kolejny element siatki; na szerokich ekranach 
+         pojawi się w nowym wierszu, a na wąskich ekranach ułoży się w kolumnie. -->
+    <div class="video-item">
+      <h2>Instrukcja stosowania preparatu Ngenla</h2>
+      <video controls controlsList="nodownload" preload="metadata" poster="posters/ngenla_poster.png">
+        <source src="videos/ngenla.mp4" type="video/mp4">
+        Twoja przeglądarka nie obsługuje elementu wideo.
+      </video>
+    </div>
+  </div>
+
+  <!-- Sekcja z prezentacjami edukacyjnymi (pliki PPTX do pobrania) -->
+  <h2 class="presentation-heading">Prezentacje edukacyjne</h2>
+  <p>
+    <a href="presentations/genotropin.pptx" download>Prezentacja o preparacie Genotropin (PPTX)</a>
+  </p>
+  <p>
+    <a href="presentations/ngenla.pptx" download>Prezentacja o preparacie Ngenla (PPTX)</a>
+  </p>
+  <!-- Dodajemy sekcję FAQ w stylu Liquid Glass. Zawiera ona pytania i odpowiedzi dotyczące terapii hormonem wzrostu. -->
+  <section class="faq-section">
+    <h2>Najczęściej zadawane pytania</h2>
+    <p class="page-summary">Zobacz odpowiedzi na najczęstsze pytania dotyczące terapii hormonem wzrostu, podawania Omnitrope, Genotropin i Ngenla, przechowywania leków oraz zasad rotacji miejsc wstrzyknięć.</p>
+    <div class="faq-container">
+      <div class="faq-item">
+        <button class="faq-question">Czy mogę podawać hormon wzrostu o dowolnej porze dnia?</button>
+        <div class="faq-answer">
+          <p>Zalecamy stałą porę, najlepiej wieczorem. Najważniejsza jest regularność zgodna z zaleceniem lekarza prowadzącego.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Co zrobić, jeśli pominę dawkę?</button>
+        <div class="faq-answer">
+          <p>Jeżeli minęło niewiele czasu, podaj dawkę jak najszybciej. Jeśli zbliża się pora kolejnej – nie dubluj. W razie wątpliwości skontaktuj się z lekarzem.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Jak rotować miejsca wstrzyknięć?</button>
+        <div class="faq-answer">
+          <p>Zmieniaj miejsce każdego podania w obrębie brzucha, ud lub pośladków, unikając poprzedniego punktu wkłucia. To zmniejsza ryzyko lipodystrofii i bolesności.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Jak przechowywać preparaty Omnitrope, Genotropin i Ngenla?</button>
+        <div class="faq-answer">
+          <p>Przechowuj zgodnie z Charakterystyką Produktu Leczniczego danego preparatu. Zwykle wymagają chłodzenia i ochrony przed światłem. Nie zamrażaj. Sprawdź temperatury w ulotce.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Jak bezpiecznie utylizować igły i materiały po wstrzyknięciu?</button>
+        <div class="faq-answer">
+          <p>Wrzucaj igły do zamykanego pojemnika na odpady medyczne i oddawaj w punkcie odbioru zgodnie z lokalnymi przepisami. Nigdy nie wyrzucaj igieł do odpadów zmieszanych.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+<footer>
+  <p><strong>Administrator serwisu:</strong>
+    Vilda Clinic sp. z o.o. •
+    <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">vildaclinic.pl</a>
+  </p>
+  <p><strong>Konsultacja merytoryczna:</strong>
+    dr n. med. Maciej Flader
+  </p>
+</footer>
+  <!-- Skrypt obsługujący akordeon FAQ: otwieranie i zamykanie odpowiedzi -->
+  <script>
+    document.querySelectorAll('.faq-item .faq-question').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        const item = btn.parentElement;
+        item.classList.toggle('open');
+      });
+    });
+  </script>
+</body>
+</html>
