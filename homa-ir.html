@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <!-- Ustawiamy odpowiedni tytuł i opis podstrony. Tytuł informuje o kalkulatorze HOMA‑IR, a opis
+       dodaje kilka słów o przeznaczeniu narzędzia. -->
+  <title>Kalkulator HOMA‑IR – wagaiwzrost.pl</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="description" content="Kalkulator HOMA‑IR oblicza wskaźnik insulinooporności u dorosłych i dzieci. Narzędzie edukacyjne nie zastępuje konsultacji lekarskiej." />
+  <meta name="robots" content="index, follow" />
+
+  <!-- Ładujemy krój Inter – używany w pozostałej części aplikacji.  -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <!-- Podstawowe arkusze stylów stosowane w aplikacji: motyw Liquid Glass oraz główne style i układ sidebara. -->
+  <link rel="stylesheet" href="ios26-v2.css?v=4" />
+  <link rel="stylesheet" href="style.css?v=2" />
+  <link rel="stylesheet" href="sidebar.css" />
+
+  <!-- Dodatkowe style związane wyłącznie z kalkulatorem HOMA‑IR. Korzystamy z definicji zmiennych
+       kolorystycznych z głównego arkusza (np. --primary, --secondary, --card), dzięki czemu
+       narzędzie zachowuje spójny wygląd z resztą serwisu. -->
+  <style>
+    /* Kontener otaczający cały kalkulator. Ustawiamy maksymalną szerokość i centrowanie. */
+    .homa-container {
+      max-width: 600px;
+      margin: 2rem auto;
+    }
+
+    /* Karta kalkulatora – otrzymuje tło i obramowanie identyczne jak inne karty w serwisie. */
+    .homa-card {
+      background: var(--card);
+      padding: 1.5rem;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid #d0dede;
+    }
+
+    .homa-card h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-top: 0;
+      margin-bottom: 1rem;
+    }
+
+    .homa-card label {
+      display: block;
+      margin-top: 1rem;
+      font-weight: 600;
+    }
+
+    .homa-card input[type="number"],
+    .homa-card select {
+      width: 100%;
+      padding: 0.55rem 0.75rem;
+      margin-top: 0.35rem;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 0.5rem;
+    }
+
+    .homa-card input[type="radio"] {
+      margin-right: 0.3rem;
+    }
+
+    /* Ustawiamy grupę przełączników obok siebie. */
+    .homa-inline-radio {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-top: 0.5rem;
+    }
+
+    .homa-card button {
+      display: inline-block;
+      margin-top: 1.7rem;
+      padding: 0.75rem 1.6rem;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: var(--radius);
+      color: #fff;
+      background: var(--primary);
+      cursor: pointer;
+      transition: background 0.25s, transform 0.25s;
+    }
+
+    .homa-card button:hover {
+      background: var(--secondary);
+      transform: translateY(-1px);
+    }
+
+    .homa-card #wynik {
+      margin-top: 1.6rem;
+      padding: 0.6rem 0.9rem;
+      /* Domyślne obramowanie; zostanie nadpisane przez klasy good/warn/risk */
+      border: 2px solid #d8e1e6;
+      border-radius: 0.6rem;
+      /* Wynik zawsze ma białe tło, niezależnie od motywu. */
+      background: #ffffff;
+      font-weight: 600;
+      font-size: 1.25rem;
+      /* Nie pokazujemy kontenera, dopóki użytkownik nie wykona obliczenia.  */
+      display: none;
+    }
+
+    /* Tekstowe klasy kolorystyczne dla interpretacji (używane w polu #interp). 
+       Ustawiamy również większy rozmiar czcionki (1.2rem) i pogrubienie. */
+    .homa-card .good { color: #2a8a2a; font-size: 1.2rem; font-weight: 700; }
+    .homa-card .warn { color: #b58900; font-size: 1.2rem; font-weight: 700; }
+    .homa-card .risk { color: #c62828; font-size: 1.2rem; font-weight: 700; }
+
+    /* Klasy na polu #wynik sterujące kolorem obwódki i animacją.  
+       Używamy istniejących animacji pulseOrange i pulseRed z głównego arkusza stylów. */
+    .homa-card #wynik.good {
+      border-color: var(--primary);
+      animation: none;
+    }
+    .homa-card #wynik.warn {
+      border-color: #c75d00;
+      animation: pulseOrange 1.25s ease-in-out infinite;
+    }
+    .homa-card #wynik.risk {
+      border-color: var(--danger);
+      animation: pulseRed 1.25s ease-in-out infinite;
+    }
+
+    .homa-card #interp {
+      margin-top: 0.8rem;
+    }
+    .homa-card #norms {
+      margin-top: 0.8rem;
+    }
+    .homa-card #visit {
+      margin-top: 0.8rem;
+    }
+    .homa-card #visit ul {
+      margin: 0.4rem 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    .homa-card #visit li {
+      margin: 0.45rem 0;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .homa-card .avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+    .homa-card small {
+      display: block;
+      margin-top: 1.2rem;
+      color: #666;
+      font-size: 0.85rem;
+      line-height: 1.4;
+    }
+
+    /* Pola wyświetlane tylko w przypadku wyboru grupy "Dziecko" są
+       wstępnie ukryte i rozsuwają się łagodnie po zaznaczeniu odpowiedniej opcji. */
+    #childFields {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease;
+    }
+    #child:checked ~ #childFields {
+      max-height: 400px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+      font-size: 0.9rem;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 0.4rem 0.3rem;
+      text-align: left;
+    }
+    th {
+      background: var(--secondary);
+      color: #fff;
+      font-weight: 600;
+    }
+    #sources {
+      font-size: 0.8rem;
+      color: #555;
+      margin-top: 0.6rem;
+      line-height: 1.35;
+    }
+
+    /* Stylowanie przycisku czyszczącego formularz.  Wyśrodkowujemy go w karcie,
+       nadajemy 2‑pikselową czerwoną obwódkę i zachowujemy stylistykę guzików aplikacji. */
+    .homa-card .clear-btn {
+      display: block;
+      margin: 1.7rem auto 0;
+      padding: 0.75rem 1.6rem;
+      font-size: 1rem;
+      font-weight: 600;
+      border: 2px solid var(--danger) !important;
+      border-radius: var(--radius);
+      background: transparent;
+      color: var(--danger);
+      cursor: pointer;
+      transition: background 0.25s;
+    }
+    .homa-card .clear-btn:hover {
+      background: rgba(198, 40, 40, 0.1);
+    }
+
+    /* Dodatkowe reguły dla suwaka wyboru grupy (Dorosły/Dziecko).
+       Wyśrodkuj cały przełącznik i przesuń białą kropkę w prawo po zaznaczeniu. */
+    .homa-toggle {
+      justify-content: center;
+    }
+    /* Używamy selektora ogólnego rodzeństwa (~) zamiast sąsiedniego (+), aby
+       reguła działała także wtedy, gdy w HTML pomiędzy <input> a <span>
+       znajdują się białe znaki (np. znaki nowej linii).  Przesuwamy uchwyt
+       z lewej strony na prawą, gdy #groupToggle jest zaznaczony. */
+    #groupToggle:checked ~ .slider::before {
+      left: auto;
+      right: 2px;
+      transform: none;
+    }
+  </style>
+</head>
+
+<body class="js-loading liquid-ios26 has-sidebar">
+  <!-- Główny nagłówek powtarza układ i styl zastosowany na stronie głównej.  -->
+  <header>
+    <div class="container">
+      <!-- Logo prowadzi zawsze do strony głównej. -->
+      <a href="index.html">
+        <img src="logo_vilda.jpeg" alt="Vilda Clinic – strona główna" style="max-width:160px;margin-bottom:10px;border-radius:var(--radius);" />
+      </a>
+      <h1>wagaiwzrost.pl</h1>
+    </div>
+    <!-- Główna nawigacja w układzie jednokolumnowym. Pokazujemy tylko kluczowe sekcje serwisu. -->
+    <nav class="main-nav" aria-label="Główna nawigacja">
+  <ul>
+    <li class="menu-toggle">
+      <input type="checkbox" id="navToggle" class="nav-toggle">
+      <label for="navToggle" aria-label="Otwórz menu">
+        <span class="bar"></span>
+        <span class="bar"></span>
+        <span class="bar"></span>
+      </label>
+      <ul id="verticalMenu" class="vertical-menu">
+      <li><a href="index.html">Strona główna</a></li>
+      <li><a href="ustawienia.html">Ustawienia</a></li>
+      <li><a href="instrukcja.html">Instrukcja</a></li>
+      <li><a href="o-aplikacji.html">O aplikacji</a></li>
+      <li><a href="kontakt.html">Kontakt</a></li>
+      </ul>
+    </li>
+      <li><a href="docpro.html" class="pro-link">DocPro</a></li>
+      <li><a href="kalkulator-klirens.html">Klirens</a></li>
+      <li><a href="cukrzyca.html">Cukrzyca</a></li>
+      <li><a href="steroidy.html">Steroidy</a></li>
+      <li><a href="materialy-edukacyjne.html">Materiały edukacyjne</a></li>
+  </ul>
+</nav>
+  </header>
+
+  <!-- Układ desktopowy: boczny pasek nawigacji oraz treść główna z prawej. -->
+  <div class="desktop-layout">
+    <!-- Lewy sidebar z menu bocznym i ikonami. -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <a href="index.html">
+          <img src="logo_vilda.jpeg" alt="Vilda Clinic – strona główna" />
+        </a>
+        <h1>wagaiwzrost.pl</h1>
+      </div>
+      <nav class="sidebar-nav" aria-label="Nawigacja boczna">
+  <ul>
+      <li>
+        <a href="index.html">
+          <span class="sidebar-icon" data-lucide="home"></span>
+          <span class="sidebar-label">Strona główna</span>
+        </a>
+      </li>
+      <li>
+        <a href="docpro.html" class="pro-link">
+          <span class="sidebar-icon" data-lucide="stethoscope"></span>
+          <span class="sidebar-label">DocPro</span>
+        </a>
+      </li>
+      <li>
+        <a href="homa-ir.html" aria-current="page">
+          <span class="sidebar-icon" data-lucide="calculator"></span>
+          <span class="sidebar-label">HOMA‑IR</span>
+        </a>
+      </li>
+      <li>
+        <a href="kalkulator-klirens.html">
+          <span class="sidebar-icon" data-lucide="droplets"></span>
+          <span class="sidebar-label">Klirens</span>
+        </a>
+      </li>
+      <li>
+        <a href="cukrzyca.html">
+          <span class="sidebar-icon" data-lucide="syringe"></span>
+          <span class="sidebar-label">Cukrzyca</span>
+        </a>
+      </li>
+      <li>
+        <a href="steroidy.html">
+          <span class="sidebar-icon" data-lucide="pill"></span>
+          <span class="sidebar-label">Steroidy</span>
+        </a>
+      </li>
+      <li>
+        <a href="materialy-edukacyjne.html">
+          <span class="sidebar-icon" data-lucide="book-open"></span>
+          <span class="sidebar-label">Materiały edukacyjne</span>
+        </a>
+      </li>
+      <li>
+        <a href="ustawienia.html">
+          <span class="sidebar-icon" data-lucide="settings"></span>
+          <span class="sidebar-label">Ustawienia</span>
+        </a>
+      </li>
+      <li>
+        <a href="instrukcja.html">
+          <span class="sidebar-icon" data-lucide="file-text"></span>
+          <span class="sidebar-label">Instrukcja</span>
+        </a>
+      </li>
+      <li>
+        <a href="o-aplikacji.html">
+          <span class="sidebar-icon" data-lucide="info"></span>
+          <span class="sidebar-label">O aplikacji</span>
+        </a>
+      </li>
+      <li>
+        <a href="kontakt.html">
+          <span class="sidebar-icon" data-lucide="mail"></span>
+          <span class="sidebar-label">Kontakt</span>
+        </a>
+      </li>
+  </ul>
+</nav>
+    </aside>
+
+    <!-- Główna zawartość strony: kalkulator HOMA‑IR w karcie. -->
+    <div class="main-content">
+      <div class="container">
+        <div class="homa-container">
+          <div class="homa-card">
+            <h1 style="text-align:center;">Kalkulator wskaźnika HOMA</h1>
+            <!-- Wybór grupy wiekowej zastąpiony suwakiem.  
+                 Gdy suwak jest w pozycji wyłączonej (po lewej) – grupa to dorosły.  
+                 Po prawej – dziecko (1–18 lat).  Suwak otrzymuje turkusowe tło w stanie aktywnym
+                 dzięki stylom .switch już zdefiniowanym w aplikacji. -->
+            <div class="homa-toggle" style="display:flex;align-items:center;gap:1rem;margin-top:0.5rem;">
+              <span id="adultLabel">Dorosły</span>
+              <label class="switch" style="margin:0;">
+                <input type="checkbox" id="groupToggle">
+                <span class="slider"></span>
+              </label>
+              <span id="childLabel">Dziecko&nbsp;(1–18&nbsp;lat)</span>
+            </div>
+            <!-- Pola dedykowane dzieciom są ukryte dopóki użytkownik nie wybierze grupy "Dziecko".  -->
+            <div id="childFields">
+              <label>Płeć
+                <select id="sex">
+                  <option value="" disabled selected>Wybierz płeć</option>
+                  <option value="boy">Chłopiec</option>
+                  <option value="girl">Dziewczynka</option>
+                </select>
+              </label>
+              <label>Etap dojrzewania
+                <select id="stage">
+                  <option value="" disabled selected>Wybierz etap</option>
+                  <option value="pre">Przedpokwitaniowy</option>
+                  <option value="pub">Pokwitanie</option>
+  <option value="full">Dojrzewanie pełne</option>
+                </select>
+              </label>
+              <label>Wiek dziecka (lata)
+                <input type="number" id="age" min="1" max="18" />
+              </label>
+            </div>
+            <!-- Pomiar glukozy -->
+            <label>Glukoza na czczo
+              <input type="number" id="glucose" step="0.1" placeholder="np. 90" />
+              <select id="glucoseUnit">
+                <option value="mg" selected>mg/dL</option>
+                <option value="mmol">mmol/L</option>
+              </select>
+            </label>
+            <!-- Pomiar insuliny -->
+            <label>Insulina na czczo&nbsp;(mU/mL)
+              <input type="number" id="insulin" step="0.1" placeholder="np. 10" />
+            </label>
+            <!-- Usunięto przycisk obliczający wynik – obliczenia odbywają się dynamicznie podczas wpisywania danych. -->
+            <!-- Przycisk czyszczący formularz tylko dla tej podstrony.
+                 Pozwala użytkownikowi szybko wyzerować pola kalkulatora HOMA‑IR bez wpływu na inne moduły. -->
+            <button type="button" id="resetBtn" class="clear-btn">Wyczyść wszystkie pola</button>
+            <!-- Sekcje wynikowe -->
+            <div id="wynik"></div>
+            <div id="interp"></div>
+            <div id="visit"></div>
+            <div id="norms"></div>
+            <div id="sources"></div>
+            <small>Kalkulator ma charakter edukacyjny i nie zastępuje konsultacji lekarskiej.</small>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Dekoracyjny pasek po prawej stronie, aktywny na szerokich ekranach.  -->
+    <aside class="decor-sidebar"></aside>
+  </div>
+
+  <!-- Stopka powtarzająca treść ze strony głównej.  -->
+  <footer>
+    <p><strong>Administrator serwisu:</strong>
+      Vilda Clinic sp. z o.o.&nbsp;•&nbsp;
+      <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">vildaclinic.pl</a>
+    </p>
+    <p><strong>Konsultacja merytoryczna:</strong>
+      dr&nbsp;n.&nbsp;med.&nbsp;Maciej&nbsp;Flader
+    </p>
+  </footer>
+
+  <!-- Przycisk "powrót na górę".  Pojawia się w prawym dolnym rogu i przewija stronę na początek. -->
+  <button id="scrollTopBtn" aria-label="Powrót na górę strony" type="button">
+    <i data-lucide="arrow-up"></i>
+  </button>
+
+  <!-- Biblioteka ikon Lucide oraz skrypt aktywujący motyw Liquid Glass.
+       Wczytanie tych plików po treści strony zapewnia ich prawidłową inicjalizację. -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
+  <script src="ios26-ui.js?v=5"></script>
+
+  <!-- Skrypt obsługujący kalkulator HOMA‑IR. Przeniesiony z oryginalnej podstrony i
+       dostosowany do nowej struktury. -->
+  <script>
+    // Obsługa przełącznika grupy (dorosły/dziecko).  Po zmianie pokazujemy lub ukrywamy
+    // pola dedykowane dzieciom i aktualizujemy wynik w trybie automatycznym.
+    const groupToggleEl = document.getElementById('groupToggle');
+    const childFields  = document.getElementById('childFields');
+    if (groupToggleEl) {
+      groupToggleEl.addEventListener('change', () => {
+        // Pokaż sekcję pól dla dzieci tylko gdy wybrany jest tryb „dziecko”
+        childFields.style.maxHeight = groupToggleEl.checked ? '400px' : '0';
+        computeHoma(true);
+      });
+    }
+
+    // Mapy progów HOMA‑IR dla dzieci w zależności od płci i etapu dojrzewania.
+    const map = {
+      boy: { pre: [2.2, 2.67], pub: [3.8, 5.22] },
+      girl: { pre: [2.0, 2.22], pub: [2.6, 3.82] }
+    };
+
+    // Funkcje opisujące interpretację wyniku u dorosłych.
+    function interpretAdult(h) {
+      if (h < 2.2) return ['good', 'Prawidłowy (< 2,2)'];
+      if (h < 2.6) return ['warn', 'Podwyższony (2,2 – 2,59)'];
+      return ['risk', 'Prawdopodobna insulinooporność (≥ 2,6)'];
+    }
+
+    // Funkcja interpretująca wynik u dzieci w zależności od płci i etapu dojrzewania.
+    function interpretChild(h, sex, stage) {
+      const [warn, risk] = map[sex][stage];
+      if (h < warn) return ['good', `Prawidłowy (< ${warn.toFixed(2)})`];
+      if (h < risk) return ['warn', `Podwyższony (${warn.toFixed(2)} – ${(risk - 0.01).toFixed(2)})`];
+      return ['risk', `Prawdopodobna insulinooporność (≥ ${risk.toFixed(2)})`];
+    }
+
+    // Funkcje generujące tabele norm dla dorosłych i dzieci.
+    function tableAdult() {
+      return `\n<table><thead><tr><th>Kategoria</th><th>HOMA‑IR</th></tr></thead><tbody>\n<tr><td>Prawidłowy</td><td>&lt; 2,2</td></tr>\n<tr><td>Podwyższony</td><td>2,2 – 2,59</td></tr>\n<tr><td>Prawdopodobna insulinooporność</td><td>&ge; 2,6</td></tr>\n</tbody></table>`;
+    }
+    function tableChild(sex, stage) {
+      const [warn, risk] = map[sex][stage];
+      const lab = stage === 'pre' ? 'przedpokwit.' : 'pokwitanie';
+      return `\n<table><thead><tr><th>${sex === 'boy' ? 'Chłopcy' : 'Dziewczynki'} – ${lab}</th><th>HOMA‑IR</th></tr></thead><tbody>\n<tr><td>Prawidłowy</td><td>&lt; ${warn.toFixed(2)}</td></tr>\n<tr><td>Podwyższony</td><td>${warn.toFixed(2)} – ${(risk - 0.01).toFixed(2)}</td></tr>\n<tr><td>Prawdopodobna insulinooporność</td><td>&ge; ${risk.toFixed(2)}</td></tr>\n</tbody></table>`;
+    }
+
+    // Źródła norm dla dorosłych i dzieci.
+    function buildSrc(group) {
+      return (group === 'adult')
+        ? `\n<strong>Źródła norm:</strong><br>\n• Kosovski IB et al. <i>Evaluation of Fasting Glucose-Insulin-C-Peptide-Derived Metabolic Indices for Identifying Metabolic Syndrome in Young, Healthy Adults.</i> Nutrients 2024.<br>\n• Biernacka-Bartnik A et al. <i>The Cut-Off Value for HOMA-IR Discriminating the Insulin Resistance Based on the SHBG Level in Women with Polycystic Ovary Syndrome.</i> Front Med 2023.`
+        : `\n<strong>Źródła norm:</strong><br>\n• Łupińska A et al. <i>Comparison of the Clinical Utility of Two Insulin Resistance Indices: IRI-HOMA and IRI-Belfiore in Diagnosing Insulin Resistance and Metabolic Complications in Children.</i> J Clin Med 2024.<br>\n• Kondakis K et al. <i>Developing a Risk Assessment Tool for Identifying Individuals at High Risk for Developing Insulin Resistance in European Adolescents: The HELENA-IR Score.</i> J Pediatr Endocrinol Metab 2022.`;
+    }
+
+    // Listy lekarzy polecanych dla dorosłych i dzieci (zawierają zdjęcia i linki do podstron w serwisie vildaclinic.pl).
+    const links = {
+      adult: `\n<ul>\n  <li class="doc"><img class="avatar" src="https://static.wixstatic.com/media/fc7973_ae4aff4e736547148e951efb1878f7d7~mv2.jpg/v1/crop/x_0,y_83,w_1462,h_1462/fill/w_120,h_120,al_c,q_80/2%20(1%20of%209)_JPG.jpg" alt="">\n      <a href="https://www.vildaclinic.pl/maria-majchrzak-hernandez-endokrynolog" target="_blank">lek.&nbsp;Maria&nbsp;Majchrzak-Hernandez</a></li>\n  <li class="doc"><img class="avatar" src="https://static.wixstatic.com/media/fc7973_2956cd259b7747fd9b1e14a5116a2d29~mv2.jpg/v1/crop/x_410,y_0,w_3321,h_3321/fill/w_120,h_120,al_c,q_80/0Z3A9662-Edit_JPG.jpg" alt="">\n      <a href="https://www.vildaclinic.pl/kopia-agata-%C5%82a%C5%BAniak-pfajfer" target="_blank">lek.&nbsp;Magdalena&nbsp;Faligowska</a></li>\n  <li class="doc"><img class="avatar" src="https://static.wixstatic.com/media/fc7973_cc9810be11444d9695d1dde533861a65~mv2.jpg/v1/crop/x_339,y_0,w_1369,h_1365/fill/w_120,h_120,al_c,q_80/1%20(14%20of%2018)_JPG.jpg" alt="">\n      <a href="https://www.vildaclinic.pl/kamila-budniak-lekarz-rodzinny" target="_blank">lek.&nbsp;Kamila&nbsp;Budniak</a></li>\n </ul>`,
+      child: `\n<ul>\n  <li class="doc"><img class="avatar" src="https://static.wixstatic.com/media/fc7973_6e3946775e12457283a049e41cffcc66~mv2.jpg/v1/crop/x_1279,y_0,w_3551,h_3551/fill/w_120,h_120,al_c,q_85/1%20(11%20of%2018)_JPG.jpg" alt="">\n      <a href="https://www.vildaclinic.pl/maciej-flader" target="_blank">dr&nbsp;Maciej&nbsp;Flader</a></li>\n  <li class="doc"><img class="avatar" src="https://static.wixstatic.com/media/fc7973_c59a2bd500534ce18cf55d35bfd5b1d9~mv2.jpg/v1/crop/x_297,y_0,w_1455,h_1463/fill/w_120,h_120,al_c,q_80/0Z3A9512-Edit_JPG.jpg" alt="">\n      <a href="https://www.vildaclinic.pl/magdalena-banaszak-ziemska-endokrynolog-dzieciecy" target="_blank">dr&nbsp;Magdalena&nbsp;Banaszak-Ziemska</a></li>\n </ul>`
+    };
+
+    // Funkcja oblicza wskaźnik HOMA‑IR i aktualizuje interfejs.  
+    // Jeśli wywołana w trybie automatycznym (isAuto=true), błędy są cicho ignorowane bez wywoływania alertów.
+    function computeHoma(isAuto = false) {
+      const g = parseFloat(document.getElementById('glucose').value);
+      const i = parseFloat(document.getElementById('insulin').value);
+      const unit = document.getElementById('glucoseUnit').value;
+      // Określ wybraną grupę na podstawie przełącznika.  
+      // false (niezaznaczony) = dorosły, true (zaznaczony) = dziecko
+      const groupToggleEl2 = document.getElementById('groupToggle');
+      const group = (groupToggleEl2 && groupToggleEl2.checked) ? 'child' : 'adult';
+
+      const wynikEl = document.getElementById('wynik');
+      const interpEl = document.getElementById('interp');
+      const normsEl = document.getElementById('norms');
+      const sourcesEl = document.getElementById('sources');
+      const visitEl = document.getElementById('visit');
+
+      // Przygotuj funkcję do czyszczenia pola wynikowego i powiązanych sekcji
+      const clearResults = () => {
+        // Ukryj kontener wyniku, usuń tekst oraz klasy kolorystyczne
+        wynikEl.style.display = 'none';
+        wynikEl.textContent = '';
+        wynikEl.classList.remove('good', 'warn', 'risk');
+        interpEl.textContent = '';
+        visitEl.textContent = '';
+        normsEl.textContent = '';
+        sourcesEl.textContent = '';
+      };
+      // Pomocnicza funkcja do zgłaszania błędów w trybie manualnym
+      const warnUser = (msg) => {
+        if (!isAuto) {
+          alert(msg);
+        }
+        clearResults();
+      };
+
+      // Walidacja podstawowych pól – glukoza i insulina muszą być liczbami.
+      if (isNaN(g) || isNaN(i)) {
+        return warnUser('Uzupełnij pola glukozy i insuliny.');
+      }
+
+      let sex, stage;
+      if (group === 'child') {
+        sex = document.getElementById('sex').value;
+        stage = document.getElementById('stage').value;
+        // Jeśli wybrano etap „dojrzewanie pełne”, traktujemy jak dorosłego (normy jak u dorosłych)
+        // i płeć staje się nieistotna.  Nie wymagamy wyboru płci w tym przypadku.
+        if (stage !== 'full') {
+          if (!sex || !stage) {
+            return warnUser('Wybierz płeć i etap dojrzewania.');
+          }
+        } else {
+          // w pełnym dojrzewaniu ustawiamy płeć na null
+          sex = null;
+        }
+
+        // Ogranicz wiek dziecka do maksymalnie 18 lat.  Jeżeli użytkownik wpisze wartość
+        // większą niż 18, automatycznie ją korygujemy, aby utrzymać wymóg wiekowy.
+        const ageEl = document.getElementById('age');
+        if (ageEl && ageEl.value) {
+          const ageVal = parseInt(ageEl.value, 10);
+          if (!isNaN(ageVal) && ageVal > 18) {
+            ageEl.value = 18;
+          }
+        }
+      }
+      // Obliczenie HOMA‑IR. 18.0182 – przelicznik jednostek mg/dL na mmol/L.
+      const homa = (i * (unit === 'mg' ? g / 18.0182 : g)) / 22.5;
+      // Wybierz typ grupy do interpretacji.  Jeśli grupa to dziecko i etap to „full” (dojrzewanie pełne),
+      // traktujemy jak dorosłego — interpretujemy wynik według norm dorosłych.
+      const interpretGroup = (group === 'child' && stage === 'full') ? 'adult' : group;
+      // Grupa lekarzy pozostaje zawsze zgodna z oryginalną grupą (dorosły/dziecko),
+      // nawet jeśli w przypadku „dojrzewania pełnego” korzystamy z norm dorosłych.
+      const doctorGroup = group;
+      // Oblicz klasę i tekst interpretacyjny
+      const [cls, txt] = (interpretGroup === 'adult')
+        ? interpretAdult(homa)
+        : interpretChild(homa, sex, stage);
+
+      // Aktualizacja pola wyniku z dynamicznym formatowaniem i klasą koloru.
+      // Pokaż kontener wyniku, jeżeli wyświetlamy treść.
+      wynikEl.style.display = 'block';
+      wynikEl.textContent = `Twój wskaźnik HOMA‑IR: ${homa.toFixed(2)}`;
+      wynikEl.classList.remove('good', 'warn', 'risk');
+      wynikEl.classList.add(cls);
+      // Aktualizacja interpretacji i pozostałych sekcji.
+      interpEl.innerHTML = `<span class="${cls}">${txt}</span>`;
+      // Normy: jeśli traktujemy jak dorosłego, pokaż tablicę dorosłych, w przeciwnym razie dziecięcą.
+      normsEl.innerHTML = (interpretGroup === 'adult') ? tableAdult() : tableChild(sex, stage);
+      // Źródła: użyj źródeł dla interpretowanej grupy
+      sourcesEl.innerHTML = buildSrc(interpretGroup);
+      // Lekarze: proponuj konsultację odpowiednio do grupy interpretacyjnej
+      visitEl.innerHTML = (cls === 'good') ? '' : `<strong>${doctorGroup === 'child' ? 'Rozważ konsultację u endokrynologa dziecięcego' : 'Rozważ konsultację u endokrynologa'}:</strong>` + links[doctorGroup];
+    }
+
+    // Obliczenia odbywają się dynamicznie podczas wpisywania danych – nie potrzebujemy przycisku "Oblicz".
+
+    // Dynamiczna aktualizacja wyniku podczas edycji danych.  
+    // Słuchamy zdarzeń input i change na istotnych polach formularza.
+    ['glucose','insulin','age'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('input', () => computeHoma(true));
+      }
+    });
+    // Reaguj na zmiany jednostki glukozy, płci, etapu dojrzewania oraz przełącznika grupy.
+    ['glucoseUnit','sex','stage','groupToggle'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('change', () => computeHoma(true));
+      }
+    });
+
+    // Obsługa przycisku czyszczącego.  Po kliknięciu resetujemy wszystkie pola formularza do wartości domyślnych
+    // i czyścimy sekcje wynikowe. Nie wpływamy na żadne inne dane w aplikacji.
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      // Wyczyść wartości liczbowych pól
+      document.getElementById('glucose').value = '';
+      document.getElementById('insulin').value = '';
+      document.getElementById('age').value = '';
+      // Przywróć domyślny wybór jednostki glukozy
+      document.getElementById('glucoseUnit').value = 'mg';
+      // Przywróć domyślnie wybrany typ grupy (dorosły) — suwak w pozycji wyłączonej
+      const gt = document.getElementById('groupToggle');
+      if (gt) gt.checked = false;
+      // Wyczyść pola wyboru płci i etapu dojrzewania
+      document.getElementById('sex').value = '';
+      document.getElementById('stage').value = '';
+      // Ukryj sekcję pól dla dzieci
+      document.getElementById('childFields').style.maxHeight = '0';
+      // Wyczyść sekcje wynikowe.  Usuwamy również klasy kolorystyczne z pola wyniku,
+      // aby zniknął kolor obwódki oraz animacja pulsu.
+      const wynikResetEl = document.getElementById('wynik');
+      wynikResetEl.textContent = '';
+      wynikResetEl.classList.remove('good', 'warn', 'risk');
+      // Ukryj kontener wyniku, aby nie pozostała pusta obwódka
+      wynikResetEl.style.display = 'none';
+      document.getElementById('interp').textContent = '';
+      document.getElementById('visit').textContent = '';
+      document.getElementById('norms').textContent = '';
+      document.getElementById('sources').textContent = '';
+    });
+  </script>
+
+  <!-- Skrypt odpowiedzialny za przewijanie do góry oraz inicjalizację ikony strzałki.  
+       Definiujemy funkcję scrollToTop oraz przypisujemy ją do przycisku.  
+       Inicjalizacja ikony Lucide odbywa się po załadowaniu biblioteki. -->
+  <script>
+    function scrollToTop() {
+      try {
+        if (typeof window.scrollTo === 'function') {
+          try {
+            window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+          } catch (err) {
+            window.scrollTo(0, 0);
+          }
+        }
+        // Dodatkowo ustaw scrollTop na 0 dla dokumentu i elementu <html>
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+      } catch (_) {}
+    }
+    // Przypnij funkcję do przycisku scrollTop
+    document.addEventListener('DOMContentLoaded', function() {
+      const btn = document.getElementById('scrollTopBtn');
+      if (btn) {
+        btn.addEventListener('click', scrollToTop);
+      }
+      // Zainicjalizuj ikonę Lucide na przycisku
+      if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        try {
+          window.lucide.createIcons({ attrs: { 'stroke-width': 1.75 } });
+        } catch (e) {}
+      }
+    });
+  </script>
+  <script>
+    // Remove the temporary js-loading class once initialization is complete.
+    document.addEventListener('DOMContentLoaded', function() {
+      document.body.classList.remove('js-loading');
+    });
+  </script>
+</body>
+</html>

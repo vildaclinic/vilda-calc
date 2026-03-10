@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <!--
+    Strona kontaktowa serwisu wagaiwzrost.pl.  Zawiera dane kontaktowe autora
+    merytorycznego oraz właściciela aplikacji.  Zachowuje spójny układ z
+    pozostałymi podstronami i umożliwia szybkie przejście do innych
+    modułów serwisu.  Inspiracja dla układu kontaktu pochodzi z dobrych
+    praktyk projektowania stron medycznych, które podkreślają prostotę,
+    przejrzystość i łatwy dostęp do informacji【623750327341673†L34-L79】.  
+  -->
+  <title>Kontakt – Waga i wzrost</title>
+  <meta name="description" content="Dane kontaktowe aplikacji Waga i wzrost. Autor: dr n. med. Maciej Flader. Właściciel serwisu: Vilda Clinic sp. z o.o. Adres e‑mail: biuro@vildaclinic.pl. Zapraszamy do współpracy." />
+  <meta name="robots" content="index, follow" />
+  <link rel="stylesheet" href="style.css?v=2" />
+  <link rel="stylesheet" href="ios26-v2.css?v=4" />
+  <link rel="stylesheet" href="sidebar.css" />
+  <!-- Dodajemy bibliotekę ikon Lucide, aby ikony w menu bocznym były widoczne -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
+</head>
+<body class="js-loading liquid-ios26 has-sidebar">
+  <header>
+    <div class="container">
+      <!-- Logo w nagłówku przekierowuje do strony głównej aplikacji -->
+      <a href="index.html">
+        <img src="logo_vilda.jpeg" alt="Vilda Clinic – strona główna" style="max-width:160px;margin-bottom:10px; border-radius:var(--radius);" />
+      </a>
+      <h1>Kontakt</h1>
+    </div>
+    <nav class="main-nav" aria-label="Główna nawigacja">
+  <ul>
+    <li class="menu-toggle">
+      <input type="checkbox" id="navToggle" class="nav-toggle">
+      <label for="navToggle" aria-label="Otwórz menu">
+        <span class="bar"></span>
+        <span class="bar"></span>
+        <span class="bar"></span>
+      </label>
+      <ul id="verticalMenu" class="vertical-menu">
+      <li><a href="index.html">Strona główna</a></li>
+      <li><a href="materialy-edukacyjne.html">Materiały edukacyjne</a></li>
+      <li><a href="ustawienia.html">Ustawienia</a></li>
+      <li><a href="instrukcja.html">Instrukcja</a></li>
+      <li><a href="o-aplikacji.html">O aplikacji</a></li>
+      </ul>
+    </li>
+      <li><a href="docpro.html" class="pro-link">DocPro</a></li>
+      <li><a href="homa-ir.html">HOMA‑IR</a></li>
+      <li><a href="kalkulator-klirens.html">Klirens</a></li>
+      <li><a href="cukrzyca.html">Cukrzyca</a></li>
+      <li><a href="steroidy.html">Steroidy</a></li>
+  </ul>
+</nav>
+  </header>
+  <div class="desktop-layout">
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <a href="index.html">
+          <img src="logo_vilda.jpeg" alt="Vilda Clinic – strona główna">
+        </a>
+        <h1>Kontakt</h1>
+      </div>
+      <nav class="sidebar-nav" aria-label="Nawigacja boczna">
+  <ul>
+      <li>
+        <a href="index.html">
+          <span class="sidebar-icon" data-lucide="home"></span>
+          <span class="sidebar-label">Strona główna</span>
+        </a>
+      </li>
+      <li>
+        <a href="docpro.html" class="pro-link">
+          <span class="sidebar-icon" data-lucide="stethoscope"></span>
+          <span class="sidebar-label">DocPro</span>
+        </a>
+      </li>
+      <li>
+        <a href="homa-ir.html">
+          <span class="sidebar-icon" data-lucide="calculator"></span>
+          <span class="sidebar-label">HOMA‑IR</span>
+        </a>
+      </li>
+      <li>
+        <a href="kalkulator-klirens.html">
+          <span class="sidebar-icon" data-lucide="droplets"></span>
+          <span class="sidebar-label">Klirens</span>
+        </a>
+      </li>
+      <li>
+        <a href="cukrzyca.html">
+          <span class="sidebar-icon" data-lucide="syringe"></span>
+          <span class="sidebar-label">Cukrzyca</span>
+        </a>
+      </li>
+      <li>
+        <a href="steroidy.html">
+          <span class="sidebar-icon" data-lucide="pill"></span>
+          <span class="sidebar-label">Steroidy</span>
+        </a>
+      </li>
+      <li>
+        <a href="materialy-edukacyjne.html">
+          <span class="sidebar-icon" data-lucide="book-open"></span>
+          <span class="sidebar-label">Materiały edukacyjne</span>
+        </a>
+      </li>
+      <li>
+        <a href="ustawienia.html">
+          <span class="sidebar-icon" data-lucide="settings"></span>
+          <span class="sidebar-label">Ustawienia</span>
+        </a>
+      </li>
+      <li>
+        <a href="instrukcja.html">
+          <span class="sidebar-icon" data-lucide="file-text"></span>
+          <span class="sidebar-label">Instrukcja</span>
+        </a>
+      </li>
+      <li>
+        <a href="o-aplikacji.html">
+          <span class="sidebar-icon" data-lucide="info"></span>
+          <span class="sidebar-label">O aplikacji</span>
+        </a>
+      </li>
+      <li>
+        <a href="kontakt.html" aria-current="page">
+          <span class="sidebar-icon" data-lucide="mail"></span>
+          <span class="sidebar-label">Kontakt</span>
+        </a>
+      </li>
+  </ul>
+</nav>
+    </aside>
+    <div class="main-content">
+      <div class="container">
+        <section style="max-width:700px; margin:0 auto; padding:1rem;">
+          <h2>Skontaktuj się z nami</h2>
+          <p>
+            Aplikacja <strong>Waga i wzrost</strong> powstała dzięki pracy
+            <strong>dr n. med. Macieja Fladera</strong> i&nbsp;zespołu
+            <strong>Vilda Clinic&nbsp;sp.&nbsp;z o.o.</strong>. Jesteśmy otwarci na
+            współpracę oraz wszelkie pytania dotyczące funkcjonalności serwisu.
+          </p>
+          <p>
+            <strong>Dane kontaktowe:</strong><br>
+            <strong>E‑mail:</strong> <a href="mailto:biuro@vildaclinic.pl">biuro@vildaclinic.pl</a><br>
+            <strong>Strona internetowa:</strong> <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">vildaclinic.pl</a>
+          </p>
+          <p>
+            Jeżeli chcesz zgłosić sugestię, zaproponować współpracę lub dowiedzieć się więcej o naszym projekcie,
+            napisz do nas. Odpowiadamy na wiadomości tak szybko, jak to możliwe.
+          </p>
+          <div style="text-align:center; margin-top:1.5rem;">
+            <img src="IMG_8041.JPG" alt="Zdjęcie" style="max-width:300px; width:100%; height:auto; border-radius:var(--radius);" />
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+  <footer>
+    <p><strong>Administrator serwisu:</strong>
+      Vilda Clinic sp. z o.o. • <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">vildaclinic.pl</a>
+    </p>
+    <p><strong>Konsultacja merytoryczna:</strong>
+      dr n. med. Maciej Flader
+    </p>
+  </footer>
+  <script src="ios26-ui.js?v=5"></script>
+  <script>
+    // Inicjalizacja ikon Lucide w momencie wczytania strony
+    lucide.createIcons();
+  </script>
+  <script>
+    // Remove the temporary js-loading class once initialization is complete.
+    document.addEventListener('DOMContentLoaded', function() {
+      document.body.classList.remove('js-loading');
+    });
+  </script>
+</body>
+</html>

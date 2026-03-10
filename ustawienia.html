@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Ustawienia – Waga i wzrost</title>
+  <!-- Ładujemy te same czcionki i style co strona główna, aby zachować spójność -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <link href="ios26-v2.css?v=4" rel="stylesheet">
+  <link href="style.css?v=2" rel="stylesheet">
+  <link href="sidebar.css" rel="stylesheet">
+  <!-- Dodatkowe style dla przełączników.  Zapewniają turkusowe tło w stanie aktywnym
+       i szare tło w stanie nieaktywnym oraz przesuwanie się kulki. -->
+  <style>
+    /* Ogólny kontener przełącznika */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 46px;
+      height: 26px;
+    }
+    /* Ukryj natywny checkbox */
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    /* Tło suwaka (stan nieaktywny) */
+    .switch .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: 0.4s;
+      border-radius: 26px;
+    }
+    /* Kółko suwaka */
+    .switch .slider:before {
+      position: absolute;
+      content: "";
+      height: 22px;
+      width: 22px;
+      left: 2px;
+      top: 2px;
+      background-color: #fff;
+      transition: 0.4s;
+      border-radius: 50%;
+      box-shadow: 0 0 2px rgba(0,0,0,0.2);
+    }
+    /* Kolor tła w stanie aktywnym */
+    .switch input:checked + .slider {
+      background-color: #00b3b3; /* turkusowe tło gdy włączone */
+    }
+    /* Pozycja kulki w stanie aktywnym */
+    .switch input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+  </style>
+  <!-- Ładujemy bibliotekę ikon Lucide do wyświetlania ikon w menu bocznym -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
+  <script src="ios26-ui.js?v=5" defer></script>
+</head>
+<body class="js-loading liquid-ios26 page-settings has-sidebar">
+  <header>
+    <div class="container">
+      <!-- Logo w nagłówku przekierowuje teraz do strony głównej serwisu -->
+      <a href="index.html">
+        <img src="logo_vilda.jpeg" alt="Vilda Clinic – strona główna"
+             style="max-width:160px;margin-bottom:10px;border-radius:var(--radius);">
+      </a>
+      <h1>Ustawienia</h1>
+    </div>
+    <nav class="main-nav" aria-label="Główna nawigacja">
+  <ul>
+    <li class="menu-toggle">
+      <input type="checkbox" id="navToggle" class="nav-toggle">
+      <label for="navToggle" aria-label="Otwórz menu">
+        <span class="bar"></span>
+        <span class="bar"></span>
+        <span class="bar"></span>
+      </label>
+      <ul id="verticalMenu" class="vertical-menu">
+      <li><a href="index.html">Strona główna</a></li>
+      <li><a href="materialy-edukacyjne.html">Materiały edukacyjne</a></li>
+      <li><a href="instrukcja.html">Instrukcja</a></li>
+      <li><a href="o-aplikacji.html">O aplikacji</a></li>
+      <li><a href="kontakt.html">Kontakt</a></li>
+      </ul>
+    </li>
+      <li><a href="docpro.html" class="pro-link">DocPro</a></li>
+      <li><a href="homa-ir.html">HOMA‑IR</a></li>
+      <li><a href="kalkulator-klirens.html">Klirens</a></li>
+      <li><a href="cukrzyca.html">Cukrzyca</a></li>
+      <li><a href="steroidy.html">Steroidy</a></li>
+  </ul>
+</nav>
+  </header>
+  <div class="desktop-layout">
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <!-- Logo w bocznym panelu przekierowuje do strony głównej serwisu -->
+        <a href="index.html">
+          <img src="logo_vilda.jpeg" alt="Vilda Clinic – strona główna">
+        </a>
+        <h1>Ustawienia</h1>
+      </div>
+      <nav class="sidebar-nav" aria-label="Nawigacja boczna">
+  <ul>
+      <li>
+        <a href="index.html">
+          <span class="sidebar-icon" data-lucide="home"></span>
+          <span class="sidebar-label">Strona główna</span>
+        </a>
+      </li>
+      <li>
+        <a href="docpro.html" class="pro-link">
+          <span class="sidebar-icon" data-lucide="stethoscope"></span>
+          <span class="sidebar-label">DocPro</span>
+        </a>
+      </li>
+      <li>
+        <a href="homa-ir.html">
+          <span class="sidebar-icon" data-lucide="calculator"></span>
+          <span class="sidebar-label">HOMA‑IR</span>
+        </a>
+      </li>
+      <li>
+        <a href="kalkulator-klirens.html">
+          <span class="sidebar-icon" data-lucide="droplets"></span>
+          <span class="sidebar-label">Klirens</span>
+        </a>
+      </li>
+      <li>
+        <a href="cukrzyca.html">
+          <span class="sidebar-icon" data-lucide="syringe"></span>
+          <span class="sidebar-label">Cukrzyca</span>
+        </a>
+      </li>
+      <li>
+        <a href="steroidy.html">
+          <span class="sidebar-icon" data-lucide="pill"></span>
+          <span class="sidebar-label">Steroidy</span>
+        </a>
+      </li>
+      <li>
+        <a href="materialy-edukacyjne.html">
+          <span class="sidebar-icon" data-lucide="book-open"></span>
+          <span class="sidebar-label">Materiały edukacyjne</span>
+        </a>
+      </li>
+      <li>
+        <a href="ustawienia.html" aria-current="page">
+          <span class="sidebar-icon" data-lucide="settings"></span>
+          <span class="sidebar-label">Ustawienia</span>
+        </a>
+      </li>
+      <li>
+        <a href="instrukcja.html">
+          <span class="sidebar-icon" data-lucide="file-text"></span>
+          <span class="sidebar-label">Instrukcja</span>
+        </a>
+      </li>
+      <li>
+        <a href="o-aplikacji.html">
+          <span class="sidebar-icon" data-lucide="info"></span>
+          <span class="sidebar-label">O aplikacji</span>
+        </a>
+      </li>
+      <li>
+        <a href="kontakt.html">
+          <span class="sidebar-icon" data-lucide="mail"></span>
+          <span class="sidebar-label">Kontakt</span>
+        </a>
+      </li>
+  </ul>
+</nav>
+    </aside>
+    <div class="main-content">
+      <div class="container" style="padding-top:1rem;padding-bottom:2rem;">
+        <h2 style="text-align:center;">Zarządzanie widocznością kart</h2>
+        <p style="text-align:center; max-width:600px; margin:0 auto 1.5rem; font-size:0.95rem;">
+          Zaznacz, które moduły i karty chcesz widzieć na stronie głównej. Wyłączenie danej
+          karty spowoduje jej ukrycie, gdy ponownie odwiedzisz stronę główną. Niektóre
+          karty mogą być powiązane ze sobą i zostaną automatycznie włączone lub wyłączone
+          razem.
+        </p>
+      <div id="settingsGrid" class="settings-grid"></div>
+      </div>
+
+      <!-- Sekcja wyglądu aplikacji -->
+      <div class="container" style="padding-top:1rem;padding-bottom:2rem;">
+        <h2 style="text-align:center;">Wygląd aplikacji</h2>
+        <p style="text-align:center; max-width:600px; margin:0 auto 1.5rem; font-size:0.95rem;">
+          Tutaj możesz dostosować kolor tła aplikacji oraz kontrast kart w motywie Liquid Glass.
+          Ustawienia te są niezależne od trybu profesjonalnego i mają pierwszeństwo nad domyślnym przyciemnieniem tła.
+        </p>
+        <div style="text-align:center; margin-bottom:2rem;">
+          <label style="display:flex; align-items:center; justify-content:center; gap:0.5rem; font-size:0.95rem;">
+            <span>Ciemne&nbsp;tło:</span>
+            <input type="range" id="darkBgLevelSettings" min="0" max="2" step="1" value="0" style="width:150px;">
+            <span id="darkBgLevelSettingsValue">0</span>
+          </label>
+        </div>
+        <div style="text-align:center; margin-bottom:2rem;">
+          <label style="display:flex; align-items:center; justify-content:center; gap:0.5rem; font-size:0.95rem;">
+            <span>Płynne&nbsp;szkło:</span>
+            <input type="range" id="glassLevelSettings" min="0" max="2" step="1" value="0" style="width:150px;">
+            <span id="glassLevelSettingsValue">0</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Sekcja ustawień wygładzania siatek Palczewskiej -->
+      <div class="container" style="padding-top:1rem;padding-bottom:2rem;">
+        <h2 style="text-align:center;">Wygładzanie siatek Palczewskiej</h2>
+        <p style="text-align:center; max-width:600px; margin:0 auto 1.5rem; font-size:0.95rem;">
+          Tutaj możesz ustawić liczbę przebiegów filtru wygładzającego krzywe w siatkach centylowych Palczewskiej.  
+          Większa wartość (0–12) oznacza bardziej gładkie krzywe, kosztem drobnej zmiany wartości (do około ±1%).
+        </p>
+        <div id="palSmoothSetting" style="text-align:center; margin-bottom:2rem;">
+          <label style="display:flex; align-items:center; justify-content:center; gap:0.5rem; font-size:0.95rem;">
+            <span>Stopień&nbsp;wygładzenia:</span>
+            <input type="range" id="palSmoothPassSettings" min="0" max="12" step="1" value="12" style="width:150px;">
+            <span id="palSmoothPassSettingsValue">12</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Sekcja ustawień wyświetlania leków dożylnych w module Antybiotykoterapia została tymczasowo ukryta -->
+
+      <!-- Sekcja ustawień czasu pulsowania ramek wynikowych (dostępna tylko w trybie PRO) -->
+      <div class="container" style="padding-top:1rem;padding-bottom:2rem;">
+        <h2 style="text-align:center;">Czas pulsowania ramek</h2>
+        <p style="text-align:center; max-width:600px; margin:0 auto 1.5rem; font-size:0.95rem;">
+          Wybierz, jak długo mają pulsować kolorowe ramki wyników w trybie profesjonalnym.
+          Opcja ta jest dostępna tylko dla użytkowników z włączonym trybem PRO.
+        </p>
+        <div style="text-align:center; margin-bottom:2rem;">
+          <label style="display:flex; align-items:center; justify-content:center; gap:0.5rem; font-size:0.95rem;">
+            <span>Czas pulsowania:</span>
+            <!-- Suwak z sześcioma pozycjami: 0 = wył., 1 = ciągle, 2 = 3s, 3 = 5s, 4 = 7s, 5 = 10s -->
+            <input type="range" id="pulseDurationSettings" min="0" max="5" step="1" value="1" style="width:150px;">
+            <span id="pulseDurationSettingsValue">ciągle</span>
+          </label>
+        </div>
+      </div>
+
+    </div>
+    <aside class="decor-sidebar"></aside>
+  </div>
+  <footer>
+    <p><strong>Administrator serwisu:</strong> Vilda Clinic sp. z o.o. •
+      <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">vildaclinic.pl</a>
+    </p>
+    <p><strong>Konsultacja merytoryczna:</strong> dr n. med. Maciej Flader</p>
+  </footer>
+  <!-- Ładujemy bibliotekę lucide do ikon w sidebarze -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
+  <!-- Skrypt budujący listę ustawień i zapisujący wybory w localStorage -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Konfiguracja kart i powiązań
+      const cardSettings = [
+        { id: 'prevSummaryWrap', label: 'Poprzedni pomiar' },
+        { id: 'currentSummaryWrap', label: 'Podsumowanie wyników' },
+        { id: 'bmiCard', label: 'Centyle, BMI & BMR' },
+        { id: 'bpCard', label: 'Ciśnienie tętnicze' },
+        { id: 'circSection', label: 'Obwód głowy i klatki piersiowej' },
+        { id: 'downSyndromeSection', label: 'Zespół Downa (wyniki)' },
+        { id: 'wflCard', label: 'Wskaźnik WFL' },
+        { id: 'coleCard', label: 'Wskaźnik Cole’a' },
+        { id: 'whrCard', label: 'Wskaźnik WHR' },
+        { id: 'advancedGrowthSection', label: 'Zaawansowane obliczenia wzrostowe' },
+        { id: 'toNormCard', label: 'Droga do normy BMI' },
+        { id: 'respiratoryCard', label: 'Liczba oddechów' },
+        // Zastąpiono karty „Łączna kaloryczność” i „Spalanie kalorii” jedną kartą „Co zjadłem?”
+        { id: 'foodCard', label: 'Co zjadłem?' },
+        { id: 'intakeCard', label: 'Szacowane spożycie energii' },
+        { id: 'planCard', label: 'Plan odchudzania' },
+        { id: 'metabolicSummaryBtn', label: 'Podsumowanie wyników - kliknij i skopiuj' },
+        { id: 'dietRecommendationsBtn', label: 'Zalecenia dietetyczne' }
+      ];
+      // Wczytaj bieżące ustawienia z localStorage lub domyślnie włącz wszystkie
+      const settings = JSON.parse(localStorage.getItem('cardVisibility') || '{}');
+      const grid = document.getElementById('settingsGrid');
+      cardSettings.forEach(function(item) {
+        const row = document.createElement('div');
+        // Używamy klas CSS zamiast inline stylów do kontrolowania wyglądu
+        row.className = 'setting-item';
+        // Etykieta
+        const label = document.createElement('span');
+        label.textContent = item.label;
+        row.appendChild(label);
+        // Przełącznik
+        const switchLabel = document.createElement('label');
+        switchLabel.className = 'switch';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = 'setting-' + item.id;
+        // domyślnie włączone (true) jeśli brak klucza lub ustawienie !== false
+        checkbox.checked = settings[item.id] !== false;
+        // jeśli element zależny, zablokuj przełącznik i uzależnij wartość od powiązanego
+        if (item.dependsOn) {
+          checkbox.disabled = true;
+        }
+        const slider = document.createElement('span');
+        slider.className = 'slider';
+        switchLabel.appendChild(checkbox);
+        switchLabel.appendChild(slider);
+        row.appendChild(switchLabel);
+        grid.appendChild(row);
+        // Obsługa zdarzeń
+        checkbox.addEventListener('change', function() {
+          settings[item.id] = this.checked;
+          // Jeśli ustawiamy planCard, ustawiamy także Kartę konsultacyjną (zależność)
+          if (item.id === 'planCard') {
+            // karta konsultacyjna nie jest już wyświetlana w ustawieniach, ale jej stan
+            // przechowujemy w localStorage, aby aplikacja wiedziała, czy ją pokazać.
+            settings['childConsultCard'] = this.checked;
+          }
+          // Jeśli ustawiamy Szacowane spożycie energii, zaktualizuj też klucze
+          // toggleIntakeCard i intakeToggleWrap, aby zachować kompatybilność
+          // z wcześniejszymi wersjami ustawień.  Dzięki temu aplikacja będzie
+          // poprawnie ukrywać przycisk toggle.
+          if (item.id === 'intakeCard') {
+            settings['toggleIntakeCard'] = this.checked;
+            settings['intakeToggleWrap'] = this.checked;
+          }
+
+          // Nie ustawiamy powiązania między kartami żywieniowymi – karta „Co zjadłem?” jest niezależna.
+          localStorage.setItem('cardVisibility', JSON.stringify(settings));
+        });
+      });
+      // Synchronizacja zależności ustawień planu odchudzania i innych kart.
+      // Nie wyświetlamy osobnej „Karty konsultacyjnej” w panelu ustawień,
+      // lecz jej stan zależy od planCard i jest przechowywany w localStorage.
+      const planCheckbox = document.getElementById('setting-planCard');
+      if (planCheckbox) {
+        planCheckbox.addEventListener('change', function() {
+          settings['planCard'] = this.checked;
+          settings['childConsultCard'] = this.checked;
+          localStorage.setItem('cardVisibility', JSON.stringify(settings));
+        });
+      }
+    });
+  </script>
+  <!-- Skrypt obsługujący suwak wygładzania siatek Palczewskiej.  
+       Odczytuje zapisane ustawienie z localStorage (klucz 'palSmoothPasses'),
+       ustawia domyślną wartość 12 i zapisuje zmiany przy każdej regulacji suwaka. -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const slider = document.getElementById('palSmoothPassSettings');
+      const valueEl = document.getElementById('palSmoothPassSettingsValue');
+      if (slider) {
+        let stored = null;
+        try {
+          const v = localStorage.getItem('palSmoothPasses');
+          if (v !== null) {
+            const parsed = parseInt(v, 10);
+            if (!isNaN(parsed)) stored = parsed;
+          }
+        } catch (e) {}
+        // Ustaw wartość suwaka i etykietę na wartość z localStorage lub domyślną 12
+        const initVal = (stored !== null ? stored : 12);
+        slider.value = initVal;
+        if (valueEl) valueEl.textContent = String(initVal);
+        // Zapisz do localStorage każdą zmianę
+        slider.addEventListener('input', function() {
+          const v2 = parseInt(this.value, 10);
+          if (!isNaN(v2)) {
+            try { localStorage.setItem('palSmoothPasses', v2); } catch (_) {}
+            if (valueEl) valueEl.textContent = String(v2);
+          }
+        });
+      }
+    });
+  </script>
+  <!-- Skrypt obsługujący przełącznik widoczności leków dożylnych w module antybiotykowym został tymczasowo usunięty -->
+  <!-- Po załadowaniu ikon lucide wymieniamy je na SVG.  Używamy createIcons,
+       aby przetworzyć wszystkie atrybuty data‑lucide i ustawić odpowiednią
+       szerokość kreski (stroke-width).  Fallback do replace() w razie braku
+       createIcons. -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      if (window.lucide) {
+        try {
+          if (typeof window.lucide.createIcons === 'function') {
+            window.lucide.createIcons({ attrs: { 'stroke-width': 1.75 } });
+          } else if (typeof window.lucide.replace === 'function') {
+            window.lucide.replace();
+          }
+        } catch (e) {
+          console.warn('Lucide icons initialization failed', e);
+        }
+      }
+    });
+  </script>
+
+  <!-- Skrypt obsługujący suwaki wyglądu aplikacji (ciemne tło i płynne szkło).  
+       Odczytuje zapisane ustawienia z localStorage, ustawia wartości początkowe 
+       i zapisuje zmiany przy każdym przesunięciu suwaka.  
+       Po każdej zmianie wywołuje applyThemeCustom(), jeśli jest dostępna, aby 
+       natychmiast zastosować styl. -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Suwak poziomu ciemnego tła
+      const darkSlider = document.getElementById('darkBgLevelSettings');
+      const darkValueEl = document.getElementById('darkBgLevelSettingsValue');
+      if (darkSlider) {
+        let storedDark = null;
+        try {
+          const v = localStorage.getItem('darkBgLevel');
+          if (v !== null) {
+            const p = parseInt(v, 10);
+            if (!isNaN(p)) storedDark = p;
+          }
+        } catch (e) {}
+        const initDark = (storedDark !== null ? storedDark : 0);
+        darkSlider.value = initDark;
+        if (darkValueEl) darkValueEl.textContent = String(initDark);
+        darkSlider.addEventListener('input', function() {
+          const v2 = parseInt(this.value, 10);
+          if (!isNaN(v2)) {
+            try { localStorage.setItem('darkBgLevel', v2); } catch (_) {}
+            if (darkValueEl) darkValueEl.textContent = String(v2);
+            if (typeof window.applyThemeCustom === 'function') {
+              try { window.applyThemeCustom(); } catch (_) {}
+            }
+          }
+        });
+      }
+      // Suwak poziomu płynnego szkła
+      const glassSlider = document.getElementById('glassLevelSettings');
+      const glassValueEl = document.getElementById('glassLevelSettingsValue');
+      if (glassSlider) {
+        let storedGlass = null;
+        try {
+          const v = localStorage.getItem('glassLevel');
+          if (v !== null) {
+            const p = parseInt(v, 10);
+            if (!isNaN(p)) storedGlass = p;
+          }
+        } catch (e) {}
+        const initGlass = (storedGlass !== null ? storedGlass : 0);
+        glassSlider.value = initGlass;
+        if (glassValueEl) glassValueEl.textContent = String(initGlass);
+        glassSlider.addEventListener('input', function() {
+          const v3 = parseInt(this.value, 10);
+          if (!isNaN(v3)) {
+            try { localStorage.setItem('glassLevel', v3); } catch (_) {}
+            if (glassValueEl) glassValueEl.textContent = String(v3);
+            if (typeof window.applyThemeCustom === 'function') {
+              try { window.applyThemeCustom(); } catch (_) {}
+            }
+          }
+        });
+      }
+    });
+  </script>
+  <script>
+    // Remove the temporary js-loading class once initialization is complete.
+    document.addEventListener('DOMContentLoaded', function() {
+      document.body.classList.remove('js-loading');
+    });
+  </script>
+
+  <!-- Skrypt obsługujący suwak czasu pulsowania ramek w trybie PRO.  Suwak
+       przechowuje wartość w localStorage (klucz 'pulseDurationMode') i nie
+       modyfikuje animacji na bieżąco, ponieważ strona wyników odczytuje
+       ustawienie przy kolejnym załadowaniu.  Mapa pozycji suwaka na
+       wartości: 0=off, 1=infinite, 2=3s, 3=5s, 4=7s, 5=10s.  Tekst etykiety
+       aktualizuje się wraz ze zmianą suwaka.  Suwak jest dezaktywowany,
+       jeśli w localStorage ustawiony jest tryb standardowy ('resultsMode'
+       różny od 'professional'). -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const slider = document.getElementById('pulseDurationSettings');
+      const valueEl = document.getElementById('pulseDurationSettingsValue');
+      if (!slider) return;
+      // Map slider index to pulse mode value
+      const indexToMode = ['off','infinite','3s','5s','7s','10s'];
+      const modeToIndex = { off:0, infinite:1, '3s':2, '5s':3, '7s':4, '10s':5 };
+      // Initialise slider with stored mode (fallback to 'infinite')
+      let stored = null;
+      try {
+        stored = localStorage.getItem('pulseDurationMode');
+      } catch (e) {}
+      const initMode = (stored && modeToIndex.hasOwnProperty(stored)) ? stored : 'infinite';
+      slider.value = modeToIndex[initMode];
+      updateLabel(initMode);
+      // Disable slider if results mode is not professional
+      let resultsMode = null;
+      try {
+        resultsMode = localStorage.getItem('resultsMode');
+      } catch (e) {}
+      const isPro = (resultsMode === 'professional');
+      if (!isPro) {
+        slider.disabled = true;
+        // Make the label semi-transparent to indicate disabled state
+        slider.parentElement.style.opacity = '0.5';
+      }
+      slider.addEventListener('input', function() {
+        const idx = parseInt(this.value, 10);
+        const mode = indexToMode[idx] || 'infinite';
+        try {
+          localStorage.setItem('pulseDurationMode', mode);
+        } catch (e) {}
+        updateLabel(mode);
+      });
+      function updateLabel(mode) {
+        if (!valueEl) return;
+        switch (mode) {
+          case 'off':
+            valueEl.textContent = 'wył.';
+            break;
+          case 'infinite':
+            valueEl.textContent = 'ciągle';
+            break;
+          case '3s':
+            valueEl.textContent = '3 s';
+            break;
+          case '5s':
+            valueEl.textContent = '5 s';
+            break;
+          case '7s':
+            valueEl.textContent = '7 s';
+            break;
+          case '10s':
+            valueEl.textContent = '10 s';
+            break;
+          default:
+            valueEl.textContent = mode;
+        }
+      }
+    });
+  </script>
+</body>
+</html>

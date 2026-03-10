@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- Home page -->
+  <url>
+    <loc>https://wagaiwzrost.pl/</loc>
+    <lastmod>2025-09-19</lastmod>
+    <priority>1.0</priority>
+  </url>
+
+  <!-- About the application -->
+  <url>
+    <loc>https://wagaiwzrost.pl/o-aplikacji.html</loc>
+    <lastmod>2026-03-08</lastmod>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Instruction page -->
+  <url>
+    <loc>https://wagaiwzrost.pl/instrukcja.html</loc>
+    <lastmod>2026-03-08</lastmod>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Diabetes education page -->
+  <url>
+    <loc>https://wagaiwzrost.pl/cukrzyca.html</loc>
+    <lastmod>2026-03-08</lastmod>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Educational materials page -->
+  <url>
+    <loc>https://wagaiwzrost.pl/materialy-edukacyjne.html</loc>
+    <lastmod>2026-03-08</lastmod>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Doctor module page (DocPro) -->
+  <url>
+    <loc>https://wagaiwzrost.pl/docpro.html</loc>
+    <lastmod>2026-01-27</lastmod>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- HOMA-IR calculator page -->
+  <url>
+    <loc>https://wagaiwzrost.pl/homa-ir.html</loc>
+    <lastmod>2026-03-08</lastmod>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Glomerular filtration (clearance) calculator page -->
+  <url>
+    <loc>https://wagaiwzrost.pl/kalkulator-klirens.html</loc>
+    <lastmod>2026-03-08</lastmod>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Steroids education page -->
+  <url>
+    <loc>https://wagaiwzrost.pl/steroidy.html</loc>
+    <lastmod>2026-03-08</lastmod>
+    <priority>0.6</priority>
+  </url>
+
+  <!-- Contact page -->
+  <url>
+    <loc>https://wagaiwzrost.pl/kontakt.html</loc>
+    <lastmod>2026-03-08</lastmod>
+    <priority>0.5</priority>
+  </url>
+
+  <!-- User settings page -->
+  <url>
+    <loc>https://wagaiwzrost.pl/ustawienia.html</loc>
+    <lastmod>2026-03-08</lastmod>
+    <priority>0.5</priority>
+  </url>
+</urlset>
