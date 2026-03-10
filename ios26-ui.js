@@ -139,10 +139,18 @@
     safeRun('refreshIconsAndFallbacks', refreshIconsAndFallbacks);
 
     const delayedRefresh = () => safeRun('refreshIconsAndFallbacks', refreshIconsAndFallbacks);
+    const delayedDockRetry = () => safeRun('setupMobileBottomDock(retry)', setupMobileBottomDock);
     window.setTimeout(delayedRefresh, 150);
     window.setTimeout(delayedRefresh, 900);
-    on(window, 'load', delayedRefresh, { passive: true, once: true });
-    on(window, 'pageshow', delayedRefresh, { passive: true });
+    window.setTimeout(delayedDockRetry, 250);
+    on(window, 'load', () => {
+      delayedDockRetry();
+      delayedRefresh();
+    }, { passive: true, once: true });
+    on(window, 'pageshow', () => {
+      delayedDockRetry();
+      delayedRefresh();
+    }, { passive: true });
   }
 
   if (document.readyState === 'loading') {
@@ -362,6 +370,137 @@
     }, 0);
   }
 
+  function isTouchAppleDevice() {
+    try {
+      const ua = navigator.userAgent || '';
+      return /iPhone|iPad|iPod/i.test(ua)
+        || (navigator.platform === 'MacIntel' && (navigator.maxTouchPoints || 0) > 1);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function getRootScrollElement() {
+    return document.scrollingElement || document.documentElement || document.body || null;
+  }
+
+  function getViewportHeight() {
+    return Math.max(
+      window.visualViewport?.height || 0,
+      window.innerHeight || 0,
+      document.documentElement?.clientHeight || 0
+    );
+  }
+
+  function getWindowScrollSnapshot() {
+    const root = getRootScrollElement();
+    const viewportHeight = getViewportHeight();
+    const currentY = Math.max(
+      window.scrollY || 0,
+      window.pageYOffset || 0,
+      root?.scrollTop || 0,
+      document.documentElement?.scrollTop || 0,
+      document.body?.scrollTop || 0
+    );
+    const fullHeight = Math.max(
+      root?.scrollHeight || 0,
+      document.documentElement?.scrollHeight || 0,
+      document.body?.scrollHeight || 0
+    );
+    const visibleHeight = Math.max(
+      viewportHeight,
+      root?.clientHeight || 0,
+      document.documentElement?.clientHeight || 0,
+      document.body?.clientHeight || 0
+    );
+
+    return {
+      target: window,
+      top: Math.max(currentY, 0),
+      max: Math.max(fullHeight - visibleHeight, 0)
+    };
+  }
+
+  function isScrollableElement(el) {
+    if (!(el instanceof Element)) return false;
+
+    const styles = window.getComputedStyle(el);
+    const overflowY = `${styles.overflowY || ''} ${styles.overflow || ''}`.toLowerCase();
+    const allowsScroll = /(auto|scroll|overlay)/.test(overflowY);
+    if (!allowsScroll) return false;
+
+    return (el.scrollHeight - el.clientHeight) > 16;
+  }
+
+  function getElementScrollSnapshot(el) {
+    if (!isScrollableElement(el)) return null;
+
+    return {
+      target: el,
+      top: Math.max(el.scrollTop || 0, 0),
+      max: Math.max((el.scrollHeight || 0) - (el.clientHeight || 0), 0)
+    };
+  }
+
+  function collectDockScrollCandidates() {
+    const seen = new Set();
+    const candidates = [];
+
+    const addCandidate = (target) => {
+      if (!target) return;
+      const normalized = target === document ? window : target;
+      if (seen.has(normalized)) return;
+      seen.add(normalized);
+      candidates.push(normalized);
+    };
+
+    addCandidate(window);
+    addCandidate(getRootScrollElement());
+    addCandidate(document.documentElement);
+    addCandidate(document.body);
+
+    qsa('[data-mobile-dock-scroll], .main-content, .main-content > .container, main, .container')
+      .forEach(addCandidate);
+
+    return candidates;
+  }
+
+  function getPreferredDockScrollSnapshot(preferredTarget = null) {
+    const orderedCandidates = [];
+    const pushCandidate = (target) => {
+      if (!target) return;
+      const normalized = target === document ? window : target;
+      if (orderedCandidates.includes(normalized)) return;
+      orderedCandidates.push(normalized);
+    };
+
+    pushCandidate(preferredTarget);
+    collectDockScrollCandidates().forEach(pushCandidate);
+
+    let best = getWindowScrollSnapshot();
+
+    orderedCandidates.forEach((candidate) => {
+      const snapshot = candidate === window ? getWindowScrollSnapshot() : getElementScrollSnapshot(candidate);
+      if (!snapshot) return;
+
+      const bestIsIdleWindow = best.target === window && best.max <= 0 && best.top <= 0;
+      const snapshotHasProgress = snapshot.top > 0 || snapshot.max > 0;
+      const bestScore = best.max + (best.top > 0 ? 1000000 : 0);
+      const snapshotScore = snapshot.max + (snapshot.top > 0 ? 1000000 : 0);
+
+      if (bestIsIdleWindow && snapshotHasProgress) {
+        best = snapshot;
+        return;
+      }
+
+      if (snapshotScore > bestScore + 4) {
+        best = snapshot;
+      }
+    });
+
+    return best;
+  }
+
   function shouldEnableMobileDock() {
     const viewportWidth = Math.max(
       window.visualViewport?.width || 0,
@@ -370,6 +509,10 @@
     );
 
     if (window.matchMedia && window.matchMedia(MOBILE_DOCK_BREAKPOINT).matches) {
+      return true;
+    }
+
+    if (isTouchAppleDevice() && viewportWidth > 0 && viewportWidth <= 1366) {
       return true;
     }
 
@@ -429,8 +572,10 @@
     document.body.appendChild(dock);
 
     const mediaQuery = window.matchMedia(MOBILE_DOCK_BREAKPOINT);
-    let lastScrollY = Math.max(window.scrollY || window.pageYOffset || 0, 0);
+    let activeScrollTarget = window;
+    let lastScrollY = 0;
     let ticking = false;
+    const detachScrollListeners = [];
 
     function setDockVisible(visible) {
       dock.classList.toggle('is-hidden', !visible);
@@ -441,7 +586,39 @@
       document.documentElement.style.setProperty('--mobile-dock-extra-offset', `${Math.max(0, extraOffset)}px`);
     }
 
+    function bindScrollTarget(target) {
+      if (!target) return;
+
+      const eventTarget = target === document ? window : target;
+      const handler = () => {
+        if (eventTarget !== window && eventTarget instanceof Element) {
+          activeScrollTarget = eventTarget;
+        }
+        requestDockUpdate();
+      };
+
+      on(eventTarget, 'scroll', handler, { passive: true });
+      detachScrollListeners.push(() => eventTarget.removeEventListener('scroll', handler));
+    }
+
+    function refreshScrollBindings() {
+      while (detachScrollListeners.length) {
+        const dispose = detachScrollListeners.pop();
+        if (typeof dispose === 'function') dispose();
+      }
+
+      collectDockScrollCandidates().forEach(bindScrollTarget);
+    }
+
+    function readDockScrollSnapshot() {
+      const snapshot = getPreferredDockScrollSnapshot(activeScrollTarget);
+      activeScrollTarget = snapshot.target;
+      return snapshot;
+    }
+
     function syncDockMode() {
+      refreshScrollBindings();
+
       const enabled = shouldEnableMobileDock();
       dock.hidden = !enabled;
       document.body.classList.toggle('has-mobile-bottom-dock', enabled);
@@ -449,11 +626,13 @@
       if (!enabled) {
         dock.classList.remove('is-hidden', 'is-keyboard-hidden');
         document.documentElement.style.setProperty('--mobile-dock-extra-offset', '0px');
-        lastScrollY = Math.max(window.scrollY || window.pageYOffset || 0, 0);
+        lastScrollY = getWindowScrollSnapshot().top;
+        activeScrollTarget = window;
         return;
       }
 
-      lastScrollY = Math.max(window.scrollY || window.pageYOffset || 0, 0);
+      const snapshot = readDockScrollSnapshot();
+      lastScrollY = snapshot.top;
       setDockVisible(true);
       updateDockOffsets();
     }
@@ -461,10 +640,22 @@
     function updateDockOnScroll() {
       if (!shouldEnableMobileDock() || dock.classList.contains('is-keyboard-hidden')) return;
 
-      const currentY = Math.max(window.scrollY || window.pageYOffset || 0, 0);
+      const snapshot = readDockScrollSnapshot();
+      const currentY = snapshot.top;
       const delta = currentY - lastScrollY;
 
-      if (Math.abs(delta) < 8) return;
+      if (snapshot.max <= 20) {
+        setDockVisible(true);
+        lastScrollY = currentY;
+        updateDockOffsets();
+        return;
+      }
+
+      if (Math.abs(delta) < 8) {
+        lastScrollY = currentY;
+        updateDockOffsets();
+        return;
+      }
 
       if (currentY <= 24) {
         setDockVisible(true);
@@ -487,11 +678,15 @@
       });
     }
 
-    on(window, 'scroll', requestDockUpdate, { passive: true });
     on(window, 'resize', syncDockMode, { passive: true });
     on(window, 'orientationchange', syncDockMode, { passive: true });
+    on(window, 'load', syncDockMode, { passive: true, once: true });
+    on(window, 'pageshow', syncDockMode, { passive: true });
     if (window.visualViewport) {
-      on(window.visualViewport, 'resize', updateDockOffsets, { passive: true });
+      on(window.visualViewport, 'resize', () => {
+        syncDockMode();
+        updateDockOffsets();
+      }, { passive: true });
       on(window.visualViewport, 'scroll', updateDockOffsets, { passive: true });
     }
 
@@ -509,13 +704,17 @@
           dock.classList.remove('is-keyboard-hidden');
           setDockVisible(true);
         }
+        syncDockMode();
         updateDockOffsets();
       }, 120);
     });
 
     if ('MutationObserver' in window) {
-      const overlayObserver = new MutationObserver(updateDockOffsets);
-      qsa('.cookie-banner, #cookieBanner').forEach((overlay) => {
+      const overlayObserver = new MutationObserver(() => {
+        refreshScrollBindings();
+        updateDockOffsets();
+      });
+      qsa('.cookie-banner, #cookieBanner, .main-content, .container').forEach((overlay) => {
         overlayObserver.observe(overlay, { attributes: true, childList: true, subtree: true });
       });
     }
@@ -527,6 +726,8 @@
     }
 
     syncDockMode();
+    window.setTimeout(syncDockMode, 250);
+    window.setTimeout(syncDockMode, 1200);
     window.setTimeout(refreshIconsAndFallbacks, 0);
   }
 
