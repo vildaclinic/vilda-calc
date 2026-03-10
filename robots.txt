@@ -1,0 +1,9 @@
+
+User-agent: *
+Allow: /
+
+# Specify the location of your XML sitemap so that crawlers can
+# easily discover all public URLs.  This helps search engines like
+# Google discover and prioritise pages for indexing.  See Google’s
+# documentation on sitemap submissionhttps://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap#:~:text=Submit%20your%20sitemap%20to%20Google for details.
+Sitemap: https://wagaiwzrost.pl/sitemap.xml

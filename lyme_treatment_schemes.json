@@ -1,0 +1,74 @@
+{
+  "label": "Schematy leczenia",
+  "description": "Aktualne schematy leczenia boreliozy z Lyme według zaleceń europejskich i polskich. Dane podano w podziale na manifestacje kliniczne z zalecanymi antybiotykami, dawkami, drogą podania i typowym czasem terapii.",
+  "schemes": [
+    {
+      "condition": "Rumień wędrujący (EM) – wczesna borelioza",
+      "adult": [
+        {"drug": "Doksycyklina", "dosage": "100 mg 2× / dzień", "route": "p.o.", "duration": "10–21 dni"},
+        {"drug": "Amoksycylina", "dosage": "500 mg 3× / dzień", "route": "p.o.", "duration": "14–21 dni"},
+        {"drug": "Aksetyl cefuroksymu", "dosage": "500 mg 2× / dzień", "route": "p.o.", "duration": "14–21 dni"},
+        {"drug": "Azytromycyna", "dosage": "500 mg 1× / dzień (pierwsza dawka 500–1000 mg)", "route": "p.o.", "duration": "5–10 dni", "note": "Alternatywa przy nietolerancji β‑laktamów"}
+      ],
+      "children": [
+        {"drug": "Amoksycylina", "dosage": "25–50 mg/kg/d", "route": "p.o.", "frequency": "3 dawki dziennie", "duration": "14–21 dni"},
+        {"drug": "Cefuroksym", "dosage": "30–40 mg/kg/d", "route": "p.o.", "frequency": "2 dawki dziennie", "duration": "14–21 dni"},
+        {"drug": "Doksycyklina", "dosage": "4,4 mg/kg/d (max. 100 mg 2×)", "route": "p.o.", "duration": "10–21 dni", "note": "Stosować z uwzględnieniem wieku i tolerancji"}
+      ]
+    },
+    {
+      "condition": "Neuroborelioza – wczesna",
+      "adult": [
+        {"drug": "Doksycyklina", "dosage": "100 mg 2× / dzień", "route": "p.o.", "duration": "14–28 dni"},
+        {"drug": "Ceftriakson", "dosage": "2 g 1× / dzień", "route": "i.v.", "duration": "14–21 dni"},
+        {"drug": "Cefotaksym", "dosage": "2 g 3× / dzień", "route": "i.v.", "duration": "14–21 dni", "note": "Alternatywa"},
+        {"drug": "Penicylina G", "dosage": "18–24 mln j./d (podzielone na 6 dawek)", "route": "i.v.", "duration": "14–21 dni", "note": "Alternatywa"}
+      ],
+      "children": [
+        {"drug": "Doksycyklina", "dosage": "4,4 mg/kg/d (max. 100 mg 2×)", "route": "p.o.", "duration": "14–28 dni"},
+        {"drug": "Ceftriakson", "dosage": "50–100 mg/kg/d", "route": "i.v.", "duration": "14–21 dni"},
+        {"drug": "Cefotaksym", "dosage": "150 mg/kg/d podzielone na 3 dawki", "route": "i.v.", "duration": "14–21 dni"},
+        {"drug": "Penicylina G", "dosage": "200 000–400 000 j/kg/d", "route": "i.v.", "duration": "14–21 dni"}
+      ]
+    },
+    {
+      "condition": "Neuroborelioza – późna (cięższe OUN)",
+      "adult": [
+        {"drug": "Ceftriakson", "dosage": "2 g 1× / dzień", "route": "i.v.", "duration": "21–28 dni"},
+        {"drug": "Doksycyklina", "dosage": "100 mg 2× / dzień", "route": "p.o. lub i.v.", "duration": "21–28 dni", "note": "Rozważyć przy łagodniejszych objawach"},
+        {"drug": "Cefotaksym", "dosage": "2 g 3× / dzień", "route": "i.v.", "duration": "21–28 dni"},
+        {"drug": "Penicylina G", "dosage": "18–24 mln j./d", "route": "i.v.", "duration": "21–28 dni"}
+      ],
+      "children": [
+        {"drug": "Ceftriakson", "dosage": "50–100 mg/kg/d", "route": "i.v.", "duration": "21–28 dni"},
+        {"drug": "Doksycyklina", "dosage": "4,4 mg/kg/d (max. 100 mg 2×)", "route": "p.o.", "duration": "21–28 dni"},
+        {"drug": "Cefotaksym", "dosage": "150 mg/kg/d podzielone na 3 dawki", "route": "i.v.", "duration": "21–28 dni"},
+        {"drug": "Penicylina G", "dosage": "200 000–400 000 j/kg/d", "route": "i.v.", "duration": "21–28 dni"}
+      ]
+    },
+    {
+      "condition": "Zapalenie stawów (Lyme arthritis)",
+      "adult": [
+        {"drug": "Doksycyklina", "dosage": "100 mg 2× / dzień", "route": "p.o.", "duration": "21–28 dni"},
+        {"drug": "Amoksycylina", "dosage": "500 mg 3× / dzień", "route": "p.o.", "duration": "21–28 dni"},
+        {"drug": "Aksetyl cefuroksymu", "dosage": "500 mg 2× / dzień", "route": "p.o.", "duration": "21–28 dni"},
+        {"drug": "Ceftriakson", "dosage": "2 g 1× / dzień", "route": "i.v.", "duration": "21–28 dni", "note": "W przypadku ciężkich objawów lub braku poprawy"}
+      ],
+      "children": [
+        {"drug": "Amoksycylina", "dosage": "25–50 mg/kg/d", "route": "p.o.", "frequency": "3 dawki dziennie", "duration": "21–28 dni"},
+        {"drug": "Cefuroksym", "dosage": "30–40 mg/kg/d", "route": "p.o.", "frequency": "2 dawki dziennie", "duration": "21–28 dni"},
+        {"drug": "Doksycyklina", "dosage": "4,4 mg/kg/d (max. 100 mg 2×)", "route": "p.o.", "duration": "21–28 dni"},
+        {"drug": "Ceftriakson", "dosage": "50–100 mg/kg/d", "route": "i.v.", "duration": "21–28 dni", "note": "W przypadku ciężkich objawów lub braku poprawy"}
+      ]
+    },
+    {
+      "condition": "Profilaktyka po ukąszeniu kleszcza (wysokie ryzyko)",
+      "adult": [
+        {"drug": "Doksycyklina", "dosage": "200 mg jednorazowo (4,4 mg/kg)", "route": "p.o.", "duration": "1 dawka", "note": "Podać w ciągu 72 h od usunięcia kleszcza"}
+      ],
+      "children": [
+        {"drug": "Doksycyklina", "dosage": "4,4 mg/kg (max. 200 mg)", "route": "p.o.", "duration": "1 dawka", "note": "Do rozważenia u dzieci powyżej minimalnego wieku; podać w ciągu 72 h od usunięcia kleszcza"}
+      ]
+    }
+  ]
+}

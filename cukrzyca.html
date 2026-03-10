@@ -1,0 +1,2927 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Przeliczniki doposiłkowe – cukrzyca typu 1 | wagaiwzrost.pl</title>
+  <link href="ios26-v2.css?v=4" rel="stylesheet">
+  <link href="style.css?v=2" rel="stylesheet">
+  <link href="sidebar.css" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/pdfmake.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/vfs_fonts.min.js"></script>
+  <script src="ios26-ui.js?v=5" defer></script>
+  <style>
+    [hidden] {
+      display: none !important;
+    }
+
+    /* Naprawa układu desktop/fullscreen:
+       w tej podstronie main-content musi być zawsze drugą kolumną,
+       a dekoracyjny pusty panel trzecią. Dodatkowo pozwalamy siatce
+       zwężać środkową kolumnę bez wypychania treści poza viewport. */
+    .desktop-layout,
+    .desktop-layout > *,
+    .main-content {
+      min-width: 0;
+    }
+
+    @media (min-width: 992px) {
+      .desktop-layout {
+        grid-template-columns: 260px minmax(0, 1fr);
+      }
+
+      .desktop-layout > .sidebar {
+        grid-column: 1;
+      }
+
+      .desktop-layout > .main-content {
+        grid-column: 2;
+      }
+
+      .desktop-layout > .decor-sidebar {
+        display: none;
+      }
+    }
+
+    @media (min-width: 1400px) {
+      .desktop-layout {
+        grid-template-columns: 230px minmax(0, 1fr) 230px;
+      }
+
+      .desktop-layout > .sidebar {
+        grid-column: 1;
+      }
+
+      .desktop-layout > .main-content {
+        grid-column: 2;
+      }
+
+      .desktop-layout > .decor-sidebar {
+        grid-column: 3;
+        display: block;
+      }
+    }
+
+    .diab-page {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .diab-hero {
+      display: grid;
+      gap: 1rem;
+      align-items: start;
+    }
+
+    @media (min-width: 900px) {
+      /* Po usunięciu prawego boksu "Zasada L" hero ma zajmować pełną szerokość */
+      .diab-hero {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .diab-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 0.35rem;
+    }
+
+    .diab-subtle {
+      font-size: 0.96rem;
+      line-height: 1.55;
+      margin: 0;
+    }
+
+
+.diab-title-center {
+      text-align: center;
+    }
+
+    .diab-hero__side {
+      display: grid;
+      gap: 0.8rem;
+    }
+
+    .diab-note-box {
+      border: 1px solid #d7e5e5;
+      border-radius: var(--radius);
+      padding: 0.85rem 1rem;
+      background: rgba(255,255,255,0.65);
+    }
+
+
+    .diab-note-box--accent {
+      border-color: rgba(0,131,141,0.24);
+      background: rgba(0,131,141,0.07);
+    }
+
+    .diab-day-flow {
+      display: grid;
+      gap: 0.65rem;
+      margin-top: 0.8rem;
+    }
+
+    .diab-day-step {
+      border-radius: var(--radius);
+      padding: 0.75rem 0.85rem;
+      background: rgba(255,255,255,0.82);
+      border: 1px solid #d7e5e5;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 0.7rem;
+      align-items: start;
+    }
+
+    .diab-day-step__num {
+      width: 1.7rem;
+      height: 1.7rem;
+      border-radius: 999px;
+      background: rgba(0,131,141,0.12);
+      color: var(--primary);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 0.9rem;
+      margin-top: 0.05rem;
+    }
+
+    .diab-day-step strong {
+      display: block;
+      margin-bottom: 0.15rem;
+      font-size: 1.05rem;
+    }
+
+    .diab-day-step p {
+      margin: 0;
+      font-size: 1rem;
+      line-height: 1.45;
+      color: #4f6060;
+    }
+
+    .diab-note-box h3,
+    .diab-card h2,
+    .diab-card h3 {
+      margin-top: 0;
+    }
+
+    .diab-l-list {
+      margin: 0.6rem 0 0;
+      padding-left: 1.2rem;
+    }
+
+    .diab-l-list li {
+      margin: 0.2rem 0;
+    }
+
+    .diab-grid {
+      display: grid;
+      gap: 1rem;
+    }
+
+    /* Karty "Jak liczyć" i "Konfiguracja" mają być jedna pod drugą (bez układu 2-kolumnowego). */
+    @media (min-width: 960px) {
+      .diab-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Accordion dla instrukcji "Jak liczyć krok po kroku?" */
+    .diab-accordion-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.8rem;
+      text-align: center;
+      appearance: none;
+      border: 1px solid rgba(0,131,141,0.28);
+      border-radius: calc(var(--radius) - 2px);
+      background: rgba(255,255,255,0.92);
+      box-shadow: inset 0 0 0 1px rgba(0,131,141,0.05);
+      padding: 0.95rem 1rem;
+      cursor: pointer;
+      transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+    }
+
+    .diab-accordion-btn:hover {
+      border-color: rgba(0,131,141,0.36);
+      box-shadow: inset 0 0 0 1px rgba(0,131,141,0.08), 0 10px 24px rgba(21,31,50,0.05);
+    }
+
+    .diab-accordion-btn:focus-visible {
+      outline: none;
+      border-color: rgba(0,131,141,0.44);
+      box-shadow: 0 0 0 4px rgba(0,131,141,0.12), inset 0 0 0 1px rgba(0,131,141,0.08);
+    }
+
+    .diab-accordion-label {
+      flex: 1 1 auto;
+      text-align: center;
+      font-size: 1.1rem;
+      font-weight: 700;
+      line-height: 1.4;
+    }
+
+    .diab-accordion-btn::before {
+      content: '';
+      width: 1.6rem;
+      height: 1.6rem;
+      flex: 0 0 1.6rem;
+    }
+
+
+
+    .diab-accordion-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.6rem;
+      height: 1.6rem;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.22);
+      font-size: 1.15rem;
+      line-height: 1;
+      transition: transform 0.18s ease;
+      flex: 0 0 auto;
+    }
+
+    .diab-accordion-btn[aria-expanded="true"] .diab-accordion-icon {
+      transform: rotate(180deg);
+    }
+
+    .diab-accordion-content {
+      margin-top: 0.95rem;
+    }
+
+    .diab-card {
+      position: relative;
+    }
+
+    .diab-card--muted {
+      opacity: 0.82;
+      transition: opacity 0.2s ease;
+    }
+
+    .diab-steps {
+      margin: 0.9rem 0 0;
+      padding-left: 1.2rem;
+    }
+
+    .diab-steps li {
+      margin-bottom: 0.55rem;
+      line-height: 1.5;
+    }
+
+    .diab-cases {
+      display: grid;
+      gap: 0.7rem;
+      margin-top: 1rem;
+    }
+
+    .diab-case {
+      border-radius: var(--radius);
+      padding: 0.85rem 1rem;
+      border: 1px solid #d8e3e3;
+      background: rgba(255,255,255,0.6);
+    }
+
+    .diab-case strong {
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+
+    .diab-case--ok {
+      border-left: 5px solid var(--primary);
+    }
+
+    .diab-case--warn {
+      border-left: 5px solid #b26b00;
+    }
+
+    .diab-case--danger {
+      border-left: 5px solid var(--danger);
+    }
+
+    .diab-form {
+      display: grid;
+      gap: 0.8rem;
+    }
+
+    .diab-form-grid {
+      display: grid;
+      gap: 0.8rem;
+    }
+
+    @media (min-width: 700px) {
+      .diab-form-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .diab-form label {
+      margin-top: 0;
+    }
+
+    .diab-help {
+      display: block;
+      margin-top: 0.3rem;
+      font-size: 0.85rem;
+      color: #586565;
+      line-height: 1.45;
+    }
+
+    .diab-status {
+      margin-top: 0.5rem;
+      padding: 0.75rem 0.9rem;
+      border-radius: var(--radius);
+      background: rgba(198,40,40,0.08);
+      border: 1px solid rgba(198,40,40,0.18);
+      color: var(--danger);
+      font-weight: 600;
+    }
+
+    .diab-task {
+      position: relative;
+      display: grid;
+      gap: 1rem;
+    }
+
+    .diab-task__header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 0.8rem;
+      align-items: start;
+    }
+
+    .diab-task__header > div {
+      width: 100%;
+      text-align: center;
+    }
+
+
+    .diab-task__header h2 {
+      margin-bottom: 0.2rem;
+    }
+
+    .diab-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.35rem 0.7rem;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      background: rgba(0,131,141,0.12);
+      color: var(--primary);
+      border: 1px solid rgba(0,131,141,0.18);
+      white-space: nowrap;
+    }
+
+    .diab-badge--ok {
+      background: rgba(0,131,141,0.12);
+      color: var(--primary);
+    }
+
+    .diab-badge--warn {
+      background: rgba(178,107,0,0.12);
+      color: #8b5300;
+      border-color: rgba(178,107,0,0.18);
+    }
+
+    .diab-badge--danger {
+      background: rgba(198,40,40,0.10);
+      color: var(--danger);
+      border-color: rgba(198,40,40,0.16);
+    }
+
+    .diab-task__meta {
+      margin: 0;
+      color: #566565;
+      font-size: 0.92rem;
+    }
+
+    .diab-note {
+      border-radius: var(--radius);
+      padding: 0.85rem 1rem;
+      background: rgba(255,255,255,0.62);
+      border: 1px solid #dde8e8;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    #taskLead {
+      text-align: center;
+    }
+
+
+    .diab-metrics {
+      display: grid;
+      gap: 0.8rem;
+    }
+
+    @media (min-width: 700px) {
+      .diab-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (min-width: 1100px) {
+      .diab-metrics {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    .diab-metric {
+      border-radius: var(--radius);
+      padding: 0.9rem 1rem;
+      background: rgba(255,255,255,0.72);
+      border: 1px solid #dbe6e6;
+      box-shadow: var(--shadow-s);
+    }
+
+    .diab-metric__label {
+      display: block;
+      font-size: 0.84rem;
+      color: #5b6a6a;
+      margin-bottom: 0.25rem;
+    }
+
+    .diab-metric__value {
+      display: block;
+      font-size: 1.05rem;
+      line-height: 1.3;
+      color: var(--text);
+    }
+
+    .diab-answer-wrap {
+      display: grid;
+      gap: 0.85rem;
+    }
+
+    .diab-answer-fields {
+      display: grid;
+      gap: 0.85rem;
+      grid-template-columns: minmax(0, 1fr);
+      align-items: start;
+    }
+
+    .diab-answer-fields > * {
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    .diab-answer-wrap label {
+      margin-top: 0;
+    }
+
+
+    .diab-answer-title {
+      display: block;
+      font-weight: 800;
+      font-size: 1.25rem;
+      line-height: 1.2;
+      margin-bottom: 0.35rem;
+      text-align: center;
+    }
+
+    /* Turkusowa ramka dla pola odpowiedzi (musi nadpisać style globalne) */
+    #patientAnswer {
+      border: 2px solid var(--primary) !important;
+      box-shadow: none !important;
+    }
+
+    #patientAnswer:focus,
+    #patientAnswer:focus-visible {
+      outline: none !important;
+      border-color: var(--primary) !important;
+      box-shadow: 0 0 0 3px rgba(0, 131, 141, 0.25) !important;
+    }
+
+    .diab-answer-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.7rem;
+    }
+
+    .diab-answer-actions button {
+      width: 100%;
+    }
+
+    @media (min-width: 700px) {
+      .diab-answer-actions button {
+        width: auto;
+      }
+    }
+
+    .diab-pro-question {
+      padding: 0.85rem 0.95rem;
+      border-radius: var(--radius);
+      border: 1px solid rgba(153,0,255,0.18);
+      background: rgba(153,0,255,0.05);
+    }
+
+    .diab-pro-question[hidden] {
+      display: none !important;
+    }
+
+    .diab-pro-questions {
+      display: grid;
+      gap: 0.85rem;
+    }
+
+    .diab-pro-question__title {
+      margin: 0 0 0.7rem;
+      font-size: 0.96rem;
+      line-height: 1.45;
+      color: #6a00cc;
+      font-weight: 700;
+    }
+
+
+    .diab-pro-question,
+    .diab-pro-question__title,
+    .diab-help {
+      min-width: 0;
+      max-width: 100%;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .diab-pro-options {
+      display: grid;
+      gap: 0.55rem;
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    .diab-pro-option {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 0.7rem;
+      align-items: flex-start;
+      width: 100%;
+      max-width: 100%;
+      padding: 0.75rem 0.85rem;
+      border-radius: var(--radius);
+      border: 1px solid rgba(153,0,255,0.16);
+      background: rgba(255,255,255,0.75);
+      cursor: pointer;
+      transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+      box-sizing: border-box;
+    }
+
+    .diab-pro-option:hover {
+      border-color: rgba(153,0,255,0.34);
+      background: rgba(153,0,255,0.08);
+    }
+
+    .diab-pro-option:focus-within {
+      border-color: rgba(153,0,255,0.42);
+      box-shadow: 0 0 0 3px rgba(153,0,255,0.12);
+      background: rgba(153,0,255,0.09);
+    }
+
+    .diab-pro-option input[type="radio"] {
+      appearance: auto;
+      -webkit-appearance: radio;
+      width: 1.05rem;
+      min-width: 1.05rem;
+      max-width: 1.05rem;
+      height: 1.05rem;
+      margin: 0.15rem 0 0;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      background: transparent;
+      box-shadow: none;
+      accent-color: #9900ff;
+      flex: 0 0 1.05rem;
+    }
+
+    .diab-pro-option span {
+      display: block;
+      min-width: 0;
+      max-width: 100%;
+      line-height: 1.5;
+      color: var(--text);
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    @media (max-width: 680px) {
+      .diab-pro-question {
+        padding: 0.75rem 0.8rem;
+      }
+
+      .diab-pro-option {
+        padding: 0.65rem 0.75rem;
+        gap: 0.6rem;
+      }
+
+      .diab-pro-question__title {
+        font-size: 0.92rem;
+      }
+    }
+
+    .diab-feedback {
+      border-radius: var(--radius);
+      padding: 0.9rem 1rem;
+      font-size: 0.96rem;
+      line-height: 1.55;
+    }
+
+    .diab-feedback--success {
+      background: rgba(0,131,141,0.08);
+      border: 1px solid rgba(0,131,141,0.18);
+      color: var(--primary);
+    }
+
+    .diab-feedback--error {
+      background: rgba(198,40,40,0.08);
+      border: 1px solid rgba(198,40,40,0.16);
+      color: var(--danger);
+    }
+
+    .diab-solution {
+      border-top: 1px solid #d9e5e5;
+      padding-top: 1rem;
+      display: grid;
+      gap: 1rem;
+    }
+
+    .diab-solution__intro p {
+      margin: 0.6rem 0 0;
+      line-height: 1.5;
+    }
+
+    .diab-solution__steps {
+      margin: 0;
+      padding-left: 1.2rem;
+    }
+
+    .diab-solution__steps li {
+      margin-bottom: 0.75rem;
+      line-height: 1.55;
+    }
+
+    .diab-solution__summary {
+      display: grid;
+      gap: 0.8rem;
+    }
+
+    @media (min-width: 700px) {
+      .diab-solution__summary {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .diab-solution__summary > div {
+      border-radius: var(--radius);
+      padding: 0.9rem 1rem;
+      background: rgba(255,255,255,0.72);
+      border: 1px solid #dce7e7;
+    }
+
+    .diab-solution__summary-label {
+      display: block;
+      margin-bottom: 0.25rem;
+      font-size: 0.84rem;
+      color: #5e6a6a;
+    }
+
+
+    .diab-explain-strip,
+    .diab-solution__lead-note {
+      padding: 0.85rem 1rem;
+      border-radius: var(--radius);
+      background: rgba(0,131,141,0.07);
+      border: 1px solid rgba(0,131,141,0.18);
+      font-size: 0.95rem;
+      line-height: 1.55;
+    }
+
+    .diab-solution__source-grid,
+    .diab-solution__today {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .diab-solution__source-grid,
+    .diab-solution__today {
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+
+    .diab-solution__source-item,
+    .diab-solution__today-item,
+    .diab-solution__balance-box {
+      border-radius: var(--radius);
+      padding: 0.85rem 0.95rem;
+      background: rgba(255,255,255,0.72);
+      border: 1px solid #dce7e7;
+    }
+
+    .diab-solution__today-item > strong {
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+
+    .diab-solution__source-note,
+    .diab-solution__today-item span {
+      display: block;
+      font-size: 0.88rem;
+      color: #556666;
+      line-height: 1.45;
+    }
+
+    .diab-solution__source-label {
+      display: block;
+      font-size: 0.82rem;
+      color: #5c6a6a;
+      margin-bottom: 0.25rem;
+    }
+
+    .diab-solution__source-value {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+
+    .diab-solution__balance-wrap {
+      display: grid;
+      gap: 0.65rem;
+    }
+
+    .diab-solution__balance {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+      gap: 0.7rem;
+      align-items: stretch;
+    }
+
+    .diab-solution__balance-symbol {
+      align-self: center;
+      justify-self: center;
+      font-size: 1.45rem;
+      font-weight: 800;
+      color: var(--primary);
+    }
+
+    .diab-solution__balance-box--accent {
+      border-color: rgba(0,131,141,0.28);
+      background: rgba(0,131,141,0.07);
+    }
+
+    .diab-solution__today-number {
+      display: block;
+      margin-top: 0.25rem;
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--primary);
+    }
+
+    .diab-solution__section-title {
+      margin: 0 0 0.1rem;
+      font-size: 1rem;
+      font-weight: 800;
+    }
+
+
+.diab-solution__section-title--center {
+      text-align: center;
+    }
+
+    /* Turkusowa ramka + większa czcionka dla najważniejszych wniosków "dziś" */
+    .diab-solution__today-item--teal {
+      border-color: var(--brand-light, var(--primary)) !important;
+    }
+
+    .diab-solution__today-item--teal > strong {
+      font-size: 1.02rem;
+    }
+
+    .diab-solution__today-item--teal span:not(.diab-solution__today-number) {
+      font-size: 0.96rem;
+    }
+
+    /* Delikatna turkusowa ramka także dla pól „Skąd biorą się liczby do działania?” */
+    .diab-solution__source-item {
+      border-color: var(--brand-light, var(--primary)) !important;
+    }
+
+
+    /* Delikatna turkusowa ramka także dla pól w karcie „Zadanie dla pacjenta” */
+    .diab-task .diab-metric {
+      border-color: var(--brand-light, var(--primary)) !important;
+    }
+
+    .diab-case small {
+      display: block;
+      margin-top: 0.35rem;
+      color: #556666;
+      line-height: 1.45;
+    }
+
+    @media (max-width: 780px) {
+      .diab-solution__balance {
+        grid-template-columns: 1fr;
+      }
+
+      .diab-solution__balance-symbol {
+        transform: rotate(90deg);
+      }
+    }
+
+    .diab-footer-note {
+      font-size: 1rem;
+      text-align: center;
+      color: #5f6c6c;
+      line-height: 1.55;
+      margin: 0;
+    }
+
+    .diab-section-credit {
+      margin-top: 1.15rem;
+      padding: 0.15rem 1rem 0.4rem;
+      text-align: center;
+      color: #5f6c6c;
+      font-size: 0.96rem;
+      line-height: 1.55;
+    }
+
+    .diab-section-credit::before {
+      content: "";
+      display: block;
+      width: min(100%, calc(100% - 2.5rem));
+      max-width: 760px;
+      height: 1px;
+      margin: 0 auto 0.9rem;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(0,131,141,0.10) 6%,
+        rgba(0,131,141,0.26) 22%,
+        rgba(0,131,141,0.34) 50%,
+        rgba(0,131,141,0.26) 78%,
+        rgba(0,131,141,0.10) 94%,
+        transparent 100%
+      );
+    }
+
+    .diab-section-credit p {
+      margin: 0;
+    }
+
+
+    .diab-kicker {
+      margin: 0;
+      font-size: 0.95rem;
+      line-height: 1.55;
+      color: #586666;
+    }
+
+    .diab-mini-formula {
+      display: inline-block;
+      margin-top: 0.4rem;
+      padding: 0.45rem 0.7rem;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.75);
+      border: 1px solid #dde8e8;
+      font-weight: 600;
+    }
+
+    #taskModeToggle:checked ~ .slider {
+      background: #9900ff;
+    }
+
+    #taskModeToggle:checked ~ .slider::before {
+      left: auto;
+      right: 2px;
+      transform: none;
+    }
+
+    .diab-pro-toggle {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      margin: 0.9rem 0 0.4rem;
+    }
+
+    .diab-pro-toggle .label-left,
+    .diab-pro-toggle .label-right {
+      font-size: 0.96rem;
+    }
+
+    .diab-pro-toggle .pro-label {
+      color: #9900ff;
+    }
+
+    /* Fioletowa ramka dla przycisku generatora (styl PRO) */
+    #generateTaskBtn {
+      border: 1.5px solid rgba(153,0,255,0.28) !important;
+      background: rgba(153,0,255,0.06) !important;
+      color: #7d17d6 !important;
+    }
+
+    #generateTaskBtn:hover {
+      background: rgba(153,0,255,0.10) !important;
+    }
+
+    #generateTaskBtn:active {
+      background: rgba(153,0,255,0.14) !important;
+    }
+
+
+    /* Delikatna turkusowa ramka dla przycisku "Zatwierdź odpowiedź" */
+    #submitAnswerBtn {
+      border: 1.5px solid var(--brand-light, var(--primary)) !important;
+    }
+
+    .diab-badge--pro {
+      background: rgba(153,0,255,0.10);
+      color: #7d17d6;
+      border-color: rgba(153,0,255,0.22);
+    }
+
+    .diab-note--pro {
+      background: rgba(153,0,255,0.05);
+      border-color: rgba(153,0,255,0.16);
+    }
+
+    .diab-pro-panel {
+      display: grid;
+      gap: 0.8rem;
+      padding: 0.95rem 1rem;
+      border-radius: var(--radius);
+      border: 1px solid rgba(153,0,255,0.22);
+      background: rgba(153,0,255,0.05);
+    }
+
+    .diab-pro-panel[hidden] {
+      display: none !important;
+    }
+
+    .diab-pro-panel__title {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 800;
+      color: #7d17d6;
+    }
+
+    .diab-pro-hint {
+      margin: 0;
+      font-size: 0.9rem;
+      line-height: 1.55;
+      color: #5e5271;
+    }
+
+    .diab-pro-conflict {
+      display: grid;
+      gap: 0.65rem;
+      padding: 0.85rem 0.95rem;
+      border-radius: var(--radius);
+      border: 1px solid rgba(178,107,0,0.22);
+      background: rgba(178,107,0,0.08);
+      color: #6b4a00;
+      line-height: 1.5;
+    }
+
+    .diab-pro-conflict[hidden] {
+      display: none !important;
+    }
+
+    .diab-pro-conflict__actions {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0.7rem;
+    }
+
+    .diab-pro-conflict__actions button {
+      width: 100%;
+    }
+
+    @media (min-width: 700px) {
+      .diab-pro-conflict__actions button {
+        width: auto;
+      }
+    }
+
+    #proConflictConfirmBtn {
+      border: 1.5px solid rgba(153,0,255,0.28) !important;
+      background: rgba(153,0,255,0.06) !important;
+      color: #7d17d6 !important;
+    }
+
+    #proConflictConfirmBtn:hover {
+      background: rgba(153,0,255,0.10) !important;
+    }
+
+    .diab-pro-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      margin-top: 0.35rem;
+    }
+
+    .diab-pro-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.35rem 0.65rem;
+      border-radius: 999px;
+      font-size: 0.84rem;
+      font-weight: 700;
+      border: 1px solid rgba(153,0,255,0.16);
+      background: rgba(153,0,255,0.06);
+      color: #7d17d6;
+    }
+
+    .diab-pro-chip--note {
+      background: rgba(153,0,255,0.03);
+      color: #6a5787;
+    }
+
+    .diab-solution__pro {
+      display: grid;
+      gap: 0.75rem;
+      padding: 0.95rem 1rem;
+      border-radius: var(--radius);
+      border: 1px solid rgba(153,0,255,0.18);
+      background: rgba(153,0,255,0.05);
+    }
+
+    .diab-solution__pro p {
+      margin: 0;
+      line-height: 1.55;
+    }
+
+    .diab-solution__steps--compact {
+      margin-top: 0;
+    }
+
+    .diab-inline-note {
+      font-size: 0.88rem;
+      color: #5f5570;
+      line-height: 1.5;
+    }
+
+    .diab-pro-summary {
+      margin: 0;
+      padding-left: 1.15rem;
+    }
+
+    .diab-pro-summary li {
+      margin-bottom: 0.55rem;
+      line-height: 1.55;
+    }
+
+    .diab-reward-layer {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 2200;
+    }
+
+    .diab-reward-layer[hidden] {
+      display: none !important;
+    }
+
+    .diab-reward-badge {
+      position: absolute;
+      left: 50%;
+      top: clamp(4.5rem, 14vh, 7.5rem);
+      transform: translateX(-50%);
+      min-width: min(90vw, 320px);
+      padding: 0.9rem 1.2rem;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.65rem;
+      background: rgba(255,255,255,0.96);
+      border: 1px solid rgba(0,131,141,0.18);
+      color: var(--primary);
+      box-shadow: 0 16px 34px rgba(0,0,0,0.16);
+      font-size: clamp(1.1rem, 2.6vw, 1.45rem);
+      font-weight: 800;
+      animation: diabBadgePop 900ms cubic-bezier(0.2,1,0.2,1) forwards;
+    }
+
+    .diab-reward-badge__emoji {
+      font-size: 1.35em;
+      line-height: 1;
+    }
+
+    .diab-confetti {
+      position: absolute;
+      top: -14vh;
+      left: calc(var(--x) * 1%);
+      width: 12px;
+      height: 20px;
+      border-radius: 4px;
+      background: var(--c);
+      opacity: 0;
+      transform: translate3d(0, -10vh, 0) rotate(0deg);
+      animation: diabConfettiFall var(--dur) linear var(--delay) forwards;
+      box-shadow: 0 1px 0 rgba(255,255,255,0.28) inset;
+    }
+
+    .diab-confetti--line {
+      width: 6px;
+      height: 24px;
+      border-radius: 999px;
+    }
+
+    .diab-balloon {
+      position: absolute;
+      bottom: -24vh;
+      left: calc(var(--x) * 1%);
+      width: 46px;
+      height: 58px;
+      border-radius: 50% 50% 46% 46%;
+      background: var(--c);
+      box-shadow: inset -10px -14px 0 rgba(255,255,255,0.18);
+      opacity: 0;
+      animation: diabBalloonFloat var(--dur) ease-in-out var(--delay) forwards;
+    }
+
+    .diab-balloon::before {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: calc(100% - 3px);
+      width: 12px;
+      height: 10px;
+      background: inherit;
+      clip-path: polygon(50% 100%, 0 0, 100% 0);
+      transform: translateX(-50%);
+    }
+
+    .diab-balloon::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: calc(100% + 6px);
+      width: 2px;
+      height: 90px;
+      background: rgba(62,62,62,0.36);
+      transform: translateX(-50%);
+    }
+
+    .diab-sparkle {
+      position: absolute;
+      left: calc(var(--x) * 1%);
+      top: calc(var(--y) * 1%);
+      font-size: clamp(1.1rem, 2vw, 1.5rem);
+      opacity: 0;
+      animation: diabSparkle 1100ms ease-out var(--delay) forwards;
+    }
+
+    @keyframes diabBadgePop {
+      0% {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-12px) scale(0.7);
+      }
+      55% {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0) scale(1.08);
+      }
+      100% {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0) scale(1);
+      }
+    }
+
+    @keyframes diabBadgeFade {
+      0% {
+        opacity: 0;
+        transform: translateX(-50%) scale(0.92);
+      }
+      15%,
+      80% {
+        opacity: 1;
+        transform: translateX(-50%) scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: translateX(-50%) scale(0.98);
+      }
+    }
+
+    @keyframes diabConfettiFall {
+      0% {
+        opacity: 0;
+        transform: translate3d(0, -12vh, 0) rotate(0deg);
+      }
+      10% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+        transform: translate3d(var(--drift), 112vh, 0) rotate(var(--rot));
+      }
+    }
+
+    @keyframes diabBalloonFloat {
+      0% {
+        opacity: 0;
+        transform: translate3d(0, 0, 0) rotate(-4deg);
+      }
+      12% {
+        opacity: 1;
+      }
+      50% {
+        transform: translate3d(calc(var(--drift) * 0.55), -55vh, 0) rotate(5deg);
+      }
+      100% {
+        opacity: 0;
+        transform: translate3d(var(--drift), -118vh, 0) rotate(-6deg);
+      }
+    }
+
+    @keyframes diabSparkle {
+      0% {
+        opacity: 0;
+        transform: scale(0.55);
+      }
+      40% {
+        opacity: 1;
+        transform: scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: scale(1.15);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .diab-confetti,
+      .diab-balloon,
+      .diab-sparkle {
+        display: none !important;
+        animation: none !important;
+      }
+
+      .diab-reward-badge {
+        animation: diabBadgeFade 1400ms ease-out forwards;
+      }
+    }
+  
+
+    /* ===== Drobne poprawki nagłówka "Najważniejsze" ===== */
+    .diab-note-title {
+      text-align: center;
+      font-weight: 800;
+      font-size: 1.5rem;
+      line-height: 1.15;
+      margin-top: 0;
+      text-decoration: underline;
+      color: #9900ff;
+      text-decoration-color: #9900ff;
+    }
+
+
+    /* ===== Instruktaż wideo ===== */
+    body.diab-instruction-video-open {
+      overflow: hidden;
+    }
+
+    .diab-video-cta {
+      margin-top: 0.85rem;
+    }
+
+    .diab-video-btn,
+    .liquid-ios26 .diab-video-btn {
+      width: 100%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      appearance: none;
+      border: 1.5px solid rgba(0,131,141,0.32) !important;
+      border-radius: calc(var(--radius) - 2px);
+      background: linear-gradient(180deg, rgba(255,255,255,0.99), rgba(246,253,253,0.98)) !important;
+      box-shadow: 0 0 0 1px rgba(0,131,141,0.04) !important;
+      color: var(--primary) !important;
+      font: inherit;
+      font-size: clamp(1rem, 2vw, 1.08rem);
+      font-weight: 700;
+      line-height: 1.4;
+      padding: 0.95rem 1rem;
+      cursor: pointer;
+      text-align: center;
+      transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+    }
+
+    .diab-video-btn:hover,
+    .liquid-ios26 .diab-video-btn:hover {
+      transform: translateY(-1px);
+      border-color: rgba(0,131,141,0.42) !important;
+      box-shadow: 0 0 0 1px rgba(0,131,141,0.06), 0 10px 24px rgba(21,31,50,0.05) !important;
+    }
+
+    .diab-video-btn:focus-visible,
+    .liquid-ios26 .diab-video-btn:focus-visible {
+      outline: none !important;
+      border-color: rgba(0,131,141,0.48) !important;
+      box-shadow: 0 0 0 4px rgba(0,131,141,0.12) !important;
+    }
+
+    .diab-video-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 9998;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .diab-video-modal[hidden] {
+      display: none !important;
+    }
+
+    .diab-video-modal__backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.62);
+    }
+
+    .diab-video-modal__dialog {
+      position: relative;
+      z-index: 1;
+      width: min(100%, 34rem);
+      max-height: calc(100vh - 2rem);
+      display: grid;
+      gap: 1rem;
+      padding: 1rem;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.98);
+      box-shadow: 0 24px 60px rgba(0,0,0,0.28);
+      overflow: auto;
+    }
+
+    .diab-video-modal__header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .diab-video-modal__heading {
+      margin: 0;
+      font-size: 1.2rem;
+      line-height: 1.25;
+      color: var(--primary);
+    }
+
+    .diab-video-modal__desc {
+      margin: 0.35rem 0 0;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      color: #566565;
+    }
+
+    .diab-video-modal__close {
+      appearance: none;
+      width: 2.75rem;
+      height: 2.75rem;
+      flex: 0 0 2.75rem;
+      border: 1px solid rgba(0,131,141,0.2);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.96);
+      color: var(--primary);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 1.8rem;
+      line-height: 1;
+      transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+    }
+
+    .diab-video-modal__close:hover {
+      transform: translateY(-1px);
+      border-color: rgba(0,131,141,0.34);
+      box-shadow: 0 10px 24px rgba(21,31,50,0.05);
+    }
+
+    .diab-video-modal__close:focus-visible {
+      outline: none;
+      border-color: rgba(0,131,141,0.44);
+      box-shadow: 0 0 0 4px rgba(0,131,141,0.12);
+    }
+
+    .diab-video-modal__player-wrap {
+      border-radius: 18px;
+      overflow: hidden;
+      background: #000000;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+    }
+
+    .diab-video-modal__player {
+      display: block;
+      width: 100%;
+      height: auto;
+      max-height: 72vh;
+      background: #000000;
+    }
+
+    .diab-video-modal__note {
+      margin: 0;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      color: #566565;
+    }
+
+    @media (max-width: 640px) {
+      .diab-video-modal {
+        padding: 0.75rem;
+      }
+
+      .diab-video-modal__dialog {
+        width: min(100%, 30rem);
+        max-height: calc(100vh - 1.5rem);
+        padding: 0.85rem;
+        border-radius: 16px;
+      }
+
+      .diab-video-modal__heading {
+        font-size: 1.08rem;
+      }
+
+      .diab-video-modal__desc,
+      .diab-video-modal__note {
+        font-size: 0.9rem;
+      }
+
+      .diab-video-modal__player {
+        max-height: 70vh;
+      }
+    }
+
+    /* ===== "Film" (interaktywny pokaz kroków) ===== */
+    body.diab-film-open {
+      overflow: hidden;
+    }
+
+    .diab-film-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .diab-film-modal[hidden] {
+      display: none !important;
+    }
+
+    .diab-film-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+    }
+
+    .diab-film-panel {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    .diab-film-frame {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      background: #ffffff;
+      color: #000000;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
+    }
+
+    @media (min-width: 520px) {
+      .diab-film-panel {
+        padding: 1.25rem;
+      }
+      .diab-film-frame {
+        width: min(460px, 100vw);
+        height: min(92vh, 900px);
+        border-radius: 16px;
+      }
+    }
+
+    .diab-film-stage,
+    .diab-film-sub,
+    .diab-film-stepmeta {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+
+    .diab-film-bold {
+      font-weight: 800;
+    }
+
+    .diab-film-stage {
+      flex: 2 0 0;
+      padding: 1.25rem;
+      padding-top: calc(3.25rem + env(safe-area-inset-top, 0px));
+      box-sizing: border-box;
+      white-space: pre-wrap;
+      font-size: clamp(1rem, 2.6vh, 1.4rem);
+      line-height: 1.35;
+    }
+
+    .diab-film-sub {
+      flex: 1 0 0;
+      padding: 1.25rem;
+      box-sizing: border-box;
+      white-space: pre-wrap;
+      font-size: clamp(1rem, 2.6vh, 1.4rem);
+      line-height: 1.35;
+
+      /* Podnieś dolny tekst o ~3rem i zostaw miejsce na kontrolki */
+      padding-bottom: calc(1.25rem + 3rem + 3.75rem + env(safe-area-inset-bottom, 0px));
+    }
+
+    .diab-film-controls {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem);
+      display: flex;
+      justify-content: center;
+      gap: 0.8rem;
+      z-index: 4;
+    }
+
+    .diab-film-ctrl {
+      width: 52px;
+      height: 52px;
+      border-radius: 999px;
+      border: 1px solid #000000;
+      background: #ffffff;
+      color: #000000;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.08s ease;
+    }
+
+    .diab-film-ctrl:active {
+      transform: translateY(1px);
+    }
+
+    .diab-film-ctrl:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    .diab-film-ctrl i {
+      width: 22px;
+      height: 22px;
+    }
+
+    .diab-film-stepmeta {
+      position: absolute;
+      top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
+      left: 0.75rem;
+      padding: 0.35rem 0.6rem;
+      border-radius: 999px;
+      border: 1px solid #000000;
+      background: #ffffff;
+      font-size: 0.9rem;
+      z-index: 4;
+    }
+
+    .diab-film-close {
+      position: absolute;
+      top: calc(env(safe-area-inset-top, 0px) + 0.65rem);
+      right: 0.75rem;
+      width: 44px;
+      height: 44px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.9);
+      background: rgba(0, 0, 0, 0.55);
+      color: #ffffff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 6;
+      font-size: 28px;
+      line-height: 1;
+    }
+
+
+
+
+    .diab-module-entry {
+      display: grid;
+      place-items: center;
+      min-height: min(72vh, 38rem);
+    }
+
+    .diab-module-entry__button {
+      appearance: none;
+      width: min(100%, 44rem);
+      min-height: clamp(16rem, 42vh, 22rem);
+      padding: clamp(1.8rem, 3vw, 2.9rem);
+      border-radius: calc(var(--radius) + 10px);
+      border: 1px solid rgba(0,131,141,0.28);
+      background: linear-gradient(180deg, rgba(255,255,255,0.99), rgba(245,253,253,0.98));
+      box-shadow: 0 22px 48px rgba(21, 31, 50, 0.08);
+      display: grid;
+      gap: 0;
+      align-content: center;
+      justify-items: center;
+      text-align: center;
+      cursor: pointer;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    }
+
+    .diab-module-entry__button:hover {
+      transform: translateY(-2px);
+      border-color: rgba(0,131,141,0.4);
+      box-shadow: 0 26px 56px rgba(21, 31, 50, 0.12);
+    }
+
+    .diab-module-entry__button:focus-visible {
+      outline: none;
+      border-color: rgba(0,131,141,0.48);
+      box-shadow: 0 0 0 4px rgba(0,131,141,0.14), 0 26px 56px rgba(21, 31, 50, 0.12);
+    }
+
+    .diab-module-entry__title {
+      font-size: clamp(1.95rem, 4vw, 2.7rem);
+      line-height: 1.12;
+      font-weight: 800;
+      color: var(--primary);
+    }
+
+    .diab-hero-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.55rem;
+    }
+
+    .diab-back-btn {
+      appearance: none;
+      border: 1px solid rgba(0,131,141,0.24);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.96);
+      color: var(--primary);
+      font: inherit;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.65rem 1rem;
+      cursor: pointer;
+      transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+    }
+
+    .diab-back-btn:hover {
+      transform: translateY(-1px);
+      border-color: rgba(0,131,141,0.34);
+      box-shadow: 0 10px 24px rgba(21,31,50,0.05);
+    }
+
+    .diab-back-btn:focus-visible {
+      outline: none;
+      border-color: rgba(0,131,141,0.44);
+      box-shadow: 0 0 0 4px rgba(0,131,141,0.10);
+    }
+
+    .diab-back-btn__arrow {
+      font-size: 1.15rem;
+      line-height: 1;
+      color: var(--primary);
+    }
+
+    .diab-eyebrow--module {
+      margin-bottom: 0;
+      margin-left: auto;
+      justify-content: flex-end;
+      text-align: right;
+      max-width: 100%;
+    }
+
+
+
+    /* Wymuszenie delikatnej turkusowej ramki dla kafelka startowego
+       i przycisku akordeonu także w motywie Liquid iOS26, który
+       globalnie nadpisuje style przycisków. */
+    .diab-module-entry__button,
+    .liquid-ios26 .diab-module-entry__button {
+      border: 1.5px solid rgba(0,131,141,0.34) !important;
+      background: linear-gradient(180deg, rgba(255,255,255,0.99), rgba(245,253,253,0.98)) !important;
+      box-shadow: 0 0 0 1px rgba(0,131,141,0.06), 0 22px 48px rgba(21,31,50,0.08) !important;
+      color: inherit !important;
+    }
+
+    .diab-module-entry__button:hover,
+    .liquid-ios26 .diab-module-entry__button:hover {
+      border-color: rgba(0,131,141,0.44) !important;
+      box-shadow: 0 0 0 1px rgba(0,131,141,0.08), 0 26px 56px rgba(21,31,50,0.12) !important;
+    }
+
+    .diab-module-entry__button:focus-visible,
+    .liquid-ios26 .diab-module-entry__button:focus-visible {
+      border-color: rgba(0,131,141,0.5) !important;
+      box-shadow: 0 0 0 4px rgba(0,131,141,0.14), 0 26px 56px rgba(21,31,50,0.12) !important;
+      outline: none !important;
+    }
+
+    .diab-accordion-btn,
+    .liquid-ios26 .diab-accordion-btn {
+      border: 1.5px solid rgba(0,131,141,0.32) !important;
+      background: linear-gradient(180deg, rgba(255,255,255,0.99), rgba(246,253,253,0.98)) !important;
+      box-shadow: 0 0 0 1px rgba(0,131,141,0.04) !important;
+      color: inherit !important;
+    }
+
+    .diab-accordion-btn:hover,
+    .liquid-ios26 .diab-accordion-btn:hover {
+      border-color: rgba(0,131,141,0.42) !important;
+      box-shadow: 0 0 0 1px rgba(0,131,141,0.06), 0 10px 24px rgba(21,31,50,0.05) !important;
+    }
+
+    .diab-accordion-btn:focus-visible,
+    .liquid-ios26 .diab-accordion-btn:focus-visible {
+      border-color: rgba(0,131,141,0.48) !important;
+      box-shadow: 0 0 0 4px rgba(0,131,141,0.12) !important;
+      outline: none !important;
+    }
+
+    #moduleContent #moduleMainHeading,
+    #moduleContent .diab-hero > div > .diab-subtle.diab-title-center,
+    .liquid-ios26 #moduleContent #moduleMainHeading,
+    .liquid-ios26 #moduleContent .diab-hero > div > .diab-subtle.diab-title-center {
+      color: var(--primary) !important;
+    }
+
+    #moduleContent .diab-hero > div > .diab-subtle.diab-title-center,
+    .liquid-ios26 #moduleContent .diab-hero > div > .diab-subtle.diab-title-center {
+      font-size: 1rem;
+    }
+
+    .diab-back-btn,
+    .diab-back-btn span,
+    .liquid-ios26 .diab-back-btn,
+    .liquid-ios26 .diab-back-btn span {
+      color: var(--primary) !important;
+    }
+
+
+    /* Docelowe nadpisania kolorów i typografii po wejściu do modułu */
+    #moduleContent #moduleMainHeading,
+    #moduleContent .diab-hero > div > .diab-subtle.diab-title-center,
+    .liquid-ios26 #moduleContent #moduleMainHeading,
+    .liquid-ios26 #moduleContent .diab-hero > div > .diab-subtle.diab-title-center {
+      color: var(--primary) !important;
+    }
+
+    #moduleContent .diab-hero > div > .diab-subtle.diab-title-center,
+    .liquid-ios26 #moduleContent .diab-hero > div > .diab-subtle.diab-title-center {
+      font-size: 1rem !important;
+    }
+
+    .diab-accordion-btn,
+    .liquid-ios26 .diab-accordion-btn {
+      font-size: clamp(1.08rem, 2.2vw, 1.18rem) !important;
+    }
+
+    .diab-accordion-label,
+    .liquid-ios26 .diab-accordion-label {
+      font-size: inherit !important;
+      font-weight: 700 !important;
+      color: var(--primary) !important;
+      line-height: 1.35;
+    }
+
+    .diab-back-btn,
+    .diab-back-btn span,
+    .diab-back-btn__arrow,
+    .liquid-ios26 .diab-back-btn,
+    .liquid-ios26 .diab-back-btn span,
+    .liquid-ios26 .diab-back-btn__arrow {
+      color: var(--primary) !important;
+    }
+
+
+
+    /* ===== Kafelki startowe + kalkulator przelicznika doposiłkowego ===== */
+    .diab-module-entry {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: auto;
+      padding-top: clamp(0.2rem, 0.9vw, 0.7rem);
+    }
+
+    .diab-module-entry__grid {
+      width: min(100%, 60rem);
+      display: grid;
+      gap: 1rem;
+    }
+
+    @media (min-width: 992px) {
+      .diab-module-entry__grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    .diab-module-entry__button,
+    .liquid-ios26 .diab-module-entry__button {
+      width: 100%;
+      min-height: clamp(12rem, 30vh, 15.5rem);
+    }
+
+    .diab-module-entry__title {
+      font-size: clamp(1.55rem, 3vw, 2.2rem);
+    }
+
+    #calculatorContent #calculatorMainHeading,
+    #calculatorContent .diab-hero > div > .diab-subtle.diab-title-center,
+    .liquid-ios26 #calculatorContent #calculatorMainHeading,
+    .liquid-ios26 #calculatorContent .diab-hero > div > .diab-subtle.diab-title-center {
+      color: var(--primary) !important;
+    }
+
+    #calculatorContent .diab-hero > div > .diab-subtle.diab-title-center,
+    .liquid-ios26 #calculatorContent .diab-hero > div > .diab-subtle.diab-title-center {
+      font-size: 1rem !important;
+    }
+
+    .diab-calc-grid {
+      display: grid;
+      gap: 1rem;
+    }
+
+    @media (min-width: 960px) {
+      .diab-calc-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .diab-calc-actions {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0.7rem;
+      margin-top: 0.35rem;
+    }
+
+    .diab-calc-actions button {
+      width: 100%;
+    }
+
+    @media (min-width: 700px) {
+      .diab-calc-actions button {
+        width: auto;
+      }
+    }
+
+    .diab-status--success {
+      background: rgba(0,131,141,0.08);
+      border: 1px solid rgba(0,131,141,0.18);
+      color: var(--primary);
+    }
+
+    .diab-status--info {
+      background: rgba(0,131,141,0.05);
+      border: 1px solid rgba(0,131,141,0.12);
+      color: #4f6060;
+    }
+
+    .diab-calc-meta {
+      margin: 0;
+      color: #566565;
+      font-size: 0.92rem;
+      line-height: 1.45;
+    }
+
+    .diab-calc-day-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      border: 1px solid rgba(0,131,141,0.18);
+      background: rgba(0,131,141,0.08);
+      color: var(--primary);
+      font-size: 0.85rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .diab-calc-empty {
+      border-radius: var(--radius);
+      padding: 1rem;
+      border: 1px dashed rgba(0,131,141,0.28);
+      background: rgba(255,255,255,0.7);
+      text-align: center;
+      color: #4f6060;
+      line-height: 1.55;
+    }
+
+    .diab-calc-table-wrap {
+      overflow-x: auto;
+      border: 1px solid #dce7e7;
+      border-radius: var(--radius);
+      background: rgba(255,255,255,0.82);
+    }
+
+    .diab-calc-table {
+      width: 100%;
+      min-width: 900px;
+      border-collapse: collapse;
+      font-size: 0.95rem;
+    }
+
+    .diab-calc-table caption {
+      caption-side: top;
+      text-align: left;
+      padding: 0 0 0.8rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .diab-calc-table th,
+    .diab-calc-table td {
+      padding: 0.75rem 0.8rem;
+      border-bottom: 1px solid #dde8e8;
+      vertical-align: top;
+    }
+
+    .diab-calc-table thead th {
+      background: rgba(0,131,141,0.08);
+      color: var(--primary);
+      font-weight: 700;
+    }
+
+    .diab-calc-table tbody tr:last-child th,
+    .diab-calc-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .diab-calc-table th[scope="row"] {
+      white-space: nowrap;
+    }
+
+    .diab-calc-table td[data-role="number"] {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .diab-calc-table td strong {
+      color: var(--primary);
+    }
+
+    .diab-calc-note {
+      margin: 0 0 0.9rem;
+      font-size: 0.95rem;
+      line-height: 1.55;
+      color: #566565;
+    }
+
+    .diab-calc-sensitivity {
+      margin: 0 0 0.9rem;
+      padding: 0.95rem 1rem;
+      border-radius: var(--radius);
+      border: 1px solid rgba(124,58,237,0.28);
+      background: rgba(124,58,237,0.08);
+      color: #5b21b6;
+      line-height: 1.55;
+      text-align: center;
+      box-shadow: 0 10px 24px rgba(21,31,50,0.04);
+    }
+
+    .diab-calc-sensitivity strong {
+      display: block;
+      color: #5b21b6;
+      text-align: center;
+    }
+
+    .diab-calc-sensitivity small {
+      display: block;
+      margin-top: 0.35rem;
+      font-size: inherit;
+      line-height: 1.55;
+      color: #6d28d9;
+      text-align: center;
+    }
+
+    .diab-calc-table tr.diab-calc-table__main-row > th,
+    .diab-calc-table tr.diab-calc-table__main-row > td {
+      border-bottom: none;
+    }
+
+    .diab-calc-table tr.diab-calc-table__detail-row td {
+      padding: 0.78rem 0.85rem 0.9rem;
+      background: rgba(124,58,237,0.04);
+      color: #314040;
+      font-size: 0.92rem;
+      line-height: 1.55;
+    }
+
+    .diab-calc-table tr.diab-calc-table__detail-row td::before {
+      content: none;
+    }
+
+    .diab-calc-balance-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.28rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin-right: 0.55rem;
+      vertical-align: middle;
+    }
+
+    .diab-calc-balance-chip--stable {
+      background: rgba(0,131,141,0.12);
+      color: var(--primary);
+      border: 1px solid rgba(0,131,141,0.18);
+    }
+
+    .diab-calc-balance-chip--warn {
+      background: rgba(178,107,0,0.12);
+      color: #8b5300;
+      border: 1px solid rgba(178,107,0,0.18);
+    }
+
+    .diab-calc-balance-chip--danger {
+      background: rgba(198,40,40,0.10);
+      color: var(--danger);
+      border: 1px solid rgba(198,40,40,0.16);
+    }
+
+    .diab-calc-balance-main {
+      display: inline;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .diab-calc-balance-sub {
+      display: block;
+      margin-top: 0.35rem;
+      font-size: 0.88rem;
+      color: #5f6c6c;
+    }
+
+    .diab-calc-header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 0.85rem;
+      align-items: start;
+      margin-bottom: 0.9rem;
+    }
+
+    .diab-calc-header > div {
+      min-width: 0;
+    }
+
+  
+
+    /* ===== Dodatkowe poprawki kalkulatora doposiłkowego ===== */
+    .diab-calc-assumptions {
+      margin-top: 0.9rem;
+    }
+
+    .diab-calc-assumptions .diab-accordion-label {
+      font-size: 1.02rem;
+    }
+
+    .diab-calc-table th.diab-calc-table__highlight,
+    .diab-calc-table td.diab-calc-table__highlight {
+      background: rgba(124,58,237,0.08);
+      border-left: 2px solid rgba(124,58,237,0.5);
+      border-right: 2px solid rgba(124,58,237,0.5);
+    }
+
+    .diab-calc-table thead th.diab-calc-table__highlight {
+      color: #5b21b6;
+      border-top: 2px solid rgba(124,58,237,0.5);
+    }
+
+    .diab-calc-table tbody tr:last-child td.diab-calc-table__highlight {
+      border-bottom: 2px solid rgba(124,58,237,0.5);
+    }
+
+    .diab-calc-table td.diab-calc-table__highlight strong {
+      color: #5b21b6;
+    }
+
+    @media (max-width: 980px) {
+      .diab-calc-table-wrap {
+        overflow: visible;
+        border: none;
+        background: transparent;
+      }
+
+      .diab-calc-table {
+        min-width: 0;
+        border-collapse: separate;
+        border-spacing: 0;
+      }
+
+      .diab-calc-table thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      .diab-calc-table tbody {
+        display: block;
+      }
+
+      .diab-calc-table tbody tr {
+        display: block;
+        overflow: hidden;
+      }
+
+      .diab-calc-table tbody tr.diab-calc-table__main-row {
+        overflow: visible;
+        border: 1px solid #dce7e7;
+        border-bottom: none;
+        border-radius: var(--radius) var(--radius) 0 0;
+        background: rgba(255,255,255,0.88);
+        box-shadow: 0 8px 18px rgba(21,31,50,0.04);
+      }
+
+      .diab-calc-table tbody tr.diab-calc-table__detail-row {
+        border: 1px solid #dce7e7;
+        border-top: none;
+        border-radius: 0 0 var(--radius) var(--radius);
+        background: rgba(124,58,237,0.05);
+        box-shadow: 0 8px 18px rgba(21,31,50,0.04);
+        margin-bottom: 0.9rem;
+      }
+
+      .diab-calc-table th[scope="row"] {
+        display: block;
+        padding: 0.85rem 0.95rem;
+        background: rgba(0,131,141,0.08);
+        color: var(--primary);
+        border-bottom: 1px solid #dde8e8;
+        border-radius: var(--radius) var(--radius) 0 0;
+        white-space: normal;
+      }
+
+      .diab-calc-table td {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 0.8rem;
+        align-items: center;
+        padding: 0.72rem 0.95rem;
+        border-bottom: 1px solid #dde8e8;
+        text-align: right;
+        white-space: normal;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .diab-calc-table td::before {
+        content: attr(data-label);
+        color: #4f6060;
+        font-weight: 600;
+        text-align: left;
+        padding-right: 0.45rem;
+      }
+
+      .diab-calc-table td[data-role="number"] {
+        text-align: right;
+        white-space: normal;
+      }
+
+      .diab-calc-table tbody tr.diab-calc-table__main-row td:last-child {
+        border-bottom: none;
+      }
+
+      .diab-calc-table tbody tr.diab-calc-table__detail-row td {
+        display: block;
+        padding: 0.78rem 0.95rem 0.92rem;
+        text-align: left;
+        border-bottom: none;
+        background: transparent;
+      }
+
+      .diab-calc-table tbody tr.diab-calc-table__detail-row td::before {
+        content: none;
+      }
+
+      .diab-calc-table td.diab-calc-table__highlight {
+        position: relative;
+        z-index: 1;
+        width: auto;
+        margin: 0.55rem 0.75rem 0.9rem;
+        border: none;
+        border-radius: 0.9rem;
+        background: rgba(124,58,237,0.1);
+        box-shadow: inset 0 0 0 2px rgba(124,58,237,0.55), 0 0 0 1px rgba(124,58,237,0.08);
+      }
+
+      .diab-calc-table tbody tr.diab-calc-table__main-row td.diab-calc-table__highlight:last-child {
+        border-bottom: none;
+      }
+
+      .diab-calc-balance-chip {
+        margin-right: 0;
+        margin-bottom: 0.45rem;
+      }
+
+      .diab-calc-balance-main {
+        display: block;
+      }
+    }
+
+  </style>
+</head>
+<body class="js-loading liquid-ios26 has-sidebar">
+  <header>
+    <div class="container">
+      <a href="index.html">
+        <img src="logo_vilda.jpeg" alt="Vilda Clinic – strona główna" style="max-width:160px;margin-bottom:10px; border-radius:var(--radius);">
+      </a>
+      <h1>Przeliczniki doposiłkowe</h1>
+    </div>
+    <nav class="main-nav" aria-label="Główna nawigacja">
+  <ul>
+    <li class="menu-toggle">
+      <input type="checkbox" id="navToggle" class="nav-toggle">
+      <label for="navToggle" aria-label="Otwórz menu">
+        <span class="bar"></span>
+        <span class="bar"></span>
+        <span class="bar"></span>
+      </label>
+      <ul id="verticalMenu" class="vertical-menu">
+      <li>
+        <a id="saveDataBtn" role="button" aria-disabled="true" href="#" data-tip="Na tej podstronie zapis danych użytkownika nie jest używany.">Zapisz dane</a>
+      </li>
+      <li>
+        <a id="loadDataBtn" role="button" aria-disabled="true" href="#" data-tip="Na tej podstronie wczytywanie danych użytkownika nie jest używane.">Wczytaj dane</a>
+        <input type="file" id="fileInput" accept=".json,application/json" style="display:none;">
+      </li>
+      <li><a href="index.html">Strona główna</a></li>
+      <li><a href="ustawienia.html">Ustawienia</a></li>
+      <li><a href="instrukcja.html">Instrukcja</a></li>
+      <li><a href="o-aplikacji.html">O aplikacji</a></li>
+      <li><a href="kontakt.html">Kontakt</a></li>
+      </ul>
+    </li>
+      <li><a href="docpro.html" class="pro-link">DocPro</a></li>
+      <li><a href="homa-ir.html">HOMA‑IR</a></li>
+      <li><a href="kalkulator-klirens.html">Klirens</a></li>
+      <li><a href="steroidy.html">Steroidy</a></li>
+      <li><a href="materialy-edukacyjne.html">Materiały edukacyjne</a></li>
+  </ul>
+</nav>
+  </header>
+
+  <div class="desktop-layout">
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <a href="index.html">
+          <img src="logo_vilda.jpeg" alt="Vilda Clinic – strona główna">
+        </a>
+        <h1>wagaiwzrost.pl</h1>
+      </div>
+      <nav class="sidebar-nav" aria-label="Nawigacja boczna">
+  <ul>
+      <li>
+        <a id="saveDataBtnSidebar" role="button" aria-disabled="true" href="#" data-tip="Na tej podstronie zapis danych użytkownika nie jest używany.">
+          <span class="sidebar-icon" data-lucide="save"></span>
+<span class="sidebar-label">Zapisz dane</span>
+        </a>
+      </li>
+      <li>
+        <a id="loadDataBtnSidebar" role="button" aria-disabled="true" href="#" data-tip="Na tej podstronie wczytywanie danych użytkownika nie jest używane.">
+          <span class="sidebar-icon" data-lucide="folder-open"></span>
+<span class="sidebar-label">Wczytaj dane</span>
+        </a>
+        <input type="file" id="fileInputSidebar" accept=".json,application/json" style="display:none;">
+      </li>
+      <li>
+        <a href="index.html">
+          <span class="sidebar-icon" data-lucide="home"></span>
+          <span class="sidebar-label">Strona główna</span>
+        </a>
+      </li>
+      <li>
+        <a href="docpro.html" class="pro-link">
+          <span class="sidebar-icon" data-lucide="stethoscope"></span>
+          <span class="sidebar-label">DocPro</span>
+        </a>
+      </li>
+      <li>
+        <a href="homa-ir.html">
+          <span class="sidebar-icon" data-lucide="calculator"></span>
+          <span class="sidebar-label">HOMA‑IR</span>
+        </a>
+      </li>
+      <li>
+        <a href="kalkulator-klirens.html">
+          <span class="sidebar-icon" data-lucide="droplets"></span>
+          <span class="sidebar-label">Klirens</span>
+        </a>
+      </li>
+      <li>
+        <a href="cukrzyca.html" aria-current="page">
+          <span class="sidebar-icon" data-lucide="syringe"></span>
+          <span class="sidebar-label">Cukrzyca</span>
+        </a>
+      </li>
+      <li>
+        <a href="steroidy.html">
+          <span class="sidebar-icon" data-lucide="pill"></span>
+          <span class="sidebar-label">Steroidy</span>
+        </a>
+      </li>
+      <li>
+        <a href="materialy-edukacyjne.html">
+          <span class="sidebar-icon" data-lucide="book-open"></span>
+          <span class="sidebar-label">Materiały edukacyjne</span>
+        </a>
+      </li>
+      <li>
+        <a href="ustawienia.html">
+          <span class="sidebar-icon" data-lucide="settings"></span>
+          <span class="sidebar-label">Ustawienia</span>
+        </a>
+      </li>
+      <li>
+        <a href="instrukcja.html">
+          <span class="sidebar-icon" data-lucide="file-text"></span>
+          <span class="sidebar-label">Instrukcja</span>
+        </a>
+      </li>
+      <li>
+        <a href="o-aplikacji.html">
+          <span class="sidebar-icon" data-lucide="info"></span>
+          <span class="sidebar-label">O aplikacji</span>
+        </a>
+      </li>
+      <li>
+        <a href="kontakt.html">
+          <span class="sidebar-icon" data-lucide="mail"></span>
+          <span class="sidebar-label">Kontakt</span>
+        </a>
+      </li>
+  </ul>
+</nav>
+    </aside>
+
+    <div class="main-content">
+      <div class="container">
+        <section id="moduleLauncher" class="diab-module-entry">
+          <div class="diab-module-entry__grid">
+            <button type="button" id="moduleLauncherBtn" class="diab-module-entry__button" aria-controls="moduleContent" aria-expanded="false" aria-label="Nauka liczenia przelicznika doposiłkowego">
+              <span class="diab-module-entry__title">Nauka liczenia przelicznika doposiłkowego</span>
+            </button>
+            <button type="button" id="calculatorLauncherBtn" class="diab-module-entry__button" aria-controls="calculatorContent" aria-expanded="false" aria-label="Kalkulator przelicznika doposiłkowego">
+              <span class="diab-module-entry__title">Kalkulator przelicznika doposiłkowego</span>
+            </button>
+          </div>
+        </section>
+
+        <div id="moduleContent" class="diab-page" hidden>
+          <section class="card diab-hero">
+            <div>
+              <div class="diab-hero-topbar">
+                <button type="button" id="moduleBackBtn" class="diab-back-btn"><span class="diab-back-btn__arrow" aria-hidden="true">←</span><span>Wstecz</span></button>
+                <span class="diab-eyebrow diab-eyebrow--module"><span data-lucide="syringe"></span> Moduł edukacyjny dla rodziców i dzieci</span>
+              </div>
+              <h2 id="moduleMainHeading" class="diab-title-center" style="margin-top:0;">Nauka liczenia przelicznika doposiłkowego</h2>
+              <p class="diab-subtle diab-title-center">Przelicznik doposiłkowy mówi, ile gramów węglowodanów „obsługuje” 1 jednostka insuliny szybkodziałającej, tak aby glikemia przed posiłkiem i 2–3 godziny po nim była na podobnym poziomie. Dla każdego posiłku liczymy osobny przelicznik.</p>
+<div class="diab-note-box diab-note-box--accent" style="margin-top:0.9rem;">
+                <h3 class="diab-note-title">Najważniejsze: liczysz z wczoraj, stosujesz dziś</h3>
+                <p class="diab-footer-note">Przelicznik doposiłkowy wyliczasz na podstawie tego, co wydarzyło się z glikemią <strong>dnia poprzedniego</strong>. Potem ten wynik wykorzystujesz do <strong>takiego samego posiłku bieżącego dnia</strong> — np. śniadanie z wczoraj służy do policzenia przelicznika na śniadanie dzisiejsze, a nie na obiad czy kolację.</p>
+                <div class="diab-day-flow">
+                  <div class="diab-day-step">
+                    <span class="diab-day-step__num">1</span>
+                    <div>
+                      <strong>Wczoraj</strong>
+                      <p>Patrzysz, jaka była glikemia przed posiłkiem, ile było węglowodanów, ile podano insuliny i jaka była glikemia 2–3 godziny później.</p>
+                    </div>
+                  </div>
+                  <div class="diab-day-step">
+                    <span class="diab-day-step__num">2</span>
+                    <div>
+                      <strong>Obliczenie</strong>
+                      <p>Na podstawie tej jednej sytuacji liczysz, ile gramów węglowodanów „obsługiwała” 1 jednostka insuliny.</p>
+                    </div>
+                  </div>
+                  <div class="diab-day-step">
+                    <span class="diab-day-step__num">3</span>
+                    <div>
+                      <strong>Dziś</strong>
+                      <p>Wyliczonego przelicznika używasz do tego samego typu posiłku bieżącego dnia.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+</div>
+          </section>
+
+          <div class="diab-grid">
+            <section class="card diab-card diab-accordion" id="howToCard">
+              <button type="button" id="howToToggleBtn" class="diab-accordion-btn" aria-expanded="false" aria-controls="howToContent">
+                <span class="diab-accordion-label">Jak liczyć krok po kroku? - kliknij i zobacz instrukcję</span>
+                <span class="diab-accordion-icon" aria-hidden="true">▾</span>
+              </button>
+
+
+              <div class="diab-video-cta">
+                <button
+                  type="button"
+                  id="instructionVideoBtn"
+                  class="diab-video-btn"
+                  aria-controls="instructionVideoModal"
+                  aria-expanded="false"
+                  data-video-src="/videos/przelicznik_doposilkowy.mp4"
+                >
+                  Obejrzyj instrukcję wideo
+                </button>
+              </div>
+
+              <div id="howToContent" class="diab-accordion-content" hidden>
+              <p class="diab-subtle">Najprościej myśl o tym tak: patrzysz, co wydarzyło się po konkretnym posiłku <strong>wczoraj</strong>, oceniasz czy insuliny było w sam raz, za mało czy za dużo, a potem z tego wyciągasz liczbę do użycia <strong>dzisiaj</strong>.</p>
+              <ol class="diab-steps">
+                <li><strong>Krok 1. Weź dane z jednego konkretnego posiłku z dnia poprzedniego.</strong><br>Potrzebujesz 5 liczb: <strong>dobowej dawki insuliny (DDI, czyli sumy insuliny z całej doby)</strong> z poprzedniego dnia, glikemii przed tym posiłkiem, ilości węglowodanów w posiłku, dawki insuliny podanej przed posiłkiem i glikemii 2–3 godziny po posiłku.</li>
+                <li><strong>Krok 2. Policz insulinowrażliwość ze wzoru 1800/DDI.</strong><br>To mówi, o ile mniej więcej <strong>1 jednostka insuliny</strong> obniża glikemię. Przykład: jeśli DDI = 30 j, to 1800 ÷ 30 = 60, czyli 1 j obniża glikemię o około 60 mg/dl.</li>
+                <li><strong>Krok 3. Sprawdź, co stało się z glikemią po tym posiłku.</strong><br>Porównujesz glikemię przed posiłkiem z glikemią 2–3 godziny po posiłku. To jest najważniejsza informacja: pokazuje, czy podanej insuliny było w sam raz, za mało, czy za dużo.</li>
+                <li><strong>Krok 4. Jeśli różnica jest mała (zwykle do około 20–30 mg/dl), uznajesz, że dawka była dobra.</strong><br>Wtedy do wzoru bierzesz dokładnie tyle insuliny, ile zostało podane przed posiłkiem.</li>
+                <li><strong>Krok 5. Jeśli glikemia po posiłku wyraźnie wzrosła, to znaczy, że insuliny zabrakło.</strong><br>Musisz policzyć, ile jednostek brakowało. Robisz to dzieląc wzrost glikemii przez insulinowrażliwość. Tę brakującą ilość <strong>dodajesz</strong> do dawki podanej przed posiłkiem.</li>
+                <li><strong>Krok 6. Jeśli glikemia po posiłku wyraźnie spadła, to znaczy, że część insuliny nie była potrzebna na jedzenie.</strong><br>Znów dzielisz różnicę glikemii przez insulinowrażliwość, ale tym razem tę ilość <strong>odejmujesz</strong> od dawki podanej przed posiłkiem.</li>
+                <li><strong>Krok 7. Ustal insulinę, która naprawdę „poszła na posiłek”.</strong><br>Do wzoru nie zawsze wpisujesz całą dawkę z pena lub pompy. Wpisujesz tylko tę część, która rzeczywiście była potrzebna do zjedzonych węglowodanów.</li>
+                <li><strong>Krok 8. Dopiero teraz liczysz przelicznik.</strong><br><strong>Przelicznik = gramy węglowodanów ÷ insulina potrzebna na posiłek.</strong> Jeśli wyjdzie np. 40 g ÷ 5 j = 8 g/j, to znaczy, że 1 j insuliny „obsługuje” około 8 g węglowodanów.</li>
+                <li><strong>Krok 9. Ten wynik przenosisz na bieżący dzień.</strong><br>Jeśli policzyłaś/policzyłeś przelicznik do śniadania na podstawie śniadania z wczoraj, to tego wyniku używasz do <strong>śniadania dzisiejszego</strong>. Nie przenosisz automatycznie przelicznika śniadaniowego na obiad czy kolację.</li>
+              </ol>
+
+              <div class="diab-explain-strip"><strong>Najczęstszy błąd:</strong> do wzoru nie zawsze wpisujesz całą podaną insulinę. Najpierw trzeba ustalić, ile insuliny naprawdę było potrzebne na jedzenie. Jeśli część dawki była korektą albo jeśli insuliny zabrakło, trzeba to najpierw poprawić.</div>
+
+              <div class="diab-cases">
+                <div class="diab-case diab-case--ok">
+                  <strong>Stabilna glikemia</strong>
+                  Jeśli różnica między glikemią przed i po posiłku jest mała, do wzoru bierzesz dokładnie taką dawkę, jaka została podana.
+                  <small>Przykład myślenia: przed posiłkiem 105 mg/dl, po posiłku 120 mg/dl. Różnica to tylko +15 mg/dl, czyli dawka wygląda na adekwatną.</small>
+                </div>
+                <div class="diab-case diab-case--warn">
+                  <strong>Za mało insuliny</strong>
+                  Gdy glikemia po posiłku rośnie zbyt mocno, do dawki podanej dodajesz brakującą liczbę jednostek wynikającą z insulinowrażliwości.
+                  <small>Przykład myślenia: przed 100 mg/dl, po 180 mg/dl. Cukier wzrósł za bardzo, więc część węglowodanów nie została „pokryta” insuliną.</small>
+                </div>
+                <div class="diab-case diab-case--danger">
+                  <strong>Za dużo insuliny / część dawki poszła na korektę</strong>
+                  Gdy glikemia po posiłku spada zbyt mocno, od dawki podanej odejmujesz nadmiar insuliny i dopiero tę wartość podstawiasz do wzoru.
+                  <small>Przykład myślenia: przed 190 mg/dl, po 90 mg/dl. Część podanej dawki nie była potrzebna na samo jedzenie, tylko obniżyła glikemię.</small>
+                </div>
+              </div>
+            
+              </div>
+            </section>
+
+            <section id="taskSetup" class="card diab-card">
+              <div id="setupProLabel" class="pro-summary-label">PRO</div>
+              <h2 id="taskSetupTitle" class="diab-title-center">Konfiguracja zadania</h2>
+<div id="taskModeToggleContainer" class="toggle-wrap diab-pro-toggle">
+                <span class="label-left">Tryb standardowy</span>
+                <label class="switch">
+                  <input type="checkbox" id="taskModeToggle">
+                  <span class="slider"></span>
+                </label>
+                <span class="label-right pro-label">Tryb profesjonalny<sup class="pro-superscript">PRO</sup></span>
+              </div>
+
+              <form id="doctorForm" class="diab-form" onsubmit="return false;" novalidate>
+                <label hidden>
+                  Numer prawa wykonywania zawodu (PWZ)
+                  <input type="text" id="pwz" inputmode="numeric" maxlength="7" placeholder="7 cyfr" autocomplete="off">
+                  <span class="diab-help">Dla spójności z resztą aplikacji przyjmujemy 7-cyfrowy numer PWZ.</span>
+                </label>
+
+                <div class="diab-form-grid">
+                  <label>
+                    Rodzaj posiłku
+                    <select id="mealType">
+                      <option value="">– wybierz –</option>
+                      <option value="śniadanie">Śniadanie</option>
+                      <option value="drugie śniadanie">Drugie śniadanie</option>
+                      <option value="obiad">Obiad</option>
+                      <option value="podwieczorek">Podwieczorek</option>
+                      <option value="kolacja">Kolacja</option>
+                      <option value="przekąska">Przekąska</option>
+                    </select>
+                  </label>
+
+                  <label>
+                    Próg „stabilnej” różnicy glikemii
+                    <select id="stabilityThreshold">
+                      <option value="20">±20 mg/dl</option>
+                      <option value="30" selected>±30 mg/dl</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div class="diab-form-grid">
+                  <label>
+                    DDI z poprzedniego dnia [j.]
+                    <input type="number" id="ddi" min="1" step="0.1" inputmode="decimal">
+                    <span class="diab-help">DDI = suma wszystkich dawek insuliny z dnia poprzedniego, łącznie z bazą.</span>
+                  </label>
+
+                  <label>
+                    Węglowodany w posiłku [g]
+                    <input type="number" id="carbs" min="1" step="0.1" inputmode="decimal">
+                  </label>
+
+                  <label>
+                    Dawka insuliny podana przed posiłkiem [j.]
+                    <input type="number" id="insulinDose" min="0.1" step="0.1" inputmode="decimal">
+                  </label>
+
+                  <label>
+                    Glikemia przed posiłkiem [mg/dl]
+                    <input type="number" id="glucoseBefore" min="20" step="1" inputmode="numeric">
+                  </label>
+
+                  <label>
+                    Glikemia 2–3 h po posiłku [mg/dl]
+                    <input type="number" id="glucoseAfter" min="20" step="1" inputmode="numeric">
+                  </label>
+                </div>
+
+                <div id="proFields" class="diab-pro-panel" hidden>
+                  <p class="diab-pro-panel__title">Rozszerzenie<sup class="pro-superscript">PRO</sup></p>
+<div class="diab-form-grid">
+                    <label>
+                      Wysiłek
+                      <select id="proExercise">
+                        <option value="none" selected>Brak</option>
+                        <option value="planned25">Planowany lekki wysiłek (−25% insuliny do posiłku)</option>
+                        <option value="planned50">Planowany umiarkowany wysiłek (−50%)</option>
+                        <option value="planned75">Planowany długi / intensywny wysiłek (−75%)</option>
+                      </select>
+                      
+                    </label>
+
+                    <label>
+                      Infekcja
+                      <select id="proInfection">
+                        <option value="none" selected>Brak</option>
+                        <option value="fever25">Infekcja z gorączką – wariant +25%</option>
+                        <option value="fever50">Infekcja z gorączką – wariant +50%</option>
+                      </select>
+                      
+                    </label>
+
+                    <label>
+                      Stres
+                      <select id="proStress">
+                        <option value="none" selected>Brak</option>
+                        <option value="present">Obecny</option>
+                      </select>
+                      
+                    </label>
+
+                    <label>
+                      Bardzo duża zawartość białka i tłuszczu
+                      <select id="proFatProtein">
+                        <option value="none" selected>Nie</option>
+                        <option value="high">Tak – &gt;200 kcal z białka i tłuszczu</option>
+                      </select>
+                      
+                    </label>
+                  </div>
+
+                  <div id="proConflictWarning" class="diab-pro-conflict" hidden>
+                    <p style="margin:0;">
+                      <strong>Uwaga:</strong> Zaznaczyłeś(aś) jednocześnie <strong>planowany wysiłek</strong> i <strong>infekcję z gorączką</strong>. W praktyce, przy infekcji (zwłaszcza z gorączką) zwykle rezygnuje się z planowanego wysiłku. Jeśli mimo to chcesz zostawić oba modyfikatory w tym zadaniu edukacyjnym, potwierdź poniżej.
+                    </p>
+                    <div class="diab-pro-conflict__actions">
+                      <button type="button" id="proConflictConfirmBtn">Rozumiem — zostaw oba</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="display:flex;justify-content:center;flex-wrap:wrap;gap:0.7rem;">
+                  <button type="button" id="generateTaskBtn">Generuj zadanie automatycznie</button>
+                  <button type="button" id="prepareTaskBtn">Przygotuj zadanie</button>
+                </div>
+
+                <div id="setupStatus" class="diab-status" aria-live="polite" hidden></div>
+              </form>
+            </section>
+          </div>
+
+          <section id="taskArea" class="card diab-task" hidden>
+            <div id="taskProLabel" class="pro-summary-label">PRO</div>
+            <div class="diab-task__header">
+              <div>
+                <h2 style="margin-top:0;">Zadanie dla pacjenta</h2>
+                <p id="taskTitleMeta" class="diab-task__meta" hidden></p>
+              </div>            </div>
+
+            <div id="taskLead" class="diab-note"></div>
+                        <div id="taskProInfo" class="diab-note diab-note--pro" hidden></div>
+            <div id="taskMetrics" class="diab-metrics"></div>
+
+            <div class="diab-answer-wrap">
+              <div class="diab-answer-fields">
+                <label class="diab-answer-label">
+  <span class="diab-answer-title">Twoja odpowiedź – przelicznik doposiłkowy [g/j]</span>
+  <input type="text" id="patientAnswer" inputmode="decimal" placeholder="np. 7,5 lub 8" autocomplete="off">
+</label>
+
+                <div id="proQuestionsWrap" class="diab-pro-questions" hidden>
+                  <div id="stressQuestionWrap" class="diab-pro-question" hidden>
+                    <p id="stressQuestionTitle" class="diab-pro-question__title"></p>
+                    <div id="stressQuestionOptions" class="diab-pro-options" role="radiogroup" aria-labelledby="stressQuestionTitle"></div>
+                    <span id="stressQuestionHelp" class="diab-help"></span>
+                  </div>
+
+                  <div id="fatProteinQuestionWrap" class="diab-pro-question" hidden>
+                    <p id="fatProteinQuestionTitle" class="diab-pro-question__title"></p>
+                    <div id="fatProteinQuestionOptions" class="diab-pro-options" role="radiogroup" aria-labelledby="fatProteinQuestionTitle"></div>
+                    <span id="fatProteinQuestionHelp" class="diab-help"></span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="diab-answer-actions">
+                <button type="button" id="submitAnswerBtn">Zatwierdź odpowiedź</button>
+                
+                <button type="button" id="showFilmBtn" aria-controls="filmModal" aria-expanded="false" hidden>Odtwórz film z odpowiedzią</button>
+                <button type="button" id="showSolutionBtn" aria-controls="solutionCard" aria-expanded="false" hidden>Pokaż rozwiązanie krok po kroku</button>
+                <button type="button" id="newTaskBtn" hidden>Nowe zadanie</button>
+              </div>
+            </div>
+
+            <div id="answerFeedback" class="diab-feedback" aria-live="polite" hidden></div>
+            <div id="solutionCard" class="diab-solution" hidden></div>
+          </section>
+          <div class="diab-section-credit">
+            <p>Materiały niezbędne do powstania tego modułu opracowała dr Ida Kobryńska-Musielak</p>
+          </div>
+
+        </div>
+
+
+        <div id="calculatorContent" class="diab-page" hidden>
+          <section class="card diab-hero">
+            <div>
+              <div class="diab-hero-topbar">
+                <button type="button" id="calculatorBackBtn" class="diab-back-btn"><span class="diab-back-btn__arrow" aria-hidden="true">←</span><span>Wstecz</span></button>
+                <span class="diab-eyebrow diab-eyebrow--module"><span data-lucide="calculator"></span> Moduł praktyczny</span>
+              </div>
+              <h2 id="calculatorMainHeading" class="diab-title-center" style="margin-top:0;">Kalkulator przelicznika doposiłkowego</h2>
+              <p class="diab-subtle diab-title-center">Wpisz dane z dnia poprzedniego, aby obliczyć przelicznik dla konkretnego posiłku, zapisać go w tabeli dnia i zachować wynik w pamięci przeglądarki.</p>
+              <div class="diab-calc-assumptions">
+                <button type="button" id="calculatorAssumptionsToggleBtn" class="diab-accordion-btn" aria-expanded="false" aria-controls="calculatorAssumptionsContent">
+                  <span class="diab-accordion-label">Założenia kalkulatora</span>
+                  <span class="diab-accordion-icon" aria-hidden="true">▾</span>
+                </button>
+                <div id="calculatorAssumptionsContent" class="diab-accordion-content" hidden>
+                  <div class="diab-note-box diab-note-box--accent" style="margin-top:0;">
+                    <h3 class="diab-note-title">Najważniejsze: liczysz z wczoraj, stosujesz dziś</h3>
+                    <p class="diab-footer-note">Kalkulator zapisuje osobny przelicznik dla każdego rodzaju posiłku. Ponowne obliczenie tego samego posiłku aktualizuje istniejący wpis zamiast tworzyć duplikat.</p>
+                    <div class="diab-day-flow">
+                      <div class="diab-day-step">
+                        <span class="diab-day-step__num">1</span>
+                        <div>
+                          <strong>Wczoraj</strong>
+                          <p>Wprowadzasz dane z wybranego posiłku z dnia poprzedniego: DDI, węglowodany, dawkę insuliny oraz glikemie przed i po posiłku.</p>
+                        </div>
+                      </div>
+                      <div class="diab-day-step">
+                        <span class="diab-day-step__num">2</span>
+                        <div>
+                          <strong>Obliczenie</strong>
+                          <p>Kalkulator wylicza przelicznik doposiłkowy dla wybranego rodzaju posiłku i zapisuje wynik w tabeli bieżącego dnia.</p>
+                        </div>
+                      </div>
+                      <div class="diab-day-step">
+                        <span class="diab-day-step__num">3</span>
+                        <div>
+                          <strong>Dziś</strong>
+                          <p>Zapisany przelicznik stosujesz do tego samego rodzaju posiłku bieżącego dnia, a pełny zestaw wyników możesz wyeksportować do PDF.</p>
+                        </div>
+                      </div>
+                    </div>
+                    <p class="diab-footer-note" style="margin-top:0.85rem;"><strong>Założenie kalkulatora:</strong> za „stabilną” różnicę glikemii przyjmujemy <strong>±30 mg/dl</strong>, zgodnie z domyślnym ustawieniem modułu edukacyjnego.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <div class="diab-calc-grid">
+            <section class="card diab-card">
+              <h2 class="diab-title-center">Oblicz i zapisz wynik</h2>
+              <form id="ratioCalculatorForm" class="diab-form" onsubmit="return false;" novalidate>
+                <div class="diab-form-grid">
+                  <label>
+                    Obliczenia dla dnia
+                    <input type="date" id="calcDate">
+                    <span class="diab-help">Domyślnie podstawiany jest dzień poprzedni. Tabela i eksport PDF są prowadzone osobno dla każdego dnia.</span>
+                  </label>
+
+                  <label>
+                    Rodzaj posiłku
+                    <select id="calcMealType">
+                      <option value="">– wybierz –</option>
+                      <option value="śniadanie">Śniadanie</option>
+                      <option value="drugie śniadanie">Drugie śniadanie</option>
+                      <option value="obiad">Obiad</option>
+                      <option value="podwieczorek">Podwieczorek</option>
+                      <option value="kolacja">Kolacja</option>
+                      <option value="przekąska">Przekąska</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div class="diab-form-grid">
+                  <label>
+                    DDI z poprzedniego dnia [j.]
+                    <input type="number" id="calcDdi" min="1" step="0.1" inputmode="decimal">
+                    <span class="diab-help">DDI = suma wszystkich dawek insuliny z dnia poprzedniego, łącznie z bazą.</span>
+                  </label>
+
+                  <label>
+                    Węglowodany w posiłku [g]
+                    <input type="number" id="calcCarbs" min="1" step="0.1" inputmode="decimal">
+                  </label>
+
+                  <label>
+                    Dawka insuliny podana przed posiłkiem [j.]
+                    <input type="number" id="calcInsulinDose" min="0.1" step="0.1" inputmode="decimal">
+                  </label>
+
+                  <label>
+                    Glikemia przed posiłkiem [mg/dl]
+                    <input type="number" id="calcGlucoseBefore" min="20" step="1" inputmode="numeric">
+                  </label>
+
+                  <label>
+                    Glikemia 2–3 h po posiłku [mg/dl]
+                    <input type="number" id="calcGlucoseAfter" min="20" step="1" inputmode="numeric">
+                  </label>
+                </div>
+
+                <div class="diab-calc-actions">
+                  <button type="submit" id="calcSaveBtn">Oblicz i zapisz</button>
+                  <button type="button" id="calcClearDayBtn">Wyczyść cały dzień</button>
+                </div>
+
+                <div id="calcStatus" class="diab-status" aria-live="polite" hidden></div>
+              </form>
+            </section>
+
+            <section id="calcResultsCard" class="card diab-card">
+              <div class="diab-calc-header">
+                <div>
+                  <h2 style="margin-top:0;">Zapisane przeliczniki</h2>
+                  <p id="calcTableMeta" class="diab-calc-meta">Obliczenia dla dnia: —</p>
+                </div>
+                <div id="calcDayBadge" class="diab-calc-day-badge">—</div>
+              </div>
+              <p class="diab-calc-note">Tabela jest zapisywana w pamięci przeglądarki. Ten sam posiłek może wystąpić tylko raz — ponowne obliczenie aktualizuje istniejący wiersz. Nad tabelą widzisz insulinowrażliwość dla danego dnia, a pod każdym posiłkiem ocenę, czy dawka insuliny była dobrze dobrana.</p>
+              <div id="calcSensitivitySummary" class="diab-calc-sensitivity" aria-live="polite" hidden></div>
+              <div id="calcEmptyState" class="diab-calc-empty">Brak zapisanych obliczeń dla wybranego dnia.</div>
+              <div id="calcTableWrap" class="diab-calc-table-wrap" hidden>
+                <table id="calcResultsTable" class="diab-calc-table">
+                  <caption id="calcResultsCaption">Przeliczniki doposiłkowe — obliczenia dla dnia</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Posiłek</th>
+                      <th scope="col">DDI [j.]</th>
+                      <th scope="col">Węglowodany [g]</th>
+                      <th scope="col">Insulina [j.]</th>
+                      <th scope="col">Glikemia przed [mg/dl]</th>
+                      <th scope="col">Glikemia po 2–3 h [mg/dl]</th>
+                      <th scope="col" class="diab-calc-table__highlight">Przelicznik praktyczny [g/j]</th>
+                      <th scope="col">Przelicznik dokładny [g/j]</th>
+                    </tr>
+                  </thead>
+                  <tbody id="calcResultsBody"></tbody>
+                </table>
+              </div>
+              <div class="diab-calc-actions" style="margin-top:1rem;">
+                <button type="button" id="calcExportPdfBtn" disabled>Eksportuj PDF</button>
+              </div>
+            </section>
+          </div>
+          <div class="diab-section-credit">
+            <p>Materiały niezbędne do powstania tego modułu opracowała dr Ida Kobryńska-Musielak</p>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <aside class="decor-sidebar"></aside>
+  </div>
+  <div id="instructionVideoModal" class="diab-video-modal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="instructionVideoHeading">
+    <div class="diab-video-modal__backdrop" data-instruction-video-close></div>
+
+    <div class="diab-video-modal__dialog" role="document">
+      <div class="diab-video-modal__header">
+        <div>
+          <h3 id="instructionVideoHeading" class="diab-video-modal__heading">Instrukcja wideo: liczenie przelicznika doposiłkowego</h3>
+          <p class="diab-video-modal__desc">Film otwiera się w osobnym oknie, aby wygodniej oglądać go na telefonie i komputerze.</p>
+        </div>
+        <button type="button" id="instructionVideoCloseBtn" class="diab-video-modal__close" aria-label="Zamknij instrukcję wideo">
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
+
+      <div class="diab-video-modal__player-wrap">
+        <video id="instructionVideoPlayer" class="diab-video-modal__player" controls playsinline preload="none" aria-label="Film instruktażowy: liczenie przelicznika doposiłkowego">
+          Twoja przeglądarka nie obsługuje odtwarzania wideo.
+        </video>
+      </div>
+
+      <p class="diab-video-modal__note">Jeśli odtwarzanie nie rozpocznie się automatycznie, użyj przycisku play w odtwarzaczu.</p>
+    </div>
+  </div>
+
+  <!-- Film: interaktywny pokaz obliczeń dla aktualnego zadania -->
+  <div id="filmModal" class="diab-film-modal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-label="Film: liczenie przelicznika doposiłkowego">
+    <div class="diab-film-backdrop" data-film-close></div>
+
+    <div class="diab-film-panel" role="document">
+      <button type="button" id="filmCloseBtn" class="diab-film-close" aria-label="Zamknij film">
+        <span aria-hidden="true">×</span>
+      </button>
+
+      <div class="diab-film-frame" aria-live="off">
+        <div class="diab-film-stage" id="filmOps" aria-label="Działania"></div>
+        <div class="diab-film-sub" id="filmSub" aria-label="Komentarz"></div>
+
+        <div class="diab-film-controls" aria-label="Sterowanie">
+          <button type="button" id="filmPrevBtn" class="diab-film-ctrl" aria-label="Poprzedni krok">
+            <i data-lucide="chevron-left" aria-hidden="true"></i>
+          </button>
+          <button type="button" id="filmPlayBtn" class="diab-film-ctrl" aria-label="Odtwórz / pauza">
+            <span class="diab-film-icon diab-film-icon--play" id="filmPlayIcon"><i data-lucide="play" aria-hidden="true"></i></span><span class="diab-film-icon diab-film-icon--pause" id="filmPauseIcon" hidden><i data-lucide="pause" aria-hidden="true"></i></span>
+          </button>
+          <button type="button" id="filmStopBtn" class="diab-film-ctrl" aria-label="Stop (reset kroku)">
+            <i data-lucide="square" aria-hidden="true"></i>
+          </button>
+          <button type="button" id="filmNextBtn" class="diab-film-ctrl" aria-label="Następny krok">
+            <i data-lucide="chevron-right" aria-hidden="true"></i>
+          </button>
+        </div>
+
+        <div class="diab-film-stepmeta" id="filmStepMeta" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
+
+
+
+  <div id="rewardLayer" class="diab-reward-layer" hidden aria-hidden="true"></div>
+
+  <!-- PDF export fix v3 -->
+  <script src="cukrzyca.js?v=6"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons();
+      }
+      document.body.classList.remove('js-loading');
+    });
+  </script>
+</body>
+</html>
