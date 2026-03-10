@@ -904,6 +904,11 @@ body.has-mobile-bottom-dock {
 }
 
 body.has-mobile-bottom-dock #scrollTopBtn {
+  bottom: calc(1rem + var(--mobile-dock-extra-offset)) !important;
+  transition: bottom 220ms ease, background 0.2s ease, transform 220ms ease, opacity 220ms ease;
+}
+
+body.has-mobile-bottom-dock.has-mobile-bottom-dock-visible #scrollTopBtn {
   bottom: calc(var(--mobile-dock-height) + env(safe-area-inset-bottom, 0px) + var(--mobile-dock-extra-offset) + 1rem) !important;
 }
 
