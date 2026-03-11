@@ -44,25 +44,145 @@
 
   function getArrowUpSvgMarkup() {
     return `
-      <svg viewBox="0 0 24 24" width="48" height="48" aria-hidden="true" focusable="false">
-        <path d="M12 19V5" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"></path>
-        <path d="M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"></path>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.75"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="lucide lucide-arrow-up"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <path d="M12 19V5"></path>
+        <path d="m5 12 7-7 7 7"></path>
       </svg>
     `;
   }
 
-  function ensureScrollTopFallback() {
-    qsa('#scrollTopBtn').forEach((btn) => {
-      if (btn.querySelector('svg')) return;
+  function ensureGlobalScrollTopHandler() {
+    if (typeof window.scrollToTop === 'function') return window.scrollToTop;
 
-      const iconHost = btn.querySelector('[data-lucide], i, span');
+    const fallbackScrollToTop = () => {
+      const behavior = prefersReducedMotion() ? 'auto' : 'smooth';
+
+      const tryScrollTarget = (target) => {
+        if (!target) return;
+
+        try {
+          if (target === window) {
+            try {
+              window.scrollTo({ top: 0, left: 0, behavior });
+            } catch (_) {
+              window.scrollTo(0, 0);
+            }
+            return;
+          }
+
+          if (typeof target.scrollTo === 'function') {
+            try {
+              target.scrollTo({ top: 0, left: 0, behavior });
+            } catch (_) {
+              target.scrollTo(0, 0);
+            }
+            return;
+          }
+
+          if (typeof target.scrollTop === 'number') {
+            target.scrollTop = 0;
+          }
+        } catch (_) {
+          if (target && typeof target.scrollTop === 'number') {
+            target.scrollTop = 0;
+          }
+        }
+      };
+
+      const seen = new Set();
+      const targets = [];
+      const addTarget = (target) => {
+        if (!target) return;
+        if (seen.has(target)) return;
+        seen.add(target);
+        targets.push(target);
+      };
+
+      const preferredSnapshot = safeRun('getPreferredDockScrollSnapshot(scrollTop)', getPreferredDockScrollSnapshot);
+      addTarget(preferredSnapshot && preferredSnapshot.target ? preferredSnapshot.target : null);
+      safeRun('collectDockScrollCandidates(scrollTop)', () => {
+        collectDockScrollCandidates().forEach(addTarget);
+      });
+      addTarget(getRootScrollElement());
+      addTarget(document.documentElement);
+      addTarget(document.body);
+      addTarget(window);
+
+      targets.forEach(tryScrollTarget);
+
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+    };
+
+    window.scrollToTop = fallbackScrollToTop;
+    return fallbackScrollToTop;
+  }
+
+  function createScrollTopButton() {
+    if (!document.body) return null;
+
+    const btn = document.createElement('button');
+    btn.id = 'scrollTopBtn';
+    btn.type = 'button';
+    btn.setAttribute('aria-label', 'Powrót na górę strony');
+    btn.innerHTML = '<i data-lucide="arrow-up"></i>';
+    btn.dataset.ios26Injected = 'true';
+    document.body.appendChild(btn);
+    return btn;
+  }
+
+  function ensureScrollTopButton() {
+    const btn = qs('#scrollTopBtn') || createScrollTopButton();
+    if (!btn) return null;
+
+    btn.type = 'button';
+    if (!btn.getAttribute('aria-label')) {
+      btn.setAttribute('aria-label', 'Powrót na górę strony');
+    }
+
+    if (btn.dataset.ios26Injected === 'true' && btn.dataset.scrollTopBound !== 'true') {
+      btn.dataset.scrollTopBound = 'true';
+      btn.addEventListener('click', (event) => {
+        event.preventDefault();
+        const handler = ensureGlobalScrollTopHandler();
+        if (typeof handler === 'function') {
+          handler();
+        }
+      });
+    }
+
+    return btn;
+  }
+
+  function ensureScrollTopFallback() {
+    const btn = ensureScrollTopButton();
+    if (!btn) return;
+
+    qsa('#scrollTopBtn').forEach((currentBtn) => {
+      if (currentBtn.querySelector('svg')) return;
+
+      const iconHost = currentBtn.querySelector('[data-lucide], i, span');
       if (iconHost && iconHost.querySelector('svg')) return;
 
-      btn.innerHTML = getArrowUpSvgMarkup();
+      currentBtn.innerHTML = getArrowUpSvgMarkup();
     });
   }
 
   function refreshIconsAndFallbacks() {
+    ensureScrollTopButton();
     refreshLucideIcons();
     ensureScrollTopFallback();
   }
@@ -137,6 +257,7 @@
     safeRun('glassify', glassify);
     safeRun('setupPressFeedback', setupPressFeedback);
     safeRun('observeAppear', observeAppear);
+    safeRun('ensureGlobalScrollTopHandler', ensureGlobalScrollTopHandler);
     safeRun('setupMobileBottomDock', setupMobileBottomDock);
     safeRun('refreshIconsAndFallbacks', refreshIconsAndFallbacks);
 
