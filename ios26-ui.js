@@ -131,6 +131,8 @@
       document.body.classList.add('liquid-ios26');
     }
 
+    safeRun('applyMobileBrowserUiOptimization', applyMobileBrowserUiOptimization);
+    safeRun('setupTransientViewportResizeGuard', setupTransientViewportResizeGuard);
     safeRun('applyThemeCustom', applyThemeCustom);
     safeRun('glassify', glassify);
     safeRun('setupPressFeedback', setupPressFeedback);
@@ -138,19 +140,54 @@
     safeRun('setupMobileBottomDock', setupMobileBottomDock);
     safeRun('refreshIconsAndFallbacks', refreshIconsAndFallbacks);
 
+    let browserUiRefreshTimer = 0;
+    let lastBrowserUiViewportWidth = getViewportWidth();
     const delayedRefresh = () => safeRun('refreshIconsAndFallbacks', refreshIconsAndFallbacks);
     const delayedDockRetry = () => safeRun('setupMobileBottomDock(retry)', setupMobileBottomDock);
+    const delayedBrowserUiRefresh = () => safeRun('applyMobileBrowserUiOptimization', applyMobileBrowserUiOptimization);
+    const delayedBrowserUiPrime = () => safeRun('primeMobileBrowserUiChrome', primeMobileBrowserUiChrome);
     window.setTimeout(delayedRefresh, 150);
     window.setTimeout(delayedRefresh, 900);
     window.setTimeout(delayedDockRetry, 250);
+    window.setTimeout(delayedBrowserUiRefresh, 0);
+    window.setTimeout(delayedBrowserUiPrime, 120);
+    window.setTimeout(delayedBrowserUiRefresh, 360);
+    window.setTimeout(delayedBrowserUiPrime, 460);
     on(window, 'load', () => {
       delayedDockRetry();
       delayedRefresh();
+      delayedBrowserUiRefresh();
+      window.setTimeout(delayedBrowserUiPrime, 80);
     }, { passive: true, once: true });
     on(window, 'pageshow', () => {
       delayedDockRetry();
       delayedRefresh();
+      delayedBrowserUiRefresh();
+      window.setTimeout(delayedBrowserUiPrime, 80);
     }, { passive: true });
+    on(window, 'orientationchange', () => {
+      window.setTimeout(delayedBrowserUiRefresh, 60);
+      window.setTimeout(delayedBrowserUiPrime, 180);
+    }, { passive: true });
+    if (window.visualViewport) {
+      on(window.visualViewport, 'resize', () => {
+        const nextViewportWidth = getViewportWidth();
+        const widthDelta = Math.abs(nextViewportWidth - lastBrowserUiViewportWidth);
+
+        if (widthDelta > 2 || !shouldOptimizeMobileBrowserUi()) {
+          lastBrowserUiViewportWidth = nextViewportWidth;
+          window.setTimeout(delayedBrowserUiRefresh, 0);
+          return;
+        }
+
+        window.clearTimeout(browserUiRefreshTimer);
+        browserUiRefreshTimer = window.setTimeout(() => {
+          lastBrowserUiViewportWidth = getViewportWidth();
+          safeRun('applyMobileBrowserUiOptimization(settled)', applyMobileBrowserUiOptimization);
+        }, 180);
+      }, { passive: true });
+    }
+    document.addEventListener('touchstart', delayedBrowserUiPrime, { passive: true, once: true });
   }
 
   if (document.readyState === 'loading') {
@@ -370,6 +407,11 @@
     }, 0);
   }
 
+  function getRemSizeInPx() {
+    const fontSize = parseFloat(window.getComputedStyle(document.documentElement).fontSize || '16');
+    return Number.isFinite(fontSize) && fontSize > 0 ? fontSize : 16;
+  }
+
   function isTouchAppleDevice() {
     try {
       const ua = navigator.userAgent || '';
@@ -380,8 +422,160 @@
     }
   }
 
+  function isStandaloneDisplayMode() {
+    try {
+      return !!(
+        window.matchMedia?.('(display-mode: standalone)').matches
+        || window.navigator.standalone === true
+      );
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function shouldOptimizeMobileBrowserUi() {
+    if (!document.documentElement || !document.body) return false;
+    if (!isTouchAppleDevice() || isStandaloneDisplayMode()) return false;
+
+    const coarsePointer = window.matchMedia?.('(pointer: coarse)').matches;
+    const viewportWidth = getViewportWidth();
+
+    return !!(coarsePointer || (viewportWidth > 0 && viewportWidth <= 1100));
+  }
+
+  function shouldGuardTransientViewportResize() {
+    if (!document.documentElement || !document.body) return false;
+    if (isStandaloneDisplayMode()) return false;
+
+    const coarsePointer = window.matchMedia?.('(pointer: coarse)').matches;
+    const viewportWidth = getViewportWidth();
+    return !!(coarsePointer || (viewportWidth > 0 && viewportWidth <= 1100));
+  }
+
+  function setupTransientViewportResizeGuard() {
+    if (window.__vildaTransientViewportResizeGuardInstalled) return;
+    window.__vildaTransientViewportResizeGuardInstalled = true;
+
+    let lastWidth = getViewportWidth();
+    let lastHeight = getViewportHeight();
+    let orientationCooldownUntil = 0;
+    let settleTimer = 0;
+
+    const syncBaseline = () => {
+      lastWidth = getViewportWidth();
+      lastHeight = getViewportHeight();
+    };
+
+    on(window, 'orientationchange', () => {
+      orientationCooldownUntil = Date.now() + 1200;
+      window.clearTimeout(settleTimer);
+      window.setTimeout(syncBaseline, 180);
+    }, { passive: true });
+
+    window.addEventListener('resize', (event) => {
+      const nextWidth = getViewportWidth();
+      const nextHeight = getViewportHeight();
+      const widthDelta = Math.abs(nextWidth - lastWidth);
+      const heightDelta = Math.abs(nextHeight - lastHeight);
+      const keyboardLikely = isEditableField(document.activeElement) || heightDelta > 220;
+      const transientBrowserUiResize = shouldGuardTransientViewportResize()
+        && Date.now() > orientationCooldownUntil
+        && widthDelta <= 2
+        && heightDelta >= 20
+        && heightDelta <= 180
+        && !keyboardLikely;
+
+      lastWidth = nextWidth;
+      lastHeight = nextHeight;
+
+      if (!transientBrowserUiResize) return;
+
+      if (event && typeof event.stopImmediatePropagation === 'function') {
+        event.stopImmediatePropagation();
+      }
+      if (event && typeof event.stopPropagation === 'function') {
+        event.stopPropagation();
+      }
+
+      window.clearTimeout(settleTimer);
+      settleTimer = window.setTimeout(() => {
+        safeRun('applyMobileBrowserUiOptimization(settled)', applyMobileBrowserUiOptimization);
+        if (typeof window.__vildaDockUpdate === 'function') {
+          window.__vildaDockUpdate('browser-ui-resize');
+        }
+      }, 120);
+    }, true);
+  }
+
+  function applyMobileBrowserUiOptimization() {
+    const enabled = shouldOptimizeMobileBrowserUi();
+    const root = document.documentElement;
+    const body = document.body;
+    if (!root || !body) return false;
+
+    root.classList.toggle('mobile-browser-ui-optimized', enabled);
+    body.classList.toggle('mobile-browser-ui-optimized', enabled);
+
+    if (!enabled) {
+      root.style.height = '';
+      body.style.height = '';
+      root.style.minHeight = '';
+      body.style.minHeight = '';
+      root.style.overscrollBehaviorY = '';
+      body.style.overscrollBehaviorY = '';
+      root.style.webkitOverflowScrolling = '';
+      body.style.webkitOverflowScrolling = '';
+      return false;
+    }
+
+    root.style.height = 'auto';
+    body.style.height = 'auto';
+    root.style.minHeight = '100%';
+    body.style.minHeight = '100%';
+    root.style.overscrollBehaviorY = 'auto';
+    body.style.overscrollBehaviorY = 'auto';
+    root.style.webkitOverflowScrolling = 'touch';
+    body.style.webkitOverflowScrolling = 'touch';
+
+    if (window.CSS?.supports?.('min-height: 100svh')) {
+      body.style.minHeight = '100svh';
+    }
+    if (window.CSS?.supports?.('min-height: 100dvh')) {
+      body.style.minHeight = '100dvh';
+    }
+
+    return true;
+  }
+
+  function primeMobileBrowserUiChrome() {
+    if (!shouldOptimizeMobileBrowserUi()) return false;
+    if (window.location.hash) return false;
+    if (document.activeElement && isEditableField(document.activeElement)) return false;
+
+    const snapshot = getWindowScrollSnapshot();
+    if ((snapshot.max || 0) < 64) return false;
+    if ((snapshot.top || 0) > 0.5) return false;
+
+    window.requestAnimationFrame(() => {
+      try {
+        window.scrollTo(0, Math.min(1, snapshot.max || 0));
+      } catch (e) {
+        /* noop */
+      }
+    });
+    return true;
+  }
+
   function getRootScrollElement() {
     return document.scrollingElement || document.documentElement || document.body || null;
+  }
+
+  function getViewportWidth() {
+    return Math.max(
+      window.visualViewport?.width || 0,
+      window.innerWidth || 0,
+      document.documentElement?.clientWidth || 0
+    );
   }
 
   function getViewportHeight() {
@@ -502,11 +696,7 @@
   }
 
   function shouldEnableMobileDock() {
-    const viewportWidth = Math.max(
-      window.visualViewport?.width || 0,
-      window.innerWidth || 0,
-      document.documentElement?.clientWidth || 0
-    );
+    const viewportWidth = getViewportWidth();
 
     if (window.matchMedia && window.matchMedia(MOBILE_DOCK_BREAKPOINT).matches) {
       return true;
@@ -575,15 +765,55 @@
     let activeScrollTarget = window;
     let lastScrollY = 0;
     let ticking = false;
+    let hasInitialDockState = false;
+    let lastViewportWidth = getViewportWidth();
+    let lastViewportHeight = getViewportHeight();
+    let resizeSettleTimer = 0;
     const detachScrollListeners = [];
 
-    function setDockVisible(visible) {
-      dock.classList.toggle('is-hidden', !visible);
+    function syncDockVisibilityClass() {
+      const isVisible = !dock.hidden
+        && !dock.classList.contains('is-hidden')
+        && !dock.classList.contains('is-keyboard-hidden');
+      document.body.classList.toggle('has-mobile-bottom-dock-visible', isVisible);
     }
 
-    function updateDockOffsets() {
-      const extraOffset = shouldEnableMobileDock() ? getVisibleBottomOverlayHeight() : 0;
-      document.documentElement.style.setProperty('--mobile-dock-extra-offset', `${Math.max(0, extraOffset)}px`);
+    function setDockVisible(visible) {
+      const shouldHide = !visible;
+      if (dock.classList.contains('is-hidden') === shouldHide) {
+        syncDockVisibilityClass();
+        updateDockMetrics();
+        return;
+      }
+      dock.classList.toggle('is-hidden', shouldHide);
+      syncDockVisibilityClass();
+      updateDockMetrics();
+    }
+
+    function updateDockMetrics() {
+      const enabled = shouldEnableMobileDock();
+      const extraOffset = enabled ? getVisibleBottomOverlayHeight() : 0;
+      const rootStyle = document.documentElement.style;
+      const baseScrollTopBottom = Math.round(getRemSizeInPx() + Math.max(0, extraOffset));
+      rootStyle.setProperty('--mobile-dock-extra-offset', `${Math.max(0, extraOffset)}px`);
+      rootStyle.setProperty('--scroll-top-btn-bottom', `${baseScrollTopBottom}px`);
+
+      const isVisible = enabled
+        && !dock.hidden
+        && !dock.classList.contains('is-hidden')
+        && !dock.classList.contains('is-keyboard-hidden');
+
+      if (!isVisible) {
+        rootStyle.setProperty('--mobile-dock-visible-lift', '0px');
+        return;
+      }
+
+      const viewportHeight = getViewportHeight();
+      const dockRect = dock.getBoundingClientRect();
+      const visibleLift = Math.max(0, Math.round(viewportHeight - dockRect.top));
+      const liftedScrollTopBottom = Math.max(baseScrollTopBottom, visibleLift + Math.round(getRemSizeInPx()));
+      rootStyle.setProperty('--mobile-dock-visible-lift', `${visibleLift}px`);
+      rootStyle.setProperty('--scroll-top-btn-bottom', `${liftedScrollTopBottom}px`);
     }
 
     function bindScrollTarget(target) {
@@ -616,7 +846,8 @@
       return snapshot;
     }
 
-    function syncDockMode() {
+    function syncDockMode(options = {}) {
+      const preserveVisibility = options.preserveVisibility !== false;
       refreshScrollBindings();
 
       const enabled = shouldEnableMobileDock();
@@ -625,16 +856,57 @@
 
       if (!enabled) {
         dock.classList.remove('is-hidden', 'is-keyboard-hidden');
+        document.body.classList.remove('has-mobile-bottom-dock-visible');
         document.documentElement.style.setProperty('--mobile-dock-extra-offset', '0px');
+        document.documentElement.style.setProperty('--mobile-dock-visible-lift', '0px');
+        document.documentElement.style.setProperty('--scroll-top-btn-bottom', `${Math.round(getRemSizeInPx())}px`);
         lastScrollY = getWindowScrollSnapshot().top;
         activeScrollTarget = window;
+        hasInitialDockState = false;
         return;
       }
 
       const snapshot = readDockScrollSnapshot();
       lastScrollY = snapshot.top;
-      setDockVisible(true);
-      updateDockOffsets();
+
+      if (!hasInitialDockState || !preserveVisibility) {
+        setDockVisible(true);
+      } else {
+        syncDockVisibilityClass();
+        updateDockMetrics();
+      }
+
+      hasInitialDockState = true;
+    }
+
+    function handleViewportResize(forceSync = false) {
+      const currentWidth = getViewportWidth();
+      const currentHeight = getViewportHeight();
+      const widthDelta = Math.abs(currentWidth - lastViewportWidth);
+      const heightDelta = Math.abs(currentHeight - lastViewportHeight);
+      const widthChanged = widthDelta > 4;
+      const transientHeightOnlyShift = !forceSync
+        && widthDelta <= 2
+        && heightDelta >= 18
+        && heightDelta <= 220
+        && !dock.classList.contains('is-keyboard-hidden');
+
+      lastViewportWidth = currentWidth;
+      lastViewportHeight = currentHeight;
+
+      if (forceSync || widthChanged) {
+        syncDockMode({ preserveVisibility: !forceSync });
+        return;
+      }
+
+      updateDockMetrics();
+
+      if (transientHeightOnlyShift) {
+        window.clearTimeout(resizeSettleTimer);
+        resizeSettleTimer = window.setTimeout(() => {
+          updateDockMetrics();
+        }, 120);
+      }
     }
 
     function updateDockOnScroll() {
@@ -643,30 +915,33 @@
       const snapshot = readDockScrollSnapshot();
       const currentY = snapshot.top;
       const delta = currentY - lastScrollY;
+      const nearBottom = (snapshot.max - currentY) <= 28;
 
       if (snapshot.max <= 20) {
         setDockVisible(true);
         lastScrollY = currentY;
-        updateDockOffsets();
+        updateDockMetrics();
         return;
       }
 
-      if (Math.abs(delta) < 8) {
+      if (Math.abs(delta) < 12) {
         lastScrollY = currentY;
-        updateDockOffsets();
+        updateDockMetrics();
         return;
       }
 
       if (currentY <= 24) {
         setDockVisible(true);
-      } else if (delta > 0 && currentY > 110) {
+      } else if (delta > 14 && currentY > 120) {
         setDockVisible(false);
-      } else if (delta < 0) {
+      } else if (delta < -18) {
         setDockVisible(true);
+      } else if (nearBottom) {
+        updateDockMetrics();
       }
 
       lastScrollY = currentY;
-      updateDockOffsets();
+      updateDockMetrics();
     }
 
     function requestDockUpdate() {
@@ -678,22 +953,20 @@
       });
     }
 
-    on(window, 'resize', syncDockMode, { passive: true });
-    on(window, 'orientationchange', syncDockMode, { passive: true });
-    on(window, 'load', syncDockMode, { passive: true, once: true });
-    on(window, 'pageshow', syncDockMode, { passive: true });
+    on(window, 'resize', () => handleViewportResize(false), { passive: true });
+    on(window, 'orientationchange', () => handleViewportResize(true), { passive: true });
+    on(window, 'load', () => syncDockMode({ preserveVisibility: false }), { passive: true, once: true });
+    on(window, 'pageshow', () => syncDockMode({ preserveVisibility: true }), { passive: true });
     if (window.visualViewport) {
-      on(window.visualViewport, 'resize', () => {
-        syncDockMode();
-        updateDockOffsets();
-      }, { passive: true });
-      on(window.visualViewport, 'scroll', updateDockOffsets, { passive: true });
+      on(window.visualViewport, 'resize', () => handleViewportResize(false), { passive: true });
+      on(window.visualViewport, 'scroll', updateDockMetrics, { passive: true });
     }
 
     document.addEventListener('focusin', (event) => {
       if (!shouldEnableMobileDock()) return;
       if (isEditableField(event.target)) {
         dock.classList.add('is-keyboard-hidden');
+        syncDockVisibilityClass();
       }
     });
 
@@ -703,33 +976,42 @@
         if (!isEditableField(document.activeElement)) {
           dock.classList.remove('is-keyboard-hidden');
           setDockVisible(true);
+          syncDockVisibilityClass();
         }
-        syncDockMode();
-        updateDockOffsets();
+        handleViewportResize(false);
       }, 120);
     });
 
     if ('MutationObserver' in window) {
       const overlayObserver = new MutationObserver(() => {
-        refreshScrollBindings();
-        updateDockOffsets();
+        updateDockMetrics();
       });
-      qsa('.cookie-banner, #cookieBanner, .main-content, .container').forEach((overlay) => {
+      qsa('.cookie-banner, #cookieBanner').forEach((overlay) => {
         overlayObserver.observe(overlay, { attributes: true, childList: true, subtree: true });
       });
     }
 
     if (typeof mediaQuery.addEventListener === 'function') {
-      mediaQuery.addEventListener('change', syncDockMode);
+      mediaQuery.addEventListener('change', () => syncDockMode({ preserveVisibility: false }));
     } else if (typeof mediaQuery.addListener === 'function') {
-      mediaQuery.addListener(syncDockMode);
+      mediaQuery.addListener(() => syncDockMode({ preserveVisibility: false }));
     }
 
-    syncDockMode();
-    window.setTimeout(syncDockMode, 250);
-    window.setTimeout(syncDockMode, 1200);
+    window.__vildaDockUpdate = (reason) => {
+      if (reason === 'browser-ui-resize') {
+        handleViewportResize(false);
+        requestDockUpdate();
+        return;
+      }
+      updateDockMetrics();
+    };
+
+    syncDockMode({ preserveVisibility: false });
+    window.setTimeout(() => syncDockMode({ preserveVisibility: true }), 250);
+    window.setTimeout(() => syncDockMode({ preserveVisibility: true }), 1200);
     window.setTimeout(refreshIconsAndFallbacks, 0);
   }
+
 
   /**
    * Numer wersji schematu stanu zapisywanego w localStorage.  Zwiększ tę

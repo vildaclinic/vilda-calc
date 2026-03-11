@@ -10860,19 +10860,33 @@ function generateMetabolicSummary() {
  * globalna, aby można ją było bezpośrednio przypisać do atrybutu
  * onclick w kodzie HTML.
  */
-function handleMetabolicSummaryClick() {
+function handleMetabolicSummaryClick(event) {
+  if (event) {
+    if (typeof event.preventDefault === 'function') {
+      event.preventDefault();
+    }
+    if (typeof event.stopImmediatePropagation === 'function') {
+      event.stopImmediatePropagation();
+    } else if (typeof event.stopPropagation === 'function') {
+      event.stopPropagation();
+    }
+  }
+
   // Wygeneruj podstawowe podsumowanie
   let summaryText = generateMetabolicSummary();
+
   // Brak danych — powiadom użytkownika
   if (!summaryText || summaryText.trim() === '') {
     alert('Brak danych do podsumowania.');
     return;
   }
+
   try {
     // Rozbij podsumowanie na linie i dodaj wartości wejściowe oraz zmodyfikuj etykiety,
-    // tak jak jest to widoczne w karcie Podsumowanie wyników.  Dzięki temu do schowka
+    // tak jak jest to widoczne w karcie Podsumowanie wyników. Dzięki temu do schowka
     // kopiowane są zarówno odczytane wartości (np. kg/cm/mmHg), jak i ich centyle.
     let lines = summaryText.split('\n').map(s => s.trim()).filter(Boolean);
+
     // Odczytaj aktualne wartości z formularza (jeśli są wypełnione).
     const weightValStr    = (document.getElementById('weight')?.value || '').trim();
     const heightValStr    = (document.getElementById('height')?.value || '').trim();
@@ -10880,97 +10894,149 @@ function handleMetabolicSummaryClick() {
     const dbpValStr       = (document.getElementById('bpDiastolic')?.value || '').trim();
     const headCircValStr  = (document.getElementById('headCircumference')?.value || '').trim();
     const chestCircValStr = (document.getElementById('chestCircumference')?.value || '').trim();
-    const waistValStr     = (document.getElementById('waistCm')?.value || '').trim();
-    const hipValStr       = (document.getElementById('hipCm')?.value || '').trim();
+
     lines = lines.map(function (line) {
-      // Waga: dodaj wartość w kg
       if (line.startsWith('Waga:')) {
         const rest   = line.slice(line.indexOf(':') + 1).trim();
         const prefix = weightValStr ? (weightValStr + ' kg, ') : '';
         return 'Waga: ' + prefix + rest;
       }
-      // Wzrost: dodaj wartość w cm
+
       if (line.startsWith('Wzrost:')) {
         const rest   = line.slice(line.indexOf(':') + 1).trim();
         const prefix = heightValStr ? (heightValStr + ' cm, ') : '';
         return 'Wzrost: ' + prefix + rest;
       }
-      // BMI – nie modyfikujemy jego wartości; pozostawiamy format "BMI: <wartość> – <centyl> (Z‑score = ...)"
-      // Ciśnienie skurczowe: zmień etykietę na RR skurczowe i dodaj wartość w mmHg
+
       if (line.startsWith('Ciśnienie skurczowe')) {
         const rest   = line.slice(line.indexOf(':') + 1).trim();
         const prefix = sbpValStr ? (sbpValStr + ' mmHg, ') : '';
         return 'RR skurczowe: ' + prefix + rest;
       }
-      // Ciśnienie rozkurczowe: zmień etykietę na RR rozkurczowe i dodaj wartość w mmHg
+
       if (line.startsWith('Ciśnienie rozkurczowe')) {
         const rest   = line.slice(line.indexOf(':') + 1).trim();
         const prefix = dbpValStr ? (dbpValStr + ' mmHg, ') : '';
         return 'RR rozkurczowe: ' + prefix + rest;
       }
-      // Obwód głowy: dodaj wartość w cm
+
       if (line.startsWith('Obwód głowy')) {
         const rest   = line.slice(line.indexOf(':') + 1).trim();
         const prefix = headCircValStr ? (headCircValStr + ' cm, ') : '';
         return 'Obwód głowy: ' + prefix + rest;
       }
-      // Obwód klatki piersiowej: zmień etykietę na "Obwód kl. piersiowej" i dodaj wartość w cm
+
       if (line.startsWith('Obwód klatki piersiowej')) {
         const rest   = line.slice(line.indexOf(':') + 1).trim();
         const prefix = chestCircValStr ? (chestCircValStr + ' cm, ') : '';
         return 'Obwód kl. piersiowej: ' + prefix + rest;
       }
-      // Obwód talii i Obwód bioder: te linie już zawierają wartości i centyle, więc nie modyfikujemy ich.
-      // MPH (mid-parental height): skróć etykietę do "MPH" oraz popraw wielkość liter w Z-score
+
       if (/^MPH \(mid[-‑]parental height\):/i.test(line)) {
         let newLine = line.replace(/^MPH \(mid[^)]*\):/i, 'MPH:');
         newLine = newLine.replace(/z-score:/i, 'Z-score:');
         return newLine;
       }
+
       return line;
     });
+
     summaryText = lines.join('\n');
   } catch (_) {
     // Jeżeli formatowanie się nie powiedzie, użyj oryginalnego tekstu
   }
-  // Funkcja pomocnicza: wyświetla powiadomienie po skopiowaniu
+
+  // Ujednolicenie formatowania tekstu przed kopiowaniem
+  summaryText = summaryText
+    .replace(/\u00A0/g, ' ')
+    .replace(/([0-9])\.([0-9])/g, '$1,$2');
+
+  // Funkcja pomocnicza: wyświetla toast po skopiowaniu zamiast alertu
   const copyAndNotify = () => {
-    alert('Dane zostały skopiowane do schowka.');
-  };
-  // Skopiuj przetworzone podsumowanie do schowka za pomocą API clipboard (jeśli dostępne)
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(summaryText).then(copyAndNotify).catch(() => {
-      // Fallback dla przeglądarek bez API clipboard
-      const textarea = document.createElement('textarea');
-      textarea.value = summaryText;
-      textarea.style.position = 'absolute';
-      textarea.style.left = '-9999px';
-      document.body.appendChild(textarea);
-      textarea.select();
-      try {
-        document.execCommand('copy');
-        copyAndNotify();
-      } catch (e) {
-        alert('Nie udało się skopiować danych.');
-      }
-      textarea.remove();
-    });
-  } else {
-    // Fallback – starsze przeglądarki
-    const textarea = document.createElement('textarea');
-    textarea.value = summaryText;
-    textarea.style.position = 'absolute';
-    textarea.style.left = '-9999px';
-    document.body.appendChild(textarea);
-    textarea.select();
-    try {
-      document.execCommand('copy');
-      copyAndNotify();
-    } catch (e) {
-      alert('Nie udało się skopiować danych.');
+    const existingToast = document.getElementById('metabolicSummaryCopyToast');
+    if (existingToast) {
+      existingToast.remove();
     }
-    textarea.remove();
-  }
+
+    const toast = document.createElement('div');
+    toast.id = 'metabolicSummaryCopyToast';
+    toast.textContent = 'Dane zostały skopiowane do schowka.';
+    toast.style.position = 'fixed';
+    toast.style.bottom = '1rem';
+    toast.style.left = '50%';
+    toast.style.transform = 'translateX(-50%)';
+    toast.style.background = '#00838d';
+    toast.style.color = 'white';
+    toast.style.padding = '0.6rem 1.2rem';
+    toast.style.borderRadius = '4px';
+    toast.style.fontSize = '1rem';
+    toast.style.zIndex = '9999';
+    document.body.appendChild(toast);
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.remove();
+      }
+    }, 2500);
+  };
+
+  const copySummaryTextToClipboard = function(text) {
+    return new Promise(function(resolve, reject) {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        navigator.clipboard.writeText(text).then(resolve).catch(function() {
+          try {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.setAttribute('readonly', '');
+            textarea.style.position = 'fixed';
+            textarea.style.left = '-9999px';
+            textarea.style.top = '0';
+            document.body.appendChild(textarea);
+            textarea.focus();
+            textarea.select();
+            textarea.setSelectionRange(0, textarea.value.length);
+            const successful = document.execCommand('copy');
+            textarea.remove();
+            if (successful) {
+              resolve();
+            } else {
+              reject(new Error('Copy command failed'));
+            }
+          } catch (err) {
+            reject(err);
+          }
+        });
+        return;
+      }
+
+      try {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'fixed';
+        textarea.style.left = '-9999px';
+        textarea.style.top = '0';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        textarea.setSelectionRange(0, textarea.value.length);
+        const successful = document.execCommand('copy');
+        textarea.remove();
+        if (successful) {
+          resolve();
+        } else {
+          reject(new Error('Copy command failed'));
+        }
+      } catch (err) {
+        reject(err);
+      }
+    });
+  };
+
+  copySummaryTextToClipboard(summaryText)
+    .then(copyAndNotify)
+    .catch(function() {
+      alert('Nie udało się skopiować danych.');
+    });
 }
 
 // Upewnij się, że funkcja kliknięcia jest dostępna globalnie, aby mogła być wywołana
@@ -11032,118 +11098,9 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   // Dodaj obsługę kliknięcia przycisku podsumowania
   const metaBtn = document.getElementById('metabolicSummaryBtn');
-  if (metaBtn) {
-    metaBtn.addEventListener('click', function() {
-      const summaryRaw = generateMetabolicSummary();
-      // Jeśli brak danych do podsumowania – pokaż komunikat i zakończ
-      if (!summaryRaw || summaryRaw.trim() === '') {
-        alert('Brak danych do podsumowania.');
-        return;
-      }
-      // Rozbij podsumowanie na linie i wzbogacaj je wartościami liczbowymi podobnie jak w karcie
-      let enriched = summaryRaw;
-      try {
-        let lines = summaryRaw.split('\n').map(s => s.trim()).filter(Boolean);
-        // Pobierz wartości z formularza
-        const weightValStr    = (document.getElementById('weight')?.value || '').trim();
-        const heightValStr    = (document.getElementById('height')?.value || '').trim();
-        const sbpValStr       = (document.getElementById('bpSystolic')?.value || '').trim();
-        const dbpValStr       = (document.getElementById('bpDiastolic')?.value || '').trim();
-        const headCircValStr  = (document.getElementById('headCircumference')?.value || '').trim();
-        const chestCircValStr = (document.getElementById('chestCircumference')?.value || '').trim();
-        lines = lines.map(function(line) {
-          // Dodaj wartość w kg do wiersza Waga
-          if (line.startsWith('Waga:')) {
-            const rest   = line.slice(line.indexOf(':') + 1).trim();
-            const prefix = weightValStr ? (weightValStr + ' kg, ') : '';
-            return 'Waga: ' + prefix + rest;
-          }
-          // Dodaj wartość w cm do wiersza Wzrost
-          if (line.startsWith('Wzrost:')) {
-            const rest   = line.slice(line.indexOf(':') + 1).trim();
-            const prefix = heightValStr ? (heightValStr + ' cm, ') : '';
-            return 'Wzrost: ' + prefix + rest;
-          }
-          // Zmień etykietę ciśnienia skurczowego na RR skurczowe oraz dodaj mmHg
-          if (line.startsWith('Ciśnienie skurczowe')) {
-            const rest   = line.slice(line.indexOf(':') + 1).trim();
-            const prefix = sbpValStr ? (sbpValStr + ' mmHg, ') : '';
-            return 'RR skurczowe: ' + prefix + rest;
-          }
-          // Zmień etykietę ciśnienia rozkurczowego na RR rozkurczowe oraz dodaj mmHg
-          if (line.startsWith('Ciśnienie rozkurczowe')) {
-            const rest   = line.slice(line.indexOf(':') + 1).trim();
-            const prefix = dbpValStr ? (dbpValStr + ' mmHg, ') : '';
-            return 'RR rozkurczowe: ' + prefix + rest;
-          }
-          // Dodaj wartość w cm do wiersza Obwód głowy
-          if (line.startsWith('Obwód głowy')) {
-            const rest   = line.slice(line.indexOf(':') + 1).trim();
-            const prefix = headCircValStr ? (headCircValStr + ' cm, ') : '';
-            return 'Obwód głowy: ' + prefix + rest;
-          }
-          // Zmień etykietę i dodaj cm do wiersza Obwód klatki piersiowej
-          if (line.startsWith('Obwód klatki piersiowej')) {
-            const rest   = line.slice(line.indexOf(':') + 1).trim();
-            const prefix = chestCircValStr ? (chestCircValStr + ' cm, ') : '';
-            return 'Obwód kl. piersiowej: ' + prefix + rest;
-          }
-          // Skróć etykietę MPH i popraw wielkość liter Z-score
-          if (/^MPH \(mid[-‑]parental height\):/i.test(line)) {
-            let newLine = line.replace(/^MPH \(mid[^)]*\):/i, 'MPH:');
-            newLine = newLine.replace(/z-score:/i, 'Z-score:');
-            return newLine;
-          }
-          return line;
-        });
-        enriched = lines.join('\n');
-      } catch (_) {
-        // Jeśli wystąpi błąd, użyj nieprzetworzonego podsumowania
-        enriched = summaryRaw;
-      }
-      // Sanitizuj tekst: usuń twarde spacje i zamień kropki w liczbach na przecinki
-      let sanitized = enriched
-        // usuń twarde spacje
-        .replace(/\u00A0/g, ' ')
-        // zamień separator dziesiętny z kropki na przecinek
-        .replace(/([0-9])\.([0-9])/g, '$1,$2');
-      // Kopiowanie do schowka przy użyciu API przeglądarki lub fallbacku
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(sanitized).then(function() {
-          alert('Dane zostały skopiowane do schowka.');
-        }).catch(function() {
-          // Fallback – jeśli nie można użyć API schowka
-          const textarea = document.createElement('textarea');
-          textarea.value = sanitized;
-          textarea.style.position = 'absolute';
-          textarea.style.left = '-9999px';
-          document.body.appendChild(textarea);
-          textarea.select();
-          try {
-            document.execCommand('copy');
-            alert('Dane zostały skopiowane do schowka.');
-          } catch (e) {
-            alert('Nie udało się skopiować danych.');
-          }
-          textarea.remove();
-        });
-      } else {
-        // Fallback – starsze przeglądarki
-        const textarea = document.createElement('textarea');
-        textarea.value = sanitized;
-        textarea.style.position = 'absolute';
-        textarea.style.left = '-9999px';
-        document.body.appendChild(textarea);
-        textarea.select();
-        try {
-          document.execCommand('copy');
-          alert('Dane zostały skopiowane do schowka.');
-        } catch (e) {
-          alert('Nie udało się skopiować danych.');
-        }
-        textarea.remove();
-      }
-    });
+  if (metaBtn && !metaBtn.dataset.metabolicSummaryListenerAttached) {
+    metaBtn.addEventListener('click', handleMetabolicSummaryClick, { capture: true });
+    metaBtn.dataset.metabolicSummaryListenerAttached = 'true';
   }
 });
 

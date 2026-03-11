@@ -809,6 +809,8 @@ body.liquid-ios26::before {
   --mobile-dock-height: 84px;
   --mobile-dock-side-gap: 0.75rem;
   --mobile-dock-extra-offset: 0px;
+  --mobile-dock-visible-lift: 0px;
+  --scroll-top-btn-bottom: 1rem;
 }
 
 #mobileBottomDock {
@@ -904,12 +906,9 @@ body.has-mobile-bottom-dock {
 }
 
 body.has-mobile-bottom-dock #scrollTopBtn {
-  bottom: calc(1rem + var(--mobile-dock-extra-offset)) !important;
+  bottom: var(--scroll-top-btn-bottom, 1rem) !important;
+  z-index: 1201;
   transition: bottom 220ms ease, background 0.2s ease, transform 220ms ease, opacity 220ms ease;
-}
-
-body.has-mobile-bottom-dock.has-mobile-bottom-dock-visible #scrollTopBtn {
-  bottom: calc(var(--mobile-dock-height) + env(safe-area-inset-bottom, 0px) + var(--mobile-dock-extra-offset) + 1rem) !important;
 }
 
 body.dark-bg-level-1 #mobileBottomDock .mobile-bottom-dock__list,
