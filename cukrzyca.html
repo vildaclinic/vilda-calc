@@ -4,13 +4,13 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Przeliczniki doposiłkowe – cukrzyca typu 1 | wagaiwzrost.pl</title>
-  <link href="ios26-v2.css?v=6" rel="stylesheet">
-  <link href="style.css?v=2" rel="stylesheet">
+  <link href="ios26-v2.css?v=9" rel="stylesheet">
+  <link href="style.css?v=6" rel="stylesheet">
   <link href="sidebar.css" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/pdfmake.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/vfs_fonts.min.js"></script>
-  <script src="ios26-ui.js?v=7" defer></script>
+  <script src="ios26-ui.js?v=11" defer></script>
   <style>
     [hidden] {
       display: none !important;
@@ -1361,6 +1361,7 @@
       z-index: 1;
       width: min(100%, 34rem);
       max-height: calc(100vh - 2rem);
+      max-height: calc(100dvh - 2rem);
       display: grid;
       gap: 1rem;
       padding: 1rem;
@@ -1451,6 +1452,7 @@
       .diab-video-modal__dialog {
         width: min(100%, 30rem);
         max-height: calc(100vh - 1.5rem);
+      max-height: calc(100dvh - 1.5rem);
         padding: 0.85rem;
         border-radius: 16px;
       }
@@ -1508,6 +1510,7 @@
       position: relative;
       width: 100vw;
       height: 100vh;
+          height: 100dvh;
       background: #ffffff;
       color: #000000;
       display: flex;
