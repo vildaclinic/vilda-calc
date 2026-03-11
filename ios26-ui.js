@@ -1,5 +1,6 @@
 
 
+
 // ios26-ui.js — dynamiczne uruchomienie Liquid Glass UI dla PWA Vilda Clinic
 //
 // Ten skrypt włącza klasę `.liquid-ios26` na <body>, dzięki czemu
@@ -941,9 +942,24 @@
       if (!target) return;
 
       const eventTarget = target === document ? window : target;
+      // Determine if the user is on iOS Safari.  We check for iPhone/iPad/iPod in the
+      // user agent string, ensure Safari is present, and exclude Chrome/Chromium
+      // variants.  Safari’s toolbars collapse based on the window scroll; if we
+      // change the active scroll target to a nested scrollable element then
+      // Safari stops hiding the bottom bar after the first scroll.  To preserve
+      // the collapsing behaviour we avoid changing activeScrollTarget on iOS Safari
+      // and always use the window as the scroll container.
+      const isIosSafari = typeof navigator !== 'undefined'
+        && /iP(?:hone|ad|od)/.test(navigator.userAgent || '')
+        && /Safari/.test(navigator.userAgent || '')
+        && !/Chrome/.test(navigator.userAgent || '');
       const handler = () => {
-        if (eventTarget !== window && eventTarget instanceof Element) {
-          activeScrollTarget = eventTarget;
+        if (!isIosSafari) {
+          // In browsers other than iOS Safari, track the deepest scrollable element
+          // so that the dock reacts to scrolling in nested containers.
+          if (eventTarget !== window && eventTarget instanceof Element) {
+            activeScrollTarget = eventTarget;
+          }
         }
         requestDockUpdate();
       };

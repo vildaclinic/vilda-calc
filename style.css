@@ -187,6 +187,40 @@ footer{margin-top:0rem;text-align:center;font-size:0.85rem;color:#666;padding:1r
 }
 
 /*
+ * ===== Mobilny Safari: stabilny viewport i poprawa zachowania paska przeglądarki =====
+ *
+ * Safari na urządzeniach iOS dynamicznie pokazuje i ukrywa górny i dolny pasek
+ * przeglądarki podczas przewijania.  Standardowe jednostki wysokości (100vh)
+ * zawierają te paski w obliczeniach, co powoduje skoki układu, gdy paski
+ * znikają lub pojawiają się.  Nowe jednostki 100svh (small viewport height)
+ * reprezentują wysokość widocznego obszaru, gdy paski są w pełni rozwinięte,
+ * dzięki czemu układ pozostaje stabilny niezależnie od stanu pasków【339208547229789†L87-L107】.
+ *
+ * Zastosuj 100svh do elementów html i body, jeśli przeglądarka obsługuje
+ * tę jednostkę; w przeciwnym razie użyj klasycznego 100vh jako zapasowego
+ * rozwiązania.  Dodatkowo ustaw overflow-y na auto dla elementu body, aby
+ * zapewnić, że główny scroll odbywa się na poziomie body (a nie w
+ * zagnieżdżonych kontenerach).  Safari ukrywa paski tylko wtedy, gdy
+ * przewijany jest główny dokument; dzięki temu użytkownik może wielokrotnie
+ * zwijać dolny pasek przeglądarki.
+ */
+@supports (height: 100svh) {
+  html, body {
+    height: 100svh;
+  }
+}
+
+@supports not (height: 100svh) {
+  html, body {
+    height: 100vh;
+  }
+}
+
+body {
+  overflow-y: auto;
+}
+
+/*
  * Szarzenie opcji niedostępnych w selektorze „Wskazanie” modułu
  * antybiotykoterapii.  Gdy pewne wskazania (np. pozaszpitalne
  * zapalenie płuc u dorosłych lub u dzieci) są dezaktywowane ze
