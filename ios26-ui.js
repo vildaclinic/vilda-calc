@@ -21,6 +21,9 @@
   const EDUCATION_PAGE_PATH = 'materialy-edukacyjne.html';
   const EDUCATION_FULL_LABEL = 'Materiały edukacyjne';
   const EDUCATION_COMPACT_LABEL = 'Edu';
+  const MOBILE_TOP_NAV_MIN_FONT_REM = 0.72;
+  const MOBILE_TOP_NAV_MAX_FONT_REM = 0.98;
+  const MOBILE_TOP_NAV_FONT_STEP_REM = 0.01;
 
   function safeRun(label, fn) {
     try {
@@ -381,6 +384,7 @@
   window.addEventListener('vilda-ui-visibility-change', applyNavigationVisibilityPreferences);
 
   let hasInitialised = false;
+  let mobileTopNavFontSyncTimer = 0;
 
   function initLiquidUi() {
     if (hasInitialised) return;
@@ -405,6 +409,7 @@
     safeRun('ensureGlobalScrollTopHandler', ensureGlobalScrollTopHandler);
     safeRun('setupMobileBottomDock', setupMobileBottomDock);
     safeRun('syncCompactEducationLabels', syncCompactEducationLabels);
+    safeRun('syncMobileTopNavFontSize', syncMobileTopNavFontSize);
     safeRun('refreshIconsAndFallbacks', refreshIconsAndFallbacks);
 
     let browserUiRefreshTimer = 0;
@@ -412,13 +417,16 @@
     const delayedRefresh = () => safeRun('refreshIconsAndFallbacks', refreshIconsAndFallbacks);
     const delayedDockRetry = () => safeRun('setupMobileBottomDock(retry)', setupMobileBottomDock);
     const delayedCompactEducationLabels = () => safeRun('syncCompactEducationLabels', syncCompactEducationLabels);
+    const delayedTopNavFontSizeSync = () => scheduleMobileTopNavFontSizeSync(0);
     const delayedBrowserUiRefresh = () => safeRun('applyMobileBrowserUiOptimization', applyMobileBrowserUiOptimization);
     const delayedBrowserUiPrime = () => safeRun('primeMobileBrowserUiChrome', primeMobileBrowserUiChrome);
     window.setTimeout(delayedRefresh, 150);
     window.setTimeout(delayedCompactEducationLabels, 0);
+    window.setTimeout(delayedTopNavFontSizeSync, 30);
     window.setTimeout(delayedRefresh, 900);
     window.setTimeout(delayedDockRetry, 250);
     window.setTimeout(delayedCompactEducationLabels, 280);
+    window.setTimeout(delayedTopNavFontSizeSync, 320);
     window.setTimeout(delayedBrowserUiRefresh, 0);
     window.setTimeout(delayedBrowserUiPrime, 120);
     window.setTimeout(delayedBrowserUiRefresh, 360);
@@ -427,6 +435,7 @@
       delayedDockRetry();
       delayedRefresh();
       delayedCompactEducationLabels();
+      delayedTopNavFontSizeSync();
       delayedBrowserUiRefresh();
       window.setTimeout(delayedBrowserUiPrime, 80);
     }, { passive: true, once: true });
@@ -434,15 +443,18 @@
       delayedDockRetry();
       delayedRefresh();
       delayedCompactEducationLabels();
+      delayedTopNavFontSizeSync();
       delayedBrowserUiRefresh();
       window.setTimeout(delayedBrowserUiPrime, 80);
     }, { passive: true });
     on(window, 'orientationchange', () => {
       window.setTimeout(delayedBrowserUiRefresh, 60);
       window.setTimeout(delayedCompactEducationLabels, 90);
+      window.setTimeout(delayedTopNavFontSizeSync, 110);
       window.setTimeout(delayedBrowserUiPrime, 180);
     }, { passive: true });
     on(window, 'resize', delayedCompactEducationLabels, { passive: true });
+    on(window, 'resize', delayedTopNavFontSizeSync, { passive: true });
     if (window.visualViewport) {
       on(window.visualViewport, 'resize', () => {
         const nextViewportWidth = getViewportWidth();
@@ -451,6 +463,7 @@
         if (widthDelta > 2 || !shouldOptimizeMobileBrowserUi()) {
           lastBrowserUiViewportWidth = nextViewportWidth;
           window.setTimeout(delayedCompactEducationLabels, 0);
+          window.setTimeout(delayedTopNavFontSizeSync, 0);
           window.setTimeout(delayedBrowserUiRefresh, 0);
           return;
         }
@@ -459,9 +472,17 @@
         browserUiRefreshTimer = window.setTimeout(() => {
           lastBrowserUiViewportWidth = getViewportWidth();
           safeRun('syncCompactEducationLabels(settled)', syncCompactEducationLabels);
+          safeRun('syncMobileTopNavFontSize(settled)', syncMobileTopNavFontSize);
           safeRun('applyMobileBrowserUiOptimization(settled)', applyMobileBrowserUiOptimization);
         }, 180);
       }, { passive: true });
+    }
+    if (document.fonts && document.fonts.ready && typeof document.fonts.ready.then === 'function') {
+      document.fonts.ready.then(() => {
+        delayedTopNavFontSizeSync();
+      }).catch(() => {
+        /* noop */
+      });
     }
     document.addEventListener('touchstart', delayedBrowserUiPrime, { passive: true, once: true });
   }
@@ -584,6 +605,97 @@
     'kontakt.html': { href: 'kontakt.html', label: 'Kontakt', icon: 'mail' }
   };
 
+
+  function clearMobileTopNavFontSize(nav) {
+    if (!nav || !nav.style) return;
+    nav.style.removeProperty('--mobile-top-nav-font-size');
+  }
+
+  function isElementVisibleForLayout(el) {
+    if (!el) return false;
+
+    let style;
+    try {
+      style = window.getComputedStyle(el);
+    } catch (e) {
+      style = null;
+    }
+
+    if (style && (style.display === 'none' || style.visibility === 'hidden')) {
+      return false;
+    }
+
+    const rect = typeof el.getBoundingClientRect === 'function'
+      ? el.getBoundingClientRect()
+      : null;
+
+    return !!(rect && rect.width > 0 && rect.height > 0);
+  }
+
+  function getMobileTopNavLinks(nav) {
+    return qsa('.main-nav > ul > li > a[href]', nav?.ownerDocument || document).filter((link) => {
+      if (!nav || !nav.contains(link)) return false;
+      if (!isElementVisibleForLayout(link)) return false;
+
+      const label = (link.textContent || '').replace(/\s+/g, ' ').trim();
+      return !!label;
+    });
+  }
+
+  function doMobileTopNavLabelsFit(links) {
+    return links.every((link) => {
+      if (!link || link.clientWidth <= 0 || link.clientHeight <= 0) return true;
+
+      const widthFits = link.scrollWidth <= (link.clientWidth + 1);
+      const heightFits = link.scrollHeight <= (link.clientHeight + 1);
+      return widthFits && heightFits;
+    });
+  }
+
+  function syncMobileTopNavFontSize() {
+    const nav = qs('.main-nav');
+    if (!nav) return;
+
+    const viewportWidth = getViewportWidth();
+    const shouldAutofit = isLikelyMobileTouchBrowser() && viewportWidth > 0 && viewportWidth <= 820;
+
+    if (!shouldAutofit) {
+      clearMobileTopNavFontSize(nav);
+      return;
+    }
+
+    if (!isElementVisibleForLayout(nav)) return;
+
+    const links = getMobileTopNavLinks(nav);
+    if (!links.length) {
+      clearMobileTopNavFontSize(nav);
+      return;
+    }
+
+    let bestSize = MOBILE_TOP_NAV_MIN_FONT_REM;
+
+    nav.style.setProperty('--mobile-top-nav-font-size', `${MOBILE_TOP_NAV_MIN_FONT_REM.toFixed(2)}rem`);
+
+    for (let size = MOBILE_TOP_NAV_MAX_FONT_REM; size >= (MOBILE_TOP_NAV_MIN_FONT_REM - 0.0001); size -= MOBILE_TOP_NAV_FONT_STEP_REM) {
+      const candidate = Number(size.toFixed(2));
+      nav.style.setProperty('--mobile-top-nav-font-size', `${candidate.toFixed(2)}rem`);
+
+      if (doMobileTopNavLabelsFit(links)) {
+        bestSize = candidate;
+        break;
+      }
+    }
+
+    nav.style.setProperty('--mobile-top-nav-font-size', `${bestSize.toFixed(2)}rem`);
+  }
+
+  function scheduleMobileTopNavFontSizeSync(delay = 0) {
+    window.clearTimeout(mobileTopNavFontSyncTimer);
+    mobileTopNavFontSyncTimer = window.setTimeout(() => {
+      safeRun('syncMobileTopNavFontSize', syncMobileTopNavFontSize);
+    }, Math.max(0, Number(delay) || 0));
+  }
+
   function shouldUseCompactEducationLabel() {
     if (!isLikelyMobileTouchBrowser()) return false;
 
@@ -675,6 +787,8 @@
         link.removeAttribute('title');
       }
     });
+
+    scheduleMobileTopNavFontSizeSync(0);
   }
 
   function normalizePath(value) {
