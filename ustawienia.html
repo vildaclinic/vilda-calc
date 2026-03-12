@@ -213,6 +213,31 @@
         </div>
       </div>
 
+      <!-- Sekcja ustawień nawigacji mobilnej -->
+      <div class="container" style="padding-top:1rem;padding-bottom:2rem;">
+        <h2 style="text-align:center;">Nawigacja mobilna</h2>
+        <p style="text-align:center; max-width:600px; margin:0 auto 1.5rem; font-size:0.95rem;">
+          Tutaj możesz osobno włączyć lub wyłączyć dolny dock oraz strzałkę nawigacyjną
+          „powrót na górę”. Zmiana zapisuje się na urządzeniu i działa od razu.
+        </p>
+        <div id="mobileUiSettingsGrid" class="settings-grid">
+          <div class="setting-item">
+            <span>Pokaż dock</span>
+            <label class="switch">
+              <input type="checkbox" id="showMobileDockSetting">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="setting-item">
+            <span>Pokaż strzałkę nawigacyjną</span>
+            <label class="switch">
+              <input type="checkbox" id="showNavigationArrowSetting">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
       <!-- Sekcja ustawień wygładzania siatek Palczewskiej -->
       <div class="container" style="padding-top:1rem;padding-bottom:2rem;">
         <h2 style="text-align:center;">Wygładzanie siatek Palczewskiej</h2>
@@ -460,6 +485,55 @@
       }
     });
   </script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const PREF_KEY_SHOW_MOBILE_DOCK = 'showMobileDock';
+      const PREF_KEY_SHOW_NAVIGATION_ARROW = 'showNavigationArrow';
+
+      const dockCheckbox = document.getElementById('showMobileDockSetting');
+      const arrowCheckbox = document.getElementById('showNavigationArrowSetting');
+
+      if (!dockCheckbox || !arrowCheckbox) return;
+
+      function readBooleanPreference(key, fallback) {
+        try {
+          const raw = localStorage.getItem(key);
+          if (raw === null || raw === undefined || raw === '') return fallback;
+
+          const normalized = String(raw).trim().toLowerCase();
+          if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
+          if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
+        } catch (e) {}
+        return fallback;
+      }
+
+      function persistBooleanPreference(key, value) {
+        try {
+          localStorage.setItem(key, value ? 'true' : 'false');
+        } catch (e) {}
+      }
+
+      function applyNavigationUiPreferenceChange() {
+        if (typeof window.applyNavigationVisibilityPreferences === 'function') {
+          try { window.applyNavigationVisibilityPreferences(); } catch (_) {}
+        }
+      }
+
+      dockCheckbox.checked = readBooleanPreference(PREF_KEY_SHOW_MOBILE_DOCK, true);
+      arrowCheckbox.checked = readBooleanPreference(PREF_KEY_SHOW_NAVIGATION_ARROW, true);
+
+      dockCheckbox.addEventListener('change', function() {
+        persistBooleanPreference(PREF_KEY_SHOW_MOBILE_DOCK, this.checked);
+        applyNavigationUiPreferenceChange();
+      });
+
+      arrowCheckbox.addEventListener('change', function() {
+        persistBooleanPreference(PREF_KEY_SHOW_NAVIGATION_ARROW, this.checked);
+        applyNavigationUiPreferenceChange();
+      });
+    });
+  </script>
+
   <script>
     // Remove the temporary js-loading class once initialization is complete.
     document.addEventListener('DOMContentLoaded', function() {

@@ -16,6 +16,8 @@
   const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const THEME_LEVELS = [0, 1, 2];
   const PIN_MOBILE_DOCK_IN_IOS_BROWSER = true;
+  const PREF_KEY_SHOW_MOBILE_DOCK = 'showMobileDock';
+  const PREF_KEY_SHOW_NAVIGATION_ARROW = 'showNavigationArrow';
 
   function safeRun(label, fn) {
     try {
@@ -154,6 +156,16 @@
       btn.setAttribute('aria-label', 'Powrót na górę strony');
     }
 
+    const showArrow = shouldShowNavigationArrowByPreference();
+    btn.setAttribute('aria-hidden', showArrow ? 'false' : 'true');
+    if (showArrow) {
+      if (btn.getAttribute('tabindex') === '-1') {
+        btn.removeAttribute('tabindex');
+      }
+    } else {
+      btn.setAttribute('tabindex', '-1');
+    }
+
     if (btn.dataset.ios26Injected === 'true' && btn.dataset.scrollTopBound !== 'true') {
       btn.dataset.scrollTopBound = 'true';
       btn.addEventListener('click', (event) => {
@@ -230,6 +242,94 @@
 
   window.applyThemeCustom = applyThemeCustom;
 
+  function readBooleanPreference(key, fallback = true) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw === null || raw === undefined || raw === '') return fallback;
+
+      const normalized = String(raw).trim().toLowerCase();
+      if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
+      if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
+
+      return fallback;
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  function shouldShowMobileDockByPreference() {
+    return readBooleanPreference(PREF_KEY_SHOW_MOBILE_DOCK, true);
+  }
+
+  function shouldShowNavigationArrowByPreference() {
+    return readBooleanPreference(PREF_KEY_SHOW_NAVIGATION_ARROW, true);
+  }
+
+  function ensureNavigationVisibilityPreferenceStyle() {
+    if (!document.documentElement || document.getElementById('vildaNavigationVisibilityPrefsStyle')) return;
+
+    const style = document.createElement('style');
+    style.id = 'vildaNavigationVisibilityPrefsStyle';
+    style.textContent = `
+      body.user-hides-mobile-dock #mobileBottomDock {
+        display: none !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        transform: translateY(calc(100% + env(safe-area-inset-bottom, 0px) + 1.2rem)) !important;
+      }
+
+      body.user-hides-nav-arrow #scrollTopBtn {
+        display: none !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        transform: none !important;
+      }
+    `;
+
+    (document.head || document.documentElement).appendChild(style);
+  }
+
+  function applyNavigationVisibilityPreferences() {
+    const body = document.body;
+    if (!body) {
+      return { dock: true, arrow: true };
+    }
+
+    ensureNavigationVisibilityPreferenceStyle();
+
+    const showDock = shouldShowMobileDockByPreference();
+    const showArrow = shouldShowNavigationArrowByPreference();
+
+    body.classList.toggle('user-hides-mobile-dock', !showDock);
+    body.classList.toggle('user-hides-nav-arrow', !showArrow);
+
+    const btn = ensureScrollTopButton();
+    if (btn) {
+      btn.setAttribute('aria-hidden', showArrow ? 'false' : 'true');
+      if (showArrow) {
+        if (btn.getAttribute('tabindex') === '-1') {
+          btn.removeAttribute('tabindex');
+        }
+      } else {
+        btn.setAttribute('tabindex', '-1');
+      }
+    }
+
+    if (typeof window.__vildaDockSyncMode === 'function') {
+      safeRun('window.__vildaDockSyncMode(visibility-prefs)', () => {
+        window.__vildaDockSyncMode({ preserveVisibility: false });
+      });
+    } else if (typeof window.__vildaDockUpdate === 'function') {
+      safeRun('window.__vildaDockUpdate(visibility-prefs)', () => {
+        window.__vildaDockUpdate('visibility-prefs');
+      });
+    }
+
+    return { dock: showDock, arrow: showArrow };
+  }
+
+  window.applyNavigationVisibilityPreferences = applyNavigationVisibilityPreferences;
+
   // Zastosuj zapisany wygląd także po powrocie z historii/BFCache oraz
   // po zmianie localStorage w innej karcie.
   window.addEventListener('pageshow', applyThemeCustom);
@@ -238,6 +338,14 @@
     if (!document.hidden) applyThemeCustom();
   });
 
+  window.addEventListener('pageshow', applyNavigationVisibilityPreferences);
+  window.addEventListener('storage', (event) => {
+    const key = event?.key || '';
+    if (!key || key === PREF_KEY_SHOW_MOBILE_DOCK || key === PREF_KEY_SHOW_NAVIGATION_ARROW) {
+      applyNavigationVisibilityPreferences();
+    }
+  });
+  window.addEventListener('vilda-ui-visibility-change', applyNavigationVisibilityPreferences);
 
   let hasInitialised = false;
 
@@ -255,6 +363,8 @@
     safeRun('applyMobileBrowserUiOptimization', applyMobileBrowserUiOptimization);
     safeRun('setupTransientViewportResizeGuard', setupTransientViewportResizeGuard);
     safeRun('applyThemeCustom', applyThemeCustom);
+    safeRun('ensureNavigationVisibilityPreferenceStyle', ensureNavigationVisibilityPreferenceStyle);
+    safeRun('applyNavigationVisibilityPreferences', applyNavigationVisibilityPreferences);
     safeRun('glassify', glassify);
     safeRun('setupPressFeedback', setupPressFeedback);
     safeRun('observeAppear', observeAppear);
@@ -874,6 +984,8 @@
   }
 
   function shouldEnableMobileDock() {
+    if (!shouldShowMobileDockByPreference()) return false;
+
     const viewportWidth = getViewportWidth();
 
     if (window.matchMedia && window.matchMedia(MOBILE_DOCK_BREAKPOINT).matches) {
@@ -1213,6 +1325,7 @@
       }
       updateDockMetrics();
     };
+    window.__vildaDockSyncMode = syncDockMode;
 
     syncDockMode({ preserveVisibility: false });
     window.setTimeout(() => syncDockMode({ preserveVisibility: true }), 250);
