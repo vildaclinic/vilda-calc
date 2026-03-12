@@ -3932,32 +3932,16 @@ header {
   background: inherit;
   /* Umożliwiamy pozycjonowanie pionowego menu względem nawigacji */
   position: relative;
-}/* Ogólne style nawigacji */
+}
+
+/* Ogólne style nawigacji */
 .main-nav ul li a {
   font-size: 1rem;
-  /* inne style */
   /* Ustawiamy flexbox i wysokość linków w nawigacji, aby tekst był
      wycentrowany pionowo względem ikony hamburgera. */
   display: flex;
   align-items: end;
   height: 32px;
-}
-
-/* Dodatkowe style dla ekranów do 600 px szerokości */
-@media (max-width: 600px) {
-  .main-nav ul li a {
-    font-size: 0.9rem;        /* zmniejsz rozmiar czcionki */
-    /* Ogólne style nawigacji */
-.main-nav ul li a {
-  font-size: 1rem;
-  /* inne style */
-}}}
-
-/* Dodatkowe style dla ekranów do 600 px szerokości */
-@media (max-width: 600px) {
-  .main-nav ul li a {
-    font-size: 0.8rem;        /* zmniejsz rozmiar czcionki */
-  }
 }
 
 /* Ustawienia koloru alertów dla modułu Antybiotykoterapia
@@ -6749,7 +6733,9 @@ body #thyroidCancerKidsCard #thyCopyCancer {
     align-items: center;
     height: auto;
     min-height: 2rem;
-    font-size: clamp(0.66rem, 2.7vw, 0.78rem);
+    /* Stały rozmiar tekstu na mobile — bez dodatkowego zmniejszania
+       przy jeszcze węższym oknie. */
+    font-size: 0.72rem;
     line-height: 1.05;
     letter-spacing: -0.01em;
     white-space: nowrap;
@@ -6780,7 +6766,4 @@ body #thyroidCancerKidsCard #thyCopyCancer {
     height: 2.1rem;
   }
 
-  .main-nav > ul > li > a {
-    font-size: clamp(0.62rem, 2.55vw, 0.72rem);
-  }
 }

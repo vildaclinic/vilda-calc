@@ -18,6 +18,9 @@
   const LOCK_MOBILE_NAVIGATION_ON_TOUCH_DEVICES = true;
   const PREF_KEY_SHOW_MOBILE_DOCK = 'showMobileDock';
   const PREF_KEY_SHOW_NAVIGATION_ARROW = 'showNavigationArrow';
+  const EDUCATION_PAGE_PATH = 'materialy-edukacyjne.html';
+  const EDUCATION_FULL_LABEL = 'Materiały edukacyjne';
+  const EDUCATION_COMPACT_LABEL = 'Edu';
 
   function safeRun(label, fn) {
     try {
@@ -401,17 +404,21 @@
     safeRun('observeAppear', observeAppear);
     safeRun('ensureGlobalScrollTopHandler', ensureGlobalScrollTopHandler);
     safeRun('setupMobileBottomDock', setupMobileBottomDock);
+    safeRun('syncCompactEducationLabels', syncCompactEducationLabels);
     safeRun('refreshIconsAndFallbacks', refreshIconsAndFallbacks);
 
     let browserUiRefreshTimer = 0;
     let lastBrowserUiViewportWidth = getViewportWidth();
     const delayedRefresh = () => safeRun('refreshIconsAndFallbacks', refreshIconsAndFallbacks);
     const delayedDockRetry = () => safeRun('setupMobileBottomDock(retry)', setupMobileBottomDock);
+    const delayedCompactEducationLabels = () => safeRun('syncCompactEducationLabels', syncCompactEducationLabels);
     const delayedBrowserUiRefresh = () => safeRun('applyMobileBrowserUiOptimization', applyMobileBrowserUiOptimization);
     const delayedBrowserUiPrime = () => safeRun('primeMobileBrowserUiChrome', primeMobileBrowserUiChrome);
     window.setTimeout(delayedRefresh, 150);
+    window.setTimeout(delayedCompactEducationLabels, 0);
     window.setTimeout(delayedRefresh, 900);
     window.setTimeout(delayedDockRetry, 250);
+    window.setTimeout(delayedCompactEducationLabels, 280);
     window.setTimeout(delayedBrowserUiRefresh, 0);
     window.setTimeout(delayedBrowserUiPrime, 120);
     window.setTimeout(delayedBrowserUiRefresh, 360);
@@ -419,19 +426,23 @@
     on(window, 'load', () => {
       delayedDockRetry();
       delayedRefresh();
+      delayedCompactEducationLabels();
       delayedBrowserUiRefresh();
       window.setTimeout(delayedBrowserUiPrime, 80);
     }, { passive: true, once: true });
     on(window, 'pageshow', () => {
       delayedDockRetry();
       delayedRefresh();
+      delayedCompactEducationLabels();
       delayedBrowserUiRefresh();
       window.setTimeout(delayedBrowserUiPrime, 80);
     }, { passive: true });
     on(window, 'orientationchange', () => {
       window.setTimeout(delayedBrowserUiRefresh, 60);
+      window.setTimeout(delayedCompactEducationLabels, 90);
       window.setTimeout(delayedBrowserUiPrime, 180);
     }, { passive: true });
+    on(window, 'resize', delayedCompactEducationLabels, { passive: true });
     if (window.visualViewport) {
       on(window.visualViewport, 'resize', () => {
         const nextViewportWidth = getViewportWidth();
@@ -439,6 +450,7 @@
 
         if (widthDelta > 2 || !shouldOptimizeMobileBrowserUi()) {
           lastBrowserUiViewportWidth = nextViewportWidth;
+          window.setTimeout(delayedCompactEducationLabels, 0);
           window.setTimeout(delayedBrowserUiRefresh, 0);
           return;
         }
@@ -446,6 +458,7 @@
         window.clearTimeout(browserUiRefreshTimer);
         browserUiRefreshTimer = window.setTimeout(() => {
           lastBrowserUiViewportWidth = getViewportWidth();
+          safeRun('syncCompactEducationLabels(settled)', syncCompactEducationLabels);
           safeRun('applyMobileBrowserUiOptimization(settled)', applyMobileBrowserUiOptimization);
         }, 180);
       }, { passive: true });
@@ -564,12 +577,105 @@
     'kalkulator-klirens.html': { href: 'kalkulator-klirens.html', label: 'Klirens', icon: 'droplets' },
     'cukrzyca.html': { href: 'cukrzyca.html', label: 'Cukrzyca', icon: 'syringe' },
     'steroidy.html': { href: 'steroidy.html', label: 'Steroidy', icon: 'pill' },
-    'materialy-edukacyjne.html': { href: 'materialy-edukacyjne.html', label: 'Materiały', icon: 'book-open' },
+    'materialy-edukacyjne.html': { href: 'materialy-edukacyjne.html', label: EDUCATION_FULL_LABEL, icon: 'book-open' },
     'ustawienia.html': { href: 'ustawienia.html', label: 'Ustawienia', icon: 'settings' },
     'instrukcja.html': { href: 'instrukcja.html', label: 'Instrukcja', icon: 'file-text' },
     'o-aplikacji.html': { href: 'o-aplikacji.html', label: 'O aplikacji', icon: 'info' },
     'kontakt.html': { href: 'kontakt.html', label: 'Kontakt', icon: 'mail' }
   };
+
+  function shouldUseCompactEducationLabel() {
+    if (!isLikelyMobileTouchBrowser()) return false;
+
+    let minScreenSide = 0;
+    try {
+      const screenWidth = Number(window.screen?.width) || 0;
+      const screenHeight = Number(window.screen?.height) || 0;
+      if (screenWidth > 0 && screenHeight > 0) {
+        minScreenSide = Math.min(screenWidth, screenHeight);
+      }
+    } catch (e) {
+      minScreenSide = 0;
+    }
+
+    if (minScreenSide > 0) return minScreenSide <= 500;
+
+    const viewportWidth = getViewportWidth();
+    return viewportWidth > 0 && viewportWidth <= 820;
+  }
+
+  function getAccessibleNavLabel(path, label) {
+    return normalizePath(path) === EDUCATION_PAGE_PATH
+      ? EDUCATION_FULL_LABEL
+      : (label || '');
+  }
+
+  function getResponsiveNavLabel(path, label) {
+    const baseLabel = label || '';
+    if (normalizePath(path) === EDUCATION_PAGE_PATH && shouldUseCompactEducationLabel()) {
+      return EDUCATION_COMPACT_LABEL;
+    }
+    return baseLabel;
+  }
+
+  function syncCompactEducationLabels() {
+    const useCompactLabel = shouldUseCompactEducationLabel();
+
+    qsa('.main-nav > ul > li > a[href]').forEach((link) => {
+      const path = normalizePath(link.getAttribute('href'));
+      if (path !== EDUCATION_PAGE_PATH) return;
+
+      const originalLabel = link.dataset.fullLabel
+        || link.textContent.replace(/\s+/g, ' ').trim()
+        || EDUCATION_FULL_LABEL;
+
+      if (!link.dataset.fullLabel) {
+        link.dataset.fullLabel = originalLabel;
+      }
+
+      const nextLabel = getResponsiveNavLabel(path, link.dataset.fullLabel || originalLabel);
+      if (link.textContent !== nextLabel) {
+        link.textContent = nextLabel;
+      }
+
+      const accessibleLabel = getAccessibleNavLabel(path, link.dataset.fullLabel || originalLabel);
+      link.setAttribute('aria-label', accessibleLabel);
+      if (useCompactLabel) {
+        link.title = accessibleLabel;
+      } else {
+        link.removeAttribute('title');
+      }
+    });
+
+    qsa('#mobileBottomDock .mobile-bottom-dock__item[href]').forEach((link) => {
+      const path = normalizePath(link.getAttribute('href'));
+      if (path !== EDUCATION_PAGE_PATH) return;
+
+      const labelEl = link.querySelector('.mobile-bottom-dock__label');
+      if (!labelEl) return;
+
+      const originalLabel = labelEl.dataset.fullLabel
+        || labelEl.textContent.replace(/\s+/g, ' ').trim()
+        || EDUCATION_FULL_LABEL;
+
+      if (!labelEl.dataset.fullLabel) {
+        labelEl.dataset.fullLabel = originalLabel;
+      }
+
+      const nextLabel = getResponsiveNavLabel(path, labelEl.dataset.fullLabel || originalLabel);
+      if (labelEl.textContent !== nextLabel) {
+        labelEl.textContent = nextLabel;
+      }
+
+      const accessibleLabel = getAccessibleNavLabel(path, labelEl.dataset.fullLabel || originalLabel);
+      link.setAttribute('aria-label', accessibleLabel);
+      if (useCompactLabel) {
+        link.title = accessibleLabel;
+      } else {
+        link.removeAttribute('title');
+      }
+    });
+  }
 
   function normalizePath(value) {
     if (!value) return 'index.html';
@@ -1103,7 +1209,12 @@
 
       const label = document.createElement('span');
       label.className = 'mobile-bottom-dock__label';
-      label.textContent = entry.label;
+      label.dataset.fullLabel = entry.label;
+      label.textContent = getResponsiveNavLabel(entry.path, entry.label);
+      anchor.setAttribute('aria-label', getAccessibleNavLabel(entry.path, entry.label));
+      if (normalizePath(entry.path) === EDUCATION_PAGE_PATH && shouldUseCompactEducationLabel()) {
+        anchor.title = getAccessibleNavLabel(entry.path, entry.label);
+      }
 
       anchor.append(iconWrap, label);
       list.appendChild(anchor);
