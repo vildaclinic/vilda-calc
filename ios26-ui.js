@@ -1,6 +1,5 @@
 
 
-
 // ios26-ui.js — dynamiczne uruchomienie Liquid Glass UI dla PWA Vilda Clinic
 //
 // Ten skrypt włącza klasę `.liquid-ios26` na <body>, dzięki czemu
@@ -16,6 +15,7 @@
   const qsa = (sel, root = document) => Array.from(root.querySelectorAll(sel));
   const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const THEME_LEVELS = [0, 1, 2];
+  const PIN_MOBILE_DOCK_IN_IOS_BROWSER = true;
 
   function safeRun(label, fn) {
     try {
@@ -513,6 +513,8 @@
   }
 
   function getVisibleBottomOverlayHeight() {
+    const viewportHeight = getViewportHeight();
+
     return qsa('.cookie-banner, #cookieBanner').reduce((max, el) => {
       if (!el) return max;
 
@@ -523,7 +525,7 @@
       if (!rect.height) return max;
 
       const isBottomOverlay = (styles.position === 'fixed' || styles.position === 'sticky')
-        && rect.bottom >= (window.innerHeight - 2);
+        && rect.bottom >= (viewportHeight - 2);
 
       return isBottomOverlay ? Math.max(max, Math.ceil(rect.height)) : max;
     }, 0);
@@ -563,6 +565,10 @@
     const viewportWidth = getViewportWidth();
 
     return !!(coarsePointer || (viewportWidth > 0 && viewportWidth <= 1100));
+  }
+
+  function shouldPinMobileDockForSafariChrome() {
+    return PIN_MOBILE_DOCK_IN_IOS_BROWSER && shouldOptimizeMobileBrowserUi();
   }
 
   function shouldGuardTransientViewportResize() {
@@ -661,8 +667,7 @@
 
     if (window.CSS?.supports?.('min-height: 100svh')) {
       body.style.minHeight = '100svh';
-    }
-    if (window.CSS?.supports?.('min-height: 100dvh')) {
+    } else if (window.CSS?.supports?.('min-height: 100dvh')) {
       body.style.minHeight = '100dvh';
     }
 
@@ -693,19 +698,15 @@
   }
 
   function getViewportWidth() {
-    return Math.max(
-      window.visualViewport?.width || 0,
-      window.innerWidth || 0,
-      document.documentElement?.clientWidth || 0
-    );
+    const visualViewportWidth = window.visualViewport?.width || 0;
+    if (visualViewportWidth > 0) return visualViewportWidth;
+    return window.innerWidth || document.documentElement?.clientWidth || 0;
   }
 
   function getViewportHeight() {
-    return Math.max(
-      window.visualViewport?.height || 0,
-      window.innerHeight || 0,
-      document.documentElement?.clientHeight || 0
-    );
+    const visualViewportHeight = window.visualViewport?.height || 0;
+    if (visualViewportHeight > 0) return visualViewportHeight;
+    return window.innerHeight || document.documentElement?.clientHeight || 0;
   }
 
   function getWindowScrollSnapshot() {
@@ -723,12 +724,11 @@
       document.documentElement?.scrollHeight || 0,
       document.body?.scrollHeight || 0
     );
-    const visibleHeight = Math.max(
-      viewportHeight,
-      root?.clientHeight || 0,
-      document.documentElement?.clientHeight || 0,
-      document.body?.clientHeight || 0
-    );
+    const visibleHeight = viewportHeight
+      || root?.clientHeight
+      || document.documentElement?.clientHeight
+      || document.body?.clientHeight
+      || 0;
 
     return {
       target: window,
@@ -892,6 +892,7 @@
     let lastViewportHeight = getViewportHeight();
     let resizeSettleTimer = 0;
     const detachScrollListeners = [];
+    const shouldPinDock = () => shouldPinMobileDockForSafariChrome();
 
     function syncDockVisibilityClass() {
       const isVisible = !dock.hidden
@@ -901,7 +902,8 @@
     }
 
     function setDockVisible(visible) {
-      const shouldHide = !visible;
+      const mustStayVisible = shouldPinDock() && !dock.classList.contains('is-keyboard-hidden');
+      const shouldHide = !visible && !mustStayVisible;
       if (dock.classList.contains('is-hidden') === shouldHide) {
         syncDockVisibilityClass();
         updateDockMetrics();
@@ -942,24 +944,9 @@
       if (!target) return;
 
       const eventTarget = target === document ? window : target;
-      // Determine if the user is on iOS Safari.  We check for iPhone/iPad/iPod in the
-      // user agent string, ensure Safari is present, and exclude Chrome/Chromium
-      // variants.  Safari’s toolbars collapse based on the window scroll; if we
-      // change the active scroll target to a nested scrollable element then
-      // Safari stops hiding the bottom bar after the first scroll.  To preserve
-      // the collapsing behaviour we avoid changing activeScrollTarget on iOS Safari
-      // and always use the window as the scroll container.
-      const isIosSafari = typeof navigator !== 'undefined'
-        && /iP(?:hone|ad|od)/.test(navigator.userAgent || '')
-        && /Safari/.test(navigator.userAgent || '')
-        && !/Chrome/.test(navigator.userAgent || '');
       const handler = () => {
-        if (!isIosSafari) {
-          // In browsers other than iOS Safari, track the deepest scrollable element
-          // so that the dock reacts to scrolling in nested containers.
-          if (eventTarget !== window && eventTarget instanceof Element) {
-            activeScrollTarget = eventTarget;
-          }
+        if (eventTarget !== window && eventTarget instanceof Element) {
+          activeScrollTarget = eventTarget;
         }
         requestDockUpdate();
       };
@@ -990,10 +977,12 @@
       const enabled = shouldEnableMobileDock();
       dock.hidden = !enabled;
       document.body.classList.toggle('has-mobile-bottom-dock', enabled);
+      document.body.classList.toggle('ios-safari-dock-pinned', enabled && shouldPinDock());
 
       if (!enabled) {
         dock.classList.remove('is-hidden', 'is-keyboard-hidden');
         document.body.classList.remove('has-mobile-bottom-dock-visible');
+        document.body.classList.remove('ios-safari-dock-pinned');
         document.documentElement.style.setProperty('--mobile-dock-extra-offset', '0px');
         document.documentElement.style.setProperty('--mobile-dock-visible-lift', '0px');
         document.documentElement.style.setProperty('--scroll-top-btn-bottom', `${Math.round(getRemSizeInPx())}px`);
@@ -1006,7 +995,7 @@
       const snapshot = readDockScrollSnapshot();
       lastScrollY = snapshot.top;
 
-      if (!hasInitialDockState || !preserveVisibility) {
+      if (!hasInitialDockState || !preserveVisibility || shouldPinDock()) {
         setDockVisible(true);
       } else {
         syncDockVisibilityClass();
@@ -1054,6 +1043,13 @@
       const delta = currentY - lastScrollY;
       const nearBottom = (snapshot.max - currentY) <= 28;
 
+      if (shouldPinDock()) {
+        setDockVisible(true);
+        lastScrollY = currentY;
+        updateDockMetrics();
+        return;
+      }
+
       if (snapshot.max <= 20) {
         setDockVisible(true);
         lastScrollY = currentY;
@@ -1096,7 +1092,10 @@
     on(window, 'pageshow', () => syncDockMode({ preserveVisibility: true }), { passive: true });
     if (window.visualViewport) {
       on(window.visualViewport, 'resize', () => handleViewportResize(false), { passive: true });
-      on(window.visualViewport, 'scroll', updateDockMetrics, { passive: true });
+      on(window.visualViewport, 'scroll', () => {
+        if (shouldPinDock()) return;
+        updateDockMetrics();
+      }, { passive: true });
     }
 
     document.addEventListener('focusin', (event) => {
