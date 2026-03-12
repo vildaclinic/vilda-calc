@@ -407,6 +407,7 @@
     safeRun('setupPressFeedback', setupPressFeedback);
     safeRun('observeAppear', observeAppear);
     safeRun('ensureGlobalScrollTopHandler', ensureGlobalScrollTopHandler);
+    safeRun('syncSingleColumnTopNavOrder', syncSingleColumnTopNavOrder);
     safeRun('setupMobileBottomDock', setupMobileBottomDock);
     safeRun('syncCompactEducationLabels', syncCompactEducationLabels);
     safeRun('syncMobileTopNavFontSize', syncMobileTopNavFontSize);
@@ -416,15 +417,18 @@
     let lastBrowserUiViewportWidth = getViewportWidth();
     const delayedRefresh = () => safeRun('refreshIconsAndFallbacks', refreshIconsAndFallbacks);
     const delayedDockRetry = () => safeRun('setupMobileBottomDock(retry)', setupMobileBottomDock);
+    const delayedTopNavStructureSync = () => safeRun('syncSingleColumnTopNavOrder', syncSingleColumnTopNavOrder);
     const delayedCompactEducationLabels = () => safeRun('syncCompactEducationLabels', syncCompactEducationLabels);
     const delayedTopNavFontSizeSync = () => scheduleMobileTopNavFontSizeSync(0);
     const delayedBrowserUiRefresh = () => safeRun('applyMobileBrowserUiOptimization', applyMobileBrowserUiOptimization);
     const delayedBrowserUiPrime = () => safeRun('primeMobileBrowserUiChrome', primeMobileBrowserUiChrome);
     window.setTimeout(delayedRefresh, 150);
+    window.setTimeout(delayedTopNavStructureSync, 0);
     window.setTimeout(delayedCompactEducationLabels, 0);
     window.setTimeout(delayedTopNavFontSizeSync, 30);
     window.setTimeout(delayedRefresh, 900);
     window.setTimeout(delayedDockRetry, 250);
+    window.setTimeout(delayedTopNavStructureSync, 280);
     window.setTimeout(delayedCompactEducationLabels, 280);
     window.setTimeout(delayedTopNavFontSizeSync, 320);
     window.setTimeout(delayedBrowserUiRefresh, 0);
@@ -432,6 +436,7 @@
     window.setTimeout(delayedBrowserUiRefresh, 360);
     window.setTimeout(delayedBrowserUiPrime, 460);
     on(window, 'load', () => {
+      delayedTopNavStructureSync();
       delayedDockRetry();
       delayedRefresh();
       delayedCompactEducationLabels();
@@ -440,6 +445,7 @@
       window.setTimeout(delayedBrowserUiPrime, 80);
     }, { passive: true, once: true });
     on(window, 'pageshow', () => {
+      delayedTopNavStructureSync();
       delayedDockRetry();
       delayedRefresh();
       delayedCompactEducationLabels();
@@ -449,10 +455,12 @@
     }, { passive: true });
     on(window, 'orientationchange', () => {
       window.setTimeout(delayedBrowserUiRefresh, 60);
+      window.setTimeout(delayedTopNavStructureSync, 90);
       window.setTimeout(delayedCompactEducationLabels, 90);
       window.setTimeout(delayedTopNavFontSizeSync, 110);
       window.setTimeout(delayedBrowserUiPrime, 180);
     }, { passive: true });
+    on(window, 'resize', delayedTopNavStructureSync, { passive: true });
     on(window, 'resize', delayedCompactEducationLabels, { passive: true });
     on(window, 'resize', delayedTopNavFontSizeSync, { passive: true });
     if (window.visualViewport) {
@@ -462,6 +470,7 @@
 
         if (widthDelta > 2 || !shouldOptimizeMobileBrowserUi()) {
           lastBrowserUiViewportWidth = nextViewportWidth;
+          window.setTimeout(delayedTopNavStructureSync, 0);
           window.setTimeout(delayedCompactEducationLabels, 0);
           window.setTimeout(delayedTopNavFontSizeSync, 0);
           window.setTimeout(delayedBrowserUiRefresh, 0);
@@ -471,6 +480,7 @@
         window.clearTimeout(browserUiRefreshTimer);
         browserUiRefreshTimer = window.setTimeout(() => {
           lastBrowserUiViewportWidth = getViewportWidth();
+          safeRun('syncSingleColumnTopNavOrder(settled)', syncSingleColumnTopNavOrder);
           safeRun('syncCompactEducationLabels(settled)', syncCompactEducationLabels);
           safeRun('syncMobileTopNavFontSize(settled)', syncMobileTopNavFontSize);
           safeRun('applyMobileBrowserUiOptimization(settled)', applyMobileBrowserUiOptimization);
@@ -589,8 +599,27 @@
 
 
   const MOBILE_DOCK_BREAKPOINT = '(max-width: 1100px), (pointer: coarse)';
-  const MOBILE_DOCK_CORE_PATHS = ['index.html', 'docpro.html', 'kalkulator-klirens.html', 'cukrzyca.html'];
-  const MOBILE_DOCK_DEFAULT_EXTRA_PATH = 'homa-ir.html';
+  const MOBILE_DOCK_FIXED_ITEMS = [
+    { path: 'index.html', href: 'index.html', label: 'Start', icon: 'home' },
+    { path: 'docpro.html', href: 'docpro.html', label: 'DocPro', icon: 'stethoscope' },
+    { path: 'kalkulator-klirens.html', href: 'kalkulator-klirens.html', label: 'Klirens', icon: 'droplets' },
+    { path: 'cukrzyca.html', href: 'cukrzyca.html', label: 'Cukrzyca', icon: 'syringe' },
+    { path: 'homa-ir.html', href: 'homa-ir.html', label: 'HOMA‑IR', icon: 'calculator' }
+  ];
+  const SINGLE_COLUMN_TOP_NAV_ITEMS = [
+    { path: 'docpro.html', href: 'docpro.html', label: 'DocPro', className: 'pro-link' },
+    { path: 'kalkulator-klirens.html', href: 'kalkulator-klirens.html', label: 'Klirens' },
+    { path: 'cukrzyca.html', href: 'cukrzyca.html', label: 'Cukrzyca' },
+    { path: 'steroidy.html', href: 'steroidy.html', label: 'Steroidy' },
+    {
+      path: EDUCATION_PAGE_PATH,
+      href: EDUCATION_PAGE_PATH,
+      label: EDUCATION_COMPACT_LABEL,
+      fullLabel: EDUCATION_FULL_LABEL,
+      accessibleLabel: EDUCATION_FULL_LABEL,
+      forceCompactLabel: true
+    }
+  ];
   const MOBILE_DOCK_FALLBACKS = {
     'index.html': { href: 'index.html', label: 'Start', icon: 'home' },
     'docpro.html': { href: 'docpro.html', label: 'DocPro', icon: 'stethoscope' },
@@ -730,6 +759,111 @@
     return baseLabel;
   }
 
+  function getTopLevelNavRootList(nav) {
+    if (!nav) return null;
+    return Array.from(nav.children || []).find((child) => child && child.tagName === 'UL') || null;
+  }
+
+  function getTopLevelNavAnchor(item) {
+    if (!item) return null;
+    return Array.from(item.children || []).find((child) => child && child.tagName === 'A' && child.hasAttribute('href')) || null;
+  }
+
+  function buildSingleColumnTopNavItem(config, existingAnchor, currentPath) {
+    const normalizedPath = normalizePath(config.path || config.href);
+    const fallback = MOBILE_DOCK_FALLBACKS[normalizedPath] || {};
+    const label = config.label
+      || fallback.label
+      || existingAnchor?.textContent?.replace(/\s+/g, ' ').trim()
+      || normalizedPath;
+    const fullLabel = config.fullLabel
+      || fallback.label
+      || existingAnchor?.dataset?.fullLabel
+      || label;
+    const accessibleLabel = config.accessibleLabel || getAccessibleNavLabel(normalizedPath, fullLabel);
+
+    const li = existingAnchor?.parentElement && existingAnchor.parentElement.tagName === 'LI'
+      ? existingAnchor.parentElement
+      : document.createElement('li');
+    let anchor = existingAnchor;
+
+    if (!anchor || anchor.parentElement !== li) {
+      anchor = document.createElement('a');
+      li.textContent = '';
+      li.appendChild(anchor);
+    }
+
+    anchor.setAttribute('href', config.href || fallback.href || normalizedPath);
+    anchor.textContent = label;
+    anchor.dataset.fullLabel = fullLabel;
+
+    if (config.forceCompactLabel) {
+      anchor.dataset.forceCompactLabel = 'true';
+    } else {
+      delete anchor.dataset.forceCompactLabel;
+    }
+
+    if (config.className) {
+      anchor.className = '';
+      config.className.split(/\s+/).filter(Boolean).forEach((className) => anchor.classList.add(className));
+    } else if (!existingAnchor) {
+      anchor.removeAttribute('class');
+    }
+
+    anchor.setAttribute('aria-label', accessibleLabel);
+    if (config.forceCompactLabel || label !== accessibleLabel) {
+      anchor.title = accessibleLabel;
+    } else {
+      anchor.removeAttribute('title');
+    }
+
+    if (normalizedPath === currentPath) {
+      anchor.setAttribute('aria-current', 'page');
+      li.classList.add('is-active');
+    } else {
+      anchor.removeAttribute('aria-current');
+      li.classList.remove('is-active');
+    }
+
+    return li;
+  }
+
+  function syncSingleColumnTopNavOrder() {
+    const nav = qs('.main-nav');
+    const rootList = getTopLevelNavRootList(nav);
+    if (!nav || !rootList) return;
+    if (!isElementVisibleForLayout(nav)) return;
+
+    const menuToggleItem = Array.from(rootList.children || []).find((child) => child?.classList?.contains('menu-toggle'));
+    if (!menuToggleItem) return;
+
+    const currentPath = normalizePath(window.location.pathname);
+    const existingByPath = new Map();
+
+    Array.from(rootList.children || []).forEach((item) => {
+      if (!item || item === menuToggleItem) return;
+      const anchor = getTopLevelNavAnchor(item);
+      if (!anchor) return;
+
+      const path = normalizePath(anchor.getAttribute('href'));
+      if (!existingByPath.has(path)) {
+        existingByPath.set(path, anchor);
+      }
+    });
+
+    Array.from(rootList.children || []).forEach((item) => {
+      if (item && item !== menuToggleItem) {
+        item.remove();
+      }
+    });
+
+    SINGLE_COLUMN_TOP_NAV_ITEMS.forEach((config) => {
+      const anchor = existingByPath.get(normalizePath(config.path || config.href)) || null;
+      const item = buildSingleColumnTopNavItem(config, anchor, currentPath);
+      rootList.appendChild(item);
+    });
+  }
+
   function syncCompactEducationLabels() {
     const useCompactLabel = shouldUseCompactEducationLabel();
 
@@ -745,14 +879,17 @@
         link.dataset.fullLabel = originalLabel;
       }
 
-      const nextLabel = getResponsiveNavLabel(path, link.dataset.fullLabel || originalLabel);
+      const forceCompactLabel = link.dataset.forceCompactLabel === 'true';
+      const nextLabel = forceCompactLabel
+        ? EDUCATION_COMPACT_LABEL
+        : getResponsiveNavLabel(path, link.dataset.fullLabel || originalLabel);
       if (link.textContent !== nextLabel) {
         link.textContent = nextLabel;
       }
 
       const accessibleLabel = getAccessibleNavLabel(path, link.dataset.fullLabel || originalLabel);
       link.setAttribute('aria-label', accessibleLabel);
-      if (useCompactLabel) {
+      if (forceCompactLabel || useCompactLabel) {
         link.title = accessibleLabel;
       } else {
         link.removeAttribute('title');
@@ -1285,13 +1422,19 @@
 
     const navEntries = collectNavEntries();
     const currentPath = normalizePath(window.location.pathname);
-    const preferredPaths = [...MOBILE_DOCK_CORE_PATHS];
-    preferredPaths.push(preferredPaths.includes(currentPath) ? MOBILE_DOCK_DEFAULT_EXTRA_PATH : currentPath);
 
-    const dockEntries = Array.from(new Set(preferredPaths))
-      .map((path) => getNavEntryForPath(path, navEntries))
-      .filter(Boolean)
-      .slice(0, 5);
+    const dockEntries = MOBILE_DOCK_FIXED_ITEMS.map((config) => {
+      const normalizedPath = normalizePath(config.path || config.href);
+      const navEntry = getNavEntryForPath(normalizedPath, navEntries) || {};
+      const fallback = MOBILE_DOCK_FALLBACKS[normalizedPath] || {};
+
+      return {
+        path: normalizedPath,
+        href: config.href || navEntry.href || fallback.href || normalizedPath,
+        label: config.label || navEntry.label || fallback.label || normalizedPath,
+        icon: config.icon || navEntry.icon || fallback.icon || 'circle'
+      };
+    }).filter(Boolean);
 
     if (!dockEntries.length) return;
 
