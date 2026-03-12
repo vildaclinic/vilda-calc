@@ -571,6 +571,23 @@
     return PIN_MOBILE_DOCK_IN_IOS_BROWSER && shouldOptimizeMobileBrowserUi();
   }
 
+  function syncScrollTopButtonPositionMode(isPinned = shouldPinMobileDockForSafariChrome()) {
+    const btn = ensureScrollTopButton();
+    if (!btn) return;
+
+    if (isPinned) {
+      btn.style.setProperty('transition', 'background 0.2s ease, opacity 0.2s ease', 'important');
+      return;
+    }
+
+    btn.style.removeProperty('transition');
+  }
+
+  function getDockViewportBottomGap(dockRect, viewportHeight) {
+    if (!dockRect) return 0;
+    return Math.max(0, Math.round(viewportHeight - dockRect.bottom));
+  }
+
   function shouldGuardTransientViewportResize() {
     if (!document.documentElement || !document.body) return false;
     if (isStandaloneDisplayMode()) return false;
@@ -916,9 +933,11 @@
 
     function updateDockMetrics() {
       const enabled = shouldEnableMobileDock();
+      const pinnedDockMode = enabled && shouldPinDock();
       const extraOffset = enabled ? getVisibleBottomOverlayHeight() : 0;
       const rootStyle = document.documentElement.style;
       const baseScrollTopBottom = Math.round(getRemSizeInPx() + Math.max(0, extraOffset));
+      syncScrollTopButtonPositionMode(pinnedDockMode);
       rootStyle.setProperty('--mobile-dock-extra-offset', `${Math.max(0, extraOffset)}px`);
       rootStyle.setProperty('--scroll-top-btn-bottom', `${baseScrollTopBottom}px`);
 
@@ -935,7 +954,9 @@
       const viewportHeight = getViewportHeight();
       const dockRect = dock.getBoundingClientRect();
       const visibleLift = Math.max(0, Math.round(viewportHeight - dockRect.top));
-      const liftedScrollTopBottom = Math.max(baseScrollTopBottom, visibleLift + Math.round(getRemSizeInPx()));
+      const dockBottomGap = getDockViewportBottomGap(dockRect, viewportHeight);
+      const scrollTopGap = pinnedDockMode ? dockBottomGap : Math.round(getRemSizeInPx());
+      const liftedScrollTopBottom = Math.max(baseScrollTopBottom, visibleLift + scrollTopGap);
       rootStyle.setProperty('--mobile-dock-visible-lift', `${visibleLift}px`);
       rootStyle.setProperty('--scroll-top-btn-bottom', `${liftedScrollTopBottom}px`);
     }
@@ -975,9 +996,11 @@
       refreshScrollBindings();
 
       const enabled = shouldEnableMobileDock();
+      const pinnedDockMode = enabled && shouldPinDock();
       dock.hidden = !enabled;
       document.body.classList.toggle('has-mobile-bottom-dock', enabled);
-      document.body.classList.toggle('ios-safari-dock-pinned', enabled && shouldPinDock());
+      document.body.classList.toggle('ios-safari-dock-pinned', pinnedDockMode);
+      syncScrollTopButtonPositionMode(pinnedDockMode);
 
       if (!enabled) {
         dock.classList.remove('is-hidden', 'is-keyboard-hidden');
@@ -1044,9 +1067,12 @@
       const nearBottom = (snapshot.max - currentY) <= 28;
 
       if (shouldPinDock()) {
-        setDockVisible(true);
+        if (dock.classList.contains('is-hidden')) {
+          setDockVisible(true);
+        } else {
+          syncDockVisibilityClass();
+        }
         lastScrollY = currentY;
-        updateDockMetrics();
         return;
       }
 
