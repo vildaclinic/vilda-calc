@@ -15,7 +15,7 @@
   const qsa = (sel, root = document) => Array.from(root.querySelectorAll(sel));
   const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const THEME_LEVELS = [0, 1, 2];
-  const PIN_MOBILE_DOCK_IN_IOS_BROWSER = true;
+  const LOCK_MOBILE_NAVIGATION_ON_TOUCH_DEVICES = true;
   const PREF_KEY_SHOW_MOBILE_DOCK = 'showMobileDock';
   const PREF_KEY_SHOW_NAVIGATION_ARROW = 'showNavigationArrow';
 
@@ -289,6 +289,36 @@
     (document.head || document.documentElement).appendChild(style);
   }
 
+
+  function ensureLockedMobileNavigationStyle() {
+    if (!document.documentElement || document.getElementById('vildaLockedMobileNavigationStyle')) return;
+
+    const style = document.createElement('style');
+    style.id = 'vildaLockedMobileNavigationStyle';
+    style.textContent = `
+      body.mobile-nav-ui-locked #mobileBottomDock,
+      body.mobile-nav-ui-locked #scrollTopBtn {
+        transition: none !important;
+        animation: none !important;
+      }
+
+      body.mobile-nav-ui-locked #scrollTopBtn {
+        transform: none !important;
+      }
+    `;
+
+    (document.head || document.documentElement).appendChild(style);
+  }
+
+  function syncLockedMobileNavigationClass(enabled = false) {
+    const body = document.body;
+    if (!body) return !!enabled;
+
+    ensureLockedMobileNavigationStyle();
+    body.classList.toggle('mobile-nav-ui-locked', !!enabled);
+    return !!enabled;
+  }
+
   function applyNavigationVisibilityPreferences() {
     const body = document.body;
     if (!body) {
@@ -364,6 +394,7 @@
     safeRun('setupTransientViewportResizeGuard', setupTransientViewportResizeGuard);
     safeRun('applyThemeCustom', applyThemeCustom);
     safeRun('ensureNavigationVisibilityPreferenceStyle', ensureNavigationVisibilityPreferenceStyle);
+    safeRun('ensureLockedMobileNavigationStyle', ensureLockedMobileNavigationStyle);
     safeRun('applyNavigationVisibilityPreferences', applyNavigationVisibilityPreferences);
     safeRun('glassify', glassify);
     safeRun('setupPressFeedback', setupPressFeedback);
@@ -677,11 +708,36 @@
     return !!(coarsePointer || (viewportWidth > 0 && viewportWidth <= 1100));
   }
 
-  function shouldPinMobileDockForSafariChrome() {
-    return PIN_MOBILE_DOCK_IN_IOS_BROWSER && shouldOptimizeMobileBrowserUi();
+  function isLikelyMobileTouchBrowser() {
+    try {
+      const ua = navigator.userAgent || '';
+      if (/Android|webOS|iPhone|iPod|Mobile|Tablet|Silk|Kindle|Opera Mini|IEMobile/i.test(ua)) {
+        return true;
+      }
+    } catch (e) {
+      /* noop */
+    }
+
+    if (isTouchAppleDevice()) return true;
+
+    const coarsePointer = window.matchMedia?.('(pointer: coarse)').matches;
+    const hoverNone = window.matchMedia?.('(hover: none)').matches;
+    return !!(coarsePointer && hoverNone);
   }
 
-  function syncScrollTopButtonPositionMode(isPinned = shouldPinMobileDockForSafariChrome()) {
+  function shouldLockMobileNavigationUi() {
+    if (!LOCK_MOBILE_NAVIGATION_ON_TOUCH_DEVICES) return false;
+    if (!isLikelyMobileTouchBrowser()) return false;
+
+    const viewportWidth = getViewportWidth();
+    return viewportWidth > 0 && viewportWidth <= 1366;
+  }
+
+  function shouldPinMobileDockForSafariChrome() {
+    return shouldLockMobileNavigationUi();
+  }
+
+  function syncScrollTopButtonPositionMode(isPinned = shouldLockMobileNavigationUi()) {
     const btn = ensureScrollTopButton();
     if (!btn) return;
 
@@ -803,10 +859,12 @@
 
   function applyMobileBrowserUiOptimization() {
     const enabled = shouldOptimizeMobileBrowserUi();
+    const lockedMobileNavigation = shouldLockMobileNavigationUi();
     const root = document.documentElement;
     const body = document.body;
     if (!root || !body) return false;
 
+    syncLockedMobileNavigationClass(lockedMobileNavigation);
     root.classList.toggle('mobile-browser-ui-optimized', enabled);
     body.classList.toggle('mobile-browser-ui-optimized', enabled);
 
@@ -983,9 +1041,7 @@
     return best;
   }
 
-  function shouldEnableMobileDock() {
-    if (!shouldShowMobileDockByPreference()) return false;
-
+  function shouldUseMobileDockLayout() {
     const viewportWidth = getViewportWidth();
 
     if (window.matchMedia && window.matchMedia(MOBILE_DOCK_BREAKPOINT).matches) {
@@ -997,6 +1053,11 @@
     }
 
     return viewportWidth > 0 && viewportWidth <= 1100;
+  }
+
+  function shouldEnableMobileDock() {
+    if (!shouldShowMobileDockByPreference()) return false;
+    return shouldUseMobileDockLayout();
   }
 
   function setupMobileBottomDock() {
@@ -1060,7 +1121,7 @@
     let lastViewportHeight = getViewportHeight();
     let resizeSettleTimer = 0;
     const detachScrollListeners = [];
-    const shouldPinDock = () => shouldPinMobileDockForSafariChrome();
+    const shouldPinDock = () => shouldLockMobileNavigationUi();
 
     function syncDockVisibilityClass() {
       const isVisible = !dock.hidden
@@ -1085,13 +1146,15 @@
     function updateDockMetrics() {
       const enabled = shouldEnableMobileDock();
       const pinnedDockMode = enabled && shouldPinDock();
+      const lockedMobileNavigation = shouldLockMobileNavigationUi();
       const extraOffset = enabled ? getVisibleBottomOverlayHeight() : 0;
       const rootStyle = document.documentElement.style;
       const baseScrollTopBottom = Math.round(getRemSizeInPx() + Math.max(0, extraOffset));
       let nextVisibleLift = 0;
       let nextScrollTopBottom = baseScrollTopBottom;
 
-      syncScrollTopButtonPositionMode(pinnedDockMode);
+      syncLockedMobileNavigationClass(lockedMobileNavigation);
+      syncScrollTopButtonPositionMode(lockedMobileNavigation);
       rootStyle.setProperty('--mobile-dock-extra-offset', `${Math.max(0, extraOffset)}px`);
 
       const isVisible = enabled
@@ -1154,16 +1217,19 @@
       refreshScrollBindings();
 
       const enabled = shouldEnableMobileDock();
+      const lockedMobileNavigation = syncLockedMobileNavigationClass(shouldLockMobileNavigationUi());
       const pinnedDockMode = enabled && shouldPinDock();
       dock.hidden = !enabled;
       document.body.classList.toggle('has-mobile-bottom-dock', enabled);
       document.body.classList.toggle('ios-safari-dock-pinned', pinnedDockMode);
-      syncScrollTopButtonPositionMode(pinnedDockMode);
+      document.body.classList.toggle('mobile-dock-pinned', pinnedDockMode);
+      syncScrollTopButtonPositionMode(lockedMobileNavigation);
 
       if (!enabled) {
         dock.classList.remove('is-hidden', 'is-keyboard-hidden');
         document.body.classList.remove('has-mobile-bottom-dock-visible');
         document.body.classList.remove('ios-safari-dock-pinned');
+        document.body.classList.remove('mobile-dock-pinned');
         document.documentElement.style.setProperty('--mobile-dock-extra-offset', '0px');
         document.documentElement.style.setProperty('--mobile-dock-visible-lift', '0px');
         document.documentElement.style.setProperty('--scroll-top-btn-bottom', `${Math.round(getRemSizeInPx())}px`);
