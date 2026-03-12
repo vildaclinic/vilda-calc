@@ -576,16 +576,55 @@
     if (!btn) return;
 
     if (isPinned) {
-      btn.style.setProperty('transition', 'background 0.2s ease, opacity 0.2s ease', 'important');
+      btn.style.setProperty('transition', 'none', 'important');
+      btn.style.setProperty('transform', 'none', 'important');
       return;
     }
 
     btn.style.removeProperty('transition');
+    btn.style.removeProperty('transform');
   }
 
   function getDockViewportBottomGap(dockRect, viewportHeight) {
     if (!dockRect) return 0;
     return Math.max(0, Math.round(viewportHeight - dockRect.bottom));
+  }
+
+  function readCssPxNumber(value, fallback = 0) {
+    const parsed = parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+
+  function getPinnedDockAnchorMetrics(dock) {
+    if (!dock) {
+      return {
+        bottomGap: 0,
+        height: 0,
+        visibleLift: 0,
+        scrollTopBottom: 0
+      };
+    }
+
+    const computedStyle = window.getComputedStyle ? window.getComputedStyle(dock) : null;
+    const dockBottomGap = Math.max(0, Math.round(readCssPxNumber(computedStyle?.bottom, 0)));
+    const dockHeight = Math.max(
+      0,
+      Math.round(
+        dock.offsetHeight
+        || readCssPxNumber(computedStyle?.height, 0)
+        || dock.getBoundingClientRect().height
+        || 0
+      )
+    );
+    const visibleLift = dockHeight + dockBottomGap;
+    const scrollTopBottom = dockHeight + (dockBottomGap * 2);
+
+    return {
+      bottomGap: dockBottomGap,
+      height: dockHeight,
+      visibleLift,
+      scrollTopBottom
+    };
   }
 
   function shouldGuardTransientViewportResize() {
@@ -937,28 +976,35 @@
       const extraOffset = enabled ? getVisibleBottomOverlayHeight() : 0;
       const rootStyle = document.documentElement.style;
       const baseScrollTopBottom = Math.round(getRemSizeInPx() + Math.max(0, extraOffset));
+      let nextVisibleLift = 0;
+      let nextScrollTopBottom = baseScrollTopBottom;
+
       syncScrollTopButtonPositionMode(pinnedDockMode);
       rootStyle.setProperty('--mobile-dock-extra-offset', `${Math.max(0, extraOffset)}px`);
-      rootStyle.setProperty('--scroll-top-btn-bottom', `${baseScrollTopBottom}px`);
 
       const isVisible = enabled
         && !dock.hidden
         && !dock.classList.contains('is-hidden')
         && !dock.classList.contains('is-keyboard-hidden');
 
-      if (!isVisible) {
-        rootStyle.setProperty('--mobile-dock-visible-lift', '0px');
-        return;
+      if (isVisible) {
+        if (pinnedDockMode) {
+          const pinnedMetrics = getPinnedDockAnchorMetrics(dock);
+          nextVisibleLift = pinnedMetrics.visibleLift;
+          nextScrollTopBottom = Math.max(baseScrollTopBottom, pinnedMetrics.scrollTopBottom);
+        } else {
+          const viewportHeight = getViewportHeight();
+          const dockRect = dock.getBoundingClientRect();
+          const visibleLift = Math.max(0, Math.round(viewportHeight - dockRect.top));
+          const dockBottomGap = getDockViewportBottomGap(dockRect, viewportHeight);
+          const liftedScrollTopBottom = Math.max(baseScrollTopBottom, visibleLift + Math.round(getRemSizeInPx()));
+          nextVisibleLift = visibleLift;
+          nextScrollTopBottom = liftedScrollTopBottom;
+        }
       }
 
-      const viewportHeight = getViewportHeight();
-      const dockRect = dock.getBoundingClientRect();
-      const visibleLift = Math.max(0, Math.round(viewportHeight - dockRect.top));
-      const dockBottomGap = getDockViewportBottomGap(dockRect, viewportHeight);
-      const scrollTopGap = pinnedDockMode ? dockBottomGap : Math.round(getRemSizeInPx());
-      const liftedScrollTopBottom = Math.max(baseScrollTopBottom, visibleLift + scrollTopGap);
-      rootStyle.setProperty('--mobile-dock-visible-lift', `${visibleLift}px`);
-      rootStyle.setProperty('--scroll-top-btn-bottom', `${liftedScrollTopBottom}px`);
+      rootStyle.setProperty('--mobile-dock-visible-lift', `${Math.max(0, nextVisibleLift)}px`);
+      rootStyle.setProperty('--scroll-top-btn-bottom', `${Math.max(0, nextScrollTopBottom)}px`);
     }
 
     function bindScrollTarget(target) {
