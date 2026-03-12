@@ -7,7 +7,39 @@
   <link href="ios26-v2.css?v=9" rel="stylesheet">
   <link href="style.css?v=5" rel="stylesheet">
   <link href="sidebar.css" rel="stylesheet">
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  
+<script>
+(function() {
+  try {
+    var KEY = 'mobileTopNavFontCache';
+    var VERSION = 'v3';
+    var SIGNATURE = 'docpro.html|kalkulator-klirens.html|cukrzyca.html|steroidy.html|materialy-edukacyjne.html';
+    var raw = localStorage.getItem(KEY);
+    if (!raw) return;
+
+    var parsed = JSON.parse(raw);
+    if (!parsed || parsed.version !== VERSION || parsed.signature !== SIGNATURE) return;
+
+    var viewportWidth = Math.round(Math.max(
+      window.innerWidth || 0,
+      document.documentElement ? (document.documentElement.clientWidth || 0) : 0
+    ));
+    var cachedWidth = Math.round(Number(parsed.width) || 0);
+    var fontRem = Number(parsed.fontRem);
+
+    if (!viewportWidth || viewportWidth !== cachedWidth || !isFinite(fontRem)) return;
+    if (fontRem < 0.72 || fontRem > 0.98) return;
+
+    var style = document.createElement('style');
+    style.id = 'mobile-top-nav-font-cache-style';
+    style.textContent = '@media (max-width: 600px){.main-nav{--mobile-top-nav-font-size:' + fontRem.toFixed(2) + 'rem !important;}}';
+    document.head.appendChild(style);
+  } catch (e) {
+    /* noop */
+  }
+})();
+</script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/pdfmake.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/vfs_fonts.min.js"></script>
   <script src="ios26-ui.js?v=11" defer></script>
@@ -2297,8 +2329,6 @@
               <input type="file" id="fileInput" accept=".json,application/json" style="display:none;">
             </li>
       <li><a href="index.html">Strona główna</a></li>
-      <li><a href="homa-ir.html">HOMA‑IR</a></li>
-      <li><a href="materialy-edukacyjne.html">Edu</a></li>
       <li><a href="ustawienia.html">Ustawienia</a></li>
       <li><a href="instrukcja.html">Instrukcja</a></li>
       <li><a href="o-aplikacji.html">O aplikacji</a></li>

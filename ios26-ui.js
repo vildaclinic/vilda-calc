@@ -19,8 +19,12 @@
   const PREF_KEY_SHOW_MOBILE_DOCK = 'showMobileDock';
   const PREF_KEY_SHOW_NAVIGATION_ARROW = 'showNavigationArrow';
   const EDUCATION_PAGE_PATH = 'materialy-edukacyjne.html';
+  const HOMA_IR_PAGE_PATH = 'homa-ir.html';
   const EDUCATION_FULL_LABEL = 'Edu';
   const EDUCATION_COMPACT_LABEL = 'Edu';
+  const MOBILE_TOP_NAV_LAYOUT_SIGNATURE = 'docpro.html|kalkulator-klirens.html|cukrzyca.html|steroidy.html|materialy-edukacyjne.html';
+  const MOBILE_TOP_NAV_FONT_CACHE_KEY = 'mobileTopNavFontCache';
+  const MOBILE_TOP_NAV_FONT_CACHE_VERSION = 'v3';
   const MOBILE_TOP_NAV_MIN_FONT_REM = 0.72;
   const MOBILE_TOP_NAV_MAX_FONT_REM = 0.98;
   const MOBILE_TOP_NAV_FONT_STEP_REM = 0.01;
@@ -389,6 +393,9 @@
 
   let hasInitialised = false;
   let mobileTopNavFontSyncTimer = 0;
+  let mobileTopNavLastViewportWidth = 0;
+  let mobileTopNavLastAppliedFontRem = null;
+  let mobileTopNavLastSignature = '';
 
   function initLiquidUi() {
     if (hasInitialised) return;
@@ -425,7 +432,7 @@
     const delayedTopNavStructureSync = () => safeRun('syncSingleColumnTopNavOrder', syncSingleColumnTopNavOrder);
     const delayedCompactEducationLabels = () => safeRun('syncCompactEducationLabels', syncCompactEducationLabels);
     const delayedNavigationCoverageAudit = () => safeRun('auditNavigationCoverage', auditNavigationCoverage);
-    const delayedTopNavFontSizeSync = () => scheduleMobileTopNavFontSizeSync(0);
+    const delayedTopNavFontSizeSync = () => scheduleMobileTopNavFontSizeSyncForWidthChange(0);
     const delayedBrowserUiRefresh = () => safeRun('applyMobileBrowserUiOptimization', applyMobileBrowserUiOptimization);
     const delayedBrowserUiPrime = () => safeRun('primeMobileBrowserUiChrome', primeMobileBrowserUiChrome);
     window.setTimeout(delayedRefresh, 150);
@@ -503,7 +510,13 @@
     }
     if (document.fonts && document.fonts.ready && typeof document.fonts.ready.then === 'function') {
       document.fonts.ready.then(() => {
-        delayedTopNavFontSizeSync();
+        const currentWidth = normalizeMobileTopNavFontViewportWidth(getViewportWidth());
+        if (readMobileTopNavFontCache(currentWidth) !== null) {
+          safeRun('applyCachedMobileTopNavFontSize(document.fonts.ready)', () => applyCachedMobileTopNavFontSize(qs('.main-nav'), currentWidth));
+          return;
+        }
+
+        scheduleMobileTopNavFontSizeSync(0, { forceMeasure: true });
       }).catch(() => {
         /* noop */
       });
@@ -662,11 +675,100 @@ const NAVIGATION_REACHABILITY_ROUTES = [
   { path: 'o-aplikacji.html', href: 'o-aplikacji.html', label: 'O aplikacji', icon: 'info' },
   { path: 'kontakt.html', href: 'kontakt.html', label: 'Kontakt', icon: 'mail' }
 ];
-const HAMBURGER_FALLBACK_ROUTE_ORDER = NAVIGATION_REACHABILITY_ROUTES.map((route) => normalizePath(route.path));
+const HAMBURGER_FALLBACK_ROUTE_ORDER = NAVIGATION_REACHABILITY_ROUTES
+  .filter((route) => normalizePath(route.path) !== EDUCATION_PAGE_PATH)
+  .map((route) => normalizePath(route.path));
+
+  function normalizeMobileTopNavFontViewportWidth(value = getViewportWidth()) {
+    const normalized = Math.round(Number(value) || 0);
+    return normalized > 0 ? normalized : 0;
+  }
+
+  function getMobileTopNavCacheSignature() {
+    return MOBILE_TOP_NAV_LAYOUT_SIGNATURE;
+  }
+
+  function readMobileTopNavFontCachePayload() {
+    try {
+      const raw = localStorage.getItem(MOBILE_TOP_NAV_FONT_CACHE_KEY);
+      if (!raw) return null;
+
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object') return null;
+      if (parsed.version !== MOBILE_TOP_NAV_FONT_CACHE_VERSION) return null;
+      return parsed;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function readMobileTopNavFontCache(viewportWidth = getViewportWidth()) {
+    const payload = readMobileTopNavFontCachePayload();
+    if (!payload) return null;
+
+    const normalizedWidth = normalizeMobileTopNavFontViewportWidth(viewportWidth);
+    const cachedWidth = normalizeMobileTopNavFontViewportWidth(payload.width);
+    const cachedFontRem = Number(payload.fontRem);
+    const cachedSignature = String(payload.signature || '').trim();
+
+    if (!normalizedWidth || cachedWidth !== normalizedWidth) return null;
+    if (cachedSignature !== getMobileTopNavCacheSignature()) return null;
+    if (!Number.isFinite(cachedFontRem)) return null;
+    if (cachedFontRem < MOBILE_TOP_NAV_MIN_FONT_REM || cachedFontRem > MOBILE_TOP_NAV_MAX_FONT_REM) return null;
+
+    return Number(cachedFontRem.toFixed(2));
+  }
+
+  function writeMobileTopNavFontCache(viewportWidth, fontRem) {
+    const normalizedWidth = normalizeMobileTopNavFontViewportWidth(viewportWidth);
+    const normalizedFontRem = Number(fontRem);
+
+    if (!normalizedWidth || !Number.isFinite(normalizedFontRem)) return null;
+
+    const payload = {
+      version: MOBILE_TOP_NAV_FONT_CACHE_VERSION,
+      width: normalizedWidth,
+      fontRem: Number(normalizedFontRem.toFixed(2)),
+      signature: getMobileTopNavCacheSignature()
+    };
+
+    try {
+      localStorage.setItem(MOBILE_TOP_NAV_FONT_CACHE_KEY, JSON.stringify(payload));
+      return payload;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function applyMobileTopNavFontSizeValue(nav, fontRem, viewportWidth = getViewportWidth()) {
+    if (!nav || !nav.style) return null;
+
+    const normalizedFontRem = Number(fontRem);
+    if (!Number.isFinite(normalizedFontRem)) return null;
+
+    const normalizedWidth = normalizeMobileTopNavFontViewportWidth(viewportWidth);
+    const finalFontRem = Number(normalizedFontRem.toFixed(2));
+    nav.style.setProperty('--mobile-top-nav-font-size', `${finalFontRem.toFixed(2)}rem`);
+    nav.dataset.mobileTopNavFontWidth = String(normalizedWidth || '');
+    nav.dataset.mobileTopNavFontRem = finalFontRem.toFixed(2);
+    mobileTopNavLastViewportWidth = normalizedWidth;
+    mobileTopNavLastAppliedFontRem = finalFontRem;
+    mobileTopNavLastSignature = getMobileTopNavCacheSignature();
+    return finalFontRem;
+  }
 
   function clearMobileTopNavFontSize(nav) {
     if (!nav || !nav.style) return;
     nav.style.removeProperty('--mobile-top-nav-font-size');
+    delete nav.dataset.mobileTopNavFontWidth;
+    delete nav.dataset.mobileTopNavFontRem;
+    mobileTopNavLastAppliedFontRem = null;
+  }
+
+  function applyCachedMobileTopNavFontSize(nav, viewportWidth = getViewportWidth()) {
+    const cachedFontRem = readMobileTopNavFontCache(viewportWidth);
+    if (cachedFontRem === null || cachedFontRem === undefined) return null;
+    return applyMobileTopNavFontSizeValue(nav, cachedFontRem, viewportWidth);
   }
 
   function isElementVisibleForLayout(el) {
@@ -710,33 +812,57 @@ const HAMBURGER_FALLBACK_ROUTE_ORDER = NAVIGATION_REACHABILITY_ROUTES.map((route
     });
   }
 
-  function syncMobileTopNavFontSize() {
+  function areDocumentFontsReady() {
+    try {
+      if (!document.fonts || !('status' in document.fonts)) return true;
+      return document.fonts.status === 'loaded';
+    } catch (e) {
+      return true;
+    }
+  }
+
+  function syncMobileTopNavFontSize(options = {}) {
     const nav = qs('.main-nav');
-    if (!nav) return;
+    if (!nav) return null;
 
     const viewportWidth = getViewportWidth();
-    const shouldAutofit = isLikelyMobileTouchBrowser() && viewportWidth > 0 && viewportWidth <= 820;
+    const normalizedWidth = normalizeMobileTopNavFontViewportWidth(viewportWidth);
+    const shouldAutofit = isLikelyMobileTouchBrowser() && normalizedWidth > 0 && normalizedWidth <= 820;
+    const forceMeasure = options.forceMeasure === true;
 
     if (!shouldAutofit) {
       clearMobileTopNavFontSize(nav);
-      return;
+      mobileTopNavLastViewportWidth = normalizedWidth;
+      mobileTopNavLastSignature = getMobileTopNavCacheSignature();
+      return null;
     }
 
-    if (!isElementVisibleForLayout(nav)) return;
+    if (!forceMeasure) {
+      const cachedFontRem = applyCachedMobileTopNavFontSize(nav, normalizedWidth);
+      if (cachedFontRem !== null && cachedFontRem !== undefined) {
+        return cachedFontRem;
+      }
+
+      if (!areDocumentFontsReady()) {
+        return null;
+      }
+    }
+
+    if (!isElementVisibleForLayout(nav)) return null;
 
     const links = getMobileTopNavLinks(nav);
     if (!links.length) {
       clearMobileTopNavFontSize(nav);
-      return;
+      return null;
     }
 
     let bestSize = MOBILE_TOP_NAV_MIN_FONT_REM;
 
-    nav.style.setProperty('--mobile-top-nav-font-size', `${MOBILE_TOP_NAV_MIN_FONT_REM.toFixed(2)}rem`);
+    applyMobileTopNavFontSizeValue(nav, MOBILE_TOP_NAV_MIN_FONT_REM, normalizedWidth);
 
     for (let size = MOBILE_TOP_NAV_MAX_FONT_REM; size >= (MOBILE_TOP_NAV_MIN_FONT_REM - 0.0001); size -= MOBILE_TOP_NAV_FONT_STEP_REM) {
       const candidate = Number(size.toFixed(2));
-      nav.style.setProperty('--mobile-top-nav-font-size', `${candidate.toFixed(2)}rem`);
+      applyMobileTopNavFontSizeValue(nav, candidate, normalizedWidth);
 
       if (doMobileTopNavLabelsFit(links)) {
         bestSize = candidate;
@@ -744,14 +870,39 @@ const HAMBURGER_FALLBACK_ROUTE_ORDER = NAVIGATION_REACHABILITY_ROUTES.map((route
       }
     }
 
-    nav.style.setProperty('--mobile-top-nav-font-size', `${bestSize.toFixed(2)}rem`);
+    applyMobileTopNavFontSizeValue(nav, bestSize, normalizedWidth);
+    writeMobileTopNavFontCache(normalizedWidth, bestSize);
+    return bestSize;
   }
 
-  function scheduleMobileTopNavFontSizeSync(delay = 0) {
+  function scheduleMobileTopNavFontSizeSync(delay = 0, options = {}) {
     window.clearTimeout(mobileTopNavFontSyncTimer);
     mobileTopNavFontSyncTimer = window.setTimeout(() => {
-      safeRun('syncMobileTopNavFontSize', syncMobileTopNavFontSize);
+      safeRun('syncMobileTopNavFontSize', () => syncMobileTopNavFontSize(options));
     }, Math.max(0, Number(delay) || 0));
+  }
+
+  function scheduleMobileTopNavFontSizeSyncForWidthChange(delay = 0, options = {}) {
+    const normalizedWidth = normalizeMobileTopNavFontViewportWidth(getViewportWidth());
+    const cachedFontForWidth = readMobileTopNavFontCache(normalizedWidth);
+    const hasCurrentDocumentFont = normalizedWidth
+      && normalizedWidth === mobileTopNavLastViewportWidth
+      && Number.isFinite(mobileTopNavLastAppliedFontRem)
+      && mobileTopNavLastSignature === getMobileTopNavCacheSignature();
+
+    if (!options.forceMeasure && normalizedWidth && normalizedWidth === mobileTopNavLastViewportWidth) {
+      if (cachedFontForWidth !== null && cachedFontForWidth !== undefined) {
+        safeRun('applyCachedMobileTopNavFontSize(width-stable)', () => applyCachedMobileTopNavFontSize(qs('.main-nav'), normalizedWidth));
+        return;
+      }
+
+      if (hasCurrentDocumentFont) {
+        safeRun('applyMobileTopNavFontSizeValue(width-stable)', () => applyMobileTopNavFontSizeValue(qs('.main-nav'), mobileTopNavLastAppliedFontRem, normalizedWidth));
+        return;
+      }
+    }
+
+    scheduleMobileTopNavFontSizeSync(delay, options);
   }
 
   function shouldUseCompactEducationLabel() {
@@ -953,8 +1104,6 @@ const HAMBURGER_FALLBACK_ROUTE_ORDER = NAVIGATION_REACHABILITY_ROUTES.map((route
         link.removeAttribute('title');
       }
     });
-
-    scheduleMobileTopNavFontSizeSync(0);
   }
 
   function normalizePath(value) {
@@ -1113,6 +1262,37 @@ function getReachableNavigationState(options = {}) {
   };
 }
 
+function shouldAllowRouteInHamburger(routePath, reachabilityState = {}) {
+  const normalized = normalizePath(routePath);
+
+  if (normalized === EDUCATION_PAGE_PATH) return false;
+  if (normalized === HOMA_IR_PAGE_PATH) {
+    return !reachabilityState.dockVisible;
+  }
+
+  return true;
+}
+
+function enforceHamburgerRoutePolicy(reachabilityState = {}) {
+  const verticalMenu = reachabilityState.verticalMenu;
+  if (!verticalMenu) return false;
+
+  let hasMutated = false;
+
+  qsa('a[href]', verticalMenu).forEach((link) => {
+    if (!isUsableNavLink(link, true)) return;
+
+    const routePath = normalizePath(link.getAttribute('href'));
+    if (shouldAllowRouteInHamburger(routePath, reachabilityState)) return;
+
+    link.parentElement?.remove();
+    hasMutated = true;
+  });
+
+  return hasMutated;
+}
+
+
 function buildManagedHamburgerLink(routeConfig, currentPath) {
   const li = document.createElement('li');
   li.dataset.routeFallback = 'true';
@@ -1250,7 +1430,13 @@ function clearUnusedManagedNavigationFallbacks(verticalMenu, sidebarNav, require
 
 function auditNavigationCoverage() {
   const currentPath = normalizePath(window.location.pathname);
-  const baselineState = getReachableNavigationState({ includeManagedFallbacks: false });
+  let baselineState = getReachableNavigationState({ includeManagedFallbacks: false });
+  const hamburgerPolicyChanged = enforceHamburgerRoutePolicy(baselineState);
+
+  if (hamburgerPolicyChanged) {
+    baselineState = getReachableNavigationState({ includeManagedFallbacks: false });
+  }
+
   const missingRoutes = NAVIGATION_REACHABILITY_ROUTES.filter((route) => {
     const routePath = normalizePath(route.path || route.href);
     if (routePath === currentPath) return false;
@@ -1258,11 +1444,14 @@ function auditNavigationCoverage() {
   });
 
   const requiredFallbackPaths = new Set();
-  let hasMutatedNavigation = false;
+  let hasMutatedNavigation = hamburgerPolicyChanged;
 
   missingRoutes.forEach((route) => {
     const routePath = normalizePath(route.path || route.href);
-    const insertedInHamburger = baselineState.hamburgerAvailable && baselineState.verticalMenu
+    const canUseHamburger = baselineState.hamburgerAvailable
+      && baselineState.verticalMenu
+      && shouldAllowRouteInHamburger(routePath, baselineState);
+    const insertedInHamburger = canUseHamburger
       ? ensureManagedHamburgerRoute(baselineState.verticalMenu, route, currentPath)
       : null;
 

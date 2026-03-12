@@ -16,7 +16,39 @@
   <link rel="stylesheet" href="style.css?v=5" />
   <link rel="stylesheet" href="sidebar.css" />
 
-  <!-- Dodatkowe style związane wyłącznie z kalkulatorem HOMA‑IR. Korzystamy z definicji zmiennych
+  
+<script>
+(function() {
+  try {
+    var KEY = 'mobileTopNavFontCache';
+    var VERSION = 'v3';
+    var SIGNATURE = 'docpro.html|kalkulator-klirens.html|cukrzyca.html|steroidy.html|materialy-edukacyjne.html';
+    var raw = localStorage.getItem(KEY);
+    if (!raw) return;
+
+    var parsed = JSON.parse(raw);
+    if (!parsed || parsed.version !== VERSION || parsed.signature !== SIGNATURE) return;
+
+    var viewportWidth = Math.round(Math.max(
+      window.innerWidth || 0,
+      document.documentElement ? (document.documentElement.clientWidth || 0) : 0
+    ));
+    var cachedWidth = Math.round(Number(parsed.width) || 0);
+    var fontRem = Number(parsed.fontRem);
+
+    if (!viewportWidth || viewportWidth !== cachedWidth || !isFinite(fontRem)) return;
+    if (fontRem < 0.72 || fontRem > 0.98) return;
+
+    var style = document.createElement('style');
+    style.id = 'mobile-top-nav-font-cache-style';
+    style.textContent = '@media (max-width: 600px){.main-nav{--mobile-top-nav-font-size:' + fontRem.toFixed(2) + 'rem !important;}}';
+    document.head.appendChild(style);
+  } catch (e) {
+    /* noop */
+  }
+})();
+</script>
+<!-- Dodatkowe style związane wyłącznie z kalkulatorem HOMA‑IR. Korzystamy z definicji zmiennych
        kolorystycznych z głównego arkusza (np. --primary, --secondary, --card), dzięki czemu
        narzędzie zachowuje spójny wygląd z resztą serwisu. -->
   <style>
@@ -250,8 +282,6 @@
       </label>
       <ul id="verticalMenu" class="vertical-menu">
       <li><a href="index.html">Strona główna</a></li>
-      <li><a href="homa-ir.html" aria-current="page">HOMA‑IR</a></li>
-      <li><a href="materialy-edukacyjne.html">Edu</a></li>
       <li><a href="ustawienia.html">Ustawienia</a></li>
       <li><a href="instrukcja.html">Instrukcja</a></li>
       <li><a href="o-aplikacji.html">O aplikacji</a></li>
