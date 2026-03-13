@@ -12149,7 +12149,7 @@ function advGrowthBuildPdfMakeDefinition(report) {
         margin: [26, 4, 26, 10],
         columns: [
           {
-            text: 'Wygenerowano automatycznie przez moduł Zaawansowane obliczenia wzrostowe — Vilda Clinic',
+            text: 'Wygenerowano automatycznie przez moduł Zaawansowane obliczenia wzrostowe - www.wagaiwzrost.pl',
             color: '#8ca0a5',
             fontSize: 8.5,
             alignment: 'left'
@@ -12332,9 +12332,6 @@ function advGrowthBuildReportPresentationModel(report) {
         : 'Kolumna hSDS - mpSDS porównuje hSDS dziecka z potencjałem wzrostowym MPH.',
       report.fallbackUsed
         ? 'Tam, gdzie wybrane źródło danych było niedostępne dla wieku lub parametru, zastosowano automatyczny fallback zgodny z logiką karty Centyle, BMI… .'
-        : null,
-      report.includesCurrent
-        ? 'Raport obejmuje także aktualny pomiar z karty Dane użytkownika (oznaczony jako „akt.”), jeśli nie dublował ostatniego wpisu historycznego.'
         : null
     ].filter(Boolean).map((item) => advGrowthSanitizePdfText(item))
   };
@@ -12549,8 +12546,7 @@ function advGrowthBuildHtmlReportMarkup(report) {
         <ul>${noteItemsHtml}</ul>
       </section>
       <div class="adv-growth-pdf-footer">
-        <span>Wygenerowano automatycznie przez moduł Zaawansowane obliczenia wzrostowe — Vilda Clinic</span>
-        <span>vildaclinic.pl</span>
+        <span>Wygenerowano automatycznie przez moduł Zaawansowane obliczenia wzrostowe - www.wagaiwzrost.pl</span>
       </div>
     </div>
   `;
