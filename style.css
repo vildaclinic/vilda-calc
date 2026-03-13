@@ -6771,10 +6771,8 @@ body #thyroidCancerKidsCard #thyCopyCancer {
 /* === Zaawansowane obliczenia wzrostowe — analiza historycznego punktu pomiarowego (PRO) === */
 .adv-history-analysis-actions{
   display:flex;
-  justify-content:center;
-  width:100%;
-  margin-top:0.85rem;
-  text-align:center;
+  justify-content:flex-end;
+  margin-top:0.7rem;
 }
 
 .adv-history-analysis-panel{
@@ -6784,19 +6782,15 @@ body #thyroidCancerKidsCard #thyCopyCancer {
 .adv-history-analysis-actions .adv-analyze-btn,
 .adv-history-analysis-actions-bottom .adv-copy-analysis-btn{
   width:auto !important;
-  max-width:100%;
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  padding:0.6rem 1.15rem;
+  padding:0.55rem 1rem;
   border-radius:10px;
   border:2px solid #9900ff;
   background:#fff;
   color:#9900ff;
   font-weight:700;
-  text-align:center;
-  white-space:normal;
-  line-height:1.3;
   box-shadow:0 1px 3px rgba(0,0,0,0.08);
 }
 
@@ -6812,63 +6806,37 @@ body #thyroidCancerKidsCard #thyCopyCancer {
   box-shadow:var(--shadow-s);
   padding:1rem;
   font-size:1rem;
-  text-align:left;
 }
 
 .adv-history-analysis-card h3{
-  margin:0 0 0.45rem 0;
+  margin:0 0 0.65rem 0;
   text-align:center;
   color:var(--primary);
   font-size:1.05rem;
 }
 
-.adv-history-analysis-card h3 svg,
-.adv-history-analysis-card h3 img,
-.adv-history-analysis-source svg,
-.adv-history-analysis-source img,
-.adv-history-analysis-meta svg,
-.adv-history-analysis-meta img{
-  display:none !important;
+.adv-history-analysis-meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:0.35rem 1rem;
+  margin:0 0 0.45rem 0;
+  font-size:0.96rem;
 }
 
 .adv-history-analysis-source{
-  margin:0 0 0.5rem 0;
+  margin:0 0 0.85rem 0;
   color:#555;
   font-size:0.94rem;
-  text-align:center;
-}
-
-.adv-history-analysis-meta{
-  display:block;
-  margin:0 0 0.8rem 0;
-  font-size:0.96rem;
-  text-align:left;
-}
-
-.adv-history-analysis-meta span{
-  display:block;
 }
 
 .adv-history-analysis-lines{
   display:grid;
-  gap:0.46rem;
-  text-align:left;
+  gap:0.42rem;
 }
 
 .adv-history-analysis-lines p{
   margin:0;
   line-height:1.45;
-  text-align:left;
-}
-
-.adv-history-analysis-line--split .adv-history-analysis-line-primary,
-.adv-history-analysis-line--split .adv-history-analysis-line-secondary{
-  display:block;
-  text-align:left;
-}
-
-.adv-history-analysis-line--split .adv-history-analysis-line-secondary{
-  margin-top:0.05rem;
 }
 
 .adv-history-analysis-actions-bottom{
@@ -6883,7 +6851,59 @@ body #thyroidCancerKidsCard #thyCopyCancer {
 
   .adv-history-analysis-actions .adv-analyze-btn,
   .adv-history-analysis-actions-bottom .adv-copy-analysis-btn{
-    width:auto !important;
-    max-width:100%;
+    width:100% !important;
   }
+}
+
+
+/* === PATCH 2026-03-13 — Zaawansowane obliczenia wzrostowe: raport PDF + pełna szerokość przycisku siatki === */
+#advButtons{
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  gap:0.75rem;
+}
+
+#advButtons button{
+  width:100% !important;
+  display:block;
+  margin:0;
+}
+
+#advButtons #advClearBtn{
+  display:none !important;
+}
+
+#advReportActions[hidden]{
+  display:none !important;
+}
+
+.adv-report-actions{
+  margin-top:0.95rem;
+}
+
+.adv-report-actions #advGenerateReportBtn{
+  width:100% !important;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0.72rem 1rem;
+  border-radius:12px;
+  border:2px solid #7c3aed;
+  background:#ffffff;
+  color:#5b21b6;
+  font-weight:700;
+  box-shadow:0 1px 3px rgba(0,0,0,0.08);
+}
+
+.adv-report-actions #advGenerateReportBtn:hover,
+.adv-report-actions #advGenerateReportBtn:focus-visible{
+  background:#faf7ff;
+}
+
+.adv-report-actions #advGenerateReportBtn:disabled{
+  opacity:0.58;
+  cursor:not-allowed;
+  box-shadow:none;
+  transform:none;
 }

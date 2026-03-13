@@ -11180,6 +11180,10 @@ function setupAdvancedGrowth() {
       el.addEventListener('change', calculateGrowthAdvanced);
     }
   });
+  // Usuń przycisk czyszczenia tej karty oraz przygotuj przycisk raportu.
+  try { removeAdvancedGrowthClearButton(); } catch (_) {}
+  try { ensureAdvancedGrowthReportControls(); } catch (_) {}
+
   // Wstępne przeliczenie przy załadowaniu strony, aby przygotować
   // globalny obiekt na wypadek wcześniejszego uruchomienia generatora
   // siatki centylowej. Nie powoduje to wyświetlenia wyników, gdy
@@ -11710,6 +11714,507 @@ function copyAdvancedGrowthHistoryText(text) {
     }
     fallbackCopy();
   });
+}
+
+
+function advGrowthFormatSignedNumber(value, digits) {
+  if (typeof value !== 'number' || !isFinite(value)) return '—';
+  const abs = advHistoryFormatNumber(Math.abs(value), digits);
+  if (value > 0) return `+${abs}`;
+  if (value < 0) return `-${abs}`;
+  return abs;
+}
+
+function advGrowthBuildTargetHeightForReport(sex) {
+  const motherH = parseFloat(document.getElementById('advMotherHeight')?.value);
+  const fatherH = parseFloat(document.getElementById('advFatherHeight')?.value);
+  if (isNaN(motherH) || isNaN(fatherH)) return null;
+  return (sex === 'F')
+    ? (((fatherH - 13) + motherH) / 2)
+    : (((motherH + 13) + fatherH) / 2);
+}
+
+function advGrowthGetTargetStatsForReport(targetHeight, sex, source, cache) {
+  if (typeof targetHeight !== 'number' || !isFinite(targetHeight)) return null;
+  const src = String(source || '').toUpperCase() || 'OLAF';
+  const memo = cache && typeof cache === 'object' ? cache : null;
+  if (memo && Object.prototype.hasOwnProperty.call(memo, src)) {
+    return memo[src];
+  }
+  let stats = null;
+  if (src === 'PALCZEWSKA') {
+    stats = calcPercentileStatsPal(targetHeight, sex, 18, 'HT');
+  } else {
+    stats = advHistoryCalcAnthroStatsForSource(targetHeight, sex, 18, 'HT', src);
+  }
+  if (memo) memo[src] = stats || null;
+  return stats || null;
+}
+
+function advGrowthCollectHistoricalPointsForReport() {
+  return collectAdvancedMeasurements(false)
+    .filter((m) => typeof m.ageMonths === 'number' && isFinite(m.ageMonths) && (m.height != null || m.weight != null))
+    .sort((a, b) => (a.ageMonths - b.ageMonths) || ((a.domIndex || 0) - (b.domIndex || 0)));
+}
+
+function advGrowthCollectAllPointsForReport() {
+  const historical = advGrowthCollectHistoricalPointsForReport().map((m, idx) => Object.assign({
+    pointType: 'history',
+    sourceIndex: idx
+  }, m));
+
+  const currentAgeYears = getAgeDecimal();
+  const currentAgeMonths = Math.round((isNaN(currentAgeYears) ? NaN : currentAgeYears * 12));
+  const currentHeight = parseFloat(document.getElementById('height')?.value);
+  const currentWeight = parseFloat(document.getElementById('weight')?.value);
+  const currentHasAnthro = !isNaN(currentHeight) || !isNaN(currentWeight);
+
+  if (!isNaN(currentAgeMonths) && currentAgeMonths >= 0 && currentHasAnthro && currentAgeYears < 18) {
+    const currentPoint = {
+      pointType: 'current',
+      sourceIndex: historical.length,
+      ageYears: currentAgeYears,
+      ageMonths: currentAgeMonths,
+      height: !isNaN(currentHeight) ? currentHeight : null,
+      weight: !isNaN(currentWeight) ? currentWeight : null,
+      boneAgeYears: null,
+      arrowEnabled: false,
+      arrowComment: '',
+      ghSync: false,
+      ghId: null,
+      domIndex: Number.MAX_SAFE_INTEGER
+    };
+
+    const isDuplicate = historical.some((row) => {
+      if (!row || row.ageMonths !== currentPoint.ageMonths) return false;
+      const sameHeight = (
+        (row.height == null && currentPoint.height == null) ||
+        (typeof row.height === 'number' && typeof currentPoint.height === 'number' && Math.abs(row.height - currentPoint.height) < 0.05)
+      );
+      const sameWeight = (
+        (row.weight == null && currentPoint.weight == null) ||
+        (typeof row.weight === 'number' && typeof currentPoint.weight === 'number' && Math.abs(row.weight - currentPoint.weight) < 0.05)
+      );
+      return sameHeight && sameWeight;
+    });
+
+    if (!isDuplicate) historical.push(currentPoint);
+  }
+
+  return historical
+    .slice()
+    .sort((a, b) => (a.ageMonths - b.ageMonths) || ((a.domIndex || 0) - (b.domIndex || 0)));
+}
+
+function advGrowthBuildReportRows() {
+  const points = advGrowthCollectAllPointsForReport();
+  const preferredSource = advHistoryGetPreferredSource();
+  const sex = document.getElementById('sex')?.value || 'M';
+  const targetHeight = advGrowthBuildTargetHeightForReport(sex);
+  const targetStatsCache = {};
+  const rows = [];
+  let previousHsds = null;
+  let fallbackUsed = false;
+
+  points.forEach((point, index) => {
+    const ageYears = point.ageMonths / 12;
+    const metricMeta = {};
+
+    const weightStats = (point.weight != null)
+      ? advHistoryResolveMetric('WT', point.weight, sex, ageYears, preferredSource)
+      : { result: null, source: null, reason: '' };
+    const heightStats = (point.height != null)
+      ? advHistoryResolveMetric('HT', point.height, sex, ageYears, preferredSource)
+      : { result: null, source: null, reason: '' };
+    const bmiValue = (point.weight != null && point.height != null && typeof BMI === 'function')
+      ? BMI(point.weight, point.height)
+      : null;
+    const bmiStats = (bmiValue != null)
+      ? advHistoryResolveMetric('BMI', bmiValue, sex, ageYears, preferredSource)
+      : { result: null, source: null, reason: '' };
+    const coleStats = (bmiValue != null)
+      ? advHistoryResolveMetric('COLE', bmiValue, sex, ageYears, preferredSource)
+      : { result: null, source: null, reason: '' };
+
+    metricMeta.WT = weightStats;
+    metricMeta.HT = heightStats;
+    metricMeta.BMI = bmiStats;
+    metricMeta.COLE = coleStats;
+
+    const targetSource = (heightStats && heightStats.source) ? heightStats.source : preferredSource;
+    const targetStats = advGrowthGetTargetStatsForReport(targetHeight, sex, targetSource, targetStatsCache);
+
+    const hsds = (heightStats && heightStats.result && typeof heightStats.result.sd === 'number' && isFinite(heightStats.result.sd))
+      ? heightStats.result.sd
+      : null;
+    const deltaHsds = (typeof hsds === 'number' && isFinite(hsds) && typeof previousHsds === 'number' && isFinite(previousHsds))
+      ? (hsds - previousHsds)
+      : null;
+    if (typeof hsds === 'number' && isFinite(hsds)) {
+      previousHsds = hsds;
+    }
+
+    const hsdsMpSds = (
+      typeof hsds === 'number' && isFinite(hsds) &&
+      targetStats && typeof targetStats.sd === 'number' && isFinite(targetStats.sd)
+    ) ? (hsds - targetStats.sd) : null;
+
+    let velocity = null;
+    let velocityGapM = null;
+    if (index > 0) {
+      const prev = points[index - 1];
+      if (
+        prev && typeof prev.ageMonths === 'number' && isFinite(prev.ageMonths) &&
+        typeof point.ageMonths === 'number' && isFinite(point.ageMonths) &&
+        prev.height != null && point.height != null
+      ) {
+        velocityGapM = point.ageMonths - prev.ageMonths;
+        if (velocityGapM >= 6 && typeof velocityCmPerYear === 'function') {
+          const vel = velocityCmPerYear(prev.height, prev.ageMonths, point.height, point.ageMonths);
+          if (typeof vel === 'number' && isFinite(vel)) {
+            velocity = vel;
+          }
+        }
+      }
+    }
+
+    const rowFallbackUsed = Object.values(metricMeta).some((meta) => meta && meta.source && String(meta.source).toUpperCase() !== String(preferredSource).toUpperCase());
+    if (rowFallbackUsed) fallbackUsed = true;
+
+    const ageLabelBase = advHistoryFormatAgeMonths(point.ageMonths);
+    const ageLabel = point.pointType === 'current' ? `${ageLabelBase} (akt.)` : ageLabelBase;
+
+    rows.push({
+      pointType: point.pointType,
+      ageMonths: point.ageMonths,
+      ageLabel,
+      weightText: (typeof point.weight === 'number' && isFinite(point.weight)) ? `${advHistoryFormatNumber(point.weight, 1)} kg` : '—',
+      heightText: (typeof point.height === 'number' && isFinite(point.height)) ? `${advHistoryFormatNumber(point.height, 1)} cm` : '—',
+      velocityText: (typeof velocity === 'number' && isFinite(velocity)) ? `${advHistoryFormatNumber(velocity, 1)} cm/rok` : '—',
+      velocityGapM,
+      hsdsText: (typeof hsds === 'number' && isFinite(hsds)) ? advGrowthFormatSignedNumber(hsds, 2) : '—',
+      deltaHsdsText: (typeof deltaHsds === 'number' && isFinite(deltaHsds)) ? advGrowthFormatSignedNumber(deltaHsds, 2) : '—',
+      hsdsMpSdsText: (typeof hsdsMpSds === 'number' && isFinite(hsdsMpSds)) ? advGrowthFormatSignedNumber(hsdsMpSds, 2) : '—',
+      bmiText: (typeof bmiValue === 'number' && isFinite(bmiValue)) ? advHistoryFormatNumber(bmiValue, 1) : '—',
+      coleText: (typeof coleStats.result === 'number' && isFinite(coleStats.result)) ? `${advHistoryFormatNumber(coleStats.result, 1)}%` : '—',
+      sourceSummary: advHistoryBuildSourceSummary(preferredSource, metricMeta),
+      rowFallbackUsed
+    });
+  });
+
+  return {
+    preferredSource,
+    sex,
+    targetHeight,
+    rows,
+    fallbackUsed,
+    historicalCount: points.filter((p) => p.pointType !== 'current').length,
+    includesCurrent: points.some((p) => p.pointType === 'current')
+  };
+}
+
+function advGrowthSanitizePdfText(value) {
+  return String(value == null ? '' : value)
+    .replace(/\r?\n+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function advGrowthHexToRgb(hex) {
+  const raw = String(hex || '').replace('#', '');
+  if (raw.length !== 6) return [0, 0, 0];
+  return [parseInt(raw.slice(0, 2), 16), parseInt(raw.slice(2, 4), 16), parseInt(raw.slice(4, 6), 16)];
+}
+
+function advGrowthDrawPdfCell(pdf, x, y, width, height, text, options) {
+  const opts = options || {};
+  const fill = opts.fill || null;
+  const border = opts.border || '#becdcd';
+  const textColor = opts.textColor || '#1f2b2b';
+  const align = opts.align || 'left';
+  const fontSize = Number.isFinite(opts.fontSize) ? opts.fontSize : 9.4;
+  const fontStyle = opts.fontStyle || 'normal';
+  const paddingX = Number.isFinite(opts.paddingX) ? opts.paddingX : 2.2;
+  const safeText = advGrowthSanitizePdfText(text || '');
+
+  if (fill) {
+    const [fr, fg, fb] = advGrowthHexToRgb(fill);
+    pdf.setFillColor(fr, fg, fb);
+    pdf.rect(x, y, width, height, 'F');
+  }
+
+  const [br, bg, bb] = advGrowthHexToRgb(border);
+  pdf.setDrawColor(br, bg, bb);
+  pdf.rect(x, y, width, height);
+
+  pdf.setFont('helvetica', fontStyle);
+  pdf.setFontSize(fontSize);
+  const [tr, tg, tb] = advGrowthHexToRgb(textColor);
+  pdf.setTextColor(tr, tg, tb);
+
+  const maxTextWidth = Math.max(4, width - (paddingX * 2));
+  const lines = safeText ? pdf.splitTextToSize(safeText, maxTextWidth) : [''];
+  const lineHeight = fontSize * 0.38;
+  const blockHeight = Math.max(lineHeight, lines.length * lineHeight);
+  let textY = y + (height / 2) - (blockHeight / 2) + lineHeight * 0.82;
+
+  lines.forEach((line) => {
+    let textX = x + paddingX;
+    if (align === 'center') {
+      textX = x + (width / 2);
+      pdf.text(line, textX, textY, { align: 'center', baseline: 'middle' });
+    } else if (align === 'right') {
+      textX = x + width - paddingX;
+      pdf.text(line, textX, textY, { align: 'right', baseline: 'middle' });
+    } else {
+      pdf.text(line, textX, textY, { align: 'left', baseline: 'middle' });
+    }
+    textY += lineHeight;
+  });
+}
+
+function generateAdvancedGrowthPdfReport() {
+  const report = advGrowthBuildReportRows();
+  if (!report || !Array.isArray(report.rows) || !report.rows.length || report.historicalCount < 1) {
+    showAdvancedGrowthHistoryToast('Brak historycznych punktów pomiarowych do raportu.');
+    return;
+  }
+  if (!window.jspdf || typeof window.jspdf.jsPDF !== 'function') {
+    showAdvancedGrowthHistoryToast('Nie udało się uruchomić generatora PDF.');
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const marginX = 14;
+  const marginTop = 14;
+  const marginBottom = 14;
+  const tableWidth = pageWidth - (marginX * 2);
+  const columns = [
+    { key: 'ageLabel', label: 'Wiek', width: 40, align: 'left', headerFill: '#eef7f7', headerText: '#005f66', bodyFill: '#ffffff', border: '#becdcd' },
+    { key: 'weightText', label: 'Waga', width: 30, align: 'center', headerFill: '#f5f3ff', headerText: '#5b21b6', bodyFill: '#faf7ff', border: '#d8c7ff' },
+    { key: 'heightText', label: 'Wzrost', width: 30, align: 'center', headerFill: '#f5f3ff', headerText: '#5b21b6', bodyFill: '#faf7ff', border: '#d8c7ff' },
+    { key: 'velocityText', label: 'Tempo wzrastania', width: 34, align: 'center', headerFill: '#eef7f7', headerText: '#005f66', bodyFill: '#ffffff', border: '#becdcd' },
+    { key: 'hsdsText', label: 'hSDS', width: 22, align: 'center', headerFill: '#eef7f7', headerText: '#005f66', bodyFill: '#ffffff', border: '#becdcd' },
+    { key: 'deltaHsdsText', label: 'ΔhSDS', width: 24, align: 'center', headerFill: '#eef7f7', headerText: '#005f66', bodyFill: '#ffffff', border: '#becdcd' },
+    { key: 'hsdsMpSdsText', label: 'hSDS - mpSDS', width: 29, align: 'center', headerFill: '#eef7f7', headerText: '#005f66', bodyFill: '#ffffff', border: '#becdcd' },
+    { key: 'bmiText', label: 'BMI', width: 22, align: 'center', headerFill: '#eef7f7', headerText: '#005f66', bodyFill: '#ffffff', border: '#becdcd' },
+    { key: 'coleText', label: 'Cole', width: 21, align: 'center', headerFill: '#eef7f7', headerText: '#005f66', bodyFill: '#ffffff', border: '#becdcd' }
+  ];
+
+  const totalBaseWidth = columns.reduce((sum, col) => sum + col.width, 0);
+  const scale = tableWidth / totalBaseWidth;
+  columns.forEach((col) => { col.width = col.width * scale; });
+
+  const nameValue = advGrowthSanitizePdfText(document.getElementById('advName')?.value || document.getElementById('name')?.value || '');
+  const sexLabel = report.sex === 'F' ? 'Dziewczynka' : 'Chłopiec';
+  const sourceLabel = advHistorySourceLabel(report.preferredSource);
+  const generatedAt = new Date();
+  let generatedLabel = '';
+  try {
+    generatedLabel = new Intl.DateTimeFormat('pl-PL', {
+      year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+    }).format(generatedAt);
+  } catch (_) {
+    generatedLabel = generatedAt.toISOString();
+  }
+
+  const title = 'Zaawansowane obliczenia wzrostowe';
+  const subtitle = 'Raport punktów pomiarowych';
+  const metaLines = [
+    nameValue ? `Pacjent: ${nameValue}` : null,
+    `Płeć: ${sexLabel}`,
+    `Preferowane źródło danych: ${sourceLabel}`,
+    `Punkty historyczne: ${report.historicalCount}` + (report.includesCurrent ? ' + aktualny pomiar' : ''),
+    `Wygenerowano: ${generatedLabel}`
+  ].filter(Boolean);
+
+  function drawDocumentHeader(isFirstPage) {
+    let y = marginTop;
+    if (isFirstPage) {
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(19);
+      pdf.setTextColor(23, 34, 34);
+      pdf.text(title, marginX, y + 4);
+      pdf.setFontSize(12.5);
+      pdf.setTextColor(66, 66, 66);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(subtitle, marginX, y + 11);
+      y += 16;
+
+      pdf.setFillColor(245, 248, 250);
+      pdf.setDrawColor(221, 231, 231);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(10.3);
+      const metaText = metaLines.join('   •   ');
+      const metaWrapped = pdf.splitTextToSize(metaText, tableWidth - 6);
+      const metaLineHeight = 4.4;
+      const metaHeight = Math.max(18, 9 + (metaWrapped.length * metaLineHeight));
+      pdf.roundedRect(marginX, y, tableWidth, metaHeight, 3.5, 3.5, 'FD');
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(11.5);
+      pdf.setTextColor(0, 95, 102);
+      pdf.text('PODSUMOWANIE RAPORTU', marginX + 3, y + 6);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(10.3);
+      pdf.setTextColor(33, 43, 54);
+      pdf.text(metaWrapped, marginX + 3, y + 12);
+      y += metaHeight + 6;
+      return y;
+    }
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(13.5);
+    pdf.setTextColor(23, 34, 34);
+    pdf.text(`${title} — ${subtitle}`, marginX, y + 4);
+    return y + 9;
+  }
+
+  function drawTableHeader(y) {
+    let x = marginX;
+    const h = 11;
+    columns.forEach((col) => {
+      advGrowthDrawPdfCell(pdf, x, y, col.width, h, col.label, {
+        fill: col.headerFill,
+        border: col.border,
+        textColor: col.headerText,
+        align: 'center',
+        fontSize: col.key === 'hsdsMpSdsText' ? 8.9 : 9.2,
+        fontStyle: 'bold'
+      });
+      x += col.width;
+    });
+    return y + h;
+  }
+
+  let y = drawDocumentHeader(true);
+  y = drawTableHeader(y);
+  const rowHeight = 10.5;
+
+  report.rows.forEach((row) => {
+    if (y + rowHeight > pageHeight - marginBottom - 18) {
+      pdf.addPage('a4', 'landscape');
+      y = drawDocumentHeader(false);
+      y = drawTableHeader(y);
+    }
+
+    let x = marginX;
+    columns.forEach((col) => {
+      const isCurrentRow = row.pointType === 'current';
+      const defaultFill = col.bodyFill;
+      const rowFill = (isCurrentRow && col.key !== 'weightText' && col.key !== 'heightText') ? '#f8fbfb' : defaultFill;
+      advGrowthDrawPdfCell(pdf, x, y, col.width, rowHeight, row[col.key], {
+        fill: rowFill,
+        border: col.border,
+        textColor: '#1f2b2b',
+        align: col.align,
+        fontSize: col.key === 'ageLabel' ? 9.3 : 9.1,
+        fontStyle: isCurrentRow ? 'bold' : 'normal'
+      });
+      x += col.width;
+    });
+    y += rowHeight;
+  });
+
+  if (y + 28 > pageHeight - marginBottom) {
+    pdf.addPage('a4', 'landscape');
+    y = drawDocumentHeader(false);
+  } else {
+    y += 5;
+  }
+
+  const notes = [
+    'Tempo wzrastania wyliczono tylko wtedy, gdy odstęp od poprzedniego punktu wynosił co najmniej 6 miesięcy i w obu punktach wpisano wzrost.',
+    'ΔhSDS oznacza zmianę względem poprzedniego dostępnego punktu z obliczalnym hSDS.',
+    report.targetHeight == null
+      ? 'Kolumna hSDS - mpSDS pozostaje pusta, jeśli nie wpisano wzrostu rodziców.'
+      : 'Kolumna hSDS - mpSDS porównuje hSDS dziecka z potencjałem wzrostowym MPH.',
+    report.fallbackUsed
+      ? 'Tam, gdzie wybrane źródło danych było niedostępne dla wieku lub parametru, zastosowano automatyczny fallback zgodny z logiką karty Centyle, BMI… .'
+      : null,
+    report.includesCurrent
+      ? 'Raport obejmuje także aktualny pomiar z karty Dane użytkownika (oznaczony jako „akt.”), jeśli nie dublował ostatniego wpisu historycznego.'
+      : null
+  ].filter(Boolean);
+
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(9.4);
+  pdf.setTextColor(67, 77, 77);
+  notes.forEach((note) => {
+    const wrapped = pdf.splitTextToSize(`• ${advGrowthSanitizePdfText(note)}`, tableWidth);
+    pdf.text(wrapped, marginX, y);
+    y += (wrapped.length * 4.4);
+  });
+
+  pdf.setFontSize(8.8);
+  pdf.setTextColor(140, 160, 165);
+  pdf.text('Wygenerowano automatycznie przez moduł Zaawansowane obliczenia wzrostowe — Vilda Clinic', marginX, pageHeight - 6.5);
+  pdf.text('vildaclinic.pl', pageWidth - marginX - 24, pageHeight - 6.5);
+
+  const safeName = (nameValue || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9_-]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  const filename = `raport_zaawansowane_obliczenia_wzrostowe${safeName ? '_' + safeName : ''}.pdf`;
+  pdf.save(filename);
+  showAdvancedGrowthHistoryToast('Raport PDF został wygenerowany.');
+}
+
+function ensureAdvancedGrowthReportControls() {
+  if (!isAdvancedGrowthMainPage()) return;
+  const form = document.getElementById('advancedGrowthForm');
+  const resultsEl = document.getElementById('advResults');
+  const buttonsWrap = document.getElementById('advButtons');
+  if (!form || !resultsEl || !buttonsWrap) return;
+
+  let wrap = document.getElementById('advReportActions');
+  if (!wrap) {
+    wrap = document.createElement('div');
+    wrap.id = 'advReportActions';
+    wrap.className = 'adv-report-actions';
+    wrap.hidden = true;
+    wrap.innerHTML = '<button type="button" id="advGenerateReportBtn">Generuj raport</button>';
+    if (buttonsWrap.parentNode) {
+      buttonsWrap.parentNode.insertBefore(wrap, buttonsWrap);
+    }
+  }
+
+  const btn = wrap.querySelector('#advGenerateReportBtn');
+  if (btn && !btn.dataset.wired) {
+    btn.dataset.wired = 'true';
+    btn.addEventListener('click', function (event) {
+      if (event && typeof event.preventDefault === 'function') event.preventDefault();
+      generateAdvancedGrowthPdfReport();
+    });
+  }
+
+  updateAdvancedGrowthReportButtonVisibility();
+}
+
+function removeAdvancedGrowthClearButton() {
+  const clearBtn = document.getElementById('advClearBtn');
+  if (clearBtn && clearBtn.parentNode) {
+    clearBtn.parentNode.removeChild(clearBtn);
+  }
+}
+
+function updateAdvancedGrowthReportButtonVisibility(forceHide) {
+  const wrap = document.getElementById('advReportActions');
+  const btn = document.getElementById('advGenerateReportBtn');
+  if (!wrap || !btn) return;
+  if (forceHide || !isAdvancedGrowthMainPage()) {
+    wrap.hidden = true;
+    btn.disabled = true;
+    return;
+  }
+
+  const historicalCount = advGrowthCollectHistoricalPointsForReport().length;
+  const visible = historicalCount >= 1;
+  wrap.hidden = !visible;
+  btn.disabled = !visible;
 }
 
 function buildHistoricalPointAnalysis(rowEl) {
@@ -12648,6 +13153,9 @@ function calculateGrowthAdvanced() {
     if (typeof updateAdvancedMeasurementAnalysisControls === 'function') {
       try { updateAdvancedMeasurementAnalysisControls(true); } catch (_) {}
     }
+    if (typeof updateAdvancedGrowthReportButtonVisibility === 'function') {
+      try { updateAdvancedGrowthReportButtonVisibility(true); } catch (_) {}
+    }
     return;
   }
   const sexEl = document.getElementById('sex');
@@ -12922,6 +13430,9 @@ if (heightMeas.length >= 1 && !isNaN(heightVal)) {
     if (typeof updateAdvancedMeasurementAnalysisControls === 'function') {
       try { updateAdvancedMeasurementAnalysisControls(false); } catch (_) {}
     }
+    if (typeof updateAdvancedGrowthReportButtonVisibility === 'function') {
+      try { updateAdvancedGrowthReportButtonVisibility(false); } catch (_) {}
+    }
     try {
       if (typeof window !== 'undefined' && typeof window.vildaPersistScheduleSave === 'function') {
         window.vildaPersistScheduleSave();
@@ -12930,45 +13441,19 @@ if (heightMeas.length >= 1 && !isNaN(heightVal)) {
 }
 
 /**
- * Czyści wszystkie pola i wyniki w sekcji zaawansowanych obliczeń wzrostowych,
- * pozostawiając dane wprowadzone w sekcji „Dane użytkownika”. Dodaje pusty wiersz
- * pomiarowy oraz resetuje globalny obiekt advancedGrowthData.
+ * Przycisk „Wyczyść dane tej karty” został usunięty z interfejsu.
+ * Zachowujemy pusty stub wyłącznie dla zgodności wstecznej ze starszym HTML,
+ * ale nie wykonujemy już żadnego czyszczenia danych tej karty.
  */
 function clearAdvancedGrowthCard() {
-  // Wyczyść pola tekstowe i numeryczne sekcji zaawansowanej
-  const fieldIds = ['advName', 'advBoneAge', 'advMotherHeight', 'advFatherHeight'];
-  fieldIds.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = '';
-  });
-  // Usuń wszystkie wiersze pomiarowe
-  const cont = document.getElementById('advMeasurements');
-  if (cont) {
-    cont.innerHTML = '';
-    // Dodaj jeden pusty wiersz pomiarowy
-    addAdvMeasurementRow();
-  }
-  // Wyczyść wyniki
-  const resEl = document.getElementById('advResults');
-  if (resEl) resEl.innerHTML = '';
-  // Zresetuj globalny obiekt
-  window.advancedGrowthData = null;
-  // Aktualizuj przyciski usuwania i limit wieku
-  updateRemoveButtons();
-  updateAdvAgeMax();
-  if (typeof updateAdvancedMeasurementAnalysisControls === 'function') {
-    try { updateAdvancedMeasurementAnalysisControls(false); } catch (_) {}
-  }
-  try {
-    if (typeof window !== 'undefined' && typeof window.vildaPersistFlushNow === 'function') {
-      window.vildaPersistFlushNow();
-    }
-  } catch (_) {}
+  return false;
 }
 
 // Uruchom inicjalizację zaawansowanej sekcji po załadowaniu DOM.
 document.addEventListener('DOMContentLoaded', () => {
   setupAdvancedGrowth();
+  try { removeAdvancedGrowthClearButton(); } catch (_) {}
+  try { ensureAdvancedGrowthReportControls(); } catch (_) {}
   // Przenieś kontener zaawansowanych obliczeń wzrostowych między kartę
   // Wskaźnika Cole'a a kartę „Droga do normy BMI”. Dzięki temu sekcja
   // pojawia się w układzie dwukolumnowym w odpowiednim miejscu.
@@ -13245,20 +13730,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }, true);
   }
 
-  // 4) 1.F — rozszerzenie clearAdvancedGrowthCard() o czyszczenie „bliźniaków”
-  if (typeof clearAdvancedGrowthCard === 'function'){
-    const __origClear = clearAdvancedGrowthCard;
-    window.clearAdvancedGrowthCard = function(){
-      const ret = __origClear.apply(this, arguments);
-      // usuń wszystkie intake-wiersze poza pierwszym (zablokowanym)
-      const rows = _intkRows();
-      rows.slice(1).forEach(r => r.remove());
-      _updateIntakeFirstRowFromUserBasics();
-      if (typeof updateIntakeRemoveButtons === 'function') updateIntakeRemoveButtons();
-      if (typeof debouncedIntakeCalc === 'function') debouncedIntakeCalc();
-      return ret;
-    };
-  }
+  // 4) Przycisk „Wyczyść dane tej karty” został usunięty z interfejsu,
+  //    dlatego nie rozszerzamy już logiki clearAdvancedGrowthCard().
 
   // 5) Uszczelnij regułę ukrywania „×” w 1. wierszu (jeśli funkcja istnieje)
   if (typeof updateIntakeRemoveButtons === 'function'){
@@ -19491,7 +19964,7 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
  *  - jeden wspólny wpis w localStorage (używamy istniejącego klucza 'sharedUserData')
  *  - zapis automatyczny przy każdej edycji
  *  - automatyczne odtworzenie po odświeżeniu strony i przejściach między podstronami
- *  - czyszczenie po kliknięciu „Wyczyść wszystkie pola” (clearAllDataBtn / clearBtn / advClearBtn)
+ *  - czyszczenie po kliknięciu „Wyczyść wszystkie pola” (clearAllDataBtn / clearBtn)
  *
  * Dane są trzymane w obiekcie localStorage.sharedUserData:
  *  - podstawowe pola (name/age/...) pozostają kompatybilne z userData.js
@@ -20173,6 +20646,5 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
   document.addEventListener('DOMContentLoaded', function () {
     attachClear('clearAllDataBtn'); // index.html + docpro.html
     attachClear('clearBtn');        // kalkulator-klirens.html
-    attachClear('advClearBtn');     // Zaawansowane obliczenia wzrostowe
   });
 })();
