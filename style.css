@@ -6768,3 +6768,89 @@ body #thyroidCancerKidsCard #thyCopyCancer {
     --mobile-top-nav-hamburger-size: 1.92rem;
   }
 }
+/* === Zaawansowane obliczenia wzrostowe — analiza historycznego punktu pomiarowego (PRO) === */
+.adv-history-analysis-actions{
+  display:flex;
+  justify-content:flex-end;
+  margin-top:0.7rem;
+}
+
+.adv-history-analysis-panel{
+  margin-top:0.75rem;
+}
+
+.adv-history-analysis-actions .adv-analyze-btn,
+.adv-history-analysis-actions-bottom .adv-copy-analysis-btn{
+  width:auto !important;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:0.55rem 1rem;
+  border-radius:10px;
+  border:2px solid #9900ff;
+  background:#fff;
+  color:#9900ff;
+  font-weight:700;
+  box-shadow:0 1px 3px rgba(0,0,0,0.08);
+}
+
+.adv-history-analysis-actions .adv-analyze-btn:hover,
+.adv-history-analysis-actions-bottom .adv-copy-analysis-btn:hover{
+  background:#faf5ff;
+}
+
+.adv-history-analysis-card.result-box{
+  border:2px solid var(--brand);
+  background:var(--card-bg);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow-s);
+  padding:1rem;
+  font-size:1rem;
+}
+
+.adv-history-analysis-card h3{
+  margin:0 0 0.65rem 0;
+  text-align:center;
+  color:var(--primary);
+  font-size:1.05rem;
+}
+
+.adv-history-analysis-meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:0.35rem 1rem;
+  margin:0 0 0.45rem 0;
+  font-size:0.96rem;
+}
+
+.adv-history-analysis-source{
+  margin:0 0 0.85rem 0;
+  color:#555;
+  font-size:0.94rem;
+}
+
+.adv-history-analysis-lines{
+  display:grid;
+  gap:0.42rem;
+}
+
+.adv-history-analysis-lines p{
+  margin:0;
+  line-height:1.45;
+}
+
+.adv-history-analysis-actions-bottom{
+  margin-top:0.9rem;
+  text-align:center;
+}
+
+@media (max-width: 600px){
+  .adv-history-analysis-actions{
+    justify-content:center;
+  }
+
+  .adv-history-analysis-actions .adv-analyze-btn,
+  .adv-history-analysis-actions-bottom .adv-copy-analysis-btn{
+    width:100% !important;
+  }
+}
