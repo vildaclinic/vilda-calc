@@ -12993,6 +12993,13 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ---------- helpers ---------- */
 function _intkRows(){ return Array.from(document.querySelectorAll('#intakeMeasurements .measure-row-intake')); }
 function _advRows(){  return Array.from(document.querySelectorAll('#advMeasurements .measure-row')); }
+function _isAdvIntakeSyncSuspended(){
+  try {
+    return !!(typeof window !== 'undefined' && window.__vildaSuspendAdvIntakeSync);
+  } catch (_) {
+    return false;
+  }
+}
 
 function _getUserBasics(){
   // Pobierz podstawowe dane użytkownika z formularza „Dane użytkownika”.
@@ -13037,6 +13044,7 @@ function _updateIntakeFirstRowFromUserBasics(){
 }
 
 function _ensureIntakeParityWithAdv(){
+  if (_isAdvIntakeSyncSuspended()) return;
   const advN = _advRows().length;
   const rows = _intkRows();
   const hasFirstLocked = rows[0]?.dataset.locked === 'true';
@@ -13056,6 +13064,7 @@ function _ensureIntakeParityWithAdv(){
 }
 
 function _syncAdvRowToIntake(advRow){
+  if (_isAdvIntakeSyncSuspended()) return;
   const idx = _advRows().indexOf(advRow);
   if (idx < 0) return;
   const target = _intkRows()[idx+1]; // +1: pierwszy wiersz intake = „Dane użytkownika”
@@ -13092,6 +13101,7 @@ function _syncAdvRowToIntake(advRow){
 }
 
 function _syncIntakeRowToAdv(intakeRow){
+  if (_isAdvIntakeSyncSuspended()) return;
   const rows = _intkRows(); const idx = rows.indexOf(intakeRow);
   if (idx <= 0) return; // 0 = wiersz zablokowany (Dane użytkownika)
   const advRow = _advRows()[idx-1]; if (!advRow) return;
@@ -19632,6 +19642,7 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
               ageM: getVal('.intake-ageM'),
               ht:   getVal('.intake-ht'),
               wt:   getVal('.intake-wt'),
+              locked: row.dataset.locked === 'true',
               disabled: {
                 ageY: getDis('.intake-ageY'),
                 ageM: getDis('.intake-ageM'),
@@ -19855,6 +19866,9 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
     let root = ensurePersist(loadShared());
     const p = root[PKEY] || {};
     const touched = [];
+    try {
+      if (typeof window !== 'undefined') window.__vildaSuspendAdvIntakeSync = true;
+    } catch (_) {}
     isRestoring = true;
 
     try {
@@ -19951,6 +19965,10 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
                 if (!el) return;
                 el.disabled = !!d;
               };
+              const setLocked = (locked) => {
+                if (locked) row.dataset.locked = 'true';
+                else delete row.dataset.locked;
+              };
 
               setVal('.intake-ageY', r.ageY);
               setVal('.intake-ageM', r.ageM);
@@ -19963,6 +19981,7 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
                 setDis('.intake-ht',   r.disabled.ht);
                 setDis('.intake-wt',   r.disabled.wt);
               }
+              setLocked(!!(r.locked || (r.disabled && r.disabled.ageY && r.disabled.ageM && r.disabled.ht && r.disabled.wt)));
             } catch (_) {}
           });
 
@@ -20125,6 +20144,14 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
           fatherEl.value = String(val);
           try { fatherEl.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
         }
+      }
+    } catch (_) {}
+
+    try {
+      if (typeof window !== 'undefined') {
+        setTimeout(() => {
+          try { window.__vildaSuspendAdvIntakeSync = false; } catch (_) {}
+        }, 0);
       }
     } catch (_) {}
   }
