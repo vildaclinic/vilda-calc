@@ -333,6 +333,11 @@ function updateAdvancedGrowthAccess() {
         if (label) label.style.display = 'none';
       }
     }
+    if (typeof updateAdvancedMeasurementAnalysisControls === 'function') {
+      try {
+        updateAdvancedMeasurementAnalysisControls(!pro);
+      } catch (_) {}
+    }
   } catch (_) {
     /* ciche pominięcie błędów */
   }
@@ -11182,6 +11187,772 @@ function setupAdvancedGrowth() {
   calculateGrowthAdvanced();
 }
 
+/* =====================================================================
+ * Analiza historycznych punktów pomiarowych (tryb PRO, strona główna)
+ * ===================================================================== */
+
+function isAdvancedGrowthMainPage() {
+  try {
+    return !document.getElementById('toggleIgfTests');
+  } catch (_) {
+    return true;
+  }
+}
+
+function isAdvancedGrowthProModeActive() {
+  try {
+    const toggle = document.getElementById('resultsModeToggle');
+    if (toggle) return !!toggle.checked;
+  } catch (_) {}
+  try {
+    if (typeof window !== 'undefined' && typeof window.professionalMode !== 'undefined') {
+      return !!window.professionalMode;
+    }
+  } catch (_) {}
+  try {
+    if (typeof professionalMode !== 'undefined') return !!professionalMode;
+  } catch (_) {}
+  try {
+    return localStorage.getItem('resultsMode') === 'professional';
+  } catch (_) {
+    return false;
+  }
+}
+
+function advHistoryEscapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function advHistoryFormatNumber(value, digits) {
+  if (typeof value !== 'number' || !isFinite(value)) return '';
+  return value.toFixed(digits).replace('.', ',');
+}
+
+function advHistoryFormatAgeMonths(ageMonths) {
+  if (typeof ageMonths !== 'number' || !isFinite(ageMonths) || ageMonths < 0) return '';
+  const yrs = Math.floor(ageMonths / 12);
+  const mos = ageMonths - (yrs * 12);
+  let yearWord;
+  if (yrs === 1) {
+    yearWord = 'rok';
+  } else if (yrs % 10 >= 2 && yrs % 10 <= 4 && (yrs % 100 < 10 || yrs % 100 >= 20)) {
+    yearWord = 'lata';
+  } else {
+    yearWord = 'lat';
+  }
+  return `${yrs} ${yearWord} ${mos} mies.`;
+}
+
+function advHistorySourceLabel(source) {
+  const map = {
+    'PALCZEWSKA': 'Palczewska',
+    'OLAF': 'OLAF',
+    'WHO': 'WHO'
+  };
+  return map[String(source || '').toUpperCase()] || String(source || '');
+}
+
+function advHistoryDecodeCentile(centileText) {
+  return String(centileText || '')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>');
+}
+
+function advHistoryPercentileText(percentile) {
+  if (typeof percentile !== 'number' || !isFinite(percentile)) return null;
+  const centTxt = formatCentile(percentile);
+  const word = centylWord(centTxt);
+  return `${advHistoryDecodeCentile(centTxt)} ${word}`;
+}
+
+function advHistoryInterpolateLmsDataSet(dataSet, ageMonths) {
+  if (!dataSet) return null;
+  const m = Math.round(ageMonths);
+  const key = String(m);
+  if (dataSet[key]) return dataSet[key];
+  const keys = Object.keys(dataSet).map(Number).filter(k => !isNaN(k)).sort((a, b) => a - b);
+  if (!keys.length) return null;
+  let lo = keys[0];
+  let hi = keys[keys.length - 1];
+  for (const k of keys) {
+    if (k <= m) lo = k;
+    if (k >= m) {
+      hi = k;
+      break;
+    }
+  }
+  if (!dataSet[String(lo)] || !dataSet[String(hi)]) return null;
+  if (lo === hi) return dataSet[String(lo)];
+  const [L1, M1, S1] = dataSet[String(lo)];
+  const [L2, M2, S2] = dataSet[String(hi)];
+  const t = (m - lo) / (hi - lo);
+  return [L1 + t * (L2 - L1), M1 + t * (M2 - M1), S1 + t * (S2 - S1)];
+}
+
+function advHistoryGetChildLMSForSource(source, sex, ageYears, param) {
+  const ageMonths = Math.round(ageYears * 12);
+  if (!isFinite(ageMonths) || ageMonths < 0 || ageMonths > 216) return null;
+  const src = String(source || '').toUpperCase();
+  const metric = (param === 'WT') ? 'WT' : 'HT';
+  const isBoy = (sex === 'M');
+
+  if (src === 'PALCZEWSKA') return null;
+
+  if (ageMonths < 36) {
+    if (src !== 'WHO') return null;
+    if (metric === 'WT') {
+      const ds = isBoy ? LMS_INFANT_WEIGHT_BOYS : LMS_INFANT_WEIGHT_GIRLS;
+      return ds[String(ageMonths)] || null;
+    }
+    const ds = isBoy ? LMS_INFANT_HEIGHT_BOYS : LMS_INFANT_HEIGHT_GIRLS;
+    return ds[String(ageMonths)] || null;
+  }
+
+  if (src === 'OLAF') {
+    const ds = (metric === 'WT')
+      ? (isBoy ? LMS_WEIGHT_BOYS : LMS_WEIGHT_GIRLS)
+      : (isBoy ? LMS_HEIGHT_BOYS : LMS_HEIGHT_GIRLS);
+    return advHistoryInterpolateLmsDataSet(ds, ageMonths);
+  }
+
+  if (src === 'WHO') {
+    if (metric === 'WT' && ageMonths > 120) return null;
+    const ds = (metric === 'WT')
+      ? (isBoy ? LMS_WEIGHT_WHO_BOYS : LMS_WEIGHT_WHO_GIRLS)
+      : (isBoy ? LMS_HEIGHT_WHO_BOYS : LMS_HEIGHT_WHO_GIRLS);
+    return advHistoryInterpolateLmsDataSet(ds, ageMonths);
+  }
+
+  return null;
+}
+
+function advHistoryGetBmiLMSForSource(source, sex, ageYears) {
+  const months = Math.round(ageYears * 12);
+  if (!isFinite(months) || months < 0 || months > 228) return null;
+  const src = String(source || '').toUpperCase();
+  if (src === 'PALCZEWSKA') return null;
+  if (src === 'OLAF') {
+    if (months < 36 || months > 216) return null;
+    const ds = (sex === 'M') ? OLAF_LMS_BOYS : OLAF_LMS_GIRLS;
+    return advHistoryInterpolateLmsDataSet(ds, months);
+  }
+  if (src === 'WHO') {
+    const ds = (months <= 60)
+      ? ((sex === 'M') ? LMS_INFANT_BOYS : LMS_INFANT_GIRLS)
+      : ((sex === 'M') ? LMS_BOYS : LMS_GIRLS);
+    return advHistoryInterpolateLmsDataSet(ds, months);
+  }
+  return null;
+}
+
+function advHistoryCalcLmsStats(value, lms) {
+  if (!lms || typeof value !== 'number' || !isFinite(value)) return null;
+  const [L, M, S] = lms;
+  if (![L, M, S].every(v => typeof v === 'number' && isFinite(v)) || M <= 0 || S <= 0 || value <= 0) {
+    return null;
+  }
+  let z;
+  if (L !== 0) {
+    z = (Math.pow(value / M, L) - 1) / (L * S);
+  } else {
+    z = Math.log(value / M) / S;
+  }
+  return {
+    percentile: normalCDF(z) * 100,
+    sd: z,
+    median: M
+  };
+}
+
+function advHistoryCalcAnthroStatsForSource(value, sex, ageYears, metric, source) {
+  if (typeof value !== 'number' || !isFinite(value) || value <= 0) return null;
+  const src = String(source || '').toUpperCase();
+  const met = (metric === 'WT') ? 'WT' : 'HT';
+  if (src === 'PALCZEWSKA') {
+    return calcPercentileStatsPal(value, sex, ageYears, met === 'WT' ? 'WT' : 'HT');
+  }
+  const lms = advHistoryGetChildLMSForSource(src, sex, ageYears, met);
+  return advHistoryCalcLmsStats(value, lms);
+}
+
+function advHistoryCalcBmiStatsForSource(bmiValue, sex, ageYears, source) {
+  if (typeof bmiValue !== 'number' || !isFinite(bmiValue) || bmiValue <= 0) return null;
+  const src = String(source || '').toUpperCase();
+  if (src === 'PALCZEWSKA') {
+    return calcPercentileStatsPal(bmiValue, sex, ageYears, 'BMI');
+  }
+  const lms = advHistoryGetBmiLMSForSource(src, sex, ageYears);
+  return advHistoryCalcLmsStats(bmiValue, lms);
+}
+
+function advHistoryCalcColeForSource(bmiValue, sex, ageYears, source) {
+  if (typeof bmiValue !== 'number' || !isFinite(bmiValue) || bmiValue <= 0) return null;
+  const src = String(source || '').toUpperCase();
+  let median = null;
+  if (src === 'PALCZEWSKA') {
+    median = getPalCentile(sex, Math.round(ageYears * 12), 50, 'BMI');
+  } else {
+    const lms = advHistoryGetBmiLMSForSource(src, sex, ageYears);
+    if (lms && typeof lms[1] === 'number' && isFinite(lms[1]) && lms[1] > 0) {
+      median = lms[1];
+    }
+  }
+  if (typeof median !== 'number' || !isFinite(median) || median <= 0) return null;
+  return (bmiValue / median) * 100;
+}
+
+function advHistoryMetricCandidates(preferredSource, metric, ageYears) {
+  const pref = String(preferredSource || 'OLAF').toUpperCase();
+  const ageM = Math.round((ageYears || 0) * 12);
+  const list = [];
+  const add = (src) => {
+    const s = String(src || '').toUpperCase();
+    if (s && !list.includes(s)) list.push(s);
+  };
+
+  if (pref === 'PALCZEWSKA') {
+    add('PALCZEWSKA');
+    if (metric === 'WT' && ageM > 120) add('OLAF');
+    add('WHO');
+    add('OLAF');
+    return list;
+  }
+
+  if (pref === 'OLAF') {
+    if (ageYears < OLAF_DATA_MIN_AGE) {
+      add('PALCZEWSKA');
+      add('WHO');
+      add('OLAF');
+    } else {
+      add('OLAF');
+      if (metric === 'WT') add('WHO');
+      add('PALCZEWSKA');
+      add('WHO');
+    }
+    return list;
+  }
+
+  add('WHO');
+  if (metric === 'WT' && ageM > 120) add('OLAF');
+  add('PALCZEWSKA');
+  add('OLAF');
+  return list;
+}
+
+function advHistoryMetricFallbackReason(preferredSource, usedSource, metric, ageYears) {
+  const pref = String(preferredSource || '').toUpperCase();
+  const used = String(usedSource || '').toUpperCase();
+  if (!pref || !used || pref === used) return '';
+  if (pref === 'OLAF' && ageYears < OLAF_DATA_MIN_AGE) {
+    return 'brak danych OLAF dla wieku poniżej 3 lat';
+  }
+  if (pref === 'WHO' && metric === 'WT' && Math.round(ageYears * 12) > 120 && used === 'OLAF') {
+    return 'brak siatek WHO dla masy ciała powyżej 10 lat';
+  }
+  return `brak danych ${advHistorySourceLabel(pref)} dla tego parametru / wieku`;
+}
+
+function advHistoryResolveMetric(metric, rawValue, sex, ageYears, preferredSource) {
+  const candidates = advHistoryMetricCandidates(preferredSource, metric, ageYears);
+  for (const src of candidates) {
+    let result = null;
+    if (metric === 'BMI') {
+      result = advHistoryCalcBmiStatsForSource(rawValue, sex, ageYears, src);
+      if (result && typeof result.percentile === 'number' && isFinite(result.percentile)) {
+        return {
+          result,
+          source: src,
+          reason: advHistoryMetricFallbackReason(preferredSource, src, metric, ageYears)
+        };
+      }
+    } else if (metric === 'COLE') {
+      result = advHistoryCalcColeForSource(rawValue, sex, ageYears, src);
+      if (typeof result === 'number' && isFinite(result)) {
+        return {
+          result,
+          source: src,
+          reason: advHistoryMetricFallbackReason(preferredSource, src, metric, ageYears)
+        };
+      }
+    } else {
+      result = advHistoryCalcAnthroStatsForSource(rawValue, sex, ageYears, metric, src);
+      if (result && typeof result.percentile === 'number' && isFinite(result.percentile)) {
+        return {
+          result,
+          source: src,
+          reason: advHistoryMetricFallbackReason(preferredSource, src, metric, ageYears)
+        };
+      }
+    }
+  }
+  return { result: null, source: null, reason: '' };
+}
+
+function advHistoryBuildSourceSummary(preferredSource, metricMeta) {
+  const pref = String(preferredSource || 'OLAF').toUpperCase();
+  const prefLabel = advHistorySourceLabel(pref);
+  const metricLabels = {
+    WT: 'waga',
+    HT: 'wzrost',
+    BMI: 'BMI',
+    COLE: 'wskaźnik Cole’a'
+  };
+  const fallbackItems = [];
+  Object.keys(metricMeta || {}).forEach((key) => {
+    const meta = metricMeta[key];
+    if (!meta || !meta.source || String(meta.source).toUpperCase() === pref) return;
+    fallbackItems.push({
+      metric: metricLabels[key] || key,
+      source: advHistorySourceLabel(meta.source),
+      reason: meta.reason || `brak danych ${prefLabel}`
+    });
+  });
+
+  if (!fallbackItems.length) {
+    return `Źródło danych: ${prefLabel}.`;
+  }
+
+  const uniqueSources = [...new Set(fallbackItems.map(item => item.source))];
+  const uniqueReasons = [...new Set(fallbackItems.map(item => item.reason))];
+  if (fallbackItems.length >= 3 && uniqueSources.length === 1 && uniqueReasons.length === 1) {
+    return `Punkt przeliczono według danych ${uniqueSources[0]} (wybrano ${prefLabel}; ${uniqueReasons[0]}).`;
+  }
+
+  const grouped = new Map();
+  fallbackItems.forEach((item) => {
+    const key = `${item.source}||${item.reason}`;
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push(item.metric);
+  });
+  const parts = [];
+  grouped.forEach((metrics, key) => {
+    const [src, reason] = key.split('||');
+    parts.push(`${metrics.join(', ')} → ${src} (${reason})`);
+  });
+  return `Źródło danych: preferowane ${prefLabel}. Fallbacki: ${parts.join('; ')}.`;
+}
+
+function collectAdvancedMeasurements(includeDomRefs) {
+  const rows = document.querySelectorAll('#advMeasurements .measure-row');
+  const measurements = [];
+  rows.forEach((row, domIndex) => {
+    const yInput = row.querySelector('.adv-age-years');
+    const mInput = row.querySelector('.adv-age-months');
+    const heightInput = row.querySelector('.adv-height');
+    const weightInput = row.querySelector('.adv-weight');
+    const boneInput = row.querySelector('.adv-bone-age');
+    const yVal = parseFloat(yInput?.value);
+    const mVal = parseFloat(mInput?.value);
+    if (isNaN(yVal) && isNaN(mVal)) return;
+    const ageYearsRow = (isNaN(yVal) ? 0 : yVal) + (isNaN(mVal) ? 0 : mVal / 12);
+    const ageMonthsRow = Math.round(ageYearsRow * 12);
+    const hVal = parseFloat(heightInput?.value);
+    const wVal = parseFloat(weightInput?.value);
+    const bVal = parseFloat(boneInput?.value);
+    const arrowEnableEl = row.querySelector('.adv-arrow-enable');
+    const arrowCommentEl = row.querySelector('.adv-arrow-comment');
+    const arrowEnabled = !!(arrowEnableEl && arrowEnableEl.checked);
+    const arrowComment = arrowEnabled && arrowCommentEl && typeof arrowCommentEl.value === 'string'
+      ? arrowCommentEl.value.trim()
+      : '';
+    const ghSync = row.getAttribute('data-gh-sync') === 'true';
+    const ghId = row.getAttribute('data-gh-id');
+    const entry = {
+      ageYears: ageYearsRow,
+      ageMonths: ageMonthsRow,
+      height: (!isNaN(hVal) ? hVal : null),
+      weight: (!isNaN(wVal) ? wVal : null),
+      boneAgeYears: (!isNaN(bVal) ? bVal : null),
+      arrowEnabled,
+      arrowComment,
+      ghSync,
+      ghId: (ghId ? String(ghId) : null),
+      domIndex
+    };
+    if (includeDomRefs) entry.rowEl = row;
+    measurements.push(entry);
+  });
+  return measurements;
+}
+
+function advHistoryGetPreferredSource() {
+  try {
+    const selected = document.querySelector('input[name="dataSource"]:checked');
+    if (selected && selected.value) return String(selected.value).toUpperCase();
+  } catch (_) {}
+  try {
+    if (typeof bmiSource !== 'undefined' && bmiSource) return String(bmiSource).toUpperCase();
+  } catch (_) {}
+  return 'OLAF';
+}
+
+function advHistoryCreateMetricLine(label, valueText, stats) {
+  if (!valueText) return `<p><strong>${advHistoryEscapeHtml(label)}:</strong> brak danych</p>`;
+  if (!stats || !stats.result) {
+    return `<p><strong>${advHistoryEscapeHtml(label)}:</strong> ${advHistoryEscapeHtml(valueText)} — brak możliwości obliczenia centyla / Z-score</p>`;
+  }
+  const percText = advHistoryPercentileText(stats.result.percentile);
+  const zText = (typeof stats.result.sd === 'number' && isFinite(stats.result.sd))
+    ? advHistoryFormatNumber(stats.result.sd, 2)
+    : null;
+  let html = `<p><strong>${advHistoryEscapeHtml(label)}:</strong> ${advHistoryEscapeHtml(valueText)}`;
+  if (percText) {
+    html += ` — ${advHistoryEscapeHtml(percText)}`;
+  }
+  if (zText != null) {
+    html += `, Z-score: ${advHistoryEscapeHtml(zText)}`;
+  }
+  html += `</p>`;
+  return html;
+}
+
+function advHistoryBuildTextMetricLine(label, valueText, stats) {
+  if (!valueText) return `${label}: brak danych`;
+  if (!stats || !stats.result) return `${label}: ${valueText} — brak możliwości obliczenia centyla / Z-score`;
+  const parts = [`${label}: ${valueText}`];
+  const percText = advHistoryPercentileText(stats.result.percentile);
+  if (percText) parts.push(percText);
+  if (typeof stats.result.sd === 'number' && isFinite(stats.result.sd)) {
+    parts.push(`Z-score: ${advHistoryFormatNumber(stats.result.sd, 2)}`);
+  }
+  return parts.join(' — ').replace(' — Z-score', ', Z-score');
+}
+
+function showAdvancedGrowthHistoryToast(message) {
+  try {
+    const existing = document.getElementById('advancedGrowthHistoryCopyToast');
+    if (existing) existing.remove();
+    const toast = document.createElement('div');
+    toast.id = 'advancedGrowthHistoryCopyToast';
+    toast.textContent = message || 'Dane zostały skopiowane do schowka.';
+    toast.style.position = 'fixed';
+    toast.style.bottom = '1rem';
+    toast.style.left = '50%';
+    toast.style.transform = 'translateX(-50%)';
+    toast.style.background = '#00838d';
+    toast.style.color = 'white';
+    toast.style.padding = '0.6rem 1.2rem';
+    toast.style.borderRadius = '4px';
+    toast.style.fontSize = '1rem';
+    toast.style.zIndex = '9999';
+    document.body.appendChild(toast);
+    setTimeout(() => {
+      try { toast.remove(); } catch (_) {}
+    }, 2500);
+  } catch (_) {}
+}
+
+function copyAdvancedGrowthHistoryText(text) {
+  return new Promise((resolve, reject) => {
+    const fallbackCopy = () => {
+      try {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'fixed';
+        textarea.style.left = '-9999px';
+        textarea.style.top = '0';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        textarea.setSelectionRange(0, textarea.value.length);
+        const ok = document.execCommand('copy');
+        textarea.remove();
+        if (ok) resolve();
+        else reject(new Error('Copy command failed'));
+      } catch (err) {
+        reject(err);
+      }
+    };
+
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      navigator.clipboard.writeText(text).then(resolve).catch(() => {
+        fallbackCopy();
+      });
+      return;
+    }
+    fallbackCopy();
+  });
+}
+
+function buildHistoricalPointAnalysis(rowEl) {
+  if (!rowEl || !isAdvancedGrowthMainPage()) return null;
+  const measurements = collectAdvancedMeasurements(true);
+  const point = measurements.find(m => m.rowEl === rowEl);
+  if (!point || typeof point.ageMonths !== 'number' || !isFinite(point.ageMonths)) return null;
+  const preferredSource = advHistoryGetPreferredSource();
+  const sex = document.getElementById('sex')?.value || 'M';
+  const ageYears = point.ageMonths / 12;
+  const ageLabel = advHistoryFormatAgeMonths(point.ageMonths);
+  const metricMeta = {};
+
+  const weightText = (typeof point.weight === 'number' && isFinite(point.weight))
+    ? `${advHistoryFormatNumber(point.weight, 1)} kg`
+    : '';
+  const heightText = (typeof point.height === 'number' && isFinite(point.height))
+    ? `${advHistoryFormatNumber(point.height, 1)} cm`
+    : '';
+
+  const weightStats = (point.weight != null)
+    ? advHistoryResolveMetric('WT', point.weight, sex, ageYears, preferredSource)
+    : { result: null, source: null, reason: '' };
+  const heightStats = (point.height != null)
+    ? advHistoryResolveMetric('HT', point.height, sex, ageYears, preferredSource)
+    : { result: null, source: null, reason: '' };
+  metricMeta.WT = weightStats;
+  metricMeta.HT = heightStats;
+
+  const bmiValue = (point.weight != null && point.height != null && typeof BMI === 'function')
+    ? BMI(point.weight, point.height)
+    : null;
+  const bmiText = (typeof bmiValue === 'number' && isFinite(bmiValue))
+    ? `${advHistoryFormatNumber(bmiValue, 1)} kg/m²`
+    : '';
+  const bmiStats = (bmiValue != null)
+    ? advHistoryResolveMetric('BMI', bmiValue, sex, ageYears, preferredSource)
+    : { result: null, source: null, reason: '' };
+  metricMeta.BMI = bmiStats;
+
+  const coleStats = (bmiValue != null)
+    ? advHistoryResolveMetric('COLE', bmiValue, sex, ageYears, preferredSource)
+    : { result: null, source: null, reason: '' };
+  metricMeta.COLE = coleStats;
+
+  let targetHeight = null;
+  const motherH = parseFloat(document.getElementById('advMotherHeight')?.value);
+  const fatherH = parseFloat(document.getElementById('advFatherHeight')?.value);
+  if (!isNaN(motherH) && !isNaN(fatherH)) {
+    targetHeight = (sex === 'F')
+      ? (((fatherH - 13) + motherH) / 2)
+      : (((motherH + 13) + fatherH) / 2);
+  }
+
+  let targetStats = null;
+  const targetSource = (heightStats && heightStats.source) ? heightStats.source : preferredSource;
+  if (typeof targetHeight === 'number' && isFinite(targetHeight)) {
+    if (String(targetSource).toUpperCase() === 'PALCZEWSKA') {
+      targetStats = calcPercentileStatsPal(targetHeight, sex, 18, 'HT');
+    } else {
+      targetStats = advHistoryCalcAnthroStatsForSource(targetHeight, sex, 18, 'HT', targetSource);
+    }
+  }
+
+  let hsdsMpSdsText = 'brak danych';
+  if (targetHeight == null) {
+    hsdsMpSdsText = 'brak danych o wzroście rodziców';
+  } else if (!heightText) {
+    hsdsMpSdsText = 'brak wzrostu w tym punkcie pomiarowym';
+  } else if (heightStats && heightStats.result && typeof heightStats.result.sd === 'number' && targetStats && typeof targetStats.sd === 'number') {
+    hsdsMpSdsText = advHistoryFormatNumber(heightStats.result.sd - targetStats.sd, 2);
+  } else {
+    hsdsMpSdsText = 'brak możliwości obliczenia';
+  }
+
+  const sorted = measurements
+    .slice()
+    .sort((a, b) => (a.ageMonths - b.ageMonths) || ((a.domIndex || 0) - (b.domIndex || 0)));
+  const pointIdx = sorted.findIndex(item => item.rowEl === rowEl);
+  const prevPoint = pointIdx > 0 ? sorted[pointIdx - 1] : null;
+  let velocityHtml = '<p><strong>Tempo wzrastania:</strong> brak wcześniejszego pomiaru</p>';
+  let velocityText = 'Tempo wzrastania: brak wcześniejszego pomiaru';
+  if (point.height == null) {
+    velocityHtml = '<p><strong>Tempo wzrastania:</strong> brak wzrostu w analizowanym punkcie</p>';
+    velocityText = 'Tempo wzrastania: brak wzrostu w analizowanym punkcie';
+  } else if (prevPoint) {
+    const gapM = point.ageMonths - prevPoint.ageMonths;
+    if (prevPoint.height == null) {
+      velocityHtml = '<p><strong>Tempo wzrastania:</strong> brak wzrostu w poprzednim pomiarze</p>';
+      velocityText = 'Tempo wzrastania: brak wzrostu w poprzednim pomiarze';
+    } else if (gapM < 6) {
+      velocityHtml = `<p><strong>Tempo wzrastania:</strong> nie obliczono — odstęp od poprzedniego pomiaru wynosi ${advHistoryEscapeHtml(String(gapM))} mies.</p>`;
+      velocityText = `Tempo wzrastania: nie obliczono — odstęp od poprzedniego pomiaru wynosi ${gapM} mies.`;
+    } else {
+      const vel = (typeof velocityCmPerYear === 'function')
+        ? velocityCmPerYear(prevPoint.height, prevPoint.ageMonths, point.height, point.ageMonths)
+        : null;
+      if (typeof vel === 'number' && isFinite(vel)) {
+        velocityHtml = `<p><strong>Tempo wzrastania od poprzedniego pomiaru (${advHistoryEscapeHtml(String(gapM))} mies.):</strong> ${advHistoryEscapeHtml(advHistoryFormatNumber(vel, 1))} cm/rok</p>`;
+        velocityText = `Tempo wzrastania od poprzedniego pomiaru (${gapM} mies.): ${advHistoryFormatNumber(vel, 1)} cm/rok`;
+      } else {
+        velocityHtml = '<p><strong>Tempo wzrastania:</strong> brak możliwości obliczenia</p>';
+        velocityText = 'Tempo wzrastania: brak możliwości obliczenia';
+      }
+    }
+  }
+
+  let boneAgeHtml = '';
+  let boneAgeText = '';
+  if (typeof point.boneAgeYears === 'number' && isFinite(point.boneAgeYears)) {
+    const diffM = Math.round((point.boneAgeYears - ageYears) * 12);
+    let diffTxt = 'zgodny z wiekiem metrykalnym';
+    if (diffM > 0) diffTxt = `+${diffM} mies. względem wieku metrykalnego`;
+    if (diffM < 0) diffTxt = `${diffM} mies. względem wieku metrykalnego`;
+    boneAgeHtml = `<p><strong>Wiek kostny:</strong> ${advHistoryEscapeHtml(advHistoryFormatNumber(point.boneAgeYears, 1))} lat (${advHistoryEscapeHtml(diffTxt)})</p>`;
+    boneAgeText = `Wiek kostny: ${advHistoryFormatNumber(point.boneAgeYears, 1)} lat (${diffTxt})`;
+  }
+
+  const sourceSummary = advHistoryBuildSourceSummary(preferredSource, metricMeta);
+
+  const mphHtml = (typeof targetHeight === 'number' && isFinite(targetHeight))
+    ? (() => {
+        let html = `<p><strong>MPH (mid-parental height):</strong> ${advHistoryEscapeHtml(advHistoryFormatNumber(targetHeight, 1))} cm`;
+        if (targetStats && typeof targetStats.percentile === 'number' && isFinite(targetStats.percentile)) {
+          html += ` — ${advHistoryEscapeHtml(advHistoryPercentileText(targetStats.percentile) || '')}`;
+          if (typeof targetStats.sd === 'number' && isFinite(targetStats.sd)) {
+            html += `, Z-score: ${advHistoryEscapeHtml(advHistoryFormatNumber(targetStats.sd, 2))}`;
+          }
+        }
+        html += '</p>';
+        return html;
+      })()
+    : '<p><strong>MPH (mid-parental height):</strong> brak danych o wzroście rodziców</p>';
+
+  const mphText = (typeof targetHeight === 'number' && isFinite(targetHeight))
+    ? (() => {
+        let line = `MPH (mid-parental height): ${advHistoryFormatNumber(targetHeight, 1)} cm`;
+        if (targetStats && typeof targetStats.percentile === 'number' && isFinite(targetStats.percentile)) {
+          line += ` — ${advHistoryPercentileText(targetStats.percentile) || ''}`;
+          if (typeof targetStats.sd === 'number' && isFinite(targetStats.sd)) {
+            line += `, Z-score: ${advHistoryFormatNumber(targetStats.sd, 2)}`;
+          }
+        }
+        return line;
+      })()
+    : 'MPH (mid-parental height): brak danych o wzroście rodziców';
+
+  const coleHtml = (typeof coleStats.result === 'number' && isFinite(coleStats.result))
+    ? `<p><strong>Wskaźnik Cole’a:</strong> ${advHistoryEscapeHtml(advHistoryFormatNumber(coleStats.result, 1))}%</p>`
+    : '<p><strong>Wskaźnik Cole’a:</strong> brak możliwości obliczenia</p>';
+  const coleText = (typeof coleStats.result === 'number' && isFinite(coleStats.result))
+    ? `Wskaźnik Cole’a: ${advHistoryFormatNumber(coleStats.result, 1)}%`
+    : 'Wskaźnik Cole’a: brak możliwości obliczenia';
+
+  const html = `
+    <div class="adv-history-analysis-card result-box">
+      <h3>Analiza punktu pomiarowego</h3>
+      <div class="adv-history-analysis-meta">
+        <span><strong>Wiek:</strong> ${advHistoryEscapeHtml(ageLabel)}</span>
+      </div>
+      <p class="adv-history-analysis-source">${advHistoryEscapeHtml(sourceSummary)}</p>
+      <div class="adv-history-analysis-lines">
+        ${boneAgeHtml}
+        ${advHistoryCreateMetricLine('Waga', weightText, weightStats)}
+        ${advHistoryCreateMetricLine('Wzrost', heightText, heightStats)}
+        ${advHistoryCreateMetricLine('BMI', bmiText, bmiStats)}
+        ${coleHtml}
+        ${mphHtml}
+        <p><strong>hSDS - mpSDS:</strong> ${advHistoryEscapeHtml(hsdsMpSdsText)}</p>
+        ${velocityHtml}
+      </div>
+      <div class="adv-history-analysis-actions-bottom">
+        <button type="button" class="adv-copy-analysis-btn">Kopiuj dane</button>
+      </div>
+    </div>
+  `;
+
+  const textLines = [
+    'Analiza punktu pomiarowego',
+    `Wiek: ${ageLabel}`,
+    sourceSummary
+  ];
+  if (boneAgeText) textLines.push(boneAgeText);
+  textLines.push(advHistoryBuildTextMetricLine('Waga', weightText, weightStats));
+  textLines.push(advHistoryBuildTextMetricLine('Wzrost', heightText, heightStats));
+  textLines.push(advHistoryBuildTextMetricLine('BMI', bmiText, bmiStats));
+  textLines.push(coleText);
+  textLines.push(mphText);
+  textLines.push(`hSDS - mpSDS: ${hsdsMpSdsText}`);
+  textLines.push(velocityText);
+
+  return {
+    html,
+    text: textLines.join('\n')
+      .replace(/ /g, ' ')
+      .replace(/([0-9])\.([0-9])/g, '$1,$2')
+  };
+}
+
+function renderAdvancedMeasurementAnalysisRow(rowEl) {
+  if (!rowEl) return;
+  const actionsWrap = rowEl.querySelector('.adv-history-analysis-actions');
+  const panel = rowEl.querySelector('.adv-history-analysis-panel');
+  const toggleBtn = rowEl.querySelector('.adv-analyze-btn');
+  if (!actionsWrap || !panel || !toggleBtn) return;
+
+  const open = rowEl.dataset.analysisOpen === 'true';
+  if (!open) {
+    panel.style.display = 'none';
+    panel.innerHTML = '';
+    toggleBtn.textContent = 'Analiza';
+    return;
+  }
+
+  const model = buildHistoricalPointAnalysis(rowEl);
+  if (!model) {
+    rowEl.dataset.analysisOpen = 'false';
+    panel.style.display = 'none';
+    panel.innerHTML = '';
+    toggleBtn.textContent = 'Analiza';
+    return;
+  }
+
+  panel.innerHTML = model.html;
+  panel.style.display = 'block';
+  toggleBtn.textContent = 'Ukryj analizę';
+
+  const copyBtn = panel.querySelector('.adv-copy-analysis-btn');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', function(event) {
+      if (event && typeof event.preventDefault === 'function') event.preventDefault();
+      copyAdvancedGrowthHistoryText(model.text)
+        .then(() => {
+          showAdvancedGrowthHistoryToast('Dane zostały skopiowane do schowka.');
+        })
+        .catch(() => {
+          showAdvancedGrowthHistoryToast('Nie udało się skopiować danych.');
+        });
+    });
+  }
+}
+
+function updateAdvancedMeasurementAnalysisControls(forceHide) {
+  const rows = document.querySelectorAll('#advMeasurements .measure-row');
+  const proMode = !forceHide && isAdvancedGrowthProModeActive();
+  const enabledForPage = !forceHide && isAdvancedGrowthMainPage();
+  rows.forEach((row) => {
+    const actionsWrap = row.querySelector('.adv-history-analysis-actions');
+    const panel = row.querySelector('.adv-history-analysis-panel');
+    const toggleBtn = row.querySelector('.adv-analyze-btn');
+    if (!actionsWrap || !panel || !toggleBtn) return;
+
+    const yVal = parseFloat(row.querySelector('.adv-age-years')?.value);
+    const mVal = parseFloat(row.querySelector('.adv-age-months')?.value);
+    const hVal = parseFloat(row.querySelector('.adv-height')?.value);
+    const wVal = parseFloat(row.querySelector('.adv-weight')?.value);
+    const hasAge = !(isNaN(yVal) && isNaN(mVal));
+    const hasAnthro = !isNaN(hVal) || !isNaN(wVal);
+    const visible = proMode && enabledForPage && hasAge && hasAnthro;
+
+    actionsWrap.style.display = visible ? 'flex' : 'none';
+    if (!visible) {
+      row.dataset.analysisOpen = 'false';
+      panel.style.display = 'none';
+      panel.innerHTML = '';
+      toggleBtn.textContent = 'Analiza';
+      return;
+    }
+
+    if (row.dataset.analysisOpen === 'true') {
+      renderAdvancedMeasurementAnalysisRow(row);
+    }
+  });
+}
+
 /**
  * Dodaje jeden wiersz pomiarowy do kontenera #advMeasurements.
  * Wiersz zawiera pola: wiek (lata), wzrost (cm) i waga (kg) oraz
@@ -11249,6 +12020,27 @@ function addAdvMeasurementRow() {
     arrowComment.addEventListener('input', () => {
       if (typeof calculateGrowthAdvanced === 'function') calculateGrowthAdvanced();
     });
+  }
+  if (isAdvancedGrowthMainPage()) {
+    const analysisActions = document.createElement('div');
+    analysisActions.className = 'adv-history-analysis-actions';
+    analysisActions.style.display = 'none';
+    analysisActions.innerHTML = '<button type="button" class="adv-analyze-btn">Analiza</button>';
+    row.appendChild(analysisActions);
+
+    const analysisPanel = document.createElement('div');
+    analysisPanel.className = 'adv-history-analysis-panel';
+    analysisPanel.style.display = 'none';
+    row.appendChild(analysisPanel);
+
+    const analyzeBtn = analysisActions.querySelector('.adv-analyze-btn');
+    if (analyzeBtn) {
+      analyzeBtn.addEventListener('click', () => {
+        const willOpen = row.dataset.analysisOpen !== 'true';
+        row.dataset.analysisOpen = willOpen ? 'true' : 'false';
+        renderAdvancedMeasurementAnalysisRow(row);
+      });
+    }
   }
   // Jeśli dostępna, odśwież widoczność pól strzałek (sterowane w index.html)
   if (typeof window !== 'undefined' && typeof window.updateArrowInputsVisibility === 'function') {
@@ -11811,6 +12603,9 @@ function calculateGrowthAdvanced() {
     // Wyczyść poprzednie dane, ale nie usuwaj zawartości formularza
     window.advancedGrowthData = null;
     if (resultsEl) resultsEl.innerHTML = '';
+    if (typeof updateAdvancedMeasurementAnalysisControls === 'function') {
+      try { updateAdvancedMeasurementAnalysisControls(true); } catch (_) {}
+    }
     return;
   }
   const sexEl = document.getElementById('sex');
@@ -11835,49 +12630,8 @@ function calculateGrowthAdvanced() {
   // Wiek kostny
   const boneAgeVal = parseFloat(document.getElementById('advBoneAge')?.value);
   const boneAgeMonths = !isNaN(boneAgeVal) ? Math.round(boneAgeVal * 12) : null;
-  // Odczytaj wprowadzone pomiary. Każdy wiersz ma dwa pola wieku (lata i miesiące).
-  const measRows = document.querySelectorAll('#advMeasurements .measure-row');
-  const measurements = [];
-  measRows.forEach(row => {
-    const yInput   = row.querySelector('.adv-age-years');
-    const mInput   = row.querySelector('.adv-age-months');
-    const heightInput = row.querySelector('.adv-height');
-    const weightInput = row.querySelector('.adv-weight');
-    const boneInput   = row.querySelector('.adv-bone-age');
-    const yVal = parseFloat(yInput?.value);
-    const mVal = parseFloat(mInput?.value);
-    // Jeżeli oba pola wieku są puste, pomiń ten pomiar
-    if (isNaN(yVal) && isNaN(mVal)) {
-      return;
-    }
-    // Oblicz wiek w latach jako suma lat + miesięcy/12 (puste pola traktowane jako 0)
-    const ageYearsRow = (isNaN(yVal) ? 0 : yVal) + (isNaN(mVal) ? 0 : mVal / 12);
-    const ageMonthsRow = Math.round(ageYearsRow * 12);
-    const hVal = parseFloat(heightInput?.value);
-    const wVal = parseFloat(weightInput?.value);
-    const bVal = parseFloat(boneInput?.value);
-    // Strzałka + komentarz (tylko dla trybu publikacji Palczewskiej).
-    const arrowEnableEl = row.querySelector('.adv-arrow-enable');
-    const arrowCommentEl = row.querySelector('.adv-arrow-comment');
-    const arrowEnabled = !!(arrowEnableEl && arrowEnableEl.checked);
-    const arrowComment = arrowEnabled && arrowCommentEl && typeof arrowCommentEl.value === 'string'
-      ? arrowCommentEl.value.trim()
-      : '';
-    // Metadane synchronizacji z monitora terapii GH/IGF‑1 (ważne dla deduplikacji po odświeżeniach)
-    const ghSync = row.getAttribute('data-gh-sync') === 'true';
-    const ghId = row.getAttribute('data-gh-id');
-    measurements.push({
-      ageYears: ageYearsRow,
-      ageMonths: ageMonthsRow,
-      height: (!isNaN(hVal) ? hVal : null),
-      weight: (!isNaN(wVal) ? wVal : null),
-      boneAgeYears: (!isNaN(bVal) ? bVal : null),
-      arrowEnabled,
-      arrowComment,
-      ghSync,
-      ghId: (ghId ? String(ghId) : null)
-    });
-  });
+  // Odczytaj wprowadzone pomiary z formularza historii wzrostu.
+  const measurements = collectAdvancedMeasurements(false);
     // === [ZAMIANA] Obliczanie tempa wzrastania zgodnie z wymaganiami (aktualizacja) ===
 let growthVelocity = null;               // cm/rok
 // Uwaga: ta flaga oznacza teraz „Aktualne” (okno 6–15 mies., tj. 6–8 mies. oraz 12±3 mies.)
@@ -12123,6 +12877,9 @@ if (heightMeas.length >= 1 && !isNaN(heightVal)) {
         try { updateProfessionalSummaryCard(); } catch (e) { /* ignore errors */ }
       }
     }
+    if (typeof updateAdvancedMeasurementAnalysisControls === 'function') {
+      try { updateAdvancedMeasurementAnalysisControls(false); } catch (_) {}
+    }
 }
 
 /**
@@ -12152,6 +12909,9 @@ function clearAdvancedGrowthCard() {
   // Aktualizuj przyciski usuwania i limit wieku
   updateRemoveButtons();
   updateAdvAgeMax();
+  if (typeof updateAdvancedMeasurementAnalysisControls === 'function') {
+    try { updateAdvancedMeasurementAnalysisControls(false); } catch (_) {}
+  }
 }
 
 // Uruchom inicjalizację zaawansowanej sekcji po załadowaniu DOM.
