@@ -11226,6 +11226,9 @@ function isAdvancedGrowthProModeActive() {
   }
 }
 
+const ADV_HISTORY_ANALYZE_LABEL = 'Analiza punktu pomiarowego';
+const ADV_HISTORY_ANALYZE_HIDE_LABEL = 'Ukryj analizę';
+
 function advHistoryEscapeHtml(str) {
   return String(str == null ? '' : str)
     .replace(/&/g, '&amp;')
@@ -11527,7 +11530,7 @@ function advHistoryBuildSourceSummary(preferredSource, metricMeta) {
   const uniqueSources = [...new Set(fallbackItems.map(item => item.source))];
   const uniqueReasons = [...new Set(fallbackItems.map(item => item.reason))];
   if (fallbackItems.length >= 3 && uniqueSources.length === 1 && uniqueReasons.length === 1) {
-    return `Punkt przeliczono według danych ${uniqueSources[0]} (wybrano ${prefLabel}; ${uniqueReasons[0]}).`;
+    return `Źródło danych: ${uniqueSources[0]} (wybrano ${prefLabel}; ${uniqueReasons[0]}).`;
   }
 
   const grouped = new Map();
@@ -11598,36 +11601,58 @@ function advHistoryGetPreferredSource() {
   return 'OLAF';
 }
 
+function advHistoryMetricUsesTwoLineZScore(label) {
+  const normalized = String(label || '').trim().toLowerCase();
+  return normalized === 'waga' || normalized === 'wzrost' || normalized === 'bmi';
+}
+
 function advHistoryCreateMetricLine(label, valueText, stats) {
-  if (!valueText) return `<p><strong>${advHistoryEscapeHtml(label)}:</strong> brak danych</p>`;
+  const safeLabel = advHistoryEscapeHtml(label);
+  if (!valueText) return `<p class="adv-history-analysis-line"><strong>${safeLabel}:</strong> brak danych</p>`;
   if (!stats || !stats.result) {
-    return `<p><strong>${advHistoryEscapeHtml(label)}:</strong> ${advHistoryEscapeHtml(valueText)} — brak możliwości obliczenia centyla / Z-score</p>`;
+    return `<p class="adv-history-analysis-line"><strong>${safeLabel}:</strong> ${advHistoryEscapeHtml(valueText)} — brak możliwości obliczenia centyla / Z-score</p>`;
   }
   const percText = advHistoryPercentileText(stats.result.percentile);
   const zText = (typeof stats.result.sd === 'number' && isFinite(stats.result.sd))
     ? advHistoryFormatNumber(stats.result.sd, 2)
     : null;
-  let html = `<p><strong>${advHistoryEscapeHtml(label)}:</strong> ${advHistoryEscapeHtml(valueText)}`;
+  const splitZ = advHistoryMetricUsesTwoLineZScore(label) && zText != null;
+
+  let firstLine = `<strong>${safeLabel}:</strong> ${advHistoryEscapeHtml(valueText)}`;
   if (percText) {
-    html += ` — ${advHistoryEscapeHtml(percText)}`;
+    firstLine += ` — ${advHistoryEscapeHtml(percText)}`;
+  }
+  if (splitZ) {
+    firstLine += ',';
+    return `<p class="adv-history-analysis-line adv-history-analysis-line--split"><span class="adv-history-analysis-line-primary">${firstLine}</span><span class="adv-history-analysis-line-secondary">Z-score: ${advHistoryEscapeHtml(zText)}</span></p>`;
   }
   if (zText != null) {
-    html += `, Z-score: ${advHistoryEscapeHtml(zText)}`;
+    firstLine += `, Z-score: ${advHistoryEscapeHtml(zText)}`;
   }
-  html += `</p>`;
-  return html;
+  return `<p class="adv-history-analysis-line"><span class="adv-history-analysis-line-primary">${firstLine}</span></p>`;
 }
 
 function advHistoryBuildTextMetricLine(label, valueText, stats) {
   if (!valueText) return `${label}: brak danych`;
   if (!stats || !stats.result) return `${label}: ${valueText} — brak możliwości obliczenia centyla / Z-score`;
-  const parts = [`${label}: ${valueText}`];
+
   const percText = advHistoryPercentileText(stats.result.percentile);
-  if (percText) parts.push(percText);
-  if (typeof stats.result.sd === 'number' && isFinite(stats.result.sd)) {
-    parts.push(`Z-score: ${advHistoryFormatNumber(stats.result.sd, 2)}`);
+  const zText = (typeof stats.result.sd === 'number' && isFinite(stats.result.sd))
+    ? advHistoryFormatNumber(stats.result.sd, 2)
+    : null;
+
+  let line = `${label}: ${valueText}`;
+  if (percText) {
+    line += ` — ${percText}`;
   }
-  return parts.join(' — ').replace(' — Z-score', ', Z-score');
+  if (zText != null) {
+    if (advHistoryMetricUsesTwoLineZScore(label)) {
+      return `${line},
+Z-score: ${zText}`;
+    }
+    line += `, Z-score: ${zText}`;
+  }
+  return line;
 }
 
 function showAdvancedGrowthHistoryToast(message) {
@@ -11765,28 +11790,28 @@ function buildHistoricalPointAnalysis(rowEl) {
     .sort((a, b) => (a.ageMonths - b.ageMonths) || ((a.domIndex || 0) - (b.domIndex || 0)));
   const pointIdx = sorted.findIndex(item => item.rowEl === rowEl);
   const prevPoint = pointIdx > 0 ? sorted[pointIdx - 1] : null;
-  let velocityHtml = '<p><strong>Tempo wzrastania:</strong> brak wcześniejszego pomiaru</p>';
+  let velocityHtml = '<p class="adv-history-analysis-line"><strong>Tempo wzrastania:</strong> brak wcześniejszego pomiaru</p>';
   let velocityText = 'Tempo wzrastania: brak wcześniejszego pomiaru';
   if (point.height == null) {
-    velocityHtml = '<p><strong>Tempo wzrastania:</strong> brak wzrostu w analizowanym punkcie</p>';
+    velocityHtml = '<p class="adv-history-analysis-line"><strong>Tempo wzrastania:</strong> brak wzrostu w analizowanym punkcie</p>';
     velocityText = 'Tempo wzrastania: brak wzrostu w analizowanym punkcie';
   } else if (prevPoint) {
     const gapM = point.ageMonths - prevPoint.ageMonths;
     if (prevPoint.height == null) {
-      velocityHtml = '<p><strong>Tempo wzrastania:</strong> brak wzrostu w poprzednim pomiarze</p>';
+      velocityHtml = '<p class="adv-history-analysis-line"><strong>Tempo wzrastania:</strong> brak wzrostu w poprzednim pomiarze</p>';
       velocityText = 'Tempo wzrastania: brak wzrostu w poprzednim pomiarze';
     } else if (gapM < 6) {
-      velocityHtml = `<p><strong>Tempo wzrastania:</strong> nie obliczono — odstęp od poprzedniego pomiaru wynosi ${advHistoryEscapeHtml(String(gapM))} mies.</p>`;
+      velocityHtml = `<p class="adv-history-analysis-line"><strong>Tempo wzrastania:</strong> nie obliczono — odstęp od poprzedniego pomiaru wynosi ${advHistoryEscapeHtml(String(gapM))} mies.</p>`;
       velocityText = `Tempo wzrastania: nie obliczono — odstęp od poprzedniego pomiaru wynosi ${gapM} mies.`;
     } else {
       const vel = (typeof velocityCmPerYear === 'function')
         ? velocityCmPerYear(prevPoint.height, prevPoint.ageMonths, point.height, point.ageMonths)
         : null;
       if (typeof vel === 'number' && isFinite(vel)) {
-        velocityHtml = `<p><strong>Tempo wzrastania od poprzedniego pomiaru (${advHistoryEscapeHtml(String(gapM))} mies.):</strong> ${advHistoryEscapeHtml(advHistoryFormatNumber(vel, 1))} cm/rok</p>`;
+        velocityHtml = `<p class="adv-history-analysis-line"><strong>Tempo wzrastania od poprzedniego pomiaru (${advHistoryEscapeHtml(String(gapM))} mies.):</strong> ${advHistoryEscapeHtml(advHistoryFormatNumber(vel, 1))} cm/rok</p>`;
         velocityText = `Tempo wzrastania od poprzedniego pomiaru (${gapM} mies.): ${advHistoryFormatNumber(vel, 1)} cm/rok`;
       } else {
-        velocityHtml = '<p><strong>Tempo wzrastania:</strong> brak możliwości obliczenia</p>';
+        velocityHtml = '<p class="adv-history-analysis-line"><strong>Tempo wzrastania:</strong> brak możliwości obliczenia</p>';
         velocityText = 'Tempo wzrastania: brak możliwości obliczenia';
       }
     }
@@ -11799,7 +11824,7 @@ function buildHistoricalPointAnalysis(rowEl) {
     let diffTxt = 'zgodny z wiekiem metrykalnym';
     if (diffM > 0) diffTxt = `+${diffM} mies. względem wieku metrykalnego`;
     if (diffM < 0) diffTxt = `${diffM} mies. względem wieku metrykalnego`;
-    boneAgeHtml = `<p><strong>Wiek kostny:</strong> ${advHistoryEscapeHtml(advHistoryFormatNumber(point.boneAgeYears, 1))} lat (${advHistoryEscapeHtml(diffTxt)})</p>`;
+    boneAgeHtml = `<p class="adv-history-analysis-line"><strong>Wiek kostny:</strong> ${advHistoryEscapeHtml(advHistoryFormatNumber(point.boneAgeYears, 1))} lat (${advHistoryEscapeHtml(diffTxt)})</p>`;
     boneAgeText = `Wiek kostny: ${advHistoryFormatNumber(point.boneAgeYears, 1)} lat (${diffTxt})`;
   }
 
@@ -11807,7 +11832,7 @@ function buildHistoricalPointAnalysis(rowEl) {
 
   const mphHtml = (typeof targetHeight === 'number' && isFinite(targetHeight))
     ? (() => {
-        let html = `<p><strong>MPH (mid-parental height):</strong> ${advHistoryEscapeHtml(advHistoryFormatNumber(targetHeight, 1))} cm`;
+        let html = `<p class="adv-history-analysis-line"><strong>MPH (mid-parental height):</strong> ${advHistoryEscapeHtml(advHistoryFormatNumber(targetHeight, 1))} cm`;
         if (targetStats && typeof targetStats.percentile === 'number' && isFinite(targetStats.percentile)) {
           html += ` — ${advHistoryEscapeHtml(advHistoryPercentileText(targetStats.percentile) || '')}`;
           if (typeof targetStats.sd === 'number' && isFinite(targetStats.sd)) {
@@ -11817,7 +11842,7 @@ function buildHistoricalPointAnalysis(rowEl) {
         html += '</p>';
         return html;
       })()
-    : '<p><strong>MPH (mid-parental height):</strong> brak danych o wzroście rodziców</p>';
+    : '<p class="adv-history-analysis-line"><strong>MPH (mid-parental height):</strong> brak danych o wzroście rodziców</p>';
 
   const mphText = (typeof targetHeight === 'number' && isFinite(targetHeight))
     ? (() => {
@@ -11833,8 +11858,8 @@ function buildHistoricalPointAnalysis(rowEl) {
     : 'MPH (mid-parental height): brak danych o wzroście rodziców';
 
   const coleHtml = (typeof coleStats.result === 'number' && isFinite(coleStats.result))
-    ? `<p><strong>Wskaźnik Cole’a:</strong> ${advHistoryEscapeHtml(advHistoryFormatNumber(coleStats.result, 1))}%</p>`
-    : '<p><strong>Wskaźnik Cole’a:</strong> brak możliwości obliczenia</p>';
+    ? `<p class="adv-history-analysis-line"><strong>Wskaźnik Cole’a:</strong> ${advHistoryEscapeHtml(advHistoryFormatNumber(coleStats.result, 1))}%</p>`
+    : '<p class="adv-history-analysis-line"><strong>Wskaźnik Cole’a:</strong> brak możliwości obliczenia</p>';
   const coleText = (typeof coleStats.result === 'number' && isFinite(coleStats.result))
     ? `Wskaźnik Cole’a: ${advHistoryFormatNumber(coleStats.result, 1)}%`
     : 'Wskaźnik Cole’a: brak możliwości obliczenia';
@@ -11842,19 +11867,19 @@ function buildHistoricalPointAnalysis(rowEl) {
   const html = `
     <div class="adv-history-analysis-card result-box">
       <h3>Analiza punktu pomiarowego</h3>
+      <p class="adv-history-analysis-source">${advHistoryEscapeHtml(sourceSummary)}</p>
       <div class="adv-history-analysis-meta">
         <span><strong>Wiek:</strong> ${advHistoryEscapeHtml(ageLabel)}</span>
       </div>
-      <p class="adv-history-analysis-source">${advHistoryEscapeHtml(sourceSummary)}</p>
       <div class="adv-history-analysis-lines">
-        ${boneAgeHtml}
         ${advHistoryCreateMetricLine('Waga', weightText, weightStats)}
         ${advHistoryCreateMetricLine('Wzrost', heightText, heightStats)}
         ${advHistoryCreateMetricLine('BMI', bmiText, bmiStats)}
         ${coleHtml}
         ${mphHtml}
-        <p><strong>hSDS - mpSDS:</strong> ${advHistoryEscapeHtml(hsdsMpSdsText)}</p>
+        <p class="adv-history-analysis-line"><strong>hSDS - mpSDS:</strong> ${advHistoryEscapeHtml(hsdsMpSdsText)}</p>
         ${velocityHtml}
+        ${boneAgeHtml}
       </div>
       <div class="adv-history-analysis-actions-bottom">
         <button type="button" class="adv-copy-analysis-btn">Kopiuj dane</button>
@@ -11864,10 +11889,9 @@ function buildHistoricalPointAnalysis(rowEl) {
 
   const textLines = [
     'Analiza punktu pomiarowego',
-    `Wiek: ${ageLabel}`,
-    sourceSummary
+    sourceSummary,
+    `Wiek: ${ageLabel}`
   ];
-  if (boneAgeText) textLines.push(boneAgeText);
   textLines.push(advHistoryBuildTextMetricLine('Waga', weightText, weightStats));
   textLines.push(advHistoryBuildTextMetricLine('Wzrost', heightText, heightStats));
   textLines.push(advHistoryBuildTextMetricLine('BMI', bmiText, bmiStats));
@@ -11875,6 +11899,7 @@ function buildHistoricalPointAnalysis(rowEl) {
   textLines.push(mphText);
   textLines.push(`hSDS - mpSDS: ${hsdsMpSdsText}`);
   textLines.push(velocityText);
+  if (boneAgeText) textLines.push(boneAgeText);
 
   return {
     html,
@@ -11895,7 +11920,7 @@ function renderAdvancedMeasurementAnalysisRow(rowEl) {
   if (!open) {
     panel.style.display = 'none';
     panel.innerHTML = '';
-    toggleBtn.textContent = 'Analiza';
+    toggleBtn.textContent = ADV_HISTORY_ANALYZE_LABEL;
     return;
   }
 
@@ -11904,13 +11929,13 @@ function renderAdvancedMeasurementAnalysisRow(rowEl) {
     rowEl.dataset.analysisOpen = 'false';
     panel.style.display = 'none';
     panel.innerHTML = '';
-    toggleBtn.textContent = 'Analiza';
+    toggleBtn.textContent = ADV_HISTORY_ANALYZE_LABEL;
     return;
   }
 
   panel.innerHTML = model.html;
   panel.style.display = 'block';
-  toggleBtn.textContent = 'Ukryj analizę';
+  toggleBtn.textContent = ADV_HISTORY_ANALYZE_HIDE_LABEL;
 
   const copyBtn = panel.querySelector('.adv-copy-analysis-btn');
   if (copyBtn) {
@@ -11950,7 +11975,7 @@ function updateAdvancedMeasurementAnalysisControls(forceHide) {
       row.dataset.analysisOpen = 'false';
       panel.style.display = 'none';
       panel.innerHTML = '';
-      toggleBtn.textContent = 'Analiza';
+      toggleBtn.textContent = ADV_HISTORY_ANALYZE_LABEL;
       return;
     }
 
@@ -12032,7 +12057,7 @@ function addAdvMeasurementRow() {
     const analysisActions = document.createElement('div');
     analysisActions.className = 'adv-history-analysis-actions';
     analysisActions.style.display = 'none';
-    analysisActions.innerHTML = '<button type="button" class="adv-analyze-btn">Analiza</button>';
+    analysisActions.innerHTML = `<button type="button" class="adv-analyze-btn">${ADV_HISTORY_ANALYZE_LABEL}</button>`;
     row.appendChild(analysisActions);
 
     const analysisPanel = document.createElement('div');
