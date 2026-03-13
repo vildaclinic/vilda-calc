@@ -11193,9 +11193,16 @@ function setupAdvancedGrowth() {
 
 function isAdvancedGrowthMainPage() {
   try {
-    return !document.getElementById('toggleIgfTests');
+    const path = String((window.location && window.location.pathname) || '').toLowerCase();
+    const file = path.split('/').pop();
+    if (!file || file === '' || file === 'index.html') return true;
+    return file !== 'docpro.html';
   } catch (_) {
-    return true;
+    try {
+      return !/docpro\.html?(?:$|[?#])/i.test(String((window.location && window.location.href) || document.location?.href || ''));
+    } catch (__){
+      return true;
+    }
   }
 }
 
@@ -12104,8 +12111,10 @@ function updateAdvAgeMax() {
 /**
  * Importuje punkty leczenia hormonem wzrostu/IGF‑1 z localStorage do karty
  * „Zaawansowane obliczenia wzrostowe”. Funkcja działa wyłącznie na stronie
- * głównej (index.html), co rozpoznaje po braku przycisku #toggleIgfTests
- * charakterystycznego dla strony DocPro. Punkty terapii zapisane
+ * głównej (index.html). Rozróżnienie strony głównej i DocPro
+ * odbywa się przez analizę pathname (index.html / docpro.html), a nie
+ * przez obecność przycisków modułów, bo oba widoki mogą zawierać część
+ * tych samych elementów DOM. Punkty terapii zapisane
  * w localStorage pod kluczem `ghTherapyPoints` są sortowane wg wieku
  * (lata i miesiące), a następnie dodawane jako wiersze pomiarowe do
  * kontenera #advMeasurements. Wiersze utworzone w ten sposób są
@@ -12146,10 +12155,12 @@ async function importTherapyPointsToAdvancedGrowth() {
   __ghAdvImportInFlight = true;
 
   try {
-    // Jeżeli na stronie znajduje się przycisk „Leczenie hormonem wzrostu / IGF‑1”,
-    // to jest to strona DocPro. Na niej synchronizacją zajmuje się moduł
-    // monitorowania terapii, więc tutaj pomijamy import.
-    if (document.getElementById('toggleIgfTests')) {
+    // Import punktów terapii wykonujemy wyłącznie na stronie głównej.
+    // Strona DocPro ma własny moduł monitorowania terapii, więc tutaj
+    // pomijamy synchronizację. Rozpoznanie strony opieramy o pathname,
+    // a nie o obecność przycisków modułów, bo część z nich występuje
+    // także na stronie głównej.
+    if (!isAdvancedGrowthMainPage()) {
       return;
     }
 
