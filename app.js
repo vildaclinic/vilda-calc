@@ -11918,6 +11918,8 @@ function advGrowthBuildReportRows() {
     preferredSource,
     sex,
     targetHeight,
+    motherHeight: (typeof parseFloat(document.getElementById('advMotherHeight')?.value) === 'number' && isFinite(parseFloat(document.getElementById('advMotherHeight')?.value))) ? parseFloat(document.getElementById('advMotherHeight')?.value) : null,
+    fatherHeight: (typeof parseFloat(document.getElementById('advFatherHeight')?.value) === 'number' && isFinite(parseFloat(document.getElementById('advFatherHeight')?.value))) ? parseFloat(document.getElementById('advFatherHeight')?.value) : null,
     rows,
     fallbackUsed,
     historicalCount: points.filter((p) => p.pointType !== 'current').length,
@@ -12173,17 +12175,13 @@ function advGrowthBuildPdfMakeDefinition(report) {
               { text: 'PODSUMOWANIE RAPORTU', style: 'pdfSummaryTitle', margin: [0, 0, 0, 4] },
               { ul: model.summaryItems, style: 'pdfSummaryList', margin: [12, 0, 0, 0] }
             ],
-            fillColor: '#f5f8fa',
-            border: [true, true, true, true],
-            borderColor: ['#dde7e7', '#dde7e7', '#dde7e7', '#dde7e7'],
-            margin: [10, 8, 10, 8]
+            border: [false, false, false, false],
+            margin: [0, 0, 0, 0]
           }]]
         },
         layout: {
-          hLineWidth: function () { return 1; },
-          vLineWidth: function () { return 1; },
-          hLineColor: function () { return '#dde7e7'; },
-          vLineColor: function () { return '#dde7e7'; },
+          hLineWidth: function () { return 0; },
+          vLineWidth: function () { return 0; },
           paddingLeft: function () { return 0; },
           paddingRight: function () { return 0; },
           paddingTop: function () { return 0; },
@@ -12239,6 +12237,55 @@ function advGrowthBuildPdfMakeDefinition(report) {
 }
 
 
+function advGrowthDecodeCentileEntities(value) {
+  return String(value == null ? '' : value)
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>');
+}
+
+function advGrowthFormatAdultHeightValue(value) {
+  if (typeof value !== 'number' || !isFinite(value)) return '—';
+  const rounded = Math.round(value);
+  const digits = Math.abs(value - rounded) < 0.05 ? 0 : 1;
+  return advHistoryFormatNumber(value, digits);
+}
+
+function advGrowthBuildParentHeightSummaryText(label, heightValue, sex, preferredSource) {
+  if (typeof heightValue !== 'number' || !isFinite(heightValue)) return null;
+  let line = `${label}: ${advGrowthFormatAdultHeightValue(heightValue)} cm`;
+  const resolved = advHistoryResolveMetric('HT', heightValue, sex, 18, preferredSource);
+  if (resolved && resolved.result) {
+    const percentileText = (typeof resolved.result.percentile === 'number' && isFinite(resolved.result.percentile))
+      ? advGrowthDecodeCentileEntities(advHistoryPercentileText(resolved.result.percentile) || '')
+      : '';
+    const zText = (typeof resolved.result.sd === 'number' && isFinite(resolved.result.sd))
+      ? advGrowthFormatSignedNumber(resolved.result.sd, 2)
+      : '';
+    if (percentileText) line += `, ${percentileText}`;
+    if (zText && zText !== '—') line += `, Z-score: ${zText}`;
+  }
+  return line;
+}
+
+function advGrowthBuildMphSummaryText(targetHeight, sex, preferredSource) {
+  if (typeof targetHeight !== 'number' || !isFinite(targetHeight)) {
+    return 'MPH (mid-parental height): brak danych o wzroście rodziców';
+  }
+  let line = `MPH (mid-parental height): ${advHistoryFormatNumber(targetHeight, 1)} cm`;
+  const resolved = advHistoryResolveMetric('HT', targetHeight, sex, 18, preferredSource);
+  if (resolved && resolved.result) {
+    const percentileText = (typeof resolved.result.percentile === 'number' && isFinite(resolved.result.percentile))
+      ? advGrowthDecodeCentileEntities(formatCentile(resolved.result.percentile))
+      : '';
+    const zText = (typeof resolved.result.sd === 'number' && isFinite(resolved.result.sd))
+      ? advGrowthFormatSignedNumber(resolved.result.sd, 2)
+      : '';
+    if (percentileText) line += ` – centyl: ${percentileText}`;
+    if (zText && zText !== '—') line += `, Z-score: ${zText}`;
+  }
+  return line;
+}
+
 function advGrowthBuildReportPresentationModel(report) {
   const nameValue = advGrowthSanitizePdfText(document.getElementById('advName')?.value || document.getElementById('name')?.value || '');
   const sexLabel = report.sex === 'F' ? 'Dziewczynka' : 'Chłopiec';
@@ -12253,9 +12300,9 @@ function advGrowthBuildReportPresentationModel(report) {
     generatedLabel = generatedAt.toISOString();
   }
 
-  const mphSummary = (typeof report.targetHeight === 'number' && isFinite(report.targetHeight))
-    ? `MPH (mid-parental height): ${advHistoryFormatNumber(report.targetHeight, 1)} cm`
-    : 'MPH (mid-parental height): brak danych o wzroście rodziców';
+  const motherSummary = advGrowthBuildParentHeightSummaryText('Wzrost Mamy', report.motherHeight, 'F', report.preferredSource);
+  const fatherSummary = advGrowthBuildParentHeightSummaryText('Wzrost Taty', report.fatherHeight, 'M', report.preferredSource);
+  const mphSummary = advGrowthBuildMphSummaryText(report.targetHeight, report.sex, report.preferredSource);
 
   return {
     title: 'Zaawansowane obliczenia wzrostowe',
@@ -12263,13 +12310,17 @@ function advGrowthBuildReportPresentationModel(report) {
     nameValue,
     sexLabel,
     sourceLabel,
+    motherSummary,
+    fatherSummary,
     mphSummary,
     generatedLabel,
     summaryItems: [
       nameValue ? `Pacjent: ${nameValue}` : null,
       `Płeć: ${sexLabel}`,
+      motherSummary,
+      fatherSummary,
       mphSummary,
-      `Preferowane źródło danych: ${sourceLabel}`,
+      `Obliczenia wykonano na podstawie danych: ${sourceLabel}`,
       `Punkty historyczne: ${report.historicalCount}` + (report.includesCurrent ? ' + aktualny pomiar' : ''),
       `Wygenerowano: ${generatedLabel}`
     ].filter(Boolean).map((item) => advGrowthSanitizePdfText(item)),
@@ -12349,10 +12400,10 @@ function advGrowthBuildHtmlReportMarkup(report) {
         }
         .adv-growth-pdf-summary {
           margin-top: 18px;
-          border: 1px solid #dde7e7;
-          background: #f5f8fa;
-          border-radius: 10px;
-          padding: 14px 16px 12px;
+          padding: 0;
+          background: transparent;
+          border: 0;
+          border-radius: 0;
         }
         .adv-growth-pdf-summary-title {
           font-size: 16px;
