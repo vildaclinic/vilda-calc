@@ -12161,9 +12161,11 @@ function updateAdvAgeMax() {
  *  - pobieramy punkty z IndexedDB (fallback: localStorage 'ghTherapyPoints')
  *  - wykonujemy „reconcile/upsert” po stabilnym kluczu pt.id:
  *      • jeśli wiersz z data-gh-id istnieje → aktualizujemy wartości
- *      • jeśli nie istnieje → próbujemy dopasować istniejący wiersz bez metadanych (legacy)
+ *      • jeśli nie istnieje → próbujemy dopasować wyłącznie istniejący legacy wiersz GH
+ *        (data-gh-sync=true, ale jeszcze bez ghId)
  *      • jeśli brak dopasowania → tworzymy nowy wiersz
  *  - usuwamy zsynchronizowane wiersze, które nie istnieją już w źródle (stare/stale)
+ *  - nigdy nie przejmujemy ani nie nadpisujemy zwykłych, ręcznie wpisanych punktów użytkownika
  *
  * UWAGA: dane liczbowe w wierszach są nadpisywane wartością źródłową,
  * ale pola stricte „lokalne” (np. strzałka/komentarz publikacyjny) nie są ruszane.
@@ -12241,18 +12243,22 @@ async function importTherapyPointsToAdvancedGrowth() {
     const rows = Array.from(advContainer.querySelectorAll('.measure-row'));
     const byGhId = new Map();              // ghId -> row
     const dupRows = [];                    // duplikaty (ten sam ghId)
-    const unmarkedCandidates = [];         // wiersze bez ghId (legacy – np. odtworzone ze starego autosave)
+    const unmarkedCandidates = [];         // tylko legacy wiersze GH: data-gh-sync=true, ale brak ghId
 
     rows.forEach(r => {
       const ghIdRaw = r.getAttribute('data-gh-id');
       const ghId = (ghIdRaw != null && String(ghIdRaw) !== '') ? String(ghIdRaw) : null;
+      const ghSyncMarked = r.getAttribute('data-gh-sync') === 'true';
       if (ghId) {
         if (byGhId.has(ghId)) {
           dupRows.push(r);
         } else {
           byGhId.set(ghId, r);
         }
-      } else {
+      } else if (ghSyncMarked) {
+        // Tylko historyczne/legacy wiersze pochodzące z monitora GH mogą zostać
+        // „upgrade’owane” do pełnego ghId. Ręcznie wpisane punkty użytkownika
+        // (bez metadanych GH) nie mogą być tutaj przejmowane ani nadpisywane.
         unmarkedCandidates.push(r);
       }
     });
@@ -19760,12 +19766,42 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
     scheduleSave();
   }
 
+  function isAdvancedGrowthCriticalTarget(target) {
+    try {
+      if (!target || typeof target.closest !== 'function') return false;
+      if (target.closest('#advMeasurements')) return true;
+      const id = target.id || '';
+      return id === 'advMotherHeight' || id === 'advFatherHeight' || id === 'advBoneAge';
+    } catch (_) {
+      return false;
+    }
+  }
+
   // Podłącz autosave (capture = true, żeby „złapać” zmiany zanim inne moduły nadpiszą stan)
   document.addEventListener('input', function (ev) {
     try { updatePersistFromElement(ev.target); } catch (_) {}
+    try {
+      if (isAdvancedGrowthCriticalTarget(ev.target)) {
+        setTimeout(() => { try { flushPersistNow(); } catch (_) {} }, 0);
+      }
+    } catch (_) {}
   }, true);
   document.addEventListener('change', function (ev) {
     try { updatePersistFromElement(ev.target); } catch (_) {}
+    try {
+      if (isAdvancedGrowthCriticalTarget(ev.target)) {
+        setTimeout(() => { try { flushPersistNow(); } catch (_) {} }, 0);
+      }
+    } catch (_) {}
+  }, true);
+  document.addEventListener('click', function (ev) {
+    try {
+      const target = ev.target;
+      if (!target || typeof target.closest !== 'function') return;
+      if (target.closest('#advAddMeasurementBtn') || target.closest('#advMeasurements .remove-measure')) {
+        setTimeout(() => { try { flushPersistNow(); } catch (_) {} }, 0);
+      }
+    } catch (_) {}
   }, true);
 
   try {
