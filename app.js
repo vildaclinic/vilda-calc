@@ -11973,41 +11973,89 @@ function advGrowthDrawPdfCell(pdf, x, y, width, height, text, options) {
   });
 }
 
-function generateAdvancedGrowthPdfReport() {
-  const report = advGrowthBuildReportRows();
-  if (!report || !Array.isArray(report.rows) || !report.rows.length || report.historicalCount < 1) {
-    showAdvancedGrowthHistoryToast('Brak historycznych punktów pomiarowych do raportu.');
-    return;
+
+let __advGrowthPdfMakeLoadPromise = null;
+
+function advGrowthLoadScriptOnce(src, testFn) {
+  return new Promise((resolve, reject) => {
+    try {
+      if (typeof testFn === 'function' && testFn()) {
+        resolve(true);
+        return;
+      }
+      const existing = Array.from(document.getElementsByTagName('script')).find((script) => script && script.src === src);
+      if (existing) {
+        if (existing.dataset.loaded === 'true' || (typeof testFn === 'function' && testFn())) {
+          resolve(true);
+          return;
+        }
+        existing.addEventListener('load', () => resolve(true), { once: true });
+        existing.addEventListener('error', () => reject(new Error(`Nie udało się załadować skryptu: ${src}`)), { once: true });
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = src;
+      script.async = true;
+      script.onload = () => {
+        script.dataset.loaded = 'true';
+        resolve(true);
+      };
+      script.onerror = () => reject(new Error(`Nie udało się załadować skryptu: ${src}`));
+      document.head.appendChild(script);
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+async function advGrowthEnsurePdfMake() {
+  if (window.pdfMake && typeof window.pdfMake.createPdf === 'function') {
+    return true;
   }
-  if (!window.jspdf || typeof window.jspdf.jsPDF !== 'function') {
-    showAdvancedGrowthHistoryToast('Nie udało się uruchomić generatora PDF.');
-    return;
+  if (__advGrowthPdfMakeLoadPromise) {
+    return __advGrowthPdfMakeLoadPromise;
   }
 
-  const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
-  const marginX = 14;
-  const marginTop = 14;
-  const marginBottom = 14;
-  const tableWidth = pageWidth - (marginX * 2);
-  const columns = [
-    { key: 'ageLabel', label: 'Wiek', width: 40, align: 'left', headerFill: '#eef7f7', headerText: '#005f66', bodyFill: '#ffffff', border: '#becdcd' },
-    { key: 'weightText', label: 'Waga', width: 30, align: 'center', headerFill: '#f5f3ff', headerText: '#5b21b6', bodyFill: '#faf7ff', border: '#d8c7ff' },
-    { key: 'heightText', label: 'Wzrost', width: 30, align: 'center', headerFill: '#f5f3ff', headerText: '#5b21b6', bodyFill: '#faf7ff', border: '#d8c7ff' },
-    { key: 'velocityText', label: 'Tempo wzrastania', width: 34, align: 'center', headerFill: '#eef7f7', headerText: '#005f66', bodyFill: '#ffffff', border: '#becdcd' },
-    { key: 'hsdsText', label: 'hSDS', width: 22, align: 'center', headerFill: '#eef7f7', headerText: '#005f66', bodyFill: '#ffffff', border: '#becdcd' },
-    { key: 'deltaHsdsText', label: 'ΔhSDS', width: 24, align: 'center', headerFill: '#eef7f7', headerText: '#005f66', bodyFill: '#ffffff', border: '#becdcd' },
-    { key: 'hsdsMpSdsText', label: 'hSDS - mpSDS', width: 29, align: 'center', headerFill: '#eef7f7', headerText: '#005f66', bodyFill: '#ffffff', border: '#becdcd' },
-    { key: 'bmiText', label: 'BMI', width: 22, align: 'center', headerFill: '#eef7f7', headerText: '#005f66', bodyFill: '#ffffff', border: '#becdcd' },
-    { key: 'coleText', label: 'Cole', width: 21, align: 'center', headerFill: '#eef7f7', headerText: '#005f66', bodyFill: '#ffffff', border: '#becdcd' }
-  ];
+  __advGrowthPdfMakeLoadPromise = (async () => {
+    await advGrowthLoadScriptOnce(
+      'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/pdfmake.min.js',
+      () => !!(window.pdfMake && typeof window.pdfMake.createPdf === 'function')
+    );
+    await advGrowthLoadScriptOnce(
+      'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/vfs_fonts.min.js',
+      () => !!(window.pdfMake && window.pdfMake.vfs && Object.keys(window.pdfMake.vfs || {}).length)
+    );
+    return !!(window.pdfMake && typeof window.pdfMake.createPdf === 'function');
+  })().catch((error) => {
+    console.warn('Nie udało się załadować pdfMake dla raportu wzrostowego.', error);
+    return false;
+  });
 
-  const totalBaseWidth = columns.reduce((sum, col) => sum + col.width, 0);
-  const scale = tableWidth / totalBaseWidth;
-  columns.forEach((col) => { col.width = col.width * scale; });
+  return __advGrowthPdfMakeLoadPromise;
+}
 
+function advGrowthCreatePdfMakeCell(text, options) {
+  const opts = options || {};
+  const cell = {
+    text: advGrowthSanitizePdfText(text),
+    alignment: opts.alignment || 'left',
+    margin: Array.isArray(opts.margin) ? opts.margin : [4, 5, 4, 5]
+  };
+
+  if (opts.bold) cell.bold = true;
+  if (opts.fillColor) cell.fillColor = opts.fillColor;
+  if (opts.color) cell.color = opts.color;
+  if (Number.isFinite(opts.fontSize)) cell.fontSize = opts.fontSize;
+  if (Array.isArray(opts.border)) cell.border = opts.border;
+  if (Array.isArray(opts.borderColor)) cell.borderColor = opts.borderColor;
+  if (Number.isFinite(opts.colSpan) && opts.colSpan > 1) cell.colSpan = opts.colSpan;
+  if (opts.noWrap === true) cell.noWrap = true;
+  if (opts.italics) cell.italics = true;
+
+  return cell;
+}
+
+function advGrowthBuildPdfMakeDefinition(report) {
   const nameValue = advGrowthSanitizePdfText(document.getElementById('advName')?.value || document.getElementById('name')?.value || '');
   const sexLabel = report.sex === 'F' ? 'Dziewczynka' : 'Chłopiec';
   const sourceLabel = advHistorySourceLabel(report.preferredSource);
@@ -12021,111 +12069,15 @@ function generateAdvancedGrowthPdfReport() {
     generatedLabel = generatedAt.toISOString();
   }
 
-  const title = 'Zaawansowane obliczenia wzrostowe';
-  const subtitle = 'Raport punktów pomiarowych';
-  const metaLines = [
+  const summaryItems = [
     nameValue ? `Pacjent: ${nameValue}` : null,
     `Płeć: ${sexLabel}`,
     `Preferowane źródło danych: ${sourceLabel}`,
     `Punkty historyczne: ${report.historicalCount}` + (report.includesCurrent ? ' + aktualny pomiar' : ''),
     `Wygenerowano: ${generatedLabel}`
-  ].filter(Boolean);
+  ].filter(Boolean).map((item) => advGrowthSanitizePdfText(item));
 
-  function drawDocumentHeader(isFirstPage) {
-    let y = marginTop;
-    if (isFirstPage) {
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(19);
-      pdf.setTextColor(23, 34, 34);
-      pdf.text(title, marginX, y + 4);
-      pdf.setFontSize(12.5);
-      pdf.setTextColor(66, 66, 66);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text(subtitle, marginX, y + 11);
-      y += 16;
-
-      pdf.setFillColor(245, 248, 250);
-      pdf.setDrawColor(221, 231, 231);
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(10.3);
-      const metaText = metaLines.join('   •   ');
-      const metaWrapped = pdf.splitTextToSize(metaText, tableWidth - 6);
-      const metaLineHeight = 4.4;
-      const metaHeight = Math.max(18, 9 + (metaWrapped.length * metaLineHeight));
-      pdf.roundedRect(marginX, y, tableWidth, metaHeight, 3.5, 3.5, 'FD');
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(11.5);
-      pdf.setTextColor(0, 95, 102);
-      pdf.text('PODSUMOWANIE RAPORTU', marginX + 3, y + 6);
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(10.3);
-      pdf.setTextColor(33, 43, 54);
-      pdf.text(metaWrapped, marginX + 3, y + 12);
-      y += metaHeight + 6;
-      return y;
-    }
-
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(13.5);
-    pdf.setTextColor(23, 34, 34);
-    pdf.text(`${title} — ${subtitle}`, marginX, y + 4);
-    return y + 9;
-  }
-
-  function drawTableHeader(y) {
-    let x = marginX;
-    const h = 11;
-    columns.forEach((col) => {
-      advGrowthDrawPdfCell(pdf, x, y, col.width, h, col.label, {
-        fill: col.headerFill,
-        border: col.border,
-        textColor: col.headerText,
-        align: 'center',
-        fontSize: col.key === 'hsdsMpSdsText' ? 8.9 : 9.2,
-        fontStyle: 'bold'
-      });
-      x += col.width;
-    });
-    return y + h;
-  }
-
-  let y = drawDocumentHeader(true);
-  y = drawTableHeader(y);
-  const rowHeight = 10.5;
-
-  report.rows.forEach((row) => {
-    if (y + rowHeight > pageHeight - marginBottom - 18) {
-      pdf.addPage('a4', 'landscape');
-      y = drawDocumentHeader(false);
-      y = drawTableHeader(y);
-    }
-
-    let x = marginX;
-    columns.forEach((col) => {
-      const isCurrentRow = row.pointType === 'current';
-      const defaultFill = col.bodyFill;
-      const rowFill = (isCurrentRow && col.key !== 'weightText' && col.key !== 'heightText') ? '#f8fbfb' : defaultFill;
-      advGrowthDrawPdfCell(pdf, x, y, col.width, rowHeight, row[col.key], {
-        fill: rowFill,
-        border: col.border,
-        textColor: '#1f2b2b',
-        align: col.align,
-        fontSize: col.key === 'ageLabel' ? 9.3 : 9.1,
-        fontStyle: isCurrentRow ? 'bold' : 'normal'
-      });
-      x += col.width;
-    });
-    y += rowHeight;
-  });
-
-  if (y + 28 > pageHeight - marginBottom) {
-    pdf.addPage('a4', 'landscape');
-    y = drawDocumentHeader(false);
-  } else {
-    y += 5;
-  }
-
-  const notes = [
+  const noteItems = [
     'Tempo wzrastania wyliczono tylko wtedy, gdy odstęp od poprzedniego punktu wynosił co najmniej 6 miesięcy i w obu punktach wpisano wzrost.',
     'ΔhSDS oznacza zmianę względem poprzedniego dostępnego punktu z obliczalnym hSDS.',
     report.targetHeight == null
@@ -12137,30 +12089,454 @@ function generateAdvancedGrowthPdfReport() {
     report.includesCurrent
       ? 'Raport obejmuje także aktualny pomiar z karty Dane użytkownika (oznaczony jako „akt.”), jeśli nie dublował ostatniego wpisu historycznego.'
       : null
-  ].filter(Boolean);
+  ].filter(Boolean).map((item) => advGrowthSanitizePdfText(item));
 
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(9.4);
-  pdf.setTextColor(67, 77, 77);
-  notes.forEach((note) => {
-    const wrapped = pdf.splitTextToSize(`• ${advGrowthSanitizePdfText(note)}`, tableWidth);
-    pdf.text(wrapped, marginX, y);
-    y += (wrapped.length * 4.4);
+  const headerRow = [
+    advGrowthCreatePdfMakeCell('Wiek', { alignment: 'left', bold: true, fillColor: '#eef7f7', color: '#005f66', fontSize: 10.0, margin: [6, 6, 6, 6] }),
+    advGrowthCreatePdfMakeCell('Waga', { alignment: 'center', bold: true, fillColor: '#f5f3ff', color: '#5b21b6', fontSize: 10.0, margin: [4, 6, 4, 6] }),
+    advGrowthCreatePdfMakeCell('Wzrost', { alignment: 'center', bold: true, fillColor: '#f5f3ff', color: '#5b21b6', fontSize: 10.0, margin: [4, 6, 4, 6] }),
+    advGrowthCreatePdfMakeCell('Tempo wzrastania', { alignment: 'center', bold: true, fillColor: '#eef7f7', color: '#005f66', fontSize: 9.8, margin: [3, 6, 3, 6] }),
+    advGrowthCreatePdfMakeCell('hSDS', { alignment: 'center', bold: true, fillColor: '#eef7f7', color: '#005f66', fontSize: 10.0, margin: [3, 6, 3, 6] }),
+    advGrowthCreatePdfMakeCell('ΔhSDS', { alignment: 'center', bold: true, fillColor: '#eef7f7', color: '#005f66', fontSize: 10.0, margin: [3, 6, 3, 6] }),
+    advGrowthCreatePdfMakeCell('hSDS - mpSDS', { alignment: 'center', bold: true, fillColor: '#eef7f7', color: '#005f66', fontSize: 9.5, margin: [3, 6, 3, 6] }),
+    advGrowthCreatePdfMakeCell('BMI', { alignment: 'center', bold: true, fillColor: '#eef7f7', color: '#005f66', fontSize: 10.0, margin: [3, 6, 3, 6] }),
+    advGrowthCreatePdfMakeCell('Cole', { alignment: 'center', bold: true, fillColor: '#eef7f7', color: '#005f66', fontSize: 10.0, margin: [3, 6, 3, 6] })
+  ];
+
+  const bodyRows = report.rows.map((row) => {
+    const isCurrentRow = row.pointType === 'current';
+    const baseFill = isCurrentRow ? '#f8fbfb' : '#ffffff';
+    const ageColor = isCurrentRow ? '#0f4c5c' : '#1f2b2b';
+    return [
+      advGrowthCreatePdfMakeCell(row.ageLabel, { alignment: 'left', bold: isCurrentRow, fillColor: baseFill, color: ageColor, fontSize: 9.9, margin: [6, 5, 6, 5] }),
+      advGrowthCreatePdfMakeCell(row.weightText, { alignment: 'center', bold: isCurrentRow, fillColor: '#faf7ff', color: '#5b21b6', fontSize: 9.8, margin: [4, 5, 4, 5] }),
+      advGrowthCreatePdfMakeCell(row.heightText, { alignment: 'center', bold: isCurrentRow, fillColor: '#faf7ff', color: '#5b21b6', fontSize: 9.8, margin: [4, 5, 4, 5] }),
+      advGrowthCreatePdfMakeCell(row.velocityText, { alignment: 'center', bold: isCurrentRow, fillColor: baseFill, fontSize: 9.6, margin: [3, 5, 3, 5] }),
+      advGrowthCreatePdfMakeCell(row.hsdsText, { alignment: 'center', bold: isCurrentRow, fillColor: baseFill, fontSize: 9.8, margin: [3, 5, 3, 5] }),
+      advGrowthCreatePdfMakeCell(row.deltaHsdsText, { alignment: 'center', bold: isCurrentRow, fillColor: baseFill, fontSize: 9.8, margin: [3, 5, 3, 5] }),
+      advGrowthCreatePdfMakeCell(row.hsdsMpSdsText, { alignment: 'center', bold: isCurrentRow, fillColor: baseFill, fontSize: 9.6, margin: [3, 5, 3, 5] }),
+      advGrowthCreatePdfMakeCell(row.bmiText, { alignment: 'center', bold: isCurrentRow, fillColor: baseFill, fontSize: 9.8, margin: [3, 5, 3, 5] }),
+      advGrowthCreatePdfMakeCell(row.coleText, { alignment: 'center', bold: isCurrentRow, fillColor: baseFill, fontSize: 9.8, margin: [3, 5, 3, 5] })
+    ];
   });
 
-  pdf.setFontSize(8.8);
-  pdf.setTextColor(140, 160, 165);
-  pdf.text('Wygenerowano automatycznie przez moduł Zaawansowane obliczenia wzrostowe — Vilda Clinic', marginX, pageHeight - 6.5);
-  pdf.text('vildaclinic.pl', pageWidth - marginX - 24, pageHeight - 6.5);
+  const tableBody = [headerRow].concat(bodyRows);
+  const title = 'Zaawansowane obliczenia wzrostowe';
+  const subtitle = 'Raport punktów pomiarowych';
 
+  return {
+    compress: true,
+    pageSize: 'A4',
+    pageOrientation: 'landscape',
+    pageMargins: [26, 24, 26, 28],
+    info: {
+      title: advGrowthSanitizePdfText(`${title} — ${subtitle}`),
+      subject: advGrowthSanitizePdfText('Raport punktów pomiarowych z karty Zaawansowane obliczenia wzrostowe'),
+      author: 'wagaiwzrost.pl'
+    },
+    defaultStyle: {
+      font: 'Roboto',
+      fontSize: 10.2,
+      color: '#212b36'
+    },
+    footer: function (currentPage, pageCount) {
+      return {
+        margin: [26, 4, 26, 10],
+        columns: [
+          {
+            text: 'Wygenerowano automatycznie przez moduł Zaawansowane obliczenia wzrostowe — Vilda Clinic',
+            color: '#8ca0a5',
+            fontSize: 8.5,
+            alignment: 'left'
+          },
+          {
+            text: `Strona ${currentPage} / ${pageCount}`,
+            color: '#8ca0a5',
+            fontSize: 8.5,
+            alignment: 'right'
+          }
+        ]
+      };
+    },
+    content: [
+      { text: title, style: 'pdfTitle' },
+      { text: subtitle, style: 'pdfSubtitle', margin: [0, 4, 0, 0] },
+      {
+        margin: [0, 10, 0, 12],
+        table: {
+          widths: ['*'],
+          body: [[{
+            stack: [
+              { text: 'PODSUMOWANIE RAPORTU', style: 'pdfSummaryTitle', margin: [0, 0, 0, 4] },
+              { ul: summaryItems, style: 'pdfSummaryList', margin: [12, 0, 0, 0] }
+            ],
+            fillColor: '#f5f8fa',
+            border: [true, true, true, true],
+            borderColor: ['#dde7e7', '#dde7e7', '#dde7e7', '#dde7e7'],
+            margin: [10, 8, 10, 8]
+          }]]
+        },
+        layout: {
+          hLineWidth: function () { return 1; },
+          vLineWidth: function () { return 1; },
+          hLineColor: function () { return '#dde7e7'; },
+          vLineColor: function () { return '#dde7e7'; },
+          paddingLeft: function () { return 0; },
+          paddingRight: function () { return 0; },
+          paddingTop: function () { return 0; },
+          paddingBottom: function () { return 0; }
+        }
+      },
+      {
+        table: {
+          headerRows: 1,
+          dontBreakRows: true,
+          keepWithHeaderRows: 1,
+          widths: [98, 64, 66, 84, 48, 54, 72, 48, 52],
+          body: tableBody
+        },
+        layout: {
+          hLineWidth: function () { return 0.6; },
+          vLineWidth: function () { return 0.6; },
+          hLineColor: function () { return '#becdcd'; },
+          vLineColor: function () { return '#becdcd'; },
+          paddingLeft: function () { return 0; },
+          paddingRight: function () { return 0; },
+          paddingTop: function () { return 0; },
+          paddingBottom: function () { return 0; }
+        }
+      },
+      { ul: noteItems, style: 'pdfNoteList', margin: [0, 12, 0, 0] }
+    ],
+    styles: {
+      pdfTitle: {
+        fontSize: 20,
+        bold: true,
+        color: '#172222'
+      },
+      pdfSubtitle: {
+        fontSize: 12,
+        color: '#424242'
+      },
+      pdfSummaryTitle: {
+        fontSize: 11.6,
+        bold: true,
+        color: '#005f66'
+      },
+      pdfSummaryList: {
+        fontSize: 10.2,
+        color: '#212b36'
+      },
+      pdfNoteList: {
+        fontSize: 10.0,
+        color: '#434d4d'
+      }
+    }
+  };
+}
+
+
+function advGrowthBuildReportPresentationModel(report) {
+  const nameValue = advGrowthSanitizePdfText(document.getElementById('advName')?.value || document.getElementById('name')?.value || '');
+  const sexLabel = report.sex === 'F' ? 'Dziewczynka' : 'Chłopiec';
+  const sourceLabel = advHistorySourceLabel(report.preferredSource);
+  const generatedAt = new Date();
+  let generatedLabel = '';
+  try {
+    generatedLabel = new Intl.DateTimeFormat('pl-PL', {
+      year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+    }).format(generatedAt);
+  } catch (_) {
+    generatedLabel = generatedAt.toISOString();
+  }
+
+  return {
+    title: 'Zaawansowane obliczenia wzrostowe',
+    subtitle: 'Raport punktów pomiarowych',
+    nameValue,
+    sexLabel,
+    sourceLabel,
+    generatedLabel,
+    summaryItems: [
+      nameValue ? `Pacjent: ${nameValue}` : null,
+      `Płeć: ${sexLabel}`,
+      `Preferowane źródło danych: ${sourceLabel}`,
+      `Punkty historyczne: ${report.historicalCount}` + (report.includesCurrent ? ' + aktualny pomiar' : ''),
+      `Wygenerowano: ${generatedLabel}`
+    ].filter(Boolean).map((item) => advGrowthSanitizePdfText(item)),
+    noteItems: [
+      'Tempo wzrastania wyliczono tylko wtedy, gdy odstęp od poprzedniego punktu wynosił co najmniej 6 miesięcy i w obu punktach wpisano wzrost.',
+      'ΔhSDS oznacza zmianę względem poprzedniego dostępnego punktu z obliczalnym hSDS.',
+      report.targetHeight == null
+        ? 'Kolumna hSDS - mpSDS pozostaje pusta, jeśli nie wpisano wzrostu rodziców.'
+        : 'Kolumna hSDS - mpSDS porównuje hSDS dziecka z potencjałem wzrostowym MPH.',
+      report.fallbackUsed
+        ? 'Tam, gdzie wybrane źródło danych było niedostępne dla wieku lub parametru, zastosowano automatyczny fallback zgodny z logiką karty Centyle, BMI… .'
+        : null,
+      report.includesCurrent
+        ? 'Raport obejmuje także aktualny pomiar z karty Dane użytkownika (oznaczony jako „akt.”), jeśli nie dublował ostatniego wpisu historycznego.'
+        : null
+    ].filter(Boolean).map((item) => advGrowthSanitizePdfText(item))
+  };
+}
+
+function advGrowthBuildHtmlReportMarkup(report) {
+  const model = advGrowthBuildReportPresentationModel(report);
+  const summaryItemsHtml = model.summaryItems
+    .map((item) => `<li>${advHistoryEscapeHtml(item)}</li>`)
+    .join('');
+  const noteItemsHtml = model.noteItems
+    .map((item) => `<li>${advHistoryEscapeHtml(item)}</li>`)
+    .join('');
+  const rowsHtml = report.rows.map((row) => {
+    const currentClass = row.pointType === 'current' ? ' is-current' : '';
+    return `
+      <tr class="adv-growth-pdf-row${currentClass}">
+        <td class="col-age">${advHistoryEscapeHtml(row.ageLabel || '—')}</td>
+        <td class="col-accent">${advHistoryEscapeHtml(row.weightText || '—')}</td>
+        <td class="col-accent">${advHistoryEscapeHtml(row.heightText || '—')}</td>
+        <td>${advHistoryEscapeHtml(row.velocityText || '—')}</td>
+        <td>${advHistoryEscapeHtml(row.hsdsText || '—')}</td>
+        <td>${advHistoryEscapeHtml(row.deltaHsdsText || '—')}</td>
+        <td>${advHistoryEscapeHtml(row.hsdsMpSdsText || '—')}</td>
+        <td>${advHistoryEscapeHtml(row.bmiText || '—')}</td>
+        <td>${advHistoryEscapeHtml(row.coleText || '—')}</td>
+      </tr>`;
+  }).join('');
+
+  return `
+    <div class="adv-growth-pdf-html-root">
+      <style>
+        .adv-growth-pdf-html-root {
+          width: 1120px;
+          background: #ffffff;
+          color: #212b36;
+          font-family: Arial, Helvetica, sans-serif;
+          box-sizing: border-box;
+          padding: 34px 36px 38px;
+        }
+        .adv-growth-pdf-title {
+          font-size: 30px;
+          line-height: 1.15;
+          font-weight: 700;
+          color: #172222;
+          margin: 0;
+        }
+        .adv-growth-pdf-subtitle {
+          font-size: 18px;
+          line-height: 1.25;
+          color: #424242;
+          margin: 6px 0 0;
+        }
+        .adv-growth-pdf-summary {
+          margin-top: 18px;
+          border: 1px solid #dde7e7;
+          background: #f5f8fa;
+          border-radius: 10px;
+          padding: 14px 16px 12px;
+        }
+        .adv-growth-pdf-summary-title {
+          font-size: 16px;
+          font-weight: 700;
+          color: #005f66;
+          margin: 0 0 8px;
+        }
+        .adv-growth-pdf-summary ul,
+        .adv-growth-pdf-notes ul {
+          margin: 0;
+          padding-left: 22px;
+        }
+        .adv-growth-pdf-summary li,
+        .adv-growth-pdf-notes li {
+          margin: 0 0 6px;
+          line-height: 1.35;
+          font-size: 14px;
+        }
+        .adv-growth-pdf-summary li:last-child,
+        .adv-growth-pdf-notes li:last-child {
+          margin-bottom: 0;
+        }
+        .adv-growth-pdf-table-wrap {
+          margin-top: 18px;
+        }
+        .adv-growth-pdf-table {
+          width: 100%;
+          border-collapse: collapse;
+          table-layout: fixed;
+        }
+        .adv-growth-pdf-table th,
+        .adv-growth-pdf-table td {
+          border: 1px solid #becdcd;
+          padding: 9px 8px;
+          font-size: 13px;
+          line-height: 1.25;
+          text-align: center;
+          vertical-align: middle;
+          word-break: break-word;
+          overflow-wrap: anywhere;
+        }
+        .adv-growth-pdf-table th {
+          background: #eef7f7;
+          color: #005f66;
+          font-weight: 700;
+        }
+        .adv-growth-pdf-table th.col-age,
+        .adv-growth-pdf-table td.col-age {
+          text-align: left;
+          width: 16%;
+        }
+        .adv-growth-pdf-table th.col-accent,
+        .adv-growth-pdf-table td.col-accent {
+          background: #f5f3ff;
+          color: #5b21b6;
+        }
+        .adv-growth-pdf-table th.col-velocity { width: 13%; }
+        .adv-growth-pdf-table th.col-short { width: 8%; }
+        .adv-growth-pdf-table th.col-medium { width: 10%; }
+        .adv-growth-pdf-row.is-current td:not(.col-accent) {
+          background: #f8fbfb;
+          font-weight: 700;
+        }
+        .adv-growth-pdf-row.is-current td.col-age {
+          color: #0f4c5c;
+        }
+        .adv-growth-pdf-notes {
+          margin-top: 18px;
+        }
+        .adv-growth-pdf-footer {
+          margin-top: 18px;
+          font-size: 12px;
+          color: #8ca0a5;
+          display: flex;
+          justify-content: space-between;
+          gap: 12px;
+          align-items: center;
+        }
+      </style>
+      <h1 class="adv-growth-pdf-title">${advHistoryEscapeHtml(model.title)}</h1>
+      <p class="adv-growth-pdf-subtitle">${advHistoryEscapeHtml(model.subtitle)}</p>
+      <section class="adv-growth-pdf-summary">
+        <h2 class="adv-growth-pdf-summary-title">PODSUMOWANIE RAPORTU</h2>
+        <ul>${summaryItemsHtml}</ul>
+      </section>
+      <section class="adv-growth-pdf-table-wrap">
+        <table class="adv-growth-pdf-table" aria-label="Raport punktów pomiarowych">
+          <thead>
+            <tr>
+              <th class="col-age">Wiek</th>
+              <th class="col-accent">Waga</th>
+              <th class="col-accent">Wzrost</th>
+              <th class="col-velocity">Tempo wzrastania</th>
+              <th class="col-short">hSDS</th>
+              <th class="col-short">ΔhSDS</th>
+              <th class="col-medium">hSDS - mpSDS</th>
+              <th class="col-short">BMI</th>
+              <th class="col-short">Cole</th>
+            </tr>
+          </thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </section>
+      <section class="adv-growth-pdf-notes">
+        <ul>${noteItemsHtml}</ul>
+      </section>
+      <div class="adv-growth-pdf-footer">
+        <span>Wygenerowano automatycznie przez moduł Zaawansowane obliczenia wzrostowe — Vilda Clinic</span>
+        <span>vildaclinic.pl</span>
+      </div>
+    </div>
+  `;
+}
+
+async function advGrowthGeneratePdfViaCanvas(report, filename) {
+  if (!window.html2canvas || !window.jspdf || typeof window.jspdf.jsPDF !== 'function') {
+    throw new Error('Brak html2canvas lub jsPDF do wygenerowania raportu awaryjnego.');
+  }
+
+  const host = document.createElement('div');
+  host.style.position = 'fixed';
+  host.style.left = '-20000px';
+  host.style.top = '0';
+  host.style.width = '1120px';
+  host.style.maxWidth = '1120px';
+  host.style.pointerEvents = 'none';
+  host.style.opacity = '1';
+  host.style.zIndex = '-1';
+  host.innerHTML = advGrowthBuildHtmlReportMarkup(report);
+  document.body.appendChild(host);
+
+  try {
+    if (document.fonts && document.fonts.ready) {
+      try { await document.fonts.ready; } catch (_) {}
+    }
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+    const reportNode = host.querySelector('.adv-growth-pdf-html-root') || host;
+    const canvas = await window.html2canvas(reportNode, {
+      scale: 2,
+      backgroundColor: '#ffffff',
+      useCORS: true,
+      logging: false
+    });
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4', compress: true });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const imgData = canvas.toDataURL('image/png');
+    const imgWidth = pageWidth;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+    let heightLeft = imgHeight;
+    let position = 0;
+    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+    heightLeft -= pageHeight;
+
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight;
+      pdf.addPage('a4', 'landscape');
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+      heightLeft -= pageHeight;
+    }
+
+    pdf.save(filename);
+  } finally {
+    if (host && host.parentNode) {
+      host.parentNode.removeChild(host);
+    }
+  }
+}
+
+async function generateAdvancedGrowthPdfReport() {
+  const report = advGrowthBuildReportRows();
+  if (!report || !Array.isArray(report.rows) || !report.rows.length || report.historicalCount < 1) {
+    showAdvancedGrowthHistoryToast('Brak historycznych punktów pomiarowych do raportu.');
+    return;
+  }
+
+  const nameValue = advGrowthSanitizePdfText(document.getElementById('advName')?.value || document.getElementById('name')?.value || '');
   const safeName = (nameValue || '')
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[̀-ͯ]/g, '')
     .replace(/[^a-zA-Z0-9_-]+/g, '_')
     .replace(/^_+|_+$/g, '');
   const filename = `raport_zaawansowane_obliczenia_wzrostowe${safeName ? '_' + safeName : ''}.pdf`;
-  pdf.save(filename);
-  showAdvancedGrowthHistoryToast('Raport PDF został wygenerowany.');
+
+  const ready = await advGrowthEnsurePdfMake();
+  if (ready && window.pdfMake && typeof window.pdfMake.createPdf === 'function') {
+    const definition = advGrowthBuildPdfMakeDefinition(report);
+    window.pdfMake.createPdf(definition).download(filename);
+    showAdvancedGrowthHistoryToast('Raport PDF został wygenerowany.');
+    return;
+  }
+
+  try {
+    await advGrowthGeneratePdfViaCanvas(report, filename);
+    showAdvancedGrowthHistoryToast('Raport PDF został wygenerowany.');
+  } catch (error) {
+    console.warn('Nie udało się wygenerować raportu PDF metodą awaryjną.', error);
+    showAdvancedGrowthHistoryToast('Nie udało się uruchomić generatora PDF. Sprawdź połączenie z internetem i spróbuj ponownie.');
+  }
 }
 
 function ensureAdvancedGrowthReportControls() {
@@ -12185,9 +12561,20 @@ function ensureAdvancedGrowthReportControls() {
   const btn = wrap.querySelector('#advGenerateReportBtn');
   if (btn && !btn.dataset.wired) {
     btn.dataset.wired = 'true';
-    btn.addEventListener('click', function (event) {
+    btn.addEventListener('click', async function (event) {
       if (event && typeof event.preventDefault === 'function') event.preventDefault();
-      generateAdvancedGrowthPdfReport();
+      if (btn.dataset.busy === 'true') return;
+      const originalLabel = btn.textContent;
+      btn.dataset.busy = 'true';
+      btn.disabled = true;
+      btn.textContent = 'Przygotowywanie raportu…';
+      try {
+        await generateAdvancedGrowthPdfReport();
+      } finally {
+        btn.dataset.busy = 'false';
+        btn.textContent = originalLabel;
+        updateAdvancedGrowthReportButtonVisibility();
+      }
     });
   }
 
