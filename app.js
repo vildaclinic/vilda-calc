@@ -11883,19 +11883,31 @@ function advGrowthBuildReportRows() {
 
     const ageLabelBase = advHistoryFormatAgeMonths(point.ageMonths);
     const ageLabel = point.pointType === 'current' ? `${ageLabelBase} (akt.)` : ageLabelBase;
+    const weightCentileText = (weightStats && weightStats.result && typeof weightStats.result.percentile === 'number' && isFinite(weightStats.result.percentile))
+      ? (advHistoryPercentileText(weightStats.result.percentile) || '—')
+      : '—';
+    const heightCentileText = (heightStats && heightStats.result && typeof heightStats.result.percentile === 'number' && isFinite(heightStats.result.percentile))
+      ? (advHistoryPercentileText(heightStats.result.percentile) || '—')
+      : '—';
+    const bmiCentileText = (bmiStats && bmiStats.result && typeof bmiStats.result.percentile === 'number' && isFinite(bmiStats.result.percentile))
+      ? (advHistoryPercentileText(bmiStats.result.percentile) || '—')
+      : '—';
 
     rows.push({
       pointType: point.pointType,
       ageMonths: point.ageMonths,
       ageLabel,
       weightText: (typeof point.weight === 'number' && isFinite(point.weight)) ? `${advHistoryFormatNumber(point.weight, 1)} kg` : '—',
+      weightCentileText,
       heightText: (typeof point.height === 'number' && isFinite(point.height)) ? `${advHistoryFormatNumber(point.height, 1)} cm` : '—',
+      heightCentileText,
       velocityText: (typeof velocity === 'number' && isFinite(velocity)) ? `${advHistoryFormatNumber(velocity, 1)} cm/rok` : '—',
       velocityGapM,
       hsdsText: (typeof hsds === 'number' && isFinite(hsds)) ? advGrowthFormatSignedNumber(hsds, 2) : '—',
       deltaHsdsText: (typeof deltaHsds === 'number' && isFinite(deltaHsds)) ? advGrowthFormatSignedNumber(deltaHsds, 2) : '—',
       hsdsMpSdsText: (typeof hsdsMpSds === 'number' && isFinite(hsdsMpSds)) ? advGrowthFormatSignedNumber(hsdsMpSds, 2) : '—',
       bmiText: (typeof bmiValue === 'number' && isFinite(bmiValue)) ? advHistoryFormatNumber(bmiValue, 1) : '—',
+      bmiCentileText,
       coleText: (typeof coleStats.result === 'number' && isFinite(coleStats.result)) ? `${advHistoryFormatNumber(coleStats.result, 1)}%` : '—',
       sourceSummary: advHistoryBuildSourceSummary(preferredSource, metricMeta),
       rowFallbackUsed
@@ -11917,6 +11929,16 @@ function advGrowthSanitizePdfText(value) {
   return String(value == null ? '' : value)
     .replace(/\r?\n+/g, ' ')
     .replace(/\s+/g, ' ')
+    .trim();
+}
+function advGrowthSanitizePdfMultilineText(value) {
+  return String(value == null ? '' : value)
+    .replace(/\r\n?/g, '\n')
+    .replace(/[^\S\n]+/g, ' ')
+    .replace(/\n{2,}/g, '\n')
+    .split('\n')
+    .map((line) => line.trim())
+    .join('\n')
     .trim();
 }
 
@@ -12036,8 +12058,11 @@ async function advGrowthEnsurePdfMake() {
 
 function advGrowthCreatePdfMakeCell(text, options) {
   const opts = options || {};
+  const sanitizedText = opts.preserveLineBreaks
+    ? advGrowthSanitizePdfMultilineText(text)
+    : advGrowthSanitizePdfText(text);
   const cell = {
-    text: advGrowthSanitizePdfText(text),
+    text: sanitizedText,
     alignment: opts.alignment || 'left',
     margin: Array.isArray(opts.margin) ? opts.margin : [4, 5, 4, 5]
   };
@@ -12056,51 +12081,28 @@ function advGrowthCreatePdfMakeCell(text, options) {
 }
 
 function advGrowthBuildPdfMakeDefinition(report) {
-  const nameValue = advGrowthSanitizePdfText(document.getElementById('advName')?.value || document.getElementById('name')?.value || '');
-  const sexLabel = report.sex === 'F' ? 'Dziewczynka' : 'Chłopiec';
-  const sourceLabel = advHistorySourceLabel(report.preferredSource);
-  const generatedAt = new Date();
-  let generatedLabel = '';
-  try {
-    generatedLabel = new Intl.DateTimeFormat('pl-PL', {
-      year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
-    }).format(generatedAt);
-  } catch (_) {
-    generatedLabel = generatedAt.toISOString();
-  }
-
-  const summaryItems = [
-    nameValue ? `Pacjent: ${nameValue}` : null,
-    `Płeć: ${sexLabel}`,
-    `Preferowane źródło danych: ${sourceLabel}`,
-    `Punkty historyczne: ${report.historicalCount}` + (report.includesCurrent ? ' + aktualny pomiar' : ''),
-    `Wygenerowano: ${generatedLabel}`
-  ].filter(Boolean).map((item) => advGrowthSanitizePdfText(item));
-
-  const noteItems = [
-    'Tempo wzrastania wyliczono tylko wtedy, gdy odstęp od poprzedniego punktu wynosił co najmniej 6 miesięcy i w obu punktach wpisano wzrost.',
-    'ΔhSDS oznacza zmianę względem poprzedniego dostępnego punktu z obliczalnym hSDS.',
-    report.targetHeight == null
-      ? 'Kolumna hSDS - mpSDS pozostaje pusta, jeśli nie wpisano wzrostu rodziców.'
-      : 'Kolumna hSDS - mpSDS porównuje hSDS dziecka z potencjałem wzrostowym MPH.',
-    report.fallbackUsed
-      ? 'Tam, gdzie wybrane źródło danych było niedostępne dla wieku lub parametru, zastosowano automatyczny fallback zgodny z logiką karty Centyle, BMI… .'
-      : null,
-    report.includesCurrent
-      ? 'Raport obejmuje także aktualny pomiar z karty Dane użytkownika (oznaczony jako „akt.”), jeśli nie dublował ostatniego wpisu historycznego.'
-      : null
-  ].filter(Boolean).map((item) => advGrowthSanitizePdfText(item));
+  const model = advGrowthBuildReportPresentationModel(report);
+  const headerFill = '#eef7f7';
+  const headerTextColor = '#005f66';
+  const accentFill = '#f5f3ff';
+  const accentTextColor = '#5b21b6';
+  const currentAccentFill = '#faf7ff';
+  const tableWidths = [84, 54, 66, 58, 68, 84, 46, 50, 72, 46, 60, 56];
+  const tableTotalWidth = tableWidths.reduce((sum, width) => sum + (Number(width) || 0), 0);
 
   const headerRow = [
-    advGrowthCreatePdfMakeCell('Wiek', { alignment: 'left', bold: true, fillColor: '#eef7f7', color: '#005f66', fontSize: 10.0, margin: [6, 6, 6, 6] }),
-    advGrowthCreatePdfMakeCell('Waga', { alignment: 'center', bold: true, fillColor: '#f5f3ff', color: '#5b21b6', fontSize: 10.0, margin: [4, 6, 4, 6] }),
-    advGrowthCreatePdfMakeCell('Wzrost', { alignment: 'center', bold: true, fillColor: '#f5f3ff', color: '#5b21b6', fontSize: 10.0, margin: [4, 6, 4, 6] }),
-    advGrowthCreatePdfMakeCell('Tempo wzrastania', { alignment: 'center', bold: true, fillColor: '#eef7f7', color: '#005f66', fontSize: 9.8, margin: [3, 6, 3, 6] }),
-    advGrowthCreatePdfMakeCell('hSDS', { alignment: 'center', bold: true, fillColor: '#eef7f7', color: '#005f66', fontSize: 10.0, margin: [3, 6, 3, 6] }),
-    advGrowthCreatePdfMakeCell('ΔhSDS', { alignment: 'center', bold: true, fillColor: '#eef7f7', color: '#005f66', fontSize: 10.0, margin: [3, 6, 3, 6] }),
-    advGrowthCreatePdfMakeCell('hSDS - mpSDS', { alignment: 'center', bold: true, fillColor: '#eef7f7', color: '#005f66', fontSize: 9.5, margin: [3, 6, 3, 6] }),
-    advGrowthCreatePdfMakeCell('BMI', { alignment: 'center', bold: true, fillColor: '#eef7f7', color: '#005f66', fontSize: 10.0, margin: [3, 6, 3, 6] }),
-    advGrowthCreatePdfMakeCell('Cole', { alignment: 'center', bold: true, fillColor: '#eef7f7', color: '#005f66', fontSize: 10.0, margin: [3, 6, 3, 6] })
+    advGrowthCreatePdfMakeCell('Wiek', { alignment: 'left', bold: true, fillColor: headerFill, color: headerTextColor, fontSize: 10.0, margin: [6, 6, 6, 6] }),
+    advGrowthCreatePdfMakeCell('Waga', { alignment: 'center', bold: true, fillColor: accentFill, color: accentTextColor, fontSize: 10.0, margin: [4, 6, 4, 6] }),
+    advGrowthCreatePdfMakeCell('Centyl wagi', { alignment: 'center', bold: true, fillColor: headerFill, color: headerTextColor, fontSize: 9.4, margin: [3, 6, 3, 6] }),
+    advGrowthCreatePdfMakeCell('Wzrost', { alignment: 'center', bold: true, fillColor: accentFill, color: accentTextColor, fontSize: 10.0, margin: [4, 6, 4, 6] }),
+    advGrowthCreatePdfMakeCell('Centyl wzrostu', { alignment: 'center', bold: true, fillColor: headerFill, color: headerTextColor, fontSize: 9.4, margin: [3, 6, 3, 6] }),
+    advGrowthCreatePdfMakeCell('Tempo wzrastania', { alignment: 'center', bold: true, fillColor: headerFill, color: headerTextColor, fontSize: 9.6, margin: [3, 6, 3, 6] }),
+    advGrowthCreatePdfMakeCell('hSDS', { alignment: 'center', bold: true, fillColor: headerFill, color: headerTextColor, fontSize: 10.0, margin: [3, 6, 3, 6] }),
+    advGrowthCreatePdfMakeCell('ΔhSDS', { alignment: 'center', bold: true, fillColor: headerFill, color: headerTextColor, fontSize: 10.0, margin: [3, 6, 3, 6] }),
+    advGrowthCreatePdfMakeCell('hSDS - mpSDS', { alignment: 'center', bold: true, fillColor: headerFill, color: headerTextColor, fontSize: 9.4, margin: [3, 6, 3, 6] }),
+    advGrowthCreatePdfMakeCell('BMI', { alignment: 'center', bold: true, fillColor: headerFill, color: headerTextColor, fontSize: 10.0, margin: [3, 6, 3, 6] }),
+    advGrowthCreatePdfMakeCell('Centyl BMI', { alignment: 'center', bold: true, fillColor: headerFill, color: headerTextColor, fontSize: 9.4, margin: [3, 6, 3, 6] }),
+    advGrowthCreatePdfMakeCell("Wskaźnik\nCole'a", { alignment: 'center', bold: true, fillColor: headerFill, color: headerTextColor, fontSize: 9.1, margin: [3, 6, 3, 6], preserveLineBreaks: true })
   ];
 
   const bodyRows = report.rows.map((row) => {
@@ -12109,20 +12111,21 @@ function advGrowthBuildPdfMakeDefinition(report) {
     const ageColor = isCurrentRow ? '#0f4c5c' : '#1f2b2b';
     return [
       advGrowthCreatePdfMakeCell(row.ageLabel, { alignment: 'left', bold: isCurrentRow, fillColor: baseFill, color: ageColor, fontSize: 9.9, margin: [6, 5, 6, 5] }),
-      advGrowthCreatePdfMakeCell(row.weightText, { alignment: 'center', bold: isCurrentRow, fillColor: '#faf7ff', color: '#5b21b6', fontSize: 9.8, margin: [4, 5, 4, 5] }),
-      advGrowthCreatePdfMakeCell(row.heightText, { alignment: 'center', bold: isCurrentRow, fillColor: '#faf7ff', color: '#5b21b6', fontSize: 9.8, margin: [4, 5, 4, 5] }),
+      advGrowthCreatePdfMakeCell(row.weightText, { alignment: 'center', bold: isCurrentRow, fillColor: currentAccentFill, color: accentTextColor, fontSize: 9.8, margin: [4, 5, 4, 5] }),
+      advGrowthCreatePdfMakeCell(row.weightCentileText, { alignment: 'center', bold: isCurrentRow, fillColor: baseFill, fontSize: 9.3, margin: [3, 5, 3, 5] }),
+      advGrowthCreatePdfMakeCell(row.heightText, { alignment: 'center', bold: isCurrentRow, fillColor: currentAccentFill, color: accentTextColor, fontSize: 9.8, margin: [4, 5, 4, 5] }),
+      advGrowthCreatePdfMakeCell(row.heightCentileText, { alignment: 'center', bold: isCurrentRow, fillColor: baseFill, fontSize: 9.3, margin: [3, 5, 3, 5] }),
       advGrowthCreatePdfMakeCell(row.velocityText, { alignment: 'center', bold: isCurrentRow, fillColor: baseFill, fontSize: 9.6, margin: [3, 5, 3, 5] }),
       advGrowthCreatePdfMakeCell(row.hsdsText, { alignment: 'center', bold: isCurrentRow, fillColor: baseFill, fontSize: 9.8, margin: [3, 5, 3, 5] }),
       advGrowthCreatePdfMakeCell(row.deltaHsdsText, { alignment: 'center', bold: isCurrentRow, fillColor: baseFill, fontSize: 9.8, margin: [3, 5, 3, 5] }),
-      advGrowthCreatePdfMakeCell(row.hsdsMpSdsText, { alignment: 'center', bold: isCurrentRow, fillColor: baseFill, fontSize: 9.6, margin: [3, 5, 3, 5] }),
+      advGrowthCreatePdfMakeCell(row.hsdsMpSdsText, { alignment: 'center', bold: isCurrentRow, fillColor: baseFill, fontSize: 9.5, margin: [3, 5, 3, 5] }),
       advGrowthCreatePdfMakeCell(row.bmiText, { alignment: 'center', bold: isCurrentRow, fillColor: baseFill, fontSize: 9.8, margin: [3, 5, 3, 5] }),
-      advGrowthCreatePdfMakeCell(row.coleText, { alignment: 'center', bold: isCurrentRow, fillColor: baseFill, fontSize: 9.8, margin: [3, 5, 3, 5] })
+      advGrowthCreatePdfMakeCell(row.bmiCentileText, { alignment: 'center', bold: isCurrentRow, fillColor: baseFill, fontSize: 9.3, margin: [3, 5, 3, 5] }),
+      advGrowthCreatePdfMakeCell(row.coleText, { alignment: 'center', bold: isCurrentRow, fillColor: baseFill, fontSize: 9.7, margin: [3, 5, 3, 5] })
     ];
   });
 
   const tableBody = [headerRow].concat(bodyRows);
-  const title = 'Zaawansowane obliczenia wzrostowe';
-  const subtitle = 'Raport punktów pomiarowych';
 
   return {
     compress: true,
@@ -12130,7 +12133,7 @@ function advGrowthBuildPdfMakeDefinition(report) {
     pageOrientation: 'landscape',
     pageMargins: [26, 24, 26, 28],
     info: {
-      title: advGrowthSanitizePdfText(`${title} — ${subtitle}`),
+      title: advGrowthSanitizePdfText(`${model.title} — ${model.subtitle}`),
       subject: advGrowthSanitizePdfText('Raport punktów pomiarowych z karty Zaawansowane obliczenia wzrostowe'),
       author: 'wagaiwzrost.pl'
     },
@@ -12159,16 +12162,16 @@ function advGrowthBuildPdfMakeDefinition(report) {
       };
     },
     content: [
-      { text: title, style: 'pdfTitle' },
-      { text: subtitle, style: 'pdfSubtitle', margin: [0, 4, 0, 0] },
+      { text: model.title, style: 'pdfTitle' },
+      { text: model.subtitle, style: 'pdfSubtitle', margin: [0, 4, 0, 0] },
       {
         margin: [0, 10, 0, 12],
         table: {
-          widths: ['*'],
+          widths: [tableTotalWidth],
           body: [[{
             stack: [
               { text: 'PODSUMOWANIE RAPORTU', style: 'pdfSummaryTitle', margin: [0, 0, 0, 4] },
-              { ul: summaryItems, style: 'pdfSummaryList', margin: [12, 0, 0, 0] }
+              { ul: model.summaryItems, style: 'pdfSummaryList', margin: [12, 0, 0, 0] }
             ],
             fillColor: '#f5f8fa',
             border: [true, true, true, true],
@@ -12192,7 +12195,7 @@ function advGrowthBuildPdfMakeDefinition(report) {
           headerRows: 1,
           dontBreakRows: true,
           keepWithHeaderRows: 1,
-          widths: [98, 64, 66, 84, 48, 54, 72, 48, 52],
+          widths: tableWidths,
           body: tableBody
         },
         layout: {
@@ -12206,7 +12209,7 @@ function advGrowthBuildPdfMakeDefinition(report) {
           paddingBottom: function () { return 0; }
         }
       },
-      { ul: noteItems, style: 'pdfNoteList', margin: [0, 12, 0, 0] }
+      { ul: model.noteItems, style: 'pdfNoteList', margin: [0, 12, 0, 0] }
     ],
     styles: {
       pdfTitle: {
@@ -12250,16 +12253,22 @@ function advGrowthBuildReportPresentationModel(report) {
     generatedLabel = generatedAt.toISOString();
   }
 
+  const mphSummary = (typeof report.targetHeight === 'number' && isFinite(report.targetHeight))
+    ? `MPH (mid-parental height): ${advHistoryFormatNumber(report.targetHeight, 1)} cm`
+    : 'MPH (mid-parental height): brak danych o wzroście rodziców';
+
   return {
     title: 'Zaawansowane obliczenia wzrostowe',
     subtitle: 'Raport punktów pomiarowych',
     nameValue,
     sexLabel,
     sourceLabel,
+    mphSummary,
     generatedLabel,
     summaryItems: [
       nameValue ? `Pacjent: ${nameValue}` : null,
       `Płeć: ${sexLabel}`,
+      mphSummary,
       `Preferowane źródło danych: ${sourceLabel}`,
       `Punkty historyczne: ${report.historicalCount}` + (report.includesCurrent ? ' + aktualny pomiar' : ''),
       `Wygenerowano: ${generatedLabel}`
@@ -12293,14 +12302,17 @@ function advGrowthBuildHtmlReportMarkup(report) {
     return `
       <tr class="adv-growth-pdf-row${currentClass}">
         <td class="col-age">${advHistoryEscapeHtml(row.ageLabel || '—')}</td>
-        <td class="col-accent">${advHistoryEscapeHtml(row.weightText || '—')}</td>
-        <td class="col-accent">${advHistoryEscapeHtml(row.heightText || '—')}</td>
-        <td>${advHistoryEscapeHtml(row.velocityText || '—')}</td>
-        <td>${advHistoryEscapeHtml(row.hsdsText || '—')}</td>
-        <td>${advHistoryEscapeHtml(row.deltaHsdsText || '—')}</td>
-        <td>${advHistoryEscapeHtml(row.hsdsMpSdsText || '—')}</td>
-        <td>${advHistoryEscapeHtml(row.bmiText || '—')}</td>
-        <td>${advHistoryEscapeHtml(row.coleText || '—')}</td>
+        <td class="col-weight col-accent">${advHistoryEscapeHtml(row.weightText || '—')}</td>
+        <td class="col-centile">${advHistoryEscapeHtml(row.weightCentileText || '—')}</td>
+        <td class="col-height col-accent">${advHistoryEscapeHtml(row.heightText || '—')}</td>
+        <td class="col-centile">${advHistoryEscapeHtml(row.heightCentileText || '—')}</td>
+        <td class="col-velocity">${advHistoryEscapeHtml(row.velocityText || '—')}</td>
+        <td class="col-short">${advHistoryEscapeHtml(row.hsdsText || '—')}</td>
+        <td class="col-short">${advHistoryEscapeHtml(row.deltaHsdsText || '—')}</td>
+        <td class="col-medium">${advHistoryEscapeHtml(row.hsdsMpSdsText || '—')}</td>
+        <td class="col-bmi">${advHistoryEscapeHtml(row.bmiText || '—')}</td>
+        <td class="col-centile">${advHistoryEscapeHtml(row.bmiCentileText || '—')}</td>
+        <td class="col-cole">${advHistoryEscapeHtml(row.coleText || '—')}</td>
       </tr>`;
   }).join('');
 
@@ -12327,6 +12339,13 @@ function advGrowthBuildHtmlReportMarkup(report) {
           line-height: 1.25;
           color: #424242;
           margin: 6px 0 0;
+        }
+        .adv-growth-pdf-summary,
+        .adv-growth-pdf-table-wrap,
+        .adv-growth-pdf-notes,
+        .adv-growth-pdf-footer {
+          width: 100%;
+          box-sizing: border-box;
         }
         .adv-growth-pdf-summary {
           margin-top: 18px;
@@ -12383,19 +12402,54 @@ function advGrowthBuildHtmlReportMarkup(report) {
         .adv-growth-pdf-table th.col-age,
         .adv-growth-pdf-table td.col-age {
           text-align: left;
-          width: 16%;
+          width: 12.5%;
+        }
+        .adv-growth-pdf-table th.col-weight,
+        .adv-growth-pdf-table td.col-weight {
+          width: 7.5%;
+        }
+        .adv-growth-pdf-table th.col-height,
+        .adv-growth-pdf-table td.col-height {
+          width: 7.5%;
+        }
+        .adv-growth-pdf-table th.col-centile,
+        .adv-growth-pdf-table td.col-centile {
+          width: 8%;
+        }
+        .adv-growth-pdf-table th.col-velocity,
+        .adv-growth-pdf-table td.col-velocity {
+          width: 10.5%;
+        }
+        .adv-growth-pdf-table th.col-short,
+        .adv-growth-pdf-table td.col-short {
+          width: 5.8%;
+        }
+        .adv-growth-pdf-table th.col-medium,
+        .adv-growth-pdf-table td.col-medium {
+          width: 7.8%;
+        }
+        .adv-growth-pdf-table th.col-bmi,
+        .adv-growth-pdf-table td.col-bmi {
+          width: 5.8%;
+        }
+        .adv-growth-pdf-table th.col-cole,
+        .adv-growth-pdf-table td.col-cole {
+          width: 7.8%;
         }
         .adv-growth-pdf-table th.col-accent,
         .adv-growth-pdf-table td.col-accent {
           background: #f5f3ff;
           color: #5b21b6;
         }
-        .adv-growth-pdf-table th.col-velocity { width: 13%; }
-        .adv-growth-pdf-table th.col-short { width: 8%; }
-        .adv-growth-pdf-table th.col-medium { width: 10%; }
+        .adv-growth-pdf-table th.col-cole span {
+          display: inline-block;
+          line-height: 1.1;
+        }
+        .adv-growth-pdf-row.is-current td {
+          font-weight: 700;
+        }
         .adv-growth-pdf-row.is-current td:not(.col-accent) {
           background: #f8fbfb;
-          font-weight: 700;
         }
         .adv-growth-pdf-row.is-current td.col-age {
           color: #0f4c5c;
@@ -12424,14 +12478,17 @@ function advGrowthBuildHtmlReportMarkup(report) {
           <thead>
             <tr>
               <th class="col-age">Wiek</th>
-              <th class="col-accent">Waga</th>
-              <th class="col-accent">Wzrost</th>
+              <th class="col-weight col-accent">Waga</th>
+              <th class="col-centile">Centyl wagi</th>
+              <th class="col-height col-accent">Wzrost</th>
+              <th class="col-centile">Centyl wzrostu</th>
               <th class="col-velocity">Tempo wzrastania</th>
               <th class="col-short">hSDS</th>
               <th class="col-short">ΔhSDS</th>
               <th class="col-medium">hSDS - mpSDS</th>
-              <th class="col-short">BMI</th>
-              <th class="col-short">Cole</th>
+              <th class="col-bmi">BMI</th>
+              <th class="col-centile">Centyl BMI</th>
+              <th class="col-cole"><span>Wskaźnik<br>Cole'a</span></th>
             </tr>
           </thead>
           <tbody>${rowsHtml}</tbody>
