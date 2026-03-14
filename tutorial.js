@@ -18,6 +18,8 @@
   const REQUIRED_TUTORIAL_IDS = ['age', 'weight', 'height'];
   const SPOTLIGHT_PADDING = 10;
   const SPOTLIGHT_MIN_MARGIN = 8;
+  const SINGLE_COLUMN_TUTORIAL_MAX_WIDTH = 699;
+  const MOBILE_PINNED_BUBBLE_STEPS = 3;
 
   let consentBannerObserver = null;
   let consentBannerResizeHandlerAttached = false;
@@ -67,6 +69,100 @@
       width: rect.width,
       height: rect.height
     };
+  }
+
+
+  function mergeRects(rects) {
+    const validRects = rects.filter(Boolean);
+    if (!validRects.length) return null;
+
+    const top = Math.min(...validRects.map((rect) => rect.top));
+    const left = Math.min(...validRects.map((rect) => rect.left));
+    const right = Math.max(...validRects.map((rect) => rect.right));
+    const bottom = Math.max(...validRects.map((rect) => rect.bottom));
+
+    return {
+      top,
+      left,
+      right,
+      bottom,
+      width: Math.max(0, right - left),
+      height: Math.max(0, bottom - top)
+    };
+  }
+
+  function getTextNodeRects(root) {
+    if (!(root instanceof Element) || typeof document.createTreeWalker !== 'function') return [];
+
+    const nodeFilter = (typeof NodeFilter !== 'undefined' && NodeFilter) || {
+      SHOW_TEXT: 4,
+      FILTER_ACCEPT: 1,
+      FILTER_REJECT: 2,
+      FILTER_SKIP: 3
+    };
+
+    const walker = document.createTreeWalker(root, nodeFilter.SHOW_TEXT, {
+      acceptNode(node) {
+        if (!(node instanceof Text)) return nodeFilter.FILTER_SKIP;
+        if (!node.textContent || !node.textContent.trim()) return nodeFilter.FILTER_SKIP;
+        if (node.parentElement && node.parentElement.closest('input, select, textarea, button')) {
+          return nodeFilter.FILTER_SKIP;
+        }
+        return nodeFilter.FILTER_ACCEPT;
+      }
+    });
+
+    const rects = [];
+    while (walker.nextNode()) {
+      const textNode = walker.currentNode;
+      try {
+        const range = document.createRange();
+        range.selectNodeContents(textNode);
+        const nodeRects = Array.from(range.getClientRects()).filter((rect) => rect.width > 2 && rect.height > 2);
+        rects.push(...nodeRects);
+      } catch (_) {
+        /* ignore range measurement errors */
+      }
+    }
+
+    return rects;
+  }
+
+  function getLabelTextRect(label) {
+    if (!(label instanceof Element)) return null;
+    return mergeRects(getTextNodeRects(label));
+  }
+
+  function getSpotlightRect(target) {
+    const targetRect = getElementRect(target);
+    if (!targetRect) return null;
+
+    if (target instanceof Element && target.matches('input, select, textarea')) {
+      const label = target.closest('label');
+      const labelTextRect = getLabelTextRect(label);
+      return mergeRects([labelTextRect, targetRect]);
+    }
+
+    return targetRect;
+  }
+
+  function getViewportWidth() {
+    return Math.max(window.innerWidth || 0, document.documentElement.clientWidth || 0);
+  }
+
+  function getViewportHeight() {
+    return Math.max(window.innerHeight || 0, document.documentElement.clientHeight || 0);
+  }
+
+  function isSingleColumnTutorialLayout() {
+    if (typeof window.matchMedia === 'function') {
+      try {
+        return window.matchMedia(`(max-width: ${SINGLE_COLUMN_TUTORIAL_MAX_WIDTH}px)`).matches;
+      } catch (_) {
+        /* noop */
+      }
+    }
+    return getViewportWidth() <= SINGLE_COLUMN_TUTORIAL_MAX_WIDTH;
   }
 
   function isConsentBannerVisible() {
@@ -231,9 +327,9 @@
       function updateSpotlight(target) {
         if (!overlay.isConnected) return;
 
-        const viewportWidth = Math.max(window.innerWidth || 0, document.documentElement.clientWidth || 0);
-        const viewportHeight = Math.max(window.innerHeight || 0, document.documentElement.clientHeight || 0);
-        const rect = getElementRect(target);
+        const viewportWidth = getViewportWidth();
+        const viewportHeight = getViewportHeight();
+        const rect = getSpotlightRect(target);
 
         if (!rect) {
           setBoxStyles(blockerTop, 0, 0, viewportWidth, viewportHeight);
@@ -248,23 +344,28 @@
         const holeLeft = Math.max(SPOTLIGHT_MIN_MARGIN, rect.left - SPOTLIGHT_PADDING);
         const holeRight = Math.min(viewportWidth - SPOTLIGHT_MIN_MARGIN, rect.right + SPOTLIGHT_PADDING);
         const holeBottom = Math.min(viewportHeight - SPOTLIGHT_MIN_MARGIN, rect.bottom + SPOTLIGHT_PADDING);
-        const holeWidth = Math.max(0, holeRight - holeLeft);
-        const holeHeight = Math.max(0, holeBottom - holeTop);
 
-        setBoxStyles(blockerTop, 0, 0, viewportWidth, holeTop);
-        setBoxStyles(blockerBottom, holeBottom, 0, viewportWidth, viewportHeight - holeBottom);
-        setBoxStyles(blockerLeft, holeTop, 0, holeLeft, holeHeight);
-        setBoxStyles(blockerRight, holeTop, holeRight, viewportWidth - holeRight, holeHeight);
+        const holeTopPx = Math.floor(holeTop);
+        const holeLeftPx = Math.floor(holeLeft);
+        const holeRightPx = Math.ceil(holeRight);
+        const holeBottomPx = Math.ceil(holeBottom);
+        const holeWidthPx = Math.max(0, holeRightPx - holeLeftPx);
+        const holeHeightPx = Math.max(0, holeBottomPx - holeTopPx);
+
+        setBoxStyles(blockerTop, 0, 0, viewportWidth, holeTopPx);
+        setBoxStyles(blockerBottom, holeBottomPx, 0, viewportWidth, viewportHeight - holeBottomPx);
+        setBoxStyles(blockerLeft, holeTopPx, 0, holeLeftPx, holeHeightPx);
+        setBoxStyles(blockerRight, holeTopPx, holeRightPx, viewportWidth - holeRightPx, holeHeightPx);
 
         highlightFrame.style.display = 'block';
-        setBoxStyles(highlightFrame, holeTop, holeLeft, holeWidth, holeHeight);
+        setBoxStyles(highlightFrame, holeTopPx, holeLeftPx, holeWidthPx, holeHeightPx);
       }
 
       function positionBubble(target) {
         if (!bubble.isConnected) return;
 
-        const viewportWidth = Math.max(window.innerWidth || 0, document.documentElement.clientWidth || 0);
-        const viewportHeight = Math.max(window.innerHeight || 0, document.documentElement.clientHeight || 0);
+        const viewportWidth = getViewportWidth();
+        const viewportHeight = getViewportHeight();
         const edgePadding = 16;
         const gap = 16;
 
@@ -273,7 +374,8 @@
         bubble.style.left = `${edgePadding}px`;
 
         const bubbleRect = bubble.getBoundingClientRect();
-        const rect = getElementRect(target);
+        const rect = getSpotlightRect(target);
+        const shouldPinBubble = Boolean(rect) && isSingleColumnTutorialLayout() && currentStep < MOBILE_PINNED_BUBBLE_STEPS;
 
         if (!rect) {
           let centeredTop = (viewportHeight - bubbleRect.height) / 2;
@@ -282,6 +384,15 @@
           centeredLeft = Math.max(edgePadding, Math.min(centeredLeft, viewportWidth - bubbleRect.width - edgePadding));
           bubble.style.top = `${Math.round(centeredTop)}px`;
           bubble.style.left = `${Math.round(centeredLeft)}px`;
+          bubble.style.visibility = 'visible';
+          return;
+        }
+
+        if (shouldPinBubble) {
+          const pinnedTop = edgePadding;
+          const pinnedLeft = Math.max(edgePadding, (viewportWidth - bubbleRect.width) / 2);
+          bubble.style.top = `${Math.round(pinnedTop)}px`;
+          bubble.style.left = `${Math.round(pinnedLeft)}px`;
           bubble.style.visibility = 'visible';
           return;
         }
@@ -302,6 +413,47 @@
         bubble.style.visibility = 'visible';
       }
 
+      function scrollTargetIntoTutorialViewport(target) {
+        if (!(target instanceof Element)) return;
+
+        const rect = getSpotlightRect(target);
+        if (!rect) return;
+
+        const controlRect = getElementRect(target) || rect;
+        const shouldPinBubble = isSingleColumnTutorialLayout() && currentStep < MOBILE_PINNED_BUBBLE_STEPS;
+        const desiredCenterY = getViewportHeight() / 2;
+        const currentCenterY = controlRect.top + (controlRect.height / 2);
+        const deltaY = currentCenterY - desiredCenterY;
+
+        if (shouldPinBubble) {
+          if (Math.abs(deltaY) > 2) {
+            try {
+              window.scrollBy({
+                top: deltaY,
+                behavior: 'smooth'
+              });
+            } catch (_) {
+              window.scrollTo(0, window.scrollY + deltaY);
+            }
+          }
+          return;
+        }
+
+        try {
+          target.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+            inline: 'nearest'
+          });
+        } catch (_) {
+          try {
+            target.scrollIntoView();
+          } catch (__ ) {
+            /* noop */
+          }
+        }
+      }
+
       function refreshTutorialUi(target) {
         updateSpotlight(target);
         positionBubble(target);
@@ -311,6 +463,7 @@
         window.clearTimeout(tutorialUiPositionTimer);
         window.requestAnimationFrame(() => refreshTutorialUi(target));
         tutorialUiPositionTimer = window.setTimeout(() => refreshTutorialUi(target), 280);
+        window.setTimeout(() => refreshTutorialUi(target), 620);
       }
 
       function applyHighlight(stepIndex) {
@@ -321,21 +474,10 @@
         currentHighlightTarget = target;
         if (target) {
           target.classList.add('tutorial-highlight');
+          scrollTargetIntoTutorialViewport(target);
         }
 
-        try {
-          if (target) {
-            target.scrollIntoView({
-              behavior: 'smooth',
-              block: 'center',
-              inline: 'nearest'
-            });
-          }
-        } catch (_) {
-          /* noop */
-        }
-
-        if (step?.focus && elem && typeof elem.focus === 'function') {
+        if (step?.focus && elem && typeof elem.focus === 'function' && !isSingleColumnTutorialLayout()) {
           window.setTimeout(() => {
             try {
               elem.focus({ preventScroll: true });
