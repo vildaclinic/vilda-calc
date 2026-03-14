@@ -125,14 +125,19 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        width: auto !important;
+        inline-size: auto !important;
+        max-width: calc(100vw - max(var(--mobile-dock-side-gap, 0.75rem), calc(env(safe-area-inset-left, 0px) + 0.35rem)) - max(var(--mobile-dock-side-gap, 0.75rem), calc(env(safe-area-inset-right, 0px) + 0.35rem)) - 0.5rem);
+        margin: 0 !important;
         border: 0;
         border-radius: 999px;
         min-height: 3rem;
-        min-width: 6.5rem;
+        min-width: 0 !important;
         padding: 0.78rem 1.1rem;
         background: var(--primary, #00838d);
         color: #fff;
         box-shadow: 0 12px 28px rgba(0,0,0,0.22);
+        box-sizing: border-box;
         font: inherit;
         font-weight: 700;
         cursor: pointer;
@@ -432,7 +437,10 @@
 
       @media (max-width: 720px) {
         .ww-help-launcher {
-          min-width: 6.25rem;
+          width: auto !important;
+          inline-size: auto !important;
+          min-width: 0 !important;
+          margin-top: 0 !important;
           padding: 0.76rem 1rem;
           border-radius: 18px;
         }
@@ -588,19 +596,19 @@
         {
           id: 'doctor',
           cardTitle: 'Jestem lekarzem',
-          cardDescription: 'Zweryfikuj PWZ, uzupełnij dane pacjenta i otwórz potrzebny moduł.',
+          cardDescription: 'Strona główna pozostaje dostępna do kalkulatorów i rozszerzonych wyników. Moduły oraz materiały DocPro są dostępne po weryfikacji numeru PWZ.',
           panelTitle: 'Jak rozpocząć pracę w DocPro?',
-          panelText: 'Wpisz numer PWZ, poczekaj na weryfikację, a następnie uzupełnij dane pacjenta i wybierz właściwy moduł.',
+          panelText: 'DocPro udostępnia moduły i materiały profesjonalne po weryfikacji numeru PWZ. Na stronie głównej możesz równolegle korzystać z kalkulatorów i rozszerzonych wyników po włączeniu „Wyników profesjonalnych” w karcie „Centyle, BMI & Basal Metabolic Rate”.',
           steps: [
-            'Wpisz numer prawa wykonywania zawodu lekarza.',
+            'Wpisz numer prawa wykonywania zawodu lekarza, aby potwierdzić dostęp do DocPro.',
             'Po weryfikacji uzupełnij podstawowe dane pacjenta.',
-            'Otwórz moduł potrzebny do bieżącej konsultacji.'
+            'Na stronie głównej możesz dodatkowo korzystać z kalkulatorów i „Wyników profesjonalnych” w karcie „Centyle, BMI & Basal Metabolic Rate”.'
           ],
           primaryLabel: 'Przejdź do weryfikacji PWZ',
           action: () => {
             ensureInlineGuide('doctor');
             waitForVisible('#pwzNumber', 1800, (input) => {
-              softlyFocus(input, { message: 'Tutaj rozpoczniesz weryfikację PWZ.' });
+              softlyFocus(input, { message: 'Tutaj rozpoczniesz weryfikację numeru PWZ.' });
             });
           }
         },
@@ -646,17 +654,20 @@
       {
         id: 'doctor',
         cardTitle: 'Jestem lekarzem',
-        cardDescription: 'Przejdź do DocPro, aby korzystać z modułów profesjonalnych po weryfikacji PWZ.',
-        panelTitle: 'Ścieżka dla lekarzy',
-        panelText: 'W DocPro zweryfikujesz numer PWZ, uzupełnisz dane pacjenta i wybierzesz odpowiedni moduł specjalistyczny.',
+        cardDescription: 'Na stronie głównej możesz korzystać z kalkulatorów i podsumowań. W karcie „Centyle, BMI & Basal Metabolic Rate” włącz „Wyniki profesjonalne”, a moduły DocPro są dostępne po weryfikacji numeru PWZ.',
+        panelTitle: 'Jak korzystać z aplikacji jako lekarz?',
+        panelText: 'Strona główna zawiera przydatne kalkulatory i podsumowania. W karcie „Centyle, BMI & Basal Metabolic Rate” włącz „Wyniki profesjonalne”, aby wyświetlić rozszerzone dane. Moduły i materiały DocPro są dostępne po weryfikacji numeru PWZ.',
         steps: [
-          'Otwórz stronę DocPro.',
-          'Zweryfikuj numer PWZ.',
-          'Wybierz potrzebny moduł specjalistyczny.'
+          'Na stronie głównej wprowadź dane pacjenta i korzystaj z kalkulatorów oraz podsumowań.',
+          'W karcie „Centyle, BMI & Basal Metabolic Rate” przełącz na „Wyniki profesjonalne”, aby wyświetlić rozszerzone wyniki.',
+          'Aby otworzyć moduły i materiały DocPro, przejdź do DocPro i potwierdź numer PWZ.'
         ],
-        primaryLabel: 'Otwórz DocPro',
+        primaryLabel: 'Pokaż wyniki profesjonalne',
         action: () => {
-          window.location.href = 'docpro.html';
+          ensureInlineGuide('doctor');
+          waitForVisible('#resultsModeToggleContainer', 1600, (toggle) => {
+            softlyFocus(toggle, { message: 'Tutaj włączysz „Wyniki profesjonalne”.' });
+          });
         }
       }
     ];
@@ -874,12 +885,12 @@
       buildInlineGuide({
         anchorSelector: '#doctorContainer',
         position: 'afterend',
-        title: 'DocPro — pierwsze kroki',
-        description: 'Zweryfikuj PWZ, uzupełnij dane pacjenta i wybierz potrzebny moduł.',
+        title: 'DocPro — dostęp profesjonalny',
+        description: 'Po weryfikacji numeru PWZ uzyskasz dostęp do materiałów i modułów DocPro. Na stronie głównej możesz nadal korzystać z kalkulatorów oraz „Wyników profesjonalnych”.',
         steps: [
-          'Wpisz PWZ, aby odblokować moduły profesjonalne.',
-          'Uzupełnij podstawowe dane pacjenta.',
-          'Otwórz sekcję potrzebną do bieżącej konsultacji.'
+          'Wpisz numer PWZ, aby potwierdzić uprawnienia i odblokować DocPro.',
+          'Po weryfikacji uzupełnij podstawowe dane pacjenta.',
+          'Na stronie głównej w karcie „Centyle, BMI & Basal Metabolic Rate” możesz włączyć „Wyniki profesjonalne” dla rozszerzonych wyników.'
         ],
         actions: [
           {
@@ -887,9 +898,50 @@
             label: 'Wpisz PWZ',
             onClick: () => {
               waitForVisible('#pwzNumber', 1800, (input) => {
-                softlyFocus(input, { message: 'Po poprawnej weryfikacji pojawią się moduły PRO.' });
+                softlyFocus(input, { message: 'Po weryfikacji PWZ odblokujesz treści i moduły DocPro.' });
               });
             }
+          },
+          {
+            type: 'link',
+            href: 'index.html',
+            label: 'Strona główna'
+          },
+          {
+            type: 'link',
+            href: 'instrukcja.html',
+            label: 'Pełna instrukcja'
+          }
+        ]
+      });
+      return;
+    }
+
+    if (state.page === 'home' && roleId === 'doctor') {
+      buildInlineGuide({
+        anchorSelector: '#resultsModeToggleContainer',
+        position: 'afterend',
+        title: 'Wyniki profesjonalne dla lekarza',
+        description: 'Na stronie głównej możesz korzystać z kalkulatorów i podsumowań. Rozszerzone dane włączysz w tej karcie, a moduły DocPro są dostępne po weryfikacji numeru PWZ.',
+        steps: [
+          'Wprowadź dane pacjenta i korzystaj z kalkulatorów oraz podsumowań na stronie głównej.',
+          'W tej karcie przełącz na „Wyniki profesjonalne”, aby wyświetlić rozszerzone wyniki.',
+          'Gdy potrzebujesz materiałów i modułów DocPro, przejdź do DocPro i potwierdź numer PWZ.'
+        ],
+        actions: [
+          {
+            type: 'button',
+            label: 'Pokaż przełącznik',
+            onClick: () => {
+              waitForVisible('#resultsModeToggleContainer', 1600, (toggle) => {
+                softlyFocus(toggle, { message: 'Tutaj włączysz „Wyniki profesjonalne”.' });
+              });
+            }
+          },
+          {
+            type: 'link',
+            href: 'docpro.html',
+            label: 'Otwórz DocPro'
           },
           {
             type: 'link',
