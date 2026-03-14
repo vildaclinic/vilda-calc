@@ -13,8 +13,9 @@
 (() => {
   const ONBOARDING_VERSION = '2026-03';
   const STORAGE_KEYS = {
-    seen: `wwOnboardingSeen:${ONBOARDING_VERSION}`,
     role: `wwOnboardingRole:${ONBOARDING_VERSION}`,
+    firstSessionStarted: `wwOnboardingFirstSessionStarted:${ONBOARDING_VERSION}`,
+    firstSessionActive: `wwOnboardingFirstSessionActive:${ONBOARDING_VERSION}`,
     launcherHint: `wwOnboardingLauncherHint:${ONBOARDING_VERSION}`
   };
 
@@ -61,14 +62,34 @@
     }
   }
 
-  function hasSeenOnboarding() {
-    return lsGet(STORAGE_KEYS.seen) === 'true' || lsGet('tutorialShown') === 'true';
+  function ssGet(key) {
+    try {
+      return window.sessionStorage.getItem(key);
+    } catch (_) {
+      return null;
+    }
   }
 
-  function markOnboardingSeen() {
-    lsSet(STORAGE_KEYS.seen, 'true');
-    // Zachowujemy kompatybilność z dotychczasowym kluczem.
-    lsSet('tutorialShown', 'true');
+  function ssSet(key, value) {
+    try {
+      window.sessionStorage.setItem(key, value);
+    } catch (_) {
+      /* ignore */
+    }
+  }
+
+  function shouldShowLauncherInCurrentSession() {
+    if (ssGet(STORAGE_KEYS.firstSessionActive) === 'true') {
+      return true;
+    }
+
+    if (lsGet(STORAGE_KEYS.firstSessionStarted) === 'true') {
+      return false;
+    }
+
+    lsSet(STORAGE_KEYS.firstSessionStarted, 'true');
+    ssSet(STORAGE_KEYS.firstSessionActive, 'true');
+    return true;
   }
 
   function getSavedRole() {
@@ -88,7 +109,7 @@
     style.id = 'ww-onboarding-styles';
     style.textContent = `
       :root {
-        --ww-help-z: 10040;
+        --ww-help-z: 1201;
         --ww-overlay-bg: rgba(7, 12, 20, 0.42);
         --ww-surface: rgba(255,255,255,0.96);
         --ww-text: #14212b;
@@ -98,22 +119,29 @@
 
       .ww-help-launcher {
         position: fixed;
-        left: 1rem;
-        bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
+        left: max(var(--mobile-dock-side-gap, 0.75rem), calc(env(safe-area-inset-left, 0px) + 0.35rem));
+        bottom: var(--scroll-top-btn-bottom, calc(env(safe-area-inset-bottom, 0px) + 1rem));
         z-index: var(--ww-help-z);
         display: inline-flex;
         align-items: center;
-        gap: 0.55rem;
+        justify-content: center;
         border: 0;
         border-radius: 999px;
-        padding: 0.78rem 1rem;
+        min-height: 3rem;
+        min-width: 6.5rem;
+        padding: 0.78rem 1.1rem;
         background: var(--primary, #00838d);
         color: #fff;
         box-shadow: 0 12px 28px rgba(0,0,0,0.22);
         font: inherit;
         font-weight: 700;
         cursor: pointer;
-        max-width: min(88vw, 14rem);
+        white-space: nowrap;
+        transition: bottom 220ms ease, background 0.2s ease, transform 220ms ease, opacity 220ms ease, box-shadow 120ms ease;
+      }
+
+      body.has-mobile-bottom-dock .ww-help-launcher {
+        bottom: var(--scroll-top-btn-bottom, calc(env(safe-area-inset-bottom, 0px) + 1rem)) !important;
       }
 
       .ww-help-launcher:hover,
@@ -121,18 +149,8 @@
         transform: translateY(-1px);
       }
 
-      .ww-help-launcher__icon {
-        width: 1.55rem;
-        height: 1.55rem;
-        display: inline-grid;
-        place-items: center;
-        border-radius: 999px;
-        background: rgba(255,255,255,0.18);
-        font-weight: 800;
-        line-height: 1;
-      }
-
       .ww-help-launcher__label {
+        display: inline-block;
         white-space: nowrap;
       }
 
@@ -414,12 +432,9 @@
 
       @media (max-width: 720px) {
         .ww-help-launcher {
-          padding: 0.78rem 0.92rem;
+          min-width: 6.25rem;
+          padding: 0.76rem 1rem;
           border-radius: 18px;
-        }
-
-        .ww-help-launcher__label {
-          display: none;
         }
 
         .ww-onboarding-overlay {
@@ -461,31 +476,10 @@
 
   function updateLauncherOffset() {
     if (!state.launcher) return;
-    const banner = document.getElementById('consent-banner');
-    const bannerVisible = banner && isVisible(banner);
-    const dockActive = !!(document.body && document.body.classList.contains('has-mobile-bottom-dock') && window.matchMedia && window.matchMedia('(max-width: 991.98px)').matches);
-
-    let bottom = 'calc(env(safe-area-inset-bottom, 0px) + 1rem)';
-    if (dockActive) bottom = 'calc(env(safe-area-inset-bottom, 0px) + 6rem)';
-    if (bannerVisible && dockActive) bottom = 'calc(env(safe-area-inset-bottom, 0px) + 10rem)';
-    else if (bannerVisible) bottom = 'calc(env(safe-area-inset-bottom, 0px) + 5.25rem)';
-
-    state.launcher.style.bottom = bottom;
+    state.launcher.style.removeProperty('bottom');
   }
 
   function observeCookieBanner() {
-    const banner = document.getElementById('consent-banner');
-    if (!banner || state.bannerObserver) {
-      updateLauncherOffset();
-      return;
-    }
-
-    state.bannerObserver = new MutationObserver(updateLauncherOffset);
-    state.bannerObserver.observe(banner, {
-      attributes: true,
-      attributeFilter: ['class', 'style', 'hidden']
-    });
-
     updateLauncherOffset();
   }
 
@@ -497,11 +491,10 @@
     btn.className = 'ww-help-launcher';
     btn.setAttribute('aria-label', 'Otwórz pomoc i szybki start');
     btn.innerHTML = `
-      <span class="ww-help-launcher__icon" aria-hidden="true">?</span>
       <span class="ww-help-launcher__label">Pomoc</span>
     `;
     btn.addEventListener('click', () => {
-      showSheet({ markSeen: false });
+      showSheet();
     });
 
     document.body.appendChild(btn);
@@ -536,7 +529,7 @@
         <div class="ww-sheet-footer">
           <button type="button" class="ww-btn ww-btn--primary"></button>
           <a class="ww-link-btn" href="instrukcja.html">Pełna instrukcja</a>
-          <button type="button" class="ww-btn ww-btn--ghost">Teraz nie</button>
+          <button type="button" class="ww-btn ww-btn--ghost">Zamknij</button>
         </div>
       </section>
     `;
@@ -562,18 +555,18 @@
     const closeBtn = overlay.querySelector('.ww-onboarding-close');
     const dismissBtn = overlay.querySelector('.ww-btn--ghost');
 
-    closeBtn.addEventListener('click', () => hideSheet({ markSeen: true, showLauncherHint: true }));
-    dismissBtn.addEventListener('click', () => hideSheet({ markSeen: true, showLauncherHint: true }));
+    closeBtn.addEventListener('click', () => hideSheet({ showLauncherHint: true }));
+    dismissBtn.addEventListener('click', () => hideSheet({ showLauncherHint: true }));
 
     overlay.addEventListener('click', (event) => {
       if (event.target === overlay) {
-        hideSheet({ markSeen: true, showLauncherHint: true });
+        hideSheet({ showLauncherHint: true });
       }
     });
 
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape' && state.helpVisible) {
-        hideSheet({ markSeen: true });
+        hideSheet();
       }
     });
 
@@ -595,32 +588,32 @@
         {
           id: 'doctor',
           cardTitle: 'Jestem lekarzem',
-          cardDescription: 'Wejdź szybko do DocPro i aktywuj moduły po weryfikacji PWZ.',
-          panelTitle: 'DocPro bez pełnoekranowego tutorialu',
-          panelText: 'Ta strona ma prowadzić do celu możliwie szybko. Najpierw aktywuj dostęp, potem wprowadź dane pacjenta i uruchom potrzebny kalkulator.',
+          cardDescription: 'Zweryfikuj PWZ, uzupełnij dane pacjenta i otwórz potrzebny moduł.',
+          panelTitle: 'Jak rozpocząć pracę w DocPro?',
+          panelText: 'Wpisz numer PWZ, poczekaj na weryfikację, a następnie uzupełnij dane pacjenta i wybierz właściwy moduł.',
           steps: [
             'Wpisz numer prawa wykonywania zawodu lekarza.',
-            'Uzupełnij podstawowe dane pacjenta w formularzu po lewej.',
-            'Korzystaj tylko z tych modułów, których potrzebujesz w danej sytuacji.'
+            'Po weryfikacji uzupełnij podstawowe dane pacjenta.',
+            'Otwórz moduł potrzebny do bieżącej konsultacji.'
           ],
-          primaryLabel: 'Przejdź do PWZ',
+          primaryLabel: 'Przejdź do weryfikacji PWZ',
           action: () => {
             ensureInlineGuide('doctor');
             waitForVisible('#pwzNumber', 1800, (input) => {
-              softlyFocus(input, { message: 'Dostęp do modułów pojawi się po prawidłowej weryfikacji PWZ.' });
+              softlyFocus(input, { message: 'Tutaj rozpoczniesz weryfikację PWZ.' });
             });
           }
         },
         {
           id: 'personal',
           cardTitle: 'Korzystam prywatnie',
-          cardDescription: 'Ta część serwisu jest przeznaczona dla lekarzy. Wersja ogólna jest na stronie głównej.',
-          panelTitle: 'Lepiej zacząć od wersji standardowej',
-          panelText: 'Jeżeli nie korzystasz z modułu profesjonalnego, przejdź do głównej wersji aplikacji. Tam wyniki i podstawowe obliczenia są pokazane bez dodatkowych kroków.',
+          cardDescription: 'Podstawowe obliczenia i wyniki znajdziesz na stronie głównej aplikacji.',
+          panelTitle: 'Przejdź do strony głównej',
+          panelText: 'Na stronie głównej wpiszesz wiek, wagę i wzrost, a wyniki pojawią się automatycznie pod formularzem.',
           steps: [
             'Otwórz stronę główną aplikacji.',
             'Wpisz wiek, wagę i wzrost.',
-            'Wyniki pojawią się automatycznie pod formularzem.'
+            'Sprawdź wyniki pod formularzem.'
           ],
           primaryLabel: 'Otwórz stronę główną',
           action: () => {
@@ -634,32 +627,32 @@
       {
         id: 'personal',
         cardTitle: 'Korzystam prywatnie',
-        cardDescription: 'Szybkie wyniki, historia pomiarów i porównanie danych bez zbędnych kroków.',
-        panelTitle: 'Najkrótsza ścieżka do wyniku',
-        panelText: 'Na stronie głównej nie potrzebujesz klasycznego tutorialu. Najważniejsze jest szybkie uzupełnienie formularza i możliwość wrócenia do pomocy wtedy, kiedy naprawdę jej potrzebujesz.',
+        cardDescription: 'Wprowadź dane, sprawdź wyniki i porównuj zapisane pomiary.',
+        panelTitle: 'Jak zacząć?',
+        panelText: 'Wpisz wiek, wagę i wzrost. Wyniki pojawią się automatycznie poniżej formularza.',
         steps: [
           'Wpisz wiek, wagę i wzrost.',
-          'Wyniki aktualizują się automatycznie pod formularzem.',
-          'Jeśli chcesz porównywać pomiary, zapisz dane i później wczytaj je ponownie.'
+          'Sprawdź wyniki wyświetlone pod formularzem.',
+          'Aby wrócić do wcześniejszych pomiarów, zapisz dane i wczytaj je ponownie.'
         ],
         primaryLabel: 'Przejdź do formularza',
         action: () => {
           ensureInlineGuide('personal');
           waitForVisible('#age', 1200, (input) => {
-            softlyFocus(input, { message: 'Wpisz wiek, wagę i wzrost — wyniki odświeżają się automatycznie.' });
+            softlyFocus(input, { message: 'Zacznij od wieku, a następnie wpisz wagę i wzrost.' });
           });
         }
       },
       {
         id: 'doctor',
         cardTitle: 'Jestem lekarzem',
-        cardDescription: 'Moduł profesjonalny jest osobną ścieżką i nie powinien obciążać zwykłego startu aplikacji.',
-        panelTitle: 'Osobna ścieżka dla lekarzy',
-        panelText: 'Zamiast mieszać oba scenariusze w jednym tutorialu, lepiej rozdzielić wejście: użytkownik ogólny zostaje tutaj, a lekarz przechodzi do DocPro i tam przechodzi weryfikację PWZ.',
+        cardDescription: 'Przejdź do DocPro, aby korzystać z modułów profesjonalnych po weryfikacji PWZ.',
+        panelTitle: 'Ścieżka dla lekarzy',
+        panelText: 'W DocPro zweryfikujesz numer PWZ, uzupełnisz dane pacjenta i wybierzesz odpowiedni moduł specjalistyczny.',
         steps: [
           'Otwórz stronę DocPro.',
           'Zweryfikuj numer PWZ.',
-          'Uruchom potrzebny moduł specjalistyczny dopiero wtedy, gdy go potrzebujesz.'
+          'Wybierz potrzebny moduł specjalistyczny.'
         ],
         primaryLabel: 'Otwórz DocPro',
         action: () => {
@@ -685,11 +678,11 @@
 
     const config = getConfigForRole(roleId);
     const dialogTitle = state.page === 'docpro'
-      ? 'Jak zacząć w DocPro?'
-      : 'Jak chcesz korzystać z aplikacji?';
+      ? 'Wybierz sposób korzystania z DocPro'
+      : 'Wybierz sposób korzystania z aplikacji';
     const dialogSubtitle = state.page === 'docpro'
-      ? 'Zamiast sztywnego samouczka masz krótki start, który można zamknąć i otworzyć ponownie.'
-      : 'Zamiast pełnoekranowego walkthrough pokazuję tylko to, co potrzebne tu i teraz.';
+      ? 'Wybierz odpowiednią ścieżkę i przejdź dalej.'
+      : 'Wybierz odpowiednią ścieżkę i przejdź dalej.';
 
     const titleEl = state.overlay.querySelector('.ww-onboarding-title');
     const subtitleEl = state.overlay.querySelector('.ww-onboarding-subtitle');
@@ -706,14 +699,13 @@
     });
     state.primaryBtn.textContent = config.primaryLabel;
     state.primaryBtn.onclick = () => {
-      hideSheet({ markSeen: true });
+      hideSheet();
       config.action();
     };
   }
 
-  function showSheet({ markSeen = false } = {}) {
+  function showSheet() {
     createOverlay();
-    if (markSeen) markOnboardingSeen();
     state.overlay.classList.add('is-open');
     state.helpVisible = true;
     requestAnimationFrame(() => {
@@ -724,13 +716,12 @@
     });
   }
 
-  function hideSheet({ markSeen = false, showLauncherHint = false } = {}) {
+  function hideSheet({ showLauncherHint = false } = {}) {
     if (!state.overlay) return;
-    if (markSeen) markOnboardingSeen();
     state.overlay.classList.remove('is-open');
     state.helpVisible = false;
-    if (showLauncherHint && lsGet(STORAGE_KEYS.launcherHint) !== 'true') {
-      lsSet(STORAGE_KEYS.launcherHint, 'true');
+    if (showLauncherHint && ssGet(STORAGE_KEYS.launcherHint) !== 'true') {
+      ssSet(STORAGE_KEYS.launcherHint, 'true');
       showToast('Pomoc możesz otworzyć ponownie przyciskiem „Pomoc”.');
     }
   }
@@ -883,12 +874,12 @@
       buildInlineGuide({
         anchorSelector: '#doctorContainer',
         position: 'afterend',
-        title: 'DocPro: szybki start',
-        description: 'To jest pomoc osadzona w układzie strony, a nie osobny tutorial zasłaniający interfejs.',
+        title: 'DocPro — pierwsze kroki',
+        description: 'Zweryfikuj PWZ, uzupełnij dane pacjenta i wybierz potrzebny moduł.',
         steps: [
-          'Najpierw wpisz PWZ, aby odblokować moduły specjalistyczne.',
-          'Następnie uzupełnij dane pacjenta po lewej stronie.',
-          'Otwieraj tylko te sekcje, których faktycznie potrzebujesz — reszta może pozostać zwinięta.'
+          'Wpisz PWZ, aby odblokować moduły profesjonalne.',
+          'Uzupełnij podstawowe dane pacjenta.',
+          'Otwórz sekcję potrzebną do bieżącej konsultacji.'
         ],
         actions: [
           {
@@ -896,7 +887,7 @@
             label: 'Wpisz PWZ',
             onClick: () => {
               waitForVisible('#pwzNumber', 1800, (input) => {
-                softlyFocus(input, { message: 'Po poprawnym PWZ pojawią się moduły PRO.' });
+                softlyFocus(input, { message: 'Po poprawnej weryfikacji pojawią się moduły PRO.' });
               });
             }
           },
@@ -915,11 +906,11 @@
         anchorSelector: '.user-card',
         position: 'afterend',
         title: 'Pierwsze kroki',
-        description: 'Najważniejsze informacje są teraz w jednym krótkim bloku, który dobrze układa się także na telefonach.',
+        description: 'Uzupełnij formularz i sprawdź wyniki pod nim.',
         steps: [
-          'Wpisz wiek, wagę i wzrost — wyniki pojawią się automatycznie niżej.',
-          'Jeżeli chcesz porównać pomiary w czasie, zapisz dane i później wczytaj je ponownie.',
-          'Pomoc wraca po kliknięciu przycisku „Pomoc” w prawym dolnym rogu.'
+          'Wpisz wiek, wagę i wzrost.',
+          'Wyniki pojawią się automatycznie pod formularzem.',
+          'Aby porównać wcześniejsze pomiary, zapisz dane i wczytaj je ponownie.'
         ],
         actions: [
           {
@@ -950,14 +941,9 @@
     if (state.started) return;
     state.started = true;
     injectStyles();
-    createLauncher();
-    createOverlay();
 
-    // Wariant bez autostartu: nie pokazujemy żadnego tutorialu ani modala
-    // przy pierwszym uruchomieniu. Zostawiamy wyłącznie przycisk „Pomoc”,
-    // który otwiera ten sam ekran startowy na żądanie użytkownika.
-    if (!hasSeenOnboarding()) {
-      markOnboardingSeen();
+    if (shouldShowLauncherInCurrentSession()) {
+      createLauncher();
     }
   }
 
