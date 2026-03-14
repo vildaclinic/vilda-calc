@@ -473,6 +473,13 @@ footer{margin-top:0rem;text-align:center;font-size:0.85rem;color:#666;padding:1r
   pointer-events: auto;
 }
 
+.tutorial-overlay.is-temporarily-hidden,
+.tutorial-bubble.is-temporarily-hidden {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
 .tutorial-bubble strong {
   display: block;
   font-size: 1.08rem;

@@ -20,6 +20,7 @@
   const SPOTLIGHT_MIN_MARGIN = 8;
   const SINGLE_COLUMN_TUTORIAL_MAX_WIDTH = 699;
   const MOBILE_PINNED_BUBBLE_STEPS = 3;
+  const PHONE_TUTORIAL_MAX_WIDTH = 820;
 
   let consentBannerObserver = null;
   let consentBannerResizeHandlerAttached = false;
@@ -165,6 +166,43 @@
     return getViewportWidth() <= SINGLE_COLUMN_TUTORIAL_MAX_WIDTH;
   }
 
+
+  function isPhoneTutorialLayout() {
+    const viewportWidth = getViewportWidth();
+    let coarsePointer = false;
+
+    if (typeof window.matchMedia === 'function') {
+      try {
+        coarsePointer = window.matchMedia('(pointer: coarse)').matches || window.matchMedia('(hover: none)').matches;
+      } catch (_) {
+        coarsePointer = false;
+      }
+    }
+
+    return coarsePointer && viewportWidth <= PHONE_TUTORIAL_MAX_WIDTH;
+  }
+
+  function getVisibleViewportHeight() {
+    if (window.visualViewport && Number.isFinite(window.visualViewport.height) && window.visualViewport.height > 0) {
+      return window.visualViewport.height;
+    }
+    return getViewportHeight();
+  }
+
+  function getPageScrollTop() {
+    return window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+  }
+
+  function getMaxPageScrollTop() {
+    const scrollingElement = document.scrollingElement || document.documentElement || document.body;
+    const scrollHeight = scrollingElement ? scrollingElement.scrollHeight : 0;
+    return Math.max(0, scrollHeight - getVisibleViewportHeight());
+  }
+
+  function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
+  }
+
   function isConsentBannerVisible() {
     const banner = getConsentBanner();
     return isElementVisible(banner);
@@ -265,13 +303,144 @@
       let currentHighlightTarget = null;
       let ended = false;
       let tutorialUiPositionTimer = 0;
+      let singleColumnScrollTimers = [];
+      let tutorialRestoreTimer = 0;
+      let tutorialTemporarilyHidden = false;
+      let mobileEditingInput = null;
+      let restingViewportHeight = getVisibleViewportHeight();
       const requiredIds = ['age', 'weight', 'height'];
 
       const tutorialViewportHandler = () => {
-        if (!ended) {
-          refreshTutorialUi(currentHighlightTarget);
+        if (ended) return;
+        if (!tutorialTemporarilyHidden && !mobileEditingInput) {
+          restingViewportHeight = getVisibleViewportHeight();
         }
+        refreshTutorialUi(currentHighlightTarget);
       };
+
+      function isPhoneEditingTutorialMode() {
+        return isSingleColumnTutorialLayout() && isPhoneTutorialLayout() && currentStep < MOBILE_PINNED_BUBBLE_STEPS;
+      }
+
+      function clearSingleColumnScrollTimers() {
+        singleColumnScrollTimers.forEach((timerId) => window.clearTimeout(timerId));
+        singleColumnScrollTimers = [];
+      }
+
+      function clearTutorialRestoreTimer() {
+        window.clearTimeout(tutorialRestoreTimer);
+        tutorialRestoreTimer = 0;
+      }
+
+      function setTutorialTemporarilyHidden(hidden) {
+        tutorialTemporarilyHidden = Boolean(hidden);
+        overlay.classList.toggle('is-temporarily-hidden', tutorialTemporarilyHidden);
+        bubble.classList.toggle('is-temporarily-hidden', tutorialTemporarilyHidden);
+      }
+
+      function centerSingleColumnTargetInViewport(target, behavior = 'auto') {
+        if (!(target instanceof Element)) return;
+
+        const controlRect = getElementRect(target);
+        if (!controlRect) return;
+
+        const viewportHeight = getVisibleViewportHeight();
+        const controlCenterY = getPageScrollTop() + controlRect.top + (controlRect.height / 2);
+        const targetScrollTop = clamp(controlCenterY - (viewportHeight / 2), 0, getMaxPageScrollTop());
+
+        try {
+          window.scrollTo({
+            top: Math.round(targetScrollTop),
+            behavior
+          });
+        } catch (_) {
+          window.scrollTo(0, Math.round(targetScrollTop));
+        }
+      }
+
+      function scheduleSingleColumnTargetCentering(target) {
+        if (!(target instanceof Element)) return;
+
+        clearSingleColumnScrollTimers();
+        const initialBehavior = isPhoneEditingTutorialMode() ? 'auto' : 'smooth';
+        centerSingleColumnTargetInViewport(target, initialBehavior);
+
+        [220, 520].forEach((delay) => {
+          const timerId = window.setTimeout(() => {
+            if (ended || currentHighlightTarget !== target) return;
+            centerSingleColumnTargetInViewport(target, 'auto');
+          }, delay);
+          singleColumnScrollTimers.push(timerId);
+        });
+      }
+
+      function restoreTutorialAfterEditing(attemptsLeft = 12) {
+        clearTutorialRestoreTimer();
+        if (ended || mobileEditingInput) return;
+
+        const activeEl = document.activeElement;
+        if (activeEl instanceof Element && requiredIds.includes(activeEl.id)) {
+          return;
+        }
+
+        const currentViewportHeight = getVisibleViewportHeight();
+        const restoreThreshold = Math.max(64, Math.min(140, restingViewportHeight * 0.18));
+        const keyboardLikelyClosed = currentViewportHeight >= (restingViewportHeight - restoreThreshold);
+
+        if (keyboardLikelyClosed || attemptsLeft <= 0) {
+          setTutorialTemporarilyHidden(false);
+          if (currentHighlightTarget && isSingleColumnTutorialLayout()) {
+            scheduleSingleColumnTargetCentering(currentHighlightTarget);
+          }
+          refreshTutorialUi(currentHighlightTarget);
+          return;
+        }
+
+        tutorialRestoreTimer = window.setTimeout(() => {
+          restoreTutorialAfterEditing(attemptsLeft - 1);
+        }, 120);
+      }
+
+      function handleTutorialInputFocus(event) {
+        const target = event.currentTarget || event.target;
+        if (!(target instanceof Element)) return;
+        if (!isPhoneEditingTutorialMode()) return;
+
+        mobileEditingInput = target;
+        clearTutorialRestoreTimer();
+        setTutorialTemporarilyHidden(true);
+      }
+
+      function handleTutorialInputBlur(event) {
+        const target = event.currentTarget || event.target;
+        if (!(target instanceof Element)) return;
+        if (mobileEditingInput === target) {
+          mobileEditingInput = null;
+        }
+        if (!isPhoneTutorialLayout()) {
+          setTutorialTemporarilyHidden(false);
+          return;
+        }
+        restoreTutorialAfterEditing();
+      }
+
+      function attachEditingListeners() {
+        requiredIds.forEach((id) => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          el.addEventListener('focus', handleTutorialInputFocus, { passive: true });
+          el.addEventListener('blur', handleTutorialInputBlur, { passive: true });
+        });
+      }
+
+      function detachEditingListeners() {
+        requiredIds.forEach((id) => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          el.removeEventListener('focus', handleTutorialInputFocus);
+          el.removeEventListener('blur', handleTutorialInputBlur);
+        });
+      }
 
       function hasRequiredData() {
         try {
@@ -326,6 +495,10 @@
 
       function updateSpotlight(target) {
         if (!overlay.isConnected) return;
+        if (tutorialTemporarilyHidden) {
+          highlightFrame.style.display = 'none';
+          return;
+        }
 
         const viewportWidth = getViewportWidth();
         const viewportHeight = getViewportHeight();
@@ -363,6 +536,7 @@
 
       function positionBubble(target) {
         if (!bubble.isConnected) return;
+        if (tutorialTemporarilyHidden) return;
 
         const viewportWidth = getViewportWidth();
         const viewportHeight = getViewportHeight();
@@ -419,23 +593,8 @@
         const rect = getSpotlightRect(target);
         if (!rect) return;
 
-        const controlRect = getElementRect(target) || rect;
-        const shouldPinBubble = isSingleColumnTutorialLayout() && currentStep < MOBILE_PINNED_BUBBLE_STEPS;
-        const desiredCenterY = getViewportHeight() / 2;
-        const currentCenterY = controlRect.top + (controlRect.height / 2);
-        const deltaY = currentCenterY - desiredCenterY;
-
-        if (shouldPinBubble) {
-          if (Math.abs(deltaY) > 2) {
-            try {
-              window.scrollBy({
-                top: deltaY,
-                behavior: 'smooth'
-              });
-            } catch (_) {
-              window.scrollTo(0, window.scrollY + deltaY);
-            }
-          }
+        if (isSingleColumnTutorialLayout()) {
+          scheduleSingleColumnTargetCentering(target);
           return;
         }
 
@@ -470,6 +629,10 @@
         const step = steps[stepIndex];
         const elem = document.getElementById(step?.id);
         const target = resolveHighlightTarget(step);
+
+        clearTutorialRestoreTimer();
+        mobileEditingInput = null;
+        setTutorialTemporarilyHidden(false);
 
         currentHighlightTarget = target;
         if (target) {
@@ -523,9 +686,14 @@
 
       function teardown() {
         detachAutoFinishListeners();
+        detachEditingListeners();
+        clearSingleColumnScrollTimers();
+        clearTutorialRestoreTimer();
         window.clearTimeout(tutorialUiPositionTimer);
         removeHighlight(currentHighlightTarget);
         currentHighlightTarget = null;
+        mobileEditingInput = null;
+        tutorialTemporarilyHidden = false;
 
         if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
         if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
@@ -598,6 +766,7 @@
 
       document.body.appendChild(overlay);
       document.body.appendChild(bubble);
+      attachEditingListeners();
       document.body.classList.add(TUTORIAL_ACTIVE_CLASS);
       syncTemporaryNavigationUiVisibility();
 
@@ -609,6 +778,7 @@
       }
 
       overlay.style.display = 'block';
+      restingViewportHeight = getVisibleViewportHeight();
       renderStep();
     } catch (error) {
       console.error('Tutorial initialization failed:', error);
