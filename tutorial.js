@@ -1,829 +1,1009 @@
 /*
- * tutorial.js — guided onboarding for first-time visitors
+ * tutorial.js — onboarding hub zamiast pełnoekranowego tutorialu
  *
- * This version dims the application with four fixed blockers placed around
- * the currently active target. Thanks to that the page is darkened evenly,
- * while the active field stays fully clear and interactive — without relying
- * on z-index battles inside nested stacking contexts.
- *
- * Additionally, while the tutorial is visible — and while the cookie / local
- * storage consent banner is visible — the mobile dock and the navigation arrow
- * are temporarily hidden.
+ * Założenia nowej wersji:
+ * - usuwamy wymuszony walkthrough krok-po-kroku;
+ * - pokazujemy krótki, opcjonalny ekran startowy dopasowany do roli użytkownika;
+ * - zostawiamy stały przycisk „Pomoc”, aby onboarding dało się otworzyć ponownie;
+ * - używamy wskazówek osadzonych w układzie strony i delikatnych podświetleń,
+ *   zamiast sztywnego dymka z overlayem;
+ * - zachowujemy zgodność z index.html i docpro.html.
  */
 
 (() => {
-  const TUTORIAL_STORAGE_KEY = 'tutorialShown';
-  const TEMP_NAV_HIDDEN_CLASS = 'nav-ui-temporarily-hidden';
-  const TUTORIAL_ACTIVE_CLASS = 'tutorial-active';
-  const REQUIRED_TUTORIAL_IDS = ['age', 'weight', 'height'];
-  const SPOTLIGHT_PADDING = 10;
-  const SPOTLIGHT_MIN_MARGIN = 8;
-  const SINGLE_COLUMN_TUTORIAL_MAX_WIDTH = 699;
-  const MOBILE_PINNED_BUBBLE_STEPS = 3;
-  const PHONE_TUTORIAL_MAX_WIDTH = 820;
+  const ONBOARDING_VERSION = '2026-03';
+  const STORAGE_KEYS = {
+    seen: `wwOnboardingSeen:${ONBOARDING_VERSION}`,
+    role: `wwOnboardingRole:${ONBOARDING_VERSION}`,
+    launcherHint: `wwOnboardingLauncherHint:${ONBOARDING_VERSION}`
+  };
 
-  let consentBannerObserver = null;
-  let consentBannerResizeHandlerAttached = false;
+  const state = {
+    page: detectPageType(),
+    role: null,
+    started: false,
+    overlay: null,
+    sheet: null,
+    dynamicTitle: null,
+    dynamicText: null,
+    dynamicList: null,
+    primaryBtn: null,
+    secondaryLink: null,
+    launcher: null,
+    toast: null,
+    bannerObserver: null,
+    helpVisible: false
+  };
 
-  function hasShownTutorial() {
+  function detectPageType() {
     try {
-      return localStorage.getItem(TUTORIAL_STORAGE_KEY) === 'true';
+      const path = (window.location.pathname || '').toLowerCase();
+      if (path.includes('docpro')) return 'docpro';
+      const title = (document.title || '').toLowerCase();
+      if (title.includes('docpro')) return 'docpro';
+    } catch (_) {}
+    return 'home';
+  }
+
+  function lsGet(key) {
+    try {
+      return window.localStorage.getItem(key);
     } catch (_) {
-      return false;
+      return null;
     }
   }
 
-  function markTutorialShown() {
+  function lsSet(key, value) {
     try {
-      localStorage.setItem(TUTORIAL_STORAGE_KEY, 'true');
+      window.localStorage.setItem(key, value);
     } catch (_) {
-      /* ignore storage failures */
+      /* ignore */
     }
   }
 
-  function getConsentBanner() {
-    return document.getElementById('consent-banner') || document.getElementById('cookieBanner');
+  function hasSeenOnboarding() {
+    return lsGet(STORAGE_KEYS.seen) === 'true' || lsGet('tutorialShown') === 'true';
   }
 
-  function isElementVisible(el) {
-    if (!(el instanceof Element)) return false;
-
-    const styles = window.getComputedStyle(el);
-    if (styles.display === 'none' || styles.visibility === 'hidden') return false;
-    if (Number.parseFloat(styles.opacity || '1') <= 0) return false;
-
-    const rect = el.getBoundingClientRect();
-    return rect.width > 0 && rect.height > 0;
+  function markOnboardingSeen() {
+    lsSet(STORAGE_KEYS.seen, 'true');
+    // Zachowujemy kompatybilność z dotychczasowym kluczem.
+    lsSet('tutorialShown', 'true');
   }
 
-  function getElementRect(el) {
-    if (!isElementVisible(el)) return null;
-
-    const rect = el.getBoundingClientRect();
-    if (!rect || rect.width <= 0 || rect.height <= 0) return null;
-
-    return {
-      top: rect.top,
-      right: rect.right,
-      bottom: rect.bottom,
-      left: rect.left,
-      width: rect.width,
-      height: rect.height
-    };
+  function getSavedRole() {
+    const saved = lsGet(STORAGE_KEYS.role);
+    if (saved === 'personal' || saved === 'doctor') return saved;
+    return state.page === 'docpro' ? 'doctor' : 'personal';
   }
 
-
-  function mergeRects(rects) {
-    const validRects = rects.filter(Boolean);
-    if (!validRects.length) return null;
-
-    const top = Math.min(...validRects.map((rect) => rect.top));
-    const left = Math.min(...validRects.map((rect) => rect.left));
-    const right = Math.max(...validRects.map((rect) => rect.right));
-    const bottom = Math.max(...validRects.map((rect) => rect.bottom));
-
-    return {
-      top,
-      left,
-      right,
-      bottom,
-      width: Math.max(0, right - left),
-      height: Math.max(0, bottom - top)
-    };
+  function saveRole(role) {
+    lsSet(STORAGE_KEYS.role, role);
   }
 
-  function getTextNodeRects(root) {
-    if (!(root instanceof Element) || typeof document.createTreeWalker !== 'function') return [];
+  function injectStyles() {
+    if (document.getElementById('ww-onboarding-styles')) return;
 
-    const nodeFilter = (typeof NodeFilter !== 'undefined' && NodeFilter) || {
-      SHOW_TEXT: 4,
-      FILTER_ACCEPT: 1,
-      FILTER_REJECT: 2,
-      FILTER_SKIP: 3
-    };
+    const style = document.createElement('style');
+    style.id = 'ww-onboarding-styles';
+    style.textContent = `
+      :root {
+        --ww-help-z: 10040;
+        --ww-overlay-bg: rgba(7, 12, 20, 0.42);
+        --ww-surface: rgba(255,255,255,0.96);
+        --ww-text: #14212b;
+        --ww-muted: #50606f;
+        --ww-border: rgba(0,0,0,0.08);
+      }
 
-    const walker = document.createTreeWalker(root, nodeFilter.SHOW_TEXT, {
-      acceptNode(node) {
-        if (!(node instanceof Text)) return nodeFilter.FILTER_SKIP;
-        if (!node.textContent || !node.textContent.trim()) return nodeFilter.FILTER_SKIP;
-        if (node.parentElement && node.parentElement.closest('input, select, textarea, button')) {
-          return nodeFilter.FILTER_SKIP;
+      .ww-help-launcher {
+        position: fixed;
+        left: 1rem;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
+        z-index: var(--ww-help-z);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        border: 0;
+        border-radius: 999px;
+        padding: 0.78rem 1rem;
+        background: var(--primary, #00838d);
+        color: #fff;
+        box-shadow: 0 12px 28px rgba(0,0,0,0.22);
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+        max-width: min(88vw, 14rem);
+      }
+
+      .ww-help-launcher:hover,
+      .ww-help-launcher:focus-visible {
+        transform: translateY(-1px);
+      }
+
+      .ww-help-launcher__icon {
+        width: 1.55rem;
+        height: 1.55rem;
+        display: inline-grid;
+        place-items: center;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.18);
+        font-weight: 800;
+        line-height: 1;
+      }
+
+      .ww-help-launcher__label {
+        white-space: nowrap;
+      }
+
+      .ww-onboarding-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: calc(var(--ww-help-z) + 1);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        background: var(--ww-overlay-bg);
+        backdrop-filter: blur(4px);
+      }
+
+      .ww-onboarding-overlay.is-open {
+        display: flex;
+      }
+
+      .ww-onboarding-sheet {
+        width: min(100%, 42rem);
+        max-height: min(88vh, 56rem);
+        overflow: auto;
+        background: var(--ww-surface);
+        color: var(--ww-text);
+        border-radius: 24px;
+        border: 1px solid var(--ww-border);
+        box-shadow: 0 24px 64px rgba(0,0,0,0.2);
+        padding: 1.2rem 1.2rem calc(1.2rem + env(safe-area-inset-bottom, 0px));
+      }
+
+      .ww-onboarding-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 1rem;
+      }
+
+      .ww-onboarding-eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--primary, #00838d);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .ww-onboarding-title {
+        margin: 0.35rem 0 0;
+        font-size: clamp(1.25rem, 1rem + 1vw, 1.8rem);
+        line-height: 1.15;
+      }
+
+      .ww-onboarding-subtitle {
+        margin: 0.6rem 0 0;
+        color: var(--ww-muted);
+        line-height: 1.5;
+      }
+
+      .ww-onboarding-close {
+        appearance: none;
+        border: 0;
+        background: transparent;
+        color: var(--ww-muted);
+        width: 2.2rem;
+        height: 2.2rem;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 1.4rem;
+        line-height: 1;
+        flex: 0 0 auto;
+      }
+
+      .ww-onboarding-close:hover,
+      .ww-onboarding-close:focus-visible {
+        background: rgba(0,0,0,0.06);
+        color: var(--ww-text);
+      }
+
+      .ww-role-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.8rem;
+        margin: 1rem 0 1.1rem;
+      }
+
+      .ww-role-card {
+        border: 1px solid var(--ww-border);
+        border-radius: 18px;
+        padding: 0.95rem;
+        background: rgba(255,255,255,0.75);
+        cursor: pointer;
+        text-align: left;
+        transition: border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+      }
+
+      .ww-role-card:hover,
+      .ww-role-card:focus-visible {
+        transform: translateY(-1px);
+      }
+
+      .ww-role-card.is-selected {
+        border-color: var(--primary, #00838d);
+        box-shadow: 0 0 0 2px rgba(0,131,141,0.18);
+      }
+
+      .ww-role-card__title {
+        display: block;
+        font-size: 1rem;
+        font-weight: 800;
+        margin-bottom: 0.35rem;
+        color: var(--ww-text);
+      }
+
+      .ww-role-card__desc {
+        display: block;
+        color: var(--ww-muted);
+        line-height: 1.45;
+        font-size: 0.95rem;
+      }
+
+      .ww-dynamic-panel {
+        border-radius: 18px;
+        border: 1px solid var(--ww-border);
+        background: rgba(255,255,255,0.78);
+        padding: 1rem;
+      }
+
+      .ww-dynamic-panel h3 {
+        margin: 0;
+        font-size: 1.05rem;
+      }
+
+      .ww-dynamic-panel p {
+        margin: 0.45rem 0 0;
+        color: var(--ww-muted);
+        line-height: 1.5;
+      }
+
+      .ww-step-list {
+        margin: 0.85rem 0 0;
+        padding-left: 1.15rem;
+      }
+
+      .ww-step-list li {
+        margin: 0.35rem 0;
+        line-height: 1.45;
+      }
+
+      .ww-sheet-footer {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.7rem;
+        margin-top: 1rem;
+      }
+
+      .ww-btn,
+      .ww-link-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 2.8rem;
+        padding: 0.72rem 1rem;
+        border-radius: 14px;
+        border: 1px solid transparent;
+        text-decoration: none;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .ww-btn--primary {
+        background: var(--primary, #00838d);
+        color: #fff;
+        border-color: var(--primary, #00838d);
+      }
+
+      .ww-btn--ghost,
+      .ww-link-btn {
+        background: rgba(255,255,255,0.72);
+        color: var(--ww-text);
+        border-color: var(--ww-border);
+      }
+
+      .ww-inline-guide {
+        margin-top: 0.9rem;
+        border: 1px solid rgba(0,0,0,0.07);
+        box-shadow: 0 14px 30px rgba(0,0,0,0.08);
+      }
+
+      .ww-inline-guide__head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 0.8rem;
+      }
+
+      .ww-inline-guide__title {
+        margin: 0;
+        font-size: 1.05rem;
+      }
+
+      .ww-inline-guide__desc {
+        margin: 0.35rem 0 0;
+        color: var(--ww-muted);
+        line-height: 1.5;
+      }
+
+      .ww-inline-guide__close {
+        border: 0;
+        background: transparent;
+        color: var(--ww-muted);
+        width: 2rem;
+        height: 2rem;
+        border-radius: 999px;
+        font-size: 1.3rem;
+        cursor: pointer;
+        flex: 0 0 auto;
+      }
+
+      .ww-inline-guide__close:hover,
+      .ww-inline-guide__close:focus-visible {
+        background: rgba(0,0,0,0.06);
+        color: var(--ww-text);
+      }
+
+      .ww-inline-guide__list {
+        margin: 0.85rem 0 0;
+        padding-left: 1.15rem;
+      }
+
+      .ww-inline-guide__list li {
+        margin: 0.36rem 0;
+        line-height: 1.45;
+      }
+
+      .ww-inline-guide__actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.65rem;
+        margin-top: 0.95rem;
+      }
+
+      .ww-soft-focus {
+        position: relative;
+        z-index: 2;
+        box-shadow: 0 0 0 3px rgba(255,255,255,0.98), 0 0 0 6px rgba(0,131,141,0.22), 0 14px 28px rgba(0,0,0,0.12);
+        border-radius: 14px;
+        transition: box-shadow 160ms ease;
+      }
+
+      .ww-toast {
+        position: fixed;
+        left: 50%;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
+        transform: translateX(-50%) translateY(10px);
+        z-index: calc(var(--ww-help-z) + 2);
+        min-width: min(92vw, 20rem);
+        max-width: min(92vw, 32rem);
+        background: rgba(20, 33, 43, 0.96);
+        color: #fff;
+        padding: 0.85rem 1rem;
+        border-radius: 14px;
+        box-shadow: 0 18px 32px rgba(0,0,0,0.24);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 160ms ease, transform 160ms ease;
+        text-align: center;
+        line-height: 1.4;
+      }
+
+      .ww-toast.is-visible {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+
+      @media (max-width: 720px) {
+        .ww-help-launcher {
+          padding: 0.78rem 0.92rem;
+          border-radius: 18px;
         }
-        return nodeFilter.FILTER_ACCEPT;
-      }
-    });
 
-    const rects = [];
-    while (walker.nextNode()) {
-      const textNode = walker.currentNode;
-      try {
-        const range = document.createRange();
-        range.selectNodeContents(textNode);
-        const nodeRects = Array.from(range.getClientRects()).filter((rect) => rect.width > 2 && rect.height > 2);
-        rects.push(...nodeRects);
-      } catch (_) {
-        /* ignore range measurement errors */
-      }
-    }
+        .ww-help-launcher__label {
+          display: none;
+        }
 
-    return rects;
+        .ww-onboarding-overlay {
+          align-items: flex-end;
+          padding: 0;
+        }
+
+        .ww-onboarding-sheet {
+          width: 100%;
+          max-height: min(90vh, 48rem);
+          border-radius: 22px 22px 0 0;
+          padding: 1rem 1rem calc(1.05rem + env(safe-area-inset-bottom, 0px));
+        }
+
+        .ww-role-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .ww-sheet-footer,
+        .ww-inline-guide__actions {
+          flex-direction: column;
+        }
+
+        .ww-btn,
+        .ww-link-btn {
+          width: 100%;
+        }
+      }
+    `;
+
+    document.head.appendChild(style);
   }
 
-  function getLabelTextRect(label) {
-    if (!(label instanceof Element)) return null;
-    return mergeRects(getTextNodeRects(label));
+  function isVisible(el) {
+    if (!el) return false;
+    const style = window.getComputedStyle(el);
+    return style.display !== 'none' && style.visibility !== 'hidden' && !el.hidden;
   }
 
-  function getSpotlightRect(target) {
-    const targetRect = getElementRect(target);
-    if (!targetRect) return null;
+  function updateLauncherOffset() {
+    if (!state.launcher) return;
+    const banner = document.getElementById('consent-banner');
+    const bannerVisible = banner && isVisible(banner);
+    const dockActive = !!(document.body && document.body.classList.contains('has-mobile-bottom-dock') && window.matchMedia && window.matchMedia('(max-width: 991.98px)').matches);
 
-    if (target instanceof Element && target.matches('input, select, textarea')) {
-      const label = target.closest('label');
-      const labelTextRect = getLabelTextRect(label);
-      return mergeRects([labelTextRect, targetRect]);
-    }
+    let bottom = 'calc(env(safe-area-inset-bottom, 0px) + 1rem)';
+    if (dockActive) bottom = 'calc(env(safe-area-inset-bottom, 0px) + 6rem)';
+    if (bannerVisible && dockActive) bottom = 'calc(env(safe-area-inset-bottom, 0px) + 10rem)';
+    else if (bannerVisible) bottom = 'calc(env(safe-area-inset-bottom, 0px) + 5.25rem)';
 
-    return targetRect;
+    state.launcher.style.bottom = bottom;
   }
 
-  function getViewportWidth() {
-    return Math.max(window.innerWidth || 0, document.documentElement.clientWidth || 0);
-  }
-
-  function getViewportHeight() {
-    return Math.max(window.innerHeight || 0, document.documentElement.clientHeight || 0);
-  }
-
-  function isSingleColumnTutorialLayout() {
-    if (typeof window.matchMedia === 'function') {
-      try {
-        return window.matchMedia(`(max-width: ${SINGLE_COLUMN_TUTORIAL_MAX_WIDTH}px)`).matches;
-      } catch (_) {
-        /* noop */
-      }
-    }
-    return getViewportWidth() <= SINGLE_COLUMN_TUTORIAL_MAX_WIDTH;
-  }
-
-
-  function isPhoneTutorialLayout() {
-    const viewportWidth = getViewportWidth();
-    let coarsePointer = false;
-
-    if (typeof window.matchMedia === 'function') {
-      try {
-        coarsePointer = window.matchMedia('(pointer: coarse)').matches || window.matchMedia('(hover: none)').matches;
-      } catch (_) {
-        coarsePointer = false;
-      }
-    }
-
-    return coarsePointer && viewportWidth <= PHONE_TUTORIAL_MAX_WIDTH;
-  }
-
-  function getVisibleViewportHeight() {
-    if (window.visualViewport && Number.isFinite(window.visualViewport.height) && window.visualViewport.height > 0) {
-      return window.visualViewport.height;
-    }
-    return getViewportHeight();
-  }
-
-  function getPageScrollTop() {
-    return window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
-  }
-
-  function getMaxPageScrollTop() {
-    const scrollingElement = document.scrollingElement || document.documentElement || document.body;
-    const scrollHeight = scrollingElement ? scrollingElement.scrollHeight : 0;
-    return Math.max(0, scrollHeight - getVisibleViewportHeight());
-  }
-
-  function clamp(value, min, max) {
-    return Math.min(Math.max(value, min), max);
-  }
-
-  function isConsentBannerVisible() {
-    const banner = getConsentBanner();
-    return isElementVisible(banner);
-  }
-
-  function syncTemporaryNavigationUiVisibility() {
-    const body = document.body;
-    if (!body) return;
-
-    const shouldHide = body.classList.contains(TUTORIAL_ACTIVE_CLASS) || isConsentBannerVisible();
-    body.classList.toggle(TEMP_NAV_HIDDEN_CLASS, shouldHide);
-
-    if (typeof window.__vildaDockUpdate === 'function') {
-      window.requestAnimationFrame(() => {
-        try {
-          window.__vildaDockUpdate('temporary-navigation-visibility');
-        } catch (_) {
-          /* noop */
-        }
-      });
-    }
-  }
-
-  function ensureConsentBannerWatcher() {
-    if (consentBannerResizeHandlerAttached) return;
-
-    const banner = getConsentBanner();
-
-    if (banner && typeof MutationObserver === 'function') {
-      consentBannerObserver = new MutationObserver(syncTemporaryNavigationUiVisibility);
-      consentBannerObserver.observe(banner, {
-        attributes: true,
-        attributeFilter: ['style', 'class', 'hidden', 'aria-hidden']
-      });
-    }
-
-    window.addEventListener('resize', syncTemporaryNavigationUiVisibility, { passive: true });
-    consentBannerResizeHandlerAttached = true;
-    syncTemporaryNavigationUiVisibility();
-  }
-
-  function canRunTutorialOnCurrentPage() {
-    return REQUIRED_TUTORIAL_IDS.every((id) => document.getElementById(id));
-  }
-
-  function initTutorial() {
-    if (hasShownTutorial()) return;
-    if (!canRunTutorialOnCurrentPage()) return;
-
-    try {
-      const resultTargetId = document.getElementById('bmiCard') ? 'bmiCard' : 'results';
-      const steps = [
-        { id: 'age', label: 'Krok 1', text: 'Podaj swój wiek (lata).', focus: true },
-        { id: 'weight', label: 'Krok 2', text: 'Wprowadź swoją wagę (kg).', focus: true },
-        { id: 'height', label: 'Krok 3', text: 'Wpisz swój wzrost (cm).', focus: true },
-        { id: resultTargetId, label: 'Krok 4', text: 'Tutaj pojawią się Twoje wyniki po uzupełnieniu danych.', focus: false }
-      ];
-
-      const overlay = document.createElement('div');
-      overlay.id = 'tutorialOverlay';
-      overlay.className = 'tutorial-overlay';
-      overlay.setAttribute('aria-hidden', 'true');
-
-      const blockerTop = document.createElement('div');
-      blockerTop.className = 'tutorial-blocker tutorial-blocker-top';
-      const blockerRight = document.createElement('div');
-      blockerRight.className = 'tutorial-blocker tutorial-blocker-right';
-      const blockerBottom = document.createElement('div');
-      blockerBottom.className = 'tutorial-blocker tutorial-blocker-bottom';
-      const blockerLeft = document.createElement('div');
-      blockerLeft.className = 'tutorial-blocker tutorial-blocker-left';
-      const highlightFrame = document.createElement('div');
-      highlightFrame.className = 'tutorial-highlight-frame';
-
-      overlay.appendChild(blockerTop);
-      overlay.appendChild(blockerRight);
-      overlay.appendChild(blockerBottom);
-      overlay.appendChild(blockerLeft);
-      overlay.appendChild(highlightFrame);
-
-      const bubble = document.createElement('div');
-      bubble.className = 'tutorial-bubble';
-      bubble.setAttribute('role', 'dialog');
-      bubble.setAttribute('aria-live', 'polite');
-      bubble.setAttribute('aria-label', 'Samouczek aplikacji');
-
-      const nextBtn = document.createElement('button');
-      nextBtn.type = 'button';
-      nextBtn.className = 'tutorial-next';
-      nextBtn.textContent = 'Dalej';
-
-      const skipBtn = document.createElement('button');
-      skipBtn.type = 'button';
-      skipBtn.className = 'tutorial-skip';
-      skipBtn.textContent = 'Pomiń';
-
-      let currentStep = 0;
-      let currentHighlightTarget = null;
-      let ended = false;
-      let tutorialUiPositionTimer = 0;
-      let singleColumnScrollTimers = [];
-      let tutorialRestoreTimer = 0;
-      let tutorialTemporarilyHidden = false;
-      let mobileEditingInput = null;
-      let restingViewportHeight = getVisibleViewportHeight();
-      const requiredIds = ['age', 'weight', 'height'];
-
-      const tutorialViewportHandler = () => {
-        if (ended) return;
-        if (!tutorialTemporarilyHidden && !mobileEditingInput) {
-          restingViewportHeight = getVisibleViewportHeight();
-        }
-        refreshTutorialUi(currentHighlightTarget);
-      };
-
-      function isPhoneEditingTutorialMode() {
-        return isSingleColumnTutorialLayout() && isPhoneTutorialLayout() && currentStep < MOBILE_PINNED_BUBBLE_STEPS;
-      }
-
-      function clearSingleColumnScrollTimers() {
-        singleColumnScrollTimers.forEach((timerId) => window.clearTimeout(timerId));
-        singleColumnScrollTimers = [];
-      }
-
-      function clearTutorialRestoreTimer() {
-        window.clearTimeout(tutorialRestoreTimer);
-        tutorialRestoreTimer = 0;
-      }
-
-      function setTutorialTemporarilyHidden(hidden) {
-        tutorialTemporarilyHidden = Boolean(hidden);
-        overlay.classList.toggle('is-temporarily-hidden', tutorialTemporarilyHidden);
-        bubble.classList.toggle('is-temporarily-hidden', tutorialTemporarilyHidden);
-      }
-
-      function centerSingleColumnTargetInViewport(target, behavior = 'auto') {
-        if (!(target instanceof Element)) return;
-
-        const controlRect = getElementRect(target);
-        if (!controlRect) return;
-
-        const viewportHeight = getVisibleViewportHeight();
-        const controlCenterY = getPageScrollTop() + controlRect.top + (controlRect.height / 2);
-        const targetScrollTop = clamp(controlCenterY - (viewportHeight / 2), 0, getMaxPageScrollTop());
-
-        try {
-          window.scrollTo({
-            top: Math.round(targetScrollTop),
-            behavior
-          });
-        } catch (_) {
-          window.scrollTo(0, Math.round(targetScrollTop));
-        }
-      }
-
-      function scheduleSingleColumnTargetCentering(target) {
-        if (!(target instanceof Element)) return;
-
-        clearSingleColumnScrollTimers();
-        const initialBehavior = isPhoneEditingTutorialMode() ? 'auto' : 'smooth';
-        centerSingleColumnTargetInViewport(target, initialBehavior);
-
-        [220, 520].forEach((delay) => {
-          const timerId = window.setTimeout(() => {
-            if (ended || currentHighlightTarget !== target) return;
-            centerSingleColumnTargetInViewport(target, 'auto');
-          }, delay);
-          singleColumnScrollTimers.push(timerId);
-        });
-      }
-
-      function restoreTutorialAfterEditing(attemptsLeft = 12) {
-        clearTutorialRestoreTimer();
-        if (ended || mobileEditingInput) return;
-
-        const activeEl = document.activeElement;
-        if (activeEl instanceof Element && requiredIds.includes(activeEl.id)) {
-          return;
-        }
-
-        const currentViewportHeight = getVisibleViewportHeight();
-        const restoreThreshold = Math.max(64, Math.min(140, restingViewportHeight * 0.18));
-        const keyboardLikelyClosed = currentViewportHeight >= (restingViewportHeight - restoreThreshold);
-
-        if (keyboardLikelyClosed || attemptsLeft <= 0) {
-          setTutorialTemporarilyHidden(false);
-          if (currentHighlightTarget && isSingleColumnTutorialLayout()) {
-            scheduleSingleColumnTargetCentering(currentHighlightTarget);
-          }
-          refreshTutorialUi(currentHighlightTarget);
-          return;
-        }
-
-        tutorialRestoreTimer = window.setTimeout(() => {
-          restoreTutorialAfterEditing(attemptsLeft - 1);
-        }, 120);
-      }
-
-      function handleTutorialInputFocus(event) {
-        const target = event.currentTarget || event.target;
-        if (!(target instanceof Element)) return;
-        if (!isPhoneEditingTutorialMode()) return;
-
-        mobileEditingInput = target;
-        clearTutorialRestoreTimer();
-        setTutorialTemporarilyHidden(true);
-      }
-
-      function handleTutorialInputBlur(event) {
-        const target = event.currentTarget || event.target;
-        if (!(target instanceof Element)) return;
-        if (mobileEditingInput === target) {
-          mobileEditingInput = null;
-        }
-        if (!isPhoneTutorialLayout()) {
-          setTutorialTemporarilyHidden(false);
-          return;
-        }
-        restoreTutorialAfterEditing();
-      }
-
-      function attachEditingListeners() {
-        requiredIds.forEach((id) => {
-          const el = document.getElementById(id);
-          if (!el) return;
-          el.addEventListener('focus', handleTutorialInputFocus, { passive: true });
-          el.addEventListener('blur', handleTutorialInputBlur, { passive: true });
-        });
-      }
-
-      function detachEditingListeners() {
-        requiredIds.forEach((id) => {
-          const el = document.getElementById(id);
-          if (!el) return;
-          el.removeEventListener('focus', handleTutorialInputFocus);
-          el.removeEventListener('blur', handleTutorialInputBlur);
-        });
-      }
-
-      function hasRequiredData() {
-        try {
-          const age = Number.parseFloat(document.getElementById('age')?.value) || 0;
-          const weight = Number.parseFloat(document.getElementById('weight')?.value) || 0;
-          const height = Number.parseFloat(document.getElementById('height')?.value) || 0;
-          return age > 0 && weight > 0 && height > 0;
-        } catch (_) {
-          return false;
-        }
-      }
-
-      function detachAutoFinishListeners() {
-        requiredIds.forEach((id) => {
-          const el = document.getElementById(id);
-          if (!el) return;
-          el.removeEventListener('input', checkAndAutoFinish);
-          el.removeEventListener('blur', checkAndAutoFinish);
-        });
-      }
-
-      function checkAndAutoFinish() {
-        if (ended) return;
-        if (currentStep === 2 && hasRequiredData()) {
-          endTutorial(true);
-        }
-      }
-
-      function resolveHighlightTarget(step) {
-        if (!step) return null;
-        const elem = document.getElementById(step.id);
-        if (!elem) return null;
-
-        if (elem.matches('input, select, textarea')) {
-          return isElementVisible(elem) ? elem : null;
-        }
-
-        return isElementVisible(elem) ? elem : null;
-      }
-
-      function removeHighlight(target) {
-        if (!target) return;
-        target.classList.remove('tutorial-highlight');
-      }
-
-      function setBoxStyles(el, top, left, width, height) {
-        el.style.top = `${Math.max(0, Math.round(top))}px`;
-        el.style.left = `${Math.max(0, Math.round(left))}px`;
-        el.style.width = `${Math.max(0, Math.round(width))}px`;
-        el.style.height = `${Math.max(0, Math.round(height))}px`;
-      }
-
-      function updateSpotlight(target) {
-        if (!overlay.isConnected) return;
-        if (tutorialTemporarilyHidden) {
-          highlightFrame.style.display = 'none';
-          return;
-        }
-
-        const viewportWidth = getViewportWidth();
-        const viewportHeight = getViewportHeight();
-        const rect = getSpotlightRect(target);
-
-        if (!rect) {
-          setBoxStyles(blockerTop, 0, 0, viewportWidth, viewportHeight);
-          setBoxStyles(blockerRight, 0, viewportWidth, 0, 0);
-          setBoxStyles(blockerBottom, viewportHeight, 0, 0, 0);
-          setBoxStyles(blockerLeft, 0, 0, 0, 0);
-          highlightFrame.style.display = 'none';
-          return;
-        }
-
-        const holeTop = Math.max(SPOTLIGHT_MIN_MARGIN, rect.top - SPOTLIGHT_PADDING);
-        const holeLeft = Math.max(SPOTLIGHT_MIN_MARGIN, rect.left - SPOTLIGHT_PADDING);
-        const holeRight = Math.min(viewportWidth - SPOTLIGHT_MIN_MARGIN, rect.right + SPOTLIGHT_PADDING);
-        const holeBottom = Math.min(viewportHeight - SPOTLIGHT_MIN_MARGIN, rect.bottom + SPOTLIGHT_PADDING);
-
-        const holeTopPx = Math.floor(holeTop);
-        const holeLeftPx = Math.floor(holeLeft);
-        const holeRightPx = Math.ceil(holeRight);
-        const holeBottomPx = Math.ceil(holeBottom);
-        const holeWidthPx = Math.max(0, holeRightPx - holeLeftPx);
-        const holeHeightPx = Math.max(0, holeBottomPx - holeTopPx);
-
-        setBoxStyles(blockerTop, 0, 0, viewportWidth, holeTopPx);
-        setBoxStyles(blockerBottom, holeBottomPx, 0, viewportWidth, viewportHeight - holeBottomPx);
-        setBoxStyles(blockerLeft, holeTopPx, 0, holeLeftPx, holeHeightPx);
-        setBoxStyles(blockerRight, holeTopPx, holeRightPx, viewportWidth - holeRightPx, holeHeightPx);
-
-        highlightFrame.style.display = 'block';
-        setBoxStyles(highlightFrame, holeTopPx, holeLeftPx, holeWidthPx, holeHeightPx);
-      }
-
-      function positionBubble(target) {
-        if (!bubble.isConnected) return;
-        if (tutorialTemporarilyHidden) return;
-
-        const viewportWidth = getViewportWidth();
-        const viewportHeight = getViewportHeight();
-        const edgePadding = 16;
-        const gap = 16;
-
-        bubble.style.visibility = 'hidden';
-        bubble.style.top = `${edgePadding}px`;
-        bubble.style.left = `${edgePadding}px`;
-
-        const bubbleRect = bubble.getBoundingClientRect();
-        const rect = getSpotlightRect(target);
-        const shouldPinBubble = Boolean(rect) && isSingleColumnTutorialLayout() && currentStep < MOBILE_PINNED_BUBBLE_STEPS;
-
-        if (!rect) {
-          let centeredTop = (viewportHeight - bubbleRect.height) / 2;
-          let centeredLeft = (viewportWidth - bubbleRect.width) / 2;
-          centeredTop = Math.max(edgePadding, Math.min(centeredTop, viewportHeight - bubbleRect.height - edgePadding));
-          centeredLeft = Math.max(edgePadding, Math.min(centeredLeft, viewportWidth - bubbleRect.width - edgePadding));
-          bubble.style.top = `${Math.round(centeredTop)}px`;
-          bubble.style.left = `${Math.round(centeredLeft)}px`;
-          bubble.style.visibility = 'visible';
-          return;
-        }
-
-        if (shouldPinBubble) {
-          const pinnedTop = edgePadding;
-          const pinnedLeft = Math.max(edgePadding, (viewportWidth - bubbleRect.width) / 2);
-          bubble.style.top = `${Math.round(pinnedTop)}px`;
-          bubble.style.left = `${Math.round(pinnedLeft)}px`;
-          bubble.style.visibility = 'visible';
-          return;
-        }
-
-        let top = rect.bottom + gap;
-        const topAbove = rect.top - bubbleRect.height - gap;
-        if (top + bubbleRect.height > viewportHeight - edgePadding && topAbove >= edgePadding) {
-          top = topAbove;
-        }
-        top = Math.max(edgePadding, Math.min(top, viewportHeight - bubbleRect.height - edgePadding));
-
-        let left = rect.left + ((rect.width || 0) - bubbleRect.width) / 2;
-        if (!Number.isFinite(left)) left = edgePadding;
-        left = Math.max(edgePadding, Math.min(left, viewportWidth - bubbleRect.width - edgePadding));
-
-        bubble.style.top = `${Math.round(top)}px`;
-        bubble.style.left = `${Math.round(left)}px`;
-        bubble.style.visibility = 'visible';
-      }
-
-      function scrollTargetIntoTutorialViewport(target) {
-        if (!(target instanceof Element)) return;
-
-        const rect = getSpotlightRect(target);
-        if (!rect) return;
-
-        if (isSingleColumnTutorialLayout()) {
-          scheduleSingleColumnTargetCentering(target);
-          return;
-        }
-
-        try {
-          target.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center',
-            inline: 'nearest'
-          });
-        } catch (_) {
-          try {
-            target.scrollIntoView();
-          } catch (__ ) {
-            /* noop */
-          }
-        }
-      }
-
-      function refreshTutorialUi(target) {
-        updateSpotlight(target);
-        positionBubble(target);
-      }
-
-      function scheduleTutorialUiPosition(target) {
-        window.clearTimeout(tutorialUiPositionTimer);
-        window.requestAnimationFrame(() => refreshTutorialUi(target));
-        tutorialUiPositionTimer = window.setTimeout(() => refreshTutorialUi(target), 280);
-        window.setTimeout(() => refreshTutorialUi(target), 620);
-      }
-
-      function applyHighlight(stepIndex) {
-        const step = steps[stepIndex];
-        const elem = document.getElementById(step?.id);
-        const target = resolveHighlightTarget(step);
-
-        clearTutorialRestoreTimer();
-        mobileEditingInput = null;
-        setTutorialTemporarilyHidden(false);
-
-        currentHighlightTarget = target;
-        if (target) {
-          target.classList.add('tutorial-highlight');
-          scrollTargetIntoTutorialViewport(target);
-        }
-
-        if (step?.focus && elem && typeof elem.focus === 'function' && !isSingleColumnTutorialLayout()) {
-          window.setTimeout(() => {
-            try {
-              elem.focus({ preventScroll: true });
-            } catch (_) {
-              try {
-                elem.focus();
-              } catch (__ ) {
-                /* noop */
-              }
-            }
-          }, 350);
-        }
-
-        detachAutoFinishListeners();
-        if (stepIndex === 2) {
-          requiredIds.forEach((id) => {
-            const el = document.getElementById(id);
-            if (!el) return;
-            el.addEventListener('input', checkAndAutoFinish, { passive: true });
-            el.addEventListener('blur', checkAndAutoFinish, { passive: true });
-          });
-          window.setTimeout(checkAndAutoFinish, 120);
-        }
-
-        scheduleTutorialUiPosition(target);
-        return target;
-      }
-
-      function renderStep() {
-        const step = steps[currentStep];
-        if (!step) return;
-
-        removeHighlight(currentHighlightTarget);
-        currentHighlightTarget = null;
-
-        bubble.innerHTML = `<strong>${step.label}</strong><p>${step.text}</p>`;
-        bubble.appendChild(nextBtn);
-        bubble.appendChild(skipBtn);
-        nextBtn.textContent = currentStep === steps.length - 1 ? 'Zakończ' : 'Dalej';
-
-        applyHighlight(currentStep);
-      }
-
-      function teardown() {
-        detachAutoFinishListeners();
-        detachEditingListeners();
-        clearSingleColumnScrollTimers();
-        clearTutorialRestoreTimer();
-        window.clearTimeout(tutorialUiPositionTimer);
-        removeHighlight(currentHighlightTarget);
-        currentHighlightTarget = null;
-        mobileEditingInput = null;
-        tutorialTemporarilyHidden = false;
-
-        if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
-        if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
-
-        document.body.classList.remove(TUTORIAL_ACTIVE_CLASS);
-        syncTemporaryNavigationUiVisibility();
-
-        window.removeEventListener('resize', tutorialViewportHandler);
-        window.removeEventListener('scroll', tutorialViewportHandler);
-        if (window.visualViewport) {
-          window.visualViewport.removeEventListener('resize', tutorialViewportHandler);
-          window.visualViewport.removeEventListener('scroll', tutorialViewportHandler);
-        }
-      }
-
-      function endTutorial(useAutoScroll = false) {
-        if (ended) return;
-        ended = true;
-
-        teardown();
-        markTutorialShown();
-
-        window.setTimeout(() => {
-          if (!useAutoScroll) return;
-
-          if (typeof window.scrollToResultsCard === 'function') {
-            try {
-              window.scrollToResultsCard();
-              return;
-            } catch (_) {
-              /* noop */
-            }
-          }
-
-          const resultEl = document.getElementById(resultTargetId) || document.getElementById('results');
-          if (resultEl) {
-            try {
-              resultEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            } catch (_) {
-              resultEl.scrollIntoView();
-            }
-          }
-        }, 320);
-      }
-
-      function nextStep() {
-        if (currentStep === 2 && hasRequiredData()) {
-          endTutorial(true);
-          return;
-        }
-
-        if (currentStep >= steps.length - 1) {
-          endTutorial();
-          return;
-        }
-
-        currentStep += 1;
-        renderStep();
-      }
-
-      nextBtn.addEventListener('click', (event) => {
-        event.stopPropagation();
-        nextStep();
-      });
-
-      skipBtn.addEventListener('click', (event) => {
-        event.stopPropagation();
-        endTutorial(false);
-      });
-
-      document.body.appendChild(overlay);
-      document.body.appendChild(bubble);
-      attachEditingListeners();
-      document.body.classList.add(TUTORIAL_ACTIVE_CLASS);
-      syncTemporaryNavigationUiVisibility();
-
-      window.addEventListener('resize', tutorialViewportHandler, { passive: true });
-      window.addEventListener('scroll', tutorialViewportHandler, { passive: true });
-      if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', tutorialViewportHandler, { passive: true });
-        window.visualViewport.addEventListener('scroll', tutorialViewportHandler, { passive: true });
-      }
-
-      overlay.style.display = 'block';
-      restingViewportHeight = getVisibleViewportHeight();
-      renderStep();
-    } catch (error) {
-      console.error('Tutorial initialization failed:', error);
-      document.body?.classList.remove(TUTORIAL_ACTIVE_CLASS);
-      syncTemporaryNavigationUiVisibility();
-      markTutorialShown();
-    }
-  }
-
-  document.addEventListener('DOMContentLoaded', () => {
-    ensureConsentBannerWatcher();
-
-    if (hasShownTutorial()) return;
-    if (!canRunTutorialOnCurrentPage()) return;
-
-    let started = false;
-    const startTutorial = () => {
-      if (started) return;
-      started = true;
-      initTutorial();
-    };
-
-    const banner = getConsentBanner();
-    const acceptBtn = document.getElementById('consent-accept');
-    const declineBtn = document.getElementById('consent-decline');
-
-    if (!isConsentBannerVisible()) {
-      startTutorial();
+  function observeCookieBanner() {
+    const banner = document.getElementById('consent-banner');
+    if (!banner || state.bannerObserver) {
+      updateLauncherOffset();
       return;
     }
 
-    const startAfterConsent = () => {
-      syncTemporaryNavigationUiVisibility();
-      startTutorial();
+    state.bannerObserver = new MutationObserver(updateLauncherOffset);
+    state.bannerObserver.observe(banner, {
+      attributes: true,
+      attributeFilter: ['class', 'style', 'hidden']
+    });
+
+    updateLauncherOffset();
+  }
+
+  function createLauncher() {
+    if (state.launcher) return;
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'ww-help-launcher';
+    btn.setAttribute('aria-label', 'Otwórz pomoc i szybki start');
+    btn.innerHTML = `
+      <span class="ww-help-launcher__icon" aria-hidden="true">?</span>
+      <span class="ww-help-launcher__label">Pomoc</span>
+    `;
+    btn.addEventListener('click', () => {
+      showSheet({ markSeen: false });
+    });
+
+    document.body.appendChild(btn);
+    state.launcher = btn;
+    observeCookieBanner();
+  }
+
+  function createOverlay() {
+    if (state.overlay) return;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'ww-onboarding-overlay';
+    overlay.innerHTML = `
+      <section class="ww-onboarding-sheet" role="dialog" aria-modal="true" aria-labelledby="ww-onboarding-title">
+        <div class="ww-onboarding-head">
+          <div>
+            <span class="ww-onboarding-eyebrow">Szybki start</span>
+            <h2 id="ww-onboarding-title" class="ww-onboarding-title"></h2>
+            <p class="ww-onboarding-subtitle"></p>
+          </div>
+          <button type="button" class="ww-onboarding-close" aria-label="Zamknij pomoc">×</button>
+        </div>
+
+        <div class="ww-role-grid" role="group" aria-label="Wybierz sposób korzystania z aplikacji"></div>
+
+        <div class="ww-dynamic-panel">
+          <h3></h3>
+          <p></p>
+          <ol class="ww-step-list"></ol>
+        </div>
+
+        <div class="ww-sheet-footer">
+          <button type="button" class="ww-btn ww-btn--primary"></button>
+          <a class="ww-link-btn" href="instrukcja.html">Pełna instrukcja</a>
+          <button type="button" class="ww-btn ww-btn--ghost">Teraz nie</button>
+        </div>
+      </section>
+    `;
+
+    const roleGrid = overlay.querySelector('.ww-role-grid');
+    const config = getRoleConfigs();
+
+    config.forEach((item) => {
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'ww-role-card';
+      card.dataset.role = item.id;
+      card.innerHTML = `
+        <span class="ww-role-card__title">${item.cardTitle}</span>
+        <span class="ww-role-card__desc">${item.cardDescription}</span>
+      `;
+      card.addEventListener('click', () => {
+        selectRole(item.id);
+      });
+      roleGrid.appendChild(card);
+    });
+
+    const closeBtn = overlay.querySelector('.ww-onboarding-close');
+    const dismissBtn = overlay.querySelector('.ww-btn--ghost');
+
+    closeBtn.addEventListener('click', () => hideSheet({ markSeen: true, showLauncherHint: true }));
+    dismissBtn.addEventListener('click', () => hideSheet({ markSeen: true, showLauncherHint: true }));
+
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) {
+        hideSheet({ markSeen: true, showLauncherHint: true });
+      }
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && state.helpVisible) {
+        hideSheet({ markSeen: true });
+      }
+    });
+
+    state.overlay = overlay;
+    state.sheet = overlay.querySelector('.ww-onboarding-sheet');
+    state.dynamicTitle = overlay.querySelector('.ww-dynamic-panel h3');
+    state.dynamicText = overlay.querySelector('.ww-dynamic-panel p');
+    state.dynamicList = overlay.querySelector('.ww-step-list');
+    state.primaryBtn = overlay.querySelector('.ww-btn--primary');
+    state.secondaryLink = overlay.querySelector('.ww-link-btn');
+
+    document.body.appendChild(overlay);
+    selectRole(getSavedRole());
+  }
+
+  function getRoleConfigs() {
+    if (state.page === 'docpro') {
+      return [
+        {
+          id: 'doctor',
+          cardTitle: 'Jestem lekarzem',
+          cardDescription: 'Wejdź szybko do DocPro i aktywuj moduły po weryfikacji PWZ.',
+          panelTitle: 'DocPro bez pełnoekranowego tutorialu',
+          panelText: 'Ta strona ma prowadzić do celu możliwie szybko. Najpierw aktywuj dostęp, potem wprowadź dane pacjenta i uruchom potrzebny kalkulator.',
+          steps: [
+            'Wpisz numer prawa wykonywania zawodu lekarza.',
+            'Uzupełnij podstawowe dane pacjenta w formularzu po lewej.',
+            'Korzystaj tylko z tych modułów, których potrzebujesz w danej sytuacji.'
+          ],
+          primaryLabel: 'Przejdź do PWZ',
+          action: () => {
+            ensureInlineGuide('doctor');
+            waitForVisible('#pwzNumber', 1800, (input) => {
+              softlyFocus(input, { message: 'Dostęp do modułów pojawi się po prawidłowej weryfikacji PWZ.' });
+            });
+          }
+        },
+        {
+          id: 'personal',
+          cardTitle: 'Korzystam prywatnie',
+          cardDescription: 'Ta część serwisu jest przeznaczona dla lekarzy. Wersja ogólna jest na stronie głównej.',
+          panelTitle: 'Lepiej zacząć od wersji standardowej',
+          panelText: 'Jeżeli nie korzystasz z modułu profesjonalnego, przejdź do głównej wersji aplikacji. Tam wyniki i podstawowe obliczenia są pokazane bez dodatkowych kroków.',
+          steps: [
+            'Otwórz stronę główną aplikacji.',
+            'Wpisz wiek, wagę i wzrost.',
+            'Wyniki pojawią się automatycznie pod formularzem.'
+          ],
+          primaryLabel: 'Otwórz stronę główną',
+          action: () => {
+            window.location.href = 'index.html';
+          }
+        }
+      ];
+    }
+
+    return [
+      {
+        id: 'personal',
+        cardTitle: 'Korzystam prywatnie',
+        cardDescription: 'Szybkie wyniki, historia pomiarów i porównanie danych bez zbędnych kroków.',
+        panelTitle: 'Najkrótsza ścieżka do wyniku',
+        panelText: 'Na stronie głównej nie potrzebujesz klasycznego tutorialu. Najważniejsze jest szybkie uzupełnienie formularza i możliwość wrócenia do pomocy wtedy, kiedy naprawdę jej potrzebujesz.',
+        steps: [
+          'Wpisz wiek, wagę i wzrost.',
+          'Wyniki aktualizują się automatycznie pod formularzem.',
+          'Jeśli chcesz porównywać pomiary, zapisz dane i później wczytaj je ponownie.'
+        ],
+        primaryLabel: 'Przejdź do formularza',
+        action: () => {
+          ensureInlineGuide('personal');
+          waitForVisible('#age', 1200, (input) => {
+            softlyFocus(input, { message: 'Wpisz wiek, wagę i wzrost — wyniki odświeżają się automatycznie.' });
+          });
+        }
+      },
+      {
+        id: 'doctor',
+        cardTitle: 'Jestem lekarzem',
+        cardDescription: 'Moduł profesjonalny jest osobną ścieżką i nie powinien obciążać zwykłego startu aplikacji.',
+        panelTitle: 'Osobna ścieżka dla lekarzy',
+        panelText: 'Zamiast mieszać oba scenariusze w jednym tutorialu, lepiej rozdzielić wejście: użytkownik ogólny zostaje tutaj, a lekarz przechodzi do DocPro i tam przechodzi weryfikację PWZ.',
+        steps: [
+          'Otwórz stronę DocPro.',
+          'Zweryfikuj numer PWZ.',
+          'Uruchom potrzebny moduł specjalistyczny dopiero wtedy, gdy go potrzebujesz.'
+        ],
+        primaryLabel: 'Otwórz DocPro',
+        action: () => {
+          window.location.href = 'docpro.html';
+        }
+      }
+    ];
+  }
+
+  function getConfigForRole(roleId) {
+    return getRoleConfigs().find((item) => item.id === roleId) || getRoleConfigs()[0];
+  }
+
+  function selectRole(roleId) {
+    state.role = roleId;
+    saveRole(roleId);
+
+    if (!state.overlay) return;
+
+    state.overlay.querySelectorAll('.ww-role-card').forEach((card) => {
+      card.classList.toggle('is-selected', card.dataset.role === roleId);
+    });
+
+    const config = getConfigForRole(roleId);
+    const dialogTitle = state.page === 'docpro'
+      ? 'Jak zacząć w DocPro?'
+      : 'Jak chcesz korzystać z aplikacji?';
+    const dialogSubtitle = state.page === 'docpro'
+      ? 'Zamiast sztywnego samouczka masz krótki start, który można zamknąć i otworzyć ponownie.'
+      : 'Zamiast pełnoekranowego walkthrough pokazuję tylko to, co potrzebne tu i teraz.';
+
+    const titleEl = state.overlay.querySelector('.ww-onboarding-title');
+    const subtitleEl = state.overlay.querySelector('.ww-onboarding-subtitle');
+    if (titleEl) titleEl.textContent = dialogTitle;
+    if (subtitleEl) subtitleEl.textContent = dialogSubtitle;
+
+    state.dynamicTitle.textContent = config.panelTitle;
+    state.dynamicText.textContent = config.panelText;
+    state.dynamicList.innerHTML = '';
+    config.steps.forEach((step) => {
+      const li = document.createElement('li');
+      li.textContent = step;
+      state.dynamicList.appendChild(li);
+    });
+    state.primaryBtn.textContent = config.primaryLabel;
+    state.primaryBtn.onclick = () => {
+      hideSheet({ markSeen: true });
+      config.action();
+    };
+  }
+
+  function showSheet({ markSeen = false } = {}) {
+    createOverlay();
+    if (markSeen) markOnboardingSeen();
+    state.overlay.classList.add('is-open');
+    state.helpVisible = true;
+    requestAnimationFrame(() => {
+      const selected = state.overlay.querySelector('.ww-role-card.is-selected') || state.primaryBtn;
+      try {
+        selected && selected.focus();
+      } catch (_) {}
+    });
+  }
+
+  function hideSheet({ markSeen = false, showLauncherHint = false } = {}) {
+    if (!state.overlay) return;
+    if (markSeen) markOnboardingSeen();
+    state.overlay.classList.remove('is-open');
+    state.helpVisible = false;
+    if (showLauncherHint && lsGet(STORAGE_KEYS.launcherHint) !== 'true') {
+      lsSet(STORAGE_KEYS.launcherHint, 'true');
+      showToast('Pomoc możesz otworzyć ponownie przyciskiem „Pomoc”.');
+    }
+  }
+
+  function showToast(message) {
+    if (!message) return;
+    if (!state.toast) {
+      const toast = document.createElement('div');
+      toast.className = 'ww-toast';
+      document.body.appendChild(toast);
+      state.toast = toast;
+    }
+    state.toast.textContent = message;
+    state.toast.classList.add('is-visible');
+    window.clearTimeout(state.toastTimer);
+    state.toastTimer = window.setTimeout(() => {
+      if (state.toast) state.toast.classList.remove('is-visible');
+    }, 2600);
+  }
+
+  function softlyFocus(target, { message = '' } = {}) {
+    if (!target) return;
+    const focusTarget = target.matches('input, select, textarea, button, a')
+      ? target
+      : target.querySelector('input, select, textarea, button, a');
+
+    try {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+    } catch (_) {}
+
+    target.classList.remove('ww-soft-focus');
+    // restart animacji/podświetlenia
+    void target.offsetWidth;
+    target.classList.add('ww-soft-focus');
+
+    window.setTimeout(() => {
+      target.classList.remove('ww-soft-focus');
+    }, 2200);
+
+    if (focusTarget && typeof focusTarget.focus === 'function') {
+      window.setTimeout(() => {
+        try {
+          focusTarget.focus({ preventScroll: true });
+        } catch (_) {
+          try { focusTarget.focus(); } catch (__) {}
+        }
+      }, 220);
+    }
+
+    if (message) showToast(message);
+  }
+
+  function waitForVisible(selector, timeoutMs, callback) {
+    const startedAt = Date.now();
+    const tick = () => {
+      const el = document.querySelector(selector);
+      if (el && isVisible(el)) {
+        callback(el);
+        return;
+      }
+      if (Date.now() - startedAt > timeoutMs) {
+        const fallback = document.querySelector(selector);
+        if (fallback) callback(fallback);
+        return;
+      }
+      window.setTimeout(tick, 120);
+    };
+    tick();
+  }
+
+  function buildInlineGuide(config) {
+    const existing = document.getElementById('wwInlineGuide');
+    if (existing) existing.remove();
+
+    const anchor = document.querySelector(config.anchorSelector);
+    if (!anchor || !anchor.parentNode) return;
+
+    const card = document.createElement('section');
+    card.id = 'wwInlineGuide';
+    card.className = 'card ww-inline-guide';
+
+    const head = document.createElement('div');
+    head.className = 'ww-inline-guide__head';
+
+    const headText = document.createElement('div');
+    const title = document.createElement('h3');
+    title.className = 'ww-inline-guide__title';
+    title.textContent = config.title;
+
+    const desc = document.createElement('p');
+    desc.className = 'ww-inline-guide__desc';
+    desc.textContent = config.description;
+
+    headText.appendChild(title);
+    headText.appendChild(desc);
+
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'ww-inline-guide__close';
+    closeBtn.setAttribute('aria-label', 'Ukryj szybki start');
+    closeBtn.textContent = '×';
+    closeBtn.addEventListener('click', () => card.remove());
+
+    head.appendChild(headText);
+    head.appendChild(closeBtn);
+
+    const list = document.createElement('ol');
+    list.className = 'ww-inline-guide__list';
+    config.steps.forEach((step) => {
+      const li = document.createElement('li');
+      li.textContent = step;
+      list.appendChild(li);
+    });
+
+    const actions = document.createElement('div');
+    actions.className = 'ww-inline-guide__actions';
+
+    config.actions.forEach((action) => {
+      let node;
+      if (action.type === 'link') {
+        node = document.createElement('a');
+        node.href = action.href;
+        node.className = 'ww-link-btn';
+        node.textContent = action.label;
+      } else {
+        node = document.createElement('button');
+        node.type = 'button';
+        node.className = `ww-btn ${action.variant === 'ghost' ? 'ww-btn--ghost' : 'ww-btn--primary'}`;
+        node.textContent = action.label;
+        node.addEventListener('click', action.onClick);
+      }
+      actions.appendChild(node);
+    });
+
+    card.appendChild(head);
+    card.appendChild(list);
+    card.appendChild(actions);
+
+    if (config.position === 'beforebegin') {
+      anchor.parentNode.insertBefore(card, anchor);
+    } else if (config.position === 'afterbegin') {
+      anchor.insertBefore(card, anchor.firstChild);
+    } else {
+      anchor.insertAdjacentElement('afterend', card);
+    }
+  }
+
+  function ensureInlineGuide(roleId) {
+    if (state.page === 'docpro' && roleId === 'doctor') {
+      buildInlineGuide({
+        anchorSelector: '#doctorContainer',
+        position: 'afterend',
+        title: 'DocPro: szybki start',
+        description: 'To jest pomoc osadzona w układzie strony, a nie osobny tutorial zasłaniający interfejs.',
+        steps: [
+          'Najpierw wpisz PWZ, aby odblokować moduły specjalistyczne.',
+          'Następnie uzupełnij dane pacjenta po lewej stronie.',
+          'Otwieraj tylko te sekcje, których faktycznie potrzebujesz — reszta może pozostać zwinięta.'
+        ],
+        actions: [
+          {
+            type: 'button',
+            label: 'Wpisz PWZ',
+            onClick: () => {
+              waitForVisible('#pwzNumber', 1800, (input) => {
+                softlyFocus(input, { message: 'Po poprawnym PWZ pojawią się moduły PRO.' });
+              });
+            }
+          },
+          {
+            type: 'link',
+            href: 'instrukcja.html',
+            label: 'Pełna instrukcja'
+          }
+        ]
+      });
+      return;
+    }
+
+    if (state.page === 'home' && roleId === 'personal') {
+      buildInlineGuide({
+        anchorSelector: '.user-card',
+        position: 'afterend',
+        title: 'Pierwsze kroki',
+        description: 'Najważniejsze informacje są teraz w jednym krótkim bloku, który dobrze układa się także na telefonach.',
+        steps: [
+          'Wpisz wiek, wagę i wzrost — wyniki pojawią się automatycznie niżej.',
+          'Jeżeli chcesz porównać pomiary w czasie, zapisz dane i później wczytaj je ponownie.',
+          'Pomoc wraca po kliknięciu przycisku „Pomoc” w prawym dolnym rogu.'
+        ],
+        actions: [
+          {
+            type: 'button',
+            label: 'Uzupełnij dane',
+            onClick: () => {
+              waitForVisible('#age', 1200, (input) => {
+                softlyFocus(input, { message: 'Zacznij od wieku, potem wpisz wagę i wzrost.' });
+              });
+            }
+          },
+          {
+            type: 'link',
+            href: 'instrukcja.html',
+            label: 'Pełna instrukcja'
+          },
+          {
+            type: 'link',
+            href: 'docpro.html',
+            label: 'DocPro dla lekarzy'
+          }
+        ]
+      });
+    }
+  }
+
+  function startAfterConsentGate() {
+    if (state.started) return;
+    state.started = true;
+    injectStyles();
+    createLauncher();
+    createOverlay();
+
+    // Wariant bez autostartu: nie pokazujemy żadnego tutorialu ani modala
+    // przy pierwszym uruchomieniu. Zostawiamy wyłącznie przycisk „Pomoc”,
+    // który otwiera ten sam ekran startowy na żądanie użytkownika.
+    if (!hasSeenOnboarding()) {
+      markOnboardingSeen();
+    }
+  }
+
+  function init() {
+    const boot = () => {
+      const banner = document.getElementById('consent-banner');
+      if (!banner || !isVisible(banner)) {
+        startAfterConsentGate();
+        return;
+      }
+
+      const handleConsentClick = (event) => {
+        const target = event.target;
+        if (!target || !target.id) return;
+        if (target.id === 'consent-accept' || target.id === 'consent-decline') {
+          document.removeEventListener('click', handleConsentClick);
+          window.setTimeout(startAfterConsentGate, 50);
+        }
+      };
+
+      document.addEventListener('click', handleConsentClick);
+
+      // Jeżeli baner został już obsłużony innym skryptem i schowany bez kliknięcia,
+      // uruchamiamy onboarding po krótkiej chwili.
+      let checks = 0;
+      const poll = () => {
+        if (state.started) return;
+        if (!isVisible(banner)) {
+          document.removeEventListener('click', handleConsentClick);
+          startAfterConsentGate();
+          return;
+        }
+        checks += 1;
+        if (checks < 30) {
+          window.setTimeout(poll, 250);
+        }
+      };
+      poll();
     };
 
-    if (acceptBtn) {
-      acceptBtn.addEventListener('click', startAfterConsent, { once: true });
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', boot, { once: true });
+    } else {
+      boot();
     }
-    if (declineBtn) {
-      declineBtn.addEventListener('click', startAfterConsent, { once: true });
-    }
+  }
 
-    if (!banner && !acceptBtn && !declineBtn) {
-      startTutorial();
-    }
-  });
+  init();
 })();
