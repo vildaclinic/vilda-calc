@@ -421,76 +421,60 @@ footer{margin-top:0rem;text-align:center;font-size:0.85rem;color:#666;padding:1r
 /*
  * Guided tutorial overlay and styling
  *
- * When a user visits the application for the first time a simple tutorial
- * overlay guides them through filling out their age, weight and height.
- * The entire page is dimmed and only the current input field is
- * highlighted. A bubble explains each step and contains navigation
- * buttons. These styles ensure the overlay appears on top of all
- * existing content without affecting the underlying layout.
+ * The tutorial now uses a real full-screen backdrop. This gives one,
+ * consistent dimming level across the whole application, regardless of
+ * whether the underlying element is a fieldset, legend, button or card.
+ * Only the active tutorial target is promoted above the backdrop.
  */
 .tutorial-overlay {
-  /* Cover the whole viewport */
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  /* The overlay no longer applies a dark background – dimming is handled via the highlight’s box‑shadow. */
-  background: transparent;
-  z-index: 9999;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.58);
+  z-index: 10020;
   display: none;
-  /* Allow pointer events to pass through the overlay so that the
-     highlighted fields remain interactive during the tutorial.  The
-     overlay itself no longer intercepts clicks; the bubble and
-     highlighted elements will still respond thanks to their higher
-     z‑index and their own pointer‑events settings. */
-  pointer-events: none;
+  pointer-events: auto;
+  touch-action: none;
+  overscroll-behavior: contain;
 }
 
 .tutorial-bubble {
   position: fixed;
-  top: 15%;
-  left: 50%;
-  transform: translateX(-50%);
-  /* Fixed width so all steps appear consistent – width based on the longest message (step 4) */
-  width: 280px;
+  top: 1rem;
+  left: 1rem;
+  width: min(320px, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2rem);
+  overflow: auto;
   background: #ffffff;
   color: #111;
   padding: 1.2rem 1rem;
-  border-radius: 12px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  border-radius: 14px;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.26);
   text-align: left;
-  line-height: 1.4;
-  /* Ensure the bubble sits on top of the highlight (which uses z-index 10001) */
-  z-index: 10002;
-
-  /* Explicitly enable pointer events on the bubble.  Although the
-     overlay now has pointer-events set to none, child elements with
-     pointer-events:auto will still receive events.  This ensures
-     navigation buttons remain clickable during the tutorial. */
+  line-height: 1.45;
+  z-index: 10022;
   pointer-events: auto;
 }
 
 .tutorial-bubble strong {
   display: block;
-  font-size: 1.1rem;
+  font-size: 1.08rem;
   margin-bottom: 0.4rem;
   color: var(--primary);
 }
 
 .tutorial-bubble p {
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.98rem;
 }
 
 .tutorial-bubble button {
-  margin-top: 0.8rem;
-  padding: 0.45rem 1rem;
+  margin-top: 0.85rem;
+  padding: 0.5rem 1rem;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 0.95rem;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.14);
 }
 
 /* Primary action for advancing through tutorial */
@@ -502,22 +486,33 @@ footer{margin-top:0rem;text-align:center;font-size:0.85rem;color:#666;padding:1r
 
 /* Secondary action to skip the tutorial */
 .tutorial-skip {
-  background: #e0e0e0;
-  color: #333;
+  background: #e6ebee;
+  color: #22303a;
 }
 
-/* Highlighted fields during the tutorial
-   We raise the stacking context and draw a border around the input. */
+/* Highlighted fields during the tutorial */
 .tutorial-highlight {
   position: relative;
-  z-index: 10001 !important;
-  /* Create a huge spread shadow that dims the rest of the page around the highlighted element */
-  box-shadow: 0 0 0 2000px rgba(0, 0, 0, 0.55), 0 0 0 3px var(--primary), 0 0 0 6px rgba(255, 255, 255, 0.7);
-  border-radius: 8px;
-  /* Make the highlighted region opaque so it doesn’t appear dimmed */
-  background: rgba(255, 255, 255, 0.98);
-  /* Ensure pointer events work on the highlighted element */
+  z-index: 10021 !important;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.99);
+  box-shadow: 0 0 0 2px rgba(0, 131, 141, 0.98), 0 0 0 6px rgba(255, 255, 255, 0.92), 0 16px 36px rgba(15, 23, 42, 0.18);
   pointer-events: auto;
+}
+
+body.nav-ui-temporarily-hidden #mobileBottomDock,
+body.nav-ui-temporarily-hidden #scrollTopBtn {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+body.nav-ui-temporarily-hidden #mobileBottomDock {
+  transform: translateY(calc(100% + env(safe-area-inset-bottom, 0px) + 1.2rem)) !important;
+}
+
+body.nav-ui-temporarily-hidden #scrollTopBtn {
+  transform: none !important;
 }
 
 /* Powiększone ramki wyników BMI i BMR */
@@ -6855,137 +6850,133 @@ body #thyroidCancerKidsCard #thyCopyCancer {
   }
 }
 
-/* === Tutorial overlay refinement + advanced growth action buttons (2026-03-13) === */
-/* Ukryj mobilny dock i strzałkę nawigacyjną, gdy trwa tutorial albo gdy widoczny jest baner zgody. */
-body.tutorial-active #mobileBottomDock,
-body.tutorial-active #scrollTopBtn,
-body.cookie-banner-active #mobileBottomDock,
-body.cookie-banner-active #scrollTopBtn {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-  transform: none !important;
+
+/* === PATCH 2026-03-13 — Zaawansowane obliczenia wzrostowe: raport PDF + pełna szerokość przycisku siatki === */
+#advButtons{
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  gap:0.75rem;
 }
 
-/* Jednolite, profesjonalne wyszarzenie całej aplikacji podczas tutoriala. */
-.tutorial-overlay {
-  background: rgba(10, 15, 27, 0.60) !important;
-  backdrop-filter: blur(1.5px);
-  -webkit-backdrop-filter: blur(1.5px);
-  z-index: 12000 !important;
-  pointer-events: none !important;
+#advButtons button{
+  width:100% !important;
+  display:block;
+  margin:0;
 }
 
-.tutorial-bubble {
-  top: max(1rem, calc(env(safe-area-inset-top, 0px) + 1rem)) !important;
-  left: 50% !important;
-  transform: translateX(-50%) !important;
-  width: min(360px, calc(100vw - 2rem)) !important;
-  border: 1px solid rgba(153, 0, 255, 0.20);
-  border-radius: 16px;
-  box-shadow: 0 14px 42px rgba(0, 0, 0, 0.28);
-  z-index: 12002 !important;
+#advButtons #advClearBtn{
+  display:none !important;
 }
 
-.tutorial-bubble button {
-  border-radius: 10px;
+#advReportActions[hidden]{
+  display:none !important;
 }
 
-.tutorial-next {
-  border: 2px solid var(--primary);
+.adv-report-actions{
+  margin-top:0.95rem;
 }
 
-.tutorial-skip {
-  border: 2px solid #cfd8dc;
+.adv-report-actions #advGenerateReportBtn{
+  width:100% !important;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0.72rem 1rem;
+  border-radius:12px;
+  border:2px solid #7c3aed;
+  background:#ffffff;
+  color:#5b21b6;
+  font-weight:700;
+  box-shadow:0 1px 3px rgba(0,0,0,0.08);
 }
 
-/* Highlight nie odpowiada już za wyszarzenie reszty strony — tylko za obwódkę i wyniesienie ponad overlay. */
-.tutorial-highlight {
-  position: relative;
-  z-index: 12001 !important;
-  isolation: isolate;
-  box-shadow:
-    0 0 0 3px var(--primary),
-    0 0 0 6px rgba(255, 255, 255, 0.78),
-    0 12px 28px rgba(0, 0, 0, 0.20) !important;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.99) !important;
-  pointer-events: auto !important;
+.adv-report-actions #advGenerateReportBtn:hover,
+.adv-report-actions #advGenerateReportBtn:focus-visible{
+  background:#faf7ff;
 }
 
-/* Przycisk Generuj raport – ramka PRO (fiolet). */
-#advancedGrowthForm #advReportActions {
-  display: flex;
-  justify-content: center;
-  margin: 0.85rem auto 0.55rem;
+.adv-report-actions #advGenerateReportBtn:disabled{
+  opacity:0.58;
+  cursor:not-allowed;
+  box-shadow:none;
+  transform:none;
 }
 
-#advancedGrowthForm #advGenerateReportBtn,
-#advancedGrowthForm #advAddMeasurementBtn {
-  background: #ffffff;
-  color: #000000;
-  border-radius: var(--radius);
-  padding: 0.65rem 1.25rem;
-  font-size: 1rem;
-  font-weight: 600;
-  box-shadow: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+/* === Zaawansowane obliczenia wzrostowe — analiza punktu pomiarowego (UI refine) === */
+.adv-history-analysis-actions{
+  justify-content:center;
+  width:100%;
+  margin-top:0.85rem;
+  text-align:center;
 }
 
-#advancedGrowthForm #advGenerateReportBtn {
-  border: 3px solid #9900ff;
+.adv-history-analysis-actions .adv-analyze-btn,
+.adv-history-analysis-actions-bottom .adv-copy-analysis-btn{
+  width:auto !important;
+  max-width:100%;
+  padding:0.6rem 1.15rem;
+  text-align:center;
+  white-space:normal;
+  line-height:1.3;
 }
 
-#advancedGrowthForm #advGenerateReportBtn:hover {
-  background: #faf5ff;
+.adv-history-analysis-card.result-box{
+  text-align:left;
 }
 
-#advancedGrowthForm #advGenerateReportBtn:disabled {
-  background: #f6f3fa;
-  color: #666666;
-  border-color: #d5b8f7;
-  cursor: not-allowed;
+.adv-history-analysis-card h3{
+  margin:0 0 0.45rem 0;
+  text-align:center;
 }
 
-/* Przycisk Dodaj kolejny pomiar – turkusowa ramka. */
-#advancedGrowthForm #advAddMeasurementBtn {
-  border: 3px solid var(--brand);
+.adv-history-analysis-card h3 svg,
+.adv-history-analysis-card h3 img,
+.adv-history-analysis-source svg,
+.adv-history-analysis-source img,
+.adv-history-analysis-meta svg,
+.adv-history-analysis-meta img{
+  display:none !important;
 }
 
-#advancedGrowthForm #advAddMeasurementBtn:hover {
-  background: #f2fbfc;
+.adv-history-analysis-source{
+  margin:0 0 0.5rem 0;
+  text-align:center;
 }
 
-.liquid-ios26 #advancedGrowthForm #advGenerateReportBtn,
-.liquid-ios26 #advancedGrowthForm #advAddMeasurementBtn {
-  background: #ffffff !important;
-  color: #000000 !important;
-  box-shadow: none !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+.adv-history-analysis-meta{
+  display:block;
+  margin:0 0 0.8rem 0;
+  text-align:left;
 }
 
-.liquid-ios26 #advancedGrowthForm #advGenerateReportBtn {
-  border: 3px solid #9900ff !important;
+.adv-history-analysis-meta span{
+  display:block;
 }
 
-.liquid-ios26 #advancedGrowthForm #advAddMeasurementBtn {
-  border: 3px solid var(--brand) !important;
+.adv-history-analysis-lines{
+  gap:0.46rem;
+  text-align:left;
 }
 
-/* Dodatkowy fallback bez JavaScript: jeśli baner zgody jest widoczny (na stronach z inline-script),
-   również chowamy dock i strzałkę. */
-body:has(#consent-banner[style*="display: block"]) #mobileBottomDock,
-body:has(#consent-banner[style*="display:block"]) #mobileBottomDock,
-body:has(#consent-banner[style*="display: block"]) #scrollTopBtn,
-body:has(#consent-banner[style*="display:block"]) #scrollTopBtn {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-  transform: none !important;
+.adv-history-analysis-lines p{
+  text-align:left;
 }
 
+.adv-history-analysis-line--split .adv-history-analysis-line-primary,
+.adv-history-analysis-line--split .adv-history-analysis-line-secondary{
+  display:block;
+  text-align:left;
+}
+
+.adv-history-analysis-line--split .adv-history-analysis-line-secondary{
+  margin-top:0.05rem;
+}
+
+@media (max-width: 600px){
+  .adv-history-analysis-actions .adv-analyze-btn,
+  .adv-history-analysis-actions-bottom .adv-copy-analysis-btn{
+    width:auto !important;
+    max-width:100%;
+  }
+}
