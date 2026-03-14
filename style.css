@@ -1,4 +1,4 @@
-﻿:root{
+:root{
   --primary:#00838d;
   --secondary:#00b0a6;
   --bg:#ffffff;
@@ -421,20 +421,35 @@ footer{margin-top:0rem;text-align:center;font-size:0.85rem;color:#666;padding:1r
 /*
  * Guided tutorial overlay and styling
  *
- * The tutorial now uses a real full-screen backdrop. This gives one,
- * consistent dimming level across the whole application, regardless of
- * whether the underlying element is a fieldset, legend, button or card.
- * Only the active tutorial target is promoted above the backdrop.
+ * Instead of placing one dark layer above the whole app and trying to pull the
+ * active field above it with z-index, the tutorial now renders four fixed
+ * blockers around the active target. This leaves a real clear opening for the
+ * field the user should use, while keeping the rest of the interface dimmed
+ * with exactly the same opacity.
  */
 .tutorial-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.58);
   z-index: 10020;
   display: none;
-  pointer-events: auto;
+  pointer-events: none;
   touch-action: none;
   overscroll-behavior: contain;
+}
+
+.tutorial-blocker {
+  position: fixed;
+  background: rgba(15, 23, 42, 0.58);
+  pointer-events: auto;
+}
+
+.tutorial-highlight-frame {
+  position: fixed;
+  display: none;
+  border-radius: 12px;
+  box-shadow: 0 0 0 2px rgba(0, 131, 141, 0.96), 0 0 0 6px rgba(255, 255, 255, 0.94), 0 18px 42px rgba(15, 23, 42, 0.18);
+  z-index: 10021;
+  pointer-events: none;
 }
 
 .tutorial-bubble {
@@ -490,14 +505,9 @@ footer{margin-top:0rem;text-align:center;font-size:0.85rem;color:#666;padding:1r
   color: #22303a;
 }
 
-/* Highlighted fields during the tutorial */
+/* Marker class kept in JS for state tracking; visual emphasis is handled by the spotlight frame. */
 .tutorial-highlight {
   position: relative;
-  z-index: 10021 !important;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.99);
-  box-shadow: 0 0 0 2px rgba(0, 131, 141, 0.98), 0 0 0 6px rgba(255, 255, 255, 0.92), 0 16px 36px rgba(15, 23, 42, 0.18);
-  pointer-events: auto;
 }
 
 body.nav-ui-temporarily-hidden #mobileBottomDock,
