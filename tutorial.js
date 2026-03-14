@@ -1,71 +1,158 @@
 /*
- * tutorial.js — simple guided tutorial for first-time visitors
+ * tutorial.js — guided tutorial for first-time visitors
  *
- * This script displays a step‑by‑step guide when a user visits the
- * application for the first time. It highlights the age, weight and
- * height fields in sequence, explaining what should be entered in each.
- * The entire page is dimmed with an overlay, while the current field
- * remains interactive and visually emphasised. A small bubble with
- * instructions and navigation buttons (Next/Finish and Skip) leads
- * the user through the process. After completing the final step the
- * page automatically scrolls to the results section. The tutorial
- * records completion using localStorage so it won’t be shown again.
+ * Ta wersja rozszerza poprzedni tutorial o dwie rzeczy:
+ *  1) ukrywa mobilny dock i strzałkę nawigacyjną podczas tutoriala,
+ *  2) pilnuje także widoczności banera zgody na analytics i wtedy również
+ *     ukrywa elementy mobilnej nawigacji.
+ *
+ * Dodatkowo tutorial korzysta z pełnoekranowego overlayu, dzięki czemu
+ * wyszarzenie reszty aplikacji jest jednolite i bardziej profesjonalne.
  */
 
 (() => {
-  // Encapsulated function that sets up and runs the tutorial
+  const STORAGE_KEY = 'tutorialShown';
+  const BODY_TUTORIAL_CLASS = 'tutorial-active';
+  const BODY_COOKIE_BANNER_CLASS = 'cookie-banner-active';
+
+  function setBodyFlag(className, enabled) {
+    try {
+      if (document.body) {
+        document.body.classList.toggle(className, !!enabled);
+      }
+    } catch (_) {}
+  }
+
+  function tutorialWasShown() {
+    try {
+      return localStorage.getItem(STORAGE_KEY) === 'true';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function markTutorialShown() {
+    try {
+      localStorage.setItem(STORAGE_KEY, 'true');
+    } catch (_) {}
+  }
+
+  function isElementVisible(el) {
+    if (!el) return false;
+    try {
+      if (el.hidden) return false;
+      const style = window.getComputedStyle ? window.getComputedStyle(el) : null;
+      if (style) {
+        if (style.display === 'none') return false;
+        if (style.visibility === 'hidden') return false;
+        if (parseFloat(style.opacity || '1') === 0) return false;
+      }
+      const rect = el.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function syncConsentBannerState() {
+    try {
+      const banner = document.getElementById('consent-banner');
+      const visible = !!banner && isElementVisible(banner);
+      setBodyFlag(BODY_COOKIE_BANNER_CLASS, visible);
+      return visible;
+    } catch (_) {
+      setBodyFlag(BODY_COOKIE_BANNER_CLASS, false);
+      return false;
+    }
+  }
+
+  function observeConsentBanner() {
+    const banner = document.getElementById('consent-banner');
+    syncConsentBannerState();
+    if (!banner) return;
+
+    if (!banner.dataset.tutorialConsentObserved) {
+      banner.dataset.tutorialConsentObserved = 'true';
+      try {
+        const observer = new MutationObserver(() => {
+          syncConsentBannerState();
+        });
+        observer.observe(banner, {
+          attributes: true,
+          attributeFilter: ['style', 'class', 'hidden', 'aria-hidden']
+        });
+      } catch (_) {}
+
+      ['transitionend', 'animationend'].forEach((eventName) => {
+        banner.addEventListener(eventName, () => {
+          syncConsentBannerState();
+        }, true);
+      });
+    }
+
+    ['consent-accept', 'consent-decline'].forEach((id) => {
+      const btn = document.getElementById(id);
+      if (!btn || btn.dataset.tutorialConsentWired === 'true') return;
+      btn.dataset.tutorialConsentWired = 'true';
+      btn.addEventListener('click', () => {
+        setTimeout(syncConsentBannerState, 0);
+      }, true);
+    });
+  }
+
   function initTutorial() {
     try {
-      // Safety check: if tutorial was already completed during this session
-      if (localStorage.getItem('tutorialShown') === 'true') return;
-      // Define the sequence of steps. Each entry references an element id
-      // and provides label/text shown in the bubble. The last step
-      // highlights the results container instead of an input field.
+      if (tutorialWasShown()) return;
+
       const steps = [
-        { id: 'age', label: 'Krok 1', text: 'Podaj swój wiek (lata).', focus: true },
-        { id: 'weight', label: 'Krok 2', text: 'Wprowadź swoją wagę (kg).', focus: true },
-        { id: 'height', label: 'Krok 3', text: 'Wpisz swój wzrost (cm).', focus: true },
-        { id: 'results', label: 'Krok 4', text: 'Następnie przewiń w dół aby zobaczyć swoje wyniki.', focus: false }
+        { id: 'age', label: 'Krok 1', text: 'Podaj swój wiek (lata).', focus: true },
+        { id: 'weight', label: 'Krok 2', text: 'Wprowadź swoją wagę (kg).', focus: true },
+        { id: 'height', label: 'Krok 3', text: 'Wpisz swój wzrost (cm).', focus: true },
+        { id: 'results', label: 'Krok 4', text: 'Następnie przewiń w dół, aby zobaczyć swoje wyniki.', focus: false }
       ];
 
-      // Create overlay and bubble elements
       const overlay = document.createElement('div');
       overlay.id = 'tutorialOverlay';
       overlay.className = 'tutorial-overlay';
+
       const bubble = document.createElement('div');
       bubble.className = 'tutorial-bubble';
       overlay.appendChild(bubble);
       document.body.appendChild(overlay);
+      setBodyFlag(BODY_TUTORIAL_CLASS, true);
 
-      // Buttons for navigation
       const nextBtn = document.createElement('button');
       nextBtn.className = 'tutorial-next';
       nextBtn.textContent = 'Dalej';
+
       const skipBtn = document.createElement('button');
       skipBtn.className = 'tutorial-skip';
       skipBtn.textContent = 'Pomiń';
-      bubble.appendChild(nextBtn);
-      bubble.appendChild(skipBtn);
 
       let currentStep = 0;
-      // NEW: Flag to ensure the tutorial is ended only once
       let ended = false;
-      // NEW: Input element ids that are required for auto-finishing the tutorial
       const requiredIds = ['age', 'weight', 'height'];
 
-      // NEW: Helper to check if all required inputs are filled with positive numbers
       function hasRequiredData() {
         try {
-          const a = parseFloat(document.getElementById('age')?.value)    || 0;
+          const a = parseFloat(document.getElementById('age')?.value) || 0;
           const w = parseFloat(document.getElementById('weight')?.value) || 0;
           const h = parseFloat(document.getElementById('height')?.value) || 0;
-          return (a > 0 && w > 0 && h > 0);
+          return a > 0 && w > 0 && h > 0;
         } catch (_) {
           return false;
         }
       }
 
-      // NEW: Called on input/blur to auto-finish the tutorial when on step 3 and data is complete
+      function detachRequiredListeners() {
+        requiredIds.forEach((id) => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          el.removeEventListener('input', checkAndAutoFinish);
+          el.removeEventListener('blur', checkAndAutoFinish);
+        });
+      }
+
       function checkAndAutoFinish() {
         if (ended) return;
         if (currentStep === 2 && hasRequiredData()) {
@@ -73,42 +160,47 @@
         }
       }
 
-      function removeHighlight(stepIndex) {
+      function getStepTarget(stepIndex) {
         const step = steps[stepIndex];
-        if (!step) return;
+        if (!step) return null;
         const elem = document.getElementById(step.id);
-        if (!elem) return;
-        const target = elem.closest('label') || elem;
-        target.classList.remove('tutorial-highlight');
+        if (!elem) return null;
+        return elem.closest('label') || elem;
+      }
+
+      function removeHighlight(stepIndex) {
+        const target = getStepTarget(stepIndex);
+        if (target) {
+          target.classList.remove('tutorial-highlight');
+        }
       }
 
       function applyHighlight(stepIndex) {
         const step = steps[stepIndex];
-        if (!step) return;
-        const elem = document.getElementById(step.id);
-        if (!elem) return;
-        const wrapper = elem.closest('label');
-        const target = wrapper || elem;
+        const target = getStepTarget(stepIndex);
+        const elem = step ? document.getElementById(step.id) : null;
+        if (!target) return;
+
+        detachRequiredListeners();
         target.classList.add('tutorial-highlight');
-        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        if (step.focus && typeof elem.focus === 'function') {
+        try {
+          target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+        } catch (_) {}
+
+        if (step && step.focus && elem && typeof elem.focus === 'function') {
           setTimeout(() => {
-            try { elem.focus(); } catch (e) {}
-          }, 400);
+            try { elem.focus(); } catch (_) {}
+          }, 280);
         }
 
-        // NEW: On the third tutorial step (height), attach listeners to detect when required data is complete
         if (stepIndex === 2) {
           requiredIds.forEach((id) => {
             const el = document.getElementById(id);
             if (!el) return;
-            el.removeEventListener('input', checkAndAutoFinish);
-            el.removeEventListener('blur', checkAndAutoFinish);
             el.addEventListener('input', checkAndAutoFinish, { passive: true });
             el.addEventListener('blur', checkAndAutoFinish, { passive: true });
           });
-          // Immediately check once in case the fields are already filled
-          setTimeout(checkAndAutoFinish, 150);
+          setTimeout(checkAndAutoFinish, 120);
         }
       }
 
@@ -122,21 +214,16 @@
         bubble.innerHTML = `<strong>${step.label}</strong><p>${step.text}</p>`;
         bubble.appendChild(nextBtn);
         bubble.appendChild(skipBtn);
-        if (currentStep === steps.length - 1) {
-          nextBtn.textContent = 'Zakończ';
-        } else {
-          nextBtn.textContent = 'Dalej';
-        }
+        nextBtn.textContent = (currentStep === steps.length - 1) ? 'Zakończ' : 'Dalej';
       }
 
       function nextStep() {
-        // NEW: If we're on the third step and required data is filled, finish early with autoscroll
         if (currentStep === 2 && hasRequiredData()) {
           endTutorial(true);
           return;
         }
         if (currentStep >= steps.length - 1) {
-          endTutorial();
+          endTutorial(false);
         } else {
           currentStep += 1;
           renderStep();
@@ -146,12 +233,14 @@
       function endTutorial(useAutoScroll) {
         if (ended) return;
         ended = true;
+        detachRequiredListeners();
         steps.forEach((_, idx) => removeHighlight(idx));
-        if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
-        try {
-          localStorage.setItem('tutorialShown', 'true');
-        } catch (e) {}
-        // NEW: If requested and available, use the global scrollToResultsCard() for a smoother experience
+        setBodyFlag(BODY_TUTORIAL_CLASS, false);
+        if (overlay && overlay.parentNode) {
+          overlay.parentNode.removeChild(overlay);
+        }
+        markTutorialShown();
+
         setTimeout(() => {
           if (useAutoScroll && typeof window.scrollToResultsCard === 'function') {
             try {
@@ -161,65 +250,69 @@
           }
           const resEl = document.getElementById('results');
           if (resEl) {
-            resEl.scrollIntoView({ behavior: 'smooth' });
+            try {
+              resEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (_) {}
           }
-        }, 400);
+        }, 320);
       }
 
-      nextBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
+      nextBtn.addEventListener('click', (event) => {
+        if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
         nextStep();
       });
-      skipBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        endTutorial();
+
+      skipBtn.addEventListener('click', (event) => {
+        if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
+        endTutorial(false);
       });
 
       overlay.style.display = 'block';
       renderStep();
-    } catch (err) {
-      console.error('Tutorial initialization failed:', err);
-      try { localStorage.setItem('tutorialShown', 'true'); } catch (e) {}
+    } catch (error) {
+      console.error('Tutorial initialization failed:', error);
+      setBodyFlag(BODY_TUTORIAL_CLASS, false);
+      markTutorialShown();
     }
   }
 
   document.addEventListener('DOMContentLoaded', () => {
     try {
-      // Do nothing if tutorial has already been shown
-      if (localStorage.getItem('tutorialShown') === 'true') return;
+      observeConsentBanner();
+
+      if (tutorialWasShown()) {
+        syncConsentBannerState();
+        return;
+      }
+
       let started = false;
-      // Helper to start tutorial once
       const startTutorial = () => {
-        if (!started) {
-          started = true;
-          initTutorial();
-        }
+        if (started) return;
+        started = true;
+        syncConsentBannerState();
+        initTutorial();
       };
 
-      // We no longer observe the cookie banner; instead, we wait for the user to
-      // interact with the cookie consent buttons. When either consent button
-      // (accept or decline) is clicked, the tutorial will start. If no banner
-      // exists (meaning the user has already made a choice on a previous visit
-      // or a banner is not used), the tutorial starts immediately.
       const banner = document.getElementById('consent-banner');
-      if (!banner) {
-        // If there is no cookie banner, we assume the decision has already been made.
+      if (!banner || !isElementVisible(banner)) {
         startTutorial();
       } else {
-        const handleClick = (e) => {
-          const target = e.target;
-          if (!target || !target.id) return;
-          const id = target.id;
+        const handleClick = (event) => {
+          const target = event.target;
+          const id = target && target.id ? target.id : '';
           if (id === 'consent-accept' || id === 'consent-decline') {
-            e.stopPropagation();
-            startTutorial();
+            setTimeout(() => {
+              syncConsentBannerState();
+              startTutorial();
+            }, 0);
             document.removeEventListener('click', handleClick);
           }
         };
         document.addEventListener('click', handleClick);
       }
-    } catch (err) {
-      console.error('Cookie consent detection failed:', err);
+    } catch (error) {
+      console.error('Cookie consent detection failed:', error);
+      setBodyFlag(BODY_COOKIE_BANNER_CLASS, false);
       initTutorial();
     }
   });

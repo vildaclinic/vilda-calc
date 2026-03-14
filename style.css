@@ -6855,133 +6855,137 @@ body #thyroidCancerKidsCard #thyCopyCancer {
   }
 }
 
-
-/* === PATCH 2026-03-13 — Zaawansowane obliczenia wzrostowe: raport PDF + pełna szerokość przycisku siatki === */
-#advButtons{
-  display:flex;
-  flex-direction:column;
-  align-items:stretch;
-  gap:0.75rem;
+/* === Tutorial overlay refinement + advanced growth action buttons (2026-03-13) === */
+/* Ukryj mobilny dock i strzałkę nawigacyjną, gdy trwa tutorial albo gdy widoczny jest baner zgody. */
+body.tutorial-active #mobileBottomDock,
+body.tutorial-active #scrollTopBtn,
+body.cookie-banner-active #mobileBottomDock,
+body.cookie-banner-active #scrollTopBtn {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: none !important;
 }
 
-#advButtons button{
-  width:100% !important;
-  display:block;
-  margin:0;
+/* Jednolite, profesjonalne wyszarzenie całej aplikacji podczas tutoriala. */
+.tutorial-overlay {
+  background: rgba(10, 15, 27, 0.60) !important;
+  backdrop-filter: blur(1.5px);
+  -webkit-backdrop-filter: blur(1.5px);
+  z-index: 12000 !important;
+  pointer-events: none !important;
 }
 
-#advButtons #advClearBtn{
-  display:none !important;
+.tutorial-bubble {
+  top: max(1rem, calc(env(safe-area-inset-top, 0px) + 1rem)) !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: min(360px, calc(100vw - 2rem)) !important;
+  border: 1px solid rgba(153, 0, 255, 0.20);
+  border-radius: 16px;
+  box-shadow: 0 14px 42px rgba(0, 0, 0, 0.28);
+  z-index: 12002 !important;
 }
 
-#advReportActions[hidden]{
-  display:none !important;
+.tutorial-bubble button {
+  border-radius: 10px;
 }
 
-.adv-report-actions{
-  margin-top:0.95rem;
+.tutorial-next {
+  border: 2px solid var(--primary);
 }
 
-.adv-report-actions #advGenerateReportBtn{
-  width:100% !important;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:0.72rem 1rem;
-  border-radius:12px;
-  border:2px solid #7c3aed;
-  background:#ffffff;
-  color:#5b21b6;
-  font-weight:700;
-  box-shadow:0 1px 3px rgba(0,0,0,0.08);
+.tutorial-skip {
+  border: 2px solid #cfd8dc;
 }
 
-.adv-report-actions #advGenerateReportBtn:hover,
-.adv-report-actions #advGenerateReportBtn:focus-visible{
-  background:#faf7ff;
+/* Highlight nie odpowiada już za wyszarzenie reszty strony — tylko za obwódkę i wyniesienie ponad overlay. */
+.tutorial-highlight {
+  position: relative;
+  z-index: 12001 !important;
+  isolation: isolate;
+  box-shadow:
+    0 0 0 3px var(--primary),
+    0 0 0 6px rgba(255, 255, 255, 0.78),
+    0 12px 28px rgba(0, 0, 0, 0.20) !important;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.99) !important;
+  pointer-events: auto !important;
 }
 
-.adv-report-actions #advGenerateReportBtn:disabled{
-  opacity:0.58;
-  cursor:not-allowed;
-  box-shadow:none;
-  transform:none;
+/* Przycisk Generuj raport – ramka PRO (fiolet). */
+#advancedGrowthForm #advReportActions {
+  display: flex;
+  justify-content: center;
+  margin: 0.85rem auto 0.55rem;
 }
 
-/* === Zaawansowane obliczenia wzrostowe — analiza punktu pomiarowego (UI refine) === */
-.adv-history-analysis-actions{
-  justify-content:center;
-  width:100%;
-  margin-top:0.85rem;
-  text-align:center;
+#advancedGrowthForm #advGenerateReportBtn,
+#advancedGrowthForm #advAddMeasurementBtn {
+  background: #ffffff;
+  color: #000000;
+  border-radius: var(--radius);
+  padding: 0.65rem 1.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.adv-history-analysis-actions .adv-analyze-btn,
-.adv-history-analysis-actions-bottom .adv-copy-analysis-btn{
-  width:auto !important;
-  max-width:100%;
-  padding:0.6rem 1.15rem;
-  text-align:center;
-  white-space:normal;
-  line-height:1.3;
+#advancedGrowthForm #advGenerateReportBtn {
+  border: 3px solid #9900ff;
 }
 
-.adv-history-analysis-card.result-box{
-  text-align:left;
+#advancedGrowthForm #advGenerateReportBtn:hover {
+  background: #faf5ff;
 }
 
-.adv-history-analysis-card h3{
-  margin:0 0 0.45rem 0;
-  text-align:center;
+#advancedGrowthForm #advGenerateReportBtn:disabled {
+  background: #f6f3fa;
+  color: #666666;
+  border-color: #d5b8f7;
+  cursor: not-allowed;
 }
 
-.adv-history-analysis-card h3 svg,
-.adv-history-analysis-card h3 img,
-.adv-history-analysis-source svg,
-.adv-history-analysis-source img,
-.adv-history-analysis-meta svg,
-.adv-history-analysis-meta img{
-  display:none !important;
+/* Przycisk Dodaj kolejny pomiar – turkusowa ramka. */
+#advancedGrowthForm #advAddMeasurementBtn {
+  border: 3px solid var(--brand);
 }
 
-.adv-history-analysis-source{
-  margin:0 0 0.5rem 0;
-  text-align:center;
+#advancedGrowthForm #advAddMeasurementBtn:hover {
+  background: #f2fbfc;
 }
 
-.adv-history-analysis-meta{
-  display:block;
-  margin:0 0 0.8rem 0;
-  text-align:left;
+.liquid-ios26 #advancedGrowthForm #advGenerateReportBtn,
+.liquid-ios26 #advancedGrowthForm #advAddMeasurementBtn {
+  background: #ffffff !important;
+  color: #000000 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
-.adv-history-analysis-meta span{
-  display:block;
+.liquid-ios26 #advancedGrowthForm #advGenerateReportBtn {
+  border: 3px solid #9900ff !important;
 }
 
-.adv-history-analysis-lines{
-  gap:0.46rem;
-  text-align:left;
+.liquid-ios26 #advancedGrowthForm #advAddMeasurementBtn {
+  border: 3px solid var(--brand) !important;
 }
 
-.adv-history-analysis-lines p{
-  text-align:left;
+/* Dodatkowy fallback bez JavaScript: jeśli baner zgody jest widoczny (na stronach z inline-script),
+   również chowamy dock i strzałkę. */
+body:has(#consent-banner[style*="display: block"]) #mobileBottomDock,
+body:has(#consent-banner[style*="display:block"]) #mobileBottomDock,
+body:has(#consent-banner[style*="display: block"]) #scrollTopBtn,
+body:has(#consent-banner[style*="display:block"]) #scrollTopBtn {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: none !important;
 }
 
-.adv-history-analysis-line--split .adv-history-analysis-line-primary,
-.adv-history-analysis-line--split .adv-history-analysis-line-secondary{
-  display:block;
-  text-align:left;
-}
-
-.adv-history-analysis-line--split .adv-history-analysis-line-secondary{
-  margin-top:0.05rem;
-}
-
-@media (max-width: 600px){
-  .adv-history-analysis-actions .adv-analyze-btn,
-  .adv-history-analysis-actions-bottom .adv-copy-analysis-btn{
-    width:auto !important;
-    max-width:100%;
-  }
-}
