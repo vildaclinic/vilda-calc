@@ -16,7 +16,8 @@
     role: `wwOnboardingRole:${ONBOARDING_VERSION}`,
     firstSessionStarted: `wwOnboardingFirstSessionStarted:${ONBOARDING_VERSION}`,
     firstSessionActive: `wwOnboardingFirstSessionActive:${ONBOARDING_VERSION}`,
-    launcherHint: `wwOnboardingLauncherHint:${ONBOARDING_VERSION}`
+    launcherHint: `wwOnboardingLauncherHint:${ONBOARDING_VERSION}`,
+    launcherResolved: `wwOnboardingLauncherResolved:${ONBOARDING_VERSION}`
   };
 
   const state = {
@@ -36,7 +37,12 @@
     toast: null,
     bannerObserver: null,
     helpVisible: false,
-    formGuideAutoDismissCleanup: null
+    formGuideAutoDismissCleanup: null,
+    homeResultsObserver: null,
+    homeResultsStateCleanup: null,
+    homeResultsSyncTimer: null,
+    compareInstructionStateCleanup: null,
+    compareInstructionSyncTimer: null
   };
 
   function detectPageType() {
@@ -82,6 +88,15 @@
   }
 
   function shouldShowLauncherInCurrentSession() {
+    if (ssGet(STORAGE_KEYS.launcherResolved) === 'true') {
+      return false;
+    }
+
+    if (isHomeResultsReady()) {
+      ssSet(STORAGE_KEYS.launcherResolved, 'true');
+      return false;
+    }
+
     if (ssGet(STORAGE_KEYS.firstSessionActive) === 'true') {
       return true;
     }
@@ -337,9 +352,18 @@
         box-shadow: 0 0 0 2px rgba(0,131,141,0.18);
       }
 
+      .ww-role-card[data-role="doctor"].is-selected {
+        border-color: var(--ww-pro-accent);
+        box-shadow: 0 0 0 2px rgba(153,0,255,0.2);
+      }
+
       .ww-role-card:focus-visible {
         outline: 2px solid rgba(0,131,141,0.35);
         outline-offset: 2px;
+      }
+
+      .ww-role-card[data-role="doctor"].is-selected:focus-visible {
+        outline-color: rgba(153, 0, 255, 0.35);
       }
 
       .ww-role-card__title {
@@ -375,6 +399,11 @@
 
       .ww-role-card.is-selected .ww-role-card__hint {
         background: rgba(0,131,141,0.14);
+      }
+
+      .ww-role-card[data-role="doctor"].is-selected .ww-role-card__hint {
+        background: rgba(153, 0, 255, 0.14);
+        color: var(--ww-pro-accent);
       }
 
       .ww-role-grid-note {
@@ -490,6 +519,10 @@
       .ww-compare-guide-host a {
         color: inherit;
         font-size: inherit;
+      }
+
+      .ww-compare-instruction-suppressed {
+        display: none !important;
       }
 
       .ww-inline-guide__head {
@@ -656,6 +689,149 @@
     if (!el) return false;
     const style = window.getComputedStyle(el);
     return style.display !== 'none' && style.visibility !== 'hidden' && !el.hidden;
+  }
+
+  function getNumericInputValue(id) {
+    const input = document.getElementById(id);
+    if (!input) return 0;
+    const rawValue = typeof input.value === 'string' ? input.value.replace(',', '.') : input.value;
+    const value = parseFloat(rawValue);
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  function getAgeForLauncherState() {
+    try {
+      if (typeof window.getAgeDecimal === 'function') {
+        const age = Number(window.getAgeDecimal());
+        if (Number.isFinite(age)) return age;
+      }
+    } catch (_) {
+      /* ignore */
+    }
+    return getNumericInputValue('age');
+  }
+
+  function isHomeResultsReady() {
+    if (state.page !== 'home') return false;
+
+    const results = document.getElementById('results');
+    if (!results || !isVisible(results)) return false;
+
+    const age = getAgeForLauncherState();
+    const weight = getNumericInputValue('weight');
+    const height = getNumericInputValue('height');
+
+    return age > 0 && weight > 0 && height > 0;
+  }
+
+  function applyLauncherVisibility(isVisibleNow) {
+    if (!state.launcher) return;
+
+    if (isVisibleNow) {
+      state.launcher.hidden = false;
+      state.launcher.removeAttribute('hidden');
+      state.launcher.removeAttribute('aria-hidden');
+      state.launcher.style.display = '';
+      updateLauncherOffset();
+      return;
+    }
+
+    state.launcher.hidden = true;
+    state.launcher.setAttribute('hidden', '');
+    state.launcher.setAttribute('aria-hidden', 'true');
+    state.launcher.style.display = 'none';
+    state.launcher.classList.remove('ww-help-launcher--pulse');
+    window.clearTimeout(state.launcherPulseTimer);
+  }
+
+  function suppressLauncherForCurrentSession() {
+    ssSet(STORAGE_KEYS.launcherResolved, 'true');
+    applyLauncherVisibility(false);
+  }
+
+  function syncLauncherWithResultsState() {
+    if (state.page !== 'home') return;
+
+    if (ssGet(STORAGE_KEYS.launcherResolved) === 'true') {
+      applyLauncherVisibility(false);
+      return;
+    }
+
+    if (isHomeResultsReady()) {
+      suppressLauncherForCurrentSession();
+    }
+  }
+
+  function scheduleLauncherResultsSync() {
+    if (state.page !== 'home') return;
+
+    const run = () => {
+      syncLauncherWithResultsState();
+    };
+
+    window.clearTimeout(state.homeResultsSyncTimer);
+    run();
+    window.requestAnimationFrame(run);
+    state.homeResultsSyncTimer = window.setTimeout(run, 140);
+  }
+
+  function observeHomeResultsState() {
+    if (state.page !== 'home') return;
+    if (state.homeResultsStateCleanup) return;
+
+    const cleanups = [];
+    const form = document.getElementById('calcForm');
+
+    if (form) {
+      const handleFormChange = () => {
+        scheduleLauncherResultsSync();
+      };
+      form.addEventListener('input', handleFormChange, true);
+      form.addEventListener('change', handleFormChange, true);
+      cleanups.push(() => {
+        form.removeEventListener('input', handleFormChange, true);
+        form.removeEventListener('change', handleFormChange, true);
+      });
+    }
+
+    const observedTargets = ['results', 'compareInstruction', 'errorBox']
+      .map((id) => document.getElementById(id))
+      .filter(Boolean);
+
+    if (observedTargets.length && typeof MutationObserver !== 'undefined') {
+      const observer = new MutationObserver(() => {
+        scheduleLauncherResultsSync();
+      });
+
+      observedTargets.forEach((target) => {
+        observer.observe(target, {
+          attributes: true,
+          attributeFilter: ['style', 'class', 'hidden']
+        });
+      });
+
+      state.homeResultsObserver = observer;
+      cleanups.push(() => observer.disconnect());
+    }
+
+    const handlePageShow = () => {
+      scheduleLauncherResultsSync();
+    };
+    window.addEventListener('pageshow', handlePageShow);
+    cleanups.push(() => window.removeEventListener('pageshow', handlePageShow));
+
+    state.homeResultsStateCleanup = () => {
+      cleanups.forEach((cleanup) => {
+        try {
+          cleanup();
+        } catch (_) {
+          /* ignore */
+        }
+      });
+    };
+
+    scheduleLauncherResultsSync();
+    window.setTimeout(scheduleLauncherResultsSync, 260);
   }
 
   function updateLauncherOffset() {
@@ -1193,6 +1369,97 @@
     }
   }
 
+  function normalizeTextContent(text) {
+    return String(text || '')
+      .replace(/ /g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function shouldSuppressDefaultCompareInstruction(compareInstruction) {
+    if (state.page !== 'home') return false;
+    if (!compareInstruction) return false;
+    if (!isSingleColumnLayout()) return false;
+    if (compareInstruction.dataset.wwGuideEmbedded === 'true' || compareInstruction.classList.contains('ww-compare-guide-host')) {
+      return false;
+    }
+
+    const normalizedText = normalizeTextContent(compareInstruction.textContent);
+    if (!normalizedText) return false;
+
+    return normalizedText.includes('Uzupełnij wymagane pola')
+      && normalizedText.includes('podaj imię')
+      && normalizedText.includes('pojawi się porównanie aktualnych danych z poprzednimi');
+  }
+
+  function syncSingleColumnCompareInstructionState() {
+    const compareInstruction = document.getElementById('compareInstruction');
+    if (!compareInstruction) return;
+
+    const shouldSuppress = shouldSuppressDefaultCompareInstruction(compareInstruction);
+    compareInstruction.classList.toggle('ww-compare-instruction-suppressed', shouldSuppress);
+  }
+
+  function scheduleSingleColumnCompareInstructionSync() {
+    const run = () => {
+      syncSingleColumnCompareInstructionState();
+    };
+
+    window.clearTimeout(state.compareInstructionSyncTimer);
+    run();
+    window.requestAnimationFrame(run);
+    state.compareInstructionSyncTimer = window.setTimeout(run, 140);
+  }
+
+  function observeSingleColumnCompareInstructionState() {
+    if (state.page !== 'home') return;
+    if (state.compareInstructionStateCleanup) return;
+
+    const compareInstruction = document.getElementById('compareInstruction');
+    if (!compareInstruction) return;
+
+    const cleanups = [];
+
+    if (typeof MutationObserver !== 'undefined') {
+      const observer = new MutationObserver(() => {
+        scheduleSingleColumnCompareInstructionSync();
+      });
+
+      observer.observe(compareInstruction, {
+        subtree: true,
+        childList: true,
+        characterData: true,
+        attributes: true,
+        attributeFilter: ['class', 'style', 'hidden', 'data-ww-guide-embedded']
+      });
+
+      cleanups.push(() => observer.disconnect());
+    }
+
+    const handleResize = () => {
+      scheduleSingleColumnCompareInstructionSync();
+    };
+
+    window.addEventListener('resize', handleResize);
+    cleanups.push(() => window.removeEventListener('resize', handleResize));
+
+    window.addEventListener('orientationchange', handleResize);
+    cleanups.push(() => window.removeEventListener('orientationchange', handleResize));
+
+    state.compareInstructionStateCleanup = () => {
+      cleanups.forEach((cleanup) => {
+        try {
+          cleanup();
+        } catch (_) {
+          /* ignore */
+        }
+      });
+    };
+
+    scheduleSingleColumnCompareInstructionSync();
+    window.setTimeout(scheduleSingleColumnCompareInstructionSync, 260);
+  }
+
   function getFirstMissingCoreField() {
     const fields = [
       { selector: '#age', label: 'wiek' },
@@ -1333,6 +1600,8 @@
         }
       }
     }
+
+    scheduleSingleColumnCompareInstructionSync();
   }
 
   function attachFormGuideAutoDismiss() {
@@ -1449,6 +1718,7 @@
         if (config.dismissOnFormInteraction) {
           attachFormGuideAutoDismiss();
         }
+        scheduleSingleColumnCompareInstructionSync();
         return;
       }
     }
@@ -1463,6 +1733,8 @@
     } else {
       anchor.insertAdjacentElement('afterend', card);
     }
+
+    scheduleSingleColumnCompareInstructionSync();
   }
 
   function ensureInlineGuide(roleId) {
@@ -1578,6 +1850,11 @@
     if (shouldShowLauncherInCurrentSession()) {
       createLauncher();
     }
+
+    observeHomeResultsState();
+    observeSingleColumnCompareInstructionState();
+    syncLauncherWithResultsState();
+    syncSingleColumnCompareInstructionState();
   }
 
   function init() {
