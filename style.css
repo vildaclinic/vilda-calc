@@ -2449,6 +2449,22 @@ body.professional-bg {
   color: #fff;
 }
 
+.data-source-toggle label input:disabled + span {
+  border-color: #cccccc;
+  color: #666666;
+  background-color: #f3f3f3;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.liquid-ios26 .data-source-toggle label input:disabled + span {
+  border-color: #cccccc !important;
+  color: #666666 !important;
+  background-color: #f3f3f3 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+}
+
 /* --- Palczewska (PRO) opcja w suwaku źródła danych ---
    Ta sekcja nadpisuje domyślny turkusowy styl dla segmentu Palczewska,
    nadając mu fioletową (#9900ff) obwódkę i tekst.  Gdy opcja jest

@@ -344,99 +344,147 @@ function updateAdvancedGrowthAccess() {
 }
 
 /**
- * Aktualizuje dostępność opcji „Palczewska” w suwaku źródła danych
- * (Palczewska/OLAF/WHO) w zależności od trybu wyników.  W trybie
- * profesjonalnym opcja Palczewska jest dostępna (enabled) i można ją
- * wybrać; w trybie standardowym opcja ta jest dezaktywowana i
- * wyszarzona (przycisk jest nieklikalny).  Funkcja ta polega na
- * atrybucie disabled radio inputu (#sourcePalczewska) oraz na
- * właściwości style nadpisanej w CSS, która powoduje wyszarzenie
- * segmentu.  Dzięki temu zachowujemy możliwość wewnętrznego
- * wykorzystania danych Palczewskiej w obliczeniach (np. dla dzieci
- * <3 lat), nawet gdy przycisk jest wyłączony, ponieważ radio może
- * pozostać zaznaczone mimo ustawienia disabled.
+ * Funkcje pomocnicze dla selektora źródła danych wzrostowych.
+ *
+ * Logika dostępności źródeł jest następująca:
+ * - Palczewska: tylko w trybie wyników profesjonalnych PRO,
+ * - OLAF: tylko dla wieku od 3 do 18 lat,
+ * - WHO: dostępne dla dzieci poniżej 18 lat.
+ */
+function getGrowthDataSourceAgeYears() {
+  const ageInput = document.getElementById('age');
+  const monthsInput = document.getElementById('ageMonths');
+  const yearsVal = parseFloat(ageInput?.value);
+  const monthsVal = parseFloat(monthsInput?.value);
+  const years = Number.isFinite(yearsVal) ? yearsVal : 0;
+  const months = Number.isFinite(monthsVal) ? monthsVal : 0;
+  return years + (months / 12);
+}
+
+function isGrowthResultsProfessionalMode() {
+  try {
+    const toggle = document.getElementById('resultsModeToggle');
+    if (toggle) return !!toggle.checked;
+  } catch (_) {}
+  try {
+    if (typeof window !== 'undefined' && typeof window.professionalMode !== 'undefined') {
+      return !!window.professionalMode;
+    }
+  } catch (_) {}
+  try {
+    if (typeof professionalMode !== 'undefined') return !!professionalMode;
+  } catch (_) {}
+  return false;
+}
+
+function isGrowthDataSourceAllowed(source, ageYears, proMode) {
+  const src = String(source || '').toUpperCase();
+  const age = Number.isFinite(ageYears) ? ageYears : 0;
+  const pro = !!proMode;
+  if (src === 'PALCZEWSKA') return pro && age < 18;
+  if (src === 'OLAF') return age >= OLAF_DATA_MIN_AGE && age < 18;
+  if (src === 'WHO') return age < 18;
+  return false;
+}
+
+function getDefaultGrowthDataSource(ageYears, proMode) {
+  const age = Number.isFinite(ageYears) ? ageYears : 0;
+  const pro = !!proMode;
+  if (!(age < 18)) return 'WHO';
+  if (age < OLAF_DATA_MIN_AGE) {
+    return pro ? 'PALCZEWSKA' : 'WHO';
+  }
+  return 'OLAF';
+}
+
+function setCheckedGrowthDataSource(source) {
+  const selectedSource = String(source || '').toUpperCase();
+  const palRadio = document.getElementById('sourcePalczewska');
+  const olafRadio = document.getElementById('sourceOlaf');
+  const whoRadio = document.getElementById('sourceWho');
+  if (palRadio) palRadio.checked = (selectedSource === 'PALCZEWSKA');
+  if (olafRadio) olafRadio.checked = (selectedSource === 'OLAF');
+  if (whoRadio) whoRadio.checked = (selectedSource === 'WHO');
+  try {
+    bmiSource = selectedSource;
+  } catch (_) {}
+  return selectedSource;
+}
+
+function refreshGrowthChartActionControls() {
+  try {
+    if (typeof window !== 'undefined' && typeof window.updateCentileButtons === 'function') {
+      window.updateCentileButtons();
+    }
+  } catch (_) {}
+  try {
+    if (typeof window !== 'undefined' && typeof window.updateAdvancedCentileChartButton === 'function') {
+      window.updateAdvancedCentileChartButton();
+    }
+  } catch (_) {}
+}
+
+function syncGrowthDataSourceInputs(options = {}) {
+  try {
+    const toggleContainer = document.getElementById('dataToggleContainer');
+    const palRadio = document.getElementById('sourcePalczewska');
+    const olafRadio = document.getElementById('sourceOlaf');
+    const whoRadio = document.getElementById('sourceWho');
+    if (!palRadio || !olafRadio || !whoRadio) {
+      return (typeof bmiSource !== 'undefined' && bmiSource) ? bmiSource : 'WHO';
+    }
+
+    const ageYears = Number.isFinite(options.ageYears) ? options.ageYears : getGrowthDataSourceAgeYears();
+    const proMode = (typeof options.proMode === 'boolean') ? options.proMode : isGrowthResultsProfessionalMode();
+    const manualSelection = !!(toggleContainer && toggleContainer.dataset && toggleContainer.dataset.manual === '1');
+    const currentSourceEl = document.querySelector('input[name="dataSource"]:checked');
+    const currentSource = currentSourceEl && currentSourceEl.value ? String(currentSourceEl.value).toUpperCase() : '';
+
+    palRadio.disabled = !isGrowthDataSourceAllowed('PALCZEWSKA', ageYears, proMode);
+    olafRadio.disabled = !isGrowthDataSourceAllowed('OLAF', ageYears, proMode);
+    whoRadio.disabled = !isGrowthDataSourceAllowed('WHO', ageYears, proMode);
+
+    let nextSource = currentSource;
+    if (!manualSelection || !isGrowthDataSourceAllowed(currentSource, ageYears, proMode)) {
+      nextSource = getDefaultGrowthDataSource(ageYears, proMode);
+    }
+    if (!isGrowthDataSourceAllowed(nextSource, ageYears, proMode)) {
+      nextSource = getDefaultGrowthDataSource(ageYears, proMode);
+    }
+
+    if (nextSource !== currentSource || !currentSource) {
+      setCheckedGrowthDataSource(nextSource);
+    } else {
+      try {
+        bmiSource = currentSource;
+      } catch (_) {}
+    }
+
+    refreshGrowthChartActionControls();
+    return nextSource || 'WHO';
+  } catch (_) {
+    try {
+      refreshGrowthChartActionControls();
+    } catch (__){ }
+    return 'WHO';
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.getDefaultGrowthDataSource = getDefaultGrowthDataSource;
+  window.isGrowthDataSourceAllowed = isGrowthDataSourceAllowed;
+  window.syncGrowthDataSourceInputs = syncGrowthDataSourceInputs;
+}
+
+/**
+ * Aktualizuje dostępność opcji „Palczewska” oraz „OLAF” w suwaku źródła danych.
+ *
+ * Dla dzieci poniżej 3 lat blokowany jest OLAF, a opcja Palczewska pozostaje
+ * dostępna wyłącznie po włączeniu wyników profesjonalnych PRO.
  */
 function updatePalczewskaAccess() {
   try {
-    const palRadio = document.getElementById('sourcePalczewska');
-    if (!palRadio) return;
-    // Ustal tryb profesjonalny na podstawie stanu suwaka resultsModeToggle.
-    let pro = false;
-    try {
-      const toggle = document.getElementById('resultsModeToggle');
-      if (toggle) {
-        pro = !!toggle.checked;
-      } else if (typeof window !== 'undefined' && typeof window.professionalMode !== 'undefined') {
-        pro = !!window.professionalMode;
-      }
-    } catch (_) {
-      // ignoruj błąd
-    }
-    if (pro) {
-      // Odblokuj opcję Palczewska
-      palRadio.disabled = false;
-      palRadio.removeAttribute('disabled');
-    } else {
-      // Zablokuj opcję Palczewska.  Jeśli aktualnie jest zaznaczona,
-      // zmień zaznaczenie na OLAF (lub WHO), tak aby generowanie siatki
-      // Palczewska zostało ukryte.  Następnie wywołaj zdarzenie
-      // 'change', aby updateCentileButtons mógł zareagować.
-      palRadio.disabled = true;
-      palRadio.setAttribute('disabled', '');
-      if (palRadio.checked) {
-        // Preferuj OLAF jako domyślne źródło danych.  Jeśli nie istnieje,
-        // użyj WHO jako zapasowego.
-        const olafRadio = document.getElementById('sourceOlaf');
-        const whoRadio  = document.getElementById('sourceWho');
-        if (olafRadio) {
-          olafRadio.checked = true;
-          // Jeśli OLAF był wcześniej disabled (teoretycznie nie powinien), usuń disabled
-          olafRadio.disabled = false;
-          olafRadio.removeAttribute('disabled');
-          // Wywołaj zdarzenie change, aby zaktualizować przyciski generowania
-          olafRadio.dispatchEvent(new Event('change'));
-        } else if (whoRadio) {
-          whoRadio.checked = true;
-          whoRadio.disabled = false;
-          whoRadio.removeAttribute('disabled');
-          whoRadio.dispatchEvent(new Event('change'));
-        }
-        // Odznacz Palczewska, aby na pewno nie była zaznaczona w DOM
-        palRadio.checked = false;
-      }
-    }
-
-    // Niezależnie od powyższych warunków, po zmianie trybu lub
-    // dezaktywacji opcji Palczewska zaktualizuj widoczność
-    // przycisków generowania siatek.  Funkcja updateCentileButtons z
-    // index.html nie jest dostępna globalnie, dlatego implementujemy
-    // minimalną logikę jej działania tutaj.  Dzięki temu po
-    // przełączeniu na wyniki standardowe „Generuj siatkę
-    // Palczewska” zostanie ukryty, a zamiast niego pojawi się
-    // „Generuj siatkę centylową” (OLAF/WHO).
-    try {
-      const palBtn  = document.getElementById('generatePalCentileChart');
-      const olafBtn = document.getElementById('generateCentileChart');
-      // Ustal aktualnie wybrane źródło danych
-      const selected = document.querySelector('input[name="dataSource"]:checked');
-      const val = selected ? selected.value : 'OLAF';
-      // Oblicz wiek użytkownika (w latach) na podstawie pól wieku.
-      const ageInput = document.getElementById('age');
-      const monthsInput = document.getElementById('ageMonths');
-      const yearsVal = ageInput ? parseFloat(ageInput.value) : 0;
-      const monthsVal = monthsInput ? parseFloat(monthsInput.value) : 0;
-      const ageYears = (yearsVal || 0) + ((monthsVal || 0) / 12);
-      const isChild = ageYears < 18;
-      if (val === 'PALCZEWSKA') {
-        if (palBtn)  palBtn.style.display  = isChild ? '' : 'none';
-        if (olafBtn) olafBtn.style.display = 'none';
-      } else {
-        if (palBtn)  palBtn.style.display  = 'none';
-        if (olafBtn) olafBtn.style.display = isChild ? '' : 'none';
-      }
-    } catch (ex) {
-      // ciche pominięcie błędów przy aktualizacji widoczności przycisków
-    }
+    syncGrowthDataSourceInputs();
   } catch (_) {
     /* ciche pominięcie błędów */
   }
@@ -7523,39 +7571,16 @@ function update(){
   const olafRadio = document.getElementById('sourceOlaf');
   const whoRadio  = document.getElementById('sourceWho');
   if (toggleContainer && palRadio && olafRadio && whoRadio) {
-    // Dorośli (>18 lat) lub brak wieku – ukryj przełącznik i wymuś WHO
+    // Dorośli (>18 lat) lub brak wieku – ukryj przełącznik i wymuś WHO.
     if (age > 18 || age === 0) {
       toggleContainer.style.display = 'none';
-      // ustaw WHO jako aktywne źródło
-      if (whoRadio) whoRadio.checked = true;
-      if (palRadio) palRadio.checked = false;
-      if (olafRadio) olafRadio.checked = false;
+      setCheckedGrowthDataSource('WHO');
       bmiSource = 'WHO';
+      refreshGrowthChartActionControls();
     } else {
-      // pokaż przełącznik
+      // Dla dzieci pokazuj przełącznik i zsynchronizuj dostępne źródła danych.
       toggleContainer.style.display = 'flex';
-      // jeżeli użytkownik nie zmienił suwaka ręcznie (brak flagi manual), ustaw domyślne źródło
-      if (!toggleContainer.dataset.manual) {
-        if (age < OLAF_DATA_MIN_AGE) {
-          // 0–3 lata: domyślnie Palczewska
-          if (palRadio) palRadio.checked = true;
-          if (olafRadio) olafRadio.checked = false;
-          if (whoRadio) whoRadio.checked = false;
-        } else {
-          // 3–18 lat: domyślnie OLAF
-          if (palRadio) palRadio.checked = false;
-          if (olafRadio) olafRadio.checked = true;
-          if (whoRadio) whoRadio.checked = false;
-        }
-      }
-      // Ustal bmiSource na podstawie zaznaczonego radio
-      if (whoRadio && whoRadio.checked) {
-        bmiSource = 'WHO';
-      } else if (olafRadio && olafRadio.checked) {
-        bmiSource = 'OLAF';
-      } else {
-        bmiSource = 'PALCZEWSKA';
-      }
+      bmiSource = syncGrowthDataSourceInputs({ ageYears: age });
     }
   }
 /* =================================================================== */

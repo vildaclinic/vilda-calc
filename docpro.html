@@ -2572,12 +2572,17 @@
     </p>
 
     <!-- Wyśrodkowany przycisk do wygenerowania siatek centylowych wzrostu i wagi.  -->
-    <div style="text-align:center;margin-top:1.2rem;">
-      <!-- Ukryj przycisk generowania siatki centylowej w karcie "Centyle, BMI & Basal Metabolic Rate" -->
+<div id="centileButtons" style="text-align:center;margin-top:1rem;">
+      <!-- Przyciski są domyślnie ukryte; logika w JS ustawia ich widoczność
+           w zależności od wieku i wybranego źródła danych. -->
       <button type="button" id="generateCentileChart" style="background-color:#00838d;color:white;padding:0.6rem 1.2rem;border:none;border-radius:4px;font-size:1rem;font-weight:600;cursor:pointer;display:none;">
         Generuj siatkę centylową
       </button>
+      <button type="button" id="generatePalCentileChart" style="background-color:#00838d;color:white;padding:0.6rem 1.2rem;border:none;border-radius:4px;font-size:1rem;font-weight:600;cursor:pointer;display:none;">
+        Generuj siatkę Palczewska
+      </button>
     </div>
+
 
     <!-- Ukryty kontener na elementy generowane podczas tworzenia siatki centylowej.  
          Canvasy są tworzone dynamicznie w JS, a następnie konwertowane do obrazu.
@@ -3794,7 +3799,53 @@ document.addEventListener('DOMContentLoaded', function() {
   // Dodaj obsługę przycisku generowania siatki centylowej z karty zaawansowanej
   const btnAdv = document.getElementById('generateCentileChartAdv');
   if (btnAdv) {
-    btnAdv.addEventListener('click', generateCentileChart);
+    function updateAdvButtonState() {
+      const state = (typeof getCentileChartState === 'function')
+        ? getCentileChartState()
+        : { visible: true, source: 'OLAF', label: 'Generuj siatkę OLAF', supported: true, message: '' };
+      btnAdv.style.display = state.visible ? '' : 'none';
+      btnAdv.textContent = state.label;
+      btnAdv.disabled = !state.supported;
+      btnAdv.title = state.message || '';
+    }
+
+    if (typeof window !== 'undefined') {
+      window.updateAdvancedCentileChartButton = updateAdvButtonState;
+    }
+
+    const dataRadios = document.querySelectorAll('input[name="dataSource"]');
+    dataRadios.forEach((r) => {
+      r.addEventListener('change', updateAdvButtonState);
+    });
+
+    const ageInputField = document.getElementById('age');
+    const ageMonthsField = document.getElementById('ageMonths');
+    if (ageInputField) ageInputField.addEventListener('input', updateAdvButtonState);
+    if (ageMonthsField) ageMonthsField.addEventListener('input', updateAdvButtonState);
+
+    updateAdvButtonState();
+
+    btnAdv.addEventListener('click', async () => {
+      const state = (typeof getCentileChartState === 'function')
+        ? getCentileChartState()
+        : { source: 'OLAF', supported: true, message: '' };
+      if (!state.supported) {
+        if (state.message) alert(state.message);
+        return;
+      }
+      if (state.source === 'PALCZEWSKA') {
+        if (typeof generatePalczewskaCentileCharts === 'function') {
+          await generatePalczewskaCentileCharts();
+        }
+        return;
+      }
+      try {
+        window.overrideCentileSource = state.source;
+        await generateCentileChart();
+      } finally {
+        window.overrideCentileSource = undefined;
+      }
+    });
   }
   // Obsługa czyszczenia danych karty zaawansowanej
   const advClear = document.getElementById('advClearBtn');
@@ -3827,6 +3878,122 @@ document.addEventListener('DOMContentLoaded', function() {
  * strony PDF.  Wszystkie funkcje są deklaracjami funkcyjnymi, dzięki czemu nadpisują wcześniejsze
  * deklaracje o tej samej nazwie w pierwszym skrypcie.
  */
+
+function getCurrentCentileChartAgeYears() {
+  const ageEl = document.getElementById('age');
+  const ageMonthsEl = document.getElementById('ageMonths');
+  const yearsVal = parseFloat(ageEl?.value);
+  const monthsVal = parseFloat(ageMonthsEl?.value);
+  const years = Number.isFinite(yearsVal) ? yearsVal : 0;
+  const months = Number.isFinite(monthsVal) ? monthsVal : 0;
+  return years + (months / 12);
+}
+
+function getCurrentCentileChartAgeMonths() {
+  return Math.round(getCurrentCentileChartAgeYears() * 12);
+}
+
+function getSelectedCentileChartSourceRaw() {
+  const selected = document.querySelector('input[name="dataSource"]:checked');
+  return selected && selected.value ? String(selected.value).toUpperCase() : 'OLAF';
+}
+
+function isCentileChartProfessionalMode() {
+  if (typeof isGrowthResultsProfessionalMode === 'function') {
+    try {
+      return !!isGrowthResultsProfessionalMode();
+    } catch (_) {}
+  }
+  const toggle = document.getElementById('resultsModeToggle');
+  return !!(toggle && toggle.checked);
+}
+
+function getCentileChartUnavailableMessage(source, ageYears, proMode) {
+  const src = String(source || 'OLAF').toUpperCase();
+  const age = Number.isFinite(ageYears) ? ageYears : 0;
+  if (!(age < 18)) {
+    return 'Siatki centylowe są dostępne dla dzieci od 0 do 18 lat.';
+  }
+  if (src === 'PALCZEWSKA' && !proMode) {
+    return 'Dane Palczewskiej są dostępne tylko po włączeniu wyników profesjonalnych PRO.';
+  }
+  if (src === 'OLAF' && age < OLAF_DATA_MIN_AGE) {
+    return 'Siatki OLAF są dostępne dla dzieci od 3 do 18 lat.';
+  }
+  if (src === 'WHO' && age >= OLAF_DATA_MIN_AGE) {
+    return 'Generowanie siatki WHO w tej aplikacji jest dostępne dla dzieci poniżej 3 roku życia.';
+  }
+  return 'Wybrana siatka centylowa nie jest dostępna dla podanego wieku.';
+}
+
+function getCentileChartState() {
+  const ageYears = getCurrentCentileChartAgeYears();
+  const rawSource = getSelectedCentileChartSourceRaw();
+  const proMode = isCentileChartProfessionalMode();
+  const isChild = ageYears < 18;
+
+  if (rawSource === 'PALCZEWSKA') {
+    return {
+      visible: isChild,
+      source: 'PALCZEWSKA',
+      label: 'Generuj siatkę Palczewska',
+      supported: isChild && proMode,
+      message: isChild && proMode ? '' : getCentileChartUnavailableMessage('PALCZEWSKA', ageYears, proMode)
+    };
+  }
+
+  if (rawSource === 'WHO') {
+    const whoSupported = isChild && ageYears < OLAF_DATA_MIN_AGE;
+    return {
+      visible: isChild,
+      source: 'WHO',
+      label: 'Generuj siatkę WHO',
+      supported: whoSupported,
+      message: whoSupported ? '' : getCentileChartUnavailableMessage('WHO', ageYears, proMode)
+    };
+  }
+
+  const olafSupported = isChild && ageYears >= OLAF_DATA_MIN_AGE;
+  return {
+    visible: isChild,
+    source: 'OLAF',
+    label: 'Generuj siatkę OLAF',
+    supported: olafSupported,
+    message: olafSupported ? '' : getCentileChartUnavailableMessage('OLAF', ageYears, proMode)
+  };
+}
+
+function getAnthroLMSForChartSource(source, sex, ageMonths, metric) {
+  const src = String(source || '').toUpperCase();
+  const m = Math.round(ageMonths);
+  const isBoy = (sex === 'M');
+  const isWeight = (metric === 'WT');
+  if (!Number.isFinite(m) || m < 0) return null;
+
+  if (src === 'WHO') {
+    if (m < 36) {
+      const infantDs = isWeight
+        ? (isBoy ? LMS_INFANT_WEIGHT_BOYS : LMS_INFANT_WEIGHT_GIRLS)
+        : (isBoy ? LMS_INFANT_HEIGHT_BOYS : LMS_INFANT_HEIGHT_GIRLS);
+      return infantDs[String(m)] || null;
+    }
+    if (isWeight && m > 120) return null;
+    const whoDs = isWeight
+      ? (isBoy ? LMS_WEIGHT_WHO_BOYS : LMS_WEIGHT_WHO_GIRLS)
+      : (isBoy ? LMS_HEIGHT_WHO_BOYS : LMS_HEIGHT_WHO_GIRLS);
+    return getLMSFromDataset(whoDs, m);
+  }
+
+  if (src === 'OLAF') {
+    if (m < 36) return null;
+    const olafDs = isWeight
+      ? (isBoy ? LMS_WEIGHT_BOYS : LMS_WEIGHT_GIRLS)
+      : (isBoy ? LMS_HEIGHT_BOYS : LMS_HEIGHT_GIRLS);
+    return getLMSFromDataset(olafDs, m);
+  }
+
+  return null;
+}
 
 // Bezpiecznie znajdź kanał centylowy dla podanej wartości.  Zwraca indeks kanału (0..len-2) lub -1.
 function findHighlightBandSafe(userVal, curves, percentiles, mIdx) {
@@ -3880,18 +4047,45 @@ function collectPageMeasurementsInRange(rangeMinX, rangeMaxX, { currentAgeMonths
       const w = (wRaw !== null && wRaw !== undefined && wRaw !== '') ? parseFloat(wRaw) : NaN;
       // Jeśli wzrost lub waga są NaN lub nie dodatnie, pomiń je. W rzeczywistości 0 oznacza brak danych,
       // dlatego traktujemy 0 lub wartości ujemne jako brakujące i nie rysujemy takich punktów.
-      if (Number.isFinite(h) && h > 0) ptsH.push({ ageMonths: am, height: h });
-      if (Number.isFinite(w) && w > 0) ptsW.push({ ageMonths: am, weight: w });
+      if (Number.isFinite(h) && h > 0) {
+        ptsH.push({
+          ageMonths: am,
+          height: h,
+          arrowEnabled: (typeof m.arrowEnabled === 'boolean' ? m.arrowEnabled : false),
+          arrowComment: (typeof m.arrowComment === 'string' ? m.arrowComment : '')
+        });
+      }
+      if (Number.isFinite(w) && w > 0) {
+        ptsW.push({ ageMonths: am, weight: w });
+      }
     });
   }
   if (Number.isFinite(currentAgeMonths) && currentAgeMonths >= rangeMinX && currentAgeMonths <= rangeMaxX) {
     // Dodaj bieżący pomiar tylko, gdy waga/wzrost są dodatnie
-    if (Number.isFinite(currentHeight) && currentHeight > 0) ptsH.push({ ageMonths: currentAgeMonths, height: currentHeight });
-    if (Number.isFinite(currentWeight) && currentWeight > 0) ptsW.push({ ageMonths: currentAgeMonths, weight: currentWeight });
+    if (Number.isFinite(currentHeight) && currentHeight > 0) {
+      ptsH.push({
+        ageMonths: currentAgeMonths,
+        height: currentHeight,
+        arrowEnabled: (adv && typeof adv.currentArrowEnabled === 'boolean' ? adv.currentArrowEnabled : false),
+        arrowComment: (adv && typeof adv.currentArrowComment === 'string' ? adv.currentArrowComment : '')
+      });
+    }
+    if (Number.isFinite(currentWeight) && currentWeight > 0) {
+      ptsW.push({ ageMonths: currentAgeMonths, weight: currentWeight });
+    }
   }
   if (adv && Number.isFinite(adv.currentAgeMonths) && adv.currentAgeMonths >= rangeMinX && adv.currentAgeMonths <= rangeMaxX) {
-    if (Number.isFinite(adv.currentHeight) && adv.currentHeight > 0) ptsH.push({ ageMonths: adv.currentAgeMonths, height: adv.currentHeight });
-    if (Number.isFinite(adv.currentWeight) && adv.currentWeight > 0) ptsW.push({ ageMonths: adv.currentAgeMonths, weight: adv.currentWeight });
+    if (Number.isFinite(adv.currentHeight) && adv.currentHeight > 0) {
+      ptsH.push({
+        ageMonths: adv.currentAgeMonths,
+        height: adv.currentHeight,
+        arrowEnabled: (typeof adv.currentArrowEnabled === 'boolean' ? adv.currentArrowEnabled : false),
+        arrowComment: (typeof adv.currentArrowComment === 'string' ? adv.currentArrowComment : '')
+      });
+    }
+    if (Number.isFinite(adv.currentWeight) && adv.currentWeight > 0) {
+      ptsW.push({ ageMonths: adv.currentAgeMonths, weight: adv.currentWeight });
+    }
   }
   ptsH.sort((a,b) => a.ageMonths - b.ageMonths);
   ptsW.sort((a,b) => a.ageMonths - b.ageMonths);
@@ -3901,7 +4095,7 @@ function collectPageMeasurementsInRange(rangeMinX, rangeMaxX, { currentAgeMonths
 // Zbuduj jedną stronę (0–35 miesięcy Palczewska lub 36–216 miesięcy OLAF) jako canvas.
 function buildCentilePageCanvas({
   rangeMinX, rangeMaxX, sex, userAgeMonths, userWeight, userHeight,
-  headerTitle, headerSubtitle, footerText
+  headerTitle, headerSubtitle, footerText, chartSource
 }) {
   // Przygotuj dane centylowe
   const months = [];
@@ -3909,29 +4103,42 @@ function buildCentilePageCanvas({
   const percentiles = Object.keys(CENTILE_ZSCORES).map(n => parseInt(n,10)).sort((a,b) => a - b);
   const weightCurves = {}, heightCurves = {};
   percentiles.forEach(p => { weightCurves[p] = []; heightCurves[p] = []; });
-  const usePalczewska = rangeMaxX <= 35;
+
+  let effectiveSource = String(chartSource || '').toUpperCase();
+  if (!effectiveSource) {
+    const override = (typeof window !== 'undefined' && window.overrideCentileSource)
+      ? String(window.overrideCentileSource).toUpperCase()
+      : '';
+    effectiveSource = override || (rangeMaxX <= 35 ? 'PALCZEWSKA' : 'OLAF');
+  }
+
   for (let m of months) {
     for (const p of percentiles) {
-      if (usePalczewska) {
+      if (effectiveSource === 'PALCZEWSKA') {
         const wVal = getPLWeightCentile(sex, m, p);
         const hVal = getPLHeightCentile(sex, m, p);
         weightCurves[p].push(wVal);
         heightCurves[p].push(hVal);
       } else {
-        const [Lw,Mw,Sw] = getLMSWeightHybrid(sex, m);
-        const [Lh,Mh,Sh] = getLMSHeightHybrid(sex, m);
+        const lmsW = getAnthroLMSForChartSource(effectiveSource, sex, m, 'WT');
+        const lmsH = getAnthroLMSForChartSource(effectiveSource, sex, m, 'HT');
         const z = CENTILE_ZSCORES[p];
-        weightCurves[p].push(valueFromLMS(Lw, Mw, Sw, z));
-        heightCurves[p].push(valueFromLMS(Lh, Mh, Sh, z));
+        weightCurves[p].push(lmsW ? valueFromLMS(lmsW[0], lmsW[1], lmsW[2], z) : null);
+        heightCurves[p].push(lmsH ? valueFromLMS(lmsH[0], lmsH[1], lmsH[2], z) : null);
       }
     }
   }
   // Gładzenie krzywych
   function smoothCurve(arr, passes = 6) {
-    let out = arr.slice(); const n = out.length;
+    let out = arr.slice();
+    const n = out.length;
     for (let pass = 0; pass < passes; pass++) {
       const tmp = out.slice();
-      for (let i = 1; i < n - 1; i++) tmp[i] = (out[i-1] + out[i] + out[i+1]) / 3;
+      for (let i = 1; i < n - 1; i++) {
+        if (Number.isFinite(out[i - 1]) && Number.isFinite(out[i]) && Number.isFinite(out[i + 1])) {
+          tmp[i] = (out[i - 1] + out[i] + out[i + 1]) / 3;
+        }
+      }
       out = tmp;
     }
     return out;
@@ -3943,8 +4150,24 @@ function buildCentilePageCanvas({
   // Ustal pierwotne zakresy Y
   let minW = +Infinity, maxW = -Infinity, minH = +Infinity, maxH = -Infinity;
   for (const p of percentiles) {
-    for (const v of weightCurves[p]) { if (v < minW) minW = v; if (v > maxW) maxW = v; }
-    for (const v of heightCurves[p]) { if (v < minH) minH = v; if (v > maxH) maxH = v; }
+    for (const v of weightCurves[p]) {
+      if (!Number.isFinite(v)) continue;
+      if (v < minW) minW = v;
+      if (v > maxW) maxW = v;
+    }
+    for (const v of heightCurves[p]) {
+      if (!Number.isFinite(v)) continue;
+      if (v < minH) minH = v;
+      if (v > maxH) maxH = v;
+    }
+  }
+  if (!Number.isFinite(minW) || !Number.isFinite(maxW)) {
+    minW = 0;
+    maxW = 30;
+  }
+  if (!Number.isFinite(minH) || !Number.isFinite(maxH)) {
+    minH = 45;
+    maxH = 110;
   }
   const roundDown5 = v => Math.floor(v/5)*5;
   const roundUp5   = v => Math.ceil(v/5)*5;
@@ -4108,7 +4331,7 @@ function buildCentilePageCanvas({
         // kropka z pierścieniem
         ctx.beginPath();
         ctx.fillStyle = '#00838d';
-        ctx.arc(cxBone, cyBone, 12, 0, 2 * Math.PI);
+        ctx.arc(cxBone, cyBone, 9, 0, 2 * Math.PI);
         ctx.fill();
         ctx.beginPath();
         ctx.lineWidth = 2;
@@ -4139,7 +4362,7 @@ function buildCentilePageCanvas({
             // kropka z pierścieniem
             ctx.beginPath();
             ctx.fillStyle = '#00838d';
-            ctx.arc(cxB, cyB, 12, 0, 2 * Math.PI);
+            ctx.arc(cxB, cyB, 9, 0, 2 * Math.PI);
             ctx.fill();
             ctx.beginPath();
             ctx.lineWidth = 2;
@@ -4179,22 +4402,44 @@ function buildCentilePageCanvas({
     // Tylko rysuj, jeśli punkt mieści się w zakresie osi Y.
     if (th < dynMinH || th > dynMaxH) return;
     ctx.save();
-    // Rysuj romb w kolorze czerwonym (#c62828)
+    // Rysuj większy romb; kolor zależy od trybu publikacji. Czarny w trybie publikacji, czerwony w standardowym.
+    const diamondHalf = 12;
+    const isPubModeTH2 = (typeof window !== 'undefined' && window.publicationCharts);
+    const thColor2 = isPubModeTH2 ? '#000000' : '#c62828';
     ctx.beginPath();
-    ctx.fillStyle = '#c62828';
-    ctx.moveTo(cx - 10, cy);
-    ctx.lineTo(cx, cy - 10);
-    ctx.lineTo(cx + 10, cy);
-    ctx.lineTo(cx, cy + 10);
+    ctx.fillStyle = thColor2;
+    ctx.moveTo(cx - diamondHalf, cy);
+    ctx.lineTo(cx, cy - diamondHalf);
+    ctx.lineTo(cx + diamondHalf, cy);
+    ctx.lineTo(cx, cy + diamondHalf);
     ctx.closePath();
     ctx.fill();
-    // Etykieta z wartością docelowego wzrostu (TH)
-    const label = 'TH ' + th.toFixed(1) + ' cm';
+    // Etykieta z wartością docelowego wzrostu bez prefiksu „TH”
+    // Wartość i jednostkę „cm” umieszczamy w dwóch wierszach, aby zachować czytelność.
+    const thValue = th.toFixed(1).replace('.', ',');
     ctx.font = 'bold 40px sans-serif';
-    ctx.fillStyle = '#c62828';
+    ctx.fillStyle = thColor2;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(label, cx + 14, cy);
+    const numW = ctx.measureText(thValue).width;
+    const cmW  = ctx.measureText('cm').width;
+    const fontSize = 40;
+    const half = fontSize / 2;
+    // Ustal długość linii i przesunięcie tekstu. Linia kończy się 5 px przed etykietą.
+    const lineLength = 40;
+    const gapBeforeText = 5;
+    const xText = cx + diamondHalf + lineLength + gapBeforeText;
+    // Pozioma linia łącząca romb z etykietą (zostaw 5 px odstępu przed etykietą)
+    ctx.beginPath();
+    ctx.moveTo(cx + diamondHalf, cy);
+    ctx.lineTo(cx + diamondHalf + lineLength, cy);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = thColor2;
+    ctx.stroke();
+    // Pierwsza linia: wartość
+    ctx.fillText(thValue, xText, cy - half);
+    // Druga linia: „cm” wyśrodkowane pod wartością liczbową
+    ctx.fillText('cm', xText + (numW - cmW) / 2, cy + half);
     ctx.restore();
   })();
   // Rysuj wagę
@@ -4238,6 +4483,116 @@ function buildCentilePageCanvas({
     });
     ctx.restore();
   })();
+
+  // Dodanie podsumowania wyników na siatce centylowej (w trybie profesjonalnym) dla wykresu wzrostu (strony OLAF 3–18 lat)
+  (function drawSummaryOverlay() {
+    try {
+      // Sprawdź, czy aktywny jest tryb profesjonalny
+      let professional = false;
+      if (typeof professionalMode !== 'undefined') {
+        professional = !!professionalMode;
+      } else {
+        professional = (localStorage.getItem('resultsMode') === 'professional');
+      }
+      // Pomiń, jeśli nie w trybie profesjonalnym lub jeśli zakres dotyczy tylko dzieci <3 lat
+      if (!professional) return;
+      if (rangeMaxX <= 35) return;
+      // Pobierz linie podsumowania z karty „Podsumowanie wyników”
+      const summaryEl = document.getElementById('currentSummaryContent');
+      if (!summaryEl) return;
+      let raw = summaryEl.innerText || summaryEl.textContent || '';
+      raw = raw.trim();
+      if (!raw) return;
+      // Split raw summary into lines, then post‑process to shorten lines and select relevant ones.
+      let rawLines = raw.split(/\n+/).map(l => l.trim()).filter(l => l);
+      // Prepare a filtered list: only include weight, height, BMI, MPH and hSDS lines.
+      // Each entry is an object { text: string, bullet: boolean } to control whether to draw a bullet.
+      const processed = [];
+      rawLines.forEach(function(l) {
+        if (/^(Waga|Wzrost|BMI|MPH|hSDS)/i.test(l)) {
+          // For weight and height lines, break after the comma following the closing parenthesis, if present.
+          if (/^(Waga|Wzrost)/i.test(l)) {
+            const idx = l.indexOf('),');
+            if (idx >= 0) {
+              const part1 = l.substring(0, idx + 2).trim();
+              const part2 = l.substring(idx + 2).trim();
+              // The first part retains the bullet; the continuation line should not.
+              processed.push({ text: part1, bullet: true });
+              if (part2) processed.push({ text: part2, bullet: false });
+            } else {
+              processed.push({ text: l, bullet: true });
+            }
+          } else {
+            processed.push({ text: l, bullet: true });
+          }
+        }
+      });
+      const lines = processed;
+      if (!lines.length) return;
+      // Oblicz wymiary siatki wzrostu (jak w drawHeightHistory)
+      const leftMargin = 120, rightMargin = 100, topMargin = 80, bottomMargin = 80;
+      const pxBase = 100 + leftMargin;
+      const pyBase = yHeightGrid + topMargin;
+      const pwBase = chartW - leftMargin - rightMargin;
+      const phBase = heightGridH - topMargin - bottomMargin;
+      const xScale = pwBase / (rangeMaxX - rangeMinX);
+      const yScale = phBase / (dynMaxH - dynMinH);
+      // Pozycja ramki względem prawego dolnego rogu: 0,5 roku (6 mies.) w osi X i 5 jednostek wzrostu w osi Y
+      const offsetMonths = 6;
+      const offsetValue  = 5;
+      const anchorX = pxBase + pwBase;
+      const anchorY = pyBase + phBase;
+      ctx.save();
+      // Ustaw parametry tekstu
+      ctx.font = '32px sans-serif';
+      const lineHeight = 42;
+      const padding = 20;
+      // Oblicz maksymalną szerokość tekstu
+      let maxWidth = 0;
+      lines.forEach(obj => {
+        const w = ctx.measureText(obj.text).width;
+        if (w > maxWidth) maxWidth = w;
+      });
+      const bulletRadius = 6;
+      const bulletSpacing = 20;
+      const boxWidth  = padding * 2 + bulletRadius * 2 + bulletSpacing + maxWidth;
+      const boxHeight = padding * 2 + lines.length * lineHeight;
+      const dx = offsetMonths * xScale;
+      const dy = offsetValue  * yScale;
+      const boxX = anchorX - dx - boxWidth;
+      const boxY = anchorY - dy - boxHeight;
+      // Rysuj tło i obramowanie
+      ctx.beginPath();
+      ctx.lineWidth = 6;
+      ctx.fillStyle = '#ffffff';
+      ctx.strokeStyle = '#000000';
+      ctx.rect(boxX, boxY, boxWidth, boxHeight);
+      ctx.fill();
+      ctx.stroke();
+      // Ustaw kolor i wyrównanie tekstu
+      ctx.fillStyle = '#000000';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      // Rysuj punkty i tekst
+      // Rysuj punkty i tekst. Tylko wiersze z bullet=true otrzymują punkt.
+      lines.forEach((lineObj, idx) => {
+        const y = boxY + padding + lineHeight * idx + lineHeight / 2;
+        const bx = boxX + padding + bulletRadius;
+        // Rysuj kropkę tylko dla linii z bullet=true
+        if (lineObj.bullet) {
+          ctx.beginPath();
+          ctx.arc(bx, y, bulletRadius, 0, 2 * Math.PI);
+          ctx.fill();
+        }
+        // Tekst zaczyna się w tym samym miejscu niezależnie od obecności punktu
+        const tx = bx + bulletRadius + bulletSpacing;
+        ctx.fillText(lineObj.text, tx, y);
+      });
+      ctx.restore();
+    } catch (_) {
+      // ignoruj ewentualne błędy rysowania podsumowania
+    }
+  })();
   // Stopka (źródło danych)
   ctx.save();
   ctx.font = '30px sans-serif';
@@ -4252,8 +4607,7 @@ function buildCentilePageCanvas({
   return canvas;
 }
 
-// Główna funkcja generująca PDF.  Tworzy jedną lub dwie strony w zależności od tego,
-// czy dane przekraczają próg 3 lat.
+// Główna funkcja generująca PDF zgodnie z aktualnie wybranym źródłem danych.
 async function generateCentileChart() {
   const ageEl = document.getElementById('age');
   const ageMonthsEl = document.getElementById('ageMonths');
@@ -4262,7 +4616,7 @@ async function generateCentileChart() {
   const sexEl = document.getElementById('sex');
   const yearsVal = parseFloat(ageEl.value) || 0;
   const monthsVal = ageMonthsEl ? (parseFloat(ageMonthsEl.value) || 0) : 0;
-  const ageYears = yearsVal + monthsVal/12;
+  const ageYears = yearsVal + monthsVal / 12;
   const weight = parseFloat(weightEl.value);
   const height = parseFloat(heightEl.value);
   const sex = (sexEl.value === 'M') ? 'M' : 'F';
@@ -4275,31 +4629,99 @@ async function generateCentileChart() {
     alert('Siatka centylowa dostępna jest dla wieku od 0 do 18 lat.');
     return;
   }
+
+  const overrideSource = (typeof window !== 'undefined' && window.overrideCentileSource)
+    ? String(window.overrideCentileSource).toUpperCase()
+    : '';
+  const state = (typeof getCentileChartState === 'function') ? getCentileChartState() : null;
+  const selectedChartSource = overrideSource || (state && state.source ? state.source : 'OLAF');
+
+  if (!overrideSource && state && !state.supported) {
+    alert(state.message || 'Wybrana siatka centylowa nie jest dostępna dla podanego wieku.');
+    return;
+  }
+
+  if (selectedChartSource === 'PALCZEWSKA' && ageMonths >= 36) {
+    if (typeof generatePalczewskaCentileCharts === 'function') {
+      await generatePalczewskaCentileCharts();
+      return;
+    }
+  }
+
   const adv = window.advancedGrowthData || null;
   const { minAll, maxAll } = collectAllAgesMonths(ageMonths, adv);
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  function addPage({ minX, maxX, subtitle, footer }) {
+  function addPage({ minX, maxX, subtitle, footer, chartSource }) {
     const canvas = buildCentilePageCanvas({
-      rangeMinX: minX, rangeMaxX: maxX, sex,
-      userAgeMonths: ageMonths, userWeight: weight, userHeight: height,
+      rangeMinX: minX,
+      rangeMaxX: maxX,
+      sex,
+      userAgeMonths: ageMonths,
+      userWeight: weight,
+      userHeight: height,
       headerTitle: (sex === 'M' ? 'Siatka centylowa chłopcy' : 'Siatka centylowa dziewczynki'),
       headerSubtitle: subtitle,
-      footerText: footer
+      footerText: footer,
+      chartSource
     });
     const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
     pdf.addImage(dataUrl, 'JPEG', 0, 0, 210, 297);
   }
-  const spansAcross3yo = (minAll < 36) && (maxAll > 36);
-  if (spansAcross3yo) {
-    addPage({ minX: 0, maxX: 35, subtitle: 'Zakres: 0–<3 lata', footer: 'Dane do siatek: Palczewska & Niedźwiecka (0–<3 lata)' });
-    pdf.addPage();
-    addPage({ minX: 36, maxX: 216, subtitle: 'Zakres: 3–18 lat', footer: 'Dane do siatek: OLAF (3–18 lat)' });
-  } else if (maxAll <= 35) {
-    addPage({ minX: 0, maxX: 35, subtitle: 'Zakres: 0–<3 lata', footer: 'Dane do siatek: Palczewska & Niedźwiecka (0–<3 lata)' });
+
+  if (selectedChartSource === 'WHO') {
+    addPage({
+      minX: 0,
+      maxX: 35,
+      subtitle: 'Zakres: 0–<3 lata',
+      footer: 'Dane do siatek: WHO (0–<3 lata)',
+      chartSource: 'WHO'
+    });
+  } else if (selectedChartSource === 'PALCZEWSKA') {
+    addPage({
+      minX: 0,
+      maxX: 35,
+      subtitle: 'Zakres: 0–<3 lata',
+      footer: 'Dane do siatek: Palczewska & Niedźwiecka (0–<3 lata)',
+      chartSource: 'PALCZEWSKA'
+    });
   } else {
-    addPage({ minX: 36, maxX: 216, subtitle: 'Zakres: 3–18 lat', footer: 'Dane do siatek: OLAF (3–18 lat)' });
+    const spansAcross3yo = (minAll < 36) && (maxAll > 36);
+    if (spansAcross3yo) {
+      addPage({
+        minX: 0,
+        maxX: 35,
+        subtitle: 'Zakres: 0–<3 lata',
+        footer: 'Dane do siatek: Palczewska & Niedźwiecka (0–<3 lata)',
+        chartSource: 'PALCZEWSKA'
+      });
+      pdf.addPage();
+      addPage({
+        minX: 36,
+        maxX: 216,
+        subtitle: 'Zakres: 3–18 lat',
+        footer: 'Dane do siatek: OLAF (3–18 lat)',
+        chartSource: 'OLAF'
+      });
+    } else if (maxAll <= 35) {
+      addPage({
+        minX: 0,
+        maxX: 35,
+        subtitle: 'Zakres: 0–<3 lata',
+        footer: 'Dane do siatek: Palczewska & Niedźwiecka (0–<3 lata)',
+        chartSource: 'PALCZEWSKA'
+      });
+    } else {
+      addPage({
+        minX: 36,
+        maxX: 216,
+        subtitle: 'Zakres: 3–18 lat',
+        footer: 'Dane do siatek: OLAF (3–18 lat)',
+        chartSource: 'OLAF'
+      });
+    }
   }
+
   const blob = pdf.output('blob');
   const url = URL.createObjectURL(blob);
   window.open(url, '_blank');
@@ -5006,6 +5428,1102 @@ async function generateCentileChart() {
       </div>
     </div>
   </div>
+
+<!-- ============================================================= -->
+  <!--  Nowe funkcje generowania siatek centylowych Palczewskiej      -->
+  <!--  Funkcje te umożliwiają utworzenie dwóch oddzielnych stron     -->
+  <!--  PDF (wzrost i waga) na podstawie pełnych danych Palczewskiej. -->
+  <!--  Zastosowano lekkie wygładzanie krzywych (filtr trójkątny) i    -->
+  <!--  dynamiczne rozszerzanie zakresów osi Y w zależności od         -->
+  <!--  wprowadzonych pomiarów.  Przycisk generujący jest ukryty na    -->
+  <!--  stronie i może zostać włączony w późniejszej aktualizacji UI.  -->
+  <script>
+  (function(){
+    // Konwersja płci z inputu ('M'/'F') na klucz w centileData
+    function sexKey(sex) {
+      return (sex === 'M') ? 'boys' : 'girls';
+    }
+    // Zwraca wartość centylową wagi dla danego miesiąca m (12–216) i centyla p.
+    // Stosuje interpolację liniową pomiędzy punktami z tablicy centileData.
+    function getPalWeightCentile(sex, m, p) {
+      if (typeof m !== 'number' || m < 12 || m > 216) return undefined;
+      const key = 'p' + p;
+      const dataset = (centileData[sexKey(sex)] && centileData[sexKey(sex)].weight) || [];
+      // Znajdź dwa sąsiednie wpisy otaczające m
+      let prev = null;
+      let next = null;
+      for (let i = 0; i < dataset.length; i++) {
+        const entry = dataset[i];
+        if (entry.months === m) {
+          // dokładne trafienie – zwróć bez interpolacji
+          return entry[key];
+        }
+        if (entry.months < m) prev = entry;
+        if (entry.months > m) {
+          next = entry;
+          break;
+        }
+      }
+      if (!prev || !next) {
+        // jeżeli nie ma obu sąsiadów, zwróć undefined
+        return undefined;
+      }
+      const t = (m - prev.months) / (next.months - prev.months);
+      const v1 = prev[key];
+      const v2 = next[key];
+      // Jeśli któryś z punktów jest null/undefined, zwróć drugi lub undefined
+      if (v1 == null && v2 == null) return undefined;
+      if (v1 == null) return v2;
+      if (v2 == null) return v1;
+      return v1 + t * (v2 - v1);
+    }
+    // Zwraca wartość centylową wzrostu dla danego miesiąca m i centyla p (12–216).
+    function getPalHeightCentile(sex, m, p) {
+      if (typeof m !== 'number' || m < 12 || m > 216) return undefined;
+      const key = 'p' + p;
+      const dataset = (centileData[sexKey(sex)] && centileData[sexKey(sex)].height) || [];
+      let prev = null;
+      let next = null;
+      for (let i = 0; i < dataset.length; i++) {
+        const entry = dataset[i];
+        if (entry.months === m) {
+          return entry[key];
+        }
+        if (entry.months < m) prev = entry;
+        if (entry.months > m) {
+          next = entry;
+          break;
+        }
+      }
+      if (!prev || !next) return undefined;
+      const t = (m - prev.months) / (next.months - prev.months);
+      const v1 = prev[key];
+      const v2 = next[key];
+      if (v1 == null && v2 == null) return undefined;
+      if (v1 == null) return v2;
+      if (v2 == null) return v1;
+      return v1 + t * (v2 - v1);
+    }
+    // Filtr trójkątny (Bartlett) wygładzający krzywe centylowe.  Przyjmujemy
+    // okno o szerokości 5 (wagi 1–2–3–2–1) i wykonujemy kilka przebiegów,
+    // aby uzyskać łagodniejsze krzywe niż zwykła średnia krocząca.
+    function triangularSmooth(arr, passes = 3) {
+      let out = arr.slice();
+      const n = out.length;
+      for (let pass = 0; pass < passes; pass++) {
+        const tmp = out.slice();
+        for (let i = 2; i < n - 2; i++) {
+          const a0 = out[i - 2], a1 = out[i - 1], a2 = out[i], a3 = out[i + 1], a4 = out[i + 2];
+          // Suma wag = 9 (1+2+3+2+1)
+          tmp[i] = (a0 + 2 * a1 + 3 * a2 + 2 * a3 + a4) / 9;
+        }
+        out = tmp;
+      }
+      return out;
+    }
+    // Ustal minimalną i maksymalną wartość w tablicy krzywych centylowych
+    function getRangeFromCurves(curves) {
+      let minV = +Infinity;
+      let maxV = -Infinity;
+      for (const p in curves) {
+        const arr = curves[p];
+        if (!Array.isArray(arr)) continue;
+        arr.forEach(v => {
+          if (v == null) return;
+          if (v < minV) minV = v;
+          if (v > maxV) maxV = v;
+        });
+      }
+      return [minV, maxV];
+    }
+    // Zaokrąglanie do najbliższej piątki w dół/górę
+    const roundDown5 = v => Math.floor(v / 5) * 5;
+    const roundUp5   = v => Math.ceil(v / 5) * 5;
+    // Budowanie pojedynczej strony A4 z siatką Palczewskiej (dla wzrostu lub wagi)
+    function buildPalczewskaPageCanvas({ chartType, sex, userAgeMonths, userWeight, userHeight }) {
+      const rangeMinX = 12;
+      const rangeMaxX = 216;
+      const months = [];
+      for (let m = rangeMinX; m <= rangeMaxX; m++) months.push(m);
+      const percentiles = [3,10,25,50,75,90,97];
+      const curves = {};
+      percentiles.forEach(p => { curves[p] = []; });
+      // Wypełnienie krzywych
+      for (let m of months) {
+        for (const p of percentiles) {
+          let v;
+          if (chartType === 'height') {
+            v = getPalHeightCentile(sex, m, p);
+          } else {
+            v = getPalWeightCentile(sex, m, p);
+          }
+          curves[p].push(v);
+        }
+      }
+      // Wygładź krzywe za pomocą filtru trójkątnego.  
+      // Liczba przebiegów jest odczytywana z localStorage (klucz 'palSmoothPasses'),
+      // co pozwala użytkownikowi zmieniać poziom gładkości w ustawieniach.  
+      // Jeśli brak wartości lub jest niepoprawna, przyjmujemy domyślnie 12 przebiegów.
+      let passes = 12;
+      try {
+        const stored = localStorage.getItem('palSmoothPasses');
+        const val = parseInt(stored, 10);
+        if (!isNaN(val)) passes = val;
+      } catch (e) {}
+      for (const p of percentiles) {
+        curves[p] = triangularSmooth(curves[p], passes);
+      }
+      // Determine whether we are in publication mode.  Publication mode is enabled via
+      // the "Siatki do publikacji" toggle in the advanced growth form and stored
+      // globally on the window.  When true, the centile charts are rendered in
+      // a monochrome style with English labels and adjusted layout.
+      const publication = !!window.publicationCharts;
+      // Zakresy pierwotne
+      const [minV, maxV] = getRangeFromCurves(curves);
+      let minY = roundDown5(minV);
+      let maxY = roundUp5(maxV);
+      // Zbierz wszystkie pomiary z sekcji Zaawansowane w podanym zakresie
+      const adv = window.advancedGrowthData || null;
+      // Funkcja collectPageMeasurementsInRange jest zdefiniowana w innym skrypcie
+      // i zwraca tablice ptsH (height) i ptsW (weight) dla zadanego zakresu
+      let pts = [];
+      if (typeof collectPageMeasurementsInRange === 'function') {
+        const { ptsH, ptsW } = collectPageMeasurementsInRange(rangeMinX, rangeMaxX, {
+          currentAgeMonths: userAgeMonths,
+          currentWeight: userWeight,
+          currentHeight: userHeight,
+          adv
+        });
+        pts = (chartType === 'height') ? ptsH : ptsW;
+      }
+      // Dodaj bieżący pomiar, jeśli nie został uwzględniony (collectPageMeasurementsInRange robi to)
+      // Oblicz minimalny i maksymalny pomiar
+      let minMeasured = +Infinity;
+      let maxMeasured = -Infinity;
+      // Pomiary z historii
+      pts.forEach(m => {
+        const val = (chartType === 'height') ? m.height : m.weight;
+        if (val == null) return;
+        if (val < minMeasured) minMeasured = val;
+        if (val > maxMeasured) maxMeasured = val;
+      });
+      // Bieżący pomiar (z formularza lub sekcji zaawansowanej)
+      const effectiveVal = (chartType === 'height') ? userHeight : userWeight;
+      if (Number.isFinite(effectiveVal) && effectiveVal > 0) {
+        if (effectiveVal < minMeasured) minMeasured = effectiveVal;
+        if (effectiveVal > maxMeasured) maxMeasured = effectiveVal;
+      }
+      // Rozszerz zakres Y w dół i w górę, jeśli pomiary wychodzą poza oryginalny zakres
+      let dynMinY = minY;
+      let dynMaxY = maxY;
+      if (minMeasured < minY) {
+        dynMinY = Math.max(0, roundDown5(minMeasured));
+      }
+      if (maxMeasured > maxY) {
+        dynMaxY = roundUp5(maxMeasured);
+      }
+      // Oblicz indeks miesiąca do podświetlenia kanału centylowego
+      const mIdx = userAgeMonths - rangeMinX;
+      // Efektywna wartość do podświetlenia (użyj danych z sekcji zaawansowanej, jeśli podano)
+      const advState = window.advancedGrowthData || {};
+      const effAge  = (typeof advState.currentAgeMonths === 'number' && !isNaN(advState.currentAgeMonths)) ? advState.currentAgeMonths : userAgeMonths;
+      const effVal  = (chartType === 'height')
+        ? ((typeof advState.currentHeight === 'number' && !isNaN(advState.currentHeight)) ? advState.currentHeight : userHeight)
+        : ((typeof advState.currentWeight === 'number' && !isNaN(advState.currentWeight)) ? advState.currentWeight : userWeight);
+      const mIdxEff = effAge - rangeMinX;
+      // Funkcja findHighlightBandSafe jest zdefiniowana w innym skrypcie
+      let bandIdx = -1;
+      if (typeof findHighlightBandSafe === 'function') {
+        bandIdx = findHighlightBandSafe(effVal, curves, percentiles, mIdxEff);
+      } else {
+        // Prosta implementacja: znajdź przedział między sąsiadującymi centylami
+        const vals = percentiles.map(p => curves[p][mIdxEff]);
+        for (let i = 0; i < vals.length - 1; i++) {
+          const lo = Math.min(vals[i], vals[i + 1]);
+          const hi = Math.max(vals[i], vals[i + 1]);
+          if (effVal >= lo && effVal <= hi) { bandIdx = i; break; }
+        }
+      }
+      // Utwórz płótno A4
+      const pw = 2480;
+      const ph = 3508;
+      const canvas = document.createElement('canvas');
+      canvas.width = pw; canvas.height = ph;
+      const ctx = canvas.getContext('2d');
+      // Tło
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, pw, ph);
+      // Nagłówek z nazwą siatki – zawiera płeć i rodzaj
+      // Draw the main header.  In publication mode, use English labels, bold weight
+      // and left alignment anchored to the left edge of the centile grid.  Otherwise,
+      // draw the original Polish header centred on the page.
+      if (!publication) {
+        ctx.font = 'bold 72px sans-serif';
+        ctx.fillStyle = '#00838d';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        const sexLabel = (sex === 'M') ? 'chłopcy' : 'dziewczynki';
+        const chartLabel = (chartType === 'height') ? 'wzrostu' : 'wagi';
+        const headerLine1 = `Siatka centylowa ${chartLabel} – ${sexLabel}`;
+        ctx.fillText(headerLine1, pw / 2, 60);
+        ctx.font = '40px sans-serif';
+        ctx.fillStyle = '#444444';
+        ctx.fillText('Badanie Palczewskiej i Niedźwieckiej (1–18 lat)', pw / 2, 60 + 72 + 8);
+      } else {
+        // Compute the left edge of the centile grid to align header text inside the chart area.
+        const scaleHeader = 0.95;
+        const origHeaderX = 100;
+        const origHeaderW = pw - 200;
+        const headerW = origHeaderW * scaleHeader;
+        const headerX = origHeaderX + (origHeaderW - headerW) / 2;
+        const headerLeftMargin = 120;
+        const startGridX_pub = headerX + headerLeftMargin;
+        // Compose English header lines based on sex and chart type.
+        const line1 = (sex === 'M') ? '1 to 18 years: Boys' : '1 to 18 years: Girls';
+        const line2 = (chartType === 'height') ? 'Stature-for-age percentiles' : 'Weight-for-age percentiles';
+        // Use bold weight and approximately 1.5 rem (~60 px) font size.
+        ctx.font = '700 60px sans-serif';
+        ctx.fillStyle = '#000000';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.fillText(line1, startGridX_pub, 60);
+        ctx.fillText(line2, startGridX_pub, 60 + 60 + 10);
+      }
+      // Nagłówek z imieniem oraz informacjami o rodzicach i MPH (dwa wiersze).
+      // W trybie publikacji stosujemy większą czcionkę i czarny kolor; w standardowym
+      // pozostawiamy oryginalny rozmiar i kolor.  Wyrównanie zmieniamy tylko dla
+      // pierwszego wiersza (imię/pacjent) dalej w kodzie.
+      if (publication) {
+        ctx.font = '50px sans-serif';
+        ctx.fillStyle = '#000000';
+      } else {
+        ctx.font = '40px sans-serif';
+        ctx.fillStyle = '#555555';
+      }
+      ctx.textAlign = 'left';
+      // Skala dla siatki Palczewskiej. Zmienna palGridScaleFactor określa, jak bardzo
+      // siatka zostanie zmniejszona. Domyślnie 0.95 oznacza 5% zmniejszenia. Używamy
+      // jej również do wyliczenia położenia nagłówka, aby był wyrównany do siatki.
+      const palGridScaleFactor = 0.95;
+      // Oblicz szerokość i położenie siatki w osi X.  Poczatek siatki to 100 px,
+      // a całkowita szerokość strefy wykresu (wraz z marginesami na etykiety osi)
+      // wynosi (pw – 200). Skorzystaj z tej samej logiki co przy rysowaniu siatki,
+      // aby nagłówek zaczynał się i kończył równo z krateczkami (bez etykiet osi).
+      const originalChartXHeader = 100;
+      const originalChartWHeader = pw - 200;
+      const chartWHeader = originalChartWHeader * palGridScaleFactor;
+      const chartXHeader = originalChartXHeader + (originalChartWHeader - chartWHeader) / 2;
+      // Marginesy używane w funkcji drawCentileGrid (na etykiety osi).  Używamy
+      // identycznych wartości, aby określić faktyczną szerokość „krateczek”.
+      const gridLeftMargin = 120;
+      const gridRightMargin = 100;
+      const startGridX = chartXHeader + gridLeftMargin;
+      const endGridX   = chartXHeader + chartWHeader - gridRightMargin;
+      // Pobierz imię z advancedGrowthData lub z formularza zaawansowanego.
+      const nameFromState = (window.advancedGrowthData && window.advancedGrowthData.name) ||
+        (document.getElementById('advName') ? document.getElementById('advName').value.trim() : '');
+      // Zbuduj etykietę imienia.  W trybie publikacji zastępujemy polski prefiks „Imię i nazwisko” na „Patient”.
+      const nameLabelPrefix = publication ? 'Patient' : 'Imię i nazwisko';
+      const nameItem = nameFromState ? `${nameLabelPrefix}: ${nameFromState}` : `${nameLabelPrefix}: _________________________________`;
+      // Pobierz wartości wzrostów rodziców oraz docelowego wzrostu (MPH) z danych zaawansowanych lub formularza.
+      const advG = window.advancedGrowthData || {};
+      const motherVal = (typeof advG.motherHeight === 'number' && isFinite(advG.motherHeight))
+        ? advG.motherHeight
+        : (function() {
+            const el = document.getElementById('advMotherHeight');
+            return el ? parseFloat(el.value) : NaN;
+          })();
+      const fatherVal = (typeof advG.fatherHeight === 'number' && isFinite(advG.fatherHeight))
+        ? advG.fatherHeight
+        : (function() {
+            const el = document.getElementById('advFatherHeight');
+            return el ? parseFloat(el.value) : NaN;
+          })();
+      const mphVal = (typeof advG.targetHeight === 'number' && isFinite(advG.targetHeight)) ? advG.targetHeight : NaN;
+      // Ustal źródło danych do obliczeń percentyli (PALCZEWSKA lub OLAF).
+      const dataSourceEl = document.querySelector('input[name="dataSource"]:checked');
+      const dataSourceVal = dataSourceEl ? dataSourceEl.value : 'PALCZEWSKA';
+      const ageYearsAdult = 18;
+      // Funkcja pomocnicza do obliczania percentyla wzrostu dla wartości val z podanym parametrem płci.
+      function computeHeightStats(val, sexParent) {
+        if (!Number.isFinite(val)) return null;
+        let stats = null;
+        try {
+          if (dataSourceVal === 'PALCZEWSKA') {
+            if (typeof calcPercentileStatsPal === 'function') {
+              stats = calcPercentileStatsPal(val, sexParent, ageYearsAdult, 'HT');
+            }
+          } else {
+            if (typeof calcPercentileStats === 'function') {
+              stats = calcPercentileStats(val, sexParent, ageYearsAdult, 'HT');
+            }
+          }
+        } catch (_) {
+          stats = null;
+        }
+        return stats;
+      }
+      // Funkcja formatHeight przygotowuje tekst w formacie „123,4 cm (N centyl)”.
+      function formatHeight(val, centLabel) {
+        if (!Number.isFinite(val)) return null;
+        const valStr = val.toFixed(1).replace('.', ',');
+        return centLabel ? `${valStr} cm (${centLabel})` : `${valStr} cm`;
+      }
+      // Funkcja pomocnicza do budowy etykiet; zwraca ciąg tekstowy lub null jeśli nie można obliczyć.
+      function buildParentLabel(prefix, val, sexParent) {
+        if (!Number.isFinite(val)) return null;
+        const stats = computeHeightStats(val, sexParent);
+        if (!stats || typeof stats.percentile !== 'number') return null;
+        const centTxt = formatCentileLabel(stats.percentile);
+        const heightTxt = formatHeight(val, centTxt);
+        return `${prefix}: ${heightTxt}`;
+      }
+      // Zbuduj etykiety dla mamy, taty oraz MPH. Jeżeli którejś nie można obliczyć, pomiń ją.
+      // Zmieniamy prefiksy etykiet rodziców na angielskie odpowiedniki w trybie publikacji
+      // W trybie publikacji używamy angielskich etykiet z małą literą „stature”
+      const motherPrefix = publication ? 'Mother’s stature' : 'wzrost Mamy';
+      const fatherPrefix = publication ? 'Father’s stature' : 'wzrost Taty';
+      const motherLabel = buildParentLabel(motherPrefix, motherVal, 'F');
+      const fatherLabel = buildParentLabel(fatherPrefix, fatherVal, 'M');
+      // MPH wykorzystuje płeć dziecka.
+      const mphLabel = (function() {
+        if (!Number.isFinite(mphVal)) return null;
+        const stats = computeHeightStats(mphVal, sex);
+        if (!stats || typeof stats.percentile !== 'number') return null;
+        const centTxt = formatCentileLabel(stats.percentile);
+        const heightTxt = formatHeight(mphVal, centTxt);
+        return `MPH: ${heightTxt}`;
+      })();
+      // Pozycje wierszy: pierwszy wiersz oraz drugi wiersz (odstęp 75 px pomiędzy)
+      const rowNameY = 150 + 50 * 1.75;
+      const rowInfoY = rowNameY + 75;
+      // Przygotuj etykiety rodziców i MPH; w trybie publikacji dodaj średnik po
+      // nawiasie w etykietach rodziców i rozdziel etykiety na dwa wiersze.
+      let motherAdj = motherLabel;
+      let fatherAdj = fatherLabel;
+      if (publication) {
+        if (motherAdj) motherAdj = motherAdj + ';';
+        if (fatherAdj) fatherAdj = fatherAdj + ';';
+      }
+      // Jeśli jesteśmy w trybie publikacji, przebuduj układ nagłówka:
+      // - pierwszy wiersz: „Mother’s stature …” wyrównany do lewej i „Patient: …” wyrównany do prawej
+      // - drugi wiersz: „Father’s Stature …” oraz „MPH …” wyrównane do lewej
+      if (publication) {
+        // Rysowanie pierwszego wiersza
+        // Matka po lewej (mniejsza czcionka 1.0 rem) jeśli dostępna
+        if (motherAdj) {
+          ctx.font = '40px sans-serif';
+          ctx.fillStyle = '#000000';
+          ctx.textAlign = 'left';
+          ctx.fillText(motherAdj, startGridX, rowNameY);
+        }
+        // Imię/pacjent po prawej (większa czcionka 50 px)
+        ctx.font = '50px sans-serif';
+        ctx.fillStyle = '#000000';
+        ctx.textAlign = 'right';
+        ctx.fillText(nameItem, endGridX, rowNameY);
+        // Rysowanie drugiego wiersza (ojciec i MPH) – elementy wyrównane do lewej krawędzi siatki z równymi odstępami
+        const info2 = [];
+        if (fatherAdj) info2.push(fatherAdj);
+        if (mphLabel) info2.push(mphLabel);
+        if (info2.length > 0) {
+          // Ustaw mniejszą czcionkę i kolor
+          ctx.font = '40px sans-serif';
+          ctx.fillStyle = '#000000';
+          ctx.textAlign = 'left';
+          // Oblicz szerokości poszczególnych etykiet
+          const widths2 = info2.map(txt => ctx.measureText(txt).width);
+          const available2 = endGridX - startGridX;
+          const total2 = widths2.reduce((a,b) => a+b, 0);
+          const gaps = info2.length - 1;
+          let gap2 = gaps > 0 ? (available2 - total2) / gaps : 0;
+          if (gap2 < 20) gap2 = 20;
+          let xPos = startGridX;
+          info2.forEach((txt, idx) => {
+            ctx.fillText(txt, xPos, rowInfoY);
+            xPos += widths2[idx] + gap2;
+          });
+        }
+      } else {
+        // Układ standardowy: pierwszy wiersz zawiera tylko imię/pacjenta
+        ctx.textAlign = 'left';
+        ctx.fillText(nameItem, startGridX, rowNameY);
+        // Drugi wiersz: wszystkie dostępne etykiety (matka, ojciec, MPH) w jednym wierszu, wyrównanie do lewej
+        const infoItems = [motherLabel, fatherLabel, mphLabel].filter(Boolean);
+        if (infoItems.length > 0) {
+          ctx.fillStyle = '#555555';
+          ctx.font = '40px sans-serif';
+          // Oblicz szerokości tekstów i równomierny odstęp między nimi, tak aby
+          // cała grupa informacji mieściła się dokładnie w szerokości siatki (chartWHeader).
+          const widthsInfo = infoItems.map(txt => ctx.measureText(txt).width);
+          const availableInfoWidth = endGridX - startGridX;
+          const totalTextW = widthsInfo.reduce((a, b) => a + b, 0);
+          const gapCount = infoItems.length - 1;
+          let gap = gapCount > 0 ? (availableInfoWidth - totalTextW) / gapCount : 0;
+          if (gap < 20) gap = 20;
+          let currentX = startGridX;
+          infoItems.forEach((txt, idx) => {
+            ctx.fillText(txt, currentX, rowInfoY);
+            currentX += widthsInfo[idx] + gap;
+          });
+        }
+      }
+      // Parametry wykresu
+      // Ustawienia wykresu dla siatek Palczewskiej. Aby zmienić rozmiar siatki centylowej,
+      // zmodyfikuj wartość `palGridScaleFactor` zdefiniowaną powyżej przy nagłówku.
+      // Wartość 0.95 oznacza zmniejszenie siatki o 5% względem oryginalnych wymiarów.
+      const originalChartX = 100;
+      const originalChartY = 300 - 50; // lekko podnieś, aby podpisy nie kolidowały z nagłówkiem
+      const originalChartW = pw - 200;
+      const originalChartH = ph - originalChartY - 200;
+      // Oblicz nowe wymiary i przesunięcia tak, aby zmniejszona siatka była wyśrodkowana.
+      const chartW = originalChartW * palGridScaleFactor;
+      const chartH = originalChartH * palGridScaleFactor;
+      const chartX = originalChartX + (originalChartW - chartW) / 2;
+      const chartY = originalChartY + (originalChartH - chartH) / 2;
+      // Narysuj siatkę centylową
+      drawCentileGrid(ctx, {
+        x: chartX,
+        y: chartY,
+        w: chartW,
+        h: chartH,
+        curves: curves,
+        minY: dynMinY,
+        maxY: dynMaxY,
+        userVal: effVal,
+        userAgeMonths: effAge,
+        // Translate axis title in publication mode (Stature/Weight)
+        title: publication ? ((chartType === 'height') ? 'Stature (cm)' : 'Weight (kg)')
+                          : ((chartType === 'height') ? 'Wzrost (cm)'  : 'Waga (kg)'),
+        units: (chartType === 'height') ? 'cm' : 'kg',
+        percentiles: percentiles,
+        highlightBandIdx: bandIdx,
+        minX: rangeMinX,
+        maxX: rangeMaxX,
+        cutoffVal: (dynMaxY > maxY) ? maxY : undefined,
+        monochrome: publication
+      });
+      // Rysowanie historii (linie + punkty)
+      (function drawHistory() {
+        const leftMargin = 120, rightMargin = 100, topMargin = 80, bottomMargin = 80;
+        const pxBase = chartX + leftMargin;
+        const pyBase = chartY + topMargin;
+        const pwBase = chartW - leftMargin - rightMargin;
+        const phBase = chartH - topMargin - bottomMargin;
+        const xScale = pwBase / (rangeMaxX - rangeMinX);
+        const yScale = phBase / (dynMaxY - dynMinY);
+        ctx.save();
+        // Linie łączące kolejne pomiary
+        if (pts && pts.length >= 2) {
+          ctx.beginPath();
+          ctx.strokeStyle = '#000000';
+          // Podwójna grubość linii w trybie publikacji
+          const isPub = typeof window !== 'undefined' && window.publicationCharts;
+          ctx.lineWidth = isPub ? 6 : 3;
+          let started = false;
+          pts.forEach(m => {
+            const ageM = m.ageMonths;
+            const val  = (chartType === 'height') ? m.height : m.weight;
+            if (ageM == null || val == null) return;
+            const cx = pxBase + (ageM - rangeMinX) * xScale;
+            const cy = pyBase + phBase - (val - dynMinY) * yScale;
+            if (!started) { ctx.moveTo(cx, cy); started = true; } else { ctx.lineTo(cx, cy); }
+          });
+          ctx.stroke();
+        }
+        // Punkty pojedyncze
+        if (pts) {
+          pts.forEach(m => {
+            const ageM = m.ageMonths;
+            const val  = (chartType === 'height') ? m.height : m.weight;
+            if (ageM == null || val == null) return;
+            const cx = pxBase + (ageM - rangeMinX) * xScale;
+            const cy = pyBase + phBase - (val - dynMinY) * yScale;
+            ctx.beginPath();
+            ctx.fillStyle = '#000000';
+            const isPub = typeof window !== 'undefined' && window.publicationCharts;
+            const radius = isPub ? 12 : 8;
+            ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
+            ctx.fill();
+          });
+        }
+        ctx.restore();
+      })();
+      // Marker wieku kostnego tylko na wykresie wzrostu
+      if (chartType === 'height') {
+        (function drawBoneAgeMarkers() {
+          const adv = window.advancedGrowthData || null;
+          if (!adv) return;
+          const leftMargin = 120, rightMargin = 100, topMargin = 80, bottomMargin = 80;
+          const pxBase = chartX + leftMargin;
+          const pyBase = chartY + topMargin;
+          const pwBase = chartW - leftMargin - rightMargin;
+          const phBase = chartH - topMargin - bottomMargin;
+          const xScale = pwBase / (rangeMaxX - rangeMinX);
+          const yScale = phBase / (dynMaxY - dynMinY);
+          ctx.save();
+          // Aktualny wiek kostny i wzrost
+          if (typeof adv.boneAgeMonths === 'number' && !isNaN(adv.boneAgeMonths)) {
+            const boneXAge = adv.boneAgeMonths;
+            // Wykres wzrostu dotyczy aktualnej wysokości (effVal)
+            if (boneXAge >= rangeMinX && boneXAge <= rangeMaxX && Number.isFinite(effVal)) {
+              const cxBone = pxBase + (boneXAge - rangeMinX) * xScale;
+              const cyBone = pyBase + phBase - (effVal - dynMinY) * yScale;
+              const cxCurrent = pxBase + (effAge - rangeMinX) * xScale;
+              // W trybie publikacji użyj czarnych kolorów i większych rozmiarów
+              const isPub = typeof window !== 'undefined' && window.publicationCharts;
+              const colorBA = isPub ? '#000000' : '#00838d';
+              const lineWidthBA = isPub ? 4 : 2;
+              const radiusInner = isPub ? 18 : 12;
+              const radiusOuter = isPub ? 36 : 24;
+              // Pozioma linia
+              ctx.beginPath();
+              ctx.strokeStyle = colorBA;
+              ctx.lineWidth = lineWidthBA;
+              ctx.moveTo(cxBone, cyBone);
+              ctx.lineTo(cxCurrent, cyBone);
+              ctx.stroke();
+              // Kropka wypełniona
+              ctx.beginPath();
+              ctx.fillStyle = colorBA;
+              ctx.arc(cxBone, cyBone, radiusInner, 0, 2 * Math.PI);
+              ctx.fill();
+              // Pierścień
+              ctx.beginPath();
+              ctx.lineWidth = lineWidthBA;
+              ctx.strokeStyle = colorBA;
+              ctx.arc(cxBone, cyBone, radiusOuter, 0, 2 * Math.PI);
+              ctx.stroke();
+            }
+          }
+          // Historyczne wieki kostne – każdy zapisany w measurements ma boneAgeYears
+          if (adv && Array.isArray(adv.measurements)) {
+            adv.measurements.forEach(m => {
+              const bVal = (typeof m.boneAgeYears === 'number' || typeof m.boneAgeYears === 'string') ? parseFloat(m.boneAgeYears) : NaN;
+              const hVal = (typeof m.height === 'number' || typeof m.height === 'string') ? parseFloat(m.height) : NaN;
+              const aVal = (typeof m.ageMonths === 'number' || typeof m.ageMonths === 'string') ? parseFloat(m.ageMonths) : NaN;
+              if (!isNaN(bVal) && !isNaN(hVal) && !isNaN(aVal)) {
+                const boneM = Math.round(bVal * 12);
+                if (boneM >= rangeMinX && boneM <= rangeMaxX && hVal >= dynMinY && hVal <= dynMaxY) {
+                  const cxB = pxBase + (boneM - rangeMinX) * xScale;
+                  const cyB = pyBase + phBase - (hVal - dynMinY) * yScale;
+                  const cxCM = pxBase + (aVal - rangeMinX) * xScale;
+                  const isPub = typeof window !== 'undefined' && window.publicationCharts;
+                  const colorBA = isPub ? '#000000' : '#00838d';
+                  const lineWidthBA = isPub ? 4 : 2;
+                  const radiusInner = isPub ? 18 : 12;
+                  const radiusOuter = isPub ? 36 : 24;
+                  // linia pozioma
+                  ctx.beginPath();
+                  ctx.strokeStyle = colorBA;
+                  ctx.lineWidth = lineWidthBA;
+                  ctx.moveTo(cxB, cyB);
+                  ctx.lineTo(cxCM, cyB);
+                  ctx.stroke();
+                  // wypełnione koło
+                  ctx.beginPath();
+                  ctx.fillStyle = colorBA;
+                  ctx.arc(cxB, cyB, radiusInner, 0, 2 * Math.PI);
+                  ctx.fill();
+                  // pierścień
+                  ctx.beginPath();
+                  ctx.lineWidth = lineWidthBA;
+                  ctx.strokeStyle = colorBA;
+                  ctx.arc(cxB, cyB, radiusOuter, 0, 2 * Math.PI);
+                  ctx.stroke();
+                }
+              }
+            });
+          }
+          ctx.restore();
+        })();
+        /*
+         * Dodanie markera docelowego wzrostu (MPH / target height)
+         * Jeśli użytkownik wprowadził wzrost rodziców w sekcji zaawansowanej i
+         * wyliczony został docelowy wzrost (advancedGrowthData.targetHeight),
+         * narysuj na siatce Palczewskiej znacznik TH. Marker jest rysowany
+         * w wieku 18 lat (216 mies.) i opisany „TH <wartość> cm”. Używamy
+         * czerwonego koloru (#c62828), aby wyróżnić cel na tle wykresu.
+         */
+        (function drawTargetHeightMarker() {
+          try {
+            const advG = window.advancedGrowthData || null;
+            if (!advG || typeof advG.targetHeight !== 'number' || isNaN(advG.targetHeight)) return;
+            const mAgeTH = 216;
+            if (mAgeTH < rangeMinX || mAgeTH > rangeMaxX) return;
+            // Oblicz współczynniki skalowania takie same jak w drawBoneAgeMarkers()
+            const leftMargin = 120, rightMargin = 100, topMargin = 80, bottomMargin = 80;
+            const pxBase = chartX + leftMargin;
+            const pyBase = chartY + topMargin;
+            const pwBase = chartW - leftMargin - rightMargin;
+            const phBase = chartH - topMargin - bottomMargin;
+            const xScale = pwBase / (rangeMaxX - rangeMinX);
+            const yScale = phBase / (dynMaxY - dynMinY);
+            const cx = pxBase + (mAgeTH - rangeMinX) * xScale;
+            const cy = pyBase + phBase - (advG.targetHeight - dynMinY) * yScale;
+            ctx.save();
+            // Rysuj większy romb, aby marker był bardziej wyraźny.
+            const diamondHalf = 12;
+            // Sprawdź tryb publikacji: marker ma być czarny w trybie publikacji, czerwony w trybie standardowym
+            const isPubMode = typeof window !== 'undefined' && window.publicationCharts;
+            const thColor3 = isPubMode ? '#000000' : '#c62828';
+            ctx.beginPath();
+            ctx.fillStyle = thColor3;
+            ctx.moveTo(cx - diamondHalf, cy);
+            ctx.lineTo(cx, cy - diamondHalf);
+            ctx.lineTo(cx + diamondHalf, cy);
+            ctx.lineTo(cx, cy + diamondHalf);
+            ctx.closePath();
+            ctx.fill();
+            // Przygotuj tekst etykiety – tylko wartość bez prefiksu
+            const thValue = advG.targetHeight.toFixed(1).replace('.', ',');
+            ctx.font = 'bold 40px sans-serif';
+            // Kolor tekstu równy kolorowi markera (czarny lub czerwony)
+            ctx.fillStyle = thColor3;
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            // Mierzymy szerokości tekstu, aby wyśrodkować „cm” pod liczbą
+            const numW = ctx.measureText(thValue).width;
+            const cmW  = ctx.measureText('cm').width;
+            const fontSize = 40;
+            const half = fontSize / 2;
+            // Ustal długość linii łączącej romb z etykietą i odstęp przed tekstem
+            const lineLength = 40;
+            // Zmniejsz odstęp między linią a etykietą do 5 px dla lepszego zbliżenia
+            const gapBeforeText = 5;
+            // Pozycja x tekstu (początek pierwszej linii), odsuń tekst od rombu
+            const xText = cx + diamondHalf + lineLength + gapBeforeText;
+            // Narysuj poziomą linię od rombu w prawo; linia nie styka się z tekstem (pozostaw 5 px przerwy)
+            ctx.beginPath();
+            ctx.moveTo(cx + diamondHalf, cy);
+            ctx.lineTo(cx + diamondHalf + lineLength, cy);
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = thColor3;
+            ctx.stroke();
+            // Narysuj wartość docelową i jednostkę „cm” w dwóch wierszach
+            ctx.fillText(thValue, xText, cy - half);
+            ctx.fillText('cm', xText + (numW - cmW) / 2, cy + half);
+            ctx.restore();
+          } catch (_) {
+            /* ciche pominięcie błędów rysowania TH */
+          }
+        })();
+        // Dodanie podsumowania wyników na siatce Palczewskiej (1–18 lat) w trybie profesjonalnym
+        (function drawSummaryOverlay() {
+          try {
+            let professional = false;
+            if (typeof professionalMode !== 'undefined') {
+              professional = !!professionalMode;
+            } else {
+              professional = (localStorage.getItem('resultsMode') === 'professional');
+            }
+            // Skip drawing the summary overlay when not in professional mode or when publication charts mode is enabled.
+            if (!professional || window.publicationCharts) return;
+            // Podsumowanie rysujemy tylko na wykresie wzrostu
+            if (chartType !== 'height') return;
+            const summaryEl = document.getElementById('currentSummaryContent');
+            if (!summaryEl) return;
+            let raw = summaryEl.innerText || summaryEl.textContent || '';
+            raw = raw.trim();
+            if (!raw) return;
+            // Split raw summary into lines, then post‑process to shorten lines and select relevant ones.
+            let rawLines = raw.split(/\n+/).map(l => l.trim()).filter(l => l);
+            // Build an array of objects { text, bullet } where bullet indicates whether to draw a dot.
+            const processed = [];
+            rawLines.forEach(function(l) {
+              if (/^(Waga|Wzrost|BMI|MPH|hSDS)/i.test(l)) {
+                // For weight and height, break after the comma following closing parenthesis.
+                if (/^(Waga|Wzrost)/i.test(l)) {
+                  const idx = l.indexOf('),');
+                  if (idx >= 0) {
+                    const part1 = l.substring(0, idx + 2).trim();
+                    const part2 = l.substring(idx + 2).trim();
+                    processed.push({ text: part1, bullet: true });
+                    if (part2) processed.push({ text: part2, bullet: false });
+                  } else {
+                    processed.push({ text: l, bullet: true });
+                  }
+                } else {
+                  processed.push({ text: l, bullet: true });
+                }
+              }
+            });
+            const lines = processed;
+            if (!lines.length) return;
+            const leftMargin = 120, rightMargin = 100, topMargin = 80, bottomMargin = 80;
+            const pxBase = chartX + leftMargin;
+            const pyBase = chartY + topMargin;
+            const pwBase = chartW - leftMargin - rightMargin;
+            const phBase = chartH - topMargin - bottomMargin;
+            const xScale = pwBase / (rangeMaxX - rangeMinX);
+            const yScale = phBase / (dynMaxY - dynMinY);
+            // W Palczewskiej odsuwamy o 1 rok (12 mies.) i 5 jednostek wzrostu
+            const offsetMonths = 12;
+            const offsetValue  = 5;
+            const anchorX = pxBase + pwBase;
+            const anchorY = pyBase + phBase;
+            ctx.save();
+            ctx.font = '32px sans-serif';
+            const lineHeight = 42;
+            const padding = 20;
+            let maxWidth = 0;
+            lines.forEach(obj => {
+              const w = ctx.measureText(obj.text).width;
+              if (w > maxWidth) maxWidth = w;
+            });
+            const bulletRadius = 6;
+            const bulletSpacing = 20;
+            const boxWidth  = padding * 2 + bulletRadius * 2 + bulletSpacing + maxWidth;
+            const boxHeight = padding * 2 + lines.length * lineHeight;
+            const dx = offsetMonths * xScale;
+            const dy = offsetValue  * yScale;
+            const boxX = anchorX - dx - boxWidth;
+            const boxY = anchorY - dy - boxHeight;
+            // Biała ramka z czarnym obramowaniem
+            ctx.beginPath();
+            ctx.lineWidth = 6;
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeStyle = '#000000';
+            ctx.rect(boxX, boxY, boxWidth, boxHeight);
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillStyle = '#000000';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            lines.forEach((lineObj, idx) => {
+              const y = boxY + padding + lineHeight * idx + lineHeight / 2;
+              const bx = boxX + padding + bulletRadius;
+              if (lineObj.bullet) {
+                ctx.beginPath();
+                ctx.arc(bx, y, bulletRadius, 0, 2 * Math.PI);
+                ctx.fill();
+              }
+              const tx = bx + bulletRadius + bulletSpacing;
+              ctx.fillText(lineObj.text, tx, y);
+            });
+            ctx.restore();
+          } catch (_) {
+            /* ignoruj błędy rysowania podsumowania */
+          }
+        })();
+        // Rysuj strzałki z komentarzami dla pomiarów w trybie publikacji na wykresie wzrostu.
+        (function drawArrowAnnotations() {
+          try {
+            // Strzałki rysujemy wyłącznie w trybie publikacji i tylko na wykresie wzrostu.
+            if (!window.publicationCharts || chartType !== 'height') return;
+            const adv = window.advancedGrowthData || null;
+            if (!adv) return;
+            // Przygotuj listę punktów z włączonymi strzałkami.
+            const arrowPts = [];
+            if (Array.isArray(adv.measurements)) {
+              adv.measurements.forEach(function(m) {
+                const amVal = Number(m.ageMonths);
+                const hv = (m.height !== null && m.height !== undefined && m.height !== '') ? parseFloat(m.height) : NaN;
+                if (m.arrowEnabled && Number.isFinite(amVal) && Number.isFinite(hv)) {
+                  arrowPts.push({ ageMonths: amVal, value: hv, comment: (typeof m.arrowComment === 'string' ? m.arrowComment : '') });
+                }
+              });
+            }
+            // Dodaj bieżący pomiar, jeśli zaznaczono strzałkę.
+            if (adv.currentArrowEnabled) {
+              const amC = Number(adv.currentAgeMonths);
+              const hvC = (adv.currentHeight !== null && adv.currentHeight !== undefined) ? parseFloat(adv.currentHeight) : NaN;
+              if (Number.isFinite(amC) && Number.isFinite(hvC)) {
+                arrowPts.push({ ageMonths: amC, value: hvC, comment: (typeof adv.currentArrowComment === 'string' ? adv.currentArrowComment : '') });
+              }
+            }
+            if (!arrowPts.length) return;
+            // Oblicz skalę i współrzędne bazowe, analogiczne do drawHistory().
+            const leftMargin2 = 120, rightMargin2 = 100, topMargin2 = 80, bottomMargin2 = 80;
+            const pxBase2 = chartX + leftMargin2;
+            const pyBase2 = chartY + topMargin2;
+            const pwBase2 = chartW - leftMargin2 - rightMargin2;
+            const phBase2 = chartH - topMargin2 - bottomMargin2;
+            const xScale2 = pwBase2 / (rangeMaxX - rangeMinX);
+            const yScale2 = phBase2 / (dynMaxY - dynMinY);
+            // Posortuj punkty według wieku, aby rozkładać etykiety od lewej do prawej.
+            arrowPts.sort(function(a,b) { return a.ageMonths - b.ageMonths; });
+            // Lista już zajętych obszarów etykiet, aby zapobiegać nakładaniu.
+            const occupied = [];
+            ctx.save();
+            // Ustaw parametry rysowania: czarna linia i wypełnienia.
+            ctx.strokeStyle = '#000000';
+            ctx.fillStyle = '#000000';
+            // Użyj czcionki 1 rem (~40 px) do mierzenia tekstu i rysowania etykiet.
+            const fontPx2 = 40;
+            ctx.font = `normal ${fontPx2}px sans-serif`;
+            const lineHeight2 = fontPx2 * 1.3;
+            const paddingX2 = 20;
+            const paddingY2 = 20;
+            const borderW2 = 3;
+            const arrowLineW2 = 6;
+            const arrowHeadH2 = 10; // wysokość grotów w px
+            const defaultArrowH2 = 10 * yScale2;
+            arrowPts.forEach(function(pt) {
+              const cxPt = pxBase2 + (pt.ageMonths - rangeMinX) * xScale2;
+              const cyPt = pyBase2 + phBase2 - (pt.value - dynMinY) * yScale2;
+              let commentText = (pt.comment || '').trim();
+              // Podziel komentarz na wiersze o maks. 12 znakach.
+              const linesArr = [];
+              if (commentText) {
+                let idx = 0;
+                while (idx < commentText.length) {
+                  linesArr.push(commentText.substring(idx, idx + 12));
+                  idx += 12;
+                }
+              }
+              // Zmierz szerokości wierszy.
+              let maxLineW2 = 0;
+              linesArr.forEach(function(line) {
+                const w = ctx.measureText(line).width;
+                if (w > maxLineW2) maxLineW2 = w;
+              });
+              const boxW2 = linesArr.length > 0 ? paddingX2 * 2 + maxLineW2 : 0;
+              const boxH2 = linesArr.length > 0 ? paddingY2 * 2 + linesArr.length * lineHeight2 : 0;
+              // Ustaw wierzchołek grotu 15 px poniżej punktu pomiarowego.
+              // W trybie publikacji strzałki powinny być dłuższe, dlatego grot
+              // znajduje się 15 px pod pomiarem, a ciało strzałki rozciąga się w dół od grotu.
+              const arrowTipY2 = cyPt + 15;
+              let arrowHeight2 = defaultArrowH2;
+              let arrowBottom2;
+              let labelTop2;
+              let labelLeft2 = cxPt - (boxW2 / 2);
+              // Funkcja pomocnicza do obliczania prostokąta etykiety na podstawie bieżącej wysokości strzałki.
+              function computeBoxRect() {
+                arrowBottom2 = arrowTipY2 + arrowHeight2;
+                labelTop2 = arrowBottom2 + 5;
+                return {
+                  x0: labelLeft2 - borderW2,
+                  y0: labelTop2 - borderW2,
+                  x1: labelLeft2 + boxW2 + borderW2,
+                  y1: labelTop2 + boxH2 + borderW2
+                };
+              }
+              let boxRect2 = computeBoxRect();
+              // Jeśli etykieta istnieje, sprawdź kolizje i w razie potrzeby wydłuż strzałkę.
+              if (linesArr.length > 0) {
+                let attempt2 = 0;
+                while (true) {
+                  let intersects2 = false;
+                  for (let j = 0; j < occupied.length; j++) {
+                    const b = occupied[j];
+                    const overlapX2 = !(boxRect2.x1 < b.x0 || boxRect2.x0 > b.x1);
+                    const overlapY2 = !(boxRect2.y1 < b.y0 || boxRect2.y0 > b.y1);
+                    if (overlapX2 && overlapY2) {
+                      intersects2 = true;
+                      break;
+                    }
+                  }
+                  if (!intersects2) break;
+                  // wydłuż strzałkę o domyślną wysokość (10 cm) i przelicz
+                  arrowHeight2 += defaultArrowH2;
+                  boxRect2 = computeBoxRect();
+                  attempt2++;
+                  if (attempt2 > 10) break;
+                }
+                // Zarejestruj zajęty obszar etykiety
+                occupied.push(boxRect2);
+              }
+              // Rysuj strzałkę: najpierw ciało, potem grot.
+              ctx.lineWidth = arrowLineW2;
+              // Linia strzałki od końca grotu do arrowBottom2
+              const bodyStart2 = arrowTipY2 + arrowHeadH2;
+              ctx.beginPath();
+              ctx.moveTo(cxPt, bodyStart2);
+              ctx.lineTo(cxPt, arrowTipY2 + arrowHeight2);
+              ctx.stroke();
+              // Grot: trójkąt z wierzchołkiem na arrowTipY2
+              // Szerokość grotu strzałki wynosi 20 px (po 10 px na lewo i prawo od osi)
+              const halfW2 = 20 / 2;
+              ctx.beginPath();
+              ctx.moveTo(cxPt, arrowTipY2);
+              ctx.lineTo(cxPt - halfW2, arrowTipY2 + arrowHeadH2);
+              ctx.lineTo(cxPt + halfW2, arrowTipY2 + arrowHeadH2);
+              ctx.closePath();
+              ctx.fill();
+              // Rysuj etykietę, jeśli są wiersze
+              if (linesArr.length > 0) {
+                ctx.save();
+                ctx.fillStyle = '#ffffff';
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = borderW2;
+                ctx.beginPath();
+                ctx.rect(labelLeft2, labelTop2, boxW2, boxH2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = '#000000';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'top';
+                linesArr.forEach(function(line, idx2) {
+                  const tx2 = labelLeft2 + paddingX2;
+                  const ty2 = labelTop2 + paddingY2 + idx2 * lineHeight2;
+                  ctx.fillText(line, tx2, ty2);
+                });
+                ctx.restore();
+              }
+            });
+            ctx.restore();
+          } catch (_) {
+            /* ignoruj błędy rysowania strzałek */
+          }
+        })();
+      }
+      // Stopka na dole strony: w trybie publikacji zastępujemy polską stopkę angielską etykietą.
+      ctx.save();
+      ctx.textBaseline = 'bottom';
+      const footerFontPx = 40;
+      const footerY = ph - (50 * 2);
+      if (publication) {
+        // Wylicz lewy margines siatki, aby tekst był zrównany z krateczkami.  Korzystamy z tych samych
+        // marginesów i skalowania co dla nagłówków siatki (palGridScaleFactor).  Nie deklarujemy
+        // ponownie tej zmiennej globalnie, aby nie kolidować z innymi definicjami.
+        const scaleFooter = 0.95;
+        const origFooterX = 100;
+        const origFooterW = pw - 200;
+        const footerW = origFooterW * scaleFooter;
+        const footerX = origFooterX + (origFooterW - footerW) / 2;
+        const leftMarginFooter = 120;
+        const startGridX_footer = footerX + leftMarginFooter;
+        ctx.textAlign = 'left';
+        ctx.font = `normal ${footerFontPx}px sans-serif`;
+        ctx.fillStyle = '#000000';
+        // W trybie publikacji użyj angielskiej stopki z informacją o źródle danych
+        const pubText = 'Data source: National Research Institute of Mother and Child in Warsaw, I. Palczewska, Z. Niedźwiecka, 1999';
+        ctx.fillText(pubText, startGridX_footer, footerY);
+      } else {
+        ctx.textAlign = 'left';
+        // Tekst stopki: część zwykła bez spacji na końcu oraz adres strony poprzedzony spacją.
+        const footerPrefix = 'Siatkę centylową wygenerowano ze strony';
+        const footerSite   = ' wagaiwzrost.pl';
+        // Zmierz szerokości poszczególnych fragmentów przy użyciu odpowiednich czcionek.
+        ctx.font = `normal ${footerFontPx}px sans-serif`;
+        const prefixWidth = ctx.measureText(footerPrefix).width;
+        ctx.font = `700 ${footerFontPx}px sans-serif`;
+        const siteWidth = ctx.measureText(footerSite).width;
+        // Wylicz łączną szerokość tekstu i początkowy X tak, by tekst był wyśrodkowany.
+        const totalFooterWidth = prefixWidth + siteWidth;
+        const startXFooter = pw / 2 - totalFooterWidth / 2;
+        // Narysuj część zwykłą
+        ctx.font = `normal ${footerFontPx}px sans-serif`;
+        ctx.fillStyle = '#555555';
+        ctx.fillText(footerPrefix, startXFooter, footerY);
+        // Narysuj adres strony pogrubioną czcionką
+        ctx.font = `700 ${footerFontPx}px sans-serif`;
+        ctx.fillText(footerSite, startXFooter + prefixWidth, footerY);
+      }
+      ctx.restore();
+      return canvas;
+    }
+    // Główna funkcja generująca PDF z siatkami Palczewskiej.
+    // Dla dzieci poniżej 3 lat korzystamy z wariantu niemowlęcego (0–<3 lata),
+    // a dla starszych z rozbudowanego układu Palczewskiej (3–18 lat).
+    async function generatePalczewskaCentileCharts() {
+      const ageEl    = document.getElementById('age');
+      const ageMEl   = document.getElementById('ageMonths');
+      const sexEl    = document.getElementById('sex');
+      const weightEl = document.getElementById('weight');
+      const heightEl = document.getElementById('height');
+      if (!ageEl || !sexEl || !weightEl || !heightEl) {
+        alert('Wprowadź wiek, płeć, wagę i wzrost, aby wygenerować siatkę.');
+        return;
+      }
+      const years  = parseFloat(ageEl.value) || 0;
+      const months = ageMEl ? (parseFloat(ageMEl.value) || 0) : 0;
+      const ageMonths = Math.round(years * 12 + months);
+      if (ageMonths < 0 || ageMonths > 216) {
+        alert('Siatki Palczewskiej są dostępne dla dzieci od 0 do 18 lat.');
+        return;
+      }
+
+      if (ageMonths < 36) {
+        try {
+          window.overrideCentileSource = 'PALCZEWSKA';
+          await generateCentileChart();
+        } finally {
+          window.overrideCentileSource = undefined;
+        }
+        return;
+      }
+
+      const sex   = (sexEl.value === 'M') ? 'M' : 'F';
+      const weight = parseFloat(weightEl.value);
+      const height = parseFloat(heightEl.value);
+
+      let __prevForceEnglish = false;
+      try {
+        __prevForceEnglish = (typeof window !== 'undefined' && window.forceCentileEnglish) ? window.forceCentileEnglish : false;
+        if (typeof window !== 'undefined') {
+          window.forceCentileEnglish = !!window.publicationCharts;
+        }
+      } catch (_) {
+        __prevForceEnglish = false;
+      }
+      try {
+        const heightCanvas = buildPalczewskaPageCanvas({ chartType: 'height', sex, userAgeMonths: ageMonths, userWeight: weight, userHeight: height });
+        const weightCanvas = buildPalczewskaPageCanvas({ chartType: 'weight', sex, userAgeMonths: ageMonths, userWeight: weight, userHeight: height });
+        const dataUrl1 = heightCanvas.toDataURL('image/jpeg', 1.0);
+        const dataUrl2 = weightCanvas.toDataURL('image/jpeg', 1.0);
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        pdf.addImage(dataUrl1, 'JPEG', 0, 0, 210, 297);
+        pdf.addPage();
+        pdf.addImage(dataUrl2, 'JPEG', 0, 0, 210, 297);
+        const blob = pdf.output('blob');
+        const url  = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+      } finally {
+        try {
+          if (typeof window !== 'undefined') {
+            window.forceCentileEnglish = __prevForceEnglish;
+          }
+        } catch (_) {
+          /* ignore */
+        }
+      }
+    }
+    // Zarejestruj obsługę przycisków generowania siatek.
+    document.addEventListener('DOMContentLoaded', function() {
+      const palBtn  = document.getElementById('generatePalCentileChart');
+      const olafBtn = document.getElementById('generateCentileChart');
+      if (palBtn) {
+        palBtn.addEventListener('click', generatePalczewskaCentileCharts);
+      }
+      function updateCentileButtons() {
+        const state = (typeof getCentileChartState === 'function')
+          ? getCentileChartState()
+          : { visible: true, source: 'OLAF', label: 'Generuj siatkę OLAF', supported: true, message: '' };
+
+        if (palBtn) {
+          palBtn.style.display = (state.visible && state.source === 'PALCZEWSKA') ? '' : 'none';
+          palBtn.disabled = !state.supported;
+          palBtn.title = (state.source === 'PALCZEWSKA') ? (state.message || '') : '';
+        }
+        if (olafBtn) {
+          olafBtn.style.display = (state.visible && state.source !== 'PALCZEWSKA') ? '' : 'none';
+          olafBtn.textContent = state.label;
+          olafBtn.disabled = !state.supported;
+          olafBtn.title = (state.source !== 'PALCZEWSKA') ? (state.message || '') : '';
+        }
+      }
+
+      if (typeof window !== 'undefined') {
+        window.updateCentileButtons = updateCentileButtons;
+      }
+
+      const sources = document.querySelectorAll('input[name="dataSource"]');
+      sources.forEach((r) => {
+        r.addEventListener('change', updateCentileButtons);
+      });
+      const ageInputField = document.getElementById('age');
+      const ageMonthsField = document.getElementById('ageMonths');
+      if (ageInputField)  ageInputField.addEventListener('input', updateCentileButtons);
+      if (ageMonthsField) ageMonthsField.addEventListener('input', updateCentileButtons);
+      updateCentileButtons();
+    });
+    // Udostępnij funkcję globalnie, aby można było ją wywołać z konsoli
+    window.generatePalczewskaCentileCharts = generatePalczewskaCentileCharts;
+  })();
+  </script>
 
   <!-- Skrypt aktywujący moduł lekarski na stronie DocPro. Po załadowaniu
        strony automatycznie zaznacza ukryty checkbox #isDoctor i wywołuje
