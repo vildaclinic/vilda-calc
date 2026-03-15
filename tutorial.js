@@ -791,11 +791,7 @@
         ],
         primaryLabel: 'Przejdź do formularza',
         action: () => {
-          ensureInlineGuide('personal');
-          if (focusSingleColumnDataTarget('personal')) return;
-          waitForVisible('#age', 1200, (input) => {
-            softlyFocus(input, { message: 'Zacznij od wieku, a następnie wpisz wagę i wzrost.' });
-          });
+          runHomePrimaryAction('personal', { ensureGuide: true });
         }
       },
       {
@@ -811,11 +807,7 @@
         ],
         primaryLabel: 'Wprowadź dane pacjenta',
         action: () => {
-          ensureInlineGuide('doctor');
-          if (focusSingleColumnDataTarget('doctor')) return;
-          waitForVisible('#age', 1200, (input) => {
-            softlyFocus(input, { message: 'Wprowadź dane pacjenta, aby wyświetlić wyniki i w razie potrzeby przełączyć na „Wyniki profesjonalne”.' });
-          });
+          runHomePrimaryAction('doctor', { ensureGuide: true });
         }
       }
     ];
@@ -979,6 +971,22 @@
       return `Uzupełnij pole „${fieldLabel}”, aby przejść dalej do wyników pacjenta.`;
     }
     return `Uzupełnij pole „${fieldLabel}”, aby wyświetlić wyniki.`;
+  }
+
+  function runHomePrimaryAction(roleId, { ensureGuide = false } = {}) {
+    if (ensureGuide) {
+      ensureInlineGuide(roleId);
+    }
+
+    if (focusSingleColumnDataTarget(roleId)) return;
+
+    const fallbackMessage = roleId === 'doctor'
+      ? 'Wprowadź dane pacjenta, aby wyświetlić wyniki i w razie potrzeby przełączyć na „Wyniki profesjonalne”.'
+      : 'Zacznij od wieku, a następnie wpisz wagę i wzrost.';
+
+    waitForVisible('#age', 1200, (input) => {
+      softlyFocus(input, { message: fallbackMessage });
+    });
   }
 
   function focusSingleColumnDataTarget(roleId) {
@@ -1241,10 +1249,7 @@
             type: 'button',
             label: 'Wprowadź dane pacjenta',
             onClick: () => {
-              if (focusSingleColumnDataTarget('doctor')) return;
-              waitForVisible('#age', 1200, (input) => {
-                softlyFocus(input, { message: 'Wprowadź dane pacjenta, aby po wyświetleniu wyników przełączyć także na „Wyniki profesjonalne”.' });
-              });
+              runHomePrimaryAction('doctor');
             }
           },
           {
@@ -1278,10 +1283,7 @@
             type: 'button',
             label: 'Uzupełnij dane',
             onClick: () => {
-              if (focusSingleColumnDataTarget('personal')) return;
-              waitForVisible('#age', 1200, (input) => {
-                softlyFocus(input, { message: 'Zacznij od wieku, potem wpisz wagę i wzrost.' });
-              });
+              runHomePrimaryAction('personal');
             }
           },
           {
