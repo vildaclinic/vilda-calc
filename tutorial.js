@@ -911,15 +911,22 @@
       )
     );
     const currentVisibleLift = Math.max(0, Math.round(viewportHeight - dockRect.top));
+    const dockTopLift = Math.max(0, dockHeight + dockBottomGap);
     const projectedVisibleLift = dock.classList.contains('is-hidden')
       ? currentVisibleLift
       : Math.max(
-          dockHeight + dockBottomGap + remPx,
+          dockTopLift + remPx,
           dockHeight + (dockBottomGap * 2)
         );
     const cushion = 6;
+    const fullSafeBottom = Math.max(baseBottom, currentVisibleLift, projectedVisibleLift) + cushion;
+    const dockAnchorBottom = dock.classList.contains('is-hidden')
+      ? currentVisibleLift
+      : Math.max(currentVisibleLift, dockTopLift);
+    const elevatedGap = Math.max(0, fullSafeBottom - dockAnchorBottom);
+    const relaxedGap = Math.max(0, Math.round(elevatedGap / 2));
 
-    return Math.max(baseBottom, currentVisibleLift, projectedVisibleLift) + cushion;
+    return Math.max(baseBottom, dockAnchorBottom + relaxedGap);
   }
 
   function applyDesktopDockAwareOffset() {
