@@ -32,6 +32,7 @@
     primaryBtn: null,
     secondaryLink: null,
     launcher: null,
+    launcherPulseTimer: null,
     toast: null,
     bannerObserver: null,
     helpVisible: false,
@@ -117,6 +118,21 @@
         --ww-text: #14212b;
         --ww-muted: #50606f;
         --ww-border: rgba(0,0,0,0.08);
+        --ww-pro-accent: #9900ff;
+        --ww-pro-accent-soft: rgba(153, 0, 255, 0.08);
+        --ww-pro-accent-ring: rgba(153, 0, 255, 0.26);
+      }
+
+      @keyframes wwHelpPulsePurple {
+        0% {
+          box-shadow: 0 0 0 0 var(--ww-pro-accent-ring);
+        }
+        70% {
+          box-shadow: 0 0 0 10px var(--ww-pro-accent-soft);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(153, 0, 255, 0);
+        }
       }
 
       .ww-help-launcher {
@@ -144,7 +160,23 @@
         font-weight: 700;
         cursor: pointer;
         white-space: nowrap;
+        overflow: visible;
+        isolation: isolate;
         transition: bottom 220ms ease, background 0.2s ease, transform 220ms ease, opacity 220ms ease, box-shadow 120ms ease;
+      }
+
+      .ww-help-launcher::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        border: 1.5px solid rgba(153, 0, 255, 0.72);
+        box-shadow: 0 0 0 0 rgba(153, 0, 255, 0);
+        pointer-events: none;
+      }
+
+      .ww-help-launcher.ww-help-launcher--pulse::after {
+        animation: wwHelpPulsePurple 1.333333s ease-in-out 6;
       }
 
       body.has-mobile-bottom-dock .ww-help-launcher {
@@ -159,6 +191,12 @@
       .ww-help-launcher__label {
         display: inline-block;
         white-space: nowrap;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .ww-help-launcher.ww-help-launcher--pulse::after {
+          animation: none;
+        }
       }
 
       .ww-close-icon {
@@ -645,6 +683,18 @@
 
     document.body.appendChild(btn);
     state.launcher = btn;
+
+    window.requestAnimationFrame(() => {
+      if (!state.launcher) return;
+      state.launcher.classList.add('ww-help-launcher--pulse');
+      window.clearTimeout(state.launcherPulseTimer);
+      state.launcherPulseTimer = window.setTimeout(() => {
+        if (state.launcher) {
+          state.launcher.classList.remove('ww-help-launcher--pulse');
+        }
+      }, 8050);
+    });
+
     observeCookieBanner();
   }
 
