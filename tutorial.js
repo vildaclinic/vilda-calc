@@ -34,7 +34,8 @@
     launcher: null,
     toast: null,
     bannerObserver: null,
-    helpVisible: false
+    helpVisible: false,
+    formGuideAutoDismissCleanup: null
   };
 
   function detectPageType() {
@@ -384,6 +385,45 @@
         box-shadow: 0 14px 30px rgba(0,0,0,0.08);
       }
 
+      .ww-inline-guide--embedded {
+        margin-top: 0;
+        padding: 0;
+        border: 0;
+        box-shadow: none;
+        background: transparent;
+        color: var(--ww-text);
+        text-align: left;
+      }
+
+      .ww-inline-guide--embedded .ww-inline-guide__head,
+      .ww-inline-guide--embedded .ww-inline-guide__desc,
+      .ww-inline-guide--embedded .ww-inline-guide__list,
+      .ww-inline-guide--embedded .ww-inline-guide__actions {
+        text-align: left;
+      }
+
+      .ww-info-card-has-guide {
+        display: block !important;
+      }
+
+      .ww-info-card-has-guide #errorBox {
+        display: none !important;
+      }
+
+      .ww-compare-guide-host {
+        display: block !important;
+        margin: 0 !important;
+        font-size: 1rem !important;
+        font-weight: 400 !important;
+        text-align: left !important;
+        color: var(--ww-text) !important;
+      }
+
+      .ww-compare-guide-host a {
+        color: inherit;
+        font-size: inherit;
+      }
+
       .ww-inline-guide__head {
         display: flex;
         align-items: flex-start;
@@ -614,18 +654,18 @@
     const closeBtn = overlay.querySelector('.ww-onboarding-close');
     const dismissBtn = overlay.querySelector('.ww-btn--ghost');
 
-    closeBtn.addEventListener('click', () => hideSheet({ showLauncherHint: true }));
-    dismissBtn.addEventListener('click', () => hideSheet({ showLauncherHint: true }));
+    closeBtn.addEventListener('click', () => hideSheet({ showLauncherHint: true, renderInlineGuide: true }));
+    dismissBtn.addEventListener('click', () => hideSheet({ showLauncherHint: true, renderInlineGuide: true }));
 
     overlay.addEventListener('click', (event) => {
       if (event.target === overlay) {
-        hideSheet({ showLauncherHint: true });
+        hideSheet({ showLauncherHint: true, renderInlineGuide: true });
       }
     });
 
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape' && state.helpVisible) {
-        hideSheet();
+        hideSheet({ renderInlineGuide: true });
       }
     });
 
@@ -788,10 +828,15 @@
     });
   }
 
-  function hideSheet({ showLauncherHint = false } = {}) {
+  function hideSheet({ showLauncherHint = false, renderInlineGuide = false } = {}) {
     if (!state.overlay) return;
     state.overlay.classList.remove('is-open');
     state.helpVisible = false;
+
+    if (renderInlineGuide && state.role) {
+      ensureInlineGuide(state.role);
+    }
+
     if (showLauncherHint && ssGet(STORAGE_KEYS.launcherHint) !== 'true') {
       ssSet(STORAGE_KEYS.launcherHint, 'true');
       showToast('Pomoc możesz otworzyć ponownie przyciskiem „Pomoc”.');
@@ -864,16 +909,78 @@
     tick();
   }
 
-  function buildInlineGuide(config) {
+  function detachFormGuideAutoDismiss() {
+    if (typeof state.formGuideAutoDismissCleanup === 'function') {
+      state.formGuideAutoDismissCleanup();
+      state.formGuideAutoDismissCleanup = null;
+    }
+  }
+
+  function removeInlineGuide({ restoreInfoCard = true } = {}) {
     const existing = document.getElementById('wwInlineGuide');
     if (existing) existing.remove();
 
-    const anchor = document.querySelector(config.anchorSelector);
-    if (!anchor || !anchor.parentNode) return;
+    detachFormGuideAutoDismiss();
+
+    const infoCard = document.getElementById('infoMessages');
+    if (infoCard) infoCard.classList.remove('ww-info-card-has-guide');
+
+    const compareInstruction = document.getElementById('compareInstruction');
+    if (!compareInstruction) return;
+
+    if (compareInstruction.dataset.wwGuideEmbedded === 'true') {
+      compareInstruction.classList.remove('ww-compare-guide-host');
+      delete compareInstruction.dataset.wwGuideEmbedded;
+
+      if (restoreInfoCard) {
+        compareInstruction.innerHTML = compareInstruction.dataset.wwOriginalHtml || '';
+        const originalDisplay = compareInstruction.dataset.wwOriginalInlineDisplay || '';
+        if (originalDisplay) {
+          compareInstruction.style.display = originalDisplay;
+        } else {
+          compareInstruction.style.removeProperty('display');
+        }
+
+        if (typeof window.updateCompareInstructionVisibility === 'function') {
+          try {
+            window.updateCompareInstructionVisibility();
+          } catch (_) {
+            /* ignore */
+          }
+        }
+      }
+    }
+  }
+
+  function attachFormGuideAutoDismiss() {
+    detachFormGuideAutoDismiss();
+
+    const form = document.getElementById('calcForm');
+    if (!form) return;
+
+    const dismiss = (event) => {
+      const target = event.target;
+      if (!target || !(target instanceof Element)) return;
+      if (!document.getElementById('wwInlineGuide')) return;
+      if (!target.closest('#calcForm')) return;
+      removeInlineGuide();
+    };
+
+    form.addEventListener('input', dismiss, true);
+    form.addEventListener('change', dismiss, true);
+
+    state.formGuideAutoDismissCleanup = () => {
+      form.removeEventListener('input', dismiss, true);
+      form.removeEventListener('change', dismiss, true);
+    };
+  }
+
+  function buildInlineGuide(config) {
+    removeInlineGuide();
 
     const card = document.createElement('section');
     card.id = 'wwInlineGuide';
-    card.className = 'card ww-inline-guide';
+    card.className = config.embedInInfoCard ? 'ww-inline-guide ww-inline-guide--embedded' : 'card ww-inline-guide';
 
     const head = document.createElement('div');
     head.className = 'ww-inline-guide__head';
@@ -895,7 +1002,7 @@
     closeBtn.className = 'ww-inline-guide__close';
     closeBtn.setAttribute('aria-label', 'Ukryj szybki start');
     closeBtn.innerHTML = getCloseIconMarkup();
-    closeBtn.addEventListener('click', () => card.remove());
+    closeBtn.addEventListener('click', () => removeInlineGuide());
 
     head.appendChild(headText);
     head.appendChild(closeBtn);
@@ -931,6 +1038,34 @@
     card.appendChild(head);
     card.appendChild(list);
     card.appendChild(actions);
+
+    if (config.embedInInfoCard) {
+      const infoCard = document.getElementById('infoMessages');
+      const compareInstruction = document.getElementById('compareInstruction');
+      if (infoCard && compareInstruction) {
+        if (!compareInstruction.dataset.wwOriginalHtml) {
+          compareInstruction.dataset.wwOriginalHtml = compareInstruction.innerHTML;
+        }
+        if (!Object.prototype.hasOwnProperty.call(compareInstruction.dataset, 'wwOriginalInlineDisplay')) {
+          compareInstruction.dataset.wwOriginalInlineDisplay = compareInstruction.style.display || '';
+        }
+
+        infoCard.classList.add('ww-info-card-has-guide');
+        compareInstruction.classList.add('ww-compare-guide-host');
+        compareInstruction.dataset.wwGuideEmbedded = 'true';
+        compareInstruction.style.display = 'block';
+        compareInstruction.innerHTML = '';
+        compareInstruction.appendChild(card);
+
+        if (config.dismissOnFormInteraction) {
+          attachFormGuideAutoDismiss();
+        }
+        return;
+      }
+    }
+
+    const anchor = document.querySelector(config.anchorSelector);
+    if (!anchor || !anchor.parentNode) return;
 
     if (config.position === 'beforebegin') {
       anchor.parentNode.insertBefore(card, anchor);
@@ -980,8 +1115,8 @@
 
     if (state.page === 'home' && roleId === 'doctor') {
       buildInlineGuide({
-        anchorSelector: '.user-card',
-        position: 'afterend',
+        embedInInfoCard: true,
+        dismissOnFormInteraction: true,
         title: 'Strona główna dla lekarza',
         description: 'Na stronie głównej wprowadzisz dane pacjenta i skorzystasz z kalkulatorów oraz podsumowań. Po wyświetleniu wyników możesz włączyć „Wyniki profesjonalne”, a moduły DocPro są dostępne po weryfikacji numeru PWZ.',
         steps: [
@@ -1016,8 +1151,8 @@
 
     if (state.page === 'home' && roleId === 'personal') {
       buildInlineGuide({
-        anchorSelector: '.user-card',
-        position: 'afterend',
+        embedInInfoCard: true,
+        dismissOnFormInteraction: true,
         title: 'Pierwsze kroki',
         description: 'Uzupełnij formularz i sprawdź wyniki pod nim.',
         steps: [
