@@ -28,6 +28,7 @@
     dynamicTitle: null,
     dynamicText: null,
     dynamicList: null,
+    selectionNote: null,
     primaryBtn: null,
     secondaryLink: null,
     launcher: null,
@@ -220,6 +221,10 @@
 
       .ww-onboarding-close {
         appearance: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
         border: 0;
         background: transparent;
         color: var(--ww-muted);
@@ -227,7 +232,7 @@
         height: 2.2rem;
         border-radius: 999px;
         cursor: pointer;
-        font-size: 1.4rem;
+        font-size: 0;
         line-height: 1;
         flex: 0 0 auto;
       }
@@ -246,6 +251,11 @@
       }
 
       .ww-role-card {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.45rem;
+        min-height: 100%;
         border: 1px solid var(--ww-border);
         border-radius: 18px;
         padding: 0.95rem;
@@ -278,6 +288,31 @@
         color: var(--ww-muted);
         line-height: 1.45;
         font-size: 0.95rem;
+      }
+
+      .ww-role-card__hint {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: auto;
+        padding: 0.38rem 0.72rem;
+        border-radius: 999px;
+        background: rgba(0,131,141,0.08);
+        color: var(--primary, #00838d);
+        font-size: 0.82rem;
+        font-weight: 700;
+        line-height: 1.2;
+      }
+
+      .ww-role-card.is-selected .ww-role-card__hint {
+        background: rgba(0,131,141,0.14);
+      }
+
+      .ww-role-grid-note {
+        margin: -0.15rem 0 1rem;
+        color: var(--ww-muted);
+        font-size: 0.92rem;
+        line-height: 1.45;
       }
 
       .ww-dynamic-panel {
@@ -368,13 +403,18 @@
       }
 
       .ww-inline-guide__close {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
         border: 0;
         background: transparent;
         color: var(--ww-muted);
         width: 2rem;
         height: 2rem;
         border-radius: 999px;
-        font-size: 1.3rem;
+        font-size: 0;
+        line-height: 1;
         cursor: pointer;
         flex: 0 0 auto;
       }
@@ -476,6 +516,14 @@
     document.head.appendChild(style);
   }
 
+  function getCloseIconMarkup() {
+    return `
+      <svg class="ww-close-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M6 6L18 18M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" />
+      </svg>
+    `;
+  }
+
   function isVisible(el) {
     if (!el) return false;
     const style = window.getComputedStyle(el);
@@ -523,10 +571,11 @@
             <h2 id="ww-onboarding-title" class="ww-onboarding-title"></h2>
             <p class="ww-onboarding-subtitle"></p>
           </div>
-          <button type="button" class="ww-onboarding-close" aria-label="Zamknij pomoc">×</button>
+          <button type="button" class="ww-onboarding-close" aria-label="Zamknij pomoc">${getCloseIconMarkup()}</button>
         </div>
 
         <div class="ww-role-grid" role="group" aria-label="Wybierz sposób korzystania z aplikacji"></div>
+        <p class="ww-role-grid-note" aria-live="polite">Kliknij wybraną kartę, aby zaktualizować instrukcję poniżej.</p>
 
         <div class="ww-dynamic-panel">
           <h3></h3>
@@ -550,9 +599,11 @@
       card.type = 'button';
       card.className = 'ww-role-card';
       card.dataset.role = item.id;
+      card.setAttribute('aria-pressed', 'false');
       card.innerHTML = `
         <span class="ww-role-card__title">${item.cardTitle}</span>
         <span class="ww-role-card__desc">${item.cardDescription}</span>
+        <span class="ww-role-card__hint">Kliknij, aby wybrać</span>
       `;
       card.addEventListener('click', () => {
         selectRole(item.id);
@@ -583,6 +634,7 @@
     state.dynamicTitle = overlay.querySelector('.ww-dynamic-panel h3');
     state.dynamicText = overlay.querySelector('.ww-dynamic-panel p');
     state.dynamicList = overlay.querySelector('.ww-step-list');
+    state.selectionNote = overlay.querySelector('.ww-role-grid-note');
     state.primaryBtn = overlay.querySelector('.ww-btn--primary');
     state.secondaryLink = overlay.querySelector('.ww-link-btn');
 
@@ -654,19 +706,19 @@
       {
         id: 'doctor',
         cardTitle: 'Jestem lekarzem',
-        cardDescription: 'Na stronie głównej możesz korzystać z kalkulatorów i podsumowań. W karcie „Centyle, BMI & Basal Metabolic Rate” włącz „Wyniki profesjonalne”, a moduły DocPro są dostępne po weryfikacji numeru PWZ.',
+        cardDescription: 'Na stronie głównej możesz wprowadzić dane pacjenta, korzystać z kalkulatorów i podsumowań, a po wyświetleniu wyników włączyć „Wyniki profesjonalne”. Moduły DocPro są dostępne po weryfikacji numeru PWZ.',
         panelTitle: 'Jak korzystać z aplikacji jako lekarz?',
-        panelText: 'Strona główna zawiera przydatne kalkulatory i podsumowania. W karcie „Centyle, BMI & Basal Metabolic Rate” włącz „Wyniki profesjonalne”, aby wyświetlić rozszerzone dane. Moduły i materiały DocPro są dostępne po weryfikacji numeru PWZ.',
+        panelText: 'Na stronie głównej wprowadzisz dane pacjenta i skorzystasz z kalkulatorów oraz podsumowań. Po wyświetleniu wyników możesz w karcie „Centyle, BMI & Basal Metabolic Rate” włączyć „Wyniki profesjonalne”. Moduły i materiały DocPro są dostępne po weryfikacji numeru PWZ.',
         steps: [
           'Na stronie głównej wprowadź dane pacjenta i korzystaj z kalkulatorów oraz podsumowań.',
-          'W karcie „Centyle, BMI & Basal Metabolic Rate” przełącz na „Wyniki profesjonalne”, aby wyświetlić rozszerzone wyniki.',
+          'Po wyświetleniu wyników przełącz kartę „Centyle, BMI & Basal Metabolic Rate” na „Wyniki profesjonalne”.',
           'Aby otworzyć moduły i materiały DocPro, przejdź do DocPro i potwierdź numer PWZ.'
         ],
-        primaryLabel: 'Pokaż wyniki profesjonalne',
+        primaryLabel: 'Wprowadź dane pacjenta',
         action: () => {
           ensureInlineGuide('doctor');
-          waitForVisible('#resultsModeToggleContainer', 1600, (toggle) => {
-            softlyFocus(toggle, { message: 'Tutaj włączysz „Wyniki profesjonalne”.' });
+          waitForVisible('#age', 1200, (input) => {
+            softlyFocus(input, { message: 'Wprowadź dane pacjenta, aby wyświetlić wyniki i w razie potrzeby przełączyć na „Wyniki profesjonalne”.' });
           });
         }
       }
@@ -684,7 +736,13 @@
     if (!state.overlay) return;
 
     state.overlay.querySelectorAll('.ww-role-card').forEach((card) => {
-      card.classList.toggle('is-selected', card.dataset.role === roleId);
+      const isSelected = card.dataset.role === roleId;
+      card.classList.toggle('is-selected', isSelected);
+      card.setAttribute('aria-pressed', String(isSelected));
+      const hint = card.querySelector('.ww-role-card__hint');
+      if (hint) {
+        hint.textContent = isSelected ? 'Wybrano' : 'Kliknij, aby wybrać';
+      }
     });
 
     const config = getConfigForRole(roleId);
@@ -699,6 +757,9 @@
     const subtitleEl = state.overlay.querySelector('.ww-onboarding-subtitle');
     if (titleEl) titleEl.textContent = dialogTitle;
     if (subtitleEl) subtitleEl.textContent = dialogSubtitle;
+    if (state.selectionNote) {
+      state.selectionNote.textContent = `Wybrano: ${config.cardTitle}. Kliknij inną kartę, aby zaktualizować instrukcję poniżej.`;
+    }
 
     state.dynamicTitle.textContent = config.panelTitle;
     state.dynamicText.textContent = config.panelText;
@@ -833,7 +894,7 @@
     closeBtn.type = 'button';
     closeBtn.className = 'ww-inline-guide__close';
     closeBtn.setAttribute('aria-label', 'Ukryj szybki start');
-    closeBtn.textContent = '×';
+    closeBtn.innerHTML = getCloseIconMarkup();
     closeBtn.addEventListener('click', () => card.remove());
 
     head.appendChild(headText);
@@ -919,22 +980,22 @@
 
     if (state.page === 'home' && roleId === 'doctor') {
       buildInlineGuide({
-        anchorSelector: '#resultsModeToggleContainer',
+        anchorSelector: '.user-card',
         position: 'afterend',
-        title: 'Wyniki profesjonalne dla lekarza',
-        description: 'Na stronie głównej możesz korzystać z kalkulatorów i podsumowań. Rozszerzone dane włączysz w tej karcie, a moduły DocPro są dostępne po weryfikacji numeru PWZ.',
+        title: 'Strona główna dla lekarza',
+        description: 'Na stronie głównej wprowadzisz dane pacjenta i skorzystasz z kalkulatorów oraz podsumowań. Po wyświetleniu wyników możesz włączyć „Wyniki profesjonalne”, a moduły DocPro są dostępne po weryfikacji numeru PWZ.',
         steps: [
-          'Wprowadź dane pacjenta i korzystaj z kalkulatorów oraz podsumowań na stronie głównej.',
-          'W tej karcie przełącz na „Wyniki profesjonalne”, aby wyświetlić rozszerzone wyniki.',
+          'Wprowadź dane pacjenta na stronie głównej.',
+          'Po wyświetleniu wyników przełącz kartę „Centyle, BMI & Basal Metabolic Rate” na „Wyniki profesjonalne”.',
           'Gdy potrzebujesz materiałów i modułów DocPro, przejdź do DocPro i potwierdź numer PWZ.'
         ],
         actions: [
           {
             type: 'button',
-            label: 'Pokaż przełącznik',
+            label: 'Wprowadź dane pacjenta',
             onClick: () => {
-              waitForVisible('#resultsModeToggleContainer', 1600, (toggle) => {
-                softlyFocus(toggle, { message: 'Tutaj włączysz „Wyniki profesjonalne”.' });
+              waitForVisible('#age', 1200, (input) => {
+                softlyFocus(input, { message: 'Wprowadź dane pacjenta, aby po wyświetleniu wyników przełączyć także na „Wyniki profesjonalne”.' });
               });
             }
           },
