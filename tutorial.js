@@ -42,7 +42,11 @@
     homeResultsStateCleanup: null,
     homeResultsSyncTimer: null,
     compareInstructionStateCleanup: null,
-    compareInstructionSyncTimer: null
+    compareInstructionSyncTimer: null,
+    desktopDockOffsetCleanup: null,
+    desktopDockOffsetRaf: null,
+    desktopDockOffsetTrailTimers: [],
+    observedDesktopDock: null
   };
 
   function detectPageType() {
@@ -153,7 +157,7 @@
       .ww-help-launcher {
         position: fixed;
         left: max(var(--mobile-dock-side-gap, 0.75rem), calc(env(safe-area-inset-left, 0px) + 0.35rem));
-        bottom: var(--scroll-top-btn-bottom, calc(env(safe-area-inset-bottom, 0px) + 1rem));
+        bottom: var(--ww-safe-scroll-top-btn-bottom, var(--scroll-top-btn-bottom, calc(env(safe-area-inset-bottom, 0px) + 1rem)));
         z-index: var(--ww-help-z);
         display: inline-flex;
         align-items: center;
@@ -195,7 +199,11 @@
       }
 
       body.has-mobile-bottom-dock .ww-help-launcher {
-        bottom: var(--scroll-top-btn-bottom, calc(env(safe-area-inset-bottom, 0px) + 1rem)) !important;
+        bottom: var(--ww-safe-scroll-top-btn-bottom, var(--scroll-top-btn-bottom, calc(env(safe-area-inset-bottom, 0px) + 1rem))) !important;
+      }
+
+      body.has-mobile-bottom-dock #scrollTopBtn {
+        bottom: var(--ww-safe-scroll-top-btn-bottom, var(--scroll-top-btn-bottom, 1rem)) !important;
       }
 
       .ww-help-launcher:hover,
@@ -834,9 +842,255 @@
     window.setTimeout(scheduleLauncherResultsSync, 260);
   }
 
+  function readCssPxNumber(value, fallback = 0) {
+    const parsed = parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+
+  function getRemSizeInPx() {
+    const root = document.documentElement;
+    if (!root) return 16;
+    const fontSize = parseFloat(window.getComputedStyle(root).fontSize || '16');
+    return Number.isFinite(fontSize) && fontSize > 0 ? fontSize : 16;
+  }
+
+  function isDesktopPointerEnvironment() {
+    if (!(window.matchMedia instanceof Function)) return false;
+    const coarse = window.matchMedia('(pointer: coarse)').matches;
+    const fine = window.matchMedia('(pointer: fine)').matches;
+    return fine && !coarse;
+  }
+
+  function clearDesktopDockOffsetTrailTimers() {
+    if (!Array.isArray(state.desktopDockOffsetTrailTimers)) return;
+    state.desktopDockOffsetTrailTimers.forEach((timer) => {
+      window.clearTimeout(timer);
+    });
+    state.desktopDockOffsetTrailTimers = [];
+  }
+
+  function computeDesktopDockAwareBottomPx() {
+    const remPx = Math.max(12, Math.round(getRemSizeInPx()));
+    const rootStyle = document.documentElement
+      ? window.getComputedStyle(document.documentElement)
+      : null;
+    const baseBottom = Math.max(
+      remPx,
+      Math.round(readCssPxNumber(rootStyle?.getPropertyValue('--scroll-top-btn-bottom'), remPx))
+    );
+
+    if (!isDesktopPointerEnvironment()) {
+      return baseBottom;
+    }
+
+    const bodyHasDock = !!(document.body && document.body.classList.contains('has-mobile-bottom-dock'));
+    if (!bodyHasDock) {
+      return baseBottom;
+    }
+
+    const dock = document.getElementById('mobileBottomDock');
+    if (!dock || dock.hidden || dock.classList.contains('is-keyboard-hidden')) {
+      return baseBottom;
+    }
+
+    const dockStyle = window.getComputedStyle(dock);
+    if (dockStyle.display === 'none' || dockStyle.visibility === 'hidden') {
+      return baseBottom;
+    }
+
+    const viewportHeight = Math.max(getViewportHeight(), 1);
+    const dockRect = dock.getBoundingClientRect();
+    const dockBottomGap = Math.max(0, Math.round(readCssPxNumber(dockStyle.bottom, 0)));
+    const dockHeight = Math.max(
+      0,
+      Math.round(
+        dock.offsetHeight
+        || readCssPxNumber(dockStyle.height, 0)
+        || dockRect.height
+        || 0
+      )
+    );
+    const currentVisibleLift = Math.max(0, Math.round(viewportHeight - dockRect.top));
+    const projectedVisibleLift = dock.classList.contains('is-hidden')
+      ? currentVisibleLift
+      : Math.max(
+          dockHeight + dockBottomGap + remPx,
+          dockHeight + (dockBottomGap * 2)
+        );
+    const cushion = 6;
+
+    return Math.max(baseBottom, currentVisibleLift, projectedVisibleLift) + cushion;
+  }
+
+  function applyDesktopDockAwareOffset() {
+    if (!document.documentElement) return;
+    const nextBottom = computeDesktopDockAwareBottomPx();
+    document.documentElement.style.setProperty('--ww-safe-scroll-top-btn-bottom', `${Math.max(0, Math.round(nextBottom))}px`);
+  }
+
+  function scheduleDesktopDockAwareOffsetSync({ withTrail = false } = {}) {
+    if (state.desktopDockOffsetRaf) {
+      window.cancelAnimationFrame(state.desktopDockOffsetRaf);
+    }
+
+    state.desktopDockOffsetRaf = window.requestAnimationFrame(() => {
+      state.desktopDockOffsetRaf = null;
+      applyDesktopDockAwareOffset();
+    });
+
+    if (!withTrail) return;
+
+    clearDesktopDockOffsetTrailTimers();
+    [70, 150, 240, 340].forEach((delay) => {
+      const timer = window.setTimeout(() => {
+        applyDesktopDockAwareOffset();
+      }, delay);
+      state.desktopDockOffsetTrailTimers.push(timer);
+    });
+  }
+
+  function bindDesktopDockOffsetObserver() {
+    if (typeof MutationObserver === 'undefined') return () => {};
+    if (!document.body) return () => {};
+
+    let dockObserver = null;
+
+    const attachDockObserver = () => {
+      const dock = document.getElementById('mobileBottomDock');
+      if (dock === state.observedDesktopDock) return;
+
+      if (dockObserver) {
+        dockObserver.disconnect();
+        dockObserver = null;
+      }
+
+      state.observedDesktopDock = dock || null;
+
+      if (!dock) return;
+
+      dockObserver = new MutationObserver(() => {
+        scheduleDesktopDockAwareOffsetSync({ withTrail: true });
+      });
+
+      dockObserver.observe(dock, {
+        attributes: true,
+        attributeFilter: ['class', 'style', 'hidden']
+      });
+    };
+
+    const bodyObserver = new MutationObserver((mutations) => {
+      let shouldResync = false;
+
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.target === document.body) {
+          shouldResync = true;
+        }
+
+        if (mutation.type === 'childList') {
+          shouldResync = true;
+        }
+      });
+
+      attachDockObserver();
+
+      if (shouldResync) {
+        scheduleDesktopDockAwareOffsetSync({ withTrail: true });
+      }
+    });
+
+    bodyObserver.observe(document.body, {
+      attributes: true,
+      attributeFilter: ['class'],
+      childList: true
+    });
+
+    attachDockObserver();
+
+    return () => {
+      bodyObserver.disconnect();
+      if (dockObserver) dockObserver.disconnect();
+      state.observedDesktopDock = null;
+    };
+  }
+
+  function observeDesktopDockAwareOffset() {
+    if (state.desktopDockOffsetCleanup) return;
+
+    const cleanups = [];
+    const scheduleFast = () => {
+      scheduleDesktopDockAwareOffsetSync({ withTrail: false });
+    };
+    const scheduleTrail = () => {
+      scheduleDesktopDockAwareOffsetSync({ withTrail: true });
+    };
+    const handleDockTransitionRun = (event) => {
+      if (event.target && event.target.id === 'mobileBottomDock') {
+        scheduleTrail();
+      }
+    };
+    const handleDockTransitionEnd = (event) => {
+      if (event.target && event.target.id === 'mobileBottomDock') {
+        scheduleFast();
+      }
+    };
+
+    window.addEventListener('resize', scheduleTrail, { passive: true });
+    cleanups.push(() => window.removeEventListener('resize', scheduleTrail));
+
+    window.addEventListener('orientationchange', scheduleTrail, { passive: true });
+    cleanups.push(() => window.removeEventListener('orientationchange', scheduleTrail));
+
+    window.addEventListener('pageshow', scheduleTrail, { passive: true });
+    cleanups.push(() => window.removeEventListener('pageshow', scheduleTrail));
+
+    document.addEventListener('scroll', scheduleFast, true);
+    cleanups.push(() => document.removeEventListener('scroll', scheduleFast, true));
+
+    document.addEventListener('transitionrun', handleDockTransitionRun, true);
+    cleanups.push(() => document.removeEventListener('transitionrun', handleDockTransitionRun, true));
+
+    document.addEventListener('transitionstart', handleDockTransitionRun, true);
+    cleanups.push(() => document.removeEventListener('transitionstart', handleDockTransitionRun, true));
+
+    document.addEventListener('transitionend', handleDockTransitionEnd, true);
+    cleanups.push(() => document.removeEventListener('transitionend', handleDockTransitionEnd, true));
+
+    if (window.visualViewport) {
+      const handleViewportResize = () => scheduleTrail();
+      const handleViewportScroll = () => scheduleFast();
+      window.visualViewport.addEventListener('resize', handleViewportResize, { passive: true });
+      cleanups.push(() => window.visualViewport.removeEventListener('resize', handleViewportResize));
+      window.visualViewport.addEventListener('scroll', handleViewportScroll, { passive: true });
+      cleanups.push(() => window.visualViewport.removeEventListener('scroll', handleViewportScroll));
+    }
+
+    cleanups.push(bindDesktopDockOffsetObserver());
+
+    state.desktopDockOffsetCleanup = () => {
+      clearDesktopDockOffsetTrailTimers();
+      if (state.desktopDockOffsetRaf) {
+        window.cancelAnimationFrame(state.desktopDockOffsetRaf);
+        state.desktopDockOffsetRaf = null;
+      }
+      cleanups.forEach((cleanup) => {
+        try {
+          cleanup();
+        } catch (_) {
+          /* ignore */
+        }
+      });
+      state.desktopDockOffsetCleanup = null;
+    };
+
+    scheduleDesktopDockAwareOffsetSync({ withTrail: true });
+    window.setTimeout(() => scheduleDesktopDockAwareOffsetSync({ withTrail: true }), 220);
+    window.setTimeout(() => scheduleDesktopDockAwareOffsetSync({ withTrail: true }), 900);
+  }
+
   function updateLauncherOffset() {
     if (!state.launcher) return;
     state.launcher.style.removeProperty('bottom');
+    scheduleDesktopDockAwareOffsetSync({ withTrail: true });
   }
 
   function observeCookieBanner() {
@@ -1853,8 +2107,10 @@
 
     observeHomeResultsState();
     observeSingleColumnCompareInstructionState();
+    observeDesktopDockAwareOffset();
     syncLauncherWithResultsState();
     syncSingleColumnCompareInstructionState();
+    scheduleDesktopDockAwareOffsetSync({ withTrail: true });
   }
 
   function init() {
