@@ -792,6 +792,7 @@
         primaryLabel: 'Przejdź do formularza',
         action: () => {
           ensureInlineGuide('personal');
+          if (focusSingleColumnDataTarget('personal')) return;
           waitForVisible('#age', 1200, (input) => {
             softlyFocus(input, { message: 'Zacznij od wieku, a następnie wpisz wagę i wzrost.' });
           });
@@ -811,6 +812,7 @@
         primaryLabel: 'Wprowadź dane pacjenta',
         action: () => {
           ensureInlineGuide('doctor');
+          if (focusSingleColumnDataTarget('doctor')) return;
           waitForVisible('#age', 1200, (input) => {
             softlyFocus(input, { message: 'Wprowadź dane pacjenta, aby wyświetlić wyniki i w razie potrzeby przełączyć na „Wyniki profesjonalne”.' });
           });
@@ -943,6 +945,62 @@
     }
 
     if (message) showToast(message);
+  }
+
+  function isSingleColumnLayout() {
+    try {
+      return window.matchMedia('(max-width: 699px)').matches;
+    } catch (_) {
+      return (window.innerWidth || 0) <= 699;
+    }
+  }
+
+  function getFirstMissingCoreField() {
+    const fields = [
+      { selector: '#age', label: 'wiek' },
+      { selector: '#weight', label: 'wagę' },
+      { selector: '#height', label: 'wzrost' }
+    ];
+
+    for (const field of fields) {
+      const el = document.querySelector(field.selector);
+      if (!el || !isVisible(el)) continue;
+      const value = typeof el.value === 'string' ? el.value.trim() : String(el.value ?? '').trim();
+      if (!value) {
+        return { ...field, element: el };
+      }
+    }
+
+    return null;
+  }
+
+  function getSingleColumnFieldMessage(roleId, fieldLabel) {
+    if (roleId === 'doctor') {
+      return `Uzupełnij pole „${fieldLabel}”, aby przejść dalej do wyników pacjenta.`;
+    }
+    return `Uzupełnij pole „${fieldLabel}”, aby wyświetlić wyniki.`;
+  }
+
+  function focusSingleColumnDataTarget(roleId) {
+    if (!isSingleColumnLayout()) return false;
+
+    const missingField = getFirstMissingCoreField();
+    if (missingField && missingField.element) {
+      softlyFocus(missingField.element, {
+        message: getSingleColumnFieldMessage(roleId, missingField.label)
+      });
+      return true;
+    }
+
+    const fallbackSelector = roleId === 'doctor' ? '#bmiCard' : '#results';
+    waitForVisible(fallbackSelector, 1200, (target) => {
+      softlyFocus(target, {
+        message: roleId === 'doctor'
+          ? 'Dane są już kompletne. Wyniki i przełącznik „Wyniki profesjonalne” znajdziesz poniżej formularza.'
+          : 'Dane są już kompletne. Wyniki znajdziesz poniżej formularza.'
+      });
+    });
+    return true;
   }
 
   function waitForVisible(selector, timeoutMs, callback) {
@@ -1183,6 +1241,7 @@
             type: 'button',
             label: 'Wprowadź dane pacjenta',
             onClick: () => {
+              if (focusSingleColumnDataTarget('doctor')) return;
               waitForVisible('#age', 1200, (input) => {
                 softlyFocus(input, { message: 'Wprowadź dane pacjenta, aby po wyświetleniu wyników przełączyć także na „Wyniki profesjonalne”.' });
               });
@@ -1219,6 +1278,7 @@
             type: 'button',
             label: 'Uzupełnij dane',
             onClick: () => {
+              if (focusSingleColumnDataTarget('personal')) return;
               waitForVisible('#age', 1200, (input) => {
                 softlyFocus(input, { message: 'Zacznij od wieku, potem wpisz wagę i wzrost.' });
               });
