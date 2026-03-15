@@ -858,7 +858,11 @@
       state.dynamicList.appendChild(li);
     });
     state.primaryBtn.textContent = config.primaryLabel;
-    state.primaryBtn.onclick = () => {
+    state.primaryBtn.onclick = (event) => {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
       hideSheet();
       config.action();
     };
@@ -907,15 +911,123 @@
     }, 2600);
   }
 
-  function softlyFocus(target, { message = '' } = {}) {
-    if (!target) return;
-    const focusTarget = target.matches('input, select, textarea, button, a')
-      ? target
-      : target.querySelector('input, select, textarea, button, a');
+  function getViewportHeight() {
+    if (window.visualViewport && Number.isFinite(window.visualViewport.height)) {
+      return window.visualViewport.height;
+    }
+    return window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight || 0;
+  }
+
+  function getCurrentScrollTop() {
+    return window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+  }
+
+  function getStickyTopOffset() {
+    let offset = 16;
 
     try {
-      target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
-    } catch (_) {}
+      const header = document.querySelector('header');
+      if (header) {
+        const style = window.getComputedStyle(header);
+        if (style.position === 'sticky' || style.position === 'fixed') {
+          const rect = header.getBoundingClientRect();
+          if (rect.height > 0 && rect.top <= 0) {
+            offset += Math.ceil(rect.height) + 8;
+          }
+        }
+      }
+    } catch (_) {
+      /* ignore */
+    }
+
+    return offset;
+  }
+
+  function setDocumentScrollTop(nextTop, { smooth = true } = {}) {
+    const top = Math.max(0, Number.isFinite(nextTop) ? nextTop : 0);
+    const prefersReducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const behavior = smooth && !prefersReducedMotion ? 'smooth' : 'auto';
+
+    try {
+      window.scrollTo({ top, left: 0, behavior });
+    } catch (_) {
+      try { window.scrollTo(0, top); } catch (__) {}
+    }
+
+    const scrollRoot = document.scrollingElement || document.documentElement || document.body;
+    if (scrollRoot && typeof scrollRoot.scrollTop === 'number') {
+      scrollRoot.scrollTop = top;
+    }
+    if (document.documentElement && typeof document.documentElement.scrollTop === 'number') {
+      document.documentElement.scrollTop = top;
+    }
+    if (document.body && typeof document.body.scrollTop === 'number') {
+      document.body.scrollTop = top;
+    }
+  }
+
+  function getScrollAnchorTarget(target) {
+    if (!target || typeof target.closest !== 'function') return target;
+    if (target.matches('input, select, textarea')) {
+      return target.closest('label') || target;
+    }
+    return target.closest('.card, fieldset') || target;
+  }
+
+  function computeScrollTopForTarget(target, { block = 'center', offset = null } = {}) {
+    const anchor = getScrollAnchorTarget(target);
+    if (!anchor) return 0;
+
+    const rect = anchor.getBoundingClientRect();
+    const viewportHeight = Math.max(getViewportHeight(), 1);
+    const currentTop = getCurrentScrollTop();
+    const safeOffset = Math.max(getStickyTopOffset(), Number.isFinite(offset) ? offset : 0);
+
+    if (block === 'start') {
+      return currentTop + rect.top - safeOffset;
+    }
+
+    const targetHeight = Math.max(rect.height || 0, 1);
+    const visibleTargetHeight = Math.min(targetHeight, Math.max(48, viewportHeight - safeOffset * 2));
+    const centeredOffset = Math.max(safeOffset, (viewportHeight - visibleTargetHeight) / 2);
+
+    return currentTop + rect.top - centeredOffset;
+  }
+
+  function scrollElementIntoView(target, { block = 'center', offset = null } = {}) {
+    const anchor = getScrollAnchorTarget(target);
+    if (!anchor) return;
+
+    if (!isSingleColumnLayout() && typeof anchor.scrollIntoView === 'function') {
+      try {
+        anchor.scrollIntoView({ behavior: 'smooth', block, inline: 'nearest' });
+        return;
+      } catch (_) {
+        /* fallback below */
+      }
+    }
+
+    const nextTop = computeScrollTopForTarget(anchor, { block, offset });
+    setDocumentScrollTop(nextTop, { smooth: true });
+
+    const retry = () => {
+      const retryTop = computeScrollTopForTarget(anchor, { block, offset });
+      if (Math.abs(retryTop - getCurrentScrollTop()) > 2) {
+        setDocumentScrollTop(retryTop, { smooth: false });
+      }
+    };
+
+    window.requestAnimationFrame(retry);
+    window.setTimeout(retry, 180);
+  }
+
+  function softlyFocus(target, { message = '', block = 'center', offset = null } = {}) {
+    if (!target) return;
+    const focusTarget = target.matches('input, select, textarea')
+      ? target
+      : target.querySelector('input, select, textarea');
+
+    scrollElementIntoView(target, { block, offset });
 
     target.classList.remove('ww-soft-focus');
     // restart animacji/podświetlenia
@@ -933,7 +1045,7 @@
         } catch (_) {
           try { focusTarget.focus(); } catch (__) {}
         }
-      }, 220);
+      }, 260);
     }
 
     if (message) showToast(message);
@@ -941,9 +1053,21 @@
 
   function isSingleColumnLayout() {
     try {
-      return window.matchMedia('(max-width: 699px)').matches;
+      const form = document.getElementById('calcForm');
+      if (form) {
+        const halves = form.querySelectorAll(':scope > .half');
+        if (halves.length >= 2) {
+          const firstRect = halves[0].getBoundingClientRect();
+          const secondRect = halves[1].getBoundingClientRect();
+          if (Math.abs(firstRect.top - secondRect.top) > 24) {
+            return true;
+          }
+        }
+      }
+
+      return window.matchMedia('(max-width: 700px)').matches;
     } catch (_) {
-      return (window.innerWidth || 0) <= 699;
+      return (window.innerWidth || 0) <= 700;
     }
   }
 
@@ -974,19 +1098,29 @@
   }
 
   function runHomePrimaryAction(roleId, { ensureGuide = false } = {}) {
+    const execute = () => {
+      if (focusSingleColumnDataTarget(roleId)) return;
+
+      const fallbackMessage = roleId === 'doctor'
+        ? 'Wprowadź dane pacjenta, aby wyświetlić wyniki i w razie potrzeby przełączyć na „Wyniki profesjonalne”.'
+        : 'Zacznij od wieku, a następnie wpisz wagę i wzrost.';
+
+      waitForVisible('#age', 1200, (input) => {
+        softlyFocus(input, {
+          message: fallbackMessage,
+          block: 'start',
+          offset: 16
+        });
+      });
+    };
+
     if (ensureGuide) {
       ensureInlineGuide(roleId);
+      window.requestAnimationFrame(execute);
+      return;
     }
 
-    if (focusSingleColumnDataTarget(roleId)) return;
-
-    const fallbackMessage = roleId === 'doctor'
-      ? 'Wprowadź dane pacjenta, aby wyświetlić wyniki i w razie potrzeby przełączyć na „Wyniki profesjonalne”.'
-      : 'Zacznij od wieku, a następnie wpisz wagę i wzrost.';
-
-    waitForVisible('#age', 1200, (input) => {
-      softlyFocus(input, { message: fallbackMessage });
-    });
+    execute();
   }
 
   function focusSingleColumnDataTarget(roleId) {
@@ -995,7 +1129,9 @@
     const missingField = getFirstMissingCoreField();
     if (missingField && missingField.element) {
       softlyFocus(missingField.element, {
-        message: getSingleColumnFieldMessage(roleId, missingField.label)
+        message: getSingleColumnFieldMessage(roleId, missingField.label),
+        block: 'start',
+        offset: 16
       });
       return true;
     }
@@ -1003,6 +1139,8 @@
     const fallbackSelector = roleId === 'doctor' ? '#bmiCard' : '#results';
     waitForVisible(fallbackSelector, 1200, (target) => {
       softlyFocus(target, {
+        block: 'start',
+        offset: 16,
         message: roleId === 'doctor'
           ? 'Dane są już kompletne. Wyniki i przełącznik „Wyniki profesjonalne” znajdziesz poniżej formularza.'
           : 'Dane są już kompletne. Wyniki znajdziesz poniżej formularza.'
@@ -1150,7 +1288,13 @@
         node.type = 'button';
         node.className = `ww-btn ${action.variant === 'ghost' ? 'ww-btn--ghost' : 'ww-btn--primary'}`;
         node.textContent = action.label;
-        node.addEventListener('click', action.onClick);
+        node.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (typeof action.onClick === 'function') {
+            action.onClick(event);
+          }
+        });
       }
       actions.appendChild(node);
     });
