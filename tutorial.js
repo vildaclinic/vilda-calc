@@ -161,6 +161,17 @@
         white-space: nowrap;
       }
 
+      .ww-close-icon {
+        display: block;
+        width: 1rem;
+        height: 1rem;
+        flex: 0 0 auto;
+        stroke: currentColor;
+        color: inherit;
+        overflow: visible;
+        pointer-events: none;
+      }
+
       .ww-onboarding-overlay {
         position: fixed;
         inset: 0;
@@ -226,12 +237,17 @@
         align-items: center;
         justify-content: center;
         padding: 0;
-        border: 0;
-        background: transparent;
-        color: var(--ww-muted);
-        width: 2.2rem;
-        height: 2.2rem;
+        margin: 0 !important;
+        border: 0 !important;
+        background: transparent !important;
+        color: #111 !important;
+        width: 2.2rem !important;
+        min-width: 2.2rem !important;
+        max-width: 2.2rem !important;
+        height: 2.2rem !important;
+        min-height: 2.2rem !important;
         border-radius: 999px;
+        box-shadow: none !important;
         cursor: pointer;
         font-size: 0;
         line-height: 1;
@@ -256,13 +272,20 @@
         flex-direction: column;
         align-items: flex-start;
         gap: 0.45rem;
-        min-height: 100%;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        min-height: 0;
+        box-sizing: border-box;
+        margin: 0 !important;
         border: 1px solid var(--ww-border);
         border-radius: 18px;
         padding: 0.95rem;
         background: rgba(255,255,255,0.75);
         cursor: pointer;
         text-align: left;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
         transition: border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
       }
 
@@ -274,6 +297,11 @@
       .ww-role-card.is-selected {
         border-color: var(--primary, #00838d);
         box-shadow: 0 0 0 2px rgba(0,131,141,0.18);
+      }
+
+      .ww-role-card:focus-visible {
+        outline: 2px solid rgba(0,131,141,0.35);
+        outline-offset: 2px;
       }
 
       .ww-role-card__title {
@@ -296,6 +324,7 @@
         align-items: center;
         justify-content: center;
         margin-top: auto;
+        min-height: 2rem;
         padding: 0.38rem 0.72rem;
         border-radius: 999px;
         background: rgba(0,131,141,0.08);
@@ -303,6 +332,7 @@
         font-size: 0.82rem;
         font-weight: 700;
         line-height: 1.2;
+        white-space: nowrap;
       }
 
       .ww-role-card.is-selected .ww-role-card__hint {
@@ -447,12 +477,17 @@
         align-items: center;
         justify-content: center;
         padding: 0;
-        border: 0;
-        background: transparent;
-        color: var(--ww-muted);
-        width: 2rem;
-        height: 2rem;
+        margin: 0 !important;
+        border: 0 !important;
+        background: transparent !important;
+        color: #111 !important;
+        width: 2rem !important;
+        min-width: 2rem !important;
+        max-width: 2rem !important;
+        height: 2rem !important;
+        min-height: 2rem !important;
         border-radius: 999px;
+        box-shadow: none !important;
         font-size: 0;
         line-height: 1;
         cursor: pointer;
@@ -539,6 +574,17 @@
 
         .ww-role-grid {
           grid-template-columns: 1fr;
+        }
+
+        .ww-role-card,
+        .ww-role-card:hover,
+        .ww-role-card:focus-visible {
+          transform: none;
+        }
+
+        .ww-onboarding-close,
+        .ww-inline-guide__close {
+          margin-top: 0 !important;
         }
 
         .ww-sheet-footer,
@@ -635,18 +681,26 @@
     const config = getRoleConfigs();
 
     config.forEach((item) => {
-      const card = document.createElement('button');
-      card.type = 'button';
+      const card = document.createElement('div');
       card.className = 'ww-role-card';
       card.dataset.role = item.id;
+      card.setAttribute('role', 'button');
+      card.setAttribute('tabindex', '0');
       card.setAttribute('aria-pressed', 'false');
       card.innerHTML = `
         <span class="ww-role-card__title">${item.cardTitle}</span>
         <span class="ww-role-card__desc">${item.cardDescription}</span>
         <span class="ww-role-card__hint">Kliknij, aby wybrać</span>
       `;
-      card.addEventListener('click', () => {
+      const activateCard = () => {
         selectRole(item.id);
+      };
+      card.addEventListener('click', activateCard);
+      card.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          activateCard();
+        }
       });
       roleGrid.appendChild(card);
     });
