@@ -550,6 +550,10 @@
         transform: translateX(-50%) translateY(0);
       }
 
+      body.has-mobile-bottom-dock-visible .ww-toast {
+        bottom: calc(var(--scroll-top-btn-bottom, calc(env(safe-area-inset-bottom, 0px) + 1rem)) + 0.75rem);
+      }
+
       @media (max-width: 720px) {
         .ww-help-launcher {
           width: auto !important;
@@ -922,6 +926,55 @@
     return window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
   }
 
+  function blurActiveEditableElement() {
+    const active = document.activeElement;
+    if (!active || !(active instanceof Element)) return false;
+    if (!active.matches('input, select, textarea')) return false;
+    try {
+      active.blur();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function requestMobileDockVisible(delay = 0) {
+    const run = () => {
+      if (!isSingleColumnLayout()) return;
+
+      if (typeof window.__vildaDockSyncMode === 'function') {
+        try {
+          window.__vildaDockSyncMode({ preserveVisibility: false });
+          return;
+        } catch (_) {
+          /* ignore */
+        }
+      }
+
+      if (typeof window.__vildaDockUpdate === 'function') {
+        try {
+          window.__vildaDockUpdate('browser-ui-resize');
+        } catch (_) {
+          /* ignore */
+        }
+      }
+
+      const dock = document.getElementById('mobileBottomDock');
+      if (dock) {
+        dock.classList.remove('is-keyboard-hidden');
+        dock.classList.remove('is-hidden');
+        document.body.classList.add('has-mobile-bottom-dock-visible');
+      }
+    };
+
+    if (delay > 0) {
+      window.setTimeout(run, delay);
+      return;
+    }
+
+    run();
+  }
+
   function getStickyTopOffset() {
     let offset = 16;
 
@@ -1021,8 +1074,20 @@
     window.setTimeout(retry, 180);
   }
 
-  function softlyFocus(target, { message = '', block = 'center', offset = null } = {}) {
+  function softlyFocus(target, {
+    message = '',
+    block = 'center',
+    offset = null,
+    focusEditable = true,
+    preserveDock = false
+  } = {}) {
     if (!target) return;
+
+    const shouldPreserveDock = preserveDock && isSingleColumnLayout();
+    if (shouldPreserveDock) {
+      blurActiveEditableElement();
+    }
+
     const focusTarget = target.matches('input, select, textarea')
       ? target
       : target.querySelector('input, select, textarea');
@@ -1038,7 +1103,7 @@
       target.classList.remove('ww-soft-focus');
     }, 2200);
 
-    if (focusTarget && typeof focusTarget.focus === 'function') {
+    if (focusEditable && focusTarget && typeof focusTarget.focus === 'function') {
       window.setTimeout(() => {
         try {
           focusTarget.focus({ preventScroll: true });
@@ -1049,6 +1114,13 @@
     }
 
     if (message) showToast(message);
+
+    if (shouldPreserveDock) {
+      requestMobileDockVisible();
+      window.requestAnimationFrame(() => requestMobileDockVisible());
+      requestMobileDockVisible(180);
+      requestMobileDockVisible(520);
+    }
   }
 
   function isSingleColumnLayout() {
@@ -1131,7 +1203,9 @@
       softlyFocus(missingField.element, {
         message: getSingleColumnFieldMessage(roleId, missingField.label),
         block: 'start',
-        offset: 16
+        offset: 16,
+        focusEditable: false,
+        preserveDock: true
       });
       return true;
     }
@@ -1141,6 +1215,7 @@
       softlyFocus(target, {
         block: 'start',
         offset: 16,
+        preserveDock: true,
         message: roleId === 'doctor'
           ? 'Dane są już kompletne. Wyniki i przełącznik „Wyniki profesjonalne” znajdziesz poniżej formularza.'
           : 'Dane są już kompletne. Wyniki znajdziesz poniżej formularza.'
