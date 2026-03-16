@@ -233,6 +233,531 @@
     }
   }
 </style>
+
+<style>
+  .settings-shell {
+    max-width: 1180px;
+    padding-top: 1rem;
+    padding-bottom: 2.5rem;
+  }
+  .settings-hero {
+    position: relative;
+    overflow: hidden;
+    padding: 1.5rem;
+    border-radius: 28px;
+    border: 1px solid rgba(0, 131, 141, 0.18);
+    background:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(242, 251, 252, 0.82)),
+      radial-gradient(circle at top right, rgba(0, 179, 179, 0.12), transparent 48%);
+    box-shadow: 0 24px 60px rgba(7, 54, 62, 0.08);
+    margin-bottom: 1.35rem;
+  }
+  .settings-hero::after {
+    content: "";
+    position: absolute;
+    right: -3rem;
+    bottom: -5rem;
+    width: 15rem;
+    height: 15rem;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0, 179, 179, 0.14), rgba(0, 179, 179, 0));
+    pointer-events: none;
+  }
+  .settings-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.4rem 0.78rem;
+    border-radius: 999px;
+    background: rgba(0, 131, 141, 0.08);
+    border: 1px solid rgba(0, 131, 141, 0.12);
+    color: #00626b;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .settings-hero-title {
+    margin: 0.9rem 0 0.55rem;
+    font-size: clamp(1.55rem, 2vw, 2.1rem);
+    line-height: 1.12;
+    color: #07363e;
+  }
+  .settings-hero-text {
+    max-width: 860px;
+    margin: 0;
+    color: #4e646a;
+    line-height: 1.62;
+    font-size: 0.98rem;
+  }
+  .settings-pill-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-top: 1rem;
+  }
+  .settings-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.45rem 0.8rem;
+    border-radius: 999px;
+    border: 1px solid rgba(0, 131, 141, 0.14);
+    background: rgba(255, 255, 255, 0.76);
+    color: #0a5058;
+    font-size: 0.86rem;
+    font-weight: 600;
+  }
+  .settings-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 1.3rem;
+  }
+  .settings-quick-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+  .settings-quick-link,
+  .settings-action-btn {
+    appearance: none;
+    border: 1px solid rgba(0, 131, 141, 0.18);
+    background: rgba(255, 255, 255, 0.82);
+    color: #07444c;
+    border-radius: 14px;
+    padding: 0.75rem 0.95rem;
+    font-size: 0.92rem;
+    font-weight: 600;
+    text-decoration: none;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.05);
+    transition: transform 0.18s ease, background-color 0.18s ease, border-color 0.18s ease;
+  }
+  .settings-quick-link:hover,
+  .settings-action-btn:hover {
+    background: rgba(255, 255, 255, 0.96);
+    border-color: rgba(0, 131, 141, 0.3);
+    transform: translateY(-1px);
+  }
+  .settings-quick-link:focus-visible,
+  .settings-action-btn:focus-visible,
+  .settings-accordion > summary:focus-visible,
+  .tech-chart-settings-btn:focus-visible {
+    outline: 3px solid rgba(0, 131, 141, 0.24);
+    outline-offset: 3px;
+  }
+  .settings-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+  }
+  .settings-overview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.45rem;
+  }
+  .settings-overview-card {
+    padding: 1.05rem 1.15rem;
+    border-radius: 22px;
+    border: 1px solid rgba(0, 131, 141, 0.16);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(246, 252, 252, 0.82));
+    box-shadow: 0 16px 38px rgba(7, 54, 62, 0.05);
+  }
+  .settings-overview-label {
+    display: inline-block;
+    margin-bottom: 0.45rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: #2d6e76;
+  }
+  .settings-overview-value {
+    display: block;
+    font-size: 1.4rem;
+    line-height: 1.15;
+    color: #07363e;
+    font-weight: 700;
+  }
+  .settings-overview-text {
+    margin: 0.4rem 0 0;
+    color: #566b71;
+    font-size: 0.92rem;
+    line-height: 1.5;
+  }
+  .settings-accordion-list {
+    display: grid;
+    gap: 1rem;
+  }
+  .settings-accordion {
+    border: 1px solid rgba(0, 131, 141, 0.16);
+    border-radius: 26px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(246, 252, 252, 0.78));
+    box-shadow: 0 18px 46px rgba(7, 54, 62, 0.06);
+    overflow: hidden;
+  }
+  .settings-accordion[open] {
+    border-color: rgba(0, 131, 141, 0.26);
+    box-shadow: 0 24px 56px rgba(7, 54, 62, 0.09);
+  }
+  .settings-accordion > summary {
+    list-style: none;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.15rem 1.25rem;
+    cursor: pointer;
+  }
+  .settings-accordion > summary::-webkit-details-marker {
+    display: none;
+  }
+  .settings-accordion-index {
+    width: 3rem;
+    height: 3rem;
+    flex: 0 0 3rem;
+    display: grid;
+    place-items: center;
+    border-radius: 18px;
+    background: linear-gradient(135deg, rgba(0, 179, 179, 0.18), rgba(0, 131, 141, 0.08));
+    color: #00646d;
+    font-size: 0.92rem;
+    font-weight: 700;
+  }
+  .settings-accordion-copy {
+    min-width: 0;
+  }
+  .settings-accordion-title {
+    margin: 0 0 0.25rem;
+    font-size: 1.06rem;
+    line-height: 1.2;
+    color: #07363e;
+  }
+  .settings-accordion-text {
+    margin: 0;
+    color: #567076;
+    font-size: 0.92rem;
+    line-height: 1.5;
+  }
+  .settings-accordion-meta {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.45rem;
+  }
+  .settings-mini-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.42rem 0.68rem;
+    border-radius: 999px;
+    background: rgba(0, 131, 141, 0.08);
+    border: 1px solid rgba(0, 131, 141, 0.12);
+    color: #145861;
+    font-size: 0.82rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .settings-chevron {
+    width: 2.6rem;
+    height: 2.6rem;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    border: 1px solid rgba(0, 131, 141, 0.14);
+    background: rgba(255, 255, 255, 0.78);
+    color: #0f5f68;
+    font-size: 1.15rem;
+    font-weight: 700;
+    line-height: 1;
+    transition: transform 0.22s ease;
+  }
+  .settings-accordion[open] .settings-chevron {
+    transform: rotate(180deg);
+  }
+  .settings-accordion-panel {
+    padding: 0 1.25rem 1.25rem;
+  }
+  .settings-panel-inner {
+    padding-top: 1.2rem;
+    border-top: 1px solid rgba(0, 131, 141, 0.12);
+  }
+  .settings-section-note {
+    margin: 0 0 1rem;
+    color: #54686e;
+    font-size: 0.93rem;
+    line-height: 1.6;
+    max-width: 880px;
+  }
+  .settings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+    gap: 1rem;
+  }
+  .setting-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.05rem;
+    border-radius: 18px;
+    border: 1px solid rgba(0, 131, 141, 0.14);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(246, 252, 252, 0.82));
+    box-shadow: 0 12px 28px rgba(7, 54, 62, 0.05);
+  }
+  .setting-item span {
+    color: #07363e;
+    font-size: 0.96rem;
+    font-weight: 600;
+    line-height: 1.45;
+  }
+  .settings-control-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+  }
+  .settings-control-card {
+    padding: 1.05rem 1.1rem;
+    border-radius: 20px;
+    border: 1px solid rgba(0, 131, 141, 0.14);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(246, 252, 252, 0.82));
+    box-shadow: 0 12px 30px rgba(7, 54, 62, 0.05);
+  }
+  .settings-control-card--wide {
+    grid-column: 1 / -1;
+  }
+  .settings-control-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.85rem;
+  }
+  .settings-control-title {
+    margin: 0;
+    font-size: 1rem;
+    line-height: 1.28;
+    color: #07363e;
+  }
+  .settings-tag {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    padding: 0.34rem 0.58rem;
+    border-radius: 999px;
+    background: rgba(0, 131, 141, 0.08);
+    border: 1px solid rgba(0, 131, 141, 0.12);
+    color: #145861;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .settings-control-desc {
+    margin: 0.48rem 0 0.95rem;
+    color: #566b71;
+    font-size: 0.9rem;
+    line-height: 1.55;
+  }
+  .settings-range-row {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+  }
+  .settings-range-row input[type="range"] {
+    flex: 1 1 auto;
+    min-width: 180px;
+  }
+  .settings-range-value {
+    min-width: 3.15rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.45rem 0.7rem;
+    border-radius: 12px;
+    background: rgba(0, 131, 141, 0.08);
+    border: 1px solid rgba(0, 131, 141, 0.12);
+    color: #0b5660;
+    font-weight: 700;
+    font-size: 0.92rem;
+  }
+  .settings-inline-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.95rem;
+  }
+  .settings-inline-note {
+    margin: 0;
+    color: #586d72;
+    font-size: 0.91rem;
+    line-height: 1.55;
+    max-width: 760px;
+  }
+  .tech-chart-settings-wrap {
+    max-width: none;
+    margin: 0;
+  }
+  .tech-chart-settings-note {
+    text-align: left;
+    max-width: none;
+    margin: 0;
+    font-size: 0.92rem;
+    line-height: 1.6;
+    color: #586d72;
+  }
+  .tech-chart-settings-actions {
+    display: flex;
+    justify-content: flex-start;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin: 0;
+  }
+  .tech-chart-settings-btn {
+    padding: 0.78rem 1rem;
+  }
+  .tech-chart-settings-status {
+    text-align: left;
+    font-size: 0.9rem;
+    color: #355b61;
+    min-height: 1.4rem;
+    margin-bottom: 1rem;
+    padding: 0.85rem 1rem;
+    border-radius: 14px;
+    background: rgba(0, 131, 141, 0.07);
+    border: 1px solid rgba(0, 131, 141, 0.1);
+  }
+  .tech-chart-group {
+    margin-bottom: 1rem;
+    padding: 1rem 1.05rem 1.05rem;
+    border-radius: 22px;
+    border: 1px solid rgba(0, 131, 141, 0.14);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(246, 252, 252, 0.8));
+    box-shadow: 0 14px 32px rgba(7, 54, 62, 0.04);
+  }
+  .tech-chart-group:last-child {
+    margin-bottom: 0;
+  }
+  .tech-chart-group-title {
+    margin: 0 0 0.45rem;
+    text-align: left;
+    font-size: 1.02rem;
+    color: #0b4d57;
+  }
+  .tech-chart-group-desc {
+    margin: 0 0 0.9rem;
+    font-size: 0.9rem;
+    color: #55686e;
+    line-height: 1.55;
+  }
+  .tech-chart-settings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+    gap: 0.9rem;
+  }
+  .tech-chart-setting-row {
+    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid rgba(0, 131, 141, 0.18);
+    border-radius: 18px;
+    padding: 1rem 1.05rem;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.04);
+  }
+  .tech-chart-setting-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    flex-wrap: wrap;
+  }
+  .tech-chart-setting-controls input[type="range"] {
+    flex: 1 1 220px;
+    min-width: 180px;
+  }
+  @media (max-width: 980px) {
+    .settings-accordion > summary {
+      grid-template-columns: auto minmax(0, 1fr) auto;
+    }
+    .settings-accordion-meta {
+      grid-column: 2 / -1;
+      justify-content: flex-start;
+    }
+  }
+  @media (max-width: 720px) {
+    .settings-toolbar {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .settings-actions,
+    .settings-quick-links {
+      width: 100%;
+    }
+    .settings-quick-link,
+    .settings-action-btn {
+      flex: 1 1 180px;
+      text-align: center;
+      justify-content: center;
+    }
+    .settings-accordion > summary {
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      padding: 1rem;
+    }
+    .settings-chevron {
+      width: 2.35rem;
+      height: 2.35rem;
+    }
+    .settings-accordion-panel {
+      padding: 0 1rem 1rem;
+    }
+    .settings-inline-actions {
+      align-items: stretch;
+    }
+    .tech-chart-setting-head {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+  @media (max-width: 560px) {
+    .settings-hero {
+      padding: 1.2rem;
+      border-radius: 24px;
+    }
+    .settings-overview-grid {
+      grid-template-columns: 1fr;
+    }
+    .settings-accordion > summary {
+      grid-template-columns: auto minmax(0, 1fr);
+    }
+    .settings-chevron {
+      grid-column: 2;
+      justify-self: end;
+      margin-top: 0.2rem;
+    }
+    .settings-accordion-meta {
+      grid-column: 1 / -1;
+    }
+    .settings-range-row {
+      flex-wrap: wrap;
+      align-items: stretch;
+    }
+    .settings-range-value {
+      width: fit-content;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .settings-quick-link,
+    .settings-action-btn,
+    .settings-chevron {
+      transition: none;
+    }
+  }
+</style>
+
   <!-- Ładujemy bibliotekę ikon Lucide do wyświetlania ikon w menu bocznym -->
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
   <script src="ios26-ui.js?v=11" defer></script>
@@ -352,120 +877,267 @@
   </ul>
 </nav>
     </aside>
+
     <div class="main-content">
-      <div class="container" style="padding-top:1rem;padding-bottom:2rem;">
-        <h2 style="text-align:center;">Zarządzanie widocznością kart</h2>
-        <p style="text-align:center; max-width:600px; margin:0 auto 1.5rem; font-size:0.95rem;">
-          Zaznacz, które moduły i karty chcesz widzieć na stronie głównej. Wyłączenie danej
-          karty spowoduje jej ukrycie, gdy ponownie odwiedzisz stronę główną. Niektóre
-          karty mogą być powiązane ze sobą i zostaną automatycznie włączone lub wyłączone
-          razem.
-        </p>
-      <div id="settingsGrid" class="settings-grid"></div>
-      </div>
-
-      <!-- Sekcja wyglądu aplikacji -->
-      <div class="container" style="padding-top:1rem;padding-bottom:2rem;">
-        <h2 style="text-align:center;">Wygląd aplikacji</h2>
-        <p style="text-align:center; max-width:600px; margin:0 auto 1.5rem; font-size:0.95rem;">
-          Tutaj możesz dostosować kolor tła aplikacji oraz kontrast kart w motywie Liquid Glass.
-          Ustawienia te są niezależne od trybu profesjonalnego i mają pierwszeństwo nad domyślnym przyciemnieniem tła.
-        </p>
-        <div style="text-align:center; margin-bottom:2rem;">
-          <label style="display:flex; align-items:center; justify-content:center; gap:0.5rem; font-size:0.95rem;">
-            <span>Ciemne&nbsp;tło:</span>
-            <input type="range" id="darkBgLevelSettings" min="0" max="2" step="1" value="0" style="width:150px;">
-            <span id="darkBgLevelSettingsValue">0</span>
-          </label>
-        </div>
-        <div style="text-align:center; margin-bottom:2rem;">
-          <label style="display:flex; align-items:center; justify-content:center; gap:0.5rem; font-size:0.95rem;">
-            <span>Płynne&nbsp;szkło:</span>
-            <input type="range" id="glassLevelSettings" min="0" max="2" step="1" value="0" style="width:150px;">
-            <span id="glassLevelSettingsValue">0</span>
-          </label>
-        </div>
-      </div>
-
-      <!-- Sekcja ustawień nawigacji mobilnej -->
-      <div class="container" style="padding-top:1rem;padding-bottom:2rem;">
-        <h2 style="text-align:center;">Nawigacja mobilna</h2>
-        <p style="text-align:center; max-width:600px; margin:0 auto 1.5rem; font-size:0.95rem;">
-          Tutaj możesz osobno włączyć lub wyłączyć dolny dock oraz strzałkę nawigacyjną
-          „powrót na górę”. Zmiana zapisuje się na urządzeniu i działa od razu.
-        </p>
-        <div id="mobileUiSettingsGrid" class="settings-grid">
-          <div class="setting-item">
-            <span>Pokaż dock</span>
-            <label class="switch">
-              <input type="checkbox" id="showMobileDockSetting">
-              <span class="slider"></span>
-            </label>
+      <div class="container settings-shell">
+        <section class="settings-hero" aria-labelledby="settingsDashboardTitle">
+          <span class="settings-kicker">Panel ustawień</span>
+          <h2 id="settingsDashboardTitle" class="settings-hero-title">Czytelniejsze ustawienia aplikacji i siatek centylowych</h2>
+          <p class="settings-hero-text">
+            Ustawienia zostały pogrupowane tematycznie, aby skrócić stronę i zmniejszyć liczbę widocznych naraz elementów.
+            Otwierasz tylko tę sekcję, której akurat potrzebujesz, a każda zmiana zapisuje się lokalnie na urządzeniu i działa od razu.
+          </p>
+          <div class="settings-pill-row" aria-label="Najważniejsze cechy panelu">
+            <span class="settings-pill">Zapis lokalny</span>
+            <span class="settings-pill">Natychmiastowy efekt</span>
+            <span class="settings-pill">Sekcje rozwijane</span>
+            <span class="settings-pill">Ustawienia siatek centylowych</span>
           </div>
-          <div class="setting-item">
-            <span>Pokaż strzałkę nawigacyjną</span>
-            <label class="switch">
-              <input type="checkbox" id="showNavigationArrowSetting">
-              <span class="slider"></span>
-            </label>
+          <div class="settings-toolbar">
+            <nav class="settings-quick-links" aria-label="Szybki dostęp do sekcji ustawień">
+              <a class="settings-quick-link" href="#settings-section-cards">Widoczność kart</a>
+              <a class="settings-quick-link" href="#settings-section-appearance">Wygląd</a>
+              <a class="settings-quick-link" href="#settings-section-mobile">Mobilne</a>
+              <a class="settings-quick-link" href="#settings-section-pal">Palczewska</a>
+              <a class="settings-quick-link" href="#settings-section-chart">Siatki centylowe</a>
+              <a class="settings-quick-link" href="#settings-section-pro">PRO</a>
+            </nav>
+            <div class="settings-actions" aria-label="Akcje dla wszystkich sekcji">
+              <button type="button" class="settings-action-btn" id="expandAllSettingsSections">Rozwiń wszystkie</button>
+              <button type="button" class="settings-action-btn" id="collapseAllSettingsSections">Zwiń wszystkie</button>
+            </div>
           </div>
+        </section>
+
+        <section class="settings-overview-grid" aria-label="Przegląd kategorii ustawień">
+          <article class="settings-overview-card">
+            <span class="settings-overview-label">Widok aplikacji</span>
+            <strong class="settings-overview-value">17 kart</strong>
+            <p class="settings-overview-text">Szybkie przełączniki sterujące widocznością głównych modułów na stronie startowej.</p>
+          </article>
+          <article class="settings-overview-card">
+            <span class="settings-overview-label">Interfejs</span>
+            <strong class="settings-overview-value">4 szybkie opcje</strong>
+            <p class="settings-overview-text">Wygląd aplikacji i elementy mobilnej nawigacji są odseparowane od ustawień medycznych.</p>
+          </article>
+          <article class="settings-overview-card">
+            <span class="settings-overview-label">Siatki centylowe</span>
+            <strong class="settings-overview-value">19 parametrów</strong>
+            <p class="settings-overview-text">W jednym miejscu masz wygładzanie Palczewskiej, grubości linii oraz ustawienia trybu PRO.</p>
+          </article>
+        </section>
+
+        <div class="settings-accordion-list">
+          <details class="settings-accordion" id="settings-section-cards" open>
+            <summary>
+              <span class="settings-accordion-index" aria-hidden="true">01</span>
+              <div class="settings-accordion-copy">
+                <h2 class="settings-accordion-title">Widoczność kart na stronie głównej</h2>
+                <p class="settings-accordion-text">Wybierasz, które moduły i karty mają być widoczne po ponownym otwarciu aplikacji.</p>
+              </div>
+              <div class="settings-accordion-meta">
+                <span class="settings-mini-chip">17 przełączników</span>
+                <span class="settings-mini-chip">Strona główna</span>
+              </div>
+              <span class="settings-chevron" aria-hidden="true">⌄</span>
+            </summary>
+            <div class="settings-accordion-panel">
+              <div class="settings-panel-inner">
+                <p class="settings-section-note">
+                  Wyłączenie danej karty ukryje ją na stronie głównej. Część opcji pozostaje logicznie powiązana,
+                  więc aplikacja zachowuje zgodność między zależnymi modułami.
+                </p>
+                <div id="settingsGrid" class="settings-grid"></div>
+              </div>
+            </div>
+          </details>
+
+          <details class="settings-accordion" id="settings-section-appearance">
+            <summary>
+              <span class="settings-accordion-index" aria-hidden="true">02</span>
+              <div class="settings-accordion-copy">
+                <h2 class="settings-accordion-title">Wygląd aplikacji</h2>
+                <p class="settings-accordion-text">Sterujesz tłem oraz poziomem efektu Liquid Glass bez wpływu na logikę obliczeń.</p>
+              </div>
+              <div class="settings-accordion-meta">
+                <span class="settings-mini-chip">2 suwaki</span>
+                <span class="settings-mini-chip">Natychmiastowy efekt</span>
+              </div>
+              <span class="settings-chevron" aria-hidden="true">⌄</span>
+            </summary>
+            <div class="settings-accordion-panel">
+              <div class="settings-panel-inner">
+                <p class="settings-section-note">
+                  Te ustawienia działają niezależnie od trybu profesjonalnego i zapisują się lokalnie w przeglądarce.
+                </p>
+                <div class="settings-control-grid">
+                  <div class="settings-control-card">
+                    <div class="settings-control-header">
+                      <h3 class="settings-control-title">Ciemne tło</h3>
+                      <span class="settings-tag">0–2</span>
+                    </div>
+                    <p class="settings-control-desc">Reguluje przyciemnienie tła aplikacji.</p>
+                    <label class="settings-range-row" for="darkBgLevelSettings">
+                      <input type="range" id="darkBgLevelSettings" min="0" max="2" step="1" value="0">
+                      <span id="darkBgLevelSettingsValue" class="settings-range-value">0</span>
+                    </label>
+                  </div>
+                  <div class="settings-control-card">
+                    <div class="settings-control-header">
+                      <h3 class="settings-control-title">Płynne szkło</h3>
+                      <span class="settings-tag">0–2</span>
+                    </div>
+                    <p class="settings-control-desc">Zwiększa lub zmniejsza kontrast kart w motywie Liquid Glass.</p>
+                    <label class="settings-range-row" for="glassLevelSettings">
+                      <input type="range" id="glassLevelSettings" min="0" max="2" step="1" value="0">
+                      <span id="glassLevelSettingsValue" class="settings-range-value">0</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <details class="settings-accordion" id="settings-section-mobile">
+            <summary>
+              <span class="settings-accordion-index" aria-hidden="true">03</span>
+              <div class="settings-accordion-copy">
+                <h2 class="settings-accordion-title">Nawigacja mobilna</h2>
+                <p class="settings-accordion-text">Osobno sterujesz dolnym dockiem i strzałką „powrót na górę”.</p>
+              </div>
+              <div class="settings-accordion-meta">
+                <span class="settings-mini-chip">2 przełączniki</span>
+                <span class="settings-mini-chip">Mobile</span>
+              </div>
+              <span class="settings-chevron" aria-hidden="true">⌄</span>
+            </summary>
+            <div class="settings-accordion-panel">
+              <div class="settings-panel-inner">
+                <p class="settings-section-note">
+                  Ustawienia mobilne dotyczą tylko elementów nawigacyjnych i nie zmieniają układu wersji desktopowej.
+                </p>
+                <div id="mobileUiSettingsGrid" class="settings-grid">
+                  <div class="setting-item">
+                    <span>Pokaż dock</span>
+                    <label class="switch">
+                      <input type="checkbox" id="showMobileDockSetting">
+                      <span class="slider"></span>
+                    </label>
+                  </div>
+                  <div class="setting-item">
+                    <span>Pokaż strzałkę nawigacyjną</span>
+                    <label class="switch">
+                      <input type="checkbox" id="showNavigationArrowSetting">
+                      <span class="slider"></span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <details class="settings-accordion" id="settings-section-pal">
+            <summary>
+              <span class="settings-accordion-index" aria-hidden="true">04</span>
+              <div class="settings-accordion-copy">
+                <h2 class="settings-accordion-title">Wygładzanie siatek Palczewskiej</h2>
+                <p class="settings-accordion-text">Dobierasz liczbę przebiegów filtru wygładzającego dla krzywych Palczewskiej.</p>
+              </div>
+              <div class="settings-accordion-meta">
+                <span class="settings-mini-chip">1 suwak</span>
+                <span class="settings-mini-chip">Palczewska</span>
+              </div>
+              <span class="settings-chevron" aria-hidden="true">⌄</span>
+            </summary>
+            <div class="settings-accordion-panel">
+              <div class="settings-panel-inner">
+                <p class="settings-section-note">
+                  Większa wartość w zakresie 0–12 daje gładsze krzywe, ale może minimalnie zmienić wartości procentowe.
+                </p>
+                <div class="settings-control-grid">
+                  <div id="palSmoothSetting" class="settings-control-card settings-control-card--wide">
+                    <div class="settings-control-header">
+                      <h3 class="settings-control-title">Stopień wygładzenia</h3>
+                      <span class="settings-tag">0–12</span>
+                    </div>
+                    <p class="settings-control-desc">Zmiana dotyczy tylko siatek Palczewskiej.</p>
+                    <label class="settings-range-row" for="palSmoothPassSettings">
+                      <input type="range" id="palSmoothPassSettings" min="0" max="12" step="1" value="12">
+                      <span id="palSmoothPassSettingsValue" class="settings-range-value">12</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <details class="settings-accordion" id="settings-section-chart">
+            <summary>
+              <span class="settings-accordion-index" aria-hidden="true">05</span>
+              <div class="settings-accordion-copy">
+                <h2 class="settings-accordion-title">Techniczny panel siatek centylowych</h2>
+                <p class="settings-accordion-text">Regulujesz grubości linii, osi, krzywych oraz elementów pomocniczych wykresu.</p>
+              </div>
+              <div class="settings-accordion-meta">
+                <span class="settings-mini-chip">17 parametrów</span>
+                <span class="settings-mini-chip">Eksperckie</span>
+              </div>
+              <span class="settings-chevron" aria-hidden="true">⌄</span>
+            </summary>
+            <div class="settings-accordion-panel">
+              <div class="settings-panel-inner">
+                <div class="settings-inline-actions">
+                  <p class="settings-inline-note">
+                    Każda wartość jest podawana w pikselach. Po zmianie wygeneruj siatkę ponownie, aby zobaczyć efekt na stronie głównej lub w DocPro.
+                  </p>
+                  <div class="tech-chart-settings-actions">
+                    <button type="button" id="resetCentileLineStylesBtn" class="tech-chart-settings-btn">Przywróć domyślne grubości</button>
+                  </div>
+                </div>
+                <div class="tech-chart-settings-wrap">
+                  <div id="centileLineSettingsStatus" class="tech-chart-settings-status">Wartości zapisują się automatycznie.</div>
+                  <div id="centileLineSettingsGrid" class="tech-chart-settings-grid"></div>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <details class="settings-accordion" id="settings-section-pro">
+            <summary>
+              <span class="settings-accordion-index" aria-hidden="true">06</span>
+              <div class="settings-accordion-copy">
+                <h2 class="settings-accordion-title">Tryb PRO: pulsowanie ramek</h2>
+                <p class="settings-accordion-text">Wybierasz czas animacji ramek wyników w interfejsie profesjonalnym.</p>
+              </div>
+              <div class="settings-accordion-meta">
+                <span class="settings-mini-chip">PRO</span>
+                <span class="settings-mini-chip">1 suwak</span>
+              </div>
+              <span class="settings-chevron" aria-hidden="true">⌄</span>
+            </summary>
+            <div class="settings-accordion-panel">
+              <div class="settings-panel-inner">
+                <p class="settings-section-note">
+                  Opcja działa tylko dla użytkowników z aktywnym trybem profesjonalnym.
+                </p>
+                <div class="settings-control-grid">
+                  <div class="settings-control-card settings-control-card--wide">
+                    <div class="settings-control-header">
+                      <h3 class="settings-control-title">Czas pulsowania</h3>
+                      <span class="settings-tag">PRO</span>
+                    </div>
+                    <p class="settings-control-desc">0 = wyłączone, 1 = ciągle, pozostałe pozycje ustawiają czas wygaszania animacji.</p>
+                    <label class="settings-range-row" for="pulseDurationSettings">
+                      <input type="range" id="pulseDurationSettings" min="0" max="5" step="1" value="1">
+                      <span id="pulseDurationSettingsValue" class="settings-range-value">ciągle</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
         </div>
       </div>
-
-      <!-- Sekcja ustawień wygładzania siatek Palczewskiej -->
-      <div class="container" style="padding-top:1rem;padding-bottom:2rem;">
-        <h2 style="text-align:center;">Wygładzanie siatek Palczewskiej</h2>
-        <p style="text-align:center; max-width:600px; margin:0 auto 1.5rem; font-size:0.95rem;">
-          Tutaj możesz ustawić liczbę przebiegów filtru wygładzającego krzywe w siatkach centylowych Palczewskiej.  
-          Większa wartość (0–12) oznacza bardziej gładkie krzywe, kosztem drobnej zmiany wartości (do około ±1%).
-        </p>
-        <div id="palSmoothSetting" style="text-align:center; margin-bottom:2rem;">
-          <label style="display:flex; align-items:center; justify-content:center; gap:0.5rem; font-size:0.95rem;">
-            <span>Stopień&nbsp;wygładzenia:</span>
-            <input type="range" id="palSmoothPassSettings" min="0" max="12" step="1" value="12" style="width:150px;">
-            <span id="palSmoothPassSettingsValue">12</span>
-          </label>
-        </div>
-      </div>
-
-
-<!-- Sekcja technicznego panelu linii siatek centylowych -->
-<div class="container" style="padding-top:1rem;padding-bottom:2rem;">
-  <h2 style="text-align:center;">Techniczny panel siatek centylowych</h2>
-  <p class="tech-chart-settings-note">
-    Tutaj możesz ustawić grubość najważniejszych linii wykorzystywanych przy generowaniu siatek centylowych
-    na stronie głównej i w DocPro. Każda wartość jest podawana w pikselach i zapisuje się automatycznie na urządzeniu.
-    Po zmianie wygeneruj siatkę ponownie, aby zobaczyć efekt.
-  </p>
-  <div class="tech-chart-settings-wrap">
-    <div class="tech-chart-settings-actions">
-      <button type="button" id="resetCentileLineStylesBtn" class="tech-chart-settings-btn">Przywróć domyślne grubości</button>
-    </div>
-    <div id="centileLineSettingsStatus" class="tech-chart-settings-status">Wartości zapisują się automatycznie.</div>
-    <div id="centileLineSettingsGrid" class="tech-chart-settings-grid"></div>
-  </div>
-</div>
-
-      <!-- Sekcja ustawień wyświetlania leków dożylnych w module Antybiotykoterapia została tymczasowo ukryta -->
-
-      <!-- Sekcja ustawień czasu pulsowania ramek wynikowych (dostępna tylko w trybie PRO) -->
-      <div class="container" style="padding-top:1rem;padding-bottom:2rem;">
-        <h2 style="text-align:center;">Czas pulsowania ramek</h2>
-        <p style="text-align:center; max-width:600px; margin:0 auto 1.5rem; font-size:0.95rem;">
-          Wybierz, jak długo mają pulsować kolorowe ramki wyników w trybie profesjonalnym.
-          Opcja ta jest dostępna tylko dla użytkowników z włączonym trybem PRO.
-        </p>
-        <div style="text-align:center; margin-bottom:2rem;">
-          <label style="display:flex; align-items:center; justify-content:center; gap:0.5rem; font-size:0.95rem;">
-            <span>Czas pulsowania:</span>
-            <!-- Suwak z sześcioma pozycjami: 0 = wył., 1 = ciągle, 2 = 3s, 3 = 5s, 4 = 7s, 5 = 10s -->
-            <input type="range" id="pulseDurationSettings" min="0" max="5" step="1" value="1" style="width:150px;">
-            <span id="pulseDurationSettingsValue">ciągle</span>
-          </label>
-        </div>
-      </div>
-
-    </div>
     <aside class="decor-sidebar"></aside>
   </div>
   <footer>
@@ -981,6 +1653,48 @@
     }
   });
 </script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const sections = Array.from(document.querySelectorAll('.settings-accordion'));
+      const expandBtn = document.getElementById('expandAllSettingsSections');
+      const collapseBtn = document.getElementById('collapseAllSettingsSections');
+
+      if (expandBtn) {
+        expandBtn.addEventListener('click', function() {
+          sections.forEach(function(section) { section.open = true; });
+        });
+      }
+
+      if (collapseBtn) {
+        collapseBtn.addEventListener('click', function() {
+          sections.forEach(function(section) { section.open = false; });
+        });
+      }
+
+      function openSectionFromHash() {
+        const hash = window.location.hash;
+        if (!hash) return;
+        const target = document.querySelector(hash);
+        if (target && target.classList.contains('settings-accordion')) {
+          target.open = true;
+        }
+      }
+
+      document.querySelectorAll('.settings-quick-link').forEach(function(link) {
+        link.addEventListener('click', function() {
+          const target = document.querySelector(this.getAttribute('href'));
+          if (target && target.classList.contains('settings-accordion')) {
+            target.open = true;
+          }
+        });
+      });
+
+      openSectionFromHash();
+      window.addEventListener('hashchange', openSectionFromHash);
+    });
+  </script>
+
   <!-- Skrypt obsługujący przełącznik widoczności leków dożylnych w module antybiotykowym został tymczasowo usunięty -->
   <!-- Po załadowaniu ikon lucide wymieniamy je na SVG.  Używamy createIcons,
        aby przetworzyć wszystkie atrybuty data‑lucide i ustawić odpowiednią
