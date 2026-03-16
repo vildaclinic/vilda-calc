@@ -599,17 +599,17 @@
   document.addEventListener('DOMContentLoaded', function() {
     const STORAGE_KEY = 'centileChartLineStyles';
     const DEFAULTS = Object.freeze({
-      majorVerticalGrid: 2.5,
-      minorVerticalGrid: 1.75,
-      majorHorizontalGrid: 2.5,
-      minorHorizontalGrid: 1.5,
-      axes: 2,
-      percentileCurves: 2,
+      majorVerticalGrid: 3.25,
+      minorVerticalGrid: 2.25,
+      majorHorizontalGrid: 3.25,
+      minorHorizontalGrid: 2.25,
+      axes: 2.5,
+      percentileCurves: 2.75,
       bandReference: 2,
       cutoffWarning: 5,
       currentPointBorder: 2,
-      historyPath: 3,
-      boneAgeStroke: 2,
+      historyPath: 4.5,
+      boneAgeStroke: 2.5,
       targetHeightConnector: 2,
       summaryBoxBorder: 6,
       publicationHistoryPath: 6,
@@ -617,6 +617,17 @@
       publicationArrowLine: 6,
       publicationArrowBoxBorder: 3
     });
+    const LEGACY_DEFAULTS = Object.freeze({
+      majorVerticalGrid: 2.5,
+      minorVerticalGrid: 1.75,
+      majorHorizontalGrid: 2.5,
+      minorHorizontalGrid: 1.5,
+      axes: 2,
+      percentileCurves: 2,
+      historyPath: 3,
+      boneAgeStroke: 2
+    });
+    const MIGRATION_KEY = 'centileChartLineStylesDefaults_v6';
 
     const GROUPS = [
       {
@@ -736,6 +747,54 @@
       const clamped = Math.min(20, Math.max(0.25, parsed));
       return Math.round(clamped * 100) / 100;
     }
+
+    function migrateDefaultsForExistingUsers() {
+      try {
+        if (localStorage.getItem(MIGRATION_KEY) === '1') return;
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) {
+          localStorage.setItem(MIGRATION_KEY, '1');
+          return;
+        }
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') {
+          localStorage.setItem(MIGRATION_KEY, '1');
+          return;
+        }
+        const keysToRefresh = [
+          'majorVerticalGrid',
+          'minorVerticalGrid',
+          'majorHorizontalGrid',
+          'minorHorizontalGrid',
+          'axes',
+          'percentileCurves',
+          'historyPath',
+          'boneAgeStroke'
+        ];
+        const next = Object.assign({}, parsed);
+        let changed = false;
+        keysToRefresh.forEach(function(key) {
+          if (!Object.prototype.hasOwnProperty.call(parsed, key)) {
+            next[key] = DEFAULTS[key];
+            changed = true;
+            return;
+          }
+          const parsedValue = normalizeValue(parsed[key], null);
+          if (parsedValue === LEGACY_DEFAULTS[key]) {
+            next[key] = DEFAULTS[key];
+            changed = true;
+          }
+        });
+        if (changed) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+        }
+        localStorage.setItem(MIGRATION_KEY, '1');
+      } catch (e) {
+        try { localStorage.setItem(MIGRATION_KEY, '1'); } catch (_) {}
+      }
+    }
+
+    migrateDefaultsForExistingUsers();
 
     function readSettings() {
       const merged = Object.assign({}, DEFAULTS);

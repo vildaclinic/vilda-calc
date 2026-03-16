@@ -1496,17 +1496,17 @@ function getLMSHeightHybrid(sex, m) {
    Ustawienia pochodzą z panelu technicznego w ustawienia.html i są trzymane w localStorage. */
 const CENTILE_CHART_LINE_STYLE_STORAGE_KEY = 'centileChartLineStyles';
 const CENTILE_CHART_LINE_DEFAULTS = Object.freeze({
-  majorVerticalGrid: 2.5,
-  minorVerticalGrid: 1.75,
-  majorHorizontalGrid: 2.5,
-  minorHorizontalGrid: 1.5,
-  axes: 2,
-  percentileCurves: 2,
+  majorVerticalGrid: 3.25,
+  minorVerticalGrid: 2.25,
+  majorHorizontalGrid: 3.25,
+  minorHorizontalGrid: 2.25,
+  axes: 2.5,
+  percentileCurves: 2.75,
   bandReference: 2,
   cutoffWarning: 5,
   currentPointBorder: 2,
-  historyPath: 3,
-  boneAgeStroke: 2,
+  historyPath: 4.5,
+  boneAgeStroke: 2.5,
   targetHeightConnector: 2,
   summaryBoxBorder: 6,
   publicationHistoryPath: 6,
@@ -1514,6 +1514,71 @@ const CENTILE_CHART_LINE_DEFAULTS = Object.freeze({
   publicationArrowLine: 6,
   publicationArrowBoxBorder: 3
 });
+const CENTILE_CHART_LINE_LEGACY_DEFAULTS = Object.freeze({
+  majorVerticalGrid: 2.5,
+  minorVerticalGrid: 1.75,
+  majorHorizontalGrid: 2.5,
+  minorHorizontalGrid: 1.5,
+  axes: 2,
+  percentileCurves: 2,
+  historyPath: 3,
+  boneAgeStroke: 2
+});
+const CENTILE_CHART_LINE_DEFAULT_MIGRATION_KEY = 'centileChartLineStylesDefaults_v6';
+
+function parseCentileChartLineMigrationValue(value) {
+  const normalized = typeof value === 'string' ? value.replace(',', '.').trim() : value;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? Math.round(parsed * 100) / 100 : null;
+}
+
+function migrateCentileChartLineDefaultsV6() {
+  try {
+    if (localStorage.getItem(CENTILE_CHART_LINE_DEFAULT_MIGRATION_KEY) === '1') return;
+    const raw = localStorage.getItem(CENTILE_CHART_LINE_STYLE_STORAGE_KEY);
+    if (!raw) {
+      localStorage.setItem(CENTILE_CHART_LINE_DEFAULT_MIGRATION_KEY, '1');
+      return;
+    }
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') {
+      localStorage.setItem(CENTILE_CHART_LINE_DEFAULT_MIGRATION_KEY, '1');
+      return;
+    }
+    const keysToRefresh = [
+      'majorVerticalGrid',
+      'minorVerticalGrid',
+      'majorHorizontalGrid',
+      'minorHorizontalGrid',
+      'axes',
+      'percentileCurves',
+      'historyPath',
+      'boneAgeStroke'
+    ];
+    const next = Object.assign({}, parsed);
+    let changed = false;
+    keysToRefresh.forEach((key) => {
+      if (!Object.prototype.hasOwnProperty.call(parsed, key)) {
+        next[key] = CENTILE_CHART_LINE_DEFAULTS[key];
+        changed = true;
+        return;
+      }
+      const parsedValue = parseCentileChartLineMigrationValue(parsed[key]);
+      if (parsedValue === CENTILE_CHART_LINE_LEGACY_DEFAULTS[key]) {
+        next[key] = CENTILE_CHART_LINE_DEFAULTS[key];
+        changed = true;
+      }
+    });
+    if (changed) {
+      localStorage.setItem(CENTILE_CHART_LINE_STYLE_STORAGE_KEY, JSON.stringify(next));
+    }
+    localStorage.setItem(CENTILE_CHART_LINE_DEFAULT_MIGRATION_KEY, '1');
+  } catch (e) {
+    try { localStorage.setItem(CENTILE_CHART_LINE_DEFAULT_MIGRATION_KEY, '1'); } catch (_) {}
+  }
+}
+
+migrateCentileChartLineDefaultsV6();
 
 function sanitizeCentileChartLineWidthValue(value, fallback) {
   const normalized = (typeof value === 'string') ? value.replace(',', '.').trim() : value;
