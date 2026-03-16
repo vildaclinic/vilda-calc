@@ -422,6 +422,11 @@ function refreshGrowthChartActionControls() {
       window.updateAdvancedCentileChartButton();
     }
   } catch (_) {}
+  try {
+    if (typeof window !== 'undefined' && typeof window.updatePublicationToggleVisibility === 'function') {
+      window.updatePublicationToggleVisibility();
+    }
+  } catch (_) {}
 }
 
 function syncGrowthDataSourceInputs(options = {}) {
@@ -13672,6 +13677,11 @@ function calculateGrowthAdvanced() {
     if (typeof updateAdvancedGrowthReportButtonVisibility === 'function') {
       try { updateAdvancedGrowthReportButtonVisibility(true); } catch (_) {}
     }
+    try {
+      if (typeof refreshGrowthChartActionControls === 'function') {
+        refreshGrowthChartActionControls();
+      }
+    } catch (_) {}
     return;
   }
   const sexEl = document.getElementById('sex');
@@ -13949,6 +13959,11 @@ if (heightMeas.length >= 1 && !isNaN(heightVal)) {
     if (typeof updateAdvancedGrowthReportButtonVisibility === 'function') {
       try { updateAdvancedGrowthReportButtonVisibility(false); } catch (_) {}
     }
+    try {
+      if (typeof refreshGrowthChartActionControls === 'function') {
+        refreshGrowthChartActionControls();
+      }
+    } catch (_) {}
     try {
       if (typeof window !== 'undefined' && typeof window.vildaPersistScheduleSave === 'function') {
         window.vildaPersistScheduleSave();

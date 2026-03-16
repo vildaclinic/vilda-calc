@@ -3806,7 +3806,7 @@ document.addEventListener('DOMContentLoaded', function() {
       btnAdv.style.display = state.visible ? '' : 'none';
       btnAdv.textContent = state.label;
       btnAdv.disabled = !state.supported;
-      btnAdv.title = state.message || '';
+      btnAdv.title = state.supported ? (state.hint || '') : (state.message || '');
     }
 
     if (typeof window !== 'undefined') {
@@ -3893,6 +3893,11 @@ function getCurrentCentileChartAgeMonths() {
   return Math.round(getCurrentCentileChartAgeYears() * 12);
 }
 
+const PALCZEWSKA_INFANT_MIN_MONTHS = 0;
+const PALCZEWSKA_INFANT_MAX_MONTHS = 36;
+const PALCZEWSKA_EXTENDED_MIN_MONTHS = 12;
+const PALCZEWSKA_EXTENDED_MAX_MONTHS = 216;
+
 function getSelectedCentileChartSourceRaw() {
   const selected = document.querySelector('input[name="dataSource"]:checked');
   return selected && selected.value ? String(selected.value).toUpperCase() : 'OLAF';
@@ -3906,6 +3911,58 @@ function isCentileChartProfessionalMode() {
   }
   const toggle = document.getElementById('resultsModeToggle');
   return !!(toggle && toggle.checked);
+}
+
+function getPalczewskaChartPlan(ageMonths, adv) {
+  const baseAgeMonths = Number.isFinite(ageMonths) ? ageMonths : getCurrentCentileChartAgeMonths();
+  const dataState = adv || window.advancedGrowthData || null;
+  const collected = (typeof collectAllAgesMonths === 'function')
+    ? collectAllAgesMonths(baseAgeMonths, dataState)
+    : { ages: [baseAgeMonths] };
+
+  const ages = (Array.isArray(collected.ages) ? collected.ages : [baseAgeMonths])
+    .map(v => Number(v))
+    .filter(v => Number.isFinite(v) && v >= PALCZEWSKA_INFANT_MIN_MONTHS && v <= PALCZEWSKA_EXTENDED_MAX_MONTHS);
+
+  const hasAges = ages.length > 0;
+  const allInOverlap = hasAges && ages.every(v => v >= PALCZEWSKA_EXTENDED_MIN_MONTHS && v <= PALCZEWSKA_INFANT_MAX_MONTHS);
+  const hasUnder1Year = ages.some(v => v < PALCZEWSKA_EXTENDED_MIN_MONTHS);
+  const hasOver3Years = ages.some(v => v > PALCZEWSKA_INFANT_MAX_MONTHS);
+  const allInExtended = hasAges && ages.every(v => v >= PALCZEWSKA_EXTENDED_MIN_MONTHS);
+
+  let mode = 'INFANT_ONLY';
+  if (allInOverlap) {
+    mode = 'CHOICE';
+  } else if (hasUnder1Year && hasOver3Years) {
+    mode = 'BOTH_REQUIRED';
+  } else if (allInExtended) {
+    mode = 'EXTENDED_ONLY';
+  }
+
+  return {
+    mode,
+    ages,
+    publicationEligible: (mode === 'CHOICE' || mode === 'EXTENDED_ONLY' || mode === 'BOTH_REQUIRED')
+  };
+}
+
+function getPalczewskaButtonLabelFromPlan(plan) {
+  const mode = plan && plan.mode ? plan.mode : 'INFANT_ONLY';
+  if (mode === 'INFANT_ONLY') return 'Generuj siatkę Palczewska 0–3 lata';
+  if (mode === 'EXTENDED_ONLY') return 'Generuj siatkę Palczewska 1–18 lat';
+  if (mode === 'BOTH_REQUIRED') return 'Generuj siatki Palczewska 0–3 i 1–18 lat';
+  return 'Generuj siatkę Palczewska';
+}
+
+function getPalczewskaButtonHintFromPlan(plan) {
+  const mode = plan && plan.mode ? plan.mode : 'INFANT_ONLY';
+  if (mode === 'CHOICE') {
+    return 'Dla wieku 1–3 lata po kliknięciu wybierzesz zakres siatki Palczewskiej: 0–3 lata albo 1–18 lat.';
+  }
+  if (mode === 'BOTH_REQUIRED') {
+    return 'Wprowadzone pomiary obejmują zakres wymagający wygenerowania obu siatek Palczewskiej: 0–3 lata oraz 1–18 lat.';
+  }
+  return '';
 }
 
 function getCentileChartUnavailableMessage(source, ageYears, proMode) {
@@ -3928,17 +3985,23 @@ function getCentileChartUnavailableMessage(source, ageYears, proMode) {
 
 function getCentileChartState() {
   const ageYears = getCurrentCentileChartAgeYears();
+  const ageMonths = getCurrentCentileChartAgeMonths();
   const rawSource = getSelectedCentileChartSourceRaw();
   const proMode = isCentileChartProfessionalMode();
   const isChild = ageYears < 18;
 
   if (rawSource === 'PALCZEWSKA') {
+    const palPlan = getPalczewskaChartPlan(ageMonths, window.advancedGrowthData || null);
+    const supported = isChild && proMode;
     return {
       visible: isChild,
       source: 'PALCZEWSKA',
-      label: 'Generuj siatkę Palczewska',
-      supported: isChild && proMode,
-      message: isChild && proMode ? '' : getCentileChartUnavailableMessage('PALCZEWSKA', ageYears, proMode)
+      label: getPalczewskaButtonLabelFromPlan(palPlan),
+      supported,
+      message: supported ? '' : getCentileChartUnavailableMessage('PALCZEWSKA', ageYears, proMode),
+      hint: supported ? getPalczewskaButtonHintFromPlan(palPlan) : '',
+      palPlan,
+      publicationEligible: supported && !!palPlan.publicationEligible
     };
   }
 
@@ -3949,7 +4012,9 @@ function getCentileChartState() {
       source: 'WHO',
       label: 'Generuj siatkę WHO',
       supported: whoSupported,
-      message: whoSupported ? '' : getCentileChartUnavailableMessage('WHO', ageYears, proMode)
+      message: whoSupported ? '' : getCentileChartUnavailableMessage('WHO', ageYears, proMode),
+      hint: '',
+      publicationEligible: false
     };
   }
 
@@ -3959,7 +4024,9 @@ function getCentileChartState() {
     source: 'OLAF',
     label: 'Generuj siatkę OLAF',
     supported: olafSupported,
-    message: olafSupported ? '' : getCentileChartUnavailableMessage('OLAF', ageYears, proMode)
+    message: olafSupported ? '' : getCentileChartUnavailableMessage('OLAF', ageYears, proMode),
+    hint: '',
+    publicationEligible: false
   };
 }
 
@@ -4641,7 +4708,7 @@ async function generateCentileChart() {
     return;
   }
 
-  if (selectedChartSource === 'PALCZEWSKA' && ageMonths >= 36) {
+  if (selectedChartSource === 'PALCZEWSKA') {
     if (typeof generatePalczewskaCentileCharts === 'function') {
       await generatePalczewskaCentileCharts();
       return;
@@ -4680,9 +4747,9 @@ async function generateCentileChart() {
   } else if (selectedChartSource === 'PALCZEWSKA') {
     addPage({
       minX: 0,
-      maxX: 35,
-      subtitle: 'Zakres: 0–<3 lata',
-      footer: 'Dane do siatek: Palczewska & Niedźwiecka (0–<3 lata)',
+      maxX: 36,
+      subtitle: 'Zakres: 0–3 lata',
+      footer: 'Dane do siatek: Palczewska & Niedźwiecka (0–3 lata)',
       chartSource: 'PALCZEWSKA'
     });
   } else {
@@ -6414,9 +6481,140 @@ async function generateCentileChart() {
       ctx.restore();
       return canvas;
     }
+    function buildPalczewskaInfantPageCanvas({ sex, userAgeMonths, userWeight, userHeight }) {
+      return buildCentilePageCanvas({
+        rangeMinX: PALCZEWSKA_INFANT_MIN_MONTHS,
+        rangeMaxX: PALCZEWSKA_INFANT_MAX_MONTHS,
+        sex,
+        userAgeMonths,
+        userWeight,
+        userHeight,
+        headerTitle: (sex === 'M' ? 'Siatka centylowa chłopcy' : 'Siatka centylowa dziewczynki'),
+        headerSubtitle: 'Zakres: 0–3 lata',
+        footerText: 'Dane do siatek: Palczewska & Niedźwiecka (0–3 lata)',
+        chartSource: 'PALCZEWSKA'
+      });
+    }
+
+    function buildPalczewskaExtendedCanvases({ sex, userAgeMonths, userWeight, userHeight }) {
+      let prevForceEnglish = false;
+      try {
+        prevForceEnglish = (typeof window !== 'undefined' && window.forceCentileEnglish) ? window.forceCentileEnglish : false;
+        if (typeof window !== 'undefined') {
+          window.forceCentileEnglish = !!window.publicationCharts;
+        }
+      } catch (_) {
+        prevForceEnglish = false;
+      }
+
+      try {
+        const heightCanvas = buildPalczewskaPageCanvas({
+          chartType: 'height',
+          sex,
+          userAgeMonths,
+          userWeight,
+          userHeight
+        });
+        const weightCanvas = buildPalczewskaPageCanvas({
+          chartType: 'weight',
+          sex,
+          userAgeMonths,
+          userWeight,
+          userHeight
+        });
+        return [heightCanvas, weightCanvas];
+      } finally {
+        try {
+          if (typeof window !== 'undefined') {
+            window.forceCentileEnglish = prevForceEnglish;
+          }
+        } catch (_) {
+          /* ignore */
+        }
+      }
+    }
+
+    function openPalczewskaCanvasesPdf(canvases) {
+      const pages = Array.isArray(canvases) ? canvases.filter(Boolean) : [];
+      if (!pages.length) return;
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      pages.forEach((canvas, idx) => {
+        if (idx > 0) pdf.addPage();
+        const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
+        pdf.addImage(dataUrl, 'JPEG', 0, 0, 210, 297);
+      });
+      const blob = pdf.output('blob');
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    }
+
+    function promptPalczewskaRangeSelection() {
+      return new Promise((resolve) => {
+        const existing = document.getElementById('palczewskaRangeModalBackdrop');
+        if (existing) existing.remove();
+
+        const backdrop = document.createElement('div');
+        backdrop.id = 'palczewskaRangeModalBackdrop';
+        backdrop.style.position = 'fixed';
+        backdrop.style.inset = '0';
+        backdrop.style.background = 'rgba(0,0,0,0.45)';
+        backdrop.style.display = 'flex';
+        backdrop.style.alignItems = 'center';
+        backdrop.style.justifyContent = 'center';
+        backdrop.style.zIndex = '10000';
+        backdrop.style.padding = '1rem';
+
+        const dialog = document.createElement('div');
+        dialog.style.background = '#ffffff';
+        dialog.style.borderRadius = '12px';
+        dialog.style.maxWidth = '520px';
+        dialog.style.width = '100%';
+        dialog.style.padding = '1.25rem';
+        dialog.style.boxShadow = '0 18px 48px rgba(0,0,0,0.2)';
+        dialog.innerHTML = `
+          <h3 style="margin:0 0 .75rem 0;font-size:1.15rem;color:#00343a;">Wybierz zakres siatki Palczewskiej</h3>
+          <p style="margin:0 0 1rem 0;line-height:1.5;color:#333;">
+            Dla wieku od 1 do 3 lat możesz wygenerować siatkę Palczewskiej w zakresie <strong>0–3 lata</strong>
+            albo <strong>1–18 lat</strong>. Wybierz zakres, który chcesz wygenerować.
+          </p>
+          <div style="display:flex;flex-wrap:wrap;gap:.75rem;justify-content:flex-end;">
+            <button type="button" data-mode="INFANT_ONLY" style="background:#00838d;color:#fff;border:none;border-radius:8px;padding:.7rem 1rem;font-weight:600;cursor:pointer;">0–3 lata</button>
+            <button type="button" data-mode="EXTENDED_ONLY" style="background:#6a1b9a;color:#fff;border:none;border-radius:8px;padding:.7rem 1rem;font-weight:600;cursor:pointer;">1–18 lat</button>
+            <button type="button" data-mode="CANCEL" style="background:#e0e0e0;color:#222;border:none;border-radius:8px;padding:.7rem 1rem;font-weight:600;cursor:pointer;">Anuluj</button>
+          </div>
+        `;
+
+        const cleanup = (value) => {
+          document.removeEventListener('keydown', onKeyDown);
+          backdrop.remove();
+          resolve(value);
+        };
+
+        const onKeyDown = (ev) => {
+          if (ev.key === 'Escape') cleanup(null);
+        };
+
+        backdrop.addEventListener('click', (ev) => {
+          if (ev.target === backdrop) cleanup(null);
+        });
+
+        dialog.querySelectorAll('button[data-mode]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const mode = btn.getAttribute('data-mode');
+            cleanup(mode === 'CANCEL' ? null : mode);
+          });
+        });
+
+        document.addEventListener('keydown', onKeyDown);
+        backdrop.appendChild(dialog);
+        document.body.appendChild(backdrop);
+      });
+    }
+
     // Główna funkcja generująca PDF z siatkami Palczewskiej.
-    // Dla dzieci poniżej 3 lat korzystamy z wariantu niemowlęcego (0–<3 lata),
-    // a dla starszych z rozbudowanego układu Palczewskiej (3–18 lat).
+    // Obsługuje wariant 0–3 lata, 1–18 lat oraz automatyczne wygenerowanie
+    // obu typów siatek, gdy wprowadzone pomiary obejmują oba zakresy.
     async function generatePalczewskaCentileCharts() {
       const ageEl    = document.getElementById('age');
       const ageMEl   = document.getElementById('ageMonths');
@@ -6427,60 +6625,55 @@ async function generateCentileChart() {
         alert('Wprowadź wiek, płeć, wagę i wzrost, aby wygenerować siatkę.');
         return;
       }
+
       const years  = parseFloat(ageEl.value) || 0;
       const months = ageMEl ? (parseFloat(ageMEl.value) || 0) : 0;
       const ageMonths = Math.round(years * 12 + months);
-      if (ageMonths < 0 || ageMonths > 216) {
+      if (ageMonths < 0 || ageMonths > PALCZEWSKA_EXTENDED_MAX_MONTHS) {
         alert('Siatki Palczewskiej są dostępne dla dzieci od 0 do 18 lat.');
         return;
       }
 
-      if (ageMonths < 36) {
-        try {
-          window.overrideCentileSource = 'PALCZEWSKA';
-          await generateCentileChart();
-        } finally {
-          window.overrideCentileSource = undefined;
-        }
+      const sex = (sexEl.value === 'M') ? 'M' : 'F';
+      const weight = parseFloat(weightEl.value);
+      const height = parseFloat(heightEl.value);
+      const adv = window.advancedGrowthData || null;
+
+      const plan = getPalczewskaChartPlan(ageMonths, adv);
+      let mode = plan.mode;
+
+      if (mode === 'CHOICE') {
+        const selectedMode = await promptPalczewskaRangeSelection();
+        if (!selectedMode) return;
+        mode = selectedMode;
+      }
+
+      const canvases = [];
+      if (mode === 'INFANT_ONLY' || mode === 'BOTH_REQUIRED') {
+        canvases.push(buildPalczewskaInfantPageCanvas({
+          sex,
+          userAgeMonths: ageMonths,
+          userWeight: weight,
+          userHeight: height
+        }));
+      }
+      if (mode === 'EXTENDED_ONLY' || mode === 'BOTH_REQUIRED') {
+        canvases.push(...buildPalczewskaExtendedCanvases({
+          sex,
+          userAgeMonths: ageMonths,
+          userWeight: weight,
+          userHeight: height
+        }));
+      }
+
+      if (!canvases.length) {
+        alert('Nie udało się ustalić zakresu siatki Palczewskiej dla podanych danych.');
         return;
       }
 
-      const sex   = (sexEl.value === 'M') ? 'M' : 'F';
-      const weight = parseFloat(weightEl.value);
-      const height = parseFloat(heightEl.value);
-
-      let __prevForceEnglish = false;
-      try {
-        __prevForceEnglish = (typeof window !== 'undefined' && window.forceCentileEnglish) ? window.forceCentileEnglish : false;
-        if (typeof window !== 'undefined') {
-          window.forceCentileEnglish = !!window.publicationCharts;
-        }
-      } catch (_) {
-        __prevForceEnglish = false;
-      }
-      try {
-        const heightCanvas = buildPalczewskaPageCanvas({ chartType: 'height', sex, userAgeMonths: ageMonths, userWeight: weight, userHeight: height });
-        const weightCanvas = buildPalczewskaPageCanvas({ chartType: 'weight', sex, userAgeMonths: ageMonths, userWeight: weight, userHeight: height });
-        const dataUrl1 = heightCanvas.toDataURL('image/jpeg', 1.0);
-        const dataUrl2 = weightCanvas.toDataURL('image/jpeg', 1.0);
-        const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-        pdf.addImage(dataUrl1, 'JPEG', 0, 0, 210, 297);
-        pdf.addPage();
-        pdf.addImage(dataUrl2, 'JPEG', 0, 0, 210, 297);
-        const blob = pdf.output('blob');
-        const url  = URL.createObjectURL(blob);
-        window.open(url, '_blank');
-      } finally {
-        try {
-          if (typeof window !== 'undefined') {
-            window.forceCentileEnglish = __prevForceEnglish;
-          }
-        } catch (_) {
-          /* ignore */
-        }
-      }
+      openPalczewskaCanvasesPdf(canvases);
     }
+
     // Zarejestruj obsługę przycisków generowania siatek.
     document.addEventListener('DOMContentLoaded', function() {
       const palBtn  = document.getElementById('generatePalCentileChart');
@@ -6495,14 +6688,19 @@ async function generateCentileChart() {
 
         if (palBtn) {
           palBtn.style.display = (state.visible && state.source === 'PALCZEWSKA') ? '' : 'none';
+          palBtn.textContent = state.label;
           palBtn.disabled = !state.supported;
-          palBtn.title = (state.source === 'PALCZEWSKA') ? (state.message || '') : '';
+          palBtn.title = (state.source === 'PALCZEWSKA')
+            ? (state.supported ? (state.hint || '') : (state.message || ''))
+            : '';
         }
         if (olafBtn) {
           olafBtn.style.display = (state.visible && state.source !== 'PALCZEWSKA') ? '' : 'none';
           olafBtn.textContent = state.label;
           olafBtn.disabled = !state.supported;
-          olafBtn.title = (state.source !== 'PALCZEWSKA') ? (state.message || '') : '';
+          olafBtn.title = (state.source !== 'PALCZEWSKA')
+            ? (state.supported ? (state.hint || '') : (state.message || ''))
+            : '';
         }
       }
 
