@@ -4340,11 +4340,15 @@ function buildCentilePageCanvas({
   const ctx = canvas.getContext('2d');
   ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, pw, ph);
   const isOlafPage = effectiveSource === 'OLAF' && rangeMinX >= 36;
-  const headerTitleFontSize = isOlafPage ? 56 : 72;
+  const chartW = pw - 200;
+  const headerGridLeftMargin = 120;
+  const headerGridRightMargin = 100;
+  const headerGridStartX = 100 + headerGridLeftMargin;
+  const headerGridEndX = 100 + chartW - headerGridRightMargin;
+  const headerTitleFontSize = 72;
   const renderedHeaderSubtitle = isOlafPage ? 'Badanie OLAF (3–18 lat)' : headerSubtitle;
-  const nameLabelX = isOlafPage ? 220 : 150;
-  const nameLabelY = isOlafPage ? 210 : (150 + 50 * 1.75);
-  const infoLabelY = isOlafPage ? (nameLabelY + 62) : null;
+  const olafNameRowY = 150 + 50 * 1.75;
+  const olafInfoRowY = olafNameRowY + 75;
   // Nagłówek
   ctx.font = `bold ${headerTitleFontSize}px sans-serif`;
   ctx.fillStyle = '#00838d';
@@ -4353,7 +4357,7 @@ function buildCentilePageCanvas({
   ctx.fillText(headerTitle, pw/2, 60);
   if (renderedHeaderSubtitle) {
     ctx.font = '40px sans-serif';
-    ctx.fillStyle = '#444';
+    ctx.fillStyle = '#444444';
     ctx.fillText(renderedHeaderSubtitle, pw/2, 60 + headerTitleFontSize + 8);
   }
   // Imię i nazwisko
@@ -4361,17 +4365,11 @@ function buildCentilePageCanvas({
     (window.advancedGrowthData && window.advancedGrowthData.name) ||
     (document.getElementById('advName') ? document.getElementById('advName').value.trim() : '');
   ctx.font = '40px sans-serif';
-  ctx.fillStyle = '#555';
+  ctx.fillStyle = '#555555';
   ctx.textAlign = 'left';
   const nameLabel = nameFromState ? `Imię i nazwisko: ${nameFromState}` : 'Imię i nazwisko: _________________________________';
-  ctx.fillText(nameLabel, nameLabelX, nameLabelY);
-  // Wymiary wykresów
-  const chartW = pw - 200;
+  ctx.fillText(nameLabel, isOlafPage ? headerGridStartX : 150, isOlafPage ? olafNameRowY : (150 + 50 * 1.75));
   if (isOlafPage) {
-    const gridLeftMargin = 120;
-    const gridRightMargin = 100;
-    const startGridX = 100 + gridLeftMargin;
-    const endGridX = 100 + chartW - gridRightMargin;
     const advG = window.advancedGrowthData || {};
     const motherVal = (typeof advG.motherHeight === 'number' && isFinite(advG.motherHeight))
       ? advG.motherHeight
@@ -4422,24 +4420,24 @@ function buildCentilePageCanvas({
     const infoItems = [motherLabel, fatherLabel, mphLabel].filter(Boolean);
     if (infoItems.length > 0) {
       ctx.fillStyle = '#555555';
-      ctx.font = '34px sans-serif';
+      ctx.font = '40px sans-serif';
       ctx.textAlign = 'left';
       const widthsInfo = infoItems.map(txt => ctx.measureText(txt).width);
-      const availableInfoWidth = endGridX - startGridX;
+      const availableInfoWidth = headerGridEndX - headerGridStartX;
       const totalTextW = widthsInfo.reduce((a, b) => a + b, 0);
       const gapCount = infoItems.length - 1;
       let gap = gapCount > 0 ? (availableInfoWidth - totalTextW) / gapCount : 0;
-      if (!Number.isFinite(gap) || gap < 16) gap = 16;
-      let currentX = startGridX;
+      if (!Number.isFinite(gap) || gap < 20) gap = 20;
+      let currentX = headerGridStartX;
       infoItems.forEach((txt, idx) => {
         const isMphItem = /^MPH:/i.test(txt);
         const drawX = isMphItem ? currentX - 13 : currentX;
-        ctx.fillText(txt, drawX, infoLabelY);
+        ctx.fillText(txt, drawX, olafInfoRowY);
         currentX += widthsInfo[idx] + gap;
       });
     }
   }
-  const olafHeaderReserve = isOlafPage ? 90 : 0;
+  const olafHeaderReserve = isOlafPage ? 76.5 : 0;
   const availH = ph - 300 - olafHeaderReserve;
   const interChartMargin = 100;
   const chartsAreaH = availH - interChartMargin;
