@@ -3049,6 +3049,30 @@ function drawCentileGrid(ctx, cfg) {
   const yScale = ph / (maxY - minY);
   ctx.save();
   ctx.lineCap = 'butt';
+  // Poziome linie siatki – rysujemy je najpierw, aby pionowe linie pomocnicze
+  // pozostawały na wierzchu w miejscach przecięcia.
+  for (let val = minY; val <= maxY; val++) {
+    const cy = py + ph - (val - minY) * yScale;
+    ctx.beginPath();
+    if (val % 5 === 0) {
+      ctx.strokeStyle = '#bbbbbb';
+      ctx.lineWidth = getCentileChartLineWidth('majorHorizontalGrid', 2.5);
+      ctx.moveTo(px, cy);
+      ctx.lineTo(px + pw, cy);
+      ctx.stroke();
+      ctx.font = '33px sans-serif';
+      ctx.fillStyle = '#333333';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(val), px - 6, cy);
+    } else {
+      ctx.strokeStyle = '#eeeeee';
+      ctx.lineWidth = getCentileChartLineWidth('minorHorizontalGrid', 1.5);
+      ctx.moveTo(px, cy);
+      ctx.lineTo(px + pw, cy);
+      ctx.stroke();
+    }
+  }
   // Pionowe linie siatki.  Zakres lat (startYear..endYear) zależy od zdefiniowanego zakresu mies. (minXVal..maxXVal).
   const startYear = Math.ceil(minXVal / 12);
   const endYear   = Math.floor(maxXVal / 12);
@@ -3079,29 +3103,6 @@ function drawCentileGrid(ctx, cfg) {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     ctx.fillText(String(age), cx, py + ph + 8);
-  }
-  // Poziome linie siatki
-  for (let val = minY; val <= maxY; val++) {
-    const cy = py + ph - (val - minY) * yScale;
-    ctx.beginPath();
-    if (val % 5 === 0) {
-      ctx.strokeStyle = '#bbbbbb';
-      ctx.lineWidth = getCentileChartLineWidth('majorHorizontalGrid', 2.5);
-      ctx.moveTo(px, cy);
-      ctx.lineTo(px + pw, cy);
-      ctx.stroke();
-      ctx.font = '33px sans-serif';
-      ctx.fillStyle = '#333333';
-      ctx.textAlign = 'right';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(String(val), px - 6, cy);
-    } else {
-      ctx.strokeStyle = '#eeeeee';
-      ctx.lineWidth = getCentileChartLineWidth('minorHorizontalGrid', 1.5);
-      ctx.moveTo(px, cy);
-      ctx.lineTo(px + pw, cy);
-      ctx.stroke();
-    }
   }
   // Osie
   ctx.beginPath();
@@ -3529,7 +3530,9 @@ const pw = 2480, ph = 3508;
   // --- koniec wstawki ---
   const chartW = pw - 200;
   // Oblicz dostępną przestrzeń na siatki dopiero w momencie rysowania, gdy znamy wysokość strony.
-  const availH = ph - 300;
+  const isOlafPage = minXVal >= 36;
+  const olafHeaderReserve = isOlafPage ? 90 : 0;
+  const availH = ph - 300 - olafHeaderReserve;
   // Margines pomiędzy dwoma wykresami (jak w oryginalnym projekcie).
   const interChartMargin = 100;
   // Przestrzeń dostępna wyłącznie na dwie siatki (wysokość płótna minus margines).
@@ -3556,7 +3559,7 @@ const pw = 2480, ph = 3508;
   }
   // Pozycje Y dla obu wykresów. Górny wykres zaczyna się w ustalonej pozycji, a dolny jest przesunięty
   // o wysokość pierwszego wykresu plus margines minus małe przesunięcie (0,5 rem) kompensujące podpisy osi.
-  const yHeightGrid = 300 - 50;
+  const yHeightGrid = 300 - 50 + olafHeaderReserve;
   const yWeightGrid = yHeightGrid + heightGridH + interChartMargin - (50 * 0.5);
   // Pierwszy wykres – wzrost
   drawCentileGrid(ctx, {
@@ -4336,16 +4339,22 @@ function buildCentilePageCanvas({
   canvas.width = pw; canvas.height = ph;
   const ctx = canvas.getContext('2d');
   ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, pw, ph);
+  const isOlafPage = effectiveSource === 'OLAF' && rangeMinX >= 36;
+  const headerTitleFontSize = isOlafPage ? 56 : 72;
+  const renderedHeaderSubtitle = isOlafPage ? 'Badanie OLAF (3–18 lat)' : headerSubtitle;
+  const nameLabelX = isOlafPage ? 220 : 150;
+  const nameLabelY = isOlafPage ? 210 : (150 + 50 * 1.75);
+  const infoLabelY = isOlafPage ? (nameLabelY + 62) : null;
   // Nagłówek
-  ctx.font = 'bold 72px sans-serif';
+  ctx.font = `bold ${headerTitleFontSize}px sans-serif`;
   ctx.fillStyle = '#00838d';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
   ctx.fillText(headerTitle, pw/2, 60);
-  if (headerSubtitle) {
+  if (renderedHeaderSubtitle) {
     ctx.font = '40px sans-serif';
     ctx.fillStyle = '#444';
-    ctx.fillText(headerSubtitle, pw/2, 60 + 72 + 8);
+    ctx.fillText(renderedHeaderSubtitle, pw/2, 60 + headerTitleFontSize + 8);
   }
   // Imię i nazwisko
   const nameFromState =
@@ -4355,10 +4364,83 @@ function buildCentilePageCanvas({
   ctx.fillStyle = '#555';
   ctx.textAlign = 'left';
   const nameLabel = nameFromState ? `Imię i nazwisko: ${nameFromState}` : 'Imię i nazwisko: _________________________________';
-  ctx.fillText(nameLabel, 150, 150 + 50 * 1.75);
+  ctx.fillText(nameLabel, nameLabelX, nameLabelY);
   // Wymiary wykresów
   const chartW = pw - 200;
-  const availH = ph - 300;
+  if (isOlafPage) {
+    const gridLeftMargin = 120;
+    const gridRightMargin = 100;
+    const startGridX = 100 + gridLeftMargin;
+    const endGridX = 100 + chartW - gridRightMargin;
+    const advG = window.advancedGrowthData || {};
+    const motherVal = (typeof advG.motherHeight === 'number' && isFinite(advG.motherHeight))
+      ? advG.motherHeight
+      : (function() {
+          const el = document.getElementById('advMotherHeight');
+          return el ? parseFloat(el.value) : NaN;
+        })();
+    const fatherVal = (typeof advG.fatherHeight === 'number' && isFinite(advG.fatherHeight))
+      ? advG.fatherHeight
+      : (function() {
+          const el = document.getElementById('advFatherHeight');
+          return el ? parseFloat(el.value) : NaN;
+        })();
+    const mphVal = (typeof advG.targetHeight === 'number' && isFinite(advG.targetHeight)) ? advG.targetHeight : NaN;
+    function computeOlafHeightStats(val, sexParent) {
+      if (!Number.isFinite(val)) return null;
+      try {
+        return (typeof calcPercentileStats === 'function')
+          ? calcPercentileStats(val, sexParent, 18, 'HT')
+          : null;
+      } catch (_) {
+        return null;
+      }
+    }
+    function formatHeightWithCentile(val, centLabel) {
+      if (!Number.isFinite(val)) return null;
+      const valStr = val.toFixed(1).replace('.', ',');
+      return centLabel ? `${valStr} cm (${centLabel})` : `${valStr} cm`;
+    }
+    function buildOlafParentLabel(prefix, val, sexParent) {
+      if (!Number.isFinite(val)) return null;
+      const stats = computeOlafHeightStats(val, sexParent);
+      if (!stats || typeof stats.percentile !== 'number') return null;
+      const centTxt = formatCentileLabel(stats.percentile);
+      const heightTxt = formatHeightWithCentile(val, centTxt);
+      return `${prefix}: ${heightTxt}`;
+    }
+    const motherLabel = buildOlafParentLabel('wzrost Mamy', motherVal, 'F');
+    const fatherLabel = buildOlafParentLabel('wzrost Taty', fatherVal, 'M');
+    const mphLabel = (function() {
+      if (!Number.isFinite(mphVal)) return null;
+      const stats = computeOlafHeightStats(mphVal, sex);
+      if (!stats || typeof stats.percentile !== 'number') return null;
+      const centTxt = formatCentileLabel(stats.percentile);
+      const heightTxt = formatHeightWithCentile(mphVal, centTxt);
+      return `MPH: ${heightTxt}`;
+    })();
+    const infoItems = [motherLabel, fatherLabel, mphLabel].filter(Boolean);
+    if (infoItems.length > 0) {
+      ctx.fillStyle = '#555555';
+      ctx.font = '34px sans-serif';
+      ctx.textAlign = 'left';
+      const widthsInfo = infoItems.map(txt => ctx.measureText(txt).width);
+      const availableInfoWidth = endGridX - startGridX;
+      const totalTextW = widthsInfo.reduce((a, b) => a + b, 0);
+      const gapCount = infoItems.length - 1;
+      let gap = gapCount > 0 ? (availableInfoWidth - totalTextW) / gapCount : 0;
+      if (!Number.isFinite(gap) || gap < 16) gap = 16;
+      let currentX = startGridX;
+      infoItems.forEach((txt, idx) => {
+        const isMphItem = /^MPH:/i.test(txt);
+        const drawX = isMphItem ? currentX - 13 : currentX;
+        ctx.fillText(txt, drawX, infoLabelY);
+        currentX += widthsInfo[idx] + gap;
+      });
+    }
+  }
+  const olafHeaderReserve = isOlafPage ? 90 : 0;
+  const availH = ph - 300 - olafHeaderReserve;
   const interChartMargin = 100;
   const chartsAreaH = availH - interChartMargin;
   let heightGridH, weightGridH;
@@ -4373,7 +4455,7 @@ function buildCentilePageCanvas({
   } else {
     heightGridH = chartsAreaH / 2; weightGridH = chartsAreaH / 2;
   }
-  const yHeightGrid = 300 - 50;
+  const yHeightGrid = 300 - 50 + olafHeaderReserve;
   const yWeightGrid = yHeightGrid + heightGridH + interChartMargin - (50 * 0.5);
   // Podświetlenie kanałów
   // Ustal „efektywne” dane do podświetlenia: jeśli użytkownik korzysta
@@ -4511,6 +4593,28 @@ function buildCentilePageCanvas({
     ctx.restore();
   })();
 
+  // Ponowne narysowanie punktów pomiarowych wzrostu, aby linia wieku kostnego
+  // wchodziła pod punkt pomiarowy, a nie przecinała go na wierzchu.
+  (function redrawHeightMeasurementPoints() {
+    const leftMargin = 120, rightMargin = 100, topMargin = 80, bottomMargin = 80;
+    const pxBase = 100 + leftMargin;
+    const pyBase = yHeightGrid + topMargin;
+    const pwBase = chartW - leftMargin - rightMargin;
+    const phBase = heightGridH - topMargin - bottomMargin;
+    const xScale = pwBase / (rangeMaxX - rangeMinX);
+    const yScale = phBase / (dynMaxH - dynMinH);
+    ctx.save();
+    ptsH.forEach(m => {
+      const cx = pxBase + (m.ageMonths - rangeMinX) * xScale;
+      const cy = pyBase + phBase - (m.height - dynMinH) * yScale;
+      ctx.beginPath();
+      ctx.fillStyle = '#000000';
+      ctx.arc(cx, cy, 8, 0, 2 * Math.PI);
+      ctx.fill();
+    });
+    ctx.restore();
+  })();
+
   // Rysowanie markera docelowego wzrostu (Target Height) na wykresie wzrostu.
   // Marker jest rysowany jako czerwony romb w wieku 18 lat (216 mies.) z etykietą „TH xx,x cm”.
   (function drawTargetHeightMarker() {
@@ -4618,6 +4722,21 @@ function buildCentilePageCanvas({
     });
     ctx.restore();
   })();
+
+  if (isOlafPage) {
+    const topMargin = 80, bottomMargin = 80;
+    const chartCenterX = 100 + (chartW / 2);
+    const heightXAxisLabelY = yHeightGrid + heightGridH - bottomMargin + 50;
+    const weightGridTopY = yWeightGrid + topMargin;
+    const brandY = (heightXAxisLabelY + weightGridTopY) / 2;
+    ctx.save();
+    ctx.font = 'bold 46px sans-serif';
+    ctx.fillStyle = '#00838d';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('wagaiwzrost.pl', chartCenterX, brandY);
+    ctx.restore();
+  }
 
   // Dodanie podsumowania wyników na siatce centylowej (w trybie profesjonalnym) dla wykresu wzrostu (strony OLAF 3–18 lat)
   (function drawSummaryOverlay() {
@@ -4729,16 +4848,18 @@ function buildCentilePageCanvas({
     }
   })();
   // Stopka (źródło danych)
-  ctx.save();
-  ctx.font = '30px sans-serif';
-  ctx.fillStyle = '#555';
-  ctx.textAlign = 'right';
-  ctx.textBaseline = 'bottom';
-  const footerY = ph - 60 + 50;
-  ctx.fillText(footerText, pw - 120, footerY);
-  ctx.textAlign = 'left';
-  ctx.fillText('vildaclinic.pl', 120, footerY);
-  ctx.restore();
+  if (!isOlafPage) {
+    ctx.save();
+    ctx.font = '30px sans-serif';
+    ctx.fillStyle = '#555';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'bottom';
+    const footerY = ph - 60 + 50;
+    ctx.fillText(footerText, pw - 120, footerY);
+    ctx.textAlign = 'left';
+    ctx.fillText('vildaclinic.pl', 120, footerY);
+    ctx.restore();
+  }
   return canvas;
 }
 
@@ -4834,8 +4955,8 @@ async function generateCentileChart() {
       addPage({
         minX: 36,
         maxX: 216,
-        subtitle: 'Zakres: 3–18 lat',
-        footer: 'Dane do siatek: OLAF (3–18 lat)',
+        subtitle: 'Badanie OLAF (3–18 lat)',
+        footer: '',
         chartSource: 'OLAF'
       });
     } else if (maxAll <= 35) {
@@ -4850,8 +4971,8 @@ async function generateCentileChart() {
       addPage({
         minX: 36,
         maxX: 216,
-        subtitle: 'Zakres: 3–18 lat',
-        footer: 'Dane do siatek: OLAF (3–18 lat)',
+        subtitle: 'Badanie OLAF (3–18 lat)',
+        footer: '',
         chartSource: 'OLAF'
       });
     }
@@ -5975,7 +6096,9 @@ async function generateCentileChart() {
           if (gap2 < 20) gap2 = 20;
           let xPos = startGridX;
           info2.forEach((txt, idx) => {
-            ctx.fillText(txt, xPos, rowInfoY);
+            const isMphItem = /^MPH:/i.test(txt);
+            const drawX = isMphItem ? xPos - 13 : xPos;
+            ctx.fillText(txt, drawX, rowInfoY);
             xPos += widths2[idx] + gap2;
           });
         }
@@ -5998,7 +6121,9 @@ async function generateCentileChart() {
           if (gap < 20) gap = 20;
           let currentX = startGridX;
           infoItems.forEach((txt, idx) => {
-            ctx.fillText(txt, currentX, rowInfoY);
+            const isMphItem = /^MPH:/i.test(txt);
+            const drawX = isMphItem ? currentX - 13 : currentX;
+            ctx.fillText(txt, drawX, rowInfoY);
             currentX += widthsInfo[idx] + gap;
           });
         }
@@ -6168,6 +6293,32 @@ async function generateCentileChart() {
                   ctx.stroke();
                 }
               }
+            });
+          }
+          ctx.restore();
+        })();
+        (function redrawHeightPointsAboveBoneAge() {
+          const leftMargin = 120, rightMargin = 100, topMargin = 80, bottomMargin = 80;
+          const pxBase = chartX + leftMargin;
+          const pyBase = chartY + topMargin;
+          const pwBase = chartW - leftMargin - rightMargin;
+          const phBase = chartH - topMargin - bottomMargin;
+          const xScale = pwBase / (rangeMaxX - rangeMinX);
+          const yScale = phBase / (dynMaxY - dynMinY);
+          ctx.save();
+          if (pts) {
+            pts.forEach(m => {
+              const ageM = m.ageMonths;
+              const val  = (chartType === 'height') ? m.height : m.weight;
+              if (ageM == null || val == null) return;
+              const cx = pxBase + (ageM - rangeMinX) * xScale;
+              const cy = pyBase + phBase - (val - dynMinY) * yScale;
+              ctx.beginPath();
+              ctx.fillStyle = '#000000';
+              const isPub = typeof window !== 'undefined' && window.publicationCharts;
+              const radius = isPub ? 12 : 8;
+              ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
+              ctx.fill();
             });
           }
           ctx.restore();
