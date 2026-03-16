@@ -1492,6 +1492,74 @@ function getLMSHeightHybrid(sex, m) {
     ? getLMSFromDataset(LMS_HEIGHT_BOYS, m)
     : getLMSFromDataset(LMS_HEIGHT_GIRLS, m);
 }
+/* Konfigurowalne grubości linii siatek centylowych.
+   Ustawienia pochodzą z panelu technicznego w ustawienia.html i są trzymane w localStorage. */
+const CENTILE_CHART_LINE_STYLE_STORAGE_KEY = 'centileChartLineStyles';
+const CENTILE_CHART_LINE_DEFAULTS = Object.freeze({
+  majorVerticalGrid: 2.5,
+  minorVerticalGrid: 1.75,
+  majorHorizontalGrid: 2.5,
+  minorHorizontalGrid: 1.5,
+  axes: 2,
+  percentileCurves: 2,
+  bandReference: 2,
+  cutoffWarning: 5,
+  currentPointBorder: 2,
+  historyPath: 3,
+  boneAgeStroke: 2,
+  targetHeightConnector: 2,
+  summaryBoxBorder: 6,
+  publicationHistoryPath: 6,
+  publicationBoneAgeStroke: 4,
+  publicationArrowLine: 6,
+  publicationArrowBoxBorder: 3
+});
+
+function sanitizeCentileChartLineWidthValue(value, fallback) {
+  const normalized = (typeof value === 'string') ? value.replace(',', '.').trim() : value;
+  const parsed = Number(normalized);
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+  const clamped = Math.min(20, Math.max(0.25, parsed));
+  return Math.round(clamped * 100) / 100;
+}
+
+function getCentileChartLineStyles() {
+  const styles = Object.assign({}, CENTILE_CHART_LINE_DEFAULTS);
+  try {
+    const raw = localStorage.getItem(CENTILE_CHART_LINE_STYLE_STORAGE_KEY);
+    if (!raw) {
+      return styles;
+    }
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') {
+      return styles;
+    }
+    Object.keys(CENTILE_CHART_LINE_DEFAULTS).forEach((key) => {
+      if (Object.prototype.hasOwnProperty.call(parsed, key)) {
+        styles[key] = sanitizeCentileChartLineWidthValue(parsed[key], CENTILE_CHART_LINE_DEFAULTS[key]);
+      }
+    });
+  } catch (_) {
+    /* użyj wartości domyślnych */
+  }
+  return styles;
+}
+
+function getCentileChartLineWidth(key, fallback) {
+  const styles = getCentileChartLineStyles();
+  const baseFallback = Object.prototype.hasOwnProperty.call(CENTILE_CHART_LINE_DEFAULTS, key)
+    ? CENTILE_CHART_LINE_DEFAULTS[key]
+    : fallback;
+  return sanitizeCentileChartLineWidthValue(styles[key], baseFallback);
+}
+
+if (typeof window !== 'undefined') {
+  window.getCentileChartLineWidth = getCentileChartLineWidth;
+  window.getCentileChartLineStyles = getCentileChartLineStyles;
+}
+
 /* Rysuje pojedynczy wykres siatki centylowej. */
 function drawCentileGrid(ctx, cfg) {
   const { x, y, w, h, curves, minY, maxY, userVal, userAgeMonths, title, units, percentiles, highlightBandIdx, cutoffVal, minX, maxX, monochrome } = cfg;
@@ -1520,7 +1588,7 @@ function drawCentileGrid(ctx, cfg) {
     const cx = px + (m - minXVal) * xScale;
     ctx.beginPath();
     ctx.strokeStyle = '#bbbbbb';
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = getCentileChartLineWidth('majorVerticalGrid', 2.5);
     ctx.moveTo(cx, py);
     ctx.lineTo(cx, py + ph);
     ctx.stroke();
@@ -1531,7 +1599,7 @@ function drawCentileGrid(ctx, cfg) {
         const halfX = px + (halfM - minXVal) * xScale;
         ctx.beginPath();
         ctx.strokeStyle = '#dddddd';
-        ctx.lineWidth = 1.75;
+        ctx.lineWidth = getCentileChartLineWidth('minorVerticalGrid', 1.75);
         ctx.moveTo(halfX, py);
         ctx.lineTo(halfX, py + ph);
         ctx.stroke();
@@ -1549,7 +1617,7 @@ function drawCentileGrid(ctx, cfg) {
     ctx.beginPath();
     if (val % 5 === 0) {
       ctx.strokeStyle = '#bbbbbb';
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = getCentileChartLineWidth('majorHorizontalGrid', 2.5);
       ctx.moveTo(px, cy);
       ctx.lineTo(px + pw, cy);
       ctx.stroke();
@@ -1560,7 +1628,7 @@ function drawCentileGrid(ctx, cfg) {
       ctx.fillText(String(val), px - 6, cy);
     } else {
       ctx.strokeStyle = '#eeeeee';
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = getCentileChartLineWidth('minorHorizontalGrid', 1.5);
       ctx.moveTo(px, cy);
       ctx.lineTo(px + pw, cy);
       ctx.stroke();
@@ -1569,7 +1637,7 @@ function drawCentileGrid(ctx, cfg) {
   // Osie
   ctx.beginPath();
   ctx.strokeStyle = '#000000';
-  ctx.lineWidth = 2;
+  ctx.lineWidth = getCentileChartLineWidth('axes', 2);
   ctx.moveTo(px, py);
   ctx.lineTo(px, py + ph);
   ctx.moveTo(px, py + ph);
@@ -1628,7 +1696,7 @@ function drawCentileGrid(ctx, cfg) {
       ctx.save();
       ctx.setLineDash([8, 6]);
       ctx.strokeStyle = mono ? 'rgba(0,0,0,0.85)' : 'rgba(0,131,141,0.85)';
-      ctx.lineWidth = 2;
+      ctx.lineWidth = getCentileChartLineWidth('bandReference', 2);
       ctx.beginPath(); ctx.moveTo(px, yLow18); ctx.lineTo(px + pw, yLow18); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(px, yHigh18); ctx.lineTo(px + pw, yHigh18); ctx.stroke();
       ctx.setLineDash([]);
@@ -1678,7 +1746,7 @@ function drawCentileGrid(ctx, cfg) {
     const vals = curves[p];
     ctx.beginPath();
     ctx.strokeStyle = colors[p] || '#000000';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = getCentileChartLineWidth('percentileCurves', 2);
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
     const pts = [];
@@ -1748,7 +1816,7 @@ function drawCentileGrid(ctx, cfg) {
     const cyWarn = py + ph - (cutoffVal - minY) * yScale;
     ctx.save();
     ctx.strokeStyle = mono ? '#000000' : '#c62828';
-    ctx.lineWidth = 5;
+    ctx.lineWidth = getCentileChartLineWidth('cutoffWarning', 5);
     ctx.beginPath();
     ctx.moveTo(px, cyWarn);
     ctx.lineTo(px + pw, cyWarn);
@@ -1768,7 +1836,7 @@ function drawCentileGrid(ctx, cfg) {
     ctx.beginPath();
     ctx.fillStyle = '#000000';
     ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = getCentileChartLineWidth('currentPointBorder', 2);
     ctx.arc(pxU, pyU, 10, 0, 2 * Math.PI);
     ctx.fill();
     ctx.stroke();
@@ -2090,7 +2158,7 @@ const pw = 2480, ph = 3508;
         if (pts.length >= 2) {
           ctx.beginPath();
           ctx.strokeStyle = '#000000';
-          ctx.lineWidth = 3;
+          ctx.lineWidth = getCentileChartLineWidth('historyPath', 3);
           let started = false;
           pts.forEach(m => {
             if (m.ageMonths >= minX && m.ageMonths <= maxX && m.height >= minYh && m.height <= maxYh) {
@@ -2157,7 +2225,7 @@ const pw = 2480, ph = 3508;
           ctx.beginPath();
           ctx.moveTo(cx + diamondHalf, cy);
           ctx.lineTo(cx + diamondHalf + lineLength, cy);
-          ctx.lineWidth = 2;
+          ctx.lineWidth = getCentileChartLineWidth('targetHeightConnector', 2);
           ctx.strokeStyle = thColor;
           ctx.stroke();
           // Pierwsza linia: wartość
@@ -2177,7 +2245,7 @@ const pw = 2480, ph = 3508;
           // Pozioma linia łącząca marker wieku kostnego z krzywą wzrastania
           ctx.beginPath();
           ctx.strokeStyle = '#00838d';
-          ctx.lineWidth = 2;
+          ctx.lineWidth = getCentileChartLineWidth('boneAgeStroke', 2);
           ctx.moveTo(cxBone, cyBone);
           ctx.lineTo(cxCurrent, cyBone);
           ctx.stroke();
@@ -2187,7 +2255,7 @@ const pw = 2480, ph = 3508;
           ctx.arc(cxBone, cyBone, 9, 0, 2 * Math.PI);
           ctx.fill();
           ctx.beginPath();
-          ctx.lineWidth = 2;
+          ctx.lineWidth = getCentileChartLineWidth('boneAgeStroke', 2);
           ctx.arc(cxBone, cyBone, 24, 0, 2 * Math.PI);
           ctx.strokeStyle = '#00838d';
           ctx.stroke();
@@ -2215,7 +2283,7 @@ const pw = 2480, ph = 3508;
                 // Pozioma linia łącząca marker wieku kostnego z krzywą wzrastania
                 ctx.beginPath();
                 ctx.strokeStyle = '#00838d';
-                ctx.lineWidth = 2;
+                ctx.lineWidth = getCentileChartLineWidth('boneAgeStroke', 2);
                 ctx.moveTo(cxB, cyB);
                 ctx.lineTo(cxCurrentM, cyB);
                 ctx.stroke();
@@ -2225,7 +2293,7 @@ const pw = 2480, ph = 3508;
                 ctx.arc(cxB, cyB, 9, 0, 2 * Math.PI);
                 ctx.fill();
                 ctx.beginPath();
-                ctx.lineWidth = 2;
+                ctx.lineWidth = getCentileChartLineWidth('boneAgeStroke', 2);
                 ctx.strokeStyle = '#00838d';
                 ctx.arc(cxB, cyB, 24, 0, 2 * Math.PI);
                 ctx.stroke();
@@ -2298,7 +2366,7 @@ const pw = 2480, ph = 3508;
         if (pts.length >= 2) {
           ctx.beginPath();
           ctx.strokeStyle = '#000000';
-          ctx.lineWidth = 3;
+          ctx.lineWidth = getCentileChartLineWidth('historyPath', 3);
           let started = false;
           pts.forEach(m => {
             if (m.ageMonths >= minX && m.ageMonths <= maxX && m.weight >= minYw && m.weight <= maxYwLocal) {
@@ -2918,7 +2986,7 @@ function buildCentilePageCanvas({
     const yScale = phBase / (dynMaxH - dynMinH);
     ctx.save();
     if (ptsH.length >= 2) {
-      ctx.beginPath(); ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.strokeStyle = '#000'; ctx.lineWidth = getCentileChartLineWidth('historyPath', 3);
       let started = false;
       ptsH.forEach(m => {
         const cx = pxBase + (m.ageMonths - rangeMinX) * xScale;
@@ -2958,7 +3026,7 @@ function buildCentilePageCanvas({
         // pozioma linia
         ctx.beginPath();
         ctx.strokeStyle = '#00838d';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = getCentileChartLineWidth('boneAgeStroke', 2);
         ctx.moveTo(cxBone, cyBone);
         ctx.lineTo(cxCurrent, cyBone);
         ctx.stroke();
@@ -2968,7 +3036,7 @@ function buildCentilePageCanvas({
         ctx.arc(cxBone, cyBone, 9, 0, 2 * Math.PI);
         ctx.fill();
         ctx.beginPath();
-        ctx.lineWidth = 2;
+        ctx.lineWidth = getCentileChartLineWidth('boneAgeStroke', 2);
         ctx.strokeStyle = '#00838d';
         ctx.arc(cxBone, cyBone, 24, 0, 2 * Math.PI);
         ctx.stroke();
@@ -2989,7 +3057,7 @@ function buildCentilePageCanvas({
             // linia pozioma
             ctx.beginPath();
             ctx.strokeStyle = '#00838d';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = getCentileChartLineWidth('boneAgeStroke', 2);
             ctx.moveTo(cxB, cyB);
             ctx.lineTo(cxCurrM, cyB);
             ctx.stroke();
@@ -2999,7 +3067,7 @@ function buildCentilePageCanvas({
             ctx.arc(cxB, cyB, 9, 0, 2 * Math.PI);
             ctx.fill();
             ctx.beginPath();
-            ctx.lineWidth = 2;
+            ctx.lineWidth = getCentileChartLineWidth('boneAgeStroke', 2);
             ctx.strokeStyle = '#00838d';
             ctx.arc(cxB, cyB, 24, 0, 2 * Math.PI);
             ctx.stroke();
@@ -3067,7 +3135,7 @@ function buildCentilePageCanvas({
     ctx.beginPath();
     ctx.moveTo(cx + diamondHalf, cy);
     ctx.lineTo(cx + diamondHalf + lineLength, cy);
-    ctx.lineWidth = 2;
+    ctx.lineWidth = getCentileChartLineWidth('targetHeightConnector', 2);
     ctx.strokeStyle = thColor2;
     ctx.stroke();
     // Pierwsza linia: wartość
@@ -3101,7 +3169,7 @@ function buildCentilePageCanvas({
     const yScale = phBase / (dynMaxW - dynMinW);
     ctx.save();
     if (ptsW.length >= 2) {
-      ctx.beginPath(); ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.strokeStyle = '#000'; ctx.lineWidth = getCentileChartLineWidth('historyPath', 3);
       let started = false;
       ptsW.forEach(m => {
         const cx = pxBase + (m.ageMonths - rangeMinX) * xScale;
@@ -3197,7 +3265,7 @@ function buildCentilePageCanvas({
       const boxY = anchorY - dy - boxHeight;
       // Rysuj tło i obramowanie
       ctx.beginPath();
-      ctx.lineWidth = 6;
+      ctx.lineWidth = getCentileChartLineWidth('summaryBoxBorder', 6);
       ctx.fillStyle = '#ffffff';
       ctx.strokeStyle = '#000000';
       ctx.rect(boxX, boxY, boxWidth, boxHeight);
@@ -4644,7 +4712,7 @@ async function generateCentileChart() {
           ctx.strokeStyle = '#000000';
           // Podwójna grubość linii w trybie publikacji
           const isPub = typeof window !== 'undefined' && window.publicationCharts;
-          ctx.lineWidth = isPub ? 6 : 3;
+          ctx.lineWidth = isPub ? getCentileChartLineWidth('publicationHistoryPath', 6) : getCentileChartLineWidth('historyPath', 3);
           let started = false;
           pts.forEach(m => {
             const ageM = m.ageMonths;
@@ -4698,7 +4766,7 @@ async function generateCentileChart() {
               // W trybie publikacji użyj czarnych kolorów i większych rozmiarów
               const isPub = typeof window !== 'undefined' && window.publicationCharts;
               const colorBA = isPub ? '#000000' : '#00838d';
-              const lineWidthBA = isPub ? 4 : 2;
+              const lineWidthBA = isPub ? getCentileChartLineWidth('publicationBoneAgeStroke', 4) : getCentileChartLineWidth('boneAgeStroke', 2);
               const radiusInner = isPub ? 18 : 12;
               const radiusOuter = isPub ? 36 : 24;
               // Pozioma linia
@@ -4735,7 +4803,7 @@ async function generateCentileChart() {
                   const cxCM = pxBase + (aVal - rangeMinX) * xScale;
                   const isPub = typeof window !== 'undefined' && window.publicationCharts;
                   const colorBA = isPub ? '#000000' : '#00838d';
-                  const lineWidthBA = isPub ? 4 : 2;
+                  const lineWidthBA = isPub ? getCentileChartLineWidth('publicationBoneAgeStroke', 4) : getCentileChartLineWidth('boneAgeStroke', 2);
                   const radiusInner = isPub ? 18 : 12;
                   const radiusOuter = isPub ? 36 : 24;
                   // linia pozioma
@@ -4822,7 +4890,7 @@ async function generateCentileChart() {
             ctx.beginPath();
             ctx.moveTo(cx + diamondHalf, cy);
             ctx.lineTo(cx + diamondHalf + lineLength, cy);
-            ctx.lineWidth = 2;
+            ctx.lineWidth = getCentileChartLineWidth('targetHeightConnector', 2);
             ctx.strokeStyle = thColor3;
             ctx.stroke();
             // Narysuj wartość docelową i jednostkę „cm” w dwóch wierszach
@@ -4906,7 +4974,7 @@ async function generateCentileChart() {
             const boxY = anchorY - dy - boxHeight;
             // Biała ramka z czarnym obramowaniem
             ctx.beginPath();
-            ctx.lineWidth = 6;
+            ctx.lineWidth = getCentileChartLineWidth('summaryBoxBorder', 6);
             ctx.fillStyle = '#ffffff';
             ctx.strokeStyle = '#000000';
             ctx.rect(boxX, boxY, boxWidth, boxHeight);
@@ -4980,8 +5048,8 @@ async function generateCentileChart() {
             const lineHeight2 = fontPx2 * 1.3;
             const paddingX2 = 20;
             const paddingY2 = 20;
-            const borderW2 = 3;
-            const arrowLineW2 = 6;
+            const borderW2 = getCentileChartLineWidth('publicationArrowBoxBorder', 3);
+            const arrowLineW2 = getCentileChartLineWidth('publicationArrowLine', 6);
             const arrowHeadH2 = 10; // wysokość grotów w px
             const defaultArrowH2 = 10 * yScale2;
             arrowPts.forEach(function(pt) {

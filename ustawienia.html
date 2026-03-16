@@ -91,6 +91,148 @@
       transform: translateX(20px);
     }
   </style>
+<style>
+  .tech-chart-settings-wrap {
+    max-width: 980px;
+    margin: 0 auto;
+  }
+  .tech-chart-settings-note {
+    text-align: center;
+    max-width: 760px;
+    margin: 0 auto 1.5rem;
+    font-size: 0.95rem;
+    line-height: 1.55;
+  }
+  .tech-chart-settings-actions {
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin: 0 0 1.25rem;
+  }
+  .tech-chart-settings-btn {
+    appearance: none;
+    border: 1px solid rgba(0, 131, 141, 0.22);
+    background: rgba(255, 255, 255, 0.88);
+    color: #004f54;
+    padding: 0.75rem 1rem;
+    border-radius: 14px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.06);
+  }
+  .tech-chart-settings-btn:hover {
+    background: rgba(255, 255, 255, 0.96);
+  }
+  .tech-chart-settings-status {
+    text-align: center;
+    font-size: 0.9rem;
+    color: #355b61;
+    min-height: 1.4rem;
+    margin-bottom: 1rem;
+  }
+  .tech-chart-group {
+    margin-bottom: 1.5rem;
+  }
+  .tech-chart-group-title {
+    margin: 0 0 0.75rem;
+    text-align: left;
+    font-size: 1.05rem;
+    color: #0b4d57;
+  }
+  .tech-chart-group-desc {
+    margin: 0 0 0.9rem;
+    font-size: 0.9rem;
+    color: #52656a;
+    line-height: 1.5;
+  }
+  .tech-chart-settings-grid {
+    display: grid;
+    gap: 0.9rem;
+  }
+  .tech-chart-setting-row {
+    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid rgba(0, 131, 141, 0.18);
+    border-radius: 18px;
+    padding: 1rem 1.1rem;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+  }
+  .tech-chart-setting-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .tech-chart-setting-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #07363e;
+    margin: 0;
+  }
+  .tech-chart-setting-default {
+    font-size: 0.82rem;
+    color: #607279;
+    white-space: nowrap;
+  }
+  .tech-chart-setting-desc {
+    font-size: 0.88rem;
+    color: #50656b;
+    line-height: 1.5;
+    margin: 0.45rem 0 0.85rem;
+  }
+  .tech-chart-setting-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    flex-wrap: wrap;
+  }
+  .tech-chart-setting-controls input[type="range"] {
+    flex: 1 1 240px;
+    min-width: 200px;
+  }
+  .tech-chart-setting-number-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    background: rgba(0, 131, 141, 0.08);
+    border: 1px solid rgba(0, 131, 141, 0.15);
+    border-radius: 12px;
+    padding: 0.45rem 0.65rem;
+  }
+  .tech-chart-setting-number {
+    width: 88px;
+    border: none;
+    background: transparent;
+    font-size: 0.96rem;
+    font-weight: 600;
+    color: #07363e;
+    outline: none;
+  }
+  .tech-chart-setting-unit {
+    font-size: 0.88rem;
+    color: #476069;
+    font-weight: 600;
+  }
+  .tech-chart-setting-hint {
+    margin-top: 0.7rem;
+    font-size: 0.8rem;
+    color: #6a7b81;
+  }
+  @media (max-width: 700px) {
+    .tech-chart-setting-head {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .tech-chart-setting-controls {
+      align-items: stretch;
+    }
+    .tech-chart-setting-number-wrap {
+      width: fit-content;
+    }
+  }
+</style>
   <!-- Ładujemy bibliotekę ikon Lucide do wyświetlania ikon w menu bocznym -->
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
   <script src="ios26-ui.js?v=11" defer></script>
@@ -286,6 +428,24 @@
         </div>
       </div>
 
+
+<!-- Sekcja technicznego panelu linii siatek centylowych -->
+<div class="container" style="padding-top:1rem;padding-bottom:2rem;">
+  <h2 style="text-align:center;">Techniczny panel siatek centylowych</h2>
+  <p class="tech-chart-settings-note">
+    Tutaj możesz ustawić grubość najważniejszych linii wykorzystywanych przy generowaniu siatek centylowych
+    na stronie głównej i w DocPro. Każda wartość jest podawana w pikselach i zapisuje się automatycznie na urządzeniu.
+    Po zmianie wygeneruj siatkę ponownie, aby zobaczyć efekt.
+  </p>
+  <div class="tech-chart-settings-wrap">
+    <div class="tech-chart-settings-actions">
+      <button type="button" id="resetCentileLineStylesBtn" class="tech-chart-settings-btn">Przywróć domyślne grubości</button>
+    </div>
+    <div id="centileLineSettingsStatus" class="tech-chart-settings-status">Wartości zapisują się automatycznie.</div>
+    <div id="centileLineSettingsGrid" class="tech-chart-settings-grid"></div>
+  </div>
+</div>
+
       <!-- Sekcja ustawień wyświetlania leków dożylnych w module Antybiotykoterapia została tymczasowo ukryta -->
 
       <!-- Sekcja ustawień czasu pulsowania ramek wynikowych (dostępna tylko w trybie PRO) -->
@@ -435,6 +595,333 @@
       }
     });
   </script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const STORAGE_KEY = 'centileChartLineStyles';
+    const DEFAULTS = Object.freeze({
+      majorVerticalGrid: 2.5,
+      minorVerticalGrid: 1.75,
+      majorHorizontalGrid: 2.5,
+      minorHorizontalGrid: 1.5,
+      axes: 2,
+      percentileCurves: 2,
+      bandReference: 2,
+      cutoffWarning: 5,
+      currentPointBorder: 2,
+      historyPath: 3,
+      boneAgeStroke: 2,
+      targetHeightConnector: 2,
+      summaryBoxBorder: 6,
+      publicationHistoryPath: 6,
+      publicationBoneAgeStroke: 4,
+      publicationArrowLine: 6,
+      publicationArrowBoxBorder: 3
+    });
+
+    const GROUPS = [
+      {
+        title: 'Linie podstawowe siatki',
+        description: 'To są linie, które budują samą siatkę centylową: oś, linie pionowe i poziome oraz krzywe centylowe.',
+        items: [
+          {
+            key: 'majorVerticalGrid',
+            label: 'Pionowe linie główne siatki',
+            description: 'Linie pionowe dla pełnych lat na osi wieku, np. 1 r.ż., 2 r.ż., 3 r.ż. i kolejne roczniki.'
+          },
+          {
+            key: 'minorVerticalGrid',
+            label: 'Pionowe linie pomocnicze',
+            description: 'Pośrednie linie pionowe między pełnymi latami, zwykle co 6 miesięcy.'
+          },
+          {
+            key: 'majorHorizontalGrid',
+            label: 'Poziome linie główne siatki',
+            description: 'Grubsze poziome linie opisane wartościami osi Y, które pomagają odczytywać wzrost lub masę.'
+          },
+          {
+            key: 'minorHorizontalGrid',
+            label: 'Poziome linie pomocnicze',
+            description: 'Cieńsze poziome linie pomiędzy głównymi poziomami siatki.'
+          },
+          {
+            key: 'axes',
+            label: 'Osie wykresu',
+            description: 'Lewa oś Y i dolna oś X siatki centylowej.'
+          },
+          {
+            key: 'percentileCurves',
+            label: 'Krzywe centylowe',
+            description: 'Linie centylowe 3c, 10c, 25c, 50c, 75c, 90c i 97c.'
+          },
+          {
+            key: 'bandReference',
+            label: 'Linie odniesienia kanału centylowego',
+            description: 'Przerywane linie pomocnicze związane z podświetleniem kanału centylowego i odczytem zakresu.'
+          },
+          {
+            key: 'cutoffWarning',
+            label: 'Linia ostrzegawcza końca oficjalnej siatki',
+            description: 'Gruba linia z komunikatem „Uwaga! koniec oficjalnej siatki centylowej”.'
+          }
+        ]
+      },
+      {
+        title: 'Nakładki kliniczne i znaczniki',
+        description: 'Te wartości sterują liniami dokładanymi na siatkę po wygenerowaniu, np. historii pomiarów i markerów.',
+        items: [
+          {
+            key: 'currentPointBorder',
+            label: 'Obwódka aktualnego punktu pomiarowego',
+            description: 'Biała obwódka czarnego punktu oznaczającego bieżący pomiar użytkownika.'
+          },
+          {
+            key: 'historyPath',
+            label: 'Linia historii pomiarów',
+            description: 'Linia łącząca kolejne punkty wzrostu lub masy w karcie „Zaawansowane obliczenia wzrostowe”.'
+          },
+          {
+            key: 'boneAgeStroke',
+            label: 'Linie i pierścienie wieku kostnego',
+            description: 'Poziome linie wieku kostnego oraz obrysy okręgów markerów wieku kostnego.'
+          },
+          {
+            key: 'targetHeightConnector',
+            label: 'Linia markera docelowego wzrostu',
+            description: 'Łącznik między rombem TH / MPH a jego etykietą z wartością docelowego wzrostu.'
+          },
+          {
+            key: 'summaryBoxBorder',
+            label: 'Ramka podsumowania wyników',
+            description: 'Obrys białej ramki z podsumowaniem w trybie profesjonalnym.'
+          }
+        ]
+      },
+      {
+        title: 'Tryb publikacji',
+        description: 'Oddzielne ustawienia dla elementów pojawiających się na siatkach do publikacji.',
+        items: [
+          {
+            key: 'publicationHistoryPath',
+            label: 'Historia pomiarów – tryb publikacji',
+            description: 'Grubość linii historii pomiarów na siatkach do publikacji.'
+          },
+          {
+            key: 'publicationBoneAgeStroke',
+            label: 'Wiek kostny – tryb publikacji',
+            description: 'Linie i obrysy markerów wieku kostnego na siatkach do publikacji.'
+          },
+          {
+            key: 'publicationArrowLine',
+            label: 'Strzałki komentarzy – tryb publikacji',
+            description: 'Pionowa linia strzałki przy komentarzu dodanym do pomiaru na siatce publikacyjnej.'
+          },
+          {
+            key: 'publicationArrowBoxBorder',
+            label: 'Ramka komentarza – tryb publikacji',
+            description: 'Obrys białego prostokąta z komentarzem przy strzałce na siatce publikacyjnej.'
+          }
+        ]
+      }
+    ];
+
+    const grid = document.getElementById('centileLineSettingsGrid');
+    const resetBtn = document.getElementById('resetCentileLineStylesBtn');
+    const statusEl = document.getElementById('centileLineSettingsStatus');
+    if (!grid) return;
+
+    function normalizeValue(raw, fallback) {
+      const normalized = typeof raw === 'string' ? raw.replace(',', '.').trim() : raw;
+      const parsed = Number(normalized);
+      if (!Number.isFinite(parsed)) return fallback;
+      const clamped = Math.min(20, Math.max(0.25, parsed));
+      return Math.round(clamped * 100) / 100;
+    }
+
+    function readSettings() {
+      const merged = Object.assign({}, DEFAULTS);
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return merged;
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') return merged;
+        Object.keys(DEFAULTS).forEach(function(key) {
+          if (Object.prototype.hasOwnProperty.call(parsed, key)) {
+            merged[key] = normalizeValue(parsed[key], DEFAULTS[key]);
+          }
+        });
+      } catch (e) {}
+      return merged;
+    }
+
+    function writeSettings(settings) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+      } catch (e) {}
+    }
+
+    function formatPx(value) {
+      const normalized = normalizeValue(value, 1);
+      const roundedInt = Math.round(normalized);
+      return Math.abs(normalized - roundedInt) < 0.001 ? String(roundedInt) : normalized.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+    }
+
+    let statusTimer = null;
+    function setStatus(message) {
+      if (!statusEl) return;
+      statusEl.textContent = message;
+      if (statusTimer) {
+        clearTimeout(statusTimer);
+        statusTimer = null;
+      }
+      statusTimer = setTimeout(function() {
+        if (statusEl) {
+          statusEl.textContent = 'Wartości zapisują się automatycznie.';
+        }
+      }, 2200);
+    }
+
+    const controls = {};
+
+    function syncControl(key, incomingValue, settings) {
+      const safeValue = normalizeValue(incomingValue, DEFAULTS[key]);
+      settings[key] = safeValue;
+      if (controls[key]) {
+        controls[key].range.value = String(safeValue);
+        controls[key].number.value = String(safeValue);
+        controls[key].defaultInfo.textContent = 'Domyślnie: ' + formatPx(DEFAULTS[key]) + ' px';
+        controls[key].hint.textContent = 'Aktualnie ustawione: ' + formatPx(safeValue) + ' px';
+      }
+      writeSettings(settings);
+      setStatus('Zapisano: ' + controls[key].labelText);
+    }
+
+    const settings = readSettings();
+
+    GROUPS.forEach(function(group) {
+      const section = document.createElement('section');
+      section.className = 'tech-chart-group';
+
+      const heading = document.createElement('h3');
+      heading.className = 'tech-chart-group-title';
+      heading.textContent = group.title;
+      section.appendChild(heading);
+
+      if (group.description) {
+        const desc = document.createElement('p');
+        desc.className = 'tech-chart-group-desc';
+        desc.textContent = group.description;
+        section.appendChild(desc);
+      }
+
+      const groupGrid = document.createElement('div');
+      groupGrid.className = 'tech-chart-settings-grid';
+
+      group.items.forEach(function(item) {
+        const row = document.createElement('div');
+        row.className = 'tech-chart-setting-row';
+
+        const head = document.createElement('div');
+        head.className = 'tech-chart-setting-head';
+
+        const title = document.createElement('h4');
+        title.className = 'tech-chart-setting-title';
+        title.textContent = item.label;
+        head.appendChild(title);
+
+        const defaultInfo = document.createElement('div');
+        defaultInfo.className = 'tech-chart-setting-default';
+        defaultInfo.textContent = 'Domyślnie: ' + formatPx(DEFAULTS[item.key]) + ' px';
+        head.appendChild(defaultInfo);
+
+        row.appendChild(head);
+
+        const desc = document.createElement('p');
+        desc.className = 'tech-chart-setting-desc';
+        desc.textContent = item.description;
+        row.appendChild(desc);
+
+        const controlsWrap = document.createElement('div');
+        controlsWrap.className = 'tech-chart-setting-controls';
+
+        const range = document.createElement('input');
+        range.type = 'range';
+        range.min = '0.25';
+        range.max = '20';
+        range.step = '0.25';
+        range.value = String(settings[item.key]);
+        controlsWrap.appendChild(range);
+
+        const numberWrap = document.createElement('label');
+        numberWrap.className = 'tech-chart-setting-number-wrap';
+
+        const number = document.createElement('input');
+        number.type = 'number';
+        number.className = 'tech-chart-setting-number';
+        number.min = '0.25';
+        number.max = '20';
+        number.step = '0.25';
+        number.inputMode = 'decimal';
+        number.value = String(settings[item.key]);
+        numberWrap.appendChild(number);
+
+        const unit = document.createElement('span');
+        unit.className = 'tech-chart-setting-unit';
+        unit.textContent = 'px';
+        numberWrap.appendChild(unit);
+
+        controlsWrap.appendChild(numberWrap);
+        row.appendChild(controlsWrap);
+
+        const hint = document.createElement('div');
+        hint.className = 'tech-chart-setting-hint';
+        hint.textContent = 'Aktualnie ustawione: ' + formatPx(settings[item.key]) + ' px';
+        row.appendChild(hint);
+
+        controls[item.key] = {
+          range: range,
+          number: number,
+          hint: hint,
+          defaultInfo: defaultInfo,
+          labelText: item.label
+        };
+
+        range.addEventListener('input', function() {
+          syncControl(item.key, this.value, settings);
+        });
+
+        number.addEventListener('input', function() {
+          const rawValue = String(this.value || '').trim();
+          if (!rawValue) return;
+          syncControl(item.key, rawValue, settings);
+        });
+
+        number.addEventListener('blur', function() {
+          syncControl(item.key, this.value, settings);
+        });
+
+        groupGrid.appendChild(row);
+      });
+
+      section.appendChild(groupGrid);
+      grid.appendChild(section);
+    });
+
+    if (resetBtn) {
+      resetBtn.addEventListener('click', function() {
+        Object.keys(DEFAULTS).forEach(function(key) {
+          settings[key] = DEFAULTS[key];
+          if (controls[key]) {
+            controls[key].range.value = String(DEFAULTS[key]);
+            controls[key].number.value = String(DEFAULTS[key]);
+            controls[key].hint.textContent = 'Aktualnie ustawione: ' + formatPx(DEFAULTS[key]) + ' px';
+          }
+        });
+        writeSettings(settings);
+        setStatus('Przywrócono domyślne grubości linii siatek centylowych.');
+      });
+    }
+  });
+</script>
   <!-- Skrypt obsługujący przełącznik widoczności leków dożylnych w module antybiotykowym został tymczasowo usunięty -->
   <!-- Po załadowaniu ikon lucide wymieniamy je na SVG.  Używamy createIcons,
        aby przetworzyć wszystkie atrybuty data‑lucide i ustawić odpowiednią
