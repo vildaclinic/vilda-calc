@@ -237,7 +237,7 @@
 <style>
   .settings-shell {
     max-width: 1180px;
-    padding-top: 1rem;
+    padding-top: 0.5rem;
     padding-bottom: 2.5rem;
   }
   .settings-hero {
@@ -392,6 +392,9 @@
   .settings-accordion-list {
     display: grid;
     gap: 1rem;
+  }
+  .settings-shell > .settings-accordion-list:first-child {
+    margin-top: 0;
   }
   .settings-accordion {
     border: 1px solid rgba(0, 131, 141, 0.16);
@@ -880,55 +883,8 @@
 
     <div class="main-content">
       <div class="container settings-shell">
-        <section class="settings-hero" aria-labelledby="settingsDashboardTitle">
-          <span class="settings-kicker">Panel ustawień</span>
-          <h2 id="settingsDashboardTitle" class="settings-hero-title">Czytelniejsze ustawienia aplikacji i siatek centylowych</h2>
-          <p class="settings-hero-text">
-            Ustawienia zostały pogrupowane tematycznie, aby skrócić stronę i zmniejszyć liczbę widocznych naraz elementów.
-            Otwierasz tylko tę sekcję, której akurat potrzebujesz, a każda zmiana zapisuje się lokalnie na urządzeniu i działa od razu.
-          </p>
-          <div class="settings-pill-row" aria-label="Najważniejsze cechy panelu">
-            <span class="settings-pill">Zapis lokalny</span>
-            <span class="settings-pill">Natychmiastowy efekt</span>
-            <span class="settings-pill">Sekcje rozwijane</span>
-            <span class="settings-pill">Ustawienia siatek centylowych</span>
-          </div>
-          <div class="settings-toolbar">
-            <nav class="settings-quick-links" aria-label="Szybki dostęp do sekcji ustawień">
-              <a class="settings-quick-link" href="#settings-section-cards">Widoczność kart</a>
-              <a class="settings-quick-link" href="#settings-section-appearance">Wygląd</a>
-              <a class="settings-quick-link" href="#settings-section-mobile">Mobilne</a>
-              <a class="settings-quick-link" href="#settings-section-pal">Palczewska</a>
-              <a class="settings-quick-link" href="#settings-section-chart">Siatki centylowe</a>
-              <a class="settings-quick-link" href="#settings-section-pro">PRO</a>
-            </nav>
-            <div class="settings-actions" aria-label="Akcje dla wszystkich sekcji">
-              <button type="button" class="settings-action-btn" id="expandAllSettingsSections">Rozwiń wszystkie</button>
-              <button type="button" class="settings-action-btn" id="collapseAllSettingsSections">Zwiń wszystkie</button>
-            </div>
-          </div>
-        </section>
-
-        <section class="settings-overview-grid" aria-label="Przegląd kategorii ustawień">
-          <article class="settings-overview-card">
-            <span class="settings-overview-label">Widok aplikacji</span>
-            <strong class="settings-overview-value">17 kart</strong>
-            <p class="settings-overview-text">Szybkie przełączniki sterujące widocznością głównych modułów na stronie startowej.</p>
-          </article>
-          <article class="settings-overview-card">
-            <span class="settings-overview-label">Interfejs</span>
-            <strong class="settings-overview-value">4 szybkie opcje</strong>
-            <p class="settings-overview-text">Wygląd aplikacji i elementy mobilnej nawigacji są odseparowane od ustawień medycznych.</p>
-          </article>
-          <article class="settings-overview-card">
-            <span class="settings-overview-label">Siatki centylowe</span>
-            <strong class="settings-overview-value">19 parametrów</strong>
-            <p class="settings-overview-text">W jednym miejscu masz wygładzanie Palczewskiej, grubości linii oraz ustawienia trybu PRO.</p>
-          </article>
-        </section>
-
         <div class="settings-accordion-list">
-          <details class="settings-accordion" id="settings-section-cards" open>
+          <details class="settings-accordion" id="settings-section-cards">
             <summary>
               <span class="settings-accordion-index" aria-hidden="true">01</span>
               <div class="settings-accordion-copy">
@@ -1138,7 +1094,8 @@
           </details>
         </div>
       </div>
-    <aside class="decor-sidebar"></aside>
+    </div>
+    <aside class="decor-sidebar" aria-hidden="true"></aside>
   </div>
   <footer>
     <p><strong>Administrator serwisu:</strong> Vilda Clinic sp. z o.o. •
@@ -1657,20 +1614,10 @@
   <script>
     document.addEventListener('DOMContentLoaded', function() {
       const sections = Array.from(document.querySelectorAll('.settings-accordion'));
-      const expandBtn = document.getElementById('expandAllSettingsSections');
-      const collapseBtn = document.getElementById('collapseAllSettingsSections');
 
-      if (expandBtn) {
-        expandBtn.addEventListener('click', function() {
-          sections.forEach(function(section) { section.open = true; });
-        });
-      }
-
-      if (collapseBtn) {
-        collapseBtn.addEventListener('click', function() {
-          sections.forEach(function(section) { section.open = false; });
-        });
-      }
+      sections.forEach(function(section) {
+        section.open = false;
+      });
 
       function openSectionFromHash() {
         const hash = window.location.hash;
@@ -1680,15 +1627,6 @@
           target.open = true;
         }
       }
-
-      document.querySelectorAll('.settings-quick-link').forEach(function(link) {
-        link.addEventListener('click', function() {
-          const target = document.querySelector(this.getAttribute('href'));
-          if (target && target.classList.contains('settings-accordion')) {
-            target.open = true;
-          }
-        });
-      });
 
       openSectionFromHash();
       window.addEventListener('hashchange', openSectionFromHash);
