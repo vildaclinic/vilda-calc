@@ -2324,15 +2324,107 @@ function auditNavigationCoverage() {
   }
 
   /**
-   * Wyświetla baner informujący o dostępnej aktualizacji.  Po kliknięciu
-   * „Przeładuj” wysyła do service worker'a komunikat o natychmiastowym
-   * przejęciu kontroli.  Po kliknięciu „Później” baner znika.
+   * Wstrzykuje style dolnego banera aktualizacji PWA.  Baner pozostaje
+   * jedynym komunikatem o nowej wersji aplikacji, a przycisk „Przeładuj”
+   * otrzymuje tę samą fioletową pulsującą obwódkę, co stały przycisk
+   * „Pomoc”.
+   */
+  function ensureUpdateBannerStyles() {
+    if (document.getElementById('ww-sw-update-banner-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'ww-sw-update-banner-styles';
+    style.textContent = `
+      @keyframes wwHelpPulsePurple {
+        0% {
+          box-shadow: 0 0 0 0 rgba(153, 0, 255, 0.26);
+        }
+        70% {
+          box-shadow: 0 0 0 10px rgba(153, 0, 255, 0.08);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(153, 0, 255, 0);
+        }
+      }
+
+      #sw-update-banner {
+        box-sizing: border-box;
+        flex-wrap: wrap;
+        row-gap: .65rem;
+      }
+
+      #sw-update-banner .ww-sw-update-banner__message {
+        flex: 1 1 14rem;
+        min-width: 0;
+        line-height: 1.35;
+      }
+
+      #sw-update-banner .ww-sw-update-banner__actions {
+        display: flex;
+        gap: .5rem;
+        flex: 0 0 auto;
+        align-items: center;
+      }
+
+      #sw-update-banner #sw-refresh {
+        position: relative;
+        isolation: isolate;
+        overflow: visible;
+      }
+
+      #sw-update-banner #sw-refresh::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        border: 1.5px solid rgba(153, 0, 255, 0.72);
+        box-shadow: 0 0 0 0 rgba(153, 0, 255, 0);
+        pointer-events: none;
+      }
+
+      #sw-update-banner #sw-refresh.ww-sw-refresh--pulse::after {
+        animation: wwHelpPulsePurple 1.333333s ease-in-out infinite;
+      }
+
+      @media (max-width: 560px) {
+        #sw-update-banner {
+          align-items: stretch;
+        }
+
+        #sw-update-banner .ww-sw-update-banner__actions {
+          width: 100%;
+        }
+
+        #sw-update-banner .ww-sw-update-banner__actions .btn {
+          flex: 1 1 0;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        #sw-update-banner #sw-refresh.ww-sw-refresh--pulse::after {
+          animation: none;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  /**
+   * Wyświetla dolny baner informujący o dostępnej aktualizacji.  Po
+   * kliknięciu „Przeładuj” wysyła do service worker'a komunikat o
+   * natychmiastowym przejęciu kontroli.  Po kliknięciu „Później” baner
+   * znika.
    */
   function showUpdateBanner(onReload) {
     // Sprawdź, czy baner już istnieje.
     if (document.getElementById('sw-update-banner')) return;
+    ensureUpdateBannerStyles();
     const bar = document.createElement('div');
     bar.id = 'sw-update-banner';
+    bar.setAttribute('role', 'alert');
+    bar.setAttribute('aria-live', 'polite');
     bar.style.cssText = `
       position:fixed;
       inset:auto 1rem 1rem 1rem;
@@ -2348,19 +2440,19 @@ function auditNavigationCoverage() {
       font-size:1rem;
     `;
     bar.innerHTML = `
-      <span><strong>Nowa wersja aplikacji</strong> — przeładować?</span>
-      <div style="display:flex; gap:.5rem;">
-        <button id="sw-refresh" class="btn">Przeładuj</button>
+      <span class="ww-sw-update-banner__message"><strong>Nowa wersja aplikacji</strong> — przeładować?</span>
+      <div class="ww-sw-update-banner__actions">
+        <button id="sw-refresh" class="btn ww-sw-refresh--pulse">Przeładuj</button>
         <button id="sw-dismiss" class="btn" style="opacity:.8">Później</button>
       </div>
     `;
     document.body.appendChild(bar);
     const refresh = bar.querySelector('#sw-refresh');
     const dismiss = bar.querySelector('#sw-dismiss');
-    refresh.addEventListener('click', () => {
+    refresh?.addEventListener('click', () => {
       if (typeof onReload === 'function') onReload();
     });
-    dismiss.addEventListener('click', () => {
+    dismiss?.addEventListener('click', () => {
       bar.remove();
     });
   }

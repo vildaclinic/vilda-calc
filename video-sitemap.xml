@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
+  <url>
+    <loc>https://wagaiwzrost.pl/omnitrope-instrukcja.html</loc>
+    <video:video>
+      <video:thumbnail_loc>https://wagaiwzrost.pl/posters/omnitrope_poster.png</video:thumbnail_loc>
+      <video:title>Instrukcja stosowania preparatu Omnitrope</video:title>
+      <video:description>Film instruktażowy pokazujący przygotowanie i podanie leku Omnitrope.</video:description>
+      <video:content_loc>https://wagaiwzrost.pl/videos/omnitrope.mp4</video:content_loc>
+      <video:duration>245</video:duration>
+      <video:publication_date>2025-11-06T09:30:00+01:00</video:publication_date>
+      <video:family_friendly>yes</video:family_friendly>
+    </video:video>
+  </url>
+  <url>
+    <loc>https://wagaiwzrost.pl/genotropin-instrukcja.html</loc>
+    <video:video>
+      <video:thumbnail_loc>https://wagaiwzrost.pl/posters/genotropin_poster.png</video:thumbnail_loc>
+      <video:title>Instrukcja stosowania preparatu Genotropin</video:title>
+      <video:description>Film edukacyjny pokazujący jak prawidłowo przygotować i podać lek Genotropin.</video:description>
+      <video:content_loc>https://wagaiwzrost.pl/videos/genotropin.mp4</video:content_loc>
+      <video:duration>255</video:duration>
+      <video:publication_date>2025-11-06T09:00:00+01:00</video:publication_date>
+      <video:family_friendly>yes</video:family_friendly>
+    </video:video>
+  </url>
+  <url>
+    <loc>https://wagaiwzrost.pl/ngenla-instrukcja.html</loc>
+    <video:video>
+      <video:thumbnail_loc>https://wagaiwzrost.pl/posters/ngenla_poster.png</video:thumbnail_loc>
+      <video:title>Instrukcja stosowania preparatu Ngenla</video:title>
+      <video:description>Film instruktażowy demonstrujący sposób podawania leku Ngenla.</video:description>
+      <video:content_loc>https://wagaiwzrost.pl/videos/ngenla.mp4</video:content_loc>
+      <video:duration>310</video:duration>
+      <video:publication_date>2025-11-06T10:00:00+01:00</video:publication_date>
+      <video:family_friendly>yes</video:family_friendly>
+    </video:video>
+  </url>
+</urlset>
