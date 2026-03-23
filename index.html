@@ -965,6 +965,24 @@
       </small>
     </div>
     <!-- ===== /WHR ===== -->
+    <!-- Podstawowe obliczenia wzrostowe – uproszczony moduł dostępny w trybie standardowym i PRO -->
+    <div id="growthCalculationsSection" style="margin-top:1rem; display:none;">
+      <button type="button" id="toggleGrowthCalculations" class="advanced-growth-btn growth-calculations-btn">
+        <span>Obliczenia wzrostowe</span>
+      </button>
+      <div id="growthCalculationsForm" class="card" style="display:none;margin-top:1rem; position:relative;">
+        <h2 style="text-align:center;">Obliczenia wzrostowe</h2>
+        <label>Imię i&nbsp;Nazwisko (opcjonalnie):
+          <input type="text" id="basicGrowthName"></label>
+        <p style="font-weight:600;margin-top:0.8rem;">Wprowadź poprzednie pomiary</p>
+        <div id="basicGrowthMeasurements"></div>
+        <button type="button" id="basicGrowthAddMeasurementBtn" style="margin-top:0.8rem;display:block;margin-left:auto;margin-right:auto;">Dodaj kolejny pomiar</button>
+        <div id="basicGrowthResults" class="result-box" style="margin-top:1rem;"></div>
+        <div id="basicGrowthButtons" class="adv-buttons basic-growth-buttons">
+          <button type="button" id="generateCentileChartBasic">Generuj siatkę centylową</button>
+        </div>
+      </div>
+    </div>
     <!-- Zaawansowane obliczenia wzrostowe – wstawione między kartę Cole'a a kartę Droga do normy BMI -->
     <div id="advancedGrowthSection" style="margin-top:1rem; display:none;">
       <!--
@@ -1290,6 +1308,9 @@
          wszystkich podstronach. -->
     <script src="userData.js" defer></script>
 
+    <!-- Uproszczony moduł „Obliczenia wzrostowe” dla zwykłych użytkowników -->
+    <script src="growth-basic-module.js" defer></script>
+
     <!-- Skrypt stosujący ustawienia widoczności kart na stronie głównej.  
          Funkcja applyCardVisibilitySettings pobiera z localStorage obiekt
          'cardVisibility' i dodaje klasę .hidden-by-settings do elementów,
@@ -1614,68 +1635,1044 @@ if (typeof window !== 'undefined') {
 }
 
 /* Rysuje pojedynczy wykres siatki centylowej. */
+function drawRoundedRectPath(ctx, x, y, w, h, r) {
+  const radius = Math.max(0, Math.min(r || 0, Math.min(w, h) / 2));
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.arcTo(x + w, y, x + w, y + h, radius);
+  ctx.arcTo(x + w, y + h, x, y + h, radius);
+  ctx.arcTo(x, y + h, x, y, radius);
+  ctx.arcTo(x, y, x + w, y, radius);
+  ctx.closePath();
+}
+
+function drawRoundedRect(ctx, x, y, w, h, r, fillStyle, strokeStyle, lineWidth) {
+  drawRoundedRectPath(ctx, x, y, w, h, r);
+  if (fillStyle) {
+    ctx.fillStyle = fillStyle;
+    ctx.fill();
+  }
+  if (strokeStyle) {
+    ctx.lineWidth = lineWidth || 1;
+    ctx.strokeStyle = strokeStyle;
+    ctx.stroke();
+  }
+}
+
+function getCentilePlotMetrics(x, y, w, h, overrides = {}) {
+  const leftMargin = Number.isFinite(overrides.leftMargin) ? overrides.leftMargin : 120;
+  const rightMargin = Number.isFinite(overrides.rightMargin) ? overrides.rightMargin : 100;
+  const topMargin = Number.isFinite(overrides.topMargin) ? overrides.topMargin : 80;
+  const bottomMargin = Number.isFinite(overrides.bottomMargin) ? overrides.bottomMargin : 80;
+  return {
+    leftMargin,
+    rightMargin,
+    topMargin,
+    bottomMargin,
+    px: x + leftMargin,
+    py: y + topMargin,
+    pw: w - leftMargin - rightMargin,
+    ph: h - topMargin - bottomMargin
+  };
+}
+
+function getCentileChartCanvasTheme(options = {}) {
+  const mono = !!options.mono;
+  const variant = options.variant || 'classic';
+  if (mono) {
+    return {
+      gridMajor: '#bbbbbb',
+      gridMinor: '#eeeeee',
+      halfVertical: '#dddddd',
+      axis: '#000000',
+      axisText: '#333333',
+      titleColor: '#000000',
+      bandFill: null,
+      bandLine: 'rgba(0,0,0,0.85)',
+      bandLabel: '#000000',
+      curveColors: { 3: '#000000', 10: '#000000', 25: '#000000', 50: '#000000', 75: '#000000', 90: '#000000', 97: '#000000' },
+      cutoffLine: '#000000',
+      cutoffText: '#000000',
+      currentPointFill: '#000000',
+      currentPointStroke: '#ffffff',
+      currentPointRadius: 10,
+      currentPointLabelMode: 'plain',
+      currentPointLabelText: '#000000',
+      currentPointHaloOuter: null,
+      currentPointHaloInner: null,
+      historyLine: '#000000',
+      historyPoint: '#000000',
+      historyLastPoint: '#000000',
+      summaryBg: '#ffffff',
+      summaryStroke: '#000000',
+      summaryTitle: '#000000',
+      summaryText: '#000000',
+      chipBg: '#ffffff',
+      chipStroke: '#000000',
+      chipText: '#000000',
+      cardBg: '#ffffff',
+      cardStroke: '#000000',
+      pagePanelBg: '#ffffff',
+      pagePanelStroke: '#000000',
+      footer: '#000000'
+    };
+  }
+
+  if (variant === 'standardUser') {
+    return {
+      gridMajor: '#d4dfe5',
+      gridMinor: '#eef3f6',
+      halfVertical: '#e5edf1',
+      axis: '#8da4ad',
+      axisText: '#4f6770',
+      titleColor: '#355560',
+      bandFill: 'rgba(77, 192, 176, 0.06)',
+      bandLine: 'rgba(106, 191, 203, 0.62)',
+      bandLabel: '#3f6a74',
+      curveColors: {
+        3: '#d97b93',
+        10: '#e6a04d',
+        25: '#d4bf63',
+        50: '#79b06b',
+        75: '#53bcc1',
+        90: '#3f9ed6',
+        97: '#8768bf'
+      },
+      cutoffLine: '#d57565',
+      cutoffText: '#b85a52',
+      currentPointFill: '#12a4b8',
+      currentPointStroke: '#ffffff',
+      currentPointRadius: 12,
+      currentPointLabelMode: 'pill',
+      currentPointLabelText: '#14434d',
+      currentPointLabelBg: 'rgba(255,255,255,0.97)',
+      currentPointLabelStroke: 'rgba(59, 123, 136, 0.16)',
+      currentPointHaloOuter: 'rgba(18,164,184,0.18)',
+      currentPointHaloInner: 'rgba(18,164,184,0.11)',
+      historyLine: '#1a5d6c',
+      historyLineShadow: 'rgba(19, 55, 66, 0.18)',
+      historyLineHighlight: 'rgba(255,255,255,0.42)',
+      historyLineHalo: 'rgba(255,255,255,0.72)',
+      historyPoint: '#2a6e7c',
+      historyPointLight: '#5aa1b0',
+      historyPointShade: '#184752',
+      historyPointShadow: 'rgba(20, 58, 69, 0.22)',
+      historyPointHighlight: 'rgba(255,255,255,0.78)',
+      historyPointStroke: 'rgba(255,255,255,0.96)',
+      historyLastPoint: '#177487',
+      summaryBg: 'rgba(255,255,255,0.95)',
+      summaryStroke: 'rgba(87, 128, 140, 0.18)',
+      summaryTitle: '#274853',
+      summaryText: '#48626c',
+      chipBg: 'rgba(241, 250, 252, 0.98)',
+      chipStroke: 'rgba(71, 156, 170, 0.18)',
+      chipText: '#1c6572',
+      cardBg: 'rgba(255,255,255,0.91)',
+      cardStroke: 'rgba(162, 195, 204, 0.45)',
+      pagePanelBg: 'rgba(255,255,255,0.87)',
+      pagePanelStroke: 'rgba(177, 204, 214, 0.58)',
+      footer: '#6b8189'
+    };
+  }
+
+  return {
+    gridMajor: '#bbbbbb',
+    gridMinor: '#eeeeee',
+    halfVertical: '#dddddd',
+    axis: '#000000',
+    axisText: '#333333',
+    titleColor: '#333333',
+    bandFill: 'rgba(0,131,141,0.10)',
+    bandLine: 'rgba(0,131,141,0.85)',
+    bandLabel: '#004f54',
+    curveColors: { 3: '#d32f2f', 10: '#f57c00', 25: '#fbc02d', 50: '#388e3c', 75: '#1976d2', 90: '#7b1fa2', 97: '#c2185b' },
+    cutoffLine: '#c62828',
+    cutoffText: '#c62828',
+    currentPointFill: '#000000',
+    currentPointStroke: '#ffffff',
+    currentPointRadius: 10,
+    currentPointLabelMode: 'plain',
+    currentPointLabelText: '#000000',
+    currentPointHaloOuter: null,
+    currentPointHaloInner: null,
+    historyLine: '#000000',
+    historyPoint: '#000000',
+    historyLastPoint: '#000000',
+    summaryBg: '#ffffff',
+    summaryStroke: '#000000',
+    summaryTitle: '#000000',
+    summaryText: '#000000',
+    chipBg: '#ffffff',
+    chipStroke: '#000000',
+    chipText: '#000000',
+    cardBg: '#ffffff',
+    cardStroke: '#000000',
+    pagePanelBg: '#ffffff',
+    pagePanelStroke: '#000000',
+    footer: '#555555'
+  };
+}
+
+function drawCentileValuePill(ctx, text, x, y, options = {}) {
+  const font = options.font || ctx.font || '32px sans-serif';
+  const paddingX = Number.isFinite(options.paddingX) ? options.paddingX : 18;
+  const paddingY = Number.isFinite(options.paddingY) ? options.paddingY : 12;
+  const radius = Number.isFinite(options.radius) ? options.radius : 18;
+  const textColor = options.textColor || '#14434d';
+  const fillStyle = options.fillStyle || 'rgba(255,255,255,0.96)';
+  const strokeStyle = options.strokeStyle || 'rgba(59, 123, 136, 0.16)';
+  const shadow = options.shadow !== false;
+  ctx.save();
+  ctx.font = font;
+  const boxH = Number.isFinite(options.height) ? options.height : 56;
+  const textWidth = ctx.measureText(text).width;
+  const boxW = Math.ceil(textWidth + paddingX * 2);
+  const boxX = x;
+  const boxY = y;
+  if (shadow) {
+    ctx.shadowColor = 'rgba(31, 61, 76, 0.10)';
+    ctx.shadowBlur = 28;
+    ctx.shadowOffsetY = 12;
+  }
+  drawRoundedRect(ctx, boxX, boxY, boxW, boxH, radius, fillStyle, strokeStyle, 2);
+  ctx.shadowColor = 'transparent';
+  ctx.fillStyle = textColor;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, boxX + boxW / 2, boxY + boxH / 2 + 1);
+  ctx.restore();
+  return { x: boxX, y: boxY, w: boxW, h: boxH };
+}
+
+function drawCentileCurrentPoint(ctx, cfg) {
+  const theme = cfg.theme || getCentileChartCanvasTheme();
+  const plot = cfg.plotMetrics || getCentilePlotMetrics(cfg.x, cfg.y, cfg.w, cfg.h);
+  const minXVal = Number.isFinite(cfg.minX) ? cfg.minX : 36;
+  const maxXVal = Number.isFinite(cfg.maxX) ? cfg.maxX : 216;
+  const minY = cfg.minY;
+  const maxY = cfg.maxY;
+  const userVal = cfg.userVal;
+  const userAgeMonths = cfg.userAgeMonths;
+  const units = cfg.units || '';
+  if (!Number.isFinite(userVal) || !Number.isFinite(userAgeMonths) || userAgeMonths < minXVal || userAgeMonths > maxXVal || !Number.isFinite(minY) || !Number.isFinite(maxY) || maxY === minY) {
+    return null;
+  }
+  const xScale = plot.pw / (maxXVal - minXVal);
+  const yScale = plot.ph / (maxY - minY);
+  const pxU = plot.px + (userAgeMonths - minXVal) * xScale;
+  const pyU = plot.py + plot.ph - (userVal - minY) * yScale;
+  const pointRadius = theme.currentPointRadius || 10;
+  ctx.save();
+  if (theme.currentPointHaloOuter) {
+    ctx.beginPath();
+    ctx.fillStyle = theme.currentPointHaloOuter;
+    ctx.arc(pxU, pyU, pointRadius + 16, 0, 2 * Math.PI);
+    ctx.fill();
+  }
+  if (theme.currentPointHaloInner) {
+    ctx.beginPath();
+    ctx.fillStyle = theme.currentPointHaloInner;
+    ctx.arc(pxU, pyU, pointRadius + 8, 0, 2 * Math.PI);
+    ctx.fill();
+  }
+  ctx.beginPath();
+  ctx.fillStyle = theme.currentPointFill || '#000000';
+  ctx.strokeStyle = theme.currentPointStroke || '#ffffff';
+  ctx.lineWidth = getCentileChartLineWidth('currentPointBorder', 2);
+  ctx.arc(pxU, pyU, pointRadius, 0, 2 * Math.PI);
+  ctx.fill();
+  ctx.stroke();
+  const lbl = `${userVal.toFixed(1).replace('.', ',')} ${units}`;
+  if (theme.currentPointLabelMode === 'pill') {
+    ctx.font = 'bold 32px sans-serif';
+    const tmpWidth = ctx.measureText(lbl).width + 36;
+    const preferRight = pxU <= plot.px + plot.pw * 0.62;
+    let boxX = preferRight ? pxU + 18 : pxU - 18 - tmpWidth;
+    let boxY = pyU - 72;
+    if (boxY < plot.py + 12) boxY = pyU + 18;
+    boxX = Math.max(plot.px + 12, Math.min(boxX, plot.px + plot.pw - tmpWidth - 12));
+    drawCentileValuePill(ctx, lbl, boxX, boxY, {
+      font: 'bold 32px sans-serif',
+      fillStyle: theme.currentPointLabelBg,
+      strokeStyle: theme.currentPointLabelStroke,
+      textColor: theme.currentPointLabelText,
+      radius: 18,
+      height: 56
+    });
+  } else {
+    ctx.font = '33px sans-serif';
+    ctx.fillStyle = theme.currentPointLabelText || '#000000';
+    ctx.textAlign = pxU > plot.px + plot.pw / 2 ? 'right' : 'left';
+    ctx.textBaseline = 'bottom';
+    const labelX = pxU > plot.px + plot.pw / 2 ? pxU - 12 : pxU + 12;
+    ctx.fillText(lbl, labelX, pyU - 12);
+  }
+  ctx.restore();
+  return { x: pxU, y: pyU };
+}
+
+function drawCentileMeasurementSeries(ctx, cfg) {
+  const plot = cfg.plotMetrics || getCentilePlotMetrics(cfg.x, cfg.y, cfg.w, cfg.h);
+  const points = Array.isArray(cfg.points) ? cfg.points : [];
+  const valueKey = cfg.valueKey;
+  const minXVal = Number.isFinite(cfg.minX) ? cfg.minX : 36;
+  const maxXVal = Number.isFinite(cfg.maxX) ? cfg.maxX : 216;
+  const minY = cfg.minY;
+  const maxY = cfg.maxY;
+  const theme = cfg.theme || null;
+  const filtered = points.filter((point) => {
+    const age = Number(point?.ageMonths);
+    const value = Number(point?.[valueKey]);
+    return Number.isFinite(age) && Number.isFinite(value) && age >= minXVal && age <= maxXVal && value >= minY && value <= maxY;
+  });
+  if (!filtered.length || !Number.isFinite(minY) || !Number.isFinite(maxY) || maxY === minY) {
+    return plot;
+  }
+  const xScale = plot.pw / (maxXVal - minXVal);
+  const yScale = plot.ph / (maxY - minY);
+  const lineColor = cfg.lineColor || '#000000';
+  const pointColor = cfg.pointColor || lineColor;
+  const lastPointColor = cfg.lastPointColor || pointColor;
+  const lineWidth = Number.isFinite(cfg.lineWidth) ? cfg.lineWidth : getCentileChartLineWidth('historyPath', 3);
+  const pointRadius = Number.isFinite(cfg.pointRadius) ? cfg.pointRadius : 8;
+  const lastPointRadius = Number.isFinite(cfg.lastPointRadius) ? cfg.lastPointRadius : pointRadius;
+  const elevatedSeries = !!(theme && (theme.historyLineShadow || theme.historyPointShadow || theme.historyLineHighlight));
+  const regularPointRadius = elevatedSeries ? Math.max(pointRadius, lastPointRadius + 1.25) : pointRadius;
+  const traceSeriesPath = () => {
+    filtered.forEach((point, idx) => {
+      const cx = plot.px + (point.ageMonths - minXVal) * xScale;
+      const cy = plot.py + plot.ph - (point[valueKey] - minY) * yScale;
+      if (idx === 0) ctx.moveTo(cx, cy);
+      else ctx.lineTo(cx, cy);
+    });
+  };
+  ctx.save();
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  if (filtered.length >= 2) {
+    if (elevatedSeries) {
+      ctx.save();
+      ctx.beginPath();
+      traceSeriesPath();
+      ctx.strokeStyle = theme.historyLineShadow || 'rgba(19, 55, 66, 0.18)';
+      ctx.lineWidth = lineWidth + 6;
+      ctx.shadowColor = theme.historyLineShadow || 'rgba(19, 55, 66, 0.18)';
+      ctx.shadowBlur = 16;
+      ctx.shadowOffsetY = 5;
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.beginPath();
+      traceSeriesPath();
+      ctx.strokeStyle = theme.historyLineHalo || 'rgba(255,255,255,0.72)';
+      ctx.lineWidth = lineWidth + 2.4;
+      ctx.stroke();
+
+      const historyGradient = ctx.createLinearGradient(plot.px, plot.py, plot.px, plot.py + plot.ph);
+      historyGradient.addColorStop(0, theme.historyPointLight || lineColor);
+      historyGradient.addColorStop(0.55, lineColor);
+      historyGradient.addColorStop(1, theme.historyPointShade || lineColor);
+      ctx.beginPath();
+      traceSeriesPath();
+      ctx.strokeStyle = historyGradient;
+      ctx.lineWidth = lineWidth;
+      ctx.stroke();
+
+      ctx.beginPath();
+      traceSeriesPath();
+      ctx.strokeStyle = theme.historyLineHighlight || 'rgba(255,255,255,0.38)';
+      ctx.lineWidth = Math.max(1.4, lineWidth * 0.34);
+      ctx.stroke();
+    } else {
+      ctx.beginPath();
+      traceSeriesPath();
+      ctx.strokeStyle = lineColor;
+      ctx.lineWidth = lineWidth;
+      ctx.stroke();
+    }
+  }
+  filtered.forEach((point, idx) => {
+    const cx = plot.px + (point.ageMonths - minXVal) * xScale;
+    const cy = plot.py + plot.ph - (point[valueKey] - minY) * yScale;
+    const isLast = idx === filtered.length - 1;
+    const radius = isLast ? lastPointRadius : regularPointRadius;
+    const fillColor = isLast ? lastPointColor : pointColor;
+    if (elevatedSeries) {
+      ctx.save();
+      ctx.shadowColor = theme.historyPointShadow || 'rgba(20, 58, 69, 0.22)';
+      ctx.shadowBlur = 16;
+      ctx.shadowOffsetY = 5;
+      ctx.beginPath();
+      ctx.fillStyle = 'rgba(17, 53, 64, 0.14)';
+      ctx.arc(cx, cy, radius + 0.8, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.restore();
+
+      if (!isLast && (theme.currentPointHaloOuter || theme.currentPointHaloInner)) {
+        const currentPointBaseRadius = Number.isFinite(theme.currentPointRadius) ? theme.currentPointRadius : radius;
+        const minorOuterRadius = Math.max(radius + 0.8, (currentPointBaseRadius + 16) * 0.5);
+        const minorInnerRadius = Math.max(radius + 0.2, (currentPointBaseRadius + 8) * 0.5);
+        if (theme.currentPointHaloOuter) {
+          ctx.beginPath();
+          ctx.fillStyle = theme.currentPointHaloOuter;
+          ctx.arc(cx, cy, minorOuterRadius, 0, 2 * Math.PI);
+          ctx.fill();
+        }
+        if (theme.currentPointHaloInner) {
+          ctx.beginPath();
+          ctx.fillStyle = theme.currentPointHaloInner;
+          ctx.arc(cx, cy, minorInnerRadius, 0, 2 * Math.PI);
+          ctx.fill();
+        }
+      }
+
+      ctx.beginPath();
+      ctx.fillStyle = theme.historyLineHalo || 'rgba(255,255,255,0.72)';
+      ctx.arc(cx, cy, radius + 1.2, 0, 2 * Math.PI);
+      ctx.fill();
+
+      const pointGradient = ctx.createRadialGradient(
+        cx - radius * 0.38,
+        cy - radius * 0.42,
+        Math.max(1, radius * 0.18),
+        cx,
+        cy,
+        radius + 1.1
+      );
+      pointGradient.addColorStop(0, theme.historyPointHighlight || 'rgba(255,255,255,0.78)');
+      pointGradient.addColorStop(0.28, theme.historyPointLight || fillColor);
+      pointGradient.addColorStop(0.66, fillColor);
+      pointGradient.addColorStop(1, theme.historyPointShade || fillColor);
+      ctx.beginPath();
+      ctx.fillStyle = pointGradient;
+      ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.lineWidth = (cfg.pointStrokeWidth || 2) + 0.25;
+      ctx.strokeStyle = cfg.pointStroke || theme.historyPointStroke || 'rgba(255,255,255,0.96)';
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.fillStyle = theme.historyPointHighlight || 'rgba(255,255,255,0.78)';
+      ctx.arc(cx - radius * 0.34, cy - radius * 0.36, Math.max(1.8, radius * 0.26), 0, 2 * Math.PI);
+      ctx.fill();
+    } else {
+      ctx.beginPath();
+      ctx.fillStyle = fillColor;
+      ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
+      ctx.fill();
+      if (cfg.pointStroke) {
+        ctx.lineWidth = cfg.pointStrokeWidth || 2;
+        ctx.strokeStyle = cfg.pointStroke;
+        ctx.stroke();
+      }
+    }
+  });
+  ctx.restore();
+  return plot;
+}
+
+function getCentilePercentileStatsForSource(value, sex, ageMonths, param, source) {
+  if (!Number.isFinite(value) || !Number.isFinite(ageMonths)) return null;
+  const src = String(source || '').toUpperCase();
+  if (src === 'PALCZEWSKA') {
+    if (typeof calcPercentileStatsPal !== 'function') return null;
+    return calcPercentileStatsPal(value, sex, ageMonths / 12, param);
+  }
+  const resolvedSource = src || (ageMonths < 36 ? 'WHO' : 'OLAF');
+  const lms = getAnthroLMSForChartSource(resolvedSource, sex, ageMonths, param);
+  if (!lms) return null;
+  const [L, M, S] = lms;
+  let z;
+  if (L !== 0) z = (Math.pow(value / M, L) - 1) / (L * S);
+  else z = Math.log(value / M) / S;
+  return { percentile: normalCDF(z) * 100, sd: z };
+}
+
+function formatStandardCentileValue(value, unit) {
+  if (!Number.isFinite(value)) return '—';
+  return `${value.toFixed(1).replace('.', ',')} ${unit}`;
+}
+
+function formatAgeForCentileChip(ageMonths) {
+  if (!Number.isFinite(ageMonths)) return '';
+  const years = Math.floor(ageMonths / 12);
+  const months = Math.round(ageMonths % 12);
+  if (months > 0 && years < 4) return `${years} l. ${months} mies.`;
+  return `${(ageMonths / 12).toFixed(ageMonths % 12 ? 1 : 0).replace('.', ',')} l.`;
+}
+
+
+function getStandardCentileSummaryTargetCenter(cfg) {
+  const source = String(cfg && cfg.source ? cfg.source : '').toUpperCase();
+  const metric = cfg && cfg.metric === 'weight' ? 'weight' : 'height';
+  if (source === 'WHO') {
+    return {
+      ageMonths: 30,
+      value: metric === 'height' ? 50 : 2.5
+    };
+  }
+  if (source === 'OLAF') {
+    return {
+      ageMonths: 192,
+      value: metric === 'height' ? 100 : 20
+    };
+  }
+  return null;
+}
+
+function getStandardCentileSummaryPlacement(cfg) {
+  const fallbackX = Number.isFinite(cfg && cfg.fallbackX) ? cfg.fallbackX : 0;
+  const fallbackY = Number.isFinite(cfg && cfg.fallbackY) ? cfg.fallbackY : 0;
+  const plot = cfg && cfg.plotMetrics;
+  const minX = cfg ? cfg.minX : NaN;
+  const maxX = cfg ? cfg.maxX : NaN;
+  const minY = cfg ? cfg.minY : NaN;
+  const maxY = cfg ? cfg.maxY : NaN;
+  const boxW = cfg ? cfg.boxW : NaN;
+  const boxH = cfg ? cfg.boxH : NaN;
+  if (!plot || !Number.isFinite(minX) || !Number.isFinite(maxX) || !Number.isFinite(minY) || !Number.isFinite(maxY) || maxX === minX || maxY === minY || !Number.isFinite(boxW) || !Number.isFinite(boxH)) {
+    return { x: fallbackX, y: fallbackY };
+  }
+  const target = getStandardCentileSummaryTargetCenter(cfg);
+  if (!target || !Number.isFinite(target.ageMonths) || !Number.isFinite(target.value)) {
+    return { x: fallbackX, y: fallbackY };
+  }
+  if (target.ageMonths < minX || target.ageMonths > maxX || target.value < minY || target.value > maxY) {
+    return { x: fallbackX, y: fallbackY };
+  }
+  const xScale = plot.pw / (maxX - minX);
+  const yScale = plot.ph / (maxY - minY);
+  const centerX = plot.px + (target.ageMonths - minX) * xScale;
+  const centerY = plot.py + plot.ph - (target.value - minY) * yScale;
+  const rawX = centerX - boxW / 2;
+  const rawY = centerY - boxH / 2;
+  const pad = 16;
+  const minBoxX = plot.px + pad;
+  const maxBoxX = plot.px + plot.pw - boxW - pad;
+  const minBoxY = plot.py + pad;
+  const maxBoxY = plot.py + plot.ph - boxH - pad;
+  const resolvedX = maxBoxX >= minBoxX ? Math.max(minBoxX, Math.min(rawX, maxBoxX)) : rawX;
+  const resolvedY = maxBoxY >= minBoxY ? Math.max(minBoxY, Math.min(rawY, maxBoxY)) : rawY;
+  return { x: resolvedX, y: resolvedY };
+}
+
+
+function drawStandardCentileSummaryBox(ctx, cfg) {
+  const theme = cfg.theme || getCentileChartCanvasTheme({ variant: 'standardUser' });
+  const title = cfg.title || '';
+  const lines = Array.isArray(cfg.lines) ? cfg.lines.filter(Boolean) : [];
+  if (!title && !lines.length) return null;
+  ctx.save();
+  const titleFont = 'bold 34px sans-serif';
+  const bodyFont = '31px sans-serif';
+  ctx.font = titleFont;
+  let maxWidth = title ? ctx.measureText(title).width : 0;
+  ctx.font = bodyFont;
+  lines.forEach((line) => {
+    const w = ctx.measureText(line).width;
+    if (w > maxWidth) maxWidth = w;
+  });
+  const paddingX = 24;
+  const paddingY = 18;
+  const lineHeight = 42;
+  const titleGap = title ? 14 : 0;
+  const dividerGap = title ? 14 : 0;
+  const boxW = Math.max(320, Math.ceil(maxWidth + paddingX * 2));
+  const boxH = Math.ceil(paddingY * 2 + (title ? lineHeight : 0) + (title ? titleGap + 2 : 0) + (lines.length * lineHeight));
+  const fallbackX = Number.isFinite(cfg.x) ? cfg.x : 0;
+  const fallbackY = Number.isFinite(cfg.y) ? cfg.y : 0;
+  const placement = getStandardCentileSummaryPlacement({
+    source: cfg.source,
+    metric: cfg.metric,
+    plotMetrics: cfg.plotMetrics,
+    minX: cfg.minX,
+    maxX: cfg.maxX,
+    minY: cfg.minY,
+    maxY: cfg.maxY,
+    boxW,
+    boxH,
+    fallbackX,
+    fallbackY
+  });
+  const x = Number.isFinite(placement.x) ? placement.x : fallbackX;
+  const y = Number.isFinite(placement.y) ? placement.y : fallbackY;
+  ctx.shadowColor = 'rgba(38, 71, 82, 0.10)';
+  ctx.shadowBlur = 28;
+  ctx.shadowOffsetY = 12;
+  drawRoundedRect(ctx, x, y, boxW, boxH, 26, theme.summaryBg, theme.summaryStroke, 2);
+  ctx.shadowColor = 'transparent';
+  ctx.fillStyle = theme.summaryTitle;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  let cursorY = y + paddingY;
+  if (title) {
+    ctx.font = titleFont;
+    ctx.fillText(title, x + paddingX, cursorY);
+    cursorY += lineHeight;
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(84, 122, 133, 0.14)';
+    ctx.lineWidth = 2;
+    ctx.moveTo(x + paddingX, cursorY + 4);
+    ctx.lineTo(x + boxW - paddingX, cursorY + 4);
+    ctx.stroke();
+    cursorY += titleGap;
+  }
+  ctx.font = bodyFont;
+  ctx.fillStyle = theme.summaryText;
+  lines.forEach((line) => {
+    ctx.fillText(line, x + paddingX, cursorY);
+    cursorY += lineHeight;
+  });
+  ctx.restore();
+  return { w: boxW, h: boxH };
+}
+
+function drawStandardCentileCardShell(ctx, cfg) {
+  const theme = cfg.theme || getCentileChartCanvasTheme({ variant: 'standardUser' });
+  const { x, y, w, h, title, hint } = cfg;
+  ctx.save();
+  ctx.shadowColor = 'rgba(35, 70, 85, 0.09)';
+  ctx.shadowBlur = 32;
+  ctx.shadowOffsetY = 16;
+  const grad = ctx.createLinearGradient(x, y, x, y + h);
+  grad.addColorStop(0, 'rgba(255,255,255,0.94)');
+  grad.addColorStop(1, 'rgba(249,252,253,0.92)');
+  drawRoundedRect(ctx, x, y, w, h, 32, grad, theme.cardStroke, 2);
+  ctx.shadowColor = 'transparent';
+  ctx.beginPath();
+  ctx.strokeStyle = 'rgba(132, 172, 182, 0.10)';
+  ctx.lineWidth = 2;
+  ctx.moveTo(x + 32, y + 78);
+  ctx.lineTo(x + w - 32, y + 78);
+  ctx.stroke();
+  ctx.fillStyle = theme.titleColor;
+  ctx.font = 'bold 38px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillText(title, x + 32, y + 20);
+  if (hint) {
+    ctx.fillStyle = '#6a818a';
+    ctx.font = '28px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(hint, x + w - 32, y + 24);
+  }
+  ctx.restore();
+}
+
+function drawStandardCentileLegend(ctx, cfg) {
+  const theme = cfg.theme || getCentileChartCanvasTheme({ variant: 'standardUser' });
+  const items = cfg.items || [];
+  const x = cfg.x;
+  const y = cfg.y;
+  const w = cfg.w;
+  const h = cfg.h;
+  ctx.save();
+  ctx.shadowColor = 'rgba(36, 68, 80, 0.08)';
+  ctx.shadowBlur = 22;
+  ctx.shadowOffsetY = 10;
+  drawRoundedRect(ctx, x, y, w, h, 999, theme.summaryBg, 'rgba(168, 196, 204, 0.30)', 2);
+  ctx.shadowColor = 'transparent';
+  const count = Math.max(items.length, 1);
+  const cellW = w / count;
+  items.forEach((item, idx) => {
+    const cx = x + cellW * idx + cellW / 2;
+    const markerX = cx - 40;
+    const markerY = y + h / 2;
+    ctx.beginPath();
+    ctx.strokeStyle = item.color;
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.moveTo(markerX - 20, markerY);
+    ctx.lineTo(markerX + 20, markerY);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.fillStyle = item.color;
+    ctx.arc(markerX, markerY, 8, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.fillStyle = '#35515a';
+    ctx.font = item.emphasis ? 'bold 28px sans-serif' : '28px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(item.label, markerX + 28, markerY + 1);
+  });
+  ctx.restore();
+}
+
+function drawStandardCentileChipRow(ctx, cfg) {
+  const theme = cfg.theme || getCentileChartCanvasTheme({ variant: 'standardUser' });
+  const chips = Array.isArray(cfg.chips) ? cfg.chips.filter(Boolean) : [];
+  if (!chips.length) return;
+  ctx.save();
+  ctx.font = 'bold 28px sans-serif';
+  const gap = 18;
+  const chipHeights = 56;
+  const widths = chips.map((text) => Math.ceil(ctx.measureText(text).width + 34));
+  const totalW = widths.reduce((sum, w) => sum + w, 0) + gap * (chips.length - 1);
+  let cursorX = cfg.centerX - totalW / 2;
+  chips.forEach((text, idx) => {
+    drawCentileValuePill(ctx, text, cursorX, cfg.y, {
+      font: 'bold 28px sans-serif',
+      fillStyle: theme.chipBg,
+      strokeStyle: theme.chipStroke,
+      textColor: theme.chipText,
+      radius: 999,
+      height: chipHeights,
+      paddingX: 17,
+      paddingY: 10,
+      shadow: false
+    });
+    cursorX += widths[idx] + gap;
+  });
+  ctx.restore();
+}
+
+
+function getCentileChartHeaderNameState() {
+  const advData = getEffectiveCentileGrowthDataState() || {};
+  const sourceModule = (advData && typeof advData.sourceModule === 'string') ? advData.sourceModule : '';
+  const advName = (advData && typeof advData.name === 'string') ? advData.name.trim() : '';
+  const advInput = document.getElementById('advName');
+  const basicInput = document.getElementById('basicGrowthName');
+  const mainInput = document.getElementById('name');
+  const fallbackName = (advInput && typeof advInput.value === 'string' && advInput.value.trim())
+    || (basicInput && typeof basicInput.value === 'string' && basicInput.value.trim())
+    || (mainInput && typeof mainInput.value === 'string' && mainInput.value.trim())
+    || '';
+  return {
+    name: advName || fallbackName || '',
+    sourceModule,
+    isBasicGrowth: sourceModule === 'basicGrowth'
+  };
+}
+
+function buildCentileChartNameLabel(options = {}) {
+  const publication = !!options.publication;
+  const showPlaceholder = options.showPlaceholder !== false;
+  const nameState = getCentileChartHeaderNameState();
+  const prefix = publication ? 'Patient' : 'Imię i nazwisko';
+  if (nameState.name) return `${prefix}: ${nameState.name}`;
+  return showPlaceholder ? `${prefix}: _________________________________` : '';
+}
+
+function renderStandardUserCentilePage(ctx, options) {
+  const theme = getCentileChartCanvasTheme({ variant: 'standardUser' });
+  const pw = options.pageWidth;
+  const ph = options.pageHeight;
+  const headerTitle = options.headerTitle;
+  const renderedSubtitle = options.renderedHeaderSubtitle || options.headerSubtitle || '';
+  const effectiveSource = String(options.effectiveSource || '').toUpperCase();
+  const standardPlotMargins = { bottomMargin: 104 };
+  const panelX = 90;
+  const panelY = 72;
+  const panelW = pw - 180;
+  const panelH = ph - 144;
+
+  const bg = ctx.createLinearGradient(0, 0, 0, ph);
+  bg.addColorStop(0, '#f9fdff');
+  bg.addColorStop(1, '#eef7fb');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, pw, ph);
+
+  const blob1 = ctx.createRadialGradient(420, 360, 50, 420, 360, 780);
+  blob1.addColorStop(0, 'rgba(95, 224, 220, 0.12)');
+  blob1.addColorStop(1, 'rgba(95, 224, 220, 0)');
+  ctx.fillStyle = blob1;
+  ctx.fillRect(0, 0, pw, ph);
+
+  const blob2 = ctx.createRadialGradient(pw - 320, 340, 40, pw - 320, 340, 680);
+  blob2.addColorStop(0, 'rgba(124, 182, 255, 0.10)');
+  blob2.addColorStop(1, 'rgba(124, 182, 255, 0)');
+  ctx.fillStyle = blob2;
+  ctx.fillRect(0, 0, pw, ph);
+
+  ctx.save();
+  ctx.shadowColor = 'rgba(29, 59, 74, 0.11)';
+  ctx.shadowBlur = 42;
+  ctx.shadowOffsetY = 20;
+  drawRoundedRect(ctx, panelX, panelY, panelW, panelH, 40, theme.pagePanelBg, theme.pagePanelStroke, 2.5);
+  ctx.shadowColor = 'transparent';
+  ctx.restore();
+
+  ctx.save();
+  const panelTopGlow = ctx.createLinearGradient(panelX, panelY, panelX, panelY + 260);
+  panelTopGlow.addColorStop(0, 'rgba(255,255,255,0.72)');
+  panelTopGlow.addColorStop(1, 'rgba(255,255,255,0.08)');
+  drawRoundedRect(ctx, panelX + 2, panelY + 2, panelW - 4, 250, 38, panelTopGlow, null, 0);
+  ctx.restore();
+
+  ctx.fillStyle = '#355567';
+  ctx.font = 'bold 78px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillText(headerTitle, pw / 2, panelY + 62);
+
+  if (renderedSubtitle) {
+    ctx.fillStyle = '#67828e';
+    ctx.font = '40px sans-serif';
+    ctx.fillText(renderedSubtitle, pw / 2, panelY + 158);
+  }
+
+  // W trybie standardowym nagłówek ma być maksymalnie czysty: bez chipów z trybem,
+  // źródłem norm, płcią czy wiekiem użytkownika.
+
+  const innerX = panelX + 46;
+  const innerW = panelW - 92;
+  const headerNameState = getCentileChartHeaderNameState();
+  const standardNameLine = headerNameState.name ? `Imię i nazwisko: ${headerNameState.name}` : '';
+  if (standardNameLine) {
+    ctx.fillStyle = '#5d7680';
+    ctx.font = '38px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText(standardNameLine, innerX + 6, renderedSubtitle ? panelY + 214 : panelY + 176);
+  }
+  const headerReserve = renderedSubtitle ? (standardNameLine ? 322 : 258) : (standardNameLine ? 282 : 218);
+  const bottomReserve = 42;
+  const cardGap = 34;
+  const chartsAvailableH = panelH - headerReserve - bottomReserve - cardGap;
+  const heightRange = Math.max(1, options.dynMaxH - options.dynMinH);
+  const weightRange = Math.max(1, options.dynMaxW - options.dynMinW);
+  let heightRatio = heightRange / (heightRange + weightRange);
+  if (!Number.isFinite(heightRatio)) heightRatio = 0.53;
+  heightRatio = Math.max(0.48, Math.min(0.56, heightRatio));
+  const heightCardH = Math.round(chartsAvailableH * heightRatio);
+  const weightCardH = chartsAvailableH - heightCardH;
+  const heightCardY = panelY + headerReserve;
+  const weightCardY = heightCardY + heightCardH + cardGap;
+
+  drawStandardCentileCardShell(ctx, {
+    x: innerX,
+    y: heightCardY,
+    w: innerW,
+    h: heightCardH,
+    title: 'Wzrost',
+    theme
+  });
+  drawStandardCentileCardShell(ctx, {
+    x: innerX,
+    y: weightCardY,
+    w: innerW,
+    h: weightCardH,
+    title: 'Masa ciała',
+    theme
+  });
+
+  const heightPlot = getCentilePlotMetrics(innerX, heightCardY, innerW, heightCardH, standardPlotMargins);
+  drawCentileGrid(ctx, {
+    x: innerX,
+    y: heightCardY,
+    w: innerW,
+    h: heightCardH,
+    curves: options.heightCurves,
+    minY: options.dynMinH,
+    maxY: options.dynMaxH,
+    userVal: options.effectiveHeight,
+    userAgeMonths: options.effectiveAgeMonths,
+    title: 'Wzrost (cm)',
+    units: 'cm',
+    percentiles: options.percentiles,
+    highlightBandIdx: options.hBandIdx,
+    minX: options.rangeMinX,
+    maxX: options.rangeMaxX,
+    cutoffVal: options.dynMaxH > options.maxH ? options.maxH : undefined,
+    themeVariant: 'standardUser',
+    plotMetrics: heightPlot,
+    skipUserPoint: true
+  });
+  drawCentileMeasurementSeries(ctx, {
+    x: innerX,
+    y: heightCardY,
+    w: innerW,
+    h: heightCardH,
+    plotMetrics: heightPlot,
+    minX: options.rangeMinX,
+    maxX: options.rangeMaxX,
+    minY: options.dynMinH,
+    maxY: options.dynMaxH,
+    points: options.ptsH,
+    valueKey: 'height',
+    theme,
+    lineColor: theme.historyLine,
+    pointColor: theme.historyPoint,
+    lastPointColor: theme.historyLastPoint,
+    lineWidth: 5,
+    pointRadius: 7,
+    lastPointRadius: 8,
+    pointStroke: 'rgba(255,255,255,0.95)',
+    pointStrokeWidth: 2.5
+  });
+  drawCentileCurrentPoint(ctx, {
+    x: innerX,
+    y: heightCardY,
+    w: innerW,
+    h: heightCardH,
+    plotMetrics: heightPlot,
+    minX: options.rangeMinX,
+    maxX: options.rangeMaxX,
+    minY: options.dynMinH,
+    maxY: options.dynMaxH,
+    userVal: options.effectiveHeight,
+    userAgeMonths: options.effectiveAgeMonths,
+    units: 'cm',
+    theme
+  });
+
+  const weightPlot = getCentilePlotMetrics(innerX, weightCardY, innerW, weightCardH, standardPlotMargins);
+  drawCentileGrid(ctx, {
+    x: innerX,
+    y: weightCardY,
+    w: innerW,
+    h: weightCardH,
+    curves: options.weightCurves,
+    minY: options.dynMinW,
+    maxY: options.dynMaxW,
+    userVal: options.effectiveWeight,
+    userAgeMonths: options.effectiveAgeMonths,
+    title: 'Waga (kg)',
+    units: 'kg',
+    percentiles: options.percentiles,
+    highlightBandIdx: options.wBandIdx,
+    minX: options.rangeMinX,
+    maxX: options.rangeMaxX,
+    cutoffVal: options.dynMaxW > options.maxW ? options.maxW : undefined,
+    themeVariant: 'standardUser',
+    plotMetrics: weightPlot,
+    skipUserPoint: true
+  });
+  drawCentileMeasurementSeries(ctx, {
+    x: innerX,
+    y: weightCardY,
+    w: innerW,
+    h: weightCardH,
+    plotMetrics: weightPlot,
+    minX: options.rangeMinX,
+    maxX: options.rangeMaxX,
+    minY: options.dynMinW,
+    maxY: options.dynMaxW,
+    points: options.ptsW,
+    valueKey: 'weight',
+    theme,
+    lineColor: theme.historyLine,
+    pointColor: theme.historyPoint,
+    lastPointColor: theme.historyLastPoint,
+    lineWidth: 5,
+    pointRadius: 7,
+    lastPointRadius: 8,
+    pointStroke: 'rgba(255,255,255,0.95)',
+    pointStrokeWidth: 2.5
+  });
+  drawCentileCurrentPoint(ctx, {
+    x: innerX,
+    y: weightCardY,
+    w: innerW,
+    h: weightCardH,
+    plotMetrics: weightPlot,
+    minX: options.rangeMinX,
+    maxX: options.rangeMaxX,
+    minY: options.dynMinW,
+    maxY: options.dynMaxW,
+    userVal: options.effectiveWeight,
+    userAgeMonths: options.effectiveAgeMonths,
+    units: 'kg',
+    theme
+  });
+
+  const heightStats = getCentilePercentileStatsForSource(options.effectiveHeight, options.sex, options.effectiveAgeMonths, 'HT', effectiveSource);
+  const weightStats = getCentilePercentileStatsForSource(options.effectiveWeight, options.sex, options.effectiveAgeMonths, 'WT', effectiveSource);
+  const heightSummaryLines = [
+    formatStandardCentileValue(options.effectiveHeight, 'cm'),
+    heightStats && Number.isFinite(heightStats.percentile) ? formatCentileLabel(heightStats.percentile) : 'aktualny pomiar'
+  ];
+  const weightSummaryLines = [
+    formatStandardCentileValue(options.effectiveWeight, 'kg'),
+    weightStats && Number.isFinite(weightStats.percentile) ? formatCentileLabel(weightStats.percentile) : 'aktualny pomiar'
+  ];
+  drawStandardCentileSummaryBox(ctx, {
+    x: heightPlot.px + heightPlot.pw - 460,
+    y: heightPlot.py + heightPlot.ph - 190,
+    title: 'Aktualny wzrost',
+    lines: heightSummaryLines,
+    theme,
+    source: effectiveSource,
+    metric: 'height',
+    plotMetrics: heightPlot,
+    minX: options.rangeMinX,
+    maxX: options.rangeMaxX,
+    minY: options.dynMinH,
+    maxY: options.dynMaxH
+  });
+  drawStandardCentileSummaryBox(ctx, {
+    x: weightPlot.px + weightPlot.pw - 460,
+    y: weightPlot.py + weightPlot.ph - 190,
+    title: 'Aktualna waga',
+    lines: weightSummaryLines,
+    theme,
+    source: effectiveSource,
+    metric: 'weight',
+    plotMetrics: weightPlot,
+    minX: options.rangeMinX,
+    maxX: options.rangeMaxX,
+    minY: options.dynMinW,
+    maxY: options.dynMaxW
+  });
+
+  // Dolna legenda percentyli i techniczna stopka są ukryte w wariancie standardowym,
+  // aby wykres był prostszy i mniej przeładowany dla zwykłych użytkowników.
+}
+
 function drawCentileGrid(ctx, cfg) {
   const { x, y, w, h, curves, minY, maxY, userVal, userAgeMonths, title, units, percentiles, highlightBandIdx, cutoffVal, minX, maxX, monochrome } = cfg;
-  // Determine the horizontal range (in months) for the chart.  If minX/maxX are not
-  // provided, default to the historical 3–18 lata range (36–216 mies.).  The variables
-  // minXVal and maxXVal ensure we always have defined numeric values for computations.
   const minXVal = (typeof minX === 'number') ? minX : 36;
   const maxXVal = (typeof maxX === 'number') ? maxX : 216;
-  const leftMargin = 120, rightMargin = 100, topMargin = 80, bottomMargin = 80;
-  const px = x + leftMargin, py = y + topMargin;
-  const pw = w - leftMargin - rightMargin, ph = h - topMargin - bottomMargin;
-  // Scale factors.  X‑axis is scaled according to the selected range (maxXVal – minXVal).
+  const plot = cfg.plotMetrics || getCentilePlotMetrics(x, y, w, h, cfg.plotMargins);
+  const { px, py, pw, ph } = plot;
   const xScale = pw / (maxXVal - minXVal);
   const yScale = ph / (maxY - minY);
+  const mono = !!monochrome;
+  const theme = getCentileChartCanvasTheme({ mono, variant: cfg.themeVariant || 'classic' });
   ctx.save();
   ctx.lineCap = 'butt';
-  // Determine whether we should render in monochrome.  When true, colours used for
-  // shaded areas, dashed lines, percentile curves and labels are overridden with
-  // black/gray tones.
-  const mono = !!monochrome;
-  // Poziome linie siatki – rysujemy je najpierw, aby pionowe linie pomocnicze
-  // pozostawały na wierzchu w miejscach przecięcia.
+
   for (let val = minY; val <= maxY; val++) {
     const cy = py + ph - (val - minY) * yScale;
     ctx.beginPath();
     if (val % 5 === 0) {
-      ctx.strokeStyle = '#bbbbbb';
+      ctx.strokeStyle = theme.gridMajor;
       ctx.lineWidth = getCentileChartLineWidth('majorHorizontalGrid', 2.5);
       ctx.moveTo(px, cy);
       ctx.lineTo(px + pw, cy);
       ctx.stroke();
       ctx.font = '33px sans-serif';
-      ctx.fillStyle = '#333333';
+      ctx.fillStyle = theme.axisText;
       ctx.textAlign = 'right';
       ctx.textBaseline = 'middle';
       ctx.fillText(String(val), px - 6, cy);
     } else {
-      ctx.strokeStyle = '#eeeeee';
+      ctx.strokeStyle = theme.gridMinor;
       ctx.lineWidth = getCentileChartLineWidth('minorHorizontalGrid', 1.5);
       ctx.moveTo(px, cy);
       ctx.lineTo(px + pw, cy);
       ctx.stroke();
     }
   }
-  // Pionowe linie siatki.  Zakres lat (startYear..endYear) zależy od zdefiniowanego zakresu mies. (minXVal..maxXVal).
+
   const startYear = Math.ceil(minXVal / 12);
-  const endYear   = Math.floor(maxXVal / 12);
+  const endYear = Math.floor(maxXVal / 12);
   for (let age = startYear; age <= endYear; age++) {
     const m = age * 12;
     const cx = px + (m - minXVal) * xScale;
     ctx.beginPath();
-    ctx.strokeStyle = '#bbbbbb';
+    ctx.strokeStyle = theme.gridMajor;
     ctx.lineWidth = getCentileChartLineWidth('majorVerticalGrid', 2.5);
     ctx.moveTo(cx, py);
     ctx.lineTo(cx, py + ph);
     ctx.stroke();
-    // Połówkowe linie (co 6 mies.)
     if (age < endYear) {
       const halfM = m + 6;
       if (halfM <= maxXVal) {
         const halfX = px + (halfM - minXVal) * xScale;
         ctx.beginPath();
-        ctx.strokeStyle = '#dddddd';
+        ctx.strokeStyle = theme.halfVertical;
         ctx.lineWidth = getCentileChartLineWidth('minorVerticalGrid', 1.75);
         ctx.moveTo(halfX, py);
         ctx.lineTo(halfX, py + ph);
@@ -1683,37 +2680,28 @@ function drawCentileGrid(ctx, cfg) {
       }
     }
     ctx.font = '35px sans-serif';
-    ctx.fillStyle = '#333333';
+    ctx.fillStyle = theme.axisText;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     ctx.fillText(String(age), cx, py + ph + 8);
   }
-  // Osie
+
   ctx.beginPath();
-  ctx.strokeStyle = '#000000';
+  ctx.strokeStyle = theme.axis;
   ctx.lineWidth = getCentileChartLineWidth('axes', 2);
   ctx.moveTo(px, py);
   ctx.lineTo(px, py + ph);
   ctx.moveTo(px, py + ph);
   ctx.lineTo(px + pw, py + ph);
   ctx.stroke();
-  
-  // Podświetlenie kanału centylowego i dwie poziome linie na poziomach 18 r.ż.
+
   if (typeof highlightBandIdx === 'number' && highlightBandIdx >= 0 && highlightBandIdx < percentiles.length - 1) {
     const pA = percentiles[highlightBandIdx];
     const pB = percentiles[highlightBandIdx + 1];
     const valsA = curves[pA];
     const valsB = curves[pB];
     const n = valsA.length;
-
-    // Wypełnienie obszaru kanału (delikatny turkus)
-    // Podświetlenie kanału centylowego (łagodny kolor w tle).  W trybie publikacji
-    // (monochrome) nie rysujemy wypełnienia, aby wygasić podświetlenie kanałów.
-    (function shadeBand() {
-      // Jeśli jesteśmy w trybie monochrome, pomiń wypełnianie tła
-      if (mono) {
-        return;
-      }
+    if (theme.bandFill) {
       const path = new Path2D();
       for (let i = 0; i < n; i++) {
         const mVal = minXVal + i;
@@ -1729,37 +2717,27 @@ function drawCentileGrid(ctx, cfg) {
       }
       path.closePath();
       ctx.save();
-      // Użyj subtelnego turkusowego koloru poza trybem monochrome
-      ctx.fillStyle = 'rgba(0,131,141,0.10)';
+      ctx.fillStyle = theme.bandFill;
       ctx.fill(path);
       ctx.restore();
-    })();
+    }
 
-    // Poziome linie na wartościach 18 r.ż. (216 mies.) – przez całą szerokość siatki.
-    // Wyznacz indeks w tablicach wartości, przesuwając o minXVal.  Jeżeli zakres
-    // osi X nie obejmuje 18 lat (216 mies.), pomijamy te linie.
     const idx18 = 216 - minXVal;
-    if (!mono && maxXVal >= 216 && idx18 >= 0 && idx18 < n) {
+    if (maxXVal >= 216 && idx18 >= 0 && idx18 < n) {
       const v1 = valsA[idx18];
       const v2 = valsB[idx18];
       const valLow18 = Math.min(v1, v2);
       const valHigh18 = Math.max(v1, v2);
       const yLow18 = py + ph - (valLow18 - minY) * yScale;
       const yHigh18 = py + ph - (valHigh18 - minY) * yScale;
-
       ctx.save();
       ctx.setLineDash([8, 6]);
-      ctx.strokeStyle = mono ? 'rgba(0,0,0,0.85)' : 'rgba(0,131,141,0.85)';
+      ctx.strokeStyle = theme.bandLine;
       ctx.lineWidth = getCentileChartLineWidth('bandReference', 2);
       ctx.beginPath(); ctx.moveTo(px, yLow18); ctx.lineTo(px + pw, yLow18); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(px, yHigh18); ctx.lineTo(px + pw, yHigh18); ctx.stroke();
       ctx.setLineDash([]);
-
-      // Etykiety wartości wewnątrz siatki, tuż przy lewym brzegu (ale nie na zewnątrz).
-      // Numeryczne wartości są zaokrąglane do 0,5 jednostki (np. 174,5 cm) i
-      // wyświetlane powyżej przerywanych linii, aby linie nie przechodziły przez tekst.
       function fmtToHalf(n) {
-        // Zaokrąglij do połowy jednostki i zwróć z przecinkiem jako separator dziesiętny
         const rounded = Math.round(n * 2) / 2;
         return rounded.toFixed(1).replace('.', ',');
       }
@@ -1767,34 +2745,24 @@ function drawCentileGrid(ctx, cfg) {
       const cHigh = Math.max(pA, pB);
       const labelLow = `${fmtToHalf(valLow18)} ${units} (${cLow} c)`;
       const labelHigh = `${fmtToHalf(valHigh18)} ${units} (${cHigh} c)`;
-
-      // Wyznacz pionowe pozycje dla etykiet. Odsuń je lekko w górę względem linii,
-      // aby uniknąć kolizji z kreskowanymi liniami. Jeżeli linie są blisko siebie,
-      // dodatkowo zwiększ odstęp.
       let y1 = yHigh18 - 18;
       let y2 = yLow18 - 18;
-      // Jeśli odległość między dwoma etykietami jest zbyt mała, rozsuń je
       if (Math.abs(y2 - y1) < 32) {
         const shift = (32 - Math.abs(y2 - y1)) / 2 + 2;
         y1 -= shift;
         y2 += shift;
       }
       ctx.font = '33px sans-serif';
-      ctx.fillStyle = mono ? '#000000' : '#004f54';
+      ctx.fillStyle = theme.bandLabel;
       ctx.textAlign = 'left';
-      // Ustaw baseline na 'middle' tak, aby podany y oznaczał środek tekstu
       ctx.textBaseline = 'middle';
       ctx.fillText(labelHigh, px + 10, y1);
-      ctx.fillText(labelLow,  px + 10, y2);
+      ctx.fillText(labelLow, px + 10, y2);
       ctx.restore();
     }
   }
 
-  // Linie centylowe
-  // Definicja kolorów dla poszczególnych centyli.  W trybie monochrome wszystkie
-  // krzywe centylowe są czarne; w przeciwnym razie korzystamy z kolorowego kodowania.
-  const defaultColors = { 3: '#d32f2f', 10: '#f57c00', 25: '#fbc02d', 50: '#388e3c', 75: '#1976d2', 90: '#7b1fa2', 97: '#c2185b' };
-  const colors = mono ? { 3: '#000000', 10: '#000000', 25: '#000000', 50: '#000000', 75: '#000000', 90: '#000000', 97: '#000000' } : defaultColors;
+  const colors = theme.curveColors;
   const labelPos = [];
   for (const p of percentiles) {
     const vals = curves[p];
@@ -1812,7 +2780,8 @@ function drawCentileGrid(ctx, cfg) {
     }
     ctx.moveTo(pts[0].x, pts[0].y);
     for (let i = 0; i < pts.length - 1; i++) {
-      const cpX = pts[i].x, cpY = pts[i].y;
+      const cpX = pts[i].x;
+      const cpY = pts[i].y;
       const midX = (pts[i].x + pts[i + 1].x) / 2;
       const midY = (pts[i].y + pts[i + 1].y) / 2;
       ctx.quadraticCurveTo(cpX, cpY, midX, midY);
@@ -1822,7 +2791,7 @@ function drawCentileGrid(ctx, cfg) {
     const lastPt = pts[pts.length - 1];
     labelPos.push({ centile: p, x: lastPt.x, y: lastPt.y, color: colors[p] });
   }
-  // Unikanie nakładania etykiet centyli
+
   labelPos.sort((a, b) => a.y - b.y);
   const minSpacing = 32;
   for (let i = 1; i < labelPos.length; i++) {
@@ -1834,73 +2803,70 @@ function drawCentileGrid(ctx, cfg) {
   const overflow = labelPos[labelPos.length - 1].y - bottom;
   if (overflow > -16) {
     const shift = overflow + 16;
-    for (const item of labelPos) {
-      item.y -= shift;
-    }
+    for (const item of labelPos) item.y -= shift;
   }
   ctx.font = '32px sans-serif';
   ctx.textBaseline = 'middle';
   for (const item of labelPos) {
-    ctx.fillStyle = mono ? '#000000' : item.color;
+    ctx.fillStyle = item.color;
     ctx.textAlign = 'left';
     ctx.fillText(String(item.centile), px + pw + 10, item.y);
   }
-  // Tytuły osi
+
   ctx.save();
-  ctx.translate(x + 40, y + topMargin + ph / 2);
+  ctx.translate(x + 40, y + plot.topMargin + ph / 2);
   ctx.rotate(-Math.PI / 2);
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.font = '36px sans-serif';
-  ctx.fillStyle = mono ? '#000000' : '#333333';
+  ctx.fillStyle = theme.titleColor;
   ctx.fillText(title, 0, 0);
   ctx.restore();
-  ctx.font = '36px sans-serif';
-  ctx.fillStyle = mono ? '#000000' : '#333333';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'top';
-  // W trybie publikacji zmień etykietę osi X na angielski odpowiednik
+
   const xLabel = mono ? 'Age (years)' : 'Wiek (lata)';
-  ctx.fillText(xLabel, px + pw / 2, py + ph + 50);
-  // Ostrzeżenie w przypadku rozszerzenia zakresu wagi
-  // Jeśli zdefiniowano cutoffVal (np. górną granicę oficjalnej siatki), narysuj grubą linię
-  // oraz ostrzeżenie, aby zaznaczyć koniec referencyjnego zakresu.  Umieszczamy
-  // go przed rysowaniem punktu użytkownika, aby punkt pozostał na wierzchu.
-  if (!mono && typeof cutoffVal === 'number' && cutoffVal >= minY && cutoffVal < maxY) {
+  const xLabelFontPx = cfg.themeVariant === 'standardUser' ? 34 : 36;
+  const xLabelY = cfg.themeVariant === 'standardUser'
+    ? py + ph + Math.max(60, plot.bottomMargin - 36)
+    : py + ph + 50;
+  ctx.font = `${xLabelFontPx}px sans-serif`;
+  ctx.fillStyle = theme.titleColor;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = cfg.themeVariant === 'standardUser' ? 'middle' : 'top';
+  ctx.fillText(xLabel, px + pw / 2, xLabelY);
+
+  if (typeof cutoffVal === 'number' && cutoffVal >= minY && cutoffVal < maxY) {
     const cyWarn = py + ph - (cutoffVal - minY) * yScale;
     ctx.save();
-    ctx.strokeStyle = mono ? '#000000' : '#c62828';
+    ctx.strokeStyle = theme.cutoffLine;
     ctx.lineWidth = getCentileChartLineWidth('cutoffWarning', 5);
     ctx.beginPath();
     ctx.moveTo(px, cyWarn);
     ctx.lineTo(px + pw, cyWarn);
     ctx.stroke();
     ctx.font = 'bold 36px sans-serif';
-    ctx.fillStyle = mono ? '#000000' : '#c62828';
+    ctx.fillStyle = theme.cutoffText;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
     ctx.fillText('Uwaga! koniec oficjalnej siatki centylowej', px + pw / 2, cyWarn - 8);
     ctx.restore();
   }
 
-  // Punkt użytkownika
-  if (typeof userVal === 'number' && !isNaN(userVal) && typeof userAgeMonths === 'number' && userAgeMonths >= minXVal && userAgeMonths <= maxXVal) {
-    const pxU = px + (userAgeMonths - minXVal) * xScale;
-    const pyU = py + ph - (userVal - minY) * yScale;
-    ctx.beginPath();
-    ctx.fillStyle = '#000000';
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = getCentileChartLineWidth('currentPointBorder', 2);
-    ctx.arc(pxU, pyU, 10, 0, 2 * Math.PI);
-    ctx.fill();
-    ctx.stroke();
-    ctx.font = '33px sans-serif';
-    ctx.fillStyle = '#000000';
-    ctx.textAlign = pxU > px + pw / 2 ? 'right' : 'left';
-    ctx.textBaseline = 'bottom';
-    const lbl = userVal.toFixed(1).replace('.', ',') + ' ' + units;
-    const labelX = pxU > px + pw / 2 ? pxU - 12 : pxU + 12;
-    ctx.fillText(lbl, labelX, pyU - 12);
+  if (!cfg.skipUserPoint) {
+    drawCentileCurrentPoint(ctx, {
+      x,
+      y,
+      w,
+      h,
+      minX: minXVal,
+      maxX: maxXVal,
+      minY,
+      maxY,
+      userVal,
+      userAgeMonths,
+      units,
+      theme,
+      plotMetrics: plot
+    });
   }
   ctx.restore();
 }
@@ -2114,15 +3080,14 @@ const pw = 2480, ph = 3508;
    */
   // Obniżenie etykiety „Imię i nazwisko” o 1,75 rem względem nagłówka (1,25 rem z poprzedniej wersji + 0,5 rem dodatkowo).
   // --- DYNAMICZNY napis "Imię i nazwisko" (z karty Zaawansowane) ---
-  const nameFromState =
-    (window.advancedGrowthData && window.advancedGrowthData.name) ||
-    (document.getElementById('advName') ? document.getElementById('advName').value.trim() : '');
+  const legacyNameState = getCentileChartHeaderNameState();
+  const nameLabel = buildCentileChartNameLabel({
+    showPlaceholder: !legacyNameState.isBasicGrowth
+  });
 
-  const nameLabel = nameFromState
-    ? `Imię i nazwisko: ${nameFromState}`
-    : 'Imię i nazwisko: _________________________________';
-
-  ctx.fillText(nameLabel, 150, 150 + 50 * 1.75);
+  if (nameLabel) {
+    ctx.fillText(nameLabel, 150, 150 + 50 * 1.75);
+  }
   // --- koniec wstawki ---
   const chartW = pw - 200;
   // Oblicz dostępną przestrzeń na siatki dopiero w momencie rysowania, gdy znamy wysokość strony.
@@ -2584,6 +3549,183 @@ function getCurrentCentileChartAgeMonths() {
   return Math.round(getCurrentCentileChartAgeYears() * 12);
 }
 
+function sanitizeCentileMeasurementEntries(entries) {
+  if (!Array.isArray(entries)) return [];
+  const normalized = [];
+  entries.forEach((entry) => {
+    if (!entry || typeof entry !== 'object') return;
+    const explicitAgeMonths = Number(entry.ageMonths);
+    const fallbackAgeYears = Number(entry.ageYears);
+    const ageMonths = Number.isFinite(explicitAgeMonths)
+      ? Math.round(explicitAgeMonths)
+      : (Number.isFinite(fallbackAgeYears) ? Math.round(fallbackAgeYears * 12) : NaN);
+    if (!Number.isFinite(ageMonths)) return;
+    const height = (entry.height !== null && entry.height !== undefined && entry.height !== '') ? Number(entry.height) : NaN;
+    const weight = (entry.weight !== null && entry.weight !== undefined && entry.weight !== '') ? Number(entry.weight) : NaN;
+    const boneAgeYears = (entry.boneAgeYears !== null && entry.boneAgeYears !== undefined && entry.boneAgeYears !== '')
+      ? Number(entry.boneAgeYears)
+      : NaN;
+    const next = Object.assign({}, entry, {
+      ageMonths,
+      ageYears: ageMonths / 12
+    });
+    next.height = Number.isFinite(height) ? height : null;
+    next.weight = Number.isFinite(weight) ? weight : null;
+    if (Number.isFinite(boneAgeYears)) next.boneAgeYears = boneAgeYears;
+    else if ('boneAgeYears' in next) next.boneAgeYears = null;
+    normalized.push(next);
+  });
+  return normalized;
+}
+
+function mergeCentileMeasurementSets(primaryEntries, secondaryEntries) {
+  const merged = [];
+  const seen = new Set();
+  const addEntry = (entry) => {
+    if (!entry || typeof entry !== 'object') return;
+    const ageMonths = Number(entry.ageMonths);
+    const height = (entry.height !== null && entry.height !== undefined && entry.height !== '') ? Number(entry.height) : NaN;
+    const weight = (entry.weight !== null && entry.weight !== undefined && entry.weight !== '') ? Number(entry.weight) : NaN;
+    if (!Number.isFinite(ageMonths) || (!Number.isFinite(height) && !Number.isFinite(weight))) return;
+    const boneAgeYears = (entry.boneAgeYears !== null && entry.boneAgeYears !== undefined && entry.boneAgeYears !== '')
+      ? Number(entry.boneAgeYears)
+      : NaN;
+    const key = [
+      Math.round(ageMonths),
+      Number.isFinite(height) ? height.toFixed(3) : '',
+      Number.isFinite(weight) ? weight.toFixed(3) : '',
+      Number.isFinite(boneAgeYears) ? boneAgeYears.toFixed(3) : ''
+    ].join('|');
+    if (seen.has(key)) return;
+    seen.add(key);
+    merged.push(entry);
+  };
+  sanitizeCentileMeasurementEntries(secondaryEntries).forEach(addEntry);
+  sanitizeCentileMeasurementEntries(primaryEntries).forEach(addEntry);
+  merged.sort((a, b) => a.ageMonths - b.ageMonths);
+  return merged;
+}
+
+function buildBasicGrowthCentileDataState() {
+  const basic = (window.basicGrowthData && typeof window.basicGrowthData === 'object') ? window.basicGrowthData : null;
+  if (!basic) return null;
+  const basicInput = document.getElementById('basicGrowthName');
+  const mainInput = document.getElementById('name');
+  const sexInput = document.getElementById('sex');
+  const currentHeightInput = document.getElementById('height');
+  const currentWeightInput = document.getElementById('weight');
+  const measurements = mergeCentileMeasurementSets(basic.measurements, []);
+  const currentAgeMonths = Number.isFinite(Number(basic.currentAgeMonths))
+    ? Math.round(Number(basic.currentAgeMonths))
+    : getCurrentCentileChartAgeMonths();
+  const currentHeight = Number.isFinite(Number(basic.currentHeight))
+    ? Number(basic.currentHeight)
+    : Number(currentHeightInput && currentHeightInput.value);
+  const currentWeight = Number.isFinite(Number(basic.currentWeight))
+    ? Number(basic.currentWeight)
+    : Number(currentWeightInput && currentWeightInput.value);
+  const name = (typeof basic.name === 'string' && basic.name.trim())
+    || (basicInput && typeof basicInput.value === 'string' && basicInput.value.trim())
+    || (mainInput && typeof mainInput.value === 'string' && mainInput.value.trim())
+    || '';
+  const sex = (typeof basic.sex === 'string' && basic.sex)
+    || (sexInput && sexInput.value)
+    || 'M';
+  const hasHistoricalMeasurements = measurements.length > 0;
+  if (!hasHistoricalMeasurements) return null;
+  return {
+    measurements,
+    growthVelocity: Number.isFinite(Number(basic.growthVelocity)) ? Number(basic.growthVelocity) : null,
+    growthVelocityUsedLastYear: !!basic.growthVelocityUsedLastYear,
+    growthVelocityContext: typeof basic.growthVelocityContext === 'string' ? basic.growthVelocityContext : '',
+    growthVelocityGapM: Number.isFinite(Number(basic.growthVelocityGapM)) ? Number(basic.growthVelocityGapM) : null,
+    currentAgeMonths,
+    currentHeight: Number.isFinite(currentHeight) ? currentHeight : null,
+    currentWeight: Number.isFinite(currentWeight) ? currentWeight : null,
+    sex,
+    name,
+    sourceModule: 'basicGrowth',
+    isLosingGrowth: !!basic.isLosingGrowth,
+    targetHeight: null,
+    targetStats: null,
+    boneAgeMonths: null,
+    currentArrowEnabled: false,
+    currentArrowComment: ''
+  };
+}
+
+function getEffectiveCentileGrowthDataState() {
+  const adv = (window.advancedGrowthData && typeof window.advancedGrowthData === 'object') ? window.advancedGrowthData : null;
+  const basic = buildBasicGrowthCentileDataState();
+  if (!adv && !basic) return null;
+  if (!adv) return basic;
+  if (!basic) return adv;
+
+  const pickString = (a, b) => (typeof a === 'string' && a.trim()) ? a.trim() : ((typeof b === 'string' && b.trim()) ? b.trim() : '');
+  const pickNumber = (a, b) => Number.isFinite(Number(a)) ? Number(a) : (Number.isFinite(Number(b)) ? Number(b) : null);
+  const pickBoolean = (a, b) => (typeof a === 'boolean') ? a : !!b;
+  const advMeasurements = Array.isArray(adv.measurements) ? sanitizeCentileMeasurementEntries(adv.measurements) : [];
+  const basicMeasurements = Array.isArray(basic.measurements) ? sanitizeCentileMeasurementEntries(basic.measurements) : [];
+  const advHasMeasurements = advMeasurements.length > 0;
+  const basicHasMeasurements = basicMeasurements.length > 0;
+
+  if (advHasMeasurements) {
+    const merged = Object.assign({}, adv);
+    merged.measurements = advMeasurements;
+    merged.currentAgeMonths = pickNumber(adv.currentAgeMonths, basic.currentAgeMonths);
+    merged.currentHeight = pickNumber(adv.currentHeight, basic.currentHeight);
+    merged.currentWeight = pickNumber(adv.currentWeight, basic.currentWeight);
+    merged.name = pickString(adv.name, basic.name);
+    merged.sex = pickString(adv.sex, basic.sex) || 'M';
+    merged.sourceModule = pickString(adv.sourceModule, '');
+    merged.currentArrowEnabled = pickBoolean(adv.currentArrowEnabled, basic.currentArrowEnabled);
+    merged.currentArrowComment = pickString(adv.currentArrowComment, basic.currentArrowComment);
+    if (!Number.isFinite(Number(merged.growthVelocity)) && Number.isFinite(Number(basic.growthVelocity))) {
+      merged.growthVelocity = Number(basic.growthVelocity);
+    }
+    if (!Number.isFinite(Number(merged.growthVelocityGapM)) && Number.isFinite(Number(basic.growthVelocityGapM))) {
+      merged.growthVelocityGapM = Number(basic.growthVelocityGapM);
+    }
+    if (!(typeof merged.growthVelocityContext === 'string' && merged.growthVelocityContext.trim()) && basic.growthVelocityContext) {
+      merged.growthVelocityContext = basic.growthVelocityContext;
+    }
+    if (typeof merged.growthVelocityUsedLastYear !== 'boolean') {
+      merged.growthVelocityUsedLastYear = !!basic.growthVelocityUsedLastYear;
+    }
+    merged.isLosingGrowth = !!(merged.isLosingGrowth || basic.isLosingGrowth);
+    return merged;
+  }
+
+  if (basicHasMeasurements) {
+    return basic;
+  }
+
+  const merged = Object.assign({}, adv);
+  merged.measurements = mergeCentileMeasurementSets(advMeasurements, basicMeasurements);
+  merged.currentAgeMonths = pickNumber(adv.currentAgeMonths, basic.currentAgeMonths);
+  merged.currentHeight = pickNumber(adv.currentHeight, basic.currentHeight);
+  merged.currentWeight = pickNumber(adv.currentWeight, basic.currentWeight);
+  merged.name = pickString(adv.name, basic.name);
+  merged.sex = pickString(adv.sex, basic.sex) || 'M';
+  merged.sourceModule = pickString(adv.sourceModule, basic.sourceModule);
+  merged.currentArrowEnabled = pickBoolean(adv.currentArrowEnabled, basic.currentArrowEnabled);
+  merged.currentArrowComment = pickString(adv.currentArrowComment, basic.currentArrowComment);
+  if (!Number.isFinite(Number(merged.growthVelocity)) && Number.isFinite(Number(basic.growthVelocity))) {
+    merged.growthVelocity = Number(basic.growthVelocity);
+  }
+  if (!Number.isFinite(Number(merged.growthVelocityGapM)) && Number.isFinite(Number(basic.growthVelocityGapM))) {
+    merged.growthVelocityGapM = Number(basic.growthVelocityGapM);
+  }
+  if (!(typeof merged.growthVelocityContext === 'string' && merged.growthVelocityContext.trim()) && basic.growthVelocityContext) {
+    merged.growthVelocityContext = basic.growthVelocityContext;
+  }
+  if (typeof merged.growthVelocityUsedLastYear !== 'boolean') {
+    merged.growthVelocityUsedLastYear = !!basic.growthVelocityUsedLastYear;
+  }
+  merged.isLosingGrowth = !!(merged.isLosingGrowth || basic.isLosingGrowth);
+  return merged;
+}
+
 const PALCZEWSKA_INFANT_MIN_MONTHS = 0;
 const PALCZEWSKA_INFANT_MAX_MONTHS = 36;
 const PALCZEWSKA_EXTENDED_MIN_MONTHS = 12;
@@ -2606,7 +3748,7 @@ function isCentileChartProfessionalMode() {
 
 function getPalczewskaChartPlan(ageMonths, adv) {
   const baseAgeMonths = Number.isFinite(ageMonths) ? ageMonths : getCurrentCentileChartAgeMonths();
-  const dataState = adv || window.advancedGrowthData || null;
+  const dataState = adv || getEffectiveCentileGrowthDataState() || null;
   const collected = (typeof collectAllAgesMonths === 'function')
     ? collectAllAgesMonths(baseAgeMonths, dataState)
     : { ages: [baseAgeMonths] };
@@ -2682,7 +3824,7 @@ function getCentileChartState() {
   const isChild = ageYears < 18;
 
   if (rawSource === 'PALCZEWSKA') {
-    const palPlan = getPalczewskaChartPlan(ageMonths, window.advancedGrowthData || null);
+    const palPlan = getPalczewskaChartPlan(ageMonths, getEffectiveCentileGrowthDataState() || null);
     const supported = isChild && proMode;
     return {
       visible: isChild,
@@ -2791,6 +3933,27 @@ function collectAllAgesMonths(ageMonths, adv) {
 function collectPageMeasurementsInRange(rangeMinX, rangeMaxX, { currentAgeMonths, currentWeight, currentHeight, adv }) {
   const ptsH = [];
   const ptsW = [];
+  const dedupeSeries = (items, valueKey) => {
+    const byKey = new Map();
+    items.forEach((item) => {
+      const age = Number(item?.ageMonths);
+      const value = Number(item?.[valueKey]);
+      if (!Number.isFinite(age) || !Number.isFinite(value)) return;
+      const key = `${Math.round(age)}|${value.toFixed(3)}`;
+      if (!byKey.has(key)) {
+        byKey.set(key, Object.assign({}, item, { ageMonths: Math.round(age) }));
+        return;
+      }
+      const existing = byKey.get(key);
+      if (valueKey === 'height') {
+        if (!existing.arrowEnabled && item.arrowEnabled) existing.arrowEnabled = true;
+        if (!(typeof existing.arrowComment === 'string' && existing.arrowComment.trim()) && typeof item.arrowComment === 'string' && item.arrowComment.trim()) {
+          existing.arrowComment = item.arrowComment;
+        }
+      }
+    });
+    return Array.from(byKey.values()).sort((a, b) => a.ageMonths - b.ageMonths);
+  };
   if (adv && Array.isArray(adv.measurements)) {
     adv.measurements.forEach(m => {
       const am = Number(m.ageMonths);
@@ -2845,9 +4008,9 @@ function collectPageMeasurementsInRange(rangeMinX, rangeMaxX, { currentAgeMonths
       ptsW.push({ ageMonths: adv.currentAgeMonths, weight: adv.currentWeight });
     }
   }
-  ptsH.sort((a,b) => a.ageMonths - b.ageMonths);
-  ptsW.sort((a,b) => a.ageMonths - b.ageMonths);
-  return { ptsH, ptsW };
+  const ptsHSorted = dedupeSeries(ptsH, 'height');
+  const ptsWSorted = dedupeSeries(ptsW, 'weight');
+  return { ptsH: ptsHSorted, ptsW: ptsWSorted };
 }
 
 // Zbuduj jedną stronę (0–35 miesięcy Palczewska lub 36–216 miesięcy OLAF) jako canvas.
@@ -2953,6 +4116,19 @@ function buildCentilePageCanvas({
   let dynMaxH = (maxMeasuredH > maxH) ? roundUp5(maxMeasuredH) : maxH;
   const scaledW = (dynMinW !== minW) || (dynMaxW !== maxW);
   const scaledH = (dynMinH !== minH) || (dynMaxH !== maxH);
+  const advForHighlight = window.advancedGrowthData || {};
+  const effectiveAgeMonths = (typeof advForHighlight.currentAgeMonths === 'number' && !isNaN(advForHighlight.currentAgeMonths))
+    ? advForHighlight.currentAgeMonths
+    : userAgeMonths;
+  const effectiveHeight = (typeof advForHighlight.currentHeight === 'number' && !isNaN(advForHighlight.currentHeight))
+    ? advForHighlight.currentHeight
+    : userHeight;
+  const effectiveWeight = (typeof advForHighlight.currentWeight === 'number' && !isNaN(advForHighlight.currentWeight))
+    ? advForHighlight.currentWeight
+    : userWeight;
+  const mIdxForPage = effectiveAgeMonths - rangeMinX;
+  const hBandIdx = findHighlightBandSafe(effectiveHeight, heightCurves, percentiles, mIdxForPage);
+  const wBandIdx = findHighlightBandSafe(effectiveWeight, weightCurves, percentiles, mIdxForPage);
   // Tworzenie płótna
   const pw = 2480, ph = 3508;
   const canvas = document.createElement('canvas');
@@ -2969,6 +4145,39 @@ function buildCentilePageCanvas({
   const renderedHeaderSubtitle = isOlafPage ? 'Badanie OLAF (3–18 lat)' : headerSubtitle;
   const olafNameRowY = 150 + 50 * 1.75;
   const olafInfoRowY = olafNameRowY + 75;
+  const standardUserVisual = !!(typeof window !== 'undefined' && window.forceStandardCentileChartStyle)
+    || !isCentileChartProfessionalMode();
+  if (standardUserVisual) {
+    renderStandardUserCentilePage(ctx, {
+      pageWidth: pw,
+      pageHeight: ph,
+      headerTitle,
+      headerSubtitle,
+      renderedHeaderSubtitle,
+      footerText,
+      effectiveSource,
+      sex,
+      rangeMinX,
+      rangeMaxX,
+      percentiles,
+      heightCurves,
+      weightCurves,
+      dynMinH,
+      dynMaxH,
+      dynMinW,
+      dynMaxW,
+      maxH,
+      maxW,
+      effectiveAgeMonths,
+      effectiveHeight,
+      effectiveWeight,
+      ptsH,
+      ptsW,
+      hBandIdx,
+      wBandIdx
+    });
+    return canvas;
+  }
   // Nagłówek
   ctx.font = `bold ${headerTitleFontSize}px sans-serif`;
   ctx.fillStyle = '#00838d';
@@ -2981,14 +4190,16 @@ function buildCentilePageCanvas({
     ctx.fillText(renderedHeaderSubtitle, pw/2, 60 + headerTitleFontSize + 8);
   }
   // Imię i nazwisko
-  const nameFromState =
-    (window.advancedGrowthData && window.advancedGrowthData.name) ||
-    (document.getElementById('advName') ? document.getElementById('advName').value.trim() : '');
+  const currentNameState = getCentileChartHeaderNameState();
   ctx.font = '40px sans-serif';
   ctx.fillStyle = '#555555';
   ctx.textAlign = 'left';
-  const nameLabel = nameFromState ? `Imię i nazwisko: ${nameFromState}` : 'Imię i nazwisko: _________________________________';
-  ctx.fillText(nameLabel, isOlafPage ? headerGridStartX : 150, isOlafPage ? olafNameRowY : (150 + 50 * 1.75));
+  const nameLabel = buildCentileChartNameLabel({
+    showPlaceholder: !currentNameState.isBasicGrowth
+  });
+  if (nameLabel) {
+    ctx.fillText(nameLabel, isOlafPage ? headerGridStartX : 150, isOlafPage ? olafNameRowY : (150 + 50 * 1.75));
+  }
   if (isOlafPage) {
     const advG = window.advancedGrowthData || {};
     const motherVal = (typeof advG.motherHeight === 'number' && isFinite(advG.motherHeight))
@@ -3075,24 +4286,8 @@ function buildCentilePageCanvas({
   }
   const yHeightGrid = 300 - 50 + olafHeaderReserve;
   const yWeightGrid = yHeightGrid + heightGridH + interChartMargin - (50 * 0.5);
-  // Podświetlenie kanałów
-  // Ustal „efektywne” dane do podświetlenia: jeśli użytkownik korzysta
-  // z sekcji Zaawansowane, bieżący wiek/wzrost/masa mogą być wprowadzone
-  // właśnie tam (np. uzupełniono tylko w formularzu zaawansowanym).
-  const advForHighlight = window.advancedGrowthData || {};
-  // Weź wiek z sekcji zaawansowanej, jeśli istnieje i jest liczbą
-  const effectiveAgeMonths = (typeof advForHighlight.currentAgeMonths === 'number' && !isNaN(advForHighlight.currentAgeMonths))
-    ? advForHighlight.currentAgeMonths
-    : userAgeMonths;
-  const effectiveHeight = (typeof advForHighlight.currentHeight === 'number' && !isNaN(advForHighlight.currentHeight))
-    ? advForHighlight.currentHeight
-    : userHeight;
-  const effectiveWeight = (typeof advForHighlight.currentWeight === 'number' && !isNaN(advForHighlight.currentWeight))
-    ? advForHighlight.currentWeight
-    : userWeight;
-  const mIdxForPage = effectiveAgeMonths - rangeMinX;
-  const hBandIdx = findHighlightBandSafe(effectiveHeight, heightCurves, percentiles, mIdxForPage);
-  const wBandIdx = findHighlightBandSafe(effectiveWeight, weightCurves, percentiles, mIdxForPage);
+  // Podświetlenie kanałów wykorzystuje efektywne dane bieżące obliczone wyżej,
+  // tak aby znaczniki odzwierciedlały aktualny pomiar również na stronach profesjonalnych.
   // Rysuj wzrost
   drawCentileGrid(ctx, {
     x: 100, y: yHeightGrid, w: chartW, h: heightGridH,
@@ -3504,29 +4699,41 @@ async function generateCentileChart() {
     return;
   }
 
-  const overrideSource = (typeof window !== 'undefined' && window.overrideCentileSource)
-    ? String(window.overrideCentileSource).toUpperCase()
-    : '';
-  const state = (typeof getCentileChartState === 'function') ? getCentileChartState() : null;
-  const selectedChartSource = overrideSource || (state && state.source ? state.source : 'OLAF');
+  const previousAdvanced = (typeof window !== 'undefined' && typeof window.advancedGrowthData !== 'undefined')
+    ? window.advancedGrowthData
+    : undefined;
+  const effectiveChartData = getEffectiveCentileGrowthDataState();
+  let advancedTemporarilyInjected = false;
 
-  if (!overrideSource && state && !state.supported) {
-    alert(state.message || 'Wybrana siatka centylowa nie jest dostępna dla podanego wieku.');
-    return;
-  }
+  try {
+    if (effectiveChartData) {
+      window.advancedGrowthData = effectiveChartData;
+      advancedTemporarilyInjected = true;
+    }
 
-  if (selectedChartSource === 'PALCZEWSKA') {
-    if (typeof generatePalczewskaCentileCharts === 'function') {
-      await generatePalczewskaCentileCharts();
+    const overrideSource = (typeof window !== 'undefined' && window.overrideCentileSource)
+      ? String(window.overrideCentileSource).toUpperCase()
+      : '';
+    const state = (typeof getCentileChartState === 'function') ? getCentileChartState() : null;
+    const selectedChartSource = overrideSource || (state && state.source ? state.source : 'OLAF');
+
+    if (!overrideSource && state && !state.supported) {
+      alert(state.message || 'Wybrana siatka centylowa nie jest dostępna dla podanego wieku.');
       return;
     }
-  }
 
-  const adv = window.advancedGrowthData || null;
-  const { minAll, maxAll } = collectAllAgesMonths(ageMonths, adv);
-  const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  function addPage({ minX, maxX, subtitle, footer, chartSource }) {
+    if (selectedChartSource === 'PALCZEWSKA') {
+      if (typeof generatePalczewskaCentileCharts === 'function') {
+        await generatePalczewskaCentileCharts();
+        return;
+      }
+    }
+
+    const adv = window.advancedGrowthData || null;
+    const { minAll, maxAll } = collectAllAgesMonths(ageMonths, adv);
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    function addPage({ minX, maxX, subtitle, footer, chartSource }) {
     const canvas = buildCentilePageCanvas({
       rangeMinX: minX,
       rangeMaxX: maxX,
@@ -3547,7 +4754,7 @@ async function generateCentileChart() {
     addPage({
       minX: 0,
       maxX: 35,
-      subtitle: 'Zakres: 0–<3 lata',
+      subtitle: 'Dane: WHO, wiek 0 - 3 lata',
       footer: 'Dane do siatek: WHO (0–<3 lata)',
       chartSource: 'WHO'
     });
@@ -3596,9 +4803,18 @@ async function generateCentileChart() {
     }
   }
 
-  const blob = pdf.output('blob');
-  const url = URL.createObjectURL(blob);
-  window.open(url, '_blank');
+    const blob = pdf.output('blob');
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+  } finally {
+    if (advancedTemporarilyInjected) {
+      if (typeof previousAdvanced === 'undefined') {
+        try { delete window.advancedGrowthData; } catch (_) { window.advancedGrowthData = null; }
+      } else {
+        window.advancedGrowthData = previousAdvanced;
+      }
+    }
+  }
 }
 // === KONIEC NOWEJ IMPLEMENTACJI SIATKI CENTYLOWEJ ===
 </script>
@@ -4534,12 +5750,13 @@ async function generateCentileChart() {
       const gridRightMargin = 100;
       const startGridX = chartXHeader + gridLeftMargin;
       const endGridX   = chartXHeader + chartWHeader - gridRightMargin;
-      // Pobierz imię z advancedGrowthData lub z formularza zaawansowanego.
-      const nameFromState = (window.advancedGrowthData && window.advancedGrowthData.name) ||
-        (document.getElementById('advName') ? document.getElementById('advName').value.trim() : '');
-      // Zbuduj etykietę imienia.  W trybie publikacji zastępujemy polski prefiks „Imię i nazwisko” na „Patient”.
-      const nameLabelPrefix = publication ? 'Patient' : 'Imię i nazwisko';
-      const nameItem = nameFromState ? `${nameLabelPrefix}: ${nameFromState}` : `${nameLabelPrefix}: _________________________________`;
+      // Pobierz imię z activeGrowthData lub z formularza. W module podstawowym
+      // nie pokazujemy pustej linii z miejscem na nazwisko.
+      const chartNameState = getCentileChartHeaderNameState();
+      const nameItem = buildCentileChartNameLabel({
+        publication,
+        showPlaceholder: !chartNameState.isBasicGrowth
+      });
       // Pobierz wartości wzrostów rodziców oraz docelowego wzrostu (MPH) z danych zaawansowanych lub formularza.
       const advG = window.advancedGrowthData || {};
       const motherVal = (typeof advG.motherHeight === 'number' && isFinite(advG.motherHeight))
@@ -4633,10 +5850,12 @@ async function generateCentileChart() {
           ctx.fillText(motherAdj, startGridX, rowNameY);
         }
         // Imię/pacjent po prawej (większa czcionka 50 px)
-        ctx.font = '50px sans-serif';
-        ctx.fillStyle = '#000000';
-        ctx.textAlign = 'right';
-        ctx.fillText(nameItem, endGridX, rowNameY);
+        if (nameItem) {
+          ctx.font = '50px sans-serif';
+          ctx.fillStyle = '#000000';
+          ctx.textAlign = 'right';
+          ctx.fillText(nameItem, endGridX, rowNameY);
+        }
         // Rysowanie drugiego wiersza (ojciec i MPH) – elementy wyrównane do lewej krawędzi siatki z równymi odstępami
         const info2 = [];
         if (fatherAdj) info2.push(fatherAdj);
@@ -4663,8 +5882,10 @@ async function generateCentileChart() {
         }
       } else {
         // Układ standardowy: pierwszy wiersz zawiera tylko imię/pacjenta
-        ctx.textAlign = 'left';
-        ctx.fillText(nameItem, startGridX, rowNameY);
+        if (nameItem) {
+          ctx.textAlign = 'left';
+          ctx.fillText(nameItem, startGridX, rowNameY);
+        }
         // Drugi wiersz: wszystkie dostępne etykiety (matka, ojciec, MPH) w jednym wierszu, wyrównanie do lewej
         const infoItems = [motherLabel, fatherLabel, mphLabel].filter(Boolean);
         if (infoItems.length > 0) {

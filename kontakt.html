@@ -3,212 +3,851 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <!--
-    Strona kontaktowa serwisu wagaiwzrost.pl.  Zawiera dane kontaktowe autora
-    merytorycznego oraz właściciela aplikacji.  Zachowuje spójny układ z
-    pozostałymi podstronami i umożliwia szybkie przejście do innych
-    modułów serwisu.  Inspiracja dla układu kontaktu pochodzi z dobrych
-    praktyk projektowania stron medycznych, które podkreślają prostotę,
-    przejrzystość i łatwy dostęp do informacji【623750327341673†L34-L79】.  
-  -->
-  <title>Kontakt – Waga i wzrost</title>
-  <meta name="description" content="Dane kontaktowe aplikacji Waga i wzrost. Autor: dr n. med. Maciej Flader. Właściciel serwisu: Vilda Clinic sp. z o.o. Adres e‑mail: biuro@vildaclinic.pl. Zapraszamy do współpracy." />
+  <title>Kontakt – Waga i wzrost | Vilda Clinic</title>
+  <meta name="description" content="Skontaktuj się z zespołem aplikacji Waga i wzrost. Dane kontaktowe Vilda Clinic sp. z o.o., informacje o współpracy oraz szybki kontakt mailowy w sprawach dotyczących serwisu i materiałów edukacyjnych." />
   <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://wagaiwzrost.pl/kontakt.html" />
   <link rel="stylesheet" href="style.css?v=5" />
   <link rel="stylesheet" href="ios26-v2.css?v=9" />
   <link rel="stylesheet" href="sidebar.css" />
-  
-<script>
-(function() {
-  try {
-    var KEY = 'mobileTopNavFontCache';
-    var VERSION = 'v3';
-    var SIGNATURE = 'docpro.html|kalkulator-klirens.html|cukrzyca.html|steroidy.html|materialy-edukacyjne.html';
-    var raw = localStorage.getItem(KEY);
-    if (!raw) return;
 
-    var parsed = JSON.parse(raw);
-    if (!parsed || parsed.version !== VERSION || parsed.signature !== SIGNATURE) return;
+  <script>
+  (function() {
+    try {
+      var KEY = 'mobileTopNavFontCache';
+      var VERSION = 'v3';
+      var SIGNATURE = 'docpro.html|kalkulator-klirens.html|cukrzyca.html|steroidy.html|materialy-edukacyjne.html';
+      var raw = localStorage.getItem(KEY);
+      if (!raw) return;
 
-    var viewportWidth = Math.round(Math.max(
-      window.innerWidth || 0,
-      document.documentElement ? (document.documentElement.clientWidth || 0) : 0
-    ));
-    var cachedWidth = Math.round(Number(parsed.width) || 0);
-    var fontRem = Number(parsed.fontRem);
+      var parsed = JSON.parse(raw);
+      if (!parsed || parsed.version !== VERSION || parsed.signature !== SIGNATURE) return;
 
-    if (!viewportWidth || viewportWidth !== cachedWidth || !isFinite(fontRem)) return;
-    if (fontRem < 0.72 || fontRem > 0.98) return;
+      var viewportWidth = Math.round(Math.max(
+        window.innerWidth || 0,
+        document.documentElement ? (document.documentElement.clientWidth || 0) : 0
+      ));
+      var cachedWidth = Math.round(Number(parsed.width) || 0);
+      var fontRem = Number(parsed.fontRem);
 
-    var style = document.createElement('style');
-    style.id = 'mobile-top-nav-font-cache-style';
-    style.textContent = '@media (max-width: 600px){.main-nav{--mobile-top-nav-font-size:' + fontRem.toFixed(2) + 'rem !important;}}';
-    document.head.appendChild(style);
-  } catch (e) {
-    /* noop */
+      if (!viewportWidth || viewportWidth !== cachedWidth || !isFinite(fontRem)) return;
+      if (fontRem < 0.72 || fontRem > 0.98) return;
+
+      var style = document.createElement('style');
+      style.id = 'mobile-top-nav-font-cache-style';
+      style.textContent = '@media (max-width: 600px){.main-nav{--mobile-top-nav-font-size:' + fontRem.toFixed(2) + 'rem !important;}}';
+      document.head.appendChild(style);
+    } catch (e) {
+      /* noop */
+    }
+  })();
+  </script>
+
+  <style>
+    .contact-page .contact-shell {
+      padding-block: 1rem 2.5rem;
+    }
+
+    .contact-page .contact-hero,
+    .contact-page .contact-panel,
+    .contact-page .contact-card,
+    .contact-page .contact-profile-card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(244,251,250,0.96));
+      border: 1px solid rgba(22, 76, 71, 0.1);
+      border-radius: 24px;
+      box-shadow: 0 16px 42px rgba(15, 45, 42, 0.08);
+    }
+
+    .contact-page .contact-hero {
+      position: relative;
+      overflow: hidden;
+      isolation: isolate;
+      padding: 1.6rem;
+      margin-bottom: 1.1rem;
+    }
+
+    .contact-page .contact-hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at top right, rgba(0, 168, 181, 0.16), transparent 34%),
+        radial-gradient(circle at bottom left, rgba(4, 120, 87, 0.09), transparent 30%);
+      z-index: -1;
+    }
+
+    .contact-page .contact-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      justify-content: center;
+    }
+
+    .contact-page .contact-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.52rem 0.82rem;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.9);
+      border: 1px solid rgba(0, 168, 181, 0.16);
+      color: #0f4b48;
+      font-weight: 700;
+      box-shadow: 0 8px 24px rgba(15, 45, 42, 0.05);
+    }
+
+    .contact-page .contact-badge .sidebar-icon,
+    .contact-page .contact-section-heading .sidebar-icon,
+    .contact-page .contact-topic-card h4 .sidebar-icon,
+    .contact-page .contact-action .sidebar-icon,
+    .contact-page .contact-method-head .sidebar-icon,
+    .contact-page .contact-link-card .sidebar-icon,
+    .contact-page .contact-kicker .sidebar-icon {
+      width: 1rem;
+      height: 1rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      align-self: center;
+      line-height: 0;
+    }
+
+    .contact-page .sidebar-icon svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .contact-page .contact-hero-main {
+      max-width: 76ch;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .contact-page .contact-hero h2 {
+      font-size: clamp(1.8rem, 3.6vw, 2.6rem);
+      line-height: 1.08;
+      margin: 0.95rem auto 0.9rem;
+      max-width: 18ch;
+      text-align: center;
+      text-wrap: balance;
+      color: #0f3533;
+    }
+
+    .contact-page .hero-lead,
+    .contact-page .contact-panel p,
+    .contact-page .contact-panel li,
+    .contact-page .contact-card p,
+    .contact-page .contact-profile-card p {
+      color: #284847;
+      line-height: 1.72;
+    }
+
+    .contact-page .hero-lead {
+      margin: 0 auto;
+      max-width: 64ch;
+      font-size: 1.05rem;
+    }
+
+    .contact-page .contact-actions {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 1.15rem;
+    }
+
+    .contact-page .contact-action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.55rem;
+      min-height: 3.2rem;
+      padding: 0.82rem 1.15rem;
+      border-radius: 18px;
+      border: 1px solid rgba(0, 168, 181, 0.16);
+      background: rgba(255,255,255,0.92);
+      color: #0f4b48;
+      text-decoration: none;
+      font-weight: 800;
+      text-align: center;
+      box-shadow: 0 10px 24px rgba(15, 45, 42, 0.06);
+      transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+
+    .contact-page .contact-action.primary {
+      background: linear-gradient(135deg, #0891b2, #14b8a6);
+      color: #fff;
+      border-color: transparent;
+      box-shadow: 0 14px 26px rgba(8, 145, 178, 0.24);
+    }
+
+    .contact-page .contact-action:hover,
+    .contact-page .contact-action:focus-visible,
+    .contact-page .contact-link-card:hover,
+    .contact-page .contact-link-card:focus-visible,
+    .contact-page .contact-method:hover,
+    .contact-page .contact-method:focus-visible {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 30px rgba(15, 45, 42, 0.10);
+      outline: none;
+    }
+
+    .contact-page .contact-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.3fr) minmax(300px, 0.92fr);
+      gap: 1rem;
+      align-items: start;
+    }
+
+    .contact-page .contact-stack,
+    .contact-page .contact-side-stack {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .contact-page .contact-panel,
+    .contact-page .contact-card,
+    .contact-page .contact-profile-card {
+      padding: 1.35rem;
+    }
+
+    .contact-page .contact-section-heading {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      align-items: center;
+      gap: 0.7rem;
+      margin-bottom: 0.8rem;
+    }
+
+    .contact-page .contact-section-heading h3 {
+      margin: 0;
+      color: #103736;
+      font-size: 1.18rem;
+      line-height: 1.25;
+    }
+
+    .contact-page .contact-section-heading .sidebar-icon {
+      width: 1.1rem;
+      height: 1.1rem;
+      color: #0891b2;
+    }
+
+    .contact-page .contact-methods {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.85rem;
+      margin-top: 0.35rem;
+    }
+
+    .contact-page .contact-method {
+      display: block;
+      padding: 1rem 1.05rem;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.9);
+      border: 1px solid rgba(22, 76, 71, 0.1);
+      text-decoration: none;
+      color: #103736;
+      min-height: 100%;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .contact-page .contact-method-head {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-weight: 800;
+      color: #0f4b48;
+      margin-bottom: 0.5rem;
+    }
+
+    .contact-page .contact-method-head .sidebar-icon {
+      width: 1.05rem;
+      height: 1.05rem;
+      color: #0891b2;
+    }
+
+    .contact-page .contact-method-label {
+      display: block;
+      font-size: 0.9rem;
+      color: #55706f;
+      margin-bottom: 0.25rem;
+    }
+
+    .contact-page .contact-method-value {
+      display: block;
+      font-size: 1rem;
+      line-height: 1.45;
+      font-weight: 700;
+      color: #103736;
+      overflow-wrap: anywhere;
+    }
+
+    .contact-page .contact-method-note {
+      display: block;
+      margin-top: 0.5rem;
+      color: #4e6766;
+      font-size: 0.9rem;
+      line-height: 1.55;
+    }
+
+    .contact-page .contact-callout {
+      margin-top: 1rem;
+      padding: 1rem 1.05rem;
+      border-radius: 20px;
+      background: rgba(8, 145, 178, 0.09);
+      border: 1px solid rgba(8, 145, 178, 0.18);
+      color: #0f4b48;
+    }
+
+    .contact-page .contact-topic-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 0.85rem;
+    }
+
+    .contact-page .contact-topic-card {
+      padding: 1rem 1.05rem;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.9);
+      border: 1px solid rgba(22, 76, 71, 0.1);
+    }
+
+    .contact-page .contact-topic-card h4 {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      align-items: center;
+      gap: 0.55rem;
+      margin: 0.05rem 0 0.6rem;
+      font-size: 1rem;
+      line-height: 1.3;
+      color: #103736;
+    }
+
+    .contact-page .contact-topic-card h4 .sidebar-icon {
+      color: #0891b2;
+    }
+
+    .contact-page .contact-topic-card p {
+      margin: 0;
+      font-size: 0.94rem;
+      line-height: 1.62;
+    }
+
+    .contact-page .contact-steps {
+      counter-reset: contactStep;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 0.85rem;
+    }
+
+    .contact-page .contact-steps li {
+      counter-increment: contactStep;
+      position: relative;
+      padding: 1rem 1rem 1rem 3.15rem;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.88);
+      border: 1px solid rgba(22, 76, 71, 0.1);
+      color: #284847;
+      line-height: 1.62;
+    }
+
+    .contact-page .contact-steps li::before {
+      content: counter(contactStep);
+      position: absolute;
+      left: 1rem;
+      top: 1rem;
+      width: 1.6rem;
+      height: 1.6rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #0891b2, #14b8a6);
+      color: #fff;
+      font-weight: 800;
+      box-shadow: 0 10px 20px rgba(8, 145, 178, 0.22);
+    }
+
+    .contact-page .contact-profile-card {
+      overflow: hidden;
+    }
+
+    .contact-page .contact-portrait {
+      margin: 0 0 1rem;
+      border-radius: 20px;
+      overflow: hidden;
+      background: #eef8f7;
+      border: 1px solid rgba(22, 76, 71, 0.08);
+    }
+
+    .contact-page .contact-portrait img {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 4 / 5;
+      object-fit: cover;
+      object-position: center top;
+    }
+
+    .contact-page .contact-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.38rem 0.7rem;
+      border-radius: 999px;
+      background: rgba(0, 168, 181, 0.12);
+      border: 1px solid rgba(0, 168, 181, 0.22);
+      color: #0a6261;
+      font-weight: 800;
+      font-size: 0.88rem;
+      margin: 0 0 0.9rem;
+    }
+
+    .contact-page .contact-profile-card h3 {
+      margin: 0 0 0.65rem;
+      color: #103736;
+      font-size: 1.3rem;
+      line-height: 1.2;
+    }
+
+    .contact-page .contact-profile-card p {
+      margin: 0;
+    }
+
+    .contact-page .contact-meta {
+      list-style: none;
+      margin: 1rem 0 0;
+      padding: 0;
+      display: grid;
+      gap: 0.7rem;
+    }
+
+    .contact-page .contact-meta li {
+      display: grid;
+      gap: 0.18rem;
+      padding: 0.9rem 1rem;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.9);
+      border: 1px solid rgba(22, 76, 71, 0.1);
+    }
+
+    .contact-page .contact-meta span {
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #5b7472;
+      font-weight: 700;
+    }
+
+    .contact-page .contact-meta strong {
+      color: #103736;
+    }
+
+    .contact-page .contact-link-grid {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .contact-page .contact-link-card {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 0.8rem;
+      padding: 0.95rem 1rem;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.9);
+      border: 1px solid rgba(0, 168, 181, 0.16);
+      text-decoration: none;
+      color: #0f4b48;
+      font-weight: 800;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .contact-page .contact-link-card .sidebar-icon:first-child {
+      color: #0891b2;
+    }
+
+    .contact-page .contact-link-card span:nth-child(2) {
+      line-height: 1.25;
+    }
+
+    .contact-page .contact-hero strong,
+    .contact-page .contact-panel strong,
+    .contact-page .contact-card strong,
+    .contact-page .contact-profile-card strong {
+      color: #0f3533;
+    }
+
+    .contact-page .contact-muted {
+      margin-top: 0.85rem;
+      font-size: 0.92rem;
+      color: #4b6765;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 1080px) {
+      .contact-page .contact-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .contact-page .contact-side-stack {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 780px) {
+      .contact-page .contact-methods,
+      .contact-page .contact-side-stack {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .contact-page .contact-shell {
+        padding-block: 0.6rem 2rem;
+      }
+
+      .contact-page .contact-hero,
+      .contact-page .contact-panel,
+      .contact-page .contact-card,
+      .contact-page .contact-profile-card {
+        padding: 1.1rem;
+        border-radius: 20px;
+      }
+
+      .contact-page .contact-action,
+      .contact-page .contact-badge {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  </style>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "ContactPage",
+        "url": "https://wagaiwzrost.pl/kontakt.html",
+        "name": "Kontakt – Waga i wzrost",
+        "inLanguage": "pl-PL",
+        "description": "Strona kontaktowa aplikacji Waga i wzrost.",
+        "mainEntity": {
+          "@id": "https://wagaiwzrost.pl/#contact-org"
+        }
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://wagaiwzrost.pl/#contact-org",
+        "name": "Vilda Clinic sp. z o.o.",
+        "url": "https://vildaclinic.pl",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://wagaiwzrost.pl/logo_vilda.jpeg"
+        },
+        "contactPoint": [
+          {
+            "@type": "ContactPoint",
+            "contactType": "information",
+            "email": "biuro@vildaclinic.pl",
+            "availableLanguage": ["pl"]
+          }
+        ]
+      },
+      {
+        "@type": "Person",
+        "@id": "https://wagaiwzrost.pl/#maciej-flader-contact",
+        "name": "dr n. med. Maciej Flader",
+        "jobTitle": "Autor merytoryczny",
+        "affiliation": {
+          "@id": "https://wagaiwzrost.pl/#contact-org"
+        }
+      }
+    ]
   }
-})();
-</script>
-<!-- Dodajemy bibliotekę ikon Lucide, aby ikony w menu bocznym były widoczne -->
+  </script>
+
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
 </head>
-<body class="js-loading liquid-ios26 has-sidebar">
+<body class="js-loading liquid-ios26 has-sidebar contact-page">
   <header>
     <div class="container">
-      <!-- Logo w nagłówku przekierowuje do strony głównej aplikacji -->
       <a href="index.html">
-        <img src="logo_vilda.jpeg" alt="Vilda Clinic – strona główna" style="max-width:160px;margin-bottom:10px; border-radius:var(--radius);" />
+        <img src="logo_vilda.jpeg" alt="Vilda Clinic – strona główna" style="max-width:160px;margin-bottom:10px;border-radius:var(--radius);" />
       </a>
       <h1>Kontakt</h1>
     </div>
-      <nav class="main-nav" aria-label="Główna nawigacja">
-  <ul>
-    <li class="menu-toggle">
-      <input type="checkbox" id="navToggle" class="nav-toggle">
-      <label for="navToggle" aria-label="Otwórz menu">
-        <span class="bar"></span>
-        <span class="bar"></span>
-        <span class="bar"></span>
-      </label>
-      <ul id="verticalMenu" class="vertical-menu">
-      <li><a href="index.html">Strona główna</a></li>
-      <li><a href="ustawienia.html">Ustawienia</a></li>
-      <li><a href="instrukcja.html">Instrukcja</a></li>
-      <li><a href="o-aplikacji.html">O aplikacji</a></li>
-      <li><a href="kontakt.html" aria-current="page">Kontakt</a></li>
+    <nav class="main-nav" aria-label="Główna nawigacja">
+      <ul>
+        <li class="menu-toggle">
+          <input type="checkbox" id="navToggle" class="nav-toggle">
+          <label for="navToggle" aria-label="Otwórz menu">
+            <span class="bar"></span>
+            <span class="bar"></span>
+            <span class="bar"></span>
+          </label>
+          <ul id="verticalMenu" class="vertical-menu">
+            <li><a href="index.html">Strona główna</a></li>
+            <li><a href="ustawienia.html">Ustawienia</a></li>
+            <li><a href="instrukcja.html">Instrukcja</a></li>
+            <li><a href="o-aplikacji.html">O aplikacji</a></li>
+            <li><a href="kontakt.html" aria-current="page">Kontakt</a></li>
+          </ul>
+        </li>
+        <li><a href="docpro.html" class="pro-link">DocPro</a></li>
+        <li><a href="kalkulator-klirens.html">Klirens</a></li>
+        <li><a href="cukrzyca.html">Cukrzyca</a></li>
+        <li><a href="steroidy.html">Steroidy</a></li>
+        <li><a href="materialy-edukacyjne.html">Edu</a></li>
       </ul>
-    </li>
-      <li><a href="docpro.html" class="pro-link">DocPro</a></li>
-      <li><a href="kalkulator-klirens.html">Klirens</a></li>
-      <li><a href="cukrzyca.html">Cukrzyca</a></li>
-      <li><a href="steroidy.html">Steroidy</a></li>
-      <li><a href="materialy-edukacyjne.html">Edu</a></li>
-  </ul>
-</nav>
+    </nav>
   </header>
+
   <div class="desktop-layout">
     <aside class="sidebar">
       <div class="sidebar-logo">
         <a href="index.html">
-          <img src="logo_vilda.jpeg" alt="Vilda Clinic – strona główna">
+          <img src="logo_vilda.jpeg" alt="Vilda Clinic – strona główna">
         </a>
         <h1>Kontakt</h1>
       </div>
       <nav class="sidebar-nav" aria-label="Nawigacja boczna">
-  <ul>
-      <li>
-        <a href="index.html">
-          <span class="sidebar-icon" data-lucide="home"></span>
-          <span class="sidebar-label">Strona główna</span>
-        </a>
-      </li>
-      <li>
-        <a href="docpro.html" class="pro-link">
-          <span class="sidebar-icon" data-lucide="stethoscope"></span>
-          <span class="sidebar-label">DocPro</span>
-        </a>
-      </li>
-      <li>
-        <a href="homa-ir.html">
-          <span class="sidebar-icon" data-lucide="calculator"></span>
-          <span class="sidebar-label">HOMA‑IR</span>
-        </a>
-      </li>
-      <li>
-        <a href="kalkulator-klirens.html">
-          <span class="sidebar-icon" data-lucide="droplets"></span>
-          <span class="sidebar-label">Klirens</span>
-        </a>
-      </li>
-      <li>
-        <a href="cukrzyca.html">
-          <span class="sidebar-icon" data-lucide="syringe"></span>
-          <span class="sidebar-label">Cukrzyca</span>
-        </a>
-      </li>
-      <li>
-        <a href="steroidy.html">
-          <span class="sidebar-icon" data-lucide="pill"></span>
-          <span class="sidebar-label">Steroidy</span>
-        </a>
-      </li>
-      <li>
-        <a href="materialy-edukacyjne.html">
-          <span class="sidebar-icon" data-lucide="book-open"></span>
-          <span class="sidebar-label">Edu</span>
-        </a>
-      </li>
-      <li>
-        <a href="ustawienia.html">
-          <span class="sidebar-icon" data-lucide="settings"></span>
-          <span class="sidebar-label">Ustawienia</span>
-        </a>
-      </li>
-      <li>
-        <a href="instrukcja.html">
-          <span class="sidebar-icon" data-lucide="file-text"></span>
-          <span class="sidebar-label">Instrukcja</span>
-        </a>
-      </li>
-      <li>
-        <a href="o-aplikacji.html">
-          <span class="sidebar-icon" data-lucide="info"></span>
-          <span class="sidebar-label">O aplikacji</span>
-        </a>
-      </li>
-      <li>
-        <a href="kontakt.html" aria-current="page">
-          <span class="sidebar-icon" data-lucide="mail"></span>
-          <span class="sidebar-label">Kontakt</span>
-        </a>
-      </li>
-  </ul>
-</nav>
+        <ul>
+          <li>
+            <a href="index.html">
+              <span class="sidebar-icon" data-lucide="home"></span>
+              <span class="sidebar-label">Strona główna</span>
+            </a>
+          </li>
+          <li>
+            <a href="docpro.html" class="pro-link">
+              <span class="sidebar-icon" data-lucide="stethoscope"></span>
+              <span class="sidebar-label">DocPro</span>
+            </a>
+          </li>
+          <li>
+            <a href="homa-ir.html">
+              <span class="sidebar-icon" data-lucide="calculator"></span>
+              <span class="sidebar-label">HOMA‑IR</span>
+            </a>
+          </li>
+          <li>
+            <a href="kalkulator-klirens.html">
+              <span class="sidebar-icon" data-lucide="droplets"></span>
+              <span class="sidebar-label">Klirens</span>
+            </a>
+          </li>
+          <li>
+            <a href="cukrzyca.html">
+              <span class="sidebar-icon" data-lucide="syringe"></span>
+              <span class="sidebar-label">Cukrzyca</span>
+            </a>
+          </li>
+          <li>
+            <a href="steroidy.html">
+              <span class="sidebar-icon" data-lucide="pill"></span>
+              <span class="sidebar-label">Steroidy</span>
+            </a>
+          </li>
+          <li>
+            <a href="materialy-edukacyjne.html">
+              <span class="sidebar-icon" data-lucide="book-open"></span>
+              <span class="sidebar-label">Edu</span>
+            </a>
+          </li>
+          <li>
+            <a href="ustawienia.html">
+              <span class="sidebar-icon" data-lucide="settings"></span>
+              <span class="sidebar-label">Ustawienia</span>
+            </a>
+          </li>
+          <li>
+            <a href="instrukcja.html">
+              <span class="sidebar-icon" data-lucide="file-text"></span>
+              <span class="sidebar-label">Instrukcja</span>
+            </a>
+          </li>
+          <li>
+            <a href="o-aplikacji.html">
+              <span class="sidebar-icon" data-lucide="info"></span>
+              <span class="sidebar-label">O aplikacji</span>
+            </a>
+          </li>
+          <li>
+            <a href="kontakt.html" aria-current="page">
+              <span class="sidebar-icon" data-lucide="mail"></span>
+              <span class="sidebar-label">Kontakt</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
     </aside>
-    <div class="main-content">
+
+    <main class="main-content">
       <div class="container">
-        <section style="max-width:700px; margin:0 auto; padding:1rem;">
-          <h2>Skontaktuj się z nami</h2>
-          <p>
-            Aplikacja <strong>Waga i wzrost</strong> powstała dzięki pracy
-            <strong>dr n. med. Macieja Fladera</strong> i&nbsp;zespołu
-            <strong>Vilda Clinic&nbsp;sp.&nbsp;z o.o.</strong>. Jesteśmy otwarci na
-            współpracę oraz wszelkie pytania dotyczące funkcjonalności serwisu.
-          </p>
-          <p>
-            <strong>Dane kontaktowe:</strong><br>
-            <strong>E‑mail:</strong> <a href="mailto:biuro@vildaclinic.pl">biuro@vildaclinic.pl</a><br>
-            <strong>Strona internetowa:</strong> <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">vildaclinic.pl</a>
-          </p>
-          <p>
-            Jeżeli chcesz zgłosić sugestię, zaproponować współpracę lub dowiedzieć się więcej o naszym projekcie,
-            napisz do nas. Odpowiadamy na wiadomości tak szybko, jak to możliwe.
-          </p>
-          <div style="text-align:center; margin-top:1.5rem;">
-            <img src="IMG_8041.JPG" alt="Zdjęcie" style="max-width:300px; width:100%; height:auto; border-radius:var(--radius);" />
+        <div class="contact-shell">
+          <section class="contact-hero">
+            <div class="contact-badges" aria-label="Skrótowe informacje o stronie kontaktowej">
+              <span class="contact-badge">
+                <span class="sidebar-icon" data-lucide="mail"></span>
+                <span>Kontakt</span>
+              </span>
+              <span class="contact-badge">
+                <span class="sidebar-icon" data-lucide="book-open"></span>
+                <span>Waga i wzrost</span>
+              </span>
+              <span class="contact-badge">
+                <span class="sidebar-icon" data-lucide="stethoscope"></span>
+                <span>Vilda Clinic</span>
+              </span>
+            </div>
+            <div class="contact-hero-main">
+              <h2>Skontaktuj się z nami</h2>
+              <p class="hero-lead">
+                Masz pytania dotyczące aplikacji, chcesz zgłosić sugestię lub porozmawiać o współpracy?
+                Napisz do nas w sprawach związanych z funkcjonalnością serwisu, materiałami edukacyjnymi
+                i rozwojem projektu.
+              </p>
+              <div class="contact-actions">
+                <a class="contact-action primary" href="mailto:biuro@vildaclinic.pl">
+                  <span class="sidebar-icon" data-lucide="mail"></span>
+                  <span>Napisz e‑mail</span>
+                </a>
+                <a class="contact-action" href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">
+                  <span class="sidebar-icon" data-lucide="globe"></span>
+                  <span>Otwórz stronę Vilda Clinic</span>
+                </a>
+              </div>
+            </div>
+          </section>
+
+          <div class="contact-grid">
+            <div class="contact-stack">
+              <section class="contact-panel">
+                <div class="contact-section-heading">
+                  <span class="sidebar-icon" data-lucide="message-square"></span>
+                  <h3>Dane kontaktowe</h3>
+                </div>
+                <div class="contact-methods">
+                  <a class="contact-method" href="mailto:biuro@vildaclinic.pl">
+                    <span class="contact-method-head">
+                      <span class="sidebar-icon" data-lucide="mail"></span>
+                      <span>E‑mail</span>
+                    </span>
+                    <span class="contact-method-value">biuro@vildaclinic.pl</span>
+                  </a>
+                  <a class="contact-method" href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">
+                    <span class="contact-method-head">
+                      <span class="sidebar-icon" data-lucide="globe"></span>
+                      <span>Strona internetowa</span>
+                    </span>
+                    <span class="contact-method-value">vildaclinic.pl</span>
+                  </a>
+                </div>
+              </section>
+
+              <section class="contact-panel">
+                <div class="contact-section-heading">
+                  <span class="sidebar-icon" data-lucide="briefcase"></span>
+                  <h3>W czym możemy pomóc</h3>
+                </div>
+                <div class="contact-topic-grid">
+                  <article class="contact-topic-card">
+                    <h4>
+                      <span class="sidebar-icon" data-lucide="message-square"></span>
+                      <span>Pytania o aplikację</span>
+                    </h4>
+                    <p>Uwagi do działania modułów, sugestie rozwoju oraz informacje o tym, jak korzystać z serwisu w praktyce.</p>
+                  </article>
+                  <article class="contact-topic-card">
+                    <h4>
+                      <span class="sidebar-icon" data-lucide="briefcase"></span>
+                      <span>Współpraca</span>
+                    </h4>
+                    <p>Wiadomości dotyczące wspólnych projektów edukacyjnych, treści medycznych i rozwoju aplikacji.</p>
+                  </article>
+                  <article class="contact-topic-card">
+                    <h4>
+                      <span class="sidebar-icon" data-lucide="book-open"></span>
+                      <span>Materiały edukacyjne</span>
+                    </h4>
+                    <p>Pytania odnoszące się do filmów, prezentacji i informacji publikowanych w sekcji edukacyjnej.</p>
+                  </article>
+                </div>
+              </section>
+
+              <section class="contact-panel">
+                <div class="contact-section-heading">
+                  <span class="sidebar-icon" data-lucide="file-text"></span>
+                  <h3>Wskazówki dotyczące korespondencji</h3>
+                </div>
+                <ol class="contact-steps">
+                  <li>Podaj krótki temat wiadomości i opisz, czego dotyczy sprawa.</li>
+                  <li>Jeżeli zgłaszasz problem techniczny, dopisz nazwę modułu albo adres podstrony.</li>
+                  <li>Jeżeli wiadomość dotyczy współpracy, wskaż zakres i preferowaną formę kontaktu zwrotnego.</li>
+                </ol>
+              </section>
+            </div>
+
+            <aside class="contact-side-stack">
+              <section class="contact-profile-card">
+                <figure class="contact-portrait">
+                  <img src="IMG_8041.JPG" alt="Portret lekarza w białym fartuchu związany z projektem Waga i wzrost" />
+                </figure>
+                <p class="contact-kicker">
+                  <span class="sidebar-icon" data-lucide="stethoscope"></span>
+                  <span>Projekt i konsultacja merytoryczna</span>
+                </p>
+                <h3>Waga i wzrost</h3>
+                <p>
+                  Aplikacja jest rozwijana przez <strong>Vilda Clinic sp. z o.o.</strong> i wspierana
+                  merytorycznie przez <strong>dr n. med. Macieja Fladera</strong>.
+                </p>
+                <ul class="contact-meta">
+                  <li>
+                    <span>Administrator serwisu</span>
+                    <strong>Vilda Clinic sp. z o.o.</strong>
+                  </li>
+                  <li>
+                    <span>Konsultacja merytoryczna</span>
+                    <strong>dr n. med. Maciej Flader</strong>
+                  </li>
+                </ul>
+              </section>
+
+
+            </aside>
           </div>
-        </section>
+        </div>
       </div>
-    </div>
+    </main>
+
+    <aside class="decor-sidebar" aria-hidden="true"></aside>
   </div>
+
   <footer>
     <p><strong>Administrator serwisu:</strong>
-      Vilda Clinic sp. z o.o. • <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">vildaclinic.pl</a>
+      Vilda Clinic sp. z o.o. •
+      <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">vildaclinic.pl</a>
     </p>
     <p><strong>Konsultacja merytoryczna:</strong>
-      dr n. med. Maciej Flader
+      dr n. med. Maciej Flader
     </p>
   </footer>
-  <script src="ios26-ui.js?v=11"></script>
+
   <script>
-    // Inicjalizacja ikon Lucide w momencie wczytania strony
-    lucide.createIcons();
-  </script>
-  <script>
-    // Remove the temporary js-loading class once initialization is complete.
     document.addEventListener('DOMContentLoaded', function() {
+      if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons();
+      }
       document.body.classList.remove('js-loading');
     });
   </script>
+  <script src="ios26-ui.js?v=11" defer></script>
 </body>
 </html>

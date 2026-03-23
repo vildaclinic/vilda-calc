@@ -1827,8 +1827,12 @@ ${step.body}` : header;
 function init() {
     const doctorForm = qs('doctorForm');
     const moduleLauncher = qs('moduleLauncher');
+    const macroLauncherBtn = qs('macroLauncherBtn');
     const moduleLauncherBtn = qs('moduleLauncherBtn');
+    const calculatorLauncherBtn = qs('calculatorLauncherBtn');
     const moduleBackBtn = qs('moduleBackBtn');
+    const macroContent = qs('macroContent');
+    const calculatorContent = qs('calculatorContent');
     const moduleContent = qs('moduleContent');
     const moduleMainHeading = qs('moduleMainHeading');
     const taskSetup = qs('taskSetup');
@@ -1919,8 +1923,20 @@ function init() {
       if (moduleLauncher) {
         moduleLauncher.hidden = true;
       }
+      if (macroContent) {
+        macroContent.hidden = true;
+      }
+      if (calculatorContent) {
+        calculatorContent.hidden = true;
+      }
       if (moduleContent) {
         moduleContent.hidden = false;
+      }
+      if (macroLauncherBtn) {
+        macroLauncherBtn.setAttribute('aria-expanded', 'false');
+      }
+      if (calculatorLauncherBtn) {
+        calculatorLauncherBtn.setAttribute('aria-expanded', 'false');
       }
       if (moduleLauncherBtn) {
         moduleLauncherBtn.setAttribute('aria-expanded', 'true');
@@ -4027,7 +4043,10 @@ function init() {
     const stableThresholdDefault = Number.isFinite(toolkit.stableThresholdDefault) ? toolkit.stableThresholdDefault : 30;
 
     const launcher = qs('moduleLauncher');
+    const macroContent = qs('macroContent');
+    const macroLauncherBtn = qs('macroLauncherBtn');
     const learningContent = qs('moduleContent');
+    const moduleLauncherBtn = qs('moduleLauncherBtn');
     const calculatorLauncherBtn = qs('calculatorLauncherBtn');
     const calculatorContent = qs('calculatorContent');
     const calculatorBackBtn = qs('calculatorBackBtn');
@@ -4042,6 +4061,7 @@ function init() {
     const calcGlucoseAfter = qs('calcGlucoseAfter');
     const calcClearDayBtn = qs('calcClearDayBtn');
     const calcExportPdfBtn = qs('calcExportPdfBtn');
+    const calcMacroTransferStatus = qs('calcMacroTransferStatus');
     const calcStatus = qs('calcStatus');
     const calcTableMeta = qs('calcTableMeta');
     const calcDayBadge = qs('calcDayBadge');
@@ -4217,8 +4237,17 @@ function init() {
       if (launcher) {
         launcher.hidden = true;
       }
+      if (macroContent) {
+        macroContent.hidden = true;
+      }
       if (learningContent) {
         learningContent.hidden = true;
+      }
+      if (moduleLauncherBtn) {
+        moduleLauncherBtn.setAttribute('aria-expanded', 'false');
+      }
+      if (macroLauncherBtn) {
+        macroLauncherBtn.setAttribute('aria-expanded', 'false');
       }
       calculatorContent.hidden = false;
       calculatorLauncherBtn.setAttribute('aria-expanded', 'true');
@@ -4456,3 +4485,645 @@ function init() {
   }
 })();
 
+
+
+(function () {
+  'use strict';
+
+  const STORAGE_KEY = 'wagaiwzrost_cukrzyca_macro_bt_draft_v1';
+  const DEFAULT_EXAMPLE_KEY = 'mealMix';
+  const EXAMPLES = {
+    mealMix: [
+      { name: 'Chleb pszenny (2 kromki)', mass: '70', carbs100: '41', protein100: '13', fat100: '3.4' },
+      { name: 'Duże jabłko', mass: '150', carbs100: '13.8', protein100: '0.26', fat100: '0.17' },
+      { name: 'Twarożek wiejski', mass: '180', carbs100: '3.4', protein100: '11', fat100: '4.3' }
+    ],
+    breadEggs: [
+      { name: 'Chleb pszenny (2 kromki)', mass: '70', carbs100: '41', protein100: '13', fat100: '3.4' },
+      { name: 'Jajka gotowane (3 szt.)', mass: '140', carbs100: '0.6', protein100: '12.5', fat100: '9.7' }
+    ]
+  };
+
+  function qs(id) {
+    return document.getElementById(id);
+  }
+
+  function parseLocaleNumber(value) {
+    if (value === null || value === undefined) return NaN;
+    if (typeof value === 'number') return Number.isFinite(value) ? value : NaN;
+    const normalized = String(value).trim().replace(/\s+/g, '').replace(',', '.');
+    return normalized === '' ? NaN : Number(normalized);
+  }
+
+  function formatNumber(value, digits) {
+    if (!Number.isFinite(value)) return '—';
+    return new Intl.NumberFormat('pl-PL', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: digits
+    }).format(value);
+  }
+
+  function toInputValue(value, digits) {
+    if (!Number.isFinite(value)) return '';
+    const rounded = Number(value.toFixed(Math.max(0, digits || 0)));
+    return String(rounded).replace(',', '.');
+  }
+
+  function cloneExampleRows(key) {
+    const rows = EXAMPLES[key] || EXAMPLES[DEFAULT_EXAMPLE_KEY] || [];
+    return rows.map(function (row) {
+      return Object.assign({}, row);
+    });
+  }
+
+  function createEmptyRow() {
+    return {
+      name: '',
+      mass: '',
+      carbs100: '',
+      protein100: '',
+      fat100: ''
+    };
+  }
+
+  function isRowDataEmpty(rowData) {
+    if (!rowData || typeof rowData !== 'object') return true;
+    return ['name', 'mass', 'carbs100', 'protein100', 'fat100'].every(function (key) {
+      return String(rowData[key] == null ? '' : rowData[key]).trim() === '';
+    });
+  }
+
+  function sanitizeRowData(rowData) {
+    const source = rowData && typeof rowData === 'object' ? rowData : {};
+    return {
+      name: String(source.name || '').slice(0, 120),
+      mass: String(source.mass || '').slice(0, 24),
+      carbs100: String(source.carbs100 || '').slice(0, 24),
+      protein100: String(source.protein100 || '').slice(0, 24),
+      fat100: String(source.fat100 || '').slice(0, 24)
+    };
+  }
+
+  function loadDraftRows() {
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if (!raw) return [createEmptyRow()];
+      const parsed = JSON.parse(raw);
+      if (!parsed || !Array.isArray(parsed.rows)) return [createEmptyRow()];
+      const rows = parsed.rows
+        .slice(0, 20)
+        .map(sanitizeRowData);
+      return rows.length ? rows : [createEmptyRow()];
+    } catch (error) {
+      return [createEmptyRow()];
+    }
+  }
+
+  function saveDraftRows(rows) {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ rows: rows.map(sanitizeRowData) }));
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function initMacroModule() {
+    const launcher = qs('moduleLauncher');
+    const macroLauncherBtn = qs('macroLauncherBtn');
+    const moduleLauncherBtn = qs('moduleLauncherBtn');
+    const calculatorLauncherBtn = qs('calculatorLauncherBtn');
+    const macroContent = qs('macroContent');
+    const macroBackBtn = qs('macroBackBtn');
+    const macroMainHeading = qs('macroMainHeading');
+    const learningContent = qs('moduleContent');
+    const calculatorContent = qs('calculatorContent');
+    const macroHowToToggleBtn = qs('macroHowToToggleBtn');
+    const macroHowToContent = qs('macroHowToContent');
+    const macroIngredientList = qs('macroIngredientList');
+    const addMacroIngredientBtn = qs('addMacroIngredientBtn');
+    const insertMacroExampleBtn = qs('insertMacroExampleBtn');
+    const clearMacroFormBtn = qs('clearMacroFormBtn');
+    const macroExampleBtns = Array.from(document.querySelectorAll('[data-macro-example]'));
+    const macroEmptyState = qs('macroEmptyState');
+    const macroSummaryWrap = qs('macroSummaryWrap');
+    const macroResultCarbs = qs('macroResultCarbs');
+    const macroResultProtein = qs('macroResultProtein');
+    const macroResultFat = qs('macroResultFat');
+    const macroResultBT = qs('macroResultBT');
+    const macroResultState = qs('macroResultState');
+    const macroCompletenessState = qs('macroCompletenessState');
+    const useMacroInRatioCalculatorBtn = qs('useMacroInRatioCalculatorBtn');
+    const calcCarbs = qs('calcCarbs');
+    const calcMacroTransferStatus = qs('calcMacroTransferStatus');
+
+    if (!launcher || !macroLauncherBtn || !macroContent || !macroBackBtn || !macroIngredientList || !macroEmptyState || !macroSummaryWrap || !macroResultCarbs || !macroResultProtein || !macroResultFat || !macroResultBT || !macroResultState || !macroCompletenessState || !useMacroInRatioCalculatorBtn) {
+      return;
+    }
+
+    const state = {
+      lastSummary: null
+    };
+
+    function focusMacroHeading() {
+      if (!macroMainHeading || typeof macroMainHeading.focus !== 'function') return;
+      macroMainHeading.setAttribute('tabindex', '-1');
+      requestAnimationFrame(function () {
+        macroMainHeading.focus({ preventScroll: true });
+      });
+    }
+
+    function openMacroModule() {
+      if (launcher) {
+        launcher.hidden = true;
+      }
+      if (learningContent) {
+        learningContent.hidden = true;
+      }
+      if (calculatorContent) {
+        calculatorContent.hidden = true;
+      }
+      macroContent.hidden = false;
+      macroLauncherBtn.setAttribute('aria-expanded', 'true');
+      if (moduleLauncherBtn) {
+        moduleLauncherBtn.setAttribute('aria-expanded', 'false');
+      }
+      if (calculatorLauncherBtn) {
+        calculatorLauncherBtn.setAttribute('aria-expanded', 'false');
+      }
+      focusMacroHeading();
+    }
+
+    function closeMacroModule() {
+      macroContent.hidden = true;
+      if (launcher) {
+        launcher.hidden = false;
+      }
+      macroLauncherBtn.setAttribute('aria-expanded', 'false');
+      requestAnimationFrame(function () {
+        macroLauncherBtn.focus({ preventScroll: true });
+        if (launcher && typeof launcher.scrollIntoView === 'function') {
+          launcher.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    }
+
+    function getRowElements() {
+      return Array.from(macroIngredientList.querySelectorAll('[data-role="macro-row"]'));
+    }
+
+    function collectRowData(rowEl) {
+      const read = function (field) {
+        const input = rowEl.querySelector('[data-field="' + field + '"]');
+        return input ? input.value : '';
+      };
+      return {
+        name: read('name'),
+        mass: read('mass'),
+        carbs100: read('carbs100'),
+        protein100: read('protein100'),
+        fat100: read('fat100')
+      };
+    }
+
+    function persistDraft() {
+      saveDraftRows(getRowElements().map(collectRowData));
+    }
+
+    function updateRowIndices() {
+      const rows = getRowElements();
+      rows.forEach(function (rowEl, index) {
+        const indexEl = rowEl.querySelector('.diab-macro-row__index');
+        const removeBtn = rowEl.querySelector('[data-action="remove-row"]');
+        if (indexEl) {
+          indexEl.textContent = 'Składnik ' + (index + 1);
+        }
+        if (removeBtn) {
+          removeBtn.disabled = rows.length === 1;
+          removeBtn.setAttribute('aria-disabled', String(rows.length === 1));
+        }
+      });
+    }
+
+    function buildRowChipHtml(label, value, modifier) {
+      const classes = ['diab-macro-chip'];
+      if (modifier) {
+        classes.push('diab-macro-chip--' + modifier);
+      }
+      return '<span class="' + classes.join(' ') + '"><strong>' + label + ':</strong> ' + value + '</span>';
+    }
+
+    function analyzeRow(rowEl) {
+      const data = collectRowData(rowEl);
+      if (isRowDataEmpty(data)) {
+        return { empty: true, raw: data };
+      }
+
+      const mass = parseLocaleNumber(data.mass);
+      const carbs100Input = parseLocaleNumber(data.carbs100);
+      const protein100Input = parseLocaleNumber(data.protein100);
+      const fat100Input = parseLocaleNumber(data.fat100);
+      const numericValues = [mass, carbs100Input, protein100Input, fat100Input];
+
+      if (numericValues.some(function (value) { return Number.isFinite(value) && value < 0; })) {
+        return {
+          empty: false,
+          valid: false,
+          message: 'Wartości nie mogą być ujemne.'
+        };
+      }
+
+      if (!Number.isFinite(mass) || mass <= 0) {
+        return {
+          empty: false,
+          valid: false,
+          message: 'Podaj masę porcji w gramach.'
+        };
+      }
+
+      const providedMacroCount = [carbs100Input, protein100Input, fat100Input].filter(function (value) {
+        return Number.isFinite(value);
+      }).length;
+
+      if (!providedMacroCount) {
+        return {
+          empty: false,
+          valid: false,
+          message: 'Uzupełnij przynajmniej jedną wartość odżywczą na 100 g.'
+        };
+      }
+
+      const carbs100 = Number.isFinite(carbs100Input) ? carbs100Input : 0;
+      const protein100 = Number.isFinite(protein100Input) ? protein100Input : 0;
+      const fat100 = Number.isFinite(fat100Input) ? fat100Input : 0;
+
+      const carbsPortion = mass * carbs100 / 100;
+      const proteinPortion = mass * protein100 / 100;
+      const fatPortion = mass * fat100 / 100;
+      const btKcal = (proteinPortion * 4) + (fatPortion * 9);
+      const macroSumTooHigh = [carbs100Input, protein100Input, fat100Input].every(function (value) {
+        return Number.isFinite(value);
+      }) && (carbs100Input + protein100Input + fat100Input > 100.5);
+
+      return {
+        empty: false,
+        valid: true,
+        raw: data,
+        name: String(data.name || '').trim(),
+        mass: mass,
+        carbs100: carbs100,
+        protein100: protein100,
+        fat100: fat100,
+        carbsPortion: carbsPortion,
+        proteinPortion: proteinPortion,
+        fatPortion: fatPortion,
+        btKcal: btKcal,
+        incomplete: {
+          carbs: !Number.isFinite(carbs100Input),
+          protein: !Number.isFinite(protein100Input),
+          fat: !Number.isFinite(fat100Input)
+        },
+        macroSumTooHigh: macroSumTooHigh
+      };
+    }
+
+    function renderRowState(rowEl, rowState) {
+      const resultWrap = rowEl.querySelector('[data-role="row-result"]');
+      const chipsWrap = rowEl.querySelector('[data-role="row-chips"]');
+      const helpEl = rowEl.querySelector('[data-role="row-help"]');
+      if (!resultWrap || !chipsWrap || !helpEl) return;
+
+      if (!rowState || rowState.empty) {
+        resultWrap.hidden = true;
+        chipsWrap.innerHTML = '';
+        helpEl.hidden = true;
+        helpEl.textContent = '';
+        helpEl.className = 'diab-help';
+        return;
+      }
+
+      resultWrap.hidden = false;
+
+      if (!rowState.valid) {
+        chipsWrap.innerHTML = '';
+        helpEl.hidden = false;
+        helpEl.textContent = rowState.message || 'Uzupełnij dane składnika.';
+        helpEl.className = 'diab-help diab-help--warn';
+        return;
+      }
+
+      chipsWrap.innerHTML = [
+        buildRowChipHtml('Węglowodany', formatNumber(rowState.carbsPortion, 1) + ' g'),
+        buildRowChipHtml('Białko', formatNumber(rowState.proteinPortion, 1) + ' g'),
+        buildRowChipHtml('Tłuszcz', formatNumber(rowState.fatPortion, 1) + ' g'),
+        buildRowChipHtml('Ładunek białkowo-tłuszczowy', formatNumber(rowState.btKcal, 1) + ' kcal', rowState.btKcal > 200 ? 'warn' : '')
+      ].join('');
+
+      const notes = [];
+      if (rowState.incomplete.carbs) {
+        notes.push('Brak wpisu dla węglowodanów — suma węglowodanów może być zaniżona.');
+      }
+      if (rowState.incomplete.protein || rowState.incomplete.fat) {
+        notes.push('Brakuje danych dla białka lub tłuszczu — ocena ładunku białkowo-tłuszczowego (B/T) może być zaniżona.');
+      }
+      if (rowState.macroSumTooHigh) {
+        notes.push('Sprawdź dane z etykiety — suma składników na 100 g jest nietypowo wysoka.');
+      }
+
+      if (notes.length) {
+        helpEl.hidden = false;
+        helpEl.textContent = notes.join(' ');
+        helpEl.className = 'diab-help diab-help--warn';
+      } else {
+        helpEl.hidden = true;
+        helpEl.textContent = '';
+        helpEl.className = 'diab-help';
+      }
+    }
+
+    function renderSummary(summary) {
+      state.lastSummary = summary;
+      if (!summary || !summary.validCount) {
+        macroEmptyState.hidden = false;
+        macroSummaryWrap.hidden = true;
+        macroResultState.className = 'diab-macro-state';
+        macroResultState.innerHTML = '';
+        macroCompletenessState.hidden = true;
+        macroCompletenessState.textContent = '';
+        useMacroInRatioCalculatorBtn.disabled = true;
+        return;
+      }
+
+      macroEmptyState.hidden = true;
+      macroSummaryWrap.hidden = false;
+      macroResultCarbs.textContent = formatNumber(summary.totals.carbs, 1) + ' g';
+      macroResultProtein.textContent = formatNumber(summary.totals.protein, 1) + ' g';
+      macroResultFat.textContent = formatNumber(summary.totals.fat, 1) + ' g';
+      macroResultBT.textContent = formatNumber(summary.totals.btKcal, 1) + ' kcal';
+
+      if (summary.totals.btKcal > 200) {
+        macroResultState.className = 'diab-macro-state diab-macro-state--warn';
+        macroResultState.innerHTML = '<strong>Ładunek białkowo-tłuszczowy (B/T) istotny:</strong> posiłek zawiera istotny ładunek białkowo-tłuszczowy. Może wpływać na glikemię także 2–4 godziny po posiłku.';
+      } else {
+        macroResultState.className = 'diab-macro-state';
+        macroResultState.innerHTML = '<strong>Ładunek białkowo-tłuszczowy (B/T) niewielki:</strong> ładunek białkowo-tłuszczowy nie przekracza progu edukacyjnego 200 kcal.';
+      }
+
+      const warnings = [];
+      if (summary.hasInvalidRows) {
+        warnings.push('Niektóre składniki mają niepełne albo nieprawidłowe dane i nie zostały w pełni uwzględnione.');
+      }
+      if (summary.incompleteCarbs) {
+        warnings.push('Brakuje części danych o węglowodanach — suma węglowodanów może być zaniżona.');
+      }
+      if (summary.incompleteBT) {
+        warnings.push('Brakuje części danych o białku lub tłuszczu — ładunek białkowo-tłuszczowy (B/T) może być zaniżony.');
+      }
+      if (summary.totals.carbs <= 0) {
+        warnings.push('Aby użyć wyniku w kalkulatorze przelicznika, suma węglowodanów musi być większa od zera.');
+      }
+
+      if (warnings.length) {
+        macroCompletenessState.hidden = false;
+        macroCompletenessState.textContent = warnings.join(' ');
+      } else {
+        macroCompletenessState.hidden = true;
+        macroCompletenessState.textContent = '';
+      }
+
+      useMacroInRatioCalculatorBtn.disabled = !(summary.totals.carbs > 0);
+    }
+
+    function recalculateMacroModule() {
+      const rows = getRowElements();
+      const summary = {
+        validCount: 0,
+        totals: {
+          carbs: 0,
+          protein: 0,
+          fat: 0,
+          btKcal: 0
+        },
+        hasInvalidRows: false,
+        incompleteCarbs: false,
+        incompleteBT: false
+      };
+
+      rows.forEach(function (rowEl) {
+        const rowState = analyzeRow(rowEl);
+        renderRowState(rowEl, rowState);
+
+        if (!rowState || rowState.empty) {
+          return;
+        }
+
+        if (!rowState.valid) {
+          summary.hasInvalidRows = true;
+          return;
+        }
+
+        summary.validCount += 1;
+        summary.totals.carbs += rowState.carbsPortion;
+        summary.totals.protein += rowState.proteinPortion;
+        summary.totals.fat += rowState.fatPortion;
+        summary.totals.btKcal += rowState.btKcal;
+        if (rowState.incomplete.carbs) {
+          summary.incompleteCarbs = true;
+        }
+        if (rowState.incomplete.protein || rowState.incomplete.fat) {
+          summary.incompleteBT = true;
+        }
+      });
+
+      renderSummary(summary);
+    }
+
+    function onRowInput() {
+      recalculateMacroModule();
+      persistDraft();
+    }
+
+    function createRowElement(rowData) {
+      const rowEl = document.createElement('div');
+      rowEl.className = 'diab-macro-row';
+      rowEl.dataset.role = 'macro-row';
+      rowEl.innerHTML = [
+        '<div class="diab-macro-row__head">',
+        '  <span class="diab-macro-row__index"></span>',
+        '  <button type="button" class="secondary-btn diab-macro-row__remove" data-action="remove-row">Usuń składnik</button>',
+        '</div>',
+        '<div class="diab-macro-row__fields">',
+        '  <label>Nazwa składnika<input type="text" data-field="name" placeholder="np. chleb pszenny"></label>',
+        '  <label>Masa porcji [g]<input type="number" data-field="mass" min="0" step="0.1" inputmode="decimal" placeholder="np. 70"></label>',
+        '  <label>Węglowodany / 100 g<input type="number" data-field="carbs100" min="0" step="0.1" inputmode="decimal" placeholder="np. 41"></label>',
+        '  <label>Białko / 100 g<input type="number" data-field="protein100" min="0" step="0.1" inputmode="decimal" placeholder="np. 11"></label>',
+        '  <label>Tłuszcz / 100 g<input type="number" data-field="fat100" min="0" step="0.1" inputmode="decimal" placeholder="np. 4,3"></label>',
+        '</div>',
+        '<div class="diab-macro-row__result" data-role="row-result" hidden>',
+        '  <div class="diab-macro-chips" data-role="row-chips"></div>',
+        '  <p class="diab-help" data-role="row-help" hidden></p>',
+        '</div>'
+      ].join('');
+
+      const data = sanitizeRowData(rowData);
+      rowEl.querySelector('[data-field="name"]').value = data.name || '';
+      rowEl.querySelector('[data-field="mass"]').value = data.mass || '';
+      rowEl.querySelector('[data-field="carbs100"]').value = data.carbs100 || '';
+      rowEl.querySelector('[data-field="protein100"]').value = data.protein100 || '';
+      rowEl.querySelector('[data-field="fat100"]').value = data.fat100 || '';
+
+      rowEl.querySelectorAll('input').forEach(function (input) {
+        input.addEventListener('input', onRowInput);
+        input.addEventListener('change', onRowInput);
+      });
+
+      const removeBtn = rowEl.querySelector('[data-action="remove-row"]');
+      if (removeBtn) {
+        removeBtn.addEventListener('click', function (event) {
+          event.preventDefault();
+          const rows = getRowElements();
+          if (rows.length <= 1) {
+            rowEl.querySelectorAll('input').forEach(function (input) {
+              input.value = '';
+            });
+          } else {
+            rowEl.remove();
+          }
+          updateRowIndices();
+          recalculateMacroModule();
+          persistDraft();
+        });
+      }
+
+      return rowEl;
+    }
+
+    function rebuildRows(rowsData) {
+      macroIngredientList.innerHTML = '';
+      const normalizedRows = Array.isArray(rowsData) && rowsData.length ? rowsData : [createEmptyRow()];
+      normalizedRows.forEach(function (rowData) {
+        macroIngredientList.appendChild(createRowElement(rowData));
+      });
+      updateRowIndices();
+      recalculateMacroModule();
+      persistDraft();
+    }
+
+    function hasAnyMeaningfulRows() {
+      return getRowElements().some(function (rowEl) {
+        return !isRowDataEmpty(collectRowData(rowEl));
+      });
+    }
+
+    function applyExample(key) {
+      if (hasAnyMeaningfulRows()) {
+        const ok = window.confirm('Czy chcesz zastąpić obecne składniki przykładowym posiłkiem z materiałów?');
+        if (!ok) {
+          return;
+        }
+      }
+      rebuildRows(cloneExampleRows(key));
+    }
+
+    function transferToCalculator() {
+      const summary = state.lastSummary;
+      if (!summary || !summary.validCount || !(summary.totals.carbs > 0)) {
+        macroCompletenessState.hidden = false;
+        macroCompletenessState.textContent = 'Aby użyć wyniku w kalkulatorze przelicznika, wpisz przynajmniej jeden składnik i upewnij się, że suma węglowodanów jest większa od zera.';
+        return;
+      }
+
+      if (calcCarbs) {
+        calcCarbs.value = toInputValue(summary.totals.carbs, 1);
+      }
+
+      const messageParts = [
+        'Przeniesiono <strong>' + formatNumber(summary.totals.carbs, 1) + ' g węglowodanów</strong> do pola „Węglowodany w posiłku”.'
+      ];
+      if (summary.totals.btKcal > 200) {
+        messageParts.push('Ładunek białkowo-tłuszczowy (B/T) przekracza 200 kcal — pamiętaj o ocenie późniejszej glikemii 2–4 h po posiłku.');
+      }
+      if (calcMacroTransferStatus) {
+        calcMacroTransferStatus.hidden = false;
+        calcMacroTransferStatus.className = 'diab-status diab-status--info';
+        calcMacroTransferStatus.innerHTML = messageParts.join(' ');
+      }
+
+      macroContent.hidden = true;
+      macroLauncherBtn.setAttribute('aria-expanded', 'false');
+      if (calculatorLauncherBtn) {
+        calculatorLauncherBtn.click();
+      }
+    }
+
+    if (macroHowToToggleBtn && macroHowToContent) {
+      macroHowToToggleBtn.addEventListener('click', function (event) {
+        event.preventDefault();
+        const isOpen = !macroHowToContent.hidden;
+        macroHowToContent.hidden = isOpen;
+        macroHowToToggleBtn.setAttribute('aria-expanded', String(!isOpen));
+      });
+    }
+
+    macroLauncherBtn.addEventListener('click', function (event) {
+      event.preventDefault();
+      openMacroModule();
+    });
+
+    macroBackBtn.addEventListener('click', function (event) {
+      event.preventDefault();
+      closeMacroModule();
+    });
+
+    if (addMacroIngredientBtn) {
+      addMacroIngredientBtn.addEventListener('click', function (event) {
+        event.preventDefault();
+        macroIngredientList.appendChild(createRowElement(createEmptyRow()));
+        updateRowIndices();
+        recalculateMacroModule();
+        persistDraft();
+      });
+    }
+
+    if (insertMacroExampleBtn) {
+      insertMacroExampleBtn.addEventListener('click', function (event) {
+        event.preventDefault();
+        applyExample(DEFAULT_EXAMPLE_KEY);
+      });
+    }
+
+    if (clearMacroFormBtn) {
+      clearMacroFormBtn.addEventListener('click', function (event) {
+        event.preventDefault();
+        if (hasAnyMeaningfulRows()) {
+          const ok = window.confirm('Czy chcesz usunąć wszystkie wpisane składniki i wyczyścić wynik?');
+          if (!ok) {
+            return;
+          }
+        }
+        rebuildRows([createEmptyRow()]);
+      });
+    }
+
+    macroExampleBtns.forEach(function (button) {
+      button.addEventListener('click', function (event) {
+        event.preventDefault();
+        const key = button.dataset && button.dataset.macroExample ? button.dataset.macroExample : DEFAULT_EXAMPLE_KEY;
+        applyExample(key);
+      });
+    });
+
+    useMacroInRatioCalculatorBtn.addEventListener('click', function (event) {
+      event.preventDefault();
+      transferToCalculator();
+    });
+
+    rebuildRows(loadDraftRows());
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initMacroModule);
+  } else {
+    initMacroModule();
+  }
+})();

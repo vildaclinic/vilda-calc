@@ -5044,6 +5044,25 @@ if (typeof document !== 'undefined') {
       }
       localStorage.setItem('resultsMode', professionalMode ? 'professional' : 'standard');
 
+      // Przy przejściu ze standardu do trybu profesjonalnego karta
+      // „Obliczenia wzrostowe” jest źródłem prawdy dla historii pomiarów.
+      // Wcześniej poniższy handler uruchamiał calculateGrowthAdvanced()
+      // zanim historia z karty podstawowej została zsynchronizowana do
+      // modułu zaawansowanego.  Jeśli w zaawansowanej karcie istniał tylko
+      // 1–2 wiersze, calculateGrowthAdvanced() synchronizowało krótszą
+      // historię z powrotem do karty podstawowej i starsze pomiary znikały.
+      // Dlatego przy włączaniu trybu PRO najpierw wymuszamy synchronizację
+      // basic → advanced, a dopiero potem wykonujemy dalsze przeliczenia.
+      if (professionalMode) {
+        try {
+          if (typeof window !== 'undefined' && typeof window.reconcileGrowthHistoryModules === 'function') {
+            window.reconcileGrowthHistoryModules('basic');
+          }
+        } catch (_) {
+          /* ciche pominięcie błędów synchronizacji historii */
+        }
+      }
+
       // Po zmianie trybu wyników zaktualizuj dostępność sekcji
       // zaawansowanych obliczeń wzrostowych.  Dzięki temu przycisk
       // „Zaawansowane obliczenia wzrostowe” zostanie aktywowany
@@ -13965,6 +13984,11 @@ if (heightMeas.length >= 1 && !isNaN(heightVal)) {
       }
     } catch (_) {}
     try {
+      if (typeof window !== 'undefined' && typeof window.syncAdvancedGrowthRowsToBasic === 'function') {
+        window.syncAdvancedGrowthRowsToBasic();
+      }
+    } catch (_) {}
+    try {
       if (typeof window !== 'undefined' && typeof window.vildaPersistScheduleSave === 'function') {
         window.vildaPersistScheduleSave();
       }
@@ -17601,6 +17625,7 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
     let started =
       hasText('name') ||
       hasText('advName') ||
+      hasText('basicGrowthName') ||
       hasText('fullName') ||
       hasPosNumber('age') ||
       hasPosNumber('ageMonths') ||
@@ -17823,6 +17848,12 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
       data: (window.advancedGrowthData ? JSON.parse(JSON.stringify(window.advancedGrowthData)) : null)
     };
 
+    // Uproszczone obliczenia wzrostowe
+    const growthBasic = {
+      name: (val('basicGrowthName') || name),
+      data: (window.basicGrowthData ? JSON.parse(JSON.stringify(window.basicGrowthData)) : null)
+    };
+
     // Intake
     const intake = {
       pal: val('intakePal') || null,
@@ -17949,6 +17980,7 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
           name,
           user,
           advanced: adv,
+          growthBasic,
           intake,
           foods: { snacks: snackRows, meals: mealRows },
           plan,
@@ -18020,7 +18052,7 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
 
   function clearAllData(){
     // Reset visible fields
-    ['name','advName','age','ageMonths','weight','height','waistCm','hipCm','advBoneAge','advMotherHeight','advFatherHeight']
+    ['name','advName','basicGrowthName','age','ageMonths','weight','height','waistCm','hipCm','advBoneAge','advMotherHeight','advFatherHeight']
       .forEach(id=>{ const el=q(id); if(el){
         el.disabled=false;
         el.value='';
@@ -18035,10 +18067,12 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
 
     // Reset globals
     try { window.advancedGrowthData = { measurements: [] }; } catch(_){}
+    try { window.basicGrowthData = { measurements: [] }; } catch(_){}
     try { window.intakeHistory = []; window.intakeEstimatedKcalPerDay = null; } catch(_){}
     // Remove dynamic rows UI if exist
     try {
       const advWrap = q('advMeasurements'); if(advWrap) advWrap.innerHTML='';
+      const basicWrap = q('basicGrowthMeasurements'); if(basicWrap) basicWrap.innerHTML='';
       const intakeWrap = q('intakeMeasurements'); if(intakeWrap) intakeWrap.innerHTML='';
       document.querySelectorAll('.food-row').forEach(el => el.remove());
     } catch(_){}
@@ -18193,6 +18227,12 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
         el.value = name;
         el.disabled = true;
         // Wyemituj zdarzenie `input`, aby warstwa autosave zapisała zmianę
+        try { el.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
+      }
+      if (q('basicGrowthName')) {
+        const el = q('basicGrowthName');
+        el.value = name;
+        el.disabled = true;
         try { el.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
       }
   
@@ -18354,6 +18394,20 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
     }
 
     // Intake
+    if (data.growthBasic) {
+      if (data.growthBasic.data) {
+        try { window.basicGrowthData = JSON.parse(JSON.stringify(data.growthBasic.data)); }
+        catch (_) { try { window.basicGrowthData = data.growthBasic.data; } catch(__) {} }
+      } else {
+        try { window.basicGrowthData = { measurements: [] }; } catch(_) {}
+      }
+      if (q('basicGrowthName') && data.growthBasic.name != null) {
+        const el = q('basicGrowthName');
+        el.value = data.growthBasic.name;
+        try { el.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
+      }
+    }
+
     if(data.intake){
       if(q('intakePal') && data.intake.pal) q('intakePal').value = data.intake.pal;
       if(Array.isArray(data.intake.history)) {
@@ -18537,6 +18591,7 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
         }
     // ► NOWE: odtwórz UI z zapisanych struktur
     try { rehydrateAdvancedFromState(); } catch(_) {}
+    try { if (typeof window !== 'undefined' && typeof window.vildaRehydrateBasicGrowthFromState === 'function') window.vildaRehydrateBasicGrowthFromState(); } catch(_) {}
     try { rehydrateIntakeFromState((data && data.intake && data.intake.pal) || null); } catch(_) {}
     {
       const loadEl = q('loadDataBtn');
@@ -19024,6 +19079,7 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
       if (name) {
         const elName    = document.getElementById('name');
         const elAdvName = document.getElementById('advName');
+        const elBasicName = document.getElementById('basicGrowthName');
         const elFull    = document.getElementById('fullName');
         // Set the name fields and dispatch input events so that the autosave
         // system records these programmatic changes.  Without dispatching
@@ -19039,6 +19095,11 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
           elAdvName.value = name;
           elAdvName.disabled = true;
           try { elAdvName.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
+        }
+        if (elBasicName) {
+          elBasicName.value = name;
+          elBasicName.disabled = true;
+          try { elBasicName.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
         }
         if (elFull) {
           elFull.value = name;
@@ -19110,6 +19171,14 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
           catch (_) { window.advancedGrowthData = data.advanced.data; }
         } else {
           window.advancedGrowthData = { measurements: [] };
+        }
+      }
+      if (data.growthBasic) {
+        if (data.growthBasic.data) {
+          try { window.basicGrowthData = JSON.parse(JSON.stringify(data.growthBasic.data)); }
+          catch (_) { window.basicGrowthData = data.growthBasic.data; }
+        } else {
+          window.basicGrowthData = { measurements: [] };
         }
       }
       if (data.intake) {
@@ -19320,6 +19389,7 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
       } catch (_) {}
       // Odtwórz UI z zapisanych struktur w kartach zaawansowanych i spożycia
       try { if (typeof rehydrateAdvancedFromState === 'function') rehydrateAdvancedFromState(); } catch (_) {}
+      try { if (typeof window !== 'undefined' && typeof window.vildaRehydrateBasicGrowthFromState === 'function') window.vildaRehydrateBasicGrowthFromState(); } catch (_) {}
       try { if (typeof rehydrateIntakeFromState   === 'function') rehydrateIntakeFromState(data.intake ? data.intake.pal : null); } catch (_) {}
 
       /*
@@ -20617,6 +20687,12 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
         }
         p.globals.advancedGrowthRowsUI = captureAdvancedGrowthRowsUI();
 
+        if (window.basicGrowthData && typeof window.basicGrowthData === 'object') {
+          p.globals.basicGrowthData = safeClone(window.basicGrowthData);
+        } else {
+          p.globals.basicGrowthData = null;
+        }
+
         // Szacowane spożycie energii – historia + ostatni wynik
         if (Array.isArray(window.intakeHistory)) {
           p.globals.intakeHistory = safeClone(window.intakeHistory);
@@ -20943,6 +21019,14 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
         try {
           const fn = window.vildaRehydrateAdvancedFromState;
           if (typeof fn === 'function') fn();
+        } catch (_) {}
+      }
+
+      if (g.basicGrowthData && typeof g.basicGrowthData === 'object') {
+        try { window.basicGrowthData = safeClone(g.basicGrowthData) || g.basicGrowthData; } catch (_) {}
+        try {
+          const fnBasic = window.vildaRehydrateBasicGrowthFromState;
+          if (typeof fnBasic === 'function') fnBasic();
         } catch (_) {}
       }
 

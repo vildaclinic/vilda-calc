@@ -10,151 +10,9 @@
   <link href="style.css?v=5" rel="stylesheet">
   <link href="ios26-v2.css?v=9" rel="stylesheet">
   <link href="sidebar.css" rel="stylesheet">
+  <link href="edu-video-ui.css?v=20260318v4" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
 
-  <style>
-    .video-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 1.5rem;
-      margin-top: 1.5rem;
-    }
-    @media (max-width: 900px) {
-      .video-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-    .video-item,
-    .presentation-card,
-    .faq-container {
-      background: var(--card);
-      border: 1px solid #d0dede;
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-    }
-    .video-item {
-      padding: 1rem;
-    }
-    .video-item h2 {
-      margin: 0 0 .5rem;
-      font-size: 1.15rem;
-      color: var(--primary);
-    }
-    .video-item video {
-      width: 100%;
-      height: auto;
-      display: block;
-      border-radius: var(--radius);
-      background: #000;
-      margin-top: .75rem;
-    }
-    .video-description,
-    .page-summary,
-    .presentation-description {
-      line-height: 1.6;
-    }
-    .video-meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: .75rem 1rem;
-      margin: .85rem 0 0;
-      color: var(--muted, #506060);
-      font-size: .95rem;
-    }
-    .resource-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: .75rem;
-      margin-top: 1rem;
-    }
-    .resource-button {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: .75rem 1rem;
-      border-radius: 999px;
-      text-decoration: none;
-      font-weight: 600;
-      border: 1px solid #c7d9d9;
-      background: rgba(255,255,255,.78);
-      color: var(--text);
-      box-shadow: var(--shadow);
-    }
-    .resource-button.secondary {
-      background: transparent;
-    }
-    .presentation-heading {
-      margin-top: 2rem;
-      margin-bottom: .75rem;
-      font-size: clamp(1.35rem, 3vw, 1.9rem);
-      color: var(--text);
-    }
-    .presentation-list {
-      display: grid;
-      gap: 1rem;
-    }
-    .presentation-card {
-      padding: 1rem 1.1rem;
-    }
-    .presentation-card h3 {
-      margin-top: 0;
-      margin-bottom: .4rem;
-      font-size: 1.05rem;
-    }
-    .faq-section {
-      margin: 2rem auto 0;
-      max-width: 900px;
-    }
-    .faq-container {
-      padding: 1rem;
-    }
-    .faq-item + .faq-item {
-      margin-top: .8rem;
-    }
-    .faq-question {
-      all: unset;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      width: 100%;
-      cursor: pointer;
-      font-size: 1rem;
-      font-weight: 600;
-      padding: .9rem 1rem;
-      border-radius: 12px;
-      color: var(--text);
-      background: rgba(255,255,255,.45);
-      box-sizing: border-box;
-    }
-    .faq-question:hover {
-      background: rgba(255,255,255,.62);
-    }
-    .faq-question::after {
-      content: '+';
-      font-size: 1.25rem;
-      transition: transform .25s ease;
-    }
-    .faq-item.open .faq-question::after {
-      content: '–';
-    }
-    .faq-answer {
-      max-height: 0;
-      overflow: hidden;
-      transition: max-height .35s ease, margin-top .35s ease;
-      padding: 0 1rem;
-    }
-    .faq-item.open .faq-answer {
-      max-height: 220px;
-      margin-top: .5rem;
-    }
-    .faq-answer p {
-      margin: 0 0 .5rem;
-      line-height: 1.6;
-    }
-    .liquid-ios26 header {
-      position: static !important;
-    }
-  </style>
 
   <script type="application/ld+json">
 {
@@ -285,54 +143,7 @@
   ]
 }
   </script>
-  <script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  "mainEntity": [
-    {
-      "@type": "Question",
-      "name": "Czy mogę podawać hormon wzrostu o dowolnej porze dnia?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Zalecamy stałą porę, najlepiej wieczorem. Najważniejsza jest regularność zgodna z zaleceniem lekarza prowadzącego."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Co zrobić, jeśli pominę dawkę?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Jeżeli minęło niewiele czasu, podaj dawkę jak najszybciej. Jeśli zbliża się pora kolejnej – nie dubluj. W razie wątpliwości skontaktuj się z lekarzem."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Jak rotować miejsca wstrzyknięć?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Zmieniaj miejsce każdego podania w obrębie brzucha, ud lub pośladków, unikając poprzedniego punktu wkłucia. To zmniejsza ryzyko lipodystrofii i bolesności."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Jak przechowywać preparaty Omnitrope, Genotropin i Ngenla?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Przechowuj zgodnie z Charakterystyką Produktu Leczniczego danego preparatu. Zwykle wymagają chłodzenia i ochrony przed światłem. Nie zamrażaj. Sprawdź temperatury w ulotce."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Jak bezpiecznie utylizować igły i materiały po wstrzyknięciu?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Wrzucaj igły do zamykanego pojemnika na odpady medyczne i oddawaj w punkcie odbioru zgodnie z lokalnymi przepisami. Nigdy nie wyrzucaj igieł do odpadów zmieszanych."
-      }
-    }
-  ]
-}
-  </script>
+
 </head>
 <body class="js-loading liquid-ios26 has-sidebar">
 
@@ -451,91 +262,113 @@
   <div class="main-content">
 
 <main class="container">
-  <h1 class="page-title">Materiały edukacyjne – preparaty hormonu wzrostu</h1>
-  <p class="page-summary">Zobacz filmy instruktażowe o prawidłowym podawaniu leków Omnitrope, Genotropin i Ngenla. Każdy film ma też własną stronę z opisem i sekcjami czasowymi, a na końcu strony znajdziesz prezentacje do pobrania.</p>
+  <div class="edu-shell">
+    <section class="card edu-hero" aria-labelledby="edu-hero-title">
+      <span class="edu-kicker"><span class="edu-kicker-icon" data-lucide="book-open"></span><span>Materiały edukacyjne</span></span>
+      <h1 id="edu-hero-title" class="edu-title">Filmy i prezentacje o preparatach hormonu wzrostu</h1>
+      <p class="edu-lead">Zobacz filmy instruktażowe o prawidłowym podawaniu leków Omnitrope, Genotropin i Ngenla. Każdy materiał wideo ma własną stronę z opisem i sekcjami czasowymi, a poniżej znajdziesz również prezentacje do pobrania.</p>
+      <div class="edu-chip-row">
+        <span class="edu-chip"><span class="edu-chip-icon" data-lucide="play"></span><span>3 filmy instruktażowe</span></span>
+        <span class="edu-chip"><span class="edu-chip-icon" data-lucide="file-text"></span><span>2 prezentacje do pobrania</span></span>
+      </div>
+    </section>
 
-  <section aria-labelledby="sekcja-filmow">
-    <h2 id="sekcja-filmow" class="presentation-heading">Filmy instruktażowe</h2>
-    <div class="video-grid">
+    <section aria-labelledby="sekcja-filmow">
+      <div class="edu-section-head">
+        <h2 id="sekcja-filmow" class="edu-section-title">Filmy instruktażowe</h2>
+      </div>
 
-    <article class="video-item" id="card-omnitrope">
-      <h2>Instrukcja stosowania preparatu Omnitrope</h2>
-      <p class="video-description">Film pokazuje przygotowanie wkładu i pena, odpowietrzenie, ustawienie dawki, technikę podania oraz zasady utylizacji i przechowywania preparatu Omnitrope.</p>
-      <video controls controlsList="nodownload" preload="metadata" poster="posters/omnitrope_poster.png">
-        <source src="videos/omnitrope.mp4" type="video/mp4">
-        Twoja przeglądarka nie obsługuje elementu wideo.
-      </video>
-      <div class="video-meta">
-        <span><strong>Czas filmu:</strong> 04:05</span>
-        <span><strong>Format:</strong> MP4</span>
-        <span><strong>Dedykowana strona filmu:</strong> omnitrope-instrukcja.html</span>
-      </div>
-      <div class="resource-actions">
-        <a class="resource-button" href="omnitrope-instrukcja.html">Otwórz stronę filmu</a>
-      </div>
-    </article>
-    
-    <article class="video-item" id="card-genotropin">
-      <h2>Instrukcja stosowania preparatu Genotropin</h2>
-      <p class="video-description">Film prowadzi krok po kroku przez przygotowanie pena i igły, test przepływu, ustawienie dawki, wykonanie wstrzyknięcia oraz zasady rotacji miejsc podania i przechowywania preparatu Genotropin.</p>
-      <video controls controlsList="nodownload" preload="metadata" poster="posters/genotropin_poster.png">
-        <source src="videos/genotropin.mp4" type="video/mp4">
-        Twoja przeglądarka nie obsługuje elementu wideo.
-      </video>
-      <div class="video-meta">
-        <span><strong>Czas filmu:</strong> 04:15</span>
-        <span><strong>Format:</strong> MP4</span>
-        <span><strong>Dedykowana strona filmu:</strong> genotropin-instrukcja.html</span>
-      </div>
-      <div class="resource-actions">
-        <a class="resource-button" href="genotropin-instrukcja.html">Otwórz stronę filmu</a>
-      </div>
-    </article>
-    
-    <article class="video-item" id="card-ngenla">
-      <h2>Instrukcja stosowania preparatu Ngenla</h2>
-      <p class="video-description">Film omawia przygotowanie zestawu Ngenla, odpowietrzenie, wybór i dezynfekcję miejsca wkłucia, samo wstrzyknięcie oraz postępowanie po podaniu i przechowywanie preparatu.</p>
-      <video controls controlsList="nodownload" preload="metadata" poster="posters/ngenla_poster.png">
-        <source src="videos/ngenla.mp4" type="video/mp4">
-        Twoja przeglądarka nie obsługuje elementu wideo.
-      </video>
-      <div class="video-meta">
-        <span><strong>Czas filmu:</strong> 05:10</span>
-        <span><strong>Format:</strong> MP4</span>
-        <span><strong>Dedykowana strona filmu:</strong> ngenla-instrukcja.html</span>
-      </div>
-      <div class="resource-actions">
-        <a class="resource-button" href="ngenla-instrukcja.html">Otwórz stronę filmu</a>
-      </div>
-    </article>
-    
-    </div>
-  </section>
+      <div class="video-grid">
+        <article class="card edu-resource-card" id="card-omnitrope">
+          <div class="edu-card-top">
+            <span class="edu-card-badge">Omnitrope</span>
+            <h3 class="edu-card-title">Instrukcja stosowania preparatu Omnitrope</h3>
+            <p class="edu-card-description">Film pokazuje przygotowanie wkładu i pena, odpowietrzenie, ustawienie dawki, technikę podania oraz zasady utylizacji i przechowywania preparatu Omnitrope.</p>
+          </div>
+          <div class="edu-video-frame">
+            <video controls controlsList="nodownload" preload="metadata" poster="posters/omnitrope_poster.png">
+              <source src="videos/omnitrope.mp4" type="video/mp4">
+              Twoja przeglądarka nie obsługuje elementu wideo.
+            </video>
+          </div>
+          <div class="resource-actions center">
+            <a class="resource-button primary" href="omnitrope-instrukcja.html"><span class="edu-inline-icon" data-lucide="play"></span><span>Otwórz stronę z filmem</span></a>
+          </div>
+        </article>
 
-  <section aria-labelledby="sekcja-prezentacji">
-    <h2 id="sekcja-prezentacji" class="presentation-heading">Prezentacje edukacyjne</h2>
-    <div class="presentation-list">
+        <article class="card edu-resource-card" id="card-genotropin">
+          <div class="edu-card-top">
+            <span class="edu-card-badge">Genotropin</span>
+            <h3 class="edu-card-title">Instrukcja stosowania preparatu Genotropin</h3>
+            <p class="edu-card-description">Film prowadzi krok po kroku przez przygotowanie pena i igły, test przepływu, ustawienie dawki, wykonanie wstrzyknięcia oraz zasady rotacji miejsc podania i przechowywania preparatu Genotropin.</p>
+          </div>
+          <div class="edu-video-frame">
+            <video controls controlsList="nodownload" preload="metadata" poster="posters/genotropin_poster.png">
+              <source src="videos/genotropin.mp4" type="video/mp4">
+              Twoja przeglądarka nie obsługuje elementu wideo.
+            </video>
+          </div>
+          <div class="resource-actions center">
+            <a class="resource-button primary" href="genotropin-instrukcja.html"><span class="edu-inline-icon" data-lucide="play"></span><span>Otwórz stronę z filmem</span></a>
+          </div>
+        </article>
 
-    <article class="presentation-card">
-      <h3>Prezentacja o preparacie Genotropin</h3>
-      <p class="presentation-description">Prezentacja edukacyjna omawiająca zasady stosowania leku Genotropin, dawkowanie i przechowywanie.</p>
-      <div class="resource-actions">
-        <a class="resource-button" href="presentations/genotropin.pptx" download>Pobierz plik PPTX</a>
+        <article class="card edu-resource-card" id="card-ngenla">
+          <div class="edu-card-top">
+            <span class="edu-card-badge">Ngenla</span>
+            <h3 class="edu-card-title">Instrukcja stosowania preparatu Ngenla</h3>
+            <p class="edu-card-description">Film omawia przygotowanie zestawu Ngenla, odpowietrzenie, wybór i dezynfekcję miejsca wkłucia, samo wstrzyknięcie oraz postępowanie po podaniu i przechowywanie preparatu.</p>
+          </div>
+          <div class="edu-video-frame">
+            <video controls controlsList="nodownload" preload="metadata" poster="posters/ngenla_poster.png">
+              <source src="videos/ngenla.mp4" type="video/mp4">
+              Twoja przeglądarka nie obsługuje elementu wideo.
+            </video>
+          </div>
+          <div class="resource-actions center">
+            <a class="resource-button primary" href="ngenla-instrukcja.html"><span class="edu-inline-icon" data-lucide="play"></span><span>Otwórz stronę z filmem</span></a>
+          </div>
+        </article>
       </div>
-    </article>
-    
-    <article class="presentation-card">
-      <h3>Prezentacja o preparacie Ngenla</h3>
-      <p class="presentation-description">Prezentacja edukacyjna o preparacie Ngenla – wskazania, sposób podawania, przechowywanie i bezpieczeństwo terapii.</p>
-      <div class="resource-actions">
-        <a class="resource-button" href="presentations/ngenla.pptx" download>Pobierz plik PPTX</a>
-      </div>
-    </article>
-    
-    </div>
-  </section>
+    </section>
 
-  <section class="faq-section" aria-labelledby="faq-heading">
+    <section aria-labelledby="sekcja-prezentacji">
+      <div class="edu-section-head">
+        <h2 id="sekcja-prezentacji" class="edu-section-title">Prezentacje edukacyjne</h2>
+      </div>
+
+      <div class="presentation-list">
+        <article class="card edu-presentation-card">
+          <div class="edu-card-top">
+            <span class="edu-card-badge">Genotropin</span>
+            <h3>Prezentacja o preparacie Genotropin</h3>
+            <p>Prezentacja edukacyjna omawiająca zasady stosowania leku Genotropin, dawkowanie i przechowywanie.</p>
+          </div>
+          <div class="edu-meta-row">
+            <span class="edu-meta-pill"><span class="edu-meta-icon" data-lucide="file-text"></span><span>PPTX do pobrania</span></span>
+          </div>
+          <div class="resource-actions">
+            <a class="resource-button" href="presentations/genotropin.pptx" download><span class="edu-inline-icon" data-lucide="folder-open"></span><span>Pobierz plik PPTX</span></a>
+          </div>
+        </article>
+
+        <article class="card edu-presentation-card">
+          <div class="edu-card-top">
+            <span class="edu-card-badge">Ngenla</span>
+            <h3>Prezentacja o preparacie Ngenla</h3>
+            <p>Prezentacja edukacyjna o preparacie Ngenla – wskazania, sposób podawania, przechowywanie i bezpieczeństwo terapii.</p>
+          </div>
+          <div class="edu-meta-row">
+            <span class="edu-meta-pill"><span class="edu-meta-icon" data-lucide="file-text"></span><span>PPTX do pobrania</span></span>
+          </div>
+          <div class="resource-actions">
+            <a class="resource-button" href="presentations/ngenla.pptx" download><span class="edu-inline-icon" data-lucide="folder-open"></span><span>Pobierz plik PPTX</span></a>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="faq-section" aria-labelledby="faq-heading" hidden>
     <h2 id="faq-heading" class="presentation-heading">Najczęściej zadawane pytania</h2>
     <p class="page-summary">Poniższe odpowiedzi porządkują najczęstsze wątpliwości dotyczące terapii hormonem wzrostu, rotacji miejsc iniekcji, przechowywania leków i bezpiecznej utylizacji igieł.</p>
     <div class="faq-container">
@@ -577,8 +410,10 @@
     
     </div>
   </section>
+  </div>
 </main>
   </div>
+  <aside class="decor-sidebar"></aside>
 </div>
 
 <footer>

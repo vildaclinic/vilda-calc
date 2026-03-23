@@ -1,0 +1,517 @@
+/* edu-video-ui.css
+   Spójne style dla strony materiałów edukacyjnych i dedykowanych stron filmów.
+   Nawiązują do kart i paneli używanych w innych częściach aplikacji.
+*/
+
+:root {
+  --edu-card-radius: 24px;
+  --edu-card-shadow: 0 16px 42px rgba(15, 45, 42, 0.08);
+  --edu-border: rgba(22, 76, 71, 0.10);
+  --edu-border-strong: rgba(0, 131, 141, 0.18);
+  --edu-surface: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(244,251,250,0.96));
+  --edu-surface-soft: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(247,251,251,0.98));
+  --edu-text-strong: #163638;
+  --edu-text: #355a59;
+  --edu-text-muted: #567375;
+}
+
+.liquid-ios26 header {
+  position: static !important;
+}
+
+.site-brand {
+  margin: 0;
+  font-size: clamp(1.35rem, 3vw, 1.9rem);
+  font-weight: 700;
+  color: var(--text);
+}
+
+.edu-shell,
+.edu-watch-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding-block: 1rem 2rem;
+}
+
+.edu-watch-page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding-inline: 0.5rem;
+}
+
+.edu-hero,
+.edu-resource-card,
+.edu-presentation-card,
+.edu-video-shell,
+.edu-info-card {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: var(--edu-card-radius);
+}
+
+.edu-hero.card,
+.edu-resource-card.card,
+.edu-presentation-card.card,
+.edu-video-shell.card,
+.edu-info-card.card {
+  background: var(--edu-surface);
+  border: 1px solid var(--edu-border);
+  box-shadow: var(--edu-card-shadow);
+}
+
+.edu-hero::before,
+.edu-resource-card::before,
+.edu-presentation-card::before,
+.edu-video-shell::before,
+.edu-info-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at top right, rgba(0, 168, 181, 0.12), transparent 34%),
+    radial-gradient(circle at bottom left, rgba(4, 120, 87, 0.08), transparent 32%);
+  z-index: -1;
+}
+
+.edu-hero {
+  padding: 1.35rem 1.4rem;
+}
+
+.edu-kicker,
+.edu-card-badge,
+.edu-chip,
+.edu-meta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.edu-kicker {
+  align-self: flex-start;
+  padding: 0.48rem 0.82rem;
+  background: rgba(255,255,255,0.90);
+  border: 1px solid var(--edu-border-strong);
+  color: #0f4b48;
+  font-weight: 800;
+  font-size: 0.92rem;
+  box-shadow: 0 8px 24px rgba(15, 45, 42, 0.05);
+}
+
+.edu-kicker-icon,
+.edu-chip-icon,
+.edu-inline-icon,
+.edu-meta-icon {
+  width: 1rem;
+  height: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  line-height: 0;
+}
+
+.edu-kicker-icon svg,
+.edu-chip-icon svg,
+.edu-inline-icon svg,
+.edu-meta-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.edu-title {
+  margin: 0.85rem 0 0.7rem;
+  font-size: clamp(1.55rem, 3vw, 2.25rem);
+  line-height: 1.14;
+  color: var(--edu-text-strong);
+  text-wrap: balance;
+}
+
+.edu-lead {
+  margin: 0;
+  max-width: 74ch;
+  color: var(--edu-text);
+  line-height: 1.7;
+  text-wrap: pretty;
+}
+
+.edu-chip-row,
+.edu-meta-row,
+.resource-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.edu-chip-row {
+  margin-top: 1rem;
+}
+
+.edu-chip,
+.edu-meta-pill {
+  padding: 0.46rem 0.8rem;
+  background: rgba(255,255,255,0.88);
+  border: 1px solid rgba(22, 76, 71, 0.10);
+  color: #0f4b48;
+  font-weight: 700;
+  box-shadow: 0 8px 24px rgba(15, 45, 42, 0.04);
+}
+
+.edu-chip {
+  font-size: 0.92rem;
+}
+
+.edu-meta-pill {
+  font-size: 0.88rem;
+}
+
+.edu-section-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
+  text-align: center;
+}
+
+.edu-section-title {
+  width: 100%;
+  margin: 0;
+  text-align: center;
+  font-size: clamp(1.25rem, 2.6vw, 1.75rem);
+  color: var(--edu-text-strong);
+}
+
+.edu-section-copy {
+  margin: 0;
+  color: var(--edu-text-muted);
+  line-height: 1.62;
+  max-width: 72ch;
+}
+
+.video-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.1rem;
+  align-items: stretch;
+}
+
+.presentation-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.edu-resource-card,
+.edu-presentation-card,
+.edu-video-shell,
+.edu-info-card {
+  padding: 1rem 1.05rem 1.1rem;
+}
+
+.edu-resource-card,
+.edu-presentation-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.edu-card-top {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.edu-card-badge {
+  align-self: flex-start;
+  padding: 0.36rem 0.72rem;
+  background: rgba(0, 168, 181, 0.12);
+  border: 1px solid rgba(0, 168, 181, 0.18);
+  color: #0f6665;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.edu-card-title,
+.edu-presentation-card h3,
+.edu-info-card h2 {
+  margin: 0;
+  color: var(--edu-text-strong);
+}
+
+.edu-card-title {
+  font-size: 1.14rem;
+  line-height: 1.32;
+}
+
+.edu-card-description,
+.edu-presentation-card p {
+  margin: 0;
+  color: #476766;
+  line-height: 1.66;
+}
+
+.edu-video-frame {
+  padding: 0.45rem;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(0,131,141,0.08), rgba(255,255,255,0.92));
+  border: 1px solid rgba(0,131,141,0.12);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+}
+
+.edu-video-frame video {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 16px;
+  background: #000;
+}
+
+.resource-actions {
+  margin-top: auto;
+}
+
+.resource-actions.center {
+  justify-content: center;
+}
+
+.resource-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 46px;
+  padding: 0.8rem 1.1rem;
+  border-radius: 14px;
+  text-decoration: none;
+  font-weight: 700;
+  text-align: center;
+  border: 1px solid rgba(0,131,141,0.18);
+  background: rgba(255,255,255,0.84);
+  color: var(--edu-text-strong);
+  box-shadow: 0 10px 22px rgba(15, 45, 42, 0.08);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.resource-button:hover,
+.resource-button:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(15, 45, 42, 0.12);
+  border-color: rgba(0,131,141,0.28);
+}
+
+.resource-button.primary {
+  background: linear-gradient(180deg, rgba(0,176,166,0.16), rgba(0,131,141,0.10));
+}
+
+.resource-button.secondary {
+  background: rgba(255,255,255,0.72);
+}
+
+.breadcrumbs {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--edu-text-muted);
+}
+
+.breadcrumbs a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.breadcrumbs a:hover,
+.breadcrumbs a:focus-visible {
+  text-decoration: underline;
+}
+
+.edu-info-card h2 {
+  font-size: 1.18rem;
+  margin-bottom: 0.9rem;
+}
+
+.chapter-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.chapter-list li {
+  margin: 0;
+}
+
+.chapter-list a {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  text-decoration: none;
+  color: var(--edu-text-strong);
+  padding: 0.82rem 0.9rem;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.88);
+  border: 1px solid rgba(22, 76, 71, 0.10);
+  box-shadow: 0 8px 24px rgba(15, 45, 42, 0.04);
+  transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+
+.chapter-list a:hover,
+.chapter-list a:focus-visible {
+  transform: translateY(-1px);
+  background: rgba(255,255,255,0.96);
+  border-color: rgba(0,131,141,0.22);
+}
+
+.chapter-time {
+  min-width: 3.8rem;
+  font-weight: 800;
+  color: var(--primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.notice {
+  margin: 0.95rem 0 0;
+  font-size: 0.92rem;
+  color: var(--edu-text-muted);
+  line-height: 1.55;
+}
+
+.faq-section[hidden] {
+  display: none !important;
+}
+
+
+.presentation-heading {
+  margin: 0;
+  font-size: clamp(1.25rem, 2.6vw, 1.75rem);
+  color: var(--edu-text-strong);
+}
+
+.faq-container {
+  background: var(--edu-surface-soft);
+  border: 1px solid var(--edu-border);
+  border-radius: var(--edu-card-radius);
+  box-shadow: var(--edu-card-shadow);
+  padding: 1rem;
+}
+
+.faq-item + .faq-item {
+  margin-top: 0.8rem;
+}
+
+.faq-question {
+  all: unset;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  cursor: pointer;
+  padding: 0.9rem 1rem;
+  border-radius: 16px;
+  box-sizing: border-box;
+  background: rgba(255,255,255,0.82);
+  border: 1px solid rgba(22, 76, 71, 0.10);
+  color: var(--edu-text-strong);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.faq-question:hover {
+  background: rgba(255,255,255,0.92);
+}
+
+.faq-question::after {
+  content: "+";
+  font-size: 1.25rem;
+  transition: transform 0.25s ease;
+}
+
+.faq-item.open .faq-question::after {
+  content: "–";
+}
+
+.faq-answer {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s ease, margin-top 0.35s ease;
+  padding: 0 1rem;
+}
+
+.faq-item.open .faq-answer {
+  max-height: 240px;
+  margin-top: 0.5rem;
+}
+
+.faq-answer p {
+  margin: 0 0 0.5rem;
+  line-height: 1.6;
+  color: var(--edu-text);
+}
+
+
+@media (max-width: 900px) {
+  .video-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .edu-shell,
+  .edu-watch-page {
+    gap: 1rem;
+    padding-block: 0.85rem 1.6rem;
+  }
+
+  .edu-hero,
+  .edu-resource-card,
+  .edu-presentation-card,
+  .edu-video-shell,
+  .edu-info-card {
+    border-radius: 20px;
+  }
+
+  .edu-hero,
+  .edu-resource-card,
+  .edu-presentation-card,
+  .edu-video-shell,
+  .edu-info-card {
+    padding: 0.95rem;
+  }
+
+  .edu-title {
+    margin-top: 0.75rem;
+    font-size: clamp(1.4rem, 6vw, 1.9rem);
+  }
+
+  .edu-lead,
+  .edu-card-description,
+  .edu-presentation-card p {
+    line-height: 1.6;
+  }
+
+  .resource-button {
+    width: 100%;
+  }
+
+  .chapter-list a {
+    padding: 0.75rem 0.82rem;
+  }
+
+  .chapter-time {
+    min-width: 3.5rem;
+  }
+}
+
+.liquid-ios26 .edu-kicker,
+.liquid-ios26 .edu-chip,
+.liquid-ios26 .edu-meta-pill,
+.liquid-ios26 .chapter-list a,
+.liquid-ios26 .resource-button {
+  backdrop-filter: blur(10px) saturate(120%);
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
+}

@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '0.9.78';
+const SW_VERSION = '0.9.95';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -48,7 +48,8 @@ const CORE_SHELL_URLS = [
   '/circumference_module.js',
   '/respiratory_module.js',
   '/custom-fixes.js',
-  '/reposition.js'
+  '/reposition.js',
+  '/growth-basic-module.js'
 ];
 
 // Dodatkowe strony i zasoby próbujemy dociągnąć w tle podczas instalacji,
@@ -63,7 +64,11 @@ const OPTIONAL_DOCUMENTS = [
   '/o-aplikacji.html',
   '/steroidy.html',
   '/ustawienia.html',
-  '/cukrzyca.html'
+  '/cukrzyca.html',
+  '/omnitrope-instrukcja.html',
+  '/genotropin-instrukcja.html',
+  '/ngenla-instrukcja.html',
+  '/przelicznik-doposilkowy-instrukcja.html'
 ];
 
 const OPTIONAL_ASSETS = [
@@ -80,9 +85,11 @@ const OPTIONAL_ASSETS = [
   '/Bad Cat.json',
   '/thyroid_neck_levels_pl.png',
   '/IMG_8041.JPG',
+  '/edu-video-ui.css',
   '/posters/omnitrope_poster.png',
   '/posters/genotropin_poster.png',
   '/posters/ngenla_poster.png',
+  '/posters/przelicznik_doposilkowy_poster.png',
   '/favicon-48x48.png',
   '/favicon-96x96.png',
   '/favicon-144x144.png',
@@ -244,7 +251,10 @@ function getNavigationCacheKeyFromResponse(request, response) {
   const pathname = responseUrl ? responseUrl.pathname : getPathname(request);
   const normalizedPath = normalizeNavigationPath(pathname);
 
-  return DOCUMENT_PATHS.has(normalizedPath) ? normalizedPath : ROOT_DOCUMENT;
+  if (DOCUMENT_PATHS.has(normalizedPath)) return normalizedPath;
+  if (pathname === '/' || pathname === ROOT_DOCUMENT) return ROOT_DOCUMENT;
+
+  return null;
 }
 
 async function cacheResponse(cacheName, key, response) {
@@ -427,11 +437,10 @@ self.addEventListener('fetch', (event) => {
   if (isNavigationRequest(request)) {
     event.respondWith(
       (async () => {
-        const cachedResponse =
-          (await readFromShellCache(request)) ||
-          (await readDocumentFromShell(ROOT_DOCUMENT));
-
+        const requestedPath = normalizeNavigationPath(getPathname(request));
+        const cachedResponse = await readFromShellCache(request);
         const networkResponsePromise = updateShellFromNetwork(request);
+
         event.waitUntil(networkResponsePromise.catch(() => undefined));
 
         if (cachedResponse) {
@@ -442,8 +451,10 @@ self.addEventListener('fetch', (event) => {
           return await networkResponsePromise;
         } catch (_) {
           return (
-            (await readDocumentFromShell(normalizeNavigationPath(getPathname(request)))) ||
-            (await readDocumentFromShell(ROOT_DOCUMENT)) ||
+            (await readDocumentFromShell(requestedPath)) ||
+            ((requestedPath === ROOT_DOCUMENT || getPathname(request) === '/')
+              ? await readDocumentFromShell(ROOT_DOCUMENT)
+              : undefined) ||
             Response.error()
           );
         }

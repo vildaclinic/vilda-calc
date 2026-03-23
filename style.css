@@ -915,6 +915,7 @@ input[type="submit"]:focus-visible{
  */
 #toggleAdvancedGrowth,
 #generateCentileChart,
+#generateCentileChartBasic,
 #toggleIntakeCard,
 #toggleDownSyndrome,
 #generateDsCentileChart,
@@ -1033,6 +1034,7 @@ input[type="submit"]:focus-visible{
  */
 #toggleAdvancedGrowth:hover,
 #generateCentileChart:hover,
+#generateCentileChartBasic:hover,
 #toggleIntakeCard:hover,
 #toggleDownSyndrome:hover,
 #generateDsCentileChart:hover,
@@ -2238,7 +2240,7 @@ body.professional-bg {
   font-weight: 600;
   cursor: pointer;
   display: block;
-  margin: 0.6rem auto;
+  margin: 0 auto;
   width: 100%;
   text-align: center;
 }
@@ -2400,6 +2402,84 @@ body.professional-bg {
    atrybut style="position:relative" został usunięty lub zastąpiony. */
 #advancedGrowthForm {
   position: relative;
+}
+
+
+/* Wyrównanie odstępów dla przycisków i kart modułów wzrostowych.
+   Zewnętrzny odstęp 1rem zapewniają kontenery kolumn (#normWrapper / .left-column)
+   przez właściwość gap. Dlatego zerujemy dodatkowe marginesy sekcji i przycisków,
+   aby nie sumowały się do >1rem. Wewnętrzny odstęp przycisk → karta pozostaje 1rem. */
+#growthCalculationsSection,
+#advancedGrowthSection {
+  margin-top: 0 !important;
+}
+
+#toggleGrowthCalculations.advanced-growth-btn,
+#toggleAdvancedGrowth.advanced-growth-btn {
+  margin: 0 auto !important;
+}
+
+#growthCalculationsForm,
+#advancedGrowthForm {
+  margin-top: 1rem !important;
+}
+
+/* Uproszczony moduł „Obliczenia wzrostowe” – przycisk dostępny w trybie standardowym i PRO */
+#toggleGrowthCalculations.advanced-growth-btn {
+  background: #ffffff;
+  color: #000000;
+  border: 3px solid var(--primary);
+  border-radius: var(--radius);
+  padding: 0.6rem 1.2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: block;
+  margin: 0 auto;
+  width: 100%;
+  text-align: center;
+}
+
+.liquid-ios26 #toggleGrowthCalculations.advanced-growth-btn {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border: 3px solid var(--primary) !important;
+  border-radius: var(--radius) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+
+#toggleGrowthCalculations.advanced-growth-btn:disabled,
+#toggleGrowthCalculations.advanced-growth-btn.disabled,
+.liquid-ios26 #toggleGrowthCalculations.advanced-growth-btn:disabled,
+.liquid-ios26 #toggleGrowthCalculations.advanced-growth-btn.disabled {
+  background: #f3f3f3 !important;
+  color: #000000 !important;
+  border: 3px solid #cccccc !important;
+  cursor: not-allowed;
+  pointer-events: none;
+  opacity: 1;
+}
+
+#growthCalculationsForm {
+  position: relative;
+}
+
+#basicGrowthMeasurements .measure-row-bot {
+  grid-template-columns: minmax(0, 1fr) 34px;
+}
+
+#basicGrowthResults:empty {
+  display: none;
+}
+
+#basicGrowthButtons.basic-growth-buttons {
+  justify-content: center;
+}
+
+#basicGrowthButtons.basic-growth-buttons button {
+  width: 100%;
 }
 
 /* -------------------------------------------------------------------
@@ -6569,6 +6649,7 @@ body.js-loading .main-content {
   /* Sekcje z inline margin-top:1rem – w widoku jednokolumnowym odstęp robi gap,
      więc zerujemy dodatkowe marginesy. */
   #circSection,
+  #growthCalculationsSection,
   #advancedGrowthSection {
     margin-top: 0 !important;
   }
@@ -6577,6 +6658,7 @@ body.js-loading .main-content {
      odstęp góra/dół wynosił dokładnie 1rem (zapewniany przez gap rodzica). */
   #toggleCircSection,
   #toggleDownSyndrome,
+  #toggleGrowthCalculations.advanced-growth-btn,
   #toggleAdvancedGrowth.advanced-growth-btn {
     margin: 0 !important;
   }

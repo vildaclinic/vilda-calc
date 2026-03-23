@@ -3,10 +3,74 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Przeliczniki doposiłkowe – cukrzyca typu 1 | wagaiwzrost.pl</title>
+  <title>Przeliczniki doposiłkowe w cukrzycy typu 1 – nauka i kalkulator | wagaiwzrost.pl</title>
+  <meta name="description" content="Moduł edukacyjny i kalkulator przeliczników doposiłkowych w cukrzycy typu 1. Nauka krok po kroku, obliczenia na podstawie DDI oraz instrukcja wideo.">
+  <meta name="robots" content="index,follow,max-image-preview:large,max-video-preview:-1">
+  <link rel="canonical" href="https://wagaiwzrost.pl/cukrzyca.html">
+  <meta property="og:locale" content="pl_PL">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Przeliczniki doposiłkowe w cukrzycy typu 1 – nauka i kalkulator">
+  <meta property="og:description" content="Moduł edukacyjny i kalkulator przeliczników doposiłkowych w cukrzycy typu 1. Nauka krok po kroku, obliczenia na podstawie DDI oraz instrukcja wideo.">
+  <meta property="og:url" content="https://wagaiwzrost.pl/cukrzyca.html">
+  <meta property="og:image" content="https://wagaiwzrost.pl/posters/przelicznik_doposilkowy_poster.png">
+  <meta property="og:image:alt" content="Przelicznik doposiłkowy – instrukcja wideo">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Przeliczniki doposiłkowe w cukrzycy typu 1 – nauka i kalkulator">
+  <meta name="twitter:description" content="Moduł edukacyjny i kalkulator przeliczników doposiłkowych w cukrzycy typu 1. Nauka krok po kroku, obliczenia na podstawie DDI oraz instrukcja wideo.">
+  <meta name="twitter:image" content="https://wagaiwzrost.pl/posters/przelicznik_doposilkowy_poster.png">
   <link href="ios26-v2.css?v=9" rel="stylesheet">
   <link href="style.css?v=5" rel="stylesheet">
   <link href="sidebar.css" rel="stylesheet">
+
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "Przeliczniki doposiłkowe w cukrzycy typu 1",
+  "description": "Moduł edukacyjny i kalkulator przeliczników doposiłkowych w cukrzycy typu 1. Nauka krok po kroku, obliczenia na podstawie DDI oraz instrukcja wideo.",
+  "url": "https://wagaiwzrost.pl/cukrzyca.html",
+  "inLanguage": "pl-PL",
+  "isPartOf": {
+    "@type": "WebSite",
+    "name": "wagaiwzrost.pl",
+    "url": "https://wagaiwzrost.pl/"
+  },
+  "about": [
+    {
+      "@type": "MedicalCondition",
+      "name": "Cukrzyca typu 1"
+    },
+    {
+      "@type": "Thing",
+      "name": "Przelicznik doposiłkowy"
+    },
+    {
+      "@type": "Thing",
+      "name": "Insulina szybkodziałająca"
+    }
+  ]
+}
+  </script>
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Strona główna",
+      "item": "https://wagaiwzrost.pl/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Cukrzyca",
+      "item": "https://wagaiwzrost.pl/cukrzyca.html"
+    }
+  ]
+}
+  </script>
   
 <script>
 (function() {
@@ -1897,6 +1961,303 @@
       font-size: clamp(1.55rem, 3vw, 2.2rem);
     }
 
+    .diab-module-entry__button--wide {
+      grid-column: 1 / -1;
+    }
+
+    #macroContent #macroMainHeading,
+    #macroContent .diab-hero > div > .diab-subtle.diab-title-center,
+    .liquid-ios26 #macroContent #macroMainHeading,
+    .liquid-ios26 #macroContent .diab-hero > div > .diab-subtle.diab-title-center {
+      color: var(--primary) !important;
+    }
+
+    #macroContent .diab-hero > div > .diab-subtle.diab-title-center,
+    .liquid-ios26 #macroContent .diab-hero > div > .diab-subtle.diab-title-center {
+      font-size: 1rem !important;
+    }
+
+    .diab-help--center {
+      text-align: center;
+    }
+
+    .diab-macro-layout {
+      display: grid;
+      gap: 1rem;
+      align-items: start;
+    }
+
+    @media (min-width: 1080px) {
+      .diab-macro-layout {
+        grid-template-columns: minmax(0, 1.28fr) minmax(20rem, 1fr);
+      }
+    }
+
+    .diab-macro-examples {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.55rem;
+      margin: 0.35rem 0 0.9rem;
+    }
+
+    .diab-macro-example-chip,
+    .diab-macro-actions .secondary-btn,
+    .diab-macro-row__remove,
+    .liquid-ios26 .diab-macro-example-chip,
+    .liquid-ios26 .diab-macro-actions .secondary-btn,
+    .liquid-ios26 .diab-macro-row__remove {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+      border-radius: 999px;
+      border: 1px solid rgba(0,131,141,0.18);
+      background: rgba(255,255,255,0.82);
+      color: var(--primary);
+      font-weight: 700;
+      box-shadow: 0 10px 24px rgba(21,31,50,0.05);
+      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+      text-align: center;
+    }
+
+    .diab-macro-example-chip:hover,
+    .diab-macro-actions .secondary-btn:hover,
+    .diab-macro-row__remove:hover,
+    .liquid-ios26 .diab-macro-example-chip:hover,
+    .liquid-ios26 .diab-macro-actions .secondary-btn:hover,
+    .liquid-ios26 .diab-macro-row__remove:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 28px rgba(21,31,50,0.07);
+      border-color: rgba(0,131,141,0.28);
+    }
+
+    .diab-macro-example-chip {
+      padding: 0.55rem 0.9rem;
+      font-size: 0.88rem;
+      line-height: 1.35;
+    }
+
+    .diab-macro-rowlist {
+      display: grid;
+      gap: 0.95rem;
+      margin-top: 0.1rem;
+    }
+
+    .diab-macro-row {
+      border-radius: var(--radius);
+      border: 1px solid #dbe7e7;
+      background: rgba(255,255,255,0.82);
+      box-shadow: var(--shadow-s);
+      padding: 0.95rem 1rem;
+      display: grid;
+      gap: 0.85rem;
+    }
+
+    .diab-macro-row__head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .diab-macro-row__index {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.35rem 0.7rem;
+      border-radius: 999px;
+      border: 1px solid rgba(0,131,141,0.16);
+      background: rgba(0,131,141,0.08);
+      color: var(--primary);
+      font-size: 0.84rem;
+      font-weight: 700;
+    }
+
+    .diab-macro-row__remove,
+    button.secondary-btn.diab-macro-row__remove,
+    .liquid-ios26 .diab-macro-row__remove,
+    .liquid-ios26 button.secondary-btn.diab-macro-row__remove {
+      padding: 0.48rem 0.8rem;
+      font-size: 0.84rem;
+      -webkit-appearance: none;
+      appearance: none;
+      border: 1px solid rgba(201, 79, 79, 0.48) !important;
+      border-style: solid !important;
+      background: rgba(255, 248, 248, 0.96) !important;
+      color: #a34a58 !important;
+      box-shadow: inset 0 0 0 1px rgba(201, 79, 79, 0.06), 0 10px 24px rgba(21,31,50,0.05);
+    }
+
+    .diab-macro-row__remove:hover,
+    .diab-macro-row__remove:focus-visible,
+    button.secondary-btn.diab-macro-row__remove:hover,
+    button.secondary-btn.diab-macro-row__remove:focus-visible,
+    .liquid-ios26 .diab-macro-row__remove:hover,
+    .liquid-ios26 .diab-macro-row__remove:focus-visible,
+    .liquid-ios26 button.secondary-btn.diab-macro-row__remove:hover,
+    .liquid-ios26 button.secondary-btn.diab-macro-row__remove:focus-visible {
+      border: 1px solid rgba(201, 79, 79, 0.66) !important;
+      background: rgba(201, 79, 79, 0.08) !important;
+      color: #933847 !important;
+      box-shadow: inset 0 0 0 1px rgba(201, 79, 79, 0.08), 0 14px 28px rgba(21,31,50,0.07);
+    }
+
+    .diab-macro-row__remove:disabled,
+    button.secondary-btn.diab-macro-row__remove:disabled,
+    .liquid-ios26 .diab-macro-row__remove:disabled,
+    .liquid-ios26 button.secondary-btn.diab-macro-row__remove:disabled {
+      border: 1px solid rgba(201, 79, 79, 0.24) !important;
+      background: rgba(255,255,255,0.82) !important;
+      color: rgba(147, 56, 71, 0.55) !important;
+      box-shadow: none;
+    }
+
+    .diab-macro-row__fields {
+      display: grid;
+      gap: 0.8rem;
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    @media (min-width: 760px) {
+      .diab-macro-row__fields {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (min-width: 1240px) {
+      .diab-macro-row__fields {
+        grid-template-columns: minmax(0, 1.2fr) repeat(4, minmax(0, 0.72fr));
+      }
+    }
+
+    .diab-macro-row__fields label {
+      margin-top: 0;
+    }
+
+    .diab-macro-row__result {
+      display: grid;
+      gap: 0.55rem;
+    }
+
+    .diab-macro-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+    }
+
+    .diab-macro-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.4rem 0.72rem;
+      border-radius: 999px;
+      border: 1px solid rgba(0,131,141,0.16);
+      background: rgba(0,131,141,0.06);
+      color: var(--primary);
+      font-size: 0.84rem;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    .diab-macro-chip strong {
+      color: inherit;
+      font-weight: 800;
+    }
+
+    .diab-macro-chip--warn {
+      background: rgba(178,107,0,0.10);
+      border-color: rgba(178,107,0,0.18);
+      color: #8b5300;
+    }
+
+    .diab-help--warn {
+      color: #8b5300;
+    }
+
+    .diab-macro-actions {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0.7rem;
+      margin-top: 0.4rem;
+    }
+
+    .diab-macro-actions button {
+      width: 100%;
+    }
+
+    @media (min-width: 700px) {
+      .diab-macro-actions button {
+        width: auto;
+      }
+    }
+
+    .diab-metrics--macro {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    @media (min-width: 1100px) {
+      .diab-metrics--macro {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    .diab-macro-empty {
+      border-radius: var(--radius);
+      padding: 1rem;
+      border: 1px dashed rgba(0,131,141,0.28);
+      background: rgba(255,255,255,0.72);
+      text-align: center;
+      color: #4f6060;
+      line-height: 1.55;
+    }
+
+    .diab-macro-summary {
+      display: grid;
+      gap: 0.9rem;
+    }
+
+    .diab-macro-state {
+      border-radius: var(--radius);
+      padding: 0.95rem 1rem;
+      border: 1px solid rgba(0,131,141,0.16);
+      background: rgba(0,131,141,0.06);
+      color: #295158;
+      line-height: 1.55;
+    }
+
+    .diab-macro-state strong {
+      color: var(--primary);
+    }
+
+    .diab-macro-state--warn {
+      background: rgba(178,107,0,0.10);
+      border-color: rgba(178,107,0,0.18);
+      color: #6d4a08;
+    }
+
+    .diab-macro-state--warn strong {
+      color: #8b5300;
+    }
+
+    .diab-macro-state--soft {
+      background: rgba(255,255,255,0.74);
+      border-color: #dde8e8;
+      color: #566565;
+    }
+
+    #useMacroInRatioCalculatorBtn,
+    .liquid-ios26 #useMacroInRatioCalculatorBtn {
+      width: 100%;
+      justify-content: center;
+    }
+
+    #calcMacroTransferStatus {
+      margin-top: 0.85rem;
+    }
+
     #calculatorContent #calculatorMainHeading,
     #calculatorContent .diab-hero > div > .diab-subtle.diab-title-center,
     .liquid-ios26 #calculatorContent #calculatorMainHeading,
@@ -2301,6 +2662,71 @@
       }
     }
 
+
+    .sidebar-logo .sidebar-title {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .diab-video-cta {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .diab-video-cta__actions {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .diab-video-link,
+    .liquid-ios26 .diab-video-link {
+      width: 100%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      appearance: none;
+      border: 1.5px solid rgba(0,131,141,0.22);
+      border-radius: calc(var(--radius) - 2px);
+      background: rgba(255,255,255,0.78);
+      box-shadow: 0 0 0 1px rgba(0,131,141,0.03);
+      color: var(--primary);
+      font: inherit;
+      font-size: 1rem;
+      font-weight: 700;
+      line-height: 1.4;
+      padding: 0.95rem 1rem;
+      text-align: center;
+      text-decoration: none;
+      transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease, background 0.18s ease;
+    }
+
+    .diab-video-link:hover,
+    .diab-video-link:focus-visible,
+    .liquid-ios26 .diab-video-link:hover,
+    .liquid-ios26 .diab-video-link:focus-visible {
+      transform: translateY(-1px);
+      border-color: rgba(0,131,141,0.34);
+      box-shadow: 0 0 0 1px rgba(0,131,141,0.05), 0 10px 24px rgba(21,31,50,0.05);
+      background: rgba(255,255,255,0.94);
+      outline: none;
+    }
+
+    .diab-video-cta__note {
+      margin: 0;
+      text-align: center;
+      font-size: 0.95rem;
+      line-height: 1.55;
+      color: #4f6060;
+    }
+
+    @media (min-width: 720px) {
+      .diab-video-cta__actions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
   </style>
 </head>
 <body class="js-loading liquid-ios26 has-sidebar">
@@ -2309,7 +2735,7 @@
       <a href="index.html">
         <img src="logo_vilda.jpeg" alt="Vilda Clinic – strona główna" style="max-width:160px;margin-bottom:10px; border-radius:var(--radius);">
       </a>
-      <h1>Przeliczniki doposiłkowe</h1>
+      <h1>Przeliczniki doposiłkowe w cukrzycy typu 1</h1>
     </div>
       <nav class="main-nav" aria-label="Główna nawigacja">
   <ul>
@@ -2350,7 +2776,7 @@
         <a href="index.html">
           <img src="logo_vilda.jpeg" alt="Vilda Clinic – strona główna">
         </a>
-        <h1>wagaiwzrost.pl</h1>
+        <p class="sidebar-title">wagaiwzrost.pl</p>
       </div>
       <nav class="sidebar-nav" aria-label="Nawigacja boczna">
   <ul>
@@ -2437,10 +2863,13 @@
 </nav>
     </aside>
 
-    <div class="main-content">
+    <main class="main-content" id="main-content">
       <div class="container">
         <section id="moduleLauncher" class="diab-module-entry">
           <div class="diab-module-entry__grid">
+            <button type="button" id="macroLauncherBtn" class="diab-module-entry__button diab-module-entry__button--wide" aria-controls="macroContent" aria-expanded="false" aria-label="Liczenie węglowodanów i ładunku białkowo-tłuszczowego">
+              <span class="diab-module-entry__title">Liczenie węglowodanów i ładunku białkowo-tłuszczowego</span>
+            </button>
             <button type="button" id="moduleLauncherBtn" class="diab-module-entry__button" aria-controls="moduleContent" aria-expanded="false" aria-label="Nauka liczenia przelicznika doposiłkowego">
               <span class="diab-module-entry__title">Nauka liczenia przelicznika doposiłkowego</span>
             </button>
@@ -2449,6 +2878,98 @@
             </button>
           </div>
         </section>
+
+        <div id="macroContent" class="diab-page" hidden>
+          <section class="card diab-hero">
+            <div>
+              <div class="diab-hero-topbar">
+                <button type="button" id="macroBackBtn" class="diab-back-btn"><span class="diab-back-btn__arrow" aria-hidden="true">←</span><span>Wstecz</span></button>
+                <span class="diab-eyebrow diab-eyebrow--module"><span data-lucide="apple"></span> Moduł edukacyjny</span>
+              </div>
+              <h2 id="macroMainHeading" class="diab-title-center" style="margin-top:0;">Liczenie węglowodanów i ładunku białkowo-tłuszczowego</h2>
+              <p class="diab-subtle diab-title-center">Policz węglowodany w porcji i sprawdź, czy posiłek ma istotny ładunek białkowo-tłuszczowy (B/T). Ten moduł przygotowuje dane do dalszej pracy z przelicznikiem doposiłkowym.</p>
+              <div class="diab-note-box diab-note-box--accent" style="margin-top:0.9rem;">
+                <h3 class="diab-note-title">Najpierw liczysz posiłek, potem przechodzisz do kalkulatora przelicznika</h3>
+                <p class="diab-footer-note">Najważniejszą wartością w codziennej praktyce jest liczba gramów węglowodanów w posiłku. Jeśli posiłek zawiera dużo białka i tłuszczu, trzeba także sprawdzić kalorie pochodzące z tych składników, bo mogą wpływać na glikemię 2–4 godziny po jedzeniu.</p>
+              </div>
+            </div>
+          </section>
+
+          <div class="diab-grid">
+            <section class="card diab-card diab-accordion" id="macroHowToCard">
+              <button type="button" id="macroHowToToggleBtn" class="diab-accordion-btn" aria-expanded="false" aria-controls="macroHowToContent">
+                <span class="diab-accordion-label">Jak liczyć? - kliknij i zobacz instrukcję</span>
+                <span class="diab-accordion-icon" aria-hidden="true">▾</span>
+              </button>
+              <div id="macroHowToContent" class="diab-accordion-content" hidden>
+                <ol class="diab-steps">
+                  <li><strong>Zważ produkt albo ustal masę porcji.</strong><br>Wpisz rzeczywistą masę porcji planowanej do spożycia.</li>
+                  <li><strong>Sprawdź wartości odżywcze na 100 g.</strong><br>Potrzebujesz gramów węglowodanów, białka i tłuszczu.</li>
+                  <li><strong>Policz składniki w porcji.</strong><br>Moduł przelicza masę porcji na realną ilość węglowodanów, białka i tłuszczu w danym posiłku.</li>
+                  <li><strong>Oceń ładunek białkowo-tłuszczowy.</strong><br>Jeśli ładunek białkowo-tłuszczowy (B/T) przekracza 200 kcal, warto pamiętać o możliwym późniejszym wzroście glikemii.</li>
+                </ol>
+                <div class="diab-note-box" style="margin-top:0.9rem;">
+                  <h3 class="diab-note-title">Wzory używane w module</h3>
+                  <p class="diab-mini-formula">Węglowodany w porcji = masa porcji × (węglowodany / 100 g) ÷ 100</p>
+                  <p class="diab-mini-formula">Białko w porcji = masa porcji × (białko / 100 g) ÷ 100</p>
+                  <p class="diab-mini-formula">Tłuszcz w porcji = masa porcji × (tłuszcz / 100 g) ÷ 100</p>
+                  <p class="diab-mini-formula">Ładunek białkowo-tłuszczowy (B/T) = (białko w porcji × 4 kcal) + (tłuszcz w porcji × 9 kcal)</p>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <div class="diab-macro-layout">
+            <section class="card diab-card">
+              <h2 class="diab-title-center">Składniki posiłku</h2>
+              <p class="diab-help diab-help--center">Dla posiłku złożonego dodaj każdy składnik osobno.</p>
+              <div class="diab-macro-examples" aria-label="Przykłady z materiałów">
+                <button type="button" class="diab-macro-example-chip" data-macro-example="mealMix">2 kromki chleba + jabłko + twarożek</button>
+                <button type="button" class="diab-macro-example-chip" data-macro-example="breadEggs">2 kromki chleba + 3 jajka</button>
+              </div>
+              <div id="macroIngredientList" class="diab-macro-rowlist" aria-live="polite"></div>
+              <div class="diab-macro-actions">
+                <button type="button" id="addMacroIngredientBtn">Dodaj składnik</button>
+                <button type="button" id="insertMacroExampleBtn" class="secondary-btn">Wstaw przykład</button>
+                <button type="button" id="clearMacroFormBtn" class="secondary-btn">Wyczyść wszystko</button>
+              </div>
+              <p class="diab-help" style="margin-top:0.85rem;">Wpisz rzeczywistą masę porcji planowanej do spożycia. Wartości odżywcze wpisuj na 100 g produktu z etykiety lub tabeli żywieniowej.</p>
+            </section>
+
+            <section class="card diab-card">
+              <h2 class="diab-title-center">Wynik posiłku</h2>
+              <div id="macroEmptyState" class="diab-macro-empty">Wpisz przynajmniej jeden składnik, aby zobaczyć wynik.</div>
+              <div id="macroSummaryWrap" class="diab-macro-summary" hidden>
+                <div class="diab-metrics diab-metrics--macro">
+                  <div class="diab-metric">
+                    <span class="diab-metric__label">Węglowodany</span>
+                    <span id="macroResultCarbs" class="diab-metric__value">—</span>
+                  </div>
+                  <div class="diab-metric">
+                    <span class="diab-metric__label">Białko</span>
+                    <span id="macroResultProtein" class="diab-metric__value">—</span>
+                  </div>
+                  <div class="diab-metric">
+                    <span class="diab-metric__label">Tłuszcz</span>
+                    <span id="macroResultFat" class="diab-metric__value">—</span>
+                  </div>
+                  <div class="diab-metric">
+                    <span class="diab-metric__label">Ładunek białkowo-tłuszczowy (B/T)</span>
+                    <span id="macroResultBT" class="diab-metric__value">—</span>
+                  </div>
+                </div>
+                <div id="macroResultState" class="diab-macro-state" aria-live="polite"></div>
+                <div id="macroCompletenessState" class="diab-macro-state diab-macro-state--soft" hidden></div>
+                <div class="diab-note">Ten moduł nie wylicza dawki insuliny. Służy do nauki liczenia posiłku i przygotowania danych do dalszej analizy.</div>
+                <button type="button" id="useMacroInRatioCalculatorBtn">Użyj wyniku w kalkulatorze przelicznika doposiłkowego</button>
+              </div>
+            </section>
+          </div>
+          <div class="diab-section-credit">
+            <p>Materiały niezbędne do powstania tego modułu opracowała dr Ida Kobryńska-Musielak</p>
+          </div>
+
+        </div>
 
         <div id="moduleContent" class="diab-page" hidden>
           <section class="card diab-hero">
@@ -2497,17 +3018,21 @@
               </button>
 
 
-              <div class="diab-video-cta">
-                <button
-                  type="button"
-                  id="instructionVideoBtn"
-                  class="diab-video-btn"
-                  aria-controls="instructionVideoModal"
-                  aria-expanded="false"
-                  data-video-src="/videos/przelicznik_doposilkowy.mp4"
-                >
-                  Obejrzyj instrukcję wideo
-                </button>
+              <div class="diab-video-cta" aria-label="Dostęp do instrukcji wideo">
+                <div class="diab-video-cta__actions">
+                  <button
+                    type="button"
+                    id="instructionVideoBtn"
+                    class="diab-video-btn"
+                    aria-controls="instructionVideoModal"
+                    aria-expanded="false"
+                    data-video-src="/videos/przelicznik_doposilkowy.mp4"
+                  >
+                    Obejrzyj instrukcję wideo
+                  </button>
+                  <a class="diab-video-link" href="przelicznik-doposilkowy-instrukcja.html">Otwórz stronę z filmem</a>
+                </div>
+                <p class="diab-video-cta__note">Ten sam materiał możesz uruchomić także na osobnej stronie z bezpośrednim odtwarzaczem.</p>
               </div>
 
               <div id="howToContent" class="diab-accordion-content" hidden>
@@ -2839,6 +3364,7 @@
                   <button type="button" id="calcClearDayBtn">Wyczyść cały dzień</button>
                 </div>
 
+                <div id="calcMacroTransferStatus" class="diab-status diab-status--info" aria-live="polite" hidden></div>
                 <div id="calcStatus" class="diab-status" aria-live="polite" hidden></div>
               </form>
             </section>
@@ -2883,7 +3409,7 @@
 
         </div>
       </div>
-    </div>
+    </main>
 
     <aside class="decor-sidebar"></aside>
   </div>
@@ -2902,7 +3428,8 @@
       </div>
 
       <div class="diab-video-modal__player-wrap">
-        <video id="instructionVideoPlayer" class="diab-video-modal__player" controls playsinline preload="none" aria-label="Film instruktażowy: liczenie przelicznika doposiłkowego">
+        <video id="instructionVideoPlayer" class="diab-video-modal__player" controls playsinline preload="metadata" poster="posters/przelicznik_doposilkowy_poster.png" aria-label="Film instruktażowy: liczenie przelicznika doposiłkowego">
+          <source src="/videos/przelicznik_doposilkowy.mp4" type="video/mp4">
           Twoja przeglądarka nie obsługuje odtwarzania wideo.
         </video>
       </div>
@@ -2949,7 +3476,7 @@
   <div id="rewardLayer" class="diab-reward-layer" hidden aria-hidden="true"></div>
 
   <!-- PDF export fix v3 -->
-  <script src="cukrzyca.js?v=6"></script>
+  <script src="cukrzyca.js?v=7"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       if (window.lucide && typeof window.lucide.createIcons === 'function') {
