@@ -37,6 +37,7 @@
     'whrCard',
     'bpCard',
     'downSyndromeSection',
+    'intakeSection',
     'circSection',
     'respiratoryCard',
     'foodCard'
@@ -108,6 +109,7 @@
       'whrCard',
       'bpCard',
       'downSyndromeSection',
+      'intakeSection',
       'circSection',
       'respiratoryCard',
       'foodCard'

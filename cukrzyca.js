@@ -1843,6 +1843,7 @@ function init() {
     const submitBtn = qs('submitAnswerBtn');
     const newTaskBtn = qs('newTaskBtn');
     const showSolutionBtn = qs('showSolutionBtn');
+    const CLEAR_ALL_EVENT = 'cukrzyca:clear-all-modules';
 
     const howToToggleBtn = qs('howToToggleBtn');
     const howToContent = qs('howToContent');
@@ -2309,6 +2310,57 @@ function init() {
       }
     }
 
+    function resetLearningModuleForNewPatient() {
+      if (doctorForm && typeof doctorForm.reset === 'function') {
+        doctorForm.reset();
+      }
+      if (howToContent) {
+        howToContent.hidden = true;
+      }
+      if (howToToggleBtn) {
+        howToToggleBtn.setAttribute('aria-expanded', 'false');
+      }
+      if (calculatorAssumptionsContent) {
+        calculatorAssumptionsContent.hidden = true;
+      }
+      if (calculatorAssumptionsToggleBtn) {
+        calculatorAssumptionsToggleBtn.setAttribute('aria-expanded', 'false');
+      }
+      closeInstructionVideo(false);
+      if (filmPlayer && filmPlayer.isOpen) {
+        filmPlayer.close(true);
+      }
+      resetTaskView();
+      taskArea.hidden = true;
+      taskSetup.classList.remove('diab-card--muted');
+      if (taskLead) {
+        taskLead.innerHTML = '';
+      }
+      if (taskMetrics) {
+        taskMetrics.innerHTML = '';
+      }
+      if (taskNote) {
+        taskNote.innerHTML = '';
+      }
+      if (proToggle) {
+        proToggle.checked = false;
+      }
+      ['proExercise', 'proInfection', 'proStress', 'proFatProtein'].forEach(function (id) {
+        const field = qs(id);
+        if (field) {
+          field.value = 'none';
+        }
+      });
+      const thresholdField = qs('stabilityThreshold');
+      if (thresholdField) {
+        thresholdField.value = String(STABLE_THRESHOLD_DEFAULT);
+      }
+      state.proConflictConfirmedSignature = '';
+      autoScenarioIndex = 0;
+      showSetupMessage('');
+      updateProModeUi();
+    }
+
     function renderTask(result) {      if (taskTitleMeta) {
         taskTitleMeta.textContent = '';
         taskTitleMeta.hidden = true;
@@ -2356,7 +2408,7 @@ function init() {
         insulinDose: parseLocaleNumber(qs('insulinDose').value),
         glucoseBefore: parseLocaleNumber(qs('glucoseBefore').value),
         glucoseAfter: parseLocaleNumber(qs('glucoseAfter').value),
-        threshold: parseLocaleNumber(qs('stabilityThreshold').value),
+        threshold: STABLE_THRESHOLD_DEFAULT,
         proMode: Boolean(proToggle && proToggle.checked),
         exerciseMode: qs('proExercise') ? qs('proExercise').value : 'none',
         infectionMode: qs('proInfection') ? qs('proInfection').value : 'none',
@@ -2522,8 +2574,7 @@ function init() {
     }
 
     function generateAutoTaskCandidate(desiredScenario) {
-      const threshold = parseLocaleNumber(qs('stabilityThreshold').value);
-      const usedThreshold = Number.isFinite(threshold) ? threshold : STABLE_THRESHOLD_DEFAULT;
+      const usedThreshold = STABLE_THRESHOLD_DEFAULT;
       const mealPreset = getSelectedOrRandomMealPreset();
       if (!mealPreset) return null;
 
@@ -2727,7 +2778,7 @@ function init() {
       }
 
       if (!candidate) {
-        showSetupMessage('Nie udało się wygenerować logicznego zadania w tym zestawie ustawień. Zmień próg stabilności / rodzaj posiłku albo (w PRO) modyfikatory i spróbuj ponownie.');
+        showSetupMessage('Nie udało się wygenerować logicznego zadania w tym zestawie ustawień. Zmień rodzaj posiłku albo (w PRO) modyfikatory i spróbuj ponownie.');
         return;
       }
 
@@ -2956,6 +3007,10 @@ function init() {
         confirmProConflict();
       });
     }
+
+    window.addEventListener(CLEAR_ALL_EVENT, function () {
+      resetLearningModuleForNewPatient();
+    });
 
     updateProModeUi();
   }
@@ -4041,6 +4096,10 @@ function init() {
     const formatNumber = typeof toolkit.formatNumber === 'function' ? toolkit.formatNumber : formatNumberLocal;
     const capitalizeFirst = typeof toolkit.capitalizeFirst === 'function' ? toolkit.capitalizeFirst : capitalizeFirstLocal;
     const stableThresholdDefault = Number.isFinite(toolkit.stableThresholdDefault) ? toolkit.stableThresholdDefault : 30;
+    const MACRO_TRANSFER_TO_CALCULATOR_EVENT = 'cukrzyca:macro-transfer-to-calculator';
+    const MACRO_CLEARED_EVENT = 'cukrzyca:macro-cleared';
+    const RATIO_DAY_CLEARED_EVENT = 'cukrzyca:ratio-day-cleared';
+    const CLEAR_ALL_EVENT = 'cukrzyca:clear-all-modules';
 
     const launcher = qs('moduleLauncher');
     const macroContent = qs('macroContent');
@@ -4078,7 +4137,8 @@ function init() {
 
     const mealOrder = Array.from(calcMealType.options || []).map((option) => option.value).filter(Boolean);
     const state = {
-      store: loadStore()
+      store: loadStore(),
+      macroTransfer: null
     };
 
     function getMealOrderIndex(mealType) {
@@ -4216,13 +4276,65 @@ function init() {
       calcStatus.className = 'diab-status';
     }
 
+    function hideMacroTransferStatus() {
+      if (!calcMacroTransferStatus) return;
+      calcMacroTransferStatus.hidden = true;
+      calcMacroTransferStatus.innerHTML = '';
+      calcMacroTransferStatus.className = 'diab-status';
+    }
+
+    function rememberMacroTransferLink() {
+      if (!calcCarbs) {
+        state.macroTransfer = null;
+        return;
+      }
+      const currentValue = String(calcCarbs.value || '').trim();
+      state.macroTransfer = currentValue ? { carbsValue: currentValue } : null;
+    }
+
+    function releaseMacroTransferLink() {
+      state.macroTransfer = null;
+      hideMacroTransferStatus();
+    }
+
+    function clearLinkedMacroTransferIfNeeded() {
+      let changed = false;
+      if (state.macroTransfer && calcCarbs) {
+        const currentValue = String(calcCarbs.value || '').trim();
+        if (!currentValue || currentValue === state.macroTransfer.carbsValue) {
+          if (currentValue) {
+            changed = true;
+          }
+          calcCarbs.value = '';
+        }
+      }
+      releaseMacroTransferLink();
+      return changed;
+    }
+
     function clearFields() {
+      releaseMacroTransferLink();
       if (calcMealType) calcMealType.value = '';
       [calcDdi, calcCarbs, calcInsulinDose, calcGlucoseBefore, calcGlucoseAfter].forEach((field) => {
         if (field) {
           field.value = '';
         }
       });
+    }
+
+    function resetCalculatorModuleForNewPatient() {
+      state.store = createEmptyStore();
+      let persisted = true;
+      try {
+        window.localStorage.removeItem(STORAGE_KEY);
+      } catch (error) {
+        persisted = saveStore(state.store);
+      }
+      calcDate.value = getYesterdayDateValue();
+      clearFields();
+      clearStatus();
+      renderTable();
+      return persisted;
     }
 
     function focusHeading() {
@@ -4417,7 +4529,7 @@ function init() {
       renderTable();
 
       const mealLabel = capitalizeFirst(data.mealType);
-      const baseMessage = `${existed ? 'Zaktualizowano' : 'Zapisano'} <strong>${escapeHtml(mealLabel)}</strong> dla dnia <strong>${escapeHtml(formatDateLabel(data.date))}</strong>. Przelicznik praktyczny: <strong>${escapeHtml(formatNumber(result.ratioRounded, 0))} g/j</strong>. Przelicznik dokładny: <strong>${escapeHtml(formatNumber(result.ratioExact, 2))} g/j</strong>.`;
+      const baseMessage = `${existed ? 'Zaktualizowano' : 'Zapisano'} <strong>${escapeHtml(mealLabel)}</strong> dla dnia <strong>${escapeHtml(formatDateLabel(data.date))}</strong>. Przelicznik praktyczny: <strong>${escapeHtml(formatNumber(result.ratioRounded, 0))} g/j</strong>. Przelicznik dokładny: <strong>${escapeHtml(formatNumber(result.ratioExact, 2))} g/j</strong>. Tego przelicznika użyj w kroku 4 do <strong>tego samego rodzaju dzisiejszego posiłku</strong> — dzisiejsze węglowodany wpisz osobno.`;
       if (persisted) {
         showStatus(baseMessage, 'success');
       } else {
@@ -4436,6 +4548,24 @@ function init() {
         clearStatus();
       });
     }
+
+    if (calcCarbs) {
+      ['input', 'change'].forEach(function (eventName) {
+        calcCarbs.addEventListener(eventName, function () {
+          if (state.macroTransfer) {
+            releaseMacroTransferLink();
+          }
+        });
+      });
+    }
+
+    window.addEventListener(MACRO_TRANSFER_TO_CALCULATOR_EVENT, function () {
+      rememberMacroTransferLink();
+    });
+
+    window.addEventListener(MACRO_CLEARED_EVENT, function () {
+      clearLinkedMacroTransferIfNeeded();
+    });
 
     if (calcClearDayBtn) {
       calcClearDayBtn.addEventListener('click', function (event) {
@@ -4456,6 +4586,14 @@ function init() {
         const persisted = saveStore(state.store);
         clearFields();
         renderTable();
+        if (hasEntries) {
+          window.dispatchEvent(new CustomEvent(RATIO_DAY_CLEARED_EVENT, {
+            detail: {
+              dateValue: dateValue,
+              hadEntries: true
+            }
+          }));
+        }
 
         const messageBase = hasEntries
           ? `Wyczyszczono zapisane obliczenia dla dnia <strong>${escapeHtml(dateLabel)}</strong>.`
@@ -4473,6 +4611,14 @@ function init() {
         exportPdf();
       });
     }
+
+    window.addEventListener(CLEAR_ALL_EVENT, function (event) {
+      const persisted = resetCalculatorModuleForNewPatient();
+      const detail = event && event.detail && typeof event.detail === 'object' ? event.detail : null;
+      if (detail && persisted === false) {
+        detail.storageOk = false;
+      }
+    });
 
     calcDate.value = getYesterdayDateValue();
     renderTable();
@@ -4589,6 +4735,10 @@ function init() {
   }
 
   function initMacroModule() {
+    const MACRO_TRANSFER_TO_CALCULATOR_EVENT = 'cukrzyca:macro-transfer-to-calculator';
+    const MACRO_CLEARED_EVENT = 'cukrzyca:macro-cleared';
+    const CLEAR_ALL_EVENT = 'cukrzyca:clear-all-modules';
+
     const launcher = qs('moduleLauncher');
     const macroLauncherBtn = qs('macroLauncherBtn');
     const moduleLauncherBtn = qs('moduleLauncherBtn');
@@ -4614,8 +4764,10 @@ function init() {
     const macroResultState = qs('macroResultState');
     const macroCompletenessState = qs('macroCompletenessState');
     const useMacroInRatioCalculatorBtn = qs('useMacroInRatioCalculatorBtn');
+    const useMacroInDoseModuleBtn = qs('useMacroInDoseModuleBtn');
     const calcCarbs = qs('calcCarbs');
     const calcMacroTransferStatus = qs('calcMacroTransferStatus');
+    const doseLauncherBtn = qs('doseLauncherBtn');
 
     if (!launcher || !macroLauncherBtn || !macroContent || !macroBackBtn || !macroIngredientList || !macroEmptyState || !macroSummaryWrap || !macroResultCarbs || !macroResultProtein || !macroResultFat || !macroResultBT || !macroResultState || !macroCompletenessState || !useMacroInRatioCalculatorBtn) {
       return;
@@ -4624,6 +4776,33 @@ function init() {
     const state = {
       lastSummary: null
     };
+
+    function dispatchMacroCleared(reason) {
+      window.__cukrzycaPendingMacroForDose = null;
+      window.dispatchEvent(new CustomEvent(MACRO_CLEARED_EVENT, {
+        detail: {
+          reason: reason || 'clear'
+        }
+      }));
+    }
+
+    function resetMacroModuleForNewPatient() {
+      rebuildRows([createEmptyRow()]);
+      if (macroHowToContent) {
+        macroHowToContent.hidden = true;
+      }
+      if (macroHowToToggleBtn) {
+        macroHowToToggleBtn.setAttribute('aria-expanded', 'false');
+      }
+      window.__cukrzycaPendingMacroForDose = null;
+      let persisted = true;
+      try {
+        window.localStorage.removeItem(STORAGE_KEY);
+      } catch (error) {
+        persisted = saveDraftRows([createEmptyRow()]);
+      }
+      return persisted;
+    }
 
     function focusMacroHeading() {
       if (!macroMainHeading || typeof macroMainHeading.focus !== 'function') return;
@@ -4851,6 +5030,9 @@ function init() {
         macroCompletenessState.hidden = true;
         macroCompletenessState.textContent = '';
         useMacroInRatioCalculatorBtn.disabled = true;
+        if (useMacroInDoseModuleBtn) {
+          useMacroInDoseModuleBtn.disabled = true;
+        }
         return;
       }
 
@@ -4891,7 +5073,11 @@ function init() {
         macroCompletenessState.textContent = '';
       }
 
-      useMacroInRatioCalculatorBtn.disabled = !(summary.totals.carbs > 0);
+      const canReuseCarbs = summary.totals.carbs > 0;
+      useMacroInRatioCalculatorBtn.disabled = !canReuseCarbs;
+      if (useMacroInDoseModuleBtn) {
+        useMacroInDoseModuleBtn.disabled = !canReuseCarbs;
+      }
     }
 
     function recalculateMacroModule() {
@@ -4953,11 +5139,11 @@ function init() {
         '  <button type="button" class="secondary-btn diab-macro-row__remove" data-action="remove-row">Usuń składnik</button>',
         '</div>',
         '<div class="diab-macro-row__fields">',
-        '  <label>Nazwa składnika<input type="text" data-field="name" placeholder="np. chleb pszenny"></label>',
-        '  <label>Masa porcji [g]<input type="number" data-field="mass" min="0" step="0.1" inputmode="decimal" placeholder="np. 70"></label>',
-        '  <label>Węglowodany / 100 g<input type="number" data-field="carbs100" min="0" step="0.1" inputmode="decimal" placeholder="np. 41"></label>',
-        '  <label>Białko / 100 g<input type="number" data-field="protein100" min="0" step="0.1" inputmode="decimal" placeholder="np. 11"></label>',
-        '  <label>Tłuszcz / 100 g<input type="number" data-field="fat100" min="0" step="0.1" inputmode="decimal" placeholder="np. 4,3"></label>',
+        '  <label class="diab-macro-row__field diab-macro-row__field--name">Nazwa składnika<input type="text" data-field="name" placeholder="np. chleb pszenny"></label>',
+        '  <label class="diab-macro-row__field diab-macro-row__field--metric">Masa porcji [g]<input type="number" data-field="mass" min="0" step="0.1" inputmode="decimal" placeholder="np. 70"></label>',
+        '  <label class="diab-macro-row__field diab-macro-row__field--metric">Węglowodany / 100 g<input type="number" data-field="carbs100" min="0" step="0.1" inputmode="decimal" placeholder="np. 41"></label>',
+        '  <label class="diab-macro-row__field diab-macro-row__field--metric">Białko / 100 g<input type="number" data-field="protein100" min="0" step="0.1" inputmode="decimal" placeholder="np. 11"></label>',
+        '  <label class="diab-macro-row__field diab-macro-row__field--metric">Tłuszcz / 100 g<input type="number" data-field="fat100" min="0" step="0.1" inputmode="decimal" placeholder="np. 4,3"></label>',
         '</div>',
         '<div class="diab-macro-row__result" data-role="row-result" hidden>',
         '  <div class="diab-macro-chips" data-role="row-chips"></div>',
@@ -4992,6 +5178,9 @@ function init() {
           updateRowIndices();
           recalculateMacroModule();
           persistDraft();
+          if (!hasAnyMeaningfulRows()) {
+            dispatchMacroCleared('remove-row');
+          }
         });
       }
 
@@ -5038,7 +5227,7 @@ function init() {
       }
 
       const messageParts = [
-        'Przeniesiono <strong>' + formatNumber(summary.totals.carbs, 1) + ' g węglowodanów</strong> do pola „Węglowodany w posiłku”.'
+        'Przeniesiono <strong>' + formatNumber(summary.totals.carbs, 1) + ' g węglowodanów</strong> do pola „Węglowodany w posiłku”. W kroku 3 wpisz dane tego samego posiłku z dnia źródłowego (najczęściej z wczoraj).'
       ];
       if (summary.totals.btKcal > 200) {
         messageParts.push('Ładunek białkowo-tłuszczowy (B/T) przekracza 200 kcal — pamiętaj o ocenie późniejszej glikemii 2–4 h po posiłku.');
@@ -5049,10 +5238,48 @@ function init() {
         calcMacroTransferStatus.innerHTML = messageParts.join(' ');
       }
 
+      window.dispatchEvent(new CustomEvent(MACRO_TRANSFER_TO_CALCULATOR_EVENT, {
+        detail: {
+          carbs: summary.totals.carbs,
+          btKcal: summary.totals.btKcal,
+          highFatProtein: summary.totals.btKcal > 200
+        }
+      }));
+
       macroContent.hidden = true;
       macroLauncherBtn.setAttribute('aria-expanded', 'false');
       if (calculatorLauncherBtn) {
         calculatorLauncherBtn.click();
+      }
+    }
+
+    function createPendingMacroTransfer(summary) {
+      if (!summary || !summary.validCount || !(summary.totals.carbs > 0)) {
+        return null;
+      }
+      return {
+        carbs: summary.totals.carbs,
+        btKcal: summary.totals.btKcal,
+        highFatProtein: summary.totals.btKcal > 200,
+        createdAt: new Date().toISOString()
+      };
+    }
+
+    function transferToDoseModule() {
+      const summary = state.lastSummary;
+      const pendingTransfer = createPendingMacroTransfer(summary);
+      if (!pendingTransfer) {
+        macroCompletenessState.hidden = false;
+        macroCompletenessState.textContent = 'Aby użyć węglowodanów do obliczenia dawki insuliny, wpisz przynajmniej jeden składnik i upewnij się, że suma węglowodanów jest większa od zera.';
+        return;
+      }
+
+      window.__cukrzycaPendingMacroForDose = pendingTransfer;
+
+      macroContent.hidden = true;
+      macroLauncherBtn.setAttribute('aria-expanded', 'false');
+      if (doseLauncherBtn) {
+        doseLauncherBtn.click();
       }
     }
 
@@ -5102,6 +5329,7 @@ function init() {
           }
         }
         rebuildRows([createEmptyRow()]);
+        dispatchMacroCleared('clear-button');
       });
     }
 
@@ -5118,6 +5346,21 @@ function init() {
       transferToCalculator();
     });
 
+    if (useMacroInDoseModuleBtn) {
+      useMacroInDoseModuleBtn.addEventListener('click', function (event) {
+        event.preventDefault();
+        transferToDoseModule();
+      });
+    }
+
+    window.addEventListener(CLEAR_ALL_EVENT, function (event) {
+      const persisted = resetMacroModuleForNewPatient();
+      const detail = event && event.detail && typeof event.detail === 'object' ? event.detail : null;
+      if (detail && persisted === false) {
+        detail.storageOk = false;
+      }
+    });
+
     rebuildRows(loadDraftRows());
   }
 
@@ -5125,5 +5368,1231 @@ function init() {
     document.addEventListener('DOMContentLoaded', initMacroModule);
   } else {
     initMacroModule();
+  }
+})();
+
+
+(function () {
+  'use strict';
+
+  const SETTINGS_STORAGE_KEY = 'wagaiwzrost_cukrzyca_dawka_do_posilku_settings_v2';
+  const LEGACY_SETTINGS_STORAGE_KEY = 'wagaiwzrost_cukrzyca_dawka_do_posilku_settings_v1';
+  const RATIO_STORAGE_KEY = 'wagaiwzrost_cukrzyca_przeliczniki_doposilkowe_v1';
+
+  function qs(id) {
+    return document.getElementById(id);
+  }
+
+  function parseLocaleNumber(value) {
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : NaN;
+    }
+    const normalized = String(value == null ? '' : value)
+      .trim()
+      .replace(/\s+/g, '')
+      .replace(/,/g, '.');
+    if (!normalized) return NaN;
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : NaN;
+  }
+
+  function formatNumber(value, digits) {
+    if (!Number.isFinite(value)) return '—';
+    return new Intl.NumberFormat('pl-PL', {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits
+    }).format(value);
+  }
+
+  function capitalizeFirst(value) {
+    const text = String(value || '').trim();
+    if (!text) return '';
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  }
+
+  function escapeHtml(value) {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function toLocalDateValue(date) {
+    const value = date instanceof Date ? new Date(date.getTime()) : new Date();
+    const offset = value.getTimezoneOffset() * 60000;
+    return new Date(value.getTime() - offset).toISOString().slice(0, 10);
+  }
+
+  function getYesterdayDateValue() {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    return toLocalDateValue(yesterday);
+  }
+
+  function normalizeDateValue(value) {
+    const raw = String(value || '').trim();
+    return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : getYesterdayDateValue();
+  }
+
+  function formatDateLabel(value) {
+    const normalized = normalizeDateValue(value);
+    const parts = normalized.split('-').map((item) => Number(item));
+    const date = new Date(parts[0], (parts[1] || 1) - 1, parts[2] || 1);
+    return new Intl.DateTimeFormat('pl-PL', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(date);
+  }
+
+  function isPlainObject(value) {
+    return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+  }
+
+  function toInputValue(value, digits) {
+    if (!Number.isFinite(value)) return '';
+    const safeDigits = Number.isFinite(digits) ? Math.max(0, Math.min(6, digits)) : 0;
+    const factor = Math.pow(10, safeDigits);
+    const rounded = Math.round(value * factor) / factor;
+    return safeDigits > 0 ? rounded.toFixed(safeDigits) : String(Math.round(rounded));
+  }
+
+  function normalizeSettings(raw) {
+    const source = isPlainObject(raw) ? raw : {};
+    const correctionThreshold = parseLocaleNumber(source.correctionThreshold);
+    const targetGlucose = parseLocaleNumber(source.targetGlucose);
+    return {
+      correctionThreshold: Number.isFinite(correctionThreshold) && correctionThreshold >= 100 && correctionThreshold <= 250 ? Math.round(correctionThreshold) : 140,
+      targetGlucose: Number.isFinite(targetGlucose) && targetGlucose >= 100 && targetGlucose <= 140 ? Math.round(targetGlucose) : 130,
+      usePracticalValues: source.usePracticalValues !== false
+    };
+  }
+
+  function loadSettings() {
+    try {
+      const raw = window.localStorage.getItem(SETTINGS_STORAGE_KEY) || window.localStorage.getItem(LEGACY_SETTINGS_STORAGE_KEY);
+      if (!raw) return normalizeSettings(null);
+      return normalizeSettings(JSON.parse(raw));
+    } catch (error) {
+      return normalizeSettings(null);
+    }
+  }
+
+  function saveSettings(settings) {
+    try {
+      window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(normalizeSettings(settings)));
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function loadRatioStore() {
+    try {
+      const raw = window.localStorage.getItem(RATIO_STORAGE_KEY);
+      if (!raw) return { version: 1, days: {} };
+      const parsed = JSON.parse(raw);
+      if (!isPlainObject(parsed) || !isPlainObject(parsed.days)) {
+        return { version: 1, days: {} };
+      }
+      return parsed;
+    } catch (error) {
+      return { version: 1, days: {} };
+    }
+  }
+
+  function getSavedMealEntry(store, dateValue, mealType) {
+    const normalizedDate = normalizeDateValue(dateValue);
+    const safeMealType = String(mealType || '').trim();
+    if (!safeMealType) return null;
+    const day = store && store.days && isPlainObject(store.days[normalizedDate])
+      ? store.days[normalizedDate]
+      : null;
+    if (!day || !isPlainObject(day.meals)) return null;
+    const entry = day.meals[safeMealType];
+    return isPlainObject(entry) ? entry : null;
+  }
+
+  function showMessage(element, message, kind) {
+    if (!element) return;
+    element.hidden = !message;
+    element.innerHTML = message || '';
+    element.className = 'diab-status';
+    if (kind === 'success') {
+      element.classList.add('diab-status--success');
+    } else if (kind === 'info') {
+      element.classList.add('diab-status--info');
+    } else if (kind === 'warn') {
+      element.classList.add('diab-status--warn');
+    } else if (kind === 'danger') {
+      element.classList.add('diab-status--danger');
+    }
+  }
+
+  function hideMessage(element) {
+    if (!element) return;
+    element.hidden = true;
+    element.innerHTML = '';
+    element.className = 'diab-status';
+  }
+
+  function setNoteBoxContent(element, html, tone) {
+    if (!element) return;
+    element.hidden = !html;
+    element.innerHTML = html || '';
+    element.className = 'diab-note-box diab-dose-note-box';
+    if (!html) return;
+    if (tone === 'accent') {
+      element.classList.add('diab-note-box--accent');
+    } else if (tone === 'warn') {
+      element.classList.add('diab-note-box--warn');
+    } else if (tone === 'danger') {
+      element.classList.add('diab-note-box--danger');
+    } else if (tone === 'soft') {
+      element.classList.add('diab-note-box--soft');
+    }
+  }
+
+  function buildDoseStatusMessage(title, subtitle) {
+    return `<span class="diab-status__title">${escapeHtml(title)}</span><span class="diab-status__subtitle">${escapeHtml(subtitle)}</span>`;
+  }
+
+  function getStoredSharedWeightKg() {
+    const liveField = qs('weight');
+    const liveWeight = liveField ? parseLocaleNumber(liveField.value) : NaN;
+    if (Number.isFinite(liveWeight) && liveWeight > 0) {
+      return liveWeight;
+    }
+
+    try {
+      const raw = localStorage.getItem('sharedUserData');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const sharedWeight = parseLocaleNumber(parsed && parsed.weight);
+        if (Number.isFinite(sharedWeight) && sharedWeight > 0) {
+          return sharedWeight;
+        }
+      }
+    } catch (error) {
+      /* ignore localStorage errors */
+    }
+
+    try {
+      const directWeight = parseLocaleNumber(localStorage.getItem('weight'));
+      if (Number.isFinite(directWeight) && directWeight > 0) {
+        return directWeight;
+      }
+    } catch (error) {
+      /* ignore localStorage errors */
+    }
+
+    return NaN;
+  }
+
+  function getHypoglycemiaFastCarbInfo() {
+    const weightKg = getStoredSharedWeightKg();
+    if (Number.isFinite(weightKg) && weightKg > 0) {
+      const grams = Math.max(1, Math.round(weightKg * 0.3));
+      return {
+        grams: grams,
+        precise: true,
+        message: buildDoseStatusMessage(
+          `Orientacyjnie około ${formatNumber(grams, 0)} g szybko wchłanialnych węglowodanów`,
+          'Po około 15 minutach wykonaj ponowny pomiar glikemii'
+        )
+      };
+    }
+
+    return {
+      grams: NaN,
+      precise: false,
+      message: buildDoseStatusMessage(
+        'Orientacyjnie 10–20 g szybko wchłanialnych węglowodanów',
+        'Po około 15 minutach wykonaj ponowny pomiar glikemii'
+      )
+    };
+  }
+
+  function initDoseCorrectionModule() {
+    const MACRO_CLEARED_EVENT = 'cukrzyca:macro-cleared';
+    const RATIO_DAY_CLEARED_EVENT = 'cukrzyca:ratio-day-cleared';
+    const CLEAR_ALL_EVENT = 'cukrzyca:clear-all-modules';
+
+    const launcher = qs('moduleLauncher');
+    const macroContent = qs('macroContent');
+    const learningContent = qs('moduleContent');
+    const calculatorContent = qs('calculatorContent');
+    const doseContent = qs('doseContent');
+
+    const macroLauncherBtn = qs('macroLauncherBtn');
+    const moduleLauncherBtn = qs('moduleLauncherBtn');
+    const calculatorLauncherBtn = qs('calculatorLauncherBtn');
+    const doseLauncherBtn = qs('doseLauncherBtn');
+    const doseBackBtn = qs('doseBackBtn');
+    const doseMainHeading = qs('doseMainHeading');
+    const doseSettingsToggleBtn = qs('doseSettingsToggleBtn');
+    const doseSettingsContent = qs('doseSettingsContent');
+
+    const doseRatioDate = qs('doseRatioDate');
+    const doseMealType = qs('doseMealType');
+    const doseCarbs = qs('doseCarbs');
+    const doseGlucoseBefore = qs('doseGlucoseBefore');
+    const doseRatioValue = qs('doseRatioValue');
+    const doseSensitivityValue = qs('doseSensitivityValue');
+    const doseCorrectionThreshold = qs('doseCorrectionThreshold');
+    const doseTargetGlucose = qs('doseTargetGlucose');
+    const doseUsePracticalValues = qs('doseUsePracticalValues');
+    const doseUseExactValues = qs('doseUseExactValues');
+    const doseRapidGapYes = qs('doseRapidGapYes');
+    const doseRapidGapNo = qs('doseRapidGapNo');
+    const doseBtNormal = qs('doseBtNormal');
+    const doseBtHigh = qs('doseBtHigh');
+    const doseValueSourceInputs = document.querySelectorAll('input[name="doseValueSource"]');
+    const doseRapidGapInputs = document.querySelectorAll('input[name="doseRapidGap"]');
+    const doseFatProteinInputs = document.querySelectorAll('input[name="doseFatProtein"]');
+    const doseCalculatorForm = qs('doseCalculatorForm');
+    const doseClearBtn = qs('doseClearBtn');
+    const doseSavedRatioStatus = qs('doseSavedRatioStatus');
+    const doseMacroTransferStatus = qs('doseMacroTransferStatus');
+    const doseStatus = qs('doseStatus');
+
+    const doseResultCard = qs('doseResultCard');
+    const doseResultMeta = qs('doseResultMeta');
+    const doseModeBadge = qs('doseModeBadge');
+    const doseResultAlert = qs('doseResultAlert');
+    const doseHypoCarbsAlert = qs('doseHypoCarbsAlert');
+    const doseMetricsWrap = qs('doseMetricsWrap');
+    const doseMealDoseValue = qs('doseMealDoseValue');
+    const doseCorrectionDoseValue = qs('doseCorrectionDoseValue');
+    const doseTotalDoseValue = qs('doseTotalDoseValue');
+    const doseRatioDisplayValue = qs('doseRatioDisplayValue');
+    const doseTotalDoseLabel = qs('doseTotalDoseLabel');
+    const doseTotalMetric = qs('doseTotalMetric');
+    const doseMealDoseMetric = qs('doseMealDoseMetric');
+    const doseCorrectionDoseMetric = qs('doseCorrectionDoseMetric');
+    const doseRatioMetric = qs('doseRatioMetric');
+    const doseBreakdown = qs('doseBreakdown');
+    const doseTimingNote = qs('doseTimingNote');
+    const doseFatProteinNote = qs('doseFatProteinNote');
+    const doseThresholdNote = qs('doseThresholdNote');
+
+    const calcDate = qs('calcDate');
+    const calcMealType = qs('calcMealType');
+
+    if (!launcher || !doseContent || !doseLauncherBtn || !doseBackBtn || !doseMainHeading || !doseSettingsToggleBtn || !doseSettingsContent || !doseRatioDate || !doseMealType || !doseCarbs || !doseGlucoseBefore || !doseRatioValue || !doseSensitivityValue || !doseCorrectionThreshold || !doseTargetGlucose || !doseUsePracticalValues || !doseUseExactValues || !doseRapidGapYes || !doseRapidGapNo || !doseBtNormal || !doseBtHigh || !doseValueSourceInputs.length || !doseRapidGapInputs.length || !doseFatProteinInputs.length || !doseCalculatorForm || !doseSavedRatioStatus || !doseMacroTransferStatus || !doseStatus || !doseResultCard || !doseResultMeta || !doseModeBadge || !doseResultAlert || !doseHypoCarbsAlert || !doseMetricsWrap || !doseMealDoseValue || !doseCorrectionDoseValue || !doseTotalDoseValue || !doseRatioDisplayValue || !doseTotalDoseLabel || !doseTotalMetric || !doseMealDoseMetric || !doseCorrectionDoseMetric || !doseRatioMetric || !doseBreakdown || !doseTimingNote || !doseFatProteinNote || !doseThresholdNote) {
+      return;
+    }
+
+    const state = {
+      ratioStore: loadRatioStore(),
+      settings: loadSettings(),
+      autoFilledRatio: false,
+      autoFilledSensitivity: false,
+      lastLoadedEntry: null,
+      lastLoadedMeta: null,
+      macroTransfer: null
+    };
+
+    function focusHeading() {
+      if (!doseMainHeading || typeof doseMainHeading.focus !== 'function') return;
+      doseMainHeading.setAttribute('tabindex', '-1');
+      requestAnimationFrame(function () {
+        doseMainHeading.focus({ preventScroll: true });
+      });
+    }
+
+    function setDoseSettingsExpanded(expanded) {
+      const isExpanded = Boolean(expanded);
+      doseSettingsContent.hidden = !isExpanded;
+      doseSettingsToggleBtn.setAttribute('aria-expanded', String(isExpanded));
+    }
+
+    function readSettingsFromUi() {
+      return normalizeSettings({
+        correctionThreshold: parseLocaleNumber(doseCorrectionThreshold.value),
+        targetGlucose: parseLocaleNumber(doseTargetGlucose.value),
+        usePracticalValues: Boolean(doseUsePracticalValues.checked)
+      });
+    }
+
+    function applySettingsToUi() {
+      const usePractical = Boolean(state.settings.usePracticalValues);
+      doseCorrectionThreshold.value = String(state.settings.correctionThreshold);
+      doseTargetGlucose.value = String(state.settings.targetGlucose);
+      doseUsePracticalValues.checked = usePractical;
+      doseUseExactValues.checked = !usePractical;
+    }
+
+    function persistSettings() {
+      state.settings = readSettingsFromUi();
+      saveSettings(state.settings);
+    }
+
+    function resetDoseSettingsToDefaults() {
+      state.settings = normalizeSettings(null);
+      applySettingsToUi();
+      let persisted = saveSettings(state.settings);
+      try {
+        window.localStorage.removeItem(LEGACY_SETTINGS_STORAGE_KEY);
+      } catch (error) {
+        // brak dostępu do pamięci nie blokuje czyszczenia pól na stronie
+      }
+      return persisted;
+    }
+
+    function clearResultCard() {
+      doseResultCard.hidden = true;
+      doseResultCard.className = 'card diab-card diab-dose-panel diab-dose-result';
+      hideMessage(doseResultAlert);
+      hideMessage(doseHypoCarbsAlert);
+      doseMetricsWrap.hidden = true;
+      doseResultMeta.textContent = '—';
+      doseModeBadge.textContent = '—';
+      doseModeBadge.className = 'diab-badge';
+      doseTotalDoseLabel.textContent = 'Łączna dawka';
+      doseMealDoseValue.textContent = '—';
+      doseCorrectionDoseValue.textContent = '—';
+      doseTotalDoseValue.textContent = '—';
+      doseRatioDisplayValue.textContent = '—';
+      doseMealDoseMetric.hidden = false;
+      doseCorrectionDoseMetric.hidden = false;
+      doseRatioMetric.hidden = false;
+      setNoteBoxContent(doseBreakdown, '', 'soft');
+      setNoteBoxContent(doseTimingNote, '', 'soft');
+      setNoteBoxContent(doseFatProteinNote, '', 'soft');
+      setNoteBoxContent(doseThresholdNote, '', 'soft');
+    }
+
+    function clearLoadedSummary() {
+      state.lastLoadedEntry = null;
+      state.lastLoadedMeta = null;
+    }
+
+    function hasAnyLoadedRatioFields() {
+      return Boolean(state.autoFilledRatio || state.autoFilledSensitivity);
+    }
+
+    function hasFullLoadedRatioFields() {
+      return Boolean(state.autoFilledRatio && state.autoFilledSensitivity && state.lastLoadedMeta);
+    }
+
+    function clearLoadedRatioLink(options) {
+      const opts = options || {};
+      let changed = false;
+
+      if (state.autoFilledRatio) {
+        if (doseRatioValue.value !== '') {
+          doseRatioValue.value = '';
+          changed = true;
+        }
+      }
+      if (state.autoFilledSensitivity) {
+        if (doseSensitivityValue.value !== '') {
+          doseSensitivityValue.value = '';
+          changed = true;
+        }
+      }
+
+      state.autoFilledRatio = false;
+      state.autoFilledSensitivity = false;
+      clearLoadedSummary();
+      if (opts.hideStatus !== false) {
+        hideMessage(doseSavedRatioStatus);
+      }
+      if (changed && opts.clearResult !== false) {
+        hideMessage(doseStatus);
+        clearResultCard();
+      }
+      return changed;
+    }
+
+    function detachLoadedRatioField(fieldName) {
+      if (fieldName === 'ratio') {
+        state.autoFilledRatio = false;
+      } else if (fieldName === 'sensitivity') {
+        state.autoFilledSensitivity = false;
+      }
+      hideMessage(doseSavedRatioStatus);
+      if (!hasAnyLoadedRatioFields()) {
+        clearLoadedSummary();
+      }
+    }
+
+    function rememberMacroTransfer(pending) {
+      const carbs = Number(pending && pending.carbs);
+      if (!Number.isFinite(carbs) || carbs <= 0) {
+        state.macroTransfer = null;
+        return;
+      }
+      state.macroTransfer = {
+        carbsLinked: true,
+        btLinked: Boolean(pending && pending.highFatProtein),
+        carbsValue: toInputValue(carbs, 1),
+        highFatProtein: Boolean(pending && pending.highFatProtein)
+      };
+    }
+
+    function clearMacroTransferState() {
+      state.macroTransfer = null;
+    }
+
+    function detachMacroTransferField(fieldName) {
+      if (!state.macroTransfer) {
+        hideMessage(doseMacroTransferStatus);
+        return;
+      }
+      if (fieldName === 'carbs') {
+        state.macroTransfer.carbsLinked = false;
+      } else if (fieldName === 'bt') {
+        state.macroTransfer.btLinked = false;
+      }
+      hideMessage(doseMacroTransferStatus);
+      if (!state.macroTransfer.carbsLinked && !state.macroTransfer.btLinked) {
+        clearMacroTransferState();
+      }
+    }
+
+    function clearLinkedMacroTransferFields(options) {
+      const opts = options || {};
+      let changed = false;
+
+      hideMessage(doseMacroTransferStatus);
+      window.__cukrzycaPendingMacroForDose = null;
+
+      if (state.macroTransfer) {
+        if (state.macroTransfer.carbsLinked) {
+          if (doseCarbs.value !== '') {
+            doseCarbs.value = '';
+            changed = true;
+          }
+        }
+        if (state.macroTransfer.btLinked && doseBtHigh.checked) {
+          doseBtNormal.checked = true;
+          doseBtHigh.checked = false;
+          changed = true;
+        }
+      }
+
+      clearMacroTransferState();
+      if (changed && opts.clearResult !== false) {
+        hideMessage(doseStatus);
+        clearResultCard();
+      }
+      return changed;
+    }
+
+    function getAutofillValues(entry) {
+      const usePractical = Boolean(doseUsePracticalValues.checked);
+      const ratio = usePractical ? Number(entry && entry.ratioRounded) : Number(entry && entry.ratioExact);
+      const sensitivity = usePractical ? Number(entry && entry.sensitivityPractical) : Number(entry && entry.sensitivityExact);
+      return {
+        usePractical: usePractical,
+        ratio: Number.isFinite(ratio) && ratio > 0 ? ratio : NaN,
+        sensitivity: Number.isFinite(sensitivity) && sensitivity > 0 ? sensitivity : NaN
+      };
+    }
+
+    function fillRatioAndSensitivity(values) {
+      if (Number.isFinite(values.ratio) && values.ratio > 0) {
+        doseRatioValue.value = toInputValue(values.ratio, values.usePractical ? 0 : 2);
+      }
+      if (Number.isFinite(values.sensitivity) && values.sensitivity > 0) {
+        doseSensitivityValue.value = toInputValue(values.sensitivity, values.usePractical ? 0 : 2);
+      }
+    }
+
+    function clearRatioAndSensitivity() {
+      doseRatioValue.value = '';
+      doseSensitivityValue.value = '';
+    }
+
+    function syncFromRatioCalculator() {
+      if (calcDate && calcDate.value) {
+        doseRatioDate.value = normalizeDateValue(calcDate.value);
+      } else if (!doseRatioDate.value) {
+        doseRatioDate.value = getYesterdayDateValue();
+      }
+
+      if (calcMealType && calcMealType.value) {
+        doseMealType.value = calcMealType.value;
+      }
+    }
+
+    function syncFromPendingMacroTransfer() {
+      hideMessage(doseMacroTransferStatus);
+      const pending = window.__cukrzycaPendingMacroForDose;
+      if (!pending || !Number.isFinite(Number(pending.carbs)) || Number(pending.carbs) <= 0) {
+        return;
+      }
+
+      window.__cukrzycaPendingMacroForDose = null;
+      doseCarbs.value = toInputValue(Number(pending.carbs), 1);
+      rememberMacroTransfer(pending);
+      if (pending.highFatProtein) {
+        doseBtHigh.checked = true;
+        doseBtNormal.checked = false;
+        showMessage(
+          doseMacroTransferStatus,
+          `Wczytano z kroku 1 <strong>${escapeHtml(formatNumber(Number(pending.carbs), 1))} g węglowodanów</strong> dla dzisiejszego posiłku. Posiłek ma też większy ładunek białka i tłuszczu, więc wynik potraktuj jako punkt wyjścia i zaplanuj kontrolę glikemii również <strong>2–4 godziny po jedzeniu</strong>.`,
+          'warn'
+        );
+        return;
+      }
+
+      doseBtNormal.checked = true;
+      doseBtHigh.checked = false;
+      showMessage(
+        doseMacroTransferStatus,
+        `Wczytano z kroku 1 <strong>${escapeHtml(formatNumber(Number(pending.carbs), 1))} g węglowodanów</strong> dla dzisiejszego posiłku. Teraz dobierz przelicznik z kroku 3 i policz dawkę przed jedzeniem.`,
+        'info'
+      );
+    }
+
+    function autoLoadSavedEntry(showFeedback) {
+      const mealType = String(doseMealType.value || '').trim();
+      const dateValue = normalizeDateValue(doseRatioDate.value || getYesterdayDateValue());
+      doseRatioDate.value = dateValue;
+
+      state.ratioStore = loadRatioStore();
+      hideMessage(doseSavedRatioStatus);
+
+      if (!mealType) {
+        clearLoadedRatioLink({ clearResult: true });
+        if (showFeedback) {
+          showMessage(doseSavedRatioStatus, 'Wybierz rodzaj posiłku, aby automatycznie wczytać dane z kroku 3.', 'info');
+        }
+        return;
+      }
+
+      const entry = getSavedMealEntry(state.ratioStore, dateValue, mealType);
+      if (!entry) {
+        clearLoadedRatioLink({ clearResult: true });
+        if (showFeedback) {
+          showMessage(
+            doseSavedRatioStatus,
+            `Brak zapisanego przelicznika dla <strong>${escapeHtml(capitalizeFirst(mealType))}</strong> w dniu <strong>${escapeHtml(formatDateLabel(dateValue))}</strong>. Wpisz przelicznik i insulinowrażliwość ręcznie.`,
+            'info'
+          );
+        }
+        return;
+      }
+
+      const values = getAutofillValues(entry);
+      fillRatioAndSensitivity(values);
+      state.autoFilledRatio = Number.isFinite(values.ratio) && values.ratio > 0;
+      state.autoFilledSensitivity = Number.isFinite(values.sensitivity) && values.sensitivity > 0;
+      state.lastLoadedEntry = entry;
+      state.lastLoadedMeta = {
+        dateValue: dateValue,
+        mealType: mealType,
+        usePractical: values.usePractical,
+        ratio: values.ratio,
+        sensitivity: values.sensitivity
+      };
+      if (showFeedback) {
+        showMessage(
+          doseSavedRatioStatus,
+          `Wczytano zapisane dane dla <strong>${escapeHtml(capitalizeFirst(mealType))}</strong> z dnia <strong>${escapeHtml(formatDateLabel(dateValue))}</strong>.`,
+          'success'
+        );
+      }
+    }
+
+    function openDoseModule() {
+      launcher.hidden = true;
+      if (macroContent) macroContent.hidden = true;
+      if (learningContent) learningContent.hidden = true;
+      if (calculatorContent) calculatorContent.hidden = true;
+      doseContent.hidden = false;
+      if (macroLauncherBtn) macroLauncherBtn.setAttribute('aria-expanded', 'false');
+      if (moduleLauncherBtn) moduleLauncherBtn.setAttribute('aria-expanded', 'false');
+      if (calculatorLauncherBtn) calculatorLauncherBtn.setAttribute('aria-expanded', 'false');
+      doseLauncherBtn.setAttribute('aria-expanded', 'true');
+      setDoseSettingsExpanded(false);
+      syncFromRatioCalculator();
+      autoLoadSavedEntry(Boolean(doseMealType.value));
+      syncFromPendingMacroTransfer();
+      focusHeading();
+    }
+
+    function closeDoseModule() {
+      doseContent.hidden = true;
+      doseLauncherBtn.setAttribute('aria-expanded', 'false');
+      setDoseSettingsExpanded(false);
+      launcher.hidden = false;
+      if (typeof launcher.scrollIntoView === 'function') {
+        launcher.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      requestAnimationFrame(function () {
+        doseLauncherBtn.focus({ preventScroll: true });
+      });
+    }
+
+    function collectFormData() {
+      return {
+        ratioDate: normalizeDateValue(doseRatioDate.value || getYesterdayDateValue()),
+        mealType: String(doseMealType.value || '').trim(),
+        carbs: parseLocaleNumber(doseCarbs.value),
+        glucoseBefore: parseLocaleNumber(doseGlucoseBefore.value),
+        ratio: parseLocaleNumber(doseRatioValue.value),
+        sensitivity: parseLocaleNumber(doseSensitivityValue.value),
+        correctionThreshold: parseLocaleNumber(doseCorrectionThreshold.value),
+        targetGlucose: parseLocaleNumber(doseTargetGlucose.value),
+        rapidGapOk: Boolean(doseRapidGapYes.checked),
+        highFatProtein: Boolean(doseBtHigh.checked)
+      };
+    }
+
+    function validateData(data) {
+      if (!data.mealType) {
+        return 'Wybierz rodzaj posiłku.';
+      }
+      if (!Number.isFinite(data.carbs) || data.carbs <= 0) {
+        return 'Podaj liczbę gramów węglowodanów w dzisiejszym posiłku.';
+      }
+      if (!Number.isFinite(data.glucoseBefore) || data.glucoseBefore < 20) {
+        return 'Podaj aktualną glikemię przed posiłkiem.';
+      }
+      if (!Number.isFinite(data.ratio) || data.ratio <= 0) {
+        return 'Podaj przelicznik doposiłkowy w g/j.';
+      }
+      if (!Number.isFinite(data.sensitivity) || data.sensitivity <= 0) {
+        return 'Podaj insulinowrażliwość w mg/dl na 1 j.';
+      }
+      if (!Number.isFinite(data.correctionThreshold) || data.correctionThreshold < 100 || data.correctionThreshold > 250) {
+        return 'Ustaw próg glikemii do doliczania korekty w zakresie 100–250 mg/dl.';
+      }
+      if (!Number.isFinite(data.targetGlucose) || data.targetGlucose < 100 || data.targetGlucose > 140) {
+        return 'Ustaw docelową glikemię po 3 h w zakresie 100–140 mg/dl.';
+      }
+      if (data.targetGlucose >= data.correctionThreshold) {
+        return 'Docelowa glikemia po 3 h powinna być niższa niż próg rozpoczęcia korekty.';
+      }
+      return '';
+    }
+
+    function calculateDose(data) {
+      const mealDose = data.carbs / data.ratio;
+      const shouldApplyCorrection = data.glucoseBefore > data.correctionThreshold;
+      const correctionDose = shouldApplyCorrection
+        ? Math.max(0, (data.glucoseBefore - data.targetGlucose) / data.sensitivity)
+        : 0;
+      const totalDose = mealDose + correctionDose;
+
+      if (data.glucoseBefore < 70) {
+        return {
+          mode: 'hypo',
+          mealDose: mealDose,
+          correctionDose: 0,
+          totalDose: NaN,
+          shouldApplyCorrection: false
+        };
+      }
+
+      if (!data.rapidGapOk) {
+        return {
+          mode: 'wait',
+          mealDose: mealDose,
+          correctionDose: 0,
+          totalDose: NaN,
+          shouldApplyCorrection: false
+        };
+      }
+
+      return {
+        mode: shouldApplyCorrection ? 'mealAndCorrection' : 'mealOnly',
+        mealDose: mealDose,
+        correctionDose: correctionDose,
+        totalDose: totalDose,
+        shouldApplyCorrection: shouldApplyCorrection
+      };
+    }
+
+    function buildBreakdownHtml(data, result) {
+      const mealDoseText = escapeHtml(formatNumber(result.mealDose, 2));
+      const ratioText = escapeHtml(formatNumber(data.ratio, 2));
+      const carbsText = escapeHtml(formatNumber(data.carbs, 1));
+
+      if (result.mode === 'hypo') {
+        return '';
+      }
+
+      if (result.mode === 'wait') {
+        return `
+          <h3 class="diab-note-title">Najpierw zachowaj odstęp</h3>
+          <p class="diab-footer-note">Od ostatniej insuliny szybkodziałającej nie minęły jeszcze <strong>2 godziny</strong>. Żeby ograniczyć nakładanie się dawek, nie licz teraz kolejnej pełnej dawki przed posiłkiem.</p>
+          <p class="diab-footer-note"><strong>Informacyjnie:</strong> sama dawka na jedzenie wynikałaby ze wzoru <strong>${carbsText} g ÷ ${ratioText} g/j = ${mealDoseText} j</strong>, ale pełne obliczenie wykonaj po zachowaniu minimalnego odstępu.</p>
+        `;
+      }
+
+      const correctionText = escapeHtml(formatNumber(result.correctionDose, 2));
+      const totalText = escapeHtml(formatNumber(result.totalDose, 2));
+      const correctionFormula = result.shouldApplyCorrection
+        ? `<p class="diab-footer-note"><strong>Korekta:</strong> (${escapeHtml(formatNumber(data.glucoseBefore, 0))} − ${escapeHtml(formatNumber(data.targetGlucose, 0))}) ÷ ${escapeHtml(formatNumber(data.sensitivity, 2))} = <strong>${correctionText} j</strong>.</p>`
+        : `<p class="diab-footer-note"><strong>Korekta:</strong> nie została doliczona, bo glikemia przed posiłkiem nie przekracza ustawionego progu <strong>${escapeHtml(formatNumber(data.correctionThreshold, 0))} mg/dl</strong>.</p>`;
+
+      return `
+        <h3 class="diab-note-title">Jak policzono wynik</h3>
+        <p class="diab-footer-note"><strong>Insulina na jedzenie:</strong> ${carbsText} g ÷ ${ratioText} g/j = <strong>${mealDoseText} j</strong>.</p>
+        ${correctionFormula}
+        <p class="diab-footer-note"><strong>Łączna dawka:</strong> <strong>${totalText} j</strong>.</p>
+      `;
+    }
+
+    function buildTimingNoteHtml(data, result) {
+      if (result.mode === 'hypo') {
+        return `
+          <h3 class="diab-note-title">Kontrola po wyrównaniu</h3>
+          <p class="diab-footer-note">Sprawdź glikemię ponownie po około <strong>15 minutach</strong>. Jeśli nadal jest poniżej <strong>70 mg/dl</strong>, ponownie podaj szybko wchłanialne węglowodany i jeszcze raz skontroluj wynik.</p>
+        `;
+      }
+
+      if (result.mode === 'wait') {
+        return `
+          <h3 class="diab-note-title">Odstęp między dawkami</h3>
+          <p class="diab-footer-note">Minimalny odstęp między kolejnymi dawkami insuliny szybkodziałającej to <strong>2 godziny</strong>, a najczęściej wygodniej planować posiłki co <strong>3–4 godziny</strong>. Powtórz obliczenie, gdy ten odstęp będzie zachowany.</p>
+        `;
+      }
+
+      if (!result.shouldApplyCorrection) {
+        return `
+          <h3 class="diab-note-title">Odstęp między insuliną a jedzeniem</h3>
+          <p class="diab-footer-note">Przy obecnym ustawieniu modułu i tej glikemii zwykle wystarcza krótki odstęp przed jedzeniem, najczęściej <strong>5–10 minut</strong>.</p>
+        `;
+      }
+
+      return `
+        <h3 class="diab-note-title">Odstęp między insuliną a jedzeniem</h3>
+        <p class="diab-footer-note">Jeśli glikemia przed posiłkiem przekracza wybrany próg korekty, zwykle stosuje się dłuższy odstęp przed posiłkiem, najczęściej <strong>20–40 minut</strong>, zależnie od wysokości glikemii i indywidualnego planu leczenia.</p>
+      `;
+    }
+
+    function buildThresholdNoteHtml(data, result) {
+      if (result.mode === 'hypo' || result.mode === 'wait') {
+        return '';
+      }
+
+      if (data.correctionThreshold > 140 && data.glucoseBefore > 140 && data.glucoseBefore <= data.correctionThreshold) {
+        return `
+          <h3 class="diab-note-title">Uwaga o progu korekty</h3>
+          <p class="diab-footer-note">Masz glikemię przed posiłkiem <strong>${escapeHtml(formatNumber(data.glucoseBefore, 0))} mg/dl</strong>. Przy obecnym ustawieniu korekta zaczyna się dopiero <strong>powyżej ${escapeHtml(formatNumber(data.correctionThreshold, 0))} mg/dl</strong>, dlatego nie została doliczona. Próg korekty pozostaje ustawieniem modułu, bo w praktyce można pracować zarówno z granicą <strong>&gt;140 mg/dl</strong>, jak i <strong>&gt;160 mg/dl</strong>.</p>
+        `;
+      }
+
+      return '';
+    }
+
+    function buildFatProteinNoteHtml(data, result) {
+      if (!data.highFatProtein) {
+        return '';
+      }
+
+      const body = result.mode === 'hypo'
+        ? 'Po wyrównaniu glikemii wróć do pełnego obliczenia dawki i zaplanuj późniejszą kontrolę glikemii.'
+        : result.mode === 'wait'
+          ? 'Po zachowaniu minimalnego odstępu wróć do pełnego obliczenia dawki i zaplanuj późniejszą kontrolę glikemii.'
+          : 'To obliczenie potraktuj jako punkt wyjścia do części węglowodanowej. Przy takim posiłku glikemia może jeszcze rosnąć 2–4 godziny po jedzeniu, dlatego zaplanuj także późniejszą kontrolę.';
+
+      return `
+        <h3 class="diab-note-title">Uwaga przy posiłku z większym ładunkiem B/T</h3>
+        <p class="diab-footer-note">Posiłek ma istotny ładunek białka i tłuszczu (<strong>&gt;200 kcal</strong> z tych składników). ${body}</p>
+      `;
+    }
+
+    function renderResult(data, result) {
+      clearResultCard();
+      doseResultCard.hidden = false;
+
+      const mealLabel = capitalizeFirst(data.mealType);
+      const useLoadedSource = hasFullLoadedRatioFields();
+      const sourceLabel = useLoadedSource
+        ? `dzień źródłowy przelicznika: ${formatDateLabel(state.lastLoadedMeta.dateValue)}`
+        : 'przelicznik wpisany ręcznie';
+      doseResultMeta.textContent = `${mealLabel} • ${sourceLabel} • glikemia przed posiłkiem: ${formatNumber(data.glucoseBefore, 0)} mg/dl`;
+
+      doseMetricsWrap.hidden = false;
+      hideMessage(doseHypoCarbsAlert);
+
+      if (result.mode === 'hypo') {
+        const hypoCarbInfo = getHypoglycemiaFastCarbInfo();
+        doseResultCard.classList.add('diab-dose-result--hypo');
+        doseModeBadge.textContent = 'Hipoglikemia';
+        doseModeBadge.className = 'diab-badge diab-badge--danger';
+        showMessage(doseResultAlert, buildDoseStatusMessage('Wyrównaj hipoglikemię', 'Dawkę insuliny oblicz po ponownym pomiarze glikemii'), 'danger');
+        showMessage(doseHypoCarbsAlert, hypoCarbInfo.message, 'danger');
+        doseMetricsWrap.hidden = true;
+      } else if (result.mode === 'wait') {
+        doseResultCard.classList.add('diab-dose-result--wait');
+        doseModeBadge.textContent = 'Zachowaj odstęp';
+        doseModeBadge.className = 'diab-badge diab-badge--warn';
+        showMessage(doseResultAlert, 'Od ostatniej insuliny szybkodziałającej nie minęły jeszcze <strong>2 godziny</strong>. Żeby ograniczyć nakładanie się dawek, policz pełną dawkę dopiero po zachowaniu minimalnego odstępu.', 'warn');
+        doseTotalDoseLabel.textContent = 'Postępowanie teraz';
+        doseTotalDoseValue.textContent = 'Odczekaj minimum 2 h';
+        doseMealDoseMetric.hidden = true;
+        doseCorrectionDoseMetric.hidden = true;
+        doseRatioMetric.hidden = true;
+      } else if (result.mode === 'mealAndCorrection') {
+        doseResultCard.classList.add('diab-dose-result--correction');
+        doseModeBadge.textContent = 'Posiłek + korekta';
+        doseModeBadge.className = 'diab-badge diab-badge--warn';
+        showMessage(doseResultAlert, `Glikemia przed posiłkiem przekracza ustawiony próg <strong>${escapeHtml(formatNumber(data.correctionThreshold, 0))} mg/dl</strong>, dlatego do dawki na jedzenie została doliczona korekta.`, 'warn');
+        doseMealDoseValue.textContent = `${formatNumber(result.mealDose, 2)} j`;
+        doseCorrectionDoseValue.textContent = `${formatNumber(result.correctionDose, 2)} j`;
+        doseTotalDoseValue.textContent = `${formatNumber(result.totalDose, 2)} j`;
+        doseRatioDisplayValue.textContent = `${formatNumber(data.ratio, 2)} g/j`;
+      } else {
+        doseResultCard.classList.add('diab-dose-result--meal');
+        doseModeBadge.textContent = 'Tylko posiłek';
+        doseModeBadge.className = 'diab-badge diab-badge--ok';
+        showMessage(doseResultAlert, `Glikemia przed posiłkiem nie przekracza ustawionego progu <strong>${escapeHtml(formatNumber(data.correctionThreshold, 0))} mg/dl</strong>, więc wyliczona została sama dawka na posiłek.`, 'success');
+        doseMealDoseValue.textContent = `${formatNumber(result.mealDose, 2)} j`;
+        doseCorrectionDoseValue.textContent = `${formatNumber(result.correctionDose, 2)} j`;
+        doseTotalDoseValue.textContent = `${formatNumber(result.totalDose, 2)} j`;
+        doseRatioDisplayValue.textContent = `${formatNumber(data.ratio, 2)} g/j`;
+      }
+
+      const breakdownHtml = buildBreakdownHtml(data, result);
+      const timingNoteHtml = buildTimingNoteHtml(data, result);
+      const fatProteinNoteHtml = buildFatProteinNoteHtml(data, result);
+      const thresholdNoteHtml = buildThresholdNoteHtml(data, result);
+
+      setNoteBoxContent(doseBreakdown, breakdownHtml, result.mode === 'hypo' ? 'danger' : result.mode === 'wait' ? 'warn' : 'soft');
+      setNoteBoxContent(doseTimingNote, timingNoteHtml, result.mode === 'hypo' ? 'danger' : result.mode === 'wait' || result.mode === 'mealAndCorrection' ? 'warn' : 'soft');
+      setNoteBoxContent(doseFatProteinNote, fatProteinNoteHtml, fatProteinNoteHtml ? 'warn' : 'soft');
+      setNoteBoxContent(doseThresholdNote, thresholdNoteHtml, 'soft');
+
+      if (typeof doseResultCard.scrollIntoView === 'function') {
+        doseResultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+
+    function handleSubmit() {
+      const data = collectFormData();
+      const validationMessage = validateData(data);
+      if (validationMessage) {
+        showMessage(doseStatus, validationMessage, 'warn');
+        clearResultCard();
+        return;
+      }
+
+      hideMessage(doseStatus);
+      const result = calculateDose(data);
+      renderResult(data, result);
+    }
+
+    function clearFields() {
+      doseMealType.value = '';
+      doseCarbs.value = '';
+      doseGlucoseBefore.value = '';
+      doseRapidGapYes.checked = true;
+      doseRapidGapNo.checked = false;
+      doseBtNormal.checked = true;
+      doseBtHigh.checked = false;
+      clearRatioAndSensitivity();
+      state.autoFilledRatio = false;
+      state.autoFilledSensitivity = false;
+      clearLoadedSummary();
+      clearMacroTransferState();
+      window.__cukrzycaPendingMacroForDose = null;
+      hideMessage(doseSavedRatioStatus);
+      hideMessage(doseMacroTransferStatus);
+      hideMessage(doseStatus);
+      clearResultCard();
+    }
+
+    function resetDoseModuleForNewPatient() {
+      clearFields();
+      doseRatioDate.value = getYesterdayDateValue();
+      state.ratioStore = loadRatioStore();
+      const persisted = resetDoseSettingsToDefaults();
+      setDoseSettingsExpanded(false);
+      return persisted;
+    }
+
+    setDoseSettingsExpanded(false);
+    doseSettingsToggleBtn.addEventListener('click', function (event) {
+      event.preventDefault();
+      const shouldExpand = doseSettingsContent.hidden;
+      setDoseSettingsExpanded(shouldExpand);
+    });
+
+    applySettingsToUi();
+    doseRatioDate.value = getYesterdayDateValue();
+    clearResultCard();
+
+    doseLauncherBtn.addEventListener('click', function (event) {
+      event.preventDefault();
+      openDoseModule();
+    });
+
+    doseBackBtn.addEventListener('click', function (event) {
+      event.preventDefault();
+      closeDoseModule();
+    });
+
+    doseCalculatorForm.addEventListener('submit', function (event) {
+      event.preventDefault();
+      handleSubmit();
+    });
+
+    if (doseClearBtn) {
+      doseClearBtn.addEventListener('click', function (event) {
+        event.preventDefault();
+        clearFields();
+      });
+    }
+
+    doseRatioDate.addEventListener('change', function () {
+      autoLoadSavedEntry(Boolean(doseMealType.value));
+      hideMessage(doseStatus);
+      clearResultCard();
+    });
+
+    doseMealType.addEventListener('change', function () {
+      autoLoadSavedEntry(true);
+      hideMessage(doseStatus);
+      clearResultCard();
+    });
+
+    doseValueSourceInputs.forEach(function (input) {
+      input.addEventListener('change', function () {
+        persistSettings();
+        autoLoadSavedEntry(Boolean(doseMealType.value));
+        hideMessage(doseStatus);
+        clearResultCard();
+      });
+    });
+
+    [doseCorrectionThreshold, doseTargetGlucose].forEach(function (field) {
+      field.addEventListener('change', function () {
+        persistSettings();
+        hideMessage(doseStatus);
+        clearResultCard();
+      });
+    });
+
+    [doseRatioValue, doseSensitivityValue].forEach(function (field) {
+      field.addEventListener('input', function () {
+        if (field === doseRatioValue) {
+          detachLoadedRatioField('ratio');
+        } else {
+          detachLoadedRatioField('sensitivity');
+        }
+        hideMessage(doseStatus);
+        clearResultCard();
+      });
+    });
+
+    [doseCarbs, doseGlucoseBefore].forEach(function (field) {
+      field.addEventListener('input', function () {
+        hideMessage(doseStatus);
+        clearResultCard();
+      });
+    });
+
+    doseCarbs.addEventListener('input', function () {
+      detachMacroTransferField('carbs');
+    });
+
+    doseRapidGapInputs.forEach(function (input) {
+      input.addEventListener('change', function () {
+        hideMessage(doseStatus);
+        clearResultCard();
+      });
+    });
+
+    doseFatProteinInputs.forEach(function (input) {
+      input.addEventListener('change', function () {
+        detachMacroTransferField('bt');
+        hideMessage(doseStatus);
+        clearResultCard();
+      });
+    });
+
+    window.addEventListener(MACRO_CLEARED_EVENT, function () {
+      clearLinkedMacroTransferFields({ clearResult: true });
+    });
+
+    window.addEventListener(RATIO_DAY_CLEARED_EVENT, function (event) {
+      const detail = event && event.detail && typeof event.detail === 'object' ? event.detail : {};
+      if (!detail.hadEntries) {
+        return;
+      }
+
+      const clearedDate = normalizeDateValue(detail.dateValue || '');
+      const selectedDate = normalizeDateValue(doseRatioDate.value || getYesterdayDateValue());
+      const loadedDate = state.lastLoadedMeta ? normalizeDateValue(state.lastLoadedMeta.dateValue || '') : '';
+      if (clearedDate !== selectedDate && clearedDate !== loadedDate) {
+        return;
+      }
+
+      const removedLinkedFields = clearLoadedRatioLink({ clearResult: true });
+      if (removedLinkedFields && selectedDate === clearedDate && doseMealType.value) {
+        showMessage(
+          doseSavedRatioStatus,
+          `W kroku 3 wyczyszczono dzień <strong>${escapeHtml(formatDateLabel(clearedDate))}</strong>, więc usunięto też automatycznie wczytane dane dla <strong>${escapeHtml(capitalizeFirst(doseMealType.value))}</strong>.`,
+          'info'
+        );
+      }
+    });
+
+    window.addEventListener(CLEAR_ALL_EVENT, function (event) {
+      const persisted = resetDoseModuleForNewPatient();
+      const detail = event && event.detail && typeof event.detail === 'object' ? event.detail : null;
+      if (detail && persisted === false) {
+        detail.storageOk = false;
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDoseCorrectionModule);
+  } else {
+    initDoseCorrectionModule();
+  }
+})();
+
+
+(function () {
+  'use strict';
+
+  const CLEAR_ALL_EVENT = 'cukrzyca:clear-all-modules';
+  let clearAllTooltip = null;
+  let clearAllTooltipHideTimer = null;
+  let clearAllTooltipCleanupTimer = null;
+
+  function qs(id) {
+    return document.getElementById(id);
+  }
+
+  function ensureClearAllTooltip() {
+    if (clearAllTooltip && clearAllTooltip.isConnected) {
+      return clearAllTooltip;
+    }
+    const tooltip = document.createElement('div');
+    tooltip.className = 'menu-tooltip copy-tooltip';
+    tooltip.style.position = 'fixed';
+    tooltip.style.display = 'none';
+    tooltip.style.opacity = '0';
+    tooltip.style.left = '0px';
+    tooltip.style.top = '0px';
+    tooltip.style.transform = 'translate(-50%, -100%) translateY(2px)';
+    tooltip.setAttribute('role', 'status');
+    tooltip.setAttribute('aria-live', 'polite');
+    document.body.appendChild(tooltip);
+    clearAllTooltip = tooltip;
+    return tooltip;
+  }
+
+  function setTooltipPlacement(tooltip, placement, visible) {
+    if (!tooltip) return;
+    const safePlacement = placement === 'bottom' ? 'bottom' : 'top';
+    tooltip.dataset.placement = safePlacement;
+    if (safePlacement === 'bottom') {
+      tooltip.style.transform = visible
+        ? 'translate(-50%, 0) translateY(0px)'
+        : 'translate(-50%, 0) translateY(-2px)';
+      return;
+    }
+    tooltip.style.transform = visible
+      ? 'translate(-50%, -100%) translateY(0px)'
+      : 'translate(-50%, -100%) translateY(2px)';
+  }
+
+  function positionTooltipNearButton(tooltip, anchorEl) {
+    if (!tooltip || !anchorEl) return;
+
+    const rect = anchorEl.getBoundingClientRect();
+    let left = Math.round(rect.left + rect.width / 2);
+    tooltip.style.left = left + 'px';
+    tooltip.style.top = Math.round(rect.top - 10) + 'px';
+    setTooltipPlacement(tooltip, 'top', false);
+
+    const tooltipRect = tooltip.getBoundingClientRect();
+    const halfWidth = tooltipRect.width / 2;
+    const minLeft = Math.round(12 + halfWidth);
+    const maxLeft = Math.round(Math.max(minLeft, window.innerWidth - 12 - halfWidth));
+    left = Math.min(Math.max(left, minLeft), maxLeft);
+
+    const canShowAbove = rect.top - tooltipRect.height - 14 >= 0;
+    if (canShowAbove) {
+      tooltip.style.left = left + 'px';
+      tooltip.style.top = Math.round(rect.top - 10) + 'px';
+      setTooltipPlacement(tooltip, 'top', false);
+      return;
+    }
+
+    let top = Math.round(rect.bottom + 10);
+    const maxTop = Math.max(12, Math.round(window.innerHeight - tooltipRect.height - 12));
+    top = Math.min(top, maxTop);
+    tooltip.style.left = left + 'px';
+    tooltip.style.top = top + 'px';
+    setTooltipPlacement(tooltip, 'bottom', false);
+  }
+
+  function showClearAllTooltip(anchorEl, message) {
+    if (!anchorEl || !message) return;
+
+    const tooltip = ensureClearAllTooltip();
+    if (clearAllTooltipHideTimer) {
+      window.clearTimeout(clearAllTooltipHideTimer);
+    }
+    if (clearAllTooltipCleanupTimer) {
+      window.clearTimeout(clearAllTooltipCleanupTimer);
+    }
+
+    tooltip.textContent = message;
+    tooltip.style.display = 'block';
+    tooltip.style.opacity = '0';
+    positionTooltipNearButton(tooltip, anchorEl);
+
+    window.requestAnimationFrame(function () {
+      positionTooltipNearButton(tooltip, anchorEl);
+      tooltip.style.opacity = '1';
+      setTooltipPlacement(tooltip, tooltip.dataset.placement || 'top', true);
+    });
+
+    clearAllTooltipHideTimer = window.setTimeout(function () {
+      if (!clearAllTooltip) return;
+      clearAllTooltip.style.opacity = '0';
+      setTooltipPlacement(clearAllTooltip, clearAllTooltip.dataset.placement || 'top', false);
+      clearAllTooltipCleanupTimer = window.setTimeout(function () {
+        if (!clearAllTooltip) return;
+        clearAllTooltip.style.display = 'none';
+      }, 220);
+    }, 1800);
+  }
+
+  function initClearAllModulesButton() {
+    const clearAllBtn = qs('clearAllDiabetesModulesBtn');
+
+    if (!clearAllBtn) {
+      return;
+    }
+
+    clearAllBtn.addEventListener('click', function (event) {
+      event.preventDefault();
+
+      const detail = {
+        reason: 'launcher-button',
+        storageOk: true
+      };
+      window.dispatchEvent(new CustomEvent(CLEAR_ALL_EVENT, { detail: detail }));
+
+      if (detail.storageOk === false) {
+        showClearAllTooltip(clearAllBtn, 'Moduły wyczyszczono. Dla pewności odśwież stronę.');
+        return;
+      }
+
+      showClearAllTooltip(clearAllBtn, 'Dane we wszystkich modułach zostały wyczyszczone.');
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initClearAllModulesButton);
+  } else {
+    initClearAllModulesButton();
   }
 })();

@@ -633,6 +633,91 @@
    * @param {'OLAF'|'NHBPEP'} [params.datasetChoice] Wymuszenie źródła norm.
    * @returns {Object}
    */
+
+  function getPediatricBpReference(params) {
+    try {
+      const ageYears = Number(params?.ageYears);
+      const sex = (params?.sex || '').toUpperCase();
+      const heightCm = Number(params?.heightCm);
+
+      if (!isFinite(ageYears) || !isFinite(heightCm)) {
+        return { ok: false, error: 'Brak wymaganych danych (wiek/wzrost).' };
+      }
+      if (!(sex === 'M' || sex === 'F')) {
+        return { ok: false, error: 'Brak danych o płci (M/K).' };
+      }
+
+      const ageMonths = ageYears * 12;
+      if (ageMonths < 36 || ageMonths > 216) {
+        return { ok: false, error: 'Normy ciśnienia są dostępne dla wieku 3–18 lat.' };
+      }
+
+      let datasetChoice = (params?.datasetChoice || '').toUpperCase();
+      if (!(datasetChoice === 'OLAF' || datasetChoice === 'NHBPEP')) {
+        const showToggle = (ageYears >= 7 && ageYears <= 18);
+        const bpToggle = document.getElementById('bpDataToggle');
+        if (showToggle && bpToggle) {
+          datasetChoice = bpToggle.checked ? 'NHBPEP' : 'OLAF';
+        } else {
+          datasetChoice = 'NHBPEP';
+        }
+      }
+      if (datasetChoice === 'OLAF' && ageYears < 7) {
+        datasetChoice = 'NHBPEP';
+      }
+
+      const zht = computeHeightZ(sex, ageMonths, heightCm);
+      if (typeof zht !== 'number' || isNaN(zht)) {
+        return { ok: false, error: 'Nie można obliczyć Z-score wzrostu (brak danych LMS).' };
+      }
+
+      let reference;
+      if (datasetChoice === 'OLAF') {
+        const dataset = (sex === 'M') ? OLAF_BP_BOYS : OLAF_BP_GIRLS;
+        const olafVals = getOlafValues(dataset, ageYears);
+        reference = {
+          sbpP10: olafVals.SBP['10'],
+          sbpP50: olafVals.SBP['50'],
+          sbpP90: olafVals.SBP['90'],
+          sbpP95: olafVals.SBP['95'],
+          dbpP10: olafVals.DBP['10'],
+          dbpP50: olafVals.DBP['50'],
+          dbpP90: olafVals.DBP['90'],
+          dbpP95: olafVals.DBP['95']
+        };
+      } else {
+        const coeffs = (sex === 'M') ? NHBPEP_BOYS : NHBPEP_GIRLS;
+        const muSbp = predictBPMean(ageYears, zht, coeffs.SBP);
+        const muDbp = predictBPMean(ageYears, zht, coeffs.DBP);
+        const sdSbp = coeffs.SBP.sigma;
+        const sdDbp = coeffs.DBP.sigma;
+        reference = {
+          sbpP10: muSbp - Z90 * sdSbp,
+          sbpP50: muSbp,
+          sbpP90: muSbp + Z90 * sdSbp,
+          sbpP95: muSbp + Z95 * sdSbp,
+          dbpP10: muDbp - Z90 * sdDbp,
+          dbpP50: muDbp,
+          dbpP90: muDbp + Z90 * sdDbp,
+          dbpP95: muDbp + Z95 * sdDbp
+        };
+      }
+
+      return {
+        ok: true,
+        datasetChoice,
+        ageYears,
+        ageMonths,
+        sex,
+        heightCm,
+        zht,
+        reference
+      };
+    } catch (e) {
+      return { ok: false, error: 'Błąd obliczeń RR (bp_module).' };
+    }
+  }
+
   function computePediatricBp(params) {
     try {
       const ageYears = Number(params?.ageYears);
@@ -795,6 +880,7 @@
     if (typeof window !== 'undefined') {
       window.bpModuleApi = window.bpModuleApi || {};
       window.bpModuleApi.computePediatricBp = computePediatricBp;
+      window.bpModuleApi.getPediatricBpReference = getPediatricBpReference;
     }
   } catch (_) {
     // ignore

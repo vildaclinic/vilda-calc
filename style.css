@@ -116,7 +116,7 @@ th,td{border:1px solid #ddd;padding:0.6rem;text-align:center;font-size:0.95rem;}
 th{background:var(--secondary);color:#fff;}
 footer{margin-top:0rem;text-align:center;font-size:0.85rem;color:#666;padding:1rem 0;background:#fafafa;}  
 @media(min-width:700px){
-  .grid-two{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+  .grid-two{display:grid;grid-template-columns:minmax(0, 1fr) minmax(0, 1fr);gap:1rem;}
     /* 
    * Domyślna wartość align-items w CSS Grid to „stretch”, co powodowało rozciąganie elementów 
    * w osi poprzecznej do pełnej wysokości. W tym projekcie takie zachowanie sprawiało, 
@@ -134,6 +134,7 @@ footer{margin-top:0rem;text-align:center;font-size:0.85rem;color:#666;padding:1r
   display:flex;
   flex-direction:column;
   height:100%;
+  min-width:0;
   /*
     Dodajemy odstęp między elementami wewnątrz kontenera „norm-wrapper”,
     który zawiera karty „Wskaźnik Cole'a” oraz „Droga do normy BMI”.
@@ -153,7 +154,13 @@ footer{margin-top:0rem;text-align:center;font-size:0.85rem;color:#666;padding:1r
 .left-column{
   display:flex;
   flex-direction:column;
+  min-width:0;
   gap:1rem;
+}
+
+#results > .left-column,
+#results > .norm-wrapper{
+  min-width:0;
 }
 
 /* ---------------------------------------------------------------------------
@@ -240,40 +247,51 @@ footer{margin-top:0rem;text-align:center;font-size:0.85rem;color:#666;padding:1r
   margin-bottom: 0.6rem;
 }
 
-/* Układ kolumnowy dla przełączników dietetycznych */
+/* Dwukolumnowy, kompaktowy układ przełączników dietetycznych */
 .diet-toggle-columns {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1.2rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+  align-items: start;
 }
 
-/* Kolumny – pozwalają układać przełączniki w dwóch kolumnach węższych na małych ekranach */
+/* Każda kolumna zawiera własny stos przełączników; min-width:0 pozwala zachować dwa słupki także na węższych ekranach */
 .diet-toggle-columns .col-left,
 .diet-toggle-columns .col-right {
-  flex: 1 1 0;
-  min-width: 200px;
-}
-
-/* Pojedyncza grupa przełącznika: etykieta nad suwakiem, odstęp między elementami */
-.diet-toggle-group {
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  margin-bottom: 1rem;
+  gap: 0.75rem;
+}
+
+/* Pojedyncza grupa przełącznika: etykieta po lewej, suwak po prawej, aby skrócić całą sekcję w pionie */
+.diet-toggle-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  min-width: 0;
+  margin-bottom: 0;
 }
 
 .diet-toggle-group .toggle-label {
-  font-size: 0.95rem;
-  margin-bottom: 0.35rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.88rem;
+  line-height: 1.2;
+  margin-bottom: 0;
   font-weight: 500;
 }
 
-/* Mały dwustanowy przełącznik do wyboru strategii/dodatków w karcie dietetycznej */
+/* Nieco węższy przełącznik – ułatwia zmieszczenie dwóch kolumn na telefonach */
 .switch-diet {
   position: relative;
   display: inline-block;
-  width: 60px;
-  height: 30px;
+  width: 52px;
+  height: 28px;
+  flex-shrink: 0;
+  margin-top: 0;
+  vertical-align: middle;
 }
 
 .switch-diet input {
@@ -287,7 +305,7 @@ footer{margin-top:0rem;text-align:center;font-size:0.85rem;color:#666;padding:1r
   right: 0;
   bottom: 0;
   background: #ccc;
-  border-radius: 30px;
+  border-radius: 28px;
   cursor: pointer;
   transition: background 0.3s;
 }
@@ -297,8 +315,8 @@ footer{margin-top:0rem;text-align:center;font-size:0.85rem;color:#666;padding:1r
   position: absolute;
   left: 2px;
   top: 2px;
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   background: #fff;
   border-radius: 50%;
   transition: transform 0.3s;
@@ -311,7 +329,13 @@ footer{margin-top:0rem;text-align:center;font-size:0.85rem;color:#666;padding:1r
 
 /* Przesunięcie białego kółka w prawo, gdy przełącznik włączony */
 .switch-diet input:checked + .slider::before {
-  transform: translateX(30px);
+  transform: translateX(24px);
+}
+
+@media (max-width: 380px) {
+  .diet-toggle-group .toggle-label {
+    font-size: 0.84rem;
+  }
 }
 
 
@@ -352,6 +376,58 @@ footer{margin-top:0rem;text-align:center;font-size:0.85rem;color:#666;padding:1r
 }
 .current-summary-col {
   flex: 1;
+}
+
+
+.current-summary-actions {
+  margin-top: 0.9rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(0, 131, 141, 0.16);
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.patient-report-summary-btn {
+  appearance: none;
+  border: 1px solid rgba(0, 131, 141, 0.28);
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbfb 100%);
+  color: #0a5157;
+  border-radius: 14px;
+  padding: 0.78rem 0.95rem;
+  font-size: 0.96rem;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, background-color 0.16s ease;
+  box-shadow: 0 8px 20px rgba(0, 131, 141, 0.08);
+  text-align: center;
+}
+
+.patient-report-summary-btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(0, 131, 141, 0.42);
+  box-shadow: 0 10px 22px rgba(0, 131, 141, 0.12);
+  background: linear-gradient(180deg, #ffffff 0%, #f4fbfb 100%);
+}
+
+.patient-report-summary-btn:disabled {
+  cursor: default;
+  opacity: 0.78;
+  transform: none;
+  box-shadow: none;
+}
+
+.patient-report-summary-hint {
+  font-size: 0.82rem;
+  color: #5a6f70;
+  text-align: left;
+}
+
+@media (max-width: 700px) {
+  .patient-report-summary-btn {
+    width: 100%;
+  }
 }
 
 /* ======== Dodatkowe style dla pól tętna i liczby oddechów ======== */
@@ -3341,8 +3417,121 @@ fieldset.user-card {
   margin-bottom: 1rem;
 }
 
+#intakeSection {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+#intakeSection .intake-toggle-wrap {
+  margin: 0;
+}
+
+#intakeSection #intakeCard {
+  margin-bottom: 0;
+}
+
+#intakeCard,
+#intakeResults,
+#intakeResults .intake-results-table-wrap {
+  min-width: 0;
+  max-width: 100%;
+}
+
 #intakeCard h2.intake-title {
   text-align: center;
+}
+
+#intakeResults .intake-results-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+#intakeResults table.intake-results-table {
+  width: 100%;
+  min-width: 0;
+  margin-top: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+}
+
+#intakeResults table.intake-results-table thead th:nth-child(1) { width: 25%; }
+#intakeResults table.intake-results-table thead th:nth-child(2) { width: 37.5%; }
+#intakeResults table.intake-results-table thead th:nth-child(3) { width: 37.5%; }
+
+#intakeResults table.intake-results-table th,
+#intakeResults table.intake-results-table td {
+  padding: .55rem .65rem;
+  text-align: left;
+  vertical-align: top;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+#intakeResults table.intake-results-table th {
+  background: var(--secondary);
+  color: #fff;
+  font-size: .92rem;
+  font-weight: 600;
+}
+
+#intakeResults table.intake-results-table tbody tr:nth-child(even) td {
+  background: rgba(0, 0, 0, .03);
+}
+
+#intakeResults .intake-period-main {
+  color: var(--primary);
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+#intakeResults .intake-period-sub {
+  margin-top: .35rem;
+  color: #6b7a7a;
+  font-size: .88rem;
+}
+
+#intakeResults .intake-stack-cell {
+  display: flex;
+  flex-direction: column;
+  gap: .45rem;
+}
+
+#intakeResults .intake-metric-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: .55rem;
+  align-items: start;
+}
+
+#intakeResults .intake-metric-row span {
+  color: #355;
+  line-height: 1.3;
+}
+
+#intakeResults .intake-metric-row strong {
+  line-height: 1.3;
+  text-align: right;
+}
+
+#intakeResults .intake-metric-row.is-key strong {
+  color: var(--primary);
+  font-size: 1rem;
+}
+
+@media (max-width: 980px) {
+  #intakeResults table.intake-results-table th,
+  #intakeResults table.intake-results-table td {
+    padding: .5rem .55rem;
+    font-size: .9rem;
+  }
+
+  #intakeResults .intake-metric-row {
+    gap: .4rem;
+  }
 }
 
 /* przycisk otwierający – delikatne wyrównanie odstępów */
@@ -3350,41 +3539,85 @@ fieldset.user-card {
   margin: 1rem 0;
 }
 
-/* układ wierszy pomiarów – jak w „Zaawansowanych…” */
+/* układ wierszy pomiarów – wiek u góry, wzrost i masa poniżej */
 .measure-row-intake {
-  display: grid;
-  /* trzy kolumny na pola; przycisk × przejdzie do nowego wiersza */
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: .5rem;
-  align-items: end;
-  margin-top: .5rem;
+  display: flex;
+  flex-direction: column;
+  gap: .45rem;
+  margin-top: .65rem;
+  position: relative;
+}
+
+#intakeMeasurements > .measure-row-intake.intake-history-row {
+  margin-top: .8rem;
+}
+
+#intakeMeasurements > .intake-history-divider + .measure-row-intake.intake-history-row {
+  margin-top: 0;
+}
+
+.intake-history-divider {
+  height: 1.5px;
+  width: calc(100% - 2.8rem);
+  max-width: 34rem;
+  /* Przesuwamy separator o 0.25rem niżej między wierszami:
+   * zwiększamy odstęp od górnego wpisu i zmniejszamy od dolnego. */
+  margin: .75rem auto .25rem auto;
+  border-radius: 999px;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    rgba(26, 181, 181, 0),
+    rgba(26, 181, 181, 0.14) 10%,
+    rgba(26, 181, 181, 0.28) 24%,
+    rgba(26, 181, 181, 0.48) 50%,
+    rgba(26, 181, 181, 0.28) 76%,
+    rgba(26, 181, 181, 0.14) 90%,
+    rgba(26, 181, 181, 0)
+  );
 }
 
 .measure-row-intake label {
+  margin-top: 0;
   font-size: .95rem;
 }
 
-/* przycisk × w sekcji Szacowanego spożycia energii – poniżej pól pomiarowych */
+.measure-row-intake .intake-row-top,
+.measure-row-intake .intake-row-bottom {
+  min-width: 0;
+}
+
+.measure-row-intake .intake-age-label {
+  display: block;
+}
+
+.measure-row-intake .intake-row-bottom {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: .5rem;
+  align-items: end;
+}
+
+/* przycisk × w sekcji Szacowanego spożycia energii */
 .measure-row-intake .remove-intake-row {
-  grid-column: 3;
   justify-self: end;
   margin-top: .25rem;
+  align-self: end;
   /* styl dziedziczony z .icon (brak obramowania, czerwony kolor) */
 }
 .measure-row-intake .remove-intake-row:hover {
   opacity: 0.8;
 }
 
-/* bardzo wąskie ekrany – ustaw w kolumnę jedna pod drugą */
+/* bardzo wąskie ekrany – ustaw dolny rząd w jedną kolumnę */
 @media (max-width:480px) {
-  .measure-row-intake {
+  .measure-row-intake .intake-row-bottom {
     grid-template-columns: 1fr;
   }
 
   .measure-row-intake .remove-intake-row {
     justify-self: end;
     margin-top: .25rem;
-    grid-column: 1;
   }
 }
 
@@ -3397,18 +3630,26 @@ fieldset.user-card {
   cursor: not-allowed;
 }
 
-/* karty wyników wariantu A na mobile */
+/* karty wyników – ten sam wariant w układzie jednokolumnowym i dwukolumnowym */
 .intake-result-card {
   border: 1px solid #d0dede;
   background: #fff;
   border-radius: var(--radius);
-  padding: .75rem .9rem;
-  margin-bottom: .75rem;
+  padding: .7rem .85rem;
+  margin-bottom: .65rem;
 }
 
 .intake-result-card p {
-  margin: .15rem 0;
-  font-size: .95rem;
+  margin: .14rem 0;
+  font-size: 1.05rem;
+  line-height: 1.35;
+  text-align: left;
+}
+
+#intakeResults .intake-results-note {
+  font-size: .84rem;
+  line-height: 1.35;
+  text-align: left;
 }
 
 /* === PATCH 2025‑08‑31: duet wieku (lata + miesiące) === */
@@ -3430,12 +3671,16 @@ fieldset.user-card {
   color: var(--primary);
 }
 
-/* Na urządzeniach mobilnych (szerokość do 700 px) zwiększ czcionkę
- * wyników karty Szacowanego spożycia energii o ~75% i wyrównaj tekst do lewej */
+/* W układzie jednokolumnowym pozostawiamy ten sam wariant sekcyjny,
+ * ale z odrobinę większą czcionką niż na desktopie. */
 @media (max-width:700px) {
   .intake-result-card p {
-    font-size: 1.65rem;
+    font-size: 1.05rem;
     text-align: left;
+  }
+
+  #intakeResults .intake-results-note {
+    font-size: .82rem;
   }
 }
 
@@ -3658,45 +3903,6 @@ fieldset.user-card {
   font-size: var(--whr-info-font-size);
   font-style: var(--whr-info-font-style);
   font-weight: var(--whr-info-font-weight);
-}
-/* === Badge na przycisku „Szacowane spożycie energii” (czerwona kropka) === */
-#toggleIntakeCard {
-  position: relative;
-}
-
-#toggleIntakeCard.has-alert::after {
-  content: "";
-  position: absolute;
-  top: -4px;
-  right: -4px;
-  width: 20px;
-  height: 20px;
-  background: var(--danger, #d93025);
-  border-radius: 50%;
-  box-shadow: 0 0 0 2px #fff;
-  /* delikatna obwódka dla kontrastu */
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  #toggleIntakeCard.has-alert::after {
-    animation: badgePing 1.6s ease-in-out infinite;
-  }
-
-  @keyframes badgePing {
-    0% {
-      transform: scale(1);
-      opacity: 1;
-    }
-
-    70% {
-      transform: scale(1.6);
-      opacity: 0;
-    }
-
-    100% {
-      opacity: 0;
-    }
-  }
 }
 /* Desktop (układ dwukolumnowy): odsuń "Usuń wszystkie dane" o 1rem w dół
    i ustaw go w nowej linii, wyśrodkowany */
@@ -5956,6 +6162,36 @@ body.thy-modal-open {
   border-radius: 6px;
   box-shadow: var(--shadow);
   transition: background 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+  box-sizing: border-box;
+  max-width: calc(100% - 0.5rem);
+}
+
+/* Długie komunikaty pod suwakiem (np. przy stałej dawce lub maksymalnej dawce dobowej)
+   muszą zawijać się do szerokości dostępnej na ekranie, szczególnie w widoku mobilnym. */
+#antibioticTherapyCard .dose-slider-container.has-message-label {
+  padding-bottom: 2.8rem;
+}
+
+#antibioticTherapyCard .slider-value-label.slider-value-label--message {
+  width: min(28rem, calc(100% - 0.5rem));
+  max-width: calc(100% - 0.5rem);
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  text-align: center;
+  line-height: 1.3;
+  padding: 0.45rem 0.65rem;
+}
+
+@media (max-width: 699px) {
+  #antibioticTherapyCard .dose-slider-container.has-message-label {
+    padding-bottom: 3.4rem;
+  }
+
+  #antibioticTherapyCard .slider-value-label.slider-value-label--message {
+    width: calc(100% - 0.5rem);
+    font-size: 0.95rem;
+  }
 }
 
 /* Podczas najechania na obszar suwaka delikatnie zmieniaj wygląd etykiety.
@@ -5970,6 +6206,33 @@ body.thy-modal-open {
 /* Gdy etykieta jest aktywnie przeciągana, zmieniamy kursor na "grabbing" */
 #antibioticTherapyCard .slider-value-label:active {
   cursor: grabbing;
+}
+
+
+/* Dłuższe komunikaty pod suwakiem (np. o stałej dawce) muszą zawijać się
+   do szerokości karty, aby nie wychodziły poza viewport na telefonach. */
+#antibioticTherapyCard .dose-slider-container--multiline {
+  padding-bottom: 0.25rem;
+}
+
+#antibioticTherapyCard .slider-value-label.slider-value-label--multiline {
+  position: relative;
+  display: block;
+  left: auto;
+  bottom: auto;
+  transform: none;
+  width: min(100%, 34rem);
+  max-width: 100%;
+  margin: 0.65rem auto 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  text-wrap: balance;
+  text-align: center;
+  line-height: 1.35;
+  box-sizing: border-box;
+  cursor: default;
+  pointer-events: none;
 }
 
 /* Dodaj dodatkowy padding dla skrajnych etykiet podziałki, aby wartości nie dotykały krawędzi suwaka */
@@ -6325,29 +6588,28 @@ body.thy-modal-open {
    Pozostawiamy układ kolumnowy dla samej grupy, dzięki czemu etykieta znajduje się
    nad przełącznikiem.  Kontener .stabilization-control jest ułożony poziomo. */
 #stabilizationGroup {
-  flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
 }
-/* Przeciętny margines dla etykiety – pozostawiamy domyślne właściwości z .diet-toggle-group */
+/* Etykieta stabilizacji korzysta z kompaktowego układu jak pozostałe przełączniki */
 #stabilizationGroup .toggle-label {
-  margin-bottom: 0.35rem;
+  margin-bottom: 0;
   margin-right: 0;
 }
-/* Kontener na suwak i ikonę informacyjną – układ poziomy */
+/* Kontener na suwak i ikonę informacyjną – układ poziomy, bez rozpychania kolumny */
 #stabilizationGroup .stabilization-control {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.35rem;
+  flex-shrink: 0;
 }
-/* Szerokość suwaka i odstępy pozostają domyślne – nie nadpisujemy .switch-diet */
-/* Styl ikony w grupie stabilizacji – dopasowany do wysokości suwaka (30px) */
+/* Styl ikony w grupie stabilizacji – dopasowany do bardziej kompaktowego suwaka */
 #stabilizationGroup .info-icon {
-  width: 30px;
-  height: 30px;
-  font-size: 1rem;
+  width: 24px;
+  height: 24px;
+  font-size: 0.9rem;
   line-height: 1;
   margin-left: 0;
-  margin-top: 0.75rem
+  margin-top: 0;
 }
 
 /* ======================================================================== */
@@ -7097,4 +7359,33 @@ body #thyroidCancerKidsCard #thyCopyCancer {
     width:auto !important;
     max-width:100%;
   }
+}
+
+/* Delikatny separator między ostatnim przyciskiem „Analiza punktu pomiarowego”
+   a przyciskiem „Dodaj kolejny pomiar”. Pokazywany tylko wtedy, gdy przyciski
+   faktycznie następują po sobie pionowo. Linia ma zachować boczne marginesy,
+   aby nie dochodziła do krawędzi karty. */
+.adv-add-divider{
+  display:none;
+  height:1px;
+  width:calc(100% - 2.8rem);
+  max-width:34rem;
+  margin:1rem auto 0.8rem auto;
+  border-radius:999px;
+  background:linear-gradient(
+    90deg,
+    rgba(153,0,255,0),
+    rgba(153,0,255,0.18) 12%,
+    rgba(153,0,255,0.34) 50%,
+    rgba(153,0,255,0.18) 88%,
+    rgba(153,0,255,0)
+  );
+}
+
+#advancedGrowthForm.adv-show-add-divider .adv-add-divider{
+  display:block;
+}
+
+#advancedGrowthForm.adv-show-add-divider #advAddMeasurementBtn{
+  margin-top:0 !important;
 }

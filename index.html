@@ -800,6 +800,52 @@
           <div id="headCircumResultDS" class="result-box" style="display:none;margin-top:.5rem;"></div>
         </div>
       </div>
+      <div id="intakeSection" class="intake-section">
+      <!-- ======== Szacowane spożycie energii (toggle + karta) ======== -->
+      <div id="intakeToggleWrap" class="text-center intake-toggle-wrap">
+        <button type="button" id="toggleIntakeCard" class="primary-btn" style="display:none;">
+          Szacowane spożycie energii
+        </button>
+      </div>
+
+      <section id="intakeCard" class="result-card" style="display:none;">
+        <h2 class="intake-title">Szacowane spożycie energii</h2>
+
+        <!-- PAL -->
+        <div class="flex">
+          <div style="flex:1 1 260px;min-width:240px;">
+            <label for="intakePal">Poziom aktywności (PAL)</label>
+            <select id="intakePal">
+              <option value="1.2">1.2 – bardzo niska</option>
+              <option value="1.4" selected>1.4 – niska</option>
+              <option value="1.6">1.6 – umiarkowana</option>
+              <option value="1.8">1.8 – wysoka</option>
+              <option value="2.0">2.0 – bardzo wysoka</option>
+            </select>
+            <div id="intakePalDesc" class="muted" style="margin-top:.5rem;"></div>
+          </div>
+        </div>
+
+        <!-- Wiersze pomiarów – styl jak w „Zaawansowanych obliczeniach wzrostowych” -->
+        <div id="intakeMeasurements"></div>
+        <div class="intake-actions">
+          <button type="button" id="intakeAddRow" class="add-row">+ dodaj wiersz</button>
+        </div>
+
+        <!-- Wyniki (na desktop tabela, na mobile – wariant A: pionowe karty) -->
+        <div id="intakeResults" class="result-box" style="margin-top:1rem;"></div>
+
+        <!-- Legenda -->
+        <div id="intakeLegend" class="muted" style="margin-top:.75rem;text-align:left;">
+          <strong>Legenda:</strong>
+          Δ masa – różnica masy (kg) między końcem i początkiem okresu;
+          Oczekiwany przyrost – przyrost masy oszacowany na podstawie medianowych (50 c) przyrostów dla wieku oraz rzeczywistego wzrostu dziecka;
+          Δ vs norma – różnica między rzeczywistym a oczekiwanym przyrostem;
+          Nadmiar/deficyt (kcal/d) – dzienny nadmiar lub deficyt energii względem zapotrzebowania.
+        </div>
+      </section>
+      <!-- ======== /Szacowane spożycie energii ======== -->
+      </div>
     </div><!-- /#leftColumnWrap -->
 
 
@@ -850,21 +896,21 @@
         <!-- Opcje wyboru strategii diety i dodatkowych rekomendacji w formie przełączników -->
         <div id="dietStrategyOptions">
           <!-- Informacja dla użytkownika o konieczności ustawienia aktywności i diety w karcie Plan odchudzania -->
-          <div class="diet-info-note">
-            W karcie <strong>Plan odchudzania</strong> wybierz odpowiedni poziom aktywności i rodzaj diety lub pozostaw rekomendowane ustawienia.
+          <div class="diet-info-note" id="dietInfoNote">
+            W karcie <strong>Plan odchudzania</strong> wybierz poziom aktywności i rodzaj diety albo pozostaw ustawienia rekomendowane.
           </div>
-          <!-- Dwukolumnowy układ przełączników: lewa kolumna z trzema opcjami, prawa z dwiema -->
+          <!-- Dwukolumnowy układ przełączników: lewa kolumna z trzema opcjami, prawa z czterema -->
           <div class="diet-toggle-columns">
             <div class="col-left">
               <div class="diet-toggle-group">
-                <span class="toggle-label">Strategia redukcji masy ciała</span>
+                <span class="toggle-label" id="reduceToggleLabel">Redukcja masy</span>
                 <label class="switch-diet">
                   <input type="checkbox" id="reduceToggle">
                   <span class="slider"></span>
                 </label>
               </div>
               <div class="diet-toggle-group" id="stabilizationGroup">
-                <span class="toggle-label">Strategia stabilizacji masy ciała</span>
+                <span class="toggle-label" id="stabilizationToggleLabel">Utrzymanie masy</span>
                 <!-- Kontener obejmujący suwak i ikonę informacyjną.  Dzięki klasie stabilization-control elementy
                      są rozmieszczone poziomo i wyrównane do środka.  Etykieta pozostaje ponad nimi. -->
                 <div class="stabilization-control">
@@ -881,7 +927,7 @@
                 </div>
               </div>
               <div class="diet-toggle-group">
-                <span class="toggle-label">Wzrost zakończony</span>
+                <span class="toggle-label" id="growthEndedLabel">Wzrost zakończony</span>
                 <label class="switch-diet">
                   <input type="checkbox" id="growthEndedFlag">
                   <span class="slider"></span>
@@ -890,22 +936,29 @@
             </div>
             <div class="col-right">
               <div class="diet-toggle-group">
-                <span class="toggle-label">Suplementacja wit. D</span>
+                <span class="toggle-label" id="patientFacingToggleLabel">Dla pacjenta</span>
+                <label class="switch-diet">
+                  <input type="checkbox" id="patientFacingToggle">
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="diet-toggle-group">
+                <span class="toggle-label" id="vitDSuppLabel">Wit. D</span>
                 <label class="switch-diet">
                   <input type="checkbox" id="vitDSuppFlag">
                   <span class="slider"></span>
                 </label>
               </div>
               <div class="diet-toggle-group">
-                <span class="toggle-label">Nawadnianie</span>
+                <span class="toggle-label" id="hydrationLabel">Picie płynów</span>
                 <label class="switch-diet">
                   <input type="checkbox" id="hydrationFlag">
                   <span class="slider"></span>
                 </label>
               </div>
-              <!-- Nowa opcja: przykłady z czasem dojścia do prawidłowej wagi -->
+              <!-- Nowa opcja: przykłady z czasem dojścia do prawidłowej masy ciała -->
               <div class="diet-toggle-group">
-                <span class="toggle-label">Przykłady z czasem dojścia do prawidłowej wagi</span>
+                <span class="toggle-label" id="journeyLabel">Czas do normy masy</span>
                 <label class="switch-diet">
                   <input type="checkbox" id="journeyFlag">
                   <span class="slider"></span>
@@ -974,7 +1027,7 @@
         <h2 style="text-align:center;">Obliczenia wzrostowe</h2>
         <label>Imię i&nbsp;Nazwisko (opcjonalnie):
           <input type="text" id="basicGrowthName"></label>
-        <p style="font-weight:600;margin-top:0.8rem;">Wprowadź poprzednie pomiary</p>
+        <p style="font-weight:600;margin-top:0.8rem;text-align:center;">Wprowadź poprzednie pomiary</p>
         <div id="basicGrowthMeasurements"></div>
         <button type="button" id="basicGrowthAddMeasurementBtn" style="margin-top:0.8rem;display:block;margin-left:auto;margin-right:auto;">Dodaj kolejny pomiar</button>
         <div id="basicGrowthResults" class="result-box" style="margin-top:1rem;"></div>
@@ -1033,8 +1086,9 @@
           <!-- Pole na komentarz; ukryte dopóki przełącznik nie jest zaznaczony -->
           <input type="text" id="advCurrentArrowComment" placeholder="Wpisz komentarz" style="display:none; margin-top:.35rem;">
         </div>
-        <p style="font-weight:600;margin-top:0.8rem;">Wprowadź poprzednie pomiary</p>
+        <p style="font-weight:600;margin-top:0.8rem;text-align:center;">Wprowadź poprzednie pomiary</p>
         <div id="advMeasurements"></div>
+        <div id="advAddMeasurementDivider" class="adv-add-divider" aria-hidden="true"></div>
         <button type="button" id="advAddMeasurementBtn" style="margin-top:0.8rem;display:block;margin-left:auto;margin-right:auto;">Dodaj kolejny pomiar</button>
         <div id="advResults" style="margin-top:1rem;"></div>
         <!-- Publication charts toggle row: appears only when the Palczewska data source is selected.
@@ -1108,51 +1162,6 @@
   <!-- Usunięto stare sekcje przekąsek, dań, sumy kalorii i spalania kalorii.
        Zastąpione przez nową kartę „Co zjadłem?” w lewej kolumnie. -->
 </div>
-<!-- ======== Szacowane spożycie energii (toggle + karta) ======== -->
-<div id="intakeToggleWrap" class="text-center intake-toggle-wrap">
-  <button type="button" id="toggleIntakeCard" class="primary-btn" style="display:none;">
-    Szacowane spożycie energii
-  </button>
-</div>
-
-<section id="intakeCard" class="result-card" style="display:none;">
-  <h2 class="intake-title">Szacowane spożycie energii</h2>
-
-  <!-- PAL -->
-  <div class="flex">
-    <div style="flex:1 1 260px;min-width:240px;">
-      <label for="intakePal">Poziom aktywności (PAL)</label>
-      <select id="intakePal">
-        <option value="1.2">1.2 – bardzo niska</option>
-        <option value="1.4" selected>1.4 – niska</option>
-        <option value="1.6">1.6 – umiarkowana</option>
-        <option value="1.8">1.8 – wysoka</option>
-        <option value="2.0">2.0 – bardzo wysoka</option>
-      </select>
-      <div id="intakePalDesc" class="muted" style="margin-top:.5rem;"></div>
-    </div>
-  </div>
-
-  <!-- Wiersze pomiarów – styl jak w „Zaawansowanych obliczeniach wzrostowych” -->
-  <div id="intakeMeasurements"></div>
-  <div class="intake-actions">
-    <button type="button" id="intakeAddRow" class="add-row">+ dodaj wiersz</button>
-    <span class="muted">Uzupełnij co najmniej dwa wiersze, aby wyliczyć spożycie na podstawie zmiany masy.</span>
-  </div>
-
-  <!-- Wyniki (na desktop tabela, na mobile – wariant A: pionowe karty) -->
-  <div id="intakeResults" class="result-box" style="margin-top:1rem;"></div>
-
-  <!-- Legenda -->
-  <div id="intakeLegend" class="muted" style="margin-top:.75rem;text-align:left;">
-    <strong>Legenda:</strong>
-    Δ masa – różnica masy (kg) między końcem i początkiem okresu;
-    Oczekiwany przyrost – przyrost masy oszacowany na podstawie medianowych (50 c) przyrostów dla wieku oraz rzeczywistego wzrostu dziecka;
-    Δ vs norma – różnica między rzeczywistym a oczekiwanym przyrostem;
-    Nadmiar/deficyt (kcal/d) – dzienny nadmiar lub deficyt energii względem zapotrzebowania.
-  </div>
-</section>
-<!-- ======== /Szacowane spożycie energii ======== -->
   <!-- 6. Plan odchudzania – formularz i wyniki -->
   <div id="planCard" class="plan-card" style="display:none;">
   <h2 style="text-align:center;">Plan odchudzania</h2>

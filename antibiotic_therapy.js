@@ -5101,6 +5101,76 @@ function chooseAmoxClavDefaultForm(weight, context){
   }
 
   /**
+   * Dobiera moc tabletki tak, aby przy zadanej dawce dobowej osiągnąć możliwie
+   * mały błąd zaokrąglenia, a przy takim samym błędzie preferować mniejszą
+   * liczbę tabletek na dawkę.  Funkcja jest używana głównie dla amoksycyliny
+   * w wysokodawkowych wskazaniach, gdzie dostępne są tabletki 500 mg i 1000 mg.
+   *
+   * @param {{name:string, mgPerTablet:number}[]} options Dostępne moce tabletek
+   * @param {number} targetMgPerDay Docelowa dawka dobowa w mg
+   * @param {number} dosesPerDay Liczba dawek na dobę
+   * @returns {string|null} nazwa preferowanej mocy tabletki
+   */
+  function chooseTabletStrengthByDoseBurden(options, targetMgPerDay, dosesPerDay){
+    if(!Array.isArray(options) || options.length === 0 || !isFinite(targetMgPerDay) || targetMgPerDay <= 0 || !isFinite(dosesPerDay) || dosesPerDay <= 0){
+      return null;
+    }
+    const tolerance = 0.20;
+    const mgMin = targetMgPerDay * (1 - tolerance);
+    const mgMax = targetMgPerDay * (1 + tolerance);
+    let bestOption = null;
+    options.forEach(function(option){
+      if(!option || !isFinite(option.mgPerTablet) || option.mgPerTablet <= 0) return;
+      const mgPerTablet = option.mgPerTablet;
+      const idealTabletsPerDose = targetMgPerDay / mgPerTablet / dosesPerDay;
+      let bestTabsForOption = null;
+      let bestMgPerDayForOption = null;
+      let bestDiffForOption = Infinity;
+      for(let offset = -4; offset <= 8; offset++){
+        let candidate = Math.round(idealTabletsPerDose * 2 + offset) / 2;
+        if(candidate < 0.5) candidate = 0.5;
+        const candidateMgPerDay = candidate * dosesPerDay * mgPerTablet;
+        if(candidateMgPerDay >= mgMin && candidateMgPerDay <= mgMax){
+          const diff = Math.abs(candidateMgPerDay - targetMgPerDay);
+          if(
+            diff < bestDiffForOption - 1e-6 ||
+            (Math.abs(diff - bestDiffForOption) < 1e-6 && (bestTabsForOption === null || candidate < bestTabsForOption))
+          ){
+            bestDiffForOption = diff;
+            bestTabsForOption = candidate;
+            bestMgPerDayForOption = candidateMgPerDay;
+          }
+        }
+      }
+      if(bestTabsForOption === null){
+        bestTabsForOption = Math.ceil(idealTabletsPerDose * 2) / 2;
+        bestMgPerDayForOption = bestTabsForOption * dosesPerDay * mgPerTablet;
+        bestDiffForOption = Math.abs(bestMgPerDayForOption - targetMgPerDay);
+      }
+      const evaluated = {
+        name: option.name,
+        mgPerTablet: mgPerTablet,
+        tabletsPerDose: bestTabsForOption,
+        mgPerDay: bestMgPerDayForOption,
+        diff: bestDiffForOption
+      };
+      if(
+        !bestOption ||
+        evaluated.diff < bestOption.diff - 1e-6 ||
+        (Math.abs(evaluated.diff - bestOption.diff) < 1e-6 && evaluated.tabletsPerDose < bestOption.tabletsPerDose - 1e-6) ||
+        (
+          Math.abs(evaluated.diff - bestOption.diff) < 1e-6 &&
+          Math.abs(evaluated.tabletsPerDose - bestOption.tabletsPerDose) < 1e-6 &&
+          evaluated.mgPerTablet > bestOption.mgPerTablet
+        )
+      ){
+        bestOption = evaluated;
+      }
+    });
+    return bestOption ? bestOption.name : null;
+  }
+
+  /**
    * Wybiera domyślną postać antybiotyku w ostrym zapaleniu ucha środkowego (otitis).
    * Reguły opierają się na zaleceniach wysokodawkowej terapii amoksycyliną
    * (80–90 mg/kg mc./dobę) i amoksycyliną z kwasem klawulanowym, a także na
@@ -5111,9 +5181,10 @@ function chooseAmoxClavDefaultForm(weight, context){
    *  • **Amoksycylina** – w OZUŚ zaleca się wysokie dawki 80–90 mg/kg/dobę.
    *    Zawiesiny 250 mg/5 ml i 500 mg/5 ml występują w butelkach 60 ml i 100 ml,
    *    przy czym stężenie 500 mg/5 ml zmniejsza objętość podawanej porcji w wysokodawkowej kuracji.
-   *    Dlatego dla pacjentów <10 kg proponujemy zawiesinę 250 mg/5 ml;
-   *    dla 10–40 kg – zawiesinę 500 mg/5 ml; dla 40–60 kg – tabletkę 500 mg;
-   *    a dla ≥60 kg – tabletkę 1000 mg.
+   *    Dlatego dla pacjentów <10 kg proponujemy zawiesinę 250 mg/5 ml,
+   *    dla 10–40 kg – zawiesinę 500 mg/5 ml, natomiast u pacjentów ≥40 kg
+   *    porównujemy tabletki 500 mg i 1000 mg i wybieramy tę moc, która
+   *    przy zachowaniu dawki daje mniejszą liczbę tabletek na dawkę.
    *
    *  • **Amoksycylina z kwasem klawulanowym** – stosuje się w przypadku braku
    *    odpowiedzi na samą amoksycylinę. Preparaty 400 mg/57 mg/5 ml (standard) i
@@ -5156,8 +5227,10 @@ function chooseAmoxClavDefaultForm(weight, context){
    *   jako leczenie pierwszego wyboru w OZUŚ. Zawiesiny 250 mg/5 ml
    *   i 500 mg/5 ml dostępne są w butelkach 60 ml lub 100 ml, przy czym stężenie
    *   500 mg/5 ml zmniejsza objętość przyjmowanego leku.  
-   *   Ustawiono progi masy ciała: <10 kg – zawiesina 250 mg/5 ml; 10–40 kg –
-   *   zawiesina 500 mg/5 ml; 40–60 kg – tabletka 500 mg; ≥60 kg – tabletka 1000 mg.
+   *   Ustawiono progi masy ciała dla zawiesin: <10 kg – zawiesina 250 mg/5 ml;
+   *   10–40 kg – zawiesina 500 mg/5 ml. U pacjentów ≥40 kg moc tabletki
+   *   (500 mg vs 1000 mg) dobierana jest dynamicznie na podstawie docelowej
+   *   dawki dobowej i oczekiwanej liczby tabletek na dawkę.
    *
    * • **Amoksycylina z kwasem klawulanowym** – stosowana jako drugi wybór (w razie
    *   niewrażliwości na samą amoksycylinę). Wytyczne rekomendują dawkę
@@ -5219,12 +5292,20 @@ function chooseAmoxClavDefaultForm(weight, context){
       }
       return null;
     }
-    // Amoksycylina – progi masy ciała
+    // Amoksycylina – u pacjentów >=40 kg dobierz moc tabletki dynamicznie.
+    // Zamiast sztywnego progu 60 kg porównujemy, która moc (500 mg vs 1000 mg)
+    // lepiej odwzorowuje domyślną wysoką dawkę w OZUŚ przy mniejszej liczbie tabletek.
     if(drugName === 'Amoksycylina'){
       if(weight < 10) return 'Zawiesina 250\u00a0mg/5\u00a0ml';
       if(weight < 40) return 'Zawiesina 500\u00a0mg/5\u00a0ml';
-      if(weight < 60) return 'Tabletka 500\u00a0mg';
-      return 'Tabletka 1000\u00a0mg';
+      const amoxMaxInfo = GLOBAL_MAX_DAILY_DOSES && GLOBAL_MAX_DAILY_DOSES['Amoksycylina'];
+      const amoxGlobalMax = amoxMaxInfo ? (weight < 40 ? amoxMaxInfo.child : amoxMaxInfo.adult) : null;
+      const targetMgPerDay = amoxGlobalMax != null ? Math.min(weight * 90, amoxGlobalMax) : (weight * 90);
+      const preferredTablet = chooseTabletStrengthByDoseBurden([
+        { name: 'Tabletka 500\u00a0mg',  mgPerTablet: 500 },
+        { name: 'Tabletka 1000\u00a0mg', mgPerTablet: 1000 }
+      ], targetMgPerDay, 2);
+      return preferredTablet || 'Tabletka 500\u00a0mg';
     }
     // Amoksycylina z kwasem klawulanowym – deleguj do istniejącej funkcji
     if(drugName === 'Amoksycylina z kwasem klawulanowym'){
@@ -8822,22 +8903,36 @@ function chooseAmoxClavDefaultForm(weight, context){
     const valueLabel = document.getElementById('sliderValueLabel');
     const doseDisplay = document.getElementById('abxDoseDisplay');
     if(!slider || !valueLabel) return;
+    const sliderContainer = slider.closest('.dose-slider-container');
+    const setMultilineLabelMode = (enabled) => {
+      const isEnabled = !!enabled;
+      valueLabel.classList.toggle('slider-value-label--multiline', isEnabled);
+      if(sliderContainer){
+        sliderContainer.classList.toggle('dose-slider-container--multiline', isEnabled);
+      }
+      if(isEnabled){
+        valueLabel.style.left = '';
+        valueLabel.style.transform = '';
+      }
+    };
     const min = parseFloat(slider.min);
     const max = parseFloat(slider.max);
     const val = parseFloat(slider.value);
     if(!isFinite(min) || !isFinite(max) || !isFinite(val)) return;
+    // Domyślnie przywróć jednoliniowy tryb etykiety. Tryb wielowierszowy
+    // włączamy tylko dla dłuższych komunikatów, aby na małych ekranach
+    // etykieta mogła zawijać się do szerokości kontenera i nie wychodziła poza viewport.
+    setMultilineLabelMode(false);
     // Jeżeli suwak jest całkowicie wyłączony z powodu przekroczenia limitu dobowego (forceMaxDose),
-    // wyświetl specjalny komunikat i wyśrodkuj etykietę. To zachowanie dotyczy leków z zakresem dawek,
-    // dla których nawet minimalna dawka mg/kg przekracza dopuszczalny limit dobowy.
+    // wyświetl specjalny komunikat i przełącz etykietę na tryb wielowierszowy.
     if (slider.dataset && slider.dataset.forceMaxDose === 'true') {
       valueLabel.textContent = 'Zastosowano maksymalną dobową dawkę leku';
-      valueLabel.style.left = '50%';
-      valueLabel.style.transform = 'translateX(-50%)';
+      setMultilineLabelMode(true);
       return;
     }
     // Jeżeli suwak jest dezaktywowany (zakres minimalny i maksymalny są równe),
-    // zastąp dynamiczną etykietę komunikatem o stałej dawce.  Etykieta ta
-    // dziedziczy styl z klasy slider-value-label i jest wyśrodkowana pod suwakiem.
+    // zastąp dynamiczną etykietę komunikatem o stałej dawce. Etykieta jest
+    // automatycznie zawijana na małych ekranach, aby nie psuła widoku mobilnego.
     if(slider.disabled || min === max){
       // Ustal jednostkę (mg/kg/dobę lub j.m./kg/dobę) na podstawie pola wyświetlania
       let unitText = '';
@@ -8847,9 +8942,7 @@ function chooseAmoxClavDefaultForm(weight, context){
         unitText = 'mg/kg/dobę';
       }
       valueLabel.textContent = `W tym wskazaniu rekomendowana jest stała dawka ${fmt(min)} ${unitText} wybranego leku`;
-      // Wyśrodkuj etykietę pod suwakiem
-      valueLabel.style.left = '50%';
-      valueLabel.style.transform = 'translateX(-50%)';
+      setMultilineLabelMode(true);
       return;
     }
     // W przeciwnym wypadku aktualizuj etykietę bieżącej wartości jak dotychczas

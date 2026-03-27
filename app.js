@@ -2974,6 +2974,71 @@ document.addEventListener('DOMContentLoaded', function() {
     return years + (months / 12);
   }
 
+
+  function isPatientFacingDietMode() {
+    const el = document.getElementById('patientFacingToggle');
+    return !!(el && el.checked);
+  }
+
+  function updateDietCardLabels() {
+    const patientFacing = isPatientFacingDietMode();
+    const noteEl = document.getElementById('dietInfoNote');
+    const generateBtn = document.getElementById('generateDietBtn');
+    const setText = function(id, value) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = value;
+    };
+    if (noteEl) {
+      noteEl.innerHTML = patientFacing
+        ? 'W karcie <strong>Plan odchudzania</strong> ustaw poziom aktywności i dietę tak, jak chcesz je opisać w zaleceniach dla pacjenta, albo pozostaw ustawienia rekomendowane.'
+        : 'W karcie <strong>Plan odchudzania</strong> wybierz poziom aktywności i rodzaj diety albo pozostaw ustawienia rekomendowane.';
+    }
+    setText('reduceToggleLabel', 'Redukcja masy');
+    setText('stabilizationToggleLabel', 'Utrzymanie masy');
+    setText('growthEndedLabel', 'Wzrost zakończony');
+    setText('patientFacingToggleLabel', patientFacing ? 'Tryb pacjenta' : 'Dla pacjenta');
+    setText('vitDSuppLabel', 'Wit. D');
+    setText('hydrationLabel', 'Picie płynów');
+    setText('journeyLabel', 'Czas do normy masy');
+    if (generateBtn) {
+      generateBtn.textContent = patientFacing ? 'Generuj zalecenia dla pacjenta' : 'Generuj zalecenia dietetyczne';
+    }
+  }
+
+  function buildDietRecommendationResult() {
+    const reduceToggleEl = document.getElementById('reduceToggle');
+    const stabilizationToggleEl = document.getElementById('stabilizationToggle');
+    let strategy;
+    if (reduceToggleEl && reduceToggleEl.checked) {
+      strategy = 'reduction';
+    } else if (stabilizationToggleEl && stabilizationToggleEl.checked) {
+      strategy = 'stabilization';
+    } else {
+      strategy = 'reduction';
+    }
+    let result = null;
+    if (strategy === 'stabilization') {
+      if (typeof generateDietRecommendationsStabilization === 'function') {
+        result = generateDietRecommendationsStabilization();
+      }
+    } else {
+      result = generateDietRecommendations();
+    }
+    return result;
+  }
+
+  function refreshDietRecommendationsIfVisible() {
+    const content = document.getElementById('dietRecommendationsContent');
+    const resultDiv = document.getElementById('dietRecommendationsResult');
+    if (!content || !resultDiv) return;
+    if (content.style.display !== 'none' && resultDiv.innerHTML && resultDiv.innerHTML.trim()) {
+      const result = buildDietRecommendationResult();
+      if (result && result.htmlOutput) {
+        resultDiv.innerHTML = result.htmlOutput;
+      }
+    }
+  }
+
   /**
    * Upewnia się, że elementy przycisku „Zalecenia dietetyczne” i kontenera
    * na treść istnieją w drzewie DOM.  Jeżeli nie zostały zadeklarowane w
@@ -3080,6 +3145,7 @@ document.addEventListener('DOMContentLoaded', function() {
    * komunikatu toast.  Przy ponownym kliknięciu ukrywa kartę.
    */
   function handleDietButtonClick(event) {
+    updateDietCardLabels();
     // Jeśli dostępne jest zdarzenie kliknięcia (event), zatrzymaj propagację,
     // aby inne nasłuchujące funkcje (np. zdefiniowane w DOMContentLoaded)
     // nie wykonały się ponownie dla tego samego kliknięcia.  Dzięki temu
@@ -3387,6 +3453,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // pokazującą przewidywany czas osiągnięcia górnej granicy normy BMI oraz przykłady aktywności fizycznej.
     const journeyEl = document.getElementById('journeyFlag');
     const journeyEnabled = journeyEl ? journeyEl.checked : false;
+    const patientFacing = isPatientFacingDietMode();
     const chosenDiet = diets.find(d => d.key === selectedKey) || null;
     const weeklyLoss = (chosenDiet && chosenDiet.weeklyLoss > 0) ? chosenDiet.weeklyLoss : 0;
     const dailyDeficit = chosenDiet ? chosenDiet.deficit : 0;
@@ -3596,6 +3663,9 @@ document.addEventListener('DOMContentLoaded', function() {
           childObese = bmiChild >= targetBMI97Child;
         }
       }
+      const childWeightIssueInstr = childObese ? 'otyłością' : 'nadwagą';
+      const childWeightIssueAcc = childObese ? 'otyłość' : 'nadwagę';
+      const childWeightIssueLoc = childObese ? 'otyłości' : 'nadwadze';
       // Wylicz docelową wagę odpowiadającą górnej granicy normy BMI (85. centyl) oraz wagę dla 50. centyla BMI.
       // W zależności od źródła danych (Palczewska vs LMS) stosujemy różne metody.
       let targetWeightNorm = null;
@@ -3720,10 +3790,19 @@ document.addEventListener('DOMContentLoaded', function() {
         const diffNorm = Math.max(0, currentWeight - targetWeightNorm);
         const diffMedian = Math.max(0, currentWeight - targetWeightMedian);
         if (toChild) {
-          // Dostosuj komunikat do strategii: redukcja lub stabilizacja masy ciała
-          if (selectedStrategy === 'stabilization') {
+          if (patientFacing) {
+            if (selectedStrategy === 'stabilization') {
+              lines.push(
+                `Twoja obecna masa ciała wynosi ${currentWeight.toFixed(1).replace('.', ',')} kg. Na tym etapie najważniejsze jest utrzymanie jej możliwie blisko obecnej wartości, aby wraz z dalszym wzrastaniem BMI mogło się stopniowo obniżać. Górna granica normy dla Twojego wieku i wzrostu odpowiada masie ok. ${targetWeightNorm.toFixed(1).replace('.', ',')} kg. Przeciętna masa ciała dziecka w Twoim wieku i przy Twoim wzroście to ok. ${targetWeightMedian.toFixed(1).replace('.', ',')} kg, więc obecnie Twoja masa ciała jest o ${diffMedian.toFixed(1).replace('.', ',')} kg wyższa od średniej.`
+              );
+            } else {
+              lines.push(
+                `Twoja obecna masa ciała wynosi ${currentWeight.toFixed(1).replace('.', ',')} kg. Docelowo warto stopniowo zbliżać się do masy ciała ok. ${targetWeightNorm.toFixed(1).replace('.', ',')} kg, co oznacza potrzebę redukcji o ok. ${diffNorm.toFixed(1).replace('.', ',')} kg. Przeciętna masa ciała dziecka w Twoim wieku i przy Twoim wzroście to ok. ${targetWeightMedian.toFixed(1).replace('.', ',')} kg, więc obecnie Twoja masa ciała jest o ${diffMedian.toFixed(1).replace('.', ',')} kg wyższa od średniej.`
+              );
+            }
+          } else if (selectedStrategy === 'stabilization') {
             lines.push(
-              `Twoja obecna waga to ${currentWeight.toFixed(1).replace('.', ',')} kg. Aby osiągnąć wagę w górnej granicy normy dla Twojego wieku i wzrostu, Twoja waga powinna wynosić ok. ${targetWeightNorm.toFixed(1).replace('.', ',')} kg. Wybrałeś strategię stabilizacji masy ciała, więc nie musisz teraz tracić wagi – staraj się utrzymać obecną masę i rosnąć, aby BMI obniżało się wraz z wzrostem. Przeciętna waga dziecka w Twoim wieku i wzroście to ok. ${targetWeightMedian.toFixed(1).replace('.', ',')} kg, co oznacza, że Twoja waga jest o ${diffMedian.toFixed(1).replace('.', ',')} kg wyższa niż średnia.`
+              `Twoja obecna waga to ${currentWeight.toFixed(1).replace('.', ',')} kg. Przy obecnym wzroście górna granica normy dla Twojego wieku odpowiada wadze ok. ${targetWeightNorm.toFixed(1).replace('.', ',')} kg. Staraj się utrzymać obecną masę ciała podczas dalszego wzrastania – dzięki temu BMI będzie stopniowo się obniżać. Przeciętna waga dziecka w Twoim wieku i wzroście to ok. ${targetWeightMedian.toFixed(1).replace('.', ',')} kg, co oznacza, że Twoja waga jest o ${diffMedian.toFixed(1).replace('.', ',')} kg wyższa niż średnia.`
             );
           } else {
             lines.push(
@@ -3731,10 +3810,19 @@ document.addEventListener('DOMContentLoaded', function() {
             );
           }
         } else {
-          // Komunikat dla rodzica – również zależy od strategii
-          if (selectedStrategy === 'stabilization') {
+          if (patientFacing) {
+            if (selectedStrategy === 'stabilization') {
+              lines.push(
+                `Obecna masa ciała dziecka wynosi ${currentWeight.toFixed(1).replace('.', ',')} kg. Na tym etapie najważniejsze jest utrzymanie jej możliwie blisko obecnej wartości, aby wraz z dalszym wzrastaniem BMI mogło się stopniowo obniżać. Górna granica normy dla wieku i wzrostu odpowiada masie ok. ${targetWeightNorm.toFixed(1).replace('.', ',')} kg. Przeciętna masa ciała rówieśnika o takim wzroście i w tym wieku to ok. ${targetWeightMedian.toFixed(1).replace('.', ',')} kg, więc masa ciała dziecka jest obecnie o ${diffMedian.toFixed(1).replace('.', ',')} kg wyższa od średniej.`
+              );
+            } else {
+              lines.push(
+                `Obecna masa ciała dziecka wynosi ${currentWeight.toFixed(1).replace('.', ',')} kg. Docelowo warto stopniowo zbliżać się do masy ciała ok. ${targetWeightNorm.toFixed(1).replace('.', ',')} kg, co oznacza potrzebę redukcji o ok. ${diffNorm.toFixed(1).replace('.', ',')} kg. Przeciętna masa ciała rówieśnika o takim wzroście i w tym wieku to ok. ${targetWeightMedian.toFixed(1).replace('.', ',')} kg, więc masa ciała dziecka jest obecnie o ${diffMedian.toFixed(1).replace('.', ',')} kg wyższa od średniej.`
+              );
+            }
+          } else if (selectedStrategy === 'stabilization') {
             lines.push(
-              `Waga dziecka: ${currentWeight.toFixed(1).replace('.', ',')} kg. Aby masa ciała znalazła się w górnej granicy normy dla wieku i wzrostu, powinna wynosić ok. ${targetWeightNorm.toFixed(1).replace('.', ',')} kg. Wybrano strategię stabilizacji masy ciała, dlatego celem jest utrzymanie obecnej masy i dalszy wzrost dziecka, tak aby BMI obniżało się wraz z rośnięciem. Przeciętna waga rówieśnika o takim wzroście i w tym wieku to ok. ${targetWeightMedian.toFixed(1).replace('.', ',')} kg, co oznacza, że masa ciała dziecka jest o ${diffMedian.toFixed(1).replace('.', ',')} kg wyższa niż średnia.`
+              `Waga dziecka: ${currentWeight.toFixed(1).replace('.', ',')} kg. Przy obecnym wzroście górna granica normy dla wieku i wzrostu odpowiada masie ok. ${targetWeightNorm.toFixed(1).replace('.', ',')} kg. Na tym etapie celem jest utrzymanie obecnej masy ciała dziecka podczas dalszego wzrastania, aby BMI mogło stopniowo się obniżać. Przeciętna waga rówieśnika o takim wzroście i w tym wieku to ok. ${targetWeightMedian.toFixed(1).replace('.', ',')} kg, co oznacza, że masa ciała dziecka jest o ${diffMedian.toFixed(1).replace('.', ',')} kg wyższa niż średnia.`
             );
           } else {
             lines.push(
@@ -3745,9 +3833,9 @@ document.addEventListener('DOMContentLoaded', function() {
       } else {
         // Jeżeli nie można obliczyć docelowej wagi, podaj ogólną informację o normie
         if (toChild) {
-          lines.push('Twoja masa ciała mieści się w granicach normy dla Twojego wieku.');
+          lines.push(patientFacing ? 'Masa ciała mieści się obecnie w granicach normy dla Twojego wieku.' : 'Twoja masa ciała mieści się w granicach normy dla Twojego wieku.');
         } else {
-          lines.push('Masa ciała dziecka mieści się w granicach normy dla jego wieku.');
+          lines.push(patientFacing ? 'Masa ciała dziecka mieści się obecnie w granicach normy dla jego wieku.' : 'Masa ciała dziecka mieści się w granicach normy dla jego wieku.');
         }
       }
       // Informacja o wzroście i jego wpływie na BMI
@@ -3770,153 +3858,149 @@ document.addEventListener('DOMContentLoaded', function() {
       const growthEndedEffective = growthEnded || smallRemaining;
       if (growthEndedEffective) {
         if (toChild) {
-          // Rozróżnij, czy wzrost został zakończony (flaga zaznaczona), czy tylko został niewielki zapas (<3 cm).
           let msg;
-          if (growthEnded) {
-            msg = 'Twój wzrost jest już zakończony – dalsze rośnięcie nie pomoże w obniżeniu BMI.';
+          if (patientFacing) {
+            if (growthEnded) {
+              msg = 'Twój wzrost jest już zakończony, więc poprawa BMI będzie zależeć przede wszystkim od codziennych nawyków żywieniowych i regularnej aktywności fizycznej.';
+            } else {
+              msg = 'Twój wzrost jest już prawie zakończony (pozostało nie więcej niż 3 cm), więc dalsze rośnięcie będzie miało niewielki wpływ na BMI.';
+            }
+            if (selectedStrategy === 'reduction') {
+              msg += ' Dlatego najważniejsza jest zdrowa, stopniowa poprawa masy ciała poprzez dietę i ruch.';
+            } else {
+              msg += ' Dlatego najważniejsze jest niedopuszczanie do dalszego przyrostu masy ciała i systematyczna poprawa codziennych nawyków.';
+            }
           } else {
-            msg = 'Twój wzrost prawie się zakończył (pozostało nie więcej niż 3 cm) – dalsze rośnięcie nie pomoże w obniżeniu BMI.';
-          }
-          if (selectedStrategy === 'reduction') {
-            msg += ' Skup się na zdrowej i stopniowej redukcji masy ciała poprzez odpowiednią dietę i aktywność fizyczną.';
-          } else {
-            msg += ' Skup się na utrzymaniu prawidłowej masy ciała poprzez zdrową dietę i aktywność fizyczną.';
+            if (growthEnded) {
+              msg = 'Twój wzrost jest już zakończony – dalsze rośnięcie nie pomoże w obniżeniu BMI.';
+            } else {
+              msg = 'Twój wzrost prawie się zakończył (pozostało nie więcej niż 3 cm) – dalsze rośnięcie nie pomoże w obniżeniu BMI.';
+            }
+            if (selectedStrategy === 'reduction') {
+              msg += ' Skup się na zdrowej i stopniowej redukcji masy ciała poprzez odpowiednią dietę i aktywność fizyczną.';
+            } else {
+              msg += ' Skup się na niedopuszczaniu do dalszego przyrostu masy ciała poprzez zdrową dietę i aktywność fizyczną.';
+            }
           }
           lines.push(msg);
         } else {
           let msg;
-          if (growthEnded) {
-            msg = 'Wzrost dziecka jest już zakończony – dalsze rośnięcie nie pomoże w obniżeniu BMI.';
+          if (patientFacing) {
+            if (growthEnded) {
+              msg = 'Wzrost dziecka jest już zakończony, więc poprawa BMI będzie zależeć przede wszystkim od codziennych nawyków żywieniowych i regularnej aktywności fizycznej.';
+            } else {
+              msg = 'Wzrost dziecka jest już prawie zakończony (pozostało nie więcej niż 3 cm), więc dalsze rośnięcie będzie miało niewielki wpływ na BMI.';
+            }
+            if (selectedStrategy === 'reduction') {
+              msg += ' Proszę skupić się na zdrowej, stopniowej poprawie masy ciała poprzez dietę i ruch.';
+            } else {
+              msg += ' Proszę przede wszystkim nie dopuszczać do dalszego przyrostu masy ciała dziecka i systematycznie wzmacniać zdrowe nawyki.';
+            }
           } else {
-            msg = 'Wzrost dziecka prawie się zakończył (pozostało nie więcej niż 3 cm) – dalsze rośnięcie nie pomoże w obniżeniu BMI.';
-          }
-          if (selectedStrategy === 'reduction') {
-            msg += ' Wspólnie skupcie się na zdrowej i stopniowej redukcji masy ciała poprzez odpowiednią dietę i aktywność fizyczną.';
-          } else {
-            msg += ' Skupcie się na utrzymaniu prawidłowej masy ciała poprzez zdrową dietę i aktywność fizyczną.';
+            if (growthEnded) {
+              msg = 'Wzrost dziecka jest już zakończony – dalsze rośnięcie nie pomoże w obniżeniu BMI.';
+            } else {
+              msg = 'Wzrost dziecka prawie się zakończył (pozostało nie więcej niż 3 cm) – dalsze rośnięcie nie pomoże w obniżeniu BMI.';
+            }
+            if (selectedStrategy === 'reduction') {
+              msg += ' Wspólnie skupcie się na zdrowej i stopniowej redukcji masy ciała poprzez odpowiednią dietę i aktywność fizyczną.';
+            } else {
+              msg += ' Skupcie się na niedopuszczaniu do dalszego przyrostu masy ciała dziecka poprzez zdrową dietę i aktywność fizyczną.';
+            }
           }
           lines.push(msg);
         }
       } else if (remainingCm !== null) {
         // Wyświetl prognozę, jeżeli dziecko ma jeszcze istotny zapas wzrostu (>3 cm)
         if (toChild) {
-          // Dodaj objaśnienie skąd pochodzi prognoza pozostałego wzrostu: docelowy wzrost (MPH) i tolerancja ±8,5 cm.
           let mphInfo = '';
           if (agd && agd.targetHeight && !isNaN(agd.targetHeight)) {
-            mphInfo = ` (Twój docelowy wzrost na podstawie wzrostu rodziców to ok. ${agd.targetHeight.toFixed(1).replace('.', ',')}\u00A0cm ±8,5\u00A0cm, więc ta prognoza jest tylko orientacyjna)`;
+            mphInfo = ` (Twój docelowy wzrost na podstawie wzrostu rodziców to ok. ${agd.targetHeight.toFixed(1).replace('.', ',')} cm ±8,5 cm, więc ta prognoza jest tylko orientacyjna)`;
           }
-          // Zmienna określająca, czy dziecko wyrośnie z nadwagi czy otyłości
           const growFrom = childObese ? 'otyłości' : 'nadwagi';
-          // Gdy istnieje indywidualna prognoza dalszego wzrostu, sformułuj komunikat w sposób
-          // bardziej motywujący: podkreśl, że każdy dodatkowy centymetr wzrostu obniża BMI
-          // i zachęć do minimalnego przyrostu masy ciała. Użyj dynamicznej końcówki „wyrośniesz z
-          // nadwagi” lub „otyłości” w zależności od klasyfikacji.
-          lines.push(
-            `Pamiętaj, że ciągle rośniesz – prognozujemy, że możesz jeszcze urosnąć ok. ${remainingCm.toFixed(1).replace('.', ',')}\u00A0cm${mphInfo}. Każdy dodatkowy centymetr wzrostu obniży Twoje BMI. Staraj się, by w tym czasie Twoja masa ciała rosła minimalnie – dzięki temu „wyrośniesz” z ${growFrom}.`
-          );
+          if (patientFacing) {
+            lines.push(
+              `Dalszy wzrost może pomóc w poprawie BMI. Szacujemy, że możesz jeszcze urosnąć ok. ${remainingCm.toFixed(1).replace('.', ',')} cm${mphInfo}. Jeżeli uda się utrzymać masę ciała możliwie blisko obecnej wartości, BMI będzie stopniowo się obniżać i z czasem możesz „wyrosnąć” z ${growFrom}.`
+            );
+          } else {
+            lines.push(
+              `Pamiętaj, że ciągle rośniesz – prognozujemy, że możesz jeszcze urosnąć ok. ${remainingCm.toFixed(1).replace('.', ',')} cm${mphInfo}. Każdy dodatkowy centymetr wzrostu obniży Twoje BMI. Staraj się, by w tym czasie Twoja masa ciała rosła minimalnie – dzięki temu „wyrośniesz” z ${growFrom}.`
+            );
+          }
         } else {
-          // Objaśnienie dla rodzica zawierające MPH i tolerancję ±8,5 cm.
           let mphInfo = '';
           if (agd && agd.targetHeight && !isNaN(agd.targetHeight)) {
-            mphInfo = ` (docelowy wzrost na podstawie wzrostu rodziców to ok. ${agd.targetHeight.toFixed(1).replace('.', ',')}\u00A0cm ±8,5\u00A0cm, więc ta prognoza jest przybliżona)`;
+            mphInfo = ` (docelowy wzrost na podstawie wzrostu rodziców to ok. ${agd.targetHeight.toFixed(1).replace('.', ',')} cm ±8,5 cm, więc ta prognoza jest przybliżona)`;
           }
           const growFrom = childObese ? 'otyłości' : 'nadwagi';
-          // Ustal komunikat dla rodzica w odniesieniu do prognozy wzrostu. Podkreśl, że przy
-          // minimalnym przyroście masy ciała BMI będzie spadać wraz ze wzrostem, co pozwoli
-          // „wyrosnąć” z nadwagi lub otyłości.
-          lines.push(
-            `Dziecko wciąż rośnie – prognozujemy, że może jeszcze urosnąć ok. ${remainingCm.toFixed(1).replace('.', ',')}\u00A0cm${mphInfo}. Jeżeli masa ciała dziecka będzie rosła minimalnie, BMI będzie spadać w miarę wzrostu – wówczas dziecko „wyrośnie” z ${growFrom}.`
-          );
+          if (patientFacing) {
+            lines.push(
+              `Dalszy wzrost dziecka może ułatwić poprawę BMI. Szacujemy, że dziecko może jeszcze urosnąć ok. ${remainingCm.toFixed(1).replace('.', ',')} cm${mphInfo}. Jeżeli masa ciała będzie rosła bardzo wolno lub pozostanie zbliżona do obecnej, BMI będzie stopniowo się obniżać i dziecko może z czasem „wyrosnąć” z ${growFrom}.`
+            );
+          } else {
+            lines.push(
+              `Dziecko wciąż rośnie – prognozujemy, że może jeszcze urosnąć ok. ${remainingCm.toFixed(1).replace('.', ',')} cm${mphInfo}. Jeżeli masa ciała dziecka będzie rosła minimalnie, BMI będzie spadać w miarę wzrostu – wówczas dziecko „wyrośnie” z ${growFrom}.`
+            );
+          }
         }
       } else {
-        // Ogólny komunikat o rośnięciu dla pozostałych przypadków
-        // Ustal, czy dziecko ma nadwagę czy otyłość, aby użyć odpowiedniego określenia
         const growFromGeneral = childObese ? 'otyłości' : 'nadwagi';
         if (toChild) {
           lines.push(
-            `Pamiętaj, że ciągle rośniesz, co oznacza, że każdy dodatkowy centymetr wzrostu obniży Twoje BMI. Staraj się, by w tym czasie Twoja masa ciała rosła minimalnie – dzięki temu „wyrośniesz” z ${growFromGeneral}.`
+            patientFacing
+              ? `Dalszy wzrost będzie sprzyjał poprawie BMI. Staraj się, aby masa ciała rosła jak najwolniej lub pozostała zbliżona do obecnej – wtedy z czasem możesz „wyrosnąć” z ${growFromGeneral}.`
+              : `Pamiętaj, że ciągle rośniesz, co oznacza, że każdy dodatkowy centymetr wzrostu obniży Twoje BMI. Staraj się, by w tym czasie Twoja masa ciała rosła minimalnie – dzięki temu „wyrośniesz” z ${growFromGeneral}.`
           );
         } else {
           lines.push(
-            `Dziecko wciąż rośnie, co pomaga naturalnie obniżyć BMI. Należy zadbać, aby masa ciała dziecka rosła minimalnie – w ten sposób dziecko „wyrośnie” z ${growFromGeneral}.`
+            patientFacing
+              ? `Dalszy wzrost dziecka będzie sprzyjał poprawie BMI. Proszę dążyć do tego, aby masa ciała rosła jak najwolniej lub pozostała zbliżona do obecnej – wtedy dziecko może z czasem „wyrosnąć” z ${growFromGeneral}.`
+              : `Dziecko wciąż rośnie, co pomaga naturalnie obniżyć BMI. Należy zadbać, aby masa ciała dziecka rosła minimalnie – w ten sposób dziecko „wyrośnie” z ${growFromGeneral}.`
           );
         }
       }
       // Informacja o wybranej diecie i deficycie energetycznym
       if (chosenDiet) {
-        const dietLabelOriginal = chosenDiet.name || '';
         const deficit = dailyDeficit || 0;
         const weekly = weeklyLoss || 0;
         const intake = chosenDiet.intake || null;
-        // Dodaj kaloryczność po nazwie diety (np. "lekka – 1400\u00A0kcal"), jeśli dostępna.
-        let dietLabelWithCalories = dietLabelOriginal;
-        if (intake && !isNaN(intake)) {
-          dietLabelWithCalories = `${dietLabelOriginal} – ${intake}\u00A0kcal`;
-        }
-        // Mapowanie nazw diet na formy w bierniku dla rodzica ("lekka" -> "lekką" itd.)
-        const dietAccusative = {
-          'lekka': 'lekką',
-          'umiarkowana': 'umiarkowaną',
-          'intensywna': 'intensywną'
-        };
+        const intakePart = (intake && !isNaN(intake))
+          ? `około ${intake} kcal dziennie`
+          : 'ilość energii dopasowaną do wieku, wzrostu, masy ciała i poziomu aktywności';
         if (toChild) {
-          // Oblicz zapotrzebowanie energetyczne i udział procentowy deficytu
-          const energyRequirement = bmrVal * pal;
-          const energyReqRounded = Math.round(energyRequirement);
-          let palDescription = '';
-          if (pal <= 1.3) palDescription = 'siedzącym trybie życia';
-          else if (pal <= 1.5) palDescription = 'lekko aktywnym trybie życia';
-          else if (pal <= 1.7) palDescription = 'umiarkowanie aktywnym trybie życia';
-          else if (pal <= 1.9) palDescription = 'aktywnym trybie życia';
-          else palDescription = 'bardzo aktywnym trybie życia';
-          let percentDef = null;
-          if (energyRequirement > 0) {
-            percentDef = Math.round((deficit / energyRequirement) * 100);
-          }
-          // Stwórz komunikat bez bezpośredniego odniesienia do konkretnej nazwy diety.
-          const kcalPart = (intake && !isNaN(intake)) ? `${intake}\u00A0kcal` : '';
-          // Format weekly weight loss with comma as decimal separator
-          let msg = `Optymalna dieta dostosowana do Twojego wieku, wzrostu, masy ciała i poziomu aktywności dostarcza około ${kcalPart} dziennie. Deficyt kaloryczny przy wybraniu tej diety wynosi około ${deficit}\u00A0kcal, co przekłada się na utratę ok. ${weekly.toFixed(1).replace('.', ',')}\u00A0kg na tydzień. `;
-          // Usuwamy szczegółowe objaśnienia dotyczące BMR i PAL – prostota przekazu jest ważniejsza w tej grupie wiekowej.
-          if (selectedStrategy === 'reduction') {
-            msg += 'Priorytetem jest zdrowa i stopniowa redukcja masy ciała.';
+          let msg;
+          if (patientFacing) {
+            msg = `W codziennym planie żywieniowym warto celować w podaż energii na poziomie ${intakePart}. Taki plan daje deficyt około ${deficit} kcal dziennie, co zwykle odpowiada spadkowi masy ciała o ok. ${weekly.toFixed(1).replace('.', ',')} kg tygodniowo. `;
+            if (selectedStrategy === 'reduction') {
+              msg += 'Najważniejsza jest zdrowa, stopniowa redukcja masy ciała.';
+            } else {
+              msg += 'Najważniejsze jest utrzymanie obecnej masy ciała i niedopuszczanie do jej dalszego szybkiego wzrostu.';
+            }
           } else {
-            msg += 'Priorytetem jest stabilizacja wagi i powolna redukcja.';
+            msg = `Optymalna dieta dostosowana do Twojego wieku, wzrostu, masy ciała i poziomu aktywności dostarcza ${intakePart}. Deficyt kaloryczny przy wybraniu tej diety wynosi około ${deficit} kcal, co przekłada się na utratę ok. ${weekly.toFixed(1).replace('.', ',')} kg na tydzień. `;
+            if (selectedStrategy === 'reduction') {
+              msg += 'Priorytetem jest zdrowa i stopniowa redukcja masy ciała.';
+            } else {
+              msg += 'Priorytetem jest utrzymanie obecnej masy ciała i zapobieganie jej dalszemu szybkiemu wzrostowi.';
+            }
           }
           lines.push(msg);
         } else {
-          // Ustal poprawną formę diety w bierniku
-          const labelLower = dietLabelOriginal.toLowerCase();
-          const accusative = dietAccusative[labelLower] || dietLabelOriginal;
-          // Połącz etykietę z kalorycznością w bierniku
-          let dietLabelAccWithCalories = accusative;
-          if (intake && !isNaN(intake)) {
-            dietLabelAccWithCalories = `${accusative} – ${intake}\u00A0kcal`;
-          }
-          // Oblicz zapotrzebowanie energetyczne i udział procentowy deficytu dla dziecka
-          const energyRequirement = bmrVal * pal;
-          const energyReqRounded = Math.round(energyRequirement);
-          let palDescription = '';
-          if (pal <= 1.3) palDescription = 'siedzącym trybie życia';
-          else if (pal <= 1.5) palDescription = 'lekko aktywnym trybie życia';
-          else if (pal <= 1.7) palDescription = 'umiarkowanie aktywnym trybie życia';
-          else if (pal <= 1.9) palDescription = 'aktywnym trybie życia';
-          else palDescription = 'bardzo aktywnym trybie życia';
-          let percentDef = null;
-          if (energyRequirement > 0) {
-            percentDef = Math.round((deficit / energyRequirement) * 100);
-          }
-          // Stwórz komunikat bez bezpośredniego odniesienia do konkretnej nazwy diety dla rodzica.
-          const kcalPartChild = (intake && !isNaN(intake)) ? `${intake}\u00A0kcal` : '';
-          // Format weekly weight loss with comma as decimal separator
-          let msg = `Optymalna dieta dla dziecka, uwzględniająca wiek, wzrost, masę ciała i poziom aktywności, dostarcza około ${kcalPartChild} dziennie. Deficyt kaloryczny przy wyborze tej diety wynosi około ${deficit}\u00A0kcal, co przekłada się na utratę ok. ${weekly.toFixed(1).replace('.', ',')}\u00A0kg tygodniowo.`;
-          // Usuwamy szczegółowe objaśnienia dotyczące BMR i PAL – uproszczenie przekazu dla rodziców.
-          // Dodaj końcowy priorytet redukcji lub stabilizacji.
-          msg += ' ';
-          if (selectedStrategy === 'reduction') {
-            msg += 'Należy pamiętać, że celem jest przede wszystkim zdrowa i stopniowa redukcja masy ciała.';
+          let msg;
+          if (patientFacing) {
+            msg = `Plan żywieniowy dziecka warto oprzeć na podaży energii rzędu ${intakePart}. Przy takim ustawieniu uzyskujemy deficyt około ${deficit} kcal dziennie, co zwykle odpowiada spadkowi masy ciała o ok. ${weekly.toFixed(1).replace('.', ',')} kg tygodniowo. `;
+            if (selectedStrategy === 'reduction') {
+              msg += 'Najważniejsza jest zdrowa, stopniowa poprawa masy ciała.';
+            } else {
+              msg += 'Najważniejsze jest utrzymanie obecnej masy ciała dziecka i niedopuszczanie do jej dalszego szybkiego wzrostu.';
+            }
           } else {
-            msg += 'Należy pamiętać, że celem jest przede wszystkim zatrzymanie przyrostu masy i powolna redukcja.';
+            msg = `Optymalna dieta dla dziecka, uwzględniająca wiek, wzrost, masę ciała i poziom aktywności, dostarcza ${intakePart}. Deficyt kaloryczny przy wyborze tej diety wynosi około ${deficit} kcal, co przekłada się na utratę ok. ${weekly.toFixed(1).replace('.', ',')} kg tygodniowo. `;
+            if (selectedStrategy === 'reduction') {
+              msg += 'Należy pamiętać, że celem jest przede wszystkim zdrowa i stopniowa redukcja masy ciała.';
+            } else {
+              msg += 'Należy pamiętać, że celem jest przede wszystkim utrzymanie obecnej masy ciała dziecka i zapobieganie jej dalszemu szybkiemu wzrostowi.';
+            }
           }
           lines.push(msg);
         }
@@ -3924,11 +4008,15 @@ document.addEventListener('DOMContentLoaded', function() {
       // Szczegółowe zalecenia żywieniowe
       if (toChild) {
         lines.push(
-          'Postaraj się jeść regularnie 4–5 niewielkich posiłków dziennie. W każdym posiłku znajdź miejsce na warzywa lub owoce (unikaj bardzo słodkich). Wybieraj pełnoziarniste pieczywo i kasze zamiast białego pieczywa i słodyczy. Jedz chude mięso lub ryby gotowane lub pieczone, a unikaj tłustych potraw, żółtego sera, makaronów z ciężkimi sosami, grzanek oraz fast‑foodów. Pij przede wszystkim wodę lub niesłodzone napoje, a unikaj słodkich napojów gazowanych.'
+          patientFacing
+            ? 'Proszę jeść regularnie 4–5 mniejszych posiłków dziennie. W każdym posiłku warto uwzględnić warzywa lub owoce, najlepiej o mniejszej zawartości cukrów prostych. Zamiast białego pieczywa, słodkich płatków i słodyczy wybieraj pieczywo pełnoziarniste, kasze i inne produkty z pełnego ziarna. Częściej sięgaj po chude mięso, ryby, nabiał naturalny oraz potrawy gotowane, duszone lub pieczone. Ogranicz fast foody, słodkie napoje, bardzo tłuste potrawy, żółte sery i ciężkie sosy.'
+            : 'Postaraj się jeść regularnie 4–5 niewielkich posiłków dziennie. W każdym posiłku znajdź miejsce na warzywa lub owoce (unikaj bardzo słodkich). Wybieraj pełnoziarniste pieczywo i kasze zamiast białego pieczywa i słodyczy. Jedz chude mięso lub ryby gotowane lub pieczone, a unikaj tłustych potraw, żółtego sera, makaronów z ciężkimi sosami, grzanek oraz fast‑foodów. Pij przede wszystkim wodę lub niesłodzone napoje, a unikaj słodkich napojów gazowanych.'
         );
       } else {
         lines.push(
-          'Proszę zadbać, aby dziecko jadło regularnie 4–5 zdrowych posiłków dziennie w spokojnej atmosferze. W każdym posiłku połowę talerza powinny stanowić warzywa lub owoce (unikaj bardzo słodkich). Wybieraj pełnoziarniste pieczywo i kasze zamiast białego pieczywa i słodyczy, podawaj chude mięso lub ryby gotowane lub pieczone zamiast smażonych. Unikaj makaronów z ciężkimi sosami, żółtego sera, grzanek oraz fast‑foodów. Nie podawaj słodkich napojów gazowanych – najlepiej dawaj dziecku wodę lub herbatki owocowe bez cukru.'
+          patientFacing
+            ? 'Proszę zadbać, aby dziecko jadło regularnie 4–5 mniejszych posiłków dziennie w spokojnej atmosferze. W każdym posiłku warto uwzględnić warzywa lub owoce, najlepiej o mniejszej zawartości cukrów prostych. Zamiast białego pieczywa, słodyczy i słodkich płatków proszę wybierać pieczywo pełnoziarniste, kasze oraz inne produkty z pełnego ziarna. Warto częściej podawać chude mięso, ryby i potrawy gotowane, duszone lub pieczone, a ograniczać fast foody, słodkie napoje, żółte sery i ciężkie sosy.'
+            : 'Proszę zadbać, aby dziecko jadło regularnie 4–5 zdrowych posiłków dziennie w spokojnej atmosferze. W każdym posiłku połowę talerza powinny stanowić warzywa lub owoce (unikaj bardzo słodkich). Wybieraj pełnoziarniste pieczywo i kasze zamiast białego pieczywa i słodyczy, podawaj chude mięso lub ryby gotowane lub pieczone zamiast smażonych. Unikaj makaronów z ciężkimi sosami, żółtego sera, grzanek oraz fast‑foodów. Nie podawaj słodkich napojów gazowanych – najlepiej dawaj dziecku wodę lub herbatki owocowe bez cukru.'
         );
       }
       // Zalecenia dotyczące aktywności fizycznej
@@ -3936,16 +4024,22 @@ document.addEventListener('DOMContentLoaded', function() {
         // Nie proponuj tańca chłopcom; dla dziewczynek pozostaw taniec jako opcję.
         if (sex === 'M') {
           lines.push(
-            'Staraj się być aktywny fizycznie przynajmniej 60 minut każdego dnia. Wybierz takie formy ruchu, które sprawiają Ci radość – mogą to być spacery, jazda na rowerze, bieganie, pływanie lub gry zespołowe. Ogranicz czas spędzany przed telewizorem, komputerem i telefonem.'
+            patientFacing
+              ? 'Proszę planować każdego dnia co najmniej 60 minut ruchu. Najlepiej wybierać aktywności, które sprawiają przyjemność – spacery, jazdę na rowerze, bieganie, pływanie lub gry zespołowe. Warto też ograniczyć czas spędzany przed telewizorem, komputerem i telefonem.'
+              : 'Staraj się być aktywny fizycznie przynajmniej 60 minut każdego dnia. Wybierz takie formy ruchu, które sprawiają Ci radość – mogą to być spacery, jazda na rowerze, bieganie, pływanie lub gry zespołowe. Ogranicz czas spędzany przed telewizorem, komputerem i telefonem.'
           );
         } else {
           lines.push(
-            'Staraj się być aktywny fizycznie przynajmniej 60 minut każdego dnia. Wybierz takie formy ruchu, które sprawiają Ci radość – mogą to być spacery, jazda na rowerze, bieganie, pływanie, taniec lub gry zespołowe. Ogranicz czas spędzany przed telewizorem, komputerem i telefonem.'
+            patientFacing
+              ? 'Proszę planować każdego dnia co najmniej 60 minut ruchu. Najlepiej wybierać aktywności, które sprawiają przyjemność – spacery, jazdę na rowerze, bieganie, pływanie, taniec lub gry zespołowe. Warto też ograniczyć czas spędzany przed telewizorem, komputerem i telefonem.'
+              : 'Staraj się być aktywny fizycznie przynajmniej 60 minut każdego dnia. Wybierz takie formy ruchu, które sprawiają Ci radość – mogą to być spacery, jazda na rowerze, bieganie, pływanie, taniec lub gry zespołowe. Ogranicz czas spędzany przed telewizorem, komputerem i telefonem.'
           );
         }
       } else {
         lines.push(
-          'Rodzice powinni zadbać o to, by dziecko każdego dnia było aktywne fizycznie przez co najmniej 60 minut. Dziecko powinno zachęcać się do różnorodnego ruchu – spacerów, jazdy na rowerze, biegania, pływania, zabaw na świeżym powietrzu czy gier zespołowych. Ograniczajcie czas spędzany przed telewizorem, komputerem i telefonem.'
+          patientFacing
+            ? 'Proszę zadbać, aby dziecko miało codziennie co najmniej 60 minut ruchu. Warto zachęcać do spacerów, jazdy na rowerze, biegania, pływania, zabaw na świeżym powietrzu i gier zespołowych oraz ograniczać czas przed telewizorem, komputerem i telefonem.'
+            : 'Rodzice powinni zadbać o to, by dziecko każdego dnia było aktywne fizycznie przez co najmniej 60 minut. Dziecko powinno zachęcać się do różnorodnego ruchu – spacerów, jazdy na rowerze, biegania, pływania, zabaw na świeżym powietrzu czy gier zespołowych. Ograniczajcie czas spędzany przed telewizorem, komputerem i telefonem.'
         );
       }
 
@@ -3954,17 +4048,23 @@ document.addEventListener('DOMContentLoaded', function() {
         let vitMsg;
         if (toChild) {
           if (age < 11) {
-            // Dzieci w wieku 5–10 lat
-            vitMsg = 'Ze względu na nadwagę lub otyłość zadbaj o odpowiednią suplementację witaminy D. W Twoim wieku (5–10 lat) standardowo zaleca się 600–1000 IU witaminy D dziennie; przy nadwadze lub otyłości dawkę zwiększa się do 1200–2000 IU dziennie. Przy dawkach powyżej 4000 IU dziennie zaleca się regularne badania stężenia 25(OH)D we krwi i konsultację z lekarzem.';
+            vitMsg = patientFacing
+              ? `W związku z ${childWeightIssueInstr} warto pamiętać o suplementacji witaminy D. W wieku 5–10 lat standardowo zaleca się 600–1000 IU dziennie, a przy ${childWeightIssueLoc} zwykle 1200–2000 IU dziennie. Przy dawkach powyżej 4000 IU dziennie konieczne są badania stężenia 25(OH)D we krwi i konsultacja z lekarzem.`
+              : `Ze względu na ${childWeightIssueAcc} zadbaj o odpowiednią suplementację witaminy D. W Twoim wieku (5–10 lat) standardowo zaleca się 600–1000 IU witaminy D dziennie; przy ${childWeightIssueLoc} dawkę zwiększa się do 1200–2000 IU dziennie. Przy dawkach powyżej 4000 IU dziennie zaleca się regularne badania stężenia 25(OH)D we krwi i konsultację z lekarzem.`;
           } else {
-            // Młodzież 11–18 lat
-            vitMsg = 'Ze względu na nadwagę lub otyłość zadbaj o odpowiednią suplementację witaminy D. W wieku 11–18 lat standardowa dawka to 1000–2000 IU dziennie; u młodzieży z nadwagą lub otyłością stosuje się 2000–4000 IU dziennie. Przy dawkach powyżej 4000 IU dziennie konieczne jest monitorowanie stężenia 25(OH)D we krwi i konsultacja z lekarzem.';
+            vitMsg = patientFacing
+              ? `W związku z ${childWeightIssueInstr} warto pamiętać o suplementacji witaminy D. W wieku 11–18 lat standardowa dawka to 1000–2000 IU dziennie, a przy ${childWeightIssueLoc} zwykle 2000–4000 IU dziennie. Przy dawkach powyżej 4000 IU dziennie konieczne jest monitorowanie stężenia 25(OH)D we krwi i konsultacja z lekarzem.`
+              : `Ze względu na ${childWeightIssueAcc} zadbaj o odpowiednią suplementację witaminy D. W wieku 11–18 lat standardowa dawka to 1000–2000 IU dziennie; u młodzieży z ${childWeightIssueInstr} stosuje się 2000–4000 IU dziennie. Przy dawkach powyżej 4000 IU dziennie konieczne jest monitorowanie stężenia 25(OH)D we krwi i konsultacja z lekarzem.`;
           }
         } else {
           if (age < 11) {
-            vitMsg = 'Dla dziecka w wieku 5–10 lat standardowa dawka witaminy D wynosi 600–1000 IU dziennie; u dzieci z nadwagą lub otyłością dawkę można zwiększyć do 1200–2000 IU dziennie. Przy wyższych dawkach (powyżej 4000 IU dziennie) należy regularnie badać stężenie 25(OH)D we krwi i skonsultować się z lekarzem.';
+            vitMsg = patientFacing
+              ? `W związku z ${childWeightIssueInstr} warto uwzględnić u dziecka suplementację witaminy D. W wieku 5–10 lat standardowo zaleca się 600–1000 IU dziennie, a przy ${childWeightIssueLoc} zwykle 1200–2000 IU dziennie. Przy dawkach powyżej 4000 IU dziennie potrzebne są badania stężenia 25(OH)D we krwi i konsultacja z lekarzem.`
+              : `Dla dziecka w wieku 5–10 lat standardowa dawka witaminy D wynosi 600–1000 IU dziennie; u dzieci z ${childWeightIssueInstr} dawkę można zwiększyć do 1200–2000 IU dziennie. Przy wyższych dawkach (powyżej 4000 IU dziennie) należy regularnie badać stężenie 25(OH)D we krwi i skonsultować się z lekarzem.`;
           } else {
-            vitMsg = 'Dla nastolatków w wieku 11–18 lat typowa dawka witaminy D to 1000–2000 IU dziennie; przy nadwadze lub otyłości stosuje się 2000–4000 IU dziennie. Przy dawkach powyżej 4000 IU dziennie należy kontrolować stężenie 25(OH)D we krwi i skonsultować się z lekarzem.';
+            vitMsg = patientFacing
+              ? `W związku z ${childWeightIssueInstr} warto uwzględnić u dziecka suplementację witaminy D. W wieku 11–18 lat standardowo zaleca się 1000–2000 IU dziennie, a przy ${childWeightIssueLoc} zwykle 2000–4000 IU dziennie. Przy dawkach powyżej 4000 IU dziennie trzeba kontrolować stężenie 25(OH)D we krwi i skonsultować się z lekarzem.`
+              : `Dla nastolatków w wieku 11–18 lat typowa dawka witaminy D to 1000–2000 IU dziennie; u nastolatków z ${childWeightIssueInstr} stosuje się 2000–4000 IU dziennie. Przy dawkach powyżej 4000 IU dziennie należy kontrolować stężenie 25(OH)D we krwi i skonsultować się z lekarzem.`;
           }
         }
         lines.push(vitMsg);
@@ -3973,121 +4073,235 @@ document.addEventListener('DOMContentLoaded', function() {
       // Dodaj zalecenia dotyczące nawadniania dla dzieci z nadwagą lub otyłością
       // Informacja pojawia się wyłącznie wtedy, gdy użytkownik wybrał opcję nawadniania.
       if (childOverweight && hydrationEnabled) {
-        // Oblicz normatywne zapotrzebowanie na wodę wg polskich norm żywienia w zależności od wieku i płci.
         let normativeLiters;
         if (age < 4) {
-          // Dzieci 1–3 lata (minimalne wartości – w praktyce wiek 4,9 zwykle nie występuje w aplikacji)
           normativeLiters = 1.25;
         } else if (age < 7) {
-          // Dzieci 4–6 lat
           normativeLiters = 1.6;
         } else if (age < 10) {
-          // Dzieci 7–9 lat
           normativeLiters = 1.75;
         } else {
-          // Młodzież 10–18 lat
-          if (sex === 'K') {
-            // Dziewczęta
-            normativeLiters = 2.0;
-          } else {
-            // Chłopcy
-            normativeLiters = 2.5;
-          }
+          normativeLiters = (sex === 'K') ? 2.0 : 2.5;
         }
-        // Oblicz zapotrzebowanie na podstawie masy ciała: WHO zaleca ok. 30 ml wody na kg masy ciała
         const weightLiters = weight * 0.03;
-        // Zasugeruj przynajmniej większą z wartości: norma wg wieku/płci vs. 30 ml/kg
         const recLiters = Math.max(normativeLiters, weightLiters);
         let hydrationMsg;
         if (toChild) {
-          // Pre-format numeric values with comma as decimal separator
           const weightLitersStr = weightLiters.toFixed(1).replace('.', ',');
           const normativeLitersStr = normativeLiters.toFixed(2).replace('.', ',');
           const recLitersStr = recLiters.toFixed(1).replace('.', ',');
-          hydrationMsg =
-            `Pamiętaj o odpowiednim nawodnieniu – Światowa Organizacja Zdrowia zaleca picie około 30 ml wody na każdy kilogram masy ciała (przy Twojej masie to ok. ${weightLitersStr} l dziennie). ` +
-            `Zgodnie z polskimi normami żywienia dzieci w Twoim wieku i płci powinny wypijać około ${normativeLitersStr} l wody dziennie. ` +
-            `Przy nadwadze lub otyłości staraj się wypijać co najmniej ${recLitersStr} l niesłodzonych płynów każdego dnia.`;
+          hydrationMsg = patientFacing
+            ? `Proszę pamiętać o regularnym piciu wody. Światowa Organizacja Zdrowia przyjmuje orientacyjnie około 30 ml płynów na każdy kilogram masy ciała, co przy Twojej masie daje ok. ${weightLitersStr} l dziennie. Polskie normy żywienia dla Twojego wieku i płci wskazują około ${normativeLitersStr} l dziennie. W praktyce warto dążyć do co najmniej ${recLitersStr} l niesłodzonych płynów każdego dnia.`
+            : `Pamiętaj o odpowiednim nawodnieniu – Światowa Organizacja Zdrowia zaleca picie około 30 ml wody na każdy kilogram masy ciała (przy Twojej masie to ok. ${weightLitersStr} l dziennie). Zgodnie z polskimi normami żywienia dzieci w Twoim wieku i płci powinny wypijać około ${normativeLitersStr} l wody dziennie. Przy nadwadze lub otyłości staraj się wypijać co najmniej ${recLitersStr} l niesłodzonych płynów każdego dnia.`;
         } else {
-          // Pre-format numeric values with comma as decimal separator
           const weightLitersStr2 = weightLiters.toFixed(1).replace('.', ',');
           const normativeLitersStr2 = normativeLiters.toFixed(2).replace('.', ',');
           const recLitersStr2 = recLiters.toFixed(1).replace('.', ',');
-          hydrationMsg =
-            `Rodzice powinni zadbać o odpowiednie nawodnienie dziecka. Światowa Organizacja Zdrowia zaleca picie około 30 ml wody na każdy kilogram masy ciała – przy obecnej masie to ok. ${weightLitersStr2} l dziennie. ` +
-            `Polskie normy żywienia dla dzieci w wieku ${Math.floor(age)} lat i płci ${sex === 'K' ? 'żeńskiej' : 'męskiej'} zalecają około ${normativeLitersStr2} l wody dziennie. ` +
-            `W przypadku nadwagi lub otyłości dziecko powinno wypijać co najmniej ${recLitersStr2} l niesłodzonych napojów każdego dnia.`;
+          hydrationMsg = patientFacing
+            ? `Proszę zadbać o regularne picie wody przez dziecko. Światowa Organizacja Zdrowia przyjmuje orientacyjnie około 30 ml płynów na każdy kilogram masy ciała, co przy obecnej masie daje ok. ${weightLitersStr2} l dziennie. Polskie normy żywienia dla dzieci w wieku ${Math.floor(age)} lat i płci ${sex === 'K' ? 'żeńskiej' : 'męskiej'} wskazują około ${normativeLitersStr2} l dziennie. W praktyce warto dążyć do co najmniej ${recLitersStr2} l niesłodzonych płynów każdego dnia.`
+            : `Rodzice powinni zadbać o odpowiednie nawodnienie dziecka. Światowa Organizacja Zdrowia zaleca picie około 30 ml wody na każdy kilogram masy ciała – przy obecnej masie to ok. ${weightLitersStr2} l dziennie. Polskie normy żywienia dla dzieci w wieku ${Math.floor(age)} lat i płci ${sex === 'K' ? 'żeńskiej' : 'męskiej'} zalecają około ${normativeLitersStr2} l wody dziennie. W przypadku nadwagi lub otyłości dziecko powinno wypijać co najmniej ${recLitersStr2} l niesłodzonych napojów każdego dnia.`;
         }
         lines.push(hydrationMsg);
       }
 
-      // Jeśli użytkownik zaznaczył opcję „Przykłady z czasem dojścia do prawidłowej wagi”
-      // oraz dziecko ma nadwagę lub otyłość, wylicz przewidywany czas dojścia do górnej
-      // granicy normy BMI przy aktualnie wybranej diecie i poziomie aktywności. Dodatkowo
-      // podaj przykładowe aktywności fizyczne wraz z czasem potrzebnym do spalenia
-      // nadmiaru kalorii odpowiadającego masie do redukcji.  Dla chłopców użyj biegania,
-      // jazdy na rowerze i piłki nożnej (liczba meczów 90‑minutowych); dla dziewczynek
-      // pływania, tańca i jazdy na rowerze.
+      // Jeśli użytkownik zaznaczył opcję „Przykłady z czasem dojścia do prawidłowej wagi”,
+      // pokaż dodatkową sekcję zależną od obranej strategii.  Przy redukcji podajemy
+      // czas wynikający z wybranego deficytu i przykłady aktywności potrzebnej do
+      // spalenia nadmiaru kalorii.  Przy stabilizacji szacujemy orientacyjny czas,
+      // po którym przy utrzymaniu obecnej masy ciała i dalszym wzrastaniu BMI może
+      // wrócić do górnej granicy normy.
       if (childOverweight && journeyEnabled) {
-        // Ustal ile kilogramów należy zredukować, aby osiągnąć górną granicę normy BMI.
-        let kgToLoseJourney = 0;
-        if (targetWeightNorm != null && !isNaN(targetWeightNorm)) {
-          kgToLoseJourney = Math.max(0, currentWeight - targetWeightNorm);
-        }
-        // Jeżeli jest co redukować i tempo utraty jest dodatnie, oblicz czas.
-        if (kgToLoseJourney > 0 && weeklyLoss > 0) {
-          const weeksJourney = Math.ceil(kgToLoseJourney / weeklyLoss);
-          // Format months value with comma as decimal separator
-          const monthsJourney = (weeksJourney / 4.345).toFixed(1).replace('.', ',');
-          // Oblicz całkowitą liczbę kalorii do spalenia
-          const kcalPerKg = (typeof KCAL_PER_KG === 'number') ? KCAL_PER_KG : 7700;
-          const kcalToBurnJourney = kgToLoseJourney * kcalPerKg;
-          // Funkcja formatująca czas w godzinach i minutach
-          function formatTime(min) {
-            const h = Math.floor(min / 60);
-            const m = Math.round(min % 60);
-            return h > 0 ? `${h} h ${m} min` : `${m} min`;
-          }
-          // Zdefiniuj aktywności w zależności od płci
-          const acts = (sex === 'M')
-            ? [
-                { name: 'bieganie', met: 8.0, match: false },
-                { name: 'rower',   met: 6.0, match: false },
-                { name: 'piłka nożna', met: 7.0, match: true }
-              ]
-            : [
-                { name: 'pływanie', met: 7.5, match: false },
-                { name: 'taniec',   met: 5.0, match: false },
-                { name: 'rower',    met: 6.0, match: false }
-              ];
-          // Oblicz opis dla każdej aktywności
-          const activityDescriptions = acts.map(act => {
-            const burnPerMin = (act.met * 3.5 * currentWeight) / 200;
-            const totalMin = (burnPerMin > 0) ? (kcalToBurnJourney / burnPerMin) : 0;
-            // Jeśli to piłka nożna – przelicz na mecze (90 minut)
-            if (act.match) {
-              const matches = totalMin / 90;
-              const matchesRounded = Math.ceil(matches);
-              return `${act.name.charAt(0).toUpperCase() + act.name.slice(1)} – około ${matchesRounded} meczów`;
-            } else {
-              return `${act.name.charAt(0).toUpperCase() + act.name.slice(1)} – około ${formatTime(totalMin)}`;
+        if (selectedStrategy === 'stabilization') {
+          const agdJourney = (typeof window.advancedGrowthData !== 'undefined') ? window.advancedGrowthData : null;
+          const startAgeMonths = Math.round(age * 12);
+
+          function projectStabilizationJourney() {
+            let annualGrowthCm = null;
+            let basedOnObservedGrowth = false;
+
+            if (agdJourney && typeof agdJourney.growthVelocity === 'number' && isFinite(agdJourney.growthVelocity) && agdJourney.growthVelocity > 0) {
+              annualGrowthCm = agdJourney.growthVelocity;
+              basedOnObservedGrowth = true;
             }
-          }).join(', ');
-          // Sformułuj komunikat zależny od odbiorcy
-          if (toChild) {
-            // Dla nastolatka: podaj szacowany czas i wyjaśnij, że podane aktywności to tylko orientacyjny sposób na spalenie całego nadmiaru kalorii bez uwzględnienia diety.
-            lines.push(
-              `Stosując wybraną dietę i utrzymując obecny poziom aktywności, dojście do górnej granicy normy BMI zajmie Ci około ${weeksJourney} tygodni (ok. ${monthsJourney} miesiąca/miesięcy). ` +
-              `Poniższe aktywności są jedynie przykładem, ile czasu teoretycznie trwałoby spalenie całego nadmiaru kalorii: ${activityDescriptions}. ` +
-              `Taki czas może wydawać się długi, bo zakłada wyłącznie spalanie kalorii przez ruch. W połączeniu z dietą proces redukcji zachodzi szybciej i przynosi lepsze efekty, więc łączenie zdrowej aktywności i odpowiedniego odżywiania jest najskuteczniejsze.`
-            );
-          } else {
-            // Dla rodziców: podaj szacowany czas i wyjaśnij, że aktywności to tylko orientacyjny sposób na spalenie nadmiaru kalorii, niezależnie od diety.
-            lines.push(
-              `Przy wybranej diecie i zadeklarowanym poziomie aktywności dziecko osiągnie górną granicę normy BMI w ciągu około ${weeksJourney} tygodni (ok. ${monthsJourney} miesiąca/miesięcy). ` +
-              `Poniższe aktywności to przykładowe wyliczenia pokazujące, ile czasu teoretycznie trwałoby spalenie całego nadmiaru kalorii: ${activityDescriptions}. ` +
-              `Taki szacowany czas może wydawać się długi, bo uwzględnia jedynie spalanie kalorii podczas ruchu. W praktyce dieta znacząco redukuje nadmiar kalorii, dlatego połączenie zdrowego odżywiania z aktywnością fizyczną daje najlepsze i najszybsze rezultaty.`
-            );
+
+            if ((!annualGrowthCm || !isFinite(annualGrowthCm) || annualGrowthCm <= 0) && typeof medianHeightForAgeMonths === 'function') {
+              try {
+                const medianHeightNow = medianHeightForAgeMonths(sex, startAgeMonths);
+                const medianHeightInYear = medianHeightForAgeMonths(sex, Math.min(Math.round(CHILD_AGE_MAX * 12), startAgeMonths + 12));
+                if (isFinite(medianHeightNow) && isFinite(medianHeightInYear) && medianHeightInYear > medianHeightNow) {
+                  annualGrowthCm = medianHeightInYear - medianHeightNow;
+                }
+              } catch (_) {
+                /* brak danych referencyjnych – użyj fallbacku poniżej */
+              }
+            }
+
+            if (!annualGrowthCm || !isFinite(annualGrowthCm) || annualGrowthCm <= 0) {
+              if (age < 5) annualGrowthCm = 6.0;
+              else if (age < 10) annualGrowthCm = 5.5;
+              else if (age < 13) annualGrowthCm = 6.5;
+              else if (age < 15) annualGrowthCm = 5.0;
+              else if (age < 17) annualGrowthCm = 3.5;
+              else annualGrowthCm = 2.0;
+            }
+
+            const monthlyGrowthCm = annualGrowthCm / 12;
+            const maxMonths = Math.max(1, Math.ceil(Math.max(0, (CHILD_AGE_MAX - age) * 12)));
+            const targetHeightCap = (agdJourney && typeof agdJourney.targetHeight === 'number' && isFinite(agdJourney.targetHeight) && agdJourney.targetHeight > height)
+              ? agdJourney.targetHeight
+              : null;
+
+            function projectedHeightAfterMonths(monthOffset) {
+              let projectedHeight = height + (monthlyGrowthCm * monthOffset);
+              if (targetHeightCap != null) {
+                projectedHeight = Math.min(projectedHeight, targetHeightCap);
+              }
+              return projectedHeight;
+            }
+
+            function projectedBmiAfterMonths(monthOffset) {
+              const projectedHeight = projectedHeightAfterMonths(monthOffset);
+              if (!isFinite(projectedHeight) || projectedHeight <= 0) return null;
+              return currentWeight / Math.pow(projectedHeight / 100, 2);
+            }
+
+            let normalizationMonth = null;
+            for (let month = 1; month <= maxMonths; month++) {
+              const projectedHeight = projectedHeightAfterMonths(month);
+              const projectedAge = age + (month / 12);
+              let targetBmiProjected = null;
+              try {
+                targetBmiProjected = toNormalBMITarget(currentWeight, projectedHeight, projectedAge, sex);
+              } catch (_) {
+                targetBmiProjected = null;
+              }
+              const projectedBmi = projectedBmiAfterMonths(month);
+              if (isFinite(targetBmiProjected) && isFinite(projectedBmi) && projectedBmi <= targetBmiProjected) {
+                normalizationMonth = month;
+                break;
+              }
+            }
+
+            if (normalizationMonth == null) {
+              return null;
+            }
+
+            let milestoneMonths = [normalizationMonth];
+            if (normalizationMonth > 6) {
+              milestoneMonths = [3, 6, normalizationMonth];
+            } else if (normalizationMonth > 3) {
+              milestoneMonths = [3, normalizationMonth];
+            }
+            milestoneMonths = Array.from(new Set(milestoneMonths)).filter(m => m > 0);
+
+            const milestones = milestoneMonths.map(monthOffset => {
+              const projectedHeight = projectedHeightAfterMonths(monthOffset);
+              const projectedBmi = projectedBmiAfterMonths(monthOffset);
+              return {
+                monthOffset,
+                projectedHeight,
+                projectedBmi
+              };
+            }).filter(item => isFinite(item.projectedHeight) && isFinite(item.projectedBmi));
+
+            return {
+              normalizationMonth,
+              weeksToNormalize: Math.ceil(normalizationMonth * 4.345),
+              monthsToNormalizeLabel: String(normalizationMonth).replace('.', ','),
+              annualGrowthCmLabel: annualGrowthCm.toFixed(1).replace('.', ','),
+              basedOnObservedGrowth,
+              milestones
+            };
+          }
+
+          const stabilizationJourney = projectStabilizationJourney();
+          if (stabilizationJourney) {
+            const milestoneDescriptions = stabilizationJourney.milestones.map(item => {
+              const monthLabel = item.monthOffset.toFixed(0).replace('.', ',');
+              const heightLabel = item.projectedHeight.toFixed(1).replace('.', ',');
+              const bmiLabel = item.projectedBmi.toFixed(1).replace('.', ',');
+              if (item.monthOffset === stabilizationJourney.normalizationMonth) {
+                return `za ${monthLabel} mies. przy wzroście ok. ${heightLabel} cm BMI może wejść w górną granicę normy (ok. ${bmiLabel})`;
+              }
+              return `za ${monthLabel} mies. przy wzroście ok. ${heightLabel} cm BMI może wynosić ok. ${bmiLabel}`;
+            }).join('; ');
+            const growthBasis = stabilizationJourney.basedOnObservedGrowth
+              ? `w tempie około ${stabilizationJourney.annualGrowthCmLabel} cm/rok`
+              : `w orientacyjnym tempie około ${stabilizationJourney.annualGrowthCmLabel} cm/rok`;
+
+            if (toChild) {
+              lines.push(
+                patientFacing
+                  ? `Przy utrzymaniu obecnej masy ciała i dalszym wzrastaniu ${growthBasis} dojście do górnej granicy normy BMI może zająć około ${stabilizationJourney.weeksToNormalize} tygodni (ok. ${stabilizationJourney.monthsToNormalizeLabel} mies.). Przykładowy przebieg: ${milestoneDescriptions}.`
+                  : `Jeśli utrzymasz obecną masę ciała i będziesz dalej rosnąć ${growthBasis}, dojście do górnej granicy normy BMI może zająć około ${stabilizationJourney.weeksToNormalize} tygodni (ok. ${stabilizationJourney.monthsToNormalizeLabel} mies.). Przykładowy przebieg: ${milestoneDescriptions}.`
+              );
+            } else {
+              lines.push(
+                patientFacing
+                  ? `Jeżeli uda się utrzymać masę ciała dziecka na poziomie zbliżonym do obecnego, a dziecko będzie dalej rosnąć ${growthBasis}, dojście do górnej granicy normy BMI może zająć około ${stabilizationJourney.weeksToNormalize} tygodni (ok. ${stabilizationJourney.monthsToNormalizeLabel} mies.). Przykładowy przebieg: ${milestoneDescriptions}.`
+                  : `Jeżeli masa ciała dziecka pozostanie zbliżona do obecnej, a dziecko będzie dalej rosnąć ${growthBasis}, dojście do górnej granicy normy BMI może zająć około ${stabilizationJourney.weeksToNormalize} tygodni (ok. ${stabilizationJourney.monthsToNormalizeLabel} mies.). Przykładowy przebieg: ${milestoneDescriptions}.`
+              );
+            }
+          }
+        } else {
+          // Ustal ile kilogramów należy zredukować, aby osiągnąć górną granicę normy BMI.
+          let kgToLoseJourney = 0;
+          if (targetWeightNorm != null && !isNaN(targetWeightNorm)) {
+            kgToLoseJourney = Math.max(0, currentWeight - targetWeightNorm);
+          }
+          // Jeżeli jest co redukować i tempo utraty jest dodatnie, oblicz czas.
+          if (kgToLoseJourney > 0 && weeklyLoss > 0) {
+            const weeksJourney = Math.ceil(kgToLoseJourney / weeklyLoss);
+            // Format months value with comma as decimal separator
+            const monthsJourney = (weeksJourney / 4.345).toFixed(1).replace('.', ',');
+            // Oblicz całkowitą liczbę kalorii do spalenia
+            const kcalPerKg = (typeof KCAL_PER_KG === 'number') ? KCAL_PER_KG : 7700;
+            const kcalToBurnJourney = kgToLoseJourney * kcalPerKg;
+            // Funkcja formatująca czas w godzinach i minutach
+            function formatTime(min) {
+              const h = Math.floor(min / 60);
+              const m = Math.round(min % 60);
+              return h > 0 ? `${h} h ${m} min` : `${m} min`;
+            }
+            // Zdefiniuj aktywności w zależności od płci
+            const acts = (sex === 'M')
+              ? [
+                  { name: 'bieganie', met: 8.0, match: false },
+                  { name: 'rower',   met: 6.0, match: false },
+                  { name: 'piłka nożna', met: 7.0, match: true }
+                ]
+              : [
+                  { name: 'pływanie', met: 7.5, match: false },
+                  { name: 'taniec',   met: 5.0, match: false },
+                  { name: 'rower',    met: 6.0, match: false }
+                ];
+            // Oblicz opis dla każdej aktywności
+            const activityDescriptions = acts.map(act => {
+              const burnPerMin = (act.met * 3.5 * currentWeight) / 200;
+              const totalMin = (burnPerMin > 0) ? (kcalToBurnJourney / burnPerMin) : 0;
+              // Jeśli to piłka nożna – przelicz na mecze (90 minut)
+              if (act.match) {
+                const matches = totalMin / 90;
+                const matchesRounded = Math.ceil(matches);
+                return `${act.name.charAt(0).toUpperCase() + act.name.slice(1)} – około ${matchesRounded} meczów`;
+              } else {
+                return `${act.name.charAt(0).toUpperCase() + act.name.slice(1)} – około ${formatTime(totalMin)}`;
+              }
+            }).join(', ');
+            // Sformułuj komunikat zależny od odbiorcy
+            if (toChild) {
+              lines.push(
+                patientFacing
+                  ? `Przy obecnych założeniach żywieniowych i utrzymaniu aktualnej aktywności dojście do górnej granicy normy BMI może zająć około ${weeksJourney} tygodni (ok. ${monthsJourney} miesiąca/miesięcy). Poniższe aktywności pokazują orientacyjnie, ile czasu zajęłoby spalenie całego nadmiaru kalorii: ${activityDescriptions}. To tylko przykład teoretyczny — w praktyce połączenie diety i ruchu daje najlepsze efekty.`
+                  : `Stosując wybraną dietę i utrzymując obecny poziom aktywności, dojście do górnej granicy normy BMI zajmie Ci około ${weeksJourney} tygodni (ok. ${monthsJourney} miesiąca/miesięcy). Poniższe aktywności są jedynie przykładem, ile czasu teoretycznie trwałoby spalenie całego nadmiaru kalorii: ${activityDescriptions}. Taki czas może wydawać się długi, bo zakłada wyłącznie spalanie kalorii przez ruch. W połączeniu z dietą proces redukcji zachodzi szybciej i przynosi lepsze efekty, więc łączenie zdrowej aktywności i odpowiedniego odżywiania jest najskuteczniejsze.`
+              );
+            } else {
+              lines.push(
+                patientFacing
+                  ? `Przy obecnych założeniach żywieniowych i utrzymaniu aktualnej aktywności dojście dziecka do górnej granicy normy BMI może zająć około ${weeksJourney} tygodni (ok. ${monthsJourney} miesiąca/miesięcy). Poniższe aktywności pokazują orientacyjnie, ile czasu zajęłoby spalenie całego nadmiaru kalorii: ${activityDescriptions}. To tylko przykład teoretyczny — w praktyce połączenie diety i ruchu daje najlepsze efekty.`
+                  : `Przy wybranej diecie i zadeklarowanym poziomie aktywności dziecko osiągnie górną granicę normy BMI w ciągu około ${weeksJourney} tygodni (ok. ${monthsJourney} miesiąca/miesięcy). Poniższe aktywności to przykładowe wyliczenia pokazujące, ile czasu teoretycznie trwałoby spalenie całego nadmiaru kalorii: ${activityDescriptions}. Taki szacowany czas może wydawać się długi, bo uwzględnia jedynie spalanie kalorii podczas ruchu. W praktyce dieta znacząco redukuje nadmiar kalorii, dlatego połączenie zdrowego odżywiania z aktywnością fizyczną daje najlepsze i najszybsze rezultaty.`
+              );
+            }
           }
         }
       }
@@ -4099,18 +4313,23 @@ document.addEventListener('DOMContentLoaded', function() {
       if (needSpecialist && !proMode) {
         if (toChild) {
           lines.push(
-            'Jeżeli masz trudności z trzymaniem się zasad żywienia lub z regularną aktywnością fizyczną, porozmawiaj z rodzicami o konsultacji z dietetykiem lub psychologiem dziecięcym. W razie potrzeby warto skorzystać również z pomocy trenera personalnego.'
+            patientFacing
+              ? 'Jeżeli wdrożenie zaleceń okaże się trudne, porozmawiaj z rodzicami o konsultacji z dietetykiem lub psychologiem dziecięcym. W razie potrzeby warto rozważyć również wsparcie trenera personalnego.'
+              : 'Jeżeli masz trudności z trzymaniem się zasad żywienia lub z regularną aktywnością fizyczną, porozmawiaj z rodzicami o konsultacji z dietetykiem lub psychologiem dziecięcym. W razie potrzeby warto skorzystać również z pomocy trenera personalnego.'
           );
         } else {
           lines.push(
-            'W razie trudności z utrzymaniem zaleceń dietetycznych lub aktywności fizycznej skonsultujcie się z dietetykiem lub psychologiem dziecięcym, a w miarę potrzeby także z trenerem personalnym, aby ustalić indywidualny plan redukcji masy i uzyskać wsparcie.'
+            patientFacing
+              ? 'Jeżeli utrzymanie zaleceń będzie trudne, proszę rozważyć konsultację z dietetykiem lub psychologiem dziecięcym, a w razie potrzeby także z trenerem personalnym, aby wspólnie ustalić realny plan żywieniowy i ruchowy.'
+              : 'W razie trudności z utrzymaniem zaleceń dietetycznych lub aktywności fizycznej skonsultujcie się z dietetykiem lub psychologiem dziecięcym, a w miarę potrzeby także z trenerem personalnym, aby ustalić indywidualny plan żywieniowy i ruchowy oraz uzyskać wsparcie.'
           );
         }
       }
       // Ostrzeżenie dla dzieci poniżej 10 lat
       if (age < 10 && !proMode) {
-        warningText =
-          'Dziecko poniżej 10 lat z nadwagą lub otyłością powinno skonsultować się z dietetykiem lub endokrynologiem dziecięcym. Proponowany plan ma charakter poglądowy.';
+        warningText = patientFacing
+          ? 'U dziecka poniżej 10. roku życia taki plan należy traktować wyłącznie orientacyjnie; wskazana jest konsultacja z dietetykiem lub endokrynologiem dziecięcym.'
+          : 'Dziecko poniżej 10 lat z nadwagą lub otyłością powinno skonsultować się z dietetykiem lub endokrynologiem dziecięcym. Proponowany plan ma charakter poglądowy.';
       }
     }
     let textOutput = '';
@@ -4172,11 +4391,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     // Pobierz pozostałą część html (zawierającą <ol>)
     const remainingHtml = htmlOut.substring(listHtmlStartIndex);
-    // Odczytaj tekstowe linie i odseparuj ewentualne ostrzeżenie (pierwsza linia z "dziecko poniżej")
+    // Odczytaj tekstowe linie i odseparuj ewentualne ostrzeżenie z pierwszej linii.
     const allLines = result.textOutput.split('\n');
     let warningLine = '';
-    if (allLines.length > 0 && allLines[0].toLowerCase().includes('dziecko poniżej')) {
-      warningLine = allLines.shift();
+    if (allLines.length > 0) {
+      const firstLineLc = allLines[0].toLowerCase();
+      if (firstLineLc.includes('dziecko poniżej') || firstLineLc.includes('u dziecka poniżej')) {
+        warningLine = allLines.shift();
+      }
     }
     // Filtruj linie zawierające wzmianki o deficycie, utracie wagi czy szybkim chudnięciu
     const filteredLines = allLines.filter(function(line) {
@@ -4224,25 +4446,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const generateBtn = document.getElementById('generateDietBtn');
     if (generateBtn && !generateBtn.dataset.dietGenerateAttached) {
       generateBtn.addEventListener('click', function() {
-        // Ustal wybraną strategię (redukcja vs stabilizacja) na podstawie przełączników
-        const reduceToggleEl = document.getElementById('reduceToggle');
-        const stabilizationToggleEl = document.getElementById('stabilizationToggle');
-        let strategy;
-        if (reduceToggleEl && reduceToggleEl.checked) {
-          strategy = 'reduction';
-        } else if (stabilizationToggleEl && stabilizationToggleEl.checked) {
-          strategy = 'stabilization';
-        } else {
-          strategy = 'reduction';
-        }
-        let result = null;
-        if (strategy === 'stabilization') {
-          if (typeof generateDietRecommendationsStabilization === 'function') {
-            result = generateDietRecommendationsStabilization();
-          }
-        } else {
-          result = generateDietRecommendations();
-        }
+        const result = buildDietRecommendationResult();
         if (!result) return;
         const { textOutput, htmlOutput } = result;
         // Wyświetl wygenerowane zalecenia w polu wynikowym
@@ -4274,6 +4478,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       });
       generateBtn.dataset.dietGenerateAttached = 'true';
+    }
+
+    updateDietCardLabels();
+    const patientFacingToggle = document.getElementById('patientFacingToggle');
+    if (patientFacingToggle && !patientFacingToggle.dataset.dietPatientFacingAttached) {
+      patientFacingToggle.addEventListener('change', function() {
+        updateDietCardLabels();
+        refreshDietRecommendationsIfVisible();
+      });
+      patientFacingToggle.dataset.dietPatientFacingAttached = 'true';
     }
     // Ustaw widoczność przycisku zaleceń na podstawie początkowych danych
     updateDietRecommendationsVisibility();
@@ -4353,6 +4567,271 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 })();
 
+
+
+function getProfessionalSummaryLineTone(line) {
+  try {
+    if (!line || typeof line !== 'string') return 'normal';
+    const lc = line.toLowerCase();
+
+    const extractPercentile = (str) => {
+      const m = str.match(/([<>]?)\s*([\d]+(?:[\.,]\d+)?)[^\d]*centyl/i);
+      if (!m) return null;
+      let perc = parseFloat(String(m[2]).replace(',', '.'));
+      if (m[1] && m[1].includes('<')) perc = 0;
+      if (m[1] && m[1].includes('>')) perc = 100;
+      return isNaN(perc) ? null : perc;
+    };
+
+    if (lc.startsWith('bmi:')) {
+      const weight = parseFloat(document.getElementById('weight')?.value) || 0;
+      const height = parseFloat(document.getElementById('height')?.value) || 0;
+      const ageYears = (typeof getAgeDecimal === 'function') ? getAgeDecimal() : 0;
+      const sexVal = document.getElementById('sex')?.value || 'M';
+      if (height > 0 && weight > 0) {
+        let bmiVal = null;
+        if (typeof BMI === 'function') bmiVal = BMI(weight, height);
+        if (bmiVal && !isNaN(bmiVal)) {
+          let category = null;
+          const months = Math.round(ageYears * 12);
+          if (typeof bmiCategoryChild === 'function' && ageYears >= CHILD_AGE_MIN && ageYears <= CHILD_AGE_MAX) {
+            category = bmiCategoryChild(bmiVal, sexVal, months);
+          } else if (typeof bmiCategory === 'function') {
+            category = bmiCategory(bmiVal);
+          }
+          const catStr = String(category || '');
+          if (catStr.includes('Otyłość')) return 'danger';
+          if (catStr === 'Niedowaga' || catStr === 'Nadwaga') return 'warn';
+          return 'normal';
+        }
+      }
+      return 'normal';
+    }
+
+    if (lc.startsWith('wskaźnik cole')) {
+      const mCole = line.match(/([\d]+(?:[\.,]\d+)?)\s*%/);
+      if (mCole) {
+        const coleVal = parseFloat(String(mCole[1]).replace(',', '.'));
+        if (!isNaN(coleVal)) {
+          if (coleVal < 90 || coleVal >= 120) return 'danger';
+          if (coleVal > 110 && coleVal < 120) return 'warn';
+        }
+      }
+      return 'normal';
+    }
+
+    if (lc.startsWith('whr:')) {
+      const ageYears = (typeof getAgeDecimal === 'function') ? getAgeDecimal() : 0;
+      const sexVal = document.getElementById('sex')?.value || 'M';
+      const weight = parseFloat(document.getElementById('weight')?.value) || 0;
+      const height = parseFloat(document.getElementById('height')?.value) || 0;
+      const waist = parseFloat(document.getElementById('waistCm')?.value) || 0;
+      const hip = parseFloat(document.getElementById('hipCm')?.value) || 0;
+      let bmiNow = null;
+      if (typeof BMI === 'function' && weight > 0 && height > 0) {
+        bmiNow = BMI(weight, height);
+      }
+      const bmiPChild = (typeof window !== 'undefined' && typeof window.bmiPercentileValue === 'number') ? window.bmiPercentileValue : null;
+      const coleCatNow = (typeof window !== 'undefined' && typeof window.coleCatValue === 'string') ? window.coleCatValue : null;
+      if (typeof interpretWHR === 'function' && ageYears && sexVal && waist > 0 && hip > 0) {
+        try {
+          const res = interpretWHR(ageYears, sexVal, waist, hip, bmiNow, bmiPChild, coleCatNow);
+          if (res && res.state) {
+            if (res.state === 'bad') return 'danger';
+            if (res.state === 'warn') return 'warn';
+            return 'normal';
+          }
+        } catch (_) {}
+      }
+      const whrMatch = line.match(/whr:\s*([\d]+(?:[\.,]\d+)?)/i);
+      if (whrMatch) {
+        const val = parseFloat(String(whrMatch[1]).replace(',', '.'));
+        let limit = 0.9;
+        try {
+          if (typeof ADULT_WHR_LIMIT !== 'undefined' && ADULT_WHR_LIMIT) {
+            limit = ADULT_WHR_LIMIT[sexVal] || limit;
+          }
+        } catch (_) {}
+        if (val > limit) return 'danger';
+      }
+      return 'normal';
+    }
+
+    if (lc.startsWith('hsds')) {
+      try {
+        const diffMatch = line.match(/hsds\s*[-‑]\s*mpsds\s*[:=]\s*([-+]?\d+(?:[\.,]\d+)?)/i);
+        if (diffMatch) {
+          const diffVal = parseFloat(String(diffMatch[1]).replace(',', '.'));
+          if (!isNaN(diffVal)) {
+            const absDiff = Math.abs(diffVal);
+            if (absDiff >= 2) return 'danger';
+            if (absDiff >= 1.5) return 'warn';
+          }
+        }
+      } catch (_) {}
+      return 'normal';
+    }
+
+    if (lc.startsWith('mph')) {
+      try {
+        const zMatch = line.match(/z[-‑]?score\s*[:=]\s*([-+]?\d+(?:[\.,]\d+)?)/i);
+        if (zMatch) {
+          const z = parseFloat(String(zMatch[1]).replace(',', '.'));
+          if (!isNaN(z)) {
+            const absZ = Math.abs(z);
+            if (absZ >= 2) return 'danger';
+            if (absZ >= 1.5) return 'warn';
+          }
+        }
+      } catch (_) {}
+      return 'normal';
+    }
+
+    if (lc.includes('centyl')) {
+      const perc = extractPercentile(line);
+      if (perc !== null) {
+        const isWeightLine = lc.startsWith('waga') || lc.startsWith('weight');
+        const isHeightLine = lc.startsWith('wzrost') || lc.startsWith('height');
+        if (isWeightLine) {
+          if (perc <= 3 || perc >= 97) return 'danger';
+          if ((perc > 3 && perc < 10) || (perc >= 90 && perc < 97)) return 'warn';
+          return 'normal';
+        }
+        if (isHeightLine) {
+          if (perc <= 3) return 'danger';
+          if ((perc > 3 && perc < 10) || (perc > 97)) return 'warn';
+          return 'normal';
+        }
+        if (perc <= 3 || perc >= 97) return 'danger';
+        if (perc <= 5 || perc >= 95) return 'warn';
+      }
+    }
+
+    return 'normal';
+  } catch (_) {
+    return 'normal';
+  }
+}
+
+function getProfessionalSummaryLineColor(line) {
+  const tone = getProfessionalSummaryLineTone(line);
+  if (tone === 'danger') return 'var(--danger)';
+  if (tone === 'warn') return '#c75d00';
+  return 'var(--primary)';
+}
+
+function getFormattedProfessionalSummaryLines() {
+  let linesRaw = '';
+  try {
+    linesRaw = (typeof generateMetabolicSummary === 'function') ? (generateMetabolicSummary() || '') : '';
+  } catch (_) {
+    linesRaw = '';
+  }
+  if (!String(linesRaw || '').trim()) return [];
+
+  let lines = String(linesRaw)
+    .split('\n')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  try {
+    const weightValStr = (document.getElementById('weight')?.value || '').trim();
+    const heightValStr = (document.getElementById('height')?.value || '').trim();
+    const sbpValStr = (document.getElementById('bpSystolic')?.value || '').trim();
+    const dbpValStr = (document.getElementById('bpDiastolic')?.value || '').trim();
+    const headCircValStr = (document.getElementById('headCircumference')?.value || '').trim();
+    const chestCircValStr = (document.getElementById('chestCircumference')?.value || '').trim();
+
+    lines = lines.map(function(line) {
+      if (line.startsWith('Waga:')) {
+        const rest = line.slice(line.indexOf(':') + 1).trim();
+        const prefix = weightValStr ? (weightValStr + ' kg, ') : '';
+        return 'Waga: ' + prefix + rest;
+      }
+      if (line.startsWith('Wzrost:')) {
+        const rest = line.slice(line.indexOf(':') + 1).trim();
+        const prefix = heightValStr ? (heightValStr + ' cm, ') : '';
+        return 'Wzrost: ' + prefix + rest;
+      }
+      if (line.startsWith('Ciśnienie skurczowe')) {
+        const rest = line.slice(line.indexOf(':') + 1).trim();
+        const prefix = sbpValStr ? (sbpValStr + ' mmHg, ') : '';
+        return 'RR skurczowe: ' + prefix + rest;
+      }
+      if (line.startsWith('Ciśnienie rozkurczowe')) {
+        const rest = line.slice(line.indexOf(':') + 1).trim();
+        const prefix = dbpValStr ? (dbpValStr + ' mmHg, ') : '';
+        return 'RR rozkurczowe: ' + prefix + rest;
+      }
+      if (line.startsWith('Obwód głowy')) {
+        const rest = line.slice(line.indexOf(':') + 1).trim();
+        const prefix = headCircValStr ? (headCircValStr + ' cm, ') : '';
+        return 'Obwód głowy: ' + prefix + rest;
+      }
+      if (line.startsWith('Obwód klatki piersiowej')) {
+        const rest = line.slice(line.indexOf(':') + 1).trim();
+        const prefix = chestCircValStr ? (chestCircValStr + ' cm, ') : '';
+        return 'Obwód kl. piersiowej: ' + prefix + rest;
+      }
+      if (/^MPH \(mid[-‑]parental height\):/i.test(line)) {
+        let newLine = line.replace(/^MPH \(mid[^)]*\):/i, 'MPH:');
+        newLine = newLine.replace(/z-score:/i, 'Z-score:');
+        return newLine;
+      }
+      return line;
+    });
+  } catch (_) {}
+
+  return lines;
+}
+
+function attachPatientReportActionToSummaryCard(options) {
+  try {
+    document.querySelectorAll('.current-summary-actions').forEach((node) => {
+      try { node.remove(); } catch (_) {}
+    });
+
+    const opts = options || {};
+    if (!opts.shouldShow || !(opts.isDocPro || opts.proMode)) {
+      if (typeof window.adjustSummaryCardsHeight === 'function') {
+        try { window.adjustSummaryCardsHeight(); } catch (_) {}
+      }
+      return;
+    }
+
+    let targetCard = null;
+    if (opts.prevVisible) {
+      targetCard =
+        document.getElementById('currentSummaryCardRight') ||
+        document.querySelector('#currentSummaryFullWrap .current-summary-card:last-child') ||
+        document.querySelector('#currentSummaryWrap .current-summary-card:last-child');
+    } else {
+      targetCard = document.getElementById('currentSummaryCard');
+    }
+
+    if (!targetCard) {
+      if (typeof window.adjustSummaryCardsHeight === 'function') {
+        try { window.adjustSummaryCardsHeight(); } catch (_) {}
+      }
+      return;
+    }
+
+    const actionWrap = document.createElement('div');
+    actionWrap.className = 'current-summary-actions';
+    actionWrap.innerHTML = `
+      <button type="button" class="patient-report-summary-btn" data-patient-report-pdf-btn>
+        Raport PDF dla pacjenta
+      </button>
+      <div class="patient-report-summary-hint">2 strony • wersja po wizycie</div>
+    `;
+    targetCard.appendChild(actionWrap);
+
+    if (typeof window.adjustSummaryCardsHeight === 'function') {
+      try { window.adjustSummaryCardsHeight(); } catch (_) {}
+    }
+  } catch (_) {}
+}
+
 // === Karta „Podsumowanie wyników” (tryb profesjonalny) ===
 /**
  * Aktualizuje zawartość i pozycję karty „Podsumowanie wyników”.
@@ -4376,236 +4855,6 @@ function updateProfessionalSummaryCard(_retry) {
     document.getElementById('currentSummaryCardRight')?.remove();
   };
 
-  /**
-   * Determine the colour for a given summary line.  The goal is to apply the same
-   * colour coding used in the individual result cards (turquoise for normal,
-   * orange for warnings and red for abnormal results).  This helper inspects
-   * the label of the line and derives the state using existing global
-   * functions (e.g. BMI category and WHR interpretation) or simple
-   * percentile thresholds.  If no specific condition is met the primary
-   * colour is returned.
-   *
-   * @param {string} line The summary text line.
-   * @returns {string} A CSS colour (var(--primary), #c75d00 or var(--danger)).
-   */
-  function determineSummaryColor(line) {
-    try {
-      if (!line || typeof line !== 'string') return 'var(--primary)';
-      const lc = line.toLowerCase();
-      // Normal, warning and danger colours
-      const COLOR_PRIMARY  = 'var(--primary)'; // turquoise
-      const COLOR_WARNING  = '#c75d00';        // orange/brown – matches .bmi-warning/.whr-warning
-      const COLOR_DANGER   = 'var(--danger)';  // red – matches .bmi-danger/.whr-danger
-
-      // Helper to parse percentile from a line (e.g. "98 centyl")
-      const extractPercentile = (str) => {
-        const m = str.match(/([<>]?)\s*([\d]+(?:[\.,]\d+)?)[^\d]*centyl/i);
-        if (!m) return null;
-        let perc = parseFloat(m[2].replace(',', '.'));
-        if (m[1] && m[1].includes('<')) perc = 0;
-        if (m[1] && m[1].includes('>')) perc = 100;
-        return isNaN(perc) ? null : perc;
-      };
-
-      // Determine colour for BMI line
-      if (lc.startsWith('bmi:')) {
-        const weight = parseFloat(document.getElementById('weight')?.value) || 0;
-        const height = parseFloat(document.getElementById('height')?.value) || 0;
-        const ageYears = (typeof getAgeDecimal === 'function') ? getAgeDecimal() : 0;
-        const sexVal = document.getElementById('sex')?.value || 'M';
-        if (height > 0 && weight > 0) {
-          // Compute BMI value
-          let bmiVal = null;
-          if (typeof BMI === 'function') {
-            bmiVal = BMI(weight, height);
-          }
-          if (bmiVal && !isNaN(bmiVal)) {
-            let category = null;
-            const months = Math.round(ageYears * 12);
-            // Child classification if applicable
-            if (typeof bmiCategoryChild === 'function' && ageYears >= CHILD_AGE_MIN && ageYears <= CHILD_AGE_MAX) {
-              category = bmiCategoryChild(bmiVal, sexVal, months);
-            } else if (typeof bmiCategory === 'function') {
-              category = bmiCategory(bmiVal);
-            }
-            if (category) {
-              const catStr = String(category);
-              if (catStr.includes('Otyłość')) {
-                return COLOR_DANGER;
-              }
-              if (catStr === 'Niedowaga' || catStr === 'Nadwaga') {
-                return COLOR_WARNING;
-              }
-              // Other categories (Prawidłowe etc.) are normal
-              return COLOR_PRIMARY;
-            }
-          }
-        }
-        // Fallback
-        return COLOR_PRIMARY;
-      }
-
-      // Determine colour for Cole index line (Wskaźnik Cole’a)
-      // Parse the numerical value and classify: <90 or ≥120 → red, 110–<120 → orange,
-      // otherwise turquoise.  This mirrors the logic used in the detailed result card.
-      if (lc.startsWith('wskaźnik cole')) {
-        // Extract the value before the percent sign
-        const mCole = line.match(/([\d]+(?:[\.,]\d+)?)\s*%/);
-        if (mCole) {
-          const coleVal = parseFloat(mCole[1].replace(',', '.'));
-          if (!isNaN(coleVal)) {
-            if (coleVal < 90 || coleVal >= 120) {
-              return COLOR_DANGER;
-            }
-            if (coleVal > 110 && coleVal < 120) {
-              return COLOR_WARNING;
-            }
-            // Otherwise in normal range (90–110)
-            return COLOR_PRIMARY;
-          }
-        }
-        // If parsing fails, fallback to primary colour
-        return COLOR_PRIMARY;
-      }
-
-      // Determine colour for WHR line
-      if (lc.startsWith('whr:')) {
-        const ageYears = (typeof getAgeDecimal === 'function') ? getAgeDecimal() : 0;
-        const sexVal   = document.getElementById('sex')?.value || 'M';
-        const weight   = parseFloat(document.getElementById('weight')?.value) || 0;
-        const height   = parseFloat(document.getElementById('height')?.value) || 0;
-        const waist    = parseFloat(document.getElementById('waistCm')?.value) || 0;
-        const hip      = parseFloat(document.getElementById('hipCm')?.value) || 0;
-        let bmiNow     = null;
-        if (typeof BMI === 'function' && weight > 0 && height > 0) {
-          bmiNow = BMI(weight, height);
-        }
-        // Retrieve auxiliary values used by WHR module if present
-        const bmiPChild  = (typeof window !== 'undefined' && typeof window.bmiPercentileValue === 'number') ? window.bmiPercentileValue : null;
-        const coleCatNow = (typeof window !== 'undefined' && typeof window.coleCatValue === 'string') ? window.coleCatValue : null;
-        if (typeof interpretWHR === 'function' && ageYears && sexVal && waist > 0 && hip > 0) {
-          try {
-            const res = interpretWHR(ageYears, sexVal, waist, hip, bmiNow, bmiPChild, coleCatNow);
-            if (res && res.state) {
-              if (res.state === 'bad') return COLOR_DANGER;
-              if (res.state === 'warn') return COLOR_WARNING;
-              return COLOR_PRIMARY;
-            }
-          } catch (_) {
-            /* ignore errors */
-          }
-        }
-        // Fallback: if WHR value > adult limit use danger
-        const whrMatch = line.match(/whr:\s*([\d]+(?:[\.,]\d+)?)/i);
-        if (whrMatch) {
-          const val = parseFloat(whrMatch[1].replace(',', '.'));
-          // Adult limits from ADULT_WHR_LIMIT
-          let limit = 0.9;
-          try {
-            if (typeof ADULT_WHR_LIMIT !== 'undefined' && ADULT_WHR_LIMIT) {
-              limit = ADULT_WHR_LIMIT[sexVal] || limit;
-            }
-          } catch (_) {}
-          if (val > limit) return COLOR_DANGER;
-        }
-        return COLOR_PRIMARY;
-      }
-
-      // Determine colour for hSDS - mpSDS difference line
-      // The difference line appears in the professional summary as "hSDS - mpSDS: <value>" and indicates
-      // how far the child's height SDS deviates from the mid-parental height SDS. We apply colour
-      // coding based on the magnitude of this difference:
-      //   • red (danger) when |difference| ≥ 2
-      //   • dark orange (warning) when |difference| ≥ 1.5
-      //   • primary colour otherwise
-      if (lc.startsWith('hsds')) {
-        try {
-          const diffMatch = line.match(/hsds\s*[-‑]\s*mpsds\s*[:=]\s*([-+]?\d+(?:[\.,]\d+)?)/i);
-          if (diffMatch) {
-            let diffVal = parseFloat(String(diffMatch[1]).replace(',', '.'));
-            if (!isNaN(diffVal)) {
-              const absDiff = Math.abs(diffVal);
-              if (absDiff >= 2) return COLOR_DANGER;
-              if (absDiff >= 1.5) return COLOR_WARNING;
-              return COLOR_PRIMARY;
-            }
-          }
-        } catch (_) {
-          // ignore parsing errors
-        }
-        // If parsing fails or value is not present, default to primary colour
-        return COLOR_PRIMARY;
-      }
-
-      // Determine colour for MPH (mid-parental height) line
-      // The MPH line contains the abbreviation at the beginning (e.g., "MPH:" or "MPH (mid-parental height):"),
-      // followed by the calculated value and optionally a Z-score.
-      // Colour coding rules:
-      //   * |Z-score| >= 2.0 → danger (red)
-      //   * |Z-score| >= 1.5 → warning (dark orange)
-      //   * otherwise → primary colour (turquoise)
-      if (lc.startsWith('mph')) {
-        try {
-          // Extract the Z-score value from the line.  The line may contain different separators such as
-          // colon or equals sign after "Z-score" and may use commas as decimal separators.
-          const zMatch = line.match(/z[-‑]?score\s*[:=]\s*([-+]?\d+(?:[\.,]\d+)?)/i);
-          if (zMatch) {
-            let z = parseFloat(String(zMatch[1]).replace(',', '.'));
-            if (!isNaN(z)) {
-              const absZ = Math.abs(z);
-              if (absZ >= 2) return COLOR_DANGER;
-              if (absZ >= 1.5) return COLOR_WARNING;
-              return COLOR_PRIMARY;
-            }
-          }
-        } catch (_) {
-          // ignore errors in parsing
-        }
-        // If no Z-score is present or parsing fails, default to primary colour
-        return COLOR_PRIMARY;
-      }
-
-      // Colour lines with explicit percentiles. Apply customised rules for weight and height
-      // based on the app's professional mode requirements. The thresholds are:
-      //   • For weight: percentiles ≤3 or ≥97 ⇒ danger (red);
-      //                percentiles in (3,10) or [90,97) ⇒ warning (dark orange);
-      //   • For height: percentiles ≤3 ⇒ danger (red);
-      //                 percentiles in (3,10) or >97 ⇒ warning (dark orange).
-      //   • For all other measurements (blood pressure, head/chest circumference) with percentile info
-      //     we retain the default logic: extreme percentiles (≤3 or ≥97) → danger; near extremes
-      //     (≤5 or ≥95) → warning.  This ensures other fields remain consistent with previous behaviour.
-      if (lc.includes('centyl')) {
-        const perc = extractPercentile(line);
-        if (perc !== null) {
-          // Determine if this line refers to weight or height by inspecting its prefix.
-          const isWeightLine = lc.startsWith('waga') || lc.startsWith('weight');
-          const isHeightLine = lc.startsWith('wzrost') || lc.startsWith('height');
-          if (isWeightLine) {
-            // Weight: red for ≤3 or ≥97; orange for (3,10) or [90,97).
-            if (perc <= 3 || perc >= 97) return COLOR_DANGER;
-            if ((perc > 3 && perc < 10) || (perc >= 90 && perc < 97)) return COLOR_WARNING;
-            return COLOR_PRIMARY;
-          }
-          if (isHeightLine) {
-            // Height: red for ≤3; orange for (3,10) or >97.
-            if (perc <= 3) return COLOR_DANGER;
-            if ((perc > 3 && perc < 10) || (perc > 97)) return COLOR_WARNING;
-            return COLOR_PRIMARY;
-          }
-          // Default handling for other percentile lines
-          if (perc <= 3 || perc >= 97) return COLOR_DANGER;
-          if (perc <= 5 || perc >= 95) return COLOR_WARNING;
-          return COLOR_PRIMARY;
-        }
-      }
-
-      // Default: normal colour
-      return COLOR_PRIMARY;
-    } catch (_) {
-      return 'var(--primary)';
-    }
-  }
-
   // Ustal, czy jesteśmy na DocPro oraz czy tryb profesjonalny jest aktywny
   const isDocPro = typeof window !== 'undefined'
     && window.location && window.location.pathname
@@ -4616,14 +4865,8 @@ function updateProfessionalSummaryCard(_retry) {
   else if (typeof window !== 'undefined' && typeof window.professionalMode !== 'undefined') proMode = !!window.professionalMode;
 
   // Czy mamy co pokazać?
-  let shouldShow = false;
-  let linesRaw = '';
-  try {
-    if (isDocPro || proMode) {
-      linesRaw = (typeof generateMetabolicSummary === 'function') ? (generateMetabolicSummary() || '') : '';
-      shouldShow = !!linesRaw.trim();
-    }
-  } catch (_) { shouldShow = false; }
+  const lines = (isDocPro || proMode) ? getFormattedProfessionalSummaryLines() : [];
+  const shouldShow = Array.isArray(lines) && lines.length > 0;
 
   // Czy „Ostatni pomiar” jest widoczny?
   const prevCard = document.getElementById('prevSummaryCard');
@@ -4635,71 +4878,8 @@ function updateProfessionalSummaryCard(_retry) {
     card.style.display = 'none';
     wrap.style.display = 'none';
     if (fullWrap) { fullWrap.style.display = 'none'; fullWrap.innerHTML = ''; }
+    attachPatientReportActionToSummaryCard({ shouldShow: false, isDocPro, proMode, prevVisible });
     return;
-  }
-
-  // Rozbij podsumowanie na linie i na dwie kolumny
-  // i przygotuj wartości wejściowe, aby wzbogacić podsumowanie o
-  // rzeczywiste pomiary oraz zmienić etykiety wyłącznie w karcie.
-  let lines = linesRaw.split('\n').map(s => s.trim()).filter(Boolean);
-
-  // Dodaj wartości pomiarów i dostosuj etykiety tylko na karcie
-  try {
-    const weightValStr      = (document.getElementById('weight')?.value || '').trim();
-    const heightValStr      = (document.getElementById('height')?.value || '').trim();
-    const sbpValStr         = (document.getElementById('bpSystolic')?.value || '').trim();
-    const dbpValStr         = (document.getElementById('bpDiastolic')?.value || '').trim();
-    const headCircValStr    = (document.getElementById('headCircumference')?.value || '').trim();
-    const chestCircValStr   = (document.getElementById('chestCircumference')?.value || '').trim();
-    lines = lines.map(function(line) {
-      // Waga: dodaj wartość w kg
-      if (line.startsWith('Waga:')) {
-        const rest   = line.slice(line.indexOf(':') + 1).trim();
-        const prefix = weightValStr ? (weightValStr + ' kg, ') : '';
-        return 'Waga: ' + prefix + rest;
-      }
-      // Wzrost: dodaj wartość w cm
-      if (line.startsWith('Wzrost:')) {
-        const rest   = line.slice(line.indexOf(':') + 1).trim();
-        const prefix = heightValStr ? (heightValStr + ' cm, ') : '';
-        return 'Wzrost: ' + prefix + rest;
-      }
-      // Ciśnienie skurczowe: zmień etykietę na RR skurczowe i dodaj wartość w mmHg
-      if (line.startsWith('Ciśnienie skurczowe')) {
-        const rest   = line.slice(line.indexOf(':') + 1).trim();
-        const prefix = sbpValStr ? (sbpValStr + ' mmHg, ') : '';
-        return 'RR skurczowe: ' + prefix + rest;
-      }
-      // Ciśnienie rozkurczowe: zmień etykietę na RR rozkurczowe i dodaj wartość w mmHg
-      if (line.startsWith('Ciśnienie rozkurczowe')) {
-        const rest   = line.slice(line.indexOf(':') + 1).trim();
-        const prefix = dbpValStr ? (dbpValStr + ' mmHg, ') : '';
-        return 'RR rozkurczowe: ' + prefix + rest;
-      }
-      // Obwód głowy: dodaj wartość w cm
-      if (line.startsWith('Obwód głowy')) {
-        const rest   = line.slice(line.indexOf(':') + 1).trim();
-        const prefix = headCircValStr ? (headCircValStr + ' cm, ') : '';
-        return 'Obwód głowy: ' + prefix + rest;
-      }
-      // Obwód klatki piersiowej: zmień etykietę i dodaj wartość w cm
-      if (line.startsWith('Obwód klatki piersiowej')) {
-        const rest   = line.slice(line.indexOf(':') + 1).trim();
-        const prefix = chestCircValStr ? (chestCircValStr + ' cm, ') : '';
-        return 'Obwód kl. piersiowej: ' + prefix + rest;
-      }
-      // MPH (mid-parental height): skróć etykietę i popraw wielkość liter w Z-score
-      // Wykrywamy zarówno myślnik zwykły (-) jak i nierozdzielający (‑) w nazwie
-      if (/^MPH \(mid[-‑]parental height\):/i.test(line)) {
-        let newLine = line.replace(/^MPH \(mid[^)]*\):/i, 'MPH:');
-        // Zmieniamy „z-score:” na „Z-score:” wyłącznie w tej linii
-        newLine = newLine.replace(/z-score:/i, 'Z-score:');
-        return newLine;
-      }
-      return line;
-    });
-  } catch (_) {
-    // Jeśli formatowanie podsumowania nie powiedzie się, zachowaj oryginalne linie
   }
 
   const mid   = Math.ceil(lines.length / 2);
@@ -4714,7 +4894,7 @@ function updateProfessionalSummaryCard(_retry) {
       const row = document.createElement('div');
       row.className = 'current-summary-row';
       // Apply colour coding: determine the colour based on the content of the original line.
-      const colour = determineSummaryColor(txt);
+      const colour = getProfessionalSummaryLineColor(txt);
       if (colour) {
         row.style.color = colour;
       }
@@ -4838,7 +5018,2021 @@ function updateProfessionalSummaryCard(_retry) {
       try { window.adjustSummaryCardsHeight(); } catch (_) {}
     }
   }
+
+  try {
+    attachPatientReportActionToSummaryCard({ shouldShow, isDocPro, proMode, prevVisible, isTwoColumn });
+  } catch (_) {}
 }
+
+
+function patientReportEscapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function patientReportFormatNumber(value, digits) {
+  if (typeof value !== 'number' || !isFinite(value)) return '—';
+  return value.toFixed(Number.isFinite(digits) ? digits : 1).replace('.', ',');
+}
+
+function patientReportDecodeCentile(value) {
+  return String(value == null ? '' : value)
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>');
+}
+
+function patientReportFormatPercentile(percentile) {
+  if (typeof percentile !== 'number' || !isFinite(percentile)) return '—';
+  if (typeof formatCentile === 'function') {
+    try {
+      const raw = formatCentile(percentile);
+      const word = (typeof centylWord === 'function') ? centylWord(raw) : 'centyl';
+      return `${patientReportDecodeCentile(raw)} ${word}`;
+    } catch (_) {}
+  }
+  return `${patientReportFormatNumber(percentile, 0)} centyl`;
+}
+
+function patientReportFormatAge(ageYears) {
+  if (typeof ageYears !== 'number' || !isFinite(ageYears) || ageYears < 0) return '—';
+  const months = Math.round(ageYears * 12);
+  if (typeof advHistoryFormatAgeMonths === 'function') {
+    try { return advHistoryFormatAgeMonths(months); } catch (_) {}
+  }
+  const years = Math.floor(months / 12);
+  const mos = months - (years * 12);
+  return `${years} l. ${mos} mies.`;
+}
+
+function patientReportSanitizeFilename(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 48);
+}
+
+function patientReportGetPreferredSource() {
+  try {
+    if (typeof advHistoryGetPreferredSource === 'function') return advHistoryGetPreferredSource();
+  } catch (_) {}
+  try {
+    if (typeof bmiSource !== 'undefined' && bmiSource) return bmiSource;
+  } catch (_) {}
+  return 'WHO';
+}
+
+function patientReportGetMetricMedian(metric, sex, ageYears, usedSource, resolved) {
+  const src = String(usedSource || patientReportGetPreferredSource()).toUpperCase();
+  if (resolved && resolved.result && typeof resolved.result.median === 'number' && isFinite(resolved.result.median)) {
+    return resolved.result.median;
+  }
+  const months = Math.round(ageYears * 12);
+  if (!isFinite(months) || months < 0) return null;
+  try {
+    if (src === 'PALCZEWSKA' && typeof getPalCentile === 'function') {
+      const palMetric = metric === 'WT' ? 'WT' : (metric === 'HT' ? 'HT' : 'BMI');
+      const median = getPalCentile(sex, months, 50, palMetric);
+      return (typeof median === 'number' && isFinite(median)) ? median : null;
+    }
+  } catch (_) {}
+  return null;
+}
+
+function patientReportBuildMedianReference(label, value, median, options) {
+  const opts = options || {};
+  const digits = Number.isFinite(opts.digits) ? opts.digits : 1;
+  const medianUnit = String(opts.medianUnit == null ? (opts.unit || '') : opts.medianUnit);
+  const diffUnit = String(opts.diffUnit == null ? (opts.unit || '') : opts.diffUnit);
+  const baseLabel = String(opts.friendlyLabel || `Przeciętna ${String(label || '').toLowerCase()} dla tego wieku`);
+  if (typeof value !== 'number' || !isFinite(value) || typeof median !== 'number' || !isFinite(median)) {
+    return {
+      available: false,
+      label: baseLabel,
+      medianText: 'Brak porównania do typowej wartości dla wieku.',
+      diffText: '',
+      neutral: true
+    };
+  }
+  const addUnit = (val, unit) => {
+    const formatted = patientReportFormatNumber(val, digits);
+    return unit ? `${formatted} ${unit}` : formatted;
+  };
+  const diff = value - median;
+  const abs = Math.abs(diff);
+  if (abs < 0.05) {
+    return {
+      available: true,
+      label: baseLabel,
+      medianText: addUnit(median, medianUnit),
+      diffText: 'To prawie tyle samo co wartość przeciętna.',
+      neutral: true
+    };
+  }
+  const direction = diff > 0 ? 'powyżej tej wartości' : 'poniżej tej wartości';
+  return {
+    available: true,
+    label: baseLabel,
+    medianText: addUnit(median, medianUnit),
+    diffText: `To o ${addUnit(abs, diffUnit)} ${direction}.`,
+    neutral: false
+  };
+}
+
+function patientReportToneColor(tone) {
+  if (tone === 'danger') return '#c62828';
+  if (tone === 'warn') return '#c75d00';
+  return '#00838d';
+}
+
+function patientReportDescribeWeight(percentile) {
+  if (typeof percentile !== 'number' || !isFinite(percentile)) return 'bez porównania centylowego';
+  if (percentile < 3) return 'znacznie poniżej typowego zakresu';
+  if (percentile < 10) return 'poniżej typowego zakresu';
+  if (percentile < 90) return 'w typowym zakresie dla wieku';
+  if (percentile < 97) return 'powyżej typowego zakresu';
+  return 'wyraźnie powyżej typowego zakresu';
+}
+
+function patientReportDescribeHeight(percentile) {
+  if (typeof percentile !== 'number' || !isFinite(percentile)) return 'bez porównania centylowego';
+  if (percentile <= 3) return 'w dolnej części siatki centylowej';
+  if (percentile < 10) return 'nieco poniżej mediany';
+  if (percentile <= 90) return 'w typowym zakresie dla wieku';
+  if (percentile <= 97) return 'powyżej mediany';
+  return 'w górnej części siatki centylowej';
+}
+
+function patientReportDescribeBmi(category) {
+  const cat = String(category || '');
+  if (!cat) return 'bez pełnej interpretacji';
+  if (cat.includes('Otyłość')) return 'BMI wyraźnie powyżej typowego zakresu';
+  if (cat === 'Nadwaga') return 'BMI powyżej typowego zakresu';
+  if (cat === 'Niedowaga') return 'BMI poniżej typowego zakresu';
+  return 'BMI w typowym zakresie';
+}
+
+function patientReportScaleGradient() {
+  return 'linear-gradient(90deg, #ffd7d7 0%, #ffc9c9 10%, #ffe4b8 17%, #d7f2f3 25%, #b3eaed 50%, #d7f2f3 75%, #ffe4b8 83%, #ffc9c9 90%, #ffd7d7 100%)';
+}
+
+function patientReportBuildScaleModel(type, percentile) {
+  if (typeof percentile !== 'number' || !isFinite(percentile)) return null;
+  const clamped = Math.max(0, Math.min(100, percentile));
+  if (type === 'BMI') {
+    return {
+      marker: clamped,
+      ticks: [
+        { pos: 5, label: '5c', safePos: 7 },
+        { pos: 50, label: '50c', safePos: 50 },
+        { pos: 85, label: '85c', safePos: 85 },
+        { pos: 95, label: '95c', safePos: 93 }
+      ],
+      gradient: patientReportScaleGradient()
+    };
+  }
+  return {
+    marker: clamped,
+    ticks: [
+      { pos: 3, label: '3c', safePos: 6.5 },
+      { pos: 50, label: '50c', safePos: 50 },
+      { pos: 97, label: '97c', safePos: 93.5 }
+    ],
+    gradient: patientReportScaleGradient()
+  };
+}
+
+function patientReportCollectAllTrendPoints() {
+  const points = [];
+  try {
+    if (typeof advGrowthCollectAllPointsForReport === 'function') {
+      const collected = advGrowthCollectAllPointsForReport();
+      if (Array.isArray(collected)) {
+        collected.forEach((point) => {
+          if (!point || typeof point.ageMonths !== 'number' || !isFinite(point.ageMonths)) return;
+          points.push({
+            ageMonths: point.ageMonths,
+            weight: (typeof point.weight === 'number' && isFinite(point.weight)) ? point.weight : null,
+            height: (typeof point.height === 'number' && isFinite(point.height)) ? point.height : null,
+            current: point.pointType === 'current'
+          });
+        });
+      }
+    }
+  } catch (_) {}
+
+  const ageYears = (typeof getAgeDecimal === 'function') ? getAgeDecimal() : 0;
+  const currentAgeMonths = Math.round(ageYears * 12);
+  const currentHeight = parseFloat(document.getElementById('height')?.value);
+  const currentWeight = parseFloat(document.getElementById('weight')?.value);
+  if (isFinite(currentAgeMonths) && currentAgeMonths >= 0 && (!isNaN(currentHeight) || !isNaN(currentWeight))) {
+    const alreadyExists = points.some((point) => {
+      if (point.ageMonths !== currentAgeMonths) return false;
+      const sameHeight = (
+        (point.height == null && isNaN(currentHeight)) ||
+        (typeof point.height === 'number' && !isNaN(currentHeight) && Math.abs(point.height - currentHeight) < 0.05)
+      );
+      const sameWeight = (
+        (point.weight == null && isNaN(currentWeight)) ||
+        (typeof point.weight === 'number' && !isNaN(currentWeight) && Math.abs(point.weight - currentWeight) < 0.05)
+      );
+      return sameHeight && sameWeight;
+    });
+    if (!alreadyExists) {
+      points.push({
+        ageMonths: currentAgeMonths,
+        weight: !isNaN(currentWeight) ? currentWeight : null,
+        height: !isNaN(currentHeight) ? currentHeight : null,
+        current: true
+      });
+    }
+  }
+
+  return points
+    .slice()
+    .sort((a, b) => a.ageMonths - b.ageMonths);
+}
+
+function patientReportBuildTrendSeries(points, key) {
+  const series = [];
+  (points || []).forEach((point, idx) => {
+    let value = null;
+    if (key === 'BMI') {
+      if (typeof point.weight === 'number' && typeof point.height === 'number' && typeof BMI === 'function') {
+        value = BMI(point.weight, point.height);
+      }
+    } else if (key === 'WT') {
+      value = point.weight;
+    } else if (key === 'HT') {
+      value = point.height;
+    }
+    if (typeof value !== 'number' || !isFinite(value)) return;
+    series.push({
+      x: point.ageMonths,
+      y: value,
+      current: !!point.current,
+      label: (typeof advHistoryFormatAgeMonths === 'function') ? advHistoryFormatAgeMonths(point.ageMonths) : `${Math.floor(point.ageMonths / 12)} l.`
+    });
+  });
+  return series;
+}
+
+function patientReportBuildTrendDeltaText(series, unit, digits) {
+  if (!Array.isArray(series) || series.length < 2) return '';
+  const prev = series[series.length - 2];
+  const last = series[series.length - 1];
+  const diff = last.y - prev.y;
+  const abs = patientReportFormatNumber(Math.abs(diff), Number.isFinite(digits) ? digits : 1);
+  if (Math.abs(diff) < 0.05) return `Ostatni wpisany okres: bez większej zmiany (${unit}).`;
+  return `Ostatni wpisany okres: ${diff > 0 ? '+' : '-'}${abs} ${unit}.`;
+}
+
+function patientReportBuildSparklineSvg(series, options) {
+  if (!Array.isArray(series) || series.length < 2) return '';
+  const opts = options || {};
+  const width = 360;
+  const height = 118;
+  const padX = 14;
+  const padY = 14;
+  const bottomPad = 24;
+  const xs = series.map((item) => item.x);
+  const ys = series.map((item) => item.y);
+  let minX = Math.min.apply(null, xs);
+  let maxX = Math.max.apply(null, xs);
+  let minY = Math.min.apply(null, ys);
+  let maxY = Math.max.apply(null, ys);
+  if (!isFinite(minX) || !isFinite(maxX) || !isFinite(minY) || !isFinite(maxY)) return '';
+  if (maxX === minX) maxX = minX + 1;
+  if (maxY === minY) {
+    const delta = Math.max(1, Math.abs(maxY) * 0.05);
+    minY -= delta;
+    maxY += delta;
+  }
+  const plotW = width - (padX * 2);
+  const plotH = height - padY - bottomPad;
+  const toX = (x) => padX + ((x - minX) / (maxX - minX)) * plotW;
+  const toY = (y) => padY + (1 - ((y - minY) / (maxY - minY))) * plotH;
+  const path = series.map((item, idx) => `${idx === 0 ? 'M' : 'L'} ${toX(item.x).toFixed(2)} ${toY(item.y).toFixed(2)}`).join(' ');
+  const areaPath = `${path} L ${toX(series[series.length - 1].x).toFixed(2)} ${(padY + plotH).toFixed(2)} L ${toX(series[0].x).toFixed(2)} ${(padY + plotH).toFixed(2)} Z`;
+  const last = series[series.length - 1];
+  const first = series[0];
+  const circles = series.map((item) => {
+    const cx = toX(item.x).toFixed(2);
+    const cy = toY(item.y).toFixed(2);
+    const r = item.current ? 4.8 : 3.4;
+    const fill = item.current ? '#7c3aed' : '#00838d';
+    const stroke = item.current ? '#ffffff' : '#e8f6f6';
+    return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="2" />`;
+  }).join('');
+  const minLabel = patientReportEscapeHtml(first.label || '');
+  const maxLabel = patientReportEscapeHtml(last.label || '');
+  const valueLabel = patientReportEscapeHtml(`${patientReportFormatNumber(last.y, Number.isFinite(opts.digits) ? opts.digits : 1)} ${opts.unit || ''}`.trim());
+  const gradientId = `patientSparkFill_${Math.random().toString(36).slice(2, 10)}`;
+  return `
+    <svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Trend ${patientReportEscapeHtml(opts.title || '')}">
+      <defs>
+        <linearGradient id="${gradientId}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#00838d" stop-opacity="0.24" />
+          <stop offset="100%" stop-color="#00838d" stop-opacity="0.03" />
+        </linearGradient>
+      </defs>
+      <line x1="${padX}" y1="${(padY + plotH).toFixed(2)}" x2="${(padX + plotW).toFixed(2)}" y2="${(padY + plotH).toFixed(2)}" stroke="#d6e7e7" stroke-width="1.5" />
+      <path d="${areaPath}" fill="url(#${gradientId})" stroke="none" />
+      <path d="${path}" fill="none" stroke="#00838d" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+      ${circles}
+      <text x="${padX}" y="${height - 5}" font-size="12" fill="#6b7d7d">${minLabel}</text>
+      <text x="${padX + plotW}" y="${height - 5}" font-size="12" fill="#6b7d7d" text-anchor="end">${maxLabel}</text>
+      <rect x="${width - 112}" y="6" width="104" height="20" rx="10" fill="#f4f7fb" stroke="#dbe7f2" />
+      <text x="${width - 60}" y="20" font-size="11.5" fill="#37556a" text-anchor="middle">${valueLabel}</text>
+    </svg>`;
+}
+
+function patientReportSplitSummaryLine(line) {
+  const raw = String(line || '').trim();
+  const idx = raw.indexOf(':');
+  if (idx <= 0) {
+    return { label: raw, value: '' };
+  }
+  return {
+    label: raw.slice(0, idx).trim(),
+    value: raw.slice(idx + 1).trim()
+  };
+}
+
+function patientReportGroupSummaryLines(lines) {
+  const groups = [
+    { key: 'main', title: 'Waga, wzrost i BMI', intro: 'Najważniejsze wskaźniki z bieżącego pomiaru.', items: [] },
+    { key: 'body', title: 'Obwody i proporcje ciała', intro: 'Pomocnicze pomiary budowy ciała.', items: [] },
+    { key: 'cardio', title: 'Ciśnienie i dodatkowe pomiary', intro: 'Pomiary dodatkowe wykonane podczas wizyty.', items: [] },
+    { key: 'growth', title: 'Tempo wzrastania i potencjał', intro: 'Wskaźniki przydatne w ocenie wzrastania w czasie.', items: [] },
+    { key: 'other', title: 'Pozostałe wyniki', intro: 'Dodatkowe informacje z części profesjonalnej.', items: [] }
+  ];
+  const pickGroup = (line) => {
+    const lc = String(line || '').toLowerCase();
+    if (lc.startsWith('waga') || lc.startsWith('wzrost') || lc.startsWith('bmi') || lc.startsWith('pow. ciała') || lc.startsWith('wskaźnik cole')) return 'main';
+    if (lc.startsWith('obwód talii') || lc.startsWith('obwód bioder') || lc.startsWith('whr')) return 'body';
+    if (lc.startsWith('rr ') || lc.startsWith('ciśnienie') || lc.startsWith('obwód głowy') || lc.startsWith('obwód kl.')) return 'cardio';
+    if (lc.startsWith('aktualne tempo') || lc.startsWith('tempo wzrastania') || lc.startsWith('mph') || lc.startsWith('hsds')) return 'growth';
+    return 'other';
+  };
+  (lines || []).forEach((line) => {
+    const groupKey = pickGroup(line);
+    const group = groups.find((item) => item.key === groupKey) || groups[groups.length - 1];
+    const split = patientReportSplitSummaryLine(line);
+    group.items.push({
+      raw: line,
+      label: split.label,
+      value: split.value,
+      tone: getProfessionalSummaryLineTone(line)
+    });
+  });
+  return groups.filter((group) => group.items.length);
+}
+
+function patientReportCollectHighlights(lines) {
+  const out = [];
+  const add = (text, tone) => {
+    if (!text) return;
+    if (out.some((item) => item.text === text)) return;
+    out.push({ text, tone: tone || 'warn' });
+  };
+  (lines || []).forEach((line) => {
+    const tone = getProfessionalSummaryLineTone(line);
+    if (tone === 'normal') return;
+    const lc = String(line || '').toLowerCase();
+    if (lc.startsWith('bmi')) add('BMI wymaga omówienia w kontekście wieku i wzrostu.', tone);
+    else if (lc.startsWith('waga')) add('Masa ciała jest poza typowym zakresem dla wieku.', tone);
+    else if (lc.startsWith('wzrost')) add('Wzrost znajduje się poza typowym zakresem centylowym.', tone);
+    else if (lc.startsWith('rr ') || lc.startsWith('ciśnienie')) add('Ciśnienie tętnicze wymaga kontroli w kolejnych pomiarach.', tone);
+    else if (lc.startsWith('whr')) add('Rozkład tkanki tłuszczowej warto oceniać łącznie z innymi wynikami.', tone);
+    else if (lc.startsWith('wskaźnik cole')) add('Wskaźnik Cole’a pomaga ocenić masę ciała względem wzrostu.', tone);
+    else if (lc.startsWith('tempo wzrastania') || lc.startsWith('aktualne tempo')) add('Tempo wzrastania trzeba interpretować w odniesieniu do czasu między pomiarami.', tone);
+    else if (lc.startsWith('mph') || lc.startsWith('hsds')) add('Wzrost warto oceniać także względem potencjału rodzinnego.', tone);
+  });
+  return out.slice(0, 4);
+}
+
+function patientReportBuildHeadline(metrics, historyCount, highlights) {
+  const bmiCard = metrics.find((item) => item.key === 'BMI') || null;
+  const heightCard = metrics.find((item) => item.key === 'HT') || null;
+  const bmiCategory = String((bmiCard && bmiCard.category) || '');
+  let badge = bmiCategory || 'Ocena bieżącego pomiaru';
+  let tone = bmiCard ? bmiCard.tone : 'normal';
+  let title = 'Najważniejsze wyniki mieszczą się obecnie w typowym zakresie dla wieku i płci.';
+  let text = '';
+
+  if (bmiCategory.includes('Otyłość')) {
+    title = 'Masa ciała i BMI są obecnie wyraźnie powyżej typowych wartości dla wieku.';
+    text = 'Najważniejsze jest obserwowanie trendu w kolejnych pomiarach i ocenianie, czy wynik stopniowo przesuwa się w stronę bardziej typowego zakresu.';
+    tone = 'danger';
+  } else if (bmiCategory === 'Nadwaga') {
+    title = 'Masa ciała i BMI są obecnie powyżej typowego zakresu dla wieku.';
+    text = 'Najważniejsze jest obserwowanie trendu kolejnych pomiarów i konsekwentne trzymanie się zaleceń ustalonych podczas wizyty.';
+    tone = 'warn';
+  } else if (bmiCategory === 'Niedowaga') {
+    title = 'Masa ciała lub BMI są obecnie poniżej typowego zakresu dla wieku.';
+    text = 'W kolejnych wizytach warto sprawdzać, czy wynik wraca w kierunku typowych wartości dla wieku i wzrostu.';
+    tone = 'warn';
+  }
+
+  let subtext = '';
+
+  if (heightCard && typeof heightCard.percentile === 'number' && isFinite(heightCard.percentile) && heightCard.percentile <= 3) {
+    subtext = 'Wzrost znajduje się dodatkowo w dolnej części siatki centylowej, dlatego duże znaczenie ma ocena tempa wzrastania w czasie.';
+  }
+  if (Array.isArray(highlights) && highlights.length && tone === 'normal') {
+    tone = highlights.some((item) => item.tone === 'danger') ? 'danger' : 'warn';
+    badge = 'Wymaga omówienia';
+  }
+
+  return { badge, tone, title, text, subtext };
+}
+
+function patientReportBuildMetricCards() {
+  const ageYears = (typeof getAgeDecimal === 'function') ? getAgeDecimal() : 0;
+  const sex = document.getElementById('sex')?.value || 'M';
+  const weight = parseFloat(document.getElementById('weight')?.value);
+  const height = parseFloat(document.getElementById('height')?.value);
+  const bmi = (!isNaN(weight) && !isNaN(height) && typeof BMI === 'function') ? BMI(weight, height) : null;
+  const preferredSource = patientReportGetPreferredSource();
+  const isChild = ageYears > 0 && ageYears <= 18;
+  const trendPoints = patientReportCollectAllTrendPoints();
+
+  const weightResolved = (isChild && !isNaN(weight) && typeof advHistoryResolveMetric === 'function')
+    ? advHistoryResolveMetric('WT', weight, sex, ageYears, preferredSource)
+    : { result: null, source: null, reason: '' };
+  const heightResolved = (isChild && !isNaN(height) && typeof advHistoryResolveMetric === 'function')
+    ? advHistoryResolveMetric('HT', height, sex, ageYears, preferredSource)
+    : { result: null, source: null, reason: '' };
+  const bmiResolved = (isChild && typeof bmi === 'number' && isFinite(bmi) && typeof advHistoryResolveMetric === 'function')
+    ? advHistoryResolveMetric('BMI', bmi, sex, ageYears, preferredSource)
+    : { result: null, source: null, reason: '' };
+
+  const bmiCategoryLabel = (typeof bmi === 'number' && isFinite(bmi))
+    ? ((isChild && typeof bmiCategoryChild === 'function') ? bmiCategoryChild(bmi, sex, Math.round(ageYears * 12)) : ((typeof window.bmiCategory === 'function') ? window.bmiCategory(bmi) : ((typeof bmiCategory === 'function') ? bmiCategory(bmi) : '')))
+    : '';
+
+  const weightPercentile = weightResolved && weightResolved.result ? weightResolved.result.percentile : null;
+  const heightPercentile = heightResolved && heightResolved.result ? heightResolved.result.percentile : null;
+  const bmiPercentile = bmiResolved && bmiResolved.result ? bmiResolved.result.percentile : null;
+
+  const weightMedian = patientReportGetMetricMedian('WT', sex, ageYears, weightResolved.source, weightResolved);
+  const heightMedian = patientReportGetMetricMedian('HT', sex, ageYears, heightResolved.source, heightResolved);
+  const bmiMedian = patientReportGetMetricMedian('BMI', sex, ageYears, bmiResolved.source, bmiResolved);
+
+  const cards = [];
+  if (!isNaN(weight)) {
+    const series = patientReportBuildTrendSeries(trendPoints, 'WT');
+    const tone = (typeof weightPercentile === 'number' && isFinite(weightPercentile))
+      ? ((weightPercentile <= 3 || weightPercentile >= 97) ? 'danger' : (((weightPercentile > 3 && weightPercentile < 10) || (weightPercentile >= 90 && weightPercentile < 97)) ? 'warn' : 'normal'))
+      : 'normal';
+    cards.push({
+      key: 'WT',
+      title: 'Masa ciała',
+      value: `${patientReportFormatNumber(weight, 1)} kg`,
+      badge: patientReportFormatPercentile(weightPercentile),
+      percentile: weightPercentile,
+      tone,
+      note: patientReportDescribeWeight(weightPercentile),
+      reference: patientReportBuildMedianReference('Masa', weight, weightMedian, { friendlyLabel: 'Przeciętna masa dla tego wieku', medianUnit: 'kg', diffUnit: 'kg', digits: 1 }),
+      scale: isChild ? patientReportBuildScaleModel('WT', weightPercentile) : null,
+      sparkline: patientReportBuildSparklineSvg(series, { title: 'masa ciała', unit: 'kg', digits: 1 }),
+      trendText: patientReportBuildTrendDeltaText(series, 'kg', 1)
+    });
+  }
+  if (!isNaN(height)) {
+    const series = patientReportBuildTrendSeries(trendPoints, 'HT');
+    const tone = (typeof heightPercentile === 'number' && isFinite(heightPercentile))
+      ? ((heightPercentile <= 3) ? 'danger' : (((heightPercentile > 3 && heightPercentile < 10) || heightPercentile > 97) ? 'warn' : 'normal'))
+      : 'normal';
+    cards.push({
+      key: 'HT',
+      title: 'Wzrost',
+      value: `${patientReportFormatNumber(height, 1)} cm`,
+      badge: patientReportFormatPercentile(heightPercentile),
+      percentile: heightPercentile,
+      tone,
+      note: patientReportDescribeHeight(heightPercentile),
+      reference: patientReportBuildMedianReference('Wzrost', height, heightMedian, { friendlyLabel: 'Przeciętny wzrost dla tego wieku', medianUnit: 'cm', diffUnit: 'cm', digits: 1 }),
+      scale: isChild ? patientReportBuildScaleModel('HT', heightPercentile) : null,
+      sparkline: patientReportBuildSparklineSvg(series, { title: 'wzrost', unit: 'cm', digits: 1 }),
+      trendText: patientReportBuildTrendDeltaText(series, 'cm', 1)
+    });
+  }
+  if (typeof bmi === 'number' && isFinite(bmi)) {
+    const series = patientReportBuildTrendSeries(trendPoints, 'BMI');
+    const tone = bmiCategoryLabel.includes('Otyłość') ? 'danger' : ((bmiCategoryLabel === 'Nadwaga' || bmiCategoryLabel === 'Niedowaga') ? 'warn' : 'normal');
+    cards.push({
+      key: 'BMI',
+      title: 'BMI',
+      value: patientReportFormatNumber(bmi, 1),
+      badge: bmiCategoryLabel || patientReportFormatPercentile(bmiPercentile),
+      percentile: bmiPercentile,
+      category: bmiCategoryLabel,
+      tone,
+      note: patientReportDescribeBmi(bmiCategoryLabel),
+      reference: patientReportBuildMedianReference('BMI', bmi, bmiMedian, { friendlyLabel: 'Przeciętne BMI dla tego wieku', medianUnit: '', diffUnit: 'pkt', digits: 1 }),
+      scale: isChild ? patientReportBuildScaleModel('BMI', bmiPercentile) : null,
+      sparkline: patientReportBuildSparklineSvg(series, { title: 'BMI', unit: '', digits: 1 }),
+      trendText: patientReportBuildTrendDeltaText(series, 'BMI', 1)
+    });
+  }
+
+  return {
+    cards,
+    historyCount: trendPoints.filter((point) => point && point.current !== true).length,
+    preferredSource,
+    isChild
+  };
+}
+
+
+function patientReportGetCurrentBasics() {
+  const ageYears = (typeof getAgeDecimal === 'function') ? getAgeDecimal() : 0;
+  const sex = document.getElementById('sex')?.value || 'M';
+  const weight = parseFloat(document.getElementById('weight')?.value);
+  const height = parseFloat(document.getElementById('height')?.value);
+  const bmi = (!isNaN(weight) && !isNaN(height) && typeof BMI === 'function') ? BMI(weight, height) : null;
+  return {
+    ageYears,
+    sex,
+    weight,
+    height,
+    bmi,
+    isChild: ageYears > 0 && ageYears <= 18
+  };
+}
+
+function patientReportClassifyCole(cole) {
+  if (typeof cole !== 'number' || !isFinite(cole)) {
+    return {
+      category: 'Brak danych',
+      tone: 'normal',
+      note: 'Nie udało się wyliczyć wskaźnika Cole’a dla tego pomiaru.'
+    };
+  }
+  if (cole < 90) {
+    return {
+      category: 'Niedowaga',
+      tone: 'warn',
+      note: 'Masa względem wzrostu i wieku jest obecnie poniżej typowego zakresu.'
+    };
+  }
+  if (cole >= 120) {
+    return {
+      category: 'Otyłość',
+      tone: 'danger',
+      note: 'Wskaźnik Cole’a potwierdza wyraźny nadmiar masy ciała względem wzrostu i wieku.'
+    };
+  }
+  if (cole > 110) {
+    return {
+      category: 'Nadwaga',
+      tone: 'warn',
+      note: 'Wskaźnik Cole’a wskazuje na masę ciała powyżej typowego zakresu dla wzrostu i wieku.'
+    };
+  }
+  return {
+    category: 'W normie',
+    tone: 'normal',
+    note: 'Masa względem wzrostu i wieku mieści się obecnie w typowym zakresie.'
+  };
+}
+
+function patientReportBuildColeScaleModel(cole) {
+  if (typeof cole !== 'number' || !isFinite(cole)) return null;
+  const min = 70;
+  const max = 130;
+  const clamp = Math.max(min, Math.min(max, cole));
+  const toPos = (value) => ((value - min) / (max - min)) * 100;
+  return {
+    marker: toPos(clamp),
+    ticks: [
+      { pos: toPos(90), label: '90%', safePos: toPos(90) },
+      { pos: toPos(100), label: '100%', safePos: toPos(100) },
+      { pos: toPos(110), label: '110%', safePos: toPos(110) },
+      { pos: toPos(120), label: '120%', safePos: toPos(120) }
+    ],
+    gradient: 'linear-gradient(90deg, #ffd7d7 0%, #ffc7c7 16.666%, #ffe2b7 28.333%, #d7f2f3 33.333%, #b3eaed 50%, #d7f2f3 66.666%, #ffe2b7 71.666%, #ffc7c7 83.333%, #ffd7d7 100%)'
+  };
+}
+
+
+function patientReportNormalizeBmiCategory(category) {
+  const raw = String(category || '').trim().toLowerCase();
+  if (!raw) return '';
+  if (raw.includes('niedowaga')) return 'underweight';
+  if (raw.includes('prawid')) return 'normal';
+  if (raw.includes('nadwaga')) return 'overweight';
+  if (raw.includes('otyłość')) return 'obesity';
+  return '';
+}
+
+function patientReportNormalizeColeCategory(category) {
+  const raw = String(category || '').trim().toLowerCase();
+  if (!raw) return '';
+  if (raw.includes('niedowaga')) return 'underweight';
+  if (raw.includes('norm')) return 'normal';
+  if (raw.includes('nadwaga')) return 'overweight';
+  if (raw.includes('otyłość')) return 'obesity';
+  return '';
+}
+
+function patientReportBuildColeBmiExplanation(bmiCategory, coleCategory) {
+  const bmiRaw = String(bmiCategory || '').trim();
+  const coleRaw = String(coleCategory || '').trim();
+  const bmiKind = patientReportNormalizeBmiCategory(bmiRaw);
+  const coleKind = patientReportNormalizeColeCategory(coleRaw);
+
+  if (!bmiKind || !coleKind) {
+    return 'Wskaźnik Cole’a porównuje BMI do przeciętnej wartości dla wieku i płci (100%), dlatego może różnić się od samej kategorii BMI.';
+  }
+
+  const explanations = {
+    'underweight|underweight': 'BMI i wskaźnik Cole’a są zgodne: oba wskazują, że masa ciała względem wzrostu jest poniżej typowego zakresu dla wieku.',
+    'underweight|normal': 'BMI jest już poniżej progu centylowego, a wskaźnik Cole’a jeszcze mieści się w normie. Zwykle oznacza to wynik bliski granicy, gdzie jedna metoda reaguje wcześniej niż druga.',
+    'underweight|overweight': 'BMI sugeruje niedobór masy, a wskaźnik Cole’a nadmiar masy. Taki rozjazd nie jest typowy i warto jeszcze raz sprawdzić pomiary oraz interpretować wynik łącznie z lekarzem.',
+    'underweight|obesity': 'BMI sugeruje niedobór masy, a wskaźnik Cole’a otyłość. Taki układ nie jest typowy i wymaga ponownego sprawdzenia danych pomiarowych oraz całościowej oceny lekarskiej.',
+
+    'normal|underweight': 'BMI jest jeszcze w szerokim zakresie normy centylowej, ale wskaźnik Cole’a pokazuje, że masa ciała jest już bliżej dolnej granicy względem wartości przeciętnej dla wieku i płci. To sygnał do obserwacji kolejnych pomiarów.',
+    'normal|normal': 'BMI i wskaźnik Cole’a są zgodne: oba pokazują, że masa ciała względem wzrostu mieści się obecnie w typowym zakresie.',
+    'normal|overweight': 'BMI jest jeszcze w szerokim zakresie normy centylowej, ale wskaźnik Cole’a pokazuje, że wynik jest już wyraźnie powyżej przeciętnej dla wieku i płci. To może być wczesny sygnał narastania nadmiaru masy.',
+    'normal|obesity': 'Klasyfikacja BMI jest jeszcze niższa, ale wskaźnik Cole’a pokazuje już bardzo duży nadmiar masy względem wartości przeciętnej dla wieku i płci. Taki wynik wymaga dokładniejszej oceny i kontroli kolejnych pomiarów.',
+
+    'overweight|underweight': 'BMI wskazuje nadmiar masy, a wskaźnik Cole’a wynik poniżej normy. Taki rozjazd nie jest typowy i warto sprawdzić poprawność pomiarów oraz interpretację wyniku z lekarzem.',
+    'overweight|normal': 'BMI wskazuje nadwagę, a wskaźnik Cole’a jest jeszcze w normie. Obie metody używają innych progów, więc przy wyniku blisko granicy BMI może przejść do kategorii nadwagi wcześniej niż Cole.',
+    'overweight|overweight': 'BMI i wskaźnik Cole’a są zgodne: oba wskazują na nadmiar masy ciała względem wzrostu i wieku.',
+    'overweight|obesity': 'BMI wskazuje nadwagę, a wskaźnik Cole’a już otyłość. Cole porównuje BMI bezpośrednio do przeciętnej wartości dla wieku i płci, dlatego może mocniej pokazać nasilony nadmiar masy.',
+
+    'obesity|underweight': 'BMI wskazuje otyłość, a wskaźnik Cole’a wynik poniżej normy. Taki rozjazd nie jest typowy i wymaga ponownego sprawdzenia danych pomiarowych oraz oceny całego obrazu klinicznego.',
+    'obesity|normal': 'BMI wskazuje otyłość, a wskaźnik Cole’a jest jeszcze w normie. Taki rozjazd nie jest typowy; warto zweryfikować pomiar wzrostu i masy oraz omówić wynik łącznie z lekarzem.',
+    'obesity|overweight': 'Obie metody pokazują nadmiar masy, ale BMI ocenia go już jako otyłość, a wskaźnik Cole’a jeszcze jako nadwagę. Zwykle oznacza to wynik bliski granicy między tymi kategoriami.',
+    'obesity|obesity': 'BMI i wskaźnik Cole’a są zgodne: oba wskazują na otyłość, czyli wyraźny nadmiar masy ciała względem wieku i wzrostu.'
+  };
+
+  let explanation = explanations[`${bmiKind}|${coleKind}`]
+    || 'BMI i wskaźnik Cole’a korzystają z różnych progów odniesienia. BMI opiera się na kategoriach centylowych, a Cole porównuje wynik do wartości przeciętnej dla wieku i płci, dlatego czasem jedna metoda pokazuje wyższą kategorię wcześniej niż druga.';
+
+  if (bmiRaw.toLowerCase().includes('olbrzym') && coleKind === 'obesity') {
+    explanation = 'BMI pokazuje bardzo duży nadmiar masy ciała, a wskaźnik Cole’a również potwierdza otyłość. Oba wyniki wskazują na wyraźne przekroczenie typowego zakresu dla wieku i wzrostu.';
+  } else if (bmiRaw.toLowerCase().includes('olbrzym') && coleKind === 'overweight') {
+    explanation = 'BMI pokazuje bardzo duży nadmiar masy ciała, a wskaźnik Cole’a niższą kategorię. Obie metody potwierdzają nadmiar masy, ale korzystają z innych progów odniesienia.';
+  }
+
+  return explanation;
+}
+
+function patientReportBuildColeCard() {
+  const basics = patientReportGetCurrentBasics();
+  if (!basics.isChild || typeof basics.bmi !== 'number' || !isFinite(basics.bmi)) {
+    return {
+      key: 'COLE',
+      title: 'Wskaźnik Cole’a',
+      value: '—',
+      badge: 'Brak danych',
+      tone: 'normal',
+      note: 'Porównanie do wskaźnika Cole’a jest dostępne po wyliczeniu BMI u dziecka.',
+      explanation: '',
+      reference: { available: false },
+      scale: null,
+      sparkline: '',
+      trendText: ''
+    };
+  }
+  const preferredSource = patientReportGetPreferredSource();
+  const bmiResolved = (typeof advHistoryResolveMetric === 'function')
+    ? advHistoryResolveMetric('BMI', basics.bmi, basics.sex, basics.ageYears, preferredSource)
+    : { result: null, source: preferredSource };
+  const bmiMedian = patientReportGetMetricMedian('BMI', basics.sex, basics.ageYears, bmiResolved.source, bmiResolved);
+  if (typeof bmiMedian !== 'number' || !isFinite(bmiMedian) || bmiMedian <= 0) {
+    return {
+      key: 'COLE',
+      title: 'Wskaźnik Cole’a',
+      value: '—',
+      badge: 'Brak danych',
+      tone: 'normal',
+      note: 'Nie udało się wyznaczyć wartości odniesienia dla wieku i płci.',
+      explanation: '',
+      reference: { available: false },
+      scale: null,
+      sparkline: '',
+      trendText: ''
+    };
+  }
+  const months = Math.round(basics.ageYears * 12);
+  const bmiCategoryLabel = (typeof bmiCategoryChild === 'function')
+    ? bmiCategoryChild(basics.bmi, basics.sex, months)
+    : '';
+  const cole = (basics.bmi / bmiMedian) * 100;
+  const classification = patientReportClassifyCole(cole);
+  return {
+    key: 'COLE',
+    title: 'Wskaźnik Cole’a',
+    value: `${patientReportFormatNumber(cole, 1)}%`,
+    badge: classification.category,
+    tone: classification.tone,
+    note: classification.note,
+    explanation: patientReportBuildColeBmiExplanation(bmiCategoryLabel, classification.category),
+    reference: patientReportBuildMedianReference("Wskaźnik Cole'a", cole, 100, {
+      friendlyLabel: 'Wartość odniesienia',
+      medianUnit: '%',
+      diffUnit: 'pkt',
+      digits: 1
+    }),
+    scale: patientReportBuildColeScaleModel(cole),
+    sparkline: '',
+    trendText: ''
+  };
+}
+
+function patientReportBuildBmrCard() {
+  const basics = patientReportGetCurrentBasics();
+  if (!isFinite(basics.ageYears) || basics.ageYears <= 0 || !isFinite(basics.weight) || !isFinite(basics.height) || typeof BMR !== 'function') {
+    return {
+      title: 'Podstawowa przemiana materii (BMR)',
+      badge: 'Brak danych',
+      value: '—',
+      note: 'Do wyliczenia BMR potrzebne są aktualne dane o wieku, masie ciała i wzroście.',
+      rows: []
+    };
+  }
+  const bmr = BMR(basics.weight, basics.height, basics.ageYears, basics.sex);
+  const activityFactors = [
+    ['Siedzący (x1.2)', 1.2],
+    ['Lekko aktywny (x1.375)', 1.375],
+    ['Średnio aktywny (x1.55)', 1.55],
+    ['Bardzo aktywny (x1.725)', 1.725],
+    ['Ekstremalnie aktywny (x1.9)', 1.9]
+  ];
+  return {
+    title: 'Podstawowa przemiana materii (BMR)',
+    badge: 'Informacyjnie',
+    value: `${patientReportFormatNumber(bmr, 0)} kcal/dzień`,
+    note: 'To orientacyjna liczba kalorii potrzebnych na podstawowe funkcje organizmu w spoczynku.',
+    rows: activityFactors.map(([label, factor]) => ({
+      label,
+      value: Math.round(bmr * factor)
+    }))
+  };
+}
+
+function patientReportBuildVitalItem(options) {
+  const opts = options || {};
+  const digits = Number.isFinite(opts.digits) ? opts.digits : 0;
+  const unit = String(opts.unit || '');
+  const format = (value) => {
+    const txt = patientReportFormatNumber(value, digits);
+    return unit ? `${txt} ${unit}` : txt;
+  };
+  const resolveStatusText = (fallback, value) => {
+    const source = opts[fallback];
+    if (typeof source === 'function') return String(source(value, opts) || '');
+    if (typeof source === 'string' && source.trim()) return source;
+    return '';
+  };
+  if (!(typeof opts.median === 'number' && isFinite(opts.median) && typeof opts.min === 'number' && isFinite(opts.min) && typeof opts.max === 'number' && isFinite(opts.max))) {
+    return {
+      kind: opts.kind || '',
+      label: opts.label || '',
+      unavailable: true,
+      message: opts.message || 'Brak danych odniesienia dla tego pomiaru.'
+    };
+  }
+  let tone = 'normal';
+  let status = '';
+  let state = 'missing';
+  if (typeof opts.value === 'number' && isFinite(opts.value)) {
+    if (opts.value < opts.min) {
+      tone = 'warn';
+      state = 'low';
+      status = resolveStatusText('lowStatusText', opts.value) || 'Wynik jest poniżej zakresu prawidłowego.';
+    } else if (opts.value > opts.max) {
+      tone = (typeof opts.highDangerThreshold === 'number' && isFinite(opts.highDangerThreshold) && opts.value >= opts.highDangerThreshold) ? 'danger' : 'warn';
+      state = 'high';
+      status = resolveStatusText('highStatusText', opts.value) || 'Wynik jest powyżej zakresu prawidłowego.';
+    } else {
+      state = 'normal';
+      status = resolveStatusText('normalStatusText', opts.value) || 'Wynik mieści się w zakresie prawidłowym.';
+    }
+  }
+  return {
+    kind: opts.kind || '',
+    label: opts.label || '',
+    medianText: format(opts.median),
+    rangeText: `${format(opts.min)} – ${format(opts.max)}`,
+    valueText: (typeof opts.value === 'number' && isFinite(opts.value)) ? format(opts.value) : '',
+    statusText: status,
+    tone,
+    state
+  };
+}
+
+function patientReportBuildVitalsCard() {
+  const basics = patientReportGetCurrentBasics();
+  const sbp = parseFloat(document.getElementById('bpSystolic')?.value);
+  const dbp = parseFloat(document.getElementById('bpDiastolic')?.value);
+  const hr = parseFloat(document.getElementById('heartRate')?.value);
+  const hasBpValue = isFinite(sbp) || isFinite(dbp);
+  const hasHrValue = isFinite(hr);
+  let bpRef = null;
+  let bpEval = null;
+  try {
+    if (window.bpModuleApi && typeof window.bpModuleApi.getPediatricBpReference === 'function') {
+      bpRef = window.bpModuleApi.getPediatricBpReference({
+        ageYears: basics.ageYears,
+        sex: basics.sex,
+        heightCm: basics.height
+      });
+    }
+  } catch (_) { bpRef = null; }
+  try {
+    if (isFinite(sbp) && isFinite(dbp) && window.bpModuleApi && typeof window.bpModuleApi.computePediatricBp === 'function') {
+      bpEval = window.bpModuleApi.computePediatricBp({
+        ageYears: basics.ageYears,
+        sex: basics.sex,
+        heightCm: basics.height,
+        sbp,
+        dbp
+      });
+    }
+  } catch (_) { bpEval = null; }
+
+  const items = [];
+  if (bpRef && bpRef.ok && bpRef.reference) {
+    items.push(patientReportBuildVitalItem({
+      kind: 'sbp',
+      label: 'Ciśnienie skurczowe',
+      unit: 'mm Hg',
+      digits: 0,
+      median: bpRef.reference.sbpP50,
+      min: bpRef.reference.sbpP10,
+      max: bpRef.reference.sbpP90,
+      highDangerThreshold: bpRef.reference.sbpP95,
+      value: isFinite(sbp) ? sbp : null,
+      lowStatusText: 'Ciśnienie skurczowe jest poniżej zakresu prawidłowego.',
+      highStatusText: 'Ciśnienie skurczowe jest powyżej zakresu prawidłowego.',
+      normalStatusText: 'Ciśnienie skurczowe mieści się w zakresie prawidłowym.'
+    }));
+    items.push(patientReportBuildVitalItem({
+      kind: 'dbp',
+      label: 'Ciśnienie rozkurczowe',
+      unit: 'mm Hg',
+      digits: 0,
+      median: bpRef.reference.dbpP50,
+      min: bpRef.reference.dbpP10,
+      max: bpRef.reference.dbpP90,
+      highDangerThreshold: bpRef.reference.dbpP95,
+      value: isFinite(dbp) ? dbp : null,
+      lowStatusText: 'Ciśnienie rozkurczowe jest poniżej zakresu prawidłowego.',
+      highStatusText: 'Ciśnienie rozkurczowe jest powyżej zakresu prawidłowego.',
+      normalStatusText: 'Ciśnienie rozkurczowe mieści się w zakresie prawidłowym.'
+    }));
+  } else {
+    const bpMessage = 'Normy ciśnienia w tym raporcie pokazujemy dla wieku 3–18 lat po wpisaniu wzrostu.';
+    items.push({ label: 'Ciśnienie skurczowe', unavailable: true, message: bpMessage });
+    items.push({ label: 'Ciśnienie rozkurczowe', unavailable: true, message: bpMessage });
+  }
+
+  let hrItem = null;
+  try {
+    if (basics.ageYears > 0 && basics.ageYears <= 18 && window.vitalSigns && typeof window.vitalSigns.getHrValues === 'function') {
+      const hrPopulation = String(document.getElementById('hrPopulation')?.value || 'healthy');
+      const hrTempValue = parseFloat(document.getElementById('hrTemperature')?.value);
+      const hrOpts = { population: hrPopulation };
+      if (isFinite(hrTempValue)) hrOpts.temperature = hrTempValue;
+      const hrRef = window.vitalSigns.getHrValues(basics.ageYears, hrOpts);
+      if (hrRef && typeof hrRef.median === 'number' && isFinite(hrRef.median)) {
+        hrItem = patientReportBuildVitalItem({
+          kind: 'hr',
+          label: 'Tętno',
+          unit: 'ud./min',
+          digits: 0,
+          median: hrRef.median,
+          min: hrRef.p10,
+          max: hrRef.p90,
+          value: isFinite(hr) ? hr : null,
+          lowStatusText: 'Wynik jest poniżej zakresu prawidłowego.',
+          highStatusText: 'Wynik jest powyżej zakresu prawidłowego.',
+          normalStatusText: 'Wynik mieści się w zakresie prawidłowym.'
+        });
+      }
+    }
+  } catch (_) { hrItem = null; }
+  if (!hrItem) {
+    hrItem = { label: 'Tętno', unavailable: true, message: 'Normy tętna pokażemy po wyliczeniu wieku pacjenta.' };
+  }
+  items.push(hrItem);
+
+  const measurableItems = items.filter((item) => item && !item.unavailable && item.valueText);
+  const anyMeasured = measurableItems.length > 0;
+  const subtitle = anyMeasured ? 'Normy dla wieku i odniesienie do podanych pomiarów.' : 'Normy dla wieku';
+  const bpMeasuredItems = measurableItems.filter((item) => item.kind === 'sbp' || item.kind === 'dbp');
+  const hrMeasuredItem = measurableItems.find((item) => item.kind === 'hr') || null;
+  const bpLow = bpMeasuredItems.some((item) => item.state === 'low');
+  const bpHighWarn = bpMeasuredItems.some((item) => item.state === 'high' && item.tone !== 'danger') || !!(bpEval && bpEval.ok && bpEval.severity === 'high');
+  const bpHighDanger = bpMeasuredItems.some((item) => item.state === 'high' && item.tone === 'danger') || !!(bpEval && bpEval.ok && (bpEval.severity === 'stage1' || bpEval.severity === 'stage2'));
+  const hrLow = !!(hrMeasuredItem && hrMeasuredItem.state === 'low');
+  const hrHigh = !!(hrMeasuredItem && hrMeasuredItem.state === 'high');
+  const allMeasuredNormal = anyMeasured && measurableItems.every((item) => item.state === 'normal');
+
+  let tone = 'normal';
+  let badge = 'Normy dla wieku';
+  let note = 'Pokazano orientacyjne wartości dla wieku.';
+
+  if (bpHighDanger) {
+    tone = 'danger';
+    badge = 'Poza normą';
+    note = hrHigh
+      ? 'Ciśnienie tętnicze jest powyżej normy dla płci, wieku i wzrostu, a tętno jest powyżej zakresu prawidłowego.'
+      : 'Ciśnienie tętnicze jest powyżej normy dla płci, wieku i wzrostu.';
+  } else if (bpHighWarn) {
+    tone = 'warn';
+    badge = 'Do kontroli';
+    note = hrHigh
+      ? 'Ciśnienie tętnicze jest w górnym zakresie, a tętno jest powyżej zakresu prawidłowego.'
+      : 'Ciśnienie tętnicze jest w górnym zakresie i warto je skontrolować w kolejnych pomiarach.';
+  } else if (bpLow) {
+    tone = 'warn';
+    badge = 'Do kontroli';
+    note = hrHigh
+      ? 'Ciśnienie tętnicze jest poniżej zakresu prawidłowego, a tętno jest powyżej zakresu prawidłowego.'
+      : 'Ciśnienie tętnicze jest poniżej zakresu prawidłowego.';
+  } else if (hrHigh) {
+    tone = 'warn';
+    badge = 'Do kontroli';
+    note = 'Tętno jest powyżej normy dla płci, wieku i wzrostu.';
+  } else if (hrLow) {
+    tone = 'warn';
+    badge = 'Do kontroli';
+    note = 'Tętno jest poniżej zakresu prawidłowego.';
+  } else if (allMeasuredNormal) {
+    badge = 'W zakresie';
+    note = 'Podane pomiary mieszczą się w zakresie prawidłowym.';
+  } else if (anyMeasured) {
+    badge = 'W zakresie';
+    note = 'Pokazano orientacyjne wartości dla wieku i odniesienie do podanych pomiarów.';
+  }
+
+  return { title: 'Ciśnienie i tętno', badge, tone, subtitle, note, items };
+}
+
+function patientReportBuildBmrCardHtml(card) {
+  const rowsHtml = Array.isArray(card?.rows) && card.rows.length
+    ? card.rows.map((row) => `
+        <tr>
+          <td>${patientReportEscapeHtml(row.label || '')}</td>
+          <td>${patientReportEscapeHtml(patientReportFormatNumber(row.value, 0))}</td>
+        </tr>`).join('')
+    : `<tr><td colspan="2">Brak danych do wyliczenia.</td></tr>`;
+  return `
+    <article class="patient-report-support-card tone-normal">
+      <div class="patient-report-support-top">
+        <div>
+          <div class="patient-report-support-title">${patientReportEscapeHtml(card?.title || 'Podstawowa przemiana materii (BMR)')}</div>
+          <div class="patient-report-support-value">${patientReportEscapeHtml(card?.value || '—')}</div>
+        </div>
+        <div class="patient-report-metric-badge tone-normal">${patientReportEscapeHtml(card?.badge || 'Informacyjnie')}</div>
+      </div>
+      <div class="patient-report-support-note">${patientReportEscapeHtml(card?.note || '')}</div>
+      <div class="patient-report-bmr-table-wrap">
+        <table class="patient-report-bmr-table">
+          <thead>
+            <tr>
+              <th>Poziom aktywności</th>
+              <th>kcal/dzień</th>
+            </tr>
+          </thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    </article>`;
+}
+
+function patientReportBuildVitalsCardHtml(card) {
+  const itemsHtml = (card?.items || []).map((item) => {
+    if (item.unavailable) {
+      return `
+        <div class="patient-report-vital-item is-unavailable">
+          <div class="patient-report-vital-item-title">${patientReportEscapeHtml(item.label || '')}</div>
+          <div class="patient-report-vital-empty">${patientReportEscapeHtml(item.message || 'Brak danych odniesienia.')}</div>
+        </div>`;
+    }
+    const valueRowHtml = item.valueText
+      ? `<div class="patient-report-vital-row is-value tone-${patientReportEscapeHtml(item.tone || 'normal')}"><span class="patient-report-vital-label">Wynik pacjenta</span><strong>${patientReportEscapeHtml(item.valueText || '')}</strong></div>`
+      : '';
+    const statusHtml = item.statusText
+      ? `<div class="patient-report-vital-status tone-${patientReportEscapeHtml(item.tone || 'normal')}">${patientReportEscapeHtml(item.statusText || '')}</div>`
+      : '<div class="patient-report-vital-status tone-normal">Brak wpisanego pomiaru.</div>';
+    return `
+      <div class="patient-report-vital-item tone-${patientReportEscapeHtml(item.tone || 'normal')}">
+        <div class="patient-report-vital-item-title">${patientReportEscapeHtml(item.label || '')}</div>
+        <div class="patient-report-vital-row"><span>50 centyl</span><strong>${patientReportEscapeHtml(item.medianText || '—')}</strong></div>
+        <div class="patient-report-vital-row"><span>Zakres prawidłowy</span><strong>${patientReportEscapeHtml(item.rangeText || '—')}</strong></div>
+        ${valueRowHtml}
+        ${statusHtml}
+      </div>`;
+  }).join('');
+  return `
+    <article class="patient-report-support-card tone-${patientReportEscapeHtml(card?.tone || 'normal')}">
+      <div class="patient-report-support-top">
+        <div>
+          <div class="patient-report-support-title">${patientReportEscapeHtml(card?.title || 'Ciśnienie i tętno')}</div>
+          <div class="patient-report-support-subtitle">${patientReportEscapeHtml(card?.subtitle || 'Normy dla wieku')}</div>
+        </div>
+        <div class="patient-report-metric-badge tone-${patientReportEscapeHtml(card?.tone || 'normal')}">${patientReportEscapeHtml(card?.badge || 'Normy dla wieku')}</div>
+      </div>
+      <div class="patient-report-support-note">${patientReportEscapeHtml(card?.note || '')}</div>
+      <div class="patient-report-vital-list">${itemsHtml}</div>
+    </article>`;
+}
+
+function patientReportBuildSecondaryCardsHtml(model) {
+  const out = [];
+  out.push(patientReportBuildMetricCardsHtml([model.coleCard || patientReportBuildColeCard()]));
+  out.push(patientReportBuildBmrCardHtml(model.bmrCard || patientReportBuildBmrCard()));
+  out.push(patientReportBuildVitalsCardHtml(model.vitalsCard || patientReportBuildVitalsCard()));
+  return out.join('');
+}
+
+function patientReportBuildModel() {
+  const name = (document.getElementById('name')?.value || document.getElementById('advName')?.value || '').trim();
+  const sex = document.getElementById('sex')?.value || 'M';
+  const ageYears = (typeof getAgeDecimal === 'function') ? getAgeDecimal() : 0;
+  const sourceKey = patientReportGetPreferredSource();
+  const sourceLabel = (typeof advHistorySourceLabel === 'function') ? advHistorySourceLabel(sourceKey) : String(sourceKey || '');
+  const metricBundle = patientReportBuildMetricCards();
+  const summaryLines = getFormattedProfessionalSummaryLines();
+  const detailGroups = patientReportGroupSummaryLines(summaryLines);
+  const highlights = patientReportCollectHighlights(summaryLines);
+  const headline = patientReportBuildHeadline(metricBundle.cards, metricBundle.historyCount, highlights);
+  let generatedLabel = '';
+  try {
+    generatedLabel = new Intl.DateTimeFormat('pl-PL', {
+      year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+    }).format(new Date());
+  } catch (_) {
+    generatedLabel = String(new Date());
+  }
+  return {
+    title: 'Raport po wizycie',
+    subtitle: '',
+    name,
+    sexLabel: sex === 'F' ? 'Dziewczynka' : 'Chłopiec',
+    ageLabel: patientReportFormatAge(ageYears),
+    generatedLabel,
+    sourceLabel,
+    metricCards: metricBundle.cards,
+    historyCount: metricBundle.historyCount,
+    isChild: metricBundle.isChild,
+    summaryLines,
+    detailGroups,
+    highlights,
+    headline,
+    coleCard: patientReportBuildColeCard(),
+    bmrCard: patientReportBuildBmrCard(),
+    vitalsCard: patientReportBuildVitalsCard()
+  };
+}
+
+function patientReportBuildScaleHtml(scale, tone) {
+  if (!scale) return '<div class="patient-report-scale-empty">Porównanie centylowe niedostępne dla tego wyniku.</div>';
+  const ticksHtml = (scale.ticks || []).map((tick) => {
+    const labelPos = (typeof tick.safePos === 'number' && isFinite(tick.safePos)) ? tick.safePos : tick.pos;
+    return `
+      <span class="patient-report-scale-tick-line" style="left:${tick.pos}%;"></span>
+      <span class="patient-report-scale-tick-label" style="left:${labelPos}%;">${patientReportEscapeHtml(tick.label)}</span>`;
+  }).join('');
+  return `
+    <div class="patient-report-scale">
+      <span class="patient-report-scale-track" style="background:${scale.gradient};"></span>
+      ${ticksHtml}
+      <span class="patient-report-scale-marker tone-${patientReportEscapeHtml(tone || 'normal')}" style="left:${scale.marker}%;"></span>
+    </div>`;
+}
+
+function patientReportBuildReferenceHtml(reference, tone) {
+  const boxTone = patientReportEscapeHtml(tone || 'normal');
+  if (!reference || reference.available === false) {
+    return `
+      <div class="patient-report-metric-reference-box tone-${boxTone} is-empty">
+        <div class="patient-report-metric-reference-empty">Brak porównania do typowej wartości dla wieku.</div>
+      </div>`;
+  }
+  return `
+    <div class="patient-report-metric-reference-box tone-${boxTone}${reference.neutral ? ' is-neutral' : ''}">
+      <div class="patient-report-metric-reference-kicker">${patientReportEscapeHtml(reference.label || '')}</div>
+      <div class="patient-report-metric-reference-main">${patientReportEscapeHtml(reference.medianText || '')}</div>
+      <div class="patient-report-metric-reference-diff">${patientReportEscapeHtml(reference.diffText || '')}</div>
+    </div>`;
+}
+
+function patientReportBuildHighlightsHtml(highlights) {
+  if (!Array.isArray(highlights) || !highlights.length) {
+    return '<div class="patient-report-muted-box">Brak dodatkowych ostrzeżeń do wyróżnienia na pierwszej stronie.</div>';
+  }
+  return `<div class="patient-report-highlight-list">${highlights.map((item) => `<div class="patient-report-highlight tone-${patientReportEscapeHtml(item.tone || 'warn')}">${patientReportEscapeHtml(item.text)}</div>`).join('')}</div>`;
+}
+
+function patientReportBuildMetricCardsHtml(cards) {
+  return (cards || []).map((card) => {
+    const trendCaptionHtml = (card.trendText && String(card.trendText).trim())
+      ? `<div class="patient-report-metric-trend-caption">${patientReportEscapeHtml(card.trendText || '')}</div>`
+      : '';
+    const trendHtml = card.sparkline
+      ? `${trendCaptionHtml}<div class="patient-report-trend-svg">${card.sparkline}</div>`
+      : '';
+    const explanationHtml = (card.explanation && String(card.explanation).trim())
+      ? `
+        <div class="patient-report-metric-context tone-${patientReportEscapeHtml(card.tone || 'normal')}">
+          <div class="patient-report-metric-context-title">Jak to rozumieć względem BMI?</div>
+          <div class="patient-report-metric-context-text">${patientReportEscapeHtml(card.explanation || '')}</div>
+        </div>`
+      : '';
+    return `
+      <article class="patient-report-metric-card tone-${patientReportEscapeHtml(card.tone || 'normal')}">
+        <div class="patient-report-metric-top">
+          <div>
+            <div class="patient-report-metric-title">${patientReportEscapeHtml(card.title)}</div>
+            <div class="patient-report-metric-value">${patientReportEscapeHtml(card.value)}</div>
+          </div>
+          <div class="patient-report-metric-badge tone-${patientReportEscapeHtml(card.tone || 'normal')}">${patientReportEscapeHtml(card.badge || '—')}</div>
+        </div>
+        <div class="patient-report-metric-note">${patientReportEscapeHtml(card.note || '')}</div>
+        ${patientReportBuildScaleHtml(card.scale, card.tone)}
+        ${patientReportBuildReferenceHtml(card.reference, card.tone)}
+        ${explanationHtml}
+        ${trendHtml}
+      </article>`;
+  }).join('');
+}
+
+function patientReportBuildDetailGroupsHtml(groups) {
+  return (groups || []).map((group) => {
+    const itemsHtml = (group.items || []).map((item) => `
+      <li class="patient-report-detail-item tone-${patientReportEscapeHtml(item.tone || 'normal')}">
+        <span class="patient-report-detail-label">${patientReportEscapeHtml(item.label || '')}</span>
+        <span class="patient-report-detail-value">${patientReportEscapeHtml(item.value || '')}</span>
+      </li>`).join('');
+    return `
+      <section class="patient-report-detail-group">
+        <h3>${patientReportEscapeHtml(group.title || '')}</h3>
+        <p>${patientReportEscapeHtml(group.intro || '')}</p>
+        <ul>${itemsHtml}</ul>
+      </section>`;
+  }).join('');
+}
+
+function patientReportBuildHtml(model) {
+  const metaParts = [
+    model.name ? `Pacjent: ${model.name}` : null,
+    `Płeć: ${model.sexLabel}`,
+    `Wiek: ${model.ageLabel}`,
+    `Wygenerowano: ${model.generatedLabel}`
+  ].filter(Boolean);
+  const metaHtml = metaParts.map((item) => `<span>${patientReportEscapeHtml(item)}</span>`).join('');
+  const detailHtml = patientReportBuildDetailGroupsHtml(model.detailGroups);
+  const cardsHtml = patientReportBuildMetricCardsHtml(model.metricCards);
+  const secondaryCardsHtml = patientReportBuildSecondaryCardsHtml(model);
+  return `
+    <div class="patient-report-pdf-root">
+      <style>
+        .patient-report-pdf-root {
+          width: 1240px;
+          background: #f3f9f9;
+          color: #183132;
+          font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+        .patient-report-page {
+          width: 1240px;
+          min-height: 1754px;
+          background: linear-gradient(180deg, #f7fbfb 0%, #ffffff 22%, #ffffff 100%);
+          padding: 56px 58px 54px;
+          box-sizing: border-box;
+          position: relative;
+        }
+        .patient-report-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 24px;
+        }
+        .patient-report-brand {
+          max-width: 72%;
+        }
+        .patient-report-brand-kicker {
+          display: block;
+          padding: 0;
+          border-radius: 0;
+          background: none;
+          color: #006a73;
+          font-size: 19px;
+          font-weight: 800;
+          letter-spacing: 0;
+          line-height: 1.15;
+          white-space: nowrap;
+          font-variant-ligatures: none;
+          font-feature-settings: 'liga' 0, 'kern' 1;
+        }
+        .patient-report-title {
+          margin: 20px 0 0;
+          font-size: 42px;
+          line-height: 1.08;
+          font-weight: 800;
+          color: #10292a;
+        }
+        .patient-report-subtitle {
+          margin: 12px 0 0;
+          font-size: 21px;
+          line-height: 1.4;
+          color: #496364;
+          max-width: 760px;
+        }
+        .patient-report-meta {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          justify-content: flex-end;
+        }
+        .patient-report-meta span {
+          padding: 10px 14px;
+          border-radius: 14px;
+          background: #ffffff;
+          border: 1px solid #d7e6e6;
+          font-size: 16px;
+          color: #395253;
+        }
+        .patient-report-hero {
+          margin-top: 28px;
+          border-radius: 28px;
+          background: linear-gradient(135deg, #0f7d86 0%, #14939c 100%);
+          color: white;
+          padding: 28px 32px 26px;
+          box-shadow: 0 22px 48px rgba(0, 131, 141, 0.18);
+        }
+        .patient-report-hero h2 {
+          margin: 0;
+          font-size: 34px;
+          line-height: 1.16;
+          font-weight: 800;
+        }
+        .patient-report-hero p {
+          margin: 14px 0 0;
+          font-size: 20px;
+          line-height: 1.5;
+          max-width: 1000px;
+        }
+        .patient-report-grid-3 {
+          margin-top: 26px;
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 18px;
+        }
+        .patient-report-secondary-grid {
+          margin-top: 18px;
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 18px;
+          align-items: stretch;
+        }
+        .patient-report-metric-card,
+        .patient-report-detail-group,
+        .patient-report-info-box,
+        .patient-report-muted-box {
+          background: #ffffff;
+          border-radius: 24px;
+          border: 1px solid #dbe8e8;
+          box-shadow: 0 12px 30px rgba(15, 77, 84, 0.08);
+        }
+        .patient-report-metric-card {
+          padding: 22px 20px 18px;
+          border-width: 2.5px;
+          border-color: #cfe3e4;
+          box-shadow: 0 14px 34px rgba(15, 77, 84, 0.10);
+        }
+        .patient-report-metric-card.tone-danger { border-color: rgba(198, 40, 40, 0.44); }
+        .patient-report-metric-card.tone-warn { border-color: rgba(199, 93, 0, 0.42); }
+        .patient-report-metric-top {
+          display: flex;
+          justify-content: space-between;
+          gap: 12px;
+          align-items: flex-start;
+        }
+        .patient-report-metric-title {
+          font-size: 18px;
+          line-height: 1.2;
+          color: #1d5053;
+          font-weight: 800;
+        }
+        .patient-report-metric-value {
+          margin-top: 8px;
+          font-size: 34px;
+          line-height: 1;
+          font-weight: 800;
+          color: #102a2b;
+        }
+        .patient-report-metric-badge {
+          flex: 0 0 auto;
+          max-width: 44%;
+          padding: 8px 12px;
+          border-radius: 14px;
+          font-size: 15px;
+          font-weight: 700;
+          text-align: right;
+          background: rgba(0, 131, 141, 0.10);
+          color: #006a73;
+        }
+        .patient-report-metric-badge.tone-warn { background: rgba(199, 93, 0, 0.12); color: #9a4a00; }
+        .patient-report-metric-badge.tone-danger { background: rgba(198, 40, 40, 0.12); color: #a32020; }
+        .patient-report-metric-note {
+          margin-top: 10px;
+          font-size: 17px;
+          color: #335152;
+          min-height: 42px;
+        }
+        .patient-report-scale {
+          position: relative;
+          height: 56px;
+          margin-top: 18px;
+        }
+        .patient-report-scale-track {
+          position: absolute;
+          left: 0;
+          right: 0;
+          top: 0;
+          height: 30px;
+          border-radius: 999px;
+          overflow: hidden;
+          border: 1.6px solid #c4dcde;
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.85);
+        }
+        .patient-report-scale-empty {
+          margin-top: 18px;
+          padding: 10px 12px;
+          border-radius: 16px;
+          background: #f5fbfb;
+          font-size: 15px;
+          color: #5a7071;
+        }
+        .patient-report-scale-tick-line {
+          position: absolute;
+          top: 6px;
+          transform: translateX(-50%);
+          width: 2px;
+          height: 18px;
+          background: rgba(16, 41, 42, 0.30);
+          z-index: 2;
+        }
+        .patient-report-scale-tick-label {
+          position: absolute;
+          top: 35px;
+          transform: translateX(-50%);
+          font-size: 12px;
+          font-weight: 700;
+          color: #51696a;
+          background: rgba(255,255,255,0.92);
+          padding: 1px 6px;
+          border-radius: 999px;
+          white-space: nowrap;
+          z-index: 2;
+        }
+        .patient-report-scale-marker {
+          position: absolute;
+          top: 15px;
+          transform: translate(-50%, -50%);
+          width: 18px;
+          height: 18px;
+          border-radius: 50%;
+          background: #00838d;
+          border: 4px solid white;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+          z-index: 3;
+        }
+        .patient-report-scale-marker.tone-warn { background: #c75d00; }
+        .patient-report-scale-marker.tone-danger { background: #c62828; }
+        .patient-report-metric-reference-box {
+          margin-top: 14px;
+          padding: 13px 14px 12px;
+          border-radius: 18px;
+          background: linear-gradient(180deg, rgba(0, 131, 141, 0.08) 0%, rgba(0, 131, 141, 0.04) 100%);
+          border: 1.6px solid rgba(0, 131, 141, 0.18);
+          min-height: 70px;
+        }
+        .patient-report-metric-reference-box.tone-warn {
+          background: linear-gradient(180deg, rgba(199, 93, 0, 0.10) 0%, rgba(199, 93, 0, 0.05) 100%);
+          border-color: rgba(199, 93, 0, 0.22);
+        }
+        .patient-report-metric-reference-box.tone-danger {
+          background: linear-gradient(180deg, rgba(198, 40, 40, 0.10) 0%, rgba(198, 40, 40, 0.05) 100%);
+          border-color: rgba(198, 40, 40, 0.22);
+        }
+        .patient-report-metric-reference-box.is-neutral {
+          background: linear-gradient(180deg, rgba(0, 131, 141, 0.06) 0%, rgba(0, 131, 141, 0.03) 100%);
+        }
+        .patient-report-metric-reference-kicker {
+          font-size: 13.5px;
+          line-height: 1.25;
+          font-weight: 800;
+          letter-spacing: 0;
+          text-transform: none;
+          color: #2f666a;
+        }
+        .patient-report-metric-reference-main {
+          margin-top: 6px;
+          font-size: 22px;
+          line-height: 1.05;
+          font-weight: 800;
+          color: #0f2b2d;
+        }
+        .patient-report-metric-reference-diff {
+          margin-top: 6px;
+          font-size: 16px;
+          line-height: 1.35;
+          font-weight: 700;
+          color: #2e5053;
+        }
+        .patient-report-metric-reference-empty {
+          font-size: 15px;
+          line-height: 1.45;
+          color: #4a6263;
+        }
+        .patient-report-metric-context {
+          margin-top: 12px;
+          padding: 12px 14px;
+          border-radius: 18px;
+          background: linear-gradient(180deg, rgba(0, 131, 141, 0.07) 0%, rgba(0, 131, 141, 0.03) 100%);
+          border: 1.5px solid rgba(0, 131, 141, 0.16);
+        }
+        .patient-report-metric-context.tone-warn {
+          background: linear-gradient(180deg, rgba(199, 93, 0, 0.09) 0%, rgba(199, 93, 0, 0.04) 100%);
+          border-color: rgba(199, 93, 0, 0.18);
+        }
+        .patient-report-metric-context.tone-danger {
+          background: linear-gradient(180deg, rgba(198, 40, 40, 0.09) 0%, rgba(198, 40, 40, 0.04) 100%);
+          border-color: rgba(198, 40, 40, 0.18);
+        }
+        .patient-report-metric-context-title {
+          font-size: 13.5px;
+          line-height: 1.25;
+          font-weight: 800;
+          color: #2f666a;
+        }
+        .patient-report-metric-context-text {
+          margin-top: 6px;
+          font-size: 15px;
+          line-height: 1.45;
+          color: #355253;
+        }
+        .patient-report-metric-trend-caption {
+          margin-top: 12px;
+          font-size: 15px;
+          color: #5a7071;
+          min-height: 24px;
+        }
+        .patient-report-trend-svg {
+          margin-top: 6px;
+          border-radius: 18px;
+          background: #f7fbfb;
+          border: 1px solid #e0ecec;
+          padding: 8px;
+        }
+        .patient-report-support-card {
+          background: #ffffff;
+          border-radius: 24px;
+          border: 2.5px solid #cfe3e4;
+          box-shadow: 0 14px 34px rgba(15, 77, 84, 0.10);
+          padding: 20px 18px 18px;
+          min-height: 100%;
+        }
+        .patient-report-support-card.tone-warn { border-color: rgba(199, 93, 0, 0.42); }
+        .patient-report-support-card.tone-danger { border-color: rgba(198, 40, 40, 0.44); }
+        .patient-report-support-top {
+          display: flex;
+          justify-content: space-between;
+          gap: 12px;
+          align-items: flex-start;
+        }
+        .patient-report-support-title {
+          font-size: 18px;
+          line-height: 1.2;
+          color: #1d5053;
+          font-weight: 800;
+        }
+        .patient-report-support-subtitle {
+          margin-top: 8px;
+          font-size: 15px;
+          line-height: 1.35;
+          color: #5a7071;
+        }
+        .patient-report-support-value {
+          margin-top: 8px;
+          font-size: 30px;
+          line-height: 1.05;
+          font-weight: 800;
+          color: #102a2b;
+        }
+        .patient-report-support-note {
+          margin-top: 10px;
+          font-size: 15px;
+          line-height: 1.45;
+          color: #345153;
+          min-height: 44px;
+        }
+        .patient-report-bmr-table-wrap {
+          margin-top: 12px;
+          border-radius: 18px;
+          border: 1px solid #d9e8e8;
+          overflow: hidden;
+          background: #fbfefe;
+        }
+        .patient-report-bmr-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 14px;
+          line-height: 1.35;
+        }
+        .patient-report-bmr-table th,
+        .patient-report-bmr-table td {
+          padding: 8px 10px;
+          text-align: left;
+          vertical-align: top;
+          border-bottom: 1px solid #e6f0f0;
+        }
+        .patient-report-bmr-table th:last-child,
+        .patient-report-bmr-table td:last-child {
+          text-align: right;
+          white-space: nowrap;
+          width: 112px;
+        }
+        .patient-report-bmr-table thead th {
+          background: #f4fbfb;
+          color: #315153;
+          font-size: 13px;
+          font-weight: 800;
+        }
+        .patient-report-bmr-table tbody tr:last-child td {
+          border-bottom: none;
+        }
+        .patient-report-vital-list {
+          margin-top: 12px;
+          display: grid;
+          gap: 10px;
+        }
+        .patient-report-vital-item {
+          border-radius: 18px;
+          border: 1.5px solid #d9e8e8;
+          background: #fbfefe;
+          padding: 12px 12px 11px;
+        }
+        .patient-report-vital-item.tone-warn { border-color: rgba(199, 93, 0, 0.24); background: rgba(199, 93, 0, 0.05); }
+        .patient-report-vital-item.tone-danger { border-color: rgba(198, 40, 40, 0.25); background: rgba(198, 40, 40, 0.05); }
+        .patient-report-vital-item-title {
+          font-size: 15px;
+          line-height: 1.25;
+          font-weight: 800;
+          color: #183c3f;
+        }
+        .patient-report-vital-row {
+          display: flex;
+          justify-content: space-between;
+          gap: 12px;
+          align-items: baseline;
+          margin-top: 8px;
+          font-size: 13.5px;
+          line-height: 1.3;
+          color: #4a6465;
+        }
+        .patient-report-vital-row strong {
+          font-size: 15px;
+          line-height: 1.2;
+          color: #103132;
+          text-align: right;
+        }
+        .patient-report-vital-row.is-value {
+          margin-top: 10px;
+          padding-top: 10px;
+          border-top: 1px solid #dceaea;
+        }
+        .patient-report-vital-row.is-value .patient-report-vital-label {
+          font-weight: 800;
+          color: #103132;
+        }
+        .patient-report-vital-row.is-value strong { font-size: 16px; }
+        .patient-report-vital-status {
+          margin-top: 8px;
+          font-size: 13.5px;
+          line-height: 1.4;
+          color: #486263;
+        }
+        .patient-report-vital-status.tone-warn { color: #9a4a00; }
+        .patient-report-vital-status.tone-danger { color: #a32020; }
+        .patient-report-vital-empty {
+          margin-top: 8px;
+          font-size: 13.5px;
+          line-height: 1.4;
+          color: #5a7071;
+        }
+        .patient-report-grid-2 {
+          margin-top: 22px;
+          display: grid;
+          grid-template-columns: 1.2fr 0.8fr;
+          gap: 18px;
+        }
+        .patient-report-info-box {
+          padding: 24px 24px 22px;
+        }
+        .patient-report-info-box h3,
+        .patient-report-detail-group h3 {
+          margin: 0;
+          font-size: 24px;
+          line-height: 1.15;
+          color: #123132;
+        }
+        .patient-report-info-box p,
+        .patient-report-detail-group p {
+          margin: 10px 0 0;
+          font-size: 17px;
+          line-height: 1.5;
+          color: #4d6667;
+        }
+        .patient-report-highlight-list {
+          display: grid;
+          gap: 12px;
+          margin-top: 16px;
+        }
+        .patient-report-highlight {
+          border-radius: 16px;
+          padding: 13px 14px;
+          font-size: 16px;
+          line-height: 1.45;
+          background: rgba(0, 131, 141, 0.08);
+          color: #006a73;
+          border: 1px solid rgba(0, 131, 141, 0.16);
+        }
+        .patient-report-highlight.tone-warn {
+          background: rgba(199, 93, 0, 0.10);
+          color: #9a4a00;
+          border-color: rgba(199, 93, 0, 0.18);
+        }
+        .patient-report-highlight.tone-danger {
+          background: rgba(198, 40, 40, 0.10);
+          color: #a32020;
+          border-color: rgba(198, 40, 40, 0.18);
+        }
+        .patient-report-muted-box {
+          padding: 18px 20px;
+          font-size: 16px;
+          line-height: 1.45;
+          color: #5f7475;
+        }
+        .patient-report-footer {
+          position: absolute;
+          left: 58px;
+          right: 58px;
+          bottom: 38px;
+          display: flex;
+          justify-content: space-between;
+          gap: 14px;
+          font-size: 14px;
+          color: #6b7d7d;
+        }
+        .patient-report-page-2 {
+          background: linear-gradient(180deg, #fbfefe 0%, #ffffff 18%, #ffffff 100%);
+        }
+        .patient-report-section-grid {
+          margin-top: 26px;
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 18px;
+          align-items: start;
+        }
+        .patient-report-detail-group {
+          padding: 22px 22px 20px;
+        }
+        .patient-report-detail-group ul {
+          list-style: none;
+          padding: 0;
+          margin: 18px 0 0;
+          display: grid;
+          gap: 10px;
+        }
+        .patient-report-detail-item {
+          display: grid;
+          grid-template-columns: 180px 1fr;
+          gap: 12px;
+          align-items: start;
+          padding: 12px 12px 12px 14px;
+          border-radius: 16px;
+          background: #f8fbfb;
+          border-left: 4px solid #00838d;
+        }
+        .patient-report-detail-item.tone-warn { border-left-color: #c75d00; }
+        .patient-report-detail-item.tone-danger { border-left-color: #c62828; }
+        .patient-report-detail-label {
+          font-size: 15px;
+          line-height: 1.4;
+          color: #4e6566;
+          font-weight: 700;
+        }
+        .patient-report-detail-value {
+          font-size: 15px;
+          line-height: 1.45;
+          color: #183132;
+        }
+        .patient-report-bottom-grid {
+          margin-top: 18px;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 18px;
+        }
+        .patient-report-legend {
+          padding: 22px 22px 20px;
+          border-radius: 24px;
+          background: #f8fbfb;
+          border: 1px solid #dbe8e8;
+        }
+        .patient-report-legend h3 {
+          margin: 0;
+          font-size: 22px;
+          color: #103132;
+        }
+        .patient-report-legend ul {
+          margin: 14px 0 0;
+          padding-left: 22px;
+        }
+        .patient-report-legend li {
+          margin: 0 0 10px;
+          font-size: 16px;
+          line-height: 1.5;
+          color: #476162;
+        }
+      </style>
+      <section class="patient-report-page">
+        <div class="patient-report-header">
+          <div class="patient-report-brand">
+            <div class="patient-report-brand-kicker">wagaiwzrost.pl</div>
+            <h1 class="patient-report-title">${patientReportEscapeHtml(model.title)}</h1>
+            ${model.subtitle ? `<p class="patient-report-subtitle">${patientReportEscapeHtml(model.subtitle)}</p>` : ''}
+          </div>
+          <div class="patient-report-meta">${metaHtml}</div>
+        </div>
+        <section class="patient-report-hero tone-${patientReportEscapeHtml(model.headline.tone || 'normal')}">
+          <h2>${patientReportEscapeHtml(model.headline.title || '')}</h2>
+          ${model.headline.text ? `<p>${patientReportEscapeHtml(model.headline.text || '')}</p>` : ''}
+          ${model.headline.subtext ? `<p>${patientReportEscapeHtml(model.headline.subtext || '')}</p>` : ''}
+        </section>
+        <section class="patient-report-grid-3">
+          ${cardsHtml}
+        </section>
+        <section class="patient-report-secondary-grid">
+          ${secondaryCardsHtml}
+        </section>
+        <div class="patient-report-footer">
+          <span>Raport ma charakter informacyjny i stanowi uzupełnienie omówienia wyników podczas wizyty.</span>
+          <span>Porównania centylowe: ${patientReportEscapeHtml(model.sourceLabel || '—')}</span>
+        </div>
+      </section>
+      <section class="patient-report-page patient-report-page-2">
+        <div class="patient-report-header">
+          <div class="patient-report-brand">
+            <div class="patient-report-brand-kicker">Załącznik liczbowy</div>
+            <h1 class="patient-report-title">Szczegółowe wyniki z trybu PRO</h1>
+          </div>
+          <div class="patient-report-meta"><span>Źródło siatek: ${patientReportEscapeHtml(model.sourceLabel || '—')}</span></div>
+        </div>
+        <section class="patient-report-section-grid">
+          ${detailHtml}
+        </section>
+        <section class="patient-report-bottom-grid">
+          <div class="patient-report-legend">
+            <h3>Krótka legenda</h3>
+            <ul>
+              <li><strong>Centyl</strong> pokazuje, jaki odsetek dzieci w tym samym wieku i tej samej płci ma wynik niższy.</li>
+              <li><strong>50 centyl</strong> to mediana — około połowa rówieśników ma wynik niższy, a połowa wyższy.</li>
+              <li><strong>Z-score</strong> pokazuje odległość od mediany w odchyleniach standardowych; im większa wartość bezwzględna, tym dalej od środka rozkładu.</li>
+            </ul>
+          </div>
+          <div class="patient-report-legend">
+            <h3>Jak korzystać z drugiej strony?</h3>
+            <ul>
+              <li>To jest liczbowy aneks do pierwszej strony — przydatny dla rodziców, którzy chcą mieć pełniejszy zapis wizyty.</li>
+              <li>Najważniejsze są trendy i kontekst wieku, a nie pojedyncza liczba odczytana bez odniesienia do siatek.</li>
+              <li>Jeśli przy kolejnych wizytach będą dopisywane wcześniejsze pomiary, raport stanie się jeszcze bardziej użyteczny.</li>
+            </ul>
+          </div>
+        </section>
+        <div class="patient-report-footer">
+          <span>Wygenerowano automatycznie przez moduł Podsumowanie wyników • wagaiwzrost.pl</span>
+          <span>${patientReportEscapeHtml(model.generatedLabel || '')}</span>
+        </div>
+      </section>
+    </div>`;
+}
+
+function patientReportShowToast(message) {
+  try {
+    const existing = document.getElementById('patientReportPdfToast');
+    if (existing) existing.remove();
+    const toast = document.createElement('div');
+    toast.id = 'patientReportPdfToast';
+    toast.textContent = message || 'Raport PDF został wygenerowany.';
+    toast.style.position = 'fixed';
+    toast.style.bottom = '1rem';
+    toast.style.left = '50%';
+    toast.style.transform = 'translateX(-50%)';
+    toast.style.background = '#00838d';
+    toast.style.color = '#fff';
+    toast.style.padding = '0.65rem 1.25rem';
+    toast.style.borderRadius = '10px';
+    toast.style.fontSize = '0.98rem';
+    toast.style.zIndex = '99999';
+    toast.style.boxShadow = '0 10px 24px rgba(0,0,0,0.18)';
+    document.body.appendChild(toast);
+    setTimeout(() => { try { toast.remove(); } catch (_) {} }, 2800);
+  } catch (_) {}
+}
+
+function patientReportDelay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+const PATIENT_REPORT_PDF_RENDER_SCALE = 2.25;
+const PATIENT_REPORT_PDF_MAX_EXPORT_WIDTH = 2200;
+const PATIENT_REPORT_PDF_JPEG_QUALITY = 0.92;
+const PATIENT_REPORT_PDF_PNG_RATIO_LIMIT = 1.4;
+const PATIENT_REPORT_PDF_PNG_RATIO_LIMIT_PREFERRED = 1.7;
+
+function patientReportResizeCanvasForPdf(sourceCanvas, maxWidth = PATIENT_REPORT_PDF_MAX_EXPORT_WIDTH) {
+  if (!sourceCanvas || !sourceCanvas.width || !sourceCanvas.height) return sourceCanvas;
+  if (!Number.isFinite(maxWidth) || maxWidth <= 0 || sourceCanvas.width <= maxWidth) return sourceCanvas;
+
+  const ratio = maxWidth / sourceCanvas.width;
+  const targetWidth = Math.max(1, Math.round(sourceCanvas.width * ratio));
+  const targetHeight = Math.max(1, Math.round(sourceCanvas.height * ratio));
+  const exportCanvas = document.createElement('canvas');
+  exportCanvas.width = targetWidth;
+  exportCanvas.height = targetHeight;
+  const ctx = exportCanvas.getContext('2d', { alpha: false });
+  if (!ctx) return sourceCanvas;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, targetWidth, targetHeight);
+  ctx.imageSmoothingEnabled = true;
+  try {
+    ctx.imageSmoothingQuality = 'high';
+  } catch (_) {}
+  ctx.drawImage(sourceCanvas, 0, 0, targetWidth, targetHeight);
+  return exportCanvas;
+}
+
+function patientReportEstimateDataUrlBytes(dataUrl) {
+  if (!dataUrl || typeof dataUrl !== 'string') return Number.POSITIVE_INFINITY;
+  const commaIndex = dataUrl.indexOf(',');
+  if (commaIndex < 0) return Number.POSITIVE_INFINITY;
+  const base64Length = dataUrl.length - commaIndex - 1;
+  return Math.ceil((base64Length * 3) / 4);
+}
+
+function patientReportCanvasToPdfImage(canvas, options = {}) {
+  const preferPng = !!(options && options.preferPng);
+  const exportCanvas = patientReportResizeCanvasForPdf(canvas);
+
+  let jpegUrl = '';
+  let pngUrl = '';
+  try {
+    jpegUrl = exportCanvas.toDataURL('image/jpeg', PATIENT_REPORT_PDF_JPEG_QUALITY);
+  } catch (_) {
+    jpegUrl = '';
+  }
+  try {
+    pngUrl = exportCanvas.toDataURL('image/png');
+  } catch (_) {
+    pngUrl = '';
+  }
+
+  const hasJpeg = typeof jpegUrl === 'string' && jpegUrl.startsWith('data:image/jpeg');
+  const hasPng = typeof pngUrl === 'string' && pngUrl.startsWith('data:image/png');
+
+  if (hasJpeg && hasPng) {
+    const jpegBytes = patientReportEstimateDataUrlBytes(jpegUrl);
+    const pngBytes = patientReportEstimateDataUrlBytes(pngUrl);
+    const ratioLimit = preferPng ? PATIENT_REPORT_PDF_PNG_RATIO_LIMIT_PREFERRED : PATIENT_REPORT_PDF_PNG_RATIO_LIMIT;
+    if (Number.isFinite(jpegBytes) && Number.isFinite(pngBytes) && pngBytes <= (jpegBytes * ratioLimit)) {
+      return { dataUrl: pngUrl, format: 'PNG' };
+    }
+    return { dataUrl: jpegUrl, format: 'JPEG' };
+  }
+
+  if (hasPng) return { dataUrl: pngUrl, format: 'PNG' };
+  if (hasJpeg) return { dataUrl: jpegUrl, format: 'JPEG' };
+
+  const fallbackUrl = exportCanvas.toDataURL('image/png');
+  return { dataUrl: fallbackUrl, format: 'PNG' };
+}
+
+let __patientReportPdfInFlight = false;
+
+async function generatePatientReportPdf(triggerBtn) {
+  if (__patientReportPdfInFlight) return;
+  const lines = getFormattedProfessionalSummaryLines();
+  if (!Array.isArray(lines) || !lines.length) {
+    patientReportShowToast('Brak danych do wygenerowania raportu PDF.');
+    return;
+  }
+  if (!(window.jspdf && window.jspdf.jsPDF) || typeof window.html2canvas !== 'function') {
+    patientReportShowToast('Brakuje bibliotek potrzebnych do wygenerowania PDF.');
+    return;
+  }
+
+  __patientReportPdfInFlight = true;
+  const btn = triggerBtn || null;
+  const originalText = btn ? btn.textContent : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Trwa generowanie PDF…';
+  }
+
+  const host = document.createElement('div');
+  host.style.position = 'fixed';
+  host.style.left = '-20000px';
+  host.style.top = '0';
+  host.style.width = '1240px';
+  host.style.zIndex = '-1';
+  host.style.pointerEvents = 'none';
+  host.style.opacity = '1';
+  host.setAttribute('aria-hidden', 'true');
+
+  try {
+    const model = patientReportBuildModel();
+    host.innerHTML = patientReportBuildHtml(model);
+    document.body.appendChild(host);
+    await patientReportDelay(80);
+
+    const pages = Array.from(host.querySelectorAll('.patient-report-page'));
+    if (!pages.length) throw new Error('Brak stron raportu do renderowania.');
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+      compress: true,
+      putOnlyUsedFonts: true
+    });
+    pdf.setProperties({
+      title: 'Raport po wizycie',
+      subject: 'Raport PDF dla pacjenta',
+      author: 'wagaiwzrost.pl'
+    });
+
+    for (let i = 0; i < pages.length; i += 1) {
+      const page = pages[i];
+      const canvas = await window.html2canvas(page, {
+        scale: PATIENT_REPORT_PDF_RENDER_SCALE,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        imageTimeout: 0
+      });
+      const preferPng = page.classList.contains('patient-report-page-2');
+      const pdfImage = patientReportCanvasToPdfImage(canvas, { preferPng });
+      if (i > 0) pdf.addPage();
+      const imageCompression = pdfImage.format === 'PNG' ? 'FAST' : 'MEDIUM';
+      pdf.addImage(pdfImage.dataUrl, pdfImage.format, 0, 0, 210, 297, undefined, imageCompression);
+    }
+
+    const filenameBase = patientReportSanitizeFilename(model.name || 'pacjent');
+    const filename = `Raport_pdf_dla_pacjenta_${filenameBase || 'pacjent'}.pdf`;
+    pdf.save(filename);
+    patientReportShowToast('Raport PDF został wygenerowany.');
+  } catch (error) {
+    console.error('Błąd generowania raportu PDF dla pacjenta:', error);
+    patientReportShowToast('Nie udało się wygenerować raportu PDF. Spróbuj ponownie.');
+  } finally {
+    try { host.remove(); } catch (_) {}
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = originalText || 'Raport PDF dla pacjenta';
+    }
+    __patientReportPdfInFlight = false;
+  }
+}
+
+(function setupPatientReportPdfButton() {
+  if (typeof document === 'undefined') return;
+  document.addEventListener('click', function(event) {
+    const btn = event.target && typeof event.target.closest === 'function'
+      ? event.target.closest('[data-patient-report-pdf-btn]')
+      : null;
+    if (!btn) return;
+    event.preventDefault();
+    generatePatientReportPdf(btn);
+  });
+})();
+
 
 // Po załadowaniu strony dodajemy obsługę zdarzeń blur na polach wiek, waga i wzrost.
 // Gdy użytkownik zakończy edycję dowolnego z tych pól (tj. pole traci fokus),
@@ -11209,7 +13403,14 @@ function setupAdvancedGrowth() {
   }
   const addBtn = document.getElementById('advAddMeasurementBtn');
   if (addBtn) {
-    addBtn.addEventListener('click', addAdvMeasurementRow);
+    addBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (typeof window !== 'undefined' && typeof window.vildaHandleAdvancedMeasurementAdd === 'function') {
+        window.vildaHandleAdvancedMeasurementAdd();
+      } else {
+        addAdvMeasurementRow();
+      }
+    });
   }
   // Dodaj pierwszy wiersz pomiarowy od razu po inicjalizacji, aby użytkownik
   // miał widoczne pola na wpisanie poprzednich pomiarów bez konieczności
@@ -12966,6 +15167,7 @@ function renderAdvancedMeasurementAnalysisRow(rowEl) {
     panel.style.display = 'none';
     panel.innerHTML = '';
     toggleBtn.textContent = ADV_HISTORY_ANALYZE_LABEL;
+    updateAdvancedMeasurementActionDivider();
     return;
   }
 
@@ -12975,6 +15177,7 @@ function renderAdvancedMeasurementAnalysisRow(rowEl) {
     panel.style.display = 'none';
     panel.innerHTML = '';
     toggleBtn.textContent = ADV_HISTORY_ANALYZE_LABEL;
+    updateAdvancedMeasurementActionDivider();
     return;
   }
 
@@ -12995,6 +15198,30 @@ function renderAdvancedMeasurementAnalysisRow(rowEl) {
         });
     });
   }
+
+  updateAdvancedMeasurementActionDivider();
+}
+
+function updateAdvancedMeasurementActionDivider() {
+  const form = document.getElementById('advancedGrowthForm');
+  if (!form) return;
+
+  let showDivider = false;
+  try {
+    const rows = Array.from(document.querySelectorAll('#advMeasurements .measure-row'));
+    const lastRow = rows.length ? rows[rows.length - 1] : null;
+    if (lastRow) {
+      const actionsWrap = lastRow.querySelector('.adv-history-analysis-actions');
+      const panel = lastRow.querySelector('.adv-history-analysis-panel');
+      const actionsVisible = !!(actionsWrap && actionsWrap.style.display !== 'none');
+      const panelVisible = !!(panel && panel.style.display !== 'none' && String(panel.innerHTML || '').trim() !== '');
+      showDivider = actionsVisible && !panelVisible;
+    }
+  } catch (_) {
+    showDivider = false;
+  }
+
+  form.classList.toggle('adv-show-add-divider', showDivider);
 }
 
 function updateAdvancedMeasurementAnalysisControls(forceHide) {
@@ -13028,6 +15255,8 @@ function updateAdvancedMeasurementAnalysisControls(forceHide) {
       renderAdvancedMeasurementAnalysisRow(row);
     }
   });
+
+  updateAdvancedMeasurementActionDivider();
 }
 
 /**
@@ -13126,11 +15355,15 @@ function addAdvMeasurementRow() {
   // nasłuch na usuwanie wiersza
   const removeBtn = row.querySelector('.remove-measure');
   if (removeBtn) {
-    removeBtn.addEventListener('click', () => {
-      container.removeChild(row);
-      // Po usunięciu wiersza również aktualizuj widoczność przycisku usuwania
-      updateRemoveButtons();
-      calculateGrowthAdvanced();
+    removeBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (typeof window !== 'undefined' && typeof window.vildaHandleAdvancedMeasurementRowRemove === 'function') {
+        window.vildaHandleAdvancedMeasurementRowRemove(row);
+      } else {
+        container.removeChild(row);
+        updateRemoveButtons();
+        calculateGrowthAdvanced();
+      }
     });
   }
   // nasłuch na zmiany w nowych polach
@@ -13153,12 +15386,11 @@ function addAdvMeasurementRow() {
  * nie może usunąć ostatniego pomiaru, ale może dodawać i usuwać kolejne.
  */
 function updateRemoveButtons() {
-  const rows = document.querySelectorAll('#advMeasurements .measure-row');
-  rows.forEach(row => {
+  const rows = Array.from(document.querySelectorAll('#advMeasurements .measure-row'));
+  rows.forEach((row, idx) => {
     const btn = row.querySelector('.remove-measure');
-    if (btn) {
-      btn.style.display = rows.length > 1 ? 'inline-block' : 'none';
-    }
+    if (!btn) return;
+    btn.style.display = (idx === 0) ? 'none' : 'inline-block';
   });
 }
 
@@ -13701,6 +15933,11 @@ function calculateGrowthAdvanced() {
         refreshGrowthChartActionControls();
       }
     } catch (_) {}
+    try {
+      if (typeof window !== 'undefined' && typeof window.refreshEstimatedIntakeVisibility === 'function') {
+        window.refreshEstimatedIntakeVisibility({ preserveRows: true, recalcIfOpen: true });
+      }
+    } catch (_) {}
     return;
   }
   const sexEl = document.getElementById('sex');
@@ -13853,6 +16090,11 @@ if (heightMeas.length >= 1 && !isNaN(heightVal)) {
     if (typeof window.updateStabilizationEligibility === 'function') {
       try { window.updateStabilizationEligibility(); } catch (_) {}
     }
+    try {
+      if (typeof window !== 'undefined' && typeof window.refreshEstimatedIntakeVisibility === 'function') {
+        window.refreshEstimatedIntakeVisibility({ preserveRows: true, recalcIfOpen: true });
+      }
+    } catch (_) {}
   
     // Przygotuj i wyświetl tekstowy rezultat w sekcji zaawansowanej
     if (resultsEl) {
@@ -14023,16 +16265,28 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ===========================================================
  * SYNC OVERLAY — Advanced Growth ↔ Intake (2-way DOM only)
  * ===========================================================
- * Ten blok dodaje dwukierunkową synchronizację danych między
- * kartami „Zaawansowane obliczenia wzrostowe” i „Szacowane spożycie energii”.
- * Blok jest umieszczony na końcu pliku, aby nie kolidować z istniejącymi
- * funkcjami. Wszystkie modyfikacje odbywają się poprzez manipulację DOM,
- * bez wprowadzania globalnych zależności.
+ * Ten blok utrzymuje stabilną, dwukierunkową synchronizację
+ * pomiędzy historią w karcie „Zaawansowane obliczenia wzrostowe”
+ * oraz historią w karcie „Szacowane spożycie energii”.
+ *
+ * Założenia:
+ *  - pierwszy wiersz w Advanced jest zawsze chroniony (bez „×”)
+ *  - pierwszy historyczny wiersz w Intake jest zawsze chroniony (bez „×”)
+ *  - w Intake dodatkowo istnieje zablokowany, wyszarzony wiersz
+ *    z bieżącymi danymi z „Danych użytkownika”
+ *  - kliknięcie „Dodaj kolejny pomiar” nie tworzy kolejnego pustego
+ *    wiersza, jeśli poprzedni wiersz jest całkowicie pusty
+ *  - usunięcie wiersza usuwa wyłącznie jego prawidłowy odpowiednik
+ *    w drugiej karcie – nigdy wyszarzonego wiersza z danymi bieżącymi
  */
+
+let __advIntakePairSeq = 0;
 
 /* ---------- helpers ---------- */
 function _intkRows(){ return Array.from(document.querySelectorAll('#intakeMeasurements .measure-row-intake')); }
 function _advRows(){  return Array.from(document.querySelectorAll('#advMeasurements .measure-row')); }
+function _getIntakeHistoryRows(){ return _intkRows().filter(row => row.dataset.locked !== 'true'); }
+
 function _isAdvIntakeSyncSuspended(){
   try {
     return !!(typeof window !== 'undefined' && window.__vildaSuspendAdvIntakeSync);
@@ -14041,265 +16295,459 @@ function _isAdvIntakeSyncSuspended(){
   }
 }
 
+function _runWithAdvIntakeSyncSuspended(callback){
+  let prev = false;
+  try {
+    prev = !!window.__vildaSuspendAdvIntakeSync;
+    window.__vildaSuspendAdvIntakeSync = true;
+  } catch (_) {}
+  try {
+    return callback();
+  } finally {
+    try { window.__vildaSuspendAdvIntakeSync = prev; } catch (_) {}
+  }
+}
+
+function _nextAdvIntakeSyncId(){
+  __advIntakePairSeq += 1;
+  return `adv-intake-${Date.now().toString(36)}-${__advIntakePairSeq}`;
+}
+
+function _getAdvIntakeSyncId(row){
+  return row?.dataset?.advIntakeSyncId || '';
+}
+
+function _setAdvIntakeSyncId(row, syncId){
+  if (!row) return;
+  if (syncId) row.dataset.advIntakeSyncId = String(syncId);
+  else delete row.dataset.advIntakeSyncId;
+}
+
+function _findAdvRowBySyncId(syncId){
+  if (!syncId) return null;
+  return _advRows().find(row => _getAdvIntakeSyncId(row) === syncId) || null;
+}
+
+function _findIntakeHistoryRowBySyncId(syncId){
+  if (!syncId) return null;
+  return _getIntakeHistoryRows().find(row => _getAdvIntakeSyncId(row) === syncId) || null;
+}
+
 function _getUserBasics(){
-  // Pobierz podstawowe dane użytkownika z formularza „Dane użytkownika”.
-  const ageY = parseFloat(document.getElementById('age')?.value);
-  const ageM = parseFloat(document.getElementById('ageMonths')?.value);
-  const height = parseFloat(document.getElementById('height')?.value);
-  const weight = parseFloat(document.getElementById('weight')?.value);
-  const totalM = (isNaN(ageY)?0:ageY)*12 + (isNaN(ageM)?0:ageM);
-  return { ageMonths: totalM, height, weight };
+  const ageYRaw = parseFloat(document.getElementById('age')?.value);
+  const ageMRaw = parseFloat(document.getElementById('ageMonths')?.value);
+  const heightRaw = parseFloat(document.getElementById('height')?.value);
+  const weightRaw = parseFloat(document.getElementById('weight')?.value);
+
+  const hasAge = !isNaN(ageYRaw) || !isNaN(ageMRaw);
+  const totalM = hasAge ? ((isNaN(ageYRaw) ? 0 : ageYRaw) * 12 + (isNaN(ageMRaw) ? 0 : ageMRaw)) : null;
+
+  return {
+    ageMonths: (typeof totalM === 'number' && isFinite(totalM)) ? Math.round(totalM) : null,
+    height: (!isNaN(heightRaw) && isFinite(heightRaw)) ? heightRaw : null,
+    weight: (!isNaN(weightRaw) && isFinite(weightRaw)) ? weightRaw : null
+  };
+}
+
+function _rowHasAnyData(row, selectors){
+  if (!row) return false;
+  return selectors.some(sel => {
+    const el = row.querySelector(sel);
+    return !!el && String(el.value ?? '').trim() !== '';
+  });
+}
+
+function _advRowHasAnyData(row){
+  return _rowHasAnyData(row, [
+    '.adv-age-years',
+    '.adv-age-months',
+    '.adv-height',
+    '.adv-weight',
+    '.adv-bone-age'
+  ]);
+}
+
+function _intakeRowHasAnyData(row){
+  return _rowHasAnyData(row, [
+    '.intake-ageY',
+    '.intake-ageM',
+    '.intake-ht',
+    '.intake-wt'
+  ]);
+}
+
+function _isProtectedAdvancedHistoryRow(row){
+  const rows = _advRows();
+  return !!row && rows.length > 0 && rows[0] === row;
+}
+
+function _isProtectedIntakeHistoryRow(row){
+  const rows = _getIntakeHistoryRows();
+  return !!row && rows.length > 0 && rows[0] === row;
 }
 
 function _lockIntakeFirstRow(){
-  const rows = _intkRows(); if(!rows.length) return;
+  const rows = _intkRows();
+  if (!rows.length) return;
   const first = rows[0];
   first.dataset.locked = 'true';
-  first.querySelectorAll('input').forEach(inp => inp.disabled = true);
-  const rm = first.querySelector('.remove-intake-row'); if (rm) rm.style.display = 'none';
+  _setAdvIntakeSyncId(first, '');
+  first.querySelectorAll('input').forEach(inp => { inp.disabled = true; });
+  const rm = first.querySelector('.remove-intake-row');
+  if (rm) rm.style.display = 'none';
 }
 
 function _updateIntakeFirstRowFromUserBasics(){
-  const cont = document.getElementById('intakeMeasurements'); if(!cont) return;
-  // Upewnij się, że wiersz istnieje; jeśli nie, dodaj go (prefill).
-  if(!_intkRows().length){
-    if (typeof intakeAddRow === 'function'){
-      const b = _getUserBasics();
-      intakeAddRow({ ageMonths: b.ageMonths, height: b.height, weight: b.weight });
-    } else {
-      return;
-    }
+  const cont = document.getElementById('intakeMeasurements');
+  if (!cont) return;
+
+  if (!_intkRows().length) {
+    if (typeof intakeAddRow === 'function') intakeAddRow();
+    else return;
   }
-  const first = _intkRows()[0]; if(!first) return;
-  const b = _getUserBasics();
-  const y = Math.floor((isNaN(b.ageMonths)?0:b.ageMonths)/12);
-  const m = (isNaN(b.ageMonths)?0:b.ageMonths)%12;
-  const set = (sel, val) => { const el = first.querySelector(sel); if(el) el.value = (val ?? '') === '' ? '' : String(val); };
-  set('.intake-ageY', isNaN(y)?'':y);
-  set('.intake-ageM', isNaN(m)?'':m);
-  set('.intake-ht', isNaN(b.height)?'':b.height);
-  set('.intake-wt', isNaN(b.weight)?'':b.weight);
+
+  const first = _intkRows()[0];
+  if (!first) return;
+
+  const basics = _getUserBasics();
+  const setVal = (sel, value) => {
+    const el = first.querySelector(sel);
+    if (!el) return;
+    el.value = (value === null || value === undefined || value === '') ? '' : String(value);
+  };
+
+  const ageMonths = (typeof basics.ageMonths === 'number' && isFinite(basics.ageMonths))
+    ? basics.ageMonths
+    : null;
+
+  setVal('.intake-ageY', ageMonths === null ? '' : Math.floor(ageMonths / 12));
+  setVal('.intake-ageM', ageMonths === null ? '' : (ageMonths % 12));
+  setVal('.intake-ht', (typeof basics.height === 'number' && isFinite(basics.height)) ? basics.height : '');
+  setVal('.intake-wt', (typeof basics.weight === 'number' && isFinite(basics.weight)) ? basics.weight : '');
+
   _lockIntakeFirstRow();
   if (typeof updateIntakeRemoveButtons === 'function') updateIntakeRemoveButtons();
 }
 
-function _ensureIntakeParityWithAdv(){
-  if (_isAdvIntakeSyncSuspended()) return;
-  const advN = _advRows().length;
-  const rows = _intkRows();
-  const hasFirstLocked = rows[0]?.dataset.locked === 'true';
-  const curr = rows.length - (hasFirstLocked?1:0);
-
-  // dołóż brakujące (nie ruszaj 1. wiersza)
-  for (let i=curr; i<advN; i++){
-    if (typeof intakeAddRow === 'function') intakeAddRow();
-  }
-  // usuń nadmiarowe po stronie intake
-  for (let i=advN; i<curr; i++){
-    const all = _intkRows();
-    const last = all[all.length-1];
-    if (last?.dataset.locked !== 'true') last.remove();
-  }
-  if (typeof updateIntakeRemoveButtons === 'function') updateIntakeRemoveButtons();
+function _ensureAtLeastOneAdvancedHistoryRow(){
+  if (!document.getElementById('advMeasurements')) return;
+  if (_advRows().length) return;
+  if (typeof addAdvMeasurementRow === 'function') addAdvMeasurementRow();
 }
 
-function _syncAdvRowToIntake(advRow){
+function _ensureAtLeastOneIntakeHistoryRow(){
+  if (!document.getElementById('intakeMeasurements')) return;
+  if (_getIntakeHistoryRows().length) return;
+  if (typeof intakeAddRow === 'function') intakeAddRow();
+}
+
+function _refreshAdvIntakeRowUi(){
+  try { if (typeof updateRemoveButtons === 'function') updateRemoveButtons(); } catch (_) {}
+  try { if (typeof updateIntakeRemoveButtons === 'function') updateIntakeRemoveButtons(); } catch (_) {}
+}
+
+function _syncAdvRowToIntake(advRow, options){
+  const opts = options || {};
   if (_isAdvIntakeSyncSuspended()) return;
-  const idx = _advRows().indexOf(advRow);
-  if (idx < 0) return;
-  const target = _intkRows()[idx+1]; // +1: pierwszy wiersz intake = „Dane użytkownika”
+  if (!advRow) return;
+
+  let syncId = _getAdvIntakeSyncId(advRow);
+  if (!syncId && !opts.skipPairing) {
+    _pairAdvancedAndIntakeRowsByOrder();
+    syncId = _getAdvIntakeSyncId(advRow);
+  }
+  const target = _findIntakeHistoryRowBySyncId(syncId);
   if (!target) return;
-  const val = (sel) => { const el = advRow.querySelector(sel); return el ? parseFloat(el.value) : NaN; };
-  // Wiek jest przechowywany w dwóch polach: lata i miesiące
-  const yVal = val('.adv-age-years');
-  const mVal = val('.adv-age-months');
-  const h = val('.adv-height');
-  const w = val('.adv-weight');
+
+  const getNum = (sel) => {
+    const el = advRow.querySelector(sel);
+    return el ? parseFloat(el.value) : NaN;
+  };
+
+  const yVal = getNum('.adv-age-years');
+  const mVal = getNum('.adv-age-months');
+  const h = getNum('.adv-height');
+  const w = getNum('.adv-weight');
+
+  const setText = (sel, value) => {
+    const el = target.querySelector(sel);
+    if (!el) return;
+    el.value = (value === '' || value === null || value === undefined || Number.isNaN(value)) ? '' : String(value);
+  };
+
   if (!isNaN(yVal) || !isNaN(mVal)) {
     let yy = isNaN(yVal) ? 0 : yVal;
     let mm = isNaN(mVal) ? 0 : mVal;
-    // Zaokrąglenie miesięcy i normalizacja powyżej 11
     mm = Math.round(mm);
     if (mm >= 12) {
       yy += Math.floor(mm / 12);
       mm = mm % 12;
     }
-    const setText = (sel, v) => { const el = target.querySelector(sel); if (el) el.value = String(v); };
     setText('.intake-ageY', yy);
     setText('.intake-ageM', mm);
   } else {
-    // Brak wpisanego wieku – wyczyść pola
-    const clr = sel => { const el = target.querySelector(sel); if (el) el.value=''; };
-    clr('.intake-ageY'); clr('.intake-ageM');
+    setText('.intake-ageY', '');
+    setText('.intake-ageM', '');
   }
-  // Zapisz wzrost i wagę do wiersza intake
-  const setNum = (sel, v) => { const el = target.querySelector(sel); if (el) el.value = isNaN(v)?'':String(v); };
-  setNum('.intake-ht', h);
-  setNum('.intake-wt', w);
 
-  if (typeof debouncedIntakeCalc === 'function') debouncedIntakeCalc();
+  setText('.intake-ht', h);
+  setText('.intake-wt', w);
+
+  try { if (typeof debouncedIntakeCalc === 'function') debouncedIntakeCalc(); } catch (_) {}
 }
 
-function _syncIntakeRowToAdv(intakeRow){
+function _syncIntakeRowToAdv(intakeRow, options){
+  const opts = options || {};
   if (_isAdvIntakeSyncSuspended()) return;
-  const rows = _intkRows(); const idx = rows.indexOf(intakeRow);
-  if (idx <= 0) return; // 0 = wiersz zablokowany (Dane użytkownika)
-  const advRow = _advRows()[idx-1]; if (!advRow) return;
+  if (!intakeRow || intakeRow.dataset.locked === 'true') return;
 
-  const gv = sel => { const el = intakeRow.querySelector(sel); return el ? parseFloat(el.value) : NaN; };
-  const y = gv('.intake-ageY'), m = gv('.intake-ageM');
-  const h = gv('.intake-ht'),  w = gv('.intake-wt');
-  const ageDec = (isNaN(y)&&isNaN(m)) ? NaN : ((isNaN(y)?0:y) + (isNaN(m)?0:m)/12);
-
-  const set = (sel, v) => { const el = advRow.querySelector(sel); if (el) el.value = (v===''||Number.isNaN(v)) ? '' : String(v); };
-  if (Number.isNaN(ageDec)) {
-    // Jeżeli w wierszu intake brak wieku, wyczyść obie części wieku po stronie Advanced
-    set('.adv-age-years','');
-    set('.adv-age-months','');
-  } else {
-    // Rozbij wiek dziesiętny na lata i miesiące
-    let yrs = Math.floor(ageDec);
-    let mos = Math.round((ageDec - yrs) * 12);
-    if (mos === 12) {
-      yrs += 1;
-      mos = 0;
-    }
-    set('.adv-age-years', yrs);
-    set('.adv-age-months', mos);
+  let syncId = _getAdvIntakeSyncId(intakeRow);
+  if (!syncId && !opts.skipPairing) {
+    _pairAdvancedAndIntakeRowsByOrder();
+    syncId = _getAdvIntakeSyncId(intakeRow);
   }
-  set('.adv-height', Number.isNaN(h)?'':h);
-  set('.adv-weight', Number.isNaN(w)?'':w);
+  const advRow = _findAdvRowBySyncId(syncId);
+  if (!advRow) return;
 
-  if (typeof calculateGrowthAdvanced === 'function') calculateGrowthAdvanced();
+  const getNum = (sel) => {
+    const el = intakeRow.querySelector(sel);
+    return el ? parseFloat(el.value) : NaN;
+  };
+
+  const y = getNum('.intake-ageY');
+  const m = getNum('.intake-ageM');
+  const h = getNum('.intake-ht');
+  const w = getNum('.intake-wt');
+
+  const setVal = (sel, value) => {
+    const el = advRow.querySelector(sel);
+    if (!el) return;
+    el.value = (value === '' || value === null || value === undefined || Number.isNaN(value)) ? '' : String(value);
+  };
+
+  if (isNaN(y) && isNaN(m)) {
+    setVal('.adv-age-years', '');
+    setVal('.adv-age-months', '');
+  } else {
+    let yrs = isNaN(y) ? 0 : y;
+    let mos = isNaN(m) ? 0 : Math.round(m);
+    if (mos >= 12) {
+      yrs += Math.floor(mos / 12);
+      mos = mos % 12;
+    }
+    setVal('.adv-age-years', yrs);
+    setVal('.adv-age-months', mos);
+  }
+
+  setVal('.adv-height', h);
+  setVal('.adv-weight', w);
+
+  try { if (typeof calculateGrowthAdvanced === 'function') calculateGrowthAdvanced(); } catch (_) {}
+}
+
+function _pairAdvancedAndIntakeRowsByOrder(){
+  if (_isAdvIntakeSyncSuspended()) return;
+  if (!document.getElementById('advMeasurements') || !document.getElementById('intakeMeasurements')) {
+    _refreshAdvIntakeRowUi();
+    return;
+  }
+
+  _runWithAdvIntakeSyncSuspended(() => {
+    _updateIntakeFirstRowFromUserBasics();
+    _ensureAtLeastOneAdvancedHistoryRow();
+    _ensureAtLeastOneIntakeHistoryRow();
+
+    while (_advRows().length < _getIntakeHistoryRows().length) {
+      if (typeof addAdvMeasurementRow !== 'function') break;
+      addAdvMeasurementRow();
+    }
+    while (_getIntakeHistoryRows().length < _advRows().length) {
+      if (typeof intakeAddRow !== 'function') break;
+      intakeAddRow();
+    }
+
+    const advRows = _advRows();
+    const intakeHistoryRows = _getIntakeHistoryRows();
+    const pairCount = Math.max(advRows.length, intakeHistoryRows.length);
+
+    for (let i = 0; i < pairCount; i += 1) {
+      const advRow = advRows[i];
+      const intakeRow = intakeHistoryRows[i];
+      const syncId = _getAdvIntakeSyncId(advRow) || _getAdvIntakeSyncId(intakeRow) || _nextAdvIntakeSyncId();
+      _setAdvIntakeSyncId(advRow, syncId);
+      _setAdvIntakeSyncId(intakeRow, syncId);
+    }
+
+    for (let i = 0; i < pairCount; i += 1) {
+      const advRow = advRows[i];
+      const intakeRow = intakeHistoryRows[i];
+      if (!advRow || !intakeRow) continue;
+
+      if (_advRowHasAnyData(advRow) && !_intakeRowHasAnyData(intakeRow)) {
+        _syncAdvRowToIntake(advRow, { skipPairing: true });
+      } else if (_intakeRowHasAnyData(intakeRow) && !_advRowHasAnyData(advRow)) {
+        _syncIntakeRowToAdv(intakeRow, { skipPairing: true });
+      }
+    }
+  });
+
+  _refreshAdvIntakeRowUi();
+}
+
+function handleAdvancedMeasurementRowRemove(row){
+  if (!row || _isProtectedAdvancedHistoryRow(row)) {
+    _refreshAdvIntakeRowUi();
+    return false;
+  }
+
+  const syncId = _getAdvIntakeSyncId(row);
+
+  _runWithAdvIntakeSyncSuspended(() => {
+    const twin = _findIntakeHistoryRowBySyncId(syncId);
+    if (twin) twin.remove();
+    row.remove();
+
+    if (!_advRows().length && typeof addAdvMeasurementRow === 'function') addAdvMeasurementRow();
+    if (!_getIntakeHistoryRows().length && typeof intakeAddRow === 'function') intakeAddRow();
+  });
+
+  _pairAdvancedAndIntakeRowsByOrder();
+  try { if (typeof calculateGrowthAdvanced === 'function') calculateGrowthAdvanced(); } catch (_) {}
+  try { if (typeof debouncedIntakeCalc === 'function') debouncedIntakeCalc(); } catch (_) {}
+  return true;
+}
+
+function handleIntakeHistoryRowRemove(row){
+  if (!row || row.dataset.locked === 'true' || _isProtectedIntakeHistoryRow(row)) {
+    _refreshAdvIntakeRowUi();
+    return false;
+  }
+
+  const syncId = _getAdvIntakeSyncId(row);
+
+  _runWithAdvIntakeSyncSuspended(() => {
+    const twin = _findAdvRowBySyncId(syncId);
+    if (twin) twin.remove();
+    row.remove();
+
+    if (!_getIntakeHistoryRows().length && typeof intakeAddRow === 'function') intakeAddRow();
+    if (!_advRows().length && typeof addAdvMeasurementRow === 'function') addAdvMeasurementRow();
+  });
+
+  _pairAdvancedAndIntakeRowsByOrder();
+  try { if (typeof calculateGrowthAdvanced === 'function') calculateGrowthAdvanced(); } catch (_) {}
+  try { if (typeof debouncedIntakeCalc === 'function') debouncedIntakeCalc(); } catch (_) {}
+  return true;
+}
+
+function handleAdvancedMeasurementAdd(){
+  _pairAdvancedAndIntakeRowsByOrder();
+
+  const rows = _advRows();
+  const last = rows[rows.length - 1];
+  if (last && !_advRowHasAnyData(last)) {
+    _refreshAdvIntakeRowUi();
+    return false;
+  }
+
+  const syncId = _nextAdvIntakeSyncId();
+
+  _runWithAdvIntakeSyncSuspended(() => {
+    if (typeof addAdvMeasurementRow === 'function') addAdvMeasurementRow();
+    if (typeof intakeAddRow === 'function') intakeAddRow();
+  });
+
+  const advRow = _advRows()[_advRows().length - 1];
+  const intakeRow = _getIntakeHistoryRows()[_getIntakeHistoryRows().length - 1];
+  _setAdvIntakeSyncId(advRow, syncId);
+  _setAdvIntakeSyncId(intakeRow, syncId);
+
+  _refreshAdvIntakeRowUi();
+  try { if (typeof calculateGrowthAdvanced === 'function') calculateGrowthAdvanced(); } catch (_) {}
+  try { if (typeof debouncedIntakeCalc === 'function') debouncedIntakeCalc(); } catch (_) {}
+  return true;
+}
+
+function handleIntakeHistoryAdd(){
+  _pairAdvancedAndIntakeRowsByOrder();
+
+  const rows = _getIntakeHistoryRows();
+  const last = rows[rows.length - 1];
+  if (last && !_intakeRowHasAnyData(last)) {
+    _refreshAdvIntakeRowUi();
+    return false;
+  }
+
+  const syncId = _nextAdvIntakeSyncId();
+
+  _runWithAdvIntakeSyncSuspended(() => {
+    if (typeof intakeAddRow === 'function') intakeAddRow();
+    if (typeof addAdvMeasurementRow === 'function') addAdvMeasurementRow();
+  });
+
+  const intakeRow = _getIntakeHistoryRows()[_getIntakeHistoryRows().length - 1];
+  const advRow = _advRows()[_advRows().length - 1];
+  _setAdvIntakeSyncId(intakeRow, syncId);
+  _setAdvIntakeSyncId(advRow, syncId);
+
+  _refreshAdvIntakeRowUi();
+  try { if (typeof calculateGrowthAdvanced === 'function') calculateGrowthAdvanced(); } catch (_) {}
+  try { if (typeof debouncedIntakeCalc === 'function') debouncedIntakeCalc(); } catch (_) {}
+  return true;
 }
 
 /* ---------- non-invasive wiring ---------- */
 document.addEventListener('DOMContentLoaded', () => {
-  // 1) Zadbaj o 1. wiersz intake = „Dane użytkownika”
-  _updateIntakeFirstRowFromUserBasics();
+  const liveCb = () => {
+    _updateIntakeFirstRowFromUserBasics();
+    _refreshAdvIntakeRowUi();
+    try { if (typeof debouncedIntakeCalc === 'function') debouncedIntakeCalc(); } catch (_) {}
+  };
 
-  // Live-sync: „Dane użytkownika” → 1. wiersz intake
-  const liveCb = () => { _updateIntakeFirstRowFromUserBasics(); if (typeof debouncedIntakeCalc === 'function') debouncedIntakeCalc(); };
-  ['age','ageMonths','weight','height','sex'].forEach(id=>{
+  ['age','ageMonths','weight','height','sex'].forEach(id => {
     const el = document.getElementById(id);
-    if (el){ el.addEventListener('input',liveCb); el.addEventListener('change',liveCb); }
+    if (el) {
+      el.addEventListener('input', liveCb);
+      el.addEventListener('change', liveCb);
+    }
   });
 
-  // 2) Parytet wierszy przy dodawaniu (oba przyciski)
-  const advAddBtn = document.getElementById('advAddMeasurementBtn');
-  const inAddBtn  = document.getElementById('intakeAddRow');
-  if (advAddBtn){
-    advAddBtn.addEventListener('click', () => {
-      // po oryginalnym add — wyrównaj intake
-      setTimeout(() => {
-        _ensureIntakeParityWithAdv();
-        // nowym wierszom dołóż nasłuchy (input/change) po stronie Advanced
-        _advRows().forEach(row=>{
-          if (row._wiredAdv) return;
-          row._wiredAdv = true;
-          row.addEventListener('input', (e)=>{
-            // Synchronizuj do Intake tylko dla pól wieku (lata/miesiące), wzrostu lub wagi
-            if (!e.target.matches('.adv-age-years,.adv-age-months,.adv-height,.adv-weight')) return;
-            _syncAdvRowToIntake(row);
-          });
-          const rm = row.querySelector('.remove-measure');
-          if (rm && !rm._wired){
-            rm._wired = true;
-            rm.addEventListener('click', ()=>{
-              const idx = _advRows().indexOf(row);
-              const twin = _intkRows()[idx+1];
-              if (twin) twin.remove();
-              if (typeof updateIntakeRemoveButtons === 'function') updateIntakeRemoveButtons();
-              if (typeof debouncedIntakeCalc === 'function') debouncedIntakeCalc();
-            });
-          }
-        });
-        if (typeof updateIntakeRemoveButtons === 'function') updateIntakeRemoveButtons();
-      },0);
-    });
-  }
-  if (inAddBtn){
-    inAddBtn.addEventListener('click', () => {
-      // jeżeli istnieje addAdvMeasurementRow – dodaj też bliźniaka w Advanced
-      setTimeout(() => {
-        const inRows = _intkRows().length;
-        const advN = _advRows().length;
-        const hasFirst = _intkRows()[0]?.dataset.locked === 'true';
-        const intendedAdv = (inRows - (hasFirst?1:0));
-        if (typeof addAdvMeasurementRow === 'function'){
-          while (_advRows().length < intendedAdv) addAdvMeasurementRow();
-        }
-        if (typeof updateIntakeRemoveButtons === 'function') updateIntakeRemoveButtons();
-      },0);
-    });
-  }
-
-  // 3) Dwukierunkowe nasłuchy inputów
   const advWrap = document.getElementById('advMeasurements');
-  if (advWrap){
-    advWrap.addEventListener('input', (e)=>{
-      // Reaguj tylko na zmiany w polach wieku (lata/miesiące), wzrostu lub wagi
+  if (advWrap) {
+    const handleAdvInput = (e) => {
       if (!e.target.matches('.adv-age-years,.adv-age-months,.adv-height,.adv-weight')) return;
-      _ensureIntakeParityWithAdv();
-      const rowEl = e.target.closest('.measure-row');
-      if (rowEl) _syncAdvRowToIntake(rowEl);
-    });
-
-    // Usuwanie pomiaru w Advanced (przycisk ×) usuwa także odpowiedni wiersz po stronie intake.
-    // Dodajemy handler w fazie capture, aby wykonał się przed innymi nasłuchami.
-    advWrap.addEventListener('click', (e) => {
-      const btn = e.target.closest('.remove-measure');
-      if (!btn) return;
-      const row = btn.closest('.measure-row');
-      if (!row) return;
-      // Znajdź indeks wiersza po stronie Advanced.
-      const idx = _advRows().indexOf(row);
-      if (idx >= 0) {
-        // Odpowiadający wiersz po stronie Intake to idx+1 (0 = zablokowany „Dane użytkownika”).
-        const twin = _intkRows()[idx + 1];
-        if (twin) twin.remove();
-        if (typeof updateIntakeRemoveButtons === 'function') updateIntakeRemoveButtons();
-        if (typeof debouncedIntakeCalc === 'function') debouncedIntakeCalc();
-      }
-    }, true);
+      const row = e.target.closest('.measure-row');
+      if (row) _syncAdvRowToIntake(row);
+    };
+    advWrap.addEventListener('input', handleAdvInput);
+    advWrap.addEventListener('change', handleAdvInput);
   }
+
   const intkWrap = document.getElementById('intakeMeasurements');
-  if (intkWrap){
-    // intake → Advanced (poza 1. wierszem)
-    intkWrap.addEventListener('input', (e)=>{
+  if (intkWrap) {
+    const handleIntakeInput = (e) => {
       if (!e.target.matches('.intake-ageY,.intake-ageM,.intake-ht,.intake-wt')) return;
       const row = e.target.closest('.measure-row-intake');
-      if (row?.dataset.locked === 'true') return; // pierwszy wiersz
-      _syncIntakeRowToAdv(row);
-    });
-    // usuwanie (capture: najpierw skasuj bliźniaka w Advanced)
-    intkWrap.addEventListener('click', (e)=>{
-      const btn = e.target.closest('.remove-intake-row'); if (!btn) return;
-      const row = btn.closest('.measure-row-intake');
-      if (row?.dataset.locked === 'true'){ e.preventDefault(); return; }
-      const rows = _intkRows(); const idx = rows.indexOf(row);
-      if (idx>0){
-        const advRow = _advRows()[idx-1]; if (advRow) advRow.remove();
-        if (typeof calculateGrowthAdvanced === 'function') calculateGrowthAdvanced();
-      }
-    }, true);
-  }
-
-  // 4) Przycisk „Wyczyść dane tej karty” został usunięty z interfejsu,
-  //    dlatego nie rozszerzamy już logiki clearAdvancedGrowthCard().
-
-  // 5) Uszczelnij regułę ukrywania „×” w 1. wierszu (jeśli funkcja istnieje)
-  if (typeof updateIntakeRemoveButtons === 'function'){
-    const __origUi = updateIntakeRemoveButtons;
-    window.updateIntakeRemoveButtons = function(){
-      __origUi.apply(this, arguments);
-      const rows = _intkRows();
-      rows.forEach((row, idx)=>{
-        const btn = row.querySelector('.remove-intake-row');
-        if (btn) btn.style.display = (idx===0 || row.dataset.locked==='true') ? 'none' : btn.style.display;
-      });
+      if (row && row.dataset.locked !== 'true') _syncIntakeRowToAdv(row);
     };
+    intkWrap.addEventListener('input', handleIntakeInput);
+    intkWrap.addEventListener('change', handleIntakeInput);
   }
+
+  window.setTimeout(() => {
+    _pairAdvancedAndIntakeRowsByOrder();
+    try { if (typeof debouncedIntakeCalc === 'function') debouncedIntakeCalc(); } catch (_) {}
+  }, 0);
+
+  try {
+    if (typeof window !== 'undefined') {
+      window.vildaHandleAdvancedMeasurementAdd = handleAdvancedMeasurementAdd;
+      window.vildaHandleIntakeHistoryAdd = handleIntakeHistoryAdd;
+      window.vildaHandleAdvancedMeasurementRowRemove = handleAdvancedMeasurementRowRemove;
+      window.vildaHandleIntakeHistoryRowRemove = handleIntakeHistoryRowRemove;
+      window.vildaEnsureAdvancedIntakePairing = _pairAdvancedAndIntakeRowsByOrder;
+    }
+  } catch (_) {}
 });
 
 document.addEventListener('DOMContentLoaded', update);
@@ -16290,21 +18738,25 @@ function intakeAddRow(prefill){
   if(!wrap) return;
   const row = document.createElement('div');
   row.className = 'measure-row-intake';
-  // W wierszu używamy trzykolumnowej siatki; czerwony znak „×” trafia do drugiego wiersza.
+  // W każdym wierszu pole wieku znajduje się nad polami wzrostu i masy.
   row.innerHTML = `
-    <label>Wiek:
-      <div class="age-mm-group">
-        <input type="number" class="intake-ageY" min="0" max="18" step="1" placeholder="lata">
-        <input type="number" class="intake-ageM" min="0" max="11" step="1" placeholder="miesiące">
-      </div>
-    </label>
-    <label>Wzrost (cm)
-      <input type="number" step="0.1" min="45" max="230" class="intake-ht">
-    </label>
-    <label>Masa (kg)
-      <input type="number" step="0.1" min="1" max="250" class="intake-wt">
-    </label>
-    <button type="button" class="icon remove-intake-row" aria-label="Usuń wiersz">×</button>
+    <div class="intake-row-top">
+      <label class="intake-age-label">Wiek:
+        <div class="age-mm-group">
+          <input type="number" class="intake-ageY" min="0" max="18" step="1" placeholder="lata">
+          <input type="number" class="intake-ageM" min="0" max="11" step="1" placeholder="miesiące">
+        </div>
+      </label>
+    </div>
+    <div class="intake-row-bottom">
+      <label>Wzrost (cm)
+        <input type="number" step="0.1" min="45" max="230" class="intake-ht">
+      </label>
+      <label>Masa (kg)
+        <input type="number" step="0.1" min="1" max="250" class="intake-wt">
+      </label>
+      <button type="button" class="icon remove-intake-row" aria-label="Usuń wiersz">×</button>
+    </div>
   `;
   wrap.appendChild(row);
 
@@ -16327,10 +18779,15 @@ function intakeAddRow(prefill){
     }
   }
 
-  row.querySelector('.remove-intake-row').addEventListener('click', ()=>{
-    row.remove();
-    updateIntakeRemoveButtons();
-    debouncedIntakeCalc();
+  row.querySelector('.remove-intake-row').addEventListener('click', (e)=>{
+    e.preventDefault();
+    if (typeof window !== 'undefined' && typeof window.vildaHandleIntakeHistoryRowRemove === 'function') {
+      window.vildaHandleIntakeHistoryRowRemove(row);
+    } else {
+      row.remove();
+      updateIntakeRemoveButtons();
+      debouncedIntakeCalc();
+    }
   });
   ['input','change'].forEach(ev=>{
     row.addEventListener(ev, e=>{
@@ -16357,6 +18814,196 @@ function readIntakeRows(){
   });
   out.sort((a,b)=>a.months-b.months);
   return out;
+}
+
+function getIntakeRowHeight(row, fallbackHeight){
+  const rowHeight = Number(row && row.height);
+  if (isFinite(rowHeight) && rowHeight > 0) return rowHeight;
+  const fallback = Number(fallbackHeight);
+  return (isFinite(fallback) && fallback > 0) ? fallback : null;
+}
+
+function clearIntakeResultsAlertState(mountId){
+  const mount = document.getElementById(mountId || 'intakeResults');
+  if (!mount) return;
+  mount.classList.remove('bmi-warning', 'bmi-danger');
+  try { clearPulse(mount); } catch (_) {}
+}
+
+function buildIntakeIntervals(rows, options){
+  const opts = options || {};
+  const sex = opts.sex || 'M';
+  const fallbackHeight = opts.fallbackHeight;
+  const pal = Number(opts.pal);
+  const teeFactor = (typeof opts.teeFactor === 'number' && isFinite(opts.teeFactor)) ? opts.teeFactor : 1;
+  const intervals = [];
+  const KG_TOL_PER_MONTH = 0.2;
+
+  if (!Array.isArray(rows) || rows.length < 2 || !isFinite(pal)) return intervals;
+
+  for(let i=0;i<rows.length-1;i++){
+    const a = rows[i], b = rows[i+1];
+    const monthsGap = b.months - a.months;
+    if(monthsGap <= 0) continue;
+    const days = monthsGap * 30.4375;
+    const dW   = b.weight - a.weight;
+
+    const heightA = getIntakeRowHeight(a, fallbackHeight);
+    const heightB = getIntakeRowHeight(b, fallbackHeight);
+    const bmrA = BMR(a.weight, heightA, a.ageYears, sex);
+    const bmrB = BMR(b.weight, heightB, b.ageYears, sex);
+    const bmrAvg = (bmrA + bmrB) / 2;
+    const teeRaw = bmrAvg * pal;
+    const teeAdj = teeRaw * teeFactor;
+
+    let expectedGain = 0;
+    let deltaVsNorm  = dW;
+    const childPair  = (a.ageYears < 18 && b.ageYears < 18);
+
+    if(childPair){
+      const measPrev = { ageMonths: (typeof a.ageMonths === 'number' ? a.ageMonths : a.months), height: getIntakeRowHeight(a, fallbackHeight), weight: a.weight };
+      const measCurr = { ageMonths: (typeof b.ageMonths === 'number' ? b.ageMonths : b.months), height: getIntakeRowHeight(b, fallbackHeight), weight: b.weight };
+      expectedGain = expectedGainMedianHeightAware(measPrev, measCurr, sex);
+      deltaVsNorm  = dW - expectedGain;
+    }
+
+    const tol = KG_TOL_PER_MONTH * Math.max(1, monthsGap);
+    const stable = Math.abs(childPair ? deltaVsNorm : dW) < tol;
+    const energyDeltaPerDay = ((childPair ? deltaVsNorm : dW) * KCAL_PER_KG) / days;
+    const intakePerDay = teeAdj + (dW * KCAL_PER_KG) / days;
+
+    intervals.push({
+      from: a.ageYears, to: b.ageYears,
+      days: Math.round(days),
+      dW: dW,
+      expectedGain: childPair ? expectedGain : null,
+      deltaVsNorm: childPair ? deltaVsNorm : null,
+      energyDeltaPerDay: stable ? Math.round(energyDeltaPerDay) : Math.round(energyDeltaPerDay),
+      intakePerDay: Math.round(intakePerDay),
+      isChild: childPair
+    });
+  }
+
+  return intervals;
+}
+
+function collectIntakeRowsForAlertProbe(){
+  const basics = getUserBasics();
+  const rows = [];
+
+  const pushUniqueRow = (row) => {
+    if (!row || !isFinite(row.ageMonths) || !isFinite(row.weight)) return;
+    const height = getIntakeRowHeight(row, basics.height);
+    const dupe = rows.some(r => Math.abs(r.ageMonths - row.ageMonths) <= 1 && Math.abs(r.weight - row.weight) < 0.01);
+    if (dupe) return;
+    rows.push({
+      ageYears: row.ageMonths / 12,
+      ageMonths: row.ageMonths,
+      months: row.ageMonths,
+      weight: row.weight,
+      height: height
+    });
+  };
+
+  try {
+    const liveRows = readIntakeRows();
+    if (Array.isArray(liveRows) && liveRows.length) {
+      liveRows.forEach(pushUniqueRow);
+    }
+  } catch (_) {}
+
+  if (isFinite(basics.ageMonths) && isFinite(basics.weight) && isFinite(basics.height)) {
+    pushUniqueRow({ ageMonths: basics.ageMonths, weight: basics.weight, height: basics.height });
+  }
+
+  if (basics.ageYears < 18 && window.advancedGrowthData && Array.isArray(window.advancedGrowthData.measurements)) {
+    window.advancedGrowthData.measurements.forEach(m => {
+      if (!m || typeof m.ageMonths !== 'number' || typeof m.weight !== 'number') return;
+      pushUniqueRow({ ageMonths: m.ageMonths, weight: m.weight, height: m.height });
+    });
+  }
+
+  rows.sort((a, b) => a.months - b.months);
+  return rows;
+}
+
+function hasPotentialIntakeAlerts(state){
+  const basicsState = state || {};
+  if (basicsState.visible === false) return false;
+
+  const basics = getUserBasics();
+  if (!isFinite(basics.weight) || !isFinite(basics.height) || !isFinite(basics.ageYears)) return false;
+
+  const rows = collectIntakeRowsForAlertProbe();
+  if (!rows.length) return false;
+
+  const pal = parseFloat(document.getElementById('intakePal')?.value || document.getElementById('palFactor')?.value || '1.4');
+  const history = rows.map(r => ({ ageMonths: r.ageMonths, weight: r.weight }));
+  const lastRow = rows[rows.length - 1];
+  const lastHeight = getIntakeRowHeight(lastRow, basics.height);
+  const lastBmr = BMR(lastRow.weight, lastHeight, lastRow.ageYears, basics.sex);
+
+  let teeFactor = 1;
+  try {
+    if (typeof window.anorexiaRiskAdjust === 'function' && isFinite(lastBmr) && isFinite(pal)) {
+      const tmp = window.anorexiaRiskAdjust({
+        user: {
+          ageYears: basics.ageYears,
+          ageMonthsOpt: basics.ageMonths % 12,
+          sex: basics.sex,
+          heightCm: basics.height,
+          weightKg: basics.weight
+        },
+        bmr: lastBmr,
+        pal: pal,
+        history: history,
+        intakeKcalPerDay: null,
+        mountId: 'anorexiaTmpMount'
+      });
+      const teeRaw = lastBmr * pal;
+      if (tmp && typeof tmp.teeAdjusted === 'number' && teeRaw > 0) {
+        teeFactor = tmp.teeAdjusted / teeRaw;
+      }
+    }
+  } catch (_) {}
+
+  let intakeKcalPerDay = null;
+  try {
+    const intervals = buildIntakeIntervals(rows, {
+      sex: basics.sex,
+      fallbackHeight: basics.height,
+      pal: pal,
+      teeFactor: teeFactor
+    });
+    const lastInterval = intervals[intervals.length - 1];
+    intakeKcalPerDay = lastInterval ? lastInterval.intakePerDay : null;
+  } catch (_) {}
+
+  try {
+    if (typeof window.detectAnRisk === 'function') {
+      const risk = window.detectAnRisk({
+        ageYears: basics.ageYears,
+        ageMonthsOpt: basics.ageMonths % 12,
+        sex: basics.sex,
+        heightCm: basics.height,
+        weightKg: basics.weight
+      }, {
+        history: history,
+        bmr: lastBmr,
+        pal: pal,
+        intakeKcalPerDay: intakeKcalPerDay
+      });
+      if (risk && risk.any) return true;
+    }
+  } catch (_) {}
+
+  try {
+    if (typeof window.has12mLossOrangeRisk === 'function' && window.has12mLossOrangeRisk(history)) {
+      return true;
+    }
+  } catch (_) {}
+
+  return false;
 }
 
 /* ——— autofill ——— */
@@ -16414,7 +19061,8 @@ try {
     const basics = getUserBasics();
     // BMR liczymy dla ostatniego wiersza (najświeższy pomiar)
     const last = rows[rows.length - 1];
-    const bmrLast = BMR(last.weight, basics.height, last.ageYears, basics.sex);
+    const lastHeight = getIntakeRowHeight(last, basics.height);
+    const bmrLast = BMR(last.weight, lastHeight, last.ageYears, basics.sex);
 
     const tmp = window.anorexiaRiskAdjust({
       user: {
@@ -16446,23 +19094,21 @@ try {
     legendEl.style.display = 'none';
   }
   if(!res) return;
-
-  // Ukryj/pokaż komunikat o konieczności wprowadzenia dwóch wierszy.
-  {
-    const msgEl = document.querySelector('#intakeCard .intake-actions .muted');
-    if(msgEl){
-      msgEl.style.display = rows.length >= 2 ? 'none' : '';
-    }
-  }
+  clearIntakeResultsAlertState('intakeResults');
 
   if(!rows.length){
-    res.innerHTML = '<p>Uzupełnij wiersze z wiekiem i masą ciała.</p>';
+    try {
+      window.intakeHistory = null;
+      window.intakeEstimatedKcalPerDay = null;
+    } catch (_) {}
+    res.innerHTML = '<p>Uzupełnij co najmniej dwa wiersze, aby wyliczyć szacowane spożycie kalorii na podstawie zmiany masy.</p>';
     return;
   }
   if(rows.length === 1){
     // Jeden wiersz – wyświetl TEE i wywołaj detekcję ryzyka anoreksji
     const r = rows[0];
-    const bmr = BMR(r.weight, height, r.ageYears, sex);
+    const rowHeight = getIntakeRowHeight(r, height);
+    const bmr = BMR(r.weight, rowHeight, r.ageYears, sex);
     const rawTee = bmr * pal;
     const tee    = rawTee * teeFactor;
     res.innerHTML = `<p><strong>Utrzymanie masy:</strong> ok. <b>${Math.round(tee)}</b> kcal/d (PAL ${pal}).<br>
@@ -16499,145 +19145,39 @@ try {
     return;
   }
 
-  const KG_TOL_PER_MONTH = 0.2;
-  const intervals = []; // zbiór wyników do renderowania
+  const intervals = buildIntakeIntervals(rows, {
+    sex: sex,
+    fallbackHeight: height,
+    pal: pal,
+    teeFactor: teeFactor
+  });
 
-  for(let i=0;i<rows.length-1;i++){
-    const a = rows[i], b = rows[i+1];
-    const monthsGap = b.months - a.months;
-    if(monthsGap <= 0) continue;
-    const days = monthsGap * 30.4375;
-    const dW   = b.weight - a.weight;
-
-    const bmrAvg = (BMR(a.weight, height, a.ageYears, sex) + BMR(b.weight, height, b.ageYears, sex)) / 2;
-    const teeRaw = bmrAvg * pal;
-    const teeAdj = teeRaw * teeFactor;              // ← zastosuj korektę
-
-    let expectedGain = 0;
-    let deltaVsNorm  = dW;
-    const childPair  = (a.ageYears < 18 && b.ageYears < 18);
-
-    if(childPair){
-      // Oblicz oczekiwany przyrost na podstawie medianowego BMI (50c) i rzeczywistego wzrostu
-      const measPrev = { ageMonths: (typeof a.ageMonths === 'number' ? a.ageMonths : a.months), height: a.height, weight: a.weight };
-      const measCurr = { ageMonths: (typeof b.ageMonths === 'number' ? b.ageMonths : b.months), height: b.height, weight: b.weight };
-      expectedGain = expectedGainMedianHeightAware(measPrev, measCurr, sex);
-      deltaVsNorm  = dW - expectedGain;
-    }
-
-    const tol = KG_TOL_PER_MONTH * Math.max(1, monthsGap);
-    const stable = Math.abs(childPair ? deltaVsNorm : dW) < tol;
-
-    const energyDeltaPerDay = ((childPair ? deltaVsNorm : dW) * KCAL_PER_KG) / days; // + => nadwyżka
-    const intakePerDay = teeAdj + (dW * KCAL_PER_KG) / days; // ← użyj teeAdj
-
-    intervals.push({
-      from: a.ageYears, to: b.ageYears,
-      days: Math.round(days),
-      dW: dW,
-      expectedGain: childPair ? expectedGain : null,
-      deltaVsNorm: childPair ? deltaVsNorm : null,
-      energyDeltaPerDay: stable ? Math.round(energyDeltaPerDay) : Math.round(energyDeltaPerDay),
-      intakePerDay: Math.round(intakePerDay),
-      isChild: childPair
-    });
-  }
-
-  // Render: tabela dla szerokich ekranów, karty (wariant A) dla wąskich
-  const isMobile = window.matchMedia('(max-width: 700px)').matches;
-
-  if(!isMobile){
-    // tabela (desktop)
-    let html = `<div class="table-scroll"><table class="data-card">
-      <thead><tr>
-        <th>Okres</th><th>Dni</th><th>Δ masa</th>
-        <th>Oczekiwany przyrost*</th><th>Δ vs norma</th>
-        <th>Nadmiar/deficyt (kcal/d)</th><th>Szac. spożycie (kcal/d)</th>
-      </tr></thead><tbody>`;
-    intervals.forEach(r=>{
-      html += `<tr>
-        <td>${r.from.toFixed(2).replace('.', ',')} → ${r.to.toFixed(2).replace('.', ',')} l.</td>
-        <td>${r.days}</td>
-        <td>${r.dW>0?'+':''}${r.dW.toFixed(2).replace('.', ',')} kg</td>
-        <td>${r.isChild ? (r.expectedGain>0?'+':'') + r.expectedGain.toFixed(2).replace('.', ',') + ' kg' : '—'}</td>
-        <td>${r.isChild ? (r.deltaVsNorm>0?'+':'') + r.deltaVsNorm.toFixed(2).replace('.', ',') + ' kg' : '—'}</td>
-        <td><b>${r.energyDeltaPerDay>=0?'+':''}${r.energyDeltaPerDay}</b></td>
-        <td><b>${r.intakePerDay}</b></td>
-      </tr>`;
-    });
-    html += `</tbody></table></div>`;
-    if (intervals.some(r=>r.isChild)) {
-      html += `<p class="muted" style="margin-top:.25rem;">* Oczekiwany przyrost – przyrost masy oszacowany na podstawie medianowych (50 c) przyrostów dla wieku oraz rzeczywistego wzrostu dziecka.</p>`;
-    }
-    res.innerHTML = html;
-
-    // Pokaż legendę po wyświetleniu tabeli, jeśli podano co najmniej dwa pomiary
-    if (legendEl && rows.length >= 2) {
-      legendEl.style.display = 'block';
-    }
-    // Zachowaj historię i oszacowanie spożycia, a następnie wywołaj baner anoreksji
-    try {
-      // Przechowaj historię (wiek w miesiącach i waga)
-      window.intakeHistory = rows.map(row => ({ ageMonths: row.ageMonths, weight: row.weight }));
-      // Oszacowanie spożycia z ostatniego interwału
-      const lastInterval = intervals[intervals.length - 1];
-      window.intakeEstimatedKcalPerDay = lastInterval ? lastInterval.intakePerDay : null;
-      if (typeof window.anorexiaRiskAdjust === 'function') {
-        const basics = getUserBasics();
-        // Użyj BMR z ostatniego wiersza do detekcji
-        const lastRow = rows[rows.length - 1];
-        const lastBmr = BMR(lastRow.weight, height, lastRow.ageYears, sex);
-        window.anorexiaRiskAdjust({
-          user: {
-            ageYears: basics.ageYears,
-            ageMonthsOpt: basics.ageMonths % 12,
-            sex: basics.sex,
-            heightCm: basics.height,
-            weightKg: basics.weight
-          },
-          bmr: lastBmr,
-          pal: pal,
-          history: window.intakeHistory,
-          intakeKcalPerDay: window.intakeEstimatedKcalPerDay,
-          mountId: 'intakeResults'
-        });
-        // Po detekcji ryzyka anoreksji wywołaj niezależne ostrzeżenie o spadku >8 kg w ~12 miesięcy
-        try {
-          if (typeof window.check12mLossOrange === 'function') {
-            const hist = window.intakeHistory || rows;
-            window.check12mLossOrange(hist, 'intakeResults');
-          }
-        } catch (e) {}
-      }
-    } catch (e) {}
-    return;
-  }
-
-  // wariant A (mobile): serie pionowych kart
+  // Render: w obu układach stosujemy ten sam wariant sekcyjnych kart,
+  // bo w wąskim widoku jest czytelniejszy i nie rozpycha kolumn w desktopie.
   let cards = '';
   intervals.forEach(r=>{
     cards += `<div class="intake-result-card">
       <p><strong>Okres:</strong> ${r.from.toFixed(2).replace('.', ',')} → ${r.to.toFixed(2).replace('.', ',')} l.</p>
       <p><strong>Dni:</strong> ${r.days}</p>
       <p><strong>Δ masa:</strong> ${r.dW>0?'+':''}${r.dW.toFixed(2).replace('.', ',')} kg</p>
-      <p><strong>${r.isChild?'Oczekiwany przyrost':'Oczekiwany przyrost'}</strong>: ${r.isChild ? ((r.expectedGain>0?'+':'') + r.expectedGain.toFixed(2).replace('.', ',') + ' kg') : '—'}</p>
-      <p><strong>${r.isChild?'Δ vs norma':'Δ vs norma'}</strong>: ${r.isChild ? ((r.deltaVsNorm>0?'+':'') + r.deltaVsNorm.toFixed(2).replace('.', ',') + ' kg') : '—'}</p>
+      <p><strong>Oczekiwany przyrost:</strong> ${r.isChild ? ((r.expectedGain>0?'+':'') + r.expectedGain.toFixed(2).replace('.', ',') + ' kg') : '—'}</p>
+      <p><strong>Δ vs norma:</strong> ${r.isChild ? ((r.deltaVsNorm>0?'+':'') + r.deltaVsNorm.toFixed(2).replace('.', ',') + ' kg') : '—'}</p>
       <p><strong>Nadmiar/deficyt (kcal/d):</strong> ${r.energyDeltaPerDay>=0?'+':''}${r.energyDeltaPerDay}</p>
       <p><strong>Szac. spożycie (kcal/d):</strong> ${r.intakePerDay}</p>
     </div>`;
   });
   if (intervals.some(r=>r.isChild)) {
-    cards += `<p class="muted" style="margin:.25rem 0 0;">* Oczekiwany przyrost – przyrost masy oszacowany na podstawie medianowych (50 c) przyrostów dla wieku oraz rzeczywistego wzrostu dziecka.</p>`;
+    cards += `<p class="muted intake-results-note" style="margin:.25rem 0 0;">* Oczekiwany przyrost – przyrost masy oszacowany na podstawie medianowych (50 c) przyrostów dla wieku oraz rzeczywistego wzrostu dziecka.</p>`;
   }
   res.innerHTML = cards;
 
   // Po wygenerowaniu wyników z co najmniej dwoma pomiarami,
-  // ujawniamy legendę, aby użytkownik wiedział, jak interpretować kolumny.
+  // ujawniamy legendę, aby użytkownik wiedział, jak interpretować pola.
   if (legendEl && rows.length >= 2) {
     legendEl.style.display = 'block';
   }
 
-  // Dla wersji mobilnej analogicznie zapisz historię i wywołaj baner anoreksji
+  // Zapisz historię i oszacowanie spożycia, a następnie wywołaj baner anoreksji.
   try {
     window.intakeHistory = rows.map(row => ({ ageMonths: row.ageMonths, weight: row.weight }));
     const lastInterval = intervals[intervals.length - 1];
@@ -16645,7 +19185,8 @@ try {
     if (typeof window.anorexiaRiskAdjust === 'function') {
       const basics = getUserBasics();
       const lastRow = rows[rows.length - 1];
-      const lastBmr = BMR(lastRow.weight, height, lastRow.ageYears, sex);
+      const lastHeight = getIntakeRowHeight(lastRow, height);
+      const lastBmr = BMR(lastRow.weight, lastHeight, lastRow.ageYears, sex);
       window.anorexiaRiskAdjust({
         user: {
           ageYears: basics.ageYears,
@@ -16687,6 +19228,7 @@ function resetIntakeCard(){
   intakeAutofilledOnce = false;              // pozwól na ponowne wypełnienie
   if(meas) meas.innerHTML='';
   if(res)  res.innerHTML='';
+  clearIntakeResultsAlertState('intakeResults');
   // Wyczyść globalne zmienne historii i szacowanego spożycia
   try {
     window.intakeHistory = null;
@@ -16708,13 +19250,47 @@ function wireAutosyncIntakeWithUserData(){
  * Szacowanego spożycia energii. Jeśli istnieje tylko jeden wiersz, przycisk
  * usuwania jest ukrywany, aby użytkownik nie mógł usunąć ostatniego pomiaru.
  */
+function updateIntakeHistoryRowMarkers(){
+  const rows = Array.from(document.querySelectorAll('#intakeMeasurements .measure-row-intake'));
+  rows.forEach((row, idx) => {
+    const isCurrent = idx === 0 || row.dataset.locked === 'true';
+    row.classList.toggle('intake-current-row', isCurrent);
+    row.classList.toggle('intake-history-row', !isCurrent);
+    row.dataset.intakeRowType = isCurrent ? 'current' : 'history';
+  });
+}
+
+function syncIntakeHistoryDividers(){
+  const wrap = document.getElementById('intakeMeasurements');
+  if (!wrap) return;
+
+  wrap.querySelectorAll('.intake-history-divider').forEach(divider => divider.remove());
+
+  const rows = Array.from(wrap.querySelectorAll('.measure-row-intake'));
+  rows.forEach((row, idx) => {
+    if (idx === 0 || !row.classList.contains('intake-history-row')) return;
+
+    const divider = document.createElement('div');
+    divider.className = 'intake-history-divider';
+    divider.setAttribute('aria-hidden', 'true');
+    wrap.insertBefore(divider, row);
+  });
+}
+
 function updateIntakeRemoveButtons(){
-  const rows = document.querySelectorAll('#intakeMeasurements .measure-row-intake');
+  const rows = Array.from(document.querySelectorAll('#intakeMeasurements .measure-row-intake'));
+  const historyRows = rows.filter(row => row.dataset.locked !== 'true');
+  updateIntakeHistoryRowMarkers();
+  syncIntakeHistoryDividers();
   rows.forEach(row=>{
     const btn = row.querySelector('.remove-intake-row');
-    if(btn){
-      btn.style.display = rows.length > 1 ? 'inline-block' : 'none';
+    if(!btn) return;
+    if (row.dataset.locked === 'true') {
+      btn.style.display = 'none';
+      return;
     }
+    const historyIdx = historyRows.indexOf(row);
+    btn.style.display = (historyIdx <= 0) ? 'none' : 'inline-block';
   });
 }
 
@@ -16724,107 +19300,164 @@ function setupEstimatedIntake(){
   const card  = document.getElementById('intakeCard');
   const addBtn= document.getElementById('intakeAddRow');
   if(!btn || !card) return;
-/* === Badge: kropka na przycisku, gdy wykryto ryzyko niedożywienia === */
-function setIntakeBadge(on, level){
-  if (!btn) return;
-  btn.classList.toggle('has-alert', !!on);
-  const base = 'Szacowane spożycie energii';
-  btn.setAttribute('aria-label', on ? base + ' — wykryto możliwe ryzyko niedożywienia' : base);
-  if (on) btn.title = 'Wykryto możliwe ryzyko niedożywienia — kliknij, aby zobaczyć szczegóły';
-  else btn.removeAttribute('title');
+
+  function getIntakeBasicsState(){
+  const weight = parseFloat(document.getElementById('weight')?.value);
+  const height = parseFloat(document.getElementById('height')?.value);
+  const ageDec = typeof getAgeDecimal === 'function' ? getAgeDecimal() : 0;
+  const sex = document.getElementById('sex')?.value || 'M';
+
+  const hasValidAge    = !isNaN(ageDec) && ageDec >= 0.25 && ageDec <= 130;
+  const hasValidWeight = !isNaN(weight) && weight >= 1 && weight <= 500;
+  const hasValidHeight = !isNaN(height) && height >= 40 && height <= 250;
+
+  return {
+    weight,
+    height,
+    ageDec,
+    sex,
+    visible: hasValidAge && hasValidWeight && hasValidHeight
+  };
 }
 
-/* Szybka ocena na podstawie samych „Danych użytkownika” (wiek/wzrost/waga) */
-function updateIntakeBadgeFromBasics(){
-  try {
-    if (typeof getUserBasics !== 'function' || typeof window.detectAnRisk !== 'function') return;
-    const u = getUserBasics(); // { ageYears, ageMonths, sex, height, weight }
-    const user = {
-      ageYears: Number(u.ageYears)||0,
-      ageMonthsOpt: Number(u.ageMonths)||0,
-      sex: u.sex || 'M',
-      heightCm: Number(u.height)||0,
-      weightKg: Number(u.weight)||0
-    };
-    if (!(user.ageYears && user.heightCm && user.weightKg)) { setIntakeBadge(false); return; }
-    const risk = window.detectAnRisk(user, {}); // tylko próg BMI/EBW itd.
-    setIntakeBadge(risk.any, risk.level);
-  } catch(_){}
+function shouldAutoExpandIntakeCard(state){
+  const basics = state || getIntakeBasicsState();
+  if (!basics.visible) return false;
+
+  const bmi = basics.weight / Math.pow(basics.height / 100, 2);
+  if (!isFinite(bmi) || bmi <= 0) return false;
+
+  let bmiSuggestsExcessWeight = false;
+  let coleSuggestsExcessWeight = false;
+
+  if (basics.ageDec >= 18) {
+    bmiSuggestsExcessWeight = bmi >= 25;
+  } else {
+    try {
+      const months = Math.round(basics.ageDec * 12);
+      if (typeof bmiCategoryChild === 'function') {
+        const category = bmiCategoryChild(bmi, basics.sex, months);
+        bmiSuggestsExcessWeight = (category === 'Nadwaga') || (typeof category === 'string' && category.indexOf('Otyłość') === 0);
+      } else if (typeof bmiPercentileChild === 'function') {
+        const percentile = bmiPercentileChild(bmi, basics.sex, months);
+        bmiSuggestsExcessWeight = isFinite(percentile) && percentile >= 85;
+      }
+    } catch(_){ }
+
+    try {
+      const cole = Number(window.colePercentValue);
+      coleSuggestsExcessWeight = isFinite(cole) && cole >= 110;
+    } catch(_){ }
+  }
+
+  if (bmiSuggestsExcessWeight || coleSuggestsExcessWeight) {
+    return true;
+  }
+
+  return hasPotentialIntakeAlerts(basics);
 }
+
+function openIntakeCard(options){
+  const opts = options || {};
+  card.style.display = 'block';
+
+  const wrap = document.getElementById('intakeMeasurements');
+  const hasRows = !!(wrap && wrap.querySelector('.measure-row-intake'));
+
+  if (!opts.preserveRows || !hasRows) {
+    intakeAutofill();
+    _updateIntakeFirstRowFromUserBasics();
+  } else {
+    try { if (typeof updateIntakeRemoveButtons === 'function') updateIntakeRemoveButtons(); } catch(_){ }
+  }
+
+  try {
+    if (typeof window !== 'undefined' && typeof window.vildaEnsureAdvancedIntakePairing === 'function') {
+      window.vildaEnsureAdvancedIntakePairing();
+    }
+  } catch(_){}
+
+  try { calcEstimatedIntake(); } catch(_){ }
+}
+
   // Funkcja pomocnicza sterująca widocznością przycisku „Szacowane spożycie energii”.
   // Przycisk jest widoczny dopiero, gdy użytkownik wprowadzi masę, wzrost i wiek.
-  function updateIntakeToggleVisibility(){
-    // Pobierz wartości masy i wzrostu z pól formularza
-    const w = parseFloat(document.getElementById('weight')?.value);
-    const h = parseFloat(document.getElementById('height')?.value);
-    // Oblicz wiek w latach z uwzględnieniem miesięcy. Funkcja getAgeDecimal()
-    // zwróci 0, jeśli oba pola wieku są puste lub niepoprawne.
-    const ageDec = typeof getAgeDecimal === 'function' ? getAgeDecimal() : 0;
+  function updateIntakeToggleVisibility(options){
+    const opts = options || {};
+    const state = getIntakeBasicsState();
 
-    // Sprawdź, czy wartości mieszczą się w dozwolonych zakresach. Przyjmujemy te same
-    // progi, które obowiązują w głównej walidacji w funkcji update():
-    //  – wiek: minimum 0.25 roku (3 miesiące) i maksimum 130 lat,
-    //  – waga: 1–500 kg,
-    //  – wzrost: 40–250 cm.
-    const hasValidAge    = !isNaN(ageDec) && ageDec >= 0.25 && ageDec <= 130;
-    const hasValidWeight = !isNaN(w)      && w >= 1         && w <= 500;
-    const hasValidHeight = !isNaN(h)      && h >= 40        && h <= 250;
+    btn.style.display = state.visible ? 'block' : 'none';
 
-    const visible = hasValidAge && hasValidWeight && hasValidHeight;
-    // Jeśli wszystkie dane są poprawne, pokaż przycisk; w przeciwnym razie ukryj go
-    btn.style.display = visible ? 'block' : 'none';
-    // Jeśli przycisk jest widoczny i dane są poprawne → spróbuj zapalić badge
-    if (visible) updateIntakeBadgeFromBasics();
-    else setIntakeBadge(false);
-    if(!visible){
+
+    if(!state.visible){
       // Zamknij kartę, jeśli przestaje spełniać warunek
       card.style.display = 'none';
+      return;
+    }
+
+    if (shouldAutoExpandIntakeCard(state)) {
+      openIntakeCard({ preserveRows: opts.preserveRows !== false });
+      return;
+    }
+
+    if (opts.recalcIfOpen && card.style.display !== 'none') {
+      try { calcEstimatedIntake(); } catch(_){ }
     }
   }
 
-  // natychmiastowa ocena widoczności przy pierwszym załadowaniu
-  updateIntakeToggleVisibility();
-
-  // dodaj nasłuchy na wprowadzane dane użytkownika
-  ['weight','height','age','ageMonths'].forEach(id=>{
-    const el = document.getElementById(id);
-    if(el){
-      el.addEventListener('input', updateIntakeToggleVisibility);
-      el.addEventListener('change', updateIntakeToggleVisibility);
-    }
-  });
+  try {
+    window.refreshEstimatedIntakeVisibility = updateIntakeToggleVisibility;
+    window.shouldAutoExpandEstimatedIntakeCard = shouldAutoExpandIntakeCard;
+  } catch(_){ }
 
   wireAutosyncIntakeWithUserData();
 
+  // dodaj nasłuchy na wprowadzane dane użytkownika
+  ['weight','height','age','ageMonths','sex'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el){
+      el.addEventListener('input', ()=> updateIntakeToggleVisibility({ preserveRows: true, recalcIfOpen: true }));
+      el.addEventListener('change', ()=> updateIntakeToggleVisibility({ preserveRows: true, recalcIfOpen: true }));
+    }
+  });
+
+  document.querySelectorAll('input[name="dataSource"]').forEach(el => {
+    el.addEventListener('change', ()=> updateIntakeToggleVisibility({ preserveRows: true, recalcIfOpen: true }));
+  });
+
+  // natychmiastowa ocena widoczności przy pierwszym załadowaniu
+  updateIntakeToggleVisibility({ preserveRows: true, recalcIfOpen: true });
+  // Uruchom ponownie po pozostałych listenerach DOMContentLoaded (np. przywracaniu stanu kart).
+  window.setTimeout(()=>{
+    updateIntakeToggleVisibility({ preserveRows: true, recalcIfOpen: true });
+  }, 0);
+
   btn.addEventListener('click', ()=>{
     const show = (card.style.display === 'none' || card.style.display === '');
-    card.style.display = show ? 'block' : 'none';
-    if(show){
-      intakeAutofill();
-      _updateIntakeFirstRowFromUserBasics(); // ← blokada + wyszarzenie po autofill
-      calcEstimatedIntake();
+    if (show) {
+      openIntakeCard({ preserveRows: true });
+    } else {
+      card.style.display = 'none';
     }
   });
 
   if(addBtn){
-    addBtn.addEventListener('click', ()=>{ intakeAddRow(); });
+    addBtn.addEventListener('click', (e)=>{
+      e.preventDefault();
+      if (typeof window !== 'undefined' && typeof window.vildaHandleIntakeHistoryAdd === 'function') {
+        window.vildaHandleIntakeHistoryAdd();
+      } else {
+        intakeAddRow();
+      }
+    });
   }
   document.getElementById('intakePal')?.addEventListener('change', debouncedIntakeCalc);
 
-  // przelicz wyniki przy rotacji/zmianie szerokości (przełączanie table->cards)
+  // przelicz wyniki przy rotacji/zmianie szerokości, aby zachować poprawny układ sekcji
   window.addEventListener('resize', ()=>{
     const visible = card && card.style.display !== 'none';
     if(visible) calcEstimatedIntake();
   });
-  // Zsynchronizuj badge z właściwą detekcją (po pełnym wyliczeniu).
-  if (typeof window.anorexiaRiskAdjust === 'function') {
-  const __orig = window.anorexiaRiskAdjust;
-  window.anorexiaRiskAdjust = function(){
-    const ret = __orig.apply(this, arguments);
-    try { if (ret && ret.risk) setIntakeBadge(ret.risk.any, ret.risk.level); } catch(_){}
-    return ret;
-  };
-}
 }
 
 document.addEventListener('DOMContentLoaded', setupEstimatedIntake);
@@ -17275,13 +19908,23 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
     }
   }
 
+  function has12mLossOrangeRisk(history) {
+    if (!Array.isArray(history) || history.length < 2) return false;
+    const pts = history.map(_rowToPoint).filter(Boolean).sort((x, y) => x.t - y.t);
+    if (pts.length < 2) return false;
+    const pair = _find12mAgoPair(pts);
+    if (!pair) return false;
+    const lostKg = pair.a.w - pair.b.w;
+    return lostKg > 8;
+  }
+
   // API: sprawdź historię i wstaw ostrzeżenie, gdy spadek > 8 kg w ~12 miesięcy
   function check12mLossOrange(history, mountId) {
-    if (!Array.isArray(history) || history.length < 2) return;
+    if (!Array.isArray(history) || history.length < 2) return false;
     const pts = history.map(_rowToPoint).filter(Boolean).sort((x, y) => x.t - y.t);
-    if (pts.length < 2) return;
+    if (pts.length < 2) return false;
     const pair = _find12mAgoPair(pts);
-    if (!pair) return;
+    if (!pair) return false;
     const lostKg = pair.a.w - pair.b.w; // >0 oznacza spadek
     if (lostKg > 8) {
       // Zamieniamy separator dziesiętny na przecinek dla utraconej masy ciała
@@ -17289,10 +19932,13 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
                    `<small>Zalecamy ocenę, czy był to intencjonalny spadek.</small>`;
       const mount = document.getElementById(mountId || 'intakeResults');
       _renderOrangeBanner(mount, text);
+      return true;
     }
+    return false;
   }
 
   window.check12mLossOrange = check12mLossOrange;
+  window.has12mLossOrangeRisk = has12mLossOrangeRisk;
 })();
 
 /* ================== SAVE / LOAD JSON – Vilda Clinic (2025-09-05) ================== */
@@ -17380,6 +20026,11 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
     if (!arr.length) {
       if (typeof addAdvMeasurementRow === 'function') addAdvMeasurementRow();
       if (typeof calculateGrowthAdvanced === 'function') calculateGrowthAdvanced();
+      try {
+        if (typeof window !== 'undefined' && typeof window.vildaEnsureAdvancedIntakePairing === 'function') {
+          window.vildaEnsureAdvancedIntakePairing();
+        }
+      } catch (_) {}
       return;
     }
     arr.forEach(m=>{
@@ -17433,6 +20084,11 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
       try { window.updateArrowInputsVisibility(); } catch (_) {}
     }
     if (typeof calculateGrowthAdvanced === 'function') calculateGrowthAdvanced();
+    try {
+      if (typeof window !== 'undefined' && typeof window.vildaEnsureAdvancedIntakePairing === 'function') {
+        window.vildaEnsureAdvancedIntakePairing();
+      }
+    } catch (_) {}
 
   }
 
@@ -17450,6 +20106,11 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
     if (!arr.length) {
       if (typeof addAdvMeasurementRow === 'function') addAdvMeasurementRow();
       if (typeof calculateGrowthAdvanced === 'function') calculateGrowthAdvanced();
+      try {
+        if (typeof window !== 'undefined' && typeof window.vildaEnsureAdvancedIntakePairing === 'function') {
+          window.vildaEnsureAdvancedIntakePairing();
+        }
+      } catch (_) {}
       return;
     }
 
@@ -17507,6 +20168,11 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
       }
     } catch (_) {}
     try { if (typeof calculateGrowthAdvanced === 'function') calculateGrowthAdvanced(); } catch (_) {}
+    try {
+      if (typeof window !== 'undefined' && typeof window.vildaEnsureAdvancedIntakePairing === 'function') {
+        window.vildaEnsureAdvancedIntakePairing();
+      }
+    } catch (_) {}
   }
 
   // Odtwórz wiersze w karcie „Szacowane spożycie energii” z window.intakeHistory
@@ -17595,7 +20261,17 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
       if (typeof intakeUpdatePalDesc === 'function') intakeUpdatePalDesc();
     }
     if (typeof updateIntakeRemoveButtons === 'function') updateIntakeRemoveButtons();
+    try {
+      if (typeof window !== 'undefined' && typeof window.vildaEnsureAdvancedIntakePairing === 'function') {
+        window.vildaEnsureAdvancedIntakePairing();
+      }
+    } catch (_) {}
     if (typeof calcEstimatedIntake === 'function') calcEstimatedIntake();
+    try {
+      if (typeof window !== 'undefined' && typeof window.refreshEstimatedIntakeVisibility === 'function') {
+        window.refreshEstimatedIntakeVisibility({ preserveRows: true, recalcIfOpen: true });
+      }
+    } catch (_) {}
   }
 
   // Udostępnij funkcje rehydratacji (np. dla autosave w localStorage)

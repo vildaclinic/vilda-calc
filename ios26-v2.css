@@ -724,6 +724,33 @@ body.liquid-ios26::before {
   cursor: grabbing !important;
 }
 
+
+/* W trybie Liquid Glass również zawijamy dłuższe komunikaty etykiety,
+   tak aby mieściły się w szerokości ekranu na urządzeniach mobilnych. */
+.liquid-ios26 #antibioticTherapyCard .dose-slider-container--multiline {
+  padding-bottom: 0.25rem !important;
+}
+
+.liquid-ios26 #antibioticTherapyCard .slider-value-label.slider-value-label--multiline {
+  position: relative !important;
+  display: block !important;
+  left: auto !important;
+  bottom: auto !important;
+  transform: none !important;
+  width: min(100%, 34rem) !important;
+  max-width: 100% !important;
+  margin: 0.65rem auto 0 !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+  text-wrap: balance !important;
+  text-align: center !important;
+  line-height: 1.35 !important;
+  box-sizing: border-box !important;
+  cursor: default !important;
+  pointer-events: none !important;
+}
+
 /* Dodatkowy padding dla skrajnych etykiet podziałki w motywie Liquid Glass */
 .liquid-ios26 #antibioticTherapyCard .slider-ticks .slider-tick-label:first-child {
   padding-left: 0.5rem !important;
