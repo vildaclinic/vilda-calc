@@ -4822,7 +4822,7 @@ function attachPatientReportActionToSummaryCard(options) {
       <button type="button" class="patient-report-summary-btn" data-patient-report-pdf-btn>
         Raport PDF dla pacjenta
       </button>
-      <div class="patient-report-summary-hint">2 strony • wersja po wizycie</div>
+      
     `;
     targetCard.appendChild(actionWrap);
 
@@ -5161,11 +5161,11 @@ function patientReportDescribeWeight(percentile) {
 
 function patientReportDescribeHeight(percentile) {
   if (typeof percentile !== 'number' || !isFinite(percentile)) return 'bez porównania centylowego';
-  if (percentile <= 3) return 'w dolnej części siatki centylowej';
-  if (percentile < 10) return 'nieco poniżej mediany';
+  if (percentile <= 3) return 'wyraźnie poniżej typowego zakresu dla wieku';
+  if (percentile <= 10) return 'w niskim zakresie centylowym dla wieku';
   if (percentile <= 90) return 'w typowym zakresie dla wieku';
-  if (percentile <= 97) return 'powyżej mediany';
-  return 'w górnej części siatki centylowej';
+  if (percentile <= 97) return 'w wysokim zakresie centylowym dla wieku';
+  return 'wyraźnie powyżej typowego zakresu dla wieku';
 }
 
 function patientReportDescribeBmi(category) {
@@ -5421,12 +5421,52 @@ function patientReportBuildHeadline(metrics, historyCount, highlights) {
   const bmiCard = metrics.find((item) => item.key === 'BMI') || null;
   const heightCard = metrics.find((item) => item.key === 'HT') || null;
   const bmiCategory = String((bmiCard && bmiCard.category) || '');
+  const bmiKind = patientReportNormalizeBmiCategory(bmiCategory);
+  const heightPercentile = heightCard && typeof heightCard.percentile === 'number' && isFinite(heightCard.percentile)
+    ? heightCard.percentile
+    : null;
+  const hasHistory = Number(historyCount) > 0;
   let badge = bmiCategory || 'Ocena bieżącego pomiaru';
   let tone = bmiCard ? bmiCard.tone : 'normal';
   let title = 'Najważniejsze wyniki mieszczą się obecnie w typowym zakresie dla wieku i płci.';
   let text = '';
+  let subtext = '';
 
-  if (bmiCategory.includes('Otyłość')) {
+  if (typeof heightPercentile === 'number' && isFinite(heightPercentile) && heightPercentile <= 10) {
+    const trendSentence = hasHistory
+      ? 'Szczególnie ważne jest porównanie obecnego wzrostu z wcześniejszymi pomiarami i oceną tempa wzrastania.'
+      : 'Szczególnie ważna jest ocena tempa wzrastania w kolejnych pomiarach.';
+    const contextSentence = 'Wynik warto interpretować także w odniesieniu do wzrostu rodziców i całego obrazu klinicznego.';
+    if (heightPercentile <= 3) {
+      badge = 'Niski wzrost';
+      tone = 'danger';
+      if (bmiKind === 'obesity' || bmiKind === 'overweight') {
+        title = 'Wzrost znajduje się wyraźnie poniżej typowego zakresu, a masa ciała i BMI są jednocześnie powyżej normy dla wieku.';
+        text = '';
+      } else if (bmiKind === 'underweight') {
+        title = 'Wzrost znajduje się wyraźnie poniżej typowego zakresu, a masa ciała lub BMI są dodatkowo poniżej normy dla wieku.';
+        text = 'Taki układ wyników wymaga szczególnie uważnej oceny wzrastania i stanu odżywienia dziecka.';
+      } else {
+        title = 'Wzrost znajduje się wyraźnie poniżej typowego zakresu dla wieku i płci.';
+        text = '';
+      }
+      subtext = `${trendSentence} ${contextSentence}`;
+    } else {
+      badge = 'Niski wzrost';
+      tone = (bmiKind === 'obesity') ? 'danger' : 'warn';
+      if (bmiKind === 'obesity' || bmiKind === 'overweight') {
+        title = 'Wzrost znajduje się w niskim zakresie centylowym, a masa ciała i BMI są jednocześnie powyżej typowego zakresu.';
+        text = 'W takiej sytuacji równie ważna jak ocena masy ciała jest analiza tempa wzrastania i całego przebiegu wzrostu.';
+      } else if (bmiKind === 'underweight') {
+        title = 'Wzrost znajduje się w niskim zakresie centylowym, a masa ciała lub BMI są dodatkowo poniżej typowego zakresu.';
+        text = 'Taki wynik wymaga uważnej obserwacji tempa wzrastania i przyrostu masy ciała w czasie.';
+      } else {
+        title = 'Wzrost znajduje się w niskim zakresie centylowym dla wieku i płci.';
+        text = '';
+      }
+      subtext = `${trendSentence} ${contextSentence}`;
+    }
+  } else if (bmiCategory.includes('Otyłość')) {
     title = 'Masa ciała i BMI są obecnie wyraźnie powyżej typowych wartości dla wieku.';
     text = 'Najważniejsze jest obserwowanie trendu w kolejnych pomiarach i ocenianie, czy wynik stopniowo przesuwa się w stronę bardziej typowego zakresu.';
     tone = 'danger';
@@ -5440,11 +5480,6 @@ function patientReportBuildHeadline(metrics, historyCount, highlights) {
     tone = 'warn';
   }
 
-  let subtext = '';
-
-  if (heightCard && typeof heightCard.percentile === 'number' && isFinite(heightCard.percentile) && heightCard.percentile <= 3) {
-    subtext = 'Wzrost znajduje się dodatkowo w dolnej części siatki centylowej, dlatego duże znaczenie ma ocena tempa wzrastania w czasie.';
-  }
   if (Array.isArray(highlights) && highlights.length && tone === 'normal') {
     tone = highlights.some((item) => item.tone === 'danger') ? 'danger' : 'warn';
     badge = 'Wymaga omówienia';
@@ -5508,7 +5543,7 @@ function patientReportBuildMetricCards() {
   if (!isNaN(height)) {
     const series = patientReportBuildTrendSeries(trendPoints, 'HT');
     const tone = (typeof heightPercentile === 'number' && isFinite(heightPercentile))
-      ? ((heightPercentile <= 3) ? 'danger' : (((heightPercentile > 3 && heightPercentile < 10) || heightPercentile > 97) ? 'warn' : 'normal'))
+      ? ((heightPercentile <= 3) ? 'danger' : (((heightPercentile > 3 && heightPercentile <= 10) || heightPercentile > 97) ? 'warn' : 'normal'))
       : 'normal';
     cards.push({
       key: 'HT',
@@ -6271,7 +6306,7 @@ function patientReportBuildHtml(model) {
           border-radius: 28px;
           background: linear-gradient(135deg, #0f7d86 0%, #14939c 100%);
           color: white;
-          padding: 28px 32px 26px;
+          padding: 26px 30px 24px;
           box-shadow: 0 22px 48px rgba(0, 131, 141, 0.18);
         }
         .patient-report-hero h2 {
@@ -6283,17 +6318,17 @@ function patientReportBuildHtml(model) {
         .patient-report-hero p {
           margin: 14px 0 0;
           font-size: 20px;
-          line-height: 1.5;
+          line-height: 1.46;
           max-width: 1000px;
         }
         .patient-report-grid-3 {
-          margin-top: 26px;
+          margin-top: 22px;
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
           gap: 18px;
         }
         .patient-report-secondary-grid {
-          margin-top: 18px;
+          margin-top: 16px;
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
           gap: 18px;
@@ -6309,7 +6344,7 @@ function patientReportBuildHtml(model) {
           box-shadow: 0 12px 30px rgba(15, 77, 84, 0.08);
         }
         .patient-report-metric-card {
-          padding: 22px 20px 18px;
+          padding: 20px 18px 16px;
           border-width: 2.5px;
           border-color: #cfe3e4;
           box-shadow: 0 14px 34px rgba(15, 77, 84, 0.10);
@@ -6319,18 +6354,18 @@ function patientReportBuildHtml(model) {
         .patient-report-metric-top {
           display: flex;
           justify-content: space-between;
-          gap: 12px;
+          gap: 10px;
           align-items: flex-start;
         }
         .patient-report-metric-title {
-          font-size: 18px;
+          font-size: 20px;
           line-height: 1.2;
           color: #1d5053;
           font-weight: 800;
         }
         .patient-report-metric-value {
           margin-top: 8px;
-          font-size: 34px;
+          font-size: 38px;
           line-height: 1;
           font-weight: 800;
           color: #102a2b;
@@ -6338,7 +6373,7 @@ function patientReportBuildHtml(model) {
         .patient-report-metric-badge {
           flex: 0 0 auto;
           max-width: 44%;
-          padding: 8px 12px;
+          padding: 7px 11px;
           border-radius: 14px;
           font-size: 15px;
           font-weight: 700;
@@ -6349,15 +6384,16 @@ function patientReportBuildHtml(model) {
         .patient-report-metric-badge.tone-warn { background: rgba(199, 93, 0, 0.12); color: #9a4a00; }
         .patient-report-metric-badge.tone-danger { background: rgba(198, 40, 40, 0.12); color: #a32020; }
         .patient-report-metric-note {
-          margin-top: 10px;
-          font-size: 17px;
+          margin-top: 8px;
+          font-size: 18px;
+          line-height: 1.38;
           color: #335152;
-          min-height: 42px;
+          min-height: 46px;
         }
         .patient-report-scale {
           position: relative;
-          height: 56px;
-          margin-top: 18px;
+          height: 58px;
+          margin-top: 16px;
         }
         .patient-report-scale-track {
           position: absolute;
@@ -6375,7 +6411,7 @@ function patientReportBuildHtml(model) {
           padding: 10px 12px;
           border-radius: 16px;
           background: #f5fbfb;
-          font-size: 15px;
+          font-size: 16px;
           color: #5a7071;
         }
         .patient-report-scale-tick-line {
@@ -6391,7 +6427,7 @@ function patientReportBuildHtml(model) {
           position: absolute;
           top: 35px;
           transform: translateX(-50%);
-          font-size: 12px;
+          font-size: 13px;
           font-weight: 700;
           color: #51696a;
           background: rgba(255,255,255,0.92);
@@ -6415,8 +6451,8 @@ function patientReportBuildHtml(model) {
         .patient-report-scale-marker.tone-warn { background: #c75d00; }
         .patient-report-scale-marker.tone-danger { background: #c62828; }
         .patient-report-metric-reference-box {
-          margin-top: 14px;
-          padding: 13px 14px 12px;
+          margin-top: 12px;
+          padding: 12px 14px 11px;
           border-radius: 18px;
           background: linear-gradient(180deg, rgba(0, 131, 141, 0.08) 0%, rgba(0, 131, 141, 0.04) 100%);
           border: 1.6px solid rgba(0, 131, 141, 0.18);
@@ -6434,7 +6470,7 @@ function patientReportBuildHtml(model) {
           background: linear-gradient(180deg, rgba(0, 131, 141, 0.06) 0%, rgba(0, 131, 141, 0.03) 100%);
         }
         .patient-report-metric-reference-kicker {
-          font-size: 13.5px;
+          font-size: 16px;
           line-height: 1.25;
           font-weight: 800;
           letter-spacing: 0;
@@ -6443,26 +6479,26 @@ function patientReportBuildHtml(model) {
         }
         .patient-report-metric-reference-main {
           margin-top: 6px;
-          font-size: 22px;
-          line-height: 1.05;
+          font-size: 24px;
+          line-height: 1.08;
           font-weight: 800;
           color: #0f2b2d;
         }
         .patient-report-metric-reference-diff {
           margin-top: 6px;
-          font-size: 16px;
+          font-size: 17px;
           line-height: 1.35;
           font-weight: 700;
           color: #2e5053;
         }
         .patient-report-metric-reference-empty {
-          font-size: 15px;
+          font-size: 16px;
           line-height: 1.45;
           color: #4a6263;
         }
         .patient-report-metric-context {
-          margin-top: 12px;
-          padding: 12px 14px;
+          margin-top: 10px;
+          padding: 11px 13px;
           border-radius: 18px;
           background: linear-gradient(180deg, rgba(0, 131, 141, 0.07) 0%, rgba(0, 131, 141, 0.03) 100%);
           border: 1.5px solid rgba(0, 131, 141, 0.16);
@@ -6476,36 +6512,36 @@ function patientReportBuildHtml(model) {
           border-color: rgba(198, 40, 40, 0.18);
         }
         .patient-report-metric-context-title {
-          font-size: 13.5px;
+          font-size: 15px;
           line-height: 1.25;
           font-weight: 800;
           color: #2f666a;
         }
         .patient-report-metric-context-text {
           margin-top: 6px;
-          font-size: 15px;
-          line-height: 1.45;
+          font-size: 16px;
+          line-height: 1.42;
           color: #355253;
         }
         .patient-report-metric-trend-caption {
-          margin-top: 12px;
-          font-size: 15px;
+          margin-top: 10px;
+          font-size: 16px;
           color: #5a7071;
           min-height: 24px;
         }
         .patient-report-trend-svg {
-          margin-top: 6px;
+          margin-top: 5px;
           border-radius: 18px;
           background: #f7fbfb;
           border: 1px solid #e0ecec;
-          padding: 8px;
+          padding: 7px;
         }
         .patient-report-support-card {
           background: #ffffff;
           border-radius: 24px;
           border: 2.5px solid #cfe3e4;
           box-shadow: 0 14px 34px rgba(15, 77, 84, 0.10);
-          padding: 20px 18px 18px;
+          padding: 18px 17px 16px;
           min-height: 100%;
         }
         .patient-report-support-card.tone-warn { border-color: rgba(199, 93, 0, 0.42); }
@@ -6517,33 +6553,33 @@ function patientReportBuildHtml(model) {
           align-items: flex-start;
         }
         .patient-report-support-title {
-          font-size: 18px;
+          font-size: 19px;
           line-height: 1.2;
           color: #1d5053;
           font-weight: 800;
         }
         .patient-report-support-subtitle {
           margin-top: 8px;
-          font-size: 15px;
+          font-size: 16px;
           line-height: 1.35;
           color: #5a7071;
         }
         .patient-report-support-value {
           margin-top: 8px;
-          font-size: 30px;
+          font-size: 33px;
           line-height: 1.05;
           font-weight: 800;
           color: #102a2b;
         }
         .patient-report-support-note {
-          margin-top: 10px;
-          font-size: 15px;
-          line-height: 1.45;
+          margin-top: 8px;
+          font-size: 16px;
+          line-height: 1.42;
           color: #345153;
           min-height: 44px;
         }
         .patient-report-bmr-table-wrap {
-          margin-top: 12px;
+          margin-top: 10px;
           border-radius: 18px;
           border: 1px solid #d9e8e8;
           overflow: hidden;
@@ -6552,12 +6588,12 @@ function patientReportBuildHtml(model) {
         .patient-report-bmr-table {
           width: 100%;
           border-collapse: collapse;
-          font-size: 14px;
+          font-size: 15px;
           line-height: 1.35;
         }
         .patient-report-bmr-table th,
         .patient-report-bmr-table td {
-          padding: 8px 10px;
+          padding: 8px 9px;
           text-align: left;
           vertical-align: top;
           border-bottom: 1px solid #e6f0f0;
@@ -6571,14 +6607,14 @@ function patientReportBuildHtml(model) {
         .patient-report-bmr-table thead th {
           background: #f4fbfb;
           color: #315153;
-          font-size: 13px;
+          font-size: 14px;
           font-weight: 800;
         }
         .patient-report-bmr-table tbody tr:last-child td {
           border-bottom: none;
         }
         .patient-report-vital-list {
-          margin-top: 12px;
+          margin-top: 10px;
           display: grid;
           gap: 10px;
         }
@@ -6586,12 +6622,12 @@ function patientReportBuildHtml(model) {
           border-radius: 18px;
           border: 1.5px solid #d9e8e8;
           background: #fbfefe;
-          padding: 12px 12px 11px;
+          padding: 11px 11px 10px;
         }
         .patient-report-vital-item.tone-warn { border-color: rgba(199, 93, 0, 0.24); background: rgba(199, 93, 0, 0.05); }
         .patient-report-vital-item.tone-danger { border-color: rgba(198, 40, 40, 0.25); background: rgba(198, 40, 40, 0.05); }
         .patient-report-vital-item-title {
-          font-size: 15px;
+          font-size: 16px;
           line-height: 1.25;
           font-weight: 800;
           color: #183c3f;
@@ -6601,20 +6637,20 @@ function patientReportBuildHtml(model) {
           justify-content: space-between;
           gap: 12px;
           align-items: baseline;
-          margin-top: 8px;
-          font-size: 13.5px;
+          margin-top: 7px;
+          font-size: 14.5px;
           line-height: 1.3;
           color: #4a6465;
         }
         .patient-report-vital-row strong {
-          font-size: 15px;
+          font-size: 16px;
           line-height: 1.2;
           color: #103132;
           text-align: right;
         }
         .patient-report-vital-row.is-value {
-          margin-top: 10px;
-          padding-top: 10px;
+          margin-top: 8px;
+          padding-top: 8px;
           border-top: 1px solid #dceaea;
         }
         .patient-report-vital-row.is-value .patient-report-vital-label {
@@ -6623,16 +6659,16 @@ function patientReportBuildHtml(model) {
         }
         .patient-report-vital-row.is-value strong { font-size: 16px; }
         .patient-report-vital-status {
-          margin-top: 8px;
-          font-size: 13.5px;
+          margin-top: 7px;
+          font-size: 14.5px;
           line-height: 1.4;
           color: #486263;
         }
         .patient-report-vital-status.tone-warn { color: #9a4a00; }
         .patient-report-vital-status.tone-danger { color: #a32020; }
         .patient-report-vital-empty {
-          margin-top: 8px;
-          font-size: 13.5px;
+          margin-top: 7px;
+          font-size: 14.5px;
           line-height: 1.4;
           color: #5a7071;
         }
@@ -6703,6 +6739,17 @@ function patientReportBuildHtml(model) {
         .patient-report-page-2 {
           background: linear-gradient(180deg, #fbfefe 0%, #ffffff 18%, #ffffff 100%);
         }
+        .patient-report-page-2 .patient-report-brand-kicker {
+          font-size: 21px;
+        }
+        .patient-report-page-2 .patient-report-title {
+          font-size: 45px;
+          margin-top: 18px;
+        }
+        .patient-report-page-2 .patient-report-meta span {
+          font-size: 17px;
+          padding: 10px 15px;
+        }
         .patient-report-section-grid {
           margin-top: 26px;
           display: grid;
@@ -6743,6 +6790,39 @@ function patientReportBuildHtml(model) {
           line-height: 1.45;
           color: #183132;
         }
+        .patient-report-page-2 .patient-report-section-grid {
+          margin-top: 24px;
+          gap: 16px;
+        }
+        .patient-report-page-2 .patient-report-detail-group {
+          padding: 20px 20px 18px;
+        }
+        .patient-report-page-2 .patient-report-detail-group h3 {
+          font-size: 26px;
+          line-height: 1.14;
+        }
+        .patient-report-page-2 .patient-report-detail-group p {
+          margin-top: 11px;
+          font-size: 18px;
+          line-height: 1.48;
+        }
+        .patient-report-page-2 .patient-report-detail-group ul {
+          margin-top: 16px;
+          gap: 9px;
+        }
+        .patient-report-page-2 .patient-report-detail-item {
+          grid-template-columns: 192px 1fr;
+          gap: 13px;
+          padding: 11px 11px 11px 14px;
+        }
+        .patient-report-page-2 .patient-report-detail-label {
+          font-size: 16.5px;
+          line-height: 1.4;
+        }
+        .patient-report-page-2 .patient-report-detail-value {
+          font-size: 16.5px;
+          line-height: 1.44;
+        }
         .patient-report-bottom-grid {
           margin-top: 18px;
           display: grid;
@@ -6769,6 +6849,29 @@ function patientReportBuildHtml(model) {
           font-size: 16px;
           line-height: 1.5;
           color: #476162;
+        }
+        .patient-report-page-2 .patient-report-bottom-grid {
+          margin-top: 16px;
+          gap: 16px;
+        }
+        .patient-report-page-2 .patient-report-legend {
+          padding: 20px 20px 18px;
+        }
+        .patient-report-page-2 .patient-report-legend h3 {
+          font-size: 24px;
+          line-height: 1.15;
+        }
+        .patient-report-page-2 .patient-report-legend ul {
+          margin-top: 13px;
+          padding-left: 24px;
+        }
+        .patient-report-page-2 .patient-report-legend li {
+          margin-bottom: 9px;
+          font-size: 17px;
+          line-height: 1.48;
+        }
+        .patient-report-page-2 .patient-report-footer {
+          font-size: 15px;
         }
       </style>
       <section class="patient-report-page">
