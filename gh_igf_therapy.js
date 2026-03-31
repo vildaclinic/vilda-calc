@@ -2271,6 +2271,104 @@ function recalc(){
     });
   }
 
+  function captureGhIgfPersistState(){
+    const card = document.getElementById('ghIgfTherapyCard');
+    if (!card) return null;
+    const getValue = (id) => {
+      const el = document.getElementById(id);
+      if (!el) return '';
+      return typeof el.value === 'string' ? el.value : String(el.value == null ? '' : el.value);
+    };
+    return {
+      program: getValue('therProg'),
+      drug: getValue('therDrug'),
+      dailyDose: getValue('therDailyDose'),
+      dailyDoseAbs: getValue('therDailyDoseAbs'),
+      customDays: getValue('therCustomDays'),
+      manualControlDate: getValue('manualControlDate')
+    };
+  }
+
+  function readGhIgfPersistFallback(){
+    try {
+      const raw = localStorage.getItem('sharedUserData');
+      if (!raw) return null;
+      const root = JSON.parse(raw) || {};
+      const persist = root && root._vildaPersist && typeof root._vildaPersist === 'object' ? root._vildaPersist : {};
+      const byId = persist.byId && typeof persist.byId === 'object' ? persist.byId : {};
+      const out = {
+        program: byId.therProg || '',
+        drug: byId.therDrug || '',
+        dailyDose: byId.therDailyDose || '',
+        dailyDoseAbs: byId.therDailyDoseAbs || '',
+        customDays: byId.therCustomDays || '',
+        manualControlDate: byId.manualControlDate || ''
+      };
+      return Object.values(out).some((value) => String(value || '') !== '') ? out : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function restoreGhIgfPersistState(state){
+    const saved = (state && typeof state === 'object') ? state : readGhIgfPersistFallback();
+    if (!saved || typeof saved !== 'object') return false;
+    mountCard();
+    const progSel = document.getElementById('therProg');
+    const drugSel = document.getElementById('therDrug');
+    const doseInp = document.getElementById('therDailyDose');
+    const doseAbsInp = document.getElementById('therDailyDoseAbs');
+    const customDaysInp = document.getElementById('therCustomDays');
+    const manualDateInp = document.getElementById('manualControlDate');
+    if (!progSel || !drugSel || !doseInp || !doseAbsInp || !customDaysInp || !manualDateInp) return false;
+
+    const hasOption = (selectEl, value) => {
+      if (!selectEl) return false;
+      return Array.from(selectEl.options || []).some((opt) => String(opt.value) === String(value));
+    };
+
+    if (saved.program && hasOption(progSel, saved.program)) {
+      progSel.value = saved.program;
+    }
+    populateDrugs();
+
+    if (saved.drug && hasOption(drugSel, saved.drug)) {
+      drugSel.value = saved.drug;
+    }
+
+    applyDefaults();
+
+    if (String(saved.dailyDose || '') !== '') {
+      doseInp.value = String(saved.dailyDose);
+    }
+    if (String(saved.dailyDoseAbs || '') !== '') {
+      doseAbsInp.value = String(saved.dailyDoseAbs);
+    }
+    if (String(saved.customDays || '') !== '') {
+      customDaysInp.value = String(saved.customDays);
+    }
+    if (String(saved.manualControlDate || '') !== '') {
+      manualDateInp.value = String(saved.manualControlDate);
+      try { manualDateInp.style.color = '#000'; } catch (_) {}
+    } else {
+      manualDateInp.value = '';
+      try { manualDateInp.style.color = '#6b7a7a'; } catch (_) {}
+    }
+
+    try { recalc(); } catch (_) {}
+    return true;
+  }
+
+  try {
+    if (typeof window !== 'undefined') {
+      window.vildaGhIgfPersistApi = {
+        ensureMounted: mountCard,
+        captureState: captureGhIgfPersistState,
+        restoreState: restoreGhIgfPersistState
+      };
+    }
+  } catch (_) {}
+
   document.addEventListener('DOMContentLoaded', function(){
     const igfBtn = document.getElementById('toggleIgfTests');
     if (!igfBtn) return;

@@ -1833,8 +1833,8 @@
   }
 
   function restoreGhMonitorPersistState(state){
-    if(!state || typeof state !== 'object' || !state.currentEditingId) return;
-    if(typeof editTherapyPoint !== 'function') return;
+    if(!state || typeof state !== 'object' || !state.currentEditingId) return false;
+    if(typeof editTherapyPoint !== 'function') return false;
     editTherapyPoint(state.currentEditingId);
     try {
       const overlay = document.getElementById('ghEditOverlay');
@@ -1856,6 +1856,7 @@
     setValue('ghEditBoneAge', fields.boneAge);
     setValue('ghEditDose', fields.dose);
     setValue('ghEditDrug', fields.drug);
+    return true;
   }
 
   try {

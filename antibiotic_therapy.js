@@ -9018,8 +9018,31 @@ function chooseAmoxClavDefaultForm(weight, context){
     };
   }
 
+  function readAntibioticPersistFallback(){
+    try {
+      const raw = localStorage.getItem('sharedUserData');
+      if (!raw) return null;
+      const root = JSON.parse(raw) || {};
+      const persist = root && root._vildaPersist && typeof root._vildaPersist === 'object' ? root._vildaPersist : {};
+      const byId = persist.byId && typeof persist.byId === 'object' ? persist.byId : {};
+      const out = {
+        indication: byId.abxIndication || '',
+        drug: byId.abxDrug || '',
+        form: byId.abxForm || '',
+        dose: byId.abxDoseInput || '',
+        duration: byId.abxDuration || '',
+        customDoseActive: false,
+        schemesVisible: false
+      };
+      return Object.values(out).some((value) => String(value || '') !== '' && value !== false) ? out : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   function restoreAntibioticPersistState(state){
-    if(!state || typeof state !== 'object') return;
+    const saved = (state && typeof state === 'object') ? state : readAntibioticPersistFallback();
+    if(!saved || typeof saved !== 'object') return false;
     mountCard();
     const indicSelect = document.getElementById('abxIndication');
     const drugSelect = document.getElementById('abxDrug');
@@ -9027,49 +9050,44 @@ function chooseAmoxClavDefaultForm(weight, context){
     const doseInput = document.getElementById('abxDoseInput');
     const durInput = document.getElementById('abxDuration');
     const slider = document.getElementById('abxDoseSlider');
-    if(!indicSelect || !drugSelect || !formSelect || !doseInput || !durInput || !slider) return;
+    if(!indicSelect || !drugSelect || !formSelect || !doseInput || !durInput || !slider) return false;
 
     customDoseActive = false;
-    schemesVisible = !!state.schemesVisible;
+    schemesVisible = !!saved.schemesVisible;
 
     const hasOption = (selectEl, value) => {
       if(!selectEl) return false;
       return Array.from(selectEl.options || []).some((opt) => String(opt.value) === String(value));
     };
 
-    if(state.indication && hasOption(indicSelect, state.indication)) {
-      indicSelect.value = state.indication;
+    if(saved.indication && hasOption(indicSelect, saved.indication)) {
+      indicSelect.value = saved.indication;
     }
     populateDrugs();
 
-    if(state.drug && hasOption(drugSelect, state.drug)) {
-      drugSelect.value = state.drug;
+    if(saved.drug && hasOption(drugSelect, saved.drug)) {
+      drugSelect.value = saved.drug;
     }
     populateForms();
 
-    if(state.form && hasOption(formSelect, state.form)) {
-      formSelect.value = state.form;
+    if(saved.form && hasOption(formSelect, saved.form)) {
+      formSelect.value = saved.form;
     }
     updateDoseControls();
 
-    if(String(state.duration || '') !== '') {
-      durInput.value = String(state.duration);
+    if(String(saved.duration || '') !== '') {
+      durInput.value = String(saved.duration);
     }
 
-    if(state.customDoseActive) {
+    if(saved.customDoseActive) {
       enableCustomDose();
-    }
-
-    if(String(state.dose || '') !== '') {
-      doseInput.value = String(state.dose);
-      slider.value = String(state.dose);
-      try {
-        doseInput.dispatchEvent(new Event('input', { bubbles: true }));
-      } catch (_) {}
-    }
-
-    if(!state.customDoseActive) {
+    } else {
       customDoseActive = false;
+    }
+
+    if(String(saved.dose || '') !== '') {
+      doseInput.value = String(saved.dose);
+      slider.value = String(saved.dose);
     }
 
     if(typeof updateSchemesButton === 'function') {
@@ -9079,6 +9097,7 @@ function chooseAmoxClavDefaultForm(weight, context){
       updateSliderUI();
     }
     recalc();
+    return true;
   }
 
   try {

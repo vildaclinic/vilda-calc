@@ -4,6 +4,7 @@
   const STORAGE_KEY = 'wagaiwzrost:docproUi:v2';
   const LEGACY_STORAGE_KEY = 'wagaiwzrost:docproState:v1';
   const UI_RESTORE_DELAYS = [0, 120, 320, 700, 1400];
+  const MODULE_RESTORE_DELAYS = [80, 260, 700, 1500];
   const BUTTON_CLASS_NAMES = ['active-toggle', 'gh-selected'];
   const UI_TOGGLE_IDS = new Set([
     'toggleEndoTests',
@@ -232,9 +233,21 @@
   function collectModuleStates() {
     const out = {};
     try {
+      if (window.vildaGhIgfPersistApi && typeof window.vildaGhIgfPersistApi.captureState === 'function') {
+        const state = window.vildaGhIgfPersistApi.captureState();
+        if (state) out.ghTherapy = state;
+      }
+    } catch (_) {}
+    try {
       if (window.vildaAbxPersistApi && typeof window.vildaAbxPersistApi.captureState === 'function') {
         const state = window.vildaAbxPersistApi.captureState();
         if (state) out.antibiotic = state;
+      }
+    } catch (_) {}
+    try {
+      if (window.vildaSgaBirthPersistApi && typeof window.vildaSgaBirthPersistApi.captureState === 'function') {
+        const state = window.vildaSgaBirthPersistApi.captureState();
+        if (state) out.sgaBirth = state;
       }
     } catch (_) {}
     try {
@@ -246,18 +259,27 @@
     return out;
   }
 
-  function restoreModuleStates(moduleStates) {
-    if (!moduleStates || typeof moduleStates !== 'object') return;
-    try {
-      if (moduleStates.antibiotic && window.vildaAbxPersistApi && typeof window.vildaAbxPersistApi.restoreState === 'function') {
-        window.vildaAbxPersistApi.restoreState(moduleStates.antibiotic);
-      }
-    } catch (_) {}
-    try {
-      if (moduleStates.ghMonitor && window.vildaGhTherapyMonitorPersistApi && typeof window.vildaGhTherapyMonitorPersistApi.restoreState === 'function') {
-        window.vildaGhTherapyMonitorPersistApi.restoreState(moduleStates.ghMonitor);
-      }
-    } catch (_) {}
+  function attemptRestoreModuleStates(moduleStates, restoredModules) {
+    const savedModules = moduleStates && typeof moduleStates === 'object' ? moduleStates : {};
+    const restored = restoredModules && typeof restoredModules === 'object' ? restoredModules : {};
+
+    const tryRestore = (key, apiName) => {
+      if (restored[key]) return;
+      const api = window[apiName];
+      if (!api || typeof api.restoreState !== 'function') return;
+      const saved = Object.prototype.hasOwnProperty.call(savedModules, key) ? savedModules[key] : undefined;
+      try {
+        const result = api.restoreState(saved);
+        if (result !== false) {
+          restored[key] = true;
+        }
+      } catch (_) {}
+    };
+
+    tryRestore('ghTherapy', 'vildaGhIgfPersistApi');
+    tryRestore('antibiotic', 'vildaAbxPersistApi');
+    tryRestore('sgaBirth', 'vildaSgaBirthPersistApi');
+    tryRestore('ghMonitor', 'vildaGhTherapyMonitorPersistApi');
   }
 
   function buildState() {
@@ -425,7 +447,6 @@
       applyControls(state);
       restoreCustomButtons(state.buttonStates);
       restoreDetails(state.details);
-      restoreModuleStates(state.moduleStates);
     });
 
     try {
@@ -444,6 +465,8 @@
   function restoreState(state) {
     if (!state) return;
 
+    const restoredModules = Object.create(null);
+
     restoring = true;
     startMutationObserver(state);
 
@@ -453,11 +476,20 @@
         applyControls(state);
         restoreCustomButtons(state.buttonStates);
         restoreDetails(state.details);
-        restoreModuleStates(state.moduleStates);
       }, delay);
     });
 
-    const lastDelay = Math.max.apply(Math, UI_RESTORE_DELAYS) + 350;
+    MODULE_RESTORE_DELAYS.forEach((delay) => {
+      window.setTimeout(() => {
+        restoreUi(state.ui);
+        attemptRestoreModuleStates(state.moduleStates, restoredModules);
+      }, delay);
+    });
+
+    const lastDelay = Math.max(
+      Math.max.apply(Math, UI_RESTORE_DELAYS),
+      Math.max.apply(Math, MODULE_RESTORE_DELAYS)
+    ) + 350;
     window.setTimeout(() => {
       restoring = false;
       queueSave(0);

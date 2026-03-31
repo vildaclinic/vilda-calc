@@ -674,6 +674,76 @@
       }
     }
 
+    function captureSgaBirthPersistState() {
+      return {
+        sex: getSelectedSex(),
+        weeks: gaWeeksSelect ? String(gaWeeksSelect.value || '') : '',
+        days: gaDaysSelect ? String(gaDaysSelect.value || '') : '',
+        weight: birthWeightInput ? String(birthWeightInput.value || '') : '',
+        length: birthLengthInput ? String(birthLengthInput.value || '') : '',
+        head: birthHeadInput ? String(birthHeadInput.value || '') : '',
+        hasComputed: resultsEl.dataset.hasComputed === '1'
+      };
+    }
+
+    function readSgaBirthPersistFallback() {
+      try {
+        const raw = localStorage.getItem('sharedUserData');
+        if (!raw) return null;
+        const root = JSON.parse(raw) || {};
+        const persist = root && root._vildaPersist && typeof root._vildaPersist === 'object' ? root._vildaPersist : {};
+        const byId = persist.byId && typeof persist.byId === 'object' ? persist.byId : {};
+        const radio = persist.radio && typeof persist.radio === 'object' ? persist.radio : {};
+        const out = {
+          sex: radio.sgaBirthSex || '',
+          weeks: byId.sgaBirthWeeks || '',
+          days: byId.sgaBirthDays || '',
+          weight: byId.sgaBirthWeight || '',
+          length: byId.sgaBirthLength || '',
+          head: byId.sgaBirthHead || ''
+        };
+        const hasAny = Object.values(out).some((value) => String(value || '') !== '');
+        if (!hasAny) return null;
+        out.hasComputed = !!(out.sex && out.weeks && (out.weight || out.length || out.head));
+        return out;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function restoreSgaBirthPersistState(state) {
+      const saved = (state && typeof state === 'object') ? state : readSgaBirthPersistFallback();
+      if (!saved || typeof saved !== 'object') return false;
+
+      sexInputs.forEach((input) => {
+        input.checked = !!(saved.sex && String(input.value) === String(saved.sex));
+      });
+      if (gaWeeksSelect && saved.weeks != null) gaWeeksSelect.value = String(saved.weeks || '');
+      if (gaDaysSelect && saved.days != null) gaDaysSelect.value = String(saved.days || '0');
+      if (birthWeightInput && saved.weight != null) birthWeightInput.value = String(saved.weight || '');
+      if (birthLengthInput && saved.length != null) birthLengthInput.value = String(saved.length || '');
+      if (birthHeadInput && saved.head != null) birthHeadInput.value = String(saved.head || '');
+
+      if (saved.hasComputed) {
+        renderResults(false);
+      } else {
+        resultsEl.style.display = 'none';
+        resultsEl.innerHTML = '';
+        resultsEl.dataset.hasComputed = '0';
+        setMessage('', '');
+      }
+      return true;
+    }
+
+    try {
+      if (typeof window !== 'undefined') {
+        window.vildaSgaBirthPersistApi = {
+          captureState: captureSgaBirthPersistState,
+          restoreState: restoreSgaBirthPersistState
+        };
+      }
+    } catch (_) {}
+
     toggleBtn.addEventListener('click', function () {
       const visible = card.style.display !== 'none' && card.style.display !== '';
       if (visible) {
