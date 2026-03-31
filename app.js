@@ -5104,6 +5104,112 @@ function patientReportGetMetricMedian(metric, sex, ageYears, usedSource, resolve
   return null;
 }
 
+function patientReportFormatCompactNumber(value, digits) {
+  if (typeof value !== 'number' || !isFinite(value)) return '—';
+  const precision = Number.isFinite(digits) ? Math.max(0, digits) : 1;
+  const rounded = Number(value.toFixed(precision));
+  return String(rounded).replace('.', ',');
+}
+
+function patientReportFormatScaleValue(value, unit, digits) {
+  if (typeof value !== 'number' || !isFinite(value)) return '';
+  const text = patientReportFormatCompactNumber(value, digits);
+  return unit ? `${text} ${unit}` : text;
+}
+
+function patientReportLmsValueForPercentile(lms, percentile) {
+  if (!Array.isArray(lms) || lms.length < 3 || typeof percentile !== 'number' || !isFinite(percentile)) return null;
+  const [L, M, S] = lms;
+  if (![L, M, S].every((value) => typeof value === 'number' && isFinite(value)) || M <= 0 || S <= 0) {
+    return null;
+  }
+  const bounded = Math.min(99.9, Math.max(0.1, percentile));
+  const z = (typeof normInv === 'function') ? normInv(bounded / 100) : null;
+  if (typeof z !== 'number' || !isFinite(z)) return null;
+  if (L !== 0) {
+    const base = 1 + (L * S * z);
+    if (base <= 0) return null;
+    return M * Math.pow(base, 1 / L);
+  }
+  return M * Math.exp(S * z);
+}
+
+function patientReportGetPalMetricValueAtPercentile(metric, sex, ageYears, percentile) {
+  if (typeof getPalCentile !== 'function' || typeof percentile !== 'number' || !isFinite(percentile)) return null;
+  const months = Math.round(ageYears * 12);
+  if (!isFinite(months) || months < 0) return null;
+  const param = metric === 'WT' ? 'WT' : (metric === 'HT' ? 'HT' : 'BMI');
+  try {
+    const exact = getPalCentile(sex, months, percentile, param);
+    if (typeof exact === 'number' && isFinite(exact)) return exact;
+  } catch (_) {}
+  const anchors = [3, 10, 25, 50, 75, 90, 97]
+    .map((centile) => ({ centile, value: getPalCentile(sex, months, centile, param) }))
+    .filter((item) => typeof item.value === 'number' && isFinite(item.value))
+    .sort((a, b) => a.centile - b.centile);
+  if (anchors.length < 2) return null;
+
+  let lower = anchors[0];
+  let upper = anchors[1];
+  if (percentile <= anchors[0].centile) {
+    lower = anchors[0];
+    upper = anchors[1];
+  } else if (percentile >= anchors[anchors.length - 1].centile) {
+    lower = anchors[anchors.length - 2];
+    upper = anchors[anchors.length - 1];
+  } else {
+    for (let i = 0; i < anchors.length - 1; i += 1) {
+      if (percentile >= anchors[i].centile && percentile <= anchors[i + 1].centile) {
+        lower = anchors[i];
+        upper = anchors[i + 1];
+        break;
+      }
+    }
+  }
+  const span = upper.centile - lower.centile;
+  if (!isFinite(span) || span === 0) return lower.value;
+  const ratio = (percentile - lower.centile) / span;
+  return lower.value + (ratio * (upper.value - lower.value));
+}
+
+function patientReportGetMetricValueAtPercentile(metric, sex, ageYears, percentile, usedSource) {
+  const src = String(usedSource || patientReportGetPreferredSource()).toUpperCase();
+  if (src === 'PALCZEWSKA') {
+    return patientReportGetPalMetricValueAtPercentile(metric, sex, ageYears, percentile);
+  }
+  if (metric === 'BMI') {
+    return patientReportLmsValueForPercentile(
+      (typeof advHistoryGetBmiLMSForSource === 'function') ? advHistoryGetBmiLMSForSource(src, sex, ageYears) : null,
+      percentile
+    );
+  }
+  return patientReportLmsValueForPercentile(
+    (typeof advHistoryGetChildLMSForSource === 'function') ? advHistoryGetChildLMSForSource(src, sex, ageYears, metric === 'WT' ? 'WT' : 'HT') : null,
+    percentile
+  );
+}
+
+function patientReportBuildScaleValueLabels(metric, sex, ageYears, usedSource) {
+  const config = (metric === 'BMI')
+    ? [
+        { percentile: 5, unit: '' },
+        { percentile: 95, unit: '' }
+      ]
+    : [
+        { percentile: 3, unit: '' },
+        { percentile: 97, unit: '' }
+      ];
+
+  return config.map((item) => {
+    const value = patientReportGetMetricValueAtPercentile(metric, sex, ageYears, item.percentile, usedSource);
+    if (typeof value !== 'number' || !isFinite(value)) return null;
+    return {
+      pos: item.percentile,
+      label: patientReportFormatScaleValue(value, item.unit, 1)
+    };
+  }).filter(Boolean);
+}
+
 function patientReportBuildMedianReference(label, value, median, options) {
   const opts = options || {};
   const digits = Number.isFinite(opts.digits) ? opts.digits : 1;
@@ -5181,7 +5287,7 @@ function patientReportScaleGradient() {
   return 'linear-gradient(90deg, #ffd7d7 0%, #ffc9c9 10%, #ffe4b8 17%, #d7f2f3 25%, #b3eaed 50%, #d7f2f3 75%, #ffe4b8 83%, #ffc9c9 90%, #ffd7d7 100%)';
 }
 
-function patientReportBuildScaleModel(type, percentile) {
+function patientReportBuildScaleModel(type, percentile, valueLabels) {
   if (typeof percentile !== 'number' || !isFinite(percentile)) return null;
   const clamped = Math.max(0, Math.min(100, percentile));
   if (type === 'BMI') {
@@ -5193,6 +5299,7 @@ function patientReportBuildScaleModel(type, percentile) {
         { pos: 85, label: '85c', safePos: 85 },
         { pos: 95, label: '95c', safePos: 93 }
       ],
+      valueLabels: Array.isArray(valueLabels) ? valueLabels : [],
       gradient: patientReportScaleGradient()
     };
   }
@@ -5203,6 +5310,7 @@ function patientReportBuildScaleModel(type, percentile) {
       { pos: 50, label: '50c', safePos: 50 },
       { pos: 97, label: '97c', safePos: 93.5 }
     ],
+    valueLabels: Array.isArray(valueLabels) ? valueLabels : [],
     gradient: patientReportScaleGradient()
   };
 }
@@ -5282,14 +5390,31 @@ function patientReportBuildTrendSeries(points, key) {
   return series;
 }
 
+function patientReportBuildTrendPeriodLabel(monthsTotal) {
+  const total = Math.max(0, Math.round(Number(monthsTotal) || 0));
+  if (!isFinite(total) || total <= 0) return 'Od poprzedniego pomiaru';
+  if (total === 1) return 'W ostatnim miesiącu';
+  if (total === 12) return 'W okresie ostatniego roku';
+  if (total < 7) return `W ostatnich ${total} miesiącach`;
+  if (total < 12) return `W ciągu ostatnich ${total} miesięcy`;
+  if (total % 12 === 0) {
+    const years = total / 12;
+    return `W okresie ostatnich ${years} lat`;
+  }
+  return `W ciągu ostatnich ${total} miesięcy`;
+}
+
 function patientReportBuildTrendDeltaText(series, unit, digits) {
   if (!Array.isArray(series) || series.length < 2) return '';
   const prev = series[series.length - 2];
   const last = series[series.length - 1];
   const diff = last.y - prev.y;
+  const diffMonths = Math.round((last.x || 0) - (prev.x || 0));
+  const periodLabel = patientReportBuildTrendPeriodLabel(diffMonths);
   const abs = patientReportFormatNumber(Math.abs(diff), Number.isFinite(digits) ? digits : 1);
-  if (Math.abs(diff) < 0.05) return `Ostatni wpisany okres: bez większej zmiany (${unit}).`;
-  return `Ostatni wpisany okres: ${diff > 0 ? '+' : '-'}${abs} ${unit}.`;
+  const unitText = String(unit || '').trim();
+  if (Math.abs(diff) < 0.05) return `${periodLabel}: bez większej zmiany.`;
+  return `${periodLabel}: ${diff > 0 ? '+' : '-'}${abs}${unitText ? ` ${unitText}` : ''}.`;
 }
 
 function patientReportBuildSparklineSvg(series, options) {
@@ -5417,7 +5542,249 @@ function patientReportCollectHighlights(lines) {
   return out.slice(0, 4);
 }
 
-function patientReportBuildHeadline(metrics, historyCount, highlights) {
+function patientReportHeadlineIssueGroupKey(line) {
+  const lc = String(line || '').toLowerCase().trim();
+  if (!lc) return '';
+  if (lc.startsWith('rr ') || lc.startsWith('ciśnienie')) return 'blood-pressure';
+  if (lc.startsWith('tętno') || lc.startsWith('hr ')) return 'heart-rate';
+  if (lc.startsWith('waga') || lc.startsWith('bmi') || lc.startsWith('wskaźnik cole')) return 'body-mass';
+  if (lc.startsWith('wzrost') || lc.startsWith('tempo wzrastania') || lc.startsWith('aktualne tempo') || lc.startsWith('mph') || lc.startsWith('hsds')) return 'growth';
+  if (lc.startsWith('whr')) return 'fat-distribution';
+  const split = patientReportSplitSummaryLine(line);
+  const label = String((split && split.label) || '').toLowerCase().trim();
+  return label || lc;
+}
+
+function patientReportCollectFlaggedSummaryItems(summaryLines) {
+  const flagged = [];
+  (summaryLines || []).forEach((line) => {
+    const tone = getProfessionalSummaryLineTone(line);
+    if (tone === 'normal') return;
+    flagged.push({
+      line,
+      tone,
+      lc: String(line || '').toLowerCase(),
+      split: patientReportSplitSummaryLine(line),
+      group: patientReportHeadlineIssueGroupKey(line)
+    });
+  });
+  return flagged;
+}
+
+function patientReportAppendSentence(base, addition) {
+  const current = String(base || '').trim();
+  const extra = String(addition || '').trim();
+  if (!current) return extra;
+  if (!extra) return current;
+  return `${current} ${extra}`;
+}
+
+function patientReportFormatIssueList(parts) {
+  const items = (parts || []).map((item) => String(item || '').trim()).filter(Boolean);
+  if (!items.length) return '';
+  if (items.length === 1) return items[0];
+  if (items.length === 2) return `${items[0]} oraz ${items[1]}`;
+  return `${items.slice(0, -1).join(', ')} oraz ${items[items.length - 1]}`;
+}
+
+function patientReportBuildAdditionalIssueSentence(flaggedItems, excludedGroups) {
+  const excluded = new Set(Array.isArray(excludedGroups) ? excludedGroups.filter(Boolean) : []);
+  const extras = [];
+  (flaggedItems || []).forEach((item) => {
+    const key = String(item && item.group || '').trim();
+    if (!key || excluded.has(key) || extras.includes(key)) return;
+    extras.push(key);
+  });
+  if (!extras.length) return '';
+
+  if (extras.length === 1) {
+    const key = extras[0];
+    if (key === 'blood-pressure') {
+      return 'Równocześnie ciśnienie tętnicze wymaga dalszej kontroli i interpretacji w kolejnych pomiarach.';
+    }
+    if (key === 'heart-rate') {
+      return 'Równocześnie tętno wymaga odniesienia do norm dla wieku i warunków pomiaru.';
+    }
+    if (key === 'growth') {
+      return 'Równocześnie wzrost wymaga oceny względem siatek centylowych i tempa wzrastania.';
+    }
+    if (key === 'body-mass') {
+      const bodyMassItems = (flaggedItems || []).filter((item) => item && item.group === 'body-mass');
+      const hasColeOnly = bodyMassItems.some((item) => item.lc.startsWith('wskaźnik cole'))
+        && !bodyMassItems.some((item) => item.lc.startsWith('bmi') || item.lc.startsWith('waga'));
+      if (hasColeOnly) {
+        return 'Równocześnie wskaźnik Cole’a jest poza typowym zakresem i warto interpretować go łącznie z BMI oraz wzrostem.';
+      }
+      return 'Równocześnie parametry masy ciała są poza typowym zakresem dla wieku.';
+    }
+    if (key === 'fat-distribution') {
+      return 'Równocześnie rozkład tkanki tłuszczowej wymaga dodatkowej oceny wraz z pozostałymi wynikami.';
+    }
+    return 'Równocześnie dodatkowej oceny wymaga jeszcze jeden parametr z podsumowania.';
+  }
+
+  const labels = extras.map((key) => {
+    if (key === 'blood-pressure') return 'ciśnienie tętnicze';
+    if (key === 'heart-rate') return 'tętno';
+    if (key === 'growth') return 'wzrost';
+    if (key === 'body-mass') return 'parametry masy ciała';
+    if (key === 'fat-distribution') return 'rozkład tkanki tłuszczowej';
+    return 'inne parametry z podsumowania';
+  });
+  return `Równocześnie dodatkowej oceny wymagają ${patientReportFormatIssueList(labels)}.`;
+}
+
+function patientReportBuildFlaggedSummaryHeadline(summaryLines) {
+  const flagged = patientReportCollectFlaggedSummaryItems(summaryLines);
+  if (!flagged.length) return null;
+
+  const hasDanger = flagged.some((item) => item.tone === 'danger');
+  const first = flagged.find((item) => item.tone === 'danger') || flagged[0];
+  let badge = hasDanger ? 'Wynik nieprawidłowy' : 'Wymaga omówienia';
+  let tone = hasDanger ? 'danger' : 'warn';
+  let title = 'Nie wszystkie najważniejsze wyniki mieszczą się obecnie w typowym zakresie dla wieku i płci.';
+  let text = '';
+  let subtext = '';
+
+  if (first.lc.startsWith('wskaźnik cole')) {
+    const mCole = first.line.match(/([\d]+(?:[\.,]\d+)?)\s*%/);
+    const coleVal = mCole ? parseFloat(String(mCole[1]).replace(',', '.')) : null;
+    const coleInfo = patientReportClassifyCole(coleVal);
+    if (coleInfo && coleInfo.category === 'Nadwaga') {
+      title = 'Wskaźnik Cole’a wskazuje obecnie na nadwagę.';
+      text = 'Pomimo tego, że waga i BMI są jeszcze w normie, wskaźnik Cole’a może być pierwszym sygnałem nadwagi u dziecka.';
+    } else if (coleInfo && coleInfo.category === 'Otyłość') {
+      title = 'Wskaźnik Cole’a wskazuje obecnie na otyłość.';
+      text = 'Oznacza to, że masa ciała względem wzrostu i wieku jest wyraźnie powyżej typowego zakresu.';
+      badge = 'Wynik nieprawidłowy';
+      tone = 'danger';
+    } else if (coleInfo && coleInfo.category === 'Niedowaga') {
+      title = 'Wskaźnik Cole’a wskazuje obecnie na niedowagę.';
+      text = 'Oznacza to, że masa ciała względem wzrostu i wieku jest poniżej typowego zakresu.';
+    } else {
+      text = 'Wskaźnik Cole’a wymaga omówienia w odniesieniu do wieku, płci i wzrostu.';
+    }
+    subtext = '';
+  } else if (first.lc.startsWith('waga')) {
+    title = 'Masa ciała znajduje się obecnie poza typowym zakresem dla wieku.';
+    text = 'Wynik należy interpretować łącznie z wzrostem, BMI i przebiegiem wcześniejszych pomiarów.';
+  } else if (first.lc.startsWith('wzrost')) {
+    title = 'Wzrost wymaga interpretacji względem siatek centylowych dla wieku i płci.';
+    text = 'Taki wynik warto oceniać razem z tempem wzrastania i danymi z wcześniejszych wizyt.';
+  } else if (first.lc.startsWith('bmi')) {
+    title = 'BMI wymaga obecnie dodatkowego omówienia.';
+    text = 'Oznacza to, że nie wszystkie parametry z bieżącego pomiaru mieszczą się w typowym zakresie dla wieku i płci.';
+  } else if (first.lc.startsWith('rr ') || first.lc.startsWith('ciśnienie')) {
+    title = 'Ciśnienie tętnicze wymaga obecnie kontroli i interpretacji w kolejnych pomiarach.';
+    text = 'Uzyskany pomiar należy oceniać w odniesieniu do wieku, wzrostu oraz warunków pomiaru.';
+  } else if (first.lc.startsWith('whr')) {
+    title = 'Rozkład tkanki tłuszczowej wymaga dodatkowej oceny.';
+    text = 'Wynik warto interpretować łącznie z masą ciała, BMI i obwodem talii.';
+  } else if (first.lc.startsWith('tempo wzrastania') || first.lc.startsWith('aktualne tempo')) {
+    title = 'Tempo wzrastania wymaga obecnie uważniejszej obserwacji.';
+    text = 'Najwięcej informacji daje porównanie kilku kolejnych pomiarów w czasie.';
+  } else if (first.lc.startsWith('mph') || first.lc.startsWith('hsds')) {
+    title = 'Wzrost warto odnieść również do potencjału rodzinnego.';
+    text = 'Ten wynik nie mieści się w pełni w typowym zakresie i powinien być interpretowany razem z pozostałymi danymi.';
+  }
+
+  if (!text) {
+    const label = String((first.split && first.split.label) || '').trim();
+    text = label
+      ? `Szczególnej uwagi wymaga parametr: ${label}.`
+      : 'Wynik wymaga omówienia w kontekście całego badania.';
+  }
+
+  text = patientReportAppendSentence(text, patientReportBuildAdditionalIssueSentence(flagged, [first.group]));
+
+  return {
+    badge,
+    tone,
+    title,
+    text,
+    subtext,
+    primaryGroup: first.group,
+    issueGroups: Array.from(new Set(flagged.map((item) => item.group).filter(Boolean)))
+  };
+}
+
+function patientReportGetWeightDirectionFromPercentile(percentile) {
+  if (typeof percentile !== 'number' || !isFinite(percentile)) return '';
+  if (percentile < 10) return 'low';
+  if (percentile >= 90) return 'high';
+  return 'normal';
+}
+
+function patientReportGetBmiDirectionFromCategory(category) {
+  const kind = patientReportNormalizeBmiCategory(category);
+  if (kind === 'underweight') return 'low';
+  if (kind === 'overweight' || kind === 'obesity') return 'high';
+  if (kind === 'normal') return 'normal';
+  return '';
+}
+
+function patientReportDescribeBodyMassHeadlineTarget(metrics, direction) {
+  const list = Array.isArray(metrics) ? metrics : [];
+  const weightCard = list.find((item) => item && item.key === 'WT') || null;
+  const bmiCard = list.find((item) => item && item.key === 'BMI') || null;
+  const weightDirection = patientReportGetWeightDirectionFromPercentile(weightCard && weightCard.percentile);
+  const bmiDirection = patientReportGetBmiDirectionFromCategory(bmiCard && bmiCard.category);
+  const includeWeight = weightDirection === direction;
+  const includeBmi = bmiDirection === direction;
+
+  if (includeWeight && includeBmi) {
+    return {
+      subject: 'Masa ciała i BMI',
+      inlineSubject: 'masa ciała i BMI',
+      verb: 'są',
+      count: 2,
+      weightDirection,
+      bmiDirection
+    };
+  }
+  if (includeWeight) {
+    return {
+      subject: 'Masa ciała',
+      inlineSubject: 'masa ciała',
+      verb: 'jest',
+      count: 1,
+      weightDirection,
+      bmiDirection
+    };
+  }
+  if (includeBmi) {
+    return {
+      subject: 'BMI',
+      inlineSubject: 'BMI',
+      verb: 'jest',
+      count: 1,
+      weightDirection,
+      bmiDirection
+    };
+  }
+  return {
+    subject: 'Parametry masy ciała',
+    inlineSubject: 'parametry masy ciała',
+    verb: 'są',
+    count: 0,
+    weightDirection,
+    bmiDirection
+  };
+}
+
+function patientReportBuildBodyMassRangeSentence(metrics, direction, options) {
+  const opts = options || {};
+  const target = patientReportDescribeBodyMassHeadlineTarget(metrics, direction);
+  const subject = opts.inline ? target.inlineSubject : target.subject;
+  const modifier = String(opts.modifier || '').trim();
+  const defaultRangeText = direction === 'high'
+    ? 'powyżej typowego zakresu dla wieku'
+    : 'poniżej typowego zakresu dla wieku';
+  const rangeText = String(opts.rangeText || defaultRangeText).trim();
+  return `${subject} ${target.verb}${modifier ? ` ${modifier}` : ''} ${rangeText}`.replace(/\s+/g, ' ').trim();
+}
+
+function patientReportBuildHeadline(metrics, historyCount, highlights, summaryLines) {
   const bmiCard = metrics.find((item) => item.key === 'BMI') || null;
   const heightCard = metrics.find((item) => item.key === 'HT') || null;
   const bmiCategory = String((bmiCard && bmiCard.category) || '');
@@ -5426,13 +5793,17 @@ function patientReportBuildHeadline(metrics, historyCount, highlights) {
     ? heightCard.percentile
     : null;
   const hasHistory = Number(historyCount) > 0;
+  const defaultTitle = 'Najważniejsze wyniki mieszczą się obecnie w typowym zakresie dla wieku i płci.';
+  const flaggedItems = patientReportCollectFlaggedSummaryItems(summaryLines);
+  const coveredIssueGroups = new Set();
   let badge = bmiCategory || 'Ocena bieżącego pomiaru';
   let tone = bmiCard ? bmiCard.tone : 'normal';
-  let title = 'Najważniejsze wyniki mieszczą się obecnie w typowym zakresie dla wieku i płci.';
+  let title = defaultTitle;
   let text = '';
   let subtext = '';
 
   if (typeof heightPercentile === 'number' && isFinite(heightPercentile) && heightPercentile <= 10) {
+    coveredIssueGroups.add('growth');
     const trendSentence = hasHistory
       ? 'Szczególnie ważne jest porównanie obecnego wzrostu z wcześniejszymi pomiarami i oceną tempa wzrastania.'
       : 'Szczególnie ważna jest ocena tempa wzrastania w kolejnych pomiarach.';
@@ -5441,10 +5812,12 @@ function patientReportBuildHeadline(metrics, historyCount, highlights) {
       badge = 'Niski wzrost';
       tone = 'danger';
       if (bmiKind === 'obesity' || bmiKind === 'overweight') {
-        title = 'Wzrost znajduje się wyraźnie poniżej typowego zakresu, a masa ciała i BMI są jednocześnie powyżej normy dla wieku.';
+        coveredIssueGroups.add('body-mass');
+        title = `Wzrost znajduje się wyraźnie poniżej typowego zakresu, a ${patientReportBuildBodyMassRangeSentence(metrics, 'high', { inline: true, modifier: 'jednocześnie', rangeText: 'powyżej normy dla wieku' })}.`;
         text = '';
       } else if (bmiKind === 'underweight') {
-        title = 'Wzrost znajduje się wyraźnie poniżej typowego zakresu, a masa ciała lub BMI są dodatkowo poniżej normy dla wieku.';
+        coveredIssueGroups.add('body-mass');
+        title = `Wzrost znajduje się wyraźnie poniżej typowego zakresu, a ${patientReportBuildBodyMassRangeSentence(metrics, 'low', { inline: true, modifier: 'dodatkowo', rangeText: 'poniżej normy dla wieku' })}.`;
         text = 'Taki układ wyników wymaga szczególnie uważnej oceny wzrastania i stanu odżywienia dziecka.';
       } else {
         title = 'Wzrost znajduje się wyraźnie poniżej typowego zakresu dla wieku i płci.';
@@ -5455,10 +5828,12 @@ function patientReportBuildHeadline(metrics, historyCount, highlights) {
       badge = 'Niski wzrost';
       tone = (bmiKind === 'obesity') ? 'danger' : 'warn';
       if (bmiKind === 'obesity' || bmiKind === 'overweight') {
-        title = 'Wzrost znajduje się w niskim zakresie centylowym, a masa ciała i BMI są jednocześnie powyżej typowego zakresu.';
+        coveredIssueGroups.add('body-mass');
+        title = `Wzrost znajduje się w niskim zakresie centylowym, a ${patientReportBuildBodyMassRangeSentence(metrics, 'high', { inline: true, modifier: 'jednocześnie', rangeText: 'powyżej typowego zakresu' })}.`;
         text = 'W takiej sytuacji równie ważna jak ocena masy ciała jest analiza tempa wzrastania i całego przebiegu wzrostu.';
       } else if (bmiKind === 'underweight') {
-        title = 'Wzrost znajduje się w niskim zakresie centylowym, a masa ciała lub BMI są dodatkowo poniżej typowego zakresu.';
+        coveredIssueGroups.add('body-mass');
+        title = `Wzrost znajduje się w niskim zakresie centylowym, a ${patientReportBuildBodyMassRangeSentence(metrics, 'low', { inline: true, modifier: 'dodatkowo', rangeText: 'poniżej typowego zakresu' })}.`;
         text = 'Taki wynik wymaga uważnej obserwacji tempa wzrastania i przyrostu masy ciała w czasie.';
       } else {
         title = 'Wzrost znajduje się w niskim zakresie centylowym dla wieku i płci.';
@@ -5467,22 +5842,51 @@ function patientReportBuildHeadline(metrics, historyCount, highlights) {
       subtext = `${trendSentence} ${contextSentence}`;
     }
   } else if (bmiCategory.includes('Otyłość')) {
-    title = 'Masa ciała i BMI są obecnie wyraźnie powyżej typowych wartości dla wieku.';
+    coveredIssueGroups.add('body-mass');
+    title = `${patientReportBuildBodyMassRangeSentence(metrics, 'high', { modifier: 'obecnie wyraźnie', rangeText: 'powyżej typowych wartości dla wieku' })}.`;
     text = 'Najważniejsze jest obserwowanie trendu w kolejnych pomiarach i ocenianie, czy wynik stopniowo przesuwa się w stronę bardziej typowego zakresu.';
     tone = 'danger';
   } else if (bmiCategory === 'Nadwaga') {
-    title = 'Masa ciała i BMI są obecnie powyżej typowego zakresu dla wieku.';
+    coveredIssueGroups.add('body-mass');
+    title = `${patientReportBuildBodyMassRangeSentence(metrics, 'high', { modifier: 'obecnie', rangeText: 'powyżej typowego zakresu dla wieku' })}.`;
     text = 'Najważniejsze jest obserwowanie trendu kolejnych pomiarów i konsekwentne trzymanie się zaleceń ustalonych podczas wizyty.';
     tone = 'warn';
   } else if (bmiCategory === 'Niedowaga') {
-    title = 'Masa ciała lub BMI są obecnie poniżej typowego zakresu dla wieku.';
+    coveredIssueGroups.add('body-mass');
+    title = `${patientReportBuildBodyMassRangeSentence(metrics, 'low', { modifier: 'obecnie', rangeText: 'poniżej typowego zakresu dla wieku' })}.`;
     text = 'W kolejnych wizytach warto sprawdzać, czy wynik wraca w kierunku typowych wartości dla wieku i wzrostu.';
+    tone = 'warn';
+  }
+
+  if (title === defaultTitle) {
+    const flaggedHeadline = patientReportBuildFlaggedSummaryHeadline(summaryLines);
+    if (flaggedHeadline) {
+      badge = flaggedHeadline.badge || badge;
+      tone = flaggedHeadline.tone || tone;
+      title = flaggedHeadline.title || title;
+      text = flaggedHeadline.text || text;
+      subtext = flaggedHeadline.subtext || subtext;
+      (flaggedHeadline.issueGroups || []).forEach((group) => {
+        if (group) coveredIssueGroups.add(group);
+      });
+    }
+  } else {
+    text = patientReportAppendSentence(text, patientReportBuildAdditionalIssueSentence(flaggedItems, Array.from(coveredIssueGroups)));
+  }
+
+  if (flaggedItems.some((item) => item.tone === 'danger')) {
+    tone = 'danger';
+  } else if (flaggedItems.length && tone === 'normal') {
     tone = 'warn';
   }
 
   if (Array.isArray(highlights) && highlights.length && tone === 'normal') {
     tone = highlights.some((item) => item.tone === 'danger') ? 'danger' : 'warn';
     badge = 'Wymaga omówienia';
+    if (title === defaultTitle) {
+      title = 'Nie wszystkie najważniejsze wyniki mieszczą się obecnie w typowym zakresie dla wieku i płci.';
+      text = 'Co najmniej jeden z parametrów z podsumowania wymaga dodatkowego omówienia.';
+    }
   }
 
   return { badge, tone, title, text, subtext };
@@ -5535,7 +5939,7 @@ function patientReportBuildMetricCards() {
       tone,
       note: patientReportDescribeWeight(weightPercentile),
       reference: patientReportBuildMedianReference('Masa', weight, weightMedian, { friendlyLabel: 'Przeciętna masa dla tego wieku', medianUnit: 'kg', diffUnit: 'kg', digits: 1 }),
-      scale: isChild ? patientReportBuildScaleModel('WT', weightPercentile) : null,
+      scale: isChild ? patientReportBuildScaleModel('WT', weightPercentile, patientReportBuildScaleValueLabels('WT', sex, ageYears, weightResolved.source)) : null,
       sparkline: patientReportBuildSparklineSvg(series, { title: 'masa ciała', unit: 'kg', digits: 1 }),
       trendText: patientReportBuildTrendDeltaText(series, 'kg', 1)
     });
@@ -5554,7 +5958,7 @@ function patientReportBuildMetricCards() {
       tone,
       note: patientReportDescribeHeight(heightPercentile),
       reference: patientReportBuildMedianReference('Wzrost', height, heightMedian, { friendlyLabel: 'Przeciętny wzrost dla tego wieku', medianUnit: 'cm', diffUnit: 'cm', digits: 1 }),
-      scale: isChild ? patientReportBuildScaleModel('HT', heightPercentile) : null,
+      scale: isChild ? patientReportBuildScaleModel('HT', heightPercentile, patientReportBuildScaleValueLabels('HT', sex, ageYears, heightResolved.source)) : null,
       sparkline: patientReportBuildSparklineSvg(series, { title: 'wzrost', unit: 'cm', digits: 1 }),
       trendText: patientReportBuildTrendDeltaText(series, 'cm', 1)
     });
@@ -5572,9 +5976,9 @@ function patientReportBuildMetricCards() {
       tone,
       note: patientReportDescribeBmi(bmiCategoryLabel),
       reference: patientReportBuildMedianReference('BMI', bmi, bmiMedian, { friendlyLabel: 'Przeciętne BMI dla tego wieku', medianUnit: '', diffUnit: 'pkt', digits: 1 }),
-      scale: isChild ? patientReportBuildScaleModel('BMI', bmiPercentile) : null,
+      scale: isChild ? patientReportBuildScaleModel('BMI', bmiPercentile, patientReportBuildScaleValueLabels('BMI', sex, ageYears, bmiResolved.source)) : null,
       sparkline: patientReportBuildSparklineSvg(series, { title: 'BMI', unit: '', digits: 1 }),
-      trendText: patientReportBuildTrendDeltaText(series, 'BMI', 1)
+      trendText: patientReportBuildTrendDeltaText(series, 'pkt', 1)
     });
   }
 
@@ -5696,7 +6100,7 @@ function patientReportBuildColeBmiExplanation(bmiCategory, coleCategory) {
 
     'normal|underweight': 'BMI jest jeszcze w szerokim zakresie normy centylowej, ale wskaźnik Cole’a pokazuje, że masa ciała jest już bliżej dolnej granicy względem wartości przeciętnej dla wieku i płci. To sygnał do obserwacji kolejnych pomiarów.',
     'normal|normal': 'BMI i wskaźnik Cole’a są zgodne: oba pokazują, że masa ciała względem wzrostu mieści się obecnie w typowym zakresie.',
-    'normal|overweight': 'BMI jest jeszcze w szerokim zakresie normy centylowej, ale wskaźnik Cole’a pokazuje, że wynik jest już wyraźnie powyżej przeciętnej dla wieku i płci. To może być wczesny sygnał narastania nadmiaru masy.',
+    'normal|overweight': 'BMI jest jeszcze w szerokim zakresie normy centylowej, ale wskaźnik Cole’a porównuje BMI do wartości przeciętnej dla wieku i płci. Dlatego może jako pierwszy pokazać nadwagę, gdy BMI dziecka jest już wyraźnie powyżej mediany, choć nie przekroczyło jeszcze progu nadwagi na siatkach BMI.',
     'normal|obesity': 'Klasyfikacja BMI jest jeszcze niższa, ale wskaźnik Cole’a pokazuje już bardzo duży nadmiar masy względem wartości przeciętnej dla wieku i płci. Taki wynik wymaga dokładniejszej oceny i kontroli kolejnych pomiarów.',
 
     'overweight|underweight': 'BMI wskazuje nadmiar masy, a wskaźnik Cole’a wynik poniżej normy. Taki rozjazd nie jest typowy i warto sprawdzić poprawność pomiarów oraz interpretację wyniku z lekarzem.',
@@ -5811,7 +6215,8 @@ function patientReportBuildBmrCard() {
     note: 'To orientacyjna liczba kalorii potrzebnych na podstawowe funkcje organizmu w spoczynku.',
     rows: activityFactors.map(([label, factor]) => ({
       label,
-      value: Math.round(bmr * factor)
+      value: Math.round(bmr * factor),
+      highlighted: label.indexOf('Średnio aktywny') === 0
     }))
   };
 }
@@ -5963,9 +6368,10 @@ function patientReportBuildVitalsCard() {
   }
   items.push(hrItem);
 
-  const measurableItems = items.filter((item) => item && !item.unavailable && item.valueText);
+  const referenceItems = items.filter((item) => item && !item.unavailable);
+  const measurableItems = referenceItems.filter((item) => item.valueText);
   const anyMeasured = measurableItems.length > 0;
-  const subtitle = anyMeasured ? 'Normy dla wieku i odniesienie do podanych pomiarów.' : 'Normy dla wieku';
+  const referenceOnly = referenceItems.length > 0 && !anyMeasured;
   const bpMeasuredItems = measurableItems.filter((item) => item.kind === 'sbp' || item.kind === 'dbp');
   const hrMeasuredItem = measurableItems.find((item) => item.kind === 'hr') || null;
   const bpLow = bpMeasuredItems.some((item) => item.state === 'low');
@@ -5976,8 +6382,10 @@ function patientReportBuildVitalsCard() {
   const allMeasuredNormal = anyMeasured && measurableItems.every((item) => item.state === 'normal');
 
   let tone = 'normal';
-  let badge = 'Normy dla wieku';
-  let note = 'Pokazano orientacyjne wartości dla wieku.';
+  let badge = anyMeasured ? 'Normy dla wieku' : 'Informacyjnie';
+  let note = referenceItems.length
+    ? 'Pokazano wartości referencyjne dla wieku.'
+    : 'Normy dla wieku będą dostępne po uzupełnieniu danych pacjenta.';
 
   if (bpHighDanger) {
     tone = 'danger';
@@ -6010,16 +6418,28 @@ function patientReportBuildVitalsCard() {
     note = 'Podane pomiary mieszczą się w zakresie prawidłowym.';
   } else if (anyMeasured) {
     badge = 'W zakresie';
-    note = 'Pokazano orientacyjne wartości dla wieku i odniesienie do podanych pomiarów.';
+    note = 'Pokazano wartości referencyjne dla wieku i odniesienie do podanych pomiarów.';
   }
 
-  return { title: 'Ciśnienie i tętno', badge, tone, subtitle, note, items };
+  const subtitle = anyMeasured && tone === 'normal'
+    ? 'Normy dla wieku i odniesienie do podanych pomiarów.'
+    : '';
+
+  return {
+    title: 'Ciśnienie i tętno',
+    badge,
+    tone,
+    subtitle,
+    note,
+    items,
+    hideMissingMeasurementLabels: referenceOnly
+  };
 }
 
 function patientReportBuildBmrCardHtml(card) {
   const rowsHtml = Array.isArray(card?.rows) && card.rows.length
     ? card.rows.map((row) => `
-        <tr>
+        <tr${row && row.highlighted ? ' class="is-highlighted"' : ''}>
           <td>${patientReportEscapeHtml(row.label || '')}</td>
           <td>${patientReportEscapeHtml(patientReportFormatNumber(row.value, 0))}</td>
         </tr>`).join('')
@@ -6049,6 +6469,13 @@ function patientReportBuildBmrCardHtml(card) {
 }
 
 function patientReportBuildVitalsCardHtml(card) {
+  const hideMissingMeasurementLabels = !!card?.hideMissingMeasurementLabels;
+  const rawSubtitle = typeof card?.subtitle === 'string' ? card.subtitle.trim() : '';
+  const rawBadge = typeof card?.badge === 'string' ? card.badge.trim() : '';
+  const showSubtitle = !!rawSubtitle && rawSubtitle.toLowerCase() !== rawBadge.toLowerCase();
+  const subtitleHtml = showSubtitle
+    ? `<div class="patient-report-support-subtitle">${patientReportEscapeHtml(rawSubtitle)}</div>`
+    : '';
   const itemsHtml = (card?.items || []).map((item) => {
     if (item.unavailable) {
       return `
@@ -6062,7 +6489,7 @@ function patientReportBuildVitalsCardHtml(card) {
       : '';
     const statusHtml = item.statusText
       ? `<div class="patient-report-vital-status tone-${patientReportEscapeHtml(item.tone || 'normal')}">${patientReportEscapeHtml(item.statusText || '')}</div>`
-      : '<div class="patient-report-vital-status tone-normal">Brak wpisanego pomiaru.</div>';
+      : (hideMissingMeasurementLabels ? '' : '<div class="patient-report-vital-status tone-normal">Brak wpisanego pomiaru.</div>');
     return `
       <div class="patient-report-vital-item tone-${patientReportEscapeHtml(item.tone || 'normal')}">
         <div class="patient-report-vital-item-title">${patientReportEscapeHtml(item.label || '')}</div>
@@ -6077,9 +6504,9 @@ function patientReportBuildVitalsCardHtml(card) {
       <div class="patient-report-support-top">
         <div>
           <div class="patient-report-support-title">${patientReportEscapeHtml(card?.title || 'Ciśnienie i tętno')}</div>
-          <div class="patient-report-support-subtitle">${patientReportEscapeHtml(card?.subtitle || 'Normy dla wieku')}</div>
+          ${subtitleHtml}
         </div>
-        <div class="patient-report-metric-badge tone-${patientReportEscapeHtml(card?.tone || 'normal')}">${patientReportEscapeHtml(card?.badge || 'Normy dla wieku')}</div>
+        <div class="patient-report-metric-badge tone-${patientReportEscapeHtml(card?.tone || 'normal')}">${patientReportEscapeHtml(card?.badge || 'Informacyjnie')}</div>
       </div>
       <div class="patient-report-support-note">${patientReportEscapeHtml(card?.note || '')}</div>
       <div class="patient-report-vital-list">${itemsHtml}</div>
@@ -6102,9 +6529,8 @@ function patientReportBuildModel() {
   const sourceLabel = (typeof advHistorySourceLabel === 'function') ? advHistorySourceLabel(sourceKey) : String(sourceKey || '');
   const metricBundle = patientReportBuildMetricCards();
   const summaryLines = getFormattedProfessionalSummaryLines();
-  const detailGroups = patientReportGroupSummaryLines(summaryLines);
   const highlights = patientReportCollectHighlights(summaryLines);
-  const headline = patientReportBuildHeadline(metricBundle.cards, metricBundle.historyCount, highlights);
+  const headline = patientReportBuildHeadline(metricBundle.cards, metricBundle.historyCount, highlights, summaryLines);
   let generatedLabel = '';
   try {
     generatedLabel = new Intl.DateTimeFormat('pl-PL', {
@@ -6125,7 +6551,6 @@ function patientReportBuildModel() {
     historyCount: metricBundle.historyCount,
     isChild: metricBundle.isChild,
     summaryLines,
-    detailGroups,
     highlights,
     headline,
     coleCard: patientReportBuildColeCard(),
@@ -6136,6 +6561,12 @@ function patientReportBuildModel() {
 
 function patientReportBuildScaleHtml(scale, tone) {
   if (!scale) return '<div class="patient-report-scale-empty">Porównanie centylowe niedostępne dla tego wyniku.</div>';
+  const valueLabelsHtml = (scale.valueLabels || []).map((item) => {
+    const labelPos = (typeof item.pos === 'number' && isFinite(item.pos))
+      ? item.pos
+      : ((typeof item.safePos === 'number' && isFinite(item.safePos)) ? item.safePos : 0);
+    return `<span class="patient-report-scale-value-label" style="left:${labelPos}%">${patientReportEscapeHtml(item.label || '')}</span>`;
+  }).join('');
   const ticksHtml = (scale.ticks || []).map((tick) => {
     const labelPos = (typeof tick.safePos === 'number' && isFinite(tick.safePos)) ? tick.safePos : tick.pos;
     return `
@@ -6144,6 +6575,7 @@ function patientReportBuildScaleHtml(scale, tone) {
   }).join('');
   return `
     <div class="patient-report-scale">
+      ${valueLabelsHtml}
       <span class="patient-report-scale-track" style="background:${scale.gradient};"></span>
       ${ticksHtml}
       <span class="patient-report-scale-marker tone-${patientReportEscapeHtml(tone || 'normal')}" style="left:${scale.marker}%;"></span>
@@ -6206,31 +6638,58 @@ function patientReportBuildMetricCardsHtml(cards) {
   }).join('');
 }
 
-function patientReportBuildDetailGroupsHtml(groups) {
-  return (groups || []).map((group) => {
-    const itemsHtml = (group.items || []).map((item) => `
-      <li class="patient-report-detail-item tone-${patientReportEscapeHtml(item.tone || 'normal')}">
-        <span class="patient-report-detail-label">${patientReportEscapeHtml(item.label || '')}</span>
-        <span class="patient-report-detail-value">${patientReportEscapeHtml(item.value || '')}</span>
-      </li>`).join('');
-    return `
-      <section class="patient-report-detail-group">
-        <h3>${patientReportEscapeHtml(group.title || '')}</h3>
-        <p>${patientReportEscapeHtml(group.intro || '')}</p>
-        <ul>${itemsHtml}</ul>
-      </section>`;
-  }).join('');
+
+function patientReportBuildSafeTitleHtml(value) {
+  const title = String(value == null ? '' : value).trim().replace(/\s+/g, ' ');
+  if (!title) return '';
+
+  const shortWords = new Set(['a', 'i', 'o', 'u', 'w', 'z', 'na', 'do', 'od', 'po', 'za', 'we', 'ze', 'ku']);
+  const words = title.split(' ').filter(Boolean);
+  const groups = [];
+
+  for (let i = 0; i < words.length; i += 1) {
+    const current = words[i];
+    const currentKey = String(current || '').toLowerCase().replace(/[^a-ząćęłńóśźż0-9]/g, '');
+    if (currentKey && shortWords.has(currentKey) && i + 1 < words.length) {
+      groups.push(`${patientReportEscapeHtml(current)}&nbsp;${patientReportEscapeHtml(words[i + 1])}`);
+      i += 1;
+      continue;
+    }
+    groups.push(patientReportEscapeHtml(current));
+  }
+
+  return groups.map((group) => `<span class="patient-report-title-group">${group}</span>`).join(' ');
+}
+
+function patientReportBuildMetaHtml(model) {
+  const buildItem = (text, className) => {
+    if (!text) return '';
+    const safeClass = className ? ` patient-report-meta-chip-${className}` : '';
+    return `<span class="patient-report-meta-chip${safeClass}">${patientReportEscapeHtml(text)}</span>`;
+  };
+
+  const firstRow = [];
+  const secondRow = [];
+
+  if (model.name) {
+    firstRow.push(buildItem(`Pacjent: ${model.name}`, 'name'));
+    firstRow.push(buildItem(`Wiek: ${model.ageLabel}`, 'age'));
+    secondRow.push(buildItem(`Płeć: ${model.sexLabel}`, 'sex'));
+    secondRow.push(buildItem(model.generatedLabel, 'generated'));
+  } else {
+    firstRow.push(buildItem(`Płeć: ${model.sexLabel}`, 'sex'));
+    firstRow.push(buildItem(`Wiek: ${model.ageLabel}`, 'age'));
+    secondRow.push(buildItem(model.generatedLabel, 'generated'));
+  }
+
+  return [firstRow, secondRow]
+    .filter((row) => row.some(Boolean))
+    .map((row, index) => `<div class="patient-report-meta-row patient-report-meta-row-${index + 1}">${row.join('')}</div>`)
+    .join('');
 }
 
 function patientReportBuildHtml(model) {
-  const metaParts = [
-    model.name ? `Pacjent: ${model.name}` : null,
-    `Płeć: ${model.sexLabel}`,
-    `Wiek: ${model.ageLabel}`,
-    `Wygenerowano: ${model.generatedLabel}`
-  ].filter(Boolean);
-  const metaHtml = metaParts.map((item) => `<span>${patientReportEscapeHtml(item)}</span>`).join('');
-  const detailHtml = patientReportBuildDetailGroupsHtml(model.detailGroups);
+  const metaHtml = patientReportBuildMetaHtml(model);
   const cardsHtml = patientReportBuildMetricCardsHtml(model.metricCards);
   const secondaryCardsHtml = patientReportBuildSecondaryCardsHtml(model);
   return `
@@ -6257,7 +6716,9 @@ function patientReportBuildHtml(model) {
           gap: 24px;
         }
         .patient-report-brand {
-          max-width: 72%;
+          flex: 1 1 auto;
+          min-width: 0;
+          max-width: none;
         }
         .patient-report-brand-kicker {
           display: block;
@@ -6265,20 +6726,33 @@ function patientReportBuildHtml(model) {
           border-radius: 0;
           background: none;
           color: #006a73;
-          font-size: 19px;
-          font-weight: 800;
+          font-size: 24px;
+          font-weight: 900;
           letter-spacing: 0;
-          line-height: 1.15;
+          line-height: 1.08;
           white-space: nowrap;
           font-variant-ligatures: none;
           font-feature-settings: 'liga' 0, 'kern' 1;
         }
         .patient-report-title {
-          margin: 20px 0 0;
+          margin: 16px 0 0;
+          display: flex;
+          flex-wrap: wrap;
+          align-items: baseline;
+          column-gap: 0.22em;
+          row-gap: 0.08em;
+          max-width: 100%;
           font-size: 42px;
           line-height: 1.08;
           font-weight: 800;
           color: #10292a;
+          word-break: keep-all;
+          overflow-wrap: normal;
+          hyphens: none;
+        }
+        .patient-report-title-group {
+          display: block;
+          white-space: nowrap;
         }
         .patient-report-subtitle {
           margin: 12px 0 0;
@@ -6288,18 +6762,53 @@ function patientReportBuildHtml(model) {
           max-width: 760px;
         }
         .patient-report-meta {
+          flex: 0 1 auto;
+          width: fit-content;
+          max-width: 52%;
+          min-width: 0;
           display: flex;
-          flex-wrap: wrap;
+          flex-direction: column;
+          gap: 10px;
+          align-items: flex-end;
+        }
+        .patient-report-meta-row {
+          display: flex;
           gap: 10px;
           justify-content: flex-end;
+          align-items: stretch;
+          width: fit-content;
+          max-width: 100%;
+          min-width: 0;
+          margin-left: auto;
         }
-        .patient-report-meta span {
-          padding: 10px 14px;
+        .patient-report-meta-chip {
+          width: fit-content;
+          max-width: 100%;
+          min-width: 0;
+          padding: 10px 15px;
           border-radius: 14px;
           background: #ffffff;
           border: 1px solid #d7e6e6;
-          font-size: 16px;
-          color: #395253;
+          font-size: 17px;
+          font-weight: 600;
+          line-height: 1.28;
+          color: #324b4c;
+          box-sizing: border-box;
+          white-space: nowrap;
+        }
+        .patient-report-meta-chip-age,
+        .patient-report-meta-chip-sex,
+        .patient-report-meta-chip-generated {
+          flex: 0 0 auto;
+        }
+        .patient-report-meta-chip-name {
+          flex: 0 1 auto;
+          width: auto;
+          max-width: 100%;
+          text-align: left;
+          white-space: normal;
+          overflow-wrap: anywhere;
+          word-break: break-word;
         }
         .patient-report-hero {
           margin-top: 28px;
@@ -6345,7 +6854,7 @@ function patientReportBuildHtml(model) {
         }
         .patient-report-metric-card {
           padding: 20px 18px 16px;
-          border-width: 2.5px;
+          border-width: 3px;
           border-color: #cfe3e4;
           box-shadow: 0 14px 34px rgba(15, 77, 84, 0.10);
         }
@@ -6392,14 +6901,26 @@ function patientReportBuildHtml(model) {
         }
         .patient-report-scale {
           position: relative;
-          height: 58px;
+          height: 82px;
           margin-top: 16px;
+        }
+        .patient-report-scale-value-label {
+          position: absolute;
+          top: 5px;
+          transform: translateX(-50%);
+          font-size: 13px;
+          line-height: 1.2;
+          font-weight: 700;
+          color: #51696a;
+          white-space: nowrap;
+          z-index: 4;
+          pointer-events: none;
         }
         .patient-report-scale-track {
           position: absolute;
           left: 0;
           right: 0;
-          top: 0;
+          top: 22px;
           height: 30px;
           border-radius: 999px;
           overflow: hidden;
@@ -6416,7 +6937,7 @@ function patientReportBuildHtml(model) {
         }
         .patient-report-scale-tick-line {
           position: absolute;
-          top: 6px;
+          top: 28px;
           transform: translateX(-50%);
           width: 2px;
           height: 18px;
@@ -6425,7 +6946,7 @@ function patientReportBuildHtml(model) {
         }
         .patient-report-scale-tick-label {
           position: absolute;
-          top: 35px;
+          top: 58px;
           transform: translateX(-50%);
           font-size: 13px;
           font-weight: 700;
@@ -6438,7 +6959,7 @@ function patientReportBuildHtml(model) {
         }
         .patient-report-scale-marker {
           position: absolute;
-          top: 15px;
+          top: 37px;
           transform: translate(-50%, -50%);
           width: 18px;
           height: 18px;
@@ -6457,6 +6978,7 @@ function patientReportBuildHtml(model) {
           background: linear-gradient(180deg, rgba(0, 131, 141, 0.08) 0%, rgba(0, 131, 141, 0.04) 100%);
           border: 1.6px solid rgba(0, 131, 141, 0.18);
           min-height: 70px;
+          text-align: center;
         }
         .patient-report-metric-reference-box.tone-warn {
           background: linear-gradient(180deg, rgba(199, 93, 0, 0.10) 0%, rgba(199, 93, 0, 0.05) 100%);
@@ -6528,6 +7050,7 @@ function patientReportBuildHtml(model) {
           font-size: 16px;
           color: #5a7071;
           min-height: 24px;
+          text-align: center;
         }
         .patient-report-trend-svg {
           margin-top: 5px;
@@ -6539,7 +7062,7 @@ function patientReportBuildHtml(model) {
         .patient-report-support-card {
           background: #ffffff;
           border-radius: 24px;
-          border: 2.5px solid #cfe3e4;
+          border: 3px solid #cfe3e4;
           box-shadow: 0 14px 34px rgba(15, 77, 84, 0.10);
           padding: 18px 17px 16px;
           min-height: 100%;
@@ -6609,6 +7132,26 @@ function patientReportBuildHtml(model) {
           color: #315153;
           font-size: 14px;
           font-weight: 800;
+        }
+        .patient-report-bmr-table tbody tr.is-highlighted td {
+          position: relative;
+          background: linear-gradient(180deg, rgba(0, 131, 141, 0.10) 0%, rgba(0, 131, 141, 0.05) 100%);
+          font-weight: 800;
+          color: #0f4f53;
+        }
+        .patient-report-bmr-table tbody tr.is-highlighted td::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          border-top: 2px solid rgba(0, 131, 141, 0.22);
+          border-bottom: 2px solid rgba(0, 131, 141, 0.22);
+          pointer-events: none;
+        }
+        .patient-report-bmr-table tbody tr.is-highlighted td:first-child::before {
+          border-left: 2px solid rgba(0, 131, 141, 0.22);
+        }
+        .patient-report-bmr-table tbody tr.is-highlighted td:last-child::before {
+          border-right: 2px solid rgba(0, 131, 141, 0.22);
         }
         .patient-report-bmr-table tbody tr:last-child td {
           border-bottom: none;
@@ -6736,149 +7279,12 @@ function patientReportBuildHtml(model) {
           font-size: 14px;
           color: #6b7d7d;
         }
-        .patient-report-page-2 {
-          background: linear-gradient(180deg, #fbfefe 0%, #ffffff 18%, #ffffff 100%);
-        }
-        .patient-report-page-2 .patient-report-brand-kicker {
-          font-size: 21px;
-        }
-        .patient-report-page-2 .patient-report-title {
-          font-size: 45px;
-          margin-top: 18px;
-        }
-        .patient-report-page-2 .patient-report-meta span {
-          font-size: 17px;
-          padding: 10px 15px;
-        }
-        .patient-report-section-grid {
-          margin-top: 26px;
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 18px;
-          align-items: start;
-        }
-        .patient-report-detail-group {
-          padding: 22px 22px 20px;
-        }
-        .patient-report-detail-group ul {
-          list-style: none;
-          padding: 0;
-          margin: 18px 0 0;
-          display: grid;
-          gap: 10px;
-        }
-        .patient-report-detail-item {
-          display: grid;
-          grid-template-columns: 180px 1fr;
-          gap: 12px;
-          align-items: start;
-          padding: 12px 12px 12px 14px;
-          border-radius: 16px;
-          background: #f8fbfb;
-          border-left: 4px solid #00838d;
-        }
-        .patient-report-detail-item.tone-warn { border-left-color: #c75d00; }
-        .patient-report-detail-item.tone-danger { border-left-color: #c62828; }
-        .patient-report-detail-label {
-          font-size: 15px;
-          line-height: 1.4;
-          color: #4e6566;
-          font-weight: 700;
-        }
-        .patient-report-detail-value {
-          font-size: 15px;
-          line-height: 1.45;
-          color: #183132;
-        }
-        .patient-report-page-2 .patient-report-section-grid {
-          margin-top: 24px;
-          gap: 16px;
-        }
-        .patient-report-page-2 .patient-report-detail-group {
-          padding: 20px 20px 18px;
-        }
-        .patient-report-page-2 .patient-report-detail-group h3 {
-          font-size: 26px;
-          line-height: 1.14;
-        }
-        .patient-report-page-2 .patient-report-detail-group p {
-          margin-top: 11px;
-          font-size: 18px;
-          line-height: 1.48;
-        }
-        .patient-report-page-2 .patient-report-detail-group ul {
-          margin-top: 16px;
-          gap: 9px;
-        }
-        .patient-report-page-2 .patient-report-detail-item {
-          grid-template-columns: 192px 1fr;
-          gap: 13px;
-          padding: 11px 11px 11px 14px;
-        }
-        .patient-report-page-2 .patient-report-detail-label {
-          font-size: 16.5px;
-          line-height: 1.4;
-        }
-        .patient-report-page-2 .patient-report-detail-value {
-          font-size: 16.5px;
-          line-height: 1.44;
-        }
-        .patient-report-bottom-grid {
-          margin-top: 18px;
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 18px;
-        }
-        .patient-report-legend {
-          padding: 22px 22px 20px;
-          border-radius: 24px;
-          background: #f8fbfb;
-          border: 1px solid #dbe8e8;
-        }
-        .patient-report-legend h3 {
-          margin: 0;
-          font-size: 22px;
-          color: #103132;
-        }
-        .patient-report-legend ul {
-          margin: 14px 0 0;
-          padding-left: 22px;
-        }
-        .patient-report-legend li {
-          margin: 0 0 10px;
-          font-size: 16px;
-          line-height: 1.5;
-          color: #476162;
-        }
-        .patient-report-page-2 .patient-report-bottom-grid {
-          margin-top: 16px;
-          gap: 16px;
-        }
-        .patient-report-page-2 .patient-report-legend {
-          padding: 20px 20px 18px;
-        }
-        .patient-report-page-2 .patient-report-legend h3 {
-          font-size: 24px;
-          line-height: 1.15;
-        }
-        .patient-report-page-2 .patient-report-legend ul {
-          margin-top: 13px;
-          padding-left: 24px;
-        }
-        .patient-report-page-2 .patient-report-legend li {
-          margin-bottom: 9px;
-          font-size: 17px;
-          line-height: 1.48;
-        }
-        .patient-report-page-2 .patient-report-footer {
-          font-size: 15px;
-        }
       </style>
       <section class="patient-report-page">
         <div class="patient-report-header">
           <div class="patient-report-brand">
             <div class="patient-report-brand-kicker">wagaiwzrost.pl</div>
-            <h1 class="patient-report-title">${patientReportEscapeHtml(model.title)}</h1>
+            <h1 class="patient-report-title" aria-label="${patientReportEscapeHtml(model.title)}">${patientReportBuildSafeTitleHtml(model.title)}</h1>
             ${model.subtitle ? `<p class="patient-report-subtitle">${patientReportEscapeHtml(model.subtitle)}</p>` : ''}
           </div>
           <div class="patient-report-meta">${metaHtml}</div>
@@ -6897,40 +7303,6 @@ function patientReportBuildHtml(model) {
         <div class="patient-report-footer">
           <span>Raport ma charakter informacyjny i stanowi uzupełnienie omówienia wyników podczas wizyty.</span>
           <span>Porównania centylowe: ${patientReportEscapeHtml(model.sourceLabel || '—')}</span>
-        </div>
-      </section>
-      <section class="patient-report-page patient-report-page-2">
-        <div class="patient-report-header">
-          <div class="patient-report-brand">
-            <div class="patient-report-brand-kicker">Załącznik liczbowy</div>
-            <h1 class="patient-report-title">Szczegółowe wyniki z trybu PRO</h1>
-          </div>
-          <div class="patient-report-meta"><span>Źródło siatek: ${patientReportEscapeHtml(model.sourceLabel || '—')}</span></div>
-        </div>
-        <section class="patient-report-section-grid">
-          ${detailHtml}
-        </section>
-        <section class="patient-report-bottom-grid">
-          <div class="patient-report-legend">
-            <h3>Krótka legenda</h3>
-            <ul>
-              <li><strong>Centyl</strong> pokazuje, jaki odsetek dzieci w tym samym wieku i tej samej płci ma wynik niższy.</li>
-              <li><strong>50 centyl</strong> to mediana — około połowa rówieśników ma wynik niższy, a połowa wyższy.</li>
-              <li><strong>Z-score</strong> pokazuje odległość od mediany w odchyleniach standardowych; im większa wartość bezwzględna, tym dalej od środka rozkładu.</li>
-            </ul>
-          </div>
-          <div class="patient-report-legend">
-            <h3>Jak korzystać z drugiej strony?</h3>
-            <ul>
-              <li>To jest liczbowy aneks do pierwszej strony — przydatny dla rodziców, którzy chcą mieć pełniejszy zapis wizyty.</li>
-              <li>Najważniejsze są trendy i kontekst wieku, a nie pojedyncza liczba odczytana bez odniesienia do siatek.</li>
-              <li>Jeśli przy kolejnych wizytach będą dopisywane wcześniejsze pomiary, raport stanie się jeszcze bardziej użyteczny.</li>
-            </ul>
-          </div>
-        </section>
-        <div class="patient-report-footer">
-          <span>Wygenerowano automatycznie przez moduł Podsumowanie wyników • wagaiwzrost.pl</span>
-          <span>${patientReportEscapeHtml(model.generatedLabel || '')}</span>
         </div>
       </section>
     </div>`;
@@ -7038,24 +7410,51 @@ function patientReportCanvasToPdfImage(canvas, options = {}) {
 
 let __patientReportPdfInFlight = false;
 
-async function generatePatientReportPdf(triggerBtn) {
-  if (__patientReportPdfInFlight) return;
-  const lines = getFormattedProfessionalSummaryLines();
-  if (!Array.isArray(lines) || !lines.length) {
-    patientReportShowToast('Brak danych do wygenerowania raportu PDF.');
-    return;
-  }
-  if (!(window.jspdf && window.jspdf.jsPDF) || typeof window.html2canvas !== 'function') {
-    patientReportShowToast('Brakuje bibliotek potrzebnych do wygenerowania PDF.');
-    return;
-  }
+function patientReportDownloadBlob(blob, filename) {
+  if (!(blob instanceof Blob)) return;
+  const safeFilename = String(filename || 'raport.pdf').trim() || 'raport.pdf';
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = safeFilename;
+  document.body.appendChild(link);
+  link.click();
+  setTimeout(() => {
+    try { URL.revokeObjectURL(url); } catch (_) {}
+    try { link.remove(); } catch (_) {}
+  }, 0);
+}
 
+async function patientReportRunExternalPdfTask(triggerBtn, taskFn, busyLabel) {
+  if (__patientReportPdfInFlight) return false;
   __patientReportPdfInFlight = true;
+
   const btn = triggerBtn || null;
   const originalText = btn ? btn.textContent : '';
   if (btn) {
     btn.disabled = true;
-    btn.textContent = 'Trwa generowanie PDF…';
+    btn.textContent = busyLabel || 'Przygotowywanie PDF…';
+  }
+
+  try {
+    await taskFn();
+    return true;
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = originalText || 'Raport PDF dla pacjenta';
+    }
+    __patientReportPdfInFlight = false;
+  }
+}
+
+async function patientReportBuildPdfPackage() {
+  const lines = getFormattedProfessionalSummaryLines();
+  if (!Array.isArray(lines) || !lines.length) {
+    throw new Error('Brak danych do wygenerowania raportu PDF.');
+  }
+  if (!(window.jspdf && window.jspdf.jsPDF) || typeof window.html2canvas !== 'function') {
+    throw new Error('Brakuje bibliotek potrzebnych do wygenerowania PDF.');
   }
 
   const host = document.createElement('div');
@@ -7087,7 +7486,7 @@ async function generatePatientReportPdf(triggerBtn) {
     });
     pdf.setProperties({
       title: 'Raport po wizycie',
-      subject: 'Raport PDF dla pacjenta',
+      subject: 'Raport po wizycie',
       author: 'wagaiwzrost.pl'
     });
 
@@ -7100,28 +7499,1036 @@ async function generatePatientReportPdf(triggerBtn) {
         logging: false,
         imageTimeout: 0
       });
-      const preferPng = page.classList.contains('patient-report-page-2');
-      const pdfImage = patientReportCanvasToPdfImage(canvas, { preferPng });
+      const pdfImage = patientReportCanvasToPdfImage(canvas);
       if (i > 0) pdf.addPage();
       const imageCompression = pdfImage.format === 'PNG' ? 'FAST' : 'MEDIUM';
       pdf.addImage(pdfImage.dataUrl, pdfImage.format, 0, 0, 210, 297, undefined, imageCompression);
     }
 
     const filenameBase = patientReportSanitizeFilename(model.name || 'pacjent');
-    const filename = `Raport_pdf_dla_pacjenta_${filenameBase || 'pacjent'}.pdf`;
-    pdf.save(filename);
-    patientReportShowToast('Raport PDF został wygenerowany.');
-  } catch (error) {
-    console.error('Błąd generowania raportu PDF dla pacjenta:', error);
-    patientReportShowToast('Nie udało się wygenerować raportu PDF. Spróbuj ponownie.');
+    return {
+      blob: pdf.output('blob'),
+      filename: `Raport_po_wizycie_${filenameBase || 'pacjent'}.pdf`
+    };
   } finally {
     try { host.remove(); } catch (_) {}
-    if (btn) {
-      btn.disabled = false;
-      btn.textContent = originalText || 'Raport PDF dla pacjenta';
-    }
-    __patientReportPdfInFlight = false;
   }
+}
+
+async function generatePatientReportPdf(triggerBtn) {
+  try {
+    await patientReportRunExternalPdfTask(triggerBtn, async () => {
+      const pdfPackage = await patientReportBuildPdfPackage();
+      if (!pdfPackage || !(pdfPackage.blob instanceof Blob)) {
+        throw new Error('Nie udało się przygotować pliku PDF.');
+      }
+      patientReportDownloadBlob(pdfPackage.blob, pdfPackage.filename);
+      patientReportShowToast('Raport PDF został wygenerowany.');
+    }, 'Przygotowywanie PDF…');
+  } catch (error) {
+    console.error('Błąd generowania raportu PDF dla pacjenta:', error);
+    patientReportShowToast(error && error.message ? error.message : 'Nie udało się wygenerować raportu PDF. Spróbuj ponownie.');
+  }
+}
+
+function patientReportGetCentileChartSelectionState() {
+  let state = null;
+  try {
+    state = (typeof getCentileChartState === 'function') ? getCentileChartState() : null;
+  } catch (_) {
+    state = null;
+  }
+  const source = String(state && state.source ? state.source : '').toUpperCase();
+  const sourceLabel = advHistorySourceLabel(source || '');
+  const available = !!(
+    state &&
+    state.visible !== false &&
+    state.supported &&
+    ((source === 'PALCZEWSKA' && typeof generatePalczewskaCentileCharts === 'function') || typeof generateCentileChart === 'function')
+  );
+  return {
+    available,
+    source,
+    sourceLabel,
+    message: (state && state.message) ? state.message : '',
+    hint: (state && state.hint) ? state.hint : ''
+  };
+}
+
+async function generatePatientCentileChartPdf(triggerBtn) {
+  const chartState = patientReportGetCentileChartSelectionState();
+  if (!chartState.available) {
+    patientReportShowToast(chartState.message || 'Siatka centylowa nie jest obecnie dostępna.');
+    return;
+  }
+
+  try {
+    await patientReportRunExternalPdfTask(triggerBtn, async () => {
+      if (chartState.source === 'PALCZEWSKA') {
+        await generatePalczewskaCentileCharts();
+        return;
+      }
+      const previousOverride = (typeof window !== 'undefined') ? window.overrideCentileSource : undefined;
+      try {
+        if (typeof window !== 'undefined') {
+          window.overrideCentileSource = chartState.source || undefined;
+        }
+        await generateCentileChart();
+      } finally {
+        if (typeof window !== 'undefined') {
+          window.overrideCentileSource = previousOverride;
+        }
+      }
+    }, 'Przygotowywanie PDF…');
+  } catch (error) {
+    console.error('Błąd generowania siatki centylowej z okna wyboru PDF:', error);
+    patientReportShowToast('Nie udało się wygenerować siatki centylowej. Spróbuj ponownie.');
+  }
+}
+
+function patientReportHasAdvancedGrowthPdfAvailable() {
+  try {
+    return typeof advGrowthCollectHistoricalPointsForReport === 'function'
+      && advGrowthCollectHistoricalPointsForReport().length >= 1
+      && typeof generateAdvancedGrowthPdfReport === 'function';
+  } catch (_) {
+    return false;
+  }
+}
+
+async function generatePatientAdvancedGrowthPdf(triggerBtn) {
+  if (!patientReportHasAdvancedGrowthPdfAvailable()) {
+    patientReportShowToast('Raport wzrastania nie jest obecnie dostępny.');
+    return;
+  }
+
+  try {
+    await patientReportRunExternalPdfTask(triggerBtn, async () => {
+      await generateAdvancedGrowthPdfReport();
+    }, 'Przygotowywanie PDF…');
+  } catch (error) {
+    console.error('Błąd generowania raportu wzrastania z okna wyboru PDF:', error);
+    patientReportShowToast('Nie udało się wygenerować raportu wzrastania. Spróbuj ponownie.');
+  }
+}
+
+
+function patientReportGetPdfChoiceOptions() {
+  const options = [];
+
+  try {
+    const lines = getFormattedProfessionalSummaryLines();
+    if (Array.isArray(lines) && lines.length) {
+      options.push({
+        value: 'visit',
+        title: 'Raport po wizycie',
+        description: 'Pełny raport z podsumowaniem wyników, interpretacją i kartami pomocniczymi.',
+        checkedByDefault: true
+      });
+    }
+  } catch (_) {}
+
+  const centileState = patientReportGetCentileChartSelectionState();
+  if (centileState.available) {
+    options.push({
+      value: 'centile',
+      title: `Siatka centylowa${centileState.sourceLabel ? ` (${centileState.sourceLabel})` : ''}`,
+      description: 'PDF z aktualną siatką centylową zgodną z wcześniej wybranym źródłem danych.',
+      checkedByDefault: false
+    });
+  }
+
+  if (patientReportHasAdvancedGrowthPdfAvailable()) {
+    options.push({
+      value: 'growth',
+      title: 'Raport wzrastania',
+      description: 'Raport z karty Zaawansowane obliczenia wzrostowe, jeśli dostępne są punkty historyczne.',
+      checkedByDefault: false
+    });
+  }
+
+  if (options.length && !options.some((option) => option.checkedByDefault)) {
+    options[0].checkedByDefault = true;
+  }
+
+  return options;
+}
+
+function patientReportGetPdfChoiceOptionMeta(value) {
+  return patientReportGetPdfChoiceOptions().find((option) => option.value === value) || null;
+}
+
+function patientReportResolveFilenameBase() {
+  let rawName = '';
+  try {
+    const model = (typeof patientReportBuildModel === 'function') ? patientReportBuildModel() : null;
+    rawName = String(
+      (model && model.name)
+      || document.getElementById('name')?.value
+      || document.getElementById('advName')?.value
+      || ''
+    );
+  } catch (_) {
+    rawName = String(document.getElementById('name')?.value || document.getElementById('advName')?.value || '');
+  }
+  return patientReportSanitizeFilename(rawName || 'pacjent') || 'pacjent';
+}
+
+function patientReportBuildPdfPageSpecFromCanvas(canvas, options) {
+  if (!canvas) return null;
+  const opts = options || {};
+  const orientation = opts.orientation === 'landscape' ? 'landscape' : 'portrait';
+  const defaultWidthMm = orientation === 'landscape' ? 297 : 210;
+  const defaultHeightMm = orientation === 'landscape' ? 210 : 297;
+
+  let format = opts.format === 'PNG' ? 'PNG' : 'JPEG';
+  let dataUrl = '';
+
+  if (opts.strategy === 'patient') {
+    const pdfImage = patientReportCanvasToPdfImage(canvas);
+    format = pdfImage && pdfImage.format ? pdfImage.format : 'PNG';
+    dataUrl = pdfImage && pdfImage.dataUrl ? pdfImage.dataUrl : '';
+  } else {
+    const mimeType = format === 'PNG' ? 'image/png' : 'image/jpeg';
+    dataUrl = canvas.toDataURL(mimeType, format === 'JPEG' ? 1.0 : undefined);
+  }
+
+  return {
+    orientation,
+    format,
+    dataUrl,
+    widthMm: Number.isFinite(opts.widthMm) ? opts.widthMm : defaultWidthMm,
+    heightMm: Number.isFinite(opts.heightMm) ? opts.heightMm : defaultHeightMm
+  };
+}
+
+function patientReportSliceCanvasToPageSpecs(canvas, options) {
+  if (!canvas) return [];
+  const opts = options || {};
+  const orientation = opts.orientation === 'landscape' ? 'landscape' : 'portrait';
+  const pageWidthMm = orientation === 'landscape' ? 297 : 210;
+  const pageHeightMm = orientation === 'landscape' ? 210 : 297;
+  const sliceHeightPx = Math.max(1, Math.floor((canvas.width * pageHeightMm) / pageWidthMm));
+  const pages = [];
+
+  for (let offsetY = 0; offsetY < canvas.height; offsetY += sliceHeightPx) {
+    const currentSliceHeight = Math.min(sliceHeightPx, canvas.height - offsetY);
+    const sliceCanvas = document.createElement('canvas');
+    sliceCanvas.width = canvas.width;
+    sliceCanvas.height = currentSliceHeight;
+    const ctx = sliceCanvas.getContext('2d');
+    if (!ctx) continue;
+    ctx.drawImage(canvas, 0, offsetY, canvas.width, currentSliceHeight, 0, 0, canvas.width, currentSliceHeight);
+    pages.push(patientReportBuildPdfPageSpecFromCanvas(sliceCanvas, {
+      orientation,
+      format: opts.format === 'JPEG' ? 'JPEG' : 'PNG',
+      widthMm: pageWidthMm,
+      heightMm: (currentSliceHeight * pageWidthMm) / canvas.width
+    }));
+  }
+
+  return pages.filter(Boolean);
+}
+
+async function patientReportCollectVisitPdfPages() {
+  const lines = getFormattedProfessionalSummaryLines();
+  if (!Array.isArray(lines) || !lines.length) {
+    throw new Error('Brak danych do wygenerowania raportu po wizycie.');
+  }
+  if (!(window.jspdf && window.jspdf.jsPDF) || typeof window.html2canvas !== 'function') {
+    throw new Error('Brakuje bibliotek potrzebnych do wygenerowania PDF.');
+  }
+
+  const host = document.createElement('div');
+  host.style.position = 'fixed';
+  host.style.left = '-20000px';
+  host.style.top = '0';
+  host.style.width = '1240px';
+  host.style.zIndex = '-1';
+  host.style.pointerEvents = 'none';
+  host.style.opacity = '1';
+  host.setAttribute('aria-hidden', 'true');
+
+  try {
+    const model = patientReportBuildModel();
+    host.innerHTML = patientReportBuildHtml(model);
+    document.body.appendChild(host);
+    if (document.fonts && document.fonts.ready) {
+      try { await document.fonts.ready; } catch (_) {}
+    }
+    await patientReportDelay(80);
+
+    const pageNodes = Array.from(host.querySelectorAll('.patient-report-page'));
+    if (!pageNodes.length) throw new Error('Brak stron raportu do renderowania.');
+
+    const pages = [];
+    for (let i = 0; i < pageNodes.length; i += 1) {
+      const canvas = await window.html2canvas(pageNodes[i], {
+        scale: PATIENT_REPORT_PDF_RENDER_SCALE,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        imageTimeout: 0
+      });
+      const pageSpec = patientReportBuildPdfPageSpecFromCanvas(canvas, {
+        orientation: 'portrait',
+        strategy: 'patient'
+      });
+      if (pageSpec) pages.push(pageSpec);
+    }
+
+    return {
+      pages,
+      filenameBase: patientReportSanitizeFilename(model.name || 'pacjent') || patientReportResolveFilenameBase()
+    };
+  } finally {
+    try { host.remove(); } catch (_) {}
+  }
+}
+
+async function patientReportCollectCentileChartPdfPages() {
+  const chartState = patientReportGetCentileChartSelectionState();
+  if (!chartState.available) {
+    throw new Error(chartState.message || 'Siatka centylowa nie jest obecnie dostępna.');
+  }
+
+  const ageEl = document.getElementById('age');
+  const ageMonthsEl = document.getElementById('ageMonths');
+  const weightEl = document.getElementById('weight');
+  const heightEl = document.getElementById('height');
+  const sexEl = document.getElementById('sex');
+  const yearsVal = parseFloat(ageEl?.value) || 0;
+  const monthsVal = ageMonthsEl ? (parseFloat(ageMonthsEl.value) || 0) : 0;
+  const ageYears = yearsVal + monthsVal / 12;
+  const weight = parseFloat(weightEl?.value);
+  const height = parseFloat(heightEl?.value);
+  const sex = (sexEl && sexEl.value === 'M') ? 'M' : 'F';
+
+  if (!Number.isFinite(ageYears) || !Number.isFinite(weight) || !Number.isFinite(height)) {
+    throw new Error('Wprowadź poprawne dane liczbowe, aby wygenerować siatkę centylową.');
+  }
+
+  const ageMonths = Math.round(ageYears * 12);
+  if (ageMonths < 0 || ageMonths > 216) {
+    throw new Error('Siatka centylowa dostępna jest dla wieku od 0 do 18 lat.');
+  }
+
+  const selectedChartSource = String(chartState.source || 'OLAF').toUpperCase();
+
+  if (selectedChartSource === 'PALCZEWSKA') {
+    if (typeof getPalczewskaChartPlan !== 'function'
+      || typeof buildPalczewskaInfantPageCanvas !== 'function'
+      || typeof buildPalczewskaExtendedCanvases !== 'function') {
+      throw new Error('Generator siatki Palczewskiej nie jest obecnie dostępny.');
+    }
+
+    const adv = (typeof window !== 'undefined' && window.advancedGrowthData) ? window.advancedGrowthData : null;
+    const plan = getPalczewskaChartPlan(ageMonths, adv);
+    let mode = plan && plan.mode ? plan.mode : 'INFANT_ONLY';
+
+    if (mode === 'CHOICE') {
+      if (typeof promptPalczewskaRangeSelection === 'function') {
+        const selectedMode = await promptPalczewskaRangeSelection();
+        if (!selectedMode) {
+          const cancelError = new Error('Anulowano wybór zakresu siatki Palczewskiej.');
+          cancelError.code = 'USER_CANCELLED';
+          throw cancelError;
+        }
+        mode = selectedMode;
+      } else {
+        mode = 'INFANT_ONLY';
+      }
+    }
+
+    const canvases = [];
+    if (mode === 'INFANT_ONLY' || mode === 'BOTH_REQUIRED') {
+      canvases.push(buildPalczewskaInfantPageCanvas({
+        sex,
+        userAgeMonths: ageMonths,
+        userWeight: weight,
+        userHeight: height
+      }));
+    }
+    if (mode === 'EXTENDED_ONLY' || mode === 'BOTH_REQUIRED') {
+      canvases.push(...buildPalczewskaExtendedCanvases({
+        sex,
+        userAgeMonths: ageMonths,
+        userWeight: weight,
+        userHeight: height
+      }));
+    }
+
+    if (!canvases.length) {
+      throw new Error('Nie udało się przygotować siatki Palczewskiej dla podanych danych.');
+    }
+
+    return {
+      pages: canvases
+        .map((canvas) => patientReportBuildPdfPageSpecFromCanvas(canvas, { orientation: 'portrait', format: 'JPEG' }))
+        .filter(Boolean),
+      filenameBase: patientReportResolveFilenameBase(),
+      source: 'PALCZEWSKA'
+    };
+  }
+
+  if (typeof buildCentilePageCanvas !== 'function') {
+    throw new Error('Generator siatki centylowej nie jest obecnie dostępny.');
+  }
+
+  const previousAdvanced = (typeof window !== 'undefined' && typeof window.advancedGrowthData !== 'undefined')
+    ? window.advancedGrowthData
+    : undefined;
+  const effectiveChartData = (typeof getEffectiveCentileGrowthDataState === 'function')
+    ? getEffectiveCentileGrowthDataState()
+    : null;
+  let advancedTemporarilyInjected = false;
+
+  try {
+    if (effectiveChartData && typeof window !== 'undefined') {
+      window.advancedGrowthData = effectiveChartData;
+      advancedTemporarilyInjected = true;
+    }
+
+    const adv = (typeof window !== 'undefined' && window.advancedGrowthData) ? window.advancedGrowthData : null;
+    const ageBounds = (typeof collectAllAgesMonths === 'function')
+      ? collectAllAgesMonths(ageMonths, adv)
+      : { minAll: ageMonths, maxAll: ageMonths };
+    const minAll = Number.isFinite(ageBounds.minAll) ? ageBounds.minAll : ageMonths;
+    const maxAll = Number.isFinite(ageBounds.maxAll) ? ageBounds.maxAll : ageMonths;
+    const pages = [];
+
+    function pushCentilePage(config) {
+      const canvas = buildCentilePageCanvas({
+        rangeMinX: config.minX,
+        rangeMaxX: config.maxX,
+        sex,
+        userAgeMonths: ageMonths,
+        userWeight: weight,
+        userHeight: height,
+        headerTitle: (sex === 'M' ? 'Siatka centylowa chłopcy' : 'Siatka centylowa dziewczynki'),
+        headerSubtitle: config.subtitle,
+        footerText: config.footer,
+        chartSource: config.chartSource
+      });
+      const pageSpec = patientReportBuildPdfPageSpecFromCanvas(canvas, { orientation: 'portrait', format: 'JPEG' });
+      if (pageSpec) pages.push(pageSpec);
+    }
+
+    if (selectedChartSource === 'WHO') {
+      pushCentilePage({
+        minX: 0,
+        maxX: 35,
+        subtitle: 'Dane: WHO, wiek 0 - 3 lata',
+        footer: 'Dane do siatek: WHO (0–<3 lata)',
+        chartSource: 'WHO'
+      });
+    } else {
+      const spansAcross3yo = (minAll < 36) && (maxAll > 36);
+      if (spansAcross3yo) {
+        pushCentilePage({
+          minX: 0,
+          maxX: 35,
+          subtitle: 'Zakres: 0–<3 lata',
+          footer: 'Dane do siatek: Palczewska & Niedźwiecka (0–<3 lata)',
+          chartSource: 'PALCZEWSKA'
+        });
+        pushCentilePage({
+          minX: 36,
+          maxX: 216,
+          subtitle: 'Badanie OLAF (3–18 lat)',
+          footer: '',
+          chartSource: 'OLAF'
+        });
+      } else if (maxAll <= 35) {
+        pushCentilePage({
+          minX: 0,
+          maxX: 35,
+          subtitle: 'Zakres: 0–<3 lata',
+          footer: 'Dane do siatek: Palczewska & Niedźwiecka (0–<3 lata)',
+          chartSource: 'PALCZEWSKA'
+        });
+      } else {
+        pushCentilePage({
+          minX: 36,
+          maxX: 216,
+          subtitle: 'Badanie OLAF (3–18 lat)',
+          footer: '',
+          chartSource: 'OLAF'
+        });
+      }
+    }
+
+    if (!pages.length) {
+      throw new Error('Nie udało się przygotować siatki centylowej.');
+    }
+
+    return {
+      pages,
+      filenameBase: patientReportResolveFilenameBase(),
+      source: selectedChartSource
+    };
+  } finally {
+    if (advancedTemporarilyInjected) {
+      if (typeof previousAdvanced === 'undefined') {
+        try { delete window.advancedGrowthData; } catch (_) { window.advancedGrowthData = null; }
+      } else {
+        window.advancedGrowthData = previousAdvanced;
+      }
+    }
+  }
+}
+
+async function patientReportCollectAdvancedGrowthPdfPages() {
+  if (!patientReportHasAdvancedGrowthPdfAvailable()) {
+    throw new Error('Raport wzrastania nie jest obecnie dostępny.');
+  }
+  if (typeof advGrowthBuildReportRows !== 'function' || typeof advGrowthBuildHtmlReportMarkup !== 'function') {
+    throw new Error('Generator raportu wzrastania nie jest obecnie dostępny.');
+  }
+  if (typeof window.html2canvas !== 'function') {
+    throw new Error('Brakuje biblioteki potrzebnej do przygotowania raportu wzrastania.');
+  }
+
+  const report = advGrowthBuildReportRows();
+  if (!report || !Array.isArray(report.rows) || !report.rows.length || report.historicalCount < 1) {
+    throw new Error('Brak historycznych punktów pomiarowych do raportu wzrastania.');
+  }
+
+  const host = document.createElement('div');
+  host.style.position = 'fixed';
+  host.style.left = '-20000px';
+  host.style.top = '0';
+  host.style.width = '1120px';
+  host.style.maxWidth = '1120px';
+  host.style.pointerEvents = 'none';
+  host.style.opacity = '1';
+  host.style.zIndex = '-1';
+  host.innerHTML = advGrowthBuildHtmlReportMarkup(report);
+  document.body.appendChild(host);
+
+  try {
+    if (document.fonts && document.fonts.ready) {
+      try { await document.fonts.ready; } catch (_) {}
+    }
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+    const reportNode = host.querySelector('.adv-growth-pdf-html-root') || host;
+    const canvas = await window.html2canvas(reportNode, {
+      scale: 2,
+      backgroundColor: '#ffffff',
+      useCORS: true,
+      logging: false
+    });
+
+    return {
+      pages: patientReportSliceCanvasToPageSpecs(canvas, { orientation: 'landscape', format: 'PNG' }),
+      filenameBase: patientReportResolveFilenameBase()
+    };
+  } finally {
+    try { host.remove(); } catch (_) {}
+  }
+}
+
+function patientReportBuildSelectedPdfFilename(selectedValues, filenameBase, meta) {
+  const base = filenameBase || 'pacjent';
+  const selected = Array.isArray(selectedValues) ? selectedValues.slice() : [];
+  const details = meta || {};
+
+  if (selected.length === 1) {
+    if (selected[0] === 'visit') return `Raport_po_wizycie_${base}.pdf`;
+    if (selected[0] === 'growth') return `Raport_wzrastania_${base}.pdf`;
+    if (selected[0] === 'centile') {
+      const sourceLabel = advHistorySourceLabel(details.centileSource || '') || 'siatka_centylowa';
+      const sourceSlug = patientReportSanitizeFilename(sourceLabel) || 'siatka_centylowa';
+      return `Siatka_centylowa_${sourceSlug}_${base}.pdf`;
+    }
+  }
+
+  return `Pakiet_raportow_${base}.pdf`;
+}
+
+async function patientReportBuildSelectedPdfPackage(selectedValues) {
+  if (!(window.jspdf && window.jspdf.jsPDF)) {
+    throw new Error('Brakuje biblioteki jsPDF potrzebnej do wygenerowania pliku PDF.');
+  }
+
+  const availableOptions = patientReportGetPdfChoiceOptions();
+  const order = availableOptions.map((option) => option.value);
+  const selectedOrdered = order.filter((value) => Array.isArray(selectedValues) && selectedValues.includes(value));
+  if (!selectedOrdered.length) {
+    throw new Error('Wybierz co najmniej jedną część raportu PDF.');
+  }
+
+  const pageSpecs = [];
+  let filenameBase = patientReportResolveFilenameBase();
+  let centileSource = '';
+
+  for (const value of selectedOrdered) {
+    if (value === 'visit') {
+      const visitPackage = await patientReportCollectVisitPdfPages();
+      if (visitPackage && Array.isArray(visitPackage.pages)) pageSpecs.push(...visitPackage.pages);
+      if (visitPackage && visitPackage.filenameBase) filenameBase = visitPackage.filenameBase;
+      continue;
+    }
+    if (value === 'centile') {
+      const centilePackage = await patientReportCollectCentileChartPdfPages();
+      if (centilePackage && Array.isArray(centilePackage.pages)) pageSpecs.push(...centilePackage.pages);
+      if (centilePackage && centilePackage.filenameBase) filenameBase = centilePackage.filenameBase;
+      if (centilePackage && centilePackage.source) centileSource = centilePackage.source;
+      continue;
+    }
+    if (value === 'growth') {
+      const growthPackage = await patientReportCollectAdvancedGrowthPdfPages();
+      if (growthPackage && Array.isArray(growthPackage.pages)) pageSpecs.push(...growthPackage.pages);
+      if (growthPackage && growthPackage.filenameBase) filenameBase = growthPackage.filenameBase;
+    }
+  }
+
+  const validPages = pageSpecs.filter((page) => page && page.dataUrl);
+  if (!validPages.length) {
+    throw new Error('Nie udało się przygotować wybranego raportu PDF.');
+  }
+
+  const firstPage = validPages[0];
+  const { jsPDF } = window.jspdf;
+  const firstMeta = patientReportGetPdfChoiceOptionMeta(selectedOrdered[0]);
+  const title = selectedOrdered.length > 1
+    ? 'Pakiet raportów PDF'
+    : (firstMeta && firstMeta.title ? firstMeta.title : 'Raport PDF');
+
+  const pdf = new jsPDF({
+    orientation: firstPage.orientation,
+    unit: 'mm',
+    format: 'a4',
+    compress: true,
+    putOnlyUsedFonts: true
+  });
+  pdf.setProperties({
+    title,
+    subject: title,
+    author: 'wagaiwzrost.pl'
+  });
+
+  validPages.forEach((page, index) => {
+    const pageOrientation = page.orientation === 'landscape' ? 'landscape' : 'portrait';
+    if (index > 0) pdf.addPage('a4', pageOrientation);
+    const compression = page.format === 'PNG' ? 'FAST' : 'MEDIUM';
+    pdf.addImage(
+      page.dataUrl,
+      page.format,
+      0,
+      0,
+      Number.isFinite(page.widthMm) ? page.widthMm : (pageOrientation === 'landscape' ? 297 : 210),
+      Number.isFinite(page.heightMm) ? page.heightMm : (pageOrientation === 'landscape' ? 210 : 297),
+      undefined,
+      compression
+    );
+  });
+
+  return {
+    blob: pdf.output('blob'),
+    filename: patientReportBuildSelectedPdfFilename(selectedOrdered, filenameBase, { centileSource })
+  };
+}
+
+async function generatePatientSelectedPdfPackage(triggerBtn, selectedValues) {
+  try {
+    await patientReportRunExternalPdfTask(triggerBtn, async () => {
+      const pdfPackage = await patientReportBuildSelectedPdfPackage(selectedValues);
+      if (!pdfPackage || !(pdfPackage.blob instanceof Blob)) {
+        throw new Error('Nie udało się przygotować pliku PDF.');
+      }
+      patientReportDownloadBlob(pdfPackage.blob, pdfPackage.filename);
+      patientReportShowToast((Array.isArray(selectedValues) && selectedValues.length > 1)
+        ? 'Pakiet PDF został wygenerowany.'
+        : 'Raport PDF został wygenerowany.');
+    }, 'Przygotowywanie PDF…');
+  } catch (error) {
+    if (error && error.code === 'USER_CANCELLED') return;
+    console.error('Błąd generowania wybranego raportu PDF dla pacjenta:', error);
+    patientReportShowToast(error && error.message ? error.message : 'Nie udało się wygenerować raportu PDF. Spróbuj ponownie.');
+  }
+}
+
+function patientReportRemovePdfChoiceDialog() {
+  try {
+    const backdrop = document.getElementById('patientReportPdfChoiceBackdrop');
+    if (!backdrop) return;
+    if (document.body && typeof backdrop.dataset.prevBodyOverflow === 'string') {
+      document.body.style.overflow = backdrop.dataset.prevBodyOverflow;
+    }
+    if (document.documentElement && typeof backdrop.dataset.prevHtmlOverflow === 'string') {
+      document.documentElement.style.overflow = backdrop.dataset.prevHtmlOverflow;
+    }
+    backdrop.remove();
+  } catch (_) {}
+}
+
+function patientReportRefreshPdfChoiceSelection(backdrop) {
+  if (!backdrop) return;
+  const labels = backdrop.querySelectorAll('.patient-report-pdf-choice');
+  let checkedCount = 0;
+  labels.forEach((label) => {
+    const input = label.querySelector('input[type="checkbox"]');
+    const isSelected = !!(input && input.checked);
+    if (isSelected) checkedCount += 1;
+    label.classList.toggle('is-selected', isSelected);
+    if (input) {
+      input.setAttribute('aria-checked', isSelected ? 'true' : 'false');
+    }
+  });
+  const confirmBtn = backdrop.querySelector('[data-patient-report-pdf-choice-confirm]');
+  if (confirmBtn) {
+    confirmBtn.disabled = checkedCount === 0;
+  }
+}
+
+function patientReportEnsurePdfChoiceDialogStyles() {
+  if (typeof document === 'undefined') return;
+  if (document.getElementById('patientReportPdfChoiceStyles')) return;
+  const style = document.createElement('style');
+  style.id = 'patientReportPdfChoiceStyles';
+  style.textContent = `
+    #patientReportPdfChoiceBackdrop.patient-report-pdf-choice-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 10020;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      box-sizing: border-box;
+      background: rgba(7, 26, 28, 0.45);
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+    }
+    .patient-report-pdf-choice-dialog {
+      width: min(100%, 500px);
+      max-height: calc(100vh - 32px);
+      max-height: min(calc(100dvh - 32px), 700px);
+      display: flex;
+      flex-direction: column;
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 26px 72px rgba(10, 43, 47, 0.22);
+      overflow: hidden;
+      box-sizing: border-box;
+      margin: auto;
+    }
+    .patient-report-pdf-choice-header-copy {
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+    .patient-report-pdf-choice-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 18px 20px 0;
+    }
+    .patient-report-pdf-choice-title {
+      margin: 0;
+      font-size: 1.08rem;
+      line-height: 1.25;
+      color: #123132;
+    }
+    .patient-report-pdf-choice-description {
+      margin: .4rem 0 0;
+      color: #476162;
+      line-height: 1.42;
+      font-size: .92rem;
+    }
+    .patient-report-pdf-choice-close {
+      border: none;
+      background: transparent;
+      color: #577576;
+      font-size: 1.5rem;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0;
+      width: 40px;
+      height: 40px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      flex: 0 0 auto;
+    }
+    .patient-report-pdf-choice-close:hover,
+    .patient-report-pdf-choice-close:focus-visible {
+      background: #eff6f6;
+      outline: none;
+    }
+    .patient-report-pdf-choice-body {
+      min-height: 0;
+      overflow-y: auto;
+      padding: 12px 20px 0;
+      -webkit-overflow-scrolling: touch;
+    }
+    .patient-report-pdf-choice-form {
+      display: grid;
+      gap: 0;
+    }
+    .patient-report-pdf-choice {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: start;
+      column-gap: 12px;
+      padding: 12px 2px;
+      margin: 0;
+      cursor: pointer;
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      box-sizing: border-box;
+      min-width: 0;
+    }
+    .patient-report-pdf-choice + .patient-report-pdf-choice {
+      border-top: 1px solid #edf3f3;
+    }
+    .patient-report-pdf-choice:focus-within {
+      outline: 2px solid rgba(15, 125, 134, 0.16);
+      outline-offset: 2px;
+      border-radius: 10px;
+    }
+    .patient-report-pdf-choice-copy {
+      display: grid;
+      gap: .22rem;
+      min-width: 0;
+    }
+    .patient-report-pdf-choice-option-title {
+      font-weight: 700;
+      color: #123132;
+      line-height: 1.3;
+      font-size: .98rem;
+    }
+    .patient-report-pdf-choice.is-selected .patient-report-pdf-choice-option-title {
+      color: #0f6b73;
+    }
+    .patient-report-pdf-choice-option-description {
+      color: #5a7273;
+      font-size: .9rem;
+      line-height: 1.4;
+    }
+    .patient-report-pdf-choice-toggle-wrap {
+      display: flex;
+      align-items: flex-start;
+      justify-content: flex-end;
+      padding-top: 1px;
+    }
+    .patient-report-pdf-choice-toggle.switch-diet {
+      margin: 0;
+    }
+    .patient-report-pdf-choice-toggle input {
+      display: block !important;
+      position: absolute !important;
+      inset: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      opacity: 0 !important;
+      margin: 0 !important;
+      cursor: pointer;
+    }
+    .patient-report-pdf-choice-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 16px 20px 18px;
+      border-top: 1px solid #eef4f4;
+      margin-top: 14px;
+    }
+    .patient-report-pdf-choice-cancel,
+    .patient-report-pdf-choice-confirm {
+      border-radius: 10px;
+      padding: .76rem 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      min-height: 46px;
+      box-sizing: border-box;
+    }
+    .patient-report-pdf-choice-cancel {
+      border: 1px solid #d3dfdf;
+      background: #ffffff;
+      color: #2a4748;
+      font-weight: 600;
+    }
+    .patient-report-pdf-choice-confirm {
+      border: none;
+      background: #00838d;
+      color: #ffffff;
+      box-shadow: 0 12px 24px rgba(0,131,141,0.18);
+    }
+    .patient-report-pdf-choice-confirm:disabled {
+      cursor: not-allowed;
+      background: #9bbdbe;
+      box-shadow: none;
+    }
+    @media (max-width: 640px) {
+      #patientReportPdfChoiceBackdrop.patient-report-pdf-choice-backdrop {
+        align-items: flex-start;
+        padding: 10px;
+      }
+      .patient-report-pdf-choice-dialog {
+        width: 100%;
+        max-width: 100%;
+        max-height: calc(100vh - 20px);
+        max-height: calc(100dvh - 20px);
+        border-radius: 14px;
+      }
+      .patient-report-pdf-choice-header {
+        gap: 10px;
+        padding: 14px 14px 0;
+      }
+      .patient-report-pdf-choice-title {
+        font-size: 1rem;
+      }
+      .patient-report-pdf-choice-description {
+        font-size: .87rem;
+        line-height: 1.38;
+      }
+      .patient-report-pdf-choice-body {
+        padding: 10px 14px 0;
+      }
+      .patient-report-pdf-choice {
+        grid-template-columns: minmax(0, 1fr) auto;
+        column-gap: 10px;
+        padding: 10px 0;
+      }
+      .patient-report-pdf-choice-option-title {
+        font-size: .95rem;
+      }
+      .patient-report-pdf-choice-option-description {
+        font-size: .84rem;
+        line-height: 1.35;
+      }
+      .patient-report-pdf-choice-footer {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        padding: 14px;
+        gap: 10px;
+      }
+      .patient-report-pdf-choice-cancel,
+      .patient-report-pdf-choice-confirm {
+        width: 100%;
+        padding: .74rem .9rem;
+      }
+    }
+    @media (max-width: 400px) {
+      .patient-report-pdf-choice-footer {
+        grid-template-columns: 1fr;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function patientReportOpenPdfChoiceDialog(triggerBtn) {
+  if (__patientReportPdfInFlight) return;
+  const options = patientReportGetPdfChoiceOptions();
+  if (!options.length) {
+    patientReportShowToast('Brak dostępnych raportów PDF do wygenerowania.');
+    return;
+  }
+
+  patientReportRemovePdfChoiceDialog();
+  patientReportEnsurePdfChoiceDialogStyles();
+
+  const backdrop = document.createElement('div');
+  backdrop.id = 'patientReportPdfChoiceBackdrop';
+  backdrop.className = 'patient-report-pdf-choice-backdrop';
+
+  const dialog = document.createElement('div');
+  dialog.className = 'patient-report-pdf-choice-dialog';
+  dialog.setAttribute('role', 'dialog');
+  dialog.setAttribute('aria-modal', 'true');
+  dialog.setAttribute('aria-labelledby', 'patientReportPdfChoiceTitle');
+  dialog.innerHTML = `
+    <div class="patient-report-pdf-choice-header">
+      <div class="patient-report-pdf-choice-header-copy">
+        <h3 id="patientReportPdfChoiceTitle" class="patient-report-pdf-choice-title">Wybierz części raportu PDF</h3>
+        <p class="patient-report-pdf-choice-description">Włącz jedną lub kilka części, które mają znaleźć się w jednym pliku PDF. Kolejność stron pozostanie stała: raport po wizycie, siatka centylowa, raport wzrastania.</p>
+      </div>
+      <button type="button" data-patient-report-pdf-choice-close aria-label="Zamknij" class="patient-report-pdf-choice-close">×</button>
+    </div>
+    <div class="patient-report-pdf-choice-body">
+      <form id="patientReportPdfChoiceForm" class="patient-report-pdf-choice-form" role="group" aria-labelledby="patientReportPdfChoiceTitle">
+        ${options.map((option) => `
+          <label class="patient-report-pdf-choice${option.checkedByDefault ? ' is-selected' : ''}">
+            <span class="patient-report-pdf-choice-copy">
+              <span class="patient-report-pdf-choice-option-title">${patientReportEscapeHtml(option.title)}</span>
+              <span class="patient-report-pdf-choice-option-description">${patientReportEscapeHtml(option.description)}</span>
+            </span>
+            <span class="patient-report-pdf-choice-toggle-wrap">
+              <span class="switch-diet patient-report-pdf-choice-toggle">
+                <input type="checkbox" name="patientReportPdfChoice" value="${patientReportEscapeHtml(option.value)}" ${option.checkedByDefault ? 'checked' : ''} />
+                <span class="slider"></span>
+              </span>
+            </span>
+          </label>
+        `).join('')}
+      </form>
+    </div>
+    <div class="patient-report-pdf-choice-footer">
+      <button type="button" data-patient-report-pdf-choice-cancel class="patient-report-pdf-choice-cancel">Anuluj</button>
+      <button type="button" data-patient-report-pdf-choice-confirm class="patient-report-pdf-choice-confirm">Generuj PDF</button>
+    </div>
+  `;
+
+  const previousBodyOverflow = document.body ? document.body.style.overflow : '';
+  const previousHtmlOverflow = document.documentElement ? document.documentElement.style.overflow : '';
+  backdrop.dataset.prevBodyOverflow = previousBodyOverflow;
+  backdrop.dataset.prevHtmlOverflow = previousHtmlOverflow;
+  if (document.body) document.body.style.overflow = 'hidden';
+  if (document.documentElement) document.documentElement.style.overflow = 'hidden';
+
+  const cleanup = () => {
+    try { document.removeEventListener('keydown', onKeyDown); } catch (_) {}
+    if (document.body) document.body.style.overflow = previousBodyOverflow;
+    if (document.documentElement) document.documentElement.style.overflow = previousHtmlOverflow;
+    patientReportRemovePdfChoiceDialog();
+  };
+
+  const onKeyDown = (event) => {
+    if (event.key === 'Escape') cleanup();
+  };
+
+  const runSelectedOptions = async () => {
+    const checkedValues = Array.from(dialog.querySelectorAll('input[name="patientReportPdfChoice"]:checked')).map((input) => input.value);
+    const selected = options.map((option) => option.value).filter((value) => checkedValues.includes(value));
+    if (!selected.length) {
+      patientReportShowToast('Wybierz co najmniej jedną część raportu PDF.');
+      patientReportRefreshPdfChoiceSelection(backdrop);
+      return;
+    }
+    cleanup();
+    await generatePatientSelectedPdfPackage(triggerBtn, selected);
+  };
+
+  backdrop.addEventListener('click', (event) => {
+    if (event.target === backdrop) cleanup();
+  });
+  dialog.querySelector('[data-patient-report-pdf-choice-close]')?.addEventListener('click', cleanup);
+  dialog.querySelector('[data-patient-report-pdf-choice-cancel]')?.addEventListener('click', cleanup);
+  dialog.querySelector('[data-patient-report-pdf-choice-confirm]')?.addEventListener('click', () => {
+    runSelectedOptions();
+  });
+
+  dialog.querySelectorAll('input[name="patientReportPdfChoice"]').forEach((input) => {
+    input.addEventListener('change', () => patientReportRefreshPdfChoiceSelection(backdrop));
+  });
+
+  backdrop.appendChild(dialog);
+  document.body.appendChild(backdrop);
+  document.addEventListener('keydown', onKeyDown);
+  patientReportRefreshPdfChoiceSelection(backdrop);
+
+  requestAnimationFrame(() => {
+    try {
+      dialog.querySelector('input[name="patientReportPdfChoice"]:checked')?.focus({ preventScroll: true });
+    } catch (_) {}
+  });
 }
 
 (function setupPatientReportPdfButton() {
@@ -7132,7 +8539,7 @@ async function generatePatientReportPdf(triggerBtn) {
       : null;
     if (!btn) return;
     event.preventDefault();
-    generatePatientReportPdf(btn);
+    patientReportOpenPdfChoiceDialog(btn);
   });
 })();
 
@@ -9577,7 +10984,7 @@ function adjustTestButtonWidths() {
   // leczenia bisfosfonianami był brany pod uwagę przy obliczaniu
   // maksymalnej szerokości.  Dzięki temu jego szerokość zostanie
   // wyrównana do innych przycisków modułu (np. Leczenie hormonem wzrostu / IGF‑1).
-  const ids = ['toggleGhTests', 'toggleOgttTests', 'toggleActhTests', 'toggleEndoTests', 'toggleIgfTests', 'toggleAbxTherapy', 'toggleZscore', 'toggleFluTherapy', 'toggleObesityTherapy', 'toggleBisphos'];
+  const ids = ['toggleGhTests', 'toggleOgttTests', 'toggleActhTests', 'toggleEndoTests', 'toggleIgfTests', 'toggleAbxTherapy', 'toggleZscore', 'toggleFluTherapy', 'toggleObesityTherapy', 'toggleBisphos', 'toggleSgaBirth'];
   const isTwoColumn = window.innerWidth >= 700;
 
   // W trybie jednokolumnowym ustawiamy szerokość wszystkich przycisków
@@ -14489,7 +15896,7 @@ function advGrowthBuildPdfMakeDefinition(report) {
     pageMargins: [26, 24, 26, 28],
     info: {
       title: advGrowthSanitizePdfText(`${model.title} — ${model.subtitle}`),
-      subject: advGrowthSanitizePdfText('Raport punktów pomiarowych z karty Zaawansowane obliczenia wzrostowe'),
+      subject: advGrowthSanitizePdfText('Raport wzrastania'),
       author: 'wagaiwzrost.pl'
     },
     defaultStyle: {
@@ -14502,7 +15909,7 @@ function advGrowthBuildPdfMakeDefinition(report) {
         margin: [26, 4, 26, 10],
         columns: [
           {
-            text: 'Wygenerowano automatycznie przez moduł Zaawansowane obliczenia wzrostowe - www.wagaiwzrost.pl',
+            text: 'Wygenerowano automatycznie przez raport wzrastania - www.wagaiwzrost.pl',
             color: '#8ca0a5',
             fontSize: 8.5,
             alignment: 'left'
@@ -14658,8 +16065,8 @@ function advGrowthBuildReportPresentationModel(report) {
   const mphSummary = advGrowthBuildMphSummaryText(report.targetHeight, report.sex, report.preferredSource);
 
   return {
-    title: 'Zaawansowane obliczenia wzrostowe',
-    subtitle: 'Raport punktów pomiarowych',
+    title: 'Raport wzrastania',
+    subtitle: 'Na podstawie karty Zaawansowane obliczenia wzrostowe',
     nameValue,
     sexLabel,
     sourceLabel,
@@ -14899,7 +16306,7 @@ function advGrowthBuildHtmlReportMarkup(report) {
         <ul>${noteItemsHtml}</ul>
       </section>
       <div class="adv-growth-pdf-footer">
-        <span>Wygenerowano automatycznie przez moduł Zaawansowane obliczenia wzrostowe - www.wagaiwzrost.pl</span>
+        <span>Wygenerowano automatycznie przez raport wzrastania - www.wagaiwzrost.pl</span>
       </div>
     </div>
   `;
@@ -14977,7 +16384,7 @@ async function generateAdvancedGrowthPdfReport() {
     .replace(/[̀-ͯ]/g, '')
     .replace(/[^a-zA-Z0-9_-]+/g, '_')
     .replace(/^_+|_+$/g, '');
-  const filename = `raport_zaawansowane_obliczenia_wzrostowe${safeName ? '_' + safeName : ''}.pdf`;
+  const filename = `Raport_wzrastania${safeName ? '_' + safeName : ''}.pdf`;
 
   const ready = await advGrowthEnsurePdfMake();
   if (ready && window.pdfMake && typeof window.pdfMake.createPdf === 'function') {
@@ -17287,6 +18694,9 @@ function getLMS(sex, months){
     const bisphosButtonWrapper = document.getElementById('bisphosButtonWrapper');
     const toggleBisphosBtn    = document.getElementById('toggleBisphos');
     const bisphosCard         = document.getElementById('bisphosCard');
+    const sgaBirthButtonWrapper = document.getElementById('sgaBirthButtonWrapper');
+    const toggleSgaBirthBtn   = document.getElementById('toggleSgaBirth');
+    const sgaBirthCard        = document.getElementById('sgaBirthCard');
 
     // Nowy moduł: leczenie otyłości (placeholder)
     const obesityButtonWrapper = document.getElementById('obesityButtonWrapper');
@@ -17687,6 +19097,15 @@ function getLMS(sex, months){
           if (toggleBisphosBtn) {
             toggleBisphosBtn.classList.remove('active-toggle');
           }
+          if (sgaBirthButtonWrapper) {
+            sgaBirthButtonWrapper.style.display = 'none';
+          }
+          if (sgaBirthCard) {
+            sgaBirthCard.style.display = 'none';
+          }
+          if (toggleSgaBirthBtn) {
+            toggleSgaBirthBtn.classList.remove('active-toggle');
+          }
           // Ukryj moduł leczenia otyłości (placeholder), dopóki numer PWZ nie zostanie pozytywnie zweryfikowany
           if (obesityButtonWrapper) {
             obesityButtonWrapper.style.display = 'none';
@@ -17759,6 +19178,15 @@ function getLMS(sex, months){
         }
         if (typeof toggleBisphosBtn !== 'undefined' && toggleBisphosBtn) {
           toggleBisphosBtn.classList.remove('active-toggle');
+        }
+        if (sgaBirthButtonWrapper) {
+          sgaBirthButtonWrapper.style.display = 'none';
+        }
+        if (sgaBirthCard) {
+          sgaBirthCard.style.display = 'none';
+        }
+        if (toggleSgaBirthBtn) {
+          toggleSgaBirthBtn.classList.remove('active-toggle');
         }
         // Ukryj moduł leczenia otyłości (placeholder)
         if (obesityButtonWrapper) {
@@ -18026,6 +19454,15 @@ function getLMS(sex, months){
       if (bisphosButtonWrapper) {
         bisphosButtonWrapper.style.display = 'flex';
       }
+      if (sgaBirthButtonWrapper) {
+        sgaBirthButtonWrapper.style.display = 'flex';
+      }
+      if (sgaBirthCard) {
+        sgaBirthCard.style.display = 'none';
+      }
+      if (toggleSgaBirthBtn) {
+        toggleSgaBirthBtn.classList.remove('active-toggle');
+      }
       // Ukryj kartę Z‑score – użytkownik otworzy ją ręcznie przyciskiem
       if (typeof zscoreCard !== 'undefined' && zscoreCard) {
         zscoreCard.style.display = 'none';
@@ -18164,6 +19601,7 @@ function getLMS(sex, months){
         if (endoButtonWrapper)  endoButtonWrapper.style.display  = 'none';
         if (igfButtonWrapper)   igfButtonWrapper.style.display   = 'none';
         if (abxButtonWrapper)   abxButtonWrapper.style.display   = 'none';
+        if (sgaBirthButtonWrapper) sgaBirthButtonWrapper.style.display = 'none';
         // Ukryj podprzyciski IGF‑1
         if (snpButtonWrapper)    snpButtonWrapper.style.display    = 'none';
         if (turnerButtonWrapper) turnerButtonWrapper.style.display = 'none';
@@ -18191,6 +19629,12 @@ function getLMS(sex, months){
         const abxToggleBtn = document.getElementById('toggleAbxTherapy');
         if (abxToggleBtn) {
           abxToggleBtn.classList.remove('active-toggle');
+        }
+        if (sgaBirthCard) {
+          sgaBirthCard.style.display = 'none';
+        }
+        if (toggleSgaBirthBtn) {
+          toggleSgaBirthBtn.classList.remove('active-toggle');
         }
       }
       // Po aktualizacji widoczności przycisków testów (zarówno przy poprawnym,

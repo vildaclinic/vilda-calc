@@ -651,6 +651,245 @@
           }
         }
 
+
+/* Moduł SGA (small for gestational age) */
+@media (min-width: 700px) {
+  #modulesWrapper #sgaBirthButtonWrapper {
+    order: 5;
+  }
+}
+.sga-birth-intro {
+  text-align: center;
+  font-size: 0.98rem;
+  line-height: 1.55;
+  margin: 0.45rem auto 0;
+  max-width: 70ch;
+}
+.sga-birth-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.sga-birth-panel {
+  border: 1px solid var(--lg-border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.45);
+}
+.sga-birth-panel h3 {
+  margin: 0 0 0.75rem;
+  text-align: center;
+  font-size: 1rem;
+}
+.sga-birth-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem 1rem;
+}
+.sga-birth-field label,
+.sga-birth-select-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+.sga-birth-help {
+  display: block;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: rgba(20, 44, 47, 0.72);
+  margin-top: 0.32rem;
+}
+.sga-birth-sex-toggle {
+  margin-top: 0.35rem;
+  max-width: 360px;
+}
+.sga-birth-sex-toggle label {
+  margin-bottom: 0 !important;
+}
+.sga-birth-sex-toggle label span {
+  padding: 0.56rem 0.95rem;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+.sga-birth-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: 1rem;
+}
+.sga-birth-secondary-btn {
+  appearance: none;
+  border: 1px solid var(--lg-border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: inherit;
+  padding: 0.72rem 1.1rem;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.sga-birth-message {
+  display: none;
+  margin-top: 0.9rem;
+  text-align: center;
+  font-weight: 600;
+  line-height: 1.45;
+}
+.sga-birth-message.is-visible {
+  display: block;
+}
+.sga-birth-message.is-error { color: var(--danger); }
+.sga-birth-message.is-success { color: var(--primary); }
+.sga-birth-message.is-warning { color: #8c5b00; }
+.sga-birth-results {
+  margin-top: 1rem;
+}
+.sga-birth-summary-box,
+.sga-birth-meta-box,
+.sga-birth-note-box {
+  border: 1px solid var(--lg-border);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.52);
+  padding: 0.95rem 1rem;
+}
+.sga-birth-summary-box h3,
+.sga-birth-meta-box h3 {
+  margin: 0 0 0.7rem;
+  text-align: center;
+  font-size: 1rem;
+}
+.sga-birth-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 0.75rem;
+  max-width: 640px;
+  margin: 0 auto;
+  justify-content: center;
+}
+.sga-birth-summary-item {
+  border: 1.5px solid rgba(0, 131, 141, 0.24);
+  border-radius: var(--radius);
+  background: rgba(0, 131, 141, 0.07);
+  padding: 0.95rem 1rem;
+  text-align: center;
+  box-shadow: 0 0 0 1px rgba(0, 131, 141, 0.08) inset;
+  color: #0b545c;
+}
+.sga-birth-summary-item.is-ok {
+  border-color: rgba(0, 131, 141, 0.36);
+  background: rgba(0, 131, 141, 0.09);
+  box-shadow: 0 0 0 1px rgba(0, 131, 141, 0.08) inset;
+  color: #0b545c;
+}
+.sga-birth-summary-item.is-sga {
+  border-color: rgba(198, 40, 40, 0.42);
+  background: rgba(198, 40, 40, 0.10);
+  box-shadow: 0 0 0 1px rgba(198, 40, 40, 0.12) inset;
+  color: #9f1d1d;
+}
+.sga-birth-summary-item.is-missing {
+  border-color: rgba(112, 124, 129, 0.32);
+  background: rgba(112, 124, 129, 0.10);
+  box-shadow: 0 0 0 1px rgba(112, 124, 129, 0.10) inset;
+  color: rgba(20, 44, 47, 0.62);
+}
+.sga-birth-summary-label,
+.sga-birth-summary-value {
+  display: block;
+  font-size: 0.98rem;
+  line-height: 1.45;
+  font-weight: 600;
+  color: inherit;
+}
+.sga-birth-summary-value {
+  margin-top: 0.3rem;
+}
+.sga-birth-result-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.85rem;
+  margin-top: 0.9rem;
+}
+.sga-birth-result-grid.is-single {
+  grid-template-columns: minmax(0, 420px);
+  justify-content: center;
+}
+.sga-birth-result-card {
+  border: 1px solid var(--lg-border);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.58);
+  padding: 0.95rem 1rem;
+}
+.sga-birth-result-card h4 {
+  margin: 0 0 0.7rem;
+  text-align: center;
+  font-size: 0.98rem;
+}
+.sga-birth-result-card dl {
+  margin: 0;
+}
+.sga-birth-result-card dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.9rem;
+  padding: 0.34rem 0;
+  border-top: 1px solid rgba(0, 131, 141, 0.12);
+}
+.sga-birth-result-card dl > div:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.sga-birth-result-card dt,
+.sga-birth-result-card dd {
+  margin: 0;
+  line-height: 1.4;
+}
+.sga-birth-result-card dt {
+  color: rgba(20, 44, 47, 0.78);
+}
+.sga-birth-result-card dd {
+  text-align: right;
+  font-weight: 600;
+}
+.sga-birth-note-box {
+  margin-top: 0.9rem;
+}
+.sga-birth-note-box p,
+.sga-birth-meta-box p {
+  margin: 0.18rem 0;
+  line-height: 1.5;
+}
+.sga-birth-toast {
+  position: fixed;
+  left: 50%;
+  bottom: max(1rem, calc(env(safe-area-inset-bottom, 0px) + 1rem));
+  transform: translate(-50%, 10px);
+  opacity: 0;
+  background: rgba(20, 44, 47, 0.94);
+  color: #fff;
+  border-radius: 999px;
+  padding: 0.55rem 0.95rem;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+  z-index: 99999;
+  pointer-events: none;
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+.sga-birth-toast.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+@media (max-width: 860px) {
+  .sga-birth-form,
+  .sga-birth-grid,
+  .sga-birth-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 </style>
 </head>
 <!-- Dodajemy klasę "liquid-ios26" bezpośrednio na element <body>,
@@ -2461,6 +2700,9 @@
   <div id="zscoreButtonWrapper" class="module-btn-wrapper" style="display:none;">
     <button type="button" id="toggleZscore" class="module-btn igf-btn">Kalkulator Z‑score</button>
   </div>
+  <div id="sgaBirthButtonWrapper" class="module-btn-wrapper" style="display:none;">
+    <button type="button" id="toggleSgaBirth" class="module-btn igf-btn">SGA (small for gestational age)</button>
+  </div>
   </div><!-- koniec modulesWrapper -->
 </form>
 <div id="errorBox"></div>
@@ -2510,6 +2752,94 @@
       <button type="button" id="computeZscoreBatch" class="igf-btn" style="margin-top:0.8rem;">Oblicz Z‑score</button>
       <div id="zscoreMessage" style="margin-top:0.8rem; color: var(--danger); font-weight:600;"></div>
     </div>
+
+<div id="sgaBirthCard" class="card" style="display:none;">
+  <h2 style="text-align:center;">SGA (small for gestational age)</h2>
+  <p class="sga-birth-intro">Wprowadź dane z okresu urodzeniowego, aby obliczyć SDS masy, długości ciała i obwodu głowy względem wieku ciążowego według Niklasson i Albertsson-Wikland 2008.</p>
+  <div class="sga-birth-form">
+    <section class="sga-birth-panel" aria-labelledby="sgaBirthRequiredHeading">
+      <h3 id="sgaBirthRequiredHeading">Dane obowiązkowe</h3>
+      <div class="sga-birth-field">
+        <label>Płeć dziecka <span aria-hidden="true">*</span></label>
+        <div class="data-source-toggle sga-birth-sex-toggle" role="radiogroup" aria-label="Płeć dziecka">
+          <label><input type="radio" name="sgaBirthSex" value="male"><span>Chłopiec</span></label>
+          <label><input type="radio" name="sgaBirthSex" value="female"><span>Dziewczynka</span></label>
+        </div>
+        <span class="sga-birth-help">Siatki są osobne dla chłopców i dziewczynek.</span>
+      </div>
+      <div class="sga-birth-grid" style="margin-top:0.9rem;">
+        <div class="sga-birth-select-group">
+          <label for="sgaBirthWeeks">Pełne tygodnie ciąży <span aria-hidden="true">*</span></label>
+          <select id="sgaBirthWeeks">
+            <option value="">– wybierz –</option>
+            <option value="24">24</option>
+            <option value="25">25</option>
+            <option value="26">26</option>
+            <option value="27">27</option>
+            <option value="28">28</option>
+            <option value="29">29</option>
+            <option value="30">30</option>
+            <option value="31">31</option>
+            <option value="32">32</option>
+            <option value="33">33</option>
+            <option value="34">34</option>
+            <option value="35">35</option>
+            <option value="36">36</option>
+            <option value="37">37</option>
+            <option value="38">38</option>
+            <option value="39">39</option>
+            <option value="40">40</option>
+            <option value="41">41</option>
+            <option value="42">42</option>
+          </select>
+          <span class="sga-birth-help">Podaj ukończone tygodnie ciąży.</span>
+        </div>
+        <div class="sga-birth-select-group">
+          <label for="sgaBirthDays">Dodatkowe dni</label>
+          <select id="sgaBirthDays">
+            <option value="0">0</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+          </select>
+          <span class="sga-birth-help">Przykład: 35 tygodni i 4 dni = 35 + 4.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="sga-birth-panel" aria-labelledby="sgaBirthMetricsHeading">
+      <h3 id="sgaBirthMetricsHeading">Parametry przy urodzeniu</h3>
+      <div class="sga-birth-grid">
+        <div class="sga-birth-field">
+          <label for="sgaBirthWeight">Masa ciała przy urodzeniu (g)</label>
+          <input type="text" id="sgaBirthWeight" inputmode="decimal" placeholder="np. 2450">
+          <span class="sga-birth-help">Wpisz masę w gramach, np. 2450.</span>
+        </div>
+        <div class="sga-birth-field">
+          <label for="sgaBirthLength">Długość ciała przy urodzeniu (cm)</label>
+          <input type="text" id="sgaBirthLength" inputmode="decimal" placeholder="np. 47,5">
+          <span class="sga-birth-help">Możesz użyć przecinka lub kropki.</span>
+        </div>
+        <div class="sga-birth-field" style="grid-column:1 / -1;">
+          <label for="sgaBirthHead">Obwód głowy przy urodzeniu (cm)</label>
+          <input type="text" id="sgaBirthHead" inputmode="decimal" placeholder="np. 32,0">
+          <span class="sga-birth-help">Pole opcjonalne, ale przydatne do pełniejszej oceny noworodka.</span>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="sga-birth-actions">
+    <button type="button" id="computeSgaBirth" class="igf-btn">Oblicz SDS</button>
+    <button type="button" id="resetSgaBirth" class="sga-birth-secondary-btn">Wyczyść moduł</button>
+  </div>
+
+  <div id="sgaBirthMessage" class="sga-birth-message" aria-live="polite"></div>
+  <div id="sgaBirthResults" class="sga-birth-results" style="display:none;"></div>
+</div>
 
   <div id="results" class="grid-two">
     <!-- Lewa kolumna: karta BMI oraz sekcja obliczeń dla dzieci z zespołem Downa
@@ -2885,6 +3215,7 @@
          elementów DOM oraz funkcji (np. pobierania masy ciała). Skrypt ten oblicza dawki 
          pamidronianu i zoledronianu na podstawie wagi dziecka oraz wybranych parametrów terapii. -->
     <script src="bisphos_therapy.js" defer></script>
+    <script src="sga_birth_module.js" defer></script>
 
     <!-- Skrypt synchronizujący podstawowe dane użytkownika (imię, wiek, płeć, masa i wzrost) pomiędzy
          stronami aplikacji. Plik userData.js zapisuje dane w localStorage i wczytuje je na
@@ -5719,6 +6050,7 @@ async function generateCentileChart() {
        Plik custom-fixes.js implementuje te funkcje poprzez
        obserwację DOM i modyfikację scrollIntoView. -->
   <script src="custom-fixes.js" defer></script>
+  <script src="docpro_state_persist.js" defer></script>
 
     <!-- Overlay for Z‑score batch conversion loading animation.  When the user starts
          the batch Z‑score calculation, this overlay is displayed for a short
