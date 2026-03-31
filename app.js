@@ -18716,6 +18716,15 @@ function getLMS(sex, months){
     let zscoreBatchSourceChoice = 'OLAF';
     const btnZscorePalczewska = document.getElementById('btnZscorePalczewska');
     const btnZscoreOlaf       = document.getElementById('btnZscoreOlaf');
+    const getZscoreBatchSourceChoice = () => {
+      if (btnZscorePalczewska && btnZscorePalczewska.classList.contains('active-toggle')) {
+        return 'PALCZEWSKA';
+      }
+      if (btnZscoreOlaf && btnZscoreOlaf.classList.contains('active-toggle')) {
+        return 'OLAF';
+      }
+      return zscoreBatchSourceChoice || 'OLAF';
+    };
     if (btnZscorePalczewska && btnZscoreOlaf) {
       const updateZscoreButtons = (choice) => {
         zscoreBatchSourceChoice = choice;
@@ -18729,6 +18738,7 @@ function getLMS(sex, months){
       };
       btnZscorePalczewska.addEventListener('click', () => updateZscoreButtons('PALCZEWSKA'));
       btnZscoreOlaf.addEventListener('click',       () => updateZscoreButtons('OLAF'));
+      zscoreBatchSourceChoice = getZscoreBatchSourceChoice();
     }
 
     if(!isDoctorCheckbox) return;
@@ -18813,7 +18823,8 @@ function getLMS(sex, months){
         // Ustal źródło danych (Palczewska lub OLAF) na podstawie wyboru użytkownika.
         // Źródło przechowywane jest w zmiennej zscoreBatchSourceChoice ustawianej
         // przez przyciski Dane Palczewska / Dane OLAF.
-        let sourceChoice = zscoreBatchSourceChoice || 'OLAF';
+        let sourceChoice = getZscoreBatchSourceChoice();
+        zscoreBatchSourceChoice = sourceChoice || 'OLAF';
         if (zscoreMessage) {
           zscoreMessage.textContent = '';
         }
@@ -24828,12 +24839,13 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
   function ensurePersist(root) {
     if (!root || typeof root !== 'object') root = {};
     if (!root[PKEY] || typeof root[PKEY] !== 'object') {
-      root[PKEY] = { v: 1, byId: {}, byName: {}, radio: {}, globals: {}, updatedAtISO: null };
+      root[PKEY] = { v: 1, byId: {}, byName: {}, radio: {}, datasetById: {}, globals: {}, updatedAtISO: null };
     } else {
       root[PKEY].v = 1;
       root[PKEY].byId = root[PKEY].byId && typeof root[PKEY].byId === 'object' ? root[PKEY].byId : {};
       root[PKEY].byName = root[PKEY].byName && typeof root[PKEY].byName === 'object' ? root[PKEY].byName : {};
       root[PKEY].radio = root[PKEY].radio && typeof root[PKEY].radio === 'object' ? root[PKEY].radio : {};
+      root[PKEY].datasetById = root[PKEY].datasetById && typeof root[PKEY].datasetById === 'object' ? root[PKEY].datasetById : {};
       root[PKEY].globals = root[PKEY].globals && typeof root[PKEY].globals === 'object' ? root[PKEY].globals : {};
     }
     return root;
@@ -24853,6 +24865,7 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
     'name','fullName','age','ageMonths','weight','height','sex',
     'advMotherHeight','advFatherHeight','advBoneAge'
   ]);
+  const TRACKED_DATASET_PROPS = ['manual', 'userChoice'];
 
   function readControlValue(el) {
     if (!el) return null;
@@ -24861,6 +24874,42 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
     if (type === 'radio') return el.checked ? el.value : null;
     // Zachowujemy dokładny tekst (np. przecinki), żeby nie zgubić formatowania
     return (typeof el.value === 'string') ? el.value : '';
+  }
+
+  function readTrackedDataset(el) {
+    if (!el || !el.id || !el.dataset) return null;
+    const out = {};
+    TRACKED_DATASET_PROPS.forEach((prop) => {
+      try {
+        if (Object.prototype.hasOwnProperty.call(el.dataset, prop)) {
+          out[prop] = String(el.dataset[prop]);
+        }
+      } catch (_) {}
+    });
+    return Object.keys(out).length ? out : null;
+  }
+
+  function storeTrackedDataset(persistState, el) {
+    if (!persistState || !persistState.datasetById || !el || !el.id) return;
+    const next = readTrackedDataset(el);
+    if (next) {
+      persistState.datasetById[el.id] = next;
+    } else if (Object.prototype.hasOwnProperty.call(persistState.datasetById, el.id)) {
+      delete persistState.datasetById[el.id];
+    }
+  }
+
+  function applyTrackedDataset(el, saved) {
+    if (!el || !el.dataset) return;
+    TRACKED_DATASET_PROPS.forEach((prop) => {
+      try {
+        if (saved && Object.prototype.hasOwnProperty.call(saved, prop)) {
+          el.dataset[prop] = String(saved[prop]);
+        } else if (Object.prototype.hasOwnProperty.call(el.dataset, prop)) {
+          delete el.dataset[prop];
+        }
+      } catch (_) {}
+    });
   }
 
   let saveTimer = null;
@@ -25037,6 +25086,7 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
       // Jeśli radio ma id, zapisujemy też jego stan checked, aby móc odtworzyć w nietypowych przypadkach
       if (el.id) {
         p.byId[el.id] = !!el.checked;
+        storeTrackedDataset(p, el);
       }
       scheduleSave();
       return;
@@ -25048,6 +25098,7 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
       if (el.id) {
         p.byId[el.id] = v;
         if (BASIC_ROOT_KEYS.has(el.id)) pendingRoot[el.id] = v;
+        storeTrackedDataset(p, el);
       } else if (el.name) {
         // Checkboxy bez id – zapisuj po name jako boolean lub listę wartości (gdy grupa)
         let nodes = null;
@@ -25073,6 +25124,7 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
     if (el.id) {
       p.byId[el.id] = v;
       if (BASIC_ROOT_KEYS.has(el.id)) pendingRoot[el.id] = v;
+      storeTrackedDataset(p, el);
     } else if (el.name) {
       p.byName[el.name] = v;
     }
@@ -25095,6 +25147,7 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
   document.addEventListener('input', function (ev) {
     try { updatePersistFromElement(ev.target); } catch (_) {}
     try {
+      setTimeout(() => { try { updatePersistFromElement(ev.target); } catch (_) {} }, 0);
       if (isAdvancedGrowthCriticalTarget(ev.target)) {
         setTimeout(() => { try { flushPersistNow(); } catch (_) {} }, 0);
       }
@@ -25103,6 +25156,7 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
   document.addEventListener('change', function (ev) {
     try { updatePersistFromElement(ev.target); } catch (_) {}
     try {
+      setTimeout(() => { try { updatePersistFromElement(ev.target); } catch (_) {} }, 0);
       if (isAdvancedGrowthCriticalTarget(ev.target)) {
         setTimeout(() => { try { flushPersistNow(); } catch (_) {} }, 0);
       }
@@ -25175,7 +25229,16 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
     isRestoring = true;
 
     try {
-      // 1) Odtwórz pola po ID
+      // 1) Odtwórz wybrane atrybuty dataset po ID, zanim późniejsze moduły
+      // skorzystają z tych flag podczas własnej inicjalizacji.
+      const datasetById = (p.datasetById && typeof p.datasetById === 'object') ? p.datasetById : {};
+      Object.keys(datasetById).forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        applyTrackedDataset(el, datasetById[id]);
+      });
+
+      // 2) Odtwórz pola po ID
       const byId = (p.byId && typeof p.byId === 'object') ? p.byId : {};
       Object.keys(byId).forEach(id => {
         const el = document.getElementById(id);
@@ -25477,7 +25540,11 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
     const btn = document.getElementById(btnId);
     if (!btn) return;
     btn.addEventListener('click', function () {
-      try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem('wagaiwzrost:docproUi:v2');
+        localStorage.removeItem('wagaiwzrost:docproState:v1');
+      } catch (_) {}
       pendingRoot = null;
     }, true);
   }

@@ -333,14 +333,9 @@ document.addEventListener('DOMContentLoaded', () => {
       } else if (val === 'ospawietrzna') {
         if (fluControlsEl) fluControlsEl.style.display = 'none';
         if (varControlsEl) varControlsEl.style.display = 'block';
-        // Przy pierwszym otwarciu sekcji leczenia ospy resetujemy znacznik userChoice,
-        // aby recalculateVar() mogło ustawić domyślny preparat.  Jeśli tego nie
-        // zrobimy, wcześniejszy wybór użytkownika będzie uniemożliwiał zmianę
-        // preparatu przy nowych danych.
-        const varPrep = document.getElementById('varPreparation');
-        if (varPrep) {
-          delete varPrep.dataset.userChoice;
-        }
+        // Zachowaj ewentualny ręczny wybór preparatu zapisany wcześniej w stanie strony.
+        // Jeśli użytkownik nie wybierał preparatu samodzielnie, recalculateVar() i tak
+        // ustali domyślną opcję na podstawie wieku i masy ciała.
         // Ustaw domyślny preparat w zależności od wieku i masy ciała (jeśli dostępne).
         // Wywołanie recalculateVar() spowoduje ustawienie odpowiedniego preparatu
         // zanim zostaną wygenerowane zalecenia.
@@ -351,6 +346,22 @@ document.addEventListener('DOMContentLoaded', () => {
         if (varControlsEl) varControlsEl.style.display = 'none';
       }
     });
+
+    // Przy odtwarzaniu stanu formularza wartości pól mogą zostać przywrócone
+    // jeszcze przed inicjalizacją tego modułu. Wymuś jednorazową synchronizację UI
+    // oraz przeliczenie zaleceń po podpięciu wszystkich listenerów.
+    window.setTimeout(() => {
+      try {
+        infectionSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      } catch (_) {}
+      try {
+        if (infectionSelect.value === 'grypa') {
+          recalculateFlu();
+        } else if (infectionSelect.value === 'ospawietrzna') {
+          recalculateVar();
+        }
+      } catch (_) {}
+    }, 0);
   }
 
   // Obsługa przycisku „Źródła” dla sekcji leczenia grypy.  Przycisk pokazuje lub

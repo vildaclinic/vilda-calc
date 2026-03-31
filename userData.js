@@ -175,6 +175,10 @@
         // Usuń zapisane dane wspólne – dzięki temu przy kolejnym
         // załadowaniu strony pola nie zostaną automatycznie uzupełnione.
         localStorage.removeItem('sharedUserData');
+        // Usuń także stan UI strony docpro, aby po ręcznym czyszczeniu pól
+        // nie wracały otwarte moduły ani pomocnicze przyciski stanowe.
+        localStorage.removeItem('wagaiwzrost:docproUi:v2');
+        localStorage.removeItem('wagaiwzrost:docproState:v1');
       } catch (_) {
         // Ignore errors (e.g. storage quota issues)
       }

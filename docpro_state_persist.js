@@ -1,8 +1,8 @@
 (function () {
   'use strict';
 
-  const STORAGE_KEY = 'wagaiwzrost:docproState:v1';
-  const SCROLL_RESTORE_DELAYS = [0, 140, 420, 900, 1600];
+  const STORAGE_KEY = 'wagaiwzrost:docproUi:v2';
+  const LEGACY_STORAGE_KEY = 'wagaiwzrost:docproState:v1';
   const UI_RESTORE_DELAYS = [0, 120, 320, 700, 1400];
   const BUTTON_CLASS_NAMES = ['active-toggle', 'gh-selected'];
   const UI_TOGGLE_IDS = new Set([
@@ -21,17 +21,13 @@
     'toggleZscore',
     'toggleSgaBirth'
   ]);
+  const CLEAR_BUTTON_SELECTOR = '#clearAllDataBtn, #clearBtn, #advClearBtn';
 
   let restoring = false;
   let saveTimer = null;
-  let scrollSaveTimer = null;
   let mutationObserver = null;
-  let lastFocusedKey = null;
 
   function getStorage() {
-    try {
-      if (window.sessionStorage) return window.sessionStorage;
-    } catch (_) {}
     try {
       if (window.localStorage) return window.localStorage;
     } catch (_) {}
@@ -60,6 +56,24 @@
     } catch (_) {
       /* ignore storage errors */
     }
+  }
+
+  function clearState() {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    try {
+      storage.removeItem(STORAGE_KEY);
+    } catch (_) {}
+    clearLegacyState();
+  }
+
+  function clearLegacyState() {
+    try {
+      storage.removeItem(LEGACY_STORAGE_KEY);
+    } catch (_) {}
+    try {
+      if (window.sessionStorage) window.sessionStorage.removeItem(LEGACY_STORAGE_KEY);
+    } catch (_) {}
   }
 
   function getElementById(id) {
@@ -94,31 +108,15 @@
     );
   }
 
-  function getControlKey(el) {
-    if (!el) return null;
-    if (el.id) return `id:${el.id}`;
+  function getUntrackedControlKey(el) {
+    if (!el || el.id || el.name) return null;
 
     const container = getNearestStateContainer(el);
     const containerId = container && container.id ? container.id : 'root';
 
-    if (el.type === 'radio' && el.name) {
-      return `radio:${containerId}:${el.name}:${el.value}`;
-    }
-
-    if (el.name) {
-      let index = 0;
-      if (container && container.querySelectorAll) {
-        const peers = Array.from(container.querySelectorAll(`[name="${cssEscape(el.name)}"]`))
-          .filter((peer) => (peer.type || '').toLowerCase() === (el.type || '').toLowerCase());
-        index = peers.indexOf(el);
-      }
-      if (index < 0) index = 0;
-      return `name:${containerId}:${el.name}:${index}`;
-    }
-
     let pathParts = [];
     let node = el;
-    while (node && node !== document.body && pathParts.length < 5) {
+    while (node && node !== document.body && pathParts.length < 6) {
       let part = node.tagName ? node.tagName.toLowerCase() : 'node';
       if (node.parentElement) {
         const siblings = Array.from(node.parentElement.children).filter((child) => child.tagName === node.tagName);
@@ -132,7 +130,8 @@
         break;
       }
     }
-    return `path:${pathParts.join('>')}`;
+
+    return `path:${containerId}:${pathParts.join('>')}`;
   }
 
   function serializeControl(el) {
@@ -157,10 +156,11 @@
     };
   }
 
-  function collectControls() {
+  function collectUntrackedControls() {
     const out = {};
     document.querySelectorAll('input, select, textarea').forEach((el) => {
-      const key = getControlKey(el);
+      if (el.id || el.name) return;
+      const key = getUntrackedControlKey(el);
       const value = serializeControl(el);
       if (!key || !value) return;
       out[key] = value;
@@ -181,12 +181,24 @@
     const out = {};
     document.querySelectorAll('button[id], [role="button"][id]').forEach((el) => {
       const entry = {};
+      let relevant = false;
+
       BUTTON_CLASS_NAMES.forEach((className) => {
-        entry[className] = el.classList.contains(className);
+        if (el.classList.contains(className)) {
+          entry[className] = true;
+          relevant = true;
+        }
       });
+
       const ariaPressed = el.getAttribute('aria-pressed');
-      if (ariaPressed != null) entry.ariaPressed = ariaPressed;
-      out[el.id] = entry;
+      if (ariaPressed != null) {
+        entry.ariaPressed = ariaPressed;
+        relevant = true;
+      }
+
+      if (relevant) {
+        out[el.id] = entry;
+      }
     });
     return out;
   }
@@ -216,36 +228,47 @@
     };
   }
 
-  function getScrollY() {
-    return window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+
+  function collectModuleStates() {
+    const out = {};
+    try {
+      if (window.vildaAbxPersistApi && typeof window.vildaAbxPersistApi.captureState === 'function') {
+        const state = window.vildaAbxPersistApi.captureState();
+        if (state) out.antibiotic = state;
+      }
+    } catch (_) {}
+    try {
+      if (window.vildaGhTherapyMonitorPersistApi && typeof window.vildaGhTherapyMonitorPersistApi.captureState === 'function') {
+        const state = window.vildaGhTherapyMonitorPersistApi.captureState();
+        if (state) out.ghMonitor = state;
+      }
+    } catch (_) {}
+    return out;
   }
 
-  function setScrollY(top) {
-    const y = Math.max(0, Number(top) || 0);
+  function restoreModuleStates(moduleStates) {
+    if (!moduleStates || typeof moduleStates !== 'object') return;
     try {
-      window.scrollTo(0, y);
+      if (moduleStates.antibiotic && window.vildaAbxPersistApi && typeof window.vildaAbxPersistApi.restoreState === 'function') {
+        window.vildaAbxPersistApi.restoreState(moduleStates.antibiotic);
+      }
     } catch (_) {}
     try {
-      if (document.documentElement) document.documentElement.scrollTop = y;
-    } catch (_) {}
-    try {
-      if (document.body) document.body.scrollTop = y;
-    } catch (_) {}
-    try {
-      if (document.scrollingElement) document.scrollingElement.scrollTop = y;
+      if (moduleStates.ghMonitor && window.vildaGhTherapyMonitorPersistApi && typeof window.vildaGhTherapyMonitorPersistApi.restoreState === 'function') {
+        window.vildaGhTherapyMonitorPersistApi.restoreState(moduleStates.ghMonitor);
+      }
     } catch (_) {}
   }
 
   function buildState() {
     return {
-      version: 1,
+      version: 2,
       savedAt: Date.now(),
-      scrollY: getScrollY(),
-      lastFocusedKey,
-      controls: collectControls(),
+      controls: collectUntrackedControls(),
       details: collectDetails(),
       buttonStates: collectButtonStates(),
-      ui: collectUi()
+      ui: collectUi(),
+      moduleStates: collectModuleStates()
     };
   }
 
@@ -256,15 +279,6 @@
       saveTimer = null;
       saveRaw(buildState());
     }, typeof delay === 'number' ? delay : 180);
-  }
-
-  function queueScrollSave() {
-    if (restoring) return;
-    clearTimeout(scrollSaveTimer);
-    scrollSaveTimer = window.setTimeout(() => {
-      scrollSaveTimer = null;
-      queueSave(0);
-    }, 120);
   }
 
   function applyControlValue(el, saved) {
@@ -314,7 +328,8 @@
     if (!state || !state.controls) return 0;
     let applied = 0;
     document.querySelectorAll('input, select, textarea').forEach((el) => {
-      const key = getControlKey(el);
+      if (el.id || el.name) return;
+      const key = getUntrackedControlKey(el);
       if (!key || !Object.prototype.hasOwnProperty.call(state.controls, key)) return;
       if (applyControlValue(el, state.controls[key])) {
         applied += 1;
@@ -399,15 +414,6 @@
     });
   }
 
-  function restoreScroll(state) {
-    if (!state) return;
-    SCROLL_RESTORE_DELAYS.forEach((delay) => {
-      window.setTimeout(() => {
-        setScrollY(state.scrollY || 0);
-      }, delay);
-    });
-  }
-
   function startMutationObserver(state) {
     if (mutationObserver) {
       mutationObserver.disconnect();
@@ -419,6 +425,7 @@
       applyControls(state);
       restoreCustomButtons(state.buttonStates);
       restoreDetails(state.details);
+      restoreModuleStates(state.moduleStates);
     });
 
     try {
@@ -438,51 +445,57 @@
     if (!state) return;
 
     restoring = true;
-    try {
-      window.autoScrollDisabled = true;
-    } catch (_) {}
-
     startMutationObserver(state);
 
-    UI_RESTORE_DELAYS.forEach((delay, idx) => {
+    UI_RESTORE_DELAYS.forEach((delay) => {
       window.setTimeout(() => {
-        applyControls(state);
         restoreUi(state.ui);
         applyControls(state);
         restoreCustomButtons(state.buttonStates);
         restoreDetails(state.details);
-        if (idx === UI_RESTORE_DELAYS.length - 1) {
-          restoreScroll(state);
-        }
+        restoreModuleStates(state.moduleStates);
       }, delay);
     });
 
-    const lastDelay = Math.max(...UI_RESTORE_DELAYS, ...SCROLL_RESTORE_DELAYS) + 350;
+    const lastDelay = Math.max.apply(Math, UI_RESTORE_DELAYS) + 350;
     window.setTimeout(() => {
       restoring = false;
       queueSave(0);
     }, lastDelay);
   }
 
-  function handleFocus(event) {
-    const target = event.target;
-    if (!target || !(target.matches && target.matches('input, select, textarea, button'))) return;
-    lastFocusedKey = getControlKey(target);
-    queueSave(120);
+  function isClearActionTarget(target) {
+    if (!target || typeof target.closest !== 'function') return false;
+    return !!target.closest(CLEAR_BUTTON_SELECTOR);
   }
 
   function initPersistence() {
+    clearLegacyState();
+
     const existing = loadState();
     if (existing) {
       restoreState(existing);
     }
 
-    document.addEventListener('input', () => queueSave(180), true);
-    document.addEventListener('change', () => queueSave(180), true);
-    document.addEventListener('click', () => queueSave(220), true);
-    document.addEventListener('focusin', handleFocus, true);
-    document.addEventListener('toggle', () => queueSave(180), true);
-    window.addEventListener('scroll', queueScrollSave, { passive: true });
+    document.addEventListener('input', (ev) => {
+      if (isClearActionTarget(ev.target)) return;
+      queueSave(180);
+    }, true);
+    document.addEventListener('change', (ev) => {
+      if (isClearActionTarget(ev.target)) return;
+      queueSave(180);
+    }, true);
+    document.addEventListener('toggle', (ev) => {
+      if (isClearActionTarget(ev.target)) return;
+      queueSave(180);
+    }, true);
+    document.addEventListener('click', (ev) => {
+      if (isClearActionTarget(ev.target)) {
+        window.setTimeout(clearState, 0);
+        return;
+      }
+      queueSave(220);
+    }, true);
     window.addEventListener('pagehide', () => {
       if (mutationObserver) {
         mutationObserver.disconnect();

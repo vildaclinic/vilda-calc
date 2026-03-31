@@ -8999,6 +8999,98 @@ function chooseAmoxClavDefaultForm(weight, context){
     }
   }
 
+  function captureAntibioticPersistState(){
+    const card = document.getElementById('antibioticTherapyCard');
+    if(!card) return null;
+    const getValue = (id) => {
+      const el = document.getElementById(id);
+      if(!el) return '';
+      return typeof el.value === 'string' ? el.value : String(el.value == null ? '' : el.value);
+    };
+    return {
+      indication: getValue('abxIndication'),
+      drug: getValue('abxDrug'),
+      form: getValue('abxForm'),
+      dose: getValue('abxDoseInput'),
+      duration: getValue('abxDuration'),
+      customDoseActive: !!customDoseActive,
+      schemesVisible: !!schemesVisible
+    };
+  }
+
+  function restoreAntibioticPersistState(state){
+    if(!state || typeof state !== 'object') return;
+    mountCard();
+    const indicSelect = document.getElementById('abxIndication');
+    const drugSelect = document.getElementById('abxDrug');
+    const formSelect = document.getElementById('abxForm');
+    const doseInput = document.getElementById('abxDoseInput');
+    const durInput = document.getElementById('abxDuration');
+    const slider = document.getElementById('abxDoseSlider');
+    if(!indicSelect || !drugSelect || !formSelect || !doseInput || !durInput || !slider) return;
+
+    customDoseActive = false;
+    schemesVisible = !!state.schemesVisible;
+
+    const hasOption = (selectEl, value) => {
+      if(!selectEl) return false;
+      return Array.from(selectEl.options || []).some((opt) => String(opt.value) === String(value));
+    };
+
+    if(state.indication && hasOption(indicSelect, state.indication)) {
+      indicSelect.value = state.indication;
+    }
+    populateDrugs();
+
+    if(state.drug && hasOption(drugSelect, state.drug)) {
+      drugSelect.value = state.drug;
+    }
+    populateForms();
+
+    if(state.form && hasOption(formSelect, state.form)) {
+      formSelect.value = state.form;
+    }
+    updateDoseControls();
+
+    if(String(state.duration || '') !== '') {
+      durInput.value = String(state.duration);
+    }
+
+    if(state.customDoseActive) {
+      enableCustomDose();
+    }
+
+    if(String(state.dose || '') !== '') {
+      doseInput.value = String(state.dose);
+      slider.value = String(state.dose);
+      try {
+        doseInput.dispatchEvent(new Event('input', { bubbles: true }));
+      } catch (_) {}
+    }
+
+    if(!state.customDoseActive) {
+      customDoseActive = false;
+    }
+
+    if(typeof updateSchemesButton === 'function') {
+      updateSchemesButton();
+    }
+    if(typeof updateSliderUI === 'function') {
+      updateSliderUI();
+    }
+    recalc();
+  }
+
+  try {
+    if(typeof window !== 'undefined') {
+      window.vildaAbxPersistApi = {
+        ensureMounted: mountCard,
+        captureState: captureAntibioticPersistState,
+        restoreState: restoreAntibioticPersistState
+      };
+    }
+  } catch(_) {}
+
   // Po załadowaniu DOM rejestrujemy przycisk i obsługę jego kliknięcia.
   document.addEventListener('DOMContentLoaded', function(){
     const btn = document.getElementById('toggleAbxTherapy');

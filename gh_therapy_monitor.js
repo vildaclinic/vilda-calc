@@ -1809,6 +1809,64 @@
    * `refreshGHTherapyMonitor` w globalnym obiekcie window, tak aby
    * app.js mógł odświeżać tabelę po wczytaniu lub wyczyszczeniu danych.
    */
+  function captureGhMonitorPersistState(){
+    const editContainer = document.getElementById('ghTherapyEditContainer');
+    const isEditing = !!(currentEditingId && editContainer && editContainer.style.display !== 'none');
+    if(!isEditing) return null;
+    const getValue = (id) => {
+      const el = document.getElementById(id);
+      if(!el) return '';
+      return typeof el.value === 'string' ? el.value : String(el.value == null ? '' : el.value);
+    };
+    return {
+      currentEditingId: String(currentEditingId),
+      fields: {
+        age: getValue('ghEditAge'),
+        ageMonths: getValue('ghEditAgeMonths'),
+        weight: getValue('ghEditWeight'),
+        height: getValue('ghEditHeight'),
+        boneAge: getValue('ghEditBoneAge'),
+        dose: getValue('ghEditDose'),
+        drug: getValue('ghEditDrug')
+      }
+    };
+  }
+
+  function restoreGhMonitorPersistState(state){
+    if(!state || typeof state !== 'object' || !state.currentEditingId) return;
+    if(typeof editTherapyPoint !== 'function') return;
+    editTherapyPoint(state.currentEditingId);
+    try {
+      const overlay = document.getElementById('ghEditOverlay');
+      if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+    } catch (_) {}
+    const fields = state.fields && typeof state.fields === 'object' ? state.fields : {};
+    const setValue = (id, value) => {
+      if(value == null || value === '') return;
+      const el = document.getElementById(id);
+      if(!el) return;
+      el.value = String(value);
+      try { el.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
+      try { el.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+    };
+    setValue('ghEditAge', fields.age);
+    setValue('ghEditAgeMonths', fields.ageMonths);
+    setValue('ghEditWeight', fields.weight);
+    setValue('ghEditHeight', fields.height);
+    setValue('ghEditBoneAge', fields.boneAge);
+    setValue('ghEditDose', fields.dose);
+    setValue('ghEditDrug', fields.drug);
+  }
+
+  try {
+    if(typeof window !== 'undefined') {
+      window.vildaGhTherapyMonitorPersistApi = {
+        captureState: captureGhMonitorPersistState,
+        restoreState: restoreGhMonitorPersistState
+      };
+    }
+  } catch(_) {}
+
   function init(){
     loadTherapyPoints();
     const card = createCard();
