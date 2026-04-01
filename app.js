@@ -18023,6 +18023,21 @@ function _updateIntakeFirstRowFromUserBasics(){
   const cont = document.getElementById('intakeMeasurements');
   if (!cont) return;
 
+  const basics = _getUserBasics();
+  const hasCurrentBasics = Number.isFinite(Number(basics && basics.ageMonths))
+    && Number.isFinite(Number(basics && basics.height))
+    && Number.isFinite(Number(basics && basics.weight));
+
+  if (!hasCurrentBasics) {
+    const rows = _intkRows();
+    const first = rows[0];
+    if (first && first.dataset.locked === 'true' && !_intakeRowHasAnyData(first)) {
+      try { first.remove(); } catch (_) {}
+    }
+    if (typeof updateIntakeRemoveButtons === 'function') updateIntakeRemoveButtons();
+    return;
+  }
+
   if (!_intkRows().length) {
     if (typeof intakeAddRow === 'function') intakeAddRow();
     else return;
@@ -18031,7 +18046,6 @@ function _updateIntakeFirstRowFromUserBasics(){
   const first = _intkRows()[0];
   if (!first) return;
 
-  const basics = _getUserBasics();
   const setVal = (sel, value) => {
     const el = first.querySelector(sel);
     if (!el) return;
@@ -18044,8 +18058,8 @@ function _updateIntakeFirstRowFromUserBasics(){
 
   setVal('.intake-ageY', ageMonths === null ? '' : Math.floor(ageMonths / 12));
   setVal('.intake-ageM', ageMonths === null ? '' : (ageMonths % 12));
-  setVal('.intake-ht', (typeof basics.height === 'number' && isFinite(basics.height)) ? basics.height : '');
-  setVal('.intake-wt', (typeof basics.weight === 'number' && isFinite(basics.weight)) ? basics.weight : '');
+  setVal('.intake-ht', basics.height);
+  setVal('.intake-wt', basics.weight);
 
   _lockIntakeFirstRow();
   if (typeof updateIntakeRemoveButtons === 'function') updateIntakeRemoveButtons();
@@ -18167,6 +18181,37 @@ function _syncIntakeRowToAdv(intakeRow, options){
   try { if (typeof calculateGrowthAdvanced === 'function') calculateGrowthAdvanced(); } catch (_) {}
 }
 
+function _copyValueIfTargetEmpty(targetEl, value) {
+  if (!targetEl) return;
+  if (String(targetEl.value ?? '').trim() !== '') return;
+  if (value === null || value === undefined || value === '' || Number.isNaN(value)) return;
+  targetEl.value = String(value);
+}
+
+function _backfillIntakeRowFromAdv(advRow, intakeRow) {
+  if (!advRow || !intakeRow) return;
+  const advAgeY = parseFloat(advRow.querySelector('.adv-age-years')?.value);
+  const advAgeM = parseFloat(advRow.querySelector('.adv-age-months')?.value);
+  const advHeight = parseFloat(advRow.querySelector('.adv-height')?.value);
+  const advWeight = parseFloat(advRow.querySelector('.adv-weight')?.value);
+  _copyValueIfTargetEmpty(intakeRow.querySelector('.intake-ageY'), Number.isNaN(advAgeY) ? '' : advAgeY);
+  _copyValueIfTargetEmpty(intakeRow.querySelector('.intake-ageM'), Number.isNaN(advAgeM) ? '' : Math.round(advAgeM));
+  _copyValueIfTargetEmpty(intakeRow.querySelector('.intake-ht'), Number.isNaN(advHeight) ? '' : advHeight);
+  _copyValueIfTargetEmpty(intakeRow.querySelector('.intake-wt'), Number.isNaN(advWeight) ? '' : advWeight);
+}
+
+function _backfillAdvRowFromIntake(intakeRow, advRow) {
+  if (!intakeRow || !advRow) return;
+  const intakeAgeY = parseFloat(intakeRow.querySelector('.intake-ageY')?.value);
+  const intakeAgeM = parseFloat(intakeRow.querySelector('.intake-ageM')?.value);
+  const intakeHeight = parseFloat(intakeRow.querySelector('.intake-ht')?.value);
+  const intakeWeight = parseFloat(intakeRow.querySelector('.intake-wt')?.value);
+  _copyValueIfTargetEmpty(advRow.querySelector('.adv-age-years'), Number.isNaN(intakeAgeY) ? '' : intakeAgeY);
+  _copyValueIfTargetEmpty(advRow.querySelector('.adv-age-months'), Number.isNaN(intakeAgeM) ? '' : Math.round(intakeAgeM));
+  _copyValueIfTargetEmpty(advRow.querySelector('.adv-height'), Number.isNaN(intakeHeight) ? '' : intakeHeight);
+  _copyValueIfTargetEmpty(advRow.querySelector('.adv-weight'), Number.isNaN(intakeWeight) ? '' : intakeWeight);
+}
+
 function _pairAdvancedAndIntakeRowsByOrder(){
   if (_isAdvIntakeSyncSuspended()) return;
   if (!document.getElementById('advMeasurements') || !document.getElementById('intakeMeasurements')) {
@@ -18204,6 +18249,9 @@ function _pairAdvancedAndIntakeRowsByOrder(){
       const advRow = advRows[i];
       const intakeRow = intakeHistoryRows[i];
       if (!advRow || !intakeRow) continue;
+
+      _backfillIntakeRowFromAdv(advRow, intakeRow);
+      _backfillAdvRowFromIntake(intakeRow, advRow);
 
       if (_advRowHasAnyData(advRow) && !_intakeRowHasAnyData(intakeRow)) {
         _syncAdvRowToIntake(advRow, { skipPairing: true });
@@ -20785,7 +20833,7 @@ try {
       <span class="muted">Dodaj drugi pomiar, aby obliczyć nadwyżkę/deficyt z trendu masy.</span></p>`;
     // Ustaw globalne zmienne historii (pojedynczy wiersz)
     try {
-      window.intakeHistory = rows.map(row => ({ ageMonths: row.ageMonths, weight: row.weight }));
+      window.intakeHistory = rows.map(row => ({ ageMonths: row.ageMonths, ageYears: row.ageYears, height: row.height, weight: row.weight }));
       window.intakeEstimatedKcalPerDay = null;
       if (typeof window.anorexiaRiskAdjust === 'function') {
         const basics = getUserBasics();
@@ -20849,7 +20897,7 @@ try {
 
   // Zapisz historię i oszacowanie spożycia, a następnie wywołaj baner anoreksji.
   try {
-    window.intakeHistory = rows.map(row => ({ ageMonths: row.ageMonths, weight: row.weight }));
+    window.intakeHistory = rows.map(row => ({ ageMonths: row.ageMonths, ageYears: row.ageYears, height: row.height, weight: row.weight }));
     const lastInterval = intervals[intervals.length - 1];
     window.intakeEstimatedKcalPerDay = lastInterval ? lastInterval.intakePerDay : null;
     if (typeof window.anorexiaRiskAdjust === 'function') {
@@ -21675,6 +21723,180 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
     updateSaveBtnVisibility();
   };
 
+  function normalizePersistNumber(value) {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function normalizeAgeMonthsValue(ageMonthsValue, ageYearsValue) {
+    const direct = normalizePersistNumber(ageMonthsValue);
+    if (direct !== null) return Math.round(direct);
+    const ageYears = normalizePersistNumber(ageYearsValue);
+    return (ageYears !== null) ? Math.round(ageYears * 12) : null;
+  }
+
+  function sanitizeAdvancedMeasurementEntries(entries) {
+    if (!Array.isArray(entries)) return [];
+    const out = [];
+    const seen = new Set();
+    entries.forEach((entry) => {
+      if (!entry || typeof entry !== 'object') return;
+      const ageMonths = normalizeAgeMonthsValue(entry.ageMonths, entry.ageYears);
+      if (ageMonths === null) return;
+      const height = normalizePersistNumber(entry.height);
+      const weight = normalizePersistNumber(entry.weight);
+      const boneAgeYears = normalizePersistNumber(entry.boneAgeYears);
+      const arrowEnabled = !!entry.arrowEnabled;
+      const arrowComment = (typeof entry.arrowComment === 'string') ? entry.arrowComment.trim() : '';
+      const ghSync = !!entry.ghSync;
+      const ghId = (entry.ghId != null && String(entry.ghId).trim() !== '') ? String(entry.ghId).trim() : '';
+      const hasPayload = (height !== null) || (weight !== null) || (boneAgeYears !== null) || arrowEnabled || !!arrowComment || ghSync || !!ghId;
+      if (!hasPayload) return;
+      const key = [
+        ageMonths,
+        height !== null ? height.toFixed(3) : '',
+        weight !== null ? weight.toFixed(3) : '',
+        boneAgeYears !== null ? boneAgeYears.toFixed(3) : '',
+        arrowEnabled ? '1' : '0',
+        arrowComment,
+        ghSync ? '1' : '0',
+        ghId
+      ].join('|');
+      if (seen.has(key)) return;
+      seen.add(key);
+      const next = Object.assign({}, entry, {
+        ageMonths,
+        ageYears: ageMonths / 12,
+        height,
+        weight,
+        boneAgeYears,
+        arrowEnabled,
+        arrowComment,
+        ghSync,
+        ghId: ghId || null
+      });
+      out.push(next);
+    });
+    out.sort((a, b) => a.ageMonths - b.ageMonths);
+    return out;
+  }
+
+  function sanitizeAdvancedRowsUI(rowsUI) {
+    if (!Array.isArray(rowsUI)) return [];
+    return rowsUI
+      .filter((item) => {
+        if (!item || typeof item !== 'object') return false;
+        const fields = [item.ageY, item.ageM, item.ht, item.wt, item.boneAge];
+        const hasText = fields.some((value) => String(value ?? '').trim() !== '');
+        const hasMeta = !!item.arrowEnabled
+          || !!(typeof item.arrowComment === 'string' && item.arrowComment.trim())
+          || !!item.ghSync
+          || !!(item.ghId != null && String(item.ghId).trim() !== '');
+        return hasText || hasMeta;
+      })
+      .map((item) => ({
+        ageY: item.ageY ?? '',
+        ageM: item.ageM ?? '',
+        ht: item.ht ?? '',
+        wt: item.wt ?? '',
+        boneAge: item.boneAge ?? '',
+        arrowEnabled: !!item.arrowEnabled,
+        arrowComment: (typeof item.arrowComment === 'string') ? item.arrowComment : '',
+        ghSync: !!item.ghSync,
+        ghId: (item.ghId != null) ? String(item.ghId) : ''
+      }));
+  }
+
+  function sanitizeIntakeHistoryEntries(entries) {
+    if (!Array.isArray(entries)) return [];
+    const out = [];
+    const seen = new Set();
+    entries.forEach((entry) => {
+      if (!entry || typeof entry !== 'object') return;
+      const ageMonths = normalizeAgeMonthsValue(entry.ageMonths, entry.ageYears);
+      if (ageMonths === null) return;
+      const height = normalizePersistNumber(entry.height);
+      const weight = normalizePersistNumber(entry.weight);
+      if (height === null && weight === null) return;
+      const key = [
+        ageMonths,
+        height !== null ? height.toFixed(3) : '',
+        weight !== null ? weight.toFixed(3) : ''
+      ].join('|');
+      if (seen.has(key)) return;
+      seen.add(key);
+      out.push({
+        ageMonths,
+        ageYears: ageMonths / 12,
+        height,
+        weight
+      });
+    });
+    out.sort((a, b) => a.ageMonths - b.ageMonths);
+    return out;
+  }
+
+  function sanitizeIntakeRowsUI(rowsUI) {
+    if (!Array.isArray(rowsUI)) return [];
+    return rowsUI
+      .filter((item) => {
+        if (!item || typeof item !== 'object') return false;
+        const fields = [item.ageY, item.ageM, item.ht, item.wt];
+        return fields.some((value) => String(value ?? '').trim() !== '');
+      })
+      .map((item) => ({
+        ageY: item.ageY ?? '',
+        ageM: item.ageM ?? '',
+        ht: item.ht ?? '',
+        wt: item.wt ?? '',
+        locked: !!item.locked,
+        disabled: {
+          ageY: !!(item.disabled && item.disabled.ageY),
+          ageM: !!(item.disabled && item.disabled.ageM),
+          ht: !!(item.disabled && item.disabled.ht),
+          wt: !!(item.disabled && item.disabled.wt)
+        }
+      }));
+  }
+
+  function hasCompleteIntakeCurrentBasics() {
+    try {
+      if (typeof _getUserBasics !== 'function') return false;
+      const basics = _getUserBasics();
+      return Number.isFinite(Number(basics && basics.ageMonths))
+        && Number.isFinite(Number(basics && basics.height))
+        && Number.isFinite(Number(basics && basics.weight));
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function withHistoryRestoreGuards(callback) {
+    let prevAdvSync = false;
+    let prevCrossSync = false;
+    let prevPauseUntil = 0;
+    try {
+      if (typeof window !== 'undefined') {
+        prevAdvSync = !!window.__vildaSuspendAdvIntakeSync;
+        prevCrossSync = !!window.__vildaSuspendGrowthHistoryCrossSync;
+        prevPauseUntil = Number(window.__vildaPersistPauseUntil || 0);
+        window.__vildaSuspendAdvIntakeSync = true;
+        window.__vildaSuspendGrowthHistoryCrossSync = true;
+        window.__vildaPersistPauseUntil = Math.max(prevPauseUntil, Date.now() + 900);
+      }
+    } catch (_) {}
+    try {
+      return callback();
+    } finally {
+      try {
+        if (typeof window !== 'undefined') {
+          window.__vildaSuspendAdvIntakeSync = prevAdvSync;
+          window.__vildaSuspendGrowthHistoryCrossSync = prevCrossSync;
+        }
+      } catch (_) {}
+    }
+  }
+
   // === REHYDRATACJA UI PO WCZYTANIU PLIKU JSON ======================
   // Odtwórz wiersze w sekcji „Zaawansowane obliczenia wzrostowe” z window.advancedGrowthData
   function rehydrateAdvancedFromState(){
@@ -21683,15 +21905,7 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
     cont.innerHTML = '';
     // jeśli nie ma danych – dodaj pusty jeden wiersz jak zwykle
     const arr = (window.advancedGrowthData && Array.isArray(window.advancedGrowthData.measurements))
-      ? window.advancedGrowthData.measurements
-          .slice()
-          // Sort measurements from oldest to newest by age in months. If ageMonths is missing,
-          // fall back to ageYears converted to months.
-          .sort((a, b) => {
-            const am = (typeof a.ageMonths === 'number') ? a.ageMonths : Math.round((a.ageYears || 0) * 12);
-            const bm = (typeof b.ageMonths === 'number') ? b.ageMonths : Math.round((b.ageYears || 0) * 12);
-            return am - bm;
-          })
+      ? sanitizeAdvancedMeasurementEntries(window.advancedGrowthData.measurements)
       : [];
     if (!arr.length) {
       if (typeof addAdvMeasurementRow === 'function') addAdvMeasurementRow();
@@ -21772,7 +21986,7 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
     if (!cont) return;
     cont.innerHTML = '';
 
-    const arr = Array.isArray(rowsUI) ? rowsUI.slice() : [];
+    const arr = sanitizeAdvancedRowsUI(rowsUI);
     if (!arr.length) {
       if (typeof addAdvMeasurementRow === 'function') addAdvMeasurementRow();
       if (typeof calculateGrowthAdvanced === 'function') calculateGrowthAdvanced();
@@ -21851,25 +22065,24 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
     const card = document.getElementById('intakeCard');
     const wrap = document.getElementById('intakeMeasurements');
     if (!wrap) return;
-    // pokaż przycisk i kartę (spełniamy warunki widoczności z istniejącej logiki)
+
     if (btn) btn.style.display = 'none';
     if (card) card.style.display = 'none';
     wrap.innerHTML = '';
-    // Jeśli w oknie globalnym istnieje zapis historii spożycia (window.intakeHistory) i zawiera co
-    // najmniej jeden element, to nie dodawaj domyślnego wiersza z danymi użytkownika.
-    // Zamiast tego utwórz pusty pierwszy wiersz dla nowych pomiarów, a następnie dołóż
-    // wiersze z historii.  Gdy historia jest pusta, zachowaj dotychczasowe zachowanie –
-    // wiersz zostanie prefillowany danymi z getUserBasics() i zablokowany.
-    const histArr = Array.isArray(window.intakeHistory) ? window.intakeHistory.slice() : [];
+
+    const histArr = sanitizeIntakeHistoryEntries(Array.isArray(window.intakeHistory) ? window.intakeHistory : []);
     const hasHistory = histArr.length > 0;
-    if (hasHistory) {
-      // Pusty wiersz na początek, aby użytkownik mógł wprowadzić nowy pomiar
-      if (typeof intakeAddRow === 'function') {
-        intakeAddRow();
+    const hasCurrentBasics = hasCompleteIntakeCurrentBasics();
+
+    if (hasCurrentBasics) {
+      try {
+        const basics = _getUserBasics();
+        intakeAddRow({ ageMonths: basics.ageMonths, height: basics.height, weight: basics.weight });
+      } catch (_) {
+        if (typeof intakeAddRow === 'function') intakeAddRow();
       }
-    } else {
-      // Brak historii – utwórz wiersz z danymi użytkownika i zablokuj go
-      if (typeof intakeAddRow === 'function'){
+    } else if (!hasHistory) {
+      if (typeof intakeAddRow === 'function') {
         let basics;
         if (typeof getUserBasics === 'function') {
           basics = getUserBasics();
@@ -21880,62 +22093,36 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
           const weight = parseFloat(q('weight')?.value);
           basics = { ageMonths: (isNaN(ageY)?0:ageY)*12 + (isNaN(ageM)?0:ageM), height, weight };
         }
-        intakeAddRow({ ageMonths: basics.ageMonths, height: basics.height, weight: basics.weight });
-      }
-      if (typeof _updateIntakeFirstRowFromUserBasics === 'function') {
-        // Only update the locked row if basics are valid numbers
-        const ageValid = !isNaN(parseFloat(q('age')?.value));
-        const heightValid = !isNaN(parseFloat(q('height')?.value));
-        const weightValid = !isNaN(parseFloat(q('weight')?.value));
-        if (ageValid || heightValid || weightValid) {
-          _updateIntakeFirstRowFromUserBasics();
+        if (basics && (Number.isFinite(Number(basics.ageMonths)) || Number.isFinite(Number(basics.height)) || Number.isFinite(Number(basics.weight)))) {
+          intakeAddRow({ ageMonths: basics.ageMonths, height: basics.height, weight: basics.weight });
+        } else {
+          intakeAddRow();
         }
       }
     }
-    // pozostałe wiersze z historii, posortowane od najstarszego do najnowszego
-    const hist = hasHistory
-      ? histArr
-          .slice()
-          // Sort intake history from oldest to newest by age in months. If ageMonths is missing,
-          // fall back to ageYears converted to months.
-          .sort((a, b) => {
-            const am = (typeof a.ageMonths === 'number') ? a.ageMonths : Math.round((a.ageYears || 0) * 12);
-            const bm = (typeof b.ageMonths === 'number') ? b.ageMonths : Math.round((b.ageYears || 0) * 12);
-            return am - bm;
-          })
-      : [];
-    hist.forEach(m=>{
-      // nie duplikuj 1. wiersza jeśli identyczny punkt czasu/wagi
-      const existing = wrap.querySelectorAll('.measure-row-intake');
-      let isDup = false;
-      if(existing.length > 0){
-        const first = existing[0];
-        const y = parseFloat(first.querySelector('.intake-ageY')?.value)||0;
-        const mm= parseFloat(first.querySelector('.intake-ageM')?.value)||0;
-        const ageM = y*12+mm;
-        const w = parseFloat(first.querySelector('.intake-wt')?.value);
-        if (typeof m.ageMonths==='number' && Math.abs(ageM - m.ageMonths)<=1 &&
-            typeof m.weight==='number' && Math.abs(w - m.weight) < 0.01) {
-          isDup = true;
-        }
-      }
-      if (isDup) return;
+
+    histArr.forEach(m=>{
       if (typeof intakeAddRow === 'function'){
         intakeAddRow({ ageMonths: m.ageMonths, height: m.height, weight: m.weight });
       }
     });
-    // Ustaw PAL (z zapisu lub planu)
+
     const palSel = document.getElementById('intakePal');
     if (palSel){
       palSel.value = (savedPal || palSel.value || '1.4');
       if (typeof intakeUpdatePalDesc === 'function') intakeUpdatePalDesc();
     }
-    if (typeof updateIntakeRemoveButtons === 'function') updateIntakeRemoveButtons();
+
+    if (hasCurrentBasics) {
+      try { _updateIntakeFirstRowFromUserBasics(); } catch (_) {}
+    }
+
     try {
       if (typeof window !== 'undefined' && typeof window.vildaEnsureAdvancedIntakePairing === 'function') {
         window.vildaEnsureAdvancedIntakePairing();
       }
     } catch (_) {}
+    if (typeof updateIntakeRemoveButtons === 'function') updateIntakeRemoveButtons();
     if (typeof calcEstimatedIntake === 'function') calcEstimatedIntake();
     try {
       if (typeof window !== 'undefined' && typeof window.refreshEstimatedIntakeVisibility === 'function') {
@@ -22520,6 +22707,18 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
       /* ignoruj błędy resetu karty GH/IGF-1 */
     }
 
+    // --- SGA birth module reset ---
+    // Po pełnym resecie danych wyczyść również moduł SGA, w tym wybór
+    // źródła referencyjnego i zapamiętane wyniki, aby nie odtworzyły się
+    // po przeładowaniu strony.
+    try {
+      if (typeof window !== 'undefined' && window.vildaSgaBirthPersistApi && typeof window.vildaSgaBirthPersistApi.resetState === 'function') {
+        window.vildaSgaBirthPersistApi.resetState({ hideCard: true });
+      }
+    } catch (_) {
+      /* ignoruj błędy resetu modułu SGA */
+    }
+
     // --- GH Therapy Monitor reset ---
     // Po pełnym resecie danych należy również wyczyścić moduł monitorowania
     // leczenia hormonem wzrostu/IGF‑1.  Zerujemy globalną tablicę, usuwamy
@@ -22672,6 +22871,11 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
         // jest to ważne dla przycisku „Przywróć zapisany stan”.
         try { window.advancedGrowthData = JSON.parse(JSON.stringify(data.advanced.data)); }
         catch(_) { try { window.advancedGrowthData = data.advanced.data; } catch(_){} }
+        try {
+          if (window.advancedGrowthData && typeof window.advancedGrowthData === 'object') {
+            window.advancedGrowthData.measurements = sanitizeAdvancedMeasurementEntries(window.advancedGrowthData.measurements);
+          }
+        } catch (_) {}
 
         // NOWE (2026-02-05): „Ostatni pomiar” z wczytanego pliku traktuj jako pomiar historyczny
         // w sekcji „Zaawansowane obliczenia wzrostowe”. Dzięki temu po wpisaniu nowych danych
@@ -22775,7 +22979,7 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
     if(data.intake){
       if(q('intakePal') && data.intake.pal) q('intakePal').value = data.intake.pal;
       if(Array.isArray(data.intake.history)) {
-        try { window.intakeHistory = data.intake.history; } catch(_){}
+        try { window.intakeHistory = sanitizeIntakeHistoryEntries(data.intake.history); } catch(_){ try { window.intakeHistory = sanitizeIntakeHistoryEntries(data.intake.history || []); } catch(__){} }
       }
       if(typeof data.intake.estKcalPerDay === 'number'){
         window.intakeEstimatedKcalPerDay = data.intake.estKcalPerDay;
@@ -22954,9 +23158,28 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
           }
         }
     // ► NOWE: odtwórz UI z zapisanych struktur
-    try { rehydrateAdvancedFromState(); } catch(_) {}
-    try { if (typeof window !== 'undefined' && typeof window.vildaRehydrateBasicGrowthFromState === 'function') window.vildaRehydrateBasicGrowthFromState(); } catch(_) {}
-    try { rehydrateIntakeFromState((data && data.intake && data.intake.pal) || null); } catch(_) {}
+    withHistoryRestoreGuards(() => {
+      try { rehydrateAdvancedFromState(); } catch(_) {}
+      try { if (typeof window !== 'undefined' && typeof window.vildaRehydrateBasicGrowthFromState === 'function') window.vildaRehydrateBasicGrowthFromState(); } catch(_) {}
+      try { rehydrateIntakeFromState((data && data.intake && data.intake.pal) || null); } catch(_) {}
+    });
+    try {
+      if (typeof window !== 'undefined' && typeof window.vildaEnsureAdvancedIntakePairing === 'function') {
+        window.vildaEnsureAdvancedIntakePairing();
+      }
+    } catch (_) {}
+    try {
+      if (typeof window !== 'undefined' && typeof window.reconcileGrowthHistoryModules === 'function') {
+        window.reconcileGrowthHistoryModules('advanced');
+      }
+    } catch (_) {}
+    try {
+      if (typeof window !== 'undefined' && typeof window.vildaPersistScheduleSave === 'function') {
+        window.setTimeout(() => {
+          try { window.vildaPersistScheduleSave(); } catch (_) {}
+        }, 950);
+      }
+    } catch (_) {}
     {
       const loadEl = q('loadDataBtn');
       if(loadEl) {
@@ -23533,6 +23756,11 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
         if (data.advanced.data) {
           try { window.advancedGrowthData = JSON.parse(JSON.stringify(data.advanced.data)); }
           catch (_) { window.advancedGrowthData = data.advanced.data; }
+          try {
+            if (window.advancedGrowthData && typeof window.advancedGrowthData === 'object') {
+              window.advancedGrowthData.measurements = sanitizeAdvancedMeasurementEntries(window.advancedGrowthData.measurements);
+            }
+          } catch (_) {}
         } else {
           window.advancedGrowthData = { measurements: [] };
         }
@@ -23550,12 +23778,12 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
         if (elIntakePal && data.intake.pal) elIntakePal.value = data.intake.pal;
         try {
           if (Array.isArray(data.intake.history)) {
-            window.intakeHistory = JSON.parse(JSON.stringify(data.intake.history));
+            window.intakeHistory = sanitizeIntakeHistoryEntries(JSON.parse(JSON.stringify(data.intake.history)));
           } else {
             window.intakeHistory = [];
           }
         } catch (_) {
-          window.intakeHistory = data.intake.history || [];
+          window.intakeHistory = sanitizeIntakeHistoryEntries(data.intake.history || []);
         }
         if (typeof data.intake.estKcalPerDay === 'number') {
           window.intakeEstimatedKcalPerDay = data.intake.estKcalPerDay;
@@ -23752,9 +23980,28 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
         }
       } catch (_) {}
       // Odtwórz UI z zapisanych struktur w kartach zaawansowanych i spożycia
-      try { if (typeof rehydrateAdvancedFromState === 'function') rehydrateAdvancedFromState(); } catch (_) {}
-      try { if (typeof window !== 'undefined' && typeof window.vildaRehydrateBasicGrowthFromState === 'function') window.vildaRehydrateBasicGrowthFromState(); } catch (_) {}
-      try { if (typeof rehydrateIntakeFromState   === 'function') rehydrateIntakeFromState(data.intake ? data.intake.pal : null); } catch (_) {}
+      withHistoryRestoreGuards(() => {
+        try { if (typeof rehydrateAdvancedFromState === 'function') rehydrateAdvancedFromState(); } catch (_) {}
+        try { if (typeof window !== 'undefined' && typeof window.vildaRehydrateBasicGrowthFromState === 'function') window.vildaRehydrateBasicGrowthFromState(); } catch (_) {}
+        try { if (typeof rehydrateIntakeFromState   === 'function') rehydrateIntakeFromState(data.intake ? data.intake.pal : null); } catch (_) {}
+      });
+      try {
+        if (typeof window !== 'undefined' && typeof window.vildaEnsureAdvancedIntakePairing === 'function') {
+          window.vildaEnsureAdvancedIntakePairing();
+        }
+      } catch (_) {}
+      try {
+        if (typeof window !== 'undefined' && typeof window.reconcileGrowthHistoryModules === 'function') {
+          window.reconcileGrowthHistoryModules('advanced');
+        }
+      } catch (_) {}
+      try {
+        if (typeof window !== 'undefined' && typeof window.vildaPersistScheduleSave === 'function') {
+          window.setTimeout(() => {
+            try { window.vildaPersistScheduleSave(); } catch (_) {}
+          }, 950);
+        }
+      } catch (_) {}
 
       /*
        * Po przywróceniu stanu z wczytanego pliku JSON wypełnione zostają
@@ -25048,7 +25295,11 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
 
   function isPersistSuppressed() {
     try {
-      return !!(typeof window !== 'undefined' && Number(window.__vildaPersistClearUntil || 0) > Date.now());
+      if (typeof window === 'undefined') return false;
+      const now = Date.now();
+      const clearUntil = Number(window.__vildaPersistClearUntil || 0);
+      const pauseUntil = Number(window.__vildaPersistPauseUntil || 0);
+      return clearUntil > now || pauseUntil > now;
     } catch (_) {
       return false;
     }
@@ -25079,7 +25330,7 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
         });
       });
     } catch (_) {}
-    return rowsUI;
+    return sanitizeAdvancedRowsUI(rowsUI);
   }
 
   function capturePersistGlobals(p) {
@@ -25141,7 +25392,7 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
               }
             });
           });
-          p.globals.intakeRowsUI = rowsUI;
+          p.globals.intakeRowsUI = sanitizeIntakeRowsUI(rowsUI);
         } catch (_) {}
 
         // Dynamiczne wiersze jedzenia (.food-row) – nie mają ID, więc trzymamy snapshot
@@ -25445,10 +25696,11 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
       const g = (p.globals && typeof p.globals === 'object') ? p.globals : {};
 
       // Zaawansowane obliczenia wzrostowe (historia + komentarze)
-      if (Array.isArray(g.advancedGrowthRowsUI) && typeof window.vildaRehydrateAdvancedRowsUI === 'function') {
+      const restoredAdvancedRowsUI = sanitizeAdvancedRowsUI(g.advancedGrowthRowsUI);
+      if (restoredAdvancedRowsUI.length && typeof window.vildaRehydrateAdvancedRowsUI === 'function') {
         try {
           const fnRows = window.vildaRehydrateAdvancedRowsUI;
-          if (typeof fnRows === 'function') fnRows(g.advancedGrowthRowsUI);
+          if (typeof fnRows === 'function') fnRows(restoredAdvancedRowsUI);
         } catch (_) {}
       } else if (g.advancedGrowthData && typeof g.advancedGrowthData === 'object') {
         try { window.advancedGrowthData = safeClone(g.advancedGrowthData) || g.advancedGrowthData; } catch (_) {}
@@ -25467,11 +25719,12 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
       }
 
       // Szacowane spożycie energii – pełny stan wierszy (UI)
-      if (Array.isArray(g.intakeRowsUI) && typeof window.intakeAddRow === 'function') {
+      const restoredIntakeRowsUI = sanitizeIntakeRowsUI(g.intakeRowsUI);
+      if (restoredIntakeRowsUI.length && typeof window.intakeAddRow === 'function') {
         try {
           const wrap = document.getElementById('intakeMeasurements');
           if (wrap) wrap.innerHTML = '';
-          g.intakeRowsUI.forEach(r => {
+          restoredIntakeRowsUI.forEach(r => {
             try {
               window.intakeAddRow();
               const rows = document.querySelectorAll('#intakeMeasurements .measure-row-intake');
@@ -25513,7 +25766,7 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
           if (typeof window.calcEstimatedIntake === 'function') window.calcEstimatedIntake();
         } catch (_) {}
       } else if (Array.isArray(g.intakeHistory)) {
-        try { window.intakeHistory = safeClone(g.intakeHistory) || g.intakeHistory; } catch (_) {}
+        try { window.intakeHistory = sanitizeIntakeHistoryEntries(safeClone(g.intakeHistory) || g.intakeHistory); } catch (_) {}
         try {
           if (typeof g.intakeEstimatedKcalPerDay === 'number' && isFinite(g.intakeEstimatedKcalPerDay)) {
             window.intakeEstimatedKcalPerDay = g.intakeEstimatedKcalPerDay;
@@ -25677,6 +25930,11 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
           const finishGrowthSyncRestore = () => {
             try { window.__vildaSuspendAdvIntakeSync = false; } catch (_) {}
             try { window.__vildaSuspendGrowthHistoryCrossSync = false; } catch (_) {}
+            try {
+              if (typeof window.vildaEnsureAdvancedIntakePairing === 'function') {
+                window.vildaEnsureAdvancedIntakePairing();
+              }
+            } catch (_) {}
             try {
               if (typeof window.reconcileGrowthHistoryModules === 'function') {
                 window.reconcileGrowthHistoryModules('advanced');

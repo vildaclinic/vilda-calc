@@ -712,6 +712,53 @@
   font-size: 0.92rem;
   font-weight: 600;
 }
+.sga-birth-source-toggle {
+  margin-top: 0.4rem;
+  max-width: 560px;
+}
+.sga-birth-source-toggle label span {
+  padding: 0.56rem 0.74rem;
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+.sga-birth-compare-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+.sga-birth-source-block {
+  border: 1px solid var(--lg-border);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.38);
+  padding: 1rem;
+}
+.sga-birth-source-header {
+  text-align: center;
+  margin-bottom: 0.85rem;
+}
+.sga-birth-source-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+.sga-birth-source-header p {
+  margin: 0.3rem 0 0;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: rgba(20, 44, 47, 0.74);
+}
+.sga-birth-compare-note {
+  border: 1px solid var(--lg-border);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.52);
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.9rem;
+  text-align: center;
+  line-height: 1.5;
+}
+.sga-birth-compare-note p {
+  margin: 0;
+}
 .sga-birth-actions {
   display: flex;
   flex-wrap: wrap;
@@ -885,7 +932,8 @@
 @media (max-width: 860px) {
   .sga-birth-form,
   .sga-birth-grid,
-  .sga-birth-summary-grid {
+  .sga-birth-summary-grid,
+  .sga-birth-compare-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -2755,10 +2803,19 @@
 
 <div id="sgaBirthCard" class="card" style="display:none;">
   <h2 style="text-align:center;">SGA (small for gestational age)</h2>
-  <p class="sga-birth-intro">Wprowadź dane z okresu urodzeniowego, aby obliczyć SDS masy, długości ciała i obwodu głowy względem wieku ciążowego według Niklasson i Albertsson-Wikland 2008.</p>
+  <p class="sga-birth-intro">Wprowadź dane z okresu urodzeniowego, aby obliczyć SDS masy, długości ciała i obwodu głowy względem wieku ciążowego. Możesz policzyć wynik według Niklasson, według INTERGROWTH-21st albo porównać oba źródła równolegle.</p>
   <div class="sga-birth-form">
     <section class="sga-birth-panel" aria-labelledby="sgaBirthRequiredHeading">
       <h3 id="sgaBirthRequiredHeading">Dane obowiązkowe</h3>
+      <div class="sga-birth-field">
+        <label>Źródło danych referencyjnych</label>
+        <div class="data-source-toggle sga-birth-source-toggle" role="radiogroup" aria-label="Źródło danych referencyjnych">
+          <label><input type="radio" name="sgaBirthSource" value="niklasson" checked><span>Niklasson</span></label>
+          <label><input type="radio" name="sgaBirthSource" value="intergrowth"><span>INTERGROWTH-21st</span></label>
+          <label><input type="radio" name="sgaBirthSource" value="compare"><span>Porównaj oba</span></label>
+        </div>
+        <span class="sga-birth-help">Tryb porównawczy pokazuje równolegle wyniki z obu źródeł dla tych samych danych wejściowych.</span>
+      </div>
       <div class="sga-birth-field">
         <label>Płeć dziecka <span aria-hidden="true">*</span></label>
         <div class="data-source-toggle sga-birth-sex-toggle" role="radiogroup" aria-label="Płeć dziecka">
@@ -3215,6 +3272,7 @@
          elementów DOM oraz funkcji (np. pobierania masy ciała). Skrypt ten oblicza dawki 
          pamidronianu i zoledronianu na podstawie wagi dziecka oraz wybranych parametrów terapii. -->
     <script src="bisphos_therapy.js" defer></script>
+    <script src="sga_intergrowth_data.js" defer></script>
     <script src="sga_birth_module.js" defer></script>
 
     <!-- Skrypt synchronizujący podstawowe dane użytkownika (imię, wiek, płeć, masa i wzrost) pomiędzy

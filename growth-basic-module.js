@@ -886,21 +886,37 @@
   function rehydrateBasicGrowthFromState() {
     const wrap = q('basicGrowthMeasurements');
     if (!wrap) return;
-    wrap.innerHTML = '';
-    const arr = (window.basicGrowthData && Array.isArray(window.basicGrowthData.measurements))
-      ? window.basicGrowthData.measurements.slice().sort((a, b) => {
-          const am = (typeof a.ageMonths === 'number') ? a.ageMonths : Math.round((a.ageYears || 0) * 12);
-          const bm = (typeof b.ageMonths === 'number') ? b.ageMonths : Math.round((b.ageYears || 0) * 12);
-          return am - bm;
-        })
-      : [];
 
-    if (!arr.length) {
-      addBasicGrowthMeasurementRow();
-      return;
+    let prevSuspend = false;
+    try {
+      prevSuspend = !!window.__vildaSuspendGrowthHistoryCrossSync;
+      window.__vildaSuspendGrowthHistoryCrossSync = true;
+    } catch (_) {}
+
+    try {
+      wrap.innerHTML = '';
+      const arr = (window.basicGrowthData && Array.isArray(window.basicGrowthData.measurements))
+        ? window.basicGrowthData.measurements.slice().sort((a, b) => {
+            const am = (typeof a.ageMonths === 'number') ? a.ageMonths : Math.round((a.ageYears || 0) * 12);
+            const bm = (typeof b.ageMonths === 'number') ? b.ageMonths : Math.round((b.ageYears || 0) * 12);
+            return am - bm;
+          })
+        : [];
+
+      if (!arr.length) {
+        createBasicGrowthRow();
+        updateBasicGrowthRemoveButtons();
+        updateBasicGrowthAgeMax();
+        return;
+      }
+
+      arr.forEach((m) => createBasicGrowthRow(m));
+      updateBasicGrowthRemoveButtons();
+      updateBasicGrowthAgeMax();
+    } finally {
+      try { window.__vildaSuspendGrowthHistoryCrossSync = prevSuspend; } catch (_) {}
     }
 
-    arr.forEach((m) => addBasicGrowthMeasurementRow(m));
     calculateBasicGrowth();
   }
 
