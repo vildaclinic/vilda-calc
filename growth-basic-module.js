@@ -35,8 +35,16 @@
     return false;
   }
 
+  function isGrowthHistoryCrossSyncTemporarilySuspended() {
+    try {
+      return !!(typeof window !== 'undefined' && window.__vildaSuspendGrowthHistoryCrossSync);
+    } catch (_) {
+      return false;
+    }
+  }
+
   function isGrowthHistoryCrossSyncEnabled() {
-    return isProfessionalResultsModeActiveLocal();
+    return isProfessionalResultsModeActiveLocal() && !isGrowthHistoryCrossSyncTemporarilySuspended();
   }
 
   function getGrowthHistorySyncState() {
@@ -260,6 +268,62 @@
       el.value = (value == null || Number.isNaN(value)) ? '' : String(value);
     };
 
+    const normalizeNumericToken = (value) => {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return '';
+      return n.toFixed(3);
+    };
+
+    const entrySignature = (entry) => {
+      if (!entry || typeof entry !== 'object') return '';
+      const ageMonths = Number.isFinite(Number(entry.ageMonths))
+        ? Math.round(Number(entry.ageMonths))
+        : Math.round((Number(entry.ageYears) || 0) * 12);
+      return [
+        Number.isFinite(ageMonths) ? ageMonths : '',
+        normalizeNumericToken(entry.height),
+        normalizeNumericToken(entry.weight)
+      ].join('|');
+    };
+
+    const preservedSignature = (meta) => {
+      if (!meta || typeof meta !== 'object') return '';
+      const years = Number(meta.ageY);
+      const months = Number(meta.ageM);
+      const ageMonths = (Number.isFinite(years) || Number.isFinite(months))
+        ? Math.round((Number.isFinite(years) ? years : 0) * 12 + (Number.isFinite(months) ? months : 0))
+        : NaN;
+      return [
+        Number.isFinite(ageMonths) ? ageMonths : '',
+        normalizeNumericToken(meta.ht),
+        normalizeNumericToken(meta.wt)
+      ].join('|');
+    };
+
+    const preservedBySignature = new Map();
+    preserved.forEach((meta) => {
+      const sig = preservedSignature(meta);
+      if (!sig) return;
+      if (!preservedBySignature.has(sig)) preservedBySignature.set(sig, []);
+      preservedBySignature.get(sig).push(meta);
+    });
+
+    const takePreservedMeta = (entry, idx) => {
+      const sig = entrySignature(entry);
+      if (sig && preservedBySignature.has(sig)) {
+        const bucket = preservedBySignature.get(sig);
+        if (bucket && bucket.length) {
+          return bucket.shift();
+        }
+      }
+      const positional = preserved[idx] || null;
+      if (!positional || typeof positional !== 'object') return positional;
+      const fallback = Object.assign({}, positional);
+      fallback.ghSync = false;
+      fallback.ghId = '';
+      return fallback;
+    };
+
     const applyPreservedMeta = (row, meta, entry) => {
       const arrowEnableEl = row.querySelector('.adv-arrow-enable');
       const arrowCommentEl = row.querySelector('.adv-arrow-comment');
@@ -284,7 +348,7 @@
     if (!list.length) {
       window.addAdvMeasurementRow();
       const row = wrap.querySelector('.measure-row');
-      if (row) applyPreservedMeta(row, preserved[0] || null, null);
+      if (row) applyPreservedMeta(row, takePreservedMeta(null, 0), null);
       try { if (typeof window.updateRemoveButtons === 'function') window.updateRemoveButtons(); } catch (_) {}
       try { if (typeof window.updateAdvAgeMax === 'function') window.updateAdvAgeMax(); } catch (_) {}
       try { if (typeof window.updateArrowInputsVisibility === 'function') window.updateArrowInputsVisibility(); } catch (_) {}
@@ -304,7 +368,7 @@
       setValue(row, '.adv-age-months', monthsPart);
       setValue(row, '.adv-height', Number.isFinite(Number(entry?.height)) ? Number(entry.height) : '');
       setValue(row, '.adv-weight', Number.isFinite(Number(entry?.weight)) ? Number(entry.weight) : '');
-      applyPreservedMeta(row, preserved[idx] || null, entry);
+      applyPreservedMeta(row, takePreservedMeta(entry, idx), entry);
     });
 
     try { if (typeof window.updateRemoveButtons === 'function') window.updateRemoveButtons(); } catch (_) {}

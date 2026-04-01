@@ -16957,6 +16957,61 @@ function updateAdvAgeMax() {
  * UWAGA: dane liczbowe w wierszach są nadpisywane wartością źródłową,
  * ale pola stricte „lokalne” (np. strzałka/komentarz publikacyjny) nie są ruszane.
  */
+
+function getGhAdvancedCurrentBasics(){
+  try {
+    if (typeof _getUserBasics === 'function') {
+      return _getUserBasics();
+    }
+  } catch (_) {}
+  const ageYearsRaw = parseFloat(document.getElementById('age')?.value);
+  const ageMonthsRaw = parseFloat(document.getElementById('ageMonths')?.value);
+  const heightRaw = parseFloat(document.getElementById('height')?.value);
+  const weightRaw = parseFloat(document.getElementById('weight')?.value);
+  const hasAge = !isNaN(ageYearsRaw) || !isNaN(ageMonthsRaw);
+  const totalAgeMonths = hasAge
+    ? Math.round(((isNaN(ageYearsRaw) ? 0 : ageYearsRaw) * 12) + (isNaN(ageMonthsRaw) ? 0 : ageMonthsRaw))
+    : null;
+  return {
+    ageMonths: (typeof totalAgeMonths === 'number' && isFinite(totalAgeMonths)) ? totalAgeMonths : null,
+    height: (!isNaN(heightRaw) && isFinite(heightRaw)) ? heightRaw : null,
+    weight: (!isNaN(weightRaw) && isFinite(weightRaw)) ? weightRaw : null
+  };
+}
+
+function ghAdvancedApproxEq(a, b, tol=0.11) {
+  if (typeof a !== 'number' || !isFinite(a) || typeof b !== 'number' || !isFinite(b)) return false;
+  return Math.abs(a - b) <= tol;
+}
+
+function ghTherapyPointMatchesCurrentBasics(pt, basics) {
+  const current = (basics && typeof basics === 'object') ? basics : getGhAdvancedCurrentBasics();
+  if (!pt || current.ageMonths == null || current.height == null || current.weight == null) return false;
+  const ageM = Math.round((((pt.ageYears || 0) * 12) + (pt.ageMonths || 0)));
+  if (ageM !== current.ageMonths) return false;
+  const h = (pt.height != null && isFinite(pt.height)) ? Number(pt.height) : null;
+  const w = (pt.weight != null && isFinite(pt.weight)) ? Number(pt.weight) : null;
+  if (h == null || w == null) return false;
+  return ghAdvancedApproxEq(h, current.height, 0.11)
+    && ghAdvancedApproxEq(w, current.weight, 0.11);
+}
+
+function ghAdvancedRowMatchesCurrentBasics(row, basics) {
+  if (!row) return false;
+  const current = (basics && typeof basics === 'object') ? basics : getGhAdvancedCurrentBasics();
+  if (current.ageMonths == null || current.height == null || current.weight == null) return false;
+  const ageYearsRaw = parseFloat(row.querySelector('.adv-age-years')?.value);
+  const ageMonthsRaw = parseFloat(row.querySelector('.adv-age-months')?.value);
+  if (isNaN(ageYearsRaw) && isNaN(ageMonthsRaw)) return false;
+  const ageM = Math.round(((isNaN(ageYearsRaw) ? 0 : ageYearsRaw) * 12) + (isNaN(ageMonthsRaw) ? 0 : ageMonthsRaw));
+  if (ageM !== current.ageMonths) return false;
+  const heightRaw = parseFloat(row.querySelector('.adv-height')?.value);
+  const weightRaw = parseFloat(row.querySelector('.adv-weight')?.value);
+  if (!isFinite(heightRaw) || !isFinite(weightRaw)) return false;
+  return ghAdvancedApproxEq(heightRaw, current.height, 0.11)
+    && ghAdvancedApproxEq(weightRaw, current.weight, 0.11);
+}
+
 let __ghAdvImportInFlight = false;
 let __ghAdvImportQueued = false;
 
@@ -16999,9 +17054,57 @@ async function importTherapyPointsToAdvancedGrowth() {
       }
     }
 
+    const cloneGhPts = (list) => {
+      try { return JSON.parse(JSON.stringify(Array.isArray(list) ? list : [])); } catch (_) {
+        return Array.isArray(list) ? list.slice() : [];
+      }
+    };
+
+    const refreshGhTherapyMirror = (list) => {
+      const normalized = cloneGhPts(list);
+      try {
+        if (typeof window !== 'undefined') {
+          window.ghTherapyPoints = normalized;
+        }
+      } catch (_) {}
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('ghTherapyPoints', JSON.stringify(normalized));
+        }
+      } catch (_) {}
+    };
+
+    const finalizeGhImport = () => {
+      if (typeof updateRemoveButtons === 'function') {
+        try { updateRemoveButtons(); } catch (_) {}
+      }
+      if (typeof calculateGrowthAdvanced === 'function') {
+        try { calculateGrowthAdvanced(); } catch (_) {}
+      }
+      try {
+        const poke = document.getElementById('advName') || document.getElementById('name');
+        if (poke) {
+          poke.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      } catch (_) {}
+    };
+
+    const clearImportedGhRows = () => {
+      const ghRows = Array.from(advContainer.querySelectorAll('.measure-row[data-gh-sync="true"], .measure-row[data-gh-id]'));
+      if (!ghRows.length) return;
+      ghRows.forEach(row => {
+        try { row.remove(); } catch (_) {}
+      });
+      finalizeGhImport();
+    };
+
     if (!Array.isArray(pts) || pts.length === 0) {
+      refreshGhTherapyMirror([]);
+      clearImportedGhRows();
       return;
     }
+
+    refreshGhTherapyMirror(pts);
 
     // Uporządkuj po wieku (miesiącach)
     pts.sort((a,b) => {
@@ -17052,6 +17155,20 @@ async function importTherapyPointsToAdvancedGrowth() {
 
     // Usuń już istniejące duplikaty zsynchronizowanych wierszy (jeśli zostały wytworzone historycznie)
     dupRows.forEach(r => { try { r.remove(); } catch(_) {} });
+
+    const currentBasics = getGhAdvancedCurrentBasics();
+
+    // Usuń legacy wiersze GH, które odpowiadają bieżącym danym użytkownika.
+    // Taki punkt nie jest historią – aktualny pomiar jest już reprezentowany
+    // przez pola „Dane użytkownika” i nie powinien być dublowany w historii.
+    for (let i = unmarkedCandidates.length - 1; i >= 0; i--) {
+      const row = unmarkedCandidates[i];
+      if (!row) continue;
+      if (ghAdvancedRowMatchesCurrentBasics(row, currentBasics)) {
+        try { row.remove(); } catch (_) {}
+        unmarkedCandidates.splice(i, 1);
+      }
+    }
 
     const used = new Set();
 
@@ -17108,6 +17225,13 @@ async function importTherapyPointsToAdvancedGrowth() {
     // Upsert dla każdego punktu
     for (const pt of pts) {
       const ghId = pointKey(pt);
+
+      // Punkt identyczny z bieżącymi danymi użytkownika nie jest punktem
+      // historycznym. Nie importujemy go do historii pomiarów na index.html.
+      if (ghTherapyPointMatchesCurrentBasics(pt, currentBasics)) {
+        continue;
+      }
+
       used.add(ghId);
 
       let row = byGhId.get(ghId);
@@ -17204,21 +17328,9 @@ async function importTherapyPointsToAdvancedGrowth() {
       });
     } catch (_) {}
 
-    // Po imporcie odśwież przyciski usuwania i przelicz wyniki
-    if (typeof updateRemoveButtons === 'function') {
-      try { updateRemoveButtons(); } catch (_) {}
-    }
-    if (typeof calculateGrowthAdvanced === 'function') {
-      try { calculateGrowthAdvanced(); } catch (_) {}
-    }
-    // Delikatnie „szturchnij” warstwę autosave, aby zapisała oczyszczony snapshot
-    // (pozwala to usunąć duplikaty także z localStorage po imporcie)
-    try {
-      const poke = document.getElementById('advName') || document.getElementById('name');
-      if (poke) {
-        poke.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-    } catch (_) {}
+    // Po imporcie odśwież przyciski usuwania, przelicz wyniki i zapisz
+    // oczyszczony snapshot do autosave.
+    finalizeGhImport();
   } catch(_) {
     // w razie błędu nie wykonuj importu
   } finally {
@@ -25224,7 +25336,10 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
     const p = root[PKEY] || {};
     const touched = [];
     try {
-      if (typeof window !== 'undefined') window.__vildaSuspendAdvIntakeSync = true;
+      if (typeof window !== 'undefined') {
+        window.__vildaSuspendAdvIntakeSync = true;
+        window.__vildaSuspendGrowthHistoryCrossSync = true;
+      }
     } catch (_) {}
     isRestoring = true;
 
@@ -25524,7 +25639,37 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
     try {
       if (typeof window !== 'undefined') {
         setTimeout(() => {
-          try { window.__vildaSuspendAdvIntakeSync = false; } catch (_) {}
+          const finishGrowthSyncRestore = () => {
+            try { window.__vildaSuspendAdvIntakeSync = false; } catch (_) {}
+            try { window.__vildaSuspendGrowthHistoryCrossSync = false; } catch (_) {}
+            try {
+              if (typeof window.reconcileGrowthHistoryModules === 'function') {
+                window.reconcileGrowthHistoryModules('advanced');
+              }
+            } catch (_) {}
+            try {
+              if (typeof window.calculateBasicGrowth === 'function') {
+                window.calculateBasicGrowth();
+              }
+            } catch (_) {}
+            try {
+              if (typeof window.vildaPersistScheduleSave === 'function') {
+                window.vildaPersistScheduleSave();
+              }
+            } catch (_) {}
+          };
+
+          (async () => {
+            try {
+              if (typeof importTherapyPointsToAdvancedGrowth === 'function') {
+                await importTherapyPointsToAdvancedGrowth();
+              }
+            } catch (_) {
+              /* ignoruj błędy importu podczas restore */
+            } finally {
+              finishGrowthSyncRestore();
+            }
+          })();
         }, 0);
       }
     } catch (_) {}

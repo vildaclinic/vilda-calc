@@ -272,6 +272,36 @@
     return new Date(date.getFullYear(), date.getMonth(), date.getDate());
   }
 
+
+  /**
+   * Parsuje wartość pola daty w formacie YYYY-MM-DD do lokalnego obiektu Date
+   * ustawionego na początek dnia.  Nie polegamy wyłącznie na konstruktorze
+   * Date(string), ponieważ w różnych przeglądarkach potrafi on zwracać datę
+   * w UTC albo lokalnie, co może dawać niespójne obliczenia liczby dni dla
+   * funkcji "Ustalona data kontroli".
+   *
+   * @param {string} value Wartość pola daty
+   * @returns {Date|null}
+   */
+  function parseLocalDateInput(value){
+    const raw = String(value == null ? '' : value).trim();
+    if (!raw) return null;
+    const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (match) {
+      const year = Number(match[1]);
+      const month = Number(match[2]);
+      const day = Number(match[3]);
+      const parsed = new Date(year, month - 1, day);
+      if (parsed.getFullYear() !== year || parsed.getMonth() !== month - 1 || parsed.getDate() !== day) {
+        return null;
+      }
+      return startOfDay(parsed);
+    }
+    const fallback = new Date(raw);
+    if (isNaN(fallback)) return null;
+    return startOfDay(fallback);
+  }
+
   /**
    * Zwraca polską nazwę dnia tygodnia w mianowniku (niedziela, poniedziałek…).
    *
@@ -1153,7 +1183,8 @@
         try {
           const ctrlInput = document.getElementById('manualControlDate');
           if (!ctrlInput || !ctrlInput.value) return;
-          const ctrlDate = new Date(ctrlInput.value);
+          const ctrlDate = parseLocalDateInput(ctrlInput.value);
+          if (!ctrlDate) return;
           // Obetnij bieżącą datę do północy, aby zapewnić poprawne obliczenie liczby dni.
           const todayReal = new Date();
           const today = startOfDay(todayReal);
@@ -1645,7 +1676,8 @@ function recalc(){
             const manualVal = document.getElementById('therManual');
             if (manualDateInput.value) {
               try {
-                const ctrlDate = new Date(manualDateInput.value);
+                const ctrlDate = parseLocalDateInput(manualDateInput.value);
+                if (!ctrlDate) throw new Error('Invalid manual control date');
                 // liczba dni między dziś a kontrolą
                 const msPerDay = 24*60*60*1000;
                 // Obetnij bieżącą datę do północy, aby uniknąć przesunięć o 1 dzień
@@ -1729,7 +1761,8 @@ function recalc(){
             const manualVal = document.getElementById('therManual');
             if (manualDateInput.value) {
               try {
-                const ctrlDate = new Date(manualDateInput.value);
+                const ctrlDate = parseLocalDateInput(manualDateInput.value);
+                if (!ctrlDate) throw new Error('Invalid manual control date');
                 const msPerDay = 24*60*60*1000;
                 // Używamy początku dnia do obliczenia różnicy dni, aby uniknąć błędu
                 // zaokrąglenia przy obecnym czasie.  Bez tego np. wybierając datę
@@ -1816,7 +1849,7 @@ function recalc(){
     let current = new Date();
     // jeśli w polu jest już ustawiona data, użyj jej jako początkowego miesiąca
     if (input.value) {
-      const parsed = new Date(input.value);
+      const parsed = parseLocalDateInput(input.value);
       if (!isNaN(parsed)) current = new Date(parsed.getFullYear(), parsed.getMonth(), 1);
     } else {
       current = new Date(current.getFullYear(), current.getMonth(), 1);
@@ -2033,13 +2066,18 @@ function recalc(){
     // nie będzie przycinany przez kontenery z overflow i zawsze będzie
     // wyświetlany nad innymi elementami.
     let appendedToBody = false;
-    // otwórz kalendarz po kliknięciu w pole
-    input.addEventListener('click', (ev) => {
-      ev.stopPropagation();
+
+    function openPickerFromInput(ev){
+      if (ev && typeof ev.preventDefault === 'function' && ev.type === 'keydown') {
+        ev.preventDefault();
+      }
+      if (ev && typeof ev.stopPropagation === 'function') {
+        ev.stopPropagation();
+      }
       // ustaw miesiąc zgodnie z obecną wartością pola
       if (input.value) {
-        const parsed = new Date(input.value);
-        if (!isNaN(parsed)) current = new Date(parsed.getFullYear(), parsed.getMonth(), 1);
+        const parsed = parseLocalDateInput(input.value);
+        if (parsed) current = new Date(parsed.getFullYear(), parsed.getMonth(), 1);
       }
       // jeżeli kalendarz nie został jeszcze dodany do body, dodaj go
       if (!appendedToBody) {
@@ -2089,6 +2127,19 @@ function recalc(){
         picker.style.zIndex = '20000';
       } catch(_) {
         /* jeśli nie uda się obliczyć pozycji, pozostaw domyślne wartości */
+      }
+    }
+
+    // otwórz kalendarz po kliknięciu albo wejściu fokusem w pole
+    input.addEventListener('click', openPickerFromInput);
+    input.addEventListener('focus', () => {
+      if (picker.style.display === 'block') return;
+      openPickerFromInput();
+    });
+    input.addEventListener('keydown', (ev) => {
+      const key = ev && ev.key ? ev.key : '';
+      if (key === 'Enter' || key === ' ' || key === 'Spacebar' || key === 'ArrowDown') {
+        openPickerFromInput(ev);
       }
     });
 

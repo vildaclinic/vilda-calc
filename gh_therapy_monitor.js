@@ -1496,6 +1496,40 @@
     renderTherapyTable();
   }
 
+
+  function getCurrentUserMeasurementBasics(){
+    const ageYearsRaw = parseFloat((document.getElementById('age') || {}).value);
+    const ageMonthsRaw = parseFloat((document.getElementById('ageMonths') || {}).value);
+    const heightRaw = parseFloat((document.getElementById('height') || {}).value);
+    const weightRaw = parseFloat((document.getElementById('weight') || {}).value);
+    const hasAge = !isNaN(ageYearsRaw) || !isNaN(ageMonthsRaw);
+    const totalAgeMonths = hasAge
+      ? Math.round(((isNaN(ageYearsRaw) ? 0 : ageYearsRaw) * 12) + (isNaN(ageMonthsRaw) ? 0 : ageMonthsRaw))
+      : null;
+    return {
+      ageMonths: (typeof totalAgeMonths === 'number' && isFinite(totalAgeMonths)) ? totalAgeMonths : null,
+      height: (!isNaN(heightRaw) && isFinite(heightRaw)) ? heightRaw : null,
+      weight: (!isNaN(weightRaw) && isFinite(weightRaw)) ? weightRaw : null
+    };
+  }
+
+  function approxEqualMeasurement(a, b, tolerance){
+    if (typeof a !== 'number' || !isFinite(a) || typeof b !== 'number' || !isFinite(b)) return false;
+    return Math.abs(a - b) <= (typeof tolerance === 'number' ? tolerance : 0.11);
+  }
+
+  function isTherapyPointCurrentMeasurement(point, basics){
+    const current = (basics && typeof basics === 'object') ? basics : getCurrentUserMeasurementBasics();
+    if (!point || current.ageMonths == null || current.height == null || current.weight == null) return false;
+    const pointAgeMonths = Math.round(((point.ageYears || 0) * 12) + (point.ageMonths || 0));
+    if (pointAgeMonths !== current.ageMonths) return false;
+    const pointHeight = (point.height != null && isFinite(point.height)) ? Number(point.height) : null;
+    const pointWeight = (point.weight != null && isFinite(point.weight)) ? Number(point.weight) : null;
+    if (pointHeight == null || pointWeight == null) return false;
+    return approxEqualMeasurement(pointHeight, current.height, 0.11)
+      && approxEqualMeasurement(pointWeight, current.weight, 0.11);
+  }
+
   /**
    * Synchronizuje punkty leczenia hormonem wzrostu z kartą „Zaawansowane obliczenia wzrostowe”.
    * Funkcja ta jest wywoływana po każdym odświeżeniu tabeli punktów leczenia.  Jeżeli karta
@@ -1536,7 +1570,14 @@
         const tb = (b.ageYears || 0) * 12 + (b.ageMonths || 0);
         return ta - tb;
       });
+      const currentBasics = getCurrentUserMeasurementBasics();
       pts.forEach(pt => {
+        // Punkt odpowiadający bieżącym danym użytkownika nie jest punktem historycznym.
+        // Karta „Zaawansowane obliczenia wzrostowe” używa aktualnego pomiaru z formularza
+        // „Dane użytkownika”, więc nie dublujemy go w historii.
+        if (isTherapyPointCurrentMeasurement(pt, currentBasics)) {
+          return;
+        }
         // Dodaj nowy wiersz pomiarowy
         window.addAdvMeasurementRow();
         // Pobierz nowo dodany wiersz (ostatni w kontenerze)
