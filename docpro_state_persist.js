@@ -28,6 +28,14 @@
   let saveTimer = null;
   let mutationObserver = null;
 
+  function isSaveSuppressed() {
+    try {
+      return !!(typeof window !== 'undefined' && Number(window.__vildaPersistClearUntil || 0) > Date.now());
+    } catch (_) {
+      return false;
+    }
+  }
+
   function getStorage() {
     try {
       if (window.localStorage) return window.localStorage;
@@ -52,6 +60,7 @@
   }
 
   function saveRaw(state) {
+    if (isSaveSuppressed()) return;
     try {
       storage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch (_) {
@@ -62,6 +71,11 @@
   function clearState() {
     clearTimeout(saveTimer);
     saveTimer = null;
+    try {
+      if (typeof window !== 'undefined') {
+        window.__vildaPersistClearUntil = Date.now() + 1500;
+      }
+    } catch (_) {}
     try {
       storage.removeItem(STORAGE_KEY);
     } catch (_) {}
@@ -295,9 +309,13 @@
   }
 
   function queueSave(delay) {
-    if (restoring) return;
+    if (restoring || isSaveSuppressed()) return;
     clearTimeout(saveTimer);
     saveTimer = window.setTimeout(() => {
+      if (restoring || isSaveSuppressed()) {
+        saveTimer = null;
+        return;
+      }
       saveTimer = null;
       saveRaw(buildState());
     }, typeof delay === 'number' ? delay : 180);
@@ -523,22 +541,24 @@
     }, true);
     document.addEventListener('click', (ev) => {
       if (isClearActionTarget(ev.target)) {
-        window.setTimeout(clearState, 0);
+        clearState();
         return;
       }
-      queueSave(220);
+      if (!isSaveSuppressed()) {
+        queueSave(220);
+      }
     }, true);
     window.addEventListener('pagehide', () => {
       if (mutationObserver) {
         mutationObserver.disconnect();
         mutationObserver = null;
       }
-      if (!restoring) {
+      if (!restoring && !isSaveSuppressed()) {
         saveRaw(buildState());
       }
     });
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden' && !restoring) {
+      if (document.visibilityState === 'hidden' && !restoring && !isSaveSuppressed()) {
         saveRaw(buildState());
       }
     });

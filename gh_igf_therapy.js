@@ -2340,6 +2340,101 @@ function recalc(){
     };
   }
 
+  function resetGhIgfManualControlUi(){
+    try {
+      const manualInp = document.getElementById('manualControlDate');
+      if (manualInp) {
+        manualInp.value = '';
+        try { manualInp.style.color = '#6b7a7a'; } catch (_) {}
+      }
+      const manualPicker = document.getElementById('manualDatePicker');
+      if (manualPicker) {
+        manualPicker.style.display = 'none';
+      }
+      const manualRow = document.getElementById('therManualRow');
+      if (manualRow) manualRow.style.display = 'none';
+      const manualLabel = document.getElementById('therManualLabel');
+      if (manualLabel) manualLabel.textContent = '—';
+      const manualVal = document.getElementById('therManual');
+      if (manualVal) manualVal.textContent = '';
+      const manualStartAdviceEl = document.getElementById('manualStartAdvice');
+      if (manualStartAdviceEl) manualStartAdviceEl.textContent = '';
+      const copyManualBtn = document.getElementById('copyManualDays');
+      if (copyManualBtn) {
+        copyManualBtn.style.display = 'none';
+        copyManualBtn.textContent = 'Wydanie leku – kliknij i skopiuj';
+      }
+    } catch (_) {
+      /* ignore reset errors */
+    }
+  }
+
+  function resetGhIgfCustomDaysUi(){
+    try {
+      const customInp = document.getElementById('therCustomDays');
+      if (customInp) customInp.value = '';
+      const customRow = document.getElementById('therCustomRow');
+      if (customRow) customRow.style.display = 'none';
+      const customLabel = document.getElementById('therCustomLabel');
+      if (customLabel) customLabel.textContent = '—';
+      const customVal = document.getElementById('therCustom');
+      if (customVal) customVal.textContent = '—';
+    } catch (_) {
+      /* ignore reset errors */
+    }
+  }
+
+  function resetGhIgfPersistState(options){
+    const opts = (options && typeof options === 'object') ? options : {};
+    const card = document.getElementById('ghIgfTherapyCard');
+    try {
+      if (typeof window !== 'undefined') {
+        window.ghTherapyCalc = null;
+      }
+    } catch (_) {}
+    if (!card) return true;
+
+    const progSel = document.getElementById('therProg');
+    const doseAbsInp = document.getElementById('therDailyDoseAbs');
+    if (progSel) {
+      progSel.value = 'SNP';
+    }
+    try { populateDrugs(); } catch (_) {}
+    try { applyDefaults(); } catch (_) {}
+
+    resetGhIgfCustomDaysUi();
+    resetGhIgfManualControlUi();
+
+    if (doseAbsInp && !kg()) {
+      doseAbsInp.value = '';
+    }
+
+    try {
+      const warnBox = document.getElementById('therWarning');
+      if (warnBox) {
+        warnBox.style.display = 'none';
+        warnBox.textContent = '';
+      }
+    } catch (_) {}
+
+    if (opts.hideCards) {
+      try {
+        card.style.display = 'none';
+        const toggle = document.getElementById('toggleIgfTests');
+        if (toggle) toggle.classList.remove('active-toggle');
+      } catch (_) {}
+      try {
+        const monitorCard = document.getElementById('ghTherapyMonitorCard');
+        if (monitorCard) monitorCard.style.display = 'none';
+        const monitorBtn = document.getElementById('toggleGhMonitor');
+        if (monitorBtn) monitorBtn.classList.remove('active-toggle');
+      } catch (_) {}
+    }
+
+    try { recalc(); } catch (_) {}
+    return true;
+  }
+
   function readGhIgfPersistFallback(){
     try {
       const raw = localStorage.getItem('sharedUserData');
@@ -2415,7 +2510,9 @@ function recalc(){
       window.vildaGhIgfPersistApi = {
         ensureMounted: mountCard,
         captureState: captureGhIgfPersistState,
-        restoreState: restoreGhIgfPersistState
+        restoreState: restoreGhIgfPersistState,
+        resetState: resetGhIgfPersistState,
+        resetManualControlState: resetGhIgfManualControlUi
       };
     }
   } catch (_) {}

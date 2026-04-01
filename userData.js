@@ -172,6 +172,11 @@
      */
     function clearStoredUserData() {
       try {
+        if (typeof window !== 'undefined') {
+          window.__vildaPersistClearUntil = Date.now() + 1500;
+        }
+      } catch (_) {}
+      try {
         // Usuń zapisane dane wspólne – dzięki temu przy kolejnym
         // załadowaniu strony pola nie zostaną automatycznie uzupełnione.
         localStorage.removeItem('sharedUserData');

@@ -22397,6 +22397,12 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
   }
 
   function clearAllData(){
+    try {
+      if (typeof window !== 'undefined') {
+        window.__vildaPersistClearUntil = Date.now() + 1500;
+      }
+    } catch (_) {}
+
     // Reset visible fields
     ['name','advName','basicGrowthName','age','ageMonths','weight','height','waistCm','hipCm','advBoneAge','advMotherHeight','advFatherHeight']
       .forEach(id=>{ const el=q(id); if(el){
@@ -22501,6 +22507,18 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
 
     if(typeof debouncedUpdate==='function') debouncedUpdate();
     updateSaveBtnVisibility();
+
+    // --- GH/IGF therapy card reset ---
+    // Po pełnym resecie danych wyczyść również stan ręcznej daty kontroli
+    // i pomocnicze pola karty „Leczenie hormonem wzrostu / IGF‑1”, aby nie
+    // odtworzyły się przy przeładowaniu strony.
+    try {
+      if (typeof window !== 'undefined' && window.vildaGhIgfPersistApi && typeof window.vildaGhIgfPersistApi.resetState === 'function') {
+        window.vildaGhIgfPersistApi.resetState({ hideCards: true });
+      }
+    } catch (_) {
+      /* ignoruj błędy resetu karty GH/IGF-1 */
+    }
 
     // --- GH Therapy Monitor reset ---
     // Po pełnym resecie danych należy również wyczyścić moduł monitorowania
@@ -25028,6 +25046,14 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
   let pendingRoot = null;
   let isRestoring = false;
 
+  function isPersistSuppressed() {
+    try {
+      return !!(typeof window !== 'undefined' && Number(window.__vildaPersistClearUntil || 0) > Date.now());
+    } catch (_) {
+      return false;
+    }
+  }
+
   function captureAdvancedGrowthRowsUI() {
     const rowsUI = [];
     try {
@@ -25146,7 +25172,16 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
   }
 
   function flushPersistNow() {
-    if (isRestoring) return;
+    if (isRestoring || isPersistSuppressed()) {
+      try {
+        if (saveTimer) {
+          clearTimeout(saveTimer);
+          saveTimer = null;
+        }
+      } catch (_) {}
+      pendingRoot = null;
+      return;
+    }
     try {
       if (saveTimer) {
         clearTimeout(saveTimer);
@@ -25163,7 +25198,7 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
   }
 
   function scheduleSave() {
-    if (isRestoring) return;
+    if (isRestoring || isPersistSuppressed()) return;
     if (saveTimer) clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
       flushPersistNow();
@@ -25171,7 +25206,7 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
   }
 
   function updatePersistFromElement(el) {
-    if (!el || isRestoring) return;
+    if (!el || isRestoring || isPersistSuppressed()) return;
     const tag = (el.tagName || '').toUpperCase();
     if (!(tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA')) return;
 
@@ -25685,6 +25720,17 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
     const btn = document.getElementById(btnId);
     if (!btn) return;
     btn.addEventListener('click', function () {
+      try {
+        if (typeof window !== 'undefined') {
+          window.__vildaPersistClearUntil = Date.now() + 1500;
+        }
+      } catch (_) {}
+      try {
+        if (saveTimer) {
+          clearTimeout(saveTimer);
+          saveTimer = null;
+        }
+      } catch (_) {}
       try {
         localStorage.removeItem(STORAGE_KEY);
         localStorage.removeItem('wagaiwzrost:docproUi:v2');
