@@ -23298,6 +23298,22 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
     } catch (_) {
       try { window.lastLoadedData = data; } catch (_) {}
     }
+
+    // Po imporcie JSON utrwal od razu pełny snapshot w sharedUserData.
+    // Dzięki temu przejście na inną podstronę nie pozwoli kolejnemu autosave
+    // nadpisać właśnie odtworzonej historii pustym stanem UI.
+    try {
+      if (typeof window !== 'undefined') {
+        setTimeout(() => {
+          try {
+            if (typeof window.vildaPersistFlushNow === 'function') {
+              window.vildaPersistFlushNow();
+            }
+          } catch (_) {}
+        }, 0);
+      }
+    } catch (_) {}
+
     // Ujawnij przycisk przywracania stanu po wczytaniu danych
     try {
       if (typeof showRestoreButton === 'function') {
@@ -25338,81 +25354,112 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
     p.globals = (p.globals && typeof p.globals === 'object') ? p.globals : {};
     try {
       if (typeof window !== 'undefined') {
-        // Zaawansowane obliczenia wzrostowe: zapisuj zarówno snapshot obliczony,
-        // jak i surowy stan wszystkich wierszy UI. Dzięki temu odtworzenie nie
-        // zależy wyłącznie od debounce calculateGrowthAdvanced().
-        if (window.advancedGrowthData && typeof window.advancedGrowthData === 'object') {
-          p.globals.advancedGrowthData = safeClone(window.advancedGrowthData);
-        } else {
-          p.globals.advancedGrowthData = null;
-        }
-        p.globals.advancedGrowthRowsUI = captureAdvancedGrowthRowsUI();
+        const hasAdvancedModule = !!document.getElementById('advMeasurements');
+        const hasBasicGrowthModule = !!document.getElementById('basicGrowthMeasurements');
+        const hasIntakeModule = !!document.getElementById('intakeMeasurements');
+        const hasFoodModule = !!document.getElementById('foodRowsSection') || !!document.getElementById('addFoodRowBtn');
 
-        if (window.basicGrowthData && typeof window.basicGrowthData === 'object') {
-          p.globals.basicGrowthData = safeClone(window.basicGrowthData);
-        } else {
-          p.globals.basicGrowthData = null;
+        // Ten sam sharedUserData jest współdzielony między wszystkimi podstronami.
+        // Gdy moduł nie istnieje na bieżącej stronie, nie wolno nadpisywać jego
+        // kanonicznego stanu pustymi snapshotami.  Dotyczy to szczególnie
+        // przejścia index.html -> docpro.html po imporcie JSON.
+
+        if (hasAdvancedModule) {
+          const hasAdvancedDataObject = !!(window.advancedGrowthData && typeof window.advancedGrowthData === 'object');
+          const advancedRowsUI = captureAdvancedGrowthRowsUI();
+          const advancedMeasurements = hasAdvancedDataObject
+            ? sanitizeAdvancedMeasurementEntries(window.advancedGrowthData.measurements)
+            : [];
+
+          // Zapisz kanoniczny stan tylko wtedy, gdy naprawdę istnieje.
+          // Nie nadpisuj poprawnego snapshotu wartością null na stronie, która
+          // nie zdążyła jeszcze odbudować obiektu window.advancedGrowthData.
+          if (hasAdvancedDataObject) {
+            p.globals.advancedGrowthData = safeClone(window.advancedGrowthData);
+          }
+
+          // Jeżeli UI ma rzeczywiste wiersze – zapisz je.  Jeżeli UI jest puste,
+          // ale dane kanoniczne zawierają historię, zachowaj poprzedni snapshot UI
+          // zamiast wpisywać pustą tablicę.  To zapobiega znikaniu historii po
+          // przejściu na docpro.html i powrocie na stronę główną.
+          if (advancedRowsUI.length > 0) {
+            p.globals.advancedGrowthRowsUI = advancedRowsUI;
+          } else if (advancedMeasurements.length === 0) {
+            p.globals.advancedGrowthRowsUI = [];
+          }
         }
 
-        // Szacowane spożycie energii – historia + ostatni wynik
-        if (Array.isArray(window.intakeHistory)) {
-          p.globals.intakeHistory = safeClone(window.intakeHistory);
-        } else {
-          p.globals.intakeHistory = null;
-        }
-        if (typeof window.intakeEstimatedKcalPerDay === 'number' && isFinite(window.intakeEstimatedKcalPerDay)) {
-          p.globals.intakeEstimatedKcalPerDay = window.intakeEstimatedKcalPerDay;
-        } else {
-          p.globals.intakeEstimatedKcalPerDay = null;
+        if (hasBasicGrowthModule) {
+          if (window.basicGrowthData && typeof window.basicGrowthData === 'object') {
+            p.globals.basicGrowthData = safeClone(window.basicGrowthData);
+          } else {
+            p.globals.basicGrowthData = null;
+          }
         }
 
-        // Pełny zapis wierszy w karcie „Szacowane spożycie energii” (inputy nie mają ID)
-        try {
-          const rowsUI = [];
-          document.querySelectorAll('#intakeMeasurements .measure-row-intake').forEach(row => {
-            const getVal = (sel) => {
-              const el = row.querySelector(sel);
-              return (el && typeof el.value === 'string') ? el.value : '';
-            };
-            const getDis = (sel) => {
-              const el = row.querySelector(sel);
-              return !!(el && el.disabled);
-            };
-            rowsUI.push({
-              ageY: getVal('.intake-ageY'),
-              ageM: getVal('.intake-ageM'),
-              ht:   getVal('.intake-ht'),
-              wt:   getVal('.intake-wt'),
-              locked: row.dataset.locked === 'true',
-              disabled: {
-                ageY: getDis('.intake-ageY'),
-                ageM: getDis('.intake-ageM'),
-                ht:   getDis('.intake-ht'),
-                wt:   getDis('.intake-wt')
-              }
+        if (hasIntakeModule) {
+          const intakeHistory = Array.isArray(window.intakeHistory)
+            ? sanitizeIntakeHistoryEntries(window.intakeHistory)
+            : [];
+
+          p.globals.intakeHistory = intakeHistory;
+          if (typeof window.intakeEstimatedKcalPerDay === 'number' && isFinite(window.intakeEstimatedKcalPerDay)) {
+            p.globals.intakeEstimatedKcalPerDay = window.intakeEstimatedKcalPerDay;
+          } else {
+            p.globals.intakeEstimatedKcalPerDay = null;
+          }
+
+          try {
+            const rowsUI = [];
+            document.querySelectorAll('#intakeMeasurements .measure-row-intake').forEach(row => {
+              const getVal = (sel) => {
+                const el = row.querySelector(sel);
+                return (el && typeof el.value === 'string') ? el.value : '';
+              };
+              const getDis = (sel) => {
+                const el = row.querySelector(sel);
+                return !!(el && el.disabled);
+              };
+              rowsUI.push({
+                ageY: getVal('.intake-ageY'),
+                ageM: getVal('.intake-ageM'),
+                ht:   getVal('.intake-ht'),
+                wt:   getVal('.intake-wt'),
+                locked: row.dataset.locked === 'true',
+                disabled: {
+                  ageY: getDis('.intake-ageY'),
+                  ageM: getDis('.intake-ageM'),
+                  ht:   getDis('.intake-ht'),
+                  wt:   getDis('.intake-wt')
+                }
+              });
             });
-          });
-          p.globals.intakeRowsUI = sanitizeIntakeRowsUI(rowsUI);
-        } catch (_) {}
+            const sanitizedRowsUI = sanitizeIntakeRowsUI(rowsUI);
+            if (sanitizedRowsUI.length > 0) {
+              p.globals.intakeRowsUI = sanitizedRowsUI;
+            } else if (intakeHistory.length === 0) {
+              p.globals.intakeRowsUI = [];
+            }
+          } catch (_) {}
+        }
 
-        // Dynamiczne wiersze jedzenia (.food-row) – nie mają ID, więc trzymamy snapshot
-        try {
-          const rows = [];
-          document.querySelectorAll('.food-row').forEach(row => {
-            const sel = row.querySelector('select');
-            const inp = row.querySelector('input[type="number"]');
-            if (!sel || !inp) return;
-            rows.push({ key: (sel.value || ''), qty: (inp.value || '').toString() });
-          });
-          p.globals.foodRows = rows;
-        } catch (_) {}
+        if (hasFoodModule) {
+          try {
+            const rows = [];
+            document.querySelectorAll('.food-row').forEach(row => {
+              const sel = row.querySelector('select');
+              const inp = row.querySelector('input[type="number"]');
+              if (!sel || !inp) return;
+              rows.push({ key: (sel.value || ''), qty: (inp.value || '').toString() });
+            });
+            p.globals.foodRows = rows;
+          } catch (_) {}
+        }
 
-        // Monitor terapii GH/IGF‑1 – jeżeli jest wczytany
         if (Array.isArray(window.ghTherapyPoints)) {
           p.globals.ghTherapyPoints = safeClone(window.ghTherapyPoints);
         }
 
-        // Kalkulator-klirens – zapamiętaj wybraną wersję (basic/advanced/spot/pro)
         if (typeof window.currentVersion === 'string' && window.currentVersion) {
           p.globals.clcrCurrentVersion = window.currentVersion;
         } else if (typeof window.currentVersion !== 'undefined') {
