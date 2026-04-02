@@ -16915,7 +16915,7 @@ function updateAdvancedMeasurementAnalysisControls(forceHide) {
  */
 function addAdvMeasurementRow(options) {
   const opts = (options && typeof options === 'object') ? options : {};
-  const isBatchRender = !!opts.skipRecalc || isAdvancedHistoryBatchRenderActive();
+  const skipInitialRecalc = !!opts.skipInitialRecalc;
   const container = document.getElementById('advMeasurements');
   if (!container) return;
   const row = document.createElement('div');
@@ -16998,7 +16998,7 @@ function addAdvMeasurementRow(options) {
     }
   }
   // Jeśli dostępna, odśwież widoczność pól strzałek (sterowane w index.html)
-  if (!isBatchRender && typeof window !== 'undefined' && typeof window.updateArrowInputsVisibility === 'function') {
+  if (typeof window !== 'undefined' && typeof window.updateArrowInputsVisibility === 'function') {
     try { window.updateArrowInputsVisibility(); } catch (_) {}
   }
   // nasłuch na usuwanie wiersza
@@ -17024,12 +17024,9 @@ function addAdvMeasurementRow(options) {
   // oblicz natychmiast po dodaniu wiersza
   // Po dodaniu nowego wiersza aktualizujemy wyświetlanie przycisku usuwania
   // oraz maksymalny dopuszczalny wiek pomiaru na podstawie aktualnego wieku dziecka.
-  if (!isBatchRender) {
-    updateRemoveButtons();
-    updateAdvAgeMax();
-    calculateGrowthAdvanced();
-  }
-  return row;
+  updateRemoveButtons();
+  updateAdvAgeMax();
+  if (!skipInitialRecalc) calculateGrowthAdvanced();
 }
 
 /**
@@ -20777,9 +20774,7 @@ function getUserBasics(){
 }
 
 /* ——— UI rows (jak w „Zaawansowanych…”): dodawanie/odczyt ——— */
-function intakeAddRow(prefill, options){
-  const opts = (options && typeof options === 'object') ? options : {};
-  const skipRefresh = !!opts.skipRefresh || isIntakeHistoryBatchRenderActive();
+function intakeAddRow(prefill){
   const wrap = document.getElementById('intakeMeasurements');
   if(!wrap) return;
   const row = document.createElement('div');
@@ -20842,10 +20837,7 @@ function intakeAddRow(prefill, options){
   });
 
   // Aktualizuj widoczność przycisków „×” po dodaniu nowego wiersza
-  if (!skipRefresh) {
-    updateIntakeRemoveButtons();
-  }
-  return row;
+  updateIntakeRemoveButtons();
 }
 
 function readIntakeRows(){
@@ -22249,6 +22241,90 @@ function sanitizeIntakeRowsUI(rowsUI) {
     }
   }
 
+  function setFieldValueSilently(el, value, options) {
+    if (!el) return;
+    const opts = (options && typeof options === 'object') ? options : {};
+    const nextValue = (value == null || Number.isNaN(value)) ? '' : String(value);
+    try {
+      el.value = nextValue;
+    } catch (_) {}
+    if (Object.prototype.hasOwnProperty.call(opts, 'disabled')) {
+      try { el.disabled = !!opts.disabled; } catch (_) {}
+    }
+  }
+
+  function setCheckboxValueSilently(el, checked) {
+    if (!el) return;
+    try {
+      el.checked = !!checked;
+    } catch (_) {}
+  }
+
+  function applyResultsModeRestoreState(isProfessional) {
+    const pro = !!isProfessional;
+    try { professionalMode = pro; } catch (_) {}
+    try { if (typeof window !== 'undefined') window.professionalMode = pro; } catch (_) {}
+    try { localStorage.setItem('resultsMode', pro ? 'professional' : 'standard'); } catch (_) {}
+    try { document.body.classList.remove('professional-bg'); } catch (_) {}
+
+    try {
+      const summaryIds = ['currentSummaryCard', 'currentSummaryCardLeft', 'currentSummaryCardRight'];
+      summaryIds.forEach((sid) => {
+        const card = document.getElementById(sid);
+        if (!card) return;
+        if (pro) card.classList.add('pro-summary-card');
+        else card.classList.remove('pro-summary-card');
+        const label = card.querySelector('.pro-summary-label');
+        if (label) {
+          label.style.display = pro ? 'block' : 'none';
+        }
+      });
+    } catch (_) {}
+
+    try {
+      if (typeof updateAdvancedGrowthAccess === 'function') updateAdvancedGrowthAccess();
+    } catch (_) {}
+    try {
+      if (typeof updatePalczewskaAccess === 'function') updatePalczewskaAccess();
+    } catch (_) {}
+    try {
+      if (typeof updateCompareInstructionVisibility === 'function') updateCompareInstructionVisibility();
+    } catch (_) {}
+    try {
+      if (typeof window !== 'undefined' && typeof window.applyThemeCustom === 'function') {
+        window.applyThemeCustom();
+      }
+    } catch (_) {}
+  }
+
+  function applyDataSourceRestoreState(dataSourceValue) {
+    const value = (typeof dataSourceValue === 'string') ? dataSourceValue : '';
+    let selected = null;
+    try {
+      const radios = document.querySelectorAll('input[name="dataSource"]');
+      radios.forEach((radio) => {
+        const shouldCheck = !!value && radio.value === value;
+        radio.checked = shouldCheck;
+        if (shouldCheck) selected = radio;
+      });
+    } catch (_) {}
+
+    try {
+      const toggleContainer = document.getElementById('dataToggleContainer');
+      if (toggleContainer && selected) {
+        toggleContainer.dataset.manual = '1';
+      }
+    } catch (_) {}
+
+    try {
+      if (selected && typeof selected.value === 'string' && selected.value) {
+        bmiSource = selected.value;
+      }
+    } catch (_) {}
+
+    return selected;
+  }
+
   function withHistoryRestoreGuards(callback) {
     let prevAdvSync = false;
     let prevCrossSync = false;
@@ -22279,84 +22355,12 @@ function sanitizeIntakeRowsUI(rowsUI) {
     }
   }
 
-
-  function withLoadedStateRestoreGuards(callback) {
-    let prevPersistRestoring = false;
-    let prevPauseUntil = 0;
-    try {
-      if (typeof window !== 'undefined') {
-        prevPersistRestoring = !!window.__vildaPersistRestoring;
-        prevPauseUntil = Number(window.__vildaPersistPauseUntil || 0);
-        window.__vildaPersistRestoring = true;
-        window.__vildaPersistPauseUntil = Math.max(prevPauseUntil, Date.now() + 1600);
-      }
-    } catch (_) {}
-    try {
-      return withHistoryRestoreGuards(callback);
-    } finally {
-      try {
-        if (typeof window !== 'undefined') {
-          window.__vildaPersistRestoring = prevPersistRestoring;
-        }
-      } catch (_) {}
-    }
-  }
-
-  function isAdvancedHistoryBatchRenderActive() {
-    try {
-      return !!(typeof window !== 'undefined' && window.__vildaBatchAdvancedHistoryRender);
-    } catch (_) {}
-    return false;
-  }
-
-  function withAdvancedHistoryBatchRender(callback) {
-    let prev = false;
-    try {
-      if (typeof window !== 'undefined') {
-        prev = !!window.__vildaBatchAdvancedHistoryRender;
-        window.__vildaBatchAdvancedHistoryRender = true;
-      }
-    } catch (_) {}
-    try {
-      return callback();
-    } finally {
-      try {
-        if (typeof window !== 'undefined') {
-          window.__vildaBatchAdvancedHistoryRender = prev;
-        }
-      } catch (_) {}
-    }
-  }
-
-  function isIntakeHistoryBatchRenderActive() {
-    try {
-      return !!(typeof window !== 'undefined' && window.__vildaBatchIntakeHistoryRender);
-    } catch (_) {}
-    return false;
-  }
-
-  function withIntakeHistoryBatchRender(callback) {
-    let prev = false;
-    try {
-      if (typeof window !== 'undefined') {
-        prev = !!window.__vildaBatchIntakeHistoryRender;
-        window.__vildaBatchIntakeHistoryRender = true;
-      }
-    } catch (_) {}
-    try {
-      return callback();
-    } finally {
-      try {
-        if (typeof window !== 'undefined') {
-          window.__vildaBatchIntakeHistoryRender = prev;
-        }
-      } catch (_) {}
-    }
-  }
-
   // === REHYDRATACJA UI PO WCZYTANIU PLIKU JSON ======================
   // Odtwórz wiersze w sekcji „Zaawansowane obliczenia wzrostowe” z window.advancedGrowthData
-  function rehydrateAdvancedFromState(){
+  function rehydrateAdvancedFromState(options){
+    const opts = (options && typeof options === 'object') ? options : {};
+    const skipRecalc = !!opts.skipRecalc;
+    const skipPairing = !!opts.skipPairing;
     const cont = document.getElementById('advMeasurements');
     if (!cont) return;
     cont.innerHTML = '';
@@ -22365,62 +22369,60 @@ function sanitizeIntakeRowsUI(rowsUI) {
       ? sanitizeAdvancedMeasurementEntries(window.advancedGrowthData.measurements)
       : [];
     if (!arr.length) {
-      if (typeof addAdvMeasurementRow === 'function') addAdvMeasurementRow();
-      if (typeof calculateGrowthAdvanced === 'function') calculateGrowthAdvanced();
+      if (typeof addAdvMeasurementRow === 'function') addAdvMeasurementRow({ skipInitialRecalc: true });
+      if (!skipRecalc && typeof calculateGrowthAdvanced === 'function') calculateGrowthAdvanced();
       try {
-        if (typeof window !== 'undefined' && typeof window.vildaEnsureAdvancedIntakePairing === 'function') {
+        if (!skipPairing && typeof window !== 'undefined' && typeof window.vildaEnsureAdvancedIntakePairing === 'function') {
           window.vildaEnsureAdvancedIntakePairing();
         }
       } catch (_) {}
       return;
     }
-    withAdvancedHistoryBatchRender(() => {
-      arr.forEach(m=>{
-        if (typeof addAdvMeasurementRow === 'function') addAdvMeasurementRow({ skipRecalc: true });
-        const rows = cont.querySelectorAll('.measure-row');
-        const row = rows[rows.length-1];
-        if (!row) return;
-        // Odtwórz metadane synchronizacji GH/IGF‑1, jeśli były zapisane w stanie (autosave / plik JSON)
-        try {
-          if (m && (m.ghSync || m.ghId)) {
-            row.setAttribute('data-gh-sync', 'true');
-            if (m.ghId != null && String(m.ghId) !== '') {
-              row.setAttribute('data-gh-id', String(m.ghId));
-            }
+    arr.forEach(m=>{
+      if (typeof addAdvMeasurementRow === 'function') addAdvMeasurementRow({ skipInitialRecalc: true });
+      const rows = cont.querySelectorAll('.measure-row');
+      const row = rows[rows.length-1];
+      if (!row) return;
+      // Odtwórz metadane synchronizacji GH/IGF‑1, jeśli były zapisane w stanie (autosave / plik JSON)
+      try {
+        if (m && (m.ghSync || m.ghId)) {
+          row.setAttribute('data-gh-sync', 'true');
+          if (m.ghId != null && String(m.ghId) !== '') {
+            row.setAttribute('data-gh-id', String(m.ghId));
           }
-        } catch (_) {}
-        const set = (sel, v)=>{ const el=row.querySelector(sel); if(el) el.value = (v==null||Number.isNaN(v)) ? '' : String(v); };
-        const ageDec = (typeof m.ageYears==='number') ? m.ageYears : (typeof m.ageMonths==='number' ? m.ageMonths/12 : null);
-        // Rozdziel wiek na pełne lata i miesiące (0–11)
-        if (typeof ageDec === 'number') {
-          const yrs = Math.floor(ageDec);
-          let mos = Math.round((ageDec - yrs) * 12);
-          // Jeżeli zaokrąglenie miesięcy daje 12, zwiększ lata i zresetuj miesiące
-          if (mos === 12) {
-            mos = 0;
-          }
-          set('.adv-age-years', yrs);
-          set('.adv-age-months', mos);
-        } else {
-          set('.adv-age-years', '');
-          set('.adv-age-months', '');
         }
-        set('.adv-height', (typeof m.height==='number') ? m.height : '');
-        set('.adv-weight', (typeof m.weight==='number') ? m.weight : '');
-        // Przywróć wiek kostny z historii, jeśli jest dostępny
-        set('.adv-bone-age', (typeof m.boneAgeYears === 'number') ? m.boneAgeYears : '');
-        // Przywróć strzałkę + komentarz (tryb publikacji siatek)
-        const arrowEnableEl = row.querySelector('.adv-arrow-enable');
-        const arrowCommentEl = row.querySelector('.adv-arrow-comment');
-        if (arrowEnableEl) {
-          arrowEnableEl.checked = !!m.arrowEnabled;
+      } catch (_) {}
+      const set = (sel, v)=>{ const el=row.querySelector(sel); if(el) el.value = (v==null||Number.isNaN(v)) ? '' : String(v); };
+      const ageDec = (typeof m.ageYears==='number') ? m.ageYears : (typeof m.ageMonths==='number' ? m.ageMonths/12 : null);
+      // Rozdziel wiek na pełne lata i miesiące (0–11)
+      if (typeof ageDec === 'number') {
+        const yrs = Math.floor(ageDec);
+        let mos = Math.round((ageDec - yrs) * 12);
+        // Jeżeli zaokrąglenie miesięcy daje 12, zwiększ lata i zresetuj miesiące
+        if (mos === 12) {
+          mos = 0;
         }
-        if (arrowCommentEl) {
-          arrowCommentEl.value = (typeof m.arrowComment === 'string') ? m.arrowComment : '';
-          // Pokaż/ukryj pole komentarza zależnie od stanu przełącznika
-          arrowCommentEl.style.display = (arrowEnableEl && arrowEnableEl.checked) ? '' : 'none';
-        }
-      });
+        set('.adv-age-years', yrs);
+        set('.adv-age-months', mos);
+      } else {
+        set('.adv-age-years', '');
+        set('.adv-age-months', '');
+      }
+      set('.adv-height', (typeof m.height==='number') ? m.height : '');
+      set('.adv-weight', (typeof m.weight==='number') ? m.weight : '');
+      // Przywróć wiek kostny z historii, jeśli jest dostępny
+      set('.adv-bone-age', (typeof m.boneAgeYears === 'number') ? m.boneAgeYears : '');
+      // Przywróć strzałkę + komentarz (tryb publikacji siatek)
+      const arrowEnableEl = row.querySelector('.adv-arrow-enable');
+      const arrowCommentEl = row.querySelector('.adv-arrow-comment');
+      if (arrowEnableEl) {
+        arrowEnableEl.checked = !!m.arrowEnabled;
+      }
+      if (arrowCommentEl) {
+        arrowCommentEl.value = (typeof m.arrowComment === 'string') ? m.arrowComment : '';
+        // Pokaż/ukryj pole komentarza zależnie od stanu przełącznika
+        arrowCommentEl.style.display = (arrowEnableEl && arrowEnableEl.checked) ? '' : 'none';
+      }
     });
     try { if (typeof updateRemoveButtons === 'function') updateRemoveButtons(); } catch (_) {}
     try { if (typeof updateAdvAgeMax === 'function') updateAdvAgeMax(); } catch (_) {}
@@ -22428,9 +22430,9 @@ function sanitizeIntakeRowsUI(rowsUI) {
     if (typeof window !== 'undefined' && typeof window.updateArrowInputsVisibility === 'function') {
       try { window.updateArrowInputsVisibility(); } catch (_) {}
     }
-    if (typeof calculateGrowthAdvanced === 'function') calculateGrowthAdvanced();
+    if (!skipRecalc && typeof calculateGrowthAdvanced === 'function') calculateGrowthAdvanced();
     try {
-      if (typeof window !== 'undefined' && typeof window.vildaEnsureAdvancedIntakePairing === 'function') {
+      if (!skipPairing && typeof window !== 'undefined' && typeof window.vildaEnsureAdvancedIntakePairing === 'function') {
         window.vildaEnsureAdvancedIntakePairing();
       }
     } catch (_) {}
@@ -22442,69 +22444,70 @@ function sanitizeIntakeRowsUI(rowsUI) {
   // potrafi wiernie przywrócić również ostatnio edytowane pola przed zamknięciem
   // przeglądarki, nawet jeśli debounce autozapisu nie zdążył wcześniej utrwalić
   // finalnej wersji obliczonego snapshotu.
-  function rehydrateAdvancedRowsUIFromState(rowsUI){
+  function rehydrateAdvancedRowsUIFromState(rowsUI, options){
+    const opts = (options && typeof options === 'object') ? options : {};
+    const skipRecalc = !!opts.skipRecalc;
+    const skipPairing = !!opts.skipPairing;
     const cont = document.getElementById('advMeasurements');
     if (!cont) return;
     cont.innerHTML = '';
 
     const arr = sanitizeAdvancedRowsUI(rowsUI);
     if (!arr.length) {
-      if (typeof addAdvMeasurementRow === 'function') addAdvMeasurementRow();
-      if (typeof calculateGrowthAdvanced === 'function') calculateGrowthAdvanced();
+      if (typeof addAdvMeasurementRow === 'function') addAdvMeasurementRow({ skipInitialRecalc: true });
+      if (!skipRecalc && typeof calculateGrowthAdvanced === 'function') calculateGrowthAdvanced();
       try {
-        if (typeof window !== 'undefined' && typeof window.vildaEnsureAdvancedIntakePairing === 'function') {
+        if (!skipPairing && typeof window !== 'undefined' && typeof window.vildaEnsureAdvancedIntakePairing === 'function') {
           window.vildaEnsureAdvancedIntakePairing();
         }
       } catch (_) {}
       return;
     }
 
-    withAdvancedHistoryBatchRender(() => {
-      arr.forEach(item => {
-        if (typeof addAdvMeasurementRow !== 'function') return;
-        addAdvMeasurementRow({ skipRecalc: true });
-        const rows = cont.querySelectorAll('.measure-row');
-        const row = rows[rows.length - 1];
-        if (!row || !item) return;
+    arr.forEach(item => {
+      if (typeof addAdvMeasurementRow !== 'function') return;
+      addAdvMeasurementRow({ skipInitialRecalc: true });
+      const rows = cont.querySelectorAll('.measure-row');
+      const row = rows[rows.length - 1];
+      if (!row || !item) return;
 
-        const setVal = (sel, v) => {
-          const el = row.querySelector(sel);
-          if (!el) return;
-          el.value = (v == null) ? '' : String(v);
-        };
-        const setChecked = (sel, checked) => {
-          const el = row.querySelector(sel);
-          if (!el) return;
-          el.checked = !!checked;
-        };
+      const setVal = (sel, v) => {
+        const el = row.querySelector(sel);
+        if (!el) return;
+        el.value = (v == null) ? '' : String(v);
+      };
+      const setChecked = (sel, checked) => {
+        const el = row.querySelector(sel);
+        if (!el) return;
+        el.checked = !!checked;
+      };
 
-        setVal('.adv-age-years', item.ageY);
-        setVal('.adv-age-months', item.ageM);
-        setVal('.adv-height', item.ht);
-        setVal('.adv-weight', item.wt);
-        setVal('.adv-bone-age', item.boneAge);
-        setChecked('.adv-arrow-enable', !!item.arrowEnabled);
-        setVal('.adv-arrow-comment', item.arrowComment);
+      setVal('.adv-age-years', item.ageY);
+      setVal('.adv-age-months', item.ageM);
+      setVal('.adv-height', item.ht);
+      setVal('.adv-weight', item.wt);
+      setVal('.adv-bone-age', item.boneAge);
+      setChecked('.adv-arrow-enable', !!item.arrowEnabled);
+      setVal('.adv-arrow-comment', item.arrowComment);
 
-        const arrowEnableEl = row.querySelector('.adv-arrow-enable');
-        const arrowCommentEl = row.querySelector('.adv-arrow-comment');
-        if (arrowCommentEl) {
-          arrowCommentEl.style.display = (arrowEnableEl && arrowEnableEl.checked) ? '' : 'none';
+      const arrowEnableEl = row.querySelector('.adv-arrow-enable');
+      const arrowCommentEl = row.querySelector('.adv-arrow-comment');
+      if (arrowCommentEl) {
+        arrowCommentEl.style.display = (arrowEnableEl && arrowEnableEl.checked) ? '' : 'none';
+      }
+
+      try {
+        if (item.ghSync) {
+          row.setAttribute('data-gh-sync', 'true');
+        } else {
+          row.removeAttribute('data-gh-sync');
         }
-
-        try {
-          if (item.ghSync) {
-            row.setAttribute('data-gh-sync', 'true');
-          } else {
-            row.removeAttribute('data-gh-sync');
-          }
-          if (item.ghId != null && String(item.ghId).trim() !== '') {
-            row.setAttribute('data-gh-id', String(item.ghId));
-          } else {
-            row.removeAttribute('data-gh-id');
-          }
-        } catch (_) {}
-      });
+        if (item.ghId != null && String(item.ghId).trim() !== '') {
+          row.setAttribute('data-gh-id', String(item.ghId));
+        } else {
+          row.removeAttribute('data-gh-id');
+        }
+      } catch (_) {}
     });
 
     try { if (typeof updateRemoveButtons === 'function') updateRemoveButtons(); } catch (_) {}
@@ -22514,9 +22517,9 @@ function sanitizeIntakeRowsUI(rowsUI) {
         window.updateArrowInputsVisibility();
       }
     } catch (_) {}
-    try { if (typeof calculateGrowthAdvanced === 'function') calculateGrowthAdvanced(); } catch (_) {}
+    try { if (!skipRecalc && typeof calculateGrowthAdvanced === 'function') calculateGrowthAdvanced(); } catch (_) {}
     try {
-      if (typeof window !== 'undefined' && typeof window.vildaEnsureAdvancedIntakePairing === 'function') {
+      if (!skipPairing && typeof window !== 'undefined' && typeof window.vildaEnsureAdvancedIntakePairing === 'function') {
         window.vildaEnsureAdvancedIntakePairing();
       }
     } catch (_) {}
@@ -22524,7 +22527,10 @@ function sanitizeIntakeRowsUI(rowsUI) {
 
   // Odtwórz wiersze w karcie „Szacowane spożycie energii” z window.intakeHistory
   
-function rehydrateIntakeFromState(savedPal){
+function rehydrateIntakeFromState(savedPal, options){
+    const opts = (options && typeof options === 'object') ? options : {};
+    const skipRecalc = !!opts.skipRecalc;
+    const skipPairing = !!opts.skipPairing;
     const btn  = document.getElementById('toggleIntakeCard');
     const card = document.getElementById('intakeCard');
     const wrap = document.getElementById('intakeMeasurements');
@@ -22542,38 +22548,36 @@ function rehydrateIntakeFromState(savedPal){
     const hasHistory = histArr.length > 0;
     const hasCurrentBasics = !!currentBasics;
 
-    withIntakeHistoryBatchRender(() => {
-      if (hasCurrentBasics) {
-        try {
-          intakeAddRow({ ageMonths: currentBasics.ageMonths, height: currentBasics.height, weight: currentBasics.weight }, { skipRefresh: true });
-        } catch (_) {
-          if (typeof intakeAddRow === 'function') intakeAddRow(null, { skipRefresh: true });
+    if (hasCurrentBasics) {
+      try {
+        intakeAddRow({ ageMonths: currentBasics.ageMonths, height: currentBasics.height, weight: currentBasics.weight });
+      } catch (_) {
+        if (typeof intakeAddRow === 'function') intakeAddRow();
+      }
+    } else if (!hasHistory) {
+      if (typeof intakeAddRow === 'function') {
+        let basics;
+        if (typeof getUserBasics === 'function') {
+          basics = getUserBasics();
+        } else {
+          const ageY = parseFloat(q('age')?.value);
+          const ageM = parseFloat(q('ageMonths')?.value);
+          const height = parseFloat(q('height')?.value);
+          const weight = parseFloat(q('weight')?.value);
+          basics = { ageMonths: (isNaN(ageY)?0:ageY)*12 + (isNaN(ageM)?0:ageM), height, weight };
         }
-      } else if (!hasHistory) {
-        if (typeof intakeAddRow === 'function') {
-          let basics;
-          if (typeof getUserBasics === 'function') {
-            basics = getUserBasics();
-          } else {
-            const ageY = parseFloat(q('age')?.value);
-            const ageM = parseFloat(q('ageMonths')?.value);
-            const height = parseFloat(q('height')?.value);
-            const weight = parseFloat(q('weight')?.value);
-            basics = { ageMonths: (isNaN(ageY)?0:ageY)*12 + (isNaN(ageM)?0:ageM), height, weight };
-          }
-          if (basics && (Number.isFinite(Number(basics.ageMonths)) || Number.isFinite(Number(basics.height)) || Number.isFinite(Number(basics.weight)))) {
-            intakeAddRow({ ageMonths: basics.ageMonths, height: basics.height, weight: basics.weight }, { skipRefresh: true });
-          } else {
-            intakeAddRow(null, { skipRefresh: true });
-          }
+        if (basics && (Number.isFinite(Number(basics.ageMonths)) || Number.isFinite(Number(basics.height)) || Number.isFinite(Number(basics.weight)))) {
+          intakeAddRow({ ageMonths: basics.ageMonths, height: basics.height, weight: basics.weight });
+        } else {
+          intakeAddRow();
         }
       }
+    }
 
-      histArr.forEach(m=>{
-        if (typeof intakeAddRow === 'function'){
-          intakeAddRow({ ageMonths: m.ageMonths, height: m.height, weight: m.weight }, { skipRefresh: true });
-        }
-      });
+    histArr.forEach(m=>{
+      if (typeof intakeAddRow === 'function'){
+        intakeAddRow({ ageMonths: m.ageMonths, height: m.height, weight: m.weight });
+      }
     });
 
     const palSel = document.getElementById('intakePal');
@@ -22587,14 +22591,14 @@ function rehydrateIntakeFromState(savedPal){
     }
 
     try {
-      if (typeof window !== 'undefined' && typeof window.vildaEnsureAdvancedIntakePairing === 'function') {
+      if (!skipPairing && typeof window !== 'undefined' && typeof window.vildaEnsureAdvancedIntakePairing === 'function') {
         window.vildaEnsureAdvancedIntakePairing();
       }
     } catch (_) {}
     if (typeof updateIntakeRemoveButtons === 'function') updateIntakeRemoveButtons();
-    if (typeof calcEstimatedIntake === 'function') calcEstimatedIntake();
+    if (!skipRecalc && typeof calcEstimatedIntake === 'function') calcEstimatedIntake();
     try {
-      if (typeof window !== 'undefined' && typeof window.refreshEstimatedIntakeVisibility === 'function') {
+      if (!skipRecalc && typeof window !== 'undefined' && typeof window.refreshEstimatedIntakeVisibility === 'function') {
         window.refreshEstimatedIntakeVisibility({ preserveRows: true, recalcIfOpen: true });
       }
     } catch (_) {}
@@ -24172,6 +24176,7 @@ function rehydrateIntakeFromState(savedPal){
   function restoreLoadedState(){
     const data = (typeof window !== 'undefined') ? window.lastLoadedData : null;
     if (!data) return;
+
     try {
       // Jeżeli użytkownik zdążył wprowadzić nowe dane po wczytaniu pliku,
       // zapytaj o potwierdzenie przed nadpisaniem
@@ -24183,382 +24188,416 @@ function rehydrateIntakeFromState(savedPal){
       // brak możliwości potwierdzenia – kontynuuj
     }
 
-    const setValue = (id, value, options) => {
-      const el = document.getElementById(id);
-      if (!el) return null;
-      const opts = (options && typeof options === 'object') ? options : {};
-      el.value = (value != null ? value : '');
-      if (Object.prototype.hasOwnProperty.call(opts, 'disabled')) {
-        el.disabled = !!opts.disabled;
+    // Przywracając pełny stan nie modyfikujemy tablicy pomiarów.
+    // W poprzedniej wersji usuwano pierwszy element, ponieważ przy wczytywaniu
+    // zapisu dodawano duplikat aktualnego pomiaru.  Po modyfikacji logiki
+    // w applyLoadedData() duplikat nie jest już tworzony, dlatego nic
+    // nie usuwamy z historii zaawansowanych obliczeń.
+    // Ukryj kartę poprzedniego pomiaru i związane elementy (na stronie głównej)
+    try {
+      const wrap = document.getElementById('prevSummaryWrap');
+      const card = document.getElementById('prevSummaryCard');
+      const togglePrev = document.getElementById('togglePrevSummary');
+      if (wrap) {
+        wrap.style.display = 'none';
+        if (wrap.dataset) delete wrap.dataset.loaded;
       }
-      return el;
-    };
-    const setChecked = (id, checked, options) => {
-      const el = document.getElementById(id);
-      if (!el) return null;
-      const opts = (options && typeof options === 'object') ? options : {};
-      el.checked = !!checked;
-      if (Object.prototype.hasOwnProperty.call(opts, 'disabled')) {
-        el.disabled = !!opts.disabled;
+      if (card) {
+        card.style.display = 'none';
+        if (card.dataset) delete card.dataset.loaded;
       }
-      return el;
-    };
-    const emit = (el, type) => {
-      if (!el) return;
-      try { el.dispatchEvent(new Event(type, { bubbles: true })); } catch (_) {}
-    };
-
-    withLoadedStateRestoreGuards(() => {
-      // Ukryj kartę poprzedniego pomiaru i związane elementy (na stronie głównej)
+      if (togglePrev) {
+        togglePrev.style.display = 'none';
+      }
       try {
-        const wrap = document.getElementById('prevSummaryWrap');
-        const card = document.getElementById('prevSummaryCard');
-        const togglePrev = document.getElementById('togglePrevSummary');
-        if (wrap) {
-          wrap.style.display = 'none';
-          if (wrap.dataset) delete wrap.dataset.loaded;
-        }
-        if (card) {
-          card.style.display = 'none';
-          if (card.dataset) delete card.dataset.loaded;
-        }
-        if (togglePrev) {
-          togglePrev.style.display = 'none';
+        hideLoadDataMessage();
+        // Po przywróceniu stanu nie pokazuj ponownie instrukcji "Uzupełnij wymagane pola...".
+        const ci = document.getElementById('compareInstruction');
+        if (ci && ci.style) {
+          ci.style.display = 'none';
         }
         try {
-          hideLoadDataMessage();
-          const ci = document.getElementById('compareInstruction');
-          if (ci && ci.style) {
-            ci.style.display = 'none';
+          if (typeof window !== 'undefined') {
+            window.forceHideCompareInstruction = true;
           }
-          try {
-            if (typeof window !== 'undefined') {
-              window.forceHideCompareInstruction = true;
-            }
-          } catch (_) {}
         } catch (_) {}
       } catch (_) {}
+    } catch (_) {}
 
-      try {
-        const name = (data.name || '').trim();
-        if (name) {
-          setValue('name', name, { disabled: true });
-          setValue('advName', name, { disabled: true });
-          setValue('basicGrowthName', name, { disabled: true });
-          setValue('fullName', name, { disabled: true });
-        }
+    let prevAdvSync = false;
+    let prevCrossSync = false;
+    let prevIntakeReset = false;
+    let prevPersistRestoring = false;
+    let prevPauseUntil = 0;
 
-        if (data.user) {
-          setValue('sex', data.user.sex || 'M', { disabled: true });
-          setValue('age', data.user.age);
-          setValue('ageMonths', data.user.ageMonths);
-          setValue('weight', data.user.weight);
-          setValue('height', data.user.height);
-          setValue('waistCm', data.user.waist);
-          setValue('hipCm', data.user.hip);
-        }
-
-        if (data.advanced) {
-          setValue('advBoneAge', data.advanced.boneAgeYears);
-          setValue('advMotherHeight', data.advanced.motherHeight);
-          setValue('advFatherHeight', data.advanced.fatherHeight);
-          if (data.advanced.data) {
-            try { window.advancedGrowthData = JSON.parse(JSON.stringify(data.advanced.data)); }
-            catch (_) { window.advancedGrowthData = data.advanced.data; }
-            try {
-              if (window.advancedGrowthData && typeof window.advancedGrowthData === 'object') {
-                window.advancedGrowthData.measurements = sanitizeAdvancedMeasurementEntries(window.advancedGrowthData.measurements);
-              }
-            } catch (_) {}
-          } else {
-            window.advancedGrowthData = { measurements: [] };
-          }
-        }
-
-        if (data.growthBasic) {
-          if (data.growthBasic.data) {
-            try { window.basicGrowthData = JSON.parse(JSON.stringify(data.growthBasic.data)); }
-            catch (_) { window.basicGrowthData = data.growthBasic.data; }
-          } else {
-            window.basicGrowthData = { measurements: [] };
-          }
-          if (data.growthBasic.name != null) {
-            setValue('basicGrowthName', data.growthBasic.name, { disabled: !!(name || '').trim() });
-          }
-        }
-
-        if (data.intake) {
-          setValue('intakePal', data.intake.pal);
-          try {
-            if (Array.isArray(data.intake.history)) {
-              window.intakeHistory = sanitizeIntakeHistoryEntries(JSON.parse(JSON.stringify(data.intake.history)));
-            } else {
-              window.intakeHistory = [];
-            }
-          } catch (_) {
-            window.intakeHistory = sanitizeIntakeHistoryEntries(data.intake.history || []);
-          }
-          if (typeof data.intake.estKcalPerDay === 'number') {
-            window.intakeEstimatedKcalPerDay = data.intake.estKcalPerDay;
-          } else {
-            window.intakeEstimatedKcalPerDay = null;
-          }
-        }
-
-        // Usuń wiersze przekąsek i dań przed odtworzeniem
-        try {
-          document.querySelectorAll('.food-row').forEach(el => el.remove());
-        } catch (_) {}
-        // Odtwórz wiersze przekąsek i dań
-        if (data.foods) {
-          try {
-            if (Array.isArray(data.foods.snacks)) {
-              data.foods.snacks.forEach(r => {
-                addFoodRow(r.key);
-                const list = document.querySelectorAll('.food-row');
-                const row  = list[list.length - 1];
-                if (!row) return;
-                const sel = row.querySelector('select');
-                const inp = row.querySelector('input[type="number"]');
-                if (sel) sel.value = r.key;
-                if (inp) inp.value = r.qty;
-              });
-            }
-            if (Array.isArray(data.foods.meals)) {
-              data.foods.meals.forEach(r => {
-                addFoodRow(r.key);
-                const list = document.querySelectorAll('.food-row');
-                const row  = list[list.length - 1];
-                if (!row) return;
-                const sel = row.querySelector('select');
-                const inp = row.querySelector('input[type="number"]');
-                if (sel) sel.value = r.key;
-                if (inp) inp.value = r.qty;
-              });
-            }
-          } catch (_) {}
-        }
-        // Przywróć plan
-        if (data.plan) {
-          setValue('palFactor', data.plan.palFactor != null ? String(data.plan.palFactor) : '');
-          setValue('dietLevel', data.plan.dietLevel);
-        }
-        // Odtwórz dane klirensu w sessionStorage i formularzu, jeśli istnieją
-        if (data.clcr && typeof data.clcr === 'object') {
-          try {
-            if (typeof sessionStorage !== 'undefined') {
-              sessionStorage.setItem('vildaClcrSessionV1', JSON.stringify(data.clcr));
-            }
-          } catch (_) {}
-          try {
-            const form = document.getElementById('clcrForm');
-            if (form && data.clcr.inputs && typeof data.clcr.inputs === 'object') {
-              Object.keys(data.clcr.inputs).forEach(function(key) {
-                const el = document.getElementById(key) || form.elements.namedItem(key);
-                if (!el) return;
-                const value = data.clcr.inputs[key];
-                const type  = (el.type || '').toLowerCase();
-                if (type === 'checkbox' || type === 'radio') {
-                  el.checked = !!value;
-                } else {
-                  el.value = value;
-                }
-              });
-              if (typeof window.update === 'function') {
-                try { window.update(); } catch (_) {}
-              }
-            }
-          } catch (_) {}
-        }
-        // Przywróć dodatkowe moduły: ciśnienie/tętno, liczba oddechów i obwody
-        if (data.bp) {
-          setValue('heartRate', data.bp.heartRate);
-          setValue('hrTemperature', data.bp.temperature);
-          setValue('hrPopulation', data.bp.population);
-          setValue('bpSystolic', data.bp.systolic);
-          setValue('bpDiastolic', data.bp.diastolic);
-        }
-        if (data.respiratory) {
-          setValue('respiratoryRateInput', data.respiratory.rate);
-          setValue('respTemperature', data.respiratory.temperature);
-          setValue('respState', data.respiratory.state != null ? data.respiratory.state : 'awake');
-          setValue('respPopulation', data.respiratory.population != null ? data.respiratory.population : 'healthy');
-        }
-        if (data.circumference) {
-          setValue('headCircumference', data.circumference.head);
-          setValue('chestCircumference', data.circumference.chest);
-          setValue('headCircumDS', data.circumference.headDs);
-        }
-        // Przywróć przełącznik normy ciśnienia (bpDataToggle)
-        if (data.bpDataToggle != null) {
-          setChecked('bpDataToggle', !!data.bpDataToggle);
-        }
-        // Przywróć dane lekarza (isDoctor, pwzNumber)
-        if (data.doctor) {
-          const elDoc = (data.doctor.isDoctor != null) ? setChecked('isDoctor', !!data.doctor.isDoctor) : document.getElementById('isDoctor');
-          setValue('pwzNumber', data.doctor.pwzNumber);
-          emit(elDoc, 'change');
-        }
-        // Przywróć dane leczenia bisfosfonianami
-        if (data.bisphos) {
-          setValue('bisphosIndication', data.bisphos.indication);
-          setValue('bisphosDrug', data.bisphos.drug);
-          setValue('bisphosDoseNumber', data.bisphos.doseNumber);
-        }
-        // Przywróć ustawienia modułu Z-score (resultsModeToggle i wybór źródła)
-        if (data.zscore) {
-          const elResults = (data.zscore.resultsMode != null)
-            ? setChecked('resultsModeToggle', !!data.zscore.resultsMode)
-            : document.getElementById('resultsModeToggle');
-          emit(elResults, 'change');
-          if (data.zscore.dataSource) {
-            try {
-              const radios = document.querySelectorAll('input[name="dataSource"]');
-              let activeRadio = null;
-              radios.forEach(r => {
-                const shouldCheck = r.value === data.zscore.dataSource;
-                r.checked = shouldCheck;
-                if (shouldCheck) activeRadio = r;
-              });
-              emit(activeRadio, 'change');
-            } catch (_) {}
-          }
-        }
-        // Zaktualizuj localStorage współdzielonych danych, aby pola pozostały zablokowane na innych podstronach
-        try {
-          if (typeof localStorage !== 'undefined') {
-            const rawShared = localStorage.getItem('sharedUserData');
-            const shared = rawShared ? (JSON.parse(rawShared) || {}) : {};
-            if (name) {
-              shared.name = name;
-              shared.nameLocked = true;
-            }
-            if (data.user) {
-              if (data.user.age != null)       shared.age = data.user.age;
-              if (data.user.ageMonths != null) shared.ageMonths = data.user.ageMonths;
-              if (data.user.weight != null)    shared.weight = data.user.weight;
-              if (data.user.height != null)    shared.height = data.user.height;
-              if (data.user.sex) {
-                shared.sex = data.user.sex;
-                shared.sexLocked = true;
-              }
-            }
-            if (data.advanced) {
-              if (data.advanced.motherHeight != null) shared.advMotherHeight = data.advanced.motherHeight;
-              if (data.advanced.fatherHeight != null) shared.advFatherHeight = data.advanced.fatherHeight;
-            }
-            localStorage.setItem('sharedUserData', JSON.stringify(shared));
-          }
-        } catch (_) {}
-
-        const advWrap = document.getElementById('advMeasurements');
-        const basicWrap = document.getElementById('basicGrowthMeasurements');
-        const needAdvancedUiRehydrate = !!(advWrap && !advWrap.querySelector('.measure-row'));
-        const needBasicUiRehydrate = !!(basicWrap && !basicWrap.querySelector('.measure-row'));
-
-        // Odtwórz UI z zapisanych struktur w kartach zaawansowanych i spożycia.
-        // Historia wzrastania w kartach zaawansowanej i podstawowej jest już zwykle
-        // zrehydratowana podczas samego wczytania pliku JSON, więc przy kliknięciu
-        // „Odtwórz zapisany stan” nie przebudowujemy jej ponownie, jeśli istnieje.
-        withHistoryRestoreGuards(() => {
-          try {
-            if (needAdvancedUiRehydrate && typeof rehydrateAdvancedFromState === 'function') {
-              rehydrateAdvancedFromState();
-            }
-          } catch (_) {}
-          try {
-            if (needBasicUiRehydrate && typeof window !== 'undefined' && typeof window.vildaRehydrateBasicGrowthFromState === 'function') {
-              window.vildaRehydrateBasicGrowthFromState();
-            }
-          } catch (_) {}
-          try {
-            if (typeof rehydrateIntakeFromState === 'function') {
-              rehydrateIntakeFromState(data.intake ? data.intake.pal : null);
-            }
-          } catch (_) {}
-        });
-
-        try {
-          if (typeof window !== 'undefined' && typeof window.vildaEnsureAdvancedIntakePairing === 'function') {
-            window.vildaEnsureAdvancedIntakePairing();
-          }
-        } catch (_) {}
-        try {
-          if (typeof window !== 'undefined' && typeof window.reconcileGrowthHistoryModules === 'function') {
-            window.reconcileGrowthHistoryModules('advanced');
-          }
-        } catch (_) {}
-        try {
-          if (typeof updateRemoveButtons === 'function') updateRemoveButtons();
-        } catch (_) {}
-        try {
-          if (typeof updateAdvAgeMax === 'function') updateAdvAgeMax();
-        } catch (_) {}
-        try {
-          if (typeof window !== 'undefined' && typeof window.calculateBasicGrowth === 'function') {
-            window.calculateBasicGrowth();
-          }
-        } catch (_) {}
-        try {
-          if (typeof calculateGrowthAdvanced === 'function') calculateGrowthAdvanced();
-        } catch (_) {}
-        try {
-          if (typeof window !== 'undefined' && typeof window.vildaPersistScheduleSave === 'function') {
-            window.setTimeout(() => {
-              try { window.vildaPersistScheduleSave(); } catch (_) {}
-            }, 950);
-          }
-        } catch (_) {}
-
-        /*
-         * Po przywróceniu stanu z wczytanego pliku JSON wypełnione zostają
-         * pola dodatkowych modułów (ciśnienie, tętno, oddychanie, obwody).
-         * Aby karty wyników zaktualizowały się bez potrzeby ingerencji
-         * użytkownika, wysyłamy do tych pól zdarzenia `input` i `change`.
-         */
-        try {
-          const fieldIds = [
-            'heartRate',
-            'hrTemperature',
-            'hrPopulation',
-            'bpSystolic',
-            'bpDiastolic',
-            'respiratoryRateInput',
-            'respTemperature',
-            'respState',
-            'respPopulation',
-            'headCircumference',
-            'chestCircumference',
-            'headCircumDS'
-          ];
-          fieldIds.forEach(function(id) {
-            const el = document.getElementById(id);
-            if (el) {
-              emit(el, 'input');
-              emit(el, 'change');
-            }
-          });
-        } catch (_) {}
-
-        // Po przywróceniu starego stanu ukryj instrukcję porównawczą w prawej kolumnie.
-        try {
-          if (typeof autoDisableFromStoredData === 'function') {
-            autoDisableFromStoredData();
-          }
-        } catch (_) {}
-
-        // Przelicz wyniki i zaktualizuj widoczność przycisków
-        try { if (typeof debouncedUpdate === 'function') debouncedUpdate(); } catch (_) {}
-        try { updateSaveBtnVisibility(); } catch (_) {}
-      } catch (err) {
-        try { console.error('restoreLoadedState error', err); } catch (_) {}
+    try {
+      if (typeof window !== 'undefined') {
+        prevAdvSync = !!window.__vildaSuspendAdvIntakeSync;
+        prevCrossSync = !!window.__vildaSuspendGrowthHistoryCrossSync;
+        prevIntakeReset = !!window.__vildaSuspendIntakeUserReset;
+        prevPersistRestoring = !!window.__vildaPersistRestoring;
+        prevPauseUntil = Number(window.__vildaPersistPauseUntil || 0);
+        window.__vildaSuspendAdvIntakeSync = true;
+        window.__vildaSuspendGrowthHistoryCrossSync = true;
+        window.__vildaSuspendIntakeUserReset = true;
+        window.__vildaPersistRestoring = true;
+        window.__vildaPersistPauseUntil = Math.max(prevPauseUntil, Date.now() + 1600);
       }
-    });
+    } catch (_) {}
+
+    try {
+      const name = (data.name || '').trim();
+      const resultsModeSaved = !!(data.zscore && data.zscore.resultsMode);
+      const dataSourceSaved = (data.zscore && typeof data.zscore.dataSource === 'string') ? data.zscore.dataSource : '';
+
+      // Przywróć podstawowe dane użytkownika i zablokuj odpowiednie pola.
+      // Nie emitujemy lawiny zdarzeń input/change – finalne przeliczenie i synchronizacja
+      // wykonywane są kontrolowanie dopiero po odbudowaniu całego UI.
+      if (name) {
+        setFieldValueSilently(document.getElementById('name'), name, { disabled: true });
+        setFieldValueSilently(document.getElementById('advName'), name, { disabled: true });
+        setFieldValueSilently(document.getElementById('basicGrowthName'), name, { disabled: true });
+        setFieldValueSilently(document.getElementById('fullName'), name, { disabled: true });
+      }
+
+      if (data.user) {
+        setFieldValueSilently(document.getElementById('sex'), data.user.sex || '', { disabled: !!data.user.sex });
+        setFieldValueSilently(document.getElementById('age'), data.user.age != null ? data.user.age : '');
+        setFieldValueSilently(document.getElementById('ageMonths'), data.user.ageMonths != null ? data.user.ageMonths : '');
+        setFieldValueSilently(document.getElementById('weight'), data.user.weight != null ? data.user.weight : '');
+        setFieldValueSilently(document.getElementById('height'), data.user.height != null ? data.user.height : '');
+        setFieldValueSilently(document.getElementById('waistCm'), data.user.waist != null ? data.user.waist : '');
+        setFieldValueSilently(document.getElementById('hipCm'), data.user.hip != null ? data.user.hip : '');
+      }
+
+      if (data.advanced) {
+        setFieldValueSilently(document.getElementById('advBoneAge'), data.advanced.boneAgeYears != null ? data.advanced.boneAgeYears : '');
+        setFieldValueSilently(document.getElementById('advMotherHeight'), data.advanced.motherHeight != null ? data.advanced.motherHeight : '');
+        setFieldValueSilently(document.getElementById('advFatherHeight'), data.advanced.fatherHeight != null ? data.advanced.fatherHeight : '');
+        if (data.advanced.data) {
+          try { window.advancedGrowthData = JSON.parse(JSON.stringify(data.advanced.data)); }
+          catch (_) { window.advancedGrowthData = data.advanced.data; }
+          try {
+            if (window.advancedGrowthData && typeof window.advancedGrowthData === 'object') {
+              window.advancedGrowthData.measurements = sanitizeAdvancedMeasurementEntries(window.advancedGrowthData.measurements);
+            }
+          } catch (_) {}
+        } else {
+          window.advancedGrowthData = { measurements: [] };
+        }
+      }
+
+      if (data.growthBasic) {
+        if (data.growthBasic.data) {
+          try { window.basicGrowthData = JSON.parse(JSON.stringify(data.growthBasic.data)); }
+          catch (_) { window.basicGrowthData = data.growthBasic.data; }
+        } else {
+          window.basicGrowthData = { measurements: [] };
+        }
+      }
+
+      if (data.intake) {
+        setFieldValueSilently(document.getElementById('intakePal'), data.intake.pal || '');
+        try {
+          if (Array.isArray(data.intake.history)) {
+            window.intakeHistory = sanitizeIntakeHistoryEntries(JSON.parse(JSON.stringify(data.intake.history)));
+          } else {
+            window.intakeHistory = [];
+          }
+        } catch (_) {
+          window.intakeHistory = sanitizeIntakeHistoryEntries(data.intake.history || []);
+        }
+        if (typeof data.intake.estKcalPerDay === 'number') {
+          window.intakeEstimatedKcalPerDay = data.intake.estKcalPerDay;
+        } else {
+          window.intakeEstimatedKcalPerDay = null;
+        }
+      }
+
+      // Usuń wiersze przekąsek i dań przed odtworzeniem
+      try {
+        document.querySelectorAll('.food-row').forEach(el => el.remove());
+      } catch (_) {}
+      // Odtwórz wiersze przekąsek i dań
+      if (data.foods) {
+        try {
+          if (Array.isArray(data.foods.snacks)) {
+            data.foods.snacks.forEach(r => {
+              addFoodRow(r.key);
+              const list = document.querySelectorAll('.food-row');
+              const row  = list[list.length - 1];
+              if (!row) return;
+              const sel = row.querySelector('select');
+              const inp = row.querySelector('input[type="number"]');
+              if (sel) sel.value = r.key;
+              if (inp) inp.value = r.qty;
+            });
+          }
+          if (Array.isArray(data.foods.meals)) {
+            data.foods.meals.forEach(r => {
+              addFoodRow(r.key);
+              const list = document.querySelectorAll('.food-row');
+              const row  = list[list.length - 1];
+              if (!row) return;
+              const sel = row.querySelector('select');
+              const inp = row.querySelector('input[type="number"]');
+              if (sel) sel.value = r.key;
+              if (inp) inp.value = r.qty;
+            });
+          }
+        } catch (_) {}
+      }
+
+      // Przywróć plan
+      if (data.plan) {
+        setFieldValueSilently(document.getElementById('palFactor'), data.plan.palFactor ? String(data.plan.palFactor) : '');
+        setFieldValueSilently(document.getElementById('dietLevel'), data.plan.dietLevel || '');
+      }
+
+      // Odtwórz dane klirensu w sessionStorage i formularzu, jeśli istnieją
+      if (data.clcr && typeof data.clcr === 'object') {
+        try {
+          if (typeof sessionStorage !== 'undefined') {
+            sessionStorage.setItem('vildaClcrSessionV1', JSON.stringify(data.clcr));
+          }
+        } catch (_) {}
+        try {
+          const form = document.getElementById('clcrForm');
+          if (form && data.clcr.inputs && typeof data.clcr.inputs === 'object') {
+            Object.keys(data.clcr.inputs).forEach(function(key) {
+              const el = document.getElementById(key) || form.elements.namedItem(key);
+              if (!el) return;
+              const value = data.clcr.inputs[key];
+              const type  = (el.type || '').toLowerCase();
+              if (type === 'checkbox' || type === 'radio') {
+                el.checked = !!value;
+              } else {
+                el.value = value;
+              }
+            });
+            if (typeof window.update === 'function') {
+              try { window.update(); } catch (_) {}
+            }
+          }
+        } catch (_) {}
+      }
+
+      // Przywróć dodatkowe moduły: ciśnienie/tętno, liczba oddechów i obwody
+      if (data.bp) {
+        setFieldValueSilently(document.getElementById('heartRate'), data.bp.heartRate != null ? data.bp.heartRate : '');
+        setFieldValueSilently(document.getElementById('hrTemperature'), data.bp.temperature != null ? data.bp.temperature : '');
+        setFieldValueSilently(document.getElementById('hrPopulation'), data.bp.population != null ? data.bp.population : '');
+        setFieldValueSilently(document.getElementById('bpSystolic'), data.bp.systolic != null ? data.bp.systolic : '');
+        setFieldValueSilently(document.getElementById('bpDiastolic'), data.bp.diastolic != null ? data.bp.diastolic : '');
+      }
+      if (data.respiratory) {
+        setFieldValueSilently(document.getElementById('respiratoryRateInput'), data.respiratory.rate != null ? data.respiratory.rate : '');
+        setFieldValueSilently(document.getElementById('respTemperature'), data.respiratory.temperature != null ? data.respiratory.temperature : '');
+        setFieldValueSilently(document.getElementById('respState'), data.respiratory.state != null ? data.respiratory.state : 'awake');
+        setFieldValueSilently(document.getElementById('respPopulation'), data.respiratory.population != null ? data.respiratory.population : 'healthy');
+      }
+      if (data.circumference) {
+        setFieldValueSilently(document.getElementById('headCircumference'), data.circumference.head != null ? data.circumference.head : '');
+        setFieldValueSilently(document.getElementById('chestCircumference'), data.circumference.chest != null ? data.circumference.chest : '');
+        setFieldValueSilently(document.getElementById('headCircumDS'), data.circumference.headDs != null ? data.circumference.headDs : '');
+      }
+
+      // Przywróć przełącznik normy ciśnienia (bpDataToggle)
+      if (data.bpDataToggle != null) {
+        setCheckboxValueSilently(document.getElementById('bpDataToggle'), !!data.bpDataToggle);
+      }
+
+      // Przywróć dane lekarza (isDoctor, pwzNumber)
+      if (data.doctor) {
+        const elDoc = document.getElementById('isDoctor');
+        if (elDoc && data.doctor.isDoctor != null) {
+          elDoc.checked = !!data.doctor.isDoctor;
+          try {
+            if (typeof elDoc.onchange === 'function') {
+              elDoc.onchange(new Event('change'));
+            }
+          } catch (_) {}
+        }
+        setFieldValueSilently(document.getElementById('pwzNumber'), data.doctor.pwzNumber != null ? data.doctor.pwzNumber : '');
+      }
+
+      // Przywróć dane leczenia bisfosfonianami
+      if (data.bisphos) {
+        setFieldValueSilently(document.getElementById('bisphosIndication'), data.bisphos.indication != null ? data.bisphos.indication : '');
+        setFieldValueSilently(document.getElementById('bisphosDrug'), data.bisphos.drug != null ? data.bisphos.drug : '');
+        setFieldValueSilently(document.getElementById('bisphosDoseNumber'), data.bisphos.doseNumber != null ? data.bisphos.doseNumber : '');
+      }
+
+      // Przywróć ustawienia modułu Z-score bez uruchamiania pełnego łańcucha change-handlerów.
+      try {
+        const elResults = document.getElementById('resultsModeToggle');
+        if (elResults) {
+          elResults.checked = resultsModeSaved;
+        }
+      } catch (_) {}
+      applyResultsModeRestoreState(resultsModeSaved);
+      applyDataSourceRestoreState(dataSourceSaved);
+
+      // Zaktualizuj localStorage współdzielonych danych, aby pola pozostały zablokowane na innych podstronach
+      try {
+        if (typeof localStorage !== 'undefined') {
+          const rawShared = localStorage.getItem('sharedUserData');
+          const shared = rawShared ? (JSON.parse(rawShared) || {}) : {};
+          if (name) {
+            shared.name = name;
+            shared.nameLocked = true;
+          }
+          if (data.user) {
+            if (data.user.age != null)       shared.age = data.user.age;
+            if (data.user.ageMonths != null) shared.ageMonths = data.user.ageMonths;
+            if (data.user.weight != null)    shared.weight = data.user.weight;
+            if (data.user.height != null)    shared.height = data.user.height;
+            if (data.user.waist != null)     shared.waistCm = data.user.waist;
+            if (data.user.hip != null)       shared.hipCm = data.user.hip;
+            if (data.user.sex) {
+              shared.sex = data.user.sex;
+              shared.sexLocked = true;
+            }
+          }
+          if (data.advanced) {
+            if (data.advanced.motherHeight != null) shared.advMotherHeight = data.advanced.motherHeight;
+            if (data.advanced.fatherHeight != null) shared.advFatherHeight = data.advanced.fatherHeight;
+            if (data.advanced.boneAgeYears != null) shared.advBoneAge = data.advanced.boneAgeYears;
+          }
+          localStorage.setItem('sharedUserData', JSON.stringify(shared));
+        }
+      } catch (_) {}
+
+      // Odtwórz UI z zapisanych struktur wsadowo, bez pośrednich przeliczeń po każdym polu/wierszu.
+      try { if (typeof rehydrateAdvancedFromState === 'function') rehydrateAdvancedFromState({ skipRecalc: true, skipPairing: true }); } catch (_) {}
+      try {
+        if (typeof window !== 'undefined' && typeof window.vildaRehydrateBasicGrowthFromState === 'function') {
+          window.vildaRehydrateBasicGrowthFromState({ skipRecalc: true });
+        }
+      } catch (_) {}
+      try { if (typeof rehydrateIntakeFromState === 'function') rehydrateIntakeFromState(data.intake ? data.intake.pal : null, { skipRecalc: true, skipPairing: true }); } catch (_) {}
+    } catch (err) {
+      try { console.error('restoreLoadedState error', err); } catch (_) {}
+    } finally {
+      try {
+        if (typeof window !== 'undefined') {
+          window.__vildaSuspendAdvIntakeSync = prevAdvSync;
+          window.__vildaSuspendGrowthHistoryCrossSync = prevCrossSync;
+          window.__vildaSuspendIntakeUserReset = prevIntakeReset;
+          window.__vildaPersistRestoring = prevPersistRestoring;
+        }
+      } catch (_) {}
+    }
+
+    try {
+      if (typeof window !== 'undefined' && typeof window.vildaEnsureAdvancedIntakePairing === 'function') {
+        window.vildaEnsureAdvancedIntakePairing();
+      }
+    } catch (_) {}
+    try { if (typeof calculateGrowthAdvanced === 'function') calculateGrowthAdvanced(); } catch (_) {}
+    try {
+      if (typeof window !== 'undefined' && typeof window.reconcileGrowthHistoryModules === 'function') {
+        window.reconcileGrowthHistoryModules('advanced');
+      }
+    } catch (_) {}
+    try {
+      if (typeof window !== 'undefined' && typeof window.calculateBasicGrowth === 'function') {
+        window.calculateBasicGrowth();
+      }
+    } catch (_) {}
+    try { if (typeof calcEstimatedIntake === 'function') calcEstimatedIntake(); } catch (_) {}
+    try {
+      if (typeof window !== 'undefined' && typeof window.refreshEstimatedIntakeVisibility === 'function') {
+        window.refreshEstimatedIntakeVisibility({ preserveRows: true, recalcIfOpen: true });
+      }
+    } catch (_) {}
+
+    /*
+     * Po zakończeniu wsadowej odbudowy można ponownie dopuścić autosave dla
+     * mniej kosztownych pól pomocniczych. Dzięki temu localStorage i
+     * sessionStorage dostają świeży snapshot bez ponownego uruchamiania całej
+     * lawiny synchronizacji wzrostowych.
+     */
+    try {
+      if (typeof window !== 'undefined') {
+        window.__vildaPersistPauseUntil = Date.now() - 1;
+      }
+    } catch (_) {}
+
+    /*
+     * Po przywróceniu stanu z wczytanego pliku JSON wypełnione zostają
+     * pola dodatkowych modułów (ciśnienie, tętno, oddychanie, obwody oraz
+     * ustawienia planu/intake). Aby karty wyników i warstwa autosave
+     * zaktualizowały się bez potrzeby ingerencji użytkownika, wysyłamy do
+     * tych pól zdarzenia `input` i `change`.
+     */
+    try {
+      const fieldIds = [
+        'heartRate',
+        'hrTemperature',
+        'hrPopulation',
+        'bpSystolic',
+        'bpDiastolic',
+        'respiratoryRateInput',
+        'respTemperature',
+        'respState',
+        'respPopulation',
+        'headCircumference',
+        'chestCircumference',
+        'headCircumDS',
+        'waistCm',
+        'hipCm',
+        'bpDataToggle',
+        'intakePal',
+        'palFactor',
+        'dietLevel',
+        'pwzNumber',
+        'bisphosIndication',
+        'bisphosDrug',
+        'bisphosDoseNumber'
+      ];
+      fieldIds.forEach(function(id) {
+        const el = document.getElementById(id);
+        if (el) {
+          try { el.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
+          try { el.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+        }
+      });
+    } catch (_) {}
+    try {
+      const selectedDataSource = document.querySelector('input[name="dataSource"]:checked');
+      if (selectedDataSource) {
+        selectedDataSource.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    } catch (_) {}
+
+    // Po przywróceniu starego stanu ukryj instrukcję porównawczą w prawej kolumnie.
+    try {
+      if (typeof autoDisableFromStoredData === 'function') {
+        autoDisableFromStoredData();
+      }
+    } catch (_) {}
+
+    // Przelicz wyniki, odśwież autosave i zaktualizuj widoczność przycisków.
+    try {
+      if (typeof debouncedUpdate === 'function') {
+        debouncedUpdate();
+      } else if (typeof window.update === 'function') {
+        window.update();
+      }
+    } catch (_) {}
+    try { if (typeof updateSaveBtnVisibility === 'function') updateSaveBtnVisibility(); } catch (_) {}
+    try { if (typeof scheduleMainSessionSave === 'function') scheduleMainSessionSave(); } catch (_) {}
 
     // Usuń zapamiętane dane, aby uniemożliwić ponowne przywracanie tego samego stanu
     try { window.lastLoadedData = null; } catch (_) {}
     try { window.prevMeasurementInfo = null; } catch (_) {}
     try { window.hasUserModifiedAfterLoad = false; } catch (_) {}
+    try {
+      if (typeof window !== 'undefined' && typeof window.vildaPersistScheduleSave === 'function') {
+        window.vildaPersistScheduleSave();
+      }
+    } catch (_) {}
     try {
       if (typeof window !== 'undefined' && typeof window.vildaPersistFlushNow === 'function') {
         setTimeout(() => {
@@ -24566,6 +24605,7 @@ function rehydrateIntakeFromState(savedPal){
         }, 0);
       }
     } catch (_) {}
+
     // Ukryj przycisk przywracania po zakończeniu
     try {
       const rb2 = document.getElementById('restoreStateBtn');
