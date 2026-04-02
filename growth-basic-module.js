@@ -627,6 +627,7 @@
   }
 
   function createBasicGrowthRow(prefill) {
+    const isBatchRender = isBasicGrowthBatchRenderActive();
     const container = q('basicGrowthMeasurements');
     if (!container) return null;
 
@@ -686,8 +687,10 @@
       input.addEventListener('change', calculateBasicGrowth);
     });
 
-    updateBasicGrowthAgeMax();
-    updateBasicGrowthRemoveButtons();
+    if (!isBatchRender) {
+      updateBasicGrowthAgeMax();
+      updateBasicGrowthRemoveButtons();
+    }
     return row;
   }
 
@@ -1068,6 +1071,33 @@
     } catch (_) {}
   }
 
+
+  function isBasicGrowthBatchRenderActive() {
+    try {
+      return !!(typeof window !== 'undefined' && window.__vildaBatchBasicGrowthRender);
+    } catch (_) {}
+    return false;
+  }
+
+  function withBasicGrowthBatchRender(callback) {
+    let prev = false;
+    try {
+      if (typeof window !== 'undefined') {
+        prev = !!window.__vildaBatchBasicGrowthRender;
+        window.__vildaBatchBasicGrowthRender = true;
+      }
+    } catch (_) {}
+    try {
+      return callback();
+    } finally {
+      try {
+        if (typeof window !== 'undefined') {
+          window.__vildaBatchBasicGrowthRender = prev;
+        }
+      } catch (_) {}
+    }
+  }
+
   function rehydrateBasicGrowthFromState() {
     const wrap = q('basicGrowthMeasurements');
     if (!wrap) return;
@@ -1096,7 +1126,9 @@
         return;
       }
 
-      arr.forEach((m) => createBasicGrowthRow(m));
+      withBasicGrowthBatchRender(() => {
+        arr.forEach((m) => createBasicGrowthRow(m));
+      });
       updateBasicGrowthRemoveButtons();
       updateBasicGrowthAgeMax();
       rememberBasicHistorySignature(arr);

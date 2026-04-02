@@ -16913,7 +16913,9 @@ function updateAdvancedMeasurementAnalysisControls(forceHide) {
  * pola otrzymują nasłuchy, które powodują ponowne przeliczenie
  * wyników.
  */
-function addAdvMeasurementRow() {
+function addAdvMeasurementRow(options) {
+  const opts = (options && typeof options === 'object') ? options : {};
+  const isBatchRender = !!opts.skipRecalc || isAdvancedHistoryBatchRenderActive();
   const container = document.getElementById('advMeasurements');
   if (!container) return;
   const row = document.createElement('div');
@@ -16996,7 +16998,7 @@ function addAdvMeasurementRow() {
     }
   }
   // Jeśli dostępna, odśwież widoczność pól strzałek (sterowane w index.html)
-  if (typeof window !== 'undefined' && typeof window.updateArrowInputsVisibility === 'function') {
+  if (!isBatchRender && typeof window !== 'undefined' && typeof window.updateArrowInputsVisibility === 'function') {
     try { window.updateArrowInputsVisibility(); } catch (_) {}
   }
   // nasłuch na usuwanie wiersza
@@ -17022,9 +17024,12 @@ function addAdvMeasurementRow() {
   // oblicz natychmiast po dodaniu wiersza
   // Po dodaniu nowego wiersza aktualizujemy wyświetlanie przycisku usuwania
   // oraz maksymalny dopuszczalny wiek pomiaru na podstawie aktualnego wieku dziecka.
-  updateRemoveButtons();
-  updateAdvAgeMax();
-  calculateGrowthAdvanced();
+  if (!isBatchRender) {
+    updateRemoveButtons();
+    updateAdvAgeMax();
+    calculateGrowthAdvanced();
+  }
+  return row;
 }
 
 /**
@@ -20772,7 +20777,9 @@ function getUserBasics(){
 }
 
 /* ——— UI rows (jak w „Zaawansowanych…”): dodawanie/odczyt ——— */
-function intakeAddRow(prefill){
+function intakeAddRow(prefill, options){
+  const opts = (options && typeof options === 'object') ? options : {};
+  const skipRefresh = !!opts.skipRefresh || isIntakeHistoryBatchRenderActive();
   const wrap = document.getElementById('intakeMeasurements');
   if(!wrap) return;
   const row = document.createElement('div');
@@ -20835,7 +20842,10 @@ function intakeAddRow(prefill){
   });
 
   // Aktualizuj widoczność przycisków „×” po dodaniu nowego wiersza
-  updateIntakeRemoveButtons();
+  if (!skipRefresh) {
+    updateIntakeRemoveButtons();
+  }
+  return row;
 }
 
 function readIntakeRows(){
@@ -22269,6 +22279,81 @@ function sanitizeIntakeRowsUI(rowsUI) {
     }
   }
 
+
+  function withLoadedStateRestoreGuards(callback) {
+    let prevPersistRestoring = false;
+    let prevPauseUntil = 0;
+    try {
+      if (typeof window !== 'undefined') {
+        prevPersistRestoring = !!window.__vildaPersistRestoring;
+        prevPauseUntil = Number(window.__vildaPersistPauseUntil || 0);
+        window.__vildaPersistRestoring = true;
+        window.__vildaPersistPauseUntil = Math.max(prevPauseUntil, Date.now() + 1600);
+      }
+    } catch (_) {}
+    try {
+      return withHistoryRestoreGuards(callback);
+    } finally {
+      try {
+        if (typeof window !== 'undefined') {
+          window.__vildaPersistRestoring = prevPersistRestoring;
+        }
+      } catch (_) {}
+    }
+  }
+
+  function isAdvancedHistoryBatchRenderActive() {
+    try {
+      return !!(typeof window !== 'undefined' && window.__vildaBatchAdvancedHistoryRender);
+    } catch (_) {}
+    return false;
+  }
+
+  function withAdvancedHistoryBatchRender(callback) {
+    let prev = false;
+    try {
+      if (typeof window !== 'undefined') {
+        prev = !!window.__vildaBatchAdvancedHistoryRender;
+        window.__vildaBatchAdvancedHistoryRender = true;
+      }
+    } catch (_) {}
+    try {
+      return callback();
+    } finally {
+      try {
+        if (typeof window !== 'undefined') {
+          window.__vildaBatchAdvancedHistoryRender = prev;
+        }
+      } catch (_) {}
+    }
+  }
+
+  function isIntakeHistoryBatchRenderActive() {
+    try {
+      return !!(typeof window !== 'undefined' && window.__vildaBatchIntakeHistoryRender);
+    } catch (_) {}
+    return false;
+  }
+
+  function withIntakeHistoryBatchRender(callback) {
+    let prev = false;
+    try {
+      if (typeof window !== 'undefined') {
+        prev = !!window.__vildaBatchIntakeHistoryRender;
+        window.__vildaBatchIntakeHistoryRender = true;
+      }
+    } catch (_) {}
+    try {
+      return callback();
+    } finally {
+      try {
+        if (typeof window !== 'undefined') {
+          window.__vildaBatchIntakeHistoryRender = prev;
+        }
+      } catch (_) {}
+    }
+  }
+
   // === REHYDRATACJA UI PO WCZYTANIU PLIKU JSON ======================
   // Odtwórz wiersze w sekcji „Zaawansowane obliczenia wzrostowe” z window.advancedGrowthData
   function rehydrateAdvancedFromState(){
@@ -22289,52 +22374,56 @@ function sanitizeIntakeRowsUI(rowsUI) {
       } catch (_) {}
       return;
     }
-    arr.forEach(m=>{
-      if (typeof addAdvMeasurementRow === 'function') addAdvMeasurementRow();
-      const rows = cont.querySelectorAll('.measure-row');
-      const row = rows[rows.length-1];
-      if (!row) return;
-      // Odtwórz metadane synchronizacji GH/IGF‑1, jeśli były zapisane w stanie (autosave / plik JSON)
-      try {
-        if (m && (m.ghSync || m.ghId)) {
-          row.setAttribute('data-gh-sync', 'true');
-          if (m.ghId != null && String(m.ghId) !== '') {
-            row.setAttribute('data-gh-id', String(m.ghId));
+    withAdvancedHistoryBatchRender(() => {
+      arr.forEach(m=>{
+        if (typeof addAdvMeasurementRow === 'function') addAdvMeasurementRow({ skipRecalc: true });
+        const rows = cont.querySelectorAll('.measure-row');
+        const row = rows[rows.length-1];
+        if (!row) return;
+        // Odtwórz metadane synchronizacji GH/IGF‑1, jeśli były zapisane w stanie (autosave / plik JSON)
+        try {
+          if (m && (m.ghSync || m.ghId)) {
+            row.setAttribute('data-gh-sync', 'true');
+            if (m.ghId != null && String(m.ghId) !== '') {
+              row.setAttribute('data-gh-id', String(m.ghId));
+            }
           }
+        } catch (_) {}
+        const set = (sel, v)=>{ const el=row.querySelector(sel); if(el) el.value = (v==null||Number.isNaN(v)) ? '' : String(v); };
+        const ageDec = (typeof m.ageYears==='number') ? m.ageYears : (typeof m.ageMonths==='number' ? m.ageMonths/12 : null);
+        // Rozdziel wiek na pełne lata i miesiące (0–11)
+        if (typeof ageDec === 'number') {
+          const yrs = Math.floor(ageDec);
+          let mos = Math.round((ageDec - yrs) * 12);
+          // Jeżeli zaokrąglenie miesięcy daje 12, zwiększ lata i zresetuj miesiące
+          if (mos === 12) {
+            mos = 0;
+          }
+          set('.adv-age-years', yrs);
+          set('.adv-age-months', mos);
+        } else {
+          set('.adv-age-years', '');
+          set('.adv-age-months', '');
         }
-      } catch (_) {}
-      const set = (sel, v)=>{ const el=row.querySelector(sel); if(el) el.value = (v==null||Number.isNaN(v)) ? '' : String(v); };
-      const ageDec = (typeof m.ageYears==='number') ? m.ageYears : (typeof m.ageMonths==='number' ? m.ageMonths/12 : null);
-      // Rozdziel wiek na pełne lata i miesiące (0–11)
-      if (typeof ageDec === 'number') {
-        const yrs = Math.floor(ageDec);
-        let mos = Math.round((ageDec - yrs) * 12);
-        // Jeżeli zaokrąglenie miesięcy daje 12, zwiększ lata i zresetuj miesiące
-        if (mos === 12) {
-          mos = 0;
+        set('.adv-height', (typeof m.height==='number') ? m.height : '');
+        set('.adv-weight', (typeof m.weight==='number') ? m.weight : '');
+        // Przywróć wiek kostny z historii, jeśli jest dostępny
+        set('.adv-bone-age', (typeof m.boneAgeYears === 'number') ? m.boneAgeYears : '');
+        // Przywróć strzałkę + komentarz (tryb publikacji siatek)
+        const arrowEnableEl = row.querySelector('.adv-arrow-enable');
+        const arrowCommentEl = row.querySelector('.adv-arrow-comment');
+        if (arrowEnableEl) {
+          arrowEnableEl.checked = !!m.arrowEnabled;
         }
-        set('.adv-age-years', yrs);
-        set('.adv-age-months', mos);
-      } else {
-        set('.adv-age-years', '');
-        set('.adv-age-months', '');
-      }
-      set('.adv-height', (typeof m.height==='number') ? m.height : '');
-      set('.adv-weight', (typeof m.weight==='number') ? m.weight : '');
-      // Przywróć wiek kostny z historii, jeśli jest dostępny
-      set('.adv-bone-age', (typeof m.boneAgeYears === 'number') ? m.boneAgeYears : '');
-      // Przywróć strzałkę + komentarz (tryb publikacji siatek)
-      const arrowEnableEl = row.querySelector('.adv-arrow-enable');
-      const arrowCommentEl = row.querySelector('.adv-arrow-comment');
-      if (arrowEnableEl) {
-        arrowEnableEl.checked = !!m.arrowEnabled;
-      }
-      if (arrowCommentEl) {
-        arrowCommentEl.value = (typeof m.arrowComment === 'string') ? m.arrowComment : '';
-        // Pokaż/ukryj pole komentarza zależnie od stanu przełącznika
-        arrowCommentEl.style.display = (arrowEnableEl && arrowEnableEl.checked) ? '' : 'none';
-      }
+        if (arrowCommentEl) {
+          arrowCommentEl.value = (typeof m.arrowComment === 'string') ? m.arrowComment : '';
+          // Pokaż/ukryj pole komentarza zależnie od stanu przełącznika
+          arrowCommentEl.style.display = (arrowEnableEl && arrowEnableEl.checked) ? '' : 'none';
+        }
+      });
     });
+    try { if (typeof updateRemoveButtons === 'function') updateRemoveButtons(); } catch (_) {}
+    try { if (typeof updateAdvAgeMax === 'function') updateAdvAgeMax(); } catch (_) {}
     // Odśwież widoczność sekcji strzałek (sterowane np. przez tryb publikacji)
     if (typeof window !== 'undefined' && typeof window.updateArrowInputsVisibility === 'function') {
       try { window.updateArrowInputsVisibility(); } catch (_) {}
@@ -22370,50 +22459,52 @@ function sanitizeIntakeRowsUI(rowsUI) {
       return;
     }
 
-    arr.forEach(item => {
-      if (typeof addAdvMeasurementRow !== 'function') return;
-      addAdvMeasurementRow();
-      const rows = cont.querySelectorAll('.measure-row');
-      const row = rows[rows.length - 1];
-      if (!row || !item) return;
+    withAdvancedHistoryBatchRender(() => {
+      arr.forEach(item => {
+        if (typeof addAdvMeasurementRow !== 'function') return;
+        addAdvMeasurementRow({ skipRecalc: true });
+        const rows = cont.querySelectorAll('.measure-row');
+        const row = rows[rows.length - 1];
+        if (!row || !item) return;
 
-      const setVal = (sel, v) => {
-        const el = row.querySelector(sel);
-        if (!el) return;
-        el.value = (v == null) ? '' : String(v);
-      };
-      const setChecked = (sel, checked) => {
-        const el = row.querySelector(sel);
-        if (!el) return;
-        el.checked = !!checked;
-      };
+        const setVal = (sel, v) => {
+          const el = row.querySelector(sel);
+          if (!el) return;
+          el.value = (v == null) ? '' : String(v);
+        };
+        const setChecked = (sel, checked) => {
+          const el = row.querySelector(sel);
+          if (!el) return;
+          el.checked = !!checked;
+        };
 
-      setVal('.adv-age-years', item.ageY);
-      setVal('.adv-age-months', item.ageM);
-      setVal('.adv-height', item.ht);
-      setVal('.adv-weight', item.wt);
-      setVal('.adv-bone-age', item.boneAge);
-      setChecked('.adv-arrow-enable', !!item.arrowEnabled);
-      setVal('.adv-arrow-comment', item.arrowComment);
+        setVal('.adv-age-years', item.ageY);
+        setVal('.adv-age-months', item.ageM);
+        setVal('.adv-height', item.ht);
+        setVal('.adv-weight', item.wt);
+        setVal('.adv-bone-age', item.boneAge);
+        setChecked('.adv-arrow-enable', !!item.arrowEnabled);
+        setVal('.adv-arrow-comment', item.arrowComment);
 
-      const arrowEnableEl = row.querySelector('.adv-arrow-enable');
-      const arrowCommentEl = row.querySelector('.adv-arrow-comment');
-      if (arrowCommentEl) {
-        arrowCommentEl.style.display = (arrowEnableEl && arrowEnableEl.checked) ? '' : 'none';
-      }
-
-      try {
-        if (item.ghSync) {
-          row.setAttribute('data-gh-sync', 'true');
-        } else {
-          row.removeAttribute('data-gh-sync');
+        const arrowEnableEl = row.querySelector('.adv-arrow-enable');
+        const arrowCommentEl = row.querySelector('.adv-arrow-comment');
+        if (arrowCommentEl) {
+          arrowCommentEl.style.display = (arrowEnableEl && arrowEnableEl.checked) ? '' : 'none';
         }
-        if (item.ghId != null && String(item.ghId).trim() !== '') {
-          row.setAttribute('data-gh-id', String(item.ghId));
-        } else {
-          row.removeAttribute('data-gh-id');
-        }
-      } catch (_) {}
+
+        try {
+          if (item.ghSync) {
+            row.setAttribute('data-gh-sync', 'true');
+          } else {
+            row.removeAttribute('data-gh-sync');
+          }
+          if (item.ghId != null && String(item.ghId).trim() !== '') {
+            row.setAttribute('data-gh-id', String(item.ghId));
+          } else {
+            row.removeAttribute('data-gh-id');
+          }
+        } catch (_) {}
+      });
     });
 
     try { if (typeof updateRemoveButtons === 'function') updateRemoveButtons(); } catch (_) {}
@@ -22451,36 +22542,38 @@ function rehydrateIntakeFromState(savedPal){
     const hasHistory = histArr.length > 0;
     const hasCurrentBasics = !!currentBasics;
 
-    if (hasCurrentBasics) {
-      try {
-        intakeAddRow({ ageMonths: currentBasics.ageMonths, height: currentBasics.height, weight: currentBasics.weight });
-      } catch (_) {
-        if (typeof intakeAddRow === 'function') intakeAddRow();
-      }
-    } else if (!hasHistory) {
-      if (typeof intakeAddRow === 'function') {
-        let basics;
-        if (typeof getUserBasics === 'function') {
-          basics = getUserBasics();
-        } else {
-          const ageY = parseFloat(q('age')?.value);
-          const ageM = parseFloat(q('ageMonths')?.value);
-          const height = parseFloat(q('height')?.value);
-          const weight = parseFloat(q('weight')?.value);
-          basics = { ageMonths: (isNaN(ageY)?0:ageY)*12 + (isNaN(ageM)?0:ageM), height, weight };
+    withIntakeHistoryBatchRender(() => {
+      if (hasCurrentBasics) {
+        try {
+          intakeAddRow({ ageMonths: currentBasics.ageMonths, height: currentBasics.height, weight: currentBasics.weight }, { skipRefresh: true });
+        } catch (_) {
+          if (typeof intakeAddRow === 'function') intakeAddRow(null, { skipRefresh: true });
         }
-        if (basics && (Number.isFinite(Number(basics.ageMonths)) || Number.isFinite(Number(basics.height)) || Number.isFinite(Number(basics.weight)))) {
-          intakeAddRow({ ageMonths: basics.ageMonths, height: basics.height, weight: basics.weight });
-        } else {
-          intakeAddRow();
+      } else if (!hasHistory) {
+        if (typeof intakeAddRow === 'function') {
+          let basics;
+          if (typeof getUserBasics === 'function') {
+            basics = getUserBasics();
+          } else {
+            const ageY = parseFloat(q('age')?.value);
+            const ageM = parseFloat(q('ageMonths')?.value);
+            const height = parseFloat(q('height')?.value);
+            const weight = parseFloat(q('weight')?.value);
+            basics = { ageMonths: (isNaN(ageY)?0:ageY)*12 + (isNaN(ageM)?0:ageM), height, weight };
+          }
+          if (basics && (Number.isFinite(Number(basics.ageMonths)) || Number.isFinite(Number(basics.height)) || Number.isFinite(Number(basics.weight)))) {
+            intakeAddRow({ ageMonths: basics.ageMonths, height: basics.height, weight: basics.weight }, { skipRefresh: true });
+          } else {
+            intakeAddRow(null, { skipRefresh: true });
+          }
         }
       }
-    }
 
-    histArr.forEach(m=>{
-      if (typeof intakeAddRow === 'function'){
-        intakeAddRow({ ageMonths: m.ageMonths, height: m.height, weight: m.weight });
-      }
+      histArr.forEach(m=>{
+        if (typeof intakeAddRow === 'function'){
+          intakeAddRow({ ageMonths: m.ageMonths, height: m.height, weight: m.weight }, { skipRefresh: true });
+        }
+      });
     });
 
     const palSel = document.getElementById('intakePal');
@@ -24089,435 +24182,379 @@ function rehydrateIntakeFromState(savedPal){
     } catch (_) {
       // brak możliwości potwierdzenia – kontynuuj
     }
-    // Przywracając pełny stan nie modyfikujemy tablicy pomiarów.
-    // W poprzedniej wersji usuwano pierwszy element, ponieważ przy wczytywaniu
-    // zapisu dodawano duplikat aktualnego pomiaru.  Po modyfikacji logiki
-    // w applyLoadedData() duplikat nie jest już tworzony, dlatego nic
-    // nie usuwamy z historii zaawansowanych obliczeń.
-    // Ukryj kartę poprzedniego pomiaru i związane elementy (na stronie głównej)
-    try {
-      const wrap = document.getElementById('prevSummaryWrap');
-      const card = document.getElementById('prevSummaryCard');
-      const togglePrev = document.getElementById('togglePrevSummary');
-      if (wrap) {
-        wrap.style.display = 'none';
-        if (wrap.dataset) delete wrap.dataset.loaded;
+
+    const setValue = (id, value, options) => {
+      const el = document.getElementById(id);
+      if (!el) return null;
+      const opts = (options && typeof options === 'object') ? options : {};
+      el.value = (value != null ? value : '');
+      if (Object.prototype.hasOwnProperty.call(opts, 'disabled')) {
+        el.disabled = !!opts.disabled;
       }
-      if (card) {
-        card.style.display = 'none';
-        if (card.dataset) delete card.dataset.loaded;
+      return el;
+    };
+    const setChecked = (id, checked, options) => {
+      const el = document.getElementById(id);
+      if (!el) return null;
+      const opts = (options && typeof options === 'object') ? options : {};
+      el.checked = !!checked;
+      if (Object.prototype.hasOwnProperty.call(opts, 'disabled')) {
+        el.disabled = !!opts.disabled;
       }
-      if (togglePrev) {
-        togglePrev.style.display = 'none';
-      }
+      return el;
+    };
+    const emit = (el, type) => {
+      if (!el) return;
+      try { el.dispatchEvent(new Event(type, { bubbles: true })); } catch (_) {}
+    };
+
+    withLoadedStateRestoreGuards(() => {
+      // Ukryj kartę poprzedniego pomiaru i związane elementy (na stronie głównej)
       try {
-        hideLoadDataMessage();
-        // Po przywróceniu stanu nie pokazuj ponownie instrukcji "Uzupełnij wymagane pola...".
-        // Funkcja hideLoadDataMessage() przywraca domyślną treść instrukcji, gdy nie ma
-        // załadowanego poprzedniego pomiaru.  W tym przypadku chcemy, aby instrukcja
-        // pozostała ukryta – użytkownik ma już wypełnione pola z poprzedniego zapisu.
-        const ci = document.getElementById('compareInstruction');
-        if (ci && ci.style) {
-          ci.style.display = 'none';
+        const wrap = document.getElementById('prevSummaryWrap');
+        const card = document.getElementById('prevSummaryCard');
+        const togglePrev = document.getElementById('togglePrevSummary');
+        if (wrap) {
+          wrap.style.display = 'none';
+          if (wrap.dataset) delete wrap.dataset.loaded;
         }
-        // Ustaw flagę ukrywającą instrukcję, aby hideLoadDataMessage() nie przywracało jej
-        // podczas przywracania i kolejnych wywołań.  Flaga zostanie wyzerowana w
-        // hideFunc() przy pierwszej edycji formularza.
+        if (card) {
+          card.style.display = 'none';
+          if (card.dataset) delete card.dataset.loaded;
+        }
+        if (togglePrev) {
+          togglePrev.style.display = 'none';
+        }
         try {
-          if (typeof window !== 'undefined') {
-            window.forceHideCompareInstruction = true;
+          hideLoadDataMessage();
+          const ci = document.getElementById('compareInstruction');
+          if (ci && ci.style) {
+            ci.style.display = 'none';
           }
-        } catch (_) {}
-      } catch (_) {}
-    } catch (_) {}
-    try {
-      // Przywróć podstawowe dane użytkownika i zablokuj odpowiednie pola
-      const name = (data.name || '').trim();
-      if (name) {
-        const elName    = document.getElementById('name');
-        const elAdvName = document.getElementById('advName');
-        const elBasicName = document.getElementById('basicGrowthName');
-        const elFull    = document.getElementById('fullName');
-        // Set the name fields and dispatch input events so that the autosave
-        // system records these programmatic changes.  Without dispatching
-        // events, values copied here are not persisted to localStorage and
-        // are lost on page reload.  Use a try/catch in case dispatchEvent
-        // fails (e.g. older browsers).
-        if (elName) {
-          elName.value = name;
-          elName.disabled = true;
-          try { elName.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
-        }
-        if (elAdvName) {
-          elAdvName.value = name;
-          elAdvName.disabled = true;
-          try { elAdvName.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
-        }
-        if (elBasicName) {
-          elBasicName.value = name;
-          elBasicName.disabled = true;
-          try { elBasicName.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
-        }
-        if (elFull) {
-          elFull.value = name;
-          elFull.disabled = true;
-          try { elFull.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
-        }
-      }
-      if (data.user) {
-        const elSex      = document.getElementById('sex');
-        const elAge      = document.getElementById('age');
-        const elAgeM     = document.getElementById('ageMonths');
-        const elWeight   = document.getElementById('weight');
-        const elHeight   = document.getElementById('height');
-        const elWaist    = document.getElementById('waistCm');
-        const elHip      = document.getElementById('hipCm');
-        // Po ustawieniu wartości programowo wywołaj zdarzenia input/change, aby
-        // mechanizm autosave zapisał je w localStorage. Bez tego wartości znikają
-        // po odświeżeniu i interfejs odtwarza się niekompletnie.
-        if (data.user.sex && elSex) {
-          elSex.value = data.user.sex;
-          elSex.disabled = true;
-          try { elSex.dispatchEvent(new Event('input',  { bubbles: true })); } catch (_) {}
-          try { elSex.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
-        }
-        if (elAge) {
-          elAge.value = (data.user.age != null ? data.user.age : '');
-          try { elAge.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
-        }
-        if (elAgeM) {
-          elAgeM.value = (data.user.ageMonths != null ? data.user.ageMonths : '');
-          try { elAgeM.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
-        }
-        if (elWeight) {
-          elWeight.value = (data.user.weight != null ? data.user.weight : '');
-          try { elWeight.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
-        }
-        if (elHeight) {
-          elHeight.value = (data.user.height != null ? data.user.height : '');
-          try { elHeight.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
-        }
-        if (elWaist) {
-          elWaist.value = (data.user.waist != null ? data.user.waist : '');
-          try { elWaist.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
-        }
-        if (elHip) {
-          elHip.value = (data.user.hip != null ? data.user.hip : '');
-          try { elHip.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
-        }
-      }
-      if (data.advanced) {
-        const elAdvBone = document.getElementById('advBoneAge');
-        const elMother  = document.getElementById('advMotherHeight');
-        const elFather  = document.getElementById('advFatherHeight');
-        if (elAdvBone) {
-          elAdvBone.value = (data.advanced.boneAgeYears != null ? data.advanced.boneAgeYears : '');
-          // Dispatch input so persistence captures the programmatic value
-          try { elAdvBone.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
-        }
-        if (elMother) {
-          elMother.value  = (data.advanced.motherHeight  != null ? data.advanced.motherHeight  : '');
-          try { elMother.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
-        }
-        if (elFather) {
-          elFather.value  = (data.advanced.fatherHeight  != null ? data.advanced.fatherHeight  : '');
-          try { elFather.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
-        }
-        if (data.advanced.data) {
-          try { window.advancedGrowthData = JSON.parse(JSON.stringify(data.advanced.data)); }
-          catch (_) { window.advancedGrowthData = data.advanced.data; }
           try {
-            if (window.advancedGrowthData && typeof window.advancedGrowthData === 'object') {
-              window.advancedGrowthData.measurements = sanitizeAdvancedMeasurementEntries(window.advancedGrowthData.measurements);
+            if (typeof window !== 'undefined') {
+              window.forceHideCompareInstruction = true;
             }
           } catch (_) {}
-        } else {
-          window.advancedGrowthData = { measurements: [] };
+        } catch (_) {}
+      } catch (_) {}
+
+      try {
+        const name = (data.name || '').trim();
+        if (name) {
+          setValue('name', name, { disabled: true });
+          setValue('advName', name, { disabled: true });
+          setValue('basicGrowthName', name, { disabled: true });
+          setValue('fullName', name, { disabled: true });
         }
-      }
-      if (data.growthBasic) {
-        if (data.growthBasic.data) {
-          try { window.basicGrowthData = JSON.parse(JSON.stringify(data.growthBasic.data)); }
-          catch (_) { window.basicGrowthData = data.growthBasic.data; }
-        } else {
-          window.basicGrowthData = { measurements: [] };
+
+        if (data.user) {
+          setValue('sex', data.user.sex || 'M', { disabled: true });
+          setValue('age', data.user.age);
+          setValue('ageMonths', data.user.ageMonths);
+          setValue('weight', data.user.weight);
+          setValue('height', data.user.height);
+          setValue('waistCm', data.user.waist);
+          setValue('hipCm', data.user.hip);
         }
-      }
-      if (data.intake) {
-        const elIntakePal = document.getElementById('intakePal');
-        if (elIntakePal && data.intake.pal) elIntakePal.value = data.intake.pal;
-        try {
-          if (Array.isArray(data.intake.history)) {
-            window.intakeHistory = sanitizeIntakeHistoryEntries(JSON.parse(JSON.stringify(data.intake.history)));
+
+        if (data.advanced) {
+          setValue('advBoneAge', data.advanced.boneAgeYears);
+          setValue('advMotherHeight', data.advanced.motherHeight);
+          setValue('advFatherHeight', data.advanced.fatherHeight);
+          if (data.advanced.data) {
+            try { window.advancedGrowthData = JSON.parse(JSON.stringify(data.advanced.data)); }
+            catch (_) { window.advancedGrowthData = data.advanced.data; }
+            try {
+              if (window.advancedGrowthData && typeof window.advancedGrowthData === 'object') {
+                window.advancedGrowthData.measurements = sanitizeAdvancedMeasurementEntries(window.advancedGrowthData.measurements);
+              }
+            } catch (_) {}
           } else {
-            window.intakeHistory = [];
+            window.advancedGrowthData = { measurements: [] };
           }
-        } catch (_) {
-          window.intakeHistory = sanitizeIntakeHistoryEntries(data.intake.history || []);
         }
-        if (typeof data.intake.estKcalPerDay === 'number') {
-          window.intakeEstimatedKcalPerDay = data.intake.estKcalPerDay;
-        } else {
-          window.intakeEstimatedKcalPerDay = null;
-        }
-      }
-      // Usuń wiersze przekąsek i dań przed odtworzeniem
-      try {
-        // Usuń wiersze jedzenia (zarówno przekąski, jak i dania) przed odtworzeniem
-        document.querySelectorAll('.food-row').forEach(el => el.remove());
-      } catch (_) {}
-      // Odtwórz wiersze przekąsek i dań
-      if (data.foods) {
-        try {
-          if (Array.isArray(data.foods.snacks)) {
-            data.foods.snacks.forEach(r => {
-              addFoodRow(r.key);
-              const list = document.querySelectorAll('.food-row');
-              const row  = list[list.length - 1];
-              if (!row) return;
-              const sel = row.querySelector('select');
-              const inp = row.querySelector('input[type="number"]');
-              if (sel) sel.value = r.key;
-              if (inp) inp.value = r.qty;
-            });
-          }
-          if (Array.isArray(data.foods.meals)) {
-            data.foods.meals.forEach(r => {
-              addFoodRow(r.key);
-              const list = document.querySelectorAll('.food-row');
-              const row  = list[list.length - 1];
-              if (!row) return;
-              const sel = row.querySelector('select');
-              const inp = row.querySelector('input[type="number"]');
-              if (sel) sel.value = r.key;
-              if (inp) inp.value = r.qty;
-            });
-          }
-        } catch (_) {}
-      }
-      // Przywróć plan
-      if (data.plan) {
-        const elPalFactor = document.getElementById('palFactor');
-        const elDietLevel = document.getElementById('dietLevel');
-        if (elPalFactor && data.plan.palFactor) elPalFactor.value = String(data.plan.palFactor);
-        if (elDietLevel && data.plan.dietLevel) elDietLevel.value = data.plan.dietLevel;
-      }
-      // Odtwórz dane klirensu w sessionStorage i formularzu, jeśli istnieją
-      if (data.clcr && typeof data.clcr === 'object') {
-        try {
-          if (typeof sessionStorage !== 'undefined') {
-            sessionStorage.setItem('vildaClcrSessionV1', JSON.stringify(data.clcr));
-          }
-        } catch (_) {}
-        try {
-          const form = document.getElementById('clcrForm');
-          if (form && data.clcr.inputs && typeof data.clcr.inputs === 'object') {
-            Object.keys(data.clcr.inputs).forEach(function(key) {
-              const el = document.getElementById(key) || form.elements.namedItem(key);
-              if (!el) return;
-              const value = data.clcr.inputs[key];
-              const type  = (el.type || '').toLowerCase();
-              if (type === 'checkbox' || type === 'radio') {
-                el.checked = !!value;
-              } else {
-                el.value = value;
-              }
-            });
-            if (typeof window.update === 'function') {
-              try { window.update(); } catch (_) {}
-            }
-          }
-        } catch (_) {}
-      }
-      // Przywróć dodatkowe moduły: ciśnienie/tętno, liczba oddechów i obwody
-      if (data.bp) {
-        const elHeartRate   = document.getElementById('heartRate');
-        const elHrTemp      = document.getElementById('hrTemperature');
-        const elHrPop       = document.getElementById('hrPopulation');
-        const elBpSyst      = document.getElementById('bpSystolic');
-        const elBpDiast     = document.getElementById('bpDiastolic');
-        if (elHeartRate) elHeartRate.value = (data.bp.heartRate  != null ? data.bp.heartRate  : '');
-        if (elHrTemp)    elHrTemp.value    = (data.bp.temperature!= null ? data.bp.temperature: '');
-        if (elHrPop)     elHrPop.value     = (data.bp.population != null ? data.bp.population : '');
-        if (elBpSyst)    elBpSyst.value    = (data.bp.systolic   != null ? data.bp.systolic   : '');
-        if (elBpDiast)   elBpDiast.value   = (data.bp.diastolic  != null ? data.bp.diastolic  : '');
-      }
-      if (data.respiratory) {
-        const elRespRate  = document.getElementById('respiratoryRateInput');
-        const elRespTemp  = document.getElementById('respTemperature');
-        const elRespState = document.getElementById('respState');
-        const elRespPop   = document.getElementById('respPopulation');
-        if (elRespRate)  elRespRate.value  = (data.respiratory.rate       != null ? data.respiratory.rate       : '');
-        if (elRespTemp)  elRespTemp.value  = (data.respiratory.temperature != null ? data.respiratory.temperature : '');
-        if (elRespState) elRespState.value = (data.respiratory.state       != null ? data.respiratory.state       : 'awake');
-        if (elRespPop)   elRespPop.value   = (data.respiratory.population  != null ? data.respiratory.population  : 'healthy');
-      }
-      if (data.circumference) {
-        const elHeadCirc  = document.getElementById('headCircumference');
-        const elChestCirc = document.getElementById('chestCircumference');
-        if (elHeadCirc)  elHeadCirc.value  = (data.circumference.head  != null ? data.circumference.head  : '');
-        if (elChestCirc) elChestCirc.value = (data.circumference.chest != null ? data.circumference.chest : '');
-        // Odtwórz również obwód głowy dla dzieci z zespołem Downa (headCircumDS), jeśli istnieje
-        const elHeadDs = document.getElementById('headCircumDS');
-        if (elHeadDs) {
-          const val = (data.circumference.headDs != null ? data.circumference.headDs : '');
-          elHeadDs.value = val;
-        }
-      }
-      // Przywróć przełącznik normy ciśnienia (bpDataToggle)
-      if (data.bpDataToggle != null) {
-        const elBpToggle = document.getElementById('bpDataToggle');
-        if (elBpToggle) elBpToggle.checked = !!data.bpDataToggle;
-      }
-      // Przywróć dane lekarza (isDoctor, pwzNumber)
-      if (data.doctor) {
-        const elDoc = document.getElementById('isDoctor');
-        if (elDoc && data.doctor.isDoctor != null) {
-          elDoc.checked = !!data.doctor.isDoctor;
-          try {
-            if (typeof elDoc.onchange === 'function') {
-              elDoc.onchange(new Event('change'));
-            }
-          } catch (_) {}
-        }
-        const elPwz = document.getElementById('pwzNumber');
-        if (elPwz) {
-          elPwz.value = (data.doctor.pwzNumber != null ? data.doctor.pwzNumber : '');
-        }
-      }
-      // Przywróć dane leczenia bisfosfonianami
-      if (data.bisphos) {
-        const elInd  = document.getElementById('bisphosIndication');
-        const elDrug = document.getElementById('bisphosDrug');
-        const elDose = document.getElementById('bisphosDoseNumber');
-        if (elInd  && data.bisphos.indication != null) elInd.value  = data.bisphos.indication;
-        if (elDrug && data.bisphos.drug       != null) elDrug.value = data.bisphos.drug;
-        if (elDose && data.bisphos.doseNumber != null) elDose.value = data.bisphos.doseNumber;
-      }
-      // Przywróć ustawienia modułu Z-score (resultsModeToggle i wybór źródła)
-      if (data.zscore) {
-        const elResults = document.getElementById('resultsModeToggle');
-        if (elResults && data.zscore.resultsMode != null) {
-          elResults.checked = !!data.zscore.resultsMode;
-          try {
-            if (typeof elResults.onchange === 'function') {
-              elResults.onchange(new Event('change'));
-            }
-          } catch (_) {}
-        }
-        if (data.zscore.dataSource) {
-          try {
-            const radios = document.querySelectorAll('input[name="dataSource"]');
-            radios.forEach(r => {
-              if (r.value === data.zscore.dataSource) {
-                r.checked = true;
-                try {
-                  if (typeof r.onchange === 'function') {
-                    r.onchange(new Event('change'));
-                  }
-                } catch (_) {}
-              } else {
-                r.checked = false;
-              }
-            });
-          } catch (_) {}
-        }
-      }
-      // Zaktualizuj localStorage współdzielonych danych, aby pola pozostały zablokowane na innych podstronach
-      try {
-        if (typeof localStorage !== 'undefined') {
-          const rawShared = localStorage.getItem('sharedUserData');
-          const shared = rawShared ? (JSON.parse(rawShared) || {}) : {};
-          if (name) {
-            shared.name = name;
-            shared.nameLocked = true;
-          }
-          if (data.user) {
-            if (data.user.age != null)       shared.age = data.user.age;
-            if (data.user.ageMonths != null) shared.ageMonths = data.user.ageMonths;
-            if (data.user.weight != null)    shared.weight = data.user.weight;
-            if (data.user.height != null)    shared.height = data.user.height;
-            if (data.user.sex) {
-              shared.sex = data.user.sex;
-              shared.sexLocked = true;
-            }
-          }
-          if (data.advanced) {
-            if (data.advanced.motherHeight != null) shared.advMotherHeight = data.advanced.motherHeight;
-            if (data.advanced.fatherHeight != null) shared.advFatherHeight = data.advanced.fatherHeight;
-          }
-          localStorage.setItem('sharedUserData', JSON.stringify(shared));
-        }
-      } catch (_) {}
-      // Odtwórz UI z zapisanych struktur w kartach zaawansowanych i spożycia
-      withHistoryRestoreGuards(() => {
-        try { if (typeof rehydrateAdvancedFromState === 'function') rehydrateAdvancedFromState(); } catch (_) {}
-        try { if (typeof window !== 'undefined' && typeof window.vildaRehydrateBasicGrowthFromState === 'function') window.vildaRehydrateBasicGrowthFromState(); } catch (_) {}
-        try { if (typeof rehydrateIntakeFromState   === 'function') rehydrateIntakeFromState(data.intake ? data.intake.pal : null); } catch (_) {}
-      });
-      try {
-        if (typeof window !== 'undefined' && typeof window.vildaEnsureAdvancedIntakePairing === 'function') {
-          window.vildaEnsureAdvancedIntakePairing();
-        }
-      } catch (_) {}
-      try {
-        if (typeof window !== 'undefined' && typeof window.reconcileGrowthHistoryModules === 'function') {
-          window.reconcileGrowthHistoryModules('advanced');
-        }
-      } catch (_) {}
-      try {
-        if (typeof window !== 'undefined' && typeof window.vildaPersistScheduleSave === 'function') {
-          window.setTimeout(() => {
-            try { window.vildaPersistScheduleSave(); } catch (_) {}
-          }, 950);
-        }
-      } catch (_) {}
 
-      /*
-       * Po przywróceniu stanu z wczytanego pliku JSON wypełnione zostają
-       * pola dodatkowych modułów (ciśnienie, tętno, oddychanie, obwody).
-       * Aby karty wyników zaktualizowały się bez potrzeby ingerencji
-       * użytkownika, wysyłamy do tych pól zdarzenia `input` i `change`.
-       */
-      try {
-        const fieldIds = [
-          'heartRate',
-          'hrTemperature',
-          'hrPopulation',
-          'bpSystolic',
-          'bpDiastolic',
-          'respiratoryRateInput',
-          'respTemperature',
-          'respState',
-          'respPopulation',
-          'headCircumference',
-          'chestCircumference',
-          'headCircumDS'
-        ];
-        fieldIds.forEach(function(id) {
-          const el = document.getElementById(id);
-          if (el) {
-            try { el.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
-            try { el.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+        if (data.growthBasic) {
+          if (data.growthBasic.data) {
+            try { window.basicGrowthData = JSON.parse(JSON.stringify(data.growthBasic.data)); }
+            catch (_) { window.basicGrowthData = data.growthBasic.data; }
+          } else {
+            window.basicGrowthData = { measurements: [] };
           }
+          if (data.growthBasic.name != null) {
+            setValue('basicGrowthName', data.growthBasic.name, { disabled: !!(name || '').trim() });
+          }
+        }
+
+        if (data.intake) {
+          setValue('intakePal', data.intake.pal);
+          try {
+            if (Array.isArray(data.intake.history)) {
+              window.intakeHistory = sanitizeIntakeHistoryEntries(JSON.parse(JSON.stringify(data.intake.history)));
+            } else {
+              window.intakeHistory = [];
+            }
+          } catch (_) {
+            window.intakeHistory = sanitizeIntakeHistoryEntries(data.intake.history || []);
+          }
+          if (typeof data.intake.estKcalPerDay === 'number') {
+            window.intakeEstimatedKcalPerDay = data.intake.estKcalPerDay;
+          } else {
+            window.intakeEstimatedKcalPerDay = null;
+          }
+        }
+
+        // Usuń wiersze przekąsek i dań przed odtworzeniem
+        try {
+          document.querySelectorAll('.food-row').forEach(el => el.remove());
+        } catch (_) {}
+        // Odtwórz wiersze przekąsek i dań
+        if (data.foods) {
+          try {
+            if (Array.isArray(data.foods.snacks)) {
+              data.foods.snacks.forEach(r => {
+                addFoodRow(r.key);
+                const list = document.querySelectorAll('.food-row');
+                const row  = list[list.length - 1];
+                if (!row) return;
+                const sel = row.querySelector('select');
+                const inp = row.querySelector('input[type="number"]');
+                if (sel) sel.value = r.key;
+                if (inp) inp.value = r.qty;
+              });
+            }
+            if (Array.isArray(data.foods.meals)) {
+              data.foods.meals.forEach(r => {
+                addFoodRow(r.key);
+                const list = document.querySelectorAll('.food-row');
+                const row  = list[list.length - 1];
+                if (!row) return;
+                const sel = row.querySelector('select');
+                const inp = row.querySelector('input[type="number"]');
+                if (sel) sel.value = r.key;
+                if (inp) inp.value = r.qty;
+              });
+            }
+          } catch (_) {}
+        }
+        // Przywróć plan
+        if (data.plan) {
+          setValue('palFactor', data.plan.palFactor != null ? String(data.plan.palFactor) : '');
+          setValue('dietLevel', data.plan.dietLevel);
+        }
+        // Odtwórz dane klirensu w sessionStorage i formularzu, jeśli istnieją
+        if (data.clcr && typeof data.clcr === 'object') {
+          try {
+            if (typeof sessionStorage !== 'undefined') {
+              sessionStorage.setItem('vildaClcrSessionV1', JSON.stringify(data.clcr));
+            }
+          } catch (_) {}
+          try {
+            const form = document.getElementById('clcrForm');
+            if (form && data.clcr.inputs && typeof data.clcr.inputs === 'object') {
+              Object.keys(data.clcr.inputs).forEach(function(key) {
+                const el = document.getElementById(key) || form.elements.namedItem(key);
+                if (!el) return;
+                const value = data.clcr.inputs[key];
+                const type  = (el.type || '').toLowerCase();
+                if (type === 'checkbox' || type === 'radio') {
+                  el.checked = !!value;
+                } else {
+                  el.value = value;
+                }
+              });
+              if (typeof window.update === 'function') {
+                try { window.update(); } catch (_) {}
+              }
+            }
+          } catch (_) {}
+        }
+        // Przywróć dodatkowe moduły: ciśnienie/tętno, liczba oddechów i obwody
+        if (data.bp) {
+          setValue('heartRate', data.bp.heartRate);
+          setValue('hrTemperature', data.bp.temperature);
+          setValue('hrPopulation', data.bp.population);
+          setValue('bpSystolic', data.bp.systolic);
+          setValue('bpDiastolic', data.bp.diastolic);
+        }
+        if (data.respiratory) {
+          setValue('respiratoryRateInput', data.respiratory.rate);
+          setValue('respTemperature', data.respiratory.temperature);
+          setValue('respState', data.respiratory.state != null ? data.respiratory.state : 'awake');
+          setValue('respPopulation', data.respiratory.population != null ? data.respiratory.population : 'healthy');
+        }
+        if (data.circumference) {
+          setValue('headCircumference', data.circumference.head);
+          setValue('chestCircumference', data.circumference.chest);
+          setValue('headCircumDS', data.circumference.headDs);
+        }
+        // Przywróć przełącznik normy ciśnienia (bpDataToggle)
+        if (data.bpDataToggle != null) {
+          setChecked('bpDataToggle', !!data.bpDataToggle);
+        }
+        // Przywróć dane lekarza (isDoctor, pwzNumber)
+        if (data.doctor) {
+          const elDoc = (data.doctor.isDoctor != null) ? setChecked('isDoctor', !!data.doctor.isDoctor) : document.getElementById('isDoctor');
+          setValue('pwzNumber', data.doctor.pwzNumber);
+          emit(elDoc, 'change');
+        }
+        // Przywróć dane leczenia bisfosfonianami
+        if (data.bisphos) {
+          setValue('bisphosIndication', data.bisphos.indication);
+          setValue('bisphosDrug', data.bisphos.drug);
+          setValue('bisphosDoseNumber', data.bisphos.doseNumber);
+        }
+        // Przywróć ustawienia modułu Z-score (resultsModeToggle i wybór źródła)
+        if (data.zscore) {
+          const elResults = (data.zscore.resultsMode != null)
+            ? setChecked('resultsModeToggle', !!data.zscore.resultsMode)
+            : document.getElementById('resultsModeToggle');
+          emit(elResults, 'change');
+          if (data.zscore.dataSource) {
+            try {
+              const radios = document.querySelectorAll('input[name="dataSource"]');
+              let activeRadio = null;
+              radios.forEach(r => {
+                const shouldCheck = r.value === data.zscore.dataSource;
+                r.checked = shouldCheck;
+                if (shouldCheck) activeRadio = r;
+              });
+              emit(activeRadio, 'change');
+            } catch (_) {}
+          }
+        }
+        // Zaktualizuj localStorage współdzielonych danych, aby pola pozostały zablokowane na innych podstronach
+        try {
+          if (typeof localStorage !== 'undefined') {
+            const rawShared = localStorage.getItem('sharedUserData');
+            const shared = rawShared ? (JSON.parse(rawShared) || {}) : {};
+            if (name) {
+              shared.name = name;
+              shared.nameLocked = true;
+            }
+            if (data.user) {
+              if (data.user.age != null)       shared.age = data.user.age;
+              if (data.user.ageMonths != null) shared.ageMonths = data.user.ageMonths;
+              if (data.user.weight != null)    shared.weight = data.user.weight;
+              if (data.user.height != null)    shared.height = data.user.height;
+              if (data.user.sex) {
+                shared.sex = data.user.sex;
+                shared.sexLocked = true;
+              }
+            }
+            if (data.advanced) {
+              if (data.advanced.motherHeight != null) shared.advMotherHeight = data.advanced.motherHeight;
+              if (data.advanced.fatherHeight != null) shared.advFatherHeight = data.advanced.fatherHeight;
+            }
+            localStorage.setItem('sharedUserData', JSON.stringify(shared));
+          }
+        } catch (_) {}
+
+        const advWrap = document.getElementById('advMeasurements');
+        const basicWrap = document.getElementById('basicGrowthMeasurements');
+        const needAdvancedUiRehydrate = !!(advWrap && !advWrap.querySelector('.measure-row'));
+        const needBasicUiRehydrate = !!(basicWrap && !basicWrap.querySelector('.measure-row'));
+
+        // Odtwórz UI z zapisanych struktur w kartach zaawansowanych i spożycia.
+        // Historia wzrastania w kartach zaawansowanej i podstawowej jest już zwykle
+        // zrehydratowana podczas samego wczytania pliku JSON, więc przy kliknięciu
+        // „Odtwórz zapisany stan” nie przebudowujemy jej ponownie, jeśli istnieje.
+        withHistoryRestoreGuards(() => {
+          try {
+            if (needAdvancedUiRehydrate && typeof rehydrateAdvancedFromState === 'function') {
+              rehydrateAdvancedFromState();
+            }
+          } catch (_) {}
+          try {
+            if (needBasicUiRehydrate && typeof window !== 'undefined' && typeof window.vildaRehydrateBasicGrowthFromState === 'function') {
+              window.vildaRehydrateBasicGrowthFromState();
+            }
+          } catch (_) {}
+          try {
+            if (typeof rehydrateIntakeFromState === 'function') {
+              rehydrateIntakeFromState(data.intake ? data.intake.pal : null);
+            }
+          } catch (_) {}
         });
-      } catch (_) {}
 
-      // Po przywróceniu starego stanu ukryj instrukcję porównawczą w prawej kolumnie.
-      // Używamy funkcji autoDisableFromStoredData() do ukrycia komunikatu,
-      // jeśli w polach wieku, wagi i wzrostu znajdują się już wartości (> 0).
-      try {
-        if (typeof autoDisableFromStoredData === 'function') {
-          autoDisableFromStoredData();
-        }
-      } catch (_) {}
+        try {
+          if (typeof window !== 'undefined' && typeof window.vildaEnsureAdvancedIntakePairing === 'function') {
+            window.vildaEnsureAdvancedIntakePairing();
+          }
+        } catch (_) {}
+        try {
+          if (typeof window !== 'undefined' && typeof window.reconcileGrowthHistoryModules === 'function') {
+            window.reconcileGrowthHistoryModules('advanced');
+          }
+        } catch (_) {}
+        try {
+          if (typeof updateRemoveButtons === 'function') updateRemoveButtons();
+        } catch (_) {}
+        try {
+          if (typeof updateAdvAgeMax === 'function') updateAdvAgeMax();
+        } catch (_) {}
+        try {
+          if (typeof window !== 'undefined' && typeof window.calculateBasicGrowth === 'function') {
+            window.calculateBasicGrowth();
+          }
+        } catch (_) {}
+        try {
+          if (typeof calculateGrowthAdvanced === 'function') calculateGrowthAdvanced();
+        } catch (_) {}
+        try {
+          if (typeof window !== 'undefined' && typeof window.vildaPersistScheduleSave === 'function') {
+            window.setTimeout(() => {
+              try { window.vildaPersistScheduleSave(); } catch (_) {}
+            }, 950);
+          }
+        } catch (_) {}
 
-      // Przelicz wyniki i zaktualizuj widoczność przycisków
-      try { if (typeof debouncedUpdate === 'function') debouncedUpdate(); } catch (_) {}
-      try { updateSaveBtnVisibility(); } catch (_) {}
-    } catch (err) {
-      try { console.error('restoreLoadedState error', err); } catch (_) {}
-    }
+        /*
+         * Po przywróceniu stanu z wczytanego pliku JSON wypełnione zostają
+         * pola dodatkowych modułów (ciśnienie, tętno, oddychanie, obwody).
+         * Aby karty wyników zaktualizowały się bez potrzeby ingerencji
+         * użytkownika, wysyłamy do tych pól zdarzenia `input` i `change`.
+         */
+        try {
+          const fieldIds = [
+            'heartRate',
+            'hrTemperature',
+            'hrPopulation',
+            'bpSystolic',
+            'bpDiastolic',
+            'respiratoryRateInput',
+            'respTemperature',
+            'respState',
+            'respPopulation',
+            'headCircumference',
+            'chestCircumference',
+            'headCircumDS'
+          ];
+          fieldIds.forEach(function(id) {
+            const el = document.getElementById(id);
+            if (el) {
+              emit(el, 'input');
+              emit(el, 'change');
+            }
+          });
+        } catch (_) {}
+
+        // Po przywróceniu starego stanu ukryj instrukcję porównawczą w prawej kolumnie.
+        try {
+          if (typeof autoDisableFromStoredData === 'function') {
+            autoDisableFromStoredData();
+          }
+        } catch (_) {}
+
+        // Przelicz wyniki i zaktualizuj widoczność przycisków
+        try { if (typeof debouncedUpdate === 'function') debouncedUpdate(); } catch (_) {}
+        try { updateSaveBtnVisibility(); } catch (_) {}
+      } catch (err) {
+        try { console.error('restoreLoadedState error', err); } catch (_) {}
+      }
+    });
+
     // Usuń zapamiętane dane, aby uniemożliwić ponowne przywracanie tego samego stanu
     try { window.lastLoadedData = null; } catch (_) {}
     try { window.prevMeasurementInfo = null; } catch (_) {}
@@ -24534,8 +24571,6 @@ function rehydrateIntakeFromState(savedPal){
       const rb2 = document.getElementById('restoreStateBtn');
       if (rb2) {
         rb2.style.display = 'none';
-        // Ponieważ ukryliśmy przycisk, wysokość karty użytkownika zmniejszyła się.
-        // Wywołaj zdarzenie resize, aby wyrównać wysokości kart ("Ostatni pomiar", "Wybierz formułę", itp.).
         try {
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new Event('resize'));
