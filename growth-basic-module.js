@@ -20,6 +20,25 @@
     }
   }
 
+  function hasMeaningfulSyncValue(value) {
+    if (value === null || value === undefined) return false;
+    if (typeof value === 'string' && value.trim() === '') return false;
+    return true;
+  }
+
+  function toOptionalSyncNumber(value) {
+    if (!hasMeaningfulSyncValue(value)) return null;
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function toSyncAgeMonths(ageMonthsValue, ageYearsValue) {
+    const direct = toOptionalSyncNumber(ageMonthsValue);
+    if (direct !== null) return Math.round(direct);
+    const years = toOptionalSyncNumber(ageYearsValue);
+    return years !== null ? Math.round(years * 12) : null;
+  }
+
 
   function isProfessionalResultsModeActiveLocal() {
     const toggle = q('resultsModeToggle');
@@ -73,6 +92,45 @@
     const state = getGrowthHistoryCountsState();
     if (!state) return;
     state[kind] = Number.isFinite(Number(count)) ? Number(count) : 0;
+  }
+
+  function getBasicHistorySignatureState() {
+    try {
+      if (!window.__vildaBasicGrowthHistorySignatureState || typeof window.__vildaBasicGrowthHistorySignatureState !== 'object') {
+        window.__vildaBasicGrowthHistorySignatureState = { synced: null };
+      }
+      return window.__vildaBasicGrowthHistorySignatureState;
+    } catch (_) {
+      return { synced: null };
+    }
+  }
+
+  function buildBasicHistorySignature(entries) {
+    const list = Array.isArray(entries) ? entries : [];
+    return list
+      .map((entry) => {
+        const ageMonths = toSyncAgeMonths(entry?.ageMonths, entry?.ageYears);
+        const height = toOptionalSyncNumber(entry?.height);
+        const weight = toOptionalSyncNumber(entry?.weight);
+        return [
+          ageMonths === null ? '' : String(ageMonths),
+          height === null ? '' : height.toFixed(3),
+          weight === null ? '' : weight.toFixed(3)
+        ].join('|');
+      })
+      .join('||');
+  }
+
+  function rememberBasicHistorySignature(entries) {
+    const state = getBasicHistorySignatureState();
+    if (!state) return;
+    state.synced = buildBasicHistorySignature(entries);
+  }
+
+  function hasBasicHistoryChangedSinceLastSync(entries) {
+    const state = getBasicHistorySignatureState();
+    const next = buildBasicHistorySignature(entries);
+    return !state || state.synced !== next;
   }
 
   function shouldPropagateBasicHistory(currentCount) {
@@ -243,10 +301,12 @@
       const months = Number.isFinite(Number(entry?.ageMonths))
         ? Math.round(Number(entry.ageMonths))
         : Math.round((Number(entry?.ageYears) || 0) * 12);
+      const height = toOptionalSyncNumber(entry?.height);
+      const weight = toOptionalSyncNumber(entry?.weight);
       createBasicGrowthRow({
         ageMonths: months,
-        height: Number.isFinite(Number(entry?.height)) ? Number(entry.height) : null,
-        weight: Number.isFinite(Number(entry?.weight)) ? Number(entry.weight) : null
+        height,
+        weight
       });
     });
 
@@ -261,6 +321,35 @@
 
     const list = Array.isArray(entries) ? entries : [];
     const preserved = Array.isArray(preservedRows) ? preservedRows : [];
+    const usedPreservedIndexes = new Set();
+    const statePreserved = (() => {
+      try {
+        if (typeof window === 'undefined' || !window.advancedGrowthData || !Array.isArray(window.advancedGrowthData.measurements)) {
+          return [];
+        }
+        return window.advancedGrowthData.measurements.map((entry) => {
+          if (!entry || typeof entry !== 'object') return null;
+          const ageMonths = toSyncAgeMonths(entry.ageMonths, entry.ageYears);
+          const yearsPart = ageMonths === null ? null : Math.floor(ageMonths / 12);
+          const monthsPart = ageMonths === null ? null : (ageMonths - (yearsPart * 12));
+          return {
+            ageYears: yearsPart,
+            ageMonthsPart: monthsPart,
+            height: entry.height,
+            weight: entry.weight,
+            boneAgeYears: entry.boneAgeYears,
+            arrowEnabled: !!entry.arrowEnabled,
+            arrowComment: (typeof entry.arrowComment === 'string') ? entry.arrowComment : '',
+            ghSync: !!entry.ghSync,
+            ghId: (entry.ghId != null) ? String(entry.ghId) : '',
+            analysisOpen: !!entry.analysisOpen
+          };
+        }).filter(Boolean);
+      } catch (_) {
+        return [];
+      }
+    })();
+    const usedStatePreservedIndexes = new Set();
 
     const setValue = (row, selector, value) => {
       const el = row.querySelector(selector);
@@ -269,67 +358,129 @@
     };
 
     const normalizeNumericToken = (value) => {
-      const n = Number(value);
-      if (!Number.isFinite(n)) return '';
+      const n = toOptionalSyncNumber(value);
+      if (n === null) return '';
       return n.toFixed(3);
+    };
+
+    const entryAgeKey = (entry) => {
+      const ageMonths = toSyncAgeMonths(entry?.ageMonths, entry?.ageYears);
+      return ageMonths === null ? '' : String(ageMonths);
+    };
+
+    const preservedAgeKey = (meta) => {
+      if (!meta || typeof meta !== 'object') return '';
+      const years = toOptionalSyncNumber(meta.ageYears != null ? meta.ageYears : meta.ageY);
+      const months = toOptionalSyncNumber(meta.ageMonthsPart != null ? meta.ageMonthsPart : meta.ageM);
+      if (years === null && months === null) return '';
+      return String(Math.round((years || 0) * 12 + (months || 0)));
     };
 
     const entrySignature = (entry) => {
       if (!entry || typeof entry !== 'object') return '';
-      const ageMonths = Number.isFinite(Number(entry.ageMonths))
-        ? Math.round(Number(entry.ageMonths))
-        : Math.round((Number(entry.ageYears) || 0) * 12);
+      const ageKey = entryAgeKey(entry);
       return [
-        Number.isFinite(ageMonths) ? ageMonths : '',
+        ageKey,
         normalizeNumericToken(entry.height),
+        normalizeNumericToken(entry.weight)
+      ].join('|');
+    };
+
+    const entryAgeWeightSignature = (entry) => {
+      if (!entry || typeof entry !== 'object') return '';
+      return [
+        entryAgeKey(entry),
         normalizeNumericToken(entry.weight)
       ].join('|');
     };
 
     const preservedSignature = (meta) => {
       if (!meta || typeof meta !== 'object') return '';
-      const years = Number(meta.ageY);
-      const months = Number(meta.ageM);
-      const ageMonths = (Number.isFinite(years) || Number.isFinite(months))
-        ? Math.round((Number.isFinite(years) ? years : 0) * 12 + (Number.isFinite(months) ? months : 0))
-        : NaN;
       return [
-        Number.isFinite(ageMonths) ? ageMonths : '',
-        normalizeNumericToken(meta.ht),
-        normalizeNumericToken(meta.wt)
+        preservedAgeKey(meta),
+        normalizeNumericToken(meta.height),
+        normalizeNumericToken(meta.weight)
       ].join('|');
     };
 
-    const preservedBySignature = new Map();
-    preserved.forEach((meta) => {
-      const sig = preservedSignature(meta);
-      if (!sig) return;
-      if (!preservedBySignature.has(sig)) preservedBySignature.set(sig, []);
-      preservedBySignature.get(sig).push(meta);
-    });
+    const preservedAgeWeightSignature = (meta) => {
+      if (!meta || typeof meta !== 'object') return '';
+      return [
+        preservedAgeKey(meta),
+        normalizeNumericToken(meta.weight)
+      ].join('|');
+    };
+
+    const takeMatchingPreservedMeta = (matcher) => {
+      const index = preserved.findIndex((meta, metaIndex) => {
+        if (usedPreservedIndexes.has(metaIndex)) return false;
+        return matcher(meta, metaIndex);
+      });
+      if (index === -1) return null;
+      usedPreservedIndexes.add(index);
+      return preserved[index] || null;
+    };
+
+    const takeMatchingStateMeta = (matcher) => {
+      const index = statePreserved.findIndex((meta, metaIndex) => {
+        if (usedStatePreservedIndexes.has(metaIndex)) return false;
+        return matcher(meta, metaIndex);
+      });
+      if (index === -1) return null;
+      usedStatePreservedIndexes.add(index);
+      return statePreserved[index] || null;
+    };
 
     const takePreservedMeta = (entry, idx) => {
-      const sig = entrySignature(entry);
-      if (sig && preservedBySignature.has(sig)) {
-        const bucket = preservedBySignature.get(sig);
-        if (bucket && bucket.length) {
-          return bucket.shift();
-        }
+      const fullSig = entrySignature(entry);
+      if (fullSig) {
+        const exact = takeMatchingPreservedMeta((meta) => preservedSignature(meta) === fullSig);
+        if (exact) return exact;
       }
-      const positional = preserved[idx] || null;
-      if (!positional || typeof positional !== 'object') return positional;
-      const fallback = Object.assign({}, positional);
-      fallback.ghSync = false;
-      fallback.ghId = '';
-      return fallback;
+
+      const ageWeightSig = entryAgeWeightSignature(entry);
+      if (ageWeightSig) {
+        const byAgeWeight = takeMatchingPreservedMeta((meta) => preservedAgeWeightSignature(meta) === ageWeightSig);
+        if (byAgeWeight) return byAgeWeight;
+      }
+
+      const ageKey = entryAgeKey(entry);
+      if (ageKey) {
+        const byAge = takeMatchingPreservedMeta((meta) => preservedAgeKey(meta) === ageKey);
+        if (byAge) return byAge;
+      }
+
+      if (fullSig) {
+        const exactState = takeMatchingStateMeta((meta) => preservedSignature(meta) === fullSig);
+        if (exactState) return exactState;
+      }
+
+      if (ageWeightSig) {
+        const stateByAgeWeight = takeMatchingStateMeta((meta) => preservedAgeWeightSignature(meta) === ageWeightSig);
+        if (stateByAgeWeight) return stateByAgeWeight;
+      }
+
+      if (ageKey) {
+        const stateByAge = takeMatchingStateMeta((meta) => preservedAgeKey(meta) === ageKey);
+        if (stateByAge) return stateByAge;
+      }
+
+      if (!usedPreservedIndexes.has(idx) && preserved[idx] && typeof preserved[idx] === 'object') {
+        usedPreservedIndexes.add(idx);
+        const fallback = Object.assign({}, preserved[idx]);
+        fallback.ghSync = false;
+        fallback.ghId = '';
+        return fallback;
+      }
+      return null;
     };
 
     const applyPreservedMeta = (row, meta, entry) => {
       const arrowEnableEl = row.querySelector('.adv-arrow-enable');
       const arrowCommentEl = row.querySelector('.adv-arrow-comment');
-      const boneAgeValue = (meta && meta.boneAgeYears !== '')
+      const boneAgeValue = (meta && hasMeaningfulSyncValue(meta.boneAgeYears))
         ? meta.boneAgeYears
-        : (Number.isFinite(Number(entry?.boneAgeYears)) ? Number(entry.boneAgeYears) : '');
+        : (toOptionalSyncNumber(entry?.boneAgeYears) !== null ? toOptionalSyncNumber(entry?.boneAgeYears) : '');
       setValue(row, '.adv-bone-age', boneAgeValue);
       if (arrowEnableEl) arrowEnableEl.checked = !!(meta && meta.arrowEnabled);
       if (arrowCommentEl) {
@@ -364,11 +515,24 @@
         : Math.round((Number(entry?.ageYears) || 0) * 12);
       const yearsPart = Math.floor(months / 12);
       const monthsPart = months - (yearsPart * 12);
+      const preservedMeta = takePreservedMeta(entry, idx);
+      const mergedHeight = (() => {
+        const entryHeight = toOptionalSyncNumber(entry?.height);
+        if (entryHeight !== null) return entryHeight;
+        const preservedHeight = toOptionalSyncNumber(preservedMeta && preservedMeta.height);
+        return preservedHeight !== null ? preservedHeight : '';
+      })();
+      const mergedWeight = (() => {
+        const entryWeight = toOptionalSyncNumber(entry?.weight);
+        if (entryWeight !== null) return entryWeight;
+        const preservedWeight = toOptionalSyncNumber(preservedMeta && preservedMeta.weight);
+        return preservedWeight !== null ? preservedWeight : '';
+      })();
       setValue(row, '.adv-age-years', yearsPart);
       setValue(row, '.adv-age-months', monthsPart);
-      setValue(row, '.adv-height', Number.isFinite(Number(entry?.height)) ? Number(entry.height) : '');
-      setValue(row, '.adv-weight', Number.isFinite(Number(entry?.weight)) ? Number(entry.weight) : '');
-      applyPreservedMeta(row, takePreservedMeta(entry, idx), entry);
+      setValue(row, '.adv-height', mergedHeight);
+      setValue(row, '.adv-weight', mergedWeight);
+      applyPreservedMeta(row, preservedMeta, entry);
     });
 
     try { if (typeof window.updateRemoveButtons === 'function') window.updateRemoveButtons(); } catch (_) {}
@@ -387,6 +551,7 @@
       noteGrowthHistoryCount('basic', sourceEntries.length);
       noteGrowthHistoryCount('advanced', sourceEntries.length);
       rebuildAdvancedRowsFromShared(sourceEntries, preservedRows);
+      rememberBasicHistorySignature(sourceEntries);
       if (typeof window.calculateGrowthAdvanced === 'function') {
         window.calculateGrowthAdvanced();
       }
@@ -402,6 +567,7 @@
       noteGrowthHistoryCount('advanced', sourceEntries.length);
       noteGrowthHistoryCount('basic', sourceEntries.length);
       rebuildBasicRowsFromShared(sourceEntries);
+      rememberBasicHistorySignature(sourceEntries);
       calculateBasicGrowth();
     });
   }
@@ -750,7 +916,11 @@
 
     if (isGrowthHistoryCrossSyncEnabled()) {
       try {
-        if (shouldPropagateBasicHistory(measurements.length)) {
+        const shouldPropagate = shouldPropagateBasicHistory(measurements.length);
+        const historyChanged = hasBasicHistoryChangedSinceLastSync(measurements);
+        const advancedCount = collectAdvancedMeasurementsForSync().length;
+        const advancedMissing = measurements.length > 0 && advancedCount === 0;
+        if (shouldPropagate && (historyChanged || advancedMissing)) {
           syncBasicGrowthRowsToAdvanced();
         }
       } catch (_) {}
@@ -907,12 +1077,14 @@
         createBasicGrowthRow();
         updateBasicGrowthRemoveButtons();
         updateBasicGrowthAgeMax();
+        rememberBasicHistorySignature([]);
         return;
       }
 
       arr.forEach((m) => createBasicGrowthRow(m));
       updateBasicGrowthRemoveButtons();
       updateBasicGrowthAgeMax();
+      rememberBasicHistorySignature(arr);
     } finally {
       try { window.__vildaSuspendGrowthHistoryCrossSync = prevSuspend; } catch (_) {}
     }
@@ -999,6 +1171,7 @@
     if (window.basicGrowthData && Array.isArray(window.basicGrowthData.measurements) && window.basicGrowthData.measurements.length) {
       rehydrateBasicGrowthFromState();
     } else {
+      rememberBasicHistorySignature([]);
       addBasicGrowthMeasurementRow();
     }
 

@@ -204,7 +204,7 @@
     // additional buttons (e.g. advClearBtn) to support clearing from
     // advanced modules.  When any of these buttons is clicked the stored
     // data and field values will be cleared.
-    ['clearAllDataBtn', 'clearBtn', 'advClearBtn'].forEach((btnId) => {
+    ['clearAllDataBtn', 'clearBtn'].forEach((btnId) => {
       const btn = document.getElementById(btnId);
       if (btn) {
         btn.addEventListener('click', clearStoredUserData);

@@ -17971,6 +17971,155 @@ function _getUserBasics(){
   };
 }
 
+
+function _getCompleteHistoryCurrentBasics(){
+  try {
+    const basics = _getUserBasics();
+    const ageMonths = Number.isFinite(Number(basics && basics.ageMonths)) ? Math.round(Number(basics.ageMonths)) : null;
+    const height = Number.isFinite(Number(basics && basics.height)) ? Number(basics.height) : null;
+    const weight = Number.isFinite(Number(basics && basics.weight)) ? Number(basics.weight) : null;
+    if (ageMonths === null || height === null || weight === null) return null;
+    return { ageMonths, height, weight };
+  } catch (_) {
+    return null;
+  }
+}
+
+function _historyApproxEq(a, b, tol = 0.05){
+  if (typeof a !== 'number' || !isFinite(a) || typeof b !== 'number' || !isFinite(b)) return false;
+  return Math.abs(a - b) <= tol;
+}
+
+function _advRowAgeMonths(row){
+  if (!row) return null;
+  const y = parseFloat(row.querySelector('.adv-age-years')?.value);
+  const m = parseFloat(row.querySelector('.adv-age-months')?.value);
+  if (Number.isNaN(y) && Number.isNaN(m)) return null;
+  return Math.round((Number.isNaN(y) ? 0 : y) * 12 + (Number.isNaN(m) ? 0 : m));
+}
+
+function _intakeRowAgeMonths(row){
+  if (!row) return null;
+  const y = parseFloat(row.querySelector('.intake-ageY')?.value);
+  const m = parseFloat(row.querySelector('.intake-ageM')?.value);
+  if (Number.isNaN(y) && Number.isNaN(m)) return null;
+  return Math.round((Number.isNaN(y) ? 0 : y) * 12 + (Number.isNaN(m) ? 0 : m));
+}
+
+function _rowMatchesCurrentBasicsByMetrics(ageMonths, height, weight, basics){
+  if (!basics || typeof basics !== 'object') return false;
+  if (!Number.isFinite(Number(ageMonths)) || Math.round(Number(ageMonths)) !== Math.round(Number(basics.ageMonths))) {
+    return false;
+  }
+
+  let compared = 0;
+  if (typeof height === 'number' && isFinite(height) && typeof basics.height === 'number' && isFinite(basics.height)) {
+    compared += 1;
+    if (!_historyApproxEq(height, basics.height)) return false;
+  }
+  if (typeof weight === 'number' && isFinite(weight) && typeof basics.weight === 'number' && isFinite(basics.weight)) {
+    compared += 1;
+    if (!_historyApproxEq(weight, basics.weight)) return false;
+  }
+
+  return compared > 0;
+}
+
+function _intakeHistoryRowDuplicatesCurrentBasics(row, basics){
+  if (!row || !basics) return false;
+  const ageMonths = _intakeRowAgeMonths(row);
+  const height = parseFloat(row.querySelector('.intake-ht')?.value);
+  const weight = parseFloat(row.querySelector('.intake-wt')?.value);
+  return _rowMatchesCurrentBasicsByMetrics(
+    ageMonths,
+    Number.isNaN(height) ? null : height,
+    Number.isNaN(weight) ? null : weight,
+    basics
+  );
+}
+
+function _advancedHistoryRowDuplicatesCurrentBasics(row, basics){
+  if (!row || !basics) return false;
+  const ageMonths = _advRowAgeMonths(row);
+  const height = parseFloat(row.querySelector('.adv-height')?.value);
+  const weight = parseFloat(row.querySelector('.adv-weight')?.value);
+  const boneAge = parseFloat(row.querySelector('.adv-bone-age')?.value);
+  const arrowEnabled = !!row.querySelector('.adv-arrow-enable')?.checked;
+  const arrowComment = String(row.querySelector('.adv-arrow-comment')?.value || '').trim();
+  const ghSync = row.getAttribute('data-gh-sync') === 'true';
+  const ghId = String(row.getAttribute('data-gh-id') || '').trim();
+  const hasExtraPayload = (!Number.isNaN(boneAge)) || arrowEnabled || !!arrowComment || ghSync || !!ghId;
+  if (hasExtraPayload) return false;
+  return _rowMatchesCurrentBasicsByMetrics(
+    ageMonths,
+    Number.isNaN(height) ? null : height,
+    Number.isNaN(weight) ? null : weight,
+    basics
+  );
+}
+
+function _pruneDuplicateCurrentHistoryRows(){
+  const basics = _getCompleteHistoryCurrentBasics();
+  if (!basics) return false;
+  let changed = false;
+
+  _getIntakeHistoryRows().forEach(row => {
+    if (!row) return;
+    if (_intakeHistoryRowDuplicatesCurrentBasics(row, basics)) {
+      try { row.remove(); changed = true; } catch (_) {}
+    }
+  });
+
+  _advRows().forEach(row => {
+    if (!row) return;
+    if (_advancedHistoryRowDuplicatesCurrentBasics(row, basics)) {
+      try { row.remove(); changed = true; } catch (_) {}
+    }
+  });
+
+  return changed;
+}
+
+function _pruneBlankAdvancedRows(){
+  const rows = _advRows();
+  if (!rows.length) return false;
+  const nonEmpty = rows.filter(row => _advRowHasAnyData(row));
+  let changed = false;
+
+  if (nonEmpty.length > 0) {
+    rows.forEach(row => {
+      if (_advRowHasAnyData(row)) return;
+      try { row.remove(); changed = true; } catch (_) {}
+    });
+    return changed;
+  }
+
+  rows.slice(1).forEach(row => {
+    try { row.remove(); changed = true; } catch (_) {}
+  });
+  return changed;
+}
+
+function _pruneBlankIntakeHistoryRows(){
+  const rows = _getIntakeHistoryRows();
+  if (!rows.length) return false;
+  const nonEmpty = rows.filter(row => _intakeRowHasAnyData(row));
+  let changed = false;
+
+  if (nonEmpty.length > 0) {
+    rows.forEach(row => {
+      if (_intakeRowHasAnyData(row)) return;
+      try { row.remove(); changed = true; } catch (_) {}
+    });
+    return changed;
+  }
+
+  rows.slice(1).forEach(row => {
+    try { row.remove(); changed = true; } catch (_) {}
+  });
+  return changed;
+}
+
 function _rowHasAnyData(row, selectors){
   if (!row) return false;
   return selectors.some(sel => {
@@ -18212,6 +18361,7 @@ function _backfillAdvRowFromIntake(intakeRow, advRow) {
   _copyValueIfTargetEmpty(advRow.querySelector('.adv-weight'), Number.isNaN(intakeWeight) ? '' : intakeWeight);
 }
 
+
 function _pairAdvancedAndIntakeRowsByOrder(){
   if (_isAdvIntakeSyncSuspended()) return;
   if (!document.getElementById('advMeasurements') || !document.getElementById('intakeMeasurements')) {
@@ -18219,18 +18369,31 @@ function _pairAdvancedAndIntakeRowsByOrder(){
     return;
   }
 
+  let mutated = false;
+
   _runWithAdvIntakeSyncSuspended(() => {
     _updateIntakeFirstRowFromUserBasics();
+    mutated = _pruneDuplicateCurrentHistoryRows() || mutated;
+    mutated = _pruneBlankAdvancedRows() || mutated;
+    mutated = _pruneBlankIntakeHistoryRows() || mutated;
+
+    const advBeforeEnsure = _advRows().length;
+    const intakeBeforeEnsure = _getIntakeHistoryRows().length;
     _ensureAtLeastOneAdvancedHistoryRow();
     _ensureAtLeastOneIntakeHistoryRow();
+    if (_advRows().length !== advBeforeEnsure || _getIntakeHistoryRows().length !== intakeBeforeEnsure) {
+      mutated = true;
+    }
 
     while (_advRows().length < _getIntakeHistoryRows().length) {
       if (typeof addAdvMeasurementRow !== 'function') break;
       addAdvMeasurementRow();
+      mutated = true;
     }
     while (_getIntakeHistoryRows().length < _advRows().length) {
       if (typeof intakeAddRow !== 'function') break;
       intakeAddRow();
+      mutated = true;
     }
 
     const advRows = _advRows();
@@ -18262,6 +18425,10 @@ function _pairAdvancedAndIntakeRowsByOrder(){
   });
 
   _refreshAdvIntakeRowUi();
+  if (mutated) {
+    try { if (typeof calculateGrowthAdvanced === 'function') calculateGrowthAdvanced(); } catch (_) {}
+    try { if (typeof debouncedIntakeCalc === 'function') debouncedIntakeCalc(); } catch (_) {}
+  }
 }
 
 function handleAdvancedMeasurementRowRemove(row){
@@ -20953,13 +21120,24 @@ function resetIntakeCard(){
     window.intakeEstimatedKcalPerDay = null;
   } catch(e){}
 }
+function shouldSuspendIntakeUserReset(){
+  try {
+    if (typeof window === 'undefined') return false;
+    return !!(window.__vildaPersistRestoring || window.__vildaSuspendIntakeUserReset);
+  } catch (_) {}
+  return false;
+}
 function wireAutosyncIntakeWithUserData(){
+  const handleUserBasicsMutation = (ev)=>{
+    if (shouldSuspendIntakeUserReset()) return;
+    resetIntakeCard(ev);
+  };
   ['age','ageMonths','sex','weight','height'].forEach(id=>{
     const el = document.getElementById(id);
     if(!el) return;
     // input oraz change – aby zareagować i na wpisywanie, i na wybór z listy
-    el.addEventListener('input', resetIntakeCard);
-    el.addEventListener('change', resetIntakeCard);
+    el.addEventListener('input', handleUserBasicsMutation);
+    el.addEventListener('change', handleUserBasicsMutation);
   });
 }
 
@@ -21724,6 +21902,8 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
   };
 
   function normalizePersistNumber(value) {
+    if (value === null || value === undefined) return null;
+    if (typeof value === 'string' && value.trim() === '') return null;
     const n = Number(value);
     return Number.isFinite(n) ? n : null;
   }
@@ -21807,7 +21987,37 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
       }));
   }
 
-  function sanitizeIntakeHistoryEntries(entries) {
+  
+function normalizeIntakeCurrentBasics(currentBasics) {
+    if (!currentBasics || typeof currentBasics !== 'object') return null;
+    const ageMonths = normalizePersistNumber(currentBasics.ageMonths);
+    const height = normalizePersistNumber(currentBasics.height);
+    const weight = normalizePersistNumber(currentBasics.weight);
+    if (ageMonths === null || height === null || weight === null) return null;
+    return { ageMonths: Math.round(ageMonths), height, weight };
+  }
+
+  function intakeHistoryEntryMatchesCurrentBasics(ageMonths, height, weight, currentBasics) {
+    const basics = normalizeIntakeCurrentBasics(currentBasics);
+    if (!basics || ageMonths === null) return false;
+    if (Math.round(ageMonths) !== basics.ageMonths) return false;
+
+    let compared = 0;
+    if (height !== null && typeof basics.height === 'number') {
+      compared += 1;
+      if (Math.abs(height - basics.height) > 0.05) return false;
+    }
+    if (weight !== null && typeof basics.weight === 'number') {
+      compared += 1;
+      if (Math.abs(weight - basics.weight) > 0.05) return false;
+    }
+    return compared > 0;
+  }
+
+  function sanitizeIntakeHistoryEntries(entries, options) {
+    const opts = (options && typeof options === 'object') ? options : {};
+    const currentBasics = normalizeIntakeCurrentBasics(opts.currentBasics);
+    const omitCurrentDuplicate = !!opts.omitCurrentDuplicate;
     if (!Array.isArray(entries)) return [];
     const out = [];
     const seen = new Set();
@@ -21818,6 +22028,9 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
       const height = normalizePersistNumber(entry.height);
       const weight = normalizePersistNumber(entry.weight);
       if (height === null && weight === null) return;
+      if (omitCurrentDuplicate && intakeHistoryEntryMatchesCurrentBasics(ageMonths, height, weight, currentBasics)) {
+        return;
+      }
       const key = [
         ageMonths,
         height !== null ? height.toFixed(3) : '',
@@ -21836,7 +22049,7 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
     return out;
   }
 
-  function sanitizeIntakeRowsUI(rowsUI) {
+function sanitizeIntakeRowsUI(rowsUI) {
     if (!Array.isArray(rowsUI)) return [];
     return rowsUI
       .filter((item) => {
@@ -21875,13 +22088,16 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
     let prevAdvSync = false;
     let prevCrossSync = false;
     let prevPauseUntil = 0;
+    let prevIntakeReset = false;
     try {
       if (typeof window !== 'undefined') {
         prevAdvSync = !!window.__vildaSuspendAdvIntakeSync;
         prevCrossSync = !!window.__vildaSuspendGrowthHistoryCrossSync;
         prevPauseUntil = Number(window.__vildaPersistPauseUntil || 0);
+        prevIntakeReset = !!window.__vildaSuspendIntakeUserReset;
         window.__vildaSuspendAdvIntakeSync = true;
         window.__vildaSuspendGrowthHistoryCrossSync = true;
+        window.__vildaSuspendIntakeUserReset = true;
         window.__vildaPersistPauseUntil = Math.max(prevPauseUntil, Date.now() + 900);
       }
     } catch (_) {}
@@ -21892,6 +22108,7 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
         if (typeof window !== 'undefined') {
           window.__vildaSuspendAdvIntakeSync = prevAdvSync;
           window.__vildaSuspendGrowthHistoryCrossSync = prevCrossSync;
+          window.__vildaSuspendIntakeUserReset = prevIntakeReset;
         }
       } catch (_) {}
     }
@@ -22060,7 +22277,8 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
   }
 
   // Odtwórz wiersze w karcie „Szacowane spożycie energii” z window.intakeHistory
-  function rehydrateIntakeFromState(savedPal){
+  
+function rehydrateIntakeFromState(savedPal){
     const btn  = document.getElementById('toggleIntakeCard');
     const card = document.getElementById('intakeCard');
     const wrap = document.getElementById('intakeMeasurements');
@@ -22070,14 +22288,17 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
     if (card) card.style.display = 'none';
     wrap.innerHTML = '';
 
-    const histArr = sanitizeIntakeHistoryEntries(Array.isArray(window.intakeHistory) ? window.intakeHistory : []);
+    const currentBasics = hasCompleteIntakeCurrentBasics() ? _getUserBasics() : null;
+    const histArr = sanitizeIntakeHistoryEntries(Array.isArray(window.intakeHistory) ? window.intakeHistory : [], {
+      currentBasics,
+      omitCurrentDuplicate: !!currentBasics
+    });
     const hasHistory = histArr.length > 0;
-    const hasCurrentBasics = hasCompleteIntakeCurrentBasics();
+    const hasCurrentBasics = !!currentBasics;
 
     if (hasCurrentBasics) {
       try {
-        const basics = _getUserBasics();
-        intakeAddRow({ ageMonths: basics.ageMonths, height: basics.height, weight: basics.weight });
+        intakeAddRow({ ageMonths: currentBasics.ageMonths, height: currentBasics.height, weight: currentBasics.weight });
       } catch (_) {
         if (typeof intakeAddRow === 'function') intakeAddRow();
       }
@@ -22649,6 +22870,7 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
       }
       if (typeof window !== 'undefined') {
         window.lastLoadedData = null;
+        window.prevMeasurementInfo = null;
         // Po wyczyszczeniu danych zeruj flagę modyfikacji – rozpoczyna się nowa sesja
         window.hasUserModifiedAfterLoad = false;
       }
@@ -23307,7 +23529,7 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
         setTimeout(() => {
           try {
             if (typeof window.vildaPersistFlushNow === 'function') {
-              window.vildaPersistFlushNow();
+              window.vildaPersistFlushNow({ force: true });
             }
           } catch (_) {}
         }, 0);
@@ -24066,6 +24288,15 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
     }
     // Usuń zapamiętane dane, aby uniemożliwić ponowne przywracanie tego samego stanu
     try { window.lastLoadedData = null; } catch (_) {}
+    try { window.prevMeasurementInfo = null; } catch (_) {}
+    try { window.hasUserModifiedAfterLoad = false; } catch (_) {}
+    try {
+      if (typeof window !== 'undefined' && typeof window.vildaPersistFlushNow === 'function') {
+        setTimeout(() => {
+          try { window.vildaPersistFlushNow({ force: true }); } catch (_) {}
+        }, 0);
+      }
+    } catch (_) {}
     // Ukryj przycisk przywracania po zakończeniu
     try {
       const rb2 = document.getElementById('restoreStateBtn');
@@ -25259,6 +25490,283 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
     'advMotherHeight','advFatherHeight','advBoneAge'
   ]);
   const TRACKED_DATASET_PROPS = ['manual', 'userChoice'];
+  const PERSIST_NAME_LOCK_IDS = ['name', 'advName', 'basicGrowthName', 'fullName'];
+
+  function persistHasLockedElement(ids) {
+    try {
+      if (!Array.isArray(ids)) return false;
+      return ids.some((id) => {
+        const el = document.getElementById(id);
+        return !!(el && el.disabled);
+      });
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function syncPersistLockFlags(root) {
+    if (!root || typeof root !== 'object') return root;
+    try {
+      const nameLocked = !!root.nameLocked || persistHasLockedElement(PERSIST_NAME_LOCK_IDS);
+      if (nameLocked) root.nameLocked = true;
+    } catch (_) {}
+    try {
+      const sexEl = document.getElementById('sex');
+      const sexLocked = !!root.sexLocked || !!(sexEl && sexEl.disabled);
+      if (sexLocked) root.sexLocked = true;
+    } catch (_) {}
+    return root;
+  }
+
+  function applyPersistLockFlags(root) {
+    try {
+      if (root && root.nameLocked) {
+        PERSIST_NAME_LOCK_IDS.forEach((id) => {
+          const el = document.getElementById(id);
+          if (el) el.disabled = true;
+        });
+      }
+    } catch (_) {}
+    try {
+      if (root && root.sexLocked) {
+        const sexEl = document.getElementById('sex');
+        if (sexEl) sexEl.disabled = true;
+      }
+    } catch (_) {}
+  }
+
+  function persistReadCurrentIntakeBasics() {
+    try {
+      if (typeof _getUserBasics !== 'function') return null;
+      const basics = _getUserBasics();
+      if (!basics || typeof basics !== 'object') return null;
+      const ageMonths = persistNormalizeNumber(basics.ageMonths);
+      const height = persistNormalizeNumber(basics.height);
+      const weight = persistNormalizeNumber(basics.weight);
+      if (ageMonths === null || height === null || weight === null) return null;
+      return { ageMonths: Math.round(ageMonths), height, weight };
+    } catch (_) {
+      return null;
+    }
+  }
+
+
+  function persistNormalizeNumber(value) {
+    if (value === null || value === undefined) return null;
+    if (typeof value === 'string' && value.trim() === '') return null;
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function persistNormalizeAgeMonthsValue(ageMonthsValue, ageYearsValue) {
+    const direct = persistNormalizeNumber(ageMonthsValue);
+    if (direct !== null) return Math.round(direct);
+    const ageYears = persistNormalizeNumber(ageYearsValue);
+    return (ageYears !== null) ? Math.round(ageYears * 12) : null;
+  }
+
+  function persistSanitizeAdvancedMeasurementEntries(entries) {
+    if (!Array.isArray(entries)) return [];
+    const out = [];
+    const seen = new Set();
+    entries.forEach((entry) => {
+      if (!entry || typeof entry !== 'object') return;
+      const ageMonths = persistNormalizeAgeMonthsValue(entry.ageMonths, entry.ageYears);
+      if (ageMonths === null) return;
+      const height = persistNormalizeNumber(entry.height);
+      const weight = persistNormalizeNumber(entry.weight);
+      const boneAgeYears = persistNormalizeNumber(entry.boneAgeYears);
+      const arrowEnabled = !!entry.arrowEnabled;
+      const arrowComment = (typeof entry.arrowComment === 'string') ? entry.arrowComment.trim() : '';
+      const ghSync = !!entry.ghSync;
+      const ghId = (entry.ghId != null && String(entry.ghId).trim() !== '') ? String(entry.ghId).trim() : '';
+      const hasPayload = (height !== null) || (weight !== null) || (boneAgeYears !== null) || arrowEnabled || !!arrowComment || ghSync || !!ghId;
+      if (!hasPayload) return;
+      const key = [
+        ageMonths,
+        height !== null ? height.toFixed(3) : '',
+        weight !== null ? weight.toFixed(3) : '',
+        boneAgeYears !== null ? boneAgeYears.toFixed(3) : '',
+        arrowEnabled ? '1' : '0',
+        arrowComment,
+        ghSync ? '1' : '0',
+        ghId
+      ].join('|');
+      if (seen.has(key)) return;
+      seen.add(key);
+      out.push(Object.assign({}, entry, {
+        ageMonths,
+        ageYears: ageMonths / 12,
+        height,
+        weight,
+        boneAgeYears,
+        arrowEnabled,
+        arrowComment,
+        ghSync,
+        ghId: ghId || null
+      }));
+    });
+    out.sort((a, b) => a.ageMonths - b.ageMonths);
+    return out;
+  }
+
+  function persistSanitizeAdvancedRowsUI(rowsUI) {
+    if (!Array.isArray(rowsUI)) return [];
+    return rowsUI
+      .filter((item) => {
+        if (!item || typeof item !== 'object') return false;
+        const fields = [item.ageY, item.ageM, item.ht, item.wt, item.boneAge];
+        const hasText = fields.some((value) => String(value ?? '').trim() !== '');
+        const hasMeta = !!item.arrowEnabled
+          || !!(typeof item.arrowComment === 'string' && item.arrowComment.trim())
+          || !!item.ghSync
+          || !!(item.ghId != null && String(item.ghId).trim() !== '');
+        return hasText || hasMeta;
+      })
+      .map((item) => ({
+        ageY: item.ageY ?? '',
+        ageM: item.ageM ?? '',
+        ht: item.ht ?? '',
+        wt: item.wt ?? '',
+        boneAge: item.boneAge ?? '',
+        arrowEnabled: !!item.arrowEnabled,
+        arrowComment: (typeof item.arrowComment === 'string') ? item.arrowComment : '',
+        ghSync: !!item.ghSync,
+        ghId: (item.ghId != null) ? String(item.ghId) : ''
+      }));
+  }
+
+  
+function persistNormalizeIntakeCurrentBasics(currentBasics) {
+    if (!currentBasics || typeof currentBasics !== 'object') return null;
+    const ageMonths = persistNormalizeNumber(currentBasics.ageMonths);
+    const height = persistNormalizeNumber(currentBasics.height);
+    const weight = persistNormalizeNumber(currentBasics.weight);
+    if (ageMonths === null || height === null || weight === null) return null;
+    return { ageMonths: Math.round(ageMonths), height, weight };
+  }
+
+  function persistIntakeEntryMatchesCurrentBasics(ageMonths, height, weight, currentBasics) {
+    const basics = persistNormalizeIntakeCurrentBasics(currentBasics);
+    if (!basics || ageMonths === null) return false;
+    if (Math.round(ageMonths) !== basics.ageMonths) return false;
+
+    let compared = 0;
+    if (height !== null && typeof basics.height === 'number') {
+      compared += 1;
+      if (Math.abs(height - basics.height) > 0.05) return false;
+    }
+    if (weight !== null && typeof basics.weight === 'number') {
+      compared += 1;
+      if (Math.abs(weight - basics.weight) > 0.05) return false;
+    }
+    return compared > 0;
+  }
+
+  function persistIntakeRowsUIMatchesCurrentBasics(item, currentBasics) {
+    if (!item || typeof item !== 'object') return false;
+    const basics = persistNormalizeIntakeCurrentBasics(currentBasics);
+    if (!basics) return false;
+    const ageY = persistNormalizeNumber(item.ageY);
+    const ageM = persistNormalizeNumber(item.ageM);
+    if (ageY === null && ageM === null) return false;
+    const ageMonths = Math.round((ageY === null ? 0 : ageY) * 12 + (ageM === null ? 0 : ageM));
+    const height = persistNormalizeNumber(item.ht);
+    const weight = persistNormalizeNumber(item.wt);
+    return persistIntakeEntryMatchesCurrentBasics(ageMonths, height, weight, basics);
+  }
+
+  function persistSanitizeIntakeHistoryEntries(entries, options) {
+    const opts = (options && typeof options === 'object') ? options : {};
+    const currentBasics = persistNormalizeIntakeCurrentBasics(opts.currentBasics);
+    const omitCurrentDuplicate = !!opts.omitCurrentDuplicate;
+    if (!Array.isArray(entries)) return [];
+    const out = [];
+    const seen = new Set();
+    entries.forEach((entry) => {
+      if (!entry || typeof entry !== 'object') return;
+      const ageMonths = persistNormalizeAgeMonthsValue(entry.ageMonths, entry.ageYears);
+      if (ageMonths === null) return;
+      const height = persistNormalizeNumber(entry.height);
+      const weight = persistNormalizeNumber(entry.weight);
+      if (height === null && weight === null) return;
+      if (omitCurrentDuplicate && persistIntakeEntryMatchesCurrentBasics(ageMonths, height, weight, currentBasics)) {
+        return;
+      }
+      const key = [
+        ageMonths,
+        height !== null ? height.toFixed(3) : '',
+        weight !== null ? weight.toFixed(3) : ''
+      ].join('|');
+      if (seen.has(key)) return;
+      seen.add(key);
+      out.push({
+        ageMonths,
+        ageYears: ageMonths / 12,
+        height,
+        weight
+      });
+    });
+    out.sort((a, b) => a.ageMonths - b.ageMonths);
+    return out;
+  }
+
+  function persistSanitizeIntakeRowsUI(rowsUI, options) {
+    const opts = (options && typeof options === 'object') ? options : {};
+    const currentBasics = persistNormalizeIntakeCurrentBasics(opts.currentBasics);
+    const omitLockedCurrent = !!opts.omitLockedCurrent;
+    const omitCurrentDuplicate = !!opts.omitCurrentDuplicate;
+    if (!Array.isArray(rowsUI)) return [];
+
+    const out = [];
+    const seen = new Set();
+
+    rowsUI.forEach((item) => {
+      if (!item || typeof item !== 'object') return;
+      const fields = [item.ageY, item.ageM, item.ht, item.wt];
+      const hasData = fields.some((value) => String(value ?? '').trim() !== '');
+      if (!hasData) return;
+
+      const isLocked = !!item.locked;
+      if (omitLockedCurrent && isLocked && persistIntakeRowsUIMatchesCurrentBasics(item, currentBasics)) {
+        return;
+      }
+      if (omitCurrentDuplicate && !isLocked && persistIntakeRowsUIMatchesCurrentBasics(item, currentBasics)) {
+        return;
+      }
+
+      const normalized = {
+        ageY: item.ageY ?? '',
+        ageM: item.ageM ?? '',
+        ht: item.ht ?? '',
+        wt: item.wt ?? '',
+        locked: isLocked,
+        disabled: {
+          ageY: !!(item.disabled && item.disabled.ageY),
+          ageM: !!(item.disabled && item.disabled.ageM),
+          ht: !!(item.disabled && item.disabled.ht),
+          wt: !!(item.disabled && item.disabled.wt)
+        }
+      };
+
+      const key = [
+        normalized.ageY,
+        normalized.ageM,
+        normalized.ht,
+        normalized.wt,
+        normalized.locked ? '1' : '0',
+        normalized.disabled.ageY ? '1' : '0',
+        normalized.disabled.ageM ? '1' : '0',
+        normalized.disabled.ht ? '1' : '0',
+        normalized.disabled.wt ? '1' : '0'
+      ].join('|');
+      if (seen.has(key)) return;
+      seen.add(key);
+      out.push(normalized);
+    });
+
+    return out;
+  }
 
   function readControlValue(el) {
     if (!el) return null;
@@ -25346,7 +25854,7 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
         });
       });
     } catch (_) {}
-    return sanitizeAdvancedRowsUI(rowsUI);
+    return persistSanitizeAdvancedRowsUI(rowsUI);
   }
 
   function capturePersistGlobals(p) {
@@ -25368,7 +25876,7 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
           const hasAdvancedDataObject = !!(window.advancedGrowthData && typeof window.advancedGrowthData === 'object');
           const advancedRowsUI = captureAdvancedGrowthRowsUI();
           const advancedMeasurements = hasAdvancedDataObject
-            ? sanitizeAdvancedMeasurementEntries(window.advancedGrowthData.measurements)
+            ? persistSanitizeAdvancedMeasurementEntries(window.advancedGrowthData.measurements)
             : [];
 
           // Zapisz kanoniczny stan tylko wtedy, gdy naprawdę istnieje.
@@ -25397,51 +25905,60 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
           }
         }
 
-        if (hasIntakeModule) {
-          const intakeHistory = Array.isArray(window.intakeHistory)
-            ? sanitizeIntakeHistoryEntries(window.intakeHistory)
-            : [];
 
-          p.globals.intakeHistory = intakeHistory;
-          if (typeof window.intakeEstimatedKcalPerDay === 'number' && isFinite(window.intakeEstimatedKcalPerDay)) {
-            p.globals.intakeEstimatedKcalPerDay = window.intakeEstimatedKcalPerDay;
-          } else {
-            p.globals.intakeEstimatedKcalPerDay = null;
-          }
+if (hasIntakeModule) {
+  const intakeCurrentBasics = persistReadCurrentIntakeBasics();
+  const intakeHistory = Array.isArray(window.intakeHistory)
+    ? persistSanitizeIntakeHistoryEntries(window.intakeHistory, {
+        currentBasics: intakeCurrentBasics,
+        omitCurrentDuplicate: !!intakeCurrentBasics
+      })
+    : [];
 
-          try {
-            const rowsUI = [];
-            document.querySelectorAll('#intakeMeasurements .measure-row-intake').forEach(row => {
-              const getVal = (sel) => {
-                const el = row.querySelector(sel);
-                return (el && typeof el.value === 'string') ? el.value : '';
-              };
-              const getDis = (sel) => {
-                const el = row.querySelector(sel);
-                return !!(el && el.disabled);
-              };
-              rowsUI.push({
-                ageY: getVal('.intake-ageY'),
-                ageM: getVal('.intake-ageM'),
-                ht:   getVal('.intake-ht'),
-                wt:   getVal('.intake-wt'),
-                locked: row.dataset.locked === 'true',
-                disabled: {
-                  ageY: getDis('.intake-ageY'),
-                  ageM: getDis('.intake-ageM'),
-                  ht:   getDis('.intake-ht'),
-                  wt:   getDis('.intake-wt')
-                }
-              });
-            });
-            const sanitizedRowsUI = sanitizeIntakeRowsUI(rowsUI);
-            if (sanitizedRowsUI.length > 0) {
-              p.globals.intakeRowsUI = sanitizedRowsUI;
-            } else if (intakeHistory.length === 0) {
-              p.globals.intakeRowsUI = [];
-            }
-          } catch (_) {}
+  p.globals.intakeHistory = intakeHistory;
+  if (typeof window.intakeEstimatedKcalPerDay === 'number' && isFinite(window.intakeEstimatedKcalPerDay)) {
+    p.globals.intakeEstimatedKcalPerDay = window.intakeEstimatedKcalPerDay;
+  } else {
+    p.globals.intakeEstimatedKcalPerDay = null;
+  }
+
+  try {
+    const rowsUI = [];
+    document.querySelectorAll('#intakeMeasurements .measure-row-intake').forEach(row => {
+      const getVal = (sel) => {
+        const el = row.querySelector(sel);
+        return (el && typeof el.value === 'string') ? el.value : '';
+      };
+      const getDis = (sel) => {
+        const el = row.querySelector(sel);
+        return !!(el && el.disabled);
+      };
+      rowsUI.push({
+        ageY: getVal('.intake-ageY'),
+        ageM: getVal('.intake-ageM'),
+        ht:   getVal('.intake-ht'),
+        wt:   getVal('.intake-wt'),
+        locked: row.dataset.locked === 'true',
+        disabled: {
+          ageY: getDis('.intake-ageY'),
+          ageM: getDis('.intake-ageM'),
+          ht:   getDis('.intake-ht'),
+          wt:   getDis('.intake-wt')
         }
+      });
+    });
+    const sanitizedRowsUI = persistSanitizeIntakeRowsUI(rowsUI, {
+      currentBasics: intakeCurrentBasics,
+      omitLockedCurrent: !!intakeCurrentBasics,
+      omitCurrentDuplicate: !!intakeCurrentBasics
+    });
+    if (sanitizedRowsUI.length > 0) {
+      p.globals.intakeRowsUI = sanitizedRowsUI;
+    } else if (intakeHistory.length === 0) {
+      p.globals.intakeRowsUI = [];
+    }
+  } catch (_) {}
+}
 
         if (hasFoodModule) {
           try {
@@ -25465,12 +25982,39 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
         } else if (typeof window.currentVersion !== 'undefined') {
           p.globals.clcrCurrentVersion = String(window.currentVersion);
         }
+
+        const hasPrevSummaryModule = !!document.getElementById('prevSummaryWrap')
+          || !!document.getElementById('prevSummaryCard')
+          || !!document.getElementById('restoreStateBtn');
+        if (hasPrevSummaryModule) {
+          const loadedComparisonData = (window.lastLoadedData && typeof window.lastLoadedData === 'object')
+            ? (safeClone(window.lastLoadedData) || window.lastLoadedData)
+            : null;
+          if (loadedComparisonData) {
+            p.globals.loadedComparisonData = loadedComparisonData;
+            p.globals.hasUserModifiedAfterLoad = !!window.hasUserModifiedAfterLoad;
+          } else {
+            const wrap = document.getElementById('prevSummaryWrap');
+            const card = document.getElementById('prevSummaryCard');
+            const restoreBtn = document.getElementById('restoreStateBtn');
+            const hasLoadedUi = !!(
+              (card && card.dataset && card.dataset.loaded === 'true')
+              || (wrap && wrap.dataset && wrap.dataset.loaded === 'true')
+            );
+            const restoreVisible = !!(restoreBtn && restoreBtn.style && restoreBtn.style.display !== 'none');
+            if (!hasLoadedUi && !restoreVisible) {
+              p.globals.loadedComparisonData = null;
+              p.globals.hasUserModifiedAfterLoad = false;
+            }
+          }
+        }
       }
     } catch (_) {}
   }
 
-  function flushPersistNow() {
-    if (isRestoring || isPersistSuppressed()) {
+  function flushPersistNow(options) {
+    const force = !!(options && options.force);
+    if (isRestoring || (isPersistSuppressed() && !force)) {
       try {
         if (saveTimer) {
           clearTimeout(saveTimer);
@@ -25488,8 +26032,10 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
       const root = pendingRoot || loadShared();
       pendingRoot = null;
       const r = ensurePersist(root);
+      syncPersistLockFlags(r);
       const p = r[PKEY];
       capturePersistGlobals(p);
+      syncPersistLockFlags(r);
       p.updatedAtISO = new Date().toISOString();
       saveShared(r);
     } catch (_) {}
@@ -25516,6 +26062,7 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
 
     const root = pendingRoot || loadShared();
     pendingRoot = ensurePersist(root);
+    syncPersistLockFlags(pendingRoot);
     const p = pendingRoot[PKEY];
 
     const type = (el.type || '').toLowerCase();
@@ -25594,7 +26141,7 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
     try {
       setTimeout(() => { try { updatePersistFromElement(ev.target); } catch (_) {} }, 0);
       if (isAdvancedGrowthCriticalTarget(ev.target)) {
-        setTimeout(() => { try { flushPersistNow(); } catch (_) {} }, 0);
+        setTimeout(() => { try { flushPersistNow({ force: true }); } catch (_) {} }, 0);
       }
     } catch (_) {}
   }, true);
@@ -25603,7 +26150,7 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
     try {
       setTimeout(() => { try { updatePersistFromElement(ev.target); } catch (_) {} }, 0);
       if (isAdvancedGrowthCriticalTarget(ev.target)) {
-        setTimeout(() => { try { flushPersistNow(); } catch (_) {} }, 0);
+        setTimeout(() => { try { flushPersistNow({ force: true }); } catch (_) {} }, 0);
       }
     } catch (_) {}
   }, true);
@@ -25612,7 +26159,7 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
       const target = ev.target;
       if (!target || typeof target.closest !== 'function') return;
       if (target.closest('#advAddMeasurementBtn') || target.closest('#advMeasurements .remove-measure')) {
-        setTimeout(() => { try { flushPersistNow(); } catch (_) {} }, 0);
+        setTimeout(() => { try { flushPersistNow({ force: true }); } catch (_) {} }, 0);
       }
     } catch (_) {}
   }, true);
@@ -25622,16 +26169,16 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
       window.vildaPersistScheduleSave = scheduleSave;
       window.vildaPersistFlushNow = flushPersistNow;
       window.addEventListener('pagehide', function () {
-        try { flushPersistNow(); } catch (_) {}
+        try { flushPersistNow({ force: true }); } catch (_) {}
       }, true);
       window.addEventListener('beforeunload', function () {
-        try { flushPersistNow(); } catch (_) {}
+        try { flushPersistNow({ force: true }); } catch (_) {}
       }, true);
     }
     if (typeof document !== 'undefined') {
       document.addEventListener('visibilitychange', function () {
         try {
-          if (document.visibilityState === 'hidden') flushPersistNow();
+          if (document.visibilityState === 'hidden') flushPersistNow({ force: true });
         } catch (_) {}
       }, true);
     }
@@ -25668,15 +26215,24 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
     let root = ensurePersist(loadShared());
     const p = root[PKEY] || {};
     const touched = [];
+    // Dane potrzebne do odbudowy karty porównania poprzedniego pomiaru
+    // muszą być dostępne także po wyjściu z wewnętrznego bloku restore UI.
+    // W poprzedniej wersji `g` było zdefiniowane tylko wewnątrz zagnieżdżonego
+    // try/finally, więc etap odtwarzania comparisonData wpadał w ReferenceError
+    // połykany przez catch i karta porównawcza nie wracała po odświeżeniu.
+    const g = (p.globals && typeof p.globals === 'object') ? p.globals : {};
     try {
       if (typeof window !== 'undefined') {
         window.__vildaSuspendAdvIntakeSync = true;
         window.__vildaSuspendGrowthHistoryCrossSync = true;
+        window.__vildaPersistRestoring = true;
+        window.__vildaSuspendIntakeUserReset = true;
       }
     } catch (_) {}
     isRestoring = true;
 
     try {
+      try {
       // 1) Odtwórz wybrane atrybuty dataset po ID, zanim późniejsze moduły
       // skorzystają z tych flag podczas własnej inicjalizacji.
       const datasetById = (p.datasetById && typeof p.datasetById === 'object') ? p.datasetById : {};
@@ -25740,10 +26296,9 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
       });
 
       // 4) Odtwórz dynamiczne sekcje / globalne dane
-      const g = (p.globals && typeof p.globals === 'object') ? p.globals : {};
 
       // Zaawansowane obliczenia wzrostowe (historia + komentarze)
-      const restoredAdvancedRowsUI = sanitizeAdvancedRowsUI(g.advancedGrowthRowsUI);
+      const restoredAdvancedRowsUI = persistSanitizeAdvancedRowsUI(g.advancedGrowthRowsUI);
       if (restoredAdvancedRowsUI.length && typeof window.vildaRehydrateAdvancedRowsUI === 'function') {
         try {
           const fnRows = window.vildaRehydrateAdvancedRowsUI;
@@ -25765,65 +26320,94 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
         } catch (_) {}
       }
 
-      // Szacowane spożycie energii – pełny stan wierszy (UI)
-      const restoredIntakeRowsUI = sanitizeIntakeRowsUI(g.intakeRowsUI);
-      if (restoredIntakeRowsUI.length && typeof window.intakeAddRow === 'function') {
-        try {
-          const wrap = document.getElementById('intakeMeasurements');
-          if (wrap) wrap.innerHTML = '';
-          restoredIntakeRowsUI.forEach(r => {
-            try {
-              window.intakeAddRow();
-              const rows = document.querySelectorAll('#intakeMeasurements .measure-row-intake');
-              const row = rows[rows.length - 1];
-              if (!row || !r) return;
 
-              const setVal = (sel, v) => {
-                const el = row.querySelector(sel);
-                if (!el) return;
-                el.value = (v == null) ? '' : String(v);
-                touched.push(el);
-              };
-              const setDis = (sel, d) => {
-                const el = row.querySelector(sel);
-                if (!el) return;
-                el.disabled = !!d;
-              };
-              const setLocked = (locked) => {
-                if (locked) row.dataset.locked = 'true';
-                else delete row.dataset.locked;
-              };
+// Szacowane spożycie energii – pełny stan wierszy (UI)
+const intakeCurrentBasics = persistReadCurrentIntakeBasics();
+const restoredIntakeRowsUI = persistSanitizeIntakeRowsUI(g.intakeRowsUI, {
+  currentBasics: intakeCurrentBasics,
+  omitLockedCurrent: !!intakeCurrentBasics,
+  omitCurrentDuplicate: !!intakeCurrentBasics
+});
+if (restoredIntakeRowsUI.length && typeof window.intakeAddRow === 'function') {
+  try {
+    const wrap = document.getElementById('intakeMeasurements');
+    if (wrap) wrap.innerHTML = '';
 
-              setVal('.intake-ageY', r.ageY);
-              setVal('.intake-ageM', r.ageM);
-              setVal('.intake-ht',   r.ht);
-              setVal('.intake-wt',   r.wt);
-
-              if (r.disabled && typeof r.disabled === 'object') {
-                setDis('.intake-ageY', r.disabled.ageY);
-                setDis('.intake-ageM', r.disabled.ageM);
-                setDis('.intake-ht',   r.disabled.ht);
-                setDis('.intake-wt',   r.disabled.wt);
-              }
-              setLocked(!!(r.locked || (r.disabled && r.disabled.ageY && r.disabled.ageM && r.disabled.ht && r.disabled.wt)));
-            } catch (_) {}
-          });
-
-          if (typeof window.updateIntakeRemoveButtons === 'function') window.updateIntakeRemoveButtons();
-          if (typeof window.calcEstimatedIntake === 'function') window.calcEstimatedIntake();
-        } catch (_) {}
-      } else if (Array.isArray(g.intakeHistory)) {
-        try { window.intakeHistory = sanitizeIntakeHistoryEntries(safeClone(g.intakeHistory) || g.intakeHistory); } catch (_) {}
-        try {
-          if (typeof g.intakeEstimatedKcalPerDay === 'number' && isFinite(g.intakeEstimatedKcalPerDay)) {
-            window.intakeEstimatedKcalPerDay = g.intakeEstimatedKcalPerDay;
-          }
-        } catch (_) {}
-        try {
-          const fn2 = window.vildaRehydrateIntakeFromState;
-          if (typeof fn2 === 'function') fn2((document.getElementById('intakePal') || {}).value || null);
-        } catch (_) {}
+    if (intakeCurrentBasics) {
+      try {
+        window.intakeAddRow({
+          ageMonths: intakeCurrentBasics.ageMonths,
+          height: intakeCurrentBasics.height,
+          weight: intakeCurrentBasics.weight
+        });
+      } catch (_) {
+        window.intakeAddRow();
       }
+    }
+
+    restoredIntakeRowsUI.forEach(r => {
+      try {
+        window.intakeAddRow();
+        const rows = document.querySelectorAll('#intakeMeasurements .measure-row-intake');
+        const row = rows[rows.length - 1];
+        if (!row || !r) return;
+
+        const setVal = (sel, v) => {
+          const el = row.querySelector(sel);
+          if (!el) return;
+          el.value = (v == null) ? '' : String(v);
+          touched.push(el);
+        };
+        const setDis = (sel, d) => {
+          const el = row.querySelector(sel);
+          if (!el) return;
+          el.disabled = !!d;
+        };
+        const setLocked = (locked) => {
+          if (locked) row.dataset.locked = 'true';
+          else delete row.dataset.locked;
+        };
+
+        setVal('.intake-ageY', r.ageY);
+        setVal('.intake-ageM', r.ageM);
+        setVal('.intake-ht',   r.ht);
+        setVal('.intake-wt',   r.wt);
+
+        if (r.disabled && typeof r.disabled === 'object') {
+          setDis('.intake-ageY', r.disabled.ageY);
+          setDis('.intake-ageM', r.disabled.ageM);
+          setDis('.intake-ht',   r.disabled.ht);
+          setDis('.intake-wt',   r.disabled.wt);
+        }
+
+        const shouldLock = !intakeCurrentBasics && !!(r.locked || (r.disabled && r.disabled.ageY && r.disabled.ageM && r.disabled.ht && r.disabled.wt));
+        setLocked(shouldLock);
+      } catch (_) {}
+    });
+
+    if (intakeCurrentBasics && typeof _updateIntakeFirstRowFromUserBasics === 'function') {
+      _updateIntakeFirstRowFromUserBasics();
+    }
+    if (typeof window.updateIntakeRemoveButtons === 'function') window.updateIntakeRemoveButtons();
+    if (typeof window.calcEstimatedIntake === 'function') window.calcEstimatedIntake();
+  } catch (_) {}
+} else if (Array.isArray(g.intakeHistory)) {
+  try {
+    window.intakeHistory = persistSanitizeIntakeHistoryEntries(safeClone(g.intakeHistory) || g.intakeHistory, {
+      currentBasics: intakeCurrentBasics,
+      omitCurrentDuplicate: !!intakeCurrentBasics
+    });
+  } catch (_) {}
+  try {
+    if (typeof g.intakeEstimatedKcalPerDay === 'number' && isFinite(g.intakeEstimatedKcalPerDay)) {
+      window.intakeEstimatedKcalPerDay = g.intakeEstimatedKcalPerDay;
+    }
+  } catch (_) {}
+  try {
+    const fn2 = window.vildaRehydrateIntakeFromState;
+    if (typeof fn2 === 'function') fn2((document.getElementById('intakePal') || {}).value || null);
+  } catch (_) {}
+}
 
       // Wiersze jedzenia
       if (Array.isArray(g.foodRows)) {
@@ -25866,9 +26450,10 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
           }
         } catch (_) {}
       }
-    } finally {
-      isRestoring = false;
-    }
+      } finally {
+      }
+
+    try { applyPersistLockFlags(root); } catch (_) {}
 
     // 5) Po odtworzeniu danych – wymuś przeliczenie wyników w modułach
     try {
@@ -25971,6 +26556,74 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
       }
     } catch (_) {}
 
+    try { applyPersistLockFlags(root); } catch (_) {}
+
+    try {
+      const comparisonData = (g.loadedComparisonData && typeof g.loadedComparisonData === 'object')
+        ? (safeClone(g.loadedComparisonData) || g.loadedComparisonData)
+        : null;
+      if (comparisonData) {
+        try { window.lastLoadedData = comparisonData; } catch (_) {}
+        try { window.hasUserModifiedAfterLoad = !!g.hasUserModifiedAfterLoad; } catch (_) {}
+        try {
+          if (typeof __renderPrevSummary === 'function') {
+            __renderPrevSummary(comparisonData);
+          }
+        } catch (_) {}
+        try {
+          if (typeof __pickLastMeasurement === 'function') {
+            window.prevMeasurementInfo = __pickLastMeasurement(comparisonData);
+          } else {
+            window.prevMeasurementInfo = null;
+          }
+        } catch (_) {
+          try { window.prevMeasurementInfo = null; } catch (_) {}
+        }
+        try {
+          if (window.hasUserModifiedAfterLoad) {
+            hideLoadDataMessage();
+            const rb = document.getElementById('restoreStateBtn');
+            if (rb) rb.style.display = 'none';
+          } else {
+            showLoadDataMessage();
+            if (typeof showRestoreButton === 'function') {
+              showRestoreButton();
+            }
+          }
+        } catch (_) {}
+        try {
+          if (typeof window.updatePrevSummaryDiff === 'function') {
+            window.updatePrevSummaryDiff();
+          }
+        } catch (_) {}
+        try {
+          if (typeof updateProfessionalSummaryCard === 'function') {
+            updateProfessionalSummaryCard();
+          }
+        } catch (_) {}
+        try {
+          if (typeof window.adjustPrevSummaryHeight === 'function') {
+            window.adjustPrevSummaryHeight();
+          }
+          if (typeof window.adjustSummaryCardsHeight === 'function') {
+            window.adjustSummaryCardsHeight();
+          }
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new Event('resize'));
+          }
+        } catch (_) {}
+        try {
+          if (typeof updateSaveBtnVisibility === 'function') {
+            updateSaveBtnVisibility();
+          }
+        } catch (_) {}
+      } else {
+        try { window.lastLoadedData = null; } catch (_) {}
+        try { window.prevMeasurementInfo = null; } catch (_) {}
+        try { window.hasUserModifiedAfterLoad = false; } catch (_) {}
+      }
+    } catch (_) {}
+
     try {
       if (typeof window !== 'undefined') {
         setTimeout(() => {
@@ -26013,6 +26666,15 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
         }, 0);
       }
     } catch (_) {}
+    } finally {
+      isRestoring = false;
+      try {
+        if (typeof window !== 'undefined') {
+          window.__vildaPersistRestoring = false;
+          window.__vildaSuspendIntakeUserReset = false;
+        }
+      } catch (_) {}
+    }
   }
 
   // Odtwarzaj po DOMContentLoaded, żeby UI zdążyło się zainicjalizować
