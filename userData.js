@@ -187,13 +187,24 @@
       } catch (_) {
         // Ignore errors (e.g. storage quota issues)
       }
-      // Wyczyść od razu widoczne pola i ponownie je odblokuj
-      fields.forEach(({ id }) => {
+      // Wyczyść od razu widoczne pola i ponownie je odblokuj.
+      // Wyjątek: pole płci powinno wracać do domyślnej wartości "M",
+      // bo reszta aplikacji traktuje ją jako stan startowy po pełnym resecie.
+      // Ustawiamy też selectedIndex, aby native <select> nie pozostał
+      // wizualnie pusty, jeśli wcześniej dostał wartość spoza listy opcji.
+      fields.forEach(({ id, key }) => {
         const el = document.getElementById(id);
         if (el) {
           try {
-            el.value = '';
             el.disabled = false;
+            if (key === 'sex') {
+              el.value = 'M';
+              if (typeof el.selectedIndex === 'number') {
+                el.selectedIndex = 0;
+              }
+            } else {
+              el.value = '';
+            }
           } catch (_) {
             // Ignore assignment errors on unsupported field types
           }

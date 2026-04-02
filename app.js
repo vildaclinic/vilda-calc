@@ -23139,6 +23139,7 @@ function rehydrateIntakeFromState(savedPal, options){
         if (q('sex')) {
           q('sex').disabled = false; // po pełnym resecie płeć znowu edytowalna
           q('sex').value = 'M';
+          if (typeof q('sex').selectedIndex === 'number') q('sex').selectedIndex = 0;
         }
         if(q('intakePal')) q('intakePal').value = '1.4';
         if(q('palFactor')) q('palFactor').value = '1.4';
