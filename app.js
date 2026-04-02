@@ -24462,7 +24462,17 @@ function rehydrateIntakeFromState(savedPal, options){
           if (data.advanced) {
             if (data.advanced.motherHeight != null) shared.advMotherHeight = data.advanced.motherHeight;
             if (data.advanced.fatherHeight != null) shared.advFatherHeight = data.advanced.fatherHeight;
-            if (data.advanced.boneAgeYears != null) shared.advBoneAge = data.advanced.boneAgeYears;
+
+            const persistRoot = (shared._vildaPersist && typeof shared._vildaPersist === 'object')
+              ? shared._vildaPersist
+              : {};
+            persistRoot.v = 1;
+            persistRoot.byId = (persistRoot.byId && typeof persistRoot.byId === 'object') ? persistRoot.byId : {};
+            shared._vildaPersist = persistRoot;
+
+            const boneAgePersistValue = (data.advanced.boneAgeYears != null) ? data.advanced.boneAgeYears : '';
+            shared.advBoneAge = boneAgePersistValue;
+            persistRoot.byId.advBoneAge = boneAgePersistValue !== '' ? String(boneAgePersistValue) : '';
           }
           localStorage.setItem('sharedUserData', JSON.stringify(shared));
         }
@@ -26859,6 +26869,21 @@ if (restoredIntakeRowsUI.length && typeof window.intakeAddRow === 'function') {
         if (val != null && val !== '') {
           fatherEl.value = String(val);
           try { fatherEl.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
+        }
+      }
+
+      // Aktualny wiek kostny jest trzymany także na root obiektu sharedUserData,
+      // ale po ręcznym „Przywróć zapisany stan” wpis do _vildaPersist.byId może być
+      // jeszcze pusty lub nieaktualny.  Na odświeżeniu strony preferuj więc wartość
+      // root.advBoneAge, aby nie zgubić bieżącego wieku kostnego po poprawnym restore.
+      const boneAgeEl = document.getElementById('advBoneAge');
+      if (boneAgeEl) {
+        const rootBoneAge = (root && root.advBoneAge != null) ? String(root.advBoneAge).trim() : '';
+        const currentBoneAge = (boneAgeEl.value || '').trim();
+        if (rootBoneAge !== '' && currentBoneAge !== rootBoneAge) {
+          boneAgeEl.value = rootBoneAge;
+          try { boneAgeEl.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
+          try { boneAgeEl.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
         }
       }
     } catch (_) {}
