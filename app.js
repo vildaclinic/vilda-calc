@@ -7361,11 +7361,54 @@ function patientReportDelay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+async function patientReportWaitForStableLayout() {
+  if (document.fonts && document.fonts.ready) {
+    try { await document.fonts.ready; } catch (_) {}
+  }
+  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+}
+
 const PATIENT_REPORT_PDF_RENDER_SCALE = 2.25;
 const PATIENT_REPORT_PDF_MAX_EXPORT_WIDTH = 2200;
 const PATIENT_REPORT_PDF_JPEG_QUALITY = 0.92;
 const PATIENT_REPORT_PDF_PNG_RATIO_LIMIT = 1.4;
 const PATIENT_REPORT_PDF_PNG_RATIO_LIMIT_PREFERRED = 1.7;
+const PATIENT_REPORT_PDF_VISIT_PREFERRED_FORMAT = 'JPEG';
+const PATIENT_REPORT_PDF_IMAGE_COMPRESSION = 'FAST';
+
+function patientReportResolveRenderScale(elementOrWidth, options = {}) {
+  const desiredScale = Number.isFinite(options.desiredScale) && options.desiredScale > 0
+    ? options.desiredScale
+    : PATIENT_REPORT_PDF_RENDER_SCALE;
+  const maxExportWidth = Number.isFinite(options.maxExportWidth) && options.maxExportWidth > 0
+    ? options.maxExportWidth
+    : PATIENT_REPORT_PDF_MAX_EXPORT_WIDTH;
+
+  let sourceWidth = 0;
+  if (Number.isFinite(elementOrWidth) && elementOrWidth > 0) {
+    sourceWidth = elementOrWidth;
+  } else if (elementOrWidth && typeof elementOrWidth === 'object') {
+    const rectWidth = (typeof elementOrWidth.getBoundingClientRect === 'function')
+      ? elementOrWidth.getBoundingClientRect().width
+      : 0;
+    sourceWidth = rectWidth
+      || elementOrWidth.offsetWidth
+      || elementOrWidth.clientWidth
+      || elementOrWidth.scrollWidth
+      || 0;
+  }
+
+  if (!(sourceWidth > 0) || !(maxExportWidth > 0)) {
+    return desiredScale;
+  }
+
+  const cappedScale = maxExportWidth / sourceWidth;
+  if (!Number.isFinite(cappedScale) || cappedScale <= 0) {
+    return desiredScale;
+  }
+
+  return Math.max(1, Math.min(desiredScale, cappedScale));
+}
 
 function patientReportResizeCanvasForPdf(sourceCanvas, maxWidth = PATIENT_REPORT_PDF_MAX_EXPORT_WIDTH) {
   if (!sourceCanvas || !sourceCanvas.width || !sourceCanvas.height) return sourceCanvas;
@@ -7399,40 +7442,78 @@ function patientReportEstimateDataUrlBytes(dataUrl) {
 
 function patientReportCanvasToPdfImage(canvas, options = {}) {
   const preferPng = !!(options && options.preferPng);
-  const exportCanvas = patientReportResizeCanvasForPdf(canvas);
+  const preferredFormat = String(options && options.preferredFormat ? options.preferredFormat : '').trim().toUpperCase();
+  const skipPngProbe = !!(options && options.skipPngProbe);
+  const maxWidth = Number.isFinite(options && options.maxWidth) && options.maxWidth > 0
+    ? options.maxWidth
+    : PATIENT_REPORT_PDF_MAX_EXPORT_WIDTH;
+  const requestedJpegQuality = Number.isFinite(options && options.jpegQuality)
+    ? options.jpegQuality
+    : PATIENT_REPORT_PDF_JPEG_QUALITY;
+  const jpegQuality = Math.max(0.5, Math.min(1, requestedJpegQuality));
+  const exportCanvas = patientReportResizeCanvasForPdf(canvas, maxWidth);
 
-  let jpegUrl = '';
-  let pngUrl = '';
-  try {
-    jpegUrl = exportCanvas.toDataURL('image/jpeg', PATIENT_REPORT_PDF_JPEG_QUALITY);
-  } catch (_) {
-    jpegUrl = '';
+  let cachedJpeg;
+  let cachedPng;
+
+  function encode(format) {
+    const normalizedFormat = format === 'PNG' ? 'PNG' : 'JPEG';
+    const mimeType = normalizedFormat === 'PNG' ? 'image/png' : 'image/jpeg';
+    try {
+      const dataUrl = exportCanvas.toDataURL(mimeType, normalizedFormat === 'JPEG' ? jpegQuality : undefined);
+      if (typeof dataUrl === 'string' && dataUrl.startsWith(`data:${mimeType}`)) {
+        return { dataUrl, format: normalizedFormat };
+      }
+    } catch (_) {}
+    return null;
   }
-  try {
-    pngUrl = exportCanvas.toDataURL('image/png');
-  } catch (_) {
-    pngUrl = '';
+
+  function getJpeg() {
+    if (typeof cachedJpeg === 'undefined') {
+      cachedJpeg = encode('JPEG') || false;
+    }
+    return cachedJpeg || null;
   }
 
-  const hasJpeg = typeof jpegUrl === 'string' && jpegUrl.startsWith('data:image/jpeg');
-  const hasPng = typeof pngUrl === 'string' && pngUrl.startsWith('data:image/png');
+  function getPng() {
+    if (typeof cachedPng === 'undefined') {
+      cachedPng = encode('PNG') || false;
+    }
+    return cachedPng || null;
+  }
 
-  if (hasJpeg && hasPng) {
-    const jpegBytes = patientReportEstimateDataUrlBytes(jpegUrl);
-    const pngBytes = patientReportEstimateDataUrlBytes(pngUrl);
+  if (preferredFormat === 'PNG') {
+    return getPng() || getJpeg() || { dataUrl: exportCanvas.toDataURL('image/png'), format: 'PNG' };
+  }
+  if (preferredFormat === 'JPEG' || preferredFormat === 'JPG') {
+    return getJpeg() || getPng() || { dataUrl: exportCanvas.toDataURL('image/png'), format: 'PNG' };
+  }
+
+  if (skipPngProbe) {
+    return (preferPng ? (getPng() || getJpeg()) : (getJpeg() || getPng()))
+      || { dataUrl: exportCanvas.toDataURL('image/png'), format: 'PNG' };
+  }
+
+  const jpegImage = getJpeg();
+  const pngImage = getPng();
+
+  if (jpegImage && pngImage) {
+    const jpegBytes = patientReportEstimateDataUrlBytes(jpegImage.dataUrl);
+    const pngBytes = patientReportEstimateDataUrlBytes(pngImage.dataUrl);
     const ratioLimit = preferPng ? PATIENT_REPORT_PDF_PNG_RATIO_LIMIT_PREFERRED : PATIENT_REPORT_PDF_PNG_RATIO_LIMIT;
     if (Number.isFinite(jpegBytes) && Number.isFinite(pngBytes) && pngBytes <= (jpegBytes * ratioLimit)) {
-      return { dataUrl: pngUrl, format: 'PNG' };
+      return pngImage;
     }
-    return { dataUrl: jpegUrl, format: 'JPEG' };
+    return jpegImage;
   }
 
-  if (hasPng) return { dataUrl: pngUrl, format: 'PNG' };
-  if (hasJpeg) return { dataUrl: jpegUrl, format: 'JPEG' };
+  if (pngImage) return pngImage;
+  if (jpegImage) return jpegImage;
 
   const fallbackUrl = exportCanvas.toDataURL('image/png');
   return { dataUrl: fallbackUrl, format: 'PNG' };
 }
+
 
 let __patientReportPdfInFlight = false;
 
@@ -7497,7 +7578,7 @@ async function patientReportBuildPdfPackage() {
     const model = patientReportBuildModel();
     host.innerHTML = patientReportBuildHtml(model);
     document.body.appendChild(host);
-    await patientReportDelay(80);
+    await patientReportWaitForStableLayout();
 
     const pages = Array.from(host.querySelectorAll('.patient-report-page'));
     if (!pages.length) throw new Error('Brak stron raportu do renderowania.');
@@ -7518,17 +7599,20 @@ async function patientReportBuildPdfPackage() {
 
     for (let i = 0; i < pages.length; i += 1) {
       const page = pages[i];
+      const renderScale = patientReportResolveRenderScale(page);
       const canvas = await window.html2canvas(page, {
-        scale: PATIENT_REPORT_PDF_RENDER_SCALE,
+        scale: renderScale,
         useCORS: true,
         backgroundColor: '#ffffff',
         logging: false,
         imageTimeout: 0
       });
-      const pdfImage = patientReportCanvasToPdfImage(canvas);
+      const pdfImage = patientReportCanvasToPdfImage(canvas, {
+        preferredFormat: PATIENT_REPORT_PDF_VISIT_PREFERRED_FORMAT,
+        skipPngProbe: true
+      });
       if (i > 0) pdf.addPage();
-      const imageCompression = pdfImage.format === 'PNG' ? 'FAST' : 'MEDIUM';
-      pdf.addImage(pdfImage.dataUrl, pdfImage.format, 0, 0, 210, 297, undefined, imageCompression);
+      pdf.addImage(pdfImage.dataUrl, pdfImage.format, 0, 0, 210, 297, undefined, PATIENT_REPORT_PDF_IMAGE_COMPRESSION);
     }
 
     const filenameBase = patientReportSanitizeFilename(model.name || 'pacjent');
@@ -7710,14 +7794,18 @@ function patientReportBuildPdfPageSpecFromCanvas(canvas, options) {
   let format = opts.format === 'PNG' ? 'PNG' : 'JPEG';
   let dataUrl = '';
 
-  if (opts.strategy === 'patient') {
-    const pdfImage = patientReportCanvasToPdfImage(canvas);
-    format = pdfImage && pdfImage.format ? pdfImage.format : 'PNG';
-    dataUrl = pdfImage && pdfImage.dataUrl ? pdfImage.dataUrl : '';
-  } else {
-    const mimeType = format === 'PNG' ? 'image/png' : 'image/jpeg';
-    dataUrl = canvas.toDataURL(mimeType, format === 'JPEG' ? 1.0 : undefined);
-  }
+  const requestedFormat = String(opts.preferredFormat || '').trim().toUpperCase();
+  const pdfImage = patientReportCanvasToPdfImage(canvas, {
+    preferredFormat: requestedFormat || (opts.strategy === 'patient'
+      ? PATIENT_REPORT_PDF_VISIT_PREFERRED_FORMAT
+      : format),
+    preferPng: format === 'PNG',
+    skipPngProbe: true,
+    jpegQuality: Number.isFinite(opts.jpegQuality) ? opts.jpegQuality : PATIENT_REPORT_PDF_JPEG_QUALITY,
+    maxWidth: Number.isFinite(opts.maxWidth) ? opts.maxWidth : PATIENT_REPORT_PDF_MAX_EXPORT_WIDTH
+  });
+  format = pdfImage && pdfImage.format ? pdfImage.format : format;
+  dataUrl = pdfImage && pdfImage.dataUrl ? pdfImage.dataUrl : '';
 
   return {
     orientation,
@@ -7779,18 +7867,17 @@ async function patientReportCollectVisitPdfPages() {
     const model = patientReportBuildModel();
     host.innerHTML = patientReportBuildHtml(model);
     document.body.appendChild(host);
-    if (document.fonts && document.fonts.ready) {
-      try { await document.fonts.ready; } catch (_) {}
-    }
-    await patientReportDelay(80);
+    await patientReportWaitForStableLayout();
 
     const pageNodes = Array.from(host.querySelectorAll('.patient-report-page'));
     if (!pageNodes.length) throw new Error('Brak stron raportu do renderowania.');
 
     const pages = [];
     for (let i = 0; i < pageNodes.length; i += 1) {
-      const canvas = await window.html2canvas(pageNodes[i], {
-        scale: PATIENT_REPORT_PDF_RENDER_SCALE,
+      const pageNode = pageNodes[i];
+      const renderScale = patientReportResolveRenderScale(pageNode);
+      const canvas = await window.html2canvas(pageNode, {
+        scale: renderScale,
         useCORS: true,
         backgroundColor: '#ffffff',
         logging: false,
@@ -7798,7 +7885,8 @@ async function patientReportCollectVisitPdfPages() {
       });
       const pageSpec = patientReportBuildPdfPageSpecFromCanvas(canvas, {
         orientation: 'portrait',
-        strategy: 'patient'
+        strategy: 'patient',
+        preferredFormat: PATIENT_REPORT_PDF_VISIT_PREFERRED_FORMAT
       });
       if (pageSpec) pages.push(pageSpec);
     }
@@ -8059,14 +8147,12 @@ async function patientReportCollectAdvancedGrowthPdfPages() {
   document.body.appendChild(host);
 
   try {
-    if (document.fonts && document.fonts.ready) {
-      try { await document.fonts.ready; } catch (_) {}
-    }
-    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    await patientReportWaitForStableLayout();
 
     const reportNode = host.querySelector('.adv-growth-pdf-html-root') || host;
+    const renderScale = patientReportResolveRenderScale(reportNode);
     const canvas = await window.html2canvas(reportNode, {
-      scale: 2,
+      scale: renderScale,
       backgroundColor: '#ffffff',
       useCORS: true,
       logging: false
@@ -8164,7 +8250,7 @@ async function patientReportBuildSelectedPdfPackage(selectedValues) {
   validPages.forEach((page, index) => {
     const pageOrientation = page.orientation === 'landscape' ? 'landscape' : 'portrait';
     if (index > 0) pdf.addPage('a4', pageOrientation);
-    const compression = page.format === 'PNG' ? 'FAST' : 'MEDIUM';
+    const compression = PATIENT_REPORT_PDF_IMAGE_COMPRESSION;
     pdf.addImage(
       page.dataUrl,
       page.format,
@@ -16382,36 +16468,35 @@ async function advGrowthGeneratePdfViaCanvas(report, filename) {
   document.body.appendChild(host);
 
   try {
-    if (document.fonts && document.fonts.ready) {
-      try { await document.fonts.ready; } catch (_) {}
-    }
-    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    await patientReportWaitForStableLayout();
 
     const reportNode = host.querySelector('.adv-growth-pdf-html-root') || host;
+    const renderScale = patientReportResolveRenderScale(reportNode);
     const canvas = await window.html2canvas(reportNode, {
-      scale: 2,
+      scale: renderScale,
       backgroundColor: '#ffffff',
       useCORS: true,
       logging: false
     });
 
+    const exportCanvas = patientReportResizeCanvasForPdf(canvas);
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4', compress: true });
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-    const imgData = canvas.toDataURL('image/png');
+    const imgData = exportCanvas.toDataURL('image/png');
     const imgWidth = pageWidth;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    const imgHeight = (exportCanvas.height * imgWidth) / exportCanvas.width;
 
     let heightLeft = imgHeight;
     let position = 0;
-    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, undefined, PATIENT_REPORT_PDF_IMAGE_COMPRESSION);
     heightLeft -= pageHeight;
 
     while (heightLeft > 0) {
       position = heightLeft - imgHeight;
       pdf.addPage('a4', 'landscape');
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, undefined, PATIENT_REPORT_PDF_IMAGE_COMPRESSION);
       heightLeft -= pageHeight;
     }
 
@@ -18149,16 +18234,21 @@ function _pruneBlankAdvancedRows(){
   let changed = false;
 
   if (nonEmpty.length > 0) {
+    // Zachowaj dokładnie jeden pusty, końcowy wiersz startowy. Dzięki temu kliknięcie
+    // „Dodaj kolejny pomiar” nie jest natychmiast „cofane” przez mechanizm parowania
+    // z kartą szacowanego spożycia energii.
+    const trailingBlank = [...rows].reverse().find(row => !_advRowHasAnyData(row)) || null;
     rows.forEach(row => {
       if (_advRowHasAnyData(row)) return;
+      if (trailingBlank && row === trailingBlank) return;
       try { row.remove(); changed = true; } catch (_) {}
     });
     return changed;
   }
 
-  rows.slice(1).forEach(row => {
-    try { row.remove(); changed = true; } catch (_) {}
-  });
+  // Jeżeli wszystkie wiersze są puste, nie usuwaj ich automatycznie — użytkownik
+  // może właśnie przygotowywać kilka pól do późniejszego wpisania, tak jak w karcie
+  // podstawowych obliczeń wzrostowych.
   return changed;
 }
 
@@ -18169,17 +18259,25 @@ function _pruneBlankIntakeHistoryRows(){
   let changed = false;
 
   if (nonEmpty.length > 0) {
+    // Jak wyżej: pozostaw jeden pusty, ostatni wiersz historii, żeby użytkownik mógł
+    // dopisać kolejny pomiar bez walki z automatycznym pruningiem.
+    const trailingBlank = [...rows].reverse().find(row => !_intakeRowHasAnyData(row)) || null;
     rows.forEach(row => {
       if (_intakeRowHasAnyData(row)) return;
+      if (trailingBlank && row === trailingBlank) return;
       try { row.remove(); changed = true; } catch (_) {}
     });
     return changed;
   }
 
-  rows.slice(1).forEach(row => {
-    try { row.remove(); changed = true; } catch (_) {}
-  });
+  // Gdy wszystkie wiersze historii są puste, pozostaw je — odpowiadają wierszom
+  // utworzonym przez użytkownika w module zaawansowanym.
   return changed;
+}
+
+function _getRawInputValue(el){
+  if (!el) return '';
+  return String(el.value ?? '').trim();
 }
 
 function _rowHasAnyData(row, selectors){
@@ -18310,15 +18408,14 @@ function _syncAdvRowToIntake(advRow, options){
   const target = _findIntakeHistoryRowBySyncId(syncId);
   if (!target) return;
 
-  const getNum = (sel) => {
-    const el = advRow.querySelector(sel);
-    return el ? parseFloat(el.value) : NaN;
-  };
-
-  const yVal = getNum('.adv-age-years');
-  const mVal = getNum('.adv-age-months');
-  const h = getNum('.adv-height');
-  const w = getNum('.adv-weight');
+  const yEl = advRow.querySelector('.adv-age-years');
+  const mEl = advRow.querySelector('.adv-age-months');
+  const yRaw = _getRawInputValue(yEl);
+  const mRaw = _getRawInputValue(mEl);
+  const yVal = yEl ? parseFloat(yEl.value) : NaN;
+  const mVal = mEl ? parseFloat(mEl.value) : NaN;
+  const h = parseFloat(advRow.querySelector('.adv-height')?.value);
+  const w = parseFloat(advRow.querySelector('.adv-weight')?.value);
 
   const setText = (sel, value) => {
     const el = target.querySelector(sel);
@@ -18326,16 +18423,16 @@ function _syncAdvRowToIntake(advRow, options){
     el.value = (value === '' || value === null || value === undefined || Number.isNaN(value)) ? '' : String(value);
   };
 
-  if (!isNaN(yVal) || !isNaN(mVal)) {
-    let yy = isNaN(yVal) ? 0 : yVal;
-    let mm = isNaN(mVal) ? 0 : mVal;
-    mm = Math.round(mm);
-    if (mm >= 12) {
-      yy += Math.floor(mm / 12);
-      mm = mm % 12;
+  if (yRaw !== '' || mRaw !== '') {
+    let yyOut = (yRaw === '' || Number.isNaN(yVal)) ? '' : yVal;
+    let mmOut = (mRaw === '' || Number.isNaN(mVal)) ? '' : Math.round(mVal);
+    if (mmOut !== '' && mmOut >= 12) {
+      const baseYears = (yyOut === '' || Number.isNaN(Number(yyOut))) ? 0 : Number(yyOut);
+      yyOut = baseYears + Math.floor(Number(mmOut) / 12);
+      mmOut = Number(mmOut) % 12;
     }
-    setText('.intake-ageY', yy);
-    setText('.intake-ageM', mm);
+    setText('.intake-ageY', yyOut);
+    setText('.intake-ageM', mmOut);
   } else {
     setText('.intake-ageY', '');
     setText('.intake-ageM', '');
@@ -18360,15 +18457,14 @@ function _syncIntakeRowToAdv(intakeRow, options){
   const advRow = _findAdvRowBySyncId(syncId);
   if (!advRow) return;
 
-  const getNum = (sel) => {
-    const el = intakeRow.querySelector(sel);
-    return el ? parseFloat(el.value) : NaN;
-  };
-
-  const y = getNum('.intake-ageY');
-  const m = getNum('.intake-ageM');
-  const h = getNum('.intake-ht');
-  const w = getNum('.intake-wt');
+  const yEl = intakeRow.querySelector('.intake-ageY');
+  const mEl = intakeRow.querySelector('.intake-ageM');
+  const yRaw = _getRawInputValue(yEl);
+  const mRaw = _getRawInputValue(mEl);
+  const y = yEl ? parseFloat(yEl.value) : NaN;
+  const m = mEl ? parseFloat(mEl.value) : NaN;
+  const h = parseFloat(intakeRow.querySelector('.intake-ht')?.value);
+  const w = parseFloat(intakeRow.querySelector('.intake-wt')?.value);
 
   const setVal = (sel, value) => {
     const el = advRow.querySelector(sel);
@@ -18376,18 +18472,19 @@ function _syncIntakeRowToAdv(intakeRow, options){
     el.value = (value === '' || value === null || value === undefined || Number.isNaN(value)) ? '' : String(value);
   };
 
-  if (isNaN(y) && isNaN(m)) {
+  if (yRaw === '' && mRaw === '') {
     setVal('.adv-age-years', '');
     setVal('.adv-age-months', '');
   } else {
-    let yrs = isNaN(y) ? 0 : y;
-    let mos = isNaN(m) ? 0 : Math.round(m);
-    if (mos >= 12) {
-      yrs += Math.floor(mos / 12);
-      mos = mos % 12;
+    let yrsOut = (yRaw === '' || Number.isNaN(y)) ? '' : y;
+    let mosOut = (mRaw === '' || Number.isNaN(m)) ? '' : Math.round(m);
+    if (mosOut !== '' && mosOut >= 12) {
+      const baseYears = (yrsOut === '' || Number.isNaN(Number(yrsOut))) ? 0 : Number(yrsOut);
+      yrsOut = baseYears + Math.floor(Number(mosOut) / 12);
+      mosOut = Number(mosOut) % 12;
     }
-    setVal('.adv-age-years', yrs);
-    setVal('.adv-age-months', mos);
+    setVal('.adv-age-years', yrsOut);
+    setVal('.adv-age-months', mosOut);
   }
 
   setVal('.adv-height', h);
@@ -18546,16 +18643,9 @@ function handleIntakeHistoryRowRemove(row){
 function handleAdvancedMeasurementAdd(){
   _pairAdvancedAndIntakeRowsByOrder();
 
-  const rows = _advRows();
-  const last = rows[rows.length - 1];
-  const allowStarterExpansion = rows.length === 1 && last && !_advRowHasAnyData(last)
-    && last.getAttribute('data-gh-sync') !== 'true'
-    && !String(last.getAttribute('data-gh-id') || '').trim();
-  if (last && !_advRowHasAnyData(last) && !allowStarterExpansion) {
-    _refreshAdvIntakeRowUi();
-    return false;
-  }
-
+  // Zachowuj się tak samo jak karta podstawowych obliczeń wzrostowych:
+  // każde kliknięcie „Dodaj kolejny pomiar” ma realnie dodawać nowy wiersz,
+  // nawet jeśli poprzedni jest jeszcze pusty.
   const syncId = _nextAdvIntakeSyncId();
 
   _runWithAdvIntakeSyncSuspended(() => {
@@ -18577,14 +18667,8 @@ function handleAdvancedMeasurementAdd(){
 function handleIntakeHistoryAdd(){
   _pairAdvancedAndIntakeRowsByOrder();
 
-  const rows = _getIntakeHistoryRows();
-  const last = rows[rows.length - 1];
-  const allowStarterExpansion = rows.length === 1 && last && !_intakeRowHasAnyData(last);
-  if (last && !_intakeRowHasAnyData(last) && !allowStarterExpansion) {
-    _refreshAdvIntakeRowUi();
-    return false;
-  }
-
+  // Lustrzane zachowanie dla sekcji szacowanego spożycia energii, która jest
+  // sprzężona 1:1 z zaawansowaną historią wzrastania.
   const syncId = _nextAdvIntakeSyncId();
 
   _runWithAdvIntakeSyncSuspended(() => {

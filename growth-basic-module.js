@@ -255,6 +255,11 @@
     }));
   }
 
+
+  function isRawSyncFieldBlank(value) {
+    return String(value ?? '').trim() === '';
+  }
+
   function collectAdvancedMeasurementsForSync() {
     if (typeof window.collectAdvancedMeasurements === 'function') {
       try {
@@ -516,6 +521,16 @@
       const yearsPart = Math.floor(months / 12);
       const monthsPart = months - (yearsPart * 12);
       const preservedMeta = takePreservedMeta(entry, idx);
+      const mergedYearsPart = (() => {
+        const preservedYearsRaw = preservedMeta && (preservedMeta.ageYears != null ? preservedMeta.ageYears : preservedMeta.ageY);
+        if (yearsPart === 0 && isRawSyncFieldBlank(preservedYearsRaw)) return '';
+        return yearsPart;
+      })();
+      const mergedMonthsPart = (() => {
+        const preservedMonthsRaw = preservedMeta && (preservedMeta.ageMonthsPart != null ? preservedMeta.ageMonthsPart : preservedMeta.ageM);
+        if (monthsPart === 0 && isRawSyncFieldBlank(preservedMonthsRaw)) return '';
+        return monthsPart;
+      })();
       const mergedHeight = (() => {
         const entryHeight = toOptionalSyncNumber(entry?.height);
         if (entryHeight !== null) return entryHeight;
@@ -528,8 +543,8 @@
         const preservedWeight = toOptionalSyncNumber(preservedMeta && preservedMeta.weight);
         return preservedWeight !== null ? preservedWeight : '';
       })();
-      setValue(row, '.adv-age-years', yearsPart);
-      setValue(row, '.adv-age-months', monthsPart);
+      setValue(row, '.adv-age-years', mergedYearsPart);
+      setValue(row, '.adv-age-months', mergedMonthsPart);
       setValue(row, '.adv-height', mergedHeight);
       setValue(row, '.adv-weight', mergedWeight);
       applyPreservedMeta(row, preservedMeta, entry);
