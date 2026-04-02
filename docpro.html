@@ -4382,13 +4382,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   }
-  // Obsługa usuwania wszystkich danych – przywraca aplikację do stanu początkowego
-  const clearAll = document.getElementById('clearAllDataBtn');
-  if (clearAll) {
-    clearAll.addEventListener('click', () => {
-      location.reload();
-    });
-  }
+  // Po pełnym czyszczeniu nie przeładowujemy strony – stan jest resetowany w app.js.
 });
 
 </script>
@@ -4686,6 +4680,62 @@ function collectPageMeasurementsInRange(rangeMinX, rangeMaxX, { currentAgeMonths
 }
 
 // Zbuduj jedną stronę (0–35 miesięcy Palczewska lub 36–216 miesięcy OLAF) jako canvas.
+function getCentileSummaryOverlayLines() {
+  const normalizeLine = (value) => String(value == null ? '' : value)
+    .trim()
+    .replace(/(\d)\.(\d)/g, '$1,$2');
+
+  let rawLines = [];
+  try {
+    if (typeof getFormattedProfessionalSummaryLines === 'function') {
+      rawLines = (getFormattedProfessionalSummaryLines() || [])
+        .map(normalizeLine)
+        .filter(Boolean);
+    }
+  } catch (_) {
+    rawLines = [];
+  }
+
+  if (!rawLines.length) {
+    try {
+      const visibleCards = Array.from(document.querySelectorAll('.current-summary-card')).filter((card) => {
+        if (!card) return false;
+        if (card.id === 'currentSummaryCard' && card.style && card.style.display === 'none') return false;
+        const style = typeof window !== 'undefined' && typeof window.getComputedStyle === 'function'
+          ? window.getComputedStyle(card)
+          : null;
+        return !style || (style.display !== 'none' && style.visibility !== 'hidden');
+      });
+      const rowNodes = visibleCards.length
+        ? visibleCards.reduce((acc, card) => acc.concat(Array.from(card.querySelectorAll('.current-summary-row'))), [])
+        : Array.from(document.querySelectorAll('#currentSummaryContent .current-summary-row'));
+      rawLines = rowNodes
+        .map((node) => normalizeLine(node && (node.innerText || node.textContent || '')))
+        .filter(Boolean);
+    } catch (_) {
+      rawLines = [];
+    }
+  }
+
+  const processed = [];
+  rawLines.forEach(function(l) {
+    if (!/^(Waga|Wzrost|BMI|MPH|hSDS)/i.test(l)) return;
+    if (/^(Waga|Wzrost)/i.test(l)) {
+      const idx = l.indexOf('),');
+      if (idx >= 0) {
+        const part1 = l.substring(0, idx + 2).trim();
+        const part2 = l.substring(idx + 2).trim();
+        processed.push({ text: part1, bullet: true });
+        if (part2) processed.push({ text: part2, bullet: false });
+        return;
+      }
+    }
+    processed.push({ text: l, bullet: true });
+  });
+
+  return processed;
+}
+
 function buildCentilePageCanvas({
   rangeMinX, rangeMaxX, sex, userAgeMonths, userWeight, userHeight,
   headerTitle, headerSubtitle, footerText, chartSource
@@ -5205,36 +5255,7 @@ function buildCentilePageCanvas({
       if (!professional) return;
       if (rangeMaxX <= 35) return;
       // Pobierz linie podsumowania z karty „Podsumowanie wyników”
-      const summaryEl = document.getElementById('currentSummaryContent');
-      if (!summaryEl) return;
-      let raw = summaryEl.innerText || summaryEl.textContent || '';
-      raw = raw.trim();
-      if (!raw) return;
-      // Split raw summary into lines, then post‑process to shorten lines and select relevant ones.
-      let rawLines = raw.split(/\n+/).map(l => l.trim()).filter(l => l);
-      // Prepare a filtered list: only include weight, height, BMI, MPH and hSDS lines.
-      // Each entry is an object { text: string, bullet: boolean } to control whether to draw a bullet.
-      const processed = [];
-      rawLines.forEach(function(l) {
-        if (/^(Waga|Wzrost|BMI|MPH|hSDS)/i.test(l)) {
-          // For weight and height lines, break after the comma following the closing parenthesis, if present.
-          if (/^(Waga|Wzrost)/i.test(l)) {
-            const idx = l.indexOf('),');
-            if (idx >= 0) {
-              const part1 = l.substring(0, idx + 2).trim();
-              const part2 = l.substring(idx + 2).trim();
-              // The first part retains the bullet; the continuation line should not.
-              processed.push({ text: part1, bullet: true });
-              if (part2) processed.push({ text: part2, bullet: false });
-            } else {
-              processed.push({ text: l, bullet: true });
-            }
-          } else {
-            processed.push({ text: l, bullet: true });
-          }
-        }
-      });
-      const lines = processed;
+      const lines = getCentileSummaryOverlayLines();
       if (!lines.length) return;
       // Oblicz wymiary siatki wzrostu (jak w drawHeightHistory)
       const leftMargin = 120, rightMargin = 100, topMargin = 80, bottomMargin = 80;
@@ -6861,34 +6882,7 @@ async function generateCentileChart() {
             if (!professional || window.publicationCharts) return;
             // Podsumowanie rysujemy tylko na wykresie wzrostu
             if (chartType !== 'height') return;
-            const summaryEl = document.getElementById('currentSummaryContent');
-            if (!summaryEl) return;
-            let raw = summaryEl.innerText || summaryEl.textContent || '';
-            raw = raw.trim();
-            if (!raw) return;
-            // Split raw summary into lines, then post‑process to shorten lines and select relevant ones.
-            let rawLines = raw.split(/\n+/).map(l => l.trim()).filter(l => l);
-            // Build an array of objects { text, bullet } where bullet indicates whether to draw a dot.
-            const processed = [];
-            rawLines.forEach(function(l) {
-              if (/^(Waga|Wzrost|BMI|MPH|hSDS)/i.test(l)) {
-                // For weight and height, break after the comma following closing parenthesis.
-                if (/^(Waga|Wzrost)/i.test(l)) {
-                  const idx = l.indexOf('),');
-                  if (idx >= 0) {
-                    const part1 = l.substring(0, idx + 2).trim();
-                    const part2 = l.substring(idx + 2).trim();
-                    processed.push({ text: part1, bullet: true });
-                    if (part2) processed.push({ text: part2, bullet: false });
-                  } else {
-                    processed.push({ text: l, bullet: true });
-                  }
-                } else {
-                  processed.push({ text: l, bullet: true });
-                }
-              }
-            });
-            const lines = processed;
+            const lines = getCentileSummaryOverlayLines();
             if (!lines.length) return;
             const leftMargin = 120, rightMargin = 100, topMargin = 80, bottomMargin = 80;
             const pxBase = chartX + leftMargin;
@@ -7391,7 +7385,11 @@ async function generateCentileChart() {
       if (ageMonthsField) ageMonthsField.addEventListener('input', updateCentileButtons);
       updateCentileButtons();
     });
-    // Udostępnij funkcję globalnie, aby można było ją wywołać z konsoli
+    // Udostępnij funkcje globalnie, aby mogły być użyte także przez generator pakietu PDF.
+    window.getPalczewskaChartPlan = getPalczewskaChartPlan;
+    window.buildPalczewskaInfantPageCanvas = buildPalczewskaInfantPageCanvas;
+    window.buildPalczewskaExtendedCanvases = buildPalczewskaExtendedCanvases;
+    window.promptPalczewskaRangeSelection = promptPalczewskaRangeSelection;
     window.generatePalczewskaCentileCharts = generatePalczewskaCentileCharts;
   })();
   </script>

@@ -171,6 +171,32 @@ async function getTherapyPointsFromDB(){
   }
 }
 
+async function clearTherapyPointsInDB(){
+  try {
+    const db = await openGHTherapyDB();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(GH_STORE_NAME, 'readwrite');
+      const store = tx.objectStore(GH_STORE_NAME);
+      const req = store.clear();
+      req.onsuccess = function(){ resolve(true); };
+      req.onerror = function(){ reject(req.error); };
+    });
+    try { db.close(); } catch (_) {}
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function isGhAdvancedImportSuppressed(){
+  try {
+    if (typeof window === 'undefined') return false;
+    return Number(window.__vildaSuppressGhAdvancedImportUntil || 0) > Date.now();
+  } catch (_) {
+    return false;
+  }
+}
+
 // Inicjalizuj BroadcastChannel do nasłuchiwania zmian w module terapii.
 const ghTherapyBroadcastChannel = (typeof BroadcastChannel !== 'undefined') ? new BroadcastChannel('gh-therapy-sync') : null;
 if (ghTherapyBroadcastChannel) {
@@ -7786,6 +7812,31 @@ async function patientReportCollectVisitPdfPages() {
   }
 }
 
+
+function patientReportGetPalczewskaPdfHelpers() {
+  const globalObj = (typeof window !== 'undefined') ? window : globalThis;
+  const resolveFn = function(name) {
+    try {
+      if (typeof globalObj !== 'undefined' && globalObj && typeof globalObj[name] === 'function') {
+        return globalObj[name];
+      }
+    } catch (_) {}
+    try {
+      if (name === 'getPalczewskaChartPlan' && typeof getPalczewskaChartPlan === 'function') return getPalczewskaChartPlan;
+      if (name === 'buildPalczewskaInfantPageCanvas' && typeof buildPalczewskaInfantPageCanvas === 'function') return buildPalczewskaInfantPageCanvas;
+      if (name === 'buildPalczewskaExtendedCanvases' && typeof buildPalczewskaExtendedCanvases === 'function') return buildPalczewskaExtendedCanvases;
+      if (name === 'promptPalczewskaRangeSelection' && typeof promptPalczewskaRangeSelection === 'function') return promptPalczewskaRangeSelection;
+    } catch (_) {}
+    return null;
+  };
+  return {
+    getPlan: resolveFn('getPalczewskaChartPlan'),
+    buildInfantCanvas: resolveFn('buildPalczewskaInfantPageCanvas'),
+    buildExtendedCanvases: resolveFn('buildPalczewskaExtendedCanvases'),
+    promptRangeSelection: resolveFn('promptPalczewskaRangeSelection')
+  };
+}
+
 async function patientReportCollectCentileChartPdfPages() {
   const chartState = patientReportGetCentileChartSelectionState();
   if (!chartState.available) {
@@ -7816,19 +7867,20 @@ async function patientReportCollectCentileChartPdfPages() {
   const selectedChartSource = String(chartState.source || 'OLAF').toUpperCase();
 
   if (selectedChartSource === 'PALCZEWSKA') {
-    if (typeof getPalczewskaChartPlan !== 'function'
-      || typeof buildPalczewskaInfantPageCanvas !== 'function'
-      || typeof buildPalczewskaExtendedCanvases !== 'function') {
+    const palczewskaHelpers = patientReportGetPalczewskaPdfHelpers();
+    if (!palczewskaHelpers.getPlan
+      || !palczewskaHelpers.buildInfantCanvas
+      || !palczewskaHelpers.buildExtendedCanvases) {
       throw new Error('Generator siatki Palczewskiej nie jest obecnie dostępny.');
     }
 
     const adv = (typeof window !== 'undefined' && window.advancedGrowthData) ? window.advancedGrowthData : null;
-    const plan = getPalczewskaChartPlan(ageMonths, adv);
+    const plan = palczewskaHelpers.getPlan(ageMonths, adv);
     let mode = plan && plan.mode ? plan.mode : 'INFANT_ONLY';
 
     if (mode === 'CHOICE') {
-      if (typeof promptPalczewskaRangeSelection === 'function') {
-        const selectedMode = await promptPalczewskaRangeSelection();
+      if (palczewskaHelpers.promptRangeSelection) {
+        const selectedMode = await palczewskaHelpers.promptRangeSelection();
         if (!selectedMode) {
           const cancelError = new Error('Anulowano wybór zakresu siatki Palczewskiej.');
           cancelError.code = 'USER_CANCELLED';
@@ -7842,7 +7894,7 @@ async function patientReportCollectCentileChartPdfPages() {
 
     const canvases = [];
     if (mode === 'INFANT_ONLY' || mode === 'BOTH_REQUIRED') {
-      canvases.push(buildPalczewskaInfantPageCanvas({
+      canvases.push(palczewskaHelpers.buildInfantCanvas({
         sex,
         userAgeMonths: ageMonths,
         userWeight: weight,
@@ -7850,7 +7902,7 @@ async function patientReportCollectCentileChartPdfPages() {
       }));
     }
     if (mode === 'EXTENDED_ONLY' || mode === 'BOTH_REQUIRED') {
-      canvases.push(...buildPalczewskaExtendedCanvases({
+      canvases.push(...palczewskaHelpers.buildExtendedCanvases({
         sex,
         userAgeMonths: ageMonths,
         userWeight: weight,
@@ -16900,7 +16952,10 @@ function updateRemoveButtons() {
   rows.forEach((row, idx) => {
     const btn = row.querySelector('.remove-measure');
     if (!btn) return;
-    btn.style.display = (idx === 0) ? 'none' : 'inline-block';
+    const onlyStarterRow = rows.length === 1 && idx === 0 && !_advRowHasAnyData(row)
+      && row.getAttribute('data-gh-sync') !== 'true'
+      && !String(row.getAttribute('data-gh-id') || '').trim();
+    btn.style.display = onlyStarterRow ? 'none' : 'inline-block';
   });
 }
 
@@ -17021,6 +17076,9 @@ async function importTherapyPointsToAdvancedGrowth() {
     __ghAdvImportQueued = true;
     return;
   }
+  if (isGhAdvancedImportSuppressed()) {
+    return;
+  }
   __ghAdvImportInFlight = true;
 
   try {
@@ -17052,6 +17110,10 @@ async function importTherapyPointsToAdvancedGrowth() {
           pts = [];
         }
       }
+    }
+
+    if (isGhAdvancedImportSuppressed()) {
+      return;
     }
 
     const cloneGhPts = (list) => {
@@ -18149,12 +18211,16 @@ function _intakeRowHasAnyData(row){
 
 function _isProtectedAdvancedHistoryRow(row){
   const rows = _advRows();
-  return !!row && rows.length > 0 && rows[0] === row;
+  if (!row || !rows.length || rows[0] !== row) return false;
+  const hasGhMeta = row.getAttribute('data-gh-sync') === 'true'
+    || !!String(row.getAttribute('data-gh-id') || '').trim();
+  return rows.length === 1 && !_advRowHasAnyData(row) && !hasGhMeta;
 }
 
 function _isProtectedIntakeHistoryRow(row){
   const rows = _getIntakeHistoryRows();
-  return !!row && rows.length > 0 && rows[0] === row;
+  if (!row || !rows.length || rows[0] !== row) return false;
+  return rows.length === 1 && !_intakeRowHasAnyData(row);
 }
 
 function _lockIntakeFirstRow(){
@@ -18482,7 +18548,10 @@ function handleAdvancedMeasurementAdd(){
 
   const rows = _advRows();
   const last = rows[rows.length - 1];
-  if (last && !_advRowHasAnyData(last)) {
+  const allowStarterExpansion = rows.length === 1 && last && !_advRowHasAnyData(last)
+    && last.getAttribute('data-gh-sync') !== 'true'
+    && !String(last.getAttribute('data-gh-id') || '').trim();
+  if (last && !_advRowHasAnyData(last) && !allowStarterExpansion) {
     _refreshAdvIntakeRowUi();
     return false;
   }
@@ -18510,7 +18579,8 @@ function handleIntakeHistoryAdd(){
 
   const rows = _getIntakeHistoryRows();
   const last = rows[rows.length - 1];
-  if (last && !_intakeRowHasAnyData(last)) {
+  const allowStarterExpansion = rows.length === 1 && last && !_intakeRowHasAnyData(last);
+  if (last && !_intakeRowHasAnyData(last) && !allowStarterExpansion) {
     _refreshAdvIntakeRowUi();
     return false;
   }
@@ -21186,7 +21256,8 @@ function updateIntakeRemoveButtons(){
       return;
     }
     const historyIdx = historyRows.indexOf(row);
-    btn.style.display = (historyIdx <= 0) ? 'none' : 'inline-block';
+    const onlyStarterRow = historyRows.length === 1 && historyIdx === 0 && !_intakeRowHasAnyData(row);
+    btn.style.display = onlyStarterRow ? 'none' : 'inline-block';
   });
 }
 
@@ -22804,10 +22875,76 @@ function rehydrateIntakeFromState(savedPal){
     setTimeout(()=>{ URL.revokeObjectURL(url); document.body.removeChild(a); }, 0);
   }
 
+  function resetGrowthHistoryModulesAfterClear(){
+    try {
+      if (typeof window !== 'undefined') {
+        window.__vildaSuspendAdvIntakeSync = true;
+        window.__vildaSuspendGrowthHistoryCrossSync = true;
+        window.__vildaSuspendIntakeUserReset = true;
+        window.__vildaPersistPauseUntil = Math.max(Number(window.__vildaPersistPauseUntil || 0), Date.now() + 1200);
+        window.__vildaSuppressGhAdvancedImportUntil = Date.now() + 4000;
+      }
+    } catch (_) {}
+
+    try {
+      const advWrap = q('advMeasurements');
+      if (advWrap) advWrap.innerHTML = '';
+      if (typeof addAdvMeasurementRow === 'function' && advWrap) {
+        addAdvMeasurementRow();
+      }
+    } catch (_) {}
+
+    try {
+      const basicWrap = q('basicGrowthMeasurements');
+      if (basicWrap) basicWrap.innerHTML = '';
+      if (typeof window !== 'undefined' && typeof window.addBasicGrowthMeasurementRow === 'function' && basicWrap) {
+        window.addBasicGrowthMeasurementRow();
+      }
+    } catch (_) {}
+
+    try {
+      const intakeWrap = q('intakeMeasurements');
+      if (intakeWrap) intakeWrap.innerHTML = '';
+    } catch (_) {}
+
+    try { if (typeof updateRemoveButtons === 'function') updateRemoveButtons(); } catch (_) {}
+    try { if (typeof calculateGrowthAdvanced === 'function') calculateGrowthAdvanced(); } catch (_) {}
+    try {
+      if (typeof window !== 'undefined' && typeof window.calculateBasicGrowth === 'function') {
+        window.calculateBasicGrowth();
+      }
+    } catch (_) {}
+    try { if (typeof updateIntakeRemoveButtons === 'function') updateIntakeRemoveButtons(); } catch (_) {}
+    try { if (typeof debouncedIntakeCalc === 'function') debouncedIntakeCalc(); } catch (_) {}
+
+    try {
+      setTimeout(() => {
+        try {
+          if (typeof window !== 'undefined') {
+            window.__vildaSuspendAdvIntakeSync = false;
+            window.__vildaSuspendGrowthHistoryCrossSync = false;
+            window.__vildaSuspendIntakeUserReset = false;
+          }
+        } catch (_) {}
+        try {
+          if (typeof window !== 'undefined' && typeof window.vildaEnsureAdvancedIntakePairing === 'function') {
+            window.vildaEnsureAdvancedIntakePairing();
+          }
+        } catch (_) {}
+        try {
+          if (typeof window !== 'undefined' && typeof window.reconcileGrowthHistoryModules === 'function') {
+            window.reconcileGrowthHistoryModules('advanced');
+          }
+        } catch (_) {}
+      }, 0);
+    } catch (_) {}
+  }
+
   function clearAllData(){
     try {
       if (typeof window !== 'undefined') {
         window.__vildaPersistClearUntil = Date.now() + 1500;
+        window.__vildaSuppressGhAdvancedImportUntil = Date.now() + 4000;
       }
     } catch (_) {}
 
@@ -22836,6 +22973,9 @@ function rehydrateIntakeFromState(savedPal){
       const intakeWrap = q('intakeMeasurements'); if(intakeWrap) intakeWrap.innerHTML='';
       document.querySelectorAll('.food-row').forEach(el => el.remove());
     } catch(_){}
+    // Odbuduj moduły historii wzrastania do czystego, przewidywalnego stanu.
+    resetGrowthHistoryModulesAfterClear();
+
     // Ukryj komunikat o wczytaniu danych, jeśli był widoczny
     hideLoadDataMessage();
     // Po pełnym resecie należy umożliwić ponowne pojawianie się instrukcji,
@@ -22953,6 +23093,14 @@ function rehydrateIntakeFromState(savedPal){
       if (typeof localStorage !== 'undefined') {
         localStorage.removeItem('ghTherapyPoints');
       }
+      try {
+        if (ghTherapyBroadcastChannel && typeof ghTherapyBroadcastChannel.postMessage === 'function') {
+          ghTherapyBroadcastChannel.postMessage({ type: 'clear' });
+        }
+      } catch (_) {}
+      try {
+        clearTherapyPointsInDB().catch(() => {});
+      } catch (_) {}
       // Odśwież tabelę monitorowania, jeśli moduł jest dostępny
       if (typeof window.refreshGHTherapyMonitor === 'function') {
         window.refreshGHTherapyMonitor();
