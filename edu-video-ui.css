@@ -272,6 +272,32 @@
   background: #000;
 }
 
+.edu-video-shell--portrait {
+  max-width: 520px;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.edu-video-shell--portrait .edu-video-frame {
+  box-sizing: border-box;
+  width: min(100%, 440px);
+  margin-inline: auto;
+  aspect-ratio: 440 / 956;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 28px;
+}
+
+.edu-video-shell--portrait .edu-video-frame video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 22px;
+}
+
 .resource-actions {
   margin-top: auto;
 }

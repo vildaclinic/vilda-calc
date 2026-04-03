@@ -321,6 +321,16 @@
       el.classList.remove('rr-warning','rr-danger');
       el.innerHTML = '<p class="circ-placeholder">' + text + '</p>';
     }
+    function clearHeadGlobals() {
+      if (typeof window === 'undefined') return;
+      try { window.headCircPercentile = undefined; } catch (_) {}
+      try { window.headCircSD = undefined; } catch (_) {}
+    }
+    function clearChestGlobals() {
+      if (typeof window === 'undefined') return;
+      try { window.chestCircPercentile = undefined; } catch (_) {}
+      try { window.chestCircSD = undefined; } catch (_) {}
+    }
 
     // Wiek sprawdzamy w granicach 0–18.5 lat (dane z tabel). Jeśli poza zakresem, pokazujemy info.
     const outOfRange = ageYears < 0 || ageYears > 18.5;
@@ -328,6 +338,7 @@
     // Aktualizuj obwód głowy
     if (headResultEl) {
       if (!headVal || !isFinite(headVal) || outOfRange) {
+        clearHeadGlobals();
         setPlaceholder(headResultEl, 'Wpisz obwód głowy (cm), aby zobaczyć wynik.');
       } else {
         const data = sex === 'M' ? HEAD_BOYS_DATA : HEAD_GIRLS_DATA;
@@ -380,6 +391,7 @@
     // Aktualizuj obwód klatki piersiowej
     if (chestResultEl) {
       if (!chestVal || !isFinite(chestVal) || outOfRange) {
+        clearChestGlobals();
         setPlaceholder(chestResultEl, 'Wpisz obwód klatki piersiowej (cm), aby zobaczyć wynik.');
       } else {
         const data = sex === 'M' ? CHEST_BOYS_DATA : CHEST_GIRLS_DATA;

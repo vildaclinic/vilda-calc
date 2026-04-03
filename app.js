@@ -14654,14 +14654,16 @@ function generateMetabolicSummary() {
     }
   }
   // Ciśnienie – odczytaj globalne zmienne ustawione przez bp_module.js
-  if (typeof window.percSbp === 'number' && !isNaN(window.percSbp)) {
+  const bpSystolicCurrent = parseFloat(document.getElementById('bpSystolic')?.value);
+  const bpDiastolicCurrent = parseFloat(document.getElementById('bpDiastolic')?.value);
+  if (bpSystolicCurrent > 0 && typeof window.percSbp === 'number' && !isNaN(window.percSbp)) {
     let line = `Ciśnienie skurczowe: ${Math.round(window.percSbp)} centyl`;
     if (pro && typeof window.zSbp === 'number' && !isNaN(window.zSbp)) {
       line += ` (Z‑score = ${window.zSbp.toFixed(2).replace('.', ',')})`;
     }
     lines.push(line);
   }
-  if (typeof window.percDbp === 'number' && !isNaN(window.percDbp)) {
+  if (bpDiastolicCurrent > 0 && typeof window.percDbp === 'number' && !isNaN(window.percDbp)) {
     let line = `Ciśnienie rozkurczowe: ${Math.round(window.percDbp)} centyl`;
     if (pro && typeof window.zDbp === 'number' && !isNaN(window.zDbp)) {
       line += ` (Z‑score = ${window.zDbp.toFixed(2).replace('.', ',')})`;
@@ -14669,14 +14671,16 @@ function generateMetabolicSummary() {
     lines.push(line);
   }
   // Obwód głowy i klatki piersiowej – ustawiane przez circumference_module.js
-  if (typeof window.headCircPercentile === 'number' && isFinite(window.headCircPercentile)) {
+  const headCircCurrent = parseFloat(document.getElementById('headCircumference')?.value);
+  const chestCircCurrent = parseFloat(document.getElementById('chestCircumference')?.value);
+  if (headCircCurrent > 0 && typeof window.headCircPercentile === 'number' && isFinite(window.headCircPercentile)) {
     let line = `Obwód głowy: ${Math.round(window.headCircPercentile)} centyl`;
     if (pro && typeof window.headCircSD === 'number' && isFinite(window.headCircSD)) {
       line += ` (Z‑score = ${window.headCircSD.toFixed(2).replace('.', ',')})`;
     }
     lines.push(line);
   }
-  if (typeof window.chestCircPercentile === 'number' && isFinite(window.chestCircPercentile)) {
+  if (chestCircCurrent > 0 && typeof window.chestCircPercentile === 'number' && isFinite(window.chestCircPercentile)) {
     let line = `Obwód klatki piersiowej: ${Math.round(window.chestCircPercentile)} centyl`;
     if (pro && typeof window.chestCircSD === 'number' && isFinite(window.chestCircSD)) {
       line += ` (Z‑score = ${window.chestCircSD.toFixed(2).replace('.', ',')})`;
@@ -23130,11 +23134,16 @@ function rehydrateIntakeFromState(savedPal, options){
     } catch (_) {}
 
     // Reset visible fields
-    ['name','advName','basicGrowthName','age','ageMonths','weight','height','waistCm','hipCm','advBoneAge','advMotherHeight','advFatherHeight']
-      .forEach(id=>{ const el=q(id); if(el){
-        el.disabled=false;
-        el.value='';
-      } });
+    [
+      'name','advName','basicGrowthName','age','ageMonths','weight','height','waistCm','hipCm',
+      'advBoneAge','advMotherHeight','advFatherHeight',
+      'heartRate','hrTemperature','bpSystolic','bpDiastolic',
+      'respiratoryRateInput','respTemperature',
+      'headCircumference','chestCircumference','headCircumDS'
+    ].forEach(id=>{ const el=q(id); if(el){
+      el.disabled=false;
+      el.value='';
+    } });
         // Reset selects
         if (q('sex')) {
           q('sex').disabled = false; // po pełnym resecie płeć znowu edytowalna
@@ -23143,6 +23152,30 @@ function rehydrateIntakeFromState(savedPal, options){
         }
         if(q('intakePal')) q('intakePal').value = '1.4';
         if(q('palFactor')) q('palFactor').value = '1.4';
+        if (q('hrPopulation')) q('hrPopulation').value = 'healthy';
+        if (q('respState')) q('respState').value = 'awake';
+        if (q('respPopulation')) q('respPopulation').value = 'healthy';
+        if (q('bpDataToggle')) {
+          q('bpDataToggle').checked = false;
+          try {
+            if (q('bpDataToggle').dataset && Object.prototype.hasOwnProperty.call(q('bpDataToggle').dataset, 'manual')) {
+              delete q('bpDataToggle').dataset.manual;
+            }
+          } catch (_) {}
+        }
+
+    // Wyczyść globalne wyniki modułów pomocniczych, aby karta „Podsumowanie wyników”
+    // nie utrzymywała starych centyli RR / obwodów po pełnym resecie.
+    try {
+      if (typeof window !== 'undefined') {
+        [
+          'percSbp','percDbp','zSbp','zDbp',
+          'headCircPercentile','headCircSD','chestCircPercentile','chestCircSD'
+        ].forEach((key) => {
+          try { window[key] = undefined; } catch (_) {}
+        });
+      }
+    } catch (_) {}
 
     // Reset globals
     try { window.advancedGrowthData = { measurements: [] }; } catch(_){}
@@ -23234,6 +23267,30 @@ function rehydrateIntakeFromState(savedPal, options){
       } catch (_) {
         /* ignore errors while hiding extra plan/konsultacja elements */
       }
+    } catch (_) {}
+
+    try {
+      setTimeout(() => {
+        try {
+          const fieldIds = [
+            'age','ageMonths','height','weight','sex',
+            'heartRate','hrTemperature','hrPopulation','bpSystolic','bpDiastolic',
+            'respiratoryRateInput','respTemperature','respState','respPopulation',
+            'headCircumference','chestCircumference','headCircumDS'
+          ];
+          fieldIds.forEach((id) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            try { el.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
+            try { el.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+          });
+        } catch (_) {}
+        try {
+          if (typeof updateProfessionalSummaryCard === 'function') {
+            updateProfessionalSummaryCard();
+          }
+        } catch (_) {}
+      }, 0);
     } catch (_) {}
 
     if(typeof debouncedUpdate==='function') debouncedUpdate();

@@ -346,6 +346,14 @@
   function updateBP() {
     const resultEl = document.getElementById('bpResult');
     if (!resultEl) return;
+
+    function clearBpGlobals() {
+      if (typeof window === 'undefined') return;
+      try { window.percSbp = undefined; } catch (_) {}
+      try { window.percDbp = undefined; } catch (_) {}
+      try { window.zSbp = undefined; } catch (_) {}
+      try { window.zDbp = undefined; } catch (_) {}
+    }
     // Odczytaj wartości wejściowe
     const ageYears  = (typeof getAgeDecimal === 'function') ? getAgeDecimal() : parseFloat(document.getElementById('age').value) || 0;
     const sexEl     = document.getElementById('sex');
@@ -417,6 +425,7 @@
     // Jeżeli brakuje niezbędnych danych (wiek, wzrost, SBP lub DBP), pokaż komunikat zachęcający do wprowadzenia pomiarów.
     // W tej sytuacji, jeśli wprowadzono tętno, nadal prezentujemy jego centyl.
     if (!ageYears || !heightCm || !sbp || !dbp || !isFinite(ageYears) || !isFinite(heightCm)) {
+      clearBpGlobals();
       clearPulse(resultEl);
       resultEl.className = 'result-box';
       resultEl.classList.remove('rr-warning', 'rr-danger');
@@ -430,6 +439,7 @@
     // Zakres wiekowy dla norm OLAF: 3–18 lat (36–216 mies.). Jeśli poza zakresem, informujemy.
     // Wynik tętna (jeśli dostępny) jest nadal prezentowany.
     if (ageYears * 12 < 36 || ageYears * 12 > 216) {
+      clearBpGlobals();
       let html = '';
       if (hrHtml) html += hrHtml;
       html += '<p>Normy ciśnienia są dostępne dla wieku 3–18&nbsp;lat.</p>';
@@ -443,6 +453,7 @@
     const ageMonths = ageYears * 12;
     const zht = computeHeightZ(sex, ageMonths, heightCm);
     if (typeof zht !== 'number' || isNaN(zht)) {
+      clearBpGlobals();
       let html = '';
       if (hrHtml) html += hrHtml;
       html += '<p>Brak danych do obliczenia centyla (błąd wzrostu).</p>';
