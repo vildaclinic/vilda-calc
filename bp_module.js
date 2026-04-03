@@ -228,7 +228,7 @@
   // Fleming 2011 – siatki centylowe dla populacji zdrowej;
   // Bonafide 2013 – hospitalizowane dzieci;
   // Daymont 2015 – korekta temperatury dla tętna.
-  const HR_SOURCE_HTML = '<p class="source-note">Źródło: Fleming&nbsp;et&nbsp;al.&nbsp;2011, Bonafide&nbsp;et&nbsp;al.&nbsp;2013, Daymont&nbsp;et&nbsp;al.&nbsp;2015</p>';
+  const HR_SOURCE_HTML = '<p class="source-note">Źródło: Fleming et al. 2011, Bonafide et al. 2013, Daymont et al. 2015</p>';
 
   /**
    * Buduje dynamiczny tekst źródłowy dla tętna w zależności od wybranych opcji.
@@ -241,15 +241,15 @@
    */
   function buildHrSourceHTML(opts) {
     const baseSrc = (opts.population === 'hospital')
-      ? 'Bonafide&nbsp;et&nbsp;al.&nbsp;2013'
-      : 'Fleming&nbsp;et&nbsp;al.&nbsp;2011';
+      ? 'Bonafide et al. 2013'
+      : 'Fleming et al. 2011';
     const mods = [];
     if (opts.temperature !== undefined && opts.temperature !== null) {
-      mods.push('o&nbsp;temperaturę&nbsp;(Daymont&nbsp;et&nbsp;al.&nbsp;2015)');
+      mods.push('o temperaturę (Daymont et al. 2015)');
     }
     let note = 'Źródło: ' + baseSrc;
     if (mods.length > 0) {
-      note += '; wynik&nbsp;skorygowano&nbsp;' + mods.join('&nbsp;i&nbsp;');
+      note += '; wynik skorygowano ' + mods.join(' i ');
     }
     return '<p class="source-note">' + note + '</p>';
   }

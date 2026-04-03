@@ -282,9 +282,9 @@
 
 .edu-video-shell--portrait .edu-video-frame {
   box-sizing: border-box;
-  width: min(100%, 440px);
+  width: min(100%, 478px);
   margin-inline: auto;
-  aspect-ratio: 440 / 956;
+  aspect-ratio: 1365 / 2048;
   display: flex;
   align-items: center;
   justify-content: center;

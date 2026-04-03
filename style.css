@@ -1477,9 +1477,23 @@ input[type="submit"]:focus-visible{
    domyślnych ustawień .source-note w innych sekcjach. */
 #respiratoryResult .source-note,
 #bpResult .source-note {
+  display: block;
+  max-width: 100%;
   font-size: 1rem;
   margin-top: 0.4rem;
   color: #555;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  hyphens: auto;
+}
+
+@media (max-width: 640px) {
+  #respiratoryResult .source-note,
+  #bpResult .source-note {
+    font-size: 0.94rem;
+    line-height: 1.45;
+  }
 }
 
 /* Jeżeli użytkownik preferuje redukcję ruchu, zachowujemy puls w karcie Cole’a
