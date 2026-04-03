@@ -492,8 +492,6 @@
     const resetBtn = document.getElementById('resetSgaBirth');
     const messageEl = document.getElementById('sgaBirthMessage');
     const resultsEl = document.getElementById('sgaBirthResults');
-    const modulesWrapper = document.getElementById('modulesWrapper');
-    const zscoreButtonWrapper = document.getElementById('zscoreButtonWrapper');
     const zscoreCard = document.getElementById('zscoreCard');
     let toastTimer = null;
 
@@ -525,35 +523,12 @@
       }
     }
 
-    function insertAfter(parent, node, anchor) {
-      if (!parent || !node || !anchor) return;
-      const next = anchor.nextSibling;
-      if (node.parentNode !== parent) {
-        parent.insertBefore(node, next);
-        return;
-      }
-      if (anchor.nextSibling !== node) {
-        parent.insertBefore(node, next);
-      }
-    }
-
-    function ensureProfessionalCardsPlacement() {
-      if (!modulesWrapper) return;
-      if (zscoreButtonWrapper && zscoreCard) {
-        insertAfter(modulesWrapper, zscoreCard, zscoreButtonWrapper);
-      }
-      if (buttonWrapper && card) {
-        insertAfter(modulesWrapper, card, buttonWrapper);
-      }
-    }
-
     function setInlineOrder(el, value) {
       if (!el) return;
       el.style.order = value == null ? '' : String(value);
     }
 
     function syncZscoreSgaPairLayout() {
-      ensureProfessionalCardsPlacement();
       const zscoreVisible = isElementVisible(zscoreCard);
       if (zscoreVisible) {
         setInlineOrder(buttonWrapper, 7);
@@ -631,7 +606,6 @@
           if (bisphosBtn) bisphosBtn.classList.remove('active-toggle');
         }
       } catch (e) {}
-      ensureProfessionalCardsPlacement();
       card.style.display = 'block';
       toggleBtn.classList.add('active-toggle');
       syncZscoreSgaPairLayout();
@@ -1028,7 +1002,6 @@
     if (buttonWrapper && buttonWrapper.style.display === '') {
       buttonWrapper.style.display = 'none';
     }
-    ensureProfessionalCardsPlacement();
     hideCard();
     resetModule();
     syncZscoreSgaPairLayout();

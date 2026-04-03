@@ -2748,63 +2748,50 @@
   <div id="zscoreButtonWrapper" class="module-btn-wrapper" style="display:none;">
     <button type="button" id="toggleZscore" class="module-btn igf-btn">Kalkulator Z‑score</button>
   </div>
+  <!-- Karta Z‑score pozostaje bezpośrednio pod swoim przyciskiem wewnątrz modulesWrapper.
+       Dzięki temu po otwarciu może „zepchnąć” przycisk SGA niżej, analogicznie do pary
+       „Rak tarczycy u dzieci” / „Leczenie bisfosfonianami”. -->
+  <div id="zscoreCard" class="card" style="display:none;">
+    <h2 style="text-align:center;">Kalkulator Z‑score (batch)</h2>
+    <!--
+      Przykładowe pliki i instrukcja obsługi: użytkownik może pobrać dwa gotowe arkusze
+      demonstrujące prawidłowy układ kolumn wymagany przez aplikację.  Kolumny powinny
+      nosić nazwy: „Lp.” lub „Pacjent” (numer porządkowy lub imię i nazwisko),
+      „Płeć” (M/K), „Data urodzenia” (w formacie YYYY‑MM‑DD), „waga (kg)” oraz „wzrost (cm)”.
+    -->
+    <!-- Instrukcja dla użytkownika korzystającego z kalkulatora Z‑score (batch).
+         Aby była bardziej zrozumiała, dzielimy ją na dwa zdania i zwiększamy
+         rozmiar czcionki.  Tekst jest wyśrodkowany, dzięki czemu odróżnia się
+         wizualnie od pozostałych elementów formularza. -->
+    <p style="text-align:center; font-size:1.15rem; margin-top:0.8rem; line-height:1.4;">
+      Przygotuj arkusz Excel (.xlsx) z kolumnami: imię i nazwisko (lub numer porządkowy), płeć (M/K),
+      data urodzenia, waga (kg) i wzrost (cm).<br>
+      Upewnij się, że liczba wierszy nie przekracza 250. Następnie wybierz odpowiedni zestaw
+      danych (Palczewska lub OLAF) i kliknij „Oblicz Z‑score”.
+    </p>
+    <p style="text-align:center; margin-top:0.5rem;">
+      <a href="zscore_przyklad_palczewska.xlsx" download>Przykładowy plik Palczewska (XLSX)</a>
+      &nbsp;|&nbsp;
+      <a href="zscore_przyklad_olaf.xlsx" download>Przykładowy plik OLAF (XLSX)</a>
+    </p>
+    <div class="flex zscore-source-buttons" style="gap:1rem; margin-top:0.6rem; justify-content:center;">
+      <!-- Przyciski wyboru źródła danych nie dziedziczą stylu .igf-btn.
+           Dzięki temu mogą pozostać neutralne (przezroczyste tło) i
+           jedynie zmieniać kolor obramowania po wybraniu (klasa .active-toggle). -->
+      <button type="button" id="btnZscorePalczewska">Dane Palczewska</button>
+      <button type="button" id="btnZscoreOlaf" class="active-toggle">Dane OLAF</button>
+    </div>
+    <input type="file" id="zscoreFileInput" accept=".xlsx,.xls" style="margin-top:0.8rem;">
+    <button type="button" id="computeZscoreBatch" class="igf-btn" style="margin-top:0.8rem;">Oblicz Z‑score</button>
+    <div id="zscoreMessage" style="margin-top:0.8rem; color: var(--danger); font-weight:600;"></div>
+  </div>
   <div id="sgaBirthButtonWrapper" class="module-btn-wrapper" style="display:none;">
     <button type="button" id="toggleSgaBirth" class="module-btn igf-btn">SGA (small for gestational age)</button>
   </div>
-  </div><!-- koniec modulesWrapper -->
-</form>
-<div id="errorBox"></div>
-<!-- Kontener na mobilne umiejscowienie przycisku przejścia do modułu lekarskiego.
-     Ten element pozostaje pusty w widoku dwukolumnowym i jest używany
-     wyłącznie przy wąskim oknie, gdy formularz zajmuje całą szerokość.
-     Wówczas sekcja z napisem „Przejdź do modułu lekarskiego” wraz z
-     podtytułem i checkboxem zostanie tutaj przeniesiona. -->
-<div id="doctorMobileContainer"></div>
-    <!-- Kontener dla modułu lekarskiego w widoku desktop – umieszczamy go pod kartami,
-         aby sekcja „Przejdź do modułu lekarskiego” i pole numeru PWZ były
-         wyśrodkowane poniżej kart.  W trybie mobilnym kontener ten jest
-         ukrywany w JS. -->
-    <div id="doctorBottom" class="doctor-bottom-container"></div>
-    <!-- Nowy kalkulator Z‑score (batch) – umożliwia obliczenie wartości Z‑score dla wielu pacjentów z pliku XLSX -->
-    <div id="zscoreCard" class="card" style="display:none;">
-      <h2 style="text-align:center;">Kalkulator Z‑score (batch)</h2>
-      <!--
-        Przykładowe pliki i instrukcja obsługi: użytkownik może pobrać dwa gotowe arkusze
-        demonstrujące prawidłowy układ kolumn wymagany przez aplikację.  Kolumny powinny
-        nosić nazwy: „Lp.” lub „Pacjent” (numer porządkowy lub imię i nazwisko),
-        „Płeć” (M/K), „Data urodzenia” (w formacie YYYY‑MM‑DD), „waga (kg)” oraz „wzrost (cm)”.
-      -->
-      <!-- Instrukcja dla użytkownika korzystającego z kalkulatora Z‑score (batch).
-           Aby była bardziej zrozumiała, dzielimy ją na dwa zdania i zwiększamy
-           rozmiar czcionki.  Tekst jest wyśrodkowany, dzięki czemu odróżnia się
-           wizualnie od pozostałych elementów formularza. -->
-      <p style="text-align:center; font-size:1.15rem; margin-top:0.8rem; line-height:1.4;">
-        Przygotuj arkusz Excel (.xlsx) z kolumnami: imię i nazwisko (lub numer porządkowy), płeć (M/K),
-        data urodzenia, waga (kg) i wzrost (cm).<br>
-        Upewnij się, że liczba wierszy nie przekracza 250. Następnie wybierz odpowiedni zestaw
-        danych (Palczewska lub OLAF) i kliknij „Oblicz Z‑score”.
-      </p>
-      <p style="text-align:center; margin-top:0.5rem;">
-        <a href="zscore_przyklad_palczewska.xlsx" download>Przykładowy plik Palczewska (XLSX)</a>
-        &nbsp;|&nbsp;
-        <a href="zscore_przyklad_olaf.xlsx" download>Przykładowy plik OLAF (XLSX)</a>
-      </p>
-      <div class="flex zscore-source-buttons" style="gap:1rem; margin-top:0.6rem; justify-content:center;">
-        <!-- Przyciski wyboru źródła danych nie dziedziczą stylu .igf-btn.
-             Dzięki temu mogą pozostać neutralne (przezroczyste tło) i
-             jedynie zmieniać kolor obramowania po wybraniu (klasa .active-toggle). -->
-        <button type="button" id="btnZscorePalczewska">Dane Palczewska</button>
-        <button type="button" id="btnZscoreOlaf" class="active-toggle">Dane OLAF</button>
-      </div>
-      <input type="file" id="zscoreFileInput" accept=".xlsx,.xls" style="margin-top:0.8rem;">
-      <button type="button" id="computeZscoreBatch" class="igf-btn" style="margin-top:0.8rem;">Oblicz Z‑score</button>
-      <div id="zscoreMessage" style="margin-top:0.8rem; color: var(--danger); font-weight:600;"></div>
-    </div>
-
-<div id="sgaBirthCard" class="card" style="display:none;">
-  <h2 style="text-align:center;">SGA (small for gestational age)</h2>
-  <p class="sga-birth-intro">Wprowadź dane z okresu urodzeniowego, aby obliczyć SDS masy, długości ciała i obwodu głowy względem wieku ciążowego. Możesz policzyć wynik według Niklasson, według INTERGROWTH-21st albo porównać oba źródła równolegle.</p>
-  <div class="sga-birth-form">
+  <div id="sgaBirthCard" class="card" style="display:none;">
+    <h2 style="text-align:center;">SGA (small for gestational age)</h2>
+    <p class="sga-birth-intro">Wprowadź dane z okresu urodzeniowego, aby obliczyć SDS masy, długości ciała i obwodu głowy względem wieku ciążowego. Możesz policzyć wynik według Niklasson, według INTERGROWTH-21st albo porównać oba źródła równolegle.</p>
+    <div class="sga-birth-form">
     <section class="sga-birth-panel" aria-labelledby="sgaBirthRequiredHeading">
       <h3 id="sgaBirthRequiredHeading">Dane obowiązkowe</h3>
       <div class="sga-birth-field">
@@ -2897,6 +2884,20 @@
   <div id="sgaBirthMessage" class="sga-birth-message" aria-live="polite"></div>
   <div id="sgaBirthResults" class="sga-birth-results" style="display:none;"></div>
 </div>
+  </div><!-- koniec modulesWrapper -->
+</form>
+<div id="errorBox"></div>
+<!-- Kontener na mobilne umiejscowienie przycisku przejścia do modułu lekarskiego.
+     Ten element pozostaje pusty w widoku dwukolumnowym i jest używany
+     wyłącznie przy wąskim oknie, gdy formularz zajmuje całą szerokość.
+     Wówczas sekcja z napisem „Przejdź do modułu lekarskiego” wraz z
+     podtytułem i checkboxem zostanie tutaj przeniesiona. -->
+<div id="doctorMobileContainer"></div>
+    <!-- Kontener dla modułu lekarskiego w widoku desktop – umieszczamy go pod kartami,
+         aby sekcja „Przejdź do modułu lekarskiego” i pole numeru PWZ były
+         wyśrodkowane poniżej kart.  W trybie mobilnym kontener ten jest
+         ukrywany w JS. -->
+    <div id="doctorBottom" class="doctor-bottom-container"></div>
 
   <div id="results" class="grid-two">
     <!-- Lewa kolumna: karta BMI oraz sekcja obliczeń dla dzieci z zespołem Downa
