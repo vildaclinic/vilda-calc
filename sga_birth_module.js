@@ -492,6 +492,9 @@
     const resetBtn = document.getElementById('resetSgaBirth');
     const messageEl = document.getElementById('sgaBirthMessage');
     const resultsEl = document.getElementById('sgaBirthResults');
+    const modulesWrapper = document.getElementById('modulesWrapper');
+    const zscoreButtonWrapper = document.getElementById('zscoreButtonWrapper');
+    const zscoreCard = document.getElementById('zscoreCard');
     let toastTimer = null;
 
     if (!toggleBtn || !card || !messageEl || !resultsEl) return;
@@ -509,6 +512,55 @@
       clearTimeout(toastTimer);
       if (existing) {
         try { existing.remove(); } catch (_) {}
+      }
+    }
+
+    function isElementVisible(el) {
+      if (!el) return false;
+      if (el.style && el.style.display === 'none') return false;
+      try {
+        return window.getComputedStyle(el).display !== 'none';
+      } catch (_) {
+        return el.style.display !== 'none' && el.style.display !== '';
+      }
+    }
+
+    function insertAfter(parent, node, anchor) {
+      if (!parent || !node || !anchor) return;
+      const next = anchor.nextSibling;
+      if (node.parentNode !== parent) {
+        parent.insertBefore(node, next);
+        return;
+      }
+      if (anchor.nextSibling !== node) {
+        parent.insertBefore(node, next);
+      }
+    }
+
+    function ensureProfessionalCardsPlacement() {
+      if (!modulesWrapper) return;
+      if (zscoreButtonWrapper && zscoreCard) {
+        insertAfter(modulesWrapper, zscoreCard, zscoreButtonWrapper);
+      }
+      if (buttonWrapper && card) {
+        insertAfter(modulesWrapper, card, buttonWrapper);
+      }
+    }
+
+    function setInlineOrder(el, value) {
+      if (!el) return;
+      el.style.order = value == null ? '' : String(value);
+    }
+
+    function syncZscoreSgaPairLayout() {
+      ensureProfessionalCardsPlacement();
+      const zscoreVisible = isElementVisible(zscoreCard);
+      if (zscoreVisible) {
+        setInlineOrder(buttonWrapper, 7);
+        setInlineOrder(card, 8);
+      } else {
+        setInlineOrder(buttonWrapper, null);
+        setInlineOrder(card, null);
       }
     }
 
@@ -567,17 +619,10 @@
     function hideCard() {
       card.style.display = 'none';
       toggleBtn.classList.remove('active-toggle');
+      syncZscoreSgaPairLayout();
     }
 
     function showCard() {
-      try {
-        const zscoreCard = document.getElementById('zscoreCard');
-        const zscoreBtn = document.getElementById('toggleZscore');
-        if (zscoreCard && zscoreCard.style.display !== 'none' && zscoreCard.style.display !== '') {
-          zscoreCard.style.display = 'none';
-          if (zscoreBtn) zscoreBtn.classList.remove('active-toggle');
-        }
-      } catch (e) {}
       try {
         const bisphosCard = document.getElementById('bisphosCard');
         const bisphosBtn = document.getElementById('toggleBisphos');
@@ -586,8 +631,10 @@
           if (bisphosBtn) bisphosBtn.classList.remove('active-toggle');
         }
       } catch (e) {}
+      ensureProfessionalCardsPlacement();
       card.style.display = 'block';
       toggleBtn.classList.add('active-toggle');
+      syncZscoreSgaPairLayout();
     }
 
     function collectWarnings(weightG, lengthCm, headCm) {
@@ -962,11 +1009,13 @@
       input.addEventListener('change', recomputeIfNeeded);
     });
 
-    const zscoreBtn = document.getElementById('toggleZscore');
-    if (zscoreBtn) {
-      zscoreBtn.addEventListener('click', function () {
-        hideCard();
-      }, true);
+    if (zscoreCard) {
+      try {
+        const zscoreObserver = new MutationObserver(() => {
+          syncZscoreSgaPairLayout();
+        });
+        zscoreObserver.observe(zscoreCard, { attributes: true, attributeFilter: ['style', 'class'] });
+      } catch (_) {}
     }
 
     const bisphosBtn = document.getElementById('toggleBisphos');
@@ -979,7 +1028,9 @@
     if (buttonWrapper && buttonWrapper.style.display === '') {
       buttonWrapper.style.display = 'none';
     }
+    ensureProfessionalCardsPlacement();
     hideCard();
     resetModule();
+    syncZscoreSgaPairLayout();
   });
 })();

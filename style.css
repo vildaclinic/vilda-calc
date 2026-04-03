@@ -2997,6 +2997,24 @@ body.professional-bg {
 #zscoreCard {
   grid-column: 1 / -1;
 }
+
+#modulesWrapper #zscoreCard,
+#modulesWrapper #sgaBirthCard {
+  width: 100%;
+}
+@media (min-width: 700px) {
+  #modulesWrapper #zscoreCard,
+  #modulesWrapper #sgaBirthCard {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  #modulesWrapper #zscoreCard {
+    order: 6;
+  }
+  #modulesWrapper #sgaBirthCard {
+    order: 6;
+  }
+}
 #ghMonitorBtnWrapper {
   width: 100%;
   display: flex;
