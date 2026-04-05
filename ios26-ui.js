@@ -442,6 +442,7 @@
 
     let browserUiRefreshTimer = 0;
     let lastBrowserUiViewportWidth = getViewportWidth();
+    let lastBrowserUiViewportHeight = getViewportHeight();
     const delayedRefresh = () => safeRun('refreshIconsAndFallbacks', refreshIconsAndFallbacks);
     const delayedDockRetry = () => safeRun('setupMobileBottomDock(retry)', setupMobileBottomDock);
     const delayedTopNavStructureSync = () => safeRun('syncSingleColumnTopNavOrder', syncSingleColumnTopNavOrder);
@@ -500,10 +501,26 @@
     if (window.visualViewport) {
       on(window.visualViewport, 'resize', () => {
         const nextViewportWidth = getViewportWidth();
+        const nextViewportHeight = getViewportHeight();
         const widthDelta = Math.abs(nextViewportWidth - lastBrowserUiViewportWidth);
+        const heightDelta = Math.abs(nextViewportHeight - lastBrowserUiViewportHeight);
+        const widthChanged = widthDelta > 2;
+        const heightOnlyViewportShift = !widthChanged && heightDelta > 2;
 
-        if (widthDelta > 2 || !shouldOptimizeMobileBrowserUi()) {
-          lastBrowserUiViewportWidth = nextViewportWidth;
+        lastBrowserUiViewportWidth = nextViewportWidth;
+        lastBrowserUiViewportHeight = nextViewportHeight;
+
+        /*
+         * W mobilnym Chrome dolny pasek przeglądarki potrafi zmieniać tylko
+         * visual viewport height podczas dojeżdżania do końca strony.
+         * Nie traktujemy tego jako sygnału do przebudowy top-nav i ponownego
+         * audytu nawigacji, bo to może wywołać kosztowny reflow całej strony
+         * i widoczne "podskakiwanie" viewportu przy samym dole.
+         *
+         * Szerokościowe zmiany viewportu (obrót, realny resize, pinch/zoom z
+         * wpływem na layout) nadal uruchamiają pełny sync jak wcześniej.
+         */
+        if (widthChanged) {
           window.setTimeout(delayedTopNavStructureSync, 0);
           window.setTimeout(delayedCompactEducationLabels, 0);
           window.setTimeout(delayedNavigationCoverageAudit, 0);
@@ -512,13 +529,14 @@
           return;
         }
 
+        if (!shouldOptimizeMobileBrowserUi() || !heightOnlyViewportShift) {
+          return;
+        }
+
         window.clearTimeout(browserUiRefreshTimer);
         browserUiRefreshTimer = window.setTimeout(() => {
           lastBrowserUiViewportWidth = getViewportWidth();
-          safeRun('syncSingleColumnTopNavOrder(settled)', syncSingleColumnTopNavOrder);
-          safeRun('syncCompactEducationLabels(settled)', syncCompactEducationLabels);
-          safeRun('auditNavigationCoverage(settled)', auditNavigationCoverage);
-          safeRun('syncMobileTopNavFontSize(settled)', syncMobileTopNavFontSize);
+          lastBrowserUiViewportHeight = getViewportHeight();
           safeRun('applyMobileBrowserUiOptimization(settled)', applyMobileBrowserUiOptimization);
         }, 180);
       }, { passive: true });
