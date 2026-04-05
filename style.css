@@ -6780,7 +6780,9 @@ body.dark-bg-level-2 {
 }
 /* Poziomy płynnego szkła: modyfikacja zmiennych Liquid Glass dla kart
    i przycisków w trybie .liquid-ios26.  Większa wartość = jaśniejsze,
-   bardziej kontrastowe karty względem tła. */
+   bardziej kontrastowe karty względem tła.  Poziomy 3 i 4 wzmacniają nie
+   tylko półprzezroczyste tło, ale też obramowanie oraz cień, żeby karty
+   były wyraźniejsze na słabszych monitorach. */
 body.glass-level-0.liquid-ios26 {
   --lg-surface-light: rgba(255, 255, 255, 0.18) !important;
   --lg-border: rgba(255, 255, 255, 0.32) !important;
@@ -6792,6 +6794,16 @@ body.glass-level-1.liquid-ios26 {
 body.glass-level-2.liquid-ios26 {
   --lg-surface-light: rgba(255, 255, 255, 0.45) !important;
   --lg-border: rgba(255, 255, 255, 0.65) !important;
+}
+body.glass-level-3.liquid-ios26 {
+  --lg-surface-light: rgba(255, 255, 255, 0.58) !important;
+  --lg-border: rgba(255, 255, 255, 0.78) !important;
+  --lg-shadow: 0 10px 32px rgba(0, 0, 0, 0.15) !important;
+}
+body.glass-level-4.liquid-ios26 {
+  --lg-surface-light: rgba(255, 255, 255, 0.72) !important;
+  --lg-border: rgba(255, 255, 255, 0.90) !important;
+  --lg-shadow: 0 12px 36px rgba(0, 0, 0, 0.18) !important;
 }
 
 /* =======================================================================
@@ -7420,4 +7432,837 @@ body #thyroidCancerKidsCard #thyCopyCancer {
 
 #advancedGrowthForm.adv-show-add-divider #advAddMeasurementBtn{
   margin-top:0 !important;
+}
+
+/* ================================================================
+ *  Wysoki kontrast – osobny tryb dostępności
+ *
+ *  Ten tryb jest niezależny od suwaka „Płynne szkło”.
+ *  Poziomy 1–3 stopniowo zwiększają czytelność kart, pól formularzy,
+ *  obramowań, cieni oraz fokusów. Reguły są umieszczone na końcu
+ *  arkusza, aby miały pierwszeństwo nad wcześniejszymi wariantami
+ *  Liquid Glass.
+ */
+body.high-contrast-level-0 {
+  /* brak dodatkowych zmian */
+}
+
+body.high-contrast-level-1.liquid-ios26 {
+  --hc-surface: rgba(255, 255, 255, 0.84);
+  --hc-border: rgba(7, 54, 62, 0.18);
+  --hc-shadow: 0 12px 30px rgba(0, 0, 0, 0.10);
+  --hc-button-bg: rgba(255, 255, 255, 0.72);
+  --hc-module-btn-bg: rgba(255, 255, 255, 0.90);
+  --hc-module-btn-hover-bg: rgba(255, 255, 255, 0.95);
+  --hc-module-btn-border: rgba(7, 54, 62, 0.20);
+  --hc-module-btn-shadow: 0 8px 20px rgba(0, 0, 0, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.68);
+  --hc-module-btn-active-bg: rgba(239, 249, 250, 0.95);
+  --hc-module-btn-active-border: rgba(0, 131, 141, 0.46);
+  --hc-module-btn-active-shadow: 0 10px 22px rgba(0, 131, 141, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  --hc-input-bg: rgba(255, 255, 255, 0.96);
+  --hc-input-border: rgba(7, 54, 62, 0.22);
+  --hc-result-bg: rgba(255, 255, 255, 0.93);
+  --hc-text: #10282d;
+  --hc-muted: #35545c;
+  --hc-focus-color: rgba(0, 131, 141, 0.34);
+  --hc-focus-width: 2px;
+  --hc-card-border-width: 1px;
+  --hc-blur: blur(10px) saturate(112%);
+}
+
+body.high-contrast-level-2.liquid-ios26 {
+  --hc-surface: rgba(255, 255, 255, 0.90);
+  --hc-border: rgba(7, 54, 62, 0.24);
+  --hc-shadow: 0 14px 34px rgba(0, 0, 0, 0.13);
+  --hc-button-bg: rgba(255, 255, 255, 0.82);
+  --hc-module-btn-bg: rgba(255, 255, 255, 0.94);
+  --hc-module-btn-hover-bg: rgba(255, 255, 255, 0.98);
+  --hc-module-btn-border: rgba(7, 54, 62, 0.26);
+  --hc-module-btn-shadow: 0 10px 24px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  --hc-module-btn-active-bg: rgba(237, 248, 249, 0.97);
+  --hc-module-btn-active-border: rgba(0, 131, 141, 0.56);
+  --hc-module-btn-active-shadow: 0 12px 26px rgba(0, 131, 141, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.86);
+  --hc-input-bg: rgba(255, 255, 255, 0.98);
+  --hc-input-border: rgba(7, 54, 62, 0.28);
+  --hc-result-bg: rgba(255, 255, 255, 0.96);
+  --hc-text: #0b2227;
+  --hc-muted: #29474f;
+  --hc-focus-color: rgba(0, 131, 141, 0.42);
+  --hc-focus-width: 2.5px;
+  --hc-card-border-width: 1.5px;
+  --hc-blur: blur(8px) saturate(108%);
+}
+
+body.high-contrast-level-3.liquid-ios26 {
+  --hc-surface: rgba(255, 255, 255, 0.96);
+  --hc-border: rgba(7, 54, 62, 0.32);
+  --hc-shadow: 0 16px 38px rgba(0, 0, 0, 0.16);
+  --hc-button-bg: rgba(255, 255, 255, 0.92);
+  --hc-module-btn-bg: rgba(255, 255, 255, 0.98);
+  --hc-module-btn-hover-bg: rgba(255, 255, 255, 1);
+  --hc-module-btn-border: rgba(7, 54, 62, 0.33);
+  --hc-module-btn-shadow: 0 12px 28px rgba(0, 0, 0, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.88);
+  --hc-module-btn-active-bg: rgba(234, 247, 248, 0.99);
+  --hc-module-btn-active-border: rgba(0, 131, 141, 0.66);
+  --hc-module-btn-active-shadow: 0 14px 30px rgba(0, 131, 141, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  --hc-input-bg: rgba(255, 255, 255, 1);
+  --hc-input-border: rgba(7, 54, 62, 0.36);
+  --hc-result-bg: rgba(255, 255, 255, 0.99);
+  --hc-text: #07181c;
+  --hc-muted: #1f3941;
+  --hc-focus-color: rgba(0, 131, 141, 0.50);
+  --hc-focus-width: 3px;
+  --hc-card-border-width: 2px;
+  --hc-blur: blur(6px) saturate(105%);
+}
+
+body.high-contrast-level-1.liquid-ios26 header,
+body.high-contrast-level-2.liquid-ios26 header,
+body.high-contrast-level-3.liquid-ios26 header,
+body.high-contrast-level-1.liquid-ios26 header._glass,
+body.high-contrast-level-2.liquid-ios26 header._glass,
+body.high-contrast-level-3.liquid-ios26 header._glass,
+body.high-contrast-level-1.liquid-ios26 ._glass,
+body.high-contrast-level-2.liquid-ios26 ._glass,
+body.high-contrast-level-3.liquid-ios26 ._glass,
+body.high-contrast-level-1.liquid-ios26 .card,
+body.high-contrast-level-2.liquid-ios26 .card,
+body.high-contrast-level-3.liquid-ios26 .card,
+body.high-contrast-level-1.liquid-ios26 .plan-card,
+body.high-contrast-level-2.liquid-ios26 .plan-card,
+body.high-contrast-level-3.liquid-ios26 .plan-card,
+body.high-contrast-level-1.liquid-ios26 .result-card,
+body.high-contrast-level-2.liquid-ios26 .result-card,
+body.high-contrast-level-3.liquid-ios26 .result-card,
+body.high-contrast-level-1.liquid-ios26 .data-card,
+body.high-contrast-level-2.liquid-ios26 .data-card,
+body.high-contrast-level-3.liquid-ios26 .data-card,
+body.high-contrast-level-1.liquid-ios26 fieldset,
+body.high-contrast-level-2.liquid-ios26 fieldset,
+body.high-contrast-level-3.liquid-ios26 fieldset,
+body.high-contrast-level-1.liquid-ios26 #timesCard,
+body.high-contrast-level-2.liquid-ios26 #timesCard,
+body.high-contrast-level-3.liquid-ios26 #timesCard,
+body.high-contrast-level-1.liquid-ios26 #intakeCard,
+body.high-contrast-level-2.liquid-ios26 #intakeCard,
+body.high-contrast-level-3.liquid-ios26 #intakeCard,
+body.page-settings.high-contrast-level-1 .settings-control-card,
+body.page-settings.high-contrast-level-2 .settings-control-card,
+body.page-settings.high-contrast-level-3 .settings-control-card,
+body.page-settings.high-contrast-level-1 .setting-item,
+body.page-settings.high-contrast-level-2 .setting-item,
+body.page-settings.high-contrast-level-3 .setting-item,
+body.page-settings.high-contrast-level-1 .tech-chart-setting-row,
+body.page-settings.high-contrast-level-2 .tech-chart-setting-row,
+body.page-settings.high-contrast-level-3 .tech-chart-setting-row {
+  background: var(--hc-surface) !important;
+  border: var(--hc-card-border-width) solid var(--hc-border) !important;
+  box-shadow: var(--hc-shadow) !important;
+  backdrop-filter: var(--hc-blur) !important;
+  -webkit-backdrop-filter: var(--hc-blur) !important;
+}
+
+body.high-contrast-level-1.liquid-ios26 .result-box,
+body.high-contrast-level-2.liquid-ios26 .result-box,
+body.high-contrast-level-3.liquid-ios26 .result-box,
+body.high-contrast-level-1.liquid-ios26 .info-card,
+body.high-contrast-level-2.liquid-ios26 .info-card,
+body.high-contrast-level-3.liquid-ios26 .info-card {
+  background: var(--hc-result-bg) !important;
+  color: var(--hc-text) !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.09) !important;
+}
+
+body.high-contrast-level-1.liquid-ios26 #modulesWrapper .module-btn,
+body.high-contrast-level-2.liquid-ios26 #modulesWrapper .module-btn,
+body.high-contrast-level-3.liquid-ios26 #modulesWrapper .module-btn,
+body.high-contrast-level-1.liquid-ios26 #toggleGhTests,
+body.high-contrast-level-2.liquid-ios26 #toggleGhTests,
+body.high-contrast-level-3.liquid-ios26 #toggleGhTests,
+body.high-contrast-level-1.liquid-ios26 #toggleOgttTests,
+body.high-contrast-level-2.liquid-ios26 #toggleOgttTests,
+body.high-contrast-level-3.liquid-ios26 #toggleOgttTests,
+body.high-contrast-level-1.liquid-ios26 #toggleActhTests,
+body.high-contrast-level-2.liquid-ios26 #toggleActhTests,
+body.high-contrast-level-3.liquid-ios26 #toggleActhTests,
+body.high-contrast-level-1.liquid-ios26 .version-option,
+body.high-contrast-level-2.liquid-ios26 .version-option,
+body.high-contrast-level-3.liquid-ios26 .version-option {
+  background: var(--hc-module-btn-bg) !important;
+  color: var(--hc-text) !important;
+  border: var(--hc-card-border-width) solid var(--hc-module-btn-border) !important;
+  box-shadow: var(--hc-module-btn-shadow) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body.high-contrast-level-1.liquid-ios26 #modulesWrapper .module-btn:hover,
+body.high-contrast-level-2.liquid-ios26 #modulesWrapper .module-btn:hover,
+body.high-contrast-level-3.liquid-ios26 #modulesWrapper .module-btn:hover,
+body.high-contrast-level-1.liquid-ios26 #toggleGhTests:hover,
+body.high-contrast-level-2.liquid-ios26 #toggleGhTests:hover,
+body.high-contrast-level-3.liquid-ios26 #toggleGhTests:hover,
+body.high-contrast-level-1.liquid-ios26 #toggleOgttTests:hover,
+body.high-contrast-level-2.liquid-ios26 #toggleOgttTests:hover,
+body.high-contrast-level-3.liquid-ios26 #toggleOgttTests:hover,
+body.high-contrast-level-1.liquid-ios26 #toggleActhTests:hover,
+body.high-contrast-level-2.liquid-ios26 #toggleActhTests:hover,
+body.high-contrast-level-3.liquid-ios26 #toggleActhTests:hover,
+body.high-contrast-level-1.liquid-ios26 .version-option:not(.disabled):hover,
+body.high-contrast-level-2.liquid-ios26 .version-option:not(.disabled):hover,
+body.high-contrast-level-3.liquid-ios26 .version-option:not(.disabled):hover {
+  background: var(--hc-module-btn-hover-bg) !important;
+}
+
+body.high-contrast-level-1.liquid-ios26 #modulesWrapper .module-btn.active-toggle,
+body.high-contrast-level-2.liquid-ios26 #modulesWrapper .module-btn.active-toggle,
+body.high-contrast-level-3.liquid-ios26 #modulesWrapper .module-btn.active-toggle,
+body.high-contrast-level-1.liquid-ios26 #toggleGhTests.active-toggle,
+body.high-contrast-level-2.liquid-ios26 #toggleGhTests.active-toggle,
+body.high-contrast-level-3.liquid-ios26 #toggleGhTests.active-toggle,
+body.high-contrast-level-1.liquid-ios26 #toggleOgttTests.active-toggle,
+body.high-contrast-level-2.liquid-ios26 #toggleOgttTests.active-toggle,
+body.high-contrast-level-3.liquid-ios26 #toggleOgttTests.active-toggle,
+body.high-contrast-level-1.liquid-ios26 #toggleActhTests.active-toggle,
+body.high-contrast-level-2.liquid-ios26 #toggleActhTests.active-toggle,
+body.high-contrast-level-3.liquid-ios26 #toggleActhTests.active-toggle,
+body.high-contrast-level-1.liquid-ios26 .version-option.selected,
+body.high-contrast-level-2.liquid-ios26 .version-option.selected,
+body.high-contrast-level-3.liquid-ios26 .version-option.selected {
+  background: var(--hc-module-btn-active-bg) !important;
+  border-color: var(--hc-module-btn-active-border) !important;
+  box-shadow: 0 0 0 1px rgba(0, 131, 141, 0.12), var(--hc-module-btn-active-shadow) !important;
+}
+
+body.high-contrast-level-1.liquid-ios26 .version-option.disabled,
+body.high-contrast-level-2.liquid-ios26 .version-option.disabled,
+body.high-contrast-level-3.liquid-ios26 .version-option.disabled {
+  background: rgba(255, 255, 255, 0.78) !important;
+  border-color: var(--hc-module-btn-border) !important;
+  color: var(--hc-muted) !important;
+  opacity: 0.72 !important;
+}
+
+
+body.high-contrast-level-1.liquid-ios26 input[type="text"],
+body.high-contrast-level-2.liquid-ios26 input[type="text"],
+body.high-contrast-level-3.liquid-ios26 input[type="text"],
+body.high-contrast-level-1.liquid-ios26 input[type="number"],
+body.high-contrast-level-2.liquid-ios26 input[type="number"],
+body.high-contrast-level-3.liquid-ios26 input[type="number"],
+body.high-contrast-level-1.liquid-ios26 select,
+body.high-contrast-level-2.liquid-ios26 select,
+body.high-contrast-level-3.liquid-ios26 select,
+body.high-contrast-level-1.liquid-ios26 textarea,
+body.high-contrast-level-2.liquid-ios26 textarea,
+body.high-contrast-level-3.liquid-ios26 textarea {
+  background: var(--hc-input-bg) !important;
+  border: var(--hc-card-border-width) solid var(--hc-input-border) !important;
+  color: var(--hc-text) !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.72), 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+}
+
+body.high-contrast-level-1.liquid-ios26 input::placeholder,
+body.high-contrast-level-2.liquid-ios26 input::placeholder,
+body.high-contrast-level-3.liquid-ios26 input::placeholder,
+body.high-contrast-level-1.liquid-ios26 textarea::placeholder,
+body.high-contrast-level-2.liquid-ios26 textarea::placeholder,
+body.high-contrast-level-3.liquid-ios26 textarea::placeholder {
+  color: var(--hc-muted) !important;
+  opacity: 1 !important;
+}
+
+body.high-contrast-level-1.liquid-ios26 .result-number small,
+body.high-contrast-level-2.liquid-ios26 .result-number small,
+body.high-contrast-level-3.liquid-ios26 .result-number small,
+body.high-contrast-level-1.liquid-ios26 small,
+body.high-contrast-level-2.liquid-ios26 small,
+body.high-contrast-level-3.liquid-ios26 small,
+body.high-contrast-level-1.liquid-ios26 .source-note,
+body.high-contrast-level-2.liquid-ios26 .source-note,
+body.high-contrast-level-3.liquid-ios26 .source-note,
+body.high-contrast-level-1.liquid-ios26 .patient-report-summary-hint,
+body.high-contrast-level-2.liquid-ios26 .patient-report-summary-hint,
+body.high-contrast-level-3.liquid-ios26 .patient-report-summary-hint,
+body.page-settings.high-contrast-level-1 .settings-control-desc,
+body.page-settings.high-contrast-level-2 .settings-control-desc,
+body.page-settings.high-contrast-level-3 .settings-control-desc,
+body.page-settings.high-contrast-level-1 .settings-section-note,
+body.page-settings.high-contrast-level-2 .settings-section-note,
+body.page-settings.high-contrast-level-3 .settings-section-note,
+body.page-settings.high-contrast-level-1 .settings-inline-note,
+body.page-settings.high-contrast-level-2 .settings-inline-note,
+body.page-settings.high-contrast-level-3 .settings-inline-note,
+body.page-settings.high-contrast-level-1 .settings-control-hint,
+body.page-settings.high-contrast-level-2 .settings-control-hint,
+body.page-settings.high-contrast-level-3 .settings-control-hint {
+  color: var(--hc-muted) !important;
+  opacity: 1 !important;
+}
+
+body.high-contrast-level-1.liquid-ios26 input:focus-visible,
+body.high-contrast-level-2.liquid-ios26 input:focus-visible,
+body.high-contrast-level-3.liquid-ios26 input:focus-visible,
+body.high-contrast-level-1.liquid-ios26 select:focus-visible,
+body.high-contrast-level-2.liquid-ios26 select:focus-visible,
+body.high-contrast-level-3.liquid-ios26 select:focus-visible,
+body.high-contrast-level-1.liquid-ios26 textarea:focus-visible,
+body.high-contrast-level-2.liquid-ios26 textarea:focus-visible,
+body.high-contrast-level-3.liquid-ios26 textarea:focus-visible,
+body.high-contrast-level-1.liquid-ios26 button:focus-visible,
+body.high-contrast-level-2.liquid-ios26 button:focus-visible,
+body.high-contrast-level-3.liquid-ios26 button:focus-visible,
+body.high-contrast-level-1.liquid-ios26 summary:focus-visible,
+body.high-contrast-level-2.liquid-ios26 summary:focus-visible,
+body.high-contrast-level-3.liquid-ios26 summary:focus-visible,
+body.high-contrast-level-1.liquid-ios26 a:focus-visible,
+body.high-contrast-level-2.liquid-ios26 a:focus-visible,
+body.high-contrast-level-3.liquid-ios26 a:focus-visible {
+  outline: var(--hc-focus-width) solid var(--hc-focus-color) !important;
+  outline-offset: 2px !important;
+}
+
+body.page-settings.high-contrast-level-1 .settings-range-value,
+body.page-settings.high-contrast-level-2 .settings-range-value,
+body.page-settings.high-contrast-level-3 .settings-range-value {
+  background: rgba(255, 255, 255, 0.78) !important;
+  border-color: var(--hc-input-border) !important;
+  color: var(--hc-text) !important;
+}
+
+/* Ustawienia – 6 głównych akordeonów/sekcji też muszą reagować na wysoki kontrast */
+body.page-settings.high-contrast-level-1 .settings-accordion,
+body.page-settings.high-contrast-level-2 .settings-accordion,
+body.page-settings.high-contrast-level-3 .settings-accordion {
+  background: var(--hc-surface) !important;
+  border: var(--hc-card-border-width) solid var(--hc-border) !important;
+  box-shadow: var(--hc-shadow) !important;
+  backdrop-filter: var(--hc-blur) !important;
+  -webkit-backdrop-filter: var(--hc-blur) !important;
+}
+
+body.page-settings.high-contrast-level-1 .settings-accordion > summary,
+body.page-settings.high-contrast-level-2 .settings-accordion > summary,
+body.page-settings.high-contrast-level-3 .settings-accordion > summary {
+  background: var(--hc-module-btn-bg) !important;
+  color: var(--hc-text) !important;
+}
+
+body.page-settings.high-contrast-level-1 .settings-accordion > summary:hover,
+body.page-settings.high-contrast-level-2 .settings-accordion > summary:hover,
+body.page-settings.high-contrast-level-3 .settings-accordion > summary:hover {
+  background: var(--hc-module-btn-hover-bg) !important;
+}
+
+body.page-settings.high-contrast-level-1 .settings-accordion[open],
+body.page-settings.high-contrast-level-2 .settings-accordion[open],
+body.page-settings.high-contrast-level-3 .settings-accordion[open] {
+  border-color: var(--hc-module-btn-active-border) !important;
+  box-shadow: 0 0 0 1px rgba(0, 131, 141, 0.08), var(--hc-shadow) !important;
+}
+
+body.page-settings.high-contrast-level-1 .settings-accordion[open] > summary,
+body.page-settings.high-contrast-level-2 .settings-accordion[open] > summary,
+body.page-settings.high-contrast-level-3 .settings-accordion[open] > summary {
+  background: var(--hc-module-btn-active-bg) !important;
+  box-shadow: inset 0 -1px 0 rgba(0, 131, 141, 0.12) !important;
+}
+
+body.page-settings.high-contrast-level-1 .settings-accordion-title,
+body.page-settings.high-contrast-level-2 .settings-accordion-title,
+body.page-settings.high-contrast-level-3 .settings-accordion-title,
+body.page-settings.high-contrast-level-1 .settings-accordion-index,
+body.page-settings.high-contrast-level-2 .settings-accordion-index,
+body.page-settings.high-contrast-level-3 .settings-accordion-index,
+body.page-settings.high-contrast-level-1 .settings-chevron,
+body.page-settings.high-contrast-level-2 .settings-chevron,
+body.page-settings.high-contrast-level-3 .settings-chevron {
+  color: var(--hc-text) !important;
+}
+
+body.page-settings.high-contrast-level-1 .settings-accordion-text,
+body.page-settings.high-contrast-level-2 .settings-accordion-text,
+body.page-settings.high-contrast-level-3 .settings-accordion-text {
+  color: var(--hc-muted) !important;
+  opacity: 1 !important;
+}
+
+body.page-settings.high-contrast-level-1 .settings-accordion-index,
+body.page-settings.high-contrast-level-2 .settings-accordion-index,
+body.page-settings.high-contrast-level-3 .settings-accordion-index,
+body.page-settings.high-contrast-level-1 .settings-mini-chip,
+body.page-settings.high-contrast-level-2 .settings-mini-chip,
+body.page-settings.high-contrast-level-3 .settings-mini-chip,
+body.page-settings.high-contrast-level-1 .settings-chevron,
+body.page-settings.high-contrast-level-2 .settings-chevron,
+body.page-settings.high-contrast-level-3 .settings-chevron {
+  background: var(--hc-button-bg) !important;
+  border: var(--hc-card-border-width) solid var(--hc-module-btn-border) !important;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06) !important;
+}
+
+body.page-settings.high-contrast-level-1 .settings-accordion[open] .settings-chevron,
+body.page-settings.high-contrast-level-2 .settings-accordion[open] .settings-chevron,
+body.page-settings.high-contrast-level-3 .settings-accordion[open] .settings-chevron {
+  background: var(--hc-module-btn-active-bg) !important;
+  border-color: var(--hc-module-btn-active-border) !important;
+  box-shadow: 0 0 0 1px rgba(0, 131, 141, 0.08), 0 6px 14px rgba(0, 131, 141, 0.08) !important;
+}
+
+body.page-settings.high-contrast-level-1 .settings-panel-inner,
+body.page-settings.high-contrast-level-2 .settings-panel-inner,
+body.page-settings.high-contrast-level-3 .settings-panel-inner {
+  border-top-color: rgba(7, 54, 62, 0.14) !important;
+}
+
+/* Instrukcja – wysoki kontrast dla kafli, akordeonu i przycisków */
+body.high-contrast-level-1.liquid-ios26 .guide-hero,
+body.high-contrast-level-2.liquid-ios26 .guide-hero,
+body.high-contrast-level-3.liquid-ios26 .guide-hero,
+body.high-contrast-level-1.liquid-ios26 .guide-inline-details,
+body.high-contrast-level-2.liquid-ios26 .guide-inline-details,
+body.high-contrast-level-3.liquid-ios26 .guide-inline-details,
+body.high-contrast-level-1.liquid-ios26 .guide-accordion-item,
+body.high-contrast-level-2.liquid-ios26 .guide-accordion-item,
+body.high-contrast-level-3.liquid-ios26 .guide-accordion-item {
+  background: var(--hc-surface) !important;
+  border: var(--hc-card-border-width) solid var(--hc-border) !important;
+  box-shadow: var(--hc-shadow) !important;
+  backdrop-filter: var(--hc-blur) !important;
+  -webkit-backdrop-filter: var(--hc-blur) !important;
+}
+
+body.high-contrast-level-1.liquid-ios26 .guide-inline-head,
+body.high-contrast-level-2.liquid-ios26 .guide-inline-head,
+body.high-contrast-level-3.liquid-ios26 .guide-inline-head {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.08)) !important;
+  border-bottom: var(--hc-card-border-width) solid var(--hc-border) !important;
+}
+
+body.high-contrast-level-1.liquid-ios26 .guide-tile,
+body.high-contrast-level-2.liquid-ios26 .guide-tile,
+body.high-contrast-level-3.liquid-ios26 .guide-tile,
+body.high-contrast-level-1.liquid-ios26 .guide-collapse-btn,
+body.high-contrast-level-2.liquid-ios26 .guide-collapse-btn,
+body.high-contrast-level-3.liquid-ios26 .guide-collapse-btn {
+  background: var(--hc-module-btn-bg) !important;
+  color: var(--hc-text) !important;
+  border: var(--hc-card-border-width) solid var(--hc-module-btn-border) !important;
+  box-shadow: var(--hc-module-btn-shadow) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body.high-contrast-level-1.liquid-ios26 .guide-tile:hover,
+body.high-contrast-level-2.liquid-ios26 .guide-tile:hover,
+body.high-contrast-level-3.liquid-ios26 .guide-tile:hover,
+body.high-contrast-level-1.liquid-ios26 .guide-collapse-btn:hover,
+body.high-contrast-level-2.liquid-ios26 .guide-collapse-btn:hover,
+body.high-contrast-level-3.liquid-ios26 .guide-collapse-btn:hover {
+  background: var(--hc-module-btn-hover-bg) !important;
+  border-color: var(--hc-module-btn-border) !important;
+}
+
+body.high-contrast-level-1.liquid-ios26 .guide-tile.is-active,
+body.high-contrast-level-2.liquid-ios26 .guide-tile.is-active,
+body.high-contrast-level-3.liquid-ios26 .guide-tile.is-active,
+body.high-contrast-level-1.liquid-ios26 .guide-accordion-item[open],
+body.high-contrast-level-2.liquid-ios26 .guide-accordion-item[open],
+body.high-contrast-level-3.liquid-ios26 .guide-accordion-item[open] {
+  background: var(--hc-module-btn-active-bg) !important;
+  border-color: var(--hc-module-btn-active-border) !important;
+  box-shadow: 0 0 0 1px rgba(0, 131, 141, 0.10), var(--hc-module-btn-active-shadow) !important;
+}
+
+body.high-contrast-level-1.liquid-ios26 .guide-inline-count,
+body.high-contrast-level-2.liquid-ios26 .guide-inline-count,
+body.high-contrast-level-3.liquid-ios26 .guide-inline-count,
+body.high-contrast-level-1.liquid-ios26 .guide-tile-count,
+body.high-contrast-level-2.liquid-ios26 .guide-tile-count,
+body.high-contrast-level-3.liquid-ios26 .guide-tile-count,
+body.high-contrast-level-1.liquid-ios26 .guide-module-badge,
+body.high-contrast-level-2.liquid-ios26 .guide-module-badge,
+body.high-contrast-level-3.liquid-ios26 .guide-module-badge {
+  background: var(--hc-button-bg) !important;
+  color: var(--hc-text) !important;
+  border: var(--hc-card-border-width) solid var(--hc-input-border) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body.high-contrast-level-1.liquid-ios26 .guide-module-copy,
+body.high-contrast-level-2.liquid-ios26 .guide-module-copy,
+body.high-contrast-level-3.liquid-ios26 .guide-module-copy,
+body.high-contrast-level-1.liquid-ios26 .guide-placeholder,
+body.high-contrast-level-2.liquid-ios26 .guide-placeholder,
+body.high-contrast-level-3.liquid-ios26 .guide-placeholder {
+  background: var(--hc-result-bg) !important;
+  color: var(--hc-text) !important;
+  border: var(--hc-card-border-width) solid var(--hc-input-border) !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body.high-contrast-level-1.liquid-ios26 .guide-accordion-item > summary,
+body.high-contrast-level-2.liquid-ios26 .guide-accordion-item > summary,
+body.high-contrast-level-3.liquid-ios26 .guide-accordion-item > summary,
+body.high-contrast-level-1.liquid-ios26 .guide-title,
+body.high-contrast-level-2.liquid-ios26 .guide-title,
+body.high-contrast-level-3.liquid-ios26 .guide-title,
+body.high-contrast-level-1.liquid-ios26 .guide-inline-title,
+body.high-contrast-level-2.liquid-ios26 .guide-inline-title,
+body.high-contrast-level-3.liquid-ios26 .guide-inline-title,
+body.high-contrast-level-1.liquid-ios26 .guide-tile-title,
+body.high-contrast-level-2.liquid-ios26 .guide-tile-title,
+body.high-contrast-level-3.liquid-ios26 .guide-tile-title {
+  color: var(--hc-text) !important;
+}
+
+body.high-contrast-level-1.liquid-ios26 .guide-accordion-item > summary:hover,
+body.high-contrast-level-2.liquid-ios26 .guide-accordion-item > summary:hover,
+body.high-contrast-level-3.liquid-ios26 .guide-accordion-item > summary:hover {
+  background: rgba(255, 255, 255, 0.18) !important;
+}
+
+body.high-contrast-level-1.liquid-ios26 .guide-lead,
+body.high-contrast-level-2.liquid-ios26 .guide-lead,
+body.high-contrast-level-3.liquid-ios26 .guide-lead,
+body.high-contrast-level-1.liquid-ios26 .guide-tile-copy,
+body.high-contrast-level-2.liquid-ios26 .guide-tile-copy,
+body.high-contrast-level-3.liquid-ios26 .guide-tile-copy,
+body.high-contrast-level-1.liquid-ios26 .guide-module-badge,
+body.high-contrast-level-2.liquid-ios26 .guide-module-badge,
+body.high-contrast-level-3.liquid-ios26 .guide-module-badge {
+  color: var(--hc-muted) !important;
+  opacity: 1 !important;
+}
+
+body.high-contrast-level-1.liquid-ios26 .guide-tile-icon,
+body.high-contrast-level-2.liquid-ios26 .guide-tile-icon,
+body.high-contrast-level-3.liquid-ios26 .guide-tile-icon,
+body.high-contrast-level-1.liquid-ios26 .guide-accordion-index,
+body.high-contrast-level-2.liquid-ios26 .guide-accordion-index,
+body.high-contrast-level-3.liquid-ios26 .guide-accordion-index {
+  background: rgba(255, 255, 255, 0.86) !important;
+  color: var(--hc-text) !important;
+  border: var(--hc-card-border-width) solid var(--hc-input-border) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06) !important;
+}
+
+body.high-contrast-level-1.liquid-ios26 .guide-tile-footer,
+body.high-contrast-level-2.liquid-ios26 .guide-tile-footer,
+body.high-contrast-level-3.liquid-ios26 .guide-tile-footer,
+body.high-contrast-level-1.liquid-ios26 .guide-inline-count,
+body.high-contrast-level-2.liquid-ios26 .guide-inline-count,
+body.high-contrast-level-3.liquid-ios26 .guide-inline-count,
+body.high-contrast-level-1.liquid-ios26 .guide-tile-count,
+body.high-contrast-level-2.liquid-ios26 .guide-tile-count,
+body.high-contrast-level-3.liquid-ios26 .guide-tile-count {
+  color: var(--hc-text) !important;
+}
+
+body.high-contrast-level-1.liquid-ios26 .guide-accordion-chevron,
+body.high-contrast-level-2.liquid-ios26 .guide-accordion-chevron,
+body.high-contrast-level-3.liquid-ios26 .guide-accordion-chevron {
+  border-right-color: var(--hc-muted) !important;
+  border-bottom-color: var(--hc-muted) !important;
+}
+
+body.high-contrast-level-1.liquid-ios26 .guide-module-badge-user,
+body.high-contrast-level-2.liquid-ios26 .guide-module-badge-user,
+body.high-contrast-level-3.liquid-ios26 .guide-module-badge-user {
+  background: rgba(0, 176, 166, 0.12) !important;
+  border-color: rgba(0, 131, 141, 0.22) !important;
+  color: #0b5e65 !important;
+}
+
+body.high-contrast-level-1.liquid-ios26 .guide-module-badge-doctor,
+body.high-contrast-level-2.liquid-ios26 .guide-module-badge-doctor,
+body.high-contrast-level-3.liquid-ios26 .guide-module-badge-doctor {
+  background: rgba(153, 0, 255, 0.10) !important;
+  border-color: rgba(123, 44, 191, 0.22) !important;
+  color: #5f3388 !important;
+}
+
+body.high-contrast-level-1.liquid-ios26 .guide-module-badge-shared,
+body.high-contrast-level-2.liquid-ios26 .guide-module-badge-shared,
+body.high-contrast-level-3.liquid-ios26 .guide-module-badge-shared {
+  background: rgba(0, 131, 141, 0.08) !important;
+  border-color: rgba(7, 54, 62, 0.18) !important;
+}
+
+
+/* O aplikacji – wysoki kontrast dla własnych modułów, kart i przycisków */
+body.about-page.high-contrast-level-1.liquid-ios26 .about-hero,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-hero,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-hero,
+body.about-page.high-contrast-level-1.liquid-ios26 .about-panel,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-panel,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-panel,
+body.about-page.high-contrast-level-1.liquid-ios26 .about-card,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-card,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-card,
+body.about-page.high-contrast-level-1.liquid-ios26 .fact-card,
+body.about-page.high-contrast-level-2.liquid-ios26 .fact-card,
+body.about-page.high-contrast-level-3.liquid-ios26 .fact-card,
+body.about-page.high-contrast-level-1.liquid-ios26 .audience-card,
+body.about-page.high-contrast-level-2.liquid-ios26 .audience-card,
+body.about-page.high-contrast-level-3.liquid-ios26 .audience-card,
+body.about-page.high-contrast-level-1.liquid-ios26 .feature-card,
+body.about-page.high-contrast-level-2.liquid-ios26 .feature-card,
+body.about-page.high-contrast-level-3.liquid-ios26 .feature-card,
+body.about-page.high-contrast-level-1.liquid-ios26 .flow-steps li,
+body.about-page.high-contrast-level-2.liquid-ios26 .flow-steps li,
+body.about-page.high-contrast-level-3.liquid-ios26 .flow-steps li,
+body.about-page.high-contrast-level-1.liquid-ios26 footer,
+body.about-page.high-contrast-level-2.liquid-ios26 footer,
+body.about-page.high-contrast-level-3.liquid-ios26 footer {
+  background: var(--hc-surface) !important;
+  border: var(--hc-card-border-width) solid var(--hc-border) !important;
+  box-shadow: var(--hc-shadow) !important;
+  color: var(--hc-text) !important;
+  backdrop-filter: var(--hc-blur) !important;
+  -webkit-backdrop-filter: var(--hc-blur) !important;
+}
+
+body.about-page.high-contrast-level-1.liquid-ios26 .hero-note,
+body.about-page.high-contrast-level-2.liquid-ios26 .hero-note,
+body.about-page.high-contrast-level-3.liquid-ios26 .hero-note,
+body.about-page.high-contrast-level-1.liquid-ios26 .about-callout,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-callout,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-callout {
+  background: var(--hc-result-bg) !important;
+  border: var(--hc-card-border-width) solid var(--hc-input-border) !important;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.08) !important;
+  color: var(--hc-text) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body.about-page.high-contrast-level-1.liquid-ios26 .about-link-card,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-link-card,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-link-card,
+body.about-page.high-contrast-level-1.liquid-ios26 .about-quick-links a,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-quick-links a,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-quick-links a {
+  background: var(--hc-module-btn-bg) !important;
+  color: var(--hc-text) !important;
+  border: var(--hc-card-border-width) solid var(--hc-module-btn-border) !important;
+  box-shadow: var(--hc-module-btn-shadow) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body.about-page.high-contrast-level-1.liquid-ios26 .about-badge,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-badge,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-badge,
+body.about-page.high-contrast-level-1.liquid-ios26 .about-chip,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-chip,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-chip,
+body.about-page.high-contrast-level-1.liquid-ios26 .inline-label,
+body.about-page.high-contrast-level-2.liquid-ios26 .inline-label,
+body.about-page.high-contrast-level-3.liquid-ios26 .inline-label {
+  background: var(--hc-button-bg) !important;
+  color: var(--hc-text) !important;
+  border: var(--hc-card-border-width) solid var(--hc-input-border) !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body.about-page.high-contrast-level-1.liquid-ios26 .about-link-card:hover,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-link-card:hover,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-link-card:hover,
+body.about-page.high-contrast-level-1.liquid-ios26 .about-quick-links a:hover,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-quick-links a:hover,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-quick-links a:hover,
+body.about-page.high-contrast-level-1.liquid-ios26 .about-badge:hover,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-badge:hover,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-badge:hover,
+body.about-page.high-contrast-level-1.liquid-ios26 .about-chip:hover,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-chip:hover,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-chip:hover {
+  background: var(--hc-module-btn-hover-bg) !important;
+  border-color: var(--hc-module-btn-border) !important;
+}
+
+body.about-page.high-contrast-level-1.liquid-ios26 .about-warning,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-warning,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-warning {
+  background: linear-gradient(180deg, rgba(255, 252, 248, 0.98), rgba(255, 246, 238, 0.96)) !important;
+  border-color: rgba(180, 83, 9, 0.24) !important;
+}
+
+body.about-page.high-contrast-level-1.liquid-ios26 .about-quick-links a.warning-link,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-quick-links a.warning-link,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-quick-links a.warning-link {
+  background: linear-gradient(180deg, rgba(255, 252, 248, 0.99), rgba(255, 246, 238, 0.97)) !important;
+  border-color: rgba(180, 83, 9, 0.26) !important;
+  color: #7c360a !important;
+}
+
+body.about-page.high-contrast-level-1.liquid-ios26 .about-quick-links a.warning-link:hover,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-quick-links a.warning-link:hover,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-quick-links a.warning-link:hover {
+  background: linear-gradient(180deg, rgba(255, 254, 251, 1), rgba(255, 249, 242, 0.98)) !important;
+}
+
+body.about-page.high-contrast-level-1.liquid-ios26 .about-hero::before,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-hero::before,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-hero::before {
+  background:
+    radial-gradient(circle at top right, rgba(0, 131, 141, 0.08), transparent 36%),
+    radial-gradient(circle at bottom left, rgba(0, 131, 141, 0.05), transparent 34%) !important;
+}
+
+body.about-page.high-contrast-level-1.liquid-ios26 .about-hero h2,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-hero h2,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-hero h2,
+body.about-page.high-contrast-level-1.liquid-ios26 .about-panel h2,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-panel h2,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-panel h2,
+body.about-page.high-contrast-level-1.liquid-ios26 .about-card h2,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-card h2,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-card h2,
+body.about-page.high-contrast-level-1.liquid-ios26 .about-panel h3,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-panel h3,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-panel h3,
+body.about-page.high-contrast-level-1.liquid-ios26 .about-card h3,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-card h3,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-card h3,
+body.about-page.high-contrast-level-1.liquid-ios26 .fact-card h3,
+body.about-page.high-contrast-level-2.liquid-ios26 .fact-card h3,
+body.about-page.high-contrast-level-3.liquid-ios26 .fact-card h3,
+body.about-page.high-contrast-level-1.liquid-ios26 .audience-card h3,
+body.about-page.high-contrast-level-2.liquid-ios26 .audience-card h3,
+body.about-page.high-contrast-level-3.liquid-ios26 .audience-card h3,
+body.about-page.high-contrast-level-1.liquid-ios26 .feature-card h3,
+body.about-page.high-contrast-level-2.liquid-ios26 .feature-card h3,
+body.about-page.high-contrast-level-3.liquid-ios26 .feature-card h3,
+body.about-page.high-contrast-level-1.liquid-ios26 .about-link-card,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-link-card,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-link-card,
+body.about-page.high-contrast-level-1.liquid-ios26 .about-quick-links a,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-quick-links a,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-quick-links a,
+body.about-page.high-contrast-level-1.liquid-ios26 .about-badge,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-badge,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-badge,
+body.about-page.high-contrast-level-1.liquid-ios26 .about-chip,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-chip,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-chip,
+body.about-page.high-contrast-level-1.liquid-ios26 .inline-label,
+body.about-page.high-contrast-level-2.liquid-ios26 .inline-label,
+body.about-page.high-contrast-level-3.liquid-ios26 .inline-label,
+body.about-page.high-contrast-level-1.liquid-ios26 .hero-note strong,
+body.about-page.high-contrast-level-2.liquid-ios26 .hero-note strong,
+body.about-page.high-contrast-level-3.liquid-ios26 .hero-note strong,
+body.about-page.high-contrast-level-1.liquid-ios26 .about-panel strong,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-panel strong,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-panel strong,
+body.about-page.high-contrast-level-1.liquid-ios26 .about-card strong,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-card strong,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-card strong,
+body.about-page.high-contrast-level-1.liquid-ios26 .about-hero strong,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-hero strong,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-hero strong,
+body.about-page.high-contrast-level-1.liquid-ios26 footer strong,
+body.about-page.high-contrast-level-2.liquid-ios26 footer strong,
+body.about-page.high-contrast-level-3.liquid-ios26 footer strong,
+body.about-page.high-contrast-level-1.liquid-ios26 footer a,
+body.about-page.high-contrast-level-2.liquid-ios26 footer a,
+body.about-page.high-contrast-level-3.liquid-ios26 footer a {
+  color: var(--hc-text) !important;
+}
+
+body.about-page.high-contrast-level-1.liquid-ios26 .about-hero p,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-hero p,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-hero p,
+body.about-page.high-contrast-level-1.liquid-ios26 .about-card p,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-card p,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-card p,
+body.about-page.high-contrast-level-1.liquid-ios26 .about-panel p,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-panel p,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-panel p,
+body.about-page.high-contrast-level-1.liquid-ios26 .about-panel li,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-panel li,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-panel li,
+body.about-page.high-contrast-level-1.liquid-ios26 .about-card li,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-card li,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-card li,
+body.about-page.high-contrast-level-1.liquid-ios26 .fact-card p,
+body.about-page.high-contrast-level-2.liquid-ios26 .fact-card p,
+body.about-page.high-contrast-level-3.liquid-ios26 .fact-card p,
+body.about-page.high-contrast-level-1.liquid-ios26 .flow-steps li,
+body.about-page.high-contrast-level-2.liquid-ios26 .flow-steps li,
+body.about-page.high-contrast-level-3.liquid-ios26 .flow-steps li,
+body.about-page.high-contrast-level-1.liquid-ios26 .hero-note,
+body.about-page.high-contrast-level-2.liquid-ios26 .hero-note,
+body.about-page.high-contrast-level-3.liquid-ios26 .hero-note,
+body.about-page.high-contrast-level-1.liquid-ios26 .about-callout,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-callout,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-callout,
+body.about-page.high-contrast-level-1.liquid-ios26 footer,
+body.about-page.high-contrast-level-2.liquid-ios26 footer,
+body.about-page.high-contrast-level-3.liquid-ios26 footer {
+  color: var(--hc-text) !important;
+}
+
+body.about-page.high-contrast-level-1.liquid-ios26 .about-muted,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-muted,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-muted {
+  color: var(--hc-muted) !important;
+  opacity: 1 !important;
+}
+
+body.about-page.high-contrast-level-1.liquid-ios26 .about-section-heading .sidebar-icon,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-section-heading .sidebar-icon,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-section-heading .sidebar-icon,
+body.about-page.high-contrast-level-1.liquid-ios26 .audience-card .sidebar-icon,
+body.about-page.high-contrast-level-2.liquid-ios26 .audience-card .sidebar-icon,
+body.about-page.high-contrast-level-3.liquid-ios26 .audience-card .sidebar-icon,
+body.about-page.high-contrast-level-1.liquid-ios26 .feature-card .sidebar-icon,
+body.about-page.high-contrast-level-2.liquid-ios26 .feature-card .sidebar-icon,
+body.about-page.high-contrast-level-3.liquid-ios26 .feature-card .sidebar-icon,
+body.about-page.high-contrast-level-1.liquid-ios26 .about-link-card .sidebar-icon,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-link-card .sidebar-icon,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-link-card .sidebar-icon,
+body.about-page.high-contrast-level-1.liquid-ios26 .about-badge .sidebar-icon,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-badge .sidebar-icon,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-badge .sidebar-icon,
+body.about-page.high-contrast-level-1.liquid-ios26 .about-chip .sidebar-icon,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-chip .sidebar-icon,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-chip .sidebar-icon {
+  color: #0b6a71 !important;
+}
+
+body.about-page.high-contrast-level-1.liquid-ios26 .about-warning h2,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-warning h2,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-warning h2,
+body.about-page.high-contrast-level-1.liquid-ios26 .about-warning .about-section-heading .sidebar-icon,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-warning .about-section-heading .sidebar-icon,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-warning .about-section-heading .sidebar-icon {
+  color: #a14608 !important;
+}
+
+body.about-page.high-contrast-level-1.liquid-ios26 .about-divider,
+body.about-page.high-contrast-level-2.liquid-ios26 .about-divider,
+body.about-page.high-contrast-level-3.liquid-ios26 .about-divider {
+  background: linear-gradient(90deg, transparent, rgba(7, 54, 62, 0.24), transparent) !important;
+}
+
+body.about-page.high-contrast-level-1.liquid-ios26 .flow-steps li::before,
+body.about-page.high-contrast-level-2.liquid-ios26 .flow-steps li::before,
+body.about-page.high-contrast-level-3.liquid-ios26 .flow-steps li::before {
+  background: linear-gradient(135deg, rgba(0, 131, 141, 0.90), rgba(20, 184, 166, 0.88)) !important;
+  color: #ffffff !important;
+  box-shadow: 0 10px 20px rgba(0, 131, 141, 0.18) !important;
+}
+
+body.high-contrast-level-1.liquid-ios26 .guide-inline-details[hidden],
+body.high-contrast-level-2.liquid-ios26 .guide-inline-details[hidden],
+body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
+  display: none !important;
 }

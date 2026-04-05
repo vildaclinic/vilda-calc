@@ -2,19 +2,35 @@
 /*
  * Moduł SGA (small for gestational age).
  * Oblicza SDS masy urodzeniowej, długości ciała i obwodu głowy względem wieku ciążowego.
- * Obsługiwane źródła: Niklasson / Albertsson-Wikland 2008 oraz
- * INTERGROWTH-21st (24+0 do 42+6 tc).
+ * Obsługiwane źródła:
+ * - Niklasson / Albertsson-Wikland 2008,
+ * - INTERGROWTH-21st (24+0 do 42+6 tc),
+ * - Malewski i wsp. (populacja polska, lata 1986–1994; tylko masa urodzeniowa, 22–43 tc).
  *
  * Uwaga implementacyjna:
- * - dla tc 24–40 zastosowano wygładzone wartości z tabeli 4 publikacji,
+ * - dla tc 24–40 zastosowano wygładzone wartości z tabeli 4 publikacji Niklasson,
  * - dla tc 41–42 zastosowano tygodniowe wartości tabelaryczne z tabel 1–3,
  *   ponieważ tabela 4 kończy się na 40 tc,
- * - masa urodzeniowa liczona jest w skali log10(kg).
+ * - masa urodzeniowa w źródle Niklasson liczona jest w skali log10(kg),
+ * - źródło Malewski obejmuje wyłącznie masę urodzeniową; wartości dla dodatkowych dni
+ *   są interpolowane liniowo między kolejnymi tygodniami, a brakujące 5. i 95. centyle
+ *   w najwcześniejszych tygodniach oszacowano z podanej średniej i SD wyłącznie na potrzeby
+ *   obliczeń percentyla/SDS.
  */
 (function () {
   const NIKLASSON_SOURCE_LABEL = 'Niklasson, A., Albertsson-Wikland, K. Continuous growth reference from 24th week of gestation to 24 months by gender. BMC Pediatr 8, 8 (2008). https://doi.org/10.1186/1471-2431-8-8';
   const INTERGROWTH_SOURCE_LABEL = 'INTERGROWTH-21st International Newborn Size References/Standards (24+0-42+6 tc): Villar et al. Lancet 2014;384:857-68 oraz Villar et al. Lancet 2016;387:844-5.';
+  const MALEWSKI_SOURCE_LABEL = 'Malewski i wsp. (populacja polska, lata 1986–1994) – tabela masy urodzeniowej wg wieku ciążowego.';
   const INTERGROWTH_Z_GRID = [-3, -2, -1, 0, 1, 2, 3];
+  const MALEWSKI_PERCENTILE_Z_GRID = [
+    -1.6448536269514729,
+    -1.2815515655446004,
+    -0.6744897501960817,
+    0,
+    0.6744897501960817,
+    1.2815515655446004,
+    1.6448536269514722
+  ];
   const SGA_SOURCE_CONFIG = {
     niklasson: {
       shortLabel: 'Niklasson / Albertsson-Wikland',
@@ -25,8 +41,14 @@
       shortLabel: 'INTERGROWTH-21st',
       helperLabel: 'Wyniki obliczone wg INTERGROWTH-21st.',
       sourceLabel: INTERGROWTH_SOURCE_LABEL
+    },
+    malewski: {
+      shortLabel: 'Malewski i wsp. (PL, masa)',
+      helperLabel: 'Wyniki obliczone wg tabeli Malewski i wsp.',
+      sourceLabel: MALEWSKI_SOURCE_LABEL
     }
   };
+  const SGA_SOURCE_KEYS = ['niklasson', 'intergrowth', 'malewski'];
   const SGA_BIRTH_REFS = {
   "male": {
     "24": {
@@ -346,6 +368,12 @@
     return Number.isFinite(num) ? num : NaN;
   }
 
+  function toFiniteNumberOrNull(value) {
+    if (value == null || value === '') return null;
+    const num = Number(value);
+    return Number.isFinite(num) ? num : null;
+  }
+
   function formatNumber(value, decimals) {
     if (!Number.isFinite(value)) return '–';
     return value.toLocaleString('pl-PL', {
@@ -449,25 +477,45 @@
     return y0 + ((value - x0) / (x1 - x0)) * (y1 - y0);
   }
 
-  function zFromAnchorTable(value, anchors) {
-    if (!Number.isFinite(value) || !Array.isArray(anchors) || anchors.length !== INTERGROWTH_Z_GRID.length) {
+  function zFromAnchorTable(value, anchors, zGrid) {
+    const activeGrid = Array.isArray(zGrid) && zGrid.length === anchors.length ? zGrid : INTERGROWTH_Z_GRID;
+    if (!Number.isFinite(value) || !Array.isArray(anchors) || anchors.length !== activeGrid.length) {
       return null;
     }
     const nums = anchors.map((entry) => Number(entry));
     if (nums.some((entry) => !Number.isFinite(entry))) return null;
 
     if (value <= nums[0]) {
-      return interpolateOnSegment(value, nums[0], nums[1], INTERGROWTH_Z_GRID[0], INTERGROWTH_Z_GRID[1]);
+      return interpolateOnSegment(value, nums[0], nums[1], activeGrid[0], activeGrid[1]);
     }
 
     for (let i = 0; i < nums.length - 1; i += 1) {
       if (value <= nums[i + 1]) {
-        return interpolateOnSegment(value, nums[i], nums[i + 1], INTERGROWTH_Z_GRID[i], INTERGROWTH_Z_GRID[i + 1]);
+        return interpolateOnSegment(value, nums[i], nums[i + 1], activeGrid[i], activeGrid[i + 1]);
       }
     }
 
     const last = nums.length - 1;
-    return interpolateOnSegment(value, nums[last - 1], nums[last], INTERGROWTH_Z_GRID[last - 1], INTERGROWTH_Z_GRID[last]);
+    return interpolateOnSegment(value, nums[last - 1], nums[last], activeGrid[last - 1], activeGrid[last]);
+  }
+
+  function sexLabelForText(sex, form) {
+    const isFemale = sex === 'female';
+    const forms = isFemale
+      ? { singular: 'dziewczynek', noun: 'dziewczynka', short: 'dziewczynek' }
+      : { singular: 'chłopców', noun: 'chłopiec', short: 'chłopców' };
+    return forms[form] || forms.short;
+  }
+
+  function sourceTitle(sourceKey) {
+    return SGA_SOURCE_CONFIG[sourceKey] ? SGA_SOURCE_CONFIG[sourceKey].shortLabel : sourceKey;
+  }
+
+  function sourceRangeText(sourceKey) {
+    if (sourceKey === 'niklasson') return '24–42 tc';
+    if (sourceKey === 'intergrowth') return '24+0 do 42+6 tc';
+    if (sourceKey === 'malewski') return '22–43 tc (tylko masa urodzeniowa)';
+    return '';
   }
 
   function metricCardHtml(title, valueLabel, sds, interpretation) {
@@ -482,6 +530,28 @@
         </dl>
       </div>
     `;
+  }
+
+  function buildMetricResult(title, valueLabel, sds, interpretation) {
+    return {
+      title,
+      valueLabel,
+      sds,
+      percentile: percentileLabel(sds),
+      interpretation,
+      unavailable: false
+    };
+  }
+
+  function buildUnavailableMetricResult(title, interpretation) {
+    return {
+      title,
+      valueLabel: '–',
+      sds: null,
+      percentile: '–',
+      interpretation: interpretation || 'Niedostępne w tym źródle',
+      unavailable: true
+    };
   }
 
   document.addEventListener('DOMContentLoaded', function () {
@@ -573,17 +643,51 @@
       }
     }
 
-    function getSelectedSourceChoice() {
-      const selected = sourceInputs.find((input) => input.checked);
-      return selected ? selected.value : 'niklasson';
+    function normalizeSourceSelection(value) {
+      const seen = new Set();
+      let raw = [];
+
+      if (Array.isArray(value)) {
+        raw = value;
+      } else if (value && typeof value === 'object' && Array.isArray(value.sourceKeys)) {
+        raw = value.sourceKeys;
+      } else if (String(value) === 'compare') {
+        raw = SGA_SOURCE_KEYS.slice();
+      } else if (value != null && value !== '') {
+        raw = [value];
+      }
+
+      const normalized = raw
+        .map((entry) => String(entry))
+        .filter((entry) => SGA_SOURCE_KEYS.includes(entry))
+        .filter((entry) => {
+          if (seen.has(entry)) return false;
+          seen.add(entry);
+          return true;
+        });
+
+      return normalized.length ? normalized : ['niklasson'];
     }
 
-    function setSelectedSourceChoice(value) {
-      const normalized = ['niklasson', 'intergrowth', 'compare'].includes(String(value)) ? String(value) : 'niklasson';
+    function getSelectedSourceKeys() {
+      return sourceInputs
+        .filter((input) => input.checked)
+        .map((input) => String(input.value))
+        .filter((value) => SGA_SOURCE_KEYS.includes(value));
+    }
+
+    function setSelectedSourceKeys(value) {
+      const normalized = normalizeSourceSelection(value);
       sourceInputs.forEach((input) => {
-        input.checked = String(input.value) === normalized;
+        input.checked = normalized.includes(String(input.value));
       });
       return normalized;
+    }
+
+    function ensureValidSourceSelection(preferredValue) {
+      const selected = getSelectedSourceKeys();
+      if (selected.length) return selected;
+      return setSelectedSourceKeys(preferredValue || 'niklasson');
     }
 
     function getSelectedSex() {
@@ -625,10 +729,160 @@
       return warnings;
     }
 
-    function buildStatusSummary(weightSds, lengthSds) {
-      const weightStatus = weightSds == null ? 'Brak danych' : (weightSds < -2 ? 'TAK' : 'NIE');
-      const lengthStatus = lengthSds == null ? 'Brak danych' : (lengthSds < -2 ? 'TAK' : 'NIE');
+    function buildStatusSummary(weightSds, lengthSds, options) {
+      const opts = options && typeof options === 'object' ? options : {};
+      const weightStatus = opts.weightUnavailable
+        ? 'Niedostępne w tym źródle'
+        : (weightSds == null ? 'Brak danych' : (weightSds < -2 ? 'TAK' : 'NIE'));
+      const lengthStatus = opts.lengthUnavailable
+        ? 'Niedostępne w tym źródle'
+        : (lengthSds == null ? 'Brak danych' : (lengthSds < -2 ? 'TAK' : 'NIE'));
       return { weightStatus, lengthStatus };
+    }
+
+    function isNiklassonSupported(weeks) {
+      return Number.isFinite(weeks) && weeks >= 24 && weeks <= 42;
+    }
+
+    function isIntergrowthSupported(weeks, days) {
+      return Number.isFinite(weeks) && weeks >= 24 && weeks <= 42 && Number.isFinite(days) && days >= 0 && days <= 6;
+    }
+
+    function isMalewskiSupported(weeks) {
+      return Number.isFinite(weeks) && weeks >= 22 && weeks <= 43;
+    }
+
+    function isSourceSupportedForAge(sourceKey, weeks, days) {
+      if (sourceKey === 'intergrowth') return isIntergrowthSupported(weeks, days);
+      if (sourceKey === 'malewski') return isMalewskiSupported(weeks);
+      return isNiklassonSupported(weeks);
+    }
+
+    function getMalewskiRawRow(sex, weeks) {
+      try {
+        const root = (typeof window !== 'undefined' && window.SGA_MALEWSKI_WEIGHT && typeof window.SGA_MALEWSKI_WEIGHT === 'object')
+          ? window.SGA_MALEWSKI_WEIGHT
+          : null;
+        const sexKey = sex === 'female' ? 'female' : 'male';
+        const bySex = root && root[sexKey] && typeof root[sexKey] === 'object' ? root[sexKey] : null;
+        const row = bySex ? bySex[String(weeks)] : null;
+        return row && typeof row === 'object' ? row : null;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function estimateMalewskiTail(meanG, sdG, direction) {
+      if (!Number.isFinite(meanG) || !Number.isFinite(sdG) || sdG <= 0) return null;
+      const sign = direction === 'lower' ? -1 : 1;
+      return Math.round(meanG + sign * 1.6448536269514722 * sdG);
+    }
+
+    function normalizeMalewskiRow(raw, week) {
+      if (!raw || typeof raw !== 'object') return null;
+      const out = {
+        week: Number(week),
+        n: toFiniteNumberOrNull(raw.n),
+        meanG: toFiniteNumberOrNull(raw.meanG),
+        sdG: toFiniteNumberOrNull(raw.sdG),
+        p5G: toFiniteNumberOrNull(raw.p5G),
+        p10G: toFiniteNumberOrNull(raw.p10G),
+        p25G: toFiniteNumberOrNull(raw.p25G),
+        p50G: toFiniteNumberOrNull(raw.p50G),
+        p75G: toFiniteNumberOrNull(raw.p75G),
+        p90G: toFiniteNumberOrNull(raw.p90G),
+        p95G: toFiniteNumberOrNull(raw.p95G),
+        estimatedTailFields: []
+      };
+
+      if (!Number.isFinite(out.p5G)) {
+        const est = estimateMalewskiTail(out.meanG, out.sdG, 'lower');
+        if (Number.isFinite(est)) {
+          out.p5G = est;
+          out.estimatedTailFields.push('p5G');
+        }
+      }
+      if (!Number.isFinite(out.p95G)) {
+        const est = estimateMalewskiTail(out.meanG, out.sdG, 'upper');
+        if (Number.isFinite(est)) {
+          out.p95G = est;
+          out.estimatedTailFields.push('p95G');
+        }
+      }
+      if (Number.isFinite(out.p5G) && Number.isFinite(out.p10G) && out.p5G >= out.p10G) {
+        out.p5G = out.p10G - 1;
+      }
+      if (Number.isFinite(out.p90G) && Number.isFinite(out.p95G) && out.p95G <= out.p90G) {
+        out.p95G = out.p90G + 1;
+      }
+      return out;
+    }
+
+    function interpolateMalewskiRows(base, next, ratio) {
+      const keys = ['meanG', 'sdG', 'p5G', 'p10G', 'p25G', 'p50G', 'p75G', 'p90G', 'p95G'];
+      if (!base) return null;
+      if (!next || !Number.isFinite(ratio) || ratio <= 0) {
+        return Object.assign({}, base, {
+          interpolated: false,
+          baseWeek: base.week,
+          nextWeek: null,
+          ratio: 0,
+          clampedToLastWeek: false,
+          estimatedTailFields: Array.isArray(base.estimatedTailFields) ? base.estimatedTailFields.slice() : []
+        });
+      }
+      const out = {
+        week: base.week + ratio,
+        n: null,
+        interpolated: true,
+        baseWeek: base.week,
+        nextWeek: next.week,
+        ratio,
+        clampedToLastWeek: false,
+        estimatedTailFields: Array.from(new Set([...(base.estimatedTailFields || []), ...(next.estimatedTailFields || [])]))
+      };
+      keys.forEach((key) => {
+        const a = toFiniteNumberOrNull(base[key]);
+        const b = toFiniteNumberOrNull(next[key]);
+        if (Number.isFinite(a) && Number.isFinite(b)) {
+          out[key] = a + ratio * (b - a);
+        } else if (Number.isFinite(a)) {
+          out[key] = a;
+        } else if (Number.isFinite(b)) {
+          out[key] = b;
+        } else {
+          out[key] = null;
+        }
+      });
+      return out;
+    }
+
+    function getInterpolatedMalewskiRow(sex, weeks, days) {
+      const base = normalizeMalewskiRow(getMalewskiRawRow(sex, weeks), weeks);
+      if (!base) return null;
+      if (!Number.isFinite(days) || days <= 0 || weeks >= 43) {
+        return Object.assign({}, base, {
+          interpolated: false,
+          baseWeek: weeks,
+          nextWeek: null,
+          ratio: 0,
+          clampedToLastWeek: Number.isFinite(days) && days > 0 && weeks >= 43,
+          estimatedTailFields: Array.isArray(base.estimatedTailFields) ? base.estimatedTailFields.slice() : []
+        });
+      }
+      const next = normalizeMalewskiRow(getMalewskiRawRow(sex, weeks + 1), weeks + 1);
+      if (!next) {
+        return Object.assign({}, base, {
+          interpolated: false,
+          baseWeek: weeks,
+          nextWeek: null,
+          ratio: 0,
+          clampedToLastWeek: false,
+          estimatedTailFields: Array.isArray(base.estimatedTailFields) ? base.estimatedTailFields.slice() : []
+        });
+      }
+      const ratio = Math.min(Math.max(days / 7, 0), 1);
+      return interpolateMalewskiRows(base, next, ratio);
     }
 
     function computeNiklassonResult(sex, weeks, days, weightG, lengthCm, headCm) {
@@ -638,21 +892,31 @@
       }
 
       const cards = [];
+      const metrics = {};
       let weightSds = null;
       let lengthSds = null;
       let headSds = null;
 
       if (Number.isFinite(weightG)) {
         weightSds = computeWeightSds(weightG, ref);
-        cards.push(metricCardHtml('Masa ciała przy urodzeniu', `${formatNumberTrim(weightG, 0)} g`, weightSds, interpretSds(weightSds)));
+        const interpretation = interpretSds(weightSds);
+        const valueLabel = `${formatNumberTrim(weightG, 0)} g`;
+        cards.push(metricCardHtml('Masa ciała przy urodzeniu', valueLabel, weightSds, interpretation));
+        metrics.weight = buildMetricResult('Masa ciała przy urodzeniu', valueLabel, weightSds, interpretation);
       }
       if (Number.isFinite(lengthCm)) {
         lengthSds = computeLinearSds(lengthCm, ref.lengthMean, ref.lengthSd);
-        cards.push(metricCardHtml('Długość ciała przy urodzeniu', `${formatNumberTrim(lengthCm, 1)} cm`, lengthSds, interpretSds(lengthSds)));
+        const interpretation = interpretSds(lengthSds);
+        const valueLabel = `${formatNumberTrim(lengthCm, 1)} cm`;
+        cards.push(metricCardHtml('Długość ciała przy urodzeniu', valueLabel, lengthSds, interpretation));
+        metrics.length = buildMetricResult('Długość ciała przy urodzeniu', valueLabel, lengthSds, interpretation);
       }
       if (Number.isFinite(headCm)) {
         headSds = computeLinearSds(headCm, ref.headMean, ref.headSd);
-        cards.push(metricCardHtml('Obwód głowy przy urodzeniu', `${formatNumberTrim(headCm, 1)} cm`, headSds, interpretSds(headSds)));
+        const interpretation = interpretSds(headSds);
+        const valueLabel = `${formatNumberTrim(headCm, 1)} cm`;
+        cards.push(metricCardHtml('Obwód głowy przy urodzeniu', valueLabel, headSds, interpretation));
+        metrics.head = buildMetricResult('Obwód głowy przy urodzeniu', valueLabel, headSds, interpretation);
       }
 
       const notes = [];
@@ -666,6 +930,7 @@
         helperLabel: SGA_SOURCE_CONFIG.niklasson.helperLabel,
         sourceLabel: SGA_SOURCE_CONFIG.niklasson.sourceLabel,
         cards,
+        metrics,
         cardCount: cards.length,
         notes,
         summary: buildStatusSummary(weightSds, lengthSds)
@@ -686,21 +951,31 @@
       }
 
       const cards = [];
+      const metrics = {};
       let weightSds = null;
       let lengthSds = null;
       let headSds = null;
 
       if (Number.isFinite(weightG)) {
         weightSds = zFromAnchorTable(weightG / 1000, weightRow);
-        cards.push(metricCardHtml('Masa ciała przy urodzeniu', `${formatNumberTrim(weightG, 0)} g`, weightSds, interpretSds(weightSds)));
+        const interpretation = interpretSds(weightSds);
+        const valueLabel = `${formatNumberTrim(weightG, 0)} g`;
+        cards.push(metricCardHtml('Masa ciała przy urodzeniu', valueLabel, weightSds, interpretation));
+        metrics.weight = buildMetricResult('Masa ciała przy urodzeniu', valueLabel, weightSds, interpretation);
       }
       if (Number.isFinite(lengthCm)) {
         lengthSds = zFromAnchorTable(lengthCm, lengthRow);
-        cards.push(metricCardHtml('Długość ciała przy urodzeniu', `${formatNumberTrim(lengthCm, 1)} cm`, lengthSds, interpretSds(lengthSds)));
+        const interpretation = interpretSds(lengthSds);
+        const valueLabel = `${formatNumberTrim(lengthCm, 1)} cm`;
+        cards.push(metricCardHtml('Długość ciała przy urodzeniu', valueLabel, lengthSds, interpretation));
+        metrics.length = buildMetricResult('Długość ciała przy urodzeniu', valueLabel, lengthSds, interpretation);
       }
       if (Number.isFinite(headCm)) {
         headSds = zFromAnchorTable(headCm, headRow);
-        cards.push(metricCardHtml('Obwód głowy przy urodzeniu', `${formatNumberTrim(headCm, 1)} cm`, headSds, interpretSds(headSds)));
+        const interpretation = interpretSds(headSds);
+        const valueLabel = `${formatNumberTrim(headCm, 1)} cm`;
+        cards.push(metricCardHtml('Obwód głowy przy urodzeniu', valueLabel, headSds, interpretation));
+        metrics.head = buildMetricResult('Obwód głowy przy urodzeniu', valueLabel, headSds, interpretation);
       }
 
       const notes = [];
@@ -714,15 +989,72 @@
         helperLabel: SGA_SOURCE_CONFIG.intergrowth.helperLabel,
         sourceLabel: SGA_SOURCE_CONFIG.intergrowth.sourceLabel,
         cards,
+        metrics,
         cardCount: cards.length,
         notes,
         summary: buildStatusSummary(weightSds, lengthSds)
       };
     }
 
+    function computeMalewskiResult(sex, weeks, days, weightG, lengthCm, headCm) {
+      if (!(typeof window !== 'undefined' && window.SGA_MALEWSKI_WEIGHT)) {
+        return { error: 'Brak załadowanych danych referencyjnych Malewski i wsp.' };
+      }
+      if (!Number.isFinite(weightG)) {
+        return { error: 'Źródło Malewski obejmuje tylko masę urodzeniową. Podaj masę ciała przy urodzeniu.' };
+      }
+
+      const ref = getInterpolatedMalewskiRow(sex, weeks, days);
+      if (!ref) {
+        return { error: 'Nie udało się odczytać danych referencyjnych Malewski i wsp. dla podanego wieku ciążowego.' };
+      }
+
+      const anchors = [ref.p5G, ref.p10G, ref.p25G, ref.p50G, ref.p75G, ref.p90G, ref.p95G];
+      let weightSds = zFromAnchorTable(weightG, anchors, MALEWSKI_PERCENTILE_Z_GRID);
+      if (!Number.isFinite(weightSds)) {
+        weightSds = computeLinearSds(weightG, ref.meanG, ref.sdG);
+      }
+
+      const cards = [
+        metricCardHtml('Masa ciała przy urodzeniu', `${formatNumberTrim(weightG, 0)} g`, weightSds, interpretSds(weightSds))
+      ];
+      const metrics = {
+        weight: buildMetricResult('Masa ciała przy urodzeniu', `${formatNumberTrim(weightG, 0)} g`, weightSds, interpretSds(weightSds))
+      };
+      if (Number.isFinite(lengthCm)) {
+        metrics.length = buildUnavailableMetricResult('Długość ciała przy urodzeniu', 'Niedostępne w tym źródle');
+      }
+      if (Number.isFinite(headCm)) {
+        metrics.head = buildUnavailableMetricResult('Obwód głowy przy urodzeniu', 'Niedostępne w tym źródle');
+      }
+
+      const notes = [];
+      if (ref.interpolated && Number.isFinite(days) && days > 0 && ref.nextWeek) {
+        notes.push(`Dla ${weeks}+${days} tc zastosowano interpolację liniową między ${ref.baseWeek}. a ${ref.nextWeek}. tygodniem ciąży.`);
+      } else if (ref.clampedToLastWeek) {
+        notes.push('Dla 43 tygodni i dodatkowych dni zastosowano referencję dla 43. tygodnia, bo źródło kończy się na wartościach tygodniowych.');
+      }
+      if (Array.isArray(ref.estimatedTailFields) && ref.estimatedTailFields.length) {
+        notes.push('W najwcześniejszych tygodniach fotografia tabeli nie zawierała 5. i/lub 95. centyla; brakujące skrajne punkty oszacowano z podanej średniej i SD wyłącznie na potrzeby obliczeń SDS/percentyla.');
+      }
+
+      return {
+        sourceKey: 'malewski',
+        title: SGA_SOURCE_CONFIG.malewski.shortLabel,
+        helperLabel: SGA_SOURCE_CONFIG.malewski.helperLabel,
+        sourceLabel: SGA_SOURCE_CONFIG.malewski.sourceLabel,
+        cards,
+        metrics,
+        cardCount: cards.length,
+        notes,
+        metaLines: [],
+        summary: buildStatusSummary(weightSds, null, { lengthUnavailable: true })
+      };
+    }
+
     function statusClass(status) {
       if (status === 'TAK') return 'is-sga';
-      if (status === 'Brak danych') return 'is-missing';
+      if (status === 'Brak danych' || status === 'Niedostępne w tym źródle') return 'is-missing';
       return 'is-ok';
     }
 
@@ -738,6 +1070,7 @@
     function renderSourceSection(result) {
       const summary = result.summary || {};
       const resultGridClass = result.cardCount === 1 ? 'sga-birth-result-grid is-single' : 'sga-birth-result-grid';
+      const metaLines = Array.isArray(result.metaLines) ? result.metaLines : [];
 
       return `
         <section class="sga-birth-source-block" data-source="${escapeHtml(result.sourceKey)}">
@@ -758,13 +1091,169 @@
           ${noteBoxHtml(result.notes)}
           <div class="sga-birth-meta-box">
             <p><strong>Źródło referencyjne:</strong> ${escapeHtml(result.sourceLabel)}</p>
+            ${metaLines.map((line) => `<p>${escapeHtml(line)}</p>`).join('')}
           </div>
         </section>
       `;
     }
 
+    function metricStatusClass(metric) {
+      if (!metric) return 'is-missing';
+      return interpretationStatusClass(metric.interpretation);
+    }
+
+    function interpretationStatusClass(label) {
+      const text = String(label || '').trim();
+      if (!text || text === '–' || text === 'Brak danych' || text === 'Brak pomiaru' || text === 'Niedostępne w tym źródle') {
+        return 'is-missing';
+      }
+      if (text === 'poniżej -2 SDS' || text === 'TAK') return 'is-sga';
+      return 'is-ok';
+    }
+
+    function compareBadgeHtml(text, kindClass) {
+      const cls = kindClass || interpretationStatusClass(text);
+      return `<span class="sga-birth-compare-badge ${escapeHtml(cls)}">${escapeHtml(text || '–')}</span>`;
+    }
+
+    function compareTableSectionHtml(title, columns, rows) {
+      return `
+        <section class="sga-birth-compare-table-block">
+          <h3>${escapeHtml(title)}</h3>
+          <div class="sga-birth-compare-table-wrap">
+            <table class="sga-birth-compare-table">
+              <thead>
+                <tr>
+                  <th scope="col">Źródło</th>
+                  ${columns.map((label) => `<th scope="col">${escapeHtml(label)}</th>`).join('')}
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.map((row) => `
+                  <tr>
+                    <th scope="row">${escapeHtml(row.source)}</th>
+                    ${row.cells.map((cell) => `<td data-label="${escapeHtml(cell.label)}">${cell.html}</td>`).join('')}
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      `;
+    }
+
+    function compareReferenceBoxHtml(results) {
+      if (!Array.isArray(results) || !results.length) return '';
+      return `
+        <div class="sga-birth-meta-box sga-birth-compare-reference-box">
+          <h3>Źródła referencyjne</h3>
+          ${results.map((result) => `<p><strong>${escapeHtml(result.title)}:</strong> ${escapeHtml(result.sourceLabel)}</p>`).join('')}
+        </div>
+      `;
+    }
+
+    function compareFootnotesHtml(results) {
+      const lines = [];
+      (Array.isArray(results) ? results : []).forEach((result) => {
+        const resultTitle = result && result.title ? result.title : '';
+        const notes = Array.isArray(result && result.notes) ? result.notes : [];
+        const metaLines = Array.isArray(result && result.metaLines) ? result.metaLines : [];
+        notes.forEach((note) => {
+          if (note) lines.push({ title: resultTitle, text: note });
+        });
+        metaLines.forEach((line) => {
+          if (line) lines.push({ title: resultTitle, text: line });
+        });
+      });
+      if (!lines.length) return '';
+      return `
+        <div class="sga-birth-note-box sga-birth-compare-footnotes">
+          <h3>Uwagi</h3>
+          ${lines.map((entry) => `<p><strong>${escapeHtml(entry.title)}:</strong> ${escapeHtml(entry.text)}</p>`).join('')}
+        </div>
+      `;
+    }
+
+    function renderThreeSourceComparison(results, compareParagraphs, inputFlags) {
+      const flags = inputFlags && typeof inputFlags === 'object' ? inputFlags : {};
+      const safeResults = Array.isArray(results) ? results : [];
+      const summaryRows = safeResults.map((result) => {
+        const summary = result && result.summary ? result.summary : {};
+        return {
+          source: result.title,
+          cells: [
+            {
+              label: 'SGA po masie',
+              html: compareBadgeHtml(summary.weightStatus || 'Brak danych', statusClass(summary.weightStatus || 'Brak danych'))
+            },
+            {
+              label: 'SGA po długości',
+              html: compareBadgeHtml(summary.lengthStatus || 'Brak danych', statusClass(summary.lengthStatus || 'Brak danych'))
+            }
+          ]
+        };
+      });
+
+      const sections = [
+        compareTableSectionHtml(
+          'Podsumowanie SGA',
+          ['SGA po masie urodzeniowej', 'SGA po długości urodzeniowej'],
+          summaryRows
+        )
+      ];
+
+      const metricDefinitions = [];
+      if (flags.weight) metricDefinitions.push({ key: 'weight', title: 'Masa ciała przy urodzeniu' });
+      if (flags.length) metricDefinitions.push({ key: 'length', title: 'Długość ciała przy urodzeniu' });
+      if (flags.head) metricDefinitions.push({ key: 'head', title: 'Obwód głowy przy urodzeniu' });
+
+      metricDefinitions.forEach((metricDef) => {
+        const metricRows = safeResults.map((result) => {
+          const metric = result && result.metrics && result.metrics[metricDef.key] ? result.metrics[metricDef.key] : null;
+          const valueLabel = metric ? metric.valueLabel : '–';
+          const sdsLabel = metric && Number.isFinite(metric.sds) ? formatNumber(metric.sds, 2) : '–';
+          const percentileText = metric && metric.percentile ? metric.percentile : '–';
+          const interpretationText = metric ? metric.interpretation : 'Brak pomiaru';
+          return {
+            source: result.title,
+            cells: [
+              {
+                label: 'Wartość',
+                html: `<span class="sga-birth-compare-value">${escapeHtml(valueLabel)}</span>`
+              },
+              {
+                label: 'SDS',
+                html: `<span class="sga-birth-compare-value">${escapeHtml(sdsLabel)}</span>`
+              },
+              {
+                label: 'Percentyl',
+                html: `<span class="sga-birth-compare-value">${escapeHtml(percentileText)}</span>`
+              },
+              {
+                label: 'Ocena',
+                html: compareBadgeHtml(interpretationText, metricStatusClass(metric))
+              }
+            ]
+          };
+        });
+        sections.push(compareTableSectionHtml(metricDef.title, ['Wartość', 'SDS', 'Percentyl', 'Ocena'], metricRows));
+      });
+
+      return `
+        <div class="sga-birth-compare-note">
+          ${compareParagraphs.map((text) => `<p>${escapeHtml(text)}</p>`).join('')}
+        </div>
+        <div class="sga-birth-compare-table-stack">
+          ${sections.join('')}
+        </div>
+        ${compareReferenceBoxHtml(safeResults)}
+        ${compareFootnotesHtml(safeResults)}
+      `;
+    }
+
     function renderResults(showFeedbackToast = true) {
-      const sourceChoice = getSelectedSourceChoice();
+      const selectedSourceKeys = ensureValidSourceSelection('niklasson');
+      const compareModeRequested = selectedSourceKeys.length > 1;
       const sex = getSelectedSex();
       const weeks = Number(gaWeeksSelect ? gaWeeksSelect.value : NaN);
       const days = Number(gaDaysSelect ? gaDaysSelect.value : 0);
@@ -789,14 +1278,19 @@
         resultsEl.innerHTML = '';
         return;
       }
-      if (!Number.isFinite(weeks) || weeks < 24 || weeks > 42) {
-        setMessage('Wybierz pełne tygodnie ciąży.', 'error');
+      if (!Number.isFinite(weeks) || weeks < 22 || weeks > 43) {
+        setMessage('Wybierz pełne tygodnie ciąży w zakresie 22–43 tc.', 'error');
         resultsEl.style.display = 'none';
         resultsEl.innerHTML = '';
         return;
       }
 
-      const hasAnyMeasurement = Number.isFinite(weightG) || Number.isFinite(lengthCm) || Number.isFinite(headCm);
+      const inputFlags = {
+        weight: Number.isFinite(weightG),
+        length: Number.isFinite(lengthCm),
+        head: Number.isFinite(headCm)
+      };
+      const hasAnyMeasurement = inputFlags.weight || inputFlags.length || inputFlags.head;
       if (!hasAnyMeasurement) {
         setMessage('Podaj co najmniej jeden parametr urodzeniowy: masę, długość lub obwód głowy.', 'error');
         resultsEl.style.display = 'none';
@@ -804,15 +1298,71 @@
         return;
       }
 
-      const sourceKeys = sourceChoice === 'compare' ? ['niklasson', 'intergrowth'] : [sourceChoice];
-      const genericWarnings = collectWarnings(weightG, lengthCm, headCm);
-      const computedResults = [];
+      if (!compareModeRequested) {
+        const singleSource = selectedSourceKeys[0] || 'niklasson';
+        if (singleSource === 'niklasson' && !isNiklassonSupported(weeks)) {
+          setMessage('Źródło Niklasson jest dostępne dla wieku ciążowego 24–42 tc.', 'error');
+          resultsEl.style.display = 'none';
+          resultsEl.innerHTML = '';
+          return;
+        }
+        if (singleSource === 'intergrowth' && !isIntergrowthSupported(weeks, days)) {
+          setMessage('Źródło INTERGROWTH-21st jest dostępne dla wieku ciążowego 24+0 do 42+6 tc.', 'error');
+          resultsEl.style.display = 'none';
+          resultsEl.innerHTML = '';
+          return;
+        }
+        if (singleSource === 'malewski' && !isMalewskiSupported(weeks)) {
+          setMessage('Źródło Malewski jest dostępne dla wieku ciążowego 22–43 tc.', 'error');
+          resultsEl.style.display = 'none';
+          resultsEl.innerHTML = '';
+          return;
+        }
+        if (singleSource === 'malewski' && !inputFlags.weight) {
+          setMessage('Źródło Malewski obejmuje tylko masę urodzeniową. Podaj masę ciała przy urodzeniu.', 'error');
+          resultsEl.style.display = 'none';
+          resultsEl.innerHTML = '';
+          return;
+        }
+      }
 
+      const genericWarnings = collectWarnings(weightG, lengthCm, headCm);
+      const compareSkippedNotes = [];
+      let sourceKeys = [];
+
+      if (compareModeRequested) {
+        selectedSourceKeys.forEach((sourceKey) => {
+          if (!isSourceSupportedForAge(sourceKey, weeks, days)) {
+            compareSkippedNotes.push(`Źródło ${sourceTitle(sourceKey)} pominięto, bo obejmuje ${sourceRangeText(sourceKey)}.`);
+            return;
+          }
+          if (sourceKey === 'malewski' && !inputFlags.weight) {
+            compareSkippedNotes.push('Źródło Malewski pominięto w trybie porównawczym, bo nie podano masy urodzeniowej.');
+            return;
+          }
+          sourceKeys.push(sourceKey);
+        });
+        if (!sourceKeys.length) {
+          setMessage('Dla wybranego wieku ciążowego i podanych parametrów nie ma dostępnego źródła do obliczeń. Dodaj masę urodzeniową albo wybierz wiek 24–42 tc.', 'error');
+          resultsEl.style.display = 'none';
+          resultsEl.innerHTML = '';
+          return;
+        }
+      } else {
+        sourceKeys = [selectedSourceKeys[0] || 'niklasson'];
+      }
+
+      const computedResults = [];
       for (let i = 0; i < sourceKeys.length; i += 1) {
         const sourceKey = sourceKeys[i];
-        const result = sourceKey === 'intergrowth'
-          ? computeIntergrowthResult(sex, weeks, days, weightG, lengthCm, headCm)
-          : computeNiklassonResult(sex, weeks, days, weightG, lengthCm, headCm);
+        let result = null;
+        if (sourceKey === 'intergrowth') {
+          result = computeIntergrowthResult(sex, weeks, days, weightG, lengthCm, headCm);
+        } else if (sourceKey === 'malewski') {
+          result = computeMalewskiResult(sex, weeks, days, weightG, lengthCm, headCm);
+        } else {
+          result = computeNiklassonResult(sex, weeks, days, weightG, lengthCm, headCm);
+        }
 
         if (result && result.error) {
           setMessage(result.error, 'error');
@@ -823,16 +1373,39 @@
         computedResults.push(result);
       }
 
-      const sectionsHtml = sourceChoice === 'compare'
-        ? `
-          <div class="sga-birth-compare-note">
-            <p>Tryb porównawczy: te same dane policzono równolegle według Niklasson oraz INTERGROWTH-21st.</p>
-          </div>
-          <div class="sga-birth-compare-grid">
-            ${computedResults.map(renderSourceSection).join('')}
-          </div>
-        `
-        : renderSourceSection(computedResults[0]);
+      let sectionsHtml = '';
+      if (compareModeRequested) {
+        const computedLabels = computedResults.map((result) => result.title);
+        const compareParagraphs = [];
+        if (computedResults.length > 1) {
+          compareParagraphs.push(`Tryb porównawczy: te same dane policzono równolegle według ${computedLabels.join(', ')}.`);
+        } else {
+          compareParagraphs.push(`Tryb porównawczy: dla tego wieku ciążowego i podanych parametrów dostępne było tylko źródło ${computedLabels[0]}.`);
+        }
+        compareParagraphs.push(...compareSkippedNotes);
+
+        if (computedResults.length >= 3 && selectedSourceKeys.length >= 3) {
+          sectionsHtml = renderThreeSourceComparison(computedResults, compareParagraphs, inputFlags);
+        } else if (computedResults.length > 1) {
+          sectionsHtml = `
+            <div class="sga-birth-compare-note">
+              ${compareParagraphs.map((text) => `<p>${escapeHtml(text)}</p>`).join('')}
+            </div>
+            <div class="sga-birth-compare-grid">
+              ${computedResults.map(renderSourceSection).join('')}
+            </div>
+          `;
+        } else {
+          sectionsHtml = `
+            <div class="sga-birth-compare-note">
+              ${compareParagraphs.map((text) => `<p>${escapeHtml(text)}</p>`).join('')}
+            </div>
+            ${renderSourceSection(computedResults[0])}
+          `;
+        }
+      } else {
+        sectionsHtml = renderSourceSection(computedResults[0]);
+      }
 
       resultsEl.innerHTML = `
         ${noteBoxHtml(genericWarnings)}
@@ -848,7 +1421,7 @@
 
     function resetModule(options) {
       const opts = options && typeof options === 'object' ? options : {};
-      setSelectedSourceChoice('niklasson');
+      setSelectedSourceKeys('niklasson');
       sexInputs.forEach((input) => {
         input.checked = false;
       });
@@ -874,8 +1447,10 @@
     }
 
     function captureSgaBirthPersistState() {
+      const sourceKeys = ensureValidSourceSelection('niklasson');
       return {
-        sourceChoice: getSelectedSourceChoice(),
+        sourceChoice: sourceKeys.length > 1 ? 'compare' : sourceKeys[0],
+        sourceKeys,
         sex: getSelectedSex(),
         weeks: gaWeeksSelect ? String(gaWeeksSelect.value || '') : '',
         days: gaDaysSelect ? String(gaDaysSelect.value || '') : '',
@@ -896,6 +1471,7 @@
         const radio = persist.radio && typeof persist.radio === 'object' ? persist.radio : {};
         const out = {
           sourceChoice: radio.sgaBirthSource || 'niklasson',
+          sourceKeys: normalizeSourceSelection(radio.sgaBirthSource || 'niklasson'),
           sex: radio.sgaBirthSex || '',
           weeks: byId.sgaBirthWeeks || '',
           days: byId.sgaBirthDays || '',
@@ -916,7 +1492,7 @@
       const saved = (state && typeof state === 'object') ? state : readSgaBirthPersistFallback();
       if (!saved || typeof saved !== 'object') return false;
 
-      setSelectedSourceChoice(saved.sourceChoice || 'niklasson');
+      setSelectedSourceKeys(saved.sourceKeys || saved.sourceChoice || 'niklasson');
       sexInputs.forEach((input) => {
         input.checked = !!(saved.sex && String(input.value) === String(saved.sex));
       });
@@ -980,7 +1556,10 @@
       input.addEventListener('change', recomputeIfNeeded);
     });
     sourceInputs.forEach((input) => {
-      input.addEventListener('change', recomputeIfNeeded);
+      input.addEventListener('change', function () {
+        ensureValidSourceSelection(this && this.value ? this.value : 'niklasson');
+        recomputeIfNeeded();
+      });
     });
 
     if (zscoreCard) {

@@ -714,12 +714,119 @@
 }
 .sga-birth-source-toggle {
   margin-top: 0.4rem;
-  max-width: 560px;
+  max-width: 760px;
+  flex-wrap: wrap;
+}
+.sga-birth-source-toggle label {
+  flex: 1 1 180px;
+  margin-bottom: 0 !important;
 }
 .sga-birth-source-toggle label span {
   padding: 0.56rem 0.74rem;
   font-size: 0.84rem;
   font-weight: 600;
+}
+.sga-birth-compare-table-stack {
+  display: grid;
+  gap: 1rem;
+}
+.sga-birth-compare-table-block {
+  border: 1px solid var(--lg-border);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.38);
+  padding: 1rem;
+}
+.sga-birth-compare-table-block h3 {
+  margin: 0 0 0.8rem;
+  text-align: center;
+  font-size: 1rem;
+}
+.sga-birth-compare-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.sga-birth-compare-table {
+  width: 100%;
+  min-width: 620px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.sga-birth-compare-table thead th {
+  padding: 0.7rem 0.8rem;
+  border-top: 1px solid rgba(0, 131, 141, 0.18);
+  border-bottom: 1px solid rgba(0, 131, 141, 0.18);
+  background: rgba(0, 131, 141, 0.08);
+  color: #0b545c;
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: left;
+}
+.sga-birth-compare-table thead th:first-child {
+  border-left: 1px solid rgba(0, 131, 141, 0.18);
+  border-top-left-radius: 14px;
+}
+.sga-birth-compare-table thead th:last-child {
+  border-right: 1px solid rgba(0, 131, 141, 0.18);
+  border-top-right-radius: 14px;
+}
+.sga-birth-compare-table tbody th[scope="row"],
+.sga-birth-compare-table tbody td {
+  padding: 0.75rem 0.8rem;
+  border-bottom: 1px solid rgba(0, 131, 141, 0.14);
+  background: rgba(255, 255, 255, 0.62);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  vertical-align: top;
+}
+.sga-birth-compare-table tbody th[scope="row"] {
+  border-left: 1px solid rgba(0, 131, 141, 0.14);
+  color: #0b545c;
+  font-weight: 700;
+  text-align: left;
+  white-space: nowrap;
+}
+.sga-birth-compare-table tbody td:last-child {
+  border-right: 1px solid rgba(0, 131, 141, 0.14);
+}
+.sga-birth-compare-table tbody tr:last-child th[scope="row"] {
+  border-bottom-left-radius: 14px;
+}
+.sga-birth-compare-table tbody tr:last-child td:last-child {
+  border-bottom-right-radius: 14px;
+}
+.sga-birth-compare-value {
+  font-weight: 600;
+  color: #14313a;
+}
+.sga-birth-compare-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.26rem 0.62rem;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 131, 141, 0.22);
+  background: rgba(0, 131, 141, 0.08);
+  color: #0b545c;
+  font-weight: 700;
+  font-size: 0.84rem;
+  line-height: 1.25;
+  text-align: center;
+}
+.sga-birth-compare-badge.is-ok {
+  border-color: rgba(0, 131, 141, 0.34);
+  background: rgba(0, 131, 141, 0.1);
+  color: #0b545c;
+}
+.sga-birth-compare-badge.is-sga {
+  border-color: rgba(198, 40, 40, 0.42);
+  background: rgba(198, 40, 40, 0.1);
+  color: #9f1d1d;
+}
+.sga-birth-compare-badge.is-missing {
+  border-color: rgba(112, 124, 129, 0.32);
+  background: rgba(112, 124, 129, 0.1);
+  color: rgba(20, 44, 47, 0.66);
 }
 .sga-birth-compare-grid {
   display: grid;
@@ -727,7 +834,12 @@
   gap: 1rem;
   align-items: start;
 }
+.sga-birth-compare-grid .sga-birth-summary-grid {
+  grid-template-columns: 1fr;
+  max-width: 100%;
+}
 .sga-birth-source-block {
+  min-width: 0;
   border: 1px solid var(--lg-border);
   border-radius: var(--radius);
   background: rgba(255, 255, 255, 0.38);
@@ -809,13 +921,14 @@
 }
 .sga-birth-summary-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
   gap: 0.75rem;
-  max-width: 640px;
+  max-width: min(640px, 100%);
   margin: 0 auto;
   justify-content: center;
 }
 .sga-birth-summary-item {
+  min-width: 0;
   border: 1.5px solid rgba(0, 131, 141, 0.24);
   border-radius: var(--radius);
   background: rgba(0, 131, 141, 0.07);
@@ -823,6 +936,7 @@
   text-align: center;
   box-shadow: 0 0 0 1px rgba(0, 131, 141, 0.08) inset;
   color: #0b545c;
+  overflow-wrap: anywhere;
 }
 .sga-birth-summary-item.is-ok {
   border-color: rgba(0, 131, 141, 0.36);
@@ -908,6 +1022,16 @@
   margin: 0.18rem 0;
   line-height: 1.5;
 }
+.sga-birth-compare-reference-box,
+.sga-birth-compare-footnotes {
+  margin-top: 1rem;
+}
+.sga-birth-compare-reference-box h3,
+.sga-birth-compare-footnotes h3 {
+  margin: 0 0 0.7rem;
+  text-align: center;
+  font-size: 1rem;
+}
 .sga-birth-toast {
   position: fixed;
   left: 50%;
@@ -935,6 +1059,70 @@
   .sga-birth-summary-grid,
   .sga-birth-compare-grid {
     grid-template-columns: 1fr;
+  }
+  .sga-birth-source-toggle label {
+    flex-basis: calc(50% - 0.35rem);
+  }
+}
+@media (max-width: 720px) {
+  .sga-birth-compare-table {
+    min-width: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+  .sga-birth-compare-table thead {
+    display: none;
+  }
+  .sga-birth-compare-table,
+  .sga-birth-compare-table tbody,
+  .sga-birth-compare-table tr,
+  .sga-birth-compare-table th,
+  .sga-birth-compare-table td {
+    display: block;
+    width: 100%;
+  }
+  .sga-birth-compare-table tbody tr {
+    border: 1px solid rgba(0, 131, 141, 0.16);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.62);
+    margin-bottom: 0.8rem;
+    padding: 0.15rem 0.9rem 0.8rem;
+  }
+  .sga-birth-compare-table tbody tr:last-child {
+    margin-bottom: 0;
+  }
+  .sga-birth-compare-table tbody th[scope="row"] {
+    border: 0;
+    border-bottom: 1px solid rgba(0, 131, 141, 0.14);
+    border-radius: 0;
+    background: transparent;
+    padding: 0.72rem 0 0.58rem;
+    margin-bottom: 0.08rem;
+    white-space: normal;
+  }
+  .sga-birth-compare-table tbody td {
+    border: 0;
+    border-top: 1px solid rgba(0, 131, 141, 0.12);
+    background: transparent;
+    padding: 0.5rem 0;
+    display: grid;
+    grid-template-columns: minmax(110px, 48%) 1fr;
+    gap: 0.7rem;
+    align-items: start;
+  }
+  .sga-birth-compare-table tbody td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    color: rgba(20, 44, 47, 0.74);
+    line-height: 1.35;
+  }
+  .sga-birth-compare-badge {
+    justify-self: start;
+  }
+}
+@media (max-width: 520px) {
+  .sga-birth-source-toggle label {
+    flex-basis: 100%;
   }
 }
 
@@ -2790,18 +2978,18 @@
   </div>
   <div id="sgaBirthCard" class="card" style="display:none;">
     <h2 style="text-align:center;">SGA (small for gestational age)</h2>
-    <p class="sga-birth-intro">Wprowadź dane z okresu urodzeniowego, aby obliczyć SDS masy, długości ciała i obwodu głowy względem wieku ciążowego. Możesz policzyć wynik według Niklasson, według INTERGROWTH-21st albo porównać oba źródła równolegle.</p>
+    <p class="sga-birth-intro">Wprowadź dane z okresu urodzeniowego, aby obliczyć SDS masy, długości ciała i obwodu głowy względem wieku ciążowego. Możesz zaznaczyć jedno, dwa albo trzy źródła referencyjne i porównać je ze sobą; przy trzech źródłach wynik zostanie pokazany w czytelnej tabeli porównawczej.</p>
     <div class="sga-birth-form">
     <section class="sga-birth-panel" aria-labelledby="sgaBirthRequiredHeading">
       <h3 id="sgaBirthRequiredHeading">Dane obowiązkowe</h3>
       <div class="sga-birth-field">
-        <label>Źródło danych referencyjnych</label>
-        <div class="data-source-toggle sga-birth-source-toggle" role="radiogroup" aria-label="Źródło danych referencyjnych">
-          <label><input type="radio" name="sgaBirthSource" value="niklasson" checked><span>Niklasson</span></label>
-          <label><input type="radio" name="sgaBirthSource" value="intergrowth"><span>INTERGROWTH-21st</span></label>
-          <label><input type="radio" name="sgaBirthSource" value="compare"><span>Porównaj oba</span></label>
+        <label>Źródła danych referencyjnych</label>
+        <div class="data-source-toggle sga-birth-source-toggle" role="group" aria-label="Źródła danych referencyjnych">
+          <label><input type="checkbox" name="sgaBirthSource" value="niklasson" checked><span>Niklasson</span></label>
+          <label><input type="checkbox" name="sgaBirthSource" value="intergrowth"><span>INTERGROWTH-21st</span></label>
+          <label><input type="checkbox" name="sgaBirthSource" value="malewski"><span>Malewski (PL, masa)</span></label>
         </div>
-        <span class="sga-birth-help">Tryb porównawczy pokazuje równolegle wyniki z obu źródeł dla tych samych danych wejściowych.</span>
+        <span class="sga-birth-help">Możesz zaznaczyć od 1 do 3 źródeł. Jeden wybór daje pojedynczy wynik, dwa wybory zachowują dotychczasowy układ porównawczy, a trzy wybory przełączają wynik w tabelę porównawczą czytelną także na telefonie.</span>
       </div>
       <div class="sga-birth-field">
         <label>Płeć dziecka <span aria-hidden="true">*</span></label>
@@ -2816,6 +3004,8 @@
           <label for="sgaBirthWeeks">Pełne tygodnie ciąży <span aria-hidden="true">*</span></label>
           <select id="sgaBirthWeeks">
             <option value="">– wybierz –</option>
+            <option value="22">22</option>
+            <option value="23">23</option>
             <option value="24">24</option>
             <option value="25">25</option>
             <option value="26">26</option>
@@ -2835,8 +3025,9 @@
             <option value="40">40</option>
             <option value="41">41</option>
             <option value="42">42</option>
+            <option value="43">43</option>
           </select>
-          <span class="sga-birth-help">Podaj ukończone tygodnie ciąży.</span>
+          <span class="sga-birth-help">Podaj ukończone tygodnie ciąży. Zakres 22–43 tc; Niklasson i INTERGROWTH-21st obejmują 24–42 tc.</span>
         </div>
         <div class="sga-birth-select-group">
           <label for="sgaBirthDays">Dodatkowe dni</label>
@@ -2860,17 +3051,17 @@
         <div class="sga-birth-field">
           <label for="sgaBirthWeight">Masa ciała przy urodzeniu (g)</label>
           <input type="text" id="sgaBirthWeight" inputmode="decimal" placeholder="np. 2450">
-          <span class="sga-birth-help">Wpisz masę w gramach, np. 2450.</span>
+          <span class="sga-birth-help">Wpisz masę w gramach, np. 2450. W źródle Malewski masa jest parametrem obowiązkowym.</span>
         </div>
         <div class="sga-birth-field">
           <label for="sgaBirthLength">Długość ciała przy urodzeniu (cm)</label>
           <input type="text" id="sgaBirthLength" inputmode="decimal" placeholder="np. 47,5">
-          <span class="sga-birth-help">Możesz użyć przecinka lub kropki.</span>
+          <span class="sga-birth-help">Możesz użyć przecinka lub kropki. Parametr wykorzystywany w źródłach Niklasson i INTERGROWTH-21st.</span>
         </div>
         <div class="sga-birth-field" style="grid-column:1 / -1;">
           <label for="sgaBirthHead">Obwód głowy przy urodzeniu (cm)</label>
           <input type="text" id="sgaBirthHead" inputmode="decimal" placeholder="np. 32,0">
-          <span class="sga-birth-help">Pole opcjonalne, ale przydatne do pełniejszej oceny noworodka.</span>
+          <span class="sga-birth-help">Pole opcjonalne, ale przydatne do pełniejszej oceny noworodka. Parametr wykorzystywany w źródłach Niklasson i INTERGROWTH-21st.</span>
         </div>
       </div>
     </section>
@@ -3274,6 +3465,7 @@
          pamidronianu i zoledronianu na podstawie wagi dziecka oraz wybranych parametrów terapii. -->
     <script src="bisphos_therapy.js" defer></script>
     <script src="sga_intergrowth_data.js" defer></script>
+    <script src="sga_malewski_data.js" defer></script>
     <script src="sga_birth_module.js" defer></script>
 
     <!-- Skrypt synchronizujący podstawowe dane użytkownika (imię, wiek, płeć, masa i wzrost) pomiędzy

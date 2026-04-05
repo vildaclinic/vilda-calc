@@ -588,6 +588,30 @@
     font-weight: 700;
     font-size: 0.92rem;
   }
+  .settings-card-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.95rem;
+  }
+  .settings-card-toggle-copy {
+    flex: 1 1 220px;
+    min-width: 0;
+  }
+  .settings-range-row.is-disabled {
+    opacity: 0.55;
+  }
+  .settings-range-row input[type="range"]:disabled {
+    cursor: not-allowed;
+  }
+  .settings-control-hint {
+    margin: 0.65rem 0 0;
+    color: #566b71;
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
   .settings-inline-actions {
     display: flex;
     align-items: center;
@@ -913,18 +937,18 @@
               <span class="settings-accordion-index" aria-hidden="true">02</span>
               <div class="settings-accordion-copy">
                 <h2 class="settings-accordion-title">Wygląd aplikacji</h2>
-                <p class="settings-accordion-text">Sterujesz tłem oraz poziomem efektu Liquid Glass bez wpływu na logikę obliczeń.</p>
+                <p class="settings-accordion-text">Sterujesz tłem, siłą efektu Liquid Glass oraz czytelnością interfejsu bez wpływu na logikę obliczeń.</p>
               </div>
               <div class="settings-accordion-meta">
-                <span class="settings-mini-chip">2 suwaki</span>
-                <span class="settings-mini-chip">Natychmiastowy efekt</span>
+                <span class="settings-mini-chip">3 kontrolki</span>
+                <span class="settings-mini-chip">Lepszy kontrast</span>
               </div>
               <span class="settings-chevron" aria-hidden="true">⌄</span>
             </summary>
             <div class="settings-accordion-panel">
               <div class="settings-panel-inner">
                 <p class="settings-section-note">
-                  Te ustawienia działają niezależnie od trybu profesjonalnego i zapisują się lokalnie w przeglądarce.
+                  Te ustawienia działają niezależnie od trybu profesjonalnego, zapisują się lokalnie w przeglądarce i pomagają też na słabszych monitorach.
                 </p>
                 <div class="settings-control-grid">
                   <div class="settings-control-card">
@@ -941,13 +965,34 @@
                   <div class="settings-control-card">
                     <div class="settings-control-header">
                       <h3 class="settings-control-title">Płynne szkło</h3>
-                      <span class="settings-tag">0–2</span>
+                      <span class="settings-tag">0–4</span>
                     </div>
                     <p class="settings-control-desc">Zwiększa lub zmniejsza kontrast kart w motywie Liquid Glass.</p>
                     <label class="settings-range-row" for="glassLevelSettings">
-                      <input type="range" id="glassLevelSettings" min="0" max="2" step="1" value="0">
+                      <input type="range" id="glassLevelSettings" min="0" max="4" step="1" value="0">
                       <span id="glassLevelSettingsValue" class="settings-range-value">0</span>
                     </label>
+                  </div>
+                  <div class="settings-control-card">
+                    <div class="settings-control-header">
+                      <h3 class="settings-control-title">Wysoki kontrast</h3>
+                      <span class="settings-tag">Wł./wył. + 1–3</span>
+                    </div>
+                    <p class="settings-control-desc">Dodatkowo wzmacnia czytelność kart, formularzy i tekstu pomocniczego. Najbardziej pomaga na słabszych ekranach.</p>
+                    <div class="settings-card-toggle-row">
+                      <div class="settings-card-toggle-copy">
+                        <p class="settings-inline-note">Po włączeniu możesz dobrać intensywność niezależnie od efektu szkła.</p>
+                      </div>
+                      <label class="switch" for="highContrastEnabledSettings">
+                        <input type="checkbox" id="highContrastEnabledSettings" aria-describedby="highContrastLevelHint">
+                        <span class="slider"></span>
+                      </label>
+                    </div>
+                    <label class="settings-range-row is-disabled" id="highContrastLevelRow" for="highContrastLevelSettings">
+                      <input type="range" id="highContrastLevelSettings" min="1" max="3" step="1" value="2" disabled>
+                      <span id="highContrastLevelSettingsValue" class="settings-range-value">2</span>
+                    </label>
+                    <p class="settings-control-hint" id="highContrastLevelHint">1 = subtelny, 2 = zbalansowany, 3 = maksymalna czytelność.</p>
                   </div>
                 </div>
               </div>
@@ -1654,61 +1699,113 @@
     });
   </script>
 
-  <!-- Skrypt obsługujący suwaki wyglądu aplikacji (ciemne tło i płynne szkło).  
-       Odczytuje zapisane ustawienia z localStorage, ustawia wartości początkowe 
-       i zapisuje zmiany przy każdym przesunięciu suwaka.  
-       Po każdej zmianie wywołuje applyThemeCustom(), jeśli jest dostępna, aby 
+  <!-- Skrypt obsługujący ustawienia wyglądu aplikacji
+       (ciemne tło, płynne szkło i wysoki kontrast).
+       Odczytuje zapisane ustawienia z localStorage, ustawia wartości początkowe
+       i zapisuje zmiany przy każdym przesunięciu suwaka lub zmianie przełącznika.
+       Po każdej zmianie wywołuje applyThemeCustom(), jeśli jest dostępna, aby
        natychmiast zastosować styl. -->
   <script>
     document.addEventListener('DOMContentLoaded', function() {
+      function applyAppearanceTheme() {
+        if (typeof window.applyThemeCustom === 'function') {
+          try { window.applyThemeCustom(); } catch (_) {}
+        }
+      }
+
+      function readStoredLevel(key, min, max, fallback) {
+        try {
+          const raw = localStorage.getItem(key);
+          if (raw === null) return fallback;
+          const parsed = parseInt(raw, 10);
+          if (!isNaN(parsed) && parsed >= min && parsed <= max) return parsed;
+        } catch (e) {}
+        return fallback;
+      }
+
+      function readStoredBoolean(key, fallback) {
+        try {
+          const raw = localStorage.getItem(key);
+          if (raw === null || raw === undefined || raw === '') return fallback;
+          const normalized = String(raw).trim().toLowerCase();
+          if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
+          if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
+        } catch (e) {}
+        return fallback;
+      }
+
       // Suwak poziomu ciemnego tła
       const darkSlider = document.getElementById('darkBgLevelSettings');
       const darkValueEl = document.getElementById('darkBgLevelSettingsValue');
       if (darkSlider) {
-        let storedDark = null;
-        try {
-          const v = localStorage.getItem('darkBgLevel');
-          if (v !== null) {
-            const p = parseInt(v, 10);
-            if (!isNaN(p)) storedDark = p;
-          }
-        } catch (e) {}
-        const initDark = (storedDark !== null ? storedDark : 0);
+        const initDark = readStoredLevel('darkBgLevel', 0, 2, 0);
         darkSlider.value = initDark;
         if (darkValueEl) darkValueEl.textContent = String(initDark);
         darkSlider.addEventListener('input', function() {
           const v2 = parseInt(this.value, 10);
-          if (!isNaN(v2)) {
+          if (!isNaN(v2) && v2 >= 0 && v2 <= 2) {
             try { localStorage.setItem('darkBgLevel', v2); } catch (_) {}
             if (darkValueEl) darkValueEl.textContent = String(v2);
-            if (typeof window.applyThemeCustom === 'function') {
-              try { window.applyThemeCustom(); } catch (_) {}
-            }
+            applyAppearanceTheme();
           }
         });
       }
+
       // Suwak poziomu płynnego szkła
       const glassSlider = document.getElementById('glassLevelSettings');
       const glassValueEl = document.getElementById('glassLevelSettingsValue');
       if (glassSlider) {
-        let storedGlass = null;
-        try {
-          const v = localStorage.getItem('glassLevel');
-          if (v !== null) {
-            const p = parseInt(v, 10);
-            if (!isNaN(p)) storedGlass = p;
-          }
-        } catch (e) {}
-        const initGlass = (storedGlass !== null ? storedGlass : 0);
+        const initGlass = readStoredLevel('glassLevel', 0, 4, 0);
         glassSlider.value = initGlass;
         if (glassValueEl) glassValueEl.textContent = String(initGlass);
         glassSlider.addEventListener('input', function() {
           const v3 = parseInt(this.value, 10);
-          if (!isNaN(v3)) {
+          if (!isNaN(v3) && v3 >= 0 && v3 <= 4) {
             try { localStorage.setItem('glassLevel', v3); } catch (_) {}
             if (glassValueEl) glassValueEl.textContent = String(v3);
-            if (typeof window.applyThemeCustom === 'function') {
-              try { window.applyThemeCustom(); } catch (_) {}
+            applyAppearanceTheme();
+          }
+        });
+      }
+
+      // Przełącznik i intensywność wysokiego kontrastu
+      const highContrastToggle = document.getElementById('highContrastEnabledSettings');
+      const highContrastSlider = document.getElementById('highContrastLevelSettings');
+      const highContrastValueEl = document.getElementById('highContrastLevelSettingsValue');
+      const highContrastLevelRow = document.getElementById('highContrastLevelRow');
+
+      if (highContrastToggle && highContrastSlider) {
+        const initHighContrastEnabled = readStoredBoolean('highContrastEnabled', false);
+        const initHighContrastLevel = readStoredLevel('highContrastLevel', 1, 3, 2);
+
+        function updateHighContrastUiState(enabled) {
+          const isEnabled = !!enabled;
+          highContrastSlider.disabled = !isEnabled;
+          if (highContrastLevelRow) {
+            highContrastLevelRow.classList.toggle('is-disabled', !isEnabled);
+          }
+        }
+
+        highContrastToggle.checked = initHighContrastEnabled;
+        highContrastSlider.value = initHighContrastLevel;
+        if (highContrastValueEl) highContrastValueEl.textContent = String(initHighContrastLevel);
+        updateHighContrastUiState(initHighContrastEnabled);
+
+        highContrastToggle.addEventListener('change', function() {
+          const enabled = !!this.checked;
+          try { localStorage.setItem('highContrastEnabled', enabled ? 'true' : 'false'); } catch (_) {}
+          try { localStorage.setItem('highContrastLevel', highContrastSlider.value); } catch (_) {}
+          updateHighContrastUiState(enabled);
+          applyAppearanceTheme();
+        });
+
+        highContrastSlider.addEventListener('input', function() {
+          const v4 = parseInt(this.value, 10);
+          if (!isNaN(v4) && v4 >= 1 && v4 <= 3) {
+            try { localStorage.setItem('highContrastLevel', v4); } catch (_) {}
+            if (highContrastValueEl) highContrastValueEl.textContent = String(v4);
+            if (highContrastToggle.checked) {
+              applyAppearanceTheme();
             }
           }
         });

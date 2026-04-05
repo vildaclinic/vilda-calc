@@ -178,50 +178,71 @@
   window.addEventListener('resize', updateInfoCardHeight);
 
   /**
-   * === Motyw aplikacji: ciemne tło i płynne szkło ===
+   * === Motyw aplikacji: ciemne tło, płynne szkło i wysoki kontrast ===
    *
-   * Użytkownik może wybrać stopień przyciemnienia tła (0–2) oraz poziom
-   * kontrastu kart Liquid Glass (0–2). Ustawienia te są zapisywane w
-   * localStorage pod kluczami 'darkBgLevel' i 'glassLevel'.  Funkcja
-   * applyThemeCustom() odczytuje te wartości i dodaje odpowiednie klasy do
-   * elementu <body>: dark-bg-level-0/1/2 oraz glass-level-0/1/2.  Jeśli
-   * wybrano ciemniejsze tło (poziom > 0), klasa professional-bg jest
-   * usuwana, aby ustawienia użytkownika miały pierwszeństwo nad domyślnym
-   * przyciemnieniem trybu profesjonalnego.  Funkcja jest globalna (do
-   * window) i wywoływana przy każdym załadowaniu dokumentu oraz po
-   * zmianie ustawień.
+   * Użytkownik może wybrać stopień przyciemnienia tła (0–2), poziom
+   * kontrastu kart Liquid Glass (0–4) oraz dodatkowy tryb wysokiego
+   * kontrastu (0–3). Ustawienia są zapisywane w localStorage pod
+   * kluczami 'darkBgLevel', 'glassLevel', 'highContrastEnabled'
+   * i 'highContrastLevel'. Funkcja applyThemeCustom() odczytuje te
+   * wartości i dodaje odpowiednie klasy do elementu <body>:
+   * dark-bg-level-0/1/2, glass-level-0/1/2/3/4 oraz
+   * high-contrast-level-0/1/2/3.
    */
   (function() {
+    const MAX_DARK_LEVEL = 2;
+    const MAX_GLASS_LEVEL = 4;
+    const HIGH_CONTRAST_LEVELS = [0, 1, 2, 3];
+
+    function normalizeLevel(rawValue, min, max, fallback) {
+      const parsed = parseInt(rawValue, 10);
+      return !isNaN(parsed) ? Math.min(max, Math.max(min, parsed)) : fallback;
+    }
+
+    function normalizeBoolean(rawValue, fallback) {
+      if (rawValue === null || rawValue === undefined || rawValue === '') return fallback;
+      const normalized = String(rawValue).trim().toLowerCase();
+      if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
+      if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
+      return fallback;
+    }
+
     function applyThemeCustom() {
       try {
         const bodyEl = document.body;
         if (!bodyEl) return;
         let darkLevel = 0;
         let glassLevel = 0;
+        let highContrastLevel = 0;
         try {
           const d = localStorage.getItem('darkBgLevel');
           if (d !== null) {
-            const p = parseInt(d, 10);
-            if (!isNaN(p)) darkLevel = p;
+            darkLevel = normalizeLevel(d, 0, MAX_DARK_LEVEL, 0);
           }
         } catch (_) {}
         try {
           const g = localStorage.getItem('glassLevel');
           if (g !== null) {
-            const p2 = parseInt(g, 10);
-            if (!isNaN(p2)) glassLevel = p2;
+            glassLevel = normalizeLevel(g, 0, MAX_GLASS_LEVEL, 0);
           }
+        } catch (_) {}
+        try {
+          const contrastEnabled = normalizeBoolean(localStorage.getItem('highContrastEnabled'), false);
+          const contrastIntensity = normalizeLevel(localStorage.getItem('highContrastLevel'), 1, 3, 2);
+          highContrastLevel = contrastEnabled ? contrastIntensity : 0;
         } catch (_) {}
         // Usuń przyciemnienie trybu profesjonalnego, jeśli użytkownik wybrał ciemniejsze tło
         if (darkLevel > 0) {
           bodyEl.classList.remove('professional-bg');
         }
-        // Usuń istniejące klasy ciemnego tła i płynnego szkła
+        // Usuń istniejące klasy ciemnego tła, płynnego szkła i wysokiego kontrastu
         bodyEl.classList.remove('dark-bg-level-0', 'dark-bg-level-1', 'dark-bg-level-2');
-        bodyEl.classList.remove('glass-level-0', 'glass-level-1', 'glass-level-2');
+        bodyEl.classList.remove('glass-level-0', 'glass-level-1', 'glass-level-2', 'glass-level-3', 'glass-level-4');
+        bodyEl.classList.remove(...HIGH_CONTRAST_LEVELS.map((level) => 'high-contrast-level-' + level));
         // Dodaj nowe klasy
         bodyEl.classList.add('dark-bg-level-' + darkLevel);
         bodyEl.classList.add('glass-level-' + glassLevel);
+        bodyEl.classList.add('high-contrast-level-' + highContrastLevel);
       } catch (e) {
         // ciche pominięcie błędów – brak zastosowania motywu nie blokuje aplikacji
       }

@@ -14,7 +14,10 @@
   const qs = (sel, root = document) => root.querySelector(sel);
   const qsa = (sel, root = document) => Array.from(root.querySelectorAll(sel));
   const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const THEME_LEVELS = [0, 1, 2];
+  const DARK_THEME_LEVELS = [0, 1, 2];
+  const GLASS_THEME_LEVELS = [0, 1, 2, 3, 4];
+  const HIGH_CONTRAST_THEME_LEVELS = [0, 1, 2, 3];
+  const HIGH_CONTRAST_INTENSITY_LEVELS = [1, 2, 3];
   const LOCK_MOBILE_NAVIGATION_ON_TOUCH_DEVICES = true;
   const PREF_KEY_SHOW_MOBILE_DOCK = 'showMobileDock';
   const PREF_KEY_SHOW_NAVIGATION_ARROW = 'showNavigationArrow';
@@ -212,14 +215,14 @@
 
   /**
    * Odczytuje poziom ustawienia wyglądu z localStorage.
-   * Zwraca jedną z dozwolonych wartości 0/1/2 lub wartość domyślną.
+   * Zwraca jedną z dozwolonych wartości lub wartość domyślną.
    */
-  function readThemeLevel(key, fallback = 0) {
+  function readThemeLevel(key, fallback = 0, allowedLevels = DARK_THEME_LEVELS) {
     try {
       const raw = localStorage.getItem(key);
       if (raw === null || raw === undefined || raw === '') return fallback;
       const parsed = parseInt(raw, 10);
-      return THEME_LEVELS.includes(parsed) ? parsed : fallback;
+      return allowedLevels.includes(parsed) ? parsed : fallback;
     } catch (e) {
       return fallback;
     }
@@ -227,27 +230,38 @@
 
   /**
    * Nakłada na <body> klasy odpowiadające ustawieniom z sekcji
-   * „Wygląd aplikacji” (ciemne tło i płynne szkło).
+   * „Wygląd aplikacji” (ciemne tło, płynne szkło i wysoki kontrast).
    *
    * Funkcja jest wystawiona globalnie jako window.applyThemeCustom,
-   * ponieważ wywołują ją suwaki na stronie ustawień.
+   * ponieważ wywołują ją kontrolki na stronie ustawień.
    */
   function applyThemeCustom() {
     const body = document.body;
-    if (!body) return { dark: 0, glass: 0 };
+    if (!body) return { dark: 0, glass: 0, contrast: 0 };
 
-    const darkLevel = readThemeLevel('darkBgLevel', 0);
-    const glassLevel = readThemeLevel('glassLevel', 0);
+    const darkLevel = readThemeLevel('darkBgLevel', 0, DARK_THEME_LEVELS);
+    const glassLevel = readThemeLevel('glassLevel', 0, GLASS_THEME_LEVELS);
+    const highContrastEnabled = readBooleanPreference('highContrastEnabled', false);
+    const highContrastIntensity = readThemeLevel('highContrastLevel', 2, HIGH_CONTRAST_INTENSITY_LEVELS);
+    const highContrastLevel = highContrastEnabled ? highContrastIntensity : 0;
 
-    THEME_LEVELS.forEach((level) => {
+    DARK_THEME_LEVELS.forEach((level) => {
       body.classList.remove(`dark-bg-level-${level}`);
+    });
+
+    GLASS_THEME_LEVELS.forEach((level) => {
       body.classList.remove(`glass-level-${level}`);
+    });
+
+    HIGH_CONTRAST_THEME_LEVELS.forEach((level) => {
+      body.classList.remove(`high-contrast-level-${level}`);
     });
 
     body.classList.add(`dark-bg-level-${darkLevel}`);
     body.classList.add(`glass-level-${glassLevel}`);
+    body.classList.add(`high-contrast-level-${highContrastLevel}`);
 
-    return { dark: darkLevel, glass: glassLevel };
+    return { dark: darkLevel, glass: glassLevel, contrast: highContrastLevel };
   }
 
   window.applyThemeCustom = applyThemeCustom;
