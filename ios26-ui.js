@@ -1636,6 +1636,52 @@ function auditNavigationCoverage() {
     return Number.isFinite(parsed) ? parsed : fallback;
   }
 
+  function getLayoutViewportHeight() {
+    return window.innerHeight || document.documentElement?.clientHeight || getViewportHeight();
+  }
+
+  function getPinnedDockAnchorMetrics(dock) {
+    if (!dock) {
+      return {
+        bottomGap: 0,
+        height: 0,
+        visibleLift: 0,
+        scrollTopBottom: 0
+      };
+    }
+
+    const computedStyle = window.getComputedStyle ? window.getComputedStyle(dock) : null;
+    const dockRect = dock.getBoundingClientRect ? dock.getBoundingClientRect() : null;
+    const rectHeight = dockRect ? Math.max(0, Math.round(dockRect.height)) : 0;
+    const computedBottomGap = Math.max(0, Math.round(readCssPxNumber(computedStyle?.bottom, 0)));
+    const layoutViewportHeight = Math.max(getLayoutViewportHeight(), 1);
+    const measuredLayoutBottomGap = dockRect
+      ? Math.max(0, Math.round(layoutViewportHeight - dockRect.bottom))
+      : computedBottomGap;
+    const fallbackHeight = Math.max(
+      0,
+      Math.round(
+        dock.offsetHeight
+        || readCssPxNumber(computedStyle?.height, 0)
+        || rectHeight
+        || 0
+      )
+    );
+    const height = rectHeight > 0 ? rectHeight : fallbackHeight;
+    const bottomGap = computedBottomGap > 0
+      ? computedBottomGap
+      : measuredLayoutBottomGap;
+    const visibleLift = Math.max(0, height + bottomGap);
+    const scrollTopBottom = Math.max(0, visibleLift + MOBILE_DOCK_SCROLL_TOP_GAP_PX);
+
+    return {
+      bottomGap,
+      height,
+      visibleLift,
+      scrollTopBottom
+    };
+  }
+
   function getDockAnchorMetrics(dock, viewportHeight = getViewportHeight()) {
     if (!dock) {
       return {
@@ -2064,7 +2110,9 @@ function auditNavigationCoverage() {
         && !dock.classList.contains('is-keyboard-hidden');
 
       if (isVisible) {
-        const dockMetrics = getDockAnchorMetrics(dock, getViewportHeight());
+        const dockMetrics = lockedMobileNavigation
+          ? getPinnedDockAnchorMetrics(dock)
+          : getDockAnchorMetrics(dock, getViewportHeight());
         nextVisibleLift = dockMetrics.visibleLift;
         nextScrollTopBottom = Math.max(baseScrollTopBottom, dockMetrics.scrollTopBottom);
       }

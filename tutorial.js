@@ -202,6 +202,17 @@
         bottom: var(--ww-safe-scroll-top-btn-bottom, var(--scroll-top-btn-bottom, calc(env(safe-area-inset-bottom, 0px) + 1rem))) !important;
       }
 
+      body.mobile-nav-ui-locked .ww-help-launcher {
+        bottom: var(--scroll-top-btn-bottom, calc(env(safe-area-inset-bottom, 0px) + 1rem)) !important;
+        transition: background 0.2s ease, box-shadow 120ms ease, opacity 220ms ease !important;
+        transform: none !important;
+      }
+
+      body.mobile-nav-ui-locked .ww-help-launcher:hover,
+      body.mobile-nav-ui-locked .ww-help-launcher:focus-visible {
+        transform: none !important;
+      }
+
       body.has-mobile-bottom-dock #scrollTopBtn {
         bottom: var(--scroll-top-btn-bottom, 1rem) !important;
       }
