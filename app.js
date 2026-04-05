@@ -6726,6 +6726,8 @@ function patientReportBuildHtml(model) {
           background: #f3f9f9;
           color: #183132;
           font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+          -webkit-text-size-adjust: none;
+          text-size-adjust: none;
         }
         .patient-report-page {
           width: 1240px;
@@ -7299,11 +7301,31 @@ function patientReportBuildHtml(model) {
           left: 58px;
           right: 58px;
           bottom: 38px;
-          display: flex;
-          justify-content: space-between;
-          gap: 14px;
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          align-items: end;
+          column-gap: 18px;
           font-size: 14px;
+          line-height: 1.35;
           color: #6b7d7d;
+        }
+        .patient-report-footer-note {
+          min-width: 0;
+          display: block;
+          text-align: left;
+          text-justify: auto;
+          white-space: normal;
+          word-spacing: normal;
+          letter-spacing: 0;
+          -webkit-hyphens: none;
+          hyphens: none;
+        }
+        .patient-report-footer-source {
+          display: block;
+          text-align: right;
+          white-space: nowrap;
+          word-spacing: normal;
+          letter-spacing: 0;
         }
       </style>
       <section class="patient-report-page">
@@ -7327,8 +7349,8 @@ function patientReportBuildHtml(model) {
           ${secondaryCardsHtml}
         </section>
         <div class="patient-report-footer">
-          <span>Raport ma charakter informacyjny i stanowi uzupełnienie omówienia wyników podczas wizyty.</span>
-          <span>Porównania centylowe: ${patientReportEscapeHtml(model.sourceLabel || '—')}</span>
+          <span class="patient-report-footer-note">Raport ma charakter informacyjny i stanowi uzupełnienie omówienia wyników podczas wizyty.</span>
+          <span class="patient-report-footer-source">Porównania centylowe: ${patientReportEscapeHtml(model.sourceLabel || '—')}</span>
         </div>
       </section>
     </div>`;
@@ -7366,6 +7388,23 @@ async function patientReportWaitForStableLayout() {
     try { await document.fonts.ready; } catch (_) {}
   }
   await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+}
+
+function patientReportCreateRenderHost(widthPx) {
+  const host = document.createElement('div');
+  const safeWidth = Math.max(1, Number(widthPx) || 0);
+  host.style.position = 'absolute';
+  host.style.left = '-20000px';
+  host.style.top = '0';
+  host.style.width = `${safeWidth}px`;
+  host.style.maxWidth = `${safeWidth}px`;
+  host.style.zIndex = '-1';
+  host.style.pointerEvents = 'none';
+  host.style.opacity = '1';
+  host.style.webkitTextSizeAdjust = 'none';
+  host.style.textSizeAdjust = 'none';
+  host.setAttribute('aria-hidden', 'true');
+  return host;
 }
 
 const PATIENT_REPORT_PDF_RENDER_SCALE = 2.25;
@@ -7564,15 +7603,7 @@ async function patientReportBuildPdfPackage() {
     throw new Error('Brakuje bibliotek potrzebnych do wygenerowania PDF.');
   }
 
-  const host = document.createElement('div');
-  host.style.position = 'fixed';
-  host.style.left = '-20000px';
-  host.style.top = '0';
-  host.style.width = '1240px';
-  host.style.zIndex = '-1';
-  host.style.pointerEvents = 'none';
-  host.style.opacity = '1';
-  host.setAttribute('aria-hidden', 'true');
+  const host = patientReportCreateRenderHost(1240);
 
   try {
     const model = patientReportBuildModel();
@@ -7853,15 +7884,7 @@ async function patientReportCollectVisitPdfPages() {
     throw new Error('Brakuje bibliotek potrzebnych do wygenerowania PDF.');
   }
 
-  const host = document.createElement('div');
-  host.style.position = 'fixed';
-  host.style.left = '-20000px';
-  host.style.top = '0';
-  host.style.width = '1240px';
-  host.style.zIndex = '-1';
-  host.style.pointerEvents = 'none';
-  host.style.opacity = '1';
-  host.setAttribute('aria-hidden', 'true');
+  const host = patientReportCreateRenderHost(1240);
 
   try {
     const model = patientReportBuildModel();
