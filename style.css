@@ -3128,6 +3128,12 @@ fieldset.user-card {
      między sekcjami w formularzu. Odstęp między wierszami będzie kontrolowany
      tylko przez gap kontenera flex. */
   margin-bottom: 1rem;
+  /* Przeglądarki nadają polu <fieldset> domyślne marginesy boczne 2px.
+     To sprawiało, że karta „Dane użytkownika” była optycznie węższa od
+     kart po prawej stronie i zmniejszała realny odstęp między kolumnami.
+     Zerujemy marginesy inline, aby szerokość karty odpowiadała szerokości
+     pozostałych kart w siatce. */
+  margin-inline: 0;
 }
 
 /* === Zwiększenie rozmiaru czcionki w polach testów stymulacyjnych GH (2025‑08‑17) === */
@@ -3369,6 +3375,20 @@ fieldset.user-card {
 @media (min-width: 700px) {
   #calcForm {
     grid-template-columns: 1fr 1fr;
+    /* Na desktopie realny odstęp między sidebarem a pierwszą kartą treści
+       wynika z 0.5rem gap kontenera .desktop-layout oraz 0.5rem lewego
+       paddingu .main-content .container, czyli łącznie 1rem. Ujednolicamy
+       do tej samej wartości poziomy odstęp między kartami formularza. */
+    column-gap: 1rem;
+    row-gap: 1rem;
+  }
+
+  /* Główna siatka wyników dostaje taki sam poziomy odstęp jak separacja
+     treści od sidebara. Zostawiamy większy row-gap, aby pionowy rytm sekcji
+     wyników nie zrobił się zbyt ciasny. */
+  #results {
+    column-gap: 1rem;
+    row-gap: 1.5rem;
   }
 }
 

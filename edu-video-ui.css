@@ -541,3 +541,381 @@
   backdrop-filter: blur(10px) saturate(120%);
   -webkit-backdrop-filter: blur(10px) saturate(120%);
 }
+
+
+/* ================================================================
+ * Motyw strony „Materiały edukacyjne”
+ *
+ * Ten widok korzysta z własnego arkusza, więc bez tych reguł część
+ * komponentów nadpisywała ustawienia „Wygląd aplikacji”. Poniżej
+ * spinamy lokalne karty, badge’e, przyciski, FAQ i footer z klasami
+ * dark-bg-level / glass-level / high-contrast-level dodawanymi na body.
+ * ================================================================ */
+body.edu-page {
+  --edu-card-border-width: 1px;
+  --edu-control-border-width: 1px;
+  --edu-surface: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(244,251,250,0.96));
+  --edu-surface-soft: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(247,251,251,0.98));
+  --edu-surface-elevated: rgba(255,255,255,0.90);
+  --edu-card-shadow: 0 16px 42px rgba(15, 45, 42, 0.08);
+  --edu-border: rgba(22, 76, 71, 0.10);
+  --edu-border-strong: rgba(0, 131, 141, 0.18);
+  --edu-kicker-bg: rgba(255,255,255,0.90);
+  --edu-kicker-text: #0f4b48;
+  --edu-kicker-shadow: 0 8px 24px rgba(15, 45, 42, 0.05);
+  --edu-chip-bg: rgba(255,255,255,0.88);
+  --edu-chip-text: #0f4b48;
+  --edu-chip-shadow: 0 8px 24px rgba(15, 45, 42, 0.04);
+  --edu-accent-bg: rgba(0, 168, 181, 0.12);
+  --edu-accent-border: rgba(0, 168, 181, 0.18);
+  --edu-accent-text: #0f6665;
+  --edu-button-bg: rgba(255,255,255,0.84);
+  --edu-button-hover-bg: rgba(255,255,255,0.94);
+  --edu-button-border: rgba(0,131,141,0.18);
+  --edu-button-shadow: 0 10px 22px rgba(15, 45, 42, 0.08);
+  --edu-button-hover-shadow: 0 14px 28px rgba(15, 45, 42, 0.12);
+  --edu-primary-bg: linear-gradient(180deg, rgba(0,176,166,0.16), rgba(0,131,141,0.10));
+  --edu-primary-border: rgba(0,131,141,0.24);
+  --edu-frame-bg: linear-gradient(180deg, rgba(0,131,141,0.08), rgba(255,255,255,0.92));
+  --edu-frame-border: rgba(0,131,141,0.12);
+  --edu-frame-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+  --edu-text-strong: #163638;
+  --edu-text: #355a59;
+  --edu-text-muted: #567375;
+  --edu-highlight-1: rgba(0, 168, 181, 0.12);
+  --edu-highlight-2: rgba(4, 120, 87, 0.08);
+  --edu-surface-backdrop: blur(14px) saturate(116%);
+  --edu-control-backdrop: blur(10px) saturate(118%);
+  --edu-focus-color: rgba(0,131,141,0.28);
+  --edu-focus-width: 2px;
+  --edu-footer-bg: rgba(250, 250, 250, 0.92);
+  --edu-footer-border: rgba(22, 76, 71, 0.10);
+}
+
+body.edu-page.dark-bg-level-1 {
+  --edu-card-shadow: 0 18px 46px rgba(11, 27, 33, 0.10);
+  --edu-kicker-shadow: 0 10px 26px rgba(11, 27, 33, 0.07);
+  --edu-chip-shadow: 0 10px 24px rgba(11, 27, 33, 0.06);
+  --edu-button-shadow: 0 12px 24px rgba(11, 27, 33, 0.10);
+  --edu-button-hover-shadow: 0 16px 30px rgba(11, 27, 33, 0.12);
+  --edu-footer-bg: rgba(248, 250, 250, 0.94);
+}
+
+body.edu-page.dark-bg-level-2 {
+  --edu-card-shadow: 0 20px 52px rgba(8, 20, 26, 0.13);
+  --edu-kicker-shadow: 0 10px 28px rgba(8, 20, 26, 0.09);
+  --edu-chip-shadow: 0 10px 26px rgba(8, 20, 26, 0.08);
+  --edu-button-shadow: 0 14px 28px rgba(8, 20, 26, 0.13);
+  --edu-button-hover-shadow: 0 18px 34px rgba(8, 20, 26, 0.15);
+  --edu-border: rgba(22, 76, 71, 0.12);
+  --edu-footer-bg: rgba(246, 248, 248, 0.96);
+}
+
+body.edu-page.liquid-ios26.glass-level-0 {
+  --edu-surface: linear-gradient(180deg, rgba(255,255,255,0.86), rgba(242,249,248,0.82));
+  --edu-surface-soft: linear-gradient(180deg, rgba(255,255,255,0.84), rgba(243,249,248,0.80));
+  --edu-surface-elevated: rgba(255,255,255,0.80);
+  --edu-kicker-bg: rgba(255,255,255,0.80);
+  --edu-chip-bg: rgba(255,255,255,0.78);
+  --edu-button-bg: rgba(255,255,255,0.78);
+  --edu-button-hover-bg: rgba(255,255,255,0.86);
+  --edu-frame-bg: linear-gradient(180deg, rgba(0,131,141,0.06), rgba(255,255,255,0.84));
+  --edu-border: rgba(255,255,255,0.34);
+  --edu-border-strong: rgba(255,255,255,0.40);
+  --edu-button-border: rgba(255,255,255,0.40);
+  --edu-accent-border: rgba(255,255,255,0.40);
+  --edu-frame-border: rgba(255,255,255,0.38);
+  --edu-card-shadow: 0 8px 22px rgba(15, 45, 42, 0.08);
+  --edu-kicker-shadow: 0 8px 22px rgba(15, 45, 42, 0.06);
+  --edu-chip-shadow: 0 8px 20px rgba(15, 45, 42, 0.05);
+  --edu-button-shadow: 0 8px 22px rgba(15, 45, 42, 0.08);
+  --edu-button-hover-shadow: 0 12px 26px rgba(15, 45, 42, 0.10);
+  --edu-surface-backdrop: blur(16px) saturate(118%);
+  --edu-control-backdrop: blur(12px) saturate(118%);
+  --edu-footer-bg: rgba(248, 250, 250, 0.88);
+}
+
+body.edu-page.liquid-ios26.glass-level-1 {
+  --edu-surface: linear-gradient(180deg, rgba(255,255,255,0.90), rgba(243,250,249,0.87));
+  --edu-surface-soft: linear-gradient(180deg, rgba(255,255,255,0.88), rgba(244,250,249,0.85));
+  --edu-surface-elevated: rgba(255,255,255,0.84);
+  --edu-kicker-bg: rgba(255,255,255,0.84);
+  --edu-chip-bg: rgba(255,255,255,0.82);
+  --edu-button-bg: rgba(255,255,255,0.82);
+  --edu-button-hover-bg: rgba(255,255,255,0.90);
+  --edu-frame-bg: linear-gradient(180deg, rgba(0,131,141,0.07), rgba(255,255,255,0.88));
+  --edu-border: rgba(255,255,255,0.46);
+  --edu-border-strong: rgba(255,255,255,0.52);
+  --edu-button-border: rgba(255,255,255,0.50);
+  --edu-accent-border: rgba(255,255,255,0.50);
+  --edu-frame-border: rgba(255,255,255,0.48);
+  --edu-card-shadow: 0 10px 24px rgba(15, 45, 42, 0.08);
+  --edu-kicker-shadow: 0 8px 24px rgba(15, 45, 42, 0.06);
+  --edu-chip-shadow: 0 8px 22px rgba(15, 45, 42, 0.05);
+  --edu-button-shadow: 0 10px 24px rgba(15, 45, 42, 0.08);
+  --edu-button-hover-shadow: 0 14px 28px rgba(15, 45, 42, 0.10);
+  --edu-surface-backdrop: blur(16px) saturate(118%);
+  --edu-control-backdrop: blur(12px) saturate(118%);
+  --edu-footer-bg: rgba(248, 250, 250, 0.90);
+}
+
+body.edu-page.liquid-ios26.glass-level-2 {
+  --edu-surface: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(244,250,249,0.91));
+  --edu-surface-soft: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(245,250,249,0.89));
+  --edu-surface-elevated: rgba(255,255,255,0.89);
+  --edu-kicker-bg: rgba(255,255,255,0.89);
+  --edu-chip-bg: rgba(255,255,255,0.87);
+  --edu-button-bg: rgba(255,255,255,0.87);
+  --edu-button-hover-bg: rgba(255,255,255,0.94);
+  --edu-frame-bg: linear-gradient(180deg, rgba(0,131,141,0.08), rgba(255,255,255,0.91));
+  --edu-border: rgba(255,255,255,0.58);
+  --edu-border-strong: rgba(255,255,255,0.64);
+  --edu-button-border: rgba(255,255,255,0.62);
+  --edu-accent-border: rgba(255,255,255,0.62);
+  --edu-frame-border: rgba(255,255,255,0.60);
+  --edu-card-shadow: 0 10px 26px rgba(15, 45, 42, 0.10);
+  --edu-kicker-shadow: 0 8px 24px rgba(15, 45, 42, 0.06);
+  --edu-chip-shadow: 0 8px 22px rgba(15, 45, 42, 0.05);
+  --edu-button-shadow: 0 10px 26px rgba(15, 45, 42, 0.10);
+  --edu-button-hover-shadow: 0 14px 30px rgba(15, 45, 42, 0.12);
+  --edu-surface-backdrop: blur(15px) saturate(116%);
+  --edu-control-backdrop: blur(11px) saturate(116%);
+  --edu-footer-bg: rgba(249, 251, 251, 0.92);
+}
+
+body.edu-page.liquid-ios26.glass-level-3 {
+  --edu-surface: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(245,251,250,0.94));
+  --edu-surface-soft: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(246,251,250,0.93));
+  --edu-surface-elevated: rgba(255,255,255,0.93);
+  --edu-kicker-bg: rgba(255,255,255,0.93);
+  --edu-chip-bg: rgba(255,255,255,0.92);
+  --edu-button-bg: rgba(255,255,255,0.92);
+  --edu-button-hover-bg: rgba(255,255,255,0.97);
+  --edu-frame-bg: linear-gradient(180deg, rgba(0,131,141,0.08), rgba(255,255,255,0.94));
+  --edu-border: rgba(255,255,255,0.72);
+  --edu-border-strong: rgba(255,255,255,0.78);
+  --edu-button-border: rgba(255,255,255,0.78);
+  --edu-accent-border: rgba(255,255,255,0.78);
+  --edu-frame-border: rgba(255,255,255,0.76);
+  --edu-card-shadow: 0 12px 30px rgba(0, 0, 0, 0.13);
+  --edu-kicker-shadow: 0 8px 24px rgba(0, 0, 0, 0.07);
+  --edu-chip-shadow: 0 8px 22px rgba(0, 0, 0, 0.06);
+  --edu-button-shadow: 0 12px 30px rgba(0, 0, 0, 0.13);
+  --edu-button-hover-shadow: 0 16px 32px rgba(0, 0, 0, 0.15);
+  --edu-surface-backdrop: blur(14px) saturate(114%);
+  --edu-control-backdrop: blur(10px) saturate(114%);
+  --edu-footer-bg: rgba(250, 252, 252, 0.94);
+}
+
+body.edu-page.liquid-ios26.glass-level-4 {
+  --edu-surface: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(246,252,251,0.96));
+  --edu-surface-soft: linear-gradient(180deg, rgba(255,255,255,0.97), rgba(247,252,251,0.95));
+  --edu-surface-elevated: rgba(255,255,255,0.96);
+  --edu-kicker-bg: rgba(255,255,255,0.96);
+  --edu-chip-bg: rgba(255,255,255,0.95);
+  --edu-button-bg: rgba(255,255,255,0.95);
+  --edu-button-hover-bg: rgba(255,255,255,0.99);
+  --edu-frame-bg: linear-gradient(180deg, rgba(0,131,141,0.08), rgba(255,255,255,0.96));
+  --edu-border: rgba(255,255,255,0.84);
+  --edu-border-strong: rgba(255,255,255,0.90);
+  --edu-button-border: rgba(255,255,255,0.90);
+  --edu-accent-border: rgba(255,255,255,0.90);
+  --edu-frame-border: rgba(255,255,255,0.88);
+  --edu-card-shadow: 0 14px 34px rgba(0, 0, 0, 0.16);
+  --edu-kicker-shadow: 0 10px 26px rgba(0, 0, 0, 0.08);
+  --edu-chip-shadow: 0 10px 24px rgba(0, 0, 0, 0.07);
+  --edu-button-shadow: 0 14px 34px rgba(0, 0, 0, 0.16);
+  --edu-button-hover-shadow: 0 18px 36px rgba(0, 0, 0, 0.18);
+  --edu-surface-backdrop: blur(13px) saturate(112%);
+  --edu-control-backdrop: blur(9px) saturate(112%);
+  --edu-footer-bg: rgba(251, 252, 252, 0.96);
+}
+
+body.edu-page.high-contrast-level-1.liquid-ios26,
+body.edu-page.high-contrast-level-2.liquid-ios26,
+body.edu-page.high-contrast-level-3.liquid-ios26 {
+  --edu-card-border-width: var(--hc-card-border-width);
+  --edu-control-border-width: var(--hc-card-border-width);
+  --edu-surface: var(--hc-surface);
+  --edu-surface-soft: var(--hc-result-bg);
+  --edu-surface-elevated: var(--hc-module-btn-bg);
+  --edu-card-shadow: var(--hc-shadow);
+  --edu-border: var(--hc-border);
+  --edu-border-strong: var(--hc-module-btn-border);
+  --edu-kicker-bg: var(--hc-button-bg);
+  --edu-kicker-text: var(--hc-text);
+  --edu-kicker-shadow: var(--hc-module-btn-shadow);
+  --edu-chip-bg: var(--hc-button-bg);
+  --edu-chip-text: var(--hc-text);
+  --edu-chip-shadow: var(--hc-module-btn-shadow);
+  --edu-accent-bg: var(--hc-button-bg);
+  --edu-accent-border: var(--hc-input-border);
+  --edu-accent-text: var(--hc-text);
+  --edu-button-bg: var(--hc-module-btn-bg);
+  --edu-button-hover-bg: var(--hc-module-btn-hover-bg);
+  --edu-button-border: var(--hc-module-btn-border);
+  --edu-button-shadow: var(--hc-module-btn-shadow);
+  --edu-button-hover-shadow: var(--hc-module-btn-active-shadow);
+  --edu-primary-bg: linear-gradient(180deg, rgba(0,131,141,0.18), rgba(0,131,141,0.12));
+  --edu-primary-border: var(--hc-module-btn-active-border);
+  --edu-frame-bg: var(--hc-result-bg);
+  --edu-frame-border: var(--hc-input-border);
+  --edu-frame-shadow: inset 0 1px 0 rgba(255,255,255,0.84);
+  --edu-text-strong: var(--hc-text);
+  --edu-text: var(--hc-text);
+  --edu-text-muted: var(--hc-muted);
+  --edu-highlight-1: rgba(0, 131, 141, 0.08);
+  --edu-highlight-2: rgba(0, 131, 141, 0.05);
+  --edu-surface-backdrop: var(--hc-blur);
+  --edu-control-backdrop: none;
+  --edu-focus-color: var(--hc-focus-color);
+  --edu-focus-width: var(--hc-focus-width);
+  --edu-footer-bg: var(--hc-surface);
+  --edu-footer-border: var(--hc-border);
+}
+
+body.edu-page .edu-hero.card,
+body.edu-page .edu-resource-card.card,
+body.edu-page .edu-presentation-card.card,
+body.edu-page .edu-video-shell.card,
+body.edu-page .edu-info-card.card,
+body.edu-page .faq-container {
+  background: var(--edu-surface);
+  border: var(--edu-card-border-width) solid var(--edu-border);
+  box-shadow: var(--edu-card-shadow);
+  backdrop-filter: var(--edu-surface-backdrop);
+  -webkit-backdrop-filter: var(--edu-surface-backdrop);
+}
+
+body.edu-page .faq-container {
+  background: var(--edu-surface-soft);
+}
+
+body.edu-page .edu-hero::before,
+body.edu-page .edu-resource-card::before,
+body.edu-page .edu-presentation-card::before,
+body.edu-page .edu-video-shell::before,
+body.edu-page .edu-info-card::before {
+  background:
+    radial-gradient(circle at top right, var(--edu-highlight-1), transparent 34%),
+    radial-gradient(circle at bottom left, var(--edu-highlight-2), transparent 32%);
+}
+
+body.edu-page .edu-kicker {
+  background: var(--edu-kicker-bg);
+  border: var(--edu-control-border-width) solid var(--edu-border-strong);
+  color: var(--edu-kicker-text);
+  box-shadow: var(--edu-kicker-shadow);
+  backdrop-filter: var(--edu-control-backdrop);
+  -webkit-backdrop-filter: var(--edu-control-backdrop);
+}
+
+body.edu-page .edu-chip,
+body.edu-page .edu-meta-pill {
+  background: var(--edu-chip-bg);
+  border: var(--edu-control-border-width) solid var(--edu-border);
+  color: var(--edu-chip-text);
+  box-shadow: var(--edu-chip-shadow);
+  backdrop-filter: var(--edu-control-backdrop);
+  -webkit-backdrop-filter: var(--edu-control-backdrop);
+}
+
+body.edu-page .edu-card-badge {
+  background: var(--edu-accent-bg);
+  border: var(--edu-control-border-width) solid var(--edu-accent-border);
+  color: var(--edu-accent-text);
+  backdrop-filter: var(--edu-control-backdrop);
+  -webkit-backdrop-filter: var(--edu-control-backdrop);
+}
+
+body.edu-page .edu-title,
+body.edu-page .edu-section-title,
+body.edu-page .presentation-heading,
+body.edu-page .edu-card-title,
+body.edu-page .edu-presentation-card h3,
+body.edu-page .edu-info-card h2 {
+  color: var(--edu-text-strong);
+}
+
+body.edu-page .edu-lead,
+body.edu-page .edu-card-description,
+body.edu-page .edu-presentation-card p,
+body.edu-page .faq-answer p,
+body.edu-page .page-summary {
+  color: var(--edu-text);
+}
+
+body.edu-page .breadcrumbs,
+body.edu-page .notice,
+body.edu-page .edu-section-copy {
+  color: var(--edu-text-muted);
+}
+
+body.edu-page .chapter-time {
+  color: var(--edu-accent-text);
+}
+
+body.edu-page .edu-video-frame {
+  background: var(--edu-frame-bg);
+  border: var(--edu-control-border-width) solid var(--edu-frame-border);
+  box-shadow: var(--edu-frame-shadow);
+  backdrop-filter: var(--edu-control-backdrop);
+  -webkit-backdrop-filter: var(--edu-control-backdrop);
+}
+
+body.edu-page .resource-button,
+body.edu-page .chapter-list a,
+body.edu-page .faq-question {
+  background: var(--edu-button-bg);
+  border: var(--edu-control-border-width) solid var(--edu-button-border);
+  color: var(--edu-text-strong);
+  box-shadow: var(--edu-button-shadow);
+  backdrop-filter: var(--edu-control-backdrop);
+  -webkit-backdrop-filter: var(--edu-control-backdrop);
+}
+
+body.edu-page .resource-button.primary {
+  background: var(--edu-primary-bg);
+  border-color: var(--edu-primary-border);
+}
+
+body.edu-page .resource-button.secondary {
+  background: var(--edu-surface-elevated);
+}
+
+body.edu-page .resource-button:hover,
+body.edu-page .resource-button:focus-visible,
+body.edu-page .chapter-list a:hover,
+body.edu-page .chapter-list a:focus-visible,
+body.edu-page .faq-question:hover,
+body.edu-page .faq-question:focus-visible,
+body.edu-page .faq-item.open .faq-question {
+  background: var(--edu-button-hover-bg);
+  border-color: var(--edu-border-strong);
+  box-shadow: var(--edu-button-hover-shadow);
+}
+
+body.edu-page .resource-button:focus-visible,
+body.edu-page .chapter-list a:focus-visible,
+body.edu-page .faq-question:focus-visible {
+  outline: none;
+  box-shadow: var(--edu-button-hover-shadow), 0 0 0 var(--edu-focus-width) var(--edu-focus-color);
+}
+
+body.edu-page footer {
+  background: var(--edu-footer-bg);
+  border-top: 1px solid var(--edu-footer-border);
+  color: var(--edu-text-muted);
+  backdrop-filter: var(--edu-control-backdrop);
+  -webkit-backdrop-filter: var(--edu-control-backdrop);
+}
+
+body.edu-page footer strong,
+body.edu-page footer a {
+  color: var(--edu-text-strong);
+}
+
+body.edu-page footer a:hover,
+body.edu-page footer a:focus-visible {
+  color: var(--edu-text-strong);
+}

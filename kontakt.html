@@ -44,6 +44,182 @@
   </script>
 
   <style>
+    .contact-page {
+      --contact-surface: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(244,251,250,0.96));
+      --contact-surface-elevated: rgba(255,255,255,0.92);
+      --contact-surface-soft: rgba(255,255,255,0.88);
+      --contact-border: rgba(22, 76, 71, 0.10);
+      --contact-border-strong: rgba(0, 168, 181, 0.16);
+      --contact-shadow: 0 16px 42px rgba(15, 45, 42, 0.08);
+      --contact-card-shadow: 0 10px 24px rgba(15, 45, 42, 0.06);
+      --contact-hover-shadow: 0 14px 30px rgba(15, 45, 42, 0.10);
+      --contact-surface-backdrop: blur(14px) saturate(116%);
+      --contact-control-backdrop: blur(10px) saturate(118%);
+      --contact-hero-highlight-1: rgba(0, 168, 181, 0.16);
+      --contact-hero-highlight-2: rgba(4, 120, 87, 0.09);
+      --contact-badge-bg: rgba(255,255,255,0.9);
+      --contact-badge-border: rgba(0, 168, 181, 0.16);
+      --contact-pill-bg: rgba(0, 168, 181, 0.12);
+      --contact-pill-border: rgba(0, 168, 181, 0.22);
+      --contact-pill-text: #0a6261;
+      --contact-callout-bg: rgba(8, 145, 178, 0.09);
+      --contact-callout-border: rgba(8, 145, 178, 0.18);
+      --contact-callout-text: #0f4b48;
+      --contact-primary-bg: linear-gradient(135deg, #0891b2, #14b8a6);
+      --contact-primary-border: transparent;
+      --contact-primary-text: #ffffff;
+      --contact-primary-shadow: 0 14px 26px rgba(8, 145, 178, 0.24);
+      --contact-primary-hover-shadow: 0 16px 30px rgba(8, 145, 178, 0.28);
+      --contact-text-strong: #0f3533;
+      --contact-text: #103736;
+      --contact-text-muted: #284847;
+      --contact-text-subtle: #55706f;
+      --contact-text-soft: #4e6766;
+      --contact-text-action: #0f4b48;
+      --contact-icon: #0891b2;
+      --contact-focus-ring: rgba(8, 145, 178, 0.24);
+      --contact-focus-width: 2px;
+      --contact-step-badge-bg: linear-gradient(135deg, #0891b2, #14b8a6);
+      --contact-step-badge-text: #ffffff;
+      --contact-step-badge-shadow: 0 10px 20px rgba(8, 145, 178, 0.22);
+      --contact-footer-bg: rgba(250, 250, 250, 0.92);
+      --contact-footer-border: rgba(22, 76, 71, 0.10);
+    }
+
+    body.contact-page.dark-bg-level-1 {
+      --contact-shadow: 0 18px 46px rgba(11, 27, 33, 0.10);
+      --contact-card-shadow: 0 12px 28px rgba(11, 27, 33, 0.07);
+      --contact-hover-shadow: 0 16px 34px rgba(11, 27, 33, 0.11);
+      --contact-footer-bg: rgba(248, 250, 250, 0.94);
+    }
+
+    body.contact-page.dark-bg-level-2 {
+      --contact-shadow: 0 20px 52px rgba(8, 20, 26, 0.13);
+      --contact-card-shadow: 0 14px 30px rgba(8, 20, 26, 0.09);
+      --contact-hover-shadow: 0 18px 36px rgba(8, 20, 26, 0.13);
+      --contact-border: rgba(22, 76, 71, 0.12);
+      --contact-footer-bg: rgba(246, 248, 248, 0.96);
+    }
+
+    body.contact-page.liquid-ios26.glass-level-0 {
+      --contact-surface: linear-gradient(180deg, rgba(255,255,255,0.88), rgba(242,249,248,0.84));
+      --contact-surface-elevated: rgba(255,255,255,0.82);
+      --contact-surface-soft: rgba(255,255,255,0.80);
+      --contact-badge-bg: rgba(255,255,255,0.82);
+      --contact-callout-bg: rgba(242,251,252,0.82);
+      --contact-border: rgba(255,255,255,0.34);
+      --contact-border-strong: rgba(255,255,255,0.38);
+      --contact-card-shadow: 0 8px 22px rgba(15, 45, 42, 0.08);
+      --contact-hover-shadow: 0 12px 26px rgba(15, 45, 42, 0.10);
+      --contact-surface-backdrop: blur(16px) saturate(118%);
+      --contact-control-backdrop: blur(12px) saturate(118%);
+      --contact-footer-bg: rgba(248, 250, 250, 0.88);
+    }
+
+    body.contact-page.liquid-ios26.glass-level-1 {
+      --contact-surface: linear-gradient(180deg, rgba(255,255,255,0.91), rgba(243,250,249,0.88));
+      --contact-surface-elevated: rgba(255,255,255,0.86);
+      --contact-surface-soft: rgba(255,255,255,0.84);
+      --contact-badge-bg: rgba(255,255,255,0.86);
+      --contact-callout-bg: rgba(241,250,251,0.86);
+      --contact-border: rgba(255,255,255,0.46);
+      --contact-border-strong: rgba(255,255,255,0.50);
+      --contact-card-shadow: 0 10px 24px rgba(15, 45, 42, 0.08);
+      --contact-hover-shadow: 0 14px 28px rgba(15, 45, 42, 0.10);
+      --contact-surface-backdrop: blur(16px) saturate(118%);
+      --contact-control-backdrop: blur(12px) saturate(118%);
+      --contact-footer-bg: rgba(248, 250, 250, 0.90);
+    }
+
+    body.contact-page.liquid-ios26.glass-level-2 {
+      --contact-surface: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(244,250,249,0.91));
+      --contact-surface-elevated: rgba(255,255,255,0.90);
+      --contact-surface-soft: rgba(255,255,255,0.88);
+      --contact-badge-bg: rgba(255,255,255,0.90);
+      --contact-callout-bg: rgba(241,250,251,0.90);
+      --contact-border: rgba(255,255,255,0.58);
+      --contact-border-strong: rgba(255,255,255,0.62);
+      --contact-card-shadow: 0 10px 26px rgba(15, 45, 42, 0.10);
+      --contact-hover-shadow: 0 14px 30px rgba(15, 45, 42, 0.12);
+      --contact-surface-backdrop: blur(15px) saturate(116%);
+      --contact-control-backdrop: blur(11px) saturate(116%);
+      --contact-footer-bg: rgba(249, 251, 251, 0.92);
+    }
+
+    body.contact-page.liquid-ios26.glass-level-3 {
+      --contact-surface: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(245,251,250,0.94));
+      --contact-surface-elevated: rgba(255,255,255,0.93);
+      --contact-surface-soft: rgba(255,255,255,0.91);
+      --contact-badge-bg: rgba(255,255,255,0.93);
+      --contact-callout-bg: rgba(243,251,252,0.93);
+      --contact-border: rgba(255,255,255,0.72);
+      --contact-border-strong: rgba(255,255,255,0.78);
+      --contact-card-shadow: 0 12px 30px rgba(0, 0, 0, 0.13);
+      --contact-hover-shadow: 0 16px 32px rgba(0, 0, 0, 0.15);
+      --contact-surface-backdrop: blur(14px) saturate(114%);
+      --contact-control-backdrop: blur(10px) saturate(114%);
+      --contact-footer-bg: rgba(250, 252, 252, 0.94);
+    }
+
+    body.contact-page.liquid-ios26.glass-level-4 {
+      --contact-surface: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(246,252,251,0.96));
+      --contact-surface-elevated: rgba(255,255,255,0.96);
+      --contact-surface-soft: rgba(255,255,255,0.94);
+      --contact-badge-bg: rgba(255,255,255,0.96);
+      --contact-callout-bg: rgba(245,252,252,0.96);
+      --contact-border: rgba(255,255,255,0.84);
+      --contact-border-strong: rgba(255,255,255,0.90);
+      --contact-card-shadow: 0 14px 34px rgba(0, 0, 0, 0.16);
+      --contact-hover-shadow: 0 18px 36px rgba(0, 0, 0, 0.18);
+      --contact-surface-backdrop: blur(13px) saturate(112%);
+      --contact-control-backdrop: blur(9px) saturate(112%);
+      --contact-footer-bg: rgba(251, 252, 252, 0.96);
+    }
+
+    body.contact-page.high-contrast-level-1.liquid-ios26,
+    body.contact-page.high-contrast-level-2.liquid-ios26,
+    body.contact-page.high-contrast-level-3.liquid-ios26 {
+      --contact-surface: var(--hc-surface);
+      --contact-surface-elevated: var(--hc-module-btn-bg);
+      --contact-surface-soft: var(--hc-module-btn-hover-bg);
+      --contact-border: var(--hc-border);
+      --contact-border-strong: var(--hc-module-btn-border);
+      --contact-shadow: var(--hc-shadow);
+      --contact-card-shadow: var(--hc-module-btn-shadow);
+      --contact-hover-shadow: var(--hc-module-btn-active-shadow);
+      --contact-surface-backdrop: var(--hc-blur);
+      --contact-control-backdrop: none;
+      --contact-badge-bg: var(--hc-button-bg);
+      --contact-badge-border: var(--hc-input-border);
+      --contact-pill-bg: var(--hc-button-bg);
+      --contact-pill-border: var(--hc-input-border);
+      --contact-pill-text: var(--hc-text);
+      --contact-callout-bg: var(--hc-result-bg);
+      --contact-callout-border: var(--hc-input-border);
+      --contact-callout-text: var(--hc-text);
+      --contact-primary-bg: linear-gradient(135deg, rgba(0,131,141,0.96), rgba(20,184,166,0.90));
+      --contact-primary-border: rgba(0, 131, 141, 0.54);
+      --contact-primary-text: #ffffff;
+      --contact-primary-shadow: 0 12px 24px rgba(0, 131, 141, 0.18);
+      --contact-primary-hover-shadow: 0 14px 28px rgba(0, 131, 141, 0.22);
+      --contact-text-strong: var(--hc-text);
+      --contact-text: var(--hc-text);
+      --contact-text-muted: var(--hc-muted);
+      --contact-text-subtle: var(--hc-muted);
+      --contact-text-soft: var(--hc-muted);
+      --contact-text-action: var(--hc-text);
+      --contact-icon: #0b6a71;
+      --contact-focus-ring: var(--hc-focus-color);
+      --contact-focus-width: var(--hc-focus-width);
+      --contact-step-badge-bg: linear-gradient(135deg, rgba(0,131,141,0.94), rgba(20,184,166,0.88));
+      --contact-step-badge-text: #ffffff;
+      --contact-step-badge-shadow: 0 10px 20px rgba(0, 131, 141, 0.18);
+      --contact-hero-highlight-1: rgba(0, 131, 141, 0.08);
+      --contact-hero-highlight-2: rgba(0, 131, 141, 0.05);
+      --contact-footer-bg: var(--hc-surface);
+      --contact-footer-border: var(--hc-border);
+    }
+
     .contact-page .contact-shell {
       padding-block: 1rem 2.5rem;
     }
@@ -52,10 +228,12 @@
     .contact-page .contact-panel,
     .contact-page .contact-card,
     .contact-page .contact-profile-card {
-      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(244,251,250,0.96));
-      border: 1px solid rgba(22, 76, 71, 0.1);
+      background: var(--contact-surface);
+      border: 1px solid var(--contact-border);
       border-radius: 24px;
-      box-shadow: 0 16px 42px rgba(15, 45, 42, 0.08);
+      box-shadow: var(--contact-shadow);
+      backdrop-filter: var(--contact-surface-backdrop);
+      -webkit-backdrop-filter: var(--contact-surface-backdrop);
     }
 
     .contact-page .contact-hero {
@@ -71,8 +249,8 @@
       position: absolute;
       inset: 0;
       background:
-        radial-gradient(circle at top right, rgba(0, 168, 181, 0.16), transparent 34%),
-        radial-gradient(circle at bottom left, rgba(4, 120, 87, 0.09), transparent 30%);
+        radial-gradient(circle at top right, var(--contact-hero-highlight-1), transparent 34%),
+        radial-gradient(circle at bottom left, var(--contact-hero-highlight-2), transparent 30%);
       z-index: -1;
     }
 
@@ -89,11 +267,13 @@
       gap: 0.45rem;
       padding: 0.52rem 0.82rem;
       border-radius: 999px;
-      background: rgba(255,255,255,0.9);
-      border: 1px solid rgba(0, 168, 181, 0.16);
-      color: #0f4b48;
+      background: var(--contact-badge-bg);
+      border: 1px solid var(--contact-badge-border);
+      color: var(--contact-text-action);
       font-weight: 700;
-      box-shadow: 0 8px 24px rgba(15, 45, 42, 0.05);
+      box-shadow: var(--contact-card-shadow);
+      backdrop-filter: var(--contact-control-backdrop);
+      -webkit-backdrop-filter: var(--contact-control-backdrop);
     }
 
     .contact-page .contact-badge .sidebar-icon,
@@ -132,7 +312,7 @@
       max-width: 18ch;
       text-align: center;
       text-wrap: balance;
-      color: #0f3533;
+      color: var(--contact-text-strong);
     }
 
     .contact-page .hero-lead,
@@ -140,7 +320,7 @@
     .contact-page .contact-panel li,
     .contact-page .contact-card p,
     .contact-page .contact-profile-card p {
-      color: #284847;
+      color: var(--contact-text-muted);
       line-height: 1.72;
     }
 
@@ -166,32 +346,55 @@
       min-height: 3.2rem;
       padding: 0.82rem 1.15rem;
       border-radius: 18px;
-      border: 1px solid rgba(0, 168, 181, 0.16);
-      background: rgba(255,255,255,0.92);
-      color: #0f4b48;
+      border: 1px solid var(--contact-border-strong);
+      background: var(--contact-surface-elevated);
+      color: var(--contact-text-action);
       text-decoration: none;
       font-weight: 800;
       text-align: center;
-      box-shadow: 0 10px 24px rgba(15, 45, 42, 0.06);
-      transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+      box-shadow: var(--contact-card-shadow);
+      backdrop-filter: var(--contact-control-backdrop);
+      -webkit-backdrop-filter: var(--contact-control-backdrop);
+      transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
     }
 
     .contact-page .contact-action.primary {
-      background: linear-gradient(135deg, #0891b2, #14b8a6);
-      color: #fff;
-      border-color: transparent;
-      box-shadow: 0 14px 26px rgba(8, 145, 178, 0.24);
+      background: var(--contact-primary-bg);
+      color: var(--contact-primary-text);
+      border-color: var(--contact-primary-border);
+      box-shadow: var(--contact-primary-shadow);
     }
 
-    .contact-page .contact-action:hover,
-    .contact-page .contact-action:focus-visible,
+    .contact-page .contact-action:not(.primary):hover,
+    .contact-page .contact-action:not(.primary):focus-visible,
     .contact-page .contact-link-card:hover,
     .contact-page .contact-link-card:focus-visible,
     .contact-page .contact-method:hover,
     .contact-page .contact-method:focus-visible {
       transform: translateY(-1px);
-      box-shadow: 0 14px 30px rgba(15, 45, 42, 0.10);
+      box-shadow: var(--contact-hover-shadow);
+      background: var(--contact-surface-soft);
+      border-color: var(--contact-border-strong);
       outline: none;
+    }
+
+    .contact-page .contact-action.primary:hover,
+    .contact-page .contact-action.primary:focus-visible {
+      transform: translateY(-1px);
+      background: var(--contact-primary-bg);
+      box-shadow: var(--contact-primary-hover-shadow);
+      border-color: var(--contact-primary-border);
+      outline: none;
+    }
+
+    .contact-page .contact-action:focus-visible,
+    .contact-page .contact-link-card:focus-visible,
+    .contact-page .contact-method:focus-visible {
+      box-shadow: var(--contact-hover-shadow), 0 0 0 var(--contact-focus-width) var(--contact-focus-ring);
+    }
+
+    .contact-page .contact-action.primary:focus-visible {
+      box-shadow: var(--contact-primary-hover-shadow), 0 0 0 var(--contact-focus-width) var(--contact-focus-ring);
     }
 
     .contact-page .contact-grid {
@@ -223,7 +426,7 @@
 
     .contact-page .contact-section-heading h3 {
       margin: 0;
-      color: #103736;
+      color: var(--contact-text);
       font-size: 1.18rem;
       line-height: 1.25;
     }
@@ -231,7 +434,7 @@
     .contact-page .contact-section-heading .sidebar-icon {
       width: 1.1rem;
       height: 1.1rem;
-      color: #0891b2;
+      color: var(--contact-icon);
     }
 
     .contact-page .contact-methods {
@@ -245,12 +448,15 @@
       display: block;
       padding: 1rem 1.05rem;
       border-radius: 20px;
-      background: rgba(255,255,255,0.9);
-      border: 1px solid rgba(22, 76, 71, 0.1);
+      background: var(--contact-surface-elevated);
+      border: 1px solid var(--contact-border);
       text-decoration: none;
-      color: #103736;
+      color: var(--contact-text);
       min-height: 100%;
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      box-shadow: var(--contact-card-shadow);
+      backdrop-filter: var(--contact-control-backdrop);
+      -webkit-backdrop-filter: var(--contact-control-backdrop);
+      transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
     }
 
     .contact-page .contact-method-head {
@@ -258,20 +464,20 @@
       align-items: center;
       gap: 0.6rem;
       font-weight: 800;
-      color: #0f4b48;
+      color: var(--contact-text-action);
       margin-bottom: 0.5rem;
     }
 
     .contact-page .contact-method-head .sidebar-icon {
       width: 1.05rem;
       height: 1.05rem;
-      color: #0891b2;
+      color: var(--contact-icon);
     }
 
     .contact-page .contact-method-label {
       display: block;
       font-size: 0.9rem;
-      color: #55706f;
+      color: var(--contact-text-subtle);
       margin-bottom: 0.25rem;
     }
 
@@ -280,14 +486,14 @@
       font-size: 1rem;
       line-height: 1.45;
       font-weight: 700;
-      color: #103736;
+      color: var(--contact-text);
       overflow-wrap: anywhere;
     }
 
     .contact-page .contact-method-note {
       display: block;
       margin-top: 0.5rem;
-      color: #4e6766;
+      color: var(--contact-text-soft);
       font-size: 0.9rem;
       line-height: 1.55;
     }
@@ -296,9 +502,12 @@
       margin-top: 1rem;
       padding: 1rem 1.05rem;
       border-radius: 20px;
-      background: rgba(8, 145, 178, 0.09);
-      border: 1px solid rgba(8, 145, 178, 0.18);
-      color: #0f4b48;
+      background: var(--contact-callout-bg);
+      border: 1px solid var(--contact-callout-border);
+      color: var(--contact-callout-text);
+      box-shadow: var(--contact-card-shadow);
+      backdrop-filter: var(--contact-control-backdrop);
+      -webkit-backdrop-filter: var(--contact-control-backdrop);
     }
 
     .contact-page .contact-topic-grid {
@@ -310,8 +519,11 @@
     .contact-page .contact-topic-card {
       padding: 1rem 1.05rem;
       border-radius: 20px;
-      background: rgba(255,255,255,0.9);
-      border: 1px solid rgba(22, 76, 71, 0.1);
+      background: var(--contact-surface-elevated);
+      border: 1px solid var(--contact-border);
+      box-shadow: var(--contact-card-shadow);
+      backdrop-filter: var(--contact-control-backdrop);
+      -webkit-backdrop-filter: var(--contact-control-backdrop);
     }
 
     .contact-page .contact-topic-card h4 {
@@ -322,11 +534,11 @@
       margin: 0.05rem 0 0.6rem;
       font-size: 1rem;
       line-height: 1.3;
-      color: #103736;
+      color: var(--contact-text);
     }
 
     .contact-page .contact-topic-card h4 .sidebar-icon {
-      color: #0891b2;
+      color: var(--contact-icon);
     }
 
     .contact-page .contact-topic-card p {
@@ -349,10 +561,13 @@
       position: relative;
       padding: 1rem 1rem 1rem 3.15rem;
       border-radius: 20px;
-      background: rgba(255,255,255,0.88);
-      border: 1px solid rgba(22, 76, 71, 0.1);
-      color: #284847;
+      background: var(--contact-surface-elevated);
+      border: 1px solid var(--contact-border);
+      color: var(--contact-text-muted);
       line-height: 1.62;
+      box-shadow: var(--contact-card-shadow);
+      backdrop-filter: var(--contact-control-backdrop);
+      -webkit-backdrop-filter: var(--contact-control-backdrop);
     }
 
     .contact-page .contact-steps li::before {
@@ -366,10 +581,10 @@
       align-items: center;
       justify-content: center;
       border-radius: 50%;
-      background: linear-gradient(135deg, #0891b2, #14b8a6);
-      color: #fff;
+      background: var(--contact-step-badge-bg);
+      color: var(--contact-step-badge-text);
       font-weight: 800;
-      box-shadow: 0 10px 20px rgba(8, 145, 178, 0.22);
+      box-shadow: var(--contact-step-badge-shadow);
     }
 
     .contact-page .contact-profile-card {
@@ -380,8 +595,9 @@
       margin: 0 0 1rem;
       border-radius: 20px;
       overflow: hidden;
-      background: #eef8f7;
-      border: 1px solid rgba(22, 76, 71, 0.08);
+      background: var(--contact-surface-soft);
+      border: 1px solid var(--contact-border);
+      box-shadow: var(--contact-card-shadow);
     }
 
     .contact-page .contact-portrait img {
@@ -399,17 +615,20 @@
       gap: 0.45rem;
       padding: 0.38rem 0.7rem;
       border-radius: 999px;
-      background: rgba(0, 168, 181, 0.12);
-      border: 1px solid rgba(0, 168, 181, 0.22);
-      color: #0a6261;
+      background: var(--contact-pill-bg);
+      border: 1px solid var(--contact-pill-border);
+      color: var(--contact-pill-text);
       font-weight: 800;
       font-size: 0.88rem;
       margin: 0 0 0.9rem;
+      box-shadow: var(--contact-card-shadow);
+      backdrop-filter: var(--contact-control-backdrop);
+      -webkit-backdrop-filter: var(--contact-control-backdrop);
     }
 
     .contact-page .contact-profile-card h3 {
       margin: 0 0 0.65rem;
-      color: #103736;
+      color: var(--contact-text);
       font-size: 1.3rem;
       line-height: 1.2;
     }
@@ -431,20 +650,23 @@
       gap: 0.18rem;
       padding: 0.9rem 1rem;
       border-radius: 18px;
-      background: rgba(255,255,255,0.9);
-      border: 1px solid rgba(22, 76, 71, 0.1);
+      background: var(--contact-surface-elevated);
+      border: 1px solid var(--contact-border);
+      box-shadow: var(--contact-card-shadow);
+      backdrop-filter: var(--contact-control-backdrop);
+      -webkit-backdrop-filter: var(--contact-control-backdrop);
     }
 
     .contact-page .contact-meta span {
       font-size: 0.82rem;
       text-transform: uppercase;
       letter-spacing: 0.04em;
-      color: #5b7472;
+      color: var(--contact-text-subtle);
       font-weight: 700;
     }
 
     .contact-page .contact-meta strong {
-      color: #103736;
+      color: var(--contact-text);
     }
 
     .contact-page .contact-link-grid {
@@ -459,16 +681,19 @@
       gap: 0.8rem;
       padding: 0.95rem 1rem;
       border-radius: 18px;
-      background: rgba(255,255,255,0.9);
-      border: 1px solid rgba(0, 168, 181, 0.16);
+      background: var(--contact-surface-elevated);
+      border: 1px solid var(--contact-border-strong);
       text-decoration: none;
-      color: #0f4b48;
+      color: var(--contact-text-action);
       font-weight: 800;
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      box-shadow: var(--contact-card-shadow);
+      backdrop-filter: var(--contact-control-backdrop);
+      -webkit-backdrop-filter: var(--contact-control-backdrop);
+      transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
     }
 
     .contact-page .contact-link-card .sidebar-icon:first-child {
-      color: #0891b2;
+      color: var(--contact-icon);
     }
 
     .contact-page .contact-link-card span:nth-child(2) {
@@ -479,14 +704,29 @@
     .contact-page .contact-panel strong,
     .contact-page .contact-card strong,
     .contact-page .contact-profile-card strong {
-      color: #0f3533;
+      color: var(--contact-text-strong);
     }
 
     .contact-page .contact-muted {
       margin-top: 0.85rem;
       font-size: 0.92rem;
-      color: #4b6765;
+      color: var(--contact-text-soft);
       line-height: 1.6;
+    }
+
+    .contact-page footer {
+      margin-top: 1rem;
+      background: var(--contact-footer-bg);
+      border-top: 1px solid var(--contact-footer-border);
+      color: var(--contact-text-muted);
+      backdrop-filter: var(--contact-surface-backdrop);
+      -webkit-backdrop-filter: var(--contact-surface-backdrop);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42);
+    }
+
+    .contact-page footer strong,
+    .contact-page footer a {
+      color: var(--contact-text);
     }
 
     @media (max-width: 1080px) {
