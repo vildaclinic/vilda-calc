@@ -604,7 +604,7 @@ body.nav-ui-temporarily-hidden #scrollTopBtn {
 }
 
 body.nav-ui-temporarily-hidden #mobileBottomDock {
-  transform: translateY(calc(100% + env(safe-area-inset-bottom, 0px) + 1.2rem)) !important;
+  transform: translateY(calc(100% + env(safe-area-inset-bottom, 0px) + var(--mobile-dock-bottom-gap, 4px) + 0.95rem)) !important;
 }
 
 body.nav-ui-temporarily-hidden #scrollTopBtn {

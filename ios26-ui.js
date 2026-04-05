@@ -31,6 +31,7 @@
   const MOBILE_TOP_NAV_MIN_FONT_REM = 0.72;
   const MOBILE_TOP_NAV_MAX_FONT_REM = 0.98;
   const MOBILE_TOP_NAV_FONT_STEP_REM = 0.01;
+  const MOBILE_DOCK_SCROLL_TOP_GAP_PX = 4;
 
   function safeRun(label, fn) {
     try {
@@ -1630,17 +1631,12 @@ function auditNavigationCoverage() {
     btn.style.removeProperty('transform');
   }
 
-  function getDockViewportBottomGap(dockRect, viewportHeight) {
-    if (!dockRect) return 0;
-    return Math.max(0, Math.round(viewportHeight - dockRect.bottom));
-  }
-
   function readCssPxNumber(value, fallback = 0) {
     const parsed = parseFloat(value);
     return Number.isFinite(parsed) ? parsed : fallback;
   }
 
-  function getPinnedDockAnchorMetrics(dock) {
+  function getDockAnchorMetrics(dock, viewportHeight = getViewportHeight()) {
     if (!dock) {
       return {
         bottomGap: 0,
@@ -1651,22 +1647,38 @@ function auditNavigationCoverage() {
     }
 
     const computedStyle = window.getComputedStyle ? window.getComputedStyle(dock) : null;
-    const dockBottomGap = Math.max(0, Math.round(readCssPxNumber(computedStyle?.bottom, 0)));
-    const dockHeight = Math.max(
+    const dockRect = dock.getBoundingClientRect ? dock.getBoundingClientRect() : null;
+    const rectHeight = dockRect ? Math.max(0, Math.round(dockRect.height)) : 0;
+    const fallbackBottomGap = Math.max(0, Math.round(readCssPxNumber(computedStyle?.bottom, 0)));
+    const fallbackHeight = Math.max(
       0,
       Math.round(
         dock.offsetHeight
         || readCssPxNumber(computedStyle?.height, 0)
-        || dock.getBoundingClientRect().height
+        || rectHeight
         || 0
       )
     );
-    const visibleLift = dockHeight + dockBottomGap;
-    const scrollTopBottom = dockHeight + (dockBottomGap * 2);
+
+    const measuredBottomGap = dockRect
+      ? Math.max(0, Math.round(viewportHeight - dockRect.bottom))
+      : fallbackBottomGap;
+    const measuredVisibleLift = dockRect
+      ? Math.max(0, Math.round(viewportHeight - dockRect.top))
+      : Math.max(0, fallbackHeight + fallbackBottomGap);
+
+    const visibleLift = measuredVisibleLift > 0
+      ? measuredVisibleLift
+      : Math.max(0, fallbackHeight + fallbackBottomGap);
+    const bottomGap = measuredBottomGap > 0
+      ? measuredBottomGap
+      : fallbackBottomGap;
+    const height = rectHeight > 0 ? rectHeight : fallbackHeight;
+    const scrollTopBottom = Math.max(0, visibleLift + MOBILE_DOCK_SCROLL_TOP_GAP_PX);
 
     return {
-      bottomGap: dockBottomGap,
-      height: dockHeight,
+      bottomGap,
+      height,
       visibleLift,
       scrollTopBottom
     };
@@ -2035,7 +2047,6 @@ function auditNavigationCoverage() {
 
     function updateDockMetrics() {
       const enabled = shouldEnableMobileDock();
-      const pinnedDockMode = enabled && shouldPinDock();
       const lockedMobileNavigation = shouldLockMobileNavigationUi();
       const extraOffset = enabled ? getVisibleBottomOverlayHeight() : 0;
       const rootStyle = document.documentElement.style;
@@ -2053,19 +2064,9 @@ function auditNavigationCoverage() {
         && !dock.classList.contains('is-keyboard-hidden');
 
       if (isVisible) {
-        if (pinnedDockMode) {
-          const pinnedMetrics = getPinnedDockAnchorMetrics(dock);
-          nextVisibleLift = pinnedMetrics.visibleLift;
-          nextScrollTopBottom = Math.max(baseScrollTopBottom, pinnedMetrics.scrollTopBottom);
-        } else {
-          const viewportHeight = getViewportHeight();
-          const dockRect = dock.getBoundingClientRect();
-          const visibleLift = Math.max(0, Math.round(viewportHeight - dockRect.top));
-          const dockBottomGap = getDockViewportBottomGap(dockRect, viewportHeight);
-          const liftedScrollTopBottom = Math.max(baseScrollTopBottom, visibleLift + Math.round(getRemSizeInPx()));
-          nextVisibleLift = visibleLift;
-          nextScrollTopBottom = liftedScrollTopBottom;
-        }
+        const dockMetrics = getDockAnchorMetrics(dock, getViewportHeight());
+        nextVisibleLift = dockMetrics.visibleLift;
+        nextScrollTopBottom = Math.max(baseScrollTopBottom, dockMetrics.scrollTopBottom);
       }
 
       rootStyle.setProperty('--mobile-dock-visible-lift', `${Math.max(0, nextVisibleLift)}px`);
@@ -2267,6 +2268,14 @@ function auditNavigationCoverage() {
       qsa('.cookie-banner, #cookieBanner').forEach((overlay) => {
         overlayObserver.observe(overlay, { attributes: true, childList: true, subtree: true });
       });
+    }
+
+    if (typeof ResizeObserver !== 'undefined') {
+      const dockResizeObserver = new ResizeObserver(() => {
+        updateDockMetrics();
+      });
+      dockResizeObserver.observe(dock);
+      dockResizeObserver.observe(list);
     }
 
     if (typeof mediaQuery.addEventListener === 'function') {

@@ -203,7 +203,7 @@
       }
 
       body.has-mobile-bottom-dock #scrollTopBtn {
-        bottom: var(--ww-safe-scroll-top-btn-bottom, var(--scroll-top-btn-bottom, 1rem)) !important;
+        bottom: var(--scroll-top-btn-bottom, 1rem) !important;
       }
 
       .ww-help-launcher:hover,

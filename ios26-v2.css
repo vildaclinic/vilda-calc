@@ -835,8 +835,10 @@ body.liquid-ios26::before {
 :root {
   --mobile-dock-height: 84px;
   --mobile-dock-side-gap: 0.75rem;
+  --mobile-dock-bottom-gap: 4px;
   --mobile-dock-extra-offset: 0px;
   --mobile-dock-visible-lift: 0px;
+  --mobile-dock-bottom-gap: 4px;
   --scroll-top-btn-bottom: 1rem;
 }
 
@@ -844,7 +846,7 @@ body.liquid-ios26::before {
   position: fixed;
   left: max(var(--mobile-dock-side-gap), calc(env(safe-area-inset-left, 0px) + 0.35rem));
   right: max(var(--mobile-dock-side-gap), calc(env(safe-area-inset-right, 0px) + 0.35rem));
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 0.55rem + var(--mobile-dock-extra-offset));
+  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--mobile-dock-bottom-gap) + var(--mobile-dock-extra-offset));
   z-index: 1100;
   display: none;
   transform: translateY(0);
@@ -923,13 +925,13 @@ body.has-mobile-bottom-dock #mobileBottomDock {
 
 #mobileBottomDock.is-hidden,
 #mobileBottomDock.is-keyboard-hidden {
-  transform: translateY(calc(100% + env(safe-area-inset-bottom, 0px) + 1.2rem));
+  transform: translateY(calc(100% + env(safe-area-inset-bottom, 0px) + var(--mobile-dock-bottom-gap) + 0.95rem));
   opacity: 0.001;
   pointer-events: none;
 }
 
 body.has-mobile-bottom-dock {
-  padding-bottom: calc(var(--mobile-dock-height) + env(safe-area-inset-bottom, 0px) + var(--mobile-dock-extra-offset) + 1.25rem) !important;
+  padding-bottom: calc(var(--mobile-dock-height) + env(safe-area-inset-bottom, 0px) + var(--mobile-dock-extra-offset) + var(--mobile-dock-bottom-gap) + 1rem) !important;
 }
 
 body.has-mobile-bottom-dock #scrollTopBtn {
@@ -979,25 +981,26 @@ body.has-mobile-bottom-dock #scrollTopBtn {
 }
 
 /* =====================================================================
- * iPhone Home Screen PWA: dock and navigation arrow closer to Safari tab position
+ * iPhone Home Screen PWA: dock pinned to a fixed 4px bottom gap
  * ---------------------------------------------------------------------
  * In standalone mode on iPhone, env(safe-area-inset-bottom) becomes much
  * larger than in Safari browser tabs, which makes the floating dock sit
- * noticeably too high.  We intentionally compress the standalone bottom
- * offset so the dock visually matches the browser version more closely,
- * while still leaving a safe gap above the home indicator.
+ * noticeably too high.  We therefore pin the standalone dock offset to a
+ * hard 4px gap so it stays visually low and consistent with the browser
+ * version, while still leaving a minimal breathing room above the bottom
+ * system area.
  */
 @media (display-mode: standalone) and (pointer: coarse) {
   #mobileBottomDock {
-    bottom: calc(clamp(0.275rem, calc(0.275rem + env(safe-area-inset-bottom, 0px) * 0.19), 0.725rem) + var(--mobile-dock-extra-offset)) !important;
+    bottom: calc(var(--mobile-dock-bottom-gap) + var(--mobile-dock-extra-offset)) !important;
   }
 
   #mobileBottomDock.is-hidden,
   #mobileBottomDock.is-keyboard-hidden {
-    transform: translateY(calc(100% + clamp(0.675rem, calc(0.675rem + env(safe-area-inset-bottom, 0px) * 0.19), 1.125rem) + var(--mobile-dock-extra-offset))) !important;
+    transform: translateY(calc(100% + var(--mobile-dock-bottom-gap) + var(--mobile-dock-extra-offset) + 0.75rem)) !important;
   }
 
   body.has-mobile-bottom-dock {
-    padding-bottom: calc(var(--mobile-dock-height) + clamp(0.725rem, calc(0.725rem + env(safe-area-inset-bottom, 0px) * 0.19), 1.175rem) + var(--mobile-dock-extra-offset)) !important;
+    padding-bottom: calc(var(--mobile-dock-height) + var(--mobile-dock-bottom-gap) + var(--mobile-dock-extra-offset) + 0.75rem) !important;
   }
 }
