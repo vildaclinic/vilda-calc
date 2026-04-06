@@ -1757,42 +1757,99 @@ function auditNavigationCoverage() {
     return !!(coarsePointer || (viewportWidth > 0 && viewportWidth <= 1100));
   }
 
+  const transientViewportResizeEventCache = typeof WeakMap !== 'undefined' ? new WeakMap() : null;
+  let transientViewportResizeBaselineWidth = 0;
+  let transientViewportResizeBaselineHeight = 0;
+  let transientViewportResizeOrientationCooldownUntil = 0;
+  let transientViewportResizeSuppressUntil = 0;
+
+  function syncTransientViewportResizeBaseline() {
+    transientViewportResizeBaselineWidth = getViewportWidth();
+    transientViewportResizeBaselineHeight = getViewportHeight();
+  }
+
+  function markTransientViewportOrientationChange() {
+    transientViewportResizeOrientationCooldownUntil = Date.now() + 1200;
+    syncTransientViewportResizeBaseline();
+    window.setTimeout(syncTransientViewportResizeBaseline, 180);
+  }
+
+  function computeShouldIgnoreTransientViewportResize() {
+    const nextWidth = getViewportWidth();
+    const nextHeight = getViewportHeight();
+
+    if (transientViewportResizeBaselineWidth <= 0 || transientViewportResizeBaselineHeight <= 0) {
+      transientViewportResizeBaselineWidth = nextWidth;
+      transientViewportResizeBaselineHeight = nextHeight;
+      return false;
+    }
+
+    const now = Date.now();
+    const widthDelta = Math.abs(nextWidth - transientViewportResizeBaselineWidth);
+    const heightDelta = Math.abs(nextHeight - transientViewportResizeBaselineHeight);
+    const keyboardLikely = isEditableField(document.activeElement) || heightDelta > 260;
+    const guardedViewport = shouldGuardTransientViewportResize()
+      && now > transientViewportResizeOrientationCooldownUntil
+      && !keyboardLikely;
+    const withinSuppressionWindow = guardedViewport
+      && now <= transientViewportResizeSuppressUntil
+      && widthDelta <= 2;
+    const transientBrowserUiResize = withinSuppressionWindow || (
+      guardedViewport
+      && widthDelta <= 2
+      && heightDelta >= 8
+      && heightDelta <= 320
+    );
+
+    transientViewportResizeBaselineWidth = nextWidth;
+    transientViewportResizeBaselineHeight = nextHeight;
+
+    if (transientBrowserUiResize) {
+      transientViewportResizeSuppressUntil = now + 180;
+      return true;
+    }
+
+    transientViewportResizeSuppressUntil = 0;
+    return false;
+  }
+
+  function shouldIgnoreTransientViewportResizeEvent(event) {
+    if (event && typeof event === 'object' && transientViewportResizeEventCache?.has(event)) {
+      return transientViewportResizeEventCache.get(event);
+    }
+
+    if (event && event.isTrusted === false) {
+      return false;
+    }
+
+    const result = computeShouldIgnoreTransientViewportResize();
+
+    if (event && typeof event === 'object' && transientViewportResizeEventCache) {
+      transientViewportResizeEventCache.set(event, result);
+    }
+
+    return result;
+  }
+
   function setupTransientViewportResizeGuard() {
     if (window.__vildaTransientViewportResizeGuardInstalled) return;
     window.__vildaTransientViewportResizeGuardInstalled = true;
+    window.__vildaShouldIgnoreTransientResize = shouldIgnoreTransientViewportResizeEvent;
 
-    let lastWidth = getViewportWidth();
-    let lastHeight = getViewportHeight();
-    let orientationCooldownUntil = 0;
     let settleTimer = 0;
 
-    const syncBaseline = () => {
-      lastWidth = getViewportWidth();
-      lastHeight = getViewportHeight();
-    };
+    syncTransientViewportResizeBaseline();
 
     on(window, 'orientationchange', () => {
-      orientationCooldownUntil = Date.now() + 1200;
+      markTransientViewportOrientationChange();
       window.clearTimeout(settleTimer);
-      window.setTimeout(syncBaseline, 180);
     }, { passive: true });
 
+    on(window, 'load', syncTransientViewportResizeBaseline, { passive: true, once: true });
+    on(window, 'pageshow', syncTransientViewportResizeBaseline, { passive: true });
+
     window.addEventListener('resize', (event) => {
-      const nextWidth = getViewportWidth();
-      const nextHeight = getViewportHeight();
-      const widthDelta = Math.abs(nextWidth - lastWidth);
-      const heightDelta = Math.abs(nextHeight - lastHeight);
-      const keyboardLikely = isEditableField(document.activeElement) || heightDelta > 220;
-      const transientBrowserUiResize = shouldGuardTransientViewportResize()
-        && Date.now() > orientationCooldownUntil
-        && widthDelta <= 2
-        && heightDelta >= 20
-        && heightDelta <= 180
-        && !keyboardLikely;
-
-      lastWidth = nextWidth;
-      lastHeight = nextHeight;
-
+      const transientBrowserUiResize = shouldIgnoreTransientViewportResizeEvent(event);
       if (!transientBrowserUiResize) return;
 
       if (event && typeof event.stopImmediatePropagation === 'function') {

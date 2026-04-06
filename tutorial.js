@@ -1052,8 +1052,13 @@
       }
     };
 
-    window.addEventListener('resize', scheduleTrail, { passive: true });
-    cleanups.push(() => window.removeEventListener('resize', scheduleTrail));
+    const handleWindowResize = (event) => {
+      if (window.__vildaShouldIgnoreTransientResize?.(event)) return;
+      scheduleTrail();
+    };
+
+    window.addEventListener('resize', handleWindowResize, { passive: true });
+    cleanups.push(() => window.removeEventListener('resize', handleWindowResize));
 
     window.addEventListener('orientationchange', scheduleTrail, { passive: true });
     cleanups.push(() => window.removeEventListener('orientationchange', scheduleTrail));
@@ -1074,7 +1079,10 @@
     cleanups.push(() => document.removeEventListener('transitionend', handleDockTransitionEnd, true));
 
     if (window.visualViewport) {
-      const handleViewportResize = () => scheduleTrail();
+      const handleViewportResize = (event) => {
+        if (window.__vildaShouldIgnoreTransientResize?.(event)) return;
+        scheduleTrail();
+      };
       const handleViewportScroll = () => scheduleFast();
       window.visualViewport.addEventListener('resize', handleViewportResize, { passive: true });
       cleanups.push(() => window.visualViewport.removeEventListener('resize', handleViewportResize));
@@ -1708,7 +1716,8 @@
       cleanups.push(() => observer.disconnect());
     }
 
-    const handleResize = () => {
+    const handleResize = (event) => {
+      if (window.__vildaShouldIgnoreTransientResize?.(event)) return;
       scheduleSingleColumnCompareInstructionSync();
     };
 

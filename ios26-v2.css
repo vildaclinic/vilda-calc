@@ -989,6 +989,26 @@ body.has-mobile-bottom-dock #scrollTopBtn {
   }
 }
 
+
+@media (max-width: 991.98px) {
+  /*
+   * Gdy mobilny Chrome pokazuje/ukrywa dolny pasek, część kart i helperów
+   * potrafi minimalnie zmienić wysokość po skryptowych przeliczeniach.
+   * Wyłączenie scroll anchoring dla głównego kontenera mobilnego ogranicza
+   * wtedy odczuwalne „podskakiwanie” całego viewportu przy samym dole strony.
+   */
+  body.has-mobile-bottom-dock,
+  body.mobile-nav-ui-locked {
+    overflow-anchor: none;
+  }
+
+  #mobileBottomDock,
+  #scrollTopBtn,
+  .ww-help-launcher {
+    overflow-anchor: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   #mobileBottomDock,
   #mobileBottomDock .mobile-bottom-dock__item {
