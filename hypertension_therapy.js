@@ -1502,8 +1502,7 @@
     // Dopasuj szerokość przycisku „Leczenie nadciśnienia” do pozostałych przycisków modułu.
     // W układzie jednokolumnowym będzie to zwykle 100%; w dwukolumnowym – stała szerokość w px.
     syncHypertensionButtonWidth();
-    window.addEventListener('resize', (event) => {
-      if (window.__vildaShouldIgnoreTransientResize?.(event)) return;
+    window.addEventListener('resize', () => {
       requestAnimationFrame(syncHypertensionButtonWidth);
     });
 

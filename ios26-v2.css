@@ -44,14 +44,7 @@
 body.liquid-ios26 {
   padding-top: env(safe-area-inset-top);
   padding-right: env(safe-area-inset-right);
-  /*
-   * W mobilnym Chrome dynamiczny dolny pasek ("chin") zmienia
-   * safe-area-inset-bottom podczas scrollu. Użycie tej dynamicznej wartości
-   * w padding-bottom całego <body> powoduje layout thrashing i widoczne
-   * podskakiwanie całego viewportu przy dojeżdżaniu do końca strony.
-   * Dlatego rezerwujemy tu statyczną maksymalną bezpieczną wysokość.
-   */
-  padding-bottom: var(--ww-safe-area-bottom-max);
+  padding-bottom: env(safe-area-inset-bottom);
   padding-left: env(safe-area-inset-left);
 }
 
@@ -845,18 +838,19 @@ body.liquid-ios26::before {
   --mobile-dock-bottom-gap: 4px;
   --mobile-dock-extra-offset: 0px;
   --mobile-dock-visible-lift: 0px;
-  --mobile-dock-bottom-gap: 4px;
+  --mobile-dock-scroll-top-gap: 4px;
+  --mobile-dock-anchor-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--mobile-dock-bottom-gap) + var(--mobile-dock-extra-offset));
+  --mobile-dock-effective-height: var(--mobile-dock-measured-height, var(--mobile-dock-height));
+  --mobile-dock-pinned-visible-lift: calc(var(--mobile-dock-effective-height) + var(--mobile-dock-anchor-bottom));
+  --mobile-dock-pinned-scroll-top-bottom: calc(var(--mobile-dock-pinned-visible-lift) + var(--mobile-dock-scroll-top-gap));
   --scroll-top-btn-bottom: 1rem;
-  --ww-safe-area-bottom-current: env(safe-area-inset-bottom, 0px);
-  --ww-safe-area-bottom-max: env(safe-area-inset-bottom, 0px);
-  --ww-safe-area-bottom-max: env(safe-area-max-inset-bottom, env(safe-area-inset-bottom, 0px));
 }
 
 #mobileBottomDock {
   position: fixed;
   left: max(var(--mobile-dock-side-gap), calc(env(safe-area-inset-left, 0px) + 0.35rem));
   right: max(var(--mobile-dock-side-gap), calc(env(safe-area-inset-right, 0px) + 0.35rem));
-  bottom: calc(var(--ww-safe-area-bottom-current) + var(--mobile-dock-bottom-gap) + var(--mobile-dock-extra-offset));
+  bottom: var(--mobile-dock-anchor-bottom);
   z-index: 1100;
   display: none;
   transform: translateY(0);
@@ -935,25 +929,23 @@ body.has-mobile-bottom-dock #mobileBottomDock {
 
 #mobileBottomDock.is-hidden,
 #mobileBottomDock.is-keyboard-hidden {
-  transform: translateY(calc(100% + var(--ww-safe-area-bottom-current) + var(--mobile-dock-bottom-gap) + 0.95rem));
+  transform: translateY(calc(100% + env(safe-area-inset-bottom, 0px) + var(--mobile-dock-bottom-gap) + 0.95rem));
   opacity: 0.001;
   pointer-events: none;
 }
 
 body.has-mobile-bottom-dock {
-  /*
-   * Treść strony nie może rosnąć/kurczyć się razem z dynamicznym chinem
-   * Chrome na Androidzie. Rezerwujemy więc miejsce pod dock używając
-   * maksymalnego bezpiecznego insetu, a sam dock nadal pozycjonujemy
-   * dynamicznym current insetem.
-   */
-  padding-bottom: calc(var(--mobile-dock-height) + var(--ww-safe-area-bottom-max) + var(--mobile-dock-extra-offset) + var(--mobile-dock-bottom-gap) + 1rem) !important;
+  padding-bottom: calc(var(--mobile-dock-height) + env(safe-area-inset-bottom, 0px) + var(--mobile-dock-extra-offset) + var(--mobile-dock-bottom-gap) + 1rem) !important;
 }
 
 body.has-mobile-bottom-dock #scrollTopBtn {
   bottom: var(--scroll-top-btn-bottom, 1rem) !important;
   z-index: 1201;
   transition: bottom 220ms ease, background 0.2s ease, transform 220ms ease, opacity 220ms ease;
+}
+
+body.mobile-nav-ui-locked.has-mobile-bottom-dock-visible #scrollTopBtn {
+  bottom: var(--mobile-dock-pinned-scroll-top-bottom, var(--scroll-top-btn-bottom, 1rem)) !important;
 }
 
 /*
@@ -981,31 +973,11 @@ body.has-mobile-bottom-dock #scrollTopBtn {
 
 @media (min-width: 992px) {
   body.has-mobile-bottom-dock {
-    padding-bottom: var(--ww-safe-area-bottom-max) !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
   }
 
   body.has-mobile-bottom-dock #scrollTopBtn {
     bottom: 1rem !important;
-  }
-}
-
-
-@media (max-width: 991.98px) {
-  /*
-   * Gdy mobilny Chrome pokazuje/ukrywa dolny pasek, część kart i helperów
-   * potrafi minimalnie zmienić wysokość po skryptowych przeliczeniach.
-   * Wyłączenie scroll anchoring dla głównego kontenera mobilnego ogranicza
-   * wtedy odczuwalne „podskakiwanie” całego viewportu przy samym dole strony.
-   */
-  body.has-mobile-bottom-dock,
-  body.mobile-nav-ui-locked {
-    overflow-anchor: none;
-  }
-
-  #mobileBottomDock,
-  #scrollTopBtn,
-  .ww-help-launcher {
-    overflow-anchor: none;
   }
 }
 

@@ -208,6 +208,10 @@
         transform: none !important;
       }
 
+      body.mobile-nav-ui-locked.has-mobile-bottom-dock-visible .ww-help-launcher {
+        bottom: var(--mobile-dock-pinned-scroll-top-bottom, var(--scroll-top-btn-bottom, calc(env(safe-area-inset-bottom, 0px) + 1rem))) !important;
+      }
+
       body.mobile-nav-ui-locked .ww-help-launcher:hover,
       body.mobile-nav-ui-locked .ww-help-launcher:focus-visible {
         transform: none !important;
@@ -215,6 +219,10 @@
 
       body.has-mobile-bottom-dock #scrollTopBtn {
         bottom: var(--scroll-top-btn-bottom, 1rem) !important;
+      }
+
+      body.mobile-nav-ui-locked.has-mobile-bottom-dock-visible #scrollTopBtn {
+        bottom: var(--mobile-dock-pinned-scroll-top-bottom, var(--scroll-top-btn-bottom, 1rem)) !important;
       }
 
       .ww-help-launcher:hover,
@@ -644,6 +652,10 @@
         bottom: calc(var(--scroll-top-btn-bottom, calc(env(safe-area-inset-bottom, 0px) + 1rem)) + 0.75rem);
       }
 
+      body.mobile-nav-ui-locked.has-mobile-bottom-dock-visible .ww-toast {
+        bottom: calc(var(--mobile-dock-pinned-scroll-top-bottom, var(--scroll-top-btn-bottom, calc(env(safe-area-inset-bottom, 0px) + 1rem))) + 0.75rem);
+      }
+
       @media (max-width: 720px) {
         .ww-help-launcher {
           width: auto !important;
@@ -1052,13 +1064,8 @@
       }
     };
 
-    const handleWindowResize = (event) => {
-      if (window.__vildaShouldIgnoreTransientResize?.(event)) return;
-      scheduleTrail();
-    };
-
-    window.addEventListener('resize', handleWindowResize, { passive: true });
-    cleanups.push(() => window.removeEventListener('resize', handleWindowResize));
+    window.addEventListener('resize', scheduleTrail, { passive: true });
+    cleanups.push(() => window.removeEventListener('resize', scheduleTrail));
 
     window.addEventListener('orientationchange', scheduleTrail, { passive: true });
     cleanups.push(() => window.removeEventListener('orientationchange', scheduleTrail));
@@ -1079,10 +1086,7 @@
     cleanups.push(() => document.removeEventListener('transitionend', handleDockTransitionEnd, true));
 
     if (window.visualViewport) {
-      const handleViewportResize = (event) => {
-        if (window.__vildaShouldIgnoreTransientResize?.(event)) return;
-        scheduleTrail();
-      };
+      const handleViewportResize = () => scheduleTrail();
       const handleViewportScroll = () => scheduleFast();
       window.visualViewport.addEventListener('resize', handleViewportResize, { passive: true });
       cleanups.push(() => window.visualViewport.removeEventListener('resize', handleViewportResize));
@@ -1716,8 +1720,7 @@
       cleanups.push(() => observer.disconnect());
     }
 
-    const handleResize = (event) => {
-      if (window.__vildaShouldIgnoreTransientResize?.(event)) return;
+    const handleResize = () => {
       scheduleSingleColumnCompareInstructionSync();
     };
 

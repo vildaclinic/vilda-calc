@@ -5750,7 +5750,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.setupPrevClcrCardHeight = setupPrevClcrCardHeight;
     // Wywołaj dostosowanie wysokości po załadowaniu DOM oraz przy zmianie rozmiaru okna.
     document.addEventListener('DOMContentLoaded', setupPrevClcrCardHeight);
-    window.addEventListener('resize', function(event){ if (window.__vildaShouldIgnoreTransientResize?.(event)) return; setupPrevClcrCardHeight(); });
+    window.addEventListener('resize', setupPrevClcrCardHeight);
   })();
 </script>
   <script>

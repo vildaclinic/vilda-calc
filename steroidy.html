@@ -1298,7 +1298,7 @@
     document.getElementById('targetDrug').addEventListener('change', () => {
       unifySelectWidths();
     });
-    window.addEventListener('resize', function(event){ if (window.__vildaShouldIgnoreTransientResize?.(event)) return; unifySelectWidths(); });
+    window.addEventListener('resize', unifySelectWidths);
 
     // Wywołaj updateGroupFilters na starcie, aby początkowo ograniczyć listę
     // docelową i kolejne wiersze do grupy pierwszego sterydu. Nie filtrujemy
@@ -1797,7 +1797,7 @@
     // interface to dynamically switch between the desktop table layout and
     // the mobile stacked fieldsets without requiring the user to
     // re-submit the form.  The handler is attached once at load time.
-    window.addEventListener('resize', function(event){ if (window.__vildaShouldIgnoreTransientResize?.(event)) return; updateResultsLayout(); });
+    window.addEventListener('resize', updateResultsLayout);
 
     document.getElementById('calcForm').addEventListener('submit', e => {
       e.preventDefault();

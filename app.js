@@ -2696,8 +2696,7 @@ function __renderPrevClcrSummary(data) {
     if (!window.__prevClcrLayoutBound) {
       window.__prevClcrLayoutBound = true;
 
-      window.addEventListener('resize', (event) => {
-        if (window.__vildaShouldIgnoreTransientResize?.(event)) return;
+      window.addEventListener('resize', () => {
         try { __syncPrevClcrCardHeight(); } catch (_) {}
       });
 
@@ -11109,8 +11108,7 @@ window.addEventListener('DOMContentLoaded', () => {
   if (hideBtn) hideBtn.style.display = 'none';
   if (toggleBtn) toggleBtn.style.display = 'none';
 });
-window.addEventListener('resize', (event) => {
-  if (window.__vildaShouldIgnoreTransientResize?.(event)) return;
+window.addEventListener('resize', () => {
   if (typeof repositionDoctor === 'function') {
     repositionDoctor();
   }
@@ -11207,8 +11205,7 @@ window.addEventListener('DOMContentLoaded', () => {
     adjustTestButtonWidths();
   }
 });
-window.addEventListener('resize', (event) => {
-  if (window.__vildaShouldIgnoreTransientResize?.(event)) return;
+window.addEventListener('resize', () => {
   if (typeof adjustTestButtonWidths === 'function') {
     adjustTestButtonWidths();
   }
@@ -21537,8 +21534,7 @@ function openIntakeCard(options){
   document.getElementById('intakePal')?.addEventListener('change', debouncedIntakeCalc);
 
   // przelicz wyniki przy rotacji/zmianie szerokości, aby zachować poprawny układ sekcji
-  window.addEventListener('resize', (event)=>{
-    if (window.__vildaShouldIgnoreTransientResize?.(event)) return;
+  window.addEventListener('resize', ()=>{
     const visible = card && card.style.display !== 'none';
     if(visible) calcEstimatedIntake();
   });
@@ -25804,8 +25800,7 @@ function rehydrateIntakeFromState(savedPal, options){
       }
       // Przy każdej zmianie rozmiaru okna dostosuj wysokości kart
       if (typeof window !== 'undefined') {
-        window.addEventListener('resize', function(event) {
-          if (window.__vildaShouldIgnoreTransientResize?.(event)) return;
+        window.addEventListener('resize', function() {
           if (typeof window.adjustPrevSummaryHeight === 'function') {
             try { window.adjustPrevSummaryHeight(); } catch (_) {}
           }

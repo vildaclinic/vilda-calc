@@ -80,10 +80,7 @@
   observer.observe(document.documentElement, { childList: true, subtree: true });
 
   // Merge on resize and after DOM is ready
-  window.addEventListener('resize', (event) => {
-    if (window.__vildaShouldIgnoreTransientResize?.(event)) return;
-    mergeSummaryCards();
-  });
+  window.addEventListener('resize', mergeSummaryCards);
   if (document.readyState === 'complete' || document.readyState === 'interactive') {
     mergeSummaryCards();
   } else {
@@ -92,10 +89,7 @@
 
   // Disable scrollIntoView on mobile and restore on wider screens
   toggleAutoScrollDisable();
-  window.addEventListener('resize', (event) => {
-    if (window.__vildaShouldIgnoreTransientResize?.(event)) return;
-    toggleAutoScrollDisable();
-  });
+  window.addEventListener('resize', toggleAutoScrollDisable);
 
   /**
    * === Dostosowanie wysokości karty komunikatów (infoMessages) ===
@@ -181,10 +175,7 @@
     });
   }
   // Update height on window resize
-  window.addEventListener('resize', (event) => {
-    if (window.__vildaShouldIgnoreTransientResize?.(event)) return;
-    updateInfoCardHeight();
-  });
+  window.addEventListener('resize', updateInfoCardHeight);
 
   /**
    * === Motyw aplikacji: ciemne tło, płynne szkło i wysoki kontrast ===
@@ -413,10 +404,7 @@
   } else {
     document.addEventListener('DOMContentLoaded', adjustAllTestCards);
   }
-  window.addEventListener('resize', (event) => {
-    if (window.__vildaShouldIgnoreTransientResize?.(event)) return;
-    adjustAllTestCards();
-  });
+  window.addEventListener('resize', adjustAllTestCards);
 
   // Hook into test toggle buttons so that whenever a list of tests is
   // shown or hidden, the cards are redistributed.  Because the DOM
@@ -557,10 +545,7 @@
       }, false);
     }
     // Reapply positioning on window resize to accommodate layout changes.
-    window.addEventListener('resize', (event) => {
-      if (window.__vildaShouldIgnoreTransientResize?.(event)) return;
-      repositionIgfAndEndo();
-    });
+    window.addEventListener('resize', repositionIgfAndEndo);
   });
 
   // Override Z‑score toggle behaviour.  Capture the click event so the
@@ -1364,8 +1349,7 @@
       rad.addEventListener('change', updateMiniSummary);
     });
     // Also update on window resize (to recalc status classes if crossing age boundary)
-    window.addEventListener('resize', function(event){
-      if (window.__vildaShouldIgnoreTransientResize?.(event)) return;
+    window.addEventListener('resize', function(){
       // If user resizes below desktop, hide summary; if above, update position
       if (window.innerWidth < 992) {
         var miniEl = document.getElementById('miniSummary');
@@ -1832,10 +1816,7 @@
     // Call once to position initially
     positionSteroidSummary();
     // Reposition on resize events
-    window.addEventListener('resize', function(event) {
-      if (window.__vildaShouldIgnoreTransientResize?.(event)) return;
-      positionSteroidSummary();
-    });
+    window.addEventListener('resize', positionSteroidSummary);
 
     // Expose the positioning function globally so it can be invoked
     // from the IntersectionObserver callback in initMiniSummary.  The
