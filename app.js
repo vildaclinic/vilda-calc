@@ -8061,15 +8061,28 @@ function patientReportBuildHtml(model) {
   const metaHtml = patientReportBuildMetaHtml(model);
   const cardsHtml = patientReportBuildMetricCardsHtml(model.metricCards);
   const secondaryCardsHtml = patientReportBuildSecondaryCardsHtml(model);
-  const footerSourceHtml = (Array.isArray(model && model.sourceLines) && model.sourceLines.length)
-    ? `
+  const isAdult = !!(model && model.isAdult);
+  const footerSourceHtml = isAdult
+    ? ((Array.isArray(model && model.sourceLines) && model.sourceLines.length)
+      ? `
           <div class="patient-report-footer-source">
             <div class="patient-report-footer-source-title">${patientReportEscapeHtml(model.sourceLabelPrefix || 'Główne źródła danych')}</div>
             <div class="patient-report-footer-source-list">
               ${model.sourceLines.map((line) => `<div class="patient-report-footer-source-line">${patientReportEscapeHtml(line || '')}</div>`).join('')}
             </div>
           </div>`
-    : `<div class="patient-report-footer-source">${patientReportEscapeHtml(model.sourceLabelPrefix || 'Porównania centylowe')}: ${patientReportEscapeHtml(model.sourceLabel || '—')}</div>`;
+      : `
+          <div class="patient-report-footer-source">
+            <div class="patient-report-footer-source-title">${patientReportEscapeHtml(model.sourceLabelPrefix || 'Główne źródła danych')}</div>
+            <div class="patient-report-footer-source-list">
+              <div class="patient-report-footer-source-line">${patientReportEscapeHtml(model.sourceLabel || '—')}</div>
+            </div>
+          </div>`)
+    : `
+          <div class="patient-report-footer-source patient-report-footer-source-compact">
+            <span class="patient-report-footer-source-title">${patientReportEscapeHtml(model.sourceLabelPrefix || 'Porównania centylowe')}:</span>
+            <span class="patient-report-footer-source-inline">${patientReportEscapeHtml(model.sourceLabel || '—')}</span>
+          </div>`;
   return `
     <div class="patient-report-pdf-root">
       <style>
@@ -8786,8 +8799,42 @@ function patientReportBuildHtml(model) {
           min-width: 0;
           display: block;
         }
+        .patient-report-page.is-child .patient-report-footer {
+          bottom: 38px;
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          align-items: end;
+          column-gap: 18px;
+          row-gap: 0;
+          padding-top: 0;
+          border-top: none;
+          font-size: 14px;
+          line-height: 1.35;
+        }
+        .patient-report-page.is-child .patient-report-footer-note {
+          display: block;
+        }
+        .patient-report-page.is-child .patient-report-footer-source {
+          display: block;
+          text-align: right;
+          white-space: nowrap;
+          overflow-wrap: normal;
+          word-break: normal;
+        }
+        .patient-report-page.is-child .patient-report-footer-source-compact {
+          font-weight: 400;
+        }
+        .patient-report-page.is-child .patient-report-footer-source-title,
+        .patient-report-page.is-child .patient-report-footer-source-inline {
+          display: inline;
+          white-space: nowrap;
+        }
+        .patient-report-page.is-child .patient-report-footer-source-title {
+          margin-right: 4px;
+          font-weight: 700;
+        }
       </style>
-      <section class="patient-report-page">
+      <section class="patient-report-page ${isAdult ? 'is-adult' : 'is-child'}">
         <div class="patient-report-header">
           <div class="patient-report-brand">
             <div class="patient-report-brand-kicker">wagaiwzrost.pl</div>
