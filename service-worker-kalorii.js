@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '0.9.153';
+const SW_VERSION = '0.9.201';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -36,8 +36,13 @@ const CORE_SHELL_URLS = [
   '/ios26-v2.css',
   '/logo_vilda.jpeg',
   '/app.js',
+  '/adult_vitals.js',
   '/ds_lms.js',
   '/centile_data.js',
+  '/bayley_pinneau_data.js',
+  '/rwt_data.js',
+  '/reinehr_cdgp_data.js',
+  '/advanced_growth_kowd.js',
   '/vitalSigns.js',
   '/gh_igf_therapy.js',
   '/antibiotic_therapy.js',
@@ -47,6 +52,7 @@ const CORE_SHELL_URLS = [
   '/bp_module.js',
   '/circumference_module.js',
   '/respiratory_module.js',
+  '/sga_intergrowth_data.js',
   '/custom-fixes.js',
   '/reposition.js',
   '/growth-basic-module.js'

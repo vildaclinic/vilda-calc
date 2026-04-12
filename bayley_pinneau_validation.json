@@ -1,0 +1,117 @@
+{
+  "meta": {
+    "description": "Spot checks comparing generated values with values visibly readable in the supplied photographs."
+  },
+  "samples": [
+    {
+      "sex": "boys",
+      "maturityGroup": "average",
+      "tableId": "IIA",
+      "currentHeightInches": 42,
+      "boneAgeLabel": "7-0",
+      "visibleTableValue": 60.4,
+      "computedFromFactorRow": 60.4,
+      "matches": true
+    },
+    {
+      "sex": "boys",
+      "maturityGroup": "average",
+      "tableId": "IIB",
+      "currentHeightInches": 58,
+      "boneAgeLabel": "14-9",
+      "visibleTableValue": 60.5,
+      "computedFromFactorRow": 60.5,
+      "matches": true
+    },
+    {
+      "sex": "boys",
+      "maturityGroup": "accelerated",
+      "tableId": "IIC",
+      "currentHeightInches": 41,
+      "boneAgeLabel": "7-0",
+      "visibleTableValue": 61.2,
+      "computedFromFactorRow": 61.2,
+      "matches": true
+    },
+    {
+      "sex": "boys",
+      "maturityGroup": "accelerated",
+      "tableId": "IID",
+      "currentHeightInches": 50,
+      "boneAgeLabel": "12-6",
+      "visibleTableValue": 60.4,
+      "computedFromFactorRow": 60.4,
+      "matches": true
+    },
+    {
+      "sex": "boys",
+      "maturityGroup": "retarded",
+      "tableId": "IIE",
+      "currentHeightInches": 42,
+      "boneAgeLabel": "6-6",
+      "visibleTableValue": 60.0,
+      "computedFromFactorRow": 60.0,
+      "matches": true
+    },
+    {
+      "sex": "girls",
+      "maturityGroup": "average",
+      "tableId": "IIIA",
+      "currentHeightInches": 37,
+      "boneAgeLabel": "6-0",
+      "visibleTableValue": 51.4,
+      "computedFromFactorRow": 51.4,
+      "matches": true
+    },
+    {
+      "sex": "girls",
+      "maturityGroup": "average",
+      "tableId": "IIIB",
+      "currentHeightInches": 51,
+      "boneAgeLabel": "18-0",
+      "visibleTableValue": 51.0,
+      "computedFromFactorRow": 51.0,
+      "matches": true
+    },
+    {
+      "sex": "girls",
+      "maturityGroup": "accelerated",
+      "tableId": "IIIC",
+      "currentHeightInches": 43,
+      "boneAgeLabel": "10-0",
+      "visibleTableValue": 51.9,
+      "computedFromFactorRow": 51.9,
+      "matches": true
+    },
+    {
+      "sex": "girls",
+      "maturityGroup": "accelerated",
+      "tableId": "IIID",
+      "currentHeightInches": 50,
+      "boneAgeLabel": "14-6",
+      "visibleTableValue": 51.0,
+      "computedFromFactorRow": 51.0,
+      "matches": true
+    },
+    {
+      "sex": "girls",
+      "maturityGroup": "retarded",
+      "tableId": "IIIE",
+      "currentHeightInches": 43,
+      "boneAgeLabel": "9-0",
+      "visibleTableValue": 51.1,
+      "computedFromFactorRow": 51.1,
+      "matches": true
+    },
+    {
+      "sex": "girls",
+      "maturityGroup": "retarded",
+      "tableId": "IIIF",
+      "currentHeightInches": 49,
+      "boneAgeLabel": "12-9",
+      "visibleTableValue": 51.2,
+      "computedFromFactorRow": 51.2,
+      "matches": true
+    }
+  ]
+}

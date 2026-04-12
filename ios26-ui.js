@@ -397,6 +397,9 @@
     if (!document.hidden) applyThemeCustom();
   });
 
+  window.addEventListener('pageshow', syncStandaloneDisplayModeClass);
+  window.addEventListener('resize', syncStandaloneDisplayModeClass, { passive: true });
+
   window.addEventListener('pageshow', applyNavigationVisibilityPreferences);
   window.addEventListener('storage', (event) => {
     const key = event?.key || '';
@@ -423,6 +426,7 @@
       document.body.classList.add('liquid-ios26');
     }
 
+    safeRun('syncStandaloneDisplayModeClass', syncStandaloneDisplayModeClass);
     safeRun('applyMobileBrowserUiOptimization', applyMobileBrowserUiOptimization);
     safeRun('setupTransientViewportResizeGuard', setupTransientViewportResizeGuard);
     safeRun('applyThemeCustom', applyThemeCustom);
@@ -1578,6 +1582,13 @@ function auditNavigationCoverage() {
     }
   }
 
+  function syncStandaloneDisplayModeClass() {
+    const enabled = isStandaloneDisplayMode();
+    document.documentElement?.classList.toggle('display-mode-standalone', enabled);
+    document.body?.classList.toggle('display-mode-standalone', enabled);
+    return enabled;
+  }
+
   function shouldOptimizeMobileBrowserUi() {
     if (!document.documentElement || !document.body) return false;
     if (!isTouchAppleDevice() || isStandaloneDisplayMode()) return false;
@@ -1695,6 +1706,7 @@ function auditNavigationCoverage() {
     const computedStyle = window.getComputedStyle ? window.getComputedStyle(dock) : null;
     const dockRect = dock.getBoundingClientRect ? dock.getBoundingClientRect() : null;
     const rectHeight = dockRect ? Math.max(0, Math.round(dockRect.height)) : 0;
+    const hasRectMeasurement = !!(dockRect && rectHeight > 0);
     const fallbackBottomGap = Math.max(0, Math.round(readCssPxNumber(computedStyle?.bottom, 0)));
     const fallbackHeight = Math.max(
       0,
@@ -1706,20 +1718,20 @@ function auditNavigationCoverage() {
       )
     );
 
-    const measuredBottomGap = dockRect
+    const measuredBottomGap = hasRectMeasurement
       ? Math.max(0, Math.round(viewportHeight - dockRect.bottom))
       : fallbackBottomGap;
-    const measuredVisibleLift = dockRect
+    const measuredVisibleLift = hasRectMeasurement
       ? Math.max(0, Math.round(viewportHeight - dockRect.top))
       : Math.max(0, fallbackHeight + fallbackBottomGap);
 
-    const visibleLift = measuredVisibleLift > 0
+    const visibleLift = hasRectMeasurement
       ? measuredVisibleLift
       : Math.max(0, fallbackHeight + fallbackBottomGap);
-    const bottomGap = measuredBottomGap > 0
+    const bottomGap = hasRectMeasurement
       ? measuredBottomGap
       : fallbackBottomGap;
-    const height = rectHeight > 0 ? rectHeight : fallbackHeight;
+    const height = hasRectMeasurement ? rectHeight : fallbackHeight;
     const scrollTopBottom = Math.max(0, visibleLift + MOBILE_DOCK_SCROLL_TOP_GAP_PX);
 
     return {
@@ -2069,14 +2081,103 @@ function auditNavigationCoverage() {
     let lastViewportHeight = getViewportHeight();
     let lastMeasuredDockHeight = 0;
     let resizeSettleTimer = 0;
+    let dockTransitionSyncFrame = 0;
+    let dockTransitionSyncUntil = 0;
     const detachScrollListeners = [];
     const shouldPinDock = () => shouldLockMobileNavigationUi();
 
+    function readMaxCssTimeMs(value) {
+      return String(value || '')
+        .split(',')
+        .map((token) => token.trim())
+        .reduce((maxMs, token) => {
+          if (!token) return maxMs;
+          const numeric = parseFloat(token);
+          if (!Number.isFinite(numeric)) return maxMs;
+          const nextMs = /ms$/i.test(token) ? numeric : numeric * 1000;
+          return Math.max(maxMs, nextMs);
+        }, 0);
+    }
+
+    function getDockTransitionSyncDurationMs() {
+      let computedStyle = null;
+      try {
+        computedStyle = window.getComputedStyle(dock);
+      } catch (e) {
+        computedStyle = null;
+      }
+
+      const durationMs = readMaxCssTimeMs(computedStyle?.transitionDuration);
+      const delayMs = readMaxCssTimeMs(computedStyle?.transitionDelay);
+      return Math.max(0, Math.round(durationMs + delayMs + 48));
+    }
+
+    function canMeasureDockLayout() {
+      return !dock.hidden
+        && !dock.classList.contains('is-keyboard-hidden')
+        && isElementVisibleForLayout(dock);
+    }
+
+    function isDockVisibleForLayout() {
+      if (!canMeasureDockLayout()) return false;
+
+      const rect = dock.getBoundingClientRect?.();
+      const viewportHeight = Math.max(getViewportHeight(), 1);
+      const viewportWidth = Math.max(getViewportWidth(), 1);
+      return !!(
+        rect
+        && rect.width > 0
+        && rect.height > 0
+        && rect.bottom > 0
+        && rect.right > 0
+        && rect.top < viewportHeight
+        && rect.left < viewportWidth
+      );
+    }
+
+    function stopDockTransitionMetricSync({ finalize = true } = {}) {
+      dockTransitionSyncUntil = 0;
+      if (dockTransitionSyncFrame) {
+        window.cancelAnimationFrame(dockTransitionSyncFrame);
+        dockTransitionSyncFrame = 0;
+      }
+      document.body.classList.remove('mobile-bottom-dock-transitioning');
+      if (finalize) {
+        syncDockVisibilityClass();
+        updateDockMetrics();
+      }
+    }
+
+    function stepDockTransitionMetricSync() {
+      dockTransitionSyncFrame = 0;
+      syncDockVisibilityClass();
+      updateDockMetrics();
+
+      const now = window.performance?.now?.() ?? Date.now();
+      if (dockTransitionSyncUntil > now) {
+        dockTransitionSyncFrame = window.requestAnimationFrame(stepDockTransitionMetricSync);
+        return;
+      }
+
+      stopDockTransitionMetricSync({ finalize: true });
+    }
+
+    function scheduleDockTransitionMetricSync(durationMs = getDockTransitionSyncDurationMs()) {
+      if (!durationMs) {
+        stopDockTransitionMetricSync({ finalize: true });
+        return;
+      }
+
+      const now = window.performance?.now?.() ?? Date.now();
+      dockTransitionSyncUntil = Math.max(dockTransitionSyncUntil, now + durationMs);
+      document.body.classList.add('mobile-bottom-dock-transitioning');
+
+      if (dockTransitionSyncFrame) return;
+      dockTransitionSyncFrame = window.requestAnimationFrame(stepDockTransitionMetricSync);
+    }
+
     function syncDockVisibilityClass() {
-      const isVisible = !dock.hidden
-        && !dock.classList.contains('is-hidden')
-        && !dock.classList.contains('is-keyboard-hidden');
-      document.body.classList.toggle('has-mobile-bottom-dock-visible', isVisible);
+      document.body.classList.toggle('has-mobile-bottom-dock-visible', isDockVisibleForLayout());
     }
 
     function setDockVisible(visible) {
@@ -2090,6 +2191,7 @@ function auditNavigationCoverage() {
       dock.classList.toggle('is-hidden', shouldHide);
       syncDockVisibilityClass();
       updateDockMetrics();
+      scheduleDockTransitionMetricSync();
     }
 
     function updateDockMetrics() {
@@ -2125,12 +2227,9 @@ function auditNavigationCoverage() {
         lastMeasuredDockHeight = 0;
       }
 
-      const isVisible = enabled
-        && !dock.hidden
-        && !dock.classList.contains('is-hidden')
-        && !dock.classList.contains('is-keyboard-hidden');
+      const canMeasureDock = enabled && canMeasureDockLayout();
 
-      if (isVisible) {
+      if (canMeasureDock) {
         const dockMetrics = lockedMobileNavigation
           ? getPinnedDockAnchorMetrics(dock)
           : getDockAnchorMetrics(dock, getViewportHeight());
@@ -2138,6 +2237,7 @@ function auditNavigationCoverage() {
         nextScrollTopBottom = Math.max(baseScrollTopBottom, dockMetrics.scrollTopBottom);
       }
 
+      document.body.classList.toggle('has-mobile-bottom-dock-visible', canMeasureDock && nextVisibleLift > 0);
       rootStyle.setProperty('--mobile-dock-visible-lift', `${Math.max(0, nextVisibleLift)}px`);
       rootStyle.setProperty('--scroll-top-btn-bottom', `${Math.max(0, nextScrollTopBottom)}px`);
     }
@@ -2186,6 +2286,7 @@ function auditNavigationCoverage() {
       syncScrollTopButtonPositionMode(lockedMobileNavigation);
 
       if (!enabled) {
+        stopDockTransitionMetricSync({ finalize: false });
         dock.classList.remove('is-hidden', 'is-keyboard-hidden');
         document.body.classList.remove('has-mobile-bottom-dock-visible');
         document.body.classList.remove('ios-safari-dock-pinned');
@@ -2312,11 +2413,29 @@ function auditNavigationCoverage() {
       }, { passive: true });
     }
 
+    const handleDockTransitionStart = (event) => {
+      if (event.target !== dock) return;
+      if (event.propertyName && !['transform', 'opacity'].includes(event.propertyName)) return;
+      scheduleDockTransitionMetricSync();
+    };
+
+    const handleDockTransitionEnd = (event) => {
+      if (event.target !== dock) return;
+      if (event.propertyName && !['transform', 'opacity'].includes(event.propertyName)) return;
+      stopDockTransitionMetricSync({ finalize: true });
+    };
+
+    on(dock, 'transitionrun', handleDockTransitionStart);
+    on(dock, 'transitionstart', handleDockTransitionStart);
+    on(dock, 'transitionend', handleDockTransitionEnd);
+    on(dock, 'transitioncancel', handleDockTransitionEnd);
+
     document.addEventListener('focusin', (event) => {
       if (!shouldEnableMobileDock()) return;
       if (isEditableField(event.target)) {
         dock.classList.add('is-keyboard-hidden');
         syncDockVisibilityClass();
+        updateDockMetrics();
       }
     });
 
@@ -2361,6 +2480,7 @@ function auditNavigationCoverage() {
         requestDockUpdate();
         return;
       }
+      syncDockVisibilityClass();
       updateDockMetrics();
     };
     window.__vildaDockSyncMode = syncDockMode;

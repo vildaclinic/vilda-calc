@@ -6,9 +6,18 @@
   <title>Ustawienia – Waga i wzrost</title>
   <!-- Ładujemy te same czcionki i style co strona główna, aby zachować spójność -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
-  <link href="ios26-v2.css?v=9" rel="stylesheet">
-  <link href="style.css?v=5" rel="stylesheet">
+  <link href="ios26-v2.css?v=10" rel="stylesheet">
+  <link href="style.css?v=6" rel="stylesheet">
   <link href="sidebar.css" rel="stylesheet">
+  <style>
+    /* Ustawienia: nagłówek ma przewijać się razem z treścią strony. */
+    body.page-settings.liquid-ios26 header,
+    body.page-settings.liquid-ios26 header._glass {
+      position: static !important;
+      top: auto !important;
+      z-index: auto !important;
+    }
+  </style>
   
 <script>
 (function() {
@@ -1167,8 +1176,8 @@
         { id: 'advancedGrowthSection', label: 'Zaawansowane obliczenia wzrostowe' },
         { id: 'toNormCard', label: 'Droga do normy BMI' },
         { id: 'respiratoryCard', label: 'Liczba oddechów' },
-        // Zastąpiono karty „Łączna kaloryczność” i „Spalanie kalorii” jedną kartą „Co zjadłem?”
-        { id: 'foodCard', label: 'Co zjadłem?' },
+        // Zastąpiono karty „Łączna kaloryczność” i „Spalanie kalorii” jedną kartą „Kalorie posiłków i czas spalania”
+        { id: 'foodCard', label: 'Kalorie posiłków i czas spalania' },
         { id: 'intakeCard', label: 'Szacowane spożycie energii' },
         { id: 'planCard', label: 'Plan odchudzania' },
         { id: 'metabolicSummaryBtn', label: 'Podsumowanie wyników - kliknij i skopiuj' },
@@ -1221,7 +1230,7 @@
             settings['intakeToggleWrap'] = this.checked;
           }
 
-          // Nie ustawiamy powiązania między kartami żywieniowymi – karta „Co zjadłem?” jest niezależna.
+          // Nie ustawiamy powiązania między kartami żywieniowymi – karta „Kalorie posiłków i czas spalania” jest niezależna.
           localStorage.setItem('cardVisibility', JSON.stringify(settings));
         });
       });

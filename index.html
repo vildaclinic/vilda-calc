@@ -41,7 +41,7 @@
     <meta name="robots" content="index, follow">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
 <!-- Zmieniamy nazwę pliku stylów na style_PWZ.css -->
-<link href="ios26-v2.css?v=9" rel="stylesheet">
+<link href="ios26-v2.css?v=10" rel="stylesheet">
 <link href="style.css?v=5" rel="stylesheet">
 <link href="sidebar.css" rel="stylesheet">
 
@@ -674,6 +674,58 @@
     <div id="centileCanvasContainer" style="display:none;"></div>
   </div>
 
+      <div id="adultVitalsCard" class="card" style="display:none;">
+        <h2 style="text-align:center;">Ciśnienie i tętno u&nbsp;dorosłych</h2>
+        <div class="toggle-wrap">
+          <span class="label-left">AHA</span>
+          <label class="switch">
+            <input type="checkbox" id="adultBpGuidelineToggle" checked>
+            <span class="slider"></span>
+          </label>
+          <span class="label-right">ESC/PTK</span>
+        </div>
+        <div class="adult-vitals-grid">
+          <label>Ciśnienie skurczowe (mm&nbsp;Hg):
+            <input type="number" id="adultBpSystolic" min="50" max="260" step="1" inputmode="numeric">
+          </label>
+          <label>Ciśnienie rozkurczowe (mm&nbsp;Hg):
+            <input type="number" id="adultBpDiastolic" min="30" max="160" step="1" inputmode="numeric">
+          </label>
+          <label>Tętno spoczynkowe (ud./min):
+            <input type="number" id="adultHeartRate" min="30" max="220" step="1" inputmode="numeric">
+          </label>
+        </div>
+        <div class="adult-vitals-options">
+          <div class="adult-vitals-option-row">
+            <div class="adult-vitals-option-label" id="adultHrAthleteLabel">Regularnie uprawia sport</div>
+            <div class="adult-vitals-radio-group" role="radiogroup" aria-labelledby="adultHrAthleteLabel">
+              <label class="adult-vitals-radio-option">
+                <input type="radio" name="adultHrAthleteGroup" id="adultHrAthleteNo" value="0" checked>
+                <span>Nie</span>
+              </label>
+              <label class="adult-vitals-radio-option">
+                <input type="radio" name="adultHrAthleteGroup" id="adultHrAthlete" value="1">
+                <span>Tak</span>
+              </label>
+            </div>
+          </div>
+          <div class="adult-vitals-option-row">
+            <div class="adult-vitals-option-label" id="adultHrBetaBlockerLabel">Przyjmuje beta‑bloker</div>
+            <div class="adult-vitals-radio-group" role="radiogroup" aria-labelledby="adultHrBetaBlockerLabel">
+              <label class="adult-vitals-radio-option">
+                <input type="radio" name="adultHrBetaBlockerGroup" id="adultHrBetaBlockerNo" value="0" checked>
+                <span>Nie</span>
+              </label>
+              <label class="adult-vitals-radio-option">
+                <input type="radio" name="adultHrBetaBlockerGroup" id="adultHrBetaBlocker" value="1">
+                <span>Tak</span>
+              </label>
+            </div>
+          </div>
+        </div>
+        <div id="adultVitalsResult" class="result-box adult-vitals-result-box"></div>
+      </div>
+
       <!-- Placeholder usuniętego kontenera zaawansowanych obliczeń wzrostowych – zostanie on wstawiony w innym miejscu. -->
       <!-- Sekcja obliczeń DS: przycisk oraz karta z wynikami. Umieszczamy ją w
            kontenerze lewej kolumny pod kartą BMI. Sekcja jest początkowo
@@ -730,9 +782,9 @@
         <div id="bpResult" class="result-box" style="margin-top:.6rem;"></div>
       </div>
 
-      <!-- Karta: Co zjadłem?  Łączy wybór przekąsek/dani oraz podsumowanie kalorii oraz spalanie. -->
+      <!-- Karta: Kalorie posiłków i czas spalania. Łączy wybór przekąsek/dani oraz podsumowanie kalorii i spalania. -->
       <div id="foodCard" class="card">
-        <h2 style="text-align:center;">Co zjadłem?</h2>
+        <h2 style="text-align:center;">Kalorie posiłków i czas spalania</h2>
         <!-- Sekcja wyboru pozycji do jedzenia.  Użytkownik może dodać dowolną liczbę pozycji. -->
         <div id="foodRowsSection">
           <div id="foodList"></div>
@@ -766,18 +818,37 @@
           <h2 style="text-align:center;">Obwód głowy i klatki piersiowej</h2>
           <!-- Pola do wprowadzenia obwodu głowy i klatki piersiowej.  
                Użytkownik może wpisać jeden lub oba pomiary; wyniki pojawią się odpowiednio poniżej. -->
-          <div class="circ-inputs" style="display:flex;flex-wrap:wrap;gap:.6rem;justify-content:center;">
-            <label>Obwód głowy (cm):
+          <div class="circ-inputs">
+            <label class="circ-input-field">Obwód głowy (cm):
               <input type="number" id="headCircumference" min="30" max="60" step="0.1">
             </label>
-            <label>Obwód klatki piersiowej (cm):
+            <label class="circ-input-field">Obwód klatki piersiowej (cm):
               <input type="number" id="chestCircumference" min="30" max="80" step="0.1">
             </label>
           </div>
           <!-- Wyniki dla obwodu głowy i klatki piersiowej.  
                Elementy są wypełniane dynamicznie przez circumference_module.js. -->
-          <div id="circHeadResult" class="result-box"></div>
-          <div id="circChestResult" class="result-box"></div>
+          <div class="circ-results-layout" aria-label="Wyniki obwodów i generowanie siatek centylowych">
+            <div class="circ-result-block">
+              <div id="circHeadResult" class="result-box"></div>
+              <div class="circ-result-action">
+                <button type="button" id="generateHeadCircChart" class="patient-report-summary-btn circ-action-btn is-pro-locked" disabled aria-disabled="true">
+                  <span>Generuj siatkę obwodu głowy</span><sup class="pro-superscript">PRO</sup>
+                </button>
+              </div>
+            </div>
+            <div class="circ-result-block">
+              <div id="circChestResult" class="result-box"></div>
+              <div class="circ-result-action">
+                <button type="button" id="generateChestCircChart" class="patient-report-summary-btn circ-action-btn is-pro-locked" disabled aria-disabled="true">
+                  <span>Generuj siatkę obwodu klatki piersiowej</span><sup class="pro-superscript">PRO</sup>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div id="circChartProHint" class="source-note circ-pro-note">
+            Generowanie siatek obwodu głowy i klatki piersiowej jest dostępne w trybie Wyniki profesjonalne <span class="circ-pro-pill">PRO</span>.
+          </div>
         </div>
       </div>
 
@@ -853,21 +924,6 @@
     <!-- Prawa kolumna: kontener z kartami WFL, Cole'a, WHR, itp. Pozostaje
          niezmieniona. -->
     <div id="normWrapper" class="norm-wrapper">
-    <!-- Nowa karta: wskaźnik waga do długości/wzrostu (WFL).  
-         W układzie jednokolumnowym pojawia się nad kartą wskaźnika Cole’a,  
-         w układzie dwukolumnowym po prawej stronie również nad kartą Cole’a.  
-         Elementy w środku są wypełniane dynamicznie w JS. -->
-    <div class="card" id="wflCard" style="display:none;">
-      <h2 style="text-align:center;">Wskaźnik waga do długości/wzrostu (WFL)</h2>
-      <!-- W tej sekcji JS wstawia obliczony Z‑score oraz krótką informację o wyniku. -->
-      <div id="wflInfo" class="result-box"></div>
-      <!-- Krótkie wyjaśnienie lub interpretacja wyniku wskaźnika WFL.  
-           Używamy tej samej klasy co w przypadku wskaźnika Cole’a, aby zachować spójny wygląd. -->
-      <p id="wflExplanation" class="cole-explanation"></p>
-      <!-- Tabela norm dla wskaźnika waga/wzrost; wypełniana w JS. -->
-      <div id="wflNormTable" style="display:none;"></div>
-    </div>
-
     <!-- Sekcja podsumowania metabolicznego.
          Pojawia się, gdy użytkownik uzupełni minimalny zestaw danych (wiek, waga, wzrost).
          Przycisk zachowuje biały kolor tła i czarną czcionkę, a szerokość jest taka sama jak w przypadku
@@ -975,6 +1031,22 @@
         <div id="dietRecommendationsResult" style="margin-top:0.6rem;"></div>
       </div>
     </div>
+
+    <!-- Nowa karta: wskaźnik waga do długości/wzrostu (WFL).  
+         W układzie jednokolumnowym pojawia się nad kartą wskaźnika Cole’a,  
+         w układzie dwukolumnowym po prawej stronie również nad kartą Cole’a.  
+         Elementy w środku są wypełniane dynamicznie w JS. -->
+    <div class="card" id="wflCard" style="display:none;">
+      <h2 style="text-align:center;">Wskaźnik waga do długości/wzrostu (WFL)</h2>
+      <!-- W tej sekcji JS wstawia obliczony Z‑score oraz krótką informację o wyniku. -->
+      <div id="wflInfo" class="result-box"></div>
+      <!-- Krótkie wyjaśnienie lub interpretacja wyniku wskaźnika WFL.  
+           Używamy tej samej klasy co w przypadku wskaźnika Cole’a, aby zachować spójny wygląd. -->
+      <p id="wflExplanation" class="cole-explanation"></p>
+      <!-- Tabela norm dla wskaźnika waga/wzrost; wypełniana w JS. -->
+      <div id="wflNormTable" style="display:none;"></div>
+    </div>
+
     <!-- Karta Wskaźnika Cole'a – wypełniana dynamicznie w JS -->
     <div class="card" id="coleCard" style="display:none;">
       <!-- Wyśrodkowujemy nagłówek karty wskaźnika Cole'a poprzez style inline -->
@@ -1070,6 +1142,27 @@
           <input type="number" id="advMotherHeight" min="100" max="250"></label>
         <label>Wzrost Taty (cm):
           <input type="number" id="advFatherHeight" min="100" max="250"></label>
+        <label>Objętość jąder (dotyczy chłopców):
+          <select id="advTesticularVolume">
+            <option value="">Wybierz</option>
+            <option value="lt4">&lt;4 ml</option>
+            <option value="4to6">4–6 ml</option>
+            <option value="gt6">&gt;6 ml</option>
+            <option value="unknown">nie wiem</option>
+          </select></label>
+        <label>Rodzinne opóźnienie dojrzewania:
+          <select id="advFamilyDelayedPuberty">
+            <option value="">Wybierz</option>
+            <option value="yes">tak</option>
+            <option value="no">nie</option>
+            <option value="unknown">nie wiem</option>
+          </select></label>
+        <label>Choroba przewlekła / zaburzenie endokrynologiczne / zespół genetyczny / leczenie wpływające na wzrastanie:
+          <select id="advGrowthExclusion">
+            <option value="">Wybierz</option>
+            <option value="no">nie</option>
+            <option value="yes">tak</option>
+          </select></label>
         <!-- W trybie publikacji dla danych Palczewskiej umożliwiamy dodanie strzałki z
              komentarzem do bieżącego pomiaru.  Sekcja poniżej zawiera checkbox
              oraz pole tekstowe na komentarz.  Cały kontener jest ukryty domyślnie i
@@ -1160,7 +1253,7 @@
     </div>
   </div>
   <!-- Usunięto stare sekcje przekąsek, dań, sumy kalorii i spalania kalorii.
-       Zastąpione przez nową kartę „Co zjadłem?” w lewej kolumnie. -->
+       Zastąpione przez nową kartę „Kalorie posiłków i czas spalania” w lewej kolumnie. -->
 </div>
   <!-- 6. Plan odchudzania – formularz i wyniki -->
   <div id="planCard" class="plan-card" style="display:none;">
@@ -1249,8 +1342,19 @@
       <li>Kułaga Z, Grajda A, Gurzkowska B, Góźdź M, Wojtyło M, Swiąder A, Różdżyńska‑Świątkowska A, Litwin M. Polish 2012 growth references for preschool children. <em>Eur J Pediatr.</em> 2013 Jun;172(6):753‑61. doi: 10.1007/s00431-013-1954-2. Epub 2013 Feb 1. PMID: 23371392; PMCID: PMC3663205.</li>
       <li>Bloem M. The 2006 WHO child growth standards. <em>BMJ.</em> 2007 Apr 7;334(7596):705‑6. doi: 10.1136/bmj.39155.658843.BE. PMID: 17413142; PMCID: PMC1847861.</li>
       <li>Boguszewski MCS. Growth hormone deficiency and replacement in children. <em>Rev Endocr Metab Disord.</em> 2021 Mar;22(1):101‑108. doi: 10.1007/s11154-020-09604-2. Epub 2020 Oct 8. PMID: 33029711.</li>
+      <li><strong>Moduł predykcji wzrostu ostatecznego (wiek kostny, Bayley-Pinneau, RWT, profile KOWD-like):</strong>
+        <ul style="margin-top:0.35rem;margin-bottom:0.1rem;padding-left:1.25rem;">
+          <li>Bayley&nbsp;N, Pinneau&nbsp;SR. Tables for predicting adult height from skeletal age: revised for use with the Greulich-Pyle hand standards. <em>J&nbsp;Pediatr.</em>&nbsp;1952;40(4):423‑441. [oryginalne tabele Bayley-Pinneau oraz tabele błędu predykcji]</li>
+          <li>Greulich&nbsp;WW, Pyle&nbsp;SI. <em>Radiographic Atlas of Skeletal Development of the Hand and Wrist.</em> 2nd&nbsp;ed. Stanford: Stanford University Press; 1959.</li>
+          <li>Roche&nbsp;AF, Wainer&nbsp;H, Thissen&nbsp;D. The RWT Method for the Prediction of Adult Stature. <em>Pediatrics.</em>&nbsp;1975;56(6):1026‑1033.</li>
+          <li>Thodberg&nbsp;HH, Juul&nbsp;A, Lomholt&nbsp;J, Martin&nbsp;DD, Jenni&nbsp;OG, Caflisch&nbsp;J, Ranke&nbsp;MB, Molinari&nbsp;L, Kreiborg&nbsp;S. Adult Height Prediction Models. W:&nbsp;<em>Handbook of Growth and Growth Monitoring in Health and Disease.</em> Springer; 2009.</li>
+          <li>Krajewska-Siuda&nbsp;E, Małecka-Tendera&nbsp;E, Krajewski-Siuda&nbsp;K. Ocena metod prognozowania wzrostu ostatecznego u chłopców z konstytucjonalnym opóźnieniem wzrastania i dojrzewania / Critical evaluation of adult height prediction methods in boys with constitutional delay of growth and puberty. <em>Endokrynol.&nbsp;Ped.</em>&nbsp;2005;4(3):39‑44.</li>
+          <li>Reinehr&nbsp;T, Hoffmann&nbsp;E, Rothermel&nbsp;J, Lehrian&nbsp;TJ, Brämswig&nbsp;J, Binder&nbsp;G. A New Model of Adult Height Prediction Validated in Boys with Constitutional Delay of Growth and Puberty. <em>Horm&nbsp;Res&nbsp;Paediatr.</em>&nbsp;2019;91:186‑194. doi:&nbsp;10.1159/000499712.</li>
+          <li>Akın Kağızmanlı&nbsp;G, Özalp Kızılay&nbsp;D, Deveci Sevim&nbsp;R, Yüksek Acinikli&nbsp;K, Mete Kalaycı&nbsp;F, Tekneci&nbsp;A, Demir&nbsp;K, Böber&nbsp;E, Anık&nbsp;A, Özen&nbsp;S, Abacı&nbsp;A. What is the Most Effective Method for Predicting Adult Height in Boys with Constitutional Delay of Growth and Puberty? <em>J&nbsp;Clin&nbsp;Res&nbsp;Pediatr&nbsp;Endocrinol.</em>&nbsp;2025. doi:&nbsp;10.4274/jcrpe.galenos.2025.2024-11-6.</li>
+        </ul>
+      </li>
       <li>Moduł tętna i liczby oddechów: Fleming&nbsp;S. i&nbsp;wsp. (2011); Bonafide&nbsp;CP i&nbsp;wsp. (2013); Daymont&nbsp;C. i&nbsp;wsp. (2015); Nijman&nbsp;RG i&nbsp;wsp. (2012); Herbert i&nbsp;wsp. (2020) &mdash; źródła siatek centylowych oraz korekt temperatury i snu/czuwania wykorzystanych w modułach tętna, oddechów i interpretacji RR.</li>
-      <li>Moduł obwodu głowy i klatki piersiowej: CDC/NCHS Infant Head Circumference Growth Charts; publikacja we <em>Frontiers in Global Women&rsquo;s Health</em> (2023) dotycząca interpretacji mikrocefalii i makrocefalii z wykorzystaniem odcięć 3. i 97. centyla.</li>
+      <li>Moduł obwodu głowy i klatki piersiowej: siatki Instytutu Matki i Dziecka (Palczewska i Niedźwiecka) dla obwodu głowy i klatki piersiowej; dla obwodu głowy u noworodków i dzieci w 1. miesiącu życia — INTERGROWTH-21st z modułu SGA, z odniesieniem do wieku ciążowego.</li>
       <li>Moduł WHR: WHO 2008/2011 cut-offs dla dorosłych oraz polskie siatki talii i bioder OLAF/OLA dla dzieci.</li>
       <li>Moduł SGA urodzeniowego: Niklasson&nbsp;A., Albertsson-Wikland&nbsp;K. Continuous growth reference from 24th week of gestation to 24 months by gender. <em>BMC Pediatr.</em> 2008;8:8. doi:&nbsp;10.1186/1471-2431-8-8; INTERGROWTH-21st: Villar i&nbsp;wsp. <em>Lancet.</em> 2014;384:857-68 oraz 2016;387:844-5; Malewski i&nbsp;wsp. (populacja polska, lata 1986–1994) – tabela masy urodzeniowej wg wieku ciążowego, zaimplementowana na podstawie dostarczonej fotografii tabel; źródło obejmuje wyłącznie masę urodzeniową.</li>
       <li>Moduł HOMA-IR: Kosovski&nbsp;IB i&nbsp;wsp. <em>Evaluation of Fasting Glucose-Insulin-C-Peptide-Derived Metabolic Indices for Identifying Metabolic Syndrome in Young, Healthy Adults.</em> <em>Nutrients.</em> 2024; Biernacka-Bartnik&nbsp;A i&nbsp;wsp. <em>The Cut-Off Value for HOMA-IR Discriminating the Insulin Resistance Based on the SHBG Level in Women with Polycystic Ovary Syndrome.</em> <em>Front Med.</em> 2023; Łupińska&nbsp;A i&nbsp;wsp. <em>Comparison of the Clinical Utility of Two Insulin Resistance Indices: IRI-HOMA and IRI-Belfiore in Diagnosing Insulin Resistance and Metabolic Complications in Children.</em> <em>J Clin Med.</em> 2024; Kondakis&nbsp;K i&nbsp;wsp. <em>Developing a Risk Assessment Tool for Identifying Individuals at High Risk for Developing Insulin Resistance in European Adolescents: The HELENA-IR Score.</em> <em>J Pediatr Endocrinol Metab.</em> 2022.</li>
@@ -1310,10 +1414,18 @@
 <script src="ds_lms.js"></script>
 <!-- Palczewska centile data (weight, height, BMI) for 0–18 years. Loaded before app.js so it attaches centileData to window. -->
 <script src="centile_data.js"></script>
+<!-- Bayley-Pinneau stage 1 dataset for the advanced height prediction module. Loaded before app.js so future modules can access window.bayleyPinneauData. -->
+<script src="bayley_pinneau_data.js"></script>
+<!-- Roche-Wainer-Thissen (RWT) dataset for the advanced height prediction module. -->
+<script src="rwt_data.js"></script>
+<!-- Reinehr 2019 CDGP-specific dataset for boys with retarded bone age. -->
+<script src="reinehr_cdgp_data.js"></script>
+<script src="advanced_growth_kowd.js"></script>
 <!-- Moduł centyli tętna i liczby oddechów.  Ładowany przed app.js, aby udostępniać
      funkcje w globalnym zakresie (window.vitalSigns).  Nowa wersja wykorzystuje
      dane Bonafide et al. 2013 z korektami temperatury i stanu snu. -->
 <script src="vitalSigns.js"></script>
+<script src="adult_vitals.js" defer></script>
 <script src="app.js" defer></script>
 
 <!-- po app.js -->
@@ -1356,7 +1468,7 @@
           advancedGrowthSection: 'advancedGrowthSection',
           toNormCard: 'toNormCard',
           respiratoryCard: 'respiratoryCard',
-          // Karta żywieniowa: „Co zjadłem?” zastępuje dawne karty łącznej kaloryczności i spalania
+          // Karta żywieniowa: „Kalorie posiłków i czas spalania” zastępuje dawne karty łącznej kaloryczności i spalania
           foodCard: 'foodCard',
           intakeCard: 'intakeCard',
           planCard: 'planCard',
@@ -1382,7 +1494,7 @@
           }
         });
         // Kontrola widoczności dla karty żywieniowej.
-        // Ustawienie foodCard steruje całą kartą „Co zjadłem?”, bez oddzielnych sekcji.
+        // Ustawienie foodCard steruje całą kartą „Kalorie posiłków i czas spalania”, bez oddzielnych sekcji.
         const foodCardEl = document.getElementById('foodCard');
         const showFoodCard = settings['foodCard'] !== false;
         if (foodCardEl) {
@@ -5096,8 +5208,13 @@ async function generateCentileChart() {
      modułach, aby korzystał z istniejących funkcji pomocniczych (np. getAgeDecimal, getLMSHeightHybrid, applyPulse). -->
 <script src="bp_module.js" defer></script>
 
+<!-- Dane INTERGROWTH-21st wykorzystywane w module obwodu głowy u noworodków
+     i dzieci w 1. miesiącu życia (odniesienie do wieku ciążowego z modułu SGA). -->
+<script src="sga_intergrowth_data.js" defer></script>
+
 <!-- Moduł obwodów głowy i klatki piersiowej.  
-     Skrypt powinien być ładowany po module ciśnienia krwi, aby mieć dostęp do funkcji pomocniczych jak applyPulse.
+     Skrypt powinien być ładowany po module ciśnienia krwi oraz po danych INTERGROWTH-21st,
+     aby mieć dostęp do funkcji pomocniczych jak applyPulse i do referencji noworodkowych.
      Określenie defer gwarantuje, że skrypt uruchomi się po załadowaniu struktury DOM. -->
 <script src="circumference_module.js" defer></script>
 

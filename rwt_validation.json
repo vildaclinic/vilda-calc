@@ -1,0 +1,20 @@
+{
+  "articleWorkedExample": {
+    "sex": "boys",
+    "chronologicalAgeLabel": "6-3",
+    "recumbentLengthCm": 108.7,
+    "weightKg": 17.4,
+    "midparentStatureCm": 169.0,
+    "skeletalAgeYears": 5.4,
+    "weightsRowAgeLabel": "6-3",
+    "expectedPredictionCm": 168.839,
+    "usingDatasetPredictionCm": 168.839,
+    "roundedPredictionCm": 168.8,
+    "expectedErrorHalfWidthCm": 4.7,
+    "usingDatasetErrorHalfWidthCm": 4.7,
+    "expectedLowerCm": 164.1,
+    "expectedUpperCm": 173.5,
+    "usingDatasetLowerCm": 164.1,
+    "usingDatasetUpperCm": 173.5
+  }
+}

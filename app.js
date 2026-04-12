@@ -68,7 +68,7 @@ const meals={
 };
 
 // Combine snacks and meals into one dictionary for unified food selection.  This
-// allows a single list of options to be presented in the new “Co zjadłem?” card.
+// allows a single list of options to be presented in the new “Kalorie posiłków i czas spalania” card.
 const foods = Object.assign({}, snacks, meals);
 
 /**
@@ -285,6 +285,16 @@ function showTooltip(target, message) {
 // (resultsModeToggle) oraz zapisywana w localStorage, aby stan został
 // zachowany pomiędzy sesjami.
 let professionalMode = false;
+
+function dispatchResultsModeSyncEvent(isProfessional) {
+  const detail = { professional: !!isProfessional };
+  try {
+    document.dispatchEvent(new CustomEvent('vildaResultsModeChanged', { detail }));
+  } catch (_) {}
+  try {
+    window.dispatchEvent(new CustomEvent('vildaResultsModeChanged', { detail }));
+  } catch (_) {}
+}
 
 /*
  * Global setting controlling the pulsation duration for warning/danger frames.
@@ -1597,6 +1607,10 @@ function updatePlanFromDiet(){
   const weightKg = +document.getElementById('weight').value;
   const heightCm = +document.getElementById('height').value;
   const pal      = +document.getElementById('palFactor').value;
+  const planResultsContainer = document.getElementById('planResults');
+  if (planResultsContainer) {
+    planResultsContainer.classList.toggle('adult-plan-results', Number(age) >= 18);
+  }
 
   if(!(age && weightKg && heightCm && pal)) return;                  // brak danych
 
@@ -3006,8 +3020,159 @@ document.addEventListener('DOMContentLoaded', function() {
     return !!(el && el.checked);
   }
 
+  function getDietToggleGroupByInputId(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input || typeof input.closest !== 'function') return null;
+    return input.closest('.diet-toggle-group');
+  }
+
+  function setDietToggleGroupVisible(inputId, visible) {
+    const group = getDietToggleGroupByInputId(inputId);
+    if (group) {
+      group.style.display = visible ? '' : 'none';
+    }
+  }
+
+  function syncDietRecommendationControlsForAge() {
+    const age = getAgeDecimalInternal();
+    const isAdult = age >= 18;
+    const columns = document.querySelector('#dietStrategyOptions .diet-toggle-columns');
+    const leftCol = columns ? columns.querySelector('.col-left') : null;
+    const rightCol = columns ? columns.querySelector('.col-right') : null;
+    const reduceToggle = document.getElementById('reduceToggle');
+    const stabilizationToggle = document.getElementById('stabilizationToggle');
+    const growthEndedFlag = document.getElementById('growthEndedFlag');
+    const vitDFlag = document.getElementById('vitDSuppFlag');
+    const hydrationFlag = document.getElementById('hydrationFlag');
+    const patientFacingToggle = document.getElementById('patientFacingToggle');
+    const journeyFlag = document.getElementById('journeyFlag');
+
+    if (isAdult) {
+      if (columns) columns.style.gridTemplateColumns = '1fr';
+      if (leftCol) leftCol.style.display = 'none';
+      if (rightCol) {
+        rightCol.style.display = 'flex';
+        rightCol.style.gridColumn = '1 / -1';
+      }
+      setDietToggleGroupVisible('reduceToggle', false);
+      setDietToggleGroupVisible('stabilizationToggle', false);
+      setDietToggleGroupVisible('growthEndedFlag', false);
+      setDietToggleGroupVisible('vitDSuppFlag', false);
+      setDietToggleGroupVisible('hydrationFlag', false);
+      setDietToggleGroupVisible('patientFacingToggle', true);
+      setDietToggleGroupVisible('journeyFlag', true);
+      if (reduceToggle) {
+        reduceToggle.checked = true;
+        reduceToggle.disabled = true;
+      }
+      if (stabilizationToggle) {
+        stabilizationToggle.disabled = true;
+      }
+      if (growthEndedFlag) {
+        growthEndedFlag.disabled = true;
+      }
+      if (vitDFlag) {
+        vitDFlag.disabled = true;
+      }
+      if (hydrationFlag) {
+        hydrationFlag.disabled = true;
+      }
+      if (patientFacingToggle) {
+        patientFacingToggle.disabled = false;
+      }
+      if (journeyFlag) {
+        journeyFlag.disabled = false;
+      }
+    } else {
+      if (columns) columns.style.gridTemplateColumns = 'repeat(2, minmax(0, 1fr))';
+      if (leftCol) leftCol.style.display = 'flex';
+      if (rightCol) {
+        rightCol.style.display = 'flex';
+        rightCol.style.gridColumn = '';
+      }
+      setDietToggleGroupVisible('reduceToggle', true);
+      setDietToggleGroupVisible('growthEndedFlag', true);
+      setDietToggleGroupVisible('vitDSuppFlag', true);
+      setDietToggleGroupVisible('hydrationFlag', true);
+      setDietToggleGroupVisible('patientFacingToggle', true);
+      setDietToggleGroupVisible('journeyFlag', true);
+      const growthEnded = !!(growthEndedFlag && growthEndedFlag.checked);
+      setDietToggleGroupVisible('stabilizationToggle', !growthEnded);
+      if (reduceToggle) {
+        reduceToggle.disabled = false;
+      }
+      if (stabilizationToggle) {
+        stabilizationToggle.disabled = false;
+      }
+      if (growthEndedFlag) {
+        growthEndedFlag.disabled = false;
+      }
+      if (vitDFlag) {
+        vitDFlag.disabled = false;
+      }
+      if (hydrationFlag) {
+        hydrationFlag.disabled = false;
+      }
+      if (patientFacingToggle) {
+        patientFacingToggle.disabled = false;
+      }
+      if (journeyFlag) {
+        journeyFlag.disabled = false;
+      }
+      if (typeof window.updateStabilizationEligibility === 'function') {
+        try { window.updateStabilizationEligibility(); } catch (_) {}
+      }
+    }
+  }
+
+  function formatDietRecommendationNumber(value, digits) {
+    const precision = Number.isFinite(digits) ? digits : 1;
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return '';
+    if (typeof patientReportFormatNumber === 'function') {
+      try {
+        return patientReportFormatNumber(numeric, precision);
+      } catch (_) {}
+    }
+    return numeric.toFixed(precision).replace('.', ',');
+  }
+
+  function formatDietRecommendationKg(value, digits) {
+    return `${formatDietRecommendationNumber(value, Number.isFinite(digits) ? digits : 1)} kg`;
+  }
+
+  function getDietPalLabel(pal) {
+    const numeric = Number(pal);
+    if (!Number.isFinite(numeric)) return '';
+    const fixed = numeric.toFixed(1);
+    return PAL_OPTIONS[fixed] || PAL_OPTIONS[String(numeric)] || PAL_OPTIONS[numeric] || '';
+  }
+
+  function getDietLevelPhrase(chosenDiet, grammaticalCase) {
+    const name = String(chosenDiet && chosenDiet.name ? chosenDiet.name : '').trim().toLowerCase();
+    const dictionary = {
+      lekka: { acc: 'dietę lekką', nom: 'dieta lekka' },
+      umiarkowana: { acc: 'dietę umiarkowaną', nom: 'dieta umiarkowana' },
+      intensywna: { acc: 'dietę intensywną', nom: 'dieta intensywna' }
+    };
+    const entry = dictionary[name];
+    if (entry) {
+      return grammaticalCase === 'nom' ? entry.nom : entry.acc;
+    }
+    if (!name) return grammaticalCase === 'nom' ? 'dobrany plan żywieniowy' : 'dobrany plan żywieniowy';
+    return grammaticalCase === 'nom' ? `dieta ${name}` : `dietę ${name}`;
+  }
+
+  function hasAdultDietWhrRisk() {
+    const whrInfo = document.getElementById('whrInfo');
+    if (!whrInfo || whrInfo.style.display === 'none') return false;
+    return whrInfo.classList.contains('whr-warning') || whrInfo.classList.contains('whr-danger');
+  }
+
   function updateDietCardLabels() {
+    syncDietRecommendationControlsForAge();
     const patientFacing = isPatientFacingDietMode();
+    const isAdult = getAgeDecimalInternal() >= 18;
     const noteEl = document.getElementById('dietInfoNote');
     const generateBtn = document.getElementById('generateDietBtn');
     const setText = function(id, value) {
@@ -3015,9 +3180,15 @@ document.addEventListener('DOMContentLoaded', function() {
       if (el) el.textContent = value;
     };
     if (noteEl) {
-      noteEl.innerHTML = patientFacing
-        ? 'W karcie <strong>Plan odchudzania</strong> ustaw poziom aktywności i dietę tak, jak chcesz je opisać w zaleceniach dla pacjenta, albo pozostaw ustawienia rekomendowane.'
-        : 'W karcie <strong>Plan odchudzania</strong> wybierz poziom aktywności i rodzaj diety albo pozostaw ustawienia rekomendowane.';
+      if (isAdult) {
+        noteEl.innerHTML = patientFacing
+          ? 'W karcie <strong>Plan odchudzania</strong> ustaw poziom aktywności i dietę tak, jak chcesz je przekazać osobie dorosłej w zaleceniach po wizycie.'
+          : 'W karcie <strong>Plan odchudzania</strong> wybierz poziom aktywności i rodzaj diety; dla dorosłych zalecenia są generowane w dedykowanym trybie, z domyślnie włączoną redukcją masy ciała.';
+      } else {
+        noteEl.innerHTML = patientFacing
+          ? 'W karcie <strong>Plan odchudzania</strong> ustaw poziom aktywności i dietę tak, jak chcesz je opisać w zaleceniach dla pacjenta, albo pozostaw ustawienia rekomendowane.'
+          : 'W karcie <strong>Plan odchudzania</strong> wybierz poziom aktywności i rodzaj diety albo pozostaw ustawienia rekomendowane.';
+      }
     }
     setText('reduceToggleLabel', 'Redukcja masy');
     setText('stabilizationToggleLabel', 'Utrzymanie masy');
@@ -3025,13 +3196,18 @@ document.addEventListener('DOMContentLoaded', function() {
     setText('patientFacingToggleLabel', patientFacing ? 'Tryb pacjenta' : 'Dla pacjenta');
     setText('vitDSuppLabel', 'Wit. D');
     setText('hydrationLabel', 'Picie płynów');
-    setText('journeyLabel', 'Czas do normy masy');
+    setText('journeyLabel', isAdult ? 'Czas do normy BMI' : 'Czas do normy masy');
     if (generateBtn) {
       generateBtn.textContent = patientFacing ? 'Generuj zalecenia dla pacjenta' : 'Generuj zalecenia dietetyczne';
     }
   }
 
   function buildDietRecommendationResult() {
+    syncDietRecommendationControlsForAge();
+    const age = getAgeDecimalInternal();
+    if (age >= 18) {
+      return generateDietRecommendations();
+    }
     const reduceToggleEl = document.getElementById('reduceToggle');
     const stabilizationToggleEl = document.getElementById('stabilizationToggle');
     let strategy;
@@ -3317,6 +3493,7 @@ document.addEventListener('DOMContentLoaded', function() {
    * warunki nie są spełnione, przycisk oraz kontener wyników są ukrywane.
    */
   function updateDietRecommendationsVisibility() {
+    syncDietRecommendationControlsForAge();
     // Upewnij się, że elementy istnieją – mogą zostać usunięte lub nie być
     // zadeklarowane w HTML.  Funkcja ensureDietRecommendationsElements tworzy je w razie potrzeby.
     const elements = ensureDietRecommendationsElements() || {};
@@ -3432,8 +3609,163 @@ document.addEventListener('DOMContentLoaded', function() {
     dietBtn.style.display = show ? 'block' : 'none';
     if (!show) {
       dietContent.style.display = 'none';
+    } else {
+      refreshDietRecommendationsIfVisible();
     }
 
+  }
+
+  function generateAdultDietRecommendations(options) {
+    const opts = options || {};
+    const weight = Number(opts.weight) || 0;
+    const height = Number(opts.height) || 0;
+    const pal = Number(opts.pal) || 0;
+    const chosenDiet = opts.chosenDiet || null;
+    const dailyDeficit = Number(opts.dailyDeficit) || 0;
+    const weeklyLoss = Number(opts.weeklyLoss) || 0;
+    const patientFacing = !!opts.patientFacing;
+    const journeyEnabled = !!opts.journeyEnabled;
+    if (!(weight > 0 && height > 0)) {
+      return { textOutput: '', htmlOutput: '' };
+    }
+
+    const bmi = weight / Math.pow(height / 100, 2);
+    const assessment = (typeof patientReportGetAdultBmiAssessment === 'function')
+      ? patientReportGetAdultBmiAssessment(bmi)
+      : { state: bmi >= 30 ? 'obesity-1' : (bmi >= 25 ? 'overweight' : (bmi < ADULT_BMI.UNDER ? 'underweight' : 'normal')) };
+    const deltaInfo = (typeof patientReportGetAdultBmiWeightDelta === 'function')
+      ? patientReportGetAdultBmiWeightDelta(weight, height)
+      : null;
+    const bmiLabel = (typeof patientReportGetAdultBmiSummaryStatusLabel === 'function')
+      ? patientReportGetAdultBmiSummaryStatusLabel(assessment.state)
+      : '';
+    const targetUpperWeight = deltaInfo && Number.isFinite(deltaInfo.upperWeight)
+      ? deltaInfo.upperWeight
+      : 24.9 * Math.pow(height / 100, 2);
+    const targetLowerWeight = deltaInfo && Number.isFinite(deltaInfo.lowerWeight)
+      ? deltaInfo.lowerWeight
+      : ADULT_BMI.UNDER * Math.pow(height / 100, 2);
+    const palLabel = getDietPalLabel(pal);
+    const palPhrase = palLabel
+      ? `${palLabel} (PAL ${formatDietRecommendationNumber(pal, 1)})`
+      : `PAL ${formatDietRecommendationNumber(pal, 1)}`;
+    const lines = [];
+    const hasWhrRisk = hasAdultDietWhrRisk();
+    const needsWeightReduction = ['overweight', 'obesity-1', 'obesity-2', 'obesity-3'].includes(String(assessment.state || ''));
+    const upperNormal = String(assessment.state || '') === 'upper-normal';
+    const underweight = String(assessment.state || '') === 'underweight';
+    const severeObesity = String(assessment.state || '') === 'obesity-2' || String(assessment.state || '') === 'obesity-3';
+
+    if (needsWeightReduction && deltaInfo) {
+      if (patientFacing) {
+        lines.push(`BMI wynosi ${formatDietRecommendationNumber(bmi, 1)}, co odpowiada ${bmiLabel}. Aby wrócić do zakresu prawidłowego BMI dla dorosłych, warto dążyć do redukcji masy ciała o ok. ${formatDietRecommendationKg(deltaInfo.kgAboveUpper)}; odpowiada to masie około ${formatDietRecommendationKg(targetUpperWeight)}.`);
+      } else {
+        lines.push(`BMI wynosi ${formatDietRecommendationNumber(bmi, 1)} (${bmiLabel}). Do uzyskania zakresu prawidłowego BMI dla dorosłych potrzebna byłaby redukcja masy ciała o ok. ${formatDietRecommendationKg(deltaInfo.kgAboveUpper)}; masa odpowiadająca BMI 24,9 wynosi ok. ${formatDietRecommendationKg(targetUpperWeight)}.`);
+      }
+    } else if (upperNormal && deltaInfo) {
+      if (patientFacing) {
+        lines.push(`BMI wynosi ${formatDietRecommendationNumber(bmi, 1)} i mieści się jeszcze w zakresie prawidłowym dla dorosłych, ale jest blisko jego górnej granicy. Do BMI 25 pozostaje ok. ${formatDietRecommendationKg(deltaInfo.kgToUpper)}.`);
+      } else {
+        lines.push(`BMI wynosi ${formatDietRecommendationNumber(bmi, 1)} i pozostaje w zakresie prawidłowym dla dorosłych, ale jest blisko jego górnej granicy. Do BMI 25 pozostaje ok. ${formatDietRecommendationKg(deltaInfo.kgToUpper)}.`);
+      }
+    } else if (underweight && deltaInfo) {
+      if (patientFacing) {
+        lines.push(`BMI wynosi ${formatDietRecommendationNumber(bmi, 1)}, co odpowiada niedowadze. Aby osiągnąć dolną granicę prawidłowego BMI dla dorosłych, warto dążyć do zwiększenia masy ciała o ok. ${formatDietRecommendationKg(deltaInfo.kgToLower)}; odpowiada to masie około ${formatDietRecommendationKg(targetLowerWeight)}.`);
+      } else {
+        lines.push(`BMI wynosi ${formatDietRecommendationNumber(bmi, 1)} (niedowaga). Do osiągnięcia dolnej granicy prawidłowego BMI dla dorosłych potrzebne byłoby zwiększenie masy ciała o ok. ${formatDietRecommendationKg(deltaInfo.kgToLower)}; masa odpowiadająca BMI 18,5 wynosi ok. ${formatDietRecommendationKg(targetLowerWeight)}.`);
+      }
+    } else if (hasWhrRisk) {
+      if (patientFacing) {
+        lines.push(`BMI wynosi ${formatDietRecommendationNumber(bmi, 1)} i mieści się w zakresie prawidłowym dla dorosłych, ale rozmieszczenie tkanki tłuszczowej sugeruje potrzebę zmniejszenia obwodu talii.`);
+      } else {
+        lines.push(`BMI wynosi ${formatDietRecommendationNumber(bmi, 1)} i mieści się w zakresie prawidłowym dla dorosłych, jednak WHR sugeruje potrzebę zmniejszenia obwodu talii.`);
+      }
+    } else {
+      lines.push(`BMI wynosi ${formatDietRecommendationNumber(bmi, 1)} i mieści się w zakresie prawidłowym dla dorosłych.`);
+    }
+
+    if (chosenDiet && dailyDeficit > 0 && weeklyLoss > 0) {
+      const intakeRounded = (chosenDiet && Number.isFinite(Number(chosenDiet.intake)))
+        ? Math.round(Number(chosenDiet.intake) / 100) * 100
+        : null;
+      const intakePhrase = Number.isFinite(intakeRounded)
+        ? `zalecana kaloryczność diety wynosi ok. ${formatDietRecommendationNumber(intakeRounded, 0)} kcal/dzień`
+        : 'zalecana kaloryczność diety jest dostosowana do wybranego planu';
+      if (patientFacing) {
+        lines.push(`W proponowanym planie przyjęto ${getDietLevelPhrase(chosenDiet, 'acc')} oraz aktywność ${palPhrase}; ${intakePhrase}, co daje deficyt ok. ${formatDietRecommendationNumber(dailyDeficit, 0)} kcal na dobę i tempo zmiany masy ciała rzędu ok. ${formatDietRecommendationNumber(weeklyLoss, 1)} kg tygodniowo.`);
+      } else {
+        lines.push(`Plan zakłada ${getDietLevelPhrase(chosenDiet, 'acc')} oraz aktywność ${palPhrase}; ${intakePhrase}, co odpowiada deficytowi energetycznemu ok. ${formatDietRecommendationNumber(dailyDeficit, 0)} kcal/dobę i tempu redukcji ok. ${formatDietRecommendationNumber(weeklyLoss, 1)} kg/tydzień.`);
+      }
+    } else if (needsWeightReduction) {
+      if (patientFacing) {
+        lines.push('W praktyce warto rozpocząć od umiarkowanego deficytu energetycznego, zwykle rzędu 500–750 kcal na dobę, i dostosowywać go do tolerancji oraz efektów leczenia.');
+      } else {
+        lines.push('Punktem wyjścia może być umiarkowany deficyt energetyczny, zwykle rzędu 500–750 kcal/dobę, z dalszą modyfikacją zależnie od tolerancji i skuteczności planu.');
+      }
+    }
+
+    if (needsWeightReduction) {
+      lines.push(patientFacing
+        ? 'Proszę przyjąć jako pierwszy cel zmniejszenie masy ciała o 5–10% w ciągu 3–6 miesięcy; to bezpieczny i klinicznie istotny etap leczenia.'
+        : 'Rekomendowany jest początkowy cel terapeutyczny: redukcja 5–10% wyjściowej masy ciała w ciągu 3–6 miesięcy.');
+      lines.push(patientFacing
+        ? 'Proszę planować 3–5 regularnych posiłków dziennie, zwiększyć udział warzyw, produktów pełnoziarnistych, nasion roślin strączkowych i chudych źródeł białka oraz ograniczyć słodkie napoje, alkohol, słodycze i żywność wysoko przetworzoną.'
+        : 'Jadłospis warto oprzeć na warzywach, produktach pełnoziarnistych, roślinach strączkowych, chudych źródłach białka i tłuszczach roślinnych; należy ograniczyć słodkie napoje, alkohol, słodycze i żywność wysoko przetworzoną.');
+      lines.push(patientFacing
+        ? 'Proszę zaplanować co najmniej 150–300 minut umiarkowanej aktywności tygodniowo oraz 2–3 sesje ćwiczeń oporowych; pomocne będzie także zwiększenie liczby kroków i ograniczenie długiego siedzenia.'
+        : 'Wskazana jest aktywność fizyczna przez co najmniej 150–300 minut tygodniowo oraz 2–3 sesje treningu oporowego, a także zwiększenie spontanicznej aktywności w ciągu dnia.');
+      lines.push(patientFacing
+        ? 'Proszę kontrolować masę ciała raz w tygodniu, obserwować obwód talii i notować sytuacje sprzyjające podjadaniu, aby łatwiej korygować codzienne nawyki.'
+        : 'Zalecane jest monitorowanie masy ciała raz w tygodniu, obwodu talii oraz regularności posiłków, snu i epizodów podjadania.');
+    } else if (upperNormal || hasWhrRisk) {
+      lines.push(patientFacing
+        ? 'Warto zadbać o to, aby masa ciała nie rosła dalej, a obwód talii stopniowo się zmniejszał; nawet niewielka poprawa nawyków może zmniejszyć ryzyko metaboliczne.'
+        : 'Priorytetem powinno być niedopuszczenie do dalszego wzrostu masy ciała oraz stopniowe zmniejszanie obwodu talii.');
+      lines.push(patientFacing
+        ? 'Proszę planować regularne posiłki, zwiększyć udział warzyw, produktów pełnoziarnistych i białka o dobrej wartości odżywczej oraz ograniczyć słodkie napoje, alkohol i żywność wysoko przetworzoną.'
+        : 'Warto uporządkować regularność posiłków, zwiększyć udział warzyw, produktów pełnoziarnistych i białka o dobrej wartości odżywczej oraz ograniczyć słodkie napoje, alkohol i żywność wysoko przetworzoną.');
+      lines.push(patientFacing
+        ? 'Proszę utrzymywać regularną aktywność fizyczną – najlepiej co najmniej 150 minut tygodniowo – oraz ograniczać długie okresy siedzenia.'
+        : 'Wskazane jest utrzymywanie regularnej aktywności fizycznej – najlepiej co najmniej 150 minut tygodniowo – oraz ograniczanie długich okresów siedzenia.');
+    } else if (underweight) {
+      lines.push(patientFacing
+        ? 'Proszę zadbać o 4–5 regularnych, odżywczych posiłków dziennie, zwiększyć udział produktów białkowych, pełnoziarnistych i zdrowych tłuszczów oraz obserwować tolerancję posiłków i apetyt.'
+        : 'Warto zadbać o 4–5 regularnych, energetycznie i odżywczo gęstych posiłków dziennie oraz zwiększyć udział produktów białkowych, pełnoziarnistych i zdrowych tłuszczów.');
+      lines.push(patientFacing
+        ? 'Jeżeli niedobór masy ciała utrzymuje się lub narasta, proszę omówić to podczas konsultacji lekarskiej, zwłaszcza gdy towarzyszą mu osłabienie, spadek apetytu lub niezamierzona utrata masy.'
+        : 'Niedowaga wymaga oceny przyczyn klinicznych, zwłaszcza przy niezamierzonej utracie masy ciała lub objawach towarzyszących.');
+    }
+
+    if (hasWhrRisk) {
+      lines.push(patientFacing
+        ? 'Dodatkowym celem powinno być zmniejszenie obwodu talii, ponieważ obecny rozkład tkanki tłuszczowej zwiększa ryzyko powikłań metabolicznych.'
+        : 'Dodatkowym celem terapii powinno być zmniejszenie obwodu talii, ponieważ obecny rozkład tkanki tłuszczowej zwiększa ryzyko powikłań metabolicznych.');
+    }
+
+    if (journeyEnabled && deltaInfo && deltaInfo.kgAboveUpper > 0.049 && weeklyLoss > 0) {
+      const weeksToNorm = Math.max(1, Math.ceil(deltaInfo.kgAboveUpper / weeklyLoss));
+      const monthsToNorm = formatDietRecommendationNumber(weeksToNorm / 4.345, 1);
+      lines.push(patientFacing
+        ? `Przy utrzymaniu tego planu dojście do zakresu prawidłowego BMI można szacować na około ${weeksToNorm} tygodni (ok. ${monthsToNorm} mies.).`
+        : `Przy utrzymaniu tych założeń czas dojścia do zakresu prawidłowego BMI można szacować na około ${weeksToNorm} tygodni (ok. ${monthsToNorm} mies.).`);
+    }
+
+    if (severeObesity) {
+      lines.push(patientFacing
+        ? 'Ze względu na stopień otyłości proszę omówić dalszy plan leczenia podczas konsultacji lekarskiej; może być potrzebna szersza ocena powikłań i bardziej intensywne postępowanie.'
+        : 'Ze względu na stopień otyłości wskazana jest konsultacja lekarska w celu oceny powikłań i rozważenia bardziej intensywnego postępowania.');
+    }
+
+    let textOutput = '';
+    let htmlOutput = '<ol>';
+    lines.forEach((ln, idx) => {
+      const prefix = (idx + 1) + '. ';
+      textOutput += prefix + ln + '\n';
+      htmlOutput += `<li>${ln}</li>`;
+    });
+    htmlOutput += '</ol>';
+    const cleanedText = textOutput.trim().replace(/[\u00A0\u202F]/g, ' ');
+    return { textOutput: cleanedText, htmlOutput };
   }
 
   /**
@@ -3486,62 +3818,22 @@ document.addEventListener('DOMContentLoaded', function() {
     const lines = [];
     let warningText = '';
     if (age >= 18) {
-      const bmi = weight / Math.pow(height / 100, 2);
-      // Czy osoba dorosła ma nadwagę/otyłość (BMI ≥ 25)?
-      const adultOverweight = bmi >= ADULT_BMI.OVER;
-      const targetUpperBMI = 24.9;
-      const targetUpperWeight = targetUpperBMI * Math.pow(height / 100, 2);
-      const kgToUpper = weight - targetUpperWeight;
-      const targetMedianBMI = 22.0;
-      const targetMedianWeight = targetMedianBMI * Math.pow(height / 100, 2);
-      const kgToMedian = weight - targetMedianWeight;
-      if (kgToUpper > 0) {
-        // Format numeric values with comma as decimal separator
-        lines.push(`Twoja aktualna waga to ${weight.toFixed(1).replace('.', ',')} kg. Aby osiągnąć górną granicę normy BMI (24,9), musisz schudnąć ok. ${kgToUpper.toFixed(1).replace('.', ',')} kg.`);
-        lines.push(`Do osiągnięcia wagi odpowiadającej 50. centylowi BMI (ok. ${targetMedianWeight.toFixed(1).replace('.', ',')} kg) brakuje około ${kgToMedian.toFixed(1).replace('.', ',')} kg.`);
-      } else {
-        // When weight is within normal range, format the target weight with comma
-        lines.push(`Twoja masa ciała mieści się w granicach normy BMI. Jeżeli pragniesz dążyć do wartości odpowiadającej 50. centylowi BMI (22,0), docelowa waga wynosi ${targetMedianWeight.toFixed(1).replace('.', ',')} kg.`);
-      }
-      if (chosenDiet) {
-        // Format weekly loss with comma as decimal separator
-        lines.push(`Wybrana dieta: ${chosenDiet.name}. Deficyt energetyczny wynosi około ${dailyDeficit} kcal/dzień, co przekłada się na utratę ok. ${weeklyLoss.toFixed(1).replace('.', ',')} kg tygodniowo.`);
-        if (kgToUpper > 0 && weeklyLoss > 0) {
-          const weeksUpper = Math.ceil(kgToUpper / weeklyLoss);
-          lines.push(`Przy tym tempie osiągnięcie górnej granicy normy BMI zajmie około ${weeksUpper} tygodni.`);
-        }
-        if (kgToMedian > 0 && weeklyLoss > 0) {
-          const weeksMedian = Math.ceil(kgToMedian / weeklyLoss);
-          lines.push(`Do uzyskania wagi odpowiadającej 50. centylowi BMI potrzeba około ${weeksMedian} tygodni.`);
-        }
-      }
-      lines.push('Dąż do redukcji masy ciała o ok. 5–10% w ciągu 3–6 miesięcy. Powolne tempo chudnięcia (0,5–1 kg/tydzień) jest bezpieczne i trwałe.');
-      lines.push('Stosuj zdrową dietę redukcyjną z deficytem 500–1000 kcal na dobę, bogatą w warzywa i owoce, pełnoziarniste produkty zbożowe, chude białko oraz zdrowe tłuszcze roślinne. Unikaj słodyczy, słodkich napojów, fast foodów i żywności wysoko przetworzonej.');
-      lines.push('Podejmuj regularną aktywność fizyczną – co najmniej 150 minut umiarkowanego wysiłku tygodniowo, najlepiej z elementami treningu siłowego. Każda dodatkowa aktywność (spacery, schody, prace domowe) wspiera redukcję wagi.');
-      lines.push('Jedz regularne posiłki co 3–4 godziny, nie pomijaj śniadań i unikaj podjadania. Kontroluj wielkość porcji, jedz powoli i nie jedz późno w nocy. Ogranicz alkohol.');
-      // Dodaj zalecenia dotyczące witaminy D dla dorosłych z nadwagą lub otyłością, jeśli użytkownik włączył suplementację
-      if (adultOverweight && vitDEnabled) {
-        let vitAdultMsg;
-        if (age < 75) {
-          // Dorośli < 75 lat
-          vitAdultMsg = 'Suplementacja witaminy D jest ważna w przypadku nadwagi lub otyłości. Standardowa dawka dla dorosłych wynosi 1000–2000 IU dziennie; przy nadwadze lub otyłości zwykle stosuje się 2000–4000 IU/dzień. Przy dawkach powyżej 4000 IU/dzień zaleca się monitorowanie stężenia 25(OH)D we krwi i konsultację z lekarzem.';
-        } else {
-          // Osoby w starszym wieku (≥75 lat)
-          vitAdultMsg = 'U osób starszych (powyżej 75 lat) zapotrzebowanie na witaminę D jest większe. Zaleca się 2000–4000 IU dziennie w przypadku nadwagi lub otyłości. Przy wyższych dawkach należy regularnie badać stężenie 25(OH)D we krwi i skonsultować się z lekarzem.';
-        }
-        lines.push(vitAdultMsg);
-      }
-      if (!proMode) {
-        lines.push('Odchudzanie to proces długotrwały – monitoruj postępy, waż się raz w tygodniu i korzystaj z konsultacji lekarskich lub dietetycznych w celu oceny skuteczności i modyfikacji planu.');
-      }
-      // Jeżeli WHR wskazuje na otyłość brzuszną, dołącz dodatkowe zalecenie
-      const whrInfo2 = document.getElementById('whrInfo');
-      if (whrInfo2 && whrInfo2.style.display !== 'none') {
-        if (whrInfo2.classList.contains('whr-warning') || whrInfo2.classList.contains('whr-danger')) {
-          lines.push('Masz niekorzystny wskaźnik WHR (talia/biodra), co wskazuje na nadmiar tkanki tłuszczowej brzusznej. Skup się na zmniejszeniu obwodu talii poprzez dietę z deficytem kalorycznym i ćwiczenia aerobowe oraz siłowe.');
-        }
-      }
-    } else {
+      return generateAdultDietRecommendations({
+        age,
+        proMode,
+        weight,
+        height,
+        sex,
+        pal,
+        chosenDiet,
+        dailyDeficit,
+        weeklyLoss,
+        patientFacing,
+        journeyEnabled
+      });
+    }
+    {
+
       // Dzieci i młodzież (5–18 lat)
       // Rozróżnij, czy zalecenia kierowane są bezpośrednio do dziecka (≥11 lat) czy do rodziców (<11 lat)
       const toChild = age >= 11;
@@ -4599,6 +4891,16 @@ function getProfessionalSummaryLineTone(line) {
   try {
     if (!line || typeof line !== 'string') return 'normal';
     const lc = line.toLowerCase();
+    const ageYears = (typeof getAgeDecimal === 'function') ? getAgeDecimal() : NaN;
+    const isAdultPatient = (typeof patientReportIsAdultAge === 'function')
+      ? patientReportIsAdultAge(ageYears)
+      : (isFinite(ageYears) && ageYears >= 18);
+    const weightNow = parseFloat(document.getElementById('weight')?.value) || 0;
+    const heightNow = parseFloat(document.getElementById('height')?.value) || 0;
+    const adultBmiNow = (isAdultPatient && heightNow > 0 && weightNow > 0 && typeof BMI === 'function')
+      ? BMI(weightNow, heightNow)
+      : null;
+    const adultBmiAssessment = isAdultPatient ? patientReportGetAdultBmiAssessment(adultBmiNow) : null;
 
     const extractPercentile = (str) => {
       const m = str.match(/([<>]?)\s*([\d]+(?:[\.,]\d+)?)[^\d]*centyl/i);
@@ -4608,6 +4910,36 @@ function getProfessionalSummaryLineTone(line) {
       if (m[1] && m[1].includes('>')) perc = 100;
       return isNaN(perc) ? null : perc;
     };
+
+    if (isAdultPatient) {
+      if (lc.startsWith('wskaźnik cole')) return 'normal';
+      if (lc.startsWith('wzrost') || lc.startsWith('tempo wzrastania') || lc.startsWith('aktualne tempo') || lc.startsWith('mph') || lc.startsWith('hsds')) {
+        return 'normal';
+      }
+      if (lc.startsWith('ciśnienie')) {
+        if (window.adultVitalsApi && typeof window.adultVitalsApi.getState === 'function' && typeof window.adultVitalsApi.classifyBloodPressure === 'function') {
+          const state = window.adultVitalsApi.getState();
+          const hasInput = (window.adultVitalsApi && typeof window.adultVitalsApi.hasAnyMeasurement === 'function')
+            ? window.adultVitalsApi.hasAnyMeasurement(state)
+            : false;
+          const guidelineKey = hasInput ? state.guidelineKey : 'ESC';
+          const info = window.adultVitalsApi.classifyBloodPressure(state.sbp, state.dbp, guidelineKey);
+          return info ? (info.tone || 'normal') : 'normal';
+        }
+        return 'normal';
+      }
+      if (lc.startsWith('tętno') || lc.startsWith('hr ')) {
+        if (window.adultVitalsApi && typeof window.adultVitalsApi.getState === 'function' && typeof window.adultVitalsApi.classifyHeartRate === 'function') {
+          const state = window.adultVitalsApi.getState();
+          const info = window.adultVitalsApi.classifyHeartRate(state.hr, { athlete: state.athlete, betaBlocker: state.betaBlocker });
+          return info ? (info.tone || 'normal') : 'normal';
+        }
+        return 'normal';
+      }
+      if (lc.startsWith('waga') || lc.startsWith('bmi')) {
+        return adultBmiAssessment ? (adultBmiAssessment.tone || 'normal') : 'normal';
+      }
+    }
 
     if (lc.startsWith('bmi:')) {
       const weight = parseFloat(document.getElementById('weight')?.value) || 0;
@@ -4746,6 +5078,22 @@ function getProfessionalSummaryLineColor(line) {
   return 'var(--primary)';
 }
 
+function patientReportFormatSummaryLineWithValue(label, valueWithUnit, rest) {
+  const normalizedLabel = String(label || '').trim();
+  const normalizedValue = String(valueWithUnit || '').trim();
+  const normalizedRest = String(rest || '').trim();
+  if (normalizedValue && normalizedRest) {
+    return `${normalizedLabel}: ${normalizedValue}, ${normalizedRest}`;
+  }
+  if (normalizedValue) {
+    return `${normalizedLabel}: ${normalizedValue}`;
+  }
+  if (normalizedRest) {
+    return `${normalizedLabel}: ${normalizedRest}`;
+  }
+  return normalizedLabel ? `${normalizedLabel}:` : '';
+}
+
 function getFormattedProfessionalSummaryLines() {
   let linesRaw = '';
   try {
@@ -4761,6 +5109,16 @@ function getFormattedProfessionalSummaryLines() {
     .filter(Boolean);
 
   try {
+    const ageYears = (typeof getAgeDecimal === 'function') ? getAgeDecimal() : NaN;
+    const isAdultPatient = (typeof patientReportIsAdultAge === 'function')
+      ? patientReportIsAdultAge(ageYears)
+      : (isFinite(ageYears) && ageYears >= 18);
+    if (isAdultPatient) {
+      lines = lines.filter((line) => !/^\s*wskaźnik\s*cole/i.test(String(line || '').replace(/ /g, ' ')));
+    }
+  } catch (_) {}
+
+  try {
     const weightValStr = (document.getElementById('weight')?.value || '').trim();
     const heightValStr = (document.getElementById('height')?.value || '').trim();
     const sbpValStr = (document.getElementById('bpSystolic')?.value || '').trim();
@@ -4771,13 +5129,13 @@ function getFormattedProfessionalSummaryLines() {
     lines = lines.map(function(line) {
       if (line.startsWith('Waga:')) {
         const rest = line.slice(line.indexOf(':') + 1).trim();
-        const prefix = weightValStr ? (weightValStr + ' kg, ') : '';
-        return 'Waga: ' + prefix + rest;
+        const valueLabel = weightValStr ? (weightValStr + ' kg') : '';
+        return patientReportFormatSummaryLineWithValue('Waga', valueLabel, rest);
       }
       if (line.startsWith('Wzrost:')) {
         const rest = line.slice(line.indexOf(':') + 1).trim();
-        const prefix = heightValStr ? (heightValStr + ' cm, ') : '';
-        return 'Wzrost: ' + prefix + rest;
+        const valueLabel = heightValStr ? (heightValStr + ' cm') : '';
+        return patientReportFormatSummaryLineWithValue('Wzrost', valueLabel, rest);
       }
       if (line.startsWith('Ciśnienie skurczowe')) {
         const rest = line.slice(line.indexOf(':') + 1).trim();
@@ -5103,14 +5461,109 @@ function patientReportSanitizeFilename(value) {
     .slice(0, 48);
 }
 
+const PATIENT_REPORT_ADULT_REFERENCE_AGE = 18;
+
+function patientReportIsAdultAge(ageYears) {
+  const age = Number(ageYears);
+  return isFinite(age) && age >= PATIENT_REPORT_ADULT_REFERENCE_AGE;
+}
+
+function patientReportGetReferenceAgeYears(ageYears) {
+  const age = Number(ageYears);
+  if (!isFinite(age) || age <= 0) return age;
+  return patientReportIsAdultAge(age) ? PATIENT_REPORT_ADULT_REFERENCE_AGE : age;
+}
+
+function patientReportGetSexLabel(sex, ageYears) {
+  const female = String(sex || '').toUpperCase() === 'F';
+  if (patientReportIsAdultAge(ageYears)) {
+    return female ? 'Kobieta' : 'Mężczyzna';
+  }
+  return female ? 'Dziewczynka' : 'Chłopiec';
+}
+
+function patientReportGetAgeReferenceLabel(ageYears, options) {
+  const opts = options || {};
+  const adultText = String(opts.adultText || 'dla dorosłych');
+  const childText = String(opts.childText || 'dla tego wieku');
+  return patientReportIsAdultAge(ageYears) ? adultText : childText;
+}
+
+function patientReportReplaceAdultReferenceText(value) {
+  let text = String(value || '').trim();
+  if (!text) return text;
+  const replacements = [
+    [/^Nie wszystkie najważniejsze wyniki mieszczą się obecnie w typowym zakresie dla wieku i płci\.$/gi, 'Nie wszystkie najważniejsze wyniki mieszczą się obecnie w typowym zakresie.'],
+    [/^Najważniejsze wyniki mieszczą się obecnie w typowym zakresie dla wieku i płci\.$/gi, 'Najważniejsze wyniki mieszczą się obecnie w typowym zakresie.'],
+    [/Wzrost znajduje się wyraźnie poniżej typowego zakresu dla wieku i płci\./gi, 'Wzrost znajduje się wyraźnie poniżej typowego zakresu względem siatek centylowych.'],
+    [/Wzrost znajduje się w niskim zakresie centylowym dla wieku i płci\./gi, 'Wzrost znajduje się w niskim zakresie centylowym względem siatek centylowych.'],
+    [/Wzrost wymaga interpretacji względem siatek centylowych dla wieku i płci\./gi, 'Wzrost wymaga interpretacji względem siatek centylowych.'],
+    [/Taki układ wyników wymaga szczególnie uważnej oceny wzrastania i stanu odżywienia dziecka\./gi, 'Taki układ wyników wymaga szczególnie uważnej oceny stanu odżywienia i całościowego obrazu klinicznego.'],
+    [/Szczególnie ważne jest porównanie obecnego wzrostu z wcześniejszymi pomiarami i oceną tempa wzrastania\./gi, 'Warto porównać obecny wzrost z wcześniejszymi pomiarami i interpretować wynik w szerszym kontekście klinicznym.'],
+    [/Szczególnie ważna jest ocena tempa wzrastania w kolejnych pomiarach\./gi, 'Wynik warto interpretować w szerszym kontekście klinicznym.'],
+    [/Równocześnie wzrost wymaga oceny względem siatek centylowych i tempa wzrastania\./gi, ''],
+    [/Wynik warto interpretować także w odniesieniu do wzrostu rodziców i całego obrazu klinicznego\./gi, 'Wynik warto interpretować w odniesieniu do całego obrazu klinicznego.'],
+    [/W takiej sytuacji równie ważna jak ocena masy ciała jest analiza tempa wzrastania i całego przebiegu wzrostu\./gi, 'W takiej sytuacji wynik warto interpretować łącznie z oceną stanu odżywienia i całego obrazu klinicznego.'],
+    [/Taki wynik wymaga uważnej obserwacji tempa wzrastania i przyrostu masy ciała w czasie\./gi, 'Taki wynik wymaga kontroli masy ciała w kolejnych pomiarach i interpretacji klinicznej.'],
+    [/w odniesieniu do wieku, płci i wzrostu/gi, 'w odniesieniu do płci, wzrostu i przyjętych norm'],
+    [/w odniesieniu do wieku, wzrostu oraz warunków pomiaru/gi, 'w odniesieniu do wzrostu, warunków pomiaru i przyjętych norm'],
+    [/w kontekście wieku i wzrostu/gi, 'w kontekście wzrostu i przyjętych norm'],
+    [/norm dla wieku oraz warunków pomiaru/gi, 'przyjętych norm oraz warunków pomiaru'],
+    [/norm dla wieku i warunków pomiaru/gi, 'przyjętych norm i warunków pomiaru'],
+    [/siatek centylowych dla wieku i płci/gi, 'siatek centylowych'],
+    [/typowym zakresie dla wieku i płci/gi, 'typowym zakresie'],
+    [/typowych wartości dla wieku(?! 18 lat)/gi, 'typowych wartości względem przyjętych norm'],
+    [/typowym zakresie dla wieku(?! 18 lat)/gi, 'typowym zakresie względem przyjętych norm'],
+    [/norm dla wieku(?! 18 lat)/gi, 'przyjętych norm'],
+    [/siatek centylowych dla wieku(?! 18 lat)/gi, 'siatek centylowych'],
+    [/dla wieku i wzrostu/gi, 'względem przyjętych norm i wzrostu'],
+    [/dla wieku(?! 18 lat)/gi, 'względem przyjętych norm']
+  ];
+  replacements.forEach(([pattern, replacement]) => {
+    text = text.replace(pattern, replacement);
+  });
+  return text.replace(/\s{2,}/g, ' ').trim();
+}
+
+function patientReportAdaptHeadlineForAdultReference(headline) {
+  const base = headline || {};
+  return {
+    ...base,
+    title: patientReportReplaceAdultReferenceText(base.title),
+    text: patientReportReplaceAdultReferenceText(base.text),
+    subtext: patientReportReplaceAdultReferenceText(base.subtext)
+  };
+}
+
+function patientReportAdaptHighlightsForAdultReference(highlights) {
+  return (highlights || []).map((item) => ({
+    ...(item || {}),
+    text: patientReportReplaceAdultReferenceText(item && item.text)
+  }));
+}
+
 function patientReportGetPreferredSource() {
+  let resolved = '';
   try {
-    if (typeof advHistoryGetPreferredSource === 'function') return advHistoryGetPreferredSource();
+    if (typeof advHistoryGetPreferredSource === 'function') {
+      resolved = String(advHistoryGetPreferredSource() || '').toUpperCase();
+    }
   } catch (_) {}
+  if (!resolved) {
+    try {
+      if (typeof bmiSource !== 'undefined' && bmiSource) {
+        resolved = String(bmiSource).toUpperCase();
+      }
+    } catch (_) {}
+  }
+  if (!resolved) resolved = 'OLAF';
   try {
-    if (typeof bmiSource !== 'undefined' && bmiSource) return bmiSource;
+    const ageYears = (typeof getAgeDecimal === 'function') ? getAgeDecimal() : NaN;
+    if (typeof patientReportIsAdultAge === 'function' && patientReportIsAdultAge(ageYears)) {
+      return 'OLAF';
+    }
   } catch (_) {}
-  return 'WHO';
+  return resolved;
 }
 
 function patientReportGetMetricMedian(metric, sex, ageYears, usedSource, resolved) {
@@ -5242,11 +5695,13 @@ function patientReportBuildMedianReference(label, value, median, options) {
   const medianUnit = String(opts.medianUnit == null ? (opts.unit || '') : opts.medianUnit);
   const diffUnit = String(opts.diffUnit == null ? (opts.unit || '') : opts.diffUnit);
   const baseLabel = String(opts.friendlyLabel || `Przeciętna ${String(label || '').toLowerCase()} dla tego wieku`);
+  const unavailableText = String(opts.unavailableText || 'Brak porównania do typowej wartości dla wieku.');
+  const equalText = String(opts.equalText || 'To prawie tyle samo co wartość przeciętna.');
   if (typeof value !== 'number' || !isFinite(value) || typeof median !== 'number' || !isFinite(median)) {
     return {
       available: false,
       label: baseLabel,
-      medianText: 'Brak porównania do typowej wartości dla wieku.',
+      medianText: unavailableText,
       diffText: '',
       neutral: true
     };
@@ -5262,7 +5717,7 @@ function patientReportBuildMedianReference(label, value, median, options) {
       available: true,
       label: baseLabel,
       medianText: addUnit(median, medianUnit),
-      diffText: 'To prawie tyle samo co wartość przeciętna.',
+      diffText: equalText,
       neutral: true
     };
   }
@@ -5282,8 +5737,16 @@ function patientReportToneColor(tone) {
   return '#00838d';
 }
 
-function patientReportDescribeWeight(percentile) {
+function patientReportDescribeWeight(percentile, options) {
+  const adultReference = !!(options && options.adultReference);
   if (typeof percentile !== 'number' || !isFinite(percentile)) return 'bez porównania centylowego';
+  if (adultReference) {
+    if (percentile < 3) return 'znacznie poniżej typowego zakresu w przyjętym odniesieniu centylowym';
+    if (percentile < 10) return 'poniżej typowego zakresu w przyjętym odniesieniu centylowym';
+    if (percentile < 90) return 'w typowym zakresie w przyjętym odniesieniu centylowym';
+    if (percentile < 97) return 'powyżej typowego zakresu w przyjętym odniesieniu centylowym';
+    return 'wyraźnie powyżej typowego zakresu w przyjętym odniesieniu centylowym';
+  }
   if (percentile < 3) return 'znacznie poniżej typowego zakresu';
   if (percentile < 10) return 'poniżej typowego zakresu';
   if (percentile < 90) return 'w typowym zakresie dla wieku';
@@ -5291,8 +5754,16 @@ function patientReportDescribeWeight(percentile) {
   return 'wyraźnie powyżej typowego zakresu';
 }
 
-function patientReportDescribeHeight(percentile) {
+function patientReportDescribeHeight(percentile, options) {
+  const adultReference = !!(options && options.adultReference);
   if (typeof percentile !== 'number' || !isFinite(percentile)) return 'bez porównania centylowego';
+  if (adultReference) {
+    if (percentile <= 3) return 'wyraźnie poniżej typowego zakresu w przyjętym odniesieniu centylowym';
+    if (percentile <= 10) return 'w niskim zakresie centylowym w przyjętym odniesieniu centylowym';
+    if (percentile <= 90) return 'w typowym zakresie w przyjętym odniesieniu centylowym';
+    if (percentile <= 97) return 'w wysokim zakresie centylowym w przyjętym odniesieniu centylowym';
+    return 'wyraźnie powyżej typowego zakresu w przyjętym odniesieniu centylowym';
+  }
   if (percentile <= 3) return 'wyraźnie poniżej typowego zakresu dla wieku';
   if (percentile <= 10) return 'w niskim zakresie centylowym dla wieku';
   if (percentile <= 90) return 'w typowym zakresie dla wieku';
@@ -5309,8 +5780,275 @@ function patientReportDescribeBmi(category) {
   return 'BMI w typowym zakresie';
 }
 
+function patientReportGetAdultBmiAssessment(bmi) {
+  const defaultResult = {
+    state: 'normal',
+    tone: 'normal',
+    badge: 'W zakresie',
+    bmiNote: 'BMI mieści się w zakresie prawidłowym dla dorosłych.',
+    weightNote: 'Ocena masy ciała u dorosłych opiera się przede wszystkim na BMI; porównanie centylowe pokazujemy wyłącznie informacyjnie.',
+    headlineTitle: '',
+    headlineText: '',
+    highlightText: ''
+  };
+  if (!(typeof bmi === 'number' && isFinite(bmi))) return defaultResult;
+  if (bmi >= 40) {
+    return {
+      state: 'obesity-3',
+      tone: 'danger',
+      badge: 'Otyłość III stopnia',
+      bmiNote: 'BMI wskazuje na otyłość III stopnia,',
+      weightNote: 'Masa ciała odpowiada otyłości III stopnia w klasyfikacji BMI,',
+      headlineTitle: 'BMI wskazuje na otyłość III stopnia.',
+      headlineText: 'Wynik wymaga pilnej konsultacji lekarskiej.',
+      highlightText: 'BMI wskazuje na otyłość III stopnia.'
+    };
+  }
+  if (bmi >= 35) {
+    return {
+      state: 'obesity-2',
+      tone: 'danger',
+      badge: 'Otyłość II stopnia',
+      bmiNote: 'BMI wskazuje na otyłość II stopnia,',
+      weightNote: 'Masa ciała odpowiada otyłości II stopnia w klasyfikacji BMI,',
+      headlineTitle: 'BMI wskazuje na otyłość II stopnia.',
+      headlineText: 'Zalecana konsultacja lekarska.',
+      highlightText: 'BMI wskazuje na otyłość II stopnia.'
+    };
+  }
+  if (bmi >= 30) {
+    return {
+      state: 'obesity-1',
+      tone: 'danger',
+      badge: 'Otyłość I stopnia',
+      bmiNote: 'BMI wskazuje na otyłość I stopnia,',
+      weightNote: 'Masa ciała odpowiada otyłości I stopnia w klasyfikacji BMI,',
+      headlineTitle: 'BMI wskazuje na otyłość I stopnia.',
+      headlineText: 'Wynik warto omówić podczas konsultacji lekarskiej.',
+      highlightText: 'BMI wskazuje na otyłość I stopnia.'
+    };
+  }
+  if (bmi >= ADULT_BMI.OVER) {
+    return {
+      state: 'overweight',
+      tone: 'warn',
+      badge: 'Nadwaga',
+      bmiNote: 'BMI wskazuje na nadwagę,',
+      weightNote: 'Masa ciała odpowiada nadwadze w klasyfikacji BMI,',
+      headlineTitle: 'BMI wskazuje na nadwagę.',
+      headlineText: 'Warto rozważyć modyfikację nawyków żywieniowych i aktywności fizycznej. Zalecana konsultacja dietetyczna.',
+      highlightText: 'BMI wskazuje na nadwagę.'
+    };
+  }
+  if (bmi >= 24) {
+    return {
+      state: 'upper-normal',
+      tone: 'warn',
+      badge: 'Do obserwacji',
+      bmiNote: 'BMI mieści się jeszcze w normie, jednak zbliża się do jej górnej granicy. Warto rozważyć modyfikację nawyków żywieniowych i stylu życia.',
+      weightNote: 'Masa ciała jest jeszcze zgodna z prawidłowym BMI dla dorosłych, ale wynik zbliża się do górnej granicy normy; porównanie centylowe pokazujemy wyłącznie informacyjnie.',
+      headlineTitle: 'BMI mieści się jeszcze w normie, ale zbliża się do górnej granicy.',
+      headlineText: 'To dobry moment, aby rozważyć modyfikację nawyków żywieniowych i stylu życia oraz obserwować trend kolejnych pomiarów.',
+      highlightText: 'BMI mieści się jeszcze w normie, ale zbliża się do górnej granicy.'
+    };
+  }
+  if (bmi < ADULT_BMI.UNDER) {
+    return {
+      state: 'underweight',
+      tone: 'warn',
+      badge: 'Niedowaga',
+      bmiNote: 'BMI wskazuje na niedowagę,',
+      weightNote: 'Masa ciała odpowiada niedowadze w klasyfikacji BMI,',
+      headlineTitle: 'BMI wskazuje na niedowagę.',
+      headlineText: 'Wynik warto interpretować w kontekście stanu odżywienia i ewentualnych przyczyn niedoboru masy ciała.',
+      highlightText: 'BMI wskazuje na niedowagę.'
+    };
+  }
+  return defaultResult;
+}
+
+function patientReportGetAdultHeightInfoNote() {
+  return 'Porównanie centylowe wzrostu u dorosłych ma w tym raporcie charakter wyłącznie informacyjny.';
+}
+
+function patientReportGetAdultBmiWeightDelta(weight, height) {
+  if (!(typeof weight === 'number' && isFinite(weight) && weight > 0)) return null;
+  if (!(typeof height === 'number' && isFinite(height) && height > 0)) return null;
+  const heightM = height / 100;
+  if (!(heightM > 0)) return null;
+  const h2 = heightM * heightM;
+  const bmiValue = (typeof BMI === 'function') ? BMI(weight, height) : (weight / h2);
+  if (!(typeof bmiValue === 'number' && isFinite(bmiValue))) return null;
+  const lowerWeight = ADULT_BMI.UNDER * h2;
+  const upperWeight = 24.9 * h2;
+  const kgToLower = Math.max(0, lowerWeight - weight);
+  const kgAboveUpper = Math.max(0, weight - upperWeight);
+  const kgToUpper = Math.max(0, upperWeight - weight);
+  let state = 'normal';
+  if (kgAboveUpper > 0.049) {
+    state = 'above-normal';
+  } else if (kgToLower > 0.049) {
+    state = 'underweight';
+  } else if (bmiValue >= 24) {
+    state = 'upper-normal';
+  }
+  return {
+    state,
+    bmi: bmiValue,
+    lowerWeight,
+    upperWeight,
+    kgToLower,
+    kgAboveUpper,
+    kgToUpper
+  };
+}
+
+function patientReportBuildAdultBmiWeightDeltaSentence(weight, height, options) {
+  const info = patientReportGetAdultBmiWeightDelta(weight, height);
+  if (!info) return '';
+  const opts = options || {};
+  const digits = Number.isFinite(opts.digits) ? opts.digits : 1;
+  const formatKg = (value) => `${patientReportFormatNumber(Math.max(0, value), digits)} kg`;
+  const lowerStart = !!opts.lowercaseStart;
+  const applyStartCase = (sentence) => {
+    const value = String(sentence || '');
+    if (!lowerStart || !value) return value;
+    return value.charAt(0).toLowerCase() + value.slice(1);
+  };
+  if (info.state === 'above-normal') {
+    const scopeLabel = opts.omitAdultQualifier ? '' : ' dla dorosłych';
+    return applyStartCase(`Aby BMI wróciło do zakresu prawidłowego${scopeLabel}, należałoby zredukować masę ciała o ok. ${formatKg(info.kgAboveUpper)}.`);
+  }
+  if (info.state === 'underweight') {
+    const scopeLabel = opts.omitAdultQualifier ? '' : ' dla dorosłych';
+    if (opts.preferPlainNormalRange) {
+      return applyStartCase(`Aby BMI wróciło do zakresu prawidłowego${scopeLabel}, należałoby zwiększyć masę ciała o ok. ${formatKg(info.kgToLower)}.`);
+    }
+    return applyStartCase(`Aby BMI osiągnęło dolną granicę zakresu prawidłowego${scopeLabel}, należałoby zwiększyć masę ciała o ok. ${formatKg(info.kgToLower)}.`);
+  }
+  if (info.state === 'upper-normal') {
+    return applyStartCase(`Do górnej granicy zakresu prawidłowego BMI dla dorosłych pozostaje ok. ${formatKg(info.kgToUpper)}.`);
+  }
+  if (opts.includeNormalReserve) {
+    return applyStartCase(`BMI mieści się w prawidłowym zakresie dla dorosłych. Do górnej granicy normy pozostaje ok. ${formatKg(info.kgToUpper)}.`);
+  }
+  return '';
+}
+
+function patientReportGetAdultBmiSummaryStatusLabel(state) {
+  const normalized = String(state || '').trim();
+  if (normalized === 'underweight') return 'niedowaga';
+  if (normalized === 'overweight') return 'nadwaga';
+  if (normalized === 'obesity-1') return 'otyłość I stopnia';
+  if (normalized === 'obesity-2') return 'otyłość II stopnia';
+  if (normalized === 'obesity-3') return 'otyłość III stopnia';
+  if (normalized === 'upper-normal') return 'w zakresie prawidłowym dla dorosłych, ale blisko górnej granicy';
+  return 'w zakresie prawidłowym dla dorosłych';
+}
+
 function patientReportScaleGradient() {
   return 'linear-gradient(90deg, #ffd7d7 0%, #ffc9c9 10%, #ffe4b8 17%, #d7f2f3 25%, #b3eaed 50%, #d7f2f3 75%, #ffe4b8 83%, #ffc9c9 90%, #ffd7d7 100%)';
+}
+
+function patientReportMapValueToScalePercent(value, minValue, maxValue) {
+  const min = Number.isFinite(minValue) ? minValue : 0;
+  const max = Number.isFinite(maxValue) ? maxValue : 100;
+  if (!(typeof value === 'number' && isFinite(value)) || !isFinite(min) || !isFinite(max) || max <= min) return 0;
+  const clamped = Math.max(min, Math.min(max, value));
+  return ((clamped - min) / (max - min)) * 100;
+}
+
+function patientReportBuildAdultBmiScaleModel(bmi) {
+  if (!(typeof bmi === 'number' && isFinite(bmi))) return null;
+
+  const min = 15;
+  const max = 40;
+  const thresholdUnder = 18.5;
+  const thresholdUpperNormalWarn = 24;
+  const thresholdOver = 25;
+  const thresholdObesity1 = 30;
+  const thresholdObesity2 = 35;
+  const thresholdObesity3 = 40;
+
+  const posUnder = patientReportMapValueToScalePercent(thresholdUnder, min, max);
+  const posUpperNormalWarn = patientReportMapValueToScalePercent(thresholdUpperNormalWarn, min, max);
+  const posOver = patientReportMapValueToScalePercent(thresholdOver, min, max);
+  const posObesity1 = patientReportMapValueToScalePercent(thresholdObesity1, min, max);
+  const posObesity2 = patientReportMapValueToScalePercent(thresholdObesity2, min, max);
+  const posObesity3 = patientReportMapValueToScalePercent(thresholdObesity3, min, max);
+
+  const gradient = `linear-gradient(90deg,
+    #ffe4b8 0%, #ffe4b8 ${posUnder}%,
+    #b3eaed ${posUnder}%, #b3eaed ${posUpperNormalWarn}%,
+    #ffe9c8 ${posUpperNormalWarn}%, #ffe9c8 ${posOver}%,
+    #ffd3a6 ${posOver}%, #ffd3a6 ${posObesity1}%,
+    #ffc9c9 ${posObesity1}%, #ffc9c9 ${posObesity2}%,
+    #ffb1b1 ${posObesity2}%, #ffb1b1 ${posObesity3}%
+  )`;
+
+  const makeTick = (value, safePos = null, digits = null) => ({
+    pos: patientReportMapValueToScalePercent(value, min, max),
+    label: patientReportFormatNumber(value, digits == null ? (value % 1 ? 1 : 0) : digits),
+    safePos: safePos == null ? patientReportMapValueToScalePercent(value, min, max) : safePos
+  });
+
+  return {
+    marker: patientReportMapValueToScalePercent(bmi, min, max),
+    ticks: [
+      makeTick(thresholdUnder, Math.max(8, posUnder), 1),
+      makeTick(thresholdOver),
+      makeTick(thresholdObesity1),
+      makeTick(thresholdObesity2),
+      makeTick(thresholdObesity3, 94.5)
+    ],
+    valueLabels: [
+      { pos: patientReportMapValueToScalePercent((min + thresholdUnder) / 2, min, max), safePos: 8.5, label: 'Niedowaga' },
+      { pos: patientReportMapValueToScalePercent((thresholdUnder + thresholdOver) / 2, min, max), safePos: 30.5, label: 'Norma' },
+      { pos: patientReportMapValueToScalePercent((thresholdOver + thresholdObesity1) / 2, min, max), label: 'Nadwaga' },
+      { pos: patientReportMapValueToScalePercent((thresholdObesity1 + max) / 2, min, max), safePos: 82, label: 'Otyłość' }
+    ],
+    gradient
+  };
+}
+
+function patientReportGetAdultBmiRangeKey(bmi) {
+  if (!(typeof bmi === 'number' && isFinite(bmi))) return '';
+  if (bmi < ADULT_BMI.UNDER) return 'underweight';
+  if (bmi < ADULT_BMI.OVER) return 'normal';
+  if (bmi < 30) return 'overweight';
+  if (bmi < 35) return 'obesity-1';
+  if (bmi < 40) return 'obesity-2';
+  return 'obesity-3';
+}
+
+function patientReportBuildAdultBmiRangesTableHtml(bmi, tone) {
+  const activeKey = patientReportGetAdultBmiRangeKey(bmi);
+  const activeTone = String(tone || 'normal');
+  const rows = [
+    { key: 'underweight', label: 'Niedowaga', range: '< 18,5' },
+    { key: 'normal', label: 'Norma', range: '18,5–24,9' },
+    { key: 'overweight', label: 'Nadwaga', range: '25,0–29,9' },
+    { key: 'obesity-1', label: 'Otyłość I°', range: '30,0–34,9' },
+    { key: 'obesity-2', label: 'Otyłość II°', range: '35,0–39,9' },
+    { key: 'obesity-3', label: 'Otyłość III°', range: '≥ 40,0' }
+  ];
+
+  const rowsHtml = rows.map((row) => {
+    const activeClass = row.key === activeKey ? ` is-active tone-${patientReportEscapeHtml(activeTone)}` : '';
+    return `
+      <tr class="patient-report-bmi-ranges-row${activeClass}">
+        <td>${patientReportEscapeHtml(row.label)}</td>
+        <td class="patient-report-bmi-ranges-value">${patientReportEscapeHtml(row.range)}</td>
+      </tr>`;
+  }).join('');
+
+  return `
+    <div class="patient-report-bmi-ranges-box">
+      <div class="patient-report-bmi-ranges-title">Normy BMI dla dorosłych</div>
+      <table class="patient-report-bmi-ranges-table" role="presentation" aria-hidden="true">
+        <tbody>${rowsHtml}</tbody>
+      </table>
+    </div>`;
 }
 
 function patientReportBuildScaleModel(type, percentile, valueLabels) {
@@ -5547,6 +6285,16 @@ function patientReportGroupSummaryLines(lines) {
 
 function patientReportCollectHighlights(lines) {
   const out = [];
+  const ageYears = (typeof getAgeDecimal === 'function') ? getAgeDecimal() : NaN;
+  const isAdultPatient = (typeof patientReportIsAdultAge === 'function')
+    ? patientReportIsAdultAge(ageYears)
+    : (isFinite(ageYears) && ageYears >= 18);
+  const weightNow = parseFloat(document.getElementById('weight')?.value) || 0;
+  const heightNow = parseFloat(document.getElementById('height')?.value) || 0;
+  const adultBmiNow = (isAdultPatient && heightNow > 0 && weightNow > 0 && typeof BMI === 'function')
+    ? BMI(weightNow, heightNow)
+    : null;
+  const adultBmiAssessment = isAdultPatient ? patientReportGetAdultBmiAssessment(adultBmiNow) : null;
   const add = (text, tone) => {
     if (!text) return;
     if (out.some((item) => item.text === text)) return;
@@ -5556,6 +6304,16 @@ function patientReportCollectHighlights(lines) {
     const tone = getProfessionalSummaryLineTone(line);
     if (tone === 'normal') return;
     const lc = String(line || '').toLowerCase();
+    if (isAdultPatient) {
+      if (lc.startsWith('wzrost') || lc.startsWith('tempo wzrastania') || lc.startsWith('aktualne tempo') || lc.startsWith('mph') || lc.startsWith('hsds')) return;
+      if (lc.startsWith('waga') || lc.startsWith('bmi')) {
+        const text = adultBmiAssessment && adultBmiAssessment.highlightText
+          ? adultBmiAssessment.highlightText
+          : 'Ocena masy ciała u dorosłych powinna być interpretowana przede wszystkim łącznie z BMI.';
+        add(text, adultBmiAssessment && adultBmiAssessment.tone ? adultBmiAssessment.tone : tone);
+        return;
+      }
+    }
     if (lc.startsWith('bmi')) add('BMI wymaga omówienia w kontekście wieku i wzrostu.', tone);
     else if (lc.startsWith('waga')) add('Masa ciała jest poza typowym zakresem dla wieku.', tone);
     else if (lc.startsWith('wzrost')) add('Wzrost znajduje się poza typowym zakresem centylowym.', tone);
@@ -5615,10 +6373,17 @@ function patientReportFormatIssueList(parts) {
 
 function patientReportBuildAdditionalIssueSentence(flaggedItems, excludedGroups) {
   const excluded = new Set(Array.isArray(excludedGroups) ? excludedGroups.filter(Boolean) : []);
+  const ageYears = (typeof getAgeDecimal === 'function') ? getAgeDecimal() : NaN;
+  const isAdultPatient = (typeof patientReportIsAdultAge === 'function')
+    ? patientReportIsAdultAge(ageYears)
+    : (isFinite(ageYears) && ageYears >= 18);
+  const basics = (typeof patientReportGetCurrentBasics === 'function') ? patientReportGetCurrentBasics() : null;
+  const adultBmiAssessment = isAdultPatient ? patientReportGetAdultBmiAssessment(basics && basics.bmi) : null;
   const extras = [];
   (flaggedItems || []).forEach((item) => {
     const key = String(item && item.group || '').trim();
     if (!key || excluded.has(key) || extras.includes(key)) return;
+    if (isAdultPatient && key === 'growth') return;
     extras.push(key);
   });
   if (!extras.length) return '';
@@ -5626,15 +6391,31 @@ function patientReportBuildAdditionalIssueSentence(flaggedItems, excludedGroups)
   if (extras.length === 1) {
     const key = extras[0];
     if (key === 'blood-pressure') {
-      return 'Równocześnie ciśnienie tętnicze wymaga dalszej kontroli i interpretacji w kolejnych pomiarach.';
+      return isAdultPatient
+        ? 'Równocześnie wynik ciśnienia tętniczego wymaga potwierdzenia w kolejnych pomiarach.'
+        : 'Równocześnie ciśnienie tętnicze wymaga dalszej kontroli i interpretacji w kolejnych pomiarach.';
     }
     if (key === 'heart-rate') {
-      return 'Równocześnie tętno wymaga odniesienia do norm dla wieku i warunków pomiaru.';
+      return isAdultPatient
+        ? 'Równocześnie tętno spoczynkowe należy interpretować łącznie z objawami, aktywnością i stosowanymi lekami.'
+        : 'Równocześnie tętno wymaga odniesienia do norm dla wieku i warunków pomiaru.';
     }
     if (key === 'growth') {
       return 'Równocześnie wzrost wymaga oceny względem siatek centylowych i tempa wzrastania.';
     }
     if (key === 'body-mass') {
+      if (isAdultPatient) {
+        if (adultBmiAssessment && adultBmiAssessment.state === 'upper-normal') {
+          return 'Równocześnie BMI mieści się jeszcze w normie, ale zbliża się do górnej granicy.';
+        }
+        if (adultBmiAssessment && (adultBmiAssessment.state === 'overweight' || String(adultBmiAssessment.state || '').startsWith('obesity'))) {
+          return 'Równocześnie BMI wskazuje na nadmiar masy ciała.';
+        }
+        if (adultBmiAssessment && adultBmiAssessment.state === 'underweight') {
+          return 'Równocześnie BMI wskazuje na niedowagę.';
+        }
+        return 'Równocześnie masę ciała u dorosłych warto interpretować przede wszystkim łącznie z BMI.';
+      }
       const bodyMassItems = (flaggedItems || []).filter((item) => item && item.group === 'body-mass');
       const hasColeOnly = bodyMassItems.some((item) => item.lc.startsWith('wskaźnik cole'))
         && !bodyMassItems.some((item) => item.lc.startsWith('bmi') || item.lc.startsWith('waga'));
@@ -5651,9 +6432,9 @@ function patientReportBuildAdditionalIssueSentence(flaggedItems, excludedGroups)
 
   const labels = extras.map((key) => {
     if (key === 'blood-pressure') return 'ciśnienie tętnicze';
-    if (key === 'heart-rate') return 'tętno';
+    if (key === 'heart-rate') return isAdultPatient ? 'tętno spoczynkowe' : 'tętno';
     if (key === 'growth') return 'wzrost';
-    if (key === 'body-mass') return 'parametry masy ciała';
+    if (key === 'body-mass') return isAdultPatient ? 'masa ciała i BMI' : 'parametry masy ciała';
     if (key === 'fat-distribution') return 'rozkład tkanki tłuszczowej';
     return 'inne parametry z podsumowania';
   });
@@ -5664,6 +6445,9 @@ function patientReportBuildFlaggedSummaryHeadline(summaryLines) {
   const flagged = patientReportCollectFlaggedSummaryItems(summaryLines);
   if (!flagged.length) return null;
 
+  const basics = (typeof patientReportGetCurrentBasics === 'function') ? patientReportGetCurrentBasics() : null;
+  const isAdultPatient = !!(basics && basics.isAdult);
+  const adultBmiAssessment = isAdultPatient ? patientReportGetAdultBmiAssessment(basics && basics.bmi) : null;
   const hasDanger = flagged.some((item) => item.tone === 'danger');
   const first = flagged.find((item) => item.tone === 'danger') || flagged[0];
   let badge = hasDanger ? 'Wynik nieprawidłowy' : 'Wymaga omówienia';
@@ -5672,7 +6456,13 @@ function patientReportBuildFlaggedSummaryHeadline(summaryLines) {
   let text = '';
   let subtext = '';
 
-  if (first.lc.startsWith('wskaźnik cole')) {
+  if (isAdultPatient && (first.lc.startsWith('waga') || first.lc.startsWith('bmi')) && adultBmiAssessment && adultBmiAssessment.state && adultBmiAssessment.state !== 'normal') {
+    badge = adultBmiAssessment.badge || badge;
+    tone = adultBmiAssessment.tone || tone;
+    title = adultBmiAssessment.headlineTitle || title;
+    text = adultBmiAssessment.headlineText || '';
+    subtext = '';
+  } else if (first.lc.startsWith('wskaźnik cole')) {
     const mCole = first.line.match(/([\d]+(?:[\.,]\d+)?)\s*%/);
     const coleVal = mCole ? parseFloat(String(mCole[1]).replace(',', '.')) : null;
     const coleInfo = patientReportClassifyCole(coleVal);
@@ -5701,8 +6491,40 @@ function patientReportBuildFlaggedSummaryHeadline(summaryLines) {
     title = 'BMI wymaga obecnie dodatkowego omówienia.';
     text = 'Oznacza to, że nie wszystkie parametry z bieżącego pomiaru mieszczą się w typowym zakresie dla wieku i płci.';
   } else if (first.lc.startsWith('rr ') || first.lc.startsWith('ciśnienie')) {
-    title = 'Ciśnienie tętnicze wymaga obecnie kontroli i interpretacji w kolejnych pomiarach.';
-    text = 'Uzyskany pomiar należy oceniać w odniesieniu do wieku, wzrostu oraz warunków pomiaru.';
+    if (isAdultPatient && window.adultVitalsApi && typeof window.adultVitalsApi.getState === 'function' && typeof window.adultVitalsApi.classifyBloodPressure === 'function') {
+      const state = window.adultVitalsApi.getState();
+      const hasInput = (window.adultVitalsApi && typeof window.adultVitalsApi.hasAnyMeasurement === 'function')
+        ? window.adultVitalsApi.hasAnyMeasurement(state)
+        : false;
+      const guidelineKey = hasInput ? state.guidelineKey : 'ESC';
+      const info = window.adultVitalsApi.classifyBloodPressure(state.sbp, state.dbp, guidelineKey);
+      if (info && info.key && info.key !== 'normal' && info.key !== 'missing' && info.key !== 'partial') {
+        badge = info.badge || badge;
+        tone = info.tone || tone;
+        title = info.headlineTitle || 'Ciśnienie tętnicze wymaga obecnie kontroli.';
+        text = info.headlineText || 'Wynik znajduje się poza typowym zakresem dla dorosłych.';
+      } else {
+        title = 'Ciśnienie tętnicze u dorosłych należy oceniać w kolejnych pomiarach.';
+        text = 'Pojedynczy odczyt warto interpretować w warunkach pełnego spoczynku i potwierdzić w kolejnych pomiarach.';
+      }
+    } else {
+      title = 'Ciśnienie tętnicze wymaga obecnie kontroli i interpretacji w kolejnych pomiarach.';
+      text = 'Uzyskany pomiar należy oceniać w odniesieniu do wieku, wzrostu oraz warunków pomiaru.';
+    }
+  } else if (first.lc.startsWith('tętno')) {
+    if (isAdultPatient && window.adultVitalsApi && typeof window.adultVitalsApi.getState === 'function' && typeof window.adultVitalsApi.classifyHeartRate === 'function') {
+      const state = window.adultVitalsApi.getState();
+      const info = window.adultVitalsApi.classifyHeartRate(state.hr, { athlete: state.athlete, betaBlocker: state.betaBlocker });
+      if (info && info.key && info.key !== 'normal' && info.key !== 'missing') {
+        badge = info.badge || badge;
+        tone = info.tone || tone;
+        title = info.headlineTitle || 'Tętno spoczynkowe wymaga obecnie kontroli.';
+        text = info.headlineText || 'Wynik odbiega od typowego zakresu tętna spoczynkowego dla dorosłych.';
+      } else {
+        title = 'Tętno spoczynkowe u dorosłych należy oceniać w pełnym spoczynku.';
+        text = 'Do interpretacji potrzebny jest rzeczywisty pomiar tętna spoczynkowego oraz kontekst kliniczny.';
+      }
+    }
   } else if (first.lc.startsWith('whr')) {
     title = 'Rozkład tkanki tłuszczowej wymaga dodatkowej oceny.';
     text = 'Wynik warto interpretować łącznie z masą ciała, BMI i obwodem talii.';
@@ -5815,6 +6637,9 @@ function patientReportBuildHeadline(metrics, historyCount, highlights, summaryLi
   const heightCard = metrics.find((item) => item.key === 'HT') || null;
   const bmiCategory = String((bmiCard && bmiCard.category) || '');
   const bmiKind = patientReportNormalizeBmiCategory(bmiCategory);
+  const basics = (typeof patientReportGetCurrentBasics === 'function') ? patientReportGetCurrentBasics() : null;
+  const isAdultPatient = !!(basics && basics.isAdult);
+  const adultBmiAssessment = isAdultPatient ? patientReportGetAdultBmiAssessment(basics && basics.bmi) : null;
   const heightPercentile = heightCard && typeof heightCard.percentile === 'number' && isFinite(heightCard.percentile)
     ? heightCard.percentile
     : null;
@@ -5828,7 +6653,14 @@ function patientReportBuildHeadline(metrics, historyCount, highlights, summaryLi
   let text = '';
   let subtext = '';
 
-  if (typeof heightPercentile === 'number' && isFinite(heightPercentile) && heightPercentile <= 10) {
+  if (isAdultPatient && adultBmiAssessment && adultBmiAssessment.state && adultBmiAssessment.state !== 'normal') {
+    coveredIssueGroups.add('body-mass');
+    badge = adultBmiAssessment.badge || badge;
+    tone = adultBmiAssessment.tone || tone;
+    title = adultBmiAssessment.headlineTitle || title;
+    text = adultBmiAssessment.headlineText || text;
+    subtext = '';
+  } else if (!isAdultPatient && typeof heightPercentile === 'number' && isFinite(heightPercentile) && heightPercentile <= 10) {
     coveredIssueGroups.add('growth');
     const trendSentence = hasHistory
       ? 'Szczególnie ważne jest porównanie obecnego wzrostu z wcześniejszymi pomiarami i oceną tempa wzrastania.'
@@ -5925,17 +6757,40 @@ function patientReportBuildMetricCards() {
   const height = parseFloat(document.getElementById('height')?.value);
   const bmi = (!isNaN(weight) && !isNaN(height) && typeof BMI === 'function') ? BMI(weight, height) : null;
   const preferredSource = patientReportGetPreferredSource();
-  const isChild = ageYears > 0 && ageYears <= 18;
+  const isAdult = patientReportIsAdultAge(ageYears);
+  const isChild = ageYears > 0 && ageYears < PATIENT_REPORT_ADULT_REFERENCE_AGE;
+  const referenceAgeYears = patientReportGetReferenceAgeYears(ageYears);
+  const canUseAnthroReference = typeof referenceAgeYears === 'number' && isFinite(referenceAgeYears) && referenceAgeYears > 0 && referenceAgeYears <= PATIENT_REPORT_ADULT_REFERENCE_AGE;
   const trendPoints = patientReportCollectAllTrendPoints();
+  const adultBmiAssessment = isAdult ? patientReportGetAdultBmiAssessment(bmi) : null;
+  const adultBmiWeightDeltaSentence = isAdult
+    ? patientReportBuildAdultBmiWeightDeltaSentence(weight, height)
+    : '';
+  const adultBmiSimplifiedDeltaStates = new Set(['overweight', 'obesity-1', 'obesity-2', 'obesity-3', 'underweight']);
+  const adultBmiNeedsSimplifiedDelta = !!(isAdult && adultBmiAssessment && adultBmiSimplifiedDeltaStates.has(adultBmiAssessment.state));
+  const adultBmiDeltaPrefersPlainNormalRange = !!(adultBmiAssessment && adultBmiAssessment.state === 'underweight');
+  const adultBmiWeightDeltaSentenceForWeightCard = adultBmiNeedsSimplifiedDelta
+    ? patientReportBuildAdultBmiWeightDeltaSentence(weight, height, {
+        lowercaseStart: true,
+        preferPlainNormalRange: adultBmiDeltaPrefersPlainNormalRange
+      })
+    : adultBmiWeightDeltaSentence;
+  const adultBmiWeightDeltaSentenceForBmiCard = adultBmiNeedsSimplifiedDelta
+    ? patientReportBuildAdultBmiWeightDeltaSentence(weight, height, {
+        lowercaseStart: true,
+        omitAdultQualifier: true,
+        preferPlainNormalRange: adultBmiDeltaPrefersPlainNormalRange
+      })
+    : adultBmiWeightDeltaSentence;
 
-  const weightResolved = (isChild && !isNaN(weight) && typeof advHistoryResolveMetric === 'function')
-    ? advHistoryResolveMetric('WT', weight, sex, ageYears, preferredSource)
+  const weightResolved = (canUseAnthroReference && !isNaN(weight) && typeof advHistoryResolveMetric === 'function')
+    ? advHistoryResolveMetric('WT', weight, sex, referenceAgeYears, preferredSource)
     : { result: null, source: null, reason: '' };
-  const heightResolved = (isChild && !isNaN(height) && typeof advHistoryResolveMetric === 'function')
-    ? advHistoryResolveMetric('HT', height, sex, ageYears, preferredSource)
+  const heightResolved = (canUseAnthroReference && !isNaN(height) && typeof advHistoryResolveMetric === 'function')
+    ? advHistoryResolveMetric('HT', height, sex, referenceAgeYears, preferredSource)
     : { result: null, source: null, reason: '' };
   const bmiResolved = (isChild && typeof bmi === 'number' && isFinite(bmi) && typeof advHistoryResolveMetric === 'function')
-    ? advHistoryResolveMetric('BMI', bmi, sex, ageYears, preferredSource)
+    ? advHistoryResolveMetric('BMI', bmi, sex, referenceAgeYears, preferredSource)
     : { result: null, source: null, reason: '' };
 
   const bmiCategoryLabel = (typeof bmi === 'number' && isFinite(bmi))
@@ -5946,16 +6801,34 @@ function patientReportBuildMetricCards() {
   const heightPercentile = heightResolved && heightResolved.result ? heightResolved.result.percentile : null;
   const bmiPercentile = bmiResolved && bmiResolved.result ? bmiResolved.result.percentile : null;
 
-  const weightMedian = patientReportGetMetricMedian('WT', sex, ageYears, weightResolved.source, weightResolved);
-  const heightMedian = patientReportGetMetricMedian('HT', sex, ageYears, heightResolved.source, heightResolved);
-  const bmiMedian = patientReportGetMetricMedian('BMI', sex, ageYears, bmiResolved.source, bmiResolved);
+  const weightMedian = patientReportGetMetricMedian('WT', sex, referenceAgeYears, weightResolved.source, weightResolved);
+  const heightMedian = patientReportGetMetricMedian('HT', sex, referenceAgeYears, heightResolved.source, heightResolved);
+  const bmiMedian = patientReportGetMetricMedian('BMI', sex, referenceAgeYears, bmiResolved.source, bmiResolved);
+
+  const weightReferenceLabel = isAdult ? 'Masa referencyjna' : 'Przeciętna masa dla tego wieku';
+  const heightReferenceLabel = isAdult ? 'Wzrost referencyjny' : 'Przeciętny wzrost dla tego wieku';
+  const adultReferenceOptions = { adultReference: isAdult };
+  const adultReferenceTextOptions = isAdult
+    ? {
+        equalText: 'To prawie tyle samo co wartość referencyjna.',
+        unavailableText: 'Brak porównania do wartości referencyjnej.'
+      }
+    : {};
 
   const cards = [];
   if (!isNaN(weight)) {
     const series = patientReportBuildTrendSeries(trendPoints, 'WT');
-    const tone = (typeof weightPercentile === 'number' && isFinite(weightPercentile))
-      ? ((weightPercentile <= 3 || weightPercentile >= 97) ? 'danger' : (((weightPercentile > 3 && weightPercentile < 10) || (weightPercentile >= 90 && weightPercentile < 97)) ? 'warn' : 'normal'))
-      : 'normal';
+    const tone = isAdult
+      ? ((adultBmiAssessment && adultBmiAssessment.tone) || 'normal')
+      : ((typeof weightPercentile === 'number' && isFinite(weightPercentile))
+        ? ((weightPercentile <= 3 || weightPercentile >= 97) ? 'danger' : (((weightPercentile > 3 && weightPercentile < 10) || (weightPercentile >= 90 && weightPercentile < 97)) ? 'warn' : 'normal'))
+        : 'normal');
+    const note = isAdult
+      ? patientReportAppendSentence(
+          ((adultBmiAssessment && adultBmiAssessment.weightNote) || 'Ocena masy ciała u dorosłych opiera się przede wszystkim na BMI; porównanie centylowe pokazujemy wyłącznie informacyjnie.'),
+          adultBmiWeightDeltaSentenceForWeightCard
+        )
+      : patientReportDescribeWeight(weightPercentile, adultReferenceOptions);
     cards.push({
       key: 'WT',
       title: 'Masa ciała',
@@ -5963,18 +6836,25 @@ function patientReportBuildMetricCards() {
       badge: patientReportFormatPercentile(weightPercentile),
       percentile: weightPercentile,
       tone,
-      note: patientReportDescribeWeight(weightPercentile),
-      reference: patientReportBuildMedianReference('Masa', weight, weightMedian, { friendlyLabel: 'Przeciętna masa dla tego wieku', medianUnit: 'kg', diffUnit: 'kg', digits: 1 }),
-      scale: isChild ? patientReportBuildScaleModel('WT', weightPercentile, patientReportBuildScaleValueLabels('WT', sex, ageYears, weightResolved.source)) : null,
+      note,
+      reference: patientReportBuildMedianReference('Masa', weight, weightMedian, { friendlyLabel: weightReferenceLabel, medianUnit: 'kg', diffUnit: 'kg', digits: 1, ...adultReferenceTextOptions }),
+      scale: (typeof weightPercentile === 'number' && isFinite(weightPercentile))
+        ? patientReportBuildScaleModel('WT', weightPercentile, patientReportBuildScaleValueLabels('WT', sex, referenceAgeYears, weightResolved.source))
+        : null,
       sparkline: patientReportBuildSparklineSvg(series, { title: 'masa ciała', unit: 'kg', digits: 1 }),
       trendText: patientReportBuildTrendDeltaText(series, 'kg', 1)
     });
   }
   if (!isNaN(height)) {
     const series = patientReportBuildTrendSeries(trendPoints, 'HT');
-    const tone = (typeof heightPercentile === 'number' && isFinite(heightPercentile))
-      ? ((heightPercentile <= 3) ? 'danger' : (((heightPercentile > 3 && heightPercentile <= 10) || heightPercentile > 97) ? 'warn' : 'normal'))
-      : 'normal';
+    const tone = isAdult
+      ? 'normal'
+      : ((typeof heightPercentile === 'number' && isFinite(heightPercentile))
+        ? ((heightPercentile <= 3) ? 'danger' : (((heightPercentile > 3 && heightPercentile <= 10) || heightPercentile > 97) ? 'warn' : 'normal'))
+        : 'normal');
+    const note = isAdult
+      ? patientReportGetAdultHeightInfoNote(heightPercentile)
+      : patientReportDescribeHeight(heightPercentile, adultReferenceOptions);
     cards.push({
       key: 'HT',
       title: 'Wzrost',
@@ -5982,27 +6862,46 @@ function patientReportBuildMetricCards() {
       badge: patientReportFormatPercentile(heightPercentile),
       percentile: heightPercentile,
       tone,
-      note: patientReportDescribeHeight(heightPercentile),
-      reference: patientReportBuildMedianReference('Wzrost', height, heightMedian, { friendlyLabel: 'Przeciętny wzrost dla tego wieku', medianUnit: 'cm', diffUnit: 'cm', digits: 1 }),
-      scale: isChild ? patientReportBuildScaleModel('HT', heightPercentile, patientReportBuildScaleValueLabels('HT', sex, ageYears, heightResolved.source)) : null,
+      note,
+      reference: patientReportBuildMedianReference('Wzrost', height, heightMedian, { friendlyLabel: heightReferenceLabel, medianUnit: 'cm', diffUnit: 'cm', digits: 1, ...adultReferenceTextOptions }),
+      scale: (typeof heightPercentile === 'number' && isFinite(heightPercentile))
+        ? patientReportBuildScaleModel('HT', heightPercentile, patientReportBuildScaleValueLabels('HT', sex, referenceAgeYears, heightResolved.source))
+        : null,
       sparkline: patientReportBuildSparklineSvg(series, { title: 'wzrost', unit: 'cm', digits: 1 }),
       trendText: patientReportBuildTrendDeltaText(series, 'cm', 1)
     });
   }
   if (typeof bmi === 'number' && isFinite(bmi)) {
     const series = patientReportBuildTrendSeries(trendPoints, 'BMI');
-    const tone = bmiCategoryLabel.includes('Otyłość') ? 'danger' : ((bmiCategoryLabel === 'Nadwaga' || bmiCategoryLabel === 'Niedowaga') ? 'warn' : 'normal');
+    const tone = isAdult
+      ? ((adultBmiAssessment && adultBmiAssessment.tone) || 'normal')
+      : (bmiCategoryLabel.includes('Otyłość') ? 'danger' : ((bmiCategoryLabel === 'Nadwaga' || bmiCategoryLabel === 'Niedowaga') ? 'warn' : 'normal'));
+    const note = isAdult
+      ? patientReportAppendSentence(
+          ((adultBmiAssessment && adultBmiAssessment.bmiNote) || patientReportDescribeBmi(bmiCategoryLabel)),
+          adultBmiWeightDeltaSentenceForBmiCard
+        )
+      : patientReportDescribeBmi(bmiCategoryLabel);
     cards.push({
       key: 'BMI',
       title: 'BMI',
       value: patientReportFormatNumber(bmi, 1),
-      badge: bmiCategoryLabel || patientReportFormatPercentile(bmiPercentile),
+      badge: isAdult
+        ? (((adultBmiAssessment && adultBmiAssessment.badge) || bmiCategoryLabel || patientReportFormatPercentile(bmiPercentile)))
+        : (bmiCategoryLabel || patientReportFormatPercentile(bmiPercentile)),
       percentile: bmiPercentile,
       category: bmiCategoryLabel,
       tone,
-      note: patientReportDescribeBmi(bmiCategoryLabel),
-      reference: patientReportBuildMedianReference('BMI', bmi, bmiMedian, { friendlyLabel: 'Przeciętne BMI dla tego wieku', medianUnit: '', diffUnit: 'pkt', digits: 1 }),
-      scale: isChild ? patientReportBuildScaleModel('BMI', bmiPercentile, patientReportBuildScaleValueLabels('BMI', sex, ageYears, bmiResolved.source)) : null,
+      note,
+      reference: isAdult
+        ? null
+        : patientReportBuildMedianReference('BMI', bmi, bmiMedian, { friendlyLabel: 'Przeciętne BMI dla tego wieku', medianUnit: '', diffUnit: 'pkt', digits: 1 }),
+      hideReference: isAdult,
+      extraHtml: isAdult ? patientReportBuildAdultBmiRangesTableHtml(bmi, tone) : '',
+      scale: isChild
+        ? patientReportBuildScaleModel('BMI', bmiPercentile, patientReportBuildScaleValueLabels('BMI', sex, referenceAgeYears, bmiResolved.source))
+        : (isAdult ? patientReportBuildAdultBmiScaleModel(bmi) : null),
+      hideEmptyScale: false,
       sparkline: patientReportBuildSparklineSvg(series, { title: 'BMI', unit: '', digits: 1 }),
       trendText: patientReportBuildTrendDeltaText(series, 'pkt', 1)
     });
@@ -6012,7 +6911,9 @@ function patientReportBuildMetricCards() {
     cards,
     historyCount: trendPoints.filter((point) => point && point.current !== true).length,
     preferredSource,
-    isChild
+    isChild,
+    isAdult,
+    referenceAgeYears
   };
 }
 
@@ -6029,11 +6930,14 @@ function patientReportGetCurrentBasics() {
     weight,
     height,
     bmi,
-    isChild: ageYears > 0 && ageYears <= 18
+    isChild: ageYears > 0 && ageYears < PATIENT_REPORT_ADULT_REFERENCE_AGE,
+    isAdult: patientReportIsAdultAge(ageYears),
+    referenceAgeYears: patientReportGetReferenceAgeYears(ageYears)
   };
 }
 
 function patientReportClassifyCole(cole) {
+
   if (typeof cole !== 'number' || !isFinite(cole)) {
     return {
       category: 'Brak danych',
@@ -6300,33 +7204,58 @@ function patientReportBuildVitalItem(options) {
 
 function patientReportBuildVitalsCard() {
   const basics = patientReportGetCurrentBasics();
+  const referenceAgeYears = patientReportGetReferenceAgeYears(basics.ageYears);
+  const isAdultReference = !!basics.isAdult;
+
+  if (isAdultReference) {
+    if (window.adultVitalsApi && typeof window.adultVitalsApi.buildReportCardData === 'function') {
+      return window.adultVitalsApi.buildReportCardData();
+    }
+    return {
+      title: 'Ciśnienie i tętno',
+      badge: 'Informacyjnie',
+      tone: 'normal',
+      subtitle: 'Klasyfikacja ESC/PTK dla dorosłych',
+      note: 'Nie udało się odczytać modułu pomiarów RR i tętna dla dorosłych. Pokazano kartę informacyjną.',
+      items: [
+        { label: 'Ciśnienie tętnicze', unavailable: true, message: 'Normy dla dorosłych będą dostępne po załadowaniu modułu.' },
+        { label: 'Tętno spoczynkowe', unavailable: true, message: 'Normy dla dorosłych będą dostępne po załadowaniu modułu.' }
+      ],
+      hideMissingMeasurementLabels: false
+    };
+  }
+
   const sbp = parseFloat(document.getElementById('bpSystolic')?.value);
   const dbp = parseFloat(document.getElementById('bpDiastolic')?.value);
   const hr = parseFloat(document.getElementById('heartRate')?.value);
-  const hasBpValue = isFinite(sbp) || isFinite(dbp);
-  const hasHrValue = isFinite(hr);
+  const bpDatasetChoice = undefined;
   let bpRef = null;
   let bpEval = null;
   try {
     if (window.bpModuleApi && typeof window.bpModuleApi.getPediatricBpReference === 'function') {
       bpRef = window.bpModuleApi.getPediatricBpReference({
-        ageYears: basics.ageYears,
+        ageYears: referenceAgeYears,
         sex: basics.sex,
-        heightCm: basics.height
+        heightCm: basics.height,
+        datasetChoice: bpDatasetChoice
       });
     }
   } catch (_) { bpRef = null; }
   try {
     if (isFinite(sbp) && isFinite(dbp) && window.bpModuleApi && typeof window.bpModuleApi.computePediatricBp === 'function') {
       bpEval = window.bpModuleApi.computePediatricBp({
-        ageYears: basics.ageYears,
+        ageYears: referenceAgeYears,
         sex: basics.sex,
         heightCm: basics.height,
         sbp,
-        dbp
+        dbp,
+        datasetChoice: bpDatasetChoice
       });
     }
   } catch (_) { bpEval = null; }
+
+  const bpReferenceMessage = 'Normy ciśnienia w tym raporcie pokazujemy dla wieku 3–18 lat po wpisaniu wzrostu.';
+  const hrReferenceMessage = 'Normy tętna pokażemy po wyliczeniu wieku pacjenta.';
 
   const items = [];
   if (bpRef && bpRef.ok && bpRef.reference) {
@@ -6359,19 +7288,18 @@ function patientReportBuildVitalsCard() {
       normalStatusText: 'Ciśnienie rozkurczowe mieści się w zakresie prawidłowym.'
     }));
   } else {
-    const bpMessage = 'Normy ciśnienia w tym raporcie pokazujemy dla wieku 3–18 lat po wpisaniu wzrostu.';
-    items.push({ label: 'Ciśnienie skurczowe', unavailable: true, message: bpMessage });
-    items.push({ label: 'Ciśnienie rozkurczowe', unavailable: true, message: bpMessage });
+    items.push({ label: 'Ciśnienie skurczowe', unavailable: true, message: bpReferenceMessage });
+    items.push({ label: 'Ciśnienie rozkurczowe', unavailable: true, message: bpReferenceMessage });
   }
 
   let hrItem = null;
   try {
-    if (basics.ageYears > 0 && basics.ageYears <= 18 && window.vitalSigns && typeof window.vitalSigns.getHrValues === 'function') {
+    if (referenceAgeYears > 0 && referenceAgeYears <= PATIENT_REPORT_ADULT_REFERENCE_AGE && window.vitalSigns && typeof window.vitalSigns.getHrValues === 'function') {
       const hrPopulation = String(document.getElementById('hrPopulation')?.value || 'healthy');
       const hrTempValue = parseFloat(document.getElementById('hrTemperature')?.value);
       const hrOpts = { population: hrPopulation };
       if (isFinite(hrTempValue)) hrOpts.temperature = hrTempValue;
-      const hrRef = window.vitalSigns.getHrValues(basics.ageYears, hrOpts);
+      const hrRef = window.vitalSigns.getHrValues(referenceAgeYears, hrOpts);
       if (hrRef && typeof hrRef.median === 'number' && isFinite(hrRef.median)) {
         hrItem = patientReportBuildVitalItem({
           kind: 'hr',
@@ -6390,7 +7318,7 @@ function patientReportBuildVitalsCard() {
     }
   } catch (_) { hrItem = null; }
   if (!hrItem) {
-    hrItem = { label: 'Tętno', unavailable: true, message: 'Normy tętna pokażemy po wyliczeniu wieku pacjenta.' };
+    hrItem = { label: 'Tętno', unavailable: true, message: hrReferenceMessage };
   }
   items.push(hrItem);
 
@@ -6407,48 +7335,70 @@ function patientReportBuildVitalsCard() {
   const hrHigh = !!(hrMeasuredItem && hrMeasuredItem.state === 'high');
   const allMeasuredNormal = anyMeasured && measurableItems.every((item) => item.state === 'normal');
 
+  const ageReferenceBadge = 'Normy dla wieku';
+  const referenceNote = 'Pokazano wartości referencyjne dla wieku.';
+  const pendingReferenceNote = 'Normy dla wieku będą dostępne po uzupełnieniu danych pacjenta.';
+
   let tone = 'normal';
-  let badge = anyMeasured ? 'Normy dla wieku' : 'Informacyjnie';
-  let note = referenceItems.length
-    ? 'Pokazano wartości referencyjne dla wieku.'
-    : 'Normy dla wieku będą dostępne po uzupełnieniu danych pacjenta.';
+  let badge = anyMeasured ? ageReferenceBadge : 'Informacyjnie';
+  let note = referenceItems.length ? referenceNote : pendingReferenceNote;
 
   if (bpHighDanger) {
     tone = 'danger';
     badge = 'Poza normą';
     note = hrHigh
-      ? 'Ciśnienie tętnicze jest powyżej normy dla płci, wieku i wzrostu, a tętno jest powyżej zakresu prawidłowego.'
-      : 'Ciśnienie tętnicze jest powyżej normy dla płci, wieku i wzrostu.';
+      ? (isAdultReference
+          ? 'Ciśnienie tętnicze jest powyżej przyjętych norm dla płci i wzrostu, a tętno jest powyżej zakresu prawidłowego.'
+          : 'Ciśnienie tętnicze jest powyżej normy dla płci, wieku i wzrostu, a tętno jest powyżej zakresu prawidłowego.')
+      : (isAdultReference
+          ? 'Ciśnienie tętnicze jest powyżej przyjętych norm dla płci i wzrostu.'
+          : 'Ciśnienie tętnicze jest powyżej normy dla płci, wieku i wzrostu.');
   } else if (bpHighWarn) {
     tone = 'warn';
     badge = 'Do kontroli';
     note = hrHigh
-      ? 'Ciśnienie tętnicze jest w górnym zakresie, a tętno jest powyżej zakresu prawidłowego.'
-      : 'Ciśnienie tętnicze jest w górnym zakresie i warto je skontrolować w kolejnych pomiarach.';
+      ? (isAdultReference
+          ? 'Ciśnienie tętnicze jest w górnym zakresie przyjętych norm, a tętno jest powyżej zakresu prawidłowego.'
+          : 'Ciśnienie tętnicze jest w górnym zakresie, a tętno jest powyżej zakresu prawidłowego.')
+      : (isAdultReference
+          ? 'Ciśnienie tętnicze jest w górnym zakresie przyjętych norm i warto je skontrolować w kolejnych pomiarach.'
+          : 'Ciśnienie tętnicze jest w górnym zakresie i warto je skontrolować w kolejnych pomiarach.');
   } else if (bpLow) {
     tone = 'warn';
     badge = 'Do kontroli';
     note = hrHigh
-      ? 'Ciśnienie tętnicze jest poniżej zakresu prawidłowego, a tętno jest powyżej zakresu prawidłowego.'
-      : 'Ciśnienie tętnicze jest poniżej zakresu prawidłowego.';
+      ? (isAdultReference
+          ? 'Ciśnienie tętnicze jest poniżej zakresu prawidłowego względem przyjętych norm, a tętno jest powyżej zakresu prawidłowego.'
+          : 'Ciśnienie tętnicze jest poniżej zakresu prawidłowego, a tętno jest powyżej zakresu prawidłowego.')
+      : (isAdultReference
+          ? 'Ciśnienie tętnicze jest poniżej zakresu prawidłowego względem przyjętych norm.'
+          : 'Ciśnienie tętnicze jest poniżej zakresu prawidłowego.');
   } else if (hrHigh) {
     tone = 'warn';
     badge = 'Do kontroli';
-    note = 'Tętno jest powyżej normy dla płci, wieku i wzrostu.';
+    note = isAdultReference
+      ? 'Tętno jest powyżej przyjętych norm.'
+      : 'Tętno jest powyżej normy dla płci, wieku i wzrostu.';
   } else if (hrLow) {
     tone = 'warn';
     badge = 'Do kontroli';
-    note = 'Tętno jest poniżej zakresu prawidłowego.';
+    note = isAdultReference
+      ? 'Tętno jest poniżej zakresu prawidłowego względem przyjętych norm.'
+      : 'Tętno jest poniżej zakresu prawidłowego.';
   } else if (allMeasuredNormal) {
     badge = 'W zakresie';
-    note = 'Podane pomiary mieszczą się w zakresie prawidłowym.';
+    note = isAdultReference
+      ? 'Podane pomiary mieszczą się w zakresie prawidłowym względem przyjętych norm.'
+      : 'Podane pomiary mieszczą się w zakresie prawidłowym.';
   } else if (anyMeasured) {
     badge = 'W zakresie';
-    note = 'Pokazano wartości referencyjne dla wieku i odniesienie do podanych pomiarów.';
+    note = isAdultReference
+      ? 'Pokazano przyjęte normy i odniesienie do podanych pomiarów.'
+      : 'Pokazano wartości referencyjne dla wieku i odniesienie do podanych pomiarów.';
   }
 
   const subtitle = anyMeasured && tone === 'normal'
-    ? 'Normy dla wieku i odniesienie do podanych pomiarów.'
+    ? (isAdultReference ? 'Normy referencyjne i odniesienie do podanych pomiarów.' : 'Normy dla wieku i odniesienie do podanych pomiarów.')
     : '';
 
   return {
@@ -6463,6 +7413,7 @@ function patientReportBuildVitalsCard() {
 }
 
 function patientReportBuildBmrCardHtml(card) {
+
   const rowsHtml = Array.isArray(card?.rows) && card.rows.length
     ? card.rows.map((row) => `
         <tr${row && row.highlighted ? ' class="is-highlighted"' : ''}>
@@ -6498,9 +7449,13 @@ function patientReportBuildVitalsCardHtml(card) {
   const hideMissingMeasurementLabels = !!card?.hideMissingMeasurementLabels;
   const rawSubtitle = typeof card?.subtitle === 'string' ? card.subtitle.trim() : '';
   const rawBadge = typeof card?.badge === 'string' ? card.badge.trim() : '';
+  const rawNote = typeof card?.note === 'string' ? card.note.trim() : '';
   const showSubtitle = !!rawSubtitle && rawSubtitle.toLowerCase() !== rawBadge.toLowerCase();
   const subtitleHtml = showSubtitle
     ? `<div class="patient-report-support-subtitle">${patientReportEscapeHtml(rawSubtitle)}</div>`
+    : '';
+  const noteHtml = rawNote
+    ? `<div class="patient-report-support-note">${patientReportEscapeHtml(rawNote)}</div>`
     : '';
   const itemsHtml = (card?.items || []).map((item) => {
     if (item.unavailable) {
@@ -6510,19 +7465,28 @@ function patientReportBuildVitalsCardHtml(card) {
           <div class="patient-report-vital-empty">${patientReportEscapeHtml(item.message || 'Brak danych odniesienia.')}</div>
         </div>`;
     }
+    const valueFirst = !!(card?.valueFirst || item?.valueFirst);
     const valueRowHtml = item.valueText
       ? `<div class="patient-report-vital-row is-value tone-${patientReportEscapeHtml(item.tone || 'normal')}"><span class="patient-report-vital-label">Wynik pacjenta</span><strong>${patientReportEscapeHtml(item.valueText || '')}</strong></div>`
       : '';
     const statusHtml = item.statusText
       ? `<div class="patient-report-vital-status tone-${patientReportEscapeHtml(item.tone || 'normal')}">${patientReportEscapeHtml(item.statusText || '')}</div>`
       : (hideMissingMeasurementLabels ? '' : '<div class="patient-report-vital-status tone-normal">Brak wpisanego pomiaru.</div>');
+    const referenceRows = Array.isArray(item.referenceRows) && item.referenceRows.length
+      ? item.referenceRows
+      : [
+          { label: '50 centyl', value: item.medianText || '—' },
+          { label: 'Zakres prawidłowy', value: item.rangeText || '—' }
+        ];
+    const referenceRowsHtml = referenceRows.map((row) => `
+        <div class="patient-report-vital-row${row && row.highlighted ? ' is-highlighted' : ''}"><span>${patientReportEscapeHtml((row && row.label) || '')}</span><strong>${patientReportEscapeHtml((row && row.value) || '—')}</strong></div>`).join('');
+    const contentHtml = valueFirst
+      ? `${valueRowHtml}${statusHtml}${referenceRowsHtml}`
+      : `${referenceRowsHtml}${valueRowHtml}${statusHtml}`;
     return `
-      <div class="patient-report-vital-item tone-${patientReportEscapeHtml(item.tone || 'normal')}">
+      <div class="patient-report-vital-item tone-${patientReportEscapeHtml(item.tone || 'normal')}${valueFirst ? ' is-value-first' : ''}">
         <div class="patient-report-vital-item-title">${patientReportEscapeHtml(item.label || '')}</div>
-        <div class="patient-report-vital-row"><span>50 centyl</span><strong>${patientReportEscapeHtml(item.medianText || '—')}</strong></div>
-        <div class="patient-report-vital-row"><span>Zakres prawidłowy</span><strong>${patientReportEscapeHtml(item.rangeText || '—')}</strong></div>
-        ${valueRowHtml}
-        ${statusHtml}
+        ${contentHtml}
       </div>`;
   }).join('');
   return `
@@ -6534,14 +7498,17 @@ function patientReportBuildVitalsCardHtml(card) {
         </div>
         <div class="patient-report-metric-badge tone-${patientReportEscapeHtml(card?.tone || 'normal')}">${patientReportEscapeHtml(card?.badge || 'Informacyjnie')}</div>
       </div>
-      <div class="patient-report-support-note">${patientReportEscapeHtml(card?.note || '')}</div>
+      ${noteHtml}
       <div class="patient-report-vital-list">${itemsHtml}</div>
     </article>`;
 }
 
 function patientReportBuildSecondaryCardsHtml(model) {
   const out = [];
-  out.push(patientReportBuildMetricCardsHtml([model.coleCard || patientReportBuildColeCard()]));
+  const isAdult = !!(model && model.isAdult);
+  if (!isAdult) {
+    out.push(patientReportBuildMetricCardsHtml([model.coleCard || patientReportBuildColeCard()]));
+  }
   out.push(patientReportBuildBmrCardHtml(model.bmrCard || patientReportBuildBmrCard()));
   out.push(patientReportBuildVitalsCardHtml(model.vitalsCard || patientReportBuildVitalsCard()));
   return out.join('');
@@ -6551,12 +7518,23 @@ function patientReportBuildModel() {
   const name = (document.getElementById('name')?.value || document.getElementById('advName')?.value || '').trim();
   const sex = document.getElementById('sex')?.value || 'M';
   const ageYears = (typeof getAgeDecimal === 'function') ? getAgeDecimal() : 0;
+  const isAdult = patientReportIsAdultAge(ageYears);
   const sourceKey = patientReportGetPreferredSource();
-  const sourceLabel = (typeof advHistorySourceLabel === 'function') ? advHistorySourceLabel(sourceKey) : String(sourceKey || '');
+  const rawSourceLabel = (typeof advHistorySourceLabel === 'function') ? advHistorySourceLabel(sourceKey) : String(sourceKey || '');
+  const sourceLabel = isAdult
+    ? 'OLAF · dorośli: odniesienie do 18. roku życia'
+    : rawSourceLabel;
   const metricBundle = patientReportBuildMetricCards();
-  const summaryLines = getFormattedProfessionalSummaryLines();
-  const highlights = patientReportCollectHighlights(summaryLines);
-  const headline = patientReportBuildHeadline(metricBundle.cards, metricBundle.historyCount, highlights, summaryLines);
+  let summaryLines = getFormattedProfessionalSummaryLines();
+  if (isAdult) {
+    summaryLines = (summaryLines || []).filter((line) => !/^\s*wskaźnik\s*cole/i.test(String(line || '').replace(/ /g, ' ')));
+  }
+  let highlights = patientReportCollectHighlights(summaryLines);
+  let headline = patientReportBuildHeadline(metricBundle.cards, metricBundle.historyCount, highlights, summaryLines);
+  if (isAdult) {
+    highlights = patientReportAdaptHighlightsForAdultReference(highlights);
+    headline = patientReportAdaptHeadlineForAdultReference(headline);
+  }
   let generatedLabel = '';
   try {
     generatedLabel = new Intl.DateTimeFormat('pl-PL', {
@@ -6569,13 +7547,16 @@ function patientReportBuildModel() {
     title: 'Raport po wizycie',
     subtitle: '',
     name,
-    sexLabel: sex === 'F' ? 'Dziewczynka' : 'Chłopiec',
+    sexLabel: patientReportGetSexLabel(sex, ageYears),
     ageLabel: patientReportFormatAge(ageYears),
     generatedLabel,
     sourceLabel,
     metricCards: metricBundle.cards,
     historyCount: metricBundle.historyCount,
     isChild: metricBundle.isChild,
+    isAdult,
+    showColeCard: !isAdult,
+    secondaryCardCount: isAdult ? 2 : 3,
     summaryLines,
     highlights,
     headline,
@@ -6585,12 +7566,13 @@ function patientReportBuildModel() {
   };
 }
 
-function patientReportBuildScaleHtml(scale, tone) {
-  if (!scale) return '<div class="patient-report-scale-empty">Porównanie centylowe niedostępne dla tego wyniku.</div>';
+function patientReportBuildScaleHtml(scale, tone, options) {
+  const suppressEmpty = !!(options && options.suppressEmpty);
+  if (!scale) return suppressEmpty ? '' : '<div class="patient-report-scale-empty">Porównanie centylowe niedostępne dla tego wyniku.</div>';
   const valueLabelsHtml = (scale.valueLabels || []).map((item) => {
-    const labelPos = (typeof item.pos === 'number' && isFinite(item.pos))
-      ? item.pos
-      : ((typeof item.safePos === 'number' && isFinite(item.safePos)) ? item.safePos : 0);
+    const labelPos = (typeof item.safePos === 'number' && isFinite(item.safePos))
+      ? item.safePos
+      : ((typeof item.pos === 'number' && isFinite(item.pos)) ? item.pos : 0);
     return `<span class="patient-report-scale-value-label" style="left:${labelPos}%">${patientReportEscapeHtml(item.label || '')}</span>`;
   }).join('');
   const ticksHtml = (scale.ticks || []).map((tick) => {
@@ -6610,10 +7592,11 @@ function patientReportBuildScaleHtml(scale, tone) {
 
 function patientReportBuildReferenceHtml(reference, tone) {
   const boxTone = patientReportEscapeHtml(tone || 'normal');
+  const emptyMessage = patientReportEscapeHtml((reference && (reference.emptyMessage || reference.medianText)) || 'Brak porównania do typowej wartości dla wieku.');
   if (!reference || reference.available === false) {
     return `
       <div class="patient-report-metric-reference-box tone-${boxTone} is-empty">
-        <div class="patient-report-metric-reference-empty">Brak porównania do typowej wartości dla wieku.</div>
+        <div class="patient-report-metric-reference-empty">${emptyMessage}</div>
       </div>`;
   }
   return `
@@ -6646,6 +7629,8 @@ function patientReportBuildMetricCardsHtml(cards) {
           <div class="patient-report-metric-context-text">${patientReportEscapeHtml(card.explanation || '')}</div>
         </div>`
       : '';
+    const referenceHtml = card.hideReference ? '' : patientReportBuildReferenceHtml(card.reference, card.tone);
+    const extraHtml = (card.extraHtml && String(card.extraHtml).trim()) ? String(card.extraHtml) : '';
     return `
       <article class="patient-report-metric-card tone-${patientReportEscapeHtml(card.tone || 'normal')}">
         <div class="patient-report-metric-top">
@@ -6656,8 +7641,9 @@ function patientReportBuildMetricCardsHtml(cards) {
           <div class="patient-report-metric-badge tone-${patientReportEscapeHtml(card.tone || 'normal')}">${patientReportEscapeHtml(card.badge || '—')}</div>
         </div>
         <div class="patient-report-metric-note">${patientReportEscapeHtml(card.note || '')}</div>
-        ${patientReportBuildScaleHtml(card.scale, card.tone)}
-        ${patientReportBuildReferenceHtml(card.reference, card.tone)}
+        ${patientReportBuildScaleHtml(card.scale, card.tone, { suppressEmpty: !!card.hideEmptyScale })}
+        ${extraHtml}
+        ${referenceHtml}
         ${explanationHtml}
         ${trendHtml}
       </article>`;
@@ -6871,6 +7857,9 @@ function patientReportBuildHtml(model) {
           gap: 18px;
           align-items: stretch;
         }
+        .patient-report-secondary-grid.is-two-col {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
         .patient-report-metric-card,
         .patient-report-detail-group,
         .patient-report-info-box,
@@ -6999,6 +7988,54 @@ function patientReportBuildHtml(model) {
         }
         .patient-report-scale-marker.tone-warn { background: #c75d00; }
         .patient-report-scale-marker.tone-danger { background: #c62828; }
+        .patient-report-bmi-ranges-box {
+          margin-top: 12px;
+          border-radius: 18px;
+          overflow: hidden;
+          background: #f8fbfb;
+          border: 1px solid #dbe7e7;
+        }
+        .patient-report-bmi-ranges-title {
+          padding: 10px 12px 8px;
+          font-size: 15px;
+          line-height: 1.2;
+          font-weight: 800;
+          color: #2f666a;
+          background: linear-gradient(180deg, rgba(0, 131, 141, 0.08) 0%, rgba(0, 131, 141, 0.03) 100%);
+          border-bottom: 1px solid #e2eded;
+        }
+        .patient-report-bmi-ranges-table {
+          width: 100%;
+          border-collapse: collapse;
+          table-layout: fixed;
+        }
+        .patient-report-bmi-ranges-row td {
+          padding: 7px 10px;
+          font-size: 14px;
+          line-height: 1.28;
+          color: #355253;
+          border-top: 1px solid #e7efef;
+        }
+        .patient-report-bmi-ranges-row:first-child td {
+          border-top: none;
+        }
+        .patient-report-bmi-ranges-value {
+          text-align: right;
+          white-space: nowrap;
+          font-variant-numeric: tabular-nums;
+          color: #1e4447;
+          font-weight: 700;
+        }
+        .patient-report-bmi-ranges-row.is-active td {
+          font-weight: 800;
+          background: rgba(0, 131, 141, 0.08);
+        }
+        .patient-report-bmi-ranges-row.is-active.tone-warn td {
+          background: rgba(199, 93, 0, 0.10);
+        }
+        .patient-report-bmi-ranges-row.is-active.tone-danger td {
+          background: rgba(198, 40, 40, 0.10);
+        }
         .patient-report-metric-reference-box {
           margin-top: 12px;
           padding: 12px 14px 11px;
@@ -7229,6 +8266,40 @@ function patientReportBuildHtml(model) {
           color: #103132;
         }
         .patient-report-vital-row.is-value strong { font-size: 16px; }
+        .patient-report-vital-item.is-value-first .patient-report-vital-row.is-value {
+          margin-top: 9px;
+          padding: 10px 12px;
+          border-top: 0;
+          border-radius: 13px;
+          background: rgba(0, 131, 141, 0.10);
+          border: 1px solid rgba(0, 131, 141, 0.16);
+        }
+        .patient-report-vital-item.is-value-first.tone-warn .patient-report-vital-row.is-value {
+          background: rgba(199, 93, 0, 0.11);
+          border-color: rgba(199, 93, 0, 0.22);
+        }
+        .patient-report-vital-item.is-value-first.tone-danger .patient-report-vital-row.is-value {
+          background: rgba(198, 40, 40, 0.10);
+          border-color: rgba(198, 40, 40, 0.20);
+        }
+        .patient-report-vital-item.is-value-first .patient-report-vital-row.is-value strong {
+          font-size: 18px;
+          font-weight: 900;
+        }
+        .patient-report-vital-item.is-value-first .patient-report-vital-status {
+          margin-top: 8px;
+          padding: 8px 10px;
+          border-radius: 11px;
+          background: rgba(255, 255, 255, 0.72);
+          font-weight: 700;
+        }
+        .patient-report-vital-row.is-highlighted {
+          padding: 7px 10px;
+          border-radius: 11px;
+          background: rgba(0, 131, 141, 0.08);
+          color: #0f4043;
+        }
+        .patient-report-vital-row.is-highlighted strong { color: #0b3f43; }
         .patient-report-vital-status {
           margin-top: 7px;
           font-size: 14.5px;
@@ -7345,7 +8416,7 @@ function patientReportBuildHtml(model) {
         <section class="patient-report-grid-3">
           ${cardsHtml}
         </section>
-        <section class="patient-report-secondary-grid">
+        <section class="patient-report-secondary-grid${model.secondaryCardCount === 2 ? ' is-two-col' : ''}">
           ${secondaryCardsHtml}
         </section>
         <div class="patient-report-footer">
@@ -7576,6 +8647,7 @@ async function patientReportRunExternalPdfTask(triggerBtn, taskFn, busyLabel) {
   __patientReportPdfInFlight = true;
 
   const btn = triggerBtn || null;
+  const originalHtml = btn ? btn.innerHTML : '';
   const originalText = btn ? btn.textContent : '';
   if (btn) {
     btn.disabled = true;
@@ -7588,7 +8660,7 @@ async function patientReportRunExternalPdfTask(triggerBtn, taskFn, busyLabel) {
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.textContent = originalText || 'Raport PDF dla pacjenta';
+      btn.innerHTML = originalHtml || originalText || 'Raport PDF dla pacjenta';
     }
     __patientReportPdfInFlight = false;
   }
@@ -8867,6 +9939,7 @@ if (typeof document !== 'undefined') {
     }
     // Ustaw stan zaznaczenia (checked = tryb profesjonalny)
     toggle.checked = professionalMode;
+    dispatchResultsModeSyncEvent(professionalMode);
 
     // Zaktualizuj klasę tła karty BMI zgodnie z początkowym stanem
     updateBmiCardBackground();
@@ -8908,6 +9981,7 @@ if (typeof document !== 'undefined') {
         /* ignoruj błąd ustawiania właściwości */
       }
       localStorage.setItem('resultsMode', professionalMode ? 'professional' : 'standard');
+      dispatchResultsModeSyncEvent(professionalMode);
 
       // Przy przejściu ze standardu do trybu profesjonalnego karta
       // „Obliczenia wzrostowe” jest źródłem prawdy dla historii pomiarów.
@@ -9802,22 +10876,74 @@ const CENTILES_PL_WEIGHT_BOYS = {
   "97": [4.40, 5.50, 6.60, 7.70, 8.60, 9.30, 9.90, 10.40, 10.90, 11.40, 11.80, 12.20, 12.60, 12.87, 13.13, 13.40, 13.70, 14.00, 14.30, 14.57, 14.83, 15.10, 15.33, 15.57, 15.80, 16.00, 16.20, 16.40, 16.60, 16.80, 17.00, 17.25, 17.50, 17.75, 18.00, 18.25, 18.50],
 };
 
+// Wspólny helper dla danych Palczewskiej.  Dzięki niemu wykresy i obliczenia
+// (centyle / Z-score) korzystają z dokładnie tego samego źródła referencyjnego
+// `centileData`.  Dla wieku < 1 miesiąca stosujemy liniową ekstrapolację na
+// podstawie dwóch pierwszych punktów tabelarycznych, co zachowuje płynny początek
+// krzywych bez wracania do osobnej, zdublowanej bazy miesięcznych tablic.
+function getPalReferenceCentileInterpolated(sex, months, centile, param) {
+  if (typeof centileData === 'undefined') return null;
+  const m = Number(months);
+  if (!Number.isFinite(m) || m < 0) return null;
+
+  const sexKey = (sex === 'M') ? 'boys' : 'girls';
+  const dataKey = (param === 'WT') ? 'weight' : (param === 'HT') ? 'height' : 'bmi';
+  const arr = centileData[sexKey] && centileData[sexKey][dataKey];
+  if (!Array.isArray(arr) || !arr.length) return null;
+
+  const key = 'p' + centile;
+  const first = arr[0];
+  const last = arr[arr.length - 1];
+  const firstVal = first ? first[key] : null;
+  const lastVal = last ? last[key] : null;
+  if (typeof firstVal !== 'number') return null;
+
+  if (m <= first.months) {
+    if (m === first.months || arr.length < 2) return firstVal;
+    const second = arr[1];
+    const secondVal = second ? second[key] : null;
+    if (typeof secondVal !== 'number' || !Number.isFinite(second.months) || second.months === first.months) {
+      return firstVal;
+    }
+    const slope = (secondVal - firstVal) / (second.months - first.months);
+    return firstVal + (m - first.months) * slope;
+  }
+
+  if (m >= last.months) {
+    return (typeof lastVal === 'number') ? lastVal : null;
+  }
+
+  for (let i = 0; i < arr.length - 1; i++) {
+    const lower = arr[i];
+    const upper = arr[i + 1];
+    if (m < lower.months || m > upper.months) continue;
+    const lowVal = lower[key];
+    const upVal = upper[key];
+    if (typeof lowVal !== 'number' && typeof upVal !== 'number') return null;
+    if (typeof lowVal !== 'number') return upVal;
+    if (typeof upVal !== 'number') return lowVal;
+    if (upper.months === lower.months) return lowVal;
+    const t = (m - lower.months) / (upper.months - lower.months);
+    return lowVal + t * (upVal - lowVal);
+  }
+
+  return (typeof lastVal === 'number') ? lastVal : null;
+}
+
 // Funkcja zwracająca wartość centyla dla wzrostu (0–36 mies.) na podstawie płci, miesiąca i centyla.
+// Nazwa zostaje dla zgodności wstecznej, ale źródło danych jest już wspólne z obliczeniami.
 function getPLHeightCentile(sex, m, p) {
   if (typeof m !== 'number' || m < 0 || m > 36) return undefined;
-  const dataset = sex === 'M' ? CENTILES_PL_HEIGHT_BOYS : CENTILES_PL_HEIGHT_GIRLS;
-  const arr = dataset[String(p)];
-  if (!arr) return undefined;
-  return arr[Math.round(m)];
+  const value = getPalReferenceCentileInterpolated(sex, m, p, 'HT');
+  return (typeof value === 'number' && Number.isFinite(value)) ? value : undefined;
 }
 
 // Funkcja zwracająca wartość centyla dla masy ciała (0–36 mies.) na podstawie płci, miesiąca i centyla.
+// Nazwa zostaje dla zgodności wstecznej, ale źródło danych jest już wspólne z obliczeniami.
 function getPLWeightCentile(sex, m, p) {
   if (typeof m !== 'number' || m < 0 || m > 36) return undefined;
-  const dataset = sex === 'M' ? CENTILES_PL_WEIGHT_BOYS : CENTILES_PL_WEIGHT_GIRLS;
-  const arr = dataset[String(p)];
-  if (!arr) return undefined;
-  return arr[Math.round(m)];
+  const value = getPalReferenceCentileInterpolated(sex, m, p, 'WT');
+  return (typeof value === 'number' && Number.isFinite(value)) ? value : undefined;
 }
 
 // Uczyńmy zmienne i funkcje globalnie dostępne, aby mogły być używane w innych plikach (np. HTML).
@@ -9827,6 +10953,7 @@ window.CENTILES_PL_WEIGHT_GIRLS = CENTILES_PL_WEIGHT_GIRLS;
 window.CENTILES_PL_WEIGHT_BOYS = CENTILES_PL_WEIGHT_BOYS;
 window.getPLHeightCentile = getPLHeightCentile;
 window.getPLWeightCentile = getPLWeightCentile;
+window.getPalReferenceCentileInterpolated = getPalReferenceCentileInterpolated;
 
 /*
  * =====================================================================
@@ -10059,41 +11186,13 @@ function bmiPercentileChildPL(bmi, sex, months) {
  *    przy użyciu tabel centylowych BMI Palczewskiej.
  */
 
-// Pobierz interpolowaną wartość centylową z danych Palczewskiej
+// Pobierz interpolowaną wartość centylową z danych Palczewskiej.
+// Obliczenia pozostają oparte na pełnych miesiącach, ale korzystają z tego
+// samego helpera co siatki, więc nie ma już osobnej ścieżki dla wieku < 3 lat.
 function getPalCentile(sex, months, centile, param) {
-  if (typeof centileData === 'undefined') return null;
-  const sexKey = (sex === 'M') ? 'boys' : 'girls';
-  const dataKey = (param === 'WT') ? 'weight' : (param === 'HT') ? 'height' : 'bmi';
-  const arr = centileData[sexKey] && centileData[sexKey][dataKey];
-  if (!arr || !arr.length) return null;
   const m = Math.round(months);
-  // jeżeli poza zakresem – użyj wartości skrajnych
-  if (m <= arr[0].months) {
-    const val = arr[0]['p' + centile];
-    return (typeof val === 'number') ? val : null;
-  }
-  const last = arr[arr.length - 1];
-  if (m >= last.months) {
-    const val = last['p' + centile];
-    return (typeof val === 'number') ? val : null;
-  }
-  // znajdź sąsiednie wiersze do interpolacji
-  let lower = arr[0], upper = arr[0];
-  for (let i = 0; i < arr.length - 1; i++) {
-    const a = arr[i], b = arr[i + 1];
-    if (m >= a.months && m <= b.months) {
-      lower = a;
-      upper = b;
-      break;
-    }
-  }
-  const lowVal = lower['p' + centile];
-  const upVal  = upper['p' + centile];
-  if (typeof lowVal !== 'number' || typeof upVal !== 'number') {
-    return null;
-  }
-  const t = (m - lower.months) / (upper.months - lower.months);
-  return lowVal + t * (upVal - lowVal);
+  const value = getPalReferenceCentileInterpolated(sex, m, centile, param);
+  return (typeof value === 'number' && Number.isFinite(value)) ? value : null;
 }
 
 // Oblicz percentyl i z‑score dla wartości wagi, wzrostu lub BMI w oparciu o dane Palczewskiej (0–18 l.)
@@ -10170,41 +11269,16 @@ function calcPercentileStatsPal(value, sex, ageYears, param) {
 
 // Oblicz percentyl BMI na podstawie rozszerzonych danych Palczewskiej
 function bmiPercentileChildPal(bmi, sex, months) {
-  const m = Math.round(months);
-  const centiles = [3, 10, 25, 50, 75, 90, 97];
-  const pairs = [];
-  for (const c of centiles) {
-    const v = getPalCentile(sex, m, c, 'BMI');
-    if (typeof v === 'number') {
-      pairs.push({ centile: c, value: v });
-    }
-  }
-  if (!pairs.length) return null;
-  pairs.sort((a, b) => a.value - b.value);
-  let percentile;
-  if (bmi <= pairs[0].value) {
-    const first = pairs[0];
-    percentile = (bmi / first.value) * first.centile;
-    if (percentile < 0) percentile = 0;
-  } else if (bmi >= pairs[pairs.length - 1].value) {
-    const last = pairs[pairs.length - 1];
-    const prev = pairs[pairs.length - 2];
-    const slope = (100 - last.centile) / (last.value - prev.value);
-    percentile = last.centile + (bmi - last.value) * slope;
-    if (percentile > 100) percentile = 100;
-  } else {
-    let lower = pairs[0], upper = pairs[1];
-    for (let i = 0; i < pairs.length - 1; i++) {
-      if (bmi >= pairs[i].value && bmi <= pairs[i + 1].value) {
-        lower = pairs[i];
-        upper = pairs[i + 1];
-        break;
-      }
-    }
-    const fraction = (bmi - lower.value) / (upper.value - lower.value);
-    percentile = lower.centile + fraction * (upper.centile - lower.centile);
-  }
-  return percentile;
+  /*
+   * Percentyl BMI dla Palczewskiej wyprowadzamy z tej samej funkcji, która
+   * zwraca z‑score (`calcPercentileStatsPal`). Dzięki temu percentyl i z‑score
+   * pozostają spójne także powyżej 97. centyla. Wcześniej percentyl był
+   * ekstrapolowany osobno w przestrzeni centyli (97 → 100), co mogło dawać
+   * wynik „>100 centyla” i kategorię „Otyłość olbrzymia” przy z‑score wyraźnie
+   * poniżej 3 SD.
+   */
+  const stats = calcPercentileStatsPal(bmi, sex, months / 12, 'BMI');
+  return stats ? stats.percentile : null;
 }
 
 /*
@@ -11324,13 +12398,16 @@ function update(){
    * domyślnej („” odpowiada wartości z arkusza CSS).
    */
   {
+    const isAdultAge = (typeof patientReportIsAdultAge === 'function')
+      ? patientReportIsAdultAge(age)
+      : (isFinite(age) && age >= 18);
     const bpCardEl = document.getElementById('bpCard');
     const circSectionEl = document.getElementById('circSection');
     if (bpCardEl) {
-      bpCardEl.style.display = (age > 18) ? 'none' : '';
+      bpCardEl.style.display = isAdultAge ? 'none' : '';
     }
     if (circSectionEl) {
-      circSectionEl.style.display = (age > 18) ? 'none' : '';
+      circSectionEl.style.display = isAdultAge ? 'none' : '';
     }
 
     // Ukryj lub pokaż kartę liczby oddechów w zależności od wieku
@@ -11338,7 +12415,13 @@ function update(){
     // do 18 lat. Dla dorosłych jest ukryta.
     const respCardEl = document.getElementById('respiratoryCard');
     if (respCardEl) {
-      respCardEl.style.display = (age > 18) ? 'none' : '';
+      respCardEl.style.display = isAdultAge ? 'none' : '';
+    }
+    if (window.adultVitalsApi && typeof window.adultVitalsApi.refreshVisibility === 'function') {
+      try { window.adultVitalsApi.refreshVisibility(); } catch (_) {}
+    }
+    if (typeof window.syncResponsiveCardPlacements === 'function') {
+      try { window.syncResponsiveCardPlacements(); } catch (_) {}
     }
   }
 
@@ -11475,7 +12558,7 @@ function update(){
 /* =================================================================== */
 
 // Walidacja danych wejściowych (wiek, waga, wzrost)
-// W zunifikowanej karcie „Co zjadłem?” oba fieldsety przekąsek i dań zastąpiono
+// W zunifikowanej karcie „Kalorie posiłków i czas spalania” oba fieldsety przekąsek i dań zastąpiono
 // jednym kontenerem (foodRowsSection).  Przypisujemy oba pola do tego samego
 // elementu, aby logika wyświetlania pozostała spójna.
 const snackFieldset = document.getElementById('foodRowsSection');
@@ -11501,7 +12584,7 @@ if (height !== 0 && (height < 40 || height > 250)) {
 }
 
 // Ukryj/pokaż sekcje "Przekąski" i "Dania obiadowe" w zależności od poprawności danych
-// Sekcja „Co zjadłem?” jest teraz zawsze widoczna niezależnie od poprawności
+// Sekcja „Kalorie posiłków i czas spalania” jest teraz zawsze widoczna niezależnie od poprawności
 // danych wejściowych.  Nie ukrywamy więc kontenera listy jedzenia.
 snackFieldset.style.display = "block";
 mealFieldset.style.display  = "block";
@@ -12312,9 +13395,17 @@ if (age <= 18) {
         coleNormTableEl.innerHTML = '';
         coleNormTableEl.style.display = 'none';
       }
+      if (typeof window !== 'undefined') {
+        window.coleCatValue = null;
+        window.colePercentValue = null;
+      }
 
-  // licz tylko, jeśli dane są sensowne (dziecko ≤ 18 l., mamy wagę i wzrost)
-  if (age > 0 && age <= CHILD_AGE_MAX && weight > 0 && height > 0) {
+  const isAdultPatient = (typeof patientReportIsAdultAge === 'function')
+    ? patientReportIsAdultAge(age)
+    : (isFinite(age) && age >= 18);
+
+  // licz tylko, jeśli dane są sensowne i pacjent nie jest dorosły
+  if (age > 0 && !isAdultPatient && weight > 0 && height > 0) {
     const months = Math.round(age * 12);
     // LMS dla BMI wg wybranego źródła (OLAF/WHO)
     const lmsBMI = getLMS(sex, months);
@@ -14460,6 +15551,15 @@ function generateMetabolicSummary() {
   const ageYears = (typeof getAgeDecimal === 'function') ? getAgeDecimal() : 0;
   const sexEl = document.getElementById('sex');
   const sexVal = sexEl ? sexEl.value : 'M';
+  const isAdultPatient = (typeof patientReportIsAdultAge === 'function')
+    ? patientReportIsAdultAge(ageYears)
+    : (isFinite(ageYears) && ageYears >= 18);
+  const referenceAgeYears = (typeof patientReportGetReferenceAgeYears === 'function')
+    ? patientReportGetReferenceAgeYears(ageYears)
+    : ageYears;
+  const reportPreferredSource = (typeof patientReportGetPreferredSource === 'function')
+    ? patientReportGetPreferredSource()
+    : ((typeof bmiSource !== 'undefined' && bmiSource) ? String(bmiSource).toUpperCase() : 'OLAF');
   // Tryb profesjonalny
   const pro = (typeof window !== 'undefined' && window.professionalMode) ? window.professionalMode : false;
 
@@ -14467,10 +15567,24 @@ function generateMetabolicSummary() {
   if (ageYears > 0 && weightVal > 0 && heightVal > 0) {
     // Oblicz statystyki wagi i wzrostu (percentyl i z-score)
     let statsW, statsH;
-    const usePal = (typeof bmiSource !== 'undefined' &&
+    let statsWSource = reportPreferredSource;
+    let statsHSource = reportPreferredSource;
+    const useAdultReferenceSummary = isAdultPatient
+      && typeof advHistoryResolveMetric === 'function'
+      && typeof referenceAgeYears === 'number'
+      && isFinite(referenceAgeYears)
+      && referenceAgeYears > 0;
+    const usePal = !useAdultReferenceSummary && (typeof bmiSource !== 'undefined' &&
                    (bmiSource === 'PALCZEWSKA' ||
                     (bmiSource === 'OLAF' && ageYears < OLAF_DATA_MIN_AGE)));
-    if (usePal) {
+    if (useAdultReferenceSummary) {
+      const weightResolved = advHistoryResolveMetric('WT', weightVal, sexVal, referenceAgeYears, reportPreferredSource);
+      const heightResolved = advHistoryResolveMetric('HT', heightVal, sexVal, referenceAgeYears, reportPreferredSource);
+      statsW = weightResolved && weightResolved.result ? weightResolved.result : null;
+      statsH = heightResolved && heightResolved.result ? heightResolved.result : null;
+      statsWSource = (weightResolved && weightResolved.source) ? weightResolved.source : reportPreferredSource;
+      statsHSource = (heightResolved && heightResolved.source) ? heightResolved.source : reportPreferredSource;
+    } else if (usePal) {
       statsW = calcPercentileStatsPal(weightVal, sexVal, ageYears, 'WT');
       statsH = calcPercentileStatsPal(heightVal, sexVal, ageYears, 'HT');
     } else {
@@ -14484,7 +15598,12 @@ function generateMetabolicSummary() {
     let w3, w97, h3, h97;
     const monthsWH = Math.round(ageYears * 12);
     if (statsW && statsH) {
-      if (usePal) {
+      if (useAdultReferenceSummary && typeof patientReportGetMetricValueAtPercentile === 'function') {
+        w3 = patientReportGetMetricValueAtPercentile('WT', sexVal, referenceAgeYears, 3, statsWSource);
+        w97 = patientReportGetMetricValueAtPercentile('WT', sexVal, referenceAgeYears, 97, statsWSource);
+        h3 = patientReportGetMetricValueAtPercentile('HT', sexVal, referenceAgeYears, 3, statsHSource);
+        h97 = patientReportGetMetricValueAtPercentile('HT', sexVal, referenceAgeYears, 97, statsHSource);
+      } else if (usePal) {
         // Skorzystaj z siatek Palczewskiej dla granicznych centyli
         w3  = getPalCentile(sexVal, monthsWH, 3, 'WT');
         w97 = getPalCentile(sexVal, monthsWH, 97, 'WT');
@@ -14514,72 +15633,97 @@ function generateMetabolicSummary() {
     }
     // Waga
     if (statsW && typeof statsW.percentile === 'number') {
-      // Format percentyl tak, aby skrajne wartości (<1, >99,9) były wyświetlane jako "<1" lub ">100".
-      let percStr = formatCentile(statsW.percentile);
-      // Określ właściwy rodzaj rzeczownika („centyl” vs „centyla”) na podstawie zakodowanych znaków
-      let word = centylWord(percStr);
-      // Zamień encje HTML na zwykłe znaki w tekście podsumowania
-      let decoded = percStr.replace(/&lt;/g, '<').replace(/&gt;/g, '>');
-      let line = `Waga: ${decoded} ${word}`;
-      if (pro && typeof statsW.sd === 'number' && !isNaN(statsW.sd)) {
-      line += ` (Z‑score = ${statsW.sd.toFixed(2).replace('.', ',')})`;
+      if (isAdultPatient) {
+        lines.push('Waga:');
+      } else {
+        // Format percentyl tak, aby skrajne wartości (<1, >99,9) były wyświetlane jako "<1" lub ">100".
+        let percStr = formatCentile(statsW.percentile);
+        // Określ właściwy rodzaj rzeczownika („centyl” vs „centyla”) na podstawie zakodowanych znaków
+        let word = centylWord(percStr);
+        // Zamień encje HTML na zwykłe znaki w tekście podsumowania
+        let decoded = percStr.replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+        let line = `Waga: ${decoded} ${word}`;
+        if (pro && typeof statsW.sd === 'number' && !isNaN(statsW.sd)) {
+          line += ` (Z‑score = ${statsW.sd.toFixed(2).replace('.', ',')})`;
+        }
+        // Dla skrajnie niskich wartości (zaokrąglony centyl ≤ 2) podaj, ile kg brakuje do 3. centyla
+        const roundedWeightCent = Math.round(statsW.percentile);
+        if (typeof w3 === 'number' && roundedWeightCent <= 2) {
+          // używamy zwykłej spacji do oddzielenia jednostki od liczby, aby uniknąć niewidzialnych znaków
+          line += `, brakuje ${(w3 - weightVal).toFixed(1).replace('.', ',')} kg do 3 centyla`;
+        }
+        // Dla wartości ≥98. centyla podaj, o ile kilogramów przekracza 97. centyl
+        if (typeof w97 === 'number' && statsW.percentile >= 98) {
+          line += `, +${(weightVal - w97).toFixed(1).replace('.', ',')} kg ponad 97 centyl`;
+        }
+        lines.push(line);
       }
-      // Dla skrajnie niskich wartości (zaokrąglony centyl ≤ 2) podaj, ile kg brakuje do 3. centyla
-      const roundedWeightCent = Math.round(statsW.percentile);
-      if (typeof w3 === 'number' && roundedWeightCent <= 2) {
-        // używamy zwykłej spacji do oddzielenia jednostki od liczby, aby uniknąć niewidzialnych znaków
-        line += `, brakuje ${(w3 - weightVal).toFixed(1).replace('.', ',')} kg do 3 centyla`;
-      }
-      // Dla wartości ≥98. centyla podaj, o ile kilogramów przekracza 97. centyl
-      if (typeof w97 === 'number' && statsW.percentile >= 98) {
-        line += `, +${(weightVal - w97).toFixed(1).replace('.', ',')} kg ponad 97 centyl`;
-      }
-      lines.push(line);
 
     }
     // Wzrost
     if (statsH && typeof statsH.percentile === 'number') {
-      let percStr = formatCentile(statsH.percentile);
-      let word = centylWord(percStr);
-      let decoded = percStr.replace(/&lt;/g, '<').replace(/&gt;/g, '>');
-      let line = `Wzrost: ${decoded} ${word}`;
-      if (pro && typeof statsH.sd === 'number' && !isNaN(statsH.sd)) {
-      line += ` (Z‑score = ${statsH.sd.toFixed(2).replace('.', ',')})`;
-      }
-      // Dla skrajnie niskich wartości (zaokrąglony centyl ≤ 2) podaj, ile cm brakuje do 3. centyla
-      const roundedHeightCent = Math.round(statsH.percentile);
+      if (isAdultPatient) {
+        lines.push('Wzrost:');
+      } else {
+        let percStr = formatCentile(statsH.percentile);
+        let word = centylWord(percStr);
+        let decoded = percStr.replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+        let line = `Wzrost: ${decoded} ${word}`;
+        if (pro && typeof statsH.sd === 'number' && !isNaN(statsH.sd)) {
+          line += ` (Z‑score = ${statsH.sd.toFixed(2).replace('.', ',')})`;
+        }
+        // Dla skrajnie niskich wartości (zaokrąglony centyl ≤ 2) podaj, ile cm brakuje do 3. centyla
+        const roundedHeightCent = Math.round(statsH.percentile);
         if (typeof h3 === 'number' && roundedHeightCent <= 2) {
-        // stosujemy zwykłe spacje zamiast wąskiej spacji, aby poprawić kompatybilność z edytorami
-        line += `, brakuje ${(h3 - heightVal).toFixed(1).replace('.', ',')} cm do 3 centyla`;
+          // stosujemy zwykłe spacje zamiast wąskiej spacji, aby poprawić kompatybilność z edytorami
+          line += `, brakuje ${(h3 - heightVal).toFixed(1).replace('.', ',')} cm do 3 centyla`;
+        }
+        // Dla wartości ≥98. centyla podaj, o ile centymetrów przekracza 97. centyl
+        if (typeof h97 === 'number' && statsH.percentile >= 98) {
+          line += `, +${(heightVal - h97).toFixed(1).replace('.', ',')} cm ponad 97 centyl`;
+        }
+        lines.push(line);
       }
-      // Dla wartości ≥98. centyla podaj, o ile centymetrów przekracza 97. centyl
-      if (typeof h97 === 'number' && statsH.percentile >= 98) {
-        line += `, +${(heightVal - h97).toFixed(1).replace('.', ',')} cm ponad 97 centyl`;
-      }
-      lines.push(line);
     }
     // BMI
     const bmi = BMI(weightVal, heightVal);
     if (bmi && !isNaN(bmi)) {
       const months = Math.round(ageYears * 12);
       let bmiPerc = null;
-      // Oblicz percentyl BMI dziecka, jeśli w wieku 0–18 lat
-      if (ageYears >= CHILD_AGE_MIN && ageYears <= CHILD_AGE_MAX) {
+      // Oblicz percentyl BMI wyłącznie u dzieci i młodzieży.
+      if (!isAdultPatient && ageYears >= CHILD_AGE_MIN && ageYears <= CHILD_AGE_MAX) {
         bmiPerc = bmiPercentileChild(bmi, sexVal, months);
       }
       let line = `BMI: ${bmi.toFixed(1).replace('.', ',')}`;
-      if (typeof bmiPerc === 'number') {
-        // BMI percentyl również formatujemy przy użyciu formatCentile, aby zachować spójność ze wzrostem i wagą
-        let percStrBmi = formatCentile(bmiPerc);
-        let wordBmi   = centylWord(percStrBmi);
-        let decodedBmi = percStrBmi.replace(/&lt;/g, '<').replace(/&gt;/g, '>');
-        line += ` – ${decodedBmi} ${wordBmi}`;
-      }
-      // Oblicz z-score BMI w trybie profesjonalnym
-      if (pro && ageYears >= CHILD_AGE_MIN && ageYears <= CHILD_AGE_MAX) {
-        const bmiZ = bmiZscore(bmi, sexVal, months);
-        if (bmiZ !== null && !isNaN(bmiZ)) {
-          line += ` (Z‑score = ${bmiZ.toFixed(2).replace('.', ',')})`;
+      if (isAdultPatient) {
+        const adultAssessment = (typeof patientReportGetAdultBmiAssessment === 'function')
+          ? patientReportGetAdultBmiAssessment(bmi)
+          : null;
+        const adultStatusLabel = patientReportGetAdultBmiSummaryStatusLabel(adultAssessment && adultAssessment.state);
+        const adultDeltaSentence = patientReportBuildAdultBmiWeightDeltaSentence(weightVal, heightVal);
+        line += ` – ${adultStatusLabel}`;
+        if (adultDeltaSentence) {
+          const adultDeltaContinuation = adultDeltaSentence
+            ? adultDeltaSentence.charAt(0).toLowerCase() + adultDeltaSentence.slice(1)
+            : '';
+          line += `, ${adultDeltaContinuation}`;
+        } else {
+          line += '.';
+        }
+      } else {
+        if (typeof bmiPerc === 'number') {
+          // BMI percentyl również formatujemy przy użyciu formatCentile, aby zachować spójność ze wzrostem i wagą
+          let percStrBmi = formatCentile(bmiPerc);
+          let wordBmi   = centylWord(percStrBmi);
+          let decodedBmi = percStrBmi.replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+          line += ` – ${decodedBmi} ${wordBmi}`;
+        }
+        // Oblicz z-score BMI w trybie profesjonalnym tylko u dzieci i młodzieży.
+        if (pro && ageYears >= CHILD_AGE_MIN && ageYears <= CHILD_AGE_MAX) {
+          const bmiZ = bmiZscore(bmi, sexVal, months);
+          if (bmiZ !== null && !isNaN(bmiZ)) {
+            line += ` (Z‑score = ${bmiZ.toFixed(2).replace('.', ',')})`;
+          }
         }
       }
       lines.push(line);
@@ -14597,31 +15741,34 @@ function generateMetabolicSummary() {
     if (bsa && !isNaN(bsa)) {
       lines.push(`Pow. ciała: ${bsa.toFixed(2).replace('.', ',')} m²`);
     }
-    // Wskaźnik Cole’a – spróbuj najpierw odczytać z modułu Cole’a,
-    // a jeśli wartość nie jest ustawiona, policz ją na podstawie LMS dla BMI.
-    let coleVal = (typeof window !== 'undefined'
-      && typeof window.colePercentValue === 'number'
-      && !isNaN(window.colePercentValue))
-      ? window.colePercentValue
-      : null;
+    // Wskaźnik Cole’a pokazujemy wyłącznie u dzieci i młodzieży.
+    // Dla pacjentów dorosłych nie włączamy go ani do obliczeń, ani do podsumowania.
+    let coleVal = null;
+    if (!isAdultPatient) {
+      coleVal = (typeof window !== 'undefined'
+        && typeof window.colePercentValue === 'number'
+        && !isNaN(window.colePercentValue))
+        ? window.colePercentValue
+        : null;
 
-    if ((coleVal === null || coleVal === undefined)
-        && ageYears >= CHILD_AGE_MIN && ageYears <= CHILD_AGE_MAX
-        && typeof getLMS === 'function') {
-      try {
-        const monthsCole = Math.round(ageYears * 12);
-        const lmsBMI = getLMS(sexVal, monthsCole);
-        if (lmsBMI && Array.isArray(lmsBMI) && lmsBMI[1] > 0) {
-          // jeśli BMI nie zostało jeszcze policzone, oblicz je pomocniczo
-          const bmiForCole = (typeof bmi === 'number' && !isNaN(bmi))
-            ? bmi
-            : BMI(weightVal, heightVal);
-          if (bmiForCole && !isNaN(bmiForCole)) {
-            coleVal = (bmiForCole / lmsBMI[1]) * 100;
+      if ((coleVal === null || coleVal === undefined)
+          && ageYears >= CHILD_AGE_MIN && ageYears <= CHILD_AGE_MAX
+          && typeof getLMS === 'function') {
+        try {
+          const monthsCole = Math.round(ageYears * 12);
+          const lmsBMI = getLMS(sexVal, monthsCole);
+          if (lmsBMI && Array.isArray(lmsBMI) && lmsBMI[1] > 0) {
+            // jeśli BMI nie zostało jeszcze policzone, oblicz je pomocniczo
+            const bmiForCole = (typeof bmi === 'number' && !isNaN(bmi))
+              ? bmi
+              : BMI(weightVal, heightVal);
+            if (bmiForCole && !isNaN(bmiForCole)) {
+              coleVal = (bmiForCole / lmsBMI[1]) * 100;
+            }
           }
+        } catch (_) {
+          coleVal = null;
         }
-      } catch (_) {
-        coleVal = null;
       }
     }
 
@@ -14676,22 +15823,66 @@ function generateMetabolicSummary() {
       /* Pomijamy błędy w odczycie obwodów */
     }
   }
-  // Ciśnienie – odczytaj globalne zmienne ustawione przez bp_module.js
-  const bpSystolicCurrent = parseFloat(document.getElementById('bpSystolic')?.value);
-  const bpDiastolicCurrent = parseFloat(document.getElementById('bpDiastolic')?.value);
-  if (bpSystolicCurrent > 0 && typeof window.percSbp === 'number' && !isNaN(window.percSbp)) {
-    let line = `Ciśnienie skurczowe: ${Math.round(window.percSbp)} centyl`;
-    if (pro && typeof window.zSbp === 'number' && !isNaN(window.zSbp)) {
-      line += ` (Z‑score = ${window.zSbp.toFixed(2).replace('.', ',')})`;
+  // Ciśnienie i tętno
+  if (isAdultPatient && window.adultVitalsApi && typeof window.adultVitalsApi.buildSummaryLines === 'function') {
+    try {
+      const adultState = (typeof window.adultVitalsApi.getState === 'function')
+        ? window.adultVitalsApi.getState()
+        : null;
+      const adultVitalLines = window.adultVitalsApi.buildSummaryLines(adultState);
+      (adultVitalLines || []).forEach((line) => {
+        if (line) lines.push(line);
+      });
+    } catch (_) {
+      /* Pomijamy błędy modułu dorosłych pomiarów RR i tętna */
     }
-    lines.push(line);
-  }
-  if (bpDiastolicCurrent > 0 && typeof window.percDbp === 'number' && !isNaN(window.percDbp)) {
-    let line = `Ciśnienie rozkurczowe: ${Math.round(window.percDbp)} centyl`;
-    if (pro && typeof window.zDbp === 'number' && !isNaN(window.zDbp)) {
-      line += ` (Z‑score = ${window.zDbp.toFixed(2).replace('.', ',')})`;
+  } else {
+    // Ciśnienie – odczytaj globalne zmienne ustawione przez bp_module.js
+    const bpSystolicCurrent = parseFloat(document.getElementById('bpSystolic')?.value);
+    const bpDiastolicCurrent = parseFloat(document.getElementById('bpDiastolic')?.value);
+    let summaryBpEval = null;
+    try {
+      if (bpSystolicCurrent > 0 && bpDiastolicCurrent > 0 && heightVal > 0
+          && typeof referenceAgeYears === 'number' && isFinite(referenceAgeYears) && referenceAgeYears > 0
+          && window.bpModuleApi && typeof window.bpModuleApi.computePediatricBp === 'function') {
+        summaryBpEval = window.bpModuleApi.computePediatricBp({
+          ageYears: referenceAgeYears,
+          sex: sexVal,
+          heightCm: heightVal,
+          sbp: bpSystolicCurrent,
+          dbp: bpDiastolicCurrent,
+          datasetChoice: undefined
+        });
+      }
+    } catch (_) {
+      summaryBpEval = null;
     }
-    lines.push(line);
+    const summaryPercSbp = (summaryBpEval && summaryBpEval.ok && typeof summaryBpEval.percSbp === 'number' && isFinite(summaryBpEval.percSbp))
+      ? summaryBpEval.percSbp
+      : ((typeof window.percSbp === 'number' && !isNaN(window.percSbp)) ? window.percSbp : null);
+    const summaryPercDbp = (summaryBpEval && summaryBpEval.ok && typeof summaryBpEval.percDbp === 'number' && isFinite(summaryBpEval.percDbp))
+      ? summaryBpEval.percDbp
+      : ((typeof window.percDbp === 'number' && !isNaN(window.percDbp)) ? window.percDbp : null);
+    const summaryZSbp = (summaryBpEval && summaryBpEval.ok && typeof summaryBpEval.zSbp === 'number' && isFinite(summaryBpEval.zSbp))
+      ? summaryBpEval.zSbp
+      : ((typeof window.zSbp === 'number' && !isNaN(window.zSbp)) ? window.zSbp : null);
+    const summaryZDbp = (summaryBpEval && summaryBpEval.ok && typeof summaryBpEval.zDbp === 'number' && isFinite(summaryBpEval.zDbp))
+      ? summaryBpEval.zDbp
+      : ((typeof window.zDbp === 'number' && !isNaN(window.zDbp)) ? window.zDbp : null);
+    if (bpSystolicCurrent > 0 && typeof summaryPercSbp === 'number' && !isNaN(summaryPercSbp)) {
+      let line = `Ciśnienie skurczowe: ${Math.round(summaryPercSbp)} centyl`;
+      if (pro && typeof summaryZSbp === 'number' && !isNaN(summaryZSbp)) {
+        line += ` (Z‑score = ${summaryZSbp.toFixed(2).replace('.', ',')})`;
+      }
+      lines.push(line);
+    }
+    if (bpDiastolicCurrent > 0 && typeof summaryPercDbp === 'number' && !isNaN(summaryPercDbp)) {
+      let line = `Ciśnienie rozkurczowe: ${Math.round(summaryPercDbp)} centyl`;
+      if (pro && typeof summaryZDbp === 'number' && !isNaN(summaryZDbp)) {
+        line += ` (Z‑score = ${summaryZDbp.toFixed(2).replace('.', ',')})`;
+      }
+      lines.push(line);
+    }
   }
   // Obwód głowy i klatki piersiowej – ustawiane przez circumference_module.js
   const headCircCurrent = parseFloat(document.getElementById('headCircumference')?.value);
@@ -14771,6 +15962,24 @@ function generateMetabolicSummary() {
         }
       }
     }
+
+    const bayleyPinneauSummaryLine = advGrowthBuildBayleyPinneauSummaryCardLine(agd.bayleyPinneau);
+    if (bayleyPinneauSummaryLine) {
+      lines.push(bayleyPinneauSummaryLine);
+    }
+
+    const rwtSummaryLine = advGrowthBuildRWTSummaryCardLine(agd.rwt);
+    if (rwtSummaryLine) {
+      lines.push(rwtSummaryLine);
+    }
+
+    const reinehrSummaryLine = (typeof advGrowthBuildReinehrCdgpSummaryCardLine === 'function')
+      ? advGrowthBuildReinehrCdgpSummaryCardLine(agd.reinehr)
+      : '';
+    if (reinehrSummaryLine) {
+      lines.push(reinehrSummaryLine);
+    }
+
   }
   // Zwróć wszystkie linie w postaci tekstu
   return lines.join('\n');
@@ -14821,14 +16030,14 @@ function handleMetabolicSummaryClick(event) {
     lines = lines.map(function (line) {
       if (line.startsWith('Waga:')) {
         const rest   = line.slice(line.indexOf(':') + 1).trim();
-        const prefix = weightValStr ? (weightValStr + ' kg, ') : '';
-        return 'Waga: ' + prefix + rest;
+        const valueLabel = weightValStr ? (weightValStr + ' kg') : '';
+        return patientReportFormatSummaryLineWithValue('Waga', valueLabel, rest);
       }
 
       if (line.startsWith('Wzrost:')) {
         const rest   = line.slice(line.indexOf(':') + 1).trim();
-        const prefix = heightValStr ? (heightValStr + ' cm, ') : '';
-        return 'Wzrost: ' + prefix + rest;
+        const valueLabel = heightValStr ? (heightValStr + ' cm') : '';
+        return patientReportFormatSummaryLineWithValue('Wzrost', valueLabel, rest);
       }
 
       if (line.startsWith('Ciśnienie skurczowe')) {
@@ -15045,6 +16254,25 @@ document.addEventListener('DOMContentLoaded', function() {
 // przy generowaniu dodatkowych elementów na wykresie centylowym.
 window.advancedGrowthData = null;
 
+function updateAdvancedGrowthSexSpecificFields() {
+  try {
+    const sex = String(document.getElementById('sex')?.value || '').trim().toUpperCase();
+    const hideForGirls = sex === 'F';
+    ['advTesticularVolume', 'advFamilyDelayedPuberty', 'advGrowthExclusion'].forEach((id) => {
+      const field = document.getElementById(id);
+      if (!field) return;
+      const wrapper = (typeof field.closest === 'function' && field.closest('label')) ? field.closest('label') : field;
+      if (wrapper) {
+        wrapper.hidden = hideForGirls;
+        wrapper.style.display = hideForGirls ? 'none' : '';
+        if (hideForGirls) wrapper.setAttribute('aria-hidden', 'true');
+        else wrapper.removeAttribute('aria-hidden');
+      }
+      field.disabled = hideForGirls;
+    });
+  } catch (_) {}
+}
+
 /**
  * Inicjalizuje obsługę sekcji zaawansowanych obliczeń wzrostowych.
  * Dodaje obsługę przycisku rozwijającego formularz, obsługę
@@ -15097,7 +16325,7 @@ function setupAdvancedGrowth() {
   // wiek kostny). Używamy zarówno eventów 'input' jak i 'change', aby
   // reagować na wszystkie możliwe scenariusze interakcji (mobilne
   // klawiatury, selektory).
-  const ids = ['age', 'ageMonths', 'weight', 'height', 'sex', 'advMotherHeight', 'advFatherHeight', 'advBoneAge'];
+  const ids = ['age', 'ageMonths', 'weight', 'height', 'sex', 'advMotherHeight', 'advFatherHeight', 'advBoneAge', 'advTesticularVolume', 'advFamilyDelayedPuberty', 'advGrowthExclusion'];
   ids.forEach(id => {
     const el = document.getElementById(id);
     if (el) {
@@ -15108,6 +16336,9 @@ function setupAdvancedGrowth() {
   // Usuń przycisk czyszczenia tej karty oraz przygotuj przycisk raportu.
   try { removeAdvancedGrowthClearButton(); } catch (_) {}
   try { ensureAdvancedGrowthReportControls(); } catch (_) {}
+
+  // Ustaw widoczność pól zależnych od płci jeszcze przed pierwszym przeliczeniem.
+  try { updateAdvancedGrowthSexSpecificFields(); } catch (_) {}
 
   // Wstępne przeliczenie przy załadowaniu strony, aby przygotować
   // globalny obiekt na wypadek wcześniejszego uruchomienia generatora
@@ -16228,6 +17459,39 @@ function advGrowthBuildReportPresentationModel(report) {
   const motherSummary = advGrowthBuildParentHeightSummaryText('Wzrost Mamy', report.motherHeight, 'F', report.preferredSource);
   const fatherSummary = advGrowthBuildParentHeightSummaryText('Wzrost Taty', report.fatherHeight, 'M', report.preferredSource);
   const mphSummary = advGrowthBuildMphSummaryText(report.targetHeight, report.sex, report.preferredSource);
+  const bayleyPinneauResultForReport = (typeof window !== 'undefined' && window.advancedGrowthData && typeof window.advancedGrowthData === 'object')
+    ? window.advancedGrowthData.bayleyPinneau
+    : null;
+  const bayleyPinneauSummary = advGrowthBuildBayleyPinneauSummaryText(bayleyPinneauResultForReport);
+  const bayleyPinneauComputed = !!(bayleyPinneauResultForReport && bayleyPinneauResultForReport.available === true);
+  const rwtResultForReport = (typeof window !== 'undefined' && window.advancedGrowthData && typeof window.advancedGrowthData === 'object')
+    ? window.advancedGrowthData.rwt
+    : null;
+  const rwtSummary = advGrowthBuildRWTSummaryText(rwtResultForReport);
+  const rwtComputed = !!(rwtResultForReport && rwtResultForReport.available === true);
+  const predictionProfileForReport = (typeof window !== 'undefined' && window.advancedGrowthData && typeof window.advancedGrowthData === 'object')
+    ? window.advancedGrowthData.predictionProfile
+    : null;
+  const predictionProfileSummaryLines = (typeof advGrowthBuildKowdProfileSummaryLines === 'function')
+    ? advGrowthBuildKowdProfileSummaryLines(predictionProfileForReport)
+    : [];
+  const reinehrResultForReport = (typeof window !== 'undefined' && window.advancedGrowthData && typeof window.advancedGrowthData === 'object')
+    ? window.advancedGrowthData.reinehr
+    : null;
+  const reinehrSummary = (typeof advGrowthBuildReinehrCdgpSummaryText === 'function')
+    ? advGrowthBuildReinehrCdgpSummaryText(reinehrResultForReport)
+    : null;
+  const reinehrComputed = !!(reinehrResultForReport && reinehrResultForReport.available === true);
+  const predictionReliabilityForReport = (typeof window !== 'undefined' && window.advancedGrowthData && typeof window.advancedGrowthData === 'object' && window.advancedGrowthData.predictionReliability)
+    ? window.advancedGrowthData.predictionReliability
+    : advGrowthBuildPredictionReliabilityModel({
+        bayleyPinneau: bayleyPinneauResultForReport,
+        rwt: rwtResultForReport,
+        reinehr: reinehrResultForReport,
+        profileModel: predictionProfileForReport
+      });
+  const predictionReliabilitySummary = advGrowthBuildPredictionReliabilitySummaryLine(predictionReliabilityForReport);
+  const anyAdultHeightPredictionComputed = bayleyPinneauComputed || rwtComputed || reinehrComputed;
 
   return {
     title: 'Raport wzrastania',
@@ -16245,6 +17509,11 @@ function advGrowthBuildReportPresentationModel(report) {
       motherSummary,
       fatherSummary,
       mphSummary,
+      ...predictionProfileSummaryLines,
+      bayleyPinneauSummary,
+      rwtSummary,
+      reinehrSummary,
+      predictionReliabilitySummary,
       `Obliczenia wykonano na podstawie danych: ${sourceLabel}`,
       `Punkty historyczne: ${report.historicalCount}` + (report.includesCurrent ? ' + aktualny pomiar' : ''),
       `Wygenerowano: ${generatedLabel}`
@@ -16257,6 +17526,9 @@ function advGrowthBuildReportPresentationModel(report) {
         : 'Kolumna hSDS - mpSDS porównuje hSDS dziecka z potencjałem wzrostowym MPH.',
       report.fallbackUsed
         ? 'Tam, gdzie wybrane źródło danych było niedostępne dla wieku lub parametru, zastosowano automatyczny fallback zgodny z logiką karty Centyle, BMI… .'
+        : null,
+      anyAdultHeightPredictionComputed
+        ? ADV_GROWTH_PREDICTION_GLOBAL_DISCLAIMER_TEXT
         : null
     ].filter(Boolean).map((item) => advGrowthSanitizePdfText(item))
   };
@@ -17042,11 +18314,23 @@ function addAdvMeasurementRow(options) {
       }
     });
   }
-  // nasłuch na zmiany w nowych polach
+  // Nasłuch na zmiany w nowych polach.  Najpierw synchronizujemy pola historii
+  // z kartą „Szacowane spożycie energii”, a dopiero potem przeliczamy wyniki.
+  // Dzięki temu usuwanie wartości z pól wieku / wzrostu / wagi nie powoduje już
+  // przywracania ostatniej cyfry przez mechanizm parowania wierszy.
   const inputs = row.querySelectorAll('input');
+  const handleRowInput = (event) => {
+    try {
+      const target = event && event.target;
+      if (target && target.matches('.adv-age-years,.adv-age-months,.adv-height,.adv-weight')) {
+        _syncAdvRowToIntake(row);
+      }
+    } catch (_) {}
+    calculateGrowthAdvanced();
+  };
   inputs.forEach(inp => {
-    inp.addEventListener('input', calculateGrowthAdvanced);
-    inp.addEventListener('change', calculateGrowthAdvanced);
+    inp.addEventListener('input', handleRowInput);
+    inp.addEventListener('change', handleRowInput);
   });
   // oblicz natychmiast po dodaniu wiersza
   // Po dodaniu nowego wiersza aktualizujemy wyświetlanie przycisku usuwania
@@ -17697,6 +18981,1373 @@ function buildVelocityTableHtml(periods) {
 }
 /* === KONIEC: funkcje pomocnicze === */
 
+function bayleyPinneauRoundHalfUp(value, digits = 1) {
+  if (typeof value !== 'number' || !isFinite(value)) return null;
+  const factor = Math.pow(10, digits);
+  return Math.round((value + Number.EPSILON) * factor) / factor;
+}
+
+function bayleyPinneauNormalizeSexKey(sex) {
+  const raw = String(sex || '').trim().toUpperCase();
+  if (raw === 'M') return 'boys';
+  if (raw === 'F') return 'girls';
+  return null;
+}
+
+function bayleyPinneauSexLabel(sexKey) {
+  if (sexKey === 'boys') return 'chłopców';
+  if (sexKey === 'girls') return 'dziewcząt';
+  return '';
+}
+
+function bayleyPinneauGroupLabel(groupKey) {
+  if (groupKey === 'accelerated') return 'przyspieszonej';
+  if (groupKey === 'retarded') return 'opóźnionej';
+  return 'średniej';
+}
+
+function bayleyPinneauGroupNominativeLabel(groupKey) {
+  if (groupKey === 'accelerated') return 'przyspieszona';
+  if (groupKey === 'retarded') return 'opóźniona';
+  return 'średnia';
+}
+
+function bayleyPinneauGroupReasonText(groupKey, deltaMonths) {
+  if (typeof deltaMonths !== 'number' || !isFinite(deltaMonths)) return '';
+  if (groupKey === 'accelerated') {
+    return `wiek kostny wyprzedza wiek metrykalny o ${bayleyPinneauFormatMonthDistance(deltaMonths)}, dlatego użyto grupy przyspieszonej`;
+  }
+  if (groupKey === 'retarded') {
+    return `wiek kostny jest opóźniony względem wieku metrykalnego o ${bayleyPinneauFormatMonthDistance(deltaMonths)}, dlatego użyto grupy opóźnionej`;
+  }
+  return 'wiek kostny mieści się w granicach ±12 miesięcy od wieku metrykalnego, dlatego użyto grupy średniej';
+}
+
+function bayleyPinneauLabelToMonths(label) {
+  const match = /^\s*(\d+)\-(\d+)\s*$/.exec(String(label || ''));
+  if (!match) return null;
+  const years = parseInt(match[1], 10);
+  const months = parseInt(match[2], 10);
+  if (!isFinite(years) || !isFinite(months)) return null;
+  return years * 12 + months;
+}
+
+function bayleyPinneauDetermineGroupKey(deltaMonths) {
+  if (typeof deltaMonths !== 'number' || !isFinite(deltaMonths)) return null;
+  if (deltaMonths >= 12) return 'accelerated';
+  if (deltaMonths <= -12) return 'retarded';
+  return 'average';
+}
+
+function bayleyPinneauFormatMonthDistance(months) {
+  const total = Math.abs(Math.round(Number(months) || 0));
+  const years = Math.floor(total / 12);
+  const remainingMonths = total % 12;
+  const parts = [];
+
+  if (years > 0) {
+    let yearWord = 'lat';
+    if (years === 1) yearWord = 'rok';
+    else if (years % 10 >= 2 && years % 10 <= 4 && (years % 100 < 10 || years % 100 >= 20)) yearWord = 'lata';
+    parts.push(`${years} ${yearWord}`);
+  }
+
+  if (remainingMonths > 0 || !parts.length) {
+    parts.push(`${remainingMonths} mies.`);
+  }
+
+  return parts.join(' ');
+}
+
+
+function bayleyPinneauFormatAgeLabel(totalMonths) {
+  if (!Number.isFinite(totalMonths)) return '';
+  const value = Math.max(0, Math.round(Number(totalMonths) || 0));
+  return `${Math.floor(value / 12)}-${value % 12}`;
+}
+
+function bayleyPinneauErrorSampleLabel(sampleKey) {
+  if (sampleKey === 'validatingSample') return 'próba walidacyjna Berkeley';
+  if (sampleKey === 'standardizationSample') return 'próba standaryzacyjna Guidance Study';
+  return '';
+}
+
+function bayleyPinneauInterpolateErrorStats(rows, targetAgeMonths, sampleKey = 'validatingSample') {
+  if (!Array.isArray(rows) || !rows.length || !Number.isFinite(targetAgeMonths)) return null;
+
+  const usableRows = rows
+    .map((row) => {
+      const ageMonthsTotal = Number(row?.ageMonthsTotal);
+      const sample = row && typeof row === 'object' ? row[sampleKey] : null;
+      const meanErrorCm = Number(sample?.meanErrorCm);
+      const sdErrorCm = Number(sample?.sdErrorCm);
+      const meanErrorInches = Number(sample?.meanErrorInches);
+      const sdErrorInches = Number(sample?.sdErrorInches);
+      if (!Number.isFinite(ageMonthsTotal) || !Number.isFinite(meanErrorCm) || !Number.isFinite(sdErrorCm)) {
+        return null;
+      }
+      return {
+        ageMonthsTotal,
+        ageLabel: row?.ageLabel || bayleyPinneauFormatAgeLabel(ageMonthsTotal),
+        tableId: row?.tableId || null,
+        sourceImage: row?.sourceImage || null,
+        sample: {
+          cases: Number(sample?.cases),
+          meanErrorCm,
+          sdErrorCm,
+          meanErrorInches: Number.isFinite(meanErrorInches) ? meanErrorInches : null,
+          sdErrorInches: Number.isFinite(sdErrorInches) ? sdErrorInches : null
+        }
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.ageMonthsTotal - b.ageMonthsTotal);
+
+  if (!usableRows.length) return null;
+
+  const minRow = usableRows[0];
+  const maxRow = usableRows[usableRows.length - 1];
+  if (targetAgeMonths < minRow.ageMonthsTotal || targetAgeMonths > maxRow.ageMonthsTotal) {
+    return {
+      ok: false,
+      reason: 'out-of-range',
+      sampleKey,
+      minRow,
+      maxRow
+    };
+  }
+
+  for (const row of usableRows) {
+    if (row.ageMonthsTotal === targetAgeMonths) {
+      return {
+        ok: true,
+        sampleKey,
+        interpolated: false,
+        interpolationRatio: 0,
+        lowerRow: row,
+        upperRow: row,
+        values: {
+          meanErrorCm: row.sample.meanErrorCm,
+          sdErrorCm: row.sample.sdErrorCm,
+          meanErrorInches: row.sample.meanErrorInches,
+          sdErrorInches: row.sample.sdErrorInches
+        }
+      };
+    }
+  }
+
+  let lowerRow = minRow;
+  let upperRow = maxRow;
+  for (let i = 1; i < usableRows.length; i += 1) {
+    const currentRow = usableRows[i];
+    if (targetAgeMonths < currentRow.ageMonthsTotal) {
+      lowerRow = usableRows[i - 1];
+      upperRow = currentRow;
+      break;
+    }
+  }
+
+  const span = upperRow.ageMonthsTotal - lowerRow.ageMonthsTotal;
+  if (!Number.isFinite(span) || span <= 0) {
+    return {
+      ok: false,
+      reason: 'invalid-span',
+      sampleKey,
+      minRow,
+      maxRow
+    };
+  }
+
+  const ratio = (targetAgeMonths - lowerRow.ageMonthsTotal) / span;
+  const interpolate = (a, b) => a + ((b - a) * ratio);
+
+  return {
+    ok: true,
+    sampleKey,
+    interpolated: true,
+    interpolationRatio: ratio,
+    lowerRow,
+    upperRow,
+    values: {
+      meanErrorCm: interpolate(lowerRow.sample.meanErrorCm, upperRow.sample.meanErrorCm),
+      sdErrorCm: interpolate(lowerRow.sample.sdErrorCm, upperRow.sample.sdErrorCm),
+      meanErrorInches: (
+        Number.isFinite(lowerRow.sample.meanErrorInches) && Number.isFinite(upperRow.sample.meanErrorInches)
+      ) ? interpolate(lowerRow.sample.meanErrorInches, upperRow.sample.meanErrorInches) : null,
+      sdErrorInches: (
+        Number.isFinite(lowerRow.sample.sdErrorInches) && Number.isFinite(upperRow.sample.sdErrorInches)
+      ) ? interpolate(lowerRow.sample.sdErrorInches, upperRow.sample.sdErrorInches) : null
+    }
+  };
+}
+
+function bayleyPinneauBuildPortabilityWarningText(result) {
+  const deltaMonths = Number(result?.deltaMonths);
+  if (!Number.isFinite(deltaMonths) || Math.abs(deltaMonths) < 24) return '';
+  return 'Uwaga: wiek kostny różni się od metrykalnego o co najmniej 24 mies. Tabele błędu Bayley-Pinneau pochodzą z ogólnej zdrowej populacji Berkeley i nie były osobno kalibrowane dla tak nasilonego przyspieszenia lub opóźnienia dojrzewania, dlatego ten przybliżony błąd należy interpretować ostrożnie.';
+}
+
+function bayleyPinneauResolvePrintedSegment(groupData, boneAgeMonths) {
+  if (!groupData || !Array.isArray(groupData.printedSegments)) return null;
+  for (const segment of groupData.printedSegments) {
+    const startM = bayleyPinneauLabelToMonths(segment?.boneAgeLabelRange?.start);
+    const endM = bayleyPinneauLabelToMonths(segment?.boneAgeLabelRange?.end);
+    if (typeof startM === 'number' && typeof endM === 'number' && boneAgeMonths >= startM && boneAgeMonths <= endM) {
+      return segment;
+    }
+  }
+  return null;
+}
+
+function bayleyPinneauSelectNearestFactor(factors, boneAgeMonths) {
+  if (!Array.isArray(factors) || !factors.length || typeof boneAgeMonths !== 'number' || !isFinite(boneAgeMonths)) {
+    return null;
+  }
+  const minFactor = factors[0];
+  const maxFactor = factors[factors.length - 1];
+  if (boneAgeMonths < minFactor.boneAgeMonths || boneAgeMonths > maxFactor.boneAgeMonths) {
+    return {
+      ok: false,
+      reason: 'out-of-range',
+      minFactor,
+      maxFactor
+    };
+  }
+
+  let bestFactor = minFactor;
+  let bestDiff = Math.abs(boneAgeMonths - minFactor.boneAgeMonths);
+  for (let i = 1; i < factors.length; i += 1) {
+    const factor = factors[i];
+    const diff = Math.abs(boneAgeMonths - factor.boneAgeMonths);
+    if (diff < bestDiff) {
+      bestFactor = factor;
+      bestDiff = diff;
+    }
+  }
+
+  return {
+    ok: true,
+    factor: bestFactor,
+    snapped: bestFactor.boneAgeMonths !== boneAgeMonths,
+    diffMonths: bestDiff,
+    minFactor,
+    maxFactor
+  };
+}
+
+
+function calculateBayleyPinneauPrediction(params) {
+  const dataRoot = (typeof window !== 'undefined' && window.bayleyPinneauData)
+    ? window.bayleyPinneauData
+    : (typeof bayleyPinneauData !== 'undefined' ? bayleyPinneauData : null);
+
+  if (!dataRoot || !dataRoot.groups) {
+    return {
+      available: false,
+      reason: 'missing-dataset',
+      message: 'Nie udało się wczytać danych tabel Bayley-Pinneau.'
+    };
+  }
+
+  const chronologicalAgeYears = Number(params?.chronologicalAgeYears);
+  const chronologicalAgeMonths = Number.isFinite(Number(params?.chronologicalAgeMonths))
+    ? Math.round(Number(params.chronologicalAgeMonths))
+    : (Number.isFinite(chronologicalAgeYears) ? Math.round(chronologicalAgeYears * 12) : null);
+  const boneAgeYears = Number(params?.boneAgeYears);
+  const currentHeightCm = Number(params?.currentHeightCm);
+  const sexKey = bayleyPinneauNormalizeSexKey(params?.sex);
+
+  if (!sexKey) {
+    return {
+      available: false,
+      reason: 'missing-sex',
+      message: 'Nie udało się określić płci potrzebnej do doboru tabel Bayley-Pinneau.'
+    };
+  }
+  if (!Number.isFinite(chronologicalAgeMonths) || chronologicalAgeMonths < 0) {
+    return {
+      available: false,
+      reason: 'missing-chronological-age',
+      message: 'Aby obliczyć prognozę metodą Bayley-Pinneau, uzupełnij aktualny wiek metrykalny.'
+    };
+  }
+  const missingHeight = (!Number.isFinite(currentHeightCm) || currentHeightCm <= 0);
+  const missingBoneAge = (!Number.isFinite(boneAgeYears) || boneAgeYears <= 0);
+  if (missingHeight || missingBoneAge) {
+    let reason = 'missing-input';
+    let message = 'Aby obliczyć prognozę wzrostu ostatecznego metodą Bayley-Pinneau, uzupełnij aktualny wzrost i wiek kostny.';
+    if (missingHeight && !missingBoneAge) {
+      reason = 'missing-height';
+      message = 'Aby obliczyć prognozę wzrostu ostatecznego metodą Bayley-Pinneau, uzupełnij aktualny wzrost w karcie Dane użytkownika.';
+    } else if (!missingHeight && missingBoneAge) {
+      reason = 'missing-bone-age';
+      message = 'Prognoza wzrostu ostatecznego metodą Bayley-Pinneau pojawi się po wpisaniu aktualnego wieku kostnego.';
+    }
+    return {
+      available: false,
+      reason,
+      message
+    };
+  }
+
+  const requestedBoneAgeMonths = Math.round(boneAgeYears * 12);
+  const deltaMonths = requestedBoneAgeMonths - chronologicalAgeMonths;
+  const groupKey = bayleyPinneauDetermineGroupKey(deltaMonths);
+  const sexData = dataRoot.groups[sexKey];
+  const groupData = sexData ? sexData[groupKey] : null;
+
+  if (!groupData || !Array.isArray(groupData.factors) || !groupData.factors.length) {
+    return {
+      available: false,
+      reason: 'missing-group-data',
+      message: 'Dla tej kombinacji płci i wieku kostnego nie znaleziono danych Bayley-Pinneau.'
+    };
+  }
+
+  const factorSelection = bayleyPinneauSelectNearestFactor(groupData.factors, requestedBoneAgeMonths);
+  if (!factorSelection || factorSelection.ok !== true) {
+    const minLabel = factorSelection?.minFactor?.boneAgeLabel || groupData?.factors?.[0]?.boneAgeLabel || '—';
+    const maxLabel = factorSelection?.maxFactor?.boneAgeLabel || groupData?.factors?.[groupData.factors.length - 1]?.boneAgeLabel || '—';
+    return {
+      available: false,
+      reason: 'out-of-range',
+      sexKey,
+      sexLabel: bayleyPinneauSexLabel(sexKey),
+      groupKey,
+      groupLabel: bayleyPinneauGroupNominativeLabel(groupKey),
+      chronologicalAgeMonths,
+      chronologicalAgeYears: chronologicalAgeMonths / 12,
+      requestedBoneAgeYears: boneAgeYears,
+      requestedBoneAgeMonths,
+      deltaMonths,
+      range: {
+        minLabel,
+        maxLabel,
+        minMonths: factorSelection?.minFactor?.boneAgeMonths ?? null,
+        maxMonths: factorSelection?.maxFactor?.boneAgeMonths ?? null
+      },
+      message: `Metoda Bayley-Pinneau nie zawiera odpowiedniej tabeli dla ${bayleyPinneauSexLabel(sexKey)} z grupy ${bayleyPinneauGroupLabel(groupKey)} przy wieku kostnym ${advHistoryFormatNumber(boneAgeYears, 1)} lat. Zakres dostępny dla tej grupy to ${minLabel}–${maxLabel}.`
+    };
+  }
+
+  const factor = factorSelection.factor;
+  const fraction = Number(factor.fractionMatureHeight);
+  if (!Number.isFinite(fraction) || fraction <= 0) {
+    return {
+      available: false,
+      reason: 'invalid-factor',
+      message: 'W danych Bayley-Pinneau brakuje prawidłowego współczynnika do obliczenia wyniku.'
+    };
+  }
+
+  const predictedAdultHeightCmRawUncorrected = currentHeightCm / fraction;
+
+  const errorModelMeta = dataRoot?.meta?.errorModel || null;
+  const errorSampleKey = String(errorModelMeta?.defaultSampleKey || 'validatingSample');
+  const errorRows = Array.isArray(dataRoot?.predictionErrorTables?.[sexKey])
+    ? dataRoot.predictionErrorTables[sexKey]
+    : [];
+  const usableErrorRows = errorRows
+    .filter((row) => {
+      const sample = row && typeof row === 'object' ? row[errorSampleKey] : null;
+      return Number.isFinite(Number(row?.ageMonthsTotal))
+        && Number.isFinite(Number(sample?.meanErrorCm))
+        && Number.isFinite(Number(sample?.sdErrorCm));
+    })
+    .sort((a, b) => Number(a.ageMonthsTotal) - Number(b.ageMonthsTotal));
+
+  const errorModelMinAgeMonths = usableErrorRows.length ? Number(usableErrorRows[0].ageMonthsTotal) : null;
+  const errorModelMaxAgeMonths = usableErrorRows.length ? Number(usableErrorRows[usableErrorRows.length - 1].ageMonthsTotal) : null;
+  const errorModelEligibleByAge = Number.isFinite(errorModelMinAgeMonths) && chronologicalAgeMonths >= errorModelMinAgeMonths;
+  const errorCoveragePercent = Number.isFinite(Number(errorModelMeta?.coveragePercent))
+    ? Number(errorModelMeta.coveragePercent)
+    : 90;
+  const errorNormalApproximationZ = Number.isFinite(Number(errorModelMeta?.normalApproximationZ))
+    ? Number(errorModelMeta.normalApproximationZ)
+    : 1.645;
+
+  let predictedAdultHeightCmRaw = predictedAdultHeightCmRawUncorrected;
+  let meanErrorCorrectionCmRaw = null;
+  let errorSdCmRaw = null;
+  let errorBoundHalfWidthCmRaw = null;
+  let predictionIntervalLowerCmRaw = null;
+  let predictionIntervalUpperCmRaw = null;
+  let errorSelection = null;
+  let errorModelUnavailableReason = null;
+
+  if (!usableErrorRows.length) {
+    errorModelUnavailableReason = 'missing-error-dataset';
+  } else if (Number.isFinite(errorModelMinAgeMonths) && chronologicalAgeMonths < errorModelMinAgeMonths) {
+    errorModelUnavailableReason = 'below-min-age';
+  } else if (Number.isFinite(errorModelMaxAgeMonths) && chronologicalAgeMonths > errorModelMaxAgeMonths) {
+    errorModelUnavailableReason = 'above-max-age';
+  } else {
+    errorSelection = bayleyPinneauInterpolateErrorStats(errorRows, chronologicalAgeMonths, errorSampleKey);
+    if (errorSelection && errorSelection.ok === true) {
+      meanErrorCorrectionCmRaw = Number(errorSelection.values?.meanErrorCm);
+      errorSdCmRaw = Number(errorSelection.values?.sdErrorCm);
+      if (Number.isFinite(meanErrorCorrectionCmRaw)) {
+        predictedAdultHeightCmRaw = predictedAdultHeightCmRawUncorrected + meanErrorCorrectionCmRaw;
+      }
+      if (Number.isFinite(errorSdCmRaw) && errorSdCmRaw >= 0) {
+        errorBoundHalfWidthCmRaw = errorSdCmRaw * errorNormalApproximationZ;
+        predictionIntervalLowerCmRaw = predictedAdultHeightCmRaw - errorBoundHalfWidthCmRaw;
+        predictionIntervalUpperCmRaw = predictedAdultHeightCmRaw + errorBoundHalfWidthCmRaw;
+      }
+    } else {
+      errorModelUnavailableReason = errorSelection?.reason || 'missing-error-data';
+    }
+  }
+
+  const predictedAdultHeightCm = bayleyPinneauRoundHalfUp(predictedAdultHeightCmRaw, 1);
+  const predictedAdultHeightCmUncorrected = bayleyPinneauRoundHalfUp(predictedAdultHeightCmRawUncorrected, 1);
+  const remainingGrowthCm = bayleyPinneauRoundHalfUp(predictedAdultHeightCm - currentHeightCm, 1);
+  const segment = bayleyPinneauResolvePrintedSegment(groupData, factor.boneAgeMonths);
+  const requestedBoneAgeRoundedYears = bayleyPinneauRoundHalfUp(requestedBoneAgeMonths / 12, 2);
+  const usedBoneAgeYears = bayleyPinneauRoundHalfUp(factor.boneAgeMonths / 12, 2);
+  const hasErrorInterval = Number.isFinite(errorBoundHalfWidthCmRaw);
+  const hasBiasCorrection = Number.isFinite(meanErrorCorrectionCmRaw);
+
+  const baseResult = {
+    available: true,
+    method: 'Bayley-Pinneau',
+    sexKey,
+    sexLabel: bayleyPinneauSexLabel(sexKey),
+    groupKey,
+    groupLabel: bayleyPinneauGroupNominativeLabel(groupKey),
+    groupReasonText: bayleyPinneauGroupReasonText(groupKey, deltaMonths),
+    chronologicalAgeMonths,
+    chronologicalAgeYears: bayleyPinneauRoundHalfUp(chronologicalAgeMonths / 12, 2),
+    currentHeightCm: bayleyPinneauRoundHalfUp(currentHeightCm, 1),
+    requestedBoneAgeYears: bayleyPinneauRoundHalfUp(boneAgeYears, 2),
+    requestedBoneAgeRoundedYears,
+    requestedBoneAgeMonths,
+    requestedBoneAgeLabel: `${Math.floor(requestedBoneAgeMonths / 12)}-${String(requestedBoneAgeMonths % 12).padStart(1, '0')}`,
+    usedBoneAgeYears,
+    usedBoneAgeMonths: factor.boneAgeMonths,
+    usedBoneAgeLabel: factor.boneAgeLabel,
+    snappedToNearestNode: !!factorSelection.snapped,
+    snappedDiffMonths: factorSelection.diffMonths,
+    percentMatureHeight: Number(factor.percentMatureHeight),
+    fractionMatureHeight: fraction,
+    predictedAdultHeightCm,
+    predictedAdultHeightCmUncorrected,
+    remainingGrowthCm,
+    deltaMonths,
+    tableId: segment?.tableId || null,
+    tableTitle: segment?.title || null,
+    sourceImage: segment?.sourceImage || null,
+    hasBiasCorrection,
+    meanErrorCorrectionCmRaw: Number.isFinite(meanErrorCorrectionCmRaw) ? meanErrorCorrectionCmRaw : null,
+    meanErrorCorrectionCm: Number.isFinite(meanErrorCorrectionCmRaw) ? bayleyPinneauRoundHalfUp(meanErrorCorrectionCmRaw, 2) : null,
+    errorSdCmRaw: Number.isFinite(errorSdCmRaw) ? errorSdCmRaw : null,
+    errorSdCm: Number.isFinite(errorSdCmRaw) ? bayleyPinneauRoundHalfUp(errorSdCmRaw, 2) : null,
+    hasErrorInterval,
+    errorBoundHalfWidthCmRaw: Number.isFinite(errorBoundHalfWidthCmRaw) ? errorBoundHalfWidthCmRaw : null,
+    errorBoundHalfWidthCm: Number.isFinite(errorBoundHalfWidthCmRaw) ? bayleyPinneauRoundHalfUp(errorBoundHalfWidthCmRaw, 1) : null,
+    predictionIntervalLowerCm: Number.isFinite(predictionIntervalLowerCmRaw) ? bayleyPinneauRoundHalfUp(predictionIntervalLowerCmRaw, 1) : null,
+    predictionIntervalUpperCm: Number.isFinite(predictionIntervalUpperCmRaw) ? bayleyPinneauRoundHalfUp(predictionIntervalUpperCmRaw, 1) : null,
+    errorBoundsCoveragePercent: errorCoveragePercent,
+    errorBoundsSampleKey: errorSampleKey,
+    errorBoundsSampleLabel: bayleyPinneauErrorSampleLabel(errorSampleKey) || String(errorModelMeta?.defaultSampleLabel || '').trim(),
+    errorBoundsInterpolatedByAge: !!(errorSelection && errorSelection.ok === true && errorSelection.interpolated === true),
+    errorBoundsAgeNodeLowerLabel: errorSelection?.lowerRow?.ageLabel || null,
+    errorBoundsAgeNodeUpperLabel: errorSelection?.upperRow?.ageLabel || null,
+    errorBoundsAgeNodeLowerMonths: Number.isFinite(Number(errorSelection?.lowerRow?.ageMonthsTotal)) ? Number(errorSelection.lowerRow.ageMonthsTotal) : null,
+    errorBoundsAgeNodeUpperMonths: Number.isFinite(Number(errorSelection?.upperRow?.ageMonthsTotal)) ? Number(errorSelection.upperRow.ageMonthsTotal) : null,
+    errorBoundsSourceTableId: errorSelection?.lowerRow?.tableId || null,
+    errorBoundsSourceImage: errorSelection?.lowerRow?.sourceImage || null,
+    errorModelEligibleByAge,
+    errorModelUnavailableReason,
+    errorModelMinAgeMonths: Number.isFinite(errorModelMinAgeMonths) ? errorModelMinAgeMonths : null,
+    errorModelMinAgeLabel: Number.isFinite(errorModelMinAgeMonths) ? bayleyPinneauFormatAgeLabel(errorModelMinAgeMonths) : null,
+    errorModelMaxAgeMonths: Number.isFinite(errorModelMaxAgeMonths) ? errorModelMaxAgeMonths : null,
+    errorModelMaxAgeLabel: Number.isFinite(errorModelMaxAgeMonths) ? bayleyPinneauFormatAgeLabel(errorModelMaxAgeMonths) : null,
+    errorModelApproximate: true
+  };
+
+  const portabilityWarningText = bayleyPinneauBuildPortabilityWarningText(baseResult);
+
+  return {
+    ...baseResult,
+    portabilityWarningText: portabilityWarningText || '',
+    hasPortabilityWarning: !!portabilityWarningText
+  };
+}
+
+function buildAdvancedGrowthDetailsToggleHtml(detailsId, detailsHtml, options) {
+  const safeDetailsId = String(detailsId || '').trim();
+  const normalizedDetailsHtml = String(detailsHtml || '').trim();
+  if (!safeDetailsId || !normalizedDetailsHtml) return '';
+
+  const collapsedLabel = String(options?.collapsedLabel || 'Szczegóły').trim() || 'Szczegóły';
+  const expandedLabel = String(options?.expandedLabel || 'Ukryj szczegóły').trim() || 'Ukryj szczegóły';
+
+  return `
+    <div class="adv-growth-result-details">
+      <button
+        type="button"
+        class="patient-report-summary-btn adv-growth-result-details-btn"
+        data-adv-growth-details-toggle
+        data-collapsed-label="${advHistoryEscapeHtml(collapsedLabel)}"
+        data-expanded-label="${advHistoryEscapeHtml(expandedLabel)}"
+        aria-expanded="false"
+        aria-controls="${advHistoryEscapeHtml(safeDetailsId)}">
+        ${advHistoryEscapeHtml(collapsedLabel)}
+      </button>
+      <div id="${advHistoryEscapeHtml(safeDetailsId)}" class="adv-growth-result-details-panel" hidden aria-hidden="true">
+        ${normalizedDetailsHtml}
+      </div>
+    </div>`;
+}
+
+function initAdvancedGrowthResultDetailsToggles(root) {
+  if (!root || typeof root.querySelectorAll !== 'function') return;
+  const buttons = root.querySelectorAll('[data-adv-growth-details-toggle]');
+  buttons.forEach((btn) => {
+    if (!btn || btn.dataset.advGrowthDetailsBound === 'true') return;
+    btn.dataset.advGrowthDetailsBound = 'true';
+    btn.addEventListener('click', () => {
+      const panelId = btn.getAttribute('aria-controls');
+      const panel = panelId ? document.getElementById(panelId) : null;
+      if (!panel) return;
+
+      const isExpanded = btn.getAttribute('aria-expanded') === 'true';
+      const nextExpanded = !isExpanded;
+      const collapsedLabel = String(btn.dataset.collapsedLabel || 'Szczegóły').trim() || 'Szczegóły';
+      const expandedLabel = String(btn.dataset.expandedLabel || 'Ukryj szczegóły').trim() || 'Ukryj szczegóły';
+
+      btn.setAttribute('aria-expanded', nextExpanded ? 'true' : 'false');
+      btn.textContent = nextExpanded ? expandedLabel : collapsedLabel;
+      panel.hidden = !nextExpanded;
+      panel.setAttribute('aria-hidden', nextExpanded ? 'false' : 'true');
+    });
+  });
+}
+
+
+
+const ADV_GROWTH_PREDICTION_GLOBAL_DISCLAIMER_TEXT = 'Metody prognozowania wzrostu ostatecznego są przeznaczone dla dzieci zdrowych i nieleczonych. W przypadku chorób przewlekłych, zaburzeń endokrynologicznych lub leczenia wpływającego na wzrastanie wynik należy interpretować ostrożnie.';
+
+function advGrowthPredictionReliabilityLabel(levelKey) {
+  switch (String(levelKey || '')) {
+    case 'high':
+      return 'wysoka';
+    case 'moderate':
+      return 'umiarkowana';
+    case 'lowered':
+      return 'obniżona';
+    case 'low':
+      return 'niska';
+    case 'indicative':
+      return 'orientacyjna';
+    default:
+      return 'nieokreślona';
+  }
+}
+
+function advGrowthPredictionReliabilitySeverity(levelKey) {
+  switch (String(levelKey || '')) {
+    case 'high':
+      return 0;
+    case 'moderate':
+      return 1;
+    case 'lowered':
+      return 2;
+    case 'low':
+      return 3;
+    case 'indicative':
+      return 2;
+    default:
+      return 2;
+  }
+}
+
+function advGrowthPredictionReliabilityLevelFromSeverity(severity) {
+  const numericSeverity = Number.isFinite(Number(severity)) ? Number(severity) : 2;
+  if (numericSeverity <= 0.5) return 'high';
+  if (numericSeverity <= 1.5) return 'moderate';
+  if (numericSeverity <= 2.5) return 'lowered';
+  return 'low';
+}
+
+function advGrowthDowngradeReliabilityLevel(levelKey, steps = 1) {
+  const normalized = String(levelKey || 'indicative');
+  if (normalized === 'indicative') return 'indicative';
+  const order = ['high', 'moderate', 'lowered', 'low'];
+  const startIndex = Math.max(0, order.indexOf(normalized));
+  const safeSteps = Math.max(0, Math.round(Number(steps) || 0));
+  return order[Math.min(order.length - 1, startIndex + safeSteps)] || 'low';
+}
+
+function advGrowthFormatReasonList(items) {
+  const cleaned = Array.from(new Set((items || [])
+    .map((item) => String(item || '').trim())
+    .filter(Boolean)));
+  if (!cleaned.length) return '';
+  if (cleaned.length === 1) return cleaned[0];
+  if (cleaned.length === 2) return `${cleaned[0]} oraz ${cleaned[1]}`;
+  return `${cleaned.slice(0, -1).join(', ')} oraz ${cleaned[cleaned.length - 1]}`;
+}
+
+function advGrowthBuildReliabilityBadgeHtml(levelKey) {
+  const normalized = String(levelKey || 'indicative').trim() || 'indicative';
+  return `<span class="adv-growth-reliability-badge is-${advHistoryEscapeHtml(normalized)}">${advHistoryEscapeHtml(advGrowthPredictionReliabilityLabel(normalized))}</span>`;
+}
+
+function advGrowthAssessBayleyPinneauReliability(result, profileModel) {
+  if (!result || typeof result !== 'object' || result.available !== true) return null;
+
+  const reasons = [];
+  const halfWidth = Number(result.errorBoundHalfWidthCm);
+  let levelKey = 'indicative';
+
+  if (Number.isFinite(halfWidth)) {
+    if (halfWidth <= 3.5) levelKey = 'high';
+    else if (halfWidth <= 4.8) levelKey = 'moderate';
+    else if (halfWidth <= 6.0) levelKey = 'lowered';
+    else levelKey = 'low';
+    reasons.push(`dostępnej szerokości przybliżonego błędu metody (±${advHistoryFormatNumber(halfWidth, 1)} cm)`);
+  } else if (result.errorModelUnavailableReason === 'below-min-age' && result.errorModelMinAgeLabel) {
+    reasons.push(`braku oryginalnych tabel błędu Bayley-Pinneau poniżej ${result.errorModelMinAgeLabel} lat`);
+  } else if (result.errorModelUnavailableReason === 'above-max-age' && result.errorModelMaxAgeLabel) {
+    reasons.push(`braku oryginalnych tabel błędu Bayley-Pinneau powyżej ${result.errorModelMaxAgeLabel} lat`);
+  } else {
+    reasons.push('braku ilościowej oceny błędu dla tego wieku metrykalnego');
+  }
+
+  const deltaMonths = Number(result.deltaMonths);
+  if (Number.isFinite(deltaMonths) && Math.abs(deltaMonths) >= 24) {
+    if (levelKey !== 'indicative') {
+      levelKey = advGrowthDowngradeReliabilityLevel(levelKey, 1);
+    }
+    reasons.push(`dużej rozbieżności wieku kostnego i metrykalnego (${bayleyPinneauFormatMonthDistance(deltaMonths)})`);
+  }
+
+  if (profileModel && profileModel.shouldDowngradeBayleyInReliability) {
+    if (levelKey !== 'indicative') {
+      levelKey = advGrowthDowngradeReliabilityLevel(levelKey, 1);
+    }
+    reasons.push('profilu KOWD-like, w którym Bayley-Pinneau może zawyżać przy większym opóźnieniu wieku kostnego');
+  } else if (profileModel && profileModel.isOutOfScope) {
+    if (levelKey !== 'indicative') {
+      levelKey = advGrowthDowngradeReliabilityLevel(levelKey, 1);
+    }
+    reasons.push('wyjścia poza populację dzieci zdrowych i nieleczonych');
+  }
+
+  return {
+    methodKey: 'bayleyPinneau',
+    methodLabel: 'Bayley-Pinneau',
+    levelKey,
+    label: advGrowthPredictionReliabilityLabel(levelKey),
+    reasons,
+    reasonText: advGrowthFormatReasonList(reasons)
+  };
+}
+
+function advGrowthAssessRWTReliability(result, profileModel) {
+  if (!result || typeof result !== 'object' || result.available !== true) return null;
+
+  const reasons = [];
+  const halfWidth = Number(result.errorBoundHalfWidthCm);
+  let levelKey = 'indicative';
+
+  if (Number.isFinite(halfWidth)) {
+    if (halfWidth <= 4.4) levelKey = 'high';
+    else if (halfWidth <= 5.6) levelKey = 'moderate';
+    else if (halfWidth <= 6.6) levelKey = 'lowered';
+    else levelKey = 'low';
+    reasons.push(`dostępnej szerokości przybliżonego błędu metody (±${advHistoryFormatNumber(halfWidth, 1)} cm)`);
+  } else {
+    reasons.push('braku ilościowej oceny błędu dla tego wieku metrykalnego');
+  }
+
+  if (result.usedChronologicalAgeAsSkeletalAge === true) {
+    if (levelKey !== 'indicative') {
+      levelKey = advGrowthDowngradeReliabilityLevel(levelKey, 1);
+    }
+    reasons.push('zastąpienia wieku kostnego wiekiem metrykalnym');
+  }
+
+  const enteredBoneAgeYears = Number(result.enteredBoneAgeYears);
+  const chronologicalAgeMonths = Number(result.chronologicalAgeMonths);
+  if (Number.isFinite(enteredBoneAgeYears) && Number.isFinite(chronologicalAgeMonths)) {
+    const deltaMonths = Math.round(enteredBoneAgeYears * 12) - chronologicalAgeMonths;
+    if (Math.abs(deltaMonths) >= 24) {
+      if (levelKey !== 'indicative') {
+        levelKey = advGrowthDowngradeReliabilityLevel(levelKey, 1);
+      }
+      reasons.push(`dużej rozbieżności wieku kostnego i metrykalnego (${bayleyPinneauFormatMonthDistance(deltaMonths)})`);
+    }
+  }
+
+  if (profileModel && profileModel.shouldPreferRwt) {
+    reasons.push('preferencji tej metody w profilu KOWD-like / CDGP-like');
+  }
+  if (profileModel && profileModel.isOutOfScope) {
+    if (levelKey !== 'indicative') {
+      levelKey = advGrowthDowngradeReliabilityLevel(levelKey, 1);
+    }
+    reasons.push('wyjścia poza populację dzieci zdrowych i nieleczonych');
+  }
+
+  return {
+    methodKey: 'rwt',
+    methodLabel: 'RWT',
+    levelKey,
+    label: advGrowthPredictionReliabilityLabel(levelKey),
+    reasons,
+    reasonText: advGrowthFormatReasonList(reasons)
+  };
+}
+
+function advGrowthBuildPredictionReliabilityModel(params) {
+  const profileModel = params?.profileModel || null;
+  const bpReliability = advGrowthAssessBayleyPinneauReliability(params?.bayleyPinneau, profileModel);
+  const rwtReliability = advGrowthAssessRWTReliability(params?.rwt, profileModel);
+  const reinehrReliability = (typeof advGrowthAssessReinehrCdgpReliability === 'function')
+    ? advGrowthAssessReinehrCdgpReliability(params?.reinehr, profileModel)
+    : null;
+  const entries = [bpReliability, rwtReliability, reinehrReliability].filter(Boolean);
+  if (!entries.length) return null;
+
+  const entryMap = Object.create(null);
+  entries.forEach((entry) => {
+    entryMap[entry.methodKey] = entry;
+  });
+
+  let overallLevelKey = entries[0].levelKey;
+  let agreementLabel = '';
+  let agreementDiffCm = null;
+  const allIndicative = entries.every((entry) => entry.levelKey === 'indicative');
+
+  const availablePredictions = [
+    { key: 'bayleyPinneau', value: Number(params?.bayleyPinneau?.predictedAdultHeightCm) },
+    { key: 'rwt', value: Number(params?.rwt?.predictedAdultHeightCm) },
+    { key: 'reinehr', value: Number(params?.reinehr?.predictedAdultHeightCm) }
+  ].filter((item) => Number.isFinite(item.value));
+
+  if (entries.length > 1) {
+    const severityAverage = entries.reduce((sum, entry) => sum + advGrowthPredictionReliabilitySeverity(entry.levelKey), 0) / entries.length;
+    let combinedSeverity = Math.round(severityAverage);
+
+    if (availablePredictions.length > 1) {
+      const values = availablePredictions.map((item) => item.value);
+      agreementDiffCm = Math.max(...values) - Math.min(...values);
+      if (agreementDiffCm <= 3) {
+        agreementLabel = 'dobra';
+      } else if (agreementDiffCm <= 6) {
+        agreementLabel = 'umiarkowana';
+      } else {
+        agreementLabel = 'niska';
+        combinedSeverity = Math.min(3, combinedSeverity + 1);
+      }
+    }
+
+    if (profileModel && profileModel.isOutOfScope) {
+      combinedSeverity = Math.min(3, combinedSeverity + 1);
+    }
+
+    overallLevelKey = allIndicative ? 'indicative' : advGrowthPredictionReliabilityLevelFromSeverity(combinedSeverity);
+  } else if (allIndicative) {
+    overallLevelKey = 'indicative';
+  }
+
+  return {
+    entries,
+    entryMap,
+    overallLevelKey,
+    overallLabel: advGrowthPredictionReliabilityLabel(overallLevelKey),
+    agreementLabel,
+    agreementDiffCm: Number.isFinite(agreementDiffCm) ? bayleyPinneauRoundHalfUp(agreementDiffCm, 1) : null,
+    disclaimerText: (profileModel && profileModel.disclaimerText) ? profileModel.disclaimerText : ADV_GROWTH_PREDICTION_GLOBAL_DISCLAIMER_TEXT,
+    profileStatusLabel: profileModel ? profileModel.statusLabel : '',
+    profileSummaryText: profileModel ? profileModel.summaryText : '',
+    hasAnyPrediction: true
+  };
+}
+
+function advGrowthBuildPredictionReliabilityHtml(model) {
+  if (!model || typeof model !== 'object' || !Array.isArray(model.entries) || !model.entries.length) {
+    return '';
+  }
+
+  const methodRowsHtml = model.entries
+    .map((entry) => `
+      <div class="adv-growth-reliability-method-row">
+        <span class="adv-growth-reliability-method-name">${advHistoryEscapeHtml(entry.methodLabel)}:</span>
+        ${advGrowthBuildReliabilityBadgeHtml(entry.levelKey)}
+      </div>`)
+    .join('');
+
+  const agreementHtml = model.agreementLabel
+    ? `<p class="adv-growth-reliability-copy">Zgodność metod: <strong>${advHistoryEscapeHtml(model.agreementLabel)}</strong>${Number.isFinite(Number(model.agreementDiffCm)) ? ` (różnica ${advHistoryEscapeHtml(advHistoryFormatNumber(model.agreementDiffCm, 1))} cm)` : ''}.</p>`
+    : '';
+
+  const detailsHtml = `
+    <div class="adv-growth-reliability-card">
+      <p class="adv-growth-reliability-title"><strong>Wskaźnik wiarygodności prognozy:</strong> ${advGrowthBuildReliabilityBadgeHtml(model.overallLevelKey)}</p>
+      <div class="adv-growth-reliability-methods">${methodRowsHtml}</div>
+      ${agreementHtml}
+      <p class="adv-growth-reliability-copy">Ocena uwzględnia dostępność błędu metody, relację wieku kostnego do metrykalnego oraz zakres zastosowania modeli.</p>
+    </div>
+    <div class="adv-growth-global-disclaimer"><strong>Uwaga ogólna:</strong> ${advHistoryEscapeHtml(model.disclaimerText || ADV_GROWTH_PREDICTION_GLOBAL_DISCLAIMER_TEXT)}</div>`;
+
+  return `
+    <div class="adv-growth-result-block adv-growth-result-block--reliability">
+      ${buildAdvancedGrowthDetailsToggleHtml('advGrowthPredictionReliabilityDetails', detailsHtml, {
+        collapsedLabel: 'Wskaźnik wiarygodności prognozy',
+        expandedLabel: 'Ukryj wskaźnik wiarygodności prognozy'
+      })}
+    </div>`;
+}
+
+function advGrowthBuildPredictionReliabilitySummaryLine(model) {
+  if (!model || typeof model !== 'object' || !Array.isArray(model.entries) || !model.entries.length) {
+    return '';
+  }
+  const prefix = model.entries.length > 1
+    ? 'Wiarygodność prognoz wzrostu'
+    : 'Wiarygodność prognozy wzrostu';
+  const methodParts = model.entries
+    .map((entry) => `${entry.methodLabel}: ${entry.label}`)
+    .join('; ');
+  return methodParts
+    ? `${prefix}: ${model.overallLabel} (${methodParts})`
+    : `${prefix}: ${model.overallLabel}`;
+}
+
+function advGrowthBuildMethodReliabilityDetailsParagraph(reliability) {
+  if (!reliability || typeof reliability !== 'object') return '';
+  const reasonText = String(reliability.reasonText || '').trim();
+  const suffix = reasonText ? ` Ocenę oparto na ${advHistoryEscapeHtml(reasonText)}.` : '';
+  return `<p class="adv-growth-result-details-copy"><span style="opacity:0.85;">Orientacyjny wskaźnik wiarygodności tej prognozy: <strong>${advHistoryEscapeHtml(reliability.label)}</strong>.${suffix}</span></p>`;
+}
+
+function buildBayleyPinneauResultHtml(result) {
+  if (!result || typeof result !== 'object') return '';
+  if (result.available !== true) {
+    const msg = String(result.message || '').trim();
+    return msg ? `<p><em>${advHistoryEscapeHtml(msg)}</em></p>` : '';
+  }
+
+  const reliability = advGrowthAssessBayleyPinneauReliability(result, result.profileModel || null);
+  const predicted = advHistoryFormatNumber(result.predictedAdultHeightCm, 1);
+  const currentHeight = advHistoryFormatNumber(result.currentHeightCm, 1);
+  const remaining = advHistoryFormatNumber(result.remainingGrowthCm, 1);
+  const percent = advHistoryFormatNumber(result.percentMatureHeight, 1);
+  const reasonText = result.groupReasonText ? (result.groupReasonText.charAt(0).toUpperCase() + result.groupReasonText.slice(1)) : '';
+  const groupText = `użyto tabeli Bayley-Pinneau dla ${result.sexLabel} z grupy ${bayleyPinneauGroupLabel(result.groupKey)}`;
+  const nodeText = result.snappedToNearestNode
+    ? `Wpisany wiek kostny dopasowano do najbliższego punktu tabeli ${result.usedBoneAgeLabel}`
+    : `Użyty punkt tabeli odpowiada wiekowi kostnemu ${result.usedBoneAgeLabel}`;
+
+  const rawPredicted = advHistoryFormatNumber(result.predictedAdultHeightCmUncorrected, 1);
+  const biasCorrectionRaw = Number(result.meanErrorCorrectionCmRaw);
+  const biasCorrectionDigits = Math.abs(biasCorrectionRaw) < 0.1 ? 2 : 1;
+  const biasCorrectionText = Number.isFinite(biasCorrectionRaw)
+    ? advGrowthFormatSignedNumber(biasCorrectionRaw, biasCorrectionDigits)
+    : '';
+  const pointEstimateCorrectionText = (result.hasBiasCorrection === true && Number.isFinite(biasCorrectionRaw) && Math.abs(biasCorrectionRaw) >= 0.05)
+    ? ` Surowa prognoza z tabeli wyniosła ${advHistoryEscapeHtml(rawPredicted)} cm; po korekcie o średni błąd ${advHistoryEscapeHtml(biasCorrectionText)} cm przyjęto ${advHistoryEscapeHtml(predicted)} cm.`
+    : (result.hasBiasCorrection === true
+      ? ' Punktową prognozę skorygowano o średni błąd z tabeli walidacyjnej.'
+      : '');
+
+  let errorParagraph = '';
+  if (result.hasErrorInterval === true) {
+    const lower = advHistoryFormatNumber(result.predictionIntervalLowerCm, 1);
+    const upper = advHistoryFormatNumber(result.predictionIntervalUpperCm, 1);
+    const halfWidth = advHistoryFormatNumber(result.errorBoundHalfWidthCm, 1);
+    const coverage = Math.round(Number(result.errorBoundsCoveragePercent) || 90);
+    const interpolationText = result.errorBoundsInterpolatedByAge
+      ? `Średni błąd i odchylenie standardowe zinterpolowano liniowo między punktami wieku ${result.errorBoundsAgeNodeLowerLabel} i ${result.errorBoundsAgeNodeUpperLabel}; wykorzystano ${result.errorBoundsSampleLabel}.`
+      : `Średni błąd i odchylenie standardowe odczytano dla wieku ${result.errorBoundsAgeNodeLowerLabel}; wykorzystano ${result.errorBoundsSampleLabel}.`;
+    errorParagraph = `<p class="adv-growth-result-details-copy"><span style="opacity:0.85;">Przybliżony ${coverage}% przedział błędu Bayley-Pinneau: ${advHistoryEscapeHtml(lower)}–${advHistoryEscapeHtml(upper)} cm (±${advHistoryEscapeHtml(halfWidth)} cm). ${advHistoryEscapeHtml(interpolationText)}</span></p>`;
+  } else if (result.errorModelUnavailableReason === 'below-min-age' && result.errorModelMinAgeLabel) {
+    errorParagraph = `<p class="adv-growth-result-details-copy"><span style="opacity:0.85;">Dla wieku metrykalnego poniżej ${advHistoryEscapeHtml(result.errorModelMinAgeLabel)} lat oryginalne tabele błędu Bayley-Pinneau nie podają danych, dlatego nie pokazano przybliżonego błędu prognozy.</span></p>`;
+  } else if ((result.errorModelUnavailableReason === 'above-max-age' || result.errorModelUnavailableReason === 'missing-error-data') && result.errorModelMaxAgeLabel) {
+    errorParagraph = `<p class="adv-growth-result-details-copy"><span style="opacity:0.85;">Przybliżonego błędu Bayley-Pinneau nie pokazano, ponieważ dostępne tabele błędu obejmują wiek metrykalny do ${advHistoryEscapeHtml(result.errorModelMaxAgeLabel)} lat.</span></p>`;
+  }
+
+  const warningParagraph = result.hasPortabilityWarning
+    ? `<p class="adv-growth-result-details-copy"><span style="opacity:0.9;"><strong>Uwaga:</strong> ${advHistoryEscapeHtml(result.portabilityWarningText)}</span></p>`
+    : '';
+
+  const reliabilityParagraph = advGrowthBuildMethodReliabilityDetailsParagraph(reliability);
+
+  const detailsHtml = `
+    <p class="adv-growth-result-details-copy"><span style="opacity:0.85;">Wyliczono na podstawie aktualnego wzrostu ${advHistoryEscapeHtml(currentHeight)} cm. ${advHistoryEscapeHtml(reasonText)} — ${advHistoryEscapeHtml(groupText)}. ${advHistoryEscapeHtml(nodeText)}; odpowiada to ${advHistoryEscapeHtml(percent)}% wzrostu ostatecznego.${pointEstimateCorrectionText} Do osiągnięcia pozostaje orientacyjnie ${advHistoryEscapeHtml(remaining)} cm.</span></p>
+    ${reliabilityParagraph}
+    ${errorParagraph}
+    ${warningParagraph}`;
+
+  return `
+    <div class="adv-growth-result-block adv-growth-result-block--bp">
+      <p><strong>Prognoza wzrostu ostatecznego (metoda Bayley-Pinneau):</strong> ${advHistoryEscapeHtml(predicted)} cm</p>
+      ${buildAdvancedGrowthDetailsToggleHtml('advGrowthBayleyDetails', detailsHtml)}
+    </div>`;
+}
+
+function advGrowthBuildBayleyPinneauSummaryText(result) {
+  if (!result || typeof result !== 'object') return null;
+  if (result.available !== true) return null;
+  const predictedAdultHeight = Number(result.predictedAdultHeightCm);
+  if (!isFinite(predictedAdultHeight)) return null;
+  let line = `Prognoza wzrostu ostatecznego (Bayley-Pinneau): ${advHistoryFormatNumber(predictedAdultHeight, 1)} cm`;
+  const halfWidth = Number(result.errorBoundHalfWidthCm);
+  if (result.hasErrorInterval === true && isFinite(halfWidth)) {
+    line += ` (±${advHistoryFormatNumber(halfWidth, 1)} cm)`;
+  }
+  return line;
+}
+
+function advGrowthBuildBayleyPinneauSummaryCardLine(result) {
+  if (!result || typeof result !== 'object') return '';
+  if (result.available !== true) return '';
+  const predictedAdultHeight = Number(result.predictedAdultHeightCm);
+  if (!isFinite(predictedAdultHeight)) return '';
+  let line = `Prognoza wzrostu ostatecznego (metoda Bayley-Pinneau): ${advHistoryFormatNumber(predictedAdultHeight, 1)} cm`;
+  const halfWidth = Number(result.errorBoundHalfWidthCm);
+  if (result.hasErrorInterval === true && isFinite(halfWidth)) {
+    line += ` (±${advHistoryFormatNumber(halfWidth, 1)} cm)`;
+  }
+  return line;
+}
+
+
+function rwtRoundHalfUp(value, digits = 1) {
+  if (typeof value !== 'number' || !isFinite(value)) return null;
+  const factor = Math.pow(10, digits);
+  return Math.round((value + Number.EPSILON) * factor) / factor;
+}
+
+function rwtNormalizeSexKey(sex) {
+  const raw = String(sex || '').trim().toUpperCase();
+  if (raw === 'M') return 'boys';
+  if (raw === 'F') return 'girls';
+  return null;
+}
+
+function rwtSexLabel(sexKey) {
+  if (sexKey === 'boys') return 'chłopców';
+  if (sexKey === 'girls') return 'dziewcząt';
+  return '';
+}
+
+function rwtFormatAgeLabel(totalMonths) {
+  if (!Number.isFinite(totalMonths)) return '';
+  const value = Math.max(0, Math.round(Number(totalMonths) || 0));
+  return `${Math.floor(value / 12)}-${value % 12}`;
+}
+
+function rwtJoinRequirementLabels(items) {
+  if (!Array.isArray(items) || !items.length) return '';
+  if (items.length === 1) return items[0];
+  if (items.length === 2) return `${items[0]} i ${items[1]}`;
+  return `${items.slice(0, -1).join(', ')} oraz ${items[items.length - 1]}`;
+}
+
+function rwtInterpolateAgeWeights(rows, targetAgeMonths) {
+  if (!Array.isArray(rows) || !rows.length || !Number.isFinite(targetAgeMonths)) {
+    return null;
+  }
+
+  const minRow = rows[0];
+  const maxRow = rows[rows.length - 1];
+  if (targetAgeMonths < minRow.ageMonthsTotal || targetAgeMonths > maxRow.ageMonthsTotal) {
+    return {
+      ok: false,
+      reason: 'out-of-range',
+      minRow,
+      maxRow
+    };
+  }
+
+  for (const row of rows) {
+    if (row.ageMonthsTotal === targetAgeMonths) {
+      return {
+        ok: true,
+        interpolated: false,
+        lowerRow: row,
+        upperRow: row,
+        fraction: 0,
+        coefficients: {
+          betaRL: Number(row.betaRL),
+          betaW: Number(row.betaW),
+          betaMPS: Number(row.betaMPS),
+          betaSA: Number(row.betaSA),
+          beta0: Number(row.beta0)
+        }
+      };
+    }
+  }
+
+  let lowerRow = minRow;
+  let upperRow = maxRow;
+  for (let i = 1; i < rows.length; i += 1) {
+    const candidate = rows[i];
+    if (candidate.ageMonthsTotal > targetAgeMonths) {
+      upperRow = candidate;
+      lowerRow = rows[i - 1];
+      break;
+    }
+  }
+
+  const span = upperRow.ageMonthsTotal - lowerRow.ageMonthsTotal;
+  if (!Number.isFinite(span) || span <= 0) {
+    return {
+      ok: false,
+      reason: 'invalid-span',
+      minRow,
+      maxRow
+    };
+  }
+
+  const fraction = (targetAgeMonths - lowerRow.ageMonthsTotal) / span;
+  const coefficients = {};
+  ['betaRL', 'betaW', 'betaMPS', 'betaSA', 'beta0'].forEach((key) => {
+    const lowerValue = Number(lowerRow[key]);
+    const upperValue = Number(upperRow[key]);
+    coefficients[key] = lowerValue + ((upperValue - lowerValue) * fraction);
+  });
+
+  return {
+    ok: true,
+    interpolated: true,
+    lowerRow,
+    upperRow,
+    fraction,
+    coefficients
+  };
+}
+
+function rwtInterpolateErrorBoundRows(rows, targetAgeMonths) {
+  if (!Array.isArray(rows) || !rows.length || !Number.isFinite(targetAgeMonths)) {
+    return null;
+  }
+
+  const sortedRows = rows.slice().sort((a, b) => Number(a?.ageMonthsTotal) - Number(b?.ageMonthsTotal));
+  const minRow = sortedRows[0];
+  const maxRow = sortedRows[sortedRows.length - 1];
+  if (targetAgeMonths < minRow.ageMonthsTotal || targetAgeMonths > maxRow.ageMonthsTotal) {
+    return {
+      ok: false,
+      reason: 'out-of-range',
+      minRow,
+      maxRow
+    };
+  }
+
+  for (const row of sortedRows) {
+    if (row.ageMonthsTotal === targetAgeMonths) {
+      return {
+        ok: true,
+        interpolated: false,
+        lowerRow: row,
+        upperRow: row,
+        fraction: 0,
+        halfWidthCm: Number(row.halfWidthCm)
+      };
+    }
+  }
+
+  let lowerRow = minRow;
+  let upperRow = maxRow;
+  for (let i = 1; i < sortedRows.length; i += 1) {
+    const candidate = sortedRows[i];
+    if (candidate.ageMonthsTotal > targetAgeMonths) {
+      upperRow = candidate;
+      lowerRow = sortedRows[i - 1];
+      break;
+    }
+  }
+
+  const span = upperRow.ageMonthsTotal - lowerRow.ageMonthsTotal;
+  const lowerValue = Number(lowerRow?.halfWidthCm);
+  const upperValue = Number(upperRow?.halfWidthCm);
+  if (!Number.isFinite(span) || span <= 0 || !Number.isFinite(lowerValue) || !Number.isFinite(upperValue)) {
+    return {
+      ok: false,
+      reason: 'invalid-span',
+      minRow,
+      maxRow
+    };
+  }
+
+  const fraction = (targetAgeMonths - lowerRow.ageMonthsTotal) / span;
+  return {
+    ok: true,
+    interpolated: true,
+    lowerRow,
+    upperRow,
+    fraction,
+    halfWidthCm: lowerValue + ((upperValue - lowerValue) * fraction)
+  };
+}
+
+function calculateRWTPrediction(params) {
+  const dataRoot = (typeof window !== 'undefined' && window.rwtData)
+    ? window.rwtData
+    : (typeof rwtData !== 'undefined' ? rwtData : null);
+
+  if (!dataRoot || !dataRoot.tables) {
+    return {
+      available: false,
+      reason: 'missing-dataset',
+      message: 'Nie udało się wczytać danych metody Roche-Wainer-Thissen (RWT).'
+    };
+  }
+
+  const sexKey = rwtNormalizeSexKey(params?.sex);
+  if (!sexKey) {
+    return {
+      available: false,
+      reason: 'missing-sex',
+      message: 'Nie udało się określić płci potrzebnej do obliczenia metody RWT.'
+    };
+  }
+
+  const chronologicalAgeYears = Number(params?.chronologicalAgeYears);
+  const chronologicalAgeMonths = Number.isFinite(Number(params?.chronologicalAgeMonths))
+    ? Math.round(Number(params.chronologicalAgeMonths))
+    : (Number.isFinite(chronologicalAgeYears) ? Math.round(chronologicalAgeYears * 12) : null);
+
+  if (!Number.isFinite(chronologicalAgeMonths) || chronologicalAgeMonths < 0) {
+    return {
+      available: false,
+      reason: 'missing-chronological-age',
+      message: 'Aby obliczyć prognozę metodą RWT, uzupełnij aktualny wiek metrykalny.'
+    };
+  }
+
+  const rows = Array.isArray(dataRoot.tables?.[sexKey]) ? dataRoot.tables[sexKey] : [];
+  if (!rows.length) {
+    return {
+      available: false,
+      reason: 'missing-table',
+      message: 'Dla tej płci nie znaleziono tabel RWT.'
+    };
+  }
+
+  const ageSelection = rwtInterpolateAgeWeights(rows, chronologicalAgeMonths);
+  if (!ageSelection || ageSelection.ok !== true) {
+    const minLabel = rwtFormatAgeLabel(rows?.[0]?.ageMonthsTotal);
+    const maxLabel = rwtFormatAgeLabel(rows?.[rows.length - 1]?.ageMonthsTotal);
+    return {
+      available: false,
+      reason: 'out-of-range',
+      sexKey,
+      sexLabel: rwtSexLabel(sexKey),
+      chronologicalAgeMonths,
+      chronologicalAgeYears: rwtRoundHalfUp(chronologicalAgeMonths / 12, 2),
+      range: {
+        minLabel,
+        maxLabel,
+        minMonths: rows?.[0]?.ageMonthsTotal ?? null,
+        maxMonths: rows?.[rows.length - 1]?.ageMonthsTotal ?? null
+      },
+      message: `Oryginalne tabele RWT zawierają dane dla ${rwtSexLabel(sexKey)} w zakresie wieku metrykalnego ${minLabel}–${maxLabel}. Bieżący wiek ${advHistoryFormatNumber(chronologicalAgeMonths / 12, 2)} lat wykracza poza ten zakres.`
+    };
+  }
+
+  const currentHeightCm = Number(params?.currentHeightCm);
+  const currentWeightKg = Number(params?.currentWeightKg);
+  const motherHeightCm = Number(params?.motherHeightCm);
+  const fatherHeightCm = Number(params?.fatherHeightCm);
+  const providedBoneAgeYears = Number(params?.boneAgeYears);
+  const fallbackUpperMonths = Number(dataRoot?.meta?.chronologicalAgeMayReplaceSkeletalAgeUntilMonths?.[sexKey]);
+  const canFallbackToChronologicalAge = Number.isFinite(fallbackUpperMonths) && chronologicalAgeMonths <= fallbackUpperMonths;
+
+  const missingItems = [];
+  if (!Number.isFinite(currentHeightCm) || currentHeightCm <= 0) {
+    missingItems.push('aktualny wzrost w karcie Dane użytkownika');
+  }
+  if (!Number.isFinite(currentWeightKg) || currentWeightKg <= 0) {
+    missingItems.push('aktualną masę ciała w karcie Dane użytkownika');
+  }
+  if (!Number.isFinite(motherHeightCm) || motherHeightCm <= 0 || !Number.isFinite(fatherHeightCm) || fatherHeightCm <= 0) {
+    missingItems.push('wzrost Mamy i Taty w karcie Zaawansowane obliczenia wzrostowe');
+  }
+  const missingBoneAge = (!Number.isFinite(providedBoneAgeYears) || providedBoneAgeYears <= 0);
+  if (missingBoneAge && !canFallbackToChronologicalAge) {
+    missingItems.push('aktualny wiek kostny');
+  }
+
+  if (missingItems.length) {
+    return {
+      available: false,
+      reason: 'missing-input',
+      sexKey,
+      sexLabel: rwtSexLabel(sexKey),
+      message: `Aby obliczyć prognozę wzrostu ostatecznego metodą RWT, uzupełnij ${rwtJoinRequirementLabels(missingItems)}.`
+    };
+  }
+
+  let usedSkeletalAgeYears = providedBoneAgeYears;
+  let usedChronologicalAgeAsSkeletalAge = false;
+  if (missingBoneAge && canFallbackToChronologicalAge) {
+    usedSkeletalAgeYears = chronologicalAgeMonths / 12;
+    usedChronologicalAgeAsSkeletalAge = true;
+  }
+
+  const standingToRecumbentAdjustmentCm = Number(dataRoot?.meta?.standingToRecumbentAdjustmentCm);
+  const recumbentEquivalentLengthCmRaw = currentHeightCm + (Number.isFinite(standingToRecumbentAdjustmentCm) ? standingToRecumbentAdjustmentCm : 1.25);
+  const midparentStatureCmRaw = (motherHeightCm + fatherHeightCm) / 2;
+  const coeffs = ageSelection.coefficients || {};
+  const predictedStatureAt18CmRaw = (Number(coeffs.betaRL) * recumbentEquivalentLengthCmRaw)
+    + (Number(coeffs.betaW) * currentWeightKg)
+    + (Number(coeffs.betaMPS) * midparentStatureCmRaw)
+    + (Number(coeffs.betaSA) * usedSkeletalAgeYears)
+    + Number(coeffs.beta0);
+
+  const predictedAdultHeightCm = rwtRoundHalfUp(predictedStatureAt18CmRaw, 1);
+  const remainingGrowthCm = rwtRoundHalfUp(predictedAdultHeightCm - currentHeightCm, 1);
+
+  const errorBoundRows = Array.isArray(dataRoot?.errorBounds90?.[sexKey]) ? dataRoot.errorBounds90[sexKey] : [];
+  const errorBoundSelection = rwtInterpolateErrorBoundRows(errorBoundRows, chronologicalAgeMonths);
+  const errorBoundHalfWidthRaw = (errorBoundSelection && errorBoundSelection.ok === true)
+    ? Number(errorBoundSelection.halfWidthCm)
+    : null;
+  const errorBoundHalfWidthCm = Number.isFinite(errorBoundHalfWidthRaw)
+    ? rwtRoundHalfUp(errorBoundHalfWidthRaw, 1)
+    : null;
+  const predictionIntervalLowerCm = Number.isFinite(errorBoundHalfWidthCm)
+    ? rwtRoundHalfUp(predictedAdultHeightCm - errorBoundHalfWidthCm, 1)
+    : null;
+  const predictionIntervalUpperCm = Number.isFinite(errorBoundHalfWidthCm)
+    ? rwtRoundHalfUp(predictedAdultHeightCm + errorBoundHalfWidthCm, 1)
+    : null;
+
+  return {
+    available: true,
+    method: 'RWT',
+    sexKey,
+    sexLabel: rwtSexLabel(sexKey),
+    chronologicalAgeMonths,
+    chronologicalAgeYears: rwtRoundHalfUp(chronologicalAgeMonths / 12, 2),
+    chronologicalAgeLabel: rwtFormatAgeLabel(chronologicalAgeMonths),
+    currentHeightCm: rwtRoundHalfUp(currentHeightCm, 1),
+    currentWeightKg: rwtRoundHalfUp(currentWeightKg, 1),
+    motherHeightCm: rwtRoundHalfUp(motherHeightCm, 1),
+    fatherHeightCm: rwtRoundHalfUp(fatherHeightCm, 1),
+    midparentStatureCm: rwtRoundHalfUp(midparentStatureCmRaw, 1),
+    recumbentEquivalentLengthCm: rwtRoundHalfUp(recumbentEquivalentLengthCmRaw, 2),
+    enteredBoneAgeYears: missingBoneAge ? null : rwtRoundHalfUp(providedBoneAgeYears, 2),
+    usedSkeletalAgeYears: rwtRoundHalfUp(usedSkeletalAgeYears, 2),
+    usedChronologicalAgeAsSkeletalAge,
+    interpolatedByChronologicalAge: !!ageSelection.interpolated,
+    ageNodeLowerLabel: ageSelection.lowerRow?.ageLabel || null,
+    ageNodeUpperLabel: ageSelection.upperRow?.ageLabel || null,
+    ageInterpolationFraction: ageSelection.interpolated ? Number(ageSelection.fraction) : 0,
+    coefficients: {
+      betaRL: rwtRoundHalfUp(Number(coeffs.betaRL), 4),
+      betaW: rwtRoundHalfUp(Number(coeffs.betaW), 4),
+      betaMPS: rwtRoundHalfUp(Number(coeffs.betaMPS), 4),
+      betaSA: rwtRoundHalfUp(Number(coeffs.betaSA), 4),
+      beta0: rwtRoundHalfUp(Number(coeffs.beta0), 4)
+    },
+    predictedAdultHeightCm,
+    predictedStatureAt18Cm: predictedAdultHeightCm,
+    predictedStatureAt18CmRaw,
+    remainingGrowthCm,
+    hasErrorInterval: Number.isFinite(errorBoundHalfWidthCm),
+    errorBoundsCoveragePercent: Number(dataRoot?.meta?.errorBounds?.coveragePercent) || 90,
+    errorBoundsApproximate: true,
+    errorBoundHalfWidthCm,
+    predictionIntervalLowerCm,
+    predictionIntervalUpperCm,
+    errorBoundsInterpolatedByAge: !!(errorBoundSelection && errorBoundSelection.ok === true && errorBoundSelection.interpolated),
+    errorBoundsAgeNodeLowerLabel: errorBoundSelection?.lowerRow?.ageLabel || null,
+    errorBoundsAgeNodeUpperLabel: errorBoundSelection?.upperRow?.ageLabel || null,
+    errorBoundsInterpolationFraction: (errorBoundSelection && errorBoundSelection.ok === true && errorBoundSelection.interpolated)
+      ? Number(errorBoundSelection.fraction)
+      : 0,
+    errorBoundsSourceLower: errorBoundSelection?.lowerRow?.source || null,
+    errorBoundsSourceUpper: errorBoundSelection?.upperRow?.source || null
+  };
+}
+
+function buildRWTResultHtml(result) {
+  if (!result || typeof result !== 'object') return '';
+  if (result.available !== true) {
+    const msg = String(result.message || '').trim();
+    return msg ? `<p><em>${advHistoryEscapeHtml(msg)}</em></p>` : '';
+  }
+
+  const reliability = advGrowthAssessRWTReliability(result, result.profileModel || null);
+  const predicted = advHistoryFormatNumber(result.predictedAdultHeightCm, 1);
+  const currentHeight = advHistoryFormatNumber(result.currentHeightCm, 1);
+  const recumbentEquivalent = advHistoryFormatNumber(result.recumbentEquivalentLengthCm, 2);
+  const weight = advHistoryFormatNumber(result.currentWeightKg, 1);
+  const midparent = advHistoryFormatNumber(result.midparentStatureCm, 1);
+  const usedSkeletalAge = advHistoryFormatNumber(result.usedSkeletalAgeYears, 2);
+  const remaining = advHistoryFormatNumber(result.remainingGrowthCm, 1);
+  const ageWeightsText = result.interpolatedByChronologicalAge
+    ? `Współczynniki wieku zinterpolowano liniowo między wierszami ${result.ageNodeLowerLabel} i ${result.ageNodeUpperLabel}.`
+    : `Użyto wiersza wieku ${result.ageNodeLowerLabel}.`;
+  const skeletalAgeText = result.usedChronologicalAgeAsSkeletalAge
+    ? `Nie wpisano wieku kostnego; zgodnie z oryginalnym opisem metody RWT użyto wieku metrykalnego ${advHistoryEscapeHtml(advHistoryFormatNumber(result.chronologicalAgeYears, 2))} lat jako przybliżenia wieku kostnego.`
+    : `Do równania wprowadzono wiek kostny ${advHistoryEscapeHtml(usedSkeletalAge)} lat.`;
+
+  const intervalDetailsHtml = result.hasErrorInterval
+    ? (() => {
+        const lower = advHistoryFormatNumber(result.predictionIntervalLowerCm, 1);
+        const upper = advHistoryFormatNumber(result.predictionIntervalUpperCm, 1);
+        const halfWidth = advHistoryFormatNumber(result.errorBoundHalfWidthCm, 1);
+        const coverage = Math.round(Number(result.errorBoundsCoveragePercent) || 90);
+        const intervalAgeText = result.errorBoundsInterpolatedByAge
+          ? `Połowę szerokości przedziału błędu zinterpolowano liniowo między punktami wieku ${result.errorBoundsAgeNodeLowerLabel} i ${result.errorBoundsAgeNodeUpperLabel}.`
+          : `Połowę szerokości przedziału błędu odczytano dla wieku ${result.errorBoundsAgeNodeLowerLabel}.`;
+        return `<p class="adv-growth-result-details-copy"><span style="opacity:0.85;">Przybliżony ${coverage}% przedział błędu RWT: ${advHistoryEscapeHtml(lower)}–${advHistoryEscapeHtml(upper)} cm (±${advHistoryEscapeHtml(halfWidth)} cm). ${advHistoryEscapeHtml(intervalAgeText)}</span></p>`;
+      })()
+    : '';
+
+  const reliabilityParagraph = advGrowthBuildMethodReliabilityDetailsParagraph(reliability);
+
+  const detailsHtml = `
+    <p class="adv-growth-result-details-copy"><span style="opacity:0.85;">Wyliczono z równania Roche-Wainer-Thissen dla ${result.sexLabel}. Z aktualnego wzrostu stojącego ${advHistoryEscapeHtml(currentHeight)} cm utworzono przybliżoną długość leżącą ${advHistoryEscapeHtml(recumbentEquivalent)} cm (+1,25 cm), użyto masy ${advHistoryEscapeHtml(weight)} kg oraz średniego wzrostu rodziców ${advHistoryEscapeHtml(midparent)} cm. ${advHistoryEscapeHtml(skeletalAgeText)} ${advHistoryEscapeHtml(ageWeightsText)} Wynik odpowiada oryginalnej prognozie RWT dla 18. roku życia; do osiągnięcia pozostaje orientacyjnie ${advHistoryEscapeHtml(remaining)} cm.</span></p>
+    ${reliabilityParagraph}
+    ${intervalDetailsHtml}`;
+
+  return `
+    <div class="adv-growth-result-block adv-growth-result-block--rwt">
+      <p><strong>Prognoza wzrostu ostatecznego (metoda RWT):</strong> ${advHistoryEscapeHtml(predicted)} cm</p>
+      ${buildAdvancedGrowthDetailsToggleHtml('advGrowthRwtDetails', detailsHtml)}
+    </div>`;
+}
+
+function advGrowthBuildRWTSummaryText(result) {
+  if (!result || typeof result !== 'object') return null;
+  if (result.available !== true) return null;
+  const predictedAdultHeight = Number(result.predictedAdultHeightCm);
+  if (!isFinite(predictedAdultHeight)) return null;
+  let line = `Prognoza wzrostu ostatecznego (RWT): ${advHistoryFormatNumber(predictedAdultHeight, 1)} cm`;
+  const halfWidth = Number(result.errorBoundHalfWidthCm);
+  if (result.hasErrorInterval === true && isFinite(halfWidth)) {
+    line += ` (±${advHistoryFormatNumber(halfWidth, 1)} cm)`;
+  }
+  return line;
+}
+
+function advGrowthBuildRWTSummaryCardLine(result) {
+  if (!result || typeof result !== 'object') return '';
+  if (result.available !== true) return '';
+  const predictedAdultHeight = Number(result.predictedAdultHeightCm);
+  if (!isFinite(predictedAdultHeight)) return '';
+  let line = `Prognoza wzrostu ostatecznego (metoda RWT): ${advHistoryFormatNumber(predictedAdultHeight, 1)} cm`;
+  const halfWidth = Number(result.errorBoundHalfWidthCm);
+  if (result.hasErrorInterval === true && isFinite(halfWidth)) {
+    line += ` (±${advHistoryFormatNumber(halfWidth, 1)} cm)`;
+  }
+  return line;
+}
+
+function advGrowthBuildRWTErrorIntervalSummaryCardLine(result) {
+  return '';
+}
+
 /**
  * Główna funkcja obliczająca potencjał wzrostowy, tempo wzrastania
  * oraz przygotowująca dane historycznych pomiarów. Dane te są
@@ -17706,6 +20357,7 @@ function buildVelocityTableHtml(periods) {
  */
 function calculateGrowthAdvanced() {
   const resultsEl = document.getElementById('advResults');
+  try { updateAdvancedGrowthSexSpecificFields(); } catch (_) {}
   // Aktualizuj maksymalny dopuszczalny wiek w polach pomiarowych przy każdym przeliczeniu
   updateAdvAgeMax();
   // Pobierz wiek użytkownika i skonwertuj do lat/miesięcy
@@ -17740,6 +20392,7 @@ function calculateGrowthAdvanced() {
   }
   const sexEl = document.getElementById('sex');
   const sex = sexEl ? sexEl.value : 'M';
+  const sexSpecificAdvancedFieldsEnabled = sex === 'M';
   const heightVal = parseFloat(document.getElementById('height')?.value);
   const weightVal = parseFloat(document.getElementById('weight')?.value);
   // Odczytaj imię podane w formularzu zaawansowanych obliczeń wzrostowych (może być puste)
@@ -17747,6 +20400,9 @@ function calculateGrowthAdvanced() {
   // Wysokości rodziców
   const motherH = parseFloat(document.getElementById('advMotherHeight')?.value);
   const fatherH = parseFloat(document.getElementById('advFatherHeight')?.value);
+  const testicularVolumeVal = sexSpecificAdvancedFieldsEnabled ? (document.getElementById('advTesticularVolume')?.value || '') : '';
+  const familyDelayedPubertyVal = sexSpecificAdvancedFieldsEnabled ? (document.getElementById('advFamilyDelayedPuberty')?.value || '') : '';
+  const growthExclusionVal = sexSpecificAdvancedFieldsEnabled ? (document.getElementById('advGrowthExclusion')?.value || '') : '';
   let targetHeight = null;
   if (!isNaN(motherH) && !isNaN(fatherH)) {
     if (sex === 'F') {
@@ -17760,6 +20416,58 @@ function calculateGrowthAdvanced() {
   // Wiek kostny
   const boneAgeVal = parseFloat(document.getElementById('advBoneAge')?.value);
   const boneAgeMonths = !isNaN(boneAgeVal) ? Math.round(boneAgeVal * 12) : null;
+  const rwtDataComplete = !isNaN(heightVal) && !isNaN(weightVal) && !isNaN(motherH) && !isNaN(fatherH);
+  const predictionProfile = (typeof advGrowthBuildKowdProfileModel === 'function')
+    ? advGrowthBuildKowdProfileModel({
+        sex: sex,
+        chronologicalAgeYears: ageYears,
+        chronologicalAgeMonths: ageMonths,
+        boneAgeYears: !isNaN(boneAgeVal) ? boneAgeVal : null,
+        currentHeightCm: !isNaN(heightVal) ? heightVal : null,
+        targetHeightCm: targetHeight,
+        testicularVolume: testicularVolumeVal,
+        familyDelayedPuberty: familyDelayedPubertyVal,
+        growthExclusion: growthExclusionVal,
+        rwtDataComplete: rwtDataComplete
+      })
+    : null;
+  const bayleyPinneauResult = calculateBayleyPinneauPrediction({
+    sex: sex,
+    chronologicalAgeYears: ageYears,
+    chronologicalAgeMonths: ageMonths,
+    boneAgeYears: !isNaN(boneAgeVal) ? boneAgeVal : null,
+    currentHeightCm: !isNaN(heightVal) ? heightVal : null
+  });
+  const rwtResult = calculateRWTPrediction({
+    sex: sex,
+    chronologicalAgeYears: ageYears,
+    chronologicalAgeMonths: ageMonths,
+    boneAgeYears: !isNaN(boneAgeVal) ? boneAgeVal : null,
+    currentHeightCm: !isNaN(heightVal) ? heightVal : null,
+    currentWeightKg: !isNaN(weightVal) ? weightVal : null,
+    motherHeightCm: !isNaN(motherH) ? motherH : null,
+    fatherHeightCm: !isNaN(fatherH) ? fatherH : null
+  });
+  const reinehrResult = (typeof advGrowthCalculateReinehrCdgpPrediction === 'function')
+    ? advGrowthCalculateReinehrCdgpPrediction({
+        sex: sex,
+        chronologicalAgeYears: ageYears,
+        chronologicalAgeMonths: ageMonths,
+        boneAgeYears: !isNaN(boneAgeVal) ? boneAgeVal : null,
+        currentHeightCm: !isNaN(heightVal) ? heightVal : null,
+        boneAgeDelayYears: (!isNaN(boneAgeVal) ? (ageYears - boneAgeVal) : null),
+        profileModel: predictionProfile
+      })
+    : null;
+  try { if (bayleyPinneauResult && typeof bayleyPinneauResult === 'object') bayleyPinneauResult.profileModel = predictionProfile || null; } catch (_) {}
+  try { if (rwtResult && typeof rwtResult === 'object') rwtResult.profileModel = predictionProfile || null; } catch (_) {}
+  try { if (reinehrResult && typeof reinehrResult === 'object') reinehrResult.profileModel = predictionProfile || null; } catch (_) {}
+  const predictionReliability = advGrowthBuildPredictionReliabilityModel({
+    bayleyPinneau: bayleyPinneauResult,
+    rwt: rwtResult,
+    reinehr: reinehrResult,
+    profileModel: predictionProfile
+  });
   // Odczytaj wprowadzone pomiary z formularza historii wzrostu.
   const measurements = collectAdvancedMeasurements(false);
     // === [ZAMIANA] Obliczanie tempa wzrastania zgodnie z wymaganiami (aktualizacja) ===
@@ -17871,6 +20579,14 @@ if (heightMeas.length >= 1 && !isNaN(heightVal)) {
       currentWeight: weightVal,
       sex: sex,
       name: advName || '',
+      bayleyPinneau: bayleyPinneauResult,
+      rwt: rwtResult,
+      reinehr: reinehrResult,
+      predictionProfile: predictionProfile,
+      predictionReliability: predictionReliability,
+      testicularVolume: testicularVolumeVal || '',
+      familyDelayedPuberty: familyDelayedPubertyVal || '',
+      growthExclusion: growthExclusionVal || '',
       isLosingGrowth: isLosingGrowth,
       // Strzałka/komentarz dla bieżącego pomiaru (renderowane na siatce publikacyjnej Palczewskiej)
       currentArrowEnabled: !!(document.getElementById('advCurrentArrowEnable') && document.getElementById('advCurrentArrowEnable').checked),
@@ -17907,6 +20623,30 @@ if (heightMeas.length >= 1 && !isNaN(heightVal)) {
         } else {
           html += `<p><strong>MPH (mid-parental height):</strong> ${th} cm</p>`;
         }
+      }
+
+      if (predictionProfile && typeof advGrowthBuildKowdProfileHtml === 'function') {
+        html += advGrowthBuildKowdProfileHtml(predictionProfile);
+      }
+
+      const predictionBlocks = [];
+      if (predictionProfile && predictionProfile.preferredModelKey === 'rwt') {
+        predictionBlocks.push(buildRWTResultHtml(rwtResult));
+        if (typeof advGrowthBuildReinehrCdgpResultHtml === 'function') {
+          predictionBlocks.push(advGrowthBuildReinehrCdgpResultHtml(reinehrResult));
+        }
+        predictionBlocks.push(buildBayleyPinneauResultHtml(bayleyPinneauResult));
+      } else {
+        predictionBlocks.push(buildBayleyPinneauResultHtml(bayleyPinneauResult));
+        predictionBlocks.push(buildRWTResultHtml(rwtResult));
+        if (typeof advGrowthBuildReinehrCdgpResultHtml === 'function') {
+          predictionBlocks.push(advGrowthBuildReinehrCdgpResultHtml(reinehrResult));
+        }
+      }
+      html += predictionBlocks.filter(Boolean).join('');
+
+      if (predictionReliability && Array.isArray(predictionReliability.entries) && predictionReliability.entries.length) {
+        html += advGrowthBuildPredictionReliabilityHtml(predictionReliability);
       }
 
       // Dodaj różnicę hSDS - mpSDS w trybie profesjonalnym.
@@ -17974,6 +20714,7 @@ if (heightMeas.length >= 1 && !isNaN(heightVal)) {
       }
       // Wstaw wygenerowane wyniki do kontenera
       resultsEl.innerHTML = html;
+      initAdvancedGrowthResultDetailsToggles(resultsEl);
 
       /*
        * Po wstawieniu wyników oceń, czy należy wyróżnić cały blok wyników.
@@ -22322,6 +25063,8 @@ function sanitizeIntakeRowsUI(rowsUI) {
         window.applyThemeCustom();
       }
     } catch (_) {}
+
+    try { dispatchResultsModeSyncEvent(pro); } catch (_) {}
   }
 
   function applyDataSourceRestoreState(dataSourceValue) {
@@ -22666,7 +25409,10 @@ function rehydrateIntakeFromState(savedPal, options){
       hasPosNumber('height') ||
       hasPosNumber('advBoneAge') ||
       hasPosNumber('advMotherHeight') ||
-      hasPosNumber('advFatherHeight');
+      hasPosNumber('advFatherHeight') ||
+      hasText('advTesticularVolume') ||
+      hasText('advFamilyDelayedPuberty') ||
+      hasText('advGrowthExclusion');
 
     // 2) Dodatkowo: sprawdź czy w formularzu klirensu wpisano cokolwiek
     if (!started) {
@@ -22877,6 +25623,9 @@ function rehydrateIntakeFromState(savedPal, options){
       boneAgeYears: num(val('advBoneAge')),
       motherHeight: num(val('advMotherHeight')),
       fatherHeight: num(val('advFatherHeight')),
+      testicularVolume: (val('advTesticularVolume') || null),
+      familyDelayedPuberty: (val('advFamilyDelayedPuberty') || null),
+      growthExclusion: (val('advGrowthExclusion') || null),
       // state snapshot if available
       data: (window.advancedGrowthData ? JSON.parse(JSON.stringify(window.advancedGrowthData)) : null)
     };
@@ -22946,6 +25695,17 @@ function rehydrateIntakeFromState(savedPal, options){
           population: val('hrPopulation') || null,
           systolic: num(val('bpSystolic')),
           diastolic: num(val('bpDiastolic'))
+        };
+        const adultVitals = {
+          guideline: (function(){
+            const el = q('adultBpGuidelineToggle');
+            return el ? (el.checked ? 'ESC' : 'AHA') : null;
+          })(),
+          heartRate: num(val('adultHeartRate')),
+          systolic: num(val('adultBpSystolic')),
+          diastolic: num(val('adultBpDiastolic')),
+          athlete: (function(){ const el = q('adultHrAthlete'); return el ? !!el.checked : null; })(),
+          betaBlocker: (function(){ const el = q('adultHrBetaBlocker'); return el ? !!el.checked : null; })()
         };
         const respiratory = {
           rate: num(val('respiratoryRateInput')),
@@ -23019,6 +25779,7 @@ function rehydrateIntakeFromState(savedPal, options){
           plan,
           clcr,
           bp,
+          adultVitals,
           respiratory,
           circumference,
           doctor,
@@ -23159,8 +25920,9 @@ function rehydrateIntakeFromState(savedPal, options){
     // Reset visible fields
     [
       'name','advName','basicGrowthName','age','ageMonths','weight','height','waistCm','hipCm',
-      'advBoneAge','advMotherHeight','advFatherHeight',
+      'advBoneAge','advMotherHeight','advFatherHeight','advTesticularVolume','advFamilyDelayedPuberty','advGrowthExclusion',
       'heartRate','hrTemperature','bpSystolic','bpDiastolic',
+      'adultHeartRate','adultBpSystolic','adultBpDiastolic',
       'respiratoryRateInput','respTemperature',
       'headCircumference','chestCircumference','headCircumDS'
     ].forEach(id=>{ const el=q(id); if(el){
@@ -23174,6 +25936,7 @@ function rehydrateIntakeFromState(savedPal, options){
           if (typeof q('sex').selectedIndex === 'number') q('sex').selectedIndex = 0;
         }
         if(q('intakePal')) q('intakePal').value = '1.4';
+        ['advTesticularVolume','advFamilyDelayedPuberty','advGrowthExclusion'].forEach(id => { const el=q(id); if (el) el.value = ''; });
         if(q('palFactor')) q('palFactor').value = '1.4';
         if (q('hrPopulation')) q('hrPopulation').value = 'healthy';
         if (q('respState')) q('respState').value = 'awake';
@@ -23186,6 +25949,11 @@ function rehydrateIntakeFromState(savedPal, options){
             }
           } catch (_) {}
         }
+        if (q('adultBpGuidelineToggle')) q('adultBpGuidelineToggle').checked = true;
+        if (q('adultHrAthlete')) q('adultHrAthlete').checked = false;
+        if (q('adultHrAthleteNo')) q('adultHrAthleteNo').checked = true;
+        if (q('adultHrBetaBlocker')) q('adultHrBetaBlocker').checked = false;
+        if (q('adultHrBetaBlockerNo')) q('adultHrBetaBlockerNo').checked = true;
 
     // Wyczyść globalne wyniki modułów pomocniczych, aby karta „Podsumowanie wyników”
     // nie utrzymywała starych centyli RR / obwodów po pełnym resecie.
@@ -23298,6 +26066,7 @@ function rehydrateIntakeFromState(savedPal, options){
           const fieldIds = [
             'age','ageMonths','height','weight','sex',
             'heartRate','hrTemperature','hrPopulation','bpSystolic','bpDiastolic',
+            'adultHeartRate','adultBpSystolic','adultBpDiastolic','adultBpGuidelineToggle','adultHrAthlete','adultHrAthleteNo','adultHrBetaBlocker','adultHrBetaBlockerNo',
             'respiratoryRateInput','respTemperature','respState','respPopulation',
             'headCircumference','chestCircumference','headCircumDS'
           ];
@@ -23497,6 +26266,21 @@ function rehydrateIntakeFromState(savedPal, options){
         el.value = data.advanced.fatherHeight;
         try { el.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
       }
+      if(q('advTesticularVolume') && data.advanced.testicularVolume!=null){
+        const el = q('advTesticularVolume');
+        el.value = data.advanced.testicularVolume;
+        try { el.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+      }
+      if(q('advFamilyDelayedPuberty') && data.advanced.familyDelayedPuberty!=null){
+        const el = q('advFamilyDelayedPuberty');
+        el.value = data.advanced.familyDelayedPuberty;
+        try { el.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+      }
+      if(q('advGrowthExclusion') && data.advanced.growthExclusion!=null){
+        const el = q('advGrowthExclusion');
+        el.value = data.advanced.growthExclusion;
+        try { el.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+      }
       if(data.advanced.data){
         // Odtwórz stan zaawansowanych obliczeń wzrostowych.
         // Uwaga: używamy kopii obiektu, aby nie mutować oryginalnych danych wczytanych z pliku –
@@ -23654,6 +26438,7 @@ function rehydrateIntakeFromState(savedPal, options){
       if (a.age != null && a.age > 18) {
         // Wyczyść wiek, miesiące wieku, wagę oraz wiek kostny
         ['age', 'ageMonths', 'weight', 'advBoneAge'].forEach(id => { const el=q(id); if (el) el.value = ''; });
+        ['advTesticularVolume','advFamilyDelayedPuberty','advGrowthExclusion'].forEach(id => { const el=q(id); if (el) el.value = ''; });
         // Przywróć zapisany wzrost
         if (q('height')) {
           q('height').value = (a.height != null ? a.height : '');
@@ -23661,6 +26446,7 @@ function rehydrateIntakeFromState(savedPal, options){
       } else {
         // W pozostałych przypadkach wyczyść również wzrost
         ['age', 'ageMonths', 'weight', 'height', 'advBoneAge'].forEach(id => { const el=q(id); if (el) el.value = ''; });
+        ['advTesticularVolume','advFamilyDelayedPuberty','advGrowthExclusion'].forEach(id => { const el=q(id); if (el) el.value = ''; });
       }
     }
 
@@ -23883,6 +26669,14 @@ function rehydrateIntakeFromState(savedPal, options){
         'hrPopulation',
         'bpSystolic',
         'bpDiastolic',
+        'adultHeartRate',
+        'adultBpSystolic',
+        'adultBpDiastolic',
+        'adultBpGuidelineToggle',
+        'adultHrAthlete',
+        'adultHrAthleteNo',
+        'adultHrBetaBlocker',
+        'adultHrBetaBlockerNo',
         'respiratoryRateInput',
         'respTemperature',
         'respState',
@@ -24090,7 +26884,7 @@ function rehydrateIntakeFromState(savedPal, options){
         }
       }
     };
-    ['name','advName','fullName','age','ageMonths','weight','height','advBoneAge','advMotherHeight','advFatherHeight']
+    ['name','advName','fullName','age','ageMonths','weight','height','advBoneAge','advMotherHeight','advFatherHeight','advTesticularVolume','advFamilyDelayedPuberty','advGrowthExclusion']
     .forEach(id=>{ const el=q(id); if(el){ el.addEventListener('input', disableLoad); el.addEventListener('change', disableLoad);} });
 
     // Obsługa przycisków w podsumowaniu poprzednich pomiarów: rozwijanie i ukrywanie karty
@@ -24355,6 +27149,9 @@ function rehydrateIntakeFromState(savedPal, options){
         setFieldValueSilently(document.getElementById('advBoneAge'), data.advanced.boneAgeYears != null ? data.advanced.boneAgeYears : '');
         setFieldValueSilently(document.getElementById('advMotherHeight'), data.advanced.motherHeight != null ? data.advanced.motherHeight : '');
         setFieldValueSilently(document.getElementById('advFatherHeight'), data.advanced.fatherHeight != null ? data.advanced.fatherHeight : '');
+        setFieldValueSilently(document.getElementById('advTesticularVolume'), data.advanced.testicularVolume != null ? data.advanced.testicularVolume : '');
+        setFieldValueSilently(document.getElementById('advFamilyDelayedPuberty'), data.advanced.familyDelayedPuberty != null ? data.advanced.familyDelayedPuberty : '');
+        setFieldValueSilently(document.getElementById('advGrowthExclusion'), data.advanced.growthExclusion != null ? data.advanced.growthExclusion : '');
         if (data.advanced.data) {
           try { window.advancedGrowthData = JSON.parse(JSON.stringify(data.advanced.data)); }
           catch (_) { window.advancedGrowthData = data.advanced.data; }
@@ -24471,6 +27268,30 @@ function rehydrateIntakeFromState(savedPal, options){
         setFieldValueSilently(document.getElementById('bpSystolic'), data.bp.systolic != null ? data.bp.systolic : '');
         setFieldValueSilently(document.getElementById('bpDiastolic'), data.bp.diastolic != null ? data.bp.diastolic : '');
       }
+      const adultVitalsData = data.adultVitals || (function() {
+        const ageYearsRaw = data && data.user ? Number(data.user.age) : NaN;
+        const ageMonthsRaw = data && data.user ? Number(data.user.ageMonths) : NaN;
+        const isAdultSnapshot = Number.isFinite(ageYearsRaw) && (ageYearsRaw + ((Number.isFinite(ageMonthsRaw) ? ageMonthsRaw : 0) / 12)) >= 18;
+        if (!isAdultSnapshot || !data.bp) return null;
+        return {
+          guideline: 'ESC',
+          heartRate: data.bp.heartRate != null ? data.bp.heartRate : null,
+          systolic: data.bp.systolic != null ? data.bp.systolic : null,
+          diastolic: data.bp.diastolic != null ? data.bp.diastolic : null,
+          athlete: false,
+          betaBlocker: false
+        };
+      })();
+      if (adultVitalsData) {
+        setCheckboxValueSilently(document.getElementById('adultBpGuidelineToggle'), String(adultVitalsData.guideline || '').toUpperCase() !== 'AHA');
+        setFieldValueSilently(document.getElementById('adultHeartRate'), adultVitalsData.heartRate != null ? adultVitalsData.heartRate : '');
+        setFieldValueSilently(document.getElementById('adultBpSystolic'), adultVitalsData.systolic != null ? adultVitalsData.systolic : '');
+        setFieldValueSilently(document.getElementById('adultBpDiastolic'), adultVitalsData.diastolic != null ? adultVitalsData.diastolic : '');
+        setCheckboxValueSilently(document.getElementById('adultHrAthlete'), !!adultVitalsData.athlete);
+        setCheckboxValueSilently(document.getElementById('adultHrAthleteNo'), !adultVitalsData.athlete);
+        setCheckboxValueSilently(document.getElementById('adultHrBetaBlocker'), !!adultVitalsData.betaBlocker);
+        setCheckboxValueSilently(document.getElementById('adultHrBetaBlockerNo'), !adultVitalsData.betaBlocker);
+      }
       if (data.respiratory) {
         setFieldValueSilently(document.getElementById('respiratoryRateInput'), data.respiratory.rate != null ? data.respiratory.rate : '');
         setFieldValueSilently(document.getElementById('respTemperature'), data.respiratory.temperature != null ? data.respiratory.temperature : '');
@@ -24543,6 +27364,9 @@ function rehydrateIntakeFromState(savedPal, options){
           if (data.advanced) {
             if (data.advanced.motherHeight != null) shared.advMotherHeight = data.advanced.motherHeight;
             if (data.advanced.fatherHeight != null) shared.advFatherHeight = data.advanced.fatherHeight;
+            if (data.advanced.testicularVolume != null) shared.advTesticularVolume = data.advanced.testicularVolume;
+            if (data.advanced.familyDelayedPuberty != null) shared.advFamilyDelayedPuberty = data.advanced.familyDelayedPuberty;
+            if (data.advanced.growthExclusion != null) shared.advGrowthExclusion = data.advanced.growthExclusion;
 
             const persistRoot = (shared._vildaPersist && typeof shared._vildaPersist === 'object')
               ? shared._vildaPersist
@@ -24629,6 +27453,14 @@ function rehydrateIntakeFromState(savedPal, options){
         'hrPopulation',
         'bpSystolic',
         'bpDiastolic',
+        'adultHeartRate',
+        'adultBpSystolic',
+        'adultBpDiastolic',
+        'adultBpGuidelineToggle',
+        'adultHrAthlete',
+        'adultHrAthleteNo',
+        'adultHrBetaBlocker',
+        'adultHrBetaBlockerNo',
         'respiratoryRateInput',
         'respTemperature',
         'respState',
@@ -25885,7 +28717,7 @@ function rehydrateIntakeFromState(savedPal, options){
   // aby zachować kompatybilność wsteczną.
   const BASIC_ROOT_KEYS = new Set([
     'name','fullName','age','ageMonths','weight','height','sex',
-    'advMotherHeight','advFatherHeight','advBoneAge'
+    'advMotherHeight','advFatherHeight','advBoneAge','advTesticularVolume','advFamilyDelayedPuberty','advGrowthExclusion'
   ]);
   const TRACKED_DATASET_PROPS = ['manual', 'userChoice'];
   const PERSIST_NAME_LOCK_IDS = ['name', 'advName', 'basicGrowthName', 'fullName'];
@@ -26527,7 +29359,7 @@ if (hasIntakeModule) {
       if (!target || typeof target.closest !== 'function') return false;
       if (target.closest('#advMeasurements')) return true;
       const id = target.id || '';
-      return id === 'advMotherHeight' || id === 'advFatherHeight' || id === 'advBoneAge';
+      return id === 'advMotherHeight' || id === 'advFatherHeight' || id === 'advBoneAge' || id === 'advTesticularVolume' || id === 'advFamilyDelayedPuberty' || id === 'advGrowthExclusion';
     } catch (_) {
       return false;
     }
@@ -26950,6 +29782,30 @@ if (restoredIntakeRowsUI.length && typeof window.intakeAddRow === 'function') {
         if (val != null && val !== '') {
           fatherEl.value = String(val);
           try { fatherEl.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
+        }
+      }
+      const testicularEl = document.getElementById('advTesticularVolume');
+      if (testicularEl && (testicularEl.value === '' || testicularEl.value == null)) {
+        const val = root.advTesticularVolume;
+        if (val != null && val !== '') {
+          testicularEl.value = String(val);
+          try { testicularEl.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+        }
+      }
+      const familyDelayedEl = document.getElementById('advFamilyDelayedPuberty');
+      if (familyDelayedEl && (familyDelayedEl.value === '' || familyDelayedEl.value == null)) {
+        const val = root.advFamilyDelayedPuberty;
+        if (val != null && val !== '') {
+          familyDelayedEl.value = String(val);
+          try { familyDelayedEl.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+        }
+      }
+      const exclusionEl = document.getElementById('advGrowthExclusion');
+      if (exclusionEl && (exclusionEl.value === '' || exclusionEl.value == null)) {
+        const val = root.advGrowthExclusion;
+        if (val != null && val !== '') {
+          exclusionEl.value = String(val);
+          try { exclusionEl.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
         }
       }
 

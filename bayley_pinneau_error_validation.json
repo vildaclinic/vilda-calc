@@ -1,0 +1,38 @@
+{
+  "boysValidating_12_0": {
+    "ageLabel": "12-0",
+    "meanErrorInches": 0.16,
+    "sdErrorInches": 1.09,
+    "meanErrorCm": 0.4064,
+    "sdErrorCm": 2.7686,
+    "halfWidth90Cm": 4.554347
+  },
+  "girlsValidating_12_0": {
+    "ageLabel": "12-0",
+    "meanErrorInches": -0.13,
+    "sdErrorInches": 1.06,
+    "meanErrorCm": -0.3302,
+    "sdErrorCm": 2.6924,
+    "halfWidth90Cm": 4.428998
+  },
+  "boysInterpolated_8_6_fromValidatingSample": {
+    "lowerAgeLabel": "8-0",
+    "upperAgeLabel": "9-0",
+    "interpolationRatio": 0.5,
+    "meanErrorInches": -0.055,
+    "sdErrorInches": 1.37,
+    "meanErrorCm": -0.1397,
+    "sdErrorCm": 3.4798,
+    "halfWidth90Cm": 5.724271
+  },
+  "girlsInterpolated_8_6_fromValidatingSample": {
+    "lowerAgeLabel": "8-0",
+    "upperAgeLabel": "9-0",
+    "interpolationRatio": 0.5,
+    "meanErrorInches": -0.755,
+    "sdErrorInches": 1.595,
+    "meanErrorCm": -1.9177,
+    "sdErrorCm": 4.0513,
+    "halfWidth90Cm": 6.664389
+  }
+}

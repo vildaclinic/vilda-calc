@@ -18,7 +18,7 @@
   <meta name="twitter:title" content="Cukrzyca typu 1 — praktyczny przewodnik">
   <meta name="twitter:description" content="Praktyczny przewodnik dla osób z cukrzycą i rodziców dzieci z cukrzycą. Proste moduły, które pomagają liczyć posiłki, dobrać insulinę i lepiej radzić sobie na co dzień.">
   <meta name="twitter:image" content="https://wagaiwzrost.pl/posters/przelicznik_doposilkowy_poster.png">
-  <link href="ios26-v2.css?v=9" rel="stylesheet">
+  <link href="ios26-v2.css?v=10" rel="stylesheet">
   <link href="style.css?v=5" rel="stylesheet">
   <link href="sidebar.css" rel="stylesheet">
 
@@ -2171,6 +2171,21 @@
       text-align: center;
       font-size: 0.84rem;
       line-height: 1.35;
+    }
+
+    @media (max-width: 640px) {
+      .diab-macro-row__fields {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.75rem 0.65rem;
+      }
+
+      .diab-macro-row__field--name {
+        width: 100%;
+      }
+
+      .diab-macro-row__field--metric {
+        font-size: 0.82rem;
+      }
     }
 
     .diab-macro-row__result {

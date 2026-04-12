@@ -944,6 +944,10 @@ body.has-mobile-bottom-dock #scrollTopBtn {
   transition: bottom 220ms ease, background 0.2s ease, transform 220ms ease, opacity 220ms ease;
 }
 
+body.has-mobile-bottom-dock.mobile-bottom-dock-transitioning #scrollTopBtn {
+  transition: background 0.2s ease, transform 220ms ease, opacity 220ms ease !important;
+}
+
 body.mobile-nav-ui-locked.has-mobile-bottom-dock-visible #scrollTopBtn {
   bottom: var(--mobile-dock-pinned-scroll-top-bottom, var(--scroll-top-btn-bottom, 1rem)) !important;
 }
@@ -971,15 +975,12 @@ body.mobile-nav-ui-locked.has-mobile-bottom-dock-visible #scrollTopBtn {
   }
 }
 
-@media (min-width: 992px) {
-  body.has-mobile-bottom-dock {
-    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
-  }
-
-  body.has-mobile-bottom-dock #scrollTopBtn {
-    bottom: 1rem !important;
-  }
-}
+/*
+ * Nie resetujemy położenia strzałki ani dolnego paddingu tylko dlatego,
+ * że viewport ma szerokość desktopową. Dock jest aktywowany również na
+ * części desktopów i na urządzeniach coarse-pointer, więc takie globalne
+ * nadpisanie rozjeżdża offset liczony z faktycznej geometrii docka.
+ */
 
 @media (prefers-reduced-motion: reduce) {
   #mobileBottomDock,
@@ -989,26 +990,54 @@ body.mobile-nav-ui-locked.has-mobile-bottom-dock-visible #scrollTopBtn {
 }
 
 /* =====================================================================
- * iPhone Home Screen PWA: dock pinned to a fixed 4px bottom gap
+ * iPhone Home Screen PWA: dock and nav arrow anchored from the same offset
  * ---------------------------------------------------------------------
- * In standalone mode on iPhone, env(safe-area-inset-bottom) becomes much
- * larger than in Safari browser tabs, which makes the floating dock sit
- * noticeably too high.  We therefore pin the standalone dock offset to a
- * hard 4px gap so it stays visually low and consistent with the browser
- * version, while still leaving a minimal breathing room above the bottom
- * system area.
+ * In standalone mode on iPhone, the dock itself must sit almost flush with
+ * the bottom edge, but the scroll-to-top arrow was still using the older
+ * pinned variable based on env(safe-area-inset-bottom).  That mismatch made
+ * the arrow float much too high above the dock after installing the PWA.
+ *
+ * The fix is to override the shared anchor variable itself, so the dock, the
+ * navigation arrow and any helper launchers/toasts that reference the same
+ * pinned metric all stay aligned to the same ~4px gap.
  */
 @media (display-mode: standalone) and (pointer: coarse) {
+  :root {
+    --mobile-dock-anchor-bottom: calc(var(--mobile-dock-bottom-gap) + var(--mobile-dock-extra-offset));
+  }
+
   #mobileBottomDock {
-    bottom: calc(var(--mobile-dock-bottom-gap) + var(--mobile-dock-extra-offset)) !important;
+    bottom: var(--mobile-dock-anchor-bottom) !important;
   }
 
   #mobileBottomDock.is-hidden,
   #mobileBottomDock.is-keyboard-hidden {
-    transform: translateY(calc(100% + var(--mobile-dock-bottom-gap) + var(--mobile-dock-extra-offset) + 0.75rem)) !important;
+    transform: translateY(calc(100% + var(--mobile-dock-anchor-bottom) + 0.75rem)) !important;
   }
 
   body.has-mobile-bottom-dock {
-    padding-bottom: calc(var(--mobile-dock-height) + var(--mobile-dock-bottom-gap) + var(--mobile-dock-extra-offset) + 0.75rem) !important;
+    padding-bottom: calc(var(--mobile-dock-height) + var(--mobile-dock-anchor-bottom) + 0.75rem) !important;
+  }
+}
+
+/* Fallback for older iOS standalone detection paths that expose
+ * navigator.standalone but may not reliably honor the CSS media query.
+ */
+@media (pointer: coarse) {
+  html.display-mode-standalone {
+    --mobile-dock-anchor-bottom: calc(var(--mobile-dock-bottom-gap) + var(--mobile-dock-extra-offset));
+  }
+
+  body.display-mode-standalone #mobileBottomDock {
+    bottom: var(--mobile-dock-anchor-bottom) !important;
+  }
+
+  body.display-mode-standalone #mobileBottomDock.is-hidden,
+  body.display-mode-standalone #mobileBottomDock.is-keyboard-hidden {
+    transform: translateY(calc(100% + var(--mobile-dock-anchor-bottom) + 0.75rem)) !important;
+  }
+
+  body.display-mode-standalone.has-mobile-bottom-dock {
+    padding-bottom: calc(var(--mobile-dock-height) + var(--mobile-dock-anchor-bottom) + 0.75rem) !important;
   }
 }

@@ -29,11 +29,13 @@
   var ORDER_IDS = [
     'metabolicSummarySection',
     'bmiCard',
+    'adultVitalsCard',
     'wflCard',
     'coleCard',
     'growthCalculationsSection',
     'advancedGrowthSection',
     'toNormCard',
+    'planCard',
     'whrCard',
     'bpCard',
     'downSyndromeSection',
@@ -64,6 +66,33 @@
 
   function isMobileLayout() {
     return getViewportWidth() < MOBILE_BREAKPOINT;
+  }
+
+  function isAdultAge() {
+    try {
+      var age = (typeof window.getAgeDecimal === 'function') ? window.getAgeDecimal() : NaN;
+      if (typeof window.patientReportIsAdultAge === 'function') {
+        return !!window.patientReportIsAdultAge(age);
+      }
+      return isFinite(age) && age >= 18;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function moveAfter(parent, el, referenceEl) {
+    if (!parent || !el) return;
+
+    if (referenceEl && referenceEl.parentNode === parent) {
+      if (referenceEl.nextSibling !== el) {
+        parent.insertBefore(el, referenceEl.nextSibling);
+      }
+      return;
+    }
+
+    if (el.parentNode !== parent || el !== parent.lastElementChild) {
+      parent.appendChild(el);
+    }
   }
 
   // Create an invisible anchor right before the element in its current parent.
@@ -130,6 +159,44 @@
     }
   }
 
+  function placeAdultVitalsCard() {
+    var card = getEl('adultVitalsCard');
+    var leftColumn = getEl('leftColumnWrap');
+    var bmiCard = getEl('bmiCard');
+
+    if (!card || !leftColumn) return;
+
+    if (isMobileLayout()) {
+      moveAfter(leftColumn, card, bmiCard);
+      return;
+    }
+
+    restoreToHome('adultVitalsCard');
+  }
+
+  function placePlanCard() {
+    var card = getEl('planCard');
+    var leftColumn = getEl('leftColumnWrap');
+    var rightColumn = getEl('normWrapper');
+    var toNormCard = getEl('toNormCard');
+
+    if (!card) return;
+
+    if (isAdultAge()) {
+      var targetParent = isMobileLayout() ? leftColumn : rightColumn;
+      if (!targetParent) return;
+      moveAfter(targetParent, card, toNormCard);
+      return;
+    }
+
+    restoreToHome('planCard');
+  }
+
+  function applyResponsiveCardPlacements() {
+    placeAdultVitalsCard();
+    placePlanCard();
+  }
+
   function restoreDesktopTwoColumnLayout() {
     var rightColumn = getEl('normWrapper');
     if (rightColumn) {
@@ -158,6 +225,8 @@
     } else {
       restoreDesktopTwoColumnLayout();
     }
+
+    applyResponsiveCardPlacements();
   }
 
   function scheduleReposition(force) {
@@ -220,5 +289,10 @@
   // Optional manual hook in case another script needs a one-time forced rebuild.
   window.repositionSingleColumnResults = function (force) {
     scheduleReposition(force !== false);
+  };
+
+  window.syncResponsiveCardPlacements = function () {
+    ensureHomeAnchors();
+    applyResponsiveCardPlacements();
   };
 })();
