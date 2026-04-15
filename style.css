@@ -986,6 +986,63 @@ input[type="submit"]:focus-visible{
   width:100%;
 }
 
+
+.energy-pal-description-text{
+  display:block;
+}
+
+.energy-mode-badge-row{
+  display:flex;
+  align-items:center;
+  gap:.45rem;
+  flex-wrap:wrap;
+}
+
+.energy-mode-badge-row--inline{
+  margin-top:.45rem;
+}
+
+.energy-mode-badge-row--results{
+  margin:0 0 .55rem;
+  justify-content:flex-start;
+}
+
+#planResults .energy-mode-badge-row--results{
+  grid-column:1 / -1;
+  justify-content:center;
+  margin:0 0 .15rem;
+}
+
+#intakeResults .energy-mode-badge-row--results{
+  margin:0 0 .65rem;
+}
+
+.energy-mode-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:.28rem .62rem;
+  border-radius:999px;
+  font-size:.82rem;
+  font-weight:700;
+  line-height:1;
+  border:1px solid rgba(191,87,0,.28);
+  background:rgba(255,145,77,.12);
+  color:#9c4300;
+}
+
+.energy-mode-badge--clinical{
+  border-color:rgba(191,87,0,.32);
+  background:rgba(255,145,77,.14);
+  color:#9c4300;
+}
+
+.energy-mode-badge-caption{
+  font-size:.84rem;
+  line-height:1.25;
+  color:#7a5a43;
+}
+
 /*
  * Ujednolicenie wyglądu wybranych przycisków (2025‑08‑29)
  *
@@ -9225,5 +9282,391 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
 
   .adult-vitals-mini-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* === Nutrition norms card ================================================= */
+.nutrition-norms-card {
+  scroll-margin-top: 1rem;
+}
+
+.nutrition-norms-cta {
+  margin-top: 0.8rem;
+  text-align: center;
+}
+
+.nutrition-norms-cta a {
+  font-weight: 600;
+}
+
+.nutrition-norms-meta {
+  margin: 0.25rem 0 0.85rem;
+  font-size: 0.94rem;
+  color: #555;
+  text-align: center;
+  line-height: 1.45;
+}
+
+.nutrition-norms-summary {
+  margin: 0 0 0.9rem;
+  font-size: 0.92rem;
+  color: #444;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.nutrition-norms-intro {
+  margin: 0 0 0.9rem;
+  font-size: 0.92rem;
+  color: #444;
+  line-height: 1.5;
+}
+
+.nutrition-norms-toolbar {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0 0 1rem;
+}
+
+.nutrition-norms-toolbar-row {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.nutrition-norms-toolbar-row--summary {
+  gap: 0.4rem;
+}
+
+.nutrition-norms-toolbar-row--body-mode {
+  justify-items: center;
+  text-align: center;
+}
+
+.nutrition-norms-toolbar-row--body-mode .nutrition-norms-toolbar-label {
+  justify-self: center;
+  text-align: center;
+}
+
+.nutrition-norms-toolbar-row--body-mode .nutrition-norms-radio-group {
+  display: flex;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.nutrition-norms-toolbar-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.nutrition-norms-toolbar-state {
+  font-size: 0.94rem;
+  color: #456a72;
+}
+
+.nutrition-norms-toolbar-help {
+  font-size: 0.9rem;
+  color: #555;
+  line-height: 1.4;
+}
+
+.nutrition-norms-toolbar-label {
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #164245;
+}
+
+.nutrition-norms-radio-group {
+  justify-self: center;
+  justify-content: center;
+}
+
+.nutrition-norms-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 54px;
+  height: 30px;
+  margin: 0;
+}
+
+.nutrition-norms-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.nutrition-norms-switch .nutrition-norms-switch-slider {
+  position: absolute;
+  inset: 0;
+  display: block;
+  border-radius: 999px;
+  background: #c3ccd1;
+  cursor: pointer;
+  transition: background-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.nutrition-norms-switch .nutrition-norms-switch-slider::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+  transition: transform 0.25s ease;
+}
+
+.nutrition-norms-switch input:checked + .nutrition-norms-switch-slider {
+  background: #0b7285;
+}
+
+.nutrition-norms-switch input:checked + .nutrition-norms-switch-slider::before {
+  transform: translateX(24px);
+}
+
+.nutrition-norms-switch input:focus-visible + .nutrition-norms-switch-slider {
+  box-shadow: 0 0 0 3px rgba(0, 131, 141, 0.18);
+}
+
+.nutrition-norms-grid {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: 1fr;
+  margin-bottom: 0.9rem;
+}
+
+.nutrition-norms-controls {
+  display: grid;
+  gap: 0.85rem;
+  margin-bottom: 0.95rem;
+}
+
+.nutrition-norms-control {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.nutrition-norms-control > span {
+  font-weight: 600;
+}
+
+.nutrition-norms-control select {
+  max-width: 100%;
+}
+
+.nutrition-norms-select-row {
+  align-items: start;
+  gap: 0.75rem;
+}
+
+.nutrition-norms-pal-select {
+  width: 100%;
+  max-width: none;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid #c6d6dc;
+  border-radius: 10px;
+  background: #fff;
+  font: inherit;
+}
+
+.nutrition-norms-body-mode {
+  align-items: start;
+}
+
+.nutrition-norms-body-mode label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-right: 1rem;
+  font-size: 0.95rem;
+}
+
+.nutrition-norms-box {
+  margin-top: 0;
+}
+
+.nutrition-norms-value {
+  display: block;
+  margin-top: 0.45rem;
+  font-size: 1.18rem;
+  font-weight: 700;
+  color: #0b7285;
+  line-height: 1.25;
+}
+
+.nutrition-norms-sub {
+  margin: 0.4rem 0 0;
+  font-size: 0.9rem;
+  color: #555;
+  line-height: 1.45;
+}
+
+.nutrition-norms-note {
+  margin: 0.15rem 0 0.9rem;
+  padding: 0.8rem 0.95rem;
+  border: 1px solid rgba(11, 114, 133, 0.18);
+  border-radius: 12px;
+  background: rgba(11, 114, 133, 0.05);
+  font-size: 0.88rem;
+  color: #555;
+  line-height: 1.5;
+}
+
+.nutrition-norms-note p {
+  margin: 0.35rem 0 0;
+}
+
+.nutrition-norms-quality-details {
+  margin: 0 0 0.9rem;
+}
+
+.nutrition-norms-quality-details summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #111;
+}
+
+.nutrition-norms-quality-details summary::marker {
+  color: #111;
+}
+
+.nutrition-norms-quality-content {
+  margin-top: 0.65rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.nutrition-norms-quality-group {
+  padding: 0.8rem 0.95rem;
+  border: 1px solid rgba(11, 114, 133, 0.18);
+  border-radius: 12px;
+  background: rgba(11, 114, 133, 0.05);
+  font-size: 0.88rem;
+  color: #555;
+  line-height: 1.5;
+}
+
+.nutrition-norms-quality-group strong {
+  display: block;
+  color: #164245;
+}
+
+.nutrition-norms-quality-group p {
+  margin: 0.35rem 0 0;
+}
+
+.nutrition-norms-messages {
+  display: grid;
+  gap: 0.55rem;
+  margin-bottom: 0.95rem;
+}
+
+.nutrition-norms-message {
+  margin-bottom: 0;
+  padding: 0.7rem 0.85rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.nutrition-norms-message--info {
+  background: rgba(11, 114, 133, 0.08);
+  border: 1px solid rgba(11, 114, 133, 0.2);
+  color: #0b5563;
+}
+
+.nutrition-norms-message--warn {
+  background: rgba(245, 159, 0, 0.10);
+  border: 1px solid rgba(245, 159, 0, 0.22);
+  color: #7a4e00;
+}
+
+.nutrition-norms-source {
+  margin-top: 0.95rem;
+  font-size: 0.82rem;
+  color: #666;
+  line-height: 1.45;
+}
+
+.nutrition-norms-details {
+  margin: 0 0 0.9rem;
+}
+
+.nutrition-norms-details summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.nutrition-norms-details ul {
+  margin: 0.55rem 0 0;
+  padding-left: 1.1rem;
+}
+
+.nutrition-norms-details li {
+  margin: 0.3rem 0;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.nutrition-norms-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.55rem;
+  table-layout: fixed;
+}
+
+.nutrition-norms-range-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.6rem;
+}
+
+.nutrition-norms-range-table th,
+.nutrition-norms-range-table td {
+  padding: 0.38rem 0.25rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  text-align: left;
+  font-size: 0.88rem;
+}
+
+.nutrition-norms-range-table th {
+  font-weight: 700;
+}
+
+.nutrition-norms-table th,
+.nutrition-norms-table td {
+  padding: 0.38rem 0.25rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  text-align: left;
+  vertical-align: top;
+  font-size: 0.9rem;
+}
+
+.nutrition-norms-table th {
+  font-weight: 700;
+}
+
+.nutrition-norms-table tr:last-child td {
+  border-bottom: 0;
+}
+
+@media (min-width: 720px) {
+  .nutrition-norms-controls {
+    grid-template-columns: minmax(220px, 260px) 1fr;
+    align-items: end;
+  }
+}
+
+@media (max-width: 560px) {
+  .nutrition-norms-body-mode label {
+    display: flex;
+    margin-right: 0;
+    margin-bottom: 0.25rem;
   }
 }

@@ -29,6 +29,7 @@
   var ORDER_IDS = [
     'metabolicSummarySection',
     'bmiCard',
+    'nutritionNormsCard',
     'adultVitalsCard',
     'wflCard',
     'coleCard',
@@ -130,6 +131,7 @@
     var desired = [
       'metabolicSummarySection',
       'bmiCard',
+      'nutritionNormsCard',
       'wflCard',
       'coleCard',
       'growthCalculationsSection',
@@ -163,11 +165,12 @@
     var card = getEl('adultVitalsCard');
     var leftColumn = getEl('leftColumnWrap');
     var bmiCard = getEl('bmiCard');
+    var nutritionCard = getEl('nutritionNormsCard');
 
     if (!card || !leftColumn) return;
 
     if (isMobileLayout()) {
-      moveAfter(leftColumn, card, bmiCard);
+      moveAfter(leftColumn, card, nutritionCard || bmiCard);
       return;
     }
 

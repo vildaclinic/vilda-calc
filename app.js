@@ -800,13 +800,341 @@ const DIET_BULLETS = {
 
 // Opisy współczynników aktywności fizycznej PAL. Wyświetlane są po wyborze w formularzu,
 // aby użytkownik świadomie określił swój poziom aktywności.
-const PAL_DESCRIPTIONS = {
-  1.2: 'PAL 1.2 – bardzo niska aktywność: brak ruchu, leżący tryb życia lub długotrwałe unieruchomienie.',
-  1.4: 'PAL 1.4 – niska aktywność: praca siedząca, minimalna aktywność poza codziennymi czynnościami, brak regularnych ćwiczeń.',
-  1.6: 'PAL 1.6 – umiarkowana aktywność: praca siedząca lub stojąca i 1–3 treningi lub dłuższe spacery w tygodniu.',
-  1.8: 'PAL 1.8 – wysoka aktywność: praca fizyczna lub intensywne ćwiczenia kilka razy w tygodniu (4–5).',
-  2.0: 'PAL 2.0 – bardzo wysoka aktywność: zawodowy sportowiec lub codzienne intensywne treningi.'
+const ENERGY_ADULT_START_AGE = 19;
+const ENERGY_CHILD_GROWTH_MULTIPLIER = 1.01;
+
+const ENERGY_REFERENCE_INFANT_TABLE = {
+  M: {
+    6: { weightKg: 7.9, ear: 1.12, rda: 1.31 },
+    7: { weightKg: 8.3, ear: 1.12, rda: 1.31 },
+    8: { weightKg: 8.6, ear: 1.12, rda: 1.31 },
+    9: { weightKg: 8.9, ear: 1.12, rda: 1.31 },
+    10: { weightKg: 9.2, ear: 1.12, rda: 1.31 },
+    11: { weightKg: 9.4, ear: 1.12, rda: 1.31 }
+  },
+  F: {
+    6: { weightKg: 7.3, ear: 1.12, rda: 1.31 },
+    7: { weightKg: 7.6, ear: 1.12, rda: 1.31 },
+    8: { weightKg: 7.9, ear: 1.12, rda: 1.31 },
+    9: { weightKg: 8.2, ear: 1.12, rda: 1.31 },
+    10: { weightKg: 8.5, ear: 1.12, rda: 1.31 },
+    11: { weightKg: 8.7, ear: 1.12, rda: 1.31 }
+  }
 };
+
+const ENERGY_REFERENCE_CHILD_TABLE = {
+  M: {
+    1: { heightCm: 75.7, weightKg: 9.6, ear: 0.95, rda: 1.14 },
+    2: { heightCm: 87.8, weightKg: 12.2, ear: 0.79, rda: 0.97 },
+    3: { heightCm: 96.1, weightKg: 14.3, ear: 0.73, rda: 0.90 },
+    4: { heightCm: 103.3, weightKg: 16.3, ear: 0.69, rda: 0.86 },
+    5: { heightCm: 111.8, weightKg: 19.1, ear: 0.69, rda: 0.85 },
+    6: { heightCm: 118.4, weightKg: 21.6, ear: 0.72, rda: 0.89 },
+    7: { heightCm: 124.6, weightKg: 24.4, ear: 0.74, rda: 0.91 },
+    8: { heightCm: 130.5, weightKg: 27.6, ear: 0.75, rda: 0.92 },
+    9: { heightCm: 136.3, weightKg: 30.8, ear: 0.75, rda: 0.92 },
+    10: { heightCm: 141.5, weightKg: 34.2, ear: 0.75, rda: 0.91 },
+    11: { heightCm: 146.7, weightKg: 38.1, ear: 0.75, rda: 0.91 },
+    12: { heightCm: 152.9, weightKg: 42.7, ear: 0.74, rda: 0.90 },
+    13: { heightCm: 160.2, weightKg: 48.1, ear: 0.73, rda: 0.90 },
+    14: { heightCm: 167.2, weightKg: 53.8, ear: 0.72, rda: 0.89 },
+    15: { heightCm: 172.5, weightKg: 59.0, ear: 0.72, rda: 0.88 },
+    16: { heightCm: 175.7, weightKg: 63.3, ear: 0.71, rda: 0.87 },
+    17: { heightCm: 177.6, weightKg: 66.9, ear: 0.70, rda: 0.86 },
+    18: { heightCm: 178.7, weightKg: 69.9, ear: 0.66, rda: 0.83 }
+  },
+  F: {
+    1: { heightCm: 74.0, weightKg: 8.9, ear: 0.95, rda: 1.14 },
+    2: { heightCm: 86.4, weightKg: 11.5, ear: 0.79, rda: 0.97 },
+    3: { heightCm: 95.1, weightKg: 13.9, ear: 0.73, rda: 0.90 },
+    4: { heightCm: 102.7, weightKg: 16.1, ear: 0.69, rda: 0.86 },
+    5: { heightCm: 110.5, weightKg: 18.7, ear: 0.69, rda: 0.85 },
+    6: { heightCm: 117.0, weightKg: 21.0, ear: 0.72, rda: 0.89 },
+    7: { heightCm: 123.0, weightKg: 23.5, ear: 0.74, rda: 0.91 },
+    8: { heightCm: 129.4, weightKg: 26.6, ear: 0.75, rda: 0.92 },
+    9: { heightCm: 135.2, weightKg: 29.9, ear: 0.75, rda: 0.92 },
+    10: { heightCm: 140.8, weightKg: 33.6, ear: 0.75, rda: 0.91 },
+    11: { heightCm: 147.1, weightKg: 37.9, ear: 0.73, rda: 0.90 },
+    12: { heightCm: 153.8, weightKg: 42.8, ear: 0.72, rda: 0.89 },
+    13: { heightCm: 159.1, weightKg: 47.7, ear: 0.71, rda: 0.88 },
+    14: { heightCm: 162.2, weightKg: 51.3, ear: 0.70, rda: 0.87 },
+    15: { heightCm: 163.7, weightKg: 53.6, ear: 0.69, rda: 0.85 },
+    16: { heightCm: 164.4, weightKg: 55.0, ear: 0.68, rda: 0.84 },
+    17: { heightCm: 164.7, weightKg: 55.7, ear: 0.67, rda: 0.83 },
+    18: { heightCm: 165.1, weightKg: 56.2, ear: 0.66, rda: 0.83 }
+  }
+};
+
+const ENERGY_PAL_META = {
+  '1.2': {
+    shortLabel: '1.2 – bardzo mała aktywność (tryb kliniczny)',
+    description: 'PAL 1.2 – bardzo mała aktywność. Tryb kliniczny poza Normami 2024; stosuj tylko wtedy, gdy naprawdę odpowiada sytuacji pacjenta.',
+    tableLabel: 'bardzo mała aktywność',
+    tableHint: 'np. unieruchomienie lub skrajnie siedzący tryb życia',
+    clinical: true
+  },
+  '1.4': {
+    shortLabel: '1.4 – mała aktywność',
+    description: 'PAL 1.4 – mała aktywność.',
+    tableLabel: 'mała aktywność',
+    tableHint: 'np. mało ruchu w ciągu dnia',
+    clinical: false
+  },
+  '1.6': {
+    shortLabel: '1.6 – umiarkowana aktywność',
+    description: 'PAL 1.6 – umiarkowana aktywność.',
+    tableLabel: 'umiarkowana aktywność',
+    tableHint: 'np. umiarkowana ilość ruchu w ciągu dnia',
+    clinical: false
+  },
+  '1.8': {
+    shortLabel: '1.8 – aktywny tryb życia',
+    description: 'PAL 1.8 – aktywny tryb życia.',
+    tableLabel: 'aktywny tryb życia',
+    tableHint: 'np. dużo ruchu lub regularny trening',
+    clinical: false
+  },
+  '2.0': {
+    shortLabel: '2.0 – bardzo aktywny tryb życia',
+    description: 'PAL 2.0 – bardzo aktywny tryb życia.',
+    tableLabel: 'bardzo aktywny tryb życia',
+    tableHint: 'np. bardzo duża aktywność lub intensywny trening',
+    clinical: false
+  }
+};
+
+const ENERGY_PAL_LABELS = Object.fromEntries(
+  Object.entries(ENERGY_PAL_META).map(([key, value]) => [key, value.shortLabel])
+);
+
+const PAL_DESCRIPTIONS = Object.fromEntries(
+  Object.entries(ENERGY_PAL_META).map(([key, value]) => [key, value.description])
+);
+
+const ENERGY_PAL_TABLE_LABELS = Object.fromEntries(
+  Object.entries(ENERGY_PAL_META).map(([key, value]) => [key, value.tableLabel])
+);
+
+const ENERGY_PAL_TABLE_HINTS = Object.fromEntries(
+  Object.entries(ENERGY_PAL_META).map(([key, value]) => [key, value.tableHint])
+);
+
+function energyEscapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function energyGetPalMeta(pal) {
+  const num = Number(pal);
+  if (!Number.isFinite(num)) return null;
+  return ENERGY_PAL_META[num.toFixed(1)] || null;
+}
+
+function energyGetPalOptionLabel(pal) {
+  const num = Number(pal);
+  if (!Number.isFinite(num)) return '';
+  const key = num.toFixed(1);
+  const meta = energyGetPalMeta(key);
+  return meta && meta.shortLabel ? meta.shortLabel : key;
+}
+
+function energyGetPalDescription(pal) {
+  const meta = energyGetPalMeta(pal);
+  return meta && meta.description ? meta.description : '';
+}
+
+function energyFormatPalCodeLabel(pal) {
+  const num = Number(pal);
+  if (!Number.isFinite(num)) return '';
+  return `PAL ${num.toFixed(1)}`;
+}
+
+function energyFormatPalRangeLabel(minPal, maxPal, { prefix = 'PAL' } = {}) {
+  const minNum = Number(minPal);
+  const maxNum = Number(maxPal);
+  if (!(Number.isFinite(minNum) && Number.isFinite(maxNum))) return '';
+  if (Math.abs(minNum - maxNum) < 0.01) {
+    return prefix ? `${prefix} ${minNum.toFixed(1)}` : minNum.toFixed(1);
+  }
+  return prefix ? `${prefix} ${minNum.toFixed(1)}–${maxNum.toFixed(1)}` : `${minNum.toFixed(1)}–${maxNum.toFixed(1)}`;
+}
+
+function energyGetPalTableLabel(pal) {
+  const meta = energyGetPalMeta(pal);
+  const code = energyFormatPalCodeLabel(pal);
+  if (!code) return 'Poziom aktywności';
+  return meta && meta.tableLabel ? `${code} — ${meta.tableLabel}` : code;
+}
+
+function energyGetPalTableHint(pal) {
+  const meta = energyGetPalMeta(pal);
+  return meta && meta.tableHint ? meta.tableHint : '';
+}
+
+function energyGetContextModeBadge(contextOrState) {
+  const ctx = contextOrState && contextOrState.context ? contextOrState.context : contextOrState;
+  const policy = ctx && ctx.policy ? ctx.policy : null;
+  const pal = ctx && ctx.pal ? ctx.pal : null;
+  const usingPal12 = !!(policy && policy.clinicalOverride) || (pal && Number(pal.used) === 1.2);
+  if (!usingPal12) return null;
+
+  return {
+    text: 'Tryb kliniczny',
+    tone: 'clinical',
+    detail: 'PAL 1.2 – poza Normami 2024.',
+    title: 'PAL 1.2 nie należy do standardowych poziomów PAL z norm referencyjnych i pozostaje wyłącznie klinicznym override.'
+  };
+}
+
+function energyRenderModeBadgeHtml(badge) {
+  if (!badge) return '';
+  const tone = energyEscapeHtml(badge.tone || 'info');
+  const text = energyEscapeHtml(badge.text || 'Informacyjnie');
+  const detailHtml = badge.detail ? `<span class="energy-mode-badge-caption">${energyEscapeHtml(badge.detail)}</span>` : '';
+  const titleAttr = badge.title ? ` title="${energyEscapeHtml(badge.title)}"` : '';
+  return `<span class="energy-mode-badge energy-mode-badge--${tone}"${titleAttr}>${text}</span>${detailHtml}`;
+}
+
+/* === ENERGY NORMS ENGINE: PAL HELPERS START ====================== */
+const ENERGY_PAL_PRESETS = {
+  infant_0_5: [],
+  infant_6_11: [],
+  child_1_3: [1.4],
+  child_4_9: [1.4, 1.6, 1.8],
+  child_10_18: [1.6, 1.8, 2.0],
+  adult_normative: [1.4, 1.6, 1.8, 2.0],
+  adult_clinical: [1.2, 1.4, 1.6, 1.8, 2.0]
+};
+
+const ENERGY_CONTEXT_PRESETS = {
+  nutrition_reference: {
+    palPolicy: 'normative',
+    bodyPolicy: 'reference',
+    allowRange: true,
+    allowClinicalPal12: false,
+    applyRiskAdjust: false
+  },
+  nutrition_actual: {
+    palPolicy: 'normative',
+    bodyPolicy: 'actual',
+    allowRange: true,
+    allowClinicalPal12: false,
+    applyRiskAdjust: false
+  },
+  intake_observed: {
+    palPolicy: 'clinical',
+    bodyPolicy: 'actual',
+    allowRange: false,
+    allowClinicalPal12: true,
+    applyRiskAdjust: 'optional'
+  },
+  plan_reduction: {
+    palPolicy: 'clinical',
+    bodyPolicy: 'actual',
+    allowRange: false,
+    allowClinicalPal12: true,
+    applyRiskAdjust: 'optional'
+  }
+};
+
+function energyGetPresetConfig(preset) {
+  const config = ENERGY_CONTEXT_PRESETS[preset] || ENERGY_CONTEXT_PRESETS.nutrition_actual;
+  return {
+    palPolicy: config.palPolicy,
+    bodyPolicy: config.bodyPolicy,
+    allowRange: !!config.allowRange,
+    allowClinicalPal12: !!config.allowClinicalPal12,
+    applyRiskAdjust: config.applyRiskAdjust
+  };
+}
+
+function energyNormalizePalFromAllowed(pal, allowed) {
+  const palette = Array.isArray(allowed) ? allowed.slice() : [];
+  if (!palette.length) return { pal: null, allowed: palette };
+  if (pal == null || pal === '') return { pal: palette[0], allowed: palette };
+  const numericPal = Number(pal);
+  if (palette.includes(numericPal)) return { pal: numericPal, allowed: palette };
+  return { pal: palette[0], allowed: palette };
+}
+
+function energyResolvePalBand(ageYears, ageMonthsOpt = 0) {
+  const ageNum = Number(ageYears) || 0;
+  const years = Math.floor(ageNum);
+  const months = years === 0
+    ? Math.floor(Number(ageMonthsOpt) || Math.round(ageNum * 12))
+    : Math.floor(ageNum * 12);
+
+  if (months < 6) return 'infant_0_5';
+  if (months < 12) return 'infant_6_11';
+  if (years < 4) return 'child_1_3';
+  if (years < 10) return 'child_4_9';
+  if (years < ENERGY_ADULT_START_AGE) return 'child_10_18';
+  return 'adult';
+}
+
+function energyGetAllowedPals(ageYears, ageMonthsOpt = 0, palMode = 'normative') {
+  const band = energyResolvePalBand(ageYears, ageMonthsOpt);
+  if (band === 'adult') {
+    return palMode === 'clinical'
+      ? ENERGY_PAL_PRESETS.adult_clinical.slice()
+      : ENERGY_PAL_PRESETS.adult_normative.slice();
+  }
+  return (ENERGY_PAL_PRESETS[band] || []).slice();
+}
+
+function energyNormalizePal(ageYears, ageMonthsOpt = 0, pal, palMode = 'normative') {
+  const allowed = energyGetAllowedPals(ageYears, ageMonthsOpt, palMode);
+  if (!allowed.length) return { pal: null, allowed };
+  const numericPal = Number(pal);
+  if (allowed.includes(numericPal)) return { pal: numericPal, allowed };
+  return { pal: allowed[0], allowed };
+}
+
+function energyIsNumeric(value) {
+  return typeof value === 'number' && isFinite(value);
+}
+
+function energyPopulatePalSelect(selectEl, { ageYears, ageMonthsOpt = 0, value = null, palMode = 'normative' }) {
+  if (!selectEl) return;
+  const preferred = (value !== null && value !== undefined && value !== '') ? Number(value) : Number(selectEl.value);
+  const { pal, allowed } = energyNormalizePal(ageYears, ageMonthsOpt, preferred, palMode);
+  if (!allowed.length) {
+    selectEl.innerHTML = '<option value="">nie dotyczy</option>';
+    selectEl.value = '';
+    return;
+  }
+  selectEl.innerHTML = allowed.map(v => {
+    const key = v.toFixed(1);
+    const label = energyGetPalOptionLabel(v) || ENERGY_PAL_LABELS[key] || key;
+    return `<option value="${key}">${label}</option>`;
+  }).join('');
+  if (isFinite(preferred) && allowed.includes(preferred)) {
+    selectEl.value = preferred.toFixed(1);
+  } else if (pal != null) {
+    selectEl.value = pal.toFixed(1);
+  }
+}
+
+function energyPopulatePalSelectByPreset(selectEl, {
+  preset = 'nutrition_actual',
+  ageYears,
+  ageMonthsOpt = 0,
+  value = null
+} = {}) {
+  const presetConfig = energyGetPresetConfig(preset);
+  const palMode = presetConfig.palPolicy === 'clinical' ? 'clinical' : 'normative';
+  return energyPopulatePalSelect(selectEl, {
+    ageYears,
+    ageMonthsOpt,
+    value,
+    palMode
+  });
+}
+/* === ENERGY NORMS ENGINE: PAL HELPERS END ======================== */
 
 // === PULSE ANIMATION HELPERS ======================================
 // Global variable controlling pulse mode: 'infinite' for continuous pulses or '2s' for single 2s flash.
@@ -1120,16 +1448,22 @@ function updateDietDescription(key) {
  * element jest ukrywany.
  * @param {number|string} value – wybrany współczynnik PAL (np. '1.6')
  */
-function updatePalDescription(value) {
-  const descEl = document.getElementById('palDesc');
+function updatePalDescription(value, mountId = 'palDesc') {
+  const descEl = document.getElementById(mountId);
   if (!descEl) return;
-  const key = parseFloat(value).toFixed(1);
-  const text = PAL_DESCRIPTIONS[key];
+  const text = energyGetPalDescription(value);
+  const badge = energyGetContextModeBadge({
+    policy: { clinicalOverride: Number(value) === 1.2 },
+    pal: { used: Number(value) }
+  });
   if (text) {
-    descEl.textContent = text;
+    const badgeHtml = badge
+      ? `<div class="energy-mode-badge-row energy-mode-badge-row--inline">${energyRenderModeBadgeHtml(badge)}</div>`
+      : '';
+    descEl.innerHTML = `<div class="energy-pal-description-text">${energyEscapeHtml(text)}</div>${badgeHtml}`;
     descEl.style.display = 'block';
   } else {
-    descEl.textContent = '';
+    descEl.innerHTML = '';
     descEl.style.display = 'none';
   }
 }
@@ -1398,20 +1732,234 @@ const CM_TO_M          = 100;
 const MINUTES_PER_HOUR = 60;
 const M_PER_KM         = 1000;
 
-const activities = {
-  run:       { name: '🏃 Bieganie 8 km/h',         MET: 8.0 },
-  bike:      { name: '🚴 Rower 16 km/h',          MET: 6.0 },
-  swim:      { name: '🏊 Pływanie rekreacyjne',    MET: 7.5 },
-  walk:      { name: '🚶 Spacer 5 km/h',          MET: 3.0 },
+/* === ACTIVITY BURN SHARED HELPERS START ============================== */
+const ACTIVITY_BURN_LIBRARY = Object.freeze({
+  run:        Object.freeze({ key: 'run',        name: '🏃 Bieganie 8 km/h',             MET: 8.0, speedKmh: 8 }),
+  bike:       Object.freeze({ key: 'bike',       name: '🚴 Rower 16 km/h',              MET: 6.0, speedKmh: 16 }),
+  swim:       Object.freeze({ key: 'swim',       name: '🏊 Pływanie rekreacyjne',        MET: 7.5, speedKmh: 3 }),
+  walk:       Object.freeze({ key: 'walk',       name: '🚶 Spacer 5 km/h',              MET: 3.0, speedKmh: 5 }),
+  swimFast:   Object.freeze({ key: 'swimFast',   name: '🏊‍♂️ Pływanie intensywne',      MET: 9.8, speedKmh: 3 }),
+  bike20:     Object.freeze({ key: 'bike20',     name: '🚴‍♂️ Rower 20 km/h',            MET: 8.0, speedKmh: 20 }),
+  elliptical: Object.freeze({ key: 'elliptical', name: '🏃‍♂️ Orbitrek (średnie tempo)', MET: 5.0, speedKmh: null }),
+  gaming:     Object.freeze({ key: 'gaming',     name: '🎮 Granie na komputerze',       MET: 1.3, speedKmh: null }),
+  tennis:     Object.freeze({ key: 'tennis',     name: '🎾 Tenis',                       MET: 7.0, speedKmh: 5 }),
+  basketball: Object.freeze({ key: 'basketball', name: '🏀 Koszykówka',                  MET: 6.5, speedKmh: 6 }),
+  football:   Object.freeze({ key: 'football',   name: '⚽ Piłka nożna',                 MET: 7.0, speedKmh: 7 }),
+  dance:      Object.freeze({ key: 'dance',      name: '💃 Taniec',                      MET: 5.0, speedKmh: 4 })
+});
 
-  // --- nowe kategorie ---
-  swimFast:  { name: '🏊‍♂️ Pływanie INTENSYWNE',  MET: 9.8 },
-  bike20:    { name: '🚴‍♂️ Rower 20 km/h',        MET: 8.0 },
-  elliptical:{ name: '🏃‍♂️ Orbitrek (średnie tempo)', MET: 5.0 },
-  gaming:    { name: '🎮 Granie na komputerze',   MET: 1.3 }
-};
+const ACTIVITY_BURN_PRESETS = Object.freeze({
+  food_times: Object.freeze({
+    key: 'food_times',
+    activityKeys: Object.freeze(['run', 'bike', 'swim', 'walk', 'swimFast', 'bike20', 'elliptical', 'gaming']),
+    includeDistance: false,
+    applyChildFactor: true,
+    tableHeader: 'Czas spalania'
+  }),
+  bmi_journey: Object.freeze({
+    key: 'bmi_journey',
+    activityKeys: Object.freeze(['walk', 'bike', 'bike20', 'run', 'swim', 'tennis', 'basketball', 'football', 'dance']),
+    includeDistance: true,
+    applyChildFactor: false,
+    tableHeader: 'Dystans / Czas do normy'
+  })
+});
 
-;
+const ACTIVITY_BURN_ROUTE_EXAMPLES = Object.freeze([
+  Object.freeze({ miasta: 'Poznań – Berlin', km: 240 }),
+  Object.freeze({ miasta: 'Kraków – Wiedeń', km: 330 }),
+  Object.freeze({ miasta: 'Gdańsk – Wilno', km: 400 }),
+  Object.freeze({ miasta: 'Wrocław – Budapeszt', km: 550 }),
+  Object.freeze({ miasta: 'Warszawa – Praga', km: 680 }),
+  Object.freeze({ miasta: 'Poznań – Paryż', km: 1200 }),
+  Object.freeze({ miasta: 'Warszawa – Paryż', km: 1600 }),
+  Object.freeze({ miasta: 'Kraków – Paryż', km: 1500 }),
+  Object.freeze({ miasta: 'Wrocław – Amsterdam', km: 1100 }),
+  Object.freeze({ miasta: 'Poznań – Barcelona', km: 2100 }),
+  Object.freeze({ miasta: 'Warszawa – Barcelona', km: 2300 }),
+  Object.freeze({ miasta: 'Warszawa – Rzym', km: 1800 })
+]);
+
+// Alias utrzymywany dla kompatybilności ze starszym kodem i testami.
+const activities = Object.freeze(
+  ACTIVITY_BURN_PRESETS.food_times.activityKeys.reduce((acc, key) => {
+    const def = ACTIVITY_BURN_LIBRARY[key];
+    acc[key] = { name: def.name, MET: def.MET, speed: def.speedKmh };
+    return acc;
+  }, {})
+);
+
+function activityGetDefinition(activityKey) {
+  return ACTIVITY_BURN_LIBRARY[String(activityKey || '')] || null;
+}
+
+function activityGetPreset(presetKey) {
+  return ACTIVITY_BURN_PRESETS[String(presetKey || '')] || null;
+}
+
+function activityResolveChildFactor(ageYears, enabled = false) {
+  const ageNum = Number(ageYears) || 0;
+  return enabled && ageNum > 0 && ageNum < 14 ? 1.1 : 1;
+}
+
+function activityBurnPerMinuteKcal(met, weightKg) {
+  const metNum = Number(met);
+  const weightNum = Number(weightKg);
+  if (!(metNum > 0) || !(weightNum > 0)) return 0;
+  return (metNum * 3.5 * weightNum) / 200;
+}
+
+function activityFormatDurationMinutes(totalMinutes) {
+  if (!Number.isFinite(totalMinutes) || totalMinutes < 0) return '—';
+  const roundedMinutes = Math.max(0, Math.round(totalMinutes));
+  const hours = Math.floor(roundedMinutes / MINUTES_PER_HOUR);
+  const minutes = roundedMinutes % MINUTES_PER_HOUR;
+  return hours > 0 ? `${hours} h ${minutes} min` : `${minutes} min`;
+}
+
+function activityFormatDistanceKm(distanceKm) {
+  if (!Number.isFinite(distanceKm) || distanceKm < 0) return '—';
+  if (distanceKm >= 1) return `${distanceKm.toFixed(1).replace('.', ',')} km`;
+  return `${Math.round(distanceKm * M_PER_KM)} m`;
+}
+
+function activityBurnEstimate({ activityKey, weightKg, kcalTarget, effectiveKcalTarget = null }) {
+  const def = activityGetDefinition(activityKey);
+  if (!def) return null;
+
+  const burnPerMinKcal = activityBurnPerMinuteKcal(def.MET, weightKg);
+  const hasExplicitEffectiveKcal = effectiveKcalTarget !== null
+    && effectiveKcalTarget !== undefined
+    && Number.isFinite(Number(effectiveKcalTarget));
+  const effectiveKcal = hasExplicitEffectiveKcal
+    ? Number(effectiveKcalTarget)
+    : (Number(kcalTarget) || 0);
+  const minutesRaw = burnPerMinKcal > 0 ? (effectiveKcal / burnPerMinKcal) : null;
+  const distanceKm = (Number.isFinite(def.speedKmh) && minutesRaw != null)
+    ? (minutesRaw / MINUTES_PER_HOUR) * def.speedKmh
+    : null;
+
+  return {
+    key: def.key,
+    name: def.name,
+    MET: def.MET,
+    speedKmh: def.speedKmh,
+    burnPerMinKcal,
+    minutesRaw,
+    timeText: activityFormatDurationMinutes(minutesRaw),
+    distanceKm,
+    distanceText: distanceKm == null ? null : activityFormatDistanceKm(distanceKm),
+    kcalTarget: Number(kcalTarget) || 0,
+    effectiveKcalTarget: effectiveKcal
+  };
+}
+
+function activityBuildModel({ presetKey, weightKg, kcalTarget, ageYears = 0 }) {
+  const preset = activityGetPreset(presetKey);
+  const baseKcal = Number(kcalTarget) || 0;
+  const weightNum = Number(weightKg) || 0;
+  if (!preset) return null;
+
+  const childFactor = activityResolveChildFactor(ageYears, preset.applyChildFactor === true);
+  const effectiveKcalTarget = baseKcal * childFactor;
+  const rows = (weightNum > 0 && baseKcal > 0)
+    ? preset.activityKeys
+        .map((activityKey) => activityBurnEstimate({
+          activityKey,
+          weightKg: weightNum,
+          kcalTarget: baseKcal,
+          effectiveKcalTarget
+        }))
+        .filter(Boolean)
+    : [];
+
+  return {
+    presetKey: preset.key,
+    includeDistance: preset.includeDistance === true,
+    tableHeader: preset.tableHeader,
+    applyChildFactor: preset.applyChildFactor === true,
+    childFactor,
+    weightKg: weightNum,
+    kcalTarget: baseKcal,
+    effectiveKcalTarget,
+    rows
+  };
+}
+
+function activityBuildFoodBurnState({ kcalTarget, weightKg, ageYears = 0 }) {
+  return activityBuildModel({
+    presetKey: 'food_times',
+    kcalTarget,
+    weightKg,
+    ageYears
+  });
+}
+
+function activityBuildJourneyBurnState({ kcalTarget, weightKg, ageYears = 0 }) {
+  return activityBuildModel({
+    presetKey: 'bmi_journey',
+    kcalTarget,
+    weightKg,
+    ageYears
+  });
+}
+
+function activityRenderTableHtml(model) {
+  if (!model || !Array.isArray(model.rows) || model.rows.length === 0) return '';
+
+  if (model.includeDistance) {
+    const rowsHtml = model.rows
+      .map((row) => `<tr><td>${row.name}</td><td>${row.distanceText} / ${row.timeText}</td></tr>`)
+      .join('');
+    return `<table style="margin-top:6px;width:100%;"><tr><th>Aktywność</th><th>Dystans / Czas do normy</th></tr>${rowsHtml}</table>`;
+  }
+
+  const rowsHtml = model.rows
+    .map((row) => `<tr><td>${row.name}</td><td>${row.timeText}</td></tr>`)
+    .join('');
+  return `<table style="width:100%;border-collapse:collapse;margin-top:0.6rem;"><tr><th>Aktywność</th><th>Czas spalania</th></tr>${rowsHtml}</table>`;
+}
+
+function activityGetPdfRows(model) {
+  if (!model || !Array.isArray(model.rows)) return [];
+  if (model.includeDistance) {
+    return model.rows.map((row) => [row.name, row.distanceText || '—', row.timeText]);
+  }
+  return model.rows.map((row) => [row.name, row.timeText]);
+}
+
+function activityGetRow(model, activityKey) {
+  if (!model || !Array.isArray(model.rows)) return null;
+  return model.rows.find((row) => row.key === activityKey) || null;
+}
+
+function activityFindRouteExample(distanceKm) {
+  if (!(Number(distanceKm) > 0)) return null;
+  const targetKm = Number(distanceKm);
+  const nearMatch = ACTIVITY_BURN_ROUTE_EXAMPLES.find((route) => targetKm < route.km * 1.15 && targetKm > route.km * 0.85);
+  if (nearMatch) return nearMatch;
+  return ACTIVITY_BURN_ROUTE_EXAMPLES.reduce((best, current) => {
+    if (!best) return current;
+    return Math.abs(current.km - targetKm) < Math.abs(best.km - targetKm) ? current : best;
+  }, null);
+}
+
+if (typeof window !== 'undefined') {
+  window.ACTIVITY_BURN_LIBRARY = ACTIVITY_BURN_LIBRARY;
+  window.ACTIVITY_BURN_PRESETS = ACTIVITY_BURN_PRESETS;
+  window.ACTIVITY_BURN_ROUTE_EXAMPLES = ACTIVITY_BURN_ROUTE_EXAMPLES;
+  window.activityGetDefinition = activityGetDefinition;
+  window.activityBurnPerMinuteKcal = activityBurnPerMinuteKcal;
+  window.activityBurnEstimate = activityBurnEstimate;
+  window.activityBuildModel = activityBuildModel;
+  window.activityBuildFoodBurnState = activityBuildFoodBurnState;
+  window.activityBuildJourneyBurnState = activityBuildJourneyBurnState;
+  window.activityRenderTableHtml = activityRenderTableHtml;
+  window.activityGetPdfRows = activityGetPdfRows;
+  window.activityGetRow = activityGetRow;
+  window.activityFindRouteExample = activityFindRouteExample;
+}
+/* === ACTIVITY BURN SHARED HELPERS END ================================ */
 
 let rowId=0;
 function addRow(containerId,optionsObj,className,defaultKey){
@@ -1442,28 +1990,706 @@ function calcTotal(obj,selector){
   });
   return kcal;
 }
+/* === ENERGY NORMS ENGINE START ================================= */
+function energyResolveEquationStage(ageYears, ageMonthsOpt = 0) {
+  const ageNum = Number(ageYears) || 0;
+  const years = Math.floor(ageNum);
+  const months = years === 0
+    ? Math.floor(Number(ageMonthsOpt) || Math.round(ageNum * 12))
+    : Math.floor(ageNum * 12);
+
+  if (months < 6) return 'infant_0_5';
+  if (months < 12) return 'infant_6_11';
+  if (years < 3) return 'child_1_2';
+  if (years < 10) return 'child_3_9';
+  if (years < 18) return 'child_10_17';
+  if (years < ENERGY_ADULT_START_AGE) return 'child_18';
+  if (years < 30) return 'adult_19_29';
+  if (years < 60) return 'adult_30_59';
+  return 'adult_60_plus';
+}
+
+function energyNormalizeSex(value) {
+  return String(value || '').toUpperCase() === 'F' ? 'F' : 'M';
+}
+
+function energyGetCompletedYears(ageYears) {
+  return Math.max(0, Math.floor(Number(ageYears) || 0));
+}
+
+function energyGetCompletedMonths(ageYears, ageMonthsOpt = 0) {
+  const ageNum = Number(ageYears) || 0;
+  const fullYears = Math.floor(ageNum);
+  if (fullYears === 0) {
+    const explicitMonths = Math.floor(Number(ageMonthsOpt));
+    if (Number.isFinite(explicitMonths) && explicitMonths >= 0) return explicitMonths;
+    return Math.max(0, Math.floor(ageNum * 12));
+  }
+  return fullYears * 12;
+}
+
+function energyGetReferenceAgeBand(ageYears, ageMonthsOpt = 0) {
+  const months = energyGetCompletedMonths(ageYears, ageMonthsOpt);
+  const years = energyGetCompletedYears(ageYears);
+  if (months < 6) {
+    return { kind: 'infant_0_6', completedMonths: months };
+  }
+  if (months < 12) {
+    return {
+      kind: 'infant_6_11',
+      completedMonths: months,
+      infantMonth: Math.max(6, Math.min(11, months))
+    };
+  }
+  if (years < ENERGY_ADULT_START_AGE) {
+    return {
+      kind: 'child_1_18',
+      completedYears: Math.max(1, Math.min(18, years))
+    };
+  }
+  return {
+    kind: 'adult_19_plus',
+    completedYears: years
+  };
+}
+
+function energyGetReferenceEntry({ sex, ageYears, ageMonthsOpt = 0 } = {}) {
+  const sexKey = energyNormalizeSex(sex);
+  const band = energyGetReferenceAgeBand(ageYears, ageMonthsOpt);
+  if (band.kind === 'infant_6_11') {
+    return {
+      sexKey,
+      band,
+      row: (ENERGY_REFERENCE_INFANT_TABLE[sexKey] || {})[band.infantMonth] || null
+    };
+  }
+  if (band.kind === 'child_1_18') {
+    return {
+      sexKey,
+      band,
+      row: (ENERGY_REFERENCE_CHILD_TABLE[sexKey] || {})[band.completedYears] || null
+    };
+  }
+  return { sexKey, band, row: null };
+}
+
+function energyReferenceWeightKg({ sex, ageYears, ageMonthsOpt = 0, heightCm } = {}) {
+  const ref = energyGetReferenceEntry({ sex, ageYears, ageMonthsOpt });
+  const band = ref.band || energyGetReferenceAgeBand(ageYears, ageMonthsOpt);
+  const height = Number(heightCm);
+
+  if (band.kind === 'infant_0_6') {
+    return {
+      weightRefKg: null,
+      referenceHeightCm: null,
+      method: 'none',
+      source: 'none',
+      label: 'brak liczbowej normy',
+      explanation: 'Dla wieku poniżej 6 miesięcy nie stosuje się liczbowej normy referencyjnej.',
+      entry: null
+    };
+  }
+
+  if (band.kind === 'infant_6_11') {
+    const row = ref.row;
+    if (!row) {
+      return {
+        weightRefKg: null,
+        referenceHeightCm: null,
+        method: 'none',
+        source: 'none',
+        label: '',
+        explanation: 'Brak tabeli referencyjnej dla tego miesiąca życia.',
+        entry: null
+      };
+    }
+    return {
+      weightRefKg: row.weightKg,
+      referenceHeightCm: null,
+      method: 'infant_table',
+      source: 'infant_table',
+      label: `masa referencyjna z tabeli (${band.infantMonth}. miesiąc)`,
+      explanation: `Masa referencyjna z tabeli norm dla ${band.infantMonth}. miesiąca życia.`,
+      entry: row
+    };
+  }
+
+  if (band.kind === 'child_1_18') {
+    const row = ref.row;
+    if (!row) {
+      return {
+        weightRefKg: null,
+        referenceHeightCm: null,
+        method: 'none',
+        source: 'none',
+        label: '',
+        explanation: 'Brak tabeli referencyjnej dla tego wieku.',
+        entry: null
+      };
+    }
+    return {
+      weightRefKg: row.weightKg,
+      referenceHeightCm: row.heightCm,
+      method: 'child_p50_table',
+      source: 'child_p50',
+      label: `P50 dla wieku ${band.completedYears} lat`,
+      explanation: `Masa referencyjna P50 dla wieku ${band.completedYears} lat.`,
+      entry: row
+    };
+  }
+
+  if (!(Number.isFinite(height) && height > 0)) {
+    return {
+      weightRefKg: null,
+      referenceHeightCm: null,
+      method: 'none',
+      source: 'none',
+      label: 'masa referencyjna przy BMI 22',
+      explanation: 'Dla dorosłych masa referencyjna wymaga podanego wzrostu.',
+      entry: null
+    };
+  }
+
+  const heightM = height / 100;
+  return {
+    weightRefKg: 22 * heightM * heightM,
+    referenceHeightCm: height,
+    method: 'adult_bmi22',
+    source: 'adult_bmi22',
+    label: 'masa referencyjna przy BMI 22',
+    explanation: 'Masa referencyjna obliczona dla BMI 22 przy podanym wzroście.',
+    entry: null
+  };
+}
+
+function energyResolveReferenceAnthropometry({ sex, ageYears, ageMonthsOpt = 0, heightCm } = {}) {
+  const resolved = energyReferenceWeightKg({ sex, ageYears, ageMonthsOpt, heightCm });
+  const inputHeight = Number(heightCm);
+  const fallbackHeight = Number.isFinite(inputHeight) && inputHeight > 0 ? inputHeight : null;
+  if (resolved.method === 'infant_table') {
+    return {
+      weightKg: resolved.weightRefKg,
+      heightCm: fallbackHeight,
+      method: resolved.method,
+      source: resolved.source,
+      label: resolved.label,
+      explanation: resolved.explanation,
+      entry: resolved.entry
+    };
+  }
+  if (resolved.method === 'child_p50_table') {
+    return {
+      weightKg: resolved.weightRefKg,
+      heightCm: resolved.referenceHeightCm,
+      method: resolved.method,
+      source: resolved.source,
+      label: resolved.label,
+      explanation: resolved.explanation,
+      entry: resolved.entry
+    };
+  }
+  if (resolved.method === 'adult_bmi22') {
+    return {
+      weightKg: resolved.weightRefKg,
+      heightCm: resolved.referenceHeightCm,
+      method: resolved.method,
+      source: resolved.source,
+      label: resolved.label,
+      explanation: resolved.explanation,
+      entry: resolved.entry
+    };
+  }
+  return {
+    weightKg: null,
+    heightCm: fallbackHeight,
+    method: resolved.method || 'none',
+    source: resolved.source || 'none',
+    label: resolved.label || '',
+    explanation: resolved.explanation || '',
+    entry: null
+  };
+}
+
+function energyResolveAnthropometry({
+  ageYears,
+  ageMonthsOpt = 0,
+  sex,
+  weightKg,
+  heightCm,
+  bodyMode = 'actual'
+}) {
+  const numericWeight = Number(weightKg);
+  const numericHeight = Number(heightCm);
+  const safeWeight = Number.isFinite(numericWeight) && numericWeight > 0 ? numericWeight : null;
+  const safeHeight = Number.isFinite(numericHeight) && numericHeight > 0 ? numericHeight : null;
+
+  if (bodyMode === 'actual') {
+    return {
+      weightKg: safeWeight,
+      heightCm: safeHeight,
+      source: (safeWeight == null && safeHeight == null) ? 'invalid' : 'actual',
+      label: 'masa aktualna'
+    };
+  }
+
+  if (bodyMode === 'reference_adult_bmi22' && Number(ageYears) >= ENERGY_ADULT_START_AGE) {
+    const resolved = energyResolveReferenceAnthropometry({ sex, ageYears, ageMonthsOpt, heightCm: safeHeight });
+    return {
+      weightKg: resolved.weightKg,
+      heightCm: resolved.heightCm,
+      source: resolved.source || 'adult_bmi22',
+      label: resolved.label || 'masa referencyjna przy BMI 22'
+    };
+  }
+
+  if ((bodyMode === 'reference_child_p50' || bodyMode === 'reference_infant_table') && Number(ageYears) < ENERGY_ADULT_START_AGE) {
+    const resolved = energyResolveReferenceAnthropometry({ sex, ageYears, ageMonthsOpt, heightCm: safeHeight });
+    if (energyIsNumeric(resolved.weightKg)) {
+      return {
+        weightKg: resolved.weightKg,
+        heightCm: energyIsNumeric(resolved.heightCm) ? resolved.heightCm : safeHeight,
+        source: resolved.source || 'child_p50',
+        label: resolved.label || 'masa referencyjna'
+      };
+    }
+
+    if (typeof advHistoryResolveMetric === 'function' && Number(ageYears) >= 1) {
+      const source = Number(ageYears) < 3 ? 'WHO' : 'OLAF';
+      const wt = advHistoryResolveMetric('WT', safeWeight, sex, ageYears, source);
+      const ht = advHistoryResolveMetric('HT', safeHeight, sex, ageYears, source);
+      const medianWeight = wt?.result?.median;
+      const medianHeight = ht?.result?.median;
+      return {
+        weightKg: energyIsNumeric(medianWeight) ? medianWeight : safeWeight,
+        heightCm: energyIsNumeric(medianHeight) ? medianHeight : safeHeight,
+        source: 'child_p50_fallback',
+        label: `P50 dla wieku ${energyGetCompletedYears(ageYears)} lat`
+      };
+    }
+  }
+
+  return {
+    weightKg: safeWeight,
+    heightCm: safeHeight,
+    source: 'actual_fallback',
+    label: 'masa aktualna'
+  };
+}
+
+function energyHenryREEkcal({ stage, sex, weightKg, heightCm }) {
+  const W = Number(weightKg);
+  const H = Number(heightCm) / 100;
+  if (!isFinite(W) || !isFinite(H) || W <= 0 || H <= 0) return null;
+
+  switch (stage) {
+    case 'child_1_2':
+      return sex === 'M'
+        ? (28.2 * W + 859 * H - 371)
+        : (30.4 * W + 703 * H - 287);
+
+    case 'child_3_9':
+      if (sex === 'M') {
+        const mj = 0.0632 * W + 1.31 * H + 1.28;
+        return mj * 239;
+      }
+      return 15.9 * W + 210 * H + 349;
+
+    case 'child_10_17':
+      return sex === 'M'
+        ? (15.6 * W + 226 * H + 299)
+        : (9.4 * W + 249 * H + 462);
+
+    case 'child_18':
+      return sex === 'M'
+        ? (14.4 * W + 313 * H + 113)
+        : (10.4 * W + 615 * H - 282);
+
+    case 'adult_19_29':
+      return sex === 'M'
+        ? (14.4 * W + 313 * H + 113)
+        : (10.4 * W + 615 * H - 282);
+
+    case 'adult_30_59':
+      return sex === 'M'
+        ? (11.4 * W + 541 * H - 137)
+        : (8.18 * W + 502 * H - 11.6);
+
+    case 'adult_60_plus':
+      return sex === 'M'
+        ? (11.4 * W + 541 * H - 256)
+        : (8.52 * W + 421 * H + 10.7);
+
+    default:
+      return null;
+  }
+}
+
+function energyButteTEEkcal(weightKg) {
+  const W = Number(weightKg);
+  if (!isFinite(W) || W <= 0) return null;
+  return -152.0 + 92.8 * W;
+}
+
+function energyStageUsesGrowthMultiplier(stage) {
+  return stage === 'child_1_2' || stage === 'child_3_9' || stage === 'child_10_17' || stage === 'child_18';
+}
+
+function energyResolveBodyModeFromPolicy({
+  ageYears,
+  stage,
+  bodyPolicy = 'actual',
+  bodyOverride = null
+} = {}) {
+  const ageNum = Number(ageYears) || 0;
+  const stageName = String(stage || '');
+  const rawOverride = String(bodyOverride == null ? '' : bodyOverride).trim().toLowerCase();
+
+  if (rawOverride === 'actual') return 'actual';
+  if (rawOverride === 'reference') {
+    if (stageName.startsWith('adult_') || ageNum >= ENERGY_ADULT_START_AGE) return 'reference_adult_bmi22';
+    if (stageName === 'infant_6_11') return 'reference_infant_table';
+    if (stageName.startsWith('child_')) return 'reference_child_p50';
+    return ageNum >= ENERGY_ADULT_START_AGE ? 'reference_adult_bmi22' : 'reference_child_p50';
+  }
+  if (rawOverride === 'reference_adult_bmi22' || rawOverride === 'adult_bmi22') return 'reference_adult_bmi22';
+  if (rawOverride === 'reference_child_p50' || rawOverride === 'child_p50') return 'reference_child_p50';
+  if (rawOverride === 'reference_infant_table' || rawOverride === 'infant_table') return 'reference_infant_table';
+
+  if (bodyPolicy === 'reference') {
+    if (stageName.startsWith('adult_') || ageNum >= ENERGY_ADULT_START_AGE) return 'reference_adult_bmi22';
+    if (stageName === 'infant_6_11') return 'reference_infant_table';
+    if (stageName === 'infant_0_5') return 'actual';
+    return 'reference_child_p50';
+  }
+  return 'actual';
+}
+
+function energyResolvePalSelection({
+  ageYears,
+  ageMonthsOpt = 0,
+  palInput = null,
+  palPolicy = 'normative',
+  allowRange = false
+} = {}) {
+  const allowed = energyGetAllowedPals(ageYears, ageMonthsOpt, palPolicy === 'clinical' ? 'clinical' : 'normative');
+  if (!allowed.length) {
+    return {
+      requested: null,
+      allowed: [],
+      used: null,
+      mode: 'none',
+      clinicalOverride: false,
+      note: ''
+    };
+  }
+
+  const raw = String(palInput == null ? '' : palInput).trim().toLowerCase();
+  const requested = raw ? Number(raw) : null;
+  const rangeRequested = allowRange && (!raw || raw === 'range' || raw === 'brak' || raw === 'brak-ograniczen' || raw === 'auto' || raw === 'all');
+
+  if (rangeRequested) {
+    return {
+      requested: null,
+      allowed: allowed.slice(),
+      used: null,
+      mode: 'range',
+      clinicalOverride: false,
+      note: ''
+    };
+  }
+
+  const normalized = energyNormalizePalFromAllowed(requested, allowed);
+  const clinicalOverride = normalized.pal === 1.2 && palPolicy === 'clinical';
+  let note = '';
+  if (requested != null && Number.isFinite(requested) && normalized.pal != null && normalized.pal !== requested) {
+    note = `PAL ${requested.toFixed(1)} nie jest dostępny dla tej grupy wieku. Przyjęto PAL ${normalized.pal.toFixed(1)}.`;
+  }
+
+  return {
+    requested: Number.isFinite(requested) ? requested : null,
+    allowed: normalized.allowed,
+    used: normalized.pal,
+    mode: energyIsNumeric(normalized.pal) ? 'fixed' : 'none',
+    clinicalOverride,
+    note
+  };
+}
+
+function energyResolveLegacyPreset({ bodyMode = 'actual', palMode = 'normative', context = '' } = {}) {
+  const normalizedBodyMode = String(bodyMode || 'actual').trim();
+  const normalizedPalMode = String(palMode || 'normative').trim().toLowerCase();
+  const normalizedContext = String(context || '').trim().toLowerCase();
+  const bodyPolicy = normalizedBodyMode === 'actual' ? 'actual' : 'reference';
+  const palPolicy = normalizedPalMode === 'clinical' ? 'clinical' : 'normative';
+
+  if (bodyPolicy === 'reference') {
+    return {
+      preset: 'nutrition_reference',
+      palPolicyOverride: palPolicy === 'clinical' ? 'clinical' : null
+    };
+  }
+
+  if (palPolicy === 'clinical') {
+    return {
+      preset: (normalizedContext.includes('plan') || normalizedContext.includes('diet'))
+        ? 'plan_reduction'
+        : 'intake_observed'
+    };
+  }
+
+  return { preset: 'nutrition_actual' };
+}
+
+function energyBuildContext({
+  preset = 'nutrition_actual',
+  ageYears,
+  ageMonthsOpt = 0,
+  sex,
+  weightKg,
+  heightCm,
+  palInput = null,
+  bodyOverride = null,
+  notes = [],
+  allowRangeOverride = null,
+  palPolicyOverride = null,
+  bodyPolicyOverride = null
+} = {}) {
+  const presetName = Object.prototype.hasOwnProperty.call(ENERGY_CONTEXT_PRESETS, preset)
+    ? preset
+    : 'nutrition_actual';
+  const presetConfig = energyGetPresetConfig(presetName);
+  const policyConfig = {
+    ...presetConfig,
+    palPolicy: palPolicyOverride || presetConfig.palPolicy,
+    bodyPolicy: bodyPolicyOverride || presetConfig.bodyPolicy
+  };
+  if (typeof allowRangeOverride === 'boolean') {
+    policyConfig.allowRange = allowRangeOverride;
+  }
+
+  const stage = energyResolveEquationStage(ageYears, ageMonthsOpt);
+  const palBand = energyResolvePalBand(ageYears, ageMonthsOpt);
+  const yearsCompleted = Math.max(0, Math.floor(Number(ageYears) || 0));
+  const monthsCompleted = yearsCompleted === 0
+    ? Math.max(0, Math.floor(Number(ageMonthsOpt) || Math.round((Number(ageYears) || 0) * 12)))
+    : Math.max(0, Math.floor((Number(ageYears) || 0) * 12));
+  const resolvedBodyMode = energyResolveBodyModeFromPolicy({
+    ageYears,
+    stage,
+    bodyPolicy: policyConfig.bodyPolicy,
+    bodyOverride
+  });
+  const anthropometry = energyResolveAnthropometry({
+    ageYears,
+    ageMonthsOpt,
+    sex,
+    weightKg,
+    heightCm,
+    bodyMode: resolvedBodyMode
+  });
+  const pal = energyResolvePalSelection({
+    ageYears,
+    ageMonthsOpt,
+    palInput,
+    palPolicy: policyConfig.palPolicy,
+    allowRange: !!policyConfig.allowRange
+  });
+
+  const noteList = Array.isArray(notes)
+    ? notes.filter((item) => typeof item === 'string' && item.trim()).map((item) => item.trim())
+    : [];
+  if (pal.note) noteList.push(pal.note);
+
+  const energy = {
+    reeKcal: null,
+    teeRawKcal: null,
+    teeAdjustedKcal: null,
+    growthMultiplier: null,
+    formulaId: null,
+    teeRangeKcal: [],
+    teeRangeMinKcal: null,
+    teeRangeMaxKcal: null
+  };
+
+  if (stage === 'infant_0_5') {
+    energy.formulaId = 'none_infant_0_5';
+    noteList.push('Brak liczbowej normy energii dla wieku poniżej 6 miesięcy.');
+  } else if (stage === 'infant_6_11') {
+    const teeInfant = energyButteTEEkcal(anthropometry.weightKg);
+    energy.formulaId = 'butte_6_11';
+    energy.teeRawKcal = teeInfant;
+    energy.teeAdjustedKcal = teeInfant;
+    noteList.push('TEE wg Butte dla niemowląt 6–11 miesięcy.');
+  } else {
+    const reeKcal = energyHenryREEkcal({
+      stage,
+      sex,
+      weightKg: anthropometry.weightKg,
+      heightCm: anthropometry.heightCm
+    });
+    energy.formulaId = `henry_${stage}`;
+    energy.reeKcal = energyIsNumeric(reeKcal) ? reeKcal : null;
+    energy.growthMultiplier = energyStageUsesGrowthMultiplier(stage)
+      ? ENERGY_CHILD_GROWTH_MULTIPLIER
+      : 1;
+
+    if (!energyIsNumeric(energy.reeKcal)) {
+      noteList.push('Brak kompletu danych do wyliczenia TEE.');
+    } else if (pal.mode === 'range') {
+      energy.teeRangeKcal = pal.allowed.map((palValue) => ({
+        pal: palValue,
+        kcal: energy.reeKcal * palValue * energy.growthMultiplier
+      }));
+      if (energy.teeRangeKcal.length) {
+        energy.teeRangeMinKcal = energy.teeRangeKcal[0].kcal;
+        energy.teeRangeMaxKcal = energy.teeRangeKcal[energy.teeRangeKcal.length - 1].kcal;
+      }
+    } else if (energyIsNumeric(pal.used)) {
+      energy.teeRawKcal = energy.reeKcal * pal.used * energy.growthMultiplier;
+      energy.teeAdjustedKcal = energy.teeRawKcal;
+    } else {
+      noteList.push('Brak kompletu danych do wyliczenia TEE.');
+    }
+  }
+
+  return {
+    preset: presetName,
+    age: {
+      yearsCompleted,
+      monthsCompleted,
+      stage,
+      palBand
+    },
+    policy: {
+      palPolicy: policyConfig.palPolicy,
+      bodyPolicy: policyConfig.bodyPolicy === 'reference' ? 'reference' : 'actual',
+      bodyMode: resolvedBodyMode,
+      allowRange: !!policyConfig.allowRange,
+      allowClinicalPal12: policyConfig.palPolicy === 'clinical' ? true : !!policyConfig.allowClinicalPal12,
+      applyRiskAdjust: policyConfig.applyRiskAdjust,
+      clinicalOverride: pal.clinicalOverride
+    },
+    anthropometry: {
+      weightInputKg: Number.isFinite(Number(weightKg)) ? Number(weightKg) : null,
+      heightInputCm: Number.isFinite(Number(heightCm)) ? Number(heightCm) : null,
+      weightUsedKg: Number.isFinite(Number(anthropometry.weightKg)) ? Number(anthropometry.weightKg) : anthropometry.weightKg,
+      heightUsedCm: Number.isFinite(Number(anthropometry.heightCm)) ? Number(anthropometry.heightCm) : anthropometry.heightCm,
+      source: anthropometry.source || 'unknown',
+      label: anthropometry.label || ''
+    },
+    pal: {
+      requested: pal.requested,
+      allowed: pal.allowed.slice(),
+      used: pal.used,
+      mode: pal.mode
+    },
+    energy,
+    notes: noteList,
+    meta: {
+      presetConfig: { ...presetConfig }
+    }
+  };
+}
+
+function energyConvertLegacyParams({
+  ageYears,
+  ageMonthsOpt = 0,
+  sex,
+  weightKg,
+  heightCm,
+  pal = null,
+  context = 'plan',
+  bodyMode = 'actual',
+  palMode = 'normative'
+} = {}) {
+  const resolved = energyResolveLegacyPreset({ bodyMode, palMode, context });
+  return {
+    preset: resolved.preset,
+    ageYears,
+    ageMonthsOpt,
+    sex,
+    weightKg,
+    heightCm,
+    palInput: pal,
+    bodyOverride: bodyMode,
+    notes: [],
+    allowRangeOverride: false,
+    palPolicyOverride: resolved.palPolicyOverride || null,
+    bodyPolicyOverride: resolved.bodyPolicyOverride || null
+  };
+}
+
+function energyProjectLegacyEstimate(ctx, legacyInput = {}) {
+  return {
+    stage: ctx.age.stage,
+    palBand: ctx.age.palBand,
+    reeKcal: energyIsNumeric(ctx.energy.reeKcal) ? ctx.energy.reeKcal : null,
+    teeRawKcal: energyIsNumeric(ctx.energy.teeRawKcal) ? ctx.energy.teeRawKcal : null,
+    teeAdjustedKcal: energyIsNumeric(ctx.energy.teeAdjustedKcal) ? ctx.energy.teeAdjustedKcal : null,
+    formulaId: ctx.energy.formulaId,
+    palUsed: ctx.pal.mode === 'fixed' ? ctx.pal.used : null,
+    palAllowed: Array.isArray(ctx.pal.allowed) ? ctx.pal.allowed.slice() : [],
+    growthMultiplier: energyIsNumeric(ctx.energy.teeRawKcal) ? ctx.energy.growthMultiplier : null,
+    weightUsedKg: ctx.anthropometry.weightUsedKg,
+    heightUsedCm: ctx.anthropometry.heightUsedCm,
+    bodyMode: legacyInput.bodyMode || 'actual',
+    notes: Array.isArray(ctx.notes) ? ctx.notes.slice() : []
+  };
+}
+
+function energyEstimate(legacyInput = {}) {
+  const ctx = energyBuildContext(energyConvertLegacyParams(legacyInput));
+  return energyProjectLegacyEstimate(ctx, legacyInput);
+}
+
+if (typeof window !== 'undefined') {
+  window.ENERGY_CONTEXT_PRESETS = ENERGY_CONTEXT_PRESETS;
+  window.ENERGY_REFERENCE_INFANT_TABLE = ENERGY_REFERENCE_INFANT_TABLE;
+  window.ENERGY_REFERENCE_CHILD_TABLE = ENERGY_REFERENCE_CHILD_TABLE;
+  window.energyGetCompletedYears = energyGetCompletedYears;
+  window.energyGetCompletedMonths = energyGetCompletedMonths;
+  window.energyGetReferenceAgeBand = energyGetReferenceAgeBand;
+  window.energyGetReferenceEntry = energyGetReferenceEntry;
+  window.energyReferenceWeightKg = energyReferenceWeightKg;
+  window.energyResolveReferenceAnthropometry = energyResolveReferenceAnthropometry;
+  window.energyResolveEquationStage = energyResolveEquationStage;
+  window.energyResolvePalBand = energyResolvePalBand;
+  window.energyGetAllowedPals = energyGetAllowedPals;
+  window.energyNormalizePal = energyNormalizePal;
+  window.energyResolvePalSelection = energyResolvePalSelection;
+  window.energyResolveAnthropometry = energyResolveAnthropometry;
+  window.energyHenryREEkcal = energyHenryREEkcal;
+  window.energyButteTEEkcal = energyButteTEEkcal;
+  window.energyStageUsesGrowthMultiplier = energyStageUsesGrowthMultiplier;
+  window.energyBuildContext = energyBuildContext;
+  window.energyConvertLegacyParams = energyConvertLegacyParams;
+  window.energyProjectLegacyEstimate = energyProjectLegacyEstimate;
+  window.energyGetPalMeta = energyGetPalMeta;
+  window.energyGetPalOptionLabel = energyGetPalOptionLabel;
+  window.energyGetPalDescription = energyGetPalDescription;
+  window.energyFormatPalCodeLabel = energyFormatPalCodeLabel;
+  window.energyFormatPalRangeLabel = energyFormatPalRangeLabel;
+}
+
 /**
- * Oblicza spoczynkową przemianę materii (BMR) w zależności od wieku.
- * Dla dzieci wykorzystujemy formuły Schofielda (FAO/WHO/UNU),
- * dla dorosłych – wzór Mifflina–St Jeora. Wynik w kcal/dzień.
- *
- * @param {number} weight Masa ciała w kilogramach
- * @param {number} height Wzrost w centymetrach
- * @param {number} age Wiek w latach
- * @param {string} sex 'M' dla mężczyzn, 'F' dla kobiet
+ * Oblicza spoczynkowy wydatek energetyczny (REE).
+ * Funkcja pozostaje jako wrapper kompatybilności dla starszych modułów.
  */
 function BMR(weight, height, age, sex){
-  // Formuły Schofielda dla dzieci (kalorie/dzień)
-  if(age < 3){
-    return Math.round(sex === 'M' ? 60.9 * weight - 54 : 61.2 * weight - 51);
-  } else if(age < 10){
-    return Math.round(sex === 'M' ? 22.7 * weight + 495 : 22.5 * weight + 499);
-  } else if(age < 18){
-    return Math.round(sex === 'M' ? 17.5 * weight + 651 : 12.2 * weight + 746);
-  }
-  // Dorośli: wzór Mifflina–St Jeora (waga kg, wzrost cm)
-  return Math.round(10 * weight + 6.25 * height - 5 * age + (sex === 'M' ? 5 : -161));
+  const profile = energyEstimate({
+    ageYears: age,
+    ageMonthsOpt: age > 0 ? Math.round((Number(age) % 1) * 12) : 0,
+    sex,
+    weightKg: weight,
+    heightCm: height,
+    pal: 1.4,
+    context: 'legacy_bmr',
+    bodyMode: 'actual',
+    palMode: 'clinical'
+  });
+  return energyIsNumeric(profile.reeKcal) ? Math.round(profile.reeKcal) : NaN;
 }
+
 function BMI(weight,height){
   return weight/Math.pow(height/CM_TO_M,2);
 }
@@ -1483,35 +2709,20 @@ function bmiCategory(bmi){
   // Otyłość III stopnia – 40.0 i więcej
   return 'Otyłość III stopnia';
 }
-function proposeDiets(bmr, pal, sex, isChild) {
 
-  // Oblicz całkowite dzienne zapotrzebowanie energetyczne (TEE) na podstawie BMR i współczynnika PAL.
-  // Zmienna teeFactor nie jest dostępna w tym zakresie; ewentualne korekty TEE są uwzględniane wcześniej.
-  const tee = bmr * pal;                                  // całkowite dzienne zapotrzebowanie
-  const minIntake = isChild ? MIN_INTAKE_CHILD
-                            : MIN_INTAKE_ADULT[sex];
+function proposeDietsFromTEE(teeKcal, sex, isChild) {
+  const tee = Number(teeKcal);
+  if (!isFinite(tee) || tee <= 0) return [];
 
-  // zwróć tablicę obiektów {key, name, deficit, intake, weeklyLoss}
-  // Jeśli deficyt musiałby zostać zredukowany do zera (bo zapotrzebowanie minus deficyt
-  // spada poniżej minimalnego spożycia), pomijamy taką dietę, aby nie proponować
-  // nierealistycznych opcji (np. intensywna dieta przy bardzo niskim TEE).
-  const result = Object.entries(DIET_LEVELS).reduce((arr, [key, cfg]) => {
-    // docelowy deficyt
+  const minIntake = isChild ? MIN_INTAKE_CHILD : MIN_INTAKE_ADULT[sex];
+
+  return Object.entries(DIET_LEVELS).reduce((arr, [key, cfg]) => {
     let deficit = Math.min(cfg.deficitPct * tee, cfg.maxDeficit);
-
-    // jeśli zapotrzebowanie minus deficyt spada poniżej minimalnego spożycia,
-    // nie stosuj deficytu (deficyt = 0)
-    if (tee - deficit < minIntake) {
-      deficit = 0;
-    }
-
-    // jeżeli deficyt = 0, pomijamy dietę – nie jest adekwatna dla tego użytkownika
-    if (deficit === 0) {
-      return arr;
-    }
+    if (tee - deficit < minIntake) deficit = 0;
+    if (deficit === 0) return arr;
 
     const intake = Math.round(tee - deficit);
-    const weeklyLoss = (deficit > 0) ? (deficit * 7 / KCAL_PER_KG) : 0;
+    const weeklyLoss = deficit > 0 ? (deficit * 7 / KCAL_PER_KG) : 0;
     arr.push({
       key,
       name: cfg.label,
@@ -1521,11 +2732,226 @@ function proposeDiets(bmr, pal, sex, isChild) {
     });
     return arr;
   }, []);
-
-  // Jeśli po filtrowaniu nie pozostała żadna dieta (np. zbyt niskie TEE uniemożliwia deficyt),
-  // zwracamy pustą tablicę. Pozostawianie „zerowej” diety mogłoby wprowadzać użytkownika w błąd.
-  return result;
 }
+
+function proposeDiets(bmr, pal, sex, isChild) {
+  const tee = Number(bmr) * Number(pal);
+  return proposeDietsFromTEE(tee, sex, isChild);
+}
+
+function energyPopulatePlanPalSelect(selectEl, { ageYears, ageMonthsOpt = 0, value = null } = {}) {
+  return energyPopulatePalSelectByPreset(selectEl, {
+    preset: 'plan_reduction',
+    ageYears,
+    ageMonthsOpt,
+    value
+  });
+}
+
+function energyPopulateIntakePalSelect(selectEl, { ageYears, ageMonthsOpt = 0, value = null } = {}) {
+  return energyPopulatePalSelectByPreset(selectEl, {
+    preset: 'intake_observed',
+    ageYears,
+    ageMonthsOpt,
+    value
+  });
+}
+
+function energyMaybeApplyRiskAdjustment({
+  context,
+  ageYears,
+  ageMonthsOpt = 0,
+  sex,
+  weightKg,
+  heightCm,
+  history = null,
+  intakeKcalPerDay = null,
+  mountId = 'anorexiaTmpMount',
+  applyRiskAdjust = false,
+  skipForInfants = true
+} = {}) {
+  const reeKcal = energyIsNumeric(context?.energy?.reeKcal) ? context.energy.reeKcal : null;
+  const teeRawKcal = energyIsNumeric(context?.energy?.teeRawKcal) ? context.energy.teeRawKcal : null;
+  const stage = context?.age?.stage || '';
+  const isInfantUnder6 = stage === 'infant_0_5';
+  const isInfantButte = stage === 'infant_6_11';
+
+  let teeBaselineKcal = teeRawKcal;
+  let risk = null;
+  let riskAdjusted = false;
+
+  const canApplyRiskAdjust = !!applyRiskAdjust
+    && energyIsNumeric(teeRawKcal)
+    && context?.policy?.applyRiskAdjust
+    && typeof window !== 'undefined'
+    && typeof window.anorexiaRiskAdjust === 'function'
+    && !(skipForInfants && (isInfantUnder6 || isInfantButte));
+
+  if (canApplyRiskAdjust) {
+    try {
+      const adjusted = window.anorexiaRiskAdjust({
+        user: {
+          ageYears,
+          ageMonthsOpt,
+          sex,
+          heightCm,
+          weightKg
+        },
+        reeKcal,
+        teeRawKcal,
+        bmr: reeKcal,
+        pal: context?.pal?.used,
+        history: history || null,
+        intakeKcalPerDay: intakeKcalPerDay == null ? null : intakeKcalPerDay,
+        mountId
+      });
+      if (adjusted && energyIsNumeric(adjusted.teeAdjusted)) {
+        teeBaselineKcal = adjusted.teeAdjusted;
+      }
+      risk = adjusted?.risk || null;
+      riskAdjusted = !!(adjusted && adjusted.risk && adjusted.risk.any);
+    } catch (_) {
+      risk = null;
+      riskAdjusted = false;
+    }
+  }
+
+  return {
+    stage,
+    reeKcal,
+    teeRawKcal,
+    teeBaselineKcal,
+    risk,
+    riskAdjusted,
+    isInfantUnder6,
+    isInfantButte
+  };
+}
+
+function energyBuildIntakeObservedState({
+  ageYears,
+  ageMonthsOpt = 0,
+  sex,
+  weightKg,
+  heightCm,
+  palInput = null,
+  history = null,
+  intakeKcalPerDay = null,
+  mountId = 'anorexiaTmpMount',
+  applyRiskAdjust = false
+} = {}) {
+  const context = energyBuildContext({
+    preset: 'intake_observed',
+    ageYears,
+    ageMonthsOpt,
+    sex,
+    weightKg,
+    heightCm,
+    palInput
+  });
+
+  const riskState = energyMaybeApplyRiskAdjustment({
+    context,
+    ageYears,
+    ageMonthsOpt,
+    sex,
+    weightKg,
+    heightCm,
+    history,
+    intakeKcalPerDay,
+    mountId,
+    applyRiskAdjust,
+    skipForInfants: true
+  });
+
+  const isChild = Number(ageYears) >= CHILD_AGE_MIN && Number(ageYears) < ENERGY_ADULT_START_AGE;
+
+  return {
+    context,
+    stage: riskState.stage,
+    reeKcal: riskState.reeKcal,
+    teeRawKcal: riskState.teeRawKcal,
+    teeBaselineKcal: riskState.teeBaselineKcal,
+    palUsed: energyIsNumeric(context?.pal?.used) ? context.pal.used : null,
+    isChild,
+    isInfantUnder6: riskState.isInfantUnder6,
+    isInfantButte: riskState.isInfantButte,
+    risk: riskState.risk,
+    riskAdjusted: riskState.riskAdjusted,
+    modeBadge: energyGetContextModeBadge(context)
+  };
+}
+
+function energyBuildPlanReductionState({
+  ageYears,
+  ageMonthsOpt = 0,
+  sex,
+  weightKg,
+  heightCm,
+  palInput = null,
+  history = null,
+  intakeKcalPerDay = null,
+  mountId = 'anorexiaTmpMount'
+} = {}) {
+  const context = energyBuildContext({
+    preset: 'plan_reduction',
+    ageYears,
+    ageMonthsOpt,
+    sex,
+    weightKg,
+    heightCm,
+    palInput
+  });
+
+  const riskState = energyMaybeApplyRiskAdjustment({
+    context,
+    ageYears,
+    ageMonthsOpt,
+    sex,
+    weightKg,
+    heightCm,
+    history,
+    intakeKcalPerDay,
+    mountId,
+    applyRiskAdjust: true,
+    skipForInfants: true
+  });
+
+  const stage = riskState.stage;
+  const isInfantPlanUnavailable = stage === 'infant_0_5' || stage === 'infant_6_11';
+  const isChild = Number(ageYears) >= CHILD_AGE_MIN && Number(ageYears) < ENERGY_ADULT_START_AGE;
+  const diets = isInfantPlanUnavailable
+    ? []
+    : proposeDietsFromTEE(riskState.teeBaselineKcal, sex, isChild);
+
+  return {
+    context,
+    stage,
+    reeKcal: riskState.reeKcal,
+    teeRawKcal: riskState.teeRawKcal,
+    teeBaselineKcal: riskState.teeBaselineKcal,
+    palUsed: energyIsNumeric(context?.pal?.used) ? context.pal.used : null,
+    isChild,
+    isInfantPlanUnavailable,
+    diets,
+    risk: riskState.risk,
+    riskAdjusted: riskState.riskAdjusted,
+    modeBadge: energyGetContextModeBadge(context)
+  };
+}
+
+if (typeof window !== 'undefined') {
+  window.energyPopulatePalSelectByPreset = energyPopulatePalSelectByPreset;
+  window.energyPopulatePlanPalSelect = energyPopulatePlanPalSelect;
+  window.energyPopulateIntakePalSelect = energyPopulateIntakePalSelect;
+  window.energyBuildIntakeObservedState = energyBuildIntakeObservedState;
+  window.energyBuildPlanReductionState = energyBuildPlanReductionState;
+  window.energyMaybeApplyRiskAdjustment = energyMaybeApplyRiskAdjustment;
+  window.energyGetContextModeBadge = energyGetContextModeBadge;
+  window.energyRenderModeBadgeHtml = energyRenderModeBadgeHtml;
+}
+
+/* === ENERGY NORMS ENGINE END =================================== */
 
 // Wybór klasy pod kolor ramki/ liczby BMI u dorosłych
 function bmiBoxClassForAdult(bmiCat, ageYears){
@@ -1536,18 +2962,14 @@ function bmiBoxClassForAdult(bmiCat, ageYears){
 }
 function fillDietSelect(diets) {
   const sel = document.getElementById('dietLevel');
-  sel.innerHTML = ''; // wyczyść
+  if (!sel) return;
+  sel.innerHTML = '';
 
-  // Określ, czy użytkownik jest dzieckiem: wiek < 18 lat (przy założeniu, że CHILD_AGE_MIN określa dolną granicę)
-  // Ustal wiek z większą precyzją (lata + miesiące/12)
   const ageVal = getAgeDecimal();
-  const isChildDefault = (ageVal >= CHILD_AGE_MIN && ageVal < 18);
+  const isChildDefault = (ageVal >= CHILD_AGE_MIN && ageVal < ENERGY_ADULT_START_AGE);
 
-  // Jeśli brak dostępnych diet, ukryj cały blok wyboru diety i zakończ
   if (!diets || diets.length === 0) {
-    // usuń wszelkie dotychczasowe opcje
     sel.innerHTML = '';
-    // ukryj wrap i opisy
     document.getElementById('dietChoiceWrap').style.display = 'none';
     const descEl = document.getElementById('dietDesc');
     const calEl  = document.getElementById('dietCalorieInfo');
@@ -1556,47 +2978,32 @@ function fillDietSelect(diets) {
     return;
   }
 
-  // Określ klucz rekomendowanej diety w zależności od wieku.
-  // Dla dzieci (<18 lat) jest to lekka dieta, dla dorosłych – umiarkowana.
-  // Domyślnie zalecana dieta: dla dzieci „lekka”, dla dorosłych „umiarkowana”.
-  // Jeśli taka dieta nie jest dostępna w liście proponowanych diet (np. zbyt małe zapotrzebowanie),
-  // rekomendację przypisujemy pierwszej dostępnej diecie.
   let recommendedKey = isChildDefault ? 'light' : 'moderate';
-  // Jeżeli zalecana dieta nie jest dostępna w proponowanej liście,
-  // ustaw rekomendację na pierwszą dostępną dietę.
   if (!diets.some(d => d.key === recommendedKey)) {
     recommendedKey = diets[0].key;
   }
-  // Zbuduj opcje w oparciu o dostępne diety z dodatkowymi informacjami.
+
   diets.forEach(d => {
     const opt = document.createElement('option');
     opt.value = d.key;
-    // Tekst opcji zawiera nazwę diety, deficyt i tempo utraty masy.
-    // Jeśli jest to dieta rekomendowana, dodaj oznaczenie „rekomendowana dieta”.
-    // Format the weekly loss with a comma as the decimal separator
-    let label = `${d.name} (‑${d.deficit} kcal/dzień ≈ ${d.weeklyLoss.toFixed(1).replace('.', ',')} kg/tydz.)`;
+    let label = `${d.name} (‑${d.deficit} kcal/dzień ≈ ${d.weeklyLoss.toFixed(1).replace('.', ',')} kg/tydz.)`;
     if (d.key === recommendedKey) {
-      label += ' – rekomendowana dieta';
+      label += ' – rekomendowana dieta';
       opt.classList.add('recommended');
     }
     opt.textContent = label;
     sel.appendChild(opt);
   });
 
-  // Określ domyślne ustawienie: dla dzieci dietę lekką, dla dorosłych umiarkowaną,
-  // jeśli dana dieta jest dostępna; w przeciwnym razie wybierz pierwszą z listy.
   let defaultKey = isChildDefault ? 'light' : 'moderate';
-  // Sprawdź, czy defaultKey występuje wśród proponowanych diet
   if (!diets.some(d => d.key === defaultKey)) {
     defaultKey = diets[0].key;
   }
   sel.value = defaultKey;
-
   document.getElementById('dietChoiceWrap').style.display = 'block';
-
-  // Uaktualnij opis diety po ustawieniu wartości domyślnej
   updateDietDescription(defaultKey);
 }
+
 /* === PLAN – aktualizacja po wyborze diety  =========================== */
 function updatePlanFromDiet(){
 
@@ -1609,44 +3016,51 @@ function updatePlanFromDiet(){
   const pal      = +document.getElementById('palFactor').value;
   const planResultsContainer = document.getElementById('planResults');
   if (planResultsContainer) {
-    planResultsContainer.classList.toggle('adult-plan-results', Number(age) >= 18);
+    planResultsContainer.classList.toggle('adult-plan-results', Number(age) >= ENERGY_ADULT_START_AGE);
   }
 
-  if(!(age && weightKg && heightCm && pal)) return;                  // brak danych
+  if(!(age && weightKg && heightCm)) return;                  // brak danych
 
   /* ------------------ 2. TEE i dostępne diety ------------- */
-  // Oblicz BMR i przewidywany całkowity wydatek energetyczny (TEE)
-  const bmr   = BMR(weightKg, heightCm, age, sex);
-  let diets;
-  // Spróbuj dostosować BMR przy ryzyku anoreksji. Użyj skorygowanej wartości TEE,
-  // aby obliczyć diety. Nie wyświetlaj banera w tym miejscu (baner zostanie
-  // wstawiony dopiero po zrenderowaniu planu).
-  let bmrForDiets = bmr;
-  try {
-    if (typeof window !== 'undefined' && typeof window.anorexiaRiskAdjust === 'function') {
-      const history = window.intakeHistory || null;
-      const intakeKcalPerDay = window.intakeEstimatedKcalPerDay || null;
-      // Skorzystaj z mountId, które nie istnieje, aby uniknąć wyświetlenia banera w tym momencie
-      const tmp = window.anorexiaRiskAdjust({
-        user: {
-          ageYears: age,
-          ageMonthsOpt: (parseFloat(document.getElementById('ageMonths')?.value) || 0),
-          sex: sex,
-          heightCm: heightCm,
-          weightKg: weightKg
-        },
-        bmr: bmr,
-        pal: pal,
-        history: history,
-        intakeKcalPerDay: intakeKcalPerDay,
-        mountId: 'anorexiaTmpMount'
-      });
-      if (tmp && typeof tmp.teeAdjusted === 'number' && pal > 0) {
-        bmrForDiets = tmp.teeAdjusted / pal;
-      }
+  const ageMonthsOpt = (parseFloat(document.getElementById('ageMonths')?.value) || 0);
+  const isChildEnergy = age >= CHILD_AGE_MIN && age < ENERGY_ADULT_START_AGE;
+  const intakeHistory = window.intakeHistory || null;
+  const intakeKcalPerDay = window.intakeEstimatedKcalPerDay || null;
+  const planState = energyBuildPlanReductionState({
+    ageYears: age,
+    ageMonthsOpt,
+    sex,
+    weightKg,
+    heightCm,
+    palInput: pal,
+    history: intakeHistory,
+    intakeKcalPerDay,
+    mountId: 'anorexiaTmpMount'
+  });
+
+  const bmr = planState.reeKcal;
+  const teeRawPlan = planState.teeRawKcal;
+
+  if (planState.isInfantPlanUnavailable) {
+    const dietSel = document.getElementById('dietLevel');
+    if (dietSel) dietSel.innerHTML = '';
+    const descEl = document.getElementById('dietDesc');
+    const calEl  = document.getElementById('dietCalorieInfo');
+    const wrap = document.getElementById('dietChoiceWrap');
+    if (descEl) descEl.style.display = 'none';
+    if (calEl) calEl.style.display = 'none';
+    if (wrap) wrap.style.display = 'none';
+    const planCardEl = document.getElementById('planCard');
+    if (planCardEl) planCardEl.style.display = 'block';
+    const planResultsEl = document.getElementById('planResults');
+    if (planResultsEl) {
+      planResultsEl.innerHTML = `<div class="result-card plan-col plan-result-card animate-in"><h3>Informacja</h3><p class="diet-warning">Plan odchudzania nie jest dostępny dla niemowląt. W tym wieku moduł energii ma charakter wyłącznie informacyjny.</p></div>`;
     }
-  } catch(e) {}
-  diets = proposeDiets(bmrForDiets, pal, sex, age < 18);
+    return;
+  }
+
+  let teeForDiets = planState.teeBaselineKcal;
+  let diets = Array.isArray(planState.diets) ? planState.diets.slice() : proposeDietsFromTEE(teeForDiets, sex, isChildEnergy);
 
   // Jeśli nie ma żadnych diet (deficyt zbyt niski dla wszystkich poziomów),
   // ukryj opcję wyboru diety i wyświetl informację w wynikach planu.
@@ -1698,7 +3112,7 @@ function updatePlanFromDiet(){
   if (calInfoEl && diet) {
     const intakeRounded = Math.round(diet.intake / 100) * 100;
     // Określ, czy użytkownik jest dzieckiem dla potrzeb rekomendowanej diety
-    const isChildDef2 = (age >= CHILD_AGE_MIN && age < 18);
+    const isChildDef2 = (age >= CHILD_AGE_MIN && age < ENERGY_ADULT_START_AGE);
     const recKey2 = isChildDef2 ? 'light' : 'moderate';
     // Dostosuj nagłówek: jeśli wybrano dietę rekomendowaną, użyj "Zalecana", w przeciwnym razie "Kaloryczność wybranej diety"
     const headerText = (diet && diet.key === recKey2) ? 'Zalecana kaloryczność diety' : 'Kaloryczność wybranej diety';
@@ -1707,11 +3121,11 @@ function updatePlanFromDiet(){
   }
 
   /* ------------------ 3. Cele BMI (różne dla dzieci/dorosłych) ------ */
-  const isChild   = age >= CHILD_AGE_MIN && age <= CHILD_AGE_MAX;
+  const isChild   = age >= CHILD_AGE_MIN && age < ENERGY_ADULT_START_AGE;
   const h         = heightCm / CM_TO_M;                              // metry
 
   /* 3a. Górna granica normy BMI – używa helpera, który respektuje WHO/OLAF */
-  const targetUpperBMI = toNormalBMITarget(weightKg, heightCm, age, sex);  // :contentReference[oaicite:0]{index=0}
+  const targetUpperBMI = age < ENERGY_ADULT_START_AGE ? toNormalBMITarget(weightKg, heightCm, age, sex) : ADULT_BMI.NORMAL_MAX;
 
   /* 3b. BMI 50 centyla – te same siatki co w całym kalkulatorze */
   let targetMedianBMI = 22.0;                                        // dorośli – przyjmujemy BMI 22 jako środek normy
@@ -1788,7 +3202,7 @@ function updatePlanFromDiet(){
   const dietWarningMarkup = warnings.join('');
 
   // Określ, czy użytkownik jest dzieckiem w kontekście wyboru domyślnej diety
-  const isChildDef = (age >= CHILD_AGE_MIN && age < 18);
+  const isChildDef = (age >= CHILD_AGE_MIN && age < ENERGY_ADULT_START_AGE);
   const recommendedKey = isChildDef ? 'light' : 'moderate';
   const recommendedName = DIET_LEVELS[recommendedKey] ? DIET_LEVELS[recommendedKey].label : '';
   // Określ etykietę nagłówka pierwszej karty w zależności od tego, czy wybrano dietę rekomendowaną
@@ -1796,9 +3210,13 @@ function updatePlanFromDiet(){
   // Nota rekomendacji nie jest już wyświetlana tutaj. Informację o rekomendowanej diecie
   // umieszczamy bezpośrednio w opcjach listy diet (jako dopisek „rekomendowana dieta”).
   const recommendNote = '';
+  const modeBadgeHtml = planState && planState.modeBadge
+    ? `<div class="energy-mode-badge-row energy-mode-badge-row--results">${energyRenderModeBadgeHtml(planState.modeBadge)}</div>`
+    : '';
 
   planResults.innerHTML = `
     ${recommendNote}
+    ${modeBadgeHtml}
     <div class="result-card plan-col plan-result-card animate-in">
       <h3>${firstCardHeading}</h3>
       <p class="result-number result-val">${intakeRounded}</p>
@@ -1837,8 +3255,10 @@ function updatePlanFromDiet(){
           heightCm: heightCm,
           weightKg: weightKg
         },
+        reeKcal: bmr,
+        teeRawKcal: teeRawPlan,
         bmr: bmr,
-        pal: pal,
+        pal: planState.palUsed,
         history: history,
         intakeKcalPerDay: intakeKcalPerDay,
         mountId: 'planResults'
@@ -1939,50 +3359,18 @@ function distanceToNormalBMI(weight, height, age, sex) {
   if (currentBMI <= targetBMI) return null;
 
   // ile kg trzeba schudnąć i ile kcal to daje
-  const targetWeight = targetBMI * Math.pow(height/CM_TO_M, 2);
+  const targetWeight = targetBMI * Math.pow(height / CM_TO_M, 2);
   const kgToLose     = weight - targetWeight;
-  const kcalToBurn = kgToLose * KCAL_PER_KG;
+  const kcalToBurn   = kgToLose * KCAL_PER_KG;
 
-  // zestaw aktywności z MET i prędkością
-  const acts = [
-    // Dotychczasowe podstawowe aktywności
-    { label:'🚶 Spacer',                met:3.0,  speed:5   },
-    { label:'🚴 Rower 16 km/h',         met:6.0,  speed:16  },
-    { label:'🚴‍♂️ Rower 20 km/h',       met:8.0,  speed:20  },
-    { label:'🏃 Bieganie 8 km/h',        met:8.0,  speed:8   },
-    { label:'🏊 Pływanie rekreacyjne',   met:7.5,  speed:3   },
-    // Nowe aktywności dodane na życzenie użytkownika
-    { label:'🎾 Tenis',                 met:7.0,  speed:5   }, // tenis (gra pojedyncza) ok. 7 MET, umiarkowany dystans
-    { label:'🏀 Koszykówka',            met:6.5,  speed:6   }, // koszykówka ogólna – ok. 6,5 MET
-    { label:'⚽ Piłka nożna',           met:7.0,  speed:7   }, // piłka nożna (rekreacyjna) – ok. 7 MET
-    { label:'💃 Taniec',                met:5.0,  speed:4   }  // taniec towarzyski / fitness – ok. 5 MET
-  ];
+  const activityModel = activityBuildJourneyBurnState({
+    kcalTarget: kcalToBurn,
+    weightKg: weight,
+    ageYears: age
+  });
+  const table = activityRenderTableHtml(activityModel);
 
-  // budujemy wiersze tabeli: dystans / czas
-  const rows = acts.map(act => {
-    // kcal spalane na minutę
-    const burnPerMin = (act.met * 3.5 * weight) / 200;
-    // ile minut potrzeba spalić kcalToBurn
-    const timeMin = kcalToBurn / burnPerMin;
-    const h = Math.floor(timeMin/60),
-          m = Math.round(timeMin%60);
-    const timeStr = h > 0 ? `${h} h ${m} min` : `${m} min`;
-
-    // kcal na 1 km = kcal/min × min/km
-    const km = kcalToBurn / (burnPerMin * (MINUTES_PER_HOUR/act.speed));
-  // Format distance with a comma as decimal separator
-  const distStr = km >= 1 ? `${km.toFixed(1).replace('.', ',')} km` : `${Math.round(km*1000)} m`;
-
-    return `<tr><td>${act.label}</td><td>${distStr} / ${timeStr}</td></tr>`;
-  }).join('');
-
-  const table = `
-    <table style="margin-top:6px;width:100%;">
-      <tr><th>Aktywność</th><th>Dystans / Czas do normy</th></tr>
-      ${rows}
-    </table>
-  `;
-  return { kgToLose, kcalToBurn, table };
+  return { kgToLose, kcalToBurn, table, activityModel };
 }
 /**
  * Ile kilogramów brakuje dziecku (2–19 l.) do dolnej granicy normy BMI (P5 WHO)
@@ -3035,7 +4423,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function syncDietRecommendationControlsForAge() {
     const age = getAgeDecimalInternal();
-    const isAdult = age >= 18;
+    const isAdult = age >= ENERGY_ADULT_START_AGE;
     const columns = document.querySelector('#dietStrategyOptions .diet-toggle-columns');
     const leftCol = columns ? columns.querySelector('.col-left') : null;
     const rightCol = columns ? columns.querySelector('.col-right') : null;
@@ -3172,7 +4560,7 @@ document.addEventListener('DOMContentLoaded', function() {
   function updateDietCardLabels() {
     syncDietRecommendationControlsForAge();
     const patientFacing = isPatientFacingDietMode();
-    const isAdult = getAgeDecimalInternal() >= 18;
+    const isAdult = getAgeDecimalInternal() >= ENERGY_ADULT_START_AGE;
     const noteEl = document.getElementById('dietInfoNote');
     const generateBtn = document.getElementById('generateDietBtn');
     const setText = function(id, value) {
@@ -3205,7 +4593,7 @@ document.addEventListener('DOMContentLoaded', function() {
   function buildDietRecommendationResult() {
     syncDietRecommendationControlsForAge();
     const age = getAgeDecimalInternal();
-    if (age >= 18) {
+    if (age >= ENERGY_ADULT_START_AGE) {
       return generateDietRecommendations();
     }
     const reduceToggleEl = document.getElementById('reduceToggle');
@@ -3536,7 +4924,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (age <= 5) return;
     const bmi = weight / Math.pow(height / 100, 2);
     let show = false;
-    if (age >= 18) {
+    if (age >= ENERGY_ADULT_START_AGE) {
       // Nadwaga/otyłość u dorosłych: BMI ≥ 25
       if (bmi >= 25) show = true;
     } else {
@@ -3791,15 +5179,21 @@ document.addEventListener('DOMContentLoaded', function() {
     const weight = parseFloat(document.getElementById('weight')?.value) || 0;
     const height = parseFloat(document.getElementById('height')?.value) || 0;
     const sex = document.getElementById('sex')?.value || 'M';
-    const pal = parseFloat(document.getElementById('palFactor')?.value) || 1;
-    let bmrVal = 0;
-    if (typeof BMR === 'function') {
-      try { bmrVal = BMR(weight, height, age, sex); } catch (_) { bmrVal = 0; }
-    }
-    let diets = [];
-    if (typeof proposeDiets === 'function') {
-      try { diets = proposeDiets(bmrVal, pal, sex, age < 18); } catch (_) { diets = []; }
-    }
+    const palRaw = document.getElementById('palFactor')?.value;
+    const pal = palRaw === '' || palRaw == null ? null : parseFloat(palRaw);
+    const ageMonthsOpt = parseFloat(document.getElementById('ageMonths')?.value) || 0;
+    const planState = energyBuildPlanReductionState({
+      ageYears: age,
+      ageMonthsOpt,
+      sex,
+      weightKg: weight,
+      heightCm: height,
+      palInput: pal,
+      history: window.intakeHistory || null,
+      intakeKcalPerDay: window.intakeEstimatedKcalPerDay || null,
+      mountId: 'anorexiaTmpMount'
+    });
+    let diets = Array.isArray(planState.diets) ? planState.diets.slice() : [];
     const selectedKey = document.getElementById('dietLevel')?.value || null;
     // Odczytaj flagę suplementacji witaminy D.  Użytkownik może zdecydować, czy chce otrzymać zalecenia dotyczące wit. D.
     const vitDEl = document.getElementById('vitDSuppFlag');
@@ -3813,18 +5207,21 @@ document.addEventListener('DOMContentLoaded', function() {
     const journeyEnabled = journeyEl ? journeyEl.checked : false;
     const patientFacing = isPatientFacingDietMode();
     const chosenDiet = diets.find(d => d.key === selectedKey) || null;
+    if (planState.isInfantPlanUnavailable) {
+      return { textOutput: '', htmlOutput: '' };
+    }
     const weeklyLoss = (chosenDiet && chosenDiet.weeklyLoss > 0) ? chosenDiet.weeklyLoss : 0;
     const dailyDeficit = chosenDiet ? chosenDiet.deficit : 0;
     const lines = [];
     let warningText = '';
-    if (age >= 18) {
+    if (age >= ENERGY_ADULT_START_AGE) {
       return generateAdultDietRecommendations({
         age,
         proMode,
         weight,
         height,
         sex,
-        pal,
+        pal: planState.palUsed,
         chosenDiet,
         dailyDeficit,
         weeklyLoss,
@@ -5096,6 +6493,264 @@ function patientReportFormatSummaryLineWithValue(label, valueWithUnit, rest) {
   return normalizedLabel ? `${normalizedLabel}:` : '';
 }
 
+
+/* === NUTRITION NORMS REPORT BRIDGE START ======================== */
+function patientReportFormatNutritionNormsKcal(value) {
+  if (typeof value !== 'number' || !isFinite(value)) return '—';
+  return `${patientReportFormatNumber(value, 0)} kcal/d`;
+}
+
+function patientReportFormatNutritionNormsPercentRange(range) {
+  if (!Array.isArray(range) || range.length !== 2) return '—';
+  const min = range[0];
+  const max = range[1];
+  if (!(typeof min === 'number' && isFinite(min) && typeof max === 'number' && isFinite(max))) return '—';
+  return `${patientReportFormatNumber(min, 0)}–${patientReportFormatNumber(max, 0)}% energii`;
+}
+
+function patientReportFormatNutritionNormsGramRange(range, digits) {
+  if (!Array.isArray(range) || range.length !== 2) return '—';
+  const min = range[0];
+  const max = range[1];
+  if (!(typeof min === 'number' && isFinite(min) && typeof max === 'number' && isFinite(max))) return '—';
+  const precision = Number.isFinite(digits) ? digits : 0;
+  return `${patientReportFormatNumber(min, precision)}–${patientReportFormatNumber(max, precision)} g/d`;
+}
+
+function patientReportBuildNutritionNormsModelFromCurrentState(uiOverrides) {
+  if (typeof window === 'undefined' || typeof window.nutritionNormsBuildCardModel !== 'function') return null;
+  const ageYears = (typeof getAgeDecimal === 'function')
+    ? getAgeDecimal()
+    : parseFloat(document.getElementById('age')?.value);
+  const ageMonthsOpt = parseFloat(document.getElementById('ageMonths')?.value || '0');
+  const sex = document.getElementById('sex')?.value || 'M';
+  const weightKg = parseFloat(document.getElementById('weight')?.value);
+  const heightCm = parseFloat(document.getElementById('height')?.value);
+  const mainPal = parseFloat(document.getElementById('palFactor')?.value);
+  const baseUiState = (window.nutritionNormsUiState && typeof window.nutritionNormsUiState === 'object')
+    ? window.nutritionNormsUiState
+    : {};
+  const mergedUiState = {
+    ...baseUiState,
+    ...(uiOverrides || {})
+  };
+  try {
+    return window.nutritionNormsBuildCardModel({
+      ageYears,
+      ageMonthsOpt,
+      sex,
+      weightKg,
+      heightCm,
+      mainPal
+    }, mergedUiState);
+  } catch (_) {
+    return null;
+  }
+}
+
+function patientReportBuildNutritionNormsPalLabel(model) {
+  const energy = model && model.energy;
+  if (!energy) return '';
+  if (energy.palMode === 'fixed' && typeof energy.usedPal === 'number' && isFinite(energy.usedPal)) {
+    return `PAL ${patientReportFormatNumber(energy.usedPal, 1)}`;
+  }
+  const items = Array.isArray(energy.items)
+    ? energy.items.filter((item) => item && typeof item.pal === 'number' && isFinite(item.pal))
+    : [];
+  if (energy.palMode === 'range' && items.length > 1) {
+    return `zakres PAL ${patientReportFormatNumber(items[0].pal, 1)}–${patientReportFormatNumber(items[items.length - 1].pal, 1)}`;
+  }
+  if (energy.palMode === 'single' && model && model.ageBand && model.ageBand.kind === 'infant_6_11') {
+    return 'wg Butte';
+  }
+  return '';
+}
+
+function patientReportBuildNutritionNormsEnergyText(model) {
+  if (!model || !model.energy) return '—';
+  const energy = model.energy;
+  if (model.ageBand && model.ageBand.kind === 'infant_0_6') {
+    return 'brak norm liczbowych';
+  }
+  if (!energy.available) return '—';
+  if ((energy.mode === 'single' || energy.mode === 'fixed') && Array.isArray(energy.items) && energy.items[0]) {
+    return patientReportFormatNutritionNormsKcal(energy.items[0].teeKcal);
+  }
+  if (Array.isArray(energy.range) && energy.range.length === 2) {
+    if (energy.range[0] === energy.range[1]) {
+      return patientReportFormatNutritionNormsKcal(energy.range[0]);
+    }
+    return `${patientReportFormatNumber(energy.range[0], 0)}–${patientReportFormatNumber(energy.range[1], 0)} kcal/d`;
+  }
+  return '—';
+}
+
+function patientReportBuildNutritionNormsProteinText(model, options) {
+  const opts = options || {};
+  const protein = model && model.protein;
+  if (!protein || !protein.targets) return '—';
+  const targets = protein.targets;
+  if (!targets.available) return 'brak norm liczbowych';
+  if (protein.main) {
+    if (opts.includeEar && opts.verbose) {
+      return `Średnie zapotrzebowanie (EAR): ${patientReportFormatNumber(protein.main.earGDay, 0)} g/d • Zalecane spożycie (RDA): ${patientReportFormatNumber(protein.main.rdaGDay, 0)} g/d`;
+    }
+    if (opts.includeEar) {
+      return `${patientReportFormatNumber(protein.main.earGDay, 0)} / ${patientReportFormatNumber(protein.main.rdaGDay, 0)} g/d`;
+    }
+    return `${patientReportFormatNumber(protein.main.rdaGDay, 0)} g/d`;
+  }
+  if (opts.includeEar && opts.verbose) {
+    return `Średnie zapotrzebowanie (EAR): ${patientReportFormatNumber(targets.ear_g_per_kg, 2)} g/kg • Zalecane spożycie (RDA): ${patientReportFormatNumber(targets.rda_g_per_kg, 2)} g/kg`;
+  }
+  if (opts.includeEar) {
+    return `${patientReportFormatNumber(targets.ear_g_per_kg, 2)} / ${patientReportFormatNumber(targets.rda_g_per_kg, 2)} g/kg`;
+  }
+  return `${patientReportFormatNumber(targets.rda_g_per_kg, 2)} g/kg`;
+}
+
+function patientReportBuildNutritionNormsMacroShortText(section) {
+  if (!section) return '—';
+  const gramText = patientReportFormatNutritionNormsGramRange(section.gramRange, 0);
+  if (gramText !== '—') return gramText;
+  return patientReportFormatNutritionNormsPercentRange(section.percentRange);
+}
+
+function patientReportBuildNutritionNormsMacroDetailedText(section) {
+  if (!section) return '—';
+  const percentText = patientReportFormatNutritionNormsPercentRange(section.percentRange);
+  const gramText = patientReportFormatNutritionNormsGramRange(section.gramRange, 0);
+  if (percentText !== '—' && gramText !== '—') {
+    return `${percentText} → ${gramText}`;
+  }
+  if (gramText !== '—') return gramText;
+  return percentText;
+}
+
+function patientReportBuildNutritionNormsContextLabel(model) {
+  const parts = [];
+  const basisLabel = String(model?.energy?.basisLabel || '').trim();
+  const palLabel = patientReportBuildNutritionNormsPalLabel(model);
+  if (basisLabel) parts.push(basisLabel);
+  if (palLabel) parts.push(palLabel);
+  return parts.join('; ');
+}
+
+function patientReportShouldIncludeNutritionInSummary(model) {
+  if (model && model.ui && model.ui.state && typeof model.ui.state.includeInSummary === 'boolean') {
+    return model.ui.state.includeInSummary;
+  }
+  if (typeof window !== 'undefined' && window.nutritionNormsUiState && typeof window.nutritionNormsUiState.includeInSummary === 'boolean') {
+    return window.nutritionNormsUiState.includeInSummary;
+  }
+  return false;
+}
+
+function patientReportBuildNutritionSummaryLinesFromModel(model) {
+  if (!model) return [];
+  if (!patientReportShouldIncludeNutritionInSummary(model)) return [];
+  if (model.ageBand && model.ageBand.kind === 'infant_0_6') {
+    return ['Normy żywieniowe: poniżej 6 miesięcy nie prezentujemy liczbowych norm energii i makroskładników.'];
+  }
+
+  const energyText = patientReportBuildNutritionNormsEnergyText(model);
+  const contextLabel = patientReportBuildNutritionNormsContextLabel(model);
+  const line1 = energyText !== '—'
+    ? `Energia (normy żywieniowe): ${energyText}${contextLabel ? ` (${contextLabel})` : ''}.`
+    : 'Energia (normy żywieniowe): brak danych do wyliczeń.';
+
+  const proteinText = patientReportBuildNutritionNormsProteinText(model, { includeEar: false });
+  const fatText = patientReportBuildNutritionNormsMacroShortText(model.fat);
+  const carbText = patientReportBuildNutritionNormsMacroShortText(model.carbs);
+  const line2 = `Makroskładniki: białko – zalecane spożycie (RDA) ${proteinText}; tłuszcz ${fatText}; węglowodany ${carbText}.`;
+
+  return [line1, line2].filter(Boolean);
+}
+
+function patientReportBuildNutritionSummaryLines() {
+  const model = patientReportBuildNutritionNormsModelFromCurrentState();
+  return patientReportBuildNutritionSummaryLinesFromModel(model);
+}
+
+function patientReportBuildNutritionCardFromModel(model) {
+  if (!model) {
+    return {
+      title: 'Normy żywieniowe',
+      subtitle: 'Energia i makroskładniki',
+      badge: 'Brak danych',
+      value: '—',
+      note: 'Nie udało się odczytać modelu norm żywieniowych dla bieżących danych.',
+      rows: [],
+      tableHeaders: ['Składnik', 'Wartość']
+    };
+  }
+
+  if (model.ageBand && model.ageBand.kind === 'infant_0_6') {
+    return {
+      title: 'Normy żywieniowe',
+      subtitle: 'Energia i makroskładniki',
+      badge: 'Informacyjnie',
+      value: 'brak norm liczbowych',
+      note: 'Dla wieku poniżej 6 miesięcy normy nie podają liczbowej energii i makroskładników; standardem pozostaje mleko kobiece.',
+      rows: [],
+      tableHeaders: ['Składnik', 'Wartość']
+    };
+  }
+
+  const rows = [];
+  rows.push({
+    label: 'Węglowodany',
+    valueText: patientReportBuildNutritionNormsMacroDetailedText(model.carbs)
+  });
+  rows.push({
+    label: 'Białko',
+    valueText: patientReportBuildNutritionNormsProteinText(model, { includeEar: true, verbose: true })
+  });
+  rows.push({
+    label: 'Tłuszcze',
+    valueText: patientReportBuildNutritionNormsMacroDetailedText(model.fat)
+  });
+
+  const noteParts = [];
+  if (model.notes && model.notes.averageText) {
+    noteParts.push(model.notes.averageText);
+  }
+  if (model.notes && model.notes.sourceLong) {
+    noteParts.push(model.notes.sourceLong);
+  }
+  const contextLabel = patientReportBuildNutritionNormsContextLabel(model);
+  if (contextLabel) {
+    noteParts.push(`Obliczenia: ${contextLabel}.`);
+  }
+  if (model.fat && model.fat.lowActivityNote) {
+    noteParts.push(model.fat.lowActivityNote);
+  }
+
+  return {
+    title: 'Normy żywieniowe',
+    subtitle: 'Energia i makroskładniki',
+    badge: (model.energy && model.energy.available) ? 'Normy' : 'Informacyjnie',
+    value: patientReportBuildNutritionNormsEnergyText(model),
+    note: noteParts.join(' '),
+    rows,
+    tableHeaders: ['Składnik', 'Wartość']
+  };
+}
+
+function patientReportBuildNutritionCard() {
+  return patientReportBuildNutritionCardFromModel(patientReportBuildNutritionNormsModelFromCurrentState());
+}
+
+if (typeof window !== 'undefined') {
+  window.patientReportBuildNutritionNormsModelFromCurrentState = patientReportBuildNutritionNormsModelFromCurrentState;
+  window.patientReportBuildNutritionSummaryLinesFromModel = patientReportBuildNutritionSummaryLinesFromModel;
+  window.patientReportBuildNutritionSummaryLines = patientReportBuildNutritionSummaryLines;
+  window.patientReportBuildNutritionCardFromModel = patientReportBuildNutritionCardFromModel;
+  window.patientReportBuildNutritionCard = patientReportBuildNutritionCard;
+}
+/* === NUTRITION NORMS REPORT BRIDGE END ========================== */
+
+
 function getFormattedProfessionalSummaryLines() {
   let linesRaw = '';
   try {
@@ -6061,6 +7716,128 @@ function patientReportGetAdultHeightInfoNote(resolved) {
   if (resolved.bandKey === '10-50') return `Wzrost mieści się między 10. a 50. centylem ${groupText}.`;
   if (resolved.bandKey === '50-90') return `Wzrost mieści się między 50. a 90. centylem ${groupText}.`;
   return `Wzrost jest powyżej 90. centyla ${groupText}.`;
+}
+
+function patientReportBuildAdultPopulationGroupText(sex, ageLabel) {
+  const sexGroupLabel = patientReportGetAdultPopulationSexLabel(sex);
+  const normalizedAgeLabel = String(ageLabel || '').trim();
+  if (normalizedAgeLabel) {
+    return `${sexGroupLabel} w wieku ${normalizedAgeLabel} w Polsce`;
+  }
+  return `${sexGroupLabel} w Polsce`;
+}
+
+function patientReportBuildAdultPopulationComparison(value, reference, options) {
+  const opts = options || {};
+  const digits = Number.isFinite(opts.digits) ? Number(opts.digits) : 1;
+  const nearTolerance = Number.isFinite(opts.nearTolerance)
+    ? Math.max(0, Number(opts.nearTolerance))
+    : null;
+  if (!(typeof value === 'number' && isFinite(value) && typeof reference === 'number' && isFinite(reference))) {
+    return {
+      available: false,
+      state: 'unavailable',
+      diff: null,
+      absDiff: null,
+      digits,
+      formattedReference: '—',
+      formattedDiff: '—'
+    };
+  }
+  const diff = value - reference;
+  const absDiff = Math.abs(diff);
+  const sameAfterRounding = patientReportFormatNumber(value, digits) === patientReportFormatNumber(reference, digits);
+  let state = diff > 0 ? 'above' : 'below';
+  if (sameAfterRounding) {
+    state = 'exact';
+  } else if (typeof nearTolerance === 'number' && absDiff <= nearTolerance) {
+    state = 'near';
+  }
+  return {
+    available: true,
+    state,
+    diff,
+    absDiff,
+    digits,
+    formattedReference: patientReportFormatNumber(reference, digits),
+    formattedDiff: patientReportFormatNumber(absDiff, digits)
+  };
+}
+
+function patientReportGetAdultHeightBandSummaryFragment(resolved) {
+  if (!resolved || !resolved.available) return '';
+  if (resolved.bandKey === '<10') return 'jest poniżej 10. centyla tej grupy';
+  if (resolved.bandKey === '10-50') return 'mieści się między 10. a 50. centylem tej grupy';
+  if (resolved.bandKey === '50-90') return 'mieści się między 50. a 90. centylem tej grupy';
+  return 'jest powyżej 90. centyla tej grupy';
+}
+
+function patientReportBuildAdultWeightPopulationSummaryText(weight, height, sex, ageYears) {
+  const bmiMedianRef = patientReportGetAdultBmiMedianRef(sex, ageYears);
+  const peerWeight = bmiMedianRef ? patientReportWeightForBmi(height, bmiMedianRef.medianBmi) : null;
+  const comparison = patientReportBuildAdultPopulationComparison(weight, peerWeight, {
+    digits: 1,
+    nearTolerance: PATIENT_REPORT_REFERENCE_NEAR_TOLERANCE.WEIGHT_KG
+  });
+  if (!comparison.available) {
+    return 'brak porównania do dorosłej populacji w Polsce.';
+  }
+  const groupText = patientReportBuildAdultPopulationGroupText(sex, bmiMedianRef && bmiMedianRef.ageLabel);
+  if (comparison.state === 'exact') {
+    return `przy Twoim wzroście jest taka sama jak przeciętna masa ${groupText}.`;
+  }
+  if (comparison.state === 'near') {
+    return `przy Twoim wzroście jest bardzo zbliżona do przeciętnej masy ${groupText}.`;
+  }
+  if (comparison.state === 'above') {
+    return `przy Twoim wzroście jest o ${comparison.formattedDiff} kg wyższa niż przeciętna masa ${groupText}.`;
+  }
+  return `przy Twoim wzroście jest o ${comparison.formattedDiff} kg niższa niż przeciętna masa ${groupText}.`;
+}
+
+function patientReportBuildAdultHeightPopulationSummaryText(height, sex, ageYears) {
+  const resolved = patientReportResolveAdultHeightPosition(height, sex, ageYears);
+  const comparison = patientReportBuildAdultPopulationComparison(height, resolved && resolved.available ? resolved.p50 : null, {
+    digits: 1,
+    nearTolerance: PATIENT_REPORT_REFERENCE_NEAR_TOLERANCE.HEIGHT_CM
+  });
+  if (!resolved || !resolved.available || !comparison.available) {
+    return 'brak porównania do dorosłej populacji w Polsce.';
+  }
+  const groupText = patientReportBuildAdultPopulationGroupText(sex, resolved.ageLabel);
+  const bandFragment = patientReportGetAdultHeightBandSummaryFragment(resolved);
+  if (comparison.state === 'exact') {
+    return `jest dokładnie równy przeciętnemu wzrostowi ${groupText}.`;
+  }
+  if (comparison.state === 'near') {
+    return `jest bardzo zbliżony do przeciętnego wzrostu ${groupText}.`;
+  }
+  if (comparison.state === 'above') {
+    return `jest o ${comparison.formattedDiff} cm wyższy od przeciętnego wzrostu ${groupText} i ${bandFragment}.`;
+  }
+  return `jest o ${comparison.formattedDiff} cm niższy od przeciętnego wzrostu ${groupText} i ${bandFragment}.`;
+}
+
+function patientReportBuildAdultBmiPopulationSummaryText(bmi, sex, ageYears) {
+  const bmiMedianRef = patientReportGetAdultBmiMedianRef(sex, ageYears);
+  const comparison = patientReportBuildAdultPopulationComparison(bmi, bmiMedianRef && bmiMedianRef.medianBmi, {
+    digits: 1,
+    nearTolerance: PATIENT_REPORT_REFERENCE_NEAR_TOLERANCE.BMI
+  });
+  if (!comparison.available) {
+    return 'brak porównania do dorosłej populacji w Polsce.';
+  }
+  const groupText = patientReportBuildAdultPopulationGroupText(sex, bmiMedianRef && bmiMedianRef.ageLabel);
+  if (comparison.state === 'exact') {
+    return `to dokładnie przeciętne BMI ${groupText}.`;
+  }
+  if (comparison.state === 'near') {
+    return `to BMI bardzo zbliżone do przeciętnego BMI ${groupText}.`;
+  }
+  if (comparison.state === 'above') {
+    return `to o ${comparison.formattedDiff} pkt więcej niż przeciętne BMI ${groupText}.`;
+  }
+  return `to o ${comparison.formattedDiff} pkt mniej niż przeciętne BMI ${groupText}.`;
 }
 
 function patientReportGetAdultBmiWeightDelta(weight, height) {
@@ -7463,35 +9240,7 @@ function patientReportBuildColeCard() {
 }
 
 function patientReportBuildBmrCard() {
-  const basics = patientReportGetCurrentBasics();
-  if (!isFinite(basics.ageYears) || basics.ageYears <= 0 || !isFinite(basics.weight) || !isFinite(basics.height) || typeof BMR !== 'function') {
-    return {
-      title: 'Podstawowa przemiana materii (BMR)',
-      badge: 'Brak danych',
-      value: '—',
-      note: 'Do wyliczenia BMR potrzebne są aktualne dane o wieku, masie ciała i wzroście.',
-      rows: []
-    };
-  }
-  const bmr = BMR(basics.weight, basics.height, basics.ageYears, basics.sex);
-  const activityFactors = [
-    ['Siedzący (x1.2)', 1.2],
-    ['Lekko aktywny (x1.375)', 1.375],
-    ['Średnio aktywny (x1.55)', 1.55],
-    ['Bardzo aktywny (x1.725)', 1.725],
-    ['Ekstremalnie aktywny (x1.9)', 1.9]
-  ];
-  return {
-    title: 'Podstawowa przemiana materii (BMR)',
-    badge: 'Informacyjnie',
-    value: `${patientReportFormatNumber(bmr, 0)} kcal/dzień`,
-    note: 'To orientacyjna liczba kalorii potrzebnych na podstawowe funkcje organizmu w spoczynku.',
-    rows: activityFactors.map(([label, factor]) => ({
-      label,
-      value: Math.round(bmr * factor),
-      highlighted: label.indexOf('Średnio aktywny') === 0
-    }))
-  };
+  return patientReportBuildNutritionCard();
 }
 
 function patientReportBuildVitalItem(options) {
@@ -7756,30 +9505,49 @@ function patientReportBuildVitalsCard() {
 }
 
 function patientReportBuildBmrCardHtml(card) {
-
+  const headers = Array.isArray(card?.tableHeaders) && card.tableHeaders.length >= 2
+    ? card.tableHeaders
+    : ['Składnik', 'Wartość'];
+  const rawSubtitle = typeof card?.subtitle === 'string' ? card.subtitle.trim() : '';
+  const subtitleHtml = rawSubtitle
+    ? `<div class="patient-report-support-subtitle">${patientReportEscapeHtml(rawSubtitle)}</div>`
+    : '';
+  const noteHtml = card?.note
+    ? `<div class="patient-report-support-note">${patientReportEscapeHtml(card.note || '')}</div>`
+    : '';
   const rowsHtml = Array.isArray(card?.rows) && card.rows.length
-    ? card.rows.map((row) => `
+    ? card.rows.map((row) => {
+        const valueText = (() => {
+          if (row && typeof row.valueText === 'string' && row.valueText.trim()) return row.valueText.trim();
+          if (row && typeof row.value === 'number' && isFinite(row.value)) {
+            return patientReportFormatNumber(row.value, Number.isFinite(row.digits) ? row.digits : 0);
+          }
+          return '—';
+        })();
+        return `
         <tr${row && row.highlighted ? ' class="is-highlighted"' : ''}>
-          <td>${patientReportEscapeHtml(row.label || '')}</td>
-          <td>${patientReportEscapeHtml(patientReportFormatNumber(row.value, 0))}</td>
-        </tr>`).join('')
-    : `<tr><td colspan="2">Brak danych do wyliczenia.</td></tr>`;
+          <td>${patientReportEscapeHtml((row && row.label) || '')}</td>
+          <td>${patientReportEscapeHtml(valueText)}</td>
+        </tr>`;
+      }).join('')
+    : `<tr><td colspan="2">Brak dodatkowych pozycji do pokazania.</td></tr>`;
   return `
     <article class="patient-report-support-card tone-normal">
       <div class="patient-report-support-top">
         <div>
-          <div class="patient-report-support-title">${patientReportEscapeHtml(card?.title || 'Podstawowa przemiana materii (BMR)')}</div>
+          <div class="patient-report-support-title">${patientReportEscapeHtml(card?.title || 'Normy żywieniowe')}</div>
+          ${subtitleHtml}
           <div class="patient-report-support-value">${patientReportEscapeHtml(card?.value || '—')}</div>
         </div>
         <div class="patient-report-metric-badge tone-normal">${patientReportEscapeHtml(card?.badge || 'Informacyjnie')}</div>
       </div>
-      <div class="patient-report-support-note">${patientReportEscapeHtml(card?.note || '')}</div>
+      ${noteHtml}
       <div class="patient-report-bmr-table-wrap">
         <table class="patient-report-bmr-table">
           <thead>
             <tr>
-              <th>Poziom aktywności</th>
-              <th>kcal/dzień</th>
+              <th>${patientReportEscapeHtml(headers[0] || 'Składnik')}</th>
+              <th>${patientReportEscapeHtml(headers[1] || 'Wartość')}</th>
             </tr>
           </thead>
           <tbody>${rowsHtml}</tbody>
@@ -7852,7 +9620,7 @@ function patientReportBuildSecondaryCardsHtml(model) {
   if (!isAdult) {
     out.push(patientReportBuildMetricCardsHtml([model.coleCard || patientReportBuildColeCard()]));
   }
-  out.push(patientReportBuildBmrCardHtml(model.bmrCard || patientReportBuildBmrCard()));
+  out.push(patientReportBuildBmrCardHtml(model.nutritionCard || model.bmrCard || patientReportBuildNutritionCard()));
   out.push(patientReportBuildVitalsCardHtml(model.vitalsCard || patientReportBuildVitalsCard()));
   return out.join('');
 }
@@ -7894,6 +9662,7 @@ function patientReportBuildModel() {
     } catch (_) {
       generatedLabel = String(new Date());
     }
+    const nutritionCard = patientReportBuildNutritionCard();
     return {
       title: 'Raport po wizycie',
       subtitle: '',
@@ -7914,7 +9683,8 @@ function patientReportBuildModel() {
       highlights,
       headline,
       coleCard: patientReportBuildColeCard(),
-      bmrCard: patientReportBuildBmrCard(),
+      nutritionCard,
+      bmrCard: nutritionCard,
       vitalsCard: patientReportBuildVitalsCard()
     };
   });
@@ -8555,6 +10325,7 @@ function patientReportBuildHtml(model) {
         .patient-report-bmr-table {
           width: 100%;
           border-collapse: collapse;
+          table-layout: fixed;
           font-size: 15px;
           line-height: 1.35;
         }
@@ -8564,12 +10335,19 @@ function patientReportBuildHtml(model) {
           text-align: left;
           vertical-align: top;
           border-bottom: 1px solid #e6f0f0;
+          white-space: normal;
+          overflow-wrap: anywhere;
+          word-break: break-word;
+        }
+        .patient-report-bmr-table th:first-child,
+        .patient-report-bmr-table td:first-child {
+          width: 31%;
         }
         .patient-report-bmr-table th:last-child,
         .patient-report-bmr-table td:last-child {
-          text-align: right;
-          white-space: nowrap;
-          width: 112px;
+          text-align: left;
+          white-space: normal;
+          width: 69%;
         }
         .patient-report-bmr-table thead th {
           background: #f4fbfb;
@@ -11236,9 +13014,12 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   // Główna funkcja: oblicza TEE z korektą i zarządza banerem
-  function anorexiaRiskAdjust({ user, bmr, pal, history, intakeKcalPerDay, mountId }) {
-    const teeRaw = (Number(bmr) || 0) * (Number(pal) || 0);
-    const risk = detectAnRisk(user, { history, bmr, pal, intakeKcalPerDay });
+  function anorexiaRiskAdjust({ user, bmr, reeKcal, pal, teeRawKcal, history, intakeKcalPerDay, mountId }) {
+    const ree = energyIsNumeric(reeKcal) ? reeKcal : (Number(bmr) || 0);
+    const teeRaw = energyIsNumeric(teeRawKcal)
+      ? teeRawKcal
+      : (isFinite(ree) && isFinite(Number(pal)) ? (ree * Number(pal)) : 0);
+    const risk = detectAnRisk(user, { history, bmr: ree, pal, intakeKcalPerDay });
     let teeAdjusted = teeRaw;
     if (risk.any) {
       teeAdjusted = Math.max(0, teeRaw * AN_CFG.correction.teeFactor);
@@ -11861,7 +13642,7 @@ function repositionDoctor() {
  * przycisku podsumowania wyników pomiędzy kolumnami w zależności od szerokości
  * okna. W układzie jednokolumnowym (np. szerokość < 700 px) przycisk
  * "Podsumowanie wyników – kliknij i skopiuj" ma znajdować się przed kartą
- * "Centyle, BMI & Basal Metabolic Rate" w lewej kolumnie. Na większych
+ * "Centyle i BMI" w lewej kolumnie. Na większych
  * ekranach przycisk pozostaje w prawej kolumnie (normWrapper) za kartą WFL.
  */
 function repositionMetabolicSummary() {
@@ -12970,6 +14751,13 @@ function update(){
   // Aktualizuj opis współczynnika PAL przy każdej zmianie formularza.
   const palElem = document.getElementById('palFactor');
   if (palElem) {
+    const ageMonthsOpt = parseFloat(document.getElementById('ageMonths')?.value) || 0;
+    const prevPal = palElem.value || '1.4';
+    energyPopulatePlanPalSelect(palElem, {
+      ageYears: age,
+      ageMonthsOpt,
+      value: prevPal
+    });
     updatePalDescription(palElem.value);
   }
   /* === OBSŁUGA WYBORU ŹRÓDŁA DANYCH (PALCZEWSKA / OLAF / WHO) ======= */
@@ -13166,6 +14954,9 @@ if (centileButtons && centileButtons.parentElement === bmrInfo) {
 
   timesDiv.innerHTML = '';
   bmrInfo.innerHTML  = '';
+  if (typeof window.clearNutritionNormsCard === 'function') {
+    try { window.clearNutritionNormsCard(); } catch (_) { /* ignore */ }
+  }
   results.style.display   = 'none';
   if (foodTimesSection) foodTimesSection.style.display = 'none';
 
@@ -13655,27 +15446,13 @@ if (age <= 18) {
     } catch (_) {
       /* ciche pominięcie błędów zapisu */
     }
-    if(bmrReady){
-      const bmr = BMR(weight,height,age,sex);
-
-      const factors = {
-        'Siedzący (x1.2)':1.2,
-        'Lekko aktywny (x1.375)':1.375,
-        'Średnio aktywny (x1.55)':1.55,
-        'Bardzo aktywny (x1.725)':1.725,
-        'Ekstremalnie aktywny (x1.9)':1.9
-      };
-      let rows='';
-      for(const [lvl,f] of Object.entries(factors)){
-        rows += `<tr><td>${lvl}</td><td>${Math.round(bmr*f)}</td></tr>`;
-      }
-      html += `<div class="result-box"><strong>BMR: ${bmr} kcal/dzień</strong>
-                <table style='margin-top:8px;width:100%;'><tr><th>Poziom aktywności</th><th>kcal/dzień</th></tr>${rows}</table></div>`;
-    }else{
-      html += `<p><em>Podaj wiek, aby obliczyć BMR.</em></p>`;
-    }
+    // Energia została wydzielona do osobnej karty „Normy żywieniowe”.
+    // W sekcji BMI pozostawiamy wyłącznie wyniki centylowe i BMI.
 
     bmrInfo.innerHTML   = html;
+    if (typeof window.renderNutritionNormsCardFromDom === 'function') {
+      try { window.renderNutritionNormsCardFromDom(); } catch (_) { /* ignore */ }
+    }
 
     // --- NOWE: przenieś przełącznik Palczewska / OLAF / WHO pomiędzy kartę BMI a BMR ---
     repositionDataSourceToggle();
@@ -14239,19 +16016,18 @@ whrChildTable.innerHTML = '';
 
     }
      /* ---------- Czas spalania ---------- */
-if(bmiReady && kcal > 0){
-  const childFactor = (age > 0 && age < 14) ? 1.1 : 1;
-  let rows='';
-  Object.values(activities).forEach(act=>{
-    const burnPerMin = (act.MET * 3.5 * weight) / 200;
-    const minutes    = (kcal * childFactor) / burnPerMin;
-    const h = Math.floor(minutes/60);
-    const m = Math.round(minutes%60);
-    const timeStr = h > 0 ? `${h} h ${m} min` : `${m} min`;
-    rows += `<tr><td>${act.name}</td><td>${timeStr}</td></tr>`;
+if(weight > 0 && kcal > 0){
+  const foodBurnState = activityBuildFoodBurnState({
+    kcalTarget: kcal,
+    weightKg: weight,
+    ageYears: age
   });
-  timesDiv.innerHTML = `<table style="width:100%;border-collapse:collapse;margin-top:0.6rem;"><tr><th>Aktywność</th><th>Czas spalania</th></tr>${rows}</table>`;
-  if (foodTimesSection) foodTimesSection.style.display = 'block';
+  timesDiv.innerHTML = activityRenderTableHtml(foodBurnState);
+  if (foodTimesSection) {
+    foodTimesSection.style.display = (foodBurnState && foodBurnState.rows.length) ? 'block' : 'none';
+  }
+} else if (foodTimesSection) {
+  foodTimesSection.style.display = 'none';
 }
 }
 
@@ -15732,13 +17508,13 @@ document.getElementById('downloadPDF').addEventListener('click', async function(
   pdf.text(`Waga: ${weight} kg`, left + 140, y + 8);
   y += 18;
 
-  // 4. BMI/BMR – karta
+  // 4. BMI – karta
   pdf.setFillColor(255,255,255);
   pdf.roundedRect(left, y, 174, 26, 4, 4, 'F');
   pdf.setFont('helvetica','bold');
   pdf.setFontSize(12);
   pdf.setTextColor(0,131,141);
-  pdf.text("WYNIKI BMI / BMR", left + 3, y + 7);
+  pdf.text("WYNIKI BMI", left + 3, y + 7);
   pdf.setFont('helvetica','normal');
   pdf.setTextColor(40,40,40);
 
@@ -15749,91 +17525,61 @@ document.getElementById('downloadPDF').addEventListener('click', async function(
   y += Math.max(26, 14 + bmiLines.length * 6);
 
   // 5. Droga do normy BMI – karta i tabela
+  const toNormData = (weight > 0 && height > 0)
+    ? distanceToNormalBMI(weight, height, age, sex)
+    : null;
+  const journeyModel = toNormData ? (toNormData.activityModel || activityBuildJourneyBurnState({
+    kcalTarget: toNormData.kcalToBurn,
+    weightKg: weight,
+    ageYears: age
+  })) : null;
+  const journeyRows = activityGetPdfRows(journeyModel);
+  const journeyBoxTextRaw = document.getElementById('toNormInfo').innerText.replace(/\n+/g, '\n').trim();
+  const journeySummaryText = (toNormData && age >= 5)
+    ? `Musisz zredukować masę o ${toNormData.kgToLose.toFixed(1).replace('.', ',')} kg (ok. ${Math.round(toNormData.kcalToBurn)} kcal).`
+    : (journeyBoxTextRaw || 'BMI jest w normie.');
+  const drogaLines = pdf.splitTextToSize(journeySummaryText, 170);
+  const journeyTableHeight = journeyRows.length ? (7 + journeyRows.length * 7) : 0;
+  const journeyBoxHeight = Math.max(30, 16 + drogaLines.length * 6 + (journeyRows.length ? journeyTableHeight + 10 : 0));
+
   pdf.setFillColor(248, 251, 250);
-  pdf.roundedRect(left, y, 174, 56, 4, 4, 'F');
+  pdf.roundedRect(left, y, 174, journeyBoxHeight, 4, 4, 'F');
   pdf.setFont('helvetica','bold');
   pdf.setFontSize(12);
   pdf.setTextColor(0,131,141);
   pdf.text("DROGA DO NORMY BMI", left + 3, y + 7);
-
-  // Pobierz wyniki do normy
-  let toNormBox = document.getElementById('toNormInfo').innerText.replace(/\n+/g, '\n').trim();
-  let toNormHTML = document.getElementById('toNormInfo').innerHTML;
-
-  // Tabela aktywności – dystans + czas
-  let tbody = [];
-  let kmRower20 = null;
-  let acts = [
-    {label: '🚴 Rower 16 km/h', key: 'Rower 16 km/h', speed: 16 },
-    {label: '🚴‍♂️ Rower 20 km/h', key: 'Rower 20 km/h', speed: 20 },
-    {label: '🏃 Bieganie', key: 'Bieganie', speed: 8 },
-    {label: '🏊 Pływanie', key: 'Pływanie', speed: 3 },
-    {label: '🚶 Spacer', key: 'Spacer', speed: 5 }
-  ];
-  acts.forEach(act=>{
-    let regex = new RegExp(`${act.key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}.*?([\\d,.]+) (km|m)`);
-    let found = regex.exec(toNormHTML);
-    if(found){
-      let dystans = parseFloat(found[1].replace(',', '.'));
-      let jednostka = found[2];
-      if(act.key==='Rower 20 km/h') kmRower20 = jednostka==='km' ? dystans : dystans/1000;
-      // Czas
-      let km = jednostka==='km'? dystans : dystans/1000;
-      let time = km/act.speed;
-      let hours = Math.floor(time);
-      let mins = Math.round((time-hours)*60);
-      let czasStr = hours > 0 ? `${hours} h ${mins} min` : `${mins} min`;
-      tbody.push([act.label, `${found[1]} ${jednostka}`, czasStr]);
-    }
-  });
-
-  // Wydruk tekstowy podsumowania
   pdf.setFont('helvetica','normal');
   pdf.setFontSize(11);
   pdf.setTextColor(45,45,45);
-  let drogaLines = pdf.splitTextToSize(toNormBox, 170);
   pdf.text(drogaLines, left + 4, y + 14);
 
-  // Tabela
-  y += 18;
-  pdf.setFillColor(240,248,246);
-  pdf.setDrawColor(200,225,225);
-  pdf.roundedRect(left+2, y, 170, 7+tbody.length*7, 2,2,'F');
-  pdf.setFont('helvetica','bold');
-  pdf.setTextColor(0,131,141);
-  pdf.setFontSize(11);
-  pdf.text("Aktywność", left+7, y+5.5);
-  pdf.text("Dystans", left+64, y+5.5);
-  pdf.text("Czas", left+112, y+5.5);
-  pdf.setFont('helvetica','normal');
-  pdf.setTextColor(25,35,37);
-  tbody.forEach((row,idx)=>{
-    pdf.text(row[0], left+7, y+12+idx*7);
-    pdf.text(row[1], left+64, y+12+idx*7);
-    pdf.text(row[2], left+112, y+12+idx*7);
-  });
-  y += 7+tbody.length*7;
+  let journeyTableY = y + 14 + drogaLines.length * 6;
+  if (journeyRows.length) {
+    pdf.setFillColor(240,248,246);
+    pdf.setDrawColor(200,225,225);
+    pdf.roundedRect(left + 2, journeyTableY, 170, journeyTableHeight, 2, 2, 'F');
+    pdf.setFont('helvetica','bold');
+    pdf.setTextColor(0,131,141);
+    pdf.setFontSize(11);
+    pdf.text("Aktywność", left + 7, journeyTableY + 5.5);
+    pdf.text("Dystans", left + 64, journeyTableY + 5.5);
+    pdf.text("Czas", left + 112, journeyTableY + 5.5);
+    pdf.setFont('helvetica','normal');
+    pdf.setTextColor(25,35,37);
+    journeyRows.forEach((row, idx) => {
+      const lineY = journeyTableY + 12 + idx * 7;
+      pdf.text(row[0], left + 7, lineY);
+      pdf.text(row[1], left + 64, lineY);
+      pdf.text(row[2], left + 112, lineY);
+    });
+  }
+  y += journeyBoxHeight;
 
   // Ciekawostka dystansowa (rower 20 km/h)
-  let trasy = [
-    { miasta: "Poznań – Berlin", km: 240 },
-    { miasta: "Kraków – Wiedeń", km: 330 },
-    { miasta: "Gdańsk – Wilno", km: 400 },
-    { miasta: "Wrocław – Budapeszt", km: 550 },
-    { miasta: "Warszawa – Praga", km: 680 },
-    { miasta: "Poznań – Paryż", km: 1200 },
-    { miasta: "Warszawa – Paryż", km: 1600 },
-    { miasta: "Kraków – Paryż", km: 1500 },
-    { miasta: "Wrocław – Amsterdam", km: 1100 },
-    { miasta: "Poznań – Barcelona", km: 2100 },
-    { miasta: "Warszawa – Barcelona", km: 2300 },
-    { miasta: "Warszawa – Rzym", km: 1800 }
-  ];
-  let przyklad = null;
-  if(kmRower20){
-    let found = trasy.find(t=>kmRower20 < t.km*1.15 && kmRower20 > t.km*0.85);
-    if(!found) found = trasy.reduce((a,b)=>Math.abs(b.km-kmRower20)<Math.abs(a.km-kmRower20)?b:a);
-    przyklad = found;
+  const bike20Row = activityGetRow(journeyModel, 'bike20');
+  const kmRower20 = bike20Row && Number.isFinite(bike20Row.distanceKm) ? bike20Row.distanceKm : null;
+  const przyklad = activityFindRouteExample(kmRower20);
+  if(kmRower20 && przyklad){
     pdf.setFont('helvetica','bold');
     pdf.setFontSize(12);
     pdf.setTextColor(0,131,141);
@@ -15841,7 +17587,7 @@ document.getElementById('downloadPDF').addEventListener('click', async function(
     pdf.setFont('helvetica','normal');
     pdf.setFontSize(11);
     pdf.setTextColor(30,30,30);
-    pdf.text(`Aby osiągnąć BMI w normie, musisz przejechać rowerem (20 km/h) ok. ${kmRower20 ? kmRower20.toFixed(0) : "?"} km –`, left+3, y+16);
+    pdf.text(`Aby osiągnąć BMI w normie, musisz przejechać rowerem (20 km/h) ok. ${kmRower20.toFixed(0)} km –`, left+3, y+16);
     pdf.text(`to tyle, ile z ${przyklad.miasta}!`, left+3, y+22);
     y += 22;
   } else {
@@ -15849,16 +17595,7 @@ document.getElementById('downloadPDF').addEventListener('click', async function(
   }
 
   // 7. Sekcja spalania kalorii – karta
-  pdf.setFillColor(255,255,255);
-  pdf.roundedRect(left, y, 174, 24, 4, 4, 'F');
-  pdf.setFont('helvetica','bold');
-  pdf.setFontSize(12);
-  pdf.setTextColor(0,131,141);
-  pdf.text("SPALANIE KALORII (WYBRANE PRZEKĄSKI / POSIŁKI)", left + 3, y + 7);
-
-  // Wyciągamy ile kalorii do spalenia:
   let kcal = 0;
-  // Zlicz całkowitą liczbę kalorii na potrzeby PDF, biorąc pod uwagę wszystkie wiersze jedzenia
   document.querySelectorAll('.food-row').forEach(r=>{
     const key = r.querySelector('select').value;
     const qty = parseFloat(r.querySelector('input').value) || 0;
@@ -15867,38 +17604,44 @@ document.getElementById('downloadPDF').addEventListener('click', async function(
     }
   });
 
-  // Tabela spalania kalorii dla każdej aktywności
-  let spalanie = [];
-  acts.forEach(act=>{
-    let burnPerMin = (act.key==="Pływanie") ? (7.5 * 3.5 * weight) / 200 : (act.speed===3? (7.5 * 3.5 * weight)/200 : (act.speed>=5 ? (act.speed>=16? (6 + (act.speed-16)/4*2)*3.5*weight/200 : 3*3.5*weight/200) : 3*3.5*weight/200)); // uproszczone
-    let minutes = kcal / burnPerMin;
-    let h = Math.floor(minutes/60);
-    let m = Math.round(minutes%60);
-    let timeStr = h > 0 ? `${h} h ${m} min` : `${m} min`;
-    spalanie.push([act.label, timeStr]);
+  const foodBurnModel = activityBuildFoodBurnState({
+    kcalTarget: kcal,
+    weightKg: weight,
+    ageYears: age
   });
+  const foodRows = activityGetPdfRows(foodBurnModel);
+  const foodTableHeight = foodRows.length ? (7 + foodRows.length * 7) : 0;
+  const foodBoxHeight = Math.max(30, 18 + (foodRows.length ? foodTableHeight + 8 : 8));
 
+  pdf.setFillColor(255,255,255);
+  pdf.roundedRect(left, y, 174, foodBoxHeight, 4, 4, 'F');
+  pdf.setFont('helvetica','bold');
+  pdf.setFontSize(12);
+  pdf.setTextColor(0,131,141);
+  pdf.text("SPALANIE KALORII (WYBRANE PRZEKĄSKI / POSIŁKI)", left + 3, y + 7);
   pdf.setFont('helvetica','normal');
   pdf.setFontSize(11);
   pdf.setTextColor(35,35,35);
   pdf.text(`Całkowita ilość wybranych kalorii: ${Math.round(kcal)} kcal`, left + 4, y + 14);
 
-  // Mini tabela
-  y += 8;
-  pdf.setFillColor(240,248,246);
-  pdf.roundedRect(left+2, y, 170, 7+spalanie.length*7, 2,2,'F');
-  pdf.setFont('helvetica','bold');
-  pdf.setTextColor(0,131,141);
-  pdf.setFontSize(11);
-  pdf.text("Aktywność", left+7, y+5.5);
-  pdf.text("Czas do spalenia", left+74, y+5.5);
-  pdf.setFont('helvetica','normal');
-  pdf.setTextColor(25,35,37);
-  spalanie.forEach((row,idx)=>{
-    pdf.text(row[0], left+7, y+12+idx*7);
-    pdf.text(row[1], left+74, y+12+idx*7);
-  });
-  y += 7+spalanie.length*7;
+  if (foodRows.length) {
+    const foodTableY = y + 18;
+    pdf.setFillColor(240,248,246);
+    pdf.roundedRect(left+2, foodTableY, 170, foodTableHeight, 2,2,'F');
+    pdf.setFont('helvetica','bold');
+    pdf.setTextColor(0,131,141);
+    pdf.setFontSize(11);
+    pdf.text("Aktywność", left+7, foodTableY+5.5);
+    pdf.text("Czas do spalenia", left+74, foodTableY+5.5);
+    pdf.setFont('helvetica','normal');
+    pdf.setTextColor(25,35,37);
+    foodRows.forEach((row, idx) => {
+      const lineY = foodTableY + 12 + idx * 7;
+      pdf.text(row[0], left+7, lineY);
+      pdf.text(row[1], left+74, lineY);
+    });
+  }
+  y += foodBoxHeight;
 
   // 8. Data i stopka
   y = Math.max(y + 12, 270);
@@ -16071,7 +17814,8 @@ function generateMetabolicSummary() {
     // Waga
     if (statsW && typeof statsW.percentile === 'number') {
       if (isAdultPatient) {
-        lines.push('Waga:');
+        const adultWeightPopulationText = patientReportBuildAdultWeightPopulationSummaryText(weightVal, heightVal, sexVal, ageYears);
+        lines.push(`Waga: ${adultWeightPopulationText}`);
       } else {
         // Format percentyl tak, aby skrajne wartości (<1, >99,9) były wyświetlane jako "<1" lub ">100".
         let percStr = formatCentile(statsW.percentile);
@@ -16100,7 +17844,8 @@ function generateMetabolicSummary() {
     // Wzrost
     if (statsH && typeof statsH.percentile === 'number') {
       if (isAdultPatient) {
-        lines.push('Wzrost:');
+        const adultHeightPopulationText = patientReportBuildAdultHeightPopulationSummaryText(heightVal, sexVal, ageYears);
+        lines.push(`Wzrost: ${adultHeightPopulationText}`);
       } else {
         let percStr = formatCentile(statsH.percentile);
         let word = centylWord(percStr);
@@ -16138,12 +17883,18 @@ function generateMetabolicSummary() {
           : null;
         const adultStatusLabel = patientReportGetAdultBmiSummaryStatusLabel(adultAssessment && adultAssessment.state);
         const adultDeltaSentence = patientReportBuildAdultBmiWeightDeltaSentence(weightVal, heightVal);
+        const adultPopulationSentence = patientReportBuildAdultBmiPopulationSummaryText(bmi, sexVal, ageYears);
         line += ` – ${adultStatusLabel}`;
+        const adultParts = [];
         if (adultDeltaSentence) {
-          const adultDeltaContinuation = adultDeltaSentence
-            ? adultDeltaSentence.charAt(0).toLowerCase() + adultDeltaSentence.slice(1)
-            : '';
-          line += `, ${adultDeltaContinuation}`;
+          const adultDeltaContinuation = adultDeltaSentence.charAt(0).toLowerCase() + adultDeltaSentence.slice(1);
+          adultParts.push(adultDeltaContinuation.replace(/\.$/, ''));
+        }
+        if (adultPopulationSentence) {
+          adultParts.push(String(adultPopulationSentence).replace(/\.$/, ''));
+        }
+        if (adultParts.length) {
+          line += `, ${adultParts.join('; ')}.`;
         } else {
           line += '.';
         }
@@ -16417,6 +18168,16 @@ function generateMetabolicSummary() {
       lines.push(reinehrSummaryLine);
     }
 
+  }
+  try {
+    const nutritionSummaryLines = (typeof patientReportBuildNutritionSummaryLines === 'function')
+      ? patientReportBuildNutritionSummaryLines()
+      : [];
+    (nutritionSummaryLines || []).forEach((line) => {
+      if (line) lines.push(line);
+    });
+  } catch (_) {
+    /* Pomijamy błędy pomocniczego podsumowania norm żywieniowych */
   }
   // Zwróć wszystkie linie w postaci tekstu
   return lines.join('\n');
@@ -22095,13 +23856,12 @@ function bmiCategoryChild(bmi, sex, months){
   // Otyłość (percentyl ≥ progu otyłości)
   return 'Otyłość';
 }
-/* kcalFor1km deduplicated – use activities object */
+/* kcalFor1km deduplicated – use shared activity burn helpers */
 function kcalFor1km(activity, weight){
-  const actKey=activity in activities?activity:null;
-  if(!actKey) return 0;
-  const {MET,speed}=activities[actKey];
-  const kcalPerMin=(MET*3.5*weight)/200;
-  return kcalPerMin*(60/speed);
+  const definition = activityGetDefinition(activity);
+  if (!definition || !Number.isFinite(definition.speedKmh)) return 0;
+  const kcalPerMin = activityBurnPerMinuteKcal(definition.MET, weight);
+  return kcalPerMin * (MINUTES_PER_HOUR / definition.speedKmh);
 }
 
 // Infant LMS tables (0–60 mies.)
@@ -24085,7 +25845,7 @@ function buildIntakeIntervals(rows, options){
   const intervals = [];
   const KG_TOL_PER_MONTH = 0.2;
 
-  if (!Array.isArray(rows) || rows.length < 2 || !isFinite(pal)) return intervals;
+  if (!Array.isArray(rows) || rows.length < 2) return intervals;
 
   for(let i=0;i<rows.length-1;i++){
     const a = rows[i], b = rows[i+1];
@@ -24096,15 +25856,34 @@ function buildIntakeIntervals(rows, options){
 
     const heightA = getIntakeRowHeight(a, fallbackHeight);
     const heightB = getIntakeRowHeight(b, fallbackHeight);
-    const bmrA = BMR(a.weight, heightA, a.ageYears, sex);
-    const bmrB = BMR(b.weight, heightB, b.ageYears, sex);
-    const bmrAvg = (bmrA + bmrB) / 2;
-    const teeRaw = bmrAvg * pal;
+
+    const energyA = energyBuildIntakeObservedState({
+      ageYears: a.ageYears,
+      ageMonthsOpt: (a.ageMonths || 0) % 12,
+      sex,
+      weightKg: a.weight,
+      heightCm: heightA,
+      palInput: pal,
+      applyRiskAdjust: false
+    });
+    const energyB = energyBuildIntakeObservedState({
+      ageYears: b.ageYears,
+      ageMonthsOpt: (b.ageMonths || 0) % 12,
+      sex,
+      weightKg: b.weight,
+      heightCm: heightB,
+      palInput: pal,
+      applyRiskAdjust: false
+    });
+
+    if (!energyIsNumeric(energyA.teeRawKcal) || !energyIsNumeric(energyB.teeRawKcal)) continue;
+
+    const teeRaw = (energyA.teeRawKcal + energyB.teeRawKcal) / 2;
     const teeAdj = teeRaw * teeFactor;
 
     let expectedGain = 0;
     let deltaVsNorm  = dW;
-    const childPair  = (a.ageYears < 18 && b.ageYears < 18);
+    const childPair  = (a.ageYears < ENERGY_ADULT_START_AGE && b.ageYears < ENERGY_ADULT_START_AGE);
 
     if(childPair){
       const measPrev = { ageMonths: (typeof a.ageMonths === 'number' ? a.ageMonths : a.months), height: getIntakeRowHeight(a, fallbackHeight), weight: a.weight };
@@ -24187,31 +25966,24 @@ function hasPotentialIntakeAlerts(state){
   const history = rows.map(r => ({ ageMonths: r.ageMonths, weight: r.weight }));
   const lastRow = rows[rows.length - 1];
   const lastHeight = getIntakeRowHeight(lastRow, basics.height);
-  const lastBmr = BMR(lastRow.weight, lastHeight, lastRow.ageYears, basics.sex);
+  const lastEnergy = energyBuildIntakeObservedState({
+    ageYears: lastRow.ageYears,
+    ageMonthsOpt: (lastRow.ageMonths || 0) % 12,
+    sex: basics.sex,
+    weightKg: lastRow.weight,
+    heightCm: lastHeight,
+    palInput: pal,
+    history,
+    intakeKcalPerDay: null,
+    mountId: 'anorexiaTmpMount',
+    applyRiskAdjust: true
+  });
+  const lastBmr = lastEnergy.reeKcal;
 
   let teeFactor = 1;
-  try {
-    if (typeof window.anorexiaRiskAdjust === 'function' && isFinite(lastBmr) && isFinite(pal)) {
-      const tmp = window.anorexiaRiskAdjust({
-        user: {
-          ageYears: basics.ageYears,
-          ageMonthsOpt: basics.ageMonths % 12,
-          sex: basics.sex,
-          heightCm: basics.height,
-          weightKg: basics.weight
-        },
-        bmr: lastBmr,
-        pal: pal,
-        history: history,
-        intakeKcalPerDay: null,
-        mountId: 'anorexiaTmpMount'
-      });
-      const teeRaw = lastBmr * pal;
-      if (tmp && typeof tmp.teeAdjusted === 'number' && teeRaw > 0) {
-        teeFactor = tmp.teeAdjusted / teeRaw;
-      }
-    }
-  } catch (_) {}
+  if (energyIsNumeric(lastEnergy.teeRawKcal) && energyIsNumeric(lastEnergy.teeBaselineKcal) && lastEnergy.teeRawKcal > 0) {
+    teeFactor = lastEnergy.teeBaselineKcal / lastEnergy.teeRawKcal;
+  }
 
   let intakeKcalPerDay = null;
   try {
@@ -24236,7 +26008,7 @@ function hasPotentialIntakeAlerts(state){
       }, {
         history: history,
         bmr: lastBmr,
-        pal: pal,
+        pal: lastEnergy.palUsed,
         intakeKcalPerDay: intakeKcalPerDay
       });
       if (risk && risk.any) return true;
@@ -24263,11 +26035,9 @@ function intakeAutofill(){
   wrap.innerHTML = '';
 
   const basic = getUserBasics();
-  // bieżący punkt
   if(!isNaN(basic.weight)){
     intakeAddRow({ ageMonths: basic.ageMonths, height: basic.height, weight: basic.weight });
   }
-  // dzieci: dołącz wszystkie pomiary z „Zaawansowanych…”
   if (basic.ageYears < 18 && window.advancedGrowthData && Array.isArray(window.advancedGrowthData.measurements)){
     window.advancedGrowthData.measurements.forEach(m=>{
       if (m && typeof m.ageMonths==='number' && typeof m.weight==='number'){
@@ -24276,71 +26046,69 @@ function intakeAutofill(){
       }
     });
   }
-  // PAL z planu (jeśli wybrany)
+
+  const intakePalEl = document.getElementById('intakePal');
   const planPal = document.getElementById('palFactor')?.value;
-  // Domyślnie ustaw PAL na 1.4 jeśli nie wybrano w planie
-  document.getElementById('intakePal').value = planPal || '1.4';
+  if (intakePalEl) {
+    energyPopulateIntakePalSelect(intakePalEl, {
+      ageYears: basic.ageYears,
+      ageMonthsOpt: basic.ageMonths % 12,
+      value: planPal || '1.4'
+    });
+  }
   intakeUpdatePalDesc();
-  // ← DODAJ TO:
-  _updateIntakeFirstRowFromUserBasics(); // nadpisz i zablokuj pierwszy wiersz po autofill
+  _updateIntakeFirstRowFromUserBasics();
 }
 
 /* ——— opis PAL ——— */
 function intakeUpdatePalDesc(){
   const pal = document.getElementById('intakePal')?.value;
-  const el  = document.getElementById('intakePalDesc');
-  if(el && pal) el.textContent = PAL_DESCRIPTIONS[pal] || '';
+  updatePalDescription(pal, 'intakePalDesc');
 }
 
 /* ——— obliczenia + render (tabela dla desktop; karty – wariant A – dla mobile) ——— */
 function calcEstimatedIntake(){
   const basics = getUserBasics();
   const {sex, height} = basics;
-  const pal = parseFloat(document.getElementById('intakePal')?.value || '1.6');
+  const palRaw = document.getElementById('intakePal')?.value;
+  const pal = palRaw === '' || palRaw == null ? null : parseFloat(palRaw);
   intakeUpdatePalDesc();
 
   const rows = readIntakeRows();
-  // ——— (NOWE) Wyznacz współczynnik korekty TEE na podstawie modułu AN ———
-let teeFactor = 1;
-try {
-  if (typeof window.anorexiaRiskAdjust === 'function' && rows.length) {
-    const basics = getUserBasics();
-    // BMR liczymy dla ostatniego wiersza (najświeższy pomiar)
+  const historyForRisk = rows.map(r => ({ ageMonths: r.ageMonths, weight: r.weight }));
+  let lastObservedState = null;
+  let teeFactor = 1;
+
+  if (rows.length) {
     const last = rows[rows.length - 1];
     const lastHeight = getIntakeRowHeight(last, basics.height);
-    const bmrLast = BMR(last.weight, lastHeight, last.ageYears, basics.sex);
-
-    const tmp = window.anorexiaRiskAdjust({
-      user: {
-        ageYears: basics.ageYears,
-        ageMonthsOpt: basics.ageMonths % 12,
-        sex: basics.sex,
-        heightCm: basics.height,
-        weightKg: basics.weight
-      },
-      bmr: bmrLast,
-      pal: pal,
-      history: rows.map(r => ({ ageMonths: r.ageMonths, weight: r.weight })),
+    lastObservedState = energyBuildIntakeObservedState({
+      ageYears: last.ageYears,
+      ageMonthsOpt: (last.ageMonths || 0) % 12,
+      sex: basics.sex,
+      weightKg: last.weight,
+      heightCm: lastHeight,
+      palInput: pal,
+      history: historyForRisk,
       intakeKcalPerDay: null,
-      // nieistniejący mountId → brak UI w tym miejscu
-      mountId: 'anorexiaTmpMount'
+      mountId: 'anorexiaTmpMount',
+      applyRiskAdjust: true
     });
-
-    // wyznacz współczynnik korekty TEE (np. 0.85)
-    const teeRaw = bmrLast * pal;
-    if (tmp && typeof tmp.teeAdjusted === 'number' && teeRaw > 0) {
-      teeFactor = tmp.teeAdjusted / teeRaw;
+    if (energyIsNumeric(lastObservedState?.teeRawKcal) && energyIsNumeric(lastObservedState?.teeBaselineKcal) && lastObservedState.teeRawKcal > 0) {
+      teeFactor = lastObservedState.teeBaselineKcal / lastObservedState.teeRawKcal;
     }
   }
-} catch (_) {}
+
   const res  = document.getElementById('intakeResults');
   const legendEl = document.getElementById('intakeLegend');
-  // domyślnie ukrywamy legendę – zostanie włączona dopiero po obliczeniu
   if (legendEl) {
     legendEl.style.display = 'none';
   }
   if(!res) return;
   clearIntakeResultsAlertState('intakeResults');
+  const lastModeBadgeHtml = lastObservedState && lastObservedState.modeBadge
+    ? `<div class="energy-mode-badge-row energy-mode-badge-row--results">${energyRenderModeBadgeHtml(lastObservedState.modeBadge)}</div>`
+    : '';
 
   if(!rows.length){
     try {
@@ -24350,43 +26118,55 @@ try {
     res.innerHTML = '<p>Uzupełnij co najmniej dwa wiersze, aby wyliczyć szacowane spożycie kalorii na podstawie zmiany masy.</p>';
     return;
   }
+
   if(rows.length === 1){
-    // Jeden wiersz – wyświetl TEE i wywołaj detekcję ryzyka anoreksji
     const r = rows[0];
     const rowHeight = getIntakeRowHeight(r, height);
-    const bmr = BMR(r.weight, rowHeight, r.ageYears, sex);
-    const rawTee = bmr * pal;
-    const tee    = rawTee * teeFactor;
-    res.innerHTML = `<p><strong>Utrzymanie masy:</strong> ok. <b>${Math.round(tee)}</b> kcal/d (PAL ${pal}).<br>
-      <span class="muted">Dodaj drugi pomiar, aby obliczyć nadwyżkę/deficyt z trendu masy.</span></p>`;
-    // Ustaw globalne zmienne historii (pojedynczy wiersz)
+    const energy = lastObservedState || energyBuildIntakeObservedState({
+      ageYears: r.ageYears,
+      ageMonthsOpt: (r.ageMonths || 0) % 12,
+      sex,
+      weightKg: r.weight,
+      heightCm: rowHeight,
+      palInput: pal,
+      applyRiskAdjust: false
+    });
+
+    const modeBadgeHtml = energy && energy.modeBadge
+      ? `<div class="energy-mode-badge-row energy-mode-badge-row--results">${energyRenderModeBadgeHtml(energy.modeBadge)}</div>`
+      : '';
+
+    if (energy.isInfantUnder6) {
+      res.innerHTML = `${modeBadgeHtml}<p><strong>Energia:</strong> dla wieku poniżej 6 miesięcy normy nie podają liczbowej wartości energii.</p>`;
+    } else if (energy.isInfantButte) {
+      res.innerHTML = `${modeBadgeHtml}<p><strong>TEE:</strong> ok. <b>${Math.round(energy.teeRawKcal)}</b> kcal/d.<br><span class="muted">Wyliczenie wg Butte dla 6–11 mies.</span></p>`;
+    } else {
+      const tee = energyIsNumeric(energy.teeBaselineKcal) ? energy.teeBaselineKcal : energy.teeRawKcal;
+      res.innerHTML = `${modeBadgeHtml}<p><strong>Utrzymanie masy:</strong> ok. <b>${Math.round(tee)}</b> kcal/d (PAL ${energy.palUsed != null ? energy.palUsed.toFixed(1) : '—'}).<br>
+        <span class="muted">Dodaj drugi pomiar, aby obliczyć nadwyżkę/deficyt z trendu masy.</span></p>`;
+    }
+
     try {
       window.intakeHistory = rows.map(row => ({ ageMonths: row.ageMonths, ageYears: row.ageYears, height: row.height, weight: row.weight }));
       window.intakeEstimatedKcalPerDay = null;
-      if (typeof window.anorexiaRiskAdjust === 'function') {
-        const basics = getUserBasics();
-        window.anorexiaRiskAdjust({
-          user: {
-            ageYears: basics.ageYears,
-            ageMonthsOpt: basics.ageMonths % 12,
-            sex: basics.sex,
-            heightCm: basics.height,
-            weightKg: basics.weight
-          },
-          bmr: bmr,
-          pal: pal,
-          history: window.intakeHistory,
-          intakeKcalPerDay: null,
-          mountId: 'intakeResults'
-        });
-        // Po detekcji ryzyka anoreksji wywołaj niezależne ostrzeżenie o spadku >8 kg w ~12 miesięcy
-        try {
-          if (typeof window.check12mLossOrange === 'function') {
-            const hist = window.intakeHistory || rows;
-            window.check12mLossOrange(hist, 'intakeResults');
-          }
-        } catch (e) {}
-      }
+      energyBuildIntakeObservedState({
+        ageYears: r.ageYears,
+        ageMonthsOpt: (r.ageMonths || 0) % 12,
+        sex,
+        weightKg: r.weight,
+        heightCm: rowHeight,
+        palInput: pal,
+        history: window.intakeHistory,
+        intakeKcalPerDay: null,
+        mountId: 'intakeResults',
+        applyRiskAdjust: true
+      });
+      try {
+        if (typeof window.check12mLossOrange === 'function') {
+          const hist = window.intakeHistory || rows;
+          window.check12mLossOrange(hist, 'intakeResults');
+        }
+      } catch (e) {}
     } catch (e) {}
     return;
   }
@@ -24398,9 +26178,7 @@ try {
     teeFactor: teeFactor
   });
 
-  // Render: w obu układach stosujemy ten sam wariant sekcyjnych kart,
-  // bo w wąskim widoku jest czytelniejszy i nie rozpycha kolumn w desktopie.
-  let cards = '';
+  let cards = lastModeBadgeHtml;
   intervals.forEach(r=>{
     cards += `<div class="intake-result-card">
       <p><strong>Okres:</strong> ${r.from.toFixed(2).replace('.', ',')} → ${r.to.toFixed(2).replace('.', ',')} l.</p>
@@ -24413,48 +26191,38 @@ try {
     </div>`;
   });
   if (intervals.some(r=>r.isChild)) {
-    cards += `<p class="muted intake-results-note" style="margin:.25rem 0 0;">* Oczekiwany przyrost – przyrost masy oszacowany na podstawie medianowych (50 c) przyrostów dla wieku oraz rzeczywistego wzrostu dziecka.</p>`;
+    cards += `<p class="muted intake-results-note" style="margin:.25rem 0 0;">* Oczekiwany przyrost – przyrost masy oszacowany na podstawie medianowych (50 c) przyrostów dla wieku oraz rzeczywistego wzrostu dziecka.</p>`;
   }
   res.innerHTML = cards;
 
-  // Po wygenerowaniu wyników z co najmniej dwoma pomiarami,
-  // ujawniamy legendę, aby użytkownik wiedział, jak interpretować pola.
   if (legendEl && rows.length >= 2) {
     legendEl.style.display = 'block';
   }
 
-  // Zapisz historię i oszacowanie spożycia, a następnie wywołaj baner anoreksji.
   try {
     window.intakeHistory = rows.map(row => ({ ageMonths: row.ageMonths, ageYears: row.ageYears, height: row.height, weight: row.weight }));
     const lastInterval = intervals[intervals.length - 1];
     window.intakeEstimatedKcalPerDay = lastInterval ? lastInterval.intakePerDay : null;
-    if (typeof window.anorexiaRiskAdjust === 'function') {
-      const basics = getUserBasics();
-      const lastRow = rows[rows.length - 1];
-      const lastHeight = getIntakeRowHeight(lastRow, height);
-      const lastBmr = BMR(lastRow.weight, lastHeight, lastRow.ageYears, sex);
-      window.anorexiaRiskAdjust({
-        user: {
-          ageYears: basics.ageYears,
-          ageMonthsOpt: basics.ageMonths % 12,
-          sex: basics.sex,
-          heightCm: basics.height,
-          weightKg: basics.weight
-        },
-        bmr: lastBmr,
-        pal: pal,
-        history: window.intakeHistory,
-        intakeKcalPerDay: window.intakeEstimatedKcalPerDay,
-        mountId: 'intakeResults'
-      });
-      // Po detekcji ryzyka anoreksji wywołaj niezależne ostrzeżenie o spadku >8 kg w ~12 miesięcy
-      try {
-        if (typeof window.check12mLossOrange === 'function') {
-          const hist = window.intakeHistory || rows;
-          window.check12mLossOrange(hist, 'intakeResults');
-        }
-      } catch (e) {}
-    }
+    const lastRow = rows[rows.length - 1];
+    const lastHeight = getIntakeRowHeight(lastRow, height);
+    energyBuildIntakeObservedState({
+      ageYears: lastRow.ageYears,
+      ageMonthsOpt: (lastRow.ageMonths || 0) % 12,
+      sex,
+      weightKg: lastRow.weight,
+      heightCm: lastHeight,
+      palInput: pal,
+      history: window.intakeHistory,
+      intakeKcalPerDay: window.intakeEstimatedKcalPerDay,
+      mountId: 'intakeResults',
+      applyRiskAdjust: true
+    });
+    try {
+      if (typeof window.check12mLossOrange === 'function') {
+        const hist = window.intakeHistory || rows;
+        window.check12mLossOrange(hist, 'intakeResults');
+      }
+    } catch (e) {}
   } catch(e){}
 }
 
@@ -24651,6 +26419,18 @@ function openIntakeCard(options){
       // Zamknij kartę, jeśli przestaje spełniać warunek
       card.style.display = 'none';
       return;
+    }
+
+    const intakePalEl = document.getElementById('intakePal');
+    if (intakePalEl) {
+      const ageMonthsOpt = parseFloat(document.getElementById('ageMonths')?.value) || 0;
+      const currentPal = intakePalEl.value || document.getElementById('palFactor')?.value || '1.4';
+      energyPopulateIntakePalSelect(intakePalEl, {
+        ageYears: state.ageDec,
+        ageMonthsOpt,
+        value: currentPal
+      });
+      intakeUpdatePalDesc();
     }
 
     if (shouldAutoExpandIntakeCard(state)) {
