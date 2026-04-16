@@ -2,8 +2,8 @@
   'use strict';
 
   const NUTRITION_NORMS_DEFAULT_STATE = {
-    palSelector: 'range',
-    bodyMode: 'reference',
+    palSelector: '1.6',
+    bodyMode: 'actual',
     includeInSummary: false
   };
 
@@ -70,6 +70,15 @@
     return `${formatNumber(range[0], 0)}–${formatNumber(range[1], 0)}% energii`;
   }
 
+  function formatPercentRangeValue(minValue, maxValue, digits) {
+    const precision = Number.isFinite(digits) ? Math.max(0, digits) : 0;
+    if (!(isFiniteNumber(minValue) && isFiniteNumber(maxValue))) return '—';
+    if (Math.abs(Number(minValue) - Number(maxValue)) < (precision === 0 ? 0.5 : 0.05)) {
+      return `około ${formatNumber((Number(minValue) + Number(maxValue)) / 2, precision)}% energii`;
+    }
+    return `${formatNumber(minValue, precision)}–${formatNumber(maxValue, precision)}% energii`;
+  }
+
   function formatGramRange(range, digits) {
     if (!Array.isArray(range) || range.length !== 2 || !isFiniteNumber(range[0]) || !isFiniteNumber(range[1])) return '—';
     const precision = Number.isFinite(digits) ? digits : 0;
@@ -87,6 +96,253 @@
     return `${formatNumber(minVal, precision)}–${formatNumber(maxVal, precision)} g/d`;
   }
 
+  function nutritionNormsPracticeMidpoint(range) {
+    if (!Array.isArray(range) || range.length !== 2 || !isFiniteNumber(range[0]) || !isFiniteNumber(range[1])) return null;
+    return (Number(range[0]) + Number(range[1])) / 2;
+  }
+
+  function nutritionNormsGetPracticeResources() {
+    return typeof window.macroPracticeGetResources === 'function' ? window.macroPracticeGetResources() : null;
+  }
+
+  function nutritionNormsPracticeTemplate(template, values) {
+    if (typeof window.macroPracticeFillTemplate === 'function') {
+      return window.macroPracticeFillTemplate(template, values);
+    }
+    return String(template || '');
+  }
+
+  function nutritionNormsGetPracticeProducts(category) {
+    return typeof window.macroPracticeGetProductsByCategory === 'function'
+      ? window.macroPracticeGetProductsByCategory(category)
+      : [];
+  }
+
+  function nutritionNormsGetPracticePortion(product) {
+    return typeof window.macroPracticeGetProductPortion === 'function'
+      ? window.macroPracticeGetProductPortion(product)
+      : null;
+  }
+
+  function nutritionNormsPracticePercent(value, total) {
+    return typeof window.macroPracticePercentOfGoal === 'function'
+      ? window.macroPracticePercentOfGoal(value, total)
+      : null;
+  }
+
+  function nutritionNormsPracticeWarningLevel(sharePct) {
+    return typeof window.macroPracticeGetWarningLevel === 'function'
+      ? window.macroPracticeGetWarningLevel(sharePct)
+      : 'medium';
+  }
+
+  function nutritionNormsPracticeCountServings(targetProteinG) {
+    if (!isFiniteNumber(targetProteinG)) return 3;
+    return Math.max(2, Math.min(6, Math.round(targetProteinG / 25)));
+  }
+
+  function nutritionNormsPracticeFormatPortionMass(product) {
+    const portion = nutritionNormsGetPracticePortion(product);
+    const massG = portion && isFiniteNumber(portion.portion_mass_g) ? Number(portion.portion_mass_g) : null;
+    if (!isFiniteNumber(massG) || massG <= 0) return '';
+    return `${formatNumber(massG, Number.isInteger(massG) ? 0 : 1)} g`;
+  }
+
+  function nutritionNormsPracticePortionLabel(product) {
+    if (!product || typeof product !== 'object') return '';
+    const rawLabel = product.default_portion && product.default_portion.label_pl
+      ? String(product.default_portion.label_pl).trim()
+      : '';
+    const massLabel = nutritionNormsPracticeFormatPortionMass(product);
+    if (rawLabel && massLabel) {
+      if (/\b\d+(?:[.,]\d+)?\s*g\b/i.test(rawLabel)) return rawLabel;
+      return `${rawLabel} • ${massLabel}`;
+    }
+    return rawLabel || massLabel || '';
+  }
+
+  const NUTRITION_PRACTICE_AGE_RULES = {
+    protein_chicken_breast: { minYears: 4 },
+    protein_skyr_natural: { minYears: 1 },
+    protein_twarog_half_fat: { minYears: 1 },
+    protein_eggs: { minYears: 1 },
+    protein_tofu_natural: { minYears: 4 },
+    carb_rice_cooked: { minYears: 1 },
+    carb_pasta_cooked: { minYears: 2 },
+    carb_oats_dry: { minYears: 1 },
+    carb_banana: { minYears: 1 },
+    carb_wholegrain_bread: { minYears: 2 },
+    fat_olive_oil: { minYears: 1 },
+    fat_avocado: { minYears: 1 },
+    fat_walnuts: { minYears: 4 },
+    fat_almonds: { minYears: 4 },
+    fat_peanut_butter_100: { minYears: 3 },
+    satfat_snickers_single: { minYears: 10 },
+    satfat_milk_chocolate: { minYears: 4 },
+    satfat_butter_croissant: { minYears: 4 },
+    satfat_kabanos: { minYears: 6 },
+    satfat_yellow_cheese: { minYears: 1 }
+  };
+
+  const NUTRITION_PRACTICE_AGE_PRIORITIES = {
+    toddler: {
+      protein: ['protein_eggs', 'protein_skyr_natural', 'protein_twarog_half_fat', 'protein_chicken_breast'],
+      carbs: ['carb_oats_dry', 'carb_banana', 'carb_rice_cooked', 'carb_pasta_cooked', 'carb_wholegrain_bread'],
+      fat: ['fat_avocado', 'fat_olive_oil', 'fat_peanut_butter_100'],
+      satfat: ['satfat_yellow_cheese', 'satfat_butter_croissant', 'satfat_milk_chocolate']
+    },
+    child: {
+      protein: ['protein_eggs', 'protein_skyr_natural', 'protein_twarog_half_fat', 'protein_chicken_breast', 'protein_tofu_natural'],
+      carbs: ['carb_rice_cooked', 'carb_pasta_cooked', 'carb_oats_dry', 'carb_banana', 'carb_wholegrain_bread'],
+      fat: ['fat_avocado', 'fat_olive_oil', 'fat_walnuts', 'fat_almonds', 'fat_peanut_butter_100'],
+      satfat: ['satfat_yellow_cheese', 'satfat_milk_chocolate', 'satfat_butter_croissant', 'satfat_kabanos']
+    },
+    teen: {
+      protein: ['protein_chicken_breast', 'protein_skyr_natural', 'protein_eggs', 'protein_twarog_half_fat', 'protein_tofu_natural'],
+      carbs: ['carb_pasta_cooked', 'carb_rice_cooked', 'carb_oats_dry', 'carb_banana', 'carb_wholegrain_bread'],
+      fat: ['fat_olive_oil', 'fat_avocado', 'fat_walnuts', 'fat_almonds', 'fat_peanut_butter_100'],
+      satfat: ['satfat_snickers_single', 'satfat_milk_chocolate', 'satfat_butter_croissant', 'satfat_kabanos', 'satfat_yellow_cheese']
+    },
+    adult: {
+      protein: ['protein_chicken_breast', 'protein_skyr_natural', 'protein_twarog_half_fat', 'protein_eggs', 'protein_tofu_natural'],
+      carbs: ['carb_rice_cooked', 'carb_pasta_cooked', 'carb_oats_dry', 'carb_banana', 'carb_wholegrain_bread'],
+      fat: ['fat_olive_oil', 'fat_avocado', 'fat_walnuts', 'fat_almonds', 'fat_peanut_butter_100'],
+      satfat: ['satfat_snickers_single', 'satfat_milk_chocolate', 'satfat_butter_croissant', 'satfat_kabanos', 'satfat_yellow_cheese']
+    }
+  };
+
+  function nutritionNormsGetPracticeAgeValue(model) {
+    if (model && model.ageBand) {
+      const ageBand = model.ageBand;
+      if (ageBand.kind === 'infant_0_6') {
+        return Math.max(0, Number(ageBand.completedMonths || 0) / 12);
+      }
+      if (ageBand.kind === 'infant_6_11') {
+        return Math.max(0.5, Number(ageBand.infantMonth || ageBand.completedMonths || 6) / 12);
+      }
+      if (isFiniteNumber(Number(ageBand.completedYears))) {
+        return Number(ageBand.completedYears);
+      }
+    }
+    if (typeof window.getAgeDecimal === 'function') {
+      const currentAge = Number(window.getAgeDecimal());
+      if (Number.isFinite(currentAge)) return currentAge;
+    }
+    return null;
+  }
+
+  function nutritionNormsGetPracticeAgeBucket(model) {
+    const ageYears = nutritionNormsGetPracticeAgeValue(model);
+    if (!isFiniteNumber(ageYears)) return 'adult';
+    if (ageYears < 1) return 'infant';
+    if (ageYears < 4) return 'toddler';
+    if (ageYears < 10) return 'child';
+    if (ageYears < 19) return 'teen';
+    return 'adult';
+  }
+
+  function nutritionNormsPracticeProductMatchesAge(product, model) {
+    if (!product || typeof product !== 'object') return false;
+    const ageYears = nutritionNormsGetPracticeAgeValue(model);
+    const bucket = nutritionNormsGetPracticeAgeBucket(model);
+    if (bucket === 'infant') return false;
+    const rules = product && product.id ? NUTRITION_PRACTICE_AGE_RULES[product.id] : null;
+    if (!rules || !isFiniteNumber(ageYears)) return true;
+    if (Number.isFinite(Number(rules.minYears)) && ageYears < Number(rules.minYears)) return false;
+    if (Number.isFinite(Number(rules.maxYears)) && ageYears > Number(rules.maxYears)) return false;
+    return true;
+  }
+
+  function nutritionNormsGetPracticePriorityIndex(productId, ageBucket, category) {
+    const bucketRules = ageBucket ? NUTRITION_PRACTICE_AGE_PRIORITIES[ageBucket] : null;
+    const orderedIds = bucketRules && bucketRules[category] ? bucketRules[category] : null;
+    if (!Array.isArray(orderedIds) || !orderedIds.length) return Number.MAX_SAFE_INTEGER;
+    const index = orderedIds.indexOf(productId);
+    return index >= 0 ? index : Number.MAX_SAFE_INTEGER;
+  }
+
+  function nutritionNormsRotatePracticeProducts(products, seedValue) {
+    const list = Array.isArray(products) ? products.slice() : [];
+    if (list.length <= 1) return list;
+    const seed = Math.abs(Number(seedValue) || 0);
+    const offset = seed % list.length;
+    if (!offset) return list;
+    return list.slice(offset).concat(list.slice(0, offset));
+  }
+
+  function nutritionNormsGetPracticeRotationSeed(model, category, sectionKey) {
+    const ageBucket = nutritionNormsGetPracticeAgeBucket(model);
+    const ageYears = nutritionNormsGetPracticeAgeValue(model);
+    const now = new Date();
+    const yearStart = new Date(now.getFullYear(), 0, 0);
+    const dayOfYear = Math.max(1, Math.floor((now - yearStart) / 86400000));
+    const seedText = `${category || ''}|${sectionKey || ''}|${ageBucket}|${Math.floor(Number(ageYears) || 0)}`;
+    let hash = 0;
+    for (let i = 0; i < seedText.length; i += 1) {
+      hash = ((hash * 33) + seedText.charCodeAt(i)) % 2147483647;
+    }
+    return dayOfYear + hash;
+  }
+
+  function nutritionNormsGetPracticeProductsForCategory(model, category) {
+    const products = nutritionNormsGetPracticeProducts(category);
+    const ageBucket = nutritionNormsGetPracticeAgeBucket(model);
+    return products
+      .map((product, index) => ({ product, index }))
+      .filter(({ product }) => nutritionNormsPracticeProductMatchesAge(product, model))
+      .sort((left, right) => {
+        const priorityLeft = nutritionNormsGetPracticePriorityIndex(left.product.id, ageBucket, category);
+        const priorityRight = nutritionNormsGetPracticePriorityIndex(right.product.id, ageBucket, category);
+        if (priorityLeft !== priorityRight) return priorityLeft - priorityRight;
+        return left.index - right.index;
+      })
+      .map(({ product }) => product);
+  }
+
+  function nutritionNormsSelectPracticeProducts(model, category, roles, limit, sectionKey) {
+    let products = nutritionNormsGetPracticeProductsForCategory(model, category);
+    if (Array.isArray(roles) && roles.length) {
+      const roleSet = new Set(roles.map((role) => String(role)));
+      products = products.filter((product) => roleSet.has(String(product && product.role || '')));
+    }
+    products = nutritionNormsRotatePracticeProducts(products, nutritionNormsGetPracticeRotationSeed(model, category, sectionKey || 'default'));
+    if (!Number.isFinite(limit)) return products;
+    return products.slice(0, Math.max(0, Number(limit)));
+  }
+
+  function nutritionNormsBuildPracticeInlineText(model, type) {
+    const resources = nutritionNormsGetPracticeResources();
+    const copy = resources && resources.copy ? resources.copy.card_inline : null;
+    if (!copy) return '';
+    let text = '';
+    if (type === 'protein') {
+      const target = model && model.protein && model.protein.main ? model.protein.main.rdaGDay : null;
+      text = nutritionNormsPracticeTemplate(copy.protein_summary, {
+        servings_count: nutritionNormsPracticeCountServings(target)
+      });
+    } else if (type === 'carbs') {
+      text = copy.carbs_summary || '';
+    } else if (type === 'fat') {
+      text = copy.fat_summary || '';
+    } else if (type === 'satfat') {
+      text = copy.satfat_summary || '';
+    }
+    return String(text || '').replace(/^To\s+w\s+praktyce:\s*/i, '').trim();
+  }
+
+  function nutritionNormsRenderPracticeInline(model, type) {
+    const resources = nutritionNormsGetPracticeResources();
+    const eligibleProducts = nutritionNormsGetPracticeProductsForCategory(model, type);
+    const text = nutritionNormsBuildPracticeInlineText(model, type);
+    const cta = resources && resources.copy && resources.copy.card_inline ? resources.copy.card_inline.cta_examples : '';
+    if (!text || !cta || !eligibleProducts.length) return '';
+    return `
+      <div class="nutrition-practice-inline">
+        <div class="nutrition-practice-inline-text">${escapeHtml(text)}</div>
+        <button type="button" class="nutrition-practice-cta" data-practice-sheet="${escapeHtml(type)}">${escapeHtml(cta)}</button>
+      </div>`;
+  }
+
   function nutritionNormsBuildRestingEnergyText(reeKcal) {
     return isFiniteNumber(reeKcal) ? `Spoczynkowy wydatek energetyczny: ${formatNumber(reeKcal, 0)} kcal/d` : '';
   }
@@ -101,6 +357,33 @@
     return '';
   }
 
+  function nutritionNormsBuildProteinEnergyShareText(model) {
+    const protein = model && model.protein;
+    const energy = model && model.energy;
+    const main = protein && protein.main;
+    if (!(main && energy && energy.available)) return '';
+    const earKcal = Number(main.earGDay) * KCAL_PER_GRAM.protein;
+    const rdaKcal = Number(main.rdaGDay) * KCAL_PER_GRAM.protein;
+    if (!(isFiniteNumber(earKcal) && isFiniteNumber(rdaKcal))) return '';
+
+    const energyValues = Array.isArray(energy.items)
+      ? energy.items.map((item) => Number(item && item.teeKcal)).filter((value) => isFiniteNumber(value) && value > 0)
+      : [];
+    if (!energyValues.length && Array.isArray(energy.range)) {
+      energy.range.forEach((value) => {
+        const num = Number(value);
+        if (isFiniteNumber(num) && num > 0) energyValues.push(num);
+      });
+    }
+    if (!energyValues.length) return '';
+
+    const minEnergy = Math.min.apply(null, energyValues);
+    const maxEnergy = Math.max.apply(null, energyValues);
+    const minPercent = (earKcal / maxEnergy) * 100;
+    const maxPercent = (rdaKcal / minEnergy) * 100;
+    return formatPercentRangeValue(minPercent, maxPercent, 0);
+  }
+
   function nutritionNormsExplainEnergyFormula(formulaLabel) {
     if (formulaLabel === 'Henry') {
       return 'Spoczynkowy wydatek energetyczny oszacowano równaniem Henry’ego, a następnie uwzględniono poziom aktywności fizycznej (PAL).';
@@ -109,6 +392,17 @@
       return 'Całkowity wydatek energetyczny oszacowano wzorem Butte dla niemowląt w wieku 6–11 miesięcy.';
     }
     return '';
+  }
+
+  function nutritionNormsGetPalDisplayParts(pal) {
+    const code = `PAL ${formatPal(pal)}`;
+    const meta = typeof window.energyGetPalMeta === 'function' ? window.energyGetPalMeta(pal) : null;
+    const label = meta && meta.tableLabel ? meta.tableLabel : '';
+    const hint = meta && meta.tableHint ? meta.tableHint : '';
+    return {
+      main: label ? `${code} — ${label}` : code,
+      hint
+    };
   }
 
   function nutritionNormsBuildOmega3QualityText(text) {
@@ -245,7 +539,7 @@
         ear_g_per_kg: row.ear,
         rda_g_per_kg: row.rda,
         referenceWeightKg: row.weightKg,
-        basisLabel: `P50 dla wieku ${band.completedYears} lat`,
+        basisLabel: `wartości typowe dla wieku ${band.completedYears === 1 ? '1 roku' : band.completedYears + ' lat'} i tej płci`,
         available: true
       } : {
         ear_g_per_kg: null,
@@ -344,6 +638,13 @@
     return input ? toNumber(input.value) : NaN;
   }
 
+  function nutritionNormsGetDefaultPalSelector(allowedPals) {
+    const pals = Array.isArray(allowedPals) ? allowedPals.filter((value) => isFiniteNumber(value)) : [];
+    if (!pals.length) return 'none';
+    if (pals.includes(1.6)) return '1.6';
+    return String(pals[0]);
+  }
+
   function nutritionNormsGetUiState() {
     const current = window.nutritionNormsUiState || {};
     const next = {
@@ -364,6 +665,36 @@
     return next;
   }
 
+  function nutritionNormsBuildBasicsSignature(basics) {
+    if (!basics || typeof basics !== 'object') return '';
+    const ageYears = isFiniteNumber(basics.ageYears) ? Number(basics.ageYears).toFixed(4) : '';
+    const ageMonthsOpt = isFiniteNumber(basics.ageMonthsOpt) ? Number(basics.ageMonthsOpt).toFixed(0) : '';
+    const sex = normalizeSex(basics.sex);
+    const weightKg = isFiniteNumber(basics.weightKg) ? Number(basics.weightKg).toFixed(3) : '';
+    const heightCm = isFiniteNumber(basics.heightCm) ? Number(basics.heightCm).toFixed(3) : '';
+    return [ageYears, ageMonthsOpt, sex, weightKg, heightCm].join('|');
+  }
+
+  function nutritionNormsMaybeResetBodyModeForBasicsChange(basics) {
+    const signature = nutritionNormsBuildBasicsSignature(basics);
+    const previousSignature = window.nutritionNormsLastBasicsSignature || '';
+    window.nutritionNormsLastBasicsSignature = signature;
+    if (!signature || !previousSignature || signature === previousSignature) return false;
+    const currentState = nutritionNormsGetUiState();
+    if (currentState.bodyMode === 'actual') return false;
+    nutritionNormsSetUiState({ bodyMode: 'actual' });
+    return true;
+  }
+
+  function nutritionNormsResetBodyModeToActual(options) {
+    const opts = options && typeof options === 'object' ? options : {};
+    const currentState = nutritionNormsGetUiState();
+    const nextState = { bodyMode: 'actual' };
+    if (typeof opts.includeInSummary === 'boolean') nextState.includeInSummary = opts.includeInSummary;
+    if (opts.force !== true && currentState.bodyMode === 'actual') return currentState;
+    return nutritionNormsSetUiState(nextState);
+  }
+
   function nutritionNormsNormalizeUiState(basics, uiOptions) {
     const band = nutritionNormsGetAgeBand(basics.ageYears, basics.ageMonthsOpt);
     const allowedPals = nutritionNormsGetAllowedPAL(basics.ageYears, basics.ageMonthsOpt);
@@ -372,8 +703,8 @@
       ...(uiOptions || {})
     };
     const normalized = {
-      palSelector: inputState.palSelector || 'range',
-      bodyMode: inputState.bodyMode || 'reference',
+      palSelector: inputState.palSelector || NUTRITION_NORMS_DEFAULT_STATE.palSelector,
+      bodyMode: inputState.bodyMode || 'actual',
       includeInSummary: !!inputState.includeInSummary
     };
 
@@ -384,15 +715,15 @@
     }
 
     if (normalized.bodyMode !== 'reference' && normalized.bodyMode !== 'actual') {
-      normalized.bodyMode = 'reference';
+      normalized.bodyMode = 'actual';
     }
 
     if (normalized.palSelector === 'inherit') {
-      normalized.palSelector = 'range';
+      normalized.palSelector = nutritionNormsGetDefaultPalSelector(allowedPals);
     }
 
     if (normalized.palSelector === 'range' && allowedPals.length <= 1) {
-      normalized.palSelector = allowedPals.length === 1 ? String(allowedPals[0]) : 'none';
+      normalized.palSelector = nutritionNormsGetDefaultPalSelector(allowedPals);
     }
 
     if (
@@ -400,7 +731,11 @@
       normalized.palSelector !== 'none' &&
       !allowedPals.includes(Number(normalized.palSelector))
     ) {
-      normalized.palSelector = allowedPals.length > 1 ? 'range' : (allowedPals.length === 1 ? String(allowedPals[0]) : 'none');
+      normalized.palSelector = nutritionNormsGetDefaultPalSelector(allowedPals);
+    }
+
+    if (normalized.palSelector === 'none' && allowedPals.length) {
+      normalized.palSelector = nutritionNormsGetDefaultPalSelector(allowedPals);
     }
 
     return normalized;
@@ -422,7 +757,7 @@
     if (!allowed.length) return [];
     const options = [];
     if (allowed.length > 1) {
-      options.push({ value: 'range', label: 'Brak ograniczeń – pokaż cały zakres' });
+      options.push({ value: 'range', label: 'Pełen zakres aktywności' });
     }
     allowed.forEach((pal) => {
       const sharedLabel = typeof window.energyGetPalOptionLabel === 'function'
@@ -586,7 +921,7 @@
       if (ageBand.kind === 'adult_19_plus') {
         messages.push({ tone: 'info', text: 'Tryb referencyjny u dorosłych korzysta z masy należnej przy BMI 22.' });
       } else if (ageBand.kind === 'child_1_18') {
-        messages.push({ tone: 'info', text: 'Tryb referencyjny u dzieci korzysta z mediany P50 dla wieku i płci.' });
+        messages.push({ tone: 'info', text: 'W trybie referencyjnym u dzieci używane są typowe dla wieku i płci wartości masy ciała i wzrostu.', centered: true });
       }
     } else if (ageBand.kind === 'adult_19_plus') {
       messages.push({ tone: 'info', text: 'Tryb aktualny przelicza normy dla obecnej masy ciała.' });
@@ -973,7 +1308,8 @@
 
   function nutritionNormsRenderMessage(msg) {
     const tone = msg && msg.tone === 'warn' ? 'warn' : 'info';
-    return `<div class="nutrition-norms-message nutrition-norms-message--${tone}">${escapeHtml(msg && msg.text)}</div>`;
+    const centeredClass = msg && msg.centered ? ' nutrition-norms-message--centered' : '';
+    return `<div class="nutrition-norms-message nutrition-norms-message--${tone}${centeredClass}">${escapeHtml(msg && msg.text)}</div>`;
   }
 
   function nutritionNormsRenderEnergyBox(model) {
@@ -1006,36 +1342,18 @@
 
     let sub = '';
     if (energy.mode === 'single') {
-      sub = 'TEE wg Butte dla niemowląt 6–11 miesięcy.';
-    } else if (energy.mode === 'fixed') {
-      const parts = [];
-      if (isFiniteNumber(energy.reeKcal)) parts.push(nutritionNormsBuildRestingEnergyText(energy.reeKcal));
-      if (isFiniteNumber(energy.usedPal)) parts.push(`PAL ${formatPal(energy.usedPal)}`);
-      if (isFiniteNumber(energy.growthMultiplier) && energy.growthMultiplier > 1) parts.push('+1% kosztu wzrastania');
-      sub = parts.join(' • ');
-    } else if (energy.mode === 'range') {
-      const minPal = energy.items[0] && energy.items[0].pal;
-      const maxPal = energy.items[energy.items.length - 1] && energy.items[energy.items.length - 1].pal;
-      const parts = [];
-      if (isFiniteNumber(energy.reeKcal)) parts.push(nutritionNormsBuildRestingEnergyText(energy.reeKcal));
-      if (isFiniteNumber(minPal) && isFiniteNumber(maxPal)) parts.push(`zakres PAL ${formatPal(minPal)}–${formatPal(maxPal)}`);
-      if (isFiniteNumber(energy.growthMultiplier) && energy.growthMultiplier > 1) parts.push('+1% kosztu wzrastania');
-      sub = parts.join(' • ');
+      sub = 'Norma dla niemowląt w wieku 6–11 miesięcy.';
     }
-
-    const comparisonLine = energy.showComparison
-      ? `<p class="nutrition-norms-sub">Dla ${escapeHtml(energy.comparisonLabel)}: ${formatKcal(energy.comparisonValue)}.</p>`
-      : '';
 
     const table = energy.mode === 'range' && energy.items.length > 1
       ? `<table class="nutrition-norms-range-table">
-          <thead><tr><th>PAL</th><th>TEE</th></tr></thead>
-          <tbody>${energy.items.map((item) => `<tr><td>${formatPal(item.pal)}</td><td>${formatNumber(item.teeKcal, 0)} kcal/d</td></tr>`).join('')}</tbody>
+          <thead><tr><th>Poziom aktywności (PAL)</th><th>Całkowity wydatek energetyczny (TEE)</th></tr></thead>
+          <tbody>${energy.items.map((item) => {
+            const palParts = nutritionNormsGetPalDisplayParts(item.pal);
+            const hintHtml = palParts.hint ? `<div class="nutrition-norms-pal-cell-sub">${escapeHtml(palParts.hint)}</div>` : '';
+            return `<tr><td><div class="nutrition-norms-pal-cell-main">${escapeHtml(palParts.main)}</div>${hintHtml}</td><td>${formatNumber(item.teeKcal, 0)} kcal/d</td></tr>`;
+          }).join('')}</tbody>
         </table>`
-      : '';
-
-    const basisLine = isFiniteNumber(energy.basisWeightKg)
-      ? `<p class="nutrition-norms-sub">Do obliczeń użyto: ${escapeHtml(energy.basisLabel)} (${formatKg(energy.basisWeightKg, 1)}${isFiniteNumber(energy.basisHeightCm) ? `; ${formatNumber(energy.basisHeightCm, 1)} cm` : ''}).</p>`
       : '';
 
     return `
@@ -1043,8 +1361,6 @@
         <strong>Energia</strong>
         <span class="nutrition-norms-value">${header}</span>
         ${sub ? `<p class="nutrition-norms-sub">${escapeHtml(sub)}</p>` : ''}
-        ${comparisonLine}
-        ${basisLine}
         ${table}
       </div>`;
   }
@@ -1072,28 +1388,27 @@
     }
 
     const main = protein.main;
-    const comparisonLine = protein.showComparison
-      ? `<p class="nutrition-norms-sub">Dla ${escapeHtml(protein.comparisonLabel)}: ${formatNumber(protein.comparisonValue, 0)} g/d (zalecane spożycie, RDA).</p>`
-      : '';
+    const proteinEnergyShare = nutritionNormsBuildProteinEnergyShareText(model);
+    const proteinShareLine = proteinEnergyShare ? `<p class="nutrition-norms-sub nutrition-norms-sub--macro-share">${escapeHtml(proteinEnergyShare)}</p>` : '';
     return `
       <div class="result-box nutrition-norms-box">
         <strong>Białko</strong>
         <span class="nutrition-norms-value">${formatNumber(main.rdaGDay, 0)} g/d</span>
-        <p class="nutrition-norms-sub">${escapeHtml(nutritionNormsBuildProteinCriteriaText(main, null))}</p>
-        <p class="nutrition-norms-sub">Do obliczeń przyjęto ${escapeHtml(protein.basisLabel)} (${formatKg(protein.basisWeightKg, 1)}).</p>
-        ${comparisonLine}
+        ${proteinShareLine}
+        ${nutritionNormsRenderPracticeInline(model, 'protein')}
       </div>`;
   }
 
-  function nutritionNormsRenderMacroBox(title, macroModel) {
+  function nutritionNormsRenderMacroBox(title, macroModel, model, practiceType) {
     const valueText = macroModel.gramRange ? formatGramRange(macroModel.gramRange, 0) : formatPercentRange(macroModel.percentRange);
     const sub = formatPercentRange(macroModel.percentRange);
     return `
       <div class="result-box nutrition-norms-box">
         <strong>${escapeHtml(title)}</strong>
         <span class="nutrition-norms-value">${valueText}</span>
-        <p class="nutrition-norms-sub">${sub}</p>
+        <p class="nutrition-norms-sub nutrition-norms-sub--macro-share">${sub}</p>
         ${macroModel.lowActivityNote ? `<p class="nutrition-norms-sub">${escapeHtml(macroModel.lowActivityNote)}</p>` : ''}
+        ${practiceType ? nutritionNormsRenderPracticeInline(model, practiceType) : ''}
       </div>`;
   }
 
@@ -1125,6 +1440,7 @@
         <div class="nutrition-norms-quality-group">
           <strong>Tłuszcze nasycone</strong>
           ${saturatedParts.map((part) => `<p>${escapeHtml(part)}</p>`).join('')}
+          ${nutritionNormsRenderPracticeInline(model, 'satfat')}
         </div>`);
     }
     if (unsaturatedParts.length) {
@@ -1168,6 +1484,248 @@
         <summary>Szczegóły obliczeń</summary>
         <ul>${lines.map((line) => `<li>${escapeHtml(line)}</li>`).join('')}</ul>
       </details>`;
+  }
+
+  function nutritionNormsBuildPracticeItemHtml(product, mainText, noteText, chipText, chipTone) {
+    const label = product && product.display_name_pl ? product.display_name_pl : 'Produkt';
+    const portionLabel = nutritionNormsPracticePortionLabel(product);
+    return `
+      <div class="nutrition-practice-sheet-item">
+        <div class="nutrition-practice-sheet-item-head">
+          <strong>${escapeHtml(label)}</strong>
+          ${portionLabel ? `<span class="nutrition-practice-sheet-item-portion">${escapeHtml(portionLabel)}</span>` : ''}
+        </div>
+        ${chipText ? `<div class="nutrition-practice-chip nutrition-practice-chip--${escapeHtml(chipTone || 'medium')}">${escapeHtml(chipText)}</div>` : ''}
+        ${mainText ? `<div class="nutrition-practice-sheet-item-main">${escapeHtml(mainText)}</div>` : ''}
+        ${noteText ? `<div class="nutrition-practice-sheet-item-note">${escapeHtml(noteText)}</div>` : ''}
+      </div>`;
+  }
+
+  function nutritionNormsBuildPracticeSheetContent(model, type) {
+    const resources = nutritionNormsGetPracticeResources();
+    const bottomSheetCopy = resources && resources.copy ? resources.copy.bottom_sheet : null;
+    const commonCopy = bottomSheetCopy ? bottomSheetCopy.common : null;
+    const chips = resources && resources.copy ? resources.copy.chips : null;
+    if (!bottomSheetCopy || !bottomSheetCopy[type]) return null;
+    const copy = bottomSheetCopy[type];
+    const sections = [];
+
+    if (type === 'protein') {
+      const target = model && model.protein && model.protein.main ? model.protein.main.rdaGDay : null;
+      const simple = nutritionNormsSelectPracticeProducts(model, 'protein', ['najprostszy', 'na_szybko'], 3, 'simple');
+      const meatless = nutritionNormsSelectPracticeProducts(model, 'protein', ['bez_miesa'], 2, 'meatless');
+      const simpleHtml = simple.map((product) => {
+        const portion = nutritionNormsGetPracticePortion(product);
+        const pct = portion ? nutritionNormsPracticePercent(portion.protein_g, target) : null;
+        const mainText = pct !== null ? nutritionNormsPracticeTemplate(copy.row_goal_share, { pct }) : '';
+        return nutritionNormsBuildPracticeItemHtml(product, mainText, copy.row_good_choice, '', '');
+      }).join('');
+      if (simpleHtml) {
+        sections.push(`<section class="nutrition-practice-sheet-section"><h4>${escapeHtml(copy.section_simple)}</h4><div class="nutrition-practice-sheet-list">${simpleHtml}</div></section>`);
+      }
+      const meatlessHtml = meatless.map((product) => {
+        const portion = nutritionNormsGetPracticePortion(product);
+        const pct = portion ? nutritionNormsPracticePercent(portion.protein_g, target) : null;
+        const mainText = pct !== null ? nutritionNormsPracticeTemplate(copy.row_goal_share, { pct }) : '';
+        return nutritionNormsBuildPracticeItemHtml(product, mainText, copy.row_meatless_note, '', '');
+      }).join('');
+      if (meatlessHtml) {
+        sections.push(`<section class="nutrition-practice-sheet-section"><h4>${escapeHtml(copy.section_meatless)}</h4><div class="nutrition-practice-sheet-list">${meatlessHtml}</div></section>`);
+      }
+      const mixProducts = nutritionNormsSelectPracticeProducts(model, 'protein', ['najprostszy', 'na_szybko', 'bez_miesa'], 3, 'mix');
+      if (mixProducts.length >= 3) {
+        const labels = mixProducts.map((product) => product && product.display_name_pl ? product.display_name_pl : '').filter(Boolean);
+        if (labels.length >= 3) {
+          const mixLine = nutritionNormsPracticeTemplate(copy.mix_example_template, {
+            item_1: labels[0],
+            item_2: labels[1],
+            item_3: labels[2]
+          });
+          sections.push(`<section class="nutrition-practice-sheet-section"><h4>${escapeHtml(copy.section_mix)}</h4><div class="nutrition-practice-mix">${escapeHtml(copy.mix_example_intro)} <strong>${escapeHtml(mixLine)}</strong></div></section>`);
+        }
+      }
+      return {
+        title: copy.title,
+        subtitle: nutritionNormsPracticeTemplate(copy.subtitle, { target_g: formatNumber(target, 0) }),
+        bodyHtml: sections.join(''),
+        footer: commonCopy && commonCopy.disclaimer_examples ? commonCopy.disclaimer_examples : ''
+      };
+    }
+
+    if (type === 'carbs') {
+      const target = nutritionNormsPracticeMidpoint(model && model.carbs ? model.carbs.gramRange : null);
+      const base = nutritionNormsSelectPracticeProducts(model, 'carbs', ['porcja_bazowa', 'sniadanie'], 3, 'base');
+      const quick = nutritionNormsSelectPracticeProducts(model, 'carbs', ['na_szybko'], 2, 'quick');
+      const baseHtml = base.map((product) => {
+        const portion = nutritionNormsGetPracticePortion(product);
+        const pct = portion ? nutritionNormsPracticePercent(portion.carbs_g, target) : null;
+        const mainText = pct !== null ? nutritionNormsPracticeTemplate(copy.row_goal_share, { pct }) : '';
+        return nutritionNormsBuildPracticeItemHtml(product, mainText, copy.row_base_note, '', '');
+      }).join('');
+      if (baseHtml) sections.push(`<section class="nutrition-practice-sheet-section"><h4>${escapeHtml(copy.section_base)}</h4><div class="nutrition-practice-sheet-list">${baseHtml}</div></section>`);
+      const quickHtml = quick.map((product) => {
+        const portion = nutritionNormsGetPracticePortion(product);
+        const pct = portion ? nutritionNormsPracticePercent(portion.carbs_g, target) : null;
+        const mainText = pct !== null ? nutritionNormsPracticeTemplate(copy.row_goal_share, { pct }) : '';
+        return nutritionNormsBuildPracticeItemHtml(product, mainText, copy.row_quick_note, '', '');
+      }).join('');
+      if (quickHtml) sections.push(`<section class="nutrition-practice-sheet-section"><h4>${escapeHtml(copy.section_quick)}</h4><div class="nutrition-practice-sheet-list">${quickHtml}</div></section>`);
+      return {
+        title: copy.title,
+        subtitle: nutritionNormsPracticeTemplate(copy.subtitle, { target_g: formatNumber(target, 0) }),
+        bodyHtml: sections.join(''),
+        footer: copy.footer || ''
+      };
+    }
+
+    if (type === 'fat') {
+      const targetMid = nutritionNormsPracticeMidpoint(model && model.fat ? model.fat.gramRange : null);
+      const targetMin = model && model.fat && Array.isArray(model.fat.gramRange) ? model.fat.gramRange[0] : null;
+      const targetMax = model && model.fat && Array.isArray(model.fat.gramRange) ? model.fat.gramRange[1] : null;
+      const better = nutritionNormsSelectPracticeProducts(model, 'fat', ['lepsze_zrodlo'], 3, 'better');
+      const watch = nutritionNormsSelectPracticeProducts(model, 'fat', ['uwazaj_na'], 2, 'watch');
+      const betterHtml = better.map((product) => {
+        const portion = nutritionNormsGetPracticePortion(product);
+        const pct = portion ? nutritionNormsPracticePercent(portion.fat_g, targetMid) : null;
+        const mainText = pct !== null ? nutritionNormsPracticeTemplate(copy.row_range_share, { pct }) : '';
+        return nutritionNormsBuildPracticeItemHtml(product, mainText, copy.row_better_note, '', '');
+      }).join('');
+      if (betterHtml) sections.push(`<section class="nutrition-practice-sheet-section"><h4>${escapeHtml(copy.section_better)}</h4><div class="nutrition-practice-sheet-list">${betterHtml}</div></section>`);
+      const watchHtml = watch.map((product) => {
+        const portion = nutritionNormsGetPracticePortion(product);
+        const pct = portion ? nutritionNormsPracticePercent(portion.fat_g, targetMid) : null;
+        const mainText = pct !== null ? nutritionNormsPracticeTemplate(copy.row_range_share, { pct }) : '';
+        return nutritionNormsBuildPracticeItemHtml(product, mainText, copy.row_watch_note, '', '');
+      }).join('');
+      if (watchHtml) sections.push(`<section class="nutrition-practice-sheet-section"><h4>${escapeHtml(copy.section_watch)}</h4><div class="nutrition-practice-sheet-list">${watchHtml}</div></section>`);
+      return {
+        title: copy.title,
+        subtitle: nutritionNormsPracticeTemplate(copy.subtitle, {
+          target_min_g: formatNumber(targetMin, 0),
+          target_max_g: formatNumber(targetMax, 0)
+        }),
+        bodyHtml: sections.join(''),
+        footer: copy.footer || ''
+      };
+    }
+
+    if (type === 'satfat') {
+      const products = nutritionNormsSelectPracticeProducts(model, 'satfat', ['warning'], 5, 'warning');
+      const satfatCap = resources && resources.dictionary && resources.dictionary.reference_caps
+        ? Number(resources.dictionary.reference_caps.saturated_fat_g) || 20
+        : 20;
+      const warningHtml = products.map((product) => {
+        const portion = nutritionNormsGetPracticePortion(product);
+        const pct = portion ? nutritionNormsPracticePercent(portion.saturated_fat_g, satfatCap) : null;
+        const level = nutritionNormsPracticeWarningLevel(pct);
+        const chipText = chips && chips[level] ? chips[level] : (level === 'high' ? 'wysoka ilość' : level === 'low' ? 'niska ilość' : 'średnia ilość');
+        const noteText = level === 'high' ? copy.row_high : level === 'low' ? copy.row_low : copy.row_medium;
+        const mainText = pct !== null ? nutritionNormsPracticeTemplate(copy.row_portion_share, { pct }) : '';
+        return nutritionNormsBuildPracticeItemHtml(product, mainText, noteText, chipText, level);
+      }).join('');
+      if (warningHtml) sections.push(`<section class="nutrition-practice-sheet-section"><h4>${escapeHtml(copy.section_warning)}</h4><div class="nutrition-practice-sheet-list">${warningHtml}</div></section>`);
+      return {
+        title: copy.title,
+        subtitle: copy.subtitle,
+        bodyHtml: sections.join(''),
+        footer: copy.footer || (commonCopy && commonCopy.disclaimer_warning ? commonCopy.disclaimer_warning : '')
+      };
+    }
+
+    return null;
+  }
+
+  function nutritionNormsGetPracticeViewportHeight() {
+    const vv = window.visualViewport;
+    const vvHeight = vv && Number.isFinite(Number(vv.height)) ? Number(vv.height) : null;
+    if (vvHeight && vvHeight > 0) return vvHeight;
+    const inner = Number.isFinite(Number(window.innerHeight)) ? Number(window.innerHeight) : null;
+    if (inner && inner > 0) return inner;
+    return null;
+  }
+
+  function nutritionNormsSyncPracticeSheetViewport() {
+    const root = el('nutritionPracticeSheet');
+    if (!root) return;
+    const viewportHeight = nutritionNormsGetPracticeViewportHeight();
+    if (!viewportHeight) {
+      root.style.removeProperty('--nutrition-practice-sheet-vh');
+      return;
+    }
+    root.style.setProperty('--nutrition-practice-sheet-vh', `${Math.round(viewportHeight)}px`);
+  }
+
+  function nutritionNormsEnsurePracticeSheet() {
+    let root = el('nutritionPracticeSheet');
+    if (root) return root;
+    root = document.createElement('div');
+    root.id = 'nutritionPracticeSheet';
+    root.className = 'nutrition-practice-sheet';
+    root.hidden = true;
+    root.innerHTML = `
+      <div class="nutrition-practice-sheet-backdrop" data-practice-sheet-close></div>
+      <div class="nutrition-practice-sheet-panel" role="dialog" aria-modal="true" aria-labelledby="nutritionPracticeSheetTitle">
+        <div class="nutrition-practice-sheet-handle"></div>
+        <div class="nutrition-practice-sheet-header">
+          <div class="nutrition-practice-sheet-header-copy">
+            <h3 id="nutritionPracticeSheetTitle"></h3>
+            <p id="nutritionPracticeSheetSubtitle"></p>
+          </div>
+          <button type="button" class="nutrition-practice-sheet-close" data-practice-sheet-close aria-label="Zamknij">✕</button>
+        </div>
+        <div id="nutritionPracticeSheetBody" class="nutrition-practice-sheet-body"></div>
+        <div id="nutritionPracticeSheetFooter" class="nutrition-practice-sheet-footer"></div>
+      </div>`;
+    document.body.appendChild(root);
+    root.addEventListener('click', (event) => {
+      if (event.target && event.target.hasAttribute('data-practice-sheet-close')) {
+        nutritionNormsClosePracticeSheet();
+      }
+    });
+    nutritionNormsSyncPracticeSheetViewport();
+    if (!root.dataset.viewportSyncBound) {
+      const syncViewport = () => nutritionNormsSyncPracticeSheetViewport();
+      window.addEventListener('resize', syncViewport, { passive: true });
+      window.addEventListener('orientationchange', syncViewport, { passive: true });
+      if (window.visualViewport && typeof window.visualViewport.addEventListener === 'function') {
+        window.visualViewport.addEventListener('resize', syncViewport, { passive: true });
+        window.visualViewport.addEventListener('scroll', syncViewport, { passive: true });
+      }
+      root.dataset.viewportSyncBound = '1';
+    }
+    return root;
+  }
+
+  function nutritionNormsOpenPracticeSheet(type) {
+    const model = window.nutritionNormsLastModel;
+    const sheetModel = nutritionNormsBuildPracticeSheetContent(model, type);
+    if (!sheetModel) return;
+    const root = nutritionNormsEnsurePracticeSheet();
+    const titleEl = document.getElementById('nutritionPracticeSheetTitle');
+    const subtitleEl = document.getElementById('nutritionPracticeSheetSubtitle');
+    const bodyEl = document.getElementById('nutritionPracticeSheetBody');
+    const footerEl = document.getElementById('nutritionPracticeSheetFooter');
+    if (titleEl) titleEl.textContent = sheetModel.title || '';
+    if (subtitleEl) subtitleEl.textContent = sheetModel.subtitle || '';
+    if (bodyEl) {
+      bodyEl.innerHTML = sheetModel.bodyHtml || '';
+      bodyEl.scrollTop = 0;
+    }
+    if (footerEl) footerEl.textContent = sheetModel.footer || '';
+    nutritionNormsSyncPracticeSheetViewport();
+    root.hidden = false;
+    document.body.classList.add('nutrition-practice-sheet-open');
+    requestAnimationFrame(() => {
+      nutritionNormsSyncPracticeSheetViewport();
+      const panel = root.querySelector('.nutrition-practice-sheet-panel');
+      if (panel && typeof panel.scrollTo === 'function') panel.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    });
+  }
+
+  function nutritionNormsClosePracticeSheet() {
+    const root = el('nutritionPracticeSheet');
+    if (root) root.hidden = true;
+    document.body.classList.remove('nutrition-practice-sheet-open');
   }
 
   function nutritionNormsRenderToolbar(model) {
@@ -1234,9 +1792,9 @@
       ${messagesHtml}
       <div class="nutrition-norms-grid">
         ${nutritionNormsRenderEnergyBox(model)}
-        ${nutritionNormsRenderMacroBox('Węglowodany', model.carbs)}
+        ${nutritionNormsRenderMacroBox('Węglowodany', model.carbs, model, 'carbs')}
         ${nutritionNormsRenderProteinBox(model)}
-        ${nutritionNormsRenderMacroBox('Tłuszcze', model.fat)}
+        ${nutritionNormsRenderMacroBox('Tłuszcze', model.fat, model, 'fat')}
       </div>
       ${nutritionNormsRenderQualityBox(model)}
       ${nutritionNormsRenderDetails(model)}
@@ -1269,6 +1827,21 @@
     window.nutritionNormsLastModel = null;
   }
 
+  function initNutritionNormsFormResetListeners() {
+    if (document.body && document.body.dataset.nutritionNormsFormResetBound === '1') return;
+    const fieldIds = ['age', 'ageMonths', 'sex', 'weight', 'height'];
+    const resetHandler = function() {
+      nutritionNormsResetBodyModeToActual();
+    };
+    fieldIds.forEach((fieldId) => {
+      const field = el(fieldId);
+      if (!field) return;
+      field.addEventListener('input', resetHandler, { passive: true });
+      field.addEventListener('change', resetHandler, { passive: true });
+    });
+    if (document.body) document.body.dataset.nutritionNormsFormResetBound = '1';
+  }
+
   function renderNutritionNormsCardFromDom() {
     const card = el('nutritionNormsCard');
     const mount = el('nutritionNormsMount');
@@ -1281,6 +1854,7 @@
       return null;
     }
 
+    nutritionNormsMaybeResetBodyModeForBasicsChange(basics);
     const model = nutritionNormsBuildCardModel(basics, nutritionNormsGetUiState());
     mount.innerHTML = nutritionNormsRenderCard(model);
     card.style.display = 'block';
@@ -1325,10 +1899,18 @@
       }
     });
 
+    mount.addEventListener('click', function(event) {
+      const trigger = event.target && event.target.closest ? event.target.closest('[data-practice-sheet]') : null;
+      if (!trigger) return;
+      event.preventDefault();
+      nutritionNormsOpenPracticeSheet(trigger.getAttribute('data-practice-sheet'));
+    });
+
     mount.dataset.boundNutritionNorms = '1';
   }
 
   function ensureNutritionNormsCardShell() {
+    initNutritionNormsFormResetListeners();
     const card = el('nutritionNormsCard');
     if (!card) return null;
     if (!el('nutritionNormsMount')) {
@@ -1365,6 +1947,16 @@
       /* ignore */
     }
     try {
+      window.addEventListener('macroPracticeResourcesReady', function() {
+        if (window.nutritionNormsLastModel) renderNutritionNormsCardFromDom();
+      });
+      window.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') nutritionNormsClosePracticeSheet();
+      });
+    } catch (_) {
+      /* ignore */
+    }
+    try {
       renderNutritionNormsCardFromDom();
     } catch (_) {
       /* ignore */
@@ -1379,6 +1971,7 @@
   window.nutritionNormsPercentEnergyToGrams = nutritionNormsPercentEnergyToGrams;
   window.nutritionNormsRangePercentToGramRange = nutritionNormsRangePercentToGramRange;
   window.nutritionNormsGetUiState = nutritionNormsGetUiState;
+  window.nutritionNormsResetBodyModeToActual = nutritionNormsResetBodyModeToActual;
   window.nutritionNormsReadBasicsFromDom = nutritionNormsReadBasicsFromDom;
   window.nutritionNormsBuildSummaryLines = nutritionNormsBuildSummaryLines;
   window.nutritionNormsBuildPatientReportCard = nutritionNormsBuildPatientReportCard;

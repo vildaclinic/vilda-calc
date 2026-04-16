@@ -1,0 +1,82 @@
+{
+  "version": "0.1.0",
+  "locale": "pl-PL",
+  "card_inline": {
+    "protein_summary": "Około {{servings_count}} prostych porcji białka w ciągu dnia.",
+    "carbs_summary": "Najlepiej rozłożyć to na kilka porcji w ciągu dnia.",
+    "fat_summary": "Ważna jest nie tylko ilość, ale też rodzaj tłuszczu.",
+    "satfat_summary": "Im mniej, tym lepiej. To nie jest cel do dobicia.",
+    "cta_examples": "Zobacz przykłady"
+  },
+  "bottom_sheet": {
+    "common": {
+      "cta_close": "Zamknij",
+      "disclaimer_examples": "To orientacyjne przykłady. Nie musisz zjadać jednego produktu, żeby osiągnąć cel dnia.",
+      "disclaimer_warning": "To nie jest „cel do dobicia”. Chodzi o produkty, które szybko podbijają tłuszcze nasycone w 1 porcji."
+    },
+    "protein": {
+      "title": "Białko — jak to wygląda w jedzeniu",
+      "subtitle": "Cel dnia: {{target_g}} g",
+      "section_simple": "Najprostsze przykłady",
+      "section_meatless": "Wersja bez mięsa",
+      "section_mix": "Prosty miks dnia",
+      "row_goal_share": "Ta porcja daje około {{pct}}% Twojego celu białka.",
+      "row_good_choice": "Dobry prosty wybór na dobicie białka.",
+      "row_meatless_note": "Wersja roślinna: najlepiej łączyć różne źródła.",
+      "mix_example_intro": "Przykładowy prosty miks dnia:",
+      "mix_example_template": "{{item_1}} + {{item_2}} + {{item_3}}"
+    },
+    "carbs": {
+      "title": "Węglowodany — jak to rozłożyć w ciągu dnia",
+      "subtitle": "Cel dnia: {{target_g}} g",
+      "section_base": "Porcje bazowe",
+      "section_quick": "Na szybko",
+      "row_goal_share": "Ta porcja daje około {{pct}}% Twojego celu węglowodanów.",
+      "row_base_note": "Dobra porcja bazowa do głównego posiłku.",
+      "row_quick_note": "Prosty przykład na przekąskę lub szybki posiłek.",
+      "footer": "Węglowodany najłatwiej rozłożyć na kilka posiłków."
+    },
+    "fat": {
+      "title": "Tłuszcz — liczy się ilość i jakość",
+      "subtitle": "Zakres dnia: {{target_min_g}}–{{target_max_g}} g",
+      "section_better": "Lepsze źródła tłuszczu",
+      "section_watch": "Jak łatwo dobić za dużo",
+      "row_range_share": "Ta porcja daje około {{pct}}% dziennego zakresu tłuszczu.",
+      "row_better_note": "To głównie źródło tłuszczów nienasyconych.",
+      "row_watch_note": "To bardziej źródło tłuszczu niż białka.",
+      "footer": "Staraj się częściej wybierać tłuszcze nienasycone."
+    },
+    "satfat": {
+      "title": "Tłuszcze nasycone — warto ograniczać",
+      "subtitle": "Tu nie pokazujemy „celu dnia”. Pokazujemy, które porcje szybko podbijają nasycone.",
+      "section_warning": "Produkty, które szybko podbijają nasycone",
+      "row_portion_share": "Ta porcja zajmuje około {{pct}}% dziennego pułapu tłuszczów nasyconych.",
+      "row_high": "Wysoka ilość tłuszczów nasyconych w 1 porcji.",
+      "row_medium": "Średnia ilość tłuszczów nasyconych w 1 porcji.",
+      "row_low": "Niska ilość tłuszczów nasyconych w 1 porcji.",
+      "footer": "W praktyce chodzi o to, żeby takie produkty nie dominowały w codziennym jedzeniu."
+    }
+  },
+  "chips": {
+    "low": "niska ilość",
+    "medium": "średnia ilość",
+    "high": "wysoka ilość",
+    "warning": "uważaj"
+  },
+  "meal_card": {
+    "line_macros": "B {{protein_g}} g • W {{carbs_g}} g • T {{fat_g}} g",
+    "line_goal_share": "Pokrywa: białko {{protein_pct}}% • węglowodany {{carbs_pct}}% • tłuszcz {{fat_pct}}%",
+    "line_warning_satfat": "Nasycone: {{level_label}} w 1 porcji",
+    "line_warning_salt": "Sól: {{level_label}} w 1 porcji",
+    "line_warning_sugars": "Cukry: {{level_label}} w 1 porcji"
+  },
+  "tooltips": {
+    "plant_protein": "Białka roślinne najlepiej oceniać w mieszance różnych produktów, a nie po jednym produkcie.",
+    "saturated_fat": "Dla tłuszczów nasyconych nie pokazujemy „celu do dobicia”. Chodzi o ograniczanie produktów, które szybko wykorzystują sporą część dziennego pułapu.",
+    "fat_quality": "W praktyce lepiej częściej wybierać oliwę, orzechy, nasiona, awokado i ryby niż produkty z dużą ilością tłuszczów nasyconych."
+  },
+  "empty_states": {
+    "no_examples": "Brakuje jeszcze przykładów dla tej kategorii.",
+    "no_target": "Najpierw oblicz cel dnia, żeby pokazać przykłady."
+  }
+}

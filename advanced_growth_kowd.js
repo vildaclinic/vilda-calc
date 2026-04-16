@@ -18,6 +18,12 @@
     return num.toFixed(typeof digits === 'number' ? digits : 1).replace('.', ',');
   }
 
+  function agToFiniteNumber(value) {
+    if (value === null || value === undefined || value === '') return null;
+    const num = Number(value);
+    return Number.isFinite(num) ? num : null;
+  }
+
   function agRound(value, digits) {
     if (typeof bayleyPinneauRoundHalfUp === 'function') return bayleyPinneauRoundHalfUp(value, digits);
     const num = Number(value);
@@ -93,13 +99,15 @@
   }
 
   function agResolveHeightStats(sex, ageYears, currentHeightCm) {
-    if (!Number.isFinite(Number(currentHeightCm)) || !Number.isFinite(Number(ageYears))) {
+    const normalizedHeight = agToFiniteNumber(currentHeightCm);
+    const normalizedAge = agToFiniteNumber(ageYears);
+    if (normalizedHeight === null || normalizedAge === null) {
       return { heightSds: null, heightPercentile: null, source: null };
     }
     try {
       const preferredSource = (typeof advHistoryGetPreferredSource === 'function') ? advHistoryGetPreferredSource() : 'OLAF';
       const resolved = (typeof advHistoryResolveMetric === 'function')
-        ? advHistoryResolveMetric('HT', Number(currentHeightCm), sex, Number(ageYears), preferredSource)
+        ? advHistoryResolveMetric('HT', normalizedHeight, sex, normalizedAge, preferredSource)
         : null;
       if (resolved && resolved.result) {
         return {
@@ -115,11 +123,12 @@
   }
 
   function agResolveTargetHeightSds(sex, targetHeightCm) {
-    if (!Number.isFinite(Number(targetHeightCm))) return { targetHeightSds: null, source: null };
+    const normalizedTargetHeight = agToFiniteNumber(targetHeightCm);
+    if (normalizedTargetHeight === null) return { targetHeightSds: null, source: null };
     try {
       const preferredSource = (typeof advHistoryGetPreferredSource === 'function') ? advHistoryGetPreferredSource() : 'OLAF';
       const resolved = (typeof advHistoryResolveMetric === 'function')
-        ? advHistoryResolveMetric('HT', Number(targetHeightCm), sex, 18, preferredSource)
+        ? advHistoryResolveMetric('HT', normalizedTargetHeight, sex, 18, preferredSource)
         : null;
       if (resolved && resolved.result && Number.isFinite(Number(resolved.result.sd))) {
         return { targetHeightSds: Number(resolved.result.sd), source: resolved.source || preferredSource || null };
@@ -247,6 +256,18 @@
     return agFormatNumber(rounded, 2);
   }
 
+  function agHasMeaningfulProfileInputs(params) {
+    const positiveNumber = function (value) {
+      const num = agToFiniteNumber(value);
+      return num !== null && num > 0;
+    };
+    return positiveNumber(params && params.boneAgeYears)
+      || positiveNumber(params && params.targetHeightCm)
+      || agNormalizeTesticularVolume(params && params.testicularVolume) !== 'unknown'
+      || agNormalizeThreeState(params && params.familyDelayedPuberty) !== 'unknown'
+      || agNormalizeThreeState(params && params.growthExclusion) !== 'unknown';
+  }
+
   function agBuildProfileEvidence(model) {
     const items = [];
     if (!model || typeof model !== 'object') return items;
@@ -269,17 +290,18 @@
   function advGrowthBuildKowdProfileModel(params) {
     const sex = params && params.sex != null ? params.sex : null;
     const sexKey = agNormalizeSexKey(sex);
-    const chronologicalAgeYears = Number(params && params.chronologicalAgeYears);
-    const chronologicalAgeMonths = Number(params && params.chronologicalAgeMonths);
-    const boneAgeYears = Number(params && params.boneAgeYears);
-    const targetHeightCm = Number(params && params.targetHeightCm);
-    const currentHeightCm = Number(params && params.currentHeightCm);
+    const chronologicalAgeYears = agToFiniteNumber(params && params.chronologicalAgeYears);
+    const chronologicalAgeMonths = agToFiniteNumber(params && params.chronologicalAgeMonths);
+    const boneAgeYears = agToFiniteNumber(params && params.boneAgeYears);
+    const targetHeightCm = agToFiniteNumber(params && params.targetHeightCm);
+    const currentHeightCm = agToFiniteNumber(params && params.currentHeightCm);
     const rwtDataComplete = !!(params && params.rwtDataComplete);
     const usesMaleSpecificSignals = sexKey === 'boys';
     const testicularVolumeKey = usesMaleSpecificSignals ? agNormalizeTesticularVolume(params && params.testicularVolume) : 'unknown';
     const familyHistoryKey = usesMaleSpecificSignals ? agNormalizeThreeState(params && params.familyDelayedPuberty) : 'unknown';
     const exclusionKey = usesMaleSpecificSignals ? agNormalizeThreeState(params && params.growthExclusion) : 'unknown';
     const exclusion = usesMaleSpecificSignals && exclusionKey === 'yes';
+    const hasProfileInputs = agHasMeaningfulProfileInputs(params);
 
     const boneAgeDelayYears = (Number.isFinite(chronologicalAgeYears) && Number.isFinite(boneAgeYears))
       ? chronologicalAgeYears - boneAgeYears
@@ -384,18 +406,24 @@
       shouldDowngradeBayleyInReliability: sexKey === 'boys' && Number.isFinite(boneAgeDelayYears) && boneAgeDelayYears >= 2,
       isOutOfScope: statusKey === 'out-of-scope',
       isPossibleKowdLike: statusKey === 'possible' || statusKey === 'probable',
-      isProbableKowdLike: statusKey === 'probable'
+      isProbableKowdLike: statusKey === 'probable',
+      hasProfileInputs: hasProfileInputs,
+      isDormant: !hasProfileInputs
     };
 
-    model.ranking = agBuildRanking(model);
-    model.summaryText = agBuildProfileSummary(model);
-    model.evidenceItems = agBuildProfileEvidence(model);
+    model.ranking = model.isDormant ? [] : agBuildRanking(model);
+    model.summaryText = model.isDormant ? '' : agBuildProfileSummary(model);
+    model.evidenceItems = model.isDormant ? [] : agBuildProfileEvidence(model);
+    if (model.isDormant) {
+      model.introText = '';
+    }
     return model;
   }
 
   function advGrowthBuildKowdProfileHtml(model) {
     if (!model || typeof model !== 'object') return '';
     if (model.sexKey !== 'boys') return '';
+    if (model.isDormant) return '';
     const preferredRow = model.preferredModelKey
       ? '<div class="adv-growth-profile-model-row"><span class="adv-growth-profile-model-name">Preferowany model:</span>' + agBuildModelChipHtml(model.preferredModelUnavailable ? 'unavailable' : 'preferred', model.preferredModelUnavailable ? ('RWT – uzupełnij wagę i wzrost rodziców') : agModelLabel(model.preferredModelKey)) + '</div>'
       : '<div class="adv-growth-profile-model-row"><span class="adv-growth-profile-model-name">Preferowany model:</span>' + agBuildModelChipHtml('comparison', 'brak automatycznego modelu preferowanego') + '</div>';
@@ -437,6 +465,7 @@
   function advGrowthBuildKowdProfileSummaryLines(model) {
     if (!model || typeof model !== 'object') return [];
     if (model.sexKey !== 'boys') return [];
+    if (model.isDormant) return [];
     const lines = ['Profil predykcyjny: ' + agProfileLabel(model.statusKey)];
     if (model.preferredModelKey) {
       if (model.preferredModelUnavailable) {

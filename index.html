@@ -42,7 +42,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
 <!-- Zmieniamy nazwę pliku stylów na style_PWZ.css -->
 <link href="ios26-v2.css?v=10" rel="stylesheet">
-<link href="style.css?v=5" rel="stylesheet">
+<link href="style.css?v=10" rel="stylesheet">
 <link href="sidebar.css" rel="stylesheet">
 
 <script>
@@ -673,6 +673,11 @@
         <div id="nutritionNormsMount"></div>
       </div>
 
+      <div id="nutritionMicrosCard" class="card nutrition-micros-card" style="display:none;">
+        <h2 style="text-align:center;">Normy żywieniowe: witaminy i składniki mineralne</h2>
+        <div id="nutritionMicrosMount"></div>
+      </div>
+
       <div id="adultVitalsCard" class="card" style="display:none;">
         <h2 style="text-align:center;">Ciśnienie i tętno u&nbsp;dorosłych</h2>
         <div class="toggle-wrap">
@@ -954,7 +959,7 @@
           <div class="diet-info-note" id="dietInfoNote">
             W karcie <strong>Plan odchudzania</strong> wybierz poziom aktywności i rodzaj diety albo pozostaw ustawienia rekomendowane.
           </div>
-          <!-- Dwukolumnowy układ przełączników: lewa kolumna z trzema opcjami, prawa z czterema -->
+          <!-- Dwukolumnowy układ przełączników: po cztery opcje w każdej kolumnie -->
           <div class="diet-toggle-columns">
             <div class="col-left">
               <div class="diet-toggle-group">
@@ -985,6 +990,13 @@
                 <span class="toggle-label" id="growthEndedLabel">Wzrost zakończony</span>
                 <label class="switch-diet">
                   <input type="checkbox" id="growthEndedFlag">
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="diet-toggle-group">
+                <span class="toggle-label" id="nutritionNormsToggleLabel">Normy żywieniowe</span>
+                <label class="switch-diet">
+                  <input type="checkbox" id="nutritionNormsFlag">
                   <span class="slider"></span>
                 </label>
               </div>
@@ -1417,14 +1429,15 @@
 <script src="rwt_data.js"></script>
 <!-- Reinehr 2019 CDGP-specific dataset for boys with retarded bone age. -->
 <script src="reinehr_cdgp_data.js"></script>
-<script src="advanced_growth_kowd.js"></script>
+<script src="advanced_growth_kowd.js?v=2"></script>
 <!-- Moduł centyli tętna i liczby oddechów.  Ładowany przed app.js, aby udostępniać
      funkcje w globalnym zakresie (window.vitalSigns).  Nowa wersja wykorzystuje
      dane Bonafide et al. 2013 z korektami temperatury i stanu snu. -->
 <script src="vitalSigns.js"></script>
 <script src="adult_vitals.js" defer></script>
-<script src="app.js" defer></script>
-<script src="nutrition_norms.js" defer></script>
+<script src="app.js?v=22" defer></script>
+<script src="nutrition_norms.js?v=21" defer></script>
+<script src="nutrition_micros.js?v=4" defer></script>
 
 <!-- po app.js -->
 <script src="gh_igf_therapy.js" defer></script>

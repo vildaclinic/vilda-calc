@@ -71,6 +71,1242 @@ const meals={
 // allows a single list of options to be presented in the new “Kalorie posiłków i czas spalania” card.
 const foods = Object.assign({}, snacks, meals);
 
+const MACRO_PRACTICE_DICTIONARY_URL_CANDIDATES = [
+  './macro_examples_dictionary_pl.json',
+  'macro_examples_dictionary_pl.json',
+  '/macro_examples_dictionary_pl.json'
+];
+const MACRO_UI_COPY_URL_CANDIDATES = [
+  './macro_ui_copy_pl.json',
+  'macro_ui_copy_pl.json',
+  '/macro_ui_copy_pl.json'
+];
+const MACRO_PRACTICE_FALLBACK_DICTIONARY = {
+  "version": "0.1.0",
+  "locale": "pl-PL",
+  "purpose": "Lekki słownik UI do funkcji „To w praktyce” w karcie Energii oraz rozszerzenia karty „Kalorie posiłków i czas spalania” o makroskładniki i ostrzeżenia.",
+  "source_policy": {
+    "generic_foods": {
+      "provider": "USDA FoodData Central",
+      "preferred_data_type": [
+        "Foundation Foods",
+        "FNDDS"
+      ],
+      "why": "Jedno public-domain źródło dla żywności ogólnej; stabilne, łatwe do cytowania i późniejszego zasilenia aplikacji."
+    },
+    "branded_foods": {
+      "provider": "Oficjalna etykieta producenta",
+      "why": "Dla produktów markowych i przekąsek ostrzegawczych."
+    },
+    "notes": [
+      "Ten plik nie jest pełną bazą składu żywności. To mały słownik produktów referencyjnych, reguł doboru i mapowania do źródeł danych.",
+      "Jeśli aplikacja ma już własną bazę posiłków/produktów, użyj pola lookup_query jako mapowania do istniejących rekordów."
+    ]
+  },
+  "selection_rules": {
+    "card_inline": {
+      "max_examples": 3,
+      "protein": [
+        "najprostszy",
+        "na_szybko",
+        "bez_miesa"
+      ],
+      "carbs": [
+        "porcja_bazowa",
+        "na_szybko",
+        "sniadanie"
+      ],
+      "fat": [
+        "lepsze_zrodlo",
+        "lepsze_zrodlo",
+        "uwazaj_na"
+      ],
+      "satfat": [
+        "warning",
+        "warning",
+        "warning"
+      ]
+    },
+    "bottom_sheet": {
+      "protein": {
+        "sections": [
+          "najprostsze_przyklady",
+          "wersja_bez_miesa",
+          "prosty_miks_dnia"
+        ],
+        "max_items_per_section": 3
+      },
+      "carbs": {
+        "sections": [
+          "porcje_bazowe",
+          "na_szybko"
+        ],
+        "max_items_per_section": 3
+      },
+      "fat": {
+        "sections": [
+          "lepsze_zrodla_tluszczu",
+          "jak_latwo_dobic_za_duzo"
+        ],
+        "max_items_per_section": 3
+      },
+      "satfat": {
+        "sections": [
+          "produkty_ktore_szybko_podbijaja_nasycone"
+        ],
+        "max_items_per_section": 5
+      }
+    }
+  },
+  "warning_rules": {
+    "saturated_fat_portion_share_of_day_cap_pct": {
+      "low_max": 10,
+      "medium_max": 20,
+      "high_min": 21
+    },
+    "copy_rule": {
+      "do_not_say": "pokrywa zapotrzebowanie na tłuszcze nasycone",
+      "say_instead": [
+        "zajmuje część dziennego pułapu",
+        "ma wysoką ilość tłuszczów nasyconych w 1 porcji",
+        "warto ograniczać"
+      ]
+    }
+  },
+  "products": [
+    {
+      "id": "protein_chicken_breast",
+      "category": "protein",
+      "display_name_pl": "Pierś z kurczaka",
+      "default_portion": {
+        "amount": 120,
+        "unit": "g",
+        "label_pl": "1 średnia porcja"
+      },
+      "role": "najprostszy",
+      "hero_macro": "protein",
+      "lookup": {
+        "provider": "normy_pl_2024",
+        "lookup_query": "Pierś z kurczaka",
+        "known_values": {
+          "protein_g_per_100g": 21.5
+        }
+      },
+      "ui_tags": [
+        "białko",
+        "prosty wybór",
+        "wytrawne"
+      ],
+      "notes_pl": "Dobry przykład „czystego” białka do prostych przeliczeń.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 120,
+        "energy_kcal": 158,
+        "protein_g": 25.8,
+        "carbs_g": 0.0,
+        "fat_g": 2.6,
+        "saturated_fat_g": 0.7
+      }
+    },
+    {
+      "id": "protein_skyr_natural",
+      "category": "protein",
+      "display_name_pl": "Skyr naturalny",
+      "default_portion": {
+        "amount": 150,
+        "unit": "g",
+        "label_pl": "1 kubeczek"
+      },
+      "role": "na_szybko",
+      "hero_macro": "protein",
+      "lookup": {
+        "provider": "normy_pl_2024",
+        "lookup_query": "Skyr naturalny",
+        "known_values": {
+          "protein_g_per_100g": 12.0
+        }
+      },
+      "ui_tags": [
+        "białko",
+        "na szybko",
+        "nabiał"
+      ],
+      "notes_pl": "Wygodny przykład z gotowej porcji.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 150,
+        "energy_kcal": 90,
+        "protein_g": 18.0,
+        "carbs_g": 6.0,
+        "fat_g": 0.3,
+        "saturated_fat_g": 0.2
+      }
+    },
+    {
+      "id": "protein_twarog_half_fat",
+      "category": "protein",
+      "display_name_pl": "Twaróg półtłusty",
+      "default_portion": {
+        "amount": 100,
+        "unit": "g",
+        "label_pl": "1/2 kostki"
+      },
+      "role": "najprostszy",
+      "hero_macro": "protein",
+      "lookup": {
+        "provider": "normy_pl_2024",
+        "lookup_query": "Twaróg półtłusty",
+        "known_values": {
+          "protein_g_per_100g": 18.7
+        }
+      },
+      "ui_tags": [
+        "białko",
+        "polski klasyk",
+        "nabiał"
+      ],
+      "notes_pl": "Bardzo czytelny przykład dla polskiego użytkownika.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 100,
+        "energy_kcal": 133,
+        "protein_g": 18.7,
+        "carbs_g": 3.5,
+        "fat_g": 4.7,
+        "saturated_fat_g": 3.0
+      }
+    },
+    {
+      "id": "protein_eggs",
+      "category": "protein",
+      "display_name_pl": "Jajka",
+      "default_portion": {
+        "amount": 2,
+        "unit": "szt.",
+        "label_pl": "2 sztuki"
+      },
+      "role": "na_szybko",
+      "hero_macro": "protein",
+      "lookup": {
+        "provider": "normy_pl_2024",
+        "lookup_query": "Jaja kurze całe",
+        "known_values": {
+          "protein_g_per_100g": 12.5
+        }
+      },
+      "ui_tags": [
+        "białko",
+        "na szybko",
+        "codzienny wybór"
+      ],
+      "notes_pl": "Łatwy do zrozumienia punkt odniesienia.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 112,
+        "energy_kcal": 160,
+        "protein_g": 14.0,
+        "carbs_g": 0.8,
+        "fat_g": 11.0,
+        "saturated_fat_g": 3.2
+      }
+    },
+    {
+      "id": "protein_tofu_natural",
+      "category": "protein",
+      "display_name_pl": "Tofu naturalne",
+      "default_portion": {
+        "amount": 150,
+        "unit": "g",
+        "label_pl": "1/2–3/4 kostki"
+      },
+      "role": "bez_miesa",
+      "hero_macro": "protein",
+      "lookup": {
+        "provider": "normy_pl_2024",
+        "lookup_query": "Tofu",
+        "known_values": {
+          "protein_g_per_100g": 12.0
+        }
+      },
+      "ui_tags": [
+        "białko",
+        "bez mięsa",
+        "roślinne"
+      ],
+      "notes_pl": "Podstawowy wariant bezmięsny.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 150,
+        "energy_kcal": 144,
+        "protein_g": 18.0,
+        "carbs_g": 2.4,
+        "fat_g": 8.7,
+        "saturated_fat_g": 1.4
+      }
+    },
+    {
+      "id": "carb_rice_cooked",
+      "category": "carbs",
+      "display_name_pl": "Ryż ugotowany",
+      "default_portion": {
+        "amount": 200,
+        "unit": "g",
+        "label_pl": "1 porcja obiadowa"
+      },
+      "role": "porcja_bazowa",
+      "hero_macro": "carbs",
+      "lookup": {
+        "provider": "usda_fdc",
+        "lookup_query": "Rice, white, cooked"
+      },
+      "ui_tags": [
+        "węglowodany",
+        "porcja bazowa",
+        "obiad"
+      ],
+      "notes_pl": "Dobra kotwica do tłumaczenia węglowodanów na porcje.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 200,
+        "energy_kcal": 260,
+        "protein_g": 5.4,
+        "carbs_g": 56.0,
+        "fat_g": 0.6,
+        "saturated_fat_g": 0.1
+      }
+    },
+    {
+      "id": "carb_pasta_cooked",
+      "category": "carbs",
+      "display_name_pl": "Makaron ugotowany",
+      "default_portion": {
+        "amount": 200,
+        "unit": "g",
+        "label_pl": "1 porcja obiadowa"
+      },
+      "role": "porcja_bazowa",
+      "hero_macro": "carbs",
+      "lookup": {
+        "provider": "usda_fdc",
+        "lookup_query": "Pasta, cooked"
+      },
+      "ui_tags": [
+        "węglowodany",
+        "porcja bazowa",
+        "obiad"
+      ],
+      "notes_pl": "Klasyczna porcja bazowa do głównego posiłku.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 200,
+        "energy_kcal": 316,
+        "protein_g": 10.0,
+        "carbs_g": 62.0,
+        "fat_g": 1.6,
+        "saturated_fat_g": 0.3
+      }
+    },
+    {
+      "id": "carb_oats_dry",
+      "category": "carbs",
+      "display_name_pl": "Płatki owsiane",
+      "default_portion": {
+        "amount": 60,
+        "unit": "g",
+        "label_pl": "1 porcja śniadaniowa"
+      },
+      "role": "sniadanie",
+      "hero_macro": "carbs",
+      "lookup": {
+        "provider": "normy_pl_2024",
+        "lookup_query": "Płatki owsiane",
+        "known_values": {
+          "protein_g_per_100g": 11.9
+        }
+      },
+      "ui_tags": [
+        "węglowodany",
+        "śniadanie",
+        "owsiane"
+      ],
+      "notes_pl": "Praktyczny przykład śniadaniowy; aplikacja może wyświetlić też białko z tej porcji.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 60,
+        "energy_kcal": 228,
+        "protein_g": 7.8,
+        "carbs_g": 40.0,
+        "fat_g": 4.2,
+        "saturated_fat_g": 0.8
+      }
+    },
+    {
+      "id": "carb_banana",
+      "category": "carbs",
+      "display_name_pl": "Banan",
+      "default_portion": {
+        "amount": 1,
+        "unit": "szt.",
+        "label_pl": "1 średni banan"
+      },
+      "role": "na_szybko",
+      "hero_macro": "carbs",
+      "lookup": {
+        "provider": "usda_fdc",
+        "lookup_query": "Banana, raw"
+      },
+      "ui_tags": [
+        "węglowodany",
+        "na szybko",
+        "owoc"
+      ],
+      "notes_pl": "Łatwy przykład „na już”.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 120,
+        "energy_kcal": 107,
+        "protein_g": 1.3,
+        "carbs_g": 27.0,
+        "fat_g": 0.3,
+        "saturated_fat_g": 0.1,
+        "sugars_g": 14.0
+      }
+    },
+    {
+      "id": "carb_wholegrain_bread",
+      "category": "carbs",
+      "display_name_pl": "Chleb pełnoziarnisty",
+      "default_portion": {
+        "amount": 2,
+        "unit": "kromki",
+        "label_pl": "2 kromki"
+      },
+      "role": "na_szybko",
+      "hero_macro": "carbs",
+      "lookup": {
+        "provider": "usda_fdc",
+        "lookup_query": "Bread, whole wheat"
+      },
+      "ui_tags": [
+        "węglowodany",
+        "pieczywo",
+        "na szybko"
+      ],
+      "notes_pl": "Bardzo czytelny przykład do kanapek i śniadania.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 60,
+        "energy_kcal": 148,
+        "protein_g": 5.5,
+        "carbs_g": 26.0,
+        "fat_g": 2.0,
+        "saturated_fat_g": 0.4,
+        "salt_g": 0.6
+      }
+    },
+    {
+      "id": "fat_olive_oil",
+      "category": "fat",
+      "display_name_pl": "Oliwa z oliwek",
+      "default_portion": {
+        "amount": 1,
+        "unit": "łyżka",
+        "label_pl": "1 łyżka"
+      },
+      "role": "lepsze_zrodlo",
+      "hero_macro": "fat",
+      "lookup": {
+        "provider": "usda_fdc",
+        "lookup_query": "Oil, olive"
+      },
+      "ui_tags": [
+        "tłuszcz",
+        "nienasycone",
+        "dodatek do potraw"
+      ],
+      "notes_pl": "Bardzo czytelne źródło tłuszczu dodanego.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 13.5,
+        "energy_kcal": 119,
+        "protein_g": 0.0,
+        "carbs_g": 0.0,
+        "fat_g": 13.5,
+        "saturated_fat_g": 1.9
+      }
+    },
+    {
+      "id": "fat_avocado",
+      "category": "fat",
+      "display_name_pl": "Awokado",
+      "default_portion": {
+        "amount": 0.5,
+        "unit": "szt.",
+        "label_pl": "1/2 sztuki"
+      },
+      "role": "lepsze_zrodlo",
+      "hero_macro": "fat",
+      "lookup": {
+        "provider": "usda_fdc",
+        "lookup_query": "Avocados, raw"
+      },
+      "ui_tags": [
+        "tłuszcz",
+        "nienasycone",
+        "produkt świeży"
+      ],
+      "notes_pl": "Przykład tłuszczu z produktu świeżego.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 75,
+        "energy_kcal": 120,
+        "protein_g": 1.5,
+        "carbs_g": 6.0,
+        "fat_g": 11.0,
+        "saturated_fat_g": 1.6
+      }
+    },
+    {
+      "id": "fat_walnuts",
+      "category": "fat",
+      "display_name_pl": "Orzechy włoskie",
+      "default_portion": {
+        "amount": 30,
+        "unit": "g",
+        "label_pl": "1 garść"
+      },
+      "role": "lepsze_zrodlo",
+      "hero_macro": "fat",
+      "lookup": {
+        "provider": "normy_pl_2024",
+        "lookup_query": "Orzechy włoskie",
+        "known_values": {
+          "protein_g_per_100g": 16.0
+        }
+      },
+      "ui_tags": [
+        "tłuszcz",
+        "nienasycone",
+        "garść"
+      ],
+      "notes_pl": "Codzienny punkt odniesienia dla tłuszczu z orzechów.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 30,
+        "energy_kcal": 196,
+        "protein_g": 4.5,
+        "carbs_g": 4.1,
+        "fat_g": 19.6,
+        "saturated_fat_g": 1.9
+      }
+    },
+    {
+      "id": "fat_almonds",
+      "category": "fat",
+      "display_name_pl": "Migdały",
+      "default_portion": {
+        "amount": 30,
+        "unit": "g",
+        "label_pl": "1 garść"
+      },
+      "role": "lepsze_zrodlo",
+      "hero_macro": "fat",
+      "lookup": {
+        "provider": "usda_fdc",
+        "lookup_query": "Almonds"
+      },
+      "ui_tags": [
+        "tłuszcz",
+        "nienasycone",
+        "garść"
+      ],
+      "notes_pl": "Czytelny przykład tłuszczu z orzechów.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 30,
+        "energy_kcal": 174,
+        "protein_g": 6.0,
+        "carbs_g": 6.0,
+        "fat_g": 15.0,
+        "saturated_fat_g": 1.1
+      }
+    },
+    {
+      "id": "fat_peanut_butter_100",
+      "category": "fat",
+      "display_name_pl": "Masło orzechowe 100%",
+      "default_portion": {
+        "amount": 2,
+        "unit": "łyżki",
+        "label_pl": "2 łyżki"
+      },
+      "role": "uwazaj_na",
+      "hero_macro": "fat",
+      "lookup": {
+        "provider": "normy_pl_2024",
+        "lookup_query": "Masło orzechowe",
+        "known_values": {
+          "protein_g_per_100g": 22.0
+        }
+      },
+      "ui_tags": [
+        "tłuszcz",
+        "kaloryczne",
+        "smarowidło"
+      ],
+      "notes_pl": "Dobry przykład produktu, który łatwo „dobija” tłuszcz i kalorie.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 32,
+        "energy_kcal": 188,
+        "protein_g": 8.0,
+        "carbs_g": 6.0,
+        "fat_g": 16.0,
+        "saturated_fat_g": 3.2,
+        "salt_g": 0.2
+      }
+    },
+    {
+      "id": "satfat_snickers_single",
+      "category": "satfat",
+      "display_name_pl": "SNICKERS baton",
+      "default_portion": {
+        "amount": 1,
+        "unit": "szt.",
+        "label_pl": "1 baton"
+      },
+      "role": "warning",
+      "hero_macro": "saturated_fat",
+      "lookup": {
+        "provider": "official_brand_label",
+        "lookup_query": "SNICKERS Singles Size Chocolate Candy Bars, 1.86 oz",
+        "known_values_per_portion": {
+          "energy_kcal": 250,
+          "fat_g": 12,
+          "saturated_fat_g": 4.5,
+          "carbs_g": 32,
+          "sugars_g": 27,
+          "protein_g": 5
+        }
+      },
+      "ui_tags": [
+        "warning",
+        "słodycze",
+        "wysokie nasycone"
+      ],
+      "notes_pl": "Modelowy przykład produktu, który szybko wykorzystuje sporą część dziennego pułapu nasyconych.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 53,
+        "energy_kcal": 250,
+        "protein_g": 5.0,
+        "carbs_g": 32.0,
+        "fat_g": 12.0,
+        "saturated_fat_g": 4.5,
+        "sugars_g": 27.0,
+        "salt_g": 0.2
+      }
+    },
+    {
+      "id": "satfat_milk_chocolate",
+      "category": "satfat",
+      "display_name_pl": "Czekolada mleczna",
+      "default_portion": {
+        "amount": 50,
+        "unit": "g",
+        "label_pl": "1/2 tabliczki"
+      },
+      "role": "warning",
+      "hero_macro": "saturated_fat",
+      "lookup": {
+        "provider": "usda_fdc",
+        "lookup_query": "Chocolate, milk"
+      },
+      "ui_tags": [
+        "warning",
+        "słodycze",
+        "nasycone"
+      ],
+      "notes_pl": "Przykład „słodkie + nasycone”.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 50,
+        "energy_kcal": 268,
+        "protein_g": 3.8,
+        "carbs_g": 30.0,
+        "fat_g": 15.0,
+        "saturated_fat_g": 9.0,
+        "sugars_g": 27.0,
+        "salt_g": 0.1
+      }
+    },
+    {
+      "id": "satfat_butter_croissant",
+      "category": "satfat",
+      "display_name_pl": "Croissant maślany",
+      "default_portion": {
+        "amount": 1,
+        "unit": "szt.",
+        "label_pl": "1 sztuka"
+      },
+      "role": "warning",
+      "hero_macro": "saturated_fat",
+      "lookup": {
+        "provider": "usda_fdc",
+        "lookup_query": "Croissant"
+      },
+      "ui_tags": [
+        "warning",
+        "wypiek",
+        "nasycone"
+      ],
+      "notes_pl": "Przykład pieczywa cukierniczego z dużym udziałem tłuszczu i nasyconych.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 60,
+        "energy_kcal": 240,
+        "protein_g": 5.0,
+        "carbs_g": 26.0,
+        "fat_g": 13.0,
+        "saturated_fat_g": 7.5,
+        "sugars_g": 6.0,
+        "salt_g": 0.5
+      }
+    },
+    {
+      "id": "satfat_kabanos",
+      "category": "satfat",
+      "display_name_pl": "Kabanosy",
+      "default_portion": {
+        "amount": 60,
+        "unit": "g",
+        "label_pl": "1 mała paczka"
+      },
+      "role": "warning",
+      "hero_macro": "saturated_fat",
+      "lookup": {
+        "provider": "local_or_usda_nearest",
+        "lookup_query": "Sausage, dry or semi-dry"
+      },
+      "ui_tags": [
+        "warning",
+        "słone",
+        "nasycone"
+      ],
+      "notes_pl": "Przykład „słone + nasycone”.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 60,
+        "energy_kcal": 320,
+        "protein_g": 16.0,
+        "carbs_g": 1.2,
+        "fat_g": 26.0,
+        "saturated_fat_g": 10.0,
+        "salt_g": 2.2
+      }
+    },
+    {
+      "id": "satfat_yellow_cheese",
+      "category": "satfat",
+      "display_name_pl": "Ser żółty",
+      "default_portion": {
+        "amount": 40,
+        "unit": "g",
+        "label_pl": "2–3 plastry"
+      },
+      "role": "warning",
+      "hero_macro": "saturated_fat",
+      "lookup": {
+        "provider": "normy_pl_2024_or_usda_nearest",
+        "lookup_query": "Ser edamski / cheese, semi-hard",
+        "known_values": {
+          "protein_g_per_100g": 26.1
+        }
+      },
+      "ui_tags": [
+        "warning",
+        "nabiał",
+        "nasycone"
+      ],
+      "notes_pl": "Codzienny produkt, który potrafi szybko podbić nasycone.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 40,
+        "energy_kcal": 142,
+        "protein_g": 10.4,
+        "carbs_g": 0.2,
+        "fat_g": 11.0,
+        "saturated_fat_g": 7.2,
+        "salt_g": 0.8
+      }
+    }
+  ],
+  "combination_examples": {
+    "protein_mixed_day": [
+      {
+        "product_id": "protein_skyr_natural",
+        "portion_multiplier": 1
+      },
+      {
+        "product_id": "protein_eggs",
+        "portion_multiplier": 1
+      },
+      {
+        "product_id": "protein_tofu_natural",
+        "portion_multiplier": 1
+      }
+    ],
+    "plant_protein_note": "Przy białku roślinnym warto łączyć różne źródła, np. strączki + produkty zbożowe + orzechy."
+  },
+  "integration_hints": {
+    "nutrition_norms_card": {
+      "preview_builder": "macroExamplesBuildPreview(targets, dictionary)",
+      "bottom_sheet_builder": "macroExamplesBuildSheet(macroType, target, dictionary, copy)"
+    },
+    "meal_card": {
+      "extra_line_1": "B {{protein_g}} g • W {{carbs_g}} g • T {{fat_g}} g",
+      "extra_line_2_mode": [
+        "goal_share",
+        "warning"
+      ],
+      "warning_chip_source": "saturated_fat_portion_share_of_day_cap_pct"
+    }
+  },
+  "reference_caps": {
+    "saturated_fat_g": 20
+  }
+};
+const MACRO_PRACTICE_FALLBACK_COPY = {
+  "version": "0.1.0",
+  "locale": "pl-PL",
+  "card_inline": {
+    "protein_summary": "Około {{servings_count}} prostych porcji białka w ciągu dnia.",
+    "carbs_summary": "Najlepiej rozłożyć to na kilka porcji w ciągu dnia.",
+    "fat_summary": "Ważna jest nie tylko ilość, ale też rodzaj tłuszczu.",
+    "satfat_summary": "Im mniej, tym lepiej. To nie jest cel do dobicia.",
+    "cta_examples": "Zobacz przykłady"
+  },
+  "bottom_sheet": {
+    "common": {
+      "cta_close": "Zamknij",
+      "disclaimer_examples": "To orientacyjne przykłady. Nie musisz zjadać jednego produktu, żeby osiągnąć cel dnia.",
+      "disclaimer_warning": "To nie jest „cel do dobicia”. Chodzi o produkty, które szybko podbijają tłuszcze nasycone w 1 porcji."
+    },
+    "protein": {
+      "title": "Białko — jak to wygląda w jedzeniu",
+      "subtitle": "Cel dnia: {{target_g}} g",
+      "section_simple": "Najprostsze przykłady",
+      "section_meatless": "Wersja bez mięsa",
+      "section_mix": "Prosty miks dnia",
+      "row_goal_share": "Ta porcja daje około {{pct}}% Twojego celu białka.",
+      "row_good_choice": "Dobry prosty wybór na dobicie białka.",
+      "row_meatless_note": "Wersja roślinna: najlepiej łączyć różne źródła.",
+      "mix_example_intro": "Przykładowy prosty miks dnia:",
+      "mix_example_template": "{{item_1}} + {{item_2}} + {{item_3}}"
+    },
+    "carbs": {
+      "title": "Węglowodany — jak to rozłożyć w ciągu dnia",
+      "subtitle": "Cel dnia: {{target_g}} g",
+      "section_base": "Porcje bazowe",
+      "section_quick": "Na szybko",
+      "row_goal_share": "Ta porcja daje około {{pct}}% Twojego celu węglowodanów.",
+      "row_base_note": "Dobra porcja bazowa do głównego posiłku.",
+      "row_quick_note": "Prosty przykład na przekąskę lub szybki posiłek.",
+      "footer": "Węglowodany najłatwiej rozłożyć na kilka posiłków."
+    },
+    "fat": {
+      "title": "Tłuszcz — liczy się ilość i jakość",
+      "subtitle": "Zakres dnia: {{target_min_g}}–{{target_max_g}} g",
+      "section_better": "Lepsze źródła tłuszczu",
+      "section_watch": "Jak łatwo dobić za dużo",
+      "row_range_share": "Ta porcja daje około {{pct}}% dziennego zakresu tłuszczu.",
+      "row_better_note": "To głównie źródło tłuszczów nienasyconych.",
+      "row_watch_note": "To bardziej źródło tłuszczu niż białka.",
+      "footer": "Staraj się częściej wybierać tłuszcze nienasycone."
+    },
+    "satfat": {
+      "title": "Tłuszcze nasycone — warto ograniczać",
+      "subtitle": "Tu nie pokazujemy „celu dnia”. Pokazujemy, które porcje szybko podbijają nasycone.",
+      "section_warning": "Produkty, które szybko podbijają nasycone",
+      "row_portion_share": "Ta porcja zajmuje około {{pct}}% dziennego pułapu tłuszczów nasyconych.",
+      "row_high": "Wysoka ilość tłuszczów nasyconych w 1 porcji.",
+      "row_medium": "Średnia ilość tłuszczów nasyconych w 1 porcji.",
+      "row_low": "Niska ilość tłuszczów nasyconych w 1 porcji.",
+      "footer": "W praktyce chodzi o to, żeby takie produkty nie dominowały w codziennym jedzeniu."
+    }
+  },
+  "chips": {
+    "low": "niska ilość",
+    "medium": "średnia ilość",
+    "high": "wysoka ilość",
+    "warning": "uważaj"
+  },
+  "meal_card": {
+    "line_macros": "B {{protein_g}} g • W {{carbs_g}} g • T {{fat_g}} g",
+    "line_goal_share": "Pokrywa: białko {{protein_pct}}% • węglowodany {{carbs_pct}}% • tłuszcz {{fat_pct}}%",
+    "line_warning_satfat": "Nasycone: {{level_label}} w 1 porcji",
+    "line_warning_salt": "Sól: {{level_label}} w 1 porcji",
+    "line_warning_sugars": "Cukry: {{level_label}} w 1 porcji"
+  },
+  "tooltips": {
+    "plant_protein": "Białka roślinne najlepiej oceniać w mieszance różnych produktów, a nie po jednym produkcie.",
+    "saturated_fat": "Dla tłuszczów nasyconych nie pokazujemy „celu do dobicia”. Chodzi o ograniczanie produktów, które szybko wykorzystują sporą część dziennego pułapu.",
+    "fat_quality": "W praktyce lepiej częściej wybierać oliwę, orzechy, nasiona, awokado i ryby niż produkty z dużą ilością tłuszczów nasyconych."
+  },
+  "empty_states": {
+    "no_examples": "Brakuje jeszcze przykładów dla tej kategorii.",
+    "no_target": "Najpierw oblicz cel dnia, żeby pokazać przykłady."
+  }
+};
+const MACRO_PRACTICE_STATE = {
+  dictionary: null,
+  copy: null,
+  ready: false,
+  loadPromise: null,
+  installedFoodRefs: false,
+  referenceFoodKeys: [],
+  source: 'none'
+};
+
+snacks.snickers.macroProductId = 'satfat_snickers_single';
+snacks.snickers.macroPortionMultiplier = 1;
+snacks.banana.macroProductId = 'carb_banana';
+snacks.banana.macroPortionMultiplier = 100 / 120;
+snacks.chocolate.macroProductId = 'satfat_milk_chocolate';
+snacks.chocolate.macroPortionMultiplier = 0.5;
+
+function macroPracticeSafeNumber(value) {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+function macroPracticeFormatNumber(value, digits = 0) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return '';
+  const precision = Number.isFinite(Number(digits)) ? Math.max(0, Number(digits)) : 0;
+  return num.toLocaleString('pl-PL', {
+    minimumFractionDigits: precision,
+    maximumFractionDigits: precision
+  });
+}
+
+function macroPracticeFillTemplate(template, values) {
+  const source = String(template || '');
+  return source.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, key) => {
+    if (!values || !(key in values)) return '';
+    return String(values[key]);
+  });
+}
+
+function macroPracticeEscapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function macroPracticeDeepClone(value) {
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch (_) {
+    return value;
+  }
+}
+
+function macroPracticeDispatchReady() {
+  try {
+    window.dispatchEvent(new CustomEvent('macroPracticeResourcesReady', { detail: macroPracticeGetResources() }));
+  } catch (_) { /* ignore */ }
+}
+
+function macroPracticeSetResources(dictionary, copy, source) {
+  if (!dictionary || !copy) return null;
+  MACRO_PRACTICE_STATE.dictionary = macroPracticeDeepClone(dictionary);
+  MACRO_PRACTICE_STATE.copy = macroPracticeDeepClone(copy);
+  MACRO_PRACTICE_STATE.ready = true;
+  MACRO_PRACTICE_STATE.source = source || 'embedded';
+  macroPracticeInstallReferenceFoods(true);
+  macroPracticeDispatchReady();
+  return macroPracticeGetResources();
+}
+
+async function macroPracticeFetchJsonCandidates(candidates) {
+  if (typeof fetch !== 'function') return null;
+  const list = Array.isArray(candidates) ? candidates : [];
+  for (const candidate of list) {
+    if (!candidate) continue;
+    try {
+      const response = await fetch(candidate, { cache: 'no-cache' });
+      if (!response.ok) continue;
+      return await response.json();
+    } catch (_) {
+      // spróbuj kolejnej ścieżki
+    }
+  }
+  return null;
+}
+
+function macroPracticeGetResources() {
+  if (!MACRO_PRACTICE_STATE.ready || !MACRO_PRACTICE_STATE.dictionary || !MACRO_PRACTICE_STATE.copy) return null;
+  return { dictionary: MACRO_PRACTICE_STATE.dictionary, copy: MACRO_PRACTICE_STATE.copy };
+}
+
+function macroPracticeGetProductsByCategory(category) {
+  const resources = macroPracticeGetResources();
+  if (!resources || !Array.isArray(resources.dictionary.products)) return [];
+  return resources.dictionary.products.filter((product) => String(product && product.category || '') === String(category || ''));
+}
+
+function macroPracticeGetProduct(productOrId) {
+  const resources = macroPracticeGetResources();
+  if (!resources || !Array.isArray(resources.dictionary.products)) return null;
+  if (!productOrId) return null;
+  if (typeof productOrId === 'object' && productOrId.id) return productOrId;
+  return resources.dictionary.products.find((product) => product && product.id === productOrId) || null;
+}
+
+function macroPracticeGetProductPortion(productOrId) {
+  const product = macroPracticeGetProduct(productOrId);
+  if (!product || typeof product !== 'object' || !product.resolved_nutrients_per_portion) return null;
+  return product.resolved_nutrients_per_portion;
+}
+
+function macroPracticeBuildPortionLabel(product) {
+  if (!product || typeof product !== 'object') return '';
+  const rawLabel = product.default_portion && product.default_portion.label_pl
+    ? String(product.default_portion.label_pl).trim()
+    : '';
+  const massG = product.resolved_nutrients_per_portion && Number.isFinite(Number(product.resolved_nutrients_per_portion.portion_mass_g))
+    ? Number(product.resolved_nutrients_per_portion.portion_mass_g)
+    : null;
+  const massLabel = Number.isFinite(massG) && massG > 0
+    ? `${macroPracticeFormatNumber(massG, Number.isInteger(massG) ? 0 : 1)} g`
+    : '';
+  if (rawLabel && massLabel) {
+    if (/\b\d+(?:[.,]\d+)?\s*g\b/i.test(rawLabel)) return rawLabel;
+    return `${rawLabel} • ${massLabel}`;
+  }
+  return rawLabel || massLabel || '';
+}
+
+function macroPracticeBuildFoodOptionName(product) {
+  if (!product || typeof product !== 'object') return '';
+  const label = product.display_name_pl || product.name || 'Produkt referencyjny';
+  const portionLabel = macroPracticeBuildPortionLabel(product)
+    ? ` (${macroPracticeBuildPortionLabel(product)})`
+    : '';
+  return `${label}${portionLabel}`;
+}
+
+function macroPracticeBuildReferenceFoodKey(product) {
+  return product && product.id ? `macro_${product.id}` : '';
+}
+
+function macroPracticeBuildFoodEntryFromProduct(product) {
+  const portion = macroPracticeGetProductPortion(product);
+  if (!product || !portion) return null;
+  return {
+    name: macroPracticeBuildFoodOptionName(product),
+    kcal: Math.round(Number(portion.energy_kcal) || 0),
+    protein_g: macroPracticeSafeNumber(portion.protein_g) || 0,
+    carbs_g: macroPracticeSafeNumber(portion.carbs_g) || 0,
+    fat_g: macroPracticeSafeNumber(portion.fat_g) || 0,
+    saturated_fat_g: macroPracticeSafeNumber(portion.saturated_fat_g) || 0,
+    sugars_g: macroPracticeSafeNumber(portion.sugars_g) || 0,
+    salt_g: macroPracticeSafeNumber(portion.salt_g) || 0,
+    macroProductId: product.id,
+    macroPortionMultiplier: 1,
+    macroPortionLabel: macroPracticeBuildPortionLabel(product),
+    isMacroReferenceFood: true,
+    macroCategory: product.category || '',
+    showSatfatWarning: product.category === 'satfat'
+  };
+}
+
+function macroPracticeBuildFoodOptionsMarkup(selectedValue) {
+  return Object.entries(foods)
+    .map(([key, value]) => `<option value="${key}" ${key === selectedValue ? 'selected' : ''}>${value.name}</option>`)
+    .join('');
+}
+
+function macroPracticeRefreshFoodSelectOptions() {
+  document.querySelectorAll('.food-row select').forEach((selectEl) => {
+    const currentValue = selectEl.value;
+    selectEl.innerHTML = macroPracticeBuildFoodOptionsMarkup(currentValue);
+    if (!foods[currentValue]) selectEl.value = 'snickers';
+  });
+}
+
+function macroPracticeInstallReferenceFoods(forceRefresh = false) {
+  if (MACRO_PRACTICE_STATE.installedFoodRefs && !forceRefresh) return false;
+  const resources = macroPracticeGetResources();
+  if (!resources || !Array.isArray(resources.dictionary.products)) return false;
+  if (forceRefresh && Array.isArray(MACRO_PRACTICE_STATE.referenceFoodKeys)) {
+    MACRO_PRACTICE_STATE.referenceFoodKeys.forEach((key) => {
+      delete snacks[key];
+      delete foods[key];
+    });
+  }
+  const installedKeys = [];
+  resources.dictionary.products.forEach((product) => {
+    const entry = macroPracticeBuildFoodEntryFromProduct(product);
+    const key = macroPracticeBuildReferenceFoodKey(product);
+    if (!entry || !key) return;
+    snacks[key] = entry;
+    foods[key] = entry;
+    installedKeys.push(key);
+  });
+  MACRO_PRACTICE_STATE.installedFoodRefs = installedKeys.length > 0;
+  MACRO_PRACTICE_STATE.referenceFoodKeys = installedKeys;
+  if (installedKeys.length) macroPracticeRefreshFoodSelectOptions();
+  return installedKeys.length > 0;
+}
+
+function macroPracticeLoadResources() {
+  if (!MACRO_PRACTICE_STATE.ready) {
+    macroPracticeSetResources(MACRO_PRACTICE_FALLBACK_DICTIONARY, MACRO_PRACTICE_FALLBACK_COPY, 'embedded');
+  }
+  if (MACRO_PRACTICE_STATE.loadPromise) return MACRO_PRACTICE_STATE.loadPromise;
+  MACRO_PRACTICE_STATE.loadPromise = Promise.all([
+    macroPracticeFetchJsonCandidates(MACRO_PRACTICE_DICTIONARY_URL_CANDIDATES),
+    macroPracticeFetchJsonCandidates(MACRO_UI_COPY_URL_CANDIDATES)
+  ]).then(([dictionary, copy]) => {
+    if (dictionary && copy) {
+      return macroPracticeSetResources(dictionary, copy, 'fetched');
+    }
+    return macroPracticeGetResources();
+  }).catch((error) => {
+    console.warn('Nie udało się odświeżyć słownika praktycznych przykładów makro. Pozostawiono zasoby wbudowane w aplikację.', error);
+    return macroPracticeGetResources();
+  }).finally(() => {
+    MACRO_PRACTICE_STATE.loadPromise = null;
+  });
+  return MACRO_PRACTICE_STATE.loadPromise;
+}
+
+function macroPracticeResolveFoodMacros(foodOrKey) {
+  const food = typeof foodOrKey === 'string' ? foods[foodOrKey] : foodOrKey;
+  if (!food || typeof food !== 'object') return null;
+  const directMacros = ['protein_g', 'carbs_g', 'fat_g', 'saturated_fat_g', 'sugars_g', 'salt_g']
+    .some((key) => Number.isFinite(Number(food[key])));
+  if (directMacros) {
+    return {
+      energy_kcal: macroPracticeSafeNumber(food.kcal) || 0,
+      protein_g: macroPracticeSafeNumber(food.protein_g) || 0,
+      carbs_g: macroPracticeSafeNumber(food.carbs_g) || 0,
+      fat_g: macroPracticeSafeNumber(food.fat_g) || 0,
+      saturated_fat_g: macroPracticeSafeNumber(food.saturated_fat_g) || 0,
+      sugars_g: macroPracticeSafeNumber(food.sugars_g) || 0,
+      salt_g: macroPracticeSafeNumber(food.salt_g) || 0,
+      macroProductId: food.macroProductId || '',
+      portionLabel: food.macroPortionLabel || '',
+      macroCategory: food.macroCategory || ''
+    };
+  }
+  if (!food.macroProductId) return null;
+  const portion = macroPracticeGetProductPortion(food.macroProductId);
+  if (!portion) return null;
+  const multiplier = macroPracticeSafeNumber(food.macroPortionMultiplier) || 1;
+  return {
+    energy_kcal: (macroPracticeSafeNumber(portion.energy_kcal) || 0) * multiplier,
+    protein_g: (macroPracticeSafeNumber(portion.protein_g) || 0) * multiplier,
+    carbs_g: (macroPracticeSafeNumber(portion.carbs_g) || 0) * multiplier,
+    fat_g: (macroPracticeSafeNumber(portion.fat_g) || 0) * multiplier,
+    saturated_fat_g: (macroPracticeSafeNumber(portion.saturated_fat_g) || 0) * multiplier,
+    sugars_g: (macroPracticeSafeNumber(portion.sugars_g) || 0) * multiplier,
+    salt_g: (macroPracticeSafeNumber(portion.salt_g) || 0) * multiplier,
+    macroProductId: food.macroProductId,
+    portionLabel: food.macroPortionLabel || '',
+    macroCategory: food.macroCategory || ''
+  };
+}
+
+function macroPracticeGetNutritionGoalTargets(model) {
+  if (!model || typeof model !== 'object') return null;
+  const proteinG = model.protein && model.protein.main ? macroPracticeSafeNumber(model.protein.main.rdaGDay) : null;
+  const carbsRange = model.carbs && Array.isArray(model.carbs.gramRange) ? model.carbs.gramRange : null;
+  const fatRange = model.fat && Array.isArray(model.fat.gramRange) ? model.fat.gramRange : null;
+  const satfatCap = MACRO_PRACTICE_STATE.dictionary && MACRO_PRACTICE_STATE.dictionary.reference_caps
+    ? macroPracticeSafeNumber(MACRO_PRACTICE_STATE.dictionary.reference_caps.saturated_fat_g)
+    : 20;
+  const midpoint = (range) => Array.isArray(range) && range.length === 2 ? (Number(range[0]) + Number(range[1])) / 2 : null;
+  return {
+    protein_g: proteinG,
+    carbs_g: midpoint(carbsRange),
+    fat_g: midpoint(fatRange),
+    satfat_cap_g: satfatCap || 20
+  };
+}
+
+function macroPracticePercentOfGoal(value, total) {
+  const num = Number(value);
+  const den = Number(total);
+  if (!Number.isFinite(num) || !Number.isFinite(den) || den <= 0) return null;
+  return Math.round((num / den) * 100);
+}
+
+function macroPracticeGetWarningLevel(sharePct) {
+  const thresholds = MACRO_PRACTICE_STATE.dictionary && MACRO_PRACTICE_STATE.dictionary.warning_rules
+    ? MACRO_PRACTICE_STATE.dictionary.warning_rules.saturated_fat_portion_share_of_day_cap_pct
+    : null;
+  const share = Number(sharePct);
+  if (!Number.isFinite(share)) return 'medium';
+  const lowMax = thresholds && Number.isFinite(Number(thresholds.low_max)) ? Number(thresholds.low_max) : 10;
+  const mediumMax = thresholds && Number.isFinite(Number(thresholds.medium_max)) ? Number(thresholds.medium_max) : 20;
+  if (share <= lowMax) return 'low';
+  if (share <= mediumMax) return 'medium';
+  return 'high';
+}
+
+function macroPracticeFormatDisplayNumber(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return '0';
+  const digits = Math.abs(num) >= 10 ? 0 : 1;
+  return num.toLocaleString('pl-PL', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+}
+
+function macroPracticeAnalyzeFoodSelection(foodKey, qty, nutritionModel) {
+  const base = macroPracticeResolveFoodMacros(foodKey);
+  if (!base) return null;
+  const amount = Number(qty);
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+  const totals = {
+    energy_kcal: (macroPracticeSafeNumber(base.energy_kcal) || 0) * amount,
+    protein_g: (macroPracticeSafeNumber(base.protein_g) || 0) * amount,
+    carbs_g: (macroPracticeSafeNumber(base.carbs_g) || 0) * amount,
+    fat_g: (macroPracticeSafeNumber(base.fat_g) || 0) * amount,
+    saturated_fat_g: (macroPracticeSafeNumber(base.saturated_fat_g) || 0) * amount,
+    sugars_g: (macroPracticeSafeNumber(base.sugars_g) || 0) * amount,
+    salt_g: (macroPracticeSafeNumber(base.salt_g) || 0) * amount
+  };
+  const mealCopy = MACRO_PRACTICE_STATE.copy && MACRO_PRACTICE_STATE.copy.meal_card ? MACRO_PRACTICE_STATE.copy.meal_card : null;
+  const chips = MACRO_PRACTICE_STATE.copy && MACRO_PRACTICE_STATE.copy.chips ? MACRO_PRACTICE_STATE.copy.chips : null;
+  const macroLine = mealCopy
+    ? macroPracticeFillTemplate(mealCopy.line_macros, {
+        protein_g: macroPracticeFormatDisplayNumber(totals.protein_g),
+        carbs_g: macroPracticeFormatDisplayNumber(totals.carbs_g),
+        fat_g: macroPracticeFormatDisplayNumber(totals.fat_g)
+      })
+    : '';
+  const targets = macroPracticeGetNutritionGoalTargets(nutritionModel);
+  const proteinPct = targets ? macroPracticePercentOfGoal(totals.protein_g, targets.protein_g) : null;
+  const carbsPct = targets ? macroPracticePercentOfGoal(totals.carbs_g, targets.carbs_g) : null;
+  const fatPct = targets ? macroPracticePercentOfGoal(totals.fat_g, targets.fat_g) : null;
+  const coverageLine = (mealCopy && proteinPct !== null && carbsPct !== null && fatPct !== null)
+    ? macroPracticeFillTemplate(mealCopy.line_goal_share, { protein_pct: proteinPct, carbs_pct: carbsPct, fat_pct: fatPct })
+    : '';
+  const satfatPct = targets ? macroPracticePercentOfGoal(totals.saturated_fat_g, targets.satfat_cap_g) : null;
+  const warningLevel = satfatPct !== null ? macroPracticeGetWarningLevel(satfatPct) : null;
+  const warningLabel = chips && warningLevel && chips[warningLevel]
+    ? chips[warningLevel]
+    : (warningLevel === 'high' ? 'wysoka ilość' : warningLevel === 'low' ? 'niska ilość' : 'średnia ilość');
+  const warningLine = (mealCopy && satfatPct !== null && satfatPct > 0)
+    ? macroPracticeFillTemplate(mealCopy.line_warning_satfat, { level_label: warningLabel, pct: satfatPct })
+    : '';
+  const showAsWarning = String(base.macroCategory || '') === 'satfat' || totals.saturated_fat_g >= 4;
+  return { nutrients: totals, macroLine, coverageLine, warningLine, showAsWarning, satfatPct, warningLevel };
+}
+
+macroPracticeLoadResources();
+window.addEventListener('macroPracticeResourcesReady', () => {
+  try {
+    if (typeof update === 'function') update();
+  } catch (_) { /* ignore */ }
+});
+
+window.macroPracticeLoadResources = macroPracticeLoadResources;
+window.macroPracticeGetResources = macroPracticeGetResources;
+window.macroPracticeFillTemplate = macroPracticeFillTemplate;
+window.macroPracticeGetProductsByCategory = macroPracticeGetProductsByCategory;
+window.macroPracticeGetProductPortion = macroPracticeGetProductPortion;
+window.macroPracticeResolveFoodMacros = macroPracticeResolveFoodMacros;
+window.macroPracticeGetNutritionGoalTargets = macroPracticeGetNutritionGoalTargets;
+window.macroPracticePercentOfGoal = macroPracticePercentOfGoal;
+window.macroPracticeGetWarningLevel = macroPracticeGetWarningLevel;
+window.macroPracticeAnalyzeFoodSelection = macroPracticeAnalyzeFoodSelection;
+
 /**
  * Adds a food row to the unified food list.  Uses the combined `foods`
  * dictionary.  Accepts an optional default key; falls back to 'snickers'.
@@ -2132,8 +3368,8 @@ function energyReferenceWeightKg({ sex, ageYears, ageMonthsOpt = 0, heightCm } =
       referenceHeightCm: row.heightCm,
       method: 'child_p50_table',
       source: 'child_p50',
-      label: `P50 dla wieku ${band.completedYears} lat`,
-      explanation: `Masa referencyjna P50 dla wieku ${band.completedYears} lat.`,
+      label: `wartości typowe dla wieku ${band.completedYears === 1 ? '1 roku' : band.completedYears + ' lat'} i tej płci`,
+      explanation: `Masa i wzrost typowe dla wieku ${band.completedYears === 1 ? '1 roku' : band.completedYears + ' lat'} i płci.`,
       entry: row
     };
   }
@@ -2263,7 +3499,7 @@ function energyResolveAnthropometry({
         weightKg: energyIsNumeric(medianWeight) ? medianWeight : safeWeight,
         heightCm: energyIsNumeric(medianHeight) ? medianHeight : safeHeight,
         source: 'child_p50_fallback',
-        label: `P50 dla wieku ${energyGetCompletedYears(ageYears)} lat`
+        label: `wartości typowe dla wieku ${energyGetCompletedYears(ageYears) === 1 ? '1 roku' : energyGetCompletedYears(ageYears) + ' lat'} i tej płci`
       };
     }
   }
@@ -4434,6 +5670,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const hydrationFlag = document.getElementById('hydrationFlag');
     const patientFacingToggle = document.getElementById('patientFacingToggle');
     const journeyFlag = document.getElementById('journeyFlag');
+    const nutritionNormsFlag = document.getElementById('nutritionNormsFlag');
 
     if (isAdult) {
       if (columns) columns.style.gridTemplateColumns = '1fr';
@@ -4449,6 +5686,7 @@ document.addEventListener('DOMContentLoaded', function() {
       setDietToggleGroupVisible('hydrationFlag', false);
       setDietToggleGroupVisible('patientFacingToggle', true);
       setDietToggleGroupVisible('journeyFlag', true);
+      setDietToggleGroupVisible('nutritionNormsFlag', true);
       if (reduceToggle) {
         reduceToggle.checked = true;
         reduceToggle.disabled = true;
@@ -4471,6 +5709,9 @@ document.addEventListener('DOMContentLoaded', function() {
       if (journeyFlag) {
         journeyFlag.disabled = false;
       }
+      if (nutritionNormsFlag) {
+        nutritionNormsFlag.disabled = false;
+      }
     } else {
       if (columns) columns.style.gridTemplateColumns = 'repeat(2, minmax(0, 1fr))';
       if (leftCol) leftCol.style.display = 'flex';
@@ -4484,6 +5725,7 @@ document.addEventListener('DOMContentLoaded', function() {
       setDietToggleGroupVisible('hydrationFlag', true);
       setDietToggleGroupVisible('patientFacingToggle', true);
       setDietToggleGroupVisible('journeyFlag', true);
+      setDietToggleGroupVisible('nutritionNormsFlag', true);
       const growthEnded = !!(growthEndedFlag && growthEndedFlag.checked);
       setDietToggleGroupVisible('stabilizationToggle', !growthEnded);
       if (reduceToggle) {
@@ -4507,6 +5749,9 @@ document.addEventListener('DOMContentLoaded', function() {
       if (journeyFlag) {
         journeyFlag.disabled = false;
       }
+      if (nutritionNormsFlag) {
+        nutritionNormsFlag.disabled = false;
+      }
       if (typeof window.updateStabilizationEligibility === 'function') {
         try { window.updateStabilizationEligibility(); } catch (_) {}
       }
@@ -4527,6 +5772,228 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function formatDietRecommendationKg(value, digits) {
     return `${formatDietRecommendationNumber(value, Number.isFinite(digits) ? digits : 1)} kg`;
+  }
+
+  const DIET_RECOMMENDATION_KCAL_PER_GRAM = {
+    protein: 4,
+    carbs: 4,
+    fat: 9
+  };
+
+  function formatDietRecommendationPercentRangeValue(minValue, maxValue, digits) {
+    const precision = Number.isFinite(digits) ? digits : 0;
+    const min = Number(minValue);
+    const max = Number(maxValue);
+    if (!(Number.isFinite(min) && Number.isFinite(max))) return '';
+    if (Math.abs(min - max) < 0.05) {
+      return `około ${formatDietRecommendationNumber((min + max) / 2, precision)}% energii`;
+    }
+    return `${formatDietRecommendationNumber(min, precision)}–${formatDietRecommendationNumber(max, precision)}% energii`;
+  }
+
+  function formatDietRecommendationPercentRange(range, digits) {
+    return Array.isArray(range)
+      ? formatDietRecommendationPercentRangeValue(range[0], range[1], Number.isFinite(digits) ? digits : 0)
+      : '';
+  }
+
+  function formatDietRecommendationGramRange(range, digits) {
+    const precision = Number.isFinite(digits) ? digits : 0;
+    if (!Array.isArray(range)) return '';
+    const min = Number(range[0]);
+    const max = Number(range[1]);
+    if (!(Number.isFinite(min) && Number.isFinite(max))) return '';
+    if (Math.abs(min - max) < 0.05) {
+      return `${formatDietRecommendationNumber((min + max) / 2, precision)} g/d`;
+    }
+    return `${formatDietRecommendationNumber(min, precision)}–${formatDietRecommendationNumber(max, precision)} g/d`;
+  }
+
+  function computeDietRecommendationMacroGramRange(energyKcal, percentRange, kcalPerGram) {
+    const energy = Number(energyKcal);
+    const factor = Number(kcalPerGram);
+    if (!(Number.isFinite(energy) && energy > 0 && Array.isArray(percentRange) && percentRange.length === 2 && Number.isFinite(factor) && factor > 0)) {
+      return null;
+    }
+    return [
+      (energy * Number(percentRange[0]) / 100) / factor,
+      (energy * Number(percentRange[1]) / 100) / factor
+    ];
+  }
+
+  function resolveDietRecommendationTargetEnergyKcal(chosenDiet, nutritionModel) {
+    const chosenIntake = chosenDiet ? Number(chosenDiet.intake) : NaN;
+    if (Number.isFinite(chosenIntake) && chosenIntake > 0) {
+      return Math.round(chosenIntake);
+    }
+    const mainValue = nutritionModel && nutritionModel.energy ? Number(nutritionModel.energy.mainValue) : NaN;
+    if (Number.isFinite(mainValue) && mainValue > 0) {
+      return Math.round(mainValue);
+    }
+    const range = nutritionModel && nutritionModel.energy && Array.isArray(nutritionModel.energy.range)
+      ? nutritionModel.energy.range.map((value) => Number(value)).filter((value) => Number.isFinite(value) && value > 0)
+      : [];
+    if (range.length) {
+      const midpoint = range.length === 1 ? range[0] : (range[0] + range[range.length - 1]) / 2;
+      if (Number.isFinite(midpoint) && midpoint > 0) {
+        return Math.round(midpoint);
+      }
+    }
+    return null;
+  }
+
+  function buildDietNutritionNormsSummary(options) {
+    const opts = options || {};
+    if (!(typeof window !== 'undefined' && typeof window.nutritionNormsBuildCardModel === 'function')) {
+      return null;
+    }
+
+    const ageYears = Number(opts.ageYears);
+    const ageMonthsOpt = Number(opts.ageMonthsOpt) || 0;
+    const weightKg = Number(opts.weightKg);
+    const heightCm = Number(opts.heightCm);
+    if (!(Number.isFinite(ageYears) && ageYears > 0 && Number.isFinite(weightKg) && weightKg > 0 && Number.isFinite(heightCm) && heightCm > 0)) {
+      return null;
+    }
+
+    const basicsFromDom = (typeof window.nutritionNormsReadBasicsFromDom === 'function')
+      ? window.nutritionNormsReadBasicsFromDom()
+      : {};
+    const basics = {
+      ...basicsFromDom,
+      ageYears,
+      ageMonthsOpt,
+      sex: opts.sex || basicsFromDom.sex || 'M',
+      weightKg,
+      heightCm,
+      mainPal: Number.isFinite(Number(opts.palUsed)) ? Number(opts.palUsed) : basicsFromDom.mainPal
+    };
+
+    const currentUiState = (typeof window.nutritionNormsGetUiState === 'function')
+      ? (window.nutritionNormsGetUiState() || {})
+      : {};
+    const fixedPal = Number(opts.palUsed);
+    const palSelector = Number.isFinite(fixedPal)
+      ? fixedPal.toFixed(1).replace(/\.0$/, '.0')
+      : 'inherit';
+    // W zaleceniach dietetycznych makroskładniki muszą być liczone
+    // niezależnie od trybu wybranego w karcie „Normy żywieniowe”,
+    // aby przypadkowe przełączenie na masę referencyjną nie zmieniało
+    // treści gotowych zaleceń dla pacjenta przy tej samej kaloryczności planu.
+    const lockedBodyMode = 'actual';
+
+    let model;
+    try {
+      model = window.nutritionNormsBuildCardModel(basics, {
+        ...currentUiState,
+        bodyMode: lockedBodyMode,
+        palSelector,
+        includeInSummary: false
+      });
+    } catch (_) {
+      model = null;
+    }
+    if (!model || !model.protein || !model.fat || !model.carbs) return null;
+
+    const targetEnergyKcal = resolveDietRecommendationTargetEnergyKcal(opts.chosenDiet, model);
+    if (!(Number.isFinite(targetEnergyKcal) && targetEnergyKcal > 0)) return null;
+
+    const proteinMain = model.protein && model.protein.main ? model.protein.main : null;
+    const proteinRdaG = proteinMain ? Number(proteinMain.rdaGDay) : NaN;
+    const proteinEarG = proteinMain ? Number(proteinMain.earGDay) : NaN;
+    const proteinShareRange = (Number.isFinite(proteinEarG) && proteinEarG > 0 && Number.isFinite(proteinRdaG) && proteinRdaG > 0)
+      ? [
+          (proteinEarG * DIET_RECOMMENDATION_KCAL_PER_GRAM.protein / targetEnergyKcal) * 100,
+          (proteinRdaG * DIET_RECOMMENDATION_KCAL_PER_GRAM.protein / targetEnergyKcal) * 100
+        ]
+      : null;
+
+    const fatRange = computeDietRecommendationMacroGramRange(targetEnergyKcal, model.fat.percentRange, DIET_RECOMMENDATION_KCAL_PER_GRAM.fat);
+    const carbRange = computeDietRecommendationMacroGramRange(targetEnergyKcal, model.carbs.percentRange, DIET_RECOMMENDATION_KCAL_PER_GRAM.carbs);
+
+    if (!(Number.isFinite(proteinRdaG) && proteinRdaG > 0) && !fatRange && !carbRange) {
+      return null;
+    }
+
+    return {
+      model,
+      targetEnergyKcal,
+      basisLabel: model.energy && model.energy.basisLabel ? String(model.energy.basisLabel) : '',
+      proteinRdaG,
+      proteinEarG,
+      proteinShareRange,
+      fatPercentRange: model.fat ? model.fat.percentRange : null,
+      fatGramRange: fatRange,
+      carbPercentRange: model.carbs ? model.carbs.percentRange : null,
+      carbGramRange: carbRange
+    };
+  }
+
+  function buildDietNutritionNormsLines(options) {
+    const opts = options || {};
+    const summary = buildDietNutritionNormsSummary(opts);
+    if (!summary) return [];
+
+    const targetEnergyLabel = `${formatDietRecommendationNumber(summary.targetEnergyKcal, 0)} kcal/d`;
+    const proteinRdaLabel = Number.isFinite(summary.proteinRdaG) ? `${formatDietRecommendationNumber(summary.proteinRdaG, 0)} g/d` : '';
+    const proteinEarLabel = Number.isFinite(summary.proteinEarG) ? `${formatDietRecommendationNumber(summary.proteinEarG, 0)} g/d` : '';
+    const proteinShareLabel = summary.proteinShareRange ? formatDietRecommendationPercentRange(summary.proteinShareRange, 0) : '';
+    const fatGramLabel = formatDietRecommendationGramRange(summary.fatGramRange, 0);
+    const fatPercentLabel = formatDietRecommendationPercentRange(summary.fatPercentRange, 0);
+    const carbGramLabel = formatDietRecommendationGramRange(summary.carbGramRange, 0);
+    const carbPercentLabel = formatDietRecommendationPercentRange(summary.carbPercentRange, 0);
+    const patientFacing = !!opts.patientFacing;
+    const isAdult = !!opts.isAdult;
+    const toChild = !!opts.toChild;
+    const lines = [];
+
+    if (patientFacing) {
+      const subject = isAdult
+        ? `Przy kaloryczności planu około ${targetEnergyLabel}`
+        : (toChild ? `Przy kaloryczności planu około ${targetEnergyLabel}` : `W diecie dziecka przy kaloryczności planu około ${targetEnergyLabel}`);
+      const patientParts = [];
+      if (proteinRdaLabel) {
+        let proteinText = `co najmniej około ${proteinRdaLabel.replace(' g/d', ' g białka dziennie')}`;
+        if (proteinShareLabel) {
+          proteinText += ` (${proteinShareLabel} energii)`;
+        }
+        patientParts.push(proteinText);
+      } else {
+        patientParts.push('odpowiednią ilość białka');
+      }
+      if (fatGramLabel && fatPercentLabel) {
+        patientParts.push(`tłuszcze około ${fatGramLabel.replace(' g/d', ' g dziennie')} (${fatPercentLabel})`);
+      }
+      if (carbGramLabel && carbPercentLabel) {
+        patientParts.push(`węglowodany około ${carbGramLabel.replace(' g/d', ' g dziennie')} (${carbPercentLabel})`);
+      }
+      const combinedPatientLine = patientReportFormatIssueList(patientParts);
+      if (combinedPatientLine) {
+        lines.push(`${subject} warto zwykle zaplanować ${combinedPatientLine}.`);
+      }
+    } else {
+      const baseLineParts = [];
+      if (proteinRdaLabel) {
+        let proteinText = `białko RDA ${proteinRdaLabel}`;
+        if (proteinEarLabel) proteinText += ` (EAR ${proteinEarLabel})`;
+        if (proteinShareLabel) proteinText += `; ${proteinShareLabel}`;
+        baseLineParts.push(proteinText);
+      }
+      if (fatGramLabel && fatPercentLabel) {
+        baseLineParts.push(`tłuszcz ${fatGramLabel} (${fatPercentLabel})`);
+      }
+      if (carbGramLabel && carbPercentLabel) {
+        baseLineParts.push(`węglowodany ${carbGramLabel} (${carbPercentLabel})`);
+      }
+      if (baseLineParts.length) {
+        lines.push(`Normy żywieniowe dla planu około ${targetEnergyLabel}: ${baseLineParts.join('; ')}.`);
+      }
+      if (summary.basisLabel) {
+        lines.push(`Przeliczenie wykonano dla trybu: ${summary.basisLabel}.`);
+      }
+    }
+
+    return lines;
   }
 
   function getDietPalLabel(pal) {
@@ -4585,6 +6052,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setText('vitDSuppLabel', 'Wit. D');
     setText('hydrationLabel', 'Picie płynów');
     setText('journeyLabel', isAdult ? 'Czas do normy BMI' : 'Czas do normy masy');
+    setText('nutritionNormsToggleLabel', 'Normy żywieniowe');
     if (generateBtn) {
       generateBtn.textContent = patientFacing ? 'Generuj zalecenia dla pacjenta' : 'Generuj zalecenia dietetyczne';
     }
@@ -5013,6 +6481,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const weeklyLoss = Number(opts.weeklyLoss) || 0;
     const patientFacing = !!opts.patientFacing;
     const journeyEnabled = !!opts.journeyEnabled;
+    const includeNutritionNorms = !!opts.includeNutritionNorms;
     if (!(weight > 0 && height > 0)) {
       return { textOutput: '', htmlOutput: '' };
     }
@@ -5090,6 +6559,23 @@ document.addEventListener('DOMContentLoaded', function() {
       } else {
         lines.push('Punktem wyjścia może być umiarkowany deficyt energetyczny, zwykle rzędu 500–750 kcal/dobę, z dalszą modyfikacją zależnie od tolerancji i skuteczności planu.');
       }
+    }
+
+    if (includeNutritionNorms) {
+      const nutritionNormLines = buildDietNutritionNormsLines({
+        ageYears: age,
+        ageMonthsOpt: 0,
+        sex,
+        weightKg: weight,
+        heightCm: height,
+        palUsed: pal,
+        chosenDiet,
+        patientFacing,
+        isAdult: true
+      });
+      nutritionNormLines.forEach((line) => {
+        lines.push(line);
+      });
     }
 
     if (needsWeightReduction) {
@@ -5205,6 +6691,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // pokazującą przewidywany czas osiągnięcia górnej granicy normy BMI oraz przykłady aktywności fizycznej.
     const journeyEl = document.getElementById('journeyFlag');
     const journeyEnabled = journeyEl ? journeyEl.checked : false;
+    const nutritionNormsEl = document.getElementById('nutritionNormsFlag');
+    const nutritionNormsEnabled = nutritionNormsEl ? nutritionNormsEl.checked : false;
     const patientFacing = isPatientFacingDietMode();
     const chosenDiet = diets.find(d => d.key === selectedKey) || null;
     if (planState.isInfantPlanUnavailable) {
@@ -5226,7 +6714,8 @@ document.addEventListener('DOMContentLoaded', function() {
         dailyDeficit,
         weeklyLoss,
         patientFacing,
-        journeyEnabled
+        journeyEnabled,
+        includeNutritionNorms: nutritionNormsEnabled
       });
     }
     {
@@ -5720,6 +7209,23 @@ document.addEventListener('DOMContentLoaded', function() {
           lines.push(msg);
         }
       }
+      if (nutritionNormsEnabled) {
+        const nutritionNormLines = buildDietNutritionNormsLines({
+          ageYears: age,
+          ageMonthsOpt,
+          sex,
+          weightKg: weight,
+          heightCm: height,
+          palUsed: planState.palUsed,
+          chosenDiet,
+          patientFacing,
+          isAdult: false,
+          toChild
+        });
+        nutritionNormLines.forEach((line) => {
+          lines.push(line);
+        });
+      }
       // Szczegółowe zalecenia żywieniowe
       if (toChild) {
         lines.push(
@@ -6203,6 +7709,13 @@ document.addEventListener('DOMContentLoaded', function() {
         refreshDietRecommendationsIfVisible();
       });
       patientFacingToggle.dataset.dietPatientFacingAttached = 'true';
+    }
+    const nutritionNormsToggle = document.getElementById('nutritionNormsFlag');
+    if (nutritionNormsToggle && !nutritionNormsToggle.dataset.dietNutritionNormsAttached) {
+      nutritionNormsToggle.addEventListener('change', function() {
+        refreshDietRecommendationsIfVisible();
+      });
+      nutritionNormsToggle.dataset.dietNutritionNormsAttached = 'true';
     }
     // Ustaw widoczność przycisku zaleceń na podstawie początkowych danych
     updateDietRecommendationsVisibility();
@@ -14895,6 +16408,9 @@ if (childConsultCard) childConsultCard.style.display = 'none';
   const totalListEl = document.getElementById('foodTotalList');
 
   // 1) zbierz wszystkie wybrane pozycje z ilościami (zarówno przekąski, jak i dania)
+  const nutritionGoalsForFoods = (typeof patientReportBuildNutritionNormsModelFromCurrentState === 'function')
+    ? patientReportBuildNutritionNormsModelFromCurrentState()
+    : null;
   const items = [];
   document.querySelectorAll('.food-row').forEach(r => {
     const key  = r.querySelector('select').value;
@@ -14903,20 +16419,41 @@ if (childConsultCard) childConsultCard.style.display = 'none';
     if (qty > 0 && foods[key]) {
       items.push({
         name: foods[key].name,
-        kcal: foods[key].kcal * qty
+        kcal: foods[key].kcal * qty,
+        analysis: macroPracticeAnalyzeFoodSelection(key, qty, nutritionGoalsForFoods)
       });
     }
   });
 
   // 2) pokaż kartę tylko jeśli są wybrane pozycje
   if(items.length){
+    const itemsWithMacros = items.filter((item) => item.analysis && item.analysis.macroLine);
+    const totalProtein = itemsWithMacros.reduce((sum, item) => sum + (item.analysis?.nutrients?.protein_g || 0), 0);
+    const totalCarbs = itemsWithMacros.reduce((sum, item) => sum + (item.analysis?.nutrients?.carbs_g || 0), 0);
+    const totalFat = itemsWithMacros.reduce((sum, item) => sum + (item.analysis?.nutrients?.fat_g || 0), 0);
+    const macroSummaryHtml = itemsWithMacros.length
+      ? `<div class="food-total-macro-summary">B ${macroPracticeFormatDisplayNumber(totalProtein)} g • W ${macroPracticeFormatDisplayNumber(totalCarbs)} g • T ${macroPracticeFormatDisplayNumber(totalFat)} g</div>${itemsWithMacros.length < items.length ? '<div class="food-total-macro-note">Makroskładniki pokazujemy dla produktów referencyjnych i tych pozycji, dla których mamy dane w słowniku przykładów.</div>' : ''}`
+      : '';
+
     // a) całkowite kcal
-    totalKcalEl.innerHTML = `<strong>Łącznie: ${Math.round(kcal)} kcal</strong>`;
+    totalKcalEl.innerHTML = `<strong>Łącznie: ${Math.round(kcal)} kcal</strong>${macroSummaryHtml}`;
 
     // b) lista jako tabela
-    const rows = items.map(it=>`<tr><td>${it.name}</td><td>${Math.round(it.kcal)} kcal</td></tr>`).join('');
+    const rows = items.map((it) => {
+      const metaLines = [];
+      if (it.analysis && it.analysis.macroLine) {
+        metaLines.push(`<div class="food-total-item-meta">${macroPracticeEscapeHtml(it.analysis.macroLine)}</div>`);
+      }
+      if (it.analysis && it.analysis.showAsWarning && it.analysis.warningLine) {
+        const warningClass = it.analysis.warningLevel ? ` food-total-item-note--${it.analysis.warningLevel}` : '';
+        metaLines.push(`<div class="food-total-item-note${warningClass}">${macroPracticeEscapeHtml(it.analysis.warningLine)}</div>`);
+      } else if (it.analysis && it.analysis.coverageLine) {
+        metaLines.push(`<div class="food-total-item-note">${macroPracticeEscapeHtml(it.analysis.coverageLine)}</div>`);
+      }
+      return `<tr><td><div class="food-total-item-name">${macroPracticeEscapeHtml(it.name)}</div>${metaLines.join('')}</td><td>${Math.round(it.kcal)} kcal</td></tr>`;
+    }).join('');
     totalListEl.innerHTML =
-        `<table class="kcal-table">
+        `<table class="kcal-table kcal-table--macro">
            <tr><th>Produkt</th><th>kcal</th></tr>
            ${rows}
          </table>`;
