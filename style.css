@@ -1063,6 +1063,9 @@ input[type="submit"]:focus-visible{
 #generateCentileChart,
 #generateCentileChartBasic,
 #toggleIntakeCard,
+#toggleFoodCard,
+#toggleNutritionMicrosCard,
+#toggleNutritionNormsCard,
 #toggleDownSyndrome,
 #generateDsCentileChart,
 #toggleCircSection {
@@ -1075,6 +1078,8 @@ input[type="submit"]:focus-visible{
   /* Kolorystyka odpowiada przyciskowi „idealnej wagi” */
   background: var(--primary) !important;
   color: #fff !important;
+  /* Taka sama grubość etykiet jak w przycisku „Obliczenia dla dzieci z zespołem Downa” */
+  font-weight: 600 !important;
   /* Stały odstęp pionowy – usuwa margin:auto z inline */
   margin: .5rem 0 !important;
 }
@@ -1182,6 +1187,9 @@ input[type="submit"]:focus-visible{
 #generateCentileChart:hover,
 #generateCentileChartBasic:hover,
 #toggleIntakeCard:hover,
+#toggleFoodCard:hover,
+#toggleNutritionMicrosCard:hover,
+#toggleNutritionNormsCard:hover,
 #toggleDownSyndrome:hover,
 #generateDsCentileChart:hover,
 #toggleCircSection:hover {
@@ -1787,7 +1795,7 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked{
 @media (max-width: 640px) {
   #respiratoryResult .source-note,
   #bpResult .source-note {
-    font-size: 0.94rem;
+    font-size: 0.98rem;
     line-height: 1.45;
   }
 }
@@ -2255,6 +2263,15 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked{
   vertical-align: top;
 }
 
+.food-total-energy-share {
+  display: block;
+  margin-top: 0.18rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #164245;
+  white-space: nowrap;
+}
+
 .food-total-macro-summary {
   margin-top: 0.35rem;
   font-size: 0.95rem;
@@ -2267,6 +2284,60 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked{
   font-size: 0.82rem;
   color: #5b6770;
   line-height: 1.4;
+}
+
+
+.food-total-info {
+  margin-top: 0.45rem;
+  text-align: center;
+}
+
+.food-total-info-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 32px;
+  padding: 0.28rem 0.7rem;
+  border: 1px solid rgba(22, 66, 69, 0.38);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.86);
+  color: #164245;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  user-select: none;
+}
+
+.food-total-info-toggle:hover,
+.food-total-info-toggle:focus-visible {
+  background: #eef6f6;
+  border-color: #164245;
+  outline: none;
+}
+
+.food-total-info .food-total-macro-note {
+  margin: 0.4rem auto 0;
+  max-width: 46rem;
+  text-align: left;
+}
+
+.food-total-goal-share {
+  margin-top: 0.3rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #164245;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.food-total-goal-share-title {
+  font-weight: 700;
+}
+
+.food-total-goal-share-values {
+  margin-top: 0.12rem;
 }
 
 .food-total-item-name {
@@ -2644,11 +2715,35 @@ body.professional-bg {
  * trybie profesjonalnym.  Używamy wysokiej specyficzności, aby
  * nadpisać styl motywu Liquid iOS26 (`.liquid-ios26 button`).
  */
-#generateDietBtn {
+#generateDietBtn,
+#dietRecommendationsPdfBtn {
   border: 3px solid #9900ff;
 }
-.liquid-ios26 #generateDietBtn {
+
+#dietRecommendationsContent #generateDietBtn,
+#dietRecommendationsPdfBtn.diet-report-pdf-btn {
+  display: block !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0.55rem 0 0 !important;
+  padding: 0.55rem 1rem !important;
+  border-radius: var(--radius) !important;
+  font-size: 0.95rem !important;
+  font-weight: 600 !important;
+  cursor: pointer;
+  text-align: center;
+}
+
+#dietRecommendationsPdfBtn.diet-report-pdf-btn {
+  background: #ffffff;
+  color: #000000;
+}
+
+.liquid-ios26 #generateDietBtn,
+.liquid-ios26 #dietRecommendationsPdfBtn {
   border: 3px solid #9900ff !important;
+  font-weight: 600 !important;
 }
 
 /* === Diet toggles – purple highlight ===
@@ -2874,20 +2969,38 @@ body.professional-bg {
 }
 
 
-/* Wyrównanie odstępów dla przycisków i kart modułów wzrostowych.
-   Zewnętrzny odstęp 1rem zapewniają kontenery kolumn (#normWrapper / .left-column)
-   przez właściwość gap. Dlatego zerujemy dodatkowe marginesy sekcji i przycisków,
-   aby nie sumowały się do >1rem. Wewnętrzny odstęp przycisk → karta pozostaje 1rem. */
+/* Wyrównanie odstępów dla przycisków i kart modułów wzrostowych, obwodów,
+   DS oraz norm żywieniowych. Zewnętrzny odstęp 1rem zapewniają kontenery
+   kolumn (#normWrapper / .left-column) przez właściwość gap. Dlatego zerujemy
+   dodatkowe marginesy sekcji i przycisków, aby nie sumowały się do >1rem.
+   Wewnętrzny odstęp przycisk → karta pozostaje 1rem. */
+#nutritionNormsSection,
+#nutritionMicrosSection,
+#foodSection,
+#circSection,
+#downSyndromeSection,
+#intakeSection,
 #growthCalculationsSection,
 #advancedGrowthSection {
   margin-top: 0 !important;
 }
 
+#toggleNutritionNormsCard,
+#toggleNutritionMicrosCard,
+#toggleFoodCard,
+#toggleCircSection,
+#toggleDownSyndrome,
+#toggleIntakeCard,
 #toggleGrowthCalculations.advanced-growth-btn,
 #toggleAdvancedGrowth.advanced-growth-btn {
   margin: 0 auto !important;
 }
 
+#nutritionNormsCard,
+#nutritionMicrosCard,
+#foodCard,
+#circCard,
+#downSyndromeCard,
 #growthCalculationsForm,
 #advancedGrowthForm {
   margin-top: 1rem !important;
@@ -3860,6 +3973,7 @@ fieldset.user-card {
 }
 
 #intakeSection #intakeCard {
+  margin-top: 0 !important;
   margin-bottom: 0;
 }
 
@@ -7668,6 +7782,11 @@ body.js-loading .main-content {
   /* Sekcje z inline margin-top:1rem – w widoku jednokolumnowym odstęp robi gap,
      więc zerujemy dodatkowe marginesy. */
   #circSection,
+  #nutritionNormsSection,
+  #nutritionMicrosSection,
+  #foodSection,
+  #downSyndromeSection,
+  #intakeSection,
   #growthCalculationsSection,
   #advancedGrowthSection {
     margin-top: 0 !important;
@@ -7676,7 +7795,11 @@ body.js-loading .main-content {
   /* Przyciski „sekcyjne” miały własne marginesy 0.6rem – usuwamy, aby
      odstęp góra/dół wynosił dokładnie 1rem (zapewniany przez gap rodzica). */
   #toggleCircSection,
+  #toggleNutritionNormsCard,
+  #toggleNutritionMicrosCard,
+  #toggleFoodCard,
   #toggleDownSyndrome,
+  #toggleIntakeCard,
   #toggleGrowthCalculations.advanced-growth-btn,
   #toggleAdvancedGrowth.advanced-growth-btn {
     margin: 0 !important;
@@ -9349,7 +9472,7 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
 
 .nutrition-norms-meta {
   margin: 0.25rem 0 0.85rem;
-  font-size: 0.94rem;
+  font-size: 0.98rem;
   color: #555;
   text-align: center;
   line-height: 1.45;
@@ -9409,7 +9532,7 @@ body.high-contrast-level-3.liquid-ios26 .guide-inline-details[hidden] {
 }
 
 .nutrition-norms-toolbar-state {
-  font-size: 0.94rem;
+  font-size: 0.98rem;
   color: #456a72;
 }
 
@@ -10026,7 +10149,7 @@ body.nutrition-practice-sheet-open {
 
 .nutrition-micros-section-title {
   margin: 0 0 0.65rem;
-  font-size: 0.94rem;
+  font-size: 0.98rem;
   font-weight: 700;
   color: #14393d;
 }
@@ -10184,5 +10307,1208 @@ body.nutrition-practice-sheet-open {
   .nutrition-micros-table--safety th,
   .nutrition-micros-table--safety td {
     font-size: 0.86rem;
+  }
+}
+
+/* === Nutrition micros abbreviations and vitamin D conversion note =========== */
+.nutrition-micros-legend {
+  margin: 0.2rem 0 1rem;
+  padding: 0.85rem 0.9rem;
+  border: 1px solid rgba(11, 114, 133, 0.16);
+  border-radius: 12px;
+  background: rgba(11, 114, 133, 0.045);
+}
+
+.nutrition-micros-legend-title {
+  margin: 0 0 0.55rem;
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: #14393d;
+}
+
+.nutrition-micros-legend-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.45rem;
+  margin: 0;
+}
+
+.nutrition-micros-legend-item {
+  display: grid;
+  grid-template-columns: minmax(3.2rem, auto) 1fr;
+  column-gap: 0.65rem;
+  align-items: start;
+}
+
+.nutrition-micros-legend-item dt {
+  margin: 0;
+  font-weight: 800;
+  color: #0b7285;
+}
+
+.nutrition-micros-legend-item dd {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: #48656a;
+}
+
+.nutrition-micros-legend-note {
+  margin: 0.65rem 0 0;
+  padding-top: 0.62rem;
+  border-top: 1px solid rgba(11, 114, 133, 0.14);
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: #48656a;
+}
+
+.nutrition-micros-abbr {
+  text-decoration: underline dotted;
+  text-underline-offset: 0.14em;
+  cursor: help;
+}
+
+.nutrition-micros-abbr:focus-visible {
+  outline: 2px solid #111;
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+.nutrition-micros-tooltip {
+  position: fixed;
+  z-index: 2147483000;
+  max-width: min(360px, calc(100vw - 16px));
+  padding: 0.66rem 0.78rem;
+  border: 2px solid #000;
+  border-radius: 8px;
+  background: #fff;
+  color: #000;
+  font-size: 1.02rem;
+  font-weight: 500;
+  line-height: 1.42;
+  text-align: left;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(1px);
+  transition: opacity 35ms linear, transform 35ms linear;
+}
+
+.nutrition-micros-tooltip.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.nutrition-micros-tooltip.is-measuring {
+  opacity: 0;
+  transform: none;
+}
+
+.nutrition-micros-tooltip[hidden] {
+  display: none;
+}
+
+@media (max-width: 420px) {
+  .nutrition-micros-tooltip {
+    max-width: calc(100vw - 20px);
+    font-size: 0.98rem;
+  }
+}
+
+
+/* === Vitamin D personalized supplementation panel ========================= */
+.nutrition-micros-box--vitamin-d {
+  position: relative;
+}
+
+.nutrition-micros-vitd-supplement {
+  margin-top: 0.7rem;
+  border-top: 1px solid rgba(11, 114, 133, 0.12);
+  padding-top: 0.65rem;
+}
+
+.nutrition-micros-vitd-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+  padding: 0.58rem 0.7rem;
+  border: 1px solid rgba(11, 114, 133, 0.2);
+  border-radius: 10px;
+  background: rgba(11, 114, 133, 0.055);
+  color: #14393d;
+  font: inherit;
+  font-size: 0.86rem;
+  line-height: 1.3;
+  text-align: left;
+  cursor: pointer;
+}
+
+.nutrition-micros-vitd-toggle:hover,
+.nutrition-micros-vitd-toggle:focus-visible {
+  border-color: rgba(11, 114, 133, 0.45);
+  background: rgba(11, 114, 133, 0.085);
+  outline: none;
+}
+
+.nutrition-micros-vitd-toggle strong {
+  margin-left: auto;
+  color: #0b7285;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.nutrition-micros-vitd-chevron {
+  flex: 0 0 auto;
+  transition: transform 0.18s ease;
+}
+
+.nutrition-micros-vitd-toggle[aria-expanded="true"] .nutrition-micros-vitd-chevron {
+  transform: rotate(180deg);
+}
+
+.nutrition-micros-vitd-panel {
+  margin-top: 0.58rem;
+  padding: 0.72rem 0.78rem;
+  border: 1px solid rgba(11, 114, 133, 0.16);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #36494d;
+  font-size: 0.83rem;
+  line-height: 1.48;
+  text-align: left;
+}
+
+.nutrition-micros-vitd-panel p {
+  margin: 0.45rem 0 0;
+}
+
+.nutrition-micros-vitd-title {
+  margin: 0 0 0.45rem;
+  color: #14393d;
+  font-weight: 800;
+}
+
+.nutrition-micros-vitd-dose {
+  margin-top: 0 !important;
+  color: #14393d;
+}
+
+.nutrition-micros-vitd-dose strong {
+  color: #0b7285;
+}
+
+.nutrition-micros-vitd-dose--missing strong {
+  color: #8a5a00;
+}
+
+.nutrition-micros-vitd-reasons {
+  margin: 0.5rem 0 0;
+  padding-left: 1.1rem;
+  text-align: left;
+  list-style-position: outside;
+}
+
+.nutrition-micros-vitd-reasons li {
+  text-align: left;
+}
+
+.nutrition-micros-vitd-reasons li + li {
+  margin-top: 0.18rem;
+}
+
+.nutrition-micros-vitd-season {
+  text-align: left;
+}
+
+.nutrition-micros-vitd-warning {
+  color: #624000;
+}
+
+.nutrition-micros-vitd-source {
+  padding-top: 0.45rem;
+  border-top: 1px solid rgba(11, 114, 133, 0.12);
+  color: #5b6770;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 520px) {
+  .nutrition-micros-vitd-toggle {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .nutrition-micros-vitd-toggle strong {
+    margin-left: 0;
+    white-space: normal;
+  }
+}
+
+@media (min-width: 720px) {
+  .nutrition-micros-legend-list {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 420px) {
+  .nutrition-micros-legend {
+    padding: 0.75rem 0.78rem;
+  }
+
+  .nutrition-micros-legend-item {
+    grid-template-columns: 1fr;
+    row-gap: 0.08rem;
+  }
+}
+
+/* === Micronutrients food examples ========================================= */
+.nutrition-micros-examples-action {
+  margin-top: 0.65rem;
+  display: flex;
+  justify-content: center;
+}
+
+.nutrition-micros-examples-action--table {
+  margin-top: 0.36rem;
+  justify-content: flex-start;
+}
+
+.nutrition-micros-examples-action--table .nutrition-micros-examples-button {
+  padding: 0.24rem 0.62rem;
+  font-size: 0.82rem;
+  line-height: 1.25;
+}
+
+.nutrition-micros-examples-sheet .nutrition-practice-sheet-body {
+  gap: 0.85rem;
+}
+
+.nutrition-micros-examples-target {
+  padding: 0.7rem 0.8rem;
+  border: 1px solid rgba(11, 114, 133, 0.14);
+  border-radius: 12px;
+  background: rgba(11, 114, 133, 0.05);
+  color: #14393d;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.nutrition-micros-examples-intro p {
+  margin: 0.5rem 0 0;
+  color: #48656a;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.nutrition-micros-examples-item .nutrition-practice-chip,
+.nutrition-micros-examples-set .nutrition-practice-chip {
+  margin-top: 0.45rem;
+}
+
+.nutrition-micros-examples-cautions ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: #624000;
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.nutrition-micros-examples-cautions li + li {
+  margin-top: 0.25rem;
+}
+
+@media (max-width: 560px) {
+  .nutrition-micros-examples-action--table .nutrition-micros-examples-button {
+    font-size: 0.8rem;
+  }
+
+  .nutrition-micros-examples-item .nutrition-practice-sheet-item-head,
+  .nutrition-micros-examples-set .nutrition-practice-sheet-item-head {
+    align-items: flex-start;
+  }
+}
+
+
+
+/* === Nutrition macro food examples: visual alignment with micronutrient examples === */
+.nutrition-macro-examples-sheet .nutrition-practice-sheet-body {
+  gap: 0.85rem;
+}
+
+.nutrition-macro-examples-target {
+  padding: 0.7rem 0.8rem;
+  border: 1px solid rgba(11, 114, 133, 0.14);
+  border-radius: 12px;
+  background: rgba(11, 114, 133, 0.05);
+  color: #14393d;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.nutrition-macro-examples-item .nutrition-practice-chip,
+.nutrition-macro-examples-set .nutrition-practice-chip {
+  margin-top: 0.45rem;
+}
+
+.nutrition-macro-examples-set .nutrition-practice-sheet-item-main {
+  margin-top: 0.34rem;
+}
+
+@media (max-width: 560px) {
+  .nutrition-macro-examples-item .nutrition-practice-sheet-item-head,
+  .nutrition-macro-examples-set .nutrition-practice-sheet-item-head {
+    align-items: flex-start;
+  }
+}
+
+/* Protein planning information in nutrition norms macro card */
+.nutrition-norms-protein-info .food-total-macro-note p {
+  margin: 0.35rem 0 0;
+}
+
+.nutrition-norms-protein-info .food-total-macro-note p:first-child {
+  margin-top: 0;
+}
+
+
+/* === Nutrition macros protein explanation ================================ */
+.nutrition-norms-protein-info {
+  margin-top: 0.55rem;
+}
+
+.nutrition-norms-protein-info .nutrition-norms-protein-info-panel {
+  line-height: 1.45;
+}
+
+.nutrition-norms-protein-info .nutrition-norms-protein-info-panel p {
+  margin: 0.38rem 0 0;
+}
+
+.nutrition-norms-protein-info .nutrition-norms-protein-info-panel p:first-child {
+  margin-top: 0;
+}
+
+.nutrition-norms-protein-info .nutrition-norms-protein-info-panel strong {
+  color: #14393d;
+}
+
+/* === Macro nutrient practice examples ===================================== */
+.nutrition-macro-examples-target p {
+  margin: 0.45rem 0 0;
+  color: #48656a;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.nutrition-macro-examples-item .nutrition-practice-chip {
+  margin-top: 0.45rem;
+}
+
+.nutrition-macro-examples-item .nutrition-practice-sheet-item-main {
+  font-weight: 600;
+}
+
+@media (max-width: 560px) {
+  .nutrition-macro-examples-item .nutrition-practice-sheet-item-head {
+    align-items: flex-start;
+  }
+}
+
+/* === Macro nutrient examples refinements ================================== */
+.nutrition-macro-examples-intro p {
+  margin: 0.5rem 0 0;
+  color: #48656a;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.nutrition-macro-examples-item .nutrition-practice-chip,
+.nutrition-macro-examples-set .nutrition-practice-chip {
+  margin-top: 0.45rem;
+}
+
+.nutrition-macro-examples-item .nutrition-practice-sheet-item-main,
+.nutrition-macro-examples-set .nutrition-practice-sheet-item-main {
+  margin-top: 0.28rem;
+}
+
+/* === Macro food examples: visual parity with micronutrient examples ========== */
+.nutrition-macro-examples-sheet .nutrition-practice-sheet-body {
+  gap: 0.85rem;
+}
+
+.nutrition-macro-examples-target {
+  padding: 0.7rem 0.8rem;
+  border: 1px solid rgba(11, 114, 133, 0.14);
+  border-radius: 12px;
+  background: rgba(11, 114, 133, 0.05);
+  color: #14393d;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.nutrition-macro-examples-intro p {
+  margin: 0.5rem 0 0;
+  color: #48656a;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.nutrition-macro-examples-item .nutrition-practice-chip,
+.nutrition-macro-examples-set .nutrition-practice-chip {
+  margin-top: 0.45rem;
+}
+
+.nutrition-macro-examples-set .nutrition-practice-sheet-item-main {
+  word-break: normal;
+}
+
+@media (max-width: 560px) {
+  .nutrition-macro-examples-item .nutrition-practice-sheet-item-head,
+  .nutrition-macro-examples-set .nutrition-practice-sheet-item-head {
+    align-items: flex-start;
+  }
+}
+
+/* === FOOD CARD VIEWPORT STABILITY PATCH ===
+ * Dynamiczne dodawanie wierszy i odświeżanie podsumowania w karcie kalorii
+ * nie powinno wywoływać scroll anchoringu przeglądarki, który objawia się
+ * chwilowym „skakaniem” viewportu. Kotwiczenie przewijania wyłączamy tylko
+ * w obrębie tej karty, bez wpływu na pozostałe moduły aplikacji.
+ */
+#foodSection,
+#foodCard,
+#foodRowsSection,
+#foodList,
+#foodTotalSection,
+#foodTimesSection {
+  overflow-anchor: none;
+}
+
+/* === Rozszerzona personalizacja karty „Zalecenia dietetyczne” === */
+.diet-personalization-module {
+  margin: 0.85rem 0 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid #e2d3f5;
+  border-radius: var(--radius);
+  background: rgba(153, 0, 255, 0.035);
+}
+
+.diet-personalization-head {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 0.65rem;
+}
+
+.diet-personalization-head > div {
+  width: 100%;
+  min-width: 0;
+}
+
+.diet-personalization-head .diet-survey-toggle {
+  align-self: center;
+  width: min(100%, 24rem);
+  max-width: 100%;
+  text-align: center;
+  white-space: normal;
+}
+
+.diet-personalization-head strong {
+  display: block;
+  font-size: 0.98rem;
+  line-height: 1.25;
+}
+
+.diet-personalization-head p,
+.diet-survey-help,
+.diet-smart-goal p,
+.diet-guidance-box p,
+.diet-calculation-details p {
+  margin: 0.25rem 0 0;
+  line-height: 1.45;
+}
+
+.diet-survey-toggle,
+.diet-survey-clear {
+  background: #ffffff;
+  color: #000000;
+  border: 2px solid #9900ff;
+  border-radius: var(--radius);
+  padding: 0.45rem 0.7rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.diet-survey-panel {
+  margin-top: 0.75rem;
+  border-top: 1px solid #eadff5;
+  padding-top: 0.75rem;
+}
+
+.diet-survey-panel[hidden] {
+  display: none !important;
+}
+
+.diet-survey-section {
+  margin-top: 0.75rem;
+}
+
+.diet-survey-section h4,
+.diet-guidance-box h4,
+.diet-smart-goal h4 {
+  margin: 0 0 0.45rem;
+  font-size: 0.96rem;
+  line-height: 1.25;
+}
+
+.diet-survey-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.diet-survey-chip {
+  display: grid;
+  grid-template-columns: 1.05rem minmax(0, 1fr);
+  align-items: flex-start;
+  gap: 0.45rem;
+  min-width: 0;
+  width: 100%;
+  margin: 0 !important;
+  padding: 0.48rem 0.55rem;
+  border: 1px solid #dedede;
+  border-radius: 0.65rem;
+  background: #ffffff;
+  cursor: pointer;
+  line-height: 1.25;
+  font-size: 0.86rem;
+}
+
+.diet-survey-chip input[type="checkbox"] {
+  appearance: auto;
+  -webkit-appearance: checkbox;
+  width: 1.05rem !important;
+  min-width: 1.05rem !important;
+  max-width: 1.05rem !important;
+  height: 1.05rem !important;
+  min-height: 1.05rem !important;
+  max-height: 1.05rem !important;
+  padding: 0 !important;
+  margin: 0.08rem 0 0 !important;
+  border-radius: 0.2rem;
+  flex: 0 0 1.05rem;
+  accent-color: #9900ff;
+  box-shadow: none !important;
+}
+
+.diet-survey-chip span {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.diet-survey-chip:has(input:checked) {
+  border-color: #9900ff;
+  background: rgba(153, 0, 255, 0.07);
+}
+
+.diet-survey-more {
+  margin-top: 0.75rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px dashed #d8c0ed;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.diet-survey-more summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.diet-survey-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.diet-survey-counter {
+  color: #555;
+  font-size: 0.86rem;
+}
+
+.diet-survey-reset-note {
+  margin-top: 0.75rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px dashed #d8c0ed;
+  border-radius: var(--radius);
+  background: rgba(153, 0, 255, 0.045);
+  color: #3f2b4f;
+  line-height: 1.45;
+}
+
+.diet-personalized-output {
+  margin-top: 0.8rem;
+}
+
+.diet-personalized-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  align-items: flex-start;
+  padding: 0.8rem;
+  border: 1px solid #e1d3f0;
+  border-radius: var(--radius);
+  background: rgba(153, 0, 255, 0.045);
+}
+
+.diet-personalized-summary h3 {
+  margin: 0.15rem 0 0.35rem;
+  font-size: 1.05rem;
+}
+
+.diet-personalized-summary p {
+  margin: 0.25rem 0;
+  line-height: 1.45;
+}
+
+.diet-personalized-kicker {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6f2ba0;
+  font-weight: 700;
+}
+
+.diet-personalized-badge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.28rem 0.5rem;
+  border: 1px solid #d6c3ea;
+  border-radius: 999px;
+  color: #5b3a78;
+  background: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.diet-personalized-badge--active {
+  border-color: #9900ff;
+  color: #5a008f;
+  background: rgba(153, 0, 255, 0.08);
+}
+
+.diet-smart-goals {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.65rem;
+  margin-top: 0.7rem;
+}
+
+.diet-smart-goal {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.65rem;
+  padding: 0.75rem;
+  border: 1px solid #e6e6e6;
+  border-radius: var(--radius);
+  background: #ffffff;
+}
+
+.diet-smart-goal-number {
+  width: 2rem;
+  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #9900ff;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.diet-guidance-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-top: 0.7rem;
+}
+
+.diet-guidance-box {
+  padding: 0.75rem;
+  border: 1px solid #e6e6e6;
+  border-radius: var(--radius);
+  background: #ffffff;
+}
+
+.diet-guidance-box--wide {
+  grid-column: 1 / -1;
+}
+
+.diet-myth-box-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.55rem;
+  margin-bottom: 0.35rem;
+}
+
+.diet-myth-box-head h4 {
+  margin-bottom: 0 !important;
+}
+
+.diet-myth-next-btn {
+  flex: 0 0 auto;
+  padding: 0.32rem 0.55rem;
+  border: 1px solid #d6c3ea;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #5a008f;
+  font-size: 0.78rem;
+  line-height: 1.2;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.diet-myth-next-btn:hover,
+.diet-myth-next-btn:focus-visible {
+  border-color: #9900ff;
+  background: rgba(153, 0, 255, 0.07);
+}
+
+.diet-swaps-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.diet-swaps-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 0.35rem;
+  align-items: start;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid #eeeeee;
+  line-height: 1.35;
+}
+
+.diet-swaps-list li:last-child {
+  border-bottom: none;
+}
+
+.diet-calculation-details {
+  margin-top: 0.8rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px dashed #d4d4d4;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.diet-calculation-details summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.diet-calculation-details-body {
+  margin-top: 0.65rem;
+}
+
+.liquid-ios26 .diet-personalization-module,
+.liquid-ios26 .diet-personalized-summary,
+.liquid-ios26 .diet-smart-goal,
+.liquid-ios26 .diet-guidance-box,
+.liquid-ios26 .diet-calculation-details,
+.liquid-ios26 .diet-survey-more {
+  border-color: rgba(153, 0, 255, 0.28) !important;
+  background: rgba(255, 255, 255, 0.55) !important;
+  backdrop-filter: blur(10px) saturate(115%) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(115%) !important;
+}
+
+.liquid-ios26 .diet-survey-toggle,
+.liquid-ios26 .diet-survey-clear {
+  border-color: #9900ff !important;
+  font-weight: 600 !important;
+}
+
+@media (max-width: 640px) {
+  .diet-personalization-head,
+  .diet-personalized-summary,
+  .diet-survey-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .diet-survey-toggle,
+  .diet-survey-clear {
+    width: 100%;
+    white-space: normal;
+  }
+
+  #dietRecommendationsPdfBtn.diet-report-pdf-btn {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .diet-survey-grid,
+  .diet-guidance-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .diet-swaps-list li {
+    grid-template-columns: 1fr;
+  }
+
+  .diet-myth-box-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .diet-myth-next-btn {
+    width: 100%;
+    white-space: normal;
+  }
+
+  .diet-swaps-list li strong {
+    display: none;
+  }
+}
+
+/* === Modernizacja karty „Zalecenia dietetyczne”: trzy tryby pracy === */
+.diet-card-modern {
+  overflow: hidden;
+}
+
+.diet-card-intro {
+  padding: 0.85rem 0.95rem;
+  border: 1px solid #e4d7f4;
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, rgba(153, 0, 255, 0.08), rgba(0, 131, 141, 0.05));
+}
+
+.diet-card-intro h3,
+.diet-panel-lead h4,
+.diet-pdf-variant-card h4,
+.diet-energy-output-head h3 {
+  margin: 0;
+  color: #241334;
+  line-height: 1.22;
+}
+
+.diet-card-intro p,
+.diet-panel-lead p,
+.diet-pdf-variant-card p,
+.diet-control-hint,
+.diet-energy-output-head p {
+  margin: 0.35rem 0 0;
+  color: #4a4a4a;
+  line-height: 1.45;
+}
+
+.diet-mode-switch {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+}
+
+.diet-mode-tab {
+  display: flex !important;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 5.2rem;
+  width: 100%;
+  padding: 0.75rem 0.85rem !important;
+  border: 2px solid #e4d7f4 !important;
+  border-radius: var(--radius) !important;
+  background: #ffffff !important;
+  color: #1e1e1e !important;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(28, 20, 36, 0.04);
+}
+
+.diet-mode-tab strong {
+  display: block;
+  font-size: 0.96rem;
+  line-height: 1.2;
+  font-weight: 800;
+}
+
+.diet-mode-tab span {
+  display: block;
+  margin-top: 0.28rem;
+  font-size: 0.8rem;
+  line-height: 1.25;
+  color: #5e5e5e;
+}
+
+.diet-mode-tab.is-active {
+  border-color: #9900ff !important;
+  background: rgba(153, 0, 255, 0.065) !important;
+  box-shadow: 0 10px 24px rgba(153, 0, 255, 0.12);
+}
+
+.diet-mode-tab.is-active strong {
+  color: #5a008f;
+}
+
+.diet-mode-panel {
+  margin-top: 0.8rem;
+}
+
+.diet-mode-panel[hidden] {
+  display: none !important;
+}
+
+.diet-panel-lead {
+  padding: 0.8rem 0.9rem;
+  border: 1px solid #ece3f7;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.diet-energy-options-panel {
+  margin-top: 0.75rem;
+}
+
+.diet-energy-controls-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-top: 0.75rem;
+}
+
+.diet-energy-control-card,
+.diet-pdf-variant-card,
+.diet-energy-output {
+  border: 1px solid #e4d7f4;
+  border-radius: var(--radius);
+  background: #ffffff;
+  padding: 0.8rem;
+}
+
+.diet-control-title {
+  display: block;
+  color: #352045;
+  font-size: 0.88rem;
+  font-weight: 800;
+  margin-bottom: 0.45rem;
+}
+
+.diet-segmented-control {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+
+.diet-segmented-control button {
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0.55rem 0.55rem !important;
+  border: 1px solid #d8c5eb !important;
+  border-radius: 0.75rem !important;
+  background: #ffffff !important;
+  color: #2a2a2a !important;
+  font-size: 0.86rem !important;
+  font-weight: 700 !important;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.diet-segmented-control button.is-active {
+  border-color: #9900ff !important;
+  background: #9900ff !important;
+  color: #ffffff !important;
+}
+
+.diet-legacy-hidden-controls {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+}
+
+.diet-energy-extra-options {
+  margin-top: 0.75rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px dashed #d8c0ed;
+  border-radius: var(--radius);
+  background: rgba(153, 0, 255, 0.035);
+}
+
+.diet-energy-extra-options summary {
+  cursor: pointer;
+  font-weight: 800;
+  color: #352045;
+}
+
+.diet-extra-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+  margin-top: 0.65rem;
+}
+
+#dietRecommendationsContent .diet-option-check {
+  display: grid !important;
+  grid-template-columns: 1.1rem minmax(0, 1fr) !important;
+  align-items: start !important;
+  justify-content: start !important;
+  gap: 0.45rem !important;
+  margin: 0 !important;
+  padding: 0.5rem 0.58rem !important;
+  border: 1px solid #e2e2e2;
+  border-radius: 0.7rem;
+  background: #ffffff;
+  font-size: 0.86rem;
+  line-height: 1.25;
+  cursor: pointer;
+}
+
+#dietRecommendationsContent .diet-option-check input[type="checkbox"] {
+  width: 1.05rem !important;
+  min-width: 1.05rem !important;
+  max-width: 1.05rem !important;
+  height: 1.05rem !important;
+  min-height: 1.05rem !important;
+  max-height: 1.05rem !important;
+  padding: 0 !important;
+  margin: 0.05rem 0 0 !important;
+  accent-color: #9900ff;
+}
+
+#dietRecommendationsContent .diet-option-check:has(input:checked) {
+  border-color: #9900ff;
+  background: rgba(153, 0, 255, 0.07);
+}
+
+#dietRecommendationsContent .diet-primary-action,
+#dietRecommendationsContent .diet-secondary-action,
+#dietRecommendationsContent #generateDietBtn,
+#dietRecommendationsContent #generateEnergyDietBtn,
+#dietRecommendationsContent #dietRecommendationsPdfBtn.diet-report-pdf-btn {
+  display: block !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0.7rem 0 0 !important;
+  padding: 0.66rem 1rem !important;
+  border-radius: var(--radius) !important;
+  font-size: 0.96rem !important;
+  font-weight: 700 !important;
+  line-height: 1.25 !important;
+  cursor: pointer;
+  text-align: center;
+}
+
+#dietRecommendationsContent .diet-primary-action,
+#dietRecommendationsContent #generateDietBtn,
+#dietRecommendationsContent #generateEnergyDietBtn {
+  border: 3px solid #9900ff !important;
+  background: #ffffff !important;
+  color: #000000 !important;
+}
+
+#dietRecommendationsContent .diet-secondary-action,
+#dietRecommendationsContent #dietRecommendationsPdfBtn.diet-report-pdf-btn {
+  border: 2px solid #9900ff !important;
+  background: #ffffff !important;
+  color: #000000 !important;
+}
+
+.diet-result-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+}
+
+.diet-result-actions[hidden] {
+  display: none !important;
+}
+
+.diet-pdf-variant-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.65rem;
+  margin-top: 0.75rem;
+}
+
+.diet-pdf-variant-card {
+  position: relative;
+}
+
+.diet-pdf-variant-card--recommended {
+  border-color: #9900ff;
+  background: linear-gradient(135deg, rgba(153, 0, 255, 0.08), rgba(255, 255, 255, 0.95));
+}
+
+.diet-recommended-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.45rem;
+  padding: 0.22rem 0.48rem;
+  border-radius: 999px;
+  background: #9900ff;
+  color: #ffffff;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.diet-energy-output-head {
+  margin-bottom: 0.65rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid #eee4f7;
+}
+
+.diet-energy-output-body ol {
+  margin-top: 0.45rem;
+  padding-left: 1.35rem;
+}
+
+.diet-energy-output-body li {
+  margin: 0.45rem 0;
+  line-height: 1.45;
+}
+
+.liquid-ios26 .diet-card-intro,
+.liquid-ios26 .diet-panel-lead,
+.liquid-ios26 .diet-energy-control-card,
+.liquid-ios26 .diet-pdf-variant-card,
+.liquid-ios26 .diet-energy-output {
+  border-color: rgba(153, 0, 255, 0.28) !important;
+  background: rgba(255,255,255,0.55) !important;
+  backdrop-filter: blur(10px) saturate(115%) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(115%) !important;
+}
+
+@media (max-width: 760px) {
+  .diet-mode-switch,
+  .diet-energy-controls-grid,
+  .diet-extra-grid,
+  .diet-result-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .diet-mode-tab {
+    min-height: auto;
   }
 }

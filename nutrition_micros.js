@@ -35,6 +35,23 @@
     return Number.isFinite(num) ? num : NaN;
   }
 
+  function parseOptionalNumber(value) {
+    if (value == null) return NaN;
+    if (typeof value === 'number') return Number.isFinite(value) ? value : NaN;
+    const raw = String(value).replace(',', '.').trim();
+    if (!raw) return NaN;
+    const num = Number(raw);
+    return Number.isFinite(num) ? num : NaN;
+  }
+
+  function firstFiniteNumber() {
+    for (let i = 0; i < arguments.length; i += 1) {
+      const num = parseOptionalNumber(arguments[i]);
+      if (Number.isFinite(num)) return num;
+    }
+    return NaN;
+  }
+
   function deepClone(value) {
     try {
       return JSON.parse(JSON.stringify(value));
@@ -48,6 +65,18 @@
     return raw === 'F' || raw === 'K' || raw === 'FEMALE' || raw === 'WOMAN' || raw === 'KOBIETA'
       ? 'female'
       : 'male';
+  }
+
+  function normalizeSexCode(value) {
+    return normalizeSex(value) === 'female' ? 'F' : 'M';
+  }
+
+  function normalizeDataSource(value) {
+    const raw = String(value == null ? '' : value).trim().toUpperCase();
+    if (raw === 'PALCZEWSKA' || raw === 'PALCZEWSKA_NIEDZWIECKA' || raw === 'PALCZEWSKA-NIEDZWIECKA') return 'PALCZEWSKA';
+    if (raw === 'WHO') return 'WHO';
+    if (raw === 'OLAF' || raw === 'OLA') return 'OLAF';
+    return '';
   }
 
   function normalizePhysiology(value) {
@@ -91,8 +120,23 @@
     const src = profile && typeof profile === 'object' ? profile : {};
     const ageMonths = normalizeAgeMonths(src);
     const sex = normalizeSex(src.sex);
+    const sexCode = normalizeSexCode(src.sexCode || src.sex);
     const physiology = normalizePhysiology(src.physiology);
     const variantPreference = Object.assign({}, src.variantPreference && typeof src.variantPreference === 'object' ? src.variantPreference : {});
+
+    const weightKg = firstFiniteNumber(src.weightKg, src.weight, src.massKg, src.bodyWeightKg);
+    const heightCm = firstFiniteNumber(src.heightCm, src.height, src.statureCm, src.bodyHeightCm);
+    const heightM = Number.isFinite(heightCm) ? heightCm / 100 : NaN;
+    const bmiFromProfile = firstFiniteNumber(src.bmi, src.bmiValue);
+    const bmi = Number.isFinite(bmiFromProfile)
+      ? bmiFromProfile
+      : (Number.isFinite(weightKg) && Number.isFinite(heightM) && heightM > 0 ? weightKg / (heightM * heightM) : NaN);
+    const dataSource = normalizeDataSource(src.dataSource || src.bmiSource || src.source || src.centileSource);
+    const bmiPercentileFromProfile = firstFiniteNumber(src.bmiPercentile, src.bmiCentile, src.bmiPerc);
+    const bmiPercentile = Number.isFinite(bmiPercentileFromProfile)
+      ? bmiPercentileFromProfile
+      : nutritionMicrosEstimateBmiPercentile({ ageMonths, sexCode, bmi, dataSource });
+    const bmiStatus = nutritionMicrosClassifyBmi({ ageMonths, bmi, bmiPercentile });
 
     const ironVariant = normalizeVariantPreference(
       src.ironVariant ||
@@ -110,7 +154,16 @@
       ageMonths: Number.isFinite(ageMonths) ? ageMonths : NaN,
       ageYears: Number.isFinite(ageMonths) ? Math.floor(ageMonths / 12) : NaN,
       sex,
+      sexCode,
       physiology,
+      weightKg: Number.isFinite(weightKg) ? weightKg : NaN,
+      heightCm: Number.isFinite(heightCm) ? heightCm : NaN,
+      bmi: Number.isFinite(bmi) ? bmi : NaN,
+      bmiPercentile: Number.isFinite(bmiPercentile) ? bmiPercentile : NaN,
+      bmiStatus,
+      bmiStatusLabel: nutritionMicrosBmiStatusLabel(bmiStatus),
+      dataSource,
+      hasCompleteAnthro: Number.isFinite(weightKg) && Number.isFinite(heightCm) && Number.isFinite(bmi),
       variantPreference
     };
   }
@@ -166,9 +219,10 @@
 
   function bindNutritionMicrosProfileListeners() {
     const fieldIds = [
-      'age', 'ageMonths', 'sex', 'microsPhysiology', 'physiology', 'pregnancyState',
+      'age', 'ageMonths', 'sex', 'weight', 'height', 'microsPhysiology', 'physiology', 'pregnancyState',
       'microsPregnancy', 'pregnancyToggle', 'microsLactation', 'lactationToggle',
-      'microsIronVariant', 'ironVariant', 'menarcheStatus', 'menstruationStatus'
+      'microsIronVariant', 'ironVariant', 'menarcheStatus', 'menstruationStatus',
+      'sourcePalczewska', 'sourceOlaf', 'sourceWho'
     ];
     fieldIds.forEach((id) => {
       const node = el(id);
@@ -467,6 +521,82 @@
     return { kind: 'years_over_75', ageMonths: months };
   }
 
+  function nutritionMicrosEstimateBmiPercentile(profile) {
+    const ageMonths = profile && Number.isFinite(profile.ageMonths) ? Number(profile.ageMonths) : NaN;
+    const bmi = profile && Number.isFinite(profile.bmi) ? Number(profile.bmi) : NaN;
+    if (!Number.isFinite(ageMonths) || !Number.isFinite(bmi) || ageMonths >= 216) return NaN;
+
+    const sexCode = normalizeSexCode(profile && profile.sexCode);
+    const dataSource = normalizeDataSource(profile && profile.dataSource);
+    const ageYearsExact = ageMonths / 12;
+
+    if (dataSource === 'PALCZEWSKA') {
+      try {
+        if (typeof calcPercentileStatsPal === 'function') {
+          const stats = calcPercentileStatsPal(bmi, sexCode, ageYearsExact, 'BMI');
+          const percentile = stats && parseOptionalNumber(stats.percentile);
+          if (Number.isFinite(percentile)) return percentile;
+        }
+      } catch (_) {
+        // fallback below
+      }
+    }
+
+    let originalSource;
+    let changedSource = false;
+    try {
+      if (typeof bmiSource !== 'undefined') {
+        originalSource = bmiSource;
+        if (dataSource) {
+          bmiSource = dataSource;
+          changedSource = true;
+        }
+      }
+    } catch (_) {
+      changedSource = false;
+    }
+
+    try {
+      if (typeof bmiPercentileChild === 'function') {
+        const percentile = parseOptionalNumber(bmiPercentileChild(bmi, sexCode, Math.round(ageMonths)));
+        if (Number.isFinite(percentile)) return percentile;
+      }
+    } catch (_) {
+      // ignore unavailable LMS/percentile functions
+    } finally {
+      if (changedSource) {
+        try { bmiSource = originalSource; } catch (_) { /* ignore */ }
+      }
+    }
+    return NaN;
+  }
+
+  function nutritionMicrosClassifyBmi(profile) {
+    const ageMonths = profile && Number.isFinite(profile.ageMonths) ? Number(profile.ageMonths) : NaN;
+    const bmi = profile && Number.isFinite(profile.bmi) ? Number(profile.bmi) : NaN;
+    const percentile = profile && Number.isFinite(profile.bmiPercentile) ? Number(profile.bmiPercentile) : NaN;
+    if (!Number.isFinite(ageMonths) || !Number.isFinite(bmi)) return 'unknown';
+    if (ageMonths < 216) {
+      if (!Number.isFinite(percentile)) return 'unknown';
+      if (percentile >= 97) return 'obesity';
+      if (percentile >= 85) return 'overweight';
+      if (percentile < 3) return 'underweight';
+      return 'normal';
+    }
+    if (bmi >= 30) return 'obesity';
+    if (bmi >= 25) return 'overweight';
+    if (bmi < 18.5) return 'underweight';
+    return 'normal';
+  }
+
+  function nutritionMicrosBmiStatusLabel(status) {
+    if (status === 'obesity') return 'otyłość';
+    if (status === 'overweight') return 'nadwaga';
+    if (status === 'underweight') return 'niedowaga';
+    if (status === 'normal') return 'zakres prawidłowy';
+    return 'brak klasyfikacji';
+  }
+
   function el(id) {
     return document.getElementById(id);
   }
@@ -509,6 +639,450 @@
       return `${formatNumber(min, precision)} ${String(unit || '').trim()}`.trim();
     }
     return `${formatNumber(min, precision)}–${formatNumber(max, precision)} ${String(unit || '').trim()}`.trim();
+  }
+
+  function nutritionMicrosIsVitaminD(nutrientId) {
+    return String(nutrientId || '').trim().toLowerCase() === 'vitamin_d';
+  }
+
+  function nutritionMicrosIsMicrogramPerDayUnit(unit) {
+    const normalized = String(unit || '').trim().toLowerCase()
+      .replace(/μ/g, 'µ')
+      .replace(/mcg/g, 'µg')
+      .replace(/ug/g, 'µg')
+      .replace(/\s+/g, '');
+    return normalized === 'µg/d' || normalized === 'µg/dobę' || normalized === 'µg/dobe' || normalized === 'µg/day';
+  }
+
+  function nutritionMicrosFormatIuValueFromMicrograms(value) {
+    if (!isFiniteNumber(value)) return '—';
+    const iu = Number(value) * 40;
+    return `${formatNumber(iu, guessPrecision(iu))} IU/dobę`;
+  }
+
+  function nutritionMicrosFormatIuRangeFromMicrograms(range) {
+    if (!Array.isArray(range) || range.length !== 2 || !isFiniteNumber(range[0]) || !isFiniteNumber(range[1])) return '—';
+    const min = Number(range[0]) * 40;
+    const max = Number(range[1]) * 40;
+    const precision = Math.max(guessPrecision(min), guessPrecision(max));
+    if (Math.abs(min - max) < 0.0001) {
+      return `${formatNumber(min, precision)} IU/dobę`;
+    }
+    return `${formatNumber(min, precision)}–${formatNumber(max, precision)} IU/dobę`;
+  }
+
+  function nutritionMicrosFormatValue(value, unit, nutrientId) {
+    const base = formatValueWithUnit(value, unit);
+    if (base === '—') return base;
+    if (nutritionMicrosIsVitaminD(nutrientId) && nutritionMicrosIsMicrogramPerDayUnit(unit)) {
+      return `${base} (${nutritionMicrosFormatIuValueFromMicrograms(value)})`;
+    }
+    return base;
+  }
+
+  function nutritionMicrosFormatRange(range, unit, nutrientId) {
+    const base = formatRangeWithUnit(range, unit);
+    if (base === '—') return base;
+    if (nutritionMicrosIsVitaminD(nutrientId) && nutritionMicrosIsMicrogramPerDayUnit(unit)) {
+      return `${base} (${nutritionMicrosFormatIuRangeFromMicrograms(range)})`;
+    }
+    return base;
+  }
+
+  const MICRONORMS_ABBREVIATIONS = {
+    RDA: {
+      title: 'RDA — Recommended Dietary Allowance; zalecane spożycie dzienne',
+      description: 'zalecane spożycie dzienne, czyli poziom pokrywający zapotrzebowanie prawie wszystkich zdrowych osób w danej grupie.'
+    },
+    AI: {
+      title: 'AI — Adequate Intake; wystarczające spożycie',
+      description: 'wystarczające spożycie; stosowane, gdy nie można wyznaczyć EAR/RDA, ale dostępne dane pozwalają oszacować poziom uznawany za adekwatny.'
+    },
+    EAR: {
+      title: 'EAR — Estimated Average Requirement; średnie zapotrzebowanie',
+      description: 'średnie zapotrzebowanie, czyli poziom pokrywający potrzeby około połowy zdrowych osób w danej grupie.'
+    },
+    UL: {
+      title: 'UL — Tolerable Upper Intake Level; górny tolerowany poziom spożycia',
+      description: 'górny tolerowany poziom spożycia; nie jest celem dziennym, tylko granicą, której zwyczajowo nie należy przekraczać.'
+    }
+  };
+
+  function nutritionMicrosAbbrHtml(code) {
+    const key = String(code || '').trim().toUpperCase();
+    const item = MICRONORMS_ABBREVIATIONS[key];
+    if (!item) return escapeHtml(code);
+    const tooltipText = escapeHtml(`${item.title}. ${item.description}`);
+    return `<abbr class="nutrition-micros-abbr" data-micros-tooltip="${tooltipText}" aria-label="${tooltipText}" tabindex="0">${escapeHtml(key)}</abbr>`;
+  }
+
+
+  const MICRONORMS_FOOD_EXAMPLES = {
+    calcium: {
+      label: 'Wapń',
+      unit: 'mg',
+      sourceNote: 'Wartości porcji są orientacyjne; przy produktach wzbogacanych sprawdź etykietę.',
+      intro: 'Łącz produkty mleczne lub wzbogacane z innymi źródłami; nie trzeba realizować celu jednym produktem.',
+      cautions: [
+        'Przy chorobach nerek, kamicy nerkowej lub suplementacji wapniem interpretację podaży wapnia warto omówić z lekarzem.'
+      ],
+      foods: [
+        { id: 'yogurt', name: 'Jogurt naturalny, niskotłuszczowy', portion: '1 kubek ok. 240 g', value: 415, note: 'Bardzo praktyczne źródło wapnia.' },
+        { id: 'milk', name: 'Mleko', portion: '1 szklanka', value: 300, note: 'Zawartość zależy od produktu i porcji.' },
+        { id: 'mozzarella', name: 'Mozzarella / ser podpuszczkowy', portion: 'ok. 40–45 g', value: 330, note: 'Porcja sera może dostarczyć dużo wapnia, ale zwykle także sól i tłuszcz nasycony.' },
+        { id: 'sardines', name: 'Sardynki z ośćmi', portion: 'ok. 85 g', value: 325, note: 'Źródło wapnia, jeśli zjadane są miękkie ości.' },
+        { id: 'tofu', name: 'Tofu koagulowane solami wapnia', portion: '½ szklanki', value: 250, note: 'Dotyczy tofu z dodatkiem soli wapniowych — warto sprawdzić etykietę.' },
+        { id: 'soymilk', name: 'Napój sojowy wzbogacany w wapń', portion: '1 szklanka', value: 300, note: 'Tylko jeśli produkt jest wzbogacany w wapń.' }
+      ],
+      sets: [
+        { title: 'Prosty wariant mleczny', foodIds: ['yogurt', 'milk', 'mozzarella'] },
+        { title: 'Wariant z rybą', foodIds: ['yogurt', 'milk', 'sardines'] },
+        { title: 'Wariant mieszany / roślinny', foodIds: ['tofu', 'soymilk', 'yogurt'] }
+      ]
+    },
+    iron: {
+      label: 'Żelazo',
+      unit: 'mg',
+      sourceNote: 'Żelazo hemowe z mięsa i owoców morza jest zwykle lepiej przyswajalne niż żelazo niehemowe z produktów roślinnych.',
+      intro: 'Przy produktach roślinnych warto łączyć źródła żelaza z witaminą C, np. warzywami lub owocami.',
+      cautions: [
+        'Przy ciąży, obfitych miesiączkach, niedokrwistości lub niskiej ferrytynie sama dieta może nie wystarczyć — decyzję o suplementacji podejmuje lekarz.'
+      ],
+      foods: [
+        { id: 'fortified_cereal', name: 'Płatki śniadaniowe wzbogacane w żelazo', portion: '1 porcja', value: 18, note: 'Tylko jeśli produkt jest fortyfikowany — sprawdź etykietę.' },
+        { id: 'oysters', name: 'Ostrygi', portion: 'ok. 85 g', value: 8, note: 'Bardzo bogate źródło żelaza hemowego.' },
+        { id: 'white_beans', name: 'Biała fasola', portion: '1 szklanka', value: 8, note: 'Źródło żelaza niehemowego.' },
+        { id: 'beef_liver', name: 'Wątroba wołowa', portion: 'ok. 85 g', value: 5, note: 'Bogate źródło, ale nie jest produktem do codziennego stosowania; w ciąży wymaga ostrożności.' },
+        { id: 'lentils', name: 'Soczewica gotowana', portion: '½ szklanki', value: 3, note: 'Warto łączyć z warzywami/owocami bogatymi w witaminę C.' },
+        { id: 'spinach', name: 'Szpinak gotowany', portion: '½ szklanki', value: 3, note: 'Zawiera żelazo, ale jego przyswajalność jest niższa niż z mięsa.' },
+        { id: 'tofu', name: 'Tofu', portion: '½ szklanki', value: 3, note: 'Źródło żelaza niehemowego.' }
+      ],
+      sets: [
+        { title: 'Wariant roślinny', foodIds: ['white_beans', 'lentils', 'spinach', 'tofu'] },
+        { title: 'Wariant z produktem fortyfikowanym', foodIds: ['fortified_cereal', 'lentils'] },
+        { title: 'Wariant z mięsem/owocami morza', foodIds: ['oysters', 'lentils', 'spinach'] }
+      ]
+    },
+    iodine: {
+      label: 'Jod',
+      unit: 'µg',
+      sourceNote: 'Zawartość jodu w nabiale, rybach i glonach jest zmienna; glony mogą mieć bardzo dużo jodu.',
+      intro: 'Najpraktyczniejsze źródła to ryby morskie, nabiał, jaja oraz sól jodowana stosowana rozsądnie.',
+      cautions: [
+        'Sól jodowana nie powinna być pretekstem do zwiększania spożycia soli. Przy chorobach tarczycy suplementację jodu omawia się z lekarzem.'
+      ],
+      foods: [
+        { id: 'cod', name: 'Dorsz pieczony', portion: 'ok. 85 g', value: 146, note: 'Jedna porcja zwykle pokrywa dużą część celu dziennego u dorosłych.' },
+        { id: 'nori', name: 'Nori suszone', portion: 'ok. 5 g / 2 łyżki płatków', value: 116, note: 'Zawartość jodu w glonach bywa bardzo zmienna.' },
+        { id: 'greek_yogurt', name: 'Jogurt grecki naturalny', portion: '¾ szklanki', value: 87, note: 'Wartość orientacyjna; nabiał ma zmienną zawartość jodu.' },
+        { id: 'milk', name: 'Mleko', portion: '1 szklanka', value: 84, note: 'Wartość orientacyjna.' },
+        { id: 'iodized_salt', name: 'Sól kuchenna jodowana', portion: '¼ łyżeczki', value: 78, note: 'Uwzględniaj ogólne ograniczenie soli w diecie.' },
+        { id: 'egg', name: 'Jajko gotowane', portion: '1 sztuka', value: 31, note: 'Uzupełniające źródło jodu.' }
+      ],
+      sets: [
+        { title: 'Wariant z rybą', foodIds: ['cod', 'milk', 'egg'] },
+        { title: 'Wariant bez ryby', foodIds: ['milk', 'greek_yogurt', 'egg', 'iodized_salt'] },
+        { title: 'Wariant z glonami', foodIds: ['nori', 'milk', 'egg'] }
+      ]
+    },
+    zinc: {
+      label: 'Cynk',
+      unit: 'mg',
+      sourceNote: 'Cynk z produktów zwierzęcych jest zwykle lepiej przyswajalny niż cynk z dużej ilości produktów zbożowych i strączkowych.',
+      intro: 'W praktyce cynk najłatwiej uzupełniać przez mięso, owoce morza, pestki, nabiał, płatki owsiane i strączki.',
+      cautions: [
+        'Bardzo wysokie dawki cynku z suplementów mogą zaburzać gospodarkę miedzią; przykłady dotyczą żywności, nie suplementów.'
+      ],
+      foods: [
+        { id: 'oysters', name: 'Ostrygi', portion: 'ok. 85 g', value: 32, note: 'Bardzo wysokie źródło; nie jest typowym codziennym punktem odniesienia.' },
+        { id: 'beef', name: 'Wołowina pieczona', portion: 'ok. 85 g', value: 3.8, note: 'Źródło cynku o dobrej biodostępności.' },
+        { id: 'crab', name: 'Krab gotowany', portion: 'ok. 85 g', value: 3.2, note: 'Dobre źródło cynku.' },
+        { id: 'oats', name: 'Płatki owsiane gotowane', portion: '1 szklanka', value: 2.3, note: 'Źródło roślinne; fityniany mogą ograniczać wchłanianie cynku.' },
+        { id: 'pumpkin_seeds', name: 'Pestki dyni prażone', portion: 'ok. 28 g', value: 2.2, note: 'Praktyczny dodatek do posiłku.' },
+        { id: 'lentils', name: 'Soczewica gotowana', portion: '½ szklanki', value: 1.3, note: 'Źródło roślinne.' },
+        { id: 'greek_yogurt', name: 'Jogurt grecki naturalny', portion: 'ok. 170 g', value: 1.0, note: 'Uzupełniające źródło cynku.' }
+      ],
+      sets: [
+        { title: 'Wariant mieszany', foodIds: ['beef', 'pumpkin_seeds', 'oats', 'lentils', 'greek_yogurt'] },
+        { title: 'Wariant z owocami morza', foodIds: ['crab', 'pumpkin_seeds', 'oats', 'greek_yogurt'] },
+        { title: 'Bardzo bogate źródło — ostrożnie', foodIds: ['oysters'] }
+      ]
+    },
+    folate: {
+      label: 'Foliany',
+      unit: 'µg DFE',
+      sourceNote: 'Wartości podano jako ekwiwalenty folianów diety (DFE), jeżeli źródło tak je raportuje.',
+      intro: 'Najpraktyczniejsze źródła to ciemnozielone warzywa liściaste, strączki i część warzyw.',
+      cautions: [
+        'W ciąży i przed ciążą zalecenia dotyczące kwasu foliowego/folianów są osobnym tematem — dieta nie zastępuje indywidualnych zaleceń lekarskich.'
+      ],
+      foods: [
+        { id: 'beef_liver', name: 'Wątroba wołowa', portion: 'ok. 85 g', value: 215, note: 'Bardzo bogate źródło, ale w ciąży nie powinno być traktowane jako rutynowy sposób pokrywania normy.' },
+        { id: 'spinach_cooked', name: 'Szpinak gotowany', portion: '½ szklanki', value: 131, note: 'Jedno z najbogatszych warzywnych źródeł folianów.' },
+        { id: 'black_eyed_peas', name: 'Fasola/groszek czarne oczko', portion: '½ szklanki', value: 105, note: 'Strączki są praktycznym źródłem folianów.' },
+        { id: 'asparagus', name: 'Szparagi gotowane', portion: '4 sztuki', value: 89, note: 'Dobre źródło folianów.' },
+        { id: 'brussels_sprouts', name: 'Brukselka gotowana', portion: '½ szklanki', value: 78, note: 'Źródło folianów i błonnika.' },
+        { id: 'romaine', name: 'Sałata rzymska', portion: '1 szklanka', value: 64, note: 'Może uzupełniać podaż folianów.' },
+        { id: 'avocado', name: 'Awokado', portion: '½ szklanki', value: 59, note: 'Uzupełniające źródło folianów.' },
+        { id: 'broccoli', name: 'Brokuły gotowane', portion: '½ szklanki', value: 52, note: 'Uzupełniające źródło folianów.' }
+      ],
+      sets: [
+        { title: 'Wariant warzywno-strączkowy', foodIds: ['spinach_cooked', 'black_eyed_peas', 'asparagus', 'brussels_sprouts'] },
+        { title: 'Wariant zielonych warzyw', foodIds: ['spinach_cooked', 'asparagus', 'brussels_sprouts', 'romaine', 'broccoli'] },
+        { title: 'Wariant z bardzo bogatym źródłem', foodIds: ['beef_liver', 'spinach_cooked', 'broccoli'] }
+      ]
+    }
+  };
+
+  function nutritionMicrosHasFoodExamples(nutrientId) {
+    return !!MICRONORMS_FOOD_EXAMPLES[String(nutrientId || '')];
+  }
+
+  function nutritionMicrosExamplesUnit(nutrientId, fallbackUnit) {
+    const data = MICRONORMS_FOOD_EXAMPLES[String(nutrientId || '')];
+    if (data && data.unit) return data.unit;
+    return String(fallbackUnit || '').replace(/\/d\b/g, '').trim() || '';
+  }
+
+  function nutritionMicrosFormatFoodValue(value, unit) {
+    if (!isFiniteNumber(value)) return '—';
+    return `${formatNumber(value, guessPrecision(value))} ${unit}`.trim();
+  }
+
+  function nutritionMicrosFormatPercent(value) {
+    if (!Number.isFinite(value)) return '—';
+    if (value >= 100) return `${Math.round(value)}%`;
+    if (value >= 10) return `${Math.round(value)}%`;
+    return `${formatNumber(value, 1)}%`;
+  }
+
+  function nutritionMicrosChipTone(percent) {
+    if (!Number.isFinite(percent)) return 'low';
+    if (percent >= 100) return 'high';
+    if (percent >= 40) return 'medium';
+    return 'low';
+  }
+
+  function nutritionMicrosPortionCountText(value, target) {
+    if (!isFiniteNumber(value) || !isFiniteNumber(target) || value <= 0 || target <= 0) return '';
+    const count = Number(target) / Number(value);
+    if (count <= 1.05) return '1 porcja lub mniej';
+    if (count < 2) return `około ${formatNumber(count, 1)} porcji`;
+    if (count < 10) return `około ${formatNumber(count, count < 4 ? 1 : 0)} porcji`;
+    return 'bardzo dużo porcji — lepiej łączyć różne źródła';
+  }
+
+  function nutritionMicrosFoodById(data, id) {
+    const foods = data && Array.isArray(data.foods) ? data.foods : [];
+    return foods.find(function(food) { return String(food && food.id) === String(id); }) || null;
+  }
+
+  function nutritionMicrosExamplesTargetFromEntry(entry) {
+    if (!entry) return null;
+    const unit = nutritionMicrosExamplesUnit(entry.id, entry.unit);
+    if (Array.isArray(entry.targetRange) && isFiniteNumber(entry.targetRange[1])) {
+      return {
+        value: Number(entry.targetRange[1]),
+        unit,
+        text: `${escapeHtml(entry.valueText)}; przykłady liczone dla wyższej wartości z zakresu`
+      };
+    }
+    if (isFiniteNumber(entry.targetValue)) {
+      return {
+        value: Number(entry.targetValue),
+        unit,
+        text: escapeHtml(entry.valueText)
+      };
+    }
+    return null;
+  }
+
+  function nutritionMicrosRenderFoodExamplesButton(entry, placement) {
+    if (!entry || !entry.examplesAvailable) return '';
+    const context = placement === 'table' ? 'nutrition-micros-examples-action--table' : 'nutrition-micros-examples-action--box';
+    return `
+      <div class="nutrition-micros-examples-action ${context}">
+        <button type="button" class="nutrition-practice-cta nutrition-micros-examples-button" data-micros-examples="${escapeHtml(entry.id)}">
+          Zobacz przykłady
+        </button>
+      </div>`;
+  }
+
+  function nutritionMicrosBuildExamplesFoodHtml(food, target, unit) {
+    const value = Number(food && food.value);
+    const percent = target && isFiniteNumber(target.value) && value > 0 ? (value / Number(target.value)) * 100 : null;
+    const chipText = Number.isFinite(percent) ? `ok. ${nutritionMicrosFormatPercent(percent)} celu` : 'wartość orientacyjna';
+    const chipTone = nutritionMicrosChipTone(percent);
+    const portionText = nutritionMicrosPortionCountText(value, target && target.value);
+    const mainBits = [
+      nutritionMicrosFormatFoodValue(value, unit),
+      portionText ? `tylko tym produktem: ${portionText}` : ''
+    ].filter(Boolean);
+    return `
+      <div class="nutrition-practice-sheet-item nutrition-micros-examples-item">
+        <div class="nutrition-practice-sheet-item-head">
+          <strong>${escapeHtml(food && food.name)}</strong>
+          <span class="nutrition-practice-sheet-item-portion">${escapeHtml(food && food.portion)}</span>
+        </div>
+        <span class="nutrition-practice-chip nutrition-practice-chip--${chipTone}">${escapeHtml(chipText)}</span>
+        <div class="nutrition-practice-sheet-item-main">${escapeHtml(mainBits.join(' • '))}</div>
+        ${food && food.note ? `<div class="nutrition-practice-sheet-item-note">${escapeHtml(food.note)}</div>` : ''}
+      </div>`;
+  }
+
+  function nutritionMicrosBuildExamplesSetHtml(set, data, target, unit) {
+    const foods = (Array.isArray(set && set.foodIds) ? set.foodIds : [])
+      .map(function(id) { return nutritionMicrosFoodById(data, id); })
+      .filter(Boolean);
+    const total = foods.reduce(function(sum, food) {
+      return sum + (isFiniteNumber(food.value) ? Number(food.value) : 0);
+    }, 0);
+    const percent = target && isFiniteNumber(target.value) && total > 0 ? (total / Number(target.value)) * 100 : null;
+    const chipText = Number.isFinite(percent) ? `ok. ${nutritionMicrosFormatPercent(percent)} celu` : 'zestaw orientacyjny';
+    const chipTone = nutritionMicrosChipTone(percent);
+    const names = foods.map(function(food) { return `${food.name} (${food.portion})`; }).join(' + ');
+    return `
+      <div class="nutrition-practice-sheet-item nutrition-micros-examples-set">
+        <div class="nutrition-practice-sheet-item-head">
+          <strong>${escapeHtml(set && set.title)}</strong>
+          <span class="nutrition-practice-sheet-item-portion">${escapeHtml(nutritionMicrosFormatFoodValue(total, unit))}</span>
+        </div>
+        <span class="nutrition-practice-chip nutrition-practice-chip--${chipTone}">${escapeHtml(chipText)}</span>
+        <div class="nutrition-practice-sheet-item-main">${escapeHtml(names)}</div>
+        <div class="nutrition-practice-sheet-item-note">To przykład orientacyjny, nie obowiązkowy jadłospis. W praktyce podaż składnika rozkłada się na wiele produktów w ciągu dnia.</div>
+      </div>`;
+  }
+
+  function nutritionMicrosExamplesContextNote(nutrientId, profile) {
+    const physiology = profile && profile.physiology ? String(profile.physiology) : 'default';
+    if (String(nutrientId) === 'folate' && (physiology === 'pregnancy' || physiology === 'lactation')) {
+      return 'Ciąża i laktacja: przykłady żywności pomagają zwiększać podaż folianów, ale nie zastępują zaleceń dotyczących kwasu foliowego/folianów ustalanych indywidualnie.';
+    }
+    if (String(nutrientId) === 'iron' && physiology === 'pregnancy') {
+      return 'Ciąża: zapotrzebowanie na żelazo jest wysokie, a suplementacja bywa konieczna; przykłady żywności nie zastępują oceny morfologii, ferrytyny i zaleceń lekarza.';
+    }
+    if (String(nutrientId) === 'iodine' && (physiology === 'pregnancy' || physiology === 'lactation')) {
+      return 'Ciąża i laktacja: zapotrzebowanie na jod jest większe; przy chorobach tarczycy lub suplementacji dawkę należy ustalić z lekarzem.';
+    }
+    return '';
+  }
+
+  function nutritionMicrosFindExamplesEntryInModel(model, nutrientId) {
+    const id = String(nutrientId || '');
+    const pools = [model && model.quickSet, model && model.vitamins, model && model.minerals];
+    for (let i = 0; i < pools.length; i += 1) {
+      const found = (Array.isArray(pools[i]) ? pools[i] : []).find(function(entry) {
+        return String(entry && entry.id) === id;
+      });
+      if (found) return found;
+    }
+    return null;
+  }
+
+  function nutritionMicrosBuildFoodExamplesSheetContent(entry, model) {
+    const data = entry && MICRONORMS_FOOD_EXAMPLES[String(entry.id || '')];
+    const target = nutritionMicrosExamplesTargetFromEntry(entry);
+    if (!data || !target || !isFiniteNumber(target.value) || target.value <= 0) return null;
+    const unit = data.unit || target.unit || nutritionMicrosExamplesUnit(entry.id, entry.unit);
+    const foodsHtml = (Array.isArray(data.foods) ? data.foods : [])
+      .map(function(food) { return nutritionMicrosBuildExamplesFoodHtml(food, target, unit); })
+      .join('');
+    const setsHtml = (Array.isArray(data.sets) ? data.sets : [])
+      .map(function(set) { return nutritionMicrosBuildExamplesSetHtml(set, data, target, unit); })
+      .join('');
+    const contextNote = nutritionMicrosExamplesContextNote(entry.id, model && model.profile);
+    const cautionItems = uniqueStrings([contextNote].concat(data.cautions || [])).map(function(text) {
+      return `<li>${escapeHtml(text)}</li>`;
+    }).join('');
+    const bodyHtml = `
+      <section class="nutrition-practice-sheet-section nutrition-micros-examples-intro">
+        <div class="nutrition-micros-examples-target">Cel z karty: <strong>${target.text}</strong></div>
+        <p>${escapeHtml(data.intro || 'Poniżej pokazano przykładowe porcje produktów, które mogą pomagać pokrywać cel dzienny.')}</p>
+      </section>
+      <section class="nutrition-practice-sheet-section">
+        <h4>Przykładowe porcje</h4>
+        <div class="nutrition-practice-sheet-list">${foodsHtml}</div>
+      </section>
+      ${setsHtml ? `<section class="nutrition-practice-sheet-section"><h4>Przykładowe zestawy na dzień</h4><div class="nutrition-practice-sheet-list">${setsHtml}</div></section>` : ''}
+      ${cautionItems ? `<section class="nutrition-practice-sheet-section nutrition-micros-examples-cautions"><h4>Ważne</h4><ul>${cautionItems}</ul></section>` : ''}`;
+    return {
+      title: `${data.label || entry.label} — przykłady pokrycia normy`,
+      subtitle: 'Orientacyjne porcje żywności. Wartości mogą różnić się zależnie od produktu, producenta, obróbki i wielkości porcji.',
+      bodyHtml,
+      footerHtml: `${escapeHtml(data.sourceNote || 'Wartości są orientacyjne.')} Przykłady służą edukacji i nie zastępują indywidualnego jadłospisu.`
+    };
+  }
+
+  function nutritionMicrosSetExamplesSheetHeight(root) {
+    if (!root || !window || !window.visualViewport) return;
+    try { root.style.setProperty('--nutrition-practice-sheet-vh', `${window.visualViewport.height}px`); } catch (_) { /* ignore */ }
+  }
+
+  function nutritionMicrosEnsureFoodExamplesSheet() {
+    let root = el('nutritionMicrosExamplesSheet');
+    if (root) return root;
+    if (!document || typeof document.createElement !== 'function' || !document.body) return null;
+    root = document.createElement('div');
+    root.id = 'nutritionMicrosExamplesSheet';
+    root.className = 'nutrition-practice-sheet nutrition-micros-examples-sheet';
+    root.hidden = true;
+    root.setAttribute('role', 'dialog');
+    root.setAttribute('aria-modal', 'true');
+    root.setAttribute('aria-labelledby', 'nutritionMicrosExamplesSheetTitle');
+    root.innerHTML = `
+      <div class="nutrition-practice-sheet-backdrop" data-micros-examples-close></div>
+      <div class="nutrition-practice-sheet-panel" role="document">
+        <div class="nutrition-practice-sheet-handle" aria-hidden="true"></div>
+        <header class="nutrition-practice-sheet-header">
+          <div class="nutrition-practice-sheet-header-copy">
+            <h3 id="nutritionMicrosExamplesSheetTitle"></h3>
+            <p id="nutritionMicrosExamplesSheetSubtitle"></p>
+          </div>
+          <button type="button" class="nutrition-practice-sheet-close" aria-label="Zamknij" data-micros-examples-close>×</button>
+        </header>
+        <div id="nutritionMicrosExamplesSheetBody" class="nutrition-practice-sheet-body"></div>
+        <footer id="nutritionMicrosExamplesSheetFooter" class="nutrition-practice-sheet-footer"></footer>
+      </div>`;
+    document.body.appendChild(root);
+    root.addEventListener('click', function(event) {
+      const target = event && event.target;
+      if (target && typeof target.closest === 'function' && target.closest('[data-micros-examples-close]')) {
+        nutritionMicrosCloseFoodExamplesSheet();
+      }
+    });
+    nutritionMicrosSetExamplesSheetHeight(root);
+    return root;
+  }
+
+  function nutritionMicrosCloseFoodExamplesSheet() {
+    const root = el('nutritionMicrosExamplesSheet');
+    if (!root) return;
+    root.hidden = true;
+    if (document && document.body && document.body.classList) document.body.classList.remove('nutrition-practice-sheet-open');
+  }
+
+  function nutritionMicrosOpenFoodExamplesSheet(nutrientId) {
+    const model = nutritionMicrosBuildCardModel(nutritionMicrosReadProfileFromDom());
+    const entry = nutritionMicrosFindExamplesEntryInModel(model, nutrientId);
+    const content = nutritionMicrosBuildFoodExamplesSheetContent(entry, model);
+    if (!content) return;
+    const root = nutritionMicrosEnsureFoodExamplesSheet();
+    if (!root) return;
+    nutritionMicrosSetExamplesSheetHeight(root);
+    const title = el('nutritionMicrosExamplesSheetTitle');
+    const subtitle = el('nutritionMicrosExamplesSheetSubtitle');
+    const body = el('nutritionMicrosExamplesSheetBody');
+    const footer = el('nutritionMicrosExamplesSheetFooter');
+    if (title) title.textContent = content.title || '';
+    if (subtitle) subtitle.textContent = content.subtitle || '';
+    if (body) body.innerHTML = content.bodyHtml || '';
+    if (footer) footer.innerHTML = content.footerHtml || '';
+    root.hidden = false;
+    if (document && document.body && document.body.classList) document.body.classList.add('nutrition-practice-sheet-open');
+    const closeButton = root.querySelector && root.querySelector('[data-micros-examples-close].nutrition-practice-sheet-close');
+    if (closeButton && closeButton.focus) {
+      try { closeButton.focus({ preventScroll: true }); } catch (_) { try { closeButton.focus(); } catch (__) { /* ignore */ } }
+    }
   }
 
   function uniqueStrings(values) {
@@ -571,6 +1145,8 @@
     const ageYears = toNumber(el('age') && el('age').value);
     const ageMonths = toNumber(el('ageMonths') && el('ageMonths').value);
     const sexValue = (el('sex') && el('sex').value) || 'M';
+    const weightKg = parseOptionalNumber(el('weight') && el('weight').value);
+    const heightCm = parseOptionalNumber(el('height') && el('height').value);
 
     let physiology = 'default';
     const physiologyField = el('microsPhysiology') || el('physiology') || el('pregnancyState');
@@ -581,6 +1157,16 @@
     if (pregnancyToggle && pregnancyToggle.checked) physiology = 'pregnancy';
     if (lactationToggle && lactationToggle.checked) physiology = 'lactation';
 
+    let dataSource = '';
+    try {
+      const selectedSource = document && typeof document.querySelector === 'function'
+        ? document.querySelector('input[name="dataSource"]:checked')
+        : null;
+      dataSource = normalizeDataSource(selectedSource && selectedSource.value);
+    } catch (_) {
+      dataSource = '';
+    }
+
     const variantPreference = {};
     const ironVariantField = el('microsIronVariant') || el('ironVariant') || el('menarcheStatus') || el('menstruationStatus');
     const ironVariantValue = (ironVariantField && ironVariantField.value) || MICRONORMS_UI_STATE.ironVariant || null;
@@ -590,6 +1176,9 @@
       ageYears: isFiniteNumber(ageYears) ? ageYears : NaN,
       ageMonths: isFiniteNumber(ageMonths) ? ageMonths : (isFiniteNumber(ageYears) ? 0 : NaN),
       sex: sexValue,
+      weightKg,
+      heightCm,
+      dataSource,
       physiology,
       variantPreference
     };
@@ -628,7 +1217,10 @@
       noteText: '',
       unresolved,
       earValue: isFiniteNumber(entry.ear) ? Number(entry.ear) : null,
-      earRange: null
+      earRange: null,
+      targetValue: null,
+      targetRange: null,
+      examplesAvailable: false
     };
 
     if (unresolved) {
@@ -636,25 +1228,30 @@
       const targetRange = nutritionMicrosCollectAlternativeRange(entry.alternatives, targetKey);
       const earRange = nutritionMicrosCollectAlternativeRange(entry.alternatives, 'ear');
       view.earRange = earRange;
-      view.valueText = formatRangeWithUnit(targetRange, entry.unit);
+      view.targetRange = targetRange;
+      view.targetValue = targetRange && isFiniteNumber(targetRange[1]) ? Number(targetRange[1]) : null;
+      view.examplesAvailable = !!proMode && nutritionMicrosHasFoodExamples(view.id) && isFiniteNumber(view.targetValue);
+      view.valueText = nutritionMicrosFormatRange(targetRange, entry.unit, entry.nutrient_id);
       view.summaryText = proMode
         ? uniqueStrings([
-            targetRange ? `${targetType || 'Cel'} ${formatRangeWithUnit(targetRange, entry.unit)}` : '',
-            earRange ? `EAR ${formatRangeWithUnit(earRange, entry.unit)}` : ''
+            targetRange ? `${targetType || 'Cel'} ${nutritionMicrosFormatRange(targetRange, entry.unit, entry.nutrient_id)}` : '',
+            earRange ? `EAR ${nutritionMicrosFormatRange(earRange, entry.unit, entry.nutrient_id)}` : ''
           ]).join(' • ')
         : 'Wartość zależy od tego, czy wystąpiła już miesiączka.';
       view.noteText = uniqueStrings((entry.alternatives || []).flatMap((item) => Array.isArray(item.notes) ? item.notes : [])).join(' • ');
       return view;
     }
 
-    view.valueText = formatValueWithUnit(entry.target_value, entry.unit);
+    view.targetValue = isFiniteNumber(entry.target_value) ? Number(entry.target_value) : null;
+    view.examplesAvailable = !!proMode && nutritionMicrosHasFoodExamples(view.id) && isFiniteNumber(view.targetValue);
+    view.valueText = nutritionMicrosFormatValue(entry.target_value, entry.unit, entry.nutrient_id);
     if (proMode) {
       if (targetType === 'RDA' && isFiniteNumber(entry.rda) && isFiniteNumber(entry.ear)) {
-        view.summaryText = `RDA ${formatValueWithUnit(entry.rda, entry.unit)} • EAR ${formatValueWithUnit(entry.ear, entry.unit)}`;
+        view.summaryText = `RDA ${nutritionMicrosFormatValue(entry.rda, entry.unit, entry.nutrient_id)} • EAR ${nutritionMicrosFormatValue(entry.ear, entry.unit, entry.nutrient_id)}`;
       } else if (targetType === 'AI' && isFiniteNumber(entry.ai)) {
-        view.summaryText = `AI ${formatValueWithUnit(entry.ai, entry.unit)}`;
+        view.summaryText = `AI ${nutritionMicrosFormatValue(entry.ai, entry.unit, entry.nutrient_id)}`;
       } else if (targetType === 'EAR' && isFiniteNumber(entry.ear)) {
-        view.summaryText = `EAR ${formatValueWithUnit(entry.ear, entry.unit)}`;
+        view.summaryText = `EAR ${nutritionMicrosFormatValue(entry.ear, entry.unit, entry.nutrient_id)}`;
       }
     } else {
       if (targetType === 'RDA') view.summaryText = 'Zalecany cel dzienny';
@@ -687,12 +1284,213 @@
         id: entry.nutrient_id,
         label: entry.nutrient_label_pl,
         typeLabel,
-        valueText: formatValueWithUnit(entry.value, entry.unit),
+        valueText: nutritionMicrosFormatValue(entry.value, entry.unit, entry.nutrient_id),
         noteText: noteParts.join(' • '),
         table: entry.table,
         safetyType: entry.safety_type
       };
     });
+  }
+
+
+  function nutritionMicrosFormatDoseMicrograms(iu) {
+    if (!Number.isFinite(iu)) return '—';
+    return `${formatNumber(iu / 40, guessPrecision(iu / 40))} µg/dobę`;
+  }
+
+  function nutritionMicrosFormatSupplementDose(iu) {
+    if (!Number.isFinite(iu)) return '—';
+    return `${formatNumber(iu, 0)} IU/dobę (${nutritionMicrosFormatDoseMicrograms(iu)})`;
+  }
+
+  function nutritionMicrosAgeGroupLabel(ageMonths, physiology) {
+    if (physiology === 'pregnancy') return 'ciąża';
+    if (physiology === 'lactation') return 'laktacja';
+    if (!Number.isFinite(ageMonths)) return 'brak wieku';
+    if (ageMonths < 6) return 'niemowlę 0–5 miesięcy';
+    if (ageMonths < 12) return 'niemowlę 6–11 miesięcy';
+    if (ageMonths < 48) return 'dziecko 1–3 lata';
+    if (ageMonths < 132) return 'dziecko 4–10 lat';
+    if (ageMonths < 228) return 'młodzież 11–18 lat';
+    if (ageMonths < 780) return 'dorosły 19–64 lata';
+    if (ageMonths < 912) return 'senior 65–75 lat';
+    return 'osoba powyżej 75 lat';
+  }
+
+  function nutritionMicrosBmiReasonText(profile) {
+    const status = profile && profile.bmiStatus;
+    const ageMonths = profile && Number.isFinite(profile.ageMonths) ? Number(profile.ageMonths) : NaN;
+    const bmi = profile && Number.isFinite(profile.bmi) ? Number(profile.bmi) : NaN;
+    const percentile = profile && Number.isFinite(profile.bmiPercentile) ? Number(profile.bmiPercentile) : NaN;
+    if (!Number.isFinite(bmi)) return 'BMI: brak pełnych danych masy ciała i wzrostu.';
+    if (Number.isFinite(ageMonths) && ageMonths < 216) {
+      if (Number.isFinite(percentile)) {
+        return `BMI ${formatNumber(bmi, 1)} kg/m², centyl BMI ${formatNumber(percentile, 0)} — ${nutritionMicrosBmiStatusLabel(status)}.`;
+      }
+      return `BMI ${formatNumber(bmi, 1)} kg/m² — nie udało się automatycznie wyznaczyć centyla BMI, więc nie dodano korekty dla nadwagi/otyłości.`;
+    }
+    return `BMI ${formatNumber(bmi, 1)} kg/m² — ${nutritionMicrosBmiStatusLabel(status)}.`;
+  }
+
+  function nutritionMicrosBuildMissingVitaminDModel(profile) {
+    const ageMonths = profile && Number.isFinite(profile.ageMonths) ? Number(profile.ageMonths) : NaN;
+    return {
+      available: false,
+      ageGroupLabel: nutritionMicrosAgeGroupLabel(ageMonths, profile && profile.physiology),
+      teaserValue: 'uzupełnij masę i wzrost',
+      doseText: '—',
+      reasonItems: [
+        `Wiek: ${nutritionMicrosAgeGroupLabel(ageMonths, profile && profile.physiology)}.`,
+        'Aby dobrać dawkę profilaktyczną z zakresu zależnego od masy ciała i BMI, uzupełnij masę ciała i wzrost w karcie Dane użytkownika.'
+      ],
+      noteText: 'Po uzupełnieniu danych aplikacja przeliczy dawkę automatycznie.',
+      warningText: 'W przypadku rozpoznanego niedoboru witaminy D dawkowanie powinno być ustalone indywidualnie, zwykle z uwzględnieniem stężenia 25(OH)D.',
+      sourceText: 'Na podstawie polskich rekomendacji profilaktyki niedoboru witaminy D, norm NIZP PZH oraz zaleceń Endocrine Society 2024.'
+    };
+  }
+
+  function nutritionMicrosBuildVitaminDSupplementModel(profile) {
+    if (!profile || !Number.isFinite(profile.ageMonths)) return null;
+    const ageMonths = Number(profile.ageMonths);
+    const weightKg = Number.isFinite(profile.weightKg) ? Number(profile.weightKg) : NaN;
+    const hasCompleteAnthro = !!profile.hasCompleteAnthro;
+    const status = profile.bmiStatus || 'unknown';
+    const elevatedBmi = status === 'overweight' || status === 'obesity';
+    const obesity = status === 'obesity';
+    const physiology = profile.physiology || 'default';
+    const reasonItems = [];
+    let iu = NaN;
+    let contextText = '';
+    let seasonText = '';
+    let bmiWarning = '';
+    let selectedFromHigherRange = false;
+
+    reasonItems.push(`Wiek: ${nutritionMicrosAgeGroupLabel(ageMonths, physiology)}.`);
+    if (Number.isFinite(weightKg)) reasonItems.push(`Masa ciała: ${formatNumber(weightKg, 1)} kg.`);
+    reasonItems.push(nutritionMicrosBmiReasonText(profile));
+
+    if (physiology === 'pregnancy' || physiology === 'lactation') {
+      iu = 2000;
+      contextText = physiology === 'pregnancy'
+        ? 'Ciąża: przy braku kontroli 25(OH)D rekomendacje polskie wskazują zwykle 2000 IU/dobę.'
+        : 'Laktacja: przy braku kontroli 25(OH)D rekomendacje polskie wskazują zwykle 2000 IU/dobę.';
+      seasonText = 'W ciąży i w okresie laktacji dawkę najlepiej prowadzić pod kontrolą 25(OH)D i zaleceń lekarza.';
+      if (elevatedBmi) {
+        bmiWarning = 'Nadwaga lub otyłość może zwiększać praktyczne zapotrzebowanie na witaminę D, ale w ciąży i laktacji wyższe dawki powinny być ustalane indywidualnie z lekarzem.';
+      }
+    } else if (ageMonths < 6) {
+      iu = 400;
+      contextText = 'Niemowlęta 0–6 miesięcy: dawka profilaktyczna zwykle 400 IU/dobę od pierwszych dni życia.';
+      seasonText = 'Dawka profilaktyczna jest zwykle całoroczna i niezależna od sposobu karmienia.';
+    } else if (ageMonths < 12) {
+      iu = 400;
+      contextText = 'Niemowlęta 6–12 miesięcy: zakres profilaktyczny wynosi zwykle 400–600 IU/dobę; automatycznie wybrano 400 IU/dobę, bo aplikacja nie zna podaży z mieszanek i żywności wzbogacanej.';
+      seasonText = 'Przy małej podaży witaminy D z diety lekarz może zalecić wyższą wartość z zakresu, np. 600 IU/dobę.';
+    } else if (ageMonths < 48) {
+      iu = elevatedBmi ? 1200 : 600;
+      selectedFromHigherRange = elevatedBmi;
+      contextText = elevatedBmi
+        ? 'Dzieci 1–3 lata: dawka bazowa to zwykle 600 IU/dobę; przy nadwadze/otyłości uwzględniono wyższe praktyczne zapotrzebowanie.'
+        : 'Dzieci 1–3 lata: dawka profilaktyczna zwykle 600 IU/dobę.';
+      seasonText = 'W tej grupie wieku suplementacja jest zwykle całoroczna.';
+    } else if (ageMonths < 132) {
+      if (!hasCompleteAnthro) return nutritionMicrosBuildMissingVitaminDModel(profile);
+      if (elevatedBmi) {
+        if (weightKg < 30) iu = 1200;
+        else if (weightKg <= 50) iu = 1600;
+        else iu = 2000;
+        selectedFromHigherRange = true;
+      } else if (weightKg < 25) iu = 600;
+      else if (weightKg <= 40) iu = 800;
+      else iu = 1000;
+      contextText = elevatedBmi
+        ? 'Dzieci 4–10 lat: zakres bazowy to zwykle 600–1000 IU/dobę; przy nadwadze/otyłości dobrano wyższy zakres, nie przekraczając automatycznego limitu dla wieku.'
+        : 'Dzieci 4–10 lat: dawkę wybrano z zakresu 600–1000 IU/dobę zależnie od masy ciała.';
+      seasonText = 'Od maja do września suplementacja może nie być konieczna, jeżeli dziecko codziennie przebywa na słońcu z odkrytymi przedramionami i podudziami przez 15–30 minut między 10:00 a 15:00, bez filtra UV; jeżeli ten warunek nie jest spełniony, dawka profilaktyczna jest zalecana przez cały rok.';
+    } else if (ageMonths < 228) {
+      if (!hasCompleteAnthro) return nutritionMicrosBuildMissingVitaminDModel(profile);
+      if (elevatedBmi) {
+        if (weightKg < 70) iu = 2000;
+        else if (weightKg <= 90) iu = 3000;
+        else iu = 4000;
+        selectedFromHigherRange = true;
+      } else if (weightKg < 50) iu = 1000;
+      else if (weightKg <= 70) iu = 1500;
+      else iu = 2000;
+      contextText = elevatedBmi
+        ? 'Młodzież 11–18 lat: zakres bazowy to zwykle 1000–2000 IU/dobę; przy nadwadze/otyłości dobrano wyższą dawkę profilaktyczną zależnie od masy ciała.'
+        : 'Młodzież 11–18 lat: dawkę wybrano z zakresu 1000–2000 IU/dobę zależnie od masy ciała.';
+      seasonText = 'Od maja do września suplementacja może nie być konieczna, jeżeli dziecko codziennie przebywa na słońcu z odkrytymi przedramionami i podudziami przez 15–30 minut między 10:00 a 15:00, bez filtra UV; jeżeli ten warunek nie jest spełniony, dawka profilaktyczna jest zalecana przez cały rok.';
+    } else if (ageMonths < 780) {
+      if (!hasCompleteAnthro) return nutritionMicrosBuildMissingVitaminDModel(profile);
+      if (status === 'obesity' || weightKg > 110) {
+        iu = 4000;
+        selectedFromHigherRange = true;
+      } else if (status === 'overweight') {
+        if (weightKg < 80) iu = 2000;
+        else if (weightKg <= 110) iu = 3000;
+        else iu = 4000;
+        selectedFromHigherRange = true;
+      } else if (weightKg < 60) iu = 1000;
+      else if (weightKg <= 80) iu = 1500;
+      else iu = 2000;
+      contextText = elevatedBmi || weightKg > 110
+        ? 'Dorośli 19–64 lata: zakres bazowy to zwykle 1000–2000 IU/dobę przy niewystarczającej ekspozycji słonecznej; przy nadwadze/otyłości dobrano wyższy zakres profilaktyczny.'
+        : 'Dorośli 19–64 lata: dawkę wybrano z zakresu 1000–2000 IU/dobę zależnie od masy ciała i przy założeniu niewystarczającej ekspozycji słonecznej.';
+      seasonText = 'To dawka do rozważenia przy niewystarczającej ekspozycji słonecznej i małej podaży z diety; nie jest dawką leczniczą.';
+    } else if (ageMonths < 912) {
+      if (!hasCompleteAnthro) return nutritionMicrosBuildMissingVitaminDModel(profile);
+      if (status === 'obesity' || weightKg > 110) {
+        iu = 4000;
+        selectedFromHigherRange = true;
+      } else if (status === 'overweight') {
+        if (weightKg < 80) iu = 2000;
+        else if (weightKg <= 110) iu = 3000;
+        else iu = 4000;
+        selectedFromHigherRange = true;
+      } else if (weightKg < 60) iu = 1000;
+      else if (weightKg <= 80) iu = 1500;
+      else iu = 2000;
+      contextText = elevatedBmi || weightKg > 110
+        ? 'Seniorzy 65–75 lat: zakres bazowy to zwykle 1000–2000 IU/dobę przez cały rok; przy nadwadze/otyłości dobrano wyższą dawkę profilaktyczną.'
+        : 'Seniorzy 65–75 lat: dawkę wybrano z zakresu 1000–2000 IU/dobę zależnie od masy ciała.';
+      seasonText = 'W tej grupie wieku suplementacja jest zwykle całoroczna ze względu na mniejszą syntezę skórną.';
+    } else {
+      if (!hasCompleteAnthro) return nutritionMicrosBuildMissingVitaminDModel(profile);
+      if (elevatedBmi) {
+        iu = 4000;
+        selectedFromHigherRange = true;
+      } else if (weightKg < 60) iu = 2000;
+      else if (weightKg <= 80) iu = 3000;
+      else iu = 4000;
+      contextText = elevatedBmi
+        ? 'Osoby powyżej 75 lat: zakres profilaktyczny to zwykle 2000–4000 IU/dobę przez cały rok; przy nadwadze/otyłości dobrano górną wartość automatycznego zakresu.'
+        : 'Osoby powyżej 75 lat: dawkę wybrano z zakresu 2000–4000 IU/dobę zależnie od masy ciała.';
+      seasonText = 'W tej grupie wieku suplementacja jest zwykle całoroczna.';
+    }
+
+    if (elevatedBmi && !bmiWarning) {
+      bmiWarning = obesity
+        ? 'Otyłość: dawki witaminy D mogą być większe niż u osób z prawidłową masą ciała, ale długotrwałe stosowanie wyższych dawek powinno być konsultowane z lekarzem, zwłaszcza przy chorobach przewlekłych lub lekach wpływających na metabolizm witaminy D.'
+        : 'Nadwaga: zapotrzebowanie praktyczne na witaminę D może być większe; aplikacja dobrała dawkę z wyższego zakresu profilaktycznego. Długotrwałą suplementację warto omówić z lekarzem lub dietetykiem.';
+    }
+
+    if (!Number.isFinite(iu)) return nutritionMicrosBuildMissingVitaminDModel(profile);
+    return {
+      available: true,
+      doseIU: iu,
+      doseMcg: iu / 40,
+      doseText: nutritionMicrosFormatSupplementDose(iu),
+      teaserValue: `${formatNumber(iu, 0)} IU/dobę`,
+      ageGroupLabel: nutritionMicrosAgeGroupLabel(ageMonths, physiology),
+      reasonItems: reasonItems.concat([contextText]).filter(Boolean),
+      seasonText,
+      bmiWarning,
+      selectedFromHigherRange,
+      noteText: 'Wartość AI w tabeli norm żywieniowych oznacza normę żywieniową, a nie dawkę leczniczą ani pełną rekomendację suplementacyjną.',
+      warningText: 'Leczenie potwierdzonego niedoboru witaminy D wymaga indywidualnej decyzji medycznej, zwykle z uwzględnieniem stężenia 25(OH)D. Nie przekraczaj górnych granic bezpieczeństwa bez zaleceń lekarza.',
+      sourceText: 'Na podstawie polskich rekomendacji profilaktyki niedoboru witaminy D, norm NIZP PZH oraz zaleceń Endocrine Society 2024. Przelicznik: 1 µg = 40 IU.'
+    };
   }
 
   function nutritionMicrosBuildMessages(profile, resolved, ageBand, controls) {
@@ -730,7 +1528,13 @@
       ? resolved.quickSet
       : (Array.isArray(resolved.nutrients) ? resolved.nutrients.slice(0, 6) : []);
 
+    const vitaminDSupplement = nutritionMicrosBuildVitaminDSupplementModel(resolved.profile);
     const quickSet = quickEntriesSource.map((entry) => nutritionMicrosBuildEntryView(entry, proMode)).filter(Boolean);
+    quickSet.forEach((entry) => {
+      if (entry && entry.id === 'vitamin_d' && vitaminDSupplement) {
+        entry.vitaminDSupplement = vitaminDSupplement;
+      }
+    });
     const vitamins = (resolved.vitamins || []).map((entry) => nutritionMicrosBuildEntryView(entry, proMode)).filter(Boolean);
     const minerals = (resolved.minerals || []).map((entry) => nutritionMicrosBuildEntryView(entry, proMode)).filter(Boolean);
 
@@ -750,11 +1554,12 @@
       proMode,
       controls,
       introText: proMode
-        ? 'Pokazujemy docelowe RDA albo AI, a po rozwinięciu pełnej tabeli także EAR tam, gdzie jest określone.'
-        : 'Pokazujemy zalecany cel dzienny (RDA) albo poziom wystarczający (AI).',
+        ? 'Pokazujemy docelowe wartości norm oraz, w trybie profesjonalnym, średnie zapotrzebowanie tam, gdzie zostało określone.'
+        : 'Pokazujemy zalecany cel dzienny albo poziom wystarczający dla danej grupy wieku i płci.',
       quickSet,
       vitamins,
       minerals,
+      vitaminDSupplement,
       safety: {
         introText: 'To nie są cele dzienne. To granice bezpieczeństwa, których nie należy zwyczajowo przekraczać przy suplementacji.',
         ul: safetyUlEntries,
@@ -775,19 +1580,63 @@
     return `<div class="${classes}">${escapeHtml(message.text || '')}</div>`;
   }
 
+  function nutritionMicrosRenderVitaminDSupplementPanel(model, panelId) {
+    if (!model) return '';
+    const safePanelId = escapeHtml(panelId || 'nutritionMicrosVitDSupplementPanel');
+    const reasonHtml = (Array.isArray(model.reasonItems) ? model.reasonItems : [])
+      .map((item) => `<li>${escapeHtml(item)}</li>`)
+      .join('');
+    const doseHtml = model.available
+      ? `<p class="nutrition-micros-vitd-dose"><strong>Sugerowana dawka profilaktyczna:</strong> ${escapeHtml(model.doseText)}</p>`
+      : `<p class="nutrition-micros-vitd-dose nutrition-micros-vitd-dose--missing"><strong>Nie można jeszcze dobrać dawki:</strong> ${escapeHtml(model.teaserValue)}</p>`;
+    const warningHtml = model.bmiWarning
+      ? `<p class="nutrition-micros-vitd-warning">${escapeHtml(model.bmiWarning)}</p>`
+      : '';
+    const seasonHtml = model.seasonText
+      ? `<p class="nutrition-micros-vitd-season">${escapeHtml(model.seasonText)}</p>`
+      : '';
+
+    return `
+      <div class="nutrition-micros-vitd-supplement">
+        <button type="button" class="nutrition-micros-vitd-toggle" aria-expanded="false" aria-controls="${safePanelId}">
+          <span>Profilaktyczna suplementacja</span>
+          <strong>${escapeHtml(model.teaserValue)}</strong>
+          <span class="nutrition-micros-vitd-chevron" aria-hidden="true">▾</span>
+        </button>
+        <div id="${safePanelId}" class="nutrition-micros-vitd-panel" hidden>
+          <div class="nutrition-micros-vitd-title">Witamina D — profilaktyczna suplementacja</div>
+          ${doseHtml}
+          ${model.noteText ? `<p>${escapeHtml(model.noteText)}</p>` : ''}
+          ${reasonHtml ? `<ul class="nutrition-micros-vitd-reasons">${reasonHtml}</ul>` : ''}
+          ${seasonHtml}
+          ${warningHtml}
+          ${model.warningText ? `<p class="nutrition-micros-vitd-warning">${escapeHtml(model.warningText)}</p>` : ''}
+          ${model.sourceText ? `<p class="nutrition-micros-vitd-source">${escapeHtml(model.sourceText)}</p>` : ''}
+        </div>
+      </div>`;
+  }
+
   function nutritionMicrosRenderQuickBox(entry) {
     if (!entry) return '';
-    const badge = entry.targetType ? `<span class="nutrition-micros-badge">${escapeHtml(entry.targetType)}</span>` : '';
+    const badge = entry.targetType ? `<span class="nutrition-micros-badge">${nutritionMicrosAbbrHtml(entry.targetType)}</span>` : '';
     const note = entry.noteText ? `<p class="nutrition-micros-note">${escapeHtml(entry.noteText)}</p>` : '';
+    const supplement = entry.vitaminDSupplement
+      ? nutritionMicrosRenderVitaminDSupplementPanel(entry.vitaminDSupplement, 'nutritionMicrosVitDSupplementPanel')
+      : '';
+    const examples = entry.examplesAvailable ? nutritionMicrosRenderFoodExamplesButton(entry, 'box') : '';
+    const classes = ['card', 'result-box', 'nutrition-micros-box'];
+    if (entry.id === 'vitamin_d') classes.push('nutrition-micros-box--vitamin-d');
     return `
-      <div class="card result-box nutrition-micros-box">
+      <div class="${classes.join(' ')}">
         <div class="nutrition-micros-box-head">
           <h3>${escapeHtml(entry.label)}</h3>
           ${badge}
         </div>
         <div class="nutrition-norms-value nutrition-micros-value">${escapeHtml(entry.valueText)}</div>
-        ${entry.summaryText ? `<p class="nutrition-norms-sub nutrition-micros-sub">${escapeHtml(entry.summaryText)}</p>` : ''}
+        ${entry.summaryText ? `<p class="nutrition-norms-sub nutrition-micros-sub">${nutritionMicrosRenderSummaryText(entry.summaryText)}</p>` : ''}
         ${note}
+        ${supplement}
+        ${examples}
       </div>`;
   }
 
@@ -808,26 +1657,53 @@
       </div>`;
   }
 
+  function nutritionMicrosRenderSummaryText(text) {
+    if (!text) return '';
+    return escapeHtml(text).replace(/\b(RDA|AI|EAR|UL)\b/g, function(match) {
+      return nutritionMicrosAbbrHtml(match);
+    });
+  }
+
+  function nutritionMicrosRenderLegend() {
+    const items = ['RDA', 'AI', 'EAR', 'UL'].map(function(code) {
+      const item = MICRONORMS_ABBREVIATIONS[code];
+      return `
+        <div class="nutrition-micros-legend-item">
+          <dt>${nutritionMicrosAbbrHtml(code)}</dt>
+          <dd>${escapeHtml(item.description)}</dd>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="nutrition-micros-legend" aria-label="Legenda skrótów norm żywieniowych">
+        <div class="nutrition-micros-legend-title">Legenda skrótów</div>
+        <dl class="nutrition-micros-legend-list">${items}</dl>
+        <p class="nutrition-micros-legend-note"><strong>Witamina D:</strong> 1 µg = 40 IU, dlatego wartości w tej karcie są podawane równolegle w µg/d i IU/dobę.</p>
+      </div>`;
+  }
+
   function nutritionMicrosGetEarColumnText(entry) {
     if (!entry) return '—';
     if (entry.unresolved) {
-      return entry.earRange ? formatRangeWithUnit(entry.earRange, entry.unit) : '—';
+      return entry.earRange ? nutritionMicrosFormatRange(entry.earRange, entry.unit, entry.id) : '—';
     }
     if (entry.targetType === 'RDA' && isFiniteNumber(entry.earValue)) {
-      return formatValueWithUnit(entry.earValue, entry.unit);
+      return nutritionMicrosFormatValue(entry.earValue, entry.unit, entry.id);
     }
     return '—';
   }
 
   function nutritionMicrosRenderTableSection(title, entries, proMode) {
     const rows = (Array.isArray(entries) ? entries : []).map((entry) => {
-      const typeCell = entry.targetType ? escapeHtml(entry.targetType) : '—';
+      const typeCell = entry.targetType ? nutritionMicrosAbbrHtml(entry.targetType) : '—';
       const extraCell = proMode ? `<td>${escapeHtml(nutritionMicrosGetEarColumnText(entry))}</td>` : '';
+      const examplesAction = entry.examplesAvailable ? nutritionMicrosRenderFoodExamplesButton(entry, 'table') : '';
       return `
         <tr>
           <td>
             <strong>${escapeHtml(entry.label)}</strong>
             ${entry.noteText ? `<div class="nutrition-micros-row-note">${escapeHtml(entry.noteText)}</div>` : ''}
+            ${examplesAction}
           </td>
           <td>${escapeHtml(entry.valueText)}</td>
           <td>${typeCell}</td>
@@ -839,7 +1715,7 @@
       ? '<colgroup><col style="width:40%"><col style="width:24%"><col style="width:16%"><col style="width:20%"></colgroup>'
       : '<colgroup><col style="width:48%"><col style="width:28%"><col style="width:24%"></colgroup>';
     const head = proMode
-      ? '<thead><tr><th>Składnik</th><th>Cel dzienny</th><th>Typ normy</th><th>EAR</th></tr></thead>'
+      ? '<thead><tr><th>Składnik</th><th>Cel dzienny</th><th>Typ normy</th><th>' + nutritionMicrosAbbrHtml('EAR') + '</th></tr></thead>'
       : '<thead><tr><th>Składnik</th><th>Cel dzienny</th><th>Typ normy</th></tr></thead>';
 
     return `
@@ -864,7 +1740,7 @@
       ? '<colgroup><col style="width:44%"><col style="width:26%"><col style="width:30%"></colgroup>'
       : '<colgroup><col style="width:60%"><col style="width:40%"></colgroup>';
     const rows = entries.map((entry) => {
-      const typeCell = proMode ? `<td>${escapeHtml(entry.typeLabel)}</td>` : '';
+      const typeCell = proMode ? `<td>${String(entry.typeLabel || '').toUpperCase() === 'UL' ? nutritionMicrosAbbrHtml('UL') : escapeHtml(entry.typeLabel)}</td>` : '';
       return `
         <tr>
           <td>
@@ -906,15 +1782,18 @@
       ? `<div class="nutrition-norms-messages">${(model.messages || []).map(nutritionMicrosRenderMessage).join('')}</div>`
       : '';
     const controlsHtml = model.controls ? nutritionMicrosRenderControls(model.controls) : '';
+    const legendHtml = nutritionMicrosRenderLegend();
 
     if (model.ageBand && model.ageBand.kind === 'infant_0_5') {
       return `
         ${messagesHtml}
+        ${model.vitaminDSupplement ? nutritionMicrosRenderVitaminDSupplementPanel(model.vitaminDSupplement, 'nutritionMicrosVitDSupplementPanelInfant') : ''}
         <div class="nutrition-norms-meta"><strong>${escapeHtml(model.meta.sourceTitle)}</strong><br>${escapeHtml(model.meta.sourceTables)}</div>`;
     }
 
     return `
       <p class="nutrition-norms-summary">${escapeHtml(model.introText)}</p>
+      ${legendHtml}
       ${messagesHtml}
       ${controlsHtml}
       <div class="nutrition-micros-section-title">Najważniejsze dla Ciebie</div>
@@ -925,12 +1804,80 @@
       <div class="nutrition-norms-meta"><strong>${escapeHtml(model.meta.sourceTitle)}</strong><br>${escapeHtml(model.meta.sourceTables)}</div>`;
   }
 
-  function clearNutritionMicrosCard() {
+  function nutritionMicrosReadCollapseStates() {
+    try {
+      const raw = window.localStorage && window.localStorage.getItem('cardCollapseState');
+      const parsed = raw ? JSON.parse(raw) : {};
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  function nutritionMicrosIsCardOpen() {
+    const states = nutritionMicrosReadCollapseStates();
+    return states.nutritionMicrosCard === true;
+  }
+
+  function nutritionMicrosSaveCardOpen(open) {
+    try {
+      if (!window.localStorage) return;
+      const states = nutritionMicrosReadCollapseStates();
+      states.nutritionMicrosCard = !!open;
+      window.localStorage.setItem('cardCollapseState', JSON.stringify(states));
+    } catch (_) {
+      /* ignore storage errors */
+    }
+  }
+
+  function nutritionMicrosApplyVisibility(available) {
+    const section = el('nutritionMicrosSection');
     const card = el('nutritionMicrosCard');
+    const toggle = el('toggleNutritionMicrosCard');
+    const isAvailable = available !== false;
+    const isOpen = isAvailable && nutritionMicrosIsCardOpen();
+
+    if (section) section.style.display = isAvailable ? '' : 'none';
+    if (card) card.style.display = isOpen ? 'block' : 'none';
+    if (toggle) {
+      toggle.setAttribute('aria-controls', 'nutritionMicrosCard');
+      toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    }
+  }
+
+  function bindNutritionMicrosToggle() {
+    const toggle = el('toggleNutritionMicrosCard');
+    if (!toggle || toggle.dataset.nutritionMicrosToggleBound === '1') return;
+
+    toggle.setAttribute('aria-controls', 'nutritionMicrosCard');
+    toggle.setAttribute('aria-expanded', nutritionMicrosIsCardOpen() ? 'true' : 'false');
+    toggle.addEventListener('click', function() {
+      const card = el('nutritionMicrosCard');
+      const mount = el('nutritionMicrosMount');
+      let currentlyOpen = nutritionMicrosIsCardOpen();
+      try {
+        if (card && typeof window.getComputedStyle === 'function') {
+          currentlyOpen = window.getComputedStyle(card).display !== 'none';
+        }
+      } catch (_) {
+        /* keep stored state */
+      }
+
+      const nextOpen = !currentlyOpen;
+      nutritionMicrosSaveCardOpen(nextOpen);
+      if (nextOpen && (!window.nutritionMicrosLastModel || !mount || !mount.innerHTML.trim())) {
+        try { renderNutritionMicrosCardFromDom(); } catch (_) { /* ignore */ }
+      }
+      nutritionMicrosApplyVisibility(!!window.nutritionMicrosLastModel || !!(mount && mount.innerHTML.trim()));
+    });
+    toggle.dataset.nutritionMicrosToggleBound = '1';
+  }
+
+  function clearNutritionMicrosCard() {
     const mount = el('nutritionMicrosMount');
     if (mount) mount.innerHTML = '';
-    if (card) card.style.display = 'none';
     window.nutritionMicrosLastModel = null;
+    nutritionMicrosApplyVisibility(false);
   }
 
   function renderNutritionMicrosCardFromDom() {
@@ -953,26 +1900,173 @@
 
     mount.innerHTML = nutritionMicrosRenderCard(model);
     bindNutritionMicrosInteractions();
-    card.style.display = 'block';
+    bindNutritionMicrosToggle();
     window.nutritionMicrosLastModel = model;
+    nutritionMicrosApplyVisibility(true);
     return model;
   }
 
   function ensureNutritionMicrosCardShell() {
+    const title = 'Normy żywieniowe: witaminy i składniki mineralne';
+    const anchor = el('nutritionNormsSection') || el('nutritionNormsCard');
+    let section = el('nutritionMicrosSection');
     let card = el('nutritionMicrosCard');
+
+    if (!section) {
+      if (!document || typeof document.createElement !== 'function') return null;
+      section = document.createElement('div');
+      section.id = 'nutritionMicrosSection';
+      section.style.display = 'none';
+      section.style.marginTop = '0';
+
+      if (card && card.parentNode) {
+        card.parentNode.insertBefore(section, card);
+        section.appendChild(card);
+      } else if (anchor && anchor.parentNode) {
+        anchor.parentNode.insertBefore(section, anchor.nextSibling);
+      } else {
+        return null;
+      }
+    }
+
+    let toggle = el('toggleNutritionMicrosCard');
+    if (!toggle) {
+      if (!document || typeof document.createElement !== 'function') return null;
+      toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.id = 'toggleNutritionMicrosCard';
+      toggle.textContent = title;
+      toggle.style.backgroundColor = '#00838d';
+      toggle.style.color = 'white';
+      toggle.style.padding = '0.6rem 1.2rem';
+      toggle.style.border = 'none';
+      toggle.style.borderRadius = '4px';
+      toggle.style.fontSize = '1rem';
+      toggle.style.fontWeight = '600';
+      toggle.style.cursor = 'pointer';
+      toggle.style.display = 'block';
+      toggle.style.margin = '0 auto';
+      section.insertBefore(toggle, section.firstChild);
+    }
+
     if (!card) {
-      const anchor = el('nutritionNormsCard');
-      if (!anchor || !anchor.parentNode) return null;
+      if (!document || typeof document.createElement !== 'function') return null;
       card = document.createElement('div');
       card.id = 'nutritionMicrosCard';
       card.className = 'card nutrition-micros-card';
       card.style.display = 'none';
-      card.innerHTML = '<h2 style="text-align:center;">Normy żywieniowe: witaminy i składniki mineralne</h2><div id="nutritionMicrosMount"></div>';
-      anchor.parentNode.insertBefore(card, anchor.nextSibling);
-    } else if (!el('nutritionMicrosMount')) {
-      card.innerHTML = '<h2 style="text-align:center;">Normy żywieniowe: witaminy i składniki mineralne</h2><div id="nutritionMicrosMount"></div>';
+      card.style.marginTop = '1rem';
+      section.appendChild(card);
+    } else if (card.parentNode !== section) {
+      section.appendChild(card);
     }
+
+    if (!el('nutritionMicrosMount')) {
+      card.innerHTML = '<h2 style="text-align:center;">' + title + '</h2><div id="nutritionMicrosMount"></div>';
+    }
+
+    bindNutritionMicrosToggle();
+    nutritionMicrosApplyVisibility(false);
     return card;
+  }
+
+
+  function nutritionMicrosEnsureTooltipElement() {
+    let tooltip = el('nutritionMicrosTooltip');
+    if (tooltip) return tooltip;
+    tooltip = document.createElement('div');
+    tooltip.id = 'nutritionMicrosTooltip';
+    tooltip.className = 'nutrition-micros-tooltip';
+    tooltip.setAttribute('role', 'tooltip');
+    tooltip.hidden = true;
+    document.body.appendChild(tooltip);
+    return tooltip;
+  }
+
+  function nutritionMicrosPositionTooltip(target, tooltip) {
+    if (!target || !tooltip) return;
+    const rect = target.getBoundingClientRect();
+    const gap = 8;
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 320;
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 320;
+    tooltip.style.left = '0px';
+    tooltip.style.top = '0px';
+    tooltip.hidden = false;
+    tooltip.classList.add('is-measuring');
+    const tipRect = tooltip.getBoundingClientRect();
+    const tipWidth = tipRect.width || 260;
+    const tipHeight = tipRect.height || 44;
+    let left = rect.left + (rect.width / 2) - (tipWidth / 2);
+    left = Math.max(8, Math.min(left, viewportWidth - tipWidth - 8));
+    let top = rect.top - tipHeight - gap;
+    if (top < 8) top = Math.min(rect.bottom + gap, viewportHeight - tipHeight - 8);
+    tooltip.style.left = `${Math.round(left)}px`;
+    tooltip.style.top = `${Math.round(top)}px`;
+    tooltip.classList.remove('is-measuring');
+  }
+
+  function nutritionMicrosShowTooltip(target) {
+    if (!target || !target.getAttribute) return;
+    const text = target.getAttribute('data-micros-tooltip');
+    if (!text) return;
+    const tooltip = nutritionMicrosEnsureTooltipElement();
+    tooltip.textContent = text;
+    tooltip.hidden = false;
+    target.setAttribute('aria-describedby', 'nutritionMicrosTooltip');
+    nutritionMicrosPositionTooltip(target, tooltip);
+    window.requestAnimationFrame(function() {
+      tooltip.classList.add('is-visible');
+      nutritionMicrosPositionTooltip(target, tooltip);
+    });
+  }
+
+  function nutritionMicrosHideTooltip(target) {
+    const tooltip = el('nutritionMicrosTooltip');
+    if (!tooltip) return;
+    tooltip.classList.remove('is-visible');
+    tooltip.hidden = true;
+    if (target && target.removeAttribute) target.removeAttribute('aria-describedby');
+  }
+
+  function bindNutritionMicrosAbbreviationTooltips() {
+    if (!document || document.__nutritionMicrosAbbrTooltipsBound) return;
+    document.addEventListener('mouseover', function(event) {
+      const target = event && event.target && typeof event.target.closest === 'function'
+        ? event.target.closest('.nutrition-micros-abbr[data-micros-tooltip]')
+        : null;
+      if (!target) return;
+      nutritionMicrosShowTooltip(target);
+    });
+    document.addEventListener('mouseout', function(event) {
+      const target = event && event.target && typeof event.target.closest === 'function'
+        ? event.target.closest('.nutrition-micros-abbr[data-micros-tooltip]')
+        : null;
+      if (!target) return;
+      const related = event.relatedTarget;
+      if (related && typeof target.contains === 'function' && target.contains(related)) return;
+      nutritionMicrosHideTooltip(target);
+    });
+    document.addEventListener('focusin', function(event) {
+      const target = event && event.target && event.target.matches && event.target.matches('.nutrition-micros-abbr[data-micros-tooltip]')
+        ? event.target
+        : null;
+      if (target) nutritionMicrosShowTooltip(target);
+    });
+    document.addEventListener('focusout', function(event) {
+      const target = event && event.target && event.target.matches && event.target.matches('.nutrition-micros-abbr[data-micros-tooltip]')
+        ? event.target
+        : null;
+      if (target) nutritionMicrosHideTooltip(target);
+    });
+    document.addEventListener('keydown', function(event) {
+      if (event && event.key === 'Escape') {
+        nutritionMicrosHideTooltip(document.activeElement);
+        nutritionMicrosCloseFoodExamplesSheet();
+      }
+    });
+    window.addEventListener('scroll', function() { nutritionMicrosHideTooltip(document.activeElement); }, true);
+    window.addEventListener('resize', function() { nutritionMicrosHideTooltip(document.activeElement); });
+    document.__nutritionMicrosAbbrTooltipsBound = true;
   }
 
   function bindNutritionMicrosInteractions() {
@@ -983,6 +2077,22 @@
       if (!target || target.id !== 'microsIronVariant') return;
       MICRONORMS_UI_STATE.ironVariant = target.value || null;
       renderNutritionMicrosCardFromDom();
+    });
+    mount.addEventListener('click', function(event) {
+      const target = event && event.target;
+      const examplesButton = target && typeof target.closest === 'function' ? target.closest('[data-micros-examples]') : null;
+      if (examplesButton) {
+        event.preventDefault();
+        nutritionMicrosOpenFoodExamplesSheet(examplesButton.getAttribute('data-micros-examples'));
+        return;
+      }
+      const button = target && typeof target.closest === 'function' ? target.closest('.nutrition-micros-vitd-toggle') : null;
+      if (!button) return;
+      const panelId = button.getAttribute('aria-controls');
+      const panel = panelId ? el(panelId) : null;
+      const nextOpen = button.getAttribute('aria-expanded') !== 'true';
+      button.setAttribute('aria-expanded', nextOpen ? 'true' : 'false');
+      if (panel) panel.hidden = !nextOpen;
     });
     mount.__nutritionMicrosBound = true;
   }
@@ -1003,6 +2113,7 @@
 
   function initMicronormsModule() {
     ensureNutritionMicrosCardShell();
+    bindNutritionMicrosAbbreviationTooltips();
     bindNutritionMicrosProfileListeners();
     if (MICRONORMS_INIT_DONE) {
       scheduleNutritionMicrosBootstrapRender();
@@ -1061,6 +2172,8 @@
   window.nutritionMicrosSelectQuickSet = selectQuickSet;
   window.nutritionMicrosReadProfileFromDom = nutritionMicrosReadProfileFromDom;
   window.nutritionMicrosBuildCardModel = nutritionMicrosBuildCardModel;
+  window.nutritionMicrosBuildVitaminDSupplementModel = nutritionMicrosBuildVitaminDSupplementModel;
+  window.nutritionMicrosBuildFoodExamplesSheetContent = nutritionMicrosBuildFoodExamplesSheetContent;
   window.renderNutritionMicrosCardFromDom = renderNutritionMicrosCardFromDom;
   window.clearNutritionMicrosCard = clearNutritionMicrosCard;
 

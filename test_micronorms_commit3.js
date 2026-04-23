@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
-const base = '/mnt/data/work_v29';
+const base = __dirname;
 
 function makeSandbox() {
   const document = {
@@ -61,7 +61,7 @@ function assert(condition, message) {
     const model = window.nutritionMicrosBuildCardModel({ ageYears: 30, ageMonths: 0, sex: 'K' });
     const vitaminD = model.safety.ul.find((item) => item.id === 'vitamin_d');
     assert(vitaminD, 'missing vitamin D UL');
-    assert(vitaminD.valueText === '100 µg/d', 'unexpected vitamin D UL value');
+    assert(vitaminD.valueText === '100 µg/d (4000 IU/dobę)', 'unexpected vitamin D UL value: ' + vitaminD.valueText);
   });
 
   test('magnesium safety note is scope-limited', () => {
@@ -69,6 +69,54 @@ function assert(condition, message) {
     const magnesium = model.safety.ul.find((item) => item.id === 'magnesium');
     assert(magnesium, 'missing magnesium UL');
     assert(/suplementów diety, wody i żywności wzbogacanej/i.test(magnesium.noteText), 'missing magnesium scope note');
+  });
+
+  test('adult female vitamin D norm includes IU conversion', () => {
+    const model = window.nutritionMicrosBuildCardModel({ ageYears: 30, ageMonths: 0, sex: 'K' });
+    const vitaminD = model.quickSet.find((item) => item.id === 'vitamin_d');
+    assert(vitaminD, 'missing vitamin D quick set entry');
+    assert(vitaminD.valueText === '15 µg/d (600 IU/dobę)', 'unexpected vitamin D norm value: ' + vitaminD.valueText);
+  });
+
+  test('non vitamin D nutrients are not converted to IU', () => {
+    const model = window.nutritionMicrosBuildCardModel({ ageYears: 30, ageMonths: 0, sex: 'K' });
+    const calcium = model.quickSet.find((item) => item.id === 'calcium');
+    assert(calcium, 'missing calcium quick set entry');
+    assert(!/IU\/dobę/.test(calcium.valueText), 'calcium should not contain IU conversion: ' + calcium.valueText);
+  });
+
+
+  test('adult vitamin D supplement is personalized from weight and BMI', () => {
+    const model = window.nutritionMicrosBuildCardModel({ ageYears: 30, ageMonths: 0, sex: 'K', weightKg: 70, heightCm: 170 });
+    const vitaminD = model.quickSet.find((item) => item.id === 'vitamin_d');
+    assert(vitaminD && vitaminD.vitaminDSupplement, 'missing vitamin D supplement model');
+    assert(vitaminD.vitaminDSupplement.doseIU === 1500, 'unexpected adult dose: ' + vitaminD.vitaminDSupplement.doseIU);
+    assert(vitaminD.vitaminDSupplement.doseText === '1500 IU/dobę (37,5 µg/dobę)', 'unexpected adult dose text: ' + vitaminD.vitaminDSupplement.doseText);
+  });
+
+  test('adult obesity routes vitamin D supplement to upper automatic range', () => {
+    const model = window.nutritionMicrosBuildCardModel({ ageYears: 30, ageMonths: 0, sex: 'M', weightKg: 110, heightCm: 170 });
+    const vitaminD = model.quickSet.find((item) => item.id === 'vitamin_d');
+    assert(vitaminD && vitaminD.vitaminDSupplement, 'missing vitamin D supplement model');
+    assert(vitaminD.vitaminDSupplement.doseIU === 4000, 'unexpected obesity dose: ' + vitaminD.vitaminDSupplement.doseIU);
+    assert(/Otyłość/.test(vitaminD.vitaminDSupplement.bmiWarning), 'missing obesity warning');
+  });
+
+  test('adolescent overweight vitamin D supplement uses higher range', () => {
+    const model = window.nutritionMicrosBuildCardModel({ ageYears: 15, ageMonths: 0, sex: 'M', weightKg: 72, heightCm: 170, bmiPercentile: 90 });
+    const vitaminD = model.quickSet.find((item) => item.id === 'vitamin_d');
+    assert(vitaminD && vitaminD.vitaminDSupplement, 'missing vitamin D supplement model');
+    assert(vitaminD.vitaminDSupplement.doseIU === 3000, 'unexpected adolescent overweight dose: ' + vitaminD.vitaminDSupplement.doseIU);
+    assert(vitaminD.vitaminDSupplement.selectedFromHigherRange === true, 'should mark higher range');
+  });
+
+  test('adolescent vitamin D seasonal note is separated from reason bullets', () => {
+    const model = window.nutritionMicrosBuildCardModel({ ageYears: 15, ageMonths: 0, sex: 'M', weightKg: 66, heightCm: 177, bmiPercentile: 69 });
+    const vitaminD = model.quickSet.find((item) => item.id === 'vitamin_d');
+    const supplement = vitaminD && vitaminD.vitaminDSupplement;
+    assert(supplement, 'missing vitamin D supplement model');
+    assert(/odkrytymi przedramionami i podudziami/.test(supplement.seasonText), 'missing detailed seasonal note');
+    assert(!supplement.reasonItems.some((item) => /Od maja do września/.test(item)), 'seasonal note should not be included in bullet reasons');
   });
 
   test('girl 10-12 gets iron control when unresolved', () => {
@@ -93,10 +141,59 @@ function assert(condition, message) {
     assert(iron.valueText === '15 mg/d', 'unexpected iron value for post menarche');
   });
 
+
+  test('professional mode adds food example actions for selected micronutrients only', () => {
+    window.professionalMode = true;
+    const model = window.nutritionMicrosBuildCardModel({ ageYears: 30, ageMonths: 0, sex: 'K' });
+    const calcium = model.quickSet.find((item) => item.id === 'calcium');
+    const iron = model.quickSet.find((item) => item.id === 'iron');
+    const iodine = model.quickSet.find((item) => item.id === 'iodine');
+    const zinc = model.minerals.find((item) => item.id === 'zinc');
+    const folate = model.vitamins.find((item) => item.id === 'folate');
+    const vitaminD = model.quickSet.find((item) => item.id === 'vitamin_d');
+    assert(calcium && calcium.examplesAvailable, 'calcium should expose examples');
+    assert(iron && iron.examplesAvailable, 'iron should expose examples');
+    assert(iodine && iodine.examplesAvailable, 'iodine should expose examples');
+    assert(zinc && zinc.examplesAvailable, 'zinc should expose examples');
+    assert(folate && folate.examplesAvailable, 'folate should expose examples');
+    assert(vitaminD && !vitaminD.examplesAvailable, 'vitamin D should not expose food examples');
+    window.professionalMode = false;
+  });
+
+  test('standard mode does not add food example actions', () => {
+    window.professionalMode = false;
+    const model = window.nutritionMicrosBuildCardModel({ ageYears: 30, ageMonths: 0, sex: 'K' });
+    const calcium = model.quickSet.find((item) => item.id === 'calcium');
+    assert(calcium && !calcium.examplesAvailable, 'calcium examples should be professional-only');
+  });
+
+  test('food examples sheet calculates target share for calcium', () => {
+    window.professionalMode = true;
+    const model = window.nutritionMicrosBuildCardModel({ ageYears: 30, ageMonths: 0, sex: 'K' });
+    const calcium = model.quickSet.find((item) => item.id === 'calcium');
+    const sheet = window.nutritionMicrosBuildFoodExamplesSheetContent(calcium, model);
+    assert(sheet && /Wapń/.test(sheet.title), 'missing calcium sheet title');
+    assert(/Przykładowe porcje/.test(sheet.bodyHtml), 'missing portions section');
+    assert(/Jogurt naturalny/.test(sheet.bodyHtml), 'missing yogurt example');
+    assert(/ok\. 42% celu/.test(sheet.bodyHtml), 'expected yogurt target share around 42% for 1000 mg target');
+    window.professionalMode = false;
+  });
+
+  test('unresolved iron examples use the upper target from the range', () => {
+    window.professionalMode = true;
+    const model = window.nutritionMicrosBuildCardModel({ ageYears: 10, ageMonths: 0, sex: 'K' });
+    const iron = model.quickSet.find((item) => item.id === 'iron');
+    assert(iron && iron.examplesAvailable, 'unresolved iron should still expose examples');
+    const sheet = window.nutritionMicrosBuildFoodExamplesSheetContent(iron, model);
+    assert(/przykłady liczone dla wyższej wartości z zakresu/.test(sheet.bodyHtml), 'missing upper-range note for unresolved iron');
+    assert(/15 mg\/d/.test(sheet.bodyHtml), 'upper iron target should be visible');
+    window.professionalMode = false;
+  });
+
   const passed = results.filter((item) => item.ok).length;
   const failed = results.filter((item) => !item.ok).length;
   const output = { passed, failed, results };
-  fs.writeFileSync('/mnt/data/micronorms_commit3_test_results_v29.json', JSON.stringify(output, null, 2));
+  fs.writeFileSync('/mnt/data/micronorms_commit3_test_results_v30.json', JSON.stringify(output, null, 2));
   if (failed) {
     console.error(JSON.stringify(output, null, 2));
     process.exit(1);

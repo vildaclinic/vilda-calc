@@ -29,7 +29,8 @@
   var ORDER_IDS = [
     'metabolicSummarySection',
     'bmiCard',
-    'nutritionNormsCard',
+    'nutritionNormsSection',
+    'nutritionMicrosSection',
     'adultVitalsCard',
     'wflCard',
     'coleCard',
@@ -43,7 +44,7 @@
     'intakeSection',
     'circSection',
     'respiratoryCard',
-    'foodCard'
+    'foodSection'
   ];
 
   // Home anchors: Map<elementId, anchorNode>
@@ -131,7 +132,8 @@
     var desired = [
       'metabolicSummarySection',
       'bmiCard',
-      'nutritionNormsCard',
+      'nutritionNormsSection',
+      'nutritionMicrosSection',
       'wflCard',
       'coleCard',
       'growthCalculationsSection',
@@ -143,7 +145,7 @@
       'intakeSection',
       'circSection',
       'respiratoryCard',
-      'foodCard'
+      'foodSection'
     ];
 
     // Important: execute only when entering mobile layout (or on explicit force),
@@ -165,12 +167,13 @@
     var card = getEl('adultVitalsCard');
     var leftColumn = getEl('leftColumnWrap');
     var bmiCard = getEl('bmiCard');
-    var nutritionCard = getEl('nutritionNormsCard');
+    var nutritionCard = getEl('nutritionNormsSection') || getEl('nutritionNormsCard');
+    var nutritionMicrosSection = getEl('nutritionMicrosSection');
 
     if (!card || !leftColumn) return;
 
     if (isMobileLayout()) {
-      moveAfter(leftColumn, card, nutritionCard || bmiCard);
+      moveAfter(leftColumn, card, nutritionMicrosSection || nutritionCard || bmiCard);
       return;
     }
 

@@ -1700,7 +1700,7 @@ input[type="submit"]:focus-visible {
         <!-- Lista wyników do debugowania: początkowo ukryta (display:none) zostanie dynamicznie ustawiona przez JS.
              Tymczasowo zmieniono display na block, aby łatwiej dostrzec, czy element jest tworzony (podczas testów). -->
         <div id="formulaLive" style="display:none; border:1px solid #d0dede; border-radius:6px; background:#fff; margin:4px 0 6px 0; max-height:220px; overflow:auto; box-shadow:0 2px 6px rgba(0,0,0,.08);"></div>
-        <select id="formulaPicker" onchange="onFormulaChange()">
+        <select id="formulaPicker">
           <option value="">— wybierz —</option>
         </select>
         <div class="formula-note" id="formulaNote" style="display:none;"></div>
@@ -2248,6 +2248,7 @@ input[type="submit"]:focus-visible {
         ALL_FORMS_SORTED = [...FORMULAS]
           .filter(f => Object.values(CAT).some(set => set.has(f.id)))
           .sort((a,b) => a.label.localeCompare(b.label, 'pl', { sensitivity:'base' }));
+        window.ALL_FORMS_SORTED = ALL_FORMS_SORTED;
         // renderuj bez filtra
         renderFormulaOptions('');
         // Podłącz zdarzenie filtra
@@ -2414,8 +2415,8 @@ input[type="submit"]:focus-visible {
         populateFormulaPicker();
         const sel = document.getElementById('formulaPicker');
         if (sel) {
-          // Nasłuchuj zmiany na selektorze formuł (uruchamia onFormulaChange)
-          sel.addEventListener('change', onFormulaChange);
+          // Obsługa zmiany formuły jest podłączana niżej przez jeden, ujednolicony handler.
+          // Nie dodajemy tutaj drugiego listenera, aby reset i podświetlanie pól nie ścigały się ze sobą.
           // Przy otwarciu selektora zawsze przywracaj pełną listę formuł i czyść filtr
           const resetToFull = () => {
             // Wyczyść tekst filtra
@@ -2447,172 +2448,230 @@ input[type="submit"]:focus-visible {
         });
       });
 
-      // Eksportuj kluczowe funkcje na obiekt window, aby były dostępne w innych skryptach i atrybutach HTML.
-      // Dzięki temu atrybut onchange="onFormulaChange()" na select będzie działał poprawnie, a także
-      // zewnętrzne skrypty mogą używać setVersion i highlightFields.
+      // Eksportuj kluczowe funkcje na obiekt window, aby były dostępne w innych skryptach.
+      // Właściwy listener zmiany formuły jest podłączany w ujednoliconym module poniżej,
+      // a zewnętrzne skrypty mogą używać setVersion i highlightFields.
       window.onFormulaChange = onFormulaChange;
       window.setVersion      = typeof setVersion      !== 'undefined' ? setVersion      : window.setVersion;
       window.highlightFields = typeof highlightFields !== 'undefined' ? highlightFields : window.highlightFields;
+      window.clearFormulaMustFill = typeof clearMust !== 'undefined' ? clearMust : window.clearFormulaMustFill;
+      window.showFormulaNote = typeof showNote !== 'undefined' ? showNote : window.showFormulaNote;
+      window.renderFormulaOptions = typeof renderFormulaOptions !== 'undefined' ? renderFormulaOptions : window.renderFormulaOptions;
       window.resetApp        = typeof resetApp        !== 'undefined' ? resetApp        : window.resetApp;
       window.FORMULAS        = typeof FORMULAS        !== 'undefined' ? FORMULAS        : window.FORMULAS;
+      window.ALL_FORMS_SORTED = typeof ALL_FORMS_SORTED !== 'undefined' ? ALL_FORMS_SORTED : window.ALL_FORMS_SORTED;
       // Upewnij się, że applyVersion jest dostępna globalnie dla obsługi zmiany wersji w onFormulaChange.
       window.applyVersion    = typeof applyVersion    !== 'undefined' ? applyVersion    : window.applyVersion;
     })();
     </script>
-    <!-- Custom override for formula change behaviour.
-         The default onFormulaChange defined earlier did not reliably switch
-         calculator versions when a new formula was selected.  To ensure
-         the correct calculator version is always activated, we define a
-         new handler here that performs the necessary reset, version switch,
-         highlighting and note display logic.  This handler consults the
-         same “Obliczenia dla tego samego pacjenta” toggle to decide
-         whether to reset form fields and preserves the patient data as
-         intended.  Finally, it replaces the global onFormulaChange
-         reference so that both the inline onchange attribute and any
-         attached listeners invoke this updated logic. -->
+    <!-- Ujednolicona obsługa wyboru formuły w kalkulatorze klirensu/eGFR. -->
     <script>
     (function(){
-      /**
-       * Handle changes to the formula selector.  Determines the target
-       * calculator version from the chosen formula, resets the form
-       * appropriately and ensures that the matching version button is
-       * selected.  Required fields are highlighted and any formula note
-       * is displayed.  KT/V formulas receive special handling to
-       * automatically enable the advanced toggle.
-       */
-      function handleFormulaChange(){
-        // Indicate that a reset is in progress to suppress aggregation
-        window.clcrIsResetting = true;
+      let formulaChangeToken = 0;
+      let formulaChangeTimers = [];
 
-        // Determine whether to preserve patient parameters when switching
-        const sameModeToggle = document.getElementById('samePatientMode');
-        const skipReset = !!(sameModeToggle && sameModeToggle.checked);
-        // Perform a soft reset of the form unless same‑patient mode is active
-        if (!skipReset && typeof window.resetApp === 'function') {
-          try {
-            window.resetApp(true);
-          } catch (_) {}
-        }
+      function getFormulaById(id){
+        const formulas = Array.isArray(window.FORMULAS) ? window.FORMULAS : [];
+        return formulas.find(item => item && item.id === id) || null;
+      }
 
-        const sel = document.getElementById('formulaPicker');
-        // Find the selected formula definition from the FORMULAS list
-        const formulas = window.FORMULAS || [];
-        const formula = sel ? formulas.find(item => item.id === sel.value) : null;
-        // Always clear any existing note and remove previous required-field highlights
+      function clearFormulaUI(){
         try {
+          if (typeof window.clearFormulaMustFill === 'function') {
+            window.clearFormulaMustFill();
+          } else {
+            document.querySelectorAll('.must-fill').forEach(el => el.classList.remove('must-fill'));
+          }
+        } catch (_) {}
+        try {
+          if (typeof window.showFormulaNote === 'function') {
+            window.showFormulaNote('');
+          } else {
+            const noteEl = document.getElementById('formulaNote');
+            if (noteEl) {
+              noteEl.style.display = 'none';
+              noteEl.textContent = '';
+            }
+          }
+        } catch (_) {}
+      }
+
+      function showFormulaNote(text){
+        try {
+          if (typeof window.showFormulaNote === 'function') {
+            window.showFormulaNote(text || '');
+            return;
+          }
           const noteEl = document.getElementById('formulaNote');
-          if (noteEl) {
+          if (!noteEl) return;
+          if (text) {
+            noteEl.style.display = '';
+            noteEl.textContent = text;
+          } else {
             noteEl.style.display = 'none';
             noteEl.textContent = '';
           }
         } catch (_) {}
-        // Remove .must-fill from all inputs/selects globally
+      }
+
+      function safeUpdate(){
         try {
-          document.querySelectorAll('.must-fill').forEach(el => el.classList.remove('must-fill'));
+          if (typeof window.update === 'function') window.update();
         } catch (_) {}
-        // If no formula is selected (placeholder), exit early
+      }
+
+      function cancelPendingFormulaHighlights(){
+        formulaChangeToken += 1;
+        formulaChangeTimers.forEach(timerId => clearTimeout(timerId));
+        formulaChangeTimers = [];
+      }
+
+      function applyTargetVersion(formula){
+        if (!formula) return false;
+        const targetVersion = formula.id === 'KTV' ? 'pro' : (formula.version || 'basic');
+        let applied = false;
+
+        try {
+          if (typeof window.applyVersion === 'function') {
+            window.applyVersion(targetVersion);
+            applied = true;
+          }
+        } catch (_) {
+          applied = false;
+        }
+
+        if (!applied) {
+          try {
+            if (typeof window.setVersion === 'function') {
+              window.setVersion(targetVersion);
+              applied = true;
+            }
+          } catch (_) {
+            applied = false;
+          }
+        }
+
+        if (!applied) {
+          const btn = document.querySelector(`.version-option[data-version="${targetVersion}"]`);
+          if (btn && !btn.classList.contains('selected')) {
+            try {
+              btn.click();
+              applied = true;
+            } catch (_) {}
+          }
+        }
+
+        if (formula.id === 'KTV') {
+          const advToggle = document.getElementById('ktvToggle');
+          const ktvFields = document.getElementById('ktvFields');
+          if (advToggle && !advToggle.checked) {
+            advToggle.checked = true;
+            try { advToggle.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+          }
+          if (ktvFields) ktvFields.style.display = 'block';
+        }
+
+        return applied;
+      }
+
+      function runFormulaHighlight(formula, doScroll){
+        if (!formula) return;
+        try {
+          if (typeof window.highlightFields === 'function') {
+            window.highlightFields(formula, !!doScroll);
+          }
+          showFormulaNote(formula.note || '');
+        } catch (_) {}
+      }
+
+      function scheduleStableHighlight(formula){
+        if (!formula) return;
+
+        formulaChangeToken += 1;
+        const token = formulaChangeToken;
+        formulaChangeTimers.forEach(timerId => clearTimeout(timerId));
+        formulaChangeTimers = [];
+
+        const guardedRun = (doScroll) => {
+          if (token !== formulaChangeToken) return;
+          runFormulaHighlight(formula, !!doScroll);
+        };
+
+        try {
+          if (typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(() => guardedRun(true));
+          } else {
+            formulaChangeTimers.push(setTimeout(() => guardedRun(true), 0));
+          }
+        } catch (_) {
+          formulaChangeTimers.push(setTimeout(() => guardedRun(true), 0));
+        }
+
+        // Drugi i trzeci przebieg są celowe: applyVersion(), resetApp() i część
+        // listenerów historycznych potrafią jeszcze asynchronicznie przeliczyć UI.
+        // Podświetlenie zostaje więc nakładane po ostatniej zmianie układu.
+        formulaChangeTimers.push(setTimeout(() => guardedRun(false), 80));
+        formulaChangeTimers.push(setTimeout(() => guardedRun(false), 180));
+        formulaChangeTimers.push(setTimeout(() => {
+          if (token !== formulaChangeToken) return;
+          window.clcrIsResetting = false;
+          guardedRun(false);
+        }, 260));
+      }
+
+      function handleFormulaChange(){
+        cancelPendingFormulaHighlights();
+
+        const sel = document.getElementById('formulaPicker');
+        const formula = sel ? getFormulaById(sel.value) : null;
+
+        window.clcrIsResetting = true;
+
+        const sameModeToggle = document.getElementById('samePatientMode');
+        const keepAllEnteredValues = !!(sameModeToggle && sameModeToggle.checked);
+
+        if (!keepAllEnteredValues && typeof window.resetApp === 'function') {
+          try { window.resetApp(true); } catch (_) {}
+        }
+
+        clearFormulaUI();
+
         if (!formula) {
           window.clcrIsResetting = false;
           return;
         }
-        // Special handling for KT/V formulas: always use professional version and
-        // activate the advanced KT/V fields toggle
-        if (formula.id === 'KTV') {
-          // Activate professional version
-          try {
-            if (typeof window.applyVersion === 'function') {
-              window.applyVersion('pro');
-            } else if (typeof window.setVersion === 'function') {
-              window.setVersion('pro');
-            }
-          } catch (_) {}
-          // Ensure the KT/V fields toggle is checked
-          const advToggle = document.getElementById('ktvToggle');
-          if (advToggle && !advToggle.checked) advToggle.checked = true;
-          // After the layout updates, highlight fields and display the note
-          setTimeout(() => {
-            try {
-              if (typeof window.highlightFields === 'function') {
-                window.highlightFields(formula, true);
-              }
-              if (formula.note) {
-                const noteEl = document.getElementById('formulaNote');
-                if (noteEl) {
-                  noteEl.style.display = '';
-                  noteEl.textContent = formula.note;
-                }
-              }
-              if (typeof window.update === 'function') {
-                window.update();
-              }
-            } catch (_) {}
-            window.clcrIsResetting = false;
-          }, 0);
-          return;
-        }
-        // General case: select the appropriate calculator version for the chosen formula
-        const targetVersion = formula.version;
-        setTimeout(() => {
-          // Attempt to use applyVersion first; fall back to setVersion or button click
-          let applied = false;
-          try {
-            if (typeof window.applyVersion === 'function') {
-              window.applyVersion(targetVersion);
-              applied = true;
-            }
-          } catch (_) {}
-          if (!applied) {
-            try {
-              if (typeof window.setVersion === 'function') {
-                window.setVersion(targetVersion);
-                applied = true;
-              }
-            } catch (_) {}
-          }
-          if (!applied) {
-            // Last resort: click the version button if it isn’t already selected
-            const btn = document.querySelector(`.version-option[data-version="${targetVersion}"]`);
-            if (btn && !btn.classList.contains('selected')) {
-              try { btn.click(); applied = true; } catch (_) {}
-            }
-          }
-          // Highlight all required fields for the selected formula
-          try {
-            if (typeof window.highlightFields === 'function') {
-              window.highlightFields(formula, true);
-            }
-            // Show formula note if provided
-            if (formula.note) {
-              const noteEl = document.getElementById('formulaNote');
-              if (noteEl) {
-                noteEl.style.display = '';
-                noteEl.textContent = formula.note;
-              }
-            }
-            // Trigger recalculation of results
-            if (typeof window.update === 'function') {
-              window.update();
-            }
-          } catch (_) {}
-          window.clcrIsResetting = false;
-        }, 0);
-      }
-      // Replace the previous global onFormulaChange with this improved handler
-      window.onFormulaChange = handleFormulaChange;
 
-      // Additionally attach capturing listener on the formula selector to suppress the old handler.
-      // The earlier script attaches an onChange listener for the outdated onFormulaChange function
-      // during the bubbling phase. We add a capturing listener that invokes the new handler
-      // and stops propagation so that obsolete handlers do not run and undo the version change.
-      try {
-        const fp = document.getElementById('formulaPicker');
-        if (fp) {
-          fp.addEventListener('change', function(evt){
-            try { handleFormulaChange(); } catch (_) {}
-            evt.stopImmediatePropagation();
-          }, true);
+        applyTargetVersion(formula);
+        safeUpdate();
+        scheduleStableHighlight(formula);
+      }
+
+      function selectClcrFormula(id){
+        const sel = document.getElementById('formulaPicker');
+        if (!sel || !id) return false;
+        if (typeof window.renderFormulaOptions === 'function') {
+          try { window.renderFormulaOptions(''); } catch (_) {}
         }
-      } catch (_) {}
+        sel.value = id;
+        handleFormulaChange();
+        return true;
+      }
+
+      function registerFormulaHandler(){
+        const sel = document.getElementById('formulaPicker');
+        if (!sel || sel.dataset.unifiedFormulaHandler === '1') return;
+        sel.dataset.unifiedFormulaHandler = '1';
+        sel.addEventListener('change', handleFormulaChange, false);
+      }
+
+      window.onFormulaChange = handleFormulaChange;
+      window.selectClcrFormula = selectClcrFormula;
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', registerFormulaHandler);
+      } else {
+        registerFormulaHandler();
+      }
     })();
     </script>
 <!-- Sekcja interpretacji AI z opisem i przyciskiem.  Umieszczamy ją w kontenerze
@@ -4804,16 +4863,17 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!item) return;
     const id = item.getAttribute('data-id');
     if (!id) return;
-    // ustaw nową wartość w głównym selektorze
-    const selectEl = document.getElementById('formulaPicker');
-    if (selectEl) selectEl.value = id;
     // zresetuj pole wyszukiwania
     const searchInput = document.getElementById('formulaSearch');
     if (searchInput) searchInput.value = '';
-    // przywróć pełną listę kategorii (bez filtra)
-    if (typeof renderFormulaOptions === 'function') {
-      renderFormulaOptions('');
+    // przywróć pełną listę kategorii (bez filtra), a dopiero potem ustaw wybraną wartość;
+    // w przeciwnym razie odbudowanie <select> może skasować bieżący wybór.
+    if (typeof window.renderFormulaOptions === 'function') {
+      window.renderFormulaOptions('');
     }
+    // ustaw nową wartość w głównym selektorze
+    const selectEl = document.getElementById('formulaPicker');
+    if (selectEl) selectEl.value = id;
     // ukryj dynamiczną listę
     liveList.style.display = 'none';
     liveList.innerHTML = '';
@@ -5570,7 +5630,7 @@ document.addEventListener('DOMContentLoaded', () => {
   })();
 </script>
 <script src="app.js" defer></script>
-<script src="custom-fixes.js" defer></script>
+<script src="custom-fixes.js?v=4" defer></script>
 <!-- Skrypt obsługujący tryb agregowania wyników dla tego samego pacjenta.  -->
 <script defer>
 document.addEventListener('DOMContentLoaded', () => {

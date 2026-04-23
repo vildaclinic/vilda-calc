@@ -42,7 +42,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
 <!-- Zmieniamy nazwę pliku stylów na style_PWZ.css -->
 <link href="ios26-v2.css?v=10" rel="stylesheet">
-<link href="style.css?v=10" rel="stylesheet">
+<link href="style.css?v=38" rel="stylesheet">
 <link href="sidebar.css" rel="stylesheet">
 
 <script>
@@ -668,14 +668,26 @@
     <div id="centileCanvasContainer" style="display:none;"></div>
   </div>
 
-      <div id="nutritionNormsCard" class="card nutrition-norms-card" style="display:none;">
-        <h2 style="text-align:center;">Normy żywieniowe: białko, tłuszcz, węglowodany</h2>
-        <div id="nutritionNormsMount"></div>
+      <div id="nutritionNormsSection" style="display:none;">
+        <button type="button" id="toggleNutritionNormsCard" aria-controls="nutritionNormsCard" aria-expanded="false"
+          style="background-color:#00838d;color:white;padding:0.6rem 1.2rem;border:none;border-radius:4px;font-size:1rem;font-weight:600;cursor:pointer;display:block;margin:0 auto;">
+          Normy żywieniowe: białko, tłuszcz, węglowodany
+        </button>
+        <div id="nutritionNormsCard" class="card nutrition-norms-card" style="display:none;margin-top:1rem;">
+          <h2 style="text-align:center;">Normy żywieniowe: białko, tłuszcz, węglowodany</h2>
+          <div id="nutritionNormsMount"></div>
+        </div>
       </div>
 
-      <div id="nutritionMicrosCard" class="card nutrition-micros-card" style="display:none;">
-        <h2 style="text-align:center;">Normy żywieniowe: witaminy i składniki mineralne</h2>
-        <div id="nutritionMicrosMount"></div>
+      <div id="nutritionMicrosSection" style="display:none;">
+        <button type="button" id="toggleNutritionMicrosCard"
+          style="background-color:#00838d;color:white;padding:0.6rem 1.2rem;border:none;border-radius:4px;font-size:1rem;font-weight:600;cursor:pointer;display:block;margin:0 auto;">
+          Normy żywieniowe: witaminy i składniki mineralne
+        </button>
+        <div id="nutritionMicrosCard" class="card nutrition-micros-card" style="display:none;margin-top:1rem;">
+          <h2 style="text-align:center;">Normy żywieniowe: witaminy i składniki mineralne</h2>
+          <div id="nutritionMicrosMount"></div>
+        </div>
       </div>
 
       <div id="adultVitalsCard" class="card" style="display:none;">
@@ -786,25 +798,33 @@
         <div id="bpResult" class="result-box" style="margin-top:.6rem;"></div>
       </div>
 
-      <!-- Karta: Kalorie posiłków i czas spalania. Łączy wybór przekąsek/dani oraz podsumowanie kalorii i spalania. -->
-      <div id="foodCard" class="card">
-        <h2 style="text-align:center;">Kalorie posiłków i czas spalania</h2>
-        <!-- Sekcja wyboru pozycji do jedzenia.  Użytkownik może dodać dowolną liczbę pozycji. -->
-        <div id="foodRowsSection">
-          <div id="foodList"></div>
-          <button type="button" class="add-row" id="addFoodRowBtn" onclick="addFoodRow()">+ dodaj pozycję</button>
-        </div>
-        <!-- Sekcja podsumowania kalorii.  Wyświetla łączną kaloryczność oraz listę pozycji. -->
-        <div id="foodTotalSection" style="display:none;text-align:center;">
-          <h2>Łączna kaloryczność <span class="subhead">(tego co wybrałeś powyżej)</span></h2>
-          <div id="foodTotalKcal" style="font-size:1.2rem;text-align:center;margin-top:4px;"></div>
-          <div id="foodTotalList"></div>
-        </div>
-        <!-- Sekcja spalania kalorii.  Wyświetla czasy spalania dla różnych aktywności. -->
-        <div id="foodTimesSection" style="display:none;text-align:center;">
-          <h2 style="text-align:center;">Spalanie kalorii<span class="subhead">(czyli ile czasu zajmie mi<br>spalenie tego, co wybrałam/em)</span></h2>
-          <div id="foodTimes"></div>
-          <small>*Obliczenia oparte na wartościach MET – wyniki orientacyjne.</small>
+      <!-- Karta: Kalorie posiłków i czas spalania.
+           Tak jak moduły norm żywieniowych, karta jest domyślnie schowana
+           i rozwija się po kliknięciu przycisku. -->
+      <div id="foodSection" style="margin-top:0;">
+        <button type="button" id="toggleFoodCard" aria-controls="foodCard" aria-expanded="false"
+          style="background-color:#00838d;color:white;padding:0.6rem 1.2rem;border:none;border-radius:4px;font-size:1rem;font-weight:600;cursor:pointer;display:block;margin:0 auto;">
+          Kalorie posiłków i czas spalania
+        </button>
+        <div id="foodCard" class="card" style="display:none;margin-top:1rem;">
+          <h2 style="text-align:center;">Kalorie posiłków i czas spalania</h2>
+          <!-- Sekcja wyboru pozycji do jedzenia.  Użytkownik może dodać dowolną liczbę pozycji. -->
+          <div id="foodRowsSection">
+            <div id="foodList"></div>
+            <button type="button" class="add-row" id="addFoodRowBtn" onclick="addFoodRow()">+ dodaj pozycję</button>
+          </div>
+          <!-- Sekcja podsumowania kalorii.  Wyświetla łączną kaloryczność oraz listę pozycji. -->
+          <div id="foodTotalSection" style="display:none;text-align:center;">
+            <h2>Łączna kaloryczność <span class="subhead">(tego co wybrałeś powyżej)</span></h2>
+            <div id="foodTotalKcal" style="font-size:1.2rem;text-align:center;margin-top:4px;"></div>
+            <div id="foodTotalList"></div>
+          </div>
+          <!-- Sekcja spalania kalorii.  Wyświetla czasy spalania dla różnych aktywności. -->
+          <div id="foodTimesSection" style="display:none;text-align:center;">
+            <h2 style="text-align:center;">Spalanie kalorii<span class="subhead">(czyli ile czasu zajmie mi<br>spalenie tego, co wybrałam/em)</span></h2>
+            <div id="foodTimes"></div>
+            <small>*Obliczenia oparte na wartościach MET – wyniki orientacyjne.</small>
+          </div>
         </div>
       </div>
 
@@ -813,9 +833,9 @@
            Umieszczamy ją w lewej kolumnie bezpośrednio pod kartą ciśnienia tętniczego,
            ale przed sekcją obliczeń dla dzieci z zespołem Downa.  
            Całość jest ukryta w kartcie, która rozwija się po kliknięciu przycisku. -->
-      <div id="circSection" style="margin-top:1rem;">
+      <div id="circSection" style="margin-top:0;">
         <button type="button" id="toggleCircSection"
-          style="background-color:#00838d;color:white;padding:0.6rem 1.2rem;border:none;border-radius:4px;font-size:1rem;font-weight:600;cursor:pointer;display:block;margin:0.6rem auto;">
+          style="background-color:#00838d;color:white;padding:0.6rem 1.2rem;border:none;border-radius:4px;font-size:1rem;font-weight:600;cursor:pointer;display:block;margin:0 auto;">
           Obwód głowy i klatki piersiowej
         </button>
         <div id="circCard" class="card" style="display:none;margin-top:1rem;">
@@ -857,7 +877,7 @@
       </div>
 
       <div id="downSyndromeSection" style="display:none;">
-        <button type="button" id="toggleDownSyndrome" style="background-color:#00838d;color:white;padding:0.6rem 1.2rem;border:none;border-radius:4px;font-size:1rem;font-weight:600;cursor:pointer;display:block;margin:0.6rem auto;">
+        <button type="button" id="toggleDownSyndrome" style="background-color:#00838d;color:white;padding:0.6rem 1.2rem;border:none;border-radius:4px;font-size:1rem;font-weight:600;cursor:pointer;display:block;margin:0 auto;">
           Obliczenia dla dzieci z zespołem Downa
         </button>
         <div id="downSyndromeCard" class="card" style="display:none; margin-top:1rem;">
@@ -952,94 +972,133 @@
            Zawiera opcje wyboru strategii (redukcja vs stabilizacja), przycisk generowania
            oraz miejsce na wynik.  Współczynnik font-size jest zmniejszony, aby treść była
            lżejsza w odbiorze i zgodna z kartą wyników. -->
-      <div id="dietRecommendationsContent" class="result-box" style="display:none;margin-top:0.6rem;text-align:left;font-size:0.875rem;">
-        <!-- Opcje wyboru strategii diety i dodatkowych rekomendacji w formie przełączników -->
-        <div id="dietStrategyOptions">
-          <!-- Informacja dla użytkownika o konieczności ustawienia aktywności i diety w karcie Plan odchudzania -->
-          <div class="diet-info-note" id="dietInfoNote">
-            W karcie <strong>Plan odchudzania</strong> wybierz poziom aktywności i rodzaj diety albo pozostaw ustawienia rekomendowane.
+      <div id="dietRecommendationsContent" class="result-box diet-card-modern" style="display:none;margin-top:0.6rem;text-align:left;font-size:0.875rem;">
+        <header class="diet-card-intro">
+          <h3>Zalecenia dietetyczne</h3>
+          <p>Wybierz, co chcesz przygotować dla pacjenta: krótki plan zmiany nawyków, zalecenia energetyczne albo raport PDF po wizycie.</p>
+        </header>
+
+        <div class="diet-mode-switch" role="tablist" aria-label="Typ zaleceń dietetycznych">
+          <button type="button" class="diet-mode-tab is-active" data-diet-mode="smart" role="tab" aria-selected="true" aria-controls="dietSmartPanel">
+            <strong>Plan SMART i nawyki</strong>
+            <span>2–3 małe kroki na 14 dni</span>
+          </button>
+          <button type="button" class="diet-mode-tab" data-diet-mode="energy" role="tab" aria-selected="false" aria-controls="dietEnergyPanel">
+            <strong>Zalecenia energetyczne</strong>
+            <span>energia, masa, deficyt, aktywność</span>
+          </button>
+          <button type="button" class="diet-mode-tab" data-diet-mode="pdf" role="tab" aria-selected="false" aria-controls="dietPdfPanel">
+            <strong>Raport PDF</strong>
+            <span>dokument po wizycie</span>
+          </button>
+        </div>
+
+        <section id="dietSmartPanel" class="diet-mode-panel is-active" data-diet-panel="smart" role="tabpanel">
+          <div class="diet-panel-lead">
+            <h4>Plan SMART i nawyki</h4>
+            <p>Ten wariant pomaga wybrać maksymalnie 2–3 realistyczne cele na najbliższe 14 dni. Najlepiej sprawdza się, gdy chcesz omówić z pacjentem konkretne zachowania, a nie tylko kalorie.</p>
           </div>
-          <!-- Dwukolumnowy układ przełączników: po cztery opcje w każdej kolumnie -->
-          <div class="diet-toggle-columns">
-            <div class="col-left">
+          <button type="button" id="generateDietBtn" class="diet-primary-action diet-primary-action--smart">
+            Generuj plan SMART
+          </button>
+          <div id="dietRecommendationsResult" class="diet-mode-result" style="margin-top:0.6rem;"></div>
+          <div class="diet-result-actions" data-diet-smart-actions hidden>
+            <button type="button" class="diet-secondary-action" data-diet-copy-result="smart">Kopiuj plan SMART</button>
+            <button type="button" class="diet-secondary-action" data-diet-report-direct="personalized">Wygeneruj PDF z planem SMART</button>
+          </div>
+        </section>
+
+        <section id="dietEnergyPanel" class="diet-mode-panel" data-diet-panel="energy" role="tabpanel" hidden>
+          <div class="diet-panel-lead">
+            <h4>Zalecenia energetyczne</h4>
+            <p>Ten wariant wykorzystuje dane pacjenta, BMI lub centyle, masę ciała, poziom aktywności oraz wybraną strategię redukcji lub stabilizacji masy.</p>
+          </div>
+          <div id="dietStrategyOptions" class="diet-energy-options-panel">
+            <div class="diet-info-note" id="dietInfoNote">
+              W karcie <strong>Plan odchudzania</strong> wybierz deklarowany poziom aktywności i rodzaj diety albo pozostaw ustawienia rekomendowane.
+            </div>
+
+            <div class="diet-energy-controls-grid">
+              <div class="diet-energy-control-card">
+                <span class="diet-control-title">Strategia</span>
+                <div class="diet-segmented-control" data-diet-strategy-proxy>
+                  <button type="button" data-diet-strategy-choice="reduction" class="is-active">Redukcja masy</button>
+                  <button type="button" data-diet-strategy-choice="stabilization">Utrzymanie / stabilizacja</button>
+                </div>
+                <p class="diet-control-hint">U dzieci stabilizacja masy może być właściwa tylko w wybranych sytuacjach klinicznych.</p>
+                <span id="stabilizationInfoIcon" class="info-icon diet-stabilization-info" style="display:none;cursor:pointer;">ℹ</span>
+              </div>
+
+              <div class="diet-energy-control-card">
+                <span class="diet-control-title">Język zaleceń</span>
+                <div class="diet-segmented-control" data-diet-audience-proxy>
+                  <button type="button" data-diet-audience-choice="patient" class="is-active">Dla pacjenta</button>
+                  <button type="button" data-diet-audience-choice="specialist">Dla specjalisty</button>
+                </div>
+                <p class="diet-control-hint">Tryb pacjenta używa prostszego, bardziej gotowego do przekazania języka.</p>
+              </div>
+            </div>
+
+            <div class="diet-legacy-hidden-controls" aria-hidden="true">
               <div class="diet-toggle-group">
                 <span class="toggle-label" id="reduceToggleLabel">Redukcja masy</span>
-                <label class="switch-diet">
-                  <input type="checkbox" id="reduceToggle">
-                  <span class="slider"></span>
-                </label>
+                <label class="switch-diet"><input type="checkbox" id="reduceToggle"><span class="slider"></span></label>
               </div>
               <div class="diet-toggle-group" id="stabilizationGroup">
                 <span class="toggle-label" id="stabilizationToggleLabel">Utrzymanie masy</span>
-                <!-- Kontener obejmujący suwak i ikonę informacyjną.  Dzięki klasie stabilization-control elementy
-                     są rozmieszczone poziomo i wyrównane do środka.  Etykieta pozostaje ponad nimi. -->
-                <div class="stabilization-control">
-                  <!-- Przełącznik stabilizacji masy ciała -->
-                  <label class="switch-diet">
-                    <input type="checkbox" id="stabilizationToggle">
-                    <span class="slider"></span>
-                  </label>
-                  <!-- Ikona informacyjna dotycząca stabilizacji.  Domyślnie ukryta; pojawia się, gdy strategia stabilizacji jest
-                       niedostępna (dziecko nie zdąży wyrosnąć z nadwagi/otyłości).  Wygląd definiowany jest w pliku CSS. -->
-                  <span id="stabilizationInfoIcon" class="info-icon" style="display:none;cursor:pointer;">
-                    ℹ
-                  </span>
-                </div>
+                <label class="switch-diet"><input type="checkbox" id="stabilizationToggle"><span class="slider"></span></label>
               </div>
-              <div class="diet-toggle-group">
-                <span class="toggle-label" id="growthEndedLabel">Wzrost zakończony</span>
-                <label class="switch-diet">
-                  <input type="checkbox" id="growthEndedFlag">
-                  <span class="slider"></span>
-                </label>
-              </div>
-              <div class="diet-toggle-group">
-                <span class="toggle-label" id="nutritionNormsToggleLabel">Normy żywieniowe</span>
-                <label class="switch-diet">
-                  <input type="checkbox" id="nutritionNormsFlag">
-                  <span class="slider"></span>
-                </label>
-              </div>
-            </div>
-            <div class="col-right">
               <div class="diet-toggle-group">
                 <span class="toggle-label" id="patientFacingToggleLabel">Dla pacjenta</span>
-                <label class="switch-diet">
-                  <input type="checkbox" id="patientFacingToggle">
-                  <span class="slider"></span>
-                </label>
-              </div>
-              <div class="diet-toggle-group">
-                <span class="toggle-label" id="vitDSuppLabel">Wit. D</span>
-                <label class="switch-diet">
-                  <input type="checkbox" id="vitDSuppFlag">
-                  <span class="slider"></span>
-                </label>
-              </div>
-              <div class="diet-toggle-group">
-                <span class="toggle-label" id="hydrationLabel">Picie płynów</span>
-                <label class="switch-diet">
-                  <input type="checkbox" id="hydrationFlag">
-                  <span class="slider"></span>
-                </label>
-              </div>
-              <!-- Nowa opcja: przykłady z czasem dojścia do prawidłowej masy ciała -->
-              <div class="diet-toggle-group">
-                <span class="toggle-label" id="journeyLabel">Czas do normy masy</span>
-                <label class="switch-diet">
-                  <input type="checkbox" id="journeyFlag">
-                  <span class="slider"></span>
-                </label>
+                <label class="switch-diet"><input type="checkbox" id="patientFacingToggle"><span class="slider"></span></label>
               </div>
             </div>
+
+            <details class="diet-energy-extra-options">
+              <summary>Pokaż opcje dodatkowe</summary>
+              <div class="diet-extra-grid">
+                <label class="diet-toggle-group diet-option-check"><input type="checkbox" id="growthEndedFlag"><span id="growthEndedLabel">Wzrost zakończony</span></label>
+                <label class="diet-toggle-group diet-option-check"><input type="checkbox" id="nutritionNormsFlag"><span id="nutritionNormsToggleLabel">Normy żywieniowe</span></label>
+                <label class="diet-toggle-group diet-option-check"><input type="checkbox" id="vitDSuppFlag"><span id="vitDSuppLabel">Wit. D</span></label>
+                <label class="diet-toggle-group diet-option-check"><input type="checkbox" id="hydrationFlag"><span id="hydrationLabel">Picie płynów</span></label>
+                <label class="diet-toggle-group diet-option-check"><input type="checkbox" id="journeyFlag"><span id="journeyLabel">Czas do normy masy</span></label>
+              </div>
+            </details>
           </div>
-        </div>
-        <!-- Przycisk generujący zalecenia dietetyczne.  Użytkownik musi wybrać strategię i kliknąć, aby zobaczyć zalecenia i skopiować je do schowka. -->
-        <button type="button" id="generateDietBtn" style="margin-top:0.6rem; display:block; margin-left:auto; margin-right:auto;">
-          Generuj zalecenia dietetyczne
-        </button>
-        <!-- Miejsce na wygenerowane zalecenia dietetyczne.  Jest puste do czasu kliknięcia przycisku generuj. -->
-        <div id="dietRecommendationsResult" style="margin-top:0.6rem;"></div>
+          <button type="button" id="generateEnergyDietBtn" class="diet-primary-action diet-primary-action--energy">
+            Generuj zalecenia energetyczne
+          </button>
+          <div id="dietEnergyResult" class="diet-mode-result" style="margin-top:0.6rem;"></div>
+          <div class="diet-result-actions" data-diet-energy-actions hidden>
+            <button type="button" class="diet-secondary-action" data-diet-copy-result="energy">Kopiuj zalecenia energetyczne</button>
+            <button type="button" class="diet-secondary-action" data-diet-report-direct="classic">Wygeneruj raport energetyczny PDF</button>
+          </div>
+        </section>
+
+        <section id="dietPdfPanel" class="diet-mode-panel" data-diet-panel="pdf" role="tabpanel" hidden>
+          <div class="diet-panel-lead">
+            <h4>Raport PDF dla pacjenta</h4>
+            <p>Wybierz dokument do wydruku lub wysłania po wizycie. Najczęściej rekomendowany jest pełny raport, który łączy obliczenia energetyczne z praktycznym planem zmiany nawyków.</p>
+          </div>
+          <div class="diet-pdf-variant-grid">
+            <article class="diet-pdf-variant-card diet-pdf-variant-card--recommended">
+              <span class="diet-recommended-badge">Rekomendowany</span>
+              <h4>Pełny raport zaleceń</h4>
+              <p>Łączy obliczenia energetyczne, cel masy ciała, 2–3 cele SMART, model talerza, praktyczne zamiany, mit kontra fakt i zasadę 80/20.</p>
+              <button type="button" class="diet-primary-action" data-diet-report-direct="full">Generuj pełny raport PDF</button>
+            </article>
+            <article class="diet-pdf-variant-card">
+              <h4>Plan SMART i nawyki</h4>
+              <p>Krótki dokument z celami na 14 dni, praktycznymi zamianami i wskazówkami dotyczącymi codziennych zachowań.</p>
+              <button type="button" class="diet-secondary-action" data-diet-report-direct="personalized">Generuj PDF: Plan SMART</button>
+            </article>
+            <article class="diet-pdf-variant-card">
+              <h4>Raport energetyczny i zalecenia podstawowe</h4>
+              <p>Jednostronicowy raport z najważniejszymi obliczeniami, energią, strategią redukcji lub stabilizacji i zaleceniami podstawowymi.</p>
+              <button type="button" class="diet-secondary-action" data-diet-report-direct="classic">Generuj raport energetyczny PDF</button>
+            </article>
+          </div>
+        </section>
       </div>
     </div>
 
@@ -1283,7 +1342,7 @@
   <div id="planInputs" class="plan-steps" style="margin-bottom:1rem;">
     <!-- Krok pierwszy: wybór poziomu aktywności -->
     <div class="plan-step">
-      <h3>Krok 1: Wybierz poziom aktywności&nbsp;(PAL)</h3>
+      <h3>Krok 1: Wybierz deklarowany poziom aktywności&nbsp;(PAL)</h3>
       <select id="palFactor" onchange="debouncedUpdate()">
         <option value="1.2">1.2 – bardzo mała aktywność (tryb kliniczny)</option>
         <option value="1.4" selected>1.4 – mała aktywność</option>
@@ -1365,6 +1424,10 @@
       <li>Moduł tętna i liczby oddechów: Fleming&nbsp;S. i&nbsp;wsp. (2011); Bonafide&nbsp;CP i&nbsp;wsp. (2013); Daymont&nbsp;C. i&nbsp;wsp. (2015); Nijman&nbsp;RG i&nbsp;wsp. (2012); Herbert i&nbsp;wsp. (2020) &mdash; źródła siatek centylowych oraz korekt temperatury i snu/czuwania wykorzystanych w modułach tętna, oddechów i interpretacji RR.</li>
       <li>Moduł obwodu głowy i klatki piersiowej: siatki Instytutu Matki i Dziecka (Palczewska i Niedźwiecka) dla obwodu głowy i klatki piersiowej; dla obwodu głowy u noworodków i dzieci w 1. miesiącu życia — INTERGROWTH-21st z modułu SGA, z odniesieniem do wieku ciążowego.</li>
       <li>Moduł WHR: WHO 2008/2011 cut-offs dla dorosłych oraz polskie siatki talii i bioder OLAF/OLA dla dzieci.</li>
+      <li>Moduły norm żywieniowych: karty „Normy żywieniowe: białko, tłuszcz, węglowodany” oraz „Normy żywieniowe: witaminy i składniki mineralne” zbudowano na podstawie: Rychlik&nbsp;E, Stoś&nbsp;K, Woźniak&nbsp;A, Mojska&nbsp;H, red. <a href="normy-02.01.pdf" target="_blank" rel="noopener noreferrer"><em>Normy żywienia dla populacji Polski</em></a>. Warszawa: Narodowy Instytut Zdrowia Publicznego PZH – Państwowy Instytut Badawczy; 2024. ISBN: 978-83-65870-78-0. Wykorzystano m.in. rozdziały: Białka, Tłuszcze, Węglowodany, Witaminy, Składniki mineralne oraz Górne tolerowane poziomy spożycia witamin i składników mineralnych; w module makroskładników rozróżniono normę białka EAR/RDA w g/d od praktycznych zakresów udziału energii z białka, tłuszczów i węglowodanów służących do układania diety.</li>
+      <li>Blok „Witamina D — profilaktyczna suplementacja” w karcie „Normy żywieniowe: witaminy i składniki mineralne” opracowano na podstawie: Płudowski&nbsp;P, Kos-Kudła&nbsp;B, Walczak&nbsp;M, Fal&nbsp;A, Zozulińska-Ziółkiewicz&nbsp;D, Sieroszewski&nbsp;P, Peregud-Pogorzelski&nbsp;J, Lauterbach&nbsp;R, Targowski&nbsp;T, Lewiński&nbsp;A i&nbsp;wsp. <a href="https://doi.org/10.3390/nu15030695" target="_blank" rel="noopener noreferrer"><em>Guidelines for Preventing and Treating Vitamin D Deficiency: A 2023 Update in Poland</em></a>. <em>Nutrients</em>. 2023;15(3):695. doi:&nbsp;10.3390/nu15030695; Demay&nbsp;MB, Pittas&nbsp;AG, Bikle&nbsp;DD, Diab&nbsp;DL, Kiely&nbsp;ME, Lazaretti-Castro&nbsp;M, Lips&nbsp;P, Mitchell&nbsp;DM, Murad&nbsp;MH, Powers&nbsp;S, Rao&nbsp;SD, Scragg&nbsp;R, Tayek&nbsp;JA, Valent&nbsp;AM, Walsh&nbsp;JME, McCartney&nbsp;CR. <a href="https://doi.org/10.1210/clinem/dgae290" target="_blank" rel="noopener noreferrer"><em>Vitamin D for the Prevention of Disease: An Endocrine Society Clinical Practice Guideline</em></a>. <em>J Clin Endocrinol Metab.</em> 2024;109(8):1907–1947. doi:&nbsp;10.1210/clinem/dgae290; NIH Office of Dietary Supplements. <a href="https://ods.od.nih.gov/factsheets/VitaminD-HealthProfessional/" target="_blank" rel="noopener noreferrer"><em>Vitamin D — Fact Sheet for Health Professionals</em></a>. Wykorzystano m.in. profilaktyczne zakresy dawek, ostrożnościową interpretację suplementacji profilaktycznej oraz przelicznik 1&nbsp;µg = 40&nbsp;IU. Wartości w aplikacji mają charakter informacyjny i nie zastępują leczenia niedoboru witaminy D ustalanego indywidualnie na podstawie stanu klinicznego i/lub stężenia 25(OH)D.</li>
+      <li>Okna „Zobacz przykłady” dla wapnia, żelaza, jodu, cynku i folianów w karcie „Normy żywieniowe: witaminy i składniki mineralne” opracowano na podstawie: Narodowy Instytut Zdrowia Publicznego PZH – Państwowy Instytut Badawczy. <a href="https://www.pzh.gov.pl/uslugi/tabele-wartosci-odzywczej-produktow/baza-danych-wersja-pelna/" target="_blank" rel="noopener noreferrer"><em>Tabele wartości odżywczej produktów spożywczych i potraw — baza danych, wersja pełna</em></a>; NIH Office of Dietary Supplements. <a href="https://ods.od.nih.gov/factsheets/Calcium-HealthProfessional/" target="_blank" rel="noopener noreferrer"><em>Calcium — Fact Sheet for Health Professionals</em></a>, <a href="https://ods.od.nih.gov/factsheets/Iron-HealthProfessional/" target="_blank" rel="noopener noreferrer"><em>Iron — Fact Sheet for Health Professionals</em></a>, <a href="https://ods.od.nih.gov/factsheets/Iodine-HealthProfessional/" target="_blank" rel="noopener noreferrer"><em>Iodine — Fact Sheet for Health Professionals</em></a>, <a href="https://ods.od.nih.gov/factsheets/Zinc-HealthProfessional/" target="_blank" rel="noopener noreferrer"><em>Zinc — Fact Sheet for Health Professionals</em></a>, <a href="https://ods.od.nih.gov/factsheets/Folate-HealthProfessional/" target="_blank" rel="noopener noreferrer"><em>Folate — Fact Sheet for Health Professionals</em></a>; U.S. Department of Agriculture, Agricultural Research Service. <a href="https://fdc.nal.usda.gov/" target="_blank" rel="noopener noreferrer"><em>FoodData Central</em></a>. Wartości porcji są orientacyjne i służą wyłącznie jako przykłady edukacyjne — zawartość składników może różnić się zależnie od produktu, producenta, obróbki i wielkości porcji.</li>
+      <li>Kartę „Kalorie posiłków i czas spalania” oraz okna „Zobacz przykłady” dla białka, tłuszczów i węglowodanów w karcie „Normy żywieniowe: białko, tłuszcz, węglowodany” uporządkowano na podstawie: U.S. Department of Agriculture, Agricultural Research Service. <a href="https://fdc.nal.usda.gov/" target="_blank" rel="noopener noreferrer"><em>FoodData Central</em></a> — w szczególności danych Foundation Foods, SR Legacy oraz Food and Nutrient Database for Dietary Studies (FNDDS). Przykłady produktów i typowych porcji mają charakter edukacyjny; wartości mogą różnić się zależnie od odmiany, producenta, obróbki i wielkości porcji. Dla produktów markowych w ostrzeżeniach wykorzystano orientacyjne wartości z etykiet producentów, a dla dań złożonych — przybliżone wartości dla typowej porcji.</li>
       <li>Moduł SGA urodzeniowego: Niklasson&nbsp;A., Albertsson-Wikland&nbsp;K. Continuous growth reference from 24th week of gestation to 24 months by gender. <em>BMC Pediatr.</em> 2008;8:8. doi:&nbsp;10.1186/1471-2431-8-8; INTERGROWTH-21st: Villar i&nbsp;wsp. <em>Lancet.</em> 2014;384:857-68 oraz 2016;387:844-5; Malewski i&nbsp;wsp. (populacja polska, lata 1986–1994) – tabela masy urodzeniowej wg wieku ciążowego, zaimplementowana na podstawie dostarczonej fotografii tabel; źródło obejmuje wyłącznie masę urodzeniową.</li>
       <li>Moduł HOMA-IR: Kosovski&nbsp;IB i&nbsp;wsp. <em>Evaluation of Fasting Glucose-Insulin-C-Peptide-Derived Metabolic Indices for Identifying Metabolic Syndrome in Young, Healthy Adults.</em> <em>Nutrients.</em> 2024; Biernacka-Bartnik&nbsp;A i&nbsp;wsp. <em>The Cut-Off Value for HOMA-IR Discriminating the Insulin Resistance Based on the SHBG Level in Women with Polycystic Ovary Syndrome.</em> <em>Front Med.</em> 2023; Łupińska&nbsp;A i&nbsp;wsp. <em>Comparison of the Clinical Utility of Two Insulin Resistance Indices: IRI-HOMA and IRI-Belfiore in Diagnosing Insulin Resistance and Metabolic Complications in Children.</em> <em>J Clin Med.</em> 2024; Kondakis&nbsp;K i&nbsp;wsp. <em>Developing a Risk Assessment Tool for Identifying Individuals at High Risk for Developing Insulin Resistance in European Adolescents: The HELENA-IR Score.</em> <em>J Pediatr Endocrinol Metab.</em> 2022.</li>
       <li>Moduł steroidów &mdash; przeliczenia i ekwiwalenty: National Adrenal Diseases Foundation. <em>Corticosteroid comparison chart.</em> 2021; Biggar&nbsp;WD, Skalsky&nbsp;A, McDonald&nbsp;CM. <em>Comparing deflazacort and prednisone in Duchenne muscular dystrophy.</em> <em>J Neuromuscul Dis.</em> 2022;9(4):463-476; Tóth&nbsp;M, Zakár&nbsp;T. <em>Relative binding affinities of testosterone, 19-nortestosterone and their 5α-reduced derivatives to the androgen receptor and to other androgen-binding proteins.</em> <em>J Steroid Biochem.</em> 1982;17(6):653-660; Yarrow&nbsp;JF i&nbsp;wsp. <em>Am J Physiol Endocrinol Metab.</em> 2011;300(4):E650-E660; Patanè&nbsp;FG i&nbsp;wsp. <em>Medicina (Kaunas).</em> 2020;56(11):606; National Heart, Lung, and Blood Institute. <em>Expert Panel Report 3: Guidelines for the Diagnosis and Management of Asthma.</em> 2007.</li>
@@ -1435,9 +1498,9 @@
      dane Bonafide et al. 2013 z korektami temperatury i stanu snu. -->
 <script src="vitalSigns.js"></script>
 <script src="adult_vitals.js" defer></script>
-<script src="app.js?v=22" defer></script>
-<script src="nutrition_norms.js?v=21" defer></script>
-<script src="nutrition_micros.js?v=4" defer></script>
+<script src="app.js?v=63" defer></script>
+<script src="nutrition_norms.js?v=32" defer></script>
+<script src="nutrition_micros.js?v=12" defer></script>
 
 <!-- po app.js -->
 <script src="gh_igf_therapy.js" defer></script>
@@ -1479,8 +1542,8 @@
           advancedGrowthSection: 'advancedGrowthSection',
           toNormCard: 'toNormCard',
           respiratoryCard: 'respiratoryCard',
-          // Karta żywieniowa: „Kalorie posiłków i czas spalania” zastępuje dawne karty łącznej kaloryczności i spalania
-          foodCard: 'foodCard',
+          // Karta żywieniowa: ustawienie foodCard steruje całym modułem (przycisk + ukryta karta).
+          foodCard: 'foodSection',
           intakeCard: 'intakeCard',
           planCard: 'planCard',
           childConsultCard: 'childConsultCard',
@@ -1504,17 +1567,20 @@
             el.classList.remove('hidden-by-settings');
           }
         });
-        // Kontrola widoczności dla karty żywieniowej.
-        // Ustawienie foodCard steruje całą kartą „Kalorie posiłków i czas spalania”, bez oddzielnych sekcji.
+        // Kontrola widoczności dla modułu żywieniowego.
+        // Ustawienie foodCard ukrywa lub pokazuje zarówno przycisk, jak i samą kartę.
+        const foodSectionEl = document.getElementById('foodSection') || document.getElementById('foodCard');
         const foodCardEl = document.getElementById('foodCard');
+        const foodToggleEl = document.getElementById('toggleFoodCard');
         const showFoodCard = settings['foodCard'] !== false;
-        if (foodCardEl) {
+        [foodSectionEl, foodCardEl, foodToggleEl].forEach(function(el) {
+          if (!el) return;
           if (!showFoodCard) {
-            foodCardEl.classList.add('hidden-by-settings');
+            el.classList.add('hidden-by-settings');
           } else {
-            foodCardEl.classList.remove('hidden-by-settings');
+            el.classList.remove('hidden-by-settings');
           }
-        }
+        });
 
         // Szacowane spożycie energii – przycisk i jego opakowanie.  Ukrywamy je
         // całkowicie, jeśli użytkownik wyłączył kartę intakeCard w ustawieniach.
@@ -1566,8 +1632,73 @@
           }
         }
       }
+      function readCardCollapseStates() {
+        try {
+          const raw = window.localStorage && window.localStorage.getItem('cardCollapseState');
+          const parsed = raw ? JSON.parse(raw) : {};
+          return parsed && typeof parsed === 'object' ? parsed : {};
+        } catch (e) {
+          return {};
+        }
+      }
+
+      function isFoodCardOpen() {
+        const states = readCardCollapseStates();
+        return states.foodCard === true;
+      }
+
+      function saveFoodCardOpen(open) {
+        try {
+          if (!window.localStorage) return;
+          const states = readCardCollapseStates();
+          states.foodCard = !!open;
+          window.localStorage.setItem('cardCollapseState', JSON.stringify(states));
+        } catch (e) {
+          /* ciche pominięcie */
+        }
+      }
+
+      function applyFoodCardCollapseState() {
+        const card = document.getElementById('foodCard');
+        const toggle = document.getElementById('toggleFoodCard');
+        const isOpen = isFoodCardOpen();
+        if (card) card.style.display = isOpen ? 'block' : 'none';
+        if (toggle) {
+          toggle.setAttribute('aria-controls', 'foodCard');
+          toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        }
+      }
+
+      function bindFoodCardToggle() {
+        const toggle = document.getElementById('toggleFoodCard');
+        if (!toggle || toggle.dataset.foodToggleBound === '1') return;
+        toggle.setAttribute('aria-controls', 'foodCard');
+        toggle.setAttribute('aria-expanded', isFoodCardOpen() ? 'true' : 'false');
+        toggle.addEventListener('click', function() {
+          const card = document.getElementById('foodCard');
+          let currentlyOpen = isFoodCardOpen();
+          try {
+            if (card && typeof window.getComputedStyle === 'function') {
+              currentlyOpen = window.getComputedStyle(card).display !== 'none';
+            }
+          } catch (e) {
+            /* pozostaw stan zapisany */
+          }
+          saveFoodCardOpen(!currentlyOpen);
+          applyFoodCardCollapseState();
+        });
+        toggle.dataset.foodToggleBound = '1';
+      }
+
+      window.applyFoodCardCollapseState = applyFoodCardCollapseState;
+      window.bindFoodCardToggle = bindFoodCardToggle;
+
       // Uruchom po załadowaniu DOM
-      document.addEventListener('DOMContentLoaded', applyCardVisibilitySettings);
+      document.addEventListener('DOMContentLoaded', function() {
+        bindFoodCardToggle();
+        applyFoodCardCollapseState();
+        applyCardVisibilitySettings();
+      });
     </script>
 
 
@@ -5621,13 +5752,13 @@ async function generateCentileChart() {
        przełączaniu trybu wyników na wąskich ekranach.
        Plik custom-fixes.js implementuje te funkcje poprzez
        obserwację DOM i modyfikację scrollIntoView. -->
-  <script src="custom-fixes.js" defer></script>
+  <script src="custom-fixes.js?v=5" defer></script>
 
   <!-- Dynamic repositioning of Cole and Advanced Growth cards on mobile/desktop
        views.  This script adjusts the DOM order of these elements only in
        the single‑column layout.  It is loaded after all other scripts to
        ensure that the elements exist in the DOM before repositioning. -->
-  <script src="reposition.js" defer></script>
+  <script src="reposition.js?v=4" defer></script>
 
   <!-- Debug output for currentSummaryCard status (temporary) -->
   <!-- Usunięto paski debugowe -->

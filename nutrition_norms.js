@@ -163,20 +163,41 @@
 
   const NUTRITION_PRACTICE_AGE_RULES = {
     protein_chicken_breast: { minYears: 4 },
-    protein_skyr_natural: { minYears: 1 },
+    protein_turkey_breast: { minYears: 4 },
+    protein_tuna_water: { minYears: 6 },
+    protein_salmon_cooked: { minYears: 4 },
+    protein_cod_baked: { minYears: 4 },
+    protein_greek_yogurt_nonfat: { minYears: 1 },
+    protein_cottage_cheese_lowfat: { minYears: 1 },
     protein_twarog_half_fat: { minYears: 1 },
     protein_eggs: { minYears: 1 },
     protein_tofu_natural: { minYears: 4 },
+    protein_lentils_cooked: { minYears: 1 },
+    protein_chickpeas_cooked: { minYears: 1 },
+    protein_white_beans_cooked: { minYears: 1 },
     carb_rice_cooked: { minYears: 1 },
     carb_pasta_cooked: { minYears: 2 },
+    carb_potatoes_boiled: { minYears: 1 },
+    carb_sweet_potato_baked: { minYears: 1 },
+    carb_quinoa_cooked: { minYears: 1 },
+    carb_buckwheat_cooked: { minYears: 1 },
     carb_oats_dry: { minYears: 1 },
     carb_banana: { minYears: 1 },
     carb_wholegrain_bread: { minYears: 2 },
+    carb_apple: { minYears: 1 },
+    carb_kidney_beans_cooked: { minYears: 1 },
+    carb_corn_cooked: { minYears: 1 },
     fat_olive_oil: { minYears: 1 },
+    fat_canola_oil: { minYears: 1 },
     fat_avocado: { minYears: 1 },
     fat_walnuts: { minYears: 4 },
     fat_almonds: { minYears: 4 },
+    fat_chia_seeds: { minYears: 4 },
+    fat_flaxseed_ground: { minYears: 4 },
+    fat_sunflower_seeds: { minYears: 4 },
     fat_peanut_butter_100: { minYears: 3 },
+    fat_tahini: { minYears: 4 },
+    fat_salmon_cooked: { minYears: 4 },
     satfat_snickers_single: { minYears: 10 },
     satfat_milk_chocolate: { minYears: 4 },
     satfat_butter_croissant: { minYears: 4 },
@@ -186,27 +207,27 @@
 
   const NUTRITION_PRACTICE_AGE_PRIORITIES = {
     toddler: {
-      protein: ['protein_eggs', 'protein_skyr_natural', 'protein_twarog_half_fat', 'protein_chicken_breast'],
-      carbs: ['carb_oats_dry', 'carb_banana', 'carb_rice_cooked', 'carb_pasta_cooked', 'carb_wholegrain_bread'],
-      fat: ['fat_avocado', 'fat_olive_oil', 'fat_peanut_butter_100'],
+      protein: ['protein_eggs', 'protein_greek_yogurt_nonfat', 'protein_twarog_half_fat', 'protein_lentils_cooked', 'protein_chickpeas_cooked', 'protein_white_beans_cooked', 'protein_cottage_cheese_lowfat'],
+      carbs: ['carb_oats_dry', 'carb_banana', 'carb_rice_cooked', 'carb_potatoes_boiled', 'carb_sweet_potato_baked', 'carb_apple', 'carb_buckwheat_cooked', 'carb_pasta_cooked', 'carb_wholegrain_bread'],
+      fat: ['fat_avocado', 'fat_olive_oil', 'fat_canola_oil', 'fat_peanut_butter_100'],
       satfat: ['satfat_yellow_cheese', 'satfat_butter_croissant', 'satfat_milk_chocolate']
     },
     child: {
-      protein: ['protein_eggs', 'protein_skyr_natural', 'protein_twarog_half_fat', 'protein_chicken_breast', 'protein_tofu_natural'],
-      carbs: ['carb_rice_cooked', 'carb_pasta_cooked', 'carb_oats_dry', 'carb_banana', 'carb_wholegrain_bread'],
-      fat: ['fat_avocado', 'fat_olive_oil', 'fat_walnuts', 'fat_almonds', 'fat_peanut_butter_100'],
+      protein: ['protein_eggs', 'protein_greek_yogurt_nonfat', 'protein_twarog_half_fat', 'protein_chicken_breast', 'protein_turkey_breast', 'protein_cod_baked', 'protein_tofu_natural', 'protein_lentils_cooked', 'protein_chickpeas_cooked', 'protein_white_beans_cooked', 'protein_salmon_cooked', 'protein_tuna_water'],
+      carbs: ['carb_rice_cooked', 'carb_pasta_cooked', 'carb_potatoes_boiled', 'carb_sweet_potato_baked', 'carb_oats_dry', 'carb_banana', 'carb_wholegrain_bread', 'carb_quinoa_cooked', 'carb_buckwheat_cooked', 'carb_apple', 'carb_kidney_beans_cooked', 'carb_corn_cooked'],
+      fat: ['fat_avocado', 'fat_olive_oil', 'fat_canola_oil', 'fat_walnuts', 'fat_almonds', 'fat_chia_seeds', 'fat_flaxseed_ground', 'fat_sunflower_seeds', 'fat_peanut_butter_100', 'fat_salmon_cooked'],
       satfat: ['satfat_yellow_cheese', 'satfat_milk_chocolate', 'satfat_butter_croissant', 'satfat_kabanos']
     },
     teen: {
-      protein: ['protein_chicken_breast', 'protein_skyr_natural', 'protein_eggs', 'protein_twarog_half_fat', 'protein_tofu_natural'],
-      carbs: ['carb_pasta_cooked', 'carb_rice_cooked', 'carb_oats_dry', 'carb_banana', 'carb_wholegrain_bread'],
-      fat: ['fat_olive_oil', 'fat_avocado', 'fat_walnuts', 'fat_almonds', 'fat_peanut_butter_100'],
+      protein: ['protein_chicken_breast', 'protein_turkey_breast', 'protein_cod_baked', 'protein_tuna_water', 'protein_salmon_cooked', 'protein_greek_yogurt_nonfat', 'protein_eggs', 'protein_twarog_half_fat', 'protein_cottage_cheese_lowfat', 'protein_tofu_natural', 'protein_lentils_cooked', 'protein_chickpeas_cooked', 'protein_white_beans_cooked'],
+      carbs: ['carb_pasta_cooked', 'carb_rice_cooked', 'carb_potatoes_boiled', 'carb_sweet_potato_baked', 'carb_oats_dry', 'carb_banana', 'carb_wholegrain_bread', 'carb_quinoa_cooked', 'carb_buckwheat_cooked', 'carb_kidney_beans_cooked', 'carb_apple', 'carb_corn_cooked'],
+      fat: ['fat_olive_oil', 'fat_canola_oil', 'fat_avocado', 'fat_walnuts', 'fat_almonds', 'fat_chia_seeds', 'fat_flaxseed_ground', 'fat_sunflower_seeds', 'fat_peanut_butter_100', 'fat_tahini', 'fat_salmon_cooked'],
       satfat: ['satfat_snickers_single', 'satfat_milk_chocolate', 'satfat_butter_croissant', 'satfat_kabanos', 'satfat_yellow_cheese']
     },
     adult: {
-      protein: ['protein_chicken_breast', 'protein_skyr_natural', 'protein_twarog_half_fat', 'protein_eggs', 'protein_tofu_natural'],
-      carbs: ['carb_rice_cooked', 'carb_pasta_cooked', 'carb_oats_dry', 'carb_banana', 'carb_wholegrain_bread'],
-      fat: ['fat_olive_oil', 'fat_avocado', 'fat_walnuts', 'fat_almonds', 'fat_peanut_butter_100'],
+      protein: ['protein_chicken_breast', 'protein_turkey_breast', 'protein_cod_baked', 'protein_tuna_water', 'protein_salmon_cooked', 'protein_greek_yogurt_nonfat', 'protein_twarog_half_fat', 'protein_cottage_cheese_lowfat', 'protein_eggs', 'protein_tofu_natural', 'protein_lentils_cooked', 'protein_chickpeas_cooked', 'protein_white_beans_cooked'],
+      carbs: ['carb_rice_cooked', 'carb_pasta_cooked', 'carb_potatoes_boiled', 'carb_sweet_potato_baked', 'carb_oats_dry', 'carb_quinoa_cooked', 'carb_buckwheat_cooked', 'carb_banana', 'carb_wholegrain_bread', 'carb_apple', 'carb_kidney_beans_cooked', 'carb_corn_cooked'],
+      fat: ['fat_olive_oil', 'fat_canola_oil', 'fat_avocado', 'fat_walnuts', 'fat_almonds', 'fat_chia_seeds', 'fat_flaxseed_ground', 'fat_sunflower_seeds', 'fat_peanut_butter_100', 'fat_tahini', 'fat_salmon_cooked'],
       satfat: ['satfat_snickers_single', 'satfat_milk_chocolate', 'satfat_butter_croissant', 'satfat_kabanos', 'satfat_yellow_cheese']
     }
   };
@@ -310,13 +331,21 @@
     return products.slice(0, Math.max(0, Number(limit)));
   }
 
+  function nutritionNormsGetProteinPracticeTarget(model) {
+    const planningRange = model && model.protein ? model.protein.planningGramRange : null;
+    const planningTarget = nutritionNormsPracticeMidpoint(planningRange);
+    if (isFiniteNumber(planningTarget) && planningTarget > 0) return planningTarget;
+    const rda = model && model.protein && model.protein.main ? Number(model.protein.main.rdaGDay) : NaN;
+    return isFiniteNumber(rda) && rda > 0 ? rda : null;
+  }
+
   function nutritionNormsBuildPracticeInlineText(model, type) {
     const resources = nutritionNormsGetPracticeResources();
     const copy = resources && resources.copy ? resources.copy.card_inline : null;
     if (!copy) return '';
     let text = '';
     if (type === 'protein') {
-      const target = model && model.protein && model.protein.main ? model.protein.main.rdaGDay : null;
+      const target = nutritionNormsGetProteinPracticeTarget(model);
       text = nutritionNormsPracticeTemplate(copy.protein_summary, {
         servings_count: nutritionNormsPracticeCountServings(target)
       });
@@ -382,6 +411,44 @@
     const minPercent = (earKcal / maxEnergy) * 100;
     const maxPercent = (rdaKcal / minEnergy) * 100;
     return formatPercentRangeValue(minPercent, maxPercent, 0);
+  }
+
+  function nutritionNormsRenderReferenceAbbr(key) {
+    const normalized = String(key || '').toUpperCase();
+    const definitions = {
+      RDA: 'RDA — zalecane spożycie: poziom spożycia składnika odżywczego pokrywający zapotrzebowanie prawie wszystkich zdrowych osób w danej grupie.',
+      EAR: 'EAR — średnie zapotrzebowanie: poziom spożycia odpowiadający medianie zapotrzebowania, czyli wystarczający dla około połowy zdrowych osób w danej grupie.'
+    };
+    const tooltip = definitions[normalized] || normalized;
+    return `<abbr class="nutrition-micros-abbr" data-micros-tooltip="${escapeHtml(tooltip)}" aria-label="${escapeHtml(tooltip)}" tabindex="0">${escapeHtml(normalized)}</abbr>`;
+  }
+
+  function nutritionNormsRenderProteinNormLine(model) {
+    const protein = model && model.protein;
+    const targets = protein && protein.targets;
+    if (!(targets && targets.available)) return '';
+    if (protein.available && protein.main) {
+      return `<p class="nutrition-norms-protein-info-line"><strong>Norma białka:</strong> ${nutritionNormsRenderReferenceAbbr('RDA')} ${formatNumber(protein.main.rdaGDay, 0)} g/d • ${nutritionNormsRenderReferenceAbbr('EAR')} ${formatNumber(protein.main.earGDay, 0)} g/d</p>`;
+    }
+    return `<p class="nutrition-norms-protein-info-line"><strong>Norma białka:</strong> ${nutritionNormsRenderReferenceAbbr('RDA')} ${formatNumber(targets.rda_g_per_kg, 2)} g/kg • ${nutritionNormsRenderReferenceAbbr('EAR')} ${formatNumber(targets.ear_g_per_kg, 2)} g/kg</p>`;
+  }
+
+  function nutritionNormsRenderProteinInfoToggle(model) {
+    const shareText = nutritionNormsBuildProteinEnergyShareText(model);
+    const normLine = nutritionNormsRenderProteinNormLine(model);
+    const shareSentence = shareText && shareText !== '—'
+      ? ` W tym profilu ${nutritionNormsRenderReferenceAbbr('EAR')}/${nutritionNormsRenderReferenceAbbr('RDA')} po przeliczeniu na energię odpowiada około ${escapeHtml(shareText)}.`
+      : '';
+    return `
+      <div class="food-total-info nutrition-norms-protein-info">
+        <button type="button" class="food-total-info-toggle" data-food-total-info-toggle aria-expanded="false" aria-controls="nutritionProteinInfoPanel">Informacje ▾</button>
+        <div class="food-total-macro-note nutrition-norms-protein-info-panel" id="nutritionProteinInfoPanel" hidden>
+          ${normLine}
+          <p><strong>Dlaczego pokazujemy dwie wartości?</strong> Zakres procentowy i przeliczenie na gramy na dobę służą do praktycznego planowania proporcji makroskładników w całodziennej diecie.</p>
+          <p>Normy ${nutritionNormsRenderReferenceAbbr('EAR')}/${nutritionNormsRenderReferenceAbbr('RDA')} opisują referencyjne zapotrzebowanie na białko w g/kg lub g/dobę, wyznaczone głównie z zapotrzebowania fizjologicznego.${shareSentence} Nie oznacza to jednak, że taki procent energii ma być docelowym udziałem białka w jadłospisie.</p>
+          <p>Do układania diety korzystaj przede wszystkim z zakresu procentowego oraz z przeliczonego zakresu gramów na dobę. ${nutritionNormsRenderReferenceAbbr('RDA')} i ${nutritionNormsRenderReferenceAbbr('EAR')} traktuj jako punkt odniesienia do oceny, czy podaż białka nie jest zbyt niska.</p>
+        </div>
+      </div>`;
   }
 
   function nutritionNormsExplainEnergyFormula(formulaLabel) {
@@ -559,7 +626,14 @@
     };
   }
 
-  function nutritionNormsMacroRI(ageYears, ageMonthsOpt) {
+  function nutritionNormsIsAdultLowActivityPal(ageBand, palResolution) {
+    if (!ageBand || ageBand.kind !== 'adult_19_plus') return false;
+    if (!palResolution || palResolution.mode !== 'fixed') return false;
+    const pal = Number(palResolution.usedPal);
+    return isFiniteNumber(pal) && pal <= 1.4;
+  }
+
+  function nutritionNormsMacroRI(ageYears, ageMonthsOpt, palResolution) {
     const band = nutritionNormsGetAgeBand(ageYears, ageMonthsOpt);
     if (band.kind === 'infant_0_6') {
       return {
@@ -574,6 +648,7 @@
       return {
         fat_percent_range: [30, 45],
         carb_percent_range: [45, 55],
+        fatNote: '',
         quality: {
           sfaText: 'Nasycone kwasy tłuszczowe: tak mało, jak to możliwe.',
           laPercent: 4,
@@ -592,6 +667,7 @@
       return {
         fat_percent_range: fatRange,
         carb_percent_range: [45, 65],
+        fatNote: '',
         quality: {
           sfaText: 'Nasycone kwasy tłuszczowe: tak mało, jak to możliwe.',
           laPercent: 4,
@@ -602,17 +678,88 @@
       };
     }
 
+    const adultLowActivity = nutritionNormsIsAdultLowActivityPal(band, palResolution);
     return {
-      fat_percent_range: [30, 40],
+      fat_percent_range: adultLowActivity ? [20, 30] : [30, 40],
       carb_percent_range: [45, 65],
+      fatNote: adultLowActivity
+        ? 'Dla dorosłych z niską aktywnością fizyczną (PAL 1,4 lub mniej) zastosowano niższy zakres tłuszczu: 20–30% energii.'
+        : '',
       quality: {
         sfaText: 'Nasycone kwasy tłuszczowe: tak mało, jak to możliwe.',
         laPercent: 4,
         alaPercent: 0.5,
-        omega3Text: 'EPA + DHA: 250 mg/d.',
-        optionalLowActivityFatRange: [20, 30]
+        omega3Text: 'EPA + DHA: 250 mg/d.'
       },
       available: true
+    };
+  }
+
+  function nutritionNormsProteinPlanningPercentRange(ageYears, ageMonthsOpt) {
+    const band = nutritionNormsGetAgeBand(ageYears, ageMonthsOpt);
+    if (band.kind === 'infant_0_6') return null;
+    if (band.kind === 'infant_6_11') return [5, 15];
+    if (band.kind === 'child_1_18') {
+      return band.completedYears < 2 ? [5, 15] : [10, 20];
+    }
+    if (band.kind === 'adult_19_plus') {
+      const years = Number(ageYears);
+      return Number.isFinite(years) && years >= 65 ? [15, 20] : [10, 20];
+    }
+    return null;
+  }
+
+  function nutritionNormsBuildPlanningReferencePercents(ageYears, ageMonthsOpt, palResolution) {
+    const band = nutritionNormsGetAgeBand(ageYears, ageMonthsOpt);
+    if (band.kind === 'infant_0_6') return null;
+
+    if (band.kind === 'infant_6_11') {
+      return { protein: 10, fat: 37.5, carbs: 52.5, note: 'punkt odniesienia do procentów posiłków' };
+    }
+
+    if (band.kind === 'child_1_18') {
+      if (band.completedYears < 2) {
+        return { protein: 10, fat: 37.5, carbs: 52.5, note: 'punkt odniesienia do procentów posiłków' };
+      }
+      if (band.completedYears <= 3) {
+        return { protein: 15, fat: 37.5, carbs: 47.5, note: 'punkt odniesienia do procentów posiłków' };
+      }
+      return { protein: 15, fat: 35, carbs: 50, note: 'punkt odniesienia do procentów posiłków' };
+    }
+
+    if (band.kind === 'adult_19_plus') {
+      const years = Number(ageYears);
+      const protein = Number.isFinite(years) && years >= 65 ? 17.5 : 15;
+      const fat = nutritionNormsIsAdultLowActivityPal(band, palResolution) ? 25 : 30;
+      const carbs = Math.max(0, 100 - protein - fat);
+      return { protein, fat, carbs, note: 'punkt odniesienia do procentów posiłków' };
+    }
+
+    return null;
+  }
+
+  function nutritionNormsBuildPlanningReferenceGramTargets(energyModel, referencePercents) {
+    if (!energyModel || !energyModel.available || !referencePercents) return null;
+    const energyValues = Array.isArray(energyModel.items)
+      ? energyModel.items
+          .map((item) => Number(item && item.teeKcal))
+          .filter((value) => isFiniteNumber(value) && value > 0)
+      : [];
+    if (!energyValues.length && Array.isArray(energyModel.range)) {
+      energyModel.range.forEach((value) => {
+        const num = Number(value);
+        if (isFiniteNumber(num) && num > 0) energyValues.push(num);
+      });
+    }
+    if (!energyValues.length) return null;
+    const minEnergy = Math.min.apply(null, energyValues);
+    const maxEnergy = Math.max.apply(null, energyValues);
+    const targetEnergy = Math.abs(maxEnergy - minEnergy) < 0.5 ? minEnergy : (minEnergy + maxEnergy) / 2;
+    return {
+      energyKcal: targetEnergy,
+      proteinG: nutritionNormsPercentEnergyToGrams(targetEnergy, referencePercents.protein, KCAL_PER_GRAM.protein),
+      carbsG: nutritionNormsPercentEnergyToGrams(targetEnergy, referencePercents.carbs, KCAL_PER_GRAM.carbs),
+      fatG: nutritionNormsPercentEnergyToGrams(targetEnergy, referencePercents.fat, KCAL_PER_GRAM.fat)
     };
   }
 
@@ -993,8 +1140,14 @@
     const proteinTargets = nutritionNormsProteinTargets(sexKey, basics.ageYears, basics.ageMonthsOpt);
     const proteinMain = nutritionNormsComputeProteinValues(proteinTargets, mainAnthro.weightKg);
     const proteinComparison = nutritionNormsComputeProteinValues(proteinTargets, comparisonAnthro && comparisonAnthro.weightKg);
+    const proteinPlanningPercentRange = nutritionNormsProteinPlanningPercentRange(basics.ageYears, basics.ageMonthsOpt);
+    const proteinPlanningGramRange = proteinPlanningPercentRange
+      ? nutritionNormsComputeMacroGramRange(energyMain, proteinPlanningPercentRange, KCAL_PER_GRAM.protein)
+      : null;
 
-    const macroRI = nutritionNormsMacroRI(basics.ageYears, basics.ageMonthsOpt);
+    const macroRI = nutritionNormsMacroRI(basics.ageYears, basics.ageMonthsOpt, palResolution);
+    const planningReferencePercents = nutritionNormsBuildPlanningReferencePercents(basics.ageYears, basics.ageMonthsOpt, palResolution);
+    const planningReferenceGramTargets = nutritionNormsBuildPlanningReferenceGramTargets(energyMain, planningReferencePercents);
     const fatGramRange = macroRI.available ? nutritionNormsComputeMacroGramRange(energyMain, macroRI.fat_percent_range, KCAL_PER_GRAM.fat) : null;
     const carbGramRange = macroRI.available ? nutritionNormsComputeMacroGramRange(energyMain, macroRI.carb_percent_range, KCAL_PER_GRAM.carbs) : null;
     const laGramRange = macroRI.available && macroRI.quality ? nutritionNormsComputeMacroGramRange(energyMain, [macroRI.quality.laPercent, macroRI.quality.laPercent], KCAL_PER_GRAM.fat) : null;
@@ -1017,12 +1170,7 @@
       optionalLowActivityFatRange: macroRI.quality.optionalLowActivityFatRange || null
     } : null;
 
-    const lowActivityAdultNote = ageBand.kind === 'adult_19_plus'
-      && qualityNote
-      && Array.isArray(qualityNote.optionalLowActivityFatRange)
-      && ((palResolution.mode === 'fixed' && palResolution.usedPal === 1.4) || (palResolution.mode === 'range' && palResolution.pals.includes(1.4)))
-        ? `Przy małej aktywności fizycznej tłuszcz może również mieścić się w zakresie ${formatPercentRange(qualityNote.optionalLowActivityFatRange)}.`
-        : '';
+    const lowActivityAdultNote = macroRI && macroRI.fatNote ? macroRI.fatNote : '';
 
     const messages = nutritionNormsBuildMessages(ageBand, state, palResolution, energyMain, basics);
     if (!proteinMain && proteinTargets.available && state.bodyMode === 'actual') {
@@ -1064,6 +1212,8 @@
         available: !!proteinMain,
         targets: proteinTargets,
         main: proteinMain,
+        planningPercentRange: proteinPlanningPercentRange,
+        planningGramRange: proteinPlanningGramRange,
         comparisonLabel: comparisonAnthro && comparisonAnthro.label,
         comparisonValue: comparisonProteinValue,
         showComparison: nutritionNormsComparisonShouldShow(mainProteinValue, comparisonProteinValue, 1),
@@ -1080,6 +1230,10 @@
         gramRange: carbGramRange
       },
       quality: qualityNote,
+      planningReference: {
+        percent: planningReferencePercents,
+        gramTargets: planningReferenceGramTargets
+      },
       messages,
       notes: {
         averageText: 'Normy służą do planowania średniej z kilku dni – nie trzeba trzymać ich co do grama każdego dnia.',
@@ -1109,11 +1263,23 @@
     if (!macroModel) return '';
     const valueText = macroModel.gramRange ? formatGramRange(macroModel.gramRange, 0) : '';
     const percentText = formatPercentRange(macroModel.percentRange);
-    if (valueText && valueText !== '—' && percentText && percentText !== '—') {
-      return `${valueText} (${percentText})`;
+    if (percentText && percentText !== '—' && valueText && valueText !== '—') {
+      return `${percentText} ➔ ${valueText}`;
     }
-    if (valueText && valueText !== '—') return valueText;
     if (percentText && percentText !== '—') return percentText;
+    if (valueText && valueText !== '—') return valueText;
+    return '';
+  }
+
+  function nutritionNormsFormatProteinPlanningValueForSummary(proteinModel) {
+    if (!proteinModel) return '';
+    const percentText = formatPercentRange(proteinModel.planningPercentRange);
+    const gramText = proteinModel.planningGramRange ? formatGramRange(proteinModel.planningGramRange, 0) : '';
+    if (percentText && percentText !== '—' && gramText && gramText !== '—') {
+      return `${percentText} ➔ ${gramText}`;
+    }
+    if (percentText && percentText !== '—') return percentText;
+    if (gramText && gramText !== '—') return gramText;
     return '';
   }
 
@@ -1137,6 +1303,52 @@
     return '';
   }
 
+  function nutritionNormsBuildActivityPhrase(model) {
+    const energy = model && model.energy;
+    if (!energy) return '';
+    if (model && model.ageBand && model.ageBand.kind === 'infant_6_11') {
+      return 'według modelu dla niemowląt w drugiej połowie 1. roku życia';
+    }
+    if (energy.palMode === 'range' || energy.mode === 'range') {
+      return 'dla zakresu poziomów aktywności fizycznej';
+    }
+    const usedPal = Number(energy.usedPal);
+    if (!isFiniteNumber(usedPal)) return '';
+    if (usedPal <= 1.4) return 'przy małej aktywności fizycznej';
+    if (usedPal <= 1.6) return 'przy umiarkowanej aktywności fizycznej';
+    if (usedPal <= 1.8) return 'przy aktywnym trybie życia';
+    return 'przy bardzo aktywnym trybie życia';
+  }
+
+  function nutritionNormsBuildActivityDescription(model) {
+    const energy = model && model.energy;
+    if (!energy) return '';
+
+    if (model && model.ageBand && model.ageBand.kind === 'infant_6_11') {
+      return 'Przedstawiono obliczenia energii według modelu dla niemowląt w drugiej połowie 1. roku życia.';
+    }
+
+    if (energy.palMode === 'range' || energy.mode === 'range') {
+      return 'Przedstawiono obliczenia dla zakresu poziomów aktywności fizycznej.';
+    }
+
+    const usedPal = Number(energy.usedPal);
+    if (!isFiniteNumber(usedPal)) return '';
+
+    let activityLabel = 'wybranego poziomu aktywności fizycznej';
+    if (usedPal <= 1.4) {
+      activityLabel = 'małej aktywności fizycznej';
+    } else if (usedPal <= 1.6) {
+      activityLabel = 'umiarkowanej aktywności fizycznej';
+    } else if (usedPal <= 1.8) {
+      activityLabel = 'aktywnego trybu życia';
+    } else {
+      activityLabel = 'bardzo aktywnego trybu życia';
+    }
+
+    return `Przedstawiono obliczenia dla ${activityLabel}.`;
+  }
+
   function nutritionNormsBuildSummaryContextText(model) {
     const parts = [];
     const palLabel = nutritionNormsBuildPalSummaryLabel(model);
@@ -1152,35 +1364,22 @@
     }
 
     const lines = [];
-    const firstParts = [];
     const energyText = nutritionNormsFormatEnergyValueForSummary(model.energy);
-    if (energyText) firstParts.push(`energia ${energyText}`);
-
-    if (model.protein && model.protein.targets && model.protein.targets.available) {
-      if (model.protein.available && model.protein.main) {
-        firstParts.push(`białko – zalecane spożycie (RDA) ${formatNumber(model.protein.main.rdaGDay, 0)} g/d; średnie zapotrzebowanie (EAR) ${formatNumber(model.protein.main.earGDay, 0)} g/d`);
-      } else {
-        firstParts.push(`białko – zalecane spożycie (RDA) ${formatNumber(model.protein.targets.rda_g_per_kg, 2)} g/kg; średnie zapotrzebowanie (EAR) ${formatNumber(model.protein.targets.ear_g_per_kg, 2)} g/kg`);
-      }
-    }
-
-    if (firstParts.length) {
-      lines.push(`Normy żywieniowe: ${firstParts.join('; ')}.`);
+    const activityPhrase = nutritionNormsBuildActivityPhrase(model);
+    if (energyText) {
+      lines.push(`Szacowane dzienne zapotrzebowanie na energię do planowania diety${activityPhrase ? ` ${activityPhrase}` : ''}: ${energyText}.`);
     }
 
     const secondParts = [];
+    const proteinPlanningText = nutritionNormsFormatProteinPlanningValueForSummary(model.protein);
+    if (proteinPlanningText) secondParts.push(`białko ${proteinPlanningText}`);
     const fatText = nutritionNormsFormatMacroValueForSummary(model.fat);
     if (fatText) secondParts.push(`tłuszcz ${fatText}`);
     const carbText = nutritionNormsFormatMacroValueForSummary(model.carbs);
     if (carbText) secondParts.push(`węglowodany ${carbText}`);
-    const contextText = nutritionNormsBuildSummaryContextText(model);
 
     if (secondParts.length) {
-      let line = secondParts.join('; ');
-      if (contextText) line += ` (${contextText})`;
-      lines.push(`${line}.`);
-    } else if (contextText && lines.length) {
-      lines[0] = lines[0].replace(/\.$/, ` (${contextText}).`);
+      lines.push(`Makroskładniki do planowania diety: ${secondParts.join('; ')}.`);
     }
 
     return lines;
@@ -1213,11 +1412,8 @@
       };
     }
 
-    const palLabel = nutritionNormsBuildPalSummaryLabel(model);
-    const contextParts = [];
-    if (palLabel) contextParts.push(palLabel);
-    if (model.energy && model.energy.basisLabel) contextParts.push(model.energy.basisLabel);
-    const subtitle = contextParts.join(' • ');
+    const activityDescription = nutritionNormsBuildActivityDescription(model);
+    const subtitle = 'Energia i makroskładniki do planowania diety';
 
     let badge = 'Informacyjnie';
     if (model.ageBand && model.ageBand.kind === 'infant_0_6') {
@@ -1260,36 +1456,26 @@
     if (carbText) {
       rows.push({
         label: 'Węglowodany',
-        value: model.carbs && model.carbs.gramRange ? formatGramRange(model.carbs.gramRange, 0) : carbText,
-        detail: model.carbs && model.carbs.percentRange ? formatPercentRange(model.carbs.percentRange) : ''
+        value: carbText,
+        detail: ''
       });
     }
 
     if (model.protein && model.protein.targets && model.protein.targets.available) {
-      if (model.protein.available && model.protein.main) {
-        rows.push({
-          label: 'Białko',
-          value: `${formatNumber(model.protein.main.rdaGDay, 0)} g/d`,
-          detail: `Średnie zapotrzebowanie (EAR): ${formatNumber(model.protein.main.earGDay, 0)} g/d • Zalecane spożycie (RDA): ${formatNumber(model.protein.main.rdaGPerKg, 2)} g/kg`
-        });
-      } else {
-        rows.push({
-          label: 'Białko',
-          value: `${formatNumber(model.protein.targets.rda_g_per_kg, 2)} g/kg`,
-          detail: `Średnie zapotrzebowanie (EAR): ${formatNumber(model.protein.targets.ear_g_per_kg, 2)} g/kg • Zalecane spożycie (RDA): ${formatNumber(model.protein.targets.rda_g_per_kg, 2)} g/kg`
-        });
-      }
+      const proteinPlanningSummary = nutritionNormsFormatProteinPlanningValueForSummary(model.protein);
+      rows.push({
+        label: 'Białko',
+        value: proteinPlanningSummary || '—',
+        detail: ''
+      });
     }
 
     const fatText = nutritionNormsFormatMacroValueForSummary(model.fat);
     if (fatText) {
-      const fatDetailParts = [];
-      if (model.fat && model.fat.percentRange) fatDetailParts.push(formatPercentRange(model.fat.percentRange));
-      if (model.fat && model.fat.lowActivityNote) fatDetailParts.push(model.fat.lowActivityNote);
       rows.push({
         label: 'Tłuszcze',
-        value: model.fat && model.fat.gramRange ? formatGramRange(model.fat.gramRange, 0) : fatText,
-        detail: fatDetailParts.join(' • ')
+        value: fatText,
+        detail: model.fat && model.fat.lowActivityNote ? model.fat.lowActivityNote : ''
       });
     }
 
@@ -1299,7 +1485,7 @@
       badge,
       value: energyText,
       subtitle,
-      note: model.notes ? [model.notes.averageText, model.notes.sourceLong].filter(Boolean).join(' ') : '',
+      note: model.notes ? [model.notes.averageText, model.notes.sourceLong, nutritionNormsBuildActivityDescription(model)].filter(Boolean).join(' ') : nutritionNormsBuildActivityDescription(model),
       rows,
       comparisonNote: nutritionNormsBuildPatientReportComparisonText(model),
       sourceNote: model.notes && model.notes.sourceShort ? model.notes.sourceShort : ''
@@ -1377,24 +1563,32 @@
         </div>`;
     }
 
+    const planningPercentText = formatPercentRange(protein.planningPercentRange);
+    const planningGramText = protein.planningGramRange ? formatGramRange(protein.planningGramRange, 0) : '';
+
     if (!protein.available) {
       return `
         <div class="result-box nutrition-norms-box">
           <strong>Białko</strong>
-          <span class="nutrition-norms-value">${formatNumber(targets.rda_g_per_kg, 2)} g/kg</span>
-          <p class="nutrition-norms-sub">${escapeHtml(nutritionNormsBuildProteinCriteriaText(null, targets))}</p>
-          <p class="nutrition-norms-sub">Brakuje masy ciała, aby przeliczyć wartości na g/d.</p>
+          <span class="nutrition-norms-value">${planningPercentText && planningPercentText !== '—' ? escapeHtml(planningPercentText) : formatNumber(targets.rda_g_per_kg, 2) + ' g/kg'}</span>
+          <p class="nutrition-norms-sub">Brakuje masy ciała i/lub energii, aby przeliczyć wartości na g/d.</p>
+          ${nutritionNormsRenderProteinInfoToggle(model)}
         </div>`;
     }
 
     const main = protein.main;
-    const proteinEnergyShare = nutritionNormsBuildProteinEnergyShareText(model);
-    const proteinShareLine = proteinEnergyShare ? `<p class="nutrition-norms-sub nutrition-norms-sub--macro-share">${escapeHtml(proteinEnergyShare)}</p>` : '';
+    const proteinMainValue = planningGramText && planningGramText !== '—'
+      ? escapeHtml(planningGramText)
+      : `${formatNumber(main.rdaGDay, 0)} g/d`;
+    const proteinPercentLine = planningPercentText && planningPercentText !== '—'
+      ? `<p class="nutrition-norms-sub nutrition-norms-sub--macro-share">${escapeHtml(planningPercentText)}</p>`
+      : '';
     return `
       <div class="result-box nutrition-norms-box">
         <strong>Białko</strong>
-        <span class="nutrition-norms-value">${formatNumber(main.rdaGDay, 0)} g/d</span>
-        ${proteinShareLine}
+        <span class="nutrition-norms-value">${proteinMainValue}</span>
+        ${proteinPercentLine}
+        ${nutritionNormsRenderProteinInfoToggle(model)}
         ${nutritionNormsRenderPracticeInline(model, 'protein')}
       </div>`;
   }
@@ -1473,10 +1667,10 @@
       if (isFiniteNumber(model.energy.growthMultiplier) && model.energy.growthMultiplier > 1) lines.push('U dzieci doliczono 1% kosztu wzrastania.');
     }
     if (model.protein && model.protein.targets && model.protein.targets.available) {
-      lines.push('Białko pokazujemy jako dwie wartości: średnie zapotrzebowanie (EAR), czyli poziom wystarczający przeciętnie dla około połowy osób w danej grupie, oraz zalecane spożycie (RDA), czyli poziom pokrywający potrzeby prawie wszystkich zdrowych osób. Wynik podajemy zarówno w gramach na kilogram masy ciała, jak i w gramach na dobę.');
+      lines.push('Białko rozdzielamy na dwie informacje: normę EAR/RDA w g/d oraz praktyczny zakres udziału energii używany do układania diety. EAR/RDA może odpowiadać niższemu procentowi energii, ponieważ jest wartością referencyjną białka, a nie docelową strukturą makroskładników.');
     }
     if (model.fat && model.fat.percentRange) {
-      lines.push('Przy tłuszczu i węglowodanach pokazujemy zalecany przedział udziału w całej energii diety. Obok przeliczamy ten przedział na gramy na dobę, żeby łatwiej było przełożyć wynik na codzienne posiłki.');
+      lines.push('Przy białku, tłuszczu i węglowodanach pokazujemy przedziały udziału w całej energii diety i przeliczamy je na gramy na dobę, żeby łatwiej było przełożyć wynik na codzienne posiłki.');
     }
     if (!lines.length) return '';
     return `
@@ -1486,18 +1680,153 @@
       </details>`;
   }
 
+  function nutritionNormsPracticeFormatPercent(value) {
+    if (!Number.isFinite(value)) return '—';
+    if (value >= 100) return `${Math.round(value)}%`;
+    if (value >= 10) return `${Math.round(value)}%`;
+    return `${formatNumber(value, 1)}%`;
+  }
+
+  function nutritionNormsPracticeChipTone(percent) {
+    if (!Number.isFinite(percent)) return 'low';
+    if (percent >= 100) return 'high';
+    if (percent >= 40) return 'medium';
+    return 'low';
+  }
+
+  function nutritionNormsPracticePortionCountText(value, target) {
+    if (!isFiniteNumber(value) || !isFiniteNumber(target) || value <= 0 || target <= 0) return '';
+    const count = Number(target) / Number(value);
+    if (count <= 1.05) return '1 porcja lub mniej';
+    if (count < 2) return `około ${formatNumber(count, 1)} porcji`;
+    if (count < 10) return `około ${formatNumber(count, count < 4 ? 1 : 0)} porcji`;
+    return 'bardzo dużo porcji — lepiej łączyć różne źródła';
+  }
+
+  function nutritionNormsPracticeValue(portion, macroKey) {
+    if (!portion || typeof portion !== 'object') return null;
+    const fieldMap = {
+      protein: 'protein_g',
+      carbs: 'carbs_g',
+      fat: 'fat_g',
+      satfat: 'saturated_fat_g'
+    };
+    const field = fieldMap[macroKey] || '';
+    const value = Number(portion[field]);
+    return isFiniteNumber(value) ? value : null;
+  }
+
+  function nutritionNormsPracticeMacroUnitName(macroKey) {
+    if (macroKey === 'protein') return 'białka';
+    if (macroKey === 'carbs') return 'węglowodanów';
+    if (macroKey === 'fat') return 'tłuszczu';
+    if (macroKey === 'satfat') return 'tłuszczów nasyconych';
+    return 'składnika';
+  }
+
+  function nutritionNormsBuildPracticeTargetHtml(label, text, introText) {
+    if (!text && !introText) return '';
+    return `
+      <section class="nutrition-practice-sheet-section nutrition-macro-examples-intro">
+        ${text ? `<div class="nutrition-macro-examples-target">${escapeHtml(label)}: <strong>${escapeHtml(text)}</strong></div>` : ''}
+        ${introText ? `<p>${escapeHtml(introText)}</p>` : ''}
+      </section>`;
+  }
+
   function nutritionNormsBuildPracticeItemHtml(product, mainText, noteText, chipText, chipTone) {
     const label = product && product.display_name_pl ? product.display_name_pl : 'Produkt';
     const portionLabel = nutritionNormsPracticePortionLabel(product);
     return `
-      <div class="nutrition-practice-sheet-item">
+      <div class="nutrition-practice-sheet-item nutrition-macro-examples-item">
         <div class="nutrition-practice-sheet-item-head">
           <strong>${escapeHtml(label)}</strong>
           ${portionLabel ? `<span class="nutrition-practice-sheet-item-portion">${escapeHtml(portionLabel)}</span>` : ''}
         </div>
-        ${chipText ? `<div class="nutrition-practice-chip nutrition-practice-chip--${escapeHtml(chipTone || 'medium')}">${escapeHtml(chipText)}</div>` : ''}
+        ${chipText ? `<span class="nutrition-practice-chip nutrition-practice-chip--${escapeHtml(chipTone || 'medium')}">${escapeHtml(chipText)}</span>` : ''}
         ${mainText ? `<div class="nutrition-practice-sheet-item-main">${escapeHtml(mainText)}</div>` : ''}
         ${noteText ? `<div class="nutrition-practice-sheet-item-note">${escapeHtml(noteText)}</div>` : ''}
+      </div>`;
+  }
+
+  function nutritionNormsBuildPracticeFoodCard(product, macroKey, target, fallbackNote) {
+    const portion = nutritionNormsGetPracticePortion(product);
+    const value = nutritionNormsPracticeValue(portion, macroKey);
+    const energy = portion && isFiniteNumber(Number(portion.energy_kcal)) ? Number(portion.energy_kcal) : null;
+    const percent = isFiniteNumber(value) && isFiniteNumber(target) && target > 0 ? nutritionNormsPracticePercent(value, target) : null;
+    const chipText = Number.isFinite(percent) ? `ok. ${nutritionNormsPracticeFormatPercent(percent)} celu` : 'wartość orientacyjna';
+    const chipTone = nutritionNormsPracticeChipTone(percent);
+    const unitName = nutritionNormsPracticeMacroUnitName(macroKey);
+    const portionCount = nutritionNormsPracticePortionCountText(value, target);
+    const mainBits = [
+      isFiniteNumber(value) ? `${formatNumber(value, value >= 10 ? 0 : 1)} g ${unitName}` : '',
+      isFiniteNumber(energy) ? `${formatNumber(energy, 0)} kcal` : '',
+      portionCount ? `tylko tym produktem: ${portionCount}` : ''
+    ].filter(Boolean);
+    const note = product && product.notes_pl ? product.notes_pl : fallbackNote;
+    return nutritionNormsBuildPracticeItemHtml(product, mainBits.join(' • '), note, chipText, chipTone);
+  }
+
+  function nutritionNormsGetProductForPracticeSet(productId) {
+    if (!productId) return null;
+    const resources = nutritionNormsGetPracticeResources();
+    const products = resources && resources.dictionary && Array.isArray(resources.dictionary.products) ? resources.dictionary.products : [];
+    return products.find((product) => String(product && product.id) === String(productId)) || null;
+  }
+
+  function nutritionNormsGetCombinationSets(type) {
+    const resources = nutritionNormsGetPracticeResources();
+    const combos = resources && resources.dictionary && resources.dictionary.combination_examples ? resources.dictionary.combination_examples : null;
+    const key = `${type}_sets`;
+    return combos && Array.isArray(combos[key]) ? combos[key] : [];
+  }
+
+  function nutritionNormsSetItemLabel(product, multiplier) {
+    const name = product && product.display_name_pl ? String(product.display_name_pl) : 'Produkt';
+    const label = nutritionNormsPracticePortionLabel(product);
+    const mult = Number(multiplier);
+    const prefix = Number.isFinite(mult) && Math.abs(mult - 1) > 0.01 ? `${formatNumber(mult, mult % 1 === 0 ? 0 : 1)} × ` : '';
+    return label ? `${name} (${prefix}${label})` : `${prefix}${name}`;
+  }
+
+  function nutritionNormsBuildPracticeSetHtml(set, model, macroKey, target, defaultNote) {
+    const items = Array.isArray(set && set.items) ? set.items : [];
+    const resolved = items.map((item) => {
+      const product = nutritionNormsGetProductForPracticeSet(item && item.product_id);
+      const multiplier = Number(item && item.portion_multiplier);
+      return { product, multiplier: Number.isFinite(multiplier) && multiplier > 0 ? multiplier : 1 };
+    }).filter(({ product }) => product && nutritionNormsPracticeProductMatchesAge(product, model));
+    if (!resolved.length) return '';
+
+    const total = resolved.reduce((sum, entry) => {
+      const portion = nutritionNormsGetPracticePortion(entry.product);
+      const value = nutritionNormsPracticeValue(portion, macroKey);
+      return sum + (isFiniteNumber(value) ? value * entry.multiplier : 0);
+    }, 0);
+    const energyTotal = resolved.reduce((sum, entry) => {
+      const portion = nutritionNormsGetPracticePortion(entry.product);
+      const energy = portion && isFiniteNumber(Number(portion.energy_kcal)) ? Number(portion.energy_kcal) : 0;
+      return sum + energy * entry.multiplier;
+    }, 0);
+    const percent = isFiniteNumber(target) && target > 0 && total > 0 ? nutritionNormsPracticePercent(total, target) : null;
+    const chipText = Number.isFinite(percent) ? `ok. ${nutritionNormsPracticeFormatPercent(percent)} celu` : 'zestaw orientacyjny';
+    const chipTone = nutritionNormsPracticeChipTone(percent);
+    const unitName = nutritionNormsPracticeMacroUnitName(macroKey);
+    const names = resolved.map((entry) => nutritionNormsSetItemLabel(entry.product, entry.multiplier)).join(' + ');
+    const title = set && set.title ? set.title : 'Przykładowy zestaw';
+    const mainBits = [
+      `${formatNumber(total, total >= 10 ? 0 : 1)} g ${unitName}`,
+      energyTotal > 0 ? `${formatNumber(energyTotal, 0)} kcal` : '',
+      names
+    ].filter(Boolean);
+    return `
+      <div class="nutrition-practice-sheet-item nutrition-macro-examples-item nutrition-macro-examples-set">
+        <div class="nutrition-practice-sheet-item-head">
+          <strong>${escapeHtml(title)}</strong>
+          <span class="nutrition-practice-sheet-item-portion">${escapeHtml(formatNumber(total, total >= 10 ? 0 : 1))} g</span>
+        </div>
+        <span class="nutrition-practice-chip nutrition-practice-chip--${chipTone}">${escapeHtml(chipText)}</span>
+        <div class="nutrition-practice-sheet-item-main">${escapeHtml(mainBits.join(' • '))}</div>
+        <div class="nutrition-practice-sheet-item-note">${escapeHtml((set && set.note) || defaultNote || 'To przykład orientacyjny — w praktyce łącz różne produkty w ciągu dnia.')}</div>
       </div>`;
   }
 
@@ -1511,69 +1840,35 @@
     const sections = [];
 
     if (type === 'protein') {
-      const target = model && model.protein && model.protein.main ? model.protein.main.rdaGDay : null;
-      const simple = nutritionNormsSelectPracticeProducts(model, 'protein', ['najprostszy', 'na_szybko'], 3, 'simple');
-      const meatless = nutritionNormsSelectPracticeProducts(model, 'protein', ['bez_miesa'], 2, 'meatless');
-      const simpleHtml = simple.map((product) => {
-        const portion = nutritionNormsGetPracticePortion(product);
-        const pct = portion ? nutritionNormsPracticePercent(portion.protein_g, target) : null;
-        const mainText = pct !== null ? nutritionNormsPracticeTemplate(copy.row_goal_share, { pct }) : '';
-        return nutritionNormsBuildPracticeItemHtml(product, mainText, copy.row_good_choice, '', '');
-      }).join('');
-      if (simpleHtml) {
-        sections.push(`<section class="nutrition-practice-sheet-section"><h4>${escapeHtml(copy.section_simple)}</h4><div class="nutrition-practice-sheet-list">${simpleHtml}</div></section>`);
-      }
-      const meatlessHtml = meatless.map((product) => {
-        const portion = nutritionNormsGetPracticePortion(product);
-        const pct = portion ? nutritionNormsPracticePercent(portion.protein_g, target) : null;
-        const mainText = pct !== null ? nutritionNormsPracticeTemplate(copy.row_goal_share, { pct }) : '';
-        return nutritionNormsBuildPracticeItemHtml(product, mainText, copy.row_meatless_note, '', '');
-      }).join('');
-      if (meatlessHtml) {
-        sections.push(`<section class="nutrition-practice-sheet-section"><h4>${escapeHtml(copy.section_meatless)}</h4><div class="nutrition-practice-sheet-list">${meatlessHtml}</div></section>`);
-      }
-      const mixProducts = nutritionNormsSelectPracticeProducts(model, 'protein', ['najprostszy', 'na_szybko', 'bez_miesa'], 3, 'mix');
-      if (mixProducts.length >= 3) {
-        const labels = mixProducts.map((product) => product && product.display_name_pl ? product.display_name_pl : '').filter(Boolean);
-        if (labels.length >= 3) {
-          const mixLine = nutritionNormsPracticeTemplate(copy.mix_example_template, {
-            item_1: labels[0],
-            item_2: labels[1],
-            item_3: labels[2]
-          });
-          sections.push(`<section class="nutrition-practice-sheet-section"><h4>${escapeHtml(copy.section_mix)}</h4><div class="nutrition-practice-mix">${escapeHtml(copy.mix_example_intro)} <strong>${escapeHtml(mixLine)}</strong></div></section>`);
-        }
-      }
+      const target = nutritionNormsGetProteinPracticeTarget(model);
+      const simple = nutritionNormsSelectPracticeProducts(model, 'protein', ['najprostszy', 'na_szybko', 'ryby'], 8, 'simple');
+      const meatless = nutritionNormsSelectPracticeProducts(model, 'protein', ['bez_miesa'], 5, 'meatless');
+      const simpleHtml = simple.map((product) => nutritionNormsBuildPracticeFoodCard(product, 'protein', target, copy.row_good_choice)).join('');
+      if (simpleHtml) sections.push(`<section class="nutrition-practice-sheet-section"><h4>${escapeHtml(copy.section_simple)}</h4><div class="nutrition-practice-sheet-list">${simpleHtml}</div></section>`);
+      const meatlessHtml = meatless.map((product) => nutritionNormsBuildPracticeFoodCard(product, 'protein', target, copy.row_meatless_note)).join('');
+      if (meatlessHtml) sections.push(`<section class="nutrition-practice-sheet-section"><h4>${escapeHtml(copy.section_meatless)}</h4><div class="nutrition-practice-sheet-list">${meatlessHtml}</div></section>`);
+      const targetText = isFiniteNumber(target) ? `${formatNumber(target, 0)} g białka` : '';
       return {
         title: copy.title,
         subtitle: nutritionNormsPracticeTemplate(copy.subtitle, { target_g: formatNumber(target, 0) }),
-        bodyHtml: sections.join(''),
+        bodyHtml: nutritionNormsBuildPracticeTargetHtml(copy.target_label || 'Orientacyjny cel z tej karty', targetText, copy.intro || '') + sections.join(''),
         footer: commonCopy && commonCopy.disclaimer_examples ? commonCopy.disclaimer_examples : ''
       };
     }
 
     if (type === 'carbs') {
       const target = nutritionNormsPracticeMidpoint(model && model.carbs ? model.carbs.gramRange : null);
-      const base = nutritionNormsSelectPracticeProducts(model, 'carbs', ['porcja_bazowa', 'sniadanie'], 3, 'base');
-      const quick = nutritionNormsSelectPracticeProducts(model, 'carbs', ['na_szybko'], 2, 'quick');
-      const baseHtml = base.map((product) => {
-        const portion = nutritionNormsGetPracticePortion(product);
-        const pct = portion ? nutritionNormsPracticePercent(portion.carbs_g, target) : null;
-        const mainText = pct !== null ? nutritionNormsPracticeTemplate(copy.row_goal_share, { pct }) : '';
-        return nutritionNormsBuildPracticeItemHtml(product, mainText, copy.row_base_note, '', '');
-      }).join('');
+      const base = nutritionNormsSelectPracticeProducts(model, 'carbs', ['porcja_bazowa', 'sniadanie'], 9, 'base');
+      const quick = nutritionNormsSelectPracticeProducts(model, 'carbs', ['na_szybko'], 5, 'quick');
+      const baseHtml = base.map((product) => nutritionNormsBuildPracticeFoodCard(product, 'carbs', target, copy.row_base_note)).join('');
       if (baseHtml) sections.push(`<section class="nutrition-practice-sheet-section"><h4>${escapeHtml(copy.section_base)}</h4><div class="nutrition-practice-sheet-list">${baseHtml}</div></section>`);
-      const quickHtml = quick.map((product) => {
-        const portion = nutritionNormsGetPracticePortion(product);
-        const pct = portion ? nutritionNormsPracticePercent(portion.carbs_g, target) : null;
-        const mainText = pct !== null ? nutritionNormsPracticeTemplate(copy.row_goal_share, { pct }) : '';
-        return nutritionNormsBuildPracticeItemHtml(product, mainText, copy.row_quick_note, '', '');
-      }).join('');
+      const quickHtml = quick.map((product) => nutritionNormsBuildPracticeFoodCard(product, 'carbs', target, copy.row_quick_note)).join('');
       if (quickHtml) sections.push(`<section class="nutrition-practice-sheet-section"><h4>${escapeHtml(copy.section_quick)}</h4><div class="nutrition-practice-sheet-list">${quickHtml}</div></section>`);
+      const targetText = isFiniteNumber(target) ? `${formatNumber(target, 0)} g węglowodanów` : '';
       return {
         title: copy.title,
         subtitle: nutritionNormsPracticeTemplate(copy.subtitle, { target_g: formatNumber(target, 0) }),
-        bodyHtml: sections.join(''),
+        bodyHtml: nutritionNormsBuildPracticeTargetHtml(copy.target_label || 'Orientacyjny cel z tej karty', targetText, copy.intro || '') + sections.join(''),
         footer: copy.footer || ''
       };
     }
@@ -1582,38 +1877,24 @@
       const targetMid = nutritionNormsPracticeMidpoint(model && model.fat ? model.fat.gramRange : null);
       const targetMin = model && model.fat && Array.isArray(model.fat.gramRange) ? model.fat.gramRange[0] : null;
       const targetMax = model && model.fat && Array.isArray(model.fat.gramRange) ? model.fat.gramRange[1] : null;
-      const better = nutritionNormsSelectPracticeProducts(model, 'fat', ['lepsze_zrodlo'], 3, 'better');
-      const watch = nutritionNormsSelectPracticeProducts(model, 'fat', ['uwazaj_na'], 2, 'watch');
-      const betterHtml = better.map((product) => {
-        const portion = nutritionNormsGetPracticePortion(product);
-        const pct = portion ? nutritionNormsPracticePercent(portion.fat_g, targetMid) : null;
-        const mainText = pct !== null ? nutritionNormsPracticeTemplate(copy.row_range_share, { pct }) : '';
-        return nutritionNormsBuildPracticeItemHtml(product, mainText, copy.row_better_note, '', '');
-      }).join('');
+      const better = nutritionNormsSelectPracticeProducts(model, 'fat', ['lepsze_zrodlo'], 10, 'better');
+      const watch = nutritionNormsSelectPracticeProducts(model, 'fat', ['uwazaj_na'], 3, 'watch');
+      const betterHtml = better.map((product) => nutritionNormsBuildPracticeFoodCard(product, 'fat', targetMid, copy.row_better_note)).join('');
       if (betterHtml) sections.push(`<section class="nutrition-practice-sheet-section"><h4>${escapeHtml(copy.section_better)}</h4><div class="nutrition-practice-sheet-list">${betterHtml}</div></section>`);
-      const watchHtml = watch.map((product) => {
-        const portion = nutritionNormsGetPracticePortion(product);
-        const pct = portion ? nutritionNormsPracticePercent(portion.fat_g, targetMid) : null;
-        const mainText = pct !== null ? nutritionNormsPracticeTemplate(copy.row_range_share, { pct }) : '';
-        return nutritionNormsBuildPracticeItemHtml(product, mainText, copy.row_watch_note, '', '');
-      }).join('');
+      const watchHtml = watch.map((product) => nutritionNormsBuildPracticeFoodCard(product, 'fat', targetMid, copy.row_watch_note)).join('');
       if (watchHtml) sections.push(`<section class="nutrition-practice-sheet-section"><h4>${escapeHtml(copy.section_watch)}</h4><div class="nutrition-practice-sheet-list">${watchHtml}</div></section>`);
+      const targetText = isFiniteNumber(targetMin) && isFiniteNumber(targetMax) ? `${formatNumber(targetMin, 0)}–${formatNumber(targetMax, 0)} g tłuszczu` : '';
       return {
         title: copy.title,
-        subtitle: nutritionNormsPracticeTemplate(copy.subtitle, {
-          target_min_g: formatNumber(targetMin, 0),
-          target_max_g: formatNumber(targetMax, 0)
-        }),
-        bodyHtml: sections.join(''),
+        subtitle: nutritionNormsPracticeTemplate(copy.subtitle, { target_min_g: formatNumber(targetMin, 0), target_max_g: formatNumber(targetMax, 0) }),
+        bodyHtml: nutritionNormsBuildPracticeTargetHtml(copy.target_label || 'Orientacyjny zakres z tej karty', targetText, copy.intro || '') + sections.join(''),
         footer: copy.footer || ''
       };
     }
 
     if (type === 'satfat') {
       const products = nutritionNormsSelectPracticeProducts(model, 'satfat', ['warning'], 5, 'warning');
-      const satfatCap = resources && resources.dictionary && resources.dictionary.reference_caps
-        ? Number(resources.dictionary.reference_caps.saturated_fat_g) || 20
-        : 20;
+      const satfatCap = resources && resources.dictionary && resources.dictionary.reference_caps ? Number(resources.dictionary.reference_caps.saturated_fat_g) || 20 : 20;
       const warningHtml = products.map((product) => {
         const portion = nutritionNormsGetPracticePortion(product);
         const pct = portion ? nutritionNormsPracticePercent(portion.saturated_fat_g, satfatCap) : null;
@@ -1624,12 +1905,7 @@
         return nutritionNormsBuildPracticeItemHtml(product, mainText, noteText, chipText, level);
       }).join('');
       if (warningHtml) sections.push(`<section class="nutrition-practice-sheet-section"><h4>${escapeHtml(copy.section_warning)}</h4><div class="nutrition-practice-sheet-list">${warningHtml}</div></section>`);
-      return {
-        title: copy.title,
-        subtitle: copy.subtitle,
-        bodyHtml: sections.join(''),
-        footer: copy.footer || (commonCopy && commonCopy.disclaimer_warning ? commonCopy.disclaimer_warning : '')
-      };
+      return { title: copy.title, subtitle: copy.subtitle, bodyHtml: sections.join(''), footer: copy.footer || (commonCopy && commonCopy.disclaimer_warning ? commonCopy.disclaimer_warning : '') };
     }
 
     return null;
@@ -1660,7 +1936,7 @@
     if (root) return root;
     root = document.createElement('div');
     root.id = 'nutritionPracticeSheet';
-    root.className = 'nutrition-practice-sheet';
+    root.className = 'nutrition-practice-sheet nutrition-macro-examples-sheet';
     root.hidden = true;
     root.innerHTML = `
       <div class="nutrition-practice-sheet-backdrop" data-practice-sheet-close></div>
@@ -1819,12 +2095,80 @@
     };
   }
 
-  function clearNutritionNormsCard() {
+  function nutritionNormsReadCollapseStates() {
+    try {
+      const raw = window.localStorage && window.localStorage.getItem('cardCollapseState');
+      const parsed = raw ? JSON.parse(raw) : {};
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  function nutritionNormsIsCardOpen() {
+    const states = nutritionNormsReadCollapseStates();
+    return states.nutritionNormsCard === true;
+  }
+
+  function nutritionNormsSaveCardOpen(open) {
+    try {
+      if (!window.localStorage) return;
+      const states = nutritionNormsReadCollapseStates();
+      states.nutritionNormsCard = !!open;
+      window.localStorage.setItem('cardCollapseState', JSON.stringify(states));
+    } catch (_) {
+      /* ignore storage errors */
+    }
+  }
+
+  function nutritionNormsApplyVisibility(available) {
+    const section = el('nutritionNormsSection');
     const card = el('nutritionNormsCard');
+    const toggle = el('toggleNutritionNormsCard');
+    const isAvailable = available !== false;
+    const isOpen = isAvailable && nutritionNormsIsCardOpen();
+
+    if (section) section.style.display = isAvailable ? '' : 'none';
+    if (card) card.style.display = isOpen ? 'block' : 'none';
+    if (toggle) {
+      toggle.setAttribute('aria-controls', 'nutritionNormsCard');
+      toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    }
+  }
+
+  function bindNutritionNormsToggle() {
+    const toggle = el('toggleNutritionNormsCard');
+    if (!toggle || toggle.dataset.nutritionNormsToggleBound === '1') return;
+
+    toggle.setAttribute('aria-controls', 'nutritionNormsCard');
+    toggle.setAttribute('aria-expanded', nutritionNormsIsCardOpen() ? 'true' : 'false');
+    toggle.addEventListener('click', function() {
+      const card = el('nutritionNormsCard');
+      const mount = el('nutritionNormsMount');
+      let currentlyOpen = nutritionNormsIsCardOpen();
+      try {
+        if (card && typeof window.getComputedStyle === 'function') {
+          currentlyOpen = window.getComputedStyle(card).display !== 'none';
+        }
+      } catch (_) {
+        /* keep stored state */
+      }
+
+      const nextOpen = !currentlyOpen;
+      nutritionNormsSaveCardOpen(nextOpen);
+      if (nextOpen && (!window.nutritionNormsLastModel || !mount || !mount.innerHTML.trim())) {
+        try { renderNutritionNormsCardFromDom(); } catch (_) { /* ignore */ }
+      }
+      nutritionNormsApplyVisibility(!!window.nutritionNormsLastModel || !!(mount && mount.innerHTML.trim()));
+    });
+    toggle.dataset.nutritionNormsToggleBound = '1';
+  }
+
+  function clearNutritionNormsCard() {
     const mount = el('nutritionNormsMount');
     if (mount) mount.innerHTML = '';
-    if (card) card.style.display = 'none';
     window.nutritionNormsLastModel = null;
+    nutritionNormsApplyVisibility(false);
   }
 
   function initNutritionNormsFormResetListeners() {
@@ -1857,8 +2201,9 @@
     nutritionNormsMaybeResetBodyModeForBasicsChange(basics);
     const model = nutritionNormsBuildCardModel(basics, nutritionNormsGetUiState());
     mount.innerHTML = nutritionNormsRenderCard(model);
-    card.style.display = 'block';
+    bindNutritionNormsToggle();
     window.nutritionNormsLastModel = model;
+    nutritionNormsApplyVisibility(true);
     try {
       if (typeof window.updateProfessionalSummaryCard === 'function') {
         window.updateProfessionalSummaryCard();
@@ -1886,6 +2231,11 @@
       if (target.id === 'nutritionNormsPalSelect') {
         nutritionNormsSetUiState({ palSelector: target.value || 'inherit' });
         renderNutritionNormsCardFromDom();
+        try {
+          if (typeof window.debouncedUpdate === 'function') window.debouncedUpdate();
+        } catch (_) {
+          /* ignore */
+        }
         return;
       }
       if (target.name === 'nutritionNormsBodyMode') {
@@ -1911,13 +2261,75 @@
 
   function ensureNutritionNormsCardShell() {
     initNutritionNormsFormResetListeners();
-    const card = el('nutritionNormsCard');
-    if (!card) return null;
+    const title = 'Normy żywieniowe: białko, tłuszcz, węglowodany';
+    let section = el('nutritionNormsSection');
+    let card = el('nutritionNormsCard');
+
+    if (!section) {
+      if (!document || typeof document.createElement !== 'function') return null;
+      section = document.createElement('div');
+      section.id = 'nutritionNormsSection';
+      section.style.display = 'none';
+      section.style.marginTop = '0';
+
+      if (card && card.parentNode) {
+        card.parentNode.insertBefore(section, card);
+        section.appendChild(card);
+      } else {
+        const microsSection = el('nutritionMicrosSection');
+        const bmiCard = el('bmiCard');
+        if (microsSection && microsSection.parentNode) {
+          microsSection.parentNode.insertBefore(section, microsSection);
+        } else if (bmiCard && bmiCard.parentNode) {
+          bmiCard.parentNode.insertBefore(section, bmiCard.nextSibling);
+        } else if (document.body) {
+          document.body.appendChild(section);
+        } else {
+          return null;
+        }
+      }
+    }
+
+    let toggle = el('toggleNutritionNormsCard');
+    if (!toggle) {
+      if (!document || typeof document.createElement !== 'function') return null;
+      toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.id = 'toggleNutritionNormsCard';
+      toggle.textContent = title;
+      toggle.style.backgroundColor = '#00838d';
+      toggle.style.color = 'white';
+      toggle.style.padding = '0.6rem 1.2rem';
+      toggle.style.border = 'none';
+      toggle.style.borderRadius = '4px';
+      toggle.style.fontSize = '1rem';
+      toggle.style.fontWeight = '600';
+      toggle.style.cursor = 'pointer';
+      toggle.style.display = 'block';
+      toggle.style.margin = '0 auto';
+      section.insertBefore(toggle, section.firstChild);
+    }
+
+    if (!card) {
+      if (!document || typeof document.createElement !== 'function') return null;
+      card = document.createElement('div');
+      card.id = 'nutritionNormsCard';
+      card.className = 'card nutrition-norms-card';
+      card.style.display = 'none';
+      card.style.marginTop = '1rem';
+      section.appendChild(card);
+    } else if (card.parentNode !== section) {
+      section.appendChild(card);
+    }
+
     if (!el('nutritionNormsMount')) {
       card.innerHTML = `
         <h2 style="text-align:center;">Normy żywieniowe: białko, tłuszcz, węglowodany</h2>
         <div id="nutritionNormsMount"></div>`;
     }
+
+    bindNutritionNormsToggle();
+    nutritionNormsApplyVisibility(false);
     return card;
   }
 
@@ -1937,6 +2349,7 @@
 
   function initNutritionNormsModule() {
     ensureNutritionNormsCardShell();
+    bindNutritionNormsToggle();
     initNutritionNormsCardInteractions();
     wrapNutritionNormsIntoUpdate();
     try {

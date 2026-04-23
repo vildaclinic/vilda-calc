@@ -2180,6 +2180,28 @@
           results.push({ id: 'toggleCircSection', title: title });
           return;
         }
+        // Special case: for the macronutrient nutrition norms card use the
+        // toggle button id as the target, mirroring the circumference module.
+        // The card itself is intentionally hidden until the user clicks the
+        // trigger button.
+        if (id === 'nutritionNormsCard') {
+          results.push({ id: 'toggleNutritionNormsCard', title: title });
+          return;
+        }
+        // Special case: for the micronutrient nutrition norms card use the
+        // toggle button id as the target, mirroring the circumference module.
+        // The card itself is intentionally hidden until the user clicks the
+        // trigger button.
+        if (id === 'nutritionMicrosCard') {
+          results.push({ id: 'toggleNutritionMicrosCard', title: title });
+          return;
+        }
+        // Special case: for the unified food card use the toggle button id,
+        // because the actual card is hidden until the user opens it.
+        if (id === 'foodCard') {
+          results.push({ id: 'toggleFoodCard', title: title });
+          return;
+        }
 
         // Special case: shorten long titles for calorie cards.  The
         // "timesCard" displays calorie-burning times with a subhead
@@ -2224,6 +2246,15 @@
     // in case the node lacks an id and a slug was generated.
     if (cardId === 'circCard' || cardId === 'obwod-glowy-i-klatki-piersiowej') {
       return 'toggleCircSection';
+    }
+    if (cardId === 'nutritionNormsCard' || cardId === 'normy-zywieniowe-bialko-tluszcz-weglowodany') {
+      return 'toggleNutritionNormsCard';
+    }
+    if (cardId === 'nutritionMicrosCard' || cardId === 'normy-zywieniowe-witaminy-i-skladniki-mineralne') {
+      return 'toggleNutritionMicrosCard';
+    }
+    if (cardId === 'foodCard' || cardId === 'kalorie-posilkow-i-czas-spalania') {
+      return 'toggleFoodCard';
     }
     // If a user saved a shortcut directly to a toggle button (e.g. toggleIgfTests),
     // we treat the element itself as the activator and do not attempt to find
@@ -2285,6 +2316,12 @@
         if (list2) {
           var formula = list2.find(function(f) { return f && f.id === cardId; });
           if (formula) {
+            if (typeof window.selectClcrFormula === 'function') {
+              try {
+                window.selectClcrFormula(formula.id);
+                return;
+              } catch (_) {}
+            }
             // Determine target version (basic, advanced, spot or pro) and apply it.
             var targetVer = formula.version || 'basic';
             // Special handling for KT/V: always require pro version and enable
@@ -2424,6 +2461,172 @@
         return;
       }
     }
+    // Special handling for the macronutrient nutrition norms card on the home page.
+    // The card is hidden by default and controlled by toggleNutritionNormsCard.
+    {
+      var lcNutritionNormsId = (cardId || '').toLowerCase();
+      var isNutritionNormsModule = false;
+      if (cardId === 'nutritionNormsCard' || cardId === 'toggleNutritionNormsCard' || cardId === 'normy-zywieniowe-bialko-tluszcz-weglowodany') {
+        isNutritionNormsModule = true;
+      }
+      if (!isNutritionNormsModule && lcNutritionNormsId.indexOf('nutritionnorms') !== -1) {
+        isNutritionNormsModule = true;
+      }
+      if (!isNutritionNormsModule && lcNutritionNormsId.indexOf('normy-zywieniowe') !== -1 && (lcNutritionNormsId.indexOf('bialko') !== -1 || lcNutritionNormsId.indexOf('tluszcz') !== -1 || lcNutritionNormsId.indexOf('weglowod') !== -1)) {
+        isNutritionNormsModule = true;
+      }
+      if (isNutritionNormsModule) {
+        var normsToggle = document.getElementById('toggleNutritionNormsCard');
+        var normsCard = document.getElementById('nutritionNormsCard');
+        var normsSection = document.getElementById('nutritionNormsSection');
+        if (normsSection) normsSection.style.display = '';
+        if (normsToggle) {
+          try {
+            normsToggle.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          } catch (e5n) {
+            normsToggle.scrollIntoView(true);
+          }
+          var isHiddenNorms = true;
+          if (normsCard) {
+            try {
+              var normsStyle = window.getComputedStyle(normsCard);
+              isHiddenNorms = (normsStyle.display === 'none' || normsCard.offsetHeight === 0);
+            } catch (e6n) {
+              isHiddenNorms = true;
+            }
+          }
+          if (isHiddenNorms) normsToggle.click();
+        }
+        setTimeout(function() {
+          var targetNormsCard = document.getElementById('nutritionNormsCard');
+          var targetNormsToggle = document.getElementById('toggleNutritionNormsCard');
+          if (targetNormsCard) {
+            try {
+              targetNormsCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (e7n) {
+              targetNormsCard.scrollIntoView(true);
+            }
+          } else if (targetNormsToggle) {
+            try {
+              targetNormsToggle.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (e8n) {
+              targetNormsToggle.scrollIntoView(true);
+            }
+          }
+        }, 200);
+        return;
+      }
+    }
+
+    // Special handling for the micronutrient nutrition norms card on the home page.
+    // The card is hidden by default and controlled by toggleNutritionMicrosCard.
+    {
+      var lcMicrosId = (cardId || '').toLowerCase();
+      var isMicrosModule = false;
+      if (cardId === 'nutritionMicrosCard' || cardId === 'toggleNutritionMicrosCard' || cardId === 'normy-zywieniowe-witaminy-i-skladniki-mineralne') {
+        isMicrosModule = true;
+      }
+      if (!isMicrosModule && (lcMicrosId.indexOf('nutritionmicros') !== -1 || lcMicrosId.indexOf('witaminy') !== -1 || lcMicrosId.indexOf('skladniki-mineralne') !== -1)) {
+        isMicrosModule = true;
+      }
+      if (isMicrosModule) {
+        var microsToggle = document.getElementById('toggleNutritionMicrosCard');
+        var microsCard = document.getElementById('nutritionMicrosCard');
+        var microsSection = document.getElementById('nutritionMicrosSection');
+        if (microsSection) microsSection.style.display = '';
+        if (microsToggle) {
+          try {
+            microsToggle.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          } catch (e5) {
+            microsToggle.scrollIntoView(true);
+          }
+          var isHiddenMicros = true;
+          if (microsCard) {
+            try {
+              var microsStyle = window.getComputedStyle(microsCard);
+              isHiddenMicros = (microsStyle.display === 'none' || microsCard.offsetHeight === 0);
+            } catch (e6) {
+              isHiddenMicros = true;
+            }
+          }
+          if (isHiddenMicros) microsToggle.click();
+        }
+        setTimeout(function() {
+          var targetMicrosCard = document.getElementById('nutritionMicrosCard');
+          var targetMicrosToggle = document.getElementById('toggleNutritionMicrosCard');
+          if (targetMicrosCard) {
+            try {
+              targetMicrosCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (e7) {
+              targetMicrosCard.scrollIntoView(true);
+            }
+          } else if (targetMicrosToggle) {
+            try {
+              targetMicrosToggle.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (e8) {
+              targetMicrosToggle.scrollIntoView(true);
+            }
+          }
+        }, 200);
+        return;
+      }
+    }
+
+
+    // Special handling for the unified food card on the home page.
+    // The card is hidden by default and controlled by toggleFoodCard.
+    {
+      var lcFoodId = (cardId || '').toLowerCase();
+      var isFoodModule = false;
+      if (cardId === 'foodCard' || cardId === 'toggleFoodCard' || cardId === 'kalorie-posilkow-i-czas-spalania') {
+        isFoodModule = true;
+      }
+      if (!isFoodModule && (lcFoodId.indexOf('foodcard') !== -1 || (lcFoodId.indexOf('kalorie') !== -1 && (lcFoodId.indexOf('posilk') !== -1 || lcFoodId.indexOf('spalania') !== -1)))) {
+        isFoodModule = true;
+      }
+      if (isFoodModule) {
+        var foodToggle = document.getElementById('toggleFoodCard');
+        var foodCard = document.getElementById('foodCard');
+        var foodSection = document.getElementById('foodSection');
+        if (foodSection) foodSection.style.display = '';
+        if (foodToggle) {
+          try {
+            foodToggle.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          } catch (e5f) {
+            foodToggle.scrollIntoView(true);
+          }
+          var isHiddenFood = true;
+          if (foodCard) {
+            try {
+              var foodStyle = window.getComputedStyle(foodCard);
+              isHiddenFood = (foodStyle.display === 'none' || foodCard.offsetHeight === 0);
+            } catch (e6f) {
+              isHiddenFood = true;
+            }
+          }
+          if (isHiddenFood) foodToggle.click();
+        }
+        setTimeout(function() {
+          var targetFoodCard = document.getElementById('foodCard');
+          var targetFoodToggle = document.getElementById('toggleFoodCard');
+          if (targetFoodCard) {
+            try {
+              targetFoodCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (e7f) {
+              targetFoodCard.scrollIntoView(true);
+            }
+          } else if (targetFoodToggle) {
+            try {
+              targetFoodToggle.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (e8f) {
+              targetFoodToggle.scrollIntoView(true);
+            }
+          }
+        }, 200);
+        return;
+      }
+    }
+
     // If the target element is a button, simply click it and scroll to it.
     // Special case: if the button is the circumference toggle, also scroll
     // to the associated card after expansion.  This ensures that the user

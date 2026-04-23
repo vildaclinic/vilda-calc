@@ -24,52 +24,241 @@
 // Usunięto document.write – wstawianie roku może być realizowane w HTML (footer) lub poprzez JS w konkretnym elemencie.
 
 
-const snacks={
-  snickers:{name:'Snickers 50 g',kcal:244},
-  bounty:{name:'Bounty 57 g',kcal:268},
-  knoppers:{name:'Knoppers 25 g',kcal:140},
-  prince:{name:'Prince Polo 50 g',kcal:264},
-  banana:{name:'Banan 100 g',kcal:90},
-  cola:{name:'Napój gazowany 330 ml',kcal:139},
-  ice:{name:'Lody waniliowe 100 g',kcal:201},
-  chocolate:{name:'Czekolada mleczna 25 g',kcal:134},
-  watermelon:{name:'Arbuz 100 g',kcal:30},
-  cookie:{name:'Ciastko digestive 15 g',kcal:70},
-  twix:{name:'Twix 50 g',kcal:248},
-  kitkat:{name:'KitKat 45 g',kcal:233},
-  chips:{name:'Chipsy 30 g',kcal:160},
-  pretzel:{name:'Paluszki 50 g',kcal:170},
-  yogurt:{name:'Jogurt owocowy 150 g',kcal:135},
+const snacks = {
+  snickers: {
+    name: 'Snickers 50 g', kcal: 244,
+    protein_g: 4.6, carbs_g: 30.3, fat_g: 11.8, saturated_fat_g: 4.4, sugars_g: 25.5, salt_g: 0.19,
+    macroCategory: 'satfat', foodGroup: 'snacks', macroSource: 'etykieta/FoodData Central',
+    macroNote: 'Wartości orientacyjne dla typowego batona 50 g.'
+  },
+  bounty: {
+    name: 'Bounty 57 g', kcal: 278,
+    protein_g: 2.8, carbs_g: 34.0, fat_g: 14.8, saturated_fat_g: 12.0, sugars_g: 28.0, salt_g: 0.17,
+    macroCategory: 'satfat', foodGroup: 'snacks', macroSource: 'etykieta/FoodData Central',
+    macroNote: 'Wartości orientacyjne dla typowego batona 57 g.'
+  },
+  knoppers: {
+    name: 'Knoppers 25 g', kcal: 140,
+    protein_g: 2.1, carbs_g: 13.6, fat_g: 8.0, saturated_fat_g: 3.6, sugars_g: 8.5, salt_g: 0.10,
+    macroCategory: 'satfat', foodGroup: 'snacks', macroSource: 'etykieta/FoodData Central',
+    macroNote: 'Wartości orientacyjne dla typowej porcji 25 g.'
+  },
+  prince: {
+    name: 'Prince Polo 50 g', kcal: 264,
+    protein_g: 3.9, carbs_g: 31.0, fat_g: 13.7, saturated_fat_g: 8.0, sugars_g: 20.0, salt_g: 0.16,
+    macroCategory: 'satfat', foodGroup: 'snacks', macroSource: 'etykieta/FoodData Central',
+    macroNote: 'Wartości orientacyjne dla typowego wafla 50 g.'
+  },
+  banana: {
+    name: 'Banan średni 120 g', kcal: 107,
+    protein_g: 1.3, carbs_g: 27.4, fat_g: 0.4, saturated_fat_g: 0.1, sugars_g: 14.6, salt_g: 0.0,
+    macroCategory: 'carbs', foodGroup: 'snacks', macroSource: 'USDA FoodData Central',
+    macroNote: 'Wartości dla średniego banana, masa jadalna ok. 120 g.'
+  },
+  cola: {
+    name: 'Napój gazowany typu cola 330 ml', kcal: 139,
+    protein_g: 0.0, carbs_g: 35.0, fat_g: 0.0, saturated_fat_g: 0.0, sugars_g: 35.0, salt_g: 0.02,
+    macroCategory: 'sugary_drink', foodGroup: 'snacks', macroSource: 'FoodData Central/etykieta',
+    macroNote: 'Wartości orientacyjne dla puszki 330 ml.'
+  },
+  ice: {
+    name: 'Lody waniliowe 100 g', kcal: 201,
+    protein_g: 3.5, carbs_g: 23.6, fat_g: 11.0, saturated_fat_g: 6.8, sugars_g: 21.0, salt_g: 0.18,
+    macroCategory: 'satfat', foodGroup: 'snacks', macroSource: 'USDA FoodData Central',
+    macroNote: 'Wartości orientacyjne dla lodów waniliowych 100 g.'
+  },
+  chocolate: {
+    name: 'Czekolada mleczna 25 g', kcal: 134,
+    protein_g: 1.9, carbs_g: 14.8, fat_g: 7.5, saturated_fat_g: 4.5, sugars_g: 13.5, salt_g: 0.05,
+    macroCategory: 'satfat', foodGroup: 'snacks', macroSource: 'USDA FoodData Central',
+    macroNote: 'Wartości orientacyjne dla 25 g czekolady mlecznej.'
+  },
+  watermelon: {
+    name: 'Arbuz 100 g', kcal: 30,
+    protein_g: 0.6, carbs_g: 7.6, fat_g: 0.2, saturated_fat_g: 0.0, sugars_g: 6.2, salt_g: 0.0,
+    macroCategory: 'carbs', foodGroup: 'snacks', macroSource: 'USDA FoodData Central',
+    macroNote: 'Wartości dla części jadalnej 100 g.'
+  },
+  cookie: {
+    name: 'Ciastko digestive 15 g', kcal: 70,
+    protein_g: 1.0, carbs_g: 9.5, fat_g: 3.0, saturated_fat_g: 1.4, sugars_g: 2.6, salt_g: 0.10,
+    macroCategory: 'satfat', foodGroup: 'snacks', macroSource: 'FoodData Central/etykieta',
+    macroNote: 'Wartości orientacyjne dla 1 ciastka 15 g.'
+  },
+  twix: {
+    name: 'Twix 50 g', kcal: 248,
+    protein_g: 2.5, carbs_g: 32.0, fat_g: 12.0, saturated_fat_g: 7.0, sugars_g: 24.0, salt_g: 0.20,
+    macroCategory: 'satfat', foodGroup: 'snacks', macroSource: 'etykieta/FoodData Central',
+    macroNote: 'Wartości orientacyjne dla typowego batona 50 g.'
+  },
+  kitkat: {
+    name: 'KitKat 45 g', kcal: 233,
+    protein_g: 3.1, carbs_g: 28.5, fat_g: 11.2, saturated_fat_g: 7.0, sugars_g: 21.0, salt_g: 0.14,
+    macroCategory: 'satfat', foodGroup: 'snacks', macroSource: 'etykieta/FoodData Central',
+    macroNote: 'Wartości orientacyjne dla typowej porcji 45 g.'
+  },
+  chips: {
+    name: 'Chipsy ziemniaczane 30 g', kcal: 160,
+    protein_g: 1.9, carbs_g: 16.0, fat_g: 10.0, saturated_fat_g: 1.1, sugars_g: 0.2, salt_g: 0.45,
+    macroCategory: 'fat', foodGroup: 'snacks', macroSource: 'USDA FoodData Central',
+    macroNote: 'Wartości orientacyjne dla małej porcji chipsów 30 g.'
+  },
+  pretzel: {
+    name: 'Paluszki słone 50 g', kcal: 190,
+    protein_g: 5.0, carbs_g: 38.0, fat_g: 1.8, saturated_fat_g: 0.4, sugars_g: 2.0, salt_g: 1.5,
+    macroCategory: 'carbs', foodGroup: 'snacks', macroSource: 'FoodData Central/etykieta',
+    macroNote: 'Wartości orientacyjne dla porcji 50 g.'
+  },
+  yogurt: {
+    name: 'Jogurt owocowy 150 g', kcal: 135,
+    protein_g: 5.4, carbs_g: 23.0, fat_g: 2.3, saturated_fat_g: 1.4, sugars_g: 20.0, salt_g: 0.18,
+    macroCategory: 'carbs', foodGroup: 'snacks', macroSource: 'USDA FoodData Central',
+    macroNote: 'Wartości orientacyjne dla kubeczka 150 g.'
+  }
 };
 
-const meals={
-  burger:{name:'Burger z frytkami',kcal:900},
-  pizza:{name:'Pizza pepperoni (¼ 30 cm)',kcal:650},
-  pierogi:{name:'Pierogi ruskie (8 szt.)',kcal:560},
-  spaghetti:{name:'Spaghetti bolognese 350 g',kcal:600},
-  caesar:{name:'Sałatka Cezar z kurczakiem',kcal:450},
-  sushi:{name:'Sushi 10 kawałków',kcal:400},
-  kebab:{name:'Kebab (tortilla)',kcal:800},
-  pancake:{name:'Naleśniki z serem (2 szt.)',kcal:500},
-  schabowy:{name:'Schabowy + ziemniaki',kcal:800},
-  goulash:{name:'Zupa gulaszowa 500 ml',kcal:300}
-  ,
-  // zdrowe dania obiadowe
-  salmonVeg:{name:'Pieczony łosoś z warzywami',kcal:497},         // porcja ok. 497 kcal
-  chickenVeg:{name:'Kurczak z warzywami',kcal:312},               // porcja ok. 311.70 kcal
-  codVeg:{name:'Dorsz pieczony z warzywami',kcal:316},            // porcja ok. 316 kcal
-  chickenRice:{name:'Kurczak z ryżem i warzywami',kcal:405},       // porcja ok. 405 kcal
-  broccoliSoup:{name:'Krem z brokułów 300 ml',kcal:180},          // porcja (ok. 300 ml) ma ~180 kcal
-  // wegetariańskie dania obiadowe
-  greekSalad:{name:'Sałatka grecka',kcal:300},                    // klasyczna sałatka grecka ~300 kcal
-  chickpeaCurry:{name:'Curry z ciecierzycą i warzywami',kcal:200},// porcja ok. 200 kcal
-  vegLasagna:{name:'Lasagne wegetariańska',kcal:370},             // porcja ok. 370 kcal
-  tofuStirfry:{name:'Stir-fry z tofu i warzywami',kcal:265}       // porcja ok. 264.5 kcal
+const meals = {
+  burger: {
+    name: 'Burger z frytkami', kcal: 900,
+    protein_g: 32.0, carbs_g: 95.0, fat_g: 43.0, saturated_fat_g: 13.0, sugars_g: 10.0, salt_g: 2.8,
+    macroCategory: 'meal', foodGroup: 'meals', macroSource: 'USDA FoodData Central/FNDDS',
+    macroNote: 'Danie złożone — wartości orientacyjne dla typowego zestawu.'
+  },
+  pizza: {
+    name: 'Pizza pepperoni (¼ 30 cm)', kcal: 650,
+    protein_g: 28.0, carbs_g: 72.0, fat_g: 28.0, saturated_fat_g: 11.0, sugars_g: 6.0, salt_g: 2.3,
+    macroCategory: 'meal', foodGroup: 'meals', macroSource: 'USDA FoodData Central/FNDDS',
+    macroNote: 'Danie złożone — wartości orientacyjne dla 1/4 pizzy 30 cm.'
+  },
+  pierogi: {
+    name: 'Pierogi ruskie (8 szt.)', kcal: 560,
+    protein_g: 18.0, carbs_g: 76.0, fat_g: 20.0, saturated_fat_g: 8.0, sugars_g: 4.0, salt_g: 2.0,
+    macroCategory: 'meal', foodGroup: 'meals', macroSource: 'FoodData Central/analog potrawy',
+    macroNote: 'Danie złożone — wartości orientacyjne, zależne od receptury i wielkości pierogów.'
+  },
+  spaghetti: {
+    name: 'Spaghetti bolognese 350 g', kcal: 600,
+    protein_g: 28.0, carbs_g: 68.0, fat_g: 24.0, saturated_fat_g: 8.0, sugars_g: 10.0, salt_g: 2.0,
+    macroCategory: 'meal', foodGroup: 'meals', macroSource: 'USDA FoodData Central/FNDDS',
+    macroNote: 'Danie złożone — wartości orientacyjne dla porcji 350 g.'
+  },
+  caesar: {
+    name: 'Sałatka Cezar z kurczakiem', kcal: 450,
+    protein_g: 31.0, carbs_g: 18.0, fat_g: 29.0, saturated_fat_g: 6.0, sugars_g: 4.0, salt_g: 1.7,
+    macroCategory: 'meal', foodGroup: 'meals', macroSource: 'USDA FoodData Central/FNDDS',
+    macroNote: 'Danie złożone — wartości orientacyjne; sos i grzanki najmocniej zmieniają wynik.'
+  },
+  sushi: {
+    name: 'Sushi 10 kawałków', kcal: 400,
+    protein_g: 17.0, carbs_g: 72.0, fat_g: 5.0, saturated_fat_g: 1.0, sugars_g: 8.0, salt_g: 2.1,
+    macroCategory: 'meal', foodGroup: 'meals', macroSource: 'USDA FoodData Central/FNDDS',
+    macroNote: 'Danie złożone — wartości orientacyjne dla zestawu 10 kawałków.'
+  },
+  kebab: {
+    name: 'Kebab w tortilli', kcal: 800,
+    protein_g: 38.0, carbs_g: 85.0, fat_g: 33.0, saturated_fat_g: 10.0, sugars_g: 8.0, salt_g: 3.2,
+    macroCategory: 'meal', foodGroup: 'meals', macroSource: 'FoodData Central/analog potrawy',
+    macroNote: 'Danie złożone — wartości orientacyjne; sos i wielkość tortilli mogą istotnie zmienić wynik.'
+  },
+  pancake: {
+    name: 'Naleśniki z serem (2 szt.)', kcal: 500,
+    protein_g: 22.0, carbs_g: 68.0, fat_g: 16.0, saturated_fat_g: 8.0, sugars_g: 22.0, salt_g: 1.0,
+    macroCategory: 'meal', foodGroup: 'meals', macroSource: 'FoodData Central/analog potrawy',
+    macroNote: 'Danie złożone — wartości orientacyjne dla 2 sztuk.'
+  },
+  schabowy: {
+    name: 'Schabowy + ziemniaki', kcal: 800,
+    protein_g: 38.0, carbs_g: 70.0, fat_g: 40.0, saturated_fat_g: 10.0, sugars_g: 4.0, salt_g: 2.4,
+    macroCategory: 'meal', foodGroup: 'meals', macroSource: 'FoodData Central/analog potrawy',
+    macroNote: 'Danie złożone — wartości orientacyjne; wynik zależy od panierki, tłuszczu i dodatków.'
+  },
+  goulash: {
+    name: 'Zupa gulaszowa 500 ml', kcal: 300,
+    protein_g: 19.0, carbs_g: 22.0, fat_g: 14.0, saturated_fat_g: 5.0, sugars_g: 7.0, salt_g: 2.2,
+    macroCategory: 'meal', foodGroup: 'meals', macroSource: 'FoodData Central/analog potrawy',
+    macroNote: 'Danie złożone — wartości orientacyjne dla porcji 500 ml.'
+  },
+  salmonVeg: {
+    name: 'Pieczony łosoś z warzywami', kcal: 497,
+    protein_g: 34.0, carbs_g: 18.0, fat_g: 33.0, saturated_fat_g: 6.0, sugars_g: 8.0, salt_g: 0.9,
+    macroCategory: 'meal', foodGroup: 'meals', macroSource: 'USDA FoodData Central',
+    macroNote: 'Danie złożone — wartości orientacyjne dla łososia, warzyw i niewielkiej ilości tłuszczu.'
+  },
+  chickenVeg: {
+    name: 'Kurczak z warzywami', kcal: 312,
+    protein_g: 38.0, carbs_g: 18.0, fat_g: 10.0, saturated_fat_g: 2.0, sugars_g: 8.0, salt_g: 0.8,
+    macroCategory: 'meal', foodGroup: 'meals', macroSource: 'USDA FoodData Central',
+    macroNote: 'Danie złożone — wartości orientacyjne dla piersi z kurczaka i warzyw.'
+  },
+  codVeg: {
+    name: 'Dorsz pieczony z warzywami', kcal: 316,
+    protein_g: 35.0, carbs_g: 24.0, fat_g: 8.0, saturated_fat_g: 1.2, sugars_g: 9.0, salt_g: 0.8,
+    macroCategory: 'meal', foodGroup: 'meals', macroSource: 'USDA FoodData Central',
+    macroNote: 'Danie złożone — wartości orientacyjne dla dorsza, warzyw i małej ilości oliwy.'
+  },
+  chickenRice: {
+    name: 'Kurczak z ryżem i warzywami', kcal: 405,
+    protein_g: 33.0, carbs_g: 48.0, fat_g: 9.0, saturated_fat_g: 1.8, sugars_g: 5.0, salt_g: 0.8,
+    macroCategory: 'meal', foodGroup: 'meals', macroSource: 'USDA FoodData Central',
+    macroNote: 'Danie złożone — wartości orientacyjne dla typowej porcji obiadowej.'
+  },
+  broccoliSoup: {
+    name: 'Krem z brokułów 300 ml', kcal: 180,
+    protein_g: 6.0, carbs_g: 18.0, fat_g: 9.0, saturated_fat_g: 3.0, sugars_g: 6.0, salt_g: 1.2,
+    macroCategory: 'meal', foodGroup: 'meals', macroSource: 'USDA FoodData Central/analog potrawy',
+    macroNote: 'Danie złożone — wartości orientacyjne dla porcji 300 ml.'
+  },
+  greekSalad: {
+    name: 'Sałatka grecka', kcal: 300,
+    protein_g: 9.0, carbs_g: 12.0, fat_g: 23.0, saturated_fat_g: 7.0, sugars_g: 7.0, salt_g: 1.8,
+    macroCategory: 'meal', foodGroup: 'meals', macroSource: 'USDA FoodData Central',
+    macroNote: 'Danie złożone — wartości orientacyjne; feta i oliwa najmocniej zmieniają wynik.'
+  },
+  chickpeaCurry: {
+    name: 'Curry z ciecierzycą i warzywami', kcal: 320,
+    protein_g: 12.0, carbs_g: 38.0, fat_g: 12.0, saturated_fat_g: 3.0, sugars_g: 9.0, salt_g: 1.3,
+    macroCategory: 'meal', foodGroup: 'meals', macroSource: 'USDA FoodData Central',
+    macroNote: 'Danie złożone — wartości orientacyjne; mleczko kokosowe i ilość oleju mogą zwiększyć tłuszcz.'
+  },
+  vegLasagna: {
+    name: 'Lasagne wegetariańska', kcal: 370,
+    protein_g: 18.0, carbs_g: 46.0, fat_g: 13.0, saturated_fat_g: 6.0, sugars_g: 10.0, salt_g: 1.8,
+    macroCategory: 'meal', foodGroup: 'meals', macroSource: 'USDA FoodData Central/FNDDS',
+    macroNote: 'Danie złożone — wartości orientacyjne dla typowej porcji.'
+  },
+  tofuStirfry: {
+    name: 'Stir-fry z tofu i warzywami', kcal: 265,
+    protein_g: 18.0, carbs_g: 18.0, fat_g: 15.0, saturated_fat_g: 2.4, sugars_g: 8.0, salt_g: 1.4,
+    macroCategory: 'meal', foodGroup: 'meals', macroSource: 'USDA FoodData Central',
+    macroNote: 'Danie złożone — wartości orientacyjne dla tofu, warzyw i niewielkiej ilości tłuszczu.'
+  }
 };
 
-// Combine snacks and meals into one dictionary for unified food selection.  This
-// allows a single list of options to be presented in the new “Kalorie posiłków i czas spalania” card.
+// Combine snacks and meals into one dictionary for unified food selection. This
+// allows a single list of options to be presented in the “Kalorie posiłków i czas spalania” card.
 const foods = Object.assign({}, snacks, meals);
+
+const FOOD_SELECT_GROUPS = Object.freeze([
+  Object.freeze({ key: 'snacks', label: 'Przekąski i napoje' }),
+  Object.freeze({ key: 'meals', label: 'Dania i zestawy' }),
+  Object.freeze({ key: 'base', label: 'Produkty bazowe' }),
+  Object.freeze({ key: 'other', label: 'Inne' })
+]);
+
+const MACRO_REFERENCE_FOOD_ALIASES = Object.freeze({
+  carb_banana: 'banana',
+  satfat_snickers_single: 'snickers',
+  satfat_milk_chocolate: 'chocolate'
+});
+
+
+function macroPracticeResolveFoodAliasKey(key) {
+  const rawKey = String(key || '');
+  if (!rawKey) return rawKey;
+  if (foods[rawKey]) return rawKey;
+  const productId = rawKey.startsWith('macro_') ? rawKey.slice(6) : rawKey;
+  return MACRO_REFERENCE_FOOD_ALIASES[productId] || rawKey;
+}
 
 const MACRO_PRACTICE_DICTIONARY_URL_CANDIDATES = [
   './macro_examples_dictionary_pl.json',
@@ -82,25 +271,27 @@ const MACRO_UI_COPY_URL_CANDIDATES = [
   '/macro_ui_copy_pl.json'
 ];
 const MACRO_PRACTICE_FALLBACK_DICTIONARY = {
-  "version": "0.1.0",
+  "version": "0.2.2",
   "locale": "pl-PL",
-  "purpose": "Lekki słownik UI do funkcji „To w praktyce” w karcie Energii oraz rozszerzenia karty „Kalorie posiłków i czas spalania” o makroskładniki i ostrzeżenia.",
+  "purpose": "Słownik przykładów produktów i porcji do kart norm makroskładników oraz karty „Kalorie posiłków i czas spalania”. Wartości edukacyjne oparto na oficjalnych bazach składu żywności, przede wszystkim USDA FoodData Central.",
   "source_policy": {
     "generic_foods": {
       "provider": "USDA FoodData Central",
       "preferred_data_type": [
         "Foundation Foods",
+        "SR Legacy",
         "FNDDS"
       ],
-      "why": "Jedno public-domain źródło dla żywności ogólnej; stabilne, łatwe do cytowania i późniejszego zasilenia aplikacji."
+      "why": "Oficjalna publiczna baza składu żywności; pozwala prezentować orientacyjne wartości energii, białka, tłuszczu i węglowodanów dla typowych produktów i porcji."
     },
     "branded_foods": {
-      "provider": "Oficjalna etykieta producenta",
-      "why": "Dla produktów markowych i przekąsek ostrzegawczych."
+      "provider": "USDA FoodData Central / oficjalne etykiety producentów",
+      "why": "Produkty markowe pozostają wyłącznie jako ostrzeżenia przy tłuszczach nasyconych; przykłady białka, tłuszczów i węglowodanów wykorzystują produkty ogólne z FDC."
     },
     "notes": [
-      "Ten plik nie jest pełną bazą składu żywności. To mały słownik produktów referencyjnych, reguł doboru i mapowania do źródeł danych.",
-      "Jeśli aplikacja ma już własną bazę posiłków/produktów, użyj pola lookup_query jako mapowania do istniejących rekordów."
+      "Wartości w tym pliku są przykładami edukacyjnymi dla typowych porcji, a nie indywidualnym jadłospisem.",
+      "Dla żywności ogólnej stosuj USDA FoodData Central; dla produktów markowych lub regionalnych wartości mogą wymagać weryfikacji z etykietą producenta albo lokalną bazą żywności.",
+      "Pole install_in_food_select=false oznacza, że produkt służy tylko jako przykład w oknie „Zobacz przykłady” i nie powiększa listy wyboru w karcie kalorii."
     ]
   },
   "selection_rules": {
@@ -130,25 +321,24 @@ const MACRO_PRACTICE_FALLBACK_DICTIONARY = {
     "bottom_sheet": {
       "protein": {
         "sections": [
-          "najprostsze_przyklady",
-          "wersja_bez_miesa",
-          "prosty_miks_dnia"
+          "przykladowe_porcje_bogate_w_bialko",
+          "wersja_bez_miesa"
         ],
-        "max_items_per_section": 3
+        "max_items_per_section": 5
       },
       "carbs": {
         "sections": [
           "porcje_bazowe",
           "na_szybko"
         ],
-        "max_items_per_section": 3
+        "max_items_per_section": 5
       },
       "fat": {
         "sections": [
           "lepsze_zrodla_tluszczu",
-          "jak_latwo_dobic_za_duzo"
+          "gestosc_energetyczna"
         ],
-        "max_items_per_section": 3
+        "max_items_per_section": 6
       },
       "satfat": {
         "sections": [
@@ -186,59 +376,226 @@ const MACRO_PRACTICE_FALLBACK_DICTIONARY = {
       "role": "najprostszy",
       "hero_macro": "protein",
       "lookup": {
-        "provider": "normy_pl_2024",
-        "lookup_query": "Pierś z kurczaka",
-        "known_values": {
-          "protein_g_per_100g": 21.5
-        }
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "chicken breast cooked roasted meat only",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
       },
       "ui_tags": [
         "białko",
-        "prosty wybór",
-        "wytrawne"
+        "chude mięso"
       ],
-      "notes_pl": "Dobry przykład „czystego” białka do prostych przeliczeń.",
+      "notes_pl": "Chude mięso — dużo białka przy niewielkiej ilości tłuszczu.",
       "resolved_nutrients_per_portion": {
         "portion_mass_g": 120,
-        "energy_kcal": 158,
-        "protein_g": 25.8,
-        "carbs_g": 0.0,
-        "fat_g": 2.6,
-        "saturated_fat_g": 0.7
+        "energy_kcal": 198,
+        "protein_g": 37.2,
+        "carbs_g": 0,
+        "fat_g": 4.3,
+        "saturated_fat_g": 1.2
       }
     },
     {
-      "id": "protein_skyr_natural",
+      "id": "protein_turkey_breast",
       "category": "protein",
-      "display_name_pl": "Skyr naturalny",
+      "display_name_pl": "Pierś z indyka",
       "default_portion": {
-        "amount": 150,
+        "amount": 120,
         "unit": "g",
+        "label_pl": "1 średnia porcja"
+      },
+      "role": "najprostszy",
+      "hero_macro": "protein",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "turkey breast roasted meat only",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "białko",
+        "chude mięso"
+      ],
+      "notes_pl": "Podobna rola jak pierś z kurczaka; praktyczne chude źródło białka.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 120,
+        "energy_kcal": 162,
+        "protein_g": 34.8,
+        "carbs_g": 0,
+        "fat_g": 2.4,
+        "saturated_fat_g": 0.7
+      },
+      "install_in_food_select": false
+    },
+    {
+      "id": "protein_tuna_water",
+      "category": "protein",
+      "display_name_pl": "Tuńczyk w wodzie",
+      "default_portion": {
+        "amount": 100,
+        "unit": "g",
+        "label_pl": "1 mała puszka po odsączeniu"
+      },
+      "role": "na_szybko",
+      "hero_macro": "protein",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "tuna canned in water drained",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "białko",
+        "ryby",
+        "na szybko"
+      ],
+      "notes_pl": "Wygodne źródło białka; przy rybach warto dbać o różnorodność gatunków.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 100,
+        "energy_kcal": 116,
+        "protein_g": 25.5,
+        "carbs_g": 0,
+        "fat_g": 0.8,
+        "saturated_fat_g": 0.2
+      },
+      "install_in_food_select": false
+    },
+    {
+      "id": "protein_salmon_cooked",
+      "category": "protein",
+      "display_name_pl": "Łosoś pieczony",
+      "default_portion": {
+        "amount": 120,
+        "unit": "g",
+        "label_pl": "1 filet"
+      },
+      "role": "najprostszy",
+      "hero_macro": "protein",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "salmon cooked dry heat",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "białko",
+        "ryby",
+        "tłuszcze nienasycone"
+      ],
+      "notes_pl": "Dostarcza białka i tłuszczów nienasyconych; ma więcej kalorii niż chude mięso.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 120,
+        "energy_kcal": 247,
+        "protein_g": 26.4,
+        "carbs_g": 0,
+        "fat_g": 14.7,
+        "saturated_fat_g": 3.1
+      },
+      "install_in_food_select": false
+    },
+    {
+      "id": "protein_cod_baked",
+      "category": "protein",
+      "display_name_pl": "Dorsz pieczony",
+      "default_portion": {
+        "amount": 120,
+        "unit": "g",
+        "label_pl": "1 filet"
+      },
+      "role": "najprostszy",
+      "hero_macro": "protein",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "cod Atlantic cooked dry heat",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "białko",
+        "ryby",
+        "chude źródło"
+      ],
+      "notes_pl": "Chuda ryba — dobre źródło białka przy małej ilości tłuszczu.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 120,
+        "energy_kcal": 126,
+        "protein_g": 27.4,
+        "carbs_g": 0,
+        "fat_g": 1.1,
+        "saturated_fat_g": 0.2
+      },
+      "install_in_food_select": false
+    },
+    {
+      "id": "protein_greek_yogurt_nonfat",
+      "category": "protein",
+      "display_name_pl": "Jogurt typu greckiego / skyr naturalny",
+      "default_portion": {
+        "amount": 1,
+        "unit": "kubeczek",
         "label_pl": "1 kubeczek"
       },
       "role": "na_szybko",
       "hero_macro": "protein",
       "lookup": {
-        "provider": "normy_pl_2024",
-        "lookup_query": "Skyr naturalny",
-        "known_values": {
-          "protein_g_per_100g": 12.0
-        }
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "Greek yogurt plain nonfat",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
       },
       "ui_tags": [
         "białko",
-        "na szybko",
+        "nabiał",
+        "na szybko"
+      ],
+      "notes_pl": "Szybki przykład nabiału wysokobiałkowego.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 170,
+        "energy_kcal": 100,
+        "protein_g": 17.3,
+        "carbs_g": 6.1,
+        "fat_g": 0.7,
+        "saturated_fat_g": 0.3
+      }
+    },
+    {
+      "id": "protein_cottage_cheese_lowfat",
+      "category": "protein",
+      "display_name_pl": "Serek wiejski / cottage cheese",
+      "default_portion": {
+        "amount": 1,
+        "unit": "kubek",
+        "label_pl": "1 mały kubek"
+      },
+      "role": "na_szybko",
+      "hero_macro": "protein",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "cottage cheese lowfat",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "białko",
         "nabiał"
       ],
-      "notes_pl": "Wygodny przykład z gotowej porcji.",
+      "notes_pl": "Nabiał z umiarkowaną ilością tłuszczu; wartości zależą od wariantu.",
       "resolved_nutrients_per_portion": {
         "portion_mass_g": 150,
-        "energy_kcal": 90,
-        "protein_g": 18.0,
-        "carbs_g": 6.0,
-        "fat_g": 0.3,
-        "saturated_fat_g": 0.2
-      }
+        "energy_kcal": 122,
+        "protein_g": 16.8,
+        "carbs_g": 5.1,
+        "fat_g": 3.9,
+        "saturated_fat_g": 2.4
+      },
+      "install_in_food_select": false
     },
     {
       "id": "protein_twarog_half_fat",
@@ -252,25 +609,24 @@ const MACRO_PRACTICE_FALLBACK_DICTIONARY = {
       "role": "najprostszy",
       "hero_macro": "protein",
       "lookup": {
-        "provider": "normy_pl_2024",
-        "lookup_query": "Twaróg półtłusty",
-        "known_values": {
-          "protein_g_per_100g": 18.7
-        }
+        "provider": "USDA FoodData Central",
+        "data_type": "USDA FoodData Central / porównawczo produkt regionalny",
+        "lookup_query": "cheese cottage dry curd / farmer cheese",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
       },
       "ui_tags": [
         "białko",
-        "polski klasyk",
         "nabiał"
       ],
-      "notes_pl": "Bardzo czytelny przykład dla polskiego użytkownika.",
+      "notes_pl": "Polski odpowiednik sera twarogowego; wartości porcji traktuj orientacyjnie.",
       "resolved_nutrients_per_portion": {
         "portion_mass_g": 100,
         "energy_kcal": 133,
         "protein_g": 18.7,
         "carbs_g": 3.5,
         "fat_g": 4.7,
-        "saturated_fat_g": 3.0
+        "saturated_fat_g": 3
       }
     },
     {
@@ -285,25 +641,24 @@ const MACRO_PRACTICE_FALLBACK_DICTIONARY = {
       "role": "na_szybko",
       "hero_macro": "protein",
       "lookup": {
-        "provider": "normy_pl_2024",
-        "lookup_query": "Jaja kurze całe",
-        "known_values": {
-          "protein_g_per_100g": 12.5
-        }
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "egg whole cooked hard-boiled",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
       },
       "ui_tags": [
         "białko",
-        "na szybko",
-        "codzienny wybór"
+        "jaja"
       ],
-      "notes_pl": "Łatwy do zrozumienia punkt odniesienia.",
+      "notes_pl": "Łatwy punkt odniesienia; białko i tłuszcz występują tu razem.",
       "resolved_nutrients_per_portion": {
-        "portion_mass_g": 112,
-        "energy_kcal": 160,
-        "protein_g": 14.0,
+        "portion_mass_g": 100,
+        "energy_kcal": 144,
+        "protein_g": 12.6,
         "carbs_g": 0.8,
-        "fat_g": 11.0,
-        "saturated_fat_g": 3.2
+        "fat_g": 9.5,
+        "saturated_fat_g": 3.1
       }
     },
     {
@@ -318,26 +673,128 @@ const MACRO_PRACTICE_FALLBACK_DICTIONARY = {
       "role": "bez_miesa",
       "hero_macro": "protein",
       "lookup": {
-        "provider": "normy_pl_2024",
-        "lookup_query": "Tofu",
-        "known_values": {
-          "protein_g_per_100g": 12.0
-        }
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "tofu firm prepared with calcium sulfate",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
       },
       "ui_tags": [
         "białko",
         "bez mięsa",
-        "roślinne"
+        "soja"
       ],
-      "notes_pl": "Podstawowy wariant bezmięsny.",
+      "notes_pl": "Bezmięsna porcja białka; zawartość zależy od twardości tofu.",
       "resolved_nutrients_per_portion": {
         "portion_mass_g": 150,
-        "energy_kcal": 144,
-        "protein_g": 18.0,
-        "carbs_g": 2.4,
-        "fat_g": 8.7,
-        "saturated_fat_g": 1.4
+        "energy_kcal": 216,
+        "protein_g": 25.5,
+        "carbs_g": 4.2,
+        "fat_g": 12.8,
+        "saturated_fat_g": 1.9
       }
+    },
+    {
+      "id": "protein_lentils_cooked",
+      "category": "protein",
+      "display_name_pl": "Soczewica gotowana",
+      "default_portion": {
+        "amount": 1,
+        "unit": "szklanka",
+        "label_pl": "1 szklanka"
+      },
+      "role": "bez_miesa",
+      "hero_macro": "protein",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "lentils mature seeds cooked boiled",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "białko",
+        "bez mięsa",
+        "strączki"
+      ],
+      "notes_pl": "Źródło białka roślinnego i węglowodanów; dobrze łączyć ze zbożami.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 180,
+        "energy_kcal": 209,
+        "protein_g": 16.2,
+        "carbs_g": 36,
+        "fat_g": 0.7,
+        "saturated_fat_g": 0.1
+      },
+      "install_in_food_select": false
+    },
+    {
+      "id": "protein_chickpeas_cooked",
+      "category": "protein",
+      "display_name_pl": "Ciecierzyca gotowana",
+      "default_portion": {
+        "amount": 1,
+        "unit": "szklanka",
+        "label_pl": "1 szklanka"
+      },
+      "role": "bez_miesa",
+      "hero_macro": "protein",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "chickpeas cooked boiled",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "białko",
+        "bez mięsa",
+        "strączki"
+      ],
+      "notes_pl": "Strączki dostarczają białka, ale też sporo węglowodanów.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 160,
+        "energy_kcal": 269,
+        "protein_g": 14.5,
+        "carbs_g": 45,
+        "fat_g": 4.2,
+        "saturated_fat_g": 0.4
+      },
+      "install_in_food_select": false
+    },
+    {
+      "id": "protein_white_beans_cooked",
+      "category": "protein",
+      "display_name_pl": "Fasola biała gotowana",
+      "default_portion": {
+        "amount": 1,
+        "unit": "szklanka",
+        "label_pl": "1 szklanka"
+      },
+      "role": "bez_miesa",
+      "hero_macro": "protein",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "beans white mature seeds cooked boiled without salt",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "białko",
+        "bez mięsa",
+        "strączki"
+      ],
+      "notes_pl": "Strączki dostarczają białka i węglowodanów złożonych; najlepiej łączyć je z innymi źródłami białka w ciągu dnia.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 179,
+        "energy_kcal": 249,
+        "protein_g": 17.4,
+        "carbs_g": 44.9,
+        "fat_g": 0.6,
+        "saturated_fat_g": 0.1
+      },
+      "install_in_food_select": false
     },
     {
       "id": "carb_rice_cooked",
@@ -351,20 +808,22 @@ const MACRO_PRACTICE_FALLBACK_DICTIONARY = {
       "role": "porcja_bazowa",
       "hero_macro": "carbs",
       "lookup": {
-        "provider": "usda_fdc",
-        "lookup_query": "Rice, white, cooked"
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "rice white long-grain cooked",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
       },
       "ui_tags": [
         "węglowodany",
-        "porcja bazowa",
-        "obiad"
+        "porcja bazowa"
       ],
-      "notes_pl": "Dobra kotwica do tłumaczenia węglowodanów na porcje.",
+      "notes_pl": "Dobra kotwica do tłumaczenia porcji węglowodanów w obiedzie.",
       "resolved_nutrients_per_portion": {
         "portion_mass_g": 200,
         "energy_kcal": 260,
         "protein_g": 5.4,
-        "carbs_g": 56.0,
+        "carbs_g": 56.4,
         "fat_g": 0.6,
         "saturated_fat_g": 0.1
       }
@@ -381,23 +840,158 @@ const MACRO_PRACTICE_FALLBACK_DICTIONARY = {
       "role": "porcja_bazowa",
       "hero_macro": "carbs",
       "lookup": {
-        "provider": "usda_fdc",
-        "lookup_query": "Pasta, cooked"
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "pasta cooked enriched",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
       },
       "ui_tags": [
         "węglowodany",
-        "porcja bazowa",
-        "obiad"
+        "porcja bazowa"
       ],
       "notes_pl": "Klasyczna porcja bazowa do głównego posiłku.",
       "resolved_nutrients_per_portion": {
         "portion_mass_g": 200,
         "energy_kcal": 316,
-        "protein_g": 10.0,
-        "carbs_g": 62.0,
-        "fat_g": 1.6,
-        "saturated_fat_g": 0.3
+        "protein_g": 11.6,
+        "carbs_g": 61.6,
+        "fat_g": 1.9,
+        "saturated_fat_g": 0.4
       }
+    },
+    {
+      "id": "carb_potatoes_boiled",
+      "category": "carbs",
+      "display_name_pl": "Ziemniaki gotowane",
+      "default_portion": {
+        "amount": 2,
+        "unit": "szt.",
+        "label_pl": "2 średnie sztuki"
+      },
+      "role": "porcja_bazowa",
+      "hero_macro": "carbs",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "potatoes boiled cooked flesh without skin",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "węglowodany",
+        "porcja bazowa"
+      ],
+      "notes_pl": "Porcja skrobiowa o zwykle niższej gęstości energetycznej niż suchsze produkty zbożowe.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 200,
+        "energy_kcal": 174,
+        "protein_g": 3.8,
+        "carbs_g": 40,
+        "fat_g": 0.2,
+        "saturated_fat_g": 0.1
+      },
+      "install_in_food_select": false
+    },
+    {
+      "id": "carb_sweet_potato_baked",
+      "category": "carbs",
+      "display_name_pl": "Batat pieczony",
+      "default_portion": {
+        "amount": 1,
+        "unit": "szt.",
+        "label_pl": "1 średnia sztuka"
+      },
+      "role": "porcja_bazowa",
+      "hero_macro": "carbs",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "sweet potato cooked baked in skin without salt",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "węglowodany",
+        "warzywa skrobiowe"
+      ],
+      "notes_pl": "Warzywo skrobiowe — może zastępować ziemniaki, ryż lub pieczywo w posiłku.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 150,
+        "energy_kcal": 135,
+        "protein_g": 3,
+        "carbs_g": 31,
+        "fat_g": 0.2,
+        "saturated_fat_g": 0
+      },
+      "install_in_food_select": false
+    },
+    {
+      "id": "carb_quinoa_cooked",
+      "category": "carbs",
+      "display_name_pl": "Komosa ryżowa gotowana",
+      "default_portion": {
+        "amount": 1,
+        "unit": "szklanka",
+        "label_pl": "1 szklanka"
+      },
+      "role": "porcja_bazowa",
+      "hero_macro": "carbs",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "quinoa cooked",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "węglowodany",
+        "porcja bazowa"
+      ],
+      "notes_pl": "Porcja węglowodanów z dodatkową ilością białka i tłuszczu.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 185,
+        "energy_kcal": 222,
+        "protein_g": 8.1,
+        "carbs_g": 39.4,
+        "fat_g": 3.6,
+        "saturated_fat_g": 0.4
+      },
+      "install_in_food_select": false
+    },
+    {
+      "id": "carb_buckwheat_cooked",
+      "category": "carbs",
+      "display_name_pl": "Kasza gryczana gotowana",
+      "default_portion": {
+        "amount": 1,
+        "unit": "szklanka",
+        "label_pl": "1 szklanka"
+      },
+      "role": "porcja_bazowa",
+      "hero_macro": "carbs",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "buckwheat groats roasted cooked",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "węglowodany",
+        "porcja bazowa",
+        "kasza"
+      ],
+      "notes_pl": "Porcja kaszy do obiadu lub kolacji; zwykle lepiej syci niż produkty oczyszczone.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 168,
+        "energy_kcal": 155,
+        "protein_g": 5.7,
+        "carbs_g": 33.5,
+        "fat_g": 1,
+        "saturated_fat_g": 0.2
+      },
+      "install_in_food_select": false
     },
     {
       "id": "carb_oats_dry",
@@ -411,56 +1005,24 @@ const MACRO_PRACTICE_FALLBACK_DICTIONARY = {
       "role": "sniadanie",
       "hero_macro": "carbs",
       "lookup": {
-        "provider": "normy_pl_2024",
-        "lookup_query": "Płatki owsiane",
-        "known_values": {
-          "protein_g_per_100g": 11.9
-        }
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "oats raw",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
       },
       "ui_tags": [
         "węglowodany",
-        "śniadanie",
-        "owsiane"
+        "śniadanie"
       ],
-      "notes_pl": "Praktyczny przykład śniadaniowy; aplikacja może wyświetlić też białko z tej porcji.",
+      "notes_pl": "Praktyczny przykład śniadaniowy; zawiera też białko i tłuszcz.",
       "resolved_nutrients_per_portion": {
         "portion_mass_g": 60,
-        "energy_kcal": 228,
-        "protein_g": 7.8,
-        "carbs_g": 40.0,
-        "fat_g": 4.2,
-        "saturated_fat_g": 0.8
-      }
-    },
-    {
-      "id": "carb_banana",
-      "category": "carbs",
-      "display_name_pl": "Banan",
-      "default_portion": {
-        "amount": 1,
-        "unit": "szt.",
-        "label_pl": "1 średni banan"
-      },
-      "role": "na_szybko",
-      "hero_macro": "carbs",
-      "lookup": {
-        "provider": "usda_fdc",
-        "lookup_query": "Banana, raw"
-      },
-      "ui_tags": [
-        "węglowodany",
-        "na szybko",
-        "owoc"
-      ],
-      "notes_pl": "Łatwy przykład „na już”.",
-      "resolved_nutrients_per_portion": {
-        "portion_mass_g": 120,
-        "energy_kcal": 107,
-        "protein_g": 1.3,
-        "carbs_g": 27.0,
-        "fat_g": 0.3,
-        "saturated_fat_g": 0.1,
-        "sugars_g": 14.0
+        "energy_kcal": 233,
+        "protein_g": 10.1,
+        "carbs_g": 39.8,
+        "fat_g": 4.1,
+        "saturated_fat_g": 0.7
       }
     },
     {
@@ -475,24 +1037,158 @@ const MACRO_PRACTICE_FALLBACK_DICTIONARY = {
       "role": "na_szybko",
       "hero_macro": "carbs",
       "lookup": {
-        "provider": "usda_fdc",
-        "lookup_query": "Bread, whole wheat"
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "bread whole wheat",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
       },
       "ui_tags": [
         "węglowodany",
-        "pieczywo",
-        "na szybko"
+        "pieczywo"
       ],
-      "notes_pl": "Bardzo czytelny przykład do kanapek i śniadania.",
+      "notes_pl": "Czytelny przykład do kanapek i śniadania.",
       "resolved_nutrients_per_portion": {
         "portion_mass_g": 60,
         "energy_kcal": 148,
-        "protein_g": 5.5,
-        "carbs_g": 26.0,
-        "fat_g": 2.0,
-        "saturated_fat_g": 0.4,
-        "salt_g": 0.6
+        "protein_g": 7.8,
+        "carbs_g": 24,
+        "fat_g": 2.5,
+        "saturated_fat_g": 0.5
       }
+    },
+    {
+      "id": "carb_banana",
+      "category": "carbs",
+      "display_name_pl": "Banan",
+      "default_portion": {
+        "amount": 1,
+        "unit": "szt.",
+        "label_pl": "1 średni banan"
+      },
+      "role": "na_szybko",
+      "hero_macro": "carbs",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "banana raw",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "węglowodany",
+        "owoce"
+      ],
+      "notes_pl": "Łatwy przykład przekąski węglowodanowej.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 118,
+        "energy_kcal": 105,
+        "protein_g": 1.3,
+        "carbs_g": 27,
+        "fat_g": 0.4,
+        "saturated_fat_g": 0.1,
+        "sugars_g": 14.4
+      }
+    },
+    {
+      "id": "carb_apple",
+      "category": "carbs",
+      "display_name_pl": "Jabłko",
+      "default_portion": {
+        "amount": 1,
+        "unit": "szt.",
+        "label_pl": "1 średnie jabłko"
+      },
+      "role": "na_szybko",
+      "hero_macro": "carbs",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "apple raw with skin",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "węglowodany",
+        "owoce"
+      ],
+      "notes_pl": "Przekąska z naturalnymi cukrami i błonnikiem.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 180,
+        "energy_kcal": 95,
+        "protein_g": 0.5,
+        "carbs_g": 25,
+        "fat_g": 0.3,
+        "saturated_fat_g": 0.1,
+        "sugars_g": 19
+      },
+      "install_in_food_select": false
+    },
+    {
+      "id": "carb_kidney_beans_cooked",
+      "category": "carbs",
+      "display_name_pl": "Fasola czerwona gotowana",
+      "default_portion": {
+        "amount": 1,
+        "unit": "szklanka",
+        "label_pl": "1 szklanka"
+      },
+      "role": "porcja_bazowa",
+      "hero_macro": "carbs",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "kidney beans red mature seeds cooked boiled",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "węglowodany",
+        "strączki"
+      ],
+      "notes_pl": "Strączki łączą węglowodany, białko i błonnik.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 170,
+        "energy_kcal": 225,
+        "protein_g": 15.3,
+        "carbs_g": 40.4,
+        "fat_g": 0.9,
+        "saturated_fat_g": 0.1
+      },
+      "install_in_food_select": false
+    },
+    {
+      "id": "carb_corn_cooked",
+      "category": "carbs",
+      "display_name_pl": "Kukurydza gotowana",
+      "default_portion": {
+        "amount": 1,
+        "unit": "szklanka",
+        "label_pl": "1 szklanka"
+      },
+      "role": "na_szybko",
+      "hero_macro": "carbs",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "corn sweet yellow cooked boiled drained",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "węglowodany",
+        "warzywa skrobiowe"
+      ],
+      "notes_pl": "Przykład skrobiowego dodatku do posiłku.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 165,
+        "energy_kcal": 143,
+        "protein_g": 5.1,
+        "carbs_g": 31.3,
+        "fat_g": 2.2,
+        "saturated_fat_g": 0.3
+      },
+      "install_in_food_select": false
     },
     {
       "id": "fat_olive_oil",
@@ -506,23 +1202,58 @@ const MACRO_PRACTICE_FALLBACK_DICTIONARY = {
       "role": "lepsze_zrodlo",
       "hero_macro": "fat",
       "lookup": {
-        "provider": "usda_fdc",
-        "lookup_query": "Oil, olive"
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "oil olive salad or cooking",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
       },
       "ui_tags": [
         "tłuszcz",
-        "nienasycone",
-        "dodatek do potraw"
+        "oliwa"
       ],
-      "notes_pl": "Bardzo czytelne źródło tłuszczu dodanego.",
+      "notes_pl": "Bardzo czytelne źródło tłuszczu dodanego, głównie jednonienasyconego.",
       "resolved_nutrients_per_portion": {
         "portion_mass_g": 13.5,
         "energy_kcal": 119,
-        "protein_g": 0.0,
-        "carbs_g": 0.0,
+        "protein_g": 0,
+        "carbs_g": 0,
         "fat_g": 13.5,
         "saturated_fat_g": 1.9
       }
+    },
+    {
+      "id": "fat_canola_oil",
+      "category": "fat",
+      "display_name_pl": "Olej rzepakowy",
+      "default_portion": {
+        "amount": 1,
+        "unit": "łyżka",
+        "label_pl": "1 łyżka"
+      },
+      "role": "lepsze_zrodlo",
+      "hero_macro": "fat",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "oil canola",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "tłuszcz",
+        "olej roślinny"
+      ],
+      "notes_pl": "Olej roślinny do sałatek i gotowania; porcja 1 łyżki szybko zwiększa kaloryczność.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 14,
+        "energy_kcal": 124,
+        "protein_g": 0,
+        "carbs_g": 0,
+        "fat_g": 14,
+        "saturated_fat_g": 1
+      },
+      "install_in_food_select": false
     },
     {
       "id": "fat_avocado",
@@ -536,21 +1267,23 @@ const MACRO_PRACTICE_FALLBACK_DICTIONARY = {
       "role": "lepsze_zrodlo",
       "hero_macro": "fat",
       "lookup": {
-        "provider": "usda_fdc",
-        "lookup_query": "Avocados, raw"
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "avocados raw all commercial varieties",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
       },
       "ui_tags": [
         "tłuszcz",
-        "nienasycone",
-        "produkt świeży"
+        "owoce"
       ],
-      "notes_pl": "Przykład tłuszczu z produktu świeżego.",
+      "notes_pl": "Przykład tłuszczu z produktu świeżego; zawiera też błonnik.",
       "resolved_nutrients_per_portion": {
         "portion_mass_g": 75,
         "energy_kcal": 120,
         "protein_g": 1.5,
-        "carbs_g": 6.0,
-        "fat_g": 11.0,
+        "carbs_g": 6.4,
+        "fat_g": 11,
         "saturated_fat_g": 1.6
       }
     },
@@ -566,25 +1299,24 @@ const MACRO_PRACTICE_FALLBACK_DICTIONARY = {
       "role": "lepsze_zrodlo",
       "hero_macro": "fat",
       "lookup": {
-        "provider": "normy_pl_2024",
-        "lookup_query": "Orzechy włoskie",
-        "known_values": {
-          "protein_g_per_100g": 16.0
-        }
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "walnuts english",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
       },
       "ui_tags": [
         "tłuszcz",
-        "nienasycone",
-        "garść"
+        "orzechy"
       ],
-      "notes_pl": "Codzienny punkt odniesienia dla tłuszczu z orzechów.",
+      "notes_pl": "Mała porcja daje sporo tłuszczu i energii; dobre źródło ALA.",
       "resolved_nutrients_per_portion": {
         "portion_mass_g": 30,
         "energy_kcal": 196,
-        "protein_g": 4.5,
+        "protein_g": 4.6,
         "carbs_g": 4.1,
         "fat_g": 19.6,
-        "saturated_fat_g": 1.9
+        "saturated_fat_g": 1.8
       }
     },
     {
@@ -599,23 +1331,125 @@ const MACRO_PRACTICE_FALLBACK_DICTIONARY = {
       "role": "lepsze_zrodlo",
       "hero_macro": "fat",
       "lookup": {
-        "provider": "usda_fdc",
-        "lookup_query": "Almonds"
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "almonds",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
       },
       "ui_tags": [
         "tłuszcz",
-        "nienasycone",
-        "garść"
+        "orzechy"
       ],
       "notes_pl": "Czytelny przykład tłuszczu z orzechów.",
       "resolved_nutrients_per_portion": {
         "portion_mass_g": 30,
         "energy_kcal": 174,
-        "protein_g": 6.0,
-        "carbs_g": 6.0,
-        "fat_g": 15.0,
+        "protein_g": 6.4,
+        "carbs_g": 6.5,
+        "fat_g": 15,
         "saturated_fat_g": 1.1
       }
+    },
+    {
+      "id": "fat_chia_seeds",
+      "category": "fat",
+      "display_name_pl": "Nasiona chia",
+      "default_portion": {
+        "amount": 2,
+        "unit": "łyżki",
+        "label_pl": "2 łyżki"
+      },
+      "role": "lepsze_zrodlo",
+      "hero_macro": "fat",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "seeds chia dried",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "tłuszcz",
+        "nasiona"
+      ],
+      "notes_pl": "Dostarczają tłuszczu, ale też błonnika; porcje zwykle są małe.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 28,
+        "energy_kcal": 138,
+        "protein_g": 4.7,
+        "carbs_g": 12,
+        "fat_g": 8.7,
+        "saturated_fat_g": 0.9
+      },
+      "install_in_food_select": false
+    },
+    {
+      "id": "fat_flaxseed_ground",
+      "category": "fat",
+      "display_name_pl": "Siemię lniane mielone",
+      "default_portion": {
+        "amount": 2,
+        "unit": "łyżki",
+        "label_pl": "2 łyżki"
+      },
+      "role": "lepsze_zrodlo",
+      "hero_macro": "fat",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "flaxseed ground",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "tłuszcz",
+        "nasiona",
+        "omega-3 ALA"
+      ],
+      "notes_pl": "Dodatek do owsianki, jogurtu lub koktajlu; wnosi tłuszcz, błonnik i kwas ALA.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 14,
+        "energy_kcal": 75,
+        "protein_g": 2.6,
+        "carbs_g": 4,
+        "fat_g": 5.9,
+        "saturated_fat_g": 0.5
+      },
+      "install_in_food_select": false
+    },
+    {
+      "id": "fat_sunflower_seeds",
+      "category": "fat",
+      "display_name_pl": "Pestki słonecznika",
+      "default_portion": {
+        "amount": 30,
+        "unit": "g",
+        "label_pl": "1 garść"
+      },
+      "role": "lepsze_zrodlo",
+      "hero_macro": "fat",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "seeds sunflower seed kernels dried",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "tłuszcz",
+        "nasiona"
+      ],
+      "notes_pl": "Poręczna porcja tłuszczu z nasion.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 30,
+        "energy_kcal": 175,
+        "protein_g": 6.2,
+        "carbs_g": 6,
+        "fat_g": 15.5,
+        "saturated_fat_g": 1.5
+      },
+      "install_in_food_select": false
     },
     {
       "id": "fat_peanut_butter_100",
@@ -629,27 +1463,93 @@ const MACRO_PRACTICE_FALLBACK_DICTIONARY = {
       "role": "uwazaj_na",
       "hero_macro": "fat",
       "lookup": {
-        "provider": "normy_pl_2024",
-        "lookup_query": "Masło orzechowe",
-        "known_values": {
-          "protein_g_per_100g": 22.0
-        }
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "peanut butter smooth style without salt",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
       },
       "ui_tags": [
         "tłuszcz",
-        "kaloryczne",
-        "smarowidło"
+        "orzechy",
+        "kaloryczne"
       ],
-      "notes_pl": "Dobry przykład produktu, który łatwo „dobija” tłuszcz i kalorie.",
+      "notes_pl": "Łatwo zwiększa tłuszcz i kalorie — odmierzanie porcji ma znaczenie.",
       "resolved_nutrients_per_portion": {
         "portion_mass_g": 32,
         "energy_kcal": 188,
-        "protein_g": 8.0,
-        "carbs_g": 6.0,
-        "fat_g": 16.0,
-        "saturated_fat_g": 3.2,
-        "salt_g": 0.2
+        "protein_g": 8,
+        "carbs_g": 7,
+        "fat_g": 16,
+        "saturated_fat_g": 3.3
       }
+    },
+    {
+      "id": "fat_tahini",
+      "category": "fat",
+      "display_name_pl": "Tahini",
+      "default_portion": {
+        "amount": 2,
+        "unit": "łyżki",
+        "label_pl": "2 łyżki"
+      },
+      "role": "uwazaj_na",
+      "hero_macro": "fat",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "sesame butter tahini",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "tłuszcz",
+        "sezam"
+      ],
+      "notes_pl": "Mała porcja pasty sezamowej wnosi dużo tłuszczu i energii.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 30,
+        "energy_kcal": 178,
+        "protein_g": 5.1,
+        "carbs_g": 6.4,
+        "fat_g": 16.1,
+        "saturated_fat_g": 2.3
+      },
+      "install_in_food_select": false
+    },
+    {
+      "id": "fat_salmon_cooked",
+      "category": "fat",
+      "display_name_pl": "Łosoś pieczony",
+      "default_portion": {
+        "amount": 120,
+        "unit": "g",
+        "label_pl": "1 filet"
+      },
+      "role": "lepsze_zrodlo",
+      "hero_macro": "fat",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "salmon cooked dry heat",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "tłuszcz",
+        "ryby",
+        "białko"
+      ],
+      "notes_pl": "Przykład produktu, w którym tłuszcz idzie razem z białkiem.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 120,
+        "energy_kcal": 247,
+        "protein_g": 26.4,
+        "carbs_g": 0,
+        "fat_g": 14.7,
+        "saturated_fat_g": 3.1
+      },
+      "install_in_food_select": false
     },
     {
       "id": "satfat_snickers_single",
@@ -663,7 +1563,7 @@ const MACRO_PRACTICE_FALLBACK_DICTIONARY = {
       "role": "warning",
       "hero_macro": "saturated_fat",
       "lookup": {
-        "provider": "official_brand_label",
+        "provider": "Oficjalna etykieta producenta / USDA FoodData Central",
         "lookup_query": "SNICKERS Singles Size Chocolate Candy Bars, 1.86 oz",
         "known_values_per_portion": {
           "energy_kcal": 250,
@@ -672,7 +1572,8 @@ const MACRO_PRACTICE_FALLBACK_DICTIONARY = {
           "carbs_g": 32,
           "sugars_g": 27,
           "protein_g": 5
-        }
+        },
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
       },
       "ui_tags": [
         "warning",
@@ -683,11 +1584,11 @@ const MACRO_PRACTICE_FALLBACK_DICTIONARY = {
       "resolved_nutrients_per_portion": {
         "portion_mass_g": 53,
         "energy_kcal": 250,
-        "protein_g": 5.0,
-        "carbs_g": 32.0,
-        "fat_g": 12.0,
+        "protein_g": 5,
+        "carbs_g": 32,
+        "fat_g": 12,
         "saturated_fat_g": 4.5,
-        "sugars_g": 27.0,
+        "sugars_g": 27,
         "salt_g": 0.2
       }
     },
@@ -703,8 +1604,9 @@ const MACRO_PRACTICE_FALLBACK_DICTIONARY = {
       "role": "warning",
       "hero_macro": "saturated_fat",
       "lookup": {
-        "provider": "usda_fdc",
-        "lookup_query": "Chocolate, milk"
+        "provider": "USDA FoodData Central / etykiety produktów",
+        "lookup_query": "Chocolate, milk",
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
       },
       "ui_tags": [
         "warning",
@@ -716,10 +1618,10 @@ const MACRO_PRACTICE_FALLBACK_DICTIONARY = {
         "portion_mass_g": 50,
         "energy_kcal": 268,
         "protein_g": 3.8,
-        "carbs_g": 30.0,
-        "fat_g": 15.0,
-        "saturated_fat_g": 9.0,
-        "sugars_g": 27.0,
+        "carbs_g": 30,
+        "fat_g": 15,
+        "saturated_fat_g": 9,
+        "sugars_g": 27,
         "salt_g": 0.1
       }
     },
@@ -735,8 +1637,9 @@ const MACRO_PRACTICE_FALLBACK_DICTIONARY = {
       "role": "warning",
       "hero_macro": "saturated_fat",
       "lookup": {
-        "provider": "usda_fdc",
-        "lookup_query": "Croissant"
+        "provider": "USDA FoodData Central / etykiety produktów",
+        "lookup_query": "Croissant",
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
       },
       "ui_tags": [
         "warning",
@@ -747,11 +1650,11 @@ const MACRO_PRACTICE_FALLBACK_DICTIONARY = {
       "resolved_nutrients_per_portion": {
         "portion_mass_g": 60,
         "energy_kcal": 240,
-        "protein_g": 5.0,
-        "carbs_g": 26.0,
-        "fat_g": 13.0,
+        "protein_g": 5,
+        "carbs_g": 26,
+        "fat_g": 13,
         "saturated_fat_g": 7.5,
-        "sugars_g": 6.0,
+        "sugars_g": 6,
         "salt_g": 0.5
       }
     },
@@ -767,8 +1670,9 @@ const MACRO_PRACTICE_FALLBACK_DICTIONARY = {
       "role": "warning",
       "hero_macro": "saturated_fat",
       "lookup": {
-        "provider": "local_or_usda_nearest",
-        "lookup_query": "Sausage, dry or semi-dry"
+        "provider": "Oficjalna etykieta producenta / USDA FoodData Central",
+        "lookup_query": "Sausage, dry or semi-dry",
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
       },
       "ui_tags": [
         "warning",
@@ -779,10 +1683,10 @@ const MACRO_PRACTICE_FALLBACK_DICTIONARY = {
       "resolved_nutrients_per_portion": {
         "portion_mass_g": 60,
         "energy_kcal": 320,
-        "protein_g": 16.0,
+        "protein_g": 16,
         "carbs_g": 1.2,
-        "fat_g": 26.0,
-        "saturated_fat_g": 10.0,
+        "fat_g": 26,
+        "saturated_fat_g": 10,
         "salt_g": 2.2
       }
     },
@@ -798,11 +1702,9 @@ const MACRO_PRACTICE_FALLBACK_DICTIONARY = {
       "role": "warning",
       "hero_macro": "saturated_fat",
       "lookup": {
-        "provider": "normy_pl_2024_or_usda_nearest",
-        "lookup_query": "Ser edamski / cheese, semi-hard",
-        "known_values": {
-          "protein_g_per_100g": 26.1
-        }
+        "provider": "USDA FoodData Central / etykiety produktów",
+        "lookup_query": "Cheese, edam",
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
       },
       "ui_tags": [
         "warning",
@@ -815,27 +1717,17 @@ const MACRO_PRACTICE_FALLBACK_DICTIONARY = {
         "energy_kcal": 142,
         "protein_g": 10.4,
         "carbs_g": 0.2,
-        "fat_g": 11.0,
+        "fat_g": 11,
         "saturated_fat_g": 7.2,
         "salt_g": 0.8
       }
     }
   ],
   "combination_examples": {
-    "protein_mixed_day": [
-      {
-        "product_id": "protein_skyr_natural",
-        "portion_multiplier": 1
-      },
-      {
-        "product_id": "protein_eggs",
-        "portion_multiplier": 1
-      },
-      {
-        "product_id": "protein_tofu_natural",
-        "portion_multiplier": 1
-      }
-    ],
+    "protein_sets": [],
+    "carbs_sets": [],
+    "fat_sets": [],
+    "protein_mixed_day": [],
     "plant_protein_note": "Przy białku roślinnym warto łączyć różne źródła, np. strączki + produkty zbożowe + orzechy."
   },
   "integration_hints": {
@@ -857,52 +1749,61 @@ const MACRO_PRACTICE_FALLBACK_DICTIONARY = {
   }
 };
 const MACRO_PRACTICE_FALLBACK_COPY = {
-  "version": "0.1.0",
+  "version": "0.2.1",
   "locale": "pl-PL",
   "card_inline": {
-    "protein_summary": "Około {{servings_count}} prostych porcji białka w ciągu dnia.",
-    "carbs_summary": "Najlepiej rozłożyć to na kilka porcji w ciągu dnia.",
-    "fat_summary": "Ważna jest nie tylko ilość, ale też rodzaj tłuszczu.",
+    "protein_summary": "Przykłady pokazują, jak z kilku porcji zbudować dzienny cel białka.",
+    "carbs_summary": "Przykłady pokazują porcje, które pomagają rozłożyć węglowodany na cały dzień.",
+    "fat_summary": "Przykłady pokazują, jak szybko sumuje się tłuszcz i które źródła wybierać częściej.",
     "satfat_summary": "Im mniej, tym lepiej. To nie jest cel do dobicia.",
     "cta_examples": "Zobacz przykłady"
   },
   "bottom_sheet": {
     "common": {
       "cta_close": "Zamknij",
-      "disclaimer_examples": "To orientacyjne przykłady. Nie musisz zjadać jednego produktu, żeby osiągnąć cel dnia.",
+      "disclaimer_examples": "To orientacyjne przykłady produktów i porcji opracowane na podstawie USDA FoodData Central. Nie musisz zjadać jednego produktu, żeby osiągnąć cel dnia; rzeczywista zawartość składników zależy od produktu, obróbki i porcji.",
       "disclaimer_warning": "To nie jest „cel do dobicia”. Chodzi o produkty, które szybko podbijają tłuszcze nasycone w 1 porcji."
     },
     "protein": {
-      "title": "Białko — jak to wygląda w jedzeniu",
-      "subtitle": "Cel dnia: {{target_g}} g",
-      "section_simple": "Najprostsze przykłady",
-      "section_meatless": "Wersja bez mięsa",
-      "section_mix": "Prosty miks dnia",
-      "row_goal_share": "Ta porcja daje około {{pct}}% Twojego celu białka.",
-      "row_good_choice": "Dobry prosty wybór na dobicie białka.",
-      "row_meatless_note": "Wersja roślinna: najlepiej łączyć różne źródła.",
-      "mix_example_intro": "Przykładowy prosty miks dnia:",
-      "mix_example_template": "{{item_1}} + {{item_2}} + {{item_3}}"
+      "title": "Białko — przykłady porcji z żywności",
+      "subtitle": "Cel do planowania: {{target_g}} g/d",
+      "section_simple": "Źródła zwierzęce i mieszane",
+      "section_meatless": "Źródła roślinne i bezmięsne",
+      "row_goal_share": "ok. {{pct}} celu",
+      "row_good_choice": "Przykład porcji, którą łatwo włączyć do posiłku.",
+      "row_meatless_note": "Białko roślinne najlepiej planować z różnych źródeł w ciągu dnia.",
+      "intro": "Poniżej pokazano przykładowe porcje produktów, które mogą pomagać pokrywać dzienny cel białka. Nie trzeba realizować celu jednym produktem — zwykle rozkłada się go na kilka posiłków.",
+      "target_label": "Cel do plakietek",
+      "section_examples": "Przykładowe porcje",
+      "chip_goal_share": "ok. {{pct}} celu"
     },
     "carbs": {
-      "title": "Węglowodany — jak to rozłożyć w ciągu dnia",
-      "subtitle": "Cel dnia: {{target_g}} g",
-      "section_base": "Porcje bazowe",
-      "section_quick": "Na szybko",
-      "row_goal_share": "Ta porcja daje około {{pct}}% Twojego celu węglowodanów.",
-      "row_base_note": "Dobra porcja bazowa do głównego posiłku.",
-      "row_quick_note": "Prosty przykład na przekąskę lub szybki posiłek.",
-      "footer": "Węglowodany najłatwiej rozłożyć na kilka posiłków."
+      "title": "Węglowodany — przykłady porcji z żywności",
+      "subtitle": "Cel do planowania: {{target_g}} g/d",
+      "section_base": "Porcje bazowe do posiłku",
+      "section_quick": "Szybkie porcje i dodatki",
+      "row_goal_share": "ok. {{pct}} celu",
+      "row_base_note": "Porcja bazowa, którą łatwo wkomponować w główny posiłek.",
+      "row_quick_note": "Szybka porcja węglowodanów; ilość cukrów i błonnika zależy od produktu.",
+      "footer": "Węglowodany najlepiej rozkładać na kilka posiłków i wybierać częściej produkty zbożowe, warzywa skrobiowe, owoce oraz strączki.",
+      "intro": "Poniżej pokazano przykładowe porcje produktów węglowodanowych. Najlepiej rozkładać je na kilka posiłków i wybierać częściej produkty zbożowe, warzywa skrobiowe, owoce i strączki.",
+      "target_label": "Cel do plakietek",
+      "section_examples": "Przykładowe porcje",
+      "chip_goal_share": "ok. {{pct}} celu"
     },
     "fat": {
-      "title": "Tłuszcz — liczy się ilość i jakość",
-      "subtitle": "Zakres dnia: {{target_min_g}}–{{target_max_g}} g",
-      "section_better": "Lepsze źródła tłuszczu",
-      "section_watch": "Jak łatwo dobić za dużo",
-      "row_range_share": "Ta porcja daje około {{pct}}% dziennego zakresu tłuszczu.",
-      "row_better_note": "To głównie źródło tłuszczów nienasyconych.",
-      "row_watch_note": "To bardziej źródło tłuszczu niż białka.",
-      "footer": "Staraj się częściej wybierać tłuszcze nienasycone."
+      "title": "Tłuszcze — przykłady porcji z żywności",
+      "subtitle": "Zakres do planowania: {{target_min_g}}–{{target_max_g}} g/d",
+      "section_better": "Źródła tłuszczów nienasyconych",
+      "section_watch": "Produkty, z którymi łatwo przesadzić",
+      "row_range_share": "ok. {{pct}} celu",
+      "row_better_note": "Dobry przykład źródła tłuszczu nienasyconego lub produktu z korzystniejszym profilem tłuszczu.",
+      "row_watch_note": "Warto odmierzać porcję — takie produkty szybko zwiększają tłuszcz i kalorie.",
+      "footer": "W tłuszczach liczy się ilość i jakość. Częściej wybieraj źródła nienasycone, a tłuszcze nasycone traktuj jako składnik do ograniczania.",
+      "intro": "Poniżej pokazano, ile tłuszczu wnoszą typowe porcje. W praktyce liczy się nie tylko ilość, ale też jakość — częściej wybieraj tłuszcze nienasycone, a ograniczaj źródła tłuszczów nasyconych.",
+      "target_label": "Cel do plakietek",
+      "section_examples": "Przykładowe porcje",
+      "chip_goal_share": "ok. {{pct}} celu"
     },
     "satfat": {
       "title": "Tłuszcze nasycone — warto ograniczać",
@@ -918,13 +1819,12 @@ const MACRO_PRACTICE_FALLBACK_COPY = {
   "chips": {
     "low": "niska ilość",
     "medium": "średnia ilość",
-    "high": "wysoka ilość",
-    "warning": "uważaj"
+    "high": "wysoka ilość"
   },
   "meal_card": {
     "line_macros": "B {{protein_g}} g • W {{carbs_g}} g • T {{fat_g}} g",
     "line_goal_share": "Pokrywa: białko {{protein_pct}}% • węglowodany {{carbs_pct}}% • tłuszcz {{fat_pct}}%",
-    "line_warning_satfat": "Nasycone: {{level_label}} w 1 porcji",
+    "line_warning_satfat": "Tłuszcze nasycone: {{level_label}} w 1 porcji",
     "line_warning_salt": "Sól: {{level_label}} w 1 porcji",
     "line_warning_sugars": "Cukry: {{level_label}} w 1 porcji"
   },
@@ -1087,6 +1987,11 @@ function macroPracticeBuildReferenceFoodKey(product) {
 function macroPracticeBuildFoodEntryFromProduct(product) {
   const portion = macroPracticeGetProductPortion(product);
   if (!product || !portion) return null;
+  const displayName = product.display_name_pl || product.name || 'Produkt referencyjny';
+  const rawPortionLabel = product.default_portion && product.default_portion.label_pl
+    ? String(product.default_portion.label_pl).trim()
+    : '';
+  const portionMassG = Number(portion.portion_mass_g);
   return {
     name: macroPracticeBuildFoodOptionName(product),
     kcal: Math.round(Number(portion.energy_kcal) || 0),
@@ -1097,25 +2002,252 @@ function macroPracticeBuildFoodEntryFromProduct(product) {
     sugars_g: macroPracticeSafeNumber(portion.sugars_g) || 0,
     salt_g: macroPracticeSafeNumber(portion.salt_g) || 0,
     macroProductId: product.id,
+    macroDisplayName: displayName,
+    macroBasePortionLabel: rawPortionLabel,
+    macroBasePortionMassG: Number.isFinite(portionMassG) ? portionMassG : null,
     macroPortionMultiplier: 1,
     macroPortionLabel: macroPracticeBuildPortionLabel(product),
     isMacroReferenceFood: true,
     macroCategory: product.category || '',
+    foodGroup: 'base',
+    macroSource: product.lookup && product.lookup.provider ? product.lookup.provider : 'USDA FoodData Central',
+    macroNote: 'Produkt bazowy — wartości orientacyjne dla podanej porcji.',
     showSatfatWarning: product.category === 'satfat'
   };
 }
 
+function macroPracticeEscapeAttr(value) {
+  return macroPracticeEscapeHtml(value).replace(/`/g, '&#96;');
+}
+
+function macroPracticeResolveFoodGroup(food) {
+  const explicit = food && food.foodGroup ? String(food.foodGroup) : '';
+  if (explicit) return explicit;
+  const category = food && food.macroCategory ? String(food.macroCategory) : '';
+  if (category === 'meal') return 'meals';
+  if (category === 'protein' || category === 'carbs' || category === 'fat' || category === 'satfat') return 'base';
+  return 'other';
+}
+
+function macroPracticeGetFoodGroupLabel(groupKey) {
+  const group = FOOD_SELECT_GROUPS.find((item) => item.key === groupKey);
+  return group ? group.label : 'Inne';
+}
+
+function macroPracticeBuildFoodOptionLabel(food) {
+  // W selektorze zostawiamy tylko nazwę produktu/dania i gramaturę porcji.
+  // Makroskładniki są nadal widoczne po wybraniu pozycji w podsumowaniu karty.
+  return food && food.name ? String(food.name) : '';
+}
+
+function macroPracticeIsEffectivelyOne(value) {
+  const num = Number(value);
+  return Number.isFinite(num) && Math.abs(num - 1) < 0.0001;
+}
+
+function macroPracticeIsIntegerLike(value) {
+  const num = Number(value);
+  return Number.isFinite(num) && Math.abs(num - Math.round(num)) < 0.0001;
+}
+
+function macroPracticeFormatQuantity(value, digits = 1) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return '';
+  const abs = Math.abs(num);
+  const precision = macroPracticeIsIntegerLike(num) ? 0 : Math.max(0, Number(digits) || 1);
+  const formatted = num.toLocaleString('pl-PL', {
+    minimumFractionDigits: precision,
+    maximumFractionDigits: precision
+  });
+  return abs >= 1000 ? formatted.replace(/\u00a0/g, ' ') : formatted;
+}
+
+function macroPracticePolishPluralForm(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return 'many';
+  if (!macroPracticeIsIntegerLike(num)) return 'many';
+  const abs = Math.abs(Math.round(num));
+  if (abs === 1) return 'one';
+  const lastTwo = abs % 100;
+  const last = abs % 10;
+  if (last >= 2 && last <= 4 && !(lastTwo >= 12 && lastTwo <= 14)) return 'few';
+  return 'many';
+}
+
+function macroPracticeChooseForm(value, forms) {
+  const form = macroPracticePolishPluralForm(value);
+  return (forms && forms[form]) || (forms && forms.many) || '';
+}
+
+function macroPracticeBuildCountPhrase(value, forms, digits = 1) {
+  const formatted = macroPracticeFormatQuantity(value, digits);
+  if (!formatted) return '';
+  return `${formatted} ${macroPracticeChooseForm(value, forms)}`.trim();
+}
+
+function macroPracticeScaleRangeLabel(label, qty, unitForms) {
+  const match = String(label || '').trim().match(/^(\d+(?:[,.]\d+)?)\s*[–-]\s*(\d+(?:[,.]\d+)?)\s+(.+)$/);
+  if (!match) return '';
+  const low = Number(match[1].replace(',', '.')) * qty;
+  const high = Number(match[2].replace(',', '.')) * qty;
+  if (!Number.isFinite(low) || !Number.isFinite(high)) return '';
+  return `${macroPracticeFormatQuantity(low)}–${macroPracticeFormatQuantity(high)} ${macroPracticeChooseForm(high, unitForms)}`.trim();
+}
+
+function macroPracticeScaleFractionLabel(label, qty, wholeForms, wholeCountForQtyOne = 0.5) {
+  const count = Number(qty) * wholeCountForQtyOne;
+  if (!Number.isFinite(count) || count <= 0) return '';
+  if (macroPracticeIsIntegerLike(count) || count >= 1) {
+    return macroPracticeBuildCountPhrase(count, wholeForms);
+  }
+  return `${macroPracticeFormatQuantity(qty)} × ${String(label || '').trim()}`;
+}
+
+function macroPracticeBuildScaledBasePortionLabel(rawLabel, qty) {
+  const label = String(rawLabel || '').trim();
+  const amount = Number(qty);
+  if (!label || !Number.isFinite(amount) || amount <= 0 || macroPracticeIsEffectivelyOne(amount)) return label;
+
+  const exactScalers = {
+    '1 porcja obiadowa': () => macroPracticeBuildCountPhrase(amount, { one: 'porcja obiadowa', few: 'porcje obiadowe', many: 'porcji obiadowych' }),
+    '1 porcja śniadaniowa': () => macroPracticeBuildCountPhrase(amount, { one: 'porcja śniadaniowa', few: 'porcje śniadaniowe', many: 'porcji śniadaniowych' }),
+    '1 średnia porcja': () => macroPracticeBuildCountPhrase(amount, { one: 'średnia porcja', few: 'średnie porcje', many: 'średnich porcji' }),
+    '1 kubeczek': () => macroPracticeBuildCountPhrase(amount, { one: 'kubeczek', few: 'kubeczki', many: 'kubeczków' }),
+    '1 szklanka': () => macroPracticeBuildCountPhrase(amount, { one: 'szklanka', few: 'szklanki', many: 'szklanek' }),
+    '1 mała puszka': () => macroPracticeBuildCountPhrase(amount, { one: 'mała puszka', few: 'małe puszki', many: 'małych puszek' }),
+    '1 średni banan': () => macroPracticeBuildCountPhrase(amount, { one: 'średni banan', few: 'średnie banany', many: 'średnich bananów' }),
+    '1 średnia sztuka': () => macroPracticeBuildCountPhrase(amount, { one: 'średnia sztuka', few: 'średnie sztuki', many: 'średnich sztuk' }),
+    '1 łyżka': () => macroPracticeBuildCountPhrase(amount, { one: 'łyżka', few: 'łyżki', many: 'łyżek' }),
+    '1 garść': () => macroPracticeBuildCountPhrase(amount, { one: 'garść', few: 'garście', many: 'garści' }),
+    '1 baton': () => macroPracticeBuildCountPhrase(amount, { one: 'baton', few: 'batony', many: 'batonów' }),
+    '1 sztuka': () => macroPracticeBuildCountPhrase(amount, { one: 'sztuka', few: 'sztuki', many: 'sztuk' }),
+    '1 mała paczka': () => macroPracticeBuildCountPhrase(amount, { one: 'mała paczka', few: 'małe paczki', many: 'małych paczek' }),
+    '2 sztuki': () => macroPracticeBuildCountPhrase(amount * 2, { one: 'sztuka', few: 'sztuki', many: 'sztuk' }),
+    '2 kromki': () => macroPracticeBuildCountPhrase(amount * 2, { one: 'kromka', few: 'kromki', many: 'kromek' }),
+    '2 łyżki': () => macroPracticeBuildCountPhrase(amount * 2, { one: 'łyżka', few: 'łyżki', many: 'łyżek' }),
+    '1/2 kostki': () => macroPracticeScaleFractionLabel(label, amount, { one: 'kostka', few: 'kostki', many: 'kostek' }, 0.5),
+    '1/2 sztuki': () => macroPracticeScaleFractionLabel(label, amount, { one: 'sztuka', few: 'sztuki', many: 'sztuk' }, 0.5),
+    '1/2 tabliczki': () => macroPracticeScaleFractionLabel(label, amount, { one: 'tabliczka', few: 'tabliczki', many: 'tabliczek' }, 0.5)
+  };
+
+  if (exactScalers[label]) return exactScalers[label]();
+  if (label === '1/2–3/4 kostki') {
+    return `${macroPracticeFormatQuantity(amount)} × ${label}`;
+  }
+  const scaledRange = macroPracticeScaleRangeLabel(label, amount, { one: 'plaster', few: 'plastry', many: 'plastrów' });
+  if (scaledRange) return scaledRange;
+  return `${macroPracticeFormatQuantity(amount)} × ${label}`;
+}
+
+function macroPracticeBuildScaledMassLabel(food, qty) {
+  if (!food || typeof food !== 'object') return '';
+  const amount = Number(qty);
+  if (!Number.isFinite(amount) || amount <= 0) return '';
+  const baseMass = Number(food.macroBasePortionMassG);
+  if (!Number.isFinite(baseMass) || baseMass <= 0) return '';
+  const totalMass = baseMass * amount;
+  return `${macroPracticeFormatQuantity(totalMass, Number.isInteger(totalMass) ? 0 : 1)} g`;
+}
+
+function macroPracticeBuildScaledReferenceFoodLabel(food, qty) {
+  if (!food || typeof food !== 'object') return '';
+  const displayName = food.macroDisplayName || '';
+  if (!displayName) return '';
+  if (macroPracticeIsEffectivelyOne(qty)) return food.name || displayName;
+  const scaledBaseLabel = macroPracticeBuildScaledBasePortionLabel(food.macroBasePortionLabel, qty);
+  const massLabel = macroPracticeBuildScaledMassLabel(food, qty);
+  const portionLabel = scaledBaseLabel && massLabel
+    ? `${scaledBaseLabel} • ${massLabel}`
+    : (scaledBaseLabel || massLabel);
+  return portionLabel ? `${displayName} (${portionLabel})` : displayName;
+}
+
+function macroPracticeBuildScaledPlainFoodLabel(food, qty) {
+  if (!food || !food.name) return '';
+  const amount = Number(qty);
+  const name = String(food.name);
+  if (!Number.isFinite(amount) || amount <= 0 || macroPracticeIsEffectivelyOne(amount)) return name;
+
+  const parenCountMatch = name.match(/^(.*?\()\s*(\d+(?:[,.]\d+)?)\s*(szt\.|sztuk|kawałków|kromek|łyżek)\s*(\).*)$/i);
+  if (parenCountMatch) {
+    const baseCount = Number(parenCountMatch[2].replace(',', '.'));
+    const total = baseCount * amount;
+    if (Number.isFinite(total)) {
+      return `${parenCountMatch[1]}${macroPracticeFormatQuantity(total)} ${parenCountMatch[3]}${parenCountMatch[4]}`;
+    }
+  }
+
+  const trailingMassMatch = name.match(/^(.*?)(\d+(?:[,.]\d+)?)\s*(g|ml)$/i);
+  if (trailingMassMatch) {
+    const baseValue = Number(trailingMassMatch[2].replace(',', '.'));
+    const total = baseValue * amount;
+    if (Number.isFinite(total)) {
+      return `${trailingMassMatch[1]}${macroPracticeFormatQuantity(total, Number.isInteger(total) ? 0 : 1)} ${trailingMassMatch[3]}`.replace(/\s+/g, ' ').trim();
+    }
+  }
+
+  const trailingCountMatch = name.match(/^(.*?)(\d+(?:[,.]\d+)?)\s+(kawałków|szt\.)$/i);
+  if (trailingCountMatch) {
+    const baseCount = Number(trailingCountMatch[2].replace(',', '.'));
+    const total = baseCount * amount;
+    if (Number.isFinite(total)) {
+      return `${trailingCountMatch[1]}${macroPracticeFormatQuantity(total)} ${trailingCountMatch[3]}`.replace(/\s+/g, ' ').trim();
+    }
+  }
+
+  return `${macroPracticeFormatQuantity(amount)} × ${name}`;
+}
+
+function macroPracticeBuildSelectedFoodLabel(foodKey, qty) {
+  const resolvedKey = macroPracticeResolveFoodAliasKey(foodKey);
+  const food = foods[resolvedKey];
+  if (!food) return '';
+  const referenceLabel = macroPracticeBuildScaledReferenceFoodLabel(food, qty);
+  if (referenceLabel) return referenceLabel;
+  return macroPracticeBuildScaledPlainFoodLabel(food, qty);
+}
+
+
+function macroPracticeFoodSortValue(food) {
+  return String(food && food.name ? food.name : '')
+    .toLocaleLowerCase('pl-PL')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
 function macroPracticeBuildFoodOptionsMarkup(selectedValue) {
-  return Object.entries(foods)
-    .map(([key, value]) => `<option value="${key}" ${key === selectedValue ? 'selected' : ''}>${value.name}</option>`)
+  const grouped = FOOD_SELECT_GROUPS.reduce((acc, group) => {
+    acc[group.key] = [];
+    return acc;
+  }, {});
+
+  Object.entries(foods).forEach(([key, value]) => {
+    if (!value || value.hiddenInFoodSelector) return;
+    const groupKey = grouped[macroPracticeResolveFoodGroup(value)] ? macroPracticeResolveFoodGroup(value) : 'other';
+    grouped[groupKey].push([key, value]);
+  });
+
+  return FOOD_SELECT_GROUPS
+    .map((group) => {
+      const entries = (grouped[group.key] || []).sort((a, b) => macroPracticeFoodSortValue(a[1]).localeCompare(macroPracticeFoodSortValue(b[1]), 'pl-PL'));
+      if (!entries.length) return '';
+      const options = entries
+        .map(([key, value]) => {
+          const selected = key === selectedValue ? ' selected' : '';
+          return `<option value="${macroPracticeEscapeAttr(key)}"${selected}>${macroPracticeEscapeHtml(macroPracticeBuildFoodOptionLabel(value))}</option>`;
+        })
+        .join('');
+      return `<optgroup label="${macroPracticeEscapeAttr(macroPracticeGetFoodGroupLabel(group.key))}">${options}</optgroup>`;
+    })
     .join('');
 }
 
 function macroPracticeRefreshFoodSelectOptions() {
   document.querySelectorAll('.food-row select').forEach((selectEl) => {
     const currentValue = selectEl.value;
-    selectEl.innerHTML = macroPracticeBuildFoodOptionsMarkup(currentValue);
-    if (!foods[currentValue]) selectEl.value = 'snickers';
+    const resolvedValue = macroPracticeResolveFoodAliasKey(currentValue);
+    selectEl.innerHTML = macroPracticeBuildFoodOptionsMarkup(resolvedValue);
+    selectEl.value = foods[resolvedValue] ? resolvedValue : 'snickers';
   });
 }
 
@@ -1134,6 +2266,15 @@ function macroPracticeInstallReferenceFoods(forceRefresh = false) {
     const entry = macroPracticeBuildFoodEntryFromProduct(product);
     const key = macroPracticeBuildReferenceFoodKey(product);
     if (!entry || !key) return;
+    if (product.install_in_food_select === false) return;
+
+    const aliasKey = MACRO_REFERENCE_FOOD_ALIASES[product.id];
+    if (aliasKey && foods[aliasKey]) {
+      // Te produkty występują już w podstawowej liście posiłków/przekąsek.
+      // Nie dokładamy ich ponownie jako „produkty referencyjne”, żeby selektor nie miał duplikatów.
+      return;
+    }
+
     snacks[key] = entry;
     foods[key] = entry;
     installedKeys.push(key);
@@ -1182,7 +2323,9 @@ function macroPracticeResolveFoodMacros(foodOrKey) {
       salt_g: macroPracticeSafeNumber(food.salt_g) || 0,
       macroProductId: food.macroProductId || '',
       portionLabel: food.macroPortionLabel || '',
-      macroCategory: food.macroCategory || ''
+      macroCategory: food.macroCategory || '',
+      macroNote: food.macroNote || '',
+      macroSource: food.macroSource || ''
     };
   }
   if (!food.macroProductId) return null;
@@ -1199,23 +2342,76 @@ function macroPracticeResolveFoodMacros(foodOrKey) {
     salt_g: (macroPracticeSafeNumber(portion.salt_g) || 0) * multiplier,
     macroProductId: food.macroProductId,
     portionLabel: food.macroPortionLabel || '',
-    macroCategory: food.macroCategory || ''
+    macroCategory: food.macroCategory || '',
+    macroNote: food.macroNote || '',
+    macroSource: food.macroSource || ''
   };
 }
 
 function macroPracticeGetNutritionGoalTargets(model) {
   if (!model || typeof model !== 'object') return null;
-  const proteinG = model.protein && model.protein.main ? macroPracticeSafeNumber(model.protein.main.rdaGDay) : null;
+  const midpoint = (range) => Array.isArray(range) && range.length === 2 ? (Number(range[0]) + Number(range[1])) / 2 : null;
+  let energyKcal = null;
+  const energy = model.energy && typeof model.energy === 'object' ? model.energy : null;
+  if (energy && energy.available) {
+    if (Array.isArray(energy.items) && energy.items.length) {
+      const energyValues = energy.items
+        .map((item) => macroPracticeSafeNumber(item && item.teeKcal))
+        .filter((value) => Number.isFinite(value) && value > 0);
+      if (energyValues.length === 1) {
+        energyKcal = energyValues[0];
+      } else if (energyValues.length > 1) {
+        energyKcal = (Math.min(...energyValues) + Math.max(...energyValues)) / 2;
+      }
+    }
+    if (!Number.isFinite(energyKcal) && Array.isArray(energy.range) && energy.range.length === 2) {
+      energyKcal = midpoint(energy.range);
+    }
+  }
+
+  const reference = model.planningReference && typeof model.planningReference === 'object'
+    ? model.planningReference
+    : null;
+  const referenceGramTargets = reference && reference.gramTargets && typeof reference.gramTargets === 'object'
+    ? reference.gramTargets
+    : null;
+  const referencePercent = reference && reference.percent && typeof reference.percent === 'object'
+    ? reference.percent
+    : null;
+  const percentToGrams = (pct, kcalPerGram) => {
+    const p = macroPracticeSafeNumber(pct);
+    const e = macroPracticeSafeNumber(energyKcal);
+    const k = macroPracticeSafeNumber(kcalPerGram);
+    return Number.isFinite(p) && Number.isFinite(e) && e > 0 && Number.isFinite(k) && k > 0
+      ? (e * (p / 100)) / k
+      : null;
+  };
+
+  const proteinPlanningRange = model.protein && Array.isArray(model.protein.planningGramRange) ? model.protein.planningGramRange : null;
+  const proteinPlanningG = midpoint(proteinPlanningRange);
+  const proteinRdaG = model.protein && model.protein.main ? macroPracticeSafeNumber(model.protein.main.rdaGDay) : null;
   const carbsRange = model.carbs && Array.isArray(model.carbs.gramRange) ? model.carbs.gramRange : null;
   const fatRange = model.fat && Array.isArray(model.fat.gramRange) ? model.fat.gramRange : null;
+
+  const proteinG = macroPracticeSafeNumber(referenceGramTargets && referenceGramTargets.proteinG)
+    || percentToGrams(referencePercent && referencePercent.protein, 4)
+    || (Number.isFinite(proteinPlanningG) && proteinPlanningG > 0 ? proteinPlanningG : proteinRdaG);
+  const carbsG = macroPracticeSafeNumber(referenceGramTargets && referenceGramTargets.carbsG)
+    || percentToGrams(referencePercent && referencePercent.carbs, 4)
+    || midpoint(carbsRange);
+  const fatG = macroPracticeSafeNumber(referenceGramTargets && referenceGramTargets.fatG)
+    || percentToGrams(referencePercent && referencePercent.fat, 9)
+    || midpoint(fatRange);
+
   const satfatCap = MACRO_PRACTICE_STATE.dictionary && MACRO_PRACTICE_STATE.dictionary.reference_caps
     ? macroPracticeSafeNumber(MACRO_PRACTICE_STATE.dictionary.reference_caps.saturated_fat_g)
     : 20;
-  const midpoint = (range) => Array.isArray(range) && range.length === 2 ? (Number(range[0]) + Number(range[1])) / 2 : null;
   return {
+    energy_kcal: energyKcal,
     protein_g: proteinG,
-    carbs_g: midpoint(carbsRange),
-    fat_g: midpoint(fatRange),
+    carbs_g: carbsG,
+    fat_g: fatG,
+    reference_percent: referencePercent || null,
     satfat_cap_g: satfatCap || 20
   };
 }
@@ -1225,6 +2421,30 @@ function macroPracticePercentOfGoal(value, total) {
   const den = Number(total);
   if (!Number.isFinite(num) || !Number.isFinite(den) || den <= 0) return null;
   return Math.round((num / den) * 100);
+}
+
+function macroPracticeBuildTotalGoalShareParts(totals, nutritionModel) {
+  const targets = macroPracticeGetNutritionGoalTargets(nutritionModel);
+  const result = { energy: '', macros: [] };
+  if (!targets) return result;
+  const buildPart = (label, value, target) => {
+    const pct = macroPracticePercentOfGoal(value, target);
+    return pct !== null ? `${label} ${pct}%` : '';
+  };
+  result.energy = buildPart('Energia', totals && totals.energy_kcal, targets.energy_kcal);
+  ['Białko', 'Węglowodany', 'Tłuszcze'].forEach((label) => {
+    const key = label === 'Białko' ? 'protein_g' : label === 'Węglowodany' ? 'carbs_g' : 'fat_g';
+    const targetKey = key;
+    const part = buildPart(label, totals && totals[key], targets[targetKey]);
+    if (part) result.macros.push(part);
+  });
+  return result;
+}
+
+function macroPracticeBuildTotalGoalShareLine(totals, nutritionModel) {
+  const parts = macroPracticeBuildTotalGoalShareParts(totals, nutritionModel);
+  const combined = [parts.energy, ...parts.macros].filter(Boolean);
+  return combined.length ? `Procent dziennego celu do planowania diety: ${combined.join(' • ')}` : '';
 }
 
 function macroPracticeGetWarningLevel(sharePct) {
@@ -1286,7 +2506,7 @@ function macroPracticeAnalyzeFoodSelection(foodKey, qty, nutritionModel) {
     ? macroPracticeFillTemplate(mealCopy.line_warning_satfat, { level_label: warningLabel, pct: satfatPct })
     : '';
   const showAsWarning = String(base.macroCategory || '') === 'satfat' || totals.saturated_fat_g >= 4;
-  return { nutrients: totals, macroLine, coverageLine, warningLine, showAsWarning, satfatPct, warningLevel };
+  return { nutrients: totals, macroLine, coverageLine, warningLine, showAsWarning, satfatPct, warningLevel, macroNote: base.macroNote || '', macroSource: base.macroSource || '' };
 }
 
 macroPracticeLoadResources();
@@ -1306,13 +2526,63 @@ window.macroPracticeGetNutritionGoalTargets = macroPracticeGetNutritionGoalTarge
 window.macroPracticePercentOfGoal = macroPracticePercentOfGoal;
 window.macroPracticeGetWarningLevel = macroPracticeGetWarningLevel;
 window.macroPracticeAnalyzeFoodSelection = macroPracticeAnalyzeFoodSelection;
+window.macroPracticeBuildSelectedFoodLabel = macroPracticeBuildSelectedFoodLabel;
+
+(function initMacroPracticeNutritionNormsRefresh() {
+  if (typeof window === 'undefined' || window.__macroPracticeNutritionNormsRefreshBound) return;
+  window.__macroPracticeNutritionNormsRefreshBound = true;
+  let refreshing = false;
+  let lastSignature = '';
+
+  const hasSelectedFoodRows = function() {
+    if (!document || typeof document.querySelectorAll !== 'function') return false;
+    return Array.from(document.querySelectorAll('.food-row')).some((row) => {
+      const select = row && row.querySelector ? row.querySelector('select') : null;
+      const input = row && row.querySelector ? row.querySelector('input') : null;
+      const qty = input ? Number(input.value) : 0;
+      return !!(select && select.value && Number.isFinite(qty) && qty > 0);
+    });
+  };
+
+  const buildSignature = function(model) {
+    if (!model || typeof model !== 'object') return '';
+    const energy = model.energy && typeof model.energy === 'object' ? model.energy : {};
+    const reference = model.planningReference && model.planningReference.percent ? model.planningReference.percent : {};
+    const fatRange = model.fat && Array.isArray(model.fat.percentRange) ? model.fat.percentRange : [];
+    return [
+      energy.palMode || '',
+      Number.isFinite(Number(energy.usedPal)) ? Number(energy.usedPal).toFixed(2) : '',
+      Array.isArray(energy.range) ? energy.range.map((value) => Number(value).toFixed(0)).join('-') : '',
+      Number.isFinite(Number(reference.protein)) ? Number(reference.protein).toFixed(1) : '',
+      Number.isFinite(Number(reference.fat)) ? Number(reference.fat).toFixed(1) : '',
+      Number.isFinite(Number(reference.carbs)) ? Number(reference.carbs).toFixed(1) : '',
+      fatRange.join('-')
+    ].join('|');
+  };
+
+  window.addEventListener('nutritionNormsModelUpdated', function(event) {
+    const signature = buildSignature(event && event.detail);
+    if (!signature || signature === lastSignature) return;
+    lastSignature = signature;
+    if (refreshing || !hasSelectedFoodRows()) return;
+    refreshing = true;
+    try {
+      if (typeof window.macroPracticeRefreshFoodCardOnly === 'function') { window.macroPracticeRefreshFoodCardOnly({ preserveViewport: true }); } else if (typeof window.update === 'function') { window.update(); }
+    } catch (_) {
+      /* ignore */
+    } finally {
+      setTimeout(function() { refreshing = false; }, 0);
+    }
+  });
+})();
 
 /**
  * Adds a food row to the unified food list.  Uses the combined `foods`
  * dictionary.  Accepts an optional default key; falls back to 'snickers'.
  */
 function addFoodRow(defaultKey = 'snickers'){
-  addRow('foodList', foods, 'food-row', defaultKey);
+  const resolvedDefaultKey = macroPracticeResolveFoodAliasKey(defaultKey) || 'snickers';
+  addRow('foodList', foods, 'food-row', foods[resolvedDefaultKey] ? resolvedDefaultKey : 'snickers');
 }
 
 // === USTAWIENIA KLINICZNE ===
@@ -1514,9 +2784,9 @@ function showTooltip(target, message) {
 
 // -----------------------------------------------------------------------------
 // Globalna zmienna kontrolująca tryb wyświetlania wyników
-// professionalMode = true  → tryb profesjonalny: wyświetla Z‑score dla wagi,
+// professionalMode = true  ➔ tryb profesjonalny: wyświetla Z‑score dla wagi,
 //                           wzrostu i BMI
-// professionalMode = false → tryb standardowy: ukrywa te wartości
+// professionalMode = false ➔ tryb standardowy: ukrywa te wartości
 // Wartość ta jest modyfikowana przez przełącznik umieszczony w karcie BMI
 // (resultsModeToggle) oraz zapisywana w localStorage, aby stan został
 // zachowany pomiędzy sesjami.
@@ -1669,8 +2939,13 @@ function getDefaultGrowthDataSource(ageYears, proMode) {
   return 'OLAF';
 }
 
-function setCheckedGrowthDataSource(source) {
+function normalizeGrowthDataSource(source) {
   const selectedSource = String(source || '').toUpperCase();
+  return ['PALCZEWSKA', 'OLAF', 'WHO'].includes(selectedSource) ? selectedSource : '';
+}
+
+function setCheckedGrowthDataSource(source) {
+  const selectedSource = normalizeGrowthDataSource(source) || 'WHO';
   const palRadio = document.getElementById('sourcePalczewska');
   const olafRadio = document.getElementById('sourceOlaf');
   const whoRadio = document.getElementById('sourceWho');
@@ -1680,6 +2955,15 @@ function setCheckedGrowthDataSource(source) {
   try {
     bmiSource = selectedSource;
   } catch (_) {}
+  return selectedSource;
+}
+
+function rememberManualGrowthDataSource(source) {
+  const selectedSource = normalizeGrowthDataSource(source);
+  const toggleContainer = document.getElementById('dataToggleContainer');
+  if (!selectedSource || !toggleContainer || !toggleContainer.dataset) return selectedSource;
+  toggleContainer.dataset.manual = '1';
+  toggleContainer.dataset.preferredSource = selectedSource;
   return selectedSource;
 }
 
@@ -1714,15 +2998,23 @@ function syncGrowthDataSourceInputs(options = {}) {
     const ageYears = Number.isFinite(options.ageYears) ? options.ageYears : getGrowthDataSourceAgeYears();
     const proMode = (typeof options.proMode === 'boolean') ? options.proMode : isGrowthResultsProfessionalMode();
     const manualSelection = !!(toggleContainer && toggleContainer.dataset && toggleContainer.dataset.manual === '1');
+    const preferredSource = normalizeGrowthDataSource(toggleContainer && toggleContainer.dataset ? toggleContainer.dataset.preferredSource : '');
     const currentSourceEl = document.querySelector('input[name="dataSource"]:checked');
-    const currentSource = currentSourceEl && currentSourceEl.value ? String(currentSourceEl.value).toUpperCase() : '';
+    const currentSource = normalizeGrowthDataSource(currentSourceEl && currentSourceEl.value ? currentSourceEl.value : '');
 
     palRadio.disabled = !isGrowthDataSourceAllowed('PALCZEWSKA', ageYears, proMode);
     olafRadio.disabled = !isGrowthDataSourceAllowed('OLAF', ageYears, proMode);
     whoRadio.disabled = !isGrowthDataSourceAllowed('WHO', ageYears, proMode);
 
     let nextSource = currentSource;
-    if (!manualSelection || !isGrowthDataSourceAllowed(currentSource, ageYears, proMode)) {
+    if (manualSelection) {
+      const manualSource = preferredSource || currentSource;
+      if (manualSource && isGrowthDataSourceAllowed(manualSource, ageYears, proMode)) {
+        nextSource = manualSource;
+      } else if (!isGrowthDataSourceAllowed(currentSource, ageYears, proMode)) {
+        nextSource = getDefaultGrowthDataSource(ageYears, proMode);
+      }
+    } else if (!isGrowthDataSourceAllowed(currentSource, ageYears, proMode)) {
       nextSource = getDefaultGrowthDataSource(ageYears, proMode);
     }
     if (!isGrowthDataSourceAllowed(nextSource, ageYears, proMode)) {
@@ -2556,8 +3848,8 @@ function applyProModePulse(weightPerc, heightPerc, bmiCat, bmiPerc, proMode) {
       // (dokładnie tak, jak jest on prezentowany w UI przez formatCentile()).
       //
       // Reguła:
-      //   BMI ≤ 3 centyla      → danger  (czerwony)
-      //   BMI (3, 5] centyla   → warning (ciemnopomarańczowy)
+      //   BMI ≤ 3 centyla      ➔ danger  (czerwony)
+      //   BMI (3, 5] centyla   ➔ warning (ciemnopomarańczowy)
       if (isNum(bmiPerc)) {
         const roundedBmiCent = Math.round(bmiPerc);
         if (roundedBmiCent <= 3) {
@@ -3202,14 +4494,26 @@ function addRow(containerId,optionsObj,className,defaultKey){
   const row=document.createElement('div');
   row.className=className;
   row.dataset.id=rowId++;
+  const isFoodRow = className === 'food-row';
+  const optionsHtml = isFoodRow
+    ? macroPracticeBuildFoodOptionsMarkup(defaultKey)
+    : Object.entries(optionsObj).map(([k,v])=>`<option value="${macroPracticeEscapeAttr(k)}" ${k===defaultKey?'selected':''}>${macroPracticeEscapeHtml(v.name)}</option>`).join('');
+  const changeHandler = isFoodRow ? 'debouncedFoodUpdate()' : 'debouncedUpdate()';
+  const removeHandler = isFoodRow
+    ? 'this.parentElement.remove();macroPracticeRefreshFoodCardOnly({preserveViewport:true})'
+    : 'this.parentElement.remove();update()';
   row.innerHTML=`
-    <select onchange="debouncedUpdate()">
-      ${Object.entries(optionsObj).map(([k,v])=>`<option value="${k}" ${k===defaultKey?'selected':''}>${v.name}</option>`).join('')}
+    <select onchange="${changeHandler}">
+      ${optionsHtml}
     </select>
-    <input type="number" value="1" min="1" onchange="debouncedUpdate()" title="Ilość">
-    <button type="button" class="icon" aria-label="Usuń" onclick="this.parentElement.remove();update()">×</button>`;
+    <input type="number" value="1" min="1" onchange="${changeHandler}" title="Ilość">
+    <button type="button" class="icon" aria-label="Usuń" onclick="${removeHandler}">×</button>`;
   document.getElementById(containerId).appendChild(row);
-  update();
+  if (isFoodRow && typeof macroPracticeRefreshFoodCardOnly === 'function') {
+    macroPracticeRefreshFoodCardOnly({ preserveViewport: true });
+  } else {
+    update();
+  }
 }
 // `addSnackRow` and `addMealRow` are preserved for backward compatibility but
 // now delegate to the unified `addFoodRow`.  They specify the default key
@@ -3226,6 +4530,166 @@ function calcTotal(obj,selector){
   });
   return kcal;
 }
+
+/* === FOOD CARD LOCAL REFRESH START =====================================
+ * Kliknięcie „+ dodaj pozycję” oraz zmiany wierszy jedzenia nie powinny
+ * przebudowywać całej aplikacji przez pełne update(). Pełne update() ukrywa
+ * i ponownie generuje karty wyników, co przy scroll anchoringu przeglądarki
+ * powodowało widoczne „skakanie” viewportu. Poniższe funkcje odświeżają
+ * wyłącznie kartę „Kalorie posiłków i czas spalania”: podsumowanie kcal,
+ * makroskładniki, procenty celu i czasy spalania.
+ */
+let macroPracticeFoodUpdateTimer = null;
+
+function macroPracticePreserveViewportDuringFoodRefresh(callback) {
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    callback();
+    return;
+  }
+  const scrollX = window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft || 0;
+  const scrollY = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+  callback();
+  const restore = () => {
+    try {
+      window.scrollTo(scrollX, scrollY);
+      if (document.documentElement) document.documentElement.scrollTop = scrollY;
+      if (document.body) document.body.scrollTop = scrollY;
+      if (document.scrollingElement) document.scrollingElement.scrollTop = scrollY;
+    } catch (_) {
+      /* ignore */
+    }
+  };
+  try { requestAnimationFrame(restore); } catch (_) { restore(); }
+  setTimeout(restore, 40);
+}
+
+function macroPracticeRefreshFoodCardOnly(options = {}) {
+  const shouldPreserveViewport = options && options.preserveViewport !== false;
+  const render = () => {
+    const foodTotalSection = document.getElementById('foodTotalSection');
+    const totalKcalEl = document.getElementById('foodTotalKcal');
+    const totalListEl = document.getElementById('foodTotalList');
+    const timesDiv = document.getElementById('foodTimes');
+    const foodTimesSection = document.getElementById('foodTimesSection');
+    if (!foodTotalSection || !totalKcalEl || !totalListEl) return;
+
+    const kcal = calcTotal(foods, '.food-row');
+    const nutritionGoalsForFoods = (typeof patientReportBuildNutritionNormsModelFromCurrentState === 'function')
+      ? patientReportBuildNutritionNormsModelFromCurrentState()
+      : null;
+    const items = [];
+    document.querySelectorAll('.food-row').forEach(r => {
+      const select = r.querySelector('select');
+      const input = r.querySelector('input');
+      const key = select ? select.value : '';
+      const qty = input ? (parseFloat(input.value) || 0) : 0;
+      if (qty > 0 && foods[key]) {
+        items.push({
+          key,
+          qty,
+          name: macroPracticeBuildSelectedFoodLabel(key, qty) || foods[key].name,
+          foodGroup: foods[key].foodGroup || macroPracticeResolveFoodGroup(foods[key]),
+          kcal: foods[key].kcal * qty,
+          analysis: macroPracticeAnalyzeFoodSelection(key, qty, nutritionGoalsForFoods)
+        });
+      }
+    });
+
+    if (items.length) {
+      const itemsWithMacros = items.filter((item) => item.analysis && item.analysis.macroLine);
+      const totalProtein = itemsWithMacros.reduce((sum, item) => sum + (item.analysis?.nutrients?.protein_g || 0), 0);
+      const totalCarbs = itemsWithMacros.reduce((sum, item) => sum + (item.analysis?.nutrients?.carbs_g || 0), 0);
+      const totalFat = itemsWithMacros.reduce((sum, item) => sum + (item.analysis?.nutrients?.fat_g || 0), 0);
+      const hasCompoundMeal = itemsWithMacros.some((item) => item.foodGroup === 'meals');
+      const totalGoalShareParts = macroPracticeBuildTotalGoalShareParts({
+        energy_kcal: kcal,
+        protein_g: totalProtein,
+        carbs_g: totalCarbs,
+        fat_g: totalFat
+      }, nutritionGoalsForFoods);
+      const totalEnergyShareHtml = totalGoalShareParts.energy
+        ? `<div class="food-total-energy-share">${macroPracticeEscapeHtml(totalGoalShareParts.energy)}</div>`
+        : '';
+      const totalGoalShareHtml = totalGoalShareParts.macros.length
+        ? `<div class="food-total-goal-share"><div class="food-total-goal-share-title">Procent dziennego celu do planowania diety:</div><div class="food-total-goal-share-values">${macroPracticeEscapeHtml(totalGoalShareParts.macros.join(' • '))}</div></div>`
+        : '';
+      const totalGoalShareNote = totalGoalShareParts.macros.length
+        ? ' Procenty makroskładników odnoszą się do orientacyjnego dziennego celu do planowania diety, wyliczonego z wieku i PAL wybranego w karcie norm żywieniowych; dla białka nie jest to ta sama wartość co RDA.'
+        : '';
+      const foodTotalInfoText = `Makroskładniki pokazujemy dla każdej pozycji z listy. Dane oparto na USDA FoodData Central i etykietach produktów; przy daniach złożonych są to wartości orientacyjne dla typowej porcji${hasCompoundMeal ? ', zależne od receptury i wielkości porcji' : ''}.${totalGoalShareNote}`;
+      const foodTotalInfoHtml = itemsWithMacros.length
+        ? `<div class="food-total-info"><button type="button" class="food-total-info-toggle" data-food-total-info-toggle aria-expanded="false" aria-controls="foodTotalInfoPanel">Informacje ▾</button><div class="food-total-macro-note" id="foodTotalInfoPanel" hidden>${macroPracticeEscapeHtml(foodTotalInfoText)}</div></div>`
+        : '';
+      const macroSummaryHtml = itemsWithMacros.length
+        ? `<div class="food-total-macro-summary">Białko ${macroPracticeFormatDisplayNumber(totalProtein)} g • Węglowodany ${macroPracticeFormatDisplayNumber(totalCarbs)} g • Tłuszcze ${macroPracticeFormatDisplayNumber(totalFat)} g</div>${totalGoalShareHtml}${foodTotalInfoHtml}`
+        : '';
+
+      totalKcalEl.innerHTML = `<strong>Łącznie: ${Math.round(kcal)} kcal</strong>${totalEnergyShareHtml}${macroSummaryHtml}`;
+      const rows = items.map((it) => {
+        const metaLines = [];
+        if (it.analysis && it.analysis.macroLine) {
+          metaLines.push(`<div class="food-total-item-meta">${macroPracticeEscapeHtml(it.analysis.macroLine)}</div>`);
+        }
+        if (it.foodGroup === 'meals' && it.analysis && it.analysis.macroNote) {
+          metaLines.push(`<div class="food-total-item-note">${macroPracticeEscapeHtml(it.analysis.macroNote)}</div>`);
+        }
+        if (it.analysis && it.analysis.showAsWarning && it.analysis.warningLine) {
+          const warningClass = it.analysis.warningLevel ? ` food-total-item-note--${it.analysis.warningLevel}` : '';
+          metaLines.push(`<div class="food-total-item-note${warningClass}">${macroPracticeEscapeHtml(it.analysis.warningLine)}</div>`);
+        } else if (it.analysis && it.analysis.coverageLine) {
+          metaLines.push(`<div class="food-total-item-note">${macroPracticeEscapeHtml(it.analysis.coverageLine)}</div>`);
+        }
+        return `<tr><td><div class="food-total-item-name">${macroPracticeEscapeHtml(it.name)}</div>${metaLines.join('')}</td><td>${Math.round(it.kcal)} kcal</td></tr>`;
+      }).join('');
+      totalListEl.innerHTML =
+        `<table class="kcal-table kcal-table--macro">
+           <tr><th>Produkt</th><th>kcal</th></tr>
+           ${rows}
+         </table>`;
+      foodTotalSection.style.display = 'block';
+    } else {
+      foodTotalSection.style.display = 'none';
+      totalKcalEl.innerHTML = '';
+      totalListEl.innerHTML = '';
+    }
+
+    const weight = parseFloat(document.getElementById('weight')?.value) || 0;
+    const age = (typeof getAgeDecimal === 'function') ? getAgeDecimal() : (parseFloat(document.getElementById('age')?.value) || 0);
+    if (weight > 0 && kcal > 0 && timesDiv && typeof activityBuildFoodBurnState === 'function') {
+      const foodBurnState = activityBuildFoodBurnState({
+        kcalTarget: kcal,
+        weightKg: weight,
+        ageYears: age
+      });
+      timesDiv.innerHTML = activityRenderTableHtml(foodBurnState);
+      if (foodTimesSection) {
+        foodTimesSection.style.display = (foodBurnState && foodBurnState.rows.length) ? 'block' : 'none';
+      }
+    } else if (foodTimesSection) {
+      foodTimesSection.style.display = 'none';
+      if (timesDiv) timesDiv.innerHTML = '';
+    }
+  };
+
+  if (shouldPreserveViewport) {
+    macroPracticePreserveViewportDuringFoodRefresh(render);
+  } else {
+    render();
+  }
+}
+
+function debouncedFoodUpdate() {
+  clearTimeout(macroPracticeFoodUpdateTimer);
+  macroPracticeFoodUpdateTimer = setTimeout(() => {
+    macroPracticeRefreshFoodCardOnly({ preserveViewport: true });
+  }, 120);
+}
+
+if (typeof window !== 'undefined') {
+  window.macroPracticeRefreshFoodCardOnly = macroPracticeRefreshFoodCardOnly;
+  window.debouncedFoodUpdate = debouncedFoodUpdate;
+}
+/* === FOOD CARD LOCAL REFRESH END ======================================= */
 /* === ENERGY NORMS ENGINE START ================================= */
 function energyResolveEquationStage(ageYears, ageMonthsOpt = 0) {
   const ageNum = Number(ageYears) || 0;
@@ -5379,6 +6843,7 @@ const debouncedUpdate = (() => {
     });
   };
 })();
+try { window.debouncedUpdate = debouncedUpdate; } catch (_) { /* ignore */ }
 
 // === Patch 2025-12-14 – reposition antibiotic therapy card below its button ===
 // This patch ensures that the antibiotic therapy card, when created by the
@@ -5644,6 +7109,2534 @@ document.addEventListener('DOMContentLoaded', function() {
     return !!(el && el.checked);
   }
 
+
+  const DIET_PERSONALIZATION_MAX_GOALS = 3;
+  const ENABLE_THERAPEUTIC_DIETS = false;
+
+  /*
+   * Przygotowana, ale domyślnie ukryta infrastruktura diet specjalistycznych.
+   * Na tym etapie UI nie pokazuje tych profili użytkownikowi. Struktura zostaje
+   * jednak w kodzie, żeby później można było łatwo aktywować moduły np. dla
+   * dyslipidemii, insulinooporności, nadciśnienia lub stłuszczeniowej choroby wątroby.
+   */
+  const therapeuticDietProfiles = {
+    dyslipidemia: {
+      enabled: false,
+      label: 'Dyslipidemia',
+      requiredData: ['diagnosisOrLabs'],
+      optionalData: ['LDL', 'HDL', 'TG', 'totalCholesterol', 'medications'],
+      ageGroups: ['teen', 'adult'],
+      priorityBlocks: ['fatQuality', 'fiber', 'plantSterols', 'bodyWeight', 'physicalActivity'],
+      warning: 'Zalecenia przy dyslipidemii wymagają interpretacji w kontekście lipidogramu, ryzyka sercowo-naczyniowego i leczenia farmakologicznego.'
+    },
+    insulinResistance: {
+      enabled: false,
+      label: 'Insulinooporność / stan przedcukrzycowy',
+      requiredData: ['diagnosisOrLabs'],
+      ageGroups: ['teen', 'adult'],
+      priorityBlocks: ['regularMeals', 'fiber', 'lowEnergyDensity', 'sweetDrinks', 'physicalActivity']
+    },
+    hypertension: {
+      enabled: false,
+      label: 'Nadciśnienie tętnicze',
+      requiredData: ['diagnosisOrBloodPressure'],
+      ageGroups: ['teen', 'adult'],
+      priorityBlocks: ['saltReduction', 'vegetablesFruit', 'bodyWeight', 'alcoholReduction', 'physicalActivity']
+    },
+    fattyLiver: {
+      enabled: false,
+      label: 'Stłuszczeniowa choroba wątroby',
+      requiredData: ['diagnosis'],
+      ageGroups: ['teen', 'adult'],
+      priorityBlocks: ['bodyWeight', 'sweetDrinks', 'alcoholReduction', 'lowEnergyDensity', 'physicalActivity']
+    }
+  };
+
+  if (typeof window !== 'undefined') {
+    window.dietTherapeuticDietProfiles = therapeuticDietProfiles;
+    window.ENABLE_THERAPEUTIC_DIETS = ENABLE_THERAPEUTIC_DIETS;
+  }
+
+
+  const DIET_MYTH_RECENT_STORAGE_KEY = 'dietRecommendationsRecentMythsV1';
+  const DIET_MYTH_RECENT_LIMIT = 5;
+  let dietRecommendationsMythSelection = { signature: '', mythId: '' };
+  let dietRecommendationsForceNewMyth = false;
+  const dietRecommendationsLastOutputs = {
+    smart: null,
+    energy: null
+  };
+
+  const DIET_MYTH_LIBRARY = [
+    {
+      id: 'dinner_after_18',
+      myth: 'Kolacji nie wolno jeść po 18:00.',
+      fact: 'Ważniejsza jest pora snu, skład kolacji i całkowita ilość jedzenia w ciągu dnia. U wielu osób dobrze sprawdza się kolacja około 2–3 godziny przed snem.',
+      practical: 'Jeśli pacjent chodzi spać później, nie trzeba pomijać kolacji. Lepiej zaplanować prosty posiłek z białkiem, warzywami i niewielką porcją produktu zbożowego lub ziemniaków.',
+      tags: ['eveningSnacking', 'longGaps', 'skippedBreakfast', 'irregularMeals', 'regularMeals'],
+      ageGroups: ['schoolChild', 'teen', 'adult'],
+      baseWeight: 14
+    },
+    {
+      id: 'fruit_evening',
+      myth: 'Owoców nie powinno się jeść wieczorem.',
+      fact: 'Owoce można jeść o różnych porach dnia. Ważniejsza jest całkowita ilość, przewaga warzyw nad owocami i cały jadłospis, a nie sama godzina zjedzenia owocu.',
+      practical: 'Owoc może być częścią kolacji lub zaplanowanej przekąski, szczególnie jeśli zastępuje słodycze. Przy redukcji masy ważniejsza jest porcja i regularność niż zakaz konkretnej godziny.',
+      tags: ['sweets', 'eveningSnacking', 'lowVegetablesFruit', 'childPickyVegetables'],
+      ageGroups: ['schoolChild', 'teen', 'adult'],
+      baseWeight: 12
+    },
+    {
+      id: 'carbs_fattening',
+      myth: 'Pieczywo, makaron i ziemniaki zawsze tuczą.',
+      fact: 'O masie ciała decyduje przede wszystkim bilans energii i cały sposób żywienia. Problemem częściej są duże porcje, smażenie, tłuste sosy i dodatki, a nie sam produkt.',
+      practical: 'Zamiast eliminować wszystkie węglowodany, wybieraj częściej pieczywo graham lub pełnoziarniste, kasze, ryż brązowy, makaron pełnoziarnisty oraz ziemniaki gotowane lub pieczone.',
+      tags: ['lowWholeGrains', 'highFatAddons', 'restrictiveThinking', 'fastFood', 'saltySnacks', 'energyDensity'],
+      ageGroups: ['schoolChild', 'teen', 'adult'],
+      baseWeight: 13
+    },
+    {
+      id: 'hunger_is_required',
+      myth: 'Im większy głód, tym lepsza dieta.',
+      fact: 'Silny, narastający głód zwykle nie jest dobrym znakiem. Może oznaczać zbyt duży deficyt energii, za mało białka, błonnika, warzyw albo zbyt długie przerwy między posiłkami.',
+      practical: 'Zanim dalej obniżysz kaloryczność, popraw kompozycję posiłków: dodaj źródło białka, warzywa, produkt pełnoziarnisty i zadbaj o regularność.',
+      tags: ['longGaps', 'eveningSnacking', 'poorSatietyRecognition', 'fastEating', 'irregularMeals', 'restrictiveThinking', 'rapidWeightLoss'],
+      ageGroups: ['teen', 'adult'],
+      baseWeight: 14
+    },
+    {
+      id: 'very_low_calorie_diet',
+      myth: 'Im mniej kalorii, tym lepiej — dieta 1000 kcal szybko rozwiąże problem.',
+      fact: 'Bardzo niskokaloryczne diety często dają krótkotrwały efekt, nasilają głód i zmęczenie oraz zwiększają ryzyko podjadania, niedoborów i porzucenia planu.',
+      practical: 'Bezpieczniejszy jest umiarkowany, możliwy do utrzymania plan: regularne posiłki, większa sytość, małe kroki i kontrolowane tempo redukcji.',
+      tags: ['rapidWeightLoss', 'restrictiveThinking', 'strongHunger'],
+      ageGroups: ['adult'],
+      baseWeight: 10
+    },
+    {
+      id: 'detox_weight_loss',
+      myth: 'Detoks sokowy lub oczyszczający to dobry sposób na odchudzanie.',
+      fact: 'Naturalne procesy usuwania zbędnych substancji zachodzą między innymi w wątrobie i nerkach. Restrykcyjne detoksy są zwykle krótkotrwałe i nie uczą codziennych nawyków.',
+      practical: 'Zamiast detoksu lepiej wspierać organizm codziennie: wodą, warzywami, owocami, produktami pełnoziarnistymi, regularnym snem i aktywnością.',
+      tags: ['dietTrends', 'rapidWeightLoss', 'restrictiveThinking'],
+      ageGroups: ['teen', 'adult'],
+      baseWeight: 9
+    },
+    {
+      id: 'slow_metabolism',
+      myth: 'Nie chudnę, bo mój metabolizm jest całkowicie zablokowany.',
+      fact: 'Tempo przemiany materii zależy od wieku, płci, masy ciała, aktywności, stanu zdrowia, snu i sposobu żywienia. U części osób znaczenie mogą mieć choroby, ale często dużą rolę mają też codzienne nawyki.',
+      practical: 'Jeśli mimo konsekwentnego planu masa długo się nie zmienia, sprawdź porcje, napoje, regularność, aktywność i sen. W razie wskazań warto omówić badania z lekarzem.',
+      tags: ['noProgress', 'frustration', 'lowPhysicalActivity', 'adult', 'bodyWeight'],
+      ageGroups: ['adult'],
+      baseWeight: 8
+    },
+    {
+      id: 'perfect_diet',
+      myth: 'Dieta działa tylko wtedy, gdy trzymam się jej idealnie.',
+      fact: 'Perfekcjonizm często prowadzi do schematu „wszystko albo nic”. Jeden słabszy posiłek nie przekreśla efektów i nie wymaga zaczynania od poniedziałku.',
+      practical: 'Wróć do planu przy kolejnym posiłku. Nie kompensuj potknięcia głodówką — wybierz następny zwykły, zaplanowany posiłek.',
+      tags: ['emotionalEating', 'sweets', 'fastFood', 'restrictiveThinking', 'allOrNothing', 'teen', 'adult'],
+      ageGroups: ['teen', 'adult'],
+      baseWeight: 15
+    },
+    {
+      id: 'one_sweet_turns_to_fat',
+      myth: 'Jeśli zjem coś słodkiego, od razu odłoży się to jako tłuszcz.',
+      fact: 'Pojedynczy produkt nie decyduje o zmianie masy ciała. Znaczenie ma powtarzalność, ilość, bilans energii i cały jadłospis.',
+      practical: 'Lepiej zaplanować rozsądną porcję niż traktować produkt jako całkowicie zakazany, po którym łatwiej o utratę kontroli.',
+      tags: ['sweets', 'emotionalEating', 'restrictiveThinking', 'allOrNothing', 'foodReward'],
+      ageGroups: ['teen', 'adult'],
+      baseWeight: 11
+    },
+    {
+      id: 'one_kg_failure',
+      myth: 'Jeśli masa wzrosła o 1 kg, to plan nie działa.',
+      fact: 'Masa ciała może naturalnie wahać się z dnia na dzień z powodu wody, treści pokarmowej, soli, aktywności, cyklu miesiączkowego lub rytmu wypróżnień.',
+      practical: 'Oceniaj trend z kilku tygodni, a nie pojedynczy pomiar. Warto zapisywać też wykonane cele, aktywność i obwód talii, jeśli jest mierzony.',
+      tags: ['frequentWeighing', 'frustration', 'noProgress', 'femaleWeightFluctuation', 'bodyWeight'],
+      ageGroups: ['teen', 'adult'],
+      baseWeight: 10
+    },
+    {
+      id: 'small_loss_no_sense',
+      myth: 'Mały spadek masy ciała nie ma znaczenia.',
+      fact: 'Stopniowa redukcja bywa bezpieczniejsza i łatwiejsza do utrzymania. Liczą się też inne efekty: regularność, mniej podjadania, lepsza sprawność i lepsze samopoczucie.',
+      practical: 'Oprócz masy ciała zapisuj wykonane małe kroki, obwód talii, aktywność i jakość posiłków. To pomaga zobaczyć postęp, którego nie pokazuje pojedynczy pomiar masy.',
+      tags: ['frustration', 'noProgress', 'longTermChange', 'bodyWeight'],
+      ageGroups: ['teen', 'adult'],
+      baseWeight: 9
+    },
+    {
+      id: 'day_is_lost',
+      myth: 'Jeśli jeden posiłek nie wyszedł, cały dzień jest stracony.',
+      fact: 'Jeden posiłek nie decyduje o efektach. Najważniejszy jest kolejny wybór i powrót do prostych zasad bez karania się głodem.',
+      practical: 'Nie wyrównuj potknięcia głodówką. Zjedz kolejny normalny posiłek i wróć do jednego małego kroku z planu.',
+      tags: ['emotionalEating', 'fastFood', 'sweets', 'restrictiveThinking', 'allOrNothing'],
+      ageGroups: ['schoolChild', 'teen', 'adult'],
+      baseWeight: 13
+    },
+    {
+      id: 'food_as_reward_child',
+      myth: 'Słodycze są najlepszą nagrodą dla dziecka.',
+      fact: 'Jedzenie używane jako główna nagroda może wzmacniać jedzenie pod wpływem emocji i utrudniać rozpoznawanie sytości.',
+      practical: 'Jako nagrodę częściej wybieraj uwagę rodzica, wspólną zabawę, naklejkę, dodatkowy czas na aktywność albo inną formę wsparcia bez jedzenia.',
+      tags: ['foodReward', 'childSweetDrinks', 'child', 'youngChild', 'schoolChild'],
+      ageGroups: ['youngChild', 'schoolChild'],
+      baseWeight: 14
+    },
+    {
+      id: 'clean_plate_child',
+      myth: 'Dziecko powinno zawsze zjeść wszystko z talerza.',
+      fact: 'Presja na „czyszczenie talerza” może osłabiać rozpoznawanie głodu i sytości. U dzieci ważniejszy jest spokojny rytm posiłków i regularna ekspozycja na produkty.',
+      practical: 'Podawaj małe porcje i pozwól dziecku poprosić o dokładkę. Pomocne jest pytanie, czy brzuch jest już najedzony, zamiast namawiania do jedzenia do końca.',
+      tags: ['childScreenEating', 'poorSatietyRecognition', 'childPickyVegetables', 'child'],
+      ageGroups: ['youngChild', 'schoolChild'],
+      baseWeight: 12
+    }
+  ];
+
+  const DIET_MYTH_DEFAULT_IDS = {
+    youngChild: ['food_as_reward_child', 'clean_plate_child'],
+    schoolChild: ['day_is_lost', 'fruit_evening', 'carbs_fattening', 'clean_plate_child'],
+    teen: ['perfect_diet', 'dinner_after_18', 'carbs_fattening', 'hunger_is_required', 'day_is_lost'],
+    adult: ['perfect_diet', 'dinner_after_18', 'carbs_fattening', 'hunger_is_required', 'one_kg_failure']
+  };
+
+  if (typeof window !== 'undefined') {
+    window.dietMythLibrary = DIET_MYTH_LIBRARY;
+  }
+
+  function dietRecommendationsReadRecentMythIds() {
+    try {
+      if (typeof window === 'undefined' || !window.localStorage) return [];
+      const raw = window.localStorage.getItem(DIET_MYTH_RECENT_STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed.filter(Boolean).map(String).slice(0, DIET_MYTH_RECENT_LIMIT) : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function dietRecommendationsRememberMythId(id) {
+    const value = String(id || '').trim();
+    if (!value) return;
+    try {
+      if (typeof window === 'undefined' || !window.localStorage) return;
+      const recent = dietRecommendationsReadRecentMythIds().filter(function(item) { return item !== value; });
+      recent.unshift(value);
+      window.localStorage.setItem(DIET_MYTH_RECENT_STORAGE_KEY, JSON.stringify(recent.slice(0, DIET_MYTH_RECENT_LIMIT)));
+    } catch (_) {}
+  }
+
+  function dietRecommendationsFindMythById(id) {
+    const value = String(id || '').trim();
+    if (!value) return null;
+    return DIET_MYTH_LIBRARY.find(function(item) { return item.id === value; }) || null;
+  }
+
+  function dietRecommendationsBuildMythSignature(state) {
+    const keys = state && Array.isArray(state.checkedKeys) ? state.checkedKeys.slice().sort() : [];
+    const whr = state && state.ageGroup === 'adult' && hasAdultDietWhrRisk() ? 'whr' : '';
+    return [
+      state && state.ageGroup || 'adult',
+      state && state.sex || '',
+      state && state.strategy || '',
+      state && state.patientFacing ? 'patient' : 'specialist',
+      whr,
+      keys.join(',')
+    ].join('|');
+  }
+
+  function dietRecommendationsRequestNewMyth() {
+    dietRecommendationsForceNewMyth = true;
+  }
+
+  function dietRecommendationsResetMythSelection() {
+    dietRecommendationsMythSelection = { signature: '', mythId: '' };
+    dietRecommendationsForceNewMyth = false;
+  }
+
+  function dietRecommendationsGetMythActiveTags(state) {
+    const tags = new Set();
+    if (!state) return [];
+    (Array.isArray(state.checkedKeys) ? state.checkedKeys : []).forEach(function(key) { tags.add(key); });
+    if (!state.surveyCompleted) {
+      if (dietPersonalizationIsChildGroup(state.ageGroup)) {
+        tags.add('child');
+        tags.add('foodReward');
+        tags.add('childPickyVegetables');
+      } else if (state.ageGroup === 'teen') {
+        tags.add('teen');
+        tags.add('irregularMeals');
+        tags.add('allOrNothing');
+      } else {
+        tags.add('adult');
+        tags.add('regularMeals');
+        tags.add('energyDensity');
+        tags.add('allOrNothing');
+      }
+    }
+    if (dietPersonalizationIsChildGroup(state.ageGroup)) tags.add('child');
+    if (state.ageGroup === 'youngChild') tags.add('youngChild');
+    if (state.ageGroup === 'schoolChild') tags.add('schoolChild');
+    if (state.ageGroup === 'teen') tags.add('teen');
+    if (state.ageGroup === 'adult') tags.add('adult');
+    if (state.sex === 'F') tags.add('femaleWeightFluctuation');
+    if (state.ageGroup === 'adult' && hasAdultDietWhrRisk()) tags.add('bodyWeight');
+    if (hasDietPersonalizationAny(state, ['sweets', 'fastFood', 'emotionalEating'])) tags.add('allOrNothing');
+    if (hasDietPersonalizationAny(state, ['rapidWeightLoss', 'dietTrends'])) tags.add('restrictiveThinking');
+    if (hasDietPersonalizationAny(state, ['longGaps', 'eveningSnacking'])) tags.add('strongHunger');
+    if (hasDietPersonalizationAny(state, ['noProgress', 'frequentWeighing'])) tags.add('frustration');
+    return Array.from(tags);
+  }
+
+  function dietRecommendationsMythMatchesAge(myth, ageGroup) {
+    if (!myth || !Array.isArray(myth.ageGroups) || !myth.ageGroups.length) return true;
+    if (myth.ageGroups.indexOf(ageGroup) !== -1) return true;
+    if (dietPersonalizationIsChildGroup(ageGroup) && myth.ageGroups.indexOf('child') !== -1) return true;
+    return false;
+  }
+
+  function dietRecommendationsScoreMyth(myth, activeTags) {
+    const tags = Array.isArray(myth && myth.tags) ? myth.tags : [];
+    const active = new Set(activeTags || []);
+    let matches = 0;
+    tags.forEach(function(tag) { if (active.has(tag)) matches += 1; });
+    return (Number(myth && myth.baseWeight) || 0) + matches * 28;
+  }
+
+  function dietRecommendationsGetDefaultMythsForAge(ageGroup) {
+    const ids = DIET_MYTH_DEFAULT_IDS[ageGroup] || DIET_MYTH_DEFAULT_IDS.adult;
+    return ids.map(dietRecommendationsFindMythById).filter(Boolean);
+  }
+
+  function dietRecommendationsSelectMyth(state, options) {
+    const opts = options || {};
+    const ageGroup = state && state.ageGroup ? state.ageGroup : 'adult';
+    const activeTags = dietRecommendationsGetMythActiveTags(state);
+    const excluded = new Set();
+    if (opts.excludeCurrentId) excluded.add(String(opts.excludeCurrentId));
+    if (opts.excludeRecent) {
+      dietRecommendationsReadRecentMythIds().forEach(function(id) { excluded.add(String(id)); });
+    }
+
+    let candidates = DIET_MYTH_LIBRARY
+      .filter(function(myth) { return dietRecommendationsMythMatchesAge(myth, ageGroup); })
+      .map(function(myth) {
+        return Object.assign({}, myth, { _score: dietRecommendationsScoreMyth(myth, activeTags) });
+      })
+      .filter(function(myth) { return myth._score > 0; });
+
+    const matchedCandidates = candidates.filter(function(myth) {
+      const tags = Array.isArray(myth.tags) ? myth.tags : [];
+      return tags.some(function(tag) { return activeTags.indexOf(tag) !== -1; });
+    });
+    if (matchedCandidates.length) candidates = matchedCandidates;
+    if (!candidates.length) candidates = dietRecommendationsGetDefaultMythsForAge(ageGroup).map(function(myth) {
+      return Object.assign({}, myth, { _score: Number(myth.baseWeight) || 10 });
+    });
+
+    let available = candidates.filter(function(myth) { return !excluded.has(myth.id); });
+    if (!available.length && opts.excludeCurrentId) {
+      available = candidates.filter(function(myth) { return myth.id !== opts.excludeCurrentId; });
+    }
+    if (!available.length) available = candidates;
+    if (!available.length) return {
+      id: 'perfect_diet_fallback',
+      myth: 'Dieta musi być idealna każdego dnia.',
+      fact: 'Celem jest powtarzalność większości dobrych wyborów, a nie perfekcja.',
+      practical: 'Wróć do planu przy kolejnym posiłku i wybierz jeden mały krok, który jest realny do wykonania.'
+    };
+
+    const total = available.reduce(function(sum, myth) { return sum + Math.max(1, myth._score || 1); }, 0);
+    let draw = Math.random() * total;
+    for (let i = 0; i < available.length; i += 1) {
+      draw -= Math.max(1, available[i]._score || 1);
+      if (draw <= 0) return available[i];
+    }
+    return available[available.length - 1];
+  }
+
+  function dietRecommendationsEscapeHtml(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function getDietAdultStartAge() {
+    return (typeof ENERGY_ADULT_START_AGE === 'number' && isFinite(ENERGY_ADULT_START_AGE))
+      ? ENERGY_ADULT_START_AGE
+      : 18;
+  }
+
+  function getDietPersonalizationAgeGroup(ageYears) {
+    const adultStart = getDietAdultStartAge();
+    const age = Number(ageYears);
+    if (!Number.isFinite(age)) return 'adult';
+    if (age >= adultStart) return 'adult';
+    if (age >= 11) return 'teen';
+    if (age >= 7) return 'schoolChild';
+    return 'youngChild';
+  }
+
+  function getDietPersonalizationAgeLabel(ageGroup) {
+    if (ageGroup === 'youngChild') return 'młodsze dziecko';
+    if (ageGroup === 'schoolChild') return 'dziecko szkolne';
+    if (ageGroup === 'teen') return 'nastolatek / nastolatka';
+    return 'osoba dorosła';
+  }
+
+  function dietPersonalizationIsChildGroup(ageGroup) {
+    return ageGroup === 'youngChild' || ageGroup === 'schoolChild';
+  }
+
+  function dietPersonalizationIsNonAdultGroup(ageGroup) {
+    return ageGroup !== 'adult';
+  }
+
+  function getDietSurveyCheckboxes() {
+    return Array.prototype.slice.call(document.querySelectorAll('[data-diet-survey-key]'));
+  }
+
+  function buildDietSurveyMarkup() {
+    return `
+      <div id="dietPersonalizationModule" class="diet-personalization-module">
+        <div class="diet-personalization-head">
+          <div>
+            <strong>Personalizacja zaleceń</strong>
+            <p id="dietPersonalizationLead">Aplikacja może wybrać 2–3 najważniejsze kroki na najbliższe 2 tygodnie na podstawie krótkiej ankiety o nawykach.</p>
+          </div>
+          <button type="button" id="toggleDietSurveyBtn" class="diet-survey-toggle" aria-controls="dietSurveyPanel" aria-expanded="false">Dopasuj zalecenia do nawyków</button>
+        </div>
+        <div id="dietSurveyPanel" class="diet-survey-panel" hidden>
+          <p class="diet-survey-help">Zaznacz tylko te obszary, które rzeczywiście dotyczą pacjenta. Nie trzeba wypełniać wszystkiego — aplikacja i tak pokaże maksymalnie 3 priorytety.</p>
+          <div class="diet-survey-section" data-diet-age-target="youngChild schoolChild">
+            <h4>Środowisko dziecka</h4>
+            <div class="diet-survey-grid">
+              <label class="diet-survey-chip"><input type="checkbox" data-diet-survey-key="childSweetDrinks"> <span>w domu często są słodkie napoje</span></label>
+              <label class="diet-survey-chip"><input type="checkbox" data-diet-survey-key="foodReward"> <span>słodycze bywają nagrodą</span></label>
+              <label class="diet-survey-chip"><input type="checkbox" data-diet-survey-key="childPickyVegetables"> <span>dziecko niechętnie próbuje warzyw</span></label>
+              <label class="diet-survey-chip"><input type="checkbox" data-diet-survey-key="childScreenEating"> <span>dziecko często je przy ekranie</span></label>
+              <label class="diet-survey-chip" data-diet-age-target="schoolChild"><input type="checkbox" data-diet-survey-key="noSchoolMeal"> <span>brak posiłku do szkoły</span></label>
+              <label class="diet-survey-chip" data-diet-age-target="schoolChild"><input type="checkbox" data-diet-survey-key="schoolSnacks"> <span>kupowanie słodyczy lub napojów w szkole</span></label>
+            </div>
+          </div>
+          <div class="diet-survey-section">
+            <h4>Rytm posiłków i przekąski</h4>
+            <div class="diet-survey-grid">
+              <label class="diet-survey-chip"><input type="checkbox" data-diet-survey-key="irregularMeals"> <span>nieregularne posiłki</span></label>
+              <label class="diet-survey-chip"><input type="checkbox" data-diet-survey-key="skippedBreakfast"> <span>pomijanie śniadania / pierwszego posiłku</span></label>
+              <label class="diet-survey-chip"><input type="checkbox" data-diet-survey-key="longGaps"> <span>długie przerwy bez jedzenia</span></label>
+              <label class="diet-survey-chip"><input type="checkbox" data-diet-survey-key="eveningSnacking"> <span>podjadanie wieczorem</span></label>
+              <label class="diet-survey-chip"><input type="checkbox" data-diet-survey-key="sweetDrinks"> <span>słodzone napoje, soki lub energetyki</span></label>
+              <label class="diet-survey-chip"><input type="checkbox" data-diet-survey-key="sweets"> <span>częste słodycze</span></label>
+              <label class="diet-survey-chip"><input type="checkbox" data-diet-survey-key="saltySnacks"> <span>słone przekąski</span></label>
+              <label class="diet-survey-chip"><input type="checkbox" data-diet-survey-key="fastFood"> <span>fast food / jedzenie na wynos</span></label>
+            </div>
+          </div>
+          <div class="diet-survey-section">
+            <h4>Jakość posiłków</h4>
+            <div class="diet-survey-grid">
+              <label class="diet-survey-chip"><input type="checkbox" data-diet-survey-key="lowVegetablesFruit"> <span>mało warzyw i owoców</span></label>
+              <label class="diet-survey-chip"><input type="checkbox" data-diet-survey-key="lowWholeGrains"> <span>mało produktów pełnoziarnistych</span></label>
+              <label class="diet-survey-chip"><input type="checkbox" data-diet-survey-key="lowProtein"> <span>mało białka w posiłkach</span></label>
+              <label class="diet-survey-chip"><input type="checkbox" data-diet-survey-key="highFatAddons"> <span>tłuste sosy, smażenie lub duże dodatki</span></label>
+            </div>
+          </div>
+          <div class="diet-survey-section">
+            <h4>Zachowania przy jedzeniu</h4>
+            <div class="diet-survey-grid">
+              <label class="diet-survey-chip"><input type="checkbox" data-diet-survey-key="fastEating"> <span>szybkie jedzenie</span></label>
+              <label class="diet-survey-chip"><input type="checkbox" data-diet-survey-key="screenEating"> <span>jedzenie przy telefonie / TV / komputerze</span></label>
+              <label class="diet-survey-chip"><input type="checkbox" data-diet-survey-key="poorSatietyRecognition"> <span>trudność z rozpoznaniem sytości</span></label>
+              <label class="diet-survey-chip"><input type="checkbox" data-diet-survey-key="emotionalEating"> <span>jedzenie ze stresu, nudy lub emocji</span></label>
+            </div>
+          </div>
+          <details class="diet-survey-more">
+            <summary>Pokaż pytania dodatkowe</summary>
+            <div class="diet-survey-section diet-survey-section--extra">
+              <h4>Organizacja, preferencje i ograniczenia</h4>
+              <div class="diet-survey-grid">
+                <label class="diet-survey-chip"><input type="checkbox" data-diet-survey-key="littleCookingTime"> <span>mało czasu na gotowanie</span></label>
+                <label class="diet-survey-chip"><input type="checkbox" data-diet-survey-key="poorMealPlanning"> <span>trudność z planowaniem zakupów</span></label>
+                <label class="diet-survey-chip"><input type="checkbox" data-diet-survey-key="eatingOutOften"> <span>częste jedzenie poza domem</span></label>
+                <label class="diet-survey-chip"><input type="checkbox" data-diet-survey-key="needsSimpleMeals"> <span>potrzeba bardzo prostych posiłków</span></label>
+                <label class="diet-survey-chip"><input type="checkbox" data-diet-survey-key="dislikesFish"> <span>pacjent nie lubi ryb</span></label>
+                <label class="diet-survey-chip"><input type="checkbox" data-diet-survey-key="noDairy"> <span>pacjent nie je nabiału</span></label>
+                <label class="diet-survey-chip"><input type="checkbox" data-diet-survey-key="vegetarian"> <span>dieta wegetariańska / roślinna</span></label>
+                <label class="diet-survey-chip"><input type="checkbox" data-diet-survey-key="allergiesOrIntolerances"> <span>alergie lub nietolerancje</span></label>
+                <label class="diet-survey-chip" data-diet-age-target="adult"><input type="checkbox" data-diet-survey-key="alcohol"> <span>częste kalorie z alkoholu</span></label>
+                <label class="diet-survey-chip"><input type="checkbox" data-diet-survey-key="lowPhysicalActivity"> <span>bardzo mało ruchu na co dzień</span></label>
+                <label class="diet-survey-chip" data-diet-age-target="teen adult"><input type="checkbox" data-diet-survey-key="restrictiveThinking"> <span>podejście „wszystko albo nic”</span></label>
+                <label class="diet-survey-chip" data-diet-age-target="teen adult"><input type="checkbox" data-diet-survey-key="rapidWeightLoss"> <span>chęć bardzo szybkiego odchudzania</span></label>
+                <label class="diet-survey-chip" data-diet-age-target="teen adult"><input type="checkbox" data-diet-survey-key="dietTrends"> <span>detoksy, modne diety lub „oczyszczanie”</span></label>
+                <label class="diet-survey-chip" data-diet-age-target="teen adult"><input type="checkbox" data-diet-survey-key="frequentWeighing"> <span>częste ważenie i stres wynikiem</span></label>
+                <label class="diet-survey-chip" data-diet-age-target="teen adult"><input type="checkbox" data-diet-survey-key="noProgress"> <span>frustracja brakiem efektów</span></label>
+              </div>
+            </div>
+          </details>
+          <div class="diet-survey-footer">
+            <button type="button" id="clearDietSurveyBtn" class="diet-survey-clear">Wyczyść ankietę</button>
+            <span id="dietSurveyCounter" class="diet-survey-counter">Zaznaczono: 0</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function ensureDietPersonalizationSurveyUi(content) {
+    const container = content || document.getElementById('dietRecommendationsContent');
+    if (!container) return null;
+    let module = document.getElementById('dietPersonalizationModule');
+    if (!module) {
+      const temp = document.createElement('div');
+      temp.innerHTML = buildDietSurveyMarkup().trim();
+      module = temp.firstElementChild;
+      const generateBtn = document.getElementById('generateDietBtn');
+      if (generateBtn && generateBtn.parentNode) {
+        generateBtn.parentNode.insertBefore(module, generateBtn);
+      } else {
+        container.appendChild(module);
+      }
+    }
+    attachDietPersonalizationControls();
+    updateDietSurveyAgeVisibility();
+    updateDietSurveyCounter();
+    return module;
+  }
+
+  function getDietSurveyTargetTokens(value) {
+    return String(value || '').split(/\s+/).map(function(v) { return v.trim(); }).filter(Boolean);
+  }
+
+  function shouldShowDietSurveyAgeTarget(tokens, ageGroup) {
+    if (!tokens || !tokens.length) return true;
+    if (tokens.indexOf('all') !== -1 || tokens.indexOf(ageGroup) !== -1) return true;
+    if (tokens.indexOf('child') !== -1 && dietPersonalizationIsChildGroup(ageGroup)) return true;
+    if (tokens.indexOf('nonAdult') !== -1 && dietPersonalizationIsNonAdultGroup(ageGroup)) return true;
+    return false;
+  }
+
+  function updateDietSurveyAgeVisibility() {
+    const ageGroup = getDietPersonalizationAgeGroup(getAgeDecimalInternal());
+    const lead = document.getElementById('dietPersonalizationLead');
+    if (lead) {
+      if (ageGroup === 'youngChild' || ageGroup === 'schoolChild') {
+        lead.textContent = 'Ankieta pomaga dobrać 2–3 małe kroki dla rodzica/opiekuna: rytm posiłków, napoje, warzywa, jedzenie bez ekranu i środowisko domowe.';
+      } else if (ageGroup === 'teen') {
+        lead.textContent = 'Ankieta pomaga dobrać 2–3 realistyczne cele dla nastolatka: regularność, szkoła, napoje, przekąski, sytość i jedzenie przy ekranie.';
+      } else {
+        lead.textContent = 'Ankieta pomaga dobrać 2–3 najważniejsze cele dla osoby dorosłej: regularność, gęstość energetyczna, talerz zdrowego żywienia, sytość i podjadanie.';
+      }
+    }
+    Array.prototype.slice.call(document.querySelectorAll('[data-diet-age-target]')).forEach(function(el) {
+      const tokens = getDietSurveyTargetTokens(el.getAttribute('data-diet-age-target'));
+      const visible = shouldShowDietSurveyAgeTarget(tokens, ageGroup);
+      el.style.display = visible ? '' : 'none';
+      if (!visible) {
+        Array.prototype.slice.call(el.querySelectorAll('[data-diet-survey-key]')).forEach(function(input) {
+          input.checked = false;
+        });
+      }
+    });
+    updateDietSurveyCounter();
+  }
+
+  function updateDietSurveyCounter() {
+    const counter = document.getElementById('dietSurveyCounter');
+    if (!counter) return;
+    const count = getDietSurveyCheckboxes().filter(function(input) { return input.checked; }).length;
+    counter.textContent = 'Zaznaczono: ' + count;
+  }
+
+  function attachDietPersonalizationControls() {
+    const toggleBtn = document.getElementById('toggleDietSurveyBtn');
+    const panel = document.getElementById('dietSurveyPanel');
+    if (toggleBtn && panel && !toggleBtn.dataset.dietSurveyAttached) {
+      toggleBtn.addEventListener('click', function() {
+        const shouldOpen = panel.hasAttribute('hidden');
+        if (shouldOpen) {
+          panel.removeAttribute('hidden');
+        } else {
+          panel.setAttribute('hidden', '');
+        }
+        toggleBtn.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+        toggleBtn.textContent = shouldOpen ? 'Ukryj ankietę' : 'Dopasuj zalecenia do nawyków';
+      });
+      toggleBtn.dataset.dietSurveyAttached = 'true';
+    }
+    const clearBtn = document.getElementById('clearDietSurveyBtn');
+    if (clearBtn && !clearBtn.dataset.dietSurveyClearAttached) {
+      clearBtn.addEventListener('click', function() {
+        getDietSurveyCheckboxes().forEach(function(input) { input.checked = false; });
+        Array.prototype.slice.call(document.querySelectorAll('.diet-survey-more')).forEach(function(details) {
+          details.open = false;
+        });
+        updateDietSurveyCounter();
+        dietRecommendationsResetMythSelection();
+        resetDietSurveyGeneratedRecommendations();
+      });
+      clearBtn.dataset.dietSurveyClearAttached = 'true';
+    }
+    getDietSurveyCheckboxes().forEach(function(input) {
+      if (!input.dataset.dietSurveyChangeAttached) {
+        input.addEventListener('change', function() {
+          updateDietSurveyCounter();
+          refreshDietRecommendationsIfVisible();
+        });
+        input.dataset.dietSurveyChangeAttached = 'true';
+      }
+    });
+  }
+
+  function collectDietPersonalizationState() {
+    const checkedKeys = [];
+    const checked = {};
+    getDietSurveyCheckboxes().forEach(function(input) {
+      const key = input.getAttribute('data-diet-survey-key');
+      if (!key) return;
+      checked[key] = !!input.checked;
+      if (input.checked) checkedKeys.push(key);
+    });
+    const age = getAgeDecimalInternal();
+    const ageGroup = getDietPersonalizationAgeGroup(age);
+    const sex = document.getElementById('sex')?.value || 'M';
+    const patientFacing = isPatientFacingDietMode();
+    const reduceToggleEl = document.getElementById('reduceToggle');
+    const stabilizationToggleEl = document.getElementById('stabilizationToggle');
+    let strategy = 'reduction';
+    if (ageGroup !== 'adult' && stabilizationToggleEl && stabilizationToggleEl.checked && !(reduceToggleEl && reduceToggleEl.checked)) {
+      strategy = 'stabilization';
+    }
+    return {
+      surveyCompleted: checkedKeys.length > 0,
+      checkedKeys,
+      checked,
+      age,
+      ageGroup,
+      sex,
+      patientFacing,
+      strategy,
+      specialist: {
+        enabled: ENABLE_THERAPEUTIC_DIETS,
+        selectedProfiles: [],
+        profiles: therapeuticDietProfiles
+      }
+    };
+  }
+
+  function hasDietPersonalizationAny(state, keys) {
+    if (!state || !state.checked) return false;
+    return keys.some(function(key) { return !!state.checked[key]; });
+  }
+
+  function addDietPersonalizationPriority(map, key, score, reason) {
+    if (!map[key] || score > map[key].score) {
+      map[key] = { key, score, reason: reason || '' };
+    }
+  }
+
+  function scoreDietPriorities(state) {
+    const map = {};
+    if (!state || !state.surveyCompleted) {
+      if (state && dietPersonalizationIsChildGroup(state.ageGroup)) {
+        addDietPersonalizationPriority(map, 'waterDefault', 88, 'bez ankiety: bezpieczny pierwszy krok u dziecka');
+        addDietPersonalizationPriority(map, 'vegetablesFruit', 84, 'bez ankiety: ekspozycja na warzywa');
+        addDietPersonalizationPriority(map, 'screenFreeMeal', 76, 'bez ankiety: sytość i jedzenie bez presji');
+      } else if (state && state.ageGroup === 'teen') {
+        addDietPersonalizationPriority(map, 'regularMeals', 86, 'bez ankiety: regularność u nastolatka');
+        addDietPersonalizationPriority(map, 'vegetablesFruit', 82, 'bez ankiety: talerz i warzywa');
+        addDietPersonalizationPriority(map, 'slowEatingSatiety', 74, 'bez ankiety: tempo jedzenia i sytość');
+      } else {
+        addDietPersonalizationPriority(map, 'plateMethod', 86, 'bez ankiety: prosty model posiłku');
+        addDietPersonalizationPriority(map, 'regularMeals', 82, 'bez ankiety: regularność');
+        addDietPersonalizationPriority(map, 'energyDensity', 76, 'bez ankiety: gęstość energetyczna');
+      }
+      return map;
+    }
+    if (hasDietPersonalizationAny(state, ['sweetDrinks', 'childSweetDrinks', 'schoolSnacks', 'alcohol'])) {
+      addDietPersonalizationPriority(map, 'sweetDrinks', state.checked.alcohol && !hasDietPersonalizationAny(state, ['sweetDrinks', 'childSweetDrinks']) ? 96 : 110, 'płynne kalorie');
+    }
+    if (hasDietPersonalizationAny(state, ['irregularMeals', 'skippedBreakfast', 'longGaps', 'noSchoolMeal'])) {
+      addDietPersonalizationPriority(map, 'regularMeals', 100, 'rytm posiłków');
+    }
+    if (hasDietPersonalizationAny(state, ['lowVegetablesFruit', 'childPickyVegetables'])) {
+      addDietPersonalizationPriority(map, 'vegetablesFruit', 94, 'niska podaż warzyw i owoców');
+    }
+    if (hasDietPersonalizationAny(state, ['eveningSnacking'])) {
+      addDietPersonalizationPriority(map, 'eveningSnacking', 88, 'wieczorne podjadanie');
+    }
+    if (hasDietPersonalizationAny(state, ['fastFood', 'saltySnacks', 'highFatAddons', 'sweets'])) {
+      addDietPersonalizationPriority(map, 'energyDensity', 84, 'wysoka gęstość energetyczna');
+    }
+    if (hasDietPersonalizationAny(state, ['fastEating', 'screenEating', 'childScreenEating', 'poorSatietyRecognition'])) {
+      addDietPersonalizationPriority(map, 'slowEatingSatiety', 80, 'tempo jedzenia i sytość');
+    }
+    if (hasDietPersonalizationAny(state, ['emotionalEating', 'foodReward'])) {
+      addDietPersonalizationPriority(map, 'emotionalEating', 78, 'jedzenie emocjonalne lub nagroda');
+    }
+    if (hasDietPersonalizationAny(state, ['littleCookingTime', 'poorMealPlanning', 'eatingOutOften', 'needsSimpleMeals'])) {
+      addDietPersonalizationPriority(map, 'simplePlanning', 68, 'organizacja posiłków');
+    }
+    if (hasDietPersonalizationAny(state, ['lowProtein'])) {
+      addDietPersonalizationPriority(map, 'proteinAtMeals', 62, 'mało źródeł białka');
+    }
+    if (hasDietPersonalizationAny(state, ['lowWholeGrains'])) {
+      addDietPersonalizationPriority(map, 'fiberWholeGrains', 58, 'mało produktów pełnoziarnistych');
+    }
+    if (!Object.keys(map).length) {
+      addDietPersonalizationPriority(map, 'plateMethod', 70, 'cel bazowy');
+      addDietPersonalizationPriority(map, 'regularMeals', 68, 'cel bazowy');
+      addDietPersonalizationPriority(map, 'vegetablesFruit', 66, 'cel bazowy');
+    }
+    return map;
+  }
+
+  function selectTopDietGoals(priorityMap, maxGoals) {
+    return Object.keys(priorityMap || {})
+      .map(function(key) { return priorityMap[key]; })
+      .sort(function(a, b) { return b.score - a.score; })
+      .slice(0, Number.isFinite(maxGoals) ? maxGoals : DIET_PERSONALIZATION_MAX_GOALS);
+  }
+
+  function buildSmartGoal(goalKey, state) {
+    const ageGroup = state.ageGroup;
+    const isYoungChild = ageGroup === 'youngChild';
+    const isSchoolChild = ageGroup === 'schoolChild';
+    const isTeen = ageGroup === 'teen';
+    const isAdult = ageGroup === 'adult';
+    const child = isYoungChild || isSchoolChild;
+    const base = {
+      key: goalKey,
+      title: 'Mały krok',
+      goal: '',
+      frequency: 'codziennie lub w większości dni tygodnia',
+      duration: '2 tygodnie',
+      measure: 'zaznacz wykonanie w kalendarzu lub notatniku',
+      why: 'mała, powtarzalna zmiana jest łatwiejsza do utrzymania niż restrykcyjna dieta.'
+    };
+    switch (goalKey) {
+      case 'waterDefault':
+      case 'sweetDrinks':
+        base.title = child ? 'Woda jako podstawowy napój' : 'Ograniczenie płynnych kalorii';
+        base.goal = child
+          ? 'Przez najbliższe 2 tygodnie podstawowym napojem w domu jest woda. Słodkie napoje nie powinny być dostępne na co dzień.'
+          : (isTeen
+            ? 'Przez 14 dni zamień słodzone napoje, soki lub energetyki na wodę minimum przez 5 dni w tygodniu.'
+            : 'Przez 14 dni zamień słodzone napoje, soki, napoje energetyczne lub kaloryczne napoje alkoholowe na wodę albo niesłodzoną herbatę minimum przez 5 dni w tygodniu.');
+        base.frequency = child ? 'minimum 5 dni w tygodniu' : 'minimum 5 dni w tygodniu';
+        base.measure = 'zaznacz każdy dzień bez słodzonego napoju jako codziennego wyboru.';
+        base.why = 'płynne kalorie słabo sycą i często są najłatwiejszym pierwszym obszarem do poprawy.';
+        break;
+      case 'regularMeals':
+        base.title = child ? 'Przewidywalny rytm posiłków' : 'Regularność posiłków';
+        base.goal = child
+          ? 'Ustal przewidywalny rytm dnia: śniadanie, posiłek w przedszkolu/szkole, obiad i kolacja, bez ciągłego podjadania między posiłkami.'
+          : (isTeen
+            ? 'Zjedz śniadanie albo posiłek w szkole minimum 10 razy w ciągu 14 dni.'
+            : 'Zjedz minimum 3 zaplanowane posiłki dziennie przez 10 z 14 dni.');
+        base.frequency = isAdult ? '10 z 14 dni' : 'minimum 4–5 dni w tygodniu';
+        base.measure = 'zaznacz dzień, w którym udało się uniknąć długiego głodzenia i późniejszego nadrabiania.';
+        base.why = 'regularność zmniejsza ryzyko silnego głodu, przypadkowego podjadania i bardzo dużych porcji wieczorem.';
+        break;
+      case 'vegetablesFruit':
+        base.title = child ? 'Warzywo jako codzienna ekspozycja' : 'Więcej warzyw i owoców';
+        base.goal = child
+          ? 'Dodaj małą porcję warzywa do obiadu lub kolacji minimum 5 razy w tygodniu. Porcja może być mała — ważna jest regularna ekspozycja bez presji.'
+          : 'Dodaj warzywo lub owoc do minimum 2 posiłków dziennie. Docelowo dąż do co najmniej 400 g warzyw i owoców dziennie, z przewagą warzyw.';
+        base.frequency = child ? 'minimum 5 razy w tygodniu' : 'codziennie';
+        base.measure = child ? 'zaznacz każdy posiłek, przy którym pojawiło się warzywo.' : 'zaznacz dzień, w którym warzywa/owoce pojawiły się przy co najmniej 2 posiłkach.';
+        base.why = 'warzywa i owoce zwiększają objętość posiłku, dostarczają błonnika i pomagają uzyskać sytość przy niższej gęstości energetycznej.';
+        break;
+      case 'plateMethod':
+        base.title = 'Talerz zdrowego żywienia';
+        base.goal = 'Przez 14 dni skomponuj jeden główny posiłek dziennie według zasady: ½ talerza warzywa/owoce z przewagą warzyw, ¼ źródło białka, ¼ produkt zbożowy lub ziemniaki, plus niewielki dodatek tłuszczu roślinnego.';
+        base.frequency = 'jeden główny posiłek dziennie';
+        base.measure = 'zaznacz każdy posiłek, w którym udało się zachować te proporcje choćby orientacyjnie.';
+        base.why = 'model talerza porządkuje porcje bez konieczności ważenia każdego składnika.';
+        break;
+      case 'screenFreeMeal':
+      case 'slowEatingSatiety':
+        base.title = child ? 'Jeden spokojny posiłek bez ekranu' : 'Wolniejsze jedzenie i sytość';
+        base.goal = child
+          ? 'Wybierz jeden posiłek dziennie, który dziecko je bez telefonu, tabletu lub telewizora. Nie zachęcaj do „czyszczenia talerza”.'
+          : 'Wybierz jeden posiłek dziennie bez telefonu, komputera lub telewizora. Jedz wolniej, najlepiej minimum 15 minut, i zatrzymaj się w połowie posiłku, żeby ocenić głód i sytość.';
+        base.frequency = 'minimum 5 dni w tygodniu';
+        base.measure = 'zaznacz każdy dzień z jednym spokojnym posiłkiem bez ekranu.';
+        base.why = 'wolniejsze jedzenie ułatwia zauważenie sytości i zmniejsza ryzyko dokładania porcji z rozpędu.';
+        break;
+      case 'eveningSnacking':
+        base.title = 'Ograniczenie wieczornego podjadania';
+        base.goal = 'Zaplanuj prostą kolację z białkiem i warzywami, a przekąski wieczorne jedz tylko wtedy, gdy są wcześniej zaplanowane i podane na talerzu.';
+        base.frequency = '10 z 14 wieczorów';
+        base.measure = 'zaznacz wieczory bez przypadkowego podjadania przy ekranie lub „z opakowania”.';
+        base.why = 'wieczorne podjadanie często wynika z długich przerw w jedzeniu, zmęczenia lub jedzenia przy ekranie, a nie z realnej potrzeby energetycznej.';
+        break;
+      case 'energyDensity':
+        base.title = 'Mniejsza gęstość energetyczna posiłków';
+        base.goal = 'W jednym głównym posiłku dziennie zwiększ objętość przez warzywa, zupę, strączki lub produkt pełnoziarnisty, a ogranicz smażenie, słodkie dodatki, majonezowe sosy i duże ilości tłuszczu.';
+        base.frequency = 'jeden główny posiłek dziennie';
+        base.measure = 'zaznacz posiłek, w którym udało się dodać objętość i zmniejszyć wysokokaloryczny dodatek.';
+        base.why = 'posiłek o niższej gęstości energetycznej może sycić podobnie, ale dostarczać mniej kalorii.';
+        break;
+      case 'emotionalEating':
+        base.title = child ? 'Jedzenie nie jako nagroda lub pocieszenie' : 'Głód fizjologiczny czy zachcianka';
+        base.goal = child
+          ? 'Przez 2 tygodnie nie używaj słodyczy jako głównej nagrody lub sposobu uspokajania. W zamian zaproponuj rozmowę, odpoczynek, zabawę, spacer albo inną formę wsparcia.'
+          : 'Zanim sięgniesz po przekąskę poza planem, zadaj 3 pytania: czy zjadł(a)bym zwykły posiłek, kiedy był ostatni posiłek i czy czuję głód, czy raczej stres, zmęczenie albo nudę.';
+        base.frequency = 'przy każdej sytuacji podjadania poza planem';
+        base.measure = 'zapisz 3–5 sytuacji, w których udało się rozpoznać emocję lub realny głód przed jedzeniem.';
+        base.why = 'rozpoznanie przyczyny podjadania pomaga dobrać właściwą reakcję zamiast kolejnego zakazu.';
+        break;
+      case 'simplePlanning':
+        base.title = 'Plan minimum na trudne dni';
+        base.goal = 'Przygotuj listę 3 prostych posiłków awaryjnych, które można zrobić szybko lub kupić bez dużej ilości smażonych dodatków i słodkich napojów.';
+        base.frequency = 'lista gotowa w tym tygodniu, używana w razie potrzeby';
+        base.measure = 'zapisz 3 propozycje i sprawdź po 2 tygodniach, ile razy zastąpiły przypadkowy fast food lub słodycze.';
+        base.why = 'prosty plan awaryjny zmniejsza liczbę decyzji podejmowanych pod wpływem głodu i pośpiechu.';
+        break;
+      case 'proteinAtMeals':
+        base.title = 'Źródło białka w głównych posiłkach';
+        base.goal = 'Dodaj źródło białka do 2 głównych posiłków dziennie: jogurt/skyr/twaróg, jaja, ryby, chude mięso, tofu, strączki lub inne akceptowane produkty.';
+        base.frequency = 'minimum 5 dni w tygodniu';
+        base.measure = 'zaznacz dni, w których białko było obecne w co najmniej 2 posiłkach.';
+        base.why = 'białko zwiększa sytość i pomaga utrzymać jakość diety podczas redukcji masy.';
+        break;
+      case 'fiberWholeGrains':
+        base.title = 'Więcej błonnika z produktów pełnoziarnistych';
+        base.goal = 'Wybierz jedną prostą zamianę dziennie: pieczywo graham/pełnoziarniste zamiast białego, płatki owsiane zamiast słodzonych płatków albo kaszę/pełnoziarnisty makaron zamiast oczyszczonego produktu.';
+        base.frequency = 'minimum 5 dni w tygodniu';
+        base.measure = 'zaznacz każdy dzień z jedną pełnoziarnistą zamianą.';
+        base.why = 'błonnik wspiera sytość, rytm wypróżnień i jakość metaboliczną diety.';
+        break;
+      default:
+        break;
+    }
+    return base;
+  }
+
+  function buildPlateRecommendationText(state) {
+    if (dietPersonalizationIsChildGroup(state.ageGroup)) {
+      return 'U dziecka nie trzeba od razu zmieniać całego talerza. Zacznij od stałego rytmu posiłków, wody jako podstawowego napoju i małych porcji warzyw podawanych regularnie bez presji.';
+    }
+    return 'Model głównego posiłku: ½ talerza warzywa i owoce z przewagą warzyw, ¼ talerza źródło białka, ¼ talerza produkt zbożowy lub ziemniaki, do tego niewielka ilość tłuszczu roślinnego.';
+  }
+
+  function buildProductSwaps(state) {
+    const swaps = [];
+    const add = function(from, to) {
+      if (swaps.length < 5) swaps.push({ from, to });
+    };
+    if (hasDietPersonalizationAny(state, ['sweetDrinks', 'childSweetDrinks', 'schoolSnacks'])) {
+      add('słodzony napój / sok', 'woda, woda z owocami lub herbata bez cukru');
+    }
+    if (hasDietPersonalizationAny(state, ['sweets'])) {
+      add('słodzony jogurt lub baton', 'jogurt naturalny z owocami albo zaplanowana porcja przekąski');
+    }
+    if (hasDietPersonalizationAny(state, ['saltySnacks'])) {
+      add('chipsy lub słone przekąski z opakowania', 'warzywa z jogurtowym dipem, hummus albo przekąska podana na talerzu');
+    }
+    if (hasDietPersonalizationAny(state, ['highFatAddons'])) {
+      add('sos majonezowy / śmietanowy', 'sos jogurtowy, pomidorowy lub mniejsza porcja sosu');
+    }
+    if (hasDietPersonalizationAny(state, ['fastFood', 'eatingOutOften'])) {
+      add('duży zestaw fast food + słodki napój', 'mniejsza porcja, więcej surówki i woda');
+    }
+    if (hasDietPersonalizationAny(state, ['lowWholeGrains'])) {
+      add('białe pieczywo lub słodkie płatki', 'pieczywo graham/pełnoziarniste albo płatki owsiane');
+    }
+    if (hasDietPersonalizationAny(state, ['noDairy'])) {
+      add('brak nabiału bez zamienników', 'napoje/jogurty roślinne fortyfikowane wapniem lub inne źródła wapnia po uzgodnieniu z dietetykiem');
+    }
+    if (hasDietPersonalizationAny(state, ['vegetarian'])) {
+      add('posiłek bez wyraźnego źródła białka', 'strączki, tofu, jaja, nabiał lub inny akceptowany produkt białkowy');
+    }
+    if (!swaps.length) {
+      add('smażenie w głębokim tłuszczu', 'pieczenie, duszenie, grillowanie lub gotowanie');
+      add('obiad lub kolacja bez warzyw', 'dodaj konkretną małą porcję: kilka plasterków ogórka lub pomidora, 2–3 łyżki surówki albo warzywa gotowane');
+      add('przypadkowa przekąska', 'zaplanowana przekąska podana na talerzu');
+    }
+    return swaps;
+  }
+
+  function buildDietMythBlock(state) {
+    const signature = dietRecommendationsBuildMythSignature(state);
+    const current = dietRecommendationsMythSelection || { signature: '', mythId: '' };
+    if (!dietRecommendationsForceNewMyth && current.signature === signature && current.mythId) {
+      const existing = dietRecommendationsFindMythById(current.mythId);
+      if (existing) return existing;
+    }
+    const selected = dietRecommendationsSelectMyth(state, {
+      excludeCurrentId: dietRecommendationsForceNewMyth && current.signature === signature ? current.mythId : '',
+      excludeRecent: true
+    });
+    dietRecommendationsForceNewMyth = false;
+    dietRecommendationsMythSelection = { signature, mythId: selected.id };
+    dietRecommendationsRememberMythId(selected.id);
+    return selected;
+  }
+
+  function buildDietMainGoal(state) {
+    const hasWhrRisk = state.ageGroup === 'adult' && hasAdultDietWhrRisk();
+    if (dietPersonalizationIsChildGroup(state.ageGroup)) {
+      return state.strategy === 'stabilization'
+        ? 'Poprawa codziennych nawyków i tempa przyrostu masy ciała, bez restrykcyjnej diety. W praktyce celem może być stabilizacja masy przy dalszym wzrastaniu.'
+        : 'Poprawa środowiska żywieniowego, rytmu posiłków i codziennych wyborów dziecka bez zawstydzania i bez restrykcyjnej diety.';
+    }
+    if (state.ageGroup === 'teen') {
+      return 'Poprawa regularności, jakości posiłków i kontroli sytości bez podejścia „wszystko albo nic”.';
+    }
+    if (hasWhrRisk) {
+      return 'Stopniowa redukcja masy ciała i/lub obwodu talii przez małe, mierzalne zmiany w sposobie jedzenia.';
+    }
+    return 'Stopniowa poprawa masy ciała, sytości i jakości diety przez 2–3 małe kroki, które można utrzymać w codziennym życiu.';
+  }
+
+  function buildDietNoShameReminder(state) {
+    if (dietPersonalizationIsChildGroup(state.ageGroup)) {
+      return 'Nie komentuj wyglądu dziecka i nie porównuj go z innymi. Zmiana powinna dotyczyć całej rodziny i środowiska domowego, nie tylko dziecka.';
+    }
+    if (state.ageGroup === 'teen') {
+      return 'Nie chodzi o idealną dietę. Lepiej ustalić rozsądne porcje i częstotliwość niż wprowadzać zasadę „nigdy więcej”.';
+    }
+    if (state.sex === 'F') {
+      return 'Oceniaj trend masy ciała z kilku tygodni, nie pojedynczy pomiar. Masa może okresowo rosnąć z powodu zatrzymania wody, soli, cyklu miesiączkowego lub intensywnego wysiłku.';
+    }
+    return 'Nie trzeba zmieniać wszystkiego naraz. Największe znaczenie ma powtarzalność kilku dobrych wyborów w większości dni tygodnia.';
+  }
+
+  function buildPersonalizedDietPlan(state) {
+    const priorities = scoreDietPriorities(state);
+    const selected = selectTopDietGoals(priorities, DIET_PERSONALIZATION_MAX_GOALS);
+    const goals = selected.map(function(item) { return buildSmartGoal(item.key, state); });
+    return {
+      state,
+      sourceLabel: state.surveyCompleted ? 'Na podstawie danych pacjenta i ankiety' : 'Na podstawie danych pacjenta; bez dodatkowej ankiety wybrano cele bazowe',
+      ageLabel: getDietPersonalizationAgeLabel(state.ageGroup),
+      mainGoal: buildDietMainGoal(state),
+      goals,
+      plateText: buildPlateRecommendationText(state),
+      swaps: buildProductSwaps(state),
+      myth: buildDietMythBlock(state),
+      reminder: buildDietNoShameReminder(state)
+    };
+  }
+
+  function buildPersonalizedDietPlanText(plan, baseResult) {
+    const out = [];
+    out.push('Spersonalizowane zalecenia dietetyczne');
+    out.push(plan.sourceLabel + ' — grupa: ' + plan.ageLabel + '.');
+    out.push('Cel główny: ' + plan.mainGoal);
+    out.push('');
+    out.push('Twoje małe kroki na najbliższe 2 tygodnie:');
+    plan.goals.forEach(function(goal, idx) {
+      out.push((idx + 1) + '. ' + goal.title);
+      out.push('   Cel: ' + goal.goal);
+      out.push('   Jak często: ' + goal.frequency + '.');
+      out.push('   Jak mierzyć: ' + goal.measure);
+      out.push('   Dlaczego: ' + goal.why);
+    });
+    out.push('');
+    out.push('Jak komponować posiłki: ' + plan.plateText);
+    if (plan.swaps.length) {
+      out.push('');
+      out.push('Praktyczne zamiany:');
+      plan.swaps.forEach(function(swap) {
+        out.push('- ' + swap.from + ' → ' + swap.to);
+      });
+    }
+    out.push('');
+    out.push('Mit / popularne przekonanie: ' + plan.myth.myth);
+    out.push('Fakt: ' + plan.myth.fact);
+    if (plan.myth.practical) out.push('Co zrobić w praktyce: ' + plan.myth.practical);
+    out.push('');
+    out.push('Ważne: ' + plan.reminder);
+    if (baseResult && baseResult.textOutput) {
+      out.push('');
+      out.push('Dodatkowe obliczenia i zalecenia energetyczne:');
+      out.push(baseResult.textOutput);
+    }
+    return out.join('\n').replace(/[\u00A0\u202F]/g, ' ').trim();
+  }
+
+  function buildPersonalizedDietPlanHtml(plan, baseResult) {
+    const goalsHtml = plan.goals.map(function(goal, idx) {
+      return `
+        <article class="diet-smart-goal">
+          <div class="diet-smart-goal-number">${idx + 1}</div>
+          <div class="diet-smart-goal-body">
+            <h4>${dietRecommendationsEscapeHtml(goal.title)}</h4>
+            <p><strong>Cel:</strong> ${dietRecommendationsEscapeHtml(goal.goal)}</p>
+            <p><strong>Jak często:</strong> ${dietRecommendationsEscapeHtml(goal.frequency)}.</p>
+            <p><strong>Jak mierzyć:</strong> ${dietRecommendationsEscapeHtml(goal.measure)}</p>
+            <p><strong>Dlaczego:</strong> ${dietRecommendationsEscapeHtml(goal.why)}</p>
+          </div>
+        </article>
+      `;
+    }).join('');
+    const swapsHtml = plan.swaps.map(function(swap) {
+      return `<li><span>${dietRecommendationsEscapeHtml(swap.from)}</span><strong>→</strong><span>${dietRecommendationsEscapeHtml(swap.to)}</span></li>`;
+    }).join('');
+    const baseHtml = baseResult && baseResult.htmlOutput
+      ? `<details class="diet-calculation-details"><summary>Dodatkowe obliczenia i zalecenia energetyczne</summary><div class="diet-calculation-details-body">${baseResult.htmlOutput}</div></details>`
+      : '';
+    const surveyBadge = plan.state.surveyCompleted
+      ? '<span class="diet-personalized-badge diet-personalized-badge--active">ankieta uwzględniona</span>'
+      : '<span class="diet-personalized-badge">cele bazowe</span>';
+    return `
+      <div class="diet-personalized-output">
+        <div class="diet-personalized-summary">
+          <div>
+            <div class="diet-personalized-kicker">${dietRecommendationsEscapeHtml(plan.sourceLabel)}</div>
+            <h3>Priorytety na najbliższe 2 tygodnie</h3>
+            <p><strong>Grupa:</strong> ${dietRecommendationsEscapeHtml(plan.ageLabel)}.</p>
+            <p><strong>Cel główny:</strong> ${dietRecommendationsEscapeHtml(plan.mainGoal)}</p>
+          </div>
+          ${surveyBadge}
+        </div>
+        <div class="diet-smart-goals">${goalsHtml}</div>
+        <div class="diet-guidance-grid">
+          <section class="diet-guidance-box">
+            <h4>Jak komponować posiłek</h4>
+            <p>${dietRecommendationsEscapeHtml(plan.plateText)}</p>
+          </section>
+          <section class="diet-guidance-box">
+            <h4>Praktyczne zamiany</h4>
+            <ul class="diet-swaps-list">${swapsHtml}</ul>
+          </section>
+          <section class="diet-guidance-box diet-guidance-box--wide">
+            <h4>Nie chodzi o perfekcję</h4>
+            <p>${dietRecommendationsEscapeHtml(plan.reminder)}</p>
+          </section>
+          <section class="diet-guidance-box diet-guidance-box--wide diet-myth-box">
+            <div class="diet-myth-box-head">
+              <h4>Warto wiedzieć: mit i fakt</h4>
+              <button type="button" class="diet-myth-next-btn" data-diet-myth-next>Pokaż inne przekonanie</button>
+            </div>
+            <p><strong>Mit / popularne przekonanie:</strong> ${dietRecommendationsEscapeHtml(plan.myth.myth)}</p>
+            <p><strong>Fakt:</strong> ${dietRecommendationsEscapeHtml(plan.myth.fact)}</p>
+            ${plan.myth.practical ? `<p><strong>Co zrobić w praktyce:</strong> ${dietRecommendationsEscapeHtml(plan.myth.practical)}</p>` : ''}
+          </section>
+        </div>
+        ${baseHtml}
+      </div>
+    `;
+  }
+
+
+  function buildDietBaseRecommendationResultForReport() {
+    syncDietRecommendationControlsForAge();
+    const age = getAgeDecimalInternal();
+    if (age >= getDietAdultStartAge()) {
+      return (typeof generateDietRecommendations === 'function') ? generateDietRecommendations() : null;
+    }
+
+    const reduceToggleEl = document.getElementById('reduceToggle');
+    const stabilizationToggleEl = document.getElementById('stabilizationToggle');
+    const strategy = (stabilizationToggleEl && stabilizationToggleEl.checked && !(reduceToggleEl && reduceToggleEl.checked))
+      ? 'stabilization'
+      : 'reduction';
+
+    if (strategy === 'stabilization' && typeof generateDietRecommendationsStabilization === 'function') {
+      return generateDietRecommendationsStabilization();
+    }
+    return (typeof generateDietRecommendations === 'function') ? generateDietRecommendations() : null;
+  }
+
+  function dietRecommendationsEnsurePdfButton(content) {
+    const container = content || document.getElementById('dietRecommendationsContent');
+    if (!container) return null;
+    const btn = document.getElementById('dietRecommendationsPdfBtn');
+    if (btn && btn.parentNode) {
+      btn.parentNode.removeChild(btn);
+    }
+    return null;
+  }
+
+  function dietRecommendationsNormalizePdfMode(mode) {
+    const raw = String(mode || '').trim().toLowerCase();
+    if (raw === 'personalized' || raw === 'personalizacja' || raw === 'smart') return 'personalized';
+    if (raw === 'classic' || raw === 'legacy' || raw === 'old' || raw === 'dotychczasowe') return 'classic';
+    return 'full';
+  }
+
+  function dietRecommendationsPdfModeLabel(mode) {
+    const normalized = dietRecommendationsNormalizePdfMode(mode);
+    if (normalized === 'personalized') return 'Plan zmiany nawyków i cele SMART';
+    if (normalized === 'classic') return 'Raport energetyczny i zalecenia podstawowe';
+    return 'Pełny raport zaleceń';
+  }
+
+  function dietRecommendationsFormatPdfNumber(value, decimals) {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return '';
+    const digits = Number.isFinite(decimals) ? Math.max(0, decimals) : 1;
+    return num.toLocaleString('pl-PL', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+  }
+
+  function dietRecommendationsGetPdfAgeLabel(ageYears) {
+    try {
+      if (typeof patientReportFormatAge === 'function') return patientReportFormatAge(ageYears);
+    } catch (_) {}
+    const age = Number(ageYears);
+    if (!Number.isFinite(age)) return '';
+    return age.toLocaleString('pl-PL', { maximumFractionDigits: age < 3 ? 1 : 0 }) + ' lat';
+  }
+
+  function dietRecommendationsGetPdfSexLabel(sex, ageYears) {
+    try {
+      if (typeof patientReportGetSexLabel === 'function') return patientReportGetSexLabel(sex, ageYears);
+    } catch (_) {}
+    return sex === 'F' ? 'żeńska' : 'męska';
+  }
+
+  function dietRecommendationsSanitizeFilename(value) {
+    try {
+      if (typeof patientReportSanitizeFilename === 'function') return patientReportSanitizeFilename(value);
+    } catch (_) {}
+    return String(value || 'pacjent')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9_-]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .slice(0, 80) || 'pacjent';
+  }
+
+  function dietRecommendationsParseClassicTextForPdf(text) {
+    const lines = String(text || '')
+      .replace(/[\u00A0\u202F]/g, ' ')
+      .split(/\r?\n+/)
+      .map(function(line) { return line.trim(); })
+      .filter(Boolean);
+    const intro = [];
+    const items = [];
+    lines.forEach(function(line) {
+      const match = line.match(/^\s*(\d+)[\.)]\s*(.+)$/);
+      if (match) {
+        items.push({ index: match[1], text: match[2].trim() });
+      } else if (items.length) {
+        items[items.length - 1].text = (items[items.length - 1].text + ' ' + line).replace(/\s+/g, ' ').trim();
+      } else {
+        intro.push(line);
+      }
+    });
+    if (!items.length && lines.length) {
+      return {
+        intro: [],
+        items: lines.map(function(line, idx) { return { index: String(idx + 1), text: line }; })
+      };
+    }
+    return { intro, items };
+  }
+
+  function dietRecommendationsBuildPdfPatientMeta() {
+    const name = (document.getElementById('name')?.value || document.getElementById('advName')?.value || '').trim();
+    const sex = document.getElementById('sex')?.value || 'M';
+    const ageYears = getAgeDecimalInternal();
+    const weightKg = parseFloat(document.getElementById('weight')?.value);
+    const heightCm = parseFloat(document.getElementById('height')?.value);
+    const bmi = (Number.isFinite(weightKg) && weightKg > 0 && Number.isFinite(heightCm) && heightCm > 0)
+      ? weightKg / Math.pow(heightCm / 100, 2)
+      : NaN;
+    let generatedLabel = '';
+    try {
+      generatedLabel = new Intl.DateTimeFormat('pl-PL', {
+        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+      }).format(new Date());
+    } catch (_) {
+      generatedLabel = String(new Date());
+    }
+    return {
+      name,
+      sex,
+      sexLabel: dietRecommendationsGetPdfSexLabel(sex, ageYears),
+      ageYears,
+      ageLabel: dietRecommendationsGetPdfAgeLabel(ageYears),
+      weightLabel: Number.isFinite(weightKg) && weightKg > 0 ? dietRecommendationsFormatPdfNumber(weightKg, 1) + ' kg' : '',
+      heightLabel: Number.isFinite(heightCm) && heightCm > 0 ? dietRecommendationsFormatPdfNumber(heightCm, 1) + ' cm' : '',
+      bmiLabel: Number.isFinite(bmi) ? dietRecommendationsFormatPdfNumber(bmi, 1) + ' kg/m²' : '',
+      generatedLabel
+    };
+  }
+
+  function dietRecommendationsBuildPdfModel(mode) {
+    const normalizedMode = dietRecommendationsNormalizePdfMode(mode);
+    syncDietRecommendationControlsForAge();
+    ensureDietPersonalizationSurveyUi(document.getElementById('dietRecommendationsContent'));
+
+    const state = collectDietPersonalizationState();
+    const includePersonalized = normalizedMode !== 'classic';
+    const includeClassic = normalizedMode !== 'personalized';
+    const baseResult = includeClassic ? buildDietBaseRecommendationResultForReport() : null;
+    const plan = includePersonalized ? buildPersonalizedDietPlan(state) : null;
+    const parsedClassic = baseResult && baseResult.textOutput ? dietRecommendationsParseClassicTextForPdf(baseResult.textOutput) : { intro: [], items: [] };
+
+    if (!plan && (!baseResult || !baseResult.textOutput)) {
+      throw new Error('Brak zaleceń dietetycznych do wygenerowania raportu PDF.');
+    }
+
+    const patient = dietRecommendationsBuildPdfPatientMeta();
+    const filenameBase = dietRecommendationsSanitizeFilename(patient.name || 'pacjent');
+    const surveyCount = state && Array.isArray(state.checkedKeys) ? state.checkedKeys.length : 0;
+    const hasWhrRisk = state.ageGroup === 'adult' && hasAdultDietWhrRisk();
+    return {
+      mode: normalizedMode,
+      modeLabel: dietRecommendationsPdfModeLabel(normalizedMode),
+      title: 'Raport zaleceń dietetycznych',
+      subtitle: normalizedMode === 'classic'
+        ? 'Raport energetyczny i zalecenia podstawowe'
+        : (normalizedMode === 'full'
+          ? ''
+          : 'Plan po wizycie oparty na metodzie małych kroków i konkretnych celach'),
+      patient,
+      filenameBase,
+      state,
+      plan,
+      baseResult,
+      parsedClassic,
+      includePersonalized,
+      includeClassic,
+      surveyCount,
+      hasWhrRisk,
+      sourceLabel: plan ? plan.sourceLabel : 'Na podstawie obliczeń energetycznych aplikacji',
+      ageLabel: plan ? plan.ageLabel : getDietPersonalizationAgeLabel(state.ageGroup)
+    };
+  }
+
+  function dietRecommendationsPdfMetaChipsHtml(model) {
+    const chips = [];
+    const patient = model.patient || {};
+    if (patient.name) chips.push(['Pacjent', patient.name]);
+    if (patient.ageLabel) chips.push(['Wiek', patient.ageLabel]);
+    if (patient.sexLabel) chips.push(['Płeć', patient.sexLabel]);
+    if (patient.weightLabel) chips.push(['Masa', patient.weightLabel]);
+    if (patient.heightLabel) chips.push(['Wzrost', patient.heightLabel]);
+    if (patient.bmiLabel) chips.push(['BMI', patient.bmiLabel]);
+    return chips.map(function(chip) {
+      return `<span class="diet-pdf-chip"><span>${dietRecommendationsEscapeHtml(chip[0])}</span><strong>${dietRecommendationsEscapeHtml(chip[1])}</strong></span>`;
+    }).join('');
+  }
+
+  function dietRecommendationsPdfGoalsHtml(plan) {
+    if (!plan || !Array.isArray(plan.goals) || !plan.goals.length) return '';
+    return plan.goals.map(function(goal, idx) {
+      return `
+        <article class="diet-pdf-goal-card">
+          <div class="diet-pdf-goal-number">${idx + 1}</div>
+          <div class="diet-pdf-goal-copy">
+            <h3>${dietRecommendationsEscapeHtml(goal.title)}</h3>
+            <div class="diet-pdf-smart-grid">
+              <div><span>Cel</span><p>${dietRecommendationsEscapeHtml(goal.goal)}</p></div>
+              <div><span>Jak często</span><p>${dietRecommendationsEscapeHtml(goal.frequency)}</p></div>
+              <div><span>Jak mierzyć</span><p>${dietRecommendationsEscapeHtml(goal.measure)}</p></div>
+              <div><span>Dlaczego</span><p>${dietRecommendationsEscapeHtml(goal.why)}</p></div>
+            </div>
+          </div>
+        </article>`;
+    }).join('');
+  }
+
+  function dietRecommendationsNormalizeSwapText(value) {
+    return String(value || '')
+      .toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9ąćęłńóśźż\s]+/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function dietRecommendationsSwapLooksSimilar(existing, candidate) {
+    const a = dietRecommendationsNormalizeSwapText((existing && existing.from ? existing.from : '') + ' ' + (existing && existing.to ? existing.to : ''));
+    const b = dietRecommendationsNormalizeSwapText((candidate && candidate.from ? candidate.from : '') + ' ' + (candidate && candidate.to ? candidate.to : ''));
+    if (!a || !b) return false;
+    const groups = [
+      ['sos', 'majonez', 'smietan', 'jogurt', 'pomidor'],
+      ['smazen', 'smazon', 'glebok', 'grill', 'piec', 'para'],
+      ['warzyw', 'fasol', 'groch', 'soczewic', 'straczk'],
+      ['chips', 'przekask', 'hummus', 'dip'],
+      ['deser', 'owoc', 'jogurt', 'smietan'],
+      ['mlecz', 'nabial', 'cukr', 'tluszcz'],
+      ['fast food', 'surow', 'surowk', 'wynos']
+    ];
+    return groups.some(function(words) {
+      let scoreA = 0;
+      let scoreB = 0;
+      words.forEach(function(word) {
+        if (a.indexOf(word) !== -1) scoreA += 1;
+        if (b.indexOf(word) !== -1) scoreB += 1;
+      });
+      return scoreA >= 2 && scoreB >= 2;
+    });
+  }
+
+  function dietRecommendationsPdfSupplementalSwaps(state) {
+    const child = state && dietPersonalizationIsChildGroup(state.ageGroup);
+    return [
+      {
+        from: 'sosy kremowe, serowe lub ciężkie sosy śmietanowe',
+        to: 'sos pomidorowy albo jogurtowy; w zupach częściej wybieraj bazę warzywną'
+      },
+      {
+        from: 'potrawy smażone lub panierowane',
+        to: 'pieczenie, duszenie, gotowanie na parze albo grillowanie oraz dodatkowa porcja warzyw'
+      },
+      {
+        from: child ? 'danie bez warzyw albo tylko symboliczna ilość warzyw' : 'duża ilość mięsa w jednym daniu',
+        to: child ? 'dodaj konkretną małą porcję: kilka plasterków ogórka lub pomidora, 2–3 łyżki surówki albo warzywa gotowane; bez presji na zjedzenie wszystkiego' : 'część porcji zastąp fasolą, grochem, soczewicą lub dodatkowymi warzywami'
+      },
+      {
+        from: 'deser ze śmietaną lub ciężkim kremem',
+        to: 'owoce z jogurtem naturalnym albo mniejsza, zaplanowana porcja deseru'
+      },
+      {
+        from: 'pełnotłusty lub dosładzany produkt mleczny',
+        to: 'jogurt naturalny, kefir, maślanka lub inny produkt bez dodatku cukru'
+      },
+      {
+        from: 'chipsy z tłustym dipem',
+        to: 'pokrojone warzywa z hummusem albo lekkim dipem jogurtowym'
+      }
+    ];
+  }
+
+  function dietRecommendationsAddUniqueSwap(target, candidate, maxItems) {
+    if (!candidate || !candidate.from || !candidate.to || target.length >= maxItems) return;
+    const duplicate = target.some(function(item) {
+      return dietRecommendationsSwapLooksSimilar(item, candidate)
+        || (dietRecommendationsNormalizeSwapText(item.from) === dietRecommendationsNormalizeSwapText(candidate.from)
+          && dietRecommendationsNormalizeSwapText(item.to) === dietRecommendationsNormalizeSwapText(candidate.to));
+    });
+    if (!duplicate) target.push(candidate);
+  }
+
+  function dietRecommendationsPdfExpandedSwaps(plan, state, maxItems) {
+    const limit = Number.isFinite(maxItems) ? Math.max(1, maxItems) : 6;
+    const original = Array.isArray(plan && plan.swaps) ? plan.swaps : [];
+    const expanded = [];
+    original.slice(0, 3).forEach(function(swap) {
+      dietRecommendationsAddUniqueSwap(expanded, swap, limit);
+    });
+    dietRecommendationsPdfSupplementalSwaps(state).forEach(function(swap) {
+      dietRecommendationsAddUniqueSwap(expanded, swap, limit);
+    });
+    original.slice(3).forEach(function(swap) {
+      dietRecommendationsAddUniqueSwap(expanded, swap, limit);
+    });
+    return expanded;
+  }
+
+  function dietRecommendationsPdfSwapsHtml(swaps) {
+    const list = Array.isArray(swaps) ? swaps : [];
+    if (!list.length) return '<div class="diet-pdf-empty">Brak dodatkowych zamian dla aktualnej ankiety.</div>';
+    return `
+      <div class="diet-pdf-swaps-table">
+        <div class="diet-pdf-swaps-head"><span>Zamiast</span><span>Wybierz częściej</span></div>
+        ${list.map(function(swap) {
+          return `<div class="diet-pdf-swap-row"><span>${dietRecommendationsEscapeHtml(swap.from)}</span><span>${dietRecommendationsEscapeHtml(swap.to)}</span></div>`;
+        }).join('')}
+      </div>`;
+  }
+
+  function dietRecommendationsPdfClassicHtml(parsedClassic) {
+    const parsed = parsedClassic || { intro: [], items: [] };
+    const introHtml = (parsed.intro || []).map(function(text) {
+      return `<p class="diet-pdf-classic-intro">${dietRecommendationsEscapeHtml(text)}</p>`;
+    }).join('');
+    const items = Array.isArray(parsed.items) ? parsed.items : [];
+    if (!items.length) return introHtml || '<div class="diet-pdf-empty">Brak zaleceń energetycznych do pokazania.</div>';
+    return `
+      ${introHtml}
+      <ol class="diet-pdf-classic-list">
+        ${items.map(function(item) {
+          return `<li><span>${dietRecommendationsEscapeHtml(item.text)}</span></li>`;
+        }).join('')}
+      </ol>`;
+  }
+
+  function dietRecommendationsPdfTrackerHtml() {
+    const boxes = Array.from({ length: 14 }).map(function(_, idx) {
+      return `<span>${idx + 1}</span>`;
+    }).join('');
+    return `<div class="diet-pdf-tracker-days">${boxes}</div>`;
+  }
+
+  function dietRecommendationsPdfPageHtml(model, bodyHtml, className) {
+    const subtitleHtml = model.subtitle
+      ? `<p>${dietRecommendationsEscapeHtml(model.subtitle)}</p>`
+      : '';
+    return `
+      <section class="diet-pdf-page ${className || ''}">
+        <header class="diet-pdf-header">
+          <div class="diet-pdf-header-title">
+            <div class="diet-pdf-brand">wagaiwzrost.pl</div>
+            <h1>${dietRecommendationsEscapeHtml(model.title)}</h1>
+            ${subtitleHtml}
+          </div>
+          <div class="diet-pdf-date">${dietRecommendationsEscapeHtml(model.patient.generatedLabel || '')}</div>
+        </header>
+        ${bodyHtml}
+        <footer class="diet-pdf-footer">
+          <div class="diet-pdf-footer-note">
+            <span class="diet-pdf-footer-dot" aria-hidden="true"></span>
+            <span>Raport edukacyjny. Zalecenia uzupełniają konsultację i nie zastępują indywidualnej opieki medycznej lub dietetycznej.</span>
+          </div>
+          <div class="diet-pdf-footer-brand" aria-label="wagaiwzrost.pl">wagaiwzrost.pl</div>
+        </footer>
+      </section>`;
+  }
+
+
+  function dietRecommendationsClassifyClassicPdfText(text) {
+    const t = String(text || '').toLowerCase();
+    if (/kcal|kalor|deficyt|utrata|tydzień|tydzien|dieta dostarcza|zapotrzeb/.test(t)) return 'energy';
+    if (/aktywn|ruch|spacer|rower|biegan|pływ|plyw|gry zespoł|gry zespol|telewiz|komputer|telefon|60 minut|wysił|wysil/.test(t)) return 'activity';
+    if (/posił|posilk|warzyw|owoc|pełnoziarn|pelnoziarn|pieczyw|kasz|słodycz|slodycz|fast|napoj|napój|wod[ayę]|mięso|mieso|ryb|sos|ser|makaron|chude|gazowan/.test(t)) return 'nutrition';
+    if (/waga|mas[ay]|bmi|norm|wzrost|roś|rosn|wyroś|wyros|średni|sredni|docelow|granicy/.test(t)) return 'weight';
+    return 'other';
+  }
+
+  function dietRecommendationsGetIntegratedClassicSections(parsedClassic) {
+    const defs = {
+      weight: {
+        key: 'weight',
+        label: 'Cel i strategia masy ciała',
+        kicker: 'ramy bezpieczeństwa',
+        empty: 'Cel masy ciała powinien być interpretowany razem z wiekiem, wzrostem i tempem wzrastania.'
+      },
+      energy: {
+        key: 'energy',
+        label: 'Energia i tempo zmian',
+        kicker: 'obliczenia',
+        empty: 'Energia i ewentualny deficyt powinny wspierać bezpieczne, stopniowe zmiany, a nie skrajne restrykcje.'
+      },
+      nutrition: {
+        key: 'nutrition',
+        label: 'Posiłki i wybory żywieniowe',
+        kicker: 'codzienna praktyka',
+        empty: 'Najważniejsze są regularne posiłki, warzywa, woda i ograniczenie produktów o wysokiej gęstości energetycznej.'
+      },
+      activity: {
+        key: 'activity',
+        label: 'Aktywność i czas siedzący',
+        kicker: 'ruch',
+        empty: 'Ruch powinien być regularny, dopasowany do możliwości i możliwie przyjemny.'
+      },
+      other: {
+        key: 'other',
+        label: 'Dodatkowe uwagi',
+        kicker: 'kontekst',
+        empty: ''
+      }
+    };
+    const sections = {};
+    Object.keys(defs).forEach(function(key) {
+      sections[key] = Object.assign({}, defs[key], { items: [] });
+    });
+    const parsed = parsedClassic || { intro: [], items: [] };
+    (Array.isArray(parsed.intro) ? parsed.intro : []).forEach(function(text) {
+      if (String(text || '').trim()) sections.other.items.push(String(text).trim());
+    });
+    (Array.isArray(parsed.items) ? parsed.items : []).forEach(function(item) {
+      const text = String(item && item.text ? item.text : '').replace(/[\u00A0\u202F]/g, ' ').replace(/\s+/g, ' ').trim();
+      if (!text) return;
+      const key = dietRecommendationsClassifyClassicPdfText(text);
+      sections[key].items.push(text);
+    });
+    return sections;
+  }
+
+  function dietRecommendationsPdfClampText(text, maxLength) {
+    const value = String(text || '').replace(/[\u00A0\u202F]/g, ' ').replace(/\s+/g, ' ').trim();
+    // W raporcie PDF nie skracamy zaleceń wielokropkiem, bo pacjent musi widzieć pełną treść zaleceń.
+    // Parametr zostaje tylko dla zgodności z wcześniejszymi wywołaniami.
+    return value;
+  }
+
+  function dietRecommendationsPdfIntegratedListHtml(section, options) {
+    const opts = options || {};
+    const items = section && Array.isArray(section.items) ? section.items : [];
+    const maxItems = Number.isFinite(opts.maxItems) ? Math.max(1, opts.maxItems) : items.length;
+    const maxLength = Number.isFinite(opts.maxLength) ? opts.maxLength : 420;
+    if (!items.length) {
+      return section && section.empty
+        ? `<p class="diet-pdf-integrated-empty">${dietRecommendationsEscapeHtml(section.empty)}</p>`
+        : '<p class="diet-pdf-integrated-empty">Brak dodatkowych informacji w tej części raportu.</p>';
+    }
+    return `<ul class="diet-pdf-integrated-list">
+      ${items.slice(0, maxItems).map(function(text) {
+        return `<li>${dietRecommendationsEscapeHtml(dietRecommendationsPdfClampText(text, maxLength))}</li>`;
+      }).join('')}
+    </ul>`;
+  }
+
+  function dietRecommendationsPdfIntegratedSectionCardHtml(section, options) {
+    const opts = options || {};
+    const wideClass = opts.wide ? ' diet-pdf-integrated-card--wide' : '';
+    const compactClass = opts.compact ? ' diet-pdf-integrated-card--compact' : '';
+    return `
+      <article class="diet-pdf-integrated-card${wideClass}${compactClass}">
+        <div class="diet-pdf-card-kicker">${dietRecommendationsEscapeHtml(section.kicker || '')}</div>
+        <h3>${dietRecommendationsEscapeHtml(section.label || '')}</h3>
+        ${dietRecommendationsPdfIntegratedListHtml(section, opts)}
+      </article>`;
+  }
+
+  function dietRecommendationsPdfIntegratedGoalContext(goal, model) {
+    const key = goal && goal.key ? goal.key : '';
+    const sections = model.integratedClassicSections || dietRecommendationsGetIntegratedClassicSections(model.parsedClassic);
+    if (key === 'regularMeals') {
+      return 'Ten krok przekłada klasyczne zalecenie regularnych posiłków na mierzalne zadanie, które ma ograniczyć długie przerwy, silny głód i nadrabianie jedzenia później.';
+    }
+    if (key === 'vegetablesFruit' || key === 'plateMethod' || key === 'fiberWholeGrains' || key === 'proteinAtMeals') {
+      return 'Ten krok jest praktyczną wersją zaleceń o większym udziale warzyw, produktów pełnoziarnistych i źródeł białka w codziennych posiłkach.';
+    }
+    if (key === 'sweetDrinks' || key === 'waterDefault') {
+      return 'Ten krok wspiera obliczony plan energetyczny, bo ogranicza kalorie, które słabo sycą i łatwo umykają w codziennym jadłospisie.';
+    }
+    if (key === 'energyDensity' || key === 'eveningSnacking' || key === 'simplePlanning') {
+      return 'Ten krok łączy obliczenia energii z praktyką: zmniejsza gęstość energetyczną posiłków bez opierania planu na głodzie.';
+    }
+    if (key === 'slowEatingSatiety' || key === 'screenFreeMeal' || key === 'emotionalEating') {
+      return 'Ten krok uzupełnia zalecenia energetyczne o kontrolę sytości, tempo jedzenia i sytuacje, w których najłatwiej jeść automatycznie.';
+    }
+    if (sections.energy && sections.energy.items && sections.energy.items.length) {
+      return 'Ten krok pomaga wprowadzić obliczony plan energetyczny w codzienny, mierzalny sposób.';
+    }
+    return 'Ten krok jest praktycznym wdrożeniem strategii wyliczonej przez aplikację.';
+  }
+
+  function dietRecommendationsPdfShortIntegratedGoalContext(goal, model) {
+    const key = goal && goal.key ? goal.key : '';
+    if (key === 'regularMeals') return 'Łączy plan z codziennym rytmem jedzenia i ogranicza późniejsze nadrabianie.';
+    if (key === 'vegetablesFruit' || key === 'plateMethod') return 'Przekłada zalecenia żywieniowe na prostą zmianę w każdym posiłku.';
+    if (key === 'fiberWholeGrains' || key === 'proteinAtMeals') return 'Wspiera sytość oraz jakość posiłków przy założonych ramach energii.';
+    if (key === 'sweetDrinks' || key === 'waterDefault') return 'Ogranicza płynne kalorie, które zwykle słabo sycą.';
+    if (key === 'energyDensity' || key === 'eveningSnacking' || key === 'simplePlanning') return 'Zmniejsza gęstość energetyczną bez opierania planu na głodzie.';
+    if (key === 'slowEatingSatiety' || key === 'screenFreeMeal' || key === 'emotionalEating') return 'Ułatwia rozpoznanie sytości i ogranicza jedzenie automatyczne.';
+    return 'Pomaga przełożyć obliczenia na mierzalne zachowanie w najbliższych 14 dniach.';
+  }
+
+  function dietRecommendationsPdfGoalsIntegratedHtml(plan, model) {
+    if (!plan || !Array.isArray(plan.goals) || !plan.goals.length) return '';
+    return plan.goals.slice(0, 3).map(function(goal, idx) {
+      const context = dietRecommendationsPdfShortIntegratedGoalContext(goal, model);
+      return `
+        <article class="diet-pdf-goal-card diet-pdf-goal-card-integrated diet-pdf-goal-card-compact">
+          <div class="diet-pdf-goal-number">${idx + 1}</div>
+          <div class="diet-pdf-goal-copy">
+            <h3>${dietRecommendationsEscapeHtml(goal.title)}</h3>
+            <p class="diet-pdf-goal-main"><strong>Cel:</strong> ${dietRecommendationsEscapeHtml(goal.goal)}</p>
+            <div class="diet-pdf-goal-mini-grid">
+              <div><span>Jak często</span><p>${dietRecommendationsEscapeHtml(goal.frequency)}</p></div>
+              <div><span>Jak mierzyć</span><p>${dietRecommendationsEscapeHtml(goal.measure)}</p></div>
+            </div>
+            <p class="diet-pdf-goal-why"><strong>Dlaczego:</strong> ${dietRecommendationsEscapeHtml(goal.why)} <em>${dietRecommendationsEscapeHtml(context)}</em></p>
+          </div>
+        </article>`;
+    }).join('');
+  }
+
+  function dietRecommendationsPdfEightyTwentyHtml(plan, state) {
+    const isChild = state && dietPersonalizationIsChildGroup(state.ageGroup);
+    const isTeen = state && state.ageGroup === 'teen';
+    const contextText = isChild
+      ? 'U dzieci zasada 80/20 dotyczy głównie środowiska domowego: większość wyborów rodziny wspiera zdrowe nawyki, ale bez zakazów, zawstydzania i komentowania wyglądu dziecka.'
+      : (isTeen
+        ? 'U nastolatków ta zasada pomaga odejść od myślenia „wszystko albo nic”: mniej udany posiłek nie kasuje planu, tylko jest sygnałem, żeby wrócić do kolejnego małego kroku.'
+        : 'U dorosłych taka elastyczność ułatwia utrzymanie planu w pracy, w weekendy, w podróży i podczas spotkań rodzinnych, bez poczucia, że trzeba zaczynać od nowa.');
+    const lead = 'Reguła 80/20 oznacza, że plan ma być powtarzalny, ale nie musi być perfekcyjny. Większość wyborów wspiera cel, a część zostaje na normalne sytuacje: wyjście, urodziny, weekend lub ulubiony produkt.';
+    const bullets = [
+      'Około 80% wyborów to codzienna baza: regularne posiłki, woda, warzywa, źródło białka, produkty mniej przetworzone i porcje dopasowane do planu.',
+      'Około 20% to miejsce na elastyczność: ulubiony produkt, posiłek poza domem albo okazjonalny deser mogą się pojawić, najlepiej jako zaplanowana porcja.',
+      'Elastyczność nie oznacza jedzenia bez kontroli i nie wymaga karania się po potknięciu. Po mniej udanym posiłku wróć do następnego zwykłego posiłku.',
+      contextText
+    ];
+    return `
+      <div class="diet-pdf-eighty-split" aria-hidden="true">
+        <div><strong>80%</strong><span>codzienna baza planu</span></div>
+        <div><strong>20%</strong><span>zaplanowana elastyczność</span></div>
+      </div>
+      <p class="diet-pdf-eighty-lead">${dietRecommendationsEscapeHtml(lead)}</p>
+      <ul class="diet-pdf-eighty-list">
+        ${bullets.map(function(text) { return `<li>${dietRecommendationsEscapeHtml(text)}</li>`; }).join('')}
+      </ul>`;
+  }
+
+  function dietRecommendationsPdfMythCardHtml(plan, extraClass) {
+    const myth = plan && plan.myth ? plan.myth : null;
+    const className = 'diet-pdf-card diet-pdf-myth-card' + (extraClass ? ' ' + extraClass : '');
+    return `
+      <article class="${className}">
+        <div class="diet-pdf-card-kicker">Obalamy mity o diecie</div>
+        <h2>Mit kontra fakt</h2>
+        <p class="diet-pdf-myth-statement"><strong>Mit:</strong> ${dietRecommendationsEscapeHtml(myth ? myth.myth : '')}</p>
+        <p><strong>Fakt:</strong> ${dietRecommendationsEscapeHtml(myth ? myth.fact : '')}</p>
+        ${myth && myth.practical ? `<p class="diet-pdf-myth-practical"><strong>Co zrobić w praktyce:</strong> ${dietRecommendationsEscapeHtml(myth.practical)}</p>` : ''}
+      </article>`;
+  }
+
+
+
+  function dietRecommendationsBuildIntegratedPdfPages(model, metaHtml, surveyBadge, metaChipCountClass) {
+    const plan = model.plan || {};
+    const sections = dietRecommendationsGetIntegratedClassicSections(model.parsedClassic);
+    model.integratedClassicSections = sections;
+    const state = model.state || {};
+    const activityOrOther = (sections.activity.items && sections.activity.items.length) ? sections.activity : sections.other;
+    const swapsForReport = dietRecommendationsPdfExpandedSwaps(plan, state, 6);
+    const goalsCount = Array.isArray(plan.goals) ? plan.goals.length : 0;
+    const goalsCountClass = ' diet-pdf-goals-count-' + Math.max(0, Math.min(3, goalsCount));
+    const childSafetyNote = dietPersonalizationIsChildGroup(state.ageGroup) || state.ageGroup === 'teen'
+      ? '<div class="diet-pdf-note-box diet-pdf-note-box-compact"><strong>Ważne:</strong> u dzieci i młodzieży liczby dotyczące masy ciała i deficytu energii interpretuj ostrożnie - w kontekście wzrastania, dojrzewania i stanu zdrowia. Priorytetem są bezpieczne nawyki oraz brak zawstydzania pacjenta.</div>'
+      : '<div class="diet-pdf-note-box diet-pdf-note-box-compact"><strong>Ważne:</strong> raport jest planem edukacyjnym. Tempo redukcji, deficyt i zalecenia należy dostosować do stanu zdrowia, leków, wyników badań i możliwości pacjenta.</div>';
+
+    const page1Body = `
+      <div class="diet-pdf-hero diet-pdf-hero-integrated diet-pdf-hero-compact">
+        <div class="diet-pdf-hero-kicker">Plan&nbsp;żywieniowy&nbsp;po&nbsp;konsultacji</div>
+        <h2>Obliczenia wyznaczają ramy, a małe kroki pokazują, co robić na co dzień.</h2>
+        <p>${dietRecommendationsEscapeHtml(plan.mainGoal || '')}</p>
+      </div>
+      <div class="diet-pdf-chip-grid diet-pdf-chip-grid-compact${metaChipCountClass}">${metaHtml}</div>
+      <div class="diet-pdf-section-head diet-pdf-section-head-tight">
+        <span>Ramy planu</span>
+      </div>
+      <div class="diet-pdf-integrated-framework diet-pdf-integrated-framework-compact">
+        ${dietRecommendationsPdfIntegratedSectionCardHtml(sections.weight, { compact: true, maxItems: 2 })}
+        ${dietRecommendationsPdfIntegratedSectionCardHtml(sections.energy, { compact: true, maxItems: 1 })}
+      </div>
+      <div class="diet-pdf-section-head diet-pdf-section-head-tight">
+        <span>Plan na 14 dni</span>
+      </div>
+      <div class="diet-pdf-goals diet-pdf-goals-integrated diet-pdf-goals-compact${goalsCountClass}">${dietRecommendationsPdfGoalsIntegratedHtml(plan, model)}</div>`;
+
+    const page2Body = `
+      <div class="diet-pdf-section-head diet-pdf-section-head-tight diet-pdf-section-head-first">
+        <span>Posiłki i utrzymanie zmiany</span>
+      </div>
+      <div class="diet-pdf-practice-grid">
+        <article class="diet-pdf-card diet-pdf-plate-card diet-pdf-card-compact">
+          <div class="diet-pdf-card-kicker">Model posiłku</div>
+          <h2>Jak komponować główny posiłek</h2>
+          <p>${dietRecommendationsEscapeHtml(plan.plateText || '')}</p>
+          <div class="diet-pdf-plate-visual diet-pdf-plate-visual-compact">
+            <div class="diet-pdf-plate-main">
+              <span class="diet-pdf-portion-fraction"><span>1/2</span></span>
+              <span class="diet-pdf-portion-title">warzywa</span>
+              <small>i owoce z przewagą warzyw</small>
+            </div>
+            <div class="diet-pdf-plate-side">
+              <div class="diet-pdf-plate-cell"><span class="diet-pdf-portion-fraction"><span>1/4</span></span><strong>białko</strong></div>
+              <div class="diet-pdf-plate-cell"><span class="diet-pdf-portion-fraction"><span>1/4</span></span><strong>zboża / ziemniaki</strong></div>
+            </div>
+          </div>
+        </article>
+        ${dietRecommendationsPdfIntegratedSectionCardHtml(sections.nutrition, { compact: true, maxItems: 1 })}
+        <article class="diet-pdf-card diet-pdf-card-compact diet-pdf-swaps-card-expanded">
+          <div class="diet-pdf-card-kicker">Zamiany produktów</div>
+          <h2>Praktyczne zamiany</h2>
+          ${dietRecommendationsPdfSwapsHtml(swapsForReport)}
+        </article>
+        <article class="diet-pdf-card diet-pdf-card-accent diet-pdf-card-compact diet-pdf-eighty-card">
+          <div class="diet-pdf-card-kicker">Elastyczność 80/20</div>
+          <h2>Co to znaczy w praktyce?</h2>
+          ${dietRecommendationsPdfEightyTwentyHtml(plan, state)}
+        </article>
+      </div>
+      <div class="diet-pdf-two-col diet-pdf-two-col-tight">
+        ${dietRecommendationsPdfIntegratedSectionCardHtml(activityOrOther, { compact: true, maxItems: 1 })}
+        ${dietRecommendationsPdfMythCardHtml(plan, 'diet-pdf-card-compact')}
+      </div>
+      <article class="diet-pdf-card diet-pdf-tracker-card diet-pdf-tracker-card-compact">
+        <div>
+          <div class="diet-pdf-card-kicker">Monitorowanie</div>
+          <h2>14 dni obserwacji, bez oceniania siebie</h2>
+          <p>Zaznacz dni, w których udało się wykonać co najmniej jeden mały krok. Po 14 dniach zostaw 1-2 najłatwiejsze kroki i uprość te, które były zbyt trudne.</p>
+        </div>
+        ${dietRecommendationsPdfTrackerHtml()}
+      </article>
+      ${childSafetyNote}`;
+
+    return [
+      dietRecommendationsPdfPageHtml(model, page1Body, 'diet-pdf-page-cover diet-pdf-page-integrated diet-pdf-page-tight'),
+      dietRecommendationsPdfPageHtml(model, page2Body, 'diet-pdf-page-integrated-closing diet-pdf-page-tight')
+    ];
+  }
+
+  function dietRecommendationsBuildPdfHtml(model) {
+    const metaHtml = dietRecommendationsPdfMetaChipsHtml(model);
+    const metaChipCount = (metaHtml.match(/class=\"diet-pdf-chip\"/g) || []).length;
+    const metaChipCountClass = ' diet-pdf-chip-count-' + Math.min(6, Math.max(1, metaChipCount));
+    const showPersonalized = !!(model.includePersonalized && model.plan);
+    const showClassic = !!(model.includeClassic && model.baseResult);
+    const plan = model.plan || {};
+    const surveyBadge = '';
+    const integratedPages = (model.mode === 'full' && showPersonalized && showClassic)
+      ? dietRecommendationsBuildIntegratedPdfPages(model, metaHtml, surveyBadge, metaChipCountClass)
+      : null;
+
+    const page1Body = showPersonalized ? `
+      <div class="diet-pdf-hero">
+        <div class="diet-pdf-hero-kicker">Plan&nbsp;żywieniowy&nbsp;po&nbsp;konsultacji</div>
+        <h2>Najpierw 2-3 realistyczne kroki, potem kolejne zmiany.</h2>
+        <p>${dietRecommendationsEscapeHtml(plan.mainGoal || '')}</p>
+      </div>
+      <div class="diet-pdf-chip-grid${metaChipCountClass}">${metaHtml}</div>
+      <div class="diet-pdf-section-head">
+        <span>Plan na 14 dni</span>
+      </div>
+      <div class="diet-pdf-goals">${dietRecommendationsPdfGoalsHtml(plan)}</div>
+    ` : `
+      <div class="diet-pdf-hero diet-pdf-hero-classic">
+        <h2>Raport energetyczny i zalecenia podstawowe</h2>
+        <p>Poniżej zebrano najważniejsze zindywidualizowane zalecenia żywieniowe.</p>
+      </div>
+      <div class="diet-pdf-chip-grid${metaChipCountClass}">${metaHtml}</div>
+      <div class="diet-pdf-card diet-pdf-card-classic diet-pdf-card-classic-main">
+        <div class="diet-pdf-classic-fit-content">
+          <h2>Obliczenia i zalecenia</h2>
+          ${dietRecommendationsPdfClassicHtml(model.parsedClassic)}
+        </div>
+      </div>
+    `;
+
+    const page2Body = showPersonalized ? `
+      <div class="diet-pdf-two-col">
+        <article class="diet-pdf-card diet-pdf-plate-card">
+          <div class="diet-pdf-card-kicker">Model posiłku</div>
+          <h2>Jak komponować główny posiłek</h2>
+          <p>${dietRecommendationsEscapeHtml(plan.plateText || '')}</p>
+          <div class="diet-pdf-plate-visual">
+            <div class="diet-pdf-plate-main">
+              <span class="diet-pdf-portion-fraction"><span>1/2</span></span>
+              <span class="diet-pdf-portion-title">warzywa</span>
+              <small>i owoce z przewagą warzyw</small>
+            </div>
+            <div class="diet-pdf-plate-side">
+              <div class="diet-pdf-plate-cell"><span class="diet-pdf-portion-fraction"><span>1/4</span></span><strong>białko</strong></div>
+              <div class="diet-pdf-plate-cell"><span class="diet-pdf-portion-fraction"><span>1/4</span></span><strong>zboża / ziemniaki</strong></div>
+            </div>
+          </div>
+        </article>
+        <article class="diet-pdf-card">
+          <div class="diet-pdf-card-kicker">Zamiany produktów</div>
+          <h2>Praktyczne zamiany</h2>
+          ${dietRecommendationsPdfSwapsHtml(plan.swaps)}
+        </article>
+      </div>
+      <div class="diet-pdf-two-col diet-pdf-two-col-lower">
+        <article class="diet-pdf-card diet-pdf-card-accent diet-pdf-eighty-card">
+          <div class="diet-pdf-card-kicker">Elastyczność 80/20</div>
+          <h2>Co to znaczy w praktyce?</h2>
+          ${dietRecommendationsPdfEightyTwentyHtml(plan, model.state || {})}
+        </article>
+        ${dietRecommendationsPdfMythCardHtml(plan, '')}
+      </div>
+      <article class="diet-pdf-card diet-pdf-tracker-card">
+        <div>
+          <div class="diet-pdf-card-kicker">Monitorowanie</div>
+          <h2>14 dni obserwacji, bez oceniania siebie</h2>
+          <p>Zaznacz dni, w których udało się wykonać co najmniej jeden mały krok. Celem jest powtarzalność, nie idealny wynik.</p>
+        </div>
+        ${dietRecommendationsPdfTrackerHtml()}
+      </article>
+    ` : '';
+
+    const page3Body = showClassic ? `
+      <div class="diet-pdf-section-head diet-pdf-section-head-classic">
+        <span>Dodatkowy kontekst</span>
+        <strong>Obliczenia energetyczne i zalecenia podstawowe</strong>
+      </div>
+      <div class="diet-pdf-card diet-pdf-card-classic diet-pdf-card-long">
+        ${dietRecommendationsPdfClassicHtml(model.parsedClassic)}
+      </div>
+      <div class="diet-pdf-note-box">
+        <strong>Ważne:</strong> u dzieci i młodzieży liczby dotyczące masy ciała i deficytu energii powinny być interpretowane ostrożnie, w kontekście wzrastania, dojrzewania i stanu zdrowia. Priorytetem pozostają bezpieczne, powtarzalne nawyki oraz brak zawstydzania pacjenta.
+      </div>
+    ` : '';
+
+    const firstPageClassName = showPersonalized ? 'diet-pdf-page-cover' : 'diet-pdf-page-cover diet-pdf-page-classic-single';
+    const pages = integratedPages || [dietRecommendationsPdfPageHtml(model, page1Body, firstPageClassName)];
+    if (!integratedPages && showPersonalized) pages.push(dietRecommendationsPdfPageHtml(model, page2Body, 'diet-pdf-page-guidance'));
+    if (!integratedPages && showClassic && showPersonalized) pages.push(dietRecommendationsPdfPageHtml(model, page3Body, 'diet-pdf-page-classic'));
+
+    return `
+      <div class="diet-pdf-root">
+        <style>
+          .diet-pdf-root { width:1240px; background:#eef7f7; color:#173233; font-family:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; -webkit-text-size-adjust:none; text-size-adjust:none; }
+          .diet-pdf-page { width:1240px; min-height:1754px; box-sizing:border-box; position:relative; padding:54px 58px 74px; background:linear-gradient(180deg,#f4fbfb 0%,#fff 22%,#fff 100%); overflow:hidden; }
+          .diet-pdf-page::before { content:""; position:absolute; top:-190px; right:-190px; width:460px; height:460px; border-radius:999px; background:rgba(0,131,141,0.08); }
+          .diet-pdf-page::after { content:""; position:absolute; left:-160px; bottom:-190px; width:420px; height:420px; border-radius:999px; background:rgba(242,151,39,0.11); }
+          .diet-pdf-page > * { position:relative; z-index:1; }
+          .diet-pdf-header { display:flex; align-items:flex-start; justify-content:space-between; gap:24px; margin-bottom:28px; text-align:left; }
+          .diet-pdf-header-title { text-align:left; max-width:900px; }
+          .diet-pdf-brand { color:#007a83; font-size:24px; font-weight:900; letter-spacing:.01em; text-transform:uppercase; text-align:left; }
+          .diet-pdf-header h1 { margin:14px 0 0; font-size:44px; line-height:1.06; color:#10292a; font-weight:900; text-align:left; }
+          .diet-pdf-header p { margin:10px 0 0; max-width:780px; color:#50696a; font-size:21px; line-height:1.38; }
+          .diet-pdf-date { flex:0 0 auto; border:1px solid #d6e8e8; background:#fff; border-radius:18px; padding:13px 16px; color:#365454; font-size:17px; font-weight:700; box-shadow:0 10px 24px rgba(15,77,84,.07); }
+          .diet-pdf-hero { border-radius:30px; padding:30px 34px; color:#fff; background:linear-gradient(135deg,#087b85 0%,#0f9ca6 100%); box-shadow:0 24px 50px rgba(0,131,141,.18); }
+          .diet-pdf-hero-classic { background:linear-gradient(135deg,#5d4276 0%,#8b50b6 100%); box-shadow:0 24px 50px rgba(91,58,120,.17); }
+          .diet-pdf-hero-kicker { display:inline-block; padding:7px 13px; border-radius:999px; background:rgba(255,255,255,.17); font-size:16px; font-weight:800; letter-spacing:0; word-spacing:.08em; text-transform:none; white-space:nowrap; }
+          .diet-pdf-hero h2 { margin:0; font-size:35px; line-height:1.12; font-weight:900; }
+          .diet-pdf-hero-kicker + h2 { margin-top:18px; }
+          .diet-pdf-hero p { margin:14px 0 0; font-size:22px; line-height:1.44; max-width:1030px; }
+          .diet-pdf-chip-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:13px; margin-top:22px; width:100%; box-sizing:border-box; align-items:stretch; justify-items:stretch; }
+          .diet-pdf-chip-grid.diet-pdf-chip-count-1 { grid-template-columns:1fr; }
+          .diet-pdf-chip-grid.diet-pdf-chip-count-2 { grid-template-columns:repeat(2,minmax(0,1fr)); }
+          .diet-pdf-chip-grid.diet-pdf-chip-count-3 { grid-template-columns:repeat(3,minmax(0,1fr)); }
+          .diet-pdf-chip-grid.diet-pdf-chip-count-4 { grid-template-columns:repeat(4,minmax(0,1fr)); }
+          .diet-pdf-chip-grid.diet-pdf-chip-count-5 { grid-template-columns:repeat(5,minmax(0,1fr)); }
+          .diet-pdf-chip-grid.diet-pdf-chip-count-6 { grid-template-columns:repeat(6,minmax(0,1fr)); }
+          .diet-pdf-chip { display:flex; flex-direction:column; justify-content:center; gap:5px; padding:14px 16px; border:2px solid #b7d8d9; border-radius:18px; background:#fff; box-shadow:0 12px 26px rgba(15,77,84,.09); min-height:62px; box-sizing:border-box; }
+          .diet-pdf-chip span { color:#5b7374; font-size:14.5px; line-height:1.1; font-weight:900; text-transform:uppercase; letter-spacing:.04em; }
+          .diet-pdf-chip strong { color:#102d2f; font-size:20px; line-height:1.18; font-weight:900; overflow-wrap:anywhere; }
+          .diet-pdf-section-head { display:flex; justify-content:space-between; align-items:center; gap:18px; margin:28px 0 16px; padding-bottom:12px; border-bottom:3px solid #e7f0f0; }
+          .diet-pdf-section-head span { color:#f08d28; font-size:19px; font-weight:900; text-transform:uppercase; letter-spacing:.06em; }
+          .diet-pdf-section-head strong { color:#436162; font-size:18px; line-height:1.3; text-align:right; }
+          .diet-pdf-goals { display:grid; grid-template-columns:1fr; gap:16px; }
+          .diet-pdf-goal-card { display:grid; grid-template-columns:64px 1fr; gap:18px; padding:18px; border:1px solid #d9e8e8; border-radius:26px; background:#fff; box-shadow:0 14px 34px rgba(15,77,84,.08); }
+          .diet-pdf-goal-number { width:54px; height:54px; display:flex; align-items:center; justify-content:center; border-radius:999px; color:#fff; font-size:25px; font-weight:900; background:linear-gradient(135deg,#f2992c 0%,#f0b255 100%); box-shadow:0 10px 18px rgba(242,151,39,.22); }
+          .diet-pdf-goal-copy h3 { margin:0 0 12px; color:#123233; font-size:26px; line-height:1.15; font-weight:900; }
+          .diet-pdf-smart-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+          .diet-pdf-smart-grid div { border-radius:16px; background:#f6fbfb; border:1px solid #e0ecec; padding:11px 12px; }
+          .diet-pdf-smart-grid span { display:block; color:#087b85; font-size:14px; font-weight:900; text-transform:uppercase; letter-spacing:.04em; margin-bottom:5px; }
+          .diet-pdf-smart-grid p { margin:0; color:#244647; font-size:17px; line-height:1.34; }
+          .diet-pdf-two-col { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:20px; }
+          .diet-pdf-two-col-lower { margin-top:20px; }
+          .diet-pdf-card { border:1px solid #d9e8e8; border-radius:28px; background:#fff; padding:24px; box-shadow:0 14px 34px rgba(15,77,84,.08); }
+          .diet-pdf-card-kicker { color:#f08d28; font-size:15px; font-weight:900; letter-spacing:.06em; text-transform:uppercase; margin-bottom:8px; }
+          .diet-pdf-card h2 { margin:0 0 12px; color:#143334; font-size:29px; line-height:1.14; font-weight:900; }
+          .diet-pdf-card p { margin:0; color:#315253; font-size:19px; line-height:1.46; }
+          .diet-pdf-plate-visual { margin-top:22px; display:grid; grid-template-columns:1.1fr .9fr; min-height:210px; overflow:hidden; border-radius:28px; border:1px solid #d8e7e7; }
+          .diet-pdf-plate-main { display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; gap:8px; padding:18px; background:#e8f6f2; color:#16635f; font-weight:900; }
+          .diet-pdf-portion-fraction { display:inline-grid; place-items:center; box-sizing:border-box; min-width:56px; height:38px; padding:0 13px; border-radius:999px; background:#fff; border:1px solid rgba(8,123,133,.18); color:#087b85; font-size:24px; line-height:1; font-weight:950; text-align:center; box-shadow:0 7px 16px rgba(15,77,84,.08); vertical-align:middle; }
+          .diet-pdf-portion-fraction > span { display:block; color:inherit; font:inherit; line-height:1; transform:translateY(-1.25px); }
+          .diet-pdf-portion-title { display:block; color:#16635f; font-size:28px; line-height:1.05; font-weight:950; }
+          .diet-pdf-plate-main small { display:block; max-width:245px; color:#487370; font-size:16px; line-height:1.25; font-weight:750; }
+          .diet-pdf-plate-side { display:grid; grid-template-rows:1fr 1fr; }
+          .diet-pdf-plate-cell { display:flex; flex-direction:column; justify-content:center; align-items:center; gap:7px; text-align:center; color:#394c63; font-weight:900; background:#f3f7fb; border-left:1px solid #d8e7e7; padding:10px 12px; min-width:0; }
+          .diet-pdf-plate-cell + .diet-pdf-plate-cell { background:#fff7ec; border-top:1px solid #d8e7e7; color:#8d5b17; }
+          .diet-pdf-plate-cell .diet-pdf-portion-fraction { min-width:48px; height:31px; padding:0 10px; font-size:18px; color:currentColor; border-color:rgba(0,0,0,.08); box-shadow:none; }
+          .diet-pdf-plate-cell .diet-pdf-portion-fraction > span { transform:translateY(-.9px); }
+          .diet-pdf-plate-cell strong { display:block; max-width:190px; color:currentColor; font-size:20px; line-height:1.12; font-weight:950; overflow-wrap:normal; }
+          .diet-pdf-swaps-table { border:1px solid #dce8e8; border-radius:20px; overflow:hidden; }
+          .diet-pdf-swaps-head, .diet-pdf-swap-row { display:grid; grid-template-columns:1fr 1fr; }
+          .diet-pdf-swaps-head span { padding:12px 14px; background:#f3f6f6; color:#274849; font-size:16px; font-weight:900; text-transform:uppercase; letter-spacing:.04em; }
+          .diet-pdf-swap-row span { padding:12px 14px; color:#315253; font-size:17px; line-height:1.32; border-top:1px solid #e6eeee; }
+          .diet-pdf-swap-row span + span { border-left:1px solid #e6eeee; color:#174f53; font-weight:700; }
+          .diet-pdf-card-accent { background:#fff8ed; border-color:#f1d3aa; }
+          .diet-pdf-myth-card { background:#f7fbfb; border-color:#cfe4e4; }
+          .diet-pdf-myth-card h2 { color:#0f5358; }
+          .diet-pdf-myth-card p + p { margin-top:8px; }
+          .diet-pdf-myth-card strong { color:#087b85; font-weight:900; }
+          .diet-pdf-myth-statement { margin:0 0 8px !important; padding:9px 11px; border:1px solid #d9e8e8; border-radius:14px; background:#fff; color:#173233 !important; font-weight:760; }
+          .diet-pdf-myth-practical { margin-top:9px !important; padding-top:9px; border-top:1px solid #e0eeee; color:#274849 !important; }
+          .diet-pdf-myth-practical strong { color:#087b85; font-weight:900; }
+          .diet-pdf-tracker-card { margin-top:20px; display:block; }
+          .diet-pdf-tracker-days { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:10px; margin-top:14px; width:100%; }
+          .diet-pdf-tracker-days span { height:50px; border-radius:15px; border:2px solid #cfe1e1; display:flex; align-items:center; justify-content:center; color:#335152; font-size:20px; font-weight:900; background:#fff; }
+          .diet-pdf-section-head-classic { margin-top:8px; }
+          .diet-pdf-card-classic { margin-top:0; }
+          .diet-pdf-card-classic-main { margin-top:22px; }
+          .diet-pdf-card-classic h2 { margin-bottom:18px; font-size:31px; }
+          .diet-pdf-classic-intro { margin:0 0 14px; font-size:21px; color:#315253; line-height:1.5; }
+          .diet-pdf-classic-list { margin:0; padding-left:0; list-style:none; counter-reset:dietClassic; display:grid; gap:14px; }
+          .diet-pdf-classic-list li { counter-increment:dietClassic; display:grid; grid-template-columns:46px 1fr; gap:14px; align-items:start; padding:16px 17px; border:1px solid #d7e6e6; border-radius:20px; background:#fbfdfd; }
+          .diet-pdf-classic-list li::before { content:counter(dietClassic); width:38px; height:38px; border-radius:999px; display:flex; align-items:center; justify-content:center; background:#eaf6f6; color:#007a83; font-weight:900; font-size:18px; }
+          .diet-pdf-classic-list li span { color:#244647; font-size:21px; line-height:1.48; }
+          .diet-pdf-page-classic-single { height:1754px; min-height:1754px; max-height:1754px; padding:50px 58px 74px; overflow:hidden; }
+          .diet-pdf-page-classic-single .diet-pdf-header { margin-bottom:22px; }
+          .diet-pdf-page-classic-single .diet-pdf-header h1 { font-size:42px; }
+          .diet-pdf-page-classic-single .diet-pdf-header p { font-size:20px; }
+          .diet-pdf-page-classic-single .diet-pdf-hero { padding:26px 34px; border-radius:28px; }
+          .diet-pdf-page-classic-single .diet-pdf-hero h2 { font-size:34px; }
+          .diet-pdf-page-classic-single .diet-pdf-hero p { font-size:21px; line-height:1.36; }
+          .diet-pdf-page-classic-single .diet-pdf-chip-grid { margin-top:22px; }
+          .diet-pdf-page-classic-single .diet-pdf-card-classic-main { box-sizing:border-box; transform-origin:top left; }
+          .diet-pdf-classic-fit-content { transform-origin:top left; width:100%; }
+          .diet-pdf-card-classic-main.diet-pdf-card-classic-scaled .diet-pdf-classic-fit-content { transform:scale(var(--classic-fit-scale,1)); }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-1 { padding-top:44px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-1 .diet-pdf-header { margin-bottom:18px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-1 .diet-pdf-header h1 { font-size:39px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-1 .diet-pdf-header p { font-size:18.5px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-1 .diet-pdf-date { padding:10px 13px; font-size:15.5px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-1 .diet-pdf-hero { padding:22px 28px; border-radius:24px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-1 .diet-pdf-hero h2 { font-size:31px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-1 .diet-pdf-hero p { margin-top:8px; font-size:18.8px; line-height:1.3; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-1 .diet-pdf-chip-grid { gap:10px; margin-top:16px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-1 .diet-pdf-chip { min-height:55px; padding:11px 13px; border-radius:16px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-1 .diet-pdf-chip span { font-size:12.6px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-1 .diet-pdf-chip strong { font-size:18px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-1 .diet-pdf-card-classic-main { margin-top:16px; padding:20px 21px; border-radius:24px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-1 .diet-pdf-card-classic h2 { margin-bottom:13px; font-size:29px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-1 .diet-pdf-classic-list { gap:9px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-1 .diet-pdf-classic-list li { grid-template-columns:40px 1fr; gap:11px; padding:12px 14px; border-radius:17px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-1 .diet-pdf-classic-list li::before { width:33px; height:33px; font-size:15.5px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-1 .diet-pdf-classic-list li span { font-size:19px; line-height:1.36; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-2 { padding-top:38px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-2 .diet-pdf-header { margin-bottom:14px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-2 .diet-pdf-brand { font-size:21px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-2 .diet-pdf-header h1 { margin-top:8px; font-size:35px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-2 .diet-pdf-header p { margin-top:6px; font-size:17.5px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-2 .diet-pdf-date { padding:9px 12px; font-size:14.8px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-2 .diet-pdf-hero { padding:18px 24px; border-radius:22px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-2 .diet-pdf-hero h2 { font-size:28px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-2 .diet-pdf-hero p { margin-top:7px; font-size:17.2px; line-height:1.27; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-2 .diet-pdf-chip-grid { gap:8px; margin-top:12px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-2 .diet-pdf-chip { min-height:50px; padding:9px 11px; border-radius:14px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-2 .diet-pdf-chip span { font-size:11.5px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-2 .diet-pdf-chip strong { font-size:16.8px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-2 .diet-pdf-card-classic-main { margin-top:13px; padding:16px 18px; border-radius:21px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-2 .diet-pdf-card-classic h2 { margin-bottom:10px; font-size:26px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-2 .diet-pdf-classic-list { gap:7px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-2 .diet-pdf-classic-list li { grid-template-columns:35px 1fr; gap:9px; padding:9px 11px; border-radius:15px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-2 .diet-pdf-classic-list li::before { width:29px; height:29px; font-size:14px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-2 .diet-pdf-classic-list li span { font-size:17px; line-height:1.29; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-3 { padding-top:34px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-3 .diet-pdf-header { margin-bottom:10px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-3 .diet-pdf-header h1 { font-size:32px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-3 .diet-pdf-header p { display:none; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-3 .diet-pdf-hero { padding:16px 22px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-3 .diet-pdf-hero h2 { font-size:26px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-3 .diet-pdf-hero p { font-size:16px; line-height:1.24; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-3 .diet-pdf-chip-grid { margin-top:10px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-3 .diet-pdf-card-classic-main { margin-top:10px; padding:14px 16px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-3 .diet-pdf-classic-list { gap:6px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-3 .diet-pdf-classic-list li { padding:8px 10px; }
+          .diet-pdf-page-classic-single.diet-pdf-classic-density-3 .diet-pdf-classic-list li span { font-size:15.8px; line-height:1.24; }
+          .diet-pdf-card-long { margin-top:12px; }
+          .diet-pdf-integrated-framework { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin-top:16px; }
+          .diet-pdf-integrated-framework-single { grid-template-columns:1fr; margin-top:20px; }
+          .diet-pdf-integrated-card { border:1px solid #d9e8e8; border-radius:26px; background:#fff; padding:21px 22px; box-shadow:0 14px 34px rgba(15,77,84,.08); }
+          .diet-pdf-integrated-card-primary { background:linear-gradient(180deg,#ffffff 0%,#f4fbfb 100%); border-color:#cde4e4; }
+          .diet-pdf-integrated-card--wide { grid-column:1 / -1; }
+          .diet-pdf-integrated-card--compact { padding:20px 22px; }
+          .diet-pdf-integrated-card h3 { margin:0 0 11px; color:#143334; font-size:27px; line-height:1.14; font-weight:900; }
+          .diet-pdf-integrated-card p { margin:0; color:#315253; font-size:18px; line-height:1.45; }
+          .diet-pdf-integrated-list { margin:0; padding:0; list-style:none; display:grid; gap:10px; }
+          .diet-pdf-integrated-list li { position:relative; padding-left:22px; color:#244647; font-size:17px; line-height:1.42; }
+          .diet-pdf-integrated-list li::before { content:""; position:absolute; left:0; top:.58em; width:9px; height:9px; border-radius:999px; background:#f2992c; box-shadow:0 0 0 4px rgba(242,153,44,.14); }
+          .diet-pdf-integrated-empty { margin:0; color:#5f7677; font-size:17px; line-height:1.42; }
+          .diet-pdf-hero-integrated { background:linear-gradient(135deg,#087b85 0%,#0f9ca6 62%,#f29a2e 160%); }
+          .diet-pdf-goal-card-integrated { padding:16px 18px; }
+          .diet-pdf-goal-context { margin-top:12px; border-radius:17px; background:#fff8ed; border:1px solid #f1d3aa; padding:12px 14px; }
+          .diet-pdf-goal-context span { display:block; color:#9a610e; font-size:14px; font-weight:900; text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px; }
+          .diet-pdf-goal-context p { margin:0; color:#4c3a24; font-size:16px; line-height:1.36; }
+          .diet-pdf-tracker-card-integrated { margin-top:20px; }
+          .diet-pdf-note-box { margin-top:18px; padding:18px 20px; border-radius:22px; background:#fff8ed; border:1px solid #f0d1a4; color:#4c3a24; font-size:18px; line-height:1.45; }
+          .diet-pdf-note-box-integrated { margin-top:18px; }
+          .diet-pdf-empty { color:#6d8080; font-size:18px; padding:16px; border-radius:18px; background:#f7fbfb; }
+          .diet-pdf-footer { position:absolute; left:58px; right:58px; bottom:26px; display:flex; justify-content:space-between; align-items:center; gap:18px; border:1px solid #d7e8e8; border-radius:18px; padding:10px 14px; color:#315253; font-size:13.8px; font-weight:750; background:linear-gradient(90deg,rgba(235,249,249,.98) 0%,rgba(255,249,239,.98) 100%); box-shadow:0 10px 24px rgba(15,77,84,.08); }
+          .diet-pdf-footer-note { display:flex; align-items:center; gap:9px; min-width:0; line-height:1.25; }
+          .diet-pdf-footer-note span:last-child { white-space:normal; }
+          .diet-pdf-footer-dot { width:10px; height:10px; flex:0 0 auto; border-radius:999px; background:#f2992c; box-shadow:0 0 0 5px rgba(242,153,44,.16); }
+          .diet-pdf-footer-brand { flex:0 0 auto; color:#087b85; font-size:15px; font-weight:950; letter-spacing:.01em; white-space:nowrap; }
+          .diet-pdf-page-tight { height:1754px; min-height:1754px; padding:38px 50px 64px; }
+          .diet-pdf-page-tight .diet-pdf-header { margin-bottom:14px; }
+          .diet-pdf-page-tight .diet-pdf-brand { font-size:22px; }
+          .diet-pdf-page-tight .diet-pdf-header h1 { margin-top:8px; font-size:42px; line-height:1.04; }
+          .diet-pdf-page-tight .diet-pdf-header p { margin-top:7px; font-size:19px; line-height:1.3; max-width:820px; }
+          .diet-pdf-page-tight .diet-pdf-date { padding:10px 13px; border-radius:16px; font-size:15px; }
+          .diet-pdf-hero-compact { border-radius:22px; padding:18px 24px; }
+          .diet-pdf-hero-compact .diet-pdf-hero-kicker { padding:6px 12px; font-size:16px; letter-spacing:0; word-spacing:.08em; text-transform:none; white-space:nowrap; }
+          .diet-pdf-hero-compact h2 { margin-top:10px; font-size:30px; line-height:1.1; max-width:1040px; }
+          .diet-pdf-hero-compact p { margin-top:8px; font-size:19px; line-height:1.35; max-width:1040px; }
+          .diet-pdf-chip-grid-compact { grid-template-columns:repeat(6,minmax(0,1fr)); gap:10px; margin-top:12px; width:100%; }
+          .diet-pdf-chip-grid-compact .diet-pdf-chip { padding:11px 12px; min-height:56px; border-radius:15px; border-width:2px; border-color:#a9cfd0; box-shadow:0 9px 20px rgba(15,77,84,.08); }
+          .diet-pdf-chip-grid-compact .diet-pdf-chip span { font-size:13.5px; letter-spacing:.025em; }
+          .diet-pdf-chip-grid-compact .diet-pdf-chip strong { font-size:18.2px; line-height:1.15; }
+          .diet-pdf-section-head-tight { margin:14px 0 9px; padding-bottom:7px; border-bottom-width:2px; }
+          .diet-pdf-section-head-first { margin-top:2px; }
+          .diet-pdf-section-head-tight span { font-size:18px; letter-spacing:.035em; }
+          .diet-pdf-section-head-tight strong { font-size:16px; }
+          .diet-pdf-integrated-framework-compact { grid-template-columns:1.08fr .92fr; gap:11px; margin-top:9px; }
+          .diet-pdf-page-tight .diet-pdf-integrated-card { border-radius:20px; padding:15px 16px; }
+          .diet-pdf-page-tight .diet-pdf-integrated-card h3 { margin-bottom:7px; font-size:23px; line-height:1.1; }
+          .diet-pdf-page-tight .diet-pdf-integrated-card p { font-size:17px; line-height:1.34; }
+          .diet-pdf-page-tight .diet-pdf-card-kicker { margin-bottom:5px; font-size:14px; letter-spacing:.025em; }
+          .diet-pdf-page-tight .diet-pdf-integrated-list { gap:6px; }
+          .diet-pdf-page-tight .diet-pdf-integrated-list li { padding-left:17px; font-size:16.2px; line-height:1.34; }
+          .diet-pdf-page-tight .diet-pdf-integrated-list li::before { width:6px; height:6px; box-shadow:0 0 0 3px rgba(242,153,44,.13); }
+          .diet-pdf-page-tight .diet-pdf-integrated-empty { font-size:16.2px; line-height:1.34; }
+          .diet-pdf-goals-compact { gap:var(--integrated-goal-gap,12px); }
+          .diet-pdf-goal-card-compact { grid-template-columns:48px 1fr; gap:var(--integrated-goal-col-gap,12px); padding:var(--integrated-goal-pad-y,15px) var(--integrated-goal-pad-x,17px); border-radius:22px; }
+          .diet-pdf-goal-card-compact .diet-pdf-goal-number { width:42px; height:42px; font-size:20px; }
+          .diet-pdf-goal-card-compact .diet-pdf-goal-copy h3 { margin-bottom:7px; font-size:23.5px; line-height:1.1; }
+          .diet-pdf-goals-count-3 { --integrated-goal-gap:14px; --integrated-goal-pad-y:16px; --integrated-goal-pad-x:18px; --integrated-goal-col-gap:13px; }
+          .diet-pdf-goals-count-2 { --integrated-goal-gap:18px; --integrated-goal-pad-y:20px; --integrated-goal-pad-x:20px; --integrated-goal-col-gap:14px; }
+          .diet-pdf-goals-count-1 { --integrated-goal-gap:18px; --integrated-goal-pad-y:24px; --integrated-goal-pad-x:22px; --integrated-goal-col-gap:15px; }
+          .diet-pdf-goal-main { margin:0 0 8px; color:#244647; font-size:17.3px; line-height:1.32; }
+          .diet-pdf-goal-main strong, .diet-pdf-goal-why strong { color:#0b737b; font-weight:900; }
+          .diet-pdf-goal-mini-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px; }
+          .diet-pdf-goal-mini-grid div { border-radius:14px; background:#f6fbfb; border:1px solid #d9e8e8; padding:9px 10px; }
+          .diet-pdf-goal-mini-grid span { display:block; color:#087b85; font-size:13.5px; font-weight:900; text-transform:uppercase; letter-spacing:.02em; margin-bottom:3px; }
+          .diet-pdf-goal-mini-grid p { margin:0; color:#244647; font-size:15.8px; line-height:1.28; }
+          .diet-pdf-goal-why { margin:0; color:#334f50; font-size:15.9px; line-height:1.31; }
+          .diet-pdf-goal-why em { display:block; margin-top:3px; color:#6a5a3f; font-style:normal; }
+          .diet-pdf-practice-grid { display:grid; grid-template-columns:1fr 1fr; gap:11px; margin-top:9px; }
+          .diet-pdf-card-compact { border-radius:21px; padding:15px 16px; }
+          .diet-pdf-card-compact h2 { margin-bottom:7px; font-size:24.5px; line-height:1.1; }
+          .diet-pdf-card-compact p { font-size:17px; line-height:1.34; }
+          .diet-pdf-plate-visual-compact { margin-top:12px; min-height:132px; border-radius:20px; }
+          .diet-pdf-plate-visual-compact .diet-pdf-plate-main { padding:10px; gap:5px; }
+          .diet-pdf-plate-visual-compact .diet-pdf-portion-fraction { min-width:44px; height:28px; padding:0 9px; font-size:17px; }
+          .diet-pdf-plate-visual-compact .diet-pdf-portion-fraction > span { transform:translateY(-.85px); }
+          .diet-pdf-plate-visual-compact .diet-pdf-portion-title { font-size:20px; }
+          .diet-pdf-plate-visual-compact .diet-pdf-plate-main small { font-size:11.5px; max-width:170px; line-height:1.15; }
+          .diet-pdf-plate-visual-compact .diet-pdf-plate-cell { gap:4px; padding:7px 8px; }
+          .diet-pdf-plate-visual-compact .diet-pdf-plate-cell .diet-pdf-portion-fraction { min-width:38px; height:24px; padding:0 8px; font-size:14px; }
+          .diet-pdf-plate-visual-compact .diet-pdf-plate-cell .diet-pdf-portion-fraction > span { transform:translateY(-.65px); }
+          .diet-pdf-plate-visual-compact .diet-pdf-plate-cell strong { font-size:13.5px; line-height:1.1; max-width:150px; }
+          .diet-pdf-page-tight .diet-pdf-swaps-table { border-radius:15px; }
+          .diet-pdf-page-tight .diet-pdf-swaps-head span { padding:8px 10px; font-size:13px; letter-spacing:.025em; }
+          .diet-pdf-page-tight .diet-pdf-swap-row span { padding:8px 10px; font-size:15.4px; line-height:1.27; }
+          .diet-pdf-page-tight .diet-pdf-swaps-card-expanded .diet-pdf-swaps-table { border-radius:14px; }
+          .diet-pdf-page-tight .diet-pdf-swaps-card-expanded .diet-pdf-swaps-head span { padding:7px 8px; font-size:12.2px; }
+          .diet-pdf-page-tight .diet-pdf-swaps-card-expanded .diet-pdf-swap-row span { padding:7px 8px; font-size:14.1px; line-height:1.19; }
+          .diet-pdf-eighty-card { grid-row:span 1; }
+          .diet-pdf-eighty-lead { margin:0 0 7px !important; font-weight:760; }
+          .diet-pdf-eighty-split { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:0 0 8px; }
+          .diet-pdf-eighty-split div { border-radius:15px; background:#fff; border:1px solid #f1d3aa; padding:8px 9px; }
+          .diet-pdf-eighty-split strong { display:block; color:#f08d28; font-size:24px; line-height:1; font-weight:900; }
+          .diet-pdf-eighty-split span { display:block; margin-top:3px; color:#5b4328; font-size:14.5px; line-height:1.15; font-weight:800; }
+          .diet-pdf-eighty-list { margin:0; padding:0; list-style:none; display:grid; gap:4px; }
+          .diet-pdf-eighty-list li { position:relative; padding-left:16px; color:#4c3a24; font-size:15.1px; line-height:1.24; }
+          .diet-pdf-eighty-list li::before { content:""; position:absolute; left:0; top:.55em; width:6px; height:6px; border-radius:999px; background:#f2992c; }
+          .diet-pdf-two-col-tight { gap:12px; margin-top:12px; }
+          .diet-pdf-two-col-tight .diet-pdf-card, .diet-pdf-two-col-tight .diet-pdf-integrated-card { border-radius:20px; padding:14px 15px; }
+          .diet-pdf-two-col-tight .diet-pdf-card h2 { margin-bottom:6px; font-size:22px; }
+          .diet-pdf-two-col-tight .diet-pdf-card p { font-size:16.3px; line-height:1.32; }
+          .diet-pdf-tracker-card-compact { margin-top:12px; display:block; border-radius:20px; padding:15px 18px; }
+          .diet-pdf-tracker-card-compact h2 { margin-bottom:5px; font-size:24px; }
+          .diet-pdf-tracker-card-compact p { font-size:16.5px; line-height:1.32; max-width:100%; }
+          .diet-pdf-tracker-card-compact .diet-pdf-tracker-days { grid-template-columns:repeat(7,minmax(0,1fr)); gap:9px; margin-top:12px; }
+          .diet-pdf-tracker-card-compact .diet-pdf-tracker-days span { height:45px; border-radius:13px; font-size:18px; border-width:2px; }
+          .diet-pdf-note-box-compact { margin-top:10px; padding:10px 13px; border-radius:16px; font-size:16px; line-height:1.28; }
+          .diet-pdf-page-tight .diet-pdf-footer { left:50px; right:50px; bottom:18px; padding:8px 12px; border-radius:17px; font-size:12.8px; }
+          .diet-pdf-page-tight .diet-pdf-footer-brand { font-size:13.4px; }
+          .diet-pdf-page-tight .diet-pdf-footer-note { gap:8px; }
+          .diet-pdf-page-tight .diet-pdf-footer-dot { width:8px; height:8px; box-shadow:0 0 0 4px rgba(242,153,44,.14); }
+
+        </style>
+        ${pages.join('')}
+      </div>`;
+  }
+
+
+  function dietRecommendationsStretchIntegratedGoalsPage(pageNode) {
+    if (!pageNode || !pageNode.querySelector || !(pageNode.classList && pageNode.classList.contains('diet-pdf-page-integrated'))) return;
+    const goals = pageNode.querySelector('.diet-pdf-goals-integrated');
+    if (!goals) return;
+    const cards = Array.prototype.slice.call(goals.querySelectorAll('.diet-pdf-goal-card-compact'));
+    if (!cards.length) return;
+
+    goals.style.removeProperty('--integrated-goal-gap');
+    goals.style.removeProperty('--integrated-goal-pad-y');
+    goals.style.removeProperty('--integrated-goal-pad-x');
+    cards.forEach(function(card) { card.style.minHeight = ''; });
+    void goals.offsetHeight;
+
+    const footer = pageNode.querySelector('.diet-pdf-footer');
+    const footerRect = footer ? footer.getBoundingClientRect() : null;
+    const pageRect = pageNode.getBoundingClientRect();
+    const footerTop = footerRect ? footerRect.top : (pageRect.top + (pageNode.clientHeight || 1754) - 62);
+    let goalsRect = goals.getBoundingClientRect();
+    let extra = footerTop - goalsRect.bottom - 24;
+    if (!Number.isFinite(extra) || extra <= 24) return;
+
+    const count = cards.length;
+    const computedGoals = window.getComputedStyle ? window.getComputedStyle(goals) : null;
+    const computedCard = window.getComputedStyle ? window.getComputedStyle(cards[0]) : null;
+    const currentGap = computedGoals ? (parseFloat(computedGoals.rowGap || computedGoals.gap) || 0) : 0;
+    const currentPadY = computedCard ? (parseFloat(computedCard.paddingTop) || 0) : 0;
+    const currentPadX = computedCard ? (parseFloat(computedCard.paddingLeft) || 0) : 0;
+
+    // Wykorzystujemy wolną przestrzeń ostrożnie: cele mają być wyraźniejsze,
+    // ale nadal ma zostać niewielki oddech nad stopką.
+    const usableExtra = Math.max(0, Math.min(extra, count >= 3 ? 130 : 190));
+    if (count > 1) {
+      const gapLimit = count >= 3 ? 24 : 30;
+      const gapIncrease = Math.min(gapLimit - currentGap, usableExtra * 0.28 / Math.max(1, count - 1));
+      if (gapIncrease > 0) goals.style.setProperty('--integrated-goal-gap', (currentGap + gapIncrease).toFixed(2) + 'px');
+    }
+
+    const gapGain = count > 1
+      ? (parseFloat(goals.style.getPropertyValue('--integrated-goal-gap')) || currentGap) - currentGap
+      : 0;
+    const remainingAfterGap = Math.max(0, usableExtra - Math.max(0, gapGain) * Math.max(0, count - 1));
+    const padLimit = count >= 3 ? 23 : 32;
+    const padIncrease = Math.min(padLimit - currentPadY, remainingAfterGap / Math.max(1, count * 2));
+    if (padIncrease > 0) {
+      goals.style.setProperty('--integrated-goal-pad-y', (currentPadY + padIncrease).toFixed(2) + 'px');
+      goals.style.setProperty('--integrated-goal-pad-x', Math.max(currentPadX, currentPadX + Math.min(4, padIncrease * 0.4)).toFixed(2) + 'px');
+    }
+
+    void goals.offsetHeight;
+    goalsRect = goals.getBoundingClientRect();
+    extra = footerTop - goalsRect.bottom - 24;
+    if (extra > 38) {
+      const stretchPerCard = Math.min(count >= 3 ? 24 : 54, extra / count);
+      cards.forEach(function(card) {
+        const currentHeight = card.getBoundingClientRect().height || 0;
+        if (currentHeight > 0) card.style.minHeight = Math.round(currentHeight + stretchPerCard) + 'px';
+      });
+    }
+  }
+
+  function dietRecommendationsFitClassicSinglePdfPage(pageNode) {
+    if (!pageNode || !pageNode.classList || !pageNode.classList.contains('diet-pdf-page-classic-single')) return;
+    const card = pageNode.querySelector('.diet-pdf-card-classic-main');
+    const content = card ? card.querySelector('.diet-pdf-classic-fit-content') : null;
+    if (!card || !content) return;
+
+    const densityClasses = [
+      'diet-pdf-classic-density-1',
+      'diet-pdf-classic-density-2',
+      'diet-pdf-classic-density-3'
+    ];
+
+    function clearClassicFit() {
+      card.classList.remove('diet-pdf-card-classic-scaled');
+      densityClasses.forEach(function(cls) { pageNode.classList.remove(cls); });
+      card.style.removeProperty('--classic-fit-scale');
+      card.style.height = '';
+      card.style.maxHeight = '';
+      card.style.minHeight = '';
+      card.style.overflow = '';
+      content.style.width = '';
+    }
+
+    function applyDensity(level) {
+      densityClasses.forEach(function(cls) { pageNode.classList.remove(cls); });
+      if (level >= 1) pageNode.classList.add('diet-pdf-classic-density-1');
+      if (level >= 2) pageNode.classList.add('diet-pdf-classic-density-2');
+      if (level >= 3) pageNode.classList.add('diet-pdf-classic-density-3');
+      card.classList.remove('diet-pdf-card-classic-scaled');
+      card.style.removeProperty('--classic-fit-scale');
+      card.style.height = '';
+      card.style.maxHeight = '';
+      card.style.minHeight = '';
+      card.style.overflow = '';
+      content.style.width = '';
+      void pageNode.offsetHeight;
+    }
+
+    function measureClassicLayout() {
+      const footer = pageNode.querySelector('.diet-pdf-footer');
+      const cardRect = card.getBoundingClientRect();
+      const footerRect = footer ? footer.getBoundingClientRect() : null;
+      const pageRect = pageNode.getBoundingClientRect();
+      const footerTop = footerRect ? footerRect.top : (pageRect.top + (pageNode.clientHeight || 1754) - 56);
+      const availableTotal = Math.max(360, footerTop - cardRect.top - 18);
+      const cardStyle = window.getComputedStyle ? window.getComputedStyle(card) : null;
+      const paddingTop = cardStyle ? parseFloat(cardStyle.paddingTop) || 0 : 0;
+      const paddingBottom = cardStyle ? parseFloat(cardStyle.paddingBottom) || 0 : 0;
+      const borderTop = cardStyle ? parseFloat(cardStyle.borderTopWidth) || 0 : 0;
+      const borderBottom = cardStyle ? parseFloat(cardStyle.borderBottomWidth) || 0 : 0;
+      const availableInner = Math.max(260, availableTotal - paddingTop - paddingBottom - borderTop - borderBottom);
+      const contentHeight = Math.max(content.scrollHeight || 0, content.getBoundingClientRect().height || 0);
+      return { availableTotal, availableInner, contentHeight };
+    }
+
+    function applyClassicScale(scale) {
+      const normalizedScale = Math.max(0.22, Math.min(1.42, Number(scale) || 1));
+      if (Math.abs(normalizedScale - 1) < 0.012) {
+        card.classList.remove('diet-pdf-card-classic-scaled');
+        card.style.removeProperty('--classic-fit-scale');
+        content.style.width = '';
+      } else {
+        card.style.setProperty('--classic-fit-scale', String(normalizedScale));
+        content.style.width = (100 / normalizedScale) + '%';
+        card.classList.add('diet-pdf-card-classic-scaled');
+      }
+      void content.offsetHeight;
+      return Math.max(content.getBoundingClientRect().height || 0, (content.scrollHeight || 0) * normalizedScale);
+    }
+
+    clearClassicFit();
+
+    // Najpierw wybieramy najmniej zagęszczony wariant, który mieści się na jednej stronie.
+    // Dopiero potem, jeśli zostaje dużo wolnego miejsca, powiększamy sam blok zaleceń.
+    let selectedLevel = 3;
+    for (let level = 0; level <= 3; level += 1) {
+      applyDensity(level);
+      const metrics = measureClassicLayout();
+      selectedLevel = level;
+      if (!metrics.contentHeight || metrics.contentHeight <= metrics.availableInner * 0.965) break;
+    }
+
+    applyDensity(selectedLevel);
+    let metrics = measureClassicLayout();
+    if (!metrics.contentHeight) return;
+
+    card.style.height = metrics.availableTotal + 'px';
+    card.style.minHeight = metrics.availableTotal + 'px';
+    card.style.maxHeight = metrics.availableTotal + 'px';
+    card.style.overflow = 'hidden';
+
+    const itemCount = card.querySelectorAll('.diet-pdf-classic-list li').length;
+    const targetMax = metrics.availableInner * 0.955;
+    const targetMin = metrics.availableInner * (itemCount <= 5 ? 0.76 : 0.82);
+    const maxUpscale = itemCount <= 4 ? 1.42 : (itemCount <= 7 ? 1.32 : 1.22);
+    let finalScale = 1;
+
+    if (metrics.contentHeight > targetMax) {
+      let low = 0.22;
+      let high = 1;
+      for (let i = 0; i < 12; i += 1) {
+        const mid = (low + high) / 2;
+        const visualHeight = applyClassicScale(mid);
+        if (visualHeight <= targetMax) low = mid;
+        else high = mid;
+      }
+      finalScale = low;
+    } else if (metrics.contentHeight < targetMin) {
+      let low = 1;
+      let high = maxUpscale;
+      for (let i = 0; i < 12; i += 1) {
+        const mid = (low + high) / 2;
+        const visualHeight = applyClassicScale(mid);
+        if (visualHeight <= targetMax) low = mid;
+        else high = mid;
+      }
+      finalScale = low;
+    }
+
+    applyClassicScale(finalScale);
+  }
+
+  async function dietRecommendationsCollectPdfPages(options) {
+    const opts = options || {};
+    const mode = dietRecommendationsNormalizePdfMode(opts.mode || opts.variant || 'full');
+    if (!(window.jspdf && window.jspdf.jsPDF) || typeof window.html2canvas !== 'function') {
+      throw new Error('Brakuje bibliotek potrzebnych do wygenerowania PDF.');
+    }
+    if (typeof patientReportCreateRenderHost !== 'function'
+      || typeof patientReportWaitForStableLayout !== 'function'
+      || typeof patientReportResolveRenderScale !== 'function'
+      || typeof patientReportBuildPdfPageSpecFromCanvas !== 'function'
+      || typeof patientReportSliceCanvasToPageSpecs !== 'function') {
+      throw new Error('Generator raportu PDF nie jest jeszcze gotowy. Odśwież stronę i spróbuj ponownie.');
+    }
+
+    const model = dietRecommendationsBuildPdfModel(mode);
+    const host = patientReportCreateRenderHost(1240);
+    try {
+      host.innerHTML = dietRecommendationsBuildPdfHtml(model);
+      document.body.appendChild(host);
+      await patientReportWaitForStableLayout();
+      const pageNodes = Array.prototype.slice.call(host.querySelectorAll('.diet-pdf-page'));
+      if (!pageNodes.length) throw new Error('Brak stron raportu zaleceń do renderowania.');
+      const pages = [];
+      for (let i = 0; i < pageNodes.length; i += 1) {
+        const pageNode = pageNodes[i];
+        const forceSingleA4Page = model.mode === 'full'
+          || model.mode === 'classic'
+          || (pageNode.classList && pageNode.classList.contains('diet-pdf-page-tight'));
+        if (model.mode === 'full') {
+          dietRecommendationsStretchIntegratedGoalsPage(pageNode);
+          await patientReportWaitForStableLayout();
+        }
+        if (model.mode === 'classic') {
+          dietRecommendationsFitClassicSinglePdfPage(pageNode);
+          await patientReportWaitForStableLayout();
+        }
+        const renderScale = patientReportResolveRenderScale(pageNode, { desiredScale: 2 });
+        const canvasOptions = {
+          scale: renderScale,
+          useCORS: true,
+          backgroundColor: '#ffffff',
+          logging: false,
+          imageTimeout: 0
+        };
+        if (forceSingleA4Page) {
+          canvasOptions.width = pageNode.offsetWidth || 1240;
+          canvasOptions.height = pageNode.offsetHeight || 1754;
+          canvasOptions.windowWidth = Math.max(document.documentElement.clientWidth || 0, pageNode.offsetWidth || 1240);
+          canvasOptions.windowHeight = Math.max(document.documentElement.clientHeight || 0, pageNode.offsetHeight || 1754);
+        }
+        const canvas = await window.html2canvas(pageNode, canvasOptions);
+
+        if (forceSingleA4Page) {
+          const fixedPageSpec = patientReportBuildPdfPageSpecFromCanvas(canvas, {
+            orientation: 'portrait',
+            format: 'JPEG',
+            widthMm: 210,
+            heightMm: 297
+          });
+          if (fixedPageSpec) pages.push(fixedPageSpec);
+        } else {
+          const pageSpecs = patientReportSliceCanvasToPageSpecs(canvas, { orientation: 'portrait', format: 'JPEG' });
+          pages.push.apply(pages, pageSpecs.filter(Boolean));
+        }
+      }
+      return {
+        pages,
+        filenameBase: model.filenameBase || 'pacjent',
+        title: model.title,
+        mode
+      };
+    } finally {
+      try { host.remove(); } catch (_) {}
+    }
+  }
+
+  async function dietRecommendationsBuildPdfPackage(mode) {
+    if (!(window.jspdf && window.jspdf.jsPDF)) {
+      throw new Error('Brakuje biblioteki jsPDF potrzebnej do wygenerowania pliku PDF.');
+    }
+    const collected = await dietRecommendationsCollectPdfPages({ mode });
+    const validPages = (collected.pages || []).filter(function(page) { return page && page.dataUrl; });
+    if (!validPages.length) throw new Error('Nie udało się przygotować raportu zaleceń dietetycznych.');
+    const firstPage = validPages[0];
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({
+      orientation: firstPage.orientation || 'portrait',
+      unit: 'mm',
+      format: 'a4',
+      compress: true,
+      putOnlyUsedFonts: true
+    });
+    pdf.setProperties({
+      title: collected.title || 'Raport zaleceń dietetycznych',
+      subject: collected.title || 'Raport zaleceń dietetycznych',
+      author: 'wagaiwzrost.pl'
+    });
+    validPages.forEach(function(page, index) {
+      const pageOrientation = page.orientation === 'landscape' ? 'landscape' : 'portrait';
+      if (index > 0) pdf.addPage('a4', pageOrientation);
+      pdf.addImage(
+        page.dataUrl,
+        page.format || 'JPEG',
+        0,
+        0,
+        Number.isFinite(page.widthMm) ? page.widthMm : 210,
+        Number.isFinite(page.heightMm) ? page.heightMm : 297,
+        undefined,
+        (typeof PATIENT_REPORT_PDF_IMAGE_COMPRESSION !== 'undefined' ? PATIENT_REPORT_PDF_IMAGE_COMPRESSION : 'FAST')
+      );
+    });
+    const variantSlug = dietRecommendationsNormalizePdfMode(collected.mode || mode);
+    return {
+      blob: pdf.output('blob'),
+      filename: `Raport_zalecen_dietetycznych_${variantSlug}_${collected.filenameBase || 'pacjent'}.pdf`
+    };
+  }
+
+  async function generateDietRecommendationsPdfReport(triggerBtn, mode) {
+    const normalizedMode = dietRecommendationsNormalizePdfMode(mode);
+    const task = async function() {
+      const pdfPackage = await dietRecommendationsBuildPdfPackage(normalizedMode);
+      if (!pdfPackage || !(pdfPackage.blob instanceof Blob)) {
+        throw new Error('Nie udało się przygotować pliku PDF.');
+      }
+      patientReportDownloadBlob(pdfPackage.blob, pdfPackage.filename);
+      patientReportShowToast('Raport zaleceń dietetycznych PDF został wygenerowany.');
+    };
+    try {
+      if (typeof patientReportRunExternalPdfTask === 'function') {
+        await patientReportRunExternalPdfTask(triggerBtn, task, 'Przygotowywanie PDF…');
+      } else {
+        if (triggerBtn) triggerBtn.disabled = true;
+        await task();
+        if (triggerBtn) triggerBtn.disabled = false;
+      }
+    } catch (error) {
+      if (triggerBtn) triggerBtn.disabled = false;
+      console.error('Błąd generowania raportu zaleceń dietetycznych PDF:', error);
+      if (typeof patientReportShowToast === 'function') {
+        patientReportShowToast(error && error.message ? error.message : 'Nie udało się wygenerować raportu zaleceń dietetycznych.');
+      } else {
+        alert(error && error.message ? error.message : 'Nie udało się wygenerować raportu zaleceń dietetycznych.');
+      }
+    }
+  }
+
+  function dietRecommendationsHasPdfAvailable() {
+    try {
+      const btn = document.getElementById('dietRecommendationsBtn');
+      if (btn) {
+        const computed = window.getComputedStyle ? window.getComputedStyle(btn) : null;
+        return btn.style.display !== 'none' && (!computed || computed.display !== 'none');
+      }
+      const age = getAgeDecimalInternal();
+      const weight = parseFloat(document.getElementById('weight')?.value);
+      const height = parseFloat(document.getElementById('height')?.value);
+      return Number.isFinite(age) && age > 5 && Number.isFinite(weight) && weight > 0 && Number.isFinite(height) && height > 0;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function dietRecommendationsEnsurePdfChoiceStyles() {
+    if (document.getElementById('dietRecommendationsPdfChoiceStyles')) return;
+    const style = document.createElement('style');
+    style.id = 'dietRecommendationsPdfChoiceStyles';
+    style.textContent = `
+      #dietRecommendationsPdfChoiceBackdrop.diet-pdf-choice-backdrop { position:fixed; inset:0; z-index:100200; display:flex; align-items:center; justify-content:center; padding:18px; background:rgba(11,32,34,.52); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); }
+      .diet-pdf-choice-dialog { width:min(94vw,760px); max-height:calc(100vh - 36px); overflow:auto; border-radius:22px; background:#fff; box-shadow:0 26px 70px rgba(0,0,0,.28); border:1px solid #d8e8e8; }
+      .diet-pdf-choice-header { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; padding:20px 22px 0; }
+      .diet-pdf-choice-title { margin:0; color:#123233; font-size:1.1rem; line-height:1.22; }
+      .diet-pdf-choice-description { margin:.35rem 0 0; color:#496364; font-size:.92rem; line-height:1.45; }
+      .diet-pdf-choice-close { flex:0 0 auto; width:2rem; height:2rem; border:0; border-radius:999px; background:#eef6f6; color:#294849; font-size:1.35rem; line-height:1; cursor:pointer; }
+      .diet-pdf-choice-body { padding:16px 22px 0; }
+      .diet-pdf-choice-option { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:14px; align-items:center; padding:13px 0; border-top:1px solid #e8eeee; cursor:pointer; }
+      .diet-pdf-choice-option:first-child { border-top:0; }
+      .diet-pdf-choice-option.is-selected .diet-pdf-choice-option-title { color:#007a83; }
+      .diet-pdf-choice-option-title { display:block; color:#143334; font-size:.98rem; font-weight:800; line-height:1.25; }
+      .diet-pdf-choice-option-description { display:block; margin-top:.25rem; color:#5b7071; font-size:.86rem; line-height:1.38; }
+      .diet-pdf-choice-radio { width:1.15rem !important; height:1.15rem !important; min-width:1.15rem !important; accent-color:#00838d; }
+      .diet-pdf-choice-footer { display:flex; justify-content:flex-end; gap:10px; padding:18px 22px 22px; }
+      .diet-pdf-choice-cancel, .diet-pdf-choice-confirm { border-radius:14px; padding:.78rem 1.1rem; font-size:.94rem; font-weight:800; cursor:pointer; }
+      .diet-pdf-choice-cancel { border:1px solid #cfe0e0; background:#fff; color:#294849; }
+      .diet-pdf-choice-confirm { border:1px solid #00838d; background:#00838d; color:#fff; box-shadow:0 10px 22px rgba(0,131,141,.18); }
+      @media(max-width:640px){ .diet-pdf-choice-dialog{width:100%; max-height:calc(100dvh - 20px); border-radius:16px;} .diet-pdf-choice-header{padding:16px 16px 0;} .diet-pdf-choice-body{padding:12px 16px 0;} .diet-pdf-choice-footer{display:grid; grid-template-columns:1fr; padding:16px;} .diet-pdf-choice-cancel,.diet-pdf-choice-confirm{width:100%;} }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function dietRecommendationsRemovePdfChoiceDialog() {
+    try {
+      const backdrop = document.getElementById('dietRecommendationsPdfChoiceBackdrop');
+      if (!backdrop) return;
+      if (document.body && typeof backdrop.dataset.prevBodyOverflow === 'string') document.body.style.overflow = backdrop.dataset.prevBodyOverflow;
+      if (document.documentElement && typeof backdrop.dataset.prevHtmlOverflow === 'string') document.documentElement.style.overflow = backdrop.dataset.prevHtmlOverflow;
+      backdrop.remove();
+    } catch (_) {}
+  }
+
+  function dietRecommendationsOpenPdfChoiceDialog(triggerBtn) {
+    dietRecommendationsEnsurePdfChoiceStyles();
+    dietRecommendationsRemovePdfChoiceDialog();
+    const options = [
+      {
+        value: 'full',
+        title: 'Pełny raport zaleceń (rekomendowane)',
+        description: 'Plan po wizycie: obliczenia, cele na 14 dni, talerz, zamiany, zasada 80/20 i monitorowanie w jednej uporządkowanej całości.'
+      },
+      {
+        value: 'personalized',
+        title: 'Plan zmiany nawyków i cele SMART',
+        description: 'Spersonalizowany plan 14-dniowy: priorytety z ankiety, praktyczne zamiany produktów, mit/fakt i zasada małych kroków.'
+      },
+      {
+        value: 'classic',
+        title: 'Raport energetyczny i zalecenia podstawowe',
+        description: 'Podsumowanie obliczeń, strategii żywieniowej oraz bazowych zaleceń dotyczących energii, masy ciała i aktywności.'
+      }
+    ];
+    const backdrop = document.createElement('div');
+    backdrop.id = 'dietRecommendationsPdfChoiceBackdrop';
+    backdrop.className = 'diet-pdf-choice-backdrop';
+    const dialog = document.createElement('div');
+    dialog.className = 'diet-pdf-choice-dialog';
+    dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-modal', 'true');
+    dialog.setAttribute('aria-labelledby', 'dietRecommendationsPdfChoiceTitle');
+    dialog.innerHTML = `
+      <div class="diet-pdf-choice-header">
+        <div>
+          <h3 id="dietRecommendationsPdfChoiceTitle" class="diet-pdf-choice-title">Wybierz wariant raportu zaleceń dietetycznych</h3>
+          <p class="diet-pdf-choice-description">Domyślnie wybierany jest pełny raport zaleceń: obliczenia aplikacji wyznaczają ramy, a małe kroki pokazują praktyczne działania.</p>
+        </div>
+        <button type="button" class="diet-pdf-choice-close" data-diet-pdf-choice-close aria-label="Zamknij">×</button>
+      </div>
+      <div class="diet-pdf-choice-body">
+        <form id="dietRecommendationsPdfChoiceForm">
+          ${options.map(function(option, idx) {
+            return `
+              <label class="diet-pdf-choice-option${idx === 0 ? ' is-selected' : ''}">
+                <span>
+                  <span class="diet-pdf-choice-option-title">${dietRecommendationsEscapeHtml(option.title)}</span>
+                  <span class="diet-pdf-choice-option-description">${dietRecommendationsEscapeHtml(option.description)}</span>
+                </span>
+                <input class="diet-pdf-choice-radio" type="radio" name="dietPdfReportMode" value="${dietRecommendationsEscapeHtml(option.value)}" ${idx === 0 ? 'checked' : ''}>
+              </label>`;
+          }).join('')}
+        </form>
+      </div>
+      <div class="diet-pdf-choice-footer">
+        <button type="button" class="diet-pdf-choice-cancel" data-diet-pdf-choice-cancel>Anuluj</button>
+        <button type="button" class="diet-pdf-choice-confirm" data-diet-pdf-choice-confirm>Generuj PDF</button>
+      </div>
+    `;
+    const previousBodyOverflow = document.body ? document.body.style.overflow : '';
+    const previousHtmlOverflow = document.documentElement ? document.documentElement.style.overflow : '';
+    backdrop.dataset.prevBodyOverflow = previousBodyOverflow;
+    backdrop.dataset.prevHtmlOverflow = previousHtmlOverflow;
+    if (document.body) document.body.style.overflow = 'hidden';
+    if (document.documentElement) document.documentElement.style.overflow = 'hidden';
+    const cleanup = function() {
+      try { document.removeEventListener('keydown', onKeyDown); } catch (_) {}
+      dietRecommendationsRemovePdfChoiceDialog();
+    };
+    const onKeyDown = function(event) {
+      if (event.key === 'Escape') cleanup();
+    };
+    dialog.querySelectorAll('input[name="dietPdfReportMode"]').forEach(function(input) {
+      input.addEventListener('change', function() {
+        dialog.querySelectorAll('.diet-pdf-choice-option').forEach(function(label) {
+          const radio = label.querySelector('input[name="dietPdfReportMode"]');
+          label.classList.toggle('is-selected', !!(radio && radio.checked));
+        });
+      });
+    });
+    dialog.querySelector('[data-diet-pdf-choice-close]')?.addEventListener('click', cleanup);
+    dialog.querySelector('[data-diet-pdf-choice-cancel]')?.addEventListener('click', cleanup);
+    dialog.querySelector('[data-diet-pdf-choice-confirm]')?.addEventListener('click', function() {
+      const checked = dialog.querySelector('input[name="dietPdfReportMode"]:checked');
+      const mode = checked ? checked.value : 'full';
+      cleanup();
+      generateDietRecommendationsPdfReport(triggerBtn, mode);
+    });
+    backdrop.addEventListener('click', function(event) {
+      if (event.target === backdrop) cleanup();
+    });
+    backdrop.appendChild(dialog);
+    document.body.appendChild(backdrop);
+    document.addEventListener('keydown', onKeyDown);
+    try { dialog.querySelector('input[name="dietPdfReportMode"]:checked')?.focus({ preventScroll: true }); } catch (_) {}
+  }
+
+  if (typeof document !== 'undefined' && typeof window !== 'undefined' && !window.__dietRecommendationsPdfDelegatedClickAttached) {
+    document.addEventListener('click', function(event) {
+      const btn = event.target && typeof event.target.closest === 'function'
+        ? event.target.closest('[data-diet-report-pdf-btn]')
+        : null;
+      if (!btn) return;
+      event.preventDefault();
+      dietRecommendationsOpenPdfChoiceDialog(btn);
+    });
+    window.__dietRecommendationsPdfDelegatedClickAttached = true;
+  }
+
+  if (typeof document !== 'undefined' && typeof window !== 'undefined' && !window.__dietRecommendationsMythNextDelegatedClickAttached) {
+    document.addEventListener('click', function(event) {
+      const btn = event.target && typeof event.target.closest === 'function'
+        ? event.target.closest('[data-diet-myth-next]')
+        : null;
+      if (!btn) return;
+      event.preventDefault();
+      dietRecommendationsRequestNewMyth();
+      refreshDietRecommendationsIfVisible();
+    });
+    window.__dietRecommendationsMythNextDelegatedClickAttached = true;
+  }
+
+  function enhanceDietRecommendationResult(baseResult) {
+    if (!baseResult) return baseResult;
+    const state = collectDietPersonalizationState();
+    const plan = buildPersonalizedDietPlan(state);
+    return {
+      textOutput: buildPersonalizedDietPlanText(plan, baseResult),
+      htmlOutput: buildPersonalizedDietPlanHtml(plan, baseResult),
+      surveyCompleted: !!(plan && plan.state && plan.state.surveyCompleted)
+    };
+  }
+
   function getDietToggleGroupByInputId(inputId) {
     const input = document.getElementById(inputId);
     if (!input || typeof input.closest !== 'function') return null;
@@ -5756,6 +9749,7 @@ document.addEventListener('DOMContentLoaded', function() {
         try { window.updateStabilizationEligibility(); } catch (_) {}
       }
     }
+    try { updateDietModernControlsState(); } catch (_) {}
   }
 
   function formatDietRecommendationNumber(value, digits) {
@@ -5859,6 +9853,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const basicsFromDom = (typeof window.nutritionNormsReadBasicsFromDom === 'function')
       ? window.nutritionNormsReadBasicsFromDom()
       : {};
+    const currentUiState = (typeof window.nutritionNormsGetUiState === 'function')
+      ? (window.nutritionNormsGetUiState() || {})
+      : {};
+    const normsPalSelector = currentUiState && currentUiState.palSelector
+      ? String(currentUiState.palSelector)
+      : 'inherit';
+    const numericNormsPal = Number(normsPalSelector);
     const basics = {
       ...basicsFromDom,
       ageYears,
@@ -5866,20 +9867,16 @@ document.addEventListener('DOMContentLoaded', function() {
       sex: opts.sex || basicsFromDom.sex || 'M',
       weightKg,
       heightCm,
-      mainPal: Number.isFinite(Number(opts.palUsed)) ? Number(opts.palUsed) : basicsFromDom.mainPal
+      // PAL z „Planu odchudzania” jest deklaracją do obliczenia deficytu.
+      // Normy makroskładników i ich procentowe cele opieramy na wyborze PAL
+      // w karcie „Normy żywieniowe: białko, tłuszcz, węglowodany”.
+      mainPal: Number.isFinite(numericNormsPal) ? numericNormsPal : basicsFromDom.mainPal
     };
 
-    const currentUiState = (typeof window.nutritionNormsGetUiState === 'function')
-      ? (window.nutritionNormsGetUiState() || {})
-      : {};
-    const fixedPal = Number(opts.palUsed);
-    const palSelector = Number.isFinite(fixedPal)
-      ? fixedPal.toFixed(1).replace(/\.0$/, '.0')
-      : 'inherit';
-    // W zaleceniach dietetycznych makroskładniki muszą być liczone
-    // niezależnie od trybu wybranego w karcie „Normy żywieniowe”,
-    // aby przypadkowe przełączenie na masę referencyjną nie zmieniało
-    // treści gotowych zaleceń dla pacjenta przy tej samej kaloryczności planu.
+    const palSelector = normsPalSelector;
+    // W zaleceniach dietetycznych makroskładniki liczymy dla aktualnej masy ciała,
+    // ale z PAL wybranym w karcie norm. PAL w planie redukcji pozostaje wyłącznie
+    // deklarowanym scenariuszem aktywności do wyliczania deficytu energetycznego.
     const lockedBodyMode = 'actual';
 
     let model;
@@ -5901,17 +9898,25 @@ document.addEventListener('DOMContentLoaded', function() {
     const proteinMain = model.protein && model.protein.main ? model.protein.main : null;
     const proteinRdaG = proteinMain ? Number(proteinMain.rdaGDay) : NaN;
     const proteinEarG = proteinMain ? Number(proteinMain.earGDay) : NaN;
-    const proteinShareRange = (Number.isFinite(proteinEarG) && proteinEarG > 0 && Number.isFinite(proteinRdaG) && proteinRdaG > 0)
+    const proteinRdaShareRange = (Number.isFinite(proteinEarG) && proteinEarG > 0 && Number.isFinite(proteinRdaG) && proteinRdaG > 0)
       ? [
           (proteinEarG * DIET_RECOMMENDATION_KCAL_PER_GRAM.protein / targetEnergyKcal) * 100,
           (proteinRdaG * DIET_RECOMMENDATION_KCAL_PER_GRAM.protein / targetEnergyKcal) * 100
         ]
       : null;
+    const proteinPlanningPercentRange = model.protein && Array.isArray(model.protein.planningPercentRange)
+      ? model.protein.planningPercentRange
+      : null;
+    const proteinPlanningGramRange = computeDietRecommendationMacroGramRange(
+      targetEnergyKcal,
+      proteinPlanningPercentRange,
+      DIET_RECOMMENDATION_KCAL_PER_GRAM.protein
+    );
 
     const fatRange = computeDietRecommendationMacroGramRange(targetEnergyKcal, model.fat.percentRange, DIET_RECOMMENDATION_KCAL_PER_GRAM.fat);
     const carbRange = computeDietRecommendationMacroGramRange(targetEnergyKcal, model.carbs.percentRange, DIET_RECOMMENDATION_KCAL_PER_GRAM.carbs);
 
-    if (!(Number.isFinite(proteinRdaG) && proteinRdaG > 0) && !fatRange && !carbRange) {
+    if (!proteinPlanningGramRange && !(Number.isFinite(proteinRdaG) && proteinRdaG > 0) && !fatRange && !carbRange) {
       return null;
     }
 
@@ -5921,7 +9926,9 @@ document.addEventListener('DOMContentLoaded', function() {
       basisLabel: model.energy && model.energy.basisLabel ? String(model.energy.basisLabel) : '',
       proteinRdaG,
       proteinEarG,
-      proteinShareRange,
+      proteinRdaShareRange,
+      proteinPlanningPercentRange,
+      proteinPlanningGramRange,
       fatPercentRange: model.fat ? model.fat.percentRange : null,
       fatGramRange: fatRange,
       carbPercentRange: model.carbs ? model.carbs.percentRange : null,
@@ -5937,7 +9944,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const targetEnergyLabel = `${formatDietRecommendationNumber(summary.targetEnergyKcal, 0)} kcal/d`;
     const proteinRdaLabel = Number.isFinite(summary.proteinRdaG) ? `${formatDietRecommendationNumber(summary.proteinRdaG, 0)} g/d` : '';
     const proteinEarLabel = Number.isFinite(summary.proteinEarG) ? `${formatDietRecommendationNumber(summary.proteinEarG, 0)} g/d` : '';
-    const proteinShareLabel = summary.proteinShareRange ? formatDietRecommendationPercentRange(summary.proteinShareRange, 0) : '';
+    const proteinRdaShareLabel = summary.proteinRdaShareRange ? formatDietRecommendationPercentRange(summary.proteinRdaShareRange, 0) : '';
+    const proteinPlanningGramLabel = formatDietRecommendationGramRange(summary.proteinPlanningGramRange, 0);
+    const proteinPlanningPercentLabel = formatDietRecommendationPercentRange(summary.proteinPlanningPercentRange, 0);
     const fatGramLabel = formatDietRecommendationGramRange(summary.fatGramRange, 0);
     const fatPercentLabel = formatDietRecommendationPercentRange(summary.fatPercentRange, 0);
     const carbGramLabel = formatDietRecommendationGramRange(summary.carbGramRange, 0);
@@ -5952,11 +9961,13 @@ document.addEventListener('DOMContentLoaded', function() {
         ? `Przy kaloryczności planu około ${targetEnergyLabel}`
         : (toChild ? `Przy kaloryczności planu około ${targetEnergyLabel}` : `W diecie dziecka przy kaloryczności planu około ${targetEnergyLabel}`);
       const patientParts = [];
-      if (proteinRdaLabel) {
+      if (proteinPlanningGramLabel && proteinPlanningPercentLabel) {
+        let proteinText = `białko około ${proteinPlanningGramLabel.replace(' g/d', ' g dziennie')} (${proteinPlanningPercentLabel})`;
+        if (proteinRdaLabel) proteinText += `; minimum referencyjne RDA ${proteinRdaLabel}`;
+        patientParts.push(proteinText);
+      } else if (proteinRdaLabel) {
         let proteinText = `co najmniej około ${proteinRdaLabel.replace(' g/d', ' g białka dziennie')}`;
-        if (proteinShareLabel) {
-          proteinText += ` (${proteinShareLabel} energii)`;
-        }
+        if (proteinRdaShareLabel) proteinText += ` (EAR/RDA odpowiada ${proteinRdaShareLabel})`;
         patientParts.push(proteinText);
       } else {
         patientParts.push('odpowiednią ilość białka');
@@ -5973,10 +9984,16 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     } else {
       const baseLineParts = [];
-      if (proteinRdaLabel) {
+      if (proteinPlanningGramLabel && proteinPlanningPercentLabel) {
+        let proteinText = `białko do planowania ${proteinPlanningGramLabel} (${proteinPlanningPercentLabel})`;
+        if (proteinRdaLabel) proteinText += `; RDA ${proteinRdaLabel}`;
+        if (proteinEarLabel) proteinText += ` (EAR ${proteinEarLabel})`;
+        if (proteinRdaShareLabel) proteinText += `; EAR/RDA odpowiada ${proteinRdaShareLabel}`;
+        baseLineParts.push(proteinText);
+      } else if (proteinRdaLabel) {
         let proteinText = `białko RDA ${proteinRdaLabel}`;
         if (proteinEarLabel) proteinText += ` (EAR ${proteinEarLabel})`;
-        if (proteinShareLabel) proteinText += `; ${proteinShareLabel}`;
+        if (proteinRdaShareLabel) proteinText += `; EAR/RDA odpowiada ${proteinRdaShareLabel}`;
         baseLineParts.push(proteinText);
       }
       if (fatGramLabel && fatPercentLabel) {
@@ -6024,6 +10041,171 @@ document.addEventListener('DOMContentLoaded', function() {
     return whrInfo.classList.contains('whr-warning') || whrInfo.classList.contains('whr-danger');
   }
 
+  function dietRecommendationsGetActiveMode() {
+    const active = document.querySelector('#dietRecommendationsContent .diet-mode-tab.is-active[data-diet-mode]');
+    const mode = active ? active.getAttribute('data-diet-mode') : '';
+    return mode === 'energy' || mode === 'pdf' ? mode : 'smart';
+  }
+
+  function dietRecommendationsSetActiveMode(mode) {
+    const normalized = mode === 'energy' || mode === 'pdf' ? mode : 'smart';
+    const content = document.getElementById('dietRecommendationsContent');
+    if (!content) return;
+    Array.prototype.slice.call(content.querySelectorAll('[data-diet-mode]')).forEach(function(tab) {
+      const isActive = tab.getAttribute('data-diet-mode') === normalized;
+      tab.classList.toggle('is-active', isActive);
+      tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+    Array.prototype.slice.call(content.querySelectorAll('[data-diet-panel]')).forEach(function(panel) {
+      const isActive = panel.getAttribute('data-diet-panel') === normalized;
+      panel.classList.toggle('is-active', isActive);
+      if (isActive) panel.removeAttribute('hidden'); else panel.setAttribute('hidden', '');
+    });
+    updateDietModernControlsState();
+  }
+
+  function dietRecommendationsDispatchChange(el) {
+    if (!el) return;
+    try {
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    } catch (_) {
+      try {
+        const evt = document.createEvent('HTMLEvents');
+        evt.initEvent('change', true, false);
+        el.dispatchEvent(evt);
+      } catch (__) {}
+    }
+  }
+
+  function updateDietModernControlsState() {
+    const age = getAgeDecimalInternal();
+    const isAdult = age >= ENERGY_ADULT_START_AGE;
+    const reduceToggle = document.getElementById('reduceToggle');
+    const stabilizationToggle = document.getElementById('stabilizationToggle');
+    const patientFacingToggle = document.getElementById('patientFacingToggle');
+
+    const stabilizationChoice = document.querySelector('[data-diet-strategy-choice="stabilization"]');
+    if (stabilizationChoice) {
+      stabilizationChoice.hidden = isAdult;
+      stabilizationChoice.disabled = isAdult || !!(stabilizationToggle && stabilizationToggle.disabled);
+    }
+
+    const isStabilization = !!(stabilizationToggle && stabilizationToggle.checked && !(reduceToggle && reduceToggle.checked));
+    Array.prototype.slice.call(document.querySelectorAll('[data-diet-strategy-choice]')).forEach(function(btn) {
+      const value = btn.getAttribute('data-diet-strategy-choice');
+      btn.classList.toggle('is-active', value === (isStabilization ? 'stabilization' : 'reduction'));
+      btn.setAttribute('aria-pressed', value === (isStabilization ? 'stabilization' : 'reduction') ? 'true' : 'false');
+    });
+
+    const audience = patientFacingToggle && patientFacingToggle.checked ? 'patient' : 'specialist';
+    Array.prototype.slice.call(document.querySelectorAll('[data-diet-audience-choice]')).forEach(function(btn) {
+      const value = btn.getAttribute('data-diet-audience-choice');
+      btn.classList.toggle('is-active', value === audience);
+      btn.setAttribute('aria-pressed', value === audience ? 'true' : 'false');
+    });
+  }
+
+  function dietRecommendationsAttachModernUiHandlers() {
+    if (typeof document === 'undefined' || window.__dietModernUiHandlersAttached) return;
+    document.addEventListener('click', function(event) {
+      const target = event.target && typeof event.target.closest === 'function' ? event.target.closest('[data-diet-mode], [data-diet-strategy-choice], [data-diet-audience-choice], [data-diet-copy-result], [data-diet-report-direct]') : null;
+      if (!target) return;
+
+      if (target.matches('[data-diet-mode]')) {
+        event.preventDefault();
+        dietRecommendationsSetActiveMode(target.getAttribute('data-diet-mode'));
+        return;
+      }
+
+      if (target.matches('[data-diet-strategy-choice]')) {
+        event.preventDefault();
+        const value = target.getAttribute('data-diet-strategy-choice');
+        const reduceToggle = document.getElementById('reduceToggle');
+        const stabilizationToggle = document.getElementById('stabilizationToggle');
+        if (value === 'stabilization' && stabilizationToggle && !stabilizationToggle.disabled) {
+          if (reduceToggle) reduceToggle.checked = false;
+          stabilizationToggle.checked = true;
+          dietRecommendationsDispatchChange(stabilizationToggle);
+        } else {
+          if (stabilizationToggle) stabilizationToggle.checked = false;
+          if (reduceToggle) reduceToggle.checked = true;
+          dietRecommendationsDispatchChange(reduceToggle);
+        }
+        updateDietModernControlsState();
+        return;
+      }
+
+      if (target.matches('[data-diet-audience-choice]')) {
+        event.preventDefault();
+        const patientFacingToggle = document.getElementById('patientFacingToggle');
+        if (patientFacingToggle && !patientFacingToggle.disabled) {
+          patientFacingToggle.checked = target.getAttribute('data-diet-audience-choice') === 'patient';
+          dietRecommendationsDispatchChange(patientFacingToggle);
+        }
+        updateDietModernControlsState();
+        return;
+      }
+
+      if (target.matches('[data-diet-copy-result]')) {
+        event.preventDefault();
+        const type = target.getAttribute('data-diet-copy-result') === 'energy' ? 'energy' : 'smart';
+        const payload = dietRecommendationsLastOutputs[type];
+        if (!payload || !payload.textOutput) return;
+        copyDietTextToClipboard(payload.textOutput).then(function() {
+          if (typeof showMetabolicToast === 'function') showMetabolicToast();
+        }).catch(function() {
+          if (typeof showMetabolicToast === 'function') showMetabolicToast();
+        });
+        return;
+      }
+
+      if (target.matches('[data-diet-report-direct]')) {
+        event.preventDefault();
+        const mode = target.getAttribute('data-diet-report-direct') || 'full';
+        generateDietRecommendationsPdfReport(target, mode);
+      }
+    });
+    window.__dietModernUiHandlersAttached = true;
+  }
+
+  function dietRecommendationsToggleResultActions(type, visible) {
+    const selector = type === 'energy' ? '[data-diet-energy-actions]' : '[data-diet-smart-actions]';
+    const el = document.querySelector(selector);
+    if (!el) return;
+    if (visible) el.removeAttribute('hidden'); else el.setAttribute('hidden', '');
+  }
+
+  function buildDietSmartRecommendationResult() {
+    syncDietRecommendationControlsForAge();
+    ensureDietPersonalizationSurveyUi(document.getElementById('dietRecommendationsContent'));
+    const state = collectDietPersonalizationState();
+    const plan = buildPersonalizedDietPlan(state);
+    return {
+      textOutput: buildPersonalizedDietPlanText(plan, null),
+      htmlOutput: buildPersonalizedDietPlanHtml(plan, null),
+      surveyCompleted: !!(plan && plan.state && plan.state.surveyCompleted)
+    };
+  }
+
+  function buildDietEnergyRecommendationResult() {
+    syncDietRecommendationControlsForAge();
+    const baseResult = buildDietBaseRecommendationResultForReport();
+    if (!baseResult) return null;
+    const html = `
+      <div class="diet-energy-output">
+        <div class="diet-energy-output-head">
+          <h3>Zindywidualizowane zalecenia żywieniowe</h3>
+          <p>Poniżej zebrano najważniejsze zalecenia energetyczne, żywieniowe i aktywnościowe wynikające z danych pacjenta.</p>
+        </div>
+        <div class="diet-energy-output-body">${baseResult.htmlOutput || ''}</div>
+      </div>`;
+    return {
+      textOutput: baseResult.textOutput || '',
+      htmlOutput: html,
+      surveyCompleted: false
+    };
+  }
+
   function updateDietCardLabels() {
     syncDietRecommendationControlsForAge();
     const patientFacing = isPatientFacingDietMode();
@@ -6037,12 +10219,12 @@ document.addEventListener('DOMContentLoaded', function() {
     if (noteEl) {
       if (isAdult) {
         noteEl.innerHTML = patientFacing
-          ? 'W karcie <strong>Plan odchudzania</strong> ustaw poziom aktywności i dietę tak, jak chcesz je przekazać osobie dorosłej w zaleceniach po wizycie.'
-          : 'W karcie <strong>Plan odchudzania</strong> wybierz poziom aktywności i rodzaj diety; dla dorosłych zalecenia są generowane w dedykowanym trybie, z domyślnie włączoną redukcją masy ciała.';
+          ? 'W karcie <strong>Plan odchudzania</strong> ustaw deklarowany poziom aktywności i dietę tak, jak chcesz je przekazać osobie dorosłej w zaleceniach po wizycie.'
+          : 'W karcie <strong>Plan odchudzania</strong> wybierz deklarowany poziom aktywności i rodzaj diety; dla dorosłych zalecenia są generowane w dedykowanym trybie, z domyślnie włączoną redukcją masy ciała.';
       } else {
         noteEl.innerHTML = patientFacing
-          ? 'W karcie <strong>Plan odchudzania</strong> ustaw poziom aktywności i dietę tak, jak chcesz je opisać w zaleceniach dla pacjenta, albo pozostaw ustawienia rekomendowane.'
-          : 'W karcie <strong>Plan odchudzania</strong> wybierz poziom aktywności i rodzaj diety albo pozostaw ustawienia rekomendowane.';
+          ? 'W karcie <strong>Plan odchudzania</strong> ustaw deklarowany poziom aktywności i dietę tak, jak chcesz je opisać w zaleceniach dla pacjenta, albo pozostaw ustawienia rekomendowane.'
+          : 'W karcie <strong>Plan odchudzania</strong> wybierz deklarowany poziom aktywności i rodzaj diety albo pozostaw ustawienia rekomendowane.';
       }
     }
     setText('reduceToggleLabel', 'Redukcja masy');
@@ -6054,46 +10236,59 @@ document.addEventListener('DOMContentLoaded', function() {
     setText('journeyLabel', isAdult ? 'Czas do normy BMI' : 'Czas do normy masy');
     setText('nutritionNormsToggleLabel', 'Normy żywieniowe');
     if (generateBtn) {
-      generateBtn.textContent = patientFacing ? 'Generuj zalecenia dla pacjenta' : 'Generuj zalecenia dietetyczne';
+      generateBtn.textContent = 'Generuj plan SMART';
     }
+    const generateEnergyBtn = document.getElementById('generateEnergyDietBtn');
+    if (generateEnergyBtn) {
+      generateEnergyBtn.textContent = patientFacing ? 'Generuj zalecenia energetyczne dla pacjenta' : 'Generuj zalecenia energetyczne';
+    }
+    updateDietModernControlsState();
+    updateDietSurveyAgeVisibility();
   }
 
-  function buildDietRecommendationResult() {
-    syncDietRecommendationControlsForAge();
-    const age = getAgeDecimalInternal();
-    if (age >= ENERGY_ADULT_START_AGE) {
-      return generateDietRecommendations();
+  function buildDietRecommendationResult(mode) {
+    const activeMode = mode || dietRecommendationsGetActiveMode();
+    if (activeMode === 'energy') return buildDietEnergyRecommendationResult();
+    return buildDietSmartRecommendationResult();
+  }
+
+  function renderDietRecommendationResult(resultDiv, result, mode) {
+    if (!resultDiv || !result || !result.htmlOutput) return;
+    const normalizedMode = mode === 'energy' ? 'energy' : 'smart';
+    resultDiv.innerHTML = result.htmlOutput;
+    resultDiv.dataset.dietSurveySource = normalizedMode === 'energy' ? 'energy' : (result.surveyCompleted ? 'survey' : 'baseline');
+    dietRecommendationsLastOutputs[normalizedMode] = {
+      textOutput: result.textOutput || '',
+      htmlOutput: result.htmlOutput || ''
+    };
+    dietRecommendationsToggleResultActions(normalizedMode, true);
+  }
+
+  function resetDietSurveyGeneratedRecommendations() {
+    const resultDiv = document.getElementById('dietRecommendationsResult');
+    if (!resultDiv || !(resultDiv.innerHTML && resultDiv.innerHTML.trim())) return;
+    const hadSurveyGeneratedOutput = resultDiv.dataset.dietSurveySource === 'survey' || !!resultDiv.querySelector('.diet-personalized-badge--active');
+    if (!hadSurveyGeneratedOutput) {
+      refreshDietRecommendationsIfVisible();
+      return;
     }
-    const reduceToggleEl = document.getElementById('reduceToggle');
-    const stabilizationToggleEl = document.getElementById('stabilizationToggle');
-    let strategy;
-    if (reduceToggleEl && reduceToggleEl.checked) {
-      strategy = 'reduction';
-    } else if (stabilizationToggleEl && stabilizationToggleEl.checked) {
-      strategy = 'stabilization';
-    } else {
-      strategy = 'reduction';
-    }
-    let result = null;
-    if (strategy === 'stabilization') {
-      if (typeof generateDietRecommendationsStabilization === 'function') {
-        result = generateDietRecommendationsStabilization();
-      }
-    } else {
-      result = generateDietRecommendations();
-    }
-    return result;
+    const generateBtn = document.getElementById('generateDietBtn');
+    const generateLabel = generateBtn && generateBtn.textContent ? generateBtn.textContent.trim() : 'Generuj zalecenia dietetyczne';
+    resultDiv.innerHTML = '<div class="diet-survey-reset-note" role="status">Ankieta została wyczyszczona. Zalecenia wygenerowane na podstawie ankiety zostały usunięte. Kliknij „' + dietRecommendationsEscapeHtml(generateLabel) + '”, aby utworzyć zalecenia od nowa bez danych z ankiety.</div>';
+    resultDiv.dataset.dietSurveySource = 'cleared';
+    dietRecommendationsLastOutputs.smart = null;
+    dietRecommendationsToggleResultActions('smart', false);
   }
 
   function refreshDietRecommendationsIfVisible() {
     const content = document.getElementById('dietRecommendationsContent');
-    const resultDiv = document.getElementById('dietRecommendationsResult');
-    if (!content || !resultDiv) return;
-    if (content.style.display !== 'none' && resultDiv.innerHTML && resultDiv.innerHTML.trim()) {
-      const result = buildDietRecommendationResult();
-      if (result && result.htmlOutput) {
-        resultDiv.innerHTML = result.htmlOutput;
-      }
+    if (!content || content.style.display === 'none') return;
+    const activeMode = dietRecommendationsGetActiveMode();
+    const resultDiv = activeMode === 'energy' ? document.getElementById('dietEnergyResult') : document.getElementById('dietRecommendationsResult');
+    if (!resultDiv) return;
+    if (resultDiv.innerHTML && resultDiv.innerHTML.trim() && resultDiv.dataset.dietSurveySource !== 'cleared') {
+      const result = buildDietRecommendationResult(activeMode);
+      renderDietRecommendationResult(resultDiv, result, activeMode === 'energy' ? 'energy' : 'smart');
     }
   }
 
@@ -6144,7 +10339,7 @@ document.addEventListener('DOMContentLoaded', function() {
       content.style.display = 'none';
       content.style.marginTop = '0.6rem';
       content.style.textAlign = 'left';
-      // Zmniejsz czcionkę o połowę względem domyślnej .result-box (1.75rem → 0.875rem)
+      // Zmniejsz czcionkę o połowę względem domyślnej .result-box (1.75rem ➔ 0.875rem)
       content.style.fontSize = '0.875rem';
       section.appendChild(content);
     } else {
@@ -6156,6 +10351,11 @@ document.addEventListener('DOMContentLoaded', function() {
       btn.addEventListener('click', handleDietButtonClick);
       btn.dataset.dietListenerAttached = 'true';
     }
+    // Upewnij się, że w panelu istnieje nowa ankieta personalizująca, przycisk raportu PDF oraz obsługa nowego układu.
+    ensureDietPersonalizationSurveyUi(content);
+    dietRecommendationsEnsurePdfButton(content);
+    dietRecommendationsAttachModernUiHandlers();
+    dietRecommendationsSetActiveMode(dietRecommendationsGetActiveMode());
     // Zwróć elementy w razie potrzeby
     return { btn, content };
   }
@@ -6214,17 +10414,25 @@ document.addEventListener('DOMContentLoaded', function() {
     const content = document.getElementById('dietRecommendationsContent');
     // Przełącz widoczność karty zaleceń dietetycznych bez generowania zawartości.
     if (!content) return;
-    // Znajdź kontener na wynik i oczyść go, gdy karta jest pokazywana lub ukrywana
+    // Znajdź kontenery na wyniki i oczyść je, gdy karta jest pokazywana lub ukrywana
     const resultDiv = document.getElementById('dietRecommendationsResult');
-    if (content.style.display !== 'none') {
-      // Karta jest widoczna – ukryj ją i usuń poprzednie wyniki
-      content.style.display = 'none';
+    const energyResultDiv = document.getElementById('dietEnergyResult');
+    const clearOutputs = function() {
       if (resultDiv) resultDiv.innerHTML = '';
+      if (energyResultDiv) energyResultDiv.innerHTML = '';
+      dietRecommendationsLastOutputs.smart = null;
+      dietRecommendationsLastOutputs.energy = null;
+      dietRecommendationsToggleResultActions('smart', false);
+      dietRecommendationsToggleResultActions('energy', false);
+    };
+    if (content.style.display !== 'none') {
+      content.style.display = 'none';
+      clearOutputs();
       return;
     } else {
-      // Karta jest ukryta – pokaż ją i wyczyść wyniki
       content.style.display = 'block';
-      if (resultDiv) resultDiv.innerHTML = '';
+      clearOutputs();
+      dietRecommendationsSetActiveMode(dietRecommendationsGetActiveMode());
     }
   }
 
@@ -6549,9 +10757,9 @@ document.addEventListener('DOMContentLoaded', function() {
         ? `zalecana kaloryczność diety wynosi ok. ${formatDietRecommendationNumber(intakeRounded, 0)} kcal/dzień`
         : 'zalecana kaloryczność diety jest dostosowana do wybranego planu';
       if (patientFacing) {
-        lines.push(`W proponowanym planie przyjęto ${getDietLevelPhrase(chosenDiet, 'acc')} oraz aktywność ${palPhrase}; ${intakePhrase}, co daje deficyt ok. ${formatDietRecommendationNumber(dailyDeficit, 0)} kcal na dobę i tempo zmiany masy ciała rzędu ok. ${formatDietRecommendationNumber(weeklyLoss, 1)} kg tygodniowo.`);
+        lines.push(`W proponowanym planie przyjęto ${getDietLevelPhrase(chosenDiet, 'acc')} oraz deklarowaną aktywność ${palPhrase}; ${intakePhrase}, co daje deficyt ok. ${formatDietRecommendationNumber(dailyDeficit, 0)} kcal na dobę i tempo zmiany masy ciała rzędu ok. ${formatDietRecommendationNumber(weeklyLoss, 1)} kg tygodniowo.`);
       } else {
-        lines.push(`Plan zakłada ${getDietLevelPhrase(chosenDiet, 'acc')} oraz aktywność ${palPhrase}; ${intakePhrase}, co odpowiada deficytowi energetycznemu ok. ${formatDietRecommendationNumber(dailyDeficit, 0)} kcal/dobę i tempu redukcji ok. ${formatDietRecommendationNumber(weeklyLoss, 1)} kg/tydzień.`);
+        lines.push(`Plan zakłada ${getDietLevelPhrase(chosenDiet, 'acc')} oraz deklarowaną aktywność ${palPhrase}; ${intakePhrase}, co odpowiada deficytowi energetycznemu ok. ${formatDietRecommendationNumber(dailyDeficit, 0)} kcal/dobę i tempu redukcji ok. ${formatDietRecommendationNumber(weeklyLoss, 1)} kg/tydzień.`);
       }
     } else if (needsWeightReduction) {
       if (patientFacing) {
@@ -6646,7 +10854,7 @@ document.addEventListener('DOMContentLoaded', function() {
    * Generuje listę zaleceń dietetycznych (tekstową i HTML) na podstawie
    * aktualnych danych użytkownika.  Uwzględnia docelową wagę (24,9 BMI u
    * dorosłych, 110% mediany BMI u dzieci) oraz medianę BMI (50 centyl),
-   * wybraną dietę i poziom aktywności PAL.  Dla dzieci <10 lat dodaje
+   * wybraną dietę i deklarowany poziom aktywności PAL.  Dla dzieci <10 lat dodaje
    * ostrzeżenie o konieczności konsultacji z lekarzem.
    * @returns {{textOutput: string, htmlOutput: string}}
    */
@@ -7199,7 +11407,7 @@ document.addEventListener('DOMContentLoaded', function() {
               msg += 'Najważniejsze jest utrzymanie obecnej masy ciała dziecka i niedopuszczanie do jej dalszego szybkiego wzrostu.';
             }
           } else {
-            msg = `Optymalna dieta dla dziecka, uwzględniająca wiek, wzrost, masę ciała i poziom aktywności, dostarcza ${intakePart}. Deficyt kaloryczny przy wyborze tej diety wynosi około ${deficit} kcal, co przekłada się na utratę ok. ${weekly.toFixed(1).replace('.', ',')} kg tygodniowo. `;
+            msg = `Optymalna dieta dla dziecka, uwzględniająca wiek, wzrost, masę ciała i deklarowany poziom aktywności, dostarcza ${intakePart}. Deficyt kaloryczny przy wyborze tej diety wynosi około ${deficit} kcal, co przekłada się na utratę ok. ${weekly.toFixed(1).replace('.', ',')} kg tygodniowo. `;
             if (selectedStrategy === 'reduction') {
               msg += 'Należy pamiętać, że celem jest przede wszystkim zdrowa i stopniowa redukcja masy ciała.';
             } else {
@@ -7513,13 +11721,13 @@ document.addEventListener('DOMContentLoaded', function() {
             if (toChild) {
               lines.push(
                 patientFacing
-                  ? `Przy obecnych założeniach żywieniowych i utrzymaniu aktualnej aktywności dojście do górnej granicy normy BMI może zająć około ${weeksJourney} tygodni (ok. ${monthsJourney} miesiąca/miesięcy). Poniższe aktywności pokazują orientacyjnie, ile czasu zajęłoby spalenie całego nadmiaru kalorii: ${activityDescriptions}. To tylko przykład teoretyczny — w praktyce połączenie diety i ruchu daje najlepsze efekty.`
-                  : `Stosując wybraną dietę i utrzymując obecny poziom aktywności, dojście do górnej granicy normy BMI zajmie Ci około ${weeksJourney} tygodni (ok. ${monthsJourney} miesiąca/miesięcy). Poniższe aktywności są jedynie przykładem, ile czasu teoretycznie trwałoby spalenie całego nadmiaru kalorii: ${activityDescriptions}. Taki czas może wydawać się długi, bo zakłada wyłącznie spalanie kalorii przez ruch. W połączeniu z dietą proces redukcji zachodzi szybciej i przynosi lepsze efekty, więc łączenie zdrowej aktywności i odpowiedniego odżywiania jest najskuteczniejsze.`
+                  ? `Przy obecnych założeniach żywieniowych i utrzymaniu zadeklarowanej aktywności dojście do górnej granicy normy BMI może zająć około ${weeksJourney} tygodni (ok. ${monthsJourney} miesiąca/miesięcy). Poniższe aktywności pokazują orientacyjnie, ile czasu zajęłoby spalenie całego nadmiaru kalorii: ${activityDescriptions}. To tylko przykład teoretyczny — w praktyce połączenie diety i ruchu daje najlepsze efekty.`
+                  : `Stosując wybraną dietę i utrzymując zadeklarowany poziom aktywności, dojście do górnej granicy normy BMI zajmie Ci około ${weeksJourney} tygodni (ok. ${monthsJourney} miesiąca/miesięcy). Poniższe aktywności są jedynie przykładem, ile czasu teoretycznie trwałoby spalenie całego nadmiaru kalorii: ${activityDescriptions}. Taki czas może wydawać się długi, bo zakłada wyłącznie spalanie kalorii przez ruch. W połączeniu z dietą proces redukcji zachodzi szybciej i przynosi lepsze efekty, więc łączenie zdrowej aktywności i odpowiedniego odżywiania jest najskuteczniejsze.`
               );
             } else {
               lines.push(
                 patientFacing
-                  ? `Przy obecnych założeniach żywieniowych i utrzymaniu aktualnej aktywności dojście dziecka do górnej granicy normy BMI może zająć około ${weeksJourney} tygodni (ok. ${monthsJourney} miesiąca/miesięcy). Poniższe aktywności pokazują orientacyjnie, ile czasu zajęłoby spalenie całego nadmiaru kalorii: ${activityDescriptions}. To tylko przykład teoretyczny — w praktyce połączenie diety i ruchu daje najlepsze efekty.`
+                  ? `Przy obecnych założeniach żywieniowych i utrzymaniu zadeklarowanej aktywności dojście dziecka do górnej granicy normy BMI może zająć około ${weeksJourney} tygodni (ok. ${monthsJourney} miesiąca/miesięcy). Poniższe aktywności pokazują orientacyjnie, ile czasu zajęłoby spalenie całego nadmiaru kalorii: ${activityDescriptions}. To tylko przykład teoretyczny — w praktyce połączenie diety i ruchu daje najlepsze efekty.`
                   : `Przy wybranej diecie i zadeklarowanym poziomie aktywności dziecko osiągnie górną granicę normy BMI w ciągu około ${weeksJourney} tygodni (ok. ${monthsJourney} miesiąca/miesięcy). Poniższe aktywności to przykładowe wyliczenia pokazujące, ile czasu teoretycznie trwałoby spalenie całego nadmiaru kalorii: ${activityDescriptions}. Taki szacowany czas może wydawać się długi, bo uwzględnia jedynie spalanie kalorii podczas ruchu. W praktyce dieta znacząco redukuje nadmiar kalorii, dlatego połączenie zdrowego odżywiania z aktywnością fizyczną daje najlepsze i najszybsze rezultaty.`
               );
             }
@@ -7667,40 +11875,47 @@ document.addEventListener('DOMContentLoaded', function() {
     const generateBtn = document.getElementById('generateDietBtn');
     if (generateBtn && !generateBtn.dataset.dietGenerateAttached) {
       generateBtn.addEventListener('click', function() {
-        const result = buildDietRecommendationResult();
+        dietRecommendationsRequestNewMyth();
+        dietRecommendationsSetActiveMode('smart');
+        const result = buildDietSmartRecommendationResult();
         if (!result) return;
-        const { textOutput, htmlOutput } = result;
-        // Wyświetl wygenerowane zalecenia w polu wynikowym
         const resultDiv = document.getElementById('dietRecommendationsResult');
         if (resultDiv) {
-          resultDiv.innerHTML = htmlOutput;
+          renderDietRecommendationResult(resultDiv, result, 'smart');
         }
-        // Skopiuj tekst do schowka i pokaż komunikat toast
         if (typeof copyDietTextToClipboard === 'function') {
-          copyDietTextToClipboard(textOutput).then(function() {
-            if (typeof showMetabolicToast === 'function') {
-              showMetabolicToast();
-            }
+          copyDietTextToClipboard(result.textOutput || '').then(function() {
+            if (typeof showMetabolicToast === 'function') showMetabolicToast();
           }).catch(function() {
-            if (typeof showMetabolicToast === 'function') {
-              showMetabolicToast();
-            }
-          });
-        } else if (typeof copyToClipboard === 'function') {
-          copyToClipboard(textOutput).then(function() {
-            if (typeof showMetabolicToast === 'function') {
-              showMetabolicToast();
-            }
-          }).catch(function() {
-            if (typeof showMetabolicToast === 'function') {
-              showMetabolicToast();
-            }
+            if (typeof showMetabolicToast === 'function') showMetabolicToast();
           });
         }
       });
       generateBtn.dataset.dietGenerateAttached = 'true';
     }
 
+    const generateEnergyBtn = document.getElementById('generateEnergyDietBtn');
+    if (generateEnergyBtn && !generateEnergyBtn.dataset.dietGenerateAttached) {
+      generateEnergyBtn.addEventListener('click', function() {
+        dietRecommendationsSetActiveMode('energy');
+        const result = buildDietEnergyRecommendationResult();
+        if (!result) return;
+        const resultDiv = document.getElementById('dietEnergyResult');
+        if (resultDiv) {
+          renderDietRecommendationResult(resultDiv, result, 'energy');
+        }
+        if (typeof copyDietTextToClipboard === 'function') {
+          copyDietTextToClipboard(result.textOutput || '').then(function() {
+            if (typeof showMetabolicToast === 'function') showMetabolicToast();
+          }).catch(function() {
+            if (typeof showMetabolicToast === 'function') showMetabolicToast();
+          });
+        }
+      });
+      generateEnergyBtn.dataset.dietGenerateAttached = 'true';
+    }
+
+    ensureDietPersonalizationSurveyUi(document.getElementById('dietRecommendationsContent'));
     updateDietCardLabels();
     const patientFacingToggle = document.getElementById('patientFacingToggle');
     if (patientFacingToggle && !patientFacingToggle.dataset.dietPatientFacingAttached) {
@@ -7717,6 +11932,16 @@ document.addEventListener('DOMContentLoaded', function() {
       });
       nutritionNormsToggle.dataset.dietNutritionNormsAttached = 'true';
     }
+    ['reduceToggle', 'stabilizationToggle', 'growthEndedFlag', 'vitDSuppFlag', 'hydrationFlag', 'journeyFlag'].forEach(function(id) {
+      const el = document.getElementById(id);
+      if (el && !el.dataset.dietPersonalizationRefreshAttached) {
+        el.addEventListener('change', function() {
+          updateDietSurveyAgeVisibility();
+          refreshDietRecommendationsIfVisible();
+        });
+        el.dataset.dietPersonalizationRefreshAttached = 'true';
+      }
+    });
     // Ustaw widoczność przycisku zaleceń na podstawie początkowych danych
     updateDietRecommendationsVisibility();
   });
@@ -7734,6 +11959,10 @@ document.addEventListener('DOMContentLoaded', function() {
   // Udostępnij funkcję w obiekcie window, aby można ją było wywołać z innych modułów
   if (typeof window !== 'undefined') {
     window.updateDietRecommendationsVisibility = updateDietRecommendationsVisibility;
+    window.dietRecommendationsHasPdfAvailable = dietRecommendationsHasPdfAvailable;
+    window.dietRecommendationsCollectPdfPages = dietRecommendationsCollectPdfPages;
+    window.generateDietRecommendationsPdfReport = generateDietRecommendationsPdfReport;
+    window.dietRecommendationsRequestNewMyth = dietRecommendationsRequestNewMyth;
   }
 })();
 
@@ -8079,6 +12308,63 @@ function patientReportBuildNutritionNormsPalLabel(model) {
   return '';
 }
 
+
+function patientReportBuildNutritionNormsActivityDescription(model) {
+  const energy = model && model.energy;
+  if (!energy) return '';
+
+  if (model && model.ageBand && model.ageBand.kind === 'infant_6_11') {
+    return 'Przedstawiono obliczenia energii według modelu dla niemowląt w drugiej połowie 1. roku życia.';
+  }
+
+  if (energy.palMode === 'range' || energy.mode === 'range') {
+    return 'Przedstawiono obliczenia dla zakresu poziomów aktywności fizycznej.';
+  }
+
+  const usedPal = Number(energy.usedPal);
+  if (!isFinite(usedPal)) return '';
+
+  let activityLabel = 'wybranego poziomu aktywności fizycznej';
+  if (usedPal <= 1.4) {
+    activityLabel = 'małej aktywności fizycznej';
+  } else if (usedPal <= 1.6) {
+    activityLabel = 'umiarkowanej aktywności fizycznej';
+  } else if (usedPal <= 1.8) {
+    activityLabel = 'aktywnego trybu życia';
+  } else {
+    activityLabel = 'bardzo aktywnego trybu życia';
+  }
+
+  return `Przedstawiono obliczenia dla ${activityLabel}.`;
+}
+
+function patientReportBuildNutritionNormsActivityPhrase(model) {
+  const energy = model && model.energy;
+  if (!energy) return '';
+
+  if (model && model.ageBand && model.ageBand.kind === 'infant_6_11') {
+    return 'według modelu dla niemowląt w drugiej połowie 1. roku życia';
+  }
+
+  if (energy.palMode === 'range' || energy.mode === 'range') {
+    return 'dla zakresu poziomów aktywności fizycznej';
+  }
+
+  const usedPal = Number(energy.usedPal);
+  if (!isFinite(usedPal)) return '';
+
+  if (usedPal <= 1.4) {
+    return 'przy małej aktywności fizycznej';
+  }
+  if (usedPal <= 1.6) {
+    return 'przy umiarkowanej aktywności fizycznej';
+  }
+  if (usedPal <= 1.8) {
+    return 'przy aktywnym trybie życia';
+  }
+  return 'przy bardzo aktywnym trybie życia';
+}
+
 function patientReportBuildNutritionNormsEnergyText(model) {
   if (!model || !model.energy) return '—';
   const energy = model.energy;
@@ -8104,6 +12390,16 @@ function patientReportBuildNutritionNormsProteinText(model, options) {
   if (!protein || !protein.targets) return '—';
   const targets = protein.targets;
   if (!targets.available) return 'brak norm liczbowych';
+  const planningPercentText = patientReportFormatNutritionNormsPercentRange(protein.planningPercentRange);
+  const planningGramText = patientReportFormatNutritionNormsGramRange(protein.planningGramRange, 0);
+  if (opts.planning) {
+    if (planningPercentText !== '—' && planningGramText !== '—') {
+      return `${planningPercentText} ➔ ${planningGramText}`;
+    }
+    if (planningGramText !== '—') return planningGramText;
+    if (planningPercentText !== '—') return planningPercentText;
+    return '—';
+  }
   if (protein.main) {
     if (opts.includeEar && opts.verbose) {
       return `Średnie zapotrzebowanie (EAR): ${patientReportFormatNumber(protein.main.earGDay, 0)} g/d • Zalecane spożycie (RDA): ${patientReportFormatNumber(protein.main.rdaGDay, 0)} g/d`;
@@ -8134,7 +12430,7 @@ function patientReportBuildNutritionNormsMacroDetailedText(section) {
   const percentText = patientReportFormatNutritionNormsPercentRange(section.percentRange);
   const gramText = patientReportFormatNutritionNormsGramRange(section.gramRange, 0);
   if (percentText !== '—' && gramText !== '—') {
-    return `${percentText} → ${gramText}`;
+    return `${percentText} ➔ ${gramText}`;
   }
   if (gramText !== '—') return gramText;
   return percentText;
@@ -8167,15 +12463,15 @@ function patientReportBuildNutritionSummaryLinesFromModel(model) {
   }
 
   const energyText = patientReportBuildNutritionNormsEnergyText(model);
-  const contextLabel = patientReportBuildNutritionNormsContextLabel(model);
+  const activityPhrase = patientReportBuildNutritionNormsActivityPhrase(model);
   const line1 = energyText !== '—'
-    ? `Energia (normy żywieniowe): ${energyText}${contextLabel ? ` (${contextLabel})` : ''}.`
-    : 'Energia (normy żywieniowe): brak danych do wyliczeń.';
+    ? `Szacowane dzienne zapotrzebowanie na energię do planowania diety${activityPhrase ? ` ${activityPhrase}` : ''}: ${energyText}.`
+    : 'Szacowane dzienne zapotrzebowanie na energię do planowania diety: brak danych do wyliczeń.';
 
-  const proteinText = patientReportBuildNutritionNormsProteinText(model, { includeEar: false });
-  const fatText = patientReportBuildNutritionNormsMacroShortText(model.fat);
-  const carbText = patientReportBuildNutritionNormsMacroShortText(model.carbs);
-  const line2 = `Makroskładniki: białko – zalecane spożycie (RDA) ${proteinText}; tłuszcz ${fatText}; węglowodany ${carbText}.`;
+  const proteinText = patientReportBuildNutritionNormsProteinText(model, { planning: true, includeEar: false });
+  const fatText = patientReportBuildNutritionNormsMacroDetailedText(model.fat);
+  const carbText = patientReportBuildNutritionNormsMacroDetailedText(model.carbs);
+  const line2 = `Makroskładniki do planowania diety: białko ${proteinText}; tłuszcz ${fatText}; węglowodany ${carbText}.`;
 
   return [line1, line2].filter(Boolean);
 }
@@ -8188,6 +12484,7 @@ function patientReportBuildNutritionSummaryLines() {
 function patientReportBuildNutritionCardFromModel(model) {
   if (!model) {
     return {
+      kind: 'nutrition-norms',
       title: 'Normy żywieniowe',
       subtitle: 'Energia i makroskładniki',
       badge: 'Brak danych',
@@ -8200,6 +12497,7 @@ function patientReportBuildNutritionCardFromModel(model) {
 
   if (model.ageBand && model.ageBand.kind === 'infant_0_6') {
     return {
+      kind: 'nutrition-norms',
       title: 'Normy żywieniowe',
       subtitle: 'Energia i makroskładniki',
       badge: 'Informacyjnie',
@@ -8217,7 +12515,7 @@ function patientReportBuildNutritionCardFromModel(model) {
   });
   rows.push({
     label: 'Białko',
-    valueText: patientReportBuildNutritionNormsProteinText(model, { includeEar: true, verbose: true })
+    valueText: patientReportBuildNutritionNormsProteinText(model, { planning: true })
   });
   rows.push({
     label: 'Tłuszcze',
@@ -8231,15 +12529,16 @@ function patientReportBuildNutritionCardFromModel(model) {
   if (model.notes && model.notes.sourceLong) {
     noteParts.push(model.notes.sourceLong);
   }
-  const contextLabel = patientReportBuildNutritionNormsContextLabel(model);
-  if (contextLabel) {
-    noteParts.push(`Obliczenia: ${contextLabel}.`);
+  const activityDescription = patientReportBuildNutritionNormsActivityDescription(model);
+  if (activityDescription) {
+    noteParts.push(activityDescription);
   }
   if (model.fat && model.fat.lowActivityNote) {
     noteParts.push(model.fat.lowActivityNote);
   }
 
   return {
+    kind: 'nutrition-norms',
     title: 'Normy żywieniowe',
     subtitle: 'Energia i makroskładniki',
     badge: (model.energy && model.energy.available) ? 'Normy' : 'Informacyjnie',
@@ -8454,7 +12753,7 @@ function updateProfessionalSummaryCard(_retry) {
       if (colour) {
         row.style.color = colour;
       }
-      // Format decimal separator: replace dots with commas when between digits (e.g. 1.23 → 1,23)
+      // Format decimal separator: replace dots with commas when between digits (e.g. 1.23 ➔ 1,23)
       const displayTxt = typeof txt === 'string' ? txt.replace(/(\d)\.(\d)/g, '$1,$2') : txt;
       row.textContent = displayTxt;
       col.appendChild(row);
@@ -8512,7 +12811,7 @@ function updateProfessionalSummaryCard(_retry) {
       card.style.display = 'none';
       if (fullWrap) { fullWrap.style.display = 'none'; fullWrap.innerHTML = ''; }
 
-      // PRAWA kolumna: pod „Ostatnim pomiarem” → używamy #currentSummaryWrap
+      // PRAWA kolumna: pod „Ostatnim pomiarem” ➔ używamy #currentSummaryWrap
       wrap.style.display = 'block';
       wrap.appendChild(buildCard(colB.length ? colB : colA, 'currentSummaryCardRight'));
 
@@ -11021,6 +15320,10 @@ function patientReportBuildBmrCardHtml(card) {
   const headers = Array.isArray(card?.tableHeaders) && card.tableHeaders.length >= 2
     ? card.tableHeaders
     : ['Składnik', 'Wartość'];
+  const isNutritionNormsCard = card?.kind === 'nutrition-norms'
+    || String(card?.title || '').trim().toLowerCase() === 'normy żywieniowe';
+  const nutritionCardClass = isNutritionNormsCard ? ' patient-report-support-card--nutrition-norms' : '';
+  const nutritionTableClass = isNutritionNormsCard ? ' patient-report-bmr-table--nutrition-norms' : '';
   const rawSubtitle = typeof card?.subtitle === 'string' ? card.subtitle.trim() : '';
   const subtitleHtml = rawSubtitle
     ? `<div class="patient-report-support-subtitle">${patientReportEscapeHtml(rawSubtitle)}</div>`
@@ -11045,7 +15348,7 @@ function patientReportBuildBmrCardHtml(card) {
       }).join('')
     : `<tr><td colspan="2">Brak dodatkowych pozycji do pokazania.</td></tr>`;
   return `
-    <article class="patient-report-support-card tone-normal">
+    <article class="patient-report-support-card tone-normal${nutritionCardClass}">
       <div class="patient-report-support-top">
         <div>
           <div class="patient-report-support-title">${patientReportEscapeHtml(card?.title || 'Normy żywieniowe')}</div>
@@ -11056,7 +15359,7 @@ function patientReportBuildBmrCardHtml(card) {
       </div>
       ${noteHtml}
       <div class="patient-report-bmr-table-wrap">
-        <table class="patient-report-bmr-table">
+        <table class="patient-report-bmr-table${nutritionTableClass}">
           <thead>
             <tr>
               <th>${patientReportEscapeHtml(headers[0] || 'Składnik')}</th>
@@ -11862,6 +16165,30 @@ function patientReportBuildHtml(model) {
           white-space: normal;
           width: 69%;
         }
+        .patient-report-bmr-table--nutrition-norms {
+          font-size: 14px;
+        }
+        .patient-report-bmr-table--nutrition-norms th,
+        .patient-report-bmr-table--nutrition-norms td {
+          padding-left: 7px;
+          padding-right: 7px;
+        }
+        .patient-report-bmr-table--nutrition-norms th:first-child,
+        .patient-report-bmr-table--nutrition-norms td:first-child {
+          width: 42%;
+          white-space: nowrap;
+          overflow-wrap: normal;
+          word-break: normal;
+          hyphens: none;
+          letter-spacing: -0.01em;
+        }
+        .patient-report-bmr-table--nutrition-norms th:last-child,
+        .patient-report-bmr-table--nutrition-norms td:last-child {
+          width: 58%;
+          white-space: normal;
+          overflow-wrap: anywhere;
+          word-break: break-word;
+        }
         .patient-report-bmr-table thead th {
           background: #f4fbfb;
           color: #315153;
@@ -12567,6 +16894,19 @@ function patientReportGetPdfChoiceOptions() {
     }
   } catch (_) {}
 
+  try {
+    if (typeof window !== 'undefined'
+      && typeof window.dietRecommendationsHasPdfAvailable === 'function'
+      && window.dietRecommendationsHasPdfAvailable()) {
+      options.push({
+        value: 'diet',
+        title: 'Raport zaleceń dietetycznych',
+        description: 'Osobny PDF, w którym obliczenia energetyczne i codzienne cele są połączone w jeden plan zaleceń.',
+        checkedByDefault: false
+      });
+    }
+  } catch (_) {}
+
   const centileState = patientReportGetCentileChartSelectionState();
   if (centileState.available) {
     options.push({
@@ -12995,6 +17335,7 @@ function patientReportBuildSelectedPdfFilename(selectedValues, filenameBase, met
 
   if (selected.length === 1) {
     if (selected[0] === 'visit') return `Raport_po_wizycie_${base}.pdf`;
+    if (selected[0] === 'diet') return `Raport_zalecen_dietetycznych_${base}.pdf`;
     if (selected[0] === 'growth') return `Raport_wzrastania_${base}.pdf`;
     if (selected[0] === 'centile') {
       const sourceLabel = advHistorySourceLabel(details.centileSource || '') || 'siatka_centylowa';
@@ -13027,6 +17368,15 @@ async function patientReportBuildSelectedPdfPackage(selectedValues) {
       const visitPackage = await patientReportCollectVisitPdfPages();
       if (visitPackage && Array.isArray(visitPackage.pages)) pageSpecs.push(...visitPackage.pages);
       if (visitPackage && visitPackage.filenameBase) filenameBase = visitPackage.filenameBase;
+      continue;
+    }
+    if (value === 'diet') {
+      if (!(typeof window !== 'undefined' && typeof window.dietRecommendationsCollectPdfPages === 'function')) {
+        throw new Error('Generator raportu zaleceń dietetycznych nie jest obecnie dostępny.');
+      }
+      const dietPackage = await window.dietRecommendationsCollectPdfPages({ mode: 'full' });
+      if (dietPackage && Array.isArray(dietPackage.pages)) pageSpecs.push(...dietPackage.pages);
+      if (dietPackage && dietPackage.filenameBase) filenameBase = dietPackage.filenameBase;
       continue;
     }
     if (value === 'centile') {
@@ -13407,7 +17757,7 @@ function patientReportOpenPdfChoiceDialog(triggerBtn) {
     <div class="patient-report-pdf-choice-header">
       <div class="patient-report-pdf-choice-header-copy">
         <h3 id="patientReportPdfChoiceTitle" class="patient-report-pdf-choice-title">Wybierz części raportu PDF</h3>
-        <p class="patient-report-pdf-choice-description">Włącz jedną lub kilka części, które mają znaleźć się w jednym pliku PDF. Kolejność stron pozostanie stała: raport po wizycie, siatka centylowa, raport wzrastania.</p>
+        <p class="patient-report-pdf-choice-description">Włącz jedną lub kilka części, które mają znaleźć się w jednym pliku PDF. Kolejność stron pozostanie stała: raport po wizycie, raport zaleceń dietetycznych, siatka centylowa, raport wzrastania.</p>
       </div>
       <button type="button" data-patient-report-pdf-choice-close aria-label="Zamknij" class="patient-report-pdf-choice-close">×</button>
     </div>
@@ -13717,7 +18067,7 @@ if (typeof document !== 'undefined') {
       // 1–2 wiersze, calculateGrowthAdvanced() synchronizowało krótszą
       // historię z powrotem do karty podstawowej i starsze pomiary znikały.
       // Dlatego przy włączaniu trybu PRO najpierw wymuszamy synchronizację
-      // basic → advanced, a dopiero potem wykonujemy dalsze przeliczenia.
+      // basic ➔ advanced, a dopiero potem wykonujemy dalsze przeliczenia.
       if (professionalMode) {
         try {
           if (typeof window !== 'undefined' && typeof window.reconcileGrowthHistoryModules === 'function') {
@@ -14495,7 +18845,7 @@ document.addEventListener('DOMContentLoaded', function(){
     const reasonsList = (risk.reasons || []).map(r => `<li>${r}</li>`).join('');
     // Tytuł i treść z korektą TEE
     const title = 'Wykryto ryzyko zaburzeń odżywiania – zastosowano korektę zapotrzebowania (−15%).';
-    wrap.innerHTML = `\n      <div><strong>${title}</strong></div>\n      ${reasonsList ? `<ul class=\"intake-reasons\">${reasonsList}</ul>` : ''}\n      <div>TEE przed: <strong>${Math.round(teeRaw)} kcal/d</strong> → po: <strong>${Math.round(teeAdjusted)} kcal/d</strong> (×${factor}).</div>\n    `;
+    wrap.innerHTML = `\n      <div><strong>${title}</strong></div>\n      ${reasonsList ? `<ul class=\"intake-reasons\">${reasonsList}</ul>` : ''}\n      <div>TEE przed: <strong>${Math.round(teeRaw)} kcal/d</strong> ➔ po: <strong>${Math.round(teeAdjusted)} kcal/d</strong> (×${factor}).</div>\n    `;
     // Wstaw na koniec kontenera
     mount.appendChild(wrap);
     // Zmień kolor ramki i uruchom puls
@@ -15002,7 +19352,7 @@ function bmiPercentileChildPal(bmi, sex, months) {
    * Percentyl BMI dla Palczewskiej wyprowadzamy z tej samej funkcji, która
    * zwraca z‑score (`calcPercentileStatsPal`). Dzięki temu percentyl i z‑score
    * pozostają spójne także powyżej 97. centyla. Wcześniej percentyl był
-   * ekstrapolowany osobno w przestrzeni centyli (97 → 100), co mogło dawać
+   * ekstrapolowany osobno w przestrzeni centyli (97 ➔ 100), co mogło dawać
    * wynik „>100 centyla” i kategorię „Otyłość olbrzymia” przy z‑score wyraźnie
    * poniżej 3 SD.
    */
@@ -15490,6 +19840,35 @@ if (typeof document !== 'undefined') {
     document.addEventListener('DOMContentLoaded', initDisableAutoScrollForFoodLists);
   } else {
     initDisableAutoScrollForFoodLists();
+  }
+}
+
+if (typeof document !== 'undefined') {
+  function initFoodTotalInfoToggle() {
+    try {
+      document.addEventListener('click', function(event) {
+        const btn = event.target && event.target.closest
+          ? event.target.closest('[data-food-total-info-toggle]')
+          : null;
+        if (!btn) return;
+        const panelId = btn.getAttribute('aria-controls');
+        const panel = panelId ? document.getElementById(panelId) : null;
+        const expanded = btn.getAttribute('aria-expanded') === 'true';
+        const nextExpanded = !expanded;
+        btn.setAttribute('aria-expanded', String(nextExpanded));
+        btn.textContent = nextExpanded ? 'Ukryj informacje ▴' : 'Informacje ▾';
+        if (panel) {
+          panel.hidden = !nextExpanded;
+        }
+      }, true);
+    } catch (_) {
+      /* ignoruj błędy inicjalizacji przycisku informacji o makroskładnikach */
+    }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initFoodTotalInfoToggle);
+  } else {
+    initFoodTotalInfoToggle();
   }
 }
 // Flaga sygnalizująca, że użytkownik edytuje pole miesięcy (#ageMonths).
@@ -16279,11 +20658,22 @@ function update(){
   const olafRadio = document.getElementById('sourceOlaf');
   const whoRadio  = document.getElementById('sourceWho');
   if (toggleContainer && palRadio && olafRadio && whoRadio) {
-    // Dorośli (>18 lat) lub brak wieku – ukryj przełącznik i wymuś WHO.
-    if (age > 18 || age === 0) {
+    const hasAgeSourceInput = !!(
+      (document.getElementById('age') && String(document.getElementById('age').value || '').trim() !== '') ||
+      (document.getElementById('ageMonths') && String(document.getElementById('ageMonths').value || '').trim() !== '')
+    );
+    // Dorośli (>18 lat) – ukryj przełącznik i wymuś WHO, bo siatki dziecięce nie są dostępne.
+    if (age > 18) {
       toggleContainer.style.display = 'none';
       setCheckedGrowthDataSource('WHO');
       bmiSource = 'WHO';
+      refreshGrowthChartActionControls();
+    } else if (!hasAgeSourceInput || age === 0) {
+      // Pusty wiek po kliknięciu „Wyczyść wszystkie pola” nie powinien nadpisywać
+      // ręcznie wybranego źródła danych (np. Palczewska).  Ukrywamy sam przełącznik,
+      // ale zostawiamy zaznaczone radio i bmiSource bez zmian, żeby po ponownym
+      // wpisaniu danych aplikacja wróciła do ostatniego ręcznego wyboru, o ile jest dozwolony.
+      toggleContainer.style.display = 'none';
       refreshGrowthChartActionControls();
     } else {
       // Dla dzieci pokazuj przełącznik i zsynchronizuj dostępne źródła danych.
@@ -16418,7 +20808,10 @@ if (childConsultCard) childConsultCard.style.display = 'none';
     // Dodaj do listy tylko wiersze z dodatnią ilością i zdefiniowanym elementem w słowniku foods
     if (qty > 0 && foods[key]) {
       items.push({
-        name: foods[key].name,
+        key,
+        qty,
+        name: macroPracticeBuildSelectedFoodLabel(key, qty) || foods[key].name,
+        foodGroup: foods[key].foodGroup || macroPracticeResolveFoodGroup(foods[key]),
         kcal: foods[key].kcal * qty,
         analysis: macroPracticeAnalyzeFoodSelection(key, qty, nutritionGoalsForFoods)
       });
@@ -16431,18 +20824,41 @@ if (childConsultCard) childConsultCard.style.display = 'none';
     const totalProtein = itemsWithMacros.reduce((sum, item) => sum + (item.analysis?.nutrients?.protein_g || 0), 0);
     const totalCarbs = itemsWithMacros.reduce((sum, item) => sum + (item.analysis?.nutrients?.carbs_g || 0), 0);
     const totalFat = itemsWithMacros.reduce((sum, item) => sum + (item.analysis?.nutrients?.fat_g || 0), 0);
+    const hasCompoundMeal = itemsWithMacros.some((item) => item.foodGroup === 'meals');
+    const totalGoalShareParts = macroPracticeBuildTotalGoalShareParts({
+      energy_kcal: kcal,
+      protein_g: totalProtein,
+      carbs_g: totalCarbs,
+      fat_g: totalFat
+    }, nutritionGoalsForFoods);
+    const totalEnergyShareHtml = totalGoalShareParts.energy
+      ? `<div class="food-total-energy-share">${macroPracticeEscapeHtml(totalGoalShareParts.energy)}</div>`
+      : '';
+    const totalGoalShareHtml = totalGoalShareParts.macros.length
+      ? `<div class="food-total-goal-share"><div class="food-total-goal-share-title">Procent dziennego celu do planowania diety:</div><div class="food-total-goal-share-values">${macroPracticeEscapeHtml(totalGoalShareParts.macros.join(' • '))}</div></div>`
+      : '';
+    const totalGoalShareNote = totalGoalShareParts.macros.length
+      ? ' Procenty makroskładników odnoszą się do orientacyjnego dziennego celu do planowania diety, wyliczonego z wieku i PAL wybranego w karcie norm żywieniowych; dla białka nie jest to ta sama wartość co RDA.'
+      : '';
+    const foodTotalInfoText = `Makroskładniki pokazujemy dla każdej pozycji z listy. Dane oparto na USDA FoodData Central i etykietach produktów; przy daniach złożonych są to wartości orientacyjne dla typowej porcji${hasCompoundMeal ? ', zależne od receptury i wielkości porcji' : ''}.${totalGoalShareNote}`;
+    const foodTotalInfoHtml = itemsWithMacros.length
+      ? `<div class="food-total-info"><button type="button" class="food-total-info-toggle" data-food-total-info-toggle aria-expanded="false" aria-controls="foodTotalInfoPanel">Informacje ▾</button><div class="food-total-macro-note" id="foodTotalInfoPanel" hidden>${macroPracticeEscapeHtml(foodTotalInfoText)}</div></div>`
+      : '';
     const macroSummaryHtml = itemsWithMacros.length
-      ? `<div class="food-total-macro-summary">B ${macroPracticeFormatDisplayNumber(totalProtein)} g • W ${macroPracticeFormatDisplayNumber(totalCarbs)} g • T ${macroPracticeFormatDisplayNumber(totalFat)} g</div>${itemsWithMacros.length < items.length ? '<div class="food-total-macro-note">Makroskładniki pokazujemy dla produktów referencyjnych i tych pozycji, dla których mamy dane w słowniku przykładów.</div>' : ''}`
+      ? `<div class="food-total-macro-summary">Białko ${macroPracticeFormatDisplayNumber(totalProtein)} g • Węglowodany ${macroPracticeFormatDisplayNumber(totalCarbs)} g • Tłuszcze ${macroPracticeFormatDisplayNumber(totalFat)} g</div>${totalGoalShareHtml}${foodTotalInfoHtml}`
       : '';
 
     // a) całkowite kcal
-    totalKcalEl.innerHTML = `<strong>Łącznie: ${Math.round(kcal)} kcal</strong>${macroSummaryHtml}`;
+    totalKcalEl.innerHTML = `<strong>Łącznie: ${Math.round(kcal)} kcal</strong>${totalEnergyShareHtml}${macroSummaryHtml}`;
 
     // b) lista jako tabela
     const rows = items.map((it) => {
       const metaLines = [];
       if (it.analysis && it.analysis.macroLine) {
         metaLines.push(`<div class="food-total-item-meta">${macroPracticeEscapeHtml(it.analysis.macroLine)}</div>`);
+      }
+      if (it.foodGroup === 'meals' && it.analysis && it.analysis.macroNote) {
+        metaLines.push(`<div class="food-total-item-note">${macroPracticeEscapeHtml(it.analysis.macroNote)}</div>`);
       }
       if (it.analysis && it.analysis.showAsWarning && it.analysis.warningLine) {
         const warningClass = it.analysis.warningLevel ? ` food-total-item-note--${it.analysis.warningLevel}` : '';
@@ -16796,7 +21212,7 @@ if (age <= 18) {
      if (professionalMode) {
       heightLine += ` (Z‑score = ${statsH.sd.toFixed(2).replace('.', ',')})`;
      }
-     // pokaż „brakuje … do 3 centyla” również dla całego 2. centyla (SD ≈ −2.0 → ~2.28 centyla, zaokrągla się do 2)
+     // pokaż „brakuje … do 3 centyla” również dla całego 2. centyla (SD ≈ −2.0 ➔ ~2.28 centyla, zaokrągla się do 2)
      if (roundedHeightCentLine <= 2 && typeof h3 === 'number') {
        heightLine += `, brakuje ${(h3 - height).toFixed(1).replace('.', ',')} cm do 3 centyla`;
      }
@@ -16899,8 +21315,8 @@ if (age <= 18) {
         // Niedowaga: używamy ZAOKRĄGLONEGO centyla (jak w UI),
         // aby reguła działała spójnie z tym, co widzi użytkownik.
         //
-        // BMI ≤ 3 centyla    → danger
-        // BMI (3, 5] centyla → warning
+        // BMI ≤ 3 centyla    ➔ danger
+        // BMI (3, 5] centyla ➔ warning
         if (typeof bmiPercentile === 'number' && !isNaN(bmiPercentile)) {
           const roundedBmiCent = Math.round(bmiPercentile);
           if (roundedBmiCent <= 3) {
@@ -17389,7 +21805,7 @@ whrChildTable.innerHTML = '';
   if (bmiReady) {
   const bmiCurrent = BMI(weight, height);
 
-  // dorośli z BMI < 18.5 → ukryj kartę
+  // dorośli z BMI < 18.5 ➔ ukryj kartę
   if (age >= 18 && bmiCurrent < 18.5) {
     toNormCard.style.display = 'none';
   } else {
@@ -18816,7 +23232,7 @@ const LMS_HEIGHT_GIRLS = {
     /* ----------------------- dzieci 3‑18 lat -------------------------------- */
     let dataSet = preferOlaf ? dataset('OLAF') : dataset('WHO');
   
-    /* jeśli brak danych w preferowanym źródle → spróbuj drugiego */
+    /* jeśli brak danych w preferowanym źródle ➔ spróbuj drugiego */
     if (!dataSet){
         dataSet = preferOlaf ? dataset('WHO') : dataset('OLAF');
         if (param === 'WT') weightUsedFallback = true;   // zapisz fakt fallbacku
@@ -18859,7 +23275,7 @@ function calcPercentileStats(value, sex, ageYears, param) {
 }
 
 function centylWord(centTxt){
-  // jeśli zawiera &lt;1 lub &gt;100 → użyj dopełniacza „centyla”
+  // jeśli zawiera &lt;1 lub &gt;100 ➔ użyj dopełniacza „centyla”
   if (centTxt.includes('&lt;') || centTxt.includes('&gt;')) return 'centyla';
   // domyślnie zostaw „centyl” (używane w karcie od lat)
   return 'centyl';
@@ -20437,7 +24853,7 @@ function advHistoryBuildSourceSummary(preferredSource, metricMeta) {
   const parts = [];
   grouped.forEach((metrics, key) => {
     const [src, reason] = key.split('||');
-    parts.push(`${metrics.join(', ')} → ${src} (${reason})`);
+    parts.push(`${metrics.join(', ')} ➔ ${src} (${reason})`);
   });
   return `Źródło danych: preferowane ${prefLabel}. Fallbacki: ${parts.join('; ')}.`;
 }
@@ -22128,17 +26544,17 @@ function updateAdvAgeMax() {
  * do sekcji „Zaawansowane obliczenia wzrostowe” na index.html.
  *
  * Kluczowe wymagania:
- *  - synchronizacja jednostronna (DocPro → index.html)
+ *  - synchronizacja jednostronna (DocPro ➔ index.html)
  *  - brak duplikacji po odświeżeniach / wielokrotnym imporcie
  *  - odporność na równoległe wywołania (np. click + BroadcastChannel)
  *
  * Mechanizm:
  *  - pobieramy punkty z IndexedDB (fallback: localStorage 'ghTherapyPoints')
  *  - wykonujemy „reconcile/upsert” po stabilnym kluczu pt.id:
- *      • jeśli wiersz z data-gh-id istnieje → aktualizujemy wartości
- *      • jeśli nie istnieje → próbujemy dopasować wyłącznie istniejący legacy wiersz GH
+ *      • jeśli wiersz z data-gh-id istnieje ➔ aktualizujemy wartości
+ *      • jeśli nie istnieje ➔ próbujemy dopasować wyłącznie istniejący legacy wiersz GH
  *        (data-gh-sync=true, ale jeszcze bez ghId)
- *      • jeśli brak dopasowania → tworzymy nowy wiersz
+ *      • jeśli brak dopasowania ➔ tworzymy nowy wiersz
  *  - usuwamy zsynchronizowane wiersze, które nie istnieją już w źródle (stare/stale)
  *  - nigdy nie przejmujemy ani nie nadpisujemy zwykłych, ręcznie wpisanych punktów użytkownika
  *
@@ -25609,9 +30025,10 @@ function getLMS(sex, months){
       const radios = toggleContainer.querySelectorAll('input[name="dataSource"]');
       radios.forEach(input => {
         input.addEventListener('change', () => {
-          // Zaznacz, że użytkownik zmienił ręcznie ustawienie, aby nie nadpisać wyboru podczas update()
-          toggleContainer.dataset.manual = '1';
-          bmiSource = input.value;
+          // Zaznacz, że użytkownik zmienił ręcznie ustawienie, aby nie nadpisać wyboru podczas update().
+          // Osobno zapamiętujemy preferowane źródło, ponieważ podczas pustego wieku lub wieku dorosłego
+          // UI może chwilowo zaznaczyć WHO, a po ponownym wpisaniu danych ma wrócić do wyboru użytkownika.
+          bmiSource = rememberManualGrowthDataSource(input.value) || input.value;
           update();
         });
       });
@@ -27718,7 +32135,7 @@ function calcEstimatedIntake(){
   let cards = lastModeBadgeHtml;
   intervals.forEach(r=>{
     cards += `<div class="intake-result-card">
-      <p><strong>Okres:</strong> ${r.from.toFixed(2).replace('.', ',')} → ${r.to.toFixed(2).replace('.', ',')} l.</p>
+      <p><strong>Okres:</strong> ${r.from.toFixed(2).replace('.', ',')} ➔ ${r.to.toFixed(2).replace('.', ',')} l.</p>
       <p><strong>Dni:</strong> ${r.days}</p>
       <p><strong>Δ masa:</strong> ${r.dW>0?'+':''}${r.dW.toFixed(2).replace('.', ',')} kg</p>
       <p><strong>Oczekiwany przyrost:</strong> ${r.isChild ? ((r.expectedGain>0?'+':'') + r.expectedGain.toFixed(2).replace('.', ',') + ' kg') : '—'}</p>
@@ -28092,7 +32509,7 @@ const CENT_LIST = [5,10,25,50,75,90,95];
 /* --------- pomoc: interpolacja centyla dla danej wartości --------- */
 function percentileFromBand(value, arrVals){
   // arrVals: [v5,v10,v25,v50,v75,v90,v95]
-  // poniżej najniższego → <5 c.; powyżej najwyższego → >95 c.
+  // poniżej najniższego ➔ <5 c.; powyżej najwyższego ➔ >95 c.
   if (value <= arrVals[0]) {
     // liniowo 0..5
     const p = (value/arrVals[0])*5;
@@ -28382,7 +32799,7 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
   };
 })();
 /* === BMI-p50 helpers (EBW) – polyfill dla modułu ryzyka AN ==================
-   Używa getLMS(sex, ageMonths) → [L, M, S], gdzie M = 50. centyl BMI.
+   Używa getLMS(sex, ageMonths) ➔ [L, M, S], gdzie M = 50. centyl BMI.
    Zakres wieku: 0–216 mies.  Zwraca liczbę (BMI p50) lub null.
    Idempotentne: nie nadpisuje istniejących implementacji. */
 
@@ -28403,7 +32820,7 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
       };
     }
   
-    // Cole 100% odpowiada BMI z 50. centyla → alias
+    // Cole 100% odpowiada BMI z 50. centyla ➔ alias
     if (typeof window.getColeBMI50 !== 'function') {
       window.getColeBMI50 = function (ageMonths, sex) {
         return _bmiP50FromLMS(ageMonths, sex);
@@ -28837,6 +33254,7 @@ function sanitizeIntakeRowsUI(rowsUI) {
       const toggleContainer = document.getElementById('dataToggleContainer');
       if (toggleContainer && selected) {
         toggleContainer.dataset.manual = '1';
+        toggleContainer.dataset.preferredSource = selected.value;
       }
     } catch (_) {}
 
@@ -30162,13 +34580,14 @@ function rehydrateIntakeFromState(savedPal, options){
       rows.forEach(r=>{
         // Dodaj wiersz jedzenia z określonym kluczem.  Funkcja addFoodRow
         // ustawia wartość domyślną, ale zostanie nadpisana poniżej.
-        addFoodRow(r.key);
+        const resolvedFoodKey = macroPracticeResolveFoodAliasKey(r.key);
+        addFoodRow(resolvedFoodKey);
         const list = document.querySelectorAll('.food-row');
         const row = list[list.length-1];
         if(!row) return;
         const sel = row.querySelector('select');
         const inp = row.querySelector('input[type="number"]');
-        if(sel) sel.value = r.key;
+        if(sel) sel.value = foods[resolvedFoodKey] ? resolvedFoodKey : 'snickers';
         if(inp) inp.value = r.qty;
       });
     }
@@ -30955,25 +35374,27 @@ function rehydrateIntakeFromState(savedPal, options){
         try {
           if (Array.isArray(data.foods.snacks)) {
             data.foods.snacks.forEach(r => {
-              addFoodRow(r.key);
+              const resolvedFoodKey = macroPracticeResolveFoodAliasKey(r.key);
+              addFoodRow(resolvedFoodKey);
               const list = document.querySelectorAll('.food-row');
               const row  = list[list.length - 1];
               if (!row) return;
               const sel = row.querySelector('select');
               const inp = row.querySelector('input[type="number"]');
-              if (sel) sel.value = r.key;
+              if (sel) sel.value = foods[resolvedFoodKey] ? resolvedFoodKey : 'snickers';
               if (inp) inp.value = r.qty;
             });
           }
           if (Array.isArray(data.foods.meals)) {
             data.foods.meals.forEach(r => {
-              addFoodRow(r.key);
+              const resolvedFoodKey = macroPracticeResolveFoodAliasKey(r.key);
+              addFoodRow(resolvedFoodKey);
               const list = document.querySelectorAll('.food-row');
               const row  = list[list.length - 1];
               if (!row) return;
               const sel = row.querySelector('select');
               const inp = row.querySelector('input[type="number"]');
-              if (sel) sel.value = r.key;
+              if (sel) sel.value = foods[resolvedFoodKey] ? resolvedFoodKey : 'snickers';
               if (inp) inp.value = r.qty;
             });
           }
@@ -33402,13 +37823,14 @@ if (restoredIntakeRowsUI.length && typeof window.intakeAddRow === 'function') {
           if (typeof window.addFoodRow === 'function') {
             g.foodRows.forEach(r => {
               if (!r || typeof r !== 'object') return;
-              window.addFoodRow(r.key || '');
+              const resolvedFoodKey = macroPracticeResolveFoodAliasKey(r.key || '');
+              window.addFoodRow(resolvedFoodKey);
               const list = document.querySelectorAll('.food-row');
               const row = list[list.length - 1];
               if (!row) return;
               const sel = row.querySelector('select');
               const inp = row.querySelector('input[type="number"]');
-              if (sel && typeof r.key === 'string') sel.value = r.key;
+              if (sel) sel.value = foods[resolvedFoodKey] ? resolvedFoodKey : 'snickers';
               if (inp && r.qty != null) inp.value = String(r.qty);
               if (sel) touched.push(sel);
               if (inp) touched.push(inp);

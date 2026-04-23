@@ -1,50 +1,59 @@
 {
-  "version": "0.1.0",
+  "version": "0.2.1",
   "locale": "pl-PL",
   "card_inline": {
-    "protein_summary": "Około {{servings_count}} prostych porcji białka w ciągu dnia.",
-    "carbs_summary": "Najlepiej rozłożyć to na kilka porcji w ciągu dnia.",
-    "fat_summary": "Ważna jest nie tylko ilość, ale też rodzaj tłuszczu.",
+    "protein_summary": "Przykłady pokazują, jak z kilku porcji zbudować dzienny cel białka.",
+    "carbs_summary": "Przykłady pokazują porcje, które pomagają rozłożyć węglowodany na cały dzień.",
+    "fat_summary": "Przykłady pokazują, jak szybko sumuje się tłuszcz i które źródła wybierać częściej.",
     "satfat_summary": "Im mniej, tym lepiej. To nie jest cel do dobicia.",
     "cta_examples": "Zobacz przykłady"
   },
   "bottom_sheet": {
     "common": {
       "cta_close": "Zamknij",
-      "disclaimer_examples": "To orientacyjne przykłady. Nie musisz zjadać jednego produktu, żeby osiągnąć cel dnia.",
+      "disclaimer_examples": "To orientacyjne przykłady produktów i porcji opracowane na podstawie USDA FoodData Central. Nie musisz zjadać jednego produktu, żeby osiągnąć cel dnia; rzeczywista zawartość składników zależy od produktu, obróbki i porcji.",
       "disclaimer_warning": "To nie jest „cel do dobicia”. Chodzi o produkty, które szybko podbijają tłuszcze nasycone w 1 porcji."
     },
     "protein": {
-      "title": "Białko — jak to wygląda w jedzeniu",
-      "subtitle": "Cel dnia: {{target_g}} g",
-      "section_simple": "Najprostsze przykłady",
-      "section_meatless": "Wersja bez mięsa",
-      "section_mix": "Prosty miks dnia",
-      "row_goal_share": "Ta porcja daje około {{pct}}% Twojego celu białka.",
-      "row_good_choice": "Dobry prosty wybór na dobicie białka.",
-      "row_meatless_note": "Wersja roślinna: najlepiej łączyć różne źródła.",
-      "mix_example_intro": "Przykładowy prosty miks dnia:",
-      "mix_example_template": "{{item_1}} + {{item_2}} + {{item_3}}"
+      "title": "Białko — przykłady porcji z żywności",
+      "subtitle": "Cel do planowania: {{target_g}} g/d",
+      "section_simple": "Źródła zwierzęce i mieszane",
+      "section_meatless": "Źródła roślinne i bezmięsne",
+      "row_goal_share": "ok. {{pct}} celu",
+      "row_good_choice": "Przykład porcji, którą łatwo włączyć do posiłku.",
+      "row_meatless_note": "Białko roślinne najlepiej planować z różnych źródeł w ciągu dnia.",
+      "intro": "Poniżej pokazano przykładowe porcje produktów, które mogą pomagać pokrywać dzienny cel białka. Nie trzeba realizować celu jednym produktem — zwykle rozkłada się go na kilka posiłków.",
+      "target_label": "Cel do plakietek",
+      "section_examples": "Przykładowe porcje",
+      "chip_goal_share": "ok. {{pct}} celu"
     },
     "carbs": {
-      "title": "Węglowodany — jak to rozłożyć w ciągu dnia",
-      "subtitle": "Cel dnia: {{target_g}} g",
-      "section_base": "Porcje bazowe",
-      "section_quick": "Na szybko",
-      "row_goal_share": "Ta porcja daje około {{pct}}% Twojego celu węglowodanów.",
-      "row_base_note": "Dobra porcja bazowa do głównego posiłku.",
-      "row_quick_note": "Prosty przykład na przekąskę lub szybki posiłek.",
-      "footer": "Węglowodany najłatwiej rozłożyć na kilka posiłków."
+      "title": "Węglowodany — przykłady porcji z żywności",
+      "subtitle": "Cel do planowania: {{target_g}} g/d",
+      "section_base": "Porcje bazowe do posiłku",
+      "section_quick": "Szybkie porcje i dodatki",
+      "row_goal_share": "ok. {{pct}} celu",
+      "row_base_note": "Porcja bazowa, którą łatwo wkomponować w główny posiłek.",
+      "row_quick_note": "Szybka porcja węglowodanów; ilość cukrów i błonnika zależy od produktu.",
+      "footer": "Węglowodany najlepiej rozkładać na kilka posiłków i wybierać częściej produkty zbożowe, warzywa skrobiowe, owoce oraz strączki.",
+      "intro": "Poniżej pokazano przykładowe porcje produktów węglowodanowych. Najlepiej rozkładać je na kilka posiłków i wybierać częściej produkty zbożowe, warzywa skrobiowe, owoce i strączki.",
+      "target_label": "Cel do plakietek",
+      "section_examples": "Przykładowe porcje",
+      "chip_goal_share": "ok. {{pct}} celu"
     },
     "fat": {
-      "title": "Tłuszcz — liczy się ilość i jakość",
-      "subtitle": "Zakres dnia: {{target_min_g}}–{{target_max_g}} g",
-      "section_better": "Lepsze źródła tłuszczu",
-      "section_watch": "Jak łatwo dobić za dużo",
-      "row_range_share": "Ta porcja daje około {{pct}}% dziennego zakresu tłuszczu.",
-      "row_better_note": "To głównie źródło tłuszczów nienasyconych.",
-      "row_watch_note": "To bardziej źródło tłuszczu niż białka.",
-      "footer": "Staraj się częściej wybierać tłuszcze nienasycone."
+      "title": "Tłuszcze — przykłady porcji z żywności",
+      "subtitle": "Zakres do planowania: {{target_min_g}}–{{target_max_g}} g/d",
+      "section_better": "Źródła tłuszczów nienasyconych",
+      "section_watch": "Produkty, z którymi łatwo przesadzić",
+      "row_range_share": "ok. {{pct}} celu",
+      "row_better_note": "Dobry przykład źródła tłuszczu nienasyconego lub produktu z korzystniejszym profilem tłuszczu.",
+      "row_watch_note": "Warto odmierzać porcję — takie produkty szybko zwiększają tłuszcz i kalorie.",
+      "footer": "W tłuszczach liczy się ilość i jakość. Częściej wybieraj źródła nienasycone, a tłuszcze nasycone traktuj jako składnik do ograniczania.",
+      "intro": "Poniżej pokazano, ile tłuszczu wnoszą typowe porcje. W praktyce liczy się nie tylko ilość, ale też jakość — częściej wybieraj tłuszcze nienasycone, a ograniczaj źródła tłuszczów nasyconych.",
+      "target_label": "Cel do plakietek",
+      "section_examples": "Przykładowe porcje",
+      "chip_goal_share": "ok. {{pct}} celu"
     },
     "satfat": {
       "title": "Tłuszcze nasycone — warto ograniczać",
@@ -60,13 +69,12 @@
   "chips": {
     "low": "niska ilość",
     "medium": "średnia ilość",
-    "high": "wysoka ilość",
-    "warning": "uważaj"
+    "high": "wysoka ilość"
   },
   "meal_card": {
     "line_macros": "B {{protein_g}} g • W {{carbs_g}} g • T {{fat_g}} g",
     "line_goal_share": "Pokrywa: białko {{protein_pct}}% • węglowodany {{carbs_pct}}% • tłuszcz {{fat_pct}}%",
-    "line_warning_satfat": "Nasycone: {{level_label}} w 1 porcji",
+    "line_warning_satfat": "Tłuszcze nasycone: {{level_label}} w 1 porcji",
     "line_warning_salt": "Sól: {{level_label}} w 1 porcji",
     "line_warning_sugars": "Cukry: {{level_label}} w 1 porcji"
   },
