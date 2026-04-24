@@ -33694,6 +33694,216 @@ function rehydrateIntakeFromState(savedPal, options){
     }
   }
 
+  const MAIN_SESSION_KEY = 'vildaMainSessionV1';
+  let mainSessionTimer = null;
+  let mainSessionPersistenceInitialized = false;
+  let mainSessionRestoreAttempted = false;
+  let mainSessionRestoreInProgress = false;
+  let mainSessionRestoreFinalizeTimer = null;
+
+  function hasMainSessionStorage(){
+    try {
+      return typeof sessionStorage !== 'undefined';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function isMainSessionAutosavePaused(){
+    if (mainSessionRestoreInProgress) return true;
+    try {
+      if (typeof window !== 'undefined') {
+        if (window.__vildaPersistRestoring) return true;
+        const pauseUntil = Number(window.__vildaPersistPauseUntil || 0);
+        if (pauseUntil && Date.now() < pauseUntil) return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  function clearMainSessionStorage(){
+    try {
+      if (mainSessionTimer) {
+        clearTimeout(mainSessionTimer);
+        mainSessionTimer = null;
+      }
+      if (mainSessionRestoreFinalizeTimer) {
+        clearTimeout(mainSessionRestoreFinalizeTimer);
+        mainSessionRestoreFinalizeTimer = null;
+      }
+    } catch (_) {}
+    if (!hasMainSessionStorage()) return;
+    try {
+      sessionStorage.removeItem(MAIN_SESSION_KEY);
+    } catch (_) {}
+  }
+
+  function saveMainSessionNow(){
+    if (!hasMainSessionStorage() || isMainSessionAutosavePaused()) return;
+    try {
+      if (mainSessionTimer) {
+        clearTimeout(mainSessionTimer);
+        mainSessionTimer = null;
+      }
+    } catch (_) {}
+    try {
+      const data = collectUserData();
+      if (data && data.version === 1) {
+        sessionStorage.setItem(MAIN_SESSION_KEY, JSON.stringify(data));
+      }
+    } catch (_) {
+      // celowo ignorujemy błędy autosave – nie mogą zatrzymać aplikacji
+    }
+  }
+
+  function scheduleMainSessionSave(evt) {
+    if (!hasMainSessionStorage() || isMainSessionAutosavePaused()) return;
+    if (evt && evt.target) {
+      try {
+        if (typeof evt.target.matches === 'function' && !evt.target.matches('input, select, textarea')) {
+          return;
+        }
+      } catch (_) {}
+    }
+
+    if (mainSessionTimer) {
+      clearTimeout(mainSessionTimer);
+    }
+    mainSessionTimer = setTimeout(() => {
+      mainSessionTimer = null;
+      if (isMainSessionAutosavePaused()) return;
+      saveMainSessionNow();
+    }, 300);
+  }
+
+  function finalizeMainSessionRestore(prevPersistRestoring) {
+    const complete = () => {
+      mainSessionRestoreFinalizeTimer = null;
+      mainSessionRestoreInProgress = false;
+      try {
+        if (typeof window !== 'undefined') {
+          window.__vildaPersistRestoring = prevPersistRestoring;
+        }
+      } catch (_) {}
+      try { saveMainSessionNow(); } catch (_) {}
+    };
+
+    try {
+      if (mainSessionRestoreFinalizeTimer) {
+        clearTimeout(mainSessionRestoreFinalizeTimer);
+      }
+    } catch (_) {}
+
+    const queueComplete = () => {
+      mainSessionRestoreFinalizeTimer = setTimeout(complete, 0);
+    };
+
+    try {
+      if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(queueComplete);
+        return;
+      }
+    } catch (_) {}
+
+    queueComplete();
+  }
+
+  function restoreMainSessionIfAny() {
+    if (mainSessionRestoreAttempted || !hasMainSessionStorage()) return;
+    mainSessionRestoreAttempted = true;
+    let prevPersistRestoring = false;
+    let restoreQueuedFinalize = false;
+    try {
+      const raw = sessionStorage.getItem(MAIN_SESSION_KEY);
+      if (!raw) return;
+
+      // Jeżeli użytkownik zdążył już coś wpisać (np. wczytał inny zestaw danych),
+      // nie nadpisujemy ręcznie wprowadzonych wartości.
+      if (typeof anyDataEntered === 'function' && anyDataEntered()) {
+        return;
+      }
+
+      const data = JSON.parse(raw);
+      if (!data || data.version !== 1) return;
+
+      try {
+        if (typeof window !== 'undefined') {
+          prevPersistRestoring = !!window.__vildaPersistRestoring;
+          window.__vildaPersistRestoring = true;
+        }
+      } catch (_) {}
+
+      mainSessionRestoreInProgress = true;
+      applyLoadedData(data);
+      restoreQueuedFinalize = true;
+      finalizeMainSessionRestore(prevPersistRestoring);
+    } catch (_) {
+      // w razie błędu po prostu nic nie przywracamy
+    } finally {
+      if (!restoreQueuedFinalize) {
+        mainSessionRestoreInProgress = false;
+        try {
+          if (typeof window !== 'undefined') {
+            window.__vildaPersistRestoring = prevPersistRestoring;
+          }
+        } catch (_) {}
+      }
+    }
+  }
+
+  function attachMainSessionClearHandler(btnId) {
+    const clearBtn = document.getElementById(btnId);
+    if (!clearBtn || clearBtn.__vildaMainSessionClearBound) return;
+    clearBtn.__vildaMainSessionClearBound = '1';
+    clearBtn.addEventListener('click', clearMainSessionStorage, true);
+  }
+
+  function initMainSessionPersistence() {
+    if (mainSessionPersistenceInitialized) return;
+    mainSessionPersistenceInitialized = true;
+
+    ['input', 'change'].forEach(evt => {
+      document.addEventListener(evt, scheduleMainSessionSave, true);
+    });
+    try {
+      window.addEventListener('pagehide', saveMainSessionNow, { capture: true });
+    } catch (_) {}
+
+    const initAfterDomReady = () => {
+      attachMainSessionClearHandler('clearAllDataBtn');
+      attachMainSessionClearHandler('clearBtn');
+      const runRestore = () => {
+        try { restoreMainSessionIfAny(); } catch (_) {}
+      };
+      if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => requestAnimationFrame(runRestore));
+      } else {
+        setTimeout(runRestore, 0);
+      }
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initAfterDomReady, { once: true });
+    } else {
+      initAfterDomReady();
+    }
+
+    // Proste API do debugowania z konsoli (opcjonalne)
+    try {
+      window.vildaSession = {
+        saveNow: saveMainSessionNow,
+        schedule: scheduleMainSessionSave,
+        clear: clearMainSessionStorage,
+        restore: () => {
+          mainSessionRestoreAttempted = false;
+          restoreMainSessionIfAny();
+        }
+      };
+    } catch (_) {}
+  }
+
+  initMainSessionPersistence();
+
   function collectUserData(){
     // Basic user
     const name = (val('name') || val('advName') || val('fullName')).trim();
@@ -33708,86 +33918,6 @@ function rehydrateIntakeFromState(savedPal, options){
       // weryfikację przy późniejszym odtwarzaniu podsumowania.
       waist: num(val('waistCm')),
       hip: num(val('hipCm'))
-    };
-    // === AUTOSAVE: stan głównego kalkulatora w sessionStorage (index.html + docpro.html) ===
-    const MAIN_SESSION_KEY = 'vildaMainSessionV1';
-
-    let mainSessionTimer = null;
-  
-    function scheduleMainSessionSave() {
-      // Jeśli przeglądarka nie wspiera sessionStorage (np. tryb prywatny w niektórych przeglądarkach) – pomijamy.
-      try {
-        if (typeof sessionStorage === 'undefined') return;
-      } catch (e) {
-        return;
-      }
-  
-      if (mainSessionTimer) {
-        clearTimeout(mainSessionTimer);
-      }
-      mainSessionTimer = setTimeout(() => {
-        try {
-          const data = collectUserData();
-          if (data && data.version === 1) {
-            sessionStorage.setItem(MAIN_SESSION_KEY, JSON.stringify(data));
-          }
-        } catch (e) {
-          // celowo ignorujemy błędy autosave – nie mogą zatrzymać aplikacji
-        }
-      }, 300);
-    }
-  
-    // Zapisuj stan przy każdej zmianie w dowolnym polu formularza
-    ['input', 'change'].forEach(evt => {
-      document.addEventListener(evt, scheduleMainSessionSave, true);
-    });
-  
-    function restoreMainSessionIfAny() {
-      try {
-        if (typeof sessionStorage === 'undefined') return;
-        const raw = sessionStorage.getItem(MAIN_SESSION_KEY);
-        if (!raw) return;
-  
-        // Jeżeli użytkownik zdążył już coś wpisać (np. wczytał inny zestaw danych),
-        // nie nadpisujemy ręcznie wprowadzonych wartości.
-        if (typeof anyDataEntered === 'function' && anyDataEntered()) {
-          return;
-        }
-  
-        const data = JSON.parse(raw);
-        if (!data || data.version !== 1) return;
-  
-        applyLoadedData(data);
-      } catch (e) {
-        // w razie błędu po prostu nic nie przywracamy
-      }
-    }
-  
-    document.addEventListener('DOMContentLoaded', restoreMainSessionIfAny);
-  
-    // Po kliknięciu „Wyczyść wszystkie dane” czyścimy też bieżącą sesję
-    document.addEventListener('DOMContentLoaded', () => {
-      const clearBtn = document.getElementById('clearAllDataBtn');
-      if (!clearBtn) return;
-      clearBtn.addEventListener('click', () => {
-        try {
-          if (typeof sessionStorage !== 'undefined') {
-            sessionStorage.removeItem(MAIN_SESSION_KEY);
-          }
-        } catch (e) {}
-      });
-    });
-  
-    // Proste API do debugowania z konsoli (opcjonalne)
-    window.vildaSession = {
-      saveNow: scheduleMainSessionSave,
-      clear: () => {
-        try {
-          if (typeof sessionStorage !== 'undefined') {
-            sessionStorage.removeItem(MAIN_SESSION_KEY);
-          }
-        } catch (e) {}
-      }
     };
     // Advanced growth (read globals if available)
     const adv = {
@@ -34088,6 +34218,7 @@ function rehydrateIntakeFromState(savedPal, options){
         window.__vildaSuppressGhAdvancedImportUntil = Date.now() + 4000;
       }
     } catch (_) {}
+    try { clearMainSessionStorage(); } catch (_) {}
 
     // Reset visible fields
     [

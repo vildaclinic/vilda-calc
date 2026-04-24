@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '0.9.290';
+const SW_VERSION = '0.9.292';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -32,10 +32,13 @@ const CORE_SHELL_URLS = [
   ROOT_DOCUMENT,
   '/manifest.json',
   '/style.css',
+  '/style.css?v=38',
   '/sidebar.css',
   '/ios26-v2.css',
+  '/ios26-v2.css?v=10',
   '/logo_vilda.jpeg',
   '/app.js',
+  '/app.js?v=64',
   '/nutrition_norms.js',
   '/nutrition_micros.js',
   '/adult_vitals.js',
@@ -49,7 +52,9 @@ const CORE_SHELL_URLS = [
   '/gh_igf_therapy.js',
   '/antibiotic_therapy.js',
   '/userData.js',
+  '/userData.js?v=2',
   '/ios26-ui.js',
+  '/ios26-ui.js?v=11',
   '/tutorial.js',
   '/bp_module.js',
   '/circumference_module.js',
@@ -253,14 +258,22 @@ function buildNavigationNetworkRequest(request) {
 function getShellCacheKeyFromRequest(request) {
   if (!isSameOrigin(request)) return null;
 
-  const pathname = getPathname(request);
+  const url = toURL(request);
+  if (!url) return null;
+
+  const pathname = url.pathname;
 
   if (isNavigationRequest(request)) {
     const normalizedPath = normalizeNavigationPath(pathname);
     return DOCUMENT_PATHS.has(normalizedPath) ? normalizedPath : null;
   }
 
-  return SHELL_PATHS.has(pathname) ? pathname : null;
+  if (!SHELL_PATHS.has(pathname)) return null;
+
+  // Dla zasobów statycznych z query stringiem (np. app.js?v=63) kluczem cache
+  // musi być pełny URL względny. W przeciwnym razie można oddać starą,
+  // niewersjonowaną odpowiedź /app.js i rozjechać HTML/CSS/JS między wersjami.
+  return url.search ? `${pathname}${url.search}` : pathname;
 }
 
 function getNavigationCacheKeyFromResponse(request, response) {
@@ -289,7 +302,7 @@ async function readFromShellCache(request) {
   if (!key) return undefined;
 
   const cache = await caches.open(SHELL_CACHE);
-  return cache.match(key, { ignoreSearch: true });
+  return cache.match(key);
 }
 
 async function readDocumentFromShell(pathname) {
@@ -297,7 +310,7 @@ async function readDocumentFromShell(pathname) {
   if (!DOCUMENT_PATHS.has(key)) return undefined;
 
   const cache = await caches.open(SHELL_CACHE);
-  return cache.match(key, { ignoreSearch: true });
+  return cache.match(key);
 }
 
 async function readFromRuntimeCache(request) {
@@ -305,7 +318,8 @@ async function readFromRuntimeCache(request) {
   const exactMatch = await cache.match(request);
   if (exactMatch) return exactMatch;
 
-  if (isSameOrigin(request)) {
+  const url = toURL(request);
+  if (isSameOrigin(request) && url && !url.search) {
     return cache.match(request, { ignoreSearch: true });
   }
 

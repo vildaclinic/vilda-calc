@@ -11512,3 +11512,737 @@ body.nutrition-practice-sheet-open {
     min-height: auto;
   }
 }
+
+
+/* === Appearance integration for diet and nutrition cards === */
+/* Celem poniższej warstwy jest podpięcie wewnętrznych paneli i kontrolek
+   kart dietetycznych oraz norm żywieniowych do ustawień „Wygląd aplikacji”.
+   Wcześniej część elementów korzystała z twardo wpisanych kolorów (#fff/#000
+   i stałych odcieni fioletu/turkusu), przez co reagowała tylko „obudowa”
+   karty. Teraz wnętrze dziedziczy zmienne zależne od trybu Liquid i trybu
+   wysokiego kontrastu. */
+
+/* -------------------- Diet recommendations -------------------- */
+#dietRecommendationsContent {
+  color: var(--diet-ui-text, var(--text)) !important;
+  --diet-ui-text: var(--text);
+  --diet-ui-heading: #241334;
+  --diet-ui-muted: #4a4a4a;
+  --diet-ui-muted-strong: #3f2b4f;
+  --diet-ui-accent: #9900ff;
+  --diet-ui-accent-strong: #5a008f;
+  --diet-ui-accent-soft: rgba(153, 0, 255, 0.07);
+  --diet-ui-accent-soft-weak: rgba(153, 0, 255, 0.045);
+  --diet-ui-surface: #ffffff;
+  --diet-ui-surface-alt: rgba(255, 255, 255, 0.72);
+  --diet-ui-surface-soft: rgba(153, 0, 255, 0.045);
+  --diet-ui-surface-soft-strong: rgba(153, 0, 255, 0.08);
+  --diet-ui-border: rgba(153, 0, 255, 0.16);
+  --diet-ui-border-strong: rgba(153, 0, 255, 0.26);
+  --diet-ui-neutral-border: #e6e6e6;
+  --diet-ui-divider: #eee4f7;
+  --diet-ui-button-bg: #ffffff;
+  --diet-ui-button-text: #000000;
+  --diet-ui-button-hover-bg: rgba(153, 0, 255, 0.07);
+  --diet-ui-switch-bg: #ccc;
+  --diet-ui-switch-thumb: #ffffff;
+  --diet-ui-focus: rgba(153, 0, 255, 0.22);
+  --diet-ui-active-bg: #9900ff;
+  --diet-ui-active-border: #9900ff;
+  --diet-ui-active-text: #ffffff;
+}
+
+body.liquid-ios26 #dietRecommendationsContent {
+  --diet-ui-text: #17131d;
+  --diet-ui-heading: #211531;
+  --diet-ui-muted: #42394d;
+  --diet-ui-muted-strong: #3c3049;
+  --diet-ui-accent-soft: color-mix(in srgb, var(--lg-surface-light) 82%, rgba(153, 0, 255, 0.10));
+  --diet-ui-accent-soft-weak: color-mix(in srgb, var(--lg-surface-light) 88%, rgba(153, 0, 255, 0.07));
+  --diet-ui-surface: var(--lg-surface-light);
+  --diet-ui-surface-alt: color-mix(in srgb, var(--lg-surface-light) 92%, rgba(255, 255, 255, 0.82));
+  --diet-ui-surface-soft: color-mix(in srgb, var(--lg-surface-light) 84%, rgba(153, 0, 255, 0.07));
+  --diet-ui-surface-soft-strong: color-mix(in srgb, var(--lg-surface-light) 78%, rgba(153, 0, 255, 0.10));
+  --diet-ui-border: var(--lg-border);
+  --diet-ui-border-strong: var(--lg-border);
+  --diet-ui-neutral-border: var(--lg-border);
+  --diet-ui-divider: color-mix(in srgb, var(--lg-border) 75%, rgba(153, 0, 255, 0.18));
+  --diet-ui-button-bg: color-mix(in srgb, var(--lg-surface-light) 94%, rgba(255, 255, 255, 0.92));
+  --diet-ui-button-hover-bg: color-mix(in srgb, var(--lg-surface-light) 78%, rgba(153, 0, 255, 0.09));
+  --diet-ui-switch-bg: color-mix(in srgb, var(--lg-surface-light) 70%, rgba(0, 0, 0, 0.12));
+}
+
+body.high-contrast-level-1.liquid-ios26 #dietRecommendationsContent,
+body.high-contrast-level-2.liquid-ios26 #dietRecommendationsContent,
+body.high-contrast-level-3.liquid-ios26 #dietRecommendationsContent {
+  background: var(--hc-result-bg) !important;
+  color: var(--hc-text) !important;
+  border: var(--hc-card-border-width) solid var(--hc-input-border) !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.09) !important;
+  backdrop-filter: var(--hc-blur) !important;
+  -webkit-backdrop-filter: var(--hc-blur) !important;
+  --diet-ui-text: var(--hc-text);
+  --diet-ui-heading: var(--hc-text);
+  --diet-ui-muted: var(--hc-muted);
+  --diet-ui-muted-strong: var(--hc-muted);
+  --diet-ui-surface: var(--hc-surface);
+  --diet-ui-surface-alt: var(--hc-result-bg);
+  --diet-ui-surface-soft: var(--hc-result-bg);
+  --diet-ui-surface-soft-strong: var(--hc-button-bg);
+  --diet-ui-border: var(--hc-border);
+  --diet-ui-border-strong: var(--hc-input-border);
+  --diet-ui-neutral-border: var(--hc-input-border);
+  --diet-ui-divider: rgba(7, 54, 62, 0.18);
+  --diet-ui-button-bg: var(--hc-module-btn-bg);
+  --diet-ui-button-text: var(--hc-text);
+  --diet-ui-button-hover-bg: var(--hc-module-btn-hover-bg);
+  --diet-ui-switch-bg: var(--hc-button-bg);
+  --diet-ui-focus: var(--hc-focus-color);
+  --diet-ui-active-bg: var(--hc-module-btn-active-bg);
+  --diet-ui-active-border: var(--hc-module-btn-active-border);
+  --diet-ui-active-text: var(--hc-text);
+}
+
+#dietRecommendationsContent .diet-card-intro,
+#dietRecommendationsContent .diet-panel-lead,
+#dietRecommendationsContent .diet-energy-control-card,
+#dietRecommendationsContent .diet-pdf-variant-card,
+#dietRecommendationsContent .diet-energy-output,
+#dietRecommendationsContent .diet-energy-extra-options,
+#dietRecommendationsContent .diet-personalization-module,
+#dietRecommendationsContent .diet-personalized-summary,
+#dietRecommendationsContent .diet-smart-goal,
+#dietRecommendationsContent .diet-guidance-box,
+#dietRecommendationsContent .diet-calculation-details,
+#dietRecommendationsContent .diet-survey-more,
+#dietRecommendationsContent .diet-survey-reset-note {
+  border-color: var(--diet-ui-border) !important;
+  color: var(--diet-ui-text) !important;
+}
+
+#dietRecommendationsContent .diet-card-intro,
+#dietRecommendationsContent .diet-personalization-module,
+#dietRecommendationsContent .diet-personalized-summary,
+#dietRecommendationsContent .diet-survey-reset-note {
+  background: var(--diet-ui-surface-soft) !important;
+}
+
+#dietRecommendationsContent .diet-panel-lead,
+#dietRecommendationsContent .diet-energy-extra-options,
+#dietRecommendationsContent .diet-calculation-details,
+#dietRecommendationsContent .diet-survey-more {
+  background: var(--diet-ui-surface-alt) !important;
+}
+
+#dietRecommendationsContent .diet-energy-control-card,
+#dietRecommendationsContent .diet-pdf-variant-card,
+#dietRecommendationsContent .diet-energy-output,
+#dietRecommendationsContent .diet-smart-goal,
+#dietRecommendationsContent .diet-guidance-box {
+  background: var(--diet-ui-surface) !important;
+}
+
+body.liquid-ios26 #dietRecommendationsContent .diet-card-intro,
+body.liquid-ios26 #dietRecommendationsContent .diet-panel-lead,
+body.liquid-ios26 #dietRecommendationsContent .diet-energy-control-card,
+body.liquid-ios26 #dietRecommendationsContent .diet-pdf-variant-card,
+body.liquid-ios26 #dietRecommendationsContent .diet-energy-output,
+body.liquid-ios26 #dietRecommendationsContent .diet-energy-extra-options,
+body.liquid-ios26 #dietRecommendationsContent .diet-personalization-module,
+body.liquid-ios26 #dietRecommendationsContent .diet-personalized-summary,
+body.liquid-ios26 #dietRecommendationsContent .diet-smart-goal,
+body.liquid-ios26 #dietRecommendationsContent .diet-guidance-box,
+body.liquid-ios26 #dietRecommendationsContent .diet-calculation-details,
+body.liquid-ios26 #dietRecommendationsContent .diet-survey-more,
+body.liquid-ios26 #dietRecommendationsContent .diet-survey-reset-note {
+  backdrop-filter: blur(10px) saturate(115%) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(115%) !important;
+}
+
+body.high-contrast-level-1.liquid-ios26 #dietRecommendationsContent .diet-card-intro,
+body.high-contrast-level-2.liquid-ios26 #dietRecommendationsContent .diet-card-intro,
+body.high-contrast-level-3.liquid-ios26 #dietRecommendationsContent .diet-card-intro,
+body.high-contrast-level-1.liquid-ios26 #dietRecommendationsContent .diet-panel-lead,
+body.high-contrast-level-2.liquid-ios26 #dietRecommendationsContent .diet-panel-lead,
+body.high-contrast-level-3.liquid-ios26 #dietRecommendationsContent .diet-panel-lead,
+body.high-contrast-level-1.liquid-ios26 #dietRecommendationsContent .diet-energy-control-card,
+body.high-contrast-level-2.liquid-ios26 #dietRecommendationsContent .diet-energy-control-card,
+body.high-contrast-level-3.liquid-ios26 #dietRecommendationsContent .diet-energy-control-card,
+body.high-contrast-level-1.liquid-ios26 #dietRecommendationsContent .diet-pdf-variant-card,
+body.high-contrast-level-2.liquid-ios26 #dietRecommendationsContent .diet-pdf-variant-card,
+body.high-contrast-level-3.liquid-ios26 #dietRecommendationsContent .diet-pdf-variant-card,
+body.high-contrast-level-1.liquid-ios26 #dietRecommendationsContent .diet-energy-output,
+body.high-contrast-level-2.liquid-ios26 #dietRecommendationsContent .diet-energy-output,
+body.high-contrast-level-3.liquid-ios26 #dietRecommendationsContent .diet-energy-output,
+body.high-contrast-level-1.liquid-ios26 #dietRecommendationsContent .diet-energy-extra-options,
+body.high-contrast-level-2.liquid-ios26 #dietRecommendationsContent .diet-energy-extra-options,
+body.high-contrast-level-3.liquid-ios26 #dietRecommendationsContent .diet-energy-extra-options,
+body.high-contrast-level-1.liquid-ios26 #dietRecommendationsContent .diet-personalization-module,
+body.high-contrast-level-2.liquid-ios26 #dietRecommendationsContent .diet-personalization-module,
+body.high-contrast-level-3.liquid-ios26 #dietRecommendationsContent .diet-personalization-module,
+body.high-contrast-level-1.liquid-ios26 #dietRecommendationsContent .diet-personalized-summary,
+body.high-contrast-level-2.liquid-ios26 #dietRecommendationsContent .diet-personalized-summary,
+body.high-contrast-level-3.liquid-ios26 #dietRecommendationsContent .diet-personalized-summary,
+body.high-contrast-level-1.liquid-ios26 #dietRecommendationsContent .diet-smart-goal,
+body.high-contrast-level-2.liquid-ios26 #dietRecommendationsContent .diet-smart-goal,
+body.high-contrast-level-3.liquid-ios26 #dietRecommendationsContent .diet-smart-goal,
+body.high-contrast-level-1.liquid-ios26 #dietRecommendationsContent .diet-guidance-box,
+body.high-contrast-level-2.liquid-ios26 #dietRecommendationsContent .diet-guidance-box,
+body.high-contrast-level-3.liquid-ios26 #dietRecommendationsContent .diet-guidance-box,
+body.high-contrast-level-1.liquid-ios26 #dietRecommendationsContent .diet-calculation-details,
+body.high-contrast-level-2.liquid-ios26 #dietRecommendationsContent .diet-calculation-details,
+body.high-contrast-level-3.liquid-ios26 #dietRecommendationsContent .diet-calculation-details,
+body.high-contrast-level-1.liquid-ios26 #dietRecommendationsContent .diet-survey-more,
+body.high-contrast-level-2.liquid-ios26 #dietRecommendationsContent .diet-survey-more,
+body.high-contrast-level-3.liquid-ios26 #dietRecommendationsContent .diet-survey-more,
+body.high-contrast-level-1.liquid-ios26 #dietRecommendationsContent .diet-survey-reset-note,
+body.high-contrast-level-2.liquid-ios26 #dietRecommendationsContent .diet-survey-reset-note,
+body.high-contrast-level-3.liquid-ios26 #dietRecommendationsContent .diet-survey-reset-note {
+  backdrop-filter: var(--hc-blur) !important;
+  -webkit-backdrop-filter: var(--hc-blur) !important;
+  box-shadow: var(--hc-shadow) !important;
+}
+
+#dietRecommendationsContent .diet-card-intro h3,
+#dietRecommendationsContent .diet-panel-lead h4,
+#dietRecommendationsContent .diet-pdf-variant-card h4,
+#dietRecommendationsContent .diet-energy-output-head h3,
+#dietRecommendationsContent .diet-personalization-head strong,
+#dietRecommendationsContent .diet-survey-section h4,
+#dietRecommendationsContent .diet-survey-more summary,
+#dietRecommendationsContent .diet-guidance-box h4,
+#dietRecommendationsContent .diet-smart-goal h4,
+#dietRecommendationsContent .diet-myth-box-head h4,
+#dietRecommendationsContent .diet-control-title,
+#dietRecommendationsContent .diet-personalized-summary h3,
+#dietRecommendationsContent .diet-energy-extra-options summary {
+  color: var(--diet-ui-heading) !important;
+}
+
+#dietRecommendationsContent .diet-personalized-kicker {
+  color: var(--diet-ui-accent-strong) !important;
+}
+
+#dietRecommendationsContent .diet-card-intro p,
+#dietRecommendationsContent .diet-panel-lead p,
+#dietRecommendationsContent .diet-pdf-variant-card p,
+#dietRecommendationsContent .diet-control-hint,
+#dietRecommendationsContent .diet-energy-output-head p,
+#dietRecommendationsContent .diet-personalization-head p,
+#dietRecommendationsContent .diet-survey-help,
+#dietRecommendationsContent .diet-smart-goal p,
+#dietRecommendationsContent .diet-guidance-box p,
+#dietRecommendationsContent .diet-calculation-details p,
+#dietRecommendationsContent .diet-survey-counter,
+#dietRecommendationsContent .diet-survey-reset-note,
+#dietRecommendationsContent .diet-recommend-note,
+#dietRecommendationsContent .diet-info-note,
+#dietRecommendationsContent .diet-mode-tab span {
+  color: var(--diet-ui-muted) !important;
+}
+
+#dietRecommendationsContent .diet-energy-output-head {
+  border-bottom-color: var(--diet-ui-divider) !important;
+}
+
+#dietRecommendationsContent .diet-survey-panel {
+  border-top-color: var(--diet-ui-divider) !important;
+}
+
+#dietRecommendationsContent .diet-swaps-list li {
+  border-bottom-color: var(--diet-ui-divider) !important;
+}
+
+#dietRecommendationsContent .diet-mode-tab,
+#dietRecommendationsContent .diet-segmented-control button,
+#dietRecommendationsContent .diet-option-check,
+#dietRecommendationsContent .diet-survey-chip,
+#dietRecommendationsContent .diet-survey-toggle,
+#dietRecommendationsContent .diet-survey-clear,
+#dietRecommendationsContent .diet-myth-next-btn,
+#dietRecommendationsContent .diet-primary-action,
+#dietRecommendationsContent .diet-secondary-action,
+#dietRecommendationsContent #generateDietBtn,
+#dietRecommendationsContent #generateEnergyDietBtn,
+#dietRecommendationsContent #dietRecommendationsPdfBtn.diet-report-pdf-btn {
+  background: var(--diet-ui-button-bg) !important;
+  color: var(--diet-ui-button-text) !important;
+}
+
+#dietRecommendationsContent .diet-mode-tab,
+#dietRecommendationsContent .diet-option-check,
+#dietRecommendationsContent .diet-survey-chip {
+  border-color: var(--diet-ui-neutral-border) !important;
+}
+
+#dietRecommendationsContent .diet-mode-tab,
+#dietRecommendationsContent .diet-segmented-control button,
+#dietRecommendationsContent .diet-survey-toggle,
+#dietRecommendationsContent .diet-survey-clear,
+#dietRecommendationsContent .diet-myth-next-btn,
+#dietRecommendationsContent .diet-primary-action,
+#dietRecommendationsContent .diet-secondary-action,
+#dietRecommendationsContent #generateDietBtn,
+#dietRecommendationsContent #generateEnergyDietBtn,
+#dietRecommendationsContent #dietRecommendationsPdfBtn.diet-report-pdf-btn {
+  border-color: var(--diet-ui-accent) !important;
+}
+
+#dietRecommendationsContent .diet-personalized-badge {
+  background: var(--diet-ui-button-bg) !important;
+  color: var(--diet-ui-muted-strong) !important;
+  border-color: var(--diet-ui-border) !important;
+}
+
+#dietRecommendationsContent .diet-mode-tab.is-active,
+#dietRecommendationsContent .diet-option-check:has(input:checked),
+#dietRecommendationsContent .diet-survey-chip:has(input:checked),
+#dietRecommendationsContent .diet-pdf-variant-card--recommended,
+#dietRecommendationsContent .diet-personalized-badge--active {
+  background: var(--diet-ui-accent-soft) !important;
+  border-color: var(--diet-ui-active-border) !important;
+}
+
+#dietRecommendationsContent .diet-mode-tab strong {
+  color: var(--diet-ui-heading) !important;
+}
+
+#dietRecommendationsContent .diet-mode-tab.is-active strong {
+  color: var(--diet-ui-accent-strong) !important;
+}
+
+#dietRecommendationsContent .diet-segmented-control button.is-active {
+  background: var(--diet-ui-active-bg) !important;
+  border-color: var(--diet-ui-active-border) !important;
+  color: var(--diet-ui-active-text) !important;
+}
+
+#dietRecommendationsContent .diet-recommended-badge,
+#dietRecommendationsContent .diet-smart-goal-number {
+  background: var(--diet-ui-active-bg) !important;
+  color: var(--diet-ui-active-text) !important;
+}
+
+#dietRecommendationsContent .diet-survey-toggle:hover,
+#dietRecommendationsContent .diet-survey-toggle:focus-visible,
+#dietRecommendationsContent .diet-survey-clear:hover,
+#dietRecommendationsContent .diet-survey-clear:focus-visible,
+#dietRecommendationsContent .diet-myth-next-btn:hover,
+#dietRecommendationsContent .diet-myth-next-btn:focus-visible,
+#dietRecommendationsContent .diet-primary-action:hover,
+#dietRecommendationsContent .diet-primary-action:focus-visible,
+#dietRecommendationsContent .diet-secondary-action:hover,
+#dietRecommendationsContent .diet-secondary-action:focus-visible,
+#dietRecommendationsContent #generateDietBtn:hover,
+#dietRecommendationsContent #generateDietBtn:focus-visible,
+#dietRecommendationsContent #generateEnergyDietBtn:hover,
+#dietRecommendationsContent #generateEnergyDietBtn:focus-visible,
+#dietRecommendationsContent #dietRecommendationsPdfBtn.diet-report-pdf-btn:hover,
+#dietRecommendationsContent #dietRecommendationsPdfBtn.diet-report-pdf-btn:focus-visible,
+#dietRecommendationsContent .diet-mode-tab:hover,
+#dietRecommendationsContent .diet-mode-tab:focus-visible,
+#dietRecommendationsContent .diet-option-check:hover,
+#dietRecommendationsContent .diet-survey-chip:hover,
+#dietRecommendationsContent .diet-segmented-control button:hover:not(.is-active),
+#dietRecommendationsContent .diet-segmented-control button:focus-visible:not(.is-active) {
+  background: var(--diet-ui-button-hover-bg) !important;
+}
+
+#dietRecommendationsContent .diet-mode-tab.is-active:hover,
+#dietRecommendationsContent .diet-mode-tab.is-active:focus-visible {
+  background: var(--diet-ui-accent-soft) !important;
+}
+
+#dietRecommendationsContent .diet-option-check input[type="checkbox"],
+#dietRecommendationsContent .diet-survey-chip input[type="checkbox"] {
+  accent-color: var(--diet-ui-accent) !important;
+}
+
+#dietRecommendationsContent .switch-diet .slider {
+  background: var(--diet-ui-switch-bg) !important;
+}
+
+#dietRecommendationsContent .switch-diet .slider::before {
+  background: var(--diet-ui-switch-thumb) !important;
+}
+
+#dietRecommendationsContent .switch-diet input:checked + .slider {
+  background: var(--diet-ui-active-bg) !important;
+}
+
+#dietRecommendationsContent .switch-diet input:checked + .slider::before {
+  background: var(--diet-ui-switch-thumb) !important;
+}
+
+/* -------------------- Nutrition norms, micronutrients and sheets -------------------- */
+.nutrition-norms-card,
+.nutrition-micros-card,
+.nutrition-practice-sheet {
+  --nutrition-ui-text: var(--text);
+  --nutrition-ui-heading: #14393d;
+  --nutrition-ui-muted: #5b6770;
+  --nutrition-ui-muted-strong: #48656a;
+  --nutrition-ui-accent: var(--primary);
+  --nutrition-ui-accent-text: #0b7285;
+  --nutrition-ui-surface: #ffffff;
+  --nutrition-ui-surface-alt: rgba(255, 255, 255, 0.72);
+  --nutrition-ui-surface-soft: rgba(11, 114, 133, 0.05);
+  --nutrition-ui-surface-soft-strong: rgba(11, 114, 133, 0.08);
+  --nutrition-ui-chip-bg: rgba(11, 114, 133, 0.10);
+  --nutrition-ui-chip-text: #0b7285;
+  --nutrition-ui-border: rgba(11, 114, 133, 0.16);
+  --nutrition-ui-border-strong: rgba(11, 114, 133, 0.22);
+  --nutrition-ui-divider: rgba(0, 0, 0, 0.08);
+  --nutrition-ui-switch-bg: #c3ccd1;
+  --nutrition-ui-switch-thumb: #ffffff;
+  --nutrition-ui-button-bg: #ffffff;
+  --nutrition-ui-button-text: #164245;
+  --nutrition-ui-button-hover-bg: rgba(11, 114, 133, 0.08);
+  --nutrition-ui-button-shadow: 0 1px 0 rgba(255, 255, 255, 0.45), 0 4px 12px rgba(0, 0, 0, 0.05);
+  --nutrition-ui-active-bg: var(--primary);
+  --nutrition-ui-active-border: var(--primary);
+  --nutrition-ui-active-text: #ffffff;
+  --nutrition-ui-focus: rgba(0, 131, 141, 0.18);
+  --nutrition-ui-warning-text: #7a4e00;
+  --nutrition-ui-warning-bg: rgba(245, 159, 0, 0.10);
+  --nutrition-ui-warning-border: rgba(245, 159, 0, 0.22);
+  --nutrition-ui-tooltip-bg: #ffffff;
+  --nutrition-ui-tooltip-text: #000000;
+  --nutrition-ui-tooltip-border: #000000;
+  --nutrition-ui-panel-blur: none;
+  --nutrition-ui-shadow: 0 8px 22px rgba(0, 0, 0, 0.08);
+}
+
+body.liquid-ios26 .nutrition-norms-card,
+body.liquid-ios26 .nutrition-micros-card,
+body.liquid-ios26 .nutrition-practice-sheet {
+  --nutrition-ui-text: #16282d;
+  --nutrition-ui-heading: #14393d;
+  --nutrition-ui-muted: #4d636a;
+  --nutrition-ui-muted-strong: #355961;
+  --nutrition-ui-surface: var(--lg-surface-light);
+  --nutrition-ui-surface-alt: color-mix(in srgb, var(--lg-surface-light) 92%, rgba(255, 255, 255, 0.85));
+  --nutrition-ui-surface-soft: color-mix(in srgb, var(--lg-surface-light) 84%, rgba(11, 114, 133, 0.07));
+  --nutrition-ui-surface-soft-strong: color-mix(in srgb, var(--lg-surface-light) 78%, rgba(11, 114, 133, 0.09));
+  --nutrition-ui-chip-bg: color-mix(in srgb, var(--lg-surface-light) 82%, rgba(11, 114, 133, 0.12));
+  --nutrition-ui-chip-text: #0b5e68;
+  --nutrition-ui-border: var(--lg-border);
+  --nutrition-ui-border-strong: var(--lg-border);
+  --nutrition-ui-divider: color-mix(in srgb, var(--lg-border) 72%, rgba(0, 0, 0, 0.08));
+  --nutrition-ui-switch-bg: color-mix(in srgb, var(--lg-surface-light) 70%, rgba(0, 0, 0, 0.12));
+  --nutrition-ui-button-bg: color-mix(in srgb, var(--lg-surface-light) 94%, rgba(255, 255, 255, 0.92));
+  --nutrition-ui-button-hover-bg: color-mix(in srgb, var(--lg-surface-light) 82%, rgba(11, 114, 133, 0.09));
+  --nutrition-ui-tooltip-bg: color-mix(in srgb, var(--lg-surface-light) 95%, rgba(255, 255, 255, 0.96));
+  --nutrition-ui-tooltip-text: #10282d;
+  --nutrition-ui-tooltip-border: var(--lg-border);
+  --nutrition-ui-panel-blur: blur(10px) saturate(115%);
+}
+
+body.high-contrast-level-1.liquid-ios26 .nutrition-norms-card,
+body.high-contrast-level-2.liquid-ios26 .nutrition-norms-card,
+body.high-contrast-level-3.liquid-ios26 .nutrition-norms-card,
+body.high-contrast-level-1.liquid-ios26 .nutrition-micros-card,
+body.high-contrast-level-2.liquid-ios26 .nutrition-micros-card,
+body.high-contrast-level-3.liquid-ios26 .nutrition-micros-card,
+body.high-contrast-level-1.liquid-ios26 .nutrition-practice-sheet,
+body.high-contrast-level-2.liquid-ios26 .nutrition-practice-sheet,
+body.high-contrast-level-3.liquid-ios26 .nutrition-practice-sheet {
+  --nutrition-ui-text: var(--hc-text);
+  --nutrition-ui-heading: var(--hc-text);
+  --nutrition-ui-muted: var(--hc-muted);
+  --nutrition-ui-muted-strong: var(--hc-muted);
+  --nutrition-ui-accent-text: var(--hc-text);
+  --nutrition-ui-surface: var(--hc-surface);
+  --nutrition-ui-surface-alt: var(--hc-result-bg);
+  --nutrition-ui-surface-soft: var(--hc-result-bg);
+  --nutrition-ui-surface-soft-strong: var(--hc-button-bg);
+  --nutrition-ui-chip-bg: var(--hc-button-bg);
+  --nutrition-ui-chip-text: var(--hc-text);
+  --nutrition-ui-border: var(--hc-border);
+  --nutrition-ui-border-strong: var(--hc-input-border);
+  --nutrition-ui-divider: rgba(7, 54, 62, 0.18);
+  --nutrition-ui-switch-bg: var(--hc-button-bg);
+  --nutrition-ui-switch-thumb: #ffffff;
+  --nutrition-ui-button-bg: var(--hc-module-btn-bg);
+  --nutrition-ui-button-text: var(--hc-text);
+  --nutrition-ui-button-hover-bg: var(--hc-module-btn-hover-bg);
+  --nutrition-ui-button-shadow: var(--hc-module-btn-shadow);
+  --nutrition-ui-active-bg: var(--hc-module-btn-active-bg);
+  --nutrition-ui-active-border: var(--hc-module-btn-active-border);
+  --nutrition-ui-active-text: var(--hc-text);
+  --nutrition-ui-focus: var(--hc-focus-color);
+  --nutrition-ui-warning-text: #5f3b00;
+  --nutrition-ui-warning-bg: rgba(255, 221, 148, 0.56);
+  --nutrition-ui-warning-border: rgba(122, 78, 0, 0.30);
+  --nutrition-ui-tooltip-bg: var(--hc-result-bg);
+  --nutrition-ui-tooltip-text: var(--hc-text);
+  --nutrition-ui-tooltip-border: var(--hc-input-border);
+  --nutrition-ui-panel-blur: var(--hc-blur);
+}
+
+.nutrition-norms-card,
+.nutrition-micros-card {
+  color: var(--nutrition-ui-text) !important;
+}
+
+.nutrition-practice-sheet .nutrition-practice-sheet-panel {
+  color: var(--nutrition-ui-text) !important;
+  background: var(--nutrition-ui-surface) !important;
+  border: 1px solid var(--nutrition-ui-border) !important;
+  box-shadow: var(--nutrition-ui-shadow) !important;
+  backdrop-filter: var(--nutrition-ui-panel-blur) !important;
+  -webkit-backdrop-filter: var(--nutrition-ui-panel-blur) !important;
+}
+
+.nutrition-practice-sheet .nutrition-practice-sheet-handle {
+  background: color-mix(in srgb, var(--nutrition-ui-border-strong) 55%, rgba(255, 255, 255, 0.55)) !important;
+}
+
+.nutrition-norms-card .nutrition-norms-value,
+.nutrition-micros-card .nutrition-micros-value,
+.nutrition-micros-card .nutrition-micros-badge,
+.nutrition-micros-card .nutrition-micros-vitd-dose strong {
+  color: var(--nutrition-ui-accent-text) !important;
+}
+
+.nutrition-norms-card .nutrition-norms-toolbar-label,
+.nutrition-norms-card .nutrition-norms-quality-group strong,
+.nutrition-norms-card .nutrition-norms-details summary,
+.nutrition-norms-card .nutrition-norms-quality-details summary,
+.nutrition-norms-card .nutrition-norms-protein-info .nutrition-norms-protein-info-panel strong,
+.nutrition-micros-card .nutrition-micros-section-title,
+.nutrition-micros-card .nutrition-micros-box-head h3,
+.nutrition-micros-card .nutrition-micros-control-label,
+.nutrition-micros-card .nutrition-micros-safety-title,
+.nutrition-micros-card .nutrition-micros-legend-title,
+.nutrition-micros-card .nutrition-micros-legend-item dt,
+.nutrition-micros-card .nutrition-micros-vitd-title,
+.nutrition-micros-card .nutrition-micros-vitd-dose,
+.nutrition-micros-card .nutrition-micros-vitd-toggle strong,
+.nutrition-practice-sheet .nutrition-practice-sheet-header h3,
+.nutrition-practice-sheet .nutrition-practice-sheet-section h4,
+.nutrition-practice-sheet .nutrition-practice-sheet-item-head strong,
+.nutrition-practice-sheet .nutrition-practice-sheet-item-portion {
+  color: var(--nutrition-ui-heading) !important;
+}
+
+.nutrition-norms-card .nutrition-norms-meta,
+.nutrition-norms-card .nutrition-norms-summary,
+.nutrition-norms-card .nutrition-norms-intro,
+.nutrition-norms-card .nutrition-norms-toolbar-state,
+.nutrition-norms-card .nutrition-norms-toolbar-help,
+.nutrition-norms-card .nutrition-norms-sub,
+.nutrition-norms-card .nutrition-norms-note,
+.nutrition-norms-card .nutrition-norms-quality-group,
+.nutrition-norms-card .nutrition-norms-source,
+.nutrition-norms-card .nutrition-norms-pal-cell-sub,
+.nutrition-norms-card .food-total-macro-note,
+.nutrition-micros-card .nutrition-micros-sub,
+.nutrition-micros-card .nutrition-micros-note,
+.nutrition-micros-card .nutrition-micros-row-note,
+.nutrition-micros-card .nutrition-micros-control-help,
+.nutrition-micros-card .nutrition-micros-safety-intro,
+.nutrition-micros-card .nutrition-micros-legend-item dd,
+.nutrition-micros-card .nutrition-micros-legend-note,
+.nutrition-micros-card .nutrition-micros-vitd-panel,
+.nutrition-micros-card .nutrition-micros-vitd-source,
+.nutrition-micros-card .nutrition-micros-vitd-season,
+.nutrition-micros-card .nutrition-micros-examples-intro p,
+.nutrition-practice-sheet .nutrition-practice-sheet-header p,
+.nutrition-practice-sheet .nutrition-practice-sheet-item-note,
+.nutrition-practice-sheet .nutrition-practice-sheet-footer {
+  color: var(--nutrition-ui-muted) !important;
+}
+
+.nutrition-practice-sheet .nutrition-practice-sheet-item-main,
+.nutrition-macro-examples-target p,
+.nutrition-macro-examples-intro p {
+  color: var(--nutrition-ui-text) !important;
+}
+
+.nutrition-norms-card .nutrition-norms-sub--muted {
+  color: var(--nutrition-ui-muted-strong) !important;
+}
+
+.nutrition-norms-card .nutrition-norms-sub--macro-share {
+  color: var(--nutrition-ui-text) !important;
+}
+
+.nutrition-norms-card .nutrition-norms-note,
+.nutrition-norms-card .nutrition-norms-quality-group,
+.nutrition-norms-card .nutrition-practice-inline,
+.nutrition-micros-card .nutrition-micros-control-box,
+.nutrition-micros-card .nutrition-micros-legend,
+.nutrition-micros-card .nutrition-micros-vitd-panel,
+.nutrition-micros-card .nutrition-micros-examples-target,
+.nutrition-practice-sheet .nutrition-practice-sheet-item,
+.nutrition-practice-sheet .nutrition-macro-examples-target,
+.nutrition-practice-sheet .nutrition-micros-examples-target {
+  background: var(--nutrition-ui-surface-soft) !important;
+  border-color: var(--nutrition-ui-border) !important;
+  color: var(--nutrition-ui-text) !important;
+}
+
+body.liquid-ios26 .nutrition-norms-card .nutrition-norms-note,
+body.liquid-ios26 .nutrition-norms-card .nutrition-norms-quality-group,
+body.liquid-ios26 .nutrition-norms-card .nutrition-practice-inline,
+body.liquid-ios26 .nutrition-micros-card .nutrition-micros-control-box,
+body.liquid-ios26 .nutrition-micros-card .nutrition-micros-legend,
+body.liquid-ios26 .nutrition-micros-card .nutrition-micros-vitd-panel,
+body.liquid-ios26 .nutrition-micros-card .nutrition-micros-examples-target,
+body.liquid-ios26 .nutrition-practice-sheet .nutrition-practice-sheet-item,
+body.liquid-ios26 .nutrition-practice-sheet .nutrition-macro-examples-target,
+body.liquid-ios26 .nutrition-practice-sheet .nutrition-micros-examples-target {
+  backdrop-filter: var(--nutrition-ui-panel-blur) !important;
+  -webkit-backdrop-filter: var(--nutrition-ui-panel-blur) !important;
+}
+
+.nutrition-micros-card .nutrition-micros-badge {
+  background: var(--nutrition-ui-chip-bg) !important;
+}
+
+.nutrition-norms-card .nutrition-practice-cta,
+.nutrition-micros-card .nutrition-practice-cta,
+.nutrition-norms-card .food-total-info-toggle,
+.nutrition-micros-card .nutrition-micros-vitd-toggle,
+.nutrition-practice-sheet .nutrition-practice-sheet-close {
+  background: var(--nutrition-ui-button-bg) !important;
+  color: var(--nutrition-ui-button-text) !important;
+  border: 1px solid var(--nutrition-ui-border-strong) !important;
+  box-shadow: var(--nutrition-ui-button-shadow) !important;
+}
+
+.nutrition-norms-card .food-total-info-toggle,
+.nutrition-norms-card .nutrition-practice-cta,
+.nutrition-micros-card .nutrition-practice-cta {
+  color: var(--nutrition-ui-button-text) !important;
+}
+
+.nutrition-norms-card .adult-vitals-radio-option span {
+  background: var(--nutrition-ui-button-bg) !important;
+  color: var(--nutrition-ui-accent-text) !important;
+  border-color: var(--nutrition-ui-border-strong) !important;
+  box-shadow: var(--nutrition-ui-button-shadow) !important;
+}
+
+.nutrition-norms-card .adult-vitals-radio-option input:checked + span {
+  background: var(--nutrition-ui-active-bg) !important;
+  color: var(--nutrition-ui-active-text) !important;
+  border-color: var(--nutrition-ui-active-border) !important;
+}
+
+.nutrition-norms-card .adult-vitals-radio-option input:focus-visible + span,
+.nutrition-norms-card .nutrition-norms-switch input:focus-visible + .nutrition-norms-switch-slider,
+.nutrition-norms-card .nutrition-practice-cta:focus-visible,
+.nutrition-micros-card .nutrition-practice-cta:focus-visible,
+.nutrition-micros-card .nutrition-micros-vitd-toggle:focus-visible,
+.nutrition-practice-sheet .nutrition-practice-sheet-close:focus-visible {
+  box-shadow: 0 0 0 3px var(--nutrition-ui-focus) !important;
+}
+
+.nutrition-norms-card .nutrition-practice-cta:hover,
+.nutrition-norms-card .nutrition-practice-cta:focus-visible,
+.nutrition-micros-card .nutrition-practice-cta:hover,
+.nutrition-micros-card .nutrition-practice-cta:focus-visible,
+.nutrition-norms-card .food-total-info-toggle:hover,
+.nutrition-norms-card .food-total-info-toggle:focus-visible,
+.nutrition-micros-card .nutrition-micros-vitd-toggle:hover,
+.nutrition-micros-card .nutrition-micros-vitd-toggle:focus-visible,
+.nutrition-practice-sheet .nutrition-practice-sheet-close:hover,
+.nutrition-practice-sheet .nutrition-practice-sheet-close:focus-visible {
+  background: var(--nutrition-ui-button-hover-bg) !important;
+}
+
+.nutrition-norms-card .nutrition-norms-switch .nutrition-norms-switch-slider {
+  background: var(--nutrition-ui-switch-bg) !important;
+  border: 1px solid var(--nutrition-ui-border) !important;
+}
+
+.nutrition-norms-card .nutrition-norms-switch .nutrition-norms-switch-slider::before {
+  background: var(--nutrition-ui-switch-thumb) !important;
+}
+
+.nutrition-norms-card .nutrition-norms-switch input:checked + .nutrition-norms-switch-slider {
+  background: var(--nutrition-ui-active-bg) !important;
+  border-color: var(--nutrition-ui-active-border) !important;
+}
+
+.nutrition-norms-card .nutrition-norms-pal-select {
+  background: var(--nutrition-ui-button-bg) !important;
+  border-color: var(--nutrition-ui-border-strong) !important;
+  color: var(--nutrition-ui-text) !important;
+}
+
+.nutrition-norms-card .nutrition-norms-range-table th,
+.nutrition-norms-card .nutrition-norms-range-table td,
+.nutrition-norms-card .nutrition-norms-table th,
+.nutrition-norms-card .nutrition-norms-table td,
+.nutrition-micros-card .nutrition-micros-table th,
+.nutrition-micros-card .nutrition-micros-table td {
+  border-bottom-color: var(--nutrition-ui-divider) !important;
+  color: var(--nutrition-ui-text) !important;
+}
+
+.nutrition-norms-card .nutrition-norms-range-table th,
+.nutrition-norms-card .nutrition-norms-table th,
+.nutrition-micros-card .nutrition-micros-table th {
+  color: var(--nutrition-ui-heading) !important;
+}
+
+.nutrition-norms-card .nutrition-norms-details summary,
+.nutrition-norms-card .nutrition-norms-quality-details summary,
+.nutrition-micros-card .nutrition-micros-details summary {
+  color: var(--nutrition-ui-heading) !important;
+}
+
+.nutrition-norms-card .nutrition-norms-quality-details summary::marker,
+.nutrition-micros-card .nutrition-micros-details summary::marker {
+  color: var(--nutrition-ui-heading) !important;
+}
+
+.nutrition-micros-card .nutrition-micros-legend-note,
+.nutrition-micros-card .nutrition-micros-vitd-supplement,
+.nutrition-micros-card .nutrition-micros-vitd-source {
+  border-top-color: var(--nutrition-ui-divider) !important;
+}
+
+.nutrition-norms-card .nutrition-norms-message--info {
+  background: var(--nutrition-ui-surface-soft-strong) !important;
+  border: 1px solid var(--nutrition-ui-border) !important;
+  color: var(--nutrition-ui-accent-text) !important;
+}
+
+.nutrition-norms-card .nutrition-norms-message--warn {
+  background: var(--nutrition-ui-warning-bg) !important;
+  border: 1px solid var(--nutrition-ui-warning-border) !important;
+  color: var(--nutrition-ui-warning-text) !important;
+}
+
+.nutrition-micros-card .nutrition-micros-vitd-warning,
+.nutrition-micros-card .nutrition-micros-examples-cautions ul {
+  color: var(--nutrition-ui-warning-text) !important;
+}
+
+.nutrition-micros-card .nutrition-micros-abbr:focus-visible {
+  outline-color: var(--nutrition-ui-heading) !important;
+}
+
+body .nutrition-micros-tooltip {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border-color: #000000 !important;
+}
+
+body.liquid-ios26 .nutrition-micros-tooltip {
+  background: color-mix(in srgb, var(--lg-surface-light) 95%, rgba(255, 255, 255, 0.96)) !important;
+  color: #10282d !important;
+  border-color: var(--lg-border) !important;
+}
+
+body.high-contrast-level-1.liquid-ios26 .nutrition-micros-tooltip,
+body.high-contrast-level-2.liquid-ios26 .nutrition-micros-tooltip,
+body.high-contrast-level-3.liquid-ios26 .nutrition-micros-tooltip {
+  background: var(--hc-result-bg) !important;
+  color: var(--hc-text) !important;
+  border-color: var(--hc-input-border) !important;
+}

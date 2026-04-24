@@ -67,8 +67,118 @@
       { id: 'advMotherHeight', key: 'advMotherHeight' },
       { id: 'advFatherHeight', key: 'advFatherHeight' }
     ];
+    const restoredValueElements = [];
 
-        /**
+    function markRestoredValue(el, previousValue) {
+      if (!el) return;
+      try {
+        const prev = previousValue == null ? '' : String(previousValue);
+        const next = el.value == null ? '' : String(el.value);
+        if (prev !== next) {
+          restoredValueElements.push(el);
+        }
+      } catch (_) {}
+    }
+
+    function onDomReady(fn) {
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', fn, { once: true });
+      } else {
+        fn();
+      }
+    }
+
+    function nextFrame(fn) {
+      if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(fn);
+      } else {
+        setTimeout(fn, 0);
+      }
+    }
+
+    function scheduleGlobalRefresh() {
+      onDomReady(() => {
+        nextFrame(() => {
+          nextFrame(() => {
+            try {
+              if (typeof window !== 'undefined') {
+                if (typeof window.debouncedUpdate === 'function') {
+                  window.debouncedUpdate();
+                } else if (typeof window.update === 'function') {
+                  window.update();
+                }
+                try {
+                  window.dispatchEvent(new Event('resize'));
+                } catch (_) {}
+              }
+            } catch (_) {}
+          });
+        });
+      });
+    }
+
+    function dispatchSyntheticValueEvent(el) {
+      if (!el || typeof el.dispatchEvent !== 'function') return;
+      const tag = (el.tagName || '').toUpperCase();
+      const type = (el.type || '').toLowerCase();
+      const eventName = (tag === 'SELECT' || type === 'checkbox' || type === 'radio')
+        ? 'change'
+        : 'input';
+      try {
+        el.dispatchEvent(new Event(eventName, { bubbles: true }));
+      } catch (_) {}
+    }
+
+    function requestRefreshAfterRestore() {
+      if (!restoredValueElements.length) return;
+      const seen = new Set();
+      const uniqueElements = restoredValueElements.filter((el) => {
+        if (!el || seen.has(el)) return false;
+        seen.add(el);
+        return true;
+      });
+      if (!uniqueElements.length) return;
+
+      onDomReady(() => {
+        nextFrame(() => {
+          nextFrame(() => {
+            let prevPersistRestoring = false;
+            let prevIntakeReset = false;
+            try {
+              if (typeof window !== 'undefined') {
+                prevPersistRestoring = !!window.__vildaPersistRestoring;
+                prevIntakeReset = !!window.__vildaSuspendIntakeUserReset;
+                window.__vildaPersistRestoring = true;
+                window.__vildaSuspendIntakeUserReset = true;
+              }
+            } catch (_) {}
+
+            try {
+              uniqueElements.forEach(dispatchSyntheticValueEvent);
+              if (typeof window !== 'undefined') {
+                if (typeof window.debouncedUpdate === 'function') {
+                  window.debouncedUpdate();
+                } else if (typeof window.update === 'function') {
+                  window.update();
+                }
+                try {
+                  window.dispatchEvent(new Event('resize'));
+                } catch (_) {}
+              }
+            } finally {
+              try {
+                if (typeof window !== 'undefined') {
+                  window.__vildaPersistRestoring = prevPersistRestoring;
+                  window.__vildaSuspendIntakeUserReset = prevIntakeReset;
+                }
+              } catch (_) {}
+            }
+          });
+        });
+      });
+    }
+
+    /**
      * Apply the stored values to all registered fields.
      *
      * Dla większości pól (imię, wiek, wzrost, masa) wpisujemy wartość z
@@ -80,57 +190,69 @@
      *    (nawet jeśli <select> ma domyślną wartość „Mężczyzna”),
      *  - jeżeli jest ustawiona flaga stored.sexLocked, dodatkowo
      *    blokujemy edycję selecta na wszystkich podstronach.
+     *
+     * Po wstawieniu wartości emitujemy kontrolowane zdarzenia input/change i
+     * wymuszamy jedno globalne przeliczenie. Dzięki temu wyniki i elementy UI
+     * zależne od wartości pól nie czekają na ręczne odświeżenie strony.
      */
-        fields.forEach(({ id, key }) => {
-          const el = document.getElementById(id);
-          if (!el) return;
-          const storedValue = stored[key];
-        
-          // 🔹 Specjalna obsługa dla imienia/nazwiska
-          if (key === 'name') {
-            // Jeżeli mamy zapisaną wartość imienia – zawsze ją wpisujemy
-            // (zarówno dla #name jak i #fullName).
-            if (storedValue !== undefined && storedValue !== null && storedValue !== '') {
-              try {
-                el.value = storedValue;
-              } catch (_) {}
-            }
-        
-            // Jeżeli flaga nameLocked jest ustawiona, pole ma być zablokowane
-            // na wszystkich podstronach, dopóki nie zaczniemy nowej sesji
-            // (czyli np. nie klikniemy „Wyczyść wszystkie dane/pola”).
-            if (stored.nameLocked) {
-              try { el.disabled = true; } catch (_) {}
-            } else {
-              // W nowej sesji upewnij się, że pole jest z powrotem edytowalne
-              try { el.disabled = false; } catch (_) {}
-            }
-            return; // reszta logiki nie dotyczy pola imienia
-          }
-        
-          // 🔹 Specjalna obsługa dla płci (jak było)
-          if (key === 'sex') {
-            if (storedValue !== undefined && storedValue !== null && storedValue !== '') {
-              try {
-                el.value = storedValue;
-              } catch (_) {}
-            }
-            if (stored.sexLocked) {
-              try { el.disabled = true; } catch (_) {}
-            } else {
-              try { el.disabled = false; } catch (_) {}
-            }
-            return;
-          }
-        
-          // Standardowa ścieżka dla pozostałych pól – tylko gdy pole jest puste
-          const hasValue = el.value !== '' && el.value !== undefined && el.value !== null;
-          if (!hasValue && storedValue !== undefined && storedValue !== null && storedValue !== '') {
-            try {
-              el.value = storedValue;
-            } catch (_) {}
-          }
-        });
+    fields.forEach(({ id, key }) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const storedValue = stored[key];
+
+      // 🔹 Specjalna obsługa dla imienia/nazwiska
+      if (key === 'name') {
+        // Jeżeli mamy zapisaną wartość imienia – zawsze ją wpisujemy
+        // (zarówno dla #name jak i #fullName).
+        if (storedValue !== undefined && storedValue !== null && storedValue !== '') {
+          const previousValue = el.value;
+          try {
+            el.value = String(storedValue);
+            markRestoredValue(el, previousValue);
+          } catch (_) {}
+        }
+
+        // Jeżeli flaga nameLocked jest ustawiona, pole ma być zablokowane
+        // na wszystkich podstronach, dopóki nie zaczniemy nowej sesji
+        // (czyli np. nie klikniemy „Wyczyść wszystkie dane/pola”).
+        if (stored.nameLocked) {
+          try { el.disabled = true; } catch (_) {}
+        } else {
+          // W nowej sesji upewnij się, że pole jest z powrotem edytowalne
+          try { el.disabled = false; } catch (_) {}
+        }
+        return; // reszta logiki nie dotyczy pola imienia
+      }
+
+      // 🔹 Specjalna obsługa dla płci (jak było)
+      if (key === 'sex') {
+        if (storedValue !== undefined && storedValue !== null && storedValue !== '') {
+          const previousValue = el.value;
+          try {
+            el.value = String(storedValue);
+            markRestoredValue(el, previousValue);
+          } catch (_) {}
+        }
+        if (stored.sexLocked) {
+          try { el.disabled = true; } catch (_) {}
+        } else {
+          try { el.disabled = false; } catch (_) {}
+        }
+        return;
+      }
+
+      // Standardowa ścieżka dla pozostałych pól – tylko gdy pole jest puste
+      const hasValue = el.value !== '' && el.value !== undefined && el.value !== null;
+      if (!hasValue && storedValue !== undefined && storedValue !== null && storedValue !== '') {
+        const previousValue = el.value;
+        try {
+          el.value = String(storedValue);
+          markRestoredValue(el, previousValue);
+        } catch (_) {}
+      }
+    });
+
+    requestRefreshAfterRestore();
 
     /**
      * Read current values from form and persist them. This function is
@@ -144,7 +266,7 @@
       fields.forEach(({ id, key }) => {
         const el = document.getElementById(id);
         if (!el) return;
-        let val = el.value;
+        const val = el.value;
         // For number inputs with step attributes browsers return empty
         // strings when nothing is entered; keep them as empty strings so
         // that presence/absence can be detected on next load.
@@ -210,6 +332,7 @@
           }
         }
       });
+      scheduleGlobalRefresh();
     }
     // Attach clear handlers to known clear buttons if they exist.  Include
     // additional buttons (e.g. advClearBtn) to support clearing from
