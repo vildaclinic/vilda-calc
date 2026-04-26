@@ -237,12 +237,47 @@
     return { ageYears, weightKg, heightCm, bmi };
   }
 
+
+  function obesityTherapySetTrustedHtml(element, markup, context) {
+    if (!element) return false;
+    const html = markup == null ? '' : String(markup);
+    try {
+      if (typeof window !== 'undefined' && window.VildaHtml && typeof window.VildaHtml.setTrustedHtml === 'function') {
+        return window.VildaHtml.setTrustedHtml(element, html, { context: context || 'obesityTherapy' });
+      }
+      element.textContent = html;
+      return true;
+    } catch (_) {
+      if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+        globalThis.vildaLogSwallowedCatch('obesity_therapy.js', _, { helper: 'obesityTherapySetTrustedHtml', context: context || '' });
+      }
+      return false;
+    }
+  }
+
+  function obesityTherapyClearHtml(element) {
+    if (!element) return false;
+    try {
+      if (typeof window !== 'undefined' && window.VildaHtml && typeof window.VildaHtml.clearHtml === 'function') return window.VildaHtml.clearHtml(element);
+      element.textContent = '';
+      return true;
+    } catch (_) {
+      if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+        globalThis.vildaLogSwallowedCatch('obesity_therapy.js', _, { helper: 'obesityTherapyClearHtml' });
+      }
+      return false;
+    }
+  }
+
   function formatBmi(bmi) {
     if (!Number.isFinite(bmi)) return null;
     return (Math.round(bmi * 10) / 10).toFixed(1).replace('.', ',');
   }
 
   function escapeHtml(str) {
+    if (typeof window !== 'undefined' && window.VildaHtml && typeof window.VildaHtml.escapeHtml === 'function') {
+      return window.VildaHtml.escapeHtml(arguments[0]);
+    }
     return String(str)
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
@@ -253,7 +288,7 @@
 
   function setList(listEl, items) {
     if (!listEl) return;
-    listEl.innerHTML = '';
+    obesityTherapyClearHtml(listEl);
     (items || []).forEach((it) => {
       const li = document.createElement('li');
       li.textContent = it;
@@ -263,7 +298,7 @@
 
   function setSources(listEl, sources) {
     if (!listEl) return;
-    listEl.innerHTML = '';
+    obesityTherapyClearHtml(listEl);
     (sources || []).forEach((s) => {
       const li = document.createElement('li');
       const a = document.createElement('a');
@@ -577,12 +612,14 @@
           }, 220);
         }, 1600);
       } catch (e) {
-        // ignore
-      }
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('obesity_therapy.js', e, { line: 579 });
+    }
+  }
     }
 
     function setResultEmpty(msg) {
-      resultBox.innerHTML = `<div style="font-size:0.95rem; color:#444;">${escapeHtml(msg)}</div>`;
+      obesityTherapySetTrustedHtml(resultBox, `<div style="font-size:0.95rem; color:#444;">${escapeHtml(msg)}</div>`, 'obesity-therapy:resultBox');
     }
 
     // Domyślnie czyścimy wynik
@@ -610,7 +647,7 @@
       const available = getTherapiesForAge(ctx.ageYears);
 
       const current = selSubstance.value;
-      selSubstance.innerHTML = '<option value="">– wybierz –</option>';
+      obesityTherapySetTrustedHtml(selSubstance, '<option value="">– wybierz –</option>', 'obesity-therapy:substance-options');
 
       available.forEach((t) => {
         const opt = document.createElement('option');
@@ -633,7 +670,7 @@
 
       const currentBrand = selBrand.value;
 
-      selBrand.innerHTML = '<option value="">– wybierz –</option>';
+      obesityTherapySetTrustedHtml(selBrand, '<option value="">– wybierz –</option>', 'obesity-therapy:brand-options');
       selBrand.disabled = true;
 
       if (!substanceKey) return;
@@ -670,7 +707,7 @@
 
       if (!substanceKey) {
         eligibilityBox.style.display = 'none';
-        eligibilityBox.innerHTML = '';
+        obesityTherapyClearHtml(eligibilityBox);
         return;
       }
 
@@ -680,17 +717,17 @@
       const msgs = therapy.eligibility(ctx) || [];
       if (!msgs.length) {
         eligibilityBox.style.display = 'none';
-        eligibilityBox.innerHTML = '';
+        obesityTherapyClearHtml(eligibilityBox);
         return;
       }
 
       eligibilityBox.style.display = 'block';
-      eligibilityBox.innerHTML = `
+      obesityTherapySetTrustedHtml(eligibilityBox, `
         <div style="font-weight:600; margin-bottom:0.4rem;">Kwalifikacja / uwagi wg ChPL:</div>
         <ul style="margin:0 0 0 1.2rem; font-size:0.95rem; line-height:1.45;">
           ${msgs.map((m) => `<li>${escapeHtml(m)}</li>`).join('')}
         </ul>
-      `;
+      `, 'obesity-therapy:eligibilityBox');
     }
 
     function updatePlanOutput() {
@@ -717,11 +754,11 @@
         return;
       }
 
-      resultBox.innerHTML = plan.html;
+      obesityTherapySetTrustedHtml(resultBox, plan.html, 'obesity-therapy:resultBox');
       copyBtn.dataset.copyText = plan.plainCopy;
 
       // Dawkowanie
-      if (dosingContent) dosingContent.innerHTML = plan.dosingHtml || '';
+      if (dosingContent) obesityTherapySetTrustedHtml(dosingContent, plan.dosingHtml || '', 'obesity-therapy:dosingContent');
       // Info + źródła
       infoSection.style.display = 'block';
       setList(infoListEl, plan.infoList || []);
@@ -819,8 +856,10 @@
     updatePlanOutput();
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+  if (typeof window !== 'undefined' && typeof window.vildaOnReady === 'function') {
+    window.vildaOnReady('obesity-therapy:init', init);
+  } else if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init, { once: true });
   } else {
     init();
   }

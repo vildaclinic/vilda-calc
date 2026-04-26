@@ -12,11 +12,49 @@
   <!-- Ładujemy krój Inter – używany w pozostałej części aplikacji.  -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
   <!-- Podstawowe arkusze stylów stosowane w aplikacji: motyw Liquid Glass oraz główne style i układ sidebara. -->
-  <link rel="stylesheet" href="ios26-v2.css?v=9" />
-  <link rel="stylesheet" href="style.css?v=6" />
+  <link rel="stylesheet" href="ios26-v2.css?v=10" />
+  <link rel="stylesheet" href="style.css?v=5" />
   <link rel="stylesheet" href="sidebar.css" />
 
-  <!-- Dodatkowe style związane wyłącznie z kalkulatorem HOMA‑IR. Korzystamy z definicji zmiennych
+  
+<script src="vilda_logger.js?v=2"></script>
+<script src="vilda_html.js?v=4"></script>
+<script src="vilda_persistence_adapter.js?v=7"></script>
+<script src="vilda_init.js?v=4"></script>
+<script src="vilda_deps.js?v=6"></script>
+<script>
+(function() {
+  try {
+    var VERSION = 'v3';
+    var SIGNATURE = 'docpro.html|kalkulator-klirens.html|cukrzyca.html|steroidy.html|materialy-edukacyjne.html';
+    var persistence = window.VildaPersistence || null;
+    var parsed = persistence && typeof persistence.readPreferenceJSON === 'function'
+      ? persistence.readPreferenceJSON('MOBILE_TOP_NAV_FONT_CACHE', null)
+      : null;
+    if (!parsed) return;
+
+    if (!parsed || parsed.version !== VERSION || parsed.signature !== SIGNATURE) return;
+
+    var viewportWidth = Math.round(Math.max(
+      window.innerWidth || 0,
+      document.documentElement ? (document.documentElement.clientWidth || 0) : 0
+    ));
+    var cachedWidth = Math.round(Number(parsed.width) || 0);
+    var fontRem = Number(parsed.fontRem);
+
+    if (!viewportWidth || viewportWidth !== cachedWidth || !isFinite(fontRem)) return;
+    if (fontRem < 0.72 || fontRem > 0.98) return;
+
+    var style = document.createElement('style');
+    style.id = 'mobile-top-nav-font-cache-style';
+    style.textContent = '@media (max-width: 600px){.main-nav{--mobile-top-nav-font-size:' + fontRem.toFixed(2) + 'rem !important;}}';
+    document.head.appendChild(style);
+  } catch (e) {
+    /* noop */
+  }
+})();
+</script>
+<!-- Dodatkowe style związane wyłącznie z kalkulatorem HOMA‑IR. Korzystamy z definicji zmiennych
        kolorystycznych z głównego arkusza (np. --primary, --secondary, --card), dzięki czemu
        narzędzie zachowuje spójny wygląd z resztą serwisu. -->
   <style>
@@ -239,7 +277,7 @@
       <h1>wagaiwzrost.pl</h1>
     </div>
     <!-- Główna nawigacja w układzie jednokolumnowym. Pokazujemy tylko kluczowe sekcje serwisu. -->
-    <nav class="main-nav" aria-label="Główna nawigacja">
+      <nav class="main-nav" aria-label="Główna nawigacja">
   <ul>
     <li class="menu-toggle">
       <input type="checkbox" id="navToggle" class="nav-toggle">
@@ -260,7 +298,7 @@
       <li><a href="kalkulator-klirens.html">Klirens</a></li>
       <li><a href="cukrzyca.html">Cukrzyca</a></li>
       <li><a href="steroidy.html">Steroidy</a></li>
-      <li><a href="materialy-edukacyjne.html">Materiały edukacyjne</a></li>
+      <li><a href="materialy-edukacyjne.html">Edu</a></li>
   </ul>
 </nav>
   </header>
@@ -316,7 +354,7 @@
       <li>
         <a href="materialy-edukacyjne.html">
           <span class="sidebar-icon" data-lucide="book-open"></span>
-          <span class="sidebar-label">Materiały edukacyjne</span>
+          <span class="sidebar-label">Edu</span>
         </a>
       </li>
       <li>
@@ -436,11 +474,47 @@
   <!-- Biblioteka ikon Lucide oraz skrypt aktywujący motyw Liquid Glass.
        Wczytanie tych plików po treści strony zapewnia ich prawidłową inicjalizację. -->
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
-  <script src="ios26-ui.js?v=11"></script>
+  <script src="ios26-ui.js?v=16"></script>
 
   <!-- Skrypt obsługujący kalkulator HOMA‑IR. Przeniesiony z oryginalnej podstrony i
        dostosowany do nowej struktury. -->
   <script>
+    function homaHtmlApi() {
+      try {
+        return (typeof window !== 'undefined' && (window.VildaHtml || window.vildaHtml)) || null;
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function homaSetTrustedHtml(element, markup, context) {
+      if (!element) return false;
+      const api = homaHtmlApi();
+      if (api && typeof api.setTrustedHtml === 'function') {
+        return api.setTrustedHtml(element, markup, { context: context || 'homa:trusted-markup' });
+      }
+      element.textContent = String(markup == null ? '' : markup);
+      return true;
+    }
+
+    function homaClearHtml(element) {
+      if (!element) return false;
+      const api = homaHtmlApi();
+      if (api && typeof api.clearHtml === 'function') return api.clearHtml(element);
+      element.textContent = '';
+      return true;
+    }
+
+    function homaRenderInterpretation(element, className, text) {
+      if (!element) return false;
+      homaClearHtml(element);
+      const span = document.createElement('span');
+      span.className = String(className || '');
+      span.textContent = String(text || '');
+      element.appendChild(span);
+      return true;
+    }
+
     // Obsługa przełącznika grupy (dorosły/dziecko).  Po zmianie pokazujemy lub ukrywamy
     // pola dedykowane dzieciom i aktualizujemy wynik w trybie automatycznym.
     const groupToggleEl = document.getElementById('groupToggle');
@@ -520,10 +594,10 @@
         wynikEl.style.display = 'none';
         wynikEl.textContent = '';
         wynikEl.classList.remove('good', 'warn', 'risk');
-        interpEl.textContent = '';
-        visitEl.textContent = '';
-        normsEl.textContent = '';
-        sourcesEl.textContent = '';
+        homaClearHtml(interpEl);
+        homaClearHtml(visitEl);
+        homaClearHtml(normsEl);
+        homaClearHtml(sourcesEl);
       };
       // Pomocnicza funkcja do zgłaszania błędów w trybie manualnym
       const warnUser = (msg) => {
@@ -583,13 +657,13 @@
       wynikEl.classList.remove('good', 'warn', 'risk');
       wynikEl.classList.add(cls);
       // Aktualizacja interpretacji i pozostałych sekcji.
-      interpEl.innerHTML = `<span class="${cls}">${txt}</span>`;
+      homaRenderInterpretation(interpEl, cls, txt);
       // Normy: jeśli traktujemy jak dorosłego, pokaż tablicę dorosłych, w przeciwnym razie dziecięcą.
-      normsEl.innerHTML = (interpretGroup === 'adult') ? tableAdult() : tableChild(sex, stage);
+      homaSetTrustedHtml(normsEl, (interpretGroup === 'adult') ? tableAdult() : tableChild(sex, stage), 'homa:norms');
       // Źródła: użyj źródeł dla interpretowanej grupy
-      sourcesEl.innerHTML = buildSrc(interpretGroup);
+      homaSetTrustedHtml(sourcesEl, buildSrc(interpretGroup), 'homa:sources');
       // Lekarze: proponuj konsultację odpowiednio do grupy interpretacyjnej
-      visitEl.innerHTML = (cls === 'good') ? '' : `<strong>${doctorGroup === 'child' ? 'Rozważ konsultację u endokrynologa dziecięcego' : 'Rozważ konsultację u endokrynologa'}:</strong>` + links[doctorGroup];
+      homaSetTrustedHtml(visitEl, (cls === 'good') ? '' : `<strong>${doctorGroup === 'child' ? 'Rozważ konsultację u endokrynologa dziecięcego' : 'Rozważ konsultację u endokrynologa'}:</strong>` + links[doctorGroup], 'homa:visit');
     }
 
     // Obliczenia odbywają się dynamicznie podczas wpisywania danych – nie potrzebujemy przycisku "Oblicz".

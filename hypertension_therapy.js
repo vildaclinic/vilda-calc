@@ -22,6 +22,9 @@
   }
 
   function escapeHtml(str) {
+    if (typeof window !== 'undefined' && window.VildaHtml && typeof window.VildaHtml.escapeHtml === 'function') {
+      return window.VildaHtml.escapeHtml(arguments[0]);
+    }
     return String(str ?? '')
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
@@ -71,6 +74,38 @@
    * - Podwyższone: SBP 120–139 i/lub DBP 70–89
    * - Nadciśnienie: SBP >=140 i/lub DBP >=90
    */
+  function hypertensionTherapySetTrustedHtml(element, markup, context) {
+    if (!element) return false;
+    const html = markup == null ? '' : String(markup);
+    try {
+      if (typeof window !== 'undefined' && window.VildaHtml && typeof window.VildaHtml.setTrustedHtml === 'function') {
+        return window.VildaHtml.setTrustedHtml(element, html, { context: context || 'hypertensionTherapy' });
+      }
+      element.textContent = html;
+      return true;
+    } catch (_) {
+      if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+        globalThis.vildaLogSwallowedCatch('hypertension_therapy.js', _, { helper: 'hypertensionTherapySetTrustedHtml', context: context || '' });
+      }
+      return false;
+    }
+  }
+
+  function hypertensionTherapyClearHtml(element) {
+    if (!element) return false;
+    try {
+      if (typeof window !== 'undefined' && window.VildaHtml && typeof window.VildaHtml.clearHtml === 'function') return window.VildaHtml.clearHtml(element);
+      element.textContent = '';
+      return true;
+    } catch (_) {
+      if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+        globalThis.vildaLogSwallowedCatch('hypertension_therapy.js', _, { helper: 'hypertensionTherapyClearHtml' });
+      }
+      return false;
+    }
+  }
+
+
   function classifyBp(sbp, dbp) {
     if (sbp == null || dbp == null) return { key: 'unknown', label: 'Brak danych', color: '#444' };
 
@@ -439,7 +474,7 @@
     }
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
+  function initHypertensionTherapyModule() {
     const wrapper = $('hypertensionButtonWrapper');
     const toggleBtn = $('toggleHypertensionTherapy');
     const card = $('hypertensionCard');
@@ -563,9 +598,9 @@
         String(a.key).localeCompare(String(b.key), 'pl', { sensitivity: 'base' })
       );
 
-      abbrevList.innerHTML = sorted
+      hypertensionTherapySetTrustedHtml(abbrevList, sorted
         .map((it) => `<li><strong>${escapeHtml(it.key)}</strong> — ${escapeHtml(it.text)}</li>`)
-        .join('');
+        .join(''), 'hypertension-therapy:abbrevList');
     }
 
     renderAbbrevList();
@@ -592,7 +627,7 @@
 
     function renderSourcesList() {
       if (!sourcesList) return;
-      sourcesList.innerHTML = sources.map((s) => `<li>${escapeHtml(s)}</li>`).join('');
+      hypertensionTherapySetTrustedHtml(sourcesList, sources.map((s) => `<li>${escapeHtml(s)}</li>`).join(''), 'hypertension-therapy:sourcesList');
     }
     renderSourcesList();
 
@@ -648,28 +683,30 @@
           }, 220);
         }, 1600);
       } catch (e) {
-        // ignore
-      }
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('hypertension_therapy.js', e, { line: 650 });
+    }
+  }
     }
 
     function setResultEmpty(msg) {
-      resultBox.innerHTML = `<div style="font-size:0.95rem; color:#444;">${escapeHtml(msg)}</div>`;
+      hypertensionTherapySetTrustedHtml(resultBox, `<div style="font-size:0.95rem; color:#444;">${escapeHtml(msg)}</div>`, 'hypertension-therapy:resultBox');
       if (copyBtn) copyBtn.dataset.copyText = '';
     }
 
     function setEligibilityInfo(lines) {
       if (!lines || !lines.length) {
         eligibilityBox.style.display = 'none';
-        eligibilityBox.innerHTML = '';
+        hypertensionTherapyClearHtml(eligibilityBox);
         return;
       }
       eligibilityBox.style.display = 'block';
-      eligibilityBox.innerHTML = `
+      hypertensionTherapySetTrustedHtml(eligibilityBox, `
         <div style="font-weight:700; margin-bottom:0.3rem;">Uwagi</div>
         <ul style="margin:0.2rem 0 0 1.1rem;">
           ${lines.map(l => `<li>${escapeHtml(l)}</li>`).join('')}
         </ul>
-      `;
+      `, 'hypertension-therapy:eligibilityBox');
     }
 
     function hasRequiredBpValues() {
@@ -1399,7 +1436,7 @@
       const opts = optionsByStage[stage] || optionsByStage.init;
 
       // Odśwież listę opcji
-      comboEl.innerHTML = '';
+      hypertensionTherapyClearHtml(comboEl);
       opts.forEach((it) => {
         const opt = document.createElement('option');
         opt.value = it.value;
@@ -1431,7 +1468,7 @@
       }
 
       const plan = buildPlan();
-      resultBox.innerHTML = plan.html;
+      hypertensionTherapySetTrustedHtml(resultBox, plan.html, 'hypertension-therapy:resultBox');
       if (copyBtn) copyBtn.dataset.copyText = plan.plainCopy;
       setEligibilityInfo(plan.notes || []);
     }
@@ -1476,8 +1513,10 @@
           toggleBtn.style.width = (window.innerWidth < 700) ? '100%' : 'auto';
         }
       } catch (e) {
-        // ignore
-      }
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('hypertension_therapy.js', e, { line: 1478 });
+    }
+  }
     }
 
 // Widoczność modułu zależna od aktywacji modułu profesjonalnego
@@ -1557,5 +1596,13 @@
         else showTooltip(copyBtn, 'Nie udało się skopiować. Zaznacz i skopiuj ręcznie.');
       });
     });
-  });
+  }
+
+  if (typeof window !== 'undefined' && typeof window.vildaOnReady === 'function') {
+    window.vildaOnReady('hypertension-therapy:init', initHypertensionTherapyModule);
+  } else if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initHypertensionTherapyModule, { once: true });
+  } else {
+    initHypertensionTherapyModule();
+  }
 })();

@@ -1,0 +1,90 @@
+{
+  "version": "0.2.1",
+  "locale": "pl-PL",
+  "card_inline": {
+    "protein_summary": "Przykłady pokazują, jak z kilku porcji zbudować dzienny cel białka.",
+    "carbs_summary": "Przykłady pokazują porcje, które pomagają rozłożyć węglowodany na cały dzień.",
+    "fat_summary": "Przykłady pokazują, jak szybko sumuje się tłuszcz i które źródła wybierać częściej.",
+    "satfat_summary": "Im mniej, tym lepiej. To nie jest cel do dobicia.",
+    "cta_examples": "Zobacz przykłady"
+  },
+  "bottom_sheet": {
+    "common": {
+      "cta_close": "Zamknij",
+      "disclaimer_examples": "To orientacyjne przykłady produktów i porcji opracowane na podstawie USDA FoodData Central. Nie musisz zjadać jednego produktu, żeby osiągnąć cel dnia; rzeczywista zawartość składników zależy od produktu, obróbki i porcji.",
+      "disclaimer_warning": "To nie jest „cel do dobicia”. Chodzi o produkty, które szybko podbijają tłuszcze nasycone w 1 porcji."
+    },
+    "protein": {
+      "title": "Białko — przykłady porcji z żywności",
+      "subtitle": "Cel do planowania: {{target_g}} g/d",
+      "section_simple": "Źródła zwierzęce i mieszane",
+      "section_meatless": "Źródła roślinne i bezmięsne",
+      "row_goal_share": "ok. {{pct}} celu",
+      "row_good_choice": "Przykład porcji, którą łatwo włączyć do posiłku.",
+      "row_meatless_note": "Białko roślinne najlepiej planować z różnych źródeł w ciągu dnia.",
+      "intro": "Poniżej pokazano przykładowe porcje produktów, które mogą pomagać pokrywać dzienny cel białka. Nie trzeba realizować celu jednym produktem — zwykle rozkłada się go na kilka posiłków.",
+      "target_label": "Cel do plakietek",
+      "section_examples": "Przykładowe porcje",
+      "chip_goal_share": "ok. {{pct}} celu"
+    },
+    "carbs": {
+      "title": "Węglowodany — przykłady porcji z żywności",
+      "subtitle": "Cel do planowania: {{target_g}} g/d",
+      "section_base": "Porcje bazowe do posiłku",
+      "section_quick": "Szybkie porcje i dodatki",
+      "row_goal_share": "ok. {{pct}} celu",
+      "row_base_note": "Porcja bazowa, którą łatwo wkomponować w główny posiłek.",
+      "row_quick_note": "Szybka porcja węglowodanów; ilość cukrów i błonnika zależy od produktu.",
+      "footer": "Węglowodany najlepiej rozkładać na kilka posiłków i wybierać częściej produkty zbożowe, warzywa skrobiowe, owoce oraz strączki.",
+      "intro": "Poniżej pokazano przykładowe porcje produktów węglowodanowych. Najlepiej rozkładać je na kilka posiłków i wybierać częściej produkty zbożowe, warzywa skrobiowe, owoce i strączki.",
+      "target_label": "Cel do plakietek",
+      "section_examples": "Przykładowe porcje",
+      "chip_goal_share": "ok. {{pct}} celu"
+    },
+    "fat": {
+      "title": "Tłuszcze — przykłady porcji z żywności",
+      "subtitle": "Zakres do planowania: {{target_min_g}}–{{target_max_g}} g/d",
+      "section_better": "Źródła tłuszczów nienasyconych",
+      "section_watch": "Produkty, z którymi łatwo przesadzić",
+      "row_range_share": "ok. {{pct}} celu",
+      "row_better_note": "Dobry przykład źródła tłuszczu nienasyconego lub produktu z korzystniejszym profilem tłuszczu.",
+      "row_watch_note": "Warto odmierzać porcję — takie produkty szybko zwiększają tłuszcz i kalorie.",
+      "footer": "W tłuszczach liczy się ilość i jakość. Częściej wybieraj źródła nienasycone, a tłuszcze nasycone traktuj jako składnik do ograniczania.",
+      "intro": "Poniżej pokazano, ile tłuszczu wnoszą typowe porcje. W praktyce liczy się nie tylko ilość, ale też jakość — częściej wybieraj tłuszcze nienasycone, a ograniczaj źródła tłuszczów nasyconych.",
+      "target_label": "Cel do plakietek",
+      "section_examples": "Przykładowe porcje",
+      "chip_goal_share": "ok. {{pct}} celu"
+    },
+    "satfat": {
+      "title": "Tłuszcze nasycone — warto ograniczać",
+      "subtitle": "Tu nie pokazujemy „celu dnia”. Pokazujemy, które porcje szybko podbijają nasycone.",
+      "section_warning": "Produkty, które szybko podbijają nasycone",
+      "row_portion_share": "Ta porcja zajmuje około {{pct}}% dziennego pułapu tłuszczów nasyconych.",
+      "row_high": "Wysoka ilość tłuszczów nasyconych w 1 porcji.",
+      "row_medium": "Średnia ilość tłuszczów nasyconych w 1 porcji.",
+      "row_low": "Niska ilość tłuszczów nasyconych w 1 porcji.",
+      "footer": "W praktyce chodzi o to, żeby takie produkty nie dominowały w codziennym jedzeniu."
+    }
+  },
+  "chips": {
+    "low": "niska ilość",
+    "medium": "średnia ilość",
+    "high": "wysoka ilość"
+  },
+  "meal_card": {
+    "line_macros": "B {{protein_g}} g • W {{carbs_g}} g • T {{fat_g}} g",
+    "line_goal_share": "Pokrywa: białko {{protein_pct}}% • węglowodany {{carbs_pct}}% • tłuszcz {{fat_pct}}%",
+    "line_warning_satfat": "Tłuszcze nasycone: {{level_label}} w 1 porcji",
+    "line_warning_salt": "Sól: {{level_label}} w 1 porcji",
+    "line_warning_sugars": "Cukry: {{level_label}} w 1 porcji"
+  },
+  "tooltips": {
+    "plant_protein": "Białka roślinne najlepiej oceniać w mieszance różnych produktów, a nie po jednym produkcie.",
+    "saturated_fat": "Dla tłuszczów nasyconych nie pokazujemy „celu do dobicia”. Chodzi o ograniczanie produktów, które szybko wykorzystują sporą część dziennego pułapu.",
+    "fat_quality": "W praktyce lepiej częściej wybierać oliwę, orzechy, nasiona, awokado i ryby niż produkty z dużą ilością tłuszczów nasyconych."
+  },
+  "empty_states": {
+    "no_examples": "Brakuje jeszcze przykładów dla tej kategorii.",
+    "no_target": "Najpierw oblicz cel dnia, żeby pokazać przykłady."
+  }
+}

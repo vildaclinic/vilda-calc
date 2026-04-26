@@ -7,12 +7,50 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <!-- Usunięto meta tagi PWA (theme-color, apple-mobile-web-app-*) -->
   <!-- skórka kliniki -->
-  <link rel="stylesheet" href="style.css?v=6">
+  <link rel="stylesheet" href="style.css?v=5">
   <!-- Liquid Glass motyw inspirowany iOS 26 — spójny z resztą serwisu wagaiwzrost.pl -->
-  <link href="ios26-v2.css?v=9" rel="stylesheet" />
+  <link href="ios26-v2.css?v=10" rel="stylesheet" />
   <!-- Boczne menu w wersji desktop -->
   <link href="sidebar.css" rel="stylesheet">
-  <!-- Usunięto link do manifestu PWA -->
+  <script src="vilda_logger.js?v=2"></script>
+<script src="vilda_html.js?v=4"></script>
+<script src="vilda_persistence_adapter.js?v=7"></script>
+<script src="vilda_init.js?v=4"></script>
+<script src="vilda_deps.js?v=6"></script>
+  
+<script>
+(function() {
+  try {
+    var VERSION = 'v3';
+    var SIGNATURE = 'docpro.html|kalkulator-klirens.html|cukrzyca.html|steroidy.html|materialy-edukacyjne.html';
+    var persistence = window.VildaPersistence || null;
+    var parsed = persistence && typeof persistence.readPreferenceJSON === 'function'
+      ? persistence.readPreferenceJSON('MOBILE_TOP_NAV_FONT_CACHE', null)
+      : null;
+    if (!parsed) return;
+
+    if (!parsed || parsed.version !== VERSION || parsed.signature !== SIGNATURE) return;
+
+    var viewportWidth = Math.round(Math.max(
+      window.innerWidth || 0,
+      document.documentElement ? (document.documentElement.clientWidth || 0) : 0
+    ));
+    var cachedWidth = Math.round(Number(parsed.width) || 0);
+    var fontRem = Number(parsed.fontRem);
+
+    if (!viewportWidth || viewportWidth !== cachedWidth || !isFinite(fontRem)) return;
+    if (fontRem < 0.72 || fontRem > 0.98) return;
+
+    var style = document.createElement('style');
+    style.id = 'mobile-top-nav-font-cache-style';
+    style.textContent = '@media (max-width: 600px){.main-nav{--mobile-top-nav-font-size:' + fontRem.toFixed(2) + 'rem !important;}}';
+    document.head.appendChild(style);
+  } catch (e) {
+    /* noop */
+  }
+})();
+</script>
+<!-- Usunięto link do manifestu PWA -->
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
   <!-- Usunięto ikonę Apple (PWA) -->
@@ -82,7 +120,7 @@
        była wyrównana z linią przycisku hamburgera w nawigacji. */
     max-width: 960px;
     width: 100%;
-    /* Wewnętrzne odstępy jak w głównym kontenerze z style.css?v=6 */
+    /* Wewnętrzne odstępy jak w głównym kontenerze z style.css?v=5 */
     padding: 0.25rem;
     margin-top: 0.75rem;
     /* Wyśrodkuj cały blok kalkulatora; po prawej i lewej będzie taki sam
@@ -400,7 +438,7 @@
      jako blok z automatycznymi marginesami po bokach, dzięki czemu
      pojawia się na środku kontenera. Szerokość przycisku została
      zwiększona poprzez podwojenie poziomego wypełnienia względem
-     domyślnych ustawień w style.css?v=6, zachowując przy tym wysokość.
+     domyślnych ustawień w style.css?v=5, zachowując przy tym wysokość.
 
      Selektor ogranicza regułę do formularza kalkulatora (#calcForm),
      aby nie wpływać na inne potencjalne przyciski typu submit w
@@ -417,7 +455,7 @@
   /* Korekta wypełnienia górnego dla głównego fieldsetu formularza
      ------------------------------------------------------------
      Po usunięciu legendy „Dane wejściowe” pozostało standardowe
-     wypełnienie górne (padding-top) ustawione w style.css?v=6 na 1.4rem,
+     wypełnienie górne (padding-top) ustawione w style.css?v=5 na 1.4rem,
      co tworzyło pustą przestrzeń na górze formularza. Aby cała
      zawartość była bliżej górnej krawędzi fieldsetu, zmniejszamy
      górny padding o 1rem. Ostateczny padding-top wynosi 0.4rem.
@@ -599,7 +637,7 @@
       </a>
       <h1>Steroids Calc Pro</h1>
     </div>
-    <nav class="main-nav" aria-label="Główna nawigacja">
+      <nav class="main-nav" aria-label="Główna nawigacja">
   <ul>
     <li class="menu-toggle">
       <input type="checkbox" id="navToggle" class="nav-toggle">
@@ -617,10 +655,10 @@
       </ul>
     </li>
       <li><a href="docpro.html" class="pro-link">DocPro</a></li>
-      <li><a href="homa-ir.html">HOMA‑IR</a></li>
       <li><a href="kalkulator-klirens.html">Klirens</a></li>
       <li><a href="cukrzyca.html">Cukrzyca</a></li>
-      <li><a href="materialy-edukacyjne.html">Materiały edukacyjne</a></li>
+      <li><a href="steroidy.html" aria-current="page">Steroidy</a></li>
+      <li><a href="materialy-edukacyjne.html">Edu</a></li>
   </ul>
 </nav>
   </header>
@@ -680,7 +718,7 @@
       <li>
         <a href="materialy-edukacyjne.html">
           <span class="sidebar-icon" data-lucide="book-open"></span>
-          <span class="sidebar-label">Materiały edukacyjne</span>
+          <span class="sidebar-label">Edu</span>
         </a>
       </li>
       <li>
@@ -973,6 +1011,47 @@
     // ------------------------------------------------------------------
     // 2. Funkcje pomocnicze interfejsu
     // ------------------------------------------------------------------
+    function steroidHtmlApi() {
+      try {
+        return (typeof window !== 'undefined' && (window.VildaHtml || window.vildaHtml)) || null;
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function steroidEscapeHtml(value) {
+      const api = steroidHtmlApi();
+      if (api && typeof api.escapeHtml === 'function') return api.escapeHtml(value);
+      return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function steroidSetTrustedHtml(element, markup, context) {
+      if (!element) return false;
+      const api = steroidHtmlApi();
+      if (api && typeof api.setTrustedHtml === 'function') {
+        return api.setTrustedHtml(element, markup, { context: context || 'steroids:trusted-markup' });
+      }
+      try {
+        element.textContent = String(markup == null ? '' : markup);
+        return true;
+      } catch (error) {
+        return false;
+      }
+    }
+
+    function steroidClearHtml(element) {
+      if (!element) return false;
+      const api = steroidHtmlApi();
+      if (api && typeof api.clearHtml === 'function') return api.clearHtml(element);
+      element.textContent = '';
+      return true;
+    }
+
     function populateSelect(sel, filterGroup = null, showBrands = false) {
       const groups = {};
       DRUGS.forEach(d => {
@@ -1033,7 +1112,7 @@
       const tgt = document.getElementById('targetDrug');
       if (tgt) {
         const prev = tgt.value;
-        tgt.innerHTML = '';
+        steroidClearHtml(tgt);
         populateSelect(tgt, currentGroup, true);
         // Przywróć poprzedni wybór, jeśli należy do bieżącej grupy
         if (prev && getDrug(prev)?.group === currentGroup) {
@@ -1046,7 +1125,7 @@
       srcSelects.forEach((sel, idx) => {
         if (idx === 0) return; // nie filtruj pierwszego selecta
         const prevVal = sel.value;
-        sel.innerHTML = '';
+        steroidClearHtml(sel);
         populateSelect(sel, currentGroup, true);
         // Przywróć poprzedni wybór, jeśli należy do bieżącej grupy
         if (prevVal && getDrug(prevVal)?.group === currentGroup) {
@@ -1164,9 +1243,9 @@
             const textResult  = document.getElementById('textResult');
             const tableResult = document.getElementById('tableResult');
             if (resultsSec) resultsSec.style.display = 'none';
-            if (textResult) textResult.innerHTML = '';
+            if (textResult) steroidClearHtml(textResult);
             if (tableResult) {
-              tableResult.innerHTML = '';
+              steroidClearHtml(tableResult);
               tableResult.style.display = 'none';
             }
             const warnEl = document.getElementById('warningSection');
@@ -1665,7 +1744,7 @@
       // Jeśli supresja ≤ 50 % → ukryj całą kartę PCT
       if (supCycleMax <= 50) {
         document.getElementById('pctCard').style.display = 'none';
-        document.getElementById('pctContent').innerHTML = '';
+        steroidClearHtml(document.getElementById('pctContent'));
         document.getElementById('pctInfo').textContent = '';
         return;
       }
@@ -1675,8 +1754,8 @@
       const cls = cycleClass(refDrugId, supCycleMax, cycleWeeks);
 
       // wypełnij treść + nagłówek
-      document.getElementById('pctContent').innerHTML =
-        generatePctHtml(cls, startAfter);
+      steroidSetTrustedHtml(document.getElementById('pctContent'),
+        generatePctHtml(cls, startAfter), 'steroids:pct');
       document.getElementById('pctInfo').textContent =
         `— dla ${refDataset.label}`;           // np. „dla Testosteron 100 mg/tydz”
 
@@ -1684,12 +1763,49 @@
     }
 
     let hptaChart = null;
+
+    function showSteroidDependencyNotice(resultOrModule, message) {
+      const text = message || 'Nie można narysować wykresu HPTA, bo brakuje Chart.js.';
+      try {
+        if (window.VildaDeps && typeof window.VildaDeps.notifyMissingDependencies === 'function') {
+          window.VildaDeps.notifyMissingDependencies(resultOrModule || 'steroids-hpta-chart', { message: text });
+          return;
+        }
+        if (window.VildaDeps && typeof window.VildaDeps.showDependencyNotice === 'function') {
+          window.VildaDeps.showDependencyNotice(text, { moduleName: 'steroids-hpta-chart' });
+          return;
+        }
+      } catch (_) {}
+      try {
+        const card = document.getElementById('chartCard');
+        if (card) {
+          const note = document.createElement('p');
+          note.setAttribute('role', 'status');
+          note.setAttribute('aria-live', 'polite');
+          note.style.color = 'var(--danger, #d32f2f)';
+          note.textContent = text;
+          card.appendChild(note);
+          card.style.display = 'block';
+        }
+      } catch (_) {}
+    }
+
     function drawHptaChart(datasets) {
+      const chartCtor = (window.VildaDeps && typeof window.VildaDeps.requireFunction === 'function')
+        ? window.VildaDeps.requireFunction('Chart', { moduleName: 'steroids-hpta-chart', silent: true })
+        : (typeof Chart === 'function' ? Chart : null);
+      if (!chartCtor) {
+        const depsReady = (window.VildaDeps && typeof window.VildaDeps.checkModuleDeps === 'function')
+          ? window.VildaDeps.checkModuleDeps('steroids-hpta-chart', { silent: true })
+          : 'steroids-hpta-chart';
+        showSteroidDependencyNotice(depsReady, 'Nie można narysować wykresu HPTA, bo brakuje Chart.js.');
+        return;
+      }
       const maxLen = Math.max(...datasets.map(ds => ds.data.length));
       const labels = Array.from({ length: maxLen }, (_, i) => i);
       const ctx = document.getElementById('hptaChart').getContext('2d');
       if (hptaChart) hptaChart.destroy();
-      hptaChart = new Chart(ctx, {
+      hptaChart = new chartCtor(ctx, {
         type: 'line',
         data: {
           labels,
@@ -1742,17 +1858,17 @@
       // Always set the summary HTML.  It remains the same regardless
       // of viewport width, but applying it here helps recover if the
       // element contents were cleared for some reason (e.g. page refresh).
-      txtResEl.innerHTML = lastCalcResult.summaryHtml;
+      steroidSetTrustedHtml(txtResEl, lastCalcResult.summaryHtml, 'steroids:last-summary');
       // Show or hide the table/fieldset section depending on whether
       // multiple rows were present in the last calculation.
       if (lastCalcResult.multipleRows) {
         // Choose between table view (desktop) and stacked fieldsets (mobile).
-        tblResEl.innerHTML = isMobile ? lastCalcResult.fieldsetRows
-                                      : lastCalcResult.tableHtml;
+        steroidSetTrustedHtml(tblResEl, isMobile ? lastCalcResult.fieldsetRows
+                                      : lastCalcResult.tableHtml, 'steroids:last-table');
         tblResEl.style.display = 'block';
       } else {
         // When there was only one input row, hide the table/fieldset area.
-        tblResEl.innerHTML = '';
+        steroidClearHtml(tblResEl);
         tblResEl.style.display = 'none';
       }
       // Always make sure the results section is visible when we have
@@ -1780,9 +1896,9 @@
         const textResult = document.getElementById('textResult');
         const tableResult = document.getElementById('tableResult');
         if (resultsSec) resultsSec.style.display = 'none';
-        if (textResult) textResult.innerHTML = '';
+        if (textResult) steroidClearHtml(textResult);
         if (tableResult) {
-          tableResult.innerHTML = '';
+          steroidClearHtml(tableResult);
           tableResult.style.display = 'none';
         }
         const warnOffEl = document.getElementById('warningSection');
@@ -1805,9 +1921,9 @@
         const textResult = document.getElementById('textResult');
         const tableResult = document.getElementById('tableResult');
         if (resultsSec) resultsSec.style.display = 'none';
-        if (textResult) textResult.innerHTML = '';
+        if (textResult) steroidClearHtml(textResult);
         if (tableResult) {
-          tableResult.innerHTML = '';
+          steroidClearHtml(tableResult);
           tableResult.style.display = 'none';
         }
         const warnOffEl = document.getElementById('warningSection');
@@ -2121,14 +2237,14 @@
         // wierszy oraz szerokości okna.  To zapewnia natychmiastowe
         // odświeżenie wyników po kliknięciu „Przelicz”, niezależnie od
         // mechanizmu dynamicznego przełączania widoków.
-        txtResEl.innerHTML = summaryHtml;
+        steroidSetTrustedHtml(txtResEl, summaryHtml, 'steroids:summary');
         if (multipleRows) {
           if (window.matchMedia('(max-width: 640px)').matches) {
             // W widoku mobilnym używamy fieldsetów z animowanymi strzałkami
-            tblResEl.innerHTML = fieldsetRows;
+            steroidSetTrustedHtml(tblResEl, fieldsetRows, 'steroids:fieldset-rows');
           } else {
             // W widoku desktopowym pokazujemy zbiorczą tabelę
-            tblResEl.innerHTML = `<table class="result-table">
+            steroidSetTrustedHtml(tblResEl, `<table class="result-table">
                 <thead>
                   <tr>
                     <th>Steroid źródłowy</th>
@@ -2140,12 +2256,12 @@
                 <tbody>
                   ${tableRows}
                 </tbody>
-              </table>`;
+              </table>`, 'steroids:desktop-table');
           }
           tblResEl.style.display = 'block';
         } else {
           // Dla pojedynczej dawki nie wyświetlamy tabeli ani fieldsetów
-          tblResEl.innerHTML = '';
+          steroidClearHtml(tblResEl);
           tblResEl.style.display = 'none';
         }
         // Upewnij się, że sekcja wyników jest widoczna
@@ -2194,8 +2310,8 @@
         // poprzednich danych.
         lastCalcResult = null;
         document.getElementById('results').style.display = 'none';
-        document.getElementById('textResult').innerHTML = '';
-        document.getElementById('tableResult').innerHTML = '';
+        steroidClearHtml(document.getElementById('textResult'));
+        steroidClearHtml(document.getElementById('tableResult'));
         document.getElementById('tableResult').style.display = 'none';
         const warnOffEl = document.getElementById('warningSection');
         if (warnOffEl) warnOffEl.style.display = 'none';
@@ -2270,7 +2386,7 @@
   </script>
   <!-- Liquid Glass interfejs: dodaje klasy szklanego wyglądu oraz mikrointerakcje.
        Parametr wersji wymusza odświeżenie z cache w przeglądarkach. -->
-  <script src="ios26-ui.js?v=11" defer></script>
+  <script src="ios26-ui.js?v=16" defer></script>
 
   <!-- Baner cookies / lokalnego przechowywania danych -->
   <div id="consent-banner" class="cookie-banner hidden">
@@ -2298,8 +2414,23 @@
     const btnAccept  = document.getElementById('consent-accept');
     const btnDecline = document.getElementById('consent-decline');
 
+    function readAnalyticsConsent(){
+      try {
+        return window.VildaPersistence && typeof window.VildaPersistence.readPreferenceRaw === 'function'
+          ? window.VildaPersistence.readPreferenceRaw('ANALYTICS_CONSENT', null)
+          : null;
+      } catch (_) { return null; }
+    }
+    function writeAnalyticsConsent(value){
+      try {
+        if (window.VildaPersistence && typeof window.VildaPersistence.writePreferenceRaw === 'function') {
+          window.VildaPersistence.writePreferenceRaw('ANALYTICS_CONSENT', value, { force: true });
+        }
+      } catch (_) {}
+    }
+
     // Sprawdź, czy użytkownik podjął decyzję wcześniej
-    const consent = localStorage.getItem('analyticsConsent');
+    const consent = readAnalyticsConsent();
 
     function loadGA() {
       const gaScript = document.createElement('script');
@@ -2321,12 +2452,12 @@
     }
 
     btnAccept.addEventListener('click', function() {
-      localStorage.setItem('analyticsConsent', 'granted');
+      writeAnalyticsConsent('granted');
       banner.style.display = 'none';
       loadGA();
     });
     btnDecline.addEventListener('click', function() {
-      localStorage.setItem('analyticsConsent', 'denied');
+      writeAnalyticsConsent('denied');
       banner.style.display = 'none';
     });
   })();
@@ -2346,9 +2477,9 @@
       }
     });
   </script>
-  <script src="userData.js" defer></script>
+    <script src="userData.js?v=6" defer></script>
     <!-- Wspólne poprawki i funkcje interfejsu (mini summary, skróty) -->
-    <script src="custom-fixes.js" defer></script>
+    <script src="custom-fixes.js?v=11" defer></script>
   <script>
     (function () {
       const STEROID_SESSION_KEY = 'vildaSteroidsSessionV1';
@@ -2408,16 +2539,20 @@
             .map(opt => opt.value);
         }
 
-        sessionStorage.setItem(STEROID_SESSION_KEY, JSON.stringify(data));
+        const persistence = window.VildaPersistence || null;
+        if (persistence && typeof persistence.writeSteroidSession === 'function') {
+          persistence.writeSteroidSession(data);
+        }
       }
 
       function restoreSteroidSession() {
         try {
-          if (typeof sessionStorage === 'undefined') return;
-          const raw = sessionStorage.getItem(STEROID_SESSION_KEY);
-          if (!raw) return;
+          const persistence = window.VildaPersistence || null;
+          const data = persistence && typeof persistence.readSteroidSession === 'function'
+            ? persistence.readSteroidSession()
+            : null;
+          if (!data) return;
 
-          const data = JSON.parse(raw);
           if (!data || data.version !== 1) return;
 
           const form = document.getElementById('calcForm');

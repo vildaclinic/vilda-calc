@@ -1,0 +1,1478 @@
+{
+  "version": "0.2.2",
+  "locale": "pl-PL",
+  "purpose": "Słownik przykładów produktów i porcji do kart norm makroskładników oraz karty „Kalorie posiłków i czas spalania”. Wartości edukacyjne oparto na oficjalnych bazach składu żywności, przede wszystkim USDA FoodData Central.",
+  "source_policy": {
+    "generic_foods": {
+      "provider": "USDA FoodData Central",
+      "preferred_data_type": [
+        "Foundation Foods",
+        "SR Legacy",
+        "FNDDS"
+      ],
+      "why": "Oficjalna publiczna baza składu żywności; pozwala prezentować orientacyjne wartości energii, białka, tłuszczu i węglowodanów dla typowych produktów i porcji."
+    },
+    "branded_foods": {
+      "provider": "USDA FoodData Central / oficjalne etykiety producentów",
+      "why": "Produkty markowe pozostają wyłącznie jako ostrzeżenia przy tłuszczach nasyconych; przykłady białka, tłuszczów i węglowodanów wykorzystują produkty ogólne z FDC."
+    },
+    "notes": [
+      "Wartości w tym pliku są przykładami edukacyjnymi dla typowych porcji, a nie indywidualnym jadłospisem.",
+      "Dla żywności ogólnej stosuj USDA FoodData Central; dla produktów markowych lub regionalnych wartości mogą wymagać weryfikacji z etykietą producenta albo lokalną bazą żywności.",
+      "Pole install_in_food_select=false oznacza, że produkt służy tylko jako przykład w oknie „Zobacz przykłady” i nie powiększa listy wyboru w karcie kalorii."
+    ]
+  },
+  "selection_rules": {
+    "card_inline": {
+      "max_examples": 3,
+      "protein": [
+        "najprostszy",
+        "na_szybko",
+        "bez_miesa"
+      ],
+      "carbs": [
+        "porcja_bazowa",
+        "na_szybko",
+        "sniadanie"
+      ],
+      "fat": [
+        "lepsze_zrodlo",
+        "lepsze_zrodlo",
+        "uwazaj_na"
+      ],
+      "satfat": [
+        "warning",
+        "warning",
+        "warning"
+      ]
+    },
+    "bottom_sheet": {
+      "protein": {
+        "sections": [
+          "przykladowe_porcje_bogate_w_bialko",
+          "wersja_bez_miesa"
+        ],
+        "max_items_per_section": 5
+      },
+      "carbs": {
+        "sections": [
+          "porcje_bazowe",
+          "na_szybko"
+        ],
+        "max_items_per_section": 5
+      },
+      "fat": {
+        "sections": [
+          "lepsze_zrodla_tluszczu",
+          "gestosc_energetyczna"
+        ],
+        "max_items_per_section": 6
+      },
+      "satfat": {
+        "sections": [
+          "produkty_ktore_szybko_podbijaja_nasycone"
+        ],
+        "max_items_per_section": 5
+      }
+    }
+  },
+  "warning_rules": {
+    "saturated_fat_portion_share_of_day_cap_pct": {
+      "low_max": 10,
+      "medium_max": 20,
+      "high_min": 21
+    },
+    "copy_rule": {
+      "do_not_say": "pokrywa zapotrzebowanie na tłuszcze nasycone",
+      "say_instead": [
+        "zajmuje część dziennego pułapu",
+        "ma wysoką ilość tłuszczów nasyconych w 1 porcji",
+        "warto ograniczać"
+      ]
+    }
+  },
+  "products": [
+    {
+      "id": "protein_chicken_breast",
+      "category": "protein",
+      "display_name_pl": "Pierś z kurczaka",
+      "default_portion": {
+        "amount": 120,
+        "unit": "g",
+        "label_pl": "1 średnia porcja"
+      },
+      "role": "najprostszy",
+      "hero_macro": "protein",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "chicken breast cooked roasted meat only",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "białko",
+        "chude mięso"
+      ],
+      "notes_pl": "Chude mięso — dużo białka przy niewielkiej ilości tłuszczu.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 120,
+        "energy_kcal": 198,
+        "protein_g": 37.2,
+        "carbs_g": 0,
+        "fat_g": 4.3,
+        "saturated_fat_g": 1.2
+      }
+    },
+    {
+      "id": "protein_turkey_breast",
+      "category": "protein",
+      "display_name_pl": "Pierś z indyka",
+      "default_portion": {
+        "amount": 120,
+        "unit": "g",
+        "label_pl": "1 średnia porcja"
+      },
+      "role": "najprostszy",
+      "hero_macro": "protein",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "turkey breast roasted meat only",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "białko",
+        "chude mięso"
+      ],
+      "notes_pl": "Podobna rola jak pierś z kurczaka; praktyczne chude źródło białka.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 120,
+        "energy_kcal": 162,
+        "protein_g": 34.8,
+        "carbs_g": 0,
+        "fat_g": 2.4,
+        "saturated_fat_g": 0.7
+      },
+      "install_in_food_select": false
+    },
+    {
+      "id": "protein_tuna_water",
+      "category": "protein",
+      "display_name_pl": "Tuńczyk w wodzie",
+      "default_portion": {
+        "amount": 100,
+        "unit": "g",
+        "label_pl": "1 mała puszka po odsączeniu"
+      },
+      "role": "na_szybko",
+      "hero_macro": "protein",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "tuna canned in water drained",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "białko",
+        "ryby",
+        "na szybko"
+      ],
+      "notes_pl": "Wygodne źródło białka; przy rybach warto dbać o różnorodność gatunków.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 100,
+        "energy_kcal": 116,
+        "protein_g": 25.5,
+        "carbs_g": 0,
+        "fat_g": 0.8,
+        "saturated_fat_g": 0.2
+      },
+      "install_in_food_select": false
+    },
+    {
+      "id": "protein_salmon_cooked",
+      "category": "protein",
+      "display_name_pl": "Łosoś pieczony",
+      "default_portion": {
+        "amount": 120,
+        "unit": "g",
+        "label_pl": "1 filet"
+      },
+      "role": "najprostszy",
+      "hero_macro": "protein",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "salmon cooked dry heat",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "białko",
+        "ryby",
+        "tłuszcze nienasycone"
+      ],
+      "notes_pl": "Dostarcza białka i tłuszczów nienasyconych; ma więcej kalorii niż chude mięso.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 120,
+        "energy_kcal": 247,
+        "protein_g": 26.4,
+        "carbs_g": 0,
+        "fat_g": 14.7,
+        "saturated_fat_g": 3.1
+      },
+      "install_in_food_select": false
+    },
+    {
+      "id": "protein_cod_baked",
+      "category": "protein",
+      "display_name_pl": "Dorsz pieczony",
+      "default_portion": {
+        "amount": 120,
+        "unit": "g",
+        "label_pl": "1 filet"
+      },
+      "role": "najprostszy",
+      "hero_macro": "protein",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "cod Atlantic cooked dry heat",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "białko",
+        "ryby",
+        "chude źródło"
+      ],
+      "notes_pl": "Chuda ryba — dobre źródło białka przy małej ilości tłuszczu.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 120,
+        "energy_kcal": 126,
+        "protein_g": 27.4,
+        "carbs_g": 0,
+        "fat_g": 1.1,
+        "saturated_fat_g": 0.2
+      },
+      "install_in_food_select": false
+    },
+    {
+      "id": "protein_greek_yogurt_nonfat",
+      "category": "protein",
+      "display_name_pl": "Jogurt typu greckiego / skyr naturalny",
+      "default_portion": {
+        "amount": 1,
+        "unit": "kubeczek",
+        "label_pl": "1 kubeczek"
+      },
+      "role": "na_szybko",
+      "hero_macro": "protein",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "Greek yogurt plain nonfat",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "białko",
+        "nabiał",
+        "na szybko"
+      ],
+      "notes_pl": "Szybki przykład nabiału wysokobiałkowego.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 170,
+        "energy_kcal": 100,
+        "protein_g": 17.3,
+        "carbs_g": 6.1,
+        "fat_g": 0.7,
+        "saturated_fat_g": 0.3
+      }
+    },
+    {
+      "id": "protein_cottage_cheese_lowfat",
+      "category": "protein",
+      "display_name_pl": "Serek wiejski / cottage cheese",
+      "default_portion": {
+        "amount": 1,
+        "unit": "kubek",
+        "label_pl": "1 mały kubek"
+      },
+      "role": "na_szybko",
+      "hero_macro": "protein",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "cottage cheese lowfat",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "białko",
+        "nabiał"
+      ],
+      "notes_pl": "Nabiał z umiarkowaną ilością tłuszczu; wartości zależą od wariantu.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 150,
+        "energy_kcal": 122,
+        "protein_g": 16.8,
+        "carbs_g": 5.1,
+        "fat_g": 3.9,
+        "saturated_fat_g": 2.4
+      },
+      "install_in_food_select": false
+    },
+    {
+      "id": "protein_twarog_half_fat",
+      "category": "protein",
+      "display_name_pl": "Twaróg półtłusty",
+      "default_portion": {
+        "amount": 100,
+        "unit": "g",
+        "label_pl": "1/2 kostki"
+      },
+      "role": "najprostszy",
+      "hero_macro": "protein",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "USDA FoodData Central / porównawczo produkt regionalny",
+        "lookup_query": "cheese cottage dry curd / farmer cheese",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "białko",
+        "nabiał"
+      ],
+      "notes_pl": "Polski odpowiednik sera twarogowego; wartości porcji traktuj orientacyjnie.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 100,
+        "energy_kcal": 133,
+        "protein_g": 18.7,
+        "carbs_g": 3.5,
+        "fat_g": 4.7,
+        "saturated_fat_g": 3
+      }
+    },
+    {
+      "id": "protein_eggs",
+      "category": "protein",
+      "display_name_pl": "Jajka",
+      "default_portion": {
+        "amount": 2,
+        "unit": "szt.",
+        "label_pl": "2 sztuki"
+      },
+      "role": "na_szybko",
+      "hero_macro": "protein",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "egg whole cooked hard-boiled",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "białko",
+        "jaja"
+      ],
+      "notes_pl": "Łatwy punkt odniesienia; białko i tłuszcz występują tu razem.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 100,
+        "energy_kcal": 144,
+        "protein_g": 12.6,
+        "carbs_g": 0.8,
+        "fat_g": 9.5,
+        "saturated_fat_g": 3.1
+      }
+    },
+    {
+      "id": "protein_tofu_natural",
+      "category": "protein",
+      "display_name_pl": "Tofu naturalne",
+      "default_portion": {
+        "amount": 150,
+        "unit": "g",
+        "label_pl": "1/2–3/4 kostki"
+      },
+      "role": "bez_miesa",
+      "hero_macro": "protein",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "tofu firm prepared with calcium sulfate",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "białko",
+        "bez mięsa",
+        "soja"
+      ],
+      "notes_pl": "Bezmięsna porcja białka; zawartość zależy od twardości tofu.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 150,
+        "energy_kcal": 216,
+        "protein_g": 25.5,
+        "carbs_g": 4.2,
+        "fat_g": 12.8,
+        "saturated_fat_g": 1.9
+      }
+    },
+    {
+      "id": "protein_lentils_cooked",
+      "category": "protein",
+      "display_name_pl": "Soczewica gotowana",
+      "default_portion": {
+        "amount": 1,
+        "unit": "szklanka",
+        "label_pl": "1 szklanka"
+      },
+      "role": "bez_miesa",
+      "hero_macro": "protein",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "lentils mature seeds cooked boiled",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "białko",
+        "bez mięsa",
+        "strączki"
+      ],
+      "notes_pl": "Źródło białka roślinnego i węglowodanów; dobrze łączyć ze zbożami.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 180,
+        "energy_kcal": 209,
+        "protein_g": 16.2,
+        "carbs_g": 36,
+        "fat_g": 0.7,
+        "saturated_fat_g": 0.1
+      },
+      "install_in_food_select": false
+    },
+    {
+      "id": "protein_chickpeas_cooked",
+      "category": "protein",
+      "display_name_pl": "Ciecierzyca gotowana",
+      "default_portion": {
+        "amount": 1,
+        "unit": "szklanka",
+        "label_pl": "1 szklanka"
+      },
+      "role": "bez_miesa",
+      "hero_macro": "protein",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "chickpeas cooked boiled",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "białko",
+        "bez mięsa",
+        "strączki"
+      ],
+      "notes_pl": "Strączki dostarczają białka, ale też sporo węglowodanów.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 160,
+        "energy_kcal": 269,
+        "protein_g": 14.5,
+        "carbs_g": 45,
+        "fat_g": 4.2,
+        "saturated_fat_g": 0.4
+      },
+      "install_in_food_select": false
+    },
+    {
+      "id": "protein_white_beans_cooked",
+      "category": "protein",
+      "display_name_pl": "Fasola biała gotowana",
+      "default_portion": {
+        "amount": 1,
+        "unit": "szklanka",
+        "label_pl": "1 szklanka"
+      },
+      "role": "bez_miesa",
+      "hero_macro": "protein",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "beans white mature seeds cooked boiled without salt",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "białko",
+        "bez mięsa",
+        "strączki"
+      ],
+      "notes_pl": "Strączki dostarczają białka i węglowodanów złożonych; najlepiej łączyć je z innymi źródłami białka w ciągu dnia.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 179,
+        "energy_kcal": 249,
+        "protein_g": 17.4,
+        "carbs_g": 44.9,
+        "fat_g": 0.6,
+        "saturated_fat_g": 0.1
+      },
+      "install_in_food_select": false
+    },
+    {
+      "id": "carb_rice_cooked",
+      "category": "carbs",
+      "display_name_pl": "Ryż ugotowany",
+      "default_portion": {
+        "amount": 200,
+        "unit": "g",
+        "label_pl": "1 porcja obiadowa"
+      },
+      "role": "porcja_bazowa",
+      "hero_macro": "carbs",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "rice white long-grain cooked",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "węglowodany",
+        "porcja bazowa"
+      ],
+      "notes_pl": "Dobra kotwica do tłumaczenia porcji węglowodanów w obiedzie.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 200,
+        "energy_kcal": 260,
+        "protein_g": 5.4,
+        "carbs_g": 56.4,
+        "fat_g": 0.6,
+        "saturated_fat_g": 0.1
+      }
+    },
+    {
+      "id": "carb_pasta_cooked",
+      "category": "carbs",
+      "display_name_pl": "Makaron ugotowany",
+      "default_portion": {
+        "amount": 200,
+        "unit": "g",
+        "label_pl": "1 porcja obiadowa"
+      },
+      "role": "porcja_bazowa",
+      "hero_macro": "carbs",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "pasta cooked enriched",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "węglowodany",
+        "porcja bazowa"
+      ],
+      "notes_pl": "Klasyczna porcja bazowa do głównego posiłku.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 200,
+        "energy_kcal": 316,
+        "protein_g": 11.6,
+        "carbs_g": 61.6,
+        "fat_g": 1.9,
+        "saturated_fat_g": 0.4
+      }
+    },
+    {
+      "id": "carb_potatoes_boiled",
+      "category": "carbs",
+      "display_name_pl": "Ziemniaki gotowane",
+      "default_portion": {
+        "amount": 2,
+        "unit": "szt.",
+        "label_pl": "2 średnie sztuki"
+      },
+      "role": "porcja_bazowa",
+      "hero_macro": "carbs",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "potatoes boiled cooked flesh without skin",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "węglowodany",
+        "porcja bazowa"
+      ],
+      "notes_pl": "Porcja skrobiowa o zwykle niższej gęstości energetycznej niż suchsze produkty zbożowe.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 200,
+        "energy_kcal": 174,
+        "protein_g": 3.8,
+        "carbs_g": 40,
+        "fat_g": 0.2,
+        "saturated_fat_g": 0.1
+      },
+      "install_in_food_select": false
+    },
+    {
+      "id": "carb_sweet_potato_baked",
+      "category": "carbs",
+      "display_name_pl": "Batat pieczony",
+      "default_portion": {
+        "amount": 1,
+        "unit": "szt.",
+        "label_pl": "1 średnia sztuka"
+      },
+      "role": "porcja_bazowa",
+      "hero_macro": "carbs",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "sweet potato cooked baked in skin without salt",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "węglowodany",
+        "warzywa skrobiowe"
+      ],
+      "notes_pl": "Warzywo skrobiowe — może zastępować ziemniaki, ryż lub pieczywo w posiłku.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 150,
+        "energy_kcal": 135,
+        "protein_g": 3,
+        "carbs_g": 31,
+        "fat_g": 0.2,
+        "saturated_fat_g": 0
+      },
+      "install_in_food_select": false
+    },
+    {
+      "id": "carb_quinoa_cooked",
+      "category": "carbs",
+      "display_name_pl": "Komosa ryżowa gotowana",
+      "default_portion": {
+        "amount": 1,
+        "unit": "szklanka",
+        "label_pl": "1 szklanka"
+      },
+      "role": "porcja_bazowa",
+      "hero_macro": "carbs",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "quinoa cooked",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "węglowodany",
+        "porcja bazowa"
+      ],
+      "notes_pl": "Porcja węglowodanów z dodatkową ilością białka i tłuszczu.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 185,
+        "energy_kcal": 222,
+        "protein_g": 8.1,
+        "carbs_g": 39.4,
+        "fat_g": 3.6,
+        "saturated_fat_g": 0.4
+      },
+      "install_in_food_select": false
+    },
+    {
+      "id": "carb_buckwheat_cooked",
+      "category": "carbs",
+      "display_name_pl": "Kasza gryczana gotowana",
+      "default_portion": {
+        "amount": 1,
+        "unit": "szklanka",
+        "label_pl": "1 szklanka"
+      },
+      "role": "porcja_bazowa",
+      "hero_macro": "carbs",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "buckwheat groats roasted cooked",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "węglowodany",
+        "porcja bazowa",
+        "kasza"
+      ],
+      "notes_pl": "Porcja kaszy do obiadu lub kolacji; zwykle lepiej syci niż produkty oczyszczone.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 168,
+        "energy_kcal": 155,
+        "protein_g": 5.7,
+        "carbs_g": 33.5,
+        "fat_g": 1,
+        "saturated_fat_g": 0.2
+      },
+      "install_in_food_select": false
+    },
+    {
+      "id": "carb_oats_dry",
+      "category": "carbs",
+      "display_name_pl": "Płatki owsiane",
+      "default_portion": {
+        "amount": 60,
+        "unit": "g",
+        "label_pl": "1 porcja śniadaniowa"
+      },
+      "role": "sniadanie",
+      "hero_macro": "carbs",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "oats raw",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "węglowodany",
+        "śniadanie"
+      ],
+      "notes_pl": "Praktyczny przykład śniadaniowy; zawiera też białko i tłuszcz.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 60,
+        "energy_kcal": 233,
+        "protein_g": 10.1,
+        "carbs_g": 39.8,
+        "fat_g": 4.1,
+        "saturated_fat_g": 0.7
+      }
+    },
+    {
+      "id": "carb_wholegrain_bread",
+      "category": "carbs",
+      "display_name_pl": "Chleb pełnoziarnisty",
+      "default_portion": {
+        "amount": 2,
+        "unit": "kromki",
+        "label_pl": "2 kromki"
+      },
+      "role": "na_szybko",
+      "hero_macro": "carbs",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "bread whole wheat",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "węglowodany",
+        "pieczywo"
+      ],
+      "notes_pl": "Czytelny przykład do kanapek i śniadania.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 60,
+        "energy_kcal": 148,
+        "protein_g": 7.8,
+        "carbs_g": 24,
+        "fat_g": 2.5,
+        "saturated_fat_g": 0.5
+      }
+    },
+    {
+      "id": "carb_banana",
+      "category": "carbs",
+      "display_name_pl": "Banan",
+      "default_portion": {
+        "amount": 1,
+        "unit": "szt.",
+        "label_pl": "1 średni banan"
+      },
+      "role": "na_szybko",
+      "hero_macro": "carbs",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "banana raw",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "węglowodany",
+        "owoce"
+      ],
+      "notes_pl": "Łatwy przykład przekąski węglowodanowej.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 118,
+        "energy_kcal": 105,
+        "protein_g": 1.3,
+        "carbs_g": 27,
+        "fat_g": 0.4,
+        "saturated_fat_g": 0.1,
+        "sugars_g": 14.4
+      }
+    },
+    {
+      "id": "carb_apple",
+      "category": "carbs",
+      "display_name_pl": "Jabłko",
+      "default_portion": {
+        "amount": 1,
+        "unit": "szt.",
+        "label_pl": "1 średnie jabłko"
+      },
+      "role": "na_szybko",
+      "hero_macro": "carbs",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "apple raw with skin",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "węglowodany",
+        "owoce"
+      ],
+      "notes_pl": "Przekąska z naturalnymi cukrami i błonnikiem.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 180,
+        "energy_kcal": 95,
+        "protein_g": 0.5,
+        "carbs_g": 25,
+        "fat_g": 0.3,
+        "saturated_fat_g": 0.1,
+        "sugars_g": 19
+      },
+      "install_in_food_select": false
+    },
+    {
+      "id": "carb_kidney_beans_cooked",
+      "category": "carbs",
+      "display_name_pl": "Fasola czerwona gotowana",
+      "default_portion": {
+        "amount": 1,
+        "unit": "szklanka",
+        "label_pl": "1 szklanka"
+      },
+      "role": "porcja_bazowa",
+      "hero_macro": "carbs",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "kidney beans red mature seeds cooked boiled",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "węglowodany",
+        "strączki"
+      ],
+      "notes_pl": "Strączki łączą węglowodany, białko i błonnik.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 170,
+        "energy_kcal": 225,
+        "protein_g": 15.3,
+        "carbs_g": 40.4,
+        "fat_g": 0.9,
+        "saturated_fat_g": 0.1
+      },
+      "install_in_food_select": false
+    },
+    {
+      "id": "carb_corn_cooked",
+      "category": "carbs",
+      "display_name_pl": "Kukurydza gotowana",
+      "default_portion": {
+        "amount": 1,
+        "unit": "szklanka",
+        "label_pl": "1 szklanka"
+      },
+      "role": "na_szybko",
+      "hero_macro": "carbs",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "corn sweet yellow cooked boiled drained",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "węglowodany",
+        "warzywa skrobiowe"
+      ],
+      "notes_pl": "Przykład skrobiowego dodatku do posiłku.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 165,
+        "energy_kcal": 143,
+        "protein_g": 5.1,
+        "carbs_g": 31.3,
+        "fat_g": 2.2,
+        "saturated_fat_g": 0.3
+      },
+      "install_in_food_select": false
+    },
+    {
+      "id": "fat_olive_oil",
+      "category": "fat",
+      "display_name_pl": "Oliwa z oliwek",
+      "default_portion": {
+        "amount": 1,
+        "unit": "łyżka",
+        "label_pl": "1 łyżka"
+      },
+      "role": "lepsze_zrodlo",
+      "hero_macro": "fat",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "oil olive salad or cooking",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "tłuszcz",
+        "oliwa"
+      ],
+      "notes_pl": "Bardzo czytelne źródło tłuszczu dodanego, głównie jednonienasyconego.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 13.5,
+        "energy_kcal": 119,
+        "protein_g": 0,
+        "carbs_g": 0,
+        "fat_g": 13.5,
+        "saturated_fat_g": 1.9
+      }
+    },
+    {
+      "id": "fat_canola_oil",
+      "category": "fat",
+      "display_name_pl": "Olej rzepakowy",
+      "default_portion": {
+        "amount": 1,
+        "unit": "łyżka",
+        "label_pl": "1 łyżka"
+      },
+      "role": "lepsze_zrodlo",
+      "hero_macro": "fat",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "oil canola",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "tłuszcz",
+        "olej roślinny"
+      ],
+      "notes_pl": "Olej roślinny do sałatek i gotowania; porcja 1 łyżki szybko zwiększa kaloryczność.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 14,
+        "energy_kcal": 124,
+        "protein_g": 0,
+        "carbs_g": 0,
+        "fat_g": 14,
+        "saturated_fat_g": 1
+      },
+      "install_in_food_select": false
+    },
+    {
+      "id": "fat_avocado",
+      "category": "fat",
+      "display_name_pl": "Awokado",
+      "default_portion": {
+        "amount": 0.5,
+        "unit": "szt.",
+        "label_pl": "1/2 sztuki"
+      },
+      "role": "lepsze_zrodlo",
+      "hero_macro": "fat",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "avocados raw all commercial varieties",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "tłuszcz",
+        "owoce"
+      ],
+      "notes_pl": "Przykład tłuszczu z produktu świeżego; zawiera też błonnik.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 75,
+        "energy_kcal": 120,
+        "protein_g": 1.5,
+        "carbs_g": 6.4,
+        "fat_g": 11,
+        "saturated_fat_g": 1.6
+      }
+    },
+    {
+      "id": "fat_walnuts",
+      "category": "fat",
+      "display_name_pl": "Orzechy włoskie",
+      "default_portion": {
+        "amount": 30,
+        "unit": "g",
+        "label_pl": "1 garść"
+      },
+      "role": "lepsze_zrodlo",
+      "hero_macro": "fat",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "walnuts english",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "tłuszcz",
+        "orzechy"
+      ],
+      "notes_pl": "Mała porcja daje sporo tłuszczu i energii; dobre źródło ALA.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 30,
+        "energy_kcal": 196,
+        "protein_g": 4.6,
+        "carbs_g": 4.1,
+        "fat_g": 19.6,
+        "saturated_fat_g": 1.8
+      }
+    },
+    {
+      "id": "fat_almonds",
+      "category": "fat",
+      "display_name_pl": "Migdały",
+      "default_portion": {
+        "amount": 30,
+        "unit": "g",
+        "label_pl": "1 garść"
+      },
+      "role": "lepsze_zrodlo",
+      "hero_macro": "fat",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "almonds",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "tłuszcz",
+        "orzechy"
+      ],
+      "notes_pl": "Czytelny przykład tłuszczu z orzechów.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 30,
+        "energy_kcal": 174,
+        "protein_g": 6.4,
+        "carbs_g": 6.5,
+        "fat_g": 15,
+        "saturated_fat_g": 1.1
+      }
+    },
+    {
+      "id": "fat_chia_seeds",
+      "category": "fat",
+      "display_name_pl": "Nasiona chia",
+      "default_portion": {
+        "amount": 2,
+        "unit": "łyżki",
+        "label_pl": "2 łyżki"
+      },
+      "role": "lepsze_zrodlo",
+      "hero_macro": "fat",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "seeds chia dried",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "tłuszcz",
+        "nasiona"
+      ],
+      "notes_pl": "Dostarczają tłuszczu, ale też błonnika; porcje zwykle są małe.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 28,
+        "energy_kcal": 138,
+        "protein_g": 4.7,
+        "carbs_g": 12,
+        "fat_g": 8.7,
+        "saturated_fat_g": 0.9
+      },
+      "install_in_food_select": false
+    },
+    {
+      "id": "fat_flaxseed_ground",
+      "category": "fat",
+      "display_name_pl": "Siemię lniane mielone",
+      "default_portion": {
+        "amount": 2,
+        "unit": "łyżki",
+        "label_pl": "2 łyżki"
+      },
+      "role": "lepsze_zrodlo",
+      "hero_macro": "fat",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "flaxseed ground",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "tłuszcz",
+        "nasiona",
+        "omega-3 ALA"
+      ],
+      "notes_pl": "Dodatek do owsianki, jogurtu lub koktajlu; wnosi tłuszcz, błonnik i kwas ALA.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 14,
+        "energy_kcal": 75,
+        "protein_g": 2.6,
+        "carbs_g": 4,
+        "fat_g": 5.9,
+        "saturated_fat_g": 0.5
+      },
+      "install_in_food_select": false
+    },
+    {
+      "id": "fat_sunflower_seeds",
+      "category": "fat",
+      "display_name_pl": "Pestki słonecznika",
+      "default_portion": {
+        "amount": 30,
+        "unit": "g",
+        "label_pl": "1 garść"
+      },
+      "role": "lepsze_zrodlo",
+      "hero_macro": "fat",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "seeds sunflower seed kernels dried",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "tłuszcz",
+        "nasiona"
+      ],
+      "notes_pl": "Poręczna porcja tłuszczu z nasion.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 30,
+        "energy_kcal": 175,
+        "protein_g": 6.2,
+        "carbs_g": 6,
+        "fat_g": 15.5,
+        "saturated_fat_g": 1.5
+      },
+      "install_in_food_select": false
+    },
+    {
+      "id": "fat_peanut_butter_100",
+      "category": "fat",
+      "display_name_pl": "Masło orzechowe 100%",
+      "default_portion": {
+        "amount": 2,
+        "unit": "łyżki",
+        "label_pl": "2 łyżki"
+      },
+      "role": "uwazaj_na",
+      "hero_macro": "fat",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "peanut butter smooth style without salt",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "tłuszcz",
+        "orzechy",
+        "kaloryczne"
+      ],
+      "notes_pl": "Łatwo zwiększa tłuszcz i kalorie — odmierzanie porcji ma znaczenie.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 32,
+        "energy_kcal": 188,
+        "protein_g": 8,
+        "carbs_g": 7,
+        "fat_g": 16,
+        "saturated_fat_g": 3.3
+      }
+    },
+    {
+      "id": "fat_tahini",
+      "category": "fat",
+      "display_name_pl": "Tahini",
+      "default_portion": {
+        "amount": 2,
+        "unit": "łyżki",
+        "label_pl": "2 łyżki"
+      },
+      "role": "uwazaj_na",
+      "hero_macro": "fat",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "sesame butter tahini",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "tłuszcz",
+        "sezam"
+      ],
+      "notes_pl": "Mała porcja pasty sezamowej wnosi dużo tłuszczu i energii.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 30,
+        "energy_kcal": 178,
+        "protein_g": 5.1,
+        "carbs_g": 6.4,
+        "fat_g": 16.1,
+        "saturated_fat_g": 2.3
+      },
+      "install_in_food_select": false
+    },
+    {
+      "id": "fat_salmon_cooked",
+      "category": "fat",
+      "display_name_pl": "Łosoś pieczony",
+      "default_portion": {
+        "amount": 120,
+        "unit": "g",
+        "label_pl": "1 filet"
+      },
+      "role": "lepsze_zrodlo",
+      "hero_macro": "fat",
+      "lookup": {
+        "provider": "USDA FoodData Central",
+        "data_type": "Foundation Foods / SR Legacy / FNDDS",
+        "lookup_query": "salmon cooked dry heat",
+        "known_values": {},
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "tłuszcz",
+        "ryby",
+        "białko"
+      ],
+      "notes_pl": "Przykład produktu, w którym tłuszcz idzie razem z białkiem.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 120,
+        "energy_kcal": 247,
+        "protein_g": 26.4,
+        "carbs_g": 0,
+        "fat_g": 14.7,
+        "saturated_fat_g": 3.1
+      },
+      "install_in_food_select": false
+    },
+    {
+      "id": "satfat_snickers_single",
+      "category": "satfat",
+      "display_name_pl": "SNICKERS baton",
+      "default_portion": {
+        "amount": 1,
+        "unit": "szt.",
+        "label_pl": "1 baton"
+      },
+      "role": "warning",
+      "hero_macro": "saturated_fat",
+      "lookup": {
+        "provider": "Oficjalna etykieta producenta / USDA FoodData Central",
+        "lookup_query": "SNICKERS Singles Size Chocolate Candy Bars, 1.86 oz",
+        "known_values_per_portion": {
+          "energy_kcal": 250,
+          "fat_g": 12,
+          "saturated_fat_g": 4.5,
+          "carbs_g": 32,
+          "sugars_g": 27,
+          "protein_g": 5
+        },
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "warning",
+        "słodycze",
+        "wysokie nasycone"
+      ],
+      "notes_pl": "Modelowy przykład produktu, który szybko wykorzystuje sporą część dziennego pułapu nasyconych.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 53,
+        "energy_kcal": 250,
+        "protein_g": 5,
+        "carbs_g": 32,
+        "fat_g": 12,
+        "saturated_fat_g": 4.5,
+        "sugars_g": 27,
+        "salt_g": 0.2
+      }
+    },
+    {
+      "id": "satfat_milk_chocolate",
+      "category": "satfat",
+      "display_name_pl": "Czekolada mleczna",
+      "default_portion": {
+        "amount": 50,
+        "unit": "g",
+        "label_pl": "1/2 tabliczki"
+      },
+      "role": "warning",
+      "hero_macro": "saturated_fat",
+      "lookup": {
+        "provider": "USDA FoodData Central / etykiety produktów",
+        "lookup_query": "Chocolate, milk",
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "warning",
+        "słodycze",
+        "nasycone"
+      ],
+      "notes_pl": "Przykład „słodkie + nasycone”.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 50,
+        "energy_kcal": 268,
+        "protein_g": 3.8,
+        "carbs_g": 30,
+        "fat_g": 15,
+        "saturated_fat_g": 9,
+        "sugars_g": 27,
+        "salt_g": 0.1
+      }
+    },
+    {
+      "id": "satfat_butter_croissant",
+      "category": "satfat",
+      "display_name_pl": "Croissant maślany",
+      "default_portion": {
+        "amount": 1,
+        "unit": "szt.",
+        "label_pl": "1 sztuka"
+      },
+      "role": "warning",
+      "hero_macro": "saturated_fat",
+      "lookup": {
+        "provider": "USDA FoodData Central / etykiety produktów",
+        "lookup_query": "Croissant",
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "warning",
+        "wypiek",
+        "nasycone"
+      ],
+      "notes_pl": "Przykład pieczywa cukierniczego z dużym udziałem tłuszczu i nasyconych.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 60,
+        "energy_kcal": 240,
+        "protein_g": 5,
+        "carbs_g": 26,
+        "fat_g": 13,
+        "saturated_fat_g": 7.5,
+        "sugars_g": 6,
+        "salt_g": 0.5
+      }
+    },
+    {
+      "id": "satfat_kabanos",
+      "category": "satfat",
+      "display_name_pl": "Kabanosy",
+      "default_portion": {
+        "amount": 60,
+        "unit": "g",
+        "label_pl": "1 mała paczka"
+      },
+      "role": "warning",
+      "hero_macro": "saturated_fat",
+      "lookup": {
+        "provider": "Oficjalna etykieta producenta / USDA FoodData Central",
+        "lookup_query": "Sausage, dry or semi-dry",
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "warning",
+        "słone",
+        "nasycone"
+      ],
+      "notes_pl": "Przykład „słone + nasycone”.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 60,
+        "energy_kcal": 320,
+        "protein_g": 16,
+        "carbs_g": 1.2,
+        "fat_g": 26,
+        "saturated_fat_g": 10,
+        "salt_g": 2.2
+      }
+    },
+    {
+      "id": "satfat_yellow_cheese",
+      "category": "satfat",
+      "display_name_pl": "Ser żółty",
+      "default_portion": {
+        "amount": 40,
+        "unit": "g",
+        "label_pl": "2–3 plastry"
+      },
+      "role": "warning",
+      "hero_macro": "saturated_fat",
+      "lookup": {
+        "provider": "USDA FoodData Central / etykiety produktów",
+        "lookup_query": "Cheese, edam",
+        "data_type_hint": "Foundation Foods / FNDDS / SR Legacy"
+      },
+      "ui_tags": [
+        "warning",
+        "nabiał",
+        "nasycone"
+      ],
+      "notes_pl": "Codzienny produkt, który potrafi szybko podbić nasycone.",
+      "resolved_nutrients_per_portion": {
+        "portion_mass_g": 40,
+        "energy_kcal": 142,
+        "protein_g": 10.4,
+        "carbs_g": 0.2,
+        "fat_g": 11,
+        "saturated_fat_g": 7.2,
+        "salt_g": 0.8
+      }
+    }
+  ],
+  "combination_examples": {
+    "protein_sets": [],
+    "carbs_sets": [],
+    "fat_sets": [],
+    "protein_mixed_day": [],
+    "plant_protein_note": "Przy białku roślinnym warto łączyć różne źródła, np. strączki + produkty zbożowe + orzechy."
+  },
+  "integration_hints": {
+    "nutrition_norms_card": {
+      "preview_builder": "macroExamplesBuildPreview(targets, dictionary)",
+      "bottom_sheet_builder": "macroExamplesBuildSheet(macroType, target, dictionary, copy)"
+    },
+    "meal_card": {
+      "extra_line_1": "B {{protein_g}} g • W {{carbs_g}} g • T {{fat_g}} g",
+      "extra_line_2_mode": [
+        "goal_share",
+        "warning"
+      ],
+      "warning_chip_source": "saturated_fat_portion_share_of_day_cap_pct"
+    }
+  },
+  "reference_caps": {
+    "saturated_fat_g": 20
+  }
+}

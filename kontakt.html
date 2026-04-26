@@ -3,180 +3,1097 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <!--
-    Strona kontaktowa serwisu wagaiwzrost.pl.  Zawiera dane kontaktowe autora
-    merytorycznego oraz właściciela aplikacji.  Zachowuje spójny układ z
-    pozostałymi podstronami i umożliwia szybkie przejście do innych
-    modułów serwisu.  Inspiracja dla układu kontaktu pochodzi z dobrych
-    praktyk projektowania stron medycznych, które podkreślają prostotę,
-    przejrzystość i łatwy dostęp do informacji【623750327341673†L34-L79】.  
-  -->
-  <title>Kontakt – Waga i wzrost</title>
-  <meta name="description" content="Dane kontaktowe aplikacji Waga i wzrost. Autor: dr n. med. Maciej Flader. Właściciel serwisu: Vilda Clinic sp. z o.o. Adres e‑mail: biuro@vildaclinic.pl. Zapraszamy do współpracy." />
+  <title>Kontakt – Waga i wzrost | Vilda Clinic</title>
+  <meta name="description" content="Skontaktuj się z zespołem aplikacji Waga i wzrost. Dane kontaktowe Vilda Clinic sp. z o.o., informacje o współpracy oraz szybki kontakt mailowy w sprawach dotyczących serwisu i materiałów edukacyjnych." />
   <meta name="robots" content="index, follow" />
-  <link rel="stylesheet" href="style.css?v=6" />
-  <link rel="stylesheet" href="ios26-v2.css?v=9" />
+  <link rel="canonical" href="https://wagaiwzrost.pl/kontakt.html" />
+  <link rel="stylesheet" href="style.css?v=5" />
+  <link rel="stylesheet" href="ios26-v2.css?v=10" />
   <link rel="stylesheet" href="sidebar.css" />
-  <!-- Dodajemy bibliotekę ikon Lucide, aby ikony w menu bocznym były widoczne -->
+
+  <script src="vilda_logger.js?v=2"></script>
+<script src="vilda_html.js?v=4"></script>
+<script src="vilda_persistence_adapter.js?v=7"></script>
+<script src="vilda_init.js?v=4"></script>
+<script src="vilda_deps.js?v=6"></script>
+<script>
+  (function() {
+    try {
+      var VERSION = 'v3';
+      var SIGNATURE = 'docpro.html|kalkulator-klirens.html|cukrzyca.html|steroidy.html|materialy-edukacyjne.html';
+      var persistence = window.VildaPersistence || null;
+      var parsed = persistence && typeof persistence.readPreferenceJSON === 'function'
+        ? persistence.readPreferenceJSON('MOBILE_TOP_NAV_FONT_CACHE', null)
+        : null;
+      if (!parsed) return;
+
+      if (!parsed || parsed.version !== VERSION || parsed.signature !== SIGNATURE) return;
+
+      var viewportWidth = Math.round(Math.max(
+        window.innerWidth || 0,
+        document.documentElement ? (document.documentElement.clientWidth || 0) : 0
+      ));
+      var cachedWidth = Math.round(Number(parsed.width) || 0);
+      var fontRem = Number(parsed.fontRem);
+
+      if (!viewportWidth || viewportWidth !== cachedWidth || !isFinite(fontRem)) return;
+      if (fontRem < 0.72 || fontRem > 0.98) return;
+
+      var style = document.createElement('style');
+      style.id = 'mobile-top-nav-font-cache-style';
+      style.textContent = '@media (max-width: 600px){.main-nav{--mobile-top-nav-font-size:' + fontRem.toFixed(2) + 'rem !important;}}';
+      document.head.appendChild(style);
+    } catch (e) {
+      /* noop */
+    }
+  })();
+  </script>
+
+  <style>
+    .contact-page {
+      --contact-surface: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(244,251,250,0.96));
+      --contact-surface-elevated: rgba(255,255,255,0.92);
+      --contact-surface-soft: rgba(255,255,255,0.88);
+      --contact-border: rgba(22, 76, 71, 0.10);
+      --contact-border-strong: rgba(0, 168, 181, 0.16);
+      --contact-shadow: 0 16px 42px rgba(15, 45, 42, 0.08);
+      --contact-card-shadow: 0 10px 24px rgba(15, 45, 42, 0.06);
+      --contact-hover-shadow: 0 14px 30px rgba(15, 45, 42, 0.10);
+      --contact-surface-backdrop: blur(14px) saturate(116%);
+      --contact-control-backdrop: blur(10px) saturate(118%);
+      --contact-hero-highlight-1: rgba(0, 168, 181, 0.16);
+      --contact-hero-highlight-2: rgba(4, 120, 87, 0.09);
+      --contact-badge-bg: rgba(255,255,255,0.9);
+      --contact-badge-border: rgba(0, 168, 181, 0.16);
+      --contact-pill-bg: rgba(0, 168, 181, 0.12);
+      --contact-pill-border: rgba(0, 168, 181, 0.22);
+      --contact-pill-text: #0a6261;
+      --contact-callout-bg: rgba(8, 145, 178, 0.09);
+      --contact-callout-border: rgba(8, 145, 178, 0.18);
+      --contact-callout-text: #0f4b48;
+      --contact-primary-bg: linear-gradient(135deg, #0891b2, #14b8a6);
+      --contact-primary-border: transparent;
+      --contact-primary-text: #ffffff;
+      --contact-primary-shadow: 0 14px 26px rgba(8, 145, 178, 0.24);
+      --contact-primary-hover-shadow: 0 16px 30px rgba(8, 145, 178, 0.28);
+      --contact-text-strong: #0f3533;
+      --contact-text: #103736;
+      --contact-text-muted: #284847;
+      --contact-text-subtle: #55706f;
+      --contact-text-soft: #4e6766;
+      --contact-text-action: #0f4b48;
+      --contact-icon: #0891b2;
+      --contact-focus-ring: rgba(8, 145, 178, 0.24);
+      --contact-focus-width: 2px;
+      --contact-step-badge-bg: linear-gradient(135deg, #0891b2, #14b8a6);
+      --contact-step-badge-text: #ffffff;
+      --contact-step-badge-shadow: 0 10px 20px rgba(8, 145, 178, 0.22);
+      --contact-footer-bg: rgba(250, 250, 250, 0.92);
+      --contact-footer-border: rgba(22, 76, 71, 0.10);
+    }
+
+    body.contact-page.dark-bg-level-1 {
+      --contact-shadow: 0 18px 46px rgba(11, 27, 33, 0.10);
+      --contact-card-shadow: 0 12px 28px rgba(11, 27, 33, 0.07);
+      --contact-hover-shadow: 0 16px 34px rgba(11, 27, 33, 0.11);
+      --contact-footer-bg: rgba(248, 250, 250, 0.94);
+    }
+
+    body.contact-page.dark-bg-level-2 {
+      --contact-shadow: 0 20px 52px rgba(8, 20, 26, 0.13);
+      --contact-card-shadow: 0 14px 30px rgba(8, 20, 26, 0.09);
+      --contact-hover-shadow: 0 18px 36px rgba(8, 20, 26, 0.13);
+      --contact-border: rgba(22, 76, 71, 0.12);
+      --contact-footer-bg: rgba(246, 248, 248, 0.96);
+    }
+
+    body.contact-page.liquid-ios26.glass-level-0 {
+      --contact-surface: linear-gradient(180deg, rgba(255,255,255,0.88), rgba(242,249,248,0.84));
+      --contact-surface-elevated: rgba(255,255,255,0.82);
+      --contact-surface-soft: rgba(255,255,255,0.80);
+      --contact-badge-bg: rgba(255,255,255,0.82);
+      --contact-callout-bg: rgba(242,251,252,0.82);
+      --contact-border: rgba(255,255,255,0.34);
+      --contact-border-strong: rgba(255,255,255,0.38);
+      --contact-card-shadow: 0 8px 22px rgba(15, 45, 42, 0.08);
+      --contact-hover-shadow: 0 12px 26px rgba(15, 45, 42, 0.10);
+      --contact-surface-backdrop: blur(16px) saturate(118%);
+      --contact-control-backdrop: blur(12px) saturate(118%);
+      --contact-footer-bg: rgba(248, 250, 250, 0.88);
+    }
+
+    body.contact-page.liquid-ios26.glass-level-1 {
+      --contact-surface: linear-gradient(180deg, rgba(255,255,255,0.91), rgba(243,250,249,0.88));
+      --contact-surface-elevated: rgba(255,255,255,0.86);
+      --contact-surface-soft: rgba(255,255,255,0.84);
+      --contact-badge-bg: rgba(255,255,255,0.86);
+      --contact-callout-bg: rgba(241,250,251,0.86);
+      --contact-border: rgba(255,255,255,0.46);
+      --contact-border-strong: rgba(255,255,255,0.50);
+      --contact-card-shadow: 0 10px 24px rgba(15, 45, 42, 0.08);
+      --contact-hover-shadow: 0 14px 28px rgba(15, 45, 42, 0.10);
+      --contact-surface-backdrop: blur(16px) saturate(118%);
+      --contact-control-backdrop: blur(12px) saturate(118%);
+      --contact-footer-bg: rgba(248, 250, 250, 0.90);
+    }
+
+    body.contact-page.liquid-ios26.glass-level-2 {
+      --contact-surface: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(244,250,249,0.91));
+      --contact-surface-elevated: rgba(255,255,255,0.90);
+      --contact-surface-soft: rgba(255,255,255,0.88);
+      --contact-badge-bg: rgba(255,255,255,0.90);
+      --contact-callout-bg: rgba(241,250,251,0.90);
+      --contact-border: rgba(255,255,255,0.58);
+      --contact-border-strong: rgba(255,255,255,0.62);
+      --contact-card-shadow: 0 10px 26px rgba(15, 45, 42, 0.10);
+      --contact-hover-shadow: 0 14px 30px rgba(15, 45, 42, 0.12);
+      --contact-surface-backdrop: blur(15px) saturate(116%);
+      --contact-control-backdrop: blur(11px) saturate(116%);
+      --contact-footer-bg: rgba(249, 251, 251, 0.92);
+    }
+
+    body.contact-page.liquid-ios26.glass-level-3 {
+      --contact-surface: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(245,251,250,0.94));
+      --contact-surface-elevated: rgba(255,255,255,0.93);
+      --contact-surface-soft: rgba(255,255,255,0.91);
+      --contact-badge-bg: rgba(255,255,255,0.93);
+      --contact-callout-bg: rgba(243,251,252,0.93);
+      --contact-border: rgba(255,255,255,0.72);
+      --contact-border-strong: rgba(255,255,255,0.78);
+      --contact-card-shadow: 0 12px 30px rgba(0, 0, 0, 0.13);
+      --contact-hover-shadow: 0 16px 32px rgba(0, 0, 0, 0.15);
+      --contact-surface-backdrop: blur(14px) saturate(114%);
+      --contact-control-backdrop: blur(10px) saturate(114%);
+      --contact-footer-bg: rgba(250, 252, 252, 0.94);
+    }
+
+    body.contact-page.liquid-ios26.glass-level-4 {
+      --contact-surface: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(246,252,251,0.96));
+      --contact-surface-elevated: rgba(255,255,255,0.96);
+      --contact-surface-soft: rgba(255,255,255,0.94);
+      --contact-badge-bg: rgba(255,255,255,0.96);
+      --contact-callout-bg: rgba(245,252,252,0.96);
+      --contact-border: rgba(255,255,255,0.84);
+      --contact-border-strong: rgba(255,255,255,0.90);
+      --contact-card-shadow: 0 14px 34px rgba(0, 0, 0, 0.16);
+      --contact-hover-shadow: 0 18px 36px rgba(0, 0, 0, 0.18);
+      --contact-surface-backdrop: blur(13px) saturate(112%);
+      --contact-control-backdrop: blur(9px) saturate(112%);
+      --contact-footer-bg: rgba(251, 252, 252, 0.96);
+    }
+
+    body.contact-page.high-contrast-level-1.liquid-ios26,
+    body.contact-page.high-contrast-level-2.liquid-ios26,
+    body.contact-page.high-contrast-level-3.liquid-ios26 {
+      --contact-surface: var(--hc-surface);
+      --contact-surface-elevated: var(--hc-module-btn-bg);
+      --contact-surface-soft: var(--hc-module-btn-hover-bg);
+      --contact-border: var(--hc-border);
+      --contact-border-strong: var(--hc-module-btn-border);
+      --contact-shadow: var(--hc-shadow);
+      --contact-card-shadow: var(--hc-module-btn-shadow);
+      --contact-hover-shadow: var(--hc-module-btn-active-shadow);
+      --contact-surface-backdrop: var(--hc-blur);
+      --contact-control-backdrop: none;
+      --contact-badge-bg: var(--hc-button-bg);
+      --contact-badge-border: var(--hc-input-border);
+      --contact-pill-bg: var(--hc-button-bg);
+      --contact-pill-border: var(--hc-input-border);
+      --contact-pill-text: var(--hc-text);
+      --contact-callout-bg: var(--hc-result-bg);
+      --contact-callout-border: var(--hc-input-border);
+      --contact-callout-text: var(--hc-text);
+      --contact-primary-bg: linear-gradient(135deg, rgba(0,131,141,0.96), rgba(20,184,166,0.90));
+      --contact-primary-border: rgba(0, 131, 141, 0.54);
+      --contact-primary-text: #ffffff;
+      --contact-primary-shadow: 0 12px 24px rgba(0, 131, 141, 0.18);
+      --contact-primary-hover-shadow: 0 14px 28px rgba(0, 131, 141, 0.22);
+      --contact-text-strong: var(--hc-text);
+      --contact-text: var(--hc-text);
+      --contact-text-muted: var(--hc-muted);
+      --contact-text-subtle: var(--hc-muted);
+      --contact-text-soft: var(--hc-muted);
+      --contact-text-action: var(--hc-text);
+      --contact-icon: #0b6a71;
+      --contact-focus-ring: var(--hc-focus-color);
+      --contact-focus-width: var(--hc-focus-width);
+      --contact-step-badge-bg: linear-gradient(135deg, rgba(0,131,141,0.94), rgba(20,184,166,0.88));
+      --contact-step-badge-text: #ffffff;
+      --contact-step-badge-shadow: 0 10px 20px rgba(0, 131, 141, 0.18);
+      --contact-hero-highlight-1: rgba(0, 131, 141, 0.08);
+      --contact-hero-highlight-2: rgba(0, 131, 141, 0.05);
+      --contact-footer-bg: var(--hc-surface);
+      --contact-footer-border: var(--hc-border);
+    }
+
+    .contact-page .contact-shell {
+      padding-block: 1rem 2.5rem;
+    }
+
+    .contact-page .contact-hero,
+    .contact-page .contact-panel,
+    .contact-page .contact-card,
+    .contact-page .contact-profile-card {
+      background: var(--contact-surface);
+      border: 1px solid var(--contact-border);
+      border-radius: 24px;
+      box-shadow: var(--contact-shadow);
+      backdrop-filter: var(--contact-surface-backdrop);
+      -webkit-backdrop-filter: var(--contact-surface-backdrop);
+    }
+
+    .contact-page .contact-hero {
+      position: relative;
+      overflow: hidden;
+      isolation: isolate;
+      padding: 1.6rem;
+      margin-bottom: 1.1rem;
+    }
+
+    .contact-page .contact-hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at top right, var(--contact-hero-highlight-1), transparent 34%),
+        radial-gradient(circle at bottom left, var(--contact-hero-highlight-2), transparent 30%);
+      z-index: -1;
+    }
+
+    .contact-page .contact-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      justify-content: center;
+    }
+
+    .contact-page .contact-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.52rem 0.82rem;
+      border-radius: 999px;
+      background: var(--contact-badge-bg);
+      border: 1px solid var(--contact-badge-border);
+      color: var(--contact-text-action);
+      font-weight: 700;
+      box-shadow: var(--contact-card-shadow);
+      backdrop-filter: var(--contact-control-backdrop);
+      -webkit-backdrop-filter: var(--contact-control-backdrop);
+    }
+
+    .contact-page .contact-badge .sidebar-icon,
+    .contact-page .contact-section-heading .sidebar-icon,
+    .contact-page .contact-topic-card h4 .sidebar-icon,
+    .contact-page .contact-action .sidebar-icon,
+    .contact-page .contact-method-head .sidebar-icon,
+    .contact-page .contact-link-card .sidebar-icon,
+    .contact-page .contact-kicker .sidebar-icon {
+      width: 1rem;
+      height: 1rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      align-self: center;
+      line-height: 0;
+    }
+
+    .contact-page .sidebar-icon svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .contact-page .contact-hero-main {
+      max-width: 76ch;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .contact-page .contact-hero h2 {
+      font-size: clamp(1.8rem, 3.6vw, 2.6rem);
+      line-height: 1.08;
+      margin: 0.95rem auto 0.9rem;
+      max-width: 18ch;
+      text-align: center;
+      text-wrap: balance;
+      color: var(--contact-text-strong);
+    }
+
+    .contact-page .hero-lead,
+    .contact-page .contact-panel p,
+    .contact-page .contact-panel li,
+    .contact-page .contact-card p,
+    .contact-page .contact-profile-card p {
+      color: var(--contact-text-muted);
+      line-height: 1.72;
+    }
+
+    .contact-page .hero-lead {
+      margin: 0 auto;
+      max-width: 64ch;
+      font-size: 1.05rem;
+    }
+
+    .contact-page .contact-actions {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 1.15rem;
+    }
+
+    .contact-page .contact-action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.55rem;
+      min-height: 3.2rem;
+      padding: 0.82rem 1.15rem;
+      border-radius: 18px;
+      border: 1px solid var(--contact-border-strong);
+      background: var(--contact-surface-elevated);
+      color: var(--contact-text-action);
+      text-decoration: none;
+      font-weight: 800;
+      text-align: center;
+      box-shadow: var(--contact-card-shadow);
+      backdrop-filter: var(--contact-control-backdrop);
+      -webkit-backdrop-filter: var(--contact-control-backdrop);
+      transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+    }
+
+    .contact-page .contact-action.primary {
+      background: var(--contact-primary-bg);
+      color: var(--contact-primary-text);
+      border-color: var(--contact-primary-border);
+      box-shadow: var(--contact-primary-shadow);
+    }
+
+    .contact-page .contact-action:not(.primary):hover,
+    .contact-page .contact-action:not(.primary):focus-visible,
+    .contact-page .contact-link-card:hover,
+    .contact-page .contact-link-card:focus-visible,
+    .contact-page .contact-method:hover,
+    .contact-page .contact-method:focus-visible {
+      transform: translateY(-1px);
+      box-shadow: var(--contact-hover-shadow);
+      background: var(--contact-surface-soft);
+      border-color: var(--contact-border-strong);
+      outline: none;
+    }
+
+    .contact-page .contact-action.primary:hover,
+    .contact-page .contact-action.primary:focus-visible {
+      transform: translateY(-1px);
+      background: var(--contact-primary-bg);
+      box-shadow: var(--contact-primary-hover-shadow);
+      border-color: var(--contact-primary-border);
+      outline: none;
+    }
+
+    .contact-page .contact-action:focus-visible,
+    .contact-page .contact-link-card:focus-visible,
+    .contact-page .contact-method:focus-visible {
+      box-shadow: var(--contact-hover-shadow), 0 0 0 var(--contact-focus-width) var(--contact-focus-ring);
+    }
+
+    .contact-page .contact-action.primary:focus-visible {
+      box-shadow: var(--contact-primary-hover-shadow), 0 0 0 var(--contact-focus-width) var(--contact-focus-ring);
+    }
+
+    .contact-page .contact-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.3fr) minmax(300px, 0.92fr);
+      gap: 1rem;
+      align-items: start;
+    }
+
+    .contact-page .contact-stack,
+    .contact-page .contact-side-stack {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .contact-page .contact-panel,
+    .contact-page .contact-card,
+    .contact-page .contact-profile-card {
+      padding: 1.35rem;
+    }
+
+    .contact-page .contact-section-heading {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      align-items: center;
+      gap: 0.7rem;
+      margin-bottom: 0.8rem;
+    }
+
+    .contact-page .contact-section-heading h3 {
+      margin: 0;
+      color: var(--contact-text);
+      font-size: 1.18rem;
+      line-height: 1.25;
+    }
+
+    .contact-page .contact-section-heading .sidebar-icon {
+      width: 1.1rem;
+      height: 1.1rem;
+      color: var(--contact-icon);
+    }
+
+    .contact-page .contact-methods {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.85rem;
+      margin-top: 0.35rem;
+    }
+
+    .contact-page .contact-method {
+      display: block;
+      padding: 1rem 1.05rem;
+      border-radius: 20px;
+      background: var(--contact-surface-elevated);
+      border: 1px solid var(--contact-border);
+      text-decoration: none;
+      color: var(--contact-text);
+      min-height: 100%;
+      box-shadow: var(--contact-card-shadow);
+      backdrop-filter: var(--contact-control-backdrop);
+      -webkit-backdrop-filter: var(--contact-control-backdrop);
+      transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+    }
+
+    .contact-page .contact-method-head {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-weight: 800;
+      color: var(--contact-text-action);
+      margin-bottom: 0.5rem;
+    }
+
+    .contact-page .contact-method-head .sidebar-icon {
+      width: 1.05rem;
+      height: 1.05rem;
+      color: var(--contact-icon);
+    }
+
+    .contact-page .contact-method-label {
+      display: block;
+      font-size: 0.9rem;
+      color: var(--contact-text-subtle);
+      margin-bottom: 0.25rem;
+    }
+
+    .contact-page .contact-method-value {
+      display: block;
+      font-size: 1rem;
+      line-height: 1.45;
+      font-weight: 700;
+      color: var(--contact-text);
+      overflow-wrap: anywhere;
+    }
+
+    .contact-page .contact-method-note {
+      display: block;
+      margin-top: 0.5rem;
+      color: var(--contact-text-soft);
+      font-size: 0.9rem;
+      line-height: 1.55;
+    }
+
+    .contact-page .contact-callout {
+      margin-top: 1rem;
+      padding: 1rem 1.05rem;
+      border-radius: 20px;
+      background: var(--contact-callout-bg);
+      border: 1px solid var(--contact-callout-border);
+      color: var(--contact-callout-text);
+      box-shadow: var(--contact-card-shadow);
+      backdrop-filter: var(--contact-control-backdrop);
+      -webkit-backdrop-filter: var(--contact-control-backdrop);
+    }
+
+    .contact-page .contact-topic-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 0.85rem;
+    }
+
+    .contact-page .contact-topic-card {
+      padding: 1rem 1.05rem;
+      border-radius: 20px;
+      background: var(--contact-surface-elevated);
+      border: 1px solid var(--contact-border);
+      box-shadow: var(--contact-card-shadow);
+      backdrop-filter: var(--contact-control-backdrop);
+      -webkit-backdrop-filter: var(--contact-control-backdrop);
+    }
+
+    .contact-page .contact-topic-card h4 {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      align-items: center;
+      gap: 0.55rem;
+      margin: 0.05rem 0 0.6rem;
+      font-size: 1rem;
+      line-height: 1.3;
+      color: var(--contact-text);
+    }
+
+    .contact-page .contact-topic-card h4 .sidebar-icon {
+      color: var(--contact-icon);
+    }
+
+    .contact-page .contact-topic-card p {
+      margin: 0;
+      font-size: 0.94rem;
+      line-height: 1.62;
+    }
+
+    .contact-page .contact-steps {
+      counter-reset: contactStep;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 0.85rem;
+    }
+
+    .contact-page .contact-steps li {
+      counter-increment: contactStep;
+      position: relative;
+      padding: 1rem 1rem 1rem 3.15rem;
+      border-radius: 20px;
+      background: var(--contact-surface-elevated);
+      border: 1px solid var(--contact-border);
+      color: var(--contact-text-muted);
+      line-height: 1.62;
+      box-shadow: var(--contact-card-shadow);
+      backdrop-filter: var(--contact-control-backdrop);
+      -webkit-backdrop-filter: var(--contact-control-backdrop);
+    }
+
+    .contact-page .contact-steps li::before {
+      content: counter(contactStep);
+      position: absolute;
+      left: 1rem;
+      top: 1rem;
+      width: 1.6rem;
+      height: 1.6rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: var(--contact-step-badge-bg);
+      color: var(--contact-step-badge-text);
+      font-weight: 800;
+      box-shadow: var(--contact-step-badge-shadow);
+    }
+
+    .contact-page .contact-profile-card {
+      overflow: hidden;
+    }
+
+    .contact-page .contact-portrait {
+      margin: 0 0 1rem;
+      border-radius: 20px;
+      overflow: hidden;
+      background: var(--contact-surface-soft);
+      border: 1px solid var(--contact-border);
+      box-shadow: var(--contact-card-shadow);
+    }
+
+    .contact-page .contact-portrait img {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 4 / 5;
+      object-fit: cover;
+      object-position: center top;
+    }
+
+    .contact-page .contact-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.38rem 0.7rem;
+      border-radius: 999px;
+      background: var(--contact-pill-bg);
+      border: 1px solid var(--contact-pill-border);
+      color: var(--contact-pill-text);
+      font-weight: 800;
+      font-size: 0.88rem;
+      margin: 0 0 0.9rem;
+      box-shadow: var(--contact-card-shadow);
+      backdrop-filter: var(--contact-control-backdrop);
+      -webkit-backdrop-filter: var(--contact-control-backdrop);
+    }
+
+    .contact-page .contact-profile-card h3 {
+      margin: 0 0 0.65rem;
+      color: var(--contact-text);
+      font-size: 1.3rem;
+      line-height: 1.2;
+    }
+
+    .contact-page .contact-profile-card p {
+      margin: 0;
+    }
+
+    .contact-page .contact-meta {
+      list-style: none;
+      margin: 1rem 0 0;
+      padding: 0;
+      display: grid;
+      gap: 0.7rem;
+    }
+
+    .contact-page .contact-meta li {
+      display: grid;
+      gap: 0.18rem;
+      padding: 0.9rem 1rem;
+      border-radius: 18px;
+      background: var(--contact-surface-elevated);
+      border: 1px solid var(--contact-border);
+      box-shadow: var(--contact-card-shadow);
+      backdrop-filter: var(--contact-control-backdrop);
+      -webkit-backdrop-filter: var(--contact-control-backdrop);
+    }
+
+    .contact-page .contact-meta span {
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--contact-text-subtle);
+      font-weight: 700;
+    }
+
+    .contact-page .contact-meta strong {
+      color: var(--contact-text);
+    }
+
+    .contact-page .contact-link-grid {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .contact-page .contact-link-card {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 0.8rem;
+      padding: 0.95rem 1rem;
+      border-radius: 18px;
+      background: var(--contact-surface-elevated);
+      border: 1px solid var(--contact-border-strong);
+      text-decoration: none;
+      color: var(--contact-text-action);
+      font-weight: 800;
+      box-shadow: var(--contact-card-shadow);
+      backdrop-filter: var(--contact-control-backdrop);
+      -webkit-backdrop-filter: var(--contact-control-backdrop);
+      transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+    }
+
+    .contact-page .contact-link-card .sidebar-icon:first-child {
+      color: var(--contact-icon);
+    }
+
+    .contact-page .contact-link-card span:nth-child(2) {
+      line-height: 1.25;
+    }
+
+    .contact-page .contact-hero strong,
+    .contact-page .contact-panel strong,
+    .contact-page .contact-card strong,
+    .contact-page .contact-profile-card strong {
+      color: var(--contact-text-strong);
+    }
+
+    .contact-page .contact-muted {
+      margin-top: 0.85rem;
+      font-size: 0.92rem;
+      color: var(--contact-text-soft);
+      line-height: 1.6;
+    }
+
+    .contact-page footer {
+      margin-top: 1rem;
+      background: var(--contact-footer-bg);
+      border-top: 1px solid var(--contact-footer-border);
+      color: var(--contact-text-muted);
+      backdrop-filter: var(--contact-surface-backdrop);
+      -webkit-backdrop-filter: var(--contact-surface-backdrop);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42);
+    }
+
+    .contact-page footer strong,
+    .contact-page footer a {
+      color: var(--contact-text);
+    }
+
+    @media (max-width: 1080px) {
+      .contact-page .contact-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .contact-page .contact-side-stack {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 780px) {
+      .contact-page .contact-methods,
+      .contact-page .contact-side-stack {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .contact-page .contact-shell {
+        padding-block: 0.6rem 2rem;
+      }
+
+      .contact-page .contact-hero,
+      .contact-page .contact-panel,
+      .contact-page .contact-card,
+      .contact-page .contact-profile-card {
+        padding: 1.1rem;
+        border-radius: 20px;
+      }
+
+      .contact-page .contact-action,
+      .contact-page .contact-badge {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  </style>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "ContactPage",
+        "url": "https://wagaiwzrost.pl/kontakt.html",
+        "name": "Kontakt – Waga i wzrost",
+        "inLanguage": "pl-PL",
+        "description": "Strona kontaktowa aplikacji Waga i wzrost.",
+        "mainEntity": {
+          "@id": "https://wagaiwzrost.pl/#contact-org"
+        }
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://wagaiwzrost.pl/#contact-org",
+        "name": "Vilda Clinic sp. z o.o.",
+        "url": "https://vildaclinic.pl",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://wagaiwzrost.pl/logo_vilda.jpeg"
+        },
+        "contactPoint": [
+          {
+            "@type": "ContactPoint",
+            "contactType": "information",
+            "email": "biuro@vildaclinic.pl",
+            "availableLanguage": ["pl"]
+          }
+        ]
+      },
+      {
+        "@type": "Person",
+        "@id": "https://wagaiwzrost.pl/#maciej-flader-contact",
+        "name": "dr n. med. Maciej Flader",
+        "jobTitle": "Autor merytoryczny",
+        "affiliation": {
+          "@id": "https://wagaiwzrost.pl/#contact-org"
+        }
+      }
+    ]
+  }
+  </script>
+
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
 </head>
-<body class="js-loading liquid-ios26 has-sidebar">
+<body class="js-loading liquid-ios26 has-sidebar contact-page">
   <header>
     <div class="container">
-      <!-- Logo w nagłówku przekierowuje do strony głównej aplikacji -->
       <a href="index.html">
-        <img src="logo_vilda.jpeg" alt="Vilda Clinic – strona główna" style="max-width:160px;margin-bottom:10px; border-radius:var(--radius);" />
+        <img src="logo_vilda.jpeg" alt="Vilda Clinic – strona główna" style="max-width:160px;margin-bottom:10px;border-radius:var(--radius);" />
       </a>
       <h1>Kontakt</h1>
     </div>
     <nav class="main-nav" aria-label="Główna nawigacja">
-  <ul>
-    <li class="menu-toggle">
-      <input type="checkbox" id="navToggle" class="nav-toggle">
-      <label for="navToggle" aria-label="Otwórz menu">
-        <span class="bar"></span>
-        <span class="bar"></span>
-        <span class="bar"></span>
-      </label>
-      <ul id="verticalMenu" class="vertical-menu">
-      <li><a href="index.html">Strona główna</a></li>
-      <li><a href="materialy-edukacyjne.html">Materiały edukacyjne</a></li>
-      <li><a href="ustawienia.html">Ustawienia</a></li>
-      <li><a href="instrukcja.html">Instrukcja</a></li>
-      <li><a href="o-aplikacji.html">O aplikacji</a></li>
+      <ul>
+        <li class="menu-toggle">
+          <input type="checkbox" id="navToggle" class="nav-toggle">
+          <label for="navToggle" aria-label="Otwórz menu">
+            <span class="bar"></span>
+            <span class="bar"></span>
+            <span class="bar"></span>
+          </label>
+          <ul id="verticalMenu" class="vertical-menu">
+            <li><a href="index.html">Strona główna</a></li>
+            <li><a href="ustawienia.html">Ustawienia</a></li>
+            <li><a href="instrukcja.html">Instrukcja</a></li>
+            <li><a href="o-aplikacji.html">O aplikacji</a></li>
+            <li><a href="kontakt.html" aria-current="page">Kontakt</a></li>
+          </ul>
+        </li>
+        <li><a href="docpro.html" class="pro-link">DocPro</a></li>
+        <li><a href="kalkulator-klirens.html">Klirens</a></li>
+        <li><a href="cukrzyca.html">Cukrzyca</a></li>
+        <li><a href="steroidy.html">Steroidy</a></li>
+        <li><a href="materialy-edukacyjne.html">Edu</a></li>
       </ul>
-    </li>
-      <li><a href="docpro.html" class="pro-link">DocPro</a></li>
-      <li><a href="homa-ir.html">HOMA‑IR</a></li>
-      <li><a href="kalkulator-klirens.html">Klirens</a></li>
-      <li><a href="cukrzyca.html">Cukrzyca</a></li>
-      <li><a href="steroidy.html">Steroidy</a></li>
-  </ul>
-</nav>
+    </nav>
   </header>
+
   <div class="desktop-layout">
     <aside class="sidebar">
       <div class="sidebar-logo">
         <a href="index.html">
-          <img src="logo_vilda.jpeg" alt="Vilda Clinic – strona główna">
+          <img src="logo_vilda.jpeg" alt="Vilda Clinic – strona główna">
         </a>
         <h1>Kontakt</h1>
       </div>
       <nav class="sidebar-nav" aria-label="Nawigacja boczna">
-  <ul>
-      <li>
-        <a href="index.html">
-          <span class="sidebar-icon" data-lucide="home"></span>
-          <span class="sidebar-label">Strona główna</span>
-        </a>
-      </li>
-      <li>
-        <a href="docpro.html" class="pro-link">
-          <span class="sidebar-icon" data-lucide="stethoscope"></span>
-          <span class="sidebar-label">DocPro</span>
-        </a>
-      </li>
-      <li>
-        <a href="homa-ir.html">
-          <span class="sidebar-icon" data-lucide="calculator"></span>
-          <span class="sidebar-label">HOMA‑IR</span>
-        </a>
-      </li>
-      <li>
-        <a href="kalkulator-klirens.html">
-          <span class="sidebar-icon" data-lucide="droplets"></span>
-          <span class="sidebar-label">Klirens</span>
-        </a>
-      </li>
-      <li>
-        <a href="cukrzyca.html">
-          <span class="sidebar-icon" data-lucide="syringe"></span>
-          <span class="sidebar-label">Cukrzyca</span>
-        </a>
-      </li>
-      <li>
-        <a href="steroidy.html">
-          <span class="sidebar-icon" data-lucide="pill"></span>
-          <span class="sidebar-label">Steroidy</span>
-        </a>
-      </li>
-      <li>
-        <a href="materialy-edukacyjne.html">
-          <span class="sidebar-icon" data-lucide="book-open"></span>
-          <span class="sidebar-label">Materiały edukacyjne</span>
-        </a>
-      </li>
-      <li>
-        <a href="ustawienia.html">
-          <span class="sidebar-icon" data-lucide="settings"></span>
-          <span class="sidebar-label">Ustawienia</span>
-        </a>
-      </li>
-      <li>
-        <a href="instrukcja.html">
-          <span class="sidebar-icon" data-lucide="file-text"></span>
-          <span class="sidebar-label">Instrukcja</span>
-        </a>
-      </li>
-      <li>
-        <a href="o-aplikacji.html">
-          <span class="sidebar-icon" data-lucide="info"></span>
-          <span class="sidebar-label">O aplikacji</span>
-        </a>
-      </li>
-      <li>
-        <a href="kontakt.html" aria-current="page">
-          <span class="sidebar-icon" data-lucide="mail"></span>
-          <span class="sidebar-label">Kontakt</span>
-        </a>
-      </li>
-  </ul>
-</nav>
+        <ul>
+          <li>
+            <a href="index.html">
+              <span class="sidebar-icon" data-lucide="home"></span>
+              <span class="sidebar-label">Strona główna</span>
+            </a>
+          </li>
+          <li>
+            <a href="docpro.html" class="pro-link">
+              <span class="sidebar-icon" data-lucide="stethoscope"></span>
+              <span class="sidebar-label">DocPro</span>
+            </a>
+          </li>
+          <li>
+            <a href="homa-ir.html">
+              <span class="sidebar-icon" data-lucide="calculator"></span>
+              <span class="sidebar-label">HOMA‑IR</span>
+            </a>
+          </li>
+          <li>
+            <a href="kalkulator-klirens.html">
+              <span class="sidebar-icon" data-lucide="droplets"></span>
+              <span class="sidebar-label">Klirens</span>
+            </a>
+          </li>
+          <li>
+            <a href="cukrzyca.html">
+              <span class="sidebar-icon" data-lucide="syringe"></span>
+              <span class="sidebar-label">Cukrzyca</span>
+            </a>
+          </li>
+          <li>
+            <a href="steroidy.html">
+              <span class="sidebar-icon" data-lucide="pill"></span>
+              <span class="sidebar-label">Steroidy</span>
+            </a>
+          </li>
+          <li>
+            <a href="materialy-edukacyjne.html">
+              <span class="sidebar-icon" data-lucide="book-open"></span>
+              <span class="sidebar-label">Edu</span>
+            </a>
+          </li>
+          <li>
+            <a href="ustawienia.html">
+              <span class="sidebar-icon" data-lucide="settings"></span>
+              <span class="sidebar-label">Ustawienia</span>
+            </a>
+          </li>
+          <li>
+            <a href="instrukcja.html">
+              <span class="sidebar-icon" data-lucide="file-text"></span>
+              <span class="sidebar-label">Instrukcja</span>
+            </a>
+          </li>
+          <li>
+            <a href="o-aplikacji.html">
+              <span class="sidebar-icon" data-lucide="info"></span>
+              <span class="sidebar-label">O aplikacji</span>
+            </a>
+          </li>
+          <li>
+            <a href="kontakt.html" aria-current="page">
+              <span class="sidebar-icon" data-lucide="mail"></span>
+              <span class="sidebar-label">Kontakt</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
     </aside>
-    <div class="main-content">
+
+    <main class="main-content">
       <div class="container">
-        <section style="max-width:700px; margin:0 auto; padding:1rem;">
-          <h2>Skontaktuj się z nami</h2>
-          <p>
-            Aplikacja <strong>Waga i wzrost</strong> powstała dzięki pracy
-            <strong>dr n. med. Macieja Fladera</strong> i&nbsp;zespołu
-            <strong>Vilda Clinic&nbsp;sp.&nbsp;z o.o.</strong>. Jesteśmy otwarci na
-            współpracę oraz wszelkie pytania dotyczące funkcjonalności serwisu.
-          </p>
-          <p>
-            <strong>Dane kontaktowe:</strong><br>
-            <strong>E‑mail:</strong> <a href="mailto:biuro@vildaclinic.pl">biuro@vildaclinic.pl</a><br>
-            <strong>Strona internetowa:</strong> <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">vildaclinic.pl</a>
-          </p>
-          <p>
-            Jeżeli chcesz zgłosić sugestię, zaproponować współpracę lub dowiedzieć się więcej o naszym projekcie,
-            napisz do nas. Odpowiadamy na wiadomości tak szybko, jak to możliwe.
-          </p>
-          <div style="text-align:center; margin-top:1.5rem;">
-            <img src="IMG_8041.JPG" alt="Zdjęcie" style="max-width:300px; width:100%; height:auto; border-radius:var(--radius);" />
+        <div class="contact-shell">
+          <section class="contact-hero">
+            <div class="contact-badges" aria-label="Skrótowe informacje o stronie kontaktowej">
+              <span class="contact-badge">
+                <span class="sidebar-icon" data-lucide="mail"></span>
+                <span>Kontakt</span>
+              </span>
+              <span class="contact-badge">
+                <span class="sidebar-icon" data-lucide="book-open"></span>
+                <span>Waga i wzrost</span>
+              </span>
+              <span class="contact-badge">
+                <span class="sidebar-icon" data-lucide="stethoscope"></span>
+                <span>Vilda Clinic</span>
+              </span>
+            </div>
+            <div class="contact-hero-main">
+              <h2>Skontaktuj się z nami</h2>
+              <p class="hero-lead">
+                Masz pytania dotyczące aplikacji, chcesz zgłosić sugestię lub porozmawiać o współpracy?
+                Napisz do nas w sprawach związanych z funkcjonalnością serwisu, materiałami edukacyjnymi
+                i rozwojem projektu.
+              </p>
+              <div class="contact-actions">
+                <a class="contact-action primary" href="mailto:biuro@vildaclinic.pl">
+                  <span class="sidebar-icon" data-lucide="mail"></span>
+                  <span>Napisz e‑mail</span>
+                </a>
+                <a class="contact-action" href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">
+                  <span class="sidebar-icon" data-lucide="globe"></span>
+                  <span>Otwórz stronę Vilda Clinic</span>
+                </a>
+              </div>
+            </div>
+          </section>
+
+          <div class="contact-grid">
+            <div class="contact-stack">
+              <section class="contact-panel">
+                <div class="contact-section-heading">
+                  <span class="sidebar-icon" data-lucide="message-square"></span>
+                  <h3>Dane kontaktowe</h3>
+                </div>
+                <div class="contact-methods">
+                  <a class="contact-method" href="mailto:biuro@vildaclinic.pl">
+                    <span class="contact-method-head">
+                      <span class="sidebar-icon" data-lucide="mail"></span>
+                      <span>E‑mail</span>
+                    </span>
+                    <span class="contact-method-value">biuro@vildaclinic.pl</span>
+                  </a>
+                  <a class="contact-method" href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">
+                    <span class="contact-method-head">
+                      <span class="sidebar-icon" data-lucide="globe"></span>
+                      <span>Strona internetowa</span>
+                    </span>
+                    <span class="contact-method-value">vildaclinic.pl</span>
+                  </a>
+                </div>
+              </section>
+
+              <section class="contact-panel">
+                <div class="contact-section-heading">
+                  <span class="sidebar-icon" data-lucide="briefcase"></span>
+                  <h3>W czym możemy pomóc</h3>
+                </div>
+                <div class="contact-topic-grid">
+                  <article class="contact-topic-card">
+                    <h4>
+                      <span class="sidebar-icon" data-lucide="message-square"></span>
+                      <span>Pytania o aplikację</span>
+                    </h4>
+                    <p>Uwagi do działania modułów, sugestie rozwoju oraz informacje o tym, jak korzystać z serwisu w praktyce.</p>
+                  </article>
+                  <article class="contact-topic-card">
+                    <h4>
+                      <span class="sidebar-icon" data-lucide="briefcase"></span>
+                      <span>Współpraca</span>
+                    </h4>
+                    <p>Wiadomości dotyczące wspólnych projektów edukacyjnych, treści medycznych i rozwoju aplikacji.</p>
+                  </article>
+                  <article class="contact-topic-card">
+                    <h4>
+                      <span class="sidebar-icon" data-lucide="book-open"></span>
+                      <span>Materiały edukacyjne</span>
+                    </h4>
+                    <p>Pytania odnoszące się do filmów, prezentacji i informacji publikowanych w sekcji edukacyjnej.</p>
+                  </article>
+                </div>
+              </section>
+
+              <section class="contact-panel">
+                <div class="contact-section-heading">
+                  <span class="sidebar-icon" data-lucide="file-text"></span>
+                  <h3>Wskazówki dotyczące korespondencji</h3>
+                </div>
+                <ol class="contact-steps">
+                  <li>Podaj krótki temat wiadomości i opisz, czego dotyczy sprawa.</li>
+                  <li>Jeżeli zgłaszasz problem techniczny, dopisz nazwę modułu albo adres podstrony.</li>
+                  <li>Jeżeli wiadomość dotyczy współpracy, wskaż zakres i preferowaną formę kontaktu zwrotnego.</li>
+                </ol>
+              </section>
+            </div>
+
+            <aside class="contact-side-stack">
+              <section class="contact-profile-card">
+                <figure class="contact-portrait">
+                  <img src="IMG_8041.JPG" alt="Portret lekarza w białym fartuchu związany z projektem Waga i wzrost" />
+                </figure>
+                <p class="contact-kicker">
+                  <span class="sidebar-icon" data-lucide="stethoscope"></span>
+                  <span>Projekt i konsultacja merytoryczna</span>
+                </p>
+                <h3>Waga i wzrost</h3>
+                <p>
+                  Aplikacja jest rozwijana przez <strong>Vilda Clinic sp. z o.o.</strong> i wspierana
+                  merytorycznie przez <strong>dr n. med. Macieja Fladera</strong>.
+                </p>
+                <ul class="contact-meta">
+                  <li>
+                    <span>Administrator serwisu</span>
+                    <strong>Vilda Clinic sp. z o.o.</strong>
+                  </li>
+                  <li>
+                    <span>Konsultacja merytoryczna</span>
+                    <strong>dr n. med. Maciej Flader</strong>
+                  </li>
+                </ul>
+              </section>
+
+
+            </aside>
           </div>
-        </section>
+        </div>
       </div>
-    </div>
+    </main>
+
+    <aside class="decor-sidebar" aria-hidden="true"></aside>
   </div>
+
   <footer>
     <p><strong>Administrator serwisu:</strong>
-      Vilda Clinic sp. z o.o. • <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">vildaclinic.pl</a>
+      Vilda Clinic sp. z o.o. •
+      <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">vildaclinic.pl</a>
     </p>
     <p><strong>Konsultacja merytoryczna:</strong>
-      dr n. med. Maciej Flader
+      dr n. med. Maciej Flader
     </p>
   </footer>
-  <script src="ios26-ui.js?v=11"></script>
+
   <script>
-    // Inicjalizacja ikon Lucide w momencie wczytania strony
-    lucide.createIcons();
-  </script>
-  <script>
-    // Remove the temporary js-loading class once initialization is complete.
     document.addEventListener('DOMContentLoaded', function() {
+      if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons();
+      }
       document.body.classList.remove('js-loading');
     });
   </script>
+  <script src="ios26-ui.js?v=16" defer></script>
 </body>
 </html>
