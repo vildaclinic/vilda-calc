@@ -32,7 +32,25 @@
  * dla osteoporozy i CRMO【16†L63-L71】【32†L301-L309】.
  */
 (function(){
-  document.addEventListener('DOMContentLoaded', function(){
+
+  function bisphosSetTrustedHtml(element, markup, context) {
+    if (!element) return false;
+    const html = markup == null ? '' : String(markup);
+    try {
+      if (typeof window !== 'undefined' && window.VildaHtml && typeof window.VildaHtml.setTrustedHtml === 'function') {
+        return window.VildaHtml.setTrustedHtml(element, html, { context: context || 'bisphos-therapy' });
+      }
+      element.textContent = html;
+      return true;
+    } catch (_) {
+      if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+        globalThis.vildaLogSwallowedCatch('bisphos_therapy.js', _, { helper: 'bisphosSetTrustedHtml', context: context || '' });
+      }
+      return false;
+    }
+  }
+
+  function initBisphosTherapyModule() {
     // Elementy interfejsu dla modułu bisfosfonianów
     const toggleBtn      = document.getElementById('toggleBisphos');
     const card           = document.getElementById('bisphosCard');
@@ -132,13 +150,13 @@
       const age    = parseFloat(ageInput && ageInput.value);
       // Sprawdzenie wymaganych danych
       if(!(weight > 0)){
-        resultEl.innerHTML = '<p>Wprowadź masę ciała dziecka w sekcji „Dane użytkownika”.</p>';
+        bisphosSetTrustedHtml(resultEl, '<p>Wprowadź masę ciała dziecka w sekcji „Dane użytkownika”.</p>', 'bisphos:resultEl');
         return;
       }
       const indication = indicationSelect ? indicationSelect.value : 'oi';
       const drug       = drugSelect ? drugSelect.value : '';
       if(!drug){
-        resultEl.innerHTML = '<p>Wybierz preparat.</p>';
+        bisphosSetTrustedHtml(resultEl, '<p>Wybierz preparat.</p>', 'bisphos:resultEl');
         return;
       }
       const doseType  = doseSelect ? doseSelect.value : 'subsequent';
@@ -289,7 +307,7 @@
 
       // Jeśli nie udało się ustalić dawki – brak danych
       if(!(mgPerKg > 0) || infusionMinutes <= 0 || intervalMonths <= 0){
-        resultEl.innerHTML = '<p>Nie można obliczyć dawki – sprawdź wybrane ustawienia.</p>';
+        bisphosSetTrustedHtml(resultEl, '<p>Nie można obliczyć dawki – sprawdź wybrane ustawienia.</p>', 'bisphos:resultEl');
         return;
       }
       // Obliczenie dawki w mg (masa ciała [kg] × dawka [mg/kg]).  Zapamiętaj pierwotną wartość, aby móc ograniczyć do maksymalnej dawki jednorazowej.
@@ -374,7 +392,7 @@
         listHtml += '</ol>';
         listHtml += '</div>';
       }
-      resultEl.innerHTML = listHtml;
+      bisphosSetTrustedHtml(resultEl, listHtml, 'bisphos:resultEl');
     }
 
     // Obsługa kliknięcia w przycisk – pokazuje lub chowa kartę i inicjuje obliczenia
@@ -393,7 +411,11 @@
               zscoreCardEl.style.display = 'none';
               if(toggleZBtn) toggleZBtn.classList.remove('active-toggle');
             }
-          } catch(e) {}
+          } catch (e) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('bisphos_therapy.js', e, { line: 396 });
+    }
+  }
           card.style.display = 'block';
           this.classList.add('active-toggle');
           updateDoseNumberVisibility();
@@ -404,7 +426,11 @@
           if(typeof adjustTestButtonWidths === 'function'){
             requestAnimationFrame(() => adjustTestButtonWidths());
           }
-        } catch(e) {}
+        } catch (e) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('bisphos_therapy.js', e, { line: 407 });
+    }
+  }
       });
     }
 
@@ -426,5 +452,13 @@
     updateDurationVisibility();
     // Początkowa konfiguracja opcji numeru podania
     updateDoseNumberVisibility();
-  });
+  }
+
+  if (typeof window !== 'undefined' && typeof window.vildaOnReady === 'function') {
+    window.vildaOnReady('bisphos-therapy:init', initBisphosTherapyModule);
+  } else if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initBisphosTherapyModule, { once: true });
+  } else {
+    initBisphosTherapyModule();
+  }
 })();

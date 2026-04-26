@@ -724,6 +724,33 @@ body.liquid-ios26::before {
   cursor: grabbing !important;
 }
 
+
+/* W trybie Liquid Glass również zawijamy dłuższe komunikaty etykiety,
+   tak aby mieściły się w szerokości ekranu na urządzeniach mobilnych. */
+.liquid-ios26 #antibioticTherapyCard .dose-slider-container--multiline {
+  padding-bottom: 0.25rem !important;
+}
+
+.liquid-ios26 #antibioticTherapyCard .slider-value-label.slider-value-label--multiline {
+  position: relative !important;
+  display: block !important;
+  left: auto !important;
+  bottom: auto !important;
+  transform: none !important;
+  width: min(100%, 34rem) !important;
+  max-width: 100% !important;
+  margin: 0.65rem auto 0 !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+  text-wrap: balance !important;
+  text-align: center !important;
+  line-height: 1.35 !important;
+  box-sizing: border-box !important;
+  cursor: default !important;
+  pointer-events: none !important;
+}
+
 /* Dodatkowy padding dla skrajnych etykiet podziałki w motywie Liquid Glass */
 .liquid-ios26 #antibioticTherapyCard .slider-ticks .slider-tick-label:first-child {
   padding-left: 0.5rem !important;
@@ -808,14 +835,22 @@ body.liquid-ios26::before {
 :root {
   --mobile-dock-height: 84px;
   --mobile-dock-side-gap: 0.75rem;
+  --mobile-dock-bottom-gap: 4px;
   --mobile-dock-extra-offset: 0px;
+  --mobile-dock-visible-lift: 0px;
+  --mobile-dock-scroll-top-gap: 4px;
+  --mobile-dock-anchor-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--mobile-dock-bottom-gap) + var(--mobile-dock-extra-offset));
+  --mobile-dock-effective-height: var(--mobile-dock-measured-height, var(--mobile-dock-height));
+  --mobile-dock-pinned-visible-lift: calc(var(--mobile-dock-effective-height) + var(--mobile-dock-anchor-bottom));
+  --mobile-dock-pinned-scroll-top-bottom: calc(var(--mobile-dock-pinned-visible-lift) + var(--mobile-dock-scroll-top-gap));
+  --scroll-top-btn-bottom: 1rem;
 }
 
 #mobileBottomDock {
   position: fixed;
   left: max(var(--mobile-dock-side-gap), calc(env(safe-area-inset-left, 0px) + 0.35rem));
   right: max(var(--mobile-dock-side-gap), calc(env(safe-area-inset-right, 0px) + 0.35rem));
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 0.55rem + var(--mobile-dock-extra-offset));
+  bottom: var(--mobile-dock-anchor-bottom);
   z-index: 1100;
   display: none;
   transform: translateY(0);
@@ -894,41 +929,35 @@ body.has-mobile-bottom-dock #mobileBottomDock {
 
 #mobileBottomDock.is-hidden,
 #mobileBottomDock.is-keyboard-hidden {
-  transform: translateY(calc(100% + env(safe-area-inset-bottom, 0px) + 1.2rem));
+  transform: translateY(calc(100% + env(safe-area-inset-bottom, 0px) + var(--mobile-dock-bottom-gap) + 0.95rem));
   opacity: 0.001;
   pointer-events: none;
 }
 
 body.has-mobile-bottom-dock {
-  padding-bottom: calc(var(--mobile-dock-height) + env(safe-area-inset-bottom, 0px) + var(--mobile-dock-extra-offset) + 1.25rem) !important;
+  padding-bottom: calc(var(--mobile-dock-height) + env(safe-area-inset-bottom, 0px) + var(--mobile-dock-extra-offset) + var(--mobile-dock-bottom-gap) + 1rem) !important;
 }
 
 body.has-mobile-bottom-dock #scrollTopBtn {
-  bottom: calc(1rem + var(--mobile-dock-extra-offset)) !important;
+  bottom: var(--scroll-top-btn-bottom, 1rem) !important;
+  z-index: 1201;
   transition: bottom 220ms ease, background 0.2s ease, transform 220ms ease, opacity 220ms ease;
 }
 
-body.has-mobile-bottom-dock.has-mobile-bottom-dock-visible #scrollTopBtn {
-  bottom: calc(var(--mobile-dock-height) + env(safe-area-inset-bottom, 0px) + var(--mobile-dock-extra-offset) + 1rem) !important;
+body.has-mobile-bottom-dock.mobile-bottom-dock-transitioning #scrollTopBtn {
+  transition: background 0.2s ease, transform 220ms ease, opacity 220ms ease !important;
 }
 
-body.dark-bg-level-1 #mobileBottomDock .mobile-bottom-dock__list,
-body.dark-bg-level-2 #mobileBottomDock .mobile-bottom-dock__list {
-  background: rgba(20, 24, 31, 0.74);
-  border-color: rgba(255, 255, 255, 0.16);
+body.mobile-nav-ui-locked.has-mobile-bottom-dock-visible #scrollTopBtn {
+  bottom: var(--mobile-dock-pinned-scroll-top-bottom, var(--scroll-top-btn-bottom, 1rem)) !important;
 }
 
-body.dark-bg-level-1 #mobileBottomDock .mobile-bottom-dock__item,
-body.dark-bg-level-2 #mobileBottomDock .mobile-bottom-dock__item {
-  color: rgba(255, 255, 255, 0.80);
-}
-
-body.dark-bg-level-1 #mobileBottomDock .mobile-bottom-dock__item.is-active,
-body.dark-bg-level-2 #mobileBottomDock .mobile-bottom-dock__item.is-active {
-  color: #ffffff;
-  background: rgba(0, 176, 166, 0.22);
-  box-shadow: inset 0 0 0 1px rgba(0, 176, 166, 0.28);
-}
+/*
+ * Dock intentionally keeps the same visual appearance regardless of the
+ * user's global "ciemne tło" setting.  The dark background preference should
+ * affect page surfaces, but not the dock itself, so we do not override the
+ * default dock palette for dark-bg-level-1/2.
+ */
 
 @media (max-width: 991.98px) {
   #mobileBottomDock {
@@ -946,19 +975,69 @@ body.dark-bg-level-2 #mobileBottomDock .mobile-bottom-dock__item.is-active {
   }
 }
 
-@media (min-width: 992px) {
-  body.has-mobile-bottom-dock {
-    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
-  }
-
-  body.has-mobile-bottom-dock #scrollTopBtn {
-    bottom: 1rem !important;
-  }
-}
+/*
+ * Nie resetujemy położenia strzałki ani dolnego paddingu tylko dlatego,
+ * że viewport ma szerokość desktopową. Dock jest aktywowany również na
+ * części desktopów i na urządzeniach coarse-pointer, więc takie globalne
+ * nadpisanie rozjeżdża offset liczony z faktycznej geometrii docka.
+ */
 
 @media (prefers-reduced-motion: reduce) {
   #mobileBottomDock,
   #mobileBottomDock .mobile-bottom-dock__item {
     transition: none !important;
+  }
+}
+
+/* =====================================================================
+ * iPhone Home Screen PWA: dock and nav arrow anchored from the same offset
+ * ---------------------------------------------------------------------
+ * In standalone mode on iPhone, the dock itself must sit almost flush with
+ * the bottom edge, but the scroll-to-top arrow was still using the older
+ * pinned variable based on env(safe-area-inset-bottom).  That mismatch made
+ * the arrow float much too high above the dock after installing the PWA.
+ *
+ * The fix is to override the shared anchor variable itself, so the dock, the
+ * navigation arrow and any helper launchers/toasts that reference the same
+ * pinned metric all stay aligned to the same ~4px gap.
+ */
+@media (display-mode: standalone) and (pointer: coarse) {
+  :root {
+    --mobile-dock-anchor-bottom: calc(var(--mobile-dock-bottom-gap) + var(--mobile-dock-extra-offset));
+  }
+
+  #mobileBottomDock {
+    bottom: var(--mobile-dock-anchor-bottom) !important;
+  }
+
+  #mobileBottomDock.is-hidden,
+  #mobileBottomDock.is-keyboard-hidden {
+    transform: translateY(calc(100% + var(--mobile-dock-anchor-bottom) + 0.75rem)) !important;
+  }
+
+  body.has-mobile-bottom-dock {
+    padding-bottom: calc(var(--mobile-dock-height) + var(--mobile-dock-anchor-bottom) + 0.75rem) !important;
+  }
+}
+
+/* Fallback for older iOS standalone detection paths that expose
+ * navigator.standalone but may not reliably honor the CSS media query.
+ */
+@media (pointer: coarse) {
+  html.display-mode-standalone {
+    --mobile-dock-anchor-bottom: calc(var(--mobile-dock-bottom-gap) + var(--mobile-dock-extra-offset));
+  }
+
+  body.display-mode-standalone #mobileBottomDock {
+    bottom: var(--mobile-dock-anchor-bottom) !important;
+  }
+
+  body.display-mode-standalone #mobileBottomDock.is-hidden,
+  body.display-mode-standalone #mobileBottomDock.is-keyboard-hidden {
+    transform: translateY(calc(100% + var(--mobile-dock-anchor-bottom) + 0.75rem)) !important;
+  }
+
+  body.display-mode-standalone.has-mobile-bottom-dock {
+    padding-bottom: calc(var(--mobile-dock-height) + var(--mobile-dock-anchor-bottom) + 0.75rem) !important;
   }
 }

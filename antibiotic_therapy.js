@@ -23,6 +23,83 @@
 
 // Uproszczono strukturę skryptu poprzez usunięcie wywołania IIFE.
   // (Usunięto debugowanie ładowania skryptu)
+  function logAbxError(message, error, meta) {
+    try {
+      const logger = window.VildaLogger || window.vildaLogger || null;
+      if (logger && typeof logger.error === 'function') {
+        logger.error('antibiotic-therapy', message || 'Błąd modułu antybiotykoterapii', error || null, meta || null);
+      }
+    } catch (loggingError) {
+      if (typeof window !== 'undefined' && window.__VILDA_DEBUG && window.console && typeof window.console.warn === 'function') {
+        window.console.warn('[VildaLogger][antibiotic-therapy] Nie udało się zapisać logu diagnostycznego', loggingError);
+      }
+    }
+  }
+
+  function logAbxWarn(message, error, meta) {
+    try {
+      const logger = window.VildaLogger || window.vildaLogger || null;
+      if (logger && typeof logger.warn === 'function') {
+        logger.warn('antibiotic-therapy', message || 'Ostrzeżenie modułu antybiotykoterapii', error || null, meta || null);
+      }
+    } catch (loggingError) {
+      if (typeof window !== 'undefined' && window.__VILDA_DEBUG && window.console && typeof window.console.warn === 'function') {
+        window.console.warn('[VildaLogger][antibiotic-therapy] Nie udało się zapisać logu diagnostycznego', loggingError);
+      }
+    }
+  }
+
+
+  function abxEscapeHtml(value) {
+    if (typeof window !== 'undefined' && window.VildaHtml && typeof window.VildaHtml.escapeHtml === 'function') {
+      return window.VildaHtml.escapeHtml(value);
+    }
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function abxSafeUrl(value) {
+    if (typeof window !== 'undefined' && window.VildaHtml && typeof window.VildaHtml.safeUrl === 'function') {
+      return window.VildaHtml.safeUrl(value, { fallback: '#' });
+    }
+    const raw = String(value == null ? '' : value).trim();
+    return /^(https?:|mailto:|tel:)/i.test(raw) || raw.charAt(0) === '#' ? raw : '#';
+  }
+
+
+  function abxSetTrustedMarkup(element, html, context) {
+    if (!element) return false;
+    try {
+      if (typeof window !== 'undefined' && window.VildaHtml && typeof window.VildaHtml.setTrustedHtml === 'function') {
+        return window.VildaHtml.setTrustedHtml(element, html, { context: context || 'antibiotic-therapy:controlled-markup' });
+      }
+      element.textContent = String(html == null ? '' : html);
+      return true;
+    } catch (error) {
+      logAbxWarn('Nie udało się wstawić kontrolowanego HTML.', error, { context: context || '' });
+      return false;
+    }
+  }
+
+  function abxClearElement(element) {
+    if (!element) return false;
+    try {
+      if (typeof window !== 'undefined' && window.VildaHtml) {
+        if (typeof window.VildaHtml.clear === 'function') return window.VildaHtml.clear(element);
+        if (typeof window.VildaHtml.clearHtml === 'function') return window.VildaHtml.clearHtml(element);
+      }
+      element.textContent = '';
+      return true;
+    } catch (error) {
+      logAbxWarn('Nie udało się wyczyścić elementu.', error);
+      return false;
+    }
+  }
+
   // Definicja leków: zawartość substancji w 5 ml oraz dostępne objętości
   // opakowań syropów. Dane te zaczerpnięto z oficjalnych serwisów
   // farmaceutycznych i kart produktów producentów (np. doz.pl).
@@ -2116,7 +2193,7 @@ function generateRecommendation(brandName, dosesPerDay, doseStr, duration, opts 
       card.appendChild(recSection);
     }
     // Ukryj sekcję domyślnie
-    recSection.innerHTML = '';
+    abxSetTrustedMarkup(recSection, '', 'recommendation ui');
     recSection.style.display = 'none';
     // Sprawdź, czy dany lek ma definicję formy
     const drugDef = DRUG_INFO[drugName];
@@ -2167,7 +2244,7 @@ function generateRecommendation(brandName, dosesPerDay, doseStr, duration, opts 
     // Przygotuj sekcję interfejsu – instrukcja i przyciski są wyrównane do lewej
     recSection.style.display = 'block';
     recSection.style.textAlign = 'left';
-    recSection.innerHTML = `
+    abxSetTrustedMarkup(recSection, `
       <div id="abxBrandUI" style="border-top: 1px solid #eee; padding-top: .6rem; text-align:left;">
         <p style="margin:.4rem 0 .6rem 0; font-weight:500;">Chcesz mieć gotowe zalecenia? Zaznacz opcje, które mają być widoczne w zaleceniach a następnie wybierz nazwę handlową preparatu i kliknij „Zalecenia do wklejenia”.</p>
         <div id="abxOptionToggles" style="display:flex; flex-direction:column; align-items:flex-start; gap:.4rem; margin-bottom:.6rem;">
@@ -2199,14 +2276,15 @@ function generateRecommendation(brandName, dosesPerDay, doseStr, duration, opts 
         </div>
         <div style="margin-bottom:.4rem;">
           <button id="abxCopyRec" type="button">Zalecenia do wklejenia</button>
+          <div id="abxCopyStatus" role="status" aria-live="polite" style="display:none; margin-top:.45rem; font-size:.92rem;"></div>
         </div>
       </div>
-    `;
+    `, 'recommendation ui');
     const listContainer = recSection.querySelector('#abxBrandList');
     // Wypełnij listę przyciskami dla nazw handlowych
-    listContainer.innerHTML = brandList.map((bn, idx) => {
-      return `<button type="button" class="abx-brand-option" data-index="${idx}" style="margin:.2rem .4rem .2rem 0;">${bn}</button>`;
-    }).join('');
+    abxSetTrustedMarkup(listContainer, brandList.map((bn, idx) => {
+      return `<button type="button" class="abx-brand-option" data-index="${idx}" style="margin:.2rem .4rem .2rem 0;">${abxEscapeHtml(bn)}</button>`;
+    }).join(''), 'brand option list');
 
     // Dodaj dodatkowe przełączniki dla leków przeciwgorączkowych u dzieci (zawiesina i czopki).
     // Te opcje są widoczne, jeżeli wiek dziecka mieści się w zakresie 3 miesiące – 12 lat (3–144 mies.).
@@ -2218,22 +2296,22 @@ function generateRecommendation(brandName, dosesPerDay, doseStr, duration, opts 
         if(ageMonths >= 3 && ageMonths < 72){
           const suspRow = document.createElement('div');
           suspRow.className = 'abx-option-row';
-          suspRow.innerHTML = `
+          abxSetTrustedMarkup(suspRow, `
             <span class="abx-option-label">Leki w zawiesinie</span>
             <label class="abx-switch">
               <input type="checkbox" id="abxToggleSuspension" checked>
               <span class="slider"></span>
             </label>
-          `;
+          `, 'antipyretic option row');
           const suppRow = document.createElement('div');
           suppRow.className = 'abx-option-row';
-          suppRow.innerHTML = `
+          abxSetTrustedMarkup(suppRow, `
             <span class="abx-option-label">Leki w czopkach</span>
             <label class="abx-switch">
               <input type="checkbox" id="abxToggleSuppository" checked>
               <span class="slider"></span>
             </label>
-          `;
+          `, 'antipyretic option row');
           // Ustal domyślne zaznaczenia w zależności od wieku: do 3 lat – oba zaznaczone; 3–<6 lat – tylko zawiesina.
           try {
             const suspInput = suspRow.querySelector('input');
@@ -2246,7 +2324,7 @@ function generateRecommendation(brandName, dosesPerDay, doseStr, duration, opts 
               if(suspInput) suspInput.checked = true;
               if(suppInput) suppInput.checked = false;
             }
-          } catch(_e){}
+          } catch (error) { logAbxWarn('Zignorowany błąd pomocniczy w module antybiotykoterapii', error); }
           let probioticRow = null;
           const probioticInput = togglesDiv.querySelector('#abxToggleProbiotic');
           if(probioticInput && probioticInput.closest){
@@ -2271,7 +2349,7 @@ function generateRecommendation(brandName, dosesPerDay, doseStr, duration, opts 
               if(suspInput) suspInput.checked = true;
               if(suppInput) suppInput.checked = false;
             }
-          } catch(e){}
+          } catch (error) { logAbxWarn('Zignorowany błąd pomocniczy w module antybiotykoterapii', error); }
           const antiToggleEl = document.getElementById('abxToggleAntipyretic');
           const updateSubOptions = () => {
             const show = antiToggleEl && antiToggleEl.checked;
@@ -2287,31 +2365,31 @@ function generateRecommendation(brandName, dosesPerDay, doseStr, duration, opts 
         } else if(ageMonths >= 72 && ageMonths < 144){
           const suspRow = document.createElement('div');
           suspRow.className = 'abx-option-row';
-          suspRow.innerHTML = `
+          abxSetTrustedMarkup(suspRow, `
             <span class="abx-option-label">Leki w zawiesinie</span>
             <label class="abx-switch">
               <input type="checkbox" id="abxToggleSuspension" checked>
               <span class="slider"></span>
             </label>
-          `;
+          `, 'antipyretic option row');
           const suppRow = document.createElement('div');
           suppRow.className = 'abx-option-row';
-          suppRow.innerHTML = `
+          abxSetTrustedMarkup(suppRow, `
             <span class="abx-option-label">Leki w czopkach</span>
             <label class="abx-switch">
               <input type="checkbox" id="abxToggleSuppository" checked>
               <span class="slider"></span>
             </label>
-          `;
+          `, 'antipyretic option row');
           const tabRow = document.createElement('div');
           tabRow.className = 'abx-option-row';
-          tabRow.innerHTML = `
+          abxSetTrustedMarkup(tabRow, `
             <span class="abx-option-label">Leki w tabletkach</span>
             <label class="abx-switch">
               <input type="checkbox" id="abxToggleTablet" checked>
               <span class="slider"></span>
             </label>
-          `;
+          `, 'tablet option row');
           let probioticRow = null;
           const probioticInput = togglesDiv.querySelector('#abxToggleProbiotic');
           if(probioticInput && probioticInput.closest){
@@ -2334,7 +2412,7 @@ function generateRecommendation(brandName, dosesPerDay, doseStr, duration, opts 
             if(suspInput) suspInput.checked = true;
             if(suppInput) suppInput.checked = false;
             if(tabInput)  tabInput.checked  = true;
-          } catch(e){}
+          } catch (error) { logAbxWarn('Zignorowany błąd pomocniczy w module antybiotykoterapii', error); }
           const antiToggleEl = document.getElementById('abxToggleAntipyretic');
           const updateSubOptions = () => {
             const show = antiToggleEl && antiToggleEl.checked;
@@ -2351,22 +2429,22 @@ function generateRecommendation(brandName, dosesPerDay, doseStr, duration, opts 
         } else if(ageMonths >= 144 && ageMonths < 216){
           const suspRow = document.createElement('div');
           suspRow.className = 'abx-option-row';
-          suspRow.innerHTML = `
+          abxSetTrustedMarkup(suspRow, `
             <span class="abx-option-label">Leki w zawiesinie</span>
             <label class="abx-switch">
               <input type="checkbox" id="abxToggleSuspension" checked>
               <span class="slider"></span>
             </label>
-          `;
+          `, 'antipyretic option row');
           const tabRow = document.createElement('div');
           tabRow.className = 'abx-option-row';
-          tabRow.innerHTML = `
+          abxSetTrustedMarkup(tabRow, `
             <span class="abx-option-label">Leki w tabletkach</span>
             <label class="abx-switch">
               <input type="checkbox" id="abxToggleTablet" checked>
               <span class="slider"></span>
             </label>
-          `;
+          `, 'tablet option row');
           let probioticRow = null;
           const probioticInput = togglesDiv.querySelector('#abxToggleProbiotic');
           if(probioticInput && probioticInput.closest){
@@ -2385,7 +2463,7 @@ function generateRecommendation(brandName, dosesPerDay, doseStr, duration, opts 
             const tabInput  = tabRow.querySelector('input');
             if(suspInput) suspInput.checked = false;
             if(tabInput)  tabInput.checked  = true;
-          } catch(e){}
+          } catch (error) { logAbxWarn('Zignorowany błąd pomocniczy w module antybiotykoterapii', error); }
           const antiToggleEl = document.getElementById('abxToggleAntipyretic');
           const updateSubOptions = () => {
             const show = antiToggleEl && antiToggleEl.checked;
@@ -2399,8 +2477,8 @@ function generateRecommendation(brandName, dosesPerDay, doseStr, duration, opts 
           }
         }
       }
-    } catch(e) {
-      // W razie błędów w obliczaniu wieku nie dodawaj dodatkowych opcji.
+    } catch(error) {
+      logAbxWarn('Nie udało się dodać opcji leków przeciwgorączkowych zależnych od wieku', error);
     }
     // Zarządzanie wyborem nazwy handlowej
     let selectedIndex = 0;
@@ -2439,8 +2517,57 @@ function generateRecommendation(brandName, dosesPerDay, doseStr, duration, opts 
     }
     // Obsługa kopiowania zaleceń do schowka
     const copyBtn = recSection.querySelector('#abxCopyRec');
+    const copyStatus = recSection.querySelector('#abxCopyStatus');
+
+    function showCopyStatus(message, manualText){
+      if(!copyStatus) return;
+      abxClearElement(copyStatus);
+      copyStatus.style.display = '';
+      const msg = document.createElement('div');
+      msg.textContent = message || '';
+      copyStatus.appendChild(msg);
+      if(manualText){
+        const box = document.createElement('textarea');
+        box.readOnly = true;
+        box.value = manualText;
+        box.setAttribute('aria-label', 'Wygenerowane zalecenia do ręcznego skopiowania');
+        box.style.width = '100%';
+        box.style.minHeight = '7rem';
+        box.style.marginTop = '.35rem';
+        box.style.fontSize = '.9rem';
+        box.addEventListener('focus', () => { try { box.select(); } catch (error) { logAbxWarn('Nie udało się zaznaczyć tekstu zaleceń.', error); } });
+        copyStatus.appendChild(box);
+      }
+    }
+
+    function copyTextWithTextarea(text){
+      const ta = document.createElement('textarea');
+      ta.value = text || '';
+      ta.setAttribute('readonly', 'readonly');
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      ta.style.top = '0';
+      document.body.appendChild(ta);
+      try {
+        ta.focus();
+        ta.select();
+        return !!document.execCommand && document.execCommand('copy');
+      } finally {
+        if(ta.parentNode) ta.parentNode.removeChild(ta);
+      }
+    }
+
+    async function copyRecommendationText(text){
+      if(navigator.clipboard && typeof navigator.clipboard.writeText === 'function'){
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+      if(copyTextWithTextarea(text)) return true;
+      throw new Error('Clipboard API jest niedostępne.');
+    }
+
     if(copyBtn){
-      copyBtn.addEventListener('click', () => {
+      copyBtn.addEventListener('click', async () => {
         const brandName = brandList[selectedIndex];
         // Odczytaj stan przełączników opcji. Jeśli elementy nie istnieją (np. dla postaci dożylnych),
         // pozostaw pola niezdefiniowane, aby funkcja generateRecommendation użyła wartości domyślnych.
@@ -2478,20 +2605,17 @@ function generateRecommendation(brandName, dosesPerDay, doseStr, duration, opts 
               }
             }
         const recText = generateRecommendation(brandName, dosesPerDay, doseStr, duration, opts);
-        if(navigator.clipboard && navigator.clipboard.writeText){
-          navigator.clipboard.writeText(recText).then(() => {
-            const oldTxt = copyBtn.textContent;
-            copyBtn.textContent = 'Skopiowano!';
-            // Podświetl przycisk na turkusowo; klasa zostaje aż do kolejnego kliknięcia lub odświeżenia
-            copyBtn.classList.add('active-toggle');
-            setTimeout(() => { copyBtn.textContent = oldTxt; }, 2000);
-          }).catch(() => {
-            // Fallback – pokaż wygenerowane zalecenia w okienku alert
-            alert(recText);
-          });
-        } else {
-          // Fallback – pokaż wygenerowane zalecenia w okienku alert
-          alert(recText);
+        const oldTxt = copyBtn.textContent;
+        try {
+          await copyRecommendationText(recText);
+          copyBtn.textContent = 'Skopiowano!';
+          copyBtn.classList.add('active-toggle');
+          showCopyStatus('Zalecenia skopiowano do schowka.', '');
+          setTimeout(() => { copyBtn.textContent = oldTxt; }, 2000);
+        } catch (error) {
+          logAbxWarn('Nie udało się skopiować zaleceń antybiotykoterapii do schowka', error);
+          copyBtn.textContent = oldTxt;
+          showCopyStatus('Nie udało się automatycznie skopiować zaleceń. Zaznacz i skopiuj tekst poniżej ręcznie.', recText);
         }
       });
     }
@@ -3873,7 +3997,7 @@ let schemesVisible = false;
     card.id = 'antibioticTherapyCard';
     card.className = 'result-card animate-in';
     card.style.margin = '1rem 0';
-    card.innerHTML = `
+    abxSetTrustedMarkup(card, `
       <h2 style="text-align:center;">Antybiotykoterapia</h2>
       <!-- W początkowym stanie modułu nie wybieramy automatycznie wskazania.  Zamiast tego
            wyświetlamy użytkownikowi instrukcję, aby wybrał wskazanie z listy.  Ten element
@@ -3938,7 +4062,7 @@ let schemesVisible = false;
            wykorzystywany tylko dla wskazania „Leczenie boreliozy” i pozostanie pusty
            przy innych wskazaniach. Przyciski i listę generuje funkcja updateSchemesButton(). -->
       <div id="abxSchemesContainer" style="margin-top:1rem; text-align:center;"></div>
-    `;
+    `, 'antibiotic therapy card template');
     return card;
   }
 
@@ -3960,7 +4084,7 @@ let schemesVisible = false;
   function populateIndications(){
     const indicSelect = document.getElementById('abxIndication');
     if(!indicSelect) return;
-    indicSelect.innerHTML = '';
+    abxClearElement(indicSelect);
     // W pierwszej kolejności dodaj opcję placeholder, która zachęca do wyboru
     // wskazania.  Ta opcja jest domyślnie zaznaczona i wyłączona.
     const placeholder = document.createElement('option');
@@ -4056,7 +4180,7 @@ let schemesVisible = false;
     const drugSelect = document.getElementById('abxDrug');
     if(!drugSelect) return;
     // Wyczyść listę leków bez względu na to, czy wskazanie jest ustawione.
-    drugSelect.innerHTML = '';
+    abxClearElement(drugSelect);
     const controls = document.getElementById('abxControls');
     const note     = document.getElementById('abxNote');
     const promptEl = document.getElementById('abxInitialPrompt');
@@ -4070,7 +4194,7 @@ let schemesVisible = false;
       if(promptEl) promptEl.style.display = 'block';
       // Wyczyść wyniki
       const resultDiv = document.getElementById('abxResult');
-      if(resultDiv) resultDiv.innerHTML = '';
+      if(resultDiv) abxClearElement(resultDiv);
       return;
     }
     // W tym miejscu istnieją zdefiniowane leki – ukryj komunikat powitalny
@@ -4088,12 +4212,15 @@ let schemesVisible = false;
         }
       }
     }
-    // Odczytaj ustawienie widoczności leków dożylnych z localStorage.
+    // Odczytaj ustawienie widoczności leków dożylnych przez wspólny adapter.
     let showIVAntibiotics = false;
     try {
-      const v = localStorage.getItem('showIVAntibiotics');
+      let v = null;
+      if (typeof window !== 'undefined' && window.VildaPersistence && typeof window.VildaPersistence.readPreferenceRaw === 'function') {
+        v = window.VildaPersistence.readPreferenceRaw('ANTIBIOTIC_SHOW_IV');
+      }
       if(v === 'true') showIVAntibiotics = true;
-    } catch(e){}
+    } catch (error) { logAbxWarn('Zignorowany błąd pomocniczy w module antybiotykoterapii', error); }
     const allDrugKeys = Object.keys(indic.drugs);
     const filteredDrugKeys = [];
     allDrugKeys.forEach(name => {
@@ -4236,7 +4363,7 @@ let schemesVisible = false;
     const drugInfo = DRUG_INFO[drugName];
     if(drugInfo && drugInfo.forms){
       formWrapper.style.display = 'block';
-      formSelect.innerHTML = '';
+      abxClearElement(formSelect);
       let forms = Object.keys(drugInfo.forms);
       // Usuń zawiesinę furazydyny u pacjentów ≥15 lat przy wskazaniu "uti_uncomplicated".
       // Zgodnie z wytycznymi użytkownika u dorosłych i młodzieży w tym wskazaniu stosujemy
@@ -4497,7 +4624,7 @@ let schemesVisible = false;
     } else {
       // Jeśli lek nie ma różnych postaci, ukryj selektor
       formWrapper.style.display = 'none';
-      formSelect.innerHTML = '';
+      abxClearElement(formSelect);
     }
   }
 
@@ -5101,6 +5228,76 @@ function chooseAmoxClavDefaultForm(weight, context){
   }
 
   /**
+   * Dobiera moc tabletki tak, aby przy zadanej dawce dobowej osiągnąć możliwie
+   * mały błąd zaokrąglenia, a przy takim samym błędzie preferować mniejszą
+   * liczbę tabletek na dawkę.  Funkcja jest używana głównie dla amoksycyliny
+   * w wysokodawkowych wskazaniach, gdzie dostępne są tabletki 500 mg i 1000 mg.
+   *
+   * @param {{name:string, mgPerTablet:number}[]} options Dostępne moce tabletek
+   * @param {number} targetMgPerDay Docelowa dawka dobowa w mg
+   * @param {number} dosesPerDay Liczba dawek na dobę
+   * @returns {string|null} nazwa preferowanej mocy tabletki
+   */
+  function chooseTabletStrengthByDoseBurden(options, targetMgPerDay, dosesPerDay){
+    if(!Array.isArray(options) || options.length === 0 || !isFinite(targetMgPerDay) || targetMgPerDay <= 0 || !isFinite(dosesPerDay) || dosesPerDay <= 0){
+      return null;
+    }
+    const tolerance = 0.20;
+    const mgMin = targetMgPerDay * (1 - tolerance);
+    const mgMax = targetMgPerDay * (1 + tolerance);
+    let bestOption = null;
+    options.forEach(function(option){
+      if(!option || !isFinite(option.mgPerTablet) || option.mgPerTablet <= 0) return;
+      const mgPerTablet = option.mgPerTablet;
+      const idealTabletsPerDose = targetMgPerDay / mgPerTablet / dosesPerDay;
+      let bestTabsForOption = null;
+      let bestMgPerDayForOption = null;
+      let bestDiffForOption = Infinity;
+      for(let offset = -4; offset <= 8; offset++){
+        let candidate = Math.round(idealTabletsPerDose * 2 + offset) / 2;
+        if(candidate < 0.5) candidate = 0.5;
+        const candidateMgPerDay = candidate * dosesPerDay * mgPerTablet;
+        if(candidateMgPerDay >= mgMin && candidateMgPerDay <= mgMax){
+          const diff = Math.abs(candidateMgPerDay - targetMgPerDay);
+          if(
+            diff < bestDiffForOption - 1e-6 ||
+            (Math.abs(diff - bestDiffForOption) < 1e-6 && (bestTabsForOption === null || candidate < bestTabsForOption))
+          ){
+            bestDiffForOption = diff;
+            bestTabsForOption = candidate;
+            bestMgPerDayForOption = candidateMgPerDay;
+          }
+        }
+      }
+      if(bestTabsForOption === null){
+        bestTabsForOption = Math.ceil(idealTabletsPerDose * 2) / 2;
+        bestMgPerDayForOption = bestTabsForOption * dosesPerDay * mgPerTablet;
+        bestDiffForOption = Math.abs(bestMgPerDayForOption - targetMgPerDay);
+      }
+      const evaluated = {
+        name: option.name,
+        mgPerTablet: mgPerTablet,
+        tabletsPerDose: bestTabsForOption,
+        mgPerDay: bestMgPerDayForOption,
+        diff: bestDiffForOption
+      };
+      if(
+        !bestOption ||
+        evaluated.diff < bestOption.diff - 1e-6 ||
+        (Math.abs(evaluated.diff - bestOption.diff) < 1e-6 && evaluated.tabletsPerDose < bestOption.tabletsPerDose - 1e-6) ||
+        (
+          Math.abs(evaluated.diff - bestOption.diff) < 1e-6 &&
+          Math.abs(evaluated.tabletsPerDose - bestOption.tabletsPerDose) < 1e-6 &&
+          evaluated.mgPerTablet > bestOption.mgPerTablet
+        )
+      ){
+        bestOption = evaluated;
+      }
+    });
+    return bestOption ? bestOption.name : null;
+  }
+
+  /**
    * Wybiera domyślną postać antybiotyku w ostrym zapaleniu ucha środkowego (otitis).
    * Reguły opierają się na zaleceniach wysokodawkowej terapii amoksycyliną
    * (80–90 mg/kg mc./dobę) i amoksycyliną z kwasem klawulanowym, a także na
@@ -5111,9 +5308,10 @@ function chooseAmoxClavDefaultForm(weight, context){
    *  • **Amoksycylina** – w OZUŚ zaleca się wysokie dawki 80–90 mg/kg/dobę.
    *    Zawiesiny 250 mg/5 ml i 500 mg/5 ml występują w butelkach 60 ml i 100 ml,
    *    przy czym stężenie 500 mg/5 ml zmniejsza objętość podawanej porcji w wysokodawkowej kuracji.
-   *    Dlatego dla pacjentów <10 kg proponujemy zawiesinę 250 mg/5 ml;
-   *    dla 10–40 kg – zawiesinę 500 mg/5 ml; dla 40–60 kg – tabletkę 500 mg;
-   *    a dla ≥60 kg – tabletkę 1000 mg.
+   *    Dlatego dla pacjentów <10 kg proponujemy zawiesinę 250 mg/5 ml,
+   *    dla 10–40 kg – zawiesinę 500 mg/5 ml, natomiast u pacjentów ≥40 kg
+   *    porównujemy tabletki 500 mg i 1000 mg i wybieramy tę moc, która
+   *    przy zachowaniu dawki daje mniejszą liczbę tabletek na dawkę.
    *
    *  • **Amoksycylina z kwasem klawulanowym** – stosuje się w przypadku braku
    *    odpowiedzi na samą amoksycylinę. Preparaty 400 mg/57 mg/5 ml (standard) i
@@ -5156,8 +5354,10 @@ function chooseAmoxClavDefaultForm(weight, context){
    *   jako leczenie pierwszego wyboru w OZUŚ. Zawiesiny 250 mg/5 ml
    *   i 500 mg/5 ml dostępne są w butelkach 60 ml lub 100 ml, przy czym stężenie
    *   500 mg/5 ml zmniejsza objętość przyjmowanego leku.  
-   *   Ustawiono progi masy ciała: <10 kg – zawiesina 250 mg/5 ml; 10–40 kg –
-   *   zawiesina 500 mg/5 ml; 40–60 kg – tabletka 500 mg; ≥60 kg – tabletka 1000 mg.
+   *   Ustawiono progi masy ciała dla zawiesin: <10 kg – zawiesina 250 mg/5 ml;
+   *   10–40 kg – zawiesina 500 mg/5 ml. U pacjentów ≥40 kg moc tabletki
+   *   (500 mg vs 1000 mg) dobierana jest dynamicznie na podstawie docelowej
+   *   dawki dobowej i oczekiwanej liczby tabletek na dawkę.
    *
    * • **Amoksycylina z kwasem klawulanowym** – stosowana jako drugi wybór (w razie
    *   niewrażliwości na samą amoksycylinę). Wytyczne rekomendują dawkę
@@ -5219,12 +5419,20 @@ function chooseAmoxClavDefaultForm(weight, context){
       }
       return null;
     }
-    // Amoksycylina – progi masy ciała
+    // Amoksycylina – u pacjentów >=40 kg dobierz moc tabletki dynamicznie.
+    // Zamiast sztywnego progu 60 kg porównujemy, która moc (500 mg vs 1000 mg)
+    // lepiej odwzorowuje domyślną wysoką dawkę w OZUŚ przy mniejszej liczbie tabletek.
     if(drugName === 'Amoksycylina'){
       if(weight < 10) return 'Zawiesina 250\u00a0mg/5\u00a0ml';
       if(weight < 40) return 'Zawiesina 500\u00a0mg/5\u00a0ml';
-      if(weight < 60) return 'Tabletka 500\u00a0mg';
-      return 'Tabletka 1000\u00a0mg';
+      const amoxMaxInfo = GLOBAL_MAX_DAILY_DOSES && GLOBAL_MAX_DAILY_DOSES['Amoksycylina'];
+      const amoxGlobalMax = amoxMaxInfo ? (weight < 40 ? amoxMaxInfo.child : amoxMaxInfo.adult) : null;
+      const targetMgPerDay = amoxGlobalMax != null ? Math.min(weight * 90, amoxGlobalMax) : (weight * 90);
+      const preferredTablet = chooseTabletStrengthByDoseBurden([
+        { name: 'Tabletka 500\u00a0mg',  mgPerTablet: 500 },
+        { name: 'Tabletka 1000\u00a0mg', mgPerTablet: 1000 }
+      ], targetMgPerDay, 2);
+      return preferredTablet || 'Tabletka 500\u00a0mg';
     }
     // Amoksycylina z kwasem klawulanowym – deleguj do istniejącej funkcji
     if(drugName === 'Amoksycylina z kwasem klawulanowym'){
@@ -6064,7 +6272,7 @@ function chooseAmoxClavDefaultForm(weight, context){
     const container = document.getElementById('abxSchemesContainer');
     if(!container) return;
     // Wyczyść kontener z poprzedniej zawartości
-    container.innerHTML = '';
+    abxClearElement(container);
     const indicSelect = document.getElementById('abxIndication');
     if(!indicSelect) return;
     const selected = indicSelect.value;
@@ -6092,7 +6300,7 @@ function chooseAmoxClavDefaultForm(weight, context){
     list.style.marginTop = '.6rem';
     // Funkcja renderująca listę
     function renderList(){
-      list.innerHTML = '';
+      abxClearElement(list);
       if(!schemesVisible){
         list.style.display = 'none';
         return;
@@ -6184,7 +6392,7 @@ function chooseAmoxClavDefaultForm(weight, context){
     // Może się zdarzyć, że indic jest niezdefiniowane (np. brak wyboru), dlatego
     // sprawdzamy zarówno istnienie obiektu, jak i jego pola drugs.
     if(!indic || !indic.drugs){
-      if(resultBox) resultBox.innerHTML = '';
+      if(resultBox) abxSetTrustedMarkup(resultBox, '', 'antibiotic result');
       if(note) note.textContent = indic && indic.message ? indic.message : '';
       return;
     }
@@ -6194,7 +6402,7 @@ function chooseAmoxClavDefaultForm(weight, context){
     // Pobierz masę ciała
     const weight = getWeight();
     if(!weight){
-      resultBox.innerHTML = '<p class="muted">Wprowadź masę ciała w sekcji „Dane użytkownika”, aby obliczyć dawkę.</p>';
+      abxSetTrustedMarkup(resultBox, '<p class="muted">Wprowadź masę ciała w sekcji „Dane użytkownika”, aby obliczyć dawkę.</p>', 'antibiotic result');
       return;
     }
     // Pobierz wartości dawki i czasu terapii
@@ -6438,8 +6646,8 @@ function chooseAmoxClavDefaultForm(weight, context){
             messages.push('Uwaga: każde zakażenie układu moczowego u mężczyzny jest traktowane jako powikłane, sugerujemy przejść do wskazania „Powikłane i inne zakażenia układu moczowego”');
           }
         }
-      } catch (e) {
-        // W przypadku niespodziewanego błędu wczytania danych użytkownika po prostu pomijamy ostrzeżenie.
+      } catch (error) {
+        logAbxWarn('Nie udało się odczytać danych użytkownika dla ostrzeżeń antybiotykoterapii', error);
       }
     }
 
@@ -6511,14 +6719,9 @@ function chooseAmoxClavDefaultForm(weight, context){
     // “Źródła” wyświetlanej pod komunikatami.
     let sourcesUsed = [];
     // Pomocnicza funkcja do escapowania HTML w treściach komunikatów.  Pozwala
-    // bezpiecznie wstawić tekst do innerHTML, zamieniając znaki specjalne na
+    // bezpiecznie wstawić tekst do kontrolowanego HTML, zamieniając znaki specjalne na
     // encje.
-    const escapeHTML = (str) => {
-      return str
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-    };
+    const escapeHTML = (str) => abxEscapeHtml(str);
 
     // Pomocnicza funkcja aktualizująca zawartość pola abxNote.  Łączy wszystkie
     // komunikaty w osobne akapity, usuwa z nich identyfikatory cytowań (np. „”),
@@ -6636,7 +6839,7 @@ function chooseAmoxClavDefaultForm(weight, context){
             noteHtml += `<p>${sanitized}</p>`;
           }
         });
-        note.innerHTML = noteHtml;
+        abxSetTrustedMarkup(note, noteHtml, 'antibiotic note');
       }
       // === Build the 'Dodatkowe informacje' section with bullet list and sources ===
       {
@@ -6662,7 +6865,7 @@ function chooseAmoxClavDefaultForm(weight, context){
             let sourcesList = '';
             linkSet.forEach(mapped => {
               const linkText = escapeHTML(mapped);
-              const href = escapeHTML(mapped);
+              const href = abxEscapeHtml(abxSafeUrl(mapped));
               sourcesList += `<li><a href="${href}" target="_blank" rel="noopener noreferrer">${linkText}</a></li>`;
             });
             infoHtml += '<div style="text-align:center; margin-top:.6rem;">';
@@ -6670,7 +6873,7 @@ function chooseAmoxClavDefaultForm(weight, context){
             infoHtml += `<div id="abxSourcesList" style="display:none; margin-top:.4rem;"><ul style="text-align:left; list-style-type:disc; margin-left:20px;">${sourcesList}</ul></div>`;
             infoHtml += '</div>';
           }
-          info.innerHTML = infoHtml;
+          abxSetTrustedMarkup(info, infoHtml, 'antibiotic info');
           const toggleBtn = document.getElementById('abxSourcesToggle');
           if(toggleBtn){
             toggleBtn.onclick = function(){
@@ -6737,12 +6940,12 @@ function chooseAmoxClavDefaultForm(weight, context){
         });
         linkSet.forEach(mapped => {
           const linkText = escapeHTML(mapped);
-          const href = escapeHTML(mapped);
+          const href = abxEscapeHtml(abxSafeUrl(mapped));
           html += `<li><a href="${href}" target="_blank" rel="noopener noreferrer">${linkText}</a></li>`;
         });
         html += '</ul>';
       }
-      note.innerHTML = html;
+      abxSetTrustedMarkup(note, html, 'antibiotic note');
     }
     // Specjalne ostrzeżenia dla fosfomycyny: zgodnie z Charakterystyką Produktu Leczniczego
     // fosfomycyna trometamol w dawce 3 g jest wskazana do jednorazowego leczenia
@@ -7682,7 +7885,7 @@ function chooseAmoxClavDefaultForm(weight, context){
     }
     // Jeśli brakuje informacji o sposobie przeliczania (np. brak mgPer5ml i mgPerTablet), wypisz tylko mg
     if(!drugMeta){
-      resultBox.innerHTML = `<p>Dawka dobowa: ${fmt(mgPerDay)} mg (podzielona na ${dosesPerDay} dawki).</p><p>Czas terapii: ${duration} dni.</p>`;
+      abxSetTrustedMarkup(resultBox, `<p>Dawka dobowa: ${fmt(mgPerDay)} mg (podzielona na ${dosesPerDay} dawki).</p><p>Czas terapii: ${duration} dni.</p>`, 'antibiotic result');
       // Wyświetl zebrane komunikaty wraz ze źródłami
       {
         const returnBtnInner = document.getElementById('abxReturnBtn');
@@ -7773,7 +7976,7 @@ function chooseAmoxClavDefaultForm(weight, context){
             // Nie wyświetlaj linii z wybraną dawką (mg/kg) dla azytromycyny w schemacie 5‑dniowym.
             let html = `\n              <p>${dosingLine}</p>\n              <p>${dailyDoseLine}</p>\n              <p><strong>Przewidywana terapia:</strong> ${duration}\u00a0dni – łącznie ${fmt(totalVolumeRounded)}\u00a0ml</p>\n            `;
             // Wstaw wynik i styluj
-            resultBox.innerHTML = html;
+            abxSetTrustedMarkup(resultBox, html, 'antibiotic result');
             resultBox.style.textAlign = 'center';
             resultBox.style.fontSize = '1.25rem';
             // Zachowaj przycisk resetu i komunikaty – wykorzystujemy oryginalny showReturn.
@@ -7903,7 +8106,7 @@ function chooseAmoxClavDefaultForm(weight, context){
       }
 
       // Wstaw wynik do pola, ustaw mniejszą czcionkę i wyrównaj do środka
-      resultBox.innerHTML = html;
+      abxSetTrustedMarkup(resultBox, html, 'antibiotic result');
       resultBox.style.textAlign = 'center';
       // Zmniejsz czcionkę w wynikach antybiotykoterapii, aby była mniej dominująca
       resultBox.style.fontSize = '1.25rem';
@@ -7988,7 +8191,7 @@ function chooseAmoxClavDefaultForm(weight, context){
           const therapyLine = `<strong>Przewidywana terapia:</strong> ${duration}\u00a0dni – łącznie ${totalTabs}\u00a0tabl.`;
           let html = `\n              <p>${dosingLine}</p>\n              <p>${dailyDoseLine}</p>\n              <p>${therapyLine}</p>\n            `;
           // Wstaw wynik do pola i ustaw styl
-          resultBox.innerHTML = html;
+          abxSetTrustedMarkup(resultBox, html, 'antibiotic result');
           resultBox.style.textAlign = 'center';
           resultBox.style.fontSize = '1.25rem';
           // Przygotuj tekst do sekcji zaleceń (copy/paste) – zawiera liczbę dawek i tabletek
@@ -8099,7 +8302,7 @@ function chooseAmoxClavDefaultForm(weight, context){
               messages.push('Uwaga: dla dzieci o masie <25 kg forma tabletkowa leku jest nieodpowiednia i może nie zapewniać dokładnego dawkowania. Rozważ użycie zawiesiny, jeśli jest dostępna.');
             }
             // Wstaw wynik i styluj
-            resultBox.innerHTML = html;
+            abxSetTrustedMarkup(resultBox, html, 'antibiotic result');
             resultBox.style.textAlign = 'center';
             resultBox.style.fontSize = '1.25rem';
             {
@@ -8316,7 +8519,7 @@ function chooseAmoxClavDefaultForm(weight, context){
         });
       }
       // Wstaw wynik do pola, ustaw mniejszą czcionkę i wyrównaj do środka
-      resultBox.innerHTML = html;
+      abxSetTrustedMarkup(resultBox, html, 'antibiotic result');
       resultBox.style.textAlign = 'center';
       // Zmniejsz czcionkę w wynikach antybiotykoterapii
       resultBox.style.fontSize = '1.25rem';
@@ -8359,11 +8562,11 @@ function chooseAmoxClavDefaultForm(weight, context){
       // Ustal frazę dla liczby podań: gdy liczba podań wynosi 1, użyj l. pojedynczej „1 raz”, w przeciwnym razie zachowaj formę „n razy”.
       const freqPhraseVial = dosesPerDay === 1 ? '1 raz' : `${dosesPerDay}\u00a0razy`;
       const dosingLineVial = `<strong>Dawkowanie leku:</strong> ${freqPhraseVial}\u00a0na dobę po ${fmt(mgPerDose)}\u00a0mg`;
-      resultBox.innerHTML = `
+      abxSetTrustedMarkup(resultBox, `
         <p>${dosingLineVial}</p>
         <p><strong>Dawka dobowa:</strong> ${fmt(mgPerDay)}\u00a0mg</p>
         <p><strong>Przewidywana terapia:</strong> ${duration}\u00a0dni</p>
-      `;
+      `, 'antibiotic result');
       // Zmniejsz czcionkę w wynikach
       resultBox.style.fontSize = '1.25rem';
       // Wyświetl zebrane komunikaty wraz ze źródłami oraz pokaż przycisk resetu, jeśli wymagany
@@ -8768,12 +8971,12 @@ function chooseAmoxClavDefaultForm(weight, context){
     const max = parseFloat(slider.max);
     // Jeśli nie można obliczyć wartości lub zakres jest niepoprawny, wyczyść podziałkę i zakończ
     if(!isFinite(min) || !isFinite(max) || max < min){
-      ticksContainer.innerHTML = '';
+      abxSetTrustedMarkup(ticksContainer, '', 'antibiotic slider ticks');
       updateSliderValueLabel();
       return;
     }
     // Wyczyść istniejące podziałki zawsze na początku
-    ticksContainer.innerHTML = '';
+    abxSetTrustedMarkup(ticksContainer, '', 'antibiotic slider ticks');
     // Jeżeli minimalna i maksymalna wartość są identyczne, suwak reprezentuje stałą dawkę.
     // Nie generujemy specjalnej etykiety w podziałce – bieżący komunikat będzie
     // wyświetlony w etykiecie wartości poniżej suwaka (updateSliderValueLabel).
@@ -8822,22 +9025,36 @@ function chooseAmoxClavDefaultForm(weight, context){
     const valueLabel = document.getElementById('sliderValueLabel');
     const doseDisplay = document.getElementById('abxDoseDisplay');
     if(!slider || !valueLabel) return;
+    const sliderContainer = slider.closest('.dose-slider-container');
+    const setMultilineLabelMode = (enabled) => {
+      const isEnabled = !!enabled;
+      valueLabel.classList.toggle('slider-value-label--multiline', isEnabled);
+      if(sliderContainer){
+        sliderContainer.classList.toggle('dose-slider-container--multiline', isEnabled);
+      }
+      if(isEnabled){
+        valueLabel.style.left = '';
+        valueLabel.style.transform = '';
+      }
+    };
     const min = parseFloat(slider.min);
     const max = parseFloat(slider.max);
     const val = parseFloat(slider.value);
     if(!isFinite(min) || !isFinite(max) || !isFinite(val)) return;
+    // Domyślnie przywróć jednoliniowy tryb etykiety. Tryb wielowierszowy
+    // włączamy tylko dla dłuższych komunikatów, aby na małych ekranach
+    // etykieta mogła zawijać się do szerokości kontenera i nie wychodziła poza viewport.
+    setMultilineLabelMode(false);
     // Jeżeli suwak jest całkowicie wyłączony z powodu przekroczenia limitu dobowego (forceMaxDose),
-    // wyświetl specjalny komunikat i wyśrodkuj etykietę. To zachowanie dotyczy leków z zakresem dawek,
-    // dla których nawet minimalna dawka mg/kg przekracza dopuszczalny limit dobowy.
+    // wyświetl specjalny komunikat i przełącz etykietę na tryb wielowierszowy.
     if (slider.dataset && slider.dataset.forceMaxDose === 'true') {
       valueLabel.textContent = 'Zastosowano maksymalną dobową dawkę leku';
-      valueLabel.style.left = '50%';
-      valueLabel.style.transform = 'translateX(-50%)';
+      setMultilineLabelMode(true);
       return;
     }
     // Jeżeli suwak jest dezaktywowany (zakres minimalny i maksymalny są równe),
-    // zastąp dynamiczną etykietę komunikatem o stałej dawce.  Etykieta ta
-    // dziedziczy styl z klasy slider-value-label i jest wyśrodkowana pod suwakiem.
+    // zastąp dynamiczną etykietę komunikatem o stałej dawce. Etykieta jest
+    // automatycznie zawijana na małych ekranach, aby nie psuła widoku mobilnego.
     if(slider.disabled || min === max){
       // Ustal jednostkę (mg/kg/dobę lub j.m./kg/dobę) na podstawie pola wyświetlania
       let unitText = '';
@@ -8847,9 +9064,7 @@ function chooseAmoxClavDefaultForm(weight, context){
         unitText = 'mg/kg/dobę';
       }
       valueLabel.textContent = `W tym wskazaniu rekomendowana jest stała dawka ${fmt(min)} ${unitText} wybranego leku`;
-      // Wyśrodkuj etykietę pod suwakiem
-      valueLabel.style.left = '50%';
-      valueLabel.style.transform = 'translateX(-50%)';
+      setMultilineLabelMode(true);
       return;
     }
     // W przeciwnym wypadku aktualizuj etykietę bieżącej wartości jak dotychczas
@@ -8906,8 +9121,223 @@ function chooseAmoxClavDefaultForm(weight, context){
     }
   }
 
+  function captureAntibioticPersistState(){
+    const card = document.getElementById('antibioticTherapyCard');
+    if(!card) return null;
+    const getValue = (id) => {
+      const el = document.getElementById(id);
+      if(!el) return '';
+      return typeof el.value === 'string' ? el.value : String(el.value == null ? '' : el.value);
+    };
+    return {
+      indication: getValue('abxIndication'),
+      drug: getValue('abxDrug'),
+      form: getValue('abxForm'),
+      dose: getValue('abxDoseInput'),
+      duration: getValue('abxDuration'),
+      customDoseActive: !!customDoseActive,
+      schemesVisible: !!schemesVisible
+    };
+  }
+
+  function readSharedPersistSnapshot(){
+    try {
+      const adapter = (typeof window !== 'undefined' && window.VildaPersistence && typeof window.VildaPersistence.readSharedPersist === 'function')
+        ? window.VildaPersistence
+        : null;
+      if (!adapter) return null;
+      return adapter.readSharedPersist({ ensurePersist: false });
+    } catch (error) {
+      logAbxWarn('Nie udało się odczytać snapshotu persistence antybiotykoterapii', error);
+      return null;
+    }
+  }
+
+  function readAntibioticPersistFallback(){
+    const snapshot = readSharedPersistSnapshot();
+    if (!snapshot) return null;
+    try {
+      const byId = snapshot.byId && typeof snapshot.byId === 'object' ? snapshot.byId : {};
+      const out = {
+        indication: byId.abxIndication || '',
+        drug: byId.abxDrug || '',
+        form: byId.abxForm || '',
+        dose: byId.abxDoseInput || '',
+        duration: byId.abxDuration || '',
+        customDoseActive: false,
+        schemesVisible: false
+      };
+      return Object.values(out).some((value) => String(value || '') !== '' && value !== false) ? out : null;
+    } catch (error) {
+      logAbxWarn('Nie udało się zbudować fallbacku persistence antybiotykoterapii', error);
+      return null;
+    }
+  }
+
+  function restoreAntibioticPersistState(state){
+    const saved = (state && typeof state === 'object') ? state : readAntibioticPersistFallback();
+    if(!saved || typeof saved !== 'object') return false;
+    mountCard();
+    const indicSelect = document.getElementById('abxIndication');
+    const drugSelect = document.getElementById('abxDrug');
+    const formSelect = document.getElementById('abxForm');
+    const doseInput = document.getElementById('abxDoseInput');
+    const durInput = document.getElementById('abxDuration');
+    const slider = document.getElementById('abxDoseSlider');
+    if(!indicSelect || !drugSelect || !formSelect || !doseInput || !durInput || !slider) return false;
+
+    customDoseActive = false;
+    schemesVisible = !!saved.schemesVisible;
+
+    const hasOption = (selectEl, value) => {
+      if(!selectEl) return false;
+      return Array.from(selectEl.options || []).some((opt) => String(opt.value) === String(value));
+    };
+
+    if(saved.indication && hasOption(indicSelect, saved.indication)) {
+      indicSelect.value = saved.indication;
+    }
+    populateDrugs();
+
+    if(saved.drug && hasOption(drugSelect, saved.drug)) {
+      drugSelect.value = saved.drug;
+    }
+    populateForms();
+
+    if(saved.form && hasOption(formSelect, saved.form)) {
+      formSelect.value = saved.form;
+    }
+    updateDoseControls();
+
+    if(String(saved.duration || '') !== '') {
+      durInput.value = String(saved.duration);
+    }
+
+    if(saved.customDoseActive) {
+      enableCustomDose();
+    } else {
+      customDoseActive = false;
+    }
+
+    if(String(saved.dose || '') !== '') {
+      doseInput.value = String(saved.dose);
+      slider.value = String(saved.dose);
+    }
+
+    if(typeof updateSchemesButton === 'function') {
+      updateSchemesButton();
+    }
+    if(typeof updateSliderUI === 'function') {
+      updateSliderUI();
+    }
+    recalc();
+    return true;
+  }
+
+  function resetAntibioticPersistState(options){
+    const opts = (options && typeof options === 'object') ? options : {};
+    customDoseActive = false;
+    schemesVisible = false;
+    try {
+      if (typeof window !== 'undefined') {
+        window.lastEffectiveMax = null;
+        window.maxValueAllowed = null;
+        window.sliderDisabledByLimit = false;
+      }
+    } catch (error) { logAbxWarn('Zignorowany błąd pomocniczy w module antybiotykoterapii', error); }
+
+    const card = document.getElementById('antibioticTherapyCard');
+    if (card) {
+      try { populateIndications(); } catch (error) { logAbxWarn('Zignorowany błąd pomocniczy w module antybiotykoterapii', error); }
+      const indicSelect = document.getElementById('abxIndication');
+      const drugSelect = document.getElementById('abxDrug');
+      const formSelect = document.getElementById('abxForm');
+      const doseInput = document.getElementById('abxDoseInput');
+      const durInput = document.getElementById('abxDuration');
+      const slider = document.getElementById('abxDoseSlider');
+      const controls = document.getElementById('abxControls');
+      const promptEl = document.getElementById('abxInitialPrompt');
+      const note = document.getElementById('abxNote');
+      const result = document.getElementById('abxResult');
+      const info = document.getElementById('abxInfo');
+      const schemes = document.getElementById('abxSchemesContainer');
+      const customBtn = document.getElementById('abxCustomDoseBtn');
+      const returnBtn = document.getElementById('abxReturnBtn');
+      const doseLabel = document.getElementById('abxDoseInputLabelText');
+
+      if (indicSelect) {
+        try { indicSelect.selectedIndex = 0; } catch (error) { logAbxWarn('Zignorowany błąd pomocniczy w module antybiotykoterapii', error); }
+        indicSelect.value = '';
+      }
+      if (drugSelect) abxClearElement(drugSelect);
+      if (formSelect) abxClearElement(formSelect);
+      if (doseInput) {
+        doseInput.value = '';
+        doseInput.classList.remove('dose-out-of-range');
+      }
+      if (durInput) durInput.value = '';
+      if (slider) {
+        slider.value = '';
+        slider.disabled = false;
+        try {
+          delete slider.dataset.forceMaxDose;
+          delete slider.dataset.maxLimitValue;
+        } catch (error) { logAbxWarn('Zignorowany błąd pomocniczy w module antybiotykoterapii', error); }
+      }
+      if (controls) controls.style.display = 'none';
+      if (promptEl) promptEl.style.display = 'block';
+      if (note) note.textContent = '';
+      if (result) abxClearElement(result);
+      if (info) abxSetTrustedMarkup(info, '', 'antibiotic info');
+      if (schemes) abxClearElement(schemes);
+      if (customBtn) customBtn.style.display = 'none';
+      if (returnBtn) {
+        returnBtn.style.display = 'none';
+        returnBtn.classList.remove('show-return');
+      }
+      if (doseLabel) doseLabel.textContent = 'Rekomendowana dawka';
+      if (opts.hideCard) {
+        try { card.style.display = 'none'; } catch (error) { logAbxWarn('Zignorowany błąd pomocniczy w module antybiotykoterapii', error); }
+      }
+    }
+
+    try {
+      const toggle = document.getElementById('toggleAbxTherapy');
+      if (toggle) toggle.classList.remove('active-toggle');
+    } catch (error) { logAbxWarn('Zignorowany błąd pomocniczy w module antybiotykoterapii', error); }
+    return true;
+  }
+
+  function handleAntibioticUserStateCleared(){
+    resetAntibioticPersistState({ hideCard: true });
+  }
+
+  function handleAntibioticModuleStateCleared(event){
+    const detail = event && event.detail && typeof event.detail === 'object' ? event.detail : {};
+    const scope = String(detail.scope || 'all').toLowerCase();
+    if (scope === 'all' || scope === '*' || scope === 'antibiotic') {
+      resetAntibioticPersistState({ hideCard: true });
+    }
+  }
+
+  try {
+    if(typeof window !== 'undefined') {
+      window.vildaAbxPersistApi = {
+        ensureMounted: mountCard,
+        captureState: captureAntibioticPersistState,
+        restoreState: restoreAntibioticPersistState,
+        resetState: resetAntibioticPersistState
+      };
+      if (!window.__vildaAbxUserStateClearedBound && typeof window.addEventListener === 'function') {
+        window.__vildaAbxUserStateClearedBound = true;
+        window.addEventListener('vilda:user-state-cleared', handleAntibioticUserStateCleared);
+        window.addEventListener('vilda:module-state-cleared', handleAntibioticModuleStateCleared);
+      }
+    }
+  } catch (error) { logAbxWarn('Zignorowany błąd pomocniczy w module antybiotykoterapii', error); }
+
   // Po załadowaniu DOM rejestrujemy przycisk i obsługę jego kliknięcia.
-  document.addEventListener('DOMContentLoaded', function(){
+  function setupAntibioticTherapyToggle(){
     const btn = document.getElementById('toggleAbxTherapy');
     if(btn){
       btn.addEventListener('click', function(e){
@@ -8929,6 +9359,20 @@ function chooseAmoxClavDefaultForm(weight, context){
         }
       }, true);
     }
-  });
+  }
+
+  function bootAntibioticTherapyModule(){
+    if (typeof window !== 'undefined' && typeof window.vildaOnReady === 'function') {
+      window.vildaOnReady('antibiotic-therapy:toggle', setupAntibioticTherapyToggle);
+      return;
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', setupAntibioticTherapyToggle, { once: true });
+    } else {
+      setupAntibioticTherapyToggle();
+    }
+  }
+
+  bootAntibioticTherapyModule();
 
   // Koniec modułu antybiotykoterapii

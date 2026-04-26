@@ -1,3 +1,83 @@
+(function (global) {
+  'use strict';
+  if (!global) return;
+  if (typeof global.vildaSafeInit !== 'function') {
+    const fallbackRegistry = Object.create(null);
+    global.vildaSafeInit = function (name, fn, options) {
+      const key = String(name || 'anonymous-init');
+      const opts = options || {};
+      if (opts.once !== false && fallbackRegistry[key]) return undefined;
+      fallbackRegistry[key] = true;
+      try {
+        return typeof fn === 'function' ? fn() : undefined;
+      } catch (error) {
+        if (global.console && typeof global.console.warn === 'function') {
+          global.console.warn('[custom-fixes:init] ' + key + ' failed', error);
+        }
+        return undefined;
+      }
+    };
+  }
+  if (typeof global.vildaOnReady !== 'function') {
+    global.vildaOnReady = function (name, fn, options) {
+      const run = function () {
+        return global.vildaSafeInit(name, fn, options);
+      };
+      if (!global.document || global.document.readyState !== 'loading') {
+        return run();
+      }
+      global.document.addEventListener('DOMContentLoaded', run, { once: true });
+      return undefined;
+    };
+  }
+})(typeof window !== 'undefined' ? window : this);
+
+
+function vildaCustomSetTrustedHtml(element, markup, context) {
+  if (!element) return false;
+  const html = markup == null ? '' : String(markup);
+  try {
+    if (typeof window !== 'undefined' && window.VildaHtml && typeof window.VildaHtml.setTrustedHtml === 'function') {
+      return window.VildaHtml.setTrustedHtml(element, html, { context: context || 'custom-fixes' });
+    }
+    element.textContent = html;
+    return true;
+  } catch (_) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', _, { helper: 'setTrustedHtml', context: context || '' });
+    }
+    return false;
+  }
+}
+
+function vildaCustomClearHtml(element) {
+  if (!element) return false;
+  try {
+    if (typeof window !== 'undefined' && window.VildaHtml && typeof window.VildaHtml.clearHtml === 'function') return window.VildaHtml.clearHtml(element);
+    element.textContent = '';
+    return true;
+  } catch (_) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', _, { helper: 'clearHtml' });
+    }
+    return false;
+  }
+}
+
+function vildaCustomHasHtmlContent(element) {
+  if (!element) return false;
+  try {
+    if (typeof window !== 'undefined' && window.VildaHtml && typeof window.VildaHtml.hasHtmlContent === 'function') return window.VildaHtml.hasHtmlContent(element);
+    return !!String(element.textContent || '').trim();
+  } catch (_) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', _, { helper: 'hasHtmlContent' });
+    }
+    return false;
+  }
+}
+
+
 
 
 
@@ -75,21 +155,23 @@
     }
   }
 
-  // Observe the DOM for summary card insertion and attempt merging
-  const observer = new MutationObserver(mergeSummaryCards);
-  observer.observe(document.documentElement, { childList: true, subtree: true });
+  // Observe the DOM for summary card insertion and attempt merging.
+  window.vildaSafeInit('custom-fixes:summary-card-observer', function () {
+    if (typeof MutationObserver !== 'undefined' && document.documentElement) {
+      const observer = new MutationObserver(mergeSummaryCards);
+      observer.observe(document.documentElement, { childList: true, subtree: true });
+    }
+    window.addEventListener('resize', mergeSummaryCards);
+  });
 
-  // Merge on resize and after DOM is ready
-  window.addEventListener('resize', mergeSummaryCards);
-  if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    mergeSummaryCards();
-  } else {
-    document.addEventListener('DOMContentLoaded', mergeSummaryCards);
-  }
+  // Merge on resize and after DOM is ready.
+  window.vildaOnReady('custom-fixes:merge-summary-cards', mergeSummaryCards);
 
-  // Disable scrollIntoView on mobile and restore on wider screens
-  toggleAutoScrollDisable();
-  window.addEventListener('resize', toggleAutoScrollDisable);
+  // Disable scrollIntoView on mobile and restore on wider screens.
+  window.vildaSafeInit('custom-fixes:auto-scroll-toggle', function () {
+    toggleAutoScrollDisable();
+    window.addEventListener('resize', toggleAutoScrollDisable);
+  });
 
   /**
    * === Dostosowanie wysokości karty komunikatów (infoMessages) ===
@@ -147,7 +229,11 @@
         // pozwól karcie dopasować się do zawartości.
         infoCard.style.minHeight = '';
       }
-    } catch (_) {}
+    } catch (_) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', _, { line: 186 });
+    }
+  }
   }
 
   function observeInfoMessageChanges() {
@@ -164,76 +250,102 @@
     }
   }
 
-  // Initialise height adjustment when document is ready
-  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  // Initialise height adjustment when document is ready.
+  window.vildaOnReady('custom-fixes:info-card-height', function () {
     updateInfoCardHeight();
     observeInfoMessageChanges();
-  } else {
-    document.addEventListener('DOMContentLoaded', function() {
-      updateInfoCardHeight();
-      observeInfoMessageChanges();
-    });
-  }
-  // Update height on window resize
-  window.addEventListener('resize', updateInfoCardHeight);
+  });
+  // Update height on window resize.
+  window.vildaSafeInit('custom-fixes:info-card-resize-listener', function () {
+    window.addEventListener('resize', updateInfoCardHeight);
+  });
 
   /**
-   * === Motyw aplikacji: ciemne tło i płynne szkło ===
+   * === Motyw aplikacji: ciemne tło, płynne szkło i wysoki kontrast ===
    *
-   * Użytkownik może wybrać stopień przyciemnienia tła (0–2) oraz poziom
-   * kontrastu kart Liquid Glass (0–2). Ustawienia te są zapisywane w
-   * localStorage pod kluczami 'darkBgLevel' i 'glassLevel'.  Funkcja
-   * applyThemeCustom() odczytuje te wartości i dodaje odpowiednie klasy do
-   * elementu <body>: dark-bg-level-0/1/2 oraz glass-level-0/1/2.  Jeśli
-   * wybrano ciemniejsze tło (poziom > 0), klasa professional-bg jest
-   * usuwana, aby ustawienia użytkownika miały pierwszeństwo nad domyślnym
-   * przyciemnieniem trybu profesjonalnego.  Funkcja jest globalna (do
-   * window) i wywoływana przy każdym załadowaniu dokumentu oraz po
-   * zmianie ustawień.
+   * Użytkownik może wybrać stopień przyciemnienia tła (0–2), poziom
+   * kontrastu kart Liquid Glass (0–4) oraz dodatkowy tryb wysokiego
+   * kontrastu (0–3). Ustawienia są zapisywane w localStorage pod
+   * kluczami 'darkBgLevel', 'glassLevel', 'highContrastEnabled'
+   * i 'highContrastLevel'. Funkcja applyThemeCustom() odczytuje te
+   * wartości i dodaje odpowiednie klasy do elementu <body>:
+   * dark-bg-level-0/1/2, glass-level-0/1/2/3/4 oraz
+   * high-contrast-level-0/1/2/3.
    */
   (function() {
+    const MAX_DARK_LEVEL = 2;
+    const MAX_GLASS_LEVEL = 4;
+    const HIGH_CONTRAST_LEVELS = [0, 1, 2, 3];
+
+    function normalizeLevel(rawValue, min, max, fallback) {
+      const parsed = parseInt(rawValue, 10);
+      return !isNaN(parsed) ? Math.min(max, Math.max(min, parsed)) : fallback;
+    }
+
+    function normalizeBoolean(rawValue, fallback) {
+      if (rawValue === null || rawValue === undefined || rawValue === '') return fallback;
+      const normalized = String(rawValue).trim().toLowerCase();
+      if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
+      if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
+      return fallback;
+    }
+
     function applyThemeCustom() {
       try {
         const bodyEl = document.body;
         if (!bodyEl) return;
         let darkLevel = 0;
         let glassLevel = 0;
+        let highContrastLevel = 0;
         try {
-          const d = localStorage.getItem('darkBgLevel');
+          const persistence = (typeof window !== 'undefined') ? window.VildaPersistence : null;
+          const readPref = persistence && typeof persistence.readPreferenceRaw === 'function'
+            ? function(key, fallback) { return persistence.readPreferenceRaw(key, fallback); }
+            : function(_key, fallback) { return fallback; };
+          const d = readPref('DARK_BG_LEVEL', null);
           if (d !== null) {
-            const p = parseInt(d, 10);
-            if (!isNaN(p)) darkLevel = p;
+            darkLevel = normalizeLevel(d, 0, MAX_DARK_LEVEL, 0);
           }
-        } catch (_) {}
-        try {
-          const g = localStorage.getItem('glassLevel');
+          const g = readPref('GLASS_LEVEL', null);
           if (g !== null) {
-            const p2 = parseInt(g, 10);
-            if (!isNaN(p2)) glassLevel = p2;
+            glassLevel = normalizeLevel(g, 0, MAX_GLASS_LEVEL, 0);
           }
-        } catch (_) {}
+          const contrastEnabled = normalizeBoolean(readPref('HIGH_CONTRAST_ENABLED', null), false);
+          const contrastIntensity = normalizeLevel(readPref('HIGH_CONTRAST_LEVEL', null), 1, 3, 2);
+          highContrastLevel = contrastEnabled ? contrastIntensity : 0;
+        } catch (_) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', _, { line: 266 });
+    }
+  }
         // Usuń przyciemnienie trybu profesjonalnego, jeśli użytkownik wybrał ciemniejsze tło
         if (darkLevel > 0) {
           bodyEl.classList.remove('professional-bg');
         }
-        // Usuń istniejące klasy ciemnego tła i płynnego szkła
+        // Usuń istniejące klasy ciemnego tła, płynnego szkła i wysokiego kontrastu
         bodyEl.classList.remove('dark-bg-level-0', 'dark-bg-level-1', 'dark-bg-level-2');
-        bodyEl.classList.remove('glass-level-0', 'glass-level-1', 'glass-level-2');
+        bodyEl.classList.remove('glass-level-0', 'glass-level-1', 'glass-level-2', 'glass-level-3', 'glass-level-4');
+        bodyEl.classList.remove(...HIGH_CONTRAST_LEVELS.map((level) => 'high-contrast-level-' + level));
         // Dodaj nowe klasy
         bodyEl.classList.add('dark-bg-level-' + darkLevel);
         bodyEl.classList.add('glass-level-' + glassLevel);
+        bodyEl.classList.add('high-contrast-level-' + highContrastLevel);
       } catch (e) {
-        // ciche pominięcie błędów – brak zastosowania motywu nie blokuje aplikacji
-      }
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', e, { line: 279 });
+    }
+  }
     }
     // Udostępnij funkcję globalnie, aby wywoływać ją z innych skryptów
     if (typeof window !== 'undefined') {
-      try { window.applyThemeCustom = applyThemeCustom; } catch (_) {}
+      try { window.applyThemeCustom = applyThemeCustom; } catch (_) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', _, { line: 285 });
+    }
+  }
     }
     // Automatycznie zastosuj ustawienia po załadowaniu dokumentu
-    document.addEventListener('DOMContentLoaded', function() {
-      applyThemeCustom();
-    });
+    window.vildaOnReady('custom-fixes:apply-theme-custom', applyThemeCustom);
   })();
 
   /**
@@ -308,8 +420,8 @@
     const rightCount = total - leftCount;
 
     // Clear existing children so that we can re‑append cards in the new order.
-    leftContainer.innerHTML  = '';
-    rightContainer.innerHTML = '';
+    vildaCustomClearHtml(leftContainer);
+    vildaCustomClearHtml(rightContainer);
 
     // Reset any inline flex styles from previous runs.  Without this the
     // flex values or paddings could accumulate when the user resizes the window.
@@ -378,12 +490,10 @@
   // ensures that the test containers exist before we attempt to modify
   // them.  We also run it on resize events to handle dynamic changes
   // between mobile and desktop layouts.
-  if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    adjustAllTestCards();
-  } else {
-    document.addEventListener('DOMContentLoaded', adjustAllTestCards);
-  }
-  window.addEventListener('resize', adjustAllTestCards);
+  window.vildaOnReady('custom-fixes:adjust-test-cards', adjustAllTestCards);
+  window.vildaSafeInit('custom-fixes:test-card-resize-listener', function () {
+    window.addEventListener('resize', adjustAllTestCards);
+  });
 
   // Hook into test toggle buttons so that whenever a list of tests is
   // shown or hidden, the cards are redistributed.  Because the DOM
@@ -493,7 +603,7 @@
   }
 
   // Set up listeners after the DOM is fully parsed.
-  document.addEventListener('DOMContentLoaded', function(){
+  window.vildaOnReady('custom-fixes:igf-endo-reposition-listeners', function () {
     const igfToggleBtn  = document.getElementById('toggleIgfTests');
     const endoToggleBtn = document.getElementById('toggleEndoTests');
     // When the IGF button is clicked, update lastOpenedSection if the
@@ -532,7 +642,7 @@
   // toggles the visibility of the Z‑score card and updates the active
   // state on the button.  It deliberately avoids hiding other sections
   // or removing active states on unrelated buttons.
-  document.addEventListener('DOMContentLoaded', function(){
+  window.vildaOnReady('custom-fixes:zscore-toggle-override', function () {
     const zBtn = document.getElementById('toggleZscore');
     if (!zBtn) return;
     zBtn.addEventListener('click', function(ev){
@@ -553,7 +663,11 @@
         if (typeof adjustTestButtonWidths === 'function') {
           requestAnimationFrame(() => adjustTestButtonWidths());
         }
-      } catch (_) {}
+      } catch (_) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', _, { line: 606 });
+    }
+  }
     }, true);
   });
 })();
@@ -577,15 +691,12 @@
         btn.style.display = 'flex';
       }
     } catch (e) {
-      // Jeśli z jakiegoś powodu nie można odczytać lub ustawić stylu,
-      // ignorujemy błąd i nie podejmujemy dalszych działań.
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', e, { line: 629 });
     }
   }
-  if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    showScrollTopBtn();
-  } else {
-    document.addEventListener('DOMContentLoaded', showScrollTopBtn);
   }
+  window.vildaOnReady('custom-fixes:show-scroll-top-button', showScrollTopBtn);
 })();
 // ---------------------------------------------------------------------------
 // Obsługa przycisków „Zapisz dane” i „Wczytaj dane” w bocznym sidebarze
@@ -720,11 +831,7 @@
     });
   }
 
-  if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    initSidebarMenu();
-  } else {
-    document.addEventListener('DOMContentLoaded', initSidebarMenu);
-  }
+  window.vildaOnReady('custom-fixes:sidebar-menu', initSidebarMenu);
 })();
 // ---------------------------------------------------------------------------
 // Wyróżnianie aktywnej pozycji w bocznym sidebarze
@@ -773,11 +880,7 @@
     });
   }
 
-  if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    markActiveSidebarLink();
-  } else {
-    document.addEventListener('DOMContentLoaded', markActiveSidebarLink);
-  }
+  window.vildaOnReady('custom-fixes:active-sidebar-link-basic', markActiveSidebarLink);
 })();
 // ---------------------------------------------------------------------------
 // Wyróżnianie aktywnej pozycji w bocznym sidebarze
@@ -855,11 +958,7 @@
     });
   }
 
-  if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    markActiveSidebarLink();
-  } else {
-    document.addEventListener('DOMContentLoaded', markActiveSidebarLink);
-  }
+  window.vildaOnReady('custom-fixes:active-sidebar-link-normalized', markActiveSidebarLink);
 })();
 
 // ---------------------------------------------------------------------------
@@ -888,6 +987,9 @@
    * @returns {string} Escaped string
    */
   function escapeHtml(str) {
+    if (typeof window !== 'undefined' && window.VildaHtml && typeof window.VildaHtml.escapeHtml === 'function') {
+      return window.VildaHtml.escapeHtml(arguments[0]);
+    }
     return String(str)
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
@@ -931,8 +1033,10 @@
         return stats.percentile;
       }
     } catch (e) {
-      // swallow any errors; simply return null
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', e, { line: 967 });
     }
+  }
     return null;
   }
 
@@ -1079,9 +1183,9 @@
     // Update inner HTML of the content container if present; otherwise update the mini summary itself
     var contentDiv = document.getElementById('miniSummaryContent');
     if (contentDiv) {
-      contentDiv.innerHTML = lines.join('');
+      vildaCustomSetTrustedHtml(contentDiv, lines.join(''), 'custom-fixes:mini-summary-content');
     } else {
-      mini.innerHTML = lines.join('');
+      vildaCustomSetTrustedHtml(mini, lines.join(''), 'custom-fixes:mini-summary');
     }
 
     // If there is no data, always hide the summary
@@ -1156,8 +1260,10 @@
         }
       }
     } catch (errReposition) {
-      // ignore reposition errors
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', errReposition, { line: 1192 });
     }
+  }
 
     // Re-render shortcuts to ensure that WFL availability reflects the current age.
     // Without this, the disabled/enabled state of the WFL shortcut would not
@@ -1168,8 +1274,10 @@
         renderShortcuts();
       }
     } catch (ex) {
-      // Ignore errors silently
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', ex, { line: 1204 });
     }
+  }
   }
 
   /**
@@ -1234,7 +1342,7 @@
         } else {
           // Check content within the summary content container
           var contentEl = document.getElementById('miniSummaryContent');
-          var hasContent = contentEl && contentEl.innerHTML.trim() !== '';
+          var hasContent = contentEl && vildaCustomHasHtmlContent(contentEl);
           if (hasContent) {
             miniEl.style.display = 'block';
           } else {
@@ -1378,12 +1486,12 @@
     var key = getSteroidShortcutStorageKey();
     steroidShortcuts = [];
     try {
-      var raw = localStorage.getItem(key);
-      if (raw) {
-        var arr = JSON.parse(raw);
-        if (Array.isArray(arr)) {
-          steroidShortcuts = arr;
-        }
+      var persistence = (typeof window !== 'undefined') ? window.VildaPersistence : null;
+      var arr = persistence && typeof persistence.readPreferenceJSON === 'function'
+        ? persistence.readPreferenceJSON(key, [])
+        : [];
+      if (Array.isArray(arr)) {
+        steroidShortcuts = arr;
       }
     } catch (ex) {
       steroidShortcuts = [];
@@ -1396,10 +1504,15 @@
   function saveSteroidShortcuts() {
     try {
       var key = getSteroidShortcutStorageKey();
-      localStorage.setItem(key, JSON.stringify(steroidShortcuts || []));
+      var persistence = (typeof window !== 'undefined') ? window.VildaPersistence : null;
+      if (persistence && typeof persistence.writePreferenceJSON === 'function') {
+        persistence.writePreferenceJSON(key, steroidShortcuts || [], { force: true });
+      }
     } catch (ex) {
-      // ignore storage errors (e.g. private browsing)
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', ex, { line: 1437 });
     }
+  }
   }
 
   /**
@@ -1411,7 +1524,7 @@
     var list = document.getElementById('steroidShortcutList');
     var addBtn = document.getElementById('addSteroidShortcutBtn');
     if (!list || !addBtn) return;
-    list.innerHTML = '';
+    vildaCustomClearHtml(list);
     // Render each stored pair
     steroidShortcuts.forEach(function(pair) {
       var srcId = pair.src;
@@ -1477,8 +1590,10 @@
         }
       }
     } catch (err) {
-      // Silently ignore any errors when toggling the info label.
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', err, { line: 1516 });
     }
+  }
   }
 
   /**
@@ -1573,7 +1688,7 @@
     row2.appendChild(selTgt);
     // Populate source list with all drugs (grouped)
     function buildOptions(sel, filterGroup) {
-      sel.innerHTML = '';
+      vildaCustomClearHtml(sel);
       if (typeof DRUGS === 'undefined') return;
       var groups = {};
       DRUGS.forEach(function(d) {
@@ -1893,8 +2008,10 @@
             showAutoCalcNotification();
           }
         } catch (e) {
-          // ignore errors (e.g. invalid input triggers alert)
-        }
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', e, { line: 1932 });
+    }
+  }
       }, 400);
     }
     // Attach listeners to capture user input
@@ -1914,26 +2031,33 @@
   function loadShortcuts() {
     var key = getShortcutStorageKey();
     try {
-      var data = localStorage.getItem(key);
-      if (data) {
-        var arr = JSON.parse(data);
-        if (Array.isArray(arr)) {
-          currentShortcuts = arr;
-        }
+      var persistence = (typeof window !== 'undefined') ? window.VildaPersistence : null;
+      var arr = persistence && typeof persistence.readPreferenceJSON === 'function'
+        ? persistence.readPreferenceJSON(key, [])
+        : [];
+      if (Array.isArray(arr)) {
+        currentShortcuts = arr;
       }
     } catch (e) {
-      // ignore parse errors
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', e, { line: 1961 });
     }
+  }
   }
 
   // Save shortcuts to localStorage
   function saveShortcuts() {
     var key = getShortcutStorageKey();
     try {
-      localStorage.setItem(key, JSON.stringify(currentShortcuts));
+      var persistence = (typeof window !== 'undefined') ? window.VildaPersistence : null;
+      if (persistence && typeof persistence.writePreferenceJSON === 'function') {
+        persistence.writePreferenceJSON(key, currentShortcuts, { force: true });
+      }
     } catch (e) {
-      // localStorage may be unavailable (private mode); ignore
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', e, { line: 1974 });
     }
+  }
   }
 
   // Compute available cards for shortcuts.  Each entry has an id and a title.
@@ -2159,6 +2283,28 @@
           results.push({ id: 'toggleCircSection', title: title });
           return;
         }
+        // Special case: for the macronutrient nutrition norms card use the
+        // toggle button id as the target, mirroring the circumference module.
+        // The card itself is intentionally hidden until the user clicks the
+        // trigger button.
+        if (id === 'nutritionNormsCard') {
+          results.push({ id: 'toggleNutritionNormsCard', title: title });
+          return;
+        }
+        // Special case: for the micronutrient nutrition norms card use the
+        // toggle button id as the target, mirroring the circumference module.
+        // The card itself is intentionally hidden until the user clicks the
+        // trigger button.
+        if (id === 'nutritionMicrosCard') {
+          results.push({ id: 'toggleNutritionMicrosCard', title: title });
+          return;
+        }
+        // Special case: for the unified food card use the toggle button id,
+        // because the actual card is hidden until the user opens it.
+        if (id === 'foodCard') {
+          results.push({ id: 'toggleFoodCard', title: title });
+          return;
+        }
 
         // Special case: shorten long titles for calorie cards.  The
         // "timesCard" displays calorie-burning times with a subhead
@@ -2203,6 +2349,15 @@
     // in case the node lacks an id and a slug was generated.
     if (cardId === 'circCard' || cardId === 'obwod-glowy-i-klatki-piersiowej') {
       return 'toggleCircSection';
+    }
+    if (cardId === 'nutritionNormsCard' || cardId === 'normy-zywieniowe-bialko-tluszcz-weglowodany') {
+      return 'toggleNutritionNormsCard';
+    }
+    if (cardId === 'nutritionMicrosCard' || cardId === 'normy-zywieniowe-witaminy-i-skladniki-mineralne') {
+      return 'toggleNutritionMicrosCard';
+    }
+    if (cardId === 'foodCard' || cardId === 'kalorie-posilkow-i-czas-spalania') {
+      return 'toggleFoodCard';
     }
     // If a user saved a shortcut directly to a toggle button (e.g. toggleIgfTests),
     // we treat the element itself as the activator and do not attempt to find
@@ -2264,6 +2419,16 @@
         if (list2) {
           var formula = list2.find(function(f) { return f && f.id === cardId; });
           if (formula) {
+            if (typeof window.selectClcrFormula === 'function') {
+              try {
+                window.selectClcrFormula(formula.id);
+                return;
+              } catch (_) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', _, { line: 2342 });
+    }
+  }
+            }
             // Determine target version (basic, advanced, spot or pro) and apply it.
             var targetVer = formula.version || 'basic';
             // Special handling for KT/V: always require pro version and enable
@@ -2294,7 +2459,11 @@
             if (!applied) {
               var btnVers = document.querySelector('.version-option[data-version="' + targetVer + '"]');
               if (btnVers && !btnVers.classList.contains('selected')) {
-                try { btnVers.click(); applied = true; } catch (_) {}
+                try { btnVers.click(); applied = true; } catch (_) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', _, { line: 2374 });
+    }
+  }
               }
             }
             // For KT/V formulas ensure the KT/V advanced toggle is enabled.
@@ -2310,14 +2479,20 @@
                 if (typeof window.highlightFields === 'function') {
                   window.highlightFields(formula, true);
                 }
-              } catch (er3) {}
+              } catch (er3) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', er3, { line: 2390 });
+    }
+  }
             }, 100);
             return;
           }
         }
       } catch (er0) {
-        // Ignore errors and fall through if formula lookup fails
-      }
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', er0, { line: 2395 });
+    }
+  }
     }
     if (!el) return;
     // Special handling for Down Syndrome calculations on the home page.  The
@@ -2403,6 +2578,172 @@
         return;
       }
     }
+    // Special handling for the macronutrient nutrition norms card on the home page.
+    // The card is hidden by default and controlled by toggleNutritionNormsCard.
+    {
+      var lcNutritionNormsId = (cardId || '').toLowerCase();
+      var isNutritionNormsModule = false;
+      if (cardId === 'nutritionNormsCard' || cardId === 'toggleNutritionNormsCard' || cardId === 'normy-zywieniowe-bialko-tluszcz-weglowodany') {
+        isNutritionNormsModule = true;
+      }
+      if (!isNutritionNormsModule && lcNutritionNormsId.indexOf('nutritionnorms') !== -1) {
+        isNutritionNormsModule = true;
+      }
+      if (!isNutritionNormsModule && lcNutritionNormsId.indexOf('normy-zywieniowe') !== -1 && (lcNutritionNormsId.indexOf('bialko') !== -1 || lcNutritionNormsId.indexOf('tluszcz') !== -1 || lcNutritionNormsId.indexOf('weglowod') !== -1)) {
+        isNutritionNormsModule = true;
+      }
+      if (isNutritionNormsModule) {
+        var normsToggle = document.getElementById('toggleNutritionNormsCard');
+        var normsCard = document.getElementById('nutritionNormsCard');
+        var normsSection = document.getElementById('nutritionNormsSection');
+        if (normsSection) normsSection.style.display = '';
+        if (normsToggle) {
+          try {
+            normsToggle.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          } catch (e5n) {
+            normsToggle.scrollIntoView(true);
+          }
+          var isHiddenNorms = true;
+          if (normsCard) {
+            try {
+              var normsStyle = window.getComputedStyle(normsCard);
+              isHiddenNorms = (normsStyle.display === 'none' || normsCard.offsetHeight === 0);
+            } catch (e6n) {
+              isHiddenNorms = true;
+            }
+          }
+          if (isHiddenNorms) normsToggle.click();
+        }
+        setTimeout(function() {
+          var targetNormsCard = document.getElementById('nutritionNormsCard');
+          var targetNormsToggle = document.getElementById('toggleNutritionNormsCard');
+          if (targetNormsCard) {
+            try {
+              targetNormsCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (e7n) {
+              targetNormsCard.scrollIntoView(true);
+            }
+          } else if (targetNormsToggle) {
+            try {
+              targetNormsToggle.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (e8n) {
+              targetNormsToggle.scrollIntoView(true);
+            }
+          }
+        }, 200);
+        return;
+      }
+    }
+
+    // Special handling for the micronutrient nutrition norms card on the home page.
+    // The card is hidden by default and controlled by toggleNutritionMicrosCard.
+    {
+      var lcMicrosId = (cardId || '').toLowerCase();
+      var isMicrosModule = false;
+      if (cardId === 'nutritionMicrosCard' || cardId === 'toggleNutritionMicrosCard' || cardId === 'normy-zywieniowe-witaminy-i-skladniki-mineralne') {
+        isMicrosModule = true;
+      }
+      if (!isMicrosModule && (lcMicrosId.indexOf('nutritionmicros') !== -1 || lcMicrosId.indexOf('witaminy') !== -1 || lcMicrosId.indexOf('skladniki-mineralne') !== -1)) {
+        isMicrosModule = true;
+      }
+      if (isMicrosModule) {
+        var microsToggle = document.getElementById('toggleNutritionMicrosCard');
+        var microsCard = document.getElementById('nutritionMicrosCard');
+        var microsSection = document.getElementById('nutritionMicrosSection');
+        if (microsSection) microsSection.style.display = '';
+        if (microsToggle) {
+          try {
+            microsToggle.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          } catch (e5) {
+            microsToggle.scrollIntoView(true);
+          }
+          var isHiddenMicros = true;
+          if (microsCard) {
+            try {
+              var microsStyle = window.getComputedStyle(microsCard);
+              isHiddenMicros = (microsStyle.display === 'none' || microsCard.offsetHeight === 0);
+            } catch (e6) {
+              isHiddenMicros = true;
+            }
+          }
+          if (isHiddenMicros) microsToggle.click();
+        }
+        setTimeout(function() {
+          var targetMicrosCard = document.getElementById('nutritionMicrosCard');
+          var targetMicrosToggle = document.getElementById('toggleNutritionMicrosCard');
+          if (targetMicrosCard) {
+            try {
+              targetMicrosCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (e7) {
+              targetMicrosCard.scrollIntoView(true);
+            }
+          } else if (targetMicrosToggle) {
+            try {
+              targetMicrosToggle.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (e8) {
+              targetMicrosToggle.scrollIntoView(true);
+            }
+          }
+        }, 200);
+        return;
+      }
+    }
+
+
+    // Special handling for the unified food card on the home page.
+    // The card is hidden by default and controlled by toggleFoodCard.
+    {
+      var lcFoodId = (cardId || '').toLowerCase();
+      var isFoodModule = false;
+      if (cardId === 'foodCard' || cardId === 'toggleFoodCard' || cardId === 'kalorie-posilkow-i-czas-spalania') {
+        isFoodModule = true;
+      }
+      if (!isFoodModule && (lcFoodId.indexOf('foodcard') !== -1 || (lcFoodId.indexOf('kalorie') !== -1 && (lcFoodId.indexOf('posilk') !== -1 || lcFoodId.indexOf('spalania') !== -1)))) {
+        isFoodModule = true;
+      }
+      if (isFoodModule) {
+        var foodToggle = document.getElementById('toggleFoodCard');
+        var foodCard = document.getElementById('foodCard');
+        var foodSection = document.getElementById('foodSection');
+        if (foodSection) foodSection.style.display = '';
+        if (foodToggle) {
+          try {
+            foodToggle.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          } catch (e5f) {
+            foodToggle.scrollIntoView(true);
+          }
+          var isHiddenFood = true;
+          if (foodCard) {
+            try {
+              var foodStyle = window.getComputedStyle(foodCard);
+              isHiddenFood = (foodStyle.display === 'none' || foodCard.offsetHeight === 0);
+            } catch (e6f) {
+              isHiddenFood = true;
+            }
+          }
+          if (isHiddenFood) foodToggle.click();
+        }
+        setTimeout(function() {
+          var targetFoodCard = document.getElementById('foodCard');
+          var targetFoodToggle = document.getElementById('toggleFoodCard');
+          if (targetFoodCard) {
+            try {
+              targetFoodCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (e7f) {
+              targetFoodCard.scrollIntoView(true);
+            }
+          } else if (targetFoodToggle) {
+            try {
+              targetFoodToggle.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (e8f) {
+              targetFoodToggle.scrollIntoView(true);
+            }
+          }
+        }, 200);
+        return;
+      }
+    }
+
     // If the target element is a button, simply click it and scroll to it.
     // Special case: if the button is the circumference toggle, also scroll
     // to the associated card after expansion.  This ensures that the user
@@ -2516,7 +2857,7 @@
     var listEl = document.getElementById('shortcutList');
     if (!listEl) return;
     // Clear current items
-    listEl.innerHTML = '';
+    vildaCustomClearHtml(listEl);
     // Build map of available cards for title lookup
     var avail = computeAvailableCards();
     var lookup = {};
@@ -2809,21 +3150,15 @@
       });
       saveShortcuts();
     } catch (ex) {
-      // ignore errors, continue
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', ex, { line: 3054 });
     }
+  }
     // Render the list
     renderShortcuts();
   }
 
-  if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    initMiniSummary();
-    initSteroidShortcuts();
-    initSteroidAutoCalc();
-  } else {
-    document.addEventListener('DOMContentLoaded', function() {
-      initMiniSummary();
-      initSteroidShortcuts();
-      initSteroidAutoCalc();
-    });
-  }
+  window.vildaOnReady('custom-fixes:mini-summary', initMiniSummary);
+  window.vildaOnReady('custom-fixes:steroid-shortcuts', initSteroidShortcuts);
+  window.vildaOnReady('custom-fixes:steroid-auto-calc', initSteroidAutoCalc);
 })();

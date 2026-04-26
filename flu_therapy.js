@@ -25,8 +25,77 @@
  * numeru PWZ (w chwili gdy widoczny staje się przycisk „Antybiotykoterapia”).
  */
 
+
+function fluEscapeHtml(value) {
+  if (typeof window !== 'undefined' && window.VildaHtml && typeof window.VildaHtml.escapeHtml === 'function') {
+    return window.VildaHtml.escapeHtml(value);
+  }
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function fluTextToHtml(value) {
+  if (typeof window !== 'undefined' && window.VildaHtml && typeof window.VildaHtml.textToHtml === 'function') {
+    return window.VildaHtml.textToHtml(value);
+  }
+  return fluEscapeHtml(value).replace(/\r\n|\r|\n/g, '<br>');
+}
+
+function fluSafeUrl(value) {
+  if (typeof window !== 'undefined' && window.VildaHtml && typeof window.VildaHtml.safeUrl === 'function') {
+    return window.VildaHtml.safeUrl(value, { fallback: '#' });
+  }
+  const raw = String(value == null ? '' : value).trim();
+  return /^(https?:|mailto:|tel:)/i.test(raw) ? raw : '#';
+}
+
+function fluSourceToSafeHtml(value) {
+  const raw = String(value == null ? '' : value).trim();
+  const anchorMatch = raw.match(/^<a\s+[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>$/i);
+  if (anchorMatch) {
+    const href = fluSafeUrl(anchorMatch[1]);
+    const label = anchorMatch[2].replace(/<[^>]*>/g, '');
+    if (typeof window !== 'undefined' && window.VildaHtml && typeof window.VildaHtml.linkHtml === 'function') {
+      return window.VildaHtml.linkHtml(href, label, { target: '_blank', rel: 'noopener noreferrer' });
+    }
+    return `<a href="${fluEscapeHtml(href)}" target="_blank" rel="noopener noreferrer">${fluEscapeHtml(label)}</a>`;
+  }
+  return fluEscapeHtml(raw);
+}
+
+function fluSetEscapedHtml(element, text) {
+  if (!element) return false;
+  if (typeof window !== 'undefined' && window.VildaHtml && typeof window.VildaHtml.setEscapedHtml === 'function') {
+    return window.VildaHtml.setEscapedHtml(element, text, { context: 'flu-therapy:recommendation' });
+  }
+  element.textContent = String(text == null ? '' : text);
+  return true;
+}
+
+function fluSetTrustedHtml(element, html, context) {
+  if (!element) return false;
+  if (typeof window !== 'undefined' && window.VildaHtml && typeof window.VildaHtml.setTrustedHtml === 'function') {
+    return window.VildaHtml.setTrustedHtml(element, html, { context: context || 'flu-therapy:trusted-markup' });
+  }
+  element.textContent = html || '';
+  return true;
+}
+
+function fluClearHtml(element) {
+  if (!element) return false;
+  if (typeof window !== 'undefined' && window.VildaHtml && typeof window.VildaHtml.clearHtml === 'function') {
+    return window.VildaHtml.clearHtml(element);
+  }
+  element.textContent = '';
+  return true;
+}
+
 // Czekamy na pełne wczytanie DOM, aby mieć dostęp do wszystkich elementów.
-document.addEventListener('DOMContentLoaded', () => {
+function initFluTherapyModule() {
   // Elementy interfejsu modułu leczenia infekcji wirusowych
   const fluBtnWrapper = document.getElementById('fluButtonWrapper');
   const abxBtnWrapper = document.getElementById('abxButtonWrapper');
@@ -201,12 +270,12 @@ document.addEventListener('DOMContentLoaded', () => {
       if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
         navigator.clipboard.writeText(rec).catch(() => {});
       }
-      // Wyświetl rezultat w przeznaczonym polu.  Używamy innerHTML,
+      // Wyświetl rezultat w przeznaczonym polu.  Używamy kontrolowanego HTML,
       // aby zachować łamanie linii w przypadku wypunktowanych zaleceń (\n → <br>).
       const resBox = document.getElementById('fluResult');
       if (resBox) {
         // Zamieniamy znak nowej linii na <br> dla poprawnego formatowania.
-        resBox.innerHTML = rec.replace(/\n/g, '<br>');
+        fluSetEscapedHtml(resBox, rec);
       }
       // Pokaż tooltip informujący o skopiowaniu zaleceń
       showFluTooltip('Zalecenia zostały skopiowane do schowka');
@@ -231,14 +300,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (drugVal && brandVal) {
       const rec = buildFluRecommendation();
       if (rec) {
-        resBox.innerHTML = rec.replace(/\n/g, '<br>');
+        fluSetEscapedHtml(resBox, rec);
         // Po aktualizacji wyniku zaplanuj pokazanie informacji o uaktualnieniu
         scheduleUpdateTooltip();
       } else {
-        resBox.innerHTML = '';
+        fluClearHtml(resBox);
       }
     } else {
-      resBox.innerHTML = '';
+      fluClearHtml(resBox);
       // Ukryj sekcje informacji dodatkowych, jeśli nie ma wyniku.
       const infoSection = document.getElementById('fluInfoSection');
       if (infoSection) infoSection.style.display = 'none';
@@ -325,7 +394,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (varControlsEl) varControlsEl.style.display = 'none';
         // Przy zmianie wskazania usuń wynik i sekcje ospy
         const varResult = document.getElementById('varResult');
-        if (varResult) varResult.innerHTML = '';
+        if (varResult) fluClearHtml(varResult);
         const varInfoSection = document.getElementById('varInfoSection');
         if (varInfoSection) varInfoSection.style.display = 'none';
         const varDoseSection = document.getElementById('varDoseSection');
@@ -333,14 +402,9 @@ document.addEventListener('DOMContentLoaded', () => {
       } else if (val === 'ospawietrzna') {
         if (fluControlsEl) fluControlsEl.style.display = 'none';
         if (varControlsEl) varControlsEl.style.display = 'block';
-        // Przy pierwszym otwarciu sekcji leczenia ospy resetujemy znacznik userChoice,
-        // aby recalculateVar() mogło ustawić domyślny preparat.  Jeśli tego nie
-        // zrobimy, wcześniejszy wybór użytkownika będzie uniemożliwiał zmianę
-        // preparatu przy nowych danych.
-        const varPrep = document.getElementById('varPreparation');
-        if (varPrep) {
-          delete varPrep.dataset.userChoice;
-        }
+        // Zachowaj ewentualny ręczny wybór preparatu zapisany wcześniej w stanie strony.
+        // Jeśli użytkownik nie wybierał preparatu samodzielnie, recalculateVar() i tak
+        // ustali domyślną opcję na podstawie wieku i masy ciała.
         // Ustaw domyślny preparat w zależności od wieku i masy ciała (jeśli dostępne).
         // Wywołanie recalculateVar() spowoduje ustawienie odpowiedniego preparatu
         // zanim zostaną wygenerowane zalecenia.
@@ -351,6 +415,30 @@ document.addEventListener('DOMContentLoaded', () => {
         if (varControlsEl) varControlsEl.style.display = 'none';
       }
     });
+
+    // Przy odtwarzaniu stanu formularza wartości pól mogą zostać przywrócone
+    // jeszcze przed inicjalizacją tego modułu. Wymuś jednorazową synchronizację UI
+    // oraz przeliczenie zaleceń po podpięciu wszystkich listenerów.
+    window.setTimeout(() => {
+      try {
+        infectionSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      } catch (_) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('flu_therapy.js', _, { line: 356 });
+    }
+  }
+      try {
+        if (infectionSelect.value === 'grypa') {
+          recalculateFlu();
+        } else if (infectionSelect.value === 'ospawietrzna') {
+          recalculateVar();
+        }
+      } catch (_) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('flu_therapy.js', _, { line: 363 });
+    }
+  }
+    }, 0);
   }
 
   // Obsługa przycisku „Źródła” dla sekcji leczenia grypy.  Przycisk pokazuje lub
@@ -387,7 +475,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       const resBox = document.getElementById('varResult');
       if (resBox) {
-        resBox.innerHTML = rec.replace(/\n/g, '<br>');
+        fluSetEscapedHtml(resBox, rec);
       }
       showFluTooltip('Zalecenia zostały skopiowane do schowka');
     });
@@ -412,7 +500,15 @@ document.addEventListener('DOMContentLoaded', () => {
       srcSection.style.display = isHidden ? 'block' : 'none';
     });
   }
-});
+}
+
+if (typeof window !== 'undefined' && typeof window.vildaOnReady === 'function') {
+  window.vildaOnReady('flu-therapy:init', initFluTherapyModule);
+} else if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initFluTherapyModule, { once: true });
+} else {
+  initFluTherapyModule();
+}
 
 /**
  * Buduje tekst zaleceń leczenia infekcji wirusowych na podstawie formularza użytkownika.
@@ -919,8 +1015,8 @@ function updateVarInfoUI() {
   const srcList = document.getElementById('varSourcesList');
   if (!infoSection || !infoList || !srcList) return;
   // Wyczyść listy i uzupełnij od nowa
-  infoList.innerHTML = '';
-  srcList.innerHTML = '';
+  fluClearHtml(infoList);
+  fluClearHtml(srcList);
   window.varModuleInfoFacts.forEach((item) => {
     const li = document.createElement('li');
     li.textContent = item;
@@ -1034,13 +1130,13 @@ function recalculateVar() {
   if (prepVal) {
     const rec = buildVarRecommendation();
     if (rec) {
-      resultBox.innerHTML = rec.replace(/\n/g, '<br>');
+      fluSetEscapedHtml(resultBox, rec);
       // Uaktualnij sekcję informacji dodatkowych i źródeł
       updateVarInfoUI();
       // Pokaż informację o uaktualnieniu
       scheduleUpdateTooltip();
     } else {
-      resultBox.innerHTML = '';
+      fluClearHtml(resultBox);
       // Ukryj sekcje informacji dodatkowych i źródeł
       const infoSection = document.getElementById('varInfoSection');
       if (infoSection) infoSection.style.display = 'none';
@@ -1048,7 +1144,7 @@ function recalculateVar() {
       if (doseSection) doseSection.style.display = 'none';
     }
   } else {
-    resultBox.innerHTML = '';
+    fluClearHtml(resultBox);
     const infoSection = document.getElementById('varInfoSection');
     if (infoSection) infoSection.style.display = 'none';
     const doseSection = document.getElementById('varDoseSection');
@@ -1075,8 +1171,8 @@ function updateFluInfoUI() {
   // Ukryj sekcję źródeł, aby wymagała kliknięcia przycisku.
   sourcesSection.style.display = 'none';
   // Wyczyść istniejące listy.
-  infoList.innerHTML = '';
-  sourcesList.innerHTML = '';
+  fluClearHtml(infoList);
+  fluClearHtml(sourcesList);
   // Wstaw fakty
   const facts = window.fluModuleInfoFacts || [];
   facts.forEach((fact) => {
@@ -1088,8 +1184,8 @@ function updateFluInfoUI() {
   const sources = window.fluModuleSources || [];
   sources.forEach((src) => {
     const li = document.createElement('li');
-    // Jeśli źródło zawiera tagi HTML (np. link), używamy innerHTML zamiast textContent.
-    li.innerHTML = src;
+    // Jeśli źródło zawiera tagi HTML (np. link), używamy kontrolowanego HTML zamiast textContent.
+    fluSetTrustedHtml(li, fluSourceToSafeHtml(src), 'flu-therapy:source-link');
     sourcesList.appendChild(li);
   });
 }
