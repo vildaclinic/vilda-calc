@@ -11,6 +11,24 @@
  */
 
 (function() {
+
+  function respiratorySetTrustedHtml(element, markup, context) {
+    if (!element) return false;
+    const html = markup == null ? '' : String(markup);
+    try {
+      if (typeof window !== 'undefined' && window.VildaHtml && typeof window.VildaHtml.setTrustedHtml === 'function') {
+        return window.VildaHtml.setTrustedHtml(element, html, { context: context || 'respiratory-module' });
+      }
+      element.textContent = html;
+      return true;
+    } catch (_) {
+      if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+        globalThis.vildaLogSwallowedCatch('respiratory_module.js', _, { helper: 'respiratorySetTrustedHtml', context: context || '' });
+      }
+      return false;
+    }
+  }
+
   /**
    * Buduje dynamiczny tekst źródłowy dla modułu RR w zależności od wybranych opcji.
    * Użytkownik może wybrać populację (healthy vs hospital), stan (awake vs sleep)
@@ -71,12 +89,12 @@
     resultEl.classList.remove('rr-warning', 'rr-danger');
     // Brak lub niepoprawne dane – wyświetl placeholder
     if (!breaths || !isFinite(breaths)) {
-      resultEl.innerHTML = '<p class="bp-placeholder">Wpisz liczbę oddechów powyżej, aby zobaczyć wynik.</p>';
+      respiratorySetTrustedHtml(resultEl, '<p class="bp-placeholder">Wpisz liczbę oddechów powyżej, aby zobaczyć wynik.</p>', 'respiratory-module:resultEl');
       return;
     }
     if (ageYears < 0 || isNaN(ageYears) || ageYears > 18) {
       // Jeżeli wiek jest nieprawidłowy (brak, ujemny lub >18 lat), informuj użytkownika.
-      resultEl.innerHTML = '<p>Normy liczby oddechów dostępne są dla wieku 0–18&nbsp;lat.</p>';
+      respiratorySetTrustedHtml(resultEl, '<p>Normy liczby oddechów dostępne są dla wieku 0–18&nbsp;lat.</p>', 'respiratory-module:resultEl');
       return;
     }
     // Upewnij się, że moduł vitalSigns jest dostępny
@@ -108,12 +126,12 @@
         // Dodaj dynamiczną notę źródłową w zależności od wybranych opcji.
         const sourceHtml = buildRespSourceHTML({ population, state, temperature });
         html += sourceHtml;
-        resultEl.innerHTML = html;
+        respiratorySetTrustedHtml(resultEl, html, 'respiratory-module:resultEl');
         return;
       }
     }
     // Jeżeli dane nie są obsługiwane przez modul
-    resultEl.innerHTML = '<p>Brak danych do obliczenia centyla.</p>';
+    respiratorySetTrustedHtml(resultEl, '<p>Brak danych do obliczenia centyla.</p>', 'respiratory-module:resultEl');
   }
 
   /**
@@ -149,6 +167,11 @@
     updateRespiratory();
   }
 
-  // Uruchom moduł po załadowaniu DOM
-  document.addEventListener('DOMContentLoaded', initRespiratoryModule);
+  if (typeof window !== 'undefined' && typeof window.vildaOnReady === 'function') {
+    window.vildaOnReady('respiratory-module:init', initRespiratoryModule);
+  } else if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initRespiratoryModule, { once: true });
+  } else {
+    initRespiratoryModule();
+  }
 })();

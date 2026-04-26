@@ -22,6 +22,65 @@
  */
 
 (function(){
+
+  function ghIgfSetTrustedHtml(element, markup, context) {
+    if (!element) return false;
+    const html = markup == null ? '' : String(markup);
+    try {
+      if (typeof window !== 'undefined' && window.VildaHtml && typeof window.VildaHtml.setTrustedHtml === 'function') {
+        return window.VildaHtml.setTrustedHtml(element, html, { context: context || 'gh-igf-therapy' });
+      }
+      element.textContent = html;
+      return true;
+    } catch (error) {
+      logGhIgfWarn('gh-igf:html', 'Nie udało się ustawić kontrolowanego HTML.', {
+        context: context || '',
+        error: error && error.message ? error.message : String(error || '')
+      });
+      return false;
+    }
+  }
+
+  function ghIgfClearHtml(element) {
+    if (!element) return false;
+    try {
+      if (typeof window !== 'undefined' && window.VildaHtml && typeof window.VildaHtml.clearHtml === 'function') return window.VildaHtml.clearHtml(element);
+      element.textContent = '';
+      return true;
+    } catch (error) {
+      logGhIgfWarn('gh-igf:html', 'Nie udało się wyczyścić elementu.', {
+        error: error && error.message ? error.message : String(error || '')
+      });
+      return false;
+    }
+  }
+
+  function logGhIgfError(message, error, meta) {
+    try {
+      const logger = window.VildaLogger || window.vildaLogger || null;
+      if (logger && typeof logger.error === 'function') {
+        logger.error('gh-igf-therapy', message || 'Błąd modułu terapii GH/IGF-1', error || null, meta || null);
+      }
+    } catch (loggingError) {
+      if (typeof window !== 'undefined' && window.__VILDA_DEBUG && window.console && typeof window.console.warn === 'function') {
+        window.console.warn('[VildaLogger][gh-igf-therapy] Nie udało się zapisać logu diagnostycznego', loggingError);
+      }
+    }
+  }
+
+  function logGhIgfWarn(message, error, meta) {
+    try {
+      const logger = window.VildaLogger || window.vildaLogger || null;
+      if (logger && typeof logger.warn === 'function') {
+        logger.warn('gh-igf-therapy', message || 'Ostrzeżenie modułu terapii GH/IGF-1', error || null, meta || null);
+      }
+    } catch (loggingError) {
+      if (typeof window !== 'undefined' && window.__VILDA_DEBUG && window.console && typeof window.console.warn === 'function') {
+        window.console.warn('[VildaLogger][gh-igf-therapy] Nie udało się zapisać logu diagnostycznego', loggingError);
+      }
+    }
+  }
+
   const GH_DRUGS = ['Omnitrope 5 mg','Omnitrope 10 mg','Genotropin 5,3 mg','Genotropin 12 mg','Ngenla 24 mg','Ngenla 60 mg'];
   const IGF_DRUGS = ['Increlex 40 mg']; // Mecaserminum
 
@@ -272,6 +331,36 @@
     return new Date(date.getFullYear(), date.getMonth(), date.getDate());
   }
 
+
+  /**
+   * Parsuje wartość pola daty w formacie YYYY-MM-DD do lokalnego obiektu Date
+   * ustawionego na początek dnia.  Nie polegamy wyłącznie na konstruktorze
+   * Date(string), ponieważ w różnych przeglądarkach potrafi on zwracać datę
+   * w UTC albo lokalnie, co może dawać niespójne obliczenia liczby dni dla
+   * funkcji "Ustalona data kontroli".
+   *
+   * @param {string} value Wartość pola daty
+   * @returns {Date|null}
+   */
+  function parseLocalDateInput(value){
+    const raw = String(value == null ? '' : value).trim();
+    if (!raw) return null;
+    const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (match) {
+      const year = Number(match[1]);
+      const month = Number(match[2]);
+      const day = Number(match[3]);
+      const parsed = new Date(year, month - 1, day);
+      if (parsed.getFullYear() !== year || parsed.getMonth() !== month - 1 || parsed.getDate() !== day) {
+        return null;
+      }
+      return startOfDay(parsed);
+    }
+    const fallback = new Date(raw);
+    if (isNaN(fallback)) return null;
+    return startOfDay(fallback);
+  }
+
   /**
    * Zwraca polską nazwę dnia tygodnia w mianowniku (niedziela, poniedziałek…).
    *
@@ -501,7 +590,9 @@
     try {
       // Uaktualnij obliczenia na wszelki wypadek
       recalc();
-    } catch(e){ /* ignore */ }
+    } catch(error){
+      logGhIgfWarn('Nie udało się odświeżyć obliczeń przed zbudowaniem zaleceń GH/IGF-1', error);
+    }
     const calc = (typeof window !== 'undefined') ? window.ghTherapyCalc : null;
     if (!calc) return '';
     // Jeśli wybrano Ngenla (somatrogon) – generuj dedykowane zalecenia tygodniowe
@@ -568,7 +659,7 @@
    * @returns {string} Tekst zaleceń z numeracją
    */
   function buildSomatrogonRecommendation(days){
-    try { recalc(); } catch(_){}
+    try { recalc(); } catch (error) { logGhIgfWarn('Zignorowany błąd pomocniczy w module terapii GH/IGF-1', error); }
     const calc = (typeof window !== 'undefined') ? window.ghTherapyCalc : null;
     if (!calc || !/^Ngenla/.test(calc.drug)) return '';
     // Nazwa preparatu i jego moc (np. „Ngenla 24 mg” → brand="Ngenla", mgPart="24 mg")
@@ -625,7 +716,7 @@
    * @returns {string} Ciąg zaleceń w formie wielowierszowej
    */
   function buildSomatrogonManualRecommendation(days, manualControlDate){
-    try { recalc(); } catch(_){}
+    try { recalc(); } catch (error) { logGhIgfWarn('Zignorowany błąd pomocniczy w module terapii GH/IGF-1', error); }
     const calc = (typeof window !== 'undefined') ? window.ghTherapyCalc : null;
     if (!calc || !/^Ngenla/.test(calc.drug)) return '';
     const tokens = calc.drug.split(' ');
@@ -676,7 +767,7 @@
    * @returns {string}
    */
   function buildGhManualRecommendation(days, ctrlDate){
-    try { recalc(); } catch(_){}
+    try { recalc(); } catch (error) { logGhIgfWarn('Zignorowany błąd pomocniczy w module terapii GH/IGF-1', error); }
     const calc = (typeof window !== 'undefined') ? window.ghTherapyCalc : null;
     if (!calc) return '';
     const drug = calc.drug;
@@ -739,7 +830,7 @@
         ta.style.left = '-9999px';
         document.body.appendChild(ta);
         ta.select();
-        try { document.execCommand('copy'); notify(); } catch(_){}
+        try { document.execCommand('copy'); notify(); } catch (error) { logGhIgfWarn('Zignorowany błąd pomocniczy w module terapii GH/IGF-1', error); }
         document.body.removeChild(ta);
       });
     } else {
@@ -750,7 +841,7 @@
       ta.style.left = '-9999px';
       document.body.appendChild(ta);
       ta.select();
-      try { document.execCommand('copy'); } catch(_){}
+      try { document.execCommand('copy'); } catch (error) { logGhIgfWarn('Zignorowany błąd pomocniczy w module terapii GH/IGF-1', error); }
       document.body.removeChild(ta);
       notify();
     }
@@ -779,9 +870,9 @@
       toast.style.zIndex = '10000';
       toast.style.boxShadow = '0 2px 6px rgba(0,0,0,0.2)';
       document.body.appendChild(toast);
-      setTimeout(() => { try { toast.remove(); } catch(e){} }, 2500);
-    } catch(_) {
-      // w razie problemów z dodaniem toastu nic nie robimy
+      setTimeout(() => { try { toast.remove(); } catch (error) { logGhIgfWarn('Zignorowany błąd pomocniczy w module terapii GH/IGF-1', error); } }, 2500);
+    } catch(error) {
+      logGhIgfWarn('Nie udało się pokazać toastu GH/IGF-1', error);
     }
   }
 
@@ -818,7 +909,7 @@
     card.className = 'result-card animate-in'; // szeroka karta jak intakeCard
     card.style.margin = '1rem 0';
 
-    card.innerHTML = `
+    ghIgfSetTrustedHtml(card, `
       <h2 style="text-align:center;">Leczenie hormonem wzrostu / IGF‑1</h2>
       <div class="flex" style="display:flex; gap:.75rem; flex-wrap:wrap; align-items:flex-end;">
         <label style="flex:1 1 260px; min-width:240px;">
@@ -944,7 +1035,7 @@
       <div id="ghMonitorBtnWrapper" style="width:100%; display:flex; justify-content:center; margin:1rem 0;">
         <button type="button" id="toggleGhMonitor" class="igf-btn btn-icon btn-accent">Monitorowanie leczenia hormonem wzrostu</button>
       </div>
-    `;
+    `, 'gh-igf:card');
     return card;
   }
 
@@ -973,8 +1064,8 @@
     if (monitorCard) {
       try {
         where.parentNode.insertBefore(monitorCard, card.nextSibling);
-      } catch(_) {
-        /* ignoruj błędy podczas przenoszenia */
+      } catch(error) {
+        logGhIgfWarn('Nie udało się przenieść karty monitorowania GH/IGF-1 pod kartę terapii', error);
       }
     }
 
@@ -1013,7 +1104,7 @@
         if (manualInp) {
           manualInp.value = '';
           // Przywróć szary kolor placeholdera po wyczyszczeniu
-          try { manualInp.style.color = '#6b7a7a'; } catch(_) {}
+          try { manualInp.style.color = '#6b7a7a'; } catch (error) { logGhIgfWarn('Zignorowany błąd pomocniczy w module terapii GH/IGF-1', error); }
         }
         const manualRow = document.getElementById('therManualRow');
         if (manualRow) manualRow.style.display = 'none';
@@ -1026,8 +1117,8 @@
         if (manualStartAdviceEl) manualStartAdviceEl.textContent = '';
         const copyManualBtn = document.getElementById('copyManualDays');
         if (copyManualBtn) copyManualBtn.style.display = 'none';
-      } catch(_) {
-        /* ignoruj błędy */
+      } catch(error) {
+        logGhIgfWarn('Nie udało się wyczyścić ręcznej daty kontroli GH/IGF-1 po zmianie programu', error);
       }
     }
 
@@ -1135,13 +1226,13 @@
     if (manualDateInp) {
       // Aktualizuj zalecenia dla własnej daty kontroli po zmianie pola
       manualDateInp.addEventListener('change', function(){
-        try { recalc(); } catch(_) {}
+        try { recalc(); } catch (error) { logGhIgfWarn('Zignorowany błąd pomocniczy w module terapii GH/IGF-1', error); }
       });
       // Zainicjuj własny kalendarz dla pola daty
       try {
         setupCustomDatePicker(manualDateInp, manualPickerEl);
-      } catch(_) {
-        /* ignoruj błędy w inicjalizacji kalendarza */
+      } catch(error) {
+        logGhIgfWarn('Nie udało się zainicjalizować kalendarza ręcznej daty kontroli GH/IGF-1', error);
       }
     }
     if (copyManualBtn) {
@@ -1153,7 +1244,8 @@
         try {
           const ctrlInput = document.getElementById('manualControlDate');
           if (!ctrlInput || !ctrlInput.value) return;
-          const ctrlDate = new Date(ctrlInput.value);
+          const ctrlDate = parseLocalDateInput(ctrlInput.value);
+          if (!ctrlDate) return;
           // Obetnij bieżącą datę do północy, aby zapewnić poprawne obliczenie liczby dni.
           const todayReal = new Date();
           const today = startOfDay(todayReal);
@@ -1176,8 +1268,8 @@
           }
           const text = buildGhManualRecommendation(therapyDays, ctrlDate);
           copyRecommendationToClipboard(text);
-        } catch(e) {
-          /* ignore */
+        } catch(error) {
+          logGhIgfWarn('Nie udało się zsynchronizować klasy aktywnej przycisku GH/IGF-1', error);
         }
       });
     }
@@ -1190,7 +1282,7 @@
   function populateDrugs(){
     const prog = document.getElementById('therProg').value;
     const drugSel = document.getElementById('therDrug');
-    drugSel.innerHTML = '';
+    ghIgfClearHtml(drugSel);
     const list = PROGRAMS[prog].drugs;
     list.forEach(name => {
       const opt = document.createElement('option');
@@ -1287,7 +1379,7 @@
 
     // Dodaj zakres do notatki, jeśli istnieje.  Zostawiamy kropkę na końcu
     // pierwotnej notatki i dołączamy zakres jako osobne zdanie w nawiasach.
-    note.innerHTML = noteHtml + (rangeHtml || '');
+    ghIgfSetTrustedHtml(note, noteHtml + (rangeHtml || ''), 'gh-igf:note');
 
     // Pokaż lub ukryj pole dawki w mg/dobę oraz ustaw jego wartość początkową.
     // Pole mg/dobę jest widoczne tylko dla codziennie podawanych preparatów GH (somatotropina).
@@ -1332,7 +1424,7 @@ function recalc(){
 
     // minimal validation: require weight
     if (!w || w <= 0){
-      summary.innerHTML = `<p>Uzupełnij <strong>wagę</strong> w sekcji „Dane użytkownika”, aby zobaczyć dawki.</p>`;
+      ghIgfSetTrustedHtml(summary, `<p>Uzupełnij <strong>wagę</strong> w sekcji „Dane użytkownika”, aby zobaczyć dawki.</p>`, 'gh-igf:summary');
       out90.textContent = '—';
       out180.textContent = '—';
       outC.textContent = '—';
@@ -1454,18 +1546,18 @@ function recalc(){
       }
     }
     if (warn){
-      warnBox.innerHTML = warn;
+      ghIgfSetTrustedHtml(warnBox, warn, 'gh-igf:warnBox');
       warnBox.style.display = 'block';
     } else {
       warnBox.style.display = 'none';
-      warnBox.innerHTML = '';
+      ghIgfClearHtml(warnBox);
     }
 
     // Summary display using effective doses
     if (/^Ngenla/.test(drug)) {
       const perKgWeek_IU_eff = (prog === 'IGF-1' ? null : weeklyEff * 3);
       const iuPartN = (perKgWeek_IU_eff==null) ? '' : ` (<span class="muted">${fmt(perKgWeek_IU_eff,2)} IU/kg/tydz</span>)`;
-      summary.innerHTML = `
+      ghIgfSetTrustedHtml(summary, `
       <div class="whr-result">
         <div class="whr-topline" style="justify-content:center;">
           <span class="whr-label">Pacjent:</span>
@@ -1477,11 +1569,11 @@ function recalc(){
           <span class="whr-badge">${fmt(perDay_mg,3)} mg/d</span>
         </div>
       </div>
-      `;
+      `, 'gh-igf:summary');
     } else {
       const perKgWeek_IU_eff2 = (prog === 'IGF-1' ? null : weeklyEff * 3);
       const iuPart2 = (perKgWeek_IU_eff2==null) ? '' : ` (<span class="muted">${fmt(perKgWeek_IU_eff2,2)} IU/kg/tydz</span>)`;
-      summary.innerHTML = `
+      ghIgfSetTrustedHtml(summary, `
       <div class="whr-result">
         <div class="whr-topline" style="justify-content:center;">
           <span class="whr-label">Pacjent:</span>
@@ -1493,7 +1585,7 @@ function recalc(){
           <span class="whr-badge">${fmt(perWeek_mg,3)} mg/tydz</span>
         </div>
       </div>
-      `;
+      `, 'gh-igf:summary');
     }
 
     // Medicine demand calculations (unchanged except using rounded perDay/perWeek)
@@ -1527,11 +1619,11 @@ function recalc(){
       }
     }
 
-    out90.innerHTML  = lineFor(90);
-    out180.innerHTML = lineFor(180);
+    ghIgfSetTrustedHtml(out90, lineFor(90), 'gh-igf:out90');
+    ghIgfSetTrustedHtml(out180, lineFor(180), 'gh-igf:out180');
     if (customDays && customDays>0){
       labC.textContent = String(customDays);
-      outC.innerHTML = lineFor(customDays);
+      ghIgfSetTrustedHtml(outC, lineFor(customDays), 'gh-igf:outC');
     } else {
       labC.textContent = '—';
       outC.textContent = '—';
@@ -1546,7 +1638,9 @@ function recalc(){
           customRowEl.style.display = 'none';
         }
       }
-    } catch(_) { /* ignore */ }
+    } catch(error) {
+      logGhIgfWarn('Nie udało się zaktualizować widoczności niestandardowych dni terapii GH/IGF-1', error);
+    }
 
     // === Update global state for recommendation builder ===
     try {
@@ -1570,7 +1664,9 @@ function recalc(){
           mgTotal180: _res180.mg
         };
       }
-    } catch (_){ /* ignore errors storing global */ }
+    } catch (error){
+      logGhIgfWarn('Nie udało się zapisać globalnego wyniku terapii GH/IGF-1', error);
+    }
 
     // === Show/hide recommendation buttons and adjust widths ===
     try {
@@ -1586,14 +1682,16 @@ function recalc(){
           amountsContainer.style.flex = '1 1 100%';
         }
       }
-    } catch(_){ /* ignore */ }
+    } catch(error){
+      logGhIgfWarn('Nie udało się odświeżyć widoczności przycisków zaleceń GH/IGF-1', error);
+    }
 
     // === Aktualizuj komunikaty i etykiety przycisków w sekcji zaleceń ===
     try {
       // Wyczyść stary komunikat w kontenerze therStartAdvice (historyczny element)
       const oldAdvice = document.getElementById('therStartAdvice');
       if (oldAdvice) {
-        oldAdvice.innerHTML = '';
+        oldAdvice && ghIgfClearHtml(oldAdvice);
       }
       const rec90Group = document.getElementById('rec90Group');
       const rec180Group = document.getElementById('rec180Group');
@@ -1645,7 +1743,8 @@ function recalc(){
             const manualVal = document.getElementById('therManual');
             if (manualDateInput.value) {
               try {
-                const ctrlDate = new Date(manualDateInput.value);
+                const ctrlDate = parseLocalDateInput(manualDateInput.value);
+                if (!ctrlDate) throw new Error('Invalid manual control date');
                 // liczba dni między dziś a kontrolą
                 const msPerDay = 24*60*60*1000;
                 // Obetnij bieżącą datę do północy, aby uniknąć przesunięć o 1 dzień
@@ -1675,19 +1774,20 @@ function recalc(){
                   if (therapyDays > 0) {
                     manualRow.style.display = 'contents';
                     manualLabel.textContent = String(therapyDays);
-                    manualVal.innerHTML = lineFor(therapyDays);
+                    ghIgfSetTrustedHtml(manualVal, lineFor(therapyDays), 'gh-igf:manualVal');
                     // podkreśl oba pola wiersza turkusową linią
                     try {
                       Array.from(manualRow.children).forEach(cell => {
                         cell.style.borderBottom = '2px solid var(--secondary)';
                         cell.style.paddingBottom = '0.2rem';
                       });
-                    } catch(_) { /* ignore */ }
+                    } catch (error) { logGhIgfWarn('Zignorowany błąd pomocniczy w module terapii GH/IGF-1', error); }
                   } else {
                     manualRow.style.display = 'none';
                   }
                 }
-              } catch(_) {
+              } catch(error) {
+                logGhIgfWarn('Nie udało się odświeżyć ręcznego wiersza zaleceń GH/IGF-1', error);
                 if (manualStartEl) manualStartEl.textContent = '';
                 if (copyManualBtn) copyManualBtn.style.display = 'none';
                 if (manualRow) manualRow.style.display = 'none';
@@ -1729,7 +1829,8 @@ function recalc(){
             const manualVal = document.getElementById('therManual');
             if (manualDateInput.value) {
               try {
-                const ctrlDate = new Date(manualDateInput.value);
+                const ctrlDate = parseLocalDateInput(manualDateInput.value);
+                if (!ctrlDate) throw new Error('Invalid manual control date');
                 const msPerDay = 24*60*60*1000;
                 // Używamy początku dnia do obliczenia różnicy dni, aby uniknąć błędu
                 // zaokrąglenia przy obecnym czasie.  Bez tego np. wybierając datę
@@ -1753,14 +1854,14 @@ function recalc(){
                   if (therapyDays > 0) {
                     manualRow.style.display = 'contents';
                     manualLabel.textContent = String(therapyDays);
-                    manualVal.innerHTML = lineFor(therapyDays);
+                    ghIgfSetTrustedHtml(manualVal, lineFor(therapyDays), 'gh-igf:manualVal');
                     // podkreśl oba pola wiersza turkusową linią
                     try {
                       Array.from(manualRow.children).forEach(cell => {
                         cell.style.borderBottom = '2px solid var(--secondary)';
                         cell.style.paddingBottom = '0.2rem';
                       });
-                    } catch(_) { /* ignore */ }
+                    } catch (error) { logGhIgfWarn('Zignorowany błąd pomocniczy w module terapii GH/IGF-1', error); }
                   } else {
                     manualRow.style.display = 'none';
                   }
@@ -1787,7 +1888,9 @@ function recalc(){
           if (manualRow3) manualRow3.style.display = 'none';
         }
       }
-    } catch(_) { /* ignore errors updating recommendation section */ }
+    } catch(error) {
+      logGhIgfWarn('Nie udało się odświeżyć sekcji zaleceń GH/IGF-1', error);
+    }
   }
 
   function hideOldIgfSubbuttons(){
@@ -1816,7 +1919,7 @@ function recalc(){
     let current = new Date();
     // jeśli w polu jest już ustawiona data, użyj jej jako początkowego miesiąca
     if (input.value) {
-      const parsed = new Date(input.value);
+      const parsed = parseLocalDateInput(input.value);
       if (!isNaN(parsed)) current = new Date(parsed.getFullYear(), parsed.getMonth(), 1);
     } else {
       current = new Date(current.getFullYear(), current.getMonth(), 1);
@@ -1859,7 +1962,7 @@ function recalc(){
         const d = pad(selDate.getDate());
         input.value = `${y}-${m}-${d}`;
         // po wyborze daty zmień kolor tekstu na czarny, aby zastąpić szary
-        try { input.style.color = '#000'; } catch(_) {}
+        try { input.style.color = '#000'; } catch (error) { logGhIgfWarn('Zignorowany błąd pomocniczy w module terapii GH/IGF-1', error); }
         picker.style.display = 'none';
         // wyzwól zdarzenie zmiany, aby przeliczyć zalecenia
         input.dispatchEvent(new Event('change'));
@@ -1869,7 +1972,7 @@ function recalc(){
 
     function render(date){
       // clear the existing content
-      picker.innerHTML = '';
+      ghIgfClearHtml(picker);
       // color definitions
       const weekendBg = 'rgba(0, 176, 166, 0.12)'; // light turquoise for weekends
       const holidayBg = 'rgba(198, 40, 40, 0.15)';  // light red for Polish holidays
@@ -1969,9 +2072,7 @@ function recalc(){
             cell.style.color = '#c62828';
             cell.style.fontWeight = '700';
           }
-        } catch(_) {
-          /* ignore errors */
-        }
+        } catch (error) { logGhIgfWarn('Zignorowany błąd pomocniczy w module terapii GH/IGF-1', error); }
         // zapisz domyślne tło w data-*; dzięki temu obsługa hover
         // przywróci pierwotny kolor zamiast usuwać podświetlenie
         cell.dataset.defaultBg = defaultBg;
@@ -2023,32 +2124,32 @@ function recalc(){
           // Ustaw wysokość siatki na obliczoną wartość
           grid.style.height = totalHeight + 'px';
         }
-      } catch(e) {
-        // Jeżeli nie możemy obliczyć rozmiarów (np. w kontekście serwera),
-        // pomijamy ustawienie wysokości.  Kalendarz będzie działał bez zmian.
-      }
+      } catch (e) { logGhIgfWarn('Zignorowany błąd pomocniczy w module terapii GH/IGF-1', e); }
     }
 
     // Upewnij się, że kalendarz może być przeniesiony do dokumentu body.  Dzięki temu
     // nie będzie przycinany przez kontenery z overflow i zawsze będzie
     // wyświetlany nad innymi elementami.
     let appendedToBody = false;
-    // otwórz kalendarz po kliknięciu w pole
-    input.addEventListener('click', (ev) => {
-      ev.stopPropagation();
+
+    function openPickerFromInput(ev){
+      if (ev && typeof ev.preventDefault === 'function' && ev.type === 'keydown') {
+        ev.preventDefault();
+      }
+      if (ev && typeof ev.stopPropagation === 'function') {
+        ev.stopPropagation();
+      }
       // ustaw miesiąc zgodnie z obecną wartością pola
       if (input.value) {
-        const parsed = new Date(input.value);
-        if (!isNaN(parsed)) current = new Date(parsed.getFullYear(), parsed.getMonth(), 1);
+        const parsed = parseLocalDateInput(input.value);
+        if (parsed) current = new Date(parsed.getFullYear(), parsed.getMonth(), 1);
       }
       // jeżeli kalendarz nie został jeszcze dodany do body, dodaj go
       if (!appendedToBody) {
         try {
           document.body.appendChild(picker);
           appendedToBody = true;
-        } catch(_) {
-          /* jeśli z jakiegoś powodu nie możemy przenieść kalendarza, kontynuujemy bez przenoszenia */
-        }
+        } catch (error) { logGhIgfWarn('Zignorowany błąd pomocniczy w module terapii GH/IGF-1', error); }
       }
       // pokaż kalendarz, aby obliczyć jego wymiary
       picker.style.display = 'block';
@@ -2087,8 +2188,19 @@ function recalc(){
         picker.style.top  = top + 'px';
         picker.style.bottom = '';
         picker.style.zIndex = '20000';
-      } catch(_) {
-        /* jeśli nie uda się obliczyć pozycji, pozostaw domyślne wartości */
+      } catch (error) { logGhIgfWarn('Zignorowany błąd pomocniczy w module terapii GH/IGF-1', error); }
+    }
+
+    // otwórz kalendarz po kliknięciu albo wejściu fokusem w pole
+    input.addEventListener('click', openPickerFromInput);
+    input.addEventListener('focus', () => {
+      if (picker.style.display === 'block') return;
+      openPickerFromInput();
+    });
+    input.addEventListener('keydown', (ev) => {
+      const key = ev && ev.key ? ev.key : '';
+      if (key === 'Enter' || key === ' ' || key === 'Spacebar' || key === 'ArrowDown') {
+        openPickerFromInput(ev);
       }
     });
 
@@ -2123,9 +2235,7 @@ function recalc(){
             render(current);
           }
         }
-      } catch(_) {
-        /* ignore */
-      } finally {
+      } catch (error) { logGhIgfWarn('Zignorowany błąd pomocniczy w module terapii GH/IGF-1', error); } finally {
         swipeStartX = null;
       }
     });
@@ -2174,9 +2284,7 @@ function recalc(){
           // ochronę przed zbyt czułym przewijaniem.
           wheelBlockedUntil = now + 400;
         }
-      } catch(_) {
-        /* ignore errors */
-      }
+      } catch (error) { logGhIgfWarn('Zignorowany błąd pomocniczy w module terapii GH/IGF-1', error); }
     }, { passive: false });
     // zamknij kalendarz przy kliknięciu poza nim
     document.addEventListener('click', (ev) => {
@@ -2202,9 +2310,7 @@ function recalc(){
           touchStartX = ev.touches[0].clientX;
           touchStartY = ev.touches[0].clientY;
         }
-      } catch(_) {
-        /* ignore */
-      }
+      } catch (error) { logGhIgfWarn('Zignorowany błąd pomocniczy w module terapii GH/IGF-1', error); }
     }, { passive: true });
     picker.addEventListener('touchend', (ev) => {
       try {
@@ -2229,9 +2335,7 @@ function recalc(){
           }
           render(current);
         }
-      } catch(_) {
-        /* ignore */
-      } finally {
+      } catch (error) { logGhIgfWarn('Zignorowany błąd pomocniczy w module terapii GH/IGF-1', error); } finally {
         touchStartX = null;
         touchStartY = null;
       }
@@ -2271,7 +2375,231 @@ function recalc(){
     });
   }
 
-  document.addEventListener('DOMContentLoaded', function(){
+  function captureGhIgfPersistState(){
+    const card = document.getElementById('ghIgfTherapyCard');
+    if (!card) return null;
+    const getValue = (id) => {
+      const el = document.getElementById(id);
+      if (!el) return '';
+      return typeof el.value === 'string' ? el.value : String(el.value == null ? '' : el.value);
+    };
+    return {
+      program: getValue('therProg'),
+      drug: getValue('therDrug'),
+      dailyDose: getValue('therDailyDose'),
+      dailyDoseAbs: getValue('therDailyDoseAbs'),
+      customDays: getValue('therCustomDays'),
+      manualControlDate: getValue('manualControlDate')
+    };
+  }
+
+  function resetGhIgfManualControlUi(){
+    try {
+      const manualInp = document.getElementById('manualControlDate');
+      if (manualInp) {
+        manualInp.value = '';
+        try { manualInp.style.color = '#6b7a7a'; } catch (error) { logGhIgfWarn('Zignorowany błąd pomocniczy w module terapii GH/IGF-1', error); }
+      }
+      const manualPicker = document.getElementById('manualDatePicker');
+      if (manualPicker) {
+        manualPicker.style.display = 'none';
+      }
+      const manualRow = document.getElementById('therManualRow');
+      if (manualRow) manualRow.style.display = 'none';
+      const manualLabel = document.getElementById('therManualLabel');
+      if (manualLabel) manualLabel.textContent = '—';
+      const manualVal = document.getElementById('therManual');
+      if (manualVal) manualVal.textContent = '';
+      const manualStartAdviceEl = document.getElementById('manualStartAdvice');
+      if (manualStartAdviceEl) manualStartAdviceEl.textContent = '';
+      const copyManualBtn = document.getElementById('copyManualDays');
+      if (copyManualBtn) {
+        copyManualBtn.style.display = 'none';
+        copyManualBtn.textContent = 'Wydanie leku – kliknij i skopiuj';
+      }
+    } catch (error) {
+      logGhIgfWarn('Nie udało się zresetować ręcznej daty kontroli GH/IGF-1', error);
+    }
+  }
+
+  function resetGhIgfCustomDaysUi(){
+    try {
+      const customInp = document.getElementById('therCustomDays');
+      if (customInp) customInp.value = '';
+      const customRow = document.getElementById('therCustomRow');
+      if (customRow) customRow.style.display = 'none';
+      const customLabel = document.getElementById('therCustomLabel');
+      if (customLabel) customLabel.textContent = '—';
+      const customVal = document.getElementById('therCustom');
+      if (customVal) customVal.textContent = '—';
+    } catch (error) {
+      logGhIgfWarn('Nie udało się zresetować niestandardowych dni terapii GH/IGF-1', error);
+    }
+  }
+
+  function resetGhIgfPersistState(options){
+    const opts = (options && typeof options === 'object') ? options : {};
+    const card = document.getElementById('ghIgfTherapyCard');
+    try {
+      if (typeof window !== 'undefined') {
+        window.ghTherapyCalc = null;
+      }
+    } catch (error) { logGhIgfWarn('Zignorowany błąd pomocniczy w module terapii GH/IGF-1', error); }
+    if (!card) return true;
+
+    const progSel = document.getElementById('therProg');
+    const doseAbsInp = document.getElementById('therDailyDoseAbs');
+    if (progSel) {
+      progSel.value = 'SNP';
+    }
+    try { populateDrugs(); } catch (error) { logGhIgfWarn('Zignorowany błąd pomocniczy w module terapii GH/IGF-1', error); }
+    try { applyDefaults(); } catch (error) { logGhIgfWarn('Zignorowany błąd pomocniczy w module terapii GH/IGF-1', error); }
+
+    resetGhIgfCustomDaysUi();
+    resetGhIgfManualControlUi();
+
+    if (doseAbsInp && !kg()) {
+      doseAbsInp.value = '';
+    }
+
+    try {
+      const warnBox = document.getElementById('therWarning');
+      if (warnBox) {
+        warnBox.style.display = 'none';
+        warnBox.textContent = '';
+      }
+    } catch (error) { logGhIgfWarn('Zignorowany błąd pomocniczy w module terapii GH/IGF-1', error); }
+
+    if (opts.hideCards) {
+      try {
+        card.style.display = 'none';
+        const toggle = document.getElementById('toggleIgfTests');
+        if (toggle) toggle.classList.remove('active-toggle');
+      } catch (error) { logGhIgfWarn('Zignorowany błąd pomocniczy w module terapii GH/IGF-1', error); }
+      try {
+        const monitorCard = document.getElementById('ghTherapyMonitorCard');
+        if (monitorCard) monitorCard.style.display = 'none';
+        const monitorBtn = document.getElementById('toggleGhMonitor');
+        if (monitorBtn) monitorBtn.classList.remove('active-toggle');
+      } catch (error) { logGhIgfWarn('Zignorowany błąd pomocniczy w module terapii GH/IGF-1', error); }
+    }
+
+    try { recalc(); } catch (error) { logGhIgfWarn('Zignorowany błąd pomocniczy w module terapii GH/IGF-1', error); }
+    return true;
+  }
+
+  function readSharedPersistSnapshot(){
+    try {
+      const adapter = (typeof window !== 'undefined' && window.VildaPersistence && typeof window.VildaPersistence.readSharedPersist === 'function')
+        ? window.VildaPersistence
+        : null;
+      if (!adapter) return null;
+      return adapter.readSharedPersist({ ensurePersist: false });
+    } catch (error) {
+      logGhIgfWarn('Nie udało się odczytać snapshotu persistence GH/IGF-1', error);
+      return null;
+    }
+  }
+
+  function readGhIgfPersistFallback(){
+    const snapshot = readSharedPersistSnapshot();
+    if (!snapshot) return null;
+    try {
+      const byId = snapshot.byId && typeof snapshot.byId === 'object' ? snapshot.byId : {};
+      const out = {
+        program: byId.therProg || '',
+        drug: byId.therDrug || '',
+        dailyDose: byId.therDailyDose || '',
+        dailyDoseAbs: byId.therDailyDoseAbs || '',
+        customDays: byId.therCustomDays || '',
+        manualControlDate: byId.manualControlDate || ''
+      };
+      return Object.values(out).some((value) => String(value || '') !== '') ? out : null;
+    } catch (error) {
+      logGhIgfWarn('Nie udało się zbudować fallbacku persistence GH/IGF-1', error);
+      return null;
+    }
+  }
+
+  function restoreGhIgfPersistState(state){
+    const saved = (state && typeof state === 'object') ? state : readGhIgfPersistFallback();
+    if (!saved || typeof saved !== 'object') return false;
+    mountCard();
+    const progSel = document.getElementById('therProg');
+    const drugSel = document.getElementById('therDrug');
+    const doseInp = document.getElementById('therDailyDose');
+    const doseAbsInp = document.getElementById('therDailyDoseAbs');
+    const customDaysInp = document.getElementById('therCustomDays');
+    const manualDateInp = document.getElementById('manualControlDate');
+    if (!progSel || !drugSel || !doseInp || !doseAbsInp || !customDaysInp || !manualDateInp) return false;
+
+    const hasOption = (selectEl, value) => {
+      if (!selectEl) return false;
+      return Array.from(selectEl.options || []).some((opt) => String(opt.value) === String(value));
+    };
+
+    if (saved.program && hasOption(progSel, saved.program)) {
+      progSel.value = saved.program;
+    }
+    populateDrugs();
+
+    if (saved.drug && hasOption(drugSel, saved.drug)) {
+      drugSel.value = saved.drug;
+    }
+
+    applyDefaults();
+
+    if (String(saved.dailyDose || '') !== '') {
+      doseInp.value = String(saved.dailyDose);
+    }
+    if (String(saved.dailyDoseAbs || '') !== '') {
+      doseAbsInp.value = String(saved.dailyDoseAbs);
+    }
+    if (String(saved.customDays || '') !== '') {
+      customDaysInp.value = String(saved.customDays);
+    }
+    if (String(saved.manualControlDate || '') !== '') {
+      manualDateInp.value = String(saved.manualControlDate);
+      try { manualDateInp.style.color = '#000'; } catch (error) { logGhIgfWarn('Zignorowany błąd pomocniczy w module terapii GH/IGF-1', error); }
+    } else {
+      manualDateInp.value = '';
+      try { manualDateInp.style.color = '#6b7a7a'; } catch (error) { logGhIgfWarn('Zignorowany błąd pomocniczy w module terapii GH/IGF-1', error); }
+    }
+
+    try { recalc(); } catch (error) { logGhIgfWarn('Zignorowany błąd pomocniczy w module terapii GH/IGF-1', error); }
+    return true;
+  }
+
+  function handleGhIgfUserStateCleared(){
+    resetGhIgfPersistState({ hideCards: true });
+  }
+
+  function handleGhIgfModuleStateCleared(event){
+    const detail = event && event.detail && typeof event.detail === 'object' ? event.detail : {};
+    const scope = String(detail.scope || 'all').toLowerCase();
+    if (scope === 'all' || scope === '*' || scope === 'gh') {
+      resetGhIgfPersistState({ hideCards: true });
+    }
+  }
+
+  try {
+    if (typeof window !== 'undefined') {
+      window.vildaGhIgfPersistApi = {
+        ensureMounted: mountCard,
+        captureState: captureGhIgfPersistState,
+        restoreState: restoreGhIgfPersistState,
+        resetState: resetGhIgfPersistState,
+        resetManualControlState: resetGhIgfManualControlUi
+      };
+      if (!window.__vildaGhIgfUserStateClearedBound && typeof window.addEventListener === 'function') {
+        window.__vildaGhIgfUserStateClearedBound = true;
+        window.addEventListener('vilda:user-state-cleared', handleGhIgfUserStateCleared);
+        window.addEventListener('vilda:module-state-cleared', handleGhIgfModuleStateCleared);
+      }
+    }
+  } catch (error) { logGhIgfWarn('Zignorowany błąd pomocniczy w module terapii GH/IGF-1', error); }
+
+  function setupGhIgfTherapyToggle(){
     const igfBtn = document.getElementById('toggleIgfTests');
     if (!igfBtn) return;
 
@@ -2297,9 +2625,7 @@ function recalc(){
               igfBtn.classList.remove('active-toggle');
             }
           }
-        } catch(e) {
-          /* ignore */
-        }
+        } catch (e) { logGhIgfWarn('Zignorowany błąd pomocniczy w module terapii GH/IGF-1', e); }
         // Regardless of the new state of the therapy card, hide the monitoring card.
         // This ensures that pressing the IGF button always collapses both the therapy
         // card and the monitoring card, as requested by the specification.
@@ -2315,12 +2641,12 @@ function recalc(){
           if (monitorBtn) {
             monitorBtn.classList.remove('active-toggle');
           }
-        } catch(_){
-          /* ignore errors when hiding the monitor card */
+        } catch(error){
+          logGhIgfWarn('Nie udało się ukryć karty monitorowania GH podczas przełączania terapii GH/IGF-1', error);
         }
       }
       // dopasuj szerokości głównych przycisków (jeśli funkcja istnieje)
-      try{ if (typeof adjustTestButtonWidths === 'function') requestAnimationFrame(adjustTestButtonWidths); }catch(_){}
+      try{ if (typeof adjustTestButtonWidths === 'function') requestAnimationFrame(adjustTestButtonWidths); }catch (error) { logGhIgfWarn('Zignorowany błąd pomocniczy w module terapii GH/IGF-1', error); }
     }, true); // <-- capture
 
     // Gdy moduł lekarski przełącza się/zmienia się waga – próbuj odświeżać wyniki karty jeśli istnieje
@@ -2329,8 +2655,22 @@ function recalc(){
       ['input','change'].forEach(evt=> wt.addEventListener(evt, ()=>{
         const card = document.getElementById('ghIgfTherapyCard');
         if (!card || card.style.display === 'none') return;
-        try{ recalc(); }catch(_){}
+        try{ recalc(); }catch (error) { logGhIgfWarn('Zignorowany błąd pomocniczy w module terapii GH/IGF-1', error); }
       }));
     }
-  });
+  }
+
+  function bootGhIgfTherapyModule(){
+    if (typeof window !== 'undefined' && typeof window.vildaOnReady === 'function') {
+      window.vildaOnReady('gh-igf-therapy:toggle', setupGhIgfTherapyToggle);
+      return;
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', setupGhIgfTherapyToggle, { once: true });
+    } else {
+      setupGhIgfTherapyToggle();
+    }
+  }
+
+  bootGhIgfTherapyModule();
 })();

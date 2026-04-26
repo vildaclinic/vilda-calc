@@ -21,6 +21,9 @@
   }
 
   function escapeHtml(str) {
+    if (typeof window !== 'undefined' && window.VildaHtml && typeof window.VildaHtml.escapeHtml === 'function') {
+      return window.VildaHtml.escapeHtml(arguments[0]);
+    }
     return String(str)
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
@@ -36,8 +39,10 @@
         return true;
       }
     } catch (_) {
-      // fallback below
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('thyroid_cancer_kids.js', _, { line: 38 });
     }
+  }
 
     try {
       const ta = document.createElement('textarea');
@@ -98,6 +103,57 @@
     });
     return lines.join('\n');
   }
+
+  function thyroidCancerSetTrustedHtml(element, markup, context) {
+    if (!element) return false;
+    const html = markup == null ? '' : String(markup);
+    try {
+      if (typeof window !== 'undefined' && window.VildaHtml && typeof window.VildaHtml.setTrustedHtml === 'function') {
+        return window.VildaHtml.setTrustedHtml(element, html, { context: context || 'thyroidCancer' });
+      }
+      element.textContent = html;
+      return true;
+    } catch (_) {
+      if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+        globalThis.vildaLogSwallowedCatch('thyroid_cancer_kids.js', _, { helper: 'thyroidCancerSetTrustedHtml', context: context || '' });
+      }
+      return false;
+    }
+  }
+
+  function thyroidCancerClearHtml(element) {
+    if (!element) return false;
+    try {
+      if (typeof window !== 'undefined' && window.VildaHtml && typeof window.VildaHtml.clearHtml === 'function') return window.VildaHtml.clearHtml(element);
+      element.textContent = '';
+      return true;
+    } catch (_) {
+      if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+        globalThis.vildaLogSwallowedCatch('thyroid_cancer_kids.js', _, { helper: 'thyroidCancerClearHtml' });
+      }
+      return false;
+    }
+  }
+
+  function thyroidCancerCloneChildrenInto(target, source, context) {
+    if (!target || !source) return false;
+    try {
+      if (typeof window !== 'undefined' && window.VildaHtml && typeof window.VildaHtml.cloneChildrenInto === 'function') {
+        return window.VildaHtml.cloneChildrenInto(target, source, { context: context || 'thyroidCancer:cloneChildrenInto' });
+      }
+      thyroidCancerClearHtml(target);
+      Array.prototype.slice.call(source.childNodes || []).forEach(function (node) {
+        target.appendChild(node.cloneNode(true));
+      });
+      return true;
+    } catch (_) {
+      if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+        globalThis.vildaLogSwallowedCatch('thyroid_cancer_kids.js', _, { helper: 'thyroidCancerCloneChildrenInto', context: context || '' });
+      }
+      return false;
+    }
+  }
+
 
   function buildSectionsHtml(sections) {
     return (sections || [])
@@ -1961,7 +2017,7 @@ const pT = state.pT;
 
     function renderSourcesList() {
       if (!sourcesList) return;
-      sourcesList.innerHTML = sources.map((s) => `<li>${escapeHtml(s)}</li>`).join('');
+      thyroidCancerSetTrustedHtml(sourcesList, sources.map((s) => `<li>${escapeHtml(s)}</li>`).join(''), 'thyroid-cancer-kids:sourcesList');
     }
     renderSourcesList();
 
@@ -2008,8 +2064,10 @@ const pT = state.pT;
       try {
         window.scrollTo(x, y);
       } catch (e) {
-        // no-op
-      }
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('thyroid_cancer_kids.js', e, { line: 2010 });
+    }
+  }
     }
 
     function focusNoScroll(el, posToPreserve) {
@@ -2023,8 +2081,10 @@ const pT = state.pT;
         try {
           el.focus();
         } catch (e2) {
-          // no-op
-        }
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('thyroid_cancer_kids.js', e2, { line: 2025 });
+    }
+  }
       }
 
       // Safety net: some browsers still scroll after focus (especially if the modal
@@ -2062,11 +2122,15 @@ const pT = state.pT;
         const body = entry.querySelector('.thy-glossary-body');
         const titleText = summary ? summary.textContent.trim() : String(termKey || 'Informacja');
         termModalTitle.textContent = titleText;
-        termModalBody.innerHTML = body ? body.innerHTML : '<p>Brak opisu dla tego pojęcia.</p>';
+        if (body) {
+          thyroidCancerCloneChildrenInto(termModalBody, body, 'thyroid-cancer-kids:termModalBody');
+        } else {
+          thyroidCancerSetTrustedHtml(termModalBody, '<p>Brak opisu dla tego pojęcia.</p>', 'thyroid-cancer-kids:termModalBody');
+        }
         if (termModalMore) termModalMore.style.display = '';
       } else {
         termModalTitle.textContent = 'Informacja';
-        termModalBody.innerHTML = '<p>Brak definicji dla tego pojęcia w module.</p>';
+        thyroidCancerSetTrustedHtml(termModalBody, '<p>Brak definicji dla tego pojęcia w module.</p>', 'thyroid-cancer-kids:termModalBody');
         if (termModalMore) termModalMore.style.display = 'none';
       }
 
@@ -2266,7 +2330,7 @@ const pT = state.pT;
         nodes: nNodes ? (nNodes.checked && !nNodes.disabled) : false,
         bethesda: nBeth ? nBeth.value : '',
       });
-      nResult.innerHTML = plan.html;
+      thyroidCancerSetTrustedHtml(nResult, plan.html, 'thyroid-cancer-kids:nResult');
       const switchesHost = $('thyNoduleSwitchesHost');
       if (nSwitches && switchesHost) {
         switchesHost.appendChild(nSwitches);
@@ -2628,7 +2692,7 @@ function getMode() {
           });
         }
 
-        cResult.innerHTML = plan.html;
+        thyroidCancerSetTrustedHtml(cResult, plan.html, 'thyroid-cancer-kids:cResult');
         cResult.style.display = 'block';
         if (cCopyBtn) cCopyBtn.dataset.copyText = plan.plain || '';
         if (cCopyWrap) cCopyWrap.style.display = plan.plain ? 'block' : 'none';
@@ -2687,5 +2751,11 @@ function getMode() {
     }
   }
 
-  document.addEventListener('DOMContentLoaded', setup);
+  if (typeof window !== 'undefined' && typeof window.vildaOnReady === 'function') {
+    window.vildaOnReady('thyroid-cancer-kids:init', setup);
+  } else if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setup, { once: true });
+  } else {
+    setup();
+  }
 })();

@@ -8,9 +8,47 @@
 <meta charset="utf-8">
 <title>Kalkulator klirensu kreatyniny / eGFR – Waga i wzrost</title>
     <!-- Integrate the calculator with the Waga i wzrost site styles -->
-    <link href="style.css?v=6" rel="stylesheet" />
+    <link href="style.css?v=5" rel="stylesheet" />
     <link href="sidebar.css" rel="stylesheet" />
-    <link href="ios26-v2.css?v=9" rel="stylesheet" />
+    <script src="vilda_logger.js?v=2"></script>
+<script src="vilda_html.js?v=4"></script>
+<script src="vilda_persistence_adapter.js?v=7"></script>
+<script src="vilda_init.js?v=4"></script>
+<script src="vilda_deps.js?v=6"></script>
+    
+<script>
+(function() {
+  try {
+    var VERSION = 'v3';
+    var SIGNATURE = 'docpro.html|kalkulator-klirens.html|cukrzyca.html|steroidy.html|materialy-edukacyjne.html';
+    var persistence = window.VildaPersistence || null;
+    var parsed = persistence && typeof persistence.readPreferenceJSON === 'function'
+      ? persistence.readPreferenceJSON('MOBILE_TOP_NAV_FONT_CACHE', null)
+      : null;
+    if (!parsed) return;
+
+    if (!parsed || parsed.version !== VERSION || parsed.signature !== SIGNATURE) return;
+
+    var viewportWidth = Math.round(Math.max(
+      window.innerWidth || 0,
+      document.documentElement ? (document.documentElement.clientWidth || 0) : 0
+    ));
+    var cachedWidth = Math.round(Number(parsed.width) || 0);
+    var fontRem = Number(parsed.fontRem);
+
+    if (!viewportWidth || viewportWidth !== cachedWidth || !isFinite(fontRem)) return;
+    if (fontRem < 0.72 || fontRem > 0.98) return;
+
+    var style = document.createElement('style');
+    style.id = 'mobile-top-nav-font-cache-style';
+    style.textContent = '@media (max-width: 600px){.main-nav{--mobile-top-nav-font-size:' + fontRem.toFixed(2) + 'rem !important;}}';
+    document.head.appendChild(style);
+  } catch (e) {
+    /* noop */
+  }
+})();
+</script>
+<link href="ios26-v2.css?v=10" rel="stylesheet" />
     <!-- Use the same Inter font as the main site -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
     <!-- Load Lucide icons library (used for the scroll‑to‑top button) -->
@@ -452,6 +490,18 @@ select:focus {
   /* Pomarańczowa ramka sygnalizująca brakujące dane */
   border-color: #ff9800 !important;
   box-shadow: 0 0 0 2px rgba(255,152,0,0.35) !important;
+  background-color: rgba(255, 193, 7, 0.12) !important;
+}
+.must-fill-group {
+  border-radius: 10px;
+  background: rgba(255, 193, 7, 0.10);
+  box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.18);
+}
+.input-group.must-fill-group {
+  padding: 0.18rem;
+}
+label.must-fill-group {
+  padding: 0.18rem 0.25rem;
 }
 
 /* === Wygląd sekcji wyboru formuły === */
@@ -1499,7 +1549,7 @@ input[type="submit"]:focus-visible {
     </a>
     <h1>Nephro Calc Pro</h1>
   </div>
-  <nav class="main-nav" aria-label="Główna nawigacja">
+    <nav class="main-nav" aria-label="Główna nawigacja">
   <ul>
     <li class="menu-toggle">
       <input type="checkbox" id="navToggle" class="nav-toggle">
@@ -1510,12 +1560,12 @@ input[type="submit"]:focus-visible {
       </label>
       <ul id="verticalMenu" class="vertical-menu">
       <li>
-        <a id="saveDataBtn" role="button" disabled="" href="#" data-tip="Aby zapisać dane, wprowadź imię, wiek, wzrost i wagę.">Zapisz dane</a>
-      </li>
+              <a id="saveDataBtn" role="button" disabled="" href="#" data-tip="Aby zapisać dane, wprowadź imię, wiek, wzrost i wagę.">Zapisz dane</a>
+            </li>
       <li>
-        <a id="loadDataBtn" role="button" href="#" data-tip="Wczytywanie danych jest możliwe tylko na początku sesji, zanim wprowadzisz nowe dane.">Wczytaj dane</a>
-        <input type="file" id="fileInput" accept=".json,application/json" style="display:none;">
-      </li>
+              <a id="loadDataBtn" role="button" href="#" data-tip="Wczytywanie danych jest możliwe tylko na początku sesji, zanim wprowadzisz nowe dane.">Wczytaj dane</a>
+              <input type="file" id="fileInput" accept=".json,application/json" style="display:none;">
+            </li>
       <li><a href="index.html">Strona główna</a></li>
       <li><a href="ustawienia.html">Ustawienia</a></li>
       <li><a href="instrukcja.html">Instrukcja</a></li>
@@ -1524,10 +1574,10 @@ input[type="submit"]:focus-visible {
       </ul>
     </li>
       <li><a href="docpro.html" class="pro-link">DocPro</a></li>
-      <li><a href="homa-ir.html">HOMA‑IR</a></li>
+      <li><a href="kalkulator-klirens.html" aria-current="page">Klirens</a></li>
       <li><a href="cukrzyca.html">Cukrzyca</a></li>
       <li><a href="steroidy.html">Steroidy</a></li>
-      <li><a href="materialy-edukacyjne.html">Materiały edukacyjne</a></li>
+      <li><a href="materialy-edukacyjne.html">Edu</a></li>
   </ul>
 </nav>
   </header>
@@ -1598,7 +1648,7 @@ input[type="submit"]:focus-visible {
       <li>
         <a href="materialy-edukacyjne.html">
           <span class="sidebar-icon" data-lucide="book-open"></span>
-          <span class="sidebar-label">Materiały edukacyjne</span>
+          <span class="sidebar-label">Edu</span>
         </a>
       </li>
       <li>
@@ -1668,7 +1718,7 @@ input[type="submit"]:focus-visible {
         <!-- Lista wyników do debugowania: początkowo ukryta (display:none) zostanie dynamicznie ustawiona przez JS.
              Tymczasowo zmieniono display na block, aby łatwiej dostrzec, czy element jest tworzony (podczas testów). -->
         <div id="formulaLive" style="display:none; border:1px solid #d0dede; border-radius:6px; background:#fff; margin:4px 0 6px 0; max-height:220px; overflow:auto; box-shadow:0 2px 6px rgba(0,0,0,.08);"></div>
-        <select id="formulaPicker" onchange="onFormulaChange()">
+        <select id="formulaPicker">
           <option value="">— wybierz —</option>
         </select>
         <div class="formula-note" id="formulaNote" style="display:none;"></div>
@@ -1987,6 +2037,75 @@ input[type="submit"]:focus-visible {
 
     <!-- === Rozszerzony moduł wyboru formuł === -->
     <script>
+(function (global) {
+  'use strict';
+  if (!global || global.clcrSetTrustedMarkup) return;
+  function logWarn(message, error, meta) {
+    try {
+      const logger = global.VildaLogger || global.vildaLogger || null;
+      if (logger && typeof logger.warn === 'function') logger.warn('clcr-calculator', message, error || null, meta || null);
+    } catch (_) {}
+  }
+  function escapeHtml(value) {
+    if (global.VildaHtml && typeof global.VildaHtml.escapeHtml === 'function') return global.VildaHtml.escapeHtml(value);
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+  function setTrustedMarkup(element, html, context) {
+    if (!element) return false;
+    try {
+      if (global.VildaHtml && typeof global.VildaHtml.setTrustedHtml === 'function') {
+        return global.VildaHtml.setTrustedHtml(element, html == null ? '' : html, { context: context || 'clcr-calculator:controlled-markup' });
+      }
+      element.textContent = String(html == null ? '' : html);
+      return true;
+    } catch (error) {
+      logWarn('Nie udało się wstawić kontrolowanego HTML.', error, { context: context || '' });
+      return false;
+    }
+  }
+  function clearElement(element) {
+    if (!element) return false;
+    try {
+      if (global.VildaHtml) {
+        if (typeof global.VildaHtml.clear === 'function') return global.VildaHtml.clear(element);
+        if (typeof global.VildaHtml.clearHtml === 'function') return global.VildaHtml.clearHtml(element);
+      }
+      element.textContent = '';
+      return true;
+    } catch (error) {
+      logWarn('Nie udało się wyczyścić elementu.', error);
+      return false;
+    }
+  }
+  function cloneChildrenInto(target, source, context) {
+    if (!target || !source) return false;
+    try {
+      if (global.VildaHtml && typeof global.VildaHtml.cloneChildrenInto === 'function') {
+        return global.VildaHtml.cloneChildrenInto(target, source, { context: context || 'clcr-calculator:clone-children' });
+      }
+      clearElement(target);
+      Array.prototype.slice.call(source.childNodes || []).forEach(function (node) {
+        target.appendChild(node.cloneNode(true));
+      });
+      return true;
+    } catch (error) {
+      logWarn('Nie udało się skopiować węzłów DOM.', error, { context: context || '' });
+      return false;
+    }
+  }
+  global.clcrEscapeHtml = escapeHtml;
+  global.clcrSetTrustedMarkup = setTrustedMarkup;
+  global.clcrClearElement = clearElement;
+  global.clcrCloneChildrenInto = cloneChildrenInto;
+})(typeof window !== 'undefined' ? window : this);
+</script>
+
+    <script>
     (function(){
       // Mapowanie wersji formularza na atrybuty data-version w HTML.  Jeżeli zmienisz
       // identyfikatory wersji (np. na spolszczone), dodaj odpowiedni alias poniżej.
@@ -2167,6 +2286,43 @@ input[type="submit"]:focus-visible {
       // Bufor sortowanych formuł – używany do filtra
       let ALL_FORMS_SORTED = [];
 
+      function clcrEscapeHtml(value) {
+        if (window.VildaHtml && typeof window.VildaHtml.escapeHtml === 'function') {
+          return window.VildaHtml.escapeHtml(value);
+        }
+        return String(value == null ? '' : value)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function clcrEscapeAttr(value) {
+        if (window.VildaHtml && typeof window.VildaHtml.escapeAttr === 'function') {
+          return window.VildaHtml.escapeAttr(value);
+        }
+        return clcrEscapeHtml(value).replace(new RegExp(String.fromCharCode(96), 'g'), '&#96;');
+      }
+
+      function clcrSetTrustedHtml(element, html, context) {
+        if (!element) return false;
+        if (window.VildaHtml && typeof window.VildaHtml.setTrustedHtml === 'function') {
+          return window.VildaHtml.setTrustedHtml(element, html || '', { context: context || 'clcr:trusted-markup' });
+        }
+        element.textContent = html || '';
+        return true;
+      }
+
+      function clcrClearHtml(element) {
+        if (!element) return false;
+        if (window.VildaHtml && typeof window.VildaHtml.clearHtml === 'function') {
+          return window.VildaHtml.clearHtml(element);
+        }
+        element.textContent = '';
+        return true;
+      }
+
       // Renderuj opcje w <select> z kategoriami; użyj opcjonalnego filtra tekstu
       function renderFormulaOptions(filterText = '') {
         const sel  = document.getElementById('formulaPicker');
@@ -2199,12 +2355,12 @@ input[type="submit"]:focus-visible {
         if (filterText && flatVisible.length) {
           live.style.display = '';
           const top = flatVisible.slice(0, 30)
-            .map(f => `<div class="fl-item" data-id="${f.id}" style="padding:.4rem .55rem; cursor:pointer; border-top:1px solid #f1f3f3;">${f.label}</div>`)
+            .map(f => `<div class="fl-item" data-id="${clcrEscapeHtml(f.id)}" style="padding:.4rem .55rem; cursor:pointer; border-top:1px solid #f1f3f3;">${clcrEscapeHtml(f.label)}</div>`)
             .join('');
-          live.innerHTML = top;
+          clcrSetTrustedMarkup(live, top, 'formula live list');
         } else {
           live.style.display = 'none';
-          live.innerHTML = '';
+          clcrClearElement(live);
         }
       }
 
@@ -2216,6 +2372,7 @@ input[type="submit"]:focus-visible {
         ALL_FORMS_SORTED = [...FORMULAS]
           .filter(f => Object.values(CAT).some(set => set.has(f.id)))
           .sort((a,b) => a.label.localeCompare(b.label, 'pl', { sensitivity:'base' }));
+        window.ALL_FORMS_SORTED = ALL_FORMS_SORTED;
         // renderuj bez filtra
         renderFormulaOptions('');
         // Podłącz zdarzenie filtra
@@ -2249,6 +2406,7 @@ input[type="submit"]:focus-visible {
       // całego dokumentu.
       function clearMust(){
         document.querySelectorAll('.must-fill').forEach(el => el.classList.remove('must-fill'));
+        document.querySelectorAll('.must-fill-group').forEach(el => el.classList.remove('must-fill-group'));
       }
 
       // Wyświetl lub ukryj notatkę pod selektorem formuł
@@ -2268,15 +2426,18 @@ input[type="submit"]:focus-visible {
       // Opcjonalny parametr doScroll decyduje, czy przewinąć do pierwszego brakującego (tylko po wyborze formuły).
       function highlightFields(formula, doScroll = false){
         clearMust();
-        if (!formula) return;
+        if (!formula || !Array.isArray(formula.requires)) return;
         let firstMissing = null;
         formula.requires.forEach(id => {
           const el = document.getElementById(id);
           if (!el) return;
-          const isEmpty = (el.tagName === 'SELECT') ? (el.value === '' || el.value == null) : (el.value === '' || el.value == null);
+          const value = (el.value == null) ? '' : String(el.value);
+          const isEmpty = value.trim() === '';
           if (isEmpty) {
             el.classList.add('must-fill');
-            if (!firstMissing) firstMissing = el;
+            const group = el.closest('.input-group') || el.closest('label');
+            if (group) group.classList.add('must-fill-group');
+            if (!firstMissing) firstMissing = group || el;
           }
         });
         if (firstMissing && doScroll) {
@@ -2382,8 +2543,8 @@ input[type="submit"]:focus-visible {
         populateFormulaPicker();
         const sel = document.getElementById('formulaPicker');
         if (sel) {
-          // Nasłuchuj zmiany na selektorze formuł (uruchamia onFormulaChange)
-          sel.addEventListener('change', onFormulaChange);
+          // Obsługa zmiany formuły jest podłączana niżej przez jeden, ujednolicony handler.
+          // Nie dodajemy tutaj drugiego listenera, aby reset i podświetlanie pól nie ścigały się ze sobą.
           // Przy otwarciu selektora zawsze przywracaj pełną listę formuł i czyść filtr
           const resetToFull = () => {
             // Wyczyść tekst filtra
@@ -2397,7 +2558,7 @@ input[type="submit"]:focus-visible {
             const live = document.getElementById('formulaLive');
             if (live) {
               live.style.display = 'none';
-              live.innerHTML = '';
+              clcrClearElement(live);
             }
           };
           // Klik myszą na selektorze
@@ -2415,172 +2576,231 @@ input[type="submit"]:focus-visible {
         });
       });
 
-      // Eksportuj kluczowe funkcje na obiekt window, aby były dostępne w innych skryptach i atrybutach HTML.
-      // Dzięki temu atrybut onchange="onFormulaChange()" na select będzie działał poprawnie, a także
-      // zewnętrzne skrypty mogą używać setVersion i highlightFields.
+      // Eksportuj kluczowe funkcje na obiekt window, aby były dostępne w innych skryptach.
+      // Właściwy listener zmiany formuły jest podłączany w ujednoliconym module poniżej,
+      // a zewnętrzne skrypty mogą używać setVersion i highlightFields.
       window.onFormulaChange = onFormulaChange;
       window.setVersion      = typeof setVersion      !== 'undefined' ? setVersion      : window.setVersion;
       window.highlightFields = typeof highlightFields !== 'undefined' ? highlightFields : window.highlightFields;
+      window.clearFormulaMustFill = typeof clearMust !== 'undefined' ? clearMust : window.clearFormulaMustFill;
+      window.showFormulaNote = typeof showNote !== 'undefined' ? showNote : window.showFormulaNote;
+      window.renderFormulaOptions = typeof renderFormulaOptions !== 'undefined' ? renderFormulaOptions : window.renderFormulaOptions;
       window.resetApp        = typeof resetApp        !== 'undefined' ? resetApp        : window.resetApp;
       window.FORMULAS        = typeof FORMULAS        !== 'undefined' ? FORMULAS        : window.FORMULAS;
+      window.ALL_FORMS_SORTED = typeof ALL_FORMS_SORTED !== 'undefined' ? ALL_FORMS_SORTED : window.ALL_FORMS_SORTED;
       // Upewnij się, że applyVersion jest dostępna globalnie dla obsługi zmiany wersji w onFormulaChange.
       window.applyVersion    = typeof applyVersion    !== 'undefined' ? applyVersion    : window.applyVersion;
     })();
     </script>
-    <!-- Custom override for formula change behaviour.
-         The default onFormulaChange defined earlier did not reliably switch
-         calculator versions when a new formula was selected.  To ensure
-         the correct calculator version is always activated, we define a
-         new handler here that performs the necessary reset, version switch,
-         highlighting and note display logic.  This handler consults the
-         same “Obliczenia dla tego samego pacjenta” toggle to decide
-         whether to reset form fields and preserves the patient data as
-         intended.  Finally, it replaces the global onFormulaChange
-         reference so that both the inline onchange attribute and any
-         attached listeners invoke this updated logic. -->
+    <!-- Ujednolicona obsługa wyboru formuły w kalkulatorze klirensu/eGFR. -->
     <script>
     (function(){
-      /**
-       * Handle changes to the formula selector.  Determines the target
-       * calculator version from the chosen formula, resets the form
-       * appropriately and ensures that the matching version button is
-       * selected.  Required fields are highlighted and any formula note
-       * is displayed.  KT/V formulas receive special handling to
-       * automatically enable the advanced toggle.
-       */
-      function handleFormulaChange(){
-        // Indicate that a reset is in progress to suppress aggregation
-        window.clcrIsResetting = true;
+      let formulaChangeToken = 0;
+      let formulaChangeTimers = [];
 
-        // Determine whether to preserve patient parameters when switching
-        const sameModeToggle = document.getElementById('samePatientMode');
-        const skipReset = !!(sameModeToggle && sameModeToggle.checked);
-        // Perform a soft reset of the form unless same‑patient mode is active
-        if (!skipReset && typeof window.resetApp === 'function') {
-          try {
-            window.resetApp(true);
-          } catch (_) {}
-        }
+      function getFormulaById(id){
+        const formulas = Array.isArray(window.FORMULAS) ? window.FORMULAS : [];
+        return formulas.find(item => item && item.id === id) || null;
+      }
 
-        const sel = document.getElementById('formulaPicker');
-        // Find the selected formula definition from the FORMULAS list
-        const formulas = window.FORMULAS || [];
-        const formula = sel ? formulas.find(item => item.id === sel.value) : null;
-        // Always clear any existing note and remove previous required-field highlights
+      function clearFormulaUI(){
         try {
+          if (typeof window.clearFormulaMustFill === 'function') {
+            window.clearFormulaMustFill();
+          } else {
+            document.querySelectorAll('.must-fill').forEach(el => el.classList.remove('must-fill'));
+            document.querySelectorAll('.must-fill-group').forEach(el => el.classList.remove('must-fill-group'));
+          }
+        } catch (_) {}
+        try {
+          if (typeof window.showFormulaNote === 'function') {
+            window.showFormulaNote('');
+          } else {
+            const noteEl = document.getElementById('formulaNote');
+            if (noteEl) {
+              noteEl.style.display = 'none';
+              noteEl.textContent = '';
+            }
+          }
+        } catch (_) {}
+      }
+
+      function showFormulaNote(text){
+        try {
+          if (typeof window.showFormulaNote === 'function') {
+            window.showFormulaNote(text || '');
+            return;
+          }
           const noteEl = document.getElementById('formulaNote');
-          if (noteEl) {
+          if (!noteEl) return;
+          if (text) {
+            noteEl.style.display = '';
+            noteEl.textContent = text;
+          } else {
             noteEl.style.display = 'none';
             noteEl.textContent = '';
           }
         } catch (_) {}
-        // Remove .must-fill from all inputs/selects globally
+      }
+
+      function safeUpdate(){
         try {
-          document.querySelectorAll('.must-fill').forEach(el => el.classList.remove('must-fill'));
+          if (typeof window.update === 'function') window.update();
         } catch (_) {}
-        // If no formula is selected (placeholder), exit early
+      }
+
+      function cancelPendingFormulaHighlights(){
+        formulaChangeToken += 1;
+        formulaChangeTimers.forEach(timerId => clearTimeout(timerId));
+        formulaChangeTimers = [];
+      }
+
+      function applyTargetVersion(formula){
+        if (!formula) return false;
+        const targetVersion = formula.id === 'KTV' ? 'pro' : (formula.version || 'basic');
+        let applied = false;
+
+        try {
+          if (typeof window.applyVersion === 'function') {
+            window.applyVersion(targetVersion);
+            applied = true;
+          }
+        } catch (_) {
+          applied = false;
+        }
+
+        if (!applied) {
+          try {
+            if (typeof window.setVersion === 'function') {
+              window.setVersion(targetVersion);
+              applied = true;
+            }
+          } catch (_) {
+            applied = false;
+          }
+        }
+
+        if (!applied) {
+          const btn = document.querySelector(`.version-option[data-version="${targetVersion}"]`);
+          if (btn && !btn.classList.contains('selected')) {
+            try {
+              btn.click();
+              applied = true;
+            } catch (_) {}
+          }
+        }
+
+        if (formula.id === 'KTV') {
+          const advToggle = document.getElementById('ktvToggle');
+          const ktvFields = document.getElementById('ktvFields');
+          if (advToggle && !advToggle.checked) {
+            advToggle.checked = true;
+            try { advToggle.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+          }
+          if (ktvFields) ktvFields.style.display = 'block';
+        }
+
+        return applied;
+      }
+
+      function runFormulaHighlight(formula, doScroll){
+        if (!formula) return;
+        try {
+          if (typeof window.highlightFields === 'function') {
+            window.highlightFields(formula, !!doScroll);
+          }
+          showFormulaNote(formula.note || '');
+        } catch (_) {}
+      }
+
+      function scheduleStableHighlight(formula){
+        if (!formula) return;
+
+        formulaChangeToken += 1;
+        const token = formulaChangeToken;
+        formulaChangeTimers.forEach(timerId => clearTimeout(timerId));
+        formulaChangeTimers = [];
+
+        const guardedRun = (doScroll) => {
+          if (token !== formulaChangeToken) return;
+          runFormulaHighlight(formula, !!doScroll);
+        };
+
+        try {
+          if (typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(() => guardedRun(true));
+          } else {
+            formulaChangeTimers.push(setTimeout(() => guardedRun(true), 0));
+          }
+        } catch (_) {
+          formulaChangeTimers.push(setTimeout(() => guardedRun(true), 0));
+        }
+
+        // Drugi i trzeci przebieg są celowe: applyVersion(), resetApp() i część
+        // listenerów historycznych potrafią jeszcze asynchronicznie przeliczyć UI.
+        // Podświetlenie zostaje więc nakładane po ostatniej zmianie układu.
+        formulaChangeTimers.push(setTimeout(() => guardedRun(false), 80));
+        formulaChangeTimers.push(setTimeout(() => guardedRun(false), 180));
+        formulaChangeTimers.push(setTimeout(() => {
+          if (token !== formulaChangeToken) return;
+          window.clcrIsResetting = false;
+          guardedRun(false);
+        }, 260));
+      }
+
+      function handleFormulaChange(){
+        cancelPendingFormulaHighlights();
+
+        const sel = document.getElementById('formulaPicker');
+        const formula = sel ? getFormulaById(sel.value) : null;
+
+        window.clcrIsResetting = true;
+
+        const sameModeToggle = document.getElementById('samePatientMode');
+        const keepAllEnteredValues = !!(sameModeToggle && sameModeToggle.checked);
+
+        if (!keepAllEnteredValues && typeof window.resetApp === 'function') {
+          try { window.resetApp(true); } catch (_) {}
+        }
+
+        clearFormulaUI();
+
         if (!formula) {
           window.clcrIsResetting = false;
           return;
         }
-        // Special handling for KT/V formulas: always use professional version and
-        // activate the advanced KT/V fields toggle
-        if (formula.id === 'KTV') {
-          // Activate professional version
-          try {
-            if (typeof window.applyVersion === 'function') {
-              window.applyVersion('pro');
-            } else if (typeof window.setVersion === 'function') {
-              window.setVersion('pro');
-            }
-          } catch (_) {}
-          // Ensure the KT/V fields toggle is checked
-          const advToggle = document.getElementById('ktvToggle');
-          if (advToggle && !advToggle.checked) advToggle.checked = true;
-          // After the layout updates, highlight fields and display the note
-          setTimeout(() => {
-            try {
-              if (typeof window.highlightFields === 'function') {
-                window.highlightFields(formula, true);
-              }
-              if (formula.note) {
-                const noteEl = document.getElementById('formulaNote');
-                if (noteEl) {
-                  noteEl.style.display = '';
-                  noteEl.textContent = formula.note;
-                }
-              }
-              if (typeof window.update === 'function') {
-                window.update();
-              }
-            } catch (_) {}
-            window.clcrIsResetting = false;
-          }, 0);
-          return;
-        }
-        // General case: select the appropriate calculator version for the chosen formula
-        const targetVersion = formula.version;
-        setTimeout(() => {
-          // Attempt to use applyVersion first; fall back to setVersion or button click
-          let applied = false;
-          try {
-            if (typeof window.applyVersion === 'function') {
-              window.applyVersion(targetVersion);
-              applied = true;
-            }
-          } catch (_) {}
-          if (!applied) {
-            try {
-              if (typeof window.setVersion === 'function') {
-                window.setVersion(targetVersion);
-                applied = true;
-              }
-            } catch (_) {}
-          }
-          if (!applied) {
-            // Last resort: click the version button if it isn’t already selected
-            const btn = document.querySelector(`.version-option[data-version="${targetVersion}"]`);
-            if (btn && !btn.classList.contains('selected')) {
-              try { btn.click(); applied = true; } catch (_) {}
-            }
-          }
-          // Highlight all required fields for the selected formula
-          try {
-            if (typeof window.highlightFields === 'function') {
-              window.highlightFields(formula, true);
-            }
-            // Show formula note if provided
-            if (formula.note) {
-              const noteEl = document.getElementById('formulaNote');
-              if (noteEl) {
-                noteEl.style.display = '';
-                noteEl.textContent = formula.note;
-              }
-            }
-            // Trigger recalculation of results
-            if (typeof window.update === 'function') {
-              window.update();
-            }
-          } catch (_) {}
-          window.clcrIsResetting = false;
-        }, 0);
-      }
-      // Replace the previous global onFormulaChange with this improved handler
-      window.onFormulaChange = handleFormulaChange;
 
-      // Additionally attach capturing listener on the formula selector to suppress the old handler.
-      // The earlier script attaches an onChange listener for the outdated onFormulaChange function
-      // during the bubbling phase. We add a capturing listener that invokes the new handler
-      // and stops propagation so that obsolete handlers do not run and undo the version change.
-      try {
-        const fp = document.getElementById('formulaPicker');
-        if (fp) {
-          fp.addEventListener('change', function(evt){
-            try { handleFormulaChange(); } catch (_) {}
-            evt.stopImmediatePropagation();
-          }, true);
+        applyTargetVersion(formula);
+        safeUpdate();
+        scheduleStableHighlight(formula);
+      }
+
+      function selectClcrFormula(id){
+        const sel = document.getElementById('formulaPicker');
+        if (!sel || !id) return false;
+        if (typeof window.renderFormulaOptions === 'function') {
+          try { window.renderFormulaOptions(''); } catch (_) {}
         }
-      } catch (_) {}
+        sel.value = id;
+        handleFormulaChange();
+        return true;
+      }
+
+      function registerFormulaHandler(){
+        const sel = document.getElementById('formulaPicker');
+        if (!sel || sel.dataset.unifiedFormulaHandler === '1') return;
+        sel.dataset.unifiedFormulaHandler = '1';
+        sel.addEventListener('change', handleFormulaChange, false);
+      }
+
+      window.onFormulaChange = handleFormulaChange;
+      window.selectClcrFormula = selectClcrFormula;
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', registerFormulaHandler);
+      } else {
+        registerFormulaHandler();
+      }
     })();
     </script>
 <!-- Sekcja interpretacji AI z opisem i przyciskiem.  Umieszczamy ją w kontenerze
@@ -2622,9 +2842,19 @@ input[type="submit"]:focus-visible {
 /* ---------- 5.1 ŁADOWANIE ARKUSZA Z NORMAMI ---------- */
 let normy = null;
 (async () => {
-  const wb = XLSX.read(await (await fetch('klirens.xlsx')).arrayBuffer());
-  // przyjmujemy, że normy i opisy są w pierwszym arkuszu
-  normy = XLSX.utils.sheet_to_json(wb.Sheets['Arkusz1'], {header: 1, raw: true});
+  try {
+    const xlsx = (typeof window !== 'undefined' && typeof window.vildaRequireObject === 'function')
+      ? window.vildaRequireObject('XLSX', { moduleName: 'clcr-norms-xlsx' })
+      : (typeof XLSX !== 'undefined' && XLSX ? XLSX : null);
+    if (!xlsx || typeof xlsx.read !== 'function' || !xlsx.utils || typeof xlsx.utils.sheet_to_json !== 'function') {
+      return;
+    }
+    const wb = xlsx.read(await (await fetch('klirens.xlsx')).arrayBuffer());
+    // przyjmujemy, że normy i opisy są w pierwszym arkuszu
+    normy = xlsx.utils.sheet_to_json(wb.Sheets['Arkusz1'], {header: 1, raw: true});
+  } catch (error) {
+    try { console.warn('Nie udało się załadować arkusza norm klirensu.', error); } catch (_) {}
+  }
 })();
 
 /* ---------- 5.2 FUNKCJE OBLICZENIOWE ---------- */
@@ -3509,7 +3739,7 @@ function update() {
               const isAdult = age >= 18;
               let customHtml = '';
               // Pomocnicza funkcja do dodawania boxu z wynikiem wraz z normą
-              function addClBox(label, value, unit = '', code) {
+              function addClBox(label, value, unit = '', code, formulaId) {
                 if (!isFiniteNum(value)) return;
                 const ageGroup = age < 18 ? 'child' : (age < 65 ? 'adult' : 'senior');
                 const rangeSet = clRefRanges[code]?.[ageGroup] || null;
@@ -3523,7 +3753,9 @@ function update() {
                     inRange = false;
                   }
                 }
-                customHtml += `<div class="result-box${inRange ? '' : ' out-of-range'}"><strong>${label}:</strong> ${value.toFixed(0)}${unit}${rangeText}</div>`;
+                const safeFormulaId = clcrEscapeHtml(formulaId || code || '');
+                const safeCode = clcrEscapeHtml(code || '');
+                customHtml += `<div class="result-box${inRange ? '' : ' out-of-range'}" data-clcr-formula="${safeFormulaId}" data-clcr-code="${safeCode}"><strong>${label}:</strong> ${value.toFixed(0)}${unit}${rangeText}</div>`;
               }
               // Funkcje do dodawania dodatków u dorosłych i dzieci (BSA, KDIGO, ACR)
               function addAdultExtras() {
@@ -3584,22 +3816,22 @@ function update() {
               function appendResultById(fid) {
                 switch (fid) {
                   case 'egfr':
-                    if (results.egfr != null) addClBox('eGFR (CKD‑EPI)', results.egfr, ' ml/min/1.73 m²', 'egfr');
+                    if (results.egfr != null) addClBox('eGFR (CKD‑EPI)', results.egfr, ' ml/min/1.73 m²', 'egfr', fid);
                     break;
                   case 'cg':
-                    if (results.cg != null) addClBox('Cockcroft–Gault', results.cg, ' ml/min', 'cg');
+                    if (results.cg != null) addClBox('Cockcroft–Gault', results.cg, ' ml/min', 'cg', fid);
                     break;
                   case 'cg_norm':
-                    if (results.cg_norm != null) addClBox('Cockcroft–Gault (1,73 m²)', results.cg_norm, ' ml/min/1.73 m²', 'cg');
+                    if (results.cg_norm != null) addClBox('Cockcroft–Gault (1,73 m²)', results.cg_norm, ' ml/min/1.73 m²', 'cg', fid);
                     break;
                   case 'cl24':
-                    if (results.cl24 != null) addClBox('Klirens 24 h (DZM)', results.cl24, ' ml/min/1.73 m²', 'cl24');
+                    if (results.cl24 != null) addClBox('Klirens 24 h (DZM)', results.cl24, ' ml/min/1.73 m²', 'cl24', fid);
                     break;
                   case 'sch_var':
-                    if (results.sch_var != null) addClBox(`Schwartz (k=${results.sch_var.k})`, results.sch_var.gfr, ' ml/min/1.73 m²', 'sch');
+                    if (results.sch_var != null) addClBox(`Schwartz (k=${results.sch_var.k})`, results.sch_var.gfr, ' ml/min/1.73 m²', 'sch', fid);
                     break;
                   case 'sch_idms':
-                    if (results.sch_idms != null) addClBox('Schwartz Bedside IDMS (k = 0,413)', results.sch_idms.gfr, ' ml/min/1.73 m²', 'sch');
+                    if (results.sch_idms != null) addClBox('Schwartz Bedside IDMS (k = 0,413)', results.sch_idms.gfr, ' ml/min/1.73 m²', 'sch', fid);
                     break;
                 }
               }
@@ -3640,24 +3872,44 @@ function update() {
             // nadpisujemy clcrInfo – pozostawiamy poprzednie wyniki, pokazując
             // jedynie kartę wyników.  W przeciwnym razie nadpisujemy kartę
             // nowo obliczonym HTML-em.
+            const currentFormulaIdEl = document.getElementById('formulaPicker');
+            const currentFormulaId = currentFormulaIdEl ? (currentFormulaIdEl.value || '') : '';
+            // Identyfikatory formuł, które generują wyniki w karcie klirensu/eGFR.
+            const clFormulaIds = ['egfr','cg','cg_norm','cl24','sch_var','sch_idms'];
             if (coreReady || (curVer === 'spot' && albuminDesc)) {
               const sameModeCb = document.getElementById('samePatientMode');
-              const currentFormulaIdEl = document.getElementById('formulaPicker');
-              const currentFormulaId = currentFormulaIdEl ? (currentFormulaIdEl.value || '') : '';
-              // Identyfikatory formuł, które generują wyniki w karcie klirensu/eGFR.
-              const clFormulaIds = ['egfr','cg','cg_norm','cl24','sch_var','sch_idms'];
               // Jeżeli włączono tryb agregacji wyników i aktualnie wybrana formuła nie jest
               // formułą klirensu/eGFR, nie nadpisuj istniejących wyników.  Zapewnij
               // jedynie, że karta wyników pozostaje widoczna.
+              const clcrInfoTarget = $('clcrInfo');
+              const resultsTarget = $('results');
               if (sameModeCb && sameModeCb.checked && currentFormulaId && clFormulaIds.indexOf(currentFormulaId) === -1) {
-                $('results').style.display = 'grid';
+                if (resultsTarget) resultsTarget.style.display = 'grid';
               } else {
-                $('clcrInfo').innerHTML = clHtml;
-                $('results').style.display = 'grid';
+                clcrSetTrustedMarkup(clcrInfoTarget, clHtml, 'clcr result html');
+                if (resultsTarget) resultsTarget.style.display = 'grid';
+              }
+              if (window.clcrSamePatientAggregator && typeof window.clcrSamePatientAggregator.afterClcrRender === 'function') {
+                window.clcrSamePatientAggregator.afterClcrRender({
+                  formulaId: currentFormulaId,
+                  clFormulaIds: clFormulaIds,
+                  clcrInfoEl: clcrInfoTarget,
+                  resultsEl: resultsTarget
+                });
               }
             } else {
-              $('clcrInfo').innerHTML = '';
-              $('results').style.display = 'none';
+              const clcrInfoTarget = $('clcrInfo');
+              const resultsTarget = $('results');
+              clcrClearElement(clcrInfoTarget);
+              if (resultsTarget) resultsTarget.style.display = 'none';
+              if (window.clcrSamePatientAggregator && typeof window.clcrSamePatientAggregator.afterClcrRender === 'function') {
+                window.clcrSamePatientAggregator.afterClcrRender({
+                  formulaId: currentFormulaId,
+                  clFormulaIds: clFormulaIds,
+                  clcrInfoEl: clcrInfoTarget,
+                  resultsEl: resultsTarget
+                });
+              }
             }
 
   /* ----------  RACHUNEK ELEKTROLITÓW  ---------- */
@@ -3877,7 +4129,7 @@ function update() {
 
 
   /* wyświetl lub ukryj kartę */
-  $('elecInfo').innerHTML = ehtml;
+  clcrSetTrustedMarkup($('elecInfo'), ehtml, 'electrolyte result html');
   $('elecCard').style.display = ehtml ? 'block' : 'none';
 
   /* === KAMICA — START (wyniki) === */
@@ -4058,10 +4310,10 @@ function update() {
           if (stoneHtml) combined += '<hr>';
           combined += shtml;
         }
-        stoneInfoEl.innerHTML = combined;
+        clcrSetTrustedMarkup(stoneInfoEl, combined, 'stone result html');
         stoneCardEl.style.display = 'block';
       } else {
-        stoneInfoEl.innerHTML = '';
+        clcrClearElement(stoneInfoEl);
         stoneCardEl.style.display = 'none';
       }
     }
@@ -4108,13 +4360,13 @@ function update() {
       const ekTv  = spKtv ? eKtV(spKtv, tHrs * 60) : null;
 
       if (spKtv) {
-        $('ktvResult').innerHTML = `<strong>KT/V (Daugirdas):</strong> ${spKtv.toFixed(2)}`;
+        clcrSetTrustedMarkup($('ktvResult'), `<strong>KT/V (Daugirdas):</strong> ${spKtv.toFixed(2)}`, 'ktv result');
         $('ktvResult').style.display = 'block';
       } else {
         $('ktvResult').style.display = 'none';
       }
       if (ekTv) {
-        $('ektvResult').innerHTML = `<strong>eKt/V (wyrównany):</strong> ${ekTv.toFixed(2)}`;
+        clcrSetTrustedMarkup($('ektvResult'), `<strong>eKt/V (wyrównany):</strong> ${ekTv.toFixed(2)}`, 'ektv result');
         $('ektvResult').style.display = 'block';
       } else {
         $('ektvResult').style.display = 'none';
@@ -4142,16 +4394,67 @@ function update() {
   }
 }
 
+// Zachowaj natywną funkcję update() kalkulatora klirensu przed załadowaniem app.js.
+// app.js ma własny globalny update(), dlatego strona klirensu udostępnia tę wersję
+// pod osobną nazwą; główny plik może wtedy bezpiecznie delegować obliczenia z powrotem tutaj.
+try { window.clcrUpdate = update; } catch (_) { /* ignore */ }
+
+
+
+function showClcrDependencyNotice(resultOrModule, message) {
+  const text = message || 'Brakuje bibliotek potrzebnych do wygenerowania PDF.';
+  try {
+    if (window.VildaDeps && typeof window.VildaDeps.notifyMissingDependencies === 'function') {
+      window.VildaDeps.notifyMissingDependencies(resultOrModule || 'clcr-pdf-export', { message: text });
+      return;
+    }
+    if (window.VildaDeps && typeof window.VildaDeps.showDependencyNotice === 'function') {
+      window.VildaDeps.showDependencyNotice(text, { moduleName: 'clcr-pdf-export' });
+      return;
+    }
+  } catch (_) {}
+  try {
+    if (typeof patientReportShowToast === 'function') {
+      patientReportShowToast(text);
+      return;
+    }
+  } catch (_) {}
+  try {
+    const box = document.createElement('div');
+    box.setAttribute('role', 'status');
+    box.setAttribute('aria-live', 'polite');
+    box.textContent = text;
+    box.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:2147483647;max-width:min(420px,calc(100vw - 32px));background:#fff;color:#2f3137;border:1px solid rgba(211,47,47,.28);border-left:4px solid #d32f2f;border-radius:14px;box-shadow:0 18px 45px rgba(0,0,0,.16);padding:12px 14px;font:500 14px/1.4 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;';
+    document.body.appendChild(box);
+    setTimeout(() => { try { box.remove(); } catch (_) {} }, 9000);
+  } catch (_) {}
+}
 
 /* ---------- 5.4 EKSPORT PDF (wersja dopracowana – jedna strona) ---------- */
 $('downloadPDF').addEventListener('click', async () => {
   // Upewnij się, że wartości są aktualne
   if (typeof update === 'function') update();
-  const { jsPDF } = window.jspdf;
+  if (typeof window !== 'undefined' && window.VildaDeps && typeof window.VildaDeps.checkModuleDeps === 'function') {
+    const depsReady = window.VildaDeps.checkModuleDeps('clcr-pdf-export', { silent: true });
+    if (depsReady && depsReady.ok === false) {
+      showClcrDependencyNotice(depsReady, 'Brakuje bibliotek potrzebnych do wygenerowania PDF.');
+      return;
+    }
+  }
+  const jsPDF = (typeof window !== 'undefined' && typeof window.vildaRequireFunction === 'function')
+    ? window.vildaRequireFunction('jspdf.jsPDF', { moduleName: 'clcr-pdf-export' })
+    : (window.jspdf && typeof window.jspdf.jsPDF === 'function' ? window.jspdf.jsPDF : null);
+  const html2canvasFn = (typeof window !== 'undefined' && typeof window.vildaRequireFunction === 'function')
+    ? window.vildaRequireFunction('html2canvas', { moduleName: 'clcr-pdf-export' })
+    : (typeof html2canvas === 'function' ? html2canvas : null);
+  if (!jsPDF || !html2canvasFn) {
+    showClcrDependencyNotice('clcr-pdf-export', 'Brakuje bibliotek potrzebnych do wygenerowania PDF.');
+    return;
+  }
 
   // Przygotuj kontener raportu
   const reportDiv = document.getElementById('pdfReport');
-  reportDiv.innerHTML = '';
+  clcrClearElement(reportDiv);
 
   // Nagłówek raportu
   const title = document.createElement('h2');
@@ -4166,11 +4469,19 @@ $('downloadPDF').addEventListener('click', async () => {
   patientSection.appendChild(patientHeader);
   const sexSelect = document.getElementById('sex');
   const sexText = sexSelect?.options[sexSelect.selectedIndex]?.text || '';
-  patientSection.innerHTML += `<p><strong>Imię i nazwisko:</strong> ${($('fullName').value || '').trim() || '–'}</p>`;
-  patientSection.innerHTML += `<p><strong>Wiek:</strong> ${$('age').value || '–'} lata</p>`;
-  patientSection.innerHTML += `<p><strong>Płeć:</strong> ${sexText || '–'}</p>`;
-  patientSection.innerHTML += `<p><strong>Masa:</strong> ${$('weight').value || '–'} kg</p>`;
-  patientSection.innerHTML += `<p><strong>Wzrost:</strong> ${$('height').value || '–'} cm</p>`;
+  const appendPatientLine = (label, value, suffix) => {
+    const p = document.createElement('p');
+    const strong = document.createElement('strong');
+    strong.textContent = label + ':';
+    p.appendChild(strong);
+    p.appendChild(document.createTextNode(' ' + (value || '–') + (suffix || '')));
+    patientSection.appendChild(p);
+  };
+  appendPatientLine('Imię i nazwisko', ($('fullName').value || '').trim(), '');
+  appendPatientLine('Wiek', $('age').value || '', ' lata');
+  appendPatientLine('Płeć', sexText || '', '');
+  appendPatientLine('Masa', $('weight').value || '', ' kg');
+  appendPatientLine('Wzrost', $('height').value || '', ' cm');
   reportDiv.appendChild(patientSection);
 
   // Funkcja pomocnicza kopiująca wynik z kart wyników
@@ -4187,8 +4498,8 @@ $('downloadPDF').addEventListener('click', async () => {
       p.className = 'result-item';
       // przenieś klasę out-of-range, jeśli istnieje
       if (child.classList.contains('out-of-range')) p.classList.add('out-of-range');
-      // kopiuj HTML etykiety i wartości, zachowując span.range
-      p.innerHTML = child.innerHTML;
+      // kopiuj istniejące węzły wyników bez ponownego parsowania kontrolowanego HTML
+      Array.from(child.childNodes || []).forEach(node => p.appendChild(node.cloneNode(true)));
       section.appendChild(p);
     });
     reportDiv.appendChild(section);
@@ -4214,8 +4525,8 @@ $('downloadPDF').addEventListener('click', async () => {
         if (elem && elem.style.display !== 'none') {
           const p = document.createElement('p');
           p.className = 'result-item';
-          // skopiuj zawartość wyników KT/V
-          p.innerHTML = elem.innerHTML;
+          // skopiuj zawartość wyników KT/V bez ponownego parsowania kontrolowanego HTML
+          Array.from(elem.childNodes || []).forEach(node => p.appendChild(node.cloneNode(true)));
           section.appendChild(p);
         }
       });
@@ -4232,7 +4543,7 @@ $('downloadPDF').addEventListener('click', async () => {
   const avail = { w: page.w - margin * 2, h: page.h - margin * 2 };
 
   // Utwórz canvas z raportu; scale=2 zapewnia wyższą rozdzielczość
-  const canvas = await html2canvas(reportDiv, { scale: 2, useCORS: true, backgroundColor: null });
+  const canvas = await html2canvasFn(reportDiv, { scale: 2, useCORS: true, backgroundColor: null });
 
   // Ukryj raport ponownie
   reportDiv.style.display = 'none';
@@ -4672,6 +4983,7 @@ const observer = new MutationObserver(() => {
     document.querySelectorAll('#clcrForm input, #clcrForm select').forEach(inp => {
       inp.classList.remove('error', 'is-filled', 'must-fill');
     });
+    document.querySelectorAll('.must-fill-group').forEach(el => el.classList.remove('must-fill-group'));
 
     // Schowaj wszystkie karty z wynikami i wyczyść treści
     ['results', 'elecCard', 'stoneCard'].forEach(id => {
@@ -4680,7 +4992,7 @@ const observer = new MutationObserver(() => {
     });
     ['clcrInfo', 'elecInfo'].forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.innerHTML = '';
+      if (el) clcrClearElement(el);
     });
     // Kontenery wyników KT/V
     ['ktvResult', 'ektvResult'].forEach(id => {
@@ -4722,7 +5034,7 @@ const observer = new MutationObserver(() => {
 
     // Wyczyść live‑listę i filtr formuł
     const live = document.getElementById('formulaLive');
-    if (live) { live.style.display = 'none'; live.innerHTML = ''; }
+    if (live) { live.style.display = 'none'; clcrClearElement(live); }
     const searchInput = document.getElementById('formulaSearch');
     if (searchInput) searchInput.value = '';
 
@@ -4772,19 +5084,20 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!item) return;
     const id = item.getAttribute('data-id');
     if (!id) return;
-    // ustaw nową wartość w głównym selektorze
-    const selectEl = document.getElementById('formulaPicker');
-    if (selectEl) selectEl.value = id;
     // zresetuj pole wyszukiwania
     const searchInput = document.getElementById('formulaSearch');
     if (searchInput) searchInput.value = '';
-    // przywróć pełną listę kategorii (bez filtra)
-    if (typeof renderFormulaOptions === 'function') {
-      renderFormulaOptions('');
+    // przywróć pełną listę kategorii (bez filtra), a dopiero potem ustaw wybraną wartość;
+    // w przeciwnym razie odbudowanie <select> może skasować bieżący wybór.
+    if (typeof window.renderFormulaOptions === 'function') {
+      window.renderFormulaOptions('');
     }
+    // ustaw nową wartość w głównym selektorze
+    const selectEl = document.getElementById('formulaPicker');
+    if (selectEl) selectEl.value = id;
     // ukryj dynamiczną listę
     liveList.style.display = 'none';
-    liveList.innerHTML = '';
+    clcrClearElement(liveList);
     // uruchom standardową obsługę zmiany poprzez wywołanie zdarzenia 'change' na selektorze
     // dispatchujemy zdarzenie 'change', aby zadziałał nasłuch przypisany w DOMContentLoaded
     if (selectEl) {
@@ -5026,7 +5339,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const elecInfoEl = document.getElementById('elecInfo');
       if (!skipClearing) {
         if (elecCardEl) elecCardEl.style.display = 'none';
-        if (elecInfoEl) elecInfoEl.innerHTML = '';
+        if (elecInfoEl) clcrClearElement(elecInfoEl);
       }
 
       // Additionally hide any KT/V result boxes when using the basic version.
@@ -5273,9 +5586,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const clcrInfoEl  = document.getElementById('clcrInfo');
         const elecInfoEl  = document.getElementById('elecInfo');
         const stoneInfoEl = document.getElementById('stoneInfo');
-        if (clcrInfoEl)  clcrInfoEl.innerHTML  = '';
-        if (elecInfoEl)  elecInfoEl.innerHTML  = '';
-        if (stoneInfoEl) stoneInfoEl.innerHTML = '';
+        if (clcrInfoEl)  clcrClearElement(clcrInfoEl);
+        if (elecInfoEl)  clcrClearElement(elecInfoEl);
+        if (stoneInfoEl) clcrClearElement(stoneInfoEl);
         // zresetuj aktualną wersję na wartość pustą
         window.currentVersion = '';
         // nie wywołuj applyVersion ponownie
@@ -5381,12 +5694,18 @@ document.addEventListener('DOMContentLoaded', () => {
     <!-- Skrypt synchronizujący dane pacjenta między stronami. Dzięki niemu wprowadzone
          na stronie głównej imię, wiek, płeć, masa oraz wzrost są automatycznie
          wczytywane w tym formularzu. Plik userData.js korzysta z localStorage. -->
-    <script src="userData.js" defer></script>
-<script src="ios26-ui.js?v=11" defer></script>
-<script src="userData.js" defer></script>
+        <script src="userData.js?v=6" defer></script>
+<script src="ios26-ui.js?v=16" defer></script>
 <script>
   (function () {
     const CLCR_SESSION_KEY = 'vildaClcrSessionV1';
+
+    function getPersistenceAdapter() {
+      try {
+        if (typeof window !== 'undefined' && window.VildaPersistence) return window.VildaPersistence;
+      } catch (_) {}
+      return null;
+    }
 
     // NOWE: pomocnicza funkcja do zrzutu wyników z kart wynikowych
     // (klirens, elektrolity, kamica, dializa) do struktury zapisywanej
@@ -5415,12 +5734,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function saveClcrSession() {
-      try {
-        if (typeof sessionStorage === 'undefined') return;
-      } catch (e) {
-        return;
-      }
-
       const form = document.getElementById('clcrForm');
       if (!form) return;
 
@@ -5459,16 +5772,19 @@ document.addEventListener('DOMContentLoaded', () => {
         data.inputs[key] = val;
       });
 
-      sessionStorage.setItem(CLCR_SESSION_KEY, JSON.stringify(data));
+      const persistence = getPersistenceAdapter();
+      if (persistence && typeof persistence.writeClcrSession === 'function') {
+        persistence.writeClcrSession(data);
+      }
     }
 
     function restoreClcrSession() {
       try {
-        if (typeof sessionStorage === 'undefined') return;
-        const raw = sessionStorage.getItem(CLCR_SESSION_KEY);
-        if (!raw) return;
-
-        const data = JSON.parse(raw);
+        const persistence = getPersistenceAdapter();
+        let data = null;
+        if (persistence && typeof persistence.readClcrSession === 'function') {
+          data = persistence.readClcrSession();
+        }
         if (!data || data.version !== 1 || !data.inputs) return;
 
         const form = document.getElementById('clcrForm');
@@ -5528,8 +5844,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (clearBtn) {
         clearBtn.addEventListener('click', () => {
           try {
-            if (typeof sessionStorage !== 'undefined') {
-              sessionStorage.removeItem(CLCR_SESSION_KEY);
+            const persistence = getPersistenceAdapter();
+            if (persistence && typeof persistence.clearClcrSession === 'function') {
+              persistence.clearClcrSession();
             }
           } catch (e) { }
         });
@@ -5537,88 +5854,145 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   })();
 </script>
-<script src="app.js" defer></script>
-<script src="custom-fixes.js" defer></script>
+<script src="app.js?v=82" defer></script>
+<script src="custom-fixes.js?v=11" defer></script>
 <!-- Skrypt obsługujący tryb agregowania wyników dla tego samego pacjenta.  -->
 <script defer>
 document.addEventListener('DOMContentLoaded', () => {
   const sameCb = document.getElementById('samePatientMode');
-  let aggregated = {};
-  let enabled = false;
-  let patientKey = null;
-  // Odwołaj się do oryginalnej funkcji update()
-  const originalUpdate = window.update;
-  if (typeof originalUpdate === 'function') {
-    window.update = function(...args) {
-      // najpierw wykonaj oryginalne obliczenia
-      originalUpdate.apply(this, args);
-      // logika agregatora
-      if (!sameCb) return;
-      const clcrInfoEl  = document.getElementById('clcrInfo');
-      const resultsEl   = document.getElementById('results');
-      if (!clcrInfoEl) return;
-      // jeśli checkbox nie jest zaznaczony – wyczyść stan i wróć
-      if (!sameCb.checked) {
-        aggregated = {};
-        enabled    = false;
-        patientKey = null;
-        return;
-      }
-      // Buduj klucz identyfikujący pacjenta
-      const fullName  = (document.getElementById('fullName')?.value || '').trim().toLowerCase();
-      const sexVal    = document.getElementById('sex')?.value || '';
-      const ageVal    = document.getElementById('age')?.value || '';
-      const weightVal = document.getElementById('weight')?.value || '';
-      const heightVal = document.getElementById('height')?.value || '';
-      const currentKey = [fullName, sexVal, ageVal, weightVal, heightVal].join('|');
-      if (!enabled || patientKey !== currentKey) {
-        // nowy pacjent – zeruj zapisane wyniki
-        aggregated = {};
-        patientKey = currentKey;
-        enabled    = true;
-      }
-      // Identyfikator wybranej formuły
-      const formulaSelect = document.getElementById('formulaPicker');
-      const formulaId     = formulaSelect ? formulaSelect.value : '';
-      if (formulaId) {
-        aggregated[formulaId] = clcrInfoEl.innerHTML;
-      }
-      // Połącz wszystkie dotychczasowe wyniki
-      let combinedHtml = '';
-      Object.keys(aggregated).forEach(key => {
-        combinedHtml += aggregated[key];
-      });
-      clcrInfoEl.innerHTML = combinedHtml;
-      if (combinedHtml && resultsEl) {
-        resultsEl.style.display = '';
-      }
-    };
+  const CLCR_FORMULA_IDS = ['egfr','cg','cg_norm','cl24','sch_var','sch_idms'];
+  const state = {
+    enabled: false,
+    patientKey: null,
+    results: new Map(),
+    order: []
+  };
+
+  function getPatientKey() {
+    const fullName  = (document.getElementById('fullName')?.value || '').trim().toLowerCase();
+    const sexVal    = document.getElementById('sex')?.value || '';
+    const ageVal    = document.getElementById('age')?.value || '';
+    const weightVal = document.getElementById('weight')?.value || '';
+    const heightVal = document.getElementById('height')?.value || '';
+    return [fullName, sexVal, ageVal, weightVal, heightVal].join('|');
   }
-  // Nasłuchiwanie zmian danych pacjenta – wyłącza tryb agregacji, gdy zmienią się dane
+
+  function resetAggregator() {
+    state.enabled = false;
+    state.patientKey = null;
+    state.results.clear();
+    state.order = [];
+  }
+
+  function cloneNodes(nodes) {
+    return Array.from(nodes || []).map(node => node.cloneNode(true));
+  }
+
+  function collectFormulaNodes(container, formulaId) {
+    if (!container || !formulaId) return [];
+    const children = Array.from(container.children || []);
+    const direct = children.filter(node => node && node.dataset && node.dataset.clcrFormula === formulaId);
+    if (direct.length) return cloneNodes(direct);
+    return [];
+  }
+
+  function hasNodeContent(nodes) {
+    return Array.from(nodes || []).some(node => (node.textContent || '').trim());
+  }
+
+  function rememberFormula(formulaId, nodes) {
+    if (!formulaId || !hasNodeContent(nodes)) return false;
+    if (!state.results.has(formulaId)) state.order.push(formulaId);
+    state.results.set(formulaId, cloneNodes(nodes));
+    return true;
+  }
+
+  function renderAggregate(clcrInfoEl, resultsEl) {
+    if (!clcrInfoEl) return false;
+    if (!state.results.size) return false;
+    clcrClearElement(clcrInfoEl);
+    state.order.forEach(formulaId => {
+      const nodes = state.results.get(formulaId) || [];
+      nodes.forEach(node => clcrInfoEl.appendChild(node.cloneNode(true)));
+    });
+    if ((clcrInfoEl.textContent || '').trim() && resultsEl) {
+      resultsEl.style.display = 'grid';
+    }
+    return true;
+  }
+
+  function afterClcrRender(ctx) {
+    if (!sameCb) return false;
+    const clcrInfoEl = ctx && ctx.clcrInfoEl ? ctx.clcrInfoEl : document.getElementById('clcrInfo');
+    const resultsEl = ctx && ctx.resultsEl ? ctx.resultsEl : document.getElementById('results');
+    const formulaId = ctx && ctx.formulaId ? String(ctx.formulaId) : (document.getElementById('formulaPicker')?.value || '');
+    const clFormulaIds = Array.isArray(ctx && ctx.clFormulaIds) ? ctx.clFormulaIds : CLCR_FORMULA_IDS;
+
+    if (!sameCb.checked) {
+      resetAggregator();
+      return false;
+    }
+
+    const key = getPatientKey();
+    if (!state.enabled || state.patientKey !== key) {
+      state.enabled = true;
+      state.patientKey = key;
+      state.results.clear();
+      state.order = [];
+    }
+
+    if (formulaId && clFormulaIds.indexOf(formulaId) !== -1) {
+      const nodes = collectFormulaNodes(clcrInfoEl, formulaId);
+      if (nodes.length) rememberFormula(formulaId, nodes);
+    }
+
+    return renderAggregate(clcrInfoEl, resultsEl);
+  }
+
+  window.clcrSamePatientAggregator = {
+    reset: resetAggregator,
+    afterClcrRender,
+    getState: () => ({
+      enabled: state.enabled,
+      patientKey: state.patientKey,
+      order: state.order.slice(),
+      count: state.results.size
+    })
+  };
+
+  if (sameCb) {
+    sameCb.addEventListener('change', () => {
+      if (!sameCb.checked) {
+        resetAggregator();
+      }
+      try { if (typeof window.update === 'function') window.update(); } catch (error) {
+        try { console.warn('Nie udało się odświeżyć agregacji wyników klirensu.', error); } catch (_) {}
+      }
+    });
+  }
+
+  // Zmiana danych identyfikujących pacjenta zeruje agregację, zanim główny listener formularza
+  // wykona ponowne update(). Dzięki temu wyniki poprzedniego pacjenta nie są mieszane z nowymi.
   const patientSet = document.getElementById('patientSet');
   if (patientSet) {
     patientSet.addEventListener('input', () => {
-      // Jeśli trwa reset aplikacji (np. przy zmianie formuły), ignoruj zmiany pól pacjenta.
       if (window.clcrIsResetting) return;
-      if (!enabled || !sameCb.checked) return;
-      const fullName  = (document.getElementById('fullName')?.value || '').trim().toLowerCase();
-      const sexVal    = document.getElementById('sex')?.value || '';
-      const ageVal    = document.getElementById('age')?.value || '';
-      const weightVal = document.getElementById('weight')?.value || '';
-      const heightVal = document.getElementById('height')?.value || '';
-      const newKey = [fullName, sexVal, ageVal, weightVal, heightVal].join('|');
-      if (patientKey && newKey !== patientKey) {
-        // Zresetuj agregator i odznacz checkbox
-        aggregated = {};
-        enabled    = false;
-        patientKey = null;
-        if (sameCb) sameCb.checked = false;
-        const clcrInfoEl  = document.getElementById('clcrInfo');
-        const resultsEl   = document.getElementById('results');
-        if (clcrInfoEl) clcrInfoEl.innerHTML = '';
-        if (resultsEl)  resultsEl.style.display = 'none';
+      if (!sameCb || !sameCb.checked || !state.enabled) return;
+      const newKey = getPatientKey();
+      if (state.patientKey && newKey !== state.patientKey) {
+        resetAggregator();
+        sameCb.checked = false;
+        const clcrInfoEl = document.getElementById('clcrInfo');
+        const resultsEl = document.getElementById('results');
+        if (clcrInfoEl) clcrClearElement(clcrInfoEl);
+        if (resultsEl) resultsEl.style.display = 'none';
       }
-    });
+    }, true);
+  }
+
+  const clearBtn = document.getElementById('clearBtn');
+  if (clearBtn) {
+    clearBtn.addEventListener('click', resetAggregator);
   }
 });
 </script>
