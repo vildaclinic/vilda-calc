@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '0.9.319';
+const SW_VERSION = '0.9.332';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -48,7 +48,7 @@ const CORE_SHELL_URLS = [
   '/vilda_deps.js',
   '/vilda_deps.js?v=6',
   '/app.js',
-  '/app.js?v=82',
+  '/app.js?v=95',
   '/nutrition_norms.js',
   '/nutrition_norms.js?v=38',
   '/nutrition_micros.js',
@@ -299,7 +299,7 @@ function getShellCacheKeyFromRequest(request) {
 
   if (!SHELL_PATHS.has(pathname)) return null;
 
-  // Dla zasobów statycznych z query stringiem (np. app.js?v=82) kluczem cache
+  // Dla zasobów statycznych z query stringiem (np. app.js?v=95) kluczem cache
   // musi być pełny URL względny. W przeciwnym razie można oddać starą,
   // niewersjonowaną odpowiedź /app.js i rozjechać HTML/CSS/JS między wersjami.
   return url.search ? `${pathname}${url.search}` : pathname;

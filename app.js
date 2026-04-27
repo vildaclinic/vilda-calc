@@ -5393,6 +5393,211 @@ function calcTotal(obj,selector){
   return kcal;
 }
 
+/* === FOOD SUMMARY HELPERS (krok 7C) ====================================
+ * Wspólna warstwa dla karty „Kalorie posiłków i czas spalania”.  Dotychczas
+ * pełne update() i lokalny refresh karty jedzenia miały niemal identyczną
+ * logikę.  Poniższe helpery centralizują zbieranie pozycji, budowę HTML
+ * kontrolowanego markupu oraz render czasu spalania bez zmiany wzorów.
+ */
+function macroPracticeReadFoodSummaryWeight() {
+  const weightEl = document.getElementById('weight');
+  const weight = parseFloat(weightEl && weightEl.value);
+  return Number.isFinite(weight) ? weight : 0;
+}
+
+function macroPracticeReadFoodSummaryAge() {
+  try {
+    if (typeof getAgeDecimal === 'function') {
+      const age = Number(getAgeDecimal());
+      return Number.isFinite(age) ? age : 0;
+    }
+  } catch (error) {
+    if (typeof vildaLogAppWarn === 'function') {
+      vildaLogAppWarn('app:food-summary', 'Nie udało się odczytać wieku dla karty posiłków.', error);
+    }
+  }
+  const ageEl = document.getElementById('age');
+  const age = parseFloat(ageEl && ageEl.value);
+  return Number.isFinite(age) ? age : 0;
+}
+
+function macroPracticeGetFoodNutritionGoals() {
+  if (typeof patientReportBuildNutritionNormsModelFromCurrentState !== 'function') return null;
+  try {
+    return patientReportBuildNutritionNormsModelFromCurrentState();
+  } catch (error) {
+    if (typeof vildaLogAppWarn === 'function') {
+      vildaLogAppWarn('app:food-summary', 'Nie udało się zbudować modelu norm żywieniowych dla karty posiłków.', error);
+    }
+    return null;
+  }
+}
+
+function macroPracticeCollectFoodSummaryItems(nutritionGoalsForFoods, options = {}) {
+  const dictionary = options.foods || foods;
+  const selector = options.selector || '.food-row';
+  const items = [];
+  document.querySelectorAll(selector).forEach((row) => {
+    const select = row.querySelector('select');
+    const input = row.querySelector('input');
+    const key = select ? select.value : '';
+    const qty = input ? (parseFloat(input.value) || 0) : 0;
+    if (qty > 0 && dictionary && dictionary[key]) {
+      const food = dictionary[key];
+      items.push({
+        key,
+        qty,
+        name: macroPracticeBuildSelectedFoodLabel(key, qty) || food.name,
+        foodGroup: food.foodGroup || macroPracticeResolveFoodGroup(food),
+        kcal: food.kcal * qty,
+        analysis: macroPracticeAnalyzeFoodSelection(key, qty, nutritionGoalsForFoods)
+      });
+    }
+  });
+  return items;
+}
+
+function macroPracticeBuildFoodSummaryState(options = {}) {
+  const dictionary = options.foods || foods;
+  const selector = options.selector || '.food-row';
+  const kcal = Number.isFinite(options.kcal) ? options.kcal : calcTotal(dictionary, selector);
+  const nutritionGoalsForFoods = Object.prototype.hasOwnProperty.call(options, 'nutritionGoalsForFoods')
+    ? options.nutritionGoalsForFoods
+    : macroPracticeGetFoodNutritionGoals();
+  const items = Array.isArray(options.items)
+    ? options.items
+    : macroPracticeCollectFoodSummaryItems(nutritionGoalsForFoods, { foods: dictionary, selector });
+  const itemsWithMacros = items.filter((item) => item.analysis && item.analysis.macroLine);
+  const totalProtein = itemsWithMacros.reduce((sum, item) => sum + (item.analysis?.nutrients?.protein_g || 0), 0);
+  const totalCarbs = itemsWithMacros.reduce((sum, item) => sum + (item.analysis?.nutrients?.carbs_g || 0), 0);
+  const totalFat = itemsWithMacros.reduce((sum, item) => sum + (item.analysis?.nutrients?.fat_g || 0), 0);
+  const hasCompoundMeal = itemsWithMacros.some((item) => item.foodGroup === 'meals');
+  const totalGoalShareParts = macroPracticeBuildTotalGoalShareParts({
+    energy_kcal: kcal,
+    protein_g: totalProtein,
+    carbs_g: totalCarbs,
+    fat_g: totalFat
+  }, nutritionGoalsForFoods);
+  const totalEnergyShareHtml = totalGoalShareParts.energy
+    ? `<div class="food-total-energy-share">${macroPracticeEscapeHtml(totalGoalShareParts.energy)}</div>`
+    : '';
+  const totalGoalShareHtml = totalGoalShareParts.macros.length
+    ? `<div class="food-total-goal-share"><div class="food-total-goal-share-title">Procent dziennego celu do planowania diety:</div><div class="food-total-goal-share-values">${macroPracticeEscapeHtml(totalGoalShareParts.macros.join(' • '))}</div></div>`
+    : '';
+  const totalGoalShareNote = totalGoalShareParts.macros.length
+    ? ' Procenty makroskładników odnoszą się do orientacyjnego dziennego celu do planowania diety, wyliczonego z wieku i PAL wybranego w karcie norm żywieniowych; dla białka nie jest to ta sama wartość co RDA.'
+    : '';
+  const foodTotalInfoText = `Makroskładniki pokazujemy dla każdej pozycji z listy. Dane oparto na USDA FoodData Central i etykietach produktów; przy daniach złożonych są to wartości orientacyjne dla typowej porcji${hasCompoundMeal ? ', zależne od receptury i wielkości porcji' : ''}.${totalGoalShareNote}`;
+  const foodTotalInfoHtml = itemsWithMacros.length
+    ? `<div class="food-total-info"><button type="button" class="food-total-info-toggle" data-food-total-info-toggle aria-expanded="false" aria-controls="foodTotalInfoPanel">Informacje ▾</button><div class="food-total-macro-note" id="foodTotalInfoPanel" hidden>${macroPracticeEscapeHtml(foodTotalInfoText)}</div></div>`
+    : '';
+  const macroSummaryHtml = itemsWithMacros.length
+    ? `<div class="food-total-macro-summary">Białko ${macroPracticeFormatDisplayNumber(totalProtein)} g • Węglowodany ${macroPracticeFormatDisplayNumber(totalCarbs)} g • Tłuszcze ${macroPracticeFormatDisplayNumber(totalFat)} g</div>${totalGoalShareHtml}${foodTotalInfoHtml}`
+    : '';
+  const totalKcalHtml = `<strong>Łącznie: ${Math.round(kcal)} kcal</strong>${totalEnergyShareHtml}${macroSummaryHtml}`;
+  const rowsHtml = items.map((item) => {
+    const metaLines = [];
+    if (item.analysis && item.analysis.macroLine) {
+      metaLines.push(`<div class="food-total-item-meta">${macroPracticeEscapeHtml(item.analysis.macroLine)}</div>`);
+    }
+    if (item.foodGroup === 'meals' && item.analysis && item.analysis.macroNote) {
+      metaLines.push(`<div class="food-total-item-note">${macroPracticeEscapeHtml(item.analysis.macroNote)}</div>`);
+    }
+    if (item.analysis && item.analysis.showAsWarning && item.analysis.warningLine) {
+      const warningClass = item.analysis.warningLevel ? ` food-total-item-note--${item.analysis.warningLevel}` : '';
+      metaLines.push(`<div class="food-total-item-note${warningClass}">${macroPracticeEscapeHtml(item.analysis.warningLine)}</div>`);
+    } else if (item.analysis && item.analysis.coverageLine) {
+      metaLines.push(`<div class="food-total-item-note">${macroPracticeEscapeHtml(item.analysis.coverageLine)}</div>`);
+    }
+    return `<tr><td><div class="food-total-item-name">${macroPracticeEscapeHtml(item.name)}</div>${metaLines.join('')}</td><td>${Math.round(item.kcal)} kcal</td></tr>`;
+  }).join('');
+  const tableHtml = `<table class="kcal-table kcal-table--macro">
+           <tr><th>Produkt</th><th>kcal</th></tr>
+           ${rowsHtml}
+         </table>`;
+  return {
+    kcal,
+    nutritionGoalsForFoods,
+    items,
+    itemCount: items.length,
+    itemsWithMacrosCount: itemsWithMacros.length,
+    totals: { protein_g: totalProtein, carbs_g: totalCarbs, fat_g: totalFat },
+    flags: { hasCompoundMeal },
+    html: { totalKcalHtml, tableHtml, rowsHtml, totalEnergyShareHtml, macroSummaryHtml }
+  };
+}
+
+function macroPracticeGetFoodSummaryElements(source) {
+  const inputElements = source && source.elements ? source.elements : source;
+  return {
+    foodTotalSection: (inputElements && inputElements.foodTotalSection) || document.getElementById('foodTotalSection'),
+    totalKcalEl: (inputElements && inputElements.foodTotalKcal) || document.getElementById('foodTotalKcal'),
+    totalListEl: (inputElements && inputElements.foodTotalList) || document.getElementById('foodTotalList'),
+    timesDiv: (inputElements && inputElements.foodTimes) || document.getElementById('foodTimes'),
+    foodTimesSection: (inputElements && inputElements.foodTimesSection) || document.getElementById('foodTimesSection')
+  };
+}
+
+function macroPracticeRenderFoodTotalSummary(summary, elements) {
+  const state = summary || macroPracticeBuildFoodSummaryState();
+  const els = elements || macroPracticeGetFoodSummaryElements();
+  const hasFoodTotalDom = !!(els.foodTotalSection && els.totalKcalEl && els.totalListEl);
+  if (hasFoodTotalDom && state.items.length) {
+    vildaAppSetTrustedHtml(els.totalKcalEl, state.html.totalKcalHtml, 'app:totalKcalEl');
+    vildaAppSetTrustedHtml(els.totalListEl, state.html.tableHtml, 'app:food-total-list');
+    els.foodTotalSection.style.display = 'block';
+  } else if (hasFoodTotalDom) {
+    els.foodTotalSection.style.display = 'none';
+    vildaAppClearHtml(els.totalKcalEl);
+    vildaAppClearHtml(els.totalListEl);
+  }
+  return { hasFoodTotalDom, state, elements: els };
+}
+
+function macroPracticeRenderFoodBurnSummary(summary, elements, options = {}) {
+  const state = summary || macroPracticeBuildFoodSummaryState();
+  const els = elements || macroPracticeGetFoodSummaryElements();
+  const weight = Number.isFinite(Number(options.weight)) ? Number(options.weight) : macroPracticeReadFoodSummaryWeight();
+  const age = Number.isFinite(Number(options.age)) ? Number(options.age) : macroPracticeReadFoodSummaryAge();
+  let foodBurnState = null;
+  if (weight > 0 && state.kcal > 0 && els.timesDiv && typeof activityBuildFoodBurnState === 'function') {
+    foodBurnState = activityBuildFoodBurnState({
+      kcalTarget: state.kcal,
+      weightKg: weight,
+      ageYears: age
+    });
+    vildaAppSetTrustedHtml(els.timesDiv, activityRenderTableHtml(foodBurnState), 'app:timesDiv');
+    if (els.foodTimesSection) {
+      els.foodTimesSection.style.display = (foodBurnState && foodBurnState.rows.length) ? 'block' : 'none';
+    }
+  } else if (els.foodTimesSection) {
+    els.foodTimesSection.style.display = 'none';
+    if (els.timesDiv) vildaAppClearHtml(els.timesDiv);
+  }
+  return { state, elements: els, foodBurnState };
+}
+
+function macroPracticeUpdateFoodSummary(options = {}) {
+  const elements = options.elements || macroPracticeGetFoodSummaryElements(options.inputState);
+  const state = options.state || macroPracticeBuildFoodSummaryState(options);
+  const totalResult = macroPracticeRenderFoodTotalSummary(state, elements);
+  let burnResult = null;
+  if (options.renderBurn !== false) {
+    burnResult = macroPracticeRenderFoodBurnSummary(state, elements, options);
+  }
+  return Object.assign({}, state, {
+    elements,
+    hasFoodTotalDom: totalResult.hasFoodTotalDom,
+    foodBurnState: burnResult ? burnResult.foodBurnState : null
+  });
+}
+
+if (typeof window !== 'undefined') {
+  window.macroPracticeBuildFoodSummaryState = window.macroPracticeBuildFoodSummaryState || macroPracticeBuildFoodSummaryState;
+  window.macroPracticeUpdateFoodSummary = window.macroPracticeUpdateFoodSummary || macroPracticeUpdateFoodSummary;
+  window.macroPracticeRefreshFoodSummary = window.macroPracticeRefreshFoodSummary || macroPracticeUpdateFoodSummary;
+}
+
 /* === FOOD CARD LOCAL REFRESH START =====================================
  * Kliknięcie „+ dodaj pozycję” oraz zmiany wierszy jedzenia nie powinny
  * przebudowywać całej aplikacji przez pełne update(). Pełne update() ukrywa
@@ -5430,110 +5635,11 @@ function macroPracticePreserveViewportDuringFoodRefresh(callback) {
 function macroPracticeRefreshFoodCardOnly(options = {}) {
   const shouldPreserveViewport = options && options.preserveViewport !== false;
   const render = () => {
-    const foodTotalSection = document.getElementById('foodTotalSection');
-    const totalKcalEl = document.getElementById('foodTotalKcal');
-    const totalListEl = document.getElementById('foodTotalList');
-    const timesDiv = document.getElementById('foodTimes');
-    const foodTimesSection = document.getElementById('foodTimesSection');
-    if (!foodTotalSection || !totalKcalEl || !totalListEl) return;
-
-    const kcal = calcTotal(foods, '.food-row');
-    const nutritionGoalsForFoods = (typeof patientReportBuildNutritionNormsModelFromCurrentState === 'function')
-      ? patientReportBuildNutritionNormsModelFromCurrentState()
-      : null;
-    const items = [];
-    document.querySelectorAll('.food-row').forEach(r => {
-      const select = r.querySelector('select');
-      const input = r.querySelector('input');
-      const key = select ? select.value : '';
-      const qty = input ? (parseFloat(input.value) || 0) : 0;
-      if (qty > 0 && foods[key]) {
-        items.push({
-          key,
-          qty,
-          name: macroPracticeBuildSelectedFoodLabel(key, qty) || foods[key].name,
-          foodGroup: foods[key].foodGroup || macroPracticeResolveFoodGroup(foods[key]),
-          kcal: foods[key].kcal * qty,
-          analysis: macroPracticeAnalyzeFoodSelection(key, qty, nutritionGoalsForFoods)
-        });
-      }
+    macroPracticeUpdateFoodSummary({
+      weight: macroPracticeReadFoodSummaryWeight(),
+      age: macroPracticeReadFoodSummaryAge(),
+      renderBurn: true
     });
-
-    if (items.length) {
-      const itemsWithMacros = items.filter((item) => item.analysis && item.analysis.macroLine);
-      const totalProtein = itemsWithMacros.reduce((sum, item) => sum + (item.analysis?.nutrients?.protein_g || 0), 0);
-      const totalCarbs = itemsWithMacros.reduce((sum, item) => sum + (item.analysis?.nutrients?.carbs_g || 0), 0);
-      const totalFat = itemsWithMacros.reduce((sum, item) => sum + (item.analysis?.nutrients?.fat_g || 0), 0);
-      const hasCompoundMeal = itemsWithMacros.some((item) => item.foodGroup === 'meals');
-      const totalGoalShareParts = macroPracticeBuildTotalGoalShareParts({
-        energy_kcal: kcal,
-        protein_g: totalProtein,
-        carbs_g: totalCarbs,
-        fat_g: totalFat
-      }, nutritionGoalsForFoods);
-      const totalEnergyShareHtml = totalGoalShareParts.energy
-        ? `<div class="food-total-energy-share">${macroPracticeEscapeHtml(totalGoalShareParts.energy)}</div>`
-        : '';
-      const totalGoalShareHtml = totalGoalShareParts.macros.length
-        ? `<div class="food-total-goal-share"><div class="food-total-goal-share-title">Procent dziennego celu do planowania diety:</div><div class="food-total-goal-share-values">${macroPracticeEscapeHtml(totalGoalShareParts.macros.join(' • '))}</div></div>`
-        : '';
-      const totalGoalShareNote = totalGoalShareParts.macros.length
-        ? ' Procenty makroskładników odnoszą się do orientacyjnego dziennego celu do planowania diety, wyliczonego z wieku i PAL wybranego w karcie norm żywieniowych; dla białka nie jest to ta sama wartość co RDA.'
-        : '';
-      const foodTotalInfoText = `Makroskładniki pokazujemy dla każdej pozycji z listy. Dane oparto na USDA FoodData Central i etykietach produktów; przy daniach złożonych są to wartości orientacyjne dla typowej porcji${hasCompoundMeal ? ', zależne od receptury i wielkości porcji' : ''}.${totalGoalShareNote}`;
-      const foodTotalInfoHtml = itemsWithMacros.length
-        ? `<div class="food-total-info"><button type="button" class="food-total-info-toggle" data-food-total-info-toggle aria-expanded="false" aria-controls="foodTotalInfoPanel">Informacje ▾</button><div class="food-total-macro-note" id="foodTotalInfoPanel" hidden>${macroPracticeEscapeHtml(foodTotalInfoText)}</div></div>`
-        : '';
-      const macroSummaryHtml = itemsWithMacros.length
-        ? `<div class="food-total-macro-summary">Białko ${macroPracticeFormatDisplayNumber(totalProtein)} g • Węglowodany ${macroPracticeFormatDisplayNumber(totalCarbs)} g • Tłuszcze ${macroPracticeFormatDisplayNumber(totalFat)} g</div>${totalGoalShareHtml}${foodTotalInfoHtml}`
-        : '';
-
-      vildaAppSetTrustedHtml(totalKcalEl, `<strong>Łącznie: ${Math.round(kcal)} kcal</strong>${totalEnergyShareHtml}${macroSummaryHtml}`, 'app:totalKcalEl');
-      const rows = items.map((it) => {
-        const metaLines = [];
-        if (it.analysis && it.analysis.macroLine) {
-          metaLines.push(`<div class="food-total-item-meta">${macroPracticeEscapeHtml(it.analysis.macroLine)}</div>`);
-        }
-        if (it.foodGroup === 'meals' && it.analysis && it.analysis.macroNote) {
-          metaLines.push(`<div class="food-total-item-note">${macroPracticeEscapeHtml(it.analysis.macroNote)}</div>`);
-        }
-        if (it.analysis && it.analysis.showAsWarning && it.analysis.warningLine) {
-          const warningClass = it.analysis.warningLevel ? ` food-total-item-note--${it.analysis.warningLevel}` : '';
-          metaLines.push(`<div class="food-total-item-note${warningClass}">${macroPracticeEscapeHtml(it.analysis.warningLine)}</div>`);
-        } else if (it.analysis && it.analysis.coverageLine) {
-          metaLines.push(`<div class="food-total-item-note">${macroPracticeEscapeHtml(it.analysis.coverageLine)}</div>`);
-        }
-        return `<tr><td><div class="food-total-item-name">${macroPracticeEscapeHtml(it.name)}</div>${metaLines.join('')}</td><td>${Math.round(it.kcal)} kcal</td></tr>`;
-      }).join('');
-      vildaAppSetTrustedHtml(totalListEl,
-        `<table class="kcal-table kcal-table--macro">
-           <tr><th>Produkt</th><th>kcal</th></tr>
-           ${rows}
-         </table>`,
-        'app:food-total-list');
-      foodTotalSection.style.display = 'block';
-    } else {
-      foodTotalSection.style.display = 'none';
-      vildaAppClearHtml(totalKcalEl);
-      vildaAppClearHtml(totalListEl);
-    }
-
-    const weight = parseFloat(document.getElementById('weight')?.value) || 0;
-    const age = (typeof getAgeDecimal === 'function') ? getAgeDecimal() : (parseFloat(document.getElementById('age')?.value) || 0);
-    if (weight > 0 && kcal > 0 && timesDiv && typeof activityBuildFoodBurnState === 'function') {
-      const foodBurnState = activityBuildFoodBurnState({
-        kcalTarget: kcal,
-        weightKg: weight,
-        ageYears: age
-      });
-      if (timesDiv) vildaAppSetTrustedHtml(timesDiv, activityRenderTableHtml(foodBurnState), 'app:timesDiv');
-      if (foodTimesSection) {
-        foodTimesSection.style.display = (foodBurnState && foodBurnState.rows.length) ? 'block' : 'none';
-      }
-    } else if (foodTimesSection) {
-      foodTimesSection.style.display = 'none';
-      if (timesDiv) vildaAppClearHtml(timesDiv);
-    }
   };
 
   if (shouldPreserveViewport) {
@@ -21760,1363 +21866,1464 @@ function smoothScrollToElement(element, duration = 800) {
   requestAnimationFrame(animateScroll);
 }
 
-function update(){
-  // app.js jest ładowany także na podstronach pomocniczych. Jeżeli strona nie ma
-  // kontenerów BMI/metabolizmu, nie uruchamiaj ciężkiej logiki głównego kalkulatora.
-  if (!document.getElementById('bmrInfo') && !document.getElementById('toNormInfo')) {
-    if (typeof window.clcrUpdate === 'function' && window.clcrUpdate !== update) {
-      return window.clcrUpdate.apply(this, arguments);
-    }
-    return;
-  }
+/* ========================================================================== 
+ * Krok 7A: warstwa przygotowująca refaktor dużej funkcji update()
+ *
+ * Ten blok nie zmienia logiki obliczeniowej. Centralizuje odczyt podstawowych
+ * pól, walidację wejścia, mapę etapów oraz lekką diagnostykę przebiegu update(),
+ * aby kolejne kroki mogły wydzielać mniejsze funkcje bez naruszania wzorów.
+ * ========================================================================== */
+const VILDA_UPDATE_PREP_VERSION = '1.10.1';
+const VILDA_UPDATE_SECTION_MAP = Object.freeze([
+  Object.freeze({ id: 'entry-guards', label: 'Guard strony i delegacja do kalkulatora klirensu', risk: 'low', helper: 'vildaUpdatePrepHandleEntryGuard()', publicAlias: 'vildaUpdateHandleEntryGuard()', nextHelper: 'vildaUpdatePrepHandleEntryGuard()' }),
+  Object.freeze({ id: 'input-read', label: 'Odczyt wieku, masy, wzrostu i płci', risk: 'low', helper: 'vildaUpdatePrepReadMainInputs()', publicAlias: 'vildaUpdateReadMainInputs()', nextHelper: 'vildaUpdatePrepReadMainInputs()' }),
+  Object.freeze({ id: 'module-visibility', label: 'Widoczność sekcji zależnych od wieku / trybu', risk: 'medium', helper: 'vildaUpdatePrepUpdateAdultMetrics()', publicAlias: 'vildaUpdateAdultMetrics()', nextHelper: 'vildaUpdatePrepUpdateAdultMetrics()' }),
+  Object.freeze({ id: 'validation', label: 'Walidacja danych wejściowych i komunikaty', risk: 'medium', helper: 'vildaUpdatePrepHandleInputValidation()', publicAlias: 'vildaUpdateHandleInputValidation()', nextHelper: 'vildaUpdatePrepHandleInputValidation()' }),
+  Object.freeze({ id: 'food-summary', label: 'Suma kalorii i analiza produktów / posiłków', risk: 'medium', helper: 'vildaUpdatePrepUpdateFoodSummary() / vildaUpdatePrepUpdateFoodBurnSummary()', publicAlias: 'vildaUpdateFoodSummary() / vildaUpdateFoodBurnSummary()', nextHelper: 'vildaUpdatePrepUpdateFoodSummary()' }),
+  Object.freeze({ id: 'bmi-bmr', label: 'BMI, BMR, klasyfikacje i karty wyników', risk: 'high', helper: 'vildaUpdatePrepComputeBmiBmrState() / vildaUpdatePrepRenderBmiBmrResults()', publicAlias: 'vildaUpdateBmiBmrResults()', nextHelper: 'vildaUpdatePrepRenderBmiBmrResults()' }),
+  Object.freeze({ id: 'weight-height-centiles', label: 'Karta centyli waga/wzrost oraz skrajne centyle', risk: 'high', helper: 'vildaUpdatePrepRenderWeightHeightCentileCard()', publicAlias: 'vildaUpdateWeightHeightCentileCard()', nextHelper: 'vildaUpdatePrepRenderWeightHeightCentileCard()' }),
+  Object.freeze({ id: 'child-metrics', label: 'WFL, Cole, WHR, WLR i pozostałe metryki pediatryczne', risk: 'high', helper: 'vildaUpdatePrepUpdateChildMetrics()', publicAlias: 'vildaUpdateChildMetrics()', nextHelper: 'vildaUpdatePrepUpdateChildMetrics()' }),
+  Object.freeze({ id: 'bmi-normalization', label: 'Droga do normy BMI, konsultacje i plan redukcji', risk: 'high', helper: 'vildaUpdatePrepUpdateBmiNormalizationAndPlan()', publicAlias: 'vildaUpdateBmiNormalizationAndPlan()', nextHelper: 'vildaUpdatePrepUpdateBmiNormalizationAndPlan()' }),
+  Object.freeze({ id: 'adult-metrics', label: 'Interpretacje dorosłych i ryzyko metaboliczne', risk: 'medium', helper: 'vildaUpdatePrepUpdateAdultMetrics()', publicAlias: 'vildaUpdateAdultMetrics()', nextHelper: 'vildaUpdatePrepUpdateAdultMetrics()' }),
+  Object.freeze({ id: 'optional-modules', label: 'Odświeżenie modułów dodatkowych i podsumowań', risk: 'medium', helper: 'vildaUpdatePrepRunPreValidationSynchronizers()', publicAlias: 'vildaUpdateOptionalSections()', nextHelper: 'vildaUpdatePrepRunPreValidationSynchronizers()' }),
+  Object.freeze({ id: 'post-render', label: 'Repozycjonowanie, widoczność kart i drobne synchronizacje UI', risk: 'low', helper: 'vildaUpdatePrepRunPostRenderSynchronization() / vildaUpdatePrepCompleteMainUpdate()', publicAlias: 'vildaUpdatePostRenderUi()', nextHelper: 'vildaUpdatePrepRunPostRenderSynchronization()' })
+]);
+const VILDA_UPDATE_REFACTOR_PLAN = Object.freeze([
+  Object.freeze({ step: '7A', status: 'done', scope: 'readMainInputs + validateMainInputs + diagnostyka przebiegu update()' }),
+  Object.freeze({ step: '7B', status: 'done', scope: 'wydzielenie guardów, walidacji i komunikatów wejściowych bez zmian obliczeń' }),
+  Object.freeze({ step: '7C', status: 'done', scope: 'wydzielenie sumy kalorii / food-summary oraz czasu spalania do wspólnych helperów' }),
+  Object.freeze({ step: '7D', status: 'done', scope: 'wydzielenie stanu BMI/BMR, renderu karty BMI oraz podstawowych wyników dorosłych' }),
+  Object.freeze({ step: '7E-1', status: 'done', scope: 'wydzielenie karty centyli waga/wzrost, lastWeightPercentile i lastHeightPercentile' }),
+  Object.freeze({ step: '7E-2', status: 'done', scope: 'wydzielenie WFL, Cole i WHR do updateChildMetrics() bez zmiany obliczeń' }),
+  Object.freeze({ step: '7E-3', status: 'done', scope: 'wydzielenie drogi do normy BMI, konsultacji i planu redukcji bez zmiany obliczeń' }),
+  Object.freeze({ step: '7F', status: 'done', scope: 'wydzielenie pozostałych interpretacji dorosłych i ryzyka metabolicznego bez zmiany obliczeń' }),
+  Object.freeze({ step: '7G', status: 'done', scope: 'wydzielenie odświeżania modułów opcjonalnych, czyszczenia wyników i końcowego post-render UI z update()' }),
+  Object.freeze({ step: '7H', status: 'done', scope: 'końcowy przegląd update() jako orkiestratora: mapa przepływu, aliasy publiczne i redukcja duplikacji odczytu DOM' }),
+  Object.freeze({ step: '8A', status: 'proposed', scope: 'ostrożne wydzielenie największych sekcji app.js do osobnych plików bez zmiany API window' })
+]);
+const VILDA_UPDATE_ORCHESTRATOR_MAP = Object.freeze([
+  Object.freeze({ order: 1, sectionId: 'entry-guards', helper: 'handleEntryGuard()', api: 'VildaUpdatePrep.handleEntryGuard', phase: 'guard', status: 'done' }),
+  Object.freeze({ order: 2, sectionId: 'input-read', helper: 'readMainInputs()', api: 'VildaUpdatePrep.readMainInputs', phase: 'read', status: 'done' }),
+  Object.freeze({ order: 3, sectionId: 'optional-modules', helper: 'runPreValidationSynchronizers()', api: 'VildaUpdatePrep.runPreValidationSynchronizers', phase: 'pre-validation', status: 'done' }),
+  Object.freeze({ order: 4, sectionId: 'post-render', helper: 'preparePreValidationUi()', api: 'VildaUpdatePrep.preparePreValidationUi', phase: 'pre-validation-ui', status: 'done' }),
+  Object.freeze({ order: 5, sectionId: 'validation', helper: 'handleInputValidation()', api: 'VildaUpdatePrep.handleInputValidation', phase: 'guard', status: 'done' }),
+  Object.freeze({ order: 6, sectionId: 'bmi-normalization', helper: 'resetBmiNormalizationUi()', api: 'VildaUpdatePrep.resetBmiNormalizationUi', phase: 'pre-render-reset', status: 'done' }),
+  Object.freeze({ order: 7, sectionId: 'food-summary', helper: 'updateFoodSummary()', api: 'VildaUpdatePrep.updateFoodSummary', phase: 'render', status: 'done' }),
+  Object.freeze({ order: 8, sectionId: 'post-render', helper: 'resetResultContainers()', api: 'VildaUpdatePrep.resetResultContainers', phase: 'pre-render-reset', status: 'done' }),
+  Object.freeze({ order: 9, sectionId: 'bmi-bmr', helper: 'computeBmiBmrState() + renderBmiBmrResults()', api: 'VildaUpdatePrep.computeBmiBmrState / renderBmiBmrResults', phase: 'compute-render', status: 'done' }),
+  Object.freeze({ order: 10, sectionId: 'weight-height-centiles', helper: 'renderWeightHeightCentileCard()', api: 'VildaUpdatePrep.renderWeightHeightCentileCard', phase: 'render', status: 'done' }),
+  Object.freeze({ order: 11, sectionId: 'child-metrics', helper: 'updateChildMetrics()', api: 'VildaUpdatePrep.updateChildMetrics', phase: 'render', status: 'done' }),
+  Object.freeze({ order: 12, sectionId: 'bmi-normalization', helper: 'updateBmiNormalizationAndPlan()', api: 'VildaUpdatePrep.updateBmiNormalizationAndPlan', phase: 'render', status: 'done' }),
+  Object.freeze({ order: 13, sectionId: 'food-summary', helper: 'updateFoodBurnSummary()', api: 'VildaUpdatePrep.updateFoodBurnSummary', phase: 'post-render', status: 'done' }),
+  Object.freeze({ order: 14, sectionId: 'post-render', helper: 'completeMainUpdate()', api: 'VildaUpdatePrep.completeMainUpdate', phase: 'finish', status: 'done' })
+]);
+const VILDA_UPDATE_PUBLIC_ALIAS_MAP = Object.freeze([
+  Object.freeze({ alias: 'vildaUpdateDiagnostics', target: 'VildaUpdatePrep.getDiagnostics', group: 'diagnostics', legacy: false }),
+  Object.freeze({ alias: 'vildaUpdateLastRun', target: 'VildaUpdatePrep.getLastRun', group: 'diagnostics', legacy: false }),
+  Object.freeze({ alias: 'vildaUpdateOrchestratorMap', target: 'VildaUpdatePrep.getOrchestratorMap', group: 'diagnostics', legacy: false }),
+  Object.freeze({ alias: 'vildaDumpUpdateOrchestrator', target: 'VildaUpdatePrep.dumpOrchestratorMap', group: 'diagnostics', legacy: false }),
+  Object.freeze({ alias: 'vildaUpdateRunMain', target: 'VildaUpdatePrep.runMainUpdate', group: 'orchestrator', legacy: false }),
+  Object.freeze({ alias: 'vildaUpdateReadMainInputs', target: 'VildaUpdatePrep.readMainInputs', group: 'update-prep', legacy: false }),
+  Object.freeze({ alias: 'vildaUpdateValidateMainInputs', target: 'VildaUpdatePrep.validateMainInputs', group: 'update-prep', legacy: false }),
+  Object.freeze({ alias: 'vildaUpdateHandleEntryGuard', target: 'VildaUpdatePrep.handleEntryGuard', group: 'update-prep', legacy: false }),
+  Object.freeze({ alias: 'vildaUpdateHandleInputValidation', target: 'VildaUpdatePrep.handleInputValidation', group: 'update-prep', legacy: false }),
+  Object.freeze({ alias: 'vildaUpdateFoodSummary', target: 'VildaUpdatePrep.updateFoodSummary', group: 'update-section', legacy: false }),
+  Object.freeze({ alias: 'vildaUpdateFoodBurnSummary', target: 'VildaUpdatePrep.updateFoodBurnSummary', group: 'update-section', legacy: false }),
+  Object.freeze({ alias: 'vildaUpdateBmiBmrResults', target: 'VildaUpdatePrep.renderBmiBmrResults', group: 'update-section', legacy: false }),
+  Object.freeze({ alias: 'vildaUpdateWeightHeightCentileCard', target: 'VildaUpdatePrep.renderWeightHeightCentileCard', group: 'update-section', legacy: false }),
+  Object.freeze({ alias: 'vildaUpdateChildMetrics', target: 'VildaUpdatePrep.updateChildMetrics', group: 'update-section', legacy: false }),
+  Object.freeze({ alias: 'vildaUpdateBmiNormalizationAndPlan', target: 'VildaUpdatePrep.updateBmiNormalizationAndPlan', group: 'update-section', legacy: false }),
+  Object.freeze({ alias: 'vildaUpdateAdultMetrics', target: 'VildaUpdatePrep.updateAdultMetrics', group: 'update-section', legacy: false }),
+  Object.freeze({ alias: 'vildaUpdateGrowthDataSourceControls', target: 'VildaUpdatePrep.updateGrowthDataSourceControls', group: 'update-section', legacy: false }),
+  Object.freeze({ alias: 'vildaUpdateOptionalSections', target: 'VildaUpdatePrep.runPreValidationSynchronizers', group: 'update-section', legacy: false }),
+  Object.freeze({ alias: 'vildaUpdatePostRenderUi', target: 'VildaUpdatePrep.runPostRenderSynchronization', group: 'update-section', legacy: false }),
+  Object.freeze({ alias: 'readMainInputs', target: 'VildaUpdatePrep.readMainInputs', group: 'legacy-compat', legacy: true }),
+  Object.freeze({ alias: 'validateMainInputs', target: 'VildaUpdatePrep.validateMainInputs', group: 'legacy-compat', legacy: true }),
+  Object.freeze({ alias: 'guardMainUpdatePage', target: 'VildaUpdatePrep.handleEntryGuard', group: 'legacy-compat', legacy: true }),
+  Object.freeze({ alias: 'handleMainInputValidation', target: 'VildaUpdatePrep.handleInputValidation', group: 'legacy-compat', legacy: true }),
+  Object.freeze({ alias: 'updateFoodSummary', target: 'VildaUpdatePrep.updateFoodSummary', group: 'legacy-compat', legacy: true }),
+  Object.freeze({ alias: 'updateBmiBmrResults', target: 'VildaUpdatePrep.renderBmiBmrResults', group: 'legacy-compat', legacy: true }),
+  Object.freeze({ alias: 'updateWeightHeightCentileCard', target: 'VildaUpdatePrep.renderWeightHeightCentileCard', group: 'legacy-compat', legacy: true }),
+  Object.freeze({ alias: 'updateChildMetrics', target: 'VildaUpdatePrep.updateChildMetrics', group: 'legacy-compat', legacy: true }),
+  Object.freeze({ alias: 'updateBmiNormalizationAndPlan', target: 'VildaUpdatePrep.updateBmiNormalizationAndPlan', group: 'legacy-compat', legacy: true }),
+  Object.freeze({ alias: 'updateAdultMetrics', target: 'VildaUpdatePrep.updateAdultMetrics', group: 'legacy-compat', legacy: true }),
+  Object.freeze({ alias: 'updateGrowthDataSourceControls', target: 'VildaUpdatePrep.updateGrowthDataSourceControls', group: 'legacy-compat', legacy: true }),
+  Object.freeze({ alias: 'updateOptionalSections', target: 'VildaUpdatePrep.runPreValidationSynchronizers', group: 'legacy-compat', legacy: true }),
+  Object.freeze({ alias: 'updatePostRenderUi', target: 'VildaUpdatePrep.runPostRenderSynchronization', group: 'legacy-compat', legacy: true })
+]);
+let vildaUpdatePrepRunCounter = 0;
+let vildaUpdatePrepLastRun = null;
 
-  // Aktualizuj sekcję różnic w karcie „Ostatni pomiar” przy każdej zmianie danych wejściowych,
-  // o ile funkcja updatePrevSummaryDiff jest zdefiniowana.  Otaczamy wywołanie blokiem try/catch
-  // aby nie przerywać działania update() w przypadku błędu w obliczeniach różnic.
-  if (typeof window.updatePrevSummaryDiff === 'function') {
-    try {
-      window.updatePrevSummaryDiff();
-    } catch (e) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', e, { line: 21045 });
-    }
-  }
-  }
-  const weightEl = document.getElementById('weight');
-  const heightEl = document.getElementById('height');
-  const sexEl    = document.getElementById('sex');
-  if (!weightEl || !heightEl || !sexEl) {
-    return;
-  }
-  const weight = parseFloat(weightEl.value) || 0;
-  // Wiek z uwzględnieniem miesięcy – korzystamy z nowej funkcji pomocniczej
-  const age    = (typeof getAgeDecimal === 'function') ? getAgeDecimal() : 0;
-  const height = parseFloat(heightEl.value) || 0;
-  const sex    = sexEl.value || 'M';
-
-  // Odśwież możliwość stabilizacji masy ciała na podstawie najnowszych danych.
-  // Używamy wersji globalnej funkcji (window.updateStabilizationEligibility), ponieważ funkcja
-  // zdefiniowana w obsłudze DOMContentLoaded nie jest w tym zasięgu.  Wywołanie umieszczamy
-  // możliwie wysoko w funkcji update(), aby reagować na każdą zmianę danych wejściowych.
-  if (typeof window.updateStabilizationEligibility === 'function') {
-    try { window.updateStabilizationEligibility(); } catch (_) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', _, { line: 21066 });
-    }
-  }
-  }
-
-  /*
-   * Ukrywanie sekcji ciśnienia i obwodów u dorosłych (>18 lat)
-   *
-   * Jeżeli wiek użytkownika przekracza 18 lat, ukrywamy kartę
-   * „Ciśnienie tętnicze u dzieci” (#bpCard) oraz całą sekcję
-   * dotyczącą obwodu głowy i klatki piersiowej (#circSection), która
-   * zawiera przycisk rozwijający i samą kartę z wynikami. W przeciwnym
-   * wypadku przywracamy ich widoczność, korzystając z wartości
-   * domyślnej („” odpowiada wartości z arkusza CSS).
-   */
-  {
-    const isAdultAge = (typeof patientReportIsAdultAge === 'function')
-      ? patientReportIsAdultAge(age)
-      : (isFinite(age) && age >= 18);
-    const bpCardEl = document.getElementById('bpCard');
-    const circSectionEl = document.getElementById('circSection');
-    if (bpCardEl) {
-      bpCardEl.style.display = isAdultAge ? 'none' : '';
-    }
-    if (circSectionEl) {
-      circSectionEl.style.display = isAdultAge ? 'none' : '';
-    }
-
-    // Ukryj lub pokaż kartę liczby oddechów w zależności od wieku
-    // Karta „Liczba oddechów” (#respiratoryCard) ma być dostępna tylko dla dzieci i młodzieży
-    // do 18 lat. Dla dorosłych jest ukryta.
-    const respCardEl = document.getElementById('respiratoryCard');
-    if (respCardEl) {
-      respCardEl.style.display = isAdultAge ? 'none' : '';
-    }
-    if (window.adultVitalsApi && typeof window.adultVitalsApi.refreshVisibility === 'function') {
-      try { window.adultVitalsApi.refreshVisibility(); } catch (_) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', _, { line: 21100 });
-    }
-  }
-    }
-    if (typeof window.syncResponsiveCardPlacements === 'function') {
-      try { window.syncResponsiveCardPlacements(); } catch (_) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', _, { line: 21103 });
-    }
-  }
-    }
-  }
-
-  /*
-   * Ukryj przełącznik „Wyniki standardowe / Wyniki profesjonalne” u dorosłych
-   *
-   * Przełącznik wyników znajduje się w kontenerze o identyfikatorze
-   * #resultsModeToggleContainer. Zgodnie z wymaganiami, gdy wiek
-   * użytkownika przekracza 18 lat, nie ma potrzeby wyświetlania tego
-   * przełącznika, ponieważ pełne wyniki nie mają zastosowania do osób
-   * dorosłych. Gdy wiek ≤ 18 lat, kontener jest przywracany.
-   */
-  {
-    // Pokaż przełącznik „Wyniki standardowe / Wyniki profesjonalne” zarówno dla dzieci,
-    // jak i dla osób dorosłych.  Wcześniej przełącznik był ukrywany dla
-    // użytkowników powyżej 18 lat, ponieważ założono, że rozszerzone
-    // wyniki nie mają zastosowania u dorosłych.  W ramach rozszerzeń modułu
-    // profesjonalnego wymagane jest udostępnienie tego przełącznika
-    // wszystkim użytkownikom.  Dlatego niezależnie od wieku ustawiamy
-    // styl wyświetlania na domyślny („”).  Jeżeli w przyszłości zajdzie
-    // potrzeba ukrycia go w innych przypadkach (np. brak danych), należy
-    // dostosować warunek w tym miejscu.
-    const resultsToggleContainer = document.getElementById('resultsModeToggleContainer');
-    if (resultsToggleContainer) {
-      resultsToggleContainer.style.display = '';
-    }
-  }
-
-  // Sterowanie widocznością sekcji zaawansowanych obliczeń wzrostowych
-  // Sekcja „Zaawansowane obliczenia wzrostowe” powinna być widoczna
-  // dla wszystkich dzieci w wieku poniżej 18 lat. Wcześniej była
-  // ograniczona do przedziału 3–18 lat, ale z nowymi siatkami
-  // Palczewskiej umożliwiamy korzystanie również dla najmłodszych.
-  // Ukrywamy sekcję tylko dla dorosłych (wiek >= 18 lat) lub gdy wiek jest niepoprawny.
-  const advSection = document.getElementById('advancedGrowthSection');
-  if (advSection) {
-    if (!isNaN(age) && age < 18) {
-      advSection.style.display = 'block';
-    } else {
-      // ukryj sekcję wraz z formularzem, ale nie usuwaj danych z pól
-      advSection.style.display = 'none';
-    }
-    // Po ustawieniu widoczności sekcji zaawansowanych obliczeń
-    // wzrostowych, zaktualizuj dostępność przycisku i formularza.
-    // Dzięki temu po pierwszym obliczeniu wyników (gdy sekcja
-    // zostanie wstawiona do DOM) przycisk „Zaawansowane obliczenia
-    // wzrostowe” zostanie prawidłowo dezaktywowany w trybie
-    // standardowym, a formularz ukryty. Bez tego wywołania,
-    // updateAdvancedGrowthAccess() może zostać wykonane zbyt wcześnie
-    // (przed wyrenderowaniem elementów), co uniemożliwia ustawienie
-    // atrybutu disabled.
-    if (typeof updateAdvancedGrowthAccess === 'function') {
-      try {
-        updateAdvancedGrowthAccess();
-      } catch (e) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', e, { line: 21158 });
-    }
-  }
-    }
-    // Po ustawieniu widoczności sekcji zaawansowanych obliczeń aktualizuj
-    // również dostępność opcji Palczewska.  Dzięki temu radio
-    // „Palczewska” zostanie zablokowane lub odblokowane w zależności
-    // od trybu wyników, również podczas pierwszego generowania
-    // wyników lub przełączania formularza.
-    if (typeof updatePalczewskaAccess === 'function') {
-      try {
-        updatePalczewskaAccess();
-      } catch (e) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', e, { line: 21170 });
-    }
-  }
-    }
-  }
-
-  // Kontroluj widoczność sekcji źródeł i zastrzeżeń
-  const sourceFieldset = document.getElementById('sourceFieldset');
-  /*
-   * Steruj widocznością sekcji źródeł i zastrzeżeń.
-   * Domyślnie (na wąskich ekranach lub bez sidebara) blok źródeł jest ukrywany
-   * na początku każdej aktualizacji i pokazywany dopiero po poprawnym
-   * obliczeniu wyników.  Gdy jednak aplikacja działa w układzie
-   * dwukolumnowym z widocznym paskiem bocznym (sidebar) – tj. dla szerokich
-   * ekranów (≥992px) oraz gdy <body> ma klasę has-sidebar – użytkownik
-   * powinien mieć dostęp do sekcji źródeł przez cały czas, nawet przed
-   * wprowadzeniem danych i po zresetowaniu formularza.  W takiej sytuacji
-   * pomijamy ukrywanie elementu i wymuszamy jego widoczność.
-   */
-  if (sourceFieldset) {
-    const bodyEl = document.body;
-    const hasSidebarClass = bodyEl && bodyEl.classList && bodyEl.classList.contains('has-sidebar');
-    let isDesktopWidth = false;
-    try {
-      // Sprawdź, czy spełniony jest warunek szerokości okna (≥992px)
-      isDesktopWidth = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(min-width: 992px)').matches;
-    } catch (e) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', e, { line: 21196 });
-    }
-  }
-    if (hasSidebarClass && isDesktopWidth) {
-      // W układzie dwukolumnowym z sidebar – zawsze pokazuj
-      sourceFieldset.style.display = 'block';
-    } else {
-      // W przeciwnym razie ukryj na czas aktualizacji; zostanie pokazany po obliczeniach
-      sourceFieldset.style.display = 'none';
-    }
-  }
-
-       // Flaga sterująca ukrywaniem karty „Droga do normy BMI” w sytuacji,
-       // gdy wskaźnik Cole’a sugeruje nadwagę/otyłość, a BMI dziecka jest w normie.
-       // Gdy zostanie ustawiona na true we fragmencie obliczania wskaźnika Cole’a,
-       // karta „Droga do normy BMI” nie będzie pokazywana, a zamiast niej pojawi się
-       // rozszerzone wyjaśnienie różnic między wskaźnikami.
-
-  // Aktualizuj opis współczynnika PAL przy każdej zmianie formularza.
-  const palElem = document.getElementById('palFactor');
-  if (palElem) {
-    const ageMonthsOpt = parseFloat(document.getElementById('ageMonths')?.value) || 0;
-    const prevPal = palElem.value || '1.4';
-    energyPopulatePlanPalSelect(palElem, {
-      ageYears: age,
-      ageMonthsOpt,
-      value: prevPal
-    });
-    updatePalDescription(palElem.value);
-  }
-  /* === OBSŁUGA WYBORU ŹRÓDŁA DANYCH (PALCZEWSKA / OLAF / WHO) ======= */
-  const toggleContainer = document.getElementById('dataToggleContainer');
-  const palRadio  = document.getElementById('sourcePalczewska');
-  const olafRadio = document.getElementById('sourceOlaf');
-  const whoRadio  = document.getElementById('sourceWho');
-  if (toggleContainer && palRadio && olafRadio && whoRadio) {
-    const hasAgeSourceInput = !!(
-      (document.getElementById('age') && String(document.getElementById('age').value || '').trim() !== '') ||
-      (document.getElementById('ageMonths') && String(document.getElementById('ageMonths').value || '').trim() !== '')
-    );
-    // Dorośli (>18 lat) – ukryj przełącznik i wymuś WHO, bo siatki dziecięce nie są dostępne.
-    if (age > 18) {
-      toggleContainer.style.display = 'none';
-      setCheckedGrowthDataSource('WHO');
-      bmiSource = 'WHO';
-      refreshGrowthChartActionControls();
-    } else if (!hasAgeSourceInput || age === 0) {
-      // Pusty wiek po kliknięciu „Wyczyść wszystkie pola” nie powinien nadpisywać
-      // ręcznie wybranego źródła danych (np. Palczewska).  Ukrywamy sam przełącznik,
-      // ale zostawiamy zaznaczone radio i bmiSource bez zmian, żeby po ponownym
-      // wpisaniu danych aplikacja wróciła do ostatniego ręcznego wyboru, o ile jest dozwolony.
-      toggleContainer.style.display = 'none';
-      refreshGrowthChartActionControls();
-    } else {
-      // Dla dzieci pokazuj przełącznik i zsynchronizuj dostępne źródła danych.
-      toggleContainer.style.display = 'flex';
-      bmiSource = syncGrowthDataSourceInputs({ ageYears: age });
-    }
-  }
-/* =================================================================== */
-
-// Walidacja danych wejściowych (wiek, waga, wzrost)
-// W zunifikowanej karcie „Kalorie posiłków i czas spalania” oba fieldsety przekąsek i dań zastąpiono
-// jednym kontenerem (foodRowsSection).  Przypisujemy oba pola do tego samego
-// elementu, aby logika wyświetlania pozostała spójna.
-const snackFieldset = document.getElementById('foodRowsSection');
-const mealFieldset  = document.getElementById('foodRowsSection');
-const errorBox      = document.getElementById('errorBox');
-const resultsEl     = document.getElementById('results');
-const planCardElMain = document.getElementById('planCard');
-const planResultsElMain = document.getElementById('planResults');
-if (errorBox) {
-  vildaAppClearHtml(errorBox);              // Czyścimy poprzednie błędy
-  errorBox.style.display = "none";       // Ukrywamy na razie box błędów
+function vildaUpdatePrepGetSectionMap() {
+  return VILDA_UPDATE_SECTION_MAP.map((section) => Object.assign({}, section));
 }
 
-// Lista błędów walidacyjnych; używamy jej wyłącznie do sprawdzenia zakresów wejściowych.
-const errors = [];
-
-// Sprawdź zakres wieku
-if (age !== 0 && (age < 0.25 || age > 130)) {
-  errors.push("Wiek poza zakresem (0.25–130 lat)");
-}
-// Sprawdź zakres masy ciała
-if (weight !== 0 && (weight < 1 || weight > 500)) {
-  errors.push("Waga poza zakresem (1–500 kg)");
-}
-// Sprawdź zakres wzrostu
-if (height !== 0 && (height < 40 || height > 250)) {
-  errors.push("Wzrost poza zakresem (40–250 cm)");
+function vildaUpdatePrepGetRefactorPlan() {
+  return VILDA_UPDATE_REFACTOR_PLAN.map((item) => Object.assign({}, item));
 }
 
-// Ukryj/pokaż sekcje "Przekąski" i "Dania obiadowe" w zależności od poprawności danych
-// Sekcja „Kalorie posiłków i czas spalania” jest teraz zawsze widoczna niezależnie od poprawności
-// danych wejściowych.  Nie ukrywamy więc kontenera listy jedzenia.
-if (snackFieldset) snackFieldset.style.display = "block";
-if (mealFieldset) mealFieldset.style.display  = "block";
+function vildaUpdatePrepGetOrchestratorMap() {
+  return VILDA_UPDATE_ORCHESTRATOR_MAP.map((item) => Object.assign({}, item));
+}
 
-  /* -------- WYMAGANE TRZY POLA: wiek + waga + wzrost -------- */
-  if (age === 0 || weight === 0 || height === 0) {
-    // ukryj wszystkie karty wyników
-    if (resultsEl) resultsEl.style.display = 'none';
-    if (planCardElMain) planCardElMain.style.display = 'none';
-    // ukryj sekcje przekąsek / dań
-    // Nie ukrywaj sekcji z jedzeniem przy braku danych – karta pozostaje widoczna
-    if (snackFieldset) snackFieldset.style.display = 'block';
-    if (mealFieldset) mealFieldset.style.display  = 'block';
-    // Jeśli użytkownik nie wczytał poprzedniego pomiaru (brak flagi loaded w prevSummary)
-    // wyświetlamy komunikat o konieczności uzupełnienia danych.  W przeciwnym razie
-    // (tzn. po wczytaniu pliku JSON) ukrywamy komunikat, aby nie pokazywać ostrzeżenia
-    // „Podaj jednocześnie wiek…”.  Dzięki temu po prawidłowym wczytaniu danych
-    // sekcja informacyjna z prawej kolumny (compareInstruction) przejmuje rolę
-    // informowania o wymaganiu wpisania nowych danych.
-    let hasPrevMeasurement = false;
-    try {
-      const wrap = document.getElementById('prevSummaryWrap');
-      const card = document.getElementById('prevSummaryCard');
-      hasPrevMeasurement = (card && card.dataset && card.dataset.loaded === 'true') ||
-                           (wrap && wrap.dataset && wrap.dataset.loaded === 'true');
-    } catch (_) {
-      hasPrevMeasurement = false;
+function vildaUpdatePrepGetPublicAliasMap() {
+  return VILDA_UPDATE_PUBLIC_ALIAS_MAP.map((item) => Object.assign({}, item));
+}
+
+function vildaUpdatePrepDumpOrchestratorMap() {
+  const map = vildaUpdatePrepGetOrchestratorMap();
+  try {
+    if (typeof console !== 'undefined' && typeof console.table === 'function') {
+      console.table(map);
     }
-    if (errorBox) {
-      if (!hasPrevMeasurement) {
-        vildaAppSetTrustedHtml(errorBox, "Podaj jednocześnie wiek, wagę i wzrost aby natychmiast zobaczyć wyniki", 'app:errorBox');
-        errorBox.style.display = 'block';
-      } else {
-        // Nie pokazuj komunikatu błędu, gdy mamy dane z poprzedniego pomiaru.
-        vildaAppClearHtml(errorBox);
-        errorBox.style.display = 'none';
-      }
+  } catch (error) {
+    if (typeof vildaLogAppWarn === 'function') {
+      vildaLogAppWarn('app:update-prep', 'Nie udało się wypisać mapy orkiestratora update().', error);
     }
-    // Zaktualizuj pozycjonowanie sekcji modułu lekarskiego, aby w trybie
-    // mobilnym pojawiła się pod komunikatem (lub pusta przestrzeń po nim).
-    if (typeof repositionDoctor === 'function') {
-      repositionDoctor();
-    }
-    return;   // ⬅️ nic nie liczymy, koniec update()
   }
+  return map;
+}
 
-// Jeśli któreś pole jest poza dozwolonym zakresem – pokaż komunikat błędu i przerwij obliczenia
-if (errors.length > 0) {
-  if (errorBox) {
-    vildaAppSetTrustedHtml(errorBox, errors.join("<br>"), 'app:errorBox'); // Wyświetl wszystkie błędy (każdy w nowej linii)
-    errorBox.style.display = "block";          // Pokaż czerwony komunikat błędu
-  }
-  if (resultsEl) resultsEl.style.display = "none";  // Nie pokazuj wyników
-  if (planCardElMain) planCardElMain.style.display = 'none';
-    // Zaktualizuj pozycjonowanie sekcji modułu lekarskiego także w tym przypadku
-    if (typeof repositionDoctor === 'function') {
-      repositionDoctor();
+function vildaUpdatePrepNow() {
+  try {
+    if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
+      return performance.now();
     }
-    return;  // Zatrzymaj dalsze obliczenia, dopóki dane nie będą poprawne
+  } catch (error) {
+    if (typeof vildaLogAppWarn === 'function') {
+      vildaLogAppWarn('app:update-prep', 'Nie udało się odczytać performance.now().', error);
+    }
+  }
+  return Date.now();
 }
 
-// Jeśli brak błędów, kontynuujemy obliczenia (poprzedni komunikat błędu już ukryty)
-// ---- RESET PLAN ODCHUDZANIA ----
-const planCard    = planCardElMain;
-const planResults = planResultsElMain;
-// Resetuj kartę planu odchudzania i ukryj informację o kaloryczności
-if (planCard) planCard.style.display = 'none';
-if (planResults) vildaAppClearHtml(planResults);
-const dietCalInfo = document.getElementById('dietCalorieInfo');
-if (dietCalInfo) dietCalInfo.style.display = 'none';
-// Resetuj ostrzeżenia i kartę konsultacji na początku aktualizacji
-const planWarningEl = document.getElementById('planWarning');
-const childConsultCard = document.getElementById('childConsultCard');
-if (planWarningEl) {
-  planWarningEl.style.display = 'none';
-  clearPulse(planWarningEl);
-}
-if (childConsultCard) childConsultCard.style.display = 'none';
-
-  const bmiReady = weight > 0 && height > 0;
-  const bmrReady = bmiReady && age > 0;
-
-  // Calculate total calories across all selected foods (snacks and meals combined)
-  const kcal = calcTotal(foods, '.food-row');
-  /* === KARTA SUMY KALORII (przekąski + dania) ========================== */
-  // Odnośniki do sekcji sumy kalorii w zintegrowanej karcie
-  const foodTotalSection = document.getElementById('foodTotalSection');
-  const totalKcalEl = document.getElementById('foodTotalKcal');
-  const totalListEl = document.getElementById('foodTotalList');
-
-  // 1) zbierz wszystkie wybrane pozycje z ilościami (zarówno przekąski, jak i dania)
-  const nutritionGoalsForFoods = (typeof patientReportBuildNutritionNormsModelFromCurrentState === 'function')
-    ? patientReportBuildNutritionNormsModelFromCurrentState()
-    : null;
-  const items = [];
-  document.querySelectorAll('.food-row').forEach(r => {
-    const select = r.querySelector('select');
-    const input = r.querySelector('input');
-    const key  = select ? select.value : '';
-    const qty  = input ? (parseFloat(input.value) || 0) : 0;
-    // Dodaj do listy tylko wiersze z dodatnią ilością i zdefiniowanym elementem w słowniku foods
-    if (qty > 0 && foods[key]) {
-      items.push({
-        key,
-        qty,
-        name: macroPracticeBuildSelectedFoodLabel(key, qty) || foods[key].name,
-        foodGroup: foods[key].foodGroup || macroPracticeResolveFoodGroup(foods[key]),
-        kcal: foods[key].kcal * qty,
-        analysis: macroPracticeAnalyzeFoodSelection(key, qty, nutritionGoalsForFoods)
-      });
+function vildaUpdatePrepClonePlain(value, depth) {
+  const maxDepth = typeof depth === 'number' ? depth : 4;
+  if (maxDepth <= 0 || value == null) return value;
+  if (typeof value !== 'object') return value;
+  if (Array.isArray(value)) {
+    return value.map((item) => vildaUpdatePrepClonePlain(item, maxDepth - 1));
+  }
+  const out = {};
+  Object.keys(value).forEach((key) => {
+    const current = value[key];
+    if (current && typeof current === 'object' && typeof current.nodeType === 'number') {
+      out[key] = { id: current.id || '', tagName: current.tagName || '', present: true };
+    } else if (typeof current !== 'function') {
+      out[key] = vildaUpdatePrepClonePlain(current, maxDepth - 1);
     }
   });
+  return out;
+}
 
-  // 2) pokaż kartę tylko jeśli są wybrane pozycje i dana strona ma moduł posiłków
-  const hasFoodTotalDom = !!(foodTotalSection && totalKcalEl && totalListEl);
-  if(hasFoodTotalDom && items.length){
-    const itemsWithMacros = items.filter((item) => item.analysis && item.analysis.macroLine);
-    const totalProtein = itemsWithMacros.reduce((sum, item) => sum + (item.analysis?.nutrients?.protein_g || 0), 0);
-    const totalCarbs = itemsWithMacros.reduce((sum, item) => sum + (item.analysis?.nutrients?.carbs_g || 0), 0);
-    const totalFat = itemsWithMacros.reduce((sum, item) => sum + (item.analysis?.nutrients?.fat_g || 0), 0);
-    const hasCompoundMeal = itemsWithMacros.some((item) => item.foodGroup === 'meals');
-    const totalGoalShareParts = macroPracticeBuildTotalGoalShareParts({
-      energy_kcal: kcal,
-      protein_g: totalProtein,
-      carbs_g: totalCarbs,
-      fat_g: totalFat
-    }, nutritionGoalsForFoods);
-    const totalEnergyShareHtml = totalGoalShareParts.energy
-      ? `<div class="food-total-energy-share">${macroPracticeEscapeHtml(totalGoalShareParts.energy)}</div>`
-      : '';
-    const totalGoalShareHtml = totalGoalShareParts.macros.length
-      ? `<div class="food-total-goal-share"><div class="food-total-goal-share-title">Procent dziennego celu do planowania diety:</div><div class="food-total-goal-share-values">${macroPracticeEscapeHtml(totalGoalShareParts.macros.join(' • '))}</div></div>`
-      : '';
-    const totalGoalShareNote = totalGoalShareParts.macros.length
-      ? ' Procenty makroskładników odnoszą się do orientacyjnego dziennego celu do planowania diety, wyliczonego z wieku i PAL wybranego w karcie norm żywieniowych; dla białka nie jest to ta sama wartość co RDA.'
-      : '';
-    const foodTotalInfoText = `Makroskładniki pokazujemy dla każdej pozycji z listy. Dane oparto na USDA FoodData Central i etykietach produktów; przy daniach złożonych są to wartości orientacyjne dla typowej porcji${hasCompoundMeal ? ', zależne od receptury i wielkości porcji' : ''}.${totalGoalShareNote}`;
-    const foodTotalInfoHtml = itemsWithMacros.length
-      ? `<div class="food-total-info"><button type="button" class="food-total-info-toggle" data-food-total-info-toggle aria-expanded="false" aria-controls="foodTotalInfoPanel">Informacje ▾</button><div class="food-total-macro-note" id="foodTotalInfoPanel" hidden>${macroPracticeEscapeHtml(foodTotalInfoText)}</div></div>`
-      : '';
-    const macroSummaryHtml = itemsWithMacros.length
-      ? `<div class="food-total-macro-summary">Białko ${macroPracticeFormatDisplayNumber(totalProtein)} g • Węglowodany ${macroPracticeFormatDisplayNumber(totalCarbs)} g • Tłuszcze ${macroPracticeFormatDisplayNumber(totalFat)} g</div>${totalGoalShareHtml}${foodTotalInfoHtml}`
-      : '';
+function vildaUpdatePrepReadNumber(el) {
+  const value = el ? parseFloat(el.value) : NaN;
+  return Number.isFinite(value) ? value : 0;
+}
 
-    // a) całkowite kcal
-    vildaAppSetTrustedHtml(totalKcalEl, `<strong>Łącznie: ${Math.round(kcal)} kcal</strong>${totalEnergyShareHtml}${macroSummaryHtml}`, 'app:totalKcalEl');
-
-    // b) lista jako tabela
-    const rows = items.map((it) => {
-      const metaLines = [];
-      if (it.analysis && it.analysis.macroLine) {
-        metaLines.push(`<div class="food-total-item-meta">${macroPracticeEscapeHtml(it.analysis.macroLine)}</div>`);
-      }
-      if (it.foodGroup === 'meals' && it.analysis && it.analysis.macroNote) {
-        metaLines.push(`<div class="food-total-item-note">${macroPracticeEscapeHtml(it.analysis.macroNote)}</div>`);
-      }
-      if (it.analysis && it.analysis.showAsWarning && it.analysis.warningLine) {
-        const warningClass = it.analysis.warningLevel ? ` food-total-item-note--${it.analysis.warningLevel}` : '';
-        metaLines.push(`<div class="food-total-item-note${warningClass}">${macroPracticeEscapeHtml(it.analysis.warningLine)}</div>`);
-      } else if (it.analysis && it.analysis.coverageLine) {
-        metaLines.push(`<div class="food-total-item-note">${macroPracticeEscapeHtml(it.analysis.coverageLine)}</div>`);
-      }
-      return `<tr><td><div class="food-total-item-name">${macroPracticeEscapeHtml(it.name)}</div>${metaLines.join('')}</td><td>${Math.round(it.kcal)} kcal</td></tr>`;
-    }).join('');
-    vildaAppSetTrustedHtml(totalListEl,
-        `<table class="kcal-table kcal-table--macro">
-           <tr><th>Produkt</th><th>kcal</th></tr>
-           ${rows}
-         </table>`,
-        'app:food-total-list');
-
-    foodTotalSection.style.display = 'block';
-  } else if (hasFoodTotalDom) {
-    foodTotalSection.style.display = 'none';
-    vildaAppClearHtml(totalKcalEl);
-    vildaAppClearHtml(totalListEl);
+function vildaUpdatePrepGetElement(id) {
+  try {
+    return document.getElementById(id);
+  } catch (error) {
+    if (typeof vildaLogAppWarn === 'function') {
+      vildaLogAppWarn('app:update-prep', 'Nie udało się pobrać elementu DOM.', error, { id });
+    }
+    return null;
   }
+}
 
-  const results   = resultsEl;
-  const timesCard = document.getElementById('timesCard'); // pozostawiony dla kompatybilności; nie jest używany w nowej karcie
-  const timesDiv  = document.getElementById('foodTimes');
-  const foodTimesSection = document.getElementById('foodTimesSection');
-  const bmrInfo   = document.getElementById('bmrInfo');
-  const toNormCard = document.getElementById('toNormCard');
-  const toNormInfo = document.getElementById('toNormInfo');
-  if (toNormInfo) vildaAppClearHtml(toNormInfo);
-  if (toNormCard) toNormCard.style.display = 'none';
+function vildaUpdatePrepIsMainCalculatorPage() {
+  return !!(vildaUpdatePrepGetElement('bmrInfo') || vildaUpdatePrepGetElement('toNormInfo'));
+}
 
-  // --- NOWE: zabezpiecz przełącznik Palczewska / OLAF / WHO przed skasowaniem ---
-  const dataSourceToggle = document.getElementById('dataToggleContainer');
-  if (dataSourceToggle && bmrInfo && dataSourceToggle.parentElement === bmrInfo) {
-    // Jeżeli przełącznik siedzi teraz wewnątrz bmrInfo, przenieś go tymczasowo
-    // tuż za ten kontener – dzięki temu wyczyszczenie zawartości bmrInfo go nie usunie.
-    bmrInfo.insertAdjacentElement('afterend', dataSourceToggle);
+function vildaUpdatePrepReadAge() {
+  try {
+    if (typeof getAgeDecimal === 'function') {
+      const age = Number(getAgeDecimal());
+      return Number.isFinite(age) ? age : 0;
+    }
+  } catch (error) {
+    if (typeof vildaLogAppWarn === 'function') {
+      vildaLogAppWarn('app:update-prep', 'Nie udało się odczytać wieku przez getAgeDecimal().', error);
+    }
   }
-  // --- NOWE: zabezpiecz przyciski generowania siatek centylowych przed skasowaniem ---
-const centileButtons = document.getElementById('centileButtons');
-if (centileButtons && bmrInfo && centileButtons.parentElement === bmrInfo) {
-  bmrInfo.insertAdjacentElement('afterend', centileButtons);
+  const yearsEl = vildaUpdatePrepGetElement('age');
+  const monthsEl = vildaUpdatePrepGetElement('ageMonths');
+  const years = vildaUpdatePrepReadNumber(yearsEl);
+  const months = vildaUpdatePrepReadNumber(monthsEl);
+  return years + (months / 12);
+}
+
+function vildaUpdatePrepHasPrevMeasurement() {
+  try {
+    const wrap = vildaUpdatePrepGetElement('prevSummaryWrap');
+    const card = vildaUpdatePrepGetElement('prevSummaryCard');
+    return !!((card && card.dataset && card.dataset.loaded === 'true') ||
+              (wrap && wrap.dataset && wrap.dataset.loaded === 'true'));
+  } catch (error) {
+    if (typeof vildaLogAppWarn === 'function') {
+      vildaLogAppWarn('app:update-prep', 'Nie udało się odczytać stanu poprzedniego pomiaru.', error);
+    }
+    return false;
+  }
+}
+
+function vildaUpdatePrepReadMainInputs() {
+  const mainCalculatorDomPresent = vildaUpdatePrepIsMainCalculatorPage();
+  const weightEl = vildaUpdatePrepGetElement('weight');
+  const heightEl = vildaUpdatePrepGetElement('height');
+  const sexEl = vildaUpdatePrepGetElement('sex');
+  const weight = vildaUpdatePrepReadNumber(weightEl);
+  const height = vildaUpdatePrepReadNumber(heightEl);
+  const age = mainCalculatorDomPresent ? vildaUpdatePrepReadAge() : 0;
+  const sex = sexEl && sexEl.value ? sexEl.value : 'M';
+  const missingRequiredElements = [];
+  if (!weightEl) missingRequiredElements.push('weight');
+  if (!heightEl) missingRequiredElements.push('height');
+  if (!sexEl) missingRequiredElements.push('sex');
+  const elements = {
+    weightEl,
+    heightEl,
+    sexEl,
+    ageEl: vildaUpdatePrepGetElement('age'),
+    ageMonthsEl: vildaUpdatePrepGetElement('ageMonths'),
+    errorBox: vildaUpdatePrepGetElement('errorBox'),
+    results: vildaUpdatePrepGetElement('results'),
+    planCard: vildaUpdatePrepGetElement('planCard'),
+    planResults: vildaUpdatePrepGetElement('planResults'),
+    foodRowsSection: vildaUpdatePrepGetElement('foodRowsSection'),
+    foodTotalSection: vildaUpdatePrepGetElement('foodTotalSection'),
+    foodTotalKcal: vildaUpdatePrepGetElement('foodTotalKcal'),
+    foodTotalList: vildaUpdatePrepGetElement('foodTotalList'),
+    foodTimes: vildaUpdatePrepGetElement('foodTimes'),
+    foodTimesSection: vildaUpdatePrepGetElement('foodTimesSection'),
+    timesCard: vildaUpdatePrepGetElement('timesCard'),
+    bmrInfo: vildaUpdatePrepGetElement('bmrInfo'),
+    toNormCard: vildaUpdatePrepGetElement('toNormCard'),
+    toNormInfo: vildaUpdatePrepGetElement('toNormInfo'),
+    sourceFieldset: vildaUpdatePrepGetElement('sourceFieldset'),
+    compareInstruction: vildaUpdatePrepGetElement('compareInstruction'),
+    dietCalorieInfo: vildaUpdatePrepGetElement('dietCalorieInfo'),
+    planWarning: vildaUpdatePrepGetElement('planWarning'),
+    childConsultCard: vildaUpdatePrepGetElement('childConsultCard')
+  };
+  return {
+    version: VILDA_UPDATE_PREP_VERSION,
+    mainCalculatorDomPresent,
+    hasRequiredDom: missingRequiredElements.length === 0,
+    missingRequiredElements,
+    elements,
+    values: { age, weight, height, sex },
+    flags: {
+      hasCompleteAnthro: age !== 0 && weight !== 0 && height !== 0,
+      bmiReady: weight > 0 && height > 0,
+      bmrReady: weight > 0 && height > 0 && age > 0,
+      hasPrevMeasurement: vildaUpdatePrepHasPrevMeasurement(),
+      hasFoodSummaryDom: !!(elements.foodTotalSection && elements.foodTotalKcal && elements.foodTotalList),
+      hasFoodBurnDom: !!(elements.foodTimes && elements.foodTimesSection),
+      hasMainResultDom: !!(elements.results && elements.bmrInfo),
+      hasPlanDom: !!(elements.planCard && elements.planResults)
+    }
+  };
+}
+
+function vildaUpdatePrepValidateMainInputs(inputState) {
+  const values = (inputState && inputState.values) || {};
+  const age = Number(values.age) || 0;
+  const weight = Number(values.weight) || 0;
+  const height = Number(values.height) || 0;
+  const errors = [];
+  if (age !== 0 && (age < 0.25 || age > 130)) {
+    errors.push('Wiek poza zakresem (0.25–130 lat)');
+  }
+  if (weight !== 0 && (weight < 1 || weight > 500)) {
+    errors.push('Waga poza zakresem (1–500 kg)');
+  }
+  if (height !== 0 && (height < 40 || height > 250)) {
+    errors.push('Wzrost poza zakresem (40–250 cm)');
+  }
+  return {
+    errors,
+    hasErrors: errors.length > 0,
+    hasCompleteAnthro: age !== 0 && weight !== 0 && height !== 0,
+    bmiReady: weight > 0 && height > 0,
+    bmrReady: weight > 0 && height > 0 && age > 0,
+    hasPrevMeasurement: !!(inputState && inputState.flags && inputState.flags.hasPrevMeasurement),
+    stopReason: errors.length ? 'range-errors' : ((age === 0 || weight === 0 || height === 0) ? 'incomplete-anthro' : null)
+  };
+}
+
+function vildaUpdatePrepCreateContext(initialInputState) {
+  const inputState = initialInputState || vildaUpdatePrepReadMainInputs();
+  const validation = vildaUpdatePrepValidateMainInputs(inputState);
+  const nowMs = vildaUpdatePrepNow();
+  return {
+    version: VILDA_UPDATE_PREP_VERSION,
+    runId: ++vildaUpdatePrepRunCounter,
+    startedAt: new Date().toISOString(),
+    startedAtMs: nowMs,
+    endedAt: null,
+    durationMs: null,
+    status: 'started',
+    stopReason: null,
+    inputState,
+    validation,
+    sections: {},
+    notes: []
+  };
+}
+
+function vildaUpdatePrepMarkSection(context, sectionId, phase, meta) {
+  if (!context || !sectionId) return context;
+  const phaseName = phase || 'mark';
+  const timeMs = vildaUpdatePrepNow();
+  if (!context.sections[sectionId]) {
+    context.sections[sectionId] = { id: sectionId, starts: [], ends: [], marks: [] };
+  }
+  const section = context.sections[sectionId];
+  const entry = { phase: phaseName, timeMs, meta: meta || null };
+  if (phaseName === 'start') section.starts.push(entry);
+  else if (phaseName === 'end') section.ends.push(entry);
+  else section.marks.push(entry);
+  return context;
+}
+
+function vildaUpdatePrepAddNote(context, message, meta) {
+  if (!context || !message) return context;
+  context.notes.push({ message: String(message), meta: meta || null, timeMs: vildaUpdatePrepNow() });
+  return context;
+}
+
+function vildaUpdatePrepFinishRun(context, status, meta) {
+  if (!context) return null;
+  context.status = status || context.status || 'completed';
+  context.stopReason = meta && meta.stopReason ? meta.stopReason : context.stopReason;
+  context.endedAt = new Date().toISOString();
+  context.durationMs = Math.max(0, vildaUpdatePrepNow() - context.startedAtMs);
+  if (meta) context.finishMeta = meta;
+  vildaUpdatePrepLastRun = vildaUpdatePrepClonePlain(context, 6);
+  return context;
+}
+
+function vildaUpdatePrepGetLastRun() {
+  return vildaUpdatePrepClonePlain(vildaUpdatePrepLastRun, 6);
+}
+
+function vildaUpdatePrepGetDiagnostics() {
+  const inputState = vildaUpdatePrepReadMainInputs();
+  return {
+    version: VILDA_UPDATE_PREP_VERSION,
+    sections: vildaUpdatePrepGetSectionMap(),
+    orchestratorMap: vildaUpdatePrepGetOrchestratorMap(),
+    publicAliases: vildaUpdatePrepGetPublicAliasMap(),
+    refactorPlan: vildaUpdatePrepGetRefactorPlan(),
+    inputState,
+    validation: vildaUpdatePrepValidateMainInputs(inputState),
+    lastRun: vildaUpdatePrepGetLastRun()
+  };
+}
+
+function vildaUpdatePrepRunOptionalHook(context, sectionId, hookName, fn) {
+  if (typeof fn !== 'function') return null;
+  try {
+    vildaUpdatePrepMarkSection(context, sectionId || 'optional-modules', 'start', { hookName });
+    const result = fn();
+    vildaUpdatePrepMarkSection(context, sectionId || 'optional-modules', 'end', { hookName });
+    return result;
+  } catch (error) {
+    vildaUpdatePrepMarkSection(context, sectionId || 'optional-modules', 'error', { hookName, message: error && error.message ? error.message : String(error) });
+    if (typeof vildaLogAppWarn === 'function') {
+      vildaLogAppWarn('app:update-prep', 'Błąd opcjonalnego hooka update().', error, { hookName, sectionId });
+    }
+    return null;
+  }
 }
 
 
-  if (timesDiv) vildaAppClearHtml(timesDiv);
-  if (bmrInfo) vildaAppClearHtml(bmrInfo);
-  if (typeof window.clearNutritionNormsCard === 'function') {
-    try { window.clearNutritionNormsCard(); } catch (_) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', _, { line: 21494 });
+/* ========================================================================== 
+ * Krok 7B: guardy strony i obsługa walidacji wejściowej update()
+ *
+ * Te helpery wydzielają z update() warunki zatrzymania i komunikaty wejściowe.
+ * Nie zmieniają obliczeń ani kolejności dalszych sekcji; porządkują jedynie
+ * decyzję: kontynuować, delegować do Klirensu albo przerwać przed obliczeniami.
+ * ========================================================================== */
+function vildaUpdatePrepHandleEntryGuard(context, updateFn, thisArg, argsLike) {
+  vildaUpdatePrepMarkSection(context, 'entry-guards', 'start');
+  const inputState = context && context.inputState ? context.inputState : vildaUpdatePrepReadMainInputs();
+  if (!inputState.mainCalculatorDomPresent) {
+    vildaUpdatePrepFinishRun(context, 'delegated-or-skipped', { stopReason: 'not-main-calculator-page' });
+    if (typeof window !== 'undefined' && typeof window.clcrUpdate === 'function' && window.clcrUpdate !== updateFn) {
+      return {
+        shouldContinue: false,
+        delegated: true,
+        stopReason: 'not-main-calculator-page',
+        result: window.clcrUpdate.apply(thisArg, argsLike || [])
+      };
     }
+    return { shouldContinue: false, delegated: false, stopReason: 'not-main-calculator-page', result: undefined };
   }
-  }
-  if (results) results.style.display   = 'none';
-  if (foodTimesSection) foodTimesSection.style.display = 'none';
-
-  // -----------------------------------------------------------------
-  // Reset and prepare elements related to Weight‑for‑Length/Height (WFL)
-  // Karta WFL (wflCard) jest wyświetlana wyłącznie u dzieci w wieku <5 lat.
-  // Na początku każdej aktualizacji ukrywamy ją i czyścimy zawartość,
-  // a także ukrywamy przypomnienia AAP dla BMI i wskaźnika Cole'a.
-  const wflCardEl         = document.getElementById('wflCard');
-  const wflInfoEl         = document.getElementById('wflInfo');
-  const wflExplanationEl  = document.getElementById('wflExplanation');
-  const wflNormTableEl    = document.getElementById('wflNormTable');
-  const wflReminderBMIEl  = document.getElementById('wflReminderBMI');
-  const wflReminderColeEl = document.getElementById('wflReminderCole');
-  if (wflCardEl) {
-    wflCardEl.style.display = 'none';
-  }
-  if (wflInfoEl) {
-    vildaAppClearHtml(wflInfoEl);
-  }
-  if (wflExplanationEl) {
-    wflExplanationEl.textContent = '';
-  }
-  if (wflNormTableEl) {
-    vildaAppClearHtml(wflNormTableEl);
-    wflNormTableEl.style.display = 'none';
-  }
-  if (wflReminderBMIEl) {
-    wflReminderBMIEl.style.display = 'none';
-    wflReminderBMIEl.textContent = '';
-  }
-  if (wflReminderColeEl) {
-    wflReminderColeEl.style.display = 'none';
-    wflReminderColeEl.textContent = '';
-  }
-
-  /* ---------- BMI i BMR ---------- */
-  if(bmiReady){
-    const bmi      = BMI(weight,height);
-    // Zmieniamy separator dziesiętny na przecinek dla tekstowej reprezentacji BMI
-    const bmiText  = bmi.toFixed(1).replace('.', ',');
-    /** Powierzchnia ciała (Body Surface Area) – wzór Haycocka */
-    function BSA_Haycock(weight, height){     // weight kg, height cm
-    return 0.024265 * Math.pow(weight, 0.5378) *
-                     Math.pow(height, 0.3964);      // wynik m²
-    }
-
-    const months = Math.round(age*12);
-    let bmiCat;
-    if(age >= CHILD_AGE_MIN && age <= CHILD_AGE_MAX){
-      bmiCat = bmiCategoryChild(bmi, sex, months);
-    }else{
-      bmiCat = bmiCategory(bmi);
-    }
-
-    let bmiPercentile = null;
-    if(age >= CHILD_AGE_MIN && age <= CHILD_AGE_MAX){
-      // Oblicz percentyl BMI w zależności od wybranego źródła danych.
-      // Jeśli używamy Palczewskiej – korzystamy z jej siatek centylowych dla całego zakresu wiekowego.
-      // W przypadku OLAF dla wieku <3 lat – również używamy Palczewskiej (brak siatek OLAF dla niemowląt).
-      // W pozostałych przypadkach (WHO oraz OLAF ≥3 lat) wyliczamy percentyl przez LMS (bmiPercentileChild()).
-      if (typeof bmiSource !== 'undefined' && bmiSource === 'PALCZEWSKA') {
-        bmiPercentile = bmiPercentileChildPal(bmi, sex, months);
-      } else if (typeof bmiSource !== 'undefined' && bmiSource === 'OLAF' && months < 36) {
-        // OLAF z brakiem niemowlęcej siatki – użyj Palczewskiej
-        bmiPercentile = bmiPercentileChildPal(bmi, sex, months);
-        if (bmiPercentile == null) {
-          // Fallback do LMS WHO/OLAF w przypadku braku danych Palczewskiej
-          bmiPercentile = bmiPercentileChild(bmi, sex, months);
-        }
-      } else {
-        // WHO oraz OLAF (≥3 lata) – LMS
-        bmiPercentile = bmiPercentileChild(bmi, sex, months);
-      }
-      // Wyznacz kategorię BMI na podstawie percentyla z odpowiednimi progami:
-      // - dla <3 lat zawsze używamy progów WHO, niezależnie od wyboru suwaka
-      // - dla ≥3 lat progów OLAF (Polska) używamy, gdy wybrane źródło to OLAF lub Palczewska
-      if (bmiPercentile !== null){
-        const useOlafClass = (typeof bmiSource !== 'undefined' && (bmiSource === 'OLAF' || bmiSource === 'PALCZEWSKA') && age >= OLAF_DATA_MIN_AGE);
-        const normalHiClass = useOlafClass ? CHILD_THRESH_OLAF.NORMAL_HI : CHILD_THRESH_WHO.NORMAL_HI;
-        const obesityClass  = useOlafClass ? CHILD_THRESH_OLAF.OBESE     : CHILD_THRESH_WHO.OBESE;
-        // Nie nadpisuj kategorii 'Otyłość olbrzymia' wyznaczonej na podstawie z‑score.
-        // Jeśli bmiCat ma inną wartość, nadpisz ją na podstawie percentyli.
-        if (bmiCat !== 'Otyłość olbrzymia') {
-          // Niedowaga poniżej 5. centyla
-          if (bmiPercentile < 5) {
-            bmiCat = 'Niedowaga';
-          // Prawidłowe BMI pomiędzy 5 a górną granicą normy
-          } else if (bmiPercentile < normalHiClass) {
-            bmiCat = 'Prawidłowe';
-          // Nadwaga poniżej progu otyłości
-          } else if (bmiPercentile < obesityClass) {
-            bmiCat = 'Nadwaga';
-          // Otyłość olbrzymia – percentyl ≥99,9 (≈3 SD)
-          } else if (bmiPercentile >= 99.9) {
-            bmiCat = 'Otyłość olbrzymia';
-          // Otyłość (obesity threshold ≤ percentyl < 99,9)
-          } else {
-            bmiCat = 'Otyłość';
-          }
-        }
-      } else {
-        // Jeśli percentyl jest niedostępny, skorzystaj z klasyfikacji dla dorosłych
-        bmiCat = bmiCategory(bmi);
-      }
-    }
-    let percText = '';
-    if (bmiPercentile !== null) {
-    percText = ` – ${formatCentile(bmiPercentile)} centyl`;
-    }
-    /* >>> DODAJ TO: zapisz percentyl BMI dziecka do globalnej zmiennej dla WHR <<< */
-    window.bmiPercentileValue = (age >= CHILD_AGE_MIN && age <= CHILD_AGE_MAX) ? bmiPercentile : null;
-
-    // BMI ostrzeżenie dla nadwagi i otyłości u dzieci – będzie wstawione do karty BMI
-    // Inicjalizuj zmienną ostrzeżenia przed jego obliczeniem, aby zachować ustawioną wartość
-    let bmiWarningHtml = '';
-    let anorexiaNote = '';
-    // Ustaw BMI ostrzeżenie: nadwaga/otyłość/otyłość olbrzymia u dzieci oraz stopniowana otyłość u dorosłych
-    if (age >= CHILD_AGE_MIN && age <= CHILD_AGE_MAX && bmiPercentile !== null) {
-      // Przygotuj ostrzeżenia dla dzieci. Dla dzieci <3 l. stosujemy progi WHO niezależnie od suwaka „Polska”.
-      const useOlafWarn = (typeof bmiSource !== 'undefined' && (bmiSource === 'OLAF' || bmiSource === 'PALCZEWSKA') && age >= OLAF_DATA_MIN_AGE);
-      const normalHi = useOlafWarn ? CHILD_THRESH_OLAF.NORMAL_HI : CHILD_THRESH_WHO.NORMAL_HI;
-      const obesity  = useOlafWarn ? CHILD_THRESH_OLAF.OBESE     : CHILD_THRESH_WHO.OBESE;
-      const monthsWarn = Math.round(age * 12);
-      const zscoreWarn = bmiZscore(bmi, sex, monthsWarn);
-      if (zscoreWarn != null && zscoreWarn >= 3) {
-        // Otyłość olbrzymia – pilna konsultacja
-        bmiWarningHtml = `<div class="centile-warning">⚠ Otyłość olbrzymia – pilna konsultacja lekarska. <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">Umów wizytę</a></div>`;
-      } else if (bmiPercentile >= obesity) {
-        // Otyłość – konsultacja z endokrynologiem dziecięcym
-        bmiWarningHtml = `<div class="centile-warning">⚠ Otyłość – skonsultuj dziecko z&nbsp;endokrynologiem dziecięcym. <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">Umów wizytę</a></div>`;
-      } else if (bmiPercentile >= normalHi) {
-        // Nadwaga – konsultacja dietetyczna (kolor ciemnopomarańczowy)
-        bmiWarningHtml = `<div class="centile-warning" style="color:#c75d00;">⚠ Nadwaga – zalecana konsultacja dietetyczna. <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">Umów wizytę</a></div>`;
-      }
-    } else if (age >= 18) {
-      // Ostrzeżenia BMI dla dorosłych: stopniowane według WHO
-      if (bmi >= 40) {
-        bmiWarningHtml = `<div class="centile-warning"><strong>⚠ Otyłość III stopnia.</strong> Pilna konsultacja lekarska!!</div>`;
-      } else if (bmi >= 35) {
-        bmiWarningHtml = `<div class="centile-warning"><strong>⚠ Otyłość II stopnia.</strong> Zalecana konsultacja lekarska!</div>`;
-      } else if (bmi >= 30) {
-        bmiWarningHtml = `<div class="centile-warning"><strong>⚠ Otyłość I stopnia.</strong> Zalecana konsultacja lekarska.</div>`;
-      } else if (bmi >= 25) {
-        bmiWarningHtml = `<div class="centile-warning" style="color:#c75d00;"><strong>⚠ Nadwaga.</strong> Zalecana konsultacja dietetyczna.</div>`;
-      } else if (bmi >= 24) {
-        // BMI w górnej granicy normy – delikatne ostrzeżenie
-        bmiWarningHtml = `<div class="centile-warning" style="color:#c75d00;">BMI mieści się jeszcze w normie, jednak zbliża się do jej górnej granicy. Warto rozważyć modyfikację nawyków żywieniowych i stylu życia.</div>`;
-      }
-    }
-  if (!professionalMode && age >= 18 && bmi < ADULT_BMI.UNDER) {
-  const sev = anorexiaSeverityAdult(bmi);
-  const consult = anorexiaConsultRecommendation(bmi);
-  if (sev) anorexiaNote += `<br><small style="color:var(--danger)">${sev}</small>`;
-  if (consult) anorexiaNote += `<br><small style="color:var(--danger);font-weight:600">${consult}</small>`;
+  vildaUpdatePrepMarkSection(context, 'entry-guards', 'end');
+  return { shouldContinue: true, delegated: false, stopReason: null, result: undefined };
 }
-let html = '';      // Zaczynamy od pustego stringu
-/* ===== KARTA CENTYLI WAGA / WZROST (3‑18 l.) ===== */
-if (age <= 18) {
-  // Przygotuj struktury centylowe dla dzieci i młodzieży do 18 roku życia.
-  // Zależnie od wieku (<3 lata) i wybranego źródła danych (Palczewska/OLAF vs WHO)
-  // obliczamy centyle i odchylenia standardowe z odpowiednich zbiorów.
-  let statsW, statsH;
-  let w3, w97, h3, h97;
-  const months = Math.round(age * 12);
-  /*
-   * Wybierz odpowiednie źródło do obliczania centyli wagi i wzrostu:
-   * – Jeśli użytkownik wybrał Palczewską (bmiSource === 'PALCZEWSKA'), użyj rozszerzonych danych Palczewskiej
-   *   dla całego zakresu 0–18 lat.
-   * – Jeżeli źródło to OLAF, ale wiek < 3 lat (OLAF_DATA_MIN_AGE), również korzystaj z danych Palczewskiej,
-   *   ponieważ OLAF nie obejmuje niemowląt.
-   * – We wszystkich pozostałych sytuacjach (WHO niemowlęta oraz OLAF/WHO dla starszych dzieci) używamy
-   *   funkcji LMS (calcPercentileStats), które automatycznie dobierają WHO lub OLAF zgodnie z ustawieniem
-   *   suwaka i dostępnością danych.
-   */
-  const usePal = (typeof bmiSource !== 'undefined' &&
-                  (bmiSource === 'PALCZEWSKA' ||
-                   (bmiSource === 'OLAF' && age < OLAF_DATA_MIN_AGE)));
-  if (usePal) {
-    // Skorzystaj z danych Palczewskiej dla wagi i wzrostu
-    // Wyłącz flagę fallbacku, aby nie wyświetlać komunikatu o OLAF przy przejściu z WHO na Palczewską
-    // Kiedy wybieramy dane Palczewskiej, korzystamy z niezależnego zestawu LMS,
-    // więc poprzednia flaga fallbacku (której używa WHO/OLAF) nie powinna się propagować.
-    weightUsedFallback = false;
-    statsW = calcPercentileStatsPal(weight, sex, age, 'WT');
-    statsH = calcPercentileStatsPal(height, sex, age, 'HT');
-    if (statsW && statsH) {
-      // Oblicz wartości graniczne 3. i 97. centyla z danych Palczewskiej
-      w3  = getPalCentile(sex, months, 3, 'WT');
-      w97 = getPalCentile(sex, months, 97, 'WT');
-      h3  = getPalCentile(sex, months, 3, 'HT');
-      h97 = getPalCentile(sex, months, 97, 'HT');
+
+function vildaUpdatePrepHandleMissingRequiredDom(context) {
+  const inputState = context && context.inputState ? context.inputState : null;
+  if (!inputState || inputState.hasRequiredDom) return { shouldContinue: true, stopReason: null };
+  if (typeof vildaLogAppWarn === 'function') {
+    vildaLogAppWarn('app:update-guard', 'Brak wymaganych elementów DOM dla głównego update().', null, { missing: inputState.missingRequiredElements });
+  }
+  vildaUpdatePrepFinishRun(context, 'stopped', { stopReason: 'missing-required-dom', missing: inputState.missingRequiredElements });
+  return { shouldContinue: false, stopReason: 'missing-required-dom', missing: inputState.missingRequiredElements };
+}
+
+function vildaUpdatePrepBuildInputUiState(context) {
+  const elements = context && context.inputState && context.inputState.elements ? context.inputState.elements : {};
+  return {
+    snackFieldset: elements.foodRowsSection || null,
+    mealFieldset: elements.foodRowsSection || null,
+    errorBox: elements.errorBox || null,
+    resultsEl: elements.results || null,
+    planCardEl: elements.planCard || null,
+    planResultsEl: elements.planResults || null
+  };
+}
+
+function vildaUpdatePrepClearInputError(uiState) {
+  const errorBox = uiState && uiState.errorBox;
+  if (!errorBox) return;
+  vildaAppClearHtml(errorBox);
+  errorBox.style.display = 'none';
+}
+
+function vildaUpdatePrepShowInputError(uiState, html, contextName) {
+  const errorBox = uiState && uiState.errorBox;
+  if (!errorBox) return;
+  vildaAppSetTrustedHtml(errorBox, html || '', contextName || 'app:errorBox');
+  errorBox.style.display = 'block';
+}
+
+function vildaUpdatePrepKeepFoodRowsVisible(uiState) {
+  if (uiState && uiState.snackFieldset) uiState.snackFieldset.style.display = 'block';
+  if (uiState && uiState.mealFieldset) uiState.mealFieldset.style.display = 'block';
+}
+
+function vildaUpdatePrepHideMainResultCards(uiState) {
+  if (uiState && uiState.resultsEl) uiState.resultsEl.style.display = 'none';
+  if (uiState && uiState.planCardEl) uiState.planCardEl.style.display = 'none';
+}
+
+function vildaUpdatePrepRefreshDoctorPosition() {
+  if (typeof repositionDoctor === 'function') {
+    repositionDoctor();
+  }
+}
+
+function vildaUpdatePrepHandleIncompleteAnthro(context, uiState) {
+  vildaUpdatePrepHideMainResultCards(uiState);
+  vildaUpdatePrepKeepFoodRowsVisible(uiState);
+  const hasPrevMeasurement = !!(context && context.validation && context.validation.hasPrevMeasurement);
+  if (!hasPrevMeasurement) {
+    vildaUpdatePrepShowInputError(uiState, 'Podaj jednocześnie wiek, wagę i wzrost aby natychmiast zobaczyć wyniki', 'app:errorBox');
+  } else {
+    vildaUpdatePrepClearInputError(uiState);
+  }
+  vildaUpdatePrepRefreshDoctorPosition();
+  vildaUpdatePrepFinishRun(context, 'stopped', { stopReason: 'incomplete-anthro' });
+  return { shouldContinue: false, stopReason: 'incomplete-anthro', uiState };
+}
+
+function vildaUpdatePrepHandleRangeErrors(context, uiState) {
+  const errors = (context && context.validation && context.validation.errors) || [];
+  vildaUpdatePrepShowInputError(uiState, errors.join('<br>'), 'app:errorBox');
+  vildaUpdatePrepHideMainResultCards(uiState);
+  vildaUpdatePrepRefreshDoctorPosition();
+  vildaUpdatePrepFinishRun(context, 'stopped', { stopReason: 'range-errors', errors });
+  return { shouldContinue: false, stopReason: 'range-errors', errors, uiState };
+}
+
+function vildaUpdatePrepHandleInputValidation(context) {
+  const uiState = vildaUpdatePrepBuildInputUiState(context);
+  vildaUpdatePrepClearInputError(uiState);
+  vildaUpdatePrepMarkSection(context, 'validation', 'start');
+  vildaUpdatePrepKeepFoodRowsVisible(uiState);
+  const validation = context && context.validation ? context.validation : { errors: [], hasCompleteAnthro: false };
+  if (!validation.hasCompleteAnthro) {
+    return vildaUpdatePrepHandleIncompleteAnthro(context, uiState);
+  }
+  if (validation.errors && validation.errors.length > 0) {
+    return vildaUpdatePrepHandleRangeErrors(context, uiState);
+  }
+  vildaUpdatePrepMarkSection(context, 'validation', 'end', { errorsCount: 0 });
+  return { shouldContinue: true, stopReason: null, uiState };
+}
+
+function vildaUpdatePrepUpdateFoodSummary(context, options = {}) {
+  const inputState = context && context.inputState ? context.inputState : null;
+  vildaUpdatePrepMarkSection(context, 'food-summary', 'start');
+  const result = macroPracticeUpdateFoodSummary(Object.assign({}, options, {
+    inputState,
+    renderBurn: false
+  }));
+  vildaUpdatePrepMarkSection(context, 'food-summary', 'food-total-rendered', {
+    kcal: result.kcal,
+    itemCount: result.itemCount,
+    itemsWithMacrosCount: result.itemsWithMacrosCount,
+    hasFoodTotalDom: result.hasFoodTotalDom
+  });
+  return result;
+}
+
+function vildaUpdatePrepUpdateFoodBurnSummary(context, foodSummaryState, options = {}) {
+  const inputState = context && context.inputState ? context.inputState : null;
+  const elements = options.elements || macroPracticeGetFoodSummaryElements(inputState);
+  const result = macroPracticeRenderFoodBurnSummary(foodSummaryState, elements, options);
+  const burnRows = result && result.foodBurnState && Array.isArray(result.foodBurnState.rows)
+    ? result.foodBurnState.rows.length
+    : 0;
+  vildaUpdatePrepMarkSection(context, 'food-summary', 'end', {
+    kcal: foodSummaryState && foodSummaryState.kcal,
+    itemCount: foodSummaryState && foodSummaryState.itemCount,
+    burnRows
+  });
+  return result;
+}
+
+
+/* ========================================================================== 
+ * Krok 7D: stan i render podstawowej sekcji BMI/BMR
+ *
+ * Ten blok wydziela podstawowe obliczenia BMI, klasyfikację dorosłych/dzieci,
+ * ostrzeżenia BMI oraz render samej karty BMI. Metryki pediatryczne typu WFL,
+ * Cole, WHR i rozbudowane z-score pozostają w update() do kolejnych kroków.
+ * ========================================================================== */
+function vildaUpdatePrepBsaHaycock(weight, height) {
+  return 0.024265 * Math.pow(weight, 0.5378) * Math.pow(height, 0.3964);
+}
+
+function vildaUpdatePrepResolveProfessionalMode() {
+  try {
+    const toggleEl = document.getElementById('resultsModeToggle');
+    if (toggleEl) return !!toggleEl.checked;
+    if (typeof window !== 'undefined' && typeof window.professionalMode !== 'undefined') {
+      return !!window.professionalMode;
+    }
+    if (typeof professionalMode !== 'undefined') {
+      return !!professionalMode;
+    }
+  } catch (error) {
+    if (typeof vildaLogAppWarn === 'function') {
+      vildaLogAppWarn('app:update-bmi-bmr', 'Nie udało się odczytać trybu profesjonalnego.', error);
+    }
+  }
+  try {
+    return typeof professionalMode !== 'undefined' ? !!professionalMode : false;
+  } catch (error) {
+    if (typeof vildaLogAppWarn === 'function') {
+      vildaLogAppWarn('app:update-bmi-bmr', 'Nie udało się użyć fallbacku professionalMode.', error);
+    }
+    return false;
+  }
+}
+
+function vildaUpdatePrepComputeBmiPercentile(params) {
+  const bmi = params.bmi;
+  const sex = params.sex;
+  const age = params.age;
+  const months = params.months;
+  if (!(age >= CHILD_AGE_MIN && age <= CHILD_AGE_MAX)) return null;
+  let percentile = null;
+  if (typeof bmiSource !== 'undefined' && bmiSource === 'PALCZEWSKA') {
+    percentile = bmiPercentileChildPal(bmi, sex, months);
+  } else if (typeof bmiSource !== 'undefined' && bmiSource === 'OLAF' && months < 36) {
+    percentile = bmiPercentileChildPal(bmi, sex, months);
+    if (percentile == null) {
+      percentile = bmiPercentileChild(bmi, sex, months);
     }
   } else {
-    // w pozostałych przypadkach (WHO/OLAF dla starszych dzieci) używamy funkcji LMS
-    statsW = calcPercentileStats(weight, sex, age, 'WT');
-    statsH = calcPercentileStats(height, sex, age, 'HT');
-    if (statsW && statsH) {
-      const lmsW = getChildLMS(sex, age, 'WT');
-      if (lmsW) {
-        w3  = (lmsW[0] !== 0)
-               ? lmsW[1] * Math.pow(1 + lmsW[0] * lmsW[2] * Z3, 1 / lmsW[0])
-               : lmsW[1] * Math.exp(lmsW[2] * Z3);
-        w97 = (lmsW[0] !== 0)
-               ? lmsW[1] * Math.pow(1 + lmsW[0] * lmsW[2] * Z97, 1 / lmsW[0])
-               : lmsW[1] * Math.exp(lmsW[2] * Z97);
+    percentile = bmiPercentileChild(bmi, sex, months);
+  }
+  return percentile;
+}
+
+function vildaUpdatePrepClassifyBmi(params) {
+  const bmi = params.bmi;
+  const sex = params.sex;
+  const age = params.age;
+  const months = params.months;
+  const bmiPercentile = params.bmiPercentile;
+  let category;
+  if (age >= CHILD_AGE_MIN && age <= CHILD_AGE_MAX) {
+    category = bmiCategoryChild(bmi, sex, months);
+    if (bmiPercentile !== null) {
+      const useOlafClass = (typeof bmiSource !== 'undefined' && (bmiSource === 'OLAF' || bmiSource === 'PALCZEWSKA') && age >= OLAF_DATA_MIN_AGE);
+      const normalHiClass = useOlafClass ? CHILD_THRESH_OLAF.NORMAL_HI : CHILD_THRESH_WHO.NORMAL_HI;
+      const obesityClass  = useOlafClass ? CHILD_THRESH_OLAF.OBESE     : CHILD_THRESH_WHO.OBESE;
+      if (category !== 'Otyłość olbrzymia') {
+        if (bmiPercentile < 5) {
+          category = 'Niedowaga';
+        } else if (bmiPercentile < normalHiClass) {
+          category = 'Prawidłowe';
+        } else if (bmiPercentile < obesityClass) {
+          category = 'Nadwaga';
+        } else if (bmiPercentile >= 99.9) {
+          category = 'Otyłość olbrzymia';
+        } else {
+          category = 'Otyłość';
+        }
       }
-      const lmsH = getChildLMS(sex, age, 'HT');
-      if (lmsH) {
-        h3  = (lmsH[0] !== 0)
-               ? lmsH[1] * Math.pow(1 + lmsH[0] * lmsH[2] * Z3, 1 / lmsH[0])
-               : lmsH[1] * Math.exp(lmsH[2] * Z3);
-        h97 = (lmsH[0] !== 0)
-               ? lmsH[1] * Math.pow(1 + lmsH[0] * lmsH[2] * Z97, 1 / lmsH[0])
-               : lmsH[1] * Math.exp(lmsH[2] * Z97);
+    } else {
+      category = bmiCategory(bmi);
+    }
+  } else {
+    category = bmiCategory(bmi);
+  }
+  return category;
+}
+
+function vildaUpdatePrepBuildBmiWarningHtml(params) {
+  const bmi = params.bmi;
+  const bmiPercentile = params.bmiPercentile;
+  const age = params.age;
+  const months = params.months;
+  const sex = params.sex;
+  let warningHtml = '';
+  if (age >= CHILD_AGE_MIN && age <= CHILD_AGE_MAX && bmiPercentile !== null) {
+    const useOlafWarn = (typeof bmiSource !== 'undefined' && (bmiSource === 'OLAF' || bmiSource === 'PALCZEWSKA') && age >= OLAF_DATA_MIN_AGE);
+    const normalHi = useOlafWarn ? CHILD_THRESH_OLAF.NORMAL_HI : CHILD_THRESH_WHO.NORMAL_HI;
+    const obesity  = useOlafWarn ? CHILD_THRESH_OLAF.OBESE     : CHILD_THRESH_WHO.OBESE;
+    const zscoreWarn = bmiZscore(bmi, sex, months);
+    if (zscoreWarn != null && zscoreWarn >= 3) {
+      warningHtml = `<div class="centile-warning">⚠ Otyłość olbrzymia – pilna konsultacja lekarska. <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">Umów wizytę</a></div>`;
+    } else if (bmiPercentile >= obesity) {
+      warningHtml = `<div class="centile-warning">⚠ Otyłość – skonsultuj dziecko z&nbsp;endokrynologiem dziecięcym. <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">Umów wizytę</a></div>`;
+    } else if (bmiPercentile >= normalHi) {
+      warningHtml = `<div class="centile-warning" style="color:#c75d00;">⚠ Nadwaga – zalecana konsultacja dietetyczna. <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">Umów wizytę</a></div>`;
+    }
+  } else if (age >= 18) {
+    if (bmi >= 40) {
+      warningHtml = `<div class="centile-warning"><strong>⚠ Otyłość III stopnia.</strong> Pilna konsultacja lekarska!!</div>`;
+    } else if (bmi >= 35) {
+      warningHtml = `<div class="centile-warning"><strong>⚠ Otyłość II stopnia.</strong> Zalecana konsultacja lekarska!</div>`;
+    } else if (bmi >= 30) {
+      warningHtml = `<div class="centile-warning"><strong>⚠ Otyłość I stopnia.</strong> Zalecana konsultacja lekarska.</div>`;
+    } else if (bmi >= 25) {
+      warningHtml = `<div class="centile-warning" style="color:#c75d00;"><strong>⚠ Nadwaga.</strong> Zalecana konsultacja dietetyczna.</div>`;
+    } else if (bmi >= 24) {
+      warningHtml = `<div class="centile-warning" style="color:#c75d00;">BMI mieści się jeszcze w normie, jednak zbliża się do jej górnej granicy. Warto rozważyć modyfikację nawyków żywieniowych i stylu życia.</div>`;
+    }
+  }
+  return warningHtml;
+}
+
+function vildaUpdatePrepBuildAdultUnderweightNote(params) {
+  const bmi = params.bmi;
+  const age = params.age;
+  const professionalModeActive = params.professionalModeActive;
+  let note = '';
+  if (!professionalModeActive && age >= 18 && bmi < ADULT_BMI.UNDER) {
+    const sev = anorexiaSeverityAdult(bmi);
+    const consult = anorexiaConsultRecommendation(bmi);
+    if (sev) note += `<br><small style="color:var(--danger)">${sev}</small>`;
+    if (consult) note += `<br><small style="color:var(--danger);font-weight:600">${consult}</small>`;
+  }
+  return note;
+}
+
+function vildaUpdatePrepResolveBmiSeverity(params) {
+  const bmiCat = params.bmiCat;
+  const bmiPercentile = params.bmiPercentile;
+  const proActive = params.proActive;
+  if (!proActive || typeof bmiCat !== 'string') return null;
+  const catLower = bmiCat.toLowerCase();
+  if (catLower.includes('otyłość') || catLower.includes('obesity')) return 'danger';
+  if (catLower.includes('nadwaga') || catLower.includes('overweight')) return 'warning';
+  if (catLower.includes('niedowaga') || catLower.includes('underweight')) {
+    if (typeof bmiPercentile === 'number' && !isNaN(bmiPercentile)) {
+      const roundedBmiCent = Math.round(bmiPercentile);
+      if (roundedBmiCent <= 3) return 'danger';
+      if (roundedBmiCent <= 5) return 'warning';
+      return 'warning';
+    }
+    return 'warning';
+  }
+  return null;
+}
+
+function vildaUpdatePrepComputeBmiBmrState(context, options = {}) {
+  const inputState = context && context.inputState ? context.inputState : null;
+  const values = inputState && inputState.values ? inputState.values : {};
+  const age = Number(options.age != null ? options.age : values.age) || 0;
+  const weight = Number(options.weight != null ? options.weight : values.weight) || 0;
+  const height = Number(options.height != null ? options.height : values.height) || 0;
+  const sex = options.sex || values.sex || 'M';
+  const bmiReady = options.bmiReady != null ? !!options.bmiReady : (weight > 0 && height > 0);
+  const bmrReady = options.bmrReady != null ? !!options.bmrReady : (weight > 0 && height > 0 && age > 0);
+  const proActive = vildaUpdatePrepResolveProfessionalMode();
+  const state = {
+    version: VILDA_UPDATE_PREP_VERSION,
+    age,
+    weight,
+    height,
+    sex,
+    bmiReady,
+    bmrReady,
+    proActive,
+    bmi: null,
+    bmiText: '',
+    bmrKcal: null,
+    bmiCat: null,
+    bmiPercentile: null,
+    bmiZVal: null,
+    bmiSeverity: null,
+    bmiWarningHtml: '',
+    anorexiaNote: '',
+    bsaLine: '',
+    boxClass: 'result-box',
+    isAdult: age >= 18,
+    isChildBmiAge: age >= CHILD_AGE_MIN && age <= CHILD_AGE_MAX
+  };
+  if (!bmiReady) {
+    vildaUpdatePrepMarkSection(context, 'bmi-bmr', 'skipped', { reason: 'bmi-not-ready' });
+    return state;
+  }
+  vildaUpdatePrepMarkSection(context, 'bmi-bmr', 'start');
+  const bmi = BMI(weight, height);
+  const months = Math.round(age * 12);
+  const bmiPercentile = vildaUpdatePrepComputeBmiPercentile({ bmi, sex, age, months });
+  const bmiCat = vildaUpdatePrepClassifyBmi({ bmi, sex, age, months, bmiPercentile });
+  const bmiWarningHtml = vildaUpdatePrepBuildBmiWarningHtml({ bmi, bmiPercentile, age, months, sex });
+  const legacyProfessionalMode = (typeof professionalMode !== 'undefined') ? !!professionalMode : proActive;
+  const anorexiaNote = vildaUpdatePrepBuildAdultUnderweightNote({ bmi, age, professionalModeActive: legacyProfessionalMode });
+  const bmiZVal = (age >= CHILD_AGE_MIN && age <= CHILD_AGE_MAX) ? bmiZscore(bmi, sex, months) : null;
+  const bmrKcal = bmrReady ? BMR(weight, height, age, sex) : null;
+  state.bmi = bmi;
+  state.bmiText = bmi.toFixed(1).replace('.', ',');
+  state.bmrKcal = Number.isFinite(bmrKcal) ? bmrKcal : null;
+  state.bmiCat = bmiCat;
+  state.bmiPercentile = bmiPercentile;
+  state.bmiZVal = bmiZVal;
+  state.bmiSeverity = vildaUpdatePrepResolveBmiSeverity({ bmiCat, bmiPercentile, proActive });
+  state.bmiWarningHtml = bmiWarningHtml;
+  state.anorexiaNote = anorexiaNote;
+  if (age > 0 && age < 18 && weight > 0 && height > 0) {
+    const bsa = vildaUpdatePrepBsaHaycock(weight, height).toFixed(2).replace('.', ',');
+    state.bsaLine = `<div class="bsa-info">Pow. ciała: <span class="result-val">${bsa}</span> m²</div>`;
+  }
+  state.boxClass = 'result-box' + bmiBoxClassForAdult(bmiCat, age);
+  vildaUpdatePrepApplyBmiGlobals(state);
+  vildaUpdatePrepMarkSection(context, 'bmi-bmr', 'computed', {
+    bmi: state.bmi,
+    bmrKcal: state.bmrKcal,
+    bmiCat: state.bmiCat,
+    bmiPercentile: state.bmiPercentile,
+    proActive: state.proActive
+  });
+  return state;
+}
+
+function vildaUpdatePrepApplyBmiGlobals(state) {
+  if (!state) return;
+  try {
+    window.bmiPercentileValue = (state.age >= CHILD_AGE_MIN && state.age <= CHILD_AGE_MAX) ? state.bmiPercentile : null;
+    window.lastBmiCategory = state.bmiCat;
+    window.lastBmiPercentile = (typeof state.bmiPercentile === 'number' && !isNaN(state.bmiPercentile)) ? state.bmiPercentile : null;
+  } catch (error) {
+    if (typeof vildaLogAppWarn === 'function') {
+      vildaLogAppWarn('app:update-bmi-bmr', 'Nie udało się zapisać globalnego stanu BMI.', error);
+    }
+  }
+}
+
+function vildaUpdatePrepBuildBmiLine(state) {
+  if (!state || !state.bmiReady) return '';
+  let bmiLine = `<strong>BMI: `;
+  const bmiValueStr = state.bmiText || (state.bmi != null ? state.bmi.toFixed(1).replace('.', ',') : '');
+  if (state.proActive && state.bmiSeverity) {
+    const bmiColor = state.bmiSeverity === 'danger'
+      ? 'var(--danger)'
+      : (state.bmiSeverity === 'warning' ? 'var(--notice-orange)' : '');
+    bmiLine += `<span class="result-val pro-${state.bmiSeverity}" style="color:${bmiColor} !important; -webkit-text-fill-color:${bmiColor} !important;">${bmiValueStr}</span>`;
+  } else {
+    bmiLine += `<span class="result-val">${bmiValueStr}</span>`;
+  }
+  if (state.bmiPercentile !== null) {
+    const bmiPercTxt = formatCentile(state.bmiPercentile);
+    const bmiPercWord = centylWord(bmiPercTxt);
+    if (state.proActive && state.bmiSeverity) {
+      bmiLine += ` <span class="pro-${state.bmiSeverity}">– ${bmiPercTxt} ${bmiPercWord}</span>`;
+    } else {
+      bmiLine += ` – ${bmiPercTxt} ${bmiPercWord}`;
+    }
+  }
+  if (state.bmiZVal !== null && !isNaN(state.bmiZVal) && state.proActive) {
+    bmiLine += ` (Z‑score = ${state.bmiZVal.toFixed(2).replace('.', ',')})`;
+  }
+  const showCatAfterNumber = !(state.age >= 18 && (state.bmiCat === 'Nadwaga' || String(state.bmiCat).startsWith('Otyłość')));
+  if (state.age >= 2 && showCatAfterNumber) {
+    if (state.proActive && state.bmiSeverity) {
+      bmiLine += ` <span class="pro-${state.bmiSeverity}">(${state.bmiCat})</span>`;
+    } else {
+      bmiLine += ` (${state.bmiCat})`;
+    }
+  }
+  bmiLine += `</strong>`;
+  return bmiLine;
+}
+
+function vildaUpdatePrepBuildBmiResultHtml(state) {
+  if (!state || !state.bmiReady) return '';
+  const bmiLine = vildaUpdatePrepBuildBmiLine(state);
+  const bmiWarnSection = (state.age >= 2 && !state.proActive) ? state.bmiWarningHtml : '';
+  return `<div id="bmiResult" class="${state.boxClass}">
+           ${bmiLine}
+           ${state.bsaLine || ''}
+           ${bmiWarnSection}
+           ${state.anorexiaNote || ''}
+         </div>`;
+}
+
+function vildaUpdatePrepRenderBmiBmrResults(context, options = {}) {
+  const state = options.bmiState || vildaUpdatePrepComputeBmiBmrState(context, options);
+  const bmrInfo = options.bmrInfo || (context && context.inputState && context.inputState.elements ? context.inputState.elements.bmrInfo : null);
+  const htmlPrefix = options.htmlPrefix || '';
+  const bmiHtml = vildaUpdatePrepBuildBmiResultHtml(state);
+  const finalHtml = `${htmlPrefix}${bmiHtml}`;
+  if (bmrInfo) {
+    vildaAppSetTrustedHtml(bmrInfo, finalHtml, 'app:bmrInfo');
+  }
+  if (typeof window.renderNutritionNormsCardFromDom === 'function') {
+    try {
+      window.renderNutritionNormsCardFromDom();
+    } catch (error) {
+      if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+        globalThis.vildaLogSwallowedCatch('app.js', error, { context: 'renderNutritionNormsCardFromDom' });
       }
     }
   }
-  // Jeżeli udało się obliczyć oba statystyki (waga i wzrost), generujemy linie wynikowe
-  if (statsW && statsH) {
-    // --- waga ---
-    const wCent = statsW ? formatCentile(statsW.percentile) : null;
-    // Oblicz poziom ostrzeżenia dla percentyla wagi w trybie profesjonalnym.
-    let weightSeverity = null;
-    if (statsW && typeof statsW.percentile === 'number') {
-      const wPerc = statsW.percentile;
-      if (wPerc <= 3 || wPerc >= 97) {
-        weightSeverity = 'danger';
-      } else if ((wPerc > 3 && wPerc < 10) || (wPerc >= 90 && wPerc < 97)) {
-        weightSeverity = 'warning';
+  repositionDataSourceToggle();
+  repositionCentileButtons();
+  try {
+    applyProModePulse(
+      typeof window.lastWeightPercentile  !== 'undefined' ? window.lastWeightPercentile  : null,
+      typeof window.lastHeightPercentile  !== 'undefined' ? window.lastHeightPercentile  : null,
+      typeof window.lastBmiCategory       !== 'undefined' ? window.lastBmiCategory       : null,
+      typeof window.lastBmiPercentile     !== 'undefined' ? window.lastBmiPercentile     : null,
+      professionalMode
+    );
+  } catch (error) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('app.js', error, { context: 'applyProModePulse:bmi-bmr' });
+    }
+  }
+  vildaUpdatePrepMarkSection(context, 'bmi-bmr', 'end', {
+    rendered: !!bmrInfo,
+    hasCentilePrefix: !!htmlPrefix,
+    hasBmiHtml: !!bmiHtml
+  });
+  return { state, html: finalHtml, bmiHtml };
+}
+
+
+
+function vildaUpdatePrepResolveCentileSeverity(percentile, metric) {
+  if (typeof percentile !== 'number' || !isFinite(percentile)) return null;
+  if (metric === 'height') {
+    if (percentile <= 3) return 'danger';
+    if ((percentile > 3 && percentile < 10) || percentile > 97) return 'warning';
+    return null;
+  }
+  if (percentile <= 3 || percentile >= 97) return 'danger';
+  if ((percentile > 3 && percentile < 10) || (percentile >= 90 && percentile < 97)) return 'warning';
+  return null;
+}
+
+function vildaUpdatePrepResolveProClass(severity, professionalModeActive) {
+  if (!professionalModeActive || !severity) return '';
+  return severity === 'danger' ? 'pro-danger' : (severity === 'warning' ? 'pro-warning' : '');
+}
+
+function vildaUpdatePrepComputeLmsBoundary(lms, zValue) {
+  if (!lms || lms.length < 3 || typeof zValue !== 'number') return null;
+  const L = lms[0];
+  const M = lms[1];
+  const S = lms[2];
+  if (![L, M, S].every((value) => typeof value === 'number' && isFinite(value))) return null;
+  return (L !== 0)
+    ? M * Math.pow(1 + L * S * zValue, 1 / L)
+    : M * Math.exp(S * zValue);
+}
+
+function vildaUpdatePrepComputeWeightHeightCentileState(context, options = {}) {
+  const state = {
+    age: Number(options.age),
+    weight: Number(options.weight),
+    height: Number(options.height),
+    sex: options.sex,
+    professionalModeActive: typeof options.professionalModeActive === 'boolean'
+      ? options.professionalModeActive
+      : (typeof professionalMode !== 'undefined' ? !!professionalMode : false),
+    source: (typeof bmiSource !== 'undefined' && bmiSource) ? bmiSource : 'OLAF',
+    months: null,
+    applicable: false,
+    usePal: false,
+    statsW: null,
+    statsH: null,
+    w3: null,
+    w97: null,
+    h3: null,
+    h97: null,
+    weightUsedFallback: false,
+    weightLine: '',
+    heightLine: '',
+    warningHtml: '',
+    html: '',
+    rendered: false
+  };
+  if (!(state.age <= 18 && state.weight > 0 && state.height > 0 && state.sex)) {
+    vildaUpdatePrepMarkSection(context, 'weight-height-centiles', 'skipped', { reason: 'not-applicable' });
+    return state;
+  }
+  state.applicable = true;
+  state.months = Math.round(state.age * 12);
+  vildaUpdatePrepMarkSection(context, 'weight-height-centiles', 'start', {
+    age: state.age,
+    months: state.months,
+    source: state.source
+  });
+  state.usePal = (typeof bmiSource !== 'undefined' &&
+                  (bmiSource === 'PALCZEWSKA' ||
+                   (bmiSource === 'OLAF' && state.age < OLAF_DATA_MIN_AGE)));
+  if (state.usePal) {
+    // Zachowuje dotychczasowe działanie: przy Palczewskiej nie propagujemy
+    // flagi fallbacku OLAF/WHO ustawianej przez getChildLMS().
+    try { weightUsedFallback = false; } catch (error) {
+      if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+        globalThis.vildaLogSwallowedCatch('app.js', error, { context: 'weight-height-centiles:reset-weight-fallback' });
       }
     }
-    let weightLine;
-    if (statsW) {
-      // Dobierz klasę koloru tylko w trybie PRO i gdy istnieje ostrzeżenie
-      let weightClass = '';
-      if (professionalMode) {
-        if (weightSeverity === 'danger') {
-          weightClass = 'pro-danger';
-        } else if (weightSeverity === 'warning') {
-          weightClass = 'pro-warning';
-        }
-      }
-      const weightWord = centylWord(wCent);
-      // Zbuduj podstawowy fragment (percentyl + odmiana słowa)
-      let base = `<span class="result-val${weightClass ? ' ' + weightClass : ''}">${wCent} ${weightWord}</span>`;
-      // W trybie profesjonalnym dodaj Z‑score obok bez kolorowania
-      if (professionalMode) {
-        base += ` (Z‑score = ${statsW.sd.toFixed(2).replace('.', ',')})`;
-      }
-      weightLine = base;
-    } else {
-      weightLine = 'Brak danych';
+    state.statsW = calcPercentileStatsPal(state.weight, state.sex, state.age, 'WT');
+    state.statsH = calcPercentileStatsPal(state.height, state.sex, state.age, 'HT');
+    if (state.statsW && state.statsH) {
+      state.w3  = getPalCentile(state.sex, state.months, 3, 'WT');
+      state.w97 = getPalCentile(state.sex, state.months, 97, 'WT');
+      state.h3  = getPalCentile(state.sex, state.months, 3, 'HT');
+      state.h97 = getPalCentile(state.sex, state.months, 97, 'HT');
     }
-    // komunikaty o braku danych WHO dla starszych dzieci
-    if (!statsW && bmiSource === 'WHO' && age * 12 > 120) {
-      weightLine = 'Brak danych WHO powyżej 10 lat – użyj BMI lub OLAF';
-    }
-    // jeżeli waga pochodzi z OLAF (fallback) dla starszych dzieci
-    if (statsW && weightUsedFallback) {
-      weightLine += ' <em>(użyto OLAF – WHO brak wagi >10 l.)</em>';
-    }
-    // Drugi warunek braku danych WHO dla starszych dzieci
-    if (!statsW && bmiSource === 'WHO' && age * 12 > 120) {
-      weightLine = 'Brak danych WHO powyżej 10 lat – użyj BMI';
-    } else {
-      // Różnice od 3. i 97. centyla wyświetlamy tylko dla skrajnych wartości
-      const roundedWeightCentLine = Math.round(statsW ? statsW.percentile : 0);
-      if (statsW && typeof w3 === 'number' && roundedWeightCentLine <= 2) {
-        weightLine += `, brakuje ${(w3 - weight).toFixed(1).replace('.', ',')} kg do 3 centyla`;
+  } else {
+    state.statsW = calcPercentileStats(state.weight, state.sex, state.age, 'WT');
+    state.statsH = calcPercentileStats(state.height, state.sex, state.age, 'HT');
+    if (state.statsW && state.statsH) {
+      const lmsW = getChildLMS(state.sex, state.age, 'WT');
+      if (lmsW) {
+        state.w3 = vildaUpdatePrepComputeLmsBoundary(lmsW, Z3);
+        state.w97 = vildaUpdatePrepComputeLmsBoundary(lmsW, Z97);
       }
-      if (statsW && typeof w97 === 'number' && statsW.percentile >= 98) {
-        weightLine += `, +${(weight - w97).toFixed(1).replace('.', ',')} kg ponad 97 centyl`;
+      const lmsH = getChildLMS(state.sex, state.age, 'HT');
+      if (lmsH) {
+        state.h3 = vildaUpdatePrepComputeLmsBoundary(lmsH, Z3);
+        state.h97 = vildaUpdatePrepComputeLmsBoundary(lmsH, Z97);
       }
     }
-     // --- wzrost ---
-     const hCent = formatCentile(statsH.percentile);
-     // użyj tego samego zaokrąglenia, które widzi użytkownik (spójność z UI)
-     const roundedHeightCentLine = Math.round(statsH.percentile);
-     // Analogicznie dla wzrostu – dołączamy Z‑score tylko w trybie profesjonalnym
-     // Wyznacz poziom ostrzeżenia dla percentyla wzrostu (danger/warning) w trybie PRO
-     let heightSeverity = null;
-     if (statsH && typeof statsH.percentile === 'number') {
-       const hPerc = statsH.percentile;
-       if (hPerc <= 3) {
-         heightSeverity = 'danger';
-       } else if ((hPerc > 3 && hPerc < 10) || hPerc > 97) {
-         heightSeverity = 'warning';
-       }
-     }
-     let heightClass = '';
-     if (professionalMode) {
-       if (heightSeverity === 'danger') {
-         heightClass = 'pro-danger';
-       } else if (heightSeverity === 'warning') {
-         heightClass = 'pro-warning';
-       }
-     }
-     let heightLine = `<span class="result-val${heightClass ? ' ' + heightClass : ''}">${hCent} ${centylWord(hCent)}</span>`;
-     if (professionalMode) {
-      heightLine += ` (Z‑score = ${statsH.sd.toFixed(2).replace('.', ',')})`;
-     }
-     // pokaż „brakuje … do 3 centyla” również dla całego 2. centyla (SD ≈ −2.0 ➔ ~2.28 centyla, zaokrągla się do 2)
-     if (roundedHeightCentLine <= 2 && typeof h3 === 'number') {
-       heightLine += `, brakuje ${(h3 - height).toFixed(1).replace('.', ',')} cm do 3 centyla`;
-     }
-    if (statsH.percentile >= 98 && typeof h97 === 'number') {
-      heightLine += `, +${(height - h97).toFixed(1).replace('.', ',')} cm ponad 97 centyl`;
+  }
+  try {
+    state.weightUsedFallback = !!weightUsedFallback;
+  } catch (error) {
+    state.weightUsedFallback = false;
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('app.js', error, { context: 'weight-height-centiles:read-weight-fallback' });
     }
-    // --- ostrzeżenia specjalistyczne ---
-    // Dla dzieci poniżej 2 lat nie pokazujemy ostrzeżeń o skrajnych centylach wagi i wzrostu.
-    let warnLines = '';
-    if (typeof age !== 'undefined' && age >= 2 && !professionalMode) {
-      // Używamy ZAOKRĄGLONEGO percentyla (jak w UI), aby „wciągnąć” cały 2. centyl do alertu
-      const roundedHeightCent = Math.round(statsH.percentile);
-      const roundedWeightCent = Math.round(statsW.percentile);
-      // 1) Konsultacja endokrynologiczna: CAŁY 2. centyl i poniżej (rounded < 3)
-      if (roundedHeightCent < PERCENTILE_EXTREME_LOW) {
-        warnLines += `<div class="centile-warning">
+  }
+  if (state.statsW && state.statsH) {
+    state.weightLine = vildaUpdatePrepBuildWeightCentileLine(state);
+    state.heightLine = vildaUpdatePrepBuildHeightCentileLine(state);
+    state.warningHtml = vildaUpdatePrepBuildWeightHeightCentileWarnings(state);
+    state.html = vildaUpdatePrepBuildWeightHeightCentileHtml(state);
+  }
+  vildaUpdatePrepMarkSection(context, 'weight-height-centiles', state.html ? 'computed' : 'no-data', {
+    source: state.source,
+    usePal: state.usePal,
+    weightPercentile: state.statsW ? state.statsW.percentile : null,
+    heightPercentile: state.statsH ? state.statsH.percentile : null,
+    fallback: state.weightUsedFallback
+  });
+  return state;
+}
+
+function vildaUpdatePrepBuildWeightCentileLine(state) {
+  const statsW = state && state.statsW;
+  if (!statsW) {
+    if (state && state.source === 'WHO' && state.age * 12 > 120) {
+      return 'Brak danych WHO powyżej 10 lat – użyj BMI';
+    }
+    return 'Brak danych';
+  }
+  const wCent = formatCentile(statsW.percentile);
+  const weightClass = vildaUpdatePrepResolveProClass(
+    vildaUpdatePrepResolveCentileSeverity(statsW.percentile, 'weight'),
+    state.professionalModeActive
+  );
+  let weightLine = `<span class="result-val${weightClass ? ' ' + weightClass : ''}">${wCent} ${centylWord(wCent)}</span>`;
+  if (state.professionalModeActive) {
+    weightLine += ` (Z‑score = ${statsW.sd.toFixed(2).replace('.', ',')})`;
+  }
+  if (state.weightUsedFallback) {
+    weightLine += ' <em>(użyto OLAF – WHO brak wagi >10 l.)</em>';
+  }
+  const roundedWeightCentLine = Math.round(statsW.percentile);
+  if (typeof state.w3 === 'number' && roundedWeightCentLine <= 2) {
+    weightLine += `, brakuje ${(state.w3 - state.weight).toFixed(1).replace('.', ',')} kg do 3 centyla`;
+  }
+  if (typeof state.w97 === 'number' && statsW.percentile >= 98) {
+    weightLine += `, +${(state.weight - state.w97).toFixed(1).replace('.', ',')} kg ponad 97 centyl`;
+  }
+  return weightLine;
+}
+
+function vildaUpdatePrepBuildHeightCentileLine(state) {
+  const statsH = state && state.statsH;
+  if (!statsH) return 'Brak danych';
+  const hCent = formatCentile(statsH.percentile);
+  const heightClass = vildaUpdatePrepResolveProClass(
+    vildaUpdatePrepResolveCentileSeverity(statsH.percentile, 'height'),
+    state.professionalModeActive
+  );
+  let heightLine = `<span class="result-val${heightClass ? ' ' + heightClass : ''}">${hCent} ${centylWord(hCent)}</span>`;
+  if (state.professionalModeActive) {
+    heightLine += ` (Z‑score = ${statsH.sd.toFixed(2).replace('.', ',')})`;
+  }
+  const roundedHeightCentLine = Math.round(statsH.percentile);
+  if (roundedHeightCentLine <= 2 && typeof state.h3 === 'number') {
+    heightLine += `, brakuje ${(state.h3 - state.height).toFixed(1).replace('.', ',')} cm do 3 centyla`;
+  }
+  if (statsH.percentile >= 98 && typeof state.h97 === 'number') {
+    heightLine += `, +${(state.height - state.h97).toFixed(1).replace('.', ',')} cm ponad 97 centyl`;
+  }
+  return heightLine;
+}
+
+function vildaUpdatePrepBuildWeightHeightCentileWarnings(state) {
+  if (!state || !state.statsW || !state.statsH) return '';
+  if (!(typeof state.age !== 'undefined' && state.age >= 2 && !state.professionalModeActive)) return '';
+  let warnLines = '';
+  const roundedHeightCent = Math.round(state.statsH.percentile);
+  const roundedWeightCent = Math.round(state.statsW.percentile);
+  if (roundedHeightCent < PERCENTILE_EXTREME_LOW) {
+    warnLines += `<div class="centile-warning">
              ⚠ Wzrost poniżej 3 centyla – skonsultuj dziecko z&nbsp;endokrynologiem dziecięcym.
              <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">Umów wizytę</a>
            </div>`;
-      // 2) Monitorowanie: cały 3. centyl do 10. centyla (włącznie) — komunikaty rozłączne
-      } else if (roundedHeightCent >= PERCENTILE_EXTREME_LOW && roundedHeightCent <= 10) {
-        warnLines += `<div class="centile-monitor-warning">
+  } else if (roundedHeightCent >= PERCENTILE_EXTREME_LOW && roundedHeightCent <= 10) {
+    warnLines += `<div class="centile-monitor-warning">
              Regularnie monitoruj wzrastanie dziecka – wzrost w dolnym zakresie normy (3–10&nbsp;centyl).
            </div>`;
-      }
-      // waga < 3 centyla (po zaokrągleniu – spójnie z tym, co widzi użytkownik)
-      if (roundedWeightCent < PERCENTILE_EXTREME_LOW) {
-        warnLines += `<div class="centile-warning">
+  }
+  if (roundedWeightCent < PERCENTILE_EXTREME_LOW) {
+    warnLines += `<div class="centile-warning">
             ⚠ Waga poniżej 3 centyla – skonsultuj dziecko z&nbsp;gastroenterologiem dziecięcym.
             <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">Umów wizytę</a>
           </div>`;
-        } else if (roundedWeightCent >= PERCENTILE_EXTREME_LOW && roundedWeightCent <= 10) {
-             warnLines += `<div class="centile-monitor-warning">
+  } else if (roundedWeightCent >= PERCENTILE_EXTREME_LOW && roundedWeightCent <= 10) {
+    warnLines += `<div class="centile-monitor-warning">
                Regularnie monitoruj masę ciała dziecka – waga w dolnym zakresie normy (3–10&nbsp;centyl).
              </div>`;
-      }
-      // waga > 97 centyla
-      if (statsW && statsW.percentile > PERCENTILE_EXTREME_HIGH) {
-        warnLines += `<div class="centile-warning">
+  }
+  if (state.statsW.percentile > PERCENTILE_EXTREME_HIGH) {
+    warnLines += `<div class="centile-warning">
             ⚠ Waga powyżej 97 centyla – skonsultuj dziecko z&nbsp;endokrynologiem dziecięcym lub dietetykiem.
             <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">Umów wizytę</a>
           </div>`;
-      }
-    }
-    // ostrzeżenie o nadwadze/otylosci przeniesione do karty BMI
-    // (bmiWarningHtml jest ustawiany powyżej i dodawany w sekcji BMI)
-    html += `<div id="whResult" class="result-box result-card animate-in">
-           <strong>Waga: ${weightLine}</strong><br>
-           <strong>Wzrost: ${heightLine}</strong>
-           ${warnLines}
-         </div>`;
-    // Zapamiętaj ostatnie percentyle wagi i wzrostu, aby użyć ich podczas zmiany trybu wyników
-    try {
-      window.lastWeightPercentile = statsW ? statsW.percentile : null;
-      window.lastHeightPercentile = statsH ? statsH.percentile : null;
-    } catch (_) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', _, { line: 21854 });
-    }
   }
+  return warnLines;
+}
+
+function vildaUpdatePrepBuildWeightHeightCentileHtml(state) {
+  if (!state || !state.statsW || !state.statsH) return '';
+  return `<div id="whResult" class="result-box result-card animate-in">
+           <strong>Waga: ${state.weightLine}</strong><br>
+           <strong>Wzrost: ${state.heightLine}</strong>
+           ${state.warningHtml || ''}
+         </div>`;
+}
+
+function vildaUpdatePrepApplyWeightHeightCentileGlobals(state) {
+  if (!state || !state.statsW || !state.statsH) return;
+  try {
+    window.lastWeightPercentile = state.statsW ? state.statsW.percentile : null;
+    window.lastHeightPercentile = state.statsH ? state.statsH.percentile : null;
+  } catch (error) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('app.js', error, { context: 'weight-height-centiles:apply-globals' });
+    }
   }
 }
-/* ===== KONIEC KARTY CENTYLI ===== */
-    let bsaLine = '';
-    if (age > 0 && age < 18 && weight > 0 && height > 0){
-    const bsa = BSA_Haycock(weight, height).toFixed(2).replace('.', ',');
-    bsaLine = `<div class="bsa-info">Pow. ciała: <span class="result-val">${bsa}</span> m²</div>`;
+
+function vildaUpdatePrepRenderWeightHeightCentileCard(context, options = {}) {
+  const state = options.state || vildaUpdatePrepComputeWeightHeightCentileState(context, options);
+  vildaUpdatePrepApplyWeightHeightCentileGlobals(state);
+  vildaUpdatePrepMarkSection(context, 'weight-height-centiles', state && state.html ? 'end' : 'skipped-render', {
+    rendered: !!(state && state.html),
+    weightPercentile: state && state.statsW ? state.statsW.percentile : null,
+    heightPercentile: state && state.statsH ? state.statsH.percentile : null
+  });
+  return {
+    state,
+    html: state && state.html ? state.html : ''
+  };
+}
+
+
+function vildaUpdatePrepGetChildMetricsElements() {
+  return {
+    wflCardEl: vildaUpdatePrepGetElement('wflCard'),
+    wflInfoEl: vildaUpdatePrepGetElement('wflInfo'),
+    wflExplanationEl: vildaUpdatePrepGetElement('wflExplanation'),
+    wflNormTableEl: vildaUpdatePrepGetElement('wflNormTable'),
+    wflReminderBMIEl: vildaUpdatePrepGetElement('wflReminderBMI'),
+    wflReminderColeEl: vildaUpdatePrepGetElement('wflReminderCole'),
+    coleCardEl: vildaUpdatePrepGetElement('coleCard'),
+    coleInfoEl: vildaUpdatePrepGetElement('coleInfo'),
+    coleExplanationEl: vildaUpdatePrepGetElement('coleExplanation'),
+    coleNormTableEl: vildaUpdatePrepGetElement('coleNormTable'),
+    whrCard: vildaUpdatePrepGetElement('whrCard'),
+    whrSuggest: vildaUpdatePrepGetElement('whrSuggest'),
+    whrInfo: vildaUpdatePrepGetElement('whrInfo'),
+    whrInterpret: vildaUpdatePrepGetElement('whrInterpret'),
+    whrChildTable: vildaUpdatePrepGetElement('whrChildTable'),
+    waistEl: vildaUpdatePrepGetElement('waistCm'),
+    hipEl: vildaUpdatePrepGetElement('hipCm')
+  };
+}
+
+function vildaUpdatePrepResetWflElements(elements) {
+  if (!elements) return;
+  if (elements.wflCardEl) elements.wflCardEl.style.display = 'none';
+  if (elements.wflInfoEl) vildaAppClearHtml(elements.wflInfoEl);
+  if (elements.wflExplanationEl) elements.wflExplanationEl.textContent = '';
+  if (elements.wflNormTableEl) {
+    vildaAppClearHtml(elements.wflNormTableEl);
+    elements.wflNormTableEl.style.display = 'none';
+  }
+  if (elements.wflReminderBMIEl) {
+    elements.wflReminderBMIEl.style.display = 'none';
+    elements.wflReminderBMIEl.textContent = '';
+  }
+  if (elements.wflReminderColeEl) {
+    elements.wflReminderColeEl.style.display = 'none';
+    elements.wflReminderColeEl.textContent = '';
+  }
+}
+
+function vildaUpdatePrepResetColeElements(elements) {
+  if (!elements) return;
+  if (elements.coleCardEl && elements.coleInfoEl && elements.coleExplanationEl) {
+    elements.coleCardEl.style.display = 'none';
+    vildaAppClearHtml(elements.coleInfoEl);
+    elements.coleInfoEl.classList.remove('bmi-warning', 'bmi-danger', 'result-card', 'animate-in', '--pulse');
+    clearPulse(elements.coleInfoEl);
+    elements.coleExplanationEl.textContent = '';
+  }
+  if (elements.coleNormTableEl) {
+    vildaAppClearHtml(elements.coleNormTableEl);
+    elements.coleNormTableEl.style.display = 'none';
+  }
+  if (typeof window !== 'undefined') {
+    window.coleCatValue = null;
+    window.colePercentValue = null;
+  }
+}
+
+function vildaUpdatePrepComputeWflState(options = {}) {
+  const age = Number(options.age) || 0;
+  const weight = Number(options.weight) || 0;
+  const height = Number(options.height) || 0;
+  const sex = options.sex || 'M';
+  const state = {
+    rendered: false,
+    eligible: age > 0 && age <= 2 && weight > 0 && height > 0,
+    zScore: null,
+    percentile: null,
+    centileText: '',
+    comment: '',
+    warning: false,
+    html: ''
+  };
+  if (!state.eligible) return state;
+  const zWfl = computeWflZScore(weight, height, sex);
+  if (zWfl === null || isNaN(zWfl)) return state;
+  const wflPercentile = normalCDF(zWfl) * 100;
+  const wflCentTxt = formatCentile(wflPercentile);
+  let wflComment = '';
+  let wflWarning = false;
+  if (zWfl < -2) {
+    wflComment = 'Niedowaga';
+    wflWarning = true;
+  } else if (zWfl >= -2 && zWfl <= 2) {
+    wflComment = 'W normie';
+  } else if (zWfl > 2 && zWfl <= 3) {
+    wflComment = 'Nadwaga';
+    wflWarning = true;
+  } else if (zWfl > 3) {
+    wflComment = 'Otyłość';
+    wflWarning = true;
+  }
+  const wflValueHtml = `<strong>Z‑score: <span class="result-val">${zWfl.toFixed(2).replace('.', ',')}</span></strong>`;
+  const wflPercentHtml = `<strong>Centyl: <span class="result-val">${wflCentTxt}</span></strong>`;
+  const commentHtml = wflComment
+    ? (wflWarning ? ` <span class="centile-warning" style="font-size:1.4rem">${wflComment}</span>` : ` <span>${wflComment}</span>`)
+    : '';
+  let wflSection = `${wflValueHtml}<br>${wflPercentHtml}`;
+  if (commentHtml) wflSection += `<br>${commentHtml}`;
+  if (wflWarning && !options.professionalModeActive) {
+    let consultMsg = '';
+    if (wflComment === 'Niedowaga') {
+      consultMsg = `<div class="centile-warning">⚠ Niedowaga – skonsultuj dziecko z&nbsp;gastroenterologiem dziecięcym. <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">Umów wizytę</a></div>`;
+    } else if (wflComment === 'Nadwaga') {
+      consultMsg = `<div class="centile-warning">⚠ Nadwaga – zalecana konsultacja z&nbsp;pediatrą. <a href="https://vildaclinic.pl/pediatria" target="_blank" rel="noopener noreferrer">Umów wizytę</a></div>`;
+    } else if (wflComment === 'Otyłość') {
+      consultMsg = `<div class="centile-warning">⚠ Otyłość – skonsultuj dziecko z&nbsp;endokrynologiem dziecięcym. <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">Umów wizytę</a></div>`;
     }
-    // Zbuduj sekcję BMI/BMR z uwzględnieniem wieku.
-    // W trybie profesjonalnym kolorujemy wartość BMI, percentyl BMI oraz etykietę kategorii.
-    // Dla dzieci <2 lat nie pokazujemy klasyfikacji (Niedowaga/Nadwaga/Otyłość) ani komunikatu o konsultacji –
-    // zalecenia przeniesiono do karty WFL.
-    let bmiLine = `<strong>BMI: `;
-    // Ustal, czy w trybie profesjonalnym (PRO) kolorować wyniki.  Odczytujemy
-    // bezpośrednio z elementu #resultsModeToggle, jeśli istnieje, lub korzystamy
-    // z window.professionalMode jako zapasowego źródła.  Dzięki temu logika
-    // kolorowania opiera się na aktualnym stanie suwaka niezależnie od
-    // domknięć (closures) w update().
-    let proActive = false;
-    try {
-      const toggleEl = document.getElementById('resultsModeToggle');
-      if (toggleEl) {
-        proActive = !!toggleEl.checked;
-      } else if (typeof window !== 'undefined' && typeof window.professionalMode !== 'undefined') {
-        proActive = !!window.professionalMode;
-      } else {
-        proActive = !!professionalMode;
-      }
-    } catch (_) {
-      // W przypadku błędu zachowaj globalne professionalMode jako zapas
-      proActive = !!professionalMode;
+    if (consultMsg) wflSection += `<br>${consultMsg}`;
+  }
+  state.zScore = zWfl;
+  state.percentile = wflPercentile;
+  state.centileText = wflCentTxt;
+  state.comment = wflComment;
+  state.warning = wflWarning;
+  state.html = wflSection;
+  return state;
+}
+
+function vildaUpdatePrepRenderWflMetrics(context, options = {}, elements) {
+  const els = elements || vildaUpdatePrepGetChildMetricsElements();
+  const state = vildaUpdatePrepComputeWflState(options);
+  if (els.wflCardEl && els.wflInfoEl && els.wflExplanationEl && els.wflNormTableEl && state.html) {
+    vildaAppSetTrustedHtml(els.wflInfoEl, state.html, 'app:wflInfoEl');
+    vildaAppSetTrustedHtml(els.wflExplanationEl, 'Wskaźnik WFL porównuje masę ciała dziecka z medianą masy dla jego długości lub wzrostu (standardy WHO). ' +
+      'Dla dzieci do 2 lat wartości Z‑score powyżej +2 odchylenia standardowego świadczą o nadwadze, a powyżej +3 – otyłości. ' +
+      'Centyl odzwierciedla, jaki odsetek rówieśników ma mniejszą lub równą masę dla danej długości.', 'app:wflExplanationEl');
+    vildaAppSetTrustedHtml(els.wflNormTableEl, '<table style="width:100%;border-collapse:collapse;margin-top:0.6rem;"><tr><th>Zakres Z</th><th>Interpretacja</th></tr>' +
+      '<tr><td>&lt; −2</td><td>Niedowaga</td></tr>' +
+      '<tr><td>−2 – 2</td><td>W normie</td></tr>' +
+      '<tr><td>2 – 3</td><td>Nadwaga</td></tr>' +
+      '<tr><td>&ge; 3</td><td>Otyłość</td></tr></table>', 'app:wflNormTableEl');
+    els.wflNormTableEl.style.display = 'block';
+    els.wflCardEl.style.display = 'block';
+    state.rendered = true;
+  }
+  if (options.age > 0 && options.age <= 2) {
+    const note = 'Amerykańska Akademia Pediatrii zaleca stosowanie wskaźnika waga do długość/wzrostu (WFL) do oceny stanu odżywienia u dzieci młodszych niż 2 lata, natomiast wskaźnika BMI u dzieci starszych.';
+    if (els.wflReminderBMIEl) {
+      els.wflReminderBMIEl.textContent = note;
+      els.wflReminderBMIEl.style.display = 'block';
     }
-    // Ustal poziom ostrzeżenia dla kategorii BMI (PRO mode)
-    let bmiSeverity = null;
-    if (proActive && typeof bmiCat === 'string') {
-      const catLower = bmiCat.toLowerCase();
-      if (catLower.includes('otyłość') || catLower.includes('obesity')) {
-        bmiSeverity = 'danger';
-      } else if (catLower.includes('nadwaga') || catLower.includes('overweight')) {
-        bmiSeverity = 'warning';
-      } else if (catLower.includes('niedowaga') || catLower.includes('underweight')) {
-        // Niedowaga: używamy ZAOKRĄGLONEGO centyla (jak w UI),
-        // aby reguła działała spójnie z tym, co widzi użytkownik.
-        //
-        // BMI ≤ 3 centyla    ➔ danger
-        // BMI (3, 5] centyla ➔ warning
-        if (typeof bmiPercentile === 'number' && !isNaN(bmiPercentile)) {
-          const roundedBmiCent = Math.round(bmiPercentile);
-          if (roundedBmiCent <= 3) {
-            bmiSeverity = 'danger';
-          } else if (roundedBmiCent <= 5) {
-            bmiSeverity = 'warning';
-          } else {
-            // Fallback, gdy centyl jest niespójny z kategorią
-            bmiSeverity = 'warning';
-          }
-        } else {
-          // Brak danych o centylu – traktuj niedowagę jako warning
-          bmiSeverity = 'warning';
-        }
-      }
-    }
-    const bmiValueStr = bmi.toFixed(1).replace('.', ',');
-    // Dodaj wartość BMI z odpowiednią klasą w zależności od trybu PRO.
-    // Ustawiamy kolor inline, aby zapewnić pierwszeństwo nad ogólnymi regułami CSS,
-    // które mogą ustawiać kolor turkusowy dla .result-val.  W ten sposób,
-    // gdy proActive jest włączony i mamy określone bmiSeverity, wynik BMI
-    // zostanie wyróżniony odpowiednim kolorem (ciemnopomarańczowym lub czerwonym)
-    // niezależnie od innych stylów.
-    if (proActive && bmiSeverity) {
-      const bmiColor = bmiSeverity === 'danger'
-        ? 'var(--danger)'
-        : (bmiSeverity === 'warning' ? 'var(--notice-orange)' : '');
-      // Użyj atrybutów color i -webkit-text-fill-color, aby zapewnić nadpisanie
-      // wszystkich stylów (w tym tych pochodzących z motywu iOS/Glass), które
-      // mogą ustawiać tylko -webkit-text-fill-color.  Dzięki !important
-      // wszystkie implementacje (Chromium, WebKit) zastosują właściwy kolor.
-      bmiLine += `<span class="result-val pro-${bmiSeverity}" style="color:${bmiColor} !important; -webkit-text-fill-color:${bmiColor} !important;">${bmiValueStr}</span>`;
-    } else {
-      bmiLine += `<span class="result-val">${bmiValueStr}</span>`;
-    }
-    // Dołącz tekst percentyla BMI (myślnik + liczba + słowo „centyl/centyla”) w odpowiednim kolorze
-    if (bmiPercentile !== null) {
-      const bmiPercTxt = formatCentile(bmiPercentile);
-      const bmiPercWord = centylWord(bmiPercTxt);
-      if (proActive && bmiSeverity) {
-        bmiLine += ` <span class="pro-${bmiSeverity}">– ${bmiPercTxt} ${bmiPercWord}</span>`;
-      } else {
-        bmiLine += ` – ${bmiPercTxt} ${bmiPercWord}`;
-      }
-    }
-    // Dodaj Z‑score BMI w nawiasie (zaokrąglony do dwóch miejsc), jeśli można go obliczyć.
-    const bmiZVal = (typeof age !== 'undefined' && age >= CHILD_AGE_MIN && age <= CHILD_AGE_MAX)
-      ? bmiZscore(bmi, sex, Math.round(age * 12))
-      : null;
-    // W trybie profesjonalnym pokazujemy Z‑score, w standardowym pomijamy tę informację.
-    if (bmiZVal !== null && !isNaN(bmiZVal) && proActive) {
-      bmiLine += ` (Z‑score = ${bmiZVal.toFixed(2).replace('.', ',')})`;
-    }
-    // U dorosłych NIE pokazujemy nawiasu z kategorią dla nadwagi/otyłości.
-    // (u dzieci zachowujemy dotychczasowy wygląd)
-    const showCatAfterNumber =
-      !(age >= 18 && (bmiCat === 'Nadwaga' || String(bmiCat).startsWith('Otyłość')));
-    if (age >= 2 && showCatAfterNumber){
-      // W trybie profesjonalnym kolorujemy etykietę kategorii BMI wraz z nawiasami
-      if (proActive && bmiSeverity) {
-        bmiLine += ` <span class="pro-${bmiSeverity}">(${bmiCat})</span>`;
-      } else {
-        bmiLine += ` (${bmiCat})`;
-      }
-    }
-    bmiLine += `</strong>`;
-    // Ostrzeżenia BMI (nadwaga/otyłość) pokazujemy tylko u dzieci i młodzieży ≥2 lat
-    const bmiWarnSection = (age >= 2 && !proActive) ? bmiWarningHtml : '';
-    const boxClass = 'result-box' + bmiBoxClassForAdult(bmiCat, age);
-    html += `<div id="bmiResult" class="${boxClass}">
-           ${bmiLine}
-           ${bsaLine}
-           ${bmiWarnSection}
-           ${anorexiaNote}
-         </div>`;
-    // Zapamiętaj kategorię BMI oraz percentyl BMI do zastosowania przy nakładkach PRO
-    try {
-      window.lastBmiCategory   = bmiCat;
-      window.lastBmiPercentile = (typeof bmiPercentile === 'number' && !isNaN(bmiPercentile)) ? bmiPercentile : null;
-    } catch (_) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', _, { line: 21982 });
+    if (els.wflReminderColeEl) {
+      els.wflReminderColeEl.textContent = note;
+      els.wflReminderColeEl.style.display = 'block';
     }
   }
-    // Energia została wydzielona do osobnej karty „Normy żywieniowe”.
-    // W sekcji BMI pozostawiamy wyłącznie wyniki centylowe i BMI.
+  vildaUpdatePrepMarkSection(context, 'child-metrics', 'wfl', {
+    rendered: state.rendered,
+    zScore: state.zScore,
+    percentile: state.percentile,
+    comment: state.comment
+  });
+  return state;
+}
 
-    if (bmrInfo) vildaAppSetTrustedHtml(bmrInfo, html, 'app:bmrInfo');
-    if (typeof window.renderNutritionNormsCardFromDom === 'function') {
-      try { window.renderNutritionNormsCardFromDom(); } catch (_) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', _, { line: 21990 });
-    }
+function vildaUpdatePrepResolveColeBmiCategory(age, sex, bmiNow, months) {
+  if (age >= CHILD_AGE_MIN && age <= CHILD_AGE_MAX) {
+    return bmiCategoryChild(bmiNow, sex, months);
   }
-    }
+  return bmiCategory(bmiNow);
+}
 
-    // --- NOWE: przenieś przełącznik Palczewska / OLAF / WHO pomiędzy kartę BMI a BMR ---
-    repositionDataSourceToggle();
-    repositionCentileButtons();
-
-    // Dodaj lub usuń pulsujące nakładki w trybie profesjonalnym na podstawie
-    // ostatnio obliczonych percentyli i kategorii BMI.  Funkcja applyProModePulse
-    // nie wykona żadnych zmian, jeśli tryb PRO jest wyłączony lub brak warunków ostrzegawczych.
-    try {
-      applyProModePulse(
-        typeof window.lastWeightPercentile  !== 'undefined' ? window.lastWeightPercentile  : null,
-        typeof window.lastHeightPercentile  !== 'undefined' ? window.lastHeightPercentile  : null,
-        typeof window.lastBmiCategory       !== 'undefined' ? window.lastBmiCategory       : null,
-        typeof window.lastBmiPercentile     !== 'undefined' ? window.lastBmiPercentile     : null,
-        professionalMode
-      );
-    } catch (_) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', _, { line: 22008 });
-    }
+function vildaUpdatePrepBuildColeExplanation(params) {
+  const isBMINormal = params.isBMINormal;
+  const isColeOver = params.isColeOver;
+  const isBMIOver = params.isBMIOver;
+  const isColeNormal = params.isColeNormal;
+  const isColeUnder = params.isColeUnder;
+  const isBMIUnder = params.isBMIUnder;
+  let expl =
+    'Wskaźnik Cole’a porównuje <em>aktualne BMI</em> dziecka z <em>medianą BMI</em> dla jego wieku i płci (wg wybranego źródła: OLAF/WHO). ' +
+    'Wartość ~100% oznacza BMI zbliżone do mediany; &lt;90% – niedowagę; 90–110% – normę; &gt;110–&lt;120% – nadwagę; ≥120% – otyłość.';
+  if (isColeOver && isBMINormal) {
+    expl =
+      '<p>🔎 <strong>Dlaczego wskaźnik Cole’a wskazuje na nadwagę lub otyłość, mimo że BMI jest jeszcze w normie?</strong></p>' +
+      '<p>Oba wskaźniki są policzone poprawnie. BMI ocenia proporcję masy do wzrostu względem rówieśników (OLAF/WHO), ' +
+      'natomiast wskaźnik Cole’a porównuje BMI do międzynarodowych standardów ryzyka nadwagi/otyłości w dorosłości. ' +
+      'U wysokich dzieci masa względem wieku bywa wyższa niż przeciętnie, choć BMI pozostaje prawidłowe.</p>' +
+      '<p>👉 To sygnał, by przyjrzeć się stylowi życia dziecka (aktywność, żywienie). W razie wątpliwości skonsultuj się z dietetykiem/lekarzem.</p>';
+  } else if (isBMIOver && isColeNormal) {
+    expl =
+      '<p>🔎 <strong>Dlaczego BMI wskazuje na nadwagę lub otyłość, mimo że wskaźnik Cole’a pozostaje w normie?</strong></p>' +
+      '<p>Oba wskaźniki są policzone poprawnie, lecz akcentują różne aspekty. BMI jest wrażliwe na niski wzrost ' +
+      '(przy niskim wzroście ta sama masa daje wyższe BMI), podczas gdy wskaźnik Cole’a porównuje BMI do mediany BMI i może pozostać w normie.</p>' +
+      '<p>👉 Zalecana weryfikacja na siatkach centylowych i konsultacja dietetyczna/lekarza, jeśli BMI przekracza próg nadwagi/otyłości.</p>';
+  } else if (isColeUnder && isBMINormal) {
+    expl =
+      '<p>🔎 <strong>Dlaczego wskaźnik Cole’a sugeruje niedowagę, a BMI jest w normie?</strong></p>' +
+      '<p>To różnica perspektyw: Cole porównuje BMI do mediany BMI; u wyjątkowo szczupłych, ale wysokich dzieci ' +
+      'masa względem wieku może wypadać nisko, przy prawidłowym BMI.</p>';
+  } else if (isBMIUnder && !isColeUnder) {
+    expl =
+      '<p>🔎 <strong>Dlaczego BMI wskazuje niedowagę, a wskaźnik Cole’a nie?</strong></p>' +
+      '<p>Wynika to z różnic metod. BMI silniej akcentuje relację masa/wzrost; Cole porównuje BMI do mediany BMI. ' +
+      'Przy ocenie zawsze kieruj się siatkami BMI-for-age oraz konsultacją kliniczną.</p>';
   }
+  return expl;
+}
 
-    if (results) results.style.display = 'grid';
-    // Po wygenerowaniu wyników zaplanuj płynne przewinięcie do pierwszej
-    // karty wyników (BMI).  Używamy niewielkiego opóźnienia, aby mieć
-    // pewność, że operacje repozycjonowania elementów (np. repositionDoctor)
-    // zakończyły się i wartości getBoundingClientRect będą dokładne.  
-    // Przed przewinięciem sprawdzamy, czy użytkownik nie jest w trakcie
-    // edycji któregoś z pól wiek/waga/wzrost.  Jeśli nadal wpisuje dane,
-    // nie wykonujemy przewijania.  Po sprawdzeniu ustawiamy widok tak,
-    // aby górna krawędź karty BMI była wyrównana z górnym brzegiem okna.
-    setTimeout(() => {
-      try {
-        // Nie przewijaj w trakcie edycji pól: jeśli kursor miga w polu wieku, wagi lub wzrostu,
-        // poczekaj do utraty fokusu.  Zapobiega to skakaniu ekranu podczas wpisywania.
-        const active = document.activeElement;
-        const ageInp    = document.getElementById('age');
-        const weightInp = document.getElementById('weight');
-        const heightInp = document.getElementById('height');
-        if (active === ageInp || active === weightInp || active === heightInp) {
-          return;
-        }
-        const cardEl = document.getElementById('bmiCard');
-        if (cardEl) {
-          // Użyj naszej funkcji scrollToResultsCard(), która zawiera rozbudowane
-          // sprawdzenia (np. aktywny element, pola wyłączone, flaga wyłączająca)
-          // i stosuje powolne, łagodne przewijanie wyrównane do górnego brzegu.
-          scrollToResultsCard();
-        }
-      } catch (err) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', err, { line: 22039 });
-    }
-  }
-    }, 150);
-    // Po wyświetleniu wyników pokaż sekcję źródeł i zastrzeżeń
-    if (typeof sourceFieldset !== 'undefined' && sourceFieldset) {
-      sourceFieldset.style.display = 'block';
-    }
-
-    /* ---------- WFL (Waga do długości/wzrostu) ---------- */
-    // Obliczamy i wyświetlamy wskaźnik WFL tylko u dzieci do 2. roku życia włącznie
-    if (wflCardEl && wflInfoEl && wflExplanationEl && wflNormTableEl && weight > 0 && height > 0) {
-      // wiek ≤ 2 lata – stosujemy siatki WHO weight‑for‑length/height
-      if (age > 0 && age <= 2) {
-        const zWfl = computeWflZScore(weight, height, sex);
-        if (zWfl !== null && !isNaN(zWfl)) {
-          // Calculate percentile from Z‑score using the normal CDF
-          const wflPercentile = normalCDF(zWfl) * 100;
-          const wflCentTxt   = formatCentile(wflPercentile);
-          // Determine interpretation based on Z‑score thresholds
-          let wflComment = '';
-          let wflWarning = false;
-          if (zWfl < -2) {
-            wflComment = 'Niedowaga';
-            wflWarning = true;
-          } else if (zWfl >= -2 && zWfl <= 2) {
-            wflComment = 'W normie';
-          } else if (zWfl > 2 && zWfl <= 3) {
-            wflComment = 'Nadwaga';
-            wflWarning = true;
-          } else if (zWfl > 3) {
-            wflComment = 'Otyłość';
-            wflWarning = true;
-          }
-          // Format results: Z‑score with two decimals and percentile
-          const wflValueHtml  = `<strong>Z‑score: <span class="result-val">${zWfl.toFixed(2).replace('.', ',')}</span></strong>`;
-          const wflPercentHtml = `<strong>Centyl: <span class="result-val">${wflCentTxt}</span></strong>`;
-          const commentHtml = wflComment
-            ? (wflWarning ? ` <span class="centile-warning" style="font-size:1.4rem">${wflComment}</span>` : ` <span>${wflComment}</span>`)
-            : '';
-          // Build WFL section with percentile and interpretation
-          let wflSection = `${wflValueHtml}<br>${wflPercentHtml}`;
-          if (commentHtml) {
-            wflSection += `<br>${commentHtml}`;
-          }
-          // Add consultation messages depending on interpretation
-          if (wflWarning && !professionalMode) {
-            let consultMsg = '';
-            if (wflComment === 'Niedowaga') {
-              consultMsg = `<div class="centile-warning">⚠ Niedowaga – skonsultuj dziecko z&nbsp;gastroenterologiem dziecięcym. <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">Umów wizytę</a></div>`;
-            } else if (wflComment === 'Nadwaga') {
-              consultMsg = `<div class="centile-warning">⚠ Nadwaga – zalecana konsultacja z&nbsp;pediatrą. <a href="https://vildaclinic.pl/pediatria" target="_blank" rel="noopener noreferrer">Umów wizytę</a></div>`;
-            } else if (wflComment === 'Otyłość') {
-              consultMsg = `<div class="centile-warning">⚠ Otyłość – skonsultuj dziecko z&nbsp;endokrynologiem dziecięcym. <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">Umów wizytę</a></div>`;
-            }
-            if (consultMsg) {
-              wflSection += `<br>${consultMsg}`;
-            }
-          }
-          vildaAppSetTrustedHtml(wflInfoEl, wflSection, 'app:wflInfoEl');
-          // Explanation text: mention both Z‑score and percentiles
-          vildaAppSetTrustedHtml(wflExplanationEl, 'Wskaźnik WFL porównuje masę ciała dziecka z medianą masy dla jego długości lub wzrostu (standardy WHO). ' +
-            'Dla dzieci do 2 lat wartości Z‑score powyżej +2 odchylenia standardowego świadczą o nadwadze, a powyżej +3 – otyłości. ' +
-            'Centyl odzwierciedla, jaki odsetek rówieśników ma mniejszą lub równą masę dla danej długości.', 'app:wflExplanationEl');
-          // Simple reference table for Z‑score interpretation
-          vildaAppSetTrustedHtml(wflNormTableEl, '<table style="width:100%;border-collapse:collapse;margin-top:0.6rem;"><tr><th>Zakres Z</th><th>Interpretacja</th></tr>' +
-            '<tr><td>&lt; −2</td><td>Niedowaga</td></tr>' +
-            '<tr><td>−2 – 2</td><td>W normie</td></tr>' +
-            '<tr><td>2 – 3</td><td>Nadwaga</td></tr>' +
-            '<tr><td>&ge; 3</td><td>Otyłość</td></tr></table>', 'app:wflNormTableEl');
-          wflNormTableEl.style.display = 'block';
-          // Show the WFL card
-          wflCardEl.style.display = 'block';
-        }
-      }
-    }
-    // Pokazuj adnotacje AAP dla BMI/Cole’a jeśli wiek ≤ 2 lata
-    if (age > 0 && age <= 2) {
-      const note = 'Amerykańska Akademia Pediatrii zaleca stosowanie wskaźnika waga do długość/wzrostu (WFL) do oceny stanu odżywienia u dzieci młodszych niż 2 lata, natomiast wskaźnika BMI u dzieci starszych.';
-      if (wflReminderBMIEl) {
-        wflReminderBMIEl.textContent = note;
-        wflReminderBMIEl.style.display = 'block';
-      }
-      if (wflReminderColeEl) {
-        wflReminderColeEl.textContent = note;
-        wflReminderColeEl.style.display = 'block';
-      }
-    }
-      /* ---------- COLE INDEX (Wskaźnik Cole'a) ---------- */
-      // Reset i obliczenie wskaźnika Cole’a (dzieci/młodzież)
-      const coleCardEl = document.getElementById('coleCard');
-      const coleInfoEl = document.getElementById('coleInfo');
-      const coleExplanationEl = document.getElementById('coleExplanation');
-      const coleNormTableEl = document.getElementById('coleNormTable');
-
-      if (coleCardEl && coleInfoEl && coleExplanationEl) {
-        // ukryj kartę i wyczyść
-        coleCardEl.style.display = 'none';
-        vildaAppClearHtml(coleInfoEl);
-        // wyczyść ew. poprzednie klasy i pulsowanie
-        coleInfoEl.classList.remove('bmi-warning', 'bmi-danger', 'result-card', 'animate-in', '--pulse');
-        clearPulse(coleInfoEl);
-        coleExplanationEl.textContent = '';
-      if (coleNormTableEl) {
-        vildaAppClearHtml(coleNormTableEl);
-        coleNormTableEl.style.display = 'none';
-      }
-      if (typeof window !== 'undefined') {
-        window.coleCatValue = null;
-        window.colePercentValue = null;
-      }
-
+function vildaUpdatePrepComputeColeState(options = {}) {
+  const age = Number(options.age) || 0;
+  const weight = Number(options.weight) || 0;
+  const height = Number(options.height) || 0;
+  const sex = options.sex || 'M';
   const isAdultPatient = (typeof patientReportIsAdultAge === 'function')
     ? patientReportIsAdultAge(age)
     : (isFinite(age) && age >= 18);
-
-  // licz tylko, jeśli dane są sensowne i pacjent nie jest dorosły
-  if (age > 0 && !isAdultPatient && weight > 0 && height > 0) {
-    const months = Math.round(age * 12);
-    // LMS dla BMI wg wybranego źródła (OLAF/WHO)
-    const lmsBMI = getLMS(sex, months);
-    if (lmsBMI && lmsBMI[1] > 0) {
-      const medianBMI = lmsBMI[1];         // M = mediana BMI
-      const bmiNow    = BMI(weight, height);
-      const cole      = (bmiNow / medianBMI) * 100;
-
-      // kategoryzacja Cole’a (progi: <90, 90–110, 110–<120, ≥120)
-      let coleCat = 'W normie';
-      if (cole < 90)                         coleCat = 'Niedowaga';
-      else if (cole > 110 && cole < 120)     coleCat = 'Nadwaga';
-      else if (cole >= 120)                  coleCat = 'Otyłość';
-
-      /* >>> NOWE: zapisz wyniki do globalnych dla innych modułów (np. WHR) <<< */
-      window.coleCatValue    = coleCat;
-      window.colePercentValue = cole;
-
-      // Nagłówek karty
-      // Format the Cole index value with a comma as decimal separator
-      vildaAppSetTrustedHtml(coleInfoEl, `<strong>Wskaźnik Cole'a: <span class="result-val">${cole.toFixed(1).replace('.', ',')}%</span></strong>`, 'app:coleInfoEl');
-      // For Cole result, avoid using 'result-card' to ensure pulse animations remain visible.
-      // Other modules (e.g. WHR, advanced growth) rely solely on the .result-box styling,
-      // which works well with our pulse helpers. The 'result-card' class adds an overflow
-      // constraint and different box-shadow that can suppress the pulse ring on some devices.
-      coleInfoEl.classList.add('animate-in', '--pulse');
-        // Kolor + pulsowanie ramki analogiczne do BMI dorosłych
-        coleInfoEl.classList.remove('bmi-warning', 'bmi-danger');
-        clearPulse(coleInfoEl);
-
-        if (coleCat === 'Otyłość') {
-          // czerwony
-          coleInfoEl.classList.add('bmi-danger');
-          applyPulse(coleInfoEl, 'danger');
-        } else if (coleCat === 'Nadwaga' || coleCat === 'Niedowaga') {
-          // ciemnopomarańczowy
-          coleInfoEl.classList.add('bmi-warning');
-          applyPulse(coleInfoEl, 'warning');
-        } else {
-         // W normie – bez pulsowania/koloru ostrzegawczego
-          clearPulse(coleInfoEl);
-        }
-
-      // Tabela norm Cole’a
-      if (coleNormTableEl) {
-        vildaAppSetTrustedHtml(coleNormTableEl, '<table style="margin-top:8px;">' +
-          '<tr><th>Wskaźnik Cole’a (%)</th><th>Interpretacja</th></tr>' +
-          '<tr><td>&lt; 90</td><td>Niedowaga</td></tr>' +
-          '<tr><td>90–110</td><td>W normie</td></tr>' +
-          '<tr><td>&gt; 110–&lt; 120</td><td>Nadwaga</td></tr>' +
-          '<tr><td>&ge; 120</td><td>Otyłość</td></tr>' +
-          '</table>', 'app:coleNormTableEl');
-        coleNormTableEl.style.display = 'block';
-      }
-
-      // Kategoria BMI (dziecko vs dorosły — funkcje masz już w pliku)
-      let bmiCat;
-      if (age >= CHILD_AGE_MIN && age <= CHILD_AGE_MAX) {
-        bmiCat = bmiCategoryChild(bmiNow, sex, months);
-      } else {
-        bmiCat = bmiCategory(bmiNow);
-      }
-      const isBMINormal  = (bmiCat === 'Prawidłowe' || bmiCat === 'W normie');
-      const isColeNormal = (coleCat === 'W normie');
-      // Nadwaga lub dowolny stopień otyłości u osoby
-      const isBMIOver    = (bmiCat === 'Nadwaga' || String(bmiCat).startsWith('Otyłość'));
-      const isColeOver   = (coleCat === 'Nadwaga' || String(coleCat).startsWith('Otyłość'));
-      const isBMIUnder   = (bmiCat === 'Niedowaga');
-      const isColeUnder  = (coleCat === 'Niedowaga');
-
-      // DOMYŚLNE krótkie objaśnienie (gdy brak rozbieżności)
-      let expl =
-        'Wskaźnik Cole’a porównuje <em>aktualne BMI</em> dziecka z <em>medianą BMI</em> dla jego wieku i płci (wg wybranego źródła: OLAF/WHO). ' +
-        'Wartość ~100% oznacza BMI zbliżone do mediany; &lt;90% – niedowagę; 90–110% – normę; &gt;110–&lt;120% – nadwagę; ≥120% – otyłość.';
-
-      // ROZBIEŻNOŚCI – komunikaty kierunkowe
-      if (isColeOver && isBMINormal) {
-        // Scenariusz A: Cole = Nadwaga/Otyłość, BMI = norma
-        expl =
-          '<p>🔎 <strong>Dlaczego wskaźnik Cole’a wskazuje na nadwagę lub otyłość, mimo że BMI jest jeszcze w normie?</strong></p>' +
-          '<p>Oba wskaźniki są policzone poprawnie. BMI ocenia proporcję masy do wzrostu względem rówieśników (OLAF/WHO), ' +
-          'natomiast wskaźnik Cole’a porównuje BMI do międzynarodowych standardów ryzyka nadwagi/otyłości w dorosłości. ' +
-          'U wysokich dzieci masa względem wieku bywa wyższa niż przeciętnie, choć BMI pozostaje prawidłowe.</p>' +
-          '<p>👉 To sygnał, by przyjrzeć się stylowi życia dziecka (aktywność, żywienie). W razie wątpliwości skonsultuj się z dietetykiem/lekarzem.</p>';
-      } else if (isBMIOver && isColeNormal) {
-        // Scenariusz B: BMI = Nadwaga/Otyłość, Cole = norma
-        expl =
-          '<p>🔎 <strong>Dlaczego BMI wskazuje na nadwagę lub otyłość, mimo że wskaźnik Cole’a pozostaje w normie?</strong></p>' +
-          '<p>Oba wskaźniki są policzone poprawnie, lecz akcentują różne aspekty. BMI jest wrażliwe na niski wzrost ' +
-          '(przy niskim wzroście ta sama masa daje wyższe BMI), podczas gdy wskaźnik Cole’a porównuje BMI do mediany BMI i może pozostać w normie.</p>' +
-          '<p>👉 Zalecana weryfikacja na siatkach centylowych i konsultacja dietetyczna/lekarza, jeśli BMI przekracza próg nadwagi/otyłości.</p>';
-      } else if (isColeUnder && isBMINormal) {
-        // Scenariusz C: Cole = Niedowaga, BMI = norma
-        expl =
-          '<p>🔎 <strong>Dlaczego wskaźnik Cole’a sugeruje niedowagę, a BMI jest w normie?</strong></p>' +
-          '<p>To różnica perspektyw: Cole porównuje BMI do mediany BMI; u wyjątkowo szczupłych, ale wysokich dzieci ' +
-          'masa względem wieku może wypadać nisko, przy prawidłowym BMI.</p>';
-      } else if (isBMIUnder && !isColeUnder) {
-        // Scenariusz D: BMI = Niedowaga, Cole ≠ Niedowaga
-        expl =
-          '<p>🔎 <strong>Dlaczego BMI wskazuje niedowagę, a wskaźnik Cole’a nie?</strong></p>' +
-          '<p>Wynika to z różnic metod. BMI silniej akcentuje relację masa/wzrost; Cole porównuje BMI do mediany BMI. ' +
-          'Przy ocenie zawsze kieruj się siatkami BMI-for-age oraz konsultacją kliniczną.</p>';
-      }
-
-      vildaAppSetTrustedHtml(coleExplanationEl, expl, 'app:coleExplanationEl');
-      coleCardEl.style.display = 'block';
-    }
-  }
+  const state = {
+    rendered: false,
+    eligible: age > 0 && !isAdultPatient && weight > 0 && height > 0,
+    cole: null,
+    coleCat: null,
+    bmiCat: null,
+    explanationHtml: ''
+  };
+  if (!state.eligible) return state;
+  const months = Math.round(age * 12);
+  const lmsBMI = getLMS(sex, months);
+  if (!(lmsBMI && lmsBMI[1] > 0)) return state;
+  const medianBMI = lmsBMI[1];
+  const bmiNow = BMI(weight, height);
+  const cole = (bmiNow / medianBMI) * 100;
+  let coleCat = 'W normie';
+  if (cole < 90) coleCat = 'Niedowaga';
+  else if (cole > 110 && cole < 120) coleCat = 'Nadwaga';
+  else if (cole >= 120) coleCat = 'Otyłość';
+  const bmiCat = vildaUpdatePrepResolveColeBmiCategory(age, sex, bmiNow, months);
+  const isBMINormal = (bmiCat === 'Prawidłowe' || bmiCat === 'W normie');
+  const isColeNormal = (coleCat === 'W normie');
+  const isBMIOver = (bmiCat === 'Nadwaga' || String(bmiCat).startsWith('Otyłość'));
+  const isColeOver = (coleCat === 'Nadwaga' || String(coleCat).startsWith('Otyłość'));
+  const isBMIUnder = (bmiCat === 'Niedowaga');
+  const isColeUnder = (coleCat === 'Niedowaga');
+  state.cole = cole;
+  state.coleCat = coleCat;
+  state.bmiCat = bmiCat;
+  state.explanationHtml = vildaUpdatePrepBuildColeExplanation({
+    isBMINormal,
+    isColeNormal,
+    isBMIOver,
+    isColeOver,
+    isBMIUnder,
+    isColeUnder
+  });
+  return state;
 }
-/* ------------------------------------- */
+
+function vildaUpdatePrepRenderColeMetrics(context, options = {}, elements) {
+  const els = elements || vildaUpdatePrepGetChildMetricsElements();
+  const state = vildaUpdatePrepComputeColeState(options);
+  if (!(els.coleCardEl && els.coleInfoEl && els.coleExplanationEl && state.cole != null)) {
+    vildaUpdatePrepMarkSection(context, 'child-metrics', 'cole-skipped', { eligible: state.eligible });
+    return state;
   }
-  /* ===== WHR – render i sugestie ===== */
-(function renderWHR(){
-  const whrCard       = document.getElementById('whrCard');
-  const whrSuggest    = document.getElementById('whrSuggest');
-  const whrInfo       = document.getElementById('whrInfo');
-  const whrInterpret  = document.getElementById('whrInterpret');
-  const whrChildTable = document.getElementById('whrChildTable');
-  if (!whrCard) return;
+  if (typeof window !== 'undefined') {
+    window.coleCatValue = state.coleCat;
+    window.colePercentValue = state.cole;
+  }
+  vildaAppSetTrustedHtml(els.coleInfoEl, `<strong>Wskaźnik Cole'a: <span class="result-val">${state.cole.toFixed(1).replace('.', ',')}%</span></strong>`, 'app:coleInfoEl');
+  els.coleInfoEl.classList.add('animate-in', '--pulse');
+  els.coleInfoEl.classList.remove('bmi-warning', 'bmi-danger');
+  clearPulse(els.coleInfoEl);
+  if (state.coleCat === 'Otyłość') {
+    els.coleInfoEl.classList.add('bmi-danger');
+    applyPulse(els.coleInfoEl, 'danger');
+  } else if (state.coleCat === 'Nadwaga' || state.coleCat === 'Niedowaga') {
+    els.coleInfoEl.classList.add('bmi-warning');
+    applyPulse(els.coleInfoEl, 'warning');
+  } else {
+    clearPulse(els.coleInfoEl);
+  }
+  if (els.coleNormTableEl) {
+    vildaAppSetTrustedHtml(els.coleNormTableEl, '<table style="margin-top:8px;">' +
+      '<tr><th>Wskaźnik Cole’a (%)</th><th>Interpretacja</th></tr>' +
+      '<tr><td>&lt; 90</td><td>Niedowaga</td></tr>' +
+      '<tr><td>90–110</td><td>W normie</td></tr>' +
+      '<tr><td>&gt; 110–&lt; 120</td><td>Nadwaga</td></tr>' +
+      '<tr><td>&ge; 120</td><td>Otyłość</td></tr>' +
+      '</table>', 'app:coleNormTableEl');
+    els.coleNormTableEl.style.display = 'block';
+  }
+  vildaAppSetTrustedHtml(els.coleExplanationEl, state.explanationHtml, 'app:coleExplanationEl');
+  els.coleCardEl.style.display = 'block';
+  state.rendered = true;
+  vildaUpdatePrepMarkSection(context, 'child-metrics', 'cole', {
+    rendered: true,
+    cole: state.cole,
+    coleCat: state.coleCat,
+    bmiCat: state.bmiCat
+  });
+  return state;
+}
 
-  // Sekcja może być rozwijana przyciskiem – ale kartę trzymamy gotową
-  whrCard.style.display = 'block';
-
-  // Bieżące BMI (dorosły/dziecko)
-  const bmiNow = (weight>0 && height>0) ? BMI(weight, height) : null;
-
-  // >>> Nowy sposób: używamy globalnych wartości ustawionych w sekcjach BMI/Cole
-  const bmiPChild  = (typeof window.bmiPercentileValue === 'number') ? window.bmiPercentileValue : null;
+function vildaUpdatePrepRenderWhrMetrics(context, options = {}, elements) {
+  const els = elements || vildaUpdatePrepGetChildMetricsElements();
+  const state = { rendered: false, suggested: false, whr: null, resultState: null };
+  if (!(els.whrCard && els.whrSuggest && els.whrInfo && els.whrInterpret && els.whrChildTable)) {
+    vildaUpdatePrepMarkSection(context, 'child-metrics', 'whr-skipped', { reason: 'missing-dom' });
+    return state;
+  }
+  if (typeof shouldSuggestWHR !== 'function' || typeof interpretWHR !== 'function') {
+    vildaUpdatePrepMarkSection(context, 'child-metrics', 'whr-skipped', { reason: 'missing-functions' });
+    return state;
+  }
+  const age = Number(options.age) || 0;
+  const weight = Number(options.weight) || 0;
+  const height = Number(options.height) || 0;
+  const sex = options.sex || 'M';
+  els.whrCard.style.display = 'block';
+  const bmiNow = (weight > 0 && height > 0) ? BMI(weight, height) : null;
+  const bmiPChild = (typeof window.bmiPercentileValue === 'number') ? window.bmiPercentileValue : null;
   const coleCatNow = (typeof window.coleCatValue === 'string') ? window.coleCatValue : null;
-
-  // Kiedy zasugerować WHR (dorosły BMI>24; dziecko BMI ≥85 c. lub BMI<85 c. + Cole nadwaga/otyłość)
   const suggest = shouldSuggestWHR(age, sex, bmiNow, bmiPChild, coleCatNow);
-  // Pokazanie lub ukrycie sugestii WHR
-  whrSuggest.style.display = suggest ? 'block' : 'none';
-  // NEW: apply or clear pulse on the suggestion banner
-  clearPulse(whrSuggest);
-  if (suggest) {
-    applyPulse(whrSuggest, 'warning');
-  }
-
-  // Dane wejściowe do WHR
-  const waistEl = document.getElementById('waistCm');
-  const hipEl   = document.getElementById('hipCm');
-  const waistCm = parseFloat(waistEl && waistEl.value) || 0;
-  const hipCm   = parseFloat(hipEl && hipEl.value)   || 0;
-
-  // Gdy użytkownik wprowadził oba pomiary obwodu talii i bioder (co skutkuje
-  // obliczeniem WHR), ukryj sugestię dotyczącą WHR. W ten sposób komunikat
-  // „Sugerujemy ocenę WHR…” znika po pojawieniu się wyniku, zgodnie z
-  // wymaganiami UI. Jeśli pomiary nie są kompletne, zachowujemy wcześniejszą
-  // logikę wyświetlania sugestii (ustaloną powyżej na podstawie funkcji
-  // shouldSuggestWHR).  W przypadku wprowadzenia obu wartości nadpisujemy
-  // widoczność banera i usuwamy animację pulsu.
+  state.suggested = !!suggest;
+  els.whrSuggest.style.display = suggest ? 'block' : 'none';
+  clearPulse(els.whrSuggest);
+  if (suggest) applyPulse(els.whrSuggest, 'warning');
+  const waistCm = parseFloat(els.waistEl && els.waistEl.value) || 0;
+  const hipCm = parseFloat(els.hipEl && els.hipEl.value) || 0;
   if (waistCm > 0 && hipCm > 0) {
-    whrSuggest.style.display = 'none';
-    clearPulse(whrSuggest);
+    els.whrSuggest.style.display = 'none';
+    clearPulse(els.whrSuggest);
   }
-
-  // Brak pomiarów – czyścimy
-  if (!(waistCm>0 && hipCm>0)){
-    whrInfo.style.display       = 'none';
-    whrInterpret.style.display  = 'none';
-    whrChildTable.style.display = 'none';
-    vildaAppClearHtml(whrChildTable);
-    return;
+  if (!(waistCm > 0 && hipCm > 0)) {
+    els.whrInfo.style.display = 'none';
+    els.whrInterpret.style.display = 'none';
+    els.whrChildTable.style.display = 'none';
+    vildaAppClearHtml(els.whrChildTable);
+    vildaUpdatePrepMarkSection(context, 'child-metrics', 'whr-input-missing', { suggested: state.suggested });
+    return state;
   }
-
-  // Interpretacja (u Ciebie: WHO dla 18+, centyle dla 3–18 lat)
   const result = interpretWHR(age, sex, waistCm, hipCm, bmiNow, bmiPChild, coleCatNow);
-  if (!result){
-    whrInfo.style.display       = 'none';
-    whrInterpret.style.display  = 'none';
-    whrChildTable.style.display = 'none';
-    vildaAppClearHtml(whrChildTable);
-    return;
+  if (!result) {
+    els.whrInfo.style.display = 'none';
+    els.whrInterpret.style.display = 'none';
+    els.whrChildTable.style.display = 'none';
+    vildaAppClearHtml(els.whrChildTable);
+    vildaUpdatePrepMarkSection(context, 'child-metrics', 'whr-no-result', { suggested: state.suggested });
+    return state;
   }
-
-  // Render – OPCJA A: wszystko w jednej ramce (#whrInfo)
-  // Przygotuj zawartość pola WHR w zależności od stanu (ok/warn/bad).
   let statusHtml;
   if (result.state === 'ok') {
     statusHtml = `<div class="whr-status ok">${result.interp}${result.note ? `<br><em>${result.note}</em>` : ''}</div>`;
   } else if (result.state === 'warn') {
-    // ostrzeżenie – pomarańczowy tekst, bez wewnętrznej ramki
     statusHtml = `<div class="whr-status warn">${result.interp}</div>`;
   } else {
-    // stan "bad" – czerwony tekst, bez wewnętrznej ramki
     statusHtml = `<div class="whr-status bad">${result.interp}</div>`;
   }
-  // Wstawiamy wynik WHR z dynamicznym statusem do pojedynczej ramki wyników.
-  vildaAppSetTrustedHtml(whrInfo, `
+  vildaAppSetTrustedHtml(els.whrInfo, `
 <div class="whr-result">
   <div class="whr-topline">
     <span class="whr-label">WHR:</span>
@@ -23124,222 +23331,1176 @@ if (age <= 18) {
   </div>
   ${statusHtml}
 </div>`, 'app:whrInfo');
-  whrInfo.style.display = 'block';
-  // Ustaw klasę koloru ramki (#whrInfo) zależnie od stanu wyniku.
-  whrInfo.classList.remove('whr-warning','whr-danger');
+  els.whrInfo.style.display = 'block';
+  els.whrInfo.classList.remove('whr-warning', 'whr-danger');
   if (result.state === 'warn') {
-    whrInfo.classList.add('whr-warning');
+    els.whrInfo.classList.add('whr-warning');
   } else if (result.state !== 'ok') {
-    whrInfo.classList.add('whr-danger');
+    els.whrInfo.classList.add('whr-danger');
   }
-  // Zastosuj pulsowanie na całej ramce wyników (#whrInfo) dla ostrzeżeń i błędnych wyników.
-  clearPulse(whrInfo);
+  clearPulse(els.whrInfo);
   if (result.state === 'warn') {
-    applyPulse(whrInfo, 'warning');
+    applyPulse(els.whrInfo, 'warning');
   } else if (result.state === 'bad') {
-    applyPulse(whrInfo, 'danger');
+    applyPulse(els.whrInfo, 'danger');
   }
-
-// Wszystko jest w ramce wyniku – ukryj dawny akapit interpretacji
-whrInterpret.style.display = 'none';
-vildaAppClearHtml(whrInterpret);
-
-// Tabela (dzieci) bez zmian
-if (result.showTable) {
-vildaAppSetTrustedHtml(whrChildTable, result.tableHtml, 'app:whrChildTable');
-whrChildTable.style.display = 'block';
-} else {
-whrChildTable.style.display = 'none';
-vildaAppClearHtml(whrChildTable);
-}
-})();
-  /* ---------- DROGA DO NORMY BMI ---------- */
-  if (bmiReady) {
-  const bmiCurrent = BMI(weight, height);
-
-  // dorośli z BMI < 18.5 ➔ ukryj kartę
-  if (age >= 18 && bmiCurrent < 18.5) {
-    if (toNormCard) toNormCard.style.display = 'none';
+  els.whrInterpret.style.display = 'none';
+  vildaAppClearHtml(els.whrInterpret);
+  if (result.showTable) {
+    vildaAppSetTrustedHtml(els.whrChildTable, result.tableHtml, 'app:whrChildTable');
+    els.whrChildTable.style.display = 'block';
   } else {
-    const toNorm = distanceToNormalBMI(weight, height, age, sex);
-    if(toNorm) {
-      // Dla dzieci poniżej 5 lat z nadwagą lub otyłością nie wyświetlamy tabeli aktywności.
-      // Zamiast tego podajemy informację o konieczności konsultacji oraz
-      // średniej masie ciała (50. centyl BMI) dla podanego wzrostu i wieku.
-      if (age < 5) {
-        // Oblicz medianowy (50 c) BMI i odpowiadającą masę ciała, jeśli dostępne są dane LMS
-        let medianBMI = null;
-        let medianWeight = null;
-        try {
-          const monthsForMedian = Math.round(age * 12);
-          if (typeof getLMS === 'function') {
-            const lmsArr = getLMS(sex, monthsForMedian);
-            if (Array.isArray(lmsArr) && lmsArr.length >= 2) {
-              medianBMI = lmsArr[1];
-            }
-          }
-        } catch (_) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', _, { line: 22412 });
+    els.whrChildTable.style.display = 'none';
+    vildaAppClearHtml(els.whrChildTable);
+  }
+  state.rendered = true;
+  state.whr = result.whr;
+  state.resultState = result.state;
+  vildaUpdatePrepMarkSection(context, 'child-metrics', 'whr', {
+    rendered: true,
+    whr: result.whr,
+    state: result.state,
+    suggested: state.suggested
+  });
+  return state;
+}
+
+function vildaUpdatePrepUpdateChildMetrics(context, options = {}) {
+  const inputState = context && context.inputState ? context.inputState : null;
+  const values = inputState && inputState.values ? inputState.values : {};
+  const age = Number(options.age != null ? options.age : values.age) || 0;
+  const weight = Number(options.weight != null ? options.weight : values.weight) || 0;
+  const height = Number(options.height != null ? options.height : values.height) || 0;
+  const sex = options.sex || values.sex || 'M';
+  const professionalModeActive = options.professionalModeActive != null
+    ? !!options.professionalModeActive
+    : ((typeof professionalMode !== 'undefined') ? !!professionalMode : vildaUpdatePrepResolveProfessionalMode());
+  vildaUpdatePrepMarkSection(context, 'child-metrics', 'start', { age, weight, height, sex });
+  const elements = vildaUpdatePrepGetChildMetricsElements();
+  vildaUpdatePrepResetWflElements(elements);
+  vildaUpdatePrepResetColeElements(elements);
+  const childOptions = { age, weight, height, sex, professionalModeActive, bmiState: options.bmiState || null };
+  const wfl = vildaUpdatePrepRenderWflMetrics(context, childOptions, elements);
+  const cole = vildaUpdatePrepRenderColeMetrics(context, childOptions, elements);
+  const whr = vildaUpdatePrepRenderWhrMetrics(context, childOptions, elements);
+  const state = { version: VILDA_UPDATE_PREP_VERSION, wfl, cole, whr };
+  vildaUpdatePrepMarkSection(context, 'child-metrics', 'end', {
+    wflRendered: !!(wfl && wfl.rendered),
+    coleRendered: !!(cole && cole.rendered),
+    whrRendered: !!(whr && whr.rendered)
+  });
+  return state;
+}
+
+function vildaUpdatePrepFormatOneDecimal(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return '';
+  return num.toFixed(1).replace('.', ',');
+}
+
+function vildaUpdatePrepGetBmiNormalizationElements(options = {}) {
+  const supplied = options.elements || {};
+  return {
+    toNormCard: supplied.toNormCard || vildaUpdatePrepGetElement('toNormCard'),
+    toNormInfo: supplied.toNormInfo || vildaUpdatePrepGetElement('toNormInfo'),
+    planCard: supplied.planCard || vildaUpdatePrepGetElement('planCard'),
+    planResults: supplied.planResults || vildaUpdatePrepGetElement('planResults'),
+    dietCalorieInfo: supplied.dietCalorieInfo || supplied.dietCalInfo || vildaUpdatePrepGetElement('dietCalorieInfo'),
+    planWarning: supplied.planWarning || supplied.planWarningEl || vildaUpdatePrepGetElement('planWarning'),
+    childConsultCard: supplied.childConsultCard || vildaUpdatePrepGetElement('childConsultCard')
+  };
+}
+
+function vildaUpdatePrepHideElement(element) {
+  if (element) element.style.display = 'none';
+}
+
+function vildaUpdatePrepShowElement(element, displayValue) {
+  if (element) element.style.display = displayValue || 'block';
+}
+
+function vildaUpdatePrepSafeClearPulse(element, moduleName) {
+  if (!element) return;
+  try {
+    if (typeof clearPulse === 'function') clearPulse(element);
+  } catch (error) {
+    if (typeof vildaLogAppWarn === 'function') {
+      vildaLogAppWarn(moduleName || 'app:update-bmi-normalization', 'Nie udało się wyczyścić efektu pulsowania.', error);
     }
   }
-        if (medianBMI && height) {
-          medianWeight = medianBMI * Math.pow(height / CM_TO_M, 2);
-        }
-        const normMessage = medianWeight
-          ? `Przy wzroście ${height.toFixed(1).replace('.', ',')} cm dzieci w tym wieku średnio ważą ok. ${medianWeight.toFixed(1).replace('.', ',')} kg (50 centyl BMI).`
-          : '';
-        if (toNormInfo) vildaAppSetTrustedHtml(toNormInfo, `<div class="result-box">
-  <strong>Musisz zredukować masę o ${toNorm.kgToLose.toFixed(1).replace('.', ',')} kg<br>
+}
+
+function vildaUpdatePrepSafeApplyPulse(element, severity, moduleName) {
+  if (!element) return;
+  try {
+    if (typeof applyPulse === 'function') applyPulse(element, severity);
+  } catch (error) {
+    if (typeof vildaLogAppWarn === 'function') {
+      vildaLogAppWarn(moduleName || 'app:update-bmi-normalization', 'Nie udało się zastosować efektu pulsowania.', error, { severity });
+    }
+  }
+}
+
+function vildaUpdatePrepResetBmiNormalizationUi(context, options = {}) {
+  const elements = vildaUpdatePrepGetBmiNormalizationElements(options);
+  const resetPlan = options.resetPlan !== false;
+  const resetToNorm = options.resetToNorm !== false;
+  vildaUpdatePrepMarkSection(context, 'bmi-normalization', 'mark', {
+    action: 'reset-ui',
+    resetPlan,
+    resetToNorm
+  });
+  if (resetPlan) {
+    vildaUpdatePrepHideElement(elements.planCard);
+    if (elements.planResults) vildaAppClearHtml(elements.planResults);
+    vildaUpdatePrepHideElement(elements.dietCalorieInfo);
+    vildaUpdatePrepHideElement(elements.planWarning);
+    vildaUpdatePrepSafeClearPulse(elements.planWarning, 'app:update-bmi-normalization');
+    vildaUpdatePrepHideElement(elements.childConsultCard);
+  }
+  if (resetToNorm) {
+    if (elements.toNormInfo) vildaAppClearHtml(elements.toNormInfo);
+    vildaUpdatePrepHideElement(elements.toNormCard);
+  }
+  return elements;
+}
+
+function vildaUpdatePrepResolveBmiNormalizationCategory(age, bmi, sex) {
+  if (age >= CHILD_AGE_MIN && age <= CHILD_AGE_MAX) {
+    const months = Math.round(age * 12);
+    return bmiCategoryChild(bmi, sex, months);
+  }
+  return bmiCategory(bmi);
+}
+
+function vildaUpdatePrepComputeMedianBmiWeight(age, height, sex) {
+  const state = { medianBMI: null, medianWeight: null };
+  try {
+    const monthsForMedian = Math.round(age * 12);
+    if (typeof getLMS === 'function') {
+      const lmsArr = getLMS(sex, monthsForMedian);
+      if (Array.isArray(lmsArr) && lmsArr.length >= 2) {
+        state.medianBMI = lmsArr[1];
+      }
+    }
+  } catch (error) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('app.js', error, { section: 'bmi-normalization:median-bmi' });
+    } else if (typeof vildaLogAppWarn === 'function') {
+      vildaLogAppWarn('app:update-bmi-normalization', 'Nie udało się obliczyć medianowego BMI.', error);
+    }
+  }
+  if (state.medianBMI && height) {
+    state.medianWeight = state.medianBMI * Math.pow(height / CM_TO_M, 2);
+  }
+  return state;
+}
+
+function vildaUpdatePrepBuildReductionToNormHtml(options, toNorm) {
+  const age = Number(options.age) || 0;
+  const height = Number(options.height) || 0;
+  const sex = options.sex || 'M';
+  const professionalModeActive = !!options.professionalModeActive;
+  if (age < 5) {
+    const median = vildaUpdatePrepComputeMedianBmiWeight(age, height, sex);
+    const normMessage = median.medianWeight
+      ? `Przy wzroście ${vildaUpdatePrepFormatOneDecimal(height)} cm dzieci w tym wieku średnio ważą ok. ${vildaUpdatePrepFormatOneDecimal(median.medianWeight)} kg (50 centyl BMI).`
+      : '';
+    return `<div class="result-box">
+  <strong>Musisz zredukować masę o ${vildaUpdatePrepFormatOneDecimal(toNorm.kgToLose)} kg<br>
   (ok. ${Math.round(toNorm.kcalToBurn)} kcal)</strong><br>
-  ${professionalMode ? '' : '<span style="color:var(--danger);font-weight:600;">Dziecko poniżej 5 lat z nadwagą lub otyłością wymaga konsultacji z&nbsp;lekarzem lub dietetykiem.</span><br>'}
+  ${professionalModeActive ? '' : '<span style="color:var(--danger);font-weight:600;">Dziecko poniżej 5 lat z nadwagą lub otyłością wymaga konsultacji z&nbsp;lekarzem lub dietetykiem.</span><br>'}
   ${normMessage}
-</div>`, 'app:toNormInfo');
-        if (toNormCard) toNormCard.style.display = 'block';
-      } else {
-        if (toNormInfo) vildaAppSetTrustedHtml(toNormInfo, `<div class="result-box">
-  <strong>Musisz zredukować masę o ${toNorm.kgToLose.toFixed(1).replace('.', ',')} kg<br>
+</div>`;
+  }
+  return `<div class="result-box">
+  <strong>Musisz zredukować masę o ${vildaUpdatePrepFormatOneDecimal(toNorm.kgToLose)} kg<br>
   (ok. ${Math.round(toNorm.kcalToBurn)} kcal)</strong>
   ${toNorm.table}
-</div>`, 'app:toNormInfo');
-        if (toNormCard) toNormCard.style.display = 'block';
-      }
-            // — jeśli Nadwaga lub Otyłość, pokaż Plan odchudzania —
-      const bmiVal = BMI(weight, height);
-      let cat;
-      if (age >= CHILD_AGE_MIN && age <= CHILD_AGE_MAX) {
-        const months = Math.round(age * 12);
-        cat = bmiCategoryChild(bmiVal, sex, months);
-      } else {
-        // dorośli – klasyczny podział BMI
-        cat = bmiCategory(bmiVal);
-      }
-      if (cat === 'Nadwaga' || String(cat).startsWith('Otyłość')) {
-        // Obsługa nadwagi/otyłości z uwzględnieniem wieku dziecka
-        const planCardEl = document.getElementById('planCard');
-        // planWarningEl i childConsultCard zostały zresetowane na początku update()
-        if (professionalMode) {
-          // Tryb profesjonalny: pokaż plan odchudzania bez komunikatów konsultacyjnych
-          if (planCardEl) planCardEl.style.display = 'block';
-          if (planCardEl && planResults && typeof updatePlanFromDiet === 'function') updatePlanFromDiet();
-          if (planWarningEl) {
-            planWarningEl.style.display = 'none';
-            clearPulse(planWarningEl);
-          }
-          if (childConsultCard) childConsultCard.style.display = 'none';
-        } else if (age < 5) {
-          // dzieci <5 lat z nadwagą/otyłością: ukryj plan i pokaż kartę konsultacyjną
-          if (planCardEl) planCardEl.style.display = 'none';
-          if (planWarningEl) {
-            planWarningEl.style.display = 'none';
-            clearPulse(planWarningEl);
-          }
-          if (childConsultCard) {
-            vildaAppSetTrustedHtml(childConsultCard, `<div style="color:var(--danger);font-weight:600;">⚠ Dziecko poniżej 5 lat z nadwagą lub otyłością wymaga konsultacji z&nbsp;endokrynologiem dziecięcym. <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:underline">Umów wizytę</a></div>`, 'app:childConsultCard');
-            childConsultCard.style.display = 'block';
-          }
-        } else {
-          // dzieci ≥5 lat oraz dorośli – pokaż plan i ewentualne ostrzeżenie
-          if (planCardEl) planCardEl.style.display = 'block';
-          if (planCardEl && planResults && typeof updatePlanFromDiet === 'function') updatePlanFromDiet();
-          // ukryj kartę konsultacyjną
-          if (childConsultCard) childConsultCard.style.display = 'none';
-          // dzieci w wieku 5–9 lat: ostrzeżenie w planie
-          if (age < 10) {
-            if (planWarningEl) {
-              vildaAppSetTrustedHtml(planWarningEl, `⚠ Dziecko poniżej&nbsp;10 lat z nadwagą lub otyłością powinno skonsultować się z&nbsp;dietetykiem lub endokrynologiem dziecięcym. Proponowany plan ma charakter poglądowy. <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:underline">Umów wizytę</a>`, 'app:planWarningEl');
-              planWarningEl.style.display = 'block';
-              applyPulse(planWarningEl, 'danger');
-            }
-          } else {
-            if (planWarningEl) {
-              planWarningEl.style.display = 'none';
-              clearPulse(planWarningEl);
-            }
-          }
-        }
-      } else {
-        // BMI nie wskazuje nadwagi/otyłości – ukryj kartę planu i wszystkie komunikaty
-        if (planCardEl) planCardEl.style.display = 'none';
-        if (planWarningEl) {
-          planWarningEl.style.display = 'none';
-          clearPulse(planWarningEl);
-        }
-        if (childConsultCard) childConsultCard.style.display = 'none';
-      }
+</div>`;
+}
 
-    } else {
-  // BMI ≤ górnej granicy normy – sprawdzamy, czy jest to niedowaga
-  const currentBMI = BMI(weight, height);
-  const months     = Math.round(age * 12);
-  const cat        = (age >= CHILD_AGE_MIN && age <= CHILD_AGE_MAX)
-                       ? bmiCategoryChild(currentBMI, sex, months)
-                       : bmiCategory(currentBMI);
-
-  if (cat === 'Niedowaga') {
-  let kgGain = 0;
-  if (age >= CHILD_AGE_MIN && age <= CHILD_AGE_MAX){
-    kgGain = kgToReachNormalBMIChild(weight, height, age, sex);
-  }
+function vildaUpdatePrepBuildUnderweightToNormHtml(options, kgGain) {
+  const age = Number(options.age) || 0;
+  const professionalModeActive = !!options.professionalModeActive;
   const gainMsg = kgGain > 0
-        ? `<br>Brakuje ok. <strong>${kgGain.toFixed(1).replace('.', ',')} kg</strong> do dolnej granicy normy BMI.`
-        : '';
-
-  // Zmień komunikat o niedowadze.  
-  // W trybie profesjonalnym pokazujemy wyłącznie informację liczbową (bez zaleceń).
-  if (professionalMode) {
-    if (toNormInfo) vildaAppSetTrustedHtml(toNormInfo, `<div class="result-box" style="color:var(--primary)">
+    ? `<br>Brakuje ok. <strong>${vildaUpdatePrepFormatOneDecimal(kgGain)} kg</strong> do dolnej granicy normy BMI.`
+    : '';
+  if (professionalModeActive) {
+    return `<div class="result-box" style="color:var(--primary)">
       BMI wskazuje na niedowagę.${gainMsg}
-    </div>`, 'app:toNormInfo');
-  } else if (age < 10) {
-    if (toNormInfo) vildaAppSetTrustedHtml(toNormInfo, `<div class="result-box">
+    </div>`;
+  }
+  if (age < 10) {
+    return `<div class="result-box">
       <div class="centile-warning">⚠ Dziecko poniżej 10 lat z niedowagą wymaga konsultacji z&nbsp;pediatrą lub gastroenterologiem dziecięcym. <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">Umów wizytę</a></div>
       ${gainMsg}
-    </div>`, 'app:toNormInfo');
-  } else {
-    if (toNormInfo) vildaAppSetTrustedHtml(toNormInfo, `
+    </div>`;
+  }
+  return `
     <div class="result-box" style="color:var(--primary)">
       Twoje BMI wskazuje na niedowagę – rozważ zwiększenie kaloryczności diety
       i&nbsp;konsultację z&nbsp;dietetykiem.${gainMsg}
-    </div>`, 'app:toNormInfo');
+    </div>`;
+}
+
+function vildaUpdatePrepRenderReductionPlanUi(context, options = {}, elements, category) {
+  const age = Number(options.age) || 0;
+  const professionalModeActive = !!options.professionalModeActive;
+  const cat = category == null ? '' : String(category);
+  const overweightOrObesity = category === 'Nadwaga' || cat.startsWith('Otyłość');
+  const state = { category, overweightOrObesity, planAction: 'hidden', consultationAction: 'hidden', warningAction: 'hidden' };
+  if (!overweightOrObesity) {
+    vildaUpdatePrepHideElement(elements.planCard);
+    vildaUpdatePrepHideElement(elements.planWarning);
+    vildaUpdatePrepSafeClearPulse(elements.planWarning, 'app:update-bmi-normalization');
+    vildaUpdatePrepHideElement(elements.childConsultCard);
+    return state;
   }
-} else {
-    // BMI w normie – rozróżnij dorosłych z BMI zbliżającym się do górnej granicy
-    if (age >= 18 && currentBMI >= 24 && currentBMI < 25) {
-      // ostrzeżenie: BMI w normie, ale blisko górnej granicy
-      if (toNormInfo) vildaAppSetTrustedHtml(toNormInfo, `<div class="result-box" style="color:#c75d00;">
+
+  if (professionalModeActive) {
+    vildaUpdatePrepShowElement(elements.planCard);
+    if (elements.planCard && elements.planResults && typeof updatePlanFromDiet === 'function') updatePlanFromDiet();
+    vildaUpdatePrepHideElement(elements.planWarning);
+    vildaUpdatePrepSafeClearPulse(elements.planWarning, 'app:update-bmi-normalization');
+    vildaUpdatePrepHideElement(elements.childConsultCard);
+    state.planAction = 'shown-professional';
+    return state;
+  }
+
+  if (age < 5) {
+    vildaUpdatePrepHideElement(elements.planCard);
+    vildaUpdatePrepHideElement(elements.planWarning);
+    vildaUpdatePrepSafeClearPulse(elements.planWarning, 'app:update-bmi-normalization');
+    if (elements.childConsultCard) {
+      vildaAppSetTrustedHtml(elements.childConsultCard, `<div style="color:var(--danger);font-weight:600;">⚠ Dziecko poniżej 5 lat z nadwagą lub otyłością wymaga konsultacji z&nbsp;endokrynologiem dziecięcym. <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:underline">Umów wizytę</a></div>`, 'app:childConsultCard');
+      vildaUpdatePrepShowElement(elements.childConsultCard);
+      state.consultationAction = 'shown-child-under-5';
+    }
+    return state;
+  }
+
+  vildaUpdatePrepShowElement(elements.planCard);
+  if (elements.planCard && elements.planResults && typeof updatePlanFromDiet === 'function') updatePlanFromDiet();
+  vildaUpdatePrepHideElement(elements.childConsultCard);
+  state.planAction = 'shown';
+  if (age < 10) {
+    if (elements.planWarning) {
+      vildaAppSetTrustedHtml(elements.planWarning, `⚠ Dziecko poniżej&nbsp;10 lat z nadwagą lub otyłością powinno skonsultować się z&nbsp;dietetykiem lub endokrynologiem dziecięcym. Proponowany plan ma charakter poglądowy. <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:underline">Umów wizytę</a>`, 'app:planWarningEl');
+      vildaUpdatePrepShowElement(elements.planWarning);
+      vildaUpdatePrepSafeApplyPulse(elements.planWarning, 'danger', 'app:update-bmi-normalization');
+      state.warningAction = 'shown-child-under-10';
+    }
+  } else {
+    vildaUpdatePrepHideElement(elements.planWarning);
+    vildaUpdatePrepSafeClearPulse(elements.planWarning, 'app:update-bmi-normalization');
+  }
+  return state;
+}
+
+function vildaUpdatePrepUpdateBmiNormalizationAndPlan(context, options = {}) {
+  const values = (context && context.inputState && context.inputState.values) || {};
+  const age = Number(options.age != null ? options.age : values.age) || 0;
+  const weight = Number(options.weight != null ? options.weight : values.weight) || 0;
+  const height = Number(options.height != null ? options.height : values.height) || 0;
+  const sex = options.sex || values.sex || 'M';
+  const bmiReady = options.bmiReady != null ? !!options.bmiReady : (weight > 0 && height > 0);
+  const professionalModeActive = options.professionalModeActive != null
+    ? !!options.professionalModeActive
+    : ((typeof professionalMode !== 'undefined') ? !!professionalMode : vildaUpdatePrepResolveProfessionalMode());
+  const elements = vildaUpdatePrepGetBmiNormalizationElements(options);
+  const state = {
+    version: VILDA_UPDATE_PREP_VERSION,
+    bmiReady,
+    bmi: null,
+    category: null,
+    toNormAvailable: false,
+    toNormRendered: false,
+    mode: null,
+    plan: null,
+    stopReason: null
+  };
+  vildaUpdatePrepMarkSection(context, 'bmi-normalization', 'start', { age, weight, height, sex, bmiReady });
+  if (!bmiReady) {
+    state.stopReason = 'bmi-not-ready';
+    vildaUpdatePrepMarkSection(context, 'bmi-normalization', 'end', state);
+    return state;
+  }
+
+  const bmiCurrent = options.bmiState && Number.isFinite(Number(options.bmiState.bmi))
+    ? Number(options.bmiState.bmi)
+    : BMI(weight, height);
+  state.bmi = bmiCurrent;
+
+  // Zachowanie historyczne: u dorosłych z BMI < 18,5 karta „droga do normy” pozostaje ukryta.
+  if (age >= 18 && bmiCurrent < 18.5) {
+    vildaUpdatePrepHideElement(elements.toNormCard);
+    state.stopReason = 'adult-underweight-hidden';
+    vildaUpdatePrepMarkSection(context, 'bmi-normalization', 'end', state);
+    return state;
+  }
+
+  const toNorm = typeof distanceToNormalBMI === 'function'
+    ? distanceToNormalBMI(weight, height, age, sex)
+    : null;
+  state.toNormAvailable = !!toNorm;
+
+  if (toNorm) {
+    const html = vildaUpdatePrepBuildReductionToNormHtml({ age, height, sex, professionalModeActive }, toNorm);
+    if (elements.toNormInfo) vildaAppSetTrustedHtml(elements.toNormInfo, html, 'app:toNormInfo');
+    vildaUpdatePrepShowElement(elements.toNormCard);
+    state.toNormRendered = true;
+    state.mode = 'reduction';
+    state.category = vildaUpdatePrepResolveBmiNormalizationCategory(age, bmiCurrent, sex);
+    state.plan = vildaUpdatePrepRenderReductionPlanUi(context, { age, professionalModeActive }, elements, state.category);
+    vildaUpdatePrepMarkSection(context, 'bmi-normalization', 'end', {
+      mode: state.mode,
+      category: state.category,
+      plan: state.plan,
+      toNormRendered: state.toNormRendered
+    });
+    return state;
+  }
+
+  state.category = vildaUpdatePrepResolveBmiNormalizationCategory(age, bmiCurrent, sex);
+  if (state.category === 'Niedowaga') {
+    let kgGain = 0;
+    if (age >= CHILD_AGE_MIN && age <= CHILD_AGE_MAX && typeof kgToReachNormalBMIChild === 'function') {
+      kgGain = kgToReachNormalBMIChild(weight, height, age, sex);
+    }
+    if (elements.toNormInfo) {
+      vildaAppSetTrustedHtml(elements.toNormInfo, vildaUpdatePrepBuildUnderweightToNormHtml({ age, professionalModeActive }, kgGain), 'app:toNormInfo');
+    }
+    state.mode = 'underweight';
+  } else if (age >= 18 && bmiCurrent >= 24 && bmiCurrent < 25) {
+    if (elements.toNormInfo) {
+      vildaAppSetTrustedHtml(elements.toNormInfo, `<div class="result-box" style="color:#c75d00;">
         Wskaźnik BMI mieści się jeszcze w normie, jednak zbliża się do jej górnej granicy.
         Zalecana jest modyfikacja nawyków żywieniowych i stylu życia.
       </div>`, 'app:toNormInfo');
-    } else {
-      // standardowy komunikat: BMI jest w normie
-      if (toNormInfo) vildaAppSetTrustedHtml(toNormInfo, `<div class="result-box" style="color:var(--primary)">
+    }
+    state.mode = 'adult-near-upper-normal';
+  } else {
+    if (elements.toNormInfo) {
+      vildaAppSetTrustedHtml(elements.toNormInfo, `<div class="result-box" style="color:var(--primary)">
         Twoje BMI jest już w normie! 🚀
       </div>`, 'app:toNormInfo');
     }
+    state.mode = 'normal';
   }
-  if (toNormCard) toNormCard.style.display = 'block';
-}
-
-  }
-
-    }
-     /* ---------- Czas spalania ---------- */
-if(weight > 0 && kcal > 0){
-  const foodBurnState = activityBuildFoodBurnState({
-    kcalTarget: kcal,
-    weightKg: weight,
-    ageYears: age
+  vildaUpdatePrepShowElement(elements.toNormCard);
+  state.toNormRendered = true;
+  vildaUpdatePrepMarkSection(context, 'bmi-normalization', 'end', {
+    mode: state.mode,
+    category: state.category,
+    toNormRendered: state.toNormRendered
   });
-  if (timesDiv) vildaAppSetTrustedHtml(timesDiv, activityRenderTableHtml(foodBurnState), 'app:timesDiv');
-  if (foodTimesSection) {
-    foodTimesSection.style.display = (foodBurnState && foodBurnState.rows.length) ? 'block' : 'none';
-  }
-} else if (foodTimesSection) {
-  foodTimesSection.style.display = 'none';
-}
+
+  return state;
 }
 
+/* ==========================================================================
+ * Krok 7F: interpretacje dorosłych, widoczność modułów zależnych od wieku
+ * oraz odświeżenie UI ryzyka metabolicznego.
+ *
+ * Helpery poniżej porządkują pozostałe fragmenty update(), które zależą od
+ * wieku dorosłego albo od profesjonalnych podsumowań metabolicznych. Nie
+ * zmieniają obliczeń klinicznych; zachowują dotychczasowe warunki i tylko
+ * centralizują ich wykonanie.
+ * ========================================================================== */
+function vildaUpdatePrepIsAdultAgeValue(age) {
+  const numericAge = Number(age);
+  if (!Number.isFinite(numericAge)) return false;
+  try {
+    if (typeof patientReportIsAdultAge === 'function') {
+      return !!patientReportIsAdultAge(numericAge);
+    }
+  } catch (error) {
+    if (typeof vildaLogAppWarn === 'function') {
+      vildaLogAppWarn('app:update-adult-metrics', 'Nie udało się ocenić wieku dorosłego przez patientReportIsAdultAge().', error, { age: numericAge });
+    }
+  }
+  return numericAge >= 18;
+}
+
+function vildaUpdatePrepGetAdultMetricsElements(options = {}) {
+  const supplied = options.elements || {};
+  return {
+    bpCard: supplied.bpCard || vildaUpdatePrepGetElement('bpCard'),
+    circSection: supplied.circSection || vildaUpdatePrepGetElement('circSection'),
+    respiratoryCard: supplied.respiratoryCard || vildaUpdatePrepGetElement('respiratoryCard'),
+    resultsModeToggleContainer: supplied.resultsModeToggleContainer || vildaUpdatePrepGetElement('resultsModeToggleContainer'),
+    advancedGrowthSection: supplied.advancedGrowthSection || vildaUpdatePrepGetElement('advancedGrowthSection'),
+    sourceToggleContainer: supplied.sourceToggleContainer || vildaUpdatePrepGetElement('dataToggleContainer'),
+    sourcePalczewska: supplied.sourcePalczewska || vildaUpdatePrepGetElement('sourcePalczewska'),
+    sourceOlaf: supplied.sourceOlaf || vildaUpdatePrepGetElement('sourceOlaf'),
+    sourceWho: supplied.sourceWho || vildaUpdatePrepGetElement('sourceWho')
+  };
+}
+
+function vildaUpdatePrepSetDisplay(element, value) {
+  if (element) element.style.display = value;
+}
+
+function vildaUpdatePrepUpdateAgeDependentAdultVisibility(context, options = {}) {
+  const values = (context && context.inputState && context.inputState.values) || {};
+  const age = Number(options.age != null ? options.age : values.age) || 0;
+  const elements = vildaUpdatePrepGetAdultMetricsElements(options);
+  const isAdultAge = vildaUpdatePrepIsAdultAgeValue(age);
+  const state = {
+    age,
+    isAdultAge,
+    hiddenForAdult: ['bpCard', 'circSection', 'respiratoryCard'].filter((key) => {
+      const element = elements[key];
+      return !!element && isAdultAge;
+    })
+  };
+
+  vildaUpdatePrepSetDisplay(elements.bpCard, isAdultAge ? 'none' : '');
+  vildaUpdatePrepSetDisplay(elements.circSection, isAdultAge ? 'none' : '');
+  vildaUpdatePrepSetDisplay(elements.respiratoryCard, isAdultAge ? 'none' : '');
+
+  vildaUpdatePrepRunOptionalHook(context, 'adult-metrics', 'adultVitalsApi.refreshVisibility', () => {
+    if (window.adultVitalsApi && typeof window.adultVitalsApi.refreshVisibility === 'function') {
+      return window.adultVitalsApi.refreshVisibility();
+    }
+    return null;
+  });
+
+  vildaUpdatePrepRunOptionalHook(context, 'adult-metrics', 'syncResponsiveCardPlacements', () => {
+    if (typeof window.syncResponsiveCardPlacements === 'function') {
+      return window.syncResponsiveCardPlacements();
+    }
+    return null;
+  });
+
+  return state;
+}
+
+function vildaUpdatePrepUpdateResultsModeToggleContainer(context, options = {}) {
+  const elements = vildaUpdatePrepGetAdultMetricsElements(options);
+  if (elements.resultsModeToggleContainer) {
+    elements.resultsModeToggleContainer.style.display = '';
+  }
+  return { shown: !!elements.resultsModeToggleContainer };
+}
+
+function vildaUpdatePrepUpdateAdvancedGrowthVisibility(context, options = {}) {
+  const values = (context && context.inputState && context.inputState.values) || {};
+  const age = Number(options.age != null ? options.age : values.age);
+  const elements = vildaUpdatePrepGetAdultMetricsElements(options);
+  const shouldShow = Number.isFinite(age) && age < 18;
+  if (elements.advancedGrowthSection) {
+    elements.advancedGrowthSection.style.display = shouldShow ? 'block' : 'none';
+  }
+
+  vildaUpdatePrepRunOptionalHook(context, 'adult-metrics', 'updateAdvancedGrowthAccess', () => {
+    if (typeof updateAdvancedGrowthAccess === 'function') return updateAdvancedGrowthAccess();
+    return null;
+  });
+
+  vildaUpdatePrepRunOptionalHook(context, 'adult-metrics', 'updatePalczewskaAccess', () => {
+    if (typeof updatePalczewskaAccess === 'function') return updatePalczewskaAccess();
+    return null;
+  });
+
+  return { shown: shouldShow, elementPresent: !!elements.advancedGrowthSection };
+}
+
+function vildaUpdatePrepHasAgeSourceInput() {
+  const ageEl = vildaUpdatePrepGetElement('age');
+  const monthsEl = vildaUpdatePrepGetElement('ageMonths');
+  return !!(
+    (ageEl && String(ageEl.value || '').trim() !== '') ||
+    (monthsEl && String(monthsEl.value || '').trim() !== '')
+  );
+}
+
+function vildaUpdatePrepUpdateGrowthDataSourceControls(context, options = {}) {
+  const values = (context && context.inputState && context.inputState.values) || {};
+  const age = Number(options.age != null ? options.age : values.age) || 0;
+  const elements = vildaUpdatePrepGetAdultMetricsElements(options);
+  const state = {
+    age,
+    action: 'skipped',
+    hasAgeSourceInput: vildaUpdatePrepHasAgeSourceInput(),
+    controlsPresent: !!(elements.sourceToggleContainer && elements.sourcePalczewska && elements.sourceOlaf && elements.sourceWho)
+  };
+
+  if (!state.controlsPresent) {
+    vildaUpdatePrepMarkSection(context, 'adult-metrics', 'mark', { action: 'growth-source-skipped', reason: 'missing-controls' });
+    return state;
+  }
+
+  if (age > 18) {
+    elements.sourceToggleContainer.style.display = 'none';
+    if (typeof setCheckedGrowthDataSource === 'function') setCheckedGrowthDataSource('WHO');
+    try {
+      bmiSource = 'WHO';
+    } catch (error) {
+      if (typeof vildaLogAppWarn === 'function') {
+        vildaLogAppWarn('app:update-adult-metrics', 'Nie udało się ustawić bmiSource na WHO dla osoby dorosłej.', error);
+      }
+    }
+    if (typeof refreshGrowthChartActionControls === 'function') refreshGrowthChartActionControls();
+    state.action = 'adult-force-who';
+  } else if (!state.hasAgeSourceInput || age === 0) {
+    elements.sourceToggleContainer.style.display = 'none';
+    if (typeof refreshGrowthChartActionControls === 'function') refreshGrowthChartActionControls();
+    state.action = 'empty-age-keep-current-source';
+  } else {
+    elements.sourceToggleContainer.style.display = 'flex';
+    if (typeof syncGrowthDataSourceInputs === 'function') {
+      try {
+        bmiSource = syncGrowthDataSourceInputs({ ageYears: age });
+      } catch (error) {
+        if (typeof vildaLogAppWarn === 'function') {
+          vildaLogAppWarn('app:update-adult-metrics', 'Nie udało się zsynchronizować źródła danych wzrastania.', error, { age });
+        }
+      }
+    }
+    state.action = 'child-sync-source';
+  }
+
+  vildaUpdatePrepMarkSection(context, 'adult-metrics', 'mark', {
+    action: 'growth-source-controls',
+    sourceAction: state.action,
+    age: state.age
+  });
+  return state;
+}
+
+function vildaUpdatePrepRefreshAdultMetabolicRiskUi(context, options = {}) {
+  const state = {
+    metabolicSummaryVisibility: false,
+    dietRecommendationsVisibility: false,
+    professionalSummaryCard: false
+  };
+
+  state.metabolicSummaryVisibility = !!vildaUpdatePrepRunOptionalHook(context, 'adult-metrics', 'updateMetabolicSummaryVisibility', () => {
+    if (typeof updateMetabolicSummaryVisibility === 'function') {
+      updateMetabolicSummaryVisibility();
+      return true;
+    }
+    return false;
+  });
+
+  state.dietRecommendationsVisibility = !!vildaUpdatePrepRunOptionalHook(context, 'adult-metrics', 'updateDietRecommendationsVisibility', () => {
+    if (typeof updateDietRecommendationsVisibility === 'function') {
+      updateDietRecommendationsVisibility();
+      return true;
+    }
+    return false;
+  });
+
+  state.professionalSummaryCard = !!vildaUpdatePrepRunOptionalHook(context, 'adult-metrics', 'updateProfessionalSummaryCard', () => {
+    if (typeof updateProfessionalSummaryCard === 'function') {
+      updateProfessionalSummaryCard();
+      return true;
+    }
+    return false;
+  });
+
+  return state;
+}
+
+function vildaUpdatePrepUpdateAdultMetrics(context, options = {}) {
+  const values = (context && context.inputState && context.inputState.values) || {};
+  const age = Number(options.age != null ? options.age : values.age) || 0;
+  const phase = options.phase || 'default';
+  const state = {
+    version: VILDA_UPDATE_PREP_VERSION,
+    age,
+    phase,
+    visibility: null,
+    resultsToggle: null,
+    advancedGrowth: null,
+    growthDataSource: null,
+    metabolicRisk: null
+  };
+
+  vildaUpdatePrepMarkSection(context, 'adult-metrics', 'start', { age, phase });
+
+  if (options.updateAgeDependentVisibility !== false) {
+    state.visibility = vildaUpdatePrepUpdateAgeDependentAdultVisibility(context, options);
+  }
+  if (options.updateResultsToggle !== false) {
+    state.resultsToggle = vildaUpdatePrepUpdateResultsModeToggleContainer(context, options);
+  }
+  if (options.updateAdvancedGrowth !== false) {
+    state.advancedGrowth = vildaUpdatePrepUpdateAdvancedGrowthVisibility(context, options);
+  }
+  if (options.updateGrowthDataSource) {
+    state.growthDataSource = vildaUpdatePrepUpdateGrowthDataSourceControls(context, options);
+  }
+  if (options.updateMetabolicRisk) {
+    state.metabolicRisk = vildaUpdatePrepRefreshAdultMetabolicRiskUi(context, options);
+  }
+
+  vildaUpdatePrepMarkSection(context, 'adult-metrics', 'end', {
+    age: state.age,
+    phase: state.phase,
+    visibility: state.visibility,
+    growthDataSource: state.growthDataSource ? state.growthDataSource.action : null,
+    metabolicRisk: state.metabolicRisk
+  });
+
+  return state;
+}
+
+
+/* ========================================================================== 
+ * Krok 7G: opcjonalne hooki, czyszczenie kontenerów i post-render UI update()
+ *
+ * Te helpery domykają refaktor orkiestracji update(): wydzielają wywołania
+ * modułów pobocznych, ochronę elementów przenoszonych w DOM, końcowe
+ * przewijanie oraz diagnostykę zakończenia przebiegu. Nie zmieniają obliczeń.
+ * ========================================================================== */
+function vildaUpdatePrepRunPreValidationSynchronizers(context, options = {}) {
+  const values = (context && context.inputState && context.inputState.values) || {};
+  const age = Number(options.age != null ? options.age : values.age) || 0;
+  const state = {
+    age,
+    prevSummaryDiff: false,
+    stabilizationEligibility: false,
+    adultMetrics: null
+  };
+
+  vildaUpdatePrepMarkSection(context, 'optional-modules', 'start', { phase: 'pre-validation' });
+
+  state.prevSummaryDiff = !!vildaUpdatePrepRunOptionalHook(context, 'optional-modules', 'updatePrevSummaryDiff', () => {
+    if (typeof window !== 'undefined' && typeof window.updatePrevSummaryDiff === 'function') {
+      window.updatePrevSummaryDiff();
+      return true;
+    }
+    return false;
+  });
+
+  state.stabilizationEligibility = !!vildaUpdatePrepRunOptionalHook(context, 'optional-modules', 'updateStabilizationEligibility', () => {
+    if (typeof window !== 'undefined' && typeof window.updateStabilizationEligibility === 'function') {
+      window.updateStabilizationEligibility();
+      return true;
+    }
+    return false;
+  });
+
+  state.adultMetrics = vildaUpdatePrepUpdateAdultMetrics(context, {
+    age,
+    phase: 'pre-validation',
+    updateGrowthDataSource: false,
+    updateMetabolicRisk: false
+  });
+
+  vildaUpdatePrepMarkSection(context, 'optional-modules', 'end', {
+    phase: 'pre-validation',
+    prevSummaryDiff: state.prevSummaryDiff,
+    stabilizationEligibility: state.stabilizationEligibility
+  });
+  return state;
+}
+
+function vildaUpdatePrepPrepareSourceFieldsetForUpdate(context, options = {}) {
+  const sourceFieldset = options.sourceFieldset || vildaUpdatePrepGetElement('sourceFieldset');
+  const state = {
+    sourceFieldset,
+    present: !!sourceFieldset,
+    visible: false,
+    reason: 'missing-source-fieldset'
+  };
+  if (!sourceFieldset) {
+    vildaUpdatePrepMarkSection(context, 'post-render', 'source-fieldset-prep-skipped', { reason: state.reason });
+    return state;
+  }
+
+  const bodyEl = document.body;
+  const hasSidebarClass = !!(bodyEl && bodyEl.classList && bodyEl.classList.contains('has-sidebar'));
+  let isDesktopWidth = false;
+  try {
+    isDesktopWidth = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(min-width: 992px)').matches;
+  } catch (error) {
+    if (typeof vildaLogAppWarn === 'function') {
+      vildaLogAppWarn('app:update-post-render', 'Nie udało się sprawdzić szerokości okna dla sourceFieldset.', error);
+    }
+  }
+
+  if (hasSidebarClass && isDesktopWidth) {
+    sourceFieldset.style.display = 'block';
+    state.visible = true;
+    state.reason = 'desktop-sidebar-visible';
+  } else {
+    sourceFieldset.style.display = 'none';
+    state.visible = false;
+    state.reason = 'hidden-until-results';
+  }
+
+  vildaUpdatePrepMarkSection(context, 'post-render', 'source-fieldset-prepared', {
+    visible: state.visible,
+    reason: state.reason
+  });
+  return state;
+}
+
+function vildaUpdatePrepRefreshPalFactorDescription(context, options = {}) {
+  const values = (context && context.inputState && context.inputState.values) || {};
+  const age = Number(options.age != null ? options.age : values.age) || 0;
+  const palElem = options.palElem || vildaUpdatePrepGetElement('palFactor');
+  const state = {
+    present: !!palElem,
+    age,
+    value: null,
+    updatedSelect: false,
+    updatedDescription: false
+  };
+  if (!palElem) return state;
+
+  const ageMonthsOpt = parseFloat(vildaUpdatePrepGetElement('ageMonths')?.value) || 0;
+  const prevPal = palElem.value || '1.4';
+  state.value = prevPal;
+
+  state.updatedSelect = !!vildaUpdatePrepRunOptionalHook(context, 'optional-modules', 'energyPopulatePlanPalSelect', () => {
+    if (typeof energyPopulatePlanPalSelect === 'function') {
+      energyPopulatePlanPalSelect(palElem, {
+        ageYears: age,
+        ageMonthsOpt,
+        value: prevPal
+      });
+      return true;
+    }
+    return false;
+  });
+
+  state.updatedDescription = !!vildaUpdatePrepRunOptionalHook(context, 'optional-modules', 'updatePalDescription', () => {
+    if (typeof updatePalDescription === 'function') {
+      updatePalDescription(palElem.value);
+      return true;
+    }
+    return false;
+  });
+  state.value = palElem.value || prevPal;
+  return state;
+}
+
+function vildaUpdatePrepPreparePreValidationUi(context, options = {}) {
+  const values = (context && context.inputState && context.inputState.values) || {};
+  const age = Number(options.age != null ? options.age : values.age) || 0;
+  const state = {
+    age,
+    sourceFieldset: null,
+    sourceFieldsetState: null,
+    pal: null,
+    growthDataSource: null
+  };
+
+  vildaUpdatePrepMarkSection(context, 'post-render', 'start', { phase: 'pre-validation-ui' });
+  state.sourceFieldsetState = vildaUpdatePrepPrepareSourceFieldsetForUpdate(context, options);
+  state.sourceFieldset = state.sourceFieldsetState ? state.sourceFieldsetState.sourceFieldset : null;
+  state.pal = vildaUpdatePrepRefreshPalFactorDescription(context, { age });
+  state.growthDataSource = vildaUpdatePrepUpdateGrowthDataSourceControls(context, { age });
+  vildaUpdatePrepMarkSection(context, 'post-render', 'end', {
+    phase: 'pre-validation-ui',
+    sourceFieldset: state.sourceFieldsetState ? state.sourceFieldsetState.reason : null,
+    palValue: state.pal ? state.pal.value : null,
+    growthDataSource: state.growthDataSource ? state.growthDataSource.action : null
+  });
+  return state;
+}
+
+function vildaUpdatePrepProtectBmrInfoChildren(context, options = {}) {
+  const bmrInfo = options.bmrInfo || vildaUpdatePrepGetElement('bmrInfo');
+  const protectedIds = Array.isArray(options.ids) ? options.ids : ['dataToggleContainer', 'centileButtons'];
+  const state = {
+    bmrInfoPresent: !!bmrInfo,
+    moved: []
+  };
+  if (!bmrInfo) return state;
+
+  protectedIds.forEach((id) => {
+    const element = vildaUpdatePrepGetElement(id);
+    if (element && element.parentElement === bmrInfo) {
+      try {
+        bmrInfo.insertAdjacentElement('afterend', element);
+        state.moved.push(id);
+      } catch (error) {
+        if (typeof vildaLogAppWarn === 'function') {
+          vildaLogAppWarn('app:update-post-render', 'Nie udało się zabezpieczyć elementu przed czyszczeniem bmrInfo.', error, { id });
+        }
+      }
+    }
+  });
+
+  if (state.moved.length) {
+    vildaUpdatePrepMarkSection(context, 'post-render', 'protected-bmr-children', { moved: state.moved.slice() });
+  }
+  return state;
+}
+
+function vildaUpdatePrepResetResultContainers(context, options = {}) {
+  const elements = {
+    bmrInfo: options.bmrInfo || vildaUpdatePrepGetElement('bmrInfo'),
+    timesDiv: options.timesDiv || vildaUpdatePrepGetElement('foodTimes'),
+    results: options.results || (context && context.inputState && context.inputState.elements ? context.inputState.elements.results : null) || vildaUpdatePrepGetElement('results'),
+    foodTimesSection: options.foodTimesSection || vildaUpdatePrepGetElement('foodTimesSection')
+  };
+  const state = {
+    protectedChildren: vildaUpdatePrepProtectBmrInfoChildren(context, { bmrInfo: elements.bmrInfo }),
+    cleared: [],
+    hidden: [],
+    nutritionNormsCleared: false
+  };
+
+  if (elements.timesDiv) {
+    vildaAppClearHtml(elements.timesDiv);
+    state.cleared.push('foodTimes');
+  }
+  if (elements.bmrInfo) {
+    vildaAppClearHtml(elements.bmrInfo);
+    state.cleared.push('bmrInfo');
+  }
+
+  state.nutritionNormsCleared = !!vildaUpdatePrepRunOptionalHook(context, 'optional-modules', 'clearNutritionNormsCard', () => {
+    if (typeof window !== 'undefined' && typeof window.clearNutritionNormsCard === 'function') {
+      window.clearNutritionNormsCard();
+      return true;
+    }
+    return false;
+  });
+
+  if (elements.results) {
+    elements.results.style.display = 'none';
+    state.hidden.push('results');
+  }
+  if (elements.foodTimesSection) {
+    elements.foodTimesSection.style.display = 'none';
+    state.hidden.push('foodTimesSection');
+  }
+
+  vildaUpdatePrepMarkSection(context, 'post-render', 'result-containers-reset', {
+    cleared: state.cleared.slice(),
+    hidden: state.hidden.slice(),
+    protectedMoved: state.protectedChildren ? state.protectedChildren.moved : [],
+    nutritionNormsCleared: state.nutritionNormsCleared
+  });
+  return state;
+}
+
+function vildaUpdatePrepShowSourceFieldsetAfterRender(context, options = {}) {
+  const sourceFieldset = options.sourceFieldset || vildaUpdatePrepGetElement('sourceFieldset');
+  const state = { shown: false, present: !!sourceFieldset };
+  if (sourceFieldset) {
+    sourceFieldset.style.display = 'block';
+    state.shown = true;
+  }
+  vildaUpdatePrepMarkSection(context, 'post-render', 'source-fieldset-after-render', state);
+  return state;
+}
+
+function vildaUpdatePrepScheduleResultsScroll(context, options = {}) {
+  const delay = Number.isFinite(Number(options.delay)) ? Number(options.delay) : 150;
+  const state = { scheduled: false, delay, reason: null };
+  if (options.enabled === false) {
+    state.reason = 'disabled';
+    vildaUpdatePrepMarkSection(context, 'post-render', 'scroll-skipped', state);
+    return state;
+  }
+  state.scheduled = true;
+  vildaUpdatePrepMarkSection(context, 'post-render', 'scroll-scheduled', { delay });
+
+  setTimeout(() => {
+    try {
+      const active = document.activeElement;
+      const ageInp = document.getElementById('age');
+      const weightInp = document.getElementById('weight');
+      const heightInp = document.getElementById('height');
+      if (active === ageInp || active === weightInp || active === heightInp) {
+        return;
+      }
+      const cardEl = document.getElementById('bmiCard');
+      if (cardEl && typeof scrollToResultsCard === 'function') {
+        scrollToResultsCard();
+      }
+    } catch (error) {
+      if (typeof vildaLogAppWarn === 'function') {
+        vildaLogAppWarn('app:update-post-render', 'Nie udało się wykonać przewinięcia do wyników.', error);
+      }
+    }
+  }, delay);
+  return state;
+}
+
+function vildaUpdatePrepRunPostRenderSynchronization(context, options = {}) {
+  const values = (context && context.inputState && context.inputState.values) || {};
+  const age = Number(options.age != null ? options.age : values.age) || 0;
+  const state = {
+    age,
+    adultMetrics: null
+  };
+
+  state.adultMetrics = vildaUpdatePrepUpdateAdultMetrics(context, {
+    age,
+    phase: 'post-render',
+    updateAgeDependentVisibility: false,
+    updateResultsToggle: false,
+    updateAdvancedGrowth: false,
+    updateGrowthDataSource: false,
+    updateMetabolicRisk: true
+  });
+  vildaUpdatePrepMarkSection(context, 'post-render', 'synchronization-complete', { age });
+  return state;
+}
+
+function vildaUpdatePrepCompleteMainUpdate(context, options = {}) {
+  const postRenderState = vildaUpdatePrepRunPostRenderSynchronization(context, options);
+  return vildaUpdatePrepFinishRun(context, options.status || 'completed', {
+    postRender: postRenderState
+  });
+}
+
+/* ========================================================================== 
+ * Krok 7H: końcowy przegląd update() jako orkiestratora.
+ *
+ * Ten blok dodaje jawną mapę przepływu, ujednolica publiczne aliasy oraz
+ * ogranicza powtórne odczyty DOM w samym update(). Nie zmienia obliczeń.
+ * ========================================================================== */
+function vildaUpdatePrepGetOrchestratorElements(context, preValidationUiState) {
+  const inputElements = (context && context.inputState && context.inputState.elements) || {};
+  return {
+    sourceFieldset: (preValidationUiState && preValidationUiState.sourceFieldset) || inputElements.sourceFieldset || vildaUpdatePrepGetElement('sourceFieldset'),
+    planCard: inputElements.planCard || vildaUpdatePrepGetElement('planCard'),
+    planResults: inputElements.planResults || vildaUpdatePrepGetElement('planResults'),
+    dietCalorieInfo: inputElements.dietCalorieInfo || vildaUpdatePrepGetElement('dietCalorieInfo'),
+    planWarning: inputElements.planWarning || vildaUpdatePrepGetElement('planWarning'),
+    childConsultCard: inputElements.childConsultCard || vildaUpdatePrepGetElement('childConsultCard'),
+    results: inputElements.results || vildaUpdatePrepGetElement('results'),
+    timesDiv: inputElements.foodTimes || vildaUpdatePrepGetElement('foodTimes'),
+    foodTimesSection: inputElements.foodTimesSection || vildaUpdatePrepGetElement('foodTimesSection'),
+    bmrInfo: inputElements.bmrInfo || vildaUpdatePrepGetElement('bmrInfo'),
+    toNormCard: inputElements.toNormCard || vildaUpdatePrepGetElement('toNormCard'),
+    toNormInfo: inputElements.toNormInfo || vildaUpdatePrepGetElement('toNormInfo')
+  };
+}
+
+function vildaUpdatePrepResolveAliasTarget(aliasTarget) {
+  const targets = {
+    'VildaUpdatePrep.getDiagnostics': vildaUpdatePrepGetDiagnostics,
+    'VildaUpdatePrep.getLastRun': vildaUpdatePrepGetLastRun,
+    'VildaUpdatePrep.getOrchestratorMap': vildaUpdatePrepGetOrchestratorMap,
+    'VildaUpdatePrep.dumpOrchestratorMap': vildaUpdatePrepDumpOrchestratorMap,
+    'VildaUpdatePrep.runMainUpdate': vildaUpdatePrepRunMainUpdate,
+    'VildaUpdatePrep.readMainInputs': vildaUpdatePrepReadMainInputs,
+    'VildaUpdatePrep.validateMainInputs': vildaUpdatePrepValidateMainInputs,
+    'VildaUpdatePrep.handleEntryGuard': vildaUpdatePrepHandleEntryGuard,
+    'VildaUpdatePrep.handleInputValidation': vildaUpdatePrepHandleInputValidation,
+    'VildaUpdatePrep.updateFoodSummary': vildaUpdatePrepUpdateFoodSummary,
+    'VildaUpdatePrep.updateFoodBurnSummary': vildaUpdatePrepUpdateFoodBurnSummary,
+    'VildaUpdatePrep.renderBmiBmrResults': vildaUpdatePrepRenderBmiBmrResults,
+    'VildaUpdatePrep.renderWeightHeightCentileCard': vildaUpdatePrepRenderWeightHeightCentileCard,
+    'VildaUpdatePrep.updateChildMetrics': vildaUpdatePrepUpdateChildMetrics,
+    'VildaUpdatePrep.updateBmiNormalizationAndPlan': vildaUpdatePrepUpdateBmiNormalizationAndPlan,
+    'VildaUpdatePrep.updateAdultMetrics': vildaUpdatePrepUpdateAdultMetrics,
+    'VildaUpdatePrep.updateGrowthDataSourceControls': vildaUpdatePrepUpdateGrowthDataSourceControls,
+    'VildaUpdatePrep.runPreValidationSynchronizers': vildaUpdatePrepRunPreValidationSynchronizers,
+    'VildaUpdatePrep.runPostRenderSynchronization': vildaUpdatePrepRunPostRenderSynchronization
+  };
+  return targets[aliasTarget] || null;
+}
+
+function vildaUpdatePrepInstallPublicAliases(targetWindow) {
+  const w = targetWindow || (typeof window !== 'undefined' ? window : null);
+  if (!w) return [];
+  const installed = [];
+  VILDA_UPDATE_PUBLIC_ALIAS_MAP.forEach((definition) => {
+    const fn = vildaUpdatePrepResolveAliasTarget(definition.target);
+    if (!definition.alias || typeof fn !== 'function') return;
+    if (typeof w[definition.alias] === 'undefined') {
+      w[definition.alias] = fn;
+    }
+    installed.push(definition.alias);
+  });
+  return installed;
+}
+
+function vildaUpdatePrepRunMainUpdate(thisArg, argsLike, updateFn) {
+  const mainUpdateContext = vildaUpdatePrepCreateContext();
+  const mainInputState = mainUpdateContext.inputState;
+  const mainValidationState = mainUpdateContext.validation;
+  const mainEntryGuard = vildaUpdatePrepHandleEntryGuard(mainUpdateContext, updateFn || null, thisArg, argsLike);
+  if (!mainEntryGuard.shouldContinue) {
+    return mainEntryGuard.result;
+  }
+
+  const mainDomGuard = vildaUpdatePrepHandleMissingRequiredDom(mainUpdateContext);
+  if (!mainDomGuard.shouldContinue) return;
+  vildaUpdatePrepMarkSection(mainUpdateContext, 'input-read', 'end', { values: mainInputState.values });
+  const { weight, age, height, sex } = mainInputState.values;
+
+  vildaUpdatePrepRunPreValidationSynchronizers(mainUpdateContext, { age });
+  const preValidationUiState = vildaUpdatePrepPreparePreValidationUi(mainUpdateContext, { age });
+  const mainOrchestratorElements = vildaUpdatePrepGetOrchestratorElements(mainUpdateContext, preValidationUiState);
+  const sourceFieldset = mainOrchestratorElements.sourceFieldset;
+
+  const mainValidationGate = vildaUpdatePrepHandleInputValidation(mainUpdateContext);
+  if (!mainValidationGate.shouldContinue) return;
+
+  const planCard = mainOrchestratorElements.planCard;
+  const planResults = mainOrchestratorElements.planResults;
+  const dietCalInfo = mainOrchestratorElements.dietCalorieInfo;
+  const planWarningEl = mainOrchestratorElements.planWarning;
+  const childConsultCard = mainOrchestratorElements.childConsultCard;
+  const bmiNormalizationElements = {
+    planCard,
+    planResults,
+    dietCalorieInfo: dietCalInfo,
+    planWarning: planWarningEl,
+    childConsultCard
+  };
+  vildaUpdatePrepResetBmiNormalizationUi(mainUpdateContext, {
+    resetToNorm: false,
+    elements: bmiNormalizationElements
+  });
+
+  const bmiReady = mainValidationState.bmiReady;
+  const bmrReady = mainValidationState.bmrReady;
+  const foodSummaryState = vildaUpdatePrepUpdateFoodSummary(mainUpdateContext, { weight, age });
+
+  const results = mainOrchestratorElements.results;
+  const timesDiv = mainOrchestratorElements.timesDiv;
+  const foodTimesSection = mainOrchestratorElements.foodTimesSection;
+  const bmrInfo = mainOrchestratorElements.bmrInfo;
+  const toNormCard = mainOrchestratorElements.toNormCard;
+  const toNormInfo = mainOrchestratorElements.toNormInfo;
+  const fullBmiNormalizationElements = Object.assign({}, bmiNormalizationElements, {
+    toNormCard,
+    toNormInfo
+  });
+
+  vildaUpdatePrepResetBmiNormalizationUi(mainUpdateContext, {
+    resetPlan: false,
+    elements: fullBmiNormalizationElements
+  });
+
+  vildaUpdatePrepResetResultContainers(mainUpdateContext, {
+    bmrInfo,
+    timesDiv,
+    results,
+    foodTimesSection
+  });
+
+  const bmiBmrState = vildaUpdatePrepComputeBmiBmrState(mainUpdateContext, {
+    age,
+    weight,
+    height,
+    sex,
+    bmiReady,
+    bmrReady
+  });
+
+  if (bmiReady) {
+    const weightHeightCentileResult = vildaUpdatePrepRenderWeightHeightCentileCard(mainUpdateContext, {
+      age,
+      weight,
+      height,
+      sex,
+      professionalModeActive: professionalMode
+    });
+    vildaUpdatePrepRenderBmiBmrResults(mainUpdateContext, {
+      bmiState: bmiBmrState,
+      htmlPrefix: weightHeightCentileResult.html,
+      bmrInfo
+    });
+
+    if (results) results.style.display = 'grid';
+    vildaUpdatePrepScheduleResultsScroll(mainUpdateContext);
+    vildaUpdatePrepShowSourceFieldsetAfterRender(mainUpdateContext, { sourceFieldset });
+
+    vildaUpdatePrepUpdateChildMetrics(mainUpdateContext, {
+      age,
+      weight,
+      height,
+      sex,
+      bmiState: bmiBmrState,
+      professionalModeActive: professionalMode
+    });
+  }
+
+  vildaUpdatePrepUpdateBmiNormalizationAndPlan(mainUpdateContext, {
+    age,
+    weight,
+    height,
+    sex,
+    bmiReady,
+    bmiState: bmiBmrState,
+    professionalModeActive: professionalMode,
+    elements: fullBmiNormalizationElements
+  });
+
+  vildaUpdatePrepUpdateFoodBurnSummary(mainUpdateContext, foodSummaryState, {
+    weight,
+    age,
+    elements: { timesDiv, foodTimesSection }
+  });
+
+  return vildaUpdatePrepCompleteMainUpdate(mainUpdateContext, {
+    age,
+    status: 'completed'
+  });
+}
+
+
+if (typeof window !== 'undefined') {
+  window.VildaUpdatePrep = Object.freeze({
+    VERSION: VILDA_UPDATE_PREP_VERSION,
+    isMainCalculatorPage: vildaUpdatePrepIsMainCalculatorPage,
+    runMainUpdate: vildaUpdatePrepRunMainUpdate,
+    readMainInputs: vildaUpdatePrepReadMainInputs,
+    validateMainInputs: vildaUpdatePrepValidateMainInputs,
+    createContext: vildaUpdatePrepCreateContext,
+    markSection: vildaUpdatePrepMarkSection,
+    finishRun: vildaUpdatePrepFinishRun,
+    runOptionalHook: vildaUpdatePrepRunOptionalHook,
+    handleEntryGuard: vildaUpdatePrepHandleEntryGuard,
+    handleMissingRequiredDom: vildaUpdatePrepHandleMissingRequiredDom,
+    handleInputValidation: vildaUpdatePrepHandleInputValidation,
+    updateFoodSummary: vildaUpdatePrepUpdateFoodSummary,
+    updateFoodBurnSummary: vildaUpdatePrepUpdateFoodBurnSummary,
+    computeBmiBmrState: vildaUpdatePrepComputeBmiBmrState,
+    buildBmiResultHtml: vildaUpdatePrepBuildBmiResultHtml,
+    renderBmiBmrResults: vildaUpdatePrepRenderBmiBmrResults,
+    computeWeightHeightCentileState: vildaUpdatePrepComputeWeightHeightCentileState,
+    buildWeightHeightCentileHtml: vildaUpdatePrepBuildWeightHeightCentileHtml,
+    renderWeightHeightCentileCard: vildaUpdatePrepRenderWeightHeightCentileCard,
+    updateChildMetrics: vildaUpdatePrepUpdateChildMetrics,
+    resetBmiNormalizationUi: vildaUpdatePrepResetBmiNormalizationUi,
+    updateBmiNormalizationAndPlan: vildaUpdatePrepUpdateBmiNormalizationAndPlan,
+    updateAdultMetrics: vildaUpdatePrepUpdateAdultMetrics,
+    updateGrowthDataSourceControls: vildaUpdatePrepUpdateGrowthDataSourceControls,
+    refreshAdultMetabolicRiskUi: vildaUpdatePrepRefreshAdultMetabolicRiskUi,
+    runPreValidationSynchronizers: vildaUpdatePrepRunPreValidationSynchronizers,
+    preparePreValidationUi: vildaUpdatePrepPreparePreValidationUi,
+    resetResultContainers: vildaUpdatePrepResetResultContainers,
+    scheduleResultsScroll: vildaUpdatePrepScheduleResultsScroll,
+    showSourceFieldsetAfterRender: vildaUpdatePrepShowSourceFieldsetAfterRender,
+    runPostRenderSynchronization: vildaUpdatePrepRunPostRenderSynchronization,
+    completeMainUpdate: vildaUpdatePrepCompleteMainUpdate,
+    getOrchestratorElements: vildaUpdatePrepGetOrchestratorElements,
+    installPublicAliases: vildaUpdatePrepInstallPublicAliases,
+    hasPrevMeasurement: vildaUpdatePrepHasPrevMeasurement,
+    getSectionMap: vildaUpdatePrepGetSectionMap,
+    getOrchestratorMap: vildaUpdatePrepGetOrchestratorMap,
+    dumpOrchestratorMap: vildaUpdatePrepDumpOrchestratorMap,
+    getPublicAliases: vildaUpdatePrepGetPublicAliasMap,
+    getRefactorPlan: vildaUpdatePrepGetRefactorPlan,
+    getLastRun: vildaUpdatePrepGetLastRun,
+    getDiagnostics: vildaUpdatePrepGetDiagnostics
+  });
+  vildaUpdatePrepInstallPublicAliases(window);
+}
+
+
+
+
+function update(){
+  return vildaUpdatePrepRunMainUpdate(this, arguments, update);
+}
 
 
 // init with no rows so user explicitly adds items
