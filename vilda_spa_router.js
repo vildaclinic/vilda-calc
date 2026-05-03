@@ -8,6 +8,23 @@
     return raw.startsWith('/') ? raw : ('/' + raw);
   }
 
+
+  function sameRoute(a, b){
+    return normalizeRoute(a) === normalizeRoute(b);
+  }
+
+  function syncActiveSpaLinks(doc, route){
+    if (!doc || typeof doc.querySelectorAll !== 'function') return;
+    const normalized = normalizeRoute(route);
+    const links = doc.querySelectorAll('a[data-spa-link][href]');
+    links.forEach(function(link){
+      const href = link.getAttribute('href') || '';
+      const linkRoute = href.startsWith('#/') ? normalizeRoute(href.slice(1)) : normalizeRoute(href);
+      const active = sameRoute(linkRoute, normalized);
+      if (active) link.setAttribute('aria-current', 'page');
+      else if (link.getAttribute('aria-current') === 'page') link.removeAttribute('aria-current');
+    });
+  }
   function createRouter(options){
     const opts = options || {};
     const routes = opts.routes || {};
@@ -115,6 +132,7 @@
           },
           onRoute: function(route){
             const normalized = normalizeRoute(route);
+            syncActiveSpaLinks(global.document, normalized);
             const isHome = normalized === '/' || normalized === '/index' || normalized === '/index.html';
             const isDocpro = normalized === '/docpro' || normalized === '/docpro.html';
             const isKlirens = normalized === '/kalkulator-klirens' || normalized === '/kalkulator-klirens.html' || normalized === '/klirens';
