@@ -7,8 +7,36 @@
     return d.getElementById('app') || d.body || null;
   }
 
+  let detachHomeLifecycle = null;
+
+  function ensureLifecycleRegistered(){
+    const runtime = global.VildaSpaViewRuntime;
+    if (!runtime || typeof runtime.registerViewLifecycle !== 'function') return;
+    if (detachHomeLifecycle) return;
+    runtime.registerViewLifecycle('home', {
+      onMount: function(ctx){
+        const doc = (ctx && ctx.options && ctx.options.doc) || global.document;
+        if (!doc) return;
+        const onEsc = function(ev){
+          if (!ev || ev.key !== 'Escape') return;
+          const toggle = doc.getElementById('navToggle');
+          if (toggle) toggle.checked = false;
+        };
+        doc.addEventListener('keydown', onEsc);
+        detachHomeLifecycle = function(){
+          try { doc.removeEventListener('keydown', onEsc); } catch (_) {}
+          detachHomeLifecycle = null;
+        };
+      },
+      onUnmount: function(){
+        if (detachHomeLifecycle) detachHomeLifecycle();
+      }
+    });
+  }
+
   function mount(options){
     const opts = options || {};
+    ensureLifecycleRegistered();
     const runtime = global.VildaSpaViewRuntime;
     if (runtime && typeof runtime.mountView === 'function') {
       return runtime.mountView('home', opts);
