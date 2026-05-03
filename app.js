@@ -77,56 +77,70 @@ const DIET_DESCRIPTIONS = {
 const GH_DB_NAME = 'ghTherapyDB';
 const GH_STORE_NAME = 'ghTherapyPoints';
 
-function openGHTherapyDB(){
-  return new Promise((resolve, reject) => {
+function vildaPerfIsEnabled(){
+  try {
+    return !!(typeof window !== 'undefined' && window.DEBUG_PERF);
+  } catch (_) {
+    return false;
+  }
+}
+
+function vildaPerfStart(label){
+  const enabled = vildaPerfIsEnabled() && typeof performance !== 'undefined' && typeof performance.now === 'function';
+  if (!enabled) return function(){};
+  const start = performance.now();
+  return function(){
+    const duration = performance.now() - start;
     try {
-      if (typeof indexedDB === 'undefined') {
-        return reject(new Error('IndexedDB not available'));
+      if (typeof performance.mark === 'function' && typeof performance.measure === 'function') {
+        const markStart = label + ':start:' + start.toFixed(3);
+        const markEnd = label + ':end:' + (start + duration).toFixed(3);
+        performance.mark(markStart);
+        performance.mark(markEnd);
+        performance.measure(label, markStart, markEnd);
       }
-      const req = indexedDB.open(GH_DB_NAME, 1);
-      req.onupgradeneeded = function(ev){
-        const db = ev.target.result;
-        if (!db.objectStoreNames.contains(GH_STORE_NAME)) {
-          db.createObjectStore(GH_STORE_NAME, { keyPath: 'id' });
-        }
-      };
-      req.onsuccess = function(ev){
-        const db = ev.target.result;
-        attachGHTherapyDBVersionChangeHandler(db, 'openGHTherapyDB');
-        resolve(db);
-      };
-      req.onerror = function(ev){ reject(ev.target.error); };
-    } catch(err) {
-      reject(err);
-    }
-  });
+    } catch (_) {}
+    try {
+      if (typeof console !== 'undefined' && typeof console.debug === 'function') {
+        console.debug('[VILDA PERF]', label, Math.round(duration * 100) / 100 + 'ms');
+      }
+    } catch (_) {}
+  };
+}
+
+function getGHTherapySyncBridge(){
+  try {
+    if (typeof window === 'undefined' || !window.VildaGHTherapySync) return null;
+    return window.VildaGHTherapySync;
+  } catch (_) {
+    return null;
+  }
+}
+
+function openGHTherapyDB(){
+  const bridge = getGHTherapySyncBridge();
+  if (bridge && typeof bridge.openGHTherapyDB === 'function') return bridge.openGHTherapyDB();
+  return Promise.reject(new Error('VildaGHTherapySync unavailable: openGHTherapyDB'));
 }
 
 function attachGHTherapyDBVersionChangeHandler(db, contextLabel){
-  try {
-    if (!db) return db;
-    db.onversionchange = function(){
-      closeGHTherapyDBConnection(db, (contextLabel || 'openGHTherapyDB') + ':onversionchange');
-    };
-  } catch (error) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', error, { step: '8O-11a-c', context: contextLabel || 'gh-therapy-indexeddb-onversionchange' });
-    }
+  const bridge = getGHTherapySyncBridge();
+  if (bridge && typeof bridge.attachGHTherapyDBVersionChangeHandler === 'function') {
+    return bridge.attachGHTherapyDBVersionChangeHandler(db, contextLabel);
   }
   return db;
 }
 
 function closeGHTherapyDBConnection(db, contextLabel){
-  try {
-    if (db && typeof db.close === 'function') db.close();
-  } catch (error) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', error, { step: '8O-11a-c', context: contextLabel || 'gh-therapy-indexeddb-close' });
-    }
+  const bridge = getGHTherapySyncBridge();
+  if (bridge && typeof bridge.closeGHTherapyDBConnection === 'function') {
+    return bridge.closeGHTherapyDBConnection(db, contextLabel);
   }
+  return undefined;
 }
 
 async function getTherapyPointsFromDB(){
+  const __perfEnd = vildaPerfStart('P1:getTherapyPointsFromDB');
   let db = null;
   try {
     db = await openGHTherapyDB();
@@ -147,10 +161,12 @@ async function getTherapyPointsFromDB(){
     return [];
   } finally {
     closeGHTherapyDBConnection(db, 'getTherapyPointsFromDB');
+    __perfEnd();
   }
 }
 
 async function clearTherapyPointsInDB(){
+  const __perfEnd = vildaPerfStart('P1:clearTherapyPointsInDB');
   let db = null;
   try {
     db = await openGHTherapyDB();
@@ -168,10 +184,13 @@ async function clearTherapyPointsInDB(){
     return false;
   } finally {
     closeGHTherapyDBConnection(db, 'clearTherapyPointsInDB');
+    __perfEnd();
   }
 }
 
 function isGhAdvancedImportSuppressed(){
+  const bridge = getGHTherapySyncBridge();
+  if (bridge && typeof bridge.isGhAdvancedImportSuppressed === 'function') return bridge.isGhAdvancedImportSuppressed();
   try {
     if (typeof window === 'undefined') return false;
     return Number(window.__vildaSuppressGhAdvancedImportUntil || 0) > Date.now();
@@ -181,118 +200,51 @@ function isGhAdvancedImportSuppressed(){
 }
 
 function readGhTherapyPointsFromModuleStorage(){
-  try {
-    if (typeof window !== 'undefined' && window.VildaPersistence && typeof window.VildaPersistence.readModuleJSON === 'function') {
-      const value = window.VildaPersistence.readModuleJSON('GH_THERAPY_POINTS', []);
-      return Array.isArray(value) ? value : [];
-    }
-  } catch (_) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', _, { line: 3175 });
-    }
-  }
+  const bridge = getGHTherapySyncBridge();
+  if (bridge && typeof bridge.readGhTherapyPointsFromModuleStorage === 'function') return bridge.readGhTherapyPointsFromModuleStorage();
   return [];
 }
 
 function writeGhTherapyPointsToModuleStorage(points){
-  const safePoints = Array.isArray(points) ? points : [];
-  try {
-    if (typeof window !== 'undefined' && window.VildaPersistence && typeof window.VildaPersistence.writeModuleJSON === 'function') {
-      return window.VildaPersistence.writeModuleJSON('GH_THERAPY_POINTS', safePoints, { force: true });
-    }
-  } catch (_) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', _, { line: 3185 });
-    }
-  }
+  const bridge = getGHTherapySyncBridge();
+  if (bridge && typeof bridge.writeGhTherapyPointsToModuleStorage === 'function') return bridge.writeGhTherapyPointsToModuleStorage(points);
   return false;
 }
 
 function clearGhTherapyPointsModuleStorage(){
-  try {
-    if (typeof window !== 'undefined' && window.VildaPersistence && typeof window.VildaPersistence.removeModuleKey === 'function') {
-      return window.VildaPersistence.removeModuleKey('GH_THERAPY_POINTS');
-    }
-  } catch (_) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', _, { line: 3194 });
-    }
-  }
+  const bridge = getGHTherapySyncBridge();
+  if (bridge && typeof bridge.clearGhTherapyPointsModuleStorage === 'function') return bridge.clearGhTherapyPointsModuleStorage();
   return false;
 }
 
-// Inicjalizuj BroadcastChannel do nasłuchiwania zmian w module terapii.
-const ghTherapyBroadcastChannel = (typeof BroadcastChannel !== 'undefined') ? new BroadcastChannel('gh-therapy-sync') : null;
-let ghTherapyBroadcastChannelClosed = false;
-
 function handleGHTherapyBroadcastMessage(){
-  // Po otrzymaniu komunikatu spróbuj ponownie zaimportować punkty z bazy
-  try {
-    if (typeof importTherapyPointsToAdvancedGrowth === 'function') {
-      importTherapyPointsToAdvancedGrowth();
-    }
-  } catch (_) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', _, { line: 3208 });
-    }
-  }
+  const bridge = getGHTherapySyncBridge();
+  if (bridge && typeof bridge.handleGHTherapyBroadcastMessage === 'function') return bridge.handleGHTherapyBroadcastMessage();
+  return undefined;
 }
 
 function isGHTherapyBroadcastChannelOpen(){
-  return !!(ghTherapyBroadcastChannel && ghTherapyBroadcastChannelClosed !== true);
+  const bridge = getGHTherapySyncBridge();
+  if (bridge && typeof bridge.isGHTherapyBroadcastChannelOpen === 'function') return bridge.isGHTherapyBroadcastChannelOpen();
+  return false;
 }
 
 function getGHTherapyBroadcastChannel(){
-  return isGHTherapyBroadcastChannelOpen() ? ghTherapyBroadcastChannel : null;
+  const bridge = getGHTherapySyncBridge();
+  if (bridge && typeof bridge.getGHTherapyBroadcastChannel === 'function') return bridge.getGHTherapyBroadcastChannel();
+  return null;
 }
 
 function closeGHTherapyBroadcastChannel(contextLabel){
-  if (!ghTherapyBroadcastChannel || ghTherapyBroadcastChannelClosed) return false;
-  ghTherapyBroadcastChannelClosed = true;
-  try {
-    if (typeof ghTherapyBroadcastChannel.removeEventListener === 'function') {
-      ghTherapyBroadcastChannel.removeEventListener('message', handleGHTherapyBroadcastMessage);
-    }
-  } catch (error) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', error, { step: '8O-11b', context: (contextLabel || 'gh-therapy-broadcast-channel-close') + ':remove-listener' });
-    }
-  }
-  try {
-    if (typeof ghTherapyBroadcastChannel.close === 'function') ghTherapyBroadcastChannel.close();
-    return true;
-  } catch (error) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', error, { step: '8O-11b', context: contextLabel || 'gh-therapy-broadcast-channel-close' });
-    }
-  }
+  const bridge = getGHTherapySyncBridge();
+  if (bridge && typeof bridge.closeGHTherapyBroadcastChannel === 'function') return bridge.closeGHTherapyBroadcastChannel(contextLabel);
   return false;
 }
 
 function registerGHTherapyBroadcastChannelLifecycleCleanup(){
-  try {
-    if (!ghTherapyBroadcastChannel || typeof window === 'undefined' || typeof window.addEventListener !== 'function') return false;
-    const cleanup = function(){ closeGHTherapyBroadcastChannel('gh-therapy-broadcast-channel-page-lifecycle'); };
-    window.addEventListener('pagehide', cleanup, { once: true });
-    window.addEventListener('beforeunload', cleanup, { once: true });
-    return true;
-  } catch (error) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', error, { step: '8O-11b', context: 'gh-therapy-broadcast-channel-lifecycle-bind' });
-    }
-  }
+  const bridge = getGHTherapySyncBridge();
+  if (bridge && typeof bridge.registerGHTherapyBroadcastChannelLifecycleCleanup === 'function') return bridge.registerGHTherapyBroadcastChannelLifecycleCleanup();
   return false;
-}
-
-if (ghTherapyBroadcastChannel) {
-  try {
-    ghTherapyBroadcastChannel.addEventListener('message', handleGHTherapyBroadcastMessage);
-  } catch (_) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', _, { line: 3212 });
-    }
-  }
-  registerGHTherapyBroadcastChannelLifecycleCleanup();
 }
 
 // =======================================================================
@@ -597,11 +549,20 @@ function refreshGrowthChartActionControls(options) {
 }
 
 function syncGrowthDataSourceInputs(options = {}) {
+  const __perfEnd = vildaPerfStart('P2:syncGrowthDataSourceInputs');
   const adapter = getVildaAdvancedGrowthAdapter();
   if (adapter && typeof adapter.syncGrowthDataSourceInputs === 'function') {
-    return adapter.syncGrowthDataSourceInputs(getVildaAdvancedGrowthSourceOptions(options || {}));
+    try {
+      return adapter.syncGrowthDataSourceInputs(getVildaAdvancedGrowthSourceOptions(options || {}));
+    } finally {
+      __perfEnd();
+    }
   }
-  return (typeof bmiSource !== 'undefined' && bmiSource) ? bmiSource : 'WHO';
+  try {
+    return (typeof bmiSource !== 'undefined' && bmiSource) ? bmiSource : 'WHO';
+  } finally {
+    __perfEnd();
+  }
 }
 
 if (typeof window !== 'undefined') {
@@ -624,15 +585,24 @@ function updatePalczewskaAccess(options) {
 }
 
 function updateGrowthDataSourceControls(context, options) {
+  const __perfEnd = vildaPerfStart('P2:updateGrowthDataSourceControls');
   const adapter = getVildaAdvancedGrowthAdapter();
   if (adapter && typeof adapter.updateGrowthDataSourceControls === 'function') {
     const mergedOptions = getVildaAdvancedGrowthSourceOptions(options || {});
     if (!mergedOptions.markSection && typeof window !== 'undefined' && window.VildaUpdatePrep && typeof window.VildaUpdatePrep.markSection === 'function') {
       mergedOptions.markSection = window.VildaUpdatePrep.markSection;
     }
-    return adapter.updateGrowthDataSourceControls(context, mergedOptions);
+    try {
+      return adapter.updateGrowthDataSourceControls(context, mergedOptions);
+    } finally {
+      __perfEnd();
+    }
   }
-  return { action: 'skipped', reason: 'missing-vilda-advanced-growth' };
+  try {
+    return { action: 'skipped', reason: 'missing-vilda-advanced-growth' };
+  } finally {
+    __perfEnd();
+  }
 }
 
 /**
@@ -3119,35 +3089,53 @@ function fillDietSelect(diets) {
 
 /* === PLAN – aktualizacja po wyborze diety  =========================== */
 function updatePlanFromDiet(){
+  const __perfEnd = vildaPerfStart('P1:updatePlanFromDiet');
+  try {
 
   /* ------------------ 1. Dane wejściowe ------------------ */
-  // Wiek w latach z uwzględnieniem miesięcy (używany w dalszych obliczeniach)
-  const age      = (typeof getAgeDecimal === 'function') ? getAgeDecimal() : 0;
-  const sexEl    = document.getElementById('sex');
-  const weightEl = document.getElementById('weight');
-  const heightEl = document.getElementById('height');
-  const palEl    = document.getElementById('palFactor');
-  const planResultsContainer = document.getElementById('planResults');
-  const planCardContainer = document.getElementById('planCard');
-  // Ten moduł nie występuje na wszystkich podstronach. Brak DOM = bezpieczny no-op.
-  if (!sexEl || !weightEl || !heightEl || !palEl || !planResultsContainer || !planCardContainer) return;
-  const sex      = sexEl.value || 'M';           // 'M' / 'F'
-  const anthroValidation = (typeof vildaGetMainAnthroValidationSnapshot === 'function')
-    ? vildaGetMainAnthroValidationSnapshot()
+  const planInputAdapter = (typeof window !== 'undefined' && window.VildaPlanInput) ? window.VildaPlanInput : null;
+  const readPlanInput = planInputAdapter && typeof planInputAdapter.readPlanInputFromDom === 'function'
+    ? planInputAdapter.readPlanInputFromDom
     : null;
-  const weightKg = anthroValidation && anthroValidation.weight && anthroValidation.weight.value != null
-    ? anthroValidation.weight.value
-    : +weightEl.value;
-  const heightCm = anthroValidation && anthroValidation.height && anthroValidation.height.value != null
-    ? anthroValidation.height.value
-    : +heightEl.value;
-  const pal      = +palEl.value;
+  const isPlanInputComplete = planInputAdapter && typeof planInputAdapter.isPlanInputComplete === 'function'
+    ? planInputAdapter.isPlanInputComplete
+    : null;
+
+  const planInput = readPlanInput
+    ? readPlanInput({
+      doc: document,
+      getAgeDecimal: (typeof getAgeDecimal === 'function') ? getAgeDecimal : null,
+      getAnthroValidation: (typeof vildaGetMainAnthroValidationSnapshot === 'function')
+        ? vildaGetMainAnthroValidationSnapshot
+        : null
+    })
+    : null;
+
+  const age = planInput ? planInput.age : ((typeof getAgeDecimal === 'function') ? getAgeDecimal() : 0);
+  const planResultsContainer = planInput ? planInput.planResultsContainer : document.getElementById('planResults');
+  const planCardContainer = planInput ? planInput.planCardContainer : document.getElementById('planCard');
+  const sex = planInput ? planInput.sex : ((document.getElementById('sex')?.value) || 'M');
+  const anthroValidation = planInput ? planInput.anthroValidation : ((typeof vildaGetMainAnthroValidationSnapshot === 'function')
+    ? vildaGetMainAnthroValidationSnapshot()
+    : null);
+  const weightKg = planInput ? planInput.weightKg : +(document.getElementById('weight')?.value);
+  const heightCm = planInput ? planInput.heightCm : +(document.getElementById('height')?.value);
+  const pal = planInput ? planInput.pal : +(document.getElementById('palFactor')?.value);
+
+  // Ten moduł nie występuje na wszystkich podstronach. Brak DOM = bezpieczny no-op.
+  if ((planInput && planInput.missingRequiredDom) || !planResultsContainer || !planCardContainer) return;
   planResultsContainer.classList.toggle('adult-plan-results', Number(age) >= ENERGY_ADULT_START_AGE);
 
-  if(!(
-    anthroValidation
-      ? anthroValidation.complete
-      : (vildaIsFiniteNonNegative(age) && vildaIsFinitePositive(weightKg) && vildaIsFinitePositive(heightCm))
+  if (!(isPlanInputComplete
+    ? isPlanInputComplete(planInput, {
+      isFiniteNonNegative: (typeof vildaIsFiniteNonNegative === 'function') ? vildaIsFiniteNonNegative : null,
+      isFinitePositive: (typeof vildaIsFinitePositive === 'function') ? vildaIsFinitePositive : null
+    })
+    : (
+      anthroValidation
+        ? anthroValidation.complete
+        : (vildaIsFiniteNonNegative(age) && vildaIsFinitePositive(weightKg) && vildaIsFinitePositive(heightCm))
+    )
   )) return;                  // brak danych
 
   /* ------------------ 2. TEE i dostępne diety ------------- */
@@ -3155,61 +3143,83 @@ function updatePlanFromDiet(){
   const isChildEnergy = age >= CHILD_AGE_MIN && age < ENERGY_ADULT_START_AGE;
   const intakeHistory = window.intakeHistory || null;
   const intakeKcalPerDay = window.intakeEstimatedKcalPerDay || null;
-  const planState = energyBuildPlanReductionState({
-    ageYears: age,
-    ageMonthsOpt,
-    sex,
-    weightKg,
-    heightCm,
-    palInput: pal,
-    history: intakeHistory,
-    intakeKcalPerDay,
-    mountId: 'anorexiaTmpMount'
-  });
+  const planEnergyAdapter = (typeof window !== 'undefined' && window.VildaPlanEnergy) ? window.VildaPlanEnergy : null;
+  const planRenderAdapter = (typeof window !== 'undefined' && window.VildaPlanRender) ? window.VildaPlanRender : null;
+  const buildPlanState = planEnergyAdapter && typeof planEnergyAdapter.buildPlanState === 'function'
+    ? planEnergyAdapter.buildPlanState
+    : null;
+  const resolvePlanDiets = planEnergyAdapter && typeof planEnergyAdapter.resolvePlanDiets === 'function'
+    ? planEnergyAdapter.resolvePlanDiets
+    : null;
+  const planState = buildPlanState
+    ? buildPlanState({ age, sex, weightKg, heightCm, pal }, {
+      ageMonthsOpt,
+      intakeHistory,
+      intakeKcalPerDay,
+      mountId: 'anorexiaTmpMount',
+      energyBuildPlanReductionState: (typeof energyBuildPlanReductionState === 'function') ? energyBuildPlanReductionState : null
+    })
+    : energyBuildPlanReductionState({
+      ageYears: age,
+      ageMonthsOpt,
+      sex,
+      weightKg,
+      heightCm,
+      palInput: pal,
+      history: intakeHistory,
+      intakeKcalPerDay,
+      mountId: 'anorexiaTmpMount'
+    });
 
   const bmr = planState.reeKcal;
   const teeRawPlan = planState.teeRawKcal;
 
   if (planState.isInfantPlanUnavailable) {
-    const dietSel = document.getElementById('dietLevel');
-    if (dietSel) vildaAppClearHtml(dietSel);
-    const descEl = document.getElementById('dietDesc');
-    const calEl  = document.getElementById('dietCalorieInfo');
-    const wrap = document.getElementById('dietChoiceWrap');
-    if (descEl) descEl.style.display = 'none';
-    if (calEl) calEl.style.display = 'none';
-    if (wrap) wrap.style.display = 'none';
-    const planCardEl = document.getElementById('planCard');
-    if (planCardEl) planCardEl.style.display = 'block';
-    const planResultsEl = document.getElementById('planResults');
-    if (planResultsEl) {
-      vildaAppSetTrustedHtml(planResultsEl, `<div class="result-card plan-col plan-result-card animate-in"><h3>Informacja</h3><p class="diet-warning">Plan odchudzania nie jest dostępny dla niemowląt. W tym wieku moduł energii ma charakter wyłącznie informacyjny.</p></div>`, 'app:planResultsEl');
+    if (planRenderAdapter && typeof planRenderAdapter.renderPlanUnavailable === 'function') {
+      planRenderAdapter.renderPlanUnavailable('infant', { doc: document });
+    } else {
+      const dietSel = document.getElementById('dietLevel');
+      if (dietSel) vildaAppClearHtml(dietSel);
+      const descEl = document.getElementById('dietDesc');
+      const calEl  = document.getElementById('dietCalorieInfo');
+      const wrap = document.getElementById('dietChoiceWrap');
+      if (descEl) descEl.style.display = 'none';
+      if (calEl) calEl.style.display = 'none';
+      if (wrap) wrap.style.display = 'none';
+      const planCardEl = document.getElementById('planCard');
+      if (planCardEl) planCardEl.style.display = 'block';
+      const planResultsEl = document.getElementById('planResults');
+      if (planResultsEl) {
+        vildaAppSetTrustedHtml(planResultsEl, `<div class="result-card plan-col plan-result-card animate-in"><h3>Informacja</h3><p class="diet-warning">Plan odchudzania nie jest dostępny dla niemowląt. W tym wieku moduł energii ma charakter wyłącznie informacyjny.</p></div>`, 'app:planResultsEl');
+      }
     }
     return;
   }
 
   let teeForDiets = planState.teeBaselineKcal;
-  let diets = Array.isArray(planState.diets) ? planState.diets.slice() : proposeDietsFromTEE(teeForDiets, sex, isChildEnergy);
+  let diets = resolvePlanDiets
+    ? resolvePlanDiets(planState, { sex, isChildEnergy }, { proposeDietsFromTEE: (typeof proposeDietsFromTEE === 'function') ? proposeDietsFromTEE : null })
+    : (Array.isArray(planState.diets) ? planState.diets.slice() : proposeDietsFromTEE(teeForDiets, sex, isChildEnergy));
 
   // Jeśli nie ma żadnych diet (deficyt zbyt niski dla wszystkich poziomów),
   // ukryj opcję wyboru diety i wyświetl informację w wynikach planu.
   if (!diets || diets.length === 0) {
-    const dietSel = document.getElementById('dietLevel');
-    if (dietSel) {
-      vildaAppClearHtml(dietSel);
+    if (planRenderAdapter && typeof planRenderAdapter.renderNoDietsAvailable === 'function') {
+      planRenderAdapter.renderNoDietsAvailable({ doc: document });
+    } else {
+      const dietSel = document.getElementById('dietLevel');
+      if (dietSel) {
+        vildaAppClearHtml(dietSel);
+      }
+      const descEl = document.getElementById('dietDesc');
+      const calEl  = document.getElementById('dietCalorieInfo');
+      if (descEl) descEl.style.display = 'none';
+      if (calEl)  calEl.style.display  = 'none';
+      const wrap = document.getElementById('dietChoiceWrap');
+      if (wrap) wrap.style.display = 'none';
+      const planCardEl = document.getElementById('planCard');
+      if (planCardEl) planCardEl.style.display = 'block';
     }
-    // schowaj opis i kaloryczność
-    const descEl = document.getElementById('dietDesc');
-    const calEl  = document.getElementById('dietCalorieInfo');
-    if (descEl) descEl.style.display = 'none';
-    if (calEl)  calEl.style.display  = 'none';
-    // ukryj wybór diety
-    const wrap = document.getElementById('dietChoiceWrap');
-    if (wrap) wrap.style.display = 'none';
-
-    // Pokaż planCard, jeśli jest ukryty (np. w przypadku nadwagi), a w planResults umieść informację
-    const planCardEl = document.getElementById('planCard');
-    if (planCardEl) planCardEl.style.display = 'block';
     const planResultsEl = document.getElementById('planResults');
     if (planResultsEl) {
       vildaAppSetTrustedHtml(planResultsEl, `<div class="result-card plan-col plan-result-card animate-in"><h3>Brak diety</h3><p class="diet-warning">Twoje całkowite zapotrzebowanie jest zbyt niskie, aby zaproponować dietę redukcyjną.</p></div>`, 'app:planResultsEl');
@@ -3444,6 +3454,9 @@ function updatePlanFromDiet(){
     if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
       globalThis.vildaLogSwallowedCatch('app.js', e, { line: 6526 });
     }
+  }
+  } finally {
+    __perfEnd();
   }
 }
 /**
@@ -8289,6 +8302,8 @@ function updateMetabolicSummaryVisibility() {
  * @returns {string} Tekst podsumowania, gotowy do skopiowania do schowka.
  */
 function generateMetabolicSummary() {
+  const __perfEnd = vildaPerfStart('P1:generateMetabolicSummary');
+  try {
   const lines = [];
   // Odczytaj dane wejściowe
   const weightVal = parseFloat(document.getElementById('weight')?.value);
@@ -8759,6 +8774,9 @@ function generateMetabolicSummary() {
   }
   // Zwróć wszystkie linie w postaci tekstu
   return lines.join('\n');
+  } finally {
+    __perfEnd();
+  }
 }
 
 /**
@@ -8769,6 +8787,8 @@ function generateMetabolicSummary() {
  * onclick w kodzie HTML.
  */
 function handleMetabolicSummaryClick(event) {
+  const __perfEnd = vildaPerfStart('P2:handleMetabolicSummaryClick');
+  try {
   if (event) {
     if (typeof event.preventDefault === 'function') {
       event.preventDefault();
@@ -8947,6 +8967,9 @@ function handleMetabolicSummaryClick(event) {
     .catch(function() {
       alert('Nie udało się skopiować danych.');
     });
+  } finally {
+    __perfEnd();
+  }
 }
 
 // Upewnij się, że funkcja kliknięcia jest dostępna globalnie, aby mogła być wywołana
@@ -9743,6 +9766,8 @@ function updateAdvancedGrowthReportButtonVisibility(forceHide) {
 
 
 function buildHistoricalPointAnalysis(rowEl) {
+  const __perfEnd = vildaPerfStart('P2:buildHistoricalPointAnalysis');
+  try {
   if (!rowEl || !isAdvancedGrowthMainPage()) return null;
   const measurements = collectAdvancedMeasurements(true);
   const point = measurements.find(m => m.rowEl === rowEl);
@@ -9937,6 +9962,9 @@ function buildHistoricalPointAnalysis(rowEl) {
       .replace(/ /g, ' ')
       .replace(/([0-9])\.([0-9])/g, '$1,$2')
   };
+  } finally {
+    __perfEnd();
+  }
 }
 
 function renderAdvancedMeasurementAnalysisRow(rowEl) {
@@ -15978,12 +16006,32 @@ function openIntakeCard(options){
 
     if (opts.recalcIfOpen && card.style.display !== 'none') {
       try { calcEstimatedIntake(); } catch (_) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', _, { line: 33002 });
+        if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+          globalThis.vildaLogSwallowedCatch('app.js', _, { line: 33002 });
+        }
+      }
     }
   }
-    }
-  }
+
+  const scheduleIntakeVisibilityUpdate = (function(){
+    let rafId = null;
+    let latestOptions = null;
+    return function(options){
+      latestOptions = options || { preserveRows: true, recalcIfOpen: true };
+      if (rafId != null) return;
+      const runner = function(){
+        rafId = null;
+        const opts = latestOptions || { preserveRows: true, recalcIfOpen: true };
+        latestOptions = null;
+        updateIntakeToggleVisibility(opts);
+      };
+      if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+        rafId = window.requestAnimationFrame(runner);
+      } else {
+        rafId = window.setTimeout(runner, 16);
+      }
+    };
+  })();
 
   try {
     window.refreshEstimatedIntakeVisibility = updateIntakeToggleVisibility;
@@ -16000,20 +16048,20 @@ function openIntakeCard(options){
   ['weight','height','age','ageMonths','sex'].forEach(id=>{
     const el = document.getElementById(id);
     if(el){
-      el.addEventListener('input', ()=> updateIntakeToggleVisibility({ preserveRows: true, recalcIfOpen: true }));
-      el.addEventListener('change', ()=> updateIntakeToggleVisibility({ preserveRows: true, recalcIfOpen: true }));
+      el.addEventListener('input', ()=> scheduleIntakeVisibilityUpdate({ preserveRows: true, recalcIfOpen: true }));
+      el.addEventListener('change', ()=> scheduleIntakeVisibilityUpdate({ preserveRows: true, recalcIfOpen: true }));
     }
   });
 
   document.querySelectorAll('input[name="dataSource"]').forEach(el => {
-    el.addEventListener('change', ()=> updateIntakeToggleVisibility({ preserveRows: true, recalcIfOpen: true }));
+    el.addEventListener('change', ()=> scheduleIntakeVisibilityUpdate({ preserveRows: true, recalcIfOpen: true }));
   });
 
   // natychmiastowa ocena widoczności przy pierwszym załadowaniu
-  updateIntakeToggleVisibility({ preserveRows: true, recalcIfOpen: true });
+  scheduleIntakeVisibilityUpdate({ preserveRows: true, recalcIfOpen: true });
   // Uruchom ponownie po pozostałych listenerach DOMContentLoaded (np. przywracaniu stanu kart).
   window.setTimeout(()=>{
-    updateIntakeToggleVisibility({ preserveRows: true, recalcIfOpen: true });
+    scheduleIntakeVisibilityUpdate({ preserveRows: true, recalcIfOpen: true });
   }, 0);
 
   btn.addEventListener('click', ()=>{
@@ -16038,10 +16086,11 @@ function openIntakeCard(options){
   document.getElementById('intakePal')?.addEventListener('change', debouncedIntakeCalc);
 
   // przelicz wyniki przy rotacji/zmianie szerokości, aby zachować poprawny układ sekcji
-  window.addEventListener('resize', ()=>{
+  const debouncedIntakeResizeRecalc = debounce(()=>{
     const visible = card && card.style.display !== 'none';
     if(visible) calcEstimatedIntake();
-  });
+  }, 120);
+  window.addEventListener('resize', debouncedIntakeResizeRecalc);
 }
 
 window.vildaAppOnReady('app:estimated-intake-init', setupEstimatedIntake);
