@@ -141,9 +141,9 @@
             const hasDocproRoot = !!(runtime && typeof runtime.getRoot === 'function' && runtime.getRoot(global.document, 'docpro'));
             const hasKlirensRoot = !!(runtime && typeof runtime.getRoot === 'function' && runtime.getRoot(global.document, 'klirens'));
 
-            if (isHome && !hasHomeRoot && global.location && global.location.pathname !== '/index.html') { global.location.assign('index.html'); return true; }
-            if (isDocpro && !hasDocproRoot && global.location && global.location.pathname !== '/docpro.html') { global.location.assign('docpro.html'); return true; }
-            if (isKlirens && !hasKlirensRoot && global.location && global.location.pathname !== '/kalkulator-klirens.html') { global.location.assign('kalkulator-klirens.html'); return true; }
+            if (isHome && !hasHomeRoot && global.location) { global.location.assign('index.html#/index'); return true; }
+            if (isDocpro && !hasDocproRoot && global.location) { global.location.assign('index.html#/docpro'); return true; }
+            if (isKlirens && !hasKlirensRoot && global.location) { global.location.assign('index.html#/kalkulator-klirens'); return true; }
 
             if (homeView && isHome && !homeMounted && typeof homeView.mount === 'function') {
               homeView.mount({});
