@@ -50,7 +50,9 @@
         if (!target) return;
         const href = target.getAttribute('href') || '';
         if (!href || href.startsWith('http') || href.startsWith('mailto:') || href.startsWith('tel:')) return;
-        if (!href.endsWith('.html') && !href.startsWith('#/')) return;
+        const isHashRoute = href.startsWith('#/');
+        const isSpaLink = target.hasAttribute('data-spa-link') || (target.dataset && target.dataset.spaLink === 'true');
+        if (!isHashRoute && !isSpaLink) return;
         ev.preventDefault();
         const route = href.startsWith('#/') ? href.slice(1) : '/' + href.replace(/\.html$/i, '');
         if (global.location && global.location.hash !== '#' + route) {
