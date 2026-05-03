@@ -108,53 +108,35 @@ function vildaPerfStart(label){
   };
 }
 
+function getGHTherapySyncBridge(){
+  try {
+    if (typeof window === 'undefined' || !window.VildaGHTherapySync) return null;
+    return window.VildaGHTherapySync;
+  } catch (_) {
+    return null;
+  }
+}
+
 function openGHTherapyDB(){
-  return new Promise((resolve, reject) => {
-    try {
-      if (typeof indexedDB === 'undefined') {
-        return reject(new Error('IndexedDB not available'));
-      }
-      const req = indexedDB.open(GH_DB_NAME, 1);
-      req.onupgradeneeded = function(ev){
-        const db = ev.target.result;
-        if (!db.objectStoreNames.contains(GH_STORE_NAME)) {
-          db.createObjectStore(GH_STORE_NAME, { keyPath: 'id' });
-        }
-      };
-      req.onsuccess = function(ev){
-        const db = ev.target.result;
-        attachGHTherapyDBVersionChangeHandler(db, 'openGHTherapyDB');
-        resolve(db);
-      };
-      req.onerror = function(ev){ reject(ev.target.error); };
-    } catch(err) {
-      reject(err);
-    }
-  });
+  const bridge = getGHTherapySyncBridge();
+  if (bridge && typeof bridge.openGHTherapyDB === 'function') return bridge.openGHTherapyDB();
+  return Promise.reject(new Error('VildaGHTherapySync unavailable: openGHTherapyDB'));
 }
 
 function attachGHTherapyDBVersionChangeHandler(db, contextLabel){
-  try {
-    if (!db) return db;
-    db.onversionchange = function(){
-      closeGHTherapyDBConnection(db, (contextLabel || 'openGHTherapyDB') + ':onversionchange');
-    };
-  } catch (error) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', error, { step: '8O-11a-c', context: contextLabel || 'gh-therapy-indexeddb-onversionchange' });
-    }
+  const bridge = getGHTherapySyncBridge();
+  if (bridge && typeof bridge.attachGHTherapyDBVersionChangeHandler === 'function') {
+    return bridge.attachGHTherapyDBVersionChangeHandler(db, contextLabel);
   }
   return db;
 }
 
 function closeGHTherapyDBConnection(db, contextLabel){
-  try {
-    if (db && typeof db.close === 'function') db.close();
-  } catch (error) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', error, { step: '8O-11a-c', context: contextLabel || 'gh-therapy-indexeddb-close' });
-    }
+  const bridge = getGHTherapySyncBridge();
+  if (bridge && typeof bridge.closeGHTherapyDBConnection === 'function') {
+    return bridge.closeGHTherapyDBConnection(db, contextLabel);
   }
+  return undefined;
 }
 
 async function getTherapyPointsFromDB(){
@@ -207,6 +189,8 @@ async function clearTherapyPointsInDB(){
 }
 
 function isGhAdvancedImportSuppressed(){
+  const bridge = getGHTherapySyncBridge();
+  if (bridge && typeof bridge.isGhAdvancedImportSuppressed === 'function') return bridge.isGhAdvancedImportSuppressed();
   try {
     if (typeof window === 'undefined') return false;
     return Number(window.__vildaSuppressGhAdvancedImportUntil || 0) > Date.now();
@@ -216,118 +200,51 @@ function isGhAdvancedImportSuppressed(){
 }
 
 function readGhTherapyPointsFromModuleStorage(){
-  try {
-    if (typeof window !== 'undefined' && window.VildaPersistence && typeof window.VildaPersistence.readModuleJSON === 'function') {
-      const value = window.VildaPersistence.readModuleJSON('GH_THERAPY_POINTS', []);
-      return Array.isArray(value) ? value : [];
-    }
-  } catch (_) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', _, { line: 3175 });
-    }
-  }
+  const bridge = getGHTherapySyncBridge();
+  if (bridge && typeof bridge.readGhTherapyPointsFromModuleStorage === 'function') return bridge.readGhTherapyPointsFromModuleStorage();
   return [];
 }
 
 function writeGhTherapyPointsToModuleStorage(points){
-  const safePoints = Array.isArray(points) ? points : [];
-  try {
-    if (typeof window !== 'undefined' && window.VildaPersistence && typeof window.VildaPersistence.writeModuleJSON === 'function') {
-      return window.VildaPersistence.writeModuleJSON('GH_THERAPY_POINTS', safePoints, { force: true });
-    }
-  } catch (_) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', _, { line: 3185 });
-    }
-  }
+  const bridge = getGHTherapySyncBridge();
+  if (bridge && typeof bridge.writeGhTherapyPointsToModuleStorage === 'function') return bridge.writeGhTherapyPointsToModuleStorage(points);
   return false;
 }
 
 function clearGhTherapyPointsModuleStorage(){
-  try {
-    if (typeof window !== 'undefined' && window.VildaPersistence && typeof window.VildaPersistence.removeModuleKey === 'function') {
-      return window.VildaPersistence.removeModuleKey('GH_THERAPY_POINTS');
-    }
-  } catch (_) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', _, { line: 3194 });
-    }
-  }
+  const bridge = getGHTherapySyncBridge();
+  if (bridge && typeof bridge.clearGhTherapyPointsModuleStorage === 'function') return bridge.clearGhTherapyPointsModuleStorage();
   return false;
 }
 
-// Inicjalizuj BroadcastChannel do nasłuchiwania zmian w module terapii.
-const ghTherapyBroadcastChannel = (typeof BroadcastChannel !== 'undefined') ? new BroadcastChannel('gh-therapy-sync') : null;
-let ghTherapyBroadcastChannelClosed = false;
-
 function handleGHTherapyBroadcastMessage(){
-  // Po otrzymaniu komunikatu spróbuj ponownie zaimportować punkty z bazy
-  try {
-    if (typeof importTherapyPointsToAdvancedGrowth === 'function') {
-      importTherapyPointsToAdvancedGrowth();
-    }
-  } catch (_) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', _, { line: 3208 });
-    }
-  }
+  const bridge = getGHTherapySyncBridge();
+  if (bridge && typeof bridge.handleGHTherapyBroadcastMessage === 'function') return bridge.handleGHTherapyBroadcastMessage();
+  return undefined;
 }
 
 function isGHTherapyBroadcastChannelOpen(){
-  return !!(ghTherapyBroadcastChannel && ghTherapyBroadcastChannelClosed !== true);
+  const bridge = getGHTherapySyncBridge();
+  if (bridge && typeof bridge.isGHTherapyBroadcastChannelOpen === 'function') return bridge.isGHTherapyBroadcastChannelOpen();
+  return false;
 }
 
 function getGHTherapyBroadcastChannel(){
-  return isGHTherapyBroadcastChannelOpen() ? ghTherapyBroadcastChannel : null;
+  const bridge = getGHTherapySyncBridge();
+  if (bridge && typeof bridge.getGHTherapyBroadcastChannel === 'function') return bridge.getGHTherapyBroadcastChannel();
+  return null;
 }
 
 function closeGHTherapyBroadcastChannel(contextLabel){
-  if (!ghTherapyBroadcastChannel || ghTherapyBroadcastChannelClosed) return false;
-  ghTherapyBroadcastChannelClosed = true;
-  try {
-    if (typeof ghTherapyBroadcastChannel.removeEventListener === 'function') {
-      ghTherapyBroadcastChannel.removeEventListener('message', handleGHTherapyBroadcastMessage);
-    }
-  } catch (error) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', error, { step: '8O-11b', context: (contextLabel || 'gh-therapy-broadcast-channel-close') + ':remove-listener' });
-    }
-  }
-  try {
-    if (typeof ghTherapyBroadcastChannel.close === 'function') ghTherapyBroadcastChannel.close();
-    return true;
-  } catch (error) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', error, { step: '8O-11b', context: contextLabel || 'gh-therapy-broadcast-channel-close' });
-    }
-  }
+  const bridge = getGHTherapySyncBridge();
+  if (bridge && typeof bridge.closeGHTherapyBroadcastChannel === 'function') return bridge.closeGHTherapyBroadcastChannel(contextLabel);
   return false;
 }
 
 function registerGHTherapyBroadcastChannelLifecycleCleanup(){
-  try {
-    if (!ghTherapyBroadcastChannel || typeof window === 'undefined' || typeof window.addEventListener !== 'function') return false;
-    const cleanup = function(){ closeGHTherapyBroadcastChannel('gh-therapy-broadcast-channel-page-lifecycle'); };
-    window.addEventListener('pagehide', cleanup, { once: true });
-    window.addEventListener('beforeunload', cleanup, { once: true });
-    return true;
-  } catch (error) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', error, { step: '8O-11b', context: 'gh-therapy-broadcast-channel-lifecycle-bind' });
-    }
-  }
+  const bridge = getGHTherapySyncBridge();
+  if (bridge && typeof bridge.registerGHTherapyBroadcastChannelLifecycleCleanup === 'function') return bridge.registerGHTherapyBroadcastChannelLifecycleCleanup();
   return false;
-}
-
-if (ghTherapyBroadcastChannel) {
-  try {
-    ghTherapyBroadcastChannel.addEventListener('message', handleGHTherapyBroadcastMessage);
-  } catch (_) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', _, { line: 3212 });
-    }
-  }
-  registerGHTherapyBroadcastChannelLifecycleCleanup();
 }
 
 // =======================================================================
