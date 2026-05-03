@@ -48,7 +48,19 @@
 <script src="vilda_html.js?v=4"></script>
 <script src="vilda_persistence_adapter.js?v=7"></script>
 <script src="vilda_init.js?v=4"></script>
-<script src="vilda_deps.js?v=6"></script>
+<script src="vilda_deps.js?v=74"></script>
+<script src="vilda_update_hooks.js?v=7"></script>
+<script src="vilda_centile_chart_header.js?v=1"></script>
+<script src="vilda_gh_therapy_resource_audit.js?v=13"></script>
+<script src="vilda_app_helpers.js?v=2"></script>
+<script src="vilda_food_data.js?v=1"></script>
+<script src="vilda_macro_practice.js?v=2"></script>
+<script src="vilda_activity_burn.js?v=1"></script>
+<script src="vilda_food_summary.js?v=2"></script>
+<script src="vilda_data_import_export.js?v=14"></script>
+<script src="vilda_advanced_growth.js?v=14"></script>
+<script src="vilda_estimated_intake.js?v=3"></script>
+<script src="vilda_update_prep.js?v=61" defer></script>
 
 <script>
 (function() {
@@ -175,7 +187,7 @@
 <!-- Dodajemy klasę "liquid-ios26" bezpośrednio na element <body>,
      aby motyw Liquid Glass był stosowany od samego początku ładowania strony.
      Dzięki temu unikamy krótkiego błysku podstawowych stylów zanim skrypt
-     ios26-ui.js?v=16 dołączy klasę dynamicznie. -->
+     ios26-ui.js?v=18 dołączy klasę dynamicznie. -->
 <body class="js-loading liquid-ios26 has-sidebar">
 
 <header>
@@ -1490,6 +1502,8 @@
 
 <!-- Load Down syndrome growth tables before app.js; these define DS datasets as global variables -->
 <script src="ds_lms.js"></script>
+<script src="vilda_down_syndrome.js?v=1"></script>
+<script src="vilda_anorexia_risk.js?v=1"></script>
 <!-- Palczewska centile data (weight, height, BMI) for 0–18 years. Loaded before app.js so it attaches centileData to window. -->
 <script src="centile_data.js"></script>
 <!-- Bayley-Pinneau stage 1 dataset for the advanced height prediction module. Loaded before app.js so future modules can access window.bayleyPinneauData. -->
@@ -1504,9 +1518,12 @@
      dane Bonafide et al. 2013 z korektami temperatury i stanu snu. -->
 <script src="vitalSigns.js"></script>
 <script src="adult_vitals.js?v=5" defer></script>
-<script src="app.js?v=82" defer></script>
-<script src="nutrition_norms.js?v=38" defer></script>
-<script src="nutrition_micros.js?v=18" defer></script>
+<script src="app.js?v=150" defer></script>
+<script src="vilda_smoke_tests.js?v=25" defer></script>
+<script src="vilda_diet_recommendations.js?v=2" defer></script>
+<script src="vilda_patient_report.js?v=3" defer></script>
+<script src="nutrition_norms.js?v=39" defer></script>
+<script src="nutrition_micros.js?v=20" defer></script>
 
 <!-- po app.js -->
 <script src="gh_igf_therapy.js?v=7" defer></script>
@@ -2636,31 +2653,77 @@ function drawStandardCentileChipRow(ctx, cfg) {
 }
 
 
-function getCentileChartHeaderNameState() {
+function getCentileChartHeaderNameState(options = {}) {
   const advData = getEffectiveCentileGrowthDataState() || {};
+  if (window.VildaCentileChartHeader && typeof window.VildaCentileChartHeader.buildHeaderNameState === 'function') {
+    return window.VildaCentileChartHeader.buildHeaderNameState(Object.assign({}, options, {
+      effectiveDataState: advData,
+      advancedGrowthData: window.advancedGrowthData || null
+    }));
+  }
   const sourceModule = (advData && typeof advData.sourceModule === 'string') ? advData.sourceModule : '';
-  const advName = (advData && typeof advData.name === 'string') ? advData.name.trim() : '';
   const advInput = document.getElementById('advName');
   const basicInput = document.getElementById('basicGrowthName');
   const mainInput = document.getElementById('name');
-  const fallbackName = (advInput && typeof advInput.value === 'string' && advInput.value.trim())
-    || (basicInput && typeof basicInput.value === 'string' && basicInput.value.trim())
-    || (mainInput && typeof mainInput.value === 'string' && mainInput.value.trim())
-    || '';
+  const advInputName = (advInput && typeof advInput.value === 'string' && advInput.value.trim()) || '';
+  const basicInputName = (basicInput && typeof basicInput.value === 'string' && basicInput.value.trim()) || '';
+  const mainInputName = (mainInput && typeof mainInput.value === 'string' && mainInput.value.trim()) || '';
+  const stateName = (advData && typeof advData.name === 'string') ? advData.name.trim() : '';
+  const domName = sourceModule === 'basicGrowth'
+    ? (basicInputName || advInputName || mainInputName)
+    : (advInputName || mainInputName || basicInputName);
   return {
-    name: advName || fallbackName || '',
+    name: domName || stateName || '',
+    nameSource: domName ? 'fresh-dom-fallback' : 'effective-growth-state-name',
     sourceModule,
-    isBasicGrowth: sourceModule === 'basicGrowth'
+    isBasicGrowth: sourceModule === 'basicGrowth',
+    preferredFreshDom: true,
+    domInputsBeforeAdvancedGrowthData: true,
+    currentDomName: domName || '',
+    effectiveStateName: stateName || '',
+    advancedGrowthDataName: (window.advancedGrowthData && typeof window.advancedGrowthData.name === 'string') ? window.advancedGrowthData.name.trim() : '',
+    staleAdvancedGrowthNameDetected: !!(window.advancedGrowthData && typeof window.advancedGrowthData.name === 'string' && domName && window.advancedGrowthData.name.trim() !== domName)
   };
 }
 
 function buildCentileChartNameLabel(options = {}) {
+  const advData = getEffectiveCentileGrowthDataState() || {};
+  if (window.VildaCentileChartHeader && typeof window.VildaCentileChartHeader.buildNameLabel === 'function') {
+    return window.VildaCentileChartHeader.buildNameLabel(Object.assign({}, options, {
+      effectiveDataState: advData,
+      advancedGrowthData: window.advancedGrowthData || null
+    }));
+  }
   const publication = !!options.publication;
   const showPlaceholder = options.showPlaceholder !== false;
-  const nameState = getCentileChartHeaderNameState();
+  const nameState = getCentileChartHeaderNameState(options);
   const prefix = publication ? 'Patient' : 'Imię i nazwisko';
   if (nameState.name) return `${prefix}: ${nameState.name}`;
   return showPlaceholder ? `${prefix}: _________________________________` : '';
+}
+
+function vildaGetCentileChartHeaderNameSnapshot(options = {}) {
+  const advData = getEffectiveCentileGrowthDataState() || {};
+  if (window.VildaCentileChartHeader && typeof window.VildaCentileChartHeader.getSnapshot === 'function') {
+    return window.VildaCentileChartHeader.getSnapshot(Object.assign({}, options, {
+      effectiveDataState: advData,
+      advancedGrowthData: window.advancedGrowthData || null
+    }));
+  }
+  return {
+    step: '8O-10e',
+    kind: 'centile-chart-header-name-snapshot',
+    readOnly: true,
+    executedPdfGeneration: false,
+    renderedDom: false,
+    header: getCentileChartHeaderNameState(options)
+  };
+}
+
+if (typeof window !== 'undefined') {
+  window.getCentileChartHeaderNameState = getCentileChartHeaderNameState;
+  window.buildCentileChartNameLabel = buildCentileChartNameLabel;
+  window.vildaGetCentileChartHeaderNameSnapshot = vildaGetCentileChartHeaderNameSnapshot;
 }
 
 function renderStandardUserCentilePage(ctx, options) {
@@ -5390,7 +5453,7 @@ async function generateCentileChart() {
 </script>
 <!-- Liquid iOS26 UI script: applies glassmorphism and micro‑interactions. The version query
      string busts the service worker cache so updated code is loaded immediately. -->
-<script src="ios26-ui.js?v=16" defer></script>
+<script src="ios26-ui.js?v=18" defer></script>
 <!-- Guided tutorial for first‑time users -->
 <script src="tutorial.js?v=5" defer></script>
 
@@ -5448,11 +5511,18 @@ async function generateCentileChart() {
       const summaryBtn = document.getElementById('metabolicSummaryBtn');
       // Funkcja kontrolująca widoczność przycisku podsumowania
       function updateMetabolicSummaryVisibility() {
-        const ageYears  = parseFloat(document.getElementById('age')?.value) || 0;
+        const ageEl = document.getElementById('age');
+        const ageYears  = parseFloat(ageEl?.value) || 0;
         const weightVal = parseFloat(document.getElementById('weight')?.value) || 0;
         const heightVal = parseFloat(document.getElementById('height')?.value) || 0;
+        const anthroValidation = (typeof window.vildaGetMainAnthroValidationSnapshot === 'function')
+          ? window.vildaGetMainAnthroValidationSnapshot()
+          : null;
+        const hasCompleteAnthro = anthroValidation
+          ? anthroValidation.complete
+          : ((ageEl?.value || '').trim() !== '' && ageYears >= 0 && weightVal > 0 && heightVal > 0);
         if (summarySection) {
-          summarySection.style.display = (ageYears > 0 && weightVal > 0 && heightVal > 0) ? 'block' : 'none';
+          summarySection.style.display = hasCompleteAnthro ? 'block' : 'none';
         }
       }
       ['age','ageMonths','weight','height'].forEach(function(id){
@@ -5802,7 +5872,7 @@ async function generateCentileChart() {
        przełączaniu trybu wyników na wąskich ekranach.
        Plik custom-fixes.js implementuje te funkcje poprzez
        obserwację DOM i modyfikację scrollIntoView. -->
-  <script src="custom-fixes.js?v=11" defer></script>
+  <script src="custom-fixes.js?v=12" defer></script>
 
   <!-- Dynamic repositioning of Cole and Advanced Growth cards on mobile/desktop
        views.  This script adjusts the DOM order of these elements only in

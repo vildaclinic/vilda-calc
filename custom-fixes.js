@@ -1119,7 +1119,13 @@ function vildaCustomHasHtmlContent(element) {
     var heightPerc = null;
     var weightClass = '';
     var heightClass = '';
-    if (ageYears > 0 && weightVal > 0 && heightVal > 0) {
+    var anthroValidation = (typeof window !== 'undefined' && typeof window.vildaGetMainAnthroValidationSnapshot === 'function')
+      ? window.vildaGetMainAnthroValidationSnapshot()
+      : null;
+    var hasCompleteAnthro = anthroValidation
+      ? anthroValidation.complete
+      : ((yearsEl ? String(yearsEl.value || '').trim() !== '' : false) && ageYears >= 0 && weightVal > 0 && heightVal > 0);
+    if (hasCompleteAnthro) {
       weightPerc = computePercentile(weightVal, sexVal, ageYears, 'WT', srcVal);
       heightPerc = computePercentile(heightVal, sexVal, ageYears, 'HT', srcVal);
       weightClass = getStatusClass(weightPerc, ageYears);

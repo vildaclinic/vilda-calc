@@ -1,6 +1,8 @@
 (function(window, document) {
   'use strict';
 
+  const MICRONORMS_MODULE_VERSION = '1.2.0';
+
   const MICRONORMS_RESOURCE_CANDIDATES = {
     norms: ['/micronorms_norms.json', 'micronorms_norms.json', './micronorms_norms.json'],
     ul: ['/micronorms_ul.json', 'micronorms_ul.json', './micronorms_ul.json'],
@@ -168,18 +170,35 @@
     };
   }
 
+  function nutritionMicrosResolveFetchJsonWithTimeout() {
+    try {
+      if (window && window.VildaAppHelpers && typeof window.VildaAppHelpers.fetchJsonWithTimeout === 'function') {
+        return window.VildaAppHelpers.fetchJsonWithTimeout;
+      }
+      if (window && typeof window.vildaFetchJsonWithTimeout === 'function') return window.vildaFetchJsonWithTimeout;
+    } catch (_) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('nutrition_micros.js', _, { step: '8O-11d', helper: 'nutritionMicrosResolveFetchJsonWithTimeout' });
+    }
+  }
+    return null;
+  }
+
   async function fetchJsonCandidates(candidates) {
-    if (typeof fetch !== 'function') return null;
+    const fetchJsonWithTimeout = nutritionMicrosResolveFetchJsonWithTimeout();
+    if (typeof fetchJsonWithTimeout !== 'function') return null;
     const list = Array.isArray(candidates) ? candidates : [];
     for (const candidate of list) {
       if (!candidate) continue;
       try {
-        const response = await fetch(candidate, { cache: 'no-cache' });
-        if (!response || !response.ok) continue;
-        return await response.json();
+        return await fetchJsonWithTimeout(candidate, {
+          cache: 'no-cache',
+          timeoutMs: 8000,
+          context: 'nutrition-micros:fetch-json-candidate'
+        });
       } catch (_) {
     if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('nutrition_micros.js', _, { line: 180 });
+      globalThis.vildaLogSwallowedCatch('nutrition_micros.js', _, { step: '8O-11d', helper: 'fetchJsonCandidates', candidate: String(candidate || '') });
     }
   }
     }
@@ -2192,26 +2211,122 @@
     mount.__nutritionMicrosBound = true;
   }
 
-  function wrapNutritionMicrosIntoUpdate() {
-    if (typeof window.update !== 'function' || window.update.__nutritionMicrosWrapped) return;
-    const original = window.update;
-    const wrapped = function nutritionMicrosWrappedUpdate() {
-      const result = original.apply(this, arguments);
-      try { renderNutritionMicrosCardFromDom(); } catch (_) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('nutrition_micros.js', _, { line: 2108 });
+  const NUTRITION_MICROS_AFTER_UPDATE_HOOK_ID = 'nutrition-micros:card-render-after-update';
+  let nutritionMicrosAfterUpdateHookRegistered = false;
+  let nutritionMicrosAfterUpdateHookToken = null;
+
+  function renderNutritionMicrosAfterUpdate(context) {
+    const source = context && context.source ? String(context.source) : '';
+    if (source && source !== 'window.update' && source !== 'window.update-fallback') {
+      return { skipped: true, reason: 'non-window-update-context', source };
+    }
+    try {
+      renderNutritionMicrosCardFromDom();
+      return { skipped: false, rendered: true };
+    } catch (_) {
+      if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+        globalThis.vildaLogSwallowedCatch('nutrition_micros.js', _, { step: '8O-10d-g', hook: NUTRITION_MICROS_AFTER_UPDATE_HOOK_ID });
+      }
+      return { skipped: false, rendered: false, error: String(_ && _.message ? _.message : _) };
     }
   }
-      return result;
+
+  function registerNutritionMicrosAfterUpdateHook() {
+    if (nutritionMicrosAfterUpdateHookRegistered === true) return true;
+    if (typeof window === 'undefined') return false;
+
+    window.__vildaNutritionMicrosAfterUpdateHookId = NUTRITION_MICROS_AFTER_UPDATE_HOOK_ID;
+    window.__vildaNutritionMicrosAfterUpdateFallback = renderNutritionMicrosAfterUpdate;
+    window.__vildaUpdateHooksNutritionMicrosMigratedWrapperIds = [NUTRITION_MICROS_AFTER_UPDATE_HOOK_ID];
+
+    const registry = window.VildaUpdateHooks;
+    if (!registry || typeof registry.registerAfterUpdateHook !== 'function') {
+      window.__vildaNutritionMicrosAfterUpdateHookRegistered = false;
+      return false;
+    }
+
+    try {
+      nutritionMicrosAfterUpdateHookToken = registry.registerAfterUpdateHook(renderNutritionMicrosAfterUpdate, {
+        id: NUTRITION_MICROS_AFTER_UPDATE_HOOK_ID,
+        label: 'Nutrition micros card render after update',
+        group: 'nutrition-update-migrated-wrapper',
+        order: 50,
+        replace: true
+      });
+      nutritionMicrosAfterUpdateHookRegistered = !!(nutritionMicrosAfterUpdateHookToken && nutritionMicrosAfterUpdateHookToken.ok === true);
+    } catch (_) {
+      nutritionMicrosAfterUpdateHookRegistered = false;
+      if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+        globalThis.vildaLogSwallowedCatch('nutrition_micros.js', _, { step: '8O-10d-g', helper: 'registerNutritionMicrosAfterUpdateHook' });
+      }
+    }
+
+    window.__vildaNutritionMicrosAfterUpdateHookRegistered = nutritionMicrosAfterUpdateHookRegistered;
+    return nutritionMicrosAfterUpdateHookRegistered;
+  }
+
+  function getNutritionMicrosUpdateHookSnapshot(options) {
+    const opts = options || {};
+    const registry = typeof window !== 'undefined' ? window.VildaUpdateHooks : null;
+    let registrySnapshot = null;
+    try {
+      registrySnapshot = registry && typeof registry.getSnapshot === 'function'
+        ? registry.getSnapshot({ includeEvents: opts.includeEvents === true })
+        : null;
+    } catch (error) {
+      registrySnapshot = { error: String(error && error.message ? error.message : error) };
+    }
+    const hooks = registrySnapshot && Array.isArray(registrySnapshot.hooks) ? registrySnapshot.hooks : [];
+    const hook = hooks.find(function(item) { return item && item.id === NUTRITION_MICROS_AFTER_UPDATE_HOOK_ID; }) || null;
+    let finalChainAudit = null;
+    try {
+      finalChainAudit = registry && typeof registry.getFinalUpdateChainAuditSnapshot === 'function'
+        ? registry.getFinalUpdateChainAuditSnapshot({ includeSourcePreview: false })
+        : null;
+    } catch (error) {
+      finalChainAudit = { error: String(error && error.message ? error.message : error) };
+    }
+
+    const finalUpdate = typeof window !== 'undefined' ? window.update : null;
+    return {
+      kind: 'vilda-nutrition-micros-update-hook-snapshot',
+      step: '8O-10d-g',
+      version: MICRONORMS_MODULE_VERSION,
+      readOnly: true,
+      didCallWindowUpdate: false,
+      didRunHooks: false,
+      didPatchWindowUpdate: false,
+      migratedWrapperId: NUTRITION_MICROS_AFTER_UPDATE_HOOK_ID,
+      hookRegistered: !!hook,
+      hookRegisteredAtInstall: nutritionMicrosAfterUpdateHookRegistered === true,
+      hookOrder: hook ? hook.order : null,
+      orderAfterNutritionNorms: !!(hook && Number(hook.order) > 40),
+      legacyWrapperRemoved: true,
+      legacyWindowUpdateWrapperPresent: false,
+      finalWindowUpdateHasLegacyNutritionNormsWrapper: !!(typeof finalUpdate === 'function' && finalUpdate.__nutritionNormsWrapped === true),
+      finalWindowUpdateHasLegacyNutritionMicrosWrapper: !!(typeof finalUpdate === 'function' && finalUpdate.__nutritionMicrosWrapped === true),
+      registry: registrySnapshot ? {
+        version: registrySnapshot.version || null,
+        step: registrySnapshot.step || null,
+        registeredCount: registrySnapshot.registeredCount,
+        migrationStatus: registrySnapshot.migrationStatus || null,
+        migratedWrapperIds: registrySnapshot.migratedWrapperIds || [],
+        migratedHookIdsRegistered: registrySnapshot.migratedHookIdsRegistered || [],
+        nutritionMicrosHookId: registrySnapshot.nutritionMicrosHookId || null,
+        nutritionMicrosHookRegistered: registrySnapshot.nutritionMicrosHookRegistered === true
+      } : null,
+      finalChainAudit: finalChainAudit ? {
+        version: finalChainAudit.version || null,
+        step: finalChainAudit.step || null,
+        allKnownWrappersMigrated: finalChainAudit.allKnownWrappersMigrated === true,
+        hookOrderExpected: finalChainAudit.hookOrderExpected === true,
+        registryBridgeFoundInFinalChain: finalChainAudit.registryBridgeFoundInFinalChain === true,
+        outOfScopeRemainingWrapperIds: finalChainAudit.outOfScopeRemainingWrapperIds || [],
+        finalWindowUpdateOwner: finalChainAudit.finalWindowUpdateOwner || null,
+        hiddenWrappersOutsideKnownMigration: finalChainAudit.hiddenWrappersOutsideKnownMigration === true
+      } : null,
+      nextStep: '8O-11a — IndexedDB cleanup albo dalsze porządki zasobowe'
     };
-    wrapped.__nutritionMicrosWrapped = true;
-    wrapped.__nutritionMicrosOriginal = original;
-    window.update = wrapped;
-    try { update = wrapped; } catch (_) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('nutrition_micros.js', _, { line: 2114 });
-    }
-  }
   }
 
   function initMicronormsModule() {
@@ -2223,7 +2338,7 @@
       return;
     }
     MICRONORMS_INIT_DONE = true;
-    wrapNutritionMicrosIntoUpdate();
+    registerNutritionMicrosAfterUpdateHook();
     try {
       window.addEventListener('nutritionMicrosDataReady', function() {
         try { renderNutritionMicrosCardFromDom(); } catch (_) {
@@ -2308,6 +2423,30 @@
   window.nutritionMicrosBuildFoodExamplesSheetContent = nutritionMicrosBuildFoodExamplesSheetContent;
   window.renderNutritionMicrosCardFromDom = renderNutritionMicrosCardFromDom;
   window.clearNutritionMicrosCard = clearNutritionMicrosCard;
+  window.nutritionMicrosRenderAfterUpdate = renderNutritionMicrosAfterUpdate;
+  window.nutritionMicrosRegisterAfterUpdateHook = registerNutritionMicrosAfterUpdateHook;
+  window.nutritionMicrosGetUpdateHookSnapshot = getNutritionMicrosUpdateHookSnapshot;
+  window.vildaGetNutritionMicrosUpdateHookSnapshot = getNutritionMicrosUpdateHookSnapshot;
+  window.VildaNutritionMicros = Object.freeze({
+    __vildaNutritionMicros: true,
+    VERSION: MICRONORMS_MODULE_VERSION,
+    version: MICRONORMS_MODULE_VERSION,
+    updateAfterUpdate: renderNutritionMicrosAfterUpdate,
+    renderAfterUpdate: renderNutritionMicrosAfterUpdate,
+    registerUpdateHook: registerNutritionMicrosAfterUpdateHook,
+    getUpdateHookSnapshot: getNutritionMicrosUpdateHookSnapshot,
+    ensureData: nutritionMicrosEnsureData,
+    getDataSnapshot: nutritionMicrosGetDataSnapshot,
+    normalizeProfile: nutritionMicrosNormalizeProfile,
+    getAgeBand: nutritionMicrosGetAgeBand,
+    resolveProfile: nutritionMicrosResolveProfile,
+    resolveProfileAsync: nutritionMicrosResolveProfileAsync,
+    readProfileFromDom: nutritionMicrosReadProfileFromDom,
+    buildCardModel: nutritionMicrosBuildCardModel,
+    buildPatientReportCard: typeof nutritionMicrosBuildPatientReportCard === 'function' ? nutritionMicrosBuildPatientReportCard : null,
+    renderCardFromDom: renderNutritionMicrosCardFromDom,
+    clearCard: clearNutritionMicrosCard
+  });
 
   if (typeof window !== 'undefined' && typeof window.vildaOnReady === 'function') {
     window.vildaOnReady('nutrition-micros:init', initMicronormsModule);

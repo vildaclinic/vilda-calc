@@ -14,7 +14,19 @@
 <script src="vilda_html.js?v=4"></script>
 <script src="vilda_persistence_adapter.js?v=7"></script>
 <script src="vilda_init.js?v=4"></script>
-<script src="vilda_deps.js?v=6"></script>
+<script src="vilda_deps.js?v=74"></script>
+<script src="vilda_update_hooks.js?v=7"></script>
+<script src="vilda_centile_chart_header.js?v=1"></script>
+<script src="vilda_gh_therapy_resource_audit.js?v=13"></script>
+<script src="vilda_app_helpers.js?v=2"></script>
+<script src="vilda_food_data.js?v=1"></script>
+<script src="vilda_macro_practice.js?v=2"></script>
+<script src="vilda_activity_burn.js?v=1"></script>
+<script src="vilda_food_summary.js?v=2"></script>
+<script src="vilda_data_import_export.js?v=14"></script>
+<script src="vilda_advanced_growth.js?v=14"></script>
+<script src="vilda_estimated_intake.js?v=3"></script>
+<script src="vilda_update_prep.js?v=61" defer></script>
     
 <script>
 (function() {
@@ -2849,7 +2861,15 @@ let normy = null;
     if (!xlsx || typeof xlsx.read !== 'function' || !xlsx.utils || typeof xlsx.utils.sheet_to_json !== 'function') {
       return;
     }
-    const wb = xlsx.read(await (await fetch('klirens.xlsx')).arrayBuffer());
+    const fetchArrayBufferWithTimeout = (typeof window !== 'undefined' && window.VildaAppHelpers && typeof window.VildaAppHelpers.fetchArrayBufferWithTimeout === 'function')
+      ? window.VildaAppHelpers.fetchArrayBufferWithTimeout
+      : ((typeof window !== 'undefined' && typeof window.vildaFetchArrayBufferWithTimeout === 'function') ? window.vildaFetchArrayBufferWithTimeout : null);
+    if (typeof fetchArrayBufferWithTimeout !== 'function') return;
+    const wb = xlsx.read(await fetchArrayBufferWithTimeout('klirens.xlsx', {
+      cache: 'no-cache',
+      timeoutMs: 10000,
+      context: 'clcr-norms-xlsx'
+    }));
     // przyjmujemy, że normy i opisy są w pierwszym arkuszu
     normy = xlsx.utils.sheet_to_json(wb.Sheets['Arkusz1'], {header: 1, raw: true});
   } catch (error) {
@@ -3311,7 +3331,9 @@ function isFiniteNum(v){ return v != null && Number.isFinite(v); }
 function update() {
   const fullName = $('fullName').value.trim();
   $('patientName').textContent = fullName || '';
-  const age    = +$('age').value;
+  const ageInputRaw = $('age') ? String($('age').value || '').trim() : '';
+  const age    = ageInputRaw === '' ? NaN : Number(ageInputRaw);
+  const hasExplicitAge = ageInputRaw !== '' && Number.isFinite(age);
   const sex    = $('sex').value;
   const weight = +$('weight').value;
   const height = +$('height').value;
@@ -3560,7 +3582,7 @@ function update() {
   
   // Dla wzorów Schwartza masa ciała nie jest wymagana — wystarczy wiek i Scr.
   // (Wzory same sprawdzą, czy mają potrzebny wzrost.)
-  const coreReady = age && Scr;
+  const coreReady = hasExplicitAge && Scr;
 
   // Sprawdź, czy użytkownik wprowadził cokolwiek w formularzu lub wybrał formułę.
   // Dla checkboxów bierzemy pod uwagę tylko zaznaczenie, ponieważ właściwość
@@ -3713,7 +3735,7 @@ function update() {
   {
     const formulaPicker = document.getElementById('formulaPicker');
     const selectedFormula = formulaPicker ? formulaPicker.value : '';
-    if (age && age < 18 && (selectedFormula === 'cg' || selectedFormula === 'egfr')) {
+    if (hasExplicitAge && age >= 0 && age < 18 && (selectedFormula === 'cg' || selectedFormula === 'egfr')) {
       clHtml += `<div class="result-box warn-yellow"><strong>Uwaga:</strong> u dzieci zaleca się stosować wzory Schwartza do oceny GFR.</div>`;
     }
   }
@@ -4831,21 +4853,27 @@ $('askAI').addEventListener('click', async () => {
     max_tokens: 400
   };
   try {
-    const response = await fetch(apiUrl, {
+    const fetchJsonWithTimeout = (typeof window !== 'undefined' && window.VildaAppHelpers && typeof window.VildaAppHelpers.fetchJsonWithTimeout === 'function')
+      ? window.VildaAppHelpers.fetchJsonWithTimeout
+      : ((typeof window !== 'undefined' && typeof window.vildaFetchJsonWithTimeout === 'function') ? window.vildaFetchJsonWithTimeout : null);
+    if (typeof fetchJsonWithTimeout !== 'function') {
+      throw new Error('Brak helpera fetchJsonWithTimeout dla interpretacji AI.');
+    }
+    const data = await fetchJsonWithTimeout(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      timeoutMs: 20000,
+      context: 'clcr-ai-interpretation'
     });
-    if (!response.ok) {
-      throw new Error('Błąd zapytania API: ' + response.status);
-    }
-    const data = await response.json();
     const answer = data.choices?.[0]?.message?.content || 'Brak odpowiedzi.';
     // Pokaż interpretację w nowym oknie alert (lub w przyszłości w dedykowanym elemencie)
-    alert('Interpretacja AI:\n\n' + answer);
+    alert('Interpretacja AI:
+
+' + answer);
   } catch (err) {
     console.error(err);
     alert('Wystąpił błąd podczas łączenia z API. Sprawdź konfigurację i połączenie internetowe.');
@@ -5695,7 +5723,7 @@ document.addEventListener('DOMContentLoaded', () => {
          na stronie głównej imię, wiek, płeć, masa oraz wzrost są automatycznie
          wczytywane w tym formularzu. Plik userData.js korzysta z localStorage. -->
         <script src="userData.js?v=6" defer></script>
-<script src="ios26-ui.js?v=16" defer></script>
+<script src="ios26-ui.js?v=18" defer></script>
 <script>
   (function () {
     const CLCR_SESSION_KEY = 'vildaClcrSessionV1';
@@ -5854,8 +5882,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   })();
 </script>
-<script src="app.js?v=82" defer></script>
-<script src="custom-fixes.js?v=11" defer></script>
+<script src="vilda_down_syndrome.js?v=1"></script>
+<script src="vilda_anorexia_risk.js?v=1"></script>
+<script src="app.js?v=150" defer></script>
+<script src="vilda_smoke_tests.js?v=25" defer></script>
+<script src="vilda_diet_recommendations.js?v=2" defer></script>
+<script src="vilda_patient_report.js?v=3" defer></script>
+<script src="custom-fixes.js?v=12" defer></script>
 <!-- Skrypt obsługujący tryb agregowania wyników dla tego samego pacjenta.  -->
 <script defer>
 document.addEventListener('DOMContentLoaded', () => {
