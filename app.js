@@ -15968,12 +15968,32 @@ function openIntakeCard(options){
 
     if (opts.recalcIfOpen && card.style.display !== 'none') {
       try { calcEstimatedIntake(); } catch (_) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', _, { line: 33002 });
+        if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+          globalThis.vildaLogSwallowedCatch('app.js', _, { line: 33002 });
+        }
+      }
     }
   }
-    }
-  }
+
+  const scheduleIntakeVisibilityUpdate = (function(){
+    let rafId = null;
+    let latestOptions = null;
+    return function(options){
+      latestOptions = options || { preserveRows: true, recalcIfOpen: true };
+      if (rafId != null) return;
+      const runner = function(){
+        rafId = null;
+        const opts = latestOptions || { preserveRows: true, recalcIfOpen: true };
+        latestOptions = null;
+        updateIntakeToggleVisibility(opts);
+      };
+      if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+        rafId = window.requestAnimationFrame(runner);
+      } else {
+        rafId = window.setTimeout(runner, 16);
+      }
+    };
+  })();
 
   try {
     window.refreshEstimatedIntakeVisibility = updateIntakeToggleVisibility;
@@ -15990,20 +16010,20 @@ function openIntakeCard(options){
   ['weight','height','age','ageMonths','sex'].forEach(id=>{
     const el = document.getElementById(id);
     if(el){
-      el.addEventListener('input', ()=> updateIntakeToggleVisibility({ preserveRows: true, recalcIfOpen: true }));
-      el.addEventListener('change', ()=> updateIntakeToggleVisibility({ preserveRows: true, recalcIfOpen: true }));
+      el.addEventListener('input', ()=> scheduleIntakeVisibilityUpdate({ preserveRows: true, recalcIfOpen: true }));
+      el.addEventListener('change', ()=> scheduleIntakeVisibilityUpdate({ preserveRows: true, recalcIfOpen: true }));
     }
   });
 
   document.querySelectorAll('input[name="dataSource"]').forEach(el => {
-    el.addEventListener('change', ()=> updateIntakeToggleVisibility({ preserveRows: true, recalcIfOpen: true }));
+    el.addEventListener('change', ()=> scheduleIntakeVisibilityUpdate({ preserveRows: true, recalcIfOpen: true }));
   });
 
   // natychmiastowa ocena widoczności przy pierwszym załadowaniu
-  updateIntakeToggleVisibility({ preserveRows: true, recalcIfOpen: true });
+  scheduleIntakeVisibilityUpdate({ preserveRows: true, recalcIfOpen: true });
   // Uruchom ponownie po pozostałych listenerach DOMContentLoaded (np. przywracaniu stanu kart).
   window.setTimeout(()=>{
-    updateIntakeToggleVisibility({ preserveRows: true, recalcIfOpen: true });
+    scheduleIntakeVisibilityUpdate({ preserveRows: true, recalcIfOpen: true });
   }, 0);
 
   btn.addEventListener('click', ()=>{
@@ -16028,10 +16048,11 @@ function openIntakeCard(options){
   document.getElementById('intakePal')?.addEventListener('change', debouncedIntakeCalc);
 
   // przelicz wyniki przy rotacji/zmianie szerokości, aby zachować poprawny układ sekcji
-  window.addEventListener('resize', ()=>{
+  const debouncedIntakeResizeRecalc = debounce(()=>{
     const visible = card && card.style.display !== 'none';
     if(visible) calcEstimatedIntake();
-  });
+  }, 120);
+  window.addEventListener('resize', debouncedIntakeResizeRecalc);
 }
 
 window.vildaAppOnReady('app:estimated-intake-init', setupEstimatedIntake);
