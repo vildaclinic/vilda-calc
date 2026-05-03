@@ -141,7 +141,6 @@
             const hasDocproRoot = !!(runtime && typeof runtime.getRoot === 'function' && runtime.getRoot(global.document, 'docpro'));
             const hasKlirensRoot = !!(runtime && typeof runtime.getRoot === 'function' && runtime.getRoot(global.document, 'klirens'));
 
-            if (isHome && !hasHomeRoot && global.location) { global.location.assign('index.html#/index'); return true; }
             if (isDocpro && !hasDocproRoot && global.location) { global.location.assign('index.html#/docpro'); return true; }
             if (isKlirens && !hasKlirensRoot && global.location) { global.location.assign('index.html#/kalkulator-klirens'); return true; }
 
@@ -152,24 +151,24 @@
             }
 
             if (homeView && isHome && !homeMounted && typeof homeView.mount === 'function') {
-              homeView.mount({});
-              homeMounted = true;
+              const mountState = homeView.mount({});
+              homeMounted = !mountState || mountState.ok !== false;
             }
             if (homeView && !isHome && homeMounted && typeof homeView.unmount === 'function') {
               homeView.unmount({});
               homeMounted = false;
             }
             if (docproView && isDocpro && !docproMounted && typeof docproView.mount === 'function') {
-              docproView.mount({});
-              docproMounted = true;
+              const mountState = docproView.mount({});
+              docproMounted = !!(mountState && mountState.ok);
             }
             if (docproView && !isDocpro && docproMounted && typeof docproView.unmount === 'function') {
               docproView.unmount({});
               docproMounted = false;
             }
             if (klirensView && isKlirens && !klirensMounted && typeof klirensView.mount === 'function') {
-              klirensView.mount({});
-              klirensMounted = true;
+              const mountState = klirensView.mount({});
+              klirensMounted = !!(mountState && mountState.ok);
             }
             if (klirensView && !isKlirens && klirensMounted && typeof klirensView.unmount === 'function') {
               klirensView.unmount({});
