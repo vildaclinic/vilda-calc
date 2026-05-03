@@ -62,8 +62,17 @@
       } catch (_) {}
     }
 
+    function resolveLocationRoute(){
+      if (!global.location) return '/';
+      if (global.location.hash && global.location.hash.startsWith('#/')) {
+        return normalizeRoute(global.location.hash.slice(1));
+      }
+      const pathname = normalizeRoute(global.location.pathname || '/');
+      return pathname === '/' ? '/index' : pathname;
+    }
+
     function handleHashChange(){
-      const route = normalizeRoute((global.location && global.location.hash) ? global.location.hash.slice(1) : '/');
+      const route = resolveLocationRoute();
       router.navigate(route, { source: 'hashchange' });
     }
 
