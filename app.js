@@ -3093,33 +3093,49 @@ function updatePlanFromDiet(){
   try {
 
   /* ------------------ 1. Dane wejściowe ------------------ */
-  // Wiek w latach z uwzględnieniem miesięcy (używany w dalszych obliczeniach)
-  const age      = (typeof getAgeDecimal === 'function') ? getAgeDecimal() : 0;
-  const sexEl    = document.getElementById('sex');
-  const weightEl = document.getElementById('weight');
-  const heightEl = document.getElementById('height');
-  const palEl    = document.getElementById('palFactor');
-  const planResultsContainer = document.getElementById('planResults');
-  const planCardContainer = document.getElementById('planCard');
-  // Ten moduł nie występuje na wszystkich podstronach. Brak DOM = bezpieczny no-op.
-  if (!sexEl || !weightEl || !heightEl || !palEl || !planResultsContainer || !planCardContainer) return;
-  const sex      = sexEl.value || 'M';           // 'M' / 'F'
-  const anthroValidation = (typeof vildaGetMainAnthroValidationSnapshot === 'function')
-    ? vildaGetMainAnthroValidationSnapshot()
+  const planInputAdapter = (typeof window !== 'undefined' && window.VildaPlanInput) ? window.VildaPlanInput : null;
+  const readPlanInput = planInputAdapter && typeof planInputAdapter.readPlanInputFromDom === 'function'
+    ? planInputAdapter.readPlanInputFromDom
     : null;
-  const weightKg = anthroValidation && anthroValidation.weight && anthroValidation.weight.value != null
-    ? anthroValidation.weight.value
-    : +weightEl.value;
-  const heightCm = anthroValidation && anthroValidation.height && anthroValidation.height.value != null
-    ? anthroValidation.height.value
-    : +heightEl.value;
-  const pal      = +palEl.value;
+  const isPlanInputComplete = planInputAdapter && typeof planInputAdapter.isPlanInputComplete === 'function'
+    ? planInputAdapter.isPlanInputComplete
+    : null;
+
+  const planInput = readPlanInput
+    ? readPlanInput({
+      doc: document,
+      getAgeDecimal: (typeof getAgeDecimal === 'function') ? getAgeDecimal : null,
+      getAnthroValidation: (typeof vildaGetMainAnthroValidationSnapshot === 'function')
+        ? vildaGetMainAnthroValidationSnapshot
+        : null
+    })
+    : null;
+
+  const age = planInput ? planInput.age : ((typeof getAgeDecimal === 'function') ? getAgeDecimal() : 0);
+  const planResultsContainer = planInput ? planInput.planResultsContainer : document.getElementById('planResults');
+  const planCardContainer = planInput ? planInput.planCardContainer : document.getElementById('planCard');
+  const sex = planInput ? planInput.sex : ((document.getElementById('sex')?.value) || 'M');
+  const anthroValidation = planInput ? planInput.anthroValidation : ((typeof vildaGetMainAnthroValidationSnapshot === 'function')
+    ? vildaGetMainAnthroValidationSnapshot()
+    : null);
+  const weightKg = planInput ? planInput.weightKg : +(document.getElementById('weight')?.value);
+  const heightCm = planInput ? planInput.heightCm : +(document.getElementById('height')?.value);
+  const pal = planInput ? planInput.pal : +(document.getElementById('palFactor')?.value);
+
+  // Ten moduł nie występuje na wszystkich podstronach. Brak DOM = bezpieczny no-op.
+  if ((planInput && planInput.missingRequiredDom) || !planResultsContainer || !planCardContainer) return;
   planResultsContainer.classList.toggle('adult-plan-results', Number(age) >= ENERGY_ADULT_START_AGE);
 
-  if(!(
-    anthroValidation
-      ? anthroValidation.complete
-      : (vildaIsFiniteNonNegative(age) && vildaIsFinitePositive(weightKg) && vildaIsFinitePositive(heightCm))
+  if (!(isPlanInputComplete
+    ? isPlanInputComplete(planInput, {
+      isFiniteNonNegative: (typeof vildaIsFiniteNonNegative === 'function') ? vildaIsFiniteNonNegative : null,
+      isFinitePositive: (typeof vildaIsFinitePositive === 'function') ? vildaIsFinitePositive : null
+    })
+    : (
+      anthroValidation
+        ? anthroValidation.complete
+        : (vildaIsFiniteNonNegative(age) && vildaIsFinitePositive(weightKg) && vildaIsFinitePositive(heightCm))
+    )
   )) return;                  // brak danych
 
   /* ------------------ 2. TEE i dostępne diety ------------- */
