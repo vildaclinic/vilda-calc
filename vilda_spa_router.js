@@ -91,12 +91,28 @@
       if (global.__vildaSpaRouterAutoInitDone) return;
       global.__vildaSpaRouterAutoInitDone = true;
       const start = function(){
+        const homeView = global.VildaSpaViews && global.VildaSpaViews.Home ? global.VildaSpaViews.Home : null;
+        let homeMounted = false;
         const state = initSpaRouter({
           enabled: global.VILDA_ENABLE_SPA_ROUTER !== false,
           routes: {
             '*': function(){ return true; }
           },
-          onRoute: function(){ return true; }
+          onRoute: function(route){
+            const normalized = normalizeRoute(route);
+            const isHome = normalized === '/' || normalized === '/index' || normalized === '/index.html';
+            if (!homeView) return true;
+            if (isHome && !homeMounted && typeof homeView.mount === 'function') {
+              homeView.mount({});
+              homeMounted = true;
+              return true;
+            }
+            if (!isHome && homeMounted && typeof homeView.unmount === 'function') {
+              homeView.unmount({});
+              homeMounted = false;
+            }
+            return true;
+          }
         });
         global.__vildaSpaRouterState = state;
       };

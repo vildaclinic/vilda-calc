@@ -12,8 +12,8 @@
     return;
   }
 
-  const VERSION = '2.20.0';
-  const STEP = '8O-13b';
+  const VERSION = '2.21.0';
+  const STEP = '8O-13c';
   const DEFAULT_ESTIMATED_INTAKE_CONTRACTS = Object.freeze([
     'estimated-intake-card-audit',
     'estimated-intake-card-helpers',
@@ -77,8 +77,9 @@
     'vilda_plan_input.js?v=1',
     'vilda_plan_energy.js?v=1',
     'vilda_plan_render.js?v=1',
-    'vilda_spa_router.js?v=2',
-    'app.js?v=156',
+    'vilda_spa_view_home.js?v=1',
+    'vilda_spa_router.js?v=3',
+    'app.js?v=157',
     'vilda_smoke_tests.js?v=25',
     'vilda_diet_recommendations.js?v=2',
     'nutrition_norms.js?v=39',
@@ -92,6 +93,7 @@
     Object.freeze({ id: 'plan-modules-contract', group: 'plan-modules', required: true, description: 'Moduły VildaPlanInput/VildaPlanEnergy/VildaPlanRender oraz bridge updatePlanFromDiet są dostępne i mają stabilne API.' }),
     Object.freeze({ id: 'update-plan-snapshot-contract', group: 'plan-modules', required: true, description: 'Helper snapshotu updatePlanFromDiet jest dostępny i zwraca stabilną sygnaturę pól UI.' }),
     Object.freeze({ id: 'update-plan-golden-snapshot', group: 'plan-modules', required: true, description: 'Kontrolowany golden snapshot updatePlanFromDiet ma stabilną sygnaturę i pola UI.' }),
+    Object.freeze({ id: 'spa-home-view-contract', group: 'spa-router', required: true, description: 'Widok Home dla SPA ma stabilne API mount/unmount i jest dostępny dla routera.' }),
     Object.freeze({ id: 'vilda-deps-estimated-contracts', group: 'deps-contracts', required: true, description: 'Kontrakty VildaDeps dla estimated intake są obecne i przechodzą po załadowaniu strony.' }),
     Object.freeze({ id: 'advanced-intake-sync-regression-surface', group: 'advanced-intake-sync', required: true, description: 'Powierzchnia diagnostyczna synchronizacji advanced growth ↔ estimated intake pozostaje dostępna.' }),
     Object.freeze({ id: 'numeric-validation-age-zero', group: 'numeric-validation', required: true, description: 'Jawna walidacja liczbowa akceptuje wpisany wiek 0 lat i odróżnia puste pole wieku od noworodka.' }),
@@ -412,6 +414,15 @@
       ok: !!(snapshot && snapshot.ok === true && snapshot.signature === expectedSignature),
       expectedSignature: expectedSignature,
       signature: snapshot && snapshot.signature ? snapshot.signature : null
+    };
+  }
+
+  function checkSpaHomeViewContract() {
+    const views = global.VildaSpaViews || null;
+    const home = views && views.Home ? views.Home : null;
+    return {
+      ok: !!(home && typeof home.mount === 'function' && typeof home.unmount === 'function'),
+      homeViewApi: !!home
     };
   }
 
@@ -1456,6 +1467,7 @@
     tests.push(runCase('plan-modules-contract', 'plan-modules', true, checkPlanModulesContract, opts));
     tests.push(runCase('update-plan-snapshot-contract', 'plan-modules', true, checkUpdatePlanSnapshotContract, opts));
     tests.push(runCase('update-plan-golden-snapshot', 'plan-modules', true, checkUpdatePlanGoldenSnapshot, opts));
+    tests.push(runCase('spa-home-view-contract', 'spa-router', true, checkSpaHomeViewContract, opts));
 
     tests.push(runCase('vilda-deps-estimated-contracts', 'deps-contracts', true, function () {
       const detail = checkNamedContracts(DEFAULT_ESTIMATED_INTAKE_CONTRACTS.slice(), { executeChecks: opts.executeContractChecks !== false, page: opts.page });
