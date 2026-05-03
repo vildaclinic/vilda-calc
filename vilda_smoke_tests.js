@@ -12,8 +12,8 @@
     return;
   }
 
-  const VERSION = '2.17.0';
-  const STEP = '8O-12c';
+  const VERSION = '2.18.0';
+  const STEP = '8O-12d';
   const DEFAULT_ESTIMATED_INTAKE_CONTRACTS = Object.freeze([
     'estimated-intake-card-audit',
     'estimated-intake-card-helpers',
@@ -90,6 +90,7 @@
     Object.freeze({ id: 'estimated-intake-readonly-snapshots', group: 'estimated-intake', required: true, description: 'Snapshoty estimated intake są read-only i nie uruchamiają calcEstimatedIntake().' }),
     Object.freeze({ id: 'plan-modules-contract', group: 'plan-modules', required: true, description: 'Moduły VildaPlanInput/VildaPlanEnergy/VildaPlanRender oraz bridge updatePlanFromDiet są dostępne i mają stabilne API.' }),
     Object.freeze({ id: 'update-plan-snapshot-contract', group: 'plan-modules', required: true, description: 'Helper snapshotu updatePlanFromDiet jest dostępny i zwraca stabilną sygnaturę pól UI.' }),
+    Object.freeze({ id: 'update-plan-golden-snapshot', group: 'plan-modules', required: true, description: 'Kontrolowany golden snapshot updatePlanFromDiet ma stabilną sygnaturę i pola UI.' }),
     Object.freeze({ id: 'vilda-deps-estimated-contracts', group: 'deps-contracts', required: true, description: 'Kontrakty VildaDeps dla estimated intake są obecne i przechodzą po załadowaniu strony.' }),
     Object.freeze({ id: 'advanced-intake-sync-regression-surface', group: 'advanced-intake-sync', required: true, description: 'Powierzchnia diagnostyczna synchronizacji advanced growth ↔ estimated intake pozostaje dostępna.' }),
     Object.freeze({ id: 'numeric-validation-age-zero', group: 'numeric-validation', required: true, description: 'Jawna walidacja liczbowa akceptuje wpisany wiek 0 lat i odróżnia puste pole wieku od noworodka.' }),
@@ -384,6 +385,31 @@
     const snapshot = fn({ doc: mockDoc });
     return {
       ok: !!(snapshot && snapshot.ok === true && typeof snapshot.signature === 'string'),
+      signature: snapshot && snapshot.signature ? snapshot.signature : null
+    };
+  }
+
+  function checkUpdatePlanGoldenSnapshot() {
+    const fn = global.vildaCaptureUpdatePlanSnapshot;
+    if (typeof fn !== 'function') return { ok: false, reason: 'missing-vildaCaptureUpdatePlanSnapshot' };
+    const nodes = {
+      planCard: { style: { display: 'block' } },
+      planResults: { style: { display: 'block' }, textContent: 'Brak diety: Twoje całkowite zapotrzebowanie jest zbyt niskie.' },
+      dietChoiceWrap: { style: { display: 'none' } },
+      dietDesc: { style: { display: 'none' } },
+      dietCalorieInfo: { style: { display: 'none' } },
+      dietLevel: { style: { display: 'none' }, options: [] }
+    };
+    const mockDoc = {
+      getElementById: function(id){
+        return Object.prototype.hasOwnProperty.call(nodes, id) ? nodes[id] : null;
+      }
+    };
+    const snapshot = fn({ doc: mockDoc });
+    const expectedSignature = '1|1|0|0|0|0|Brak diety: Twoje całkowite zapotrzebowanie jest zbyt niskie.';
+    return {
+      ok: !!(snapshot && snapshot.ok === true && snapshot.signature === expectedSignature),
+      expectedSignature: expectedSignature,
       signature: snapshot && snapshot.signature ? snapshot.signature : null
     };
   }
@@ -1428,6 +1454,7 @@
     tests.push(runCase('estimated-intake-readonly-snapshots', 'estimated-intake', true, checkEstimatedIntakeReadOnlySnapshots, opts));
     tests.push(runCase('plan-modules-contract', 'plan-modules', true, checkPlanModulesContract, opts));
     tests.push(runCase('update-plan-snapshot-contract', 'plan-modules', true, checkUpdatePlanSnapshotContract, opts));
+    tests.push(runCase('update-plan-golden-snapshot', 'plan-modules', true, checkUpdatePlanGoldenSnapshot, opts));
 
     tests.push(runCase('vilda-deps-estimated-contracts', 'deps-contracts', true, function () {
       const detail = checkNamedContracts(DEFAULT_ESTIMATED_INTAKE_CONTRACTS.slice(), { executeChecks: opts.executeContractChecks !== false, page: opts.page });
