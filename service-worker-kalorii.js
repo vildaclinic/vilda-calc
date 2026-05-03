@@ -18,12 +18,40 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '0.9.319';
+const SW_VERSION = '0.9.406';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
 const ACTIVE_CACHE_NAMES = new Set([SHELL_CACHE, RUNTIME_CACHE]);
+const RUNTIME_CACHE_MAX_ENTRIES = 96;
+const RUNTIME_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const RUNTIME_METADATA_CACHE_KEY_PREFIX = '/__vilda_runtime_cache_metadata__/';
+const RUNTIME_METADATA_SCHEMA_VERSION = 1;
 const ROOT_DOCUMENT = '/index.html';
+const SW_FETCH_CACHE_STRATEGY_AUDIT = Object.freeze({
+  step: '8O-11e',
+  latestValidationStep: '8O-11k',
+  readOnly: true,
+  navigation: 'cache-first-background-refresh',
+  shellAssets: 'cache-first-background-refresh',
+  runtime: 'cache-first-background-refresh',
+  install: 'required-core-precache-optional-sequential-precache',
+  activation: 'runtime-cache-migration-and-prune',
+  timeoutPolicy: 'intentional-no-timeout-inside-service-worker-fetch-paths',
+  bypassPolicy: 'range-video-videos-presentations',
+  offlineUpdateFlowSmoke: 'tools/service_worker_offline_update_flow_smoke.js',
+  offlineUpdateFlowSmokeExpected: true,
+  versionedShellCacheKeyPolicy: 'precache-and-fetch-use-pathname-plus-search-for-versioned-shell-assets',
+  versionedShellCacheKeyFixApplied: true,
+  staleCachePruningAuditApplied: true,
+  staleCachePruningAuditPolicy: 'audit-activate-prune-scope-and-runtime-cache-growth-risk-without-changing-cache-strategy',
+  runtimeCachePruningImplemented: true,
+  runtimeCachePruningRecommendedFollowUp: false,
+  runtimeCachePruningPolicy: 'ttl-and-max-entry-prune-after-runtime-write-and-on-activate',
+  runtimeCacheMaxEntries: RUNTIME_CACHE_MAX_ENTRIES,
+  runtimeCacheTtlMs: RUNTIME_CACHE_TTL_MS,
+  semanticsChanged: false
+});
 
 // Minimalny shell wymagany do natychmiastowego startu aplikacji z cache.
 // Jeśli któregoś z tych plików nie uda się pobrać podczas instalacji nowego SW,
@@ -46,16 +74,50 @@ const CORE_SHELL_URLS = [
   '/vilda_init.js',
   '/vilda_init.js?v=4',
   '/vilda_deps.js',
-  '/vilda_deps.js?v=6',
+  '/vilda_deps.js?v=74',
+  '/vilda_update_hooks.js',
+  '/vilda_update_hooks.js?v=7',
+  '/vilda_centile_chart_header.js',
+  '/vilda_centile_chart_header.js?v=1',
+  '/vilda_gh_therapy_resource_audit.js',
+  '/vilda_gh_therapy_resource_audit.js?v=13',
+  '/vilda_app_helpers.js',
+  '/vilda_app_helpers.js?v=2',
+  '/vilda_food_data.js',
+  '/vilda_food_data.js?v=1',
+  '/vilda_macro_practice.js',
+  '/vilda_macro_practice.js?v=2',
+  '/vilda_activity_burn.js',
+  '/vilda_activity_burn.js?v=1',
+  '/vilda_food_summary.js',
+  '/vilda_food_summary.js?v=2',
+  '/vilda_data_import_export.js',
+  '/vilda_data_import_export.js?v=14',
+  '/vilda_advanced_growth.js',
+  '/vilda_advanced_growth.js?v=14',
+  '/vilda_estimated_intake.js',
+  '/vilda_estimated_intake.js?v=3',
+  '/vilda_update_prep.js',
+  '/vilda_update_prep.js?v=61',
   '/app.js',
-  '/app.js?v=82',
+  '/app.js?v=150',
+  '/vilda_smoke_tests.js',
+  '/vilda_smoke_tests.js?v=25',
+  '/vilda_diet_recommendations.js',
+  '/vilda_diet_recommendations.js?v=2',
+  '/vilda_patient_report.js',
+  '/vilda_patient_report.js?v=3',
   '/nutrition_norms.js',
-  '/nutrition_norms.js?v=38',
+  '/nutrition_norms.js?v=39',
   '/nutrition_micros.js',
-  '/nutrition_micros.js?v=18',
+  '/nutrition_micros.js?v=20',
   '/adult_vitals.js',
   '/adult_vitals.js?v=5',
   '/ds_lms.js',
+  '/vilda_down_syndrome.js',
+  '/vilda_down_syndrome.js?v=1',
+  '/vilda_anorexia_risk.js',
+  '/vilda_anorexia_risk.js?v=1',
   '/centile_data.js',
   '/bayley_pinneau_data.js',
   '/rwt_data.js',
@@ -69,7 +131,7 @@ const CORE_SHELL_URLS = [
   '/userData.js',
   '/userData.js?v=6',
   '/ios26-ui.js',
-  '/ios26-ui.js?v=16',
+  '/ios26-ui.js?v=18',
   '/tutorial.js?v=5',
   '/bp_module.js',
   '/bp_module.js?v=4',
@@ -79,7 +141,7 @@ const CORE_SHELL_URLS = [
   '/respiratory_module.js?v=3',
   '/sga_intergrowth_data.js',
   '/custom-fixes.js',
-  '/custom-fixes.js?v=11',
+  '/custom-fixes.js?v=12',
   '/reposition.js',
   '/reposition.js?v=5',
   '/growth-basic-module.js?v=8'
@@ -108,7 +170,7 @@ const OPTIONAL_ASSETS = [
   '/cukrzyca.js',
   '/cukrzyca.js?v=29',
   '/gh_therapy_monitor.js',
-  '/gh_therapy_monitor.js?v=8',
+  '/gh_therapy_monitor.js?v=12',
   '/flu_therapy.js',
   '/flu_therapy.js?v=5',
   '/bisphos_therapy.js',
@@ -284,6 +346,21 @@ function buildNavigationNetworkRequest(request) {
   });
 }
 
+function getShellCacheKeyFromStaticUrl(input) {
+  if (!isSameOrigin(input)) return null;
+
+  const url = toURL(input);
+  if (!url) return null;
+
+  const pathname = url.pathname;
+  if (!SHELL_PATHS.has(pathname)) return null;
+
+  // Dla zasobów statycznych z query stringiem (np. app.js?v=100) kluczem cache
+  // musi być pełny URL względny. W przeciwnym razie można oddać starą,
+  // niewersjonowaną odpowiedź /app.js i rozjechać HTML/CSS/JS między wersjami.
+  return url.search ? `${pathname}${url.search}` : pathname;
+}
+
 function getShellCacheKeyFromRequest(request) {
   if (!isSameOrigin(request)) return null;
 
@@ -297,12 +374,7 @@ function getShellCacheKeyFromRequest(request) {
     return DOCUMENT_PATHS.has(normalizedPath) ? normalizedPath : null;
   }
 
-  if (!SHELL_PATHS.has(pathname)) return null;
-
-  // Dla zasobów statycznych z query stringiem (np. app.js?v=82) kluczem cache
-  // musi być pełny URL względny. W przeciwnym razie można oddać starą,
-  // niewersjonowaną odpowiedź /app.js i rozjechać HTML/CSS/JS między wersjami.
-  return url.search ? `${pathname}${url.search}` : pathname;
+  return getShellCacheKeyFromStaticUrl(request);
 }
 
 function getNavigationCacheKeyFromResponse(request, response) {
@@ -326,6 +398,165 @@ async function cacheResponse(cacheName, key, response) {
   return response;
 }
 
+function getRuntimeCacheNowMs() {
+  try {
+    return Date.now();
+  } catch (_) {
+    void _;
+    return 0;
+  }
+}
+
+function getRuntimeMetadataCacheKey(request) {
+  const url = toURL(request);
+  if (!url) return null;
+  return `${RUNTIME_METADATA_CACHE_KEY_PREFIX}${encodeURIComponent(url.href)}`;
+}
+
+function isRuntimeMetadataRequest(request) {
+  const pathname = getPathname(request);
+  return !!pathname && pathname.indexOf(RUNTIME_METADATA_CACHE_KEY_PREFIX) === 0;
+}
+
+function buildRuntimeMetadataResponse(request, cachedAt) {
+  const url = toURL(request);
+  const metadata = {
+    schemaVersion: RUNTIME_METADATA_SCHEMA_VERSION,
+    url: url ? url.href : '',
+    cachedAt,
+    ttlMs: RUNTIME_CACHE_TTL_MS
+  };
+
+  return new Response(JSON.stringify(metadata), {
+    status: 200,
+    headers: { 'content-type': 'application/json' }
+  });
+}
+
+async function readRuntimeCacheMetadata(cache, request) {
+  const metadataKey = getRuntimeMetadataCacheKey(request);
+  if (!metadataKey) return null;
+
+  try {
+    const response = await cache.match(metadataKey);
+    if (!response) return null;
+
+    const raw = typeof response.text === 'function' ? await response.clone().text() : '';
+    const metadata = raw ? JSON.parse(raw) : null;
+    const cachedAt = metadata && Number(metadata.cachedAt);
+
+    if (!Number.isFinite(cachedAt)) return null;
+
+    return {
+      schemaVersion: metadata.schemaVersion || RUNTIME_METADATA_SCHEMA_VERSION,
+      url: metadata.url || '',
+      cachedAt,
+      ttlMs: metadata.ttlMs || RUNTIME_CACHE_TTL_MS
+    };
+  } catch (_) {
+    void _;
+    return null;
+  }
+}
+
+async function writeRuntimeCacheMetadata(cache, request, cachedAt) {
+  const metadataKey = getRuntimeMetadataCacheKey(request);
+  if (!metadataKey) return;
+  await cache.put(metadataKey, buildRuntimeMetadataResponse(request, cachedAt));
+}
+
+async function deleteRuntimeCacheEntry(cache, request) {
+  await cache.delete(request);
+
+  const metadataKey = getRuntimeMetadataCacheKey(request);
+  if (metadataKey) {
+    await cache.delete(metadataKey);
+  }
+}
+
+function isRuntimeCacheMetadataExpired(metadata, nowMs) {
+  if (!metadata || !Number.isFinite(Number(metadata.cachedAt))) return false;
+  return nowMs - Number(metadata.cachedAt) > RUNTIME_CACHE_TTL_MS;
+}
+
+async function findRuntimeCacheMatch(cache, request) {
+  const exactMatch = await cache.match(request);
+  if (exactMatch) return { request, response: exactMatch };
+
+  const url = toURL(request);
+  if (!isSameOrigin(request) || !url || url.search) return null;
+
+  const keys = await cache.keys();
+  for (const candidate of keys) {
+    if (isRuntimeMetadataRequest(candidate)) continue;
+
+    const candidateUrl = toURL(candidate);
+    if (!candidateUrl || candidateUrl.origin !== url.origin || candidateUrl.pathname !== url.pathname) continue;
+
+    const response = await cache.match(candidate);
+    if (response) return { request: candidate, response };
+  }
+
+  return null;
+}
+
+async function getRuntimeCacheEntries(cache) {
+  const keys = await cache.keys();
+  const nowMs = getRuntimeCacheNowMs();
+  const entries = [];
+
+  for (const request of keys) {
+    if (isRuntimeMetadataRequest(request)) continue;
+
+    let metadata = await readRuntimeCacheMetadata(cache, request);
+    if (!metadata) {
+      await writeRuntimeCacheMetadata(cache, request, nowMs);
+      metadata = {
+        schemaVersion: RUNTIME_METADATA_SCHEMA_VERSION,
+        url: toURL(request)?.href || '',
+        cachedAt: nowMs,
+        ttlMs: RUNTIME_CACHE_TTL_MS
+      };
+    }
+
+    entries.push({ request, metadata, cachedAt: Number(metadata.cachedAt) || 0 });
+  }
+
+  return entries;
+}
+
+async function pruneRuntimeCache(cache) {
+  const nowMs = getRuntimeCacheNowMs();
+  const entries = await getRuntimeCacheEntries(cache);
+  const expiredEntries = entries.filter((entry) => isRuntimeCacheMetadataExpired(entry.metadata, nowMs));
+
+  for (const entry of expiredEntries) {
+    await deleteRuntimeCacheEntry(cache, entry.request);
+  }
+
+  const remainingEntries = entries
+    .filter((entry) => expiredEntries.indexOf(entry) === -1)
+    .sort((a, b) => a.cachedAt - b.cachedAt);
+
+  const overflowCount = Math.max(0, remainingEntries.length - RUNTIME_CACHE_MAX_ENTRIES);
+  if (overflowCount > 0) {
+    const overflowEntries = remainingEntries.slice(0, overflowCount);
+    for (const entry of overflowEntries) {
+      await deleteRuntimeCacheEntry(cache, entry.request);
+    }
+  }
+}
+
+async function cacheRuntimeResponse(request, response) {
+  if (!isCacheableResponse(response) || shouldBypassCache(request) || isRuntimeMetadataRequest(request)) return response;
+
+  const cache = await caches.open(RUNTIME_CACHE);
+  await cache.put(request, response.clone());
+  await writeRuntimeCacheMetadata(cache, request, getRuntimeCacheNowMs());
+  await pruneRuntimeCache(cache);
+  return response;
+}
+
 async function readFromShellCache(request) {
   const key = getShellCacheKeyFromRequest(request);
   if (!key) return undefined;
@@ -343,16 +574,25 @@ async function readDocumentFromShell(pathname) {
 }
 
 async function readFromRuntimeCache(request) {
-  const cache = await caches.open(RUNTIME_CACHE);
-  const exactMatch = await cache.match(request);
-  if (exactMatch) return exactMatch;
+  if (isRuntimeMetadataRequest(request)) return undefined;
 
-  const url = toURL(request);
-  if (isSameOrigin(request) && url && !url.search) {
-    return cache.match(request, { ignoreSearch: true });
+  const cache = await caches.open(RUNTIME_CACHE);
+  const match = await findRuntimeCacheMatch(cache, request);
+  if (!match) return undefined;
+
+  const nowMs = getRuntimeCacheNowMs();
+  const metadata = await readRuntimeCacheMetadata(cache, match.request);
+
+  if (metadata && isRuntimeCacheMetadataExpired(metadata, nowMs)) {
+    await deleteRuntimeCacheEntry(cache, match.request);
+    return undefined;
   }
 
-  return undefined;
+  if (!metadata) {
+    await writeRuntimeCacheMetadata(cache, match.request, nowMs);
+  }
+
+  return match.response;
 }
 
 async function updateShellFromNetwork(request) {
@@ -388,7 +628,7 @@ async function updateRuntimeFromNetwork(request) {
   const networkResponse = await fetch(request);
 
   if (isCacheableResponse(networkResponse) && !shouldBypassCache(request)) {
-    await cacheResponse(RUNTIME_CACHE, request, networkResponse);
+    await cacheRuntimeResponse(request, networkResponse);
   }
 
   return networkResponse;
@@ -399,7 +639,9 @@ async function fetchAndStorePrecacheUrl(url, { required = false } = {}) {
   const request = new Request(url, { cache: 'reload', redirect: 'follow' });
   const response = await fetch(request);
   const pathname = getPathname(url);
-  const cacheKey = DOCUMENT_PATHS.has(pathname) ? normalizeNavigationPath(pathname) : pathname;
+  const cacheKey = DOCUMENT_PATHS.has(pathname)
+    ? normalizeNavigationPath(pathname)
+    : getShellCacheKeyFromStaticUrl(url);
   const safeResponse = DOCUMENT_PATHS.has(cacheKey)
     ? await makeNavigationResponseSafe(response)
     : response;
@@ -447,6 +689,7 @@ async function migrateOldRuntimeCaches(keys) {
         const response = await oldCache.match(request);
         if (response) {
           await runtimeCache.put(request, response);
+          await writeRuntimeCacheMetadata(runtimeCache, request, getRuntimeCacheNowMs());
         }
       }
     } catch (_) {
@@ -465,6 +708,7 @@ self.addEventListener('activate', (event) => {
       const keys = await caches.keys();
 
       await migrateOldRuntimeCaches(keys);
+      await pruneRuntimeCache(await caches.open(RUNTIME_CACHE));
 
       await Promise.all(
         keys
@@ -495,6 +739,7 @@ self.addEventListener('fetch', (event) => {
   if (request.cache === 'only-if-cached' && request.mode !== 'same-origin') return;
 
   if (shouldBypassCache(request)) return;
+  if (isRuntimeMetadataRequest(request)) return;
 
   if (isNavigationRequest(request)) {
     event.respondWith(

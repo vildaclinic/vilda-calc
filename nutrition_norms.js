@@ -1,6 +1,8 @@
 (function(window, document) {
   'use strict';
 
+  const NUTRITION_NORMS_MODULE_VERSION = '1.1.0';
+
   const NUTRITION_NORMS_DEFAULT_STATE = {
     palSelector: '1.6',
     bodyMode: 'actual',
@@ -2398,33 +2400,127 @@
     return card;
   }
 
-  function wrapNutritionNormsIntoUpdate() {
-    if (typeof window.update !== 'function' || window.update.__nutritionNormsWrapped) return;
-    const original = window.update;
-    const wrapped = function nutritionNormsWrappedUpdate() {
-      const result = original.apply(this, arguments);
-      try { renderNutritionNormsCardFromDom(); } catch (_) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('nutrition_norms.js', _, { line: 2344 });
+  const NUTRITION_NORMS_AFTER_UPDATE_HOOK_ID = 'nutrition-norms:card-render-after-update';
+  let nutritionNormsAfterUpdateHookRegistered = false;
+  let nutritionNormsAfterUpdateHookToken = null;
+
+  function renderNutritionNormsAfterUpdate(context) {
+    const source = context && context.source ? String(context.source) : '';
+    if (source && source !== 'window.update' && source !== 'window.update-fallback') {
+      return { skipped: true, reason: 'non-window-update-context', source };
+    }
+    try {
+      renderNutritionNormsCardFromDom();
+      return { skipped: false, rendered: true };
+    } catch (_) {
+      if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+        globalThis.vildaLogSwallowedCatch('nutrition_norms.js', _, { step: '8O-10d-f', hook: NUTRITION_NORMS_AFTER_UPDATE_HOOK_ID });
+      }
+      return { skipped: false, rendered: false, error: String(_ && _.message ? _.message : _) };
     }
   }
-      return result;
+
+  function registerNutritionNormsAfterUpdateHook() {
+    if (nutritionNormsAfterUpdateHookRegistered === true) return true;
+    if (typeof window === 'undefined') return false;
+
+    window.__vildaNutritionNormsAfterUpdateHookId = NUTRITION_NORMS_AFTER_UPDATE_HOOK_ID;
+    window.__vildaNutritionNormsAfterUpdateFallback = renderNutritionNormsAfterUpdate;
+    window.__vildaUpdateHooksNutritionNormsMigratedWrapperIds = [NUTRITION_NORMS_AFTER_UPDATE_HOOK_ID];
+
+    const registry = window.VildaUpdateHooks;
+    if (!registry || typeof registry.registerAfterUpdateHook !== 'function') {
+      window.__vildaNutritionNormsAfterUpdateHookRegistered = false;
+      return false;
+    }
+
+    try {
+      nutritionNormsAfterUpdateHookToken = registry.registerAfterUpdateHook(renderNutritionNormsAfterUpdate, {
+        id: NUTRITION_NORMS_AFTER_UPDATE_HOOK_ID,
+        label: 'Nutrition norms card render after update',
+        group: 'nutrition-update-migrated-wrapper',
+        order: 40,
+        replace: true
+      });
+      nutritionNormsAfterUpdateHookRegistered = !!(nutritionNormsAfterUpdateHookToken && nutritionNormsAfterUpdateHookToken.ok === true);
+    } catch (_) {
+      nutritionNormsAfterUpdateHookRegistered = false;
+      if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+        globalThis.vildaLogSwallowedCatch('nutrition_norms.js', _, { step: '8O-10d-f', helper: 'registerNutritionNormsAfterUpdateHook' });
+      }
+    }
+
+    window.__vildaNutritionNormsAfterUpdateHookRegistered = nutritionNormsAfterUpdateHookRegistered;
+    return nutritionNormsAfterUpdateHookRegistered;
+  }
+
+  function getNutritionNormsUpdateHookSnapshot(options) {
+    const opts = options || {};
+    const registry = typeof window !== 'undefined' ? window.VildaUpdateHooks : null;
+    let registrySnapshot = null;
+    try {
+      registrySnapshot = registry && typeof registry.getSnapshot === 'function'
+        ? registry.getSnapshot({ includeEvents: opts.includeEvents === true })
+        : null;
+    } catch (error) {
+      registrySnapshot = { error: String(error && error.message ? error.message : error) };
+    }
+    const hooks = registrySnapshot && Array.isArray(registrySnapshot.hooks) ? registrySnapshot.hooks : [];
+    const hook = hooks.find(function(item) { return item && item.id === NUTRITION_NORMS_AFTER_UPDATE_HOOK_ID; }) || null;
+    let finalChainAudit = null;
+    try {
+      finalChainAudit = registry && typeof registry.getFinalUpdateChainAuditSnapshot === 'function'
+        ? registry.getFinalUpdateChainAuditSnapshot({ includeSourcePreview: false })
+        : null;
+    } catch (error) {
+      finalChainAudit = { error: String(error && error.message ? error.message : error) };
+    }
+
+    const finalUpdate = typeof window !== 'undefined' ? window.update : null;
+    return {
+      kind: 'vilda-nutrition-norms-update-hook-snapshot',
+      step: '8O-10d-f',
+      version: NUTRITION_NORMS_MODULE_VERSION,
+      readOnly: true,
+      didCallWindowUpdate: false,
+      didRunHooks: false,
+      didPatchWindowUpdate: false,
+      migratedWrapperId: NUTRITION_NORMS_AFTER_UPDATE_HOOK_ID,
+      hookRegistered: !!hook,
+      hookRegisteredAtInstall: nutritionNormsAfterUpdateHookRegistered === true,
+      hookOrder: hook ? hook.order : null,
+      orderAfterDietRecommendations: !!(hook && Number(hook.order) > 30),
+      orderBeforeNutritionMicrosTarget: !!(hook && Number(hook.order) < 50),
+      legacyWrapperRemoved: true,
+      legacyWindowUpdateWrapperPresent: false,
+      finalWindowUpdateHasLegacyNutritionNormsWrapper: !!(typeof finalUpdate === 'function' && finalUpdate.__nutritionNormsWrapped === true),
+      finalWindowUpdateHasLegacyNutritionMicrosWrapper: !!(typeof finalUpdate === 'function' && finalUpdate.__nutritionMicrosWrapped === true),
+      registry: registrySnapshot ? {
+        version: registrySnapshot.version || null,
+        step: registrySnapshot.step || null,
+        registeredCount: registrySnapshot.registeredCount,
+        migrationStatus: registrySnapshot.migrationStatus || null,
+        migratedWrapperIds: registrySnapshot.migratedWrapperIds || [],
+        migratedHookIdsRegistered: registrySnapshot.migratedHookIdsRegistered || []
+      } : null,
+      finalChainAudit: finalChainAudit ? {
+        version: finalChainAudit.version || null,
+        step: finalChainAudit.step || null,
+        allKnownWrappersMigrated: finalChainAudit.allKnownWrappersMigrated === true,
+        hookOrderExpected: finalChainAudit.hookOrderExpected === true,
+        registryBridgeFoundInFinalChain: finalChainAudit.registryBridgeFoundInFinalChain === true,
+        outOfScopeRemainingWrapperIds: finalChainAudit.outOfScopeRemainingWrapperIds || [],
+        finalWindowUpdateOwner: finalChainAudit.finalWindowUpdateOwner || null
+      } : null,
+      nextStep: '8O-10d-g — przepięcie nutrition_micros.js na VildaUpdateHooks'
     };
-    wrapped.__nutritionNormsWrapped = true;
-    wrapped.__nutritionNormsOriginal = original;
-    window.update = wrapped;
-    try { update = wrapped; } catch (_) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('nutrition_norms.js', _, { line: 2350 });
-    }
-  }
   }
 
   function initNutritionNormsModule() {
     ensureNutritionNormsCardShell();
     bindNutritionNormsToggle();
     initNutritionNormsCardInteractions();
-    wrapNutritionNormsIntoUpdate();
+    registerNutritionNormsAfterUpdateHook();
     try {
       window.addEventListener('vildaResultsModeChanged', function() {
         if (window.nutritionNormsLastModel) renderNutritionNormsCardFromDom();
@@ -2470,6 +2566,27 @@
   window.nutritionNormsBuildCardModel = nutritionNormsBuildCardModel;
   window.renderNutritionNormsCardFromDom = renderNutritionNormsCardFromDom;
   window.clearNutritionNormsCard = clearNutritionNormsCard;
+  window.nutritionNormsRenderAfterUpdate = renderNutritionNormsAfterUpdate;
+  window.nutritionNormsRegisterAfterUpdateHook = registerNutritionNormsAfterUpdateHook;
+  window.nutritionNormsGetUpdateHookSnapshot = getNutritionNormsUpdateHookSnapshot;
+  window.vildaGetNutritionNormsUpdateHookSnapshot = getNutritionNormsUpdateHookSnapshot;
+  window.VildaNutritionNorms = Object.freeze({
+    __vildaNutritionNorms: true,
+    VERSION: NUTRITION_NORMS_MODULE_VERSION,
+    version: NUTRITION_NORMS_MODULE_VERSION,
+    updateAfterUpdate: renderNutritionNormsAfterUpdate,
+    renderAfterUpdate: renderNutritionNormsAfterUpdate,
+    registerUpdateHook: registerNutritionNormsAfterUpdateHook,
+    getUpdateHookSnapshot: getNutritionNormsUpdateHookSnapshot,
+    getAgeBand: nutritionNormsGetAgeBand,
+    getAllowedPAL: nutritionNormsGetAllowedPAL,
+    resolvePAL: nutritionNormsResolvePAL,
+    buildCardModel: nutritionNormsBuildCardModel,
+    buildPatientReportCard: nutritionNormsBuildPatientReportCard,
+    getUiState: nutritionNormsGetUiState,
+    renderCardFromDom: renderNutritionNormsCardFromDom,
+    clearCard: clearNutritionNormsCard
+  });
 
   if (typeof window !== 'undefined' && typeof window.vildaOnReady === 'function') {
     window.vildaOnReady('nutrition-norms:init', initNutritionNormsModule);

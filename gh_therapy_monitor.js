@@ -178,7 +178,9 @@
           }
         };
         req.onsuccess = function(ev){
-          resolve(ev.target.result);
+          const db = ev.target.result;
+          attachTherapyDBVersionChangeHandler(db, 'openTherapyDB');
+          resolve(db);
         };
         req.onerror = function(ev){
           reject(ev.target.error);
@@ -189,15 +191,36 @@
     });
   }
 
+  function attachTherapyDBVersionChangeHandler(db, contextLabel){
+    try {
+      if (!db) return db;
+      db.onversionchange = function(){
+        closeTherapyDBConnection(db, (contextLabel || 'openTherapyDB') + ':onversionchange');
+      };
+    } catch (error) {
+      logGhMonitorWarn('Nie udało się podłączyć obsługi onversionchange IndexedDB terapii GH/IGF-1', error, { step: '8O-11a-c', context: contextLabel || 'gh-therapy-indexeddb-onversionchange' });
+    }
+    return db;
+  }
+
   /**
    * Czyści istniejące rekordy i zapisuje przekazane punkty do bazy.
    * Operacja jest wykonywana asynchronicznie.  W przypadku niepowodzenia
    * błąd jest ignorowany, ponieważ localStorage nadal przechowuje kopię.
    * @param {Array<Object>} pts tablica punktów terapii
    */
-  async function saveTherapyPointsToDB(pts){
+  function closeTherapyDBConnection(db, contextLabel){
     try {
-      const db = await openTherapyDB();
+      if (db && typeof db.close === 'function') db.close();
+    } catch (error) {
+      logGhMonitorWarn('Nie udało się zamknąć połączenia IndexedDB terapii GH/IGF-1', error, { step: '8O-11a-c', context: contextLabel || 'gh-therapy-indexeddb-close' });
+    }
+  }
+
+  async function saveTherapyPointsToDB(pts){
+    let db = null;
+    try {
+      db = await openTherapyDB();
       const tx = db.transaction(GH_STORE_NAME, 'readwrite');
       const store = tx.objectStore(GH_STORE_NAME);
       // Wyczyść istniejące dane
@@ -220,14 +243,60 @@
       await new Promise((res, rej) => {
         tx.oncomplete = () => res();
         tx.onerror = () => rej(tx.error);
+        tx.onabort = () => rej(tx.error || new Error('IndexedDB transaction aborted'));
       });
     } catch(error) {
       logGhMonitorWarn('Nie udało się zsynchronizować punktów terapii GH z IndexedDB', error);
+    } finally {
+      closeTherapyDBConnection(db, 'saveTherapyPointsToDB');
     }
   }
 
   // Utwórz kanał BroadcastChannel do synchronizacji z innymi zakładkami.
   const ghTherapyBroadcastChannel = (typeof BroadcastChannel !== 'undefined') ? new BroadcastChannel('gh-therapy-sync') : null;
+  let ghTherapyBroadcastChannelClosed = false;
+
+  function isGHTherapyBroadcastChannelOpen(){
+    return !!(ghTherapyBroadcastChannel && ghTherapyBroadcastChannelClosed !== true);
+  }
+
+  function closeGHTherapyBroadcastChannel(contextLabel){
+    if (!ghTherapyBroadcastChannel || ghTherapyBroadcastChannelClosed) return false;
+    ghTherapyBroadcastChannelClosed = true;
+    try {
+      if (typeof ghTherapyBroadcastChannel.close === 'function') ghTherapyBroadcastChannel.close();
+      return true;
+    } catch (error) {
+      logGhMonitorWarn('Nie udało się zamknąć BroadcastChannel terapii GH/IGF-1', error, { step: '8O-11b', context: contextLabel || 'gh-therapy-broadcast-channel-close' });
+    }
+    return false;
+  }
+
+  function postGHTherapyBroadcastMessage(message, contextLabel){
+    if (!isGHTherapyBroadcastChannelOpen() || typeof ghTherapyBroadcastChannel.postMessage !== 'function') return false;
+    try {
+      ghTherapyBroadcastChannel.postMessage(message);
+      return true;
+    } catch (error) {
+      logGhMonitorWarn('Nie udało się wysłać komunikatu BroadcastChannel terapii GH/IGF-1', error, { step: '8O-11b', context: contextLabel || 'gh-therapy-broadcast-channel-post' });
+    }
+    return false;
+  }
+
+  function registerGHTherapyBroadcastChannelLifecycleCleanup(){
+    try {
+      if (!ghTherapyBroadcastChannel || typeof window === 'undefined' || typeof window.addEventListener !== 'function') return false;
+      const cleanup = function(){ closeGHTherapyBroadcastChannel('gh-therapy-broadcast-channel-page-lifecycle'); };
+      window.addEventListener('pagehide', cleanup, { once: true });
+      window.addEventListener('beforeunload', cleanup, { once: true });
+      return true;
+    } catch (error) {
+      logGhMonitorWarn('Nie udało się podpiąć lifecycle cleanup BroadcastChannel terapii GH/IGF-1', error, { step: '8O-11b', context: 'gh-therapy-broadcast-channel-lifecycle-bind' });
+    }
+    return false;
+  }
+
+  registerGHTherapyBroadcastChannelLifecycleCleanup();
   /**
    * Wyświetla pełnoekranowe ostrzeżenie przed usunięciem punktu leczenia.
    * Użytkownik musi potwierdzić decyzję, aby punkt został faktycznie usunięty.
@@ -517,18 +586,10 @@
       // saveTherapyPointsToDB zwraca Promise; nie czekamy na wynik, aby nie blokować UI
       saveTherapyPointsToDB(window.ghTherapyPoints || []).then(() => {
         // Wyślij komunikat tylko po udanym zapisie
-        if (ghTherapyBroadcastChannel) {
-          try {
-            ghTherapyBroadcastChannel.postMessage({ type: 'update' });
-          } catch (error) { logGhMonitorWarn('Zignorowany błąd pomocniczy w monitorze terapii GH/IGF-1', error); }
-        }
+        postGHTherapyBroadcastMessage({ type: 'update' }, 'saveTherapyPoints:update-after-db-save');
       }).catch(() => {
         // W przypadku błędu zapisu nadal spróbuj powiadomić
-        if (ghTherapyBroadcastChannel) {
-          try {
-            ghTherapyBroadcastChannel.postMessage({ type: 'update' });
-          } catch (error) { logGhMonitorWarn('Zignorowany błąd pomocniczy w monitorze terapii GH/IGF-1', error); }
-        }
+        postGHTherapyBroadcastMessage({ type: 'update' }, 'saveTherapyPoints:update-after-db-error');
       });
     } catch (error) { logGhMonitorWarn('Zignorowany błąd pomocniczy w monitorze terapii GH/IGF-1', error); }
   }
@@ -1836,7 +1897,7 @@
   function repositionCardIfNeeded(){
     const monitorCard = document.getElementById('ghTherapyMonitorCard');
     const ghCard = document.getElementById('ghIgfTherapyCard');
-    if (!monitorCard || !ghCard || !ghCard.parentNode) return;
+    if (!monitorCard || !ghCard || !ghCard.parentNode) return false;
     // W każdej sytuacji spróbuj wstawić przycisk do karty GH.  Jeżeli już
     // istnieje, funkcja nic nie zrobi.  To zapewnia, że przycisk będzie
     // dostępny nawet jeśli karta monitorowania znajduje się w odpowiednim
@@ -1844,12 +1905,14 @@
     injectMonitorToggleButton();
     // Jeśli nasza karta już znajduje się tuż po karcie GH, nie trzeba jej
     // ponownie przemieszczać.
-    if (monitorCard.previousSibling === ghCard) return;
+    if (monitorCard.previousSibling === ghCard) return true;
     try {
       ghCard.parentNode.insertBefore(monitorCard, ghCard.nextSibling);
+      return true;
     } catch(error){
       logGhMonitorWarn('Nie udało się umieścić karty monitora GH pod kartą terapii', error);
     }
+    return false;
   }
 
   /**
@@ -1910,6 +1973,104 @@
     } catch (error) {
       logGhMonitorWarn('Nie udało się wstawić przycisku monitora GH', error);
     }
+  }
+
+  let ghTherapyMonitorDomObserver = null;
+  let ghTherapyMonitorDomObserverLifecycleBound = false;
+  let ghTherapyMonitorDomObserverRootId = null;
+
+  function getGHTherapyMonitorMutationObserverRoot(){
+    try {
+      const preferredRootIds = ['modulesWrapper', 'doctorBottom', 'advancedGrowthSection'];
+      for (const rootId of preferredRootIds) {
+        const root = document.getElementById(rootId);
+        if (root) {
+          ghTherapyMonitorDomObserverRootId = rootId;
+          return root;
+        }
+      }
+      if (document.body) {
+        ghTherapyMonitorDomObserverRootId = 'document.body';
+        return document.body;
+      }
+    } catch (error) {
+      logGhMonitorWarn('Nie udało się wybrać zakresu obserwatora DOM monitora GH/IGF-1', error, { step: '8O-11c', context: 'gh-therapy-monitor-dom-observer-root' });
+    }
+    ghTherapyMonitorDomObserverRootId = null;
+    return null;
+  }
+
+  function disconnectGHTherapyMonitorDomObserver(contextLabel){
+    const observer = ghTherapyMonitorDomObserver;
+    if (!observer) return false;
+    ghTherapyMonitorDomObserver = null;
+    try {
+      if (typeof observer.disconnect === 'function') observer.disconnect();
+      return true;
+    } catch (error) {
+      logGhMonitorWarn('Nie udało się odłączyć obserwatora DOM monitora GH/IGF-1', error, { step: '8O-11c', context: contextLabel || 'gh-therapy-monitor-dom-observer-disconnect' });
+    }
+    return false;
+  }
+
+  function registerGHTherapyMonitorMutationObserverLifecycleCleanup(){
+    try {
+      if (ghTherapyMonitorDomObserverLifecycleBound) return true;
+      if (typeof window === 'undefined' || typeof window.addEventListener !== 'function') return false;
+      const cleanup = function(){ disconnectGHTherapyMonitorDomObserver('gh-therapy-monitor-dom-observer-page-lifecycle'); };
+      window.addEventListener('pagehide', cleanup, { once: true });
+      window.addEventListener('beforeunload', cleanup, { once: true });
+      ghTherapyMonitorDomObserverLifecycleBound = true;
+      return true;
+    } catch (error) {
+      logGhMonitorWarn('Nie udało się podpiąć lifecycle cleanup obserwatora DOM monitora GH/IGF-1', error, { step: '8O-11c', context: 'gh-therapy-monitor-dom-observer-lifecycle-bind' });
+    }
+    return false;
+  }
+
+  function scheduleGHTherapyMonitorRepositionFromObserver(contextLabel){
+    try {
+      setTimeout(function(){
+        const positioned = repositionCardIfNeeded();
+        if (positioned) disconnectGHTherapyMonitorDomObserver(contextLabel || 'gh-therapy-monitor-dom-observer-target-positioned');
+      }, 0);
+      return true;
+    } catch (error) {
+      logGhMonitorWarn('Nie udało się zaplanować przeniesienia karty monitora GH/IGF-1', error, { step: '8O-11c', context: contextLabel || 'gh-therapy-monitor-dom-observer-reposition' });
+    }
+    return false;
+  }
+
+  function startGHTherapyMonitorDomObserver(){
+    try {
+      if (ghTherapyMonitorDomObserver) return true;
+      if (typeof MutationObserver === 'undefined') return false;
+      if (document.getElementById('ghIgfTherapyCard')) return false;
+      const root = getGHTherapyMonitorMutationObserverRoot();
+      if (!root) return false;
+      const observer = new MutationObserver((mutationsList) => {
+        for (const mut of mutationsList) {
+          if (!mut.addedNodes) continue;
+          for (const node of mut.addedNodes) {
+            if (node && node.nodeType === 1) {
+              // Sprawdź, czy dodano kartę GH lub kontener ją zawierający.
+              if (node.id === 'ghIgfTherapyCard' || node.querySelector && node.querySelector('#ghIgfTherapyCard')) {
+                scheduleGHTherapyMonitorRepositionFromObserver('gh-therapy-monitor-dom-observer-card-detected');
+                return;
+              }
+            }
+          }
+        }
+      });
+      observer.observe(root, { childList: true, subtree: true });
+      ghTherapyMonitorDomObserver = observer;
+      ghTherapyMonitorDomObserverRootId = root.id || (root === document.body ? 'document.body' : ghTherapyMonitorDomObserverRootId || 'unknown');
+      registerGHTherapyMonitorMutationObserverLifecycleCleanup();
+      return true;
+    } catch(error) {
+      logGhMonitorWarn('Nie udało się uruchomić obserwatora DOM monitora GH', error, { step: '8O-11c', rootId: ghTherapyMonitorDomObserverRootId || null });
+    }
+    return false;
   }
 
   /**
@@ -1984,9 +2145,7 @@
     try { clearGhTherapyPointsStorage(); } catch (error) { logGhMonitorWarn('Zignorowany błąd pomocniczy w monitorze terapii GH/IGF-1', error); }
     try { saveTherapyPointsToDB([]).catch((error) => { logGhMonitorWarn('Nie udało się wyczyścić punktów terapii GH w IndexedDB', error); }); } catch (error) { logGhMonitorWarn('Nie udało się uruchomić czyszczenia IndexedDB terapii GH', error); }
     try {
-      if (ghTherapyBroadcastChannel && typeof ghTherapyBroadcastChannel.postMessage === 'function') {
-        ghTherapyBroadcastChannel.postMessage({ type: 'clear' });
-      }
+      postGHTherapyBroadcastMessage({ type: 'clear' }, 'resetGhMonitorPersistState:clear');
     } catch (error) { logGhMonitorWarn('Zignorowany błąd pomocniczy w monitorze terapii GH/IGF-1', error); }
     try { renderTherapyTable(); } catch (error) { logGhMonitorWarn('Zignorowany błąd pomocniczy w monitorze terapii GH/IGF-1', error); }
     if (opts.hideCard) {
@@ -2059,34 +2218,10 @@
     // powielanie zdarzeń (dodanie wielu punktów przy jednym kliknięciu).
 
     // Po inicjalizacji spróbuj natychmiast przemieścić kartę za kartę GH/IGF‑1,
-    // jeżeli jest już obecna w DOM.  Może się zdarzyć, że użytkownik otworzy
-    // moduł GH dopiero później – wówczas poniższy obserwator przeniesie kartę,
-    // kiedy tylko karta GH zostanie utworzona.
-    repositionCardIfNeeded();
-
-    // Obserwuj zmiany w DOM, aby wykryć pojawienie się karty GH/IGF‑1 i
-    // przesunąć za nią naszą kartę monitorowania.  Używamy MutationObservera
-    // do monitorowania struktury DOM (dodawanie węzłów) w całym dokumencie.
-    const obs = new MutationObserver((mutationsList) => {
-      for (const mut of mutationsList) {
-        if (!mut.addedNodes) continue;
-        for (const node of mut.addedNodes) {
-          if (node && node.nodeType === 1) {
-            // Sprawdź, czy dodano kartę GH lub kontener ją zawierający
-            if (node.id === 'ghIgfTherapyCard' || node.querySelector && node.querySelector('#ghIgfTherapyCard')) {
-              // Po krótkim opóźnieniu (render + style) przemieść kartę
-              setTimeout(() => { repositionCardIfNeeded(); }, 0);
-              return;
-            }
-          }
-        }
-      }
-    });
-    try {
-      obs.observe(document.body, { childList: true, subtree: true });
-    } catch(error) {
-      logGhMonitorWarn('Nie udało się uruchomić obserwatora DOM monitora GH', error);
-    }
+    // jeżeli jest już obecna w DOM.  Jeżeli moduł GH zostanie otwarty później,
+    // obserwator DOM obejmie najwęższy dostępny kontener modułów i odłączy się
+    // po wykryciu karty lub podczas lifecycle strony.
+    if (!repositionCardIfNeeded()) startGHTherapyMonitorDomObserver();
   }
 
   function bootGhTherapyMonitorModule() {

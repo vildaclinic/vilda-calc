@@ -570,14 +570,6 @@
     document.addEventListener('touchstart', delayedBrowserUiPrime, { passive: true, once: true });
   }
 
-  if (typeof window.vildaOnReady === 'function') {
-    window.vildaOnReady('ios26-ui:init-liquid-ui', initLiquidUi);
-  } else if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initLiquidUi, { once: true });
-  } else {
-    initLiquidUi();
-  }
-
   /**
    * Dodaje klasę `_glass` i animację wejścia do podstawowych kontenerów,
    * takich jak header, karty, fieldsety. Używa IntersectionObserver do
@@ -2676,14 +2668,27 @@ function auditNavigationCoverage() {
    * natychmiastowym przejęciu kontroli.  Po kliknięciu „Później” baner
    * znika.
    */
-  function showUpdateBanner(onReload) {
-    // Sprawdź, czy baner już istnieje.
-    if (document.getElementById('sw-update-banner')) return;
+  function showUpdateBanner(onReload, meta) {
+    const state = getSWClientLifecycleState();
+    const reason = meta && meta.reason ? String(meta.reason) : 'service-worker-update-banner';
+    state.updateBannerShowRequestCount += 1;
+    state.updateBannerLastReason = reason;
+
+    // Sprawdź, czy baner już istnieje. Krok 8O-11k utrzymuje singleton UX,
+    // aby jeden waiting worker nie generował wielu równoległych promptów.
+    if (document.getElementById('sw-update-banner')) {
+      state.updateBannerDuplicateRequestCount += 1;
+      state.updateBannerActive = true;
+      return;
+    }
     ensureUpdateBannerStyles();
     const bar = document.createElement('div');
     bar.id = 'sw-update-banner';
+    if (!bar.dataset) bar.dataset = {};
+    bar.dataset.vildaSwUpdateBannerStep = SW_CLIENT_LIFECYCLE_STEP;
     bar.setAttribute('role', 'alert');
     bar.setAttribute('aria-live', 'polite');
+    bar.setAttribute('aria-atomic', 'true');
     bar.style.cssText = `
       position:fixed;
       inset:auto 1rem 1rem 1rem;
@@ -2701,58 +2706,282 @@ function auditNavigationCoverage() {
     iosSetTrustedHtml(bar, `
       <span class="ww-sw-update-banner__message"><strong>Nowa wersja aplikacji</strong> — przeładować?</span>
       <div class="ww-sw-update-banner__actions">
-        <button id="sw-refresh" class="btn ww-sw-refresh--pulse">Przeładuj</button>
-        <button id="sw-dismiss" class="btn" style="opacity:.8">Później</button>
+        <button id="sw-refresh" type="button" class="btn ww-sw-refresh--pulse" data-vilda-sw-update-action="refresh" aria-label="Przeładuj aplikację i zastosuj nową wersję">Przeładuj</button>
+        <button id="sw-dismiss" type="button" class="btn" style="opacity:.8" data-vilda-sw-update-action="dismiss" aria-label="Odłóż aktualizację aplikacji na później">Później</button>
       </div>
     `, 'ios26-ui:bar');
     document.body.appendChild(bar);
+    state.updateBannerShowCount += 1;
+    state.updateBannerActive = true;
+    state.updateBannerPendingReload = false;
+    state.updateBannerLastAction = 'shown';
+
     const refresh = bar.querySelector('#sw-refresh');
     const dismiss = bar.querySelector('#sw-dismiss');
+    const markBannerRemoved = (action) => {
+      if (!state.updateBannerActive) return;
+      state.updateBannerActive = false;
+      state.updateBannerRemoveCount += 1;
+      state.updateBannerLastAction = action || state.updateBannerLastAction || 'removed';
+    };
     refresh?.addEventListener('click', () => {
-      if (typeof onReload === 'function') onReload();
+      state.updateBannerRefreshClickCount += 1;
+      if (state.updateBannerPendingReload) {
+        state.updateBannerDuplicateRefreshClickCount += 1;
+        return;
+      }
+      state.updateBannerPendingReload = true;
+      state.updateBannerRefreshHandledCount += 1;
+      state.updateBannerLastAction = 'refresh';
+      if (refresh && typeof refresh.setAttribute === 'function') {
+        refresh.setAttribute('aria-busy', 'true');
+        refresh.setAttribute('disabled', 'disabled');
+      }
+      if (dismiss && typeof dismiss.setAttribute === 'function') {
+        dismiss.setAttribute('disabled', 'disabled');
+      }
+      const posted = typeof onReload === 'function' ? onReload() !== false : false;
+      state.updateBannerRefreshPostedSkipWaiting = posted === true;
     });
     dismiss?.addEventListener('click', () => {
-      bar.remove();
+      state.updateBannerDismissClickCount += 1;
+      if (!state.updateBannerActive) {
+        state.updateBannerDuplicateDismissClickCount += 1;
+        return;
+      }
+      state.updateBannerDismissHandledCount += 1;
+      markBannerRemoved('dismiss');
+      if (typeof bar.remove === 'function') bar.remove();
+    });
+  }
+
+  const SW_CLIENT_LIFECYCLE_STEP = '8O-11k';
+  const SW_CLIENT_LIFECYCLE_VERSION = '1.1.0';
+
+  function createSWClientLifecycleTracker() {
+    return (typeof WeakSet === 'function') ? new WeakSet() : [];
+  }
+
+  function swClientTrackerHas(tracker, item) {
+    if (!tracker || !item) return false;
+    if (typeof tracker.has === 'function') return tracker.has(item);
+    return tracker.indexOf(item) !== -1;
+  }
+
+  function swClientTrackerAdd(tracker, item) {
+    if (!tracker || !item || swClientTrackerHas(tracker, item)) return;
+    if (typeof tracker.add === 'function') tracker.add(item);
+    else tracker.push(item);
+  }
+
+  function getSWClientLifecycleState() {
+    const root = window || {};
+    if (!root.__vildaServiceWorkerClientLifecycle) {
+      root.__vildaServiceWorkerClientLifecycle = {
+        step: SW_CLIENT_LIFECYCLE_STEP,
+        version: SW_CLIENT_LIFECYCLE_VERSION,
+        registrationPromise: null,
+        registrationAttempted: false,
+        registrationSucceeded: false,
+        registrationFailed: false,
+        registrationRequestCount: 0,
+        lastScope: null,
+        lastError: null,
+        updatefoundListenerCount: 0,
+        statechangeListenerCount: 0,
+        waitingPromptCount: 0,
+        skipWaitingMessageCount: 0,
+        updateBannerShowRequestCount: 0,
+        updateBannerShowCount: 0,
+        updateBannerDuplicateRequestCount: 0,
+        updateBannerRefreshClickCount: 0,
+        updateBannerRefreshHandledCount: 0,
+        updateBannerDuplicateRefreshClickCount: 0,
+        updateBannerRefreshPostedSkipWaiting: false,
+        updateBannerDismissClickCount: 0,
+        updateBannerDismissHandledCount: 0,
+        updateBannerDuplicateDismissClickCount: 0,
+        updateBannerRemoveCount: 0,
+        updateBannerActive: false,
+        updateBannerPendingReload: false,
+        updateBannerLastAction: null,
+        updateBannerLastReason: null,
+        controllerchangeListenerRegistered: false,
+        controllerchangeHandledCount: 0,
+        reloadedAfterControllerChange: false,
+        updatefoundRegistrations: createSWClientLifecycleTracker(),
+        statechangeWorkers: createSWClientLifecycleTracker(),
+        promptedWorkers: createSWClientLifecycleTracker()
+      };
+    }
+    return root.__vildaServiceWorkerClientLifecycle;
+  }
+
+  function getServiceWorkerClientLifecycleSnapshot() {
+    const state = getSWClientLifecycleState();
+    return {
+      step: SW_CLIENT_LIFECYCLE_STEP,
+      version: SW_CLIENT_LIFECYCLE_VERSION,
+      readOnly: true,
+      registeredServiceWorkerFromSnapshot: false,
+      postedSkipWaitingFromSnapshot: false,
+      reloadedPageFromSnapshot: false,
+      registrationAttempted: !!state.registrationAttempted,
+      registrationSucceeded: !!state.registrationSucceeded,
+      registrationFailed: !!state.registrationFailed,
+      registrationRequestCount: state.registrationRequestCount || 0,
+      lastScope: state.lastScope || null,
+      lastError: state.lastError || null,
+      updatefoundListenerCount: state.updatefoundListenerCount || 0,
+      statechangeListenerCount: state.statechangeListenerCount || 0,
+      waitingPromptCount: state.waitingPromptCount || 0,
+      skipWaitingMessageCount: state.skipWaitingMessageCount || 0,
+      updateBannerShowRequestCount: state.updateBannerShowRequestCount || 0,
+      updateBannerShowCount: state.updateBannerShowCount || 0,
+      updateBannerDuplicateRequestCount: state.updateBannerDuplicateRequestCount || 0,
+      updateBannerRefreshClickCount: state.updateBannerRefreshClickCount || 0,
+      updateBannerRefreshHandledCount: state.updateBannerRefreshHandledCount || 0,
+      updateBannerDuplicateRefreshClickCount: state.updateBannerDuplicateRefreshClickCount || 0,
+      updateBannerRefreshPostedSkipWaiting: !!state.updateBannerRefreshPostedSkipWaiting,
+      updateBannerDismissClickCount: state.updateBannerDismissClickCount || 0,
+      updateBannerDismissHandledCount: state.updateBannerDismissHandledCount || 0,
+      updateBannerDuplicateDismissClickCount: state.updateBannerDuplicateDismissClickCount || 0,
+      updateBannerRemoveCount: state.updateBannerRemoveCount || 0,
+      updateBannerActive: !!state.updateBannerActive,
+      updateBannerPendingReload: !!state.updateBannerPendingReload,
+      updateBannerLastAction: state.updateBannerLastAction || null,
+      updateBannerLastReason: state.updateBannerLastReason || null,
+      controllerchangeListenerRegistered: !!state.controllerchangeListenerRegistered,
+      controllerchangeHandledCount: state.controllerchangeHandledCount || 0,
+      reloadedAfterControllerChange: !!state.reloadedAfterControllerChange,
+      singletonRegistrationGuard: true,
+      duplicateUpdatefoundListenerGuard: true,
+      duplicateStatechangeListenerGuard: true,
+      duplicateWaitingPromptGuard: true,
+      controllerchangeReloadGuard: true,
+      updateBannerSingletonGuard: true,
+      updateBannerAccessibleAlert: true,
+      updateBannerButtonTypeGuard: true,
+      updateBannerAriaLabelGuard: true,
+      updateBannerRefreshSinglePostGuard: true,
+      updateBannerDismissNoSkipWaitingGuard: true
+    };
+  }
+
+  window.VildaServiceWorkerClientLifecycle = window.VildaServiceWorkerClientLifecycle || {};
+  window.VildaServiceWorkerClientLifecycle.step = SW_CLIENT_LIFECYCLE_STEP;
+  window.VildaServiceWorkerClientLifecycle.version = SW_CLIENT_LIFECYCLE_VERSION;
+  window.VildaServiceWorkerClientLifecycle.updateUxStep = SW_CLIENT_LIFECYCLE_STEP;
+  window.VildaServiceWorkerClientLifecycle.updateUxVersion = SW_CLIENT_LIFECYCLE_VERSION;
+  window.VildaServiceWorkerClientLifecycle.getSnapshot = getServiceWorkerClientLifecycleSnapshot;
+  window.VildaServiceWorkerClientLifecycle.getUpdateUxSnapshot = getServiceWorkerClientLifecycleSnapshot;
+  window.vildaGetServiceWorkerClientLifecycleSnapshot = getServiceWorkerClientLifecycleSnapshot;
+  window.vildaGetServiceWorkerUpdateUxSnapshot = getServiceWorkerClientLifecycleSnapshot;
+
+  function postSkipWaitingToWaitingWorker(registration, reason) {
+    const state = getSWClientLifecycleState();
+    const waiting = registration && registration.waiting;
+    if (!waiting || typeof waiting.postMessage !== 'function') return false;
+    try {
+      waiting.postMessage({ type: 'SKIP_WAITING' });
+      state.skipWaitingMessageCount += 1;
+      state.lastSkipWaitingReason = reason || null;
+      return true;
+    } catch (error) {
+      state.lastError = error && error.message ? error.message : String(error || 'skip-waiting-error');
+      return false;
+    }
+  }
+
+  function showServiceWorkerWaitingPrompt(registration, worker, reason) {
+    const state = getSWClientLifecycleState();
+    const waiting = worker || (registration && registration.waiting);
+    if (!registration || !waiting) return;
+    if (swClientTrackerHas(state.promptedWorkers, waiting)) return;
+    swClientTrackerAdd(state.promptedWorkers, waiting);
+    state.waitingPromptCount += 1;
+    state.lastWaitingPromptReason = reason || null;
+    showUpdateBanner(() => {
+      return postSkipWaitingToWaitingWorker(registration, reason || 'service-worker-update-banner');
+    }, { reason: reason || 'service-worker-update-banner' });
+  }
+
+  function attachServiceWorkerRegistrationLifecycle(registration) {
+    if (!registration || typeof registration.addEventListener !== 'function') return;
+    const state = getSWClientLifecycleState();
+    showServiceWorkerWaitingPrompt(registration, registration.waiting, 'registration-waiting');
+    if (swClientTrackerHas(state.updatefoundRegistrations, registration)) return;
+    swClientTrackerAdd(state.updatefoundRegistrations, registration);
+    state.updatefoundListenerCount += 1;
+    registration.addEventListener('updatefound', () => {
+      const newSW = registration.installing;
+      if (!newSW || typeof newSW.addEventListener !== 'function') return;
+      if (swClientTrackerHas(state.statechangeWorkers, newSW)) return;
+      swClientTrackerAdd(state.statechangeWorkers, newSW);
+      state.statechangeListenerCount += 1;
+      newSW.addEventListener('statechange', () => {
+        const container = navigator && navigator.serviceWorker ? navigator.serviceWorker : null;
+        if (newSW.state === 'installed' && container && container.controller) {
+          showServiceWorkerWaitingPrompt(registration, registration.waiting || newSW, 'installed-with-controller');
+        }
+      });
+    });
+  }
+
+  function attachServiceWorkerControllerChangeLifecycle(container) {
+    if (!container || typeof container.addEventListener !== 'function') return;
+    const state = getSWClientLifecycleState();
+    if (state.controllerchangeListenerRegistered) return;
+    state.controllerchangeListenerRegistered = true;
+    container.addEventListener('controllerchange', () => {
+      state.controllerchangeHandledCount += 1;
+      if (state.reloadedAfterControllerChange) return;
+      state.reloadedAfterControllerChange = true;
+      try { migrateIfNeeded(); } catch (error) { state.lastError = error && error.message ? error.message : String(error || 'migration-error'); }
+      try { window.location.reload(); } catch (error) { state.lastError = error && error.message ? error.message : String(error || 'reload-error'); }
     });
   }
 
   /**
    * Rejestruje service worker'a i nasłuchuje jego stanu, aby w razie
-   * dostępności aktualizacji pokazać baner.  Gdy nowy service worker
-   * przejmie kontrolę, odświeża stronę po migracji danych.
+   * dostępności aktualizacji pokazać baner.  Krok 8O-11k utrzymuje singleton
+   * rejestracji z 8O-11j i dodaje smoke'owany UX banera: dostępność,
+   * idempotentną akcję „Przeładuj” oraz bezpieczne „Później”.
    */
   async function setupSW() {
-    if (!('serviceWorker' in navigator)) return;
-    try {
-      const reg = await navigator.serviceWorker.register('/service-worker-kalorii.js');
-      function listen(registration) {
-        if (!registration) return;
-        // Jeżeli nowy service worker czeka na aktywację, pokaż baner.
-        if (registration.waiting) {
-          showUpdateBanner(() => {
-            registration.waiting?.postMessage({ type: 'SKIP_WAITING' });
-          });
-        }
-        registration.addEventListener('updatefound', () => {
-          const newSW = registration.installing;
-          newSW?.addEventListener('statechange', () => {
-            if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
-              showUpdateBanner(() => {
-                registration.waiting?.postMessage({ type: 'SKIP_WAITING' });
-              });
-            }
-          });
-        });
+    const container = navigator && navigator.serviceWorker ? navigator.serviceWorker : null;
+    if (!container || typeof container.register !== 'function') return null;
+    const state = getSWClientLifecycleState();
+    attachServiceWorkerControllerChangeLifecycle(container);
+    if (state.registrationPromise) return state.registrationPromise;
+    state.registrationAttempted = true;
+    state.registrationRequestCount += 1;
+    state.registrationPromise = (async () => {
+      try {
+        const reg = await container.register('/service-worker-kalorii.js');
+        state.registrationSucceeded = true;
+        state.registrationFailed = false;
+        state.lastScope = reg && reg.scope ? reg.scope : null;
+        attachServiceWorkerRegistrationLifecycle(reg);
+        return reg;
+      } catch (e) {
+        state.registrationFailed = true;
+        state.lastError = e && e.message ? e.message : String(e || 'Service Worker registration failed');
+        state.registrationPromise = null;
+        console.warn('Service Worker registration failed', e);
+        return null;
       }
-      listen(reg);
-      // Po przejęciu kontroli przez nowy service worker przeładuj stronę.
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        migrateIfNeeded();
-        window.location.reload();
-      });
-    } catch (e) {
-      console.warn('Service Worker registration failed', e);
-    }
+    })();
+    return state.registrationPromise;
+  }
+
+
+  if (typeof window.vildaOnReady === 'function') {
+    window.vildaOnReady('ios26-ui:init-liquid-ui', initLiquidUi);
+  } else if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initLiquidUi, { once: true });
+  } else {
+    initLiquidUi();
   }
 
 })();

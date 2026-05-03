@@ -48,7 +48,19 @@
 <script src="vilda_html.js?v=4"></script>
 <script src="vilda_persistence_adapter.js?v=7"></script>
 <script src="vilda_init.js?v=4"></script>
-<script src="vilda_deps.js?v=6"></script>
+<script src="vilda_deps.js?v=74"></script>
+<script src="vilda_update_hooks.js?v=7"></script>
+<script src="vilda_centile_chart_header.js?v=1"></script>
+<script src="vilda_gh_therapy_resource_audit.js?v=13"></script>
+<script src="vilda_app_helpers.js?v=2"></script>
+<script src="vilda_food_data.js?v=1"></script>
+<script src="vilda_macro_practice.js?v=2"></script>
+<script src="vilda_activity_burn.js?v=1"></script>
+<script src="vilda_food_summary.js?v=2"></script>
+<script src="vilda_data_import_export.js?v=14"></script>
+<script src="vilda_advanced_growth.js?v=14"></script>
+<script src="vilda_estimated_intake.js?v=3"></script>
+<script src="vilda_update_prep.js?v=61" defer></script>
 
 <script>
 (function() {
@@ -1137,7 +1149,7 @@
 <!-- Dodajemy klasę "liquid-ios26" bezpośrednio na element <body>,
      aby motyw Liquid Glass był stosowany od samego początku ładowania strony.
      Dzięki temu unikamy krótkiego błysku podstawowych stylów zanim skrypt
-     ios26-ui.js?v=16 dołączy klasę dynamicznie. -->
+     ios26-ui.js?v=18 dołączy klasę dynamicznie. -->
 <body class="js-loading liquid-ios26 has-sidebar">
 
 <header>
@@ -3441,15 +3453,20 @@
 
 <!-- Load Down syndrome growth tables before app.js; these define DS datasets as global variables -->
 <script src="ds_lms.js"></script>
+<script src="vilda_down_syndrome.js?v=1"></script>
+<script src="vilda_anorexia_risk.js?v=1"></script>
 <!-- Palczewska centile data (weight, height, BMI) for 0–18 years. Loaded before app.js so it attaches centileData to window. -->
 <script src="centile_data.js"></script>
 <!-- Biblioteka XLSX do obsługi plików Excel.  Ładowana przed app.js, aby
      obiekt globalny XLSX był dostępny podczas inicjowania aplikacji. -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="app.js?v=82" defer></script>
+<script src="app.js?v=150" defer></script>
+<script src="vilda_smoke_tests.js?v=25" defer></script>
+<script src="vilda_diet_recommendations.js?v=2" defer></script>
+<script src="vilda_patient_report.js?v=3" defer></script>
 <!-- po app.js -->
 <script src="gh_igf_therapy.js?v=7" defer></script>
-<script src="gh_therapy_monitor.js?v=8" defer></script>
+<script src="gh_therapy_monitor.js?v=12" defer></script>
 <!-- Skrypt kalkulatora antybiotykoterapii – generuje kartę dawek antybiotyków.
      Ładowany po głównym pliku app.js i module GH/IGF, aby skorzystać z już zainicjowanych
      elementów DOM oraz funkcji (np. pobierania masy ciała). Plik antibiotic_therapy.js
@@ -3987,6 +4004,75 @@ function drawCentileGrid(ctx, cfg) {
   }
   ctx.restore();
 }
+/* 8O-10e: świeże imię i nazwisko w nagłówkach PDF siatek centylowych. */
+function getCentileChartHeaderNameState(options = {}) {
+  if (window.VildaCentileChartHeader && typeof window.VildaCentileChartHeader.buildHeaderNameState === 'function') {
+    return window.VildaCentileChartHeader.buildHeaderNameState(Object.assign({}, options, {
+      effectiveDataState: window.advancedGrowthData || null,
+      advancedGrowthData: window.advancedGrowthData || null
+    }));
+  }
+  const advInput = document.getElementById('advName');
+  const basicInput = document.getElementById('basicGrowthName');
+  const mainInput = document.getElementById('name');
+  const advInputName = (advInput && typeof advInput.value === 'string' && advInput.value.trim()) || '';
+  const basicInputName = (basicInput && typeof basicInput.value === 'string' && basicInput.value.trim()) || '';
+  const mainInputName = (mainInput && typeof mainInput.value === 'string' && mainInput.value.trim()) || '';
+  const advStateName = (window.advancedGrowthData && typeof window.advancedGrowthData.name === 'string') ? window.advancedGrowthData.name.trim() : '';
+  const domName = advInputName || mainInputName || basicInputName;
+  return {
+    step: '8O-10e',
+    readOnly: true,
+    name: domName || advStateName || '',
+    nameSource: domName ? 'fresh-dom-fallback' : 'advancedGrowthData-name-fallback',
+    sourceModule: (window.advancedGrowthData && typeof window.advancedGrowthData.sourceModule === 'string') ? window.advancedGrowthData.sourceModule : '',
+    isBasicGrowth: false,
+    preferredFreshDom: true,
+    domInputsBeforeAdvancedGrowthData: true,
+    currentDomName: domName || '',
+    advancedGrowthDataName: advStateName,
+    staleAdvancedGrowthNameDetected: !!(advStateName && domName && advStateName !== domName)
+  };
+}
+
+function buildCentileChartNameLabel(options = {}) {
+  if (window.VildaCentileChartHeader && typeof window.VildaCentileChartHeader.buildNameLabel === 'function') {
+    return window.VildaCentileChartHeader.buildNameLabel(Object.assign({}, options, {
+      effectiveDataState: window.advancedGrowthData || null,
+      advancedGrowthData: window.advancedGrowthData || null
+    }));
+  }
+  const publication = !!options.publication;
+  const showPlaceholder = options.showPlaceholder !== false;
+  const prefix = publication ? 'Patient' : 'Imię i nazwisko';
+  const nameState = getCentileChartHeaderNameState(options);
+  if (nameState.name) return `${prefix}: ${nameState.name}`;
+  return showPlaceholder ? `${prefix}: _________________________________` : '';
+}
+
+function vildaGetCentileChartHeaderNameSnapshot(options = {}) {
+  if (window.VildaCentileChartHeader && typeof window.VildaCentileChartHeader.getSnapshot === 'function') {
+    return window.VildaCentileChartHeader.getSnapshot(Object.assign({}, options, {
+      effectiveDataState: window.advancedGrowthData || null,
+      advancedGrowthData: window.advancedGrowthData || null
+    }));
+  }
+  return {
+    step: '8O-10e',
+    kind: 'centile-chart-header-name-snapshot',
+    readOnly: true,
+    executedPdfGeneration: false,
+    renderedDom: false,
+    header: getCentileChartHeaderNameState(options)
+  };
+}
+
+if (typeof window !== 'undefined') {
+  window.getCentileChartHeaderNameState = getCentileChartHeaderNameState;
+  window.buildCentileChartNameLabel = buildCentileChartNameLabel;
+  window.vildaGetCentileChartHeaderNameSnapshot = vildaGetCentileChartHeaderNameSnapshot;
+}
+
 /* Główna funkcja generująca PDF z siatkami centylowymi. */
 
 async function generateCentileChart() {
@@ -4197,13 +4283,7 @@ const pw = 2480, ph = 3508;
    */
   // Obniżenie etykiety „Imię i nazwisko” o 1,75 rem względem nagłówka (1,25 rem z poprzedniej wersji + 0,5 rem dodatkowo).
   // --- DYNAMICZNY napis "Imię i nazwisko" (z karty Zaawansowane) ---
-  const nameFromState =
-    (window.advancedGrowthData && window.advancedGrowthData.name) ||
-    (document.getElementById('advName') ? document.getElementById('advName').value.trim() : '');
-
-  const nameLabel = nameFromState
-    ? `Imię i nazwisko: ${nameFromState}`
-    : 'Imię i nazwisko: _________________________________';
+  const nameLabel = buildCentileChartNameLabel({ showPlaceholder: true });
 
   ctx.fillText(nameLabel, 150, 150 + 50 * 1.75);
   // --- koniec wstawki ---
@@ -5096,13 +5176,10 @@ function buildCentilePageCanvas({
     ctx.fillText(renderedHeaderSubtitle, pw/2, 60 + headerTitleFontSize + 8);
   }
   // Imię i nazwisko
-  const nameFromState =
-    (window.advancedGrowthData && window.advancedGrowthData.name) ||
-    (document.getElementById('advName') ? document.getElementById('advName').value.trim() : '');
   ctx.font = '40px sans-serif';
   ctx.fillStyle = '#555555';
   ctx.textAlign = 'left';
-  const nameLabel = nameFromState ? `Imię i nazwisko: ${nameFromState}` : 'Imię i nazwisko: _________________________________';
+  const nameLabel = buildCentileChartNameLabel({ showPlaceholder: true });
   ctx.fillText(nameLabel, isOlafPage ? headerGridStartX : 150, isOlafPage ? olafNameRowY : (150 + 50 * 1.75));
   if (isOlafPage) {
     const advG = window.advancedGrowthData || {};
@@ -5924,7 +6001,7 @@ async function generateCentileChart() {
 </script>
 <!-- Liquid iOS26 UI script: applies glassmorphism and micro‑interactions. The version query
      string busts the service worker cache so updated code is loaded immediately. -->
-<script src="ios26-ui.js?v=16" defer></script>
+<script src="ios26-ui.js?v=18" defer></script>
 <!-- Guided tutorial for first‑time users -->
 <script src="tutorial.js?v=5" defer></script>
 
@@ -5958,26 +6035,16 @@ async function generateCentileChart() {
   });
 </script>
 
-<!-- Register the service worker for offline support and updates.
-     W trybie debugowania możesz całkowicie wyłączyć rejestrację,
-     aby uniknąć problemów z cache – ustaw DEBUG_SW na true/false poniżej. -->
+<!-- Service Worker registration/update-flow jest obsługiwany globalnie przez ios26-ui.js.
+     Krok 8O-11j usuwa równoległą rejestrację z docpro.html, aby uniknąć
+     duplikowania register()/updatefound/controllerchange lifecycle. -->
 <script>
-  (function() {
-    const DEBUG_SW = false; // Ustaw na false, aby zarejestrować service worker na serwerze home.pl
-    if (!DEBUG_SW && 'serviceWorker' in navigator) {
-      window.addEventListener('load', function() {
-        navigator.serviceWorker.register('service-worker-kalorii.js')
-          .then(function(registration) {
-            console.log('Service worker registered with scope:', registration.scope);
-          })
-          .catch(function(error) {
-            console.error('Service worker registration failed:', error);
-          });
-      });
-    } else {
-      console.log('Service worker registration skipped (DEBUG_SW = true)');
-    }
-  })();
+  window.__vildaDocproLegacyServiceWorkerRegistrationRemoved8O11j = Object.freeze({
+    step: '8O-11j',
+    removedLegacyInlineRegistration: true,
+    delegatedToGlobalIos26UiLifecycle: true,
+    registeredServiceWorkerHere: false
+  });
 </script>
   <!-- Skrypt obsługujący podsumowanie metaboliczne.  
        Funkcja ta generuje tekstowe podsumowanie wyników obliczeń (centyle, Z‑score)  
@@ -5991,11 +6058,18 @@ async function generateCentileChart() {
       const summaryBtn = document.getElementById('metabolicSummaryBtn');
       // Funkcja kontrolująca widoczność przycisku podsumowania
       function updateMetabolicSummaryVisibility() {
-        const ageYears  = parseFloat(document.getElementById('age')?.value) || 0;
+        const ageEl = document.getElementById('age');
+        const ageYears  = parseFloat(ageEl?.value) || 0;
         const weightVal = parseFloat(document.getElementById('weight')?.value) || 0;
         const heightVal = parseFloat(document.getElementById('height')?.value) || 0;
+        const anthroValidation = (typeof window.vildaGetMainAnthroValidationSnapshot === 'function')
+          ? window.vildaGetMainAnthroValidationSnapshot()
+          : null;
+        const hasCompleteAnthro = anthroValidation
+          ? anthroValidation.complete
+          : ((ageEl?.value || '').trim() !== '' && ageYears >= 0 && weightVal > 0 && heightVal > 0);
         if (summarySection) {
-          summarySection.style.display = (ageYears > 0 && weightVal > 0 && heightVal > 0) ? 'block' : 'none';
+          summarySection.style.display = hasCompleteAnthro ? 'block' : 'none';
         }
       }
       ['age','ageMonths','weight','height'].forEach(function(id){
@@ -6370,7 +6444,7 @@ async function generateCentileChart() {
        przełączaniu trybu wyników na wąskich ekranach.
        Plik custom-fixes.js implementuje te funkcje poprzez
        obserwację DOM i modyfikację scrollIntoView. -->
-  <script src="custom-fixes.js?v=11" defer></script>
+  <script src="custom-fixes.js?v=12" defer></script>
   <script src="docpro_state_persist.js?v=4" defer></script>
 
     <!-- Overlay for Z‑score batch conversion loading animation.  When the user starts
@@ -6702,12 +6776,8 @@ async function generateCentileChart() {
       const gridRightMargin = 100;
       const startGridX = chartXHeader + gridLeftMargin;
       const endGridX   = chartXHeader + chartWHeader - gridRightMargin;
-      // Pobierz imię z advancedGrowthData lub z formularza zaawansowanego.
-      const nameFromState = (window.advancedGrowthData && window.advancedGrowthData.name) ||
-        (document.getElementById('advName') ? document.getElementById('advName').value.trim() : '');
-      // Zbuduj etykietę imienia.  W trybie publikacji zastępujemy polski prefiks „Imię i nazwisko” na „Patient”.
-      const nameLabelPrefix = publication ? 'Patient' : 'Imię i nazwisko';
-      const nameItem = nameFromState ? `${nameLabelPrefix}: ${nameFromState}` : `${nameLabelPrefix}: _________________________________`;
+      // Pobierz świeże imię z formularza; advancedGrowthData.name jest tylko fallbackiem.
+      const nameItem = buildCentileChartNameLabel({ publication, showPlaceholder: true });
       // Pobierz wartości wzrostów rodziców oraz docelowego wzrostu (MPH) z danych zaawansowanych lub formularza.
       const advG = window.advancedGrowthData || {};
       const motherVal = (typeof advG.motherHeight === 'number' && isFinite(advG.motherHeight))
