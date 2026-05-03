@@ -6560,6 +6560,44 @@ function smoothScrollToElement(element, duration = 800) {
  * window.VildaUpdatePrep.runMainUpdate().
  * ========================================================================== */
 
+function vildaCaptureUpdatePlanSnapshot(options){
+  const opts = options || {};
+  const doc = opts.doc || (typeof document !== 'undefined' ? document : null);
+  if (!doc) return { ok: false, reason: 'missing-document' };
+  const planCard = doc.getElementById('planCard');
+  const planResults = doc.getElementById('planResults');
+  const dietChoiceWrap = doc.getElementById('dietChoiceWrap');
+  const dietDesc = doc.getElementById('dietDesc');
+  const dietCalorieInfo = doc.getElementById('dietCalorieInfo');
+  const dietLevel = doc.getElementById('dietLevel');
+  const snapshot = {
+    ok: true,
+    planCardVisible: !!(planCard && planCard.style && planCard.style.display !== 'none'),
+    planResultsVisible: !!(planResults && planResults.style && planResults.style.display !== 'none'),
+    dietChoiceVisible: !!(dietChoiceWrap && dietChoiceWrap.style && dietChoiceWrap.style.display !== 'none'),
+    dietDescVisible: !!(dietDesc && dietDesc.style && dietDesc.style.display !== 'none'),
+    dietCalorieVisible: !!(dietCalorieInfo && dietCalorieInfo.style && dietCalorieInfo.style.display !== 'none'),
+    dietOptionCount: dietLevel && dietLevel.options ? dietLevel.options.length : 0,
+    planResultsText: planResults && typeof planResults.textContent === 'string'
+      ? planResults.textContent.trim().replace(/\s+/g, ' ').slice(0, 500)
+      : ''
+  };
+  snapshot.signature = [
+    snapshot.planCardVisible ? '1' : '0',
+    snapshot.planResultsVisible ? '1' : '0',
+    snapshot.dietChoiceVisible ? '1' : '0',
+    snapshot.dietDescVisible ? '1' : '0',
+    snapshot.dietCalorieVisible ? '1' : '0',
+    String(snapshot.dietOptionCount),
+    snapshot.planResultsText.slice(0, 120)
+  ].join('|');
+  return snapshot;
+}
+
+if (typeof window !== 'undefined') {
+  window.vildaCaptureUpdatePlanSnapshot = vildaCaptureUpdatePlanSnapshot;
+}
+
 function update(){
   const prep = (typeof window !== 'undefined' && window.VildaUpdatePrep) ? window.VildaUpdatePrep : null;
   if (prep && typeof prep.runMainUpdate === 'function') {
