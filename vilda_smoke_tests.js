@@ -12,8 +12,8 @@
     return;
   }
 
-  const VERSION = '2.14.0';
-  const STEP = '8O-11k';
+  const VERSION = '2.15.0';
+  const STEP = '8O-12a';
   const DEFAULT_ESTIMATED_INTAKE_CONTRACTS = Object.freeze([
     'estimated-intake-card-audit',
     'estimated-intake-card-helpers',
@@ -73,7 +73,8 @@
     'vilda_food_summary.js?v=2',
     'vilda_estimated_intake.js?v=3',
     'vilda_update_prep.js?v=61',
-    'app.js?v=150',
+    'vilda_gh_therapy_sync.js?v=1',
+    'app.js?v=151',
     'vilda_smoke_tests.js?v=25',
     'vilda_diet_recommendations.js?v=2',
     'nutrition_norms.js?v=39',
