@@ -77,6 +77,7 @@
     'vilda_plan_input.js?v=1',
     'vilda_plan_energy.js?v=1',
     'vilda_plan_render.js?v=1',
+    'vilda_spa_view_runtime.js?v=1',
     'vilda_spa_view_home.js?v=1',
     'vilda_spa_view_docpro.js?v=1',
     'vilda_spa_view_klirens.js?v=1',
