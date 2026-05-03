@@ -3144,6 +3144,7 @@ function updatePlanFromDiet(){
   const intakeHistory = window.intakeHistory || null;
   const intakeKcalPerDay = window.intakeEstimatedKcalPerDay || null;
   const planEnergyAdapter = (typeof window !== 'undefined' && window.VildaPlanEnergy) ? window.VildaPlanEnergy : null;
+  const planRenderAdapter = (typeof window !== 'undefined' && window.VildaPlanRender) ? window.VildaPlanRender : null;
   const buildPlanState = planEnergyAdapter && typeof planEnergyAdapter.buildPlanState === 'function'
     ? planEnergyAdapter.buildPlanState
     : null;
@@ -3174,19 +3175,23 @@ function updatePlanFromDiet(){
   const teeRawPlan = planState.teeRawKcal;
 
   if (planState.isInfantPlanUnavailable) {
-    const dietSel = document.getElementById('dietLevel');
-    if (dietSel) vildaAppClearHtml(dietSel);
-    const descEl = document.getElementById('dietDesc');
-    const calEl  = document.getElementById('dietCalorieInfo');
-    const wrap = document.getElementById('dietChoiceWrap');
-    if (descEl) descEl.style.display = 'none';
-    if (calEl) calEl.style.display = 'none';
-    if (wrap) wrap.style.display = 'none';
-    const planCardEl = document.getElementById('planCard');
-    if (planCardEl) planCardEl.style.display = 'block';
-    const planResultsEl = document.getElementById('planResults');
-    if (planResultsEl) {
-      vildaAppSetTrustedHtml(planResultsEl, `<div class="result-card plan-col plan-result-card animate-in"><h3>Informacja</h3><p class="diet-warning">Plan odchudzania nie jest dostępny dla niemowląt. W tym wieku moduł energii ma charakter wyłącznie informacyjny.</p></div>`, 'app:planResultsEl');
+    if (planRenderAdapter && typeof planRenderAdapter.renderPlanUnavailable === 'function') {
+      planRenderAdapter.renderPlanUnavailable('infant', { doc: document });
+    } else {
+      const dietSel = document.getElementById('dietLevel');
+      if (dietSel) vildaAppClearHtml(dietSel);
+      const descEl = document.getElementById('dietDesc');
+      const calEl  = document.getElementById('dietCalorieInfo');
+      const wrap = document.getElementById('dietChoiceWrap');
+      if (descEl) descEl.style.display = 'none';
+      if (calEl) calEl.style.display = 'none';
+      if (wrap) wrap.style.display = 'none';
+      const planCardEl = document.getElementById('planCard');
+      if (planCardEl) planCardEl.style.display = 'block';
+      const planResultsEl = document.getElementById('planResults');
+      if (planResultsEl) {
+        vildaAppSetTrustedHtml(planResultsEl, `<div class="result-card plan-col plan-result-card animate-in"><h3>Informacja</h3><p class="diet-warning">Plan odchudzania nie jest dostępny dla niemowląt. W tym wieku moduł energii ma charakter wyłącznie informacyjny.</p></div>`, 'app:planResultsEl');
+      }
     }
     return;
   }
@@ -3199,22 +3204,22 @@ function updatePlanFromDiet(){
   // Jeśli nie ma żadnych diet (deficyt zbyt niski dla wszystkich poziomów),
   // ukryj opcję wyboru diety i wyświetl informację w wynikach planu.
   if (!diets || diets.length === 0) {
-    const dietSel = document.getElementById('dietLevel');
-    if (dietSel) {
-      vildaAppClearHtml(dietSel);
+    if (planRenderAdapter && typeof planRenderAdapter.renderNoDietsAvailable === 'function') {
+      planRenderAdapter.renderNoDietsAvailable({ doc: document });
+    } else {
+      const dietSel = document.getElementById('dietLevel');
+      if (dietSel) {
+        vildaAppClearHtml(dietSel);
+      }
+      const descEl = document.getElementById('dietDesc');
+      const calEl  = document.getElementById('dietCalorieInfo');
+      if (descEl) descEl.style.display = 'none';
+      if (calEl)  calEl.style.display  = 'none';
+      const wrap = document.getElementById('dietChoiceWrap');
+      if (wrap) wrap.style.display = 'none';
+      const planCardEl = document.getElementById('planCard');
+      if (planCardEl) planCardEl.style.display = 'block';
     }
-    // schowaj opis i kaloryczność
-    const descEl = document.getElementById('dietDesc');
-    const calEl  = document.getElementById('dietCalorieInfo');
-    if (descEl) descEl.style.display = 'none';
-    if (calEl)  calEl.style.display  = 'none';
-    // ukryj wybór diety
-    const wrap = document.getElementById('dietChoiceWrap');
-    if (wrap) wrap.style.display = 'none';
-
-    // Pokaż planCard, jeśli jest ukryty (np. w przypadku nadwagi), a w planResults umieść informację
-    const planCardEl = document.getElementById('planCard');
-    if (planCardEl) planCardEl.style.display = 'block';
     const planResultsEl = document.getElementById('planResults');
     if (planResultsEl) {
       vildaAppSetTrustedHtml(planResultsEl, `<div class="result-card plan-col plan-result-card animate-in"><h3>Brak diety</h3><p class="diet-warning">Twoje całkowite zapotrzebowanie jest zbyt niskie, aby zaproponować dietę redukcyjną.</p></div>`, 'app:planResultsEl');
@@ -6554,6 +6559,44 @@ function smoothScrollToElement(element, duration = 800) {
  * app.js zachowuje tylko publiczny wrapper update(), który deleguje do
  * window.VildaUpdatePrep.runMainUpdate().
  * ========================================================================== */
+
+function vildaCaptureUpdatePlanSnapshot(options){
+  const opts = options || {};
+  const doc = opts.doc || (typeof document !== 'undefined' ? document : null);
+  if (!doc) return { ok: false, reason: 'missing-document' };
+  const planCard = doc.getElementById('planCard');
+  const planResults = doc.getElementById('planResults');
+  const dietChoiceWrap = doc.getElementById('dietChoiceWrap');
+  const dietDesc = doc.getElementById('dietDesc');
+  const dietCalorieInfo = doc.getElementById('dietCalorieInfo');
+  const dietLevel = doc.getElementById('dietLevel');
+  const snapshot = {
+    ok: true,
+    planCardVisible: !!(planCard && planCard.style && planCard.style.display !== 'none'),
+    planResultsVisible: !!(planResults && planResults.style && planResults.style.display !== 'none'),
+    dietChoiceVisible: !!(dietChoiceWrap && dietChoiceWrap.style && dietChoiceWrap.style.display !== 'none'),
+    dietDescVisible: !!(dietDesc && dietDesc.style && dietDesc.style.display !== 'none'),
+    dietCalorieVisible: !!(dietCalorieInfo && dietCalorieInfo.style && dietCalorieInfo.style.display !== 'none'),
+    dietOptionCount: dietLevel && dietLevel.options ? dietLevel.options.length : 0,
+    planResultsText: planResults && typeof planResults.textContent === 'string'
+      ? planResults.textContent.trim().replace(/\s+/g, ' ').slice(0, 500)
+      : ''
+  };
+  snapshot.signature = [
+    snapshot.planCardVisible ? '1' : '0',
+    snapshot.planResultsVisible ? '1' : '0',
+    snapshot.dietChoiceVisible ? '1' : '0',
+    snapshot.dietDescVisible ? '1' : '0',
+    snapshot.dietCalorieVisible ? '1' : '0',
+    String(snapshot.dietOptionCount),
+    snapshot.planResultsText.slice(0, 120)
+  ].join('|');
+  return snapshot;
+}
+
+if (typeof window !== 'undefined') {
+  window.vildaCaptureUpdatePlanSnapshot = vildaCaptureUpdatePlanSnapshot;
+}
 
 function update(){
   const prep = (typeof window !== 'undefined' && window.VildaUpdatePrep) ? window.VildaUpdatePrep : null;
