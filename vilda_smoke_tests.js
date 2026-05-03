@@ -99,6 +99,7 @@
     Object.freeze({ id: 'spa-home-view-contract', group: 'spa-router', required: true, description: 'Widok Home dla SPA ma stabilne API mount/unmount i jest dostępny dla routera.' }),
     Object.freeze({ id: 'spa-docpro-view-contract', group: 'spa-router', required: true, description: 'Widok DocPro dla SPA ma stabilne API mount/unmount i jest dostępny dla routera.' }),
     Object.freeze({ id: 'spa-klirens-view-contract', group: 'spa-router', required: true, description: 'Widok Klirens dla SPA ma stabilne API mount/unmount i jest dostępny dla routera.' }),
+    Object.freeze({ id: 'spa-lifecycle-registry-contract', group: 'spa-router', required: true, description: 'Runtime SPA udostępnia rejestr lifecycle i API mount/unmount dla hooków cleanup.' }),
     Object.freeze({ id: 'vilda-deps-estimated-contracts', group: 'deps-contracts', required: true, description: 'Kontrakty VildaDeps dla estimated intake są obecne i przechodzą po załadowaniu strony.' }),
     Object.freeze({ id: 'advanced-intake-sync-regression-surface', group: 'advanced-intake-sync', required: true, description: 'Powierzchnia diagnostyczna synchronizacji advanced growth ↔ estimated intake pozostaje dostępna.' }),
     Object.freeze({ id: 'numeric-validation-age-zero', group: 'numeric-validation', required: true, description: 'Jawna walidacja liczbowa akceptuje wpisany wiek 0 lat i odróżnia puste pole wieku od noworodka.' }),
@@ -437,6 +438,23 @@
     return {
       ok: !!(docpro && typeof docpro.mount === 'function' && typeof docpro.unmount === 'function'),
       docproViewApi: !!docpro
+    };
+  }
+
+  function checkSpaKlirensViewContract() {
+    const views = global.VildaSpaViews || null;
+    const klirens = views && views.Klirens ? views.Klirens : null;
+    return {
+      ok: !!(klirens && typeof klirens.mount === 'function' && typeof klirens.unmount === 'function'),
+      klirensViewApi: !!klirens
+    };
+  }
+
+  function checkSpaLifecycleRegistryContract() {
+    const runtime = global.VildaSpaViewRuntime || null;
+    return {
+      ok: !!(runtime && typeof runtime.registerViewLifecycle === 'function' && typeof runtime.mountView === 'function' && typeof runtime.unmountView === 'function'),
+      hasRuntime: !!runtime
     };
   }
 
@@ -1483,6 +1501,8 @@
     tests.push(runCase('update-plan-golden-snapshot', 'plan-modules', true, checkUpdatePlanGoldenSnapshot, opts));
     tests.push(runCase('spa-home-view-contract', 'spa-router', true, checkSpaHomeViewContract, opts));
     tests.push(runCase('spa-docpro-view-contract', 'spa-router', true, checkSpaDocproViewContract, opts));
+    tests.push(runCase('spa-klirens-view-contract', 'spa-router', true, checkSpaKlirensViewContract, opts));
+    tests.push(runCase('spa-lifecycle-registry-contract', 'spa-router', true, checkSpaLifecycleRegistryContract, opts));
 
     tests.push(runCase('vilda-deps-estimated-contracts', 'deps-contracts', true, function () {
       const detail = checkNamedContracts(DEFAULT_ESTIMATED_INTAKE_CONTRACTS.slice(), { executeChecks: opts.executeContractChecks !== false, page: opts.page });
