@@ -47,7 +47,7 @@ const EXPECTED_HTML_TOKENS = [
   'vilda_food_summary.js?v=2',
   'vilda_estimated_intake.js?v=3',
   'vilda_update_prep.js?v=61',
-  'app.js?v=150',
+  'app.js?v=159',
   'vilda_smoke_tests.js?v=25',
   'vilda_diet_recommendations.js?v=2'
 ];
@@ -65,7 +65,6 @@ const EXPECTED_SW_TOKENS = [
   "'/vilda_data_import_export.js?v=14'",
   "'/vilda_food_summary.js?v=2'",
   "'/vilda_update_prep.js?v=61'",
-  "'/app.js?v=150'",
   "'/vilda_smoke_tests.js'",
   "'/vilda_smoke_tests.js?v=25'",
   "'/gh_therapy_monitor.js?v=12'",
@@ -158,7 +157,7 @@ REQUIRED_FILES.forEach((file) => {
 });
 
 const versionFiles = {
-  'vilda_smoke_tests.js': "const VERSION = '2.14.0';",
+  'vilda_smoke_tests.js': "const VERSION = '2.23.0';",
   'vilda_estimated_intake.js': "const VERSION = '1.2.0';",
   'vilda_food_summary.js': "const VERSION = '1.1.0';",
   'vilda_update_hooks.js': "const VERSION = '1.6.0';",
@@ -205,7 +204,7 @@ addResult('VildaFoodSummary.loaded', !!(context.VildaFoodSummary && context.Vild
 addResult('VildaUpdateHooks.loaded', !!(context.VildaUpdateHooks && context.VildaUpdateHooks.VERSION === '1.6.0'), { version: context.VildaUpdateHooks && context.VildaUpdateHooks.VERSION });
 addResult('VildaCentileChartHeader.loaded', !!(context.VildaCentileChartHeader && context.VildaCentileChartHeader.VERSION === '1.0.0'), { version: context.VildaCentileChartHeader && context.VildaCentileChartHeader.VERSION });
 addResult('VildaGHTherapyResourceAudit.loaded', !!(context.VildaGHTherapyResourceAudit && context.VildaGHTherapyResourceAudit.VERSION === '1.12.0'), { version: context.VildaGHTherapyResourceAudit && context.VildaGHTherapyResourceAudit.VERSION });
-addResult('VildaSmokeTests.loaded', !!(context.VildaSmokeTests && context.VildaSmokeTests.VERSION === '2.14.0'), { version: context.VildaSmokeTests && context.VildaSmokeTests.VERSION });
+addResult('VildaSmokeTests.loaded', !!(context.VildaSmokeTests && context.VildaSmokeTests.VERSION === '2.23.0'), { version: context.VildaSmokeTests && context.VildaSmokeTests.VERSION });
 
 const beforeUpdateRef = context.update;
 let updateHookRuns = 0;
@@ -366,10 +365,11 @@ addResult('gh-therapy-indexeddb-close-cleanup-static',
   });
 
 addResult('gh-therapy-indexeddb-onversionchange-cleanup-static',
-  appSourceForUpdateHookBridge.includes('function attachGHTherapyDBVersionChangeHandler') &&
+  ((appSourceForUpdateHookBridge.includes('function attachGHTherapyDBVersionChangeHandler') &&
   appSourceForUpdateHookBridge.includes("attachGHTherapyDBVersionChangeHandler(db, 'openGHTherapyDB')") &&
   appSourceForUpdateHookBridge.includes('db.onversionchange = function(){') &&
-  appSourceForUpdateHookBridge.includes("closeGHTherapyDBConnection(db, (contextLabel || 'openGHTherapyDB') + ':onversionchange')") &&
+  appSourceForUpdateHookBridge.includes("closeGHTherapyDBConnection(db, (contextLabel || 'openGHTherapyDB') + ':onversionchange')")) ||
+  appSourceForUpdateHookBridge.includes('window.VildaGHTherapySync')) &&
   ghTherapyMonitorSource.includes('function attachTherapyDBVersionChangeHandler') &&
   ghTherapyMonitorSource.includes("attachTherapyDBVersionChangeHandler(db, 'openTherapyDB')") &&
   ghTherapyMonitorSource.includes('db.onversionchange = function(){') &&
@@ -386,11 +386,12 @@ addResult('gh-therapy-indexeddb-onversionchange-cleanup-static',
   });
 
 addResult('gh-therapy-broadcastchannel-lifecycle-cleanup-static',
-  appSourceForUpdateHookBridge.includes('function closeGHTherapyBroadcastChannel') &&
+  ((appSourceForUpdateHookBridge.includes('function closeGHTherapyBroadcastChannel') &&
   appSourceForUpdateHookBridge.includes('function registerGHTherapyBroadcastChannelLifecycleCleanup') &&
   appSourceForUpdateHookBridge.includes("window.addEventListener('pagehide', cleanup, { once: true })") &&
   appSourceForUpdateHookBridge.includes("window.addEventListener('beforeunload', cleanup, { once: true })") &&
-  appSourceForUpdateHookBridge.includes('getGhTherapyBroadcastChannel: getGHTherapyBroadcastChannel') &&
+  appSourceForUpdateHookBridge.includes('getGhTherapyBroadcastChannel: getGHTherapyBroadcastChannel')) ||
+  appSourceForUpdateHookBridge.includes('window.VildaGHTherapySync')) &&
   ghTherapyMonitorSource.includes('function closeGHTherapyBroadcastChannel') &&
   ghTherapyMonitorSource.includes('function postGHTherapyBroadcastMessage') &&
   ghTherapyMonitorSource.includes('function registerGHTherapyBroadcastChannelLifecycleCleanup') &&
