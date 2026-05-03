@@ -7,9 +7,9 @@
    - `VildaSpaRouter.createRouter`
    - `VildaSpaRouter.initSpaRouter`
 
-2. Router jest **domyślnie wyłączony**.
-   - aktywuje się tylko gdy `window.VILDA_ENABLE_SPA_ROUTER === true`
-   - dzięki temu wdrożenie nie zmienia zachowania produkcyjnego bez jawnego włączenia flagi.
+2. Router jest **domyślnie włączony**.
+   - wyłącza się tylko gdy `window.VILDA_ENABLE_SPA_ROUTER === false`
+   - zachowano tryb awaryjny opt-out (flaga globalna).
 
 3. Dodano obsługę hash-route (`#/...`) i bezpieczne przechwytywanie lokalnych linków `.html`.
 
@@ -19,7 +19,7 @@
    - `kalkulator-klirens.html`
 
 5. Zaktualizowano oczekiwany manifest smoke (`vilda_smoke_tests.js`) o:
-   - `vilda_spa_router.js?v=1`
+   - `vilda_spa_router.js?v=2`
    - `app.js?v=156`
 
 ## Jak przetestować lokalnie (bez ryzyka)
@@ -27,7 +27,7 @@
 W konsoli przeglądarki:
 
 ```js
-window.VILDA_ENABLE_SPA_ROUTER = true;
+window.VILDA_ENABLE_SPA_ROUTER = false; // jeśli chcesz tymczasowo wyłączyć router
 location.reload();
 ```
 

@@ -36,7 +36,7 @@
 
   function initSpaRouter(options){
     const opts = options || {};
-    const enabled = opts.enabled === true || global.VILDA_ENABLE_SPA_ROUTER === true;
+    const enabled = opts.enabled === true || (opts.enabled !== false && global.VILDA_ENABLE_SPA_ROUTER !== false);
     const doc = global.document;
     if (!enabled || !doc) {
       return { enabled: false, reason: enabled ? 'missing-document' : 'disabled-by-flag' };
@@ -84,4 +84,29 @@
     createRouter: createRouter,
     initSpaRouter: initSpaRouter
   };
+
+  function autoInitDefaultRouter(){
+    try {
+      if (!global.document) return;
+      if (global.__vildaSpaRouterAutoInitDone) return;
+      global.__vildaSpaRouterAutoInitDone = true;
+      const start = function(){
+        const state = initSpaRouter({
+          enabled: global.VILDA_ENABLE_SPA_ROUTER !== false,
+          routes: {
+            '*': function(){ return true; }
+          },
+          onRoute: function(){ return true; }
+        });
+        global.__vildaSpaRouterState = state;
+      };
+      if (global.document.readyState === 'loading') {
+        global.document.addEventListener('DOMContentLoaded', start, { once: true });
+      } else {
+        start();
+      }
+    } catch (_) {}
+  }
+
+  autoInitDefaultRouter();
 })(typeof window !== 'undefined' ? window : globalThis);
