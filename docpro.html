@@ -1181,15 +1181,15 @@
               <a id="loadDataBtn" role="button" href="#" data-tip="Wczytywanie danych jest możliwe tylko na początku sesji, zanim wprowadzisz nowe dane.">Wczytaj dane</a>
               <input type="file" id="fileInput" accept=".json,application/json" style="display:none;">
             </li>
-      <li><a href="index.html">Strona główna</a></li>
+      <li><a href="#/index" data-spa-link="true">Strona główna</a></li>
       <li><a href="ustawienia.html">Ustawienia</a></li>
       <li><a href="instrukcja.html">Instrukcja</a></li>
       <li><a href="o-aplikacji.html">O aplikacji</a></li>
       <li><a href="kontakt.html">Kontakt</a></li>
       </ul>
     </li>
-      <li><a href="docpro.html" class="pro-link" aria-current="page">DocPro</a></li>
-      <li><a href="kalkulator-klirens.html">Klirens</a></li>
+      <li><a href="#/docpro" data-spa-link="true" class="pro-link" aria-current="page">DocPro</a></li>
+      <li><a href="#/kalkulator-klirens" data-spa-link="true">Klirens</a></li>
       <li><a href="cukrzyca.html">Cukrzyca</a></li>
       <li><a href="steroidy.html">Steroidy</a></li>
       <li><a href="materialy-edukacyjne.html">Edu</a></li>
@@ -1197,7 +1197,7 @@
 </nav>
 </header>
 
-<div class="desktop-layout">
+<div class="desktop-layout" data-spa-view="docpro">
   <!-- Lewy sidebar – menu DocPro na desktopie -->
   <aside class="sidebar">
     <div class="sidebar-logo">
@@ -1223,13 +1223,13 @@
         <input type="file" id="fileInputSidebar" accept=".json,application/json" style="display:none;">
       </li>
       <li>
-        <a href="index.html">
+        <a href="#/index" data-spa-link="true">
           <span class="sidebar-icon" data-lucide="home"></span>
           <span class="sidebar-label">Strona główna</span>
         </a>
       </li>
       <li>
-        <a href="docpro.html" class="pro-link" aria-current="page">
+        <a href="#/docpro" data-spa-link="true" class="pro-link" aria-current="page">
           <span class="sidebar-icon" data-lucide="stethoscope"></span>
           <span class="sidebar-label">DocPro</span>
         </a>
@@ -1241,7 +1241,7 @@
         </a>
       </li>
       <li>
-        <a href="kalkulator-klirens.html">
+        <a href="#/kalkulator-klirens" data-spa-link="true">
           <span class="sidebar-icon" data-lucide="droplets"></span>
           <span class="sidebar-label">Klirens</span>
         </a>
@@ -3463,7 +3463,14 @@
 <script src="vilda_gh_therapy_sync.js?v=1" defer></script>
 <script src="vilda_plan_input.js?v=1" defer></script>
 <script src="vilda_plan_energy.js?v=1" defer></script>
-<script src="app.js?v=153" defer></script>
+<script src="vilda_plan_render.js?v=1" defer></script>
+<script src="vilda_spa_embed_bridge.js?v=1" defer></script>
+<script src="vilda_spa_view_runtime.js?v=1" defer></script>
+<script src="vilda_spa_view_home.js?v=1" defer></script>
+<script src="vilda_spa_view_docpro.js?v=1" defer></script>
+<script src="vilda_spa_view_klirens.js?v=1" defer></script>
+<script src="vilda_spa_router.js?v=5" defer></script>
+<script src="app.js?v=159" defer></script>
 <script src="vilda_smoke_tests.js?v=25" defer></script>
 <script src="vilda_diet_recommendations.js?v=2" defer></script>
 <script src="vilda_patient_report.js?v=3" defer></script>
