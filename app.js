@@ -3143,17 +3143,32 @@ function updatePlanFromDiet(){
   const isChildEnergy = age >= CHILD_AGE_MIN && age < ENERGY_ADULT_START_AGE;
   const intakeHistory = window.intakeHistory || null;
   const intakeKcalPerDay = window.intakeEstimatedKcalPerDay || null;
-  const planState = energyBuildPlanReductionState({
-    ageYears: age,
-    ageMonthsOpt,
-    sex,
-    weightKg,
-    heightCm,
-    palInput: pal,
-    history: intakeHistory,
-    intakeKcalPerDay,
-    mountId: 'anorexiaTmpMount'
-  });
+  const planEnergyAdapter = (typeof window !== 'undefined' && window.VildaPlanEnergy) ? window.VildaPlanEnergy : null;
+  const buildPlanState = planEnergyAdapter && typeof planEnergyAdapter.buildPlanState === 'function'
+    ? planEnergyAdapter.buildPlanState
+    : null;
+  const resolvePlanDiets = planEnergyAdapter && typeof planEnergyAdapter.resolvePlanDiets === 'function'
+    ? planEnergyAdapter.resolvePlanDiets
+    : null;
+  const planState = buildPlanState
+    ? buildPlanState({ age, sex, weightKg, heightCm, pal }, {
+      ageMonthsOpt,
+      intakeHistory,
+      intakeKcalPerDay,
+      mountId: 'anorexiaTmpMount',
+      energyBuildPlanReductionState: (typeof energyBuildPlanReductionState === 'function') ? energyBuildPlanReductionState : null
+    })
+    : energyBuildPlanReductionState({
+      ageYears: age,
+      ageMonthsOpt,
+      sex,
+      weightKg,
+      heightCm,
+      palInput: pal,
+      history: intakeHistory,
+      intakeKcalPerDay,
+      mountId: 'anorexiaTmpMount'
+    });
 
   const bmr = planState.reeKcal;
   const teeRawPlan = planState.teeRawKcal;
@@ -3177,7 +3192,9 @@ function updatePlanFromDiet(){
   }
 
   let teeForDiets = planState.teeBaselineKcal;
-  let diets = Array.isArray(planState.diets) ? planState.diets.slice() : proposeDietsFromTEE(teeForDiets, sex, isChildEnergy);
+  let diets = resolvePlanDiets
+    ? resolvePlanDiets(planState, { sex, isChildEnergy }, { proposeDietsFromTEE: (typeof proposeDietsFromTEE === 'function') ? proposeDietsFromTEE : null })
+    : (Array.isArray(planState.diets) ? planState.diets.slice() : proposeDietsFromTEE(teeForDiets, sex, isChildEnergy));
 
   // Jeśli nie ma żadnych diet (deficyt zbyt niski dla wszystkich poziomów),
   // ukryj opcję wyboru diety i wyświetl informację w wynikach planu.
