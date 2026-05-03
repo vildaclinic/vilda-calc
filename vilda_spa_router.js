@@ -93,8 +93,10 @@
       const start = function(){
         const homeView = global.VildaSpaViews && global.VildaSpaViews.Home ? global.VildaSpaViews.Home : null;
         const docproView = global.VildaSpaViews && global.VildaSpaViews.DocPro ? global.VildaSpaViews.DocPro : null;
+        const klirensView = global.VildaSpaViews && global.VildaSpaViews.Klirens ? global.VildaSpaViews.Klirens : null;
         let homeMounted = false;
         let docproMounted = false;
+        let klirensMounted = false;
         const state = initSpaRouter({
           enabled: global.VILDA_ENABLE_SPA_ROUTER !== false,
           routes: {
@@ -104,6 +106,7 @@
             const normalized = normalizeRoute(route);
             const isHome = normalized === '/' || normalized === '/index' || normalized === '/index.html';
             const isDocpro = normalized === '/docpro' || normalized === '/docpro.html';
+            const isKlirens = normalized === '/kalkulator-klirens' || normalized === '/kalkulator-klirens.html' || normalized === '/klirens';
             if (homeView && isHome && !homeMounted && typeof homeView.mount === 'function') {
               homeView.mount({});
               homeMounted = true;
@@ -119,6 +122,14 @@
             if (docproView && !isDocpro && docproMounted && typeof docproView.unmount === 'function') {
               docproView.unmount({});
               docproMounted = false;
+            }
+            if (klirensView && isKlirens && !klirensMounted && typeof klirensView.mount === 'function') {
+              klirensView.mount({});
+              klirensMounted = true;
+            }
+            if (klirensView && !isKlirens && klirensMounted && typeof klirensView.unmount === 'function') {
+              klirensView.unmount({});
+              klirensMounted = false;
             }
             return true;
           }
