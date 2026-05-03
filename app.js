@@ -77,6 +77,37 @@ const DIET_DESCRIPTIONS = {
 const GH_DB_NAME = 'ghTherapyDB';
 const GH_STORE_NAME = 'ghTherapyPoints';
 
+function vildaPerfIsEnabled(){
+  try {
+    return !!(typeof window !== 'undefined' && window.DEBUG_PERF);
+  } catch (_) {
+    return false;
+  }
+}
+
+function vildaPerfStart(label){
+  const enabled = vildaPerfIsEnabled() && typeof performance !== 'undefined' && typeof performance.now === 'function';
+  if (!enabled) return function(){};
+  const start = performance.now();
+  return function(){
+    const duration = performance.now() - start;
+    try {
+      if (typeof performance.mark === 'function' && typeof performance.measure === 'function') {
+        const markStart = label + ':start:' + start.toFixed(3);
+        const markEnd = label + ':end:' + (start + duration).toFixed(3);
+        performance.mark(markStart);
+        performance.mark(markEnd);
+        performance.measure(label, markStart, markEnd);
+      }
+    } catch (_) {}
+    try {
+      if (typeof console !== 'undefined' && typeof console.debug === 'function') {
+        console.debug('[VILDA PERF]', label, Math.round(duration * 100) / 100 + 'ms');
+      }
+    } catch (_) {}
+  };
+}
+
 function openGHTherapyDB(){
   return new Promise((resolve, reject) => {
     try {
@@ -127,6 +158,7 @@ function closeGHTherapyDBConnection(db, contextLabel){
 }
 
 async function getTherapyPointsFromDB(){
+  const __perfEnd = vildaPerfStart('P1:getTherapyPointsFromDB');
   let db = null;
   try {
     db = await openGHTherapyDB();
@@ -147,10 +179,12 @@ async function getTherapyPointsFromDB(){
     return [];
   } finally {
     closeGHTherapyDBConnection(db, 'getTherapyPointsFromDB');
+    __perfEnd();
   }
 }
 
 async function clearTherapyPointsInDB(){
+  const __perfEnd = vildaPerfStart('P1:clearTherapyPointsInDB');
   let db = null;
   try {
     db = await openGHTherapyDB();
@@ -168,6 +202,7 @@ async function clearTherapyPointsInDB(){
     return false;
   } finally {
     closeGHTherapyDBConnection(db, 'clearTherapyPointsInDB');
+    __perfEnd();
   }
 }
 
@@ -597,11 +632,20 @@ function refreshGrowthChartActionControls(options) {
 }
 
 function syncGrowthDataSourceInputs(options = {}) {
+  const __perfEnd = vildaPerfStart('P2:syncGrowthDataSourceInputs');
   const adapter = getVildaAdvancedGrowthAdapter();
   if (adapter && typeof adapter.syncGrowthDataSourceInputs === 'function') {
-    return adapter.syncGrowthDataSourceInputs(getVildaAdvancedGrowthSourceOptions(options || {}));
+    try {
+      return adapter.syncGrowthDataSourceInputs(getVildaAdvancedGrowthSourceOptions(options || {}));
+    } finally {
+      __perfEnd();
+    }
   }
-  return (typeof bmiSource !== 'undefined' && bmiSource) ? bmiSource : 'WHO';
+  try {
+    return (typeof bmiSource !== 'undefined' && bmiSource) ? bmiSource : 'WHO';
+  } finally {
+    __perfEnd();
+  }
 }
 
 if (typeof window !== 'undefined') {
@@ -624,15 +668,24 @@ function updatePalczewskaAccess(options) {
 }
 
 function updateGrowthDataSourceControls(context, options) {
+  const __perfEnd = vildaPerfStart('P2:updateGrowthDataSourceControls');
   const adapter = getVildaAdvancedGrowthAdapter();
   if (adapter && typeof adapter.updateGrowthDataSourceControls === 'function') {
     const mergedOptions = getVildaAdvancedGrowthSourceOptions(options || {});
     if (!mergedOptions.markSection && typeof window !== 'undefined' && window.VildaUpdatePrep && typeof window.VildaUpdatePrep.markSection === 'function') {
       mergedOptions.markSection = window.VildaUpdatePrep.markSection;
     }
-    return adapter.updateGrowthDataSourceControls(context, mergedOptions);
+    try {
+      return adapter.updateGrowthDataSourceControls(context, mergedOptions);
+    } finally {
+      __perfEnd();
+    }
   }
-  return { action: 'skipped', reason: 'missing-vilda-advanced-growth' };
+  try {
+    return { action: 'skipped', reason: 'missing-vilda-advanced-growth' };
+  } finally {
+    __perfEnd();
+  }
 }
 
 /**
@@ -3119,6 +3172,8 @@ function fillDietSelect(diets) {
 
 /* === PLAN – aktualizacja po wyborze diety  =========================== */
 function updatePlanFromDiet(){
+  const __perfEnd = vildaPerfStart('P1:updatePlanFromDiet');
+  try {
 
   /* ------------------ 1. Dane wejściowe ------------------ */
   // Wiek w latach z uwzględnieniem miesięcy (używany w dalszych obliczeniach)
@@ -3444,6 +3499,9 @@ function updatePlanFromDiet(){
     if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
       globalThis.vildaLogSwallowedCatch('app.js', e, { line: 6526 });
     }
+  }
+  } finally {
+    __perfEnd();
   }
 }
 /**
@@ -8289,6 +8347,8 @@ function updateMetabolicSummaryVisibility() {
  * @returns {string} Tekst podsumowania, gotowy do skopiowania do schowka.
  */
 function generateMetabolicSummary() {
+  const __perfEnd = vildaPerfStart('P1:generateMetabolicSummary');
+  try {
   const lines = [];
   // Odczytaj dane wejściowe
   const weightVal = parseFloat(document.getElementById('weight')?.value);
@@ -8759,6 +8819,9 @@ function generateMetabolicSummary() {
   }
   // Zwróć wszystkie linie w postaci tekstu
   return lines.join('\n');
+  } finally {
+    __perfEnd();
+  }
 }
 
 /**
@@ -8769,6 +8832,8 @@ function generateMetabolicSummary() {
  * onclick w kodzie HTML.
  */
 function handleMetabolicSummaryClick(event) {
+  const __perfEnd = vildaPerfStart('P2:handleMetabolicSummaryClick');
+  try {
   if (event) {
     if (typeof event.preventDefault === 'function') {
       event.preventDefault();
@@ -8947,6 +9012,9 @@ function handleMetabolicSummaryClick(event) {
     .catch(function() {
       alert('Nie udało się skopiować danych.');
     });
+  } finally {
+    __perfEnd();
+  }
 }
 
 // Upewnij się, że funkcja kliknięcia jest dostępna globalnie, aby mogła być wywołana
@@ -9743,6 +9811,8 @@ function updateAdvancedGrowthReportButtonVisibility(forceHide) {
 
 
 function buildHistoricalPointAnalysis(rowEl) {
+  const __perfEnd = vildaPerfStart('P2:buildHistoricalPointAnalysis');
+  try {
   if (!rowEl || !isAdvancedGrowthMainPage()) return null;
   const measurements = collectAdvancedMeasurements(true);
   const point = measurements.find(m => m.rowEl === rowEl);
@@ -9937,6 +10007,9 @@ function buildHistoricalPointAnalysis(rowEl) {
       .replace(/ /g, ' ')
       .replace(/([0-9])\.([0-9])/g, '$1,$2')
   };
+  } finally {
+    __perfEnd();
+  }
 }
 
 function renderAdvancedMeasurementAnalysisRow(rowEl) {
