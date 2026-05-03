@@ -454,7 +454,6 @@ async function readRuntimeCacheMetadata(cache, request) {
       ttlMs: metadata.ttlMs || RUNTIME_CACHE_TTL_MS
     };
   } catch (_) {
-    void _;
     return null;
   }
 }
@@ -476,7 +475,11 @@ async function deleteRuntimeCacheEntry(cache, request) {
 
 function isRuntimeCacheMetadataExpired(metadata, nowMs) {
   if (!metadata || !Number.isFinite(Number(metadata.cachedAt))) return false;
-  return nowMs - Number(metadata.cachedAt) > RUNTIME_CACHE_TTL_MS;
+
+  const ttlMs = Number(metadata.ttlMs);
+  const effectiveTtlMs = Number.isFinite(ttlMs) && ttlMs > 0 ? ttlMs : RUNTIME_CACHE_TTL_MS;
+
+  return nowMs - Number(metadata.cachedAt) > effectiveTtlMs;
 }
 
 async function findRuntimeCacheMatch(cache, request) {
@@ -668,8 +671,7 @@ async function installShell() {
     try {
       await fetchAndStorePrecacheUrl(url, { required: false });
     } catch (_) {
-    void _;
-  }
+    }
   }
 }
 
@@ -693,8 +695,7 @@ async function migrateOldRuntimeCaches(keys) {
         }
       }
     } catch (_) {
-    void _;
-  }
+    }
   }
 }
 
@@ -720,8 +721,7 @@ self.addEventListener('activate', (event) => {
         try {
           await self.registration.navigationPreload.disable();
         } catch (_) {
-    void _;
-  }
+        }
       }
 
       await self.clients.claim();
