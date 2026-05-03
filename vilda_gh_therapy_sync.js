@@ -3,6 +3,8 @@
 
   const GH_DB_NAME = 'ghTherapyDB';
   const GH_STORE_NAME = 'ghTherapyPoints';
+  let ghTherapyPointsCache = null;
+  let ghTherapyPointsCacheSerialized = null;
 
   function logSwallowed(error, context){
     try {
@@ -66,10 +68,20 @@
   }
 
   function readGhTherapyPointsFromModuleStorage(){
+    if (Array.isArray(ghTherapyPointsCache)) {
+      return ghTherapyPointsCache.slice();
+    }
     try {
       if (global.VildaPersistence && typeof global.VildaPersistence.readModuleJSON === 'function') {
         const value = global.VildaPersistence.readModuleJSON('GH_THERAPY_POINTS', []);
-        return Array.isArray(value) ? value : [];
+        const normalized = Array.isArray(value) ? value : [];
+        ghTherapyPointsCache = normalized.slice();
+        try {
+          ghTherapyPointsCacheSerialized = JSON.stringify(normalized);
+        } catch (_) {
+          ghTherapyPointsCacheSerialized = null;
+        }
+        return normalized;
       }
     } catch (_) {
       logSwallowed(_, { op: 'readGhTherapyPointsFromModuleStorage' });
@@ -78,9 +90,24 @@
   }
 
   function writeGhTherapyPointsToModuleStorage(points){
+    const normalizedPoints = Array.isArray(points) ? points : [];
+    let serialized = null;
+    try {
+      serialized = JSON.stringify(normalizedPoints);
+      if (serialized && ghTherapyPointsCacheSerialized === serialized) {
+        return true;
+      }
+    } catch (_) {
+      serialized = null;
+    }
     try {
       if (global.VildaPersistence && typeof global.VildaPersistence.writeModuleJSON === 'function') {
-        return global.VildaPersistence.writeModuleJSON('GH_THERAPY_POINTS', Array.isArray(points) ? points : [], { force: true });
+        const saved = global.VildaPersistence.writeModuleJSON('GH_THERAPY_POINTS', normalizedPoints, { force: true });
+        if (saved) {
+          ghTherapyPointsCache = normalizedPoints.slice();
+          ghTherapyPointsCacheSerialized = serialized;
+        }
+        return saved;
       }
     } catch (_) {
       logSwallowed(_, { op: 'writeGhTherapyPointsToModuleStorage' });
@@ -91,7 +118,12 @@
   function clearGhTherapyPointsModuleStorage(){
     try {
       if (global.VildaPersistence && typeof global.VildaPersistence.removeModuleKey === 'function') {
-        return global.VildaPersistence.removeModuleKey('GH_THERAPY_POINTS');
+        const removed = global.VildaPersistence.removeModuleKey('GH_THERAPY_POINTS');
+        if (removed) {
+          ghTherapyPointsCache = [];
+          ghTherapyPointsCacheSerialized = '[]';
+        }
+        return removed;
       }
     } catch (_) {
       logSwallowed(_, { op: 'clearGhTherapyPointsModuleStorage' });
