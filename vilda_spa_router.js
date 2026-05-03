@@ -145,6 +145,12 @@
             if (isDocpro && !hasDocproRoot && global.location) { global.location.assign('index.html#/docpro'); return true; }
             if (isKlirens && !hasKlirensRoot && global.location) { global.location.assign('index.html#/kalkulator-klirens'); return true; }
 
+            if (runtime && typeof runtime.unmountView === 'function') {
+              if (!isHome && hasHomeRoot) { runtime.unmountView('home', {}); homeMounted = false; }
+              if (!isDocpro && hasDocproRoot) { runtime.unmountView('docpro', {}); docproMounted = false; }
+              if (!isKlirens && hasKlirensRoot) { runtime.unmountView('klirens', {}); klirensMounted = false; }
+            }
+
             if (homeView && isHome && !homeMounted && typeof homeView.mount === 'function') {
               homeView.mount({});
               homeMounted = true;
