@@ -1,76 +1,49 @@
-# Faza 5+6 v4 — wersja diagnostyczna
+# Faza 5+6 v5 — naprawa wreszcie
 
-**Ta wersja nie naprawia bug'a — dodaje szczegółowe logi do konsoli.** Po wgraniu i kliknięciu w sidebar w konsoli zobaczymy DOKŁADNIE w którym kroku navigator coś robi źle (lub nic nie robi).
+## Co znaleźliśmy
 
-## Co dodałem
+Z Twojego screena DevTools widać:
 
-W każdym kroku `navigateTo()` w `vilda_navigator.js` dodany `console.log` z prefiksem `[vilda-nav]`. Każdy try/catch loguje błąd. Znajdziemy precyzyjnie:
-- Czy kliknięcie jest przechwytywane
-- Czy fetch leci i jaką odpowiedź zwraca
-- Czy parsing HTML się udaje
-- Czy `.main-content` jest znalezione
-- Czy podmiana DOM się udaje
-- Czy są błędy w którymś kroku
-
-## Jak wdrożyć
-
-Standardowo: usuń wszystko z roota repo, wgraj zawartość folderu `wagaiwzrost_complete_faza5_6_v4/`, push, hard reload incognito.
-
-## Co zrobić po wgraniu — KRYTYCZNE
-
-1. Otwórz `https://vildaclinic.github.io/` w incognito
-2. **DevTools → Console**, włącz "Preserve log" (checkbox u góry konsoli)
-3. Kliknij "DocPro" w sidebarze (lub dowolną stronę z 5 problematycznych)
-4. **Skopiuj cały log** z konsoli — wszystkie linie z prefixem `[vilda-nav]`
-5. Wyślij mi screenshot lub tekst tego logu
-
-## Czego oczekujemy w logu (przy działającej nawigacji)
-
-```
-[vilda-nav] START navigateTo: https://.../docpro.html
-[vilda-nav] FETCH start: https://.../docpro.html
-[vilda-nav] FETCH response: 200 OK
-[vilda-nav] FETCH body length: 350000
-[vilda-nav] PARSE OK, title: DocPro – Waga i wzrost
-[vilda-nav] main-content lookup: new=true old=true
-[vilda-nav] Stylesheets sync OK
-[vilda-nav] Inline styles sync OK
-[vilda-nav] Body class sync OK, body class now: liquid-ios26 has-sidebar
-[vilda-nav] About to replace main-content. New child count: 35
-[vilda-nav] main-content REPLACED OK
-[vilda-nav] executeScripts done
-[vilda-nav] loadMissingScripts done
-[vilda-nav] DONE navigateTo: https://.../docpro.html
+```html
+<div class="main-content"> ... </div> == $0
 ```
 
-## Czego się spodziewam zobaczyć (jakaś jedna z poniższych anomalii)
+Po Turbo nawigacji `<div class="main-content">` w live DOM był **PUSTY**. Logi v4 mówiły że "main-content REPLACED OK" i "child count: 2", ale to było liczone na elemencie z DOMParser doc. Po `replaceWith()` w live DOM zostawał pusty div — dzieci nie zostały przeniesione.
 
-**Scenariusz A — fetch nie kończy się:**
-```
-[vilda-nav] START navigateTo
-[vilda-nav] FETCH start
-... (nic więcej, log się urywa)
-```
-Oznacza że Service Worker nie odpowiada lub blokuje request.
+## Przyczyna
 
-**Scenariusz B — błąd w środku:**
-```
-[vilda-nav] START
-[vilda-nav] FETCH OK
-[vilda-nav] PARSE OK
-[vilda-nav] Error in syncBodyClass: ...
-```
-Pokaże gdzie pęka.
+`oldMain.replaceWith(newMain)` gdzie `newMain` pochodzi z `DOMParser` doc, używa wewnętrznie `adoptNode`. W większości przypadków działa, ale w pewnych okolicznościach (zaobserwowane w Twoim Chrome 2026, github.io scope) **dzieci pozostają w document źródłowym**, w live DOM ląduje pusty `<div>`. To nie był js-loading, nie był body class — było `replaceWith` które niedopełniło zadania.
 
-**Scenariusz C — wszystko OK, ale strona dalej nie działa:**
+## Naprawa
+
+Zamiast `oldMain.replaceWith(newMain)` używam **`document.importNode(newMain, true)`** — explicit deep clone z DOMParser doc do bieżącego dokumentu, **przed** wstawieniem. Gwarantuje że wszystkie dzieci są w live DOM.
+
+Plus dodatkowy log `live child count` po replace — w Twoich kolejnych testach zobaczysz że jest np. 2 (z `.container` w środku) zamiast nic.
+
+## Lista zmian względem v4
+
+- `vilda_navigator.js` — bump `?v=4` → `?v=5`. Linia ze zmianą jest w funkcji `navigateTo` przy "5. Podmień main-content".
+- 15× HTML — bump wersji navigatora
+- `service-worker-kalorii.js` — `?v=5` w precache, `SW_VERSION` `0.9.417` → `0.9.418`
+
+## Wgrywanie
+
+Standardowo: usuń wszystko z roota repo `vildaclinic.github.io/vilda-calc/`, wgraj zawartość folderu `wagaiwzrost_complete_faza5_6_v5/`, push, hard reload incognito.
+
+## Weryfikacja
+
+1. Console: `[vilda-nav] Aktywny`
+2. SW: `0.9.418`
+3. `vilda_navigator.js?v=5` w Network
+4. **Test Turbo:** klikaj po sidebar — strony się **ładują** (treść widoczna), bez potrzeby F5
+
+W konsoli powinieneś widzieć log po klik:
 ```
-[vilda-nav] DONE navigateTo
-... ale wygląda jakby nic się nie zmieniło
+[vilda-nav] About to replace main-content. New child count: 2
+[vilda-nav] After importNode, child count: 2
+[vilda-nav] main-content REPLACED OK, live child count: 2
 ```
-Oznacza że content się podmienił, ale coś go zaraz nadpisuje (np. inny moduł pisze do DOM-a).
 
-## Po Twoim raporcie
+Dwa razy "child count: 2" w trakcie + po replace. Wtedy wiemy że treść jest w live DOM.
 
-Z konkretnym logiem ze screenu/tekstu od razu zlokalizuję bug i wyślę finalną naprawę.
-
-**Plik z całą diagnostyką nazywa się `vilda_navigator.js?v=4` — sprawdź w Network że to TEN się ładuje.**
+Daj znać czy działa.

@@ -189,7 +189,7 @@
       return;
     }
 
-    const newMain = newDoc.querySelector('.main-content');
+    let newMain = newDoc.querySelector('.main-content');
     const oldMain = document.querySelector('.main-content');
     console.log('[vilda-nav] main-content lookup: new=', !!newMain, 'old=', !!oldMain);
     if (!newMain || !oldMain) {
@@ -253,11 +253,24 @@
       console.error('[vilda-nav] Error swapping main-nav:', err);
     }
 
-    // 5. Podmień main-content — najważniejszy krok
+    // 5. Podmień main-content — najważniejszy krok.
+    //
+    // BUG NAPRAWIONY: oldMain.replaceWith(newMain) gdzie newMain pochodzi z DOMParser
+    // doc, działa "głównie" — replaceWith używa adoptNode wewnętrznie. Ale w niektórych
+    // okolicznościach (zaobserwowane w Chrome 2026, github.io scope) dzieci newMain
+    // pozostają w document źródłowym (DOMParser doc) i wstawiony zostaje pusty <div>.
+    //
+    // Rozwiązanie: explicit document.importNode(newMain, true) — robi deep clone
+    // do bieżącego dokumentu PRZED wstawieniem. Gwarantuje że dzieci są w live DOM.
     try {
       console.log('[vilda-nav] About to replace main-content. New child count:', newMain.children.length);
-      oldMain.replaceWith(newMain);
-      console.log('[vilda-nav] main-content REPLACED OK');
+      const importedMain = document.importNode(newMain, true);
+      console.log('[vilda-nav] After importNode, child count:', importedMain.children.length);
+      oldMain.replaceWith(importedMain);
+      // Po replaceWith referencja `newMain` jest stale — używamy importedMain dla scripts
+      newMain = importedMain;
+      console.log('[vilda-nav] main-content REPLACED OK, live child count:',
+        document.querySelector('.main-content')?.children.length);
     } catch (err) {
       console.error('[vilda-nav] Error replacing main-content:', err);
       window.location.href = url;
