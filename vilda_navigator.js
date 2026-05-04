@@ -123,6 +123,7 @@
 
   async function navigateTo(url, opts = {}) {
     opts = opts || {};
+    console.log('[vilda-nav] START navigateTo:', url);
 
     // Anuluj poprzednią nawigację jeśli była
     if (currentNavigation) {
@@ -137,7 +138,7 @@
       cancelable: true
     });
     if (!document.dispatchEvent(beforeEvent)) {
-      // Anulowane przez listenera — fallback do zwykłego reload
+      console.warn('[vilda-nav] before-navigate canceled, full reload');
       window.location.href = url;
       return;
     }
@@ -146,121 +147,164 @@
 
     let html;
     try {
+      console.log('[vilda-nav] FETCH start:', url);
       const res = await fetch(url, {
         signal: abortController.signal,
         headers: { 'Accept': 'text/html', 'X-Requested-With': 'VildaNavigator' }
       });
+      console.log('[vilda-nav] FETCH response:', res.status, res.statusText);
       if (!res.ok) throw new Error('HTTP ' + res.status);
       html = await res.text();
+      console.log('[vilda-nav] FETCH body length:', html.length);
     } catch (err) {
-      if (err.name === 'AbortError') return;
+      if (err.name === 'AbortError') {
+        console.log('[vilda-nav] Aborted (newer navigation took over)');
+        return;
+      }
       console.warn('[vilda-nav] Fetch failed, fallback to full reload:', err);
       document.dispatchEvent(new CustomEvent('vilda:navigate-error', { detail: { url, error: err } }));
       window.location.href = url;
       return;
     }
 
-    if (currentNavigation && currentNavigation.url !== url) return; // wyprzedzona
+    if (currentNavigation && currentNavigation.url !== url) {
+      console.log('[vilda-nav] Wyprzedzona przez nowszą nawigację');
+      return;
+    }
 
     let newDoc;
     try {
       newDoc = new DOMParser().parseFromString(html, 'text/html');
+      console.log('[vilda-nav] PARSE OK, title:', newDoc.title);
     } catch (err) {
       console.warn('[vilda-nav] Parse failed, fallback:', err);
       window.location.href = url;
       return;
     }
 
-    // Escape hatch: jeśli docelowa strona ma <meta name="vilda-no-turbo">,
-    // fallback do pełnego reloadu. Dla podstron które wymagają fresh init
-    // wszystkich modułów (np. po regresjach JavaScript).
+    // Escape hatch
     if (newDoc.querySelector('meta[name="vilda-no-turbo"]')) {
       console.info('[vilda-nav] Cel ma meta vilda-no-turbo — fallback do reload');
       window.location.href = url;
       return;
     }
 
-    // === PODMIANA DOM ===
-
-    // 1. main-content (główna treść)
     const newMain = newDoc.querySelector('.main-content');
     const oldMain = document.querySelector('.main-content');
+    console.log('[vilda-nav] main-content lookup: new=', !!newMain, 'old=', !!oldMain);
     if (!newMain || !oldMain) {
       console.warn('[vilda-nav] No .main-content, fallback to reload');
       window.location.href = url;
       return;
     }
 
-    // 2. Doładuj brakujące <link rel="stylesheet"> z nowej strony
-    // (np. klirens może mieć inline style/skrypty których nie ma index)
-    const newLinks = Array.from(newDoc.querySelectorAll('link[rel="stylesheet"]'));
-    for (const link of newLinks) {
-      const norm = normalizeSrc(link.href);
-      if (!loadedStyles.has(norm)) {
-        loadedStyles.add(norm);
-        const clone = document.createElement('link');
-        clone.rel = 'stylesheet';
-        clone.href = link.href;
-        if (link.media) clone.media = link.media;
-        document.head.appendChild(clone);
+    // 2. Doładuj brakujące <link rel="stylesheet">
+    try {
+      const newLinks = Array.from(newDoc.querySelectorAll('link[rel="stylesheet"]'));
+      for (const link of newLinks) {
+        const norm = normalizeSrc(link.href);
+        if (!loadedStyles.has(norm)) {
+          loadedStyles.add(norm);
+          const clone = document.createElement('link');
+          clone.rel = 'stylesheet';
+          clone.href = link.href;
+          if (link.media) clone.media = link.media;
+          document.head.appendChild(clone);
+        }
       }
+      console.log('[vilda-nav] Stylesheets sync OK');
+    } catch (err) {
+      console.error('[vilda-nav] Error syncing stylesheets:', err);
     }
 
-    // 2a. Synchronizuj inline <style> bloki z <head> nowej strony.
-    // Niektóre strony (cukrzyca: 102 KB inline, klirens: 46 KB, docpro: 33 KB,
-    // ustawienia: 18 KB) mają duże <style> bloki w head, specyficzne dla strony.
-    // Bez tego style strony X "trzymają" wygląd po nawigacji do strony Y.
-    syncInlineStyles(newDoc);
-
-    // 2b. Synchronizuj <body> klasę i atrybuty.
-    // Strony różnią się body class (page-cukrzyca, page-settings, edu-page,
-    // has-sidebar, liquid-ios26 ...). Bez synchronizacji style "page-X" nie aktywują się.
-    // Zachowujemy js-loading jeśli było (navigator nie powinien jego ruszać),
-    // ale klas page-* musimy zresetować i ustawić zgodnie z nową stroną.
-    syncBodyClass(newDoc);
-
-    // 3. Aktualizuj <h1> w headerze (textContent — bez flickera logo)
-    const newH1 = newDoc.querySelector('header h1');
-    const oldH1 = document.querySelector('header h1');
-    if (newH1 && oldH1) {
-      oldH1.textContent = newH1.textContent;
+    try {
+      syncInlineStyles(newDoc);
+      console.log('[vilda-nav] Inline styles sync OK');
+    } catch (err) {
+      console.error('[vilda-nav] Error in syncInlineStyles:', err);
     }
 
-    // 4. Podmień .main-nav (różny set linków save/load między stronami)
-    const newMainNav = newDoc.querySelector('header .main-nav');
-    const oldMainNav = document.querySelector('header .main-nav');
-    if (newMainNav && oldMainNav) {
-      oldMainNav.replaceWith(newMainNav);
+    try {
+      syncBodyClass(newDoc);
+      console.log('[vilda-nav] Body class sync OK, body class now:', document.body.className);
+    } catch (err) {
+      console.error('[vilda-nav] Error in syncBodyClass:', err);
     }
 
-    // 5. Podmień main-content
-    oldMain.replaceWith(newMain);
-
-    // 6. Aktualizuj title
-    if (newDoc.title) {
-      document.title = newDoc.title;
+    // 3. Aktualizuj <h1>
+    try {
+      const newH1 = newDoc.querySelector('header h1');
+      const oldH1 = document.querySelector('header h1');
+      if (newH1 && oldH1) {
+        oldH1.textContent = newH1.textContent;
+      }
+    } catch (err) {
+      console.error('[vilda-nav] Error updating h1:', err);
     }
 
-    // 7. Aktualizuj meta description i og:tags
-    syncMetaTags(newDoc);
+    // 4. Podmień .main-nav
+    try {
+      const newMainNav = newDoc.querySelector('header .main-nav');
+      const oldMainNav = document.querySelector('header .main-nav');
+      if (newMainNav && oldMainNav) {
+        oldMainNav.replaceWith(newMainNav);
+      }
+    } catch (err) {
+      console.error('[vilda-nav] Error swapping main-nav:', err);
+    }
 
-    // 8. Aktualizuj aktywny element w sidebarze
-    updateSidebarActive(url);
+    // 5. Podmień main-content — najważniejszy krok
+    try {
+      console.log('[vilda-nav] About to replace main-content. New child count:', newMain.children.length);
+      oldMain.replaceWith(newMain);
+      console.log('[vilda-nav] main-content REPLACED OK');
+    } catch (err) {
+      console.error('[vilda-nav] Error replacing main-content:', err);
+      window.location.href = url;
+      return;
+    }
 
-    // 9. Push history state (jeśli nie z popstate)
+    // 6. Title
+    if (newDoc.title) document.title = newDoc.title;
+
+    // 7. Meta tags
+    try {
+      syncMetaTags(newDoc);
+    } catch (err) {
+      console.error('[vilda-nav] syncMetaTags error:', err);
+    }
+
+    // 8. Sidebar active
+    try {
+      updateSidebarActive(url);
+    } catch (err) {
+      console.error('[vilda-nav] updateSidebarActive error:', err);
+    }
+
+    // 9. Push history
     if (!opts.fromHistory) {
       history.pushState({ vildaNav: true }, '', url);
     }
 
-    // 10. Wykonaj inline scripts z nowego main-content + main-nav
-    // (DOMParser nie wykonuje skryptów, więc musimy ręcznie)
-    executeScripts(newMain);
-    if (newMainNav) executeScripts(newMainNav);
+    // 10. Inline scripts
+    try {
+      const newMainNavForScripts = document.querySelector('header .main-nav');
+      executeScripts(newMain);
+      if (newMainNavForScripts) executeScripts(newMainNavForScripts);
+      console.log('[vilda-nav] executeScripts done');
+    } catch (err) {
+      console.error('[vilda-nav] executeScripts error:', err);
+    }
 
-    // 11. Doładuj brakujące zewnętrzne <script src> z nowej strony (z całego dokumentu)
-    await loadMissingScripts(newDoc);
+    // 11. Doładuj brakujące zewnętrzne scripts
+    try {
+      await loadMissingScripts(newDoc);
+      console.log('[vilda-nav] loadMissingScripts done');
+    } catch (err) {
+      console.error('[vilda-nav] loadMissingScripts error:', err);
+    }
 
-    // 12. Scroll: do góry, lub do hash jeśli był
+    // 12. Scroll
     if (location.hash) {
       const target = document.getElementById(location.hash.slice(1));
       if (target) target.scrollIntoView();
@@ -269,7 +313,7 @@
       window.scrollTo(0, 0);
     }
 
-    // 13. Google Analytics — track jako nowy pageview
+    // 13. Google Analytics
     if (typeof window.gtag === 'function') {
       try {
         window.gtag('event', 'page_view', {
@@ -280,13 +324,16 @@
       } catch (e) { /* noop */ }
     }
 
-    // 14. Wystrzel custom event — moduły mogą się re-inicjalizować
-    document.dispatchEvent(new CustomEvent('vilda:navigated', {
-      detail: { url, pathname: location.pathname }
-    }));
+    // 14. Custom event
+    try {
+      document.dispatchEvent(new CustomEvent('vilda:navigated', {
+        detail: { url, pathname: location.pathname }
+      }));
+    } catch (err) {
+      console.error('[vilda-nav] vilda:navigated dispatch error:', err);
+    }
 
-    // 15. Lucide icons — re-render dla nowych <span data-lucide="X"> w main-content.
-    // Lucide jest commonly używane w sidebar i navigation, ale też w treści stron.
+    // 15. Lucide icons
     if (window.lucide && typeof window.lucide.createIcons === 'function') {
       try {
         window.lucide.createIcons();
@@ -295,6 +342,7 @@
 
     hideLoadingBar();
     currentNavigation = null;
+    console.log('[vilda-nav] DONE navigateTo:', url);
   }
 
   // === SYNC HELPERS ===
@@ -342,7 +390,14 @@
   function syncBodyClass(newDoc) {
     // Strony różnią się body class (page-cukrzyca, page-settings, edu-page,
     // has-sidebar, liquid-ios26 itp.) — te klasy aktywują specyficzne reguły CSS.
-    // Klasy `js-loading` jest dynamiczna (managed przez app.js), nie ruszamy.
+    //
+    // Klasa `js-loading` jest WYJĄTKIEM:
+    // - jest w markupie HTML każdej strony
+    // - normalnie zdejmowana przez app.js w DOMContentLoaded
+    // - reguła `body.js-loading .main-content { visibility: hidden }` w style.css UKRYWA TREŚĆ
+    // - po Turbo nav DOMContentLoaded nie wystrzela się drugi raz, więc gdyby Turbo
+    //   dodał js-loading z markupu, treść byłaby niewidoczna do F5
+    // - dlatego js-loading jest IGNOROWANA w obu kierunkach: nie dodajemy, nie usuwamy
     const newBody = newDoc.body;
     if (!newBody) return;
     const oldBody = document.body;
@@ -350,25 +405,31 @@
     const newClasses = Array.from(newBody.classList);
     const oldClasses = Array.from(oldBody.classList);
 
-    // Klasy które chronimy przed zmianą (managed przez inne moduły, nie przez markup HTML)
-    const PROTECTED = new Set(['js-loading']);
+    // Klasy ignorowane całkowicie — w pełni managed przez aplikację, nie przez markup
+    const IGNORED = new Set(['js-loading']);
 
-    // Usuń stare klasy (oprócz protected)
+    // Usuń stare klasy (oprócz ignored)
     for (const cls of oldClasses) {
-      if (PROTECTED.has(cls)) continue;
+      if (IGNORED.has(cls)) continue;
       if (!newClasses.includes(cls)) {
         oldBody.classList.remove(cls);
       }
     }
-    // Dodaj nowe klasy
+    // Dodaj nowe klasy (oprócz ignored — szczególnie js-loading nie może być dodana
+    // z markupu nowej strony, bo trzymałaby visibility:hidden na main-content do F5)
     for (const cls of newClasses) {
+      if (IGNORED.has(cls)) continue;
       if (!oldBody.classList.contains(cls)) {
         oldBody.classList.add(cls);
       }
     }
 
+    // Dla pewności — Turbo nawigacja oznacza że "ładowanie zakończone".
+    // Niezależnie od markupu, body NIE może mieć js-loading po Turbo (visibility:hidden
+    // na main-content powodowałby pozorny brak treści — patrz komentarz wyżej).
+    oldBody.classList.remove('js-loading');
+
     // Synchronizuj atrybuty data-* z body (np. data-page, data-theme — ustawiane w HTML)
-    // (atrybuty inne niż class)
     for (const attr of Array.from(oldBody.attributes)) {
       if (attr.name === 'class') continue;
       if (attr.name.startsWith('data-vilda-')) continue; // nasze własne, zostawiamy
