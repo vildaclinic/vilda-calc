@@ -206,6 +206,19 @@
       }
     }
 
+    // 2a. Synchronizuj inline <style> bloki z <head> nowej strony.
+    // Niektóre strony (cukrzyca: 102 KB inline, klirens: 46 KB, docpro: 33 KB,
+    // ustawienia: 18 KB) mają duże <style> bloki w head, specyficzne dla strony.
+    // Bez tego style strony X "trzymają" wygląd po nawigacji do strony Y.
+    syncInlineStyles(newDoc);
+
+    // 2b. Synchronizuj <body> klasę i atrybuty.
+    // Strony różnią się body class (page-cukrzyca, page-settings, edu-page,
+    // has-sidebar, liquid-ios26 ...). Bez synchronizacji style "page-X" nie aktywują się.
+    // Zachowujemy js-loading jeśli było (navigator nie powinien jego ruszać),
+    // ale klas page-* musimy zresetować i ustawić zgodnie z nową stroną.
+    syncBodyClass(newDoc);
+
     // 3. Aktualizuj <h1> w headerze (textContent — bez flickera logo)
     const newH1 = newDoc.querySelector('header h1');
     const oldH1 = document.querySelector('header h1');
@@ -282,6 +295,93 @@
 
     hideLoadingBar();
     currentNavigation = null;
+  }
+
+  // === SYNC HELPERS ===
+
+  // Atrybut na elemencie identyfikujący że dany style/element został dodany przez navigator
+  // (zarządzamy nim — usuwamy przy następnej nawigacji, żeby nie zostawiać śmieci)
+  const NAV_OWNED_ATTR = 'data-vilda-nav-owned';
+
+  // Zachowaj sygnaturę (text content) inline style które są już w <head> przy starcie aplikacji.
+  // Te STYLE PIERWOTNE NIE są usuwane przy nawigacji — to są style oryginalnej strony.
+  // Reszta (style dodane przez navigator z nowej strony) są usuwane przy każdej nawigacji.
+  const initialInlineStyleSignatures = new Set();
+  Array.from(document.head.querySelectorAll('style')).forEach(s => {
+    initialInlineStyleSignatures.add(s.textContent.trim().slice(0, 200));
+  });
+
+  function syncInlineStyles(newDoc) {
+    // Krok 1: usuń style dodane wcześniej przez navigator (z poprzedniej nawigacji)
+    Array.from(document.head.querySelectorAll(`style[${NAV_OWNED_ATTR}]`))
+      .forEach(s => s.remove());
+
+    // Krok 2: dla każdego <style> w nowym <head>, jeśli nie ma go już w obecnym head
+    // (na bazie sygnatury content prefix), dodaj kopię oznaczoną jako "owned" przez navigator.
+    const newStyles = Array.from(newDoc.head.querySelectorAll('style'));
+    const currentSigs = new Set();
+    Array.from(document.head.querySelectorAll('style')).forEach(s => {
+      currentSigs.add(s.textContent.trim().slice(0, 200));
+    });
+
+    for (const newStyle of newStyles) {
+      const sig = newStyle.textContent.trim().slice(0, 200);
+      if (currentSigs.has(sig)) continue;
+      if (initialInlineStyleSignatures.has(sig)) continue;
+      const clone = document.createElement('style');
+      // Skopiuj atrybuty (id, media, etc.)
+      for (const attr of newStyle.attributes) {
+        clone.setAttribute(attr.name, attr.value);
+      }
+      clone.textContent = newStyle.textContent;
+      clone.setAttribute(NAV_OWNED_ATTR, 'style');
+      document.head.appendChild(clone);
+    }
+  }
+
+  function syncBodyClass(newDoc) {
+    // Strony różnią się body class (page-cukrzyca, page-settings, edu-page,
+    // has-sidebar, liquid-ios26 itp.) — te klasy aktywują specyficzne reguły CSS.
+    // Klasy `js-loading` jest dynamiczna (managed przez app.js), nie ruszamy.
+    const newBody = newDoc.body;
+    if (!newBody) return;
+    const oldBody = document.body;
+
+    const newClasses = Array.from(newBody.classList);
+    const oldClasses = Array.from(oldBody.classList);
+
+    // Klasy które chronimy przed zmianą (managed przez inne moduły, nie przez markup HTML)
+    const PROTECTED = new Set(['js-loading']);
+
+    // Usuń stare klasy (oprócz protected)
+    for (const cls of oldClasses) {
+      if (PROTECTED.has(cls)) continue;
+      if (!newClasses.includes(cls)) {
+        oldBody.classList.remove(cls);
+      }
+    }
+    // Dodaj nowe klasy
+    for (const cls of newClasses) {
+      if (!oldBody.classList.contains(cls)) {
+        oldBody.classList.add(cls);
+      }
+    }
+
+    // Synchronizuj atrybuty data-* z body (np. data-page, data-theme — ustawiane w HTML)
+    // (atrybuty inne niż class)
+    for (const attr of Array.from(oldBody.attributes)) {
+      if (attr.name === 'class') continue;
+      if (attr.name.startsWith('data-vilda-')) continue; // nasze własne, zostawiamy
+      if (!newBody.hasAttribute(attr.name)) {
+        oldBody.removeAttribute(attr.name);
+      }
+    }
+    for (const attr of Array.from(newBody.attributes)) {
+      if (attr.name === 'class') continue;
+      if (oldBody.getAttribute(attr.name) !== attr.value) {
+        oldBody.setAttribute(attr.name, attr.value);
+      }
+    }
   }
 
   function syncMetaTags(newDoc) {

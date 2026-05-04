@@ -1,153 +1,113 @@
-# Kompletna paczka — Faza 5+6 (cała aplikacja z Turbo navigator)
+# Faza 5+6 v2 — naprawa rozjechanych stron
 
-**To jest KOMPLETNA aplikacja w stanie po Fazie 5+6** — wszystkie pliki (114), włącznie z nowym `vilda_navigator.js` który dodaje SPA-like nawigację.
+Po wdrożeniu Fazy 5+6 część stron (docpro, klirens, cukrzyca, steroidy, ustawienia) wyglądała wizualnie nieprawidłowo. **Diagnostyka i naprawa.**
 
-Po jej wgraniu kliknięcie w sidebar nie powoduje pełnego reloadu — sidebar i logo zostają, podmienia się tylko treść.
+## Co było źle
 
-## Co nowego względem Fazy 4
+Dwa problemy nakładające się:
 
-Tylko 17 plików zmienionych względem kompletnej paczki Fazy 4:
-- **NOWY:** `vilda_navigator.js` (15 KB) — silnik nawigacji w stylu Turbo/Hotwire/PJAX
-- 15 HTML — dodany jeden `<script src="vilda_navigator.js?v=1" defer></script>` zaraz po `vilda_logger.js`
-- `service-worker-kalorii.js` — `vilda_navigator.js?v=1` w precache, bump SW `0.9.413` → `0.9.414`
+**Problem 1 — `<body class>` nie był synchronizowany.**
 
-Wszystkie inne pliki są identyczne jak w Fazie 4 (114 plików łącznie z manifest.json, vilda_*.js, style.css, data/, obrazami itd.).
+Strony aplikacji mają różne klasy na `<body>` które aktywują specyficzne style:
+
+| Strona | body class |
+|--------|-----------|
+| index.html | (brak) |
+| homa-ir.html | `js-loading liquid-ios26 has-sidebar` |
+| materialy-edukacyjne.html | `js-loading liquid-ios26 has-sidebar edu-page` |
+| docpro.html | (brak — ale ma duże inline style) |
+| cukrzyca.html | `js-loading liquid-ios26 page-cukrzyca has-sidebar` |
+| ustawienia.html | `js-loading liquid-ios26 page-settings has-sidebar` |
+| steroidy.html | `js-loading liquid-ios26 has-sidebar` |
+| kalkulator-klirens.html | `js-loading liquid-ios26 has-sidebar` |
+
+Po Turbo nawigacji navigator podmieniał `.main-content` ale **nie ruszał** `<body>` ani jego klasy. Czyli po klik index → cukrzyca, body dalej miał `class=""` zamiast `class="page-cukrzyca has-sidebar"`. Reguły CSS typu `.page-cukrzyca .X { ... }` nie matchowały, strona traciła swój wygląd.
+
+**Problem 2 — duże inline `<style>` bloki specyficzne dla strony.**
+
+| Strona | inline `<style>` |
+|--------|------------------|
+| index.html | 3.2 KB |
+| homa-ir.html | 5.6 KB |
+| docpro.html | **33 KB** |
+| ustawienia.html | 18 KB |
+| kalkulator-klirens.html | **46 KB** |
+| cukrzyca.html | **102 KB** |
+
+Te bloki są w `<head>` strony — navigator ich nie podmieniał. Po klik index (3.2 KB inline) → cukrzyca, brakowało 102 KB stylów cukrzycy w head, więc strona „się rozjechała".
+
+**Dlaczego index/homa/edu wyglądały OK:** te trzy strony nie mają specyficznej klasy `page-X` ani dużego inline `<style>` (tylko podstawowe critical CSS). Reszta wymaga.
+
+## Co naprawiłem
+
+W `vilda_navigator.js` dodałem dwie nowe funkcje synchronizujące, wywoływane przy każdej Turbo nawigacji:
+
+**`syncBodyClass(newDoc)`:**
+- Czyta klasy z `<body>` nowej strony
+- Usuwa stare klasy z obecnego `<body>` (oprócz `js-loading` która jest dynamiczna)
+- Dodaje nowe klasy
+- Synchronizuje też atrybuty `data-*` z body
+
+**`syncInlineStyles(newDoc)`:**
+- Przy starcie aplikacji robi „snapshot" inline `<style>` w head (sygnatury 200 znaków)
+- Te oryginalne style są chronione — nie usuwane
+- Style dodane przez navigator z poprzedniej nawigacji są usuwane (oznaczone `data-vilda-nav-owned`)
+- Nowe style z nowej strony są dodawane (jeśli ich sygnatura nie pokrywa się z istniejącymi)
+
+Czyli zamiast nadmiarowego dublowania CSS przy każdej nawigacji, navigator zarządza tylko „swoimi" inline-style, oryginalne zostawia w spokoju.
+
+## Lista zmienionych plików w paczce v2
+
+Względem poprzedniej kompletnej paczki Fazy 5+6:
+
+- `vilda_navigator.js` — wersja `?v=1` → `?v=2`. Dodane `syncBodyClass` i `syncInlineStyles`. Rozmiar: 15 KB → 19 KB.
+- 15× HTML — bump `vilda_navigator.js?v=1` → `?v=2` (cache buster).
+- `service-worker-kalorii.js` — bump `vilda_navigator.js?v=2` w precache, `SW_VERSION` `0.9.414` → `0.9.415`.
+
+Wszystkie inne 96 plików identyczne jak w poprzedniej paczce 5+6.
 
 ## Jak wdrożyć
 
-### Opcja A (zalecana) — wymiana na świeżo
+Wgraj **całą zawartość folderu** `wagaiwzrost_complete_faza5_6_v2/` (TYLKO zawartość, nie cały folder) do roota repo `vildaclinic.github.io`, nadpisując wszystko. Z `data/` jako podkatalog.
 
-1. **Backup obecnego stanu repo** na github (jeśli ma cokolwiek wartego zachowania).
-2. **Usuń wszystkie pliki z roota repo** `vildaclinic.github.io`.
-3. Rozpakuj ZIP. **Wgraj ZAWARTOŚĆ folderu** `wagaiwzrost_complete_faza5_6/` (TYLKO jego zawartość, nie cały folder) do roota repo. Z `data/` jako podkatalog.
-4. Commit + push.
-5. Poczekaj 1-2 min aż GitHub Pages się zbuduje (status w Actions tab — zielony znaczek).
-6. Otwórz `https://vildaclinic.github.io/` w trybie incognito.
-7. Hard reload (Ctrl+Shift+R).
-
-### Opcja B — nadpisanie na bazie Fazy 4
-
-Jeśli już masz wgraną kompletną paczkę Fazy 4 i wszystko działa — możesz wgrać tylko 17 zmienionych plików:
-
-| Plik | Status |
-|------|--------|
-| `vilda_navigator.js` | NOWY |
-| `service-worker-kalorii.js` | nadpisany |
-| `index.html` | nadpisany |
-| `docpro.html` | nadpisany |
-| `kalkulator-klirens.html` | nadpisany |
-| `cukrzyca.html` | nadpisany |
-| `homa-ir.html` | nadpisany |
-| `steroidy.html` | nadpisany |
-| `ustawienia.html` | nadpisany |
-| `kontakt.html` | nadpisany |
-| `instrukcja.html` | nadpisany |
-| `materialy-edukacyjne.html` | nadpisany |
-| `o-aplikacji.html` | nadpisany |
-| `genotropin-instrukcja.html` | nadpisany |
-| `ngenla-instrukcja.html` | nadpisany |
-| `omnitrope-instrukcja.html` | nadpisany |
-| `przelicznik-doposilkowy-instrukcja.html` | nadpisany |
-
-Ale dla prostoty i bezpieczeństwa — opcja A (pełna wymiana) jest lepsza.
+Commit + push. Poczekaj 1-2 min na build. Hard reload incognito.
 
 ## Weryfikacja po wgraniu
 
-W przeglądarce (incognito), po hard reload:
+1. **Console:** `[vilda-nav] Aktywny — Turbo-style nawigacja.`
+2. **Application → Service Workers:** wersja `0.9.415`
+3. **Network filter `vilda_navigator`:** musi być `vilda_navigator.js?v=2` (nie `v=1`)
 
-### Test 1 — czy SW i navigator działają
-- Otwórz https://vildaclinic.github.io/
-- DevTools → Console
-- **Powinno być:** `[vilda-nav] Aktywny — Turbo-style nawigacja.`
-- **Application → Service Workers**: wersja `0.9.414`, status `activated and is running`
-- **Network filter `vilda_navigator`**: musi być widoczny (200, 15 KB)
+### Test wizualny (najważniejszy)
 
-### Test 2 — czy Turbo działa
-- Otwórz `https://vildaclinic.github.io/`
-- **Otwórz DevTools → Network tab**, zostaw otwarty
-- Kliknij „DocPro" w sidebarze
-- **Co powinno się wydarzyć:**
-  - Cienki turkusowy pasek progresu na górze (przez ~200-500ms)
-  - Sidebar i logo **nie znikają i nie migają**
-  - Treść w środku się zmienia
-  - URL w pasku adresu zmienia się na `docpro.html`
-  - W Network: nowy wpis `docpro.html` z **Type: fetch** (nie `Type: document`)
-- Jeśli widzisz pełen reload (cała strona biała na chwilę, sidebar miga) — Turbo NIE działa, daj znać.
+Każdy z 5 wcześniej rozjechanych testów:
 
-### Test 3 — Back button
-- Po nawigacji DocPro → klikinij strzałkę wstecz w przeglądarce
-- Powinno wrócić na index bez pełnego reloadu, sidebar nie miga.
+1. **index → docpro** — czy DocPro wygląda jak przy bezpośrednim wejściu na URL?
+2. **index → klirens** — czy klirens wygląda dobrze?
+3. **index → cukrzyca** — czy cukrzyca wygląda dobrze (102 KB inline style)?
+4. **index → steroidy** — czy steroidy wygląda dobrze?
+5. **index → ustawienia** — czy ustawienia wygląda dobrze?
 
-### Test 4 — funkcje aplikacji
-- Wpisz dane dziecka na index → BMI/percentyl liczy?
-- Klik DocPro → wróć → przelicza BMI?
-- Klik Klirens → wpisz dane → eGFR liczy?
+**Test referencyjny:** otwórz tę samą stronę bezpośrednim URL w nowej karcie incognito (bez Turbo). Wygląd powinien być **identyczny** jak po Turbo nawigacji.
 
-## ⚠️ Ważne ograniczenie — moduły z `{ once: true }`
+### Test drugiego wejścia
 
-Aplikacja ma dziesiątki modułów (cukrzyca.js, bp_module.js, gh_igf_therapy.js, antibiotic_therapy.js, …) używających `document.addEventListener('DOMContentLoaded', initX, { once: true })`. Po Turbo nav DOMContentLoaded nie wystrzela się ponownie, więc taki moduł **nie wie** o nowym DOM po podmianie.
+Dodatkowo sprawdź:
+- index → cukrzyca → index → cukrzyca — czy dalej wygląda dobrze?
+- index → klirens → docpro → klirens — czy klirens po przeskoku przez docpro dalej wygląda dobrze?
 
-W praktyce: pierwsza wizyta na podstronie zawsze działa. Ale po klik X→Y→X (drugie wejście) niektóre interaktywne elementy mogą nie działać (przyciski nie reagują, formularze nie przeliczają).
+## Co jeśli któraś strona dalej się rozjeżdża
 
-**Mechanizmy bezpieczeństwa (escape hatches):**
+Daj znać konkretnie:
+- Która strona
+- Co dokładnie wygląda inaczej (screenshot pomocny)
+- W DevTools → Elements: jaka jest klasa `<body>` po nawigacji vs przy direct load
+- W DevTools → Elements → `<head>`: czy są duplikaty `<style>` lub ich brak
 
-1. **Per-link wyłączenie:** dodaj `data-no-turbo="true"` do `<a>` — kliknięcie zrobi pełen reload zamiast Turbo.
+Z tej informacji znajdę dokładny powód.
 
-2. **Per-strona wyłączenie:** dodaj `<meta name="vilda-no-turbo">` w `<head>` problematycznej strony — wejście na nią robi pełen reload, ale nawigacja stamtąd dalej Turbo.
+## Co dalej
 
-3. **Per-moduł naprawa:** dodaj listener `vilda:navigated` w module:
-   ```javascript
-   document.addEventListener('vilda:navigated', () => {
-     if (location.pathname.endsWith('/cukrzyca.html')) initCukrzyca();
-   });
-   ```
+Jak wszystkie strony wyglądają OK — to koniec planowanego scope (Faza 6 zakończona).
 
-## Procedura testów drugiego wejścia
-
-Każdy test = **dwa kliknięcia** (X→Y→X) żeby wykryć regresje:
-
-1. **index → docpro → index** — czy index dalej liczy BMI po powrocie?
-2. **index → klirens → index → klirens** — czy klirens liczy eGFR po drugim wejściu?
-3. **index → cukrzyca → index → cukrzyca** — czy moduł cukrzycy generuje zadania po drugim wejściu?
-4. **index → steroidy → index → steroidy**
-5. **index → homa-ir → index → homa-ir** — czy liczy po drugim wejściu?
-6. **index → ustawienia → index → ustawienia** — czy preferencje zapisują się?
-7. **Back/Forward** — strzałki przeglądarki działają płynnie?
-
-**Jeśli któryś test wykryje regresję** — daj znać konkretnie:
-- Która strona, który element nie działa
-- Czy przy pierwszym wejściu czy dopiero po powrocie
-
-Wtedy decydujemy: quick fix przez `<meta name="vilda-no-turbo">`, czy refaktoryzacja modułu.
-
-## Quick fix dla regresji
-
-Jeśli np. cukrzyca.html nie działa po nawigacji powrotnej, **najszybsza tymczasowa naprawa**:
-
-Otwórz `cukrzyca.html` w repo, znajdź `<head>`, dodaj jedną linijkę:
-
-```html
-<meta name="vilda-no-turbo">
-```
-
-Wejście na cukrzyca będzie pełnym reload (jak przed Fazą 6), ale nawigacja **z** cukrzyca **na inne strony** dalej będzie Turbo. Sidebar dalej nie miga przy normalnej nawigacji między pozostałymi stronami.
-
-## Spodziewany efekt UX
-
-| Scenariusz | Przed | Po |
-|------------|-------|-----|
-| Klik w sidebar do nowej strony | 0.5–2 s, miganie | 100–500 ms, sidebar nieruchomy |
-| Powrót do odwiedzonej strony | 0.3–1 s, miganie | 50–200 ms, instant feel |
-| Back/Forward | pełen reload | natychmiastowy switch |
-
-## Podsumowanie
-
-- **Paczka kompletna**: 114 plików, ~2.3 MB
-- **Faza 5+6 dodaje**: tylko 17 zmienionych plików nad Fazą 4
-- **Główny zysk**: brak migania sidebar/logo przy nawigacji
-- **Główne ryzyko**: moduły z `{ once: true }` mogą wymagać `<meta name="vilda-no-turbo">` quick fix
-
-Daj znać po wgraniu czy:
-1. `[vilda-nav] Aktywny` jest w konsoli
-2. Test 2 pokazuje `Type: fetch` (Turbo) zamiast `Type: document` (reload)
-3. Które strony mają regresje przy drugim wejściu (jeśli mają)
+Zostaje jeszcze potencjalnie test funkcjonalny **drugiego wejścia** dla logiki JS (czy moduły działają po nawigacji powrotnej). Jeśli któryś moduł będzie miał problem (np. cukrzyca nie generuje zadań po drugim wejściu), wtedy quick fix przez `<meta name="vilda-no-turbo">` w head problematycznej strony.
