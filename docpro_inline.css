@@ -1,0 +1,959 @@
+        /* By default the user field containers stack vertically */
+        .user-fields-row {
+          display: flex;
+          flex-direction: column;
+        }
+        .user-col-left,
+        .user-col-right {
+          flex: 1;
+        }
+        /* Ułóż elementy wewnątrz każdej kolumny w pionie.  Bez tego
+           przycisk „Wyczyść wszystkie pola” mógł ustawiać się obok
+           pola wzrostu na szerokich ekranach. */
+        .user-col-left,
+        .user-col-right {
+          display: flex;
+          flex-direction: column;
+        }
+        /* On wider screens (700px and above) arrange the user fields into two
+           columns with a gap between them */
+        @media (min-width: 700px) {
+          .user-fields-row {
+            flex-direction: row;
+            gap: 1rem;
+          }
+        }
+        /* Hide the general results section and associated cards on the DocPro
+           page, since only the professional module is relevant here. */
+        #results {
+          display: none !important;
+        }
+        /* Ukryj kontener komunikatów o błędach (np. „Podaj jednocześnie wiek, wagę i wzrost”)
+           na podstronie DocPro, ponieważ te komunikaty dotyczą kalkulatorów
+           ogólnych, które są tutaj niewidoczne. */
+        #errorBox {
+          display: none !important;
+        }
+
+        /*
+         * Zachowaj dwukolumnowy układ formularza (#calcForm) na szerokich ekranach.
+         * Globalny arkusz stylów definiuje grid z dwiema kolumnami (1fr 1fr),
+         * dlatego poniższa reguła upewnia się, że podstrona DocPro również
+         * korzysta z dwóch kolumn – karta użytkownika po lewej, sekcja lekarska po prawej.
+         */
+        @media (min-width: 700px) {
+          #calcForm {
+            grid-template-columns: 1fr 1fr !important;
+          }
+        }
+
+        /* Pełna szerokość karty danych użytkownika na podstronie DocPro.
+         * Karta (fieldset.user-card) dziedziczy minimalne marginesy boczne z
+         * formularza, ale sama miała automatyczne dopasowanie szerokości,
+         * co w połączeniu z niektórymi globalnymi regułami powodowało jej
+         * zawężenie.  Ustawiamy szerokość i max-width na 100%, aby
+         * wypełniała całą dostępną przestrzeń kontenera.
+         */
+        #userSection fieldset.user-card {
+          /* Pozostaw szerokość karty użytkownika zgodną z układem kolumn siatki.
+             Nie wymuszaj pełnej szerokości; pozwól wypełnić przestrzeń kolumny. */
+        }
+
+        /* Nie nadpisuj szerokości kontenera sekcji użytkownika – jego rozmiar
+           wynika z klasy .half oraz układu siatki formularza. */
+        #userSection {
+          /* width: 100% !important; */
+        }
+
+        /* Na podstronie DocPro całkowicie ukrywamy sekcję „Szacowane spożycie energii”
+         * wraz z przyciskiem, który ją rozwija.  Te elementy są przydatne
+         * na stronie głównej, ale nie w module profesjonalnym. */
+        #toggleIntakeCard,
+        #intakeCard {
+          display: none !important;
+        }
+
+        /* Przywracamy globalne ograniczenie max-width dla kontenera na stronie
+         * DocPro (960 px).  Dodatkowa klasa .container-docpro została usunięta
+         * z głównego kontenera, więc ta reguła nie jest już potrzebna. */
+
+        /*
+         * Sformatuj komunikat informujący o konieczności wpisania numeru PWZ.
+         * W stanie początkowym powinien być wyśrodkowany oraz turkusowy,
+         * aby przyciągał uwagę użytkownika. Po pozytywnej weryfikacji
+         * numeru element .doctor-info jest ukrywany przez skrypt JS.
+         */
+        .doctor-info {
+          text-align: center;
+          color: var(--primary);
+        }
+
+        /* === Profesjonalny overlay ===
+         * Pełnoekranowa warstwa, która przyciemnia stronę i wymaga
+         * potwierdzenia od użytkownika, zanim udostępni treści dla lekarzy.
+         * W trybie mobilnym i desktopowym wypełnia całe okno i blokuje
+         * interakcje z tłem.  Zawiera wewnętrzny kontener z nagłówkiem,
+         * opisem i dwoma przyciskami akcji.  Przycisk „Potwierdzam” ma
+         * delikatnie turkusowe tło, natomiast „Wychodzę” jest biały. */
+        #professionalOverlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100vw;
+          height: 100vh;
+          height: 100dvh;
+          display: none;
+          align-items: center;
+          justify-content: center;
+          background: rgba(0, 0, 0, 0.6);
+          z-index: 10000;
+        }
+        #professionalOverlay .professional-overlay-inner {
+          background: var(--card);
+          color: var(--text);
+          padding: 1.5rem 1.2rem;
+          border-radius: var(--radius);
+          max-width: 460px;
+          width: 90%;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+          text-align: center;
+        }
+        #professionalOverlay .professional-overlay-inner h3 {
+          margin-top: 0;
+          margin-bottom: 0.8rem;
+          color: var(--primary);
+          font-size: 1.4rem;
+        }
+        #professionalOverlay .professional-overlay-inner p {
+          margin: 0 0 1.4rem;
+          font-size: 0.95rem;
+          line-height: 1.4;
+        }
+        #professionalOverlay .professional-overlay-buttons {
+          display: flex;
+          justify-content: center;
+          gap: 1rem;
+          flex-wrap: wrap;
+        }
+        #professionalOverlay .professional-confirm-btn {
+          background: var(--secondary);
+          color: #fff;
+          border: none;
+          border-radius: var(--radius);
+          padding: 0.55rem 1.2rem;
+          cursor: pointer;
+          font: inherit;
+          transition: background 0.2s ease, box-shadow 0.2s ease;
+        }
+        #professionalOverlay .professional-confirm-btn:hover {
+          background: var(--primary);
+          box-shadow: var(--shadow);
+        }
+        #professionalOverlay .professional-exit-btn {
+          background: #ffffff;
+          color: var(--primary);
+          border: 1px solid #d0dede;
+          border-radius: var(--radius);
+          padding: 0.55rem 1.2rem;
+          cursor: pointer;
+          font: inherit;
+          transition: background 0.2s ease, box-shadow 0.2s ease;
+        }
+        #professionalOverlay .professional-exit-btn:hover {
+          background: #f5f9f9;
+          box-shadow: var(--shadow);
+        }
+
+        /* === Overlay zapamiętywania numeru PWZ ===
+         * Druga pełnoekranowa warstwa służąca do zadania pytania, czy
+         * zapamiętać numer prawa wykonywania zawodu w przeglądarce.
+         * Wzorowana na overlayu modułu profesjonalnego i zawiera
+         * nagłówek, opis oraz dwa przyciski „Tak” i „Nie”. */
+        #rememberPwzOverlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100vw;
+          height: 100vh;
+          height: 100dvh;
+          display: none;
+          align-items: center;
+          justify-content: center;
+          background: rgba(0, 0, 0, 0.6);
+          z-index: 10001;
+        }
+        #rememberPwzOverlay .remember-overlay-inner {
+          background: var(--card);
+          color: var(--text);
+          padding: 1.5rem 1.2rem;
+          border-radius: var(--radius);
+          max-width: 460px;
+          width: 90%;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+          text-align: center;
+        }
+        #rememberPwzOverlay .remember-overlay-inner h3 {
+          margin-top: 0;
+          margin-bottom: 0.8rem;
+          color: var(--primary);
+          font-size: 1.4rem;
+        }
+        #rememberPwzOverlay .remember-overlay-inner p {
+          margin: 0 0 1.4rem;
+          font-size: 0.95rem;
+          line-height: 1.4;
+        }
+        #rememberPwzOverlay .remember-overlay-buttons {
+          display: flex;
+          justify-content: center;
+          gap: 1rem;
+          flex-wrap: wrap;
+        }
+        #rememberPwzOverlay .remember-yes-btn {
+          background: var(--secondary);
+          color: #fff;
+          border: none;
+          border-radius: var(--radius);
+          padding: 0.55rem 1.2rem;
+          cursor: pointer;
+          font: inherit;
+          transition: background 0.2s ease, box-shadow 0.2s ease;
+        }
+        #rememberPwzOverlay .remember-yes-btn:hover {
+          background: var(--primary);
+          box-shadow: var(--shadow);
+        }
+        #rememberPwzOverlay .remember-no-btn {
+          background: #ffffff;
+          color: var(--primary);
+          border: 1px solid #d0dede;
+          border-radius: var(--radius);
+          padding: 0.55rem 1.2rem;
+          cursor: pointer;
+          font: inherit;
+          transition: background 0.2s ease, box-shadow 0.2s ease;
+        }
+        #rememberPwzOverlay .remember-no-btn:hover {
+          background: #f5f9f9;
+          box-shadow: var(--shadow);
+        }
+
+        /* === Dwukolumnowy układ list testów (GH, OGTT/GnRH, ACTH/TRH) ===
+         *
+         * Kontenery z testami (np. #ghTestsLeft/#ghTestsRight) mają klasę
+         * .half, która nadaje im szerokość 50%.  Jednak domyślnie elementy
+         * te są blokowe, przez co układają się pionowo jeden pod drugim.
+         * W widoku dwukolumnowym (szerokość ≥ 700 px) ustawiamy dla
+         * #modulesWrapper wyświetlanie flex i pozwalamy na zawijanie wierszy.
+         * Dzięki temu przyciski modułów (o szerokości 100%) zajmują pełną
+         * szerokość, a dwa kontenery testów ustawiają się obok siebie.
+         * gap zapewnia odstęp między kolumnami oraz wierszami.  Poszczególne
+         * kontenery testów zachowują szerokość 50%, co gwarantuje równe
+         * rozdzielenie dostępnej przestrzeni między kolumny. */
+        @media (min-width: 700px) {
+          #modulesWrapper {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+          }
+          /* Upewnij się, że przyciski modułów zajmują pełną szerokość także w
+             układzie flex.  Bez tego reguła flex może powodować ich
+             zawężenie. */
+          /* Przyciski modułów posiadają klasę .module-btn-wrapper, dlatego
+             poniższe ustawienia pełnej szerokości stosujemy tylko do
+             kontenerów bez tej klasy (np. przyciski testów GH/OGTT/ACTH). */
+          #modulesWrapper > div[id$="ButtonWrapper"]:not(.module-btn-wrapper) {
+            flex: 0 0 100%;
+            max-width: 100%;
+          }
+          /* Testy GH/OGTT/ACTH umieszczone w kolumnach powinny zajmować
+             połowę szerokości w wierszu.  Używamy calc, aby uwzględnić
+             odstęp (gap) pomiędzy kolumnami. */
+          #modulesWrapper .gh-tests-left,
+          #modulesWrapper .gh-tests-right,
+          #modulesWrapper .ogtt-tests-left,
+          #modulesWrapper .ogtt-tests-right,
+          #modulesWrapper .acth-tests-left,
+          #modulesWrapper .acth-tests-right {
+            flex: 0 0 calc(50% - 0.5rem);
+            max-width: calc(50% - 0.5rem);
+          }
+
+          /*
+           * W układzie dwukolumnowym przenosimy główne przyciski modułu
+           * profesjonalnego do osobnych kolumn: przycisk „Testy w endokrynologii”
+           * trafia do lewej kolumny, a przycisk „Leczenie hormonem wzrostu / IGF‑1”
+           * do prawej.  Domyślnie style globalne nadają wszystkim przyciskom
+           * pełną szerokość (grid‑column: 1 / ‑1).  Poniższa reguła nadpisuje
+           * te ustawienia dla konkretnych kontenerów w ramach #modulesWrapper,
+           * ustawiając szerokość na 50% z uwzględnieniem odstępu (gap).
+           */
+          #modulesWrapper #endoButtonWrapper,
+          #modulesWrapper #igfButtonWrapper {
+            /* Szerokość przycisków jest teraz kontrolowana przez klasę .module-btn-wrapper */
+          }
+          /* Umieść przyciski „Antybiotykoterapia” i „Leczenie bisfosfonianami” w jednym wierszu
+             poniżej wiersza głównych przycisków modułu (Endo i IGF‑1).  Nadaj im po 50 % szerokości
+             (z uwzględnieniem odstępu) i ustaw kolejność na 2, aby były renderowane razem.
+             Dzięki temu w pierwszym wierszu pozostaną przyciski Endo/IGF‑1, a w drugim
+             Antybiotykoterapia i Leczenie bisfosfonianami. */
+          /*
+           * Przyciski „Antybiotykoterapia” i „Leczenie bisfosfonianami” zajmują połowę
+           * szerokości wiersza (uwzględniając odstęp) i są renderowane jako drugi
+           * wiersz modułu lekarskiego.  Aby móc niezależnie sterować każdym
+           * przyciskiem, definiujemy reguły osobno dla każdego kontenera.  Dzięki
+           * temu łatwiej jest dostosować wygląd przycisku leczenia bisfosfonianami
+           * bez dotykania ustawień przycisku antybiotykoterapii.
+           */
+          #modulesWrapper #abxButtonWrapper {
+            /* Szerokość przycisku określa klasa .module-btn-wrapper */
+            order: 2;
+          }
+          #modulesWrapper #bisphosButtonWrapper {
+            /* Szerokość przycisku określa klasa .module-btn-wrapper */
+            order: 4;
+          }
+
+          /* Moduł: Rak tarczycy u dzieci — ma zająć miejsce (wizualnie) dawnego przycisku bisfosfonianów */
+          #modulesWrapper #thyroidCancerKidsButtonWrapper {
+            /* Szerokość przycisku określa klasa .module-btn-wrapper */
+            order: 4;
+          }
+
+          
+
+          #modulesWrapper #obesityButtonWrapper {
+            /* Szerokość przycisku określa klasa .module-btn-wrapper */
+            order: 3;
+          }
+          #modulesWrapper #hypertensionButtonWrapper {
+            /* Szerokość przycisku określa klasa .module-btn-wrapper */
+            order: 3;
+          }
+/* Nowy przycisk „Leczenie infekcji wirusowych” ma podobne parametry
+             jak przycisk antybiotykoterapii: zajmuje połowę szerokości w drugim
+             wierszu modułów i renderuje się obok przycisku abx. */
+          #modulesWrapper #fluButtonWrapper {
+            /* Szerokość przycisku określa klasa .module-btn-wrapper */
+            order: 2;
+          }
+
+          /* Domyślnie globalny arkusz stylów ukrywa przycisk „Antybiotykoterapia”
+             (#abxButtonWrapper { display: none !important; }).  Na podstronie DocPro
+             nie nadpisujemy tego ustawienia w CSS, aby przycisk pozostał niewidoczny
+             do czasu pozytywnej weryfikacji numeru PWZ.  Widoczność tego przycisku
+             jest kontrolowana wyłącznie w kodzie JavaScript (activateProfessionalModule
+             oraz validatePWZ), dlatego tutaj nie ustawiamy stylu display. */
+
+          /*
+           * Przycisk „Leczenie bisfosfonianami” powinien zachowywać się
+           * tak samo jak pozostałe przyciski modułu lekarskiego.  Globalne
+           * style nadają elementom w #modulesWrapper pełną szerokość i
+           * przypisują im kolumnę grid 1/-1, co w układzie dwukolumnowym
+           * sprawia, że przycisk bisfosfonianów wypełnia cały wiersz.
+           * Aby uzyskać symetryczny układ 2×2 (Antybiotykoterapia obok
+           * Leczenia bisfosfonianami), nadpisujemy te właściwości i
+           * dostosowujemy zachowanie do flexboxa.  Ustawiamy display:flex,
+           * aby kontener przycisku korzystał z modelu flex i mógł być
+           * umieszczany obok innych przycisków.  W media query resetujemy
+           * kolumnę grid na auto, dzięki czemu szerokość kontroluje flex,
+           * a przycisk zajmuje połowę wiersza podobnie jak pozostałe.
+           */
+          /* Wyświetlanie flex i kolumna grid dla przycisku leczenia bisfosfonianami zostały
+             przeniesione do wspólnej klasy .module-btn-wrapper. */
+          /* #modulesWrapper #bisphosButtonWrapper { display: flex; } */
+          /* @media (min-width: 700px) {
+            #modulesWrapper #bisphosButtonWrapper { grid-column: auto; }
+          } */
+
+          /* Globalny arkusz stylów ustawia kolumnę siatki dla #abxButtonWrapper na 1 / -1,
+             co powoduje, że przycisk zajmuje całą szerokość w układzie grid.  Ponieważ
+             w tym projekcie korzystamy z flexboxa wewnątrz modulesWrapper, ustawiamy
+             grid-column na auto, aby element zachowywał się jak pozostałe przyciski
+             i mógł być umieszczany w jednej linii z przyciskiem bisfosfonianów. */
+          /* Kolumna grid dla przycisku antybiotykoterapii została przeniesiona do klasy .module-btn-wrapper. */
+          /* @media (min-width: 700px) {
+            #modulesWrapper #abxButtonWrapper { grid-column: auto; }
+          } */
+
+          /* Kalkulator Z‑score ma spaść do kolejnego wiersza (poniżej pary:
+             Rak tarczycy u dzieci + Leczenie bisfosfonianami). */
+          #modulesWrapper #zscoreButtonWrapper {
+            order: 5;
+          }
+
+          /* Zachowaj naturalną kolejność przycisków w DOM.  Nie
+           * modyfikujemy ich właściwości order, ale definiujemy reguły
+           * eksplicytnie dla czytelności. */
+          #modulesWrapper #endoButtonWrapper { order: 0; }
+          #modulesWrapper #igfButtonWrapper  { order: 0; }
+
+          /* When the endocrine test list is toggled, ensure that the
+             “Leczenie hormonem wzrostu / IGF‑1” button stays in the same
+             row alongside the “Testy w endokrynologii” button.  Without
+             an explicit order the new test buttons (GH/OGTT/ACTH) appear
+             before the IGF button in the flex flow, pushing it down.  By
+             assigning a higher order (1) to all endocrine test wrappers and
+             test panels, they are rendered after the main buttons,
+             preventing the IGF button from shifting position when the
+             endocrine list is expanded. */
+          #modulesWrapper #ghButtonWrapper,
+          #modulesWrapper #ghTestsLeft,
+          #modulesWrapper #ghTestsRight,
+          #modulesWrapper #ogttButtonWrapper,
+          #modulesWrapper #ogttTestsLeft,
+          #modulesWrapper #ogttTestsRight,
+          #modulesWrapper #acthButtonWrapper,
+          #modulesWrapper #acthTestsLeft,
+          #modulesWrapper #acthTestsRight {
+            order: 1;
+          }
+        }
+        /*
+         * Style dla przycisków wyboru źródła danych w kalkulatorze Z‑score (batch).
+         * W kontenerze .zscore-source-buttons nadajemy delikatną ramkę i
+         * zaokrąglone narożniki.  Gdy przycisk jest aktywny (klasa .active-toggle),
+         * ramka zmienia kolor na turkusowy (zmienna --primary).
+         */
+        .zscore-source-buttons button {
+          /* Neutral wygląd dla przycisków – usuń domyślne wypełnienie
+             i kolor tła. Używamy !important, aby nadpisać reguły z innych
+             arkuszy (np. motywu Liquid Glass). */
+          border: 1px solid var(--lg-border) !important;
+          background: transparent !important;
+          padding: 0.45rem 1rem;
+          border-radius: var(--radius);
+          cursor: pointer;
+        }
+        .zscore-source-buttons button.active-toggle {
+          border-color: var(--primary);
+        }
+
+        /* === Z‑score batch loading overlay ===
+         * This overlay appears when the user starts the Z‑score (batch) calculation.  It dims
+         * the page and centers a Lottie animation to give the impression of ongoing
+         * processing.  The overlay is hidden by default and shown via JavaScript when
+         * the calculation begins. */
+        #zscoreLoadingOverlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100vw;
+          height: 100vh;
+          height: 100dvh;
+          display: none;
+          align-items: center;
+          justify-content: center;
+          background-color: rgba(255, 255, 255, 0.8);
+          z-index: 20000;
+        }
+      
+        /* === Leczenie nadciśnienia: przywróć klasyczne wypunktowania (sidebar.css resetuje <ul>) === */
+        #hypertensionCard ul {
+          display: block;
+          list-style-type: disc;
+          list-style-position: outside;
+          margin: 0.35rem 0 0.35rem 1.7rem;
+          padding-left: 0.2rem;
+        }
+        #hypertensionCard li {
+          display: list-item;
+          margin: 0.18rem 0;
+          padding-left: 0.2rem; /* „tabulator” – odsuń tekst od znacznika listy */
+        }
+
+
+        /* === PATCH 2026-02-20 — ujednolicenie szerokości przycisków modułów (w tym „Rak tarczycy u dzieci”) === */
+        #modulesWrapper .module-btn {
+          display: block;
+          width: 100% !important;
+          max-width: 520px !important;
+          margin-left: auto;
+          margin-right: auto;
+        }
+        @media (min-width: 700px) {
+          #modulesWrapper .module-btn-wrapper {
+            flex: 0 0 calc(50% - 0.5rem) !important;
+            max-width: calc(50% - 0.5rem) !important;
+          }
+          #modulesWrapper #thyroidCancerKidsButtonWrapper {
+            flex: 0 0 calc(50% - 0.5rem) !important;
+            max-width: calc(50% - 0.5rem) !important;
+          }
+        }
+
+
+/* Moduł SGA (small for gestational age) */
+@media (min-width: 700px) {
+  #modulesWrapper #sgaBirthButtonWrapper {
+    order: 5;
+  }
+}
+.sga-birth-intro {
+  text-align: center;
+  font-size: 0.98rem;
+  line-height: 1.55;
+  margin: 0.45rem auto 0;
+  max-width: 70ch;
+}
+.sga-birth-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.sga-birth-panel {
+  border: 1px solid var(--lg-border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.45);
+}
+.sga-birth-panel h3 {
+  margin: 0 0 0.75rem;
+  text-align: center;
+  font-size: 1rem;
+}
+.sga-birth-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem 1rem;
+}
+.sga-birth-field label,
+.sga-birth-select-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+.sga-birth-help {
+  display: block;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: rgba(20, 44, 47, 0.72);
+  margin-top: 0.32rem;
+}
+.sga-birth-sex-toggle {
+  margin-top: 0.35rem;
+  max-width: 360px;
+}
+.sga-birth-sex-toggle label {
+  margin-bottom: 0 !important;
+}
+.sga-birth-sex-toggle label span {
+  padding: 0.56rem 0.95rem;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+.sga-birth-source-toggle {
+  margin-top: 0.4rem;
+  max-width: 760px;
+  flex-wrap: wrap;
+}
+.sga-birth-source-toggle label {
+  flex: 1 1 180px;
+  margin-bottom: 0 !important;
+}
+.sga-birth-source-toggle label span {
+  padding: 0.56rem 0.74rem;
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+.sga-birth-compare-table-stack {
+  display: grid;
+  gap: 1rem;
+}
+.sga-birth-compare-table-block {
+  border: 1px solid var(--lg-border);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.38);
+  padding: 1rem;
+}
+.sga-birth-compare-table-block h3 {
+  margin: 0 0 0.8rem;
+  text-align: center;
+  font-size: 1rem;
+}
+.sga-birth-compare-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.sga-birth-compare-table {
+  width: 100%;
+  min-width: 620px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.sga-birth-compare-table thead th {
+  padding: 0.7rem 0.8rem;
+  border-top: 1px solid rgba(0, 131, 141, 0.18);
+  border-bottom: 1px solid rgba(0, 131, 141, 0.18);
+  background: rgba(0, 131, 141, 0.08);
+  color: #0b545c;
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: left;
+}
+.sga-birth-compare-table thead th:first-child {
+  border-left: 1px solid rgba(0, 131, 141, 0.18);
+  border-top-left-radius: 14px;
+}
+.sga-birth-compare-table thead th:last-child {
+  border-right: 1px solid rgba(0, 131, 141, 0.18);
+  border-top-right-radius: 14px;
+}
+.sga-birth-compare-table tbody th[scope="row"],
+.sga-birth-compare-table tbody td {
+  padding: 0.75rem 0.8rem;
+  border-bottom: 1px solid rgba(0, 131, 141, 0.14);
+  background: rgba(255, 255, 255, 0.62);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  vertical-align: top;
+}
+.sga-birth-compare-table tbody th[scope="row"] {
+  border-left: 1px solid rgba(0, 131, 141, 0.14);
+  color: #0b545c;
+  font-weight: 700;
+  text-align: left;
+  white-space: nowrap;
+}
+.sga-birth-compare-table tbody td:last-child {
+  border-right: 1px solid rgba(0, 131, 141, 0.14);
+}
+.sga-birth-compare-table tbody tr:last-child th[scope="row"] {
+  border-bottom-left-radius: 14px;
+}
+.sga-birth-compare-table tbody tr:last-child td:last-child {
+  border-bottom-right-radius: 14px;
+}
+.sga-birth-compare-value {
+  font-weight: 600;
+  color: #14313a;
+}
+.sga-birth-compare-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.26rem 0.62rem;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 131, 141, 0.22);
+  background: rgba(0, 131, 141, 0.08);
+  color: #0b545c;
+  font-weight: 700;
+  font-size: 0.84rem;
+  line-height: 1.25;
+  text-align: center;
+}
+.sga-birth-compare-badge.is-ok {
+  border-color: rgba(0, 131, 141, 0.34);
+  background: rgba(0, 131, 141, 0.1);
+  color: #0b545c;
+}
+.sga-birth-compare-badge.is-sga {
+  border-color: rgba(198, 40, 40, 0.42);
+  background: rgba(198, 40, 40, 0.1);
+  color: #9f1d1d;
+}
+.sga-birth-compare-badge.is-missing {
+  border-color: rgba(112, 124, 129, 0.32);
+  background: rgba(112, 124, 129, 0.1);
+  color: rgba(20, 44, 47, 0.66);
+}
+.sga-birth-compare-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+.sga-birth-compare-grid .sga-birth-summary-grid {
+  grid-template-columns: 1fr;
+  max-width: 100%;
+}
+.sga-birth-source-block {
+  min-width: 0;
+  border: 1px solid var(--lg-border);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.38);
+  padding: 1rem;
+}
+.sga-birth-source-header {
+  text-align: center;
+  margin-bottom: 0.85rem;
+}
+.sga-birth-source-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+.sga-birth-source-header p {
+  margin: 0.3rem 0 0;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: rgba(20, 44, 47, 0.74);
+}
+.sga-birth-compare-note {
+  border: 1px solid var(--lg-border);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.52);
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.9rem;
+  text-align: center;
+  line-height: 1.5;
+}
+.sga-birth-compare-note p {
+  margin: 0;
+}
+.sga-birth-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: 1rem;
+}
+.sga-birth-secondary-btn {
+  appearance: none;
+  border: 1px solid var(--lg-border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: inherit;
+  padding: 0.72rem 1.1rem;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.sga-birth-message {
+  display: none;
+  margin-top: 0.9rem;
+  text-align: center;
+  font-weight: 600;
+  line-height: 1.45;
+}
+.sga-birth-message.is-visible {
+  display: block;
+}
+.sga-birth-message.is-error { color: var(--danger); }
+.sga-birth-message.is-success { color: var(--primary); }
+.sga-birth-message.is-warning { color: #8c5b00; }
+.sga-birth-results {
+  margin-top: 1rem;
+}
+.sga-birth-summary-box,
+.sga-birth-meta-box,
+.sga-birth-note-box {
+  border: 1px solid var(--lg-border);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.52);
+  padding: 0.95rem 1rem;
+}
+.sga-birth-summary-box h3,
+.sga-birth-meta-box h3 {
+  margin: 0 0 0.7rem;
+  text-align: center;
+  font-size: 1rem;
+}
+.sga-birth-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+  gap: 0.75rem;
+  max-width: min(640px, 100%);
+  margin: 0 auto;
+  justify-content: center;
+}
+.sga-birth-summary-item {
+  min-width: 0;
+  border: 1.5px solid rgba(0, 131, 141, 0.24);
+  border-radius: var(--radius);
+  background: rgba(0, 131, 141, 0.07);
+  padding: 0.95rem 1rem;
+  text-align: center;
+  box-shadow: 0 0 0 1px rgba(0, 131, 141, 0.08) inset;
+  color: #0b545c;
+  overflow-wrap: anywhere;
+}
+.sga-birth-summary-item.is-ok {
+  border-color: rgba(0, 131, 141, 0.36);
+  background: rgba(0, 131, 141, 0.09);
+  box-shadow: 0 0 0 1px rgba(0, 131, 141, 0.08) inset;
+  color: #0b545c;
+}
+.sga-birth-summary-item.is-sga {
+  border-color: rgba(198, 40, 40, 0.42);
+  background: rgba(198, 40, 40, 0.10);
+  box-shadow: 0 0 0 1px rgba(198, 40, 40, 0.12) inset;
+  color: #9f1d1d;
+}
+.sga-birth-summary-item.is-missing {
+  border-color: rgba(112, 124, 129, 0.32);
+  background: rgba(112, 124, 129, 0.10);
+  box-shadow: 0 0 0 1px rgba(112, 124, 129, 0.10) inset;
+  color: rgba(20, 44, 47, 0.62);
+}
+.sga-birth-summary-label,
+.sga-birth-summary-value {
+  display: block;
+  font-size: 0.98rem;
+  line-height: 1.45;
+  font-weight: 600;
+  color: inherit;
+}
+.sga-birth-summary-value {
+  margin-top: 0.3rem;
+}
+.sga-birth-result-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.85rem;
+  margin-top: 0.9rem;
+}
+.sga-birth-result-grid.is-single {
+  grid-template-columns: minmax(0, 420px);
+  justify-content: center;
+}
+.sga-birth-result-card {
+  border: 1px solid var(--lg-border);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.58);
+  padding: 0.95rem 1rem;
+}
+.sga-birth-result-card h4 {
+  margin: 0 0 0.7rem;
+  text-align: center;
+  font-size: 0.98rem;
+}
+.sga-birth-result-card dl {
+  margin: 0;
+}
+.sga-birth-result-card dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.9rem;
+  padding: 0.34rem 0;
+  border-top: 1px solid rgba(0, 131, 141, 0.12);
+}
+.sga-birth-result-card dl > div:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.sga-birth-result-card dt,
+.sga-birth-result-card dd {
+  margin: 0;
+  line-height: 1.4;
+}
+.sga-birth-result-card dt {
+  color: rgba(20, 44, 47, 0.78);
+}
+.sga-birth-result-card dd {
+  text-align: right;
+  font-weight: 600;
+}
+.sga-birth-note-box {
+  margin-top: 0.9rem;
+}
+.sga-birth-note-box p,
+.sga-birth-meta-box p {
+  margin: 0.18rem 0;
+  line-height: 1.5;
+}
+.sga-birth-compare-reference-box,
+.sga-birth-compare-footnotes {
+  margin-top: 1rem;
+}
+.sga-birth-compare-reference-box h3,
+.sga-birth-compare-footnotes h3 {
+  margin: 0 0 0.7rem;
+  text-align: center;
+  font-size: 1rem;
+}
+.sga-birth-toast {
+  position: fixed;
+  left: 50%;
+  bottom: max(1rem, calc(env(safe-area-inset-bottom, 0px) + 1rem));
+  transform: translate(-50%, 10px);
+  opacity: 0;
+  background: rgba(20, 44, 47, 0.94);
+  color: #fff;
+  border-radius: 999px;
+  padding: 0.55rem 0.95rem;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+  z-index: 99999;
+  pointer-events: none;
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+.sga-birth-toast.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+@media (max-width: 860px) {
+  .sga-birth-form,
+  .sga-birth-grid,
+  .sga-birth-summary-grid,
+  .sga-birth-compare-grid {
+    grid-template-columns: 1fr;
+  }
+  .sga-birth-source-toggle label {
+    flex-basis: calc(50% - 0.35rem);
+  }
+}
+@media (max-width: 720px) {
+  .sga-birth-compare-table {
+    min-width: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+  .sga-birth-compare-table thead {
+    display: none;
+  }
+  .sga-birth-compare-table,
+  .sga-birth-compare-table tbody,
+  .sga-birth-compare-table tr,
+  .sga-birth-compare-table th,
+  .sga-birth-compare-table td {
+    display: block;
+    width: 100%;
+  }
+  .sga-birth-compare-table tbody tr {
+    border: 1px solid rgba(0, 131, 141, 0.16);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.62);
+    margin-bottom: 0.8rem;
+    padding: 0.15rem 0.9rem 0.8rem;
+  }
+  .sga-birth-compare-table tbody tr:last-child {
+    margin-bottom: 0;
+  }
+  .sga-birth-compare-table tbody th[scope="row"] {
+    border: 0;
+    border-bottom: 1px solid rgba(0, 131, 141, 0.14);
+    border-radius: 0;
+    background: transparent;
+    padding: 0.72rem 0 0.58rem;
+    margin-bottom: 0.08rem;
+    white-space: normal;
+  }
+  .sga-birth-compare-table tbody td {
+    border: 0;
+    border-top: 1px solid rgba(0, 131, 141, 0.12);
+    background: transparent;
+    padding: 0.5rem 0;
+    display: grid;
+    grid-template-columns: minmax(110px, 48%) 1fr;
+    gap: 0.7rem;
+    align-items: start;
+  }
+  .sga-birth-compare-table tbody td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    color: rgba(20, 44, 47, 0.74);
+    line-height: 1.35;
+  }
+  .sga-birth-compare-badge {
+    justify-self: start;
+  }
+}
+@media (max-width: 520px) {
+  .sga-birth-source-toggle label {
+    flex-basis: 100%;
+  }
+}
+

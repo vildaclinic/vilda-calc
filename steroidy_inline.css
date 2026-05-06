@@ -1,0 +1,554 @@
+  select.srcDrug { 
+    width: 100% !important; 
+    min-width: 0 !important;
+  }
+  /* ---------- Globalne zmienne ---------- */
+  :root {
+    /* szerokość list wyboru na desktop – liczona w JS;
+       na mobile nadpisujemy ją w media query poniżej */
+    --select-unified-width: auto;
+    --select-unified-width-mob: 100%;
+  }
+
+  /* ---------- Skalowanie typografii ---------- */
+  html {
+    /* Ujednolicamy podstawową wielkość czcionki z pozostałymi podstronami.
+       Zamiast skalowania wraz z szerokością ekranu stosujemy stały
+       rozmiar 16 px, co eliminuje wrażenie „powiększenia” całej strony. */
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;      /* iOS Safari poprawa */
+  }
+  /* body { margin, font-family, line-height } usunięte (Etap 4.3d) — duplikat ze style.css. Powodował repaint permanentnego body przy nawigacji Turbo. */
+
+  /* Domyślne rozmiary czcionek formularza – ujednolicone dla wszystkich
+     elementów, aby ułatwić czytanie zarówno na desktopie, jak i na
+     urządzeniach mobilnych */
+  label {
+    font-size: 0.95rem;
+  }
+  input,
+  select,
+  button {
+    font-size: 1rem;
+    line-height: 1.3;
+  }
+
+  /* ---------- Kontener ogólny ---------- */
+  .container {
+    max-width: 900px;
+    margin-inline: auto;
+  }
+
+  /* Wariant kontenera dla kalkulatora steroidów: brak ograniczenia szerokości.
+     Dzięki tej regule formularz i wyniki mogą rozciągać się na pełen viewport,
+     co zapobiega ograniczeniu do jednej kolumny. */
+  .calc-container {
+    /* Nie ograniczaj szerokości kontenera – pozwól rozciągać się na 100% szerokości */
+    /* Pozwól rozciągać się na całą szerokość ekranu, ale ogranicz maksymalną
+       szerokość do 1200px, aby zachować czytelny układ na dużych monitorach.
+       Dzięki temu sekcja wyników może bez problemu tworzyć dwie kolumny,
+       a formularz pozostanie czytelny. */
+    /* Ograniczenie szerokości do 960 px tak, aby strona nie wykraczała
+       poza obszar wyznaczony przez dwie kolumny na głównej stronie i
+       była wyrównana z linią przycisku hamburgera w nawigacji. */
+    max-width: 960px;
+    width: 100%;
+    /* Wewnętrzne odstępy jak w głównym kontenerze z style.css?v=5 */
+    padding: 0.25rem;
+    margin-top: 0.75rem;
+    /* Wyśrodkuj cały blok kalkulatora; po prawej i lewej będzie taki sam
+       margines w zależności od szerokości okna, aby uniknąć pustej strefy
+       tylko z jednej strony. */
+    margin-inline: auto;
+  }
+
+  /* Zapewnij, że formularz z danymi wejściowymi wykorzystuje całą szerokość
+     kontenera. Bez tego element fieldset pozostawał węższy niż dostępna
+     przestrzeń, przez co lewa kolumna była szeroka, a prawa pusta. */
+  .calc-container form fieldset {
+    width: 100%;
+  }
+
+  /* Na tej stronie rezygnujemy z układu gridowego zdefiniowanego globalnie
+     dla formularza (#calcForm). Ustawiamy display: block, aby elementy
+     wewnątrz formularza zajmowały pełną szerokość kontenera i nie były
+     ograniczane do pojedynczej kolumny z pozostawioną pustą przestrzenią. */
+  .calc-container #calcForm {
+    display: block;
+  }
+
+  /* Dodatkowy odstęp poniżej formularza, aby oddzielić go od wyników. */
+  #calcForm {
+    margin-bottom: 1.5rem;
+  }
+
+
+  /* ---------- Wiersz dawki (formularz) ---------- */
+  .dose-row {
+    display: flex;
+    flex-wrap: wrap;       /* ważne dla układu na mobile */
+    gap: 0.75rem;
+  }
+  .dose-row > label {
+    flex: 1 1 150px;       /* każda „kolumna” min. 150px */
+  }
+  select.srcDrug {
+    width: var(--select-unified-width);
+    min-width: var(--select-unified-width);
+    max-width: 100%;       /* nie wystawaj poza widok */
+  }
+  /* Stała numeracja wierszy + separator */
+  #sourceRows { counter-reset: row; }  /* zerujemy licznik przed listą dawek */
+  .dose-row {
+    position: relative;
+    padding: 0.85rem 0 0.85rem 3rem;    /* odstęp z lewej na numerację */
+    border-top: 1px solid #e5e5e5;      /* delikatna linia oddzielająca */
+  }
+  .dose-row:first-child {
+    border-top: none;
+    padding-top: 0;
+  }
+  .dose-row::before {                  /* numer porządkowy przed wierszem */
+    counter-increment: row;
+    content: counter(row) ".";
+    position: absolute;
+    left: 0;
+    top: 0.9rem;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  @media (max-width: 640px) {
+    select.srcDrug {
+      /* na urządzeniach <640px stosujemy pełną szerokość */
+      width: var(--select-unified-width-mob) !important;
+      min-width: 0 !important;
+    }
+    /* Na wąskich ekranach zwiększamy odstępy i wielkość przycisków,
+       aby ułatwić obsługę dotykową. */
+    .add-row,
+    button[type="submit"] {
+      font-size: 1.2rem;
+      padding: 0.6rem 1rem;
+    }
+    .dose-row {
+      padding: 1rem 0 1rem 3rem;
+      gap: 1rem;
+      /* Na małych ekranach układamy pola w kolumnie, aby uniknąć
+         „łamania” linii przy większych czcionkach. */
+      flex-direction: column;
+    }
+
+    /* Każde pole zajmuje pełną szerokość wiersza na mobile */
+    .dose-row > label {
+      flex: 1 1 100%;
+    }
+  }
+
+  /* ---------- Waga i wzrost w jednym wierszu ---------- */
+  /* Grupuje pola masy ciała (waga) i wzrostu, aby układały się
+     obok siebie na szerokich ekranach. Na węższych ekranach (mobile)
+     elementy te zostaną ułożone pionowo dzięki regułom poniżej. */
+  .weight-height-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  .weight-height-row > div {
+    flex: 1 1 150px;
+  }
+
+  @media (max-width: 640px) {
+    /* W widoku mobilnym ustawiamy pola w kolumnie,
+       aby zapewnić wygodę użytkowania. */
+    .weight-height-row {
+      flex-direction: column;
+    }
+    .weight-height-row > div {
+      flex: 1 1 100%;
+    }
+  }
+
+  /* ---------- Przyciski ---------- */
+  .add-row { margin-top: 1rem; }
+  @media (max-width: 640px) {
+    .add-row { font-size: 1.125rem; } /* większe przyciski na mobile */
+  }
+
+  /* ---------- Sekcja wyników ---------- */
+  .grid-two {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  /* Wyrównujemy górne krawędzie kolumn w układzie grid */
+  align-items: start;
+  }
+  @media (max-width: 640px) {
+    .grid-two { grid-template-columns: 1fr; } /* jedna kolumna na mobile */
+  }
+  .result-box, .table-scroll {
+    overflow: auto;
+  }
+
+  /* ---------- Fieldsety wynikowe ---------- */
+  /* Używamy ich do prezentacji poszczególnych przeliczeń w formie spójnej z
+     podsumowaniem. Każdy fieldset otrzymuje obramowanie i odstępy. */
+  .result-fieldset {
+    border: 1px solid #ccc;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0rem;
+    border-radius: 6px;
+  }
+  
+  .result-fieldset p{
+  font-size:1.2rem;
+  }
+
+  .result-fieldset legend {
+    font-weight: bold;
+    padding: 0 0.5rem;
+    /* Wyśrodkuj legendy (nagłówki) w polach wynikowych */
+    display: table;
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  /* Ustawiamy domyślne wyrównanie tekstu w polach wynikowych na środek,
+     dzięki czemu nagłówki (legend) i elementy z klasą result-heading są
+     wyśrodkowane. Następnie wyśrodkowane ustawienie nadpisujemy w
+     akapitach wewnątrz fieldsetów tak, aby treść wyników pozostała
+     wyrównana do lewej. */
+  .result-fieldset {
+    text-align: center;
+  }
+  .result-fieldset p {
+    text-align: left;
+  }
+
+  /* Nagłówki sekcji wyników w polach wynikowych. Zastępują legend i są
+     wyświetlane w centrum karty. */
+  .result-heading {
+    display: block;
+    width: 100%;
+    font-weight: bold;
+    text-align: center;
+    margin: 0 0 0.5rem;
+  }
+
+  /* Dodatkowe wyrównanie – upewnia się, że wszystkie legendy w sekcji wyników
+     (w tym te dodawane dynamicznie) mają wyrównanie do środka */
+  #results legend {
+    text-align: center;
+    display: table;
+    margin: 0 auto;
+  }
+  /* Nagłówki fieldsetów wynikowych */
+  .result-title{
+    font-weight: 700;
+    font-size: 1.3rem;   /* ≈18 px przy root‑em = 16 px */
+    line-height: 1.25;
+    display: block;        /* aby działało margin:auto */
+    width: 100%;
+    text-align: center;
+    margin: 0 0 .5rem;
+  }
+
+  /* „Zerujemy” domyślny padding legendy, gdy ma naszą klasę */
+  .result-fieldset legend.result-title{ padding:0; }
+  /* ---------- Wykres HPTA ---------- */
+  #hptaInfo ul { margin-top:0; }
+  #hptaInfo li { margin-bottom:0.4rem; }
+  #hptaChart {
+    width: 100% !important;
+    height: auto;
+  }
+  /* === przełącznik suwak «Tylko HPTA» ================================= */
+  .hpta-switch{
+    margin:1.1rem 0 1.6rem;
+    display:flex;align-items:center;     /* pionowe wyśrodkowanie */
+    gap:.75rem;font-size:1rem;
+  }
+  .hpta-switch input{position:absolute;opacity:0;}  /* chowamy natywny */
+
+  .hpta-switch label{
+    display:flex;align-items:center;     /* tekst zrównany środkiem */
+    position:relative;
+    cursor:pointer;user-select:none;
+    line-height:1;                       /* bez wpływu line‑height */
+  }
+
+  /* ─── tor suwaka ─── */
+  .hpta-switch label::before{
+    content:'';position:relative;
+    flex:0 0 50px;height:24px;           /* szer. i wys. toru */
+    background:#c6c6c6;border-radius:12px;
+    transition:background .25s;
+  }
+
+  /* ─── kółko ─── */
+  .hpta-switch label::after{
+    content:'';position:absolute;
+    left:3px;top:50%;transform:translateY(-50%);
+    width:20px;height:20px;
+    background:#fff;border-radius:50%;
+    box-shadow:0 0 2px rgba(0,0,0,.4);
+    transition:transform .25s;
+  }
+
+  /* ─── stan ON – kolor z CSS‑a zmiennej --btn-color ─── */
+  .hpta-switch input:checked + label::before{
+    background:var(--btn-color,#1e7fc7);
+  }
+  .hpta-switch input:checked + label::after{
+    transform:translate(26px,-50%);
+  }
+
+  /* Mobile – ciut większy suwak */
+  @media(max-width:640px){
+    .hpta-switch label::before{flex:0 0 58px;height:28px;}
+    .hpta-switch label::after{width:24px;height:24px;}
+    .hpta-switch input:checked + label::after{transform:translate(30px,-50%);}
+  }
+
+  /*
+   * ================================================================
+   * Dostosowania graficzne (2025‑07‑26)
+   *
+   * Ujednolicamy kolor obramowania dla podsumowania („Łączna dawka równoważna”)
+   * oraz kontenera z indywidualnymi przeliczeniami. Używamy tej samej
+   * wartości co nagłówek i przycisk „Przelicz”, czyli CSS‑owej zmiennej
+   * `--btn-color`. Jeśli z jakiegoś powodu zmienna nie jest ustawiona,
+   * stosujemy kolor zapasowy #1e7fc7 (turkusowy/niebieski).
+   *
+   * Dodatkowo wyrównujemy odstępy – sekcja wyników ma teraz stały
+   * margines górny, aby obie kolumny (tekstowa i tabelaryczna) były
+   * równo odsunięte od poprzedzającego formularza wejściowego.
+   */
+  /* Kontenery w sekcji wyników (card) – border w kolorze turkusowym */
+  #results .card {
+    border-color: var(--btn-color, #1e7fc7);
+    /* Zeruj górny margines i wypełnienie, aby obie kolumny zaczynały się
+       w tej samej linii. Przy okazji poprawiamy zapis jednostek (1rem bez spacji). */
+    margin-top: 0;
+    padding-top: 1.0 rem;
+    /* Upewnij się, że elementy są wyrównane do górnej krawędzi w układzie grid */
+    align-self: start;
+  }
+  /* Fieldsety w sekcji wynikowej – identyczny kolor obramowania */
+  .result-fieldset {
+    border-color: var(--btn-color, #1e7fc7);
+  }
+  /* Stały odstęp nad sekcją wynikową */
+  #results {
+    /* Większy odstęp oddzielający formularz od wyników */
+    margin-top: 2rem;
+  }
+
+  /* Wyróżnienie etykiet „Steroid źródłowy” i „Steroid docelowy”
+     ------------------------------------------------------------
+     Wartość kolorystyczna przyjęta dla tych etykiet powinna być
+     spójna z nagłówkiem „Dawka równoważna” w sekcji wyników. Nagłówek
+     ten korzysta z domyślnego koloru legendy (zmienna CSS --primary),
+     dlatego poniższe reguły również używają tego samego koloru.  
+
+     Selekcja pierwszego labela w każdym wierszu .dose-row odpowiada
+     etykiecie „Steroid źródłowy”. Druga reguła dotyczy pola „Steroid
+     docelowy”, które ma atrybut for="targetDrug". Dzięki temu
+     zmiany są ograniczone do formularza #calcForm i nie wpływają na
+     inne etykiety na stronie. */
+  #calcForm .dose-row > label:first-child,
+  #calcForm label[for="targetDrug"] {
+    font-weight: 700;      /* pogrubienie tekstu */
+    color: var(--primary); /* kolor jak w nagłówku Dawka równoważna */
+    font-size: 1.2rem; 
+  }
+
+  /* Centracja i poszerzenie przycisku „Przelicz”
+     ------------------------------------------------------------
+     Główny przycisk obliczający dawkę („Przelicz”) jest elementem
+     formularza o typie submit. Aby wyróżnić go wizualnie, ustawiamy go
+     jako blok z automatycznymi marginesami po bokach, dzięki czemu
+     pojawia się na środku kontenera. Szerokość przycisku została
+     zwiększona poprzez podwojenie poziomego wypełnienia względem
+     domyślnych ustawień w style.css?v=5, zachowując przy tym wysokość.
+
+     Selektor ogranicza regułę do formularza kalkulatora (#calcForm),
+     aby nie wpływać na inne potencjalne przyciski typu submit w
+     późniejszych sekcjach. */
+  #calcForm button[type="submit"] {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    /* Podwajamy poziomy padding (0.9rem → 1.8rem) dla większej szerokości */
+    padding-left: 1.8rem;
+    padding-right: 1.8rem;
+  }
+
+  /* Korekta wypełnienia górnego dla głównego fieldsetu formularza
+     ------------------------------------------------------------
+     Po usunięciu legendy „Dane wejściowe” pozostało standardowe
+     wypełnienie górne (padding-top) ustawione w style.css?v=5 na 1.4rem,
+     co tworzyło pustą przestrzeń na górze formularza. Aby cała
+     zawartość była bliżej górnej krawędzi fieldsetu, zmniejszamy
+     górny padding o 1rem. Ostateczny padding-top wynosi 0.4rem.
+     Reguła ta jest zawężona do #calcForm, aby nie wpływać na
+     inne pola typu fieldset na stronie. */
+  #calcForm > fieldset {
+    padding-top: 0.4rem;
+  }
+  /* odsunięcie tekstu nagłówka od obramowania */
+  #textResult .result-fieldset .result-title {
+    padding: 0.25rem 0.75rem; /* góra/dół, lewo/prawo – im większe wartości, tym większy odstęp */
+  }
+  /* Center text inside the summary results fieldset */
+  #textResult .result-fieldset {
+    /* Ustawiamy flexbox, aby móc wyśrodkować treść w pionie.  */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    /* Wyśrodkuj tekst w osi X */
+    text-align: center;
+    padding-top: 2rem;    /* zwiększ tę wartość, aby powiększyć odstęp od górnej krawędzi */
+    padding-bottom: 1rem; /* analogicznie dla dolnej krawędzi */
+  }
+
+  /* --------------------------------------------------------------------
+   * Poprawki dla urządzeń mobilnych
+   *
+   * • Ukrycie przewijania poziomego: na niektórych smartfonach kliknięcie
+   *   w pola formularza (masa ciała, wzrost, dawka) powoduje delikatne
+   *   powiększenie strony, co z kolei umożliwia przewijanie kalkulatora
+   *   w poziomie. Aby temu zapobiec, blokujemy poziome przewijanie na całej
+   *   stronie. Przewijanie poziome pozostaje dostępne tylko w miejscach
+   *   zdefiniowanych lokalnie (np. tabele wyników, które mają własny
+   *   overflow).
+   * • Ustawienie minimalnej wielkości czcionki dla pól formularza na
+   *   urządzeniach mobilnych: przeglądarki mobilne Safari automatycznie
+   *   przybliżają stronę, gdy pole wejściowe ma czcionkę mniejszą niż 16 px.
+   *   Podnosząc rozmiar tekstu w polach input i select do 16 px, zapobiegamy
+   *   auto‑zoomowaniu.
+   */
+  /* body { overflow-x: hidden } usunięte (duplikat zachowania ze style.css w innym selektorze) */
+  @media (max-width: 640px) {
+    input[type="number"],
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"],
+    select,
+    textarea {
+      font-size: 16px;
+    }
+    /* Upewnij się, że kontener nie przekracza szerokości viewportu */
+    .container {
+      max-width: 100%;
+    }
+  }
+
+  /* Akapity w podsumowaniu: wyrównaj do środka i usuń nadmierne marginesy,
+     aby ułatwić pionowe wyśrodkowanie. */
+  #textResult .result-fieldset p {
+    text-align: center;
+    margin: 0.3rem 0;
+  }
+
+  /* Zwiększamy odstęp między ostrzeżeniem a wykresem supresji HPTA o 1 rem.
+     Gdy użytkownik przelicza steroidy z grupy AAS, po sekcji ostrzeżenia
+     (Uwaga: ...) pojawia się wykres „Supresja osi HPTA”.  Domyślnie oba
+     elementy są kartami (section.card) z tylko wewnętrznym wypełnieniem,
+     dlatego przestrzeń między nimi może być zbyt mała.  Poniższa reguła
+     dodaje dodatkowy margines górny dla wykresu, ale tylko wtedy, gdy
+     występuje bezpośrednio po ostrzeżeniu.  Dzięki temu zachowujemy
+     domyślne odstępy na innych podstronach, jednocześnie zwiększając
+     odległość między ostrzeżeniem a wykresem o 1 rem na stronie steroidy. */
+  #warningSection + #chartCard {
+    margin-top: 1rem;
+  }
+
+  /* Dodaj dodatkowy odstęp 1 rem pomiędzy wykresem a sekcją objaśniającą.
+     Gdy wykres supresji HPTA jest wyświetlany, poniżej znajduje się sekcja
+     „Jak czytać wykres supresji HPTA?”.  Domyślnie elementy te są kartami
+     ustawionymi jedna po drugiej z niewielkim odstępem wynikającym z
+     wewnętrznego wypełnienia.  Poniższa reguła stosuje dodatkowy
+     margines górny do sekcji objaśnienia, ale tylko wtedy, gdy występuje
+     bezpośrednio po sekcji z wykresem.  Dzięki temu odstęp między nimi
+     zostaje zwiększony o 1 rem. */
+  #chartCard + #hptaInfo {
+    margin-top: 1rem;
+  }
+
+  /* ---------- Stylowanie wyników ---------- */
+  /* Liniom z przelicznikiem i komentarzem nadajemy mniejszą czcionkę, aby były mniej dominujące */
+  .result-fieldset .convert-info {
+    /* Ustaw ten sam rozmiar czcionki co ostrzeżenie o charakterze poglądowym
+       (tekst „Uwaga: ...”), aby przelicznik i komentarze były spójne wizualnie */
+    font-size: 1rem;
+  }
+  /* Linie z głównym wynikiem (równoważnik), mg/kg i BSA wyróżniamy strzałką po lewej stronie */
+  .result-fieldset .highlight-row {
+    position: relative;
+    padding-left: 1.5rem;
+  }
+  .result-fieldset .highlight-row::before {
+    content: "➜";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1rem;
+    color: var(--primary);
+    animation: arrowMove 1s ease-in-out infinite;
+  }
+  @keyframes arrowMove {
+    0%   { transform: translate(-1px, -50%); opacity: 0.6; }
+    50%  { transform: translate(4px, -50%); opacity: 1; }
+    100% { transform: translate(-1px, -50%); opacity: 0.6; }
+  }
+
+  /*
+   * Stylowanie tabeli w widoku desktop dla wyników wielu dawek
+   * ----------------------------------------------------------
+   * Gdy użytkownik doda więcej niż jedną dawkę, wyniki poszczególnych
+   * przeliczeń są prezentowane w formie tabeli podsumowującej. Poniższe
+   * reguły zapewniają pełną szerokość tabeli, czytelne odstępy oraz
+   * prosty układ bez animowanych strzałek. Strzałki pozostają nadal
+   * widoczne w podsumowaniu (fieldset z „Łączna dawka równoważna”).
+   */
+  #tableResult .result-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  #tableResult .result-table th,
+  #tableResult .result-table td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid #e0e0e0;
+    text-align: left;
+    vertical-align: top;
+  }
+  #tableResult .result-table th {
+    font-weight: 600;
+  }
+
+  /*
+   * Zwiększ odstęp pod tabelą z przeliczeniami w przypadku wielu dawek.
+   * Po wyświetleniu tabeli (desktop) lub listy fieldsetów (mobile) sekcja z
+   * ostrzeżeniem powinna być wyraźnie oddzielona od wyników. Ustawiamy
+   * dolny margines na 2 rem dla kontenera tabeli/fieldsetów. Ponieważ
+   * #tableResult jest ukryty przy jednej dawce (display:none), ta reguła
+   * dotyczy tylko przypadków, gdy tabelę widać.
+   */
+  #tableResult {
+    margin-bottom: 1rem;
+  }
+
+  /* --------------------------------------------------------------------
+   * PWA/iOS dostosowania
+   *
+   * Na urządzeniach z iOS (zwłaszcza iPhone'y z Dynamic Island) konieczne
+   * jest uwzględnienie bezpiecznej strefy u góry ekranu. Dzięki temu logo
+   * kalkulatora nie zachodzi na wycięcie w ekranie. Używamy zmiennej
+   * env(safe-area-inset-top), która zwraca wysokość bezpiecznej strefy.
+   * Dodajemy ją do istniejącego marginesu górnego nagłówka; jeśli
+   * przeglądarka nie obsługuje env(), wartość domyślna wynosi 0.
+   */
+  /* header { padding: 1rem } usunięte — duplikat ze style.css; powodował repaint permanentnego headera przy nawigacji Turbo. */

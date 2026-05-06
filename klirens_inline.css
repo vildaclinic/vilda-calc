@@ -1,0 +1,1445 @@
+/* :root variables, body, *, header, h1 — usunięte (Etap 4.3d). Były duplikatami
+   reguł z style.css. Gdy Turbo wymieniał klirens_inline.css przy nawigacji,
+   te identyczne ale re-zaaplikowane reguły powodowały repaint permanentnego
+   headera. Wartości pochodzą teraz z style.css i nie trzeba ich powielać. */
+/*
+ * Dodatkowe klasy użytkowe, aby ułatwić dostosowanie interfejsu użytkownika.
+ *
+ *  - .center-text: wyrównuje tekst do środka. Używamy go m.in. dla nagłówków
+ *    sekcji, aby etykiety „Wybierz wersję kalkulatora” oraz nagłówki kart
+ *    wyników były czytelnie wyśrodkowane.
+ *  - .inline-checkbox-label: stosuje flexbox, aby tekst i pole wyboru były
+ *    ustawione obok siebie w jednej linii, z niewielkim odstępem między nimi.
+ *    Dodatkowo ustawia środkowanie całego wiersza, aby etykieta wraz z
+ *    checkboxem była wyśrodkowana względem rodzica.
+ *  - .white-checkbox: całkowicie nadpisuje domyślne style przeglądarki dla
+ *    pola wyboru. Dzięki własnemu obramowaniu i białemu tłu checkboxy
+ *    pozostają jasne nawet w ciemnym motywie systemu. Po zaznaczeniu
+ *    rysujemy kolorowy „ptaszek” w kolorze motywu głównego.
+ *  - .ktv-grid: wymusza układ pól KT/V w jednej kolumnie nawet na szerokich
+ *    ekranach. Umożliwia zachowanie przejrzystości sekcji zaawansowanych
+ *    obliczeń.
+ */
+.center-text {
+  text-align: center;
+}
+.inline-checkbox-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  /* Nie zawijaj poszczególnych elementów w nowej linii, aby checkbox zawsze
+     znajdował się obok tekstu.  Dzięki temu checkbox nie zsunie się pod
+     tekst nawet na węższych ekranach. */
+  flex-wrap: nowrap;
+}
+.white-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 1.1em;
+  height: 1.1em;
+  border: 1px solid var(--text);
+  border-radius: 4px;
+  background-color: #fff;
+  position: relative;
+  cursor: pointer;
+}
+.white-checkbox:checked::after {
+  content: '';
+  position: absolute;
+  top: 0.15em;
+  left: 0.35em;
+  width: 0.25em;
+  height: 0.55em;
+  border: solid var(--primary);
+  border-width: 0 0.2em 0.2em 0;
+  transform: rotate(45deg);
+}
+.ktv-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+/* * box-sizing usunięto — duplikat z style.css */
+/* body { ... } — wycięte (duplikat z style.css). Reapplikowanie powodowało
+   repaint permanentnego elementu przy nawigacji Turbo. */
+
+/* Usunięto pasek instalacyjny PWA */
+.container { max-width: 960px; margin-inline: auto; padding: 1rem; }
+fieldset {
+  border: 1px solid #d0dede;
+  background: var(--card);
+  padding: 1.4rem 1rem 1rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+legend {
+  font-weight: 600;
+  color: var(--primary);
+  background: var(--card);
+  padding: 0 .6rem;
+  font-size: 1rem;
+  position: absolute;
+  top: -0.7rem;
+  left: 0;
+}
+label {
+  display: block;
+  margin-top: 0.7rem;
+  font-size: 0.95rem;
+}
+input, select, option {
+  font-family: system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  width: 100%;
+  padding: 0.45rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+/*
+ * The native select element can render slightly shorter than text inputs on some
+ * platforms because the UA stylesheet uses a different internal line-height.
+ * To ensure the unit selector for serum creatinine (ScrUnit) aligns neatly
+ * with other input fields, give it an explicit height calculated from the
+ * input’s font size, padding and borders. The calculation below mirrors
+ * 1rem of text height, 0.9rem total vertical padding (0.45rem top and
+ * bottom) and 2 px of border, yielding an overall height matching the
+ * number inputs. Adjusting only this select avoids unexpectedly resizing
+ * all dropdowns across the form.
+ */
+#ScrUnit {
+  /*
+   * Match the vertical height of the text inputs. Inputs inherit a
+   * line‑height of roughly 1.2, so the height is the sum of that line
+   * height (≈1.2 rem), the vertical padding (0.9 rem) and the 2 px borders.
+   * Using calc(2.1rem + 2px) yields ~35.6 px, closely aligning the dropdown
+   * with the number/text inputs across browsers. Padding is kept
+   * consistent with other controls.
+   */
+  height: calc(2.1rem + 2px);
+  padding: 0.45rem 0.65rem;
+  line-height: 1rem;
+}
+/* Ensure serum calcium and phosphate unit selectors match input height */
+#S_Ca_unit,
+#S_PO4_unit {
+  /* Match the height of other inputs (similar to #ScrUnit) */
+  height: calc(2.1rem + 2px);
+  padding: 0.45rem 0.65rem;
+  line-height: 1rem;
+}
+/* Ensure the unit selector for creatinine in a spot urine sample (#Ucr_spot_unit) matches the height of other inputs.
+   This mirrors the sizing applied to the serum creatinine and calcium/phosphate selectors so that the layout remains
+   consistent when switching units between mg/dl and µmol/L. */
+#Ucr_spot_unit {
+  height: calc(2.1rem + 2px);
+  padding: 0.45rem 0.65rem;
+  line-height: 1rem;
+}
+.flex {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  /* Zapobiegamy rozciąganiu elementów na jednakową wysokość, aby uniknąć dużych pustych przestrzeni w polu „Parametry z surowicy i DZM” */
+  align-items: flex-start;
+}
+.snack-row, .meal-row {
+  display: grid;
+  grid-template-columns: 1fr 100px 34px;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+button.icon {
+  background: none;
+  border: none;
+  font-size: 1.35rem;
+  cursor: pointer;
+  color: var(--danger);
+  font-weight: 900;
+  line-height: 1;
+}
+button.icon:hover { opacity: 0.8; }
+button.add-row {
+  background: var(--secondary);
+  color: #fff;
+  border: none;
+  padding: 0.45rem 0.9rem;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 0.7rem;
+}
+button.add-row:hover { background: var(--primary); }
+#results {
+  display: none;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+.card {
+  /* Przywracamy oryginalny kolor tła kart (tzw. card), aby całe sekcje wyników pozostały w barwie motywu */
+  background: var(--card);
+  padding: 1rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.activity-time {
+  margin: 0.4rem 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.6rem;
+}
+th, td {
+  border: 1px solid #ddd;
+  padding: 0.6rem;
+  text-align: center;
+  font-size: 0.95rem;
+}
+th {
+  background: var(--secondary);
+  color: #fff;
+}
+footer {
+  margin-top: 0rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: #666;
+  padding: 1rem 0;
+  background: #fafafa;
+}
+@media(min-width: 700px) {
+  .grid-two {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+}
+
+/* center calorie burn block */
+#timesCard { text-align: center; }
+
+/* Powiększone ramki wyników BMI i BMR */
+.result-box {
+  /* Zmieniamy kolor obramowania pól wyników na turkusowy jak nagłówek */
+  border: 2px solid var(--primary);
+  border-radius: 8px;
+  padding: 10px;
+  margin: 12px 0;
+  font-size: 1.3rem;
+  /* Domyślnie tło wyników ustawiamy na białe, aby kontenery były jaśniejsze */
+  background: #ffffff;
+  text-align: center;
+  /* Dodajemy delikatny cień, aby pola wyników były spójne z kartami */
+  box-shadow: var(--shadow);
+}
+
+/* --- legenda wewnątrz ramek fieldset --- */
+fieldset {
+  position: relative;
+  padding-top: 1.0rem;   /* miejsce na legendę */
+}
+legend {
+  position: absolute;
+  top: 0;
+  left: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  padding: 0 .5rem;
+  background: var(--card); /* kolor karty, zakrywa linię ramki */
+  border-radius: var(--radius);
+}
+/* zaokrąglone logo jak kontenery wyników */
+header img {
+  border-radius: var(--radius);
+  display: inline-block; /* opcjonalnie, żeby mieć pewność */
+}
+/* Wyśrodkowanie nagłówka w karcie "Droga do normy BMI" */
+#toNormCard h2 {
+  text-align: center;
+}
+
+html, body {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: auto;
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+}
+html {
+  min-height: 100%;
+}
+body {
+  min-height: 100%;
+}
+@supports (min-height: 100svh) {
+  body {
+    min-height: 100svh;
+  }
+}
+@supports (min-height: 100dvh) {
+  body {
+    min-height: 100dvh;
+  }
+}
+/* =====================  UI REFINEMENTS – 2025‑06‑29  ===================== */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+body {
+  font-size: 16px;
+  line-height: 1.5;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Styl raportu PDF – wyświetlany tylko podczas generowania PDF. Używa większych fontów
+   i klarownego układu, aby raport był czytelny na jednej stronie A4. */
+#pdfReport {
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--text);
+  width: 100%;
+  max-width: 180mm; /* ogranicz szerokość raportu, aby zmieścił się na stronie A4 (210 mm minus marginesy) */
+  margin: 0 auto;
+  padding: 0;
+}
+#pdfReport .section {
+  margin-bottom: 10px;
+  page-break-inside: avoid;
+}
+#pdfReport h2 {
+  font-size: 22px;
+  margin: 0 0 6px;
+  color: var(--primary);
+}
+#pdfReport h3 {
+  font-size: 16px;
+  margin: 8px 0 4px;
+  color: var(--secondary);
+}
+#pdfReport p {
+  margin: 2px 0;
+}
+#pdfReport .result-item {
+  margin: 2px 0;
+  font-size: 14px;
+}
+#pdfReport .result-item strong {
+  font-weight: 600;
+}
+#pdfReport .range {
+  color: #666;
+  font-style: italic;
+  margin-left: 2px;
+}
+#pdfReport .out-of-range {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+/* Buttons */
+button,
+input[type="button"],
+input[type="submit"] {
+  cursor: pointer;
+  font: inherit;
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.55rem 1.1rem;
+  background: var(--primary);
+  color: #fff;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+button:hover,
+input[type="button"]:hover,
+input[type="submit"]:hover {
+  background: var(--secondary);
+  box-shadow: var(--shadow);
+}
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Icon (×) buttons inside rows */
+button.icon {
+  background: transparent;
+  color: var(--danger);
+  font-size: 1.25rem;
+  padding: 0.25rem 0.5rem;
+  line-height: 1;
+}
+button.icon:hover {
+  background: rgba(198,40,40,0.1);
+}
+
+/* Inputs & selects */
+input[type="number"],
+input[type="text"],
+select {
+  width: 100%;
+  max-width: 100%;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid #d0d7da;
+  border-radius: var(--radius);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+input:focus,
+select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(0,131,141,0.25);
+}
+
+/* Stała (poza fokusem) turkusowa ramka dla pól wypełnionych poprawnie */
+.is-filled {
+  /* Utrzymuj tę samą turkusową ramkę, co podczas fokusa. Używamy !important,
+     aby nadpisać inne reguły, które mogłyby zmienić obramowanie lub cień. */
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 2px rgba(0,131,141,0.25) !important;
+}
+
+/* === Dodatkowe podświetlenie dla pól wymaganych przez selektor formuł === */
+.must-fill {
+  /* Pomarańczowa ramka sygnalizująca brakujące dane */
+  border-color: #ff9800 !important;
+  box-shadow: 0 0 0 2px rgba(255,152,0,0.35) !important;
+  background-color: rgba(255, 193, 7, 0.12) !important;
+}
+.must-fill-group {
+  border-radius: 10px;
+  background: rgba(255, 193, 7, 0.10);
+  box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.18);
+}
+.input-group.must-fill-group {
+  padding: 0.18rem;
+}
+label.must-fill-group {
+  padding: 0.18rem 0.25rem;
+}
+
+/* === Wygląd sekcji wyboru formuły === */
+.formula-picker {
+  border: 1px solid #d0dede;
+  background: var(--card);
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin: 0.25rem 0 1rem;
+}
+.formula-picker label {
+  font-weight: 600;
+}
+#formulaPicker {
+  margin-top: 0.35rem;
+}
+.formula-note {
+  font-size: 0.9rem;
+  color: #555;
+  margin-top: 0.5rem;
+}
+
+/* Table design */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+th, td {
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+}
+thead th {
+  background: var(--primary);
+  color: #fff;
+  font-weight: 600;
+}
+tbody tr:nth-child(odd) {
+  /* Tło kart z wynikami ustawione na białe, zgodnie z prośbą użytkownika */
+  background: #ffffff;
+}
+tbody tr:hover {
+  background: rgba(0,176,166,0.08);
+}
+
+/* Card shadow & radius unification */
+/* Przywracamy kolor tła sekcji (np. kart klirensu) do barwy motywu, pozostawiając białe tło tylko dla pól wyników (.result-box) */
+section.card,
+#toNormCard {
+  border-radius: var(--radius);
+  background: var(--card);
+  box-shadow: var(--shadow);
+  padding: 1rem;
+}
+
+/* Responsive horizontal scrolling for wide tables */
+.table-scroll {
+  overflow-x: auto;
+}
+.table-scroll > table {
+  min-width: 520px;
+}
+
+/* Utility */
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+
+  /*
+   * Dodatkowe dostosowania dla kart wyników i przycisków „Info”.
+   *
+   * W związku z prośbą o wyśrodkowanie nagłówków „Klirens / eGFR”, „Inne wskaźniki”
+   * oraz „Ryzyko kamicy nerkowej” nadajemy im jednoznaczne wyrównanie do środka.
+   * Nagłówki te znajdują się wewnątrz kart wyników (#clcrCard, #elecCard, #stoneCard),
+   * dlatego selektory są zawężone do odpowiednich identyfikatorów, aby nie wpływać
+   * na inne tytuły w aplikacji.
+   */
+  #clcrCard h2,
+  #elecCard h2,
+  #stoneCard h2 {
+    text-align: center;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /*
+   * Aby karty dodatkowych wyników („Inne wskaźniki”, „Ryzyko kamicy nerkowej”) były
+   * wyrównane do środka w szerokim widoku, nadajemy im automatyczne marginesy
+   * w poziomie. Dzięki temu po zakończeniu obliczeń karty te prezentują się
+   * symetrycznie względem osi strony.
+   */
+  #elecCard,
+  #stoneCard {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /*
+   * Ukryj przycisk Info oraz odpowiadający mu dymek narzędziowy dla pól
+   * #ktvToggle (przełącznik pokazywania zaawansowanych obliczeń KT/V)
+   * i #includeKTV (opcja dołączenia wyników KT/V do raportu AI).  Skrypt
+   * automatycznego generowania przycisków Info tworzy te elementy, jednak w
+   * przypadku tych dwóch pól nie chcemy ich wyświetlać – kryjemy je więc
+   * całkowicie za pomocą CSS.  Zastosowano wysoki priorytet (!important), aby
+   * nadpisać dowolne inne reguły.
+   */
+  #ktvToggle + .info-btn,
+  #includeKTV + .info-btn,
+  #ktvToggle + .info-btn + .tooltip,
+  #includeKTV + .info-btn + .tooltip {
+    display: none !important;
+  }
+
+/* Mobile tweaks */
+@media(max-width: 600px) {
+  th, td { padding: 0.5rem; }
+  button, input[type="button"], input[type="submit"] {
+    width: 100%;
+    margin-top: 0.5rem;
+  }
+
+/* (Przycisk czyszczenia formularza jest definiowany poza blokiem mediów. */
+}
+
+/* ======================================================================== */
+
+/* ---------- Przycisk czyszczenia formularza ---------- */
+/* Kontener otaczający przycisk ma pełną szerokość formularza i
+ * wyśrodkowuje jego zawartość.  Margines dolny oddziela go od
+ * kolejnej sekcji formularza.  Domyślnie kontener jest ukryty,
+ * a jego widoczność jest sterowana przez logikę JS po wypełnieniu
+ * minimalnej liczby pól potrzebnych do obliczeń. */
+#clearContainer {
+  width: 100%;
+  text-align: center;
+  margin-bottom: 1rem;
+  /* Zawsze pokazuj kontener przycisku czyszczenia */
+  display: block;
+}
+/* Sam przycisk wykorzystuje kolor zmiennej --danger, białe litery
+ * oraz zaokrąglone narożniki.  Po najechaniu kursorem przycisk
+ * staje się delikatnie jaśniejszy. */
+#clearBtn {
+  background: var(--danger);
+  color: #fff;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+#clearBtn:hover {
+  opacity: 0.9;
+}
+/* === FORM GRID LAYOUT 2025‑07‑02 FIX === */
+#clcrForm {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-rows: auto 1fr;
+  gap: 1rem;
+}
+#clcrForm > div {
+  display: flex;
+  flex-direction: column;
+}
+#clcrForm > div fieldset {
+  flex: 1 1 auto;
+}
+#clcrForm > .patient-card {
+  grid-column: 1 / -1;
+  align-self: start;
+}
+#clcrForm > .patient-card fieldset {
+  height: auto;
+}
+
+/* === RESULT HIGHLIGHT 2025‑06‑29 ===================== */
+:root {
+  --brand: #00838d;
+  --brand-light: #00b0a6;
+  --card-bg: #ffffff;
+  --radius: 12px;
+  --shadow-s: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-l: 0 4px 22px rgba(0,0,0,0.14);
+  --anim-fast: 150ms ease;
+}
+
+/* === Kalkulator version selection === */
+.version-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.version-option {
+  border: 1px solid #d0dede;
+  background: var(--card);
+  padding: 1rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  font-weight: 600;
+  text-align: center;
+}
+.version-option.selected {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(0,131,141,0.25);
+}
+.version-option.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+button,
+input[type="submit"] {
+  transition: transform var(--anim-fast), box-shadow var(--anim-fast);
+}
+button:hover,
+input[type="submit"]:hover,
+button:focus-visible,
+input[type="submit"]:focus-visible {
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: var(--shadow-l);
+}
+
+.result-card {
+  background: var(--card-bg);
+  border: 2px solid var(--brand);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-s);
+  padding: 1.25rem 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+.result-card.--pulse::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--brand-light);
+  opacity: 0;
+  z-index: -1;
+  animation: pulseBG 1s ease-out forwards;
+}
+@keyframes pulseBG {
+  0% { opacity: 0.15; }
+  100% { opacity: 0; }
+}
+
+.result-number {
+  font: 600 2.75rem/1 "Inter", sans-serif;
+  letter-spacing: -0.02em;
+  color: var(--brand);
+  display: inline-flex;
+  align-items: flex-end;
+}
+.result-number small {
+  font-size: 0.45em;
+  margin-left: 0.1em;
+  color: #444;
+}
+
+@keyframes fadeSlideUp {
+  0% { opacity: 0; transform: translateY(12px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.animate-in {
+  animation: fadeSlideUp 0.45s cubic-bezier(0.4,0,0.2,1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+}
+
+/* === DATA CARDS 2025‑06‑29 ===================== */
+.data-card {
+  background: var(--card);
+  border: 2px solid var(--primary);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.25rem 1rem;
+  overflow: auto;
+}
+
+.data-card table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-card thead {
+  background: var(--primary);
+  color: #fff;
+}
+
+.data-card th,
+.data-card td {
+  padding: 0.4rem 0.6rem;
+  text-align: center;
+}
+
+.data-card tr:nth-child(even) {
+  background: rgba(0,0,0,0.03);
+}
+
+/* === PLAN RESULTS TWO-COLUMN LAYOUT 2025‑06‑30 === */
+#planResults {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+@media(max-width: 600px) {
+  #planResults {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* === BMI & BMR BLOCK FRAME PATCH 2025‑06‑30 === */
+#bmiCard {
+  border: 1px solid #d0dede;
+}
+
+/* === TIMES CARD FRAME PATCH 2025‑06‑30 === */
+#timesCard {
+  border: 1px solid #d0dede;
+}
+
+/* === UI TWEAKS – 50 centyl & Plan (2025‑06‑30) === */
+.bmi50-info {
+  font-size: 1.3rem !important;
+  font-weight: 600;
+  display: block;
+  margin-top: 6px;
+}
+.bmi50-info .bmi50-number {
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+.plan-time {
+  font-size: 1.5rem;
+  font-weight: 600;
+  display: inline-block;
+  margin-bottom: 2px;
+}
+
+/* === PATCH 2025‑07‑01 – PLAN & 50 centyl UI === */
+.small-50 { font-size: 0.1rem; font-weight: 500; }
+.plan-time, .plan-month, .plan-year {
+  font-size: 1.5rem;
+  font-weight: 600;
+  display: inline-block;
+  margin-bottom: 2px;
+}
+
+/* === PLAN CARD – override font size ONLY in plan columns (added 2025‑07‑01) === */
+.plan-col .result-number {
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+/* === SPACING FIX FOR FIELDSETS – 2025‑08‑01 ===
+   Zastępujemy układ grid dla formularza #clcrForm układem kolumnowym flex,
+   aby sekcje (Dane pacjenta, Parametry z surowicy i DZM, Parametry z dobowej zbiórki moczu)
+   były rozmieszczone w równych odstępach pionowych. Dodatkowo param-row
+   jest układem poziomym flex na duże ekrany z zawijaniem, a param-col definiuje
+   minimalną szerokość każdej kolumny. */
+#clcrForm {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  /* nadpisujemy wrap i align-items z klasy .flex, aby elementy nie zawijały się i
+     każdy wiersz zajmował całą szerokość formularza */
+  flex-wrap: nowrap;
+  align-items: stretch;
+}
+/* Specjalne dopasowanie kontenera z parametrami – element param-row musi
+   nadpisać domyślne ustawienia #clcrForm > div, aby kolumny były ustawione obok
+   siebie i miały niezależną wysokość. */
+#clcrForm > .param-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+#clcrForm > .param-row > .param-col {
+  flex: 1 1 320px;
+}
+
+/* === WIDTH EQUALIZATION FOR PATIENT FIELDSET (2025‑08‑03) ===
+   Aby sekcja „Dane pacjenta” miała identyczną szerokość jak pola
+   „Parametry z surowicy i DZM” oraz „Parametry z dobowej zbiórki moczu”,
+   ograniczamy jej szerokość na dużych ekranach do połowy szerokości
+   kontenera formularza (z uwzględnieniem odstępu między kolumnami).
+   Na mniejszych ekranach pole to wypełnia całą dostępną szerokość,
+   dzięki czemu zachowujemy spójny wygląd zarówno w widoku mobilnym,
+   jak i w trybie PC. */
+@media (min-width: 700px) {
+  #clcrForm > .patient-card {
+    /* Aby sekcja „Dane pacjenta” miała dokładnie taką samą szerokość
+       jak pojedyncza kolumna wiersza parametrów, obliczamy ją na podstawie
+       sumy szerokości dwóch kolumn param-row oraz odstępu między nimi.
+       Każda kolumna param-row zajmuje połowę szerokości wiersza
+       pomniejszoną jedynie o odstęp między kolumnami (1 rem). Dlatego
+       odejmujemy jedynie tę przerwę, a nie całkowity padding kontenera. */
+    width: calc((100% - 1rem) / 2);
+    /* Zapobiegamy automatycznemu rozciąganiu, aby zachować powyższą szerokość. */
+    flex: 0 0 auto;
+  }
+}
+@media (max-width: 699px) {
+  #clcrForm > .patient-card {
+    /* Na małych ekranach sekcja wypełnia pełną szerokość kontenera,
+       tak jak pozostałe pola, co zapewnia spójny układ. */
+    width: 100%;
+  }
+}
+
+/* === PATCH 2025‑07‑01 – pełna szerokość karty Inne wskaźniki === */
+#elecCard { grid-column: 1 / -1; }
+#elecInfo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+#elecInfo .result-box {
+  /*
+     Domyślnie każda karta wyniku zajmuje co najmniej około 260 px
+     szerokości i może rosnąć w zależności od dostępnego miejsca.
+     Ustawiamy min-width na 0, aby elementy mogły się zmniejszać
+     poniżej swojego flex-basis bez generowania poziomego przewijania.
+  */
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+/*
+  W widokach mobilnych (np. telefony w orientacji pionowej) wymuszamy,
+  aby każdy wynik był wyświetlany w osobnym wierszu na pełną
+  szerokość kontenera. Dzięki temu długie etykiety nie będą
+  wychodziły poza granice sekcji, a układ pozostanie czytelny.
+*/
+@media (max-width: 600px) {
+  #elecInfo .result-box {
+    flex: 1 1 100%;
+  }
+}
+
+/* === OUT-OF-RANGE HIGHLIGHT === */
+/* === STAGE HIGHLIGHT COLORS (KDIGO G3a/G3b) === */
+.result-box.warn-orange {
+  background: #fff3e0;   /* jasny pomarańczowy */
+  border-color: #ffa726; /* pomarańcz */
+}
+.result-box.warn-orange strong {
+  color: #ef6c00;
+}
+.result-box.warn-yellow {
+  background: #fffde7;   /* jasny żółty */
+  border-color: #fff176; /* żółty */
+}
+.result-box.warn-yellow strong {
+  color: #fbc02d;
+}
+
+.result-box.out-of-range {
+  background: #ffebee;
+  border-color: #e57373;
+}
+.result-box.out-of-range strong {
+  color: #c62828;
+}
+
+/* === EQUAL HEIGHT INPUT CARDS (2025-07-02) === */
+/* Modyfikujemy układ formularza #clcrForm tak, aby stosował flexbox w pionie zamiast
+   siatki. Dzięki temu każda sekcja formularza (Dane pacjenta, Parametry z surowicy i DZM,
+   Parametry z dobowej zbiórki moczu) jest renderowana jako osobny wiersz o wysokości
+   dopasowanej do zawartości, a odstępy między nimi określa właściwość gap. */
+#clcrForm {
+  display: flex !important;
+  flex-direction: column;
+  gap: 1rem;
+}
+#clcrForm > div {
+  display: flex;
+  flex-direction: column;
+}
+#clcrForm fieldset {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+/* helper boxes (optional) fill remaining flex space */
+.helper-box {
+  margin-top: auto;
+  font-size: 0.85rem;
+  color: #555;
+  background: #eef4f4;
+  border: 1px dashed var(--primary);
+  border-radius: var(--radius);
+  padding: 0.6rem;
+}
+
+#clcrForm {
+  /* Finalna definicja formularza wykorzystuje flexbox w pionie,
+     zapewniając równe odstępy między sekcjami bez sztucznego wydłużania wierszy. */
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+#clcrForm > div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;  /* avoid overflow */
+}
+#clcrForm > div.patient-card {
+  grid-column: 1 / -1;
+}
+/* two-column layout inside patient fieldset */
+#patientSet {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 1rem;
+}
+/* make labels stretch full width inside patient grid */
+#patientSet label {
+  margin-top: 0.7rem;
+}
+
+/* === FULL‑WIDTH “Klirens / eGFR” CARD (2025‑07‑02) === */
+#clcrCard {
+  grid-column: 1 / -1;  /* rozciąga się na obie kolumny kontenera #results */
+}
+  /* ------- Walidacja i podpowiedzi ------- */
+  .validation-message {
+    color: var(--danger);
+    font-size: 0.8rem;
+    line-height: 1.2;
+  }
+  .error {
+    border-color: var(--danger) !important;
+  }
+  .info-icon {
+    margin-left: 4px;
+    cursor: help;
+    color: var(--primary);
+    font-size: 1rem;
+    line-height: 1;
+    vertical-align: middle;
+    display: inline-block;
+  }
+  .info-icon:hover {
+    color: var(--primary);
+  }
+  /* additional classes for validation and tooltips */
+  .input-error    { border: 2px solid #d00 !important; }
+  .tooltip-icon   { cursor: help; font-weight: bold; color: #36c; margin-left: 4px; }
+
+  /* simple cards used for extra sections (e.g. advanced KT/V) */
+  /* Ujednolicony wygląd kart – zaokrąglone narożniki jak w innych sekcjach */
+  .card{ border: 1px solid #ccc; padding: 12px; margin: 12px 0; border-radius: var(--radius); }
+  .card h2{ margin-top: 0; font-size: 1.1rem; text-align: left; }
+
+  /* Layout for advanced KT/V fields: use flex instead of grid to align labels and icons like other inputs */
+  #ktvFields > div {
+    /* Utrzymuj poziome ułożenie pola i przycisku Info bez zawijania.  
+       Poprzednio włączony flex-wrap pozwalał przyciskowi Info zsuwać się pod pole,  
+       dlatego wymuszamy nowrap, aby elementy pozostały w jednym wierszu jak w innych sekcjach. */
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+  #ktvFields label {
+    flex: 1 1 160px;
+  }
+
+  /* Make form fields white regardless of system dark/light mode */
+  input,
+  select,
+  option {
+    background-color: #fff;
+    color: var(--text);
+  }
+
+  /* === MOBILE BUTTON PADDING – 2025‑08‑03 === */
+  @media (max-width: 600px) {
+    #downloadPDF,
+    #downloadDOCX,
+    #askAI {
+      /* szerokość jak pola w .container → 100 % minus 2 × 1 rem wewn. odstępu  */
+      width: calc(100% - 2rem);
+      /* identyczny odstęp boczny jak .container (1 rem) */
+      margin-left: 1rem;
+      margin-right: 1rem;
+    }
+  }
+
+  /* === AI FIELDSET WIDTH FIX – 2025‑08‑09 === */
+  /*
+     W trybie pełnoekranowym sekcja „Interpretacja AI” nie powinna być
+     szersza od kart znajdujących się w głównym kontenerze.  Poprzednia
+     poprawka wymuszała pełną szerokość, co powodowało zbyt szeroki wygląd
+     tej sekcji na średnich i szerokich urządzeniach, zwłaszcza w orientacji
+     poziomej na telefonie.  Ustawiamy maksymalną szerokość na 960 px (taką jak
+     kontener) i centrujemy pole w osi X.  Dodatkowo, dla widoków o
+     szerokości mniejszej niż ok. 992 px (maksymalna szerokość kontenera wraz
+     z odstępami) element uzyskuje szerokość 100% pomniejszoną o 2×1 rem,
+     aby linie kart pokrywały się z innymi kartami wewnątrz kontenera.
+  */
+  #aiFieldset {
+    /* Wewnątrz kontenera przyjmij 100 % dostępnej szerokości.  Nie
+       ustawiaj maksymalnej szerokości tutaj – kontrolę nad rozmiarem
+       przejmuje otaczający kontener (.container). */
+    width: 100%;
+    max-width: none;
+    /* Reset poziomych marginesów – szerokość jest ustalana przez
+       kontener, więc nie chcemy dodatkowego centrowania. */
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  /* === FIX CLIRENS CARD WIDTH ON NARROW SCREENS – 2025‑08‑12 === */
+  /*
+     Na niektórych urządzeniach mobilnych (np. Beam Pro z Androidem 14) karta
+     „Klirens / eGFR” była renderowana nieco szerzej niż pozostałe karty wyników.
+     Stało się tak dlatego, że w trybie siatki wymuszaliśmy rozciągnięcie jej
+     na wszystkie kolumny poprzez właściwość `grid-column: 1 / -1`.  Gdy przeglądarka
+     przełączała się na układ jednokolumnowy, ta deklaracja pozostawała aktywna
+     i powodowała drobne rozbieżności w szerokości względem pozostałych kart.
+
+     Poniższe media query resetuje tę właściwość na wąskich ekranach, dzięki czemu
+     karta klirensu przyjmuje standardową szerokość kart w kontenerze .container.
+  */
+  @media (max-width: 699px) {
+    #clcrCard {
+      /* Usuń wymuszanie rozciągania na wiele kolumn w siatce */
+      grid-column: auto;
+    }
+    /* W widoku jednokolumnowym wszystkie karty wyników powinny mieć taką samą szerokość.
+       Usuwamy automatyczne marginesy poziome z kart „Inne wskaźniki” i „Ryzyko kamicy
+       nerkowej”, dzięki czemu wąskie widoki prezentują spójny układ kart. */
+    #elecCard,
+    #stoneCard {
+      margin-left: 0;
+      margin-right: 0;
+    }
+  }
+
+  /* === EQUAL HEIGHT PARAM-SECTIONS IN LANDSCAPE – 2025‑08‑03 === */
+  /*
+     W widoku poziomym (ekrany szersze niż ~700 px) wyrównujemy wysokość
+     kolumn z parametrami z surowicy/DZM oraz dobowej zbiórki moczu.
+     Domyślnie flexbox rozciąga elementy po przekątnej tylko wtedy, gdy
+     align-items ustawione jest na "stretch". Wcześniejsze poprawki
+     ustawiają align-items: flex-start, co zapobiegało rozciąganiu
+     krótszej kolumny i skutkowało nierównymi wysokościami. Teraz
+     przywracamy zachowanie stretch tylko dla wiersza parametrów na
+     szerokich ekranach. Dzięki temu sekcja „Parametry z surowicy i DZM”
+     w widoku poziomym będzie równa wysokością sekcji „Parametry z
+     dobowej zbiórki moczu” i rozciągnie się do dolnej granicy tego
+     kontenera.
+  */
+  @media (min-width: 700px) {
+    #clcrForm > .param-row {
+      align-items: stretch;
+    }
+    /* Upewniamy się, że same fieldsety w kolumnach wypełniają przestrzeń
+       wysokościową, aby rozciąganie było widoczne. */
+    #clcrForm > .param-row > .param-col {
+      display: flex;
+      flex-direction: column;
+    }
+    #clcrForm > .param-row > .param-col fieldset {
+      /* elementy fieldset elastycznie wypełniają dostępną przestrzeń */
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+    }
+  }
+
+  /* === PLACEHOLDER ROWS FOR SYMMETRY – 2025‑08‑03 === */
+  /* Wiersze o klasie .placeholder-row są używane jako niewidoczne odstępy w
+     sekcji „Parametry z surowicy i DZM”, aby liczba rzędów w lewej
+     kolumnie odpowiadała liczbie pól w kolumnie prawej. W widoku
+     poziomym są niewidoczne, ale zachowują wysokość dzięki
+     visibility:hidden. W widoku pionowym całkowicie je ukrywamy, aby
+     uniknąć dużych pustych przestrzeni. */
+  .placeholder-row {
+    visibility: hidden;
+  }
+  @media (max-width: 699px) {
+    .placeholder-row {
+      display: none;
+    }
+  }
+
+  /* Hide any info-wrapper following a placeholder row.  Without this rule,
+     the automatically inserted .input-group would remain visible in the DOM,
+     resulting in blank unlabeled fields.  This rule ensures the wrapper
+     stays hidden on all screen sizes. */
+  .placeholder-row + .input-group {
+    display: none !important;
+  }
+
+  /* === INFO‑BUTTON & TOOLTIP – 2025‑08‑03 === */
+
+  /* kontener input + przycisk Info */
+  .input-group{
+    position:relative;
+    display:flex;
+    align-items:stretch;
+    gap:0.5rem;
+  }
+  .input-group input,
+  .input-group select{
+    flex:1 1 auto;           /* przejmij całą dostępną szerokość */
+  }
+
+  /* przycisk Info */
+  .info-btn{
+    flex:0 0 auto;
+    background:#00b0a6;      /* turkus – dopasuj do motywu */
+    color:#fff;
+    font-weight:600;
+    border:none;
+    border-radius:var(--radius,6px);
+    padding:0.5rem 1rem;
+    cursor:pointer;
+    transition:background .2s,transform .15s;
+  }
+  .info-btn:hover{background:#00838d;}
+  .info-btn:focus{
+    outline:2px solid #00838d;
+    outline-offset:2px;
+  }
+
+  /* dymek */
+  .tooltip{
+    display:none;            /* ukryty domyślnie */
+    position:absolute;
+    top:100%; left:0;
+    margin-top:0.35rem;
+    max-width:280px;
+    padding:0.75rem;
+    background:#f0f9f9;      /* jasny turkus */
+    color:#000;
+    border:1px solid #00b0a6;
+    border-radius:4px;
+    box-shadow:0 2px 8px rgba(0,0,0,.15);
+    z-index:1000;
+  }
+  /* strzałka */
+  .tooltip::before{
+    content:"";
+    position:absolute;
+    top:-6px; left:22px;
+    border:6px solid transparent;
+    border-bottom-color:#f0f9f9;
+  }
+  /* widoczny dymek */
+  .tooltip.visible{display:block;}
+
+  /* Dodatkowa logika dla pól typu checkbox: zawijaj elementy wewnątrz, aby przycisk Info nie wychodził poza kontener */
+  .wrap-info{
+    flex-wrap: wrap;
+  }
+  /* Nie rozciągaj pól typu checkbox na całą szerokość w obrębie .wrap-info */
+  .wrap-info input[type="checkbox"],
+  .wrap-info select[type="checkbox"]{
+    flex: 0 0 auto;
+  }
+  /* Gdy przycisk Info znajduje się obok checkboxa, pozwól mu zawijać się na nową linię bez rozciągania na pełną szerokość */
+  .wrap-info .info-btn{
+    flex: 0 0 auto;
+    margin-top: 0.25rem;
+  }
+
+  /* mobile: keep the same horizontal alignment for the Info button as on larger screens.
+     Previously we switched the .input-group to a 2/3‑1/3 grid on narrow screens, which
+     caused the Info buttons to take up one third of the available width and
+     mis‑align relative to their inputs. To ensure the placement and alignment of the
+     Info buttons remains consistent between single‑column and two‑column layouts,
+     we retain the flex layout on small screens and let the button size itself to
+     its content. */
+  @media(max-width:600px){
+    .input-group{
+      display:flex;          /* remain a horizontal flex container */
+      align-items:stretch;   /* match the height of its children */
+    }
+    .info-btn{
+      width:auto;            /* do not force full width; size based on content */
+      align-self:stretch;    /* match input height */
+    }
+  }
+
+  /* Center Info buttons for specific checkbox fields. The toggle for advanced KT/V
+     calculations (#ktvToggle) and the option to include KT/V in the AI report
+     (#includeKTV) are rendered as checkboxes with an adjacent Info button. By default
+     checkbox wrappers (.wrap-info) add a top margin to the Info button which pushes it
+     down and misaligns it with the checkbox and label. The rules below remove that
+     top margin and vertically center the button within the wrapper. */
+  #ktvToggle + .info-btn,
+  #includeKTV + .info-btn {
+    margin-top: 0;
+    align-self: center;
+  }
+
+  /* When a wrapper has the .center-info class (added in the JS for specific
+     checkbox fields), center the checkbox and its Info button horizontally.
+     We rely on flexbox to distribute space around the two children evenly. */
+  .center-info {
+    justify-content: center;
+  }
+  .center-info .info-btn {
+    margin-top: 0;
+  }
+
+  /* Specjalny układ dla pola „Obliczenia dla tego samego pacjenta”:
+     checkbox ma znajdować się nad przyciskiem Info, a obie kontrolki
+     powinny być wyśrodkowane. Dodatkowo checkbox otrzymuje margines
+     górny i dolny 0,6 rem. */
+  .stack-info {
+    flex-direction: column;
+    align-items: center;
+  }
+  .stack-info input[type="checkbox"] {
+    margin-top: 0.6rem !important;
+    margin-bottom: 0.6rem !important;
+  }
+  .stack-info .info-btn {
+    align-self: center;
+    margin-top: 0;
+  }
+  /* --------------------------------------------------------------------
+   * PWA/iOS dostosowania
+   *
+   * Na urządzeniach z iOS (np. iPhone z Dynamic Island) należy uwzględnić
+   * bezpieczny obszar u góry ekranu.  Dodając wysokość safe‑area do górnego
+   * paddingu nagłówka zapobiegamy nakładaniu się logo i tytułu na wycięcie.
+   */
+  /* Ujednolicamy wysokość nagłówka również na urządzeniach z bezpieczną strefą (notch).
+     Zamiast zwiększać wysokość o wartość safe‑area, używamy stałej wartości 1 rem.
+     Dzięki temu nagłówek jest tej samej wysokości jak na stronie głównej. */
+  header {
+    padding-top: 1rem;
+  }
+
+  /*
+   * W orientacji poziomej (landscape) aplikacja może rozszerzać się na całą
+   * szerokość ekranu, co powoduje, że zawartość nachodzi na wycięcie (notch)
+   * urządzeń iPhone.  Aby temu zapobiec, dodajemy wewnętrzny padding
+   * po lewej i prawej stronie dokumentu równy bezpiecznym odstępom.
+   * Używamy zmiennych środowiskowych `safe-area-inset-left` i
+   * `safe-area-inset-right`.  Na nowoczesnych przeglądarkach wspierających
+   * funkcję `max()` stosujemy większy z tych odstępów po obu stronach,
+   * tak aby odległości były symetryczne.  Dzięki temu aplikacja nie będzie
+   * nachodzić na wycięcie w trybie poziomym, a marginesy będą równomierne.
+   */
+  @media (orientation: landscape) {
+    body {
+      /* Podstawowe odstępy odpowiadające lewemu i prawemu bezpiecznemu obszarowi */
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
+    }
+    @supports (padding-left: max(0px)) {
+      body {
+        /* Zastosuj większy z odstępów po obu stronach, aby były symetryczne */
+        padding-left: max(env(safe-area-inset-left), env(safe-area-inset-right));
+        padding-right: max(env(safe-area-inset-left), env(safe-area-inset-right));
+      }
+    }
+  }
+  /* === PREV CLCR CARD LAYOUT – 2025‑12‑04 ======================
+   Karta „Ostatni pomiar (klirens/eGFR)” obok „Dane pacjenta”.
+   – Desktop (>=700px): dwie kolumny, wysokość karty = wysokość „Dane pacjenta”,
+     wewnętrzny scroll tylko dla zawartości karty.
+   – Mobile (<700px): karta zachowuje się jak zwykła sekcja, bez wymuszania wysokości.
+================================================================ */
+
+@media (min-width: 700px) {
+  /* Gdy mamy kartę ostatniego pomiaru, formularz przechodzi w tryb
+     „wiersze z zawijaniem”: pierwszy wiersz = dwie kolumny. */
+  #clcrForm.has-prev-clcr {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  /* Dwie kolumny: lewa = Dane pacjenta, prawa = Ostatni pomiar */
+  #clcrForm.has-prev-clcr > .patient-card,
+  #clcrForm.has-prev-clcr > #prevClcrCard {
+    /*
+     * Force both the patient card and the "Ostatni pomiar" card to occupy
+     * exactly half of the available width when the previous measurement card
+     * is present.  An inline style on the patient card (`flex:1 1 300px`)
+     * would normally override external CSS declarations.  Using
+     * `!important` here ensures that our two‑column layout takes
+     * precedence over the inline style and that both cards remain the
+     * same width.  Without this override the patient card would grow to
+     * fill the available space, leaving the previous measurement card
+     * narrower than intended.
+     */
+    flex: 0 0 calc((100% - 1rem) / 2) !important;
+    max-width: calc((100% - 1rem) / 2);
+  }
+
+  /* Karta poprzedniego pomiaru jako kolumna flex,
+     żeby środkowa część mogła mieć własny scroll. */
+  #clcrForm.has-prev-clcr > #prevClcrCard {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  /* Wszystkie pozostałe sekcje formularza idą pod spodem, na pełną szerokość */
+  #clcrForm.has-prev-clcr > :not(.patient-card):not(#prevClcrCard) {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+
+  /* Kontener z listą sekcji w karcie – to tutaj będzie przewijanie */
+  #prevClcrCard .prev-clcr-sections {
+    flex: 1 1 auto;
+    min-height: 0;
+    /* właściwe overflow ustawi JavaScript (tylko na desktopie) */
+  }
+}
+
+/* Widok mobilny – karta zachowuje się jak zwykła sekcja, bez sztywnej wysokości */
+@media (max-width: 699px) {
+  #clcrForm.has-prev-clcr > #prevClcrCard {
+    width: 100%;
+  }
+}
+
+
+/* ============================ */
+
+  /* === PREV CLCR PLACEHOLDER AND LAYOUT (2025‑12‑05) === */
+  /* Styl placeholdera pojawiającego się, gdy nie ma wczytanych wyników poprzedniego pomiaru.
+     Wyświetla się obok karty „Dane pacjenta” w trybie desktop (≥700 px). */
+  #prevClcrPlaceholder {
+    border-radius: var(--radius);
+    border: 1px dashed rgba(0, 131, 141, 0.7);
+    background: #f6fcfc;
+    padding: 1rem 1.25rem;
+    box-shadow: var(--shadow-s);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  #prevClcrPlaceholder p {
+    margin: 0;
+    color: var(--brand, #00838d);
+    font-size: 0.95rem;
+    line-height: 1.4;
+  }
+
+  /* Layout dla karty „Ostatni pomiar” oraz placeholdera na dużych ekranach. */
+  @media (min-width: 700px) {
+    /* Ustaw układ formularza w wiersze z możliwością zawijania: pierwszy wiersz zawiera kolumny
+       „Dane pacjenta” oraz placeholder/kartę „Ostatni pomiar”, a kolejne sekcje są na pełną szerokość. */
+    #clcrForm {
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+    /* Lewa kolumna („Dane pacjenta”), prawa kolumna (placeholder lub karta „Ostatni pomiar”). */
+    #clcrForm > .patient-card,
+    #clcrForm > #prevClcrPlaceholder,
+    #clcrForm.has-prev-clcr > #prevClcrCard {
+      flex: 0 0 calc((100% - 1rem) / 2);
+      max-width: calc((100% - 1rem) / 2);
+    }
+    /* Karta z poprzednim pomiarem jako kolumna flex – środkowa część będzie przewijana. */
+    #clcrForm.has-prev-clcr > #prevClcrCard {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    #prevClcrCard .prev-clcr-sections {
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+    /* Ukryj placeholder, gdy jest widoczna karta z wynikiem poprzedniego pomiaru. */
+    #clcrForm.has-prev-clcr > #prevClcrPlaceholder {
+      display: none;
+    }
+    /* Wszystkie pozostałe sekcje formularza (np. wersje kalkulatora, param-row) zajmują pełną szerokość. */
+    #clcrForm > :not(.patient-card):not(#prevClcrPlaceholder):not(#prevClcrCard) {
+      flex: 0 0 100%;
+      max-width: 100%;
+    }
+  }
+  /* Na mniejszych ekranach karta i placeholder zachowują się jak zwykłe sekcje (pełna szerokość). */
+  @media (max-width: 699px) {
+    #clcrForm.has-prev-clcr > #prevClcrCard,
+    #clcrForm > #prevClcrPlaceholder {
+      width: 100%;
+    }
+  }
+/* Desktop-only: shift the entire "Ostatni pomiar (klirens/eGFR)" card 1rem up,
+   without affecting other cards. */
+   @media (min-width: 700px) {
+  #prevClcrCard {
+    margin-top: 0rem;
+  }
+}
+
+/* On small screens keep the natural vertical flow (no manual shift). */
+@media (max-width: 699px) {
+  #prevClcrCard {
+    margin-top: 0;
+  }
+}
+
+
+
+/* ============================ */
+
+  /* Desktop: usuń domyślny margines dolny z fieldsetu dla karty z poprzednim pomiarem,
+     aby dolna krawędź karty wyrównywała się z sekcją wyboru formuły. */
+  @media (min-width: 700px) {
+    #prevClcrCard {
+      margin-bottom: 0 !important;
+    }
+  }
