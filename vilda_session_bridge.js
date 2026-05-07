@@ -28,7 +28,7 @@
     { type: 'css',    src: 'vilda_auth_ui.css?v=15',  ready: function () { return false; } },
     { type: 'script', src: 'vilda_crypto.js?v=1',     ready: function () { return !!global.VildaCrypto; } },
     { type: 'script', src: 'vilda_vault.js?v=9',      ready: function () { return !!global.VildaVault; } },
-    { type: 'script', src: 'vilda_auth_ui.js?v=23',   ready: function () { return !!global.VildaAuthUI; } }
+    { type: 'script', src: 'vilda_auth_ui.js?v=24',   ready: function () { return !!global.VildaAuthUI; } }
   ];
 
   // ════════════════════════════════════════════════════════════════

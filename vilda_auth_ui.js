@@ -863,7 +863,7 @@
 
     const fileInput = el('input', {
       type: 'file',
-      accept: '*/*', /* iOS nie obsługuje niestandardowych rozszerzeń (.wiw/.vilda) bez UTI — */* pokazuje wszystkie pliki */
+      accept: '*/*', // iOS nie obsługuje .wiw/.vilda bez UTI — accept=* pokazuje wszystkie pliki
       style: 'display:none;'
     });
 
@@ -1586,7 +1586,7 @@
       //   .wiw — nowe pliki kopii pacjentów (zaszyfrowane envelope)
       //   .vilda — wczesne testy (zaszyfrowane envelope, wsteczna kompatybilność)
       //   .json — płaskie pliki sprzed wprowadzenia szyfrowania (legacy)
-      accept: '*/*', /* iOS nie obsługuje niestandardowych rozszerzeń (.wiw/.vilda) bez UTI — */* pokazuje wszystkie pliki */
+      accept: '*/*', // iOS nie obsługuje .wiw/.vilda bez UTI — accept=* pokazuje wszystkie pliki
       multiple: 'multiple',
       style: 'display:none;'
     });

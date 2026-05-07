@@ -944,9 +944,10 @@ body.chrome-drawer-open { overflow: hidden; }
   }
   .has-vilda-chrome .main-content { padding: 0.2rem 0; }
 
-  /* Instrukcja "Uzupełnij wymagane pola..." — na desktopie użyteczna w prawej kolumnie,
-     na mobile zbędna (formularz i wyniki są w jednej kolumnie, użytkownik widzi kontekst) */
-  #compareInstruction { display: none !important; }
+  /* Karta #infoMessages (#errorBox + #compareInstruction) — na desktopie użyteczna
+     w prawej kolumnie obok formularza, na mobile zbędna: formularz i wyniki są
+     w jednej kolumnie, tekst "Podaj jednocześnie..." nie wnosi wartości */
+  #infoMessages { display: none !important; }
 }
 
 /* ============ ACCESSIBILITY ============ */
