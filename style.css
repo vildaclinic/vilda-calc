@@ -3626,6 +3626,8 @@ fieldset.user-card {
      Zerujemy marginesy inline, aby szerokość karty odpowiadała szerokości
      pozostałych kart w siatce. */
   margin-inline: 0;
+  /* Legenda usunięta — padding-top 1rem był zarezerwowany pod nią, teraz redukujemy */
+  padding-top: 0.5rem;
 }
 
 /* === Zwiększenie rozmiaru czcionki w polach testów stymulacyjnych GH (2025‑08‑17) === */
