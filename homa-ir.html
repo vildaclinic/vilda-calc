@@ -12,15 +12,16 @@
   <!-- Ładujemy krój Inter – używany w pozostałej części aplikacji.  -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
   <!-- Podstawowe arkusze stylów stosowane w aplikacji: motyw Liquid Glass oraz główne style i układ sidebara. -->
-  <link rel="stylesheet" href="ios26-v2.css?v=10" />
+  <link rel="stylesheet" href="ios26-v2.css?v=12" />
   <link rel="stylesheet" href="style.css?v=5" />
   <link rel="stylesheet" href="sidebar.css" />
 
   
-  <link href="vilda_chrome.css?v=7" rel="stylesheet">
+  <link href="vilda_chrome.css?v=9" rel="stylesheet">
 <script src="vilda_logger.js?v=2"></script>
 <script src="vilda_html.js?v=4"></script>
 <script src="vilda_persistence_adapter.js?v=7"></script>
+<script src="vilda_session_bridge.js?v=1"></script>
 <script src="vilda_init.js?v=4"></script>
 <script src="vilda_deps.js?v=6"></script>
 <script>
@@ -371,7 +372,7 @@
   <!-- Synchronizacja danych pacjenta ze shared storage (jednostronna: read-only).
        Wypełnia #age i #sex na podstawie VildaPersistence.sharedUserData bez
        write-backu — mapuje M/F — boy/girl specyficzne dla HOMA. -->
-  <script src="custom-fixes.js?v=17" defer></script>
+  <script src="custom-fixes.js?v=19" defer></script>
 
   <!-- Skrypt obsługujący kalkulator HOMA‑IR. Przeniesiony z oryginalnej podstrony i
        dostosowany do nowej struktury. -->

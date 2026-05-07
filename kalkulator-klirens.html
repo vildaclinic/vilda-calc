@@ -10,15 +10,16 @@
     <!-- Integrate the calculator with the Waga i wzrost site styles -->
     <link href="style.css?v=5" rel="stylesheet" />
     <link href="sidebar.css" rel="stylesheet" />
-    <link href="vilda_chrome.css?v=7" rel="stylesheet">
-    <link href="vilda_auth_ui.css?v=11" rel="stylesheet" />
+    <link href="vilda_chrome.css?v=9" rel="stylesheet">
+    <link href="vilda_auth_ui.css?v=15" rel="stylesheet" />
     <script src="vilda_logger.js?v=2"></script>
 <script src="vilda_html.js?v=4"></script>
 <script src="vilda_persistence_adapter.js?v=7"></script>
+<script src="vilda_session_bridge.js?v=1"></script>
 <script src="vilda_init.js?v=4"></script>
 <script src="vilda_crypto.js?v=1"></script>
 <script src="vilda_vault.js?v=9"></script>
-<script src="vilda_auth_ui.js?v=18"></script>
+<script src="vilda_auth_ui.js?v=22"></script>
 <script src="vilda_file_export.js?v=4"></script>
 <script src="vilda_deps.js?v=87"></script>
 <script src="vilda_update_hooks.js?v=7"></script>
@@ -66,7 +67,7 @@
   }
 })();
 </script>
-<link href="ios26-v2.css?v=10" rel="stylesheet" />
+<link href="ios26-v2.css?v=12" rel="stylesheet" />
     <!-- Use the same Inter font as the main site -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
     <!-- Load Lucide icons library (used for the scroll‑to‑top button) -->
@@ -1038,6 +1039,7 @@ input[type="submit"]:focus-visible {
   display: grid;
   grid-template-columns: 1fr 1fr;
   column-gap: 1rem;
+  padding-top: 0.5rem;
 }
 /* make labels stretch full width inside patient grid */
 #patientSet label {
@@ -1577,12 +1579,12 @@ input[type="submit"]:focus-visible {
   <!-- 3. FORMULARZ DANYCH PACJENTA -->
   <form id="clcrForm" class="flex" onsubmit="return false;">
     <div class="patient-card" style="flex:1 1 300px;">
-      <fieldset id="patientSet"><legend>Dane pacjenta</legend>
-        <label>Imię i nazwisko:
+      <fieldset id="patientSet">
+        <label>Imię i nazwisko <span style="font-weight:400;opacity:0.65;">(opcjonalnie)</span>:
           <input type="text" id="fullName"></label>
         <label>Wiek (lata):
           <input type="number" id="age" min="0" max="120" required></label>
-        <label>Wiek (miesiące – opcjonalnie):
+        <label>Wiek <span style="font-weight:400;opacity:0.65;">(miesiące – opcjonalnie)</span>:
           <input type="number" id="ageMonths" min="0" max="11" placeholder="np. 6"></label>
         <label>Płeć:
           <select id="sex">
@@ -6226,7 +6228,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <script src="vilda_smoke_tests.js?v=48" defer></script>
 <script src="vilda_diet_recommendations.js?v=2" defer></script>
 <script src="vilda_patient_report.js?v=3" defer></script>
-<script src="custom-fixes.js?v=17" defer></script>
+<script src="custom-fixes.js?v=19" defer></script>
 <!-- Skrypt obsługujący tryb agregowania wyników dla tego samego pacjenta.  -->
 <script defer>
 document.addEventListener('DOMContentLoaded', () => {
