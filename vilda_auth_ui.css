@@ -775,6 +775,145 @@
   box-shadow: 0 8px 24px rgba(0, 131, 141, 0.25);
 }
 
+/* ── KARTA INDYWIDUALNEGO PACJENTA ──────────────────────────────────────── */
+
+/* Header karty — user-card bez hover/pointer (nie jest klikalny) */
+.vilda-patient-card-header {
+  cursor: default;
+  pointer-events: none;
+}
+.vilda-patient-card-header:hover {
+  border-color: #e0eef0;
+  background: #ffffff;
+  box-shadow: none;
+  transform: none;
+}
+
+/* Większa typografia w nagłówku karty pacjenta */
+.vilda-patient-card-header .vilda-auth-user-avatar {
+  flex: 0 0 52px;
+  width: 52px;
+  height: 52px;
+  font-size: 22px;
+}
+.vilda-patient-card-header .vilda-auth-user-name {
+  font-size: 20px;
+  font-weight: 700;
+}
+.vilda-patient-card-header .vilda-auth-user-meta {
+  font-size: 14px;
+  font-weight: 500;
+  color: #2e4a54;
+}
+
+/* Siatka statystyk — 2 kolumny na szerokich, 2 na wąskich */
+.vilda-patient-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+}
+
+/* Pojedyncza kafelka ze statystyką */
+.vilda-patient-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 12px 14px;
+  background: #f5fafb;
+  border: 1.5px solid #e0eef0;
+  border-radius: 12px;
+}
+
+.vilda-patient-stat-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #2e4a54;
+  white-space: normal;
+  line-height: 1.3;
+}
+
+.vilda-patient-stat-value {
+  font-size: 19px;
+  font-weight: 700;
+  color: #08202C;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+
+.vilda-patient-stat-sub {
+  font-size: 12px;
+  color: #4a6168;
+  font-weight: 700;
+  margin-top: 2px;
+  line-height: 1.3;
+}
+
+.vilda-patient-stat-extra {
+  font-size: 12px;
+  color: #c75d00;
+  font-weight: 700;
+  margin-top: 2px;
+  line-height: 1.3;
+}
+
+/* Kafelka w normie — subtelny gradient turkusowy */
+.vilda-patient-stat--ok {
+  background: linear-gradient(135deg, rgba(0,131,141,0.10) 0%, rgba(0,180,166,0.04) 100%);
+  border-color: rgba(0,131,141,0.30);
+}
+.vilda-patient-stat--ok .vilda-patient-stat-label { color: #1a3a42; }
+.vilda-patient-stat--ok .vilda-patient-stat-value { color: #00636b; }
+.vilda-patient-stat--ok .vilda-patient-stat-sub   { color: #2e6a72; }
+
+/* Kafelka ostrzeżenie — pomarańczowy gradient */
+.vilda-patient-stat--improve {
+  background: linear-gradient(135deg, rgba(199,93,0,0.11) 0%, rgba(199,93,0,0.04) 100%);
+  border-color: rgba(199,93,0,0.35);
+}
+.vilda-patient-stat--improve .vilda-patient-stat-label { color: #5a2a00; }
+.vilda-patient-stat--improve .vilda-patient-stat-value { color: #a04700; }
+.vilda-patient-stat--improve .vilda-patient-stat-sub   { color: #a04700; }
+.vilda-patient-stat--improve .vilda-patient-stat-extra { color: #a04700; }
+
+/* Kafelka alert — czerwony gradient */
+.vilda-patient-stat--alert {
+  background: linear-gradient(135deg, rgba(198,40,40,0.10) 0%, rgba(198,40,40,0.04) 100%);
+  border-color: rgba(198,40,40,0.32);
+}
+.vilda-patient-stat--alert .vilda-patient-stat-label { color: #5a0a0a; }
+.vilda-patient-stat--alert .vilda-patient-stat-value { color: #b71c1c; }
+.vilda-patient-stat--alert .vilda-patient-stat-sub   { color: #b71c1c; }
+.vilda-patient-stat--alert .vilda-patient-stat-extra { color: #b71c1c; }
+
+/* Sparkline wzrostu */
+.vilda-patient-sparkline-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  background: #f5fafb;
+  border: 1.5px solid #e0eef0;
+  border-radius: 14px;
+}
+
+.vilda-patient-sparkline-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #6a8089;
+}
+
+.vilda-patient-sparkline {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+  overflow: visible;
+}
+
 /* --- MOBILE --- */
 @media (max-width: 520px) {
   .vilda-auth-overlay { padding: 32px 18px 28px 18px; }

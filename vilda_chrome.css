@@ -106,6 +106,12 @@
   min-height: var(--chrome-strip-height);
   box-sizing: border-box;
 }
+/* Na mobile header ma dodatkowo subpasek (~25px), więc rezerwujemy więcej miejsca */
+@media (max-width: 991px) {
+  .has-sidebar header {
+    min-height: calc(var(--chrome-strip-height) + 25px);
+  }
+}
 
 /* ============ HEADER STRIP ============ */
 .has-vilda-chrome header {
@@ -341,6 +347,25 @@
   .chrome-brand { display: none !important; }
 }
 
+/* Subpasek brandingowy — wstrzykiwany przez JS jako .chrome-mobile-brand-bar */
+.chrome-mobile-brand-bar {
+  display: none; /* domyślnie ukryty — pokazuje się tylko na mobile */
+}
+@media (max-width: 991px) {
+  .chrome-mobile-brand-bar {
+    display: block;
+    text-align: center;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--primary, #00838d);
+    background: rgba(0, 131, 141, 0.05);
+    border-top: 0.5px solid rgba(0, 131, 141, 0.14);
+    padding: 4px 0 5px;
+    line-height: 1;
+  }
+}
+
 @media (max-width: 600px) {
   .chrome-strip { gap: 0.4rem; }
   .chrome-chip { padding: 0.3rem 0.45rem 0.3rem 0.35rem; }
@@ -449,7 +474,8 @@
   padding: 0.5rem 0.85rem 0.25rem;
 }
 .chrome-drawer-nav ul { list-style: none; padding: 0; margin: 0; }
-.chrome-drawer-nav a {
+.chrome-drawer-nav a,
+.chrome-drawer-nav .chrome-drawer-btn {
   display: flex; align-items: center; gap: 0.7rem;
   padding: 0.7rem 0.85rem;
   text-decoration: none;
@@ -459,7 +485,24 @@
   margin: 0.05rem 0.25rem;
   transition: background 0.12s ease, color 0.12s ease;
 }
-.chrome-drawer-nav a:hover { background: #eef5f5; }
+/* Resetuj domyślne style przycisków — wyglądają identycznie jak linki */
+.chrome-drawer-nav .chrome-drawer-btn {
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-size: inherit;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+/* Dodatkowy odstęp pionowy między przyciskami akcji (Zapisz/Wczytaj/Pacjenci) */
+.chrome-drawer-nav li:has(.chrome-drawer-btn) {
+  margin-top: 0.125rem;
+  margin-bottom: 0.125rem;
+}
+.chrome-drawer-nav a:hover,
+.chrome-drawer-nav .chrome-drawer-btn:hover { background: #eef5f5; }
 .chrome-drawer-nav a[aria-current="page"],
 .chrome-drawer-nav a.is-active {
   background: var(--chrome-active-bg);
@@ -892,11 +935,14 @@ body.chrome-drawer-open { overflow: hidden; }
   .has-vilda-chrome aside.sidebar-v2,
   .has-vilda-chrome aside.sidebar { display: none !important; }
 
+  /* Poziomy padding zerujemy na desktop-layout i main-content —
+     całą kontrolę nad szerokością przejmuje .container (reguła niżej),
+     która synchronizuje padding ze zmienną docka. */
   .has-vilda-chrome .desktop-layout {
     display: block;
-    padding: 0.6rem 0.6rem 1rem;
+    padding: 0.3rem 0 1rem;
   }
-  .has-vilda-chrome .main-content { padding: 0.4rem; }
+  .has-vilda-chrome .main-content { padding: 0.2rem 0; }
 }
 
 /* ============ ACCESSIBILITY ============ */
@@ -994,4 +1040,18 @@ body.chrome-drawer-open { overflow: hidden; }
 .has-vilda-chrome .menu-tooltip[style*="opacity: 1"],
 .has-vilda-chrome .menu-tooltip[style*="opacity:1"] {
   transform: translateX(0) !important;
+}
+
+/* ── Szerokość kolumny treści = szerokość docka (mobile) ──────────────────
+ * Nadpisujemy padding: 1rem z style.css na urządzeniach mobilnych.
+ * Używamy tego samego wyrażenia max() co pozycjonowanie #mobileBottomDock,
+ * więc krawędź treści i krawędź docka zawsze się pokrywają — łącznie
+ * z iPhone w orientacji poziomej, gdzie safe-area-inset-left/right > 0.
+ * Reguła poniżej 992 px (jednokolumnowy układ bez sidebara).
+ * ──────────────────────────────────────────────────────────────────────── */
+@media (max-width: 991.98px) {
+  .container {
+    padding-left:  max(var(--mobile-dock-side-gap, 0.75rem), calc(env(safe-area-inset-left,  0px) + 0.35rem));
+    padding-right: max(var(--mobile-dock-side-gap, 0.75rem), calc(env(safe-area-inset-right, 0px) + 0.35rem));
+  }
 }

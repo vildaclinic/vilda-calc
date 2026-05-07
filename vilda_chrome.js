@@ -43,6 +43,7 @@
   var MENU = [
     {
       title: 'Pacjent',
+      hideDrawerTitle: true,  // sekcja konta w drawerze już pokazuje dane pacjenta
       items: [
         {
           id: 'saveDataBtnSidebar',
@@ -60,6 +61,14 @@
           ariaDisabled: true,
           tip: 'Wczytywanie danych jest możliwe na początku sesji, zanim wprowadzisz nowe dane.',
           extraHTML: '<input type="file" id="fileInputSidebar" accept=".json,application/json" style="display:none;">'
+        },
+        {
+          id: 'patientsListBtnSidebar',
+          label: 'Pacjenci',
+          icon: 'users',
+          role: 'button',
+          authOnly: true,
+          tip: 'Zaloguj się, aby przeglądać bazę pacjentów.'
         }
       ]
     },
@@ -203,9 +212,11 @@
     attrs.push('href="' + escHTML(item.href || '#') + '"');
     var classes = ['sidebar-link'];
     if (item.cls) classes.push(item.cls);
+    if (item.authOnly) classes.push('auth-only-item');
     attrs.push('class="' + classes.join(' ') + '"');
     if (item.role) attrs.push('role="' + escHTML(item.role) + '"');
     if (item.ariaDisabled) attrs.push('aria-disabled="true"');
+    if (item.authOnly) attrs.push('data-auth-only="true"');
     if (item.tip) attrs.push('data-tip="' + escHTML(item.tip) + '"');
 
     var html = [
@@ -360,6 +371,8 @@
       '    </div>',
       '  </div>',
       '</div>',
+      // Subpasek brandingowy — widoczny tylko na mobile (ukryty przez CSS na >=992px)
+      '<div class="chrome-mobile-brand-bar" aria-hidden="true">wagaiwzrost.pl</div>',
       // Mobilne menu — drawer wysuwany po kliknięciu hamburgera
       '<div class="chrome-drawer" data-vilda-chrome-drawer hidden aria-hidden="true">',
       '  <div class="chrome-drawer-backdrop" data-vilda-chrome-drawer-close></div>',
@@ -406,15 +419,35 @@
     html.push('<nav class="chrome-drawer-nav" aria-label="Menu mobilne">');
     for (var i = 0; i < MENU.length; i++) {
       var grp = MENU[i];
+      var items = grp.items;
+
+      // Sprawdź czy sekcja ma cokolwiek do wyrenderowania
+      var hasItems = false;
+      for (var k = 0; k < items.length; k++) {
+        if (items[k].href || items[k].role === 'button') { hasItems = true; break; }
+      }
+      if (!hasItems) continue;
+
       html.push('<div class="chrome-drawer-section">');
-      html.push('  <div class="chrome-drawer-section-title">' + escHTML(grp.title) + '</div>');
+      // hideDrawerTitle: true — sekcja "Pacjent" pomija tytuł bo drawer-account
+      // już pokazuje dane pacjenta i "Pacjent" pojawiłoby się podwójnie.
+      if (!grp.hideDrawerTitle) {
+        html.push('  <div class="chrome-drawer-section-title">' + escHTML(grp.title) + '</div>');
+      }
       html.push('  <ul>');
-      for (var j = 0; j < grp.items.length; j++) {
-        var it = grp.items[j];
-        // Przyciski Save/Load w drawerze nie mają sensu (wymagają synchronizacji
-        // z formularzem, który może nie istnieć na mobile-first stronach
-        // narzędziowych) — pomijamy je w drawerze.
-        if (it.role === 'button') continue;
+      for (var j = 0; j < items.length; j++) {
+        var it = items[j];
+        if (it.role === 'button') {
+          // Renderujemy przyciski akcji (Zapisz/Wczytaj/Pacjenci) jako <button>
+          // z tym samym wyglądem co linki nawigacyjne.
+          var btnClasses = ['chrome-drawer-btn'];
+          if (it.authOnly) btnClasses.push('auth-only-item');
+          html.push('<li><button type="button" class="' + btnClasses.join(' ') + '" data-drawer-btn="' + escHTML(it.id || '') + '"' + (it.authOnly ? ' data-auth-only="true"' : '') + '>');
+          html.push('  <span class="chrome-drawer-icon" data-lucide="' + escHTML(it.icon || 'circle') + '" aria-hidden="true"></span>');
+          html.push('  <span class="chrome-drawer-label">' + escHTML(it.label) + '</span>');
+          html.push('</button></li>');
+          continue;
+        }
         var attrs = ['href="' + escHTML(it.href || '#') + '"'];
         if (it.cls) attrs.push('class="' + escHTML(it.cls) + '"');
         html.push('<li><a ' + attrs.join(' ') + '>');
@@ -470,6 +503,7 @@
     var drawerBody = doc.querySelector('[data-vilda-chrome-drawer-body]');
     if (drawerBody && !drawerBody.firstChild) {
       drawerBody.innerHTML = renderDrawerMenuHTML();
+      bindDrawerButtons(drawerBody);
     }
 
     bindHeaderInteractions(header);
@@ -479,6 +513,29 @@
     var drawerEl = doc.querySelector('[data-vilda-chrome-drawer]');
     if (drawerEl) safeCreateIcons(drawerEl);
     return true;
+  }
+
+  // Binduje kliknięcia przycisków akcji w drawerze (Zapisz/Wczytaj/Pacjenci).
+  // Każdy <button data-drawer-btn="SOME_ID"> deleguje kliknięcie do odpowiedniego
+  // przycisku w sidebarze — custom-fixes.js ma tam pełną logikę.
+  function bindDrawerButtons(container) {
+    var btns = container ? container.querySelectorAll('[data-drawer-btn]') : [];
+    for (var b = 0; b < btns.length; b++) {
+      (function (drawerBtn) {
+        drawerBtn.addEventListener('click', function () {
+          var targetId = drawerBtn.getAttribute('data-drawer-btn');
+          if (!targetId) return;
+          // Zamknij drawer najpierw
+          var drawerEl = doc.querySelector('[data-vilda-chrome-drawer]');
+          if (drawerEl) closeDrawer(drawerEl);
+          // Deleguj do odpowiednika w sidebarze (custom-fixes.js jest właścicielem logiki)
+          var sidebarBtn = doc.getElementById(targetId);
+          if (sidebarBtn && typeof sidebarBtn.click === 'function') {
+            sidebarBtn.click();
+          }
+        });
+      })(btns[b]);
+    }
   }
 
   function bindHeaderInteractions(header) {
@@ -690,6 +747,20 @@
 
     // Synchronizujemy też sekcję "Konto" w drawerze (mobile menu).
     refreshDrawerAccount(user, isGuest, loggedInLabel);
+
+    // Elementy auth-only (np. "Pacjenci") — widoczne tylko dla zalogowanych.
+    var loggedIn = !!(user && !isGuest);
+    refreshAuthOnlyItems(loggedIn);
+  }
+
+  // Pokazuje / ukrywa elementy z flagą data-auth-only="true" w sidebarze
+  // i drawerze w zależności od stanu zalogowania.
+  function refreshAuthOnlyItems(loggedIn) {
+    var items = doc.querySelectorAll('[data-auth-only="true"]');
+    for (var i = 0; i < items.length; i++) {
+      var el = items[i];
+      el.style.display = loggedIn ? '' : 'none';
+    }
   }
 
   // Aktualizuje sekcję konta w drawerze — wyświetla aktualnie zalogowanego
@@ -772,7 +843,12 @@
 
     var drawerValueEl = doc.querySelector('[data-vilda-chrome-drawer-patient-value]');
 
-    var p = getPatientFromForm();
+    // VildaSession.getPatient() próbuje najpierw pól formularza, a gdy ich brak
+    // (strony bez app.js) — czyta z VildaPersistence.sharedUserData (localStorage).
+    var session = global.VildaSession;
+    var p = (session && typeof session.getPatient === 'function')
+      ? session.getPatient()
+      : getPatientFromForm();
     if (!p || !p.name) {
       chip.classList.add('is-empty');
       chip.classList.remove('has-patient');
@@ -807,8 +883,8 @@
       var v = global.VildaVault;
       if (!v) return false;
       vaultListenersBound = true;
-      if (typeof v.onUnlock      === 'function') v.onUnlock(refreshUserChip);
-      if (typeof v.onLock        === 'function') v.onLock(refreshUserChip);
+      if (typeof v.onUnlock       === 'function') v.onUnlock(refreshUserChip);
+      if (typeof v.onLock         === 'function') v.onLock(refreshUserChip);
       if (typeof v.onPatientSaved === 'function') v.onPatientSaved(refreshPatientChip);
       refreshUserChip();
       return true;
@@ -816,10 +892,17 @@
 
     doc.addEventListener('vilda:guest-mode-changed', refreshUserChip);
 
-    // Próba natychmiastowa — VildaVault może być już gotowy.
+    // VildaSession.bridge uruchamia lazy-load auth na stronach bez VildaVault
+    // i odpala 'vilda:auth-loaded' gdy skrypty się załadują.
+    // Dzięki temu chip od razu pokazuje właściwy stan bez 10-sekundowego pollingu.
+    doc.addEventListener('vilda:auth-loaded',      function () { tryBindVault(); refreshUserChip(); });
+    doc.addEventListener('vilda:session-changed',  function () { refreshUserChip(); refreshPatientChip(); });
+
+    // Próba natychmiastowa — VildaVault może być już gotowy (statycznie załadowany).
     if (!tryBindVault()) {
-      // VildaVault jeszcze nie załadowany — sprawdzamy co 100 ms przez max 10 s,
-      // rejestrujemy listenery dokładnie raz i wyłączamy polling.
+      // VildaVault jeszcze nie załadowany — polling jako safety-net (max 10 s).
+      // Na "lekkich" stronach vilda_session_bridge.js lazy-ładuje vault, więc
+      // zdarzenie 'vilda:auth-loaded' powinno wypalić zanim polling się skończy.
       var attempts = 0;
       var vaultTimer = setInterval(function () {
         if (tryBindVault() || ++attempts >= 100) clearInterval(vaultTimer);
@@ -948,6 +1031,21 @@
         'Wczytywanie danych jest zarezerwowane dla zalogowanych użytkowników.',
         'Wczytywanie danych jest dostępne na stronie głównej pacjenta.'
       ));
+    }
+
+    // Przycisk „Pacjenci" — fallback tylko gdy custom-fixes.js go nie obsługuje.
+    var patientsBtn = doc.getElementById('patientsListBtnSidebar');
+    if (patientsBtn) {
+      patientsBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        if (patientsBtn._cfBound) return;
+        var authUI = global.VildaAuthUI;
+        if (authUI && typeof authUI.showPatientsList === 'function') {
+          authUI.showPatientsList(null, { viewOnly: true });
+        } else {
+          showChromeTip(patientsBtn, 'Zaloguj się, aby przeglądać bazę pacjentów.');
+        }
+      });
     }
   }
 

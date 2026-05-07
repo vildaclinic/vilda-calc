@@ -863,7 +863,7 @@
 
     const fileInput = el('input', {
       type: 'file',
-      accept: '.wiw,.vilda,application/json',
+      accept: '*/*', /* iOS nie obsługuje niestandardowych rozszerzeń (.wiw/.vilda) bez UTI — */* pokazuje wszystkie pliki */
       style: 'display:none;'
     });
 
@@ -1062,6 +1062,361 @@
     setTimeout(function () { try { pwInput.focus(); } catch (_) {} }, 30);
   }
 
+  // ============ SPARKLINE WZROSTU ============
+  /**
+   * Buduje miniaturowy wykres SVG wzrostu w czasie z tablicy measurements.
+   * Każdy pomiar: { ageYears, ageMonths, height, weight }.
+   * Zwraca element SVG lub null gdy za mało danych (< 2 punktów).
+   */
+  function buildHeightSparkline(measurements) {
+    if (!measurements || measurements.length < 2) return null;
+    var svgNS = 'http://www.w3.org/2000/svg';
+
+    var points = [];
+    for (var i = 0; i < measurements.length; i++) {
+      var m = measurements[i];
+      if (!m || m.height == null) continue;
+      var ageMo = ((m.ageYears || 0) * 12) + (m.ageMonths || 0);
+      var h = parseFloat(m.height);
+      if (isFinite(ageMo) && isFinite(h)) points.push({ age: ageMo, height: h });
+    }
+    if (points.length < 2) return null;
+
+    var W = 280, H = 64, PAD = 8;
+    var minAge = points[0].age, maxAge = points[points.length - 1].age;
+    var heights = points.map(function (p) { return p.height; });
+    var minH = Math.min.apply(null, heights);
+    var maxH = Math.max.apply(null, heights);
+    var rangeAge = maxAge - minAge || 1;
+    var rangeH   = maxH - minH || 1;
+
+    function toX(age) { return PAD + (age - minAge) / rangeAge * (W - 2 * PAD); }
+    function toY(h)   { return H - PAD - (h - minH) / rangeH * (H - 2 * PAD); }
+
+    var polylinePoints = points.map(function (p) {
+      return toX(p.age).toFixed(1) + ',' + toY(p.height).toFixed(1);
+    }).join(' ');
+
+    var svg = global.document.createElementNS(svgNS, 'svg');
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    svg.setAttribute('width', W);
+    svg.setAttribute('height', H);
+    svg.setAttribute('class', 'vilda-patient-sparkline');
+    svg.setAttribute('aria-hidden', 'true');
+
+    var polyline = global.document.createElementNS(svgNS, 'polyline');
+    polyline.setAttribute('points', polylinePoints);
+    polyline.setAttribute('fill', 'none');
+    polyline.setAttribute('stroke', '#00838d');
+    polyline.setAttribute('stroke-width', '2.5');
+    polyline.setAttribute('stroke-linecap', 'round');
+    polyline.setAttribute('stroke-linejoin', 'round');
+    svg.appendChild(polyline);
+
+    for (var j = 0; j < points.length; j++) {
+      var circle = global.document.createElementNS(svgNS, 'circle');
+      circle.setAttribute('cx', toX(points[j].age).toFixed(1));
+      circle.setAttribute('cy', toY(points[j].height).toFixed(1));
+      circle.setAttribute('r', j === points.length - 1 ? '5' : '3');
+      circle.setAttribute('fill', '#00838d');
+      circle.setAttribute('stroke', '#ffffff');
+      circle.setAttribute('stroke-width', '1.5');
+      svg.appendChild(circle);
+    }
+    return svg;
+  }
+
+  // ============ KARTA INDYWIDUALNEGO PACJENTA ============
+  /**
+   * Otwiera szczegółową kartę pacjenta z jego statystykami i sparkline.
+   * @param {string} patientId   — ID z listPatients()
+   * @param {Function|null} onPick — callback do wczytania danych (null = viewOnly)
+   * @param {object} listOptions  — opcje przekazywane z powrotem do showPatientsList
+   */
+  async function showPatientCard(patientId, onPick, listOptions) {
+    var V = getVault();
+    if (!V || !V.isUnlocked()) return;
+
+    // Pokaż skeleton ładowania
+    open(el('div', { class: 'vilda-auth-screen vilda-auth-patient-card' }, [
+      el('h2', { class: 'vilda-auth-title', text: 'Karta pacjenta' }),
+      el('p', { class: 'vilda-auth-subtitle', text: 'Wczytywanie danych…' })
+    ]));
+    setBusy(true);
+
+    var snap = null;
+    try { snap = await V.getLatestSnapshot(patientId); }
+    catch (e) { logError('showPatientCard getLatestSnapshot', e); }
+    setBusy(false);
+
+    if (!snap || !snap.payload) {
+      open(el('div', { class: 'vilda-auth-screen vilda-auth-patient-card' }, [
+        el('h2', { class: 'vilda-auth-title', text: 'Karta pacjenta' }),
+        el('p', { class: 'vilda-auth-subtitle', text: 'Nie udało się wczytać danych pacjenta.' }),
+        el('div', { class: 'vilda-auth-actions' }, [
+          el('button', { class: 'vilda-auth-btn vilda-auth-btn-ghost', type: 'button',
+            text: '← Wróć do listy',
+            onclick: function () { showPatientsList(onPick, listOptions); }
+          })
+        ])
+      ]));
+      return;
+    }
+
+    var payload = snap.payload;
+
+    // ── Dane z formularza (struktura collectUserData) ──
+    var user      = payload.user     || {};
+    var advanced  = payload.advanced || {};
+    var growthRoot = payload.growthBasic || {};
+    var growthData = growthRoot.data     || {};
+
+    var name      = payload.name || '(bez imienia)';
+    var age       = user.age       != null ? parseInt(user.age, 10)       : null;
+    var ageMonths = user.ageMonths != null ? parseInt(user.ageMonths, 10) : null;
+    var sex       = user.sex || '';
+    var height    = user.height != null ? parseFloat(user.height) : null;
+    var weight    = user.weight != null ? parseFloat(user.weight) : null;
+
+    // totalAgeMonths = pełny wiek w miesiącach do obliczeń centylowych
+    var totalAgeMonths = (age != null && ageMonths != null)
+      ? (age * 12 + ageMonths)
+      : (age != null ? age * 12 : null);
+
+    // ── Dane wzrostowe (sparkline + prędkość) ──
+    var measurements = (growthData.measurements || []).filter(function (m) {
+      return m && m.height != null;
+    });
+    var growthVelocity = growthData.growthVelocity != null ? growthData.growthVelocity : null;
+    var isLosingGrowth = !!growthData.isLosingGrowth;
+    var isSlowVelocity = !!growthData.isSlowVelocity;
+
+    // ── BMI ──
+    var bmi = null;
+    if (height != null && weight != null && height > 0) {
+      bmi = weight / Math.pow(height / 100, 2);
+    }
+
+    // ── Centyle — używaj globalnych funkcji aplikacji gdy dostępne ──
+    var heightPerc = null, weightPerc = null, bmiPerc = null;
+    var isAdult = (totalAgeMonths != null && totalAgeMonths >= 216); // 18 lat
+    var sexForCalc = sex; // M/K lub chłopiec/dziewczynka — funkcje obsługują oba formaty
+    try {
+      if (!isAdult && age != null && typeof calcPercentileStats === 'function') {
+        if (height != null) {
+          var sH = calcPercentileStats(height, sexForCalc, age, 'HT');
+          if (sH && sH.percentile != null) heightPerc = sH.percentile;
+        }
+        if (weight != null) {
+          var sW = calcPercentileStats(weight, sexForCalc, age, 'WT');
+          if (sW && sW.percentile != null) weightPerc = sW.percentile;
+        }
+      }
+      if (!isAdult && bmi != null && totalAgeMonths != null && typeof bmiPercentileChild === 'function') {
+        var bp = bmiPercentileChild(bmi, sexForCalc, totalAgeMonths);
+        if (bp != null) bmiPerc = bp;
+      }
+    } catch (_) {}
+
+    // ── Wskaźnik Cole'a (tylko dzieci, wymaga LMS) ──
+    var cole = null;
+    try {
+      if (!isAdult && bmi != null && totalAgeMonths != null && typeof getLMS === 'function') {
+        var lms = getLMS(sexForCalc, Math.round(totalAgeMonths));
+        if (lms && lms.M) {
+          cole = (bmi / lms.M) * 100;
+        }
+      }
+    } catch (_) {}
+
+    // ── Źródło danych centylowych ──
+    var zscore = payload.zscore || {};
+    var dataSource = (typeof zscore.dataSource === 'string' && zscore.dataSource)
+      ? zscore.dataSource.toUpperCase() : null;
+    var dataSourceLabel = dataSource === 'PALCZEWSKA' ? 'Palczewska'
+      : dataSource === 'WHO' ? 'WHO' : dataSource === 'OLAF' ? 'OLAF' : null;
+
+    // ── MPH (Mid-Parental Height) ──
+    var motherH = advanced.motherHeight ? parseFloat(advanced.motherHeight) : null;
+    var fatherH = advanced.fatherHeight ? parseFloat(advanced.fatherHeight) : null;
+    var mph = null;
+    var mphPerc = null;
+    if (motherH && fatherH && isFinite(motherH) && isFinite(fatherH)) {
+      var sexL = sex.toLowerCase();
+      if (sexL === 'm' || sexL === 'ch' || sexL === 'chłopiec' || sexL === 'male') {
+        mph = (motherH + fatherH + 13) / 2;
+      } else if (sexL === 'k' || sexL === 'dz' || sexL === 'dziewczynka' || sexL === 'female' ||
+                 sexL === 'f') {
+        mph = (motherH + fatherH - 13) / 2;
+      }
+    }
+    // Centyl MPH — wzrost docelowy oceniamy na siatce w wieku 18 lat
+    if (mph != null) {
+      try {
+        if (dataSource === 'PALCZEWSKA' && typeof calcPercentileStatsPal === 'function') {
+          var mphS = calcPercentileStatsPal(mph, sex, 18, 'HT');
+          if (mphS && mphS.percentile != null) mphPerc = mphS.percentile;
+        } else if (typeof calcPercentileStats === 'function') {
+          var mphS2 = calcPercentileStats(mph, sex, 18, 'HT');
+          if (mphS2 && mphS2.percentile != null) mphPerc = mphS2.percentile;
+        }
+      } catch (_) {}
+    }
+
+    // ── Klasyfikacja kolorów (spójna z vilda_summary_cards.js) ──
+    function classify(type, val, perc) {
+      if (!isAdult) {
+        if (type === 'height') return (perc != null && (perc < 3 || perc > 97)) ? 'alert' : null;
+        if (type === 'weight') return (perc != null) ? (perc >= 97 || perc < 3 ? 'alert' : perc >= 90 ? 'improve' : null) : null;
+        if (type === 'bmi')    return (perc != null) ? (perc >= 97 || perc < 3 ? 'alert' : perc >= 85 ? 'improve' : null) : null;
+        if (type === 'cole')   return (val != null)  ? (val < 90 || val >= 120 ? 'alert' : val > 110 ? 'improve' : null) : null;
+      } else {
+        if (type === 'bmi')  return (val != null) ? (val >= 30 || val < 18.5 ? 'alert' : val >= 25 ? 'improve' : null) : null;
+        if (type === 'cole') return (val != null) ? (val < 90 || val >= 120 ? 'alert' : val > 110 ? 'improve' : null) : null;
+      }
+      return null;
+    }
+
+    // ── Formatowanie centyla ──
+    function fmtCentyl(p) {
+      if (p == null || !isFinite(p)) return '';
+      var r = Math.round(p);
+      if (r < 1)  return '<1. centyl';
+      if (r > 99) return '>99. centyl';
+      return r + '. centyl';
+    }
+
+    // ── Buduj kafelkę statystyki ──
+    function statEl(label, value, sub, status) {
+      var cls = 'vilda-patient-stat';
+      if (status === 'alert')   cls += ' vilda-patient-stat--alert';
+      else if (status === 'improve') cls += ' vilda-patient-stat--improve';
+      else if (value && value !== '—') cls += ' vilda-patient-stat--ok';
+      var children = [
+        el('div', { class: 'vilda-patient-stat-label', text: label }),
+        el('div', { class: 'vilda-patient-stat-value', text: value || '—' })
+      ];
+      if (sub) {
+        var subCls = (status === 'alert' || status === 'improve')
+          ? 'vilda-patient-stat-extra' : 'vilda-patient-stat-sub';
+        children.push(el('div', { class: subCls, text: sub }));
+      }
+      return el('div', { class: cls }, children);
+    }
+
+    function fmtNum(n, dec) {
+      if (n == null || !isFinite(n)) return null;
+      return n.toFixed(dec != null ? dec : 1).replace('.', ',');
+    }
+
+    // ── Statystyki ──
+    var statsChildren = [];
+
+    // Wzrost
+    var hStatus = classify('height', height, heightPerc);
+    var hSub = heightPerc != null ? fmtCentyl(heightPerc) : null;
+    if (height != null) statsChildren.push(statEl('Wzrost', fmtNum(height) + ' cm', hSub, hStatus));
+
+    // Waga
+    var wStatus = classify('weight', weight, weightPerc);
+    var wSub = weightPerc != null ? fmtCentyl(weightPerc) : null;
+    if (weight != null) statsChildren.push(statEl('Waga', fmtNum(weight) + ' kg', wSub, wStatus));
+
+    // BMI
+    var bmiStatus = classify('bmi', bmi, bmiPerc);
+    var bmiSub = bmiPerc != null ? fmtCentyl(bmiPerc) : null;
+    if (bmi != null) statsChildren.push(statEl('BMI', fmtNum(bmi), bmiSub, bmiStatus));
+
+    // Wskaźnik Cole'a
+    var coleStatus = classify('cole', cole, null);
+    if (cole != null) statsChildren.push(statEl("Wskaźnik Cole'a", fmtNum(cole) + '%', null, coleStatus));
+
+    // Prędkość wzrastania
+    if (growthVelocity != null) {
+      var velWarn = isLosingGrowth ? '⚠ zahamowanie wzrostu'
+        : isSlowVelocity          ? '⚠ wolna prędkość'      : null;
+      var velStatus = (isLosingGrowth || isSlowVelocity) ? 'improve' : null;
+      statsChildren.push(statEl('Prędkość wzrastania', fmtNum(growthVelocity) + ' cm/rok', velWarn, velStatus));
+    }
+
+    // MPH (Mid-Parental Height)
+    if (mph != null) {
+      var mphSub = mphPerc != null ? fmtCentyl(mphPerc) : null;
+      statsChildren.push(statEl('MPH', fmtNum(mph) + ' cm', mphSub, null));
+    }
+
+    // Źródło siatek centylowych
+    if (dataSourceLabel) {
+      statsChildren.push(statEl('Siatki centylowe', dataSourceLabel, null, null));
+    }
+
+    // ── Nagłówek karty (avatar + imię) ──
+    var ageStr = '';
+    if (age != null) {
+      ageStr = age + ' lat';
+      if (ageMonths != null && ageMonths > 0) {
+        ageStr += ' i ' + ageMonths + (ageMonths === 1 ? ' miesiąc' : ageMonths < 5 ? ' miesiące' : ' miesięcy');
+      }
+    }
+    var headerMeta = [ageStr, sex].filter(Boolean).join(' · ');
+    var lastSavedStr = (snap.savedAtISO || snap.lastSavedAtISO)
+      ? formatRelativeISO(snap.savedAtISO || snap.lastSavedAtISO) : '';
+
+    var headerDiv = el('div', { class: 'vilda-auth-user-card vilda-patient-card-header' }, [
+      el('div', { class: 'vilda-auth-user-avatar', text: name.charAt(0).toUpperCase() }),
+      el('div', { class: 'vilda-auth-user-info' }, [
+        el('div', { class: 'vilda-auth-user-name', text: name }),
+        headerMeta   ? el('div', { class: 'vilda-auth-user-meta', text: headerMeta })              : null,
+        lastSavedStr ? el('div', { class: 'vilda-auth-user-meta', text: 'Ostatni wpis: ' + lastSavedStr }) : null
+      ].filter(Boolean))
+    ]);
+
+    // ── Sparkline ──
+    var sparklineWrap = null;
+    if (measurements.length >= 2) {
+      var svgEl = buildHeightSparkline(measurements);
+      if (svgEl) {
+        sparklineWrap = el('div', { class: 'vilda-patient-sparkline-wrap' }, [
+          el('div', { class: 'vilda-patient-sparkline-label', text: 'Wzrost w czasie' }),
+          svgEl
+        ]);
+      }
+    }
+
+    // ── Akcje ──
+    var backBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost', type: 'button',
+      text: '← Wróć do listy',
+      onclick: function () { showPatientsList(onPick, listOptions); }
+    });
+
+    var loadBtn = null;
+    if (typeof onPick === 'function') {
+      loadBtn = el('button', {
+        class: 'vilda-auth-btn vilda-auth-btn-primary', type: 'button',
+        text: 'Wczytaj tego pacjenta',
+        onclick: function () { onPick(payload); hide(); }
+      });
+    }
+
+    // ── Złożenie ekranu ──
+    var screenChildren = [
+      el('h2', { class: 'vilda-auth-title', text: 'Karta pacjenta' }),
+      headerDiv
+    ];
+    if (statsChildren.length > 0) {
+      screenChildren.push(el('div', { class: 'vilda-patient-stats-grid' }, statsChildren));
+    }
+    if (sparklineWrap) screenChildren.push(sparklineWrap);
+    screenChildren.push(
+      el('div', { class: 'vilda-auth-actions' },
+        loadBtn ? [backBtn, loadBtn] : [backBtn]
+      )
+    );
+
+    open(el('div', { class: 'vilda-auth-screen vilda-auth-patient-card' }, screenChildren));
+  }
+
   // ============ LISTA PACJENTÓW ============
   async function showPatientsList(onPick, options) {
     const V = getVault();
@@ -1082,7 +1437,7 @@
       class: 'vilda-auth-subtitle',
       text: patients.length === 0
         ? 'Nie masz jeszcze zapisanych pacjentów. Wpisz dane w aplikacji i kliknij „Zapisz dane”.'
-        : 'Kliknij konto pacjenta, aby wczytać najnowszy zapis. Łącznie: ' + patients.length + (patients.length === 1 ? ' pacjent.' : ' pacjentów.')
+        : 'Kliknij pacjenta, aby zobaczyć jego kartę. Łącznie: ' + patients.length + (patients.length === 1 ? ' pacjent.' : ' pacjentów.')
     });
 
     // Pole wyszukiwarki — pokazujemy tylko gdy są jakiekolwiek dane do filtrowania.
@@ -1124,20 +1479,9 @@
       const card = el('button', {
         class: 'vilda-auth-user-card',
         type: 'button',
-        title: 'Wczytaj dane: ' + headerName,
-        onclick: async function () {
-          setBusy(true);
-          try {
-            const snap = await V.getLatestSnapshot(p.patientId);
-            if (snap && snap.payload && typeof onPick === 'function') {
-              onPick(snap.payload);
-            }
-            hide();
-          } catch (e) {
-            logError('getLatestSnapshot', e);
-          } finally {
-            setBusy(false);
-          }
+        title: 'Zobacz kartę: ' + headerName,
+        onclick: function () {
+          showPatientCard(p.patientId, onPick, opts);
         }
       }, [
         el('div', { class: 'vilda-auth-user-avatar', text: headerName.charAt(0).toUpperCase() }),
@@ -1242,7 +1586,7 @@
       //   .wiw — nowe pliki kopii pacjentów (zaszyfrowane envelope)
       //   .vilda — wczesne testy (zaszyfrowane envelope, wsteczna kompatybilność)
       //   .json — płaskie pliki sprzed wprowadzenia szyfrowania (legacy)
-      accept: '.wiw,.vilda,.json,application/json',
+      accept: '*/*', /* iOS nie obsługuje niestandardowych rozszerzeń (.wiw/.vilda) bez UTI — */* pokazuje wszystkie pliki */
       multiple: 'multiple',
       style: 'display:none;'
     });
@@ -1739,6 +2083,7 @@
     showLoginForUser: showLoginForUser,
     showRecoveryFlowForUser: showRecoveryFlowForUser,
     showPatientsList: showPatientsList,
+    showPatientCard: showPatientCard,
     showImportPatientsFlow: showImportPatientsFlow,
     showRestoreVaultFlow: showRestoreVaultFlow,
     hide: hide,
