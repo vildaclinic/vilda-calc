@@ -712,7 +712,12 @@ function vildaCustomHasHtmlContent(element) {
   }
 
   function isVaultUnlocked() {
-    // Tryb gościa = niezalogowany, nawet jeśli vault technicznie ma masterKey.
+    // Deleguj do VildaSession — jedno źródło prawdy dla całej aplikacji.
+    // VildaSession.isLoggedIn() sprawdza VildaVault gdy dostępny,
+    // w przeciwnym razie odpada do sessionStorage (działa na każdej stronie).
+    var vs = window.VildaSession;
+    if (vs && typeof vs.isLoggedIn === 'function') return vs.isLoggedIn();
+    // Safety-net gdy vilda_session_bridge.js nie załadowany (nie powinno się zdarzyć).
     var auth = window.VildaAuthUI;
     if (auth && typeof auth.isGuestMode === 'function' && auth.isGuestMode()) return false;
     var v = window.VildaVault;
@@ -752,16 +757,18 @@ function vildaCustomHasHtmlContent(element) {
   }
 
   function initSidebarMenu() {
-    var sidebarSave  = document.getElementById('saveDataBtnSidebar');
-    var sidebarLoad  = document.getElementById('loadDataBtnSidebar');
-    var sidebarFile  = document.getElementById('fileInputSidebar');
-    var headerSave   = document.getElementById('saveDataBtn');
-    var headerLoad   = document.getElementById('loadDataBtn');
+    var sidebarSave     = document.getElementById('saveDataBtnSidebar');
+    var sidebarLoad     = document.getElementById('loadDataBtnSidebar');
+    var sidebarPatients = document.getElementById('patientsListBtnSidebar');
+    var sidebarFile     = document.getElementById('fileInputSidebar');
+    var headerSave      = document.getElementById('saveDataBtn');
+    var headerLoad      = document.getElementById('loadDataBtn');
 
     // Sygnalizuj vilda_chrome.js, że custom-fixes przejmuje obsługę kliknięć.
     // Bazowy handler z vilda_chrome sprawdza ten flag i oddaje kontrolę.
-    if (sidebarSave) sidebarSave._cfBound = true;
-    if (sidebarLoad) sidebarLoad._cfBound = true;
+    if (sidebarSave)     sidebarSave._cfBound = true;
+    if (sidebarLoad)     sidebarLoad._cfBound = true;
+    if (sidebarPatients) sidebarPatients._cfBound = true;
 
     // Na starcie wyrównaj stan disabled z przyciskami w menu hamburgera
     syncSidebarMenuState();
@@ -772,7 +779,7 @@ function vildaCustomHasHtmlContent(element) {
         e.preventDefault();
 
         if (!isVaultUnlocked()) {
-          var msg = 'Zapisywanie danych jest zarezerwowane dla zalogowanych użytkowników.';
+          var msg = (window.VildaSession && window.VildaSession.TOOLTIPS.saveData.notLoggedIn) || 'Zapisywanie danych jest zarezerwowane dla zalogowanych użytkowników.';
           showTip(sidebarSave, msg);
           return;
         }
@@ -788,7 +795,22 @@ function vildaCustomHasHtmlContent(element) {
         }
 
         if (window.vildaExport && typeof window.vildaExport.saveUserData === 'function') {
-          window.vildaExport.saveUserData();
+          // app.js zawsze przekazuje window.showTooltip do dataIo.saveUserData —
+          // nasze opts są ignorowane przez wrapper. Tymczasowo podmieniamy
+          // window.showTooltip na one-shot interceptor: przy pierwszym wywołaniu
+          // (sync dla błędów walidacji, async dla sukcesu) przekierowuje tooltip
+          // na przycisk sidebar, a potem przywraca oryginał.
+          var _origShowTooltip = window.showTooltip;
+          window.showTooltip = function _sidebarSaveTip(target, msg) {
+            window.showTooltip = _origShowTooltip; // przywróć natychmiast po pierwszym wywołaniu
+            showTip(sidebarSave, msg);
+          };
+          try {
+            window.vildaExport.saveUserData();
+          } catch (err) {
+            window.showTooltip = _origShowTooltip; // przywróć też przy wyjątku
+            throw err;
+          }
           syncSidebarMenuState();
         }
       });
@@ -807,7 +829,7 @@ function vildaCustomHasHtmlContent(element) {
         // Najpierw sprawdź login — komunikat o wymaganym logowaniu ma priorytet
         // nad generycznym „disabled" (który też jest ustawiony dla niezalogowanych).
         if (!isVaultUnlocked()) {
-          var loginMsg = 'Wczytywanie danych jest zarezerwowane dla zalogowanych użytkowników.';
+          var loginMsg = (window.VildaSession && window.VildaSession.TOOLTIPS.loadData.notLoggedIn) || 'Wczytywanie danych jest zarezerwowane dla zalogowanych użytkowników.';
           showTip(sidebarLoad, loginMsg);
           return;
         }
@@ -817,7 +839,7 @@ function vildaCustomHasHtmlContent(element) {
           var msg =
             (headerLoad && (headerLoad.getAttribute('data-tip') || headerLoad.getAttribute('title'))) ||
             sidebarLoad.getAttribute('data-tip') ||
-            'Wczytywanie danych jest możliwe tylko na początku sesji.';
+            (window.VildaSession && window.VildaSession.TOOLTIPS.loadData.sessionLocked) || 'Wczytywanie danych jest możliwe tylko na początku sesji.';
           showTip(sidebarLoad, msg);
           return;
         }
@@ -841,6 +863,28 @@ function vildaCustomHasHtmlContent(element) {
           // Fallback: kliknij #loadDataBtn (index.html / docpro.html) —
           // on sam wywoła showPatientsList przez vilda_data_import_export.js.
           headerLoad.click();
+        }
+      });
+    }
+
+    // PACJENCI — otwiera bazę pacjentów w trybie podglądu (bez wczytywania).
+    // Przycisk jest widoczny tylko dla zalogowanych (data-auth-only=”true”
+    // obsługuje vilda_chrome.js refreshAuthOnlyItems).
+    if (sidebarPatients) {
+      sidebarPatients.addEventListener('click', function (e) {
+        e.preventDefault();
+
+        if (!isVaultUnlocked()) {
+          showTip(sidebarPatients, (window.VildaSession && window.VildaSession.TOOLTIPS.patients.notLoggedIn) || 'Zaloguj się, aby przeglądać bazę pacjentów.');
+          return;
+        }
+
+        var authUI = window.VildaAuthUI;
+        if (authUI && typeof authUI.showPatientsList === 'function') {
+          // Otwieramy bez callbacku — użytkownik tylko przegląda, nie wczytuje.
+          authUI.showPatientsList(null, { viewOnly: true });
+        } else {
+          showTip(sidebarPatients, (window.VildaSession && window.VildaSession.TOOLTIPS.patients.unavailable) || 'Moduł pacjentów niedostępny — odśwież stronę.');
         }
       });
     }

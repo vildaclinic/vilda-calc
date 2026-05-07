@@ -42,17 +42,18 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
 <!-- Zmieniamy nazwę pliku stylów na style_PWZ.css -->
 <link href="style.css?v=5" rel="stylesheet" />
-<link href="ios26-v2.css?v=10" rel="stylesheet" />
+<link href="ios26-v2.css?v=12" rel="stylesheet" />
 <link href="sidebar.css" rel="stylesheet" />
-<link href="vilda_chrome.css?v=7" rel="stylesheet">
-<link href="vilda_auth_ui.css?v=11" rel="stylesheet" />
+<link href="vilda_chrome.css?v=9" rel="stylesheet">
+<link href="vilda_auth_ui.css?v=15" rel="stylesheet" />
 <script src="vilda_logger.js?v=2"></script>
 <script src="vilda_html.js?v=4"></script>
 <script src="vilda_persistence_adapter.js?v=7"></script>
+<script src="vilda_session_bridge.js?v=1"></script>
 <script src="vilda_init.js?v=4"></script>
 <script src="vilda_crypto.js?v=1"></script>
 <script src="vilda_vault.js?v=9"></script>
-<script src="vilda_auth_ui.js?v=18"></script>
+<script src="vilda_auth_ui.js?v=22"></script>
 <script src="vilda_file_export.js?v=4"></script>
 <script src="vilda_deps.js?v=87"></script>
 <script src="vilda_update_hooks.js?v=7"></script>
@@ -1177,17 +1178,17 @@
     <!-- Karta „Dane użytkownika” ma identyczny układ jak na stronie głównej serwisu.
          Zachowujemy legendę i pole na imię i nazwisko oraz używamy tych samych identyfikatorów,
          aby dane były synchronizowane pomiędzy stronami. -->
-    <fieldset class="user-card"><legend>Dane użytkownika</legend>
+    <fieldset class="user-card">
       <!-- Zmodyfikowane pole wieku: lata oraz opcjonalnie miesiące -->
       <!-- Nowe pole imię i nazwisko -->
-      <label>Imię i&nbsp;Nazwisko:
+      <label>Imię i&nbsp;Nazwisko <span style="font-weight:400;opacity:0.65;">(opcjonalnie)</span>:
         <input type="text" id="name">
       </label>
       <label>Wiek (lata):
         <!-- Pozwalamy podać wiek w latach od 0 do 130; lata są wymagane -->
         <input type="number" id="age" min="0" max="130" oninput="debouncedUpdate()" required></label>
       <!-- Nowe pole na wiek w miesiącach; zakres 1–11, opcjonalne -->
-      <label>Wiek (miesiące – opcjonalnie):
+      <label>Wiek <span style="font-weight:400;opacity:0.65;">(miesiące – opcjonalnie)</span>:
         <!--
           Umożliwiamy wpisywanie jedynie wartości od 1 do 11 (pełne miesiące).
           Pole pozostawione puste jest interpretowane jako brak dodatkowych miesięcy.
@@ -6326,7 +6327,7 @@ async function generateCentileChart() {
        przełączaniu trybu wyników na wąskich ekranach.
        Plik custom-fixes.js implementuje te funkcje poprzez
        obserwację DOM i modyfikację scrollIntoView. -->
-  <script src="custom-fixes.js?v=17" defer></script>
+  <script src="custom-fixes.js?v=19" defer></script>
   <script src="docpro_state_persist.js?v=4" defer></script>
 
     <!-- Overlay for Z‑score batch conversion loading animation.  When the user starts
