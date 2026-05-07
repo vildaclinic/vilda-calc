@@ -943,6 +943,10 @@ body.chrome-drawer-open { overflow: hidden; }
     padding: 0.3rem 0 1rem;
   }
   .has-vilda-chrome .main-content { padding: 0.2rem 0; }
+
+  /* Instrukcja "Uzupełnij wymagane pola..." — na desktopie użyteczna w prawej kolumnie,
+     na mobile zbędna (formularz i wyniki są w jednej kolumnie, użytkownik widzi kontekst) */
+  #compareInstruction { display: none !important; }
 }
 
 /* ============ ACCESSIBILITY ============ */
