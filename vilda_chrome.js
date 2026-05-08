@@ -76,12 +76,9 @@
       ]
     },
     {
-      title: 'Konto i pomoc',
+      title: 'Konto',
       items: [
-        { href: 'ustawienia.html', label: 'Ustawienia', icon: 'settings' },
-        { href: 'instrukcja.html', label: 'Instrukcja', icon: 'file-text' },
-        { href: 'o-aplikacji.html', label: 'O aplikacji', icon: 'info' },
-        { href: 'kontakt.html', label: 'Kontakt', icon: 'mail' }
+        { href: 'ustawienia.html', label: 'Ustawienia', icon: 'settings' }
       ]
     }
   ];
@@ -183,20 +180,6 @@
            doc.querySelector('aside.sidebar');
   }
 
-  function renderSidebarLogo() {
-    return [
-      '<div class="sidebar-logo">',
-      '  <a href="index.html" aria-label="Strona główna wagaiwzrost.pl">',
-      '    <img src="logo_vilda.jpeg" alt="Vilda Clinic">',
-      '  </a>',
-      '  <div class="sidebar-brand">',
-      '    <span class="sidebar-brand-name">wagaiwzrost.pl</span>',
-      '    <span class="sidebar-brand-tagline">Vilda Clinic</span>',
-      '  </div>',
-      '</div>'
-    ].join('');
-  }
-
   function renderSidebarItem(item) {
     var attrs = [];
     if (item.id) attrs.push('id="' + escHTML(item.id) + '"');
@@ -224,7 +207,6 @@
 
   function renderSidebarHTML() {
     var html = ['<div class="sidebar-inner">'];
-    html.push(renderSidebarLogo());
     html.push('<nav class="sidebar-nav" aria-label="Nawigacja boczna">');
     for (var i = 0; i < MENU.length; i++) {
       var grp = MENU[i];
@@ -1041,6 +1023,86 @@
     }
   }
 
+  // ============ BANER ZGODY (ANALITYKA) ============
+  // Jeden egzemplarz banera wstrzykiwany przez vilda_chrome.js na wszystkich stronach.
+  // Obsługuje Google Consent Mode v2 i zapis decyzji przez VildaPersistence.
+  function initConsentBanner() {
+    if (doc.getElementById('consent-banner')) return; // baner już w DOM (np. stara strona)
+
+    // --- wstrzyknij HTML ---
+    var bannerEl = doc.createElement('div');
+    bannerEl.id = 'consent-banner';
+    bannerEl.className = 'cookie-banner';
+    bannerEl.innerHTML =
+      '<p><strong>Vilda Clinic</strong> korzysta z Google Analytics (GA4) do tworzenia anonimowych statystyk odwiedzin.' +
+      ' Adres IP jest anonimizowany. Zgoda jest dobrowolna i możesz ją wycofać w dowolnym momencie w' +
+      ' <a href="ustawienia.html">Ustawieniach</a>.' +
+      ' Więcej informacji w <a href="polityka-prywatnosci.html">Polityce prywatności</a>.</p>' +
+      '<div class="cookie-buttons">' +
+      '<button id="consent-accept">Akceptuję analitykę</button>' +
+      '<button id="consent-decline">Nie zgadzam się</button>' +
+      '</div>';
+    doc.body.appendChild(bannerEl);
+
+    // --- odczyt / zapis zgody przez VildaPersistence ---
+    function readConsent() {
+      try {
+        var p = global.VildaPersistence;
+        return p && typeof p.readPreferenceRaw === 'function'
+          ? p.readPreferenceRaw('ANALYTICS_CONSENT', null)
+          : null;
+      } catch (_) { return null; }
+    }
+    function writeConsent(value) {
+      try {
+        var p = global.VildaPersistence;
+        if (p && typeof p.writePreferenceRaw === 'function') {
+          p.writePreferenceRaw('ANALYTICS_CONSENT', value, { force: true });
+        }
+      } catch (_) {}
+    }
+
+    // --- Consent Mode v2 + dynamiczne ładowanie GA4 ---
+    function loadGA() {
+      global.dataLayer = global.dataLayer || [];
+      function gtag() { global.dataLayer.push(arguments); }
+      gtag('consent', 'update', { analytics_storage: 'granted' });
+      var s = doc.createElement('script');
+      s.src = 'https://www.googletagmanager.com/gtag/js?id=G-EZZTNV8W07';
+      s.async = true;
+      doc.head.appendChild(s);
+      gtag('js', new Date());
+      gtag('config', 'G-EZZTNV8W07', { anonymize_ip: true });
+    }
+    function denyGA() {
+      global.dataLayer = global.dataLayer || [];
+      function gtag() { global.dataLayer.push(arguments); }
+      gtag('consent', 'update', { analytics_storage: 'denied' });
+    }
+
+    // --- podjęta wcześniej decyzja ---
+    var consent = readConsent();
+    if (!consent) {
+      bannerEl.style.display = 'block';
+    } else if (consent === 'granted') {
+      loadGA();
+    } else {
+      denyGA();
+    }
+
+    // --- przyciski ---
+    doc.getElementById('consent-accept').addEventListener('click', function () {
+      writeConsent('granted');
+      bannerEl.style.display = 'none';
+      loadGA();
+    });
+    doc.getElementById('consent-decline').addEventListener('click', function () {
+      writeConsent('denied');
+      bannerEl.style.display = 'none';
+      denyGA();
+    });
+  }
+
   // ============ INIT ============
   function init() {
     if (booted) return;
@@ -1055,6 +1117,7 @@
     refreshPatientChip();
     safeCreateIcons();
     scheduleIconRetry();
+    initConsentBanner();
   }
 
   function boot() {

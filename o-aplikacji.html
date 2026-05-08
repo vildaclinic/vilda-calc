@@ -1,6 +1,20 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
+<!-- Google Consent Mode v2 — domyślne ustawienie przed podjęciem decyzji przez użytkownika.
+     GA4 załaduje się dopiero po wyrażeniu zgody (patrz: vilda_chrome.js / initConsentBanner).
+     Blok musi być w <head> przed jakimkolwiek tagiem analytics. -->
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('consent', 'default', {
+    analytics_storage: 'denied',
+    ad_storage: 'denied',
+    ad_user_data: 'denied',
+    ad_personalization: 'denied',
+    wait_for_update: 500
+  });
+</script>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>O aplikacji Waga i wzrost – kalkulatory zdrowia dla rodzin i lekarzy</title>
@@ -462,6 +476,89 @@
       color: #c2410c;
     }
 
+    /* Chipy „czego aplikacja nie robi" */
+    .about-page .disclaimer-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin: 1rem 0 0.75rem;
+    }
+    .about-page .disclaimer-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.32rem;
+      background: rgba(180, 83, 9, 0.07);
+      border: 1px solid rgba(180, 83, 9, 0.18);
+      border-radius: 100px;
+      padding: 0.28rem 0.8rem 0.28rem 0.6rem;
+      font-size: 0.79rem;
+      font-weight: 500;
+      color: #92400e;
+      line-height: 1.4;
+    }
+    .about-page .disclaimer-chip .sidebar-icon {
+      color: #c2410c;
+      width: 13px;
+      height: 13px;
+      flex-shrink: 0;
+    }
+
+    /* Sekcja Moduł Profesjonalny */
+    .about-page .about-pro-disclaimer {
+      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(240,249,255,0.96));
+      border-color: rgba(3, 105, 161, 0.16);
+    }
+    .about-page .about-pro-disclaimer h2 {
+      color: #0c4a6e;
+    }
+    .about-page .about-pro-disclaimer .about-section-heading .sidebar-icon {
+      color: #0284c7;
+    }
+    .about-page .about-pro-disclaimer > p {
+      color: #1e3a4a;
+    }
+    .about-page .pro-disclaimer-list {
+      list-style: none;
+      padding: 0;
+      margin: 1rem 0 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+    .about-page .pro-disclaimer-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 0.82rem 1rem;
+      background: rgba(3, 105, 161, 0.045);
+      border: 1px solid rgba(3, 105, 161, 0.1);
+      border-radius: 14px;
+      font-size: 0.91rem;
+      line-height: 1.65;
+      color: #1a3047;
+    }
+    .about-page .pro-disclaimer-list li .sidebar-icon {
+      color: #0284c7;
+      flex-shrink: 0;
+      margin-top: 3px;
+      width: 17px;
+      height: 17px;
+    }
+    .about-page .pro-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.28rem;
+      background: linear-gradient(135deg, #0284c7, #0891b2);
+      color: #fff;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      padding: 0.22rem 0.65rem;
+      border-radius: 100px;
+      vertical-align: middle;
+      margin-left: 0.35rem;
+    }
+
     .about-page .about-panel strong,
     .about-page .about-card strong,
     .about-page .about-hero strong {
@@ -632,7 +729,7 @@
             <a href="#jak-to-dziala">Jak to działa</a>
             <a href="#dla-kogo">Dla kogo</a>
             <a href="#rozwoj">Rozwój aplikacji</a>
-            <a class="warning-link" href="#zastrzezenie">Ważne zastrzeżenie</a>
+            <a class="warning-link" href="#zastrzezenie">Zastrzeżenia</a>
           </div>
 
           <div class="hero-note">
@@ -805,13 +902,51 @@
         <section id="zastrzezenie" class="about-panel about-warning">
           <div class="about-section-heading">
             <span class="sidebar-icon" data-lucide="triangle-alert"></span>
-            <h2>Ważne zastrzeżenie</h2>
+            <h2>Przeznaczenie i zastrzeżenia</h2>
           </div>
           <p>
-            <strong>Waga i wzrost</strong> ma charakter edukacyjny i wspierający. Wyniki kalkulatorów, modułów i analiz
-            nie zastępują pełnej oceny lekarskiej, badania przedmiotowego ani indywidualnej decyzji klinicznej.
-            W razie wątpliwości zdrowotnych należy skonsultować się z lekarzem lub innym odpowiednim specjalistą.
+            <strong>Waga i wzrost</strong> to narzędzie o charakterze informacyjnym i edukacyjnym. Algorytmy aplikacji
+            dostosowują obliczenia do wprowadzonych danych — wieku, wzrostu, masy ciała i płci — jednak wyniki
+            kalkulatorów, modułów i analiz nie stanowią oceny klinicznej i nie zastępują profesjonalnej konsultacji medycznej.
           </p>
+          <div class="disclaimer-chips">
+            <span class="disclaimer-chip"><span class="sidebar-icon" data-lucide="x-circle"></span> nie stanowi rozpoznania</span>
+            <span class="disclaimer-chip"><span class="sidebar-icon" data-lucide="x-circle"></span> nie jest zaleceniem terapeutycznym</span>
+            <span class="disclaimer-chip"><span class="sidebar-icon" data-lucide="x-circle"></span> nie zastępuje planu leczenia</span>
+          </div>
+          <div class="about-callout">
+            W razie wątpliwości zdrowotnych — zarówno dotyczących masy ciała, jak i wyników modułów specjalistycznych — należy skonsultować się z lekarzem lub innym odpowiednim specjalistą.
+          </div>
+        </section>
+
+        <section class="about-panel about-pro-disclaimer">
+          <div class="about-section-heading">
+            <span class="sidebar-icon" data-lucide="stethoscope"></span>
+            <h2>Moduł Profesjonalny — wyłącznie dla lekarzy <span class="pro-tag">DocPro</span></h2>
+          </div>
+          <p>
+            Moduł Profesjonalny (<strong>DocPro</strong>) jest przeznaczony wyłącznie dla lekarzy. Zawiera między innymi
+            farmakologiczne kalkulatory testowych dawek leków, obliczenia kliniczne i zestawienia dopasowane do danych
+            pacjenta. Korzystanie z tego modułu wymaga wykształcenia medycznego oraz umiejętności samodzielnej interpretacji wyników.
+          </p>
+          <ul class="pro-disclaimer-list">
+            <li>
+              <span class="sidebar-icon" data-lucide="clipboard-check"></span>
+              <span>Wyniki modułów specjalistycznych mają charakter obliczeniowy i pomocniczy — nie stanowią gotowych zleceń ani rekomendacji klinicznych.</span>
+            </li>
+            <li>
+              <span class="sidebar-icon" data-lucide="book-open"></span>
+              <span>Wszystkie obliczenia wymagają weryfikacji z aktualną literaturą medyczną, Charakterystyką Produktu Leczniczego oraz obowiązującymi standardami klinicznymi.</span>
+            </li>
+            <li>
+              <span class="sidebar-icon" data-lucide="scale"></span>
+              <span>Dawki obliczone przez aplikację nie uwzględniają wszystkich indywidualnych czynników klinicznych — ostateczna decyzja terapeutyczna należy zawsze do lekarza prowadzącego.</span>
+            </li>
+            <li>
+              <span class="sidebar-icon" data-lucide="user-check"></span>
+              <span>Moduł jest dostępny dla każdego użytkownika aplikacji, jednak może być stosowany wyłącznie przez osoby z wykształceniem medycznym zdolne do samodzielnej interpretacji wyników.</span>
+            </li>
+          </ul>
         </section>
 
         <section class="about-panel">
@@ -848,16 +983,49 @@
       </div>
     </main>
   </div>
-
-  <footer>
-    <p><strong>Administrator serwisu:</strong>
-      Vilda Clinic sp. z o.o. •
-      <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">vildaclinic.pl</a>
+<footer class="site-footer">
+  <div class="site-footer__inner">
+    <div class="site-footer__brand">
+      <a href="index.html" class="site-footer__brand-link">
+        <span class="site-footer__brand-icon" aria-hidden="true">
+          <img src="pwa-icons/icon-48x48.png" alt="" width="22" height="22">
+        </span>
+        <span class="site-footer__brand-name">wagaiwzrost.pl</span>
+      </a>
+      <p class="site-footer__brand-meta">
+        Vilda Clinic sp. z o.o.<br>
+        Konsultacja merytoryczna: dr&nbsp;n.&nbsp;med.&nbsp;Maciej&nbsp;Flader
+      </p>
+    </div>
+    <nav class="site-footer__col" aria-label="Kalkulatory">
+      <h3 class="site-footer__col-title">Kalkulatory</h3>
+      <a href="index.html" class="site-footer__link">Strona główna</a>
+      <a href="homa-ir.html" class="site-footer__link">HOMA-IR</a>
+      <a href="kalkulator-klirens.html" class="site-footer__link">Klirens / eGFR</a>
+    </nav>
+    <nav class="site-footer__col" aria-label="Kalkulatory — ciąg dalszy">
+      <h3 class="site-footer__col-title site-footer__col-title--hidden" aria-hidden="true">&nbsp;</h3>
+      <a href="docpro.html" class="site-footer__link">DocPro</a>
+      <a href="steroidy.html" class="site-footer__link">Steroidy</a>
+      <a href="cukrzyca.html" class="site-footer__link">Cukrzyca</a>
+    </nav>
+    <nav class="site-footer__col" aria-label="Informacje">
+      <h3 class="site-footer__col-title">Informacje</h3>
+      <a href="o-aplikacji.html" class="site-footer__link">O aplikacji</a>
+      <a href="kontakt.html" class="site-footer__link">Kontakt</a>
+      <a href="polityka-prywatnosci.html" class="site-footer__link">Polityka prywatności</a>
+    </nav>
+  </div>
+  <div class="site-footer__disclaimer-wrap">
+    <p class="site-footer__disclaimer">
+      Narzędzie do celów informacyjnych — nie zastępuje konsultacji lekarskiej ani samodzielnych decyzji klinicznych.
     </p>
-    <p><strong>Konsultacja merytoryczna:</strong>
-      dr n. med. Maciej Flader
-    </p>
-  </footer>
+  </div>
+  <div class="site-footer__bottom">
+    <span>© 2025 Vilda Clinic sp. z o.o.</span>
+    <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer" class="site-footer__vildaclinic">vildaclinic.pl</a>
+  </div>
+</footer>
 
   <script>
     document.addEventListener('DOMContentLoaded', function() {

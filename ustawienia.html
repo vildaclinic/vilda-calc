@@ -1,6 +1,20 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
+<!-- Google Consent Mode v2 — domyślne ustawienie przed podjęciem decyzji przez użytkownika.
+     GA4 załaduje się dopiero po wyrażeniu zgody (patrz: vilda_chrome.js / initConsentBanner).
+     Blok musi być w <head> przed jakimkolwiek tagiem analytics. -->
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('consent', 'default', {
+    analytics_storage: 'denied',
+    ad_storage: 'denied',
+    ad_user_data: 'denied',
+    ad_personalization: 'denied',
+    wait_for_update: 500
+  });
+</script>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Ustawienia – Waga i wzrost</title>
@@ -99,6 +113,12 @@
             <div class="settings-subnav-group-label">Kopie</div>
             <a class="settings-subnav-link" data-target="settings-section-backup" href="#settings-section-backup">
               <i data-lucide="hard-drive"></i>Kopie zapasowe
+            </a>
+          </div>
+          <div class="settings-subnav-group">
+            <div class="settings-subnav-group-label">Prywatność</div>
+            <a class="settings-subnav-link" data-target="settings-section-privacy" href="#settings-section-privacy">
+              <i data-lucide="eye"></i>Analityka
             </a>
           </div>
           <div class="settings-subnav-group">
@@ -459,6 +479,47 @@
             </div>
           </details>
 
+          <div class="settings-group-label">Prywatność</div>
+          <details class="settings-accordion" id="settings-section-privacy">
+            <summary>
+              <span class="settings-accordion-index" aria-hidden="true"><i data-lucide="eye"></i></span>
+              <div class="settings-accordion-copy">
+                <h2 class="settings-accordion-title">Analityka i zgody</h2>
+                <p class="settings-accordion-text">Zarządzasz zgodą na Google Analytics (GA4). Zmiana działa natychmiast — bez przeładowania strony.</p>
+              </div>
+              <div class="settings-accordion-meta">
+                <span class="settings-mini-chip" id="analyticsConsentChip">ładowanie…</span>
+              </div>
+              <span class="settings-chevron" aria-hidden="true">⌄</span>
+            </summary>
+            <div class="settings-accordion-panel">
+              <div class="settings-panel-inner">
+                <p class="settings-section-note">
+                  GA4 zbiera anonimowe statystyki odwiedzin. Adresy IP są anonimizowane. Więcej informacji w
+                  <a href="polityka-prywatnosci.html" style="color:var(--primary,#00838d);">Polityce prywatności</a>.
+                </p>
+                <div class="settings-control-grid">
+                  <div class="settings-control-card">
+                    <div class="settings-control-header">
+                      <h3 class="settings-control-title">Google Analytics</h3>
+                      <span class="settings-tag">GA4</span>
+                    </div>
+                    <p class="settings-control-desc">Zbiera anonimowe dane o użyciu aplikacji (przeglądane sekcje, typ urządzenia). Nie zapisuje danych wpisywanych w formularzach.</p>
+                    <div class="settings-card-toggle-row">
+                      <div class="settings-card-toggle-copy">
+                        <p class="settings-inline-note" id="analyticsConsentNote">Sprawdzam stan zgody…</p>
+                      </div>
+                      <label class="switch" for="analyticsConsentToggle">
+                        <input type="checkbox" id="analyticsConsentToggle">
+                        <span class="slider"></span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+
           <div class="settings-group-label">Konto i bezpieczeństwo</div>
           <details class="settings-accordion" id="settings-section-account">
             <summary>
@@ -572,12 +633,49 @@
     </div>
     <aside class="decor-sidebar" aria-hidden="true"></aside>
   </div>
-  <footer>
-    <p><strong>Administrator serwisu:</strong> Vilda Clinic sp. z o.o. •
-      <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">vildaclinic.pl</a>
+<footer class="site-footer">
+  <div class="site-footer__inner">
+    <div class="site-footer__brand">
+      <a href="index.html" class="site-footer__brand-link">
+        <span class="site-footer__brand-icon" aria-hidden="true">
+          <img src="pwa-icons/icon-48x48.png" alt="" width="22" height="22">
+        </span>
+        <span class="site-footer__brand-name">wagaiwzrost.pl</span>
+      </a>
+      <p class="site-footer__brand-meta">
+        Vilda Clinic sp. z o.o.<br>
+        Konsultacja merytoryczna: dr&nbsp;n.&nbsp;med.&nbsp;Maciej&nbsp;Flader
+      </p>
+    </div>
+    <nav class="site-footer__col" aria-label="Kalkulatory">
+      <h3 class="site-footer__col-title">Kalkulatory</h3>
+      <a href="index.html" class="site-footer__link">Strona główna</a>
+      <a href="homa-ir.html" class="site-footer__link">HOMA-IR</a>
+      <a href="kalkulator-klirens.html" class="site-footer__link">Klirens / eGFR</a>
+    </nav>
+    <nav class="site-footer__col" aria-label="Kalkulatory — ciąg dalszy">
+      <h3 class="site-footer__col-title site-footer__col-title--hidden" aria-hidden="true">&nbsp;</h3>
+      <a href="docpro.html" class="site-footer__link">DocPro</a>
+      <a href="steroidy.html" class="site-footer__link">Steroidy</a>
+      <a href="cukrzyca.html" class="site-footer__link">Cukrzyca</a>
+    </nav>
+    <nav class="site-footer__col" aria-label="Informacje">
+      <h3 class="site-footer__col-title">Informacje</h3>
+      <a href="o-aplikacji.html" class="site-footer__link">O aplikacji</a>
+      <a href="kontakt.html" class="site-footer__link">Kontakt</a>
+      <a href="polityka-prywatnosci.html" class="site-footer__link">Polityka prywatności</a>
+    </nav>
+  </div>
+  <div class="site-footer__disclaimer-wrap">
+    <p class="site-footer__disclaimer">
+      Narzędzie do celów informacyjnych — nie zastępuje konsultacji lekarskiej ani samodzielnych decyzji klinicznych.
     </p>
-    <p><strong>Konsultacja merytoryczna:</strong> dr n. med. Maciej Flader</p>
-  </footer>
+  </div>
+  <div class="site-footer__bottom">
+    <span>© 2025 Vilda Clinic sp. z o.o.</span>
+    <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer" class="site-footer__vildaclinic">vildaclinic.pl</a>
+  </div>
+</footer>
   <!-- Ładujemy bibliotekę lucide do ikon w sidebarze -->
   <!-- Skrypt budujący listę ustawień i zapisujący wybory w localStorage -->
   <script>
@@ -1320,6 +1418,78 @@
     document.addEventListener('DOMContentLoaded', function() {
       document.body.classList.remove('js-loading');
     });
+  </script>
+
+  <script>
+  // === Zarządzanie zgodą na analitykę (sekcja Prywatność w ustawieniach) ===
+  (function () {
+    'use strict';
+
+    var toggle = document.getElementById('analyticsConsentToggle');
+    var chip   = document.getElementById('analyticsConsentChip');
+    var note   = document.getElementById('analyticsConsentNote');
+    if (!toggle) return;
+
+    function readConsent() {
+      try {
+        var p = window.VildaPersistence;
+        return p && typeof p.readPreferenceRaw === 'function'
+          ? p.readPreferenceRaw('ANALYTICS_CONSENT', null)
+          : null;
+      } catch (_) { return null; }
+    }
+    function writeConsent(value) {
+      try {
+        var p = window.VildaPersistence;
+        if (p && typeof p.writePreferenceRaw === 'function') {
+          p.writePreferenceRaw('ANALYTICS_CONSENT', value, { force: true });
+        }
+      } catch (_) {}
+    }
+    function loadGA() {
+      window.dataLayer = window.dataLayer || [];
+      function gtag() { window.dataLayer.push(arguments); }
+      gtag('consent', 'update', { analytics_storage: 'granted' });
+      // Załaduj skrypt GA4 tylko raz
+      if (!document.querySelector('script[src*="googletagmanager.com/gtag"]')) {
+        var s = document.createElement('script');
+        s.src = 'https://www.googletagmanager.com/gtag/js?id=G-EZZTNV8W07';
+        s.async = true;
+        document.head.appendChild(s);
+        gtag('js', new Date());
+        gtag('config', 'G-EZZTNV8W07', { anonymize_ip: true });
+      }
+    }
+    function denyGA() {
+      window.dataLayer = window.dataLayer || [];
+      function gtag() { window.dataLayer.push(arguments); }
+      gtag('consent', 'update', { analytics_storage: 'denied' });
+    }
+    function updateUI(consent) {
+      var granted = consent === 'granted';
+      toggle.checked = granted;
+      if (chip) {
+        chip.textContent = granted ? 'Włączona' : 'Wyłączona';
+        chip.style.background = granted ? 'rgba(0,131,141,.13)' : '';
+        chip.style.color = granted ? '#00838d' : '';
+      }
+      if (note) {
+        note.textContent = granted
+          ? 'Analityka jest włączona. Dane odwiedzin są zbierane anonimowo.'
+          : 'Analityka jest wyłączona. Żadne dane odwiedzin nie są zbierane.';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      updateUI(readConsent() || 'denied');
+      toggle.addEventListener('change', function () {
+        var newConsent = toggle.checked ? 'granted' : 'denied';
+        writeConsent(newConsent);
+        updateUI(newConsent);
+        if (newConsent === 'granted') { loadGA(); } else { denyGA(); }
+      });
+    });
+  })();
   </script>
 
   <!-- Skrypt obsługujący suwak czasu pulsowania ramek w trybie PRO.  Suwak

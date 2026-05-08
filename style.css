@@ -114,7 +114,136 @@ button.add-row:hover{background:var(--primary);}
 table{width:100%;border-collapse:collapse;margin-top:0.6rem;}
 th,td{border:1px solid #ddd;padding:0.6rem;text-align:center;font-size:0.95rem;}
 th{background:var(--secondary);color:#fff;}
-footer{margin-top:0rem;text-align:center;font-size:0.85rem;color:#666;padding:1rem 0;background:#fafafa;}  
+/* ============ SITE FOOTER — Wariant B ============
+ * Trzy kolumny na desktopie (brand + 2 nav), dwie na mobile.
+ * Disclaimer medyczny między siatką a linią copyright.
+ * Pseudo-element ::after pokrywa rezerwę body na dock na mobile.
+ * ================================================== */
+.site-footer {
+  background: #f4f8f8;
+  border-top: 1px solid #d0e8e8;
+  position: relative;         /* potrzebne dla ::after */
+  color: #4a7a7a;
+}
+.site-footer__inner {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 1.1rem;
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr 1fr;
+  gap: 1.5rem;
+  box-sizing: border-box;
+}
+/* Brand — kolumna 1 */
+.site-footer__brand-link {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  text-decoration: none;
+  margin-bottom: .45rem;
+}
+.site-footer__brand-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.site-footer__brand-icon img {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+.site-footer__brand-name {
+  font-size: .8rem;
+  font-weight: 600;
+  color: #005a62;
+  letter-spacing: .01em;
+}
+.site-footer__brand-meta {
+  font-size: .72rem;
+  color: #7a9999;
+  line-height: 1.55;
+}
+/* Nav kolumny 2–4 */
+.site-footer__col-title {
+  font-size: .65rem;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #6fa8a8;
+  margin-bottom: .5rem;
+}
+.site-footer__col-title--hidden {
+  visibility: hidden;
+}
+.site-footer__link {
+  display: block;
+  font-size: .78rem;
+  color: #4a7a7a;
+  text-decoration: none;
+  padding: .18rem 0;
+  transition: color .15s;
+}
+.site-footer__link:hover { color: #00838d; }
+/* Disclaimer */
+.site-footer__disclaimer-wrap {
+  background: rgba(0, 131, 141, .055);
+  border-top: .5px solid rgba(0, 131, 141, .14);
+  border-bottom: .5px solid rgba(0, 131, 141, .14);
+}
+.site-footer__disclaimer {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: .6rem 1rem;
+  font-size: .73rem;
+  color: #3a6d6d;
+  line-height: 1.55;
+  box-sizing: border-box;
+}
+.site-footer__disclaimer::before {
+  content: "⚕\00a0";
+}
+/* Bottom bar — copyright */
+.site-footer__bottom {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: .6rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: .72rem;
+  color: #a0b8b8;
+  box-sizing: border-box;
+}
+.site-footer__vildaclinic {
+  color: #7ababd;
+  text-decoration: none;
+  font-weight: 500;
+}
+.site-footer__vildaclinic:hover { color: #00838d; }
+/* Mobile — brand na pełną szerokość, trzy kolumny nav obok siebie */
+@media (max-width: 700px) {
+  .site-footer__inner {
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1rem .75rem;
+  }
+  .site-footer__brand {
+    grid-column: 1 / -1;
+  }
+  .site-footer__bottom {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: .1rem .5rem;
+    padding: .35rem 1rem;
+  }
+}
+/* Przestrzeń dla docka (body.has-mobile-bottom-dock → padding-bottom) jest
+   zarezerwowana przez body i nie wymaga osobnego pseudo-elementu.
+   Tło body pod stopką jest neutralne i nie wymaga pokrycia kolorem stopki. */
 @media(min-width:700px){
   .grid-two{display:grid;grid-template-columns:minmax(0, 1fr) minmax(0, 1fr);gap:1rem;}
     /* 
@@ -2139,24 +2268,139 @@ body.liquid-ios26 .circ-chart-btn.is-pro-locked{
  * zwiększamy odstęp nad blokiem źródeł, aby wizualnie oddzielić go od
  * poprzednich kart i fieldsetów.
  */
+/* === FIELDSET ŹRÓDEŁ — przepisany na chrome design language === */
 #sourceFieldset {
-  max-width: 100%;        /* nigdy nie przekraczaj szerokości kontenera */
-  overflow-wrap: anywhere;/* pozwól łamać długie słowa w dowolnym miejscu */
-  word-break: break-word; /* łamie wyrazy, jeśli zawierają twarde spacje */
-  margin-top: 1.5rem;       /* większy odstęp od poprzednich bloków */
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  margin-top: 1.5rem;
+
+  /* Chrome glass card */
+  border: 1px solid rgba(0, 131, 141, 0.14);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(240,252,252,0.92));
+  box-shadow: 0 8px 28px rgba(0, 81, 88, 0.08);
+  padding: 0 1.1rem 1.2rem;
 }
 
-/* Na szerszych ekranach siatka wyników (grid-two) składa się z dwóch kolumn
-   o szerokości 50% każda i przerwy 1rem między nimi. Aby dopasować szerokość
-   sekcji źródeł danych do szerokości pojedynczej kolumny, ograniczamy jej
-   maksymalną szerokość do połowy kontenera pomniejszonej o połowę odstępu.
-   Na wąskich ekranach (gdzie wyniki układają się w jeden słupek) blok
-   źródeł może zajmować całą szerokość rodzica. */
+/* Legend jako nagłówek sekcji w stylu chrome */
+#sourceFieldset legend {
+  float: none;
+  width: auto;
+  padding: 0 0.6rem;
+  margin: 0 0 0 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--chrome-label-color, #5a7274);
+  line-height: 1;
+}
+
+/* Podsekcje wewnątrz fieldsetu */
+.source-panel {
+  border-radius: 14px;
+  padding: 0.88rem 1rem;
+  margin-top: 0.75rem;
+}
+
+.source-panel--warning {
+  background: rgba(180, 83, 9, 0.055);
+  border: 1px solid rgba(180, 83, 9, 0.14);
+}
+
+.source-panel--pro {
+  background: rgba(3, 105, 161, 0.045);
+  border: 1px solid rgba(3, 105, 161, 0.12);
+}
+
+.source-panel__heading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.55rem;
+}
+
+.source-panel__heading strong {
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.source-panel--warning .source-panel__heading strong { color: #8a3d0a; }
+.source-panel--pro    .source-panel__heading strong { color: #0c4a6e; }
+
+.source-panel__icon {
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.source-panel--warning .source-panel__icon { color: #c2410c; }
+.source-panel--pro    .source-panel__icon { color: #0284c7; }
+.source-panel__icon svg { display: block; width: 100%; height: 100%; }
+
+.source-panel p {
+  margin: 0 0 0.55rem;
+  font-size: 0.875rem;
+  line-height: 1.65;
+  color: #374151;
+}
+.source-panel p:last-child { margin-bottom: 0; }
+
+.source-panel ul {
+  margin: 0.4rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.875rem;
+  line-height: 1.65;
+  color: #374151;
+}
+
+.source-panel ul li + li { margin-top: 0.25rem; }
+
+/* Przycisk "Źródła" */
+#sourceFieldset .source-toggle-wrap {
+  text-align: center;
+  margin-top: 1rem;
+}
+
+#sourceFieldset #toggleSources {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.44rem 1.1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 131, 141, 0.22);
+  background: rgba(255, 255, 255, 0.75);
+  color: var(--primary, #00838d);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 2px 8px rgba(0, 81, 88, 0.07);
+}
+#sourceFieldset #toggleSources:hover {
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 4px 14px rgba(0, 81, 88, 0.12);
+}
+
+/* Lista źródeł */
+#sourceList {
+  font-size: 0.8rem;
+  line-height: 1.7;
+  color: #4b5563;
+  padding-left: 1.35rem;
+  margin-top: 0.75rem;
+}
+#sourceList li + li { margin-top: 0.4rem; }
+#sourceList a { color: var(--primary, #00838d); }
+
 @media (min-width: 700px) {
   #sourceFieldset {
-    /* Ustaw górną granicę szerokości na połowę kontenera; centracja w osi poziomej */
     max-width: 100%;
-    /* Wyrównaj blok źródeł do lewej krawędzi kontenera, aby pasował do kolumn */
     margin-left: 0;
     margin-right: auto;
   }

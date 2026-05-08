@@ -39,6 +39,36 @@
   let pendingSetupOptions = null;
   let idleHandlersBound = false;
 
+  // ============ PLATFORM DETECTION ============
+  /**
+   * Zwraca lokalną nazwę metody biometrycznej dla aktualnej platformy:
+   *   macOS          → "Touch ID"
+   *   iOS / iPadOS   → "Face ID / Touch ID"
+   *   Windows        → "Windows Hello"
+   *   Android / inne → "dane biometryczne"
+   */
+  function getBiometricLabel() {
+    var ua = (navigator.userAgent || '').toLowerCase();
+    var platform = ((navigator.userAgentData && navigator.userAgentData.platform) ||
+                    navigator.platform || '').toLowerCase();
+
+    // macOS — Touch ID (MacBook z Touch Bar / Magic Keyboard z Touch ID)
+    if (/macintosh|mac os x/.test(ua) && !/iphone|ipad/.test(ua)) {
+      return 'Touch ID';
+    }
+    // iOS / iPadOS — mogą mieć Face ID lub Touch ID zależnie od modelu,
+    // nie da się tego niezawodnie odróżnić w przeglądarce bez dodatkowych API
+    if (/iphone|ipad|ipod/.test(ua)) {
+      return 'Face ID / Touch ID';
+    }
+    // Windows Hello
+    if (/windows/.test(ua) || /win/.test(platform)) {
+      return 'Windows Hello';
+    }
+    // Android i pozostałe
+    return 'dane biometryczne';
+  }
+
   // ============ UTIL ============
   function getCrypto() { return global.VildaCrypto || null; }
   function getVault() { return global.VildaVault || null; }
@@ -750,7 +780,7 @@
       const biometricBtn = el('button', {
         class: 'vilda-auth-btn vilda-auth-btn-biometric',
         type: 'button',
-        text: '🪪  Face ID / odcisk palca'
+        text: '🪪  ' + getBiometricLabel()
       });
       biometricBtn.addEventListener('click', async function () {
         showError(errBox, '');
@@ -886,9 +916,10 @@
     // Oznacz jako pokazany — dopiero teraz, tuż przed renderowaniem
     localStorage.setItem(flagKey, new Date().toISOString());
 
+    const bioLabel = getBiometricLabel();
     const overlay = el('div', { class: 'vilda-auth-overlay vilda-auth-overlay-sheet' });
     const sheet = el('div', { class: 'vilda-auth-sheet' }, [
-      el('h3', { class: 'vilda-auth-sheet-title', text: 'Chcesz logować się przez Face ID?' }),
+      el('h3', { class: 'vilda-auth-sheet-title', text: 'Chcesz logować się przez ' + bioLabel + '?' }),
       el('p', {
         class: 'vilda-auth-sheet-body',
         text: 'Następnym razem jeden dotyk wystarczy — bez wpisywania hasła.'
@@ -897,7 +928,7 @@
         el('button', {
           class: 'vilda-auth-btn vilda-auth-btn-primary',
           type: 'button',
-          text: 'Tak, włącz Face ID',
+          text: 'Tak, włącz ' + bioLabel,
           onclick: async function () {
             overlay.remove();
             try {

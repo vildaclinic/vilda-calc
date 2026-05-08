@@ -1069,7 +1069,8 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  z-index: 9999;
+  /* Wyżej niż sidebar (99999) i drawer (99999) */
+  z-index: 1000000;
   padding: 0;
   animation: vildaSheetFadeIn 0.22s ease;
 }
@@ -1084,13 +1085,33 @@
   border-radius: 20px 20px 0 0;
   padding: 28px 24px 36px;
   width: 100%;
-  max-width: 520px;
+  max-width: 480px;
   animation: vildaSheetSlideUp 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+  box-sizing: border-box;
 }
 
 @keyframes vildaSheetSlideUp {
   from { transform: translateY(100%); }
   to   { transform: translateY(0); }
+}
+
+/* Na desktopie — wycentrowany modal zamiast bottom-sheetu */
+@media (min-width: 700px) {
+  .vilda-auth-overlay-sheet {
+    align-items: center;
+    padding: 24px;
+  }
+  .vilda-auth-sheet {
+    border-radius: 16px;
+    max-width: 400px;
+    padding: 32px 28px 28px;
+    box-shadow: 0 20px 60px rgba(0, 40, 48, 0.22), 0 4px 12px rgba(0, 40, 48, 0.10);
+    animation: vildaSheetFadeScale 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @keyframes vildaSheetFadeScale {
+    from { opacity: 0; transform: scale(0.96) translateY(6px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
 }
 
 .vilda-auth-sheet-title {

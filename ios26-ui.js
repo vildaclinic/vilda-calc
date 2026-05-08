@@ -695,10 +695,9 @@
     'cukrzyca.html': { href: 'cukrzyca.html', label: 'Cukrzyca', icon: 'syringe' },
     'steroidy.html': { href: 'steroidy.html', label: 'Steroidy', icon: 'pill' },
     'materialy-edukacyjne.html': { href: 'materialy-edukacyjne.html', label: EDUCATION_FULL_LABEL, icon: 'book-open' },
-    'ustawienia.html': { href: 'ustawienia.html', label: 'Ustawienia', icon: 'settings' },
-    'instrukcja.html': { href: 'instrukcja.html', label: 'Instrukcja', icon: 'file-text' },
-    'o-aplikacji.html': { href: 'o-aplikacji.html', label: 'O aplikacji', icon: 'info' },
-    'kontakt.html': { href: 'kontakt.html', label: 'Kontakt', icon: 'mail' }
+    'ustawienia.html': { href: 'ustawienia.html', label: 'Ustawienia', icon: 'settings' }
+    // instrukcja.html, o-aplikacji.html, kontakt.html — strony informacyjne dostępne przez stopkę,
+    // nie wymagają wymuszonego wpisu w sidebar/hamburger.
   };
 
 
@@ -710,10 +709,9 @@ const NAVIGATION_REACHABILITY_ROUTES = [
   { path: 'cukrzyca.html', href: 'cukrzyca.html', label: 'Cukrzyca', icon: 'syringe' },
   { path: 'steroidy.html', href: 'steroidy.html', label: 'Steroidy', icon: 'pill' },
   { path: EDUCATION_PAGE_PATH, href: EDUCATION_PAGE_PATH, label: EDUCATION_FULL_LABEL, icon: 'book-open' },
-  { path: 'ustawienia.html', href: 'ustawienia.html', label: 'Ustawienia', icon: 'settings' },
-  { path: 'instrukcja.html', href: 'instrukcja.html', label: 'Instrukcja', icon: 'file-text' },
-  { path: 'o-aplikacji.html', href: 'o-aplikacji.html', label: 'O aplikacji', icon: 'info' },
-  { path: 'kontakt.html', href: 'kontakt.html', label: 'Kontakt', icon: 'mail' }
+  { path: 'ustawienia.html', href: 'ustawienia.html', label: 'Ustawienia', icon: 'settings' }
+  // instrukcja.html, o-aplikacji.html, kontakt.html — strony informacyjne dostępne przez stopkę;
+  // usunięte z NAVIGATION_REACHABILITY_ROUTES, bo nie są częścią głównej nawigacji aplikacji.
 ];
 const HAMBURGER_FALLBACK_ROUTE_ORDER = NAVIGATION_REACHABILITY_ROUTES
   .filter((route) => normalizePath(route.path) !== EDUCATION_PAGE_PATH)

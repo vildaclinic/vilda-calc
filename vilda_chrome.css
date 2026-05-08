@@ -353,15 +353,21 @@
 }
 @media (max-width: 991px) {
   .chrome-mobile-brand-bar {
-    display: block;
-    text-align: center;
+    /* min-height musi pokrywać dokładnie rezerwę z .has-sidebar header (25px),
+       żeby żaden skrawek tła nagłówka nie wystawał poniżej paska — szczególnie
+       widoczne gdy header ma zaokrąglone dolne rogi (liquid-ios26 + overflow:hidden). */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 25px;
+    box-sizing: border-box;
+    padding: 0;
     font-size: 0.8rem;
     font-weight: 600;
     letter-spacing: 0.04em;
     color: var(--primary, #00838d);
     background: rgba(0, 131, 141, 0.05);
     border-top: 0.5px solid rgba(0, 131, 141, 0.14);
-    padding: 4px 0 5px;
     line-height: 1;
   }
 }
@@ -687,46 +693,6 @@ body.chrome-drawer-open { overflow: hidden; }
   }
   .has-vilda-chrome aside.sidebar-v2 .sidebar-inner::-webkit-scrollbar { width: 6px; }
   .has-vilda-chrome aside.sidebar-v2 .sidebar-inner::-webkit-scrollbar-thumb { background: rgba(0, 131, 141, 0.18); border-radius: 4px; }
-
-  /* Logo box */
-  .has-vilda-chrome aside.sidebar-v2 .sidebar-logo {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    padding: 1rem var(--chrome-sidebar-pad-x) 0.85rem;
-    border-bottom: 1px solid rgba(0, 131, 141, 0.08);
-  }
-  .has-vilda-chrome aside.sidebar-v2 .sidebar-logo a {
-    display: inline-flex;
-    flex: 0 0 auto;
-    text-decoration: none;
-  }
-  .has-vilda-chrome aside.sidebar-v2 .sidebar-logo img {
-    width: 44px;
-    height: 44px;
-    object-fit: cover;
-    border-radius: 12px;
-    margin: 0;
-    max-width: none;
-  }
-  .has-vilda-chrome aside.sidebar-v2 .sidebar-logo h1 { display: none; }
-  .has-vilda-chrome aside.sidebar-v2 .sidebar-brand {
-    display: inline-flex;
-    flex-direction: column;
-    line-height: 1.15;
-  }
-  .has-vilda-chrome aside.sidebar-v2 .sidebar-brand-name {
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--primary, #00838d);
-  }
-  .has-vilda-chrome aside.sidebar-v2 .sidebar-brand-tagline {
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.07em;
-    color: var(--chrome-label-color);
-    font-weight: 600;
-  }
 
   /* Sekcje grupujące menu */
   .has-vilda-chrome aside.sidebar-v2 .sidebar-nav {

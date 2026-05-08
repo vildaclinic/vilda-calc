@@ -3,14 +3,19 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-EZZTNV8W07"></script>
+<!-- Google Consent Mode v2 — domyślne ustawienie przed podjęciem decyzji przez użytkownika.
+     GA4 załaduje się dopiero po wyrażeniu zgody (patrz: app.js / loadGA()).
+     Blok musi być w <head> przed jakimkolwiek tagiem analytics. -->
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-EZZTNV8W07');
+  gtag('consent', 'default', {
+    analytics_storage: 'denied',
+    ad_storage: 'denied',
+    ad_user_data: 'denied',
+    ad_personalization: 'denied',
+    wait_for_update: 500
+  });
 </script>
 <meta charset="utf-8" />
     <!--
@@ -1269,22 +1274,41 @@
   -->
   <fieldset id="sourceFieldset" style="display:none;">
     <legend>O aplikacji: źródła, metodologia i zastrzeżenia</legend>
-    <p>
-      <strong>Przeznaczenie i sposób działania</strong><br />
-      Aplikacja wykorzystuje algorytmy dopasowujące obliczenia do wieku, wzrostu i masy ciała, aby wyniki były możliwie najlepiej dostosowane do indywidualnych parametrów użytkownika. Ma charakter informacyjny i edukacyjny — nie zastępuje porady lekarskiej ani profesjonalnej diagnostyki. Wyniki nie stanowią rozpoznania, zaleceń terapeutycznych ani planu leczenia. W przypadku wątpliwości należy skonsultować się z odpowiednim specjalistą.
-    </p>
-    <p>
-      <strong>Moduł Profesjonalny</strong><br />
-      Moduł Profesjonalny jest przeznaczony wyłącznie dla lekarzy. Zawiera m.in. kalkulatory dawek leków wykorzystywanych w testach farmakologicznych.
-    </p>
-    <ul style="margin-left:1.25rem;margin-top:0;margin-bottom:0.5rem;">
-      <li>Obliczenia mają charakter pomocniczy i wymagają niezależnej weryfikacji klinicznej.</li>
-      <li>Przed zastosowaniem należy każdorazowo odnieść się do aktualnej Charakterystyki Produktu Leczniczego (ChPL), obowiązujących wytycznych, maksymalnych dawek, przeciwwskazań oraz stanu klinicznego pacjenta.</li>
-      <li>Jednostki i zaokrąglenia dawek należy sprawdzać przed podaniem.</li>
-      <li>Odpowiedzialność za decyzje kliniczne spoczywa na użytkowniku profesjonalnym.</li>
-    </ul>
-    <div style="text-align:center;margin-top:1rem;">
-      <!-- Przyciski togglujący widoczność listy źródeł. Dodano aria-expanded dla dostępności -->
+
+    <div class="source-panel source-panel--warning">
+      <div class="source-panel__heading">
+        <span class="source-panel__icon" data-lucide="triangle-alert"></span>
+        <strong>Przeznaczenie i zastrzeżenia</strong>
+      </div>
+      <p>
+        <strong>Waga i wzrost</strong> to narzędzie o charakterze informacyjnym i edukacyjnym.
+        Algorytmy aplikacji dostosowują obliczenia do wprowadzonych danych — wieku, wzrostu, masy ciała i płci —
+        jednak wyniki kalkulatorów, modułów i analiz nie stanowią oceny klinicznej i nie zastępują
+        profesjonalnej konsultacji medycznej. Wyniki <strong>nie stanowią rozpoznania</strong>,
+        <strong>nie są zaleceniem terapeutycznym</strong> ani <strong>planem leczenia</strong>.
+        W razie wątpliwości zdrowotnych należy skonsultować się z lekarzem lub innym odpowiednim specjalistą.
+      </p>
+    </div>
+
+    <div class="source-panel source-panel--pro">
+      <div class="source-panel__heading">
+        <span class="source-panel__icon" data-lucide="stethoscope"></span>
+        <strong>Moduł Profesjonalny (DocPro) — wyłącznie dla lekarzy</strong>
+      </div>
+      <p>
+        Moduł Profesjonalny jest przeznaczony wyłącznie dla lekarzy. Zawiera m.in. farmakologiczne kalkulatory
+        testowych dawek leków, obliczenia kliniczne i zestawienia dopasowane do danych pacjenta.
+        Korzystanie z tego modułu wymaga wykształcenia medycznego oraz umiejętności samodzielnej interpretacji wyników.
+      </p>
+      <ul>
+        <li>Wyniki modułów specjalistycznych mają charakter obliczeniowy i pomocniczy — nie stanowią gotowych zleceń ani rekomendacji klinicznych.</li>
+        <li>Wszystkie obliczenia wymagają weryfikacji z aktualną literaturą medyczną, Charakterystyką Produktu Leczniczego (ChPL) oraz obowiązującymi standardami klinicznymi.</li>
+        <li>Dawki obliczone przez aplikację nie uwzględniają wszystkich indywidualnych czynników klinicznych — ostateczna decyzja terapeutyczna należy zawsze do lekarza prowadzącego.</li>
+        <li>Moduł może być stosowany wyłącznie przez osoby z wykształceniem medycznym zdolne do samodzielnej interpretacji wyników.</li>
+      </ul>
+    </div>
+
+    <div class="source-toggle-wrap">
       <button type="button" id="toggleSources" aria-expanded="false">Źródła</button>
     </div>
     <ol id="sourceList" style="display:none;padding-left:1.25rem;margin-top:0.5rem;">
@@ -1357,14 +1381,48 @@
        once the viewport is sufficiently wide (see sidebar.css for breakpoints). -->
   <aside class="decor-sidebar"></aside>
 </div><!-- /desktop-layout -->
-<footer>
-  <p><strong>Administrator serwisu:</strong>
-    Vilda Clinic sp. z o.o. • 
-    <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">vildaclinic.pl</a>
-  </p>
-  <p><strong>Konsultacja merytoryczna:</strong>
-    dr n. med. Maciej Flader
-  </p>
+<footer class="site-footer">
+  <div class="site-footer__inner">
+    <div class="site-footer__brand">
+      <a href="index.html" class="site-footer__brand-link">
+        <span class="site-footer__brand-icon" aria-hidden="true">
+          <img src="pwa-icons/icon-48x48.png" alt="" width="22" height="22">
+        </span>
+        <span class="site-footer__brand-name">wagaiwzrost.pl</span>
+      </a>
+      <p class="site-footer__brand-meta">
+        Vilda Clinic sp. z o.o.<br>
+        Konsultacja merytoryczna: dr&nbsp;n.&nbsp;med.&nbsp;Maciej&nbsp;Flader
+      </p>
+    </div>
+    <nav class="site-footer__col" aria-label="Kalkulatory">
+      <h3 class="site-footer__col-title">Kalkulatory</h3>
+      <a href="index.html" class="site-footer__link">Strona główna</a>
+      <a href="homa-ir.html" class="site-footer__link">HOMA-IR</a>
+      <a href="kalkulator-klirens.html" class="site-footer__link">Klirens / eGFR</a>
+    </nav>
+    <nav class="site-footer__col" aria-label="Kalkulatory — ciąg dalszy">
+      <h3 class="site-footer__col-title site-footer__col-title--hidden" aria-hidden="true">&nbsp;</h3>
+      <a href="docpro.html" class="site-footer__link">DocPro</a>
+      <a href="steroidy.html" class="site-footer__link">Steroidy</a>
+      <a href="cukrzyca.html" class="site-footer__link">Cukrzyca</a>
+    </nav>
+    <nav class="site-footer__col" aria-label="Informacje">
+      <h3 class="site-footer__col-title">Informacje</h3>
+      <a href="o-aplikacji.html" class="site-footer__link">O aplikacji</a>
+      <a href="kontakt.html" class="site-footer__link">Kontakt</a>
+      <a href="polityka-prywatnosci.html" class="site-footer__link">Polityka prywatności</a>
+    </nav>
+  </div>
+  <div class="site-footer__disclaimer-wrap">
+    <p class="site-footer__disclaimer">
+      Narzędzie do celów informacyjnych — nie zastępuje konsultacji lekarskiej ani samodzielnych decyzji klinicznych.
+    </p>
+  </div>
+  <div class="site-footer__bottom">
+    <span>© 2025 Vilda Clinic sp. z o.o.</span>
+    <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer" class="site-footer__vildaclinic">vildaclinic.pl</a>
+  </div>
 </footer>
 <!-- Uruchamiamy update() po pełnym załadowaniu strony -->
 <!-- === UI ENHANCEMENT SCRIPT 2025‑06‑29 === -->
@@ -5727,21 +5785,7 @@ async function generateCentileChart() {
     });
   </script>
 
-  <!-- Baner cookies / lokalnego przechowywania danych -->
-<div id="consent-banner" class="cookie-banner hidden">
-  <p>
-    Korzystając z aplikacji <strong>Vilda Clinic</strong> zapisujemy niewielkie ilości danych w Twojej przeglądarce:
-  </p>
-  <ul>
-    <li><strong>Pliki niezbędne:</strong> Service Worker zapisuje pliki aplikacji (HTML, CSS, JavaScript, grafiki) w Cache Storage, aby umożliwić działanie offline. Nie zbiera żadnych danych osobowych.</li>
-    <li><strong>Pamięć funkcjonalna:</strong> Po weryfikacji numeru PWZ możesz zdecydować, czy zapamiętać go w tej przeglądarce. Numer zostanie zapisany w localStorage wyłącznie w Twoim urządzeniu i nie jest nigdzie wysyłany.</li>
-    <li><strong>Analityka:</strong> Google Analytics (GA4) używa własnych plików cookie, aby tworzyć anonimowe statystyki odwiedzin. Nie zapisuje danych wpisywanych w aplikacji. Zgoda na analitykę jest dobrowolna i możesz ją wycofać.</li>
-  </ul>
-  <div class="cookie-buttons">
-    <button id="consent-accept">Akceptuję analitykę</button>
-    <button id="consent-decline">Odrzucam analitykę</button>
-  </div>
-</div>
+  <!-- Baner zgody wstrzykiwany centralnie przez vilda_chrome.js (initConsentBanner) -->
   <!-- Przycisk "powrót na górę" widoczny w widoku mobilnym. Po kliknięciu
        przenosi użytkownika na szczyt strony. Ikona jest generowana przez
        bibliotekę Lucide. -->

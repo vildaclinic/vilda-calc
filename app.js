@@ -12906,10 +12906,13 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
   });
 
 (function() {
-  // Elementy banera
+  // Baner jest teraz centralnie wstrzykiwany przez vilda_chrome.js (initConsentBanner).
+  // Ten blok obsługuje jedynie starsze strony, na których baner jest jeszcze w HTML.
   const banner   = document.getElementById('consent-banner');
   const btnAccept = document.getElementById('consent-accept');
   const btnDecline = document.getElementById('consent-decline');
+  // Jeśli vilda_chrome.js już przejął obsługę banera, wyjdź.
+  if (!banner || !btnAccept || !btnDecline) return;
 
   function readAnalyticsConsent(){
     try {
@@ -12939,14 +12942,18 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
   const consent = readAnalyticsConsent();
 
   function loadGA() {
+    // Consent Mode v2 — aktualizuj zgodę zanim skrypt GA4 zacznie zbierać dane
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){ dataLayer.push(arguments); }
+    gtag('consent', 'update', {
+      analytics_storage: 'granted'
+    });
+
     // Załaduj skrypt GA4 dopiero po wyrażeniu zgody
     const gaScript = document.createElement('script');
     gaScript.src = 'https://www.googletagmanager.com/gtag/js?id=G-EZZTNV8W07';
     gaScript.async = true;
     document.head.appendChild(gaScript);
-
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){ dataLayer.push(arguments); }
 
     gtag('js', new Date());
     gtag('config', 'G-EZZTNV8W07', {
@@ -12954,11 +12961,22 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
     });
   }
 
+  function denyGA() {
+    // Consent Mode v2 — jawne potwierdzenie braku zgody
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){ dataLayer.push(arguments); }
+    gtag('consent', 'update', {
+      analytics_storage: 'denied'
+    });
+  }
+
   if (!consent) {
-    // Jeśli użytkownik nie udzielił zgody – pokaż baner
+    // Użytkownik jeszcze nie podjął decyzji — pokaż baner
     banner.style.display = 'block';
   } else if (consent === 'granted') {
     loadGA();
+  } else {
+    denyGA();
   }
 
   btnAccept.addEventListener('click', function() {
@@ -12970,7 +12988,7 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
   btnDecline.addEventListener('click', function() {
     writeAnalyticsConsent('denied');
     banner.style.display = 'none';
-    // Brak ładowania GA4
+    denyGA();
   });
 })();
 

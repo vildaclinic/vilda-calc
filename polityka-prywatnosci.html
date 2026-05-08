@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<!-- Google Consent Mode v2 — domyślne ustawienie przed podjęciem decyzji przez użytkownika.
+     GA4 załaduje się dopiero po wyrażeniu zgody (patrz: vilda_chrome.js / initConsentBanner).
+     Blok musi być w <head> przed jakimkolwiek tagiem analytics. -->
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('consent', 'default', {
+    analytics_storage: 'denied',
+    ad_storage: 'denied',
+    ad_user_data: 'denied',
+    ad_personalization: 'denied',
+    wait_for_update: 500
+  });
+</script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Polityka prywatności – wagaiwzrost.pl</title>
+  <meta name="description" content="Polityka prywatności aplikacji wagaiwzrost.pl — informacje o przetwarzaniu danych osobowych, plikach cookie i analityce Google Analytics." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://wagaiwzrost.pl/polityka-prywatnosci.html" />
+  <link rel="stylesheet" href="style.css?v=5" />
+  <link rel="stylesheet" href="ios26-v2.css?v=12" />
+  <link rel="stylesheet" href="sidebar.css" />
+
+  <link href="vilda_chrome.css?v=10" rel="stylesheet">
+  <script src="vilda_logger.js?v=2"></script>
+<script src="vilda_html.js?v=4"></script>
+<script src="vilda_persistence_adapter.js?v=7"></script>
+<script src="vilda_session_bridge.js?v=1"></script>
+<script src="vilda_init.js?v=4"></script>
+<script src="vilda_deps.js?v=6"></script>
+<script>
+  (function() {
+    try {
+      var VERSION = 'v3';
+      var SIGNATURE = 'docpro.html|kalkulator-klirens.html|cukrzyca.html|steroidy.html|materialy-edukacyjne.html';
+      var persistence = window.VildaPersistence || null;
+      var parsed = persistence && typeof persistence.readPreferenceJSON === 'function'
+        ? persistence.readPreferenceJSON('MOBILE_TOP_NAV_FONT_CACHE', null)
+        : null;
+      if (!parsed) return;
+      if (!parsed || parsed.version !== VERSION || parsed.signature !== SIGNATURE) return;
+      var viewportWidth = Math.round(Math.max(
+        window.innerWidth || 0,
+        document.documentElement ? (document.documentElement.clientWidth || 0) : 0
+      ));
+      var cachedWidth = Math.round(Number(parsed.width) || 0);
+      var fontRem = Number(parsed.fontRem);
+      if (!viewportWidth || viewportWidth !== cachedWidth || !isFinite(fontRem)) return;
+      if (fontRem < 0.72 || fontRem > 0.98) return;
+      var style = document.createElement('style');
+      style.id = 'mobile-top-nav-font-cache-style';
+      style.textContent = '@media (max-width: 600px){.main-nav{--mobile-top-nav-font-size:' + fontRem.toFixed(2) + 'rem !important;}}';
+      document.head.appendChild(style);
+    } catch (e) { /* noop */ }
+  })();
+</script>
+
+  <style>
+    .privacy-shell {
+      padding-block: 1rem 2.5rem;
+    }
+    .privacy-card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(244,251,250,0.96));
+      border: 1px solid rgba(22, 76, 71, 0.1);
+      border-radius: 24px;
+      box-shadow: 0 16px 42px rgba(15, 45, 42, 0.08);
+      padding: 2rem 2rem 2.5rem;
+      margin-bottom: 1.5rem;
+      position: relative;
+      overflow: hidden;
+      isolation: isolate;
+    }
+    .privacy-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at top right, rgba(0, 168, 181, 0.10), transparent 34%),
+        radial-gradient(circle at bottom left, rgba(4, 120, 87, 0.06), transparent 32%);
+      z-index: -1;
+    }
+    .privacy-card h1 {
+      font-size: 1.55rem;
+      font-weight: 700;
+      color: var(--primary, #00838d);
+      margin-bottom: 0.3rem;
+    }
+    .privacy-card .privacy-subtitle {
+      font-size: 0.88rem;
+      color: #6b7280;
+      margin-bottom: 0;
+    }
+    .privacy-card h2 {
+      font-size: 1.08rem;
+      font-weight: 700;
+      color: #164c47;
+      margin: 2rem 0 0.6rem;
+      padding-bottom: 0.35rem;
+      border-bottom: 1.5px solid rgba(22, 76, 71, 0.12);
+    }
+    .privacy-card h2:first-of-type {
+      margin-top: 1.4rem;
+    }
+    .privacy-card p {
+      margin: 0.5rem 0;
+      line-height: 1.65;
+      font-size: 0.94rem;
+      color: #1f2937;
+    }
+    .privacy-card ul,
+    .privacy-card ol {
+      margin: 0.5rem 0 0.5rem 1.4rem;
+      line-height: 1.65;
+      font-size: 0.94rem;
+      color: #1f2937;
+    }
+    .privacy-card li {
+      margin-bottom: 0.3rem;
+    }
+    .privacy-card table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+      margin: 0.75rem 0;
+    }
+    .privacy-card th {
+      background: rgba(0, 131, 141, 0.08);
+      font-weight: 600;
+      text-align: left;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid rgba(22, 76, 71, 0.14);
+      color: #164c47;
+    }
+    .privacy-card td {
+      padding: 0.45rem 0.75rem;
+      border: 1px solid rgba(22, 76, 71, 0.1);
+      vertical-align: top;
+    }
+    .privacy-card tr:nth-child(even) td {
+      background: rgba(244, 251, 250, 0.6);
+    }
+    .privacy-card .privacy-contact-box {
+      background: rgba(0, 131, 141, 0.06);
+      border: 1px solid rgba(0, 131, 141, 0.18);
+      border-radius: 12px;
+      padding: 1rem 1.2rem;
+      margin-top: 1rem;
+      font-size: 0.92rem;
+      line-height: 1.7;
+    }
+    .privacy-card .privacy-contact-box strong {
+      color: #00838d;
+    }
+    @media (max-width: 640px) {
+      .privacy-card {
+        padding: 1.25rem 1rem 1.75rem;
+      }
+      .privacy-card table {
+        font-size: 0.8rem;
+      }
+    }
+  </style>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
+<script src="vilda_chrome.js?v=7"></script>
+</head>
+<body class="js-loading liquid-ios26 has-sidebar privacy-page">
+  <header></header>
+  <div class="desktop-layout">
+    <aside data-vilda-chrome-sidebar class="sidebar"></aside>
+    <main class="main-content">
+      <div class="privacy-shell">
+
+        <div class="privacy-card">
+          <h1>Polityka prywatności</h1>
+          <p class="privacy-subtitle">Ostatnia aktualizacja: maj 2025 &nbsp;·&nbsp; wagaiwzrost.pl</p>
+
+          <h2>1. Administrator danych osobowych</h2>
+          <p>
+            Administratorem danych osobowych przetwarzanych w związku z korzystaniem z aplikacji
+            <strong>wagaiwzrost.pl</strong> jest:
+          </p>
+          <p>
+            <strong>Vilda Clinic sp. z o.o.</strong><br>
+            KRS: 0001102016<br>
+            NIP: 7010867977<br>
+            REGON: 528545547
+          </p>
+          <p>
+            Inspektorem Ochrony Danych (IOD) jest:<br>
+            <strong>Piotr Szymański</strong>, radca prawny<br>
+            tel. +48 696 457 149<br>
+            e-mail: <a href="mailto:szymanski@stlegal.pl">szymanski@stlegal.pl</a>
+          </p>
+          <p>
+            We wszelkich sprawach dotyczących ochrony danych osobowych możesz kontaktować się
+            bezpośrednio z IOD pod powyższymi danymi.
+          </p>
+
+          <h2>2. Zakres i cel przetwarzania danych</h2>
+          <p>
+            Aplikacja wagaiwzrost.pl to narzędzie kalkulacyjne działające przede wszystkim lokalnie
+            w przeglądarce. Dane wpisywane przez użytkownika (wzrost, waga, wiek itp.)
+            <strong>nie są przesyłane na serwery administratora</strong> — obliczenia wykonywane są
+            wyłącznie po stronie urządzenia użytkownika.
+          </p>
+          <p>
+            Administrator przetwarza dane osobowe w następujących celach:
+          </p>
+          <ul>
+            <li><strong>Obsługa konta użytkownika:</strong> rejestracja, logowanie i zarządzanie
+              profilem w ramach platformy Vilda Clinic (art. 6 ust. 1 lit. b RODO).</li>
+            <li><strong>Kontakt i korespondencja:</strong> odpowiedź na zapytania kierowane przez
+              formularz kontaktowy lub e-mail (art. 6 ust. 1 lit. f RODO — uzasadniony interes).</li>
+            <li><strong>Analityka:</strong> anonimowe statystyki korzystania z aplikacji za
+              pośrednictwem Google Analytics 4, wyłącznie za zgodą użytkownika
+              (art. 6 ust. 1 lit. a RODO).</li>
+          </ul>
+
+          <h2>3. Dane przechowywane lokalnie w przeglądarce</h2>
+          <p>
+            Aplikacja korzysta z następujących mechanizmów przeglądarki, które nie przekazują
+            danych do administratora:
+          </p>
+          <table>
+            <thead>
+              <tr>
+                <th>Mechanizm</th>
+                <th>Co przechowuje</th>
+                <th>Kiedy usuwane</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Cache Storage</strong> (Service Worker)</td>
+                <td>Pliki aplikacji (HTML, CSS, JS, grafiki) — umożliwiają działanie offline</td>
+                <td>Po odinstalowaniu PWA lub ręcznym wyczyszczeniu cache</td>
+              </tr>
+              <tr>
+                <td><strong>localStorage</strong></td>
+                <td>Preferencje UI (tryb wyników, motyw), numer PWZ (opcjonalnie, za zgodą),
+                  decyzja w sprawie analityki (<code>ANALYTICS_CONSENT</code>)</td>
+                <td>Po ręcznym wyczyszczeniu danych witryny</td>
+              </tr>
+              <tr>
+                <td><strong>sessionStorage</strong></td>
+                <td>Klucz sesji skarbca danych (Vilda Vault) — umożliwia odczyt zaszyfrowanych
+                  danych pacjenta w trakcie bieżącej sesji przeglądarki</td>
+                <td>Automatycznie po zamknięciu karty lub okna przeglądarki</td>
+              </tr>
+              <tr>
+                <td><strong>IndexedDB</strong></td>
+                <td>Zaszyfrowane dane pacjentów (baza <code>vilda_user_&lt;userId&gt;</code>)
+                  — wyłącznie dla zalogowanych użytkowników</td>
+                <td>Po usunięciu konta lub ręcznym wyczyszczeniu danych witryny</td>
+              </tr>
+            </tbody>
+          </table>
+          <p>
+            Dane pacjentów przechowywane w IndexedDB są szyfrowane algorytmem AES-GCM-256,
+            a klucz szyfrowania wyprowadzany jest z hasła użytkownika metodą PBKDF2-SHA256
+            (600 000 iteracji). Administrator nie ma technicznej możliwości odczytu tych danych.
+          </p>
+
+          <h2>4. Google Analytics 4 (analityka)</h2>
+          <p>
+            Za Twoją dobrowolną zgodą aplikacja korzysta z Google Analytics 4 (GA4) dostarczanego
+            przez Google LLC, 1600 Amphitheatre Parkway, Mountain View, CA 94043, USA.
+          </p>
+          <ul>
+            <li>GA4 tworzy anonimowe statystyki odwiedzin (liczba sesji, przeglądane sekcje,
+              typ urządzenia).</li>
+            <li>Aplikacja aktywnie włącza anonimizację adresów IP (parametr
+              <code>anonymize_ip</code>), dzięki czemu ostatni oktet adresu IPv4 lub ostatnie 80 bitów
+              adresu IPv6 są zerowane przed zapisem.</li>
+            <li>GA4 <strong>nie zbiera</strong> danych wpisywanych w formularzach aplikacji.</li>
+            <li>Zgodnie z ustawieniami administratora dane surowe w GA4 są przechowywane przez
+              <strong>2 miesiące</strong>, po czym są automatycznie usuwane przez Google.</li>
+            <li>Dane mogą być przekazywane do serwerów Google w Stanach Zjednoczonych.
+              Transfer odbywa się na podstawie Standardowych Klauzul Umownych (SCC) zatwierdzonych
+              przez Komisję Europejską.</li>
+          </ul>
+          <p>
+            Zgodę na analitykę możesz wycofać w dowolnym momencie w sekcji
+            <a href="ustawienia.html#settings-section-privacy">Ustawienia → Prywatność</a>
+            lub klikając „Nie zgadzam się" w banerze przy pierwszym odwiedzeniu strony. Wycofanie zgody nie wpływa na
+            zgodność z prawem przetwarzania dokonanego przed jej wycofaniem.
+          </p>
+          <p>
+            Więcej informacji o polityce prywatności Google znajdziesz na stronie
+            <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">
+              policies.google.com/privacy</a>.
+          </p>
+
+          <h2>5. Okres przechowywania danych</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Kategoria danych</th>
+                <th>Okres przechowywania</th>
+                <th>Podstawa</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Dane konta użytkownika</td>
+                <td>Do usunięcia konta, nie dłużej niż 5 lat od ostatniego logowania</td>
+                <td>Uzasadniony interes / umowa</td>
+              </tr>
+              <tr>
+                <td>Korespondencja (e-mail, formularz kontaktowy)</td>
+                <td><strong>6 lat</strong> od zakończenia sprawy</td>
+                <td>Uzasadniony interes (roszczenia)</td>
+              </tr>
+              <tr>
+                <td>Dane analityczne GA4 (surowe)</td>
+                <td><strong>2 miesiące</strong></td>
+                <td>Zgoda użytkownika</td>
+              </tr>
+              <tr>
+                <td>Dane lokalne w przeglądarce użytkownika</td>
+                <td>Do ręcznego usunięcia przez użytkownika</td>
+                <td>—</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <h2>6. Prawa użytkownika (RODO)</h2>
+          <p>Na podstawie RODO przysługują Ci następujące prawa:</p>
+          <ul>
+            <li><strong>Dostęp</strong> do danych osobowych (art. 15 RODO)</li>
+            <li><strong>Sprostowanie</strong> nieprawidłowych danych (art. 16 RODO)</li>
+            <li><strong>Usunięcie</strong> danych („prawo do bycia zapomnianym") (art. 17 RODO)</li>
+            <li><strong>Ograniczenie</strong> przetwarzania (art. 18 RODO)</li>
+            <li><strong>Przeniesienie</strong> danych (art. 20 RODO)</li>
+            <li><strong>Sprzeciw</strong> wobec przetwarzania (art. 21 RODO)</li>
+            <li><strong>Wycofanie zgody</strong> na przetwarzanie w każdym momencie, bez wpływu
+              na zgodność z prawem przetwarzania dokonanego przed wycofaniem</li>
+          </ul>
+          <p>
+            Masz również prawo wniesienia skargi do organu nadzorczego — w Polsce jest nim
+            <strong>Prezes Urzędu Ochrony Danych Osobowych (UODO)</strong>,
+            ul. Stawki 2, 00-193 Warszawa,
+            <a href="https://uodo.gov.pl" target="_blank" rel="noopener noreferrer">uodo.gov.pl</a>.
+          </p>
+
+          <h2>7. Kontakt w sprawach danych osobowych</h2>
+          <div class="privacy-contact-box">
+            <strong>Inspektor Ochrony Danych:</strong><br>
+            Piotr Szymański, radca prawny<br>
+            tel. +48 696 457 149<br>
+            e-mail: <a href="mailto:szymanski@stlegal.pl">szymanski@stlegal.pl</a><br><br>
+            <strong>Administrator:</strong><br>
+            Vilda Clinic sp. z o.o.<br>
+            e-mail: <a href="mailto:kontakt@vildaclinic.pl">kontakt@vildaclinic.pl</a>
+          </div>
+
+          <h2>8. Zmiany polityki prywatności</h2>
+          <p>
+            Administrator zastrzega prawo do zmiany niniejszej polityki prywatności. O istotnych
+            zmianach użytkownicy zostaną poinformowani poprzez komunikat w aplikacji lub na stronie
+            głównej. Data ostatniej aktualizacji jest wskazana na początku dokumentu.
+          </p>
+        </div><!-- /.privacy-card -->
+
+      </div><!-- /.privacy-shell -->
+    </main>
+  </div>
+
+  <footer class="site-footer">
+  <div class="site-footer__inner">
+    <div class="site-footer__brand">
+      <a href="index.html" class="site-footer__brand-link">
+        <span class="site-footer__brand-icon" aria-hidden="true">
+          <img src="pwa-icons/icon-48x48.png" alt="" width="22" height="22">
+        </span>
+        <span class="site-footer__brand-name">wagaiwzrost.pl</span>
+      </a>
+      <p class="site-footer__brand-meta">
+        Vilda Clinic sp. z o.o.<br>
+        KRS 0001102016
+      </p>
+    </div>
+    <nav class="site-footer__col" aria-label="Kalkulatory">
+      <h3 class="site-footer__col-title">Kalkulatory</h3>
+      <a href="index.html" class="site-footer__link">Strona główna</a>
+      <a href="homa-ir.html" class="site-footer__link">HOMA-IR</a>
+      <a href="kalkulator-klirens.html" class="site-footer__link">Klirens / eGFR</a>
+    </nav>
+    <nav class="site-footer__col" aria-label="Kalkulatory — ciąg dalszy">
+      <h3 class="site-footer__col-title site-footer__col-title--hidden" aria-hidden="true">&nbsp;</h3>
+      <a href="docpro.html" class="site-footer__link">DocPro</a>
+      <a href="steroidy.html" class="site-footer__link">Steroidy</a>
+      <a href="cukrzyca.html" class="site-footer__link">Cukrzyca</a>
+    </nav>
+    <nav class="site-footer__col" aria-label="Informacje">
+      <h3 class="site-footer__col-title">Informacje</h3>
+      <a href="o-aplikacji.html" class="site-footer__link">O aplikacji</a>
+      <a href="kontakt.html" class="site-footer__link">Kontakt</a>
+      <a href="polityka-prywatnosci.html" class="site-footer__link" aria-current="page">Polityka prywatności</a>
+    </nav>
+  </div>
+  <div class="site-footer__disclaimer-wrap">
+    <p class="site-footer__disclaimer">
+      Narzędzie do celów informacyjnych — nie zastępuje konsultacji lekarskiej ani samodzielnych decyzji klinicznych.
+    </p>
+  </div>
+  <div class="site-footer__bottom">
+    <span>© 2025 Vilda Clinic sp. z o.o.</span>
+    <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer" class="site-footer__vildaclinic">vildaclinic.pl</a>
+  </div>
+</footer>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons();
+      }
+      // Remove the temporary js-loading class once initialization is complete.
+      // Without this, body.js-loading .main-content { visibility: hidden } keeps the page blank.
+      document.body.classList.remove('js-loading');
+    });
+  </script>
+  <script src="ios26-ui.js?v=18" defer></script>
+</body>
+</html>
