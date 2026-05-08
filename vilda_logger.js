@@ -53,11 +53,20 @@
   }
 
   function shouldConsoleLog() {
+    // Tryb debug wymaga jednoczesnego spełnienia DWÓCH warunków, żeby zwykły
+    // skrypt XSS nie mógł go włączyć samym localStorage.setItem.
+    // Warunek 1: token w pamięci runtime (ustawiany przez konsolę dewelopera)
+    // Warunek 2: specjalny klucz w sessionStorage (nie persystuje między zakładkami)
     try {
       if (debugEnabled === true) return true;
-      if (global.__VILDA_DEBUG === true) return true;
-      if (global.localStorage && global.localStorage.getItem('vildaDebug') === '1') return true;
-      return /(?:^|[?&])vildaDebug=1(?:&|$)/.test(global.location && global.location.search ? global.location.search : '');
+      const rtFlag = global.__VILDA_DEBUG === true;
+      const ssFlag = global.sessionStorage &&
+                     global.sessionStorage.getItem('__vdbg') === 'on';
+      if (rtFlag && ssFlag) return true;
+      // URL param pozostaje jako "break-glass" dla deweloperów z dostępem do sieci
+      return /(?:^|[?&])vildaDebug=1(?:&|$)/.test(
+        global.location && global.location.search ? global.location.search : ''
+      );
     } catch (_) {
       return false;
     }

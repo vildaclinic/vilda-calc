@@ -184,7 +184,11 @@
   }
 
   async function deriveKey(password, salt, iterations) {
-    const iter = (typeof iterations === 'number' && iterations > 0) ? iterations : KDF_ITERATIONS;
+    const MIN_SAFE_ITERATIONS = 100000; // poniżej tej liczby iteracji szyfrowanie jest zbyt słabe
+    const iter = Math.max(
+      (typeof iterations === 'number' && iterations > 0) ? iterations : KDF_ITERATIONS,
+      MIN_SAFE_ITERATIONS
+    );
     const saltBytes = (salt instanceof Uint8Array) ? salt : base64ToBytes(salt);
     const baseKey = await importPasswordKeyMaterial(password);
     return getCryptoSubtle().deriveKey(
@@ -268,7 +272,11 @@
       throw new Error('VildaCrypto.buildEnvelope: brak payload.iv/payload.data.');
     }
     const saltStr = (o.salt instanceof Uint8Array) ? bytesToBase64(o.salt) : String(o.salt);
-    const iter = (typeof o.iterations === 'number' && o.iterations > 0) ? o.iterations : KDF_ITERATIONS;
+    const MIN_SAFE_ITERATIONS = 100000;
+    const iter = Math.max(
+      (typeof o.iterations === 'number' && o.iterations > 0) ? o.iterations : KDF_ITERATIONS,
+      MIN_SAFE_ITERATIONS
+    );
     const env = {
       format: ENVELOPE_FORMAT,
       kind: o.kind,

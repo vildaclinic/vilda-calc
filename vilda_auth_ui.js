@@ -2375,13 +2375,17 @@
     ensureRoot();
 
     try {
-      getVault().onLock(function () {
+      getVault().onLock(function (reason) {
         hideLogoutButton();
         // Wylogowanie/auto-lock = porzucenie tożsamości. Wyczyść stan aplikacji,
         // żeby kolejny user (lub gość) nie zobaczył danych poprzedniego.
         resetAppSessionState('on-lock');
         if (isGuestMode()) return;
-        // po blokadzie wracamy do ekranu startowego (lista użytkowników)
+        // Gdy konto zostało właśnie usunięte, ustawienia.html natychmiast
+        // przekierowuje na index.html — nie otwieramy tu ekranu startowego,
+        // żeby uniknąć błysku starych danych przed nawigacją.
+        if (reason === 'user-removed') return;
+        // po każdym innym rodzaju blokady wracamy do ekranu startowego
         showStartupScreen();
       });
       getVault().onUnlock(function () {

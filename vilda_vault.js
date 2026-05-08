@@ -57,9 +57,11 @@
   // Rate-limit logowania per user (chroni przed brute-force gdy ktoś ma fizyczny
   // dostęp do urządzenia). Po N błędnych próbach kolejne unlocki dla tego usera
   // są blokowane na ttlMs, niezależnie czy hasło/recovery key są poprawne.
+  // Dane throttle są persystowane w localStorage, dzięki czemu blokada działa
+  // między zakładkami — otwarcie nowej karty nie resetuje licznika prób.
   const LOGIN_THROTTLE_MAX_ATTEMPTS = 5;
   const LOGIN_THROTTLE_WINDOW_MS = 30 * 1000;
-  const loginThrottle = new Map(); // userId -> { failedAttempts: [...timestamps], blockedUntil: number }
+  const THROTTLE_STORAGE_KEY = 'vilda-lth-v1'; // cross-tab persistent login throttle
 
   // ============ ZALEŻNOŚĆ: VildaCrypto ============
   function getCrypto() {
@@ -116,18 +118,36 @@
   }
 
   // ============ RATE LIMIT LOGIN ============
-  function getLoginThrottleEntry(userId) {
-    if (!loginThrottle.has(userId)) {
-      loginThrottle.set(userId, { failedAttempts: [], blockedUntil: 0 });
-    }
-    return loginThrottle.get(userId);
+  // Dane throttle żyją w localStorage (nie w pamięci), dzięki czemu blokada
+  // po N nieudanych próbach utrzymuje się gdy atakujący otworzy nową kartę
+  // lub przeładuje stronę. localStorage jest wspólne między zakładkami tego
+  // samego origin. Dane throttle nie są wrażliwe — zawierają tylko timestamps
+  // i flagę blockedUntil, bez żadnych danych medycznych.
+
+  function loadThrottleStore() {
+    try {
+      const raw = global.localStorage && global.localStorage.getItem(THROTTLE_STORAGE_KEY);
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : {};
+    } catch (_) { return {}; }
+  }
+
+  function saveThrottleStore(store) {
+    try {
+      if (global.localStorage) {
+        global.localStorage.setItem(THROTTLE_STORAGE_KEY, JSON.stringify(store));
+      }
+    } catch (_) {}
   }
 
   function checkLoginThrottle(userId) {
     const now = Date.now();
-    const entry = getLoginThrottleEntry(userId);
+    const store = loadThrottleStore();
+    const entry = store[userId];
+    if (!entry) return;
     // wyczyść stare wpisy starsze niż okno
-    entry.failedAttempts = entry.failedAttempts.filter(function (t) { return now - t < LOGIN_THROTTLE_WINDOW_MS; });
+    entry.failedAttempts = (entry.failedAttempts || []).filter(function (t) { return now - t < LOGIN_THROTTLE_WINDOW_MS; });
     if (entry.blockedUntil > now) {
       const remainingMs = entry.blockedUntil - now;
       const remainingSec = Math.ceil(remainingMs / 1000);
@@ -136,33 +156,44 @@
       e.remainingMs = remainingMs;
       throw e;
     }
+    // zapisz wyczyszczone stare wpisy z powrotem
+    store[userId] = entry;
+    saveThrottleStore(store);
   }
 
   function recordLoginFailure(userId) {
     const now = Date.now();
-    const entry = getLoginThrottleEntry(userId);
+    const store = loadThrottleStore();
+    if (!store[userId]) store[userId] = { failedAttempts: [], blockedUntil: 0 };
+    const entry = store[userId];
+    entry.failedAttempts = (entry.failedAttempts || []).filter(function (t) { return now - t < LOGIN_THROTTLE_WINDOW_MS; });
     entry.failedAttempts.push(now);
     if (entry.failedAttempts.length >= LOGIN_THROTTLE_MAX_ATTEMPTS) {
       entry.blockedUntil = now + LOGIN_THROTTLE_WINDOW_MS;
-      entry.failedAttempts = []; // reset licznika po blokadzie
+      entry.failedAttempts = []; // reset licznika po nałożeniu blokady
     }
+    store[userId] = entry;
+    saveThrottleStore(store);
   }
 
   function recordLoginSuccess(userId) {
-    if (loginThrottle.has(userId)) {
-      loginThrottle.delete(userId); // czyste konto po pomyślnym logowaniu
+    const store = loadThrottleStore();
+    if (store[userId]) {
+      delete store[userId]; // czyste konto po pomyślnym logowaniu
+      saveThrottleStore(store);
     }
   }
 
   function getLoginThrottleStatus(userId) {
     const now = Date.now();
-    const entry = loginThrottle.has(userId) ? loginThrottle.get(userId) : null;
+    const store = loadThrottleStore();
+    const entry = store[userId] || null;
     if (!entry) return { failedCount: 0, blockedUntil: 0, remainingMs: 0 };
-    const recent = entry.failedAttempts.filter(function (t) { return now - t < LOGIN_THROTTLE_WINDOW_MS; });
+    const recent = (entry.failedAttempts || []).filter(function (t) { return now - t < LOGIN_THROTTLE_WINDOW_MS; });
     return {
       failedCount: recent.length,
-      blockedUntil: entry.blockedUntil,
-      remainingMs: Math.max(0, entry.blockedUntil - now)
+      blockedUntil: entry.blockedUntil || 0,
+      remainingMs: Math.max(0, (entry.blockedUntil || 0) - now)
     };
   }
 
@@ -434,6 +465,18 @@
   // klirens) NIE wymaga ponownego logowania. sessionStorage żyje tylko w obrębie
   // jednej karty i znika po jej zamknięciu — sesja jest izolowana między
   // kartami i automatycznie krótkotrwała.
+  //
+  // Model zagrożeń: sessionStorage dostępne jest wyłącznie dla JS działającego
+  // w tej samej karcie i na tym samym origin (same-origin policy). keyB64 to
+  // bajty klucza głównego w base64 — wystarczają do odszyfrowania danych z
+  // IndexedDB, więc ochrona sessionStorage jest ważna. Kluczowe zabezpieczenia:
+  //   1. expiresAtISO — sesja wygasa po czasie idle-lock (domyślnie 20 min);
+  //      token jest odświeżany przy każdej udanej nawigacji między stronami.
+  //   2. clearPersistedSession() wywoływane przez lock() (ręczny, idle, removal).
+  //   3. Izolacja między kartami — sessionStorage nie jest współdzielone.
+  // Uwaga: wrapping key nie może być przechowywany wyłącznie w pamięci JS bo
+  // każda nawigacja tworzy nowy kontekst JS — persystencja sesji wymaga
+  // obecności keyB64 w sessionStorage.
   function persistSession() {
     try {
       if (!global.sessionStorage || !masterKeyBytes || !currentUserId) return;
@@ -443,7 +486,8 @@
         userId: currentUserId,
         label: currentUserLabel,
         keyB64: C.bytesToBase64(masterKeyBytes),
-        savedAtISO: new Date().toISOString()
+        savedAtISO: new Date().toISOString(),
+        expiresAtISO: new Date(Date.now() + idleTimeoutMs).toISOString()
       };
       global.sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(blob));
     } catch (_) { /* sessionStorage może być niedostępne (privacy mode) — ignorujemy */ }
@@ -465,6 +509,13 @@
         clearPersistedSession();
         return false;
       }
+      // Odrzuć sesję, której TTL upłynął (ustawiany przy zapisie na savedAt + idleTimeout).
+      // Chroni to przed odtworzeniem sesji ze starego snapshotu sessionStorage
+      // (np. gdy przeglądarka przywraca karty po restarcie).
+      if (blob.expiresAtISO && new Date(blob.expiresAtISO).getTime() < Date.now()) {
+        clearPersistedSession();
+        return false;
+      }
       // sprawdź, czy user nadal istnieje (mógł zostać usunięty w innej karcie)
       const meta = await getAdapter().getUserMeta(blob.userId);
       if (!meta) {
@@ -478,6 +529,9 @@
       currentUserId = blob.userId;
       currentUserLabel = blob.label || (await getAdapter().getRegistryEntry(blob.userId) || {}).label || DEFAULT_LABEL;
       lockReason = null;
+      // Odśwież TTL sesji — każda nawigacja przesuwa expiresAtISO do przodu,
+      // więc aktywny użytkownik nie zostanie wylogowany podczas pracy.
+      persistSession();
       notifyUnlock();
       return true;
     } catch (_) {
@@ -789,11 +843,15 @@
       }
     }
 
+    // Najpierw usuń dane z IndexedDB, a dopiero potem wywołaj lock().
+    // Gdybyśmy wywołali lock() wcześniej, listener onLock odpaliłby showStartupScreen()
+    // → listUsers() jeszcze PRZED fizycznym usunięciem wpisu z rejestru — użytkownik
+    // zobaczyłby usunięte konto na ekranie „Kto się loguje?".
+    await getAdapter().deleteUserDatabase(userId);
+    await getAdapter().removeRegistryEntry(userId);
     if (currentUserId === userId) {
       lock('user-removed');
     }
-    await getAdapter().deleteUserDatabase(userId);
-    await getAdapter().removeRegistryEntry(userId);
     return true;
   }
 

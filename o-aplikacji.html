@@ -1,6 +1,37 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
+  <!-- ═══ Security headers ═══════════════════════════════════════════════
+       Content-Security-Policy ogranicza skąd mogą być ładowane zasoby.
+       Referrer-Policy ukrywa pełne URL przed zewnętrznymi serwisami.
+       Permissions-Policy wyłącza dostęp do sprzętu (kamera, mikrofon, GPS). -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src  'self' 'unsafe-inline'
+                https://unpkg.com
+                https://cdnjs.cloudflare.com
+                https://cdn.jsdelivr.net
+                https://cdn.sheetjs.com
+                https://www.googletagmanager.com;
+    style-src   'self' 'unsafe-inline' https://fonts.googleapis.com;
+    font-src    'self' https://fonts.gstatic.com data:;
+    img-src     'self' data: blob: https:;
+    connect-src 'self'
+                https://www.google-analytics.com
+                https://analytics.google.com
+                https://region1.google-analytics.com
+                https://www.googletagmanager.com;
+    worker-src  'self';
+    manifest-src 'self';
+    frame-ancestors 'none';
+    base-uri    'self';
+    form-action 'self';
+    object-src  'none';
+  ">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta http-equiv="Permissions-Policy"
+        content="geolocation=(), camera=(), microphone=(), payment=(), usb=(), bluetooth=()">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
 <!-- Google Consent Mode v2 — domyślne ustawienie przed podjęciem decyzji przez użytkownika.
      GA4 załaduje się dopiero po wyrażeniu zgody (patrz: vilda_chrome.js / initConsentBanner).
      Blok musi być w <head> przed jakimkolwiek tagiem analytics. -->
@@ -655,7 +686,7 @@
     }
   })();
   </script>
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
+  <script src="https://unpkg.com/lucide@1.14.0/dist/umd/lucide.min.js" integrity="sha384-jB6ZXxyEV94yzTxgLMvrwwNbn/pTTqwrMDI+v8FV5o5FnId/yn3DJwSdrDujU9A7" crossorigin="anonymous" defer></script>
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
