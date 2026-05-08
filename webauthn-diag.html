@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WebAuthn PRF — diagnostyka</title>
+  <style>
+    body { font-family: -apple-system, sans-serif; max-width: 520px; margin: 0 auto; padding: 20px; background: #f4f8f9; }
+    h1 { font-size: 1.2rem; color: #00838d; margin-bottom: 4px; }
+    p.sub { font-size: 0.8rem; color: #666; margin: 0 0 20px; }
+    .card { background: #fff; border-radius: 14px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+    .label { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #888; margin-bottom: 6px; }
+    .result { font-size: 0.95rem; font-weight: 600; color: #002830; word-break: break-all; }
+    .ok   { color: #00838d; }
+    .fail { color: #b00020; }
+    .warn { color: #b07000; }
+    .pending { color: #999; font-style: italic; }
+    pre { font-size: 0.75rem; background: #f0f5f6; padding: 10px; border-radius: 8px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; margin-top: 8px; }
+    button { margin-top: 16px; width: 100%; padding: 14px; background: #00838d; color: #fff; border: none; border-radius: 12px; font-size: 1rem; font-weight: 600; }
+    button:disabled { opacity: 0.5; }
+    .ls-key { font-size: 0.78rem; background: #fff8e1; border: 1px solid #ffe082; border-radius: 8px; padding: 8px 10px; margin-top: 8px; }
+    .ls-clear { display: inline-block; margin-top: 8px; padding: 6px 14px; background: #fef2f3; color: #b00020; border: 1px solid #b00020; border-radius: 8px; font-size: 0.82rem; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+<h1>WebAuthn PRF — diagnostyka</h1>
+<p class="sub">Otwórz na iPhonie w Safari. Wyniki pokaż deweloperowi.</p>
+
+<div class="card">
+  <div class="label">1. PublicKeyCredential dostępny</div>
+  <div class="result" id="r1">…</div>
+</div>
+
+<div class="card">
+  <div class="label">2. navigator.credentials.create</div>
+  <div class="result" id="r2">…</div>
+</div>
+
+<div class="card">
+  <div class="label">3. isUserVerifyingPlatformAuthenticatorAvailable</div>
+  <div class="result" id="r3">…</div>
+</div>
+
+<div class="card">
+  <div class="label">4. getClientCapabilities (WebAuthn L3)</div>
+  <div class="result" id="r4">…</div>
+  <pre id="r4raw" style="display:none"></pre>
+</div>
+
+<div class="card">
+  <div class="label">5. isConditionalMediationAvailable</div>
+  <div class="result" id="r5">…</div>
+</div>
+
+<div class="card">
+  <div class="label">6. User-Agent</div>
+  <div class="result" id="r6" style="font-size:0.78rem; font-weight:400;"></div>
+</div>
+
+<div class="card">
+  <div class="label">7. Hostname (rpId dla WebAuthn)</div>
+  <div class="result" id="r7"></div>
+</div>
+
+<div class="card">
+  <div class="label">8. Flagi localStorage (biometricPromptShown)</div>
+  <div class="result" id="r8">…</div>
+  <div id="r8detail"></div>
+</div>
+
+<div class="card">
+  <div class="label">9. Test próbnego credentials.get z PRF</div>
+  <div class="result pending" id="r9">Naciśnij przycisk poniżej</div>
+  <pre id="r9raw" style="display:none"></pre>
+  <button id="testBtn" onclick="testGet()">Przetestuj credentials.get + PRF</button>
+</div>
+
+<div class="card">
+  <div class="label">Wersje plików auth (window.VildaCrypto / VildaVault / VildaAuthUI)</div>
+  <div class="result" id="r10" style="font-size:0.82rem; font-weight:400;">…</div>
+</div>
+
+<script>
+async function run() {
+  const ok   = s => '<span class="ok">✓ ' + s + '</span>';
+  const fail = s => '<span class="fail">✗ ' + s + '</span>';
+  const warn = s => '<span class="warn">⚠ ' + s + '</span>';
+
+  // 1
+  document.getElementById('r1').innerHTML =
+    window.PublicKeyCredential ? ok('tak') : fail('brak — WebAuthn niedostępny');
+
+  // 2
+  document.getElementById('r2').innerHTML =
+    (navigator.credentials && typeof navigator.credentials.create === 'function')
+      ? ok('dostępny') : fail('brak');
+
+  // 3
+  try {
+    const v = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+    document.getElementById('r3').innerHTML = v ? ok('true — Face ID/Touch ID dostępny') : fail('false — brak platform authenticatora');
+  } catch(e) { document.getElementById('r3').innerHTML = fail('błąd: ' + e.message); }
+
+  // 4
+  if (typeof PublicKeyCredential.getClientCapabilities === 'function') {
+    try {
+      const caps = await PublicKeyCredential.getClientCapabilities();
+      const raw = JSON.stringify(caps, null, 2);
+      const hasPrf = !!(caps && (caps['extension:prf'] || caps['prf']));
+      document.getElementById('r4').innerHTML = hasPrf
+        ? ok('extension:prf = true')
+        : fail('PRF nie w capabilities. Klucze: ' + Object.keys(caps).join(', '));
+      document.getElementById('r4raw').style.display = 'block';
+      document.getElementById('r4raw').textContent = raw;
+    } catch(e) {
+      document.getElementById('r4').innerHTML = fail('getClientCapabilities() rzucił błąd: ' + e.message);
+    }
+  } else {
+    document.getElementById('r4').innerHTML = warn('getClientCapabilities niedostępny — używamy fallbacku');
+  }
+
+  // 5
+  if (typeof PublicKeyCredential.isConditionalMediationAvailable === 'function') {
+    try {
+      const v = await PublicKeyCredential.isConditionalMediationAvailable();
+      document.getElementById('r5').innerHTML = v ? ok('true') : fail('false');
+    } catch(e) { document.getElementById('r5').innerHTML = fail('błąd: ' + e.message); }
+  } else {
+    document.getElementById('r5').innerHTML = warn('metoda niedostępna');
+  }
+
+  // 6
+  document.getElementById('r6').textContent = navigator.userAgent;
+
+  // 7
+  document.getElementById('r7').textContent = window.location.hostname || '(brak — otwarte z pliku?)';
+  if (!window.location.hostname) {
+    document.getElementById('r7').innerHTML += '<br><span class="fail">⚠ Brak hostname! WebAuthn wymaga HTTPS z prawdziwą domeną lub localhost.</span>';
+  }
+
+  // 8
+  const keys = Object.keys(localStorage).filter(k => k.includes('biometricPrompt'));
+  const r8 = document.getElementById('r8');
+  const r8d = document.getElementById('r8detail');
+  if (keys.length === 0) {
+    r8.innerHTML = ok('brak flag — prompt nie był jeszcze pokazany');
+  } else {
+    r8.innerHTML = warn(keys.length + ' flaga/flagi znalezione');
+    keys.forEach(function(k) {
+      const div = document.createElement('div');
+      div.className = 'ls-key';
+      div.innerHTML = '<strong>' + k + '</strong><br>' + localStorage.getItem(k);
+      const btn = document.createElement('span');
+      btn.className = 'ls-clear';
+      btn.textContent = '🗑 Usuń tę flagę';
+      btn.onclick = function() { localStorage.removeItem(k); div.innerHTML += ' <em>usunięto</em>'; btn.remove(); };
+      div.appendChild(btn);
+      r8d.appendChild(div);
+    });
+  }
+
+  // 10 - wersje
+  const vc = window.VildaCrypto;
+  const vv = window.VildaVault;
+  const va = window.VildaAuthUI;
+  document.getElementById('r10').innerHTML = [
+    'VildaCrypto: ' + (vc ? (vc.VERSION || '?') + ' / STEP ' + (vc.STEP || '?') : '<span class="fail">nie załadowany</span>'),
+    'VildaVault: ' + (vv ? (vv.VERSION || '?') + ' / STEP ' + (vv.STEP || '?') : '<span class="fail">nie załadowany</span>'),
+    'VildaAuthUI: ' + (va ? (va.VERSION || '?') : '<span class="fail">nie załadowany</span>')
+  ].join('<br>');
+}
+
+async function testGet() {
+  const btn = document.getElementById('testBtn');
+  btn.disabled = true;
+  btn.textContent = 'Czekam na odpowiedź Safari…';
+  const out = document.getElementById('r9');
+  const raw = document.getElementById('r9raw');
+  const PRF_INPUT = new TextEncoder().encode('wagaiwzrost.pl:vault-master-key:v1');
+  const rpId = window.location.hostname || 'localhost';
+
+  try {
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    const assertion = await navigator.credentials.get({
+      publicKey: {
+        rpId: rpId,
+        challenge: challenge,
+        timeout: 60000,
+        userVerification: 'required',
+        allowCredentials: [],
+        extensions: { prf: { eval: { first: PRF_INPUT } } }
+      }
+    });
+    const prfRes = assertion.getClientExtensionResults()?.prf?.results;
+    if (prfRes && prfRes.first) {
+      out.innerHTML = '<span class="ok">✓ PRF secret odebrany! (' + new Uint8Array(prfRes.first).length + ' bajtów) — WebAuthn PRF działa poprawnie.</span>';
+    } else {
+      const ext = JSON.stringify(assertion.getClientExtensionResults(), null, 2);
+      out.innerHTML = '<span class="fail">✗ Credentials.get OK ale brak PRF results.</span>';
+      raw.textContent = 'getClientExtensionResults(): ' + ext;
+      raw.style.display = 'block';
+    }
+  } catch(e) {
+    out.innerHTML = '<span class="warn">⚠ ' + e.name + ': ' + e.message + '</span>';
+    raw.textContent = e.toString();
+    raw.style.display = 'block';
+  }
+  btn.disabled = false;
+  btn.textContent = 'Przetestuj ponownie';
+}
+
+run();
+</script>
+</body>
+</html>
