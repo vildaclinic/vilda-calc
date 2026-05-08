@@ -11,7 +11,7 @@
   <link href="sidebar.css" rel="stylesheet">
   <link href="vilda_chrome.css?v=10" rel="stylesheet">
   <link href="vilda_auth_ui.css?v=16" rel="stylesheet">
-  <link href="ustawienia.css?v=4" rel="stylesheet">
+  <link href="ustawienia.css?v=5" rel="stylesheet">
   <script src="vilda_logger.js?v=2"></script>
 <script src="vilda_html.js?v=4"></script>
 <script src="vilda_persistence_adapter.js?v=7"></script>
@@ -2037,100 +2037,107 @@
     (function () {
       'use strict';
 
-      var LOCKED_SECTION_IDS = ['settings-section-backup', 'settings-section-account'];
-      var LOCK_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
-      var TIP_TEXT = 'Zaloguj się, aby uzyskać dostęp';
-
-      // ── Oryginalne zawartości chevronów (do przywrócenia) ──────
+      var LOCKED_IDS  = ['settings-section-backup', 'settings-section-account'];
+      var LOCK_SVG    = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+      var TIP_TEXT    = 'Zaloguj się, aby uzyskać dostęp';
       var chevronOriginals = {};
 
+      // ── Sprawdzenie stanu logowania ──────────────────────────
       function isLoggedIn() {
-        return !!(window.VildaSession && typeof window.VildaSession.isLoggedIn === 'function'
-          ? window.VildaSession.isLoggedIn()
-          : (window.VildaVault && typeof window.VildaVault.isUnlocked === 'function' && window.VildaVault.isUnlocked()));
+        var v = window.VildaVault;
+        if (v && typeof v.isUnlocked === 'function') return v.isUnlocked();
+        var s = window.VildaSession;
+        if (s && typeof s.isLoggedIn === 'function') return s.isLoggedIn();
+        return false;
       }
 
-      // ── Handler kliknięcia w zablokowany accordion ─────────────
-      function onLockedClick(e) {
-        var section = e.currentTarget;
-        if (!section.classList.contains('settings-accordion--locked')) return;
+      // ── Klik w zablokowany accordion — pokazuje tooltip ──────
+      function onLockedSummaryClick(e) {
         e.preventDefault();
-        var tip = section.querySelector('.settings-lock-tip');
+        var tip = e.currentTarget.querySelector('.settings-lock-tip');
         if (!tip) return;
         tip.classList.add('is-visible');
-        clearTimeout(tip._hideTimer);
-        tip._hideTimer = setTimeout(function () {
-          tip.classList.remove('is-visible');
-        }, 2200);
+        clearTimeout(tip._t);
+        tip._t = setTimeout(function () { tip.classList.remove('is-visible'); }, 2200);
       }
 
-      // ── Zastosuj stan (locked/unlocked) ────────────────────────
+      // ── Zastosuj stan auth ───────────────────────────────────
       function applyAuthState() {
         var loggedIn = isLoggedIn();
 
-        // Strefa niebezpieczna — schowaj całkowicie gdy niezalogowany
-        var dangerZone = document.querySelector('.settings-danger-zone');
-        if (dangerZone) {
-          dangerZone.style.display = loggedIn ? '' : 'none';
-        }
-        // Subnav link do danger zone — analogicznie
-        var dangerLink = document.querySelector('.settings-subnav-link[data-target="settings-section-account"]');
+        // Strefa niebezpieczna: całkowite ukrycie
+        var dz = document.querySelector('.settings-danger-zone');
+        if (dz) dz.style.display = loggedIn ? '' : 'none';
 
-        LOCKED_SECTION_IDS.forEach(function (id) {
+        LOCKED_IDS.forEach(function (id) {
           var section = document.getElementById(id);
           if (!section) return;
+          var summary = section.querySelector('summary');
           var chevron = section.querySelector('.settings-chevron');
 
           if (loggedIn) {
-            // Odblokuj
+            // ── Odblokuj ──
             section.classList.remove('settings-accordion--locked');
-            section.removeEventListener('click', onLockedClick);
-            // Przywróć oryginalną zawartość chevrona
+            if (summary) summary.removeEventListener('click', onLockedSummaryClick);
             if (chevron && chevronOriginals[id] !== undefined) {
               chevron.innerHTML = chevronOriginals[id];
             }
           } else {
-            // Zablokuj
+            // ── Zablokuj ──
             if (!section.classList.contains('settings-accordion--locked')) {
-              // Zapamiętaj oryginalną zawartość chevrona
               if (chevron) chevronOriginals[id] = chevron.innerHTML;
-              section.classList.add('settings-accordion--locked');
-              section.open = false;
-              // Zamień chevron na kłódkę
-              if (chevron) chevron.innerHTML = LOCK_SVG;
-              // Dodaj tooltip jeśli jeszcze nie ma
-              var summary = section.querySelector('summary');
-              if (summary && !summary.querySelector('.settings-lock-tip')) {
+            }
+            section.classList.add('settings-accordion--locked');
+            section.open = false;
+            if (chevron) chevron.innerHTML = LOCK_SVG;
+
+            // Tooltip w summary
+            if (summary) {
+              if (!summary.querySelector('.settings-lock-tip')) {
                 var tip = document.createElement('span');
                 tip.className = 'settings-lock-tip';
                 tip.textContent = TIP_TEXT;
                 summary.appendChild(tip);
               }
-              section.addEventListener('click', onLockedClick);
+              summary.removeEventListener('click', onLockedSummaryClick);
+              summary.addEventListener('click', onLockedSummaryClick);
             }
           }
-        });
 
-        // Subnav: przyciemnij linki do zablokowanych sekcji
-        LOCKED_SECTION_IDS.forEach(function (id) {
+          // Subnav: opacity
           var link = document.querySelector('.settings-subnav-link[data-target="' + id + '"]');
-          if (!link) return;
-          link.style.opacity = loggedIn ? '' : '0.4';
-          link.style.pointerEvents = loggedIn ? '' : 'none';
+          if (link) {
+            link.style.opacity       = loggedIn ? '' : '0.4';
+            link.style.pointerEvents = loggedIn ? '' : 'none';
+          }
         });
-        // Strefa niebezpieczna w subnav (brak linku — nie ma sekcji)
       }
 
-      // ── Init po DOMContentLoaded ────────────────────────────────
+      // ── Init ─────────────────────────────────────────────────
       document.addEventListener('DOMContentLoaded', function () {
         applyAuthState();
+
+        // Główny mechanizm: VildaVault callbacks (onUnlock/onLock)
+        var v = window.VildaVault;
+        if (v) {
+          if (typeof v.onUnlock === 'function') v.onUnlock(applyAuthState);
+          if (typeof v.onLock   === 'function') v.onLock(applyAuthState);
+        }
+
+        // Fallback: zdarzenia dokumentu (guest mode, lazy-load auth)
+        document.addEventListener('vilda:session-changed',  applyAuthState);
+        document.addEventListener('vilda:auth-loaded',      applyAuthState);
+        document.addEventListener('vilda:guest-mode-changed', applyAuthState);
       }, { once: true });
 
-      if (document.readyState !== 'loading') applyAuthState();
-
-      // Aktualizuj gdy użytkownik się loguje / wylogowuje
-      document.addEventListener('vilda:session-changed', applyAuthState);
-      document.addEventListener('vilda:auth-loaded',    applyAuthState);
+      if (document.readyState !== 'loading') {
+        applyAuthState();
+        var v = window.VildaVault;
+        if (v) {
+          if (typeof v.onUnlock === 'function') v.onUnlock(applyAuthState);
+          if (typeof v.onLock   === 'function') v.onLock(applyAuthState);
+        }
+      }
     })();
   </script>
 </body>
