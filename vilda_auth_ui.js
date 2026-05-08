@@ -1913,10 +1913,27 @@
         } catch (_) { /* nie JSON / nie legacy — spróbujemy envelope */ }
 
         if (!isLegacy) {
+          // Sprawdź czy to vault-backup zanim wywołamy previewPatientEnvelope
+          // (które rzuciłoby błąd dla kind=vault-backup).
+          let detectedKind = null;
           try {
-            preview = await V.previewPatientEnvelope(entry.text, password);
-          } catch (e) {
-            errMsg = e && e.message ? e.message : String(e);
+            const C = global.VildaCrypto;
+            if (C && C.parseEnvelope) {
+              const env = C.parseEnvelope(entry.text);
+              detectedKind = env.kind || null;
+              if (detectedKind === 'vault-backup') {
+                entry.isVaultBackup = true;
+                entry.vaultBackupMeta = env.metadata || {};
+              }
+            }
+          } catch (_) {}
+
+          if (!entry.isVaultBackup) {
+            try {
+              preview = await V.previewPatientEnvelope(entry.text, password);
+            } catch (e) {
+              errMsg = e && e.message ? e.message : String(e);
+            }
           }
         }
 
@@ -1936,6 +1953,43 @@
       // 3) Buduj wszystkie karty w DocumentFragment, NIE w previewBox.
       const fragment = doc.createDocumentFragment();
       selectedFiles.forEach(function (entry, idx) {
+        // ── Specjalna karta dla pliku vault-backup ──────────────────────────
+        if (entry.isVaultBackup) {
+          const meta      = entry.vaultBackupMeta || {};
+          const backupLbl = meta.label || 'Kopia konta';
+          const pCount    = meta.patientCount != null ? meta.patientCount : '?';
+          const sCount    = meta.snapshotCount != null ? meta.snapshotCount : '?';
+          const expAt     = meta.exportedAtISO ? formatRelativeISO(meta.exportedAtISO) : '';
+
+          const mergeBtn = el('button', {
+            class: 'vilda-auth-btn vilda-auth-btn-primary vilda-auth-btn-small',
+            type:  'button',
+            text:  'Scal z moim kontem →'
+          });
+          mergeBtn.addEventListener('click', function () {
+            showMergeAccountFlow(entry.text, entry.file.name);
+          });
+
+          const card = el('div', { class: 'vilda-auth-import-card vilda-auth-import-card-backup' }, [
+            el('div', { class: 'vilda-auth-import-card-avatar', text: '🗂', style: 'font-size:1.4rem;' }),
+            el('div', { class: 'vilda-auth-import-card-info' }, [
+              el('div', { class: 'vilda-auth-import-card-name' }, [
+                el('span', { text: backupLbl }),
+                el('span', {
+                  style: 'margin-left:8px; font-size:0.72rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#00838d; background:rgba(0,131,141,0.1); padding:1px 7px; border-radius:20px;',
+                  text: 'KOPIA KONTA'
+                })
+              ]),
+              el('div', { class: 'vilda-auth-import-card-meta',
+                text: pCount + ' pacj. · ' + sCount + ' wizyt' + (expAt ? ' · eksport: ' + expAt : '') }),
+              el('div', { class: 'vilda-auth-import-card-filename', text: entry.file.name })
+            ]),
+            el('div', { class: 'vilda-auth-import-card-check' }, [mergeBtn])
+          ]);
+          fragment.appendChild(card);
+          return; // nie budujemy standardowej karty dla tego wpisu
+        }
+
         const ok = !!(entry.preview && entry.preview.header);
         const headerName = ok ? entry.preview.header.name : null;
         const ageStr = ok && entry.preview.header.age != null ? (entry.preview.header.age + ' lat') : '';
@@ -2216,6 +2270,226 @@
     await showStartupScreen();
   }
 
+  // ============ SCALANIE VAULT-BACKUP ============
+
+  /**
+   * Ekran scalania kopii całego konta z bieżącym kontem.
+   * Otwiera się gdy użytkownik wybierze plik vault-backup w imporcie pacjentów
+   * lub wywoła bezpośrednio.
+   *
+   * @param {string} fileText  - zawartość pliku .wiw (vault-backup)
+   * @param {string} [fileName] - oryginalna nazwa pliku (do wyświetlenia)
+   */
+  function showMergeAccountFlow(fileText, fileName) {
+    const V = getVault();
+    if (!V || !V.isUnlocked()) return;
+
+    const title = el('h2', { class: 'vilda-auth-title', text: 'Scal kopię konta' });
+    const sub   = el('p', {
+      class: 'vilda-auth-subtitle',
+      text: 'Podaj hasło do tej kopii. Aplikacja sprawdzi, które wizyty już masz, i doda tylko brakujące — bez usuwania ani nadpisywania istniejących danych.'
+    });
+
+    const fileInfo = el('div', {
+      class: 'vilda-auth-info',
+      style: 'font-size:0.82rem; color:#4a6670; margin-bottom:4px;',
+      text: fileName ? ('Plik: ' + fileName) : ''
+    });
+
+    const pwInput = el('input', {
+      type:         'password',
+      class:        'vilda-auth-input',
+      placeholder:  'Hasło do tej kopii konta',
+      autocomplete: 'off'
+    });
+
+    const errBox = el('div', { class: 'vilda-auth-error' });
+    errBox.style.display = 'none';
+
+    // Sekcja podglądu — wypełniana po wpisaniu hasła
+    const previewBox = el('div', { class: 'vilda-auth-info', style: 'display:none; text-align:left;' });
+
+    // Przycisk podglądu
+    const previewBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost',
+      type:  'button',
+      text:  'Sprawdź co zostanie scalone'
+    });
+
+    // Przycisk wykonania scalania — początkowo ukryty
+    const mergeBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-primary',
+      type:  'button',
+      text:  'Scal teraz'
+    });
+    mergeBtn.style.display = 'none';
+
+    const back = el('button', {
+      class:   'vilda-auth-btn vilda-auth-btn-ghost',
+      type:    'button',
+      text:    'Wstecz',
+      onclick: function () { showImportPatientsFlow(null); }
+    });
+
+    // Wyniki po scaleniu
+    const reportBox = el('div', { class: 'vilda-auth-info', style: 'display:none; text-align:left;' });
+
+    // ---- Podgląd ----
+    previewBtn.addEventListener('click', async function () {
+      showError(errBox, '');
+      previewBox.style.display = 'none';
+      mergeBtn.style.display   = 'none';
+      if (!pwInput.value) { showError(errBox, 'Wpisz hasło do tej kopii konta.'); return; }
+      setBusy(true);
+      previewBtn.disabled = true;
+      try {
+        const plan = await V.previewVaultBackupMerge(fileText, pwInput.value);
+
+        // Buduj podgląd
+        while (previewBox.firstChild) previewBox.removeChild(previewBox.firstChild);
+
+        const backupDateStr = plan.backupExportedAtISO
+          ? formatRelativeISO(plan.backupExportedAtISO) : '';
+
+        previewBox.appendChild(el('div', {
+          style: 'font-weight:700; color:#002830; margin-bottom:10px; font-size:0.95rem;',
+          text:  'Kopia konta: „' + plan.backupLabel + '"' + (backupDateStr ? ' · ' + backupDateStr : '')
+        }));
+
+        // Scalenie (wspólni pacjenci)
+        if (plan.mergePatients.length > 0) {
+          previewBox.appendChild(el('div', {
+            style: 'font-weight:600; color:#00838d; margin:10px 0 6px; font-size:0.83rem; text-transform:uppercase; letter-spacing:0.05em;',
+            text:  'Pacjenci do uzupełnienia wizyt (' + plan.mergePatients.length + ')'
+          }));
+          plan.mergePatients.forEach(function (p) {
+            const noNew = p.newSnapshotCount === 0;
+            const row = el('div', {
+              style: 'display:flex; justify-content:space-between; align-items:baseline; padding:4px 0; border-bottom:1px solid rgba(0,131,141,0.08); font-size:0.85rem; color:' + (noNew ? '#999' : '#002830') + ';'
+            }, [
+              el('span', { text: p.name }),
+              el('span', {
+                style: 'font-size:0.78rem; color:' + (noNew ? '#bbb' : '#00838d') + '; white-space:nowrap; margin-left:12px;',
+                text: noNew
+                  ? 'brak nowych (wszystkie wizyty już są)'
+                  : (p.currentSnapshotCount + ' + ' + p.newSnapshotCount + ' nowych = ' + (p.currentSnapshotCount + p.newSnapshotCount))
+              })
+            ]);
+            previewBox.appendChild(row);
+          });
+        }
+
+        // Nowi pacjenci
+        if (plan.addPatients.length > 0) {
+          previewBox.appendChild(el('div', {
+            style: 'font-weight:600; color:#00838d; margin:14px 0 6px; font-size:0.83rem; text-transform:uppercase; letter-spacing:0.05em;',
+            text:  'Nowi pacjenci do dodania (' + plan.addPatients.length + ')'
+          }));
+          plan.addPatients.forEach(function (p) {
+            const row = el('div', {
+              style: 'display:flex; justify-content:space-between; align-items:baseline; padding:4px 0; border-bottom:1px solid rgba(0,131,141,0.08); font-size:0.85rem; color:#002830;'
+            }, [
+              el('span', { text: p.name }),
+              el('span', {
+                style: 'font-size:0.78rem; color:#00838d; white-space:nowrap; margin-left:12px;',
+                text:  p.snapshotCount + ' ' + (p.snapshotCount === 1 ? 'wizyta' : 'wizyty/wizyt')
+              })
+            ]);
+            previewBox.appendChild(row);
+          });
+        }
+
+        // Podsumowanie
+        const summaryParts = [];
+        if (plan.totalNewSnapshots > 0)   summaryParts.push(plan.totalNewSnapshots + ' nowych wizyt zostanie dodanych');
+        if (plan.totalNewSnapshots === 0)  summaryParts.push('Brak nowych danych — wszystko już masz');
+        if (plan.addPatients.length > 0)   summaryParts.push(plan.addPatients.length + ' nowych pacjentów');
+
+        previewBox.appendChild(el('div', {
+          style: 'margin-top:14px; padding:10px 12px; background:rgba(0,131,141,0.06); border-radius:10px; font-size:0.87rem; color:#002830; font-weight:600;',
+          text:  summaryParts.join(' · ')
+        }));
+
+        previewBox.style.display = 'block';
+
+        if (plan.totalNewSnapshots > 0 || plan.addPatients.length > 0) {
+          mergeBtn.style.display = '';
+          mergeBtn.textContent   = 'Scal teraz (' + plan.totalNewSnapshots + ' nowych wizyt' +
+            (plan.addPatients.length > 0 ? ', ' + plan.addPatients.length + ' nowych pacjentów' : '') + ')';
+        } else {
+          mergeBtn.style.display = 'none';
+        }
+
+      } catch (e) {
+        showError(errBox, e && e.message ? e.message : 'Nie udało się odczytać kopii.');
+      } finally {
+        setBusy(false);
+        previewBtn.disabled = false;
+      }
+    });
+
+    // ---- Scalanie ----
+    mergeBtn.addEventListener('click', async function () {
+      showError(errBox, '');
+      setBusy(true);
+      mergeBtn.disabled    = true;
+      previewBtn.disabled  = true;
+      pwInput.disabled     = true;
+      try {
+        const result = await V.mergeVaultBackup(fileText, pwInput.value);
+
+        previewBox.style.display = 'none';
+        mergeBtn.style.display   = 'none';
+        reportBox.style.display  = 'block';
+        while (reportBox.firstChild) reportBox.removeChild(reportBox.firstChild);
+
+        const lines = [];
+        if (result.addedPatientCount > 0)
+          lines.push('➕ Dodano ' + result.addedPatientCount + ' nowych pacjentów');
+        if (result.mergedPatientCount > 0)
+          lines.push('🔀 Uzupełniono wizyty u ' + result.mergedPatientCount + ' pacjentów');
+        if (result.addedSnapshotCount > 0)
+          lines.push('✓ Łącznie dodano ' + result.addedSnapshotCount + ' wizyt');
+        if (result.skippedSnapshotCount > 0)
+          lines.push('↩ Pominięto ' + result.skippedSnapshotCount + ' duplikatów (już były w Twoim koncie)');
+        if (result.addedSnapshotCount === 0 && result.addedPatientCount === 0)
+          lines.push('Brak zmian — wszystkie dane z tej kopii już były w Twoim koncie.');
+
+        lines.forEach(function (line) {
+          reportBox.appendChild(el('p', { style: 'margin:4px 0; font-size:0.88rem;', text: line }));
+        });
+
+        // Zmień przycisk Wstecz na "Gotowe"
+        back.textContent = 'Gotowe';
+        back.className   = 'vilda-auth-btn vilda-auth-btn-primary';
+        back.onclick     = function () { hide(); startIdleWatch(); };
+
+      } catch (e) {
+        showError(errBox, e && e.message ? e.message : 'Scalanie nie powiodło się.');
+        mergeBtn.disabled   = false;
+        previewBtn.disabled = false;
+        pwInput.disabled    = false;
+      } finally {
+        setBusy(false);
+      }
+    });
+
+    pwInput.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter') previewBtn.click();
+    });
+
+    open(el('div', { class: 'vilda-auth-screen vilda-auth-merge' }, [
+      title, sub, fileInfo, pwInput, errBox,
+      el('div', { class: 'vilda-auth-actions' }, [previewBtn]),
+      previewBox,
+      el('div', { class: 'vilda-auth-actions', style: 'margin-top:8px;' }, [mergeBtn]),
+      reportBox,
+      el('div', { class: 'vilda-auth-actions', style: 'margin-top:4px;' }, [back])
+    ]));
+
+    setTimeout(function () { try { pwInput.focus(); } catch (_) {} }, 30);
+  }
+
   // ============ EKSPORT API ============
   const api = {
     __vildaAuthUI: true,
@@ -2232,6 +2506,7 @@
     showPatientsList: showPatientsList,
     showPatientCard: showPatientCard,
     showImportPatientsFlow: showImportPatientsFlow,
+    showMergeAccountFlow: showMergeAccountFlow,
     showRestoreVaultFlow: showRestoreVaultFlow,
     hide: hide,
     lockAndShowLogin: lockAndShowLogin,

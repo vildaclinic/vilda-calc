@@ -566,8 +566,8 @@
     var AUTH_DEPENDENCIES = [
       { type: 'css',    href: 'vilda_auth_ui.css?v=16',  test: function () { return false; } },
       { type: 'script', href: 'vilda_crypto.js?v=4',    test: function () { return !!global.VildaCrypto; } },
-      { type: 'script', href: 'vilda_vault.js?v=10',    test: function () { return !!global.VildaVault; } },
-      { type: 'script', href: 'vilda_auth_ui.js?v=26',  test: function () { return !!global.VildaAuthUI; } }
+      { type: 'script', href: 'vilda_vault.js?v=11',    test: function () { return !!global.VildaVault; } },
+      { type: 'script', href: 'vilda_auth_ui.js?v=27',  test: function () { return !!global.VildaAuthUI; } }
     ];
 
     function loadOne(asset) {

@@ -1529,6 +1529,220 @@
     };
   }
 
+  // ============ SCALANIE VAULT-BACKUP Z BIEŻĄCYM KONTEM ============
+
+  /**
+   * Podgląd scalania bez zapisu do bazy.
+   * Zwraca plan operacji: które pacjenty zostaną scalone (mają wspólne patientId),
+   * które dodane (nowe), ile snapshotów zostanie dorzuconych.
+   *
+   * @param {string} input    - zawartość pliku .wiw (vault-backup)
+   * @param {string} password - hasło do tej kopii konta
+   * @returns {Promise<{
+   *   backupLabel: string,
+   *   backupExportedAtISO: string|null,
+   *   mergePatients: Array<{patientId, name, currentSnapshotCount, backupSnapshotCount, newSnapshotCount}>,
+   *   addPatients:   Array<{patientId, name, snapshotCount}>,
+   *   totalNewSnapshots: number
+   * }>}
+   */
+  async function previewVaultBackupMerge(input, password) {
+    if (!isUnlocked()) throw new Error('VildaVault: zaloguj się przed podglądem scalania.');
+    const C = getCrypto();
+
+    const envelope = parseEnvelopeFromInput(input);
+    if (envelope.kind !== 'vault-backup') {
+      throw new Error('VildaVault: wybrany plik to nie kopia całego konta (kind=' + envelope.kind + ').');
+    }
+
+    let sourceMasterKey;
+    try {
+      sourceMasterKey = await C.unwrapMasterFromEnvelope(envelope, password);
+    } catch (_) {
+      const e = new Error('VildaVault: nieprawidłowe hasło dla tej kopii konta.');
+      e.code = 'BAD_PASSWORD';
+      throw e;
+    }
+
+    const headerPlain  = await C.decryptJson(sourceMasterKey, envelope.header.iv,  envelope.header.data);
+    const fullPayload  = await C.decryptJson(sourceMasterKey, envelope.payload.iv, envelope.payload.data);
+    const sourcePatients = Array.isArray(fullPayload.patients) ? fullPayload.patients : [];
+
+    // Załaduj bieżące patientId-s jednym zapytaniem
+    const currentPatientsRaw = await getAdapter().listPatientsForUser(currentUserId);
+    const currentPatientIds  = new Set(currentPatientsRaw.map(function (p) { return p.patientId; }));
+
+    const mergePatients = [];
+    const addPatients   = [];
+
+    for (let i = 0; i < sourcePatients.length; i++) {
+      const sp = sourcePatients[i];
+      if (!sp || !sp.patientId) continue;
+      const backupSnapshots = Array.isArray(sp.snapshots) ? sp.snapshots : [];
+      const name = (sp.header && sp.header.name) || '(brak nazwy)';
+
+      if (currentPatientIds.has(sp.patientId)) {
+        // Ten sam pacjent — oblicz ile snapshotów z backupu jest nowych
+        const currentSnaps   = await getAdapter().listSnapshotsForUser(currentUserId, sp.patientId);
+        const currentSnapIds = new Set(currentSnaps.map(function (s) { return s.snapshotId; }));
+        const newSnapCount   = backupSnapshots.filter(function (s) { return !currentSnapIds.has(s.snapshotId); }).length;
+
+        mergePatients.push({
+          patientId:            sp.patientId,
+          name:                 name,
+          currentSnapshotCount: currentSnaps.length,
+          backupSnapshotCount:  backupSnapshots.length,
+          newSnapshotCount:     newSnapCount
+        });
+      } else {
+        // Nowy pacjent — zostanie dodany w całości
+        addPatients.push({
+          patientId:     sp.patientId,
+          name:          name,
+          snapshotCount: backupSnapshots.length
+        });
+      }
+    }
+
+    const totalNewSnapshots =
+      addPatients.reduce(function (s, p) { return s + p.snapshotCount; }, 0) +
+      mergePatients.reduce(function (s, p) { return s + p.newSnapshotCount; }, 0);
+
+    return {
+      backupLabel:         headerPlain.label || (envelope.metadata && envelope.metadata.label) || 'Konto z kopii',
+      backupExportedAtISO: headerPlain.exportedAtISO || (envelope.metadata && envelope.metadata.exportedAtISO) || null,
+      mergePatients:       mergePatients,
+      addPatients:         addPatients,
+      totalNewSnapshots:   totalNewSnapshots
+    };
+  }
+
+  /**
+   * Scala vault-backup z bieżącym kontem.
+   *
+   * Reguły scalania (bezpieczne — nie niszczy istniejących danych):
+   *   • snapshotId już istnieje → pomijany (nigdy nie nadpisywany)
+   *   • patientId już istnieje → dorzucane tylko brakujące snapshoty
+   *   • patientId nie istnieje → pacjent dodawany z pełną historią
+   *   • snapshotCount i lastSavedAtISO aktualizowane po faktycznej liczbie wpisów
+   *
+   * @param {string} input    - zawartość pliku .wiw (vault-backup)
+   * @param {string} password - hasło do tej kopii konta
+   * @returns {Promise<{mergedPatientCount, addedPatientCount, addedSnapshotCount, skippedSnapshotCount}>}
+   */
+  async function mergeVaultBackup(input, password) {
+    if (!isUnlocked()) throw new Error('VildaVault: zaloguj się przed scalaniem.');
+    const C = getCrypto();
+
+    const envelope = parseEnvelopeFromInput(input);
+    if (envelope.kind !== 'vault-backup') {
+      throw new Error('VildaVault: wybrany plik to nie kopia całego konta.');
+    }
+
+    let sourceMasterKey;
+    try {
+      sourceMasterKey = await C.unwrapMasterFromEnvelope(envelope, password);
+    } catch (_) {
+      const e = new Error('VildaVault: nieprawidłowe hasło dla tej kopii konta.');
+      e.code = 'BAD_PASSWORD';
+      throw e;
+    }
+
+    const fullPayload    = await C.decryptJson(sourceMasterKey, envelope.payload.iv, envelope.payload.data);
+    const sourcePatients = Array.isArray(fullPayload.patients) ? fullPayload.patients : [];
+
+    const currentPatientsRaw = await getAdapter().listPatientsForUser(currentUserId);
+    const currentPatientIds  = new Set(currentPatientsRaw.map(function (p) { return p.patientId; }));
+
+    const nowISO = new Date().toISOString();
+    let mergedPatientCount   = 0;
+    let addedPatientCount    = 0;
+    let addedSnapshotCount   = 0;
+    let skippedSnapshotCount = 0;
+
+    for (let i = 0; i < sourcePatients.length; i++) {
+      const sp = sourcePatients[i];
+      if (!sp || !sp.patientId || !sp.header) continue;
+
+      const backupSnapshots = Array.isArray(sp.snapshots) ? sp.snapshots : [];
+      const headerCipher    = await encryptPayloadForCurrentUser(sp.header);
+
+      if (currentPatientIds.has(sp.patientId)) {
+        // ── SCALANIE: pacjent istnieje — dorzuć brakujące snapshoty ──────────
+        const currentSnaps   = await getAdapter().listSnapshotsForUser(currentUserId, sp.patientId);
+        const currentSnapIds = new Set(currentSnaps.map(function (s) { return s.snapshotId; }));
+
+        let addedForThisPatient = 0;
+        for (let j = 0; j < backupSnapshots.length; j++) {
+          const s = backupSnapshots[j];
+          if (!s || !s.snapshotId) continue;
+          if (currentSnapIds.has(s.snapshotId)) {
+            skippedSnapshotCount++;
+            continue; // duplikat — nie nadpisujemy
+          }
+          const payloadCipher = await encryptPayloadForCurrentUser(s.payload || {});
+          await getAdapter().putSnapshotForUser(currentUserId, {
+            snapshotId:    s.snapshotId,
+            patientId:     sp.patientId,
+            savedAtISO:    s.savedAtISO || nowISO,
+            payloadCipher: payloadCipher
+          });
+          addedForThisPatient++;
+          addedSnapshotCount++;
+        }
+
+        // Zaktualizuj patient record tylko gdy coś się zmieniło
+        if (addedForThisPatient > 0) {
+          const existingRec      = await getAdapter().getPatientForUser(currentUserId, sp.patientId);
+          const prevCount        = (existingRec && existingRec.snapshotCount) || currentSnaps.length;
+          const newSnapshotCount = prevCount + addedForThisPatient;
+          // lastSavedAtISO = maksimum z obu źródeł
+          const existingLast     = (existingRec && existingRec.lastSavedAtISO) || '';
+          const backupLast       = sp.lastSavedAtISO || '';
+          const newLastSavedAtISO = existingLast > backupLast ? existingLast : backupLast;
+
+          await getAdapter().putPatientForUser(currentUserId, Object.assign({}, existingRec || {}, {
+            patientId:       sp.patientId,
+            headerCipher:    headerCipher,
+            snapshotCount:   newSnapshotCount,
+            lastSavedAtISO:  newLastSavedAtISO || nowISO
+          }));
+        }
+        mergedPatientCount++;
+
+      } else {
+        // ── DODAWANIE: nowy pacjent — cała historia ───────────────────────────
+        for (let j = 0; j < backupSnapshots.length; j++) {
+          const s = backupSnapshots[j];
+          if (!s || !s.snapshotId) continue;
+          const payloadCipher = await encryptPayloadForCurrentUser(s.payload || {});
+          await getAdapter().putSnapshotForUser(currentUserId, {
+            snapshotId:    s.snapshotId,
+            patientId:     sp.patientId,
+            savedAtISO:    s.savedAtISO || nowISO,
+            payloadCipher: payloadCipher
+          });
+          addedSnapshotCount++;
+        }
+        await getAdapter().putPatientForUser(currentUserId, {
+          patientId:      sp.patientId,
+          headerCipher:   headerCipher,
+          createdAtISO:   sp.createdAtISO   || nowISO,
+          lastSavedAtISO: sp.lastSavedAtISO || nowISO,
+          snapshotCount:  backupSnapshots.length
+        });
+        addedPatientCount++;
+      }
+    }
+
+    return {
+      mergedPatientCount:   mergedPatientCount,
+      addedPatientCount:    addedPatientCount,
+      addedSnapshotCount:   addedSnapshotCount,
+      skippedSnapshotCount: skippedSnapshotCount
+    };
+  }
+
   // ============ IMPORT STAREGO PŁASKIEGO JSON-a (legacy) ============
   // Pliki sprzed wprowadzenia szyfrowania (collectUserData() bezpośrednio
   // do download blob jako .json). Format: płaski obiekt z polami name, user,
@@ -1803,6 +2017,9 @@
     resetIdleTimer: resetIdleTimer,
     onUnlock: onUnlock,
     onLock: onLock,
+    // Scalanie vault-backup
+    previewVaultBackupMerge: previewVaultBackupMerge,
+    mergeVaultBackup: mergeVaultBackup,
     // WebAuthn passkeys
     isPrfSupported: isPrfSupported,
     registerPasskey: registerPasskey,
