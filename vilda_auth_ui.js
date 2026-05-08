@@ -254,24 +254,28 @@
     return rootEl;
   }
 
-  function buildBrandHeader() {
+  function buildBrandHeader(opts) {
+    const options = opts || {};
+    const name = el('h1', { class: 'vilda-auth-brand-name', text: 'wagaiwzrost.pl' });
+    const tag = el('p', { class: 'vilda-auth-brand-tag', text: 'Vilda Clinic' });
+    if (options.noLogo) {
+      return el('div', { class: 'vilda-auth-brand' }, [name, tag]);
+    }
     const logo = el('img', {
       class: 'vilda-auth-logo',
       src: 'logo_vilda.jpeg',
       alt: 'Waga i wzrost — Vilda Clinic'
     });
-    const name = el('h1', { class: 'vilda-auth-brand-name', text: 'wagaiwzrost.pl' });
-    const tag = el('p', { class: 'vilda-auth-brand-tag', text: 'Vilda Clinic' });
     return el('div', { class: 'vilda-auth-brand' }, [logo, name, tag]);
   }
 
-  function open(content) {
+  function open(content, opts) {
     ensureRoot();
     if (!rootEl) return;
     clear(rootEl);
     const overlay = el('div', { class: 'vilda-auth-overlay' });
     const card = el('div', { class: 'vilda-auth-card', role: 'dialog', 'aria-modal': 'true' });
-    card.appendChild(buildBrandHeader());
+    card.appendChild(buildBrandHeader(opts));
     card.appendChild(content);
     overlay.appendChild(card);
     rootEl.appendChild(overlay);
@@ -1696,7 +1700,7 @@
     children.push(list);
     children.push(el('div', { class: 'vilda-auth-actions' }, [cancel, importBtn]));
 
-    open(el('div', { class: 'vilda-auth-screen vilda-auth-patients' }, children));
+    open(el('div', { class: 'vilda-auth-screen vilda-auth-patients' }, children), { noLogo: true });
   }
 
   // Normalizuje string do filtrowania: lowercase + usunięcie polskich diakrytyków,

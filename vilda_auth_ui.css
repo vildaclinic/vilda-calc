@@ -426,11 +426,12 @@
   margin-top: 4px;
 }
 
-/* Wariant z przewijaniem dla picker'a pacjentów — zawsze pokazuje ~5 kart,
-   reszta jest dostępna wewnątrz scroll-area, modal nie rozciąga się w zawrotną
-   wysokość przy 100+ pacjentach. Wartość 440px ≈ 5 × 80px (karta + gap). */
+/* Wariant z przewijaniem dla picker'a pacjentów — pokazuje ~3 karty jednocześnie
+   (pozostałe dostępne przez scroll), co na mobile zostawia miejsce na przyciski
+   Anuluj i Importuj kopie pacjentów bez wychodzenia poza viewport.
+   Wartość 248px ≈ 3 × 75px (karta) + 2 × 10px (gap) + 8px (padding kontenera). */
 .vilda-auth-patients-scroll {
-  max-height: min(440px, 60vh);
+  max-height: min(248px, 36vh);
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 4px 6px 4px 4px;
