@@ -794,19 +794,39 @@ body.liquid-ios26::before {
  * wcześniejsze definicje w style.css.
  */
 #clearAllDataBtn,
-#clearBtn {
-  border: 2px solid rgba(204, 0, 0, 0.4) !important;
-  /* Dopasuj promień zaokrąglenia ramki do promienia przycisku.  Korzystamy z
-     zmiennej --radius, która definiuje zaokrąglenie w motywie.  Dzięki temu
-     ramka i przycisk będą miały taki sam kształt narożników. */
+#clearBtn,
+#resetBtn.clear-btn {
+  background: transparent !important;
+  color: var(--primary, #00838d) !important;
+  border: 1.5px solid var(--primary, #00838d) !important;
   border-radius: var(--radius) !important;
+  transition: background 0.18s, color 0.18s;
+}
+#clearAllDataBtn:hover,
+#clearBtn:hover,
+#resetBtn.clear-btn:hover {
+  background: rgba(0, 131, 141, 0.07) !important;
+}
+/* Ikona — flex layout przeniesiony do bloku display */
+#clearAllDataBtn i[data-lucide],
+#clearBtn i[data-lucide],
+#resetBtn.clear-btn i[data-lucide],
+#clearAllDataBtn svg,
+#clearBtn svg,
+#resetBtn.clear-btn svg {
+  width: 1em !important;
+  height: 1em !important;
+  flex-shrink: 0 !important;
+  stroke: currentColor !important;
 }
 
-/* Przyciski czyszczenia pól otrzymują blokowy układ i pełną szerokość kontenera.  Używamy
-   display:block, aby każdy przycisk zaczynał się w nowej linii i miał tę samą szerokość. */
+/* Przyciski czyszczenia pól — flex (ikona + tekst w linii), pełna szerokość. */
 #clearAllDataBtn,
 #clearBtn {
-  display: block !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.45em !important;
   width: 100% !important;
   max-width: 100%;
   margin-left: auto !important;
