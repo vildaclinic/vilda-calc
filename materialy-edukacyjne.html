@@ -1,6 +1,20 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
+<!-- Google Consent Mode v2 — domyślne ustawienie przed podjęciem decyzji przez użytkownika.
+     GA4 załaduje się dopiero po wyrażeniu zgody (patrz: vilda_chrome.js / initConsentBanner).
+     Blok musi być w <head> przed jakimkolwiek tagiem analytics. -->
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('consent', 'default', {
+    analytics_storage: 'denied',
+    ad_storage: 'denied',
+    ad_user_data: 'denied',
+    ad_personalization: 'denied',
+    wait_for_update: 500
+  });
+</script>
   <meta charset="utf-8">
   <title>Materiały edukacyjne – filmy o Omnitrope, Genotropin i Ngenla | Waga i wzrost</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -310,15 +324,48 @@
   </div>
   <aside class="decor-sidebar"></aside>
 </div>
-
-<footer>
-  <p><strong>Administrator serwisu:</strong>
-    Vilda Clinic sp. z o.o. •
-    <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">vildaclinic.pl</a>
-  </p>
-  <p><strong>Konsultacja merytoryczna:</strong>
-    dr n. med. Maciej Flader
-  </p>
+<footer class="site-footer">
+  <div class="site-footer__inner">
+    <div class="site-footer__brand">
+      <a href="index.html" class="site-footer__brand-link">
+        <span class="site-footer__brand-icon" aria-hidden="true">
+          <img src="pwa-icons/icon-48x48.png" alt="" width="22" height="22">
+        </span>
+        <span class="site-footer__brand-name">wagaiwzrost.pl</span>
+      </a>
+      <p class="site-footer__brand-meta">
+        Vilda Clinic sp. z o.o.<br>
+        Konsultacja merytoryczna: dr&nbsp;n.&nbsp;med.&nbsp;Maciej&nbsp;Flader
+      </p>
+    </div>
+    <nav class="site-footer__col" aria-label="Kalkulatory">
+      <h3 class="site-footer__col-title">Kalkulatory</h3>
+      <a href="index.html" class="site-footer__link">Strona główna</a>
+      <a href="homa-ir.html" class="site-footer__link">HOMA-IR</a>
+      <a href="kalkulator-klirens.html" class="site-footer__link">Klirens / eGFR</a>
+    </nav>
+    <nav class="site-footer__col" aria-label="Kalkulatory — ciąg dalszy">
+      <h3 class="site-footer__col-title site-footer__col-title--hidden" aria-hidden="true">&nbsp;</h3>
+      <a href="docpro.html" class="site-footer__link">DocPro</a>
+      <a href="steroidy.html" class="site-footer__link">Steroidy</a>
+      <a href="cukrzyca.html" class="site-footer__link">Cukrzyca</a>
+    </nav>
+    <nav class="site-footer__col" aria-label="Informacje">
+      <h3 class="site-footer__col-title">Informacje</h3>
+      <a href="o-aplikacji.html" class="site-footer__link">O aplikacji</a>
+      <a href="kontakt.html" class="site-footer__link">Kontakt</a>
+      <a href="polityka-prywatnosci.html" class="site-footer__link">Polityka prywatności</a>
+    </nav>
+  </div>
+  <div class="site-footer__disclaimer-wrap">
+    <p class="site-footer__disclaimer">
+      Narzędzie do celów informacyjnych — nie zastępuje konsultacji lekarskiej ani samodzielnych decyzji klinicznych.
+    </p>
+  </div>
+  <div class="site-footer__bottom">
+    <span>© 2025 Vilda Clinic sp. z o.o.</span>
+    <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer" class="site-footer__vildaclinic">vildaclinic.pl</a>
+  </div>
 </footer>
 
 <script>

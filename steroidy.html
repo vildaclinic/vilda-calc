@@ -1,6 +1,20 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
+<!-- Google Consent Mode v2 — domyślne ustawienie przed podjęciem decyzji przez użytkownika.
+     GA4 załaduje się dopiero po wyrażeniu zgody (patrz: vilda_chrome.js / initConsentBanner).
+     Blok musi być w <head> przed jakimkolwiek tagiem analytics. -->
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('consent', 'default', {
+    analytics_storage: 'denied',
+    ad_storage: 'denied',
+    ad_user_data: 'denied',
+    ad_personalization: 'denied',
+    wait_for_update: 500
+  });
+</script>
   <meta charset="utf-8">
   <title>Kalkulator dawek steroidów – Vilda Clinic (multi‑dose)</title>
   <!-- Configure the viewport to allow the page to extend into the safe areas on devices with display cut‑outs (e.g. iPhone Dynamic Island) -->
@@ -784,15 +798,49 @@
   </div><!-- /.desktop-layout -->
 
   <!-- Spójny footer jak na stronie głównej -->
-  <footer>
-    <p><strong>Administrator serwisu:</strong>
-      Vilda Clinic sp. z o.o.&nbsp;•&nbsp;
-      <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">vildaclinic.pl</a>
+<footer class="site-footer">
+  <div class="site-footer__inner">
+    <div class="site-footer__brand">
+      <a href="index.html" class="site-footer__brand-link">
+        <span class="site-footer__brand-icon" aria-hidden="true">
+          <img src="pwa-icons/icon-48x48.png" alt="" width="22" height="22">
+        </span>
+        <span class="site-footer__brand-name">wagaiwzrost.pl</span>
+      </a>
+      <p class="site-footer__brand-meta">
+        Vilda Clinic sp. z o.o.<br>
+        Konsultacja merytoryczna: dr&nbsp;n.&nbsp;med.&nbsp;Maciej&nbsp;Flader
+      </p>
+    </div>
+    <nav class="site-footer__col" aria-label="Kalkulatory">
+      <h3 class="site-footer__col-title">Kalkulatory</h3>
+      <a href="index.html" class="site-footer__link">Strona główna</a>
+      <a href="homa-ir.html" class="site-footer__link">HOMA-IR</a>
+      <a href="kalkulator-klirens.html" class="site-footer__link">Klirens / eGFR</a>
+    </nav>
+    <nav class="site-footer__col" aria-label="Kalkulatory — ciąg dalszy">
+      <h3 class="site-footer__col-title site-footer__col-title--hidden" aria-hidden="true">&nbsp;</h3>
+      <a href="docpro.html" class="site-footer__link">DocPro</a>
+      <a href="steroidy.html" class="site-footer__link">Steroidy</a>
+      <a href="cukrzyca.html" class="site-footer__link">Cukrzyca</a>
+    </nav>
+    <nav class="site-footer__col" aria-label="Informacje">
+      <h3 class="site-footer__col-title">Informacje</h3>
+      <a href="o-aplikacji.html" class="site-footer__link">O aplikacji</a>
+      <a href="kontakt.html" class="site-footer__link">Kontakt</a>
+      <a href="polityka-prywatnosci.html" class="site-footer__link">Polityka prywatności</a>
+    </nav>
+  </div>
+  <div class="site-footer__disclaimer-wrap">
+    <p class="site-footer__disclaimer">
+      Narzędzie do celów informacyjnych — nie zastępuje konsultacji lekarskiej ani samodzielnych decyzji klinicznych.
     </p>
-    <p><strong>Konsultacja merytoryczna:</strong>
-      dr&nbsp;n.&nbsp;med.&nbsp;Maciej&nbsp;Flader
-    </p>
-  </footer>
+  </div>
+  <div class="site-footer__bottom">
+    <span>© 2025 Vilda Clinic sp. z o.o.</span>
+    <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer" class="site-footer__vildaclinic">vildaclinic.pl</a>
+  </div>
+</footer>
 
   <!-- Usunięto rejestrację service workera (PWA) -->
 
@@ -2282,80 +2330,9 @@
        Parametr wersji wymusza odświeżenie z cache w przeglądarkach. -->
   <script src="ios26-ui.js?v=18" defer></script>
 
-  <!-- Baner cookies / lokalnego przechowywania danych -->
-  <div id="consent-banner" class="cookie-banner hidden">
-    <p>
-      Korzystając z aplikacji <strong>Vilda Clinic</strong> zapisujemy niewielkie ilości danych w Twojej przeglądarce:
-    </p>
-    <ul>
-      <li><strong>Pliki niezbędne:</strong> Service Worker zapisuje pliki aplikacji (HTML, CSS, JavaScript, grafiki) w Cache Storage, aby umożliwić działanie offline. Nie zbiera żadnych danych osobowych.</li>
-      <li><strong>Pamięć funkcjonalna:</strong> Po weryfikacji numeru PWZ możesz zdecydować, czy zapamiętać go w tej przeglądarce. Numer zostanie zapisany w localStorage wyłącznie w Twoim urządzeniu i nie jest nigdzie wysyłany.</li>
-      <li><strong>Analityka:</strong> Google Analytics (GA4) używa własnych plików cookie, aby tworzyć anonimowe statystyki odwiedzin. Nie zapisuje danych wpisywanych w aplikacji. Zgoda na analitykę jest dobrowolna i możesz ją wycofać.</li>
-    </ul>
-    <div class="cookie-buttons">
-      <button id="consent-accept">Akceptuję analitykę</button>
-      <button id="consent-decline">Odrzucam analitykę</button>
-    </div>
-  </div>
+  <!-- Baner zgody wstrzykiwany centralnie przez vilda_chrome.js (initConsentBanner) -->
+</div>
 
-  <!-- Skrypt obsługujący baner zgody na pliki cookie / analitykę.  
-       Kod jest uproszczoną wersją tego używanego w głównym kalkulatorze BMI.  
-       Ładuje Google Analytics po zaakceptowaniu zgody, zapisuje decyzję w localStorage  
-       i ukrywa baner. -->
-  <script>
-  (function() {
-    const banner     = document.getElementById('consent-banner');
-    const btnAccept  = document.getElementById('consent-accept');
-    const btnDecline = document.getElementById('consent-decline');
-
-    function readAnalyticsConsent(){
-      try {
-        return window.VildaPersistence && typeof window.VildaPersistence.readPreferenceRaw === 'function'
-          ? window.VildaPersistence.readPreferenceRaw('ANALYTICS_CONSENT', null)
-          : null;
-      } catch (_) { return null; }
-    }
-    function writeAnalyticsConsent(value){
-      try {
-        if (window.VildaPersistence && typeof window.VildaPersistence.writePreferenceRaw === 'function') {
-          window.VildaPersistence.writePreferenceRaw('ANALYTICS_CONSENT', value, { force: true });
-        }
-      } catch (_) {}
-    }
-
-    // Sprawdź, czy użytkownik podjął decyzję wcześniej
-    const consent = readAnalyticsConsent();
-
-    function loadGA() {
-      const gaScript = document.createElement('script');
-      gaScript.src = 'https://www.googletagmanager.com/gtag/js?id=G-EZZTNV8W07';
-      gaScript.async = true;
-      document.head.appendChild(gaScript);
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){ dataLayer.push(arguments); }
-      gtag('js', new Date());
-      gtag('config', 'G-EZZTNV8W07', { anonymize_ip: true });
-    }
-
-    if (!consent) {
-      // Jeśli brak decyzji – pokaż baner
-      banner.style.display = 'block';
-    } else if (consent === 'granted') {
-      // Użytkownik wcześniej zaakceptował analitykę – załaduj GA
-      loadGA();
-    }
-
-    btnAccept.addEventListener('click', function() {
-      writeAnalyticsConsent('granted');
-      banner.style.display = 'none';
-      loadGA();
-    });
-    btnDecline.addEventListener('click', function() {
-      writeAnalyticsConsent('denied');
-      banner.style.display = 'none';
-    });
-  })();
-  </script>
 
   <!-- Skrypt do rozwijania listy źródeł w kalkulatorze sterydów.  Funkcja toggluje widoczność listy po kliknięciu przycisku. -->
   <script>

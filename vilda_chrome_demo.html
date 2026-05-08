@@ -1,6 +1,20 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
+<!-- Google Consent Mode v2 — domyślne ustawienie przed podjęciem decyzji przez użytkownika.
+     GA4 załaduje się dopiero po wyrażeniu zgody (patrz: vilda_chrome.js / initConsentBanner).
+     Blok musi być w <head> przed jakimkolwiek tagiem analytics. -->
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('consent', 'default', {
+    analytics_storage: 'denied',
+    ad_storage: 'denied',
+    ad_user_data: 'denied',
+    ad_personalization: 'denied',
+    wait_for_update: 500
+  });
+</script>
 <meta charset="utf-8">
 <title>Demo nowego chrome — wagaiwzrost.pl</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
