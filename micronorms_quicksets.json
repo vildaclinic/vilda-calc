@@ -1,0 +1,128 @@
+{
+  "source": {
+    "title": "Reguły produktowe karty „Najważniejsze dla Ciebie”",
+    "edition": 1,
+    "based_on": "Projekt karty witamin i składników mineralnych dla wagaiwzrost.pl"
+  },
+  "rules": [
+    {
+      "id": "default_child_6_119",
+      "conditions": {
+        "sex": "all",
+        "physiology": "default",
+        "age_min_months": 6,
+        "age_max_months": 119
+      },
+      "nutrients": [
+        "vitamin_d",
+        "calcium",
+        "iron",
+        "iodine",
+        "folate",
+        "selenium"
+      ]
+    },
+    {
+      "id": "male_120_227",
+      "conditions": {
+        "sex": "male",
+        "physiology": "default",
+        "age_min_months": 120,
+        "age_max_months": 227
+      },
+      "nutrients": [
+        "vitamin_d",
+        "calcium",
+        "iron",
+        "iodine",
+        "zinc",
+        "folate"
+      ]
+    },
+    {
+      "id": "female_120_227",
+      "conditions": {
+        "sex": "female",
+        "physiology": "default",
+        "age_min_months": 120,
+        "age_max_months": 227
+      },
+      "nutrients": [
+        "vitamin_d",
+        "calcium",
+        "iron",
+        "iodine",
+        "folate",
+        "vitamin_b12"
+      ]
+    },
+    {
+      "id": "male_adult",
+      "conditions": {
+        "sex": "male",
+        "physiology": "default",
+        "age_min_months": 228,
+        "age_max_months": null
+      },
+      "nutrients": [
+        "vitamin_d",
+        "calcium",
+        "iodine",
+        "zinc",
+        "folate",
+        "vitamin_b12"
+      ]
+    },
+    {
+      "id": "female_adult",
+      "conditions": {
+        "sex": "female",
+        "physiology": "default",
+        "age_min_months": 228,
+        "age_max_months": null
+      },
+      "nutrients": [
+        "vitamin_d",
+        "calcium",
+        "iron",
+        "iodine",
+        "folate",
+        "vitamin_b12"
+      ]
+    },
+    {
+      "id": "pregnancy",
+      "conditions": {
+        "sex": "female",
+        "physiology": "pregnancy",
+        "age_min_months": 0,
+        "age_max_months": null
+      },
+      "nutrients": [
+        "vitamin_d",
+        "calcium",
+        "iron",
+        "iodine",
+        "folate",
+        "choline"
+      ]
+    },
+    {
+      "id": "lactation",
+      "conditions": {
+        "sex": "female",
+        "physiology": "lactation",
+        "age_min_months": 0,
+        "age_max_months": null
+      },
+      "nutrients": [
+        "vitamin_d",
+        "calcium",
+        "iodine",
+        "choline",
+        "vitamin_b12",
+        "selenium"
+      ]
+    }
+  ]
+}
