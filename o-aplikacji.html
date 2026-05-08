@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>O aplikacji Waga i wzrost – kalkulatory zdrowia dla rodzin i lekarzy</title>
+  <meta name="description" content="Poznaj aplikację Waga i wzrost: narzędzie dla użytkowników prywatnych, rodziców dzieci i lekarzy. Aplikacja reaguje na dane z pola Dane użytkownika i dostosowuje wyniki do wieku, wzrostu i masy ciała." />
+  <meta name="keywords" content="waga i wzrost, BMI, siatki centylowe, kalorie, PWA, lekarz, rodzice, dzieci, DocPro, kalkulator medyczny" />
+  <link rel="canonical" href="https://wagaiwzrost.pl/o-aplikacji.html" />
+  <meta name="robots" content="index, follow" />
+  <link rel="stylesheet" href="style.css?v=5" />
+  <link rel="stylesheet" href="ios26-v2.css?v=12" />
+  <link rel="stylesheet" href="sidebar.css" />
+
+  <link href="vilda_chrome.css?v=10" rel="stylesheet">
+  <style>
+    .about-page .about-shell {
+      padding-block: 1rem 2.5rem;
+    }
+
+    .about-page .about-panel,
+    .about-page .about-card,
+    .about-page .about-hero {
+      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(244,251,250,0.96));
+      border: 1px solid rgba(22, 76, 71, 0.1);
+      border-radius: 24px;
+      box-shadow: 0 16px 42px rgba(15, 45, 42, 0.08);
+    }
+
+    .about-page .about-hero {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      padding: 1.6rem;
+      margin-bottom: 1.2rem;
+      position: relative;
+      overflow: hidden;
+      isolation: isolate;
+    }
+
+    .about-page .about-hero-main {
+      width: 100%;
+      max-width: 78ch;
+      margin: 0 auto;
+    }
+
+    .about-page .about-hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at top right, rgba(0, 168, 181, 0.14), transparent 34%),
+        radial-gradient(circle at bottom left, rgba(4, 120, 87, 0.09), transparent 32%);
+      z-index: -1;
+    }
+
+    .about-page .about-badges,
+    .about-page .about-chip-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+    }
+
+    .about-page .about-quick-links {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.75rem;
+      width: 100%;
+      margin: 1rem 0 0;
+    }
+
+    .about-page .about-badge,
+    .about-page .about-quick-links a,
+    .about-page .about-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.5rem 0.8rem;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.88);
+      border: 1px solid rgba(0, 168, 181, 0.16);
+      color: #0f4b48;
+      font-weight: 700;
+      text-decoration: none;
+      box-shadow: 0 8px 24px rgba(15, 45, 42, 0.05);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .about-page .about-badge .sidebar-icon,
+    .about-page .about-chip .sidebar-icon {
+      width: 1rem;
+      height: 1rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      align-self: center;
+      flex-shrink: 0;
+    }
+
+    .about-page .sidebar-icon svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .about-page .about-shell .sidebar-icon {
+      line-height: 0;
+    }
+
+    .about-page .about-hero .about-badges {
+      justify-content: center;
+    }
+
+    .about-page .about-hero h2 {
+      font-size: clamp(1.75rem, 3.5vw, 2.55rem);
+      line-height: 1.1;
+      margin: 0.75rem auto 0.9rem;
+      max-width: 26ch;
+      text-align: center;
+      text-wrap: balance;
+      color: #0f3533;
+    }
+
+    .about-page .about-hero p,
+    .about-page .about-card p,
+    .about-page .about-panel p,
+    .about-page .about-panel li,
+    .about-page .about-card li {
+      color: #284847;
+      line-height: 1.72;
+    }
+
+    .about-page .inline-label {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.14rem 0.45rem;
+      border-radius: 999px;
+      background: rgba(0, 168, 181, 0.12);
+      border: 1px solid rgba(0, 168, 181, 0.22);
+      color: #0a6261;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .about-page .hero-copy {
+      width: 100%;
+      max-width: 68ch;
+      box-sizing: border-box;
+      margin: 0 auto 1rem;
+      text-align: justify;
+      text-justify: inter-word;
+    }
+
+    .about-page .hero-copy p {
+      margin: 0;
+    }
+
+    .about-page .hero-copy p + p {
+      margin-top: 1rem;
+    }
+
+    .about-page .hero-copy .hero-lead {
+      font-size: 1.07rem;
+    }
+
+    .about-page .hero-note {
+      margin-top: 1rem;
+      padding: 1rem 1.05rem;
+      border-radius: 20px;
+      background: rgba(8, 145, 178, 0.09);
+      border: 1px solid rgba(8, 145, 178, 0.18);
+      width: 100%;
+      box-sizing: border-box;
+      text-align: justify;
+      text-justify: inter-word;
+    }
+
+    .about-page .hero-note strong {
+      color: #0f4b48;
+    }
+
+    .about-page .about-facts {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.95rem;
+      align-self: stretch;
+      width: 100%;
+      margin-top: 0.15rem;
+    }
+
+    .about-page .fact-card {
+      padding: 1rem;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.9);
+      border: 1px solid rgba(22, 76, 71, 0.1);
+      min-height: 132px;
+    }
+
+    .about-page .fact-card h3 {
+      margin: 0.15rem 0 0.55rem;
+      font-size: 1rem;
+      color: #103736;
+    }
+
+    .about-page .fact-card p {
+      margin: 0;
+      font-size: 0.96rem;
+      line-height: 1.6;
+    }
+
+    .about-page .about-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .about-page .about-card,
+    .about-page .about-panel {
+      padding: 1.35rem;
+      margin-bottom: 1rem;
+    }
+
+    .about-page .about-card h2,
+    .about-page .about-panel h2,
+    .about-page .about-card h3,
+    .about-page .about-panel h3 {
+      color: #103736;
+      margin-top: 0;
+    }
+
+    .about-page .about-section-heading {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      align-items: center;
+      gap: 0.7rem;
+      margin-bottom: 0.8rem;
+    }
+
+    .about-page .about-section-heading h2 {
+      margin: 0;
+      line-height: 1.25;
+    }
+
+    .about-page .about-section-heading .sidebar-icon {
+      width: 1.1rem;
+      height: 1.1rem;
+      color: #0891b2;
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      align-self: center;
+    }
+
+    .about-page .about-callout {
+      margin-top: 1rem;
+      padding: 1rem 1.05rem;
+      border-left: 4px solid #0891b2;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.8);
+    }
+
+    .about-page .feature-grid,
+    .about-page .cta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 1rem;
+    }
+
+    .about-page .audience-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+    }
+
+    .about-page .audience-grid .audience-card:last-child {
+      grid-column: 1 / -1;
+    }
+
+    .about-page .audience-card {
+      padding: 1.15rem;
+      border-radius: 22px;
+      background: rgba(255,255,255,0.9);
+      border: 1px solid rgba(22, 76, 71, 0.1);
+    }
+
+    .about-page .audience-card h3 {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      align-items: center;
+      gap: 0.55rem;
+      margin: 0 0 0.75rem;
+      font-size: 1.08rem;
+      line-height: 1.25;
+    }
+
+    .about-page .audience-card .sidebar-icon {
+      width: 1.1rem;
+      height: 1.1rem;
+      color: #0891b2;
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      align-self: center;
+    }
+
+    .about-page .audience-card ul,
+    .about-page .feature-list,
+    .about-page .about-list {
+      margin: 0;
+      padding-left: 1.1rem;
+    }
+
+    .about-page .flow-steps {
+      counter-reset: aboutStep;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 0.9rem;
+    }
+
+    .about-page .flow-steps li {
+      counter-increment: aboutStep;
+      position: relative;
+      padding: 1rem 1rem 1rem 3.25rem;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.88);
+      border: 1px solid rgba(22, 76, 71, 0.1);
+    }
+
+    .about-page .flow-steps li::before {
+      content: counter(aboutStep);
+      position: absolute;
+      left: 1rem;
+      top: 1rem;
+      width: 1.6rem;
+      height: 1.6rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #0891b2, #14b8a6);
+      color: #fff;
+      font-weight: 800;
+      box-shadow: 0 10px 20px rgba(8, 145, 178, 0.22);
+    }
+
+    .about-page .feature-card {
+      padding: 1.05rem 1.1rem;
+      border-radius: 22px;
+      background: rgba(255,255,255,0.9);
+      border: 1px solid rgba(22, 76, 71, 0.1);
+      min-height: 100%;
+    }
+
+    .about-page .feature-card h3 {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      align-items: center;
+      gap: 0.55rem;
+      margin: 0 0 0.65rem;
+      font-size: 1.04rem;
+      line-height: 1.25;
+    }
+
+    .about-page .feature-card .sidebar-icon {
+      width: 1.05rem;
+      height: 1.05rem;
+      color: #0891b2;
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      align-self: center;
+    }
+
+    .about-page .about-divider {
+      height: 1px;
+      border: 0;
+      background: linear-gradient(90deg, transparent, rgba(22, 76, 71, 0.18), transparent);
+      margin: 1.2rem 0;
+    }
+
+    .about-page .about-link-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 0.8rem;
+      margin-top: 0.9rem;
+    }
+
+    .about-page .about-link-card {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 0.8rem;
+      padding: 0.95rem 1rem;
+      border-radius: 18px;
+      border: 1px solid rgba(0, 168, 181, 0.16);
+      background: rgba(255,255,255,0.9);
+      text-decoration: none;
+      color: #0f4b48;
+      font-weight: 700;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .about-page .about-link-card .sidebar-icon {
+      width: 1rem;
+      height: 1rem;
+      color: #0891b2;
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      align-self: center;
+    }
+
+    .about-page .about-link-card span:nth-child(2) {
+      display: block;
+      align-self: center;
+      line-height: 1.25;
+    }
+
+    .about-page .about-quick-links a {
+      justify-content: center;
+      text-align: center;
+      min-height: 3rem;
+      width: 100%;
+    }
+
+    .about-page .about-quick-links a.warning-link {
+      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,248,240,0.96));
+      border-color: rgba(180, 83, 9, 0.16);
+      color: #8a3d0a;
+    }
+
+    .about-page .about-quick-links a.warning-link:hover {
+      box-shadow: 0 12px 24px rgba(138, 61, 10, 0.12);
+    }
+
+    .about-page .about-muted {
+      color: #4b6765;
+      font-size: 0.95rem;
+      text-align: center;
+      max-width: 72ch;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .about-page .about-warning {
+      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,248,240,0.96));
+      border-color: rgba(180, 83, 9, 0.16);
+    }
+
+    .about-page .about-warning h2 {
+      color: #8a3d0a;
+    }
+
+    .about-page .about-warning .about-section-heading .sidebar-icon {
+      color: #c2410c;
+    }
+
+    .about-page .about-panel strong,
+    .about-page .about-card strong,
+    .about-page .about-hero strong {
+      color: #0f3533;
+    }
+
+    .about-page .about-link-card:hover,
+    .about-page .about-quick-links a:hover,
+    .about-page .about-badge:hover,
+    .about-page .about-chip:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 24px rgba(15, 45, 42, 0.08);
+    }
+
+    @media (max-width: 780px) {
+      .about-page .about-facts {
+        grid-template-columns: 1fr;
+      }
+
+      .about-page .about-quick-links {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 640px) {
+      .about-page .about-shell {
+        padding-block: 0.6rem 2rem;
+      }
+
+      .about-page .about-hero,
+      .about-page .about-card,
+      .about-page .about-panel {
+        padding: 1.1rem;
+        border-radius: 20px;
+      }
+
+      .about-page .about-facts,
+      .about-page .audience-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .about-page .audience-grid .audience-card:last-child {
+        grid-column: auto;
+      }
+
+      .about-page .about-badge,
+      .about-page .about-quick-links a,
+      .about-page .about-chip {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .about-page .about-quick-links {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+
+  <script src="vilda_logger.js?v=2"></script>
+<script src="vilda_html.js?v=4"></script>
+<script src="vilda_persistence_adapter.js?v=7"></script>
+<script src="vilda_session_bridge.js?v=1"></script>
+<script src="vilda_init.js?v=4"></script>
+<script src="vilda_deps.js?v=6"></script>
+<script>
+  (function() {
+    try {
+      var VERSION = 'v3';
+      var SIGNATURE = 'docpro.html|kalkulator-klirens.html|cukrzyca.html|steroidy.html|materialy-edukacyjne.html';
+      var persistence = window.VildaPersistence || null;
+      var parsed = persistence && typeof persistence.readPreferenceJSON === 'function'
+        ? persistence.readPreferenceJSON('MOBILE_TOP_NAV_FONT_CACHE', null)
+        : null;
+      if (!parsed) return;
+
+      if (!parsed || parsed.version !== VERSION || parsed.signature !== SIGNATURE) return;
+
+      var viewportWidth = Math.round(Math.max(
+        window.innerWidth || 0,
+        document.documentElement ? (document.documentElement.clientWidth || 0) : 0
+      ));
+      var cachedWidth = Math.round(Number(parsed.width) || 0);
+      var fontRem = Number(parsed.fontRem);
+
+      if (!viewportWidth || viewportWidth !== cachedWidth || !isFinite(fontRem)) return;
+      if (fontRem < 0.72 || fontRem > 0.98) return;
+
+      var style = document.createElement('style');
+      style.id = 'mobile-top-nav-font-cache-style';
+      style.textContent = '@media (max-width: 600px){.main-nav{--mobile-top-nav-font-size:' + fontRem.toFixed(2) + 'rem !important;}}';
+      document.head.appendChild(style);
+    } catch (e) {
+      /* noop */
+    }
+  })();
+  </script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        { "@type": "Organization", "@id": "https://wagaiwzrost.pl/#org" },
+        { "@type": "Person", "@id": "https://wagaiwzrost.pl/#dr-flader" },
+        {
+          "@type": "WebApplication",
+          "@id": "https://wagaiwzrost.pl/#app",
+          "name": "Waga i wzrost",
+          "url": "https://wagaiwzrost.pl/",
+          "applicationCategory": "HealthApplication",
+          "operatingSystem": "All",
+          "description": "Aplikacja dla użytkowników prywatnych, rodziców dzieci i lekarzy. Reaguje na dane z pola Dane użytkownika i dopasowuje wyniki do wieku, wzrostu i masy ciała.",
+          "offers": { "@type": "Offer", "price": "0", "priceCurrency": "PLN" },
+          "publisher": { "@id": "https://wagaiwzrost.pl/#org" },
+          "author": { "@id": "https://wagaiwzrost.pl/#dr-flader" },
+          "inLanguage": "pl-PL",
+          "isAccessibleForFree": true
+        },
+        {
+          "@type": "WebPage",
+          "@id": "https://wagaiwzrost.pl/o-aplikacji.html#page",
+          "name": "O aplikacji – Waga i wzrost",
+          "url": "https://wagaiwzrost.pl/o-aplikacji.html",
+          "isPartOf": { "@id": "https://wagaiwzrost.pl/#website" },
+          "publisher": { "@id": "https://wagaiwzrost.pl/#org" },
+          "reviewedBy": { "@id": "https://wagaiwzrost.pl/#dr-flader" },
+          "inLanguage": "pl-PL",
+          "isAccessibleForFree": true
+        }
+      ]
+    }
+  </script>
+<script src="vilda_chrome.js?v=7"></script>
+</head>
+<body class="js-loading liquid-ios26 has-sidebar about-page">
+  <header>
+</header>
+
+  <div class="desktop-layout">
+    <aside class="sidebar"></aside>
+
+    <main class="main-content">
+      <div class="container about-shell">
+        <section class="about-hero">
+          <div class="about-hero-main">
+            <div class="about-badges">
+              <span class="about-badge"><span class="sidebar-icon" data-lucide="sparkles"></span> Aplikacja reagująca na dane użytkownika</span>
+              <span class="about-badge"><span class="sidebar-icon" data-lucide="users"></span> Dla rodzin i lekarzy</span>
+              <span class="about-badge"><span class="sidebar-icon" data-lucide="refresh-cw"></span> Stale rozwijana i aktualizowana</span>
+            </div>
+            <h2>Narzędzie, które dopasowuje wynik do konkretnego użytkownika lub pacjenta.</h2>
+            <div class="hero-copy">
+              <p class="hero-lead">
+                <strong>Waga i wzrost</strong> to rozbudowana aplikacja webowa dla użytkowników prywatnych,
+                rodziców dzieci oraz lekarzy. Jej najważniejszą cechą jest to, że reaguje na dane wpisane
+                w polu <span class="inline-label">Dane użytkownika</span> i stara się podać wynik możliwie najlepiej dopasowany
+                do <strong>wieku, wzrostu i masy ciała</strong>.
+              </p>
+              <p>
+                Dzięki temu aplikacja nie działa jak pojedynczy, sztywny kalkulator. Zależnie od tego,
+                kto korzysta z narzędzia i jakie dane zostaną wpisane, dobierane są odpowiednie obliczenia,
+                źródła odniesienia, zakresy norm, interpretacje i dostępne moduły. To podejście ma znaczenie
+                zarówno przy prostych obliczeniach domowych, jak i przy bardziej zaawansowanych analizach klinicznych.
+              </p>
+            </div>
+          </div>
+
+          <div class="about-quick-links">
+            <a href="#jak-to-dziala">Jak to działa</a>
+            <a href="#dla-kogo">Dla kogo</a>
+            <a href="#rozwoj">Rozwój aplikacji</a>
+            <a class="warning-link" href="#zastrzezenie">Ważne zastrzeżenie</a>
+          </div>
+
+          <div class="hero-note">
+            <strong>Najważniejsze założenie:</strong> po zmianie wieku, wzrostu, masy ciała lub innych danych wejściowych
+            aplikacja aktualizuje wynik i sposób jego prezentacji tak, aby był bardziej adekwatny do danego użytkownika,
+            dziecka lub pacjenta.
+          </div>
+
+          <div class="about-facts" aria-label="Najważniejsze informacje o aplikacji">
+            <article class="fact-card">
+              <div class="about-chip-list">
+                <span class="about-chip"><span class="sidebar-icon" data-lucide="sliders-horizontal"></span> Dane użytkownika</span>
+              </div>
+              <h3>Dynamiczne dopasowanie</h3>
+              <p>Wyniki nie są oderwane od kontekstu. Aplikacja uwzględnia wpisane dane i dopasowuje obliczenia do konkretnej osoby.</p>
+            </article>
+            <article class="fact-card">
+              <div class="about-chip-list">
+                <span class="about-chip"><span class="sidebar-icon" data-lucide="baby"></span> Dzieci i dorośli</span>
+              </div>
+              <h3>Różne grupy użytkowników</h3>
+              <p>Jedna aplikacja wspiera codzienne decyzje zdrowotne, monitorowanie rozwoju dziecka i pracę lekarską.</p>
+            </article>
+            <article class="fact-card">
+              <div class="about-chip-list">
+                <span class="about-chip"><span class="sidebar-icon" data-lucide="stethoscope"></span> Moduły kliniczne</span>
+              </div>
+              <h3>Także dla lekarzy</h3>
+              <p>DocPro oraz pozostałe moduły specjalistyczne są praktycznym wsparciem w decyzjach klinicznych.</p>
+            </article>
+            <article class="fact-card">
+              <div class="about-chip-list">
+                <span class="about-chip"><span class="sidebar-icon" data-lucide="rocket"></span> Rozwój ciągły</span>
+              </div>
+              <h3>Stałe uaktualnienia</h3>
+              <p>Aplikacja jest stale rozwijana, porządkowana i rozszerzana o nowe funkcje, poprawki i usprawnienia interfejsu.</p>
+            </article>
+          </div>
+        </section>
+
+        <section id="jak-to-dziala" class="about-panel">
+          <div class="about-section-heading">
+            <span class="sidebar-icon" data-lucide="workflow"></span>
+            <h2>Jak aplikacja dobiera wynik</h2>
+          </div>
+          <ol class="flow-steps">
+            <li>
+              Punktem wyjścia są dane wpisane w polu <span class="inline-label">Dane użytkownika</span>, przede wszystkim
+              <strong>wiek, płeć, wzrost i masa ciała</strong>.
+            </li>
+            <li>
+              Na tej podstawie aplikacja dobiera odpowiedni sposób liczenia, zakres norm, siatki odniesienia,
+              dostępne funkcje i sposób prezentacji wyniku.
+            </li>
+            <li>
+              Jeśli korzystasz z modułów dziecięcych, wzrostowych lub lekarskich, aplikacja próbuje uwzględnić
+              kontekst rozwojowy i kliniczny, a nie tylko samą wartość liczbową.
+            </li>
+            <li>
+              Po zmianie danych wejściowych wynik jest przeliczany ponownie, tak aby odpowiadał aktualnym parametrom
+              użytkownika lub pacjenta.
+            </li>
+          </ol>
+          <div class="about-callout">
+            <strong>W praktyce:</strong> to samo narzędzie może zachować się inaczej u niemowlęcia, starszego dziecka,
+            osoby dorosłej lub pacjenta ocenianego przez lekarza, bo aplikacja stara się pracować na danych konkretnej osoby.
+          </div>
+        </section>
+
+        <section id="dla-kogo" class="about-panel">
+          <div class="about-section-heading">
+            <span class="sidebar-icon" data-lucide="users-round"></span>
+            <h2>Dla kogo jest ta aplikacja</h2>
+          </div>
+          <div class="audience-grid">
+            <article class="audience-card">
+              <h3><span class="sidebar-icon" data-lucide="user-round"></span> Użytkownicy prywatni</h3>
+              <ul>
+                <li>do szybkiej oceny masy ciała, BMI, obwodów i zapotrzebowania energetycznego,</li>
+                <li>do planowania redukcji masy ciała i codziennej pracy z dietą,</li>
+                <li>do prostszego zrozumienia, jak zmiana masy ciała lub wzrostu wpływa na wynik.</li>
+              </ul>
+            </article>
+            <article class="audience-card">
+              <h3><span class="sidebar-icon" data-lucide="baby"></span> Rodzice dzieci</h3>
+              <ul>
+                <li>do monitorowania wzrostu, masy ciała i BMI dziecka w odniesieniu do siatek centylowych,</li>
+                <li>do lepszego zrozumienia rozwoju dziecka na podstawie wpisanych danych,</li>
+                <li>do uporządkowania informacji przed konsultacją lekarską.</li>
+              </ul>
+            </article>
+            <article class="audience-card">
+              <h3><span class="sidebar-icon" data-lucide="stethoscope"></span> Lekarze</h3>
+              <ul>
+                <li>do szybkich obliczeń wspierających interpretację danych wzrostowych i metabolicznych,</li>
+                <li>do pracy z modułami specjalistycznymi w DocPro, Klirensie, Steroidach i innych sekcjach,</li>
+                <li>do uzyskania wyniku dopasowanego do wieku, wzrostu i masy ciała pacjenta.</li>
+              </ul>
+            </article>
+          </div>
+        </section>
+
+        <section class="about-panel">
+          <div class="about-section-heading">
+            <span class="sidebar-icon" data-lucide="layout-grid"></span>
+            <h2>Co znajdziesz w aplikacji</h2>
+          </div>
+          <div class="feature-grid">
+            <article class="feature-card">
+              <h3><span class="sidebar-icon" data-lucide="home"></span> Strona główna</h3>
+              <p>Moduły do codziennych obliczeń zdrowotnych, wzrostowych i żywieniowych. Wyniki zmieniają się wraz z danymi wpisanymi w formularzu użytkownika.</p>
+            </article>
+            <article class="feature-card">
+              <h3><span class="sidebar-icon" data-lucide="stethoscope"></span> DocPro</h3>
+              <p>Rozszerzona część dla lekarzy, w której większy nacisk położono na obliczenia kliniczne i interpretację danych pacjenta.</p>
+            </article>
+            <article class="feature-card">
+              <h3><span class="sidebar-icon" data-lucide="droplets"></span> Klirens</h3>
+              <p>Moduły nerkowe i laboratoryjne korzystające z danych pacjenta oraz wprowadzonych parametrów surowicy, moczu i zbiórek dobowych.</p>
+            </article>
+            <article class="feature-card">
+              <h3><span class="sidebar-icon" data-lucide="activity"></span> HOMA-IR, Cukrzyca, Steroidy, Edu</h3>
+              <p>Sekcje wspierające ocenę metaboliczną, edukację, interpretację podstawowych zależności i pracę z wybranymi zagadnieniami klinicznymi.</p>
+            </article>
+          </div>
+          <hr class="about-divider" />
+          <p class="about-muted">
+            Różne podstrony pełnią różne role, ale ich wspólną podstawą pozostaje dopasowanie wyniku do danych wpisanych przez użytkownika lub lekarza.
+          </p>
+        </section>
+
+        <section id="rozwoj" class="about-panel">
+          <div class="about-section-heading">
+            <span class="sidebar-icon" data-lucide="refresh-cw"></span>
+            <h2>Aplikacja jest stale rozwijana i uaktualniana</h2>
+          </div>
+          <div class="about-grid">
+            <article class="about-card">
+              <h3>Nowe funkcje</h3>
+              <p>Zakres aplikacji jest systematycznie poszerzany o kolejne moduły, warianty obliczeń i dodatkowe tryby pracy dla różnych grup użytkowników.</p>
+            </article>
+            <article class="about-card">
+              <h3>Aktualizacje treści i logiki</h3>
+              <p>Rozwijane są nie tylko obliczenia, ale też opisy, instrukcje, warstwa wizualna i sposób prezentacji wyników, tak aby aplikacja była czytelniejsza i bardziej użyteczna.</p>
+            </article>
+            <article class="about-card">
+              <h3>Dopasowanie do praktyki</h3>
+              <p>Zmiany wprowadzane są z myślą zarówno o codziennym użyciu domowym, jak i o praktycznym zastosowaniu lekarskim oraz edukacyjnym.</p>
+            </article>
+          </div>
+          <div class="about-callout">
+            <strong>To ważne:</strong> strona oraz sama aplikacja nie są projektem zamkniętym. Funkcje, opisy i interfejs są regularnie porządkowane,
+            rozszerzane i dostosowywane do aktualnych potrzeb użytkowników, rodziców i lekarzy.
+          </div>
+        </section>
+
+        <section class="about-panel">
+          <div class="about-section-heading">
+            <span class="sidebar-icon" data-lucide="shield-check"></span>
+            <h2>Co wyróżnia tę aplikację</h2>
+          </div>
+          <ul class="about-list">
+            <li>łączy narzędzia przydatne w domu, w edukacji i w praktyce lekarskiej,</li>
+            <li>nie ogranicza się do jednego kalkulatora, ale buduje wynik na podstawie wpisanych danych użytkownika,</li>
+            <li>obsługuje zarówno osoby dorosłe, jak i dzieci, z naciskiem na praktyczną interpretację wzrostu i masy ciała,</li>
+            <li>jest dostępna jako aplikacja webowa i może być używana wygodnie także na urządzeniach mobilnych.</li>
+          </ul>
+        </section>
+
+        <section id="zastrzezenie" class="about-panel about-warning">
+          <div class="about-section-heading">
+            <span class="sidebar-icon" data-lucide="triangle-alert"></span>
+            <h2>Ważne zastrzeżenie</h2>
+          </div>
+          <p>
+            <strong>Waga i wzrost</strong> ma charakter edukacyjny i wspierający. Wyniki kalkulatorów, modułów i analiz
+            nie zastępują pełnej oceny lekarskiej, badania przedmiotowego ani indywidualnej decyzji klinicznej.
+            W razie wątpliwości zdrowotnych należy skonsultować się z lekarzem lub innym odpowiednim specjalistą.
+          </p>
+        </section>
+
+        <section class="about-panel">
+          <div class="about-section-heading">
+            <span class="sidebar-icon" data-lucide="link"></span>
+            <h2>Przejdź dalej</h2>
+          </div>
+          <p>
+            Jeśli chcesz zobaczyć szczegóły modułów lub rozpocząć pracę z aplikacją, skorzystaj z poniższych odnośników.
+          </p>
+          <div class="about-link-grid">
+            <a class="about-link-card" href="index.html">
+              <span class="sidebar-icon" data-lucide="home"></span>
+              <span>Strona główna</span>
+              <span class="sidebar-icon" data-lucide="arrow-right"></span>
+            </a>
+            <a class="about-link-card" href="instrukcja.html">
+              <span class="sidebar-icon" data-lucide="file-text"></span>
+              <span>Instrukcja</span>
+              <span class="sidebar-icon" data-lucide="arrow-right"></span>
+            </a>
+            <a class="about-link-card" href="kontakt.html">
+              <span class="sidebar-icon" data-lucide="mail"></span>
+              <span>Kontakt</span>
+              <span class="sidebar-icon" data-lucide="arrow-right"></span>
+            </a>
+            <a class="about-link-card" href="docpro.html">
+              <span class="sidebar-icon" data-lucide="stethoscope"></span>
+              <span>DocPro</span>
+              <span class="sidebar-icon" data-lucide="arrow-right"></span>
+            </a>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <footer>
+    <p><strong>Administrator serwisu:</strong>
+      Vilda Clinic sp. z o.o. •
+      <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer">vildaclinic.pl</a>
+    </p>
+    <p><strong>Konsultacja merytoryczna:</strong>
+      dr n. med. Maciej Flader
+    </p>
+  </footer>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons();
+      }
+    });
+  </script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      document.body.classList.remove('js-loading');
+    });
+  </script>
+  <script src="ios26-ui.js?v=18" defer></script>
+</body>
+</html>

@@ -1,0 +1,1062 @@
+/* vilda_chrome.css — style nowego komponentu nagłówka i menu bocznego.
+ * v1.0.0
+ *
+ * Plik dołączamy PO sidebar.css i ios26-v2.css, dlatego część reguł używa
+ * !important wyłącznie tam, gdzie globalny motyw Liquid Glass wymusza inne
+ * wartości na wszystkich przyciskach/linkach.
+ *
+ * Zachowujemy w pełni kompatybilność z mini-summary i steroid-summary —
+ * te elementy są wstawiane do .sidebar-extras przez custom-fixes.js i
+ * korzystają z reguł zdefiniowanych w sidebar.css.
+ */
+
+/* ============ DESIGN TOKENS — ROZSZERZENIA ============ */
+:root {
+  --chrome-strip-height: 64px;
+  --chrome-sidebar-width: 270px;
+  --chrome-sidebar-pad-x: 0.85rem;
+  --chrome-radius-pill: 999px;
+  --chrome-radius-card: 14px;
+  --chrome-section-gap: 1.1rem;
+  --chrome-label-color: #5a7274;
+  --chrome-active-bg: linear-gradient(135deg, var(--primary, #00838d), var(--secondary, #00b0a6));
+  --chrome-glass-bg: rgba(255, 255, 255, 0.78);
+  --chrome-glass-border: rgba(0, 131, 141, 0.14);
+  --chrome-glass-shadow: 0 8px 28px rgba(0, 81, 88, 0.10);
+}
+
+/* ============ FOUC PREVENTION ============
+ * Reguły działają NATYCHMIAST po załadowaniu pliku CSS, jeszcze przed
+ * uruchomieniem vilda_chrome.js (który odpala się dopiero na DOMContentLoaded).
+ * Używamy klasy .has-sidebar osadzonej statycznie w <body> każdego pliku HTML.
+ *
+ * Cel: zapobiec "skakaniu" layoutu i przebijaniu się starego CSS w chwili,
+ * gdy JS podmienia zawartość sidebara i headera. Bez tych reguł przeglądarka
+ * wyrenderuje stary statyczny HTML (różne logo, płaska lista bez sekcji,
+ * stary hamburger mobilny), a potem skokowo go zastąpi nowym.
+ */
+
+/* 1. Ukryj dzieci statycznego sidebara — zanim JS doda klasę .sidebar-v2.
+      Dzięki temu stara płaska nawigacja, stare logo itd. nigdy nie będą widoczne. */
+.has-sidebar aside.sidebar:not(.sidebar-v2) > * {
+  display: none !important;
+}
+
+/* 2. Desktop: ustaw pełny layout gridu od razu — bez czekania na has-vilda-chrome.
+      Każda właściwość opisana poniżej powodowała skok layoutu w chwili gdy JS
+      dodawał klasę body.has-vilda-chrome (na DOMContentLoaded).
+      - grid-template-columns: sidebar.css = 260px, chrome = 270px → skok 10px
+      - align-items: sidebar.css = stretch, chrome = start → zmiana wyrównania
+      - padding/max-width/margin/gap: chrome nadpisywał je przez .has-vilda-chrome */
+@media (min-width: 992px) {
+  .has-sidebar .desktop-layout {
+    grid-template-columns: var(--chrome-sidebar-width) 1fr;
+    align-items: start;
+    gap: 1rem;
+    padding: 1rem 0 2rem 0;
+    max-width: none;
+    margin: 0;
+    box-sizing: border-box;
+  }
+
+  /* main-content: padding i border-radius muszą być stabilne od startu,
+     żeby treść strony nie przesuwała się gdy JS doda klasę has-vilda-chrome. */
+  .has-sidebar .main-content {
+    background: #ffffff;
+    border-radius: var(--chrome-radius-card);
+    padding: 1.25rem 1.25rem 1.5rem;
+    box-shadow: 0 4px 14px rgba(0, 70, 80, 0.05);
+    min-width: 0;
+  }
+  .has-sidebar .main-content .container {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Kalkulatory z własnym max-width (wycentrowane w main-content) */
+  .has-sidebar .main-content .homa-container,
+  .has-sidebar .main-content .clcr-container,
+  .has-sidebar .main-content .doc-shell {
+    max-width: 720px;
+  }
+}
+
+/* Trzy kolumny na bardzo szerokich ekranach — też stabilizujemy od startu */
+@media (min-width: 1400px) {
+  .has-sidebar .desktop-layout {
+    grid-template-columns: var(--chrome-sidebar-width) 1fr 230px;
+  }
+}
+
+/* 3. Ukryj stary .container z logo i .main-nav z hamburgerem na WSZYSTKICH rozmiarach
+      ekranu. sidebar.css robi to już na desktopie (≥992px) przez .has-sidebar;
+      ta reguła rozszerza ukrywanie na mobile — bez niej stary hamburger był
+      widoczny do czasu uruchomienia JS (mignięcie przed pojawieniem się chrome-strip). */
+.has-sidebar header > .container {
+  display: none !important;
+}
+.has-sidebar header > .main-nav {
+  display: none !important;
+}
+
+/* 4. Zarezerwuj wysokość nagłówka = wysokość chrome-strip, żeby wstrzyknięcie
+      paska przez JS nie zmieniało pionowego układu strony. */
+.has-sidebar header {
+  min-height: var(--chrome-strip-height);
+  box-sizing: border-box;
+}
+/* Na mobile header ma dodatkowo subpasek (~25px), więc rezerwujemy więcej miejsca */
+@media (max-width: 991px) {
+  .has-sidebar header {
+    min-height: calc(var(--chrome-strip-height) + 25px);
+  }
+}
+
+/* ============ HEADER STRIP ============ */
+.has-vilda-chrome header {
+  position: relative;
+  z-index: 50;
+  padding: 0;
+  background: var(--chrome-glass-bg);
+  backdrop-filter: saturate(160%) blur(14px);
+  -webkit-backdrop-filter: saturate(160%) blur(14px);
+  border-bottom: 1px solid var(--chrome-glass-border);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 6px 18px rgba(0, 70, 80, 0.06);
+}
+
+.has-vilda-chrome header > [data-vilda-chrome-wrap] {
+  width: 100%;
+}
+
+.chrome-strip {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  height: var(--chrome-strip-height);
+  padding: 0 1rem;
+  max-width: 1500px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.chrome-mobile-menu-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Wymuszamy stałą wysokość (40px) i wyrównanie do środka osi krzyżowej
+     flexa stripa — bez tego globalne reguły style.css `button { padding:.55rem 1.1rem }`
+     wpływały na wysokość/baseline buttonu i hamburger zjeżdżał w dół, gdy chipy
+     po prawej zmieniały rozmiar (chip-icon 28→32px na <600px). */
+  width: 40px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  max-height: 40px !important;
+  flex: 0 0 auto;
+  align-self: center !important;
+  border-radius: 12px !important;
+  border: 1px solid var(--chrome-glass-border) !important;
+  background: rgba(255, 255, 255, 0.6) !important;
+  color: var(--primary, #00838d) !important;
+  cursor: pointer;
+  padding: 0 !important;
+  margin: 0 !important;
+  line-height: 1 !important;
+  box-sizing: border-box !important;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.chrome-mobile-menu-btn:hover { background: rgba(255, 255, 255, 0.9) !important; }
+.chrome-mobile-menu-btn:active { transform: scale(0.96); }
+.chrome-mobile-menu-btn svg { width: 22px; height: 22px; display: block; }
+
+/* Tekstowe fallbacki dla ikon Lucide — widoczne zanim biblioteka załaduje się
+   i zamieni <span data-lucide> na <svg>. Po `lucide.createIcons()` cały span
+   jest podmieniany na svg, więc fallback automatycznie znika. */
+.chrome-icon-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  line-height: 1;
+  font-weight: 400;
+  color: currentColor;
+}
+.chrome-icon-fallback--small {
+  font-size: 0.95rem;
+}
+
+.chrome-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  text-decoration: none;
+  color: var(--text, #333);
+  flex: 0 0 auto;
+}
+.chrome-brand-logo {
+  width: 38px;
+  height: 38px;
+  object-fit: cover;
+  border-radius: 10px;
+  flex: 0 0 auto;
+}
+.chrome-brand-text {
+  display: inline-flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+.chrome-brand-name {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--primary, #00838d);
+  letter-spacing: -0.01em;
+}
+.chrome-brand-tagline {
+  font-size: 0.72rem;
+  color: var(--chrome-label-color);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.chrome-chips {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+/* Pojedynczy chip — pacjent / konto. Wbudowany w header: brak własnego tła ani
+   ramki, ikona + etykieta + wartość siedzą bezpośrednio na szklanej powierzchni
+   nagłówka. Wcześniej każdy chip miał swoją "pastylkę", co wizualnie zasłaniało
+   sąsiada i dawało wrażenie pływających elementów nad headerem. */
+.chrome-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.4rem;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  border-radius: var(--chrome-radius-pill);
+  transition: background 0.15s ease;
+  max-width: 240px;
+  min-width: 0;
+}
+/* Subtelny hover, żeby było jasne że chip jest interaktywny (klik na chip-action). */
+.chrome-chip:hover { background: rgba(255, 255, 255, 0.55); }
+
+.chip-icon, .chip-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #e2f1f2, #cfe9ec);
+  color: var(--primary, #00838d);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.chip-icon svg, .chip-avatar svg {
+  width: 16px;
+  height: 16px;
+}
+
+.chip-content {
+  display: inline-flex;
+  flex-direction: column;
+  line-height: 1.1;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.chip-label {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--chrome-label-color);
+  font-weight: 600;
+}
+.chip-value {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text, #333);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+/* Patient chip — różnice stanu */
+.chrome-patient-chip.is-empty .chip-icon { background: #e8eded; color: #9eb8bb; }
+.chrome-patient-chip.is-empty .chip-value { color: #9eb8bb; font-weight: 500; }
+.chrome-patient-chip.has-patient .chip-icon {
+  background: linear-gradient(135deg, var(--primary, #00838d), var(--secondary, #00b0a6));
+  color: #fff;
+}
+
+/* User chip — różnice stanu */
+.chrome-user-chip.is-loading .chip-avatar { color: #9eb8bb; }
+.chrome-user-chip.is-guest .chip-avatar { background: #f3eaea; color: #b35c5c; }
+.chrome-user-chip.is-logged-in .chip-avatar {
+  background: linear-gradient(135deg, var(--primary, #00838d), var(--secondary, #00b0a6));
+  color: #fff;
+}
+
+/* Przycisk wyloguj/zaloguj — bez własnej pastylki, ikona-only, wbudowany
+   w prawą krawędź user-chipa. Nie wchodzi wizualnie na avatar i tekst chipa. */
+.chip-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: transparent;
+  border: 0;
+  color: var(--chrome-label-color);
+  cursor: pointer;
+  padding: 0;
+  margin-left: 0.15rem;
+  flex: 0 0 auto;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.chip-action:hover {
+  background: rgba(198, 40, 40, 0.12);
+  color: var(--danger, #c62828);
+}
+.chrome-user-chip.is-guest .chip-action:hover {
+  background: rgba(0, 131, 141, 0.12);
+  color: var(--primary, #00838d);
+}
+.chip-action svg { width: 14px; height: 14px; }
+
+/* ============ MOBILE: chowanie elementów ============ */
+@media (min-width: 992px) {
+  .chrome-mobile-menu-btn { display: none !important; }
+}
+
+@media (max-width: 991px) {
+  .chrome-strip { padding: 0 0.75rem; gap: 0.55rem; }
+  /* Pełne ukrycie brandu (logo + nazwa) na mobile/tablet — w sidebarze na desktopie
+     brand jest już widoczny, a na telefonie miniaturka loga była zbyt blisko ikony
+     hamburgera i łatwo było ją kliknąć przypadkiem. */
+  .chrome-brand { display: none !important; }
+}
+
+/* Subpasek brandingowy — wstrzykiwany przez JS jako .chrome-mobile-brand-bar */
+.chrome-mobile-brand-bar {
+  display: none; /* domyślnie ukryty — pokazuje się tylko na mobile */
+}
+@media (max-width: 991px) {
+  .chrome-mobile-brand-bar {
+    display: block;
+    text-align: center;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--primary, #00838d);
+    background: rgba(0, 131, 141, 0.05);
+    border-top: 0.5px solid rgba(0, 131, 141, 0.14);
+    padding: 4px 0 5px;
+    line-height: 1;
+  }
+}
+
+@media (max-width: 600px) {
+  .chrome-strip { gap: 0.4rem; }
+  .chrome-chip { padding: 0.3rem 0.45rem 0.3rem 0.35rem; }
+  .chrome-chip .chip-content { display: none; }
+  .chrome-chip .chip-action { display: none; }
+  .chrome-patient-chip,
+  .chrome-user-chip { padding: 0.3rem; }
+  .chip-icon, .chip-avatar { width: 32px; height: 32px; }
+}
+
+/* Pływający przycisk „Wyloguj/Zaloguj się" z vilda_auth_ui.css jest zbędny gdy
+   działa nowy chrome-strip — chip „Konto" w stripie ma już własny przycisk
+   wylogowania (#vildaUserAction). Pływający duplikat nachodzi na nagłówek
+   i porusza się z viewportem, więc go ukrywamy. */
+.has-vilda-chrome .vilda-auth-logout { display: none !important; }
+
+/* ============ DRAWER (mobile menu) ============ */
+.chrome-drawer {
+  position: fixed;
+  inset: 0;
+  /* Wyżej niż cookie-banner (10000), tutorialowe overlaye (10020+), karty
+     z ios26 (1201) i pozostałe popupy aplikacji. Dzięki temu drawer hamburgera
+     nigdy nie wpada pod żaden inny widok. Tutorial-spotlight (2147483000) jest
+     wyżej z założenia — i tak pojawia się tylko podczas onboardingu. */
+  z-index: 99999;
+  display: flex;
+}
+.chrome-drawer[hidden] { display: none; }
+.chrome-drawer-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 28, 30, 0.45);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  cursor: pointer;
+  animation: chromeFadeIn 0.18s ease;
+}
+.chrome-drawer-panel {
+  position: relative;
+  width: min(86%, 320px);
+  background: #ffffff;
+  height: 100%;
+  margin-left: 0;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 4px 0 24px rgba(0, 50, 60, 0.18);
+  animation: chromeSlideIn 0.22s ease;
+}
+@keyframes chromeFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes chromeSlideIn { from { transform: translateX(-12px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+.chrome-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid #e5eded;
+}
+.chrome-drawer-title { font-weight: 700; color: var(--primary, #00838d); }
+/* Krzyżyk zamykający drawer rysujemy w czystym CSS na pseudo-elementach
+   przycisku — niezależnie od ikon SVG / Lucide / motywu. Dwie linie z
+   kolorem tekstu motywu są obrócone o ±45°, więc X jest widoczny w każdym
+   trybie (jasnym, ciemnym, high-contrast) i nie zależy od stylów buttonów
+   ios26. Ewentualne svg w środku ukrywamy, żeby nie nakładał się na CSS-X. */
+.chrome-drawer-close {
+  position: relative;
+  width: 36px; height: 36px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 10px;
+  border: 1px solid #e5eded !important;
+  background: #fff !important;
+  color: #08202C !important;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.chrome-drawer-close svg { display: none !important; }
+.chrome-drawer-close::before,
+.chrome-drawer-close::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 18px;
+  height: 2px;
+  background: currentColor;
+  border-radius: 2px;
+  transform-origin: center;
+}
+.chrome-drawer-close::before { transform: translate(-50%, -50%) rotate(45deg); }
+.chrome-drawer-close::after  { transform: translate(-50%, -50%) rotate(-45deg); }
+.chrome-drawer-close:hover { color: var(--primary, #00838d) !important; border-color: var(--primary, #00838d) !important; }
+.chrome-drawer-body {
+  overflow-y: auto;
+  padding: 0.5rem 0.5rem 1.2rem;
+  flex: 1 1 auto;
+}
+
+.chrome-drawer-section { margin-top: 1rem; }
+.chrome-drawer-section:first-child { margin-top: 0; }
+.chrome-drawer-section-title {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--chrome-label-color);
+  font-weight: 700;
+  padding: 0.5rem 0.85rem 0.25rem;
+}
+.chrome-drawer-nav ul { list-style: none; padding: 0; margin: 0; }
+.chrome-drawer-nav a,
+.chrome-drawer-nav .chrome-drawer-btn {
+  display: flex; align-items: center; gap: 0.7rem;
+  padding: 0.7rem 0.85rem;
+  text-decoration: none;
+  color: var(--text, #333);
+  font-weight: 500;
+  border-radius: 10px;
+  margin: 0.05rem 0.25rem;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+/* Resetuj domyślne style przycisków — wyglądają identycznie jak linki */
+.chrome-drawer-nav .chrome-drawer-btn {
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-size: inherit;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+/* Dodatkowy odstęp pionowy między przyciskami akcji (Zapisz/Wczytaj/Pacjenci) */
+.chrome-drawer-nav li:has(.chrome-drawer-btn) {
+  margin-top: 0.125rem;
+  margin-bottom: 0.125rem;
+}
+.chrome-drawer-nav a:hover,
+.chrome-drawer-nav .chrome-drawer-btn:hover { background: #eef5f5; }
+.chrome-drawer-nav a[aria-current="page"],
+.chrome-drawer-nav a.is-active {
+  background: var(--chrome-active-bg);
+  color: #fff;
+  font-weight: 700;
+}
+.chrome-drawer-nav a[aria-current="page"] .chrome-drawer-icon,
+.chrome-drawer-nav a.is-active .chrome-drawer-icon { color: #fff; }
+.chrome-drawer-icon { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; flex: 0 0 auto; color: var(--primary, #00838d); }
+.chrome-drawer-icon svg { width: 18px; height: 18px; }
+.chrome-drawer-label { flex: 1 1 auto; }
+.chrome-drawer-nav .pro-link { color: var(--secondary, #00b0a6); font-weight: 700; }
+
+body.chrome-drawer-open { overflow: hidden; }
+
+/* ============ DRAWER: sekcja "Konto" (login/logout dla mobile) ============
+   Wyświetlamy ją na górze drawera, żeby mobilny użytkownik miał klikalny
+   przycisk wyloguj/zaloguj — chip-action z chrome-stripa jest na <600px
+   ukryty (display:none), więc bez tego użytkownik na telefonie utknąłby
+   bez możliwości przełączenia konta. */
+.chrome-drawer-account {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.85rem 0.85rem 0.95rem;
+  margin: 0 0 0.6rem;
+  border-bottom: 1px solid #e5eded;
+  background: linear-gradient(180deg, rgba(0,131,141,0.06), rgba(0,131,141,0.0));
+}
+.chrome-drawer-account-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+.chrome-drawer-account-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  background: #e8eded;
+  color: #9eb8bb;
+  flex: 0 0 auto;
+}
+.chrome-drawer-account-avatar.is-logged-in {
+  background: linear-gradient(135deg, var(--primary, #00838d), var(--secondary, #00b0a6));
+  color: #fff;
+}
+.chrome-drawer-account-avatar.is-guest {
+  background: #f3eaea;
+  color: #b35c5c;
+}
+.chrome-drawer-account-info {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.chrome-drawer-account-label {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--chrome-label-color);
+  font-weight: 700;
+}
+.chrome-drawer-account-value {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text, #333);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chrome-drawer-account-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  border-radius: 10px;
+  border: 1px solid var(--primary, #00838d);
+  background: #fff;
+  color: var(--primary, #00838d);
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.chrome-drawer-account-action:hover {
+  background: var(--primary, #00838d);
+  color: #fff;
+}
+.chrome-drawer-account-action svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+.chrome-drawer-patient-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.4rem 0.1rem 0;
+  border-top: 1px dashed rgba(0,131,141,0.18);
+  margin-top: 0.2rem;
+}
+.chrome-drawer-patient-label {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--chrome-label-color);
+  font-weight: 700;
+  flex: 0 0 auto;
+}
+.chrome-drawer-patient-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text, #333);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: right;
+}
+
+/* ============ SIDEBAR v2 (desktop) ============ */
+@media (min-width: 992px) {
+  /* Uwaga: reguły layout dla .desktop-layout (grid-template-columns, align-items, gap,
+     padding, max-width, margin) oraz dla .main-content i .main-content .container
+     zostały przeniesione do bloku FOUC PREVENTION powyżej (selektor .has-sidebar).
+     Tutaj zostają tylko style które dotyczą elementów tworzonych przez JS (sidebar-v2,
+     chrome-strip, decor-sidebar w stanie po-JS). */
+
+  /* Karta sidebara — jedno wspólne tło, sticky żeby nie skakał viewport.
+     Na niektórych podstronach (HOMA-IR) inne moduły CSS lub inline-style
+     potrafią dodać marginesy/padding/transform do <aside class="sidebar">,
+     co optycznie odsuwa go od lewej krawędzi. Wymuszamy reset, żeby
+     sidebar zawsze trafiał w pierwszą kolumnę gridu, do samej krawędzi. */
+  .has-vilda-chrome aside.sidebar-v2,
+  .has-vilda-chrome aside.sidebar.sidebar-v2,
+  .has-vilda-chrome .desktop-layout > aside.sidebar {
+    position: sticky;
+    /* 1rem odstępu od górnej krawędzi viewportu podczas przewijania. */
+    top: 1rem;
+    align-self: start;
+    justify-self: stretch;
+    grid-column: 1;
+    background: var(--chrome-glass-bg) !important;
+    backdrop-filter: saturate(160%) blur(14px);
+    -webkit-backdrop-filter: saturate(160%) blur(14px);
+    border: 1px solid var(--chrome-glass-border);
+    /* Sidebar dotyka lewej krawędzi viewportu — zaokrąglamy tylko prawe rogi,
+       żeby karta nie wyglądała jak "ucięta" przy krawędzi ekranu. */
+    border-radius: 0 var(--chrome-radius-card) var(--chrome-radius-card) 0;
+    border-left: 0;
+    box-shadow: var(--chrome-glass-shadow);
+    padding: 0 !important;
+    margin: 0 !important;
+    height: auto;
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100vh - 2rem);
+    overflow: hidden;
+    display: flex;
+    transform: none !important;
+    inset-inline-start: auto;
+  }
+
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-inner {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    /* Subtelny scrollbar */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 131, 141, 0.25) transparent;
+  }
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-inner::-webkit-scrollbar { width: 6px; }
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-inner::-webkit-scrollbar-thumb { background: rgba(0, 131, 141, 0.18); border-radius: 4px; }
+
+  /* Logo box */
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-logo {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 1rem var(--chrome-sidebar-pad-x) 0.85rem;
+    border-bottom: 1px solid rgba(0, 131, 141, 0.08);
+  }
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-logo a {
+    display: inline-flex;
+    flex: 0 0 auto;
+    text-decoration: none;
+  }
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-logo img {
+    width: 44px;
+    height: 44px;
+    object-fit: cover;
+    border-radius: 12px;
+    margin: 0;
+    max-width: none;
+  }
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-logo h1 { display: none; }
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-brand {
+    display: inline-flex;
+    flex-direction: column;
+    line-height: 1.15;
+  }
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-brand-name {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--primary, #00838d);
+  }
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-brand-tagline {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--chrome-label-color);
+    font-weight: 600;
+  }
+
+  /* Sekcje grupujące menu */
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    padding: 0.4rem 0;
+    margin: 0;
+  }
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-section {
+    padding: 0.35rem 0 0.55rem;
+  }
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-section + .sidebar-section {
+    border-top: 1px solid rgba(0, 131, 141, 0.08);
+    margin-top: 0.15rem;
+  }
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-section-title {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--chrome-label-color);
+    font-weight: 700;
+    padding: 0.4rem var(--chrome-sidebar-pad-x) 0.3rem;
+  }
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-section ul {
+    list-style: none;
+    margin: 0;
+    padding: 0 0.45rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  /* Linki menu — pill shape z ikoną + etykietą */
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-nav a {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.55rem 0.7rem;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.93rem;
+    color: var(--text, #333);
+    background: transparent;
+    transition: background 0.12s ease, color 0.12s ease, transform 0.08s ease;
+    text-align: left;
+    box-sizing: border-box;
+    position: relative;
+  }
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-nav a .sidebar-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    flex: 0 0 auto;
+    color: var(--primary, #00838d);
+    transition: color 0.12s ease;
+  }
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-nav a .sidebar-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-nav a .sidebar-label {
+    flex: 1 1 auto;
+    line-height: 1.2;
+  }
+
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-nav a:hover,
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-nav a:focus-visible {
+    background: rgba(0, 131, 141, 0.08);
+    color: var(--text, #333);
+    outline: none;
+  }
+
+  /* Pozycja PRO — delikatnie wyróżniona */
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-nav a.pro-link .sidebar-label {
+    color: var(--secondary, #00b0a6);
+    font-weight: 700;
+  }
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-nav a.pro-link .sidebar-icon { color: var(--secondary, #00b0a6); }
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-nav a.pro-link::after {
+    content: 'PRO';
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    color: var(--secondary, #00b0a6);
+    background: rgba(0, 176, 166, 0.12);
+    padding: 0.1rem 0.35rem;
+    border-radius: 999px;
+    margin-left: auto;
+  }
+
+  /* AKTYWNA POZYCJA */
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-nav a[aria-current="page"],
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-nav a.is-active {
+    background: var(--chrome-active-bg) !important;
+    color: #fff !important;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(0, 131, 141, 0.22);
+  }
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-nav a[aria-current="page"] .sidebar-icon,
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-nav a.is-active .sidebar-icon { color: #fff; }
+  /* Reset starego stylu z sidebar.css (linia ~563) */
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-nav a.is-active .sidebar-label,
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-nav a[aria-current="page"] .sidebar-label {
+    text-decoration: none;
+  }
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-nav a.pro-link[aria-current="page"]::after,
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-nav a.pro-link.is-active::after {
+    background: rgba(255, 255, 255, 0.25);
+    color: #fff;
+  }
+
+  /* Stan disabled (np. "Zapisz dane" gdy formularz pusty) */
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-nav a[aria-disabled="true"],
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-nav a[disabled] {
+    color: #9eb8bb !important;
+    cursor: default;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-nav a[aria-disabled="true"] .sidebar-icon,
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-nav a[disabled] .sidebar-icon { color: #9eb8bb; }
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-nav a[aria-disabled="true"]:hover,
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-nav a[disabled]:hover {
+    background: transparent !important;
+  }
+
+  /* Sidebar-extras — kontener na dynamiczne karty (mini-summary, steroid-summary) */
+  .has-vilda-chrome aside.sidebar-v2 .sidebar-extras {
+    padding: 0 var(--chrome-sidebar-pad-x);
+    margin-top: 0.2rem;
+  }
+
+  /* mini-summary i steroid-summary nadal renderowane przez custom-fixes.js,
+     ale otrzymują marginesy spójne z nowym layoutem */
+  .has-vilda-chrome aside.sidebar-v2 .mini-summary {
+    margin: 0.5rem 0 0;
+    padding: 0.75rem 0.6rem !important;
+    border-radius: 10px;
+    border: 1px solid rgba(0, 131, 141, 0.1);
+    background: rgba(255, 255, 255, 0.85) !important;
+  }
+  .has-vilda-chrome aside.sidebar-v2 .steroid-summary {
+    margin: 0.5rem 0 0;
+    padding: 0.75rem 0.6rem;
+    border-radius: 10px;
+    border: 1px solid rgba(0, 131, 141, 0.1);
+    background: rgba(255, 255, 255, 0.85);
+  }
+
+  /* Ukryj stary header.container i .main-nav gdy chrome jest aktywny */
+  .has-vilda-chrome header > .container { display: none !important; }
+  .has-vilda-chrome header > .main-nav { display: none !important; }
+
+  /* Decor sidebar (>=1400px) — zachowujemy spójny styl z nowym sidebarem.
+     Decor-sidebar dotyka prawej krawędzi viewportu, więc zaokrąglamy tylko lewe rogi
+     i ukrywamy prawą ramkę (analogicznie do lewego sidebara, który dotyka lewej krawędzi). */
+  @media (min-width: 1400px) {
+    /* .desktop-layout grid-template-columns przeniesione do bloku FOUC PREVENTION (.has-sidebar) */
+    .has-vilda-chrome .decor-sidebar {
+      background: var(--chrome-glass-bg) !important;
+      border: 1px solid var(--chrome-glass-border);
+      border-radius: var(--chrome-radius-card) 0 0 var(--chrome-radius-card);
+      border-right: 0;
+      box-shadow: var(--chrome-glass-shadow);
+      /* Sticky podczas przewijania, analogicznie do lewego sidebara — 1rem od góry. */
+      position: sticky;
+      top: 1rem;
+      align-self: start;
+      max-height: calc(100vh - 2rem);
+      /* Zawartość (mini-summary + skróty + steroid-summary) potrafi być wyższa niż
+         dostępna wysokość — pozwalamy scrollować wewnątrz panelu. */
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(0, 131, 141, 0.25) transparent;
+      margin: 0 !important;
+      padding: 0.5rem 0.6rem !important;
+      box-sizing: border-box;
+    }
+    .has-vilda-chrome .decor-sidebar::-webkit-scrollbar { width: 6px; }
+    .has-vilda-chrome .decor-sidebar::-webkit-scrollbar-thumb { background: rgba(0, 131, 141, 0.18); border-radius: 4px; }
+
+    /* Mini-summary i steroid-summary mountują się teraz w decor-sidebarze.
+       Zdejmujemy z nich własne tło/border (które miały sens w lewym sidebarze
+       z białą kartą) — niech dziedziczą szklane tło decor-sidebara. */
+    .has-vilda-chrome .decor-sidebar .mini-summary {
+      position: static;
+      background: transparent !important;
+      border: 0;
+      padding: 0.25rem 0;
+    }
+    .has-vilda-chrome .decor-sidebar .steroid-summary {
+      background: transparent !important;
+      border: 0;
+      margin: 0.6rem 0 0;
+      padding: 0.25rem 0;
+    }
+  }
+}
+
+/* ============ MOBILE: ukryj sidebar (drawer w headerze przejmuje role) ============ */
+@media (max-width: 991px) {
+  .has-vilda-chrome aside.sidebar-v2,
+  .has-vilda-chrome aside.sidebar { display: none !important; }
+
+  /* Poziomy padding zerujemy na desktop-layout i main-content —
+     całą kontrolę nad szerokością przejmuje .container (reguła niżej),
+     która synchronizuje padding ze zmienną docka. */
+  .has-vilda-chrome .desktop-layout {
+    display: block;
+    padding: 0.3rem 0 1rem;
+  }
+  .has-vilda-chrome .main-content { padding: 0.2rem 0; }
+
+  /* Karta #infoMessages (#errorBox + #compareInstruction) — na desktopie użyteczna
+     w prawej kolumnie obok formularza, na mobile zbędna: formularz i wyniki są
+     w jednej kolumnie, tekst "Podaj jednocześnie..." nie wnosi wartości */
+  #infoMessages { display: none !important; }
+}
+
+/* ============ ACCESSIBILITY ============ */
+.has-vilda-chrome a:focus-visible,
+.has-vilda-chrome button:focus-visible {
+  outline: 2px solid var(--primary, #00838d);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* ============ UNIFIED TOOLTIP — .vilda-tip ============
+ * Używany przez showChromeTip() w vilda_chrome.js (wszystkie strony)
+ * oraz przez showTooltip() z app.js na stronach z .has-vilda-chrome (override).
+ *
+ * Estetyka: Liquid Glass v2 — półprzezroczyste białe tło z rozmyciem,
+ * subtelna turkusowa ramka i miękki cień. Animacja wjazdu z prawej strony
+ * (element pojawia się obok przycisku w sidebarze).
+ */
+
+/* Klasa nadawana przez showChromeTip() */
+.vilda-tip {
+  position: fixed;
+  z-index: 99999;
+  max-width: min(280px, calc(100vw - 24px));
+  padding: 0.6rem 1rem;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 0.83rem;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--primary, #00838d);
+  background: rgba(255, 255, 255, 0.96);
+  border: 1.5px solid rgba(0, 131, 141, 0.20);
+  box-shadow:
+    0 4px 20px rgba(0, 81, 88, 0.13),
+    0 1px 4px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(14px) saturate(1.6);
+  -webkit-backdrop-filter: blur(14px) saturate(1.6);
+  pointer-events: none;
+  white-space: normal;
+  /* Wejście: fade + lekkie przesunięcie w prawo */
+  opacity: 0;
+  transform: translateX(6px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.vilda-tip.vilda-tip--in {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Strzałka wskazująca na przycisk (trójkąt CSS po lewej stronie tooltipa) */
+.vilda-tip::before {
+  content: '';
+  position: absolute;
+  left: -7px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-width: 6px 7px 6px 0;
+  border-style: solid;
+  border-color: transparent rgba(0, 131, 141, 0.20) transparent transparent;
+}
+.vilda-tip::after {
+  content: '';
+  position: absolute;
+  left: -5px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-width: 5px 6px 5px 0;
+  border-style: solid;
+  border-color: transparent rgba(255, 255, 255, 0.96) transparent transparent;
+}
+
+/* Override .menu-tooltip z app.js — ujednolicamy wygląd na stronach z chrome */
+.has-vilda-chrome .menu-tooltip {
+  background: rgba(255, 255, 255, 0.96) !important;
+  color: var(--primary, #00838d) !important;
+  border: 1.5px solid rgba(0, 131, 141, 0.20) !important;
+  border-radius: 10px !important;
+  box-shadow:
+    0 4px 20px rgba(0, 81, 88, 0.13),
+    0 1px 4px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8) !important;
+  backdrop-filter: blur(14px) saturate(1.6) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(1.6) !important;
+  font-size: 0.83rem !important;
+  font-weight: 500 !important;
+  padding: 0.6rem 1rem !important;
+  transform: translateX(6px) !important;
+  transition: opacity 0.18s ease, transform 0.18s ease !important;
+}
+
+/* Stan widoczny (app.js ustawia opacity:1 przez requestAnimationFrame) */
+.has-vilda-chrome .menu-tooltip[style*="opacity: 1"],
+.has-vilda-chrome .menu-tooltip[style*="opacity:1"] {
+  transform: translateX(0) !important;
+}
+
+/* ── Szerokość kolumny treści = szerokość docka (mobile) ──────────────────
+ * Nadpisujemy padding: 1rem z style.css na urządzeniach mobilnych.
+ * Używamy tego samego wyrażenia max() co pozycjonowanie #mobileBottomDock,
+ * więc krawędź treści i krawędź docka zawsze się pokrywają — łącznie
+ * z iPhone w orientacji poziomej, gdzie safe-area-inset-left/right > 0.
+ * Reguła poniżej 992 px (jednokolumnowy układ bez sidebara).
+ * ──────────────────────────────────────────────────────────────────────── */
+@media (max-width: 991.98px) {
+  .container {
+    padding-left:  max(var(--mobile-dock-side-gap, 0.75rem), calc(env(safe-area-inset-left,  0px) + 0.35rem));
+    padding-right: max(var(--mobile-dock-side-gap, 0.75rem), calc(env(safe-area-inset-right, 0px) + 0.35rem));
+  }
+}

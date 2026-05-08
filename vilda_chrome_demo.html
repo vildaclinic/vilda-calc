@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Demo nowego chrome — wagaiwzrost.pl</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="ios26-v2.css?v=12" rel="stylesheet">
+<link href="style.css?v=38" rel="stylesheet">
+<link href="sidebar.css" rel="stylesheet">
+<link href="vilda_chrome.css?v=1" rel="stylesheet">
+<style>
+  /* Style dodatkowe TYLKO dla strony demo — pokazują panel kontrolny */
+  .demo-controls {
+    position: fixed;
+    right: 1rem;
+    bottom: 1rem;
+    width: 320px;
+    background: #fff;
+    border: 1px solid var(--chrome-glass-border, rgba(0,131,141,0.14));
+    border-radius: 14px;
+    box-shadow: 0 12px 36px rgba(0,70,80,0.18);
+    padding: 1rem;
+    z-index: 999;
+    font-family: Inter, system-ui, sans-serif;
+    font-size: 0.9rem;
+  }
+  .demo-controls h2 {
+    margin: 0 0 0.6rem;
+    font-size: 0.95rem;
+    color: var(--primary, #00838d);
+    letter-spacing: -0.01em;
+  }
+  .demo-controls fieldset { border: none; padding: 0; margin: 0 0 0.7rem; }
+  .demo-controls fieldset legend {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #5a7274;
+    font-weight: 700;
+    margin-bottom: 0.3rem;
+  }
+  .demo-controls label { display: block; margin: 0.25rem 0; font-size: 0.85rem; }
+  .demo-controls input[type="text"],
+  .demo-controls input[type="number"],
+  .demo-controls select {
+    width: 100%;
+    padding: 0.4rem 0.6rem;
+    border: 1px solid #d0dede;
+    border-radius: 8px;
+    font: inherit;
+  }
+  .demo-controls .row { display: flex; gap: 0.4rem; }
+  .demo-controls .row > * { flex: 1 1 0; min-width: 0; }
+  .demo-controls .demo-buttons { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+  .demo-controls .demo-buttons button {
+    padding: 0.4rem 0.7rem;
+    background: var(--primary, #00838d);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font: inherit;
+  }
+  .demo-controls .demo-buttons button.alt {
+    background: #fff;
+    color: var(--primary, #00838d);
+    border: 1px solid var(--primary, #00838d);
+  }
+  .demo-note {
+    background: #f6fafa;
+    border-left: 3px solid var(--secondary, #00b0a6);
+    padding: 0.7rem 0.8rem;
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    color: #455a5b;
+    border-radius: 6px;
+  }
+  @media (max-width: 991px) {
+    .demo-controls { width: calc(100% - 2rem); }
+  }
+</style>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
+</head>
+<body class="js-loading liquid-ios26 has-sidebar">
+<header data-vilda-chrome-header></header>
+<div class="desktop-layout">
+  <aside class="sidebar" data-vilda-chrome-sidebar></aside>
+  <div class="main-content">
+    <div class="container">
+      <div class="card" style="padding:1.2rem;">
+        <h2 style="margin-top:0;color:var(--primary,#00838d);">Demo: nowy nagłówek + sidebar</h2>
+        <p>To strona demonstracyjna — pokazuje, jak będzie wyglądać <code>vilda_chrome.js</code> wstrzyknięty na każdą podstronę aplikacji. Sidebar i pasek nagłówka są renderowane <strong>z jednego źródła prawdy</strong>, więc:</p>
+        <ul>
+          <li>wyglądają identycznie na każdej podstronie,</li>
+          <li>przy przechodzeniu nie ma „skakania” elementów,</li>
+          <li>dane pacjenta i konta nie wymagają duplikacji w 15 plikach HTML.</li>
+        </ul>
+        <p>Po prawej u dołu masz panel kontrolny — możesz tam wpisać przykładowego pacjenta i wybrać stan konta. Header zaktualizuje się natychmiast.</p>
+        <p style="margin-bottom:0;">Aktywna pozycja menu jest podświetlana automatycznie wg <code>window.location.pathname</code> — w tym demo strona jest „nieznana”, więc żadna pozycja nie zostanie zaznaczona. Kliknij dowolny link w sidebarze, aby zobaczyć podświetlenie na docelowej podstronie.</p>
+      </div>
+
+      <!-- Imitacja formularza pacjenta — VildaChrome czyta z tych pól -->
+      <fieldset class="user-card" style="margin-top:1rem;">
+        <legend>Symulacja danych pacjenta (jak na index.html)</legend>
+        <label>Imię i Nazwisko: <input type="text" id="name" placeholder="np. Anna Kowalska"></label>
+        <label>Wiek (lata): <input type="number" id="age" min="0" max="130"></label>
+        <label>Wiek (miesiące): <input type="number" id="ageMonths" min="0" max="11"></label>
+        <label>Płeć:
+          <select id="sex">
+            <option value="">—</option>
+            <option value="M">Mężczyzna</option>
+            <option value="F">Kobieta</option>
+          </select>
+        </label>
+      </fieldset>
+    </div>
+  </div>
+</div>
+
+<aside class="demo-controls" aria-label="Panel kontrolny demo">
+  <h2>Panel demo</h2>
+  <fieldset>
+    <legend>Stan konta (mock VildaVault)</legend>
+    <label><input type="radio" name="acct" value="logged" checked> Zalogowany jako "dr Maciej Flader"</label>
+    <label><input type="radio" name="acct" value="guest"> Tryb gościa</label>
+    <label><input type="radio" name="acct" value="anon"> Niezalogowany</label>
+  </fieldset>
+  <div class="demo-buttons">
+    <button id="btnSetAnna" class="alt">Wczytaj pacjenta Anna</button>
+    <button id="btnSetJanek" class="alt">Wczytaj pacjenta Janek</button>
+    <button id="btnClearPatient" class="alt">Wyczyść pacjenta</button>
+  </div>
+  <div class="demo-note">
+    Komponent reaguje na zdarzenia <code>VildaVault.onUnlock/onLock</code> oraz na zmiany pól formularza. W produkcji nie potrzebujesz tego panelu.
+  </div>
+</aside>
+
+<script>
+// MOCK VildaVault — w realnym pliku jest dostarczany przez vilda_vault.js
+(function () {
+  var listeners = { unlock: [], lock: [] };
+  var current = { userId: 'demo', label: 'dr Maciej Flader' };
+  window.VildaGuestMode = false;
+  window.VildaVault = {
+    __vildaVault: true,
+    isUnlocked: function () { return current !== null; },
+    getCurrentUser: function () { return current; },
+    onUnlock: function (fn) { listeners.unlock.push(fn); },
+    onLock: function (fn) { listeners.lock.push(fn); },
+    onPatientSaved: function () {},
+    lock: function () {
+      current = null;
+      listeners.lock.forEach(function (fn) { try { fn('manual'); } catch (e) {} });
+    },
+    _setUser: function (user, guest) {
+      current = user;
+      window.VildaGuestMode = !!guest;
+      if (user && !guest) listeners.unlock.forEach(function (fn) { try { fn(user); } catch (e) {} });
+      else listeners.lock.forEach(function (fn) { try { fn(guest ? 'guest' : 'manual'); } catch (e) {} });
+      document.dispatchEvent(new Event('vilda:guest-mode-changed'));
+    }
+  };
+})();
+</script>
+<script src="vilda_chrome.js?v=1"></script>
+<script>
+// Panel demo — przełączanie stanu konta, wczytywanie pacjentów
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('input[name="acct"]').forEach(function (r) {
+    r.addEventListener('change', function () {
+      switch (r.value) {
+        case 'logged':
+          window.VildaVault._setUser({ userId: 'demo', label: 'dr Maciej Flader' }, false);
+          break;
+        case 'guest':
+          window.VildaVault._setUser(null, true);
+          break;
+        case 'anon':
+          window.VildaVault._setUser(null, false);
+          break;
+      }
+    });
+  });
+
+  function setPatient(name, age, ageMonths, sex) {
+    document.getElementById('name').value = name;
+    document.getElementById('age').value = age;
+    document.getElementById('ageMonths').value = ageMonths;
+    document.getElementById('sex').value = sex;
+    if (window.VildaChrome) window.VildaChrome.refreshPatientChip();
+  }
+
+  document.getElementById('btnSetAnna').addEventListener('click', function () {
+    setPatient('Anna Kowalska', 8, 4, 'F');
+  });
+  document.getElementById('btnSetJanek').addEventListener('click', function () {
+    setPatient('Janek Nowak', 14, '', 'M');
+  });
+  document.getElementById('btnClearPatient').addEventListener('click', function () {
+    setPatient('', '', '', '');
+  });
+});
+</script>
+</body>
+</html>
