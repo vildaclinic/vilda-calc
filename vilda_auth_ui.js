@@ -1567,6 +1567,47 @@
     open(el('div', { class: 'vilda-auth-screen vilda-auth-patient-card' }, screenChildren));
   }
 
+  // ============ LISTA PACJENTÓW — helpers sortowania ============
+
+  var _PSORT_KEY = 'vilda:patients-sort';
+  var _PSORT_OPTIONS = [
+    { id: 'recent-desc', label: 'Ostatnio zapisany',  sub: 'od najnowszego' },
+    { id: 'name-asc',    label: 'Imię A → Z',         sub: null },
+    { id: 'name-desc',   label: 'Imię Z → A',         sub: null },
+    { id: 'visits-desc', label: 'Liczba wpisów',      sub: 'od największej' }
+  ];
+  function _readPSort() {
+    try { return (global.localStorage && global.localStorage.getItem(_PSORT_KEY)) || 'recent-desc'; } catch (_) { return 'recent-desc'; }
+  }
+  function _writePSort(id) {
+    try { if (global.localStorage) global.localStorage.setItem(_PSORT_KEY, id); } catch (_) {}
+  }
+  function _applyPSort(arr, id) {
+    const a = arr.slice();
+    if (id === 'name-asc') {
+      a.sort(function (x, y) {
+        const nx = ((x.header && x.header.name) || '').toLowerCase();
+        const ny = ((y.header && y.header.name) || '').toLowerCase();
+        return nx < ny ? -1 : nx > ny ? 1 : 0;
+      });
+    } else if (id === 'name-desc') {
+      a.sort(function (x, y) {
+        const nx = ((x.header && x.header.name) || '').toLowerCase();
+        const ny = ((y.header && y.header.name) || '').toLowerCase();
+        return nx > ny ? -1 : nx < ny ? 1 : 0;
+      });
+    } else if (id === 'visits-desc') {
+      a.sort(function (x, y) { return ((y.snapshotCount || 0) - (x.snapshotCount || 0)); });
+    } else { // recent-desc (domyślne)
+      a.sort(function (x, y) {
+        const tx = x.lastSavedAtISO ? Date.parse(x.lastSavedAtISO) : 0;
+        const ty = y.lastSavedAtISO ? Date.parse(y.lastSavedAtISO) : 0;
+        return (ty || 0) - (tx || 0);
+      });
+    }
+    return a;
+  }
+
   // ============ LISTA PACJENTÓW ============
   async function showPatientsList(onPick, options) {
     const V = getVault();
@@ -1575,12 +1616,8 @@
     let patients = [];
     try { patients = await V.listPatients(); } catch (e) { logError('listPatients', e); }
 
-    // Sortujemy malejąco po dacie ostatniego zapisu — najnowsi pacjenci na górze.
-    patients = patients.slice().sort(function (a, b) {
-      var ta = a && a.lastSavedAtISO ? Date.parse(a.lastSavedAtISO) : 0;
-      var tb = b && b.lastSavedAtISO ? Date.parse(b.lastSavedAtISO) : 0;
-      return (tb || 0) - (ta || 0);
-    });
+    let currentSort = _readPSort();
+    patients = _applyPSort(patients, currentSort);
 
     const title = el('h2', { class: 'vilda-auth-title', text: 'Pacjenci' });
     const sub = el('p', {
@@ -1604,8 +1641,7 @@
       resultsCounter = el('div', { class: 'vilda-auth-search-counter' });
     }
 
-    // Scrollowalny kontener listy — max ~5 kart widocznych, reszta pod scrollem
-    // wewnątrz tego kontenera, żeby modal nie rósł do nieba przy 100+ pacjentach.
+    // Scrollowalny kontener listy — max ~3 karty widocznych, reszta pod scrollem.
     const list = el('div', { class: 'vilda-auth-user-list vilda-auth-patients-scroll' });
     const emptyResult = el('div', { class: 'vilda-auth-search-empty', text: 'Brak pasujących pacjentów.' });
     emptyResult.hidden = true;
@@ -1614,7 +1650,9 @@
     // Trzymamy referencje do par (card, normalizedName) dla szybkiego filtrowania.
     const cards = [];
 
-    patients.forEach(function (p) {
+    // Buduje kartę pacjenta i dodaje ją do listy + tablicy cards.
+    // Wydzielona jako funkcja, żeby można ją wywołać ponownie po zmianie sortowania.
+    function buildCard(p) {
       const headerName = (p.header && p.header.name) ? p.header.name : '(bez imienia)';
       const lastSeen = p.lastSavedAtISO ? formatRelativeISO(p.lastSavedAtISO) : '';
       const ageStr = (p.header && p.header.age != null) ? (p.header.age + ' lat') : '';
@@ -1630,9 +1668,7 @@
         class: 'vilda-auth-user-card',
         type: 'button',
         title: 'Zobacz kartę: ' + headerName,
-        onclick: function () {
-          showPatientCard(p.patientId, onPick, opts);
-        }
+        onclick: function () { showPatientCard(p.patientId, onPick, opts); }
       }, [
         el('div', { class: 'vilda-auth-user-avatar', text: headerName.charAt(0).toUpperCase() }),
         el('div', { class: 'vilda-auth-user-info' }, [
@@ -1643,7 +1679,9 @@
       ]);
       list.appendChild(card);
       cards.push({ card: card, key: normalizeForSearch(headerName) });
-    });
+    }
+
+    patients.forEach(buildCard);
 
     function updateCounter(visibleCount) {
       if (!resultsCounter) return;
@@ -1679,6 +1717,83 @@
       setTimeout(function () { try { searchInput.focus(); } catch (_) {} }, 60);
     }
 
+    // ── Ikonka sortowania w nagłówku (tylko gdy są pacjenci) ──────────────────
+    let titleRow;
+    if (patients.length > 0) {
+      const SORT_ICON = '<svg xmlns=”http://www.w3.org/2000/svg” width=”15” height=”15” viewBox=”0 0 24 24” fill=”none” stroke=”currentColor” stroke-width=”2.2” stroke-linecap=”round” stroke-linejoin=”round”><line x1=”3” y1=”6” x2=”21” y2=”6”/><line x1=”3” y1=”12” x2=”15” y2=”12”/><line x1=”3” y1=”18” x2=”9” y2=”18”/></svg>';
+
+      const sortDropdown = el('div', { class: 'vilda-auth-sort-dropdown' });
+      sortDropdown.hidden = true;
+      let _outsideListener = null;
+
+      function closeSortDropdown() {
+        sortDropdown.hidden = true;
+        sortBtn.classList.remove('vilda-auth-sort-btn--open');
+        if (_outsideListener) {
+          global.document.removeEventListener('click', _outsideListener, true);
+          _outsideListener = null;
+        }
+      }
+
+      _PSORT_OPTIONS.forEach(function (opt) {
+        const optEl = el('button', {
+          type: 'button',
+          class: 'vilda-auth-sort-option' + (opt.id === currentSort ? ' vilda-auth-sort-option--active' : '')
+        }, [
+          el('span', { class: 'vilda-auth-sort-option-label', text: opt.label }),
+          opt.sub ? el('span', { class: 'vilda-auth-sort-option-sub', text: opt.sub }) : null
+        ]);
+        optEl.addEventListener('click', function () {
+          if (opt.id === currentSort) { closeSortDropdown(); return; }
+          currentSort = opt.id;
+          _writePSort(opt.id);
+          // Zaktualizuj wizualny stan aktywnej opcji
+          sortDropdown.querySelectorAll('.vilda-auth-sort-option').forEach(function (o) {
+            o.classList.toggle('vilda-auth-sort-option--active', o === optEl);
+          });
+          // Przetasuj i odbuduj karty
+          const sorted = _applyPSort(patients, currentSort);
+          list.innerHTML = '';
+          list.appendChild(emptyResult);
+          cards.length = 0;
+          sorted.forEach(buildCard);
+          applyFilter();
+          list.scrollTop = 0;
+          closeSortDropdown();
+        });
+        sortDropdown.appendChild(optEl);
+      });
+
+      const sortBtn = el('button', {
+        type: 'button',
+        class: 'vilda-auth-sort-btn',
+        title: 'Zmień sortowanie',
+        html: SORT_ICON
+      });
+      sortBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (!sortDropdown.hidden) { closeSortDropdown(); return; }
+        sortDropdown.hidden = false;
+        sortBtn.classList.add('vilda-auth-sort-btn--open');
+        // Zamknij przy kliknięciu poza elementem (defer o jeden tick, żeby nie złapać bieżącego eventu)
+        setTimeout(function () {
+          _outsideListener = function (ev) {
+            if (!sortDropdown.contains(ev.target) && ev.target !== sortBtn) {
+              closeSortDropdown();
+            }
+          };
+          global.document.addEventListener('click', _outsideListener, true);
+        }, 0);
+      });
+
+      titleRow = el('div', { class: 'vilda-auth-title-row' }, [
+        title,
+        el('div', { class: 'vilda-auth-sort-wrap' }, [sortBtn, sortDropdown])
+      ]);
+    } else {
+      titleRow = title; // brak pacjentów — sam tytuł, bez ikonki sortowania
+    }
+
     const importBtn = el('button', {
       class: 'vilda-auth-btn vilda-auth-btn-ghost',
       type: 'button',
@@ -1693,7 +1808,7 @@
       onclick: function () { hide(); }
     });
 
-    const children = [title, sub];
+    const children = [titleRow, sub];
     if (searchInput) {
       children.push(el('div', { class: 'vilda-auth-search-wrap' }, [searchInput, resultsCounter]));
     }
