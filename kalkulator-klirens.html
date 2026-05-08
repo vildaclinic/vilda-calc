@@ -6169,9 +6169,23 @@ document.addEventListener('DOMContentLoaded', () => {
       // zapisany stan. Opóźnienie do następnej kolejki zapobiega nadpisaniu snapshotu
       // przez współdzielone dane pacjenta z innych podstron.
       bindClcrAutosave(form);
-      setTimeout(() => restoreClcrSession(), 0);
+      setTimeout(() => {
+        restoreClcrSession();
+        // Globalny persist runtime (vilda_persist_runtime.js) może pokazać przycisk
+        // „Odtwórz zapisany stan" (#restoreStateBtn) na podstawie resztkowych danych
+        // porównawczych z innych kart aplikacji (np. strona główna, docpro).
+        // Na stronie kalkulatora klirensu ten przycisk nie ma przypiętej akcji
+        // (initRestoreStateButton nie jest tu wywoływane), więc po zakończeniu
+        // odtwarzania stanu klirens ukrywamy go, jeśli nie ma obsługi kliknięcia.
+        try {
+          const btn = document.getElementById('restoreStateBtn');
+          if (btn && !btn.__vildaRestoreStateButtonBound) btn.style.display = 'none';
+        } catch (_) {}
+      }, 0);
 
       // Po kliknięciu „Wyczyść wszystkie pola” wyczyść również stan sesji
+      // oraz resztkowe dane porównawcze, które mogłyby ponownie wywołać
+      // pokazanie przycisku „Odtwórz zapisany stan” przy kolejnym odświeżeniu.
       const clearBtn = document.getElementById('clearBtn');
       if (clearBtn) {
         clearBtn.addEventListener('click', () => {
@@ -6184,6 +6198,16 @@ document.addEventListener('DOMContentLoaded', () => {
               window.sessionStorage.removeItem(CLCR_SESSION_KEY);
             }
           } catch (e) { }
+          // Wyczyść resztkowe globalne dane porównawcze i ukryj przycisk
+          try {
+            if (typeof window.resetLoadedComparisonUiResidue === 'function') {
+              window.resetLoadedComparisonUiResidue();
+            } else {
+              window.lastLoadedData = null;
+              const btn = document.getElementById('restoreStateBtn');
+              if (btn) btn.style.display = 'none';
+            }
+          } catch (_) {}
         });
       }
     });
