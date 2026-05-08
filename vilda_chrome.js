@@ -564,10 +564,10 @@
     // są one statycznie dołączone, więc ładujemy je leniwie dopiero przy
     // próbie zalogowania — bez ruszania 12 plików HTML.
     var AUTH_DEPENDENCIES = [
-      { type: 'css',    href: 'vilda_auth_ui.css?v=11',  test: function () { return false; } },
-      { type: 'script', href: 'vilda_crypto.js?v=1',    test: function () { return !!global.VildaCrypto; } },
-      { type: 'script', href: 'vilda_vault.js?v=9',     test: function () { return !!global.VildaVault; } },
-      { type: 'script', href: 'vilda_auth_ui.js?v=18',  test: function () { return !!global.VildaAuthUI; } }
+      { type: 'css',    href: 'vilda_auth_ui.css?v=16',  test: function () { return false; } },
+      { type: 'script', href: 'vilda_crypto.js?v=4',    test: function () { return !!global.VildaCrypto; } },
+      { type: 'script', href: 'vilda_vault.js?v=10',    test: function () { return !!global.VildaVault; } },
+      { type: 'script', href: 'vilda_auth_ui.js?v=26',  test: function () { return !!global.VildaAuthUI; } }
     ];
 
     function loadOne(asset) {

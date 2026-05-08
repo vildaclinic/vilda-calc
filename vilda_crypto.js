@@ -429,14 +429,28 @@
       // przez próbny create() niżej.
       if (typeof PublicKeyCredential.getClientCapabilities === 'function') {
         const caps = await PublicKeyCredential.getClientCapabilities();
-        // Spec WebAuthn L3: klucz to 'extension:prf', nie 'prf'.
-        // Obsługujemy obie formy na wypadek starszych implementacji.
-        _prfSupportedCache = !!(caps && (caps['extension:prf'] || caps['prf']));
-        return _prfSupportedCache;
+        // Chrome 128+ i przyszłe Safari raportują PRF wprost.
+        if (caps && (caps['extension:prf'] || caps['prf'])) {
+          _prfSupportedCache = true;
+          return true;
+        }
+        // Safari iOS 18+ / iOS 26 NIE raportuje 'extension:prf' w getClientCapabilities(),
+        // mimo że PRF jest obsługiwany od iOS 18.
+        // Proxy: passkeyPlatformAuthenticator + conditionalGet = Face ID + passkey autofill
+        // — dokładnie te warunki, przy których PRF działa na Apple platform.
+        if (caps && caps['passkeyPlatformAuthenticator'] && caps['conditionalGet']) {
+          _prfSupportedCache = true;
+          return true;
+        }
+        // getClientCapabilities dostępne, ale brak platform authenticatora → PRF niedostępny.
+        if (caps && !caps['passkeyPlatformAuthenticator']) {
+          _prfSupportedCache = false;
+          return false;
+        }
+        // Fallthrough — caps null lub nierozpoznana struktura, spróbuj isConditionalMediationAvailable
       }
-      // Fallback dla przeglądarek bez getClientCapabilities (Safari 18.0–18.3, Chrome 116–122):
-      // isConditionalMediationAvailable() zwraca true gdy passkey autofill jest dostępny —
-      // w praktyce pokrywa się z PRF na tych wersjach.
+      // Fallback dla Safari 18.0–18.3 i Chrome 116–122 bez getClientCapabilities:
+      // isConditionalMediationAvailable() = true oznacza passkey autofill = PRF dostępne.
       if (typeof PublicKeyCredential.isConditionalMediationAvailable === 'function') {
         try {
           _prfSupportedCache = await PublicKeyCredential.isConditionalMediationAvailable();
