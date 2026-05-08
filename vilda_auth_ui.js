@@ -853,9 +853,7 @@
     const V = getVault();
     if (!V) return;
 
-    // Sprawdź flagę — nie pokazuj ponownie
     const flagKey = 'vilda:biometricPromptShown:' + userId;
-    if (localStorage.getItem(flagKey)) return;
 
     let prfOk = false;
     let passkeys = [];
@@ -867,7 +865,21 @@
     // Pokaż tylko gdy PRF dostępny i brak już zarejestrowanego passkey
     if (!prfOk || passkeys.length > 0) return;
 
-    // Oznacz jako pokazany
+    // Jeśli PRF teraz działa ale flaga mogła być ustawiona zanim naprawiliśmy
+    // detekcję — sprawdź czy passkeys naprawdę są puste (już sprawdzone wyżej).
+    // Flaga blokuje ponowne pokazanie TYLKO gdy passkey już był zarejestrowany lub
+    // użytkownik świadomie wybrał "Nie teraz" przy działającym PRF.
+    // Czyścimy starą flagę jeśli brak passkeys — znaczy PRF wcześniej nie działał.
+    if (localStorage.getItem(flagKey) && passkeys.length === 0) {
+      // Flaga ustawiona, ale brak passkey — mogła być zapisana przez stary buggy kod.
+      // Reset żeby użytkownik mógł zobaczyć prompt.
+      localStorage.removeItem(flagKey);
+    }
+
+    // Sprawdź jeszcze raz po ewentualnym resecie flagi
+    if (localStorage.getItem(flagKey)) return;
+
+    // Oznacz jako pokazany — dopiero teraz, tuż przed renderowaniem
     localStorage.setItem(flagKey, new Date().toISOString());
 
     const overlay = el('div', { class: 'vilda-auth-overlay vilda-auth-overlay-sheet' });

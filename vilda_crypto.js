@@ -429,14 +429,22 @@
       // przez próbny create() niżej.
       if (typeof PublicKeyCredential.getClientCapabilities === 'function') {
         const caps = await PublicKeyCredential.getClientCapabilities();
-        _prfSupportedCache = !!(caps && caps['prf']);
+        // Spec WebAuthn L3: klucz to 'extension:prf', nie 'prf'.
+        // Obsługujemy obie formy na wypadek starszych implementacji.
+        _prfSupportedCache = !!(caps && (caps['extension:prf'] || caps['prf']));
         return _prfSupportedCache;
       }
-      // Fallback: sprawdzamy przez isConditionalMediationAvailable jako proxy
-      // (Chrome 108+ = w praktyce PRF też obecne). Nie jest idealne, ale bezpieczne.
-      _prfSupportedCache = typeof PublicKeyCredential
-        .isConditionalMediationAvailable === 'function';
-      return _prfSupportedCache;
+      // Fallback dla przeglądarek bez getClientCapabilities (Safari 18.0–18.3, Chrome 116–122):
+      // isConditionalMediationAvailable() zwraca true gdy passkey autofill jest dostępny —
+      // w praktyce pokrywa się z PRF na tych wersjach.
+      if (typeof PublicKeyCredential.isConditionalMediationAvailable === 'function') {
+        try {
+          _prfSupportedCache = await PublicKeyCredential.isConditionalMediationAvailable();
+          return _prfSupportedCache;
+        } catch (_) {}
+      }
+      _prfSupportedCache = false;
+      return false;
     } catch {
       _prfSupportedCache = false;
       return false;
