@@ -1291,7 +1291,7 @@
     open(el('div', { class: 'vilda-auth-screen vilda-auth-patient-card' }, [
       el('h2', { class: 'vilda-auth-title', text: 'Karta pacjenta' }),
       el('p', { class: 'vilda-auth-subtitle', text: 'Wczytywanie danych…' })
-    ]));
+    ]), { noLogo: true });
     setBusy(true);
 
     var snap = null;
@@ -1309,7 +1309,7 @@
             onclick: function () { showPatientsList(onPick, listOptions); }
           })
         ])
-      ]));
+      ]), { noLogo: true });
       return;
     }
 
@@ -1545,7 +1545,16 @@
       loadBtn = el('button', {
         class: 'vilda-auth-btn vilda-auth-btn-primary', type: 'button',
         text: 'Wczytaj tego pacjenta',
-        onclick: function () { onPick(payload); hide(); }
+        onclick: function () {
+          var patient = global.VildaSession && typeof global.VildaSession.getPatient === 'function'
+            ? global.VildaSession.getPatient() : null;
+          if (patient && patient.source === 'form') {
+            var msg = 'Zastąpisz dane pacjenta „' + patient.name + '”. Kontynuować?';
+            if (!global.confirm(msg)) return;
+          }
+          onPick(payload);
+          hide();
+        }
       });
     }
 
@@ -1564,7 +1573,7 @@
       )
     );
 
-    open(el('div', { class: 'vilda-auth-screen vilda-auth-patient-card' }, screenChildren));
+    open(el('div', { class: 'vilda-auth-screen vilda-auth-patient-card' }, screenChildren), { noLogo: true });
   }
 
   // ============ LISTA PACJENTÓW — helpers sortowania ============
@@ -1573,8 +1582,7 @@
   var _PSORT_OPTIONS = [
     { id: 'recent-desc', label: 'Ostatnio zapisany',  sub: 'od najnowszego' },
     { id: 'name-asc',    label: 'Imię A → Z',         sub: null },
-    { id: 'name-desc',   label: 'Imię Z → A',         sub: null },
-    { id: 'visits-desc', label: 'Liczba wpisów',      sub: 'od największej' }
+    { id: 'name-desc',   label: 'Imię Z → A',         sub: null }
   ];
   function _readPSort() {
     try { return (global.localStorage && global.localStorage.getItem(_PSORT_KEY)) || 'recent-desc'; } catch (_) { return 'recent-desc'; }
@@ -1717,11 +1725,9 @@
       setTimeout(function () { try { searchInput.focus(); } catch (_) {} }, 60);
     }
 
-    // ── Ikonka sortowania w nagłówku (tylko gdy są pacjenci) ──────────────────
-    let titleRow;
+    // ── Ikonka sortowania w wierszu z wyszukiwarką (tylko gdy są pacjenci) ──────
+    let sortWrap = null;
     if (patients.length > 0) {
-      const SORT_ICON = '<svg xmlns=”http://www.w3.org/2000/svg” width=”15” height=”15” viewBox=”0 0 24 24” fill=”none” stroke=”currentColor” stroke-width=”2.2” stroke-linecap=”round” stroke-linejoin=”round”><line x1=”3” y1=”6” x2=”21” y2=”6”/><line x1=”3” y1=”12” x2=”15” y2=”12”/><line x1=”3” y1=”18” x2=”9” y2=”18”/></svg>';
-
       const sortDropdown = el('div', { class: 'vilda-auth-sort-dropdown' });
       sortDropdown.hidden = true;
       let _outsideListener = null;
@@ -1767,15 +1773,14 @@
       const sortBtn = el('button', {
         type: 'button',
         class: 'vilda-auth-sort-btn',
-        title: 'Zmień sortowanie',
-        html: SORT_ICON
+        title: 'Zmień sortowanie'
       });
       sortBtn.addEventListener('click', function (e) {
         e.stopPropagation();
         if (!sortDropdown.hidden) { closeSortDropdown(); return; }
         sortDropdown.hidden = false;
         sortBtn.classList.add('vilda-auth-sort-btn--open');
-        // Zamknij przy kliknięciu poza elementem (defer o jeden tick, żeby nie złapać bieżącego eventu)
+        // Zamknij przy kliknięciu poza elementem (defer o jeden tick)
         setTimeout(function () {
           _outsideListener = function (ev) {
             if (!sortDropdown.contains(ev.target) && ev.target !== sortBtn) {
@@ -1786,12 +1791,7 @@
         }, 0);
       });
 
-      titleRow = el('div', { class: 'vilda-auth-title-row' }, [
-        title,
-        el('div', { class: 'vilda-auth-sort-wrap' }, [sortBtn, sortDropdown])
-      ]);
-    } else {
-      titleRow = title; // brak pacjentów — sam tytuł, bez ikonki sortowania
+      sortWrap = el('div', { class: 'vilda-auth-sort-wrap' }, [sortBtn, sortDropdown]);
     }
 
     const importBtn = el('button', {
@@ -1808,9 +1808,9 @@
       onclick: function () { hide(); }
     });
 
-    const children = [titleRow, sub];
+    const children = [title, sub];
     if (searchInput) {
-      children.push(el('div', { class: 'vilda-auth-search-wrap' }, [searchInput, resultsCounter]));
+      children.push(el('div', { class: 'vilda-auth-search-wrap' }, [searchInput, sortWrap, resultsCounter]));
     }
     children.push(list);
     children.push(el('div', { class: 'vilda-auth-actions' }, [cancel, importBtn]));

@@ -726,12 +726,10 @@ function vildaCustomHasHtmlContent(element) {
 
   function syncSidebarMenuState() {
     var headerSave  = document.getElementById('saveDataBtn');
-    var headerLoad  = document.getElementById('loadDataBtn');
     var sidebarSave = document.getElementById('saveDataBtnSidebar');
-    var sidebarLoad = document.getElementById('loadDataBtnSidebar');
     var loggedIn    = isVaultUnlocked();
 
-    // Dla niezalogowanych oba przyciski są zawsze wyszarzone.
+    // Dla niezalogowanych przycisk Zapisz jest zawsze wyszarzony.
     // Dla zalogowanych — kopiujemy stan z przycisku nagłówkowego (jeśli istnieje).
     if (sidebarSave) {
       var saveDisabled = !loggedIn || (headerSave && (headerSave.disabled || headerSave.hasAttribute('disabled')));
@@ -743,31 +741,16 @@ function vildaCustomHasHtmlContent(element) {
         sidebarSave.removeAttribute('aria-disabled');
       }
     }
-
-    if (sidebarLoad) {
-      var loadDisabled = !loggedIn || (headerLoad && (headerLoad.disabled || headerLoad.hasAttribute('disabled')));
-      if (loadDisabled) {
-        sidebarLoad.setAttribute('disabled', '');
-        sidebarLoad.setAttribute('aria-disabled', 'true');
-      } else {
-        sidebarLoad.removeAttribute('disabled');
-        sidebarLoad.removeAttribute('aria-disabled');
-      }
-    }
   }
 
   function initSidebarMenu() {
     var sidebarSave     = document.getElementById('saveDataBtnSidebar');
-    var sidebarLoad     = document.getElementById('loadDataBtnSidebar');
     var sidebarPatients = document.getElementById('patientsListBtnSidebar');
-    var sidebarFile     = document.getElementById('fileInputSidebar');
     var headerSave      = document.getElementById('saveDataBtn');
-    var headerLoad      = document.getElementById('loadDataBtn');
 
     // Sygnalizuj vilda_chrome.js, że custom-fixes przejmuje obsługę kliknięć.
     // Bazowy handler z vilda_chrome sprawdza ten flag i oddaje kontrolę.
     if (sidebarSave)     sidebarSave._cfBound = true;
-    if (sidebarLoad)     sidebarLoad._cfBound = true;
     if (sidebarPatients) sidebarPatients._cfBound = true;
 
     // Na starcie wyrównaj stan disabled z przyciskami w menu hamburgera
@@ -816,60 +799,10 @@ function vildaCustomHasHtmlContent(element) {
       });
     }
 
-    // WCZYTAJ DANE — Etap 8R-4c: sidebar deleguje do nagłówkowego przycisku,
-    // który zawiera całą logikę vault (otwiera ekran „Pacjenci” w trybie
-    // zalogowanym, tooltip „Zaloguj się…” w trybie gościa, wsparcie disabled,
-    // sprawdzenie czy formularz jest pusty). Stary flow z dialogiem plikowym
-    // dla niezaszyfrowanych JSON-ów został wycofany — wczytywanie historii
-    // pacjentów odbywa się przez vault.
-    if (sidebarLoad) {
-      sidebarLoad.addEventListener('click', function (e) {
-        e.preventDefault();
-
-        // Najpierw sprawdź login — komunikat o wymaganym logowaniu ma priorytet
-        // nad generycznym „disabled" (który też jest ustawiony dla niezalogowanych).
-        if (!isVaultUnlocked()) {
-          var loginMsg = (window.VildaSession && window.VildaSession.TOOLTIPS.loadData.notLoggedIn) || 'Wczytywanie danych jest zarezerwowane dla zalogowanych użytkowników.';
-          showTip(sidebarLoad, loginMsg);
-          return;
-        }
-
-        // Przycisk wyszarzony z innego powodu (np. ograniczenie sesji)
-        if (sidebarLoad.hasAttribute('disabled')) {
-          var msg =
-            (headerLoad && (headerLoad.getAttribute('data-tip') || headerLoad.getAttribute('title'))) ||
-            sidebarLoad.getAttribute('data-tip') ||
-            (window.VildaSession && window.VildaSession.TOOLTIPS.loadData.sessionLocked) || 'Wczytywanie danych jest możliwe tylko na początku sesji.';
-          showTip(sidebarLoad, msg);
-          return;
-        }
-
-        // Preferuj bezpośrednie wywołanie VildaAuthUI.showPatientsList() —
-        // otwiera ładne in-app okno wyboru pacjentów na KAŻDEJ stronie,
-        // nie tylko na index.html gdzie istnieje #loadDataBtn.
-        var authUI = window.VildaAuthUI;
-        if (authUI && typeof authUI.showPatientsList === 'function') {
-          authUI.showPatientsList(function (payload) {
-            // Na stronach z app.js (index.html, docpro.html) używamy applyLoadedData.
-            if (payload && typeof window.applyLoadedData === 'function') {
-              try { window.applyLoadedData(payload); } catch (_) {}
-            }
-            // Na każdej stronie odświeżamy chip pacjenta w headerze.
-            if (window.VildaChrome && typeof window.VildaChrome.refreshPatientChip === 'function') {
-              window.VildaChrome.refreshPatientChip();
-            }
-          });
-        } else if (headerLoad && typeof headerLoad.click === 'function') {
-          // Fallback: kliknij #loadDataBtn (index.html / docpro.html) —
-          // on sam wywoła showPatientsList przez vilda_data_import_export.js.
-          headerLoad.click();
-        }
-      });
-    }
-
-    // PACJENCI — otwiera bazę pacjentów w trybie podglądu (bez wczytywania).
-    // Przycisk jest widoczny tylko dla zalogowanych (data-auth-only=”true”
-    // obsługuje vilda_chrome.js refreshAuthOnlyItems).
+    // PACJENCI — otwiera bazę pacjentów.
+    // Na stronach z formularzem (applyLoadedData dostępne) przekazuje callback
+    // wczytujący — karta pacjenta pokaże przycisk „Wczytaj tego pacjenta”.
+    // Na pozostałych stronach — tryb podglądu bez wczytywania.
     if (sidebarPatients) {
       sidebarPatients.addEventListener('click', function (e) {
         e.preventDefault();
@@ -880,12 +813,21 @@ function vildaCustomHasHtmlContent(element) {
         }
 
         var authUI = window.VildaAuthUI;
-        if (authUI && typeof authUI.showPatientsList === 'function') {
-          // Otwieramy bez callbacku — użytkownik tylko przegląda, nie wczytuje.
-          authUI.showPatientsList(null, { viewOnly: true });
-        } else {
+        if (!authUI || typeof authUI.showPatientsList !== 'function') {
           showTip(sidebarPatients, (window.VildaSession && window.VildaSession.TOOLTIPS.patients.unavailable) || 'Moduł pacjentów niedostępny — odśwież stronę.');
+          return;
         }
+
+        // Callback do wczytania danych — dostępny tylko na stronach z formularzem.
+        var canLoad = typeof window.applyLoadedData === 'function';
+        authUI.showPatientsList(canLoad ? function (payload) {
+          if (payload && typeof window.applyLoadedData === 'function') {
+            try { window.applyLoadedData(payload); } catch (_) {}
+          }
+          if (window.VildaChrome && typeof window.VildaChrome.refreshPatientChip === 'function') {
+            window.VildaChrome.refreshPatientChip();
+          }
+        } : null);
       });
     }
 

@@ -27,7 +27,7 @@
  *
  * Stare elementy zachowujemy z tymi samymi ID, aby istniejący kod (custom-fixes.js,
  * vilda_data_import_export.js, mini-summary, steroid-summary) działał bez zmian:
- *   #saveDataBtnSidebar, #loadDataBtnSidebar, #fileInputSidebar
+ *   #saveDataBtnSidebar
  */
 
 (function (global) {
@@ -52,15 +52,6 @@
           role: 'button',
           ariaDisabled: true,
           tip: 'Aby zapisać dane, wprowadź imię, wiek, wzrost i wagę.'
-        },
-        {
-          id: 'loadDataBtnSidebar',
-          label: 'Wczytaj dane',
-          icon: 'folder-open',
-          role: 'button',
-          ariaDisabled: true,
-          tip: 'Wczytywanie danych jest możliwe na początku sesji, zanim wprowadzisz nowe dane.',
-          extraHTML: '<input type="file" id="fileInputSidebar" accept=".json,application/json" style="display:none;">'
         },
         {
           id: 'patientsListBtnSidebar',
@@ -1006,45 +997,46 @@
 
   function bindSidebarDataButtons() {
     var saveBtn = doc.getElementById('saveDataBtnSidebar');
-    var loadBtn = doc.getElementById('loadDataBtnSidebar');
-
-    function makeHandler(btn, msgGuest, msgLoggedIn) {
-      return function (e) {
-        e.preventDefault();
-        if (btn._cfBound) return; // custom-fixes.js przejął obsługę
-        var v = global.VildaVault;
-        var unlocked = !!(v && typeof v.isUnlocked === 'function' && v.isUnlocked());
-        showChromeTip(btn, unlocked ? msgLoggedIn : msgGuest);
-      };
-    }
 
     if (saveBtn) {
-      saveBtn.addEventListener('click', makeHandler(
-        saveBtn,
-        'Zapisywanie danych jest zarezerwowane dla zalogowanych użytkowników.',
-        'Zapisywanie danych jest dostępne na stronie głównej pacjenta.'
-      ));
-    }
-    if (loadBtn) {
-      loadBtn.addEventListener('click', makeHandler(
-        loadBtn,
-        'Wczytywanie danych jest zarezerwowane dla zalogowanych użytkowników.',
-        'Wczytywanie danych jest dostępne na stronie głównej pacjenta.'
-      ));
+      saveBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        if (saveBtn._cfBound) return; // custom-fixes.js przejął obsługę
+        var v = global.VildaVault;
+        var unlocked = !!(v && typeof v.isUnlocked === 'function' && v.isUnlocked());
+        showChromeTip(saveBtn, unlocked
+          ? 'Zapisywanie danych jest dostępne na stronie głównej pacjenta.'
+          : 'Zapisywanie danych jest zarezerwowane dla zalogowanych użytkowników.');
+      });
     }
 
-    // Przycisk „Pacjenci" — fallback tylko gdy custom-fixes.js go nie obsługuje.
+    // Przycisk „Pacjenci" — fallback na stronach bez custom-fixes.js.
+    // Na stronach z formularzem (applyLoadedData dostępne) przekazuje callback wczytujący.
+    // Na pozostałych stronach — tryb podglądu bez wczytywania.
     var patientsBtn = doc.getElementById('patientsListBtnSidebar');
     if (patientsBtn) {
       patientsBtn.addEventListener('click', function (e) {
         e.preventDefault();
         if (patientsBtn._cfBound) return;
-        var authUI = global.VildaAuthUI;
-        if (authUI && typeof authUI.showPatientsList === 'function') {
-          authUI.showPatientsList(null, { viewOnly: true });
-        } else {
+        var v = global.VildaVault;
+        if (!(v && typeof v.isUnlocked === 'function' && v.isUnlocked())) {
           showChromeTip(patientsBtn, 'Zaloguj się, aby przeglądać bazę pacjentów.');
+          return;
         }
+        var authUI = global.VildaAuthUI;
+        if (!authUI || typeof authUI.showPatientsList !== 'function') {
+          showChromeTip(patientsBtn, 'Moduł pacjentów niedostępny — odśwież stronę.');
+          return;
+        }
+        // Na stronach z formularzem przekaż callback wczytujący dane.
+        var canLoad = typeof global.applyLoadedData === 'function';
+        authUI.showPatientsList(canLoad ? function (payload) {
+          if (payload) {
+            try { global.applyLoadedData(payload); } catch (_) {}
+          }
+          var vc = global.VildaChrome;
+          if (vc && typeof vc.refreshPatientChip === 'function') vc.refreshPatientChip();
+        } : null);
       });
     }
   }

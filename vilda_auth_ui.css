@@ -371,12 +371,14 @@
 /* --- WYSZUKIWARKA PACJENTÓW --- */
 .vilda-auth-search-wrap {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
   margin-top: 8px;
 }
 .vilda-auth-search-input {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   box-sizing: border-box;
   padding: 12px 14px;
   font-size: 16px;
@@ -397,6 +399,7 @@
   box-shadow: 0 0 0 3px rgba(0, 131, 141, 0.15);
 }
 .vilda-auth-search-counter {
+  width: 100%; /* zawsze w osobnym wierszu pod inputem+ikonką */
   min-height: 1em;
   font-size: 12px;
   color: #6c8084;
@@ -916,38 +919,32 @@
 }
 
 /* --- SORT PATIENTS --- */
-.vilda-auth-title-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-.vilda-auth-title-row .vilda-auth-title {
-  flex: 1;
-  margin: 0;
-}
 .vilda-auth-sort-wrap {
   position: relative;
-  flex-shrink: 0;
 }
 .vilda-auth-sort-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   padding: 0;
-  border-radius: 10px;
-  border: 1.5px solid #e0e8eb;
-  background: #ffffff;
-  color: #4a6168;
+  border: none;
+  background: transparent;
+  color: #8a9aa1;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
-.vilda-auth-sort-btn:hover,
+/* Trzy poziome kreski — rysowane przez CSS, bez SVG/tekstu */
+.vilda-auth-sort-btn::before {
+  content: '';
+  display: block;
+  width: 14px;
+  height: 2px;
+  background: currentColor;
+  border-radius: 1px;
+  box-shadow: 0 -5px 0 currentColor, 0 5px 0 currentColor;
+}
 .vilda-auth-sort-btn--open {
-  background: #f0f8f9;
-  border-color: #00838d;
   color: #00838d;
 }
 .vilda-auth-sort-dropdown {

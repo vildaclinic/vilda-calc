@@ -42,11 +42,6 @@
       notOnThisPage:'Zapisywanie danych jest dostępne na stronie głównej pacjenta.',
       saveError:    'Nie udało się zapisać pacjenta.'           // uzupełniany dynamicznie przez saveUserData
     },
-    loadData: {
-      notLoggedIn:      'Wczytywanie danych jest zarezerwowane dla zalogowanych użytkowników.',
-      sessionLocked:    'Wczytywanie danych jest możliwe tylko na początku sesji.',
-      notOnThisPage:    'Wczytywanie danych jest dostępne na stronie głównej pacjenta.'
-    },
     patients: {
       notLoggedIn:  'Zaloguj się, aby przeglądać bazę pacjentów.',
       unavailable:  'Moduł pacjentów niedostępny — odśwież stronę.'
@@ -184,16 +179,6 @@
   }
 
   /**
-   * Zwraca { enabled: bool, tip: string|null } dla przycisku „Wczytaj dane".
-   */
-  function getLoadButtonState() {
-    if (!isLoggedIn()) {
-      return { enabled: false, tip: TOOLTIPS.loadData.notLoggedIn };
-    }
-    return { enabled: true, tip: null };
-  }
-
-  /**
    * Zwraca { enabled: bool, tip: string|null } dla przycisku „Pacjenci".
    */
   function getPatientsButtonState() {
@@ -326,7 +311,6 @@
 
     // Stany przycisków
     getSaveButtonState:     getSaveButtonState,
-    getLoadButtonState:     getLoadButtonState,
     getPatientsButtonState: getPatientsButtonState,
 
     // Zdarzenia
