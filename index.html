@@ -92,8 +92,8 @@
 <script src="vilda_init.js?v=4"></script>
 <script src="vilda_crypto.js?v=4"></script>
 <script src="vilda_vault.js?v=11"></script>
-<script src="vilda_sync.js?v=1"></script>
-<script src="vilda_sync_integration.js?v=1"></script>
+<script src="vilda_sync.js?v=2"></script>
+<script src="vilda_sync_integration.js?v=2"></script>
 <script src="vilda_auth_ui.js?v=27"></script>
 <script src="vilda_file_export.js?v=4"></script>
 <script src="vilda_deps.js?v=87"></script>
@@ -7300,6 +7300,211 @@ async function generateCentileChart() {
     document.addEventListener('DOMContentLoaded', function() {
       document.body.classList.remove('js-loading');
     });
+  </script>
+
+  <!-- ═══ Interstitial: nowe urządzenie / odtwarzanie danych z serwera ══════
+       Pokazuje się jednorazowo po odblokowaniu, gdy VildaSync wykryje że to
+       nowe urządzenie a slot z danymi istnieje na serwerze.
+       Odpowiednik ekranu "Odtwórz z kopii zapasowej" z iCloud / 1Password. -->
+  <div id="vilda-restore-overlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="vilda-restore-title"
+       style="
+         display: none;
+         position: fixed;
+         inset: 0;
+         z-index: 99999;
+         background: var(--bg, #f5f5f7);
+         display: none;
+         flex-direction: column;
+         align-items: center;
+         justify-content: center;
+         padding: 2rem 1.25rem;
+         box-sizing: border-box;
+       ">
+    <div style="
+           max-width: 420px;
+           width: 100%;
+           text-align: center;
+         ">
+      <!-- Ikona chmury -->
+      <div style="
+             width: 72px; height: 72px;
+             border-radius: 20px;
+             background: var(--primary, #00838d);
+             display: flex; align-items: center; justify-content: center;
+             margin: 0 auto 1.5rem;
+             font-size: 2rem;
+           "
+           aria-hidden="true">
+        ☁️
+      </div>
+
+      <h2 id="vilda-restore-title"
+          style="
+            margin: 0 0 0.5rem;
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: var(--text, #1c1c1e);
+          ">
+        Znaleziono Twoje dane na serwerze
+      </h2>
+
+      <p style="
+           margin: 0 0 0.4rem;
+           font-size: 0.95rem;
+           color: var(--text-muted, #6e6e73);
+         ">
+        Ostatnia synchronizacja:
+      </p>
+      <p id="vilda-restore-date"
+         style="
+           margin: 0 0 2rem;
+           font-size: 1rem;
+           font-weight: 600;
+           color: var(--text, #1c1c1e);
+         ">
+        …
+      </p>
+
+      <p style="
+           margin: 0 0 2rem;
+           font-size: 0.88rem;
+           color: var(--text-muted, #6e6e73);
+           line-height: 1.5;
+         ">
+        Serwer przechowuje wyłącznie zaszyfrowane dane —
+        tylko Ty, znając hasło, możesz je odczytać.
+      </p>
+
+      <!-- Główny przycisk CTA -->
+      <button id="vilda-restore-btn"
+              type="button"
+              style="
+                display: block;
+                width: 100%;
+                padding: 0.9rem 1.5rem;
+                border: none;
+                border-radius: 14px;
+                background: var(--primary, #00838d);
+                color: #fff;
+                font-size: 1.05rem;
+                font-weight: 600;
+                cursor: pointer;
+                margin-bottom: 1rem;
+              ">
+        Pobierz dane z serwera
+      </button>
+
+      <!-- Przycisk pominięcia — mniej wyeksponowany -->
+      <button id="vilda-restore-skip"
+              type="button"
+              style="
+                background: none;
+                border: none;
+                color: var(--text-muted, #6e6e73);
+                font-size: 0.92rem;
+                cursor: pointer;
+                text-decoration: underline;
+                padding: 0.4rem;
+              ">
+        Zacznij od nowa (nie pobieraj)
+      </button>
+    </div>
+  </div>
+
+  <script>
+  (function () {
+    'use strict';
+
+    var OVERLAY_ID     = 'vilda-restore-overlay';
+    var DATE_ID        = 'vilda-restore-date';
+    var RESTORE_BTN_ID = 'vilda-restore-btn';
+    var SKIP_BTN_ID    = 'vilda-restore-skip';
+
+    function getOverlay()  { return document.getElementById(OVERLAY_ID); }
+    function getDateEl()   { return document.getElementById(DATE_ID); }
+    function getRestBtn()  { return document.getElementById(RESTORE_BTN_ID); }
+    function getSkipBtn()  { return document.getElementById(SKIP_BTN_ID); }
+
+    function showOverlay(lastModified) {
+      var overlay = getOverlay();
+      var dateEl  = getDateEl();
+      if (!overlay || !dateEl) return;
+
+      // Formatuj datę po polsku
+      var dateStr = '—';
+      if (lastModified) {
+        try {
+          var d = new Date(lastModified);
+          if (!isNaN(d.getTime())) {
+            dateStr = d.toLocaleDateString('pl-PL', {
+              day: 'numeric', month: 'long', year: 'numeric'
+            });
+          }
+        } catch (_) {}
+      }
+      dateEl.textContent = dateStr;
+
+      overlay.style.display = 'flex';
+    }
+
+    function hideOverlay() {
+      var overlay = getOverlay();
+      if (overlay) overlay.style.display = 'none';
+    }
+
+    function setRestoreBtnLoading(loading) {
+      var btn = getRestBtn();
+      if (!btn) return;
+      if (loading) {
+        btn.disabled = true;
+        btn.textContent = 'Pobieranie…';
+      } else {
+        btn.disabled = false;
+        btn.textContent = 'Pobierz dane z serwera';
+      }
+    }
+
+    // Nasłuchuj eventu z vilda_sync_integration.js
+    document.addEventListener('vilda:new-device-restore-available', function (e) {
+      var detail = (e && e.detail) || {};
+      showOverlay(detail.lastModified || null);
+    });
+
+    // Kliknięcie "Pobierz dane" → syncFull() + zamknij overlay
+    document.addEventListener('DOMContentLoaded', function () {
+      var restBtn = getRestBtn();
+      var skipBtn = getSkipBtn();
+
+      if (restBtn) {
+        restBtn.addEventListener('click', function () {
+          setRestoreBtnLoading(true);
+          var S = window.VildaSync;
+          if (S && typeof S.syncFull === 'function') {
+            S.syncFull()
+              .then(function () { hideOverlay(); })
+              .catch(function () {
+                // Nawet przy błędzie zamknij overlay — sync status indicator pokaże błąd
+                hideOverlay();
+              });
+          } else {
+            hideOverlay();
+          }
+        });
+      }
+
+      if (skipBtn) {
+        skipBtn.addEventListener('click', function () {
+          hideOverlay();
+          // Nie wywołujemy syncFull — użytkownik chce zacząć od nowa
+          // sessionStorage flag już ustawiony w vilda_sync_integration.js
+        });
+      }
+    });
+
+  })();
   </script>
 </body>
 </html>

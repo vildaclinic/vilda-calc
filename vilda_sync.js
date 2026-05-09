@@ -289,8 +289,10 @@
           }
 
           if (regResp.status === 409) {
-            // Slot już istnieje (race, inny device zarejestrował wcześniej)
-            // Przejdź do ścieżki upload — pobierz aktualny ETag
+            // Slot już istnieje na serwerze.
+            // Jeśli to NOWE URZĄDZENIE (state.registered był false = świeże localStorage),
+            // najpierw pobierz dane serwera, żeby nie nadpisać ich lokalnym (pustym) vaultem.
+            var isNewDevice = !state.registered;
             state.registered = true;
             saveSyncState(slotId, state);
             var stResp = await fetchWithTimeout(
@@ -301,6 +303,28 @@
               var stData      = await stResp.json();
               state.localEtag = stData.etag;
               saveSyncState(slotId, state);
+            }
+
+            if (isNewDevice) {
+              // Nowe urządzenie: zamiast nadpisywać, pobierz i scal dane serwera
+              try {
+                var pullResp = await fetchWithTimeout(
+                  workerUrl + '/v1/slots/' + slotId + '/blob',
+                  { method: 'GET', headers: { 'Authorization': 'Bearer ' + authToken } }
+                );
+                if (pullResp.ok) {
+                  var pullEncBuf = await pullResp.arrayBuffer();
+                  var pullPlain  = await decryptBlob(pullEncBuf, syncEncKey);
+                  var pullRaw    = JSON.parse(new TextDecoder().decode(pullPlain));
+                  await vault.mergeSyncPayload(pullRaw);
+                  // Przebuduj blob z połączonymi danymi
+                  var mergedRaw   = await vault.exportSyncPayload();
+                  var mergedPlain = new TextEncoder().encode(JSON.stringify(mergedRaw));
+                  encBlob = await encryptBlob(mergedPlain, syncEncKey);
+                }
+              } catch (_) {
+                // Jeśli pull się nie udał — kontynuuj z lokalnym stanem
+              }
             }
             // Kontynuuj do upload poniżej (nie return)
 
@@ -441,32 +465,48 @@
     var state      = loadSyncState(slotId);
 
     try {
+      // ── Scenariusz nowego urządzenia ────────────────────────────────────────
+      // Gdy localnie niezarejestrowany, sprawdź czy slot istnieje na serwerze
+      // (inny device mógł go zarejestrować z tym samym masterKey).
       if (!state.registered) {
-        var notRegResult = { action: 'not-registered' };
-        emit(syncCompleteListeners, { operation: 'pull', result: notRegResult });
-        return notRegResult;
-      }
-
-      // 1. Sprawdź metadane serwera (lekkie — bez pobierania bloba)
-      var statusResp = await fetchWithTimeout(
-        workerUrl + '/v1/slots/' + slotId + '/status',
-        { method: 'GET', headers: { 'Authorization': 'Bearer ' + authToken } }
-      );
-
-      if (statusResp.status === 401) {
-        // Slot usunięty lub auth nieważny
-        clearSyncStateForSlot(slotId);
-        throw syncError('VildaSync: błąd uwierzytelnienia przy pull. Slot mógł zostać usunięty.', 'AUTH_FAILED');
-      }
-      if (!statusResp.ok) {
-        throw syncError(
-          'VildaSync: błąd odczytu statusu (' + statusResp.status + ').',
-          'STATUS_FAILED',
-          { httpStatus: statusResp.status }
+        var probeResp = await fetchWithTimeout(
+          workerUrl + '/v1/slots/' + slotId + '/status',
+          { method: 'GET', headers: { 'Authorization': 'Bearer ' + authToken } }
         );
-      }
+        if (!probeResp.ok) {
+          // Slot nie istnieje lub token nie pasuje — naprawdę niezarejestrowane
+          var notRegResult = { action: 'not-registered' };
+          emit(syncCompleteListeners, { operation: 'pull', result: notRegResult });
+          return notRegResult;
+        }
+        // Slot istnieje i token pasuje → adoptuj, wymuś pełne pobranie danych
+        var probeJson = await probeResp.json();
+        state.registered = true;
+        state.localEtag  = null;
+        saveSyncState(slotId, state);
+        var statusData = probeJson;
+      } else {
+        // 1. Sprawdź metadane serwera (lekkie — bez pobierania bloba)
+        var statusResp = await fetchWithTimeout(
+          workerUrl + '/v1/slots/' + slotId + '/status',
+          { method: 'GET', headers: { 'Authorization': 'Bearer ' + authToken } }
+        );
 
-      var statusData = await statusResp.json();
+        if (statusResp.status === 401) {
+          // Slot usunięty lub auth nieważny
+          clearSyncStateForSlot(slotId);
+          throw syncError('VildaSync: błąd uwierzytelnienia przy pull. Slot mógł zostać usunięty.', 'AUTH_FAILED');
+        }
+        if (!statusResp.ok) {
+          throw syncError(
+            'VildaSync: błąd odczytu statusu (' + statusResp.status + ').',
+            'STATUS_FAILED',
+            { httpStatus: statusResp.status }
+          );
+        }
+
+        var statusData = await statusResp.json();
+      }
 
       // 2. ETag się nie zmienił — brak potrzeby pobierania bloba
       if (state.localEtag && state.localEtag === statusData.etag) {
@@ -624,6 +664,47 @@
     );
   }
 
+  // ─── Wykrywanie nowego urządzenia ───────────────────────────────────────────
+
+  /**
+   * Sprawdza, czy bieżące urządzenie jest "nowe" (lokalnie niezarejestrowane)
+   * i czy na serwerze istnieje slot dla tego konta.
+   *
+   * Używane przed syncFull() żeby zdecydować czy pokazać interstitial
+   * "Znaleziono Twoje dane na serwerze".
+   *
+   * @returns {Promise<{ isNewDevice: boolean, lastModified: string|null }>}
+   */
+  async function probeNewDevice() {
+    var vault;
+    try { vault = requireUnlockedVault(); } catch (_) { return { isNewDevice: false, lastModified: null }; }
+    var syncMat;
+    try { syncMat = await vault.getSyncMaterial(); } catch (_) { return { isNewDevice: false, lastModified: null }; }
+    var slotId = syncMat.slotId;
+    var state  = loadSyncState(slotId);
+    if (state.registered) {
+      // Urządzenie już wcześniej rejestrowało się — nie jest nowe
+      return { isNewDevice: false, lastModified: null };
+    }
+    try {
+      var resp = await fetchWithTimeout(
+        getWorkerUrl() + '/v1/slots/' + slotId + '/status',
+        { method: 'GET', headers: { 'Authorization': 'Bearer ' + syncMat.authToken } }
+      );
+      if (!resp.ok) {
+        // Brak slotu lub błąd auth — slot nie istnieje na serwerze
+        return { isNewDevice: false, lastModified: null };
+      }
+      var data = await resp.json();
+      return {
+        isNewDevice:  true,
+        lastModified: data.lastModified || data.updatedAt || null
+      };
+    } catch (_) {
+      return { isNewDevice: false, lastModified: null };
+    }
+  }
+
   // ─── Rejestracja listenerów ──────────────────────────────────────────────────
 
   function onSyncStart(cb)    { if (typeof cb === 'function') syncStartListeners.push(cb); }
@@ -675,7 +756,13 @@
     onSyncComplete: onSyncComplete,
 
     /** Callback wywoływany przy błędzie sync. */
-    onSyncError:    onSyncError
+    onSyncError:    onSyncError,
+
+    /**
+     * Sprawdź czy to nowe urządzenie z danymi na serwerze.
+     * @returns {Promise<{ isNewDevice: boolean, lastModified: string|null }>}
+     */
+    probeNewDevice: probeNewDevice
   };
 
 })(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : null));

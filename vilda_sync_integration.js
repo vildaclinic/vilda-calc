@@ -34,9 +34,10 @@
 
   // ─── Stałe ──────────────────────────────────────────────────────────────────
 
-  var SYNC_ENABLED_KEY = 'vilda-sync-enabled-v1';
-  var DEBOUNCE_MS      = 5000; // debounce push po zapisie pacjenta
-  var UNLOCK_DELAY_MS  = 600;  // krótkie opóźnienie po onUnlock (vault init)
+  var SYNC_ENABLED_KEY        = 'vilda-sync-enabled-v1';
+  var DEBOUNCE_MS             = 5000; // debounce push po zapisie pacjenta
+  var UNLOCK_DELAY_MS         = 600;  // krótkie opóźnienie po onUnlock (vault init)
+  var NEW_DEVICE_SHOWN_KEY    = 'vilda-new-device-restore-shown-v1'; // sessionStorage flag
 
   // Kody błędów które blokują dalsze próby do czasu ponownego unlock
   var BLOCKING_ERROR_CODES = ['AUTH_FAILED', 'RATE_LIMITED', 'SLOT_AUTH_MISMATCH'];
@@ -138,7 +139,8 @@
     if (!V || vaultBound) return;
     vaultBound = true;
 
-    // onUnlock → syncFull() (z krótkim opóźnieniem żeby vault zdążył się w pełni zainicjować)
+    // onUnlock → (opcjonalnie: interstitial nowego urządzenia) → syncFull()
+    // z krótkim opóźnieniem żeby vault zdążył się w pełni zainicjować
     if (typeof V.onUnlock === 'function') {
       V.onUnlock(function () {
         // Każdy nowy unlock resetuje flagę blokady
@@ -147,9 +149,66 @@
         if (!isSyncEnabled()) return;
         var S = getSync();
         if (!S || typeof S.syncFull !== 'function') return;
+
         setTimeout(function () {
-          if (syncBlockedUntilUnlock) return; // mógł zostać ustawiony w trakcie opóźnienia
-          S.syncFull().catch(function () {});
+          if (syncBlockedUntilUnlock) return;
+
+          // Sprawdź czy już pokazaliśmy interstitial w tej sesji
+          var alreadyShown = false;
+          try {
+            alreadyShown = !!(global.sessionStorage &&
+              global.sessionStorage.getItem(NEW_DEVICE_SHOWN_KEY));
+          } catch (_) {}
+
+          if (alreadyShown) {
+            // Już obsłużone — idź prosto do sync
+            S.syncFull().catch(function () {});
+            return;
+          }
+
+          // Nie pokazaliśmy jeszcze — sprawdź czy to nowe urządzenie z danymi na serwerze
+          if (typeof S.probeNewDevice !== 'function') {
+            S.syncFull().catch(function () {});
+            return;
+          }
+
+          S.probeNewDevice().then(function (result) {
+            if (syncBlockedUntilUnlock) return;
+
+            if (result && result.isNewDevice) {
+              // Nowe urządzenie + slot na serwerze → pokaż interstitial
+              // Ustaw flagę PRZED dispatchem żeby wielokrotne unlock nie powodowało
+              // wielokrotnego pokazania w tej samej sesji
+              try {
+                if (global.sessionStorage) {
+                  global.sessionStorage.setItem(NEW_DEVICE_SHOWN_KEY, '1');
+                }
+              } catch (_) {}
+
+              try {
+                if (typeof global.document !== 'undefined') {
+                  global.document.dispatchEvent(new CustomEvent(
+                    'vilda:new-device-restore-available',
+                    {
+                      detail: { lastModified: result.lastModified || null },
+                      bubbles: false
+                    }
+                  ));
+                }
+              } catch (_) {}
+              // NIE wywołujemy syncFull — użytkownik zdecyduje przez interstitial
+            } else {
+              // Zwykłe urządzenie lub slot nie istnieje — normalny sync
+              if (!syncBlockedUntilUnlock) {
+                S.syncFull().catch(function () {});
+              }
+            }
+          }).catch(function () {
+            // Probe nie powiodło się (offline?) — normalny sync
+            if (!syncBlockedUntilUnlock) {
+              S.syncFull().catch(function () {});
+            }
+          });
         }, UNLOCK_DELAY_MS);
       });
     }

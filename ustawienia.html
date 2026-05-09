@@ -67,8 +67,8 @@
 <script src="vilda_init.js?v=4"></script>
 <script src="vilda_crypto.js?v=4"></script>
 <script src="vilda_vault.js?v=11"></script>
-<script src="vilda_sync.js?v=1"></script>
-<script src="vilda_sync_integration.js?v=1"></script>
+<script src="vilda_sync.js?v=2"></script>
+<script src="vilda_sync_integration.js?v=2"></script>
 <script src="vilda_auth_ui.js?v=27"></script>
 <script src="vilda_file_export.js?v=4"></script>
 <script src="vilda_deps.js?v=6"></script>
@@ -578,6 +578,26 @@
                     </div>
                     <p class="settings-inline-note settings-backup-note" id="syncStatusNote">
                       Aby zarządzać synchronizacją, zaloguj się.
+                    </p>
+                  </div>
+
+                  <div class="settings-backup-sep" role="separator"></div>
+
+                  <!-- ── Podsekcja 2b: Nowe urządzenie / odtwarzanie ── -->
+                  <div class="settings-backup-section" id="syncNewDeviceCard">
+                    <div class="settings-control-header">
+                      <h3 class="settings-control-title">Nowe urządzenie lub odtwarzanie danych</h3>
+                    </div>
+                    <p class="settings-control-desc">
+                      Jeśli logujesz się na nowym urządzeniu lub po wyczyszczeniu danych przeglądarki — Twoje dane są bezpiecznie przechowywane na serwerze. Aby je odtworzyć:
+                    </p>
+                    <ol class="settings-control-desc" style="padding-left:1.2em;margin:0 0 0.75em;line-height:1.8">
+                      <li>Zaloguj się <strong>tym samym hasłem</strong> co na poprzednim urządzeniu</li>
+                      <li>Włącz synchronizację (przełącznik powyżej)</li>
+                      <li>Kliknij <strong>„Pobierz z serwera"</strong> — dane zostaną pobrane i odszyfrowane lokalnie</li>
+                    </ol>
+                    <p class="settings-inline-note settings-backup-note" style="color:var(--color-text-secondary)">
+                      Hasło jest jedynym kluczem do danych — serwer przechowuje wyłącznie zaszyfrowane bajty i nigdy nie zna Twojego hasła ani danych pacjentów.
                     </p>
                   </div>
 
