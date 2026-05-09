@@ -33,7 +33,7 @@
   ">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta http-equiv="Permissions-Policy"
-        content="geolocation=(), camera=(), microphone=(), payment=(), usb=(), bluetooth=()">
+        content="geolocation=(), microphone=(), payment=(), usb=(), bluetooth=()">
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
 <!-- Google Consent Mode v2 — domyślne ustawienie przed podjęciem decyzji przez użytkownika.
      GA4 załaduje się dopiero po wyrażeniu zgody (patrz: vilda_chrome.js / initConsentBanner).
@@ -2313,7 +2313,7 @@
               const s = document.createElement('script');
               s.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
               // SRI — chroni przed podmianą po stronie CDN
-              s.integrity = 'sha384-6dJGbwKyMRdPEb3l3xvJV0lMXIU5h+UymqNGSCgPyIZ4kBXHcFOV8BF4/v3c1ks';
+              s.integrity = 'sha384-9Q0jWoineiIq95JeIyBsNV90KKLfDsbkj29k_YFxf76a2JwkHDYkMuSbNGN6XJfV';
               s.crossOrigin = 'anonymous';
               s.onload  = function () { resolve(window.jsQR); };
               s.onerror = function () { resolve(null); };
