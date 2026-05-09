@@ -340,36 +340,51 @@
       class: 'vilda-auth-subtitle',
       text: 'Aby zapisywać dane pacjentów, skonfiguruj swoje konto. Aplikacja zaszyfruje i lokalnie przechowa dane na tym urządzeniu.'
     });
-    const buttons = el('div', { class: 'vilda-auth-buttons' });
-    buttons.appendChild(el('button', {
-      class: 'vilda-auth-btn vilda-auth-btn-primary',
-      type: 'button',
-      text: 'Skonfiguruj zapisywanie pacjentów',
-      onclick: function () { showSetupWizard(); }
-    }));
-    buttons.appendChild(el('button', {
-      class: 'vilda-auth-btn vilda-auth-btn-ghost',
+
+    // ── Opcje dodatkowe (zwijane) ─────────────────────────────────────────────
+    const extraPanel = el('div', { class: 'vilda-auth-buttons' });
+    extraPanel.style.display = 'none';
+
+    extraPanel.appendChild(el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle',
       type: 'button',
       text: '☁ Mam kod synchronizacji',
       onclick: function () { showSyncCodeRestoreScreen(); }
     }));
-    buttons.appendChild(el('button', {
+    extraPanel.appendChild(el('button', {
       class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle',
       type: 'button',
       text: 'Odtwórz konto z pliku kopii (.wiw)',
       onclick: function () { showRestoreVaultFlow(); }
     }));
-    buttons.appendChild(el('button', {
+
+    const toggleBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle',
+      type: 'button',
+      text: 'Opcje dodatkowe ▾'
+    });
+    toggleBtn.addEventListener('click', function () {
+      const expanded = extraPanel.style.display !== 'none';
+      extraPanel.style.display = expanded ? 'none' : '';
+      toggleBtn.textContent = expanded ? 'Opcje dodatkowe ▾' : 'Opcje dodatkowe ▴';
+    });
+
+    const mainButtons = el('div', { class: 'vilda-auth-buttons' });
+    mainButtons.appendChild(el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-primary',
+      type: 'button',
+      text: 'Skonfiguruj zapisywanie pacjentów',
+      onclick: function () { showSetupWizard(); }
+    }));
+    mainButtons.appendChild(el('button', {
       class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle',
       type: 'button',
       text: 'Korzystaj bez logowania',
       onclick: function () { setGuestMode(true); hide(); }
     }));
-    const info = el('p', {
-      class: 'vilda-auth-info',
-      text: 'Jeśli masz kod synchronizacji z poprzedniego urządzenia — wpisz go i podaj hasło aby natychmiast przywrócić konto i dane pacjentów z chmury. Jeśli masz plik kopii (.wiw), użyj opcji odtworzenia z pliku.'
-    });
-    open(el('div', { class: 'vilda-auth-screen vilda-auth-startup' }, [title, subtitle, buttons, info]));
+    mainButtons.appendChild(toggleBtn);
+
+    open(el('div', { class: 'vilda-auth-screen vilda-auth-startup' }, [title, subtitle, mainButtons, extraPanel]));
   }
 
   // ============ EKRAN WYBORU UŻYTKOWNIKA ============
