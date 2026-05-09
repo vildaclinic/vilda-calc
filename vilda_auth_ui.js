@@ -72,6 +72,7 @@
   // ============ UTIL ============
   function getCrypto() { return global.VildaCrypto || null; }
   function getVault() { return global.VildaVault || null; }
+  function getSyncIntegration() { return global.VildaSyncIntegration || null; }
   function logWarn(msg) {
     if (typeof global.vildaLogAppWarn === 'function') {
       try { global.vildaLogAppWarn('vilda_auth_ui', msg); return; } catch (_) {}
@@ -376,7 +377,7 @@
     const title = el('h2', { class: 'vilda-auth-title', text: 'Kto się loguje?' });
     const subtitle = el('p', {
       class: 'vilda-auth-subtitle',
-      text: 'Wybierz konto, aby kontynuować, lub dodaj nowego użytkownika.'
+      text: 'Wybierz konto, aby kontynuować.'
     });
 
     const userList = el('div', { class: 'vilda-auth-user-list' });
@@ -398,32 +399,38 @@
       userList.appendChild(card);
     });
 
-    const addBtn = el('button', {
+    // ── Opcje dodatkowe (zwijane) ─────────────────────────────────────────────
+    const extraPanel = el('div', { class: 'vilda-auth-buttons' });
+    extraPanel.style.display = 'none';
+
+    extraPanel.appendChild(el('button', {
       class: 'vilda-auth-btn vilda-auth-btn-ghost',
       type: 'button',
       text: '+ Dodaj nowego użytkownika',
       onclick: function () { showSetupWizard(); }
-    });
-
-    const qrLoginBtn = el('button', {
-      class: 'vilda-auth-btn vilda-auth-btn-ghost',
-      type: 'button',
-      text: '📱 Zaloguj się przez QR (z innego urządzenia)',
-      onclick: function () { showQRLoginScreen(); }
-    });
-
-    const syncCodeBtn = el('button', {
+    }));
+    extraPanel.appendChild(el('button', {
       class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle',
       type: 'button',
       text: '☁ Mam kod synchronizacji',
       onclick: function () { showSyncCodeRestoreScreen(); }
-    });
-
-    const restoreBtn = el('button', {
+    }));
+    extraPanel.appendChild(el('button', {
       class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle',
       type: 'button',
       text: 'Odtwórz konto z pliku kopii (.wiw)',
       onclick: function () { showRestoreVaultFlow(); }
+    }));
+
+    const toggleBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle',
+      type: 'button',
+      text: 'Opcje dodatkowe ▾'
+    });
+    toggleBtn.addEventListener('click', function () {
+      const expanded = extraPanel.style.display !== 'none';
+      extraPanel.style.display = expanded ? 'none' : '';
+      toggleBtn.textContent = expanded ? 'Opcje dodatkowe ▾' : 'Opcje dodatkowe ▴';
     });
 
     const guestBtn = el('button', {
@@ -435,7 +442,8 @@
 
     open(el('div', { class: 'vilda-auth-screen vilda-auth-picker' }, [
       title, subtitle, userList,
-      el('div', { class: 'vilda-auth-buttons' }, [addBtn, qrLoginBtn, syncCodeBtn, restoreBtn, guestBtn])
+      el('div', { class: 'vilda-auth-buttons' }, [guestBtn, toggleBtn]),
+      extraPanel
     ]));
   }
 
@@ -452,7 +460,7 @@
     pendingSetupOptions = pendingSetupOptions || {};
     pendingSetupOptions.step = 1;
 
-    const stepLabel = el('div', { class: 'vilda-auth-step', text: 'Krok 1 z 3' });
+    const stepLabel = el('div', { class: 'vilda-auth-step', text: 'Krok 1 z 4' });
     const title = el('h2', { class: 'vilda-auth-title', text: 'Nowe konto' });
     const sub = el('p', {
       class: 'vilda-auth-subtitle',
@@ -540,7 +548,7 @@
     if (!opts || !opts.password || !opts.recoveryKey) { renderSetupStep1(); return; }
     pendingSetupOptions.step = 2;
 
-    const stepLabel = el('div', { class: 'vilda-auth-step', text: 'Krok 2 z 3' });
+    const stepLabel = el('div', { class: 'vilda-auth-step', text: 'Krok 2 z 4' });
     const title = el('h2', { class: 'vilda-auth-title', text: 'Klucz odzyskiwania' });
     const sub = el('p', {
       class: 'vilda-auth-subtitle',
@@ -602,7 +610,7 @@
             label: opts.label,
             recoveryKey: opts.recoveryKey
           });
-          renderSetupStep3();
+          renderSetupSyncStep();
         } catch (e) {
           logError('createUser failed', e);
           showError(errBox, e && e.message ? e.message : 'Nie udało się utworzyć konta.');
@@ -625,15 +633,57 @@
     ]));
   }
 
+  // ─── Krok 3 z 4: pytanie o synchronizację ────────────────────────────────────
+  function renderSetupSyncStep() {
+    const stepLabel = el('div', { class: 'vilda-auth-step', text: 'Krok 3 z 4' });
+    const title = el('h2', { class: 'vilda-auth-title', text: 'Korzystasz z kilku urządzeń?' });
+    const sub = el('p', {
+      class: 'vilda-auth-subtitle',
+      text: 'Włącz synchronizację, a Twoje dane będą dostępne na każdym urządzeniu po zalogowaniu. Dane są zaszyfrowane — serwer nigdy nie widzi danych pacjentów.'
+    });
+
+    const yesBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-primary',
+      type: 'button',
+      text: 'Tak, włącz synchronizację'
+    });
+    const noBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost',
+      type: 'button',
+      text: 'Nie, tylko to urządzenie'
+    });
+
+    yesBtn.addEventListener('click', function () {
+      const SI = getSyncIntegration();
+      if (SI && typeof SI.setSyncEnabled === 'function') {
+        SI.setSyncEnabled(true);
+      }
+      renderSetupStep3();
+    });
+
+    noBtn.addEventListener('click', function () {
+      renderSetupStep3();
+    });
+
+    open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
+      stepLabel, title, sub,
+      el('div', { class: 'vilda-auth-actions vilda-auth-actions-center' }, [yesBtn, noBtn])
+    ]));
+  }
+
   function renderSetupStep3() {
     pendingSetupOptions = null;
 
-    const stepLabel = el('div', { class: 'vilda-auth-step', text: 'Krok 3 z 3' });
+    const stepLabel = el('div', { class: 'vilda-auth-step', text: 'Krok 4 z 4' });
     const check = el('div', { class: 'vilda-auth-success-check', text: '✓' });
     const title = el('h2', { class: 'vilda-auth-title', text: 'Wszystko gotowe' });
+    const SI = getSyncIntegration();
+    const syncOn = !!(SI && typeof SI.isSyncEnabled === 'function' && SI.isSyncEnabled());
     const sub = el('p', {
       class: 'vilda-auth-subtitle',
-      text: 'Konto skonfigurowane i odblokowane. Możesz zapisywać dane pacjentów. Po 20 minutach bezczynności zostaniesz automatycznie wylogowany.'
+      text: syncOn
+        ? 'Konto skonfigurowane, synchronizacja włączona. Możesz zapisywać dane pacjentów. Po 20 minutach bezczynności zostaniesz automatycznie wylogowany.'
+        : 'Konto skonfigurowane i odblokowane. Możesz zapisywać dane pacjentów. Synchronizację możesz włączyć w Ustawieniach. Po 20 minutach bezczynności zostaniesz automatycznie wylogowany.'
     });
 
     // Sekcja kopii zapasowych — tytuł + opis NAD przyciskiem, przycisk
