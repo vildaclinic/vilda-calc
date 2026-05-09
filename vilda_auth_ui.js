@@ -2619,6 +2619,23 @@
       });
     } catch (e) { logError('boot: listenery', e); }
 
+    // Gdy użytkownik jawnie czyści dane ("Wyczyść wszystkie pola"), kasujemy snapshot
+    // żeby tryRestoreSession na kolejnej podstronie nie przywrócił starych danych.
+    // clearAllData → clearSharedAutosaveResidue → dispatchUserStateClearFallback
+    // wysyła ten event. Bez tego: sharedUserData gone, _vildaSnapRestore zostaje,
+    // onUnlock (z tryRestoreSession) widzi sharedExists=false i wchodzi w fallback.
+    try {
+      if (typeof global.addEventListener === 'function') {
+        global.addEventListener('vilda:user-state-cleared', function () {
+          _pendingSessionRestore = null;
+          _needsRestoreAfterHide = false;
+          try {
+            if (global.localStorage) global.localStorage.removeItem('_vildaSnapRestore');
+          } catch (_) {}
+        });
+      }
+    } catch (_) {}
+
     // Najpierw spróbuj przywrócić sesję zalogowanego użytkownika z sessionStorage —
     // nawigacja między podstronami nie powinna wymagać ponownego logowania.
     let restored = false;
