@@ -3046,10 +3046,17 @@
       }, 1000);
 
       // Polling co 1s
+      // UWAGA: callback jest async — jeśli żądanie sieciowe trwa >1s, dwa ticki
+      // mogą być jednocześnie „w locie". Po każdym await sprawdzamy czy pollTimer
+      // nie został już wyczyszczony przez równoległy tick (który obsłużył payload
+      // jako pierwszy). Bez tego sprawdzenia drugi tick też wołałby showPhase2,
+      // ale po tym jak pierwszy zdążył wywołać stopPolling() → privateKeyB64u = null.
       pollTimer = setInterval(async function () {
         if (!transferToken || timeLeft <= 0) return;
         try {
           const payload = await V.pollQRLoginStatus(transferToken);
+          // Sprawdź po await — inny równoległy tick mógł już obsłużyć payload
+          if (!pollTimer) return;
           if (payload) {
             clearInterval(pollTimer); pollTimer = null;
             clearInterval(countdown); countdown = null;
