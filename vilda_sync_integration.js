@@ -38,11 +38,17 @@
   var DEBOUNCE_MS      = 5000; // debounce push po zapisie pacjenta
   var UNLOCK_DELAY_MS  = 600;  // krótkie opóźnienie po onUnlock (vault init)
 
+  // Kody błędów które blokują dalsze próby do czasu ponownego unlock
+  var BLOCKING_ERROR_CODES = ['AUTH_FAILED', 'RATE_LIMITED', 'SLOT_AUTH_MISMATCH'];
+
   // ─── Stan modułu ─────────────────────────────────────────────────────────────
 
-  var vaultBound   = false;
-  var syncBound    = false;
+  var vaultBound    = false;
+  var syncBound     = false;
   var debounceTimer = null;
+  // Flaga: ustaw po błędzie blokującym, wyczyść przy onUnlock.
+  // Zapobiega nieskończonej pętli: AUTH_FAILED → clear state → re-register → 409 → AUTH_FAILED...
+  var syncBlockedUntilUnlock = false;
 
   // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -75,6 +81,21 @@
   function getSync()  { return global.VildaSync  || null; }
   function getVault() { return global.VildaVault || null; }
 
+  // Wyciągnij kod błędu z obiektu emitowanego przez VildaSync.onSyncError
+  // Format: { operation: 'push'|'pull', error: { message, code, ... } }
+  function extractErrorCode(emitted) {
+    if (!emitted) return null;
+    // emitted to { operation, error }
+    var err = emitted.error || emitted;
+    return (err && err.code) ? err.code : null;
+  }
+
+  function extractErrorMessage(emitted) {
+    if (!emitted) return 'Nieznany błąd synchronizacji';
+    var err = emitted.error || emitted;
+    return (err && err.message) ? err.message : String(err);
+  }
+
   // ─── Binding: VildaSync → DOM events ─────────────────────────────────────────
 
   function bindSyncEvents() {
@@ -89,16 +110,23 @@
     }
     if (typeof S.onSyncComplete === 'function') {
       S.onSyncComplete(function (result) {
+        // Sukces: zresetuj flagę blokady (nie syncBlockedUntilUnlock, bo to reset przy unlock)
         dispatch({ state: 'ok', result: result, ts: Date.now() });
       });
     }
     if (typeof S.onSyncError === 'function') {
-      S.onSyncError(function (err) {
-        dispatch({
-          state: 'error',
-          message: err && err.message ? err.message : String(err),
-          ts: Date.now()
-        });
+      S.onSyncError(function (emitted) {
+        var code    = extractErrorCode(emitted);
+        var message = extractErrorMessage(emitted);
+
+        // Jeśli błąd jest blokujący — zablokuj kolejne próby do onUnlock
+        if (code && BLOCKING_ERROR_CODES.indexOf(code) !== -1) {
+          syncBlockedUntilUnlock = true;
+          clearTimeout(debounceTimer);
+          debounceTimer = null;
+        }
+
+        dispatch({ state: 'error', message: message, code: code, ts: Date.now() });
       });
     }
   }
@@ -113,10 +141,14 @@
     // onUnlock → syncFull() (z krótkim opóźnieniem żeby vault zdążył się w pełni zainicjować)
     if (typeof V.onUnlock === 'function') {
       V.onUnlock(function () {
+        // Każdy nowy unlock resetuje flagę blokady
+        syncBlockedUntilUnlock = false;
+
         if (!isSyncEnabled()) return;
         var S = getSync();
         if (!S || typeof S.syncFull !== 'function') return;
         setTimeout(function () {
+          if (syncBlockedUntilUnlock) return; // mógł zostać ustawiony w trakcie opóźnienia
           S.syncFull().catch(function () {});
         }, UNLOCK_DELAY_MS);
       });
@@ -126,10 +158,12 @@
     if (typeof V.onPatientSaved === 'function') {
       V.onPatientSaved(function () {
         if (!isSyncEnabled()) return;
+        if (syncBlockedUntilUnlock) return; // nie próbuj gdy zablokowane po błędzie
         var S = getSync();
         if (!S || typeof S.syncPush !== 'function') return;
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(function () {
+          if (syncBlockedUntilUnlock) return;
           S.syncPush().catch(function () {});
         }, DEBOUNCE_MS);
       });
@@ -140,6 +174,7 @@
       V.onLock(function () {
         clearTimeout(debounceTimer);
         debounceTimer = null;
+        // Nie resetujemy syncBlockedUntilUnlock przy lock — dopiero unlock jest "fresh start"
       });
     }
   }
