@@ -45,12 +45,12 @@
   // więc getCurrentUser() w onLock zawsze zwraca null. Śledzimy userId sami —
   // aktualizujemy w onUnlock, używamy w onLock, zerujemy po użyciu.
   let _trackedUserId = null;
-  // Flaga: onUnlock przygotował sharedUserData do przywrócenia — hide() wywoła
-  // vildaPersistRestoreAll() ZARAZ PO ukryciu auth UI (w tym samym macrotask co
-  // logowanie), dzięki czemu: (a) ciężkie obliczenia restoreAll() nie blokują
-  // widocznego auth overlay, (b) wewnętrzny setTimeout(0) restoreAll() odpala się
-  // przed kolejną interakcją użytkownika → nie trafia na ekran logowania.
-  let _needsRestoreAfterHide = false;
+  // Licznik generacji przywrócenia sesji. Każde onUnlock zwiększa _restoreCounter
+  // i zapisuje aktualną wartość w _restoreSerial. onLock zeruje _restoreSerial —
+  // jeśli setTimeout(0) z onUnlock odpali się PO wylogowaniu, nie znajdzie
+  // zgodności seryjnej i po prostu wyjdzie bez wywoływania restoreAll().
+  let _restoreCounter = 0;
+  let _restoreSerial  = 0;
 
   // ============ PLATFORM DETECTION ============
   /**
@@ -330,20 +330,6 @@
     if (!rootEl) return;
     rootEl.style.display = 'none';
     clear(rootEl);
-    // Jeśli onUnlock przygotował dane do przywrócenia, wywołaj restoreAll() teraz —
-    // auth UI jest już ukryte (display:none), więc ciężkie obliczenia nie powodują
-    // widocznego wyszarzenia ekranu. Wywołanie tutaj (w tym samym macrotask co
-    // biometricBtn.click / submit) gwarantuje też, że wewnętrzny setTimeout(0)
-    // z restoreAll() odpali się PRZED kolejną interakcją użytkownika,
-    // a nie na ekranie "Kto się loguje?" po szybkim wylogowaniu.
-    if (_needsRestoreAfterHide) {
-      _needsRestoreAfterHide = false;
-      try {
-        if (typeof global.vildaPersistRestoreAll === 'function') {
-          global.vildaPersistRestoreAll();
-        }
-      } catch (_) {}
-    }
   }
 
   // ============ DYSPOZYTOR EKRANU STARTOWEGO ============
@@ -2505,7 +2491,7 @@
         //   1) _pendingSessionRestore (pamięć) — dla wylogowania bez przeładowania
         //   2) localStorage['_vildaSnapRestore'] — przeżywa przeładowanie strony
         _pendingSessionRestore = null;
-        _needsRestoreAfterHide = false; // anuluj ewentualną oczekującą restaurację (szybkie wylogowanie przed hide())
+        _restoreSerial = 0; // anuluj oczekujący setTimeout z onUnlock (szybkie wylogowanie)
         var lockedUserId = _trackedUserId;
         _trackedUserId = null; // zużyty — wyczyść niezależnie od wyniku
         if (reason !== 'user-removed' && lockedUserId) {
@@ -2602,16 +2588,22 @@
                   global.localStorage.setItem('sharedUserData', restore.sharedUserData);
                 }
               } catch (_) {}
-              // Ustaw flagę zamiast wywoływać restoreAll() bezpośrednio.
-              // hide() sprawdzi tę flagę i wywoła vildaPersistRestoreAll() zaraz po
-              // ukryciu auth UI (display:none) — w tym samym macrotask co handler
-              // biometricBtn.click / submit. Korzyści:
-              //   (a) Ciężkie obliczenia restoreAll() nie blokują widocznego overlay
-              //       (auth UI jest już ukryte gdy restoreAll() się wykonuje).
-              //   (b) Wewnętrzny setTimeout(0) restoreAll() odpali się przed kolejną
-              //       interakcją użytkownika — nie trafi na ekran "Kto się loguje?"
-              //       jeśli użytkownik wyloguje się w tej samej sekundzie.
-              _needsRestoreAfterHide = true;
+              // Zaplanuj restoreAll() w osobnym macrotasku przez setTimeout(0).
+              // Dzięki temu:
+              //   (a) hide() natychmiast ukrywa auth UI bez blokowania głównego wątku
+              //       — brak widocznego "freeze" ekranu biometrycznego.
+              //   (b) Licznik seryjny (_restoreSerial) gwarantuje anulowanie jeśli
+              //       użytkownik wyloguje się zanim setTimeout odpali (onLock zeruje
+              //       _restoreSerial → callback widzi niezgodność i wychodzi).
+              var _s = (_restoreSerial = ++_restoreCounter);
+              setTimeout(function () {
+                if (_restoreSerial !== _s) return; // wylogowanie anulowało restore
+                try {
+                  if (typeof global.vildaPersistRestoreAll === 'function') {
+                    global.vildaPersistRestoreAll();
+                  }
+                } catch (_) {}
+              }, 0);
             }
             // Inny użytkownik — snapshot odrzucamy, stan pozostaje wyczyszczony
           } catch (_) {}
@@ -2628,7 +2620,7 @@
       if (typeof global.addEventListener === 'function') {
         global.addEventListener('vilda:user-state-cleared', function () {
           _pendingSessionRestore = null;
-          _needsRestoreAfterHide = false;
+          _restoreSerial = 0; // anuluj oczekujący setTimeout jeśli user właśnie wyczyścił dane
           try {
             if (global.localStorage) global.localStorage.removeItem('_vildaSnapRestore');
           } catch (_) {}
