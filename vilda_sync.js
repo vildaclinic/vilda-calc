@@ -44,7 +44,7 @@
  *
  * ─── Konfiguracja ────────────────────────────────────────────────────────────
  *
- *   window.VILDA_SYNC_WORKER_URL = 'https://vilda-sync.wagaiwzrost.pl'
+ *   window.VILDA_SYNC_WORKER_URL = 'https://vilda-sync.maciej-4b9.workers.dev'
  *   (opcjonalnie, przed załadowaniem tego pliku)
  */
 
