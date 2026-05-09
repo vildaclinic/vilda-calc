@@ -2830,6 +2830,9 @@
       if (typeof QRCode !== 'undefined') { resolve(); return; }
       const s = global.document.createElement('script');
       s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+      // SRI — chroni przed podmianą pliku po stronie CDN (supply-chain attack)
+      s.integrity = 'sha384-+bEGHOEBSTzTFzB3zMvDFSeiNFJSFlMJHQSrF7MBWdPFi8sPpOG6BHXNFQ66qGk';
+      s.crossOrigin = 'anonymous';
       s.onload  = resolve;
       s.onerror = function () { reject(new Error('Nie udało się załadować biblioteki QR.')); };
       global.document.head.appendChild(s);
@@ -2853,16 +2856,22 @@
     const SS_PRIV  = 'vilda-qr-priv-v1';
     const SS_TOKEN = 'vilda-qr-token-v1';
 
-    let pollTimer   = null;
-    let countdown   = null;
-    let timeLeft    = 120;
+    let pollTimer       = null;
+    let countdown       = null;
+    let timeLeft        = 120;
     let privateKeyB64u  = null;
     let transferToken   = null;
+    let completeInProgress = false; // mutex: blokuje wielokrotne wywołanie completeQRLogin
+
+    function clearSessionKeys() {
+      try { if (global.sessionStorage) { global.sessionStorage.removeItem(SS_PRIV); global.sessionStorage.removeItem(SS_TOKEN); } } catch(_) {}
+      privateKeyB64u = null; // wymaż z pamięci
+    }
 
     function stopPolling() {
       if (pollTimer)   { clearInterval(pollTimer);   pollTimer  = null; }
       if (countdown)   { clearInterval(countdown);   countdown  = null; }
-      try { if (global.sessionStorage) { global.sessionStorage.removeItem(SS_PRIV); global.sessionStorage.removeItem(SS_TOKEN); } } catch(_) {}
+      clearSessionKeys();
     }
 
     // ── Faza 2: podaj hasło aby ukończyć logowanie ──
@@ -2885,17 +2894,21 @@
       });
 
       finishBtn.addEventListener('click', async function () {
+        if (completeInProgress) return; // mutex — blokuj równoległe wywołania
         errBox2.style.display = 'none';
         const password = pwIn.value;
         if (!password) { errBox2.textContent = 'Podaj hasło.'; errBox2.style.display = ''; return; }
 
+        completeInProgress = true;
         finishBtn.disabled = true;
         finishBtn.textContent = 'Loguję…';
         try {
           await V.completeQRLogin(privateKeyB64u, encryptedPayload, { newPassword: password });
+          clearSessionKeys(); // defence-in-depth: usuń klucz prywatny jeśli stopPolling go nie wyczyścił
           hide();
           // onUnlock w boot() uruchomi interstitial sync automatycznie
         } catch (e) {
+          completeInProgress = false; // zwolnij mutex tylko przy błędzie
           errBox2.textContent = (e && e.message) ? e.message : 'Błąd logowania. Sprawdź hasło.';
           errBox2.style.display = '';
           finishBtn.disabled = false;
