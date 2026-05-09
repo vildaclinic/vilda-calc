@@ -2566,15 +2566,17 @@
                   global.localStorage.setItem('sharedUserData', restore.sharedUserData);
                 }
               } catch (_) {}
-              // Poczekaj aż auth UI zostanie ukryte i DOM ustabilizuje się,
-              // potem przywróć pola dokładnie tak jak przy przeładowaniu strony.
-              setTimeout(function () {
-                try {
-                  if (typeof global.vildaPersistRestoreAll === 'function') {
-                    global.vildaPersistRestoreAll();
-                  }
-                } catch (_) {}
-              }, 500);
+              // Przywróć pola formularza SYNCHRONICZNIE — auth overlay jest jeszcze widoczny,
+              // ale elementy formularza pod nim już istnieją i mogą być wypełnione.
+              // NIE używamy setTimeout: timer odpaliłby się na ekranie "Kto się loguje"
+              // gdyby użytkownik wylogował się szybciej niż upłynął timeout, zamrażając UI.
+              // Wewnętrzny setTimeout(0) wewnątrz restoreAll() odpali się zaraz po ukryciu
+              // auth overlay — to poprawny moment dla reconcileGrowthHistoryModules itp.
+              try {
+                if (typeof global.vildaPersistRestoreAll === 'function') {
+                  global.vildaPersistRestoreAll();
+                }
+              } catch (_) {}
             }
             // Inny użytkownik — snapshot odrzucamy, stan pozostaje wyczyszczony
           } catch (_) {}
