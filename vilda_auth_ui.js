@@ -2676,30 +2676,85 @@
     const V = getVault();
     if (!V) return;
 
-    const title = el('h2', { class: 'vilda-auth-title', text: 'Odtwórz z chmury' });
+    const title = el('h2', { class: 'vilda-auth-title', text: 'Logowanie z innego urządzenia' });
     const sub = el('p', {
       class: 'vilda-auth-subtitle',
-      text: 'Wklej kod synchronizacji z poprzedniego urządzenia i podaj hasło, którym był zabezpieczony.'
+      text: 'Wybierz sposób logowania przy użyciu już zalogowanego urządzenia (np. telefonu).'
     });
+
+    // ── Sekcja QR — zalecana metoda ───────────────────────────────────────────
+    const qrSection = document.createElement('div');
+    qrSection.style.cssText = [
+      'background:var(--surface-alt,#f0f4ff)',
+      'border:1px solid var(--border,#d0d5e8)',
+      'border-radius:10px',
+      'padding:0.9rem 1rem',
+      'margin:0 0 0.5rem'
+    ].join(';');
+    qrSection.innerHTML = [
+      '<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem;">',
+      '<span style="font-size:1.1rem;">📱</span>',
+      '<strong style="font-size:0.95rem;">Zaloguj przez kod QR</strong>',
+      '<span style="font-size:0.75rem;background:var(--color-accent,#4f6ef7);color:#fff;',
+      'border-radius:4px;padding:1px 7px;margin-left:auto;">Zalecane</span>',
+      '</div>',
+      '<p style="margin:0 0 0.55rem;font-size:0.84rem;color:var(--text-secondary,#555);line-height:1.5;">',
+      'Komputer wyświetli kod QR — zeskanuj go telefonem i potwierdź hasłem.',
+      ' Nie wymaga przepisywania żadnych kodów.',
+      '</p>'
+    ].join('');
+
+    const qrBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-primary vilda-auth-btn-small',
+      type: 'button',
+      text: '📱 Wyświetl kod QR'
+    });
+    qrBtn.addEventListener('click', function () { showQRLoginScreen(); });
+    qrSection.appendChild(qrBtn);
+
+    // ── Separator ─────────────────────────────────────────────────────────────
+    const orDiv = document.createElement('div');
+    orDiv.style.cssText = 'display:flex;align-items:center;gap:0.6rem;margin:0.6rem 0;color:var(--text-muted,#888);font-size:0.82rem;';
+    orDiv.innerHTML = '<hr style="flex:1;border:none;border-top:1px solid var(--border,#ddd)"><span>lub</span><hr style="flex:1;border:none;border-top:1px solid var(--border,#ddd)">';
+
+    // ── Sekcja kodu synchronizacji ────────────────────────────────────────────
+    const codeSection = document.createElement('div');
+    codeSection.style.cssText = 'border:1px solid var(--border,#ddd);border-radius:10px;padding:0.9rem 1rem;';
+
+    const codeSectionTitle = document.createElement('div');
+    codeSectionTitle.style.cssText = 'display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem;';
+    codeSectionTitle.innerHTML = [
+      '<span style="font-size:1.1rem;">☁</span>',
+      '<strong style="font-size:0.95rem;">Kod synchronizacji</strong>'
+    ].join('');
+
+    const codeSectionDesc = document.createElement('p');
+    codeSectionDesc.style.cssText = 'margin:0 0 0.7rem;font-size:0.84rem;color:var(--text-secondary,#555);line-height:1.5;';
+    codeSectionDesc.innerHTML = [
+      'Wklej kod wygenerowany w: telefon → <strong>Ustawienia → Synchronizacja</strong>',
+      ' → <strong>„☁ Pokaż kod synchronizacji"</strong> → Generuj.'
+    ].join('');
 
     const codeInput = el('textarea', {
       class: 'vilda-auth-input',
       placeholder: 'vsc1.XXXXXX.XXXXXX.XXXXXX',
       rows: '3',
-      style: 'font-family:monospace;font-size:0.82rem;resize:vertical;min-height:72px;'
+      style: 'font-family:monospace;font-size:0.82rem;resize:vertical;min-height:68px;margin-bottom:0.5rem;'
     });
 
     const labelInput = el('input', {
       type: 'text',
       class: 'vilda-auth-input',
       placeholder: 'Nazwa konta (opcjonalnie, np. dr Kowalska)',
-      maxlength: '60'
+      maxlength: '60',
+      style: 'margin-bottom:0.5rem;'
     });
 
     const pwInput = el('input', {
       type: 'password',
       class: 'vilda-auth-input',
-      placeholder: 'Hasło ze starego urządzenia'
+      placeholder: 'Hasło ze starego urządzenia',
+      style: 'margin-bottom:0.5rem;'
     });
 
     const errBox = el('div', { class: 'vilda-auth-error' });
@@ -2711,9 +2766,9 @@
     }
 
     const submitBtn = el('button', {
-      class: 'vilda-auth-btn vilda-auth-btn-primary',
+      class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small',
       type: 'button',
-      text: 'Odtwórz konto'
+      text: 'Odtwórz konto z kodem'
     });
 
     submitBtn.addEventListener('click', async function () {
@@ -2727,12 +2782,10 @@
 
       submitBtn.disabled = true;
       const origText = submitBtn.textContent;
-      submitBtn.textContent = 'Odtwarzanie… (może potrwać kilka sekund)';
+      submitBtn.textContent = 'Odtwarzanie…';
 
       try {
         await V.importSyncCode(code, pw, { label: label });
-        // Vault jest teraz odblokowany z oryginalnym masterKey.
-        // vilda_sync_integration.js wykryje nowe urządzenie i pokaże interstitial automatycznie.
         hide();
       } catch (e) {
         showErr(e && e.message ? e.message : 'Błąd odtwarzania. Sprawdź kod i hasło.');
@@ -2741,10 +2794,17 @@
       }
     });
 
-    // Enter w polu hasła odpala submit
     pwInput.addEventListener('keydown', function (e) {
       if (e.key === 'Enter') submitBtn.click();
     });
+
+    codeSection.appendChild(codeSectionTitle);
+    codeSection.appendChild(codeSectionDesc);
+    codeSection.appendChild(codeInput);
+    codeSection.appendChild(labelInput);
+    codeSection.appendChild(pwInput);
+    codeSection.appendChild(errBox);
+    codeSection.appendChild(submitBtn);
 
     const back = el('button', {
       class: 'vilda-auth-btn vilda-auth-btn-ghost',
@@ -2753,17 +2813,10 @@
       onclick: function () { showStartupScreen(); }
     });
 
-    const hint = el('p', {
-      class: 'vilda-auth-side-note',
-      style: 'text-align:center;margin:8px 0 0;font-size:0.82rem;',
-      text: 'Kod synchronizacji wygeneruj w Ustawieniach → Synchronizacja → „Pokaż kod synchronizacji".'
-    });
-
-    open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
-      title, sub, codeInput, labelInput, pwInput, errBox, submitBtn, back, hint
-    ]));
-
-    setTimeout(function () { try { codeInput.focus(); } catch (_) {} }, 30);
+    const wrapper = el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
+      title, sub, qrSection, orDiv, codeSection, back
+    ]);
+    open(wrapper);
   }
 
   // ============ EKRAN LOGOWANIA KODEM QR ============
