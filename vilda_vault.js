@@ -2424,7 +2424,7 @@
 
   /**
    * Odpytuje serwer o status sesji QR.
-   * Wywołuje co 3s auth_ui — zwraca null gdy nadal oczekuje, payload gdy ready.
+   * Wywołuje co 1s auth_ui — zwraca null gdy nadal oczekuje, payload gdy ready.
    *
    * @param {string} transferToken
    * @returns {Promise<null | { ephemeralPublicKeyB64u, iv, ciphertext }>}
@@ -2434,7 +2434,7 @@
     try {
       resp = await fetchTransfer('/v1/transfer/' + transferToken, { method: 'GET' });
     } catch (e) {
-      return null; // sieć — cicho ignorujemy, spróbujemy za 3s
+      return null; // sieć — cicho ignorujemy, spróbujemy za 1s
     }
     if (!resp.ok) return null;
     const data = await resp.json().catch(function () { return null; });
