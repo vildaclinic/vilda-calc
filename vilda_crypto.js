@@ -767,11 +767,11 @@
     // Tablica ma dokładnie 32 bajty — spread w bytesToBase64url jest bezpieczny.
     const authToken = bytesToBase64url(authTokenBytes);
 
-    // ---- Oblicz authTokenHash = SHA-256(authTokenBytes) ----
+    // ---- Oblicz authTokenHash = SHA-256(authToken_string) ---
     // To jedyna wartość związana z autentykacją przechowywana na serwerze.
-    // Serwer sprawdza: SHA-256(przesłany_token) === stored_hash.
+    // Worker liczy SHA-256(base64url_string) — klient musi hashować identycznie.
     // Nawet pełny dump bazy serwera nie ujawnia authToken ani masterKey.
-    const hashBuf = await subtle.digest('SHA-256', authTokenBytes);
+    const hashBuf = await subtle.digest('SHA-256', stringToBytes(authToken));
     const hashBytes = new Uint8Array(hashBuf);
     let authTokenHash = '';
     for (let i = 0; i < hashBytes.length; i += 1) {
