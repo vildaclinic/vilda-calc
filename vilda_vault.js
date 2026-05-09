@@ -2440,7 +2440,7 @@
     const data = await resp.json().catch(function () { return null; });
     if (!data) return null;
     if (data.status === 'ready' && data.encryptedPayload) {
-      return data.encryptedPayload;
+      return { encryptedPayload: data.encryptedPayload, label: data.accountLabel || null };
     }
     return null;
   }
@@ -2623,7 +2623,7 @@
       putResp = await fetchTransfer('/v1/transfer/' + transferToken, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(Object.assign({}, payload, { accountLabel: currentUserLabel || null }))
       });
     } catch (e) {
       throw new Error('VildaVault.approveQRLogin: błąd sieci przy wysyłaniu — ' + (e.message || e));

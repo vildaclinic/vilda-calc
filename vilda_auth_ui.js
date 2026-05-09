@@ -2875,7 +2875,11 @@
     }
 
     // ── Faza 2: podaj hasło aby ukończyć logowanie ──
-    function showPhase2(encryptedPayload) {
+    function showPhase2(result) {
+      // result = { encryptedPayload, label } zwrócone przez pollQRLoginStatus
+      const encryptedPayload = result && result.encryptedPayload ? result.encryptedPayload : result;
+      const transferredLabel = result && result.label ? result.label : null;
+
       // Zachowaj klucz prywatny PRZED stopPolling() — ta funkcja wywołuje
       // clearSessionKeys() → privateKeyB64u = null, a my potrzebujemy go w finishBtn.
       const savedPrivKey = privateKeyB64u;
@@ -2883,12 +2887,7 @@
       const title2 = el('h2', { class: 'vilda-auth-title', text: '✓ Prawie gotowe!' });
       const sub2   = el('p',  {
         class: 'vilda-auth-subtitle',
-        text:  'Nadaj nazwę temu kontu i podaj hasło, aby zalogować się na tym urządzeniu.'
-      });
-      const labelIn = el('input', {
-        type: 'text', class: 'vilda-auth-input',
-        placeholder: 'Nazwa konta (np. Dr Kowalski – komputer)',
-        autocomplete: 'off'
+        text:  'Podaj hasło, aby zalogować się na tym urządzeniu.'
       });
       const pwIn = el('input', {
         type: 'password', class: 'vilda-auth-input',
@@ -2911,8 +2910,7 @@
         finishBtn.disabled = true;
         finishBtn.textContent = 'Loguję…';
         try {
-          const label = labelIn.value.trim() || null;
-          await V.completeQRLogin(savedPrivKey, encryptedPayload, { newPassword: password, label: label });
+          await V.completeQRLogin(savedPrivKey, encryptedPayload, { newPassword: password, label: transferredLabel });
           clearSessionKeys(); // defence-in-depth: usuń klucz prywatny jeśli stopPolling go nie wyczyścił
           hide();
           // onUnlock w boot() uruchomi interstitial sync automatycznie
@@ -2925,13 +2923,12 @@
         }
       });
 
-      labelIn.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { try { pwIn.focus(); } catch(_) {} } });
       pwIn.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') finishBtn.click(); });
 
       open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
-        title2, sub2, labelIn, pwIn, errBox2, finishBtn
+        title2, sub2, pwIn, errBox2, finishBtn
       ]));
-      setTimeout(function () { try { labelIn.focus(); } catch(_) {} }, 30);
+      setTimeout(function () { try { pwIn.focus(); } catch(_) {} }, 30);
     }
 
     // ── Faza 1: wyświetl QR ──
