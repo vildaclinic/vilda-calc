@@ -787,6 +787,207 @@
     return masterBytes;
   }
 
+  // ============ QR TRANSFER — ECDH P-256 ============
+  //
+  // Umożliwia przekazanie masterKeyBytes między dwoma urządzeniami przez
+  // serwer (zero-knowledge relay) za pomocą kryptografii asymetrycznej:
+  //
+  //   Komputer generuje parę kluczy ECDH P-256 (compPriv, compPub).
+  //   compPub → serwer → telefon.
+  //   Telefon generuje efemeryczną parę (ephPriv, ephPub).
+  //   Obydwie strony niezależnie obliczają:
+  //     sharedSecret = ECDH(compPriv, ephPub) = ECDH(ephPriv, compPub)
+  //   HKDF(sharedSecret) → AES-256-GCM key
+  //   Telefon szyfruje masterKeyBytes tym kluczem → {ephPub, iv, ciphertext}
+  //   Komputer odszyfrowuje po pobraniu z serwera.
+  //   Serwer widzi tylko zaszyfrowany blob — nigdy masterKeyBytes.
+
+  const QR_TRANSFER_HKDF_INFO = 'wagaiwzrost.pl:qr-transfer:v1';
+
+  /**
+   * Generuje parę kluczy ECDH P-256 dla nowego urządzenia (komputer).
+   * Klucz prywatny jest extractable: musi być zapamiętany w pamięci
+   * (sessionStorage) przez czas życia QR kodu (120s).
+   *
+   * @returns {Promise<{ privateKey: CryptoKey, publicKeyB64u: string }>}
+   */
+  async function generateECDHKeypair() {
+    const subtle = getCryptoSubtle();
+    const keypair = await subtle.generateKey(
+      { name: 'ECDH', namedCurve: 'P-256' },
+      true,       // extractable — prywatny musi być serializowalny do sessionStorage
+      ['deriveBits']
+    );
+    // Eksportuj klucz publiczny jako 'raw' (65 bajtów uncompressed point)
+    const pubRaw = await subtle.exportKey('raw', keypair.publicKey);
+    const pubB64u = bytesToBase64url(new Uint8Array(pubRaw));
+    return { privateKey: keypair.privateKey, publicKeyB64u: pubB64u };
+  }
+
+  /**
+   * Serializuje klucz prywatny ECDH do PKCS#8 (base64url) do sessionStorage.
+   * @param {CryptoKey} privateKey
+   * @returns {Promise<string>}
+   */
+  async function exportECDHPrivateKey(privateKey) {
+    const subtle = getCryptoSubtle();
+    const pkcs8 = await subtle.exportKey('pkcs8', privateKey);
+    return bytesToBase64url(new Uint8Array(pkcs8));
+  }
+
+  /**
+   * Deserializuje klucz prywatny ECDH z PKCS#8 base64url.
+   * @param {string} b64u
+   * @returns {Promise<CryptoKey>}
+   */
+  async function importECDHPrivateKey(b64u) {
+    const subtle = getCryptoSubtle();
+    const bytes = base64urlToBytes(b64u);
+    return subtle.importKey(
+      'pkcs8', bytes,
+      { name: 'ECDH', namedCurve: 'P-256' },
+      false,
+      ['deriveBits']
+    );
+  }
+
+  /**
+   * Importuje klucz publiczny ECDH z raw base64url.
+   * @param {string} b64u — 87 znaków (65 bajtów uncompressed P-256 point)
+   * @returns {Promise<CryptoKey>}
+   */
+  async function importECDHPublicKey(b64u) {
+    const subtle = getCryptoSubtle();
+    const bytes = base64urlToBytes(b64u);
+    if (bytes.length !== 65 || bytes[0] !== 0x04) {
+      throw new Error('VildaCrypto.importECDHPublicKey: nieprawidłowy klucz publiczny ECDH P-256.');
+    }
+    return subtle.importKey(
+      'raw', bytes,
+      { name: 'ECDH', namedCurve: 'P-256' },
+      false,
+      []
+    );
+  }
+
+  /**
+   * Wyprowadza AES-256-GCM key ze współdzielonego sekretu ECDH przez HKDF.
+   * @param {ArrayBuffer} sharedBits  — 256 bitów z deriveBits(ECDH)
+   * @returns {Promise<CryptoKey>}
+   */
+  async function deriveAESFromSharedSecret(sharedBits) {
+    const subtle = getCryptoSubtle();
+    // Import surowych bitów jako HKDF key material
+    const hkdfKey = await subtle.importKey(
+      'raw', sharedBits, 'HKDF', false, ['deriveKey']
+    );
+    // Brak soli domenowej: HKDF salt = zero bytes (standard dla ECDH)
+    const salt = new Uint8Array(32); // zerowa sól (32 bajty)
+    return subtle.deriveKey(
+      {
+        name: 'HKDF',
+        hash: 'SHA-256',
+        salt: salt,
+        info: stringToBytes(QR_TRANSFER_HKDF_INFO)
+      },
+      hkdfKey,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['encrypt', 'decrypt']
+    );
+  }
+
+  /**
+   * Szyfruje masterKeyBytes kluczem publicznym drugiego urządzenia (ECIES).
+   * Generuje efemeryczną parę kluczy, wykonuje ECDH, HKDF → AES-GCM.
+   *
+   * @param {Uint8Array} masterKeyBytes    — 32 bajty
+   * @param {string}     peerPublicKeyB64u — klucz publiczny ECDH komputera
+   * @returns {Promise<{ ephemeralPublicKeyB64u: string, iv: string, ciphertext: string }>}
+   */
+  async function encryptForTransfer(masterKeyBytes, peerPublicKeyB64u) {
+    const subtle = getCryptoSubtle();
+    const view = (masterKeyBytes instanceof Uint8Array) ? masterKeyBytes : new Uint8Array(masterKeyBytes);
+    if (view.length !== MASTER_KEY_BYTES) {
+      throw new Error('VildaCrypto.encryptForTransfer: nieprawidłowy rozmiar masterKeyBytes.');
+    }
+
+    // 1. Efemeryczna para kluczy ECDH (jednorazowa, strona telefonu)
+    const ephKeypair = await subtle.generateKey(
+      { name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']
+    );
+    const ephPubRaw = await subtle.exportKey('raw', ephKeypair.publicKey);
+    const ephemeralPublicKeyB64u = bytesToBase64url(new Uint8Array(ephPubRaw));
+
+    // 2. Import klucza publicznego komputera
+    const peerPubKey = await importECDHPublicKey(peerPublicKeyB64u);
+
+    // 3. ECDH → shared secret (256 bitów)
+    const sharedBits = await subtle.deriveBits(
+      { name: 'ECDH', public: peerPubKey },
+      ephKeypair.privateKey,
+      256
+    );
+
+    // 4. HKDF(sharedBits) → AES-256-GCM key
+    const aesKey = await deriveAESFromSharedSecret(sharedBits);
+
+    // 5. AES-GCM szyfrowanie masterKeyBytes
+    const iv = getRandomValues(new Uint8Array(12));
+    const cipherBuf = await subtle.encrypt({ name: 'AES-GCM', iv: iv }, aesKey, view);
+
+    return {
+      ephemeralPublicKeyB64u: ephemeralPublicKeyB64u,
+      iv:         bytesToBase64url(iv),
+      ciphertext: bytesToBase64url(new Uint8Array(cipherBuf))
+    };
+  }
+
+  /**
+   * Odszyfrowuje masterKeyBytes przy użyciu prywatnego klucza ECDH komputera.
+   *
+   * @param {CryptoKey} privateKey      — klucz prywatny ECDH komputera
+   * @param {object}    payload         — { ephemeralPublicKeyB64u, iv, ciphertext }
+   * @returns {Promise<Uint8Array>}     — 32-bajtowy masterKey
+   */
+  async function decryptFromTransfer(privateKey, payload) {
+    const subtle = getCryptoSubtle();
+    const { ephemeralPublicKeyB64u, iv, ciphertext } = payload;
+
+    if (!ephemeralPublicKeyB64u || !iv || !ciphertext) {
+      throw new Error('VildaCrypto.decryptFromTransfer: nieprawidłowy payload (brak ephemeralPublicKeyB64u/iv/ciphertext).');
+    }
+
+    // 1. Import efemerycznego klucza publicznego telefonu
+    const peerPubKey = await importECDHPublicKey(ephemeralPublicKeyB64u);
+
+    // 2. ECDH → shared secret
+    const sharedBits = await subtle.deriveBits(
+      { name: 'ECDH', public: peerPubKey },
+      privateKey,
+      256
+    );
+
+    // 3. HKDF(sharedBits) → AES-256-GCM key
+    const aesKey = await deriveAESFromSharedSecret(sharedBits);
+
+    // 4. Odszyfruj masterKeyBytes
+    const ivBytes = base64urlToBytes(iv);
+    const cipherBytes = base64urlToBytes(ciphertext);
+    let plainBuf;
+    try {
+      plainBuf = await subtle.decrypt({ name: 'AES-GCM', iv: ivBytes }, aesKey, cipherBytes);
+    } catch (_) {
+      throw new Error('VildaCrypto.decryptFromTransfer: błąd deszyfrowania — uszkodzony payload.');
+    }
+
+    const masterBytes = new Uint8Array(plainBuf);
+    if (masterBytes.length !== MASTER_KEY_BYTES) {
+      throw new Error('VildaCrypto.decryptFromTransfer: błędny rozmiar odszyfrowanych danych.');
+    }
+    return masterBytes;
+  }
+
   const SYNC_HKDF_SALT_STR      = 'wagaiwzrost.pl:sync:v1';         // stały, domenowy
   const SYNC_INFO_SLOT_ID_STR   = 'wagaiwzrost.pl:sync:slot-id:v1';  // domain separation
   const SYNC_INFO_AUTH_STR      = 'wagaiwzrost.pl:sync:auth-token:v1';
@@ -958,7 +1159,13 @@
     deriveSyncMaterial: deriveSyncMaterial,
     // Kod synchronizacji (cross-device restore bez pliku .wiw)
     encryptSyncCode: encryptSyncCode,
-    decryptSyncCode: decryptSyncCode
+    decryptSyncCode: decryptSyncCode,
+    // QR Transfer — ECDH P-256 key exchange
+    generateECDHKeypair:    generateECDHKeypair,
+    exportECDHPrivateKey:   exportECDHPrivateKey,
+    importECDHPrivateKey:   importECDHPrivateKey,
+    encryptForTransfer:     encryptForTransfer,
+    decryptFromTransfer:    decryptFromTransfer
   };
 
   global.VildaCrypto = api;

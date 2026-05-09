@@ -405,6 +405,13 @@
       onclick: function () { showSetupWizard(); }
     });
 
+    const qrLoginBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost',
+      type: 'button',
+      text: '📱 Zaloguj się przez QR (z innego urządzenia)',
+      onclick: function () { showQRLoginScreen(); }
+    });
+
     const syncCodeBtn = el('button', {
       class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle',
       type: 'button',
@@ -428,7 +435,7 @@
 
     open(el('div', { class: 'vilda-auth-screen vilda-auth-picker' }, [
       title, subtitle, userList,
-      el('div', { class: 'vilda-auth-buttons' }, [addBtn, syncCodeBtn, restoreBtn, guestBtn])
+      el('div', { class: 'vilda-auth-buttons' }, [addBtn, qrLoginBtn, syncCodeBtn, restoreBtn, guestBtn])
     ]));
   }
 
@@ -2759,6 +2766,238 @@
     setTimeout(function () { try { codeInput.focus(); } catch (_) {} }, 30);
   }
 
+  // ============ EKRAN LOGOWANIA KODEM QR ============
+
+  /**
+   * Ładuje bibliotekę QRCode.js z CDN (jednorazowo, lazy).
+   * @returns {Promise<void>}
+   */
+  function loadQRCodeLib() {
+    return new Promise(function (resolve, reject) {
+      if (typeof QRCode !== 'undefined') { resolve(); return; }
+      const s = global.document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+      s.onload  = resolve;
+      s.onerror = function () { reject(new Error('Nie udało się załadować biblioteki QR.')); };
+      global.document.head.appendChild(s);
+    });
+  }
+
+  /**
+   * Ekran „Zaloguj się przez QR" — strona komputera (nowego urządzenia).
+   *
+   * Faza 1: wyświetla QR + odlicza 120s + polling.
+   * Faza 2 (po zatwierdzeniu przez telefon): prosi o hasło i nazwę konta,
+   *          tworzy lokalne konto z przeniesionym masterKey.
+   */
+  function showQRLoginScreen() {
+    const V = getVault();
+    if (!V || typeof V.initiateQRLogin !== 'function') {
+      return; // brak wsparcia
+    }
+
+    // ── klucze sessionStorage ──
+    const SS_PRIV  = 'vilda-qr-priv-v1';
+    const SS_TOKEN = 'vilda-qr-token-v1';
+
+    let pollTimer   = null;
+    let countdown   = null;
+    let timeLeft    = 120;
+    let privateKeyB64u  = null;
+    let transferToken   = null;
+
+    function stopPolling() {
+      if (pollTimer)   { clearInterval(pollTimer);   pollTimer  = null; }
+      if (countdown)   { clearInterval(countdown);   countdown  = null; }
+      try { if (global.sessionStorage) { global.sessionStorage.removeItem(SS_PRIV); global.sessionStorage.removeItem(SS_TOKEN); } } catch(_) {}
+    }
+
+    // ── Faza 2: ustawienie hasła po zatwierdzeniu przez telefon ──
+    function showPhase2(encryptedPayload) {
+      stopPolling();
+      const title2  = el('h2', { class: 'vilda-auth-title', text: '✓ Konto zatwierdzone!' });
+      const sub2    = el('p',  {
+        class: 'vilda-auth-subtitle',
+        text:  'Klucz konta został bezpiecznie przesłany. Teraz ustaw hasło i nazwę dla tego urządzenia.'
+      });
+      const labelIn = el('input', {
+        type: 'text', class: 'vilda-auth-input',
+        placeholder: 'Nazwa konta (opcjonalnie, np. dr Kowalska)', maxlength: '60'
+      });
+      const pw1 = el('input', { type: 'password', class: 'vilda-auth-input', placeholder: 'Nowe hasło (min. 8 znaków)' });
+      const pw2 = el('input', { type: 'password', class: 'vilda-auth-input', placeholder: 'Powtórz hasło' });
+      const errBox2 = el('div', { class: 'vilda-auth-error' });
+      errBox2.style.display = 'none';
+
+      const finishBtn = el('button', {
+        class: 'vilda-auth-btn vilda-auth-btn-primary', type: 'button', text: 'Zaloguj się'
+      });
+
+      finishBtn.addEventListener('click', async function () {
+        errBox2.style.display = 'none';
+        const label    = (labelIn.value || '').trim() || undefined;
+        const password = pw1.value;
+        if (!password || password.length < 8) { errBox2.textContent = 'Hasło musi mieć minimum 8 znaków.'; errBox2.style.display = ''; return; }
+        if (password !== pw2.value) { errBox2.textContent = 'Hasła nie są takie same.'; errBox2.style.display = ''; return; }
+
+        finishBtn.disabled = true;
+        finishBtn.textContent = 'Tworzę konto…';
+        try {
+          await V.completeQRLogin(privateKeyB64u, encryptedPayload, { newPassword: password, label: label });
+          hide();
+          // onUnlock w boot() uruchomi interstitial sync automatycznie
+        } catch (e) {
+          errBox2.textContent = (e && e.message) ? e.message : 'Błąd tworzenia konta.';
+          errBox2.style.display = '';
+          finishBtn.disabled = false;
+          finishBtn.textContent = 'Zaloguj się';
+        }
+      });
+
+      pw2.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') finishBtn.click(); });
+
+      open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
+        title2, sub2, labelIn, pw1, pw2, errBox2, finishBtn
+      ]));
+      setTimeout(function () { try { pw1.focus(); } catch(_) {} }, 30);
+    }
+
+    // ── Faza 1: wyświetl QR ──
+    async function showPhase1() {
+      // skeleton podczas inicjalizacji
+      const loadingDiv = el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
+        el('h2', { class: 'vilda-auth-title', text: 'Logowanie przez QR' }),
+        el('p',  { class: 'vilda-auth-subtitle', text: 'Generuję kod QR…' })
+      ]);
+      open(loadingDiv);
+
+      // Załaduj bibliotekę QR
+      try {
+        await loadQRCodeLib();
+      } catch (e) {
+        open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
+          el('h2', { class: 'vilda-auth-title', text: 'Logowanie przez QR' }),
+          el('p',  { class: 'vilda-auth-error', text: 'Nie udało się załadować biblioteki QR. Sprawdź połączenie z internetem.' }),
+          el('button', { class: 'vilda-auth-btn vilda-auth-btn-ghost', type: 'button', text: '← Wróć',
+            onclick: function () { showStartupScreen(); }
+          })
+        ]));
+        return;
+      }
+
+      // Inicjuj sesję QR
+      let initResult;
+      try {
+        initResult = await V.initiateQRLogin();
+      } catch (e) {
+        open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
+          el('h2', { class: 'vilda-auth-title', text: 'Logowanie przez QR' }),
+          el('p',  { class: 'vilda-auth-error', text: (e && e.message) || 'Błąd generowania kodu QR.' }),
+          el('button', { class: 'vilda-auth-btn vilda-auth-btn-ghost', type: 'button', text: '← Wróć',
+            onclick: function () { showStartupScreen(); }
+          })
+        ]));
+        return;
+      }
+
+      privateKeyB64u = initResult.privateKeyB64u;
+      transferToken  = initResult.transferToken;
+      timeLeft       = initResult.expiresIn || 120;
+
+      // Zapamiętaj w sessionStorage (na wypadek odświeżenia strony)
+      try {
+        if (global.sessionStorage) {
+          global.sessionStorage.setItem(SS_PRIV,  privateKeyB64u);
+          global.sessionStorage.setItem(SS_TOKEN, transferToken);
+        }
+      } catch(_) {}
+
+      // ── Zbuduj UI ──
+      const title = el('h2', { class: 'vilda-auth-title', text: 'Zaloguj się przez QR' });
+      const sub   = el('p',  {
+        class: 'vilda-auth-subtitle',
+        text:  'Na zalogowanym urządzeniu (np. telefonie) otwórz Ustawienia → „Zatwierdź logowanie QR" i zeskanuj ten kod.'
+      });
+
+      // Kontener QR kodu
+      const qrWrap = el('div', {
+        style: 'display:flex;justify-content:center;margin:12px 0;'
+      });
+      const qrInner = el('div', {
+        style: 'background:#fff;padding:12px;border-radius:12px;display:inline-block;box-shadow:0 2px 12px rgba(0,0,0,.10);'
+      });
+      qrWrap.appendChild(qrInner);
+
+      // Licznik czasu
+      const timerEl = el('p', {
+        class: 'vilda-auth-side-note',
+        style: 'text-align:center;margin:4px 0;',
+        text:  'Kod ważny przez ' + timeLeft + ' sekund'
+      });
+
+      // Status
+      const statusEl = el('p', {
+        class: 'vilda-auth-side-note',
+        style: 'text-align:center;margin:4px 0;color:#00838d;',
+        text:  'Czekam na zatwierdzenie przez telefon…'
+      });
+
+      const back = el('button', {
+        class: 'vilda-auth-btn vilda-auth-btn-ghost', type: 'button', text: '← Wróć',
+        onclick: function () { stopPolling(); showStartupScreen(); }
+      });
+
+      open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
+        title, sub, qrWrap, timerEl, statusEl,
+        el('div', { class: 'vilda-auth-actions' }, [back])
+      ]));
+
+      // Wygeneruj QR kod
+      try {
+        /* global QRCode */
+        new QRCode(qrInner, {
+          text:         initResult.qrData,
+          width:        200,
+          height:       200,
+          colorDark:    '#00464d',
+          colorLight:   '#ffffff',
+          correctLevel: QRCode.CorrectLevel.M
+        });
+      } catch(e) {
+        statusEl.textContent = 'Błąd generowania QR: ' + (e.message || e);
+        return;
+      }
+
+      // Odliczanie
+      countdown = setInterval(function () {
+        timeLeft--;
+        timerEl.textContent = 'Kod ważny przez ' + timeLeft + ' sekund';
+        if (timeLeft <= 0) {
+          stopPolling();
+          statusEl.textContent = '⏰ Kod wygasł. Wróć i wygeneruj nowy.';
+          back.textContent = 'Wygeneruj nowy kod';
+          back.onclick = function () { stopPolling(); showQRLoginScreen(); };
+        }
+      }, 1000);
+
+      // Polling co 3s
+      pollTimer = setInterval(async function () {
+        if (!transferToken || timeLeft <= 0) return;
+        try {
+          const payload = await V.pollQRLoginStatus(transferToken);
+          if (payload) {
+            clearInterval(pollTimer); pollTimer = null;
+            clearInterval(countdown); countdown = null;
+            statusEl.textContent = '✓ Zatwierdzono! Ustaw hasło dla nowego konta…';
+            setTimeout(function () { showPhase2(payload); }, 800);
+          }
+        } catch(_) { /* sieć — spróbujemy za 3s */ }
+      }, 3000);
+    }
+
+    showPhase1();
+  }
+
   // ============ EKSPORT API ============
   const api = {
     __vildaAuthUI: true,
@@ -2778,6 +3017,7 @@
     showMergeAccountFlow: showMergeAccountFlow,
     showRestoreVaultFlow: showRestoreVaultFlow,
     showSyncCodeRestoreScreen: showSyncCodeRestoreScreen,
+    showQRLoginScreen: showQRLoginScreen,
     hide: hide,
     lockAndShowLogin: lockAndShowLogin,
     isGuestMode: isGuestMode,

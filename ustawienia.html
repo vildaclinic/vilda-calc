@@ -65,11 +65,11 @@
 <script src="vilda_persistence_adapter.js?v=7"></script>
 <script src="vilda_session_bridge.js?v=1"></script>
 <script src="vilda_init.js?v=4"></script>
-<script src="vilda_crypto.js?v=5"></script>
-<script src="vilda_vault.js?v=12"></script>
+<script src="vilda_crypto.js?v=6"></script>
+<script src="vilda_vault.js?v=13"></script>
 <script src="vilda_sync.js?v=2"></script>
 <script src="vilda_sync_integration.js?v=2"></script>
-<script src="vilda_auth_ui.js?v=28"></script>
+<script src="vilda_auth_ui.js?v=29"></script>
 <script src="vilda_file_export.js?v=4"></script>
 <script src="vilda_deps.js?v=6"></script>
   
@@ -602,6 +602,66 @@
                   </div>
 
                   <div class="settings-backup-sep" role="separator"></div>
+
+                  <div class="settings-backup-sep" role="separator"></div>
+
+                  <!-- ── Podsekcja 2c: Zatwierdź logowanie QR ── -->
+                  <div class="settings-backup-section" id="syncQRApproveCard">
+                    <div class="settings-control-header">
+                      <h3 class="settings-control-title">Zatwierdź logowanie QR</h3>
+                      <span class="settings-tag" id="syncQRApproveTag">—</span>
+                    </div>
+                    <p class="settings-control-desc">
+                      Jeśli na innym urządzeniu (np. komputerze) wyświetla się kod QR do logowania — zeskanuj go tutaj i potwierdź hasłem. Klucz konta zostanie bezpiecznie przesłany.
+                    </p>
+                    <div class="settings-card-toggle-row settings-backup-btn-row">
+                      <button type="button" id="syncQRScanBtn"
+                              class="vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small settings-backup-btn"
+                              disabled>
+                        📷 Skanuj kod QR
+                      </button>
+                    </div>
+
+                    <!-- Panel skanera — domyślnie ukryty -->
+                    <div id="syncQRPanel" style="display:none;margin-top:0.75rem;">
+
+                      <!-- Widok kamery / BarcodeDetector -->
+                      <div id="syncQRVideoWrap" style="display:none;margin-bottom:0.75rem;">
+                        <video id="syncQRVideo" autoplay playsinline
+                               style="width:100%;max-width:320px;border-radius:8px;display:block;margin:0 auto;
+                                      background:#000;aspect-ratio:1/1;object-fit:cover;"></video>
+                        <p style="text-align:center;font-size:0.82rem;color:var(--text-muted);margin:4px 0 0;">
+                          Skieruj kamerę na kod QR wyświetlony na komputerze
+                        </p>
+                      </div>
+
+                      <!-- Fallback: wklej token ręcznie -->
+                      <div id="syncQRManualWrap">
+                        <label style="display:block;font-size:0.85rem;color:var(--text-muted);margin-bottom:0.4rem;">
+                          Lub wklej token QR ręcznie (ostatnie 43 znaki z kodu QR):
+                        </label>
+                        <input type="text" id="syncQRTokenInput"
+                               class="vilda-auth-input"
+                               placeholder="np. vsc1-qr:XXXXXXXXXXXXXXXXXXX…"
+                               style="font-family:monospace;font-size:0.82rem;">
+                      </div>
+
+                      <label style="display:block;font-size:0.85rem;color:var(--text-muted);margin:0.6rem 0 0.3rem;">
+                        Potwierdź hasłem do konta:
+                      </label>
+                      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+                        <input type="password" id="syncQRPwInput"
+                               class="vilda-auth-input"
+                               placeholder="Twoje hasło"
+                               style="flex:1;min-width:160px;margin:0;">
+                        <button type="button" id="syncQRApproveBtn"
+                                class="vilda-auth-btn vilda-auth-btn-primary vilda-auth-btn-small">
+                          Zatwierdź
+                        </button>
+                      </div>
+                      <p class="settings-inline-note settings-backup-note" id="syncQRStatus"></p>
+                    </div>
+                  </div>
 
                   <div class="settings-backup-sep" role="separator"></div>
 
@@ -2063,6 +2123,7 @@
           if (!V || !V.isUnlocked()) {
             [syncNowBtn, syncPullBtn, syncClearStateBtn, syncDeleteSlotBtn].forEach(function(b) { if(b) b.disabled = true; });
             if (syncShowCodeBtn) syncShowCodeBtn.disabled = true;
+            if (syncQRScanBtn)   syncQRScanBtn.disabled   = true;
             setText(syncStatusNote, 'Zaloguj się, aby zarządzać synchronizacją.');
             if (syncStatusTag)  setText(syncStatusTag, 'wymaga logowania');
             if (syncSlotTag)    setText(syncSlotTag,   'wymaga logowania');
@@ -2105,8 +2166,9 @@
           // (np. na nowym urządzeniu gdzie sync jeszcze nie był włączony)
           if (syncPullBtn) syncPullBtn.disabled = false;
           if (syncDeleteSlotBtn) syncDeleteSlotBtn.disabled = !registered;
-          // Kod sync — dostępny zawsze gdy vault odblokowany
+          // Kod sync + QR approve — dostępne zawsze gdy vault odblokowany
           if (syncShowCodeBtn) syncShowCodeBtn.disabled = false;
+          if (syncQRScanBtn)   syncQRScanBtn.disabled   = false;
         }
 
         // Toggle włączenia sync
@@ -2222,6 +2284,152 @@
             } finally {
               syncDeleteSlotBtn.disabled = false;
               syncDeleteSlotBtn.textContent = orig;
+            }
+          });
+        }
+
+        // ─── Sekcja: Zatwierdź logowanie QR ──────────────────────────────────
+        const syncQRScanBtn    = $('syncQRScanBtn');
+        const syncQRPanel      = $('syncQRPanel');
+        const syncQRVideoWrap  = $('syncQRVideoWrap');
+        const syncQRVideo      = $('syncQRVideo');
+        const syncQRManualWrap = $('syncQRManualWrap');
+        const syncQRTokenInput = $('syncQRTokenInput');
+        const syncQRPwInput    = $('syncQRPwInput');
+        const syncQRApproveBtn = $('syncQRApproveBtn');
+        const syncQRStatus     = $('syncQRStatus');
+        const syncQRApproveTag = $('syncQRApproveTag');
+
+        // Przycisk: Skanuj kod QR — otwiera panel i uruchamia kamerę
+        if (syncQRScanBtn) {
+          syncQRScanBtn.addEventListener('click', async function () {
+            if (!syncQRPanel) return;
+            syncQRPanel.style.display = '';
+            syncQRScanBtn.disabled = true;
+            if (syncQRStatus) setText(syncQRStatus, '');
+            if (syncQRApproveTag) setText(syncQRApproveTag, '');
+            if (syncQRTokenInput) syncQRTokenInput.value = '';
+            if (syncQRPwInput) syncQRPwInput.value = '';
+
+            // Próbuj uruchomić kamerę przez BarcodeDetector + getUserMedia
+            const hasBarcodeDetector = (typeof BarcodeDetector !== 'undefined');
+            const hasCamera = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+
+            if (hasBarcodeDetector && hasCamera) {
+              try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                  video: { facingMode: { ideal: 'environment' }, width: { ideal: 320 }, height: { ideal: 320 } }
+                });
+                if (syncQRVideo) {
+                  syncQRVideo.srcObject = stream;
+                  if (syncQRVideoWrap) syncQRVideoWrap.style.display = '';
+                  if (syncQRManualWrap) syncQRManualWrap.style.display = 'none';
+
+                  const detector = new BarcodeDetector({ formats: ['qr_code'] });
+                  let scanActive = true;
+
+                  async function scanFrame() {
+                    if (!scanActive || !syncQRVideo || syncQRVideo.readyState < 2) {
+                      if (scanActive) setTimeout(scanFrame, 200);
+                      return;
+                    }
+                    try {
+                      const codes = await detector.detect(syncQRVideo);
+                      if (codes && codes.length > 0) {
+                        const raw = codes[0].rawValue || '';
+                        const token = raw.startsWith('vsc1-qr:') ? raw.replace('vsc1-qr:', '') : raw;
+                        if (token.length === 43) {
+                          scanActive = false;
+                          stream.getTracks().forEach(function (t) { t.stop(); });
+                          if (syncQRVideoWrap) syncQRVideoWrap.style.display = 'none';
+                          if (syncQRManualWrap) syncQRManualWrap.style.display = '';
+                          if (syncQRTokenInput) syncQRTokenInput.value = token;
+                          if (syncQRStatus) setText(syncQRStatus, '✓ Kod QR zeskanowany. Podaj hasło i kliknij Zatwierdź.');
+                          if (syncQRPwInput) syncQRPwInput.focus();
+                          return;
+                        }
+                      }
+                    } catch (_) {}
+                    if (scanActive) setTimeout(scanFrame, 250);
+                  }
+                  setTimeout(scanFrame, 500);
+                }
+              } catch (camErr) {
+                // Brak kamery lub brak uprawnień → tryb ręczny
+                if (syncQRManualWrap) syncQRManualWrap.style.display = '';
+                if (syncQRStatus) setText(syncQRStatus, '⚠ Kamera niedostępna. Wklej token QR ręcznie.');
+              }
+            } else {
+              // Brak BarcodeDetector lub kamery → tryb ręczny
+              if (syncQRManualWrap) syncQRManualWrap.style.display = '';
+              if (syncQRVideoWrap) syncQRVideoWrap.style.display = 'none';
+              if (syncQRStatus) setText(syncQRStatus,
+                hasBarcodeDetector ? '⚠ Brak kamery. Wklej token QR ręcznie.'
+                : '⚠ Ta przeglądarka nie obsługuje skanera QR. Wklej token ręcznie.');
+            }
+
+            if (syncQRTokenInput) syncQRTokenInput.focus();
+          });
+        }
+
+        // Przycisk: Zatwierdź logowanie
+        if (syncQRApproveBtn) {
+          syncQRApproveBtn.addEventListener('click', async function () {
+            const V = window.VildaVault;
+            if (!V || typeof V.approveQRLogin !== 'function') {
+              if (syncQRStatus) setText(syncQRStatus, '⚠ Moduł nie obsługuje tej funkcji.');
+              return;
+            }
+            if (!V.isUnlocked()) {
+              if (syncQRStatus) setText(syncQRStatus, '⚠ Zaloguj się przed zatwierdzeniem kodu QR.');
+              return;
+            }
+
+            let rawToken = syncQRTokenInput ? (syncQRTokenInput.value || '').trim() : '';
+            // Obsługuj wklejony pełny format "vsc1-qr:TOKEN" lub sam token
+            if (rawToken.startsWith('vsc1-qr:')) rawToken = rawToken.replace('vsc1-qr:', '');
+
+            const pw = syncQRPwInput ? syncQRPwInput.value : '';
+
+            if (!rawToken || rawToken.length !== 43) {
+              if (syncQRStatus) setText(syncQRStatus, '⚠ Nieprawidłowy token QR (musi mieć 43 znaki).');
+              return;
+            }
+            if (!pw) {
+              if (syncQRStatus) setText(syncQRStatus, '⚠ Podaj hasło do konta.');
+              if (syncQRPwInput) syncQRPwInput.focus();
+              return;
+            }
+
+            syncQRApproveBtn.disabled = true;
+            const origText = syncQRApproveBtn.textContent;
+            syncQRApproveBtn.textContent = 'Wysyłam…';
+            if (syncQRStatus) setText(syncQRStatus, '');
+
+            try {
+              await V.approveQRLogin(rawToken, pw);
+              if (syncQRStatus) setText(syncQRStatus, '✓ Zatwierdzono! Drugie urządzenie może teraz się zalogować.');
+              if (syncQRApproveTag) setText(syncQRApproveTag, 'sukces');
+              // Schowaj panel po chwili
+              setTimeout(function () {
+                if (syncQRPanel) syncQRPanel.style.display = 'none';
+                if (syncQRScanBtn) syncQRScanBtn.disabled = false;
+                if (syncQRPwInput) syncQRPwInput.value = '';
+                if (syncQRApproveTag) setText(syncQRApproveTag, '');
+                if (syncQRStatus) setText(syncQRStatus, '');
+              }, 4000);
+            } catch (err) {
+              const msg = err && err.message ? err.message : String(err);
+              const friendly = msg.toLowerCase().includes('nieprawidłow') || msg.toLowerCase().includes('bad_password')
+                ? '⚠ Nieprawidłowe hasło.'
+                : msg.includes('wygasł') || msg.includes('nie istnieje')
+                  ? '⚠ Kod QR wygasł lub już był użyty. Wróć na komputer i wygeneruj nowy kod.'
+                  : '⚠ Błąd: ' + msg;
+              if (syncQRStatus) setText(syncQRStatus, friendly);
+              if (syncQRApproveTag) setText(syncQRApproveTag, 'błąd');
+            } finally {
+              syncQRApproveBtn.disabled = false;
+              syncQRApproveBtn.textContent = origText;
             }
           });
         }

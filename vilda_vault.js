@@ -2339,6 +2339,308 @@
     return { userId: userId, label: label, recoveryKey: recoveryKey };
   }
 
+  // ============ QR TRANSFER — LOGOWANIE KODEM QR ============
+  //
+  // Trzy funkcje obsługujące efemeryczny transfer masterKey między urządzeniami:
+  //
+  //   initiateQRLogin()               — komputer (nowe urządzenie)
+  //   approveQRLogin(token, password) — telefon (zalogowane urządzenie)
+  //   completeQRLogin(privateKeyB64u, payload, options) — komputer (finalizacja)
+  //
+  // Żadna z funkcji nie ujawnia masterKeyBytes poza vaultem.
+  // Klucz prywatny ECDH jest serializowany do sessionStorage przez auth_ui —
+  // vault zwraca go w formie base64url by UI mogło go zapamiętać.
+
+  var DEFAULT_WORKER_URL_QR = 'https://vilda-sync.maciej-4b9.workers.dev';
+
+  function getWorkerUrlQR() {
+    var w = typeof window !== 'undefined' && window.VILDA_SYNC_WORKER_URL;
+    return (w || DEFAULT_WORKER_URL_QR).replace(/\/$/, '');
+  }
+
+  async function fetchTransfer(path, opts) {
+    var url = getWorkerUrlQR() + path;
+    var controller = new AbortController();
+    var timer = setTimeout(function () { controller.abort(); }, 15000);
+    try {
+      return await fetch(url, Object.assign({ signal: controller.signal }, opts));
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  /**
+   * Inicjuje sesję QR login po stronie komputera (nowego urządzenia).
+   * Generuje parę kluczy ECDH, rejestruje token na serwerze.
+   * Vault NIE musi być odblokowany — to wywołanie jest przed logowaniem.
+   *
+   * @returns {Promise<{
+   *   qrData:          string,   // "vsc1-qr:{transferToken}" — treść QR kodu
+   *   transferToken:   string,   // 43-char base64url — do pollingu
+   *   privateKeyB64u:  string,   // PKCS#8 base64url — do zapamiętania w sessionStorage
+   *   expiresIn:       number    // sekundy do wygaśnięcia (120)
+   * }>}
+   */
+  async function initiateQRLogin() {
+    const C = getCrypto();
+    if (!C || typeof C.generateECDHKeypair !== 'function') {
+      throw new Error('VildaVault.initiateQRLogin: VildaCrypto nie obsługuje ECDH.');
+    }
+
+    // 1. Generuj parę kluczy ECDH P-256
+    const { privateKey, publicKeyB64u } = await C.generateECDHKeypair();
+
+    // 2. Zarejestruj token na serwerze
+    let resp;
+    try {
+      resp = await fetchTransfer('/v1/transfer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ecdhPublicKeyB64u: publicKeyB64u })
+      });
+    } catch (e) {
+      throw new Error('VildaVault.initiateQRLogin: błąd sieci — ' + (e.message || e));
+    }
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(function () { return {}; });
+      throw new Error('VildaVault.initiateQRLogin: serwer ' + resp.status +
+        ' — ' + (err && err.error && err.error.message || 'nieznany błąd'));
+    }
+
+    const data = await resp.json();
+    const transferToken = data.transferToken;
+
+    // 3. Serializuj klucz prywatny do sessionStorage (przez auth_ui)
+    const privateKeyB64u = await C.exportECDHPrivateKey(privateKey);
+
+    return {
+      qrData:        'vsc1-qr:' + transferToken,
+      transferToken: transferToken,
+      privateKeyB64u: privateKeyB64u,
+      expiresIn:     data.expiresIn || 120
+    };
+  }
+
+  /**
+   * Odpytuje serwer o status sesji QR.
+   * Wywołuje co 3s auth_ui — zwraca null gdy nadal oczekuje, payload gdy ready.
+   *
+   * @param {string} transferToken
+   * @returns {Promise<null | { ephemeralPublicKeyB64u, iv, ciphertext }>}
+   */
+  async function pollQRLoginStatus(transferToken) {
+    let resp;
+    try {
+      resp = await fetchTransfer('/v1/transfer/' + transferToken, { method: 'GET' });
+    } catch (e) {
+      return null; // sieć — cicho ignorujemy, spróbujemy za 3s
+    }
+    if (!resp.ok) return null;
+    const data = await resp.json().catch(function () { return null; });
+    if (!data) return null;
+    if (data.status === 'ready' && data.encryptedPayload) {
+      return data.encryptedPayload;
+    }
+    return null;
+  }
+
+  /**
+   * Finalizuje QR login po stronie komputera.
+   * Odszyfrowuje masterKeyBytes i tworzy nowe lokalne konto.
+   * Vault musi być ZABLOKOWANY.
+   *
+   * @param {string} privateKeyB64u   — z sessionStorage (wynik initiateQRLogin)
+   * @param {object} encryptedPayload — { ephemeralPublicKeyB64u, iv, ciphertext }
+   * @param {object} [options]        — { label?: string }
+   * @returns {Promise<{ userId: string, label: string, recoveryKey: string }>}
+   */
+  async function completeQRLogin(privateKeyB64u, encryptedPayload, options) {
+    if (isUnlocked()) {
+      throw new Error('VildaVault.completeQRLogin: vault musi być zablokowany przed importem QR.');
+    }
+    const C = getCrypto();
+
+    // 1. Odtwórz klucz prywatny z PKCS#8
+    let privateKey;
+    try {
+      privateKey = await C.importECDHPrivateKey(privateKeyB64u);
+    } catch (e) {
+      throw new Error('VildaVault.completeQRLogin: błąd odczytu klucza prywatnego — ' + (e.message || e));
+    }
+
+    // 2. Odszyfruj masterKeyBytes
+    let masterBytes;
+    try {
+      masterBytes = await C.decryptFromTransfer(privateKey, encryptedPayload);
+    } catch (e) {
+      throw new Error('VildaVault.completeQRLogin: błąd deszyfrowania — ' + (e.message || e));
+    }
+
+    // 3. Utwórz nowe lokalne konto z odtworzonym masterKey
+    //    (identyczna logika jak importSyncCode — nowy userId, ten sam masterKey → ten sam slotId)
+    const opts = (options && typeof options === 'object') ? options : {};
+    const userId = generateUserId();
+    const iter = C.KDF_ITERATIONS;
+    const passwordSalt = C.generateSalt();
+    const recoverySalt = C.generateSalt();
+    const recoveryKey  = C.generateRecoveryKey();
+
+    // Konto z QR wymaga ustawienia hasła — generujemy tymczasowe silne hasło
+    // które użytkownik będzie musiał zmienić po zalogowaniu.
+    // ALTERNATYWNIE: auth_ui pyta o nowe hasło przed completeQRLogin.
+    // Używamy importSyncCode-style: vault loguje się bez hasła przez adoptMasterBytes.
+    // Hasło = 'qr-imported' — placeholder. Użytkownik zmieni je w ustawieniach.
+    // Lepsze podejście: auth_ui prosi o nowe hasło PRZED wywołaniem completeQRLogin.
+    // Przekazujemy je jako options.newPassword.
+    const password = (typeof opts.newPassword === 'string' && opts.newPassword.length >= MIN_PASSWORD_LENGTH)
+      ? opts.newPassword
+      : null;
+
+    let encryptedByPassword = null;
+    let passwordWrappingKey = null;
+    if (password) {
+      passwordWrappingKey  = await C.deriveKey(password, passwordSalt, iter);
+      encryptedByPassword  = await C.encryptBytes(passwordWrappingKey, masterBytes);
+    } else {
+      // Brak hasła: szyfrujemy masterKey kluczem z losowego hasła (nie do odtworzenia hasłem)
+      // Użytkownik MUSI ustawić hasło po zalogowaniu przez resetPasswordWhileUnlocked().
+      const randomPw = C.bytesToBase64url(C.generateSalt());
+      passwordWrappingKey  = await C.deriveKey(randomPw, passwordSalt, iter);
+      encryptedByPassword  = await C.encryptBytes(passwordWrappingKey, masterBytes);
+    }
+
+    const recoveryWrappingKey = await C.deriveKeyFromRecoveryKey(recoveryKey, recoverySalt, iter);
+    const encryptedByRecovery = await C.encryptBytes(recoveryWrappingKey, masterBytes);
+
+    let label = (typeof opts.label === 'string' && opts.label.trim().length) ? opts.label.trim() : '';
+    if (!label) {
+      const existing = await listUsers();
+      label = DEFAULT_LABEL + (existing.length > 0 ? ' ' + (existing.length + 1) : '');
+    }
+
+    const nowISO = new Date().toISOString();
+    const meta = {
+      schemaVersion: SCHEMA_VERSION,
+      createdAtISO: nowISO,
+      kdfName: C.KDF_NAME,
+      kdfHash: C.KDF_HASH,
+      kdfIterations: iter,
+      passwordSalt: C.bytesToBase64(passwordSalt),
+      recoverySalt:  C.bytesToBase64(recoverySalt),
+      encryptedMasterByPassword: {
+        iv:   C.bytesToBase64(encryptedByPassword.iv),
+        data: C.bytesToBase64(encryptedByPassword.data)
+      },
+      encryptedMasterByRecovery: {
+        iv:   C.bytesToBase64(encryptedByRecovery.iv),
+        data: C.bytesToBase64(encryptedByRecovery.data)
+      },
+      restoredFromQR: true,
+      needsPasswordReset: !password
+    };
+
+    await getAdapter().putUserMeta(userId, meta);
+    await getAdapter().putRegistryEntry({
+      userId: userId,
+      label: label,
+      createdAtISO: nowISO,
+      lastLoginAtISO: nowISO
+    });
+
+    await adoptMasterBytes(masterBytes, userId, label);
+    return { userId: userId, label: label, recoveryKey: recoveryKey, needsPasswordReset: !password };
+  }
+
+  /**
+   * Zatwierdza QR login z poziomu zalogowanego urządzenia (telefon).
+   * Szyfruje masterKeyBytes kluczem publicznym komputera i wysyła na serwer.
+   * Vault MUSI być odblokowany.
+   *
+   * @param {string} transferToken  — zeskanowany z QR (po "vsc1-qr:" prefix)
+   * @param {string} password       — hasło użytkownika (weryfikacja)
+   * @returns {Promise<{ ok: true }>}
+   */
+  async function approveQRLogin(transferToken, password) {
+    if (!isUnlocked() || !masterKeyBytes) {
+      throw new Error('VildaVault.approveQRLogin: vault musi być odblokowany.');
+    }
+    if (typeof password !== 'string' || password.length < MIN_PASSWORD_LENGTH) {
+      throw new Error('VildaVault.approveQRLogin: nieprawidłowe hasło.');
+    }
+
+    const C = getCrypto();
+
+    // 1. Weryfikuj hasło (re-derive i sprawdź encryptedMasterByPassword)
+    const meta = await getAdapter().getUserMeta(currentUserId);
+    if (!meta) throw new Error('VildaVault.approveQRLogin: brak metadanych użytkownika.');
+    const wrappingKey = await C.deriveKey(password, meta.passwordSalt, meta.kdfIterations);
+    try {
+      await C.decryptBytes(wrappingKey, meta.encryptedMasterByPassword.iv, meta.encryptedMasterByPassword.data);
+    } catch (_) {
+      const e = new Error('VildaVault.approveQRLogin: nieprawidłowe hasło.');
+      e.code = 'BAD_PASSWORD';
+      throw e;
+    }
+
+    // 2. Pobierz klucz publiczny komputera z serwera
+    let resp;
+    try {
+      resp = await fetchTransfer('/v1/transfer/' + transferToken, { method: 'GET' });
+    } catch (e) {
+      throw new Error('VildaVault.approveQRLogin: błąd sieci — ' + (e.message || e));
+    }
+
+    if (resp.status === 404) {
+      throw new Error('VildaVault.approveQRLogin: kod QR wygasł lub jest nieprawidłowy.');
+    }
+    if (!resp.ok) {
+      throw new Error('VildaVault.approveQRLogin: błąd serwera ' + resp.status);
+    }
+
+    const data = await resp.json();
+
+    if (data.status === 'ready') {
+      throw new Error('VildaVault.approveQRLogin: ten kod QR został już wykorzystany.');
+    }
+
+    const peerPublicKeyB64u = data.ecdhPublicKeyB64u;
+    if (!peerPublicKeyB64u) {
+      throw new Error('VildaVault.approveQRLogin: serwer nie zwrócił klucza publicznego.');
+    }
+
+    // 3. Zaszyfruj masterKeyBytes kluczem publicznym komputera (ECIES)
+    let payload;
+    try {
+      payload = await C.encryptForTransfer(masterKeyBytes, peerPublicKeyB64u);
+    } catch (e) {
+      throw new Error('VildaVault.approveQRLogin: błąd szyfrowania — ' + (e.message || e));
+    }
+
+    // 4. Wyślij zaszyfrowany payload na serwer
+    let putResp;
+    try {
+      putResp = await fetchTransfer('/v1/transfer/' + transferToken, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } catch (e) {
+      throw new Error('VildaVault.approveQRLogin: błąd sieci przy wysyłaniu — ' + (e.message || e));
+    }
+
+    if (putResp.status === 409) {
+      throw new Error('VildaVault.approveQRLogin: ten kod QR został już wykorzystany.');
+    }
+    if (!putResp.ok) {
+      const errBody = await putResp.json().catch(function () { return {}; });
+      throw new Error('VildaVault.approveQRLogin: serwer ' + putResp.status +
+        ' — ' + (errBody && errBody.error && errBody.error.message || 'nieznany błąd'));
+    }
+
+    return { ok: true };
+  }
+
   const api = {
     __vildaVault: true,
     VERSION: VERSION,
@@ -2398,7 +2700,12 @@
     registerPasskey: registerPasskey,
     unlockWithPasskey: unlockWithPasskey,
     listPasskeys: listPasskeys,
-    removePasskey: removePasskey
+    removePasskey: removePasskey,
+    // QR Transfer — logowanie kodem QR
+    initiateQRLogin:   initiateQRLogin,
+    pollQRLoginStatus: pollQRLoginStatus,
+    completeQRLogin:   completeQRLogin,
+    approveQRLogin:    approveQRLogin
   };
 
   global.VildaVault = api;
