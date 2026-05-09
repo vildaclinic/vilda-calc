@@ -2865,20 +2865,18 @@
       try { if (global.sessionStorage) { global.sessionStorage.removeItem(SS_PRIV); global.sessionStorage.removeItem(SS_TOKEN); } } catch(_) {}
     }
 
-    // ── Faza 2: ustawienie hasła po zatwierdzeniu przez telefon ──
+    // ── Faza 2: podaj hasło aby ukończyć logowanie ──
     function showPhase2(encryptedPayload) {
       stopPolling();
-      const title2  = el('h2', { class: 'vilda-auth-title', text: '✓ Konto zatwierdzone!' });
-      const sub2    = el('p',  {
+      const title2 = el('h2', { class: 'vilda-auth-title', text: '✓ Prawie gotowe!' });
+      const sub2   = el('p',  {
         class: 'vilda-auth-subtitle',
-        text:  'Klucz konta został bezpiecznie przesłany. Teraz ustaw hasło i nazwę dla tego urządzenia.'
+        text:  'Podaj swoje hasło, aby zalogować się na tym urządzeniu.'
       });
-      const labelIn = el('input', {
-        type: 'text', class: 'vilda-auth-input',
-        placeholder: 'Nazwa konta (opcjonalnie, np. dr Kowalska)', maxlength: '60'
+      const pwIn = el('input', {
+        type: 'password', class: 'vilda-auth-input',
+        placeholder: 'Twoje hasło'
       });
-      const pw1 = el('input', { type: 'password', class: 'vilda-auth-input', placeholder: 'Nowe hasło (min. 8 znaków)' });
-      const pw2 = el('input', { type: 'password', class: 'vilda-auth-input', placeholder: 'Powtórz hasło' });
       const errBox2 = el('div', { class: 'vilda-auth-error' });
       errBox2.style.display = 'none';
 
@@ -2888,31 +2886,29 @@
 
       finishBtn.addEventListener('click', async function () {
         errBox2.style.display = 'none';
-        const label    = (labelIn.value || '').trim() || undefined;
-        const password = pw1.value;
-        if (!password || password.length < 8) { errBox2.textContent = 'Hasło musi mieć minimum 8 znaków.'; errBox2.style.display = ''; return; }
-        if (password !== pw2.value) { errBox2.textContent = 'Hasła nie są takie same.'; errBox2.style.display = ''; return; }
+        const password = pwIn.value;
+        if (!password) { errBox2.textContent = 'Podaj hasło.'; errBox2.style.display = ''; return; }
 
         finishBtn.disabled = true;
-        finishBtn.textContent = 'Tworzę konto…';
+        finishBtn.textContent = 'Loguję…';
         try {
-          await V.completeQRLogin(privateKeyB64u, encryptedPayload, { newPassword: password, label: label });
+          await V.completeQRLogin(privateKeyB64u, encryptedPayload, { newPassword: password });
           hide();
           // onUnlock w boot() uruchomi interstitial sync automatycznie
         } catch (e) {
-          errBox2.textContent = (e && e.message) ? e.message : 'Błąd tworzenia konta.';
+          errBox2.textContent = (e && e.message) ? e.message : 'Błąd logowania. Sprawdź hasło.';
           errBox2.style.display = '';
           finishBtn.disabled = false;
           finishBtn.textContent = 'Zaloguj się';
         }
       });
 
-      pw2.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') finishBtn.click(); });
+      pwIn.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') finishBtn.click(); });
 
       open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
-        title2, sub2, labelIn, pw1, pw2, errBox2, finishBtn
+        title2, sub2, pwIn, errBox2, finishBtn
       ]));
-      setTimeout(function () { try { pw1.focus(); } catch(_) {} }, 30);
+      setTimeout(function () { try { pwIn.focus(); } catch(_) {} }, 30);
     }
 
     // ── Faza 1: wyświetl QR ──
@@ -3033,7 +3029,7 @@
         }
       }, 1000);
 
-      // Polling co 3s
+      // Polling co 1s
       pollTimer = setInterval(async function () {
         if (!transferToken || timeLeft <= 0) return;
         try {
@@ -3041,11 +3037,11 @@
           if (payload) {
             clearInterval(pollTimer); pollTimer = null;
             clearInterval(countdown); countdown = null;
-            statusEl.textContent = '✓ Zatwierdzono! Ustaw hasło dla nowego konta…';
-            setTimeout(function () { showPhase2(payload); }, 800);
+            statusEl.textContent = '✓ Zatwierdzono!';
+            setTimeout(function () { showPhase2(payload); }, 300);
           }
-        } catch(_) { /* sieć — spróbujemy za 3s */ }
-      }, 3000);
+        } catch(_) { /* sieć — spróbujemy za 1s */ }
+      }, 1000);
     }
 
     showPhase1();
