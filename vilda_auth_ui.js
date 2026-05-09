@@ -27,8 +27,8 @@
     return;
   }
 
-  const VERSION = '2.5.0';
-  const STEP = '8R-7b';
+  const VERSION = '2.5.1';
+  const STEP = '8R-7c';
   const ROOT_ID = 'vilda-auth-ui-root';
   const IDLE_EVENTS = ['mousedown', 'keydown', 'touchstart', 'scroll', 'pointerdown'];
   const PWA_GUEST_FLAG = 'VildaGuestMode';
@@ -51,6 +51,11 @@
   // zgodności seryjnej i po prostu wyjdzie bez wywoływania restoreAll().
   let _restoreCounter = 0;
   let _restoreSerial  = 0;
+  // Flaga aktywna podczas resetAppSessionState wywoływanego z onLock.
+  // Zapobiega skasowaniu _pendingSessionRestore przez listener 'vilda:user-state-cleared',
+  // który jest też emitowany przez clearAllData() wywołane w trakcie wylogowania.
+  // BEZ tej flagi: snapshot → clearAllData → event kasuje snapshot → brak restore po re-loginie.
+  let _lockClearInProgress = false;
 
   // ============ PLATFORM DETECTION ============
   /**
@@ -2512,7 +2517,14 @@
 
         // Wylogowanie/auto-lock = porzucenie tożsamości. Wyczyść stan aplikacji,
         // żeby kolejny user (lub gość) nie zobaczył danych poprzedniego.
-        resetAppSessionState('on-lock');
+        // _lockClearInProgress chroni snapshot przed skasowaniem przez 'vilda:user-state-cleared'
+        // emitowane synchronicznie przez clearAllData() wewnątrz resetAppSessionState.
+        _lockClearInProgress = true;
+        try {
+          resetAppSessionState('on-lock');
+        } finally {
+          _lockClearInProgress = false;
+        }
         if (isGuestMode()) return;
         // Gdy konto zostało właśnie usunięte, ustawienia.html natychmiast
         // przekierowuje na index.html — nie otwieramy tu ekranu startowego,
@@ -2619,8 +2631,11 @@
     try {
       if (typeof global.addEventListener === 'function') {
         global.addEventListener('vilda:user-state-cleared', function () {
+          // Jeśli event pochodzi z clearAllData() wywołanego przez onLock (wylogowanie),
+          // NIE kasuj snapshotu — jest potrzebny do przywrócenia stanu po re-loginie.
+          if (_lockClearInProgress) return;
           _pendingSessionRestore = null;
-          _restoreSerial = 0; // anuluj oczekujący setTimeout jeśli user właśnie wyczyścił dane
+          _restoreSerial = 0; // anuluj oczekujący setTimeout jeśli user jawnie wyczyścił dane
           try {
             if (global.localStorage) global.localStorage.removeItem('_vildaSnapRestore');
           } catch (_) {}
