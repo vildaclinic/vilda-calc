@@ -2301,7 +2301,33 @@
         const syncQRApproveTag = $('syncQRApproveTag');
 
         // Przycisk: Skanuj kod QR — otwiera panel i uruchamia kamerę
+        // Strategia: 1) BarcodeDetector (natywne, szybkie)
+        //            2) jsQR + canvas (działa w każdej przeglądarce z kamerą)
+        //            3) tryb ręczny (fallback gdy brak kamery)
         if (syncQRScanBtn) {
+
+          // Lazy-load jsQR z CDN — ~50 KB, ładowane tylko gdy kliknięto skanuj
+          function loadJsQR() {
+            return new Promise(function (resolve) {
+              if (window.jsQR) { resolve(window.jsQR); return; }
+              const s = document.createElement('script');
+              s.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
+              s.onload  = function () { resolve(window.jsQR); };
+              s.onerror = function () { resolve(null); };
+              document.head.appendChild(s);
+            });
+          }
+
+          // Wspólna logika po wykryciu tokenu (obie metody skanowania)
+          function onTokenFound(token, stream) {
+            if (stream) stream.getTracks().forEach(function (t) { t.stop(); });
+            if (syncQRVideoWrap) syncQRVideoWrap.style.display = 'none';
+            if (syncQRManualWrap) syncQRManualWrap.style.display = '';
+            if (syncQRTokenInput) syncQRTokenInput.value = token;
+            if (syncQRStatus) setText(syncQRStatus, '✓ Kod QR zeskanowany. Podaj hasło i kliknij Zatwierdź.');
+            if (syncQRPwInput) { syncQRPwInput.focus(); }
+          }
+
           syncQRScanBtn.addEventListener('click', async function () {
             if (!syncQRPanel) return;
             syncQRPanel.style.display = '';
@@ -2311,64 +2337,102 @@
             if (syncQRTokenInput) syncQRTokenInput.value = '';
             if (syncQRPwInput) syncQRPwInput.value = '';
 
-            // Próbuj uruchomić kamerę przez BarcodeDetector + getUserMedia
-            const hasBarcodeDetector = (typeof BarcodeDetector !== 'undefined');
             const hasCamera = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
-
-            if (hasBarcodeDetector && hasCamera) {
-              try {
-                const stream = await navigator.mediaDevices.getUserMedia({
-                  video: { facingMode: { ideal: 'environment' }, width: { ideal: 320 }, height: { ideal: 320 } }
-                });
-                if (syncQRVideo) {
-                  syncQRVideo.srcObject = stream;
-                  if (syncQRVideoWrap) syncQRVideoWrap.style.display = '';
-                  if (syncQRManualWrap) syncQRManualWrap.style.display = 'none';
-
-                  const detector = new BarcodeDetector({ formats: ['qr_code'] });
-                  let scanActive = true;
-
-                  async function scanFrame() {
-                    if (!scanActive || !syncQRVideo || syncQRVideo.readyState < 2) {
-                      if (scanActive) setTimeout(scanFrame, 200);
-                      return;
-                    }
-                    try {
-                      const codes = await detector.detect(syncQRVideo);
-                      if (codes && codes.length > 0) {
-                        const raw = codes[0].rawValue || '';
-                        const token = raw.startsWith('vsc1-qr:') ? raw.replace('vsc1-qr:', '') : raw;
-                        if (token.length === 43) {
-                          scanActive = false;
-                          stream.getTracks().forEach(function (t) { t.stop(); });
-                          if (syncQRVideoWrap) syncQRVideoWrap.style.display = 'none';
-                          if (syncQRManualWrap) syncQRManualWrap.style.display = '';
-                          if (syncQRTokenInput) syncQRTokenInput.value = token;
-                          if (syncQRStatus) setText(syncQRStatus, '✓ Kod QR zeskanowany. Podaj hasło i kliknij Zatwierdź.');
-                          if (syncQRPwInput) syncQRPwInput.focus();
-                          return;
-                        }
-                      }
-                    } catch (_) {}
-                    if (scanActive) setTimeout(scanFrame, 250);
-                  }
-                  setTimeout(scanFrame, 500);
-                }
-              } catch (camErr) {
-                // Brak kamery lub brak uprawnień → tryb ręczny
-                if (syncQRManualWrap) syncQRManualWrap.style.display = '';
-                if (syncQRStatus) setText(syncQRStatus, '⚠ Kamera niedostępna. Wklej token QR ręcznie.');
-              }
-            } else {
-              // Brak BarcodeDetector lub kamery → tryb ręczny
+            if (!hasCamera) {
               if (syncQRManualWrap) syncQRManualWrap.style.display = '';
-              if (syncQRVideoWrap) syncQRVideoWrap.style.display = 'none';
-              if (syncQRStatus) setText(syncQRStatus,
-                hasBarcodeDetector ? '⚠ Brak kamery. Wklej token QR ręcznie.'
-                : '⚠ Ta przeglądarka nie obsługuje skanera QR. Wklej token ręcznie.');
+              if (syncQRVideoWrap)  syncQRVideoWrap.style.display  = 'none';
+              if (syncQRStatus) setText(syncQRStatus, '⚠ Brak dostępu do kamery. Wklej token QR ręcznie.');
+              if (syncQRTokenInput) syncQRTokenInput.focus();
+              return;
             }
 
-            if (syncQRTokenInput) syncQRTokenInput.focus();
+            // Uruchom kamerę
+            let stream;
+            try {
+              stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { ideal: 'environment' }, width: { ideal: 640 }, height: { ideal: 640 } }
+              });
+            } catch (camErr) {
+              if (syncQRManualWrap) syncQRManualWrap.style.display = '';
+              if (syncQRStatus) setText(syncQRStatus, '⚠ Brak uprawnień do kamery. Wklej token QR ręcznie.');
+              if (syncQRTokenInput) syncQRTokenInput.focus();
+              return;
+            }
+
+            if (syncQRVideo) syncQRVideo.srcObject = stream;
+            if (syncQRVideoWrap)  syncQRVideoWrap.style.display  = '';
+            if (syncQRManualWrap) syncQRManualWrap.style.display = 'none';
+            if (syncQRStatus) setText(syncQRStatus, '🔍 Skieruj kamerę na kod QR…');
+
+            let scanActive = true;
+
+            // ── Metoda 1: BarcodeDetector (natywne API, Chrome Android / Safari iOS) ──
+            if (typeof BarcodeDetector !== 'undefined') {
+              const detector = new BarcodeDetector({ formats: ['qr_code'] });
+              (async function scanBD() {
+                if (!scanActive || !syncQRVideo || syncQRVideo.readyState < 2) {
+                  if (scanActive) setTimeout(scanBD, 200);
+                  return;
+                }
+                try {
+                  const codes = await detector.detect(syncQRVideo);
+                  if (codes && codes.length > 0) {
+                    const raw = codes[0].rawValue || '';
+                    const token = raw.startsWith('vsc1-qr:') ? raw.replace('vsc1-qr:', '') : raw;
+                    if (token.length === 43) {
+                      scanActive = false;
+                      onTokenFound(token, stream);
+                      return;
+                    }
+                  }
+                } catch (_) {}
+                if (scanActive) setTimeout(scanBD, 250);
+              })();
+              return;
+            }
+
+            // ── Metoda 2: jsQR + canvas (wszystkie przeglądarki z kamerą) ──────────
+            const jsQRLib = await loadJsQR();
+            if (!jsQRLib) {
+              // Nie udało się załadować jsQR — tryb ręczny
+              if (stream) stream.getTracks().forEach(function (t) { t.stop(); });
+              if (syncQRVideoWrap)  syncQRVideoWrap.style.display  = 'none';
+              if (syncQRManualWrap) syncQRManualWrap.style.display = '';
+              if (syncQRStatus) setText(syncQRStatus, '⚠ Nie można załadować skanera. Wklej token QR ręcznie.');
+              if (syncQRTokenInput) syncQRTokenInput.focus();
+              return;
+            }
+
+            const canvas = document.createElement('canvas');
+            const ctx    = canvas.getContext('2d');
+
+            (function scanCanvas() {
+              if (!scanActive) return;
+              const vid = syncQRVideo;
+              if (!vid || vid.readyState < 2 || vid.videoWidth === 0) {
+                setTimeout(scanCanvas, 200);
+                return;
+              }
+              canvas.width  = vid.videoWidth;
+              canvas.height = vid.videoHeight;
+              ctx.drawImage(vid, 0, 0);
+              try {
+                const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const result  = jsQRLib(imgData.data, imgData.width, imgData.height, {
+                  inversionAttempts: 'dontInvert'
+                });
+                if (result && result.data) {
+                  const raw   = result.data;
+                  const token = raw.startsWith('vsc1-qr:') ? raw.replace('vsc1-qr:', '') : raw;
+                  if (token.length === 43) {
+                    scanActive = false;
+                    onTokenFound(token, stream);
+                    return;
+                  }
+                }
+              } catch (_) {}
+              setTimeout(scanCanvas, 250);
+            })();
           });
         }
 
