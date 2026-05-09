@@ -2580,12 +2580,6 @@
           } catch (_) {}
         }
 
-        // UWAGA: NIE usuwamy _vildaSnapRestore tutaj.
-        // onLock zastąpi go nowym snapshotem przy następnym wylogowaniu.
-        // Dzięki temu jeśli strona zostanie przeładowana przed kolejnym wylogowaniem
-        // (np. po widocznym "freeze" biometrycznego logowania Touch ID), snapshot
-        // jest nadal dostępny i dane zostaną odtworzone po kolejnym zalogowaniu.
-
         if (restore && restore.sharedUserData) {
           try {
             var unlockedUser = getVault().getCurrentUser ? getVault().getCurrentUser() : null;
@@ -2593,11 +2587,17 @@
               // Ten sam użytkownik — wpisz sharedUserData z powrotem do localStorage.
               // clearAllData() go usunął, więc trzeba go przywrócić zanim restoreAll()
               // zostanie wywołane (restoreAll czyta właśnie z localStorage).
+              // Jednocześnie kasujemy _vildaSnapRestore — snapshot już zużyty.
+              // Gdyby pozostał, nawigacja na inną podstronę (gdzie sharedExists=false
+              // bo clearSharedAutosaveResidue() wyczyściło sharedUserData) wchodziłaby
+              // w fallback i przywracała stary snapshot ze starymi danymi ("Ostatni pomiar").
               try {
                 if (global.localStorage) {
                   global.localStorage.setItem('sharedUserData', restore.sharedUserData);
+                  global.localStorage.removeItem('_vildaSnapRestore');
                 }
               } catch (_) {}
+              _pendingSessionRestore = null; // zużyty — nie dopuść do ponownego restore
               // Zaplanuj restoreAll() w osobnym macrotasku przez setTimeout(0).
               // Dzięki temu:
               //   (a) hide() natychmiast ukrywa auth UI bez blokowania głównego wątku
