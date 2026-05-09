@@ -12,8 +12,8 @@
     return;
   }
 
-  const VERSION = '1.0.0';
-  const STEP = '8Q-3';
+  const VERSION = '1.0.1';
+  const STEP = '8Q-3b';
 
   const dependencyKeys = Object.freeze([
     '__pickLastMeasurement',
@@ -1072,6 +1072,14 @@ if (hasIntakeModule) {
     if (el.id) {
       p.byId[el.id] = v;
       if (BASIC_ROOT_KEYS.has(el.id)) pendingRoot[el.id] = v;
+      // Synchronizacja synonimów name/fullName (krok 8Q-3b):
+      // userData.js mapuje oba pola na klucz 'name' w sharedUserData.
+      // Persist runtime zapisuje pod id elementu (name lub fullName).
+      // Bez tej synchronizacji pendingRoot.name (lub .fullName) pozostaje
+      // z przestarzałą wartością z momentu loadShared() i przy flush
+      // nadpisuje poprawną wartość zapisaną przez userData.js w bubble-phase.
+      if (el.id === 'name') { pendingRoot.fullName = v; p.byId.fullName = v; }
+      if (el.id === 'fullName') { pendingRoot.name = v; p.byId.name = v; }
       storeTrackedDataset(p, el);
     } else if (el.name) {
       p.byName[el.name] = v;
