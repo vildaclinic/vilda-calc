@@ -2876,6 +2876,9 @@
 
     // ── Faza 2: podaj hasło aby ukończyć logowanie ──
     function showPhase2(encryptedPayload) {
+      // Zachowaj klucz prywatny PRZED stopPolling() — ta funkcja wywołuje
+      // clearSessionKeys() → privateKeyB64u = null, a my potrzebujemy go w finishBtn.
+      const savedPrivKey = privateKeyB64u;
       stopPolling();
       const title2 = el('h2', { class: 'vilda-auth-title', text: '✓ Prawie gotowe!' });
       const sub2   = el('p',  {
@@ -2903,7 +2906,7 @@
         finishBtn.disabled = true;
         finishBtn.textContent = 'Loguję…';
         try {
-          await V.completeQRLogin(privateKeyB64u, encryptedPayload, { newPassword: password });
+          await V.completeQRLogin(savedPrivKey, encryptedPayload, { newPassword: password });
           clearSessionKeys(); // defence-in-depth: usuń klucz prywatny jeśli stopPolling go nie wyczyścił
           hide();
           // onUnlock w boot() uruchomi interstitial sync automatycznie
