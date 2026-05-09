@@ -2475,26 +2475,30 @@
         // więc getCurrentUser() tu zawsze zwraca null. Używamy _trackedUserId
         // przechwyconego wcześniej w onUnlock.
         //
-        // Autosave pól formularza żyje w localStorage['sharedUserData'] (NIE w
-        // sessionStorage['vildaMainSessionV1'] — to jest flow importu JSON, który
-        // pokazuje kartę "Ostatni pomiar"). Musimy snapshować właściwy klucz
-        // i przywracać go przez restoreAll(), nie przez vildaSession.restore().
+        // Autosave pól formularza żyje w localStorage['sharedUserData'].
+        // NIE wywołujemy vildaPersistFlushNow() — ma to efekty uboczne (m.in.
+        // clearSharedAutosaveResidue, resetLoadedComparisonUiResidue) które mogą
+        // zamrozić ekran. Debounce autosave wynosi 250ms, więc dane są już w
+        // localStorage do czasu kliknięcia "Wyloguj".
+        //
+        // Snapshot przechowujemy w DWÓCH miejscach:
+        //   1) _pendingSessionRestore (pamięć) — dla wylogowania bez przeładowania
+        //   2) localStorage['_vildaSnapRestore'] — przeżywa przeładowanie strony
         _pendingSessionRestore = null;
         var lockedUserId = _trackedUserId;
         _trackedUserId = null; // zużyty — wyczyść niezależnie od wyniku
         if (reason !== 'user-removed' && lockedUserId) {
           try {
-            // Wymuś natychmiastowy zapis bufora autosave (debounce mógł nie zdążyć)
-            try {
-              if (global.vildaPersistFlushNow && typeof global.vildaPersistFlushNow === 'function') {
-                global.vildaPersistFlushNow({ force: true });
-              }
-            } catch (_) {}
-            // Odczytaj sharedUserData z localStorage — to jest autosave pól formularza
             var sharedSnap = null;
             try { sharedSnap = global.localStorage && global.localStorage.getItem('sharedUserData'); } catch (_) {}
             if (sharedSnap) {
               _pendingSessionRestore = { userId: lockedUserId, sharedUserData: sharedSnap };
+              // Persystuj do localStorage aby przeżyć przeładowanie strony (ważność: 1h)
+              try {
+                global.localStorage.setItem('_vildaSnapRestore', JSON.stringify({
+                  userId: lockedUserId, data: sharedSnap, ts: Date.now()
+                }));
+              } catch (_) {}
             }
           } catch (_) {}
         }
@@ -2526,10 +2530,30 @@
         startIdleWatch();
 
         // ── Przywróć sesję jeśli zalogował się ten sam użytkownik ──────────────
-        // Pobierz snapshot zanim go skasujemy — niezależnie od wyniku, po
-        // jednym onUnlock snapshot jest zużyty (nie próbujemy kolejny raz).
+        // Priorytet: pamięć (_pendingSessionRestore) > localStorage (_vildaSnapRestore).
+        // _vildaSnapRestore przeżywa przeładowanie strony więc obsługuje oba scenariusze.
         var restore = _pendingSessionRestore;
         _pendingSessionRestore = null;
+
+        // Fallback: spróbuj localStorage jeśli brak snapshotu w pamięci
+        if (!restore || !restore.sharedUserData) {
+          try {
+            var snapRaw = global.localStorage && global.localStorage.getItem('_vildaSnapRestore');
+            if (snapRaw) {
+              var snap = JSON.parse(snapRaw);
+              // Snapshot ważny tylko przez 1 godzinę
+              if (snap && snap.userId && snap.data && (Date.now() - (snap.ts || 0)) < 3600000) {
+                restore = { userId: snap.userId, sharedUserData: snap.data };
+              }
+            }
+          } catch (_) {}
+        }
+
+        // Wyczyść _vildaSnapRestore z localStorage — jednorazowe użycie.
+        // Robimy to niezależnie od wyniku: błędny user = dane wrażliwe innego konta,
+        // muszą być usunięte.
+        try { global.localStorage && global.localStorage.removeItem('_vildaSnapRestore'); } catch (_) {}
+
         if (restore && restore.sharedUserData) {
           try {
             var unlockedUser = getVault().getCurrentUser ? getVault().getCurrentUser() : null;
@@ -2542,15 +2566,15 @@
                   global.localStorage.setItem('sharedUserData', restore.sharedUserData);
                 }
               } catch (_) {}
-              // Poczekaj aż DOM będzie gotowy po ukryciu auth UI, potem przywróć
-              // pola formularza przez ten sam mechanizm co przy przeładowaniu strony.
+              // Poczekaj aż auth UI zostanie ukryte i DOM ustabilizuje się,
+              // potem przywróć pola dokładnie tak jak przy przeładowaniu strony.
               setTimeout(function () {
                 try {
                   if (typeof global.vildaPersistRestoreAll === 'function') {
                     global.vildaPersistRestoreAll();
                   }
                 } catch (_) {}
-              }, 350);
+              }, 500);
             }
             // Inny użytkownik — snapshot odrzucamy, stan pozostaje wyczyszczony
           } catch (_) {}
