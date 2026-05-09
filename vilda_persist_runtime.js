@@ -1135,6 +1135,9 @@ if (hasIntakeModule) {
       window.vildaPersistScheduleSave = scheduleSave;
       window.vildaPersistFlushNow = flushPersistNow;
       window.vildaGetPersistAutosaveCoalescingSnapshot = getPersistAutosaveCoalescingSnapshot;
+      // Eksponujemy restoreAll() aby vilda_auth_ui mógł przywrócić stan formularza
+      // po ponownym zalogowaniu tego samego użytkownika (bez przeładowania strony).
+      window.vildaPersistRestoreAll = restoreAll;
       window.addEventListener('pagehide', function () {
         try { flushPersistNow({ force: true }); } catch (error) { vildaLogAppError('app:persistence', 'Błąd flushPersistNow przy pagehide', error); }
       }, true);
