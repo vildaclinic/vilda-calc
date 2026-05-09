@@ -2529,11 +2529,25 @@
         showLogoutButton();
         startIdleWatch();
 
+        // ── Sprawdź czy sharedUserData istnieje w localStorage ─────────────────
+        // Jeśli tak, to onUnlock pochodzi z tryRestoreSession (nawigacja między
+        // podstronami) — sharedUserData jest nienaruszone i normalny restoreAll()
+        // z vildaAppOnReady obsłuży dane bez naszej ingerencji.
+        var sharedExists = false;
+        try {
+          var existingShared = global.localStorage && global.localStorage.getItem('sharedUserData');
+          sharedExists = !!(existingShared && existingShared !== 'null' && existingShared.length > 10);
+        } catch (_) {}
+
         // ── Przywróć sesję jeśli zalogował się ten sam użytkownik ──────────────
         // Priorytet: pamięć (_pendingSessionRestore) > localStorage (_vildaSnapRestore).
         // _vildaSnapRestore przeżywa przeładowanie strony więc obsługuje oba scenariusze.
         var restore = _pendingSessionRestore;
         _pendingSessionRestore = null;
+
+        // Wczesny powrót dla tryRestoreSession (nawigacja między podstronami):
+        // dane są nienaruszone w localStorage, nie ma pending restore z wylogowania.
+        if (!restore && sharedExists) return;
 
         // Fallback: spróbuj localStorage jeśli brak snapshotu w pamięci
         if (!restore || !restore.sharedUserData) {
@@ -2549,10 +2563,11 @@
           } catch (_) {}
         }
 
-        // Wyczyść _vildaSnapRestore z localStorage — jednorazowe użycie.
-        // Robimy to niezależnie od wyniku: błędny user = dane wrażliwe innego konta,
-        // muszą być usunięte.
-        try { global.localStorage && global.localStorage.removeItem('_vildaSnapRestore'); } catch (_) {}
+        // UWAGA: NIE usuwamy _vildaSnapRestore tutaj.
+        // onLock zastąpi go nowym snapshotem przy następnym wylogowaniu.
+        // Dzięki temu jeśli strona zostanie przeładowana przed kolejnym wylogowaniem
+        // (np. po widocznym "freeze" biometrycznego logowania Touch ID), snapshot
+        // jest nadal dostępny i dane zostaną odtworzone po kolejnym zalogowaniu.
 
         if (restore && restore.sharedUserData) {
           try {
@@ -2566,17 +2581,23 @@
                   global.localStorage.setItem('sharedUserData', restore.sharedUserData);
                 }
               } catch (_) {}
-              // Przywróć pola formularza SYNCHRONICZNIE — auth overlay jest jeszcze widoczny,
-              // ale elementy formularza pod nim już istnieją i mogą być wypełnione.
-              // NIE używamy setTimeout: timer odpaliłby się na ekranie "Kto się loguje"
-              // gdyby użytkownik wylogował się szybciej niż upłynął timeout, zamrażając UI.
-              // Wewnętrzny setTimeout(0) wewnątrz restoreAll() odpali się zaraz po ukryciu
-              // auth overlay — to poprawny moment dla reconcileGrowthHistoryModules itp.
-              try {
-                if (typeof global.vildaPersistRestoreAll === 'function') {
-                  global.vildaPersistRestoreAll();
-                }
-              } catch (_) {}
+              // Użyj setTimeout(0) zamiast synchronicznego wywołania.
+              // restoreAll() wykonuje ciężkie obliczenia synchronicznie (dispatching
+              // zdarzeń input/change, debouncedUpdate, calculateGrowthAdvanced itp.).
+              // Gdy onUnlock odpala się wewnątrz adoptMasterBytes → unlockWithPasskey,
+              // auth UI jest jeszcze widoczne z aktywnym setBusy(true) — synchroniczne
+              // restoreAll() powoduje widoczne "zamrożenie" ekranu (szczególnie przy
+              // Touch ID gdzie system natychmiast dismissuje prompt biometryczny).
+              // Z setTimeout(0): macrotask handlera biometricBtn/submit kończy się
+              // (wywołując hide()) PRZED odpaleniem setTimeout(0) callbacka —
+              // więc auth UI jest już ukryte gdy restoreAll() wykonuje ciężkie obliczenia.
+              setTimeout(function () {
+                try {
+                  if (typeof global.vildaPersistRestoreAll === 'function') {
+                    global.vildaPersistRestoreAll();
+                  }
+                } catch (_) {}
+              }, 0);
             }
             // Inny użytkownik — snapshot odrzucamy, stan pozostaje wyczyszczony
           } catch (_) {}
