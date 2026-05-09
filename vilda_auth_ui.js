@@ -38,6 +38,9 @@
   let logoutBtnEl = null;
   let pendingSetupOptions = null;
   let idleHandlersBound = false;
+  // Snapshot sesji przed wylogowaniem — umożliwia przywrócenie stanu po ponownym logowaniu
+  // tego samego użytkownika (idle timeout, ręczne wylogowanie i powrót).
+  let _pendingSessionRestore = null; // { userId: string, snapshot: string } | null
 
   // ============ PLATFORM DETECTION ============
   /**
@@ -2462,6 +2465,32 @@
     try {
       getVault().onLock(function (reason) {
         hideLogoutButton();
+
+        // ── Snapshot sesji przed czyszczeniem ──────────────────────────────────
+        // Gdy ten sam user za chwilę się zaloguje (idle timeout, ręczny logout
+        // i powrót), przywrócimy stan formularzy dokładnie w miejscu gdzie był.
+        // Snapshot przechowujemy w pamięci — storage zostanie zaraz wyczyszczone.
+        _pendingSessionRestore = null;
+        if (reason !== 'user-removed') {
+          try {
+            var currentUser = getVault().getCurrentUser ? getVault().getCurrentUser() : null;
+            if (currentUser && currentUser.userId) {
+              // Wymuś natychmiastowy zapis (debounce mógł nie zdążyć)
+              try {
+                if (global.vildaSession && typeof global.vildaSession.saveNow === 'function') {
+                  global.vildaSession.saveNow();
+                }
+              } catch (_) {}
+              // Odczytaj surowy JSON z sessionStorage zanim zostanie wyczyszczony
+              var rawSnap = null;
+              try { rawSnap = global.sessionStorage && global.sessionStorage.getItem('vildaMainSessionV1'); } catch (_) {}
+              if (rawSnap) {
+                _pendingSessionRestore = { userId: currentUser.userId, snapshot: rawSnap };
+              }
+            }
+          } catch (_) {}
+        }
+
         // Wylogowanie/auto-lock = porzucenie tożsamości. Wyczyść stan aplikacji,
         // żeby kolejny user (lub gość) nie zobaczył danych poprzedniego.
         resetAppSessionState('on-lock');
@@ -2482,6 +2511,34 @@
         }
         showLogoutButton();
         startIdleWatch();
+
+        // ── Przywróć sesję jeśli zalogował się ten sam użytkownik ──────────────
+        // Pobierz snapshot zanim go skasujemy — niezależnie od wyniku, po
+        // jednym onUnlock snapshot jest zużyty (nie próbujemy kolejny raz).
+        var restore = _pendingSessionRestore;
+        _pendingSessionRestore = null;
+        if (restore && restore.snapshot) {
+          try {
+            var unlockedUser = getVault().getCurrentUser ? getVault().getCurrentUser() : null;
+            if (unlockedUser && unlockedUser.userId === restore.userId) {
+              // Ten sam użytkownik — wpisz snapshot z powrotem do sessionStorage
+              try {
+                if (global.sessionStorage) {
+                  global.sessionStorage.setItem('vildaMainSessionV1', restore.snapshot);
+                }
+              } catch (_) {}
+              // Poczekaj aż DOM będzie gotowy po ukryciu auth UI, potem przywróć
+              setTimeout(function () {
+                try {
+                  if (global.vildaSession && typeof global.vildaSession.restore === 'function') {
+                    global.vildaSession.restore();
+                  }
+                } catch (_) {}
+              }, 350);
+            }
+            // Inny użytkownik — snapshot odrzucamy, stan pozostaje wyczyszczony
+          } catch (_) {}
+        }
       });
     } catch (e) { logError('boot: listenery', e); }
 
