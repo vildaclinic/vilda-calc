@@ -349,18 +349,24 @@
     buttons.appendChild(el('button', {
       class: 'vilda-auth-btn vilda-auth-btn-ghost',
       type: 'button',
-      text: 'Odtwórz konto z pełnej kopii',
+      text: '☁ Mam kod synchronizacji',
+      onclick: function () { showSyncCodeRestoreScreen(); }
+    }));
+    buttons.appendChild(el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle',
+      type: 'button',
+      text: 'Odtwórz konto z pliku kopii (.wiw)',
       onclick: function () { showRestoreVaultFlow(); }
     }));
     buttons.appendChild(el('button', {
-      class: 'vilda-auth-btn vilda-auth-btn-ghost',
+      class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle',
       type: 'button',
       text: 'Korzystaj bez logowania',
       onclick: function () { setGuestMode(true); hide(); }
     }));
     const info = el('p', {
       class: 'vilda-auth-info',
-      text: 'Ustalisz hasło dostępu oraz otrzymasz klucz awaryjny do odzyskania danych w razie zapomnienia hasła. Jeśli masz pełną kopię konta z innego urządzenia, możesz ją odtworzyć w jednym kliknięciu — konto i wszyscy pacjenci wrócą bez zmian.'
+      text: 'Jeśli masz kod synchronizacji z poprzedniego urządzenia — wpisz go i podaj hasło aby natychmiast przywrócić konto i dane pacjentów z chmury. Jeśli masz plik kopii (.wiw), użyj opcji odtworzenia z pliku.'
     });
     open(el('div', { class: 'vilda-auth-screen vilda-auth-startup' }, [title, subtitle, buttons, info]));
   }
@@ -399,10 +405,17 @@
       onclick: function () { showSetupWizard(); }
     });
 
+    const syncCodeBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle',
+      type: 'button',
+      text: '☁ Mam kod synchronizacji',
+      onclick: function () { showSyncCodeRestoreScreen(); }
+    });
+
     const restoreBtn = el('button', {
       class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle',
       type: 'button',
-      text: 'Odtwórz konto z pełnej kopii',
+      text: 'Odtwórz konto z pliku kopii (.wiw)',
       onclick: function () { showRestoreVaultFlow(); }
     });
 
@@ -415,7 +428,7 @@
 
     open(el('div', { class: 'vilda-auth-screen vilda-auth-picker' }, [
       title, subtitle, userList,
-      el('div', { class: 'vilda-auth-buttons' }, [addBtn, restoreBtn, guestBtn])
+      el('div', { class: 'vilda-auth-buttons' }, [addBtn, syncCodeBtn, restoreBtn, guestBtn])
     ]));
   }
 
@@ -2644,6 +2657,108 @@
     setTimeout(function () { try { pwInput.focus(); } catch (_) {} }, 30);
   }
 
+  // ============ EKRAN ODTWARZANIA Z KODU SYNCHRONIZACJI ============
+
+  /**
+   * Ekran „Mam kod synchronizacji" — cross-device restore bez pliku .wiw.
+   * Użytkownik podaje kod (vsc1.…) + hasło → vault odblokowany z tym samym
+   * masterKey → ten sam slotId → interstitial „Znaleziono Twoje dane" pojawia
+   * się automatycznie z vilda_sync_integration.js.
+   */
+  function showSyncCodeRestoreScreen() {
+    const V = getVault();
+    if (!V) return;
+
+    const title = el('h2', { class: 'vilda-auth-title', text: 'Odtwórz z chmury' });
+    const sub = el('p', {
+      class: 'vilda-auth-subtitle',
+      text: 'Wklej kod synchronizacji z poprzedniego urządzenia i podaj hasło, którym był zabezpieczony.'
+    });
+
+    const codeInput = el('textarea', {
+      class: 'vilda-auth-input',
+      placeholder: 'vsc1.XXXXXX.XXXXXX.XXXXXX',
+      rows: '3',
+      style: 'font-family:monospace;font-size:0.82rem;resize:vertical;min-height:72px;'
+    });
+
+    const labelInput = el('input', {
+      type: 'text',
+      class: 'vilda-auth-input',
+      placeholder: 'Nazwa konta (opcjonalnie, np. dr Kowalska)',
+      maxlength: '60'
+    });
+
+    const pwInput = el('input', {
+      type: 'password',
+      class: 'vilda-auth-input',
+      placeholder: 'Hasło ze starego urządzenia'
+    });
+
+    const errBox = el('div', { class: 'vilda-auth-error' });
+    errBox.style.display = 'none';
+
+    function showErr(msg) {
+      errBox.textContent = msg || '';
+      errBox.style.display = msg ? '' : 'none';
+    }
+
+    const submitBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-primary',
+      type: 'button',
+      text: 'Odtwórz konto'
+    });
+
+    submitBtn.addEventListener('click', async function () {
+      showErr('');
+      const code  = (codeInput.value  || '').trim();
+      const pw    = (pwInput.value    || '');
+      const label = (labelInput.value || '').trim() || undefined;
+
+      if (!code) { showErr('Wklej kod synchronizacji.'); return; }
+      if (!pw)   { showErr('Podaj hasło.'); return; }
+
+      submitBtn.disabled = true;
+      const origText = submitBtn.textContent;
+      submitBtn.textContent = 'Odtwarzanie… (może potrwać kilka sekund)';
+
+      try {
+        await V.importSyncCode(code, pw, { label: label });
+        // Vault jest teraz odblokowany z oryginalnym masterKey.
+        // vilda_sync_integration.js wykryje nowe urządzenie i pokaże interstitial automatycznie.
+        hide();
+      } catch (e) {
+        showErr(e && e.message ? e.message : 'Błąd odtwarzania. Sprawdź kod i hasło.');
+        submitBtn.disabled = false;
+        submitBtn.textContent = origText;
+      }
+    });
+
+    // Enter w polu hasła odpala submit
+    pwInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') submitBtn.click();
+    });
+
+    const back = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost',
+      type: 'button',
+      text: '← Wróć',
+      onclick: function () { showStartupScreen(); }
+    });
+
+    const hint = el('p', {
+      class: 'vilda-auth-side-note',
+      style: 'text-align:center;margin:8px 0 0;font-size:0.82rem;',
+      text: 'Kod synchronizacji wygeneruj w Ustawieniach → Synchronizacja → „Pokaż kod synchronizacji".'
+    });
+
+    open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
+      title, sub, codeInput, labelInput, pwInput, errBox, submitBtn, back, hint
+    ]));
+
+    setTimeout(function () { try { codeInput.focus(); } catch (_) {} }, 30);
+  }
+
   // ============ EKSPORT API ============
   const api = {
     __vildaAuthUI: true,
@@ -2662,6 +2777,7 @@
     showImportPatientsFlow: showImportPatientsFlow,
     showMergeAccountFlow: showMergeAccountFlow,
     showRestoreVaultFlow: showRestoreVaultFlow,
+    showSyncCodeRestoreScreen: showSyncCodeRestoreScreen,
     hide: hide,
     lockAndShowLogin: lockAndShowLogin,
     isGuestMode: isGuestMode,

@@ -2227,6 +2227,118 @@
   }
 
   // ============ EKSPORT API ============
+  // ============ KOD SYNCHRONIZACJI ============
+
+  /**
+   * Generuje przenośny kod synchronizacji zabezpieczony hasłem.
+   * Kod pozwala odtworzyć konto na nowym urządzeniu bez pliku .wiw —
+   * wystarczy kod + hasło które użytkownik już zna.
+   *
+   * Wymaga odblokowanego vault i weryfikuje hasło przed eksportem.
+   *
+   * @param {string} password  — aktualne hasło użytkownika (do weryfikacji + szyfrowania kodu)
+   * @returns {Promise<string>} — kod synchronizacji (~140 znaków)
+   */
+  async function exportSyncCode(password) {
+    if (!isUnlocked()) throw new Error('VildaVault.exportSyncCode: vault nie jest odblokowany.');
+    if (typeof password !== 'string' || password.length < MIN_PASSWORD_LENGTH) {
+      throw new Error('VildaVault.exportSyncCode: nieprawidłowe hasło.');
+    }
+    const C = getCrypto();
+    // Weryfikacja hasła: próbujemy odszyfrować encryptedMasterByPassword
+    const meta = await getAdapter().getUserMeta(currentUserId);
+    if (!meta) throw new Error('VildaVault.exportSyncCode: brak metadanych użytkownika.');
+    const wrappingKey = await C.deriveKey(password, meta.passwordSalt, meta.kdfIterations);
+    try {
+      await C.decryptBytes(wrappingKey, meta.encryptedMasterByPassword.iv, meta.encryptedMasterByPassword.data);
+    } catch (_) {
+      throw new Error('VildaVault.exportSyncCode: nieprawidłowe hasło.');
+    }
+    return C.encryptSyncCode(masterKeyBytes, password);
+  }
+
+  /**
+   * Odtwarza konto na nowym urządzeniu z kodu synchronizacji + hasła.
+   * Tworzy nowy wpis użytkownika w lokalnym IndexedDB z tym samym masterKey —
+   * co oznacza ten sam slotId i dostęp do danych na serwerze.
+   *
+   * Vault musi być zablokowany przed wywołaniem.
+   *
+   * @param {string} syncCode   — kod "vsc1.salt.iv.cipher"
+   * @param {string} password   — hasło którym zaszyfrowano kod
+   * @param {object} [options]  — { label?: string }
+   * @returns {Promise<{ userId: string, label: string, recoveryKey: string }>}
+   */
+  async function importSyncCode(syncCode, password, options) {
+    if (isUnlocked()) {
+      throw new Error('VildaVault.importSyncCode: wyloguj się przed odtwarzaniem kodu synchronizacji.');
+    }
+    if (typeof password !== 'string' || password.length < MIN_PASSWORD_LENGTH) {
+      throw new Error('VildaVault.importSyncCode: hasło musi mieć minimum ' + MIN_PASSWORD_LENGTH + ' znaków.');
+    }
+    const C = getCrypto();
+    const opts = (options && typeof options === 'object') ? options : {};
+
+    // Odszyfruj masterKeyBytes z kodu synchronizacji
+    let masterBytes;
+    try {
+      masterBytes = await C.decryptSyncCode(syncCode, password);
+    } catch (e) {
+      throw new Error('VildaVault.importSyncCode: ' + (e.message || 'nieprawidłowy kod lub hasło.'));
+    }
+
+    // Utwórz nowy wpis użytkownika na tym urządzeniu z odtworzonym masterKey.
+    // Nowy userId jest celowy — zachowujemy izolację między urządzeniami w IndexedDB.
+    // Ważny jest masterKey (a przez HKDF — slotId na serwerze), nie lokalny userId.
+    const userId = generateUserId();
+    const iter = C.KDF_ITERATIONS;
+    const passwordSalt = C.generateSalt();
+    const recoverySalt = C.generateSalt();
+    const recoveryKey  = C.generateRecoveryKey();
+
+    const passwordWrappingKey = await C.deriveKey(password, passwordSalt, iter);
+    const recoveryWrappingKey = await C.deriveKeyFromRecoveryKey(recoveryKey, recoverySalt, iter);
+    const encryptedByPassword = await C.encryptBytes(passwordWrappingKey, masterBytes);
+    const encryptedByRecovery = await C.encryptBytes(recoveryWrappingKey, masterBytes);
+
+    let label = (typeof opts.label === 'string' && opts.label.trim().length) ? opts.label.trim() : '';
+    if (!label) {
+      const existing = await listUsers();
+      label = DEFAULT_LABEL + (existing.length > 0 ? ' ' + (existing.length + 1) : '');
+    }
+
+    const nowISO = new Date().toISOString();
+    const meta = {
+      schemaVersion: SCHEMA_VERSION,
+      createdAtISO: nowISO,
+      kdfName: C.KDF_NAME,
+      kdfHash: C.KDF_HASH,
+      kdfIterations: iter,
+      passwordSalt: C.bytesToBase64(passwordSalt),
+      recoverySalt:  C.bytesToBase64(recoverySalt),
+      encryptedMasterByPassword: {
+        iv:   C.bytesToBase64(encryptedByPassword.iv),
+        data: C.bytesToBase64(encryptedByPassword.data)
+      },
+      encryptedMasterByRecovery: {
+        iv:   C.bytesToBase64(encryptedByRecovery.iv),
+        data: C.bytesToBase64(encryptedByRecovery.data)
+      },
+      restoredFromSyncCode: true
+    };
+
+    await getAdapter().putUserMeta(userId, meta);
+    await getAdapter().putRegistryEntry({
+      userId: userId,
+      label: label,
+      createdAtISO: nowISO,
+      lastLoginAtISO: nowISO
+    });
+
+    await adoptMasterBytes(masterBytes, userId, label);
+    return { userId: userId, label: label, recoveryKey: recoveryKey };
+  }
+
   const api = {
     __vildaVault: true,
     VERSION: VERSION,
@@ -2274,6 +2386,9 @@
     // Scalanie vault-backup (z pliku .wiw + hasłem)
     previewVaultBackupMerge: previewVaultBackupMerge,
     mergeVaultBackup: mergeVaultBackup,
+    // Kod synchronizacji (cross-device bez .wiw)
+    exportSyncCode:    exportSyncCode,
+    importSyncCode:    importSyncCode,
     // API Sync — używane przez vilda_sync.js
     getSyncMaterial:   getSyncMaterial,
     exportSyncPayload: exportSyncPayload,

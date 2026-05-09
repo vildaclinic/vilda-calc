@@ -686,6 +686,107 @@
   //                   jest odporna na preimage i kolizje; odwrócenie do
   //                   authToken jest obliczeniowo niewykonalne.
 
+  // ─── Kod synchronizacji ──────────────────────────────────────────────────────
+  //
+  // "Kod synchronizacji" to przenośny ciąg ~140 znaków który pozwala odtworzyć
+  // konto na nowym urządzeniu BEZ pliku .wiw — wystarczy kod + hasło.
+  //
+  // Format: "vsc1.{salt_b64url}.{iv_b64url}.{cipher_b64url}"
+  //   salt    — 16 losowych bajtów → wejście PBKDF2
+  //   iv      — 12 losowych bajtów → AES-GCM nonce
+  //   cipher  — AES-256-GCM(PBKDF2(password,salt), masterKeyBytes) + 16-bajtowy tag
+  //
+  // Bezpieczeństwo:
+  //   Bez hasła kod jest kryptograficznie bezużyteczny (AES-GCM + PBKDF2 200k iter).
+  //   Kod ujawnia tylko sól PBKDF2, IV i zaszyfrowany masterKey.
+  //   Kompromitacja kodu bez hasła nie ujawnia danych.
+
+  const SYNC_CODE_PREFIX   = 'vsc1';
+  const SYNC_CODE_KDF_ITER = 200000;
+  const SYNC_CODE_KDF_HASH = 'SHA-256';
+  const SYNC_CODE_SALT_LEN = 16;
+
+  /**
+   * Szyfruje masterKeyBytes hasłem i zwraca przenośny kod synchronizacji.
+   * @param {Uint8Array} masterKeyBytes  — 32 bajty klucza głównego
+   * @param {string}     password        — hasło użytkownika (do ochrony kodu)
+   * @returns {Promise<string>}          — kod "vsc1.salt.iv.cipher"
+   */
+  async function encryptSyncCode(masterKeyBytes, password) {
+    const subtle = getCryptoSubtle();
+    const view = (masterKeyBytes instanceof Uint8Array) ? masterKeyBytes : new Uint8Array(masterKeyBytes);
+    if (view.length !== MASTER_KEY_BYTES) {
+      throw new Error('VildaCrypto.encryptSyncCode: nieprawidłowy rozmiar masterKeyBytes.');
+    }
+    const salt = crypto.getRandomValues(new Uint8Array(SYNC_CODE_SALT_LEN));
+    const iv   = crypto.getRandomValues(new Uint8Array(12));
+
+    const pwMaterial = await subtle.importKey(
+      'raw', stringToBytes(password), 'PBKDF2', false, ['deriveKey']
+    );
+    const wrappingKey = await subtle.deriveKey(
+      { name: 'PBKDF2', hash: SYNC_CODE_KDF_HASH, salt: salt, iterations: SYNC_CODE_KDF_ITER },
+      pwMaterial,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['encrypt']
+    );
+    const cipherBuf = await subtle.encrypt({ name: 'AES-GCM', iv: iv }, wrappingKey, view);
+    return [
+      SYNC_CODE_PREFIX,
+      bytesToBase64url(salt),
+      bytesToBase64url(iv),
+      bytesToBase64url(new Uint8Array(cipherBuf))
+    ].join('.');
+  }
+
+  /**
+   * Deszyfruje kod synchronizacji i zwraca oryginalne masterKeyBytes.
+   * @param {string} syncCode  — kod "vsc1.salt.iv.cipher"
+   * @param {string} password  — hasło użytkownika
+   * @returns {Promise<Uint8Array>}  — 32-bajtowy masterKey
+   * @throws {Error} gdy hasło jest nieprawidłowe lub kod uszkodzony
+   */
+  async function decryptSyncCode(syncCode, password) {
+    const subtle = getCryptoSubtle();
+    if (typeof syncCode !== 'string') {
+      throw new Error('VildaCrypto.decryptSyncCode: kod synchronizacji musi być tekstem.');
+    }
+    const parts = syncCode.trim().split('.');
+    if (parts.length !== 4 || parts[0] !== SYNC_CODE_PREFIX) {
+      throw new Error('VildaCrypto.decryptSyncCode: nieprawidłowy format kodu. Upewnij się że kopiujesz pełny kod zaczynający się od "vsc1."');
+    }
+    let salt, iv, cipherBytes;
+    try {
+      salt       = base64urlToBytes(parts[1]);
+      iv         = base64urlToBytes(parts[2]);
+      cipherBytes = base64urlToBytes(parts[3]);
+    } catch (_) {
+      throw new Error('VildaCrypto.decryptSyncCode: błąd dekodowania kodu synchronizacji.');
+    }
+    const pwMaterial = await subtle.importKey(
+      'raw', stringToBytes(password), 'PBKDF2', false, ['deriveKey']
+    );
+    const wrappingKey = await subtle.deriveKey(
+      { name: 'PBKDF2', hash: SYNC_CODE_KDF_HASH, salt: salt, iterations: SYNC_CODE_KDF_ITER },
+      pwMaterial,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['decrypt']
+    );
+    let masterBytes;
+    try {
+      const plainBuf = await subtle.decrypt({ name: 'AES-GCM', iv: iv }, wrappingKey, cipherBytes);
+      masterBytes = new Uint8Array(plainBuf);
+    } catch (_) {
+      throw new Error('VildaCrypto.decryptSyncCode: nieprawidłowe hasło lub uszkodzony kod synchronizacji.');
+    }
+    if (masterBytes.length !== MASTER_KEY_BYTES) {
+      throw new Error('VildaCrypto.decryptSyncCode: kod zawiera nieprawidłowe dane.');
+    }
+    return masterBytes;
+  }
+
   const SYNC_HKDF_SALT_STR      = 'wagaiwzrost.pl:sync:v1';         // stały, domenowy
   const SYNC_INFO_SLOT_ID_STR   = 'wagaiwzrost.pl:sync:slot-id:v1';  // domain separation
   const SYNC_INFO_AUTH_STR      = 'wagaiwzrost.pl:sync:auth-token:v1';
@@ -854,7 +955,10 @@
     SYNC_INFO_SLOT_ID_STR: SYNC_INFO_SLOT_ID_STR,
     SYNC_INFO_AUTH_STR: SYNC_INFO_AUTH_STR,
     SYNC_INFO_BLOB_ENC_STR: SYNC_INFO_BLOB_ENC_STR,
-    deriveSyncMaterial: deriveSyncMaterial
+    deriveSyncMaterial: deriveSyncMaterial,
+    // Kod synchronizacji (cross-device restore bez pliku .wiw)
+    encryptSyncCode: encryptSyncCode,
+    decryptSyncCode: decryptSyncCode
   };
 
   global.VildaCrypto = api;

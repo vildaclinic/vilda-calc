@@ -65,11 +65,11 @@
 <script src="vilda_persistence_adapter.js?v=7"></script>
 <script src="vilda_session_bridge.js?v=1"></script>
 <script src="vilda_init.js?v=4"></script>
-<script src="vilda_crypto.js?v=4"></script>
-<script src="vilda_vault.js?v=11"></script>
+<script src="vilda_crypto.js?v=5"></script>
+<script src="vilda_vault.js?v=12"></script>
 <script src="vilda_sync.js?v=2"></script>
 <script src="vilda_sync_integration.js?v=2"></script>
-<script src="vilda_auth_ui.js?v=27"></script>
+<script src="vilda_auth_ui.js?v=28"></script>
 <script src="vilda_file_export.js?v=4"></script>
 <script src="vilda_deps.js?v=6"></script>
   
@@ -603,7 +603,67 @@
 
                   <div class="settings-backup-sep" role="separator"></div>
 
-                  <!-- ── Podsekcja 3: Zarządzanie slotem ── -->
+                  <div class="settings-backup-sep" role="separator"></div>
+
+                  <!-- ── Podsekcja 3: Kod synchronizacji ── -->
+                  <div class="settings-backup-section" id="syncCodeCard">
+                    <div class="settings-control-header">
+                      <h3 class="settings-control-title">Kod synchronizacji</h3>
+                      <span class="settings-tag" id="syncCodeTag">—</span>
+                    </div>
+                    <p class="settings-control-desc">
+                      Kod synchronizacji pozwala odtworzyć konto na nowym urządzeniu <strong>bez pliku kopii .wiw</strong> — wystarczy kod + hasło. Zapisz go w bezpiecznym miejscu (menedżer haseł, zaszyfrowane notatki).
+                    </p>
+                    <div class="settings-card-toggle-row settings-backup-btn-row">
+                      <button type="button" id="syncShowCodeBtn" class="vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small settings-backup-btn" disabled>
+                        ☁ Pokaż kod synchronizacji
+                      </button>
+                    </div>
+                    <!-- Panel z kodem — domyślnie ukryty -->
+                    <div id="syncCodePanel" style="display:none;margin-top:0.75rem;">
+                      <label style="display:block;font-size:0.85rem;color:var(--text-muted);margin-bottom:0.4rem;">
+                        Podaj hasło, aby wygenerować kod:
+                      </label>
+                      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+                        <input type="password" id="syncCodePwInput"
+                               class="vilda-auth-input"
+                               placeholder="Twoje hasło"
+                               style="flex:1;min-width:160px;margin:0;">
+                        <button type="button" id="syncGenerateCodeBtn"
+                                class="vilda-auth-btn vilda-auth-btn-primary vilda-auth-btn-small">
+                          Generuj
+                        </button>
+                      </div>
+                      <div id="syncCodeOutput" style="display:none;margin-top:0.75rem;">
+                        <label style="display:block;font-size:0.85rem;color:var(--text-muted);margin-bottom:0.4rem;">
+                          Twój kod synchronizacji (skopiuj i zachowaj):
+                        </label>
+                        <textarea id="syncCodeText" readonly
+                                  style="width:100%;box-sizing:border-box;font-family:monospace;font-size:0.75rem;
+                                         padding:0.6rem;border-radius:8px;border:1px solid var(--border);
+                                         background:var(--surface-alt,#f5f5f7);color:var(--text);
+                                         resize:none;min-height:80px;"></textarea>
+                        <div style="display:flex;gap:0.5rem;margin-top:0.5rem;flex-wrap:wrap;">
+                          <button type="button" id="syncCopyCodeBtn"
+                                  class="vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small">
+                            Kopiuj kod
+                          </button>
+                          <button type="button" id="syncHideCodeBtn"
+                                  class="vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small vilda-auth-btn-subtle">
+                            Ukryj
+                          </button>
+                        </div>
+                        <p style="margin:0.5rem 0 0;font-size:0.78rem;color:var(--text-muted);">
+                          ⚠ Kod bez hasła jest bezużyteczny — ale i tak traktuj go jak tajny klucz. Zapisz go razem z hasłem w menedżerze haseł.
+                        </p>
+                      </div>
+                    </div>
+                    <p class="settings-inline-note settings-backup-note" id="syncCodeStatus"></p>
+                  </div>
+
+                  <div class="settings-backup-sep" role="separator"></div>
+
+                  <!-- ── Podsekcja 4: Zarządzanie slotem ── -->
                   <div class="settings-backup-section" id="syncSlotCard">
                     <div class="settings-control-header">
                       <h3 class="settings-control-title">Zarządzanie slotem sync</h3>
@@ -1952,6 +2012,18 @@
         const syncSlotTag       = $('syncSlotTag');
         const syncSlotStatus    = $('syncSlotStatus');
 
+        // Kod synchronizacji
+        const syncShowCodeBtn     = $('syncShowCodeBtn');
+        const syncCodePanel       = $('syncCodePanel');
+        const syncCodePwInput     = $('syncCodePwInput');
+        const syncGenerateCodeBtn = $('syncGenerateCodeBtn');
+        const syncCodeOutput      = $('syncCodeOutput');
+        const syncCodeText        = $('syncCodeText');
+        const syncCopyCodeBtn     = $('syncCopyCodeBtn');
+        const syncHideCodeBtn     = $('syncHideCodeBtn');
+        const syncCodeStatus      = $('syncCodeStatus');
+        const syncCodeTag         = $('syncCodeTag');
+
         function isSyncEnabled() {
           try { return localStorage.getItem(SYNC_ENABLED_KEY) === 'true'; } catch(_) { return false; }
         }
@@ -1990,6 +2062,7 @@
 
           if (!V || !V.isUnlocked()) {
             [syncNowBtn, syncPullBtn, syncClearStateBtn, syncDeleteSlotBtn].forEach(function(b) { if(b) b.disabled = true; });
+            if (syncShowCodeBtn) syncShowCodeBtn.disabled = true;
             setText(syncStatusNote, 'Zaloguj się, aby zarządzać synchronizacją.');
             if (syncStatusTag)  setText(syncStatusTag, 'wymaga logowania');
             if (syncSlotTag)    setText(syncSlotTag,   'wymaga logowania');
@@ -2032,6 +2105,8 @@
           // (np. na nowym urządzeniu gdzie sync jeszcze nie był włączony)
           if (syncPullBtn) syncPullBtn.disabled = false;
           if (syncDeleteSlotBtn) syncDeleteSlotBtn.disabled = !registered;
+          // Kod sync — dostępny zawsze gdy vault odblokowany
+          if (syncShowCodeBtn) syncShowCodeBtn.disabled = false;
         }
 
         // Toggle włączenia sync
@@ -2148,6 +2223,90 @@
               syncDeleteSlotBtn.disabled = false;
               syncDeleteSlotBtn.textContent = orig;
             }
+          });
+        }
+
+        // ─── Przycisk: Pokaż kod synchronizacji ────────────────────────────────
+        if (syncShowCodeBtn) {
+          syncShowCodeBtn.addEventListener('click', function () {
+            if (!syncCodePanel) return;
+            syncCodePanel.style.display = '';
+            syncShowCodeBtn.disabled = true;
+            if (syncCodePwInput) syncCodePwInput.value = '';
+            if (syncCodeOutput) syncCodeOutput.style.display = 'none';
+            if (syncCodeText) syncCodeText.value = '';
+            if (syncCodeStatus) setText(syncCodeStatus, '');
+            if (syncCodeTag) setText(syncCodeTag, '');
+            if (syncCodePwInput) syncCodePwInput.focus();
+          });
+        }
+
+        if (syncGenerateCodeBtn) {
+          syncGenerateCodeBtn.addEventListener('click', async function () {
+            const V = window.VildaVault;
+            if (!V || typeof V.exportSyncCode !== 'function') {
+              if (syncCodeStatus) setText(syncCodeStatus, '⚠ Moduł nie obsługuje tej funkcji.');
+              return;
+            }
+            const pw = syncCodePwInput ? syncCodePwInput.value : '';
+            if (!pw) {
+              if (syncCodeStatus) setText(syncCodeStatus, '⚠ Podaj hasło do konta.');
+              if (syncCodePwInput) syncCodePwInput.focus();
+              return;
+            }
+            syncGenerateCodeBtn.disabled = true;
+            const orig = syncGenerateCodeBtn.textContent;
+            syncGenerateCodeBtn.textContent = 'Generuję…';
+            if (syncCodeStatus) setText(syncCodeStatus, '');
+            try {
+              const code = await V.exportSyncCode(pw);
+              if (syncCodeText) syncCodeText.value = code;
+              if (syncCodeOutput) syncCodeOutput.style.display = '';
+              if (syncCodeStatus) setText(syncCodeStatus, '✓ Kod wygenerowany. Skopiuj go i przechowaj w bezpiecznym miejscu.');
+              if (syncCodeTag) setText(syncCodeTag, 'gotowy');
+            } catch (err) {
+              const msg = err && err.message ? err.message : String(err);
+              const friendly = msg.toLowerCase().includes('nieprawidłow') || msg.toLowerCase().includes('wrong') || msg.toLowerCase().includes('invalid')
+                ? '⚠ Nieprawidłowe hasło.'
+                : '⚠ Błąd: ' + msg;
+              if (syncCodeStatus) setText(syncCodeStatus, friendly);
+              if (syncCodeTag) setText(syncCodeTag, 'błąd');
+            } finally {
+              syncGenerateCodeBtn.disabled = false;
+              syncGenerateCodeBtn.textContent = orig;
+            }
+          });
+        }
+
+        if (syncCopyCodeBtn) {
+          syncCopyCodeBtn.addEventListener('click', function () {
+            const code = syncCodeText ? syncCodeText.value : '';
+            if (!code) return;
+            if (navigator && navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+              navigator.clipboard.writeText(code).then(function () {
+                const orig = syncCopyCodeBtn.textContent;
+                syncCopyCodeBtn.textContent = '✓ Skopiowano!';
+                setTimeout(function () { syncCopyCodeBtn.textContent = orig; }, 2000);
+              }).catch(function () {
+                if (syncCodeStatus) setText(syncCodeStatus, '⚠ Nie udało się skopiować — zaznacz tekst ręcznie.');
+              });
+            } else {
+              // Fallback: zaznacz textarea
+              if (syncCodeText) { syncCodeText.select(); }
+              if (syncCodeStatus) setText(syncCodeStatus, 'Zaznacz i skopiuj ręcznie (Ctrl+C / ⌘C).');
+            }
+          });
+        }
+
+        if (syncHideCodeBtn) {
+          syncHideCodeBtn.addEventListener('click', function () {
+            if (syncCodeOutput) syncCodeOutput.style.display = 'none';
+            if (syncCodePanel) syncCodePanel.style.display = 'none';
+            if (syncCodePwInput) syncCodePwInput.value = '';
+            if (syncCodeText) syncCodeText.value = '';
+            if (syncCodeStatus) setText(syncCodeStatus, '');
+            if (syncCodeTag) setText(syncCodeTag, '');
+            if (syncShowCodeBtn) syncShowCodeBtn.disabled = false;
           });
         }
 
