@@ -146,9 +146,8 @@
         // Każdy nowy unlock resetuje flagę blokady
         syncBlockedUntilUnlock = false;
 
-        if (!isSyncEnabled()) return;
         var S = getSync();
-        if (!S || typeof S.syncFull !== 'function') return;
+        if (!S) return;
 
         setTimeout(function () {
           if (syncBlockedUntilUnlock) return;
@@ -161,14 +160,20 @@
           } catch (_) {}
 
           if (alreadyShown) {
-            // Już obsłużone — idź prosto do sync
-            S.syncFull().catch(function () {});
+            // Interstitial już był pokazany — jeśli sync włączony, odpal normalny sync
+            if (isSyncEnabled() && typeof S.syncFull === 'function') {
+              S.syncFull().catch(function () {});
+            }
             return;
           }
 
-          // Nie pokazaliśmy jeszcze — sprawdź czy to nowe urządzenie z danymi na serwerze
+          // Probe działa ZAWSZE (niezależnie od isSyncEnabled) —
+          // na nowym urządzeniu sync może być jeszcze wyłączony a slot już istnieć
           if (typeof S.probeNewDevice !== 'function') {
-            S.syncFull().catch(function () {});
+            // Brak metody — wróć do starego zachowania
+            if (isSyncEnabled() && typeof S.syncFull === 'function') {
+              S.syncFull().catch(function () {});
+            }
             return;
           }
 
@@ -177,8 +182,7 @@
 
             if (result && result.isNewDevice) {
               // Nowe urządzenie + slot na serwerze → pokaż interstitial
-              // Ustaw flagę PRZED dispatchem żeby wielokrotne unlock nie powodowało
-              // wielokrotnego pokazania w tej samej sesji
+              // (niezależnie od tego czy sync był wcześniej włączony)
               try {
                 if (global.sessionStorage) {
                   global.sessionStorage.setItem(NEW_DEVICE_SHOWN_KEY, '1');
@@ -198,14 +202,15 @@
               } catch (_) {}
               // NIE wywołujemy syncFull — użytkownik zdecyduje przez interstitial
             } else {
-              // Zwykłe urządzenie lub slot nie istnieje — normalny sync
-              if (!syncBlockedUntilUnlock) {
+              // Slot nie istnieje lub urządzenie już zarejestrowane —
+              // normalny sync tylko jeśli włączony
+              if (isSyncEnabled() && !syncBlockedUntilUnlock && typeof S.syncFull === 'function') {
                 S.syncFull().catch(function () {});
               }
             }
           }).catch(function () {
-            // Probe nie powiodło się (offline?) — normalny sync
-            if (!syncBlockedUntilUnlock) {
+            // Probe nie powiodło się (offline?) — normalny sync jeśli włączony
+            if (isSyncEnabled() && !syncBlockedUntilUnlock && typeof S.syncFull === 'function') {
               S.syncFull().catch(function () {});
             }
           });

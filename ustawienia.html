@@ -2026,7 +2026,11 @@
             : (registered ? 'Slot zarejestrowany. Jeszcze nie synchronizowano.' : 'Slot nie jest jeszcze zarejestrowany — uruchom sync, aby go utworzyć.');
           setText(syncStatusNote, noteText);
 
-          [syncNowBtn, syncPullBtn, syncClearStateBtn].forEach(function(b) { if(b) b.disabled = !enabled; });
+          // syncNowBtn i syncClearStateBtn wymagają włączonego sync
+          [syncNowBtn, syncClearStateBtn].forEach(function(b) { if(b) b.disabled = !enabled; });
+          // syncPullBtn to operacja odtwarzania — dostępna zawsze gdy vault odblokowany
+          // (np. na nowym urządzeniu gdzie sync jeszcze nie był włączony)
+          if (syncPullBtn) syncPullBtn.disabled = false;
           if (syncDeleteSlotBtn) syncDeleteSlotBtn.disabled = !registered;
         }
 

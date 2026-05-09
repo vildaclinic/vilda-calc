@@ -7481,6 +7481,13 @@ async function generateCentileChart() {
       if (restBtn) {
         restBtn.addEventListener('click', function () {
           setRestoreBtnLoading(true);
+
+          // Auto-włącz sync jeśli jeszcze wyłączony — użytkownik potwierdził chęć odtworzenia
+          var I = window.VildaSyncIntegration;
+          if (I && typeof I.setSyncEnabled === 'function' && !I.isSyncEnabled()) {
+            I.setSyncEnabled(true);
+          }
+
           var S = window.VildaSync;
           if (S && typeof S.syncFull === 'function') {
             S.syncFull()
