@@ -2494,25 +2494,35 @@
         _restoreSerial = 0; // anuluj oczekujący setTimeout z onUnlock (szybkie wylogowanie)
         var lockedUserId = _trackedUserId;
         _trackedUserId = null; // zużyty — wyczyść niezależnie od wyniku
+
+        // Odczytaj sharedUserData PRZED resetAppSessionState — clearAllData() wewnątrz
+        // wywołuje persistence.clearUserState() który emituje vilda:user-state-cleared
+        // SYNCHRONICZNIE. Nasz listener na ten event zeruje _pendingSessionRestore i
+        // usuwa _vildaSnapRestore z localStorage. Dlatego tylko odczyt jest tu —
+        // zapisujemy snapshot dopiero PO resetAppSessionState (event już przebiegł).
+        var sharedSnap = null;
         if (reason !== 'user-removed' && lockedUserId) {
-          try {
-            var sharedSnap = null;
-            try { sharedSnap = global.localStorage && global.localStorage.getItem('sharedUserData'); } catch (_) {}
-            if (sharedSnap) {
-              _pendingSessionRestore = { userId: lockedUserId, sharedUserData: sharedSnap };
-              // Persystuj do localStorage aby przeżyć przeładowanie strony (ważność: 1h)
-              try {
-                global.localStorage.setItem('_vildaSnapRestore', JSON.stringify({
-                  userId: lockedUserId, data: sharedSnap, ts: Date.now()
-                }));
-              } catch (_) {}
-            }
-          } catch (_) {}
+          try { sharedSnap = global.localStorage && global.localStorage.getItem('sharedUserData'); } catch (_) {}
         }
 
         // Wylogowanie/auto-lock = porzucenie tożsamości. Wyczyść stan aplikacji,
         // żeby kolejny user (lub gość) nie zobaczył danych poprzedniego.
+        // UWAGA: tu synchronicznie odpala vilda:user-state-cleared — snapshot
+        // zapisujemy dopiero po powrocie z tej funkcji.
         resetAppSessionState('on-lock');
+
+        // Zapisz snapshot PO zdarzeniu vilda:user-state-cleared (które już przebiegło
+        // wewnątrz resetAppSessionState). Kolejna emisja z showStartupScreen() jest
+        // tłumiona przez throttle (150 ms), więc snapshot przeżyje do onUnlock.
+        if (sharedSnap) {
+          _pendingSessionRestore = { userId: lockedUserId, sharedUserData: sharedSnap };
+          // Persystuj do localStorage aby przeżyć przeładowanie strony (ważność: 1h)
+          try {
+            global.localStorage.setItem('_vildaSnapRestore', JSON.stringify({
+              userId: lockedUserId, data: sharedSnap, ts: Date.now()
+            }));
+          } catch (_) {}
+        }
         if (isGuestMode()) return;
         // Gdy konto zostało właśnie usunięte, ustawienia.html natychmiast
         // przekierowuje na index.html — nie otwieramy tu ekranu startowego,
