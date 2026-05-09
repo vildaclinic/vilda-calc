@@ -41,6 +41,10 @@
   // Snapshot sesji przed wylogowaniem — umożliwia przywrócenie stanu po ponownym logowaniu
   // tego samego użytkownika (idle timeout, ręczne wylogowanie i powrót).
   let _pendingSessionRestore = null; // { userId: string, snapshot: string } | null
+  // UWAGA: vilda_vault.lock() zeruje currentUserId PRZED wywołaniem notifyLock(),
+  // więc getCurrentUser() w onLock zawsze zwraca null. Śledzimy userId sami —
+  // aktualizujemy w onUnlock, używamy w onLock, zerujemy po użyciu.
+  let _trackedUserId = null;
 
   // ============ PLATFORM DETECTION ============
   /**
@@ -2467,26 +2471,25 @@
         hideLogoutButton();
 
         // ── Snapshot sesji przed czyszczeniem ──────────────────────────────────
-        // Gdy ten sam user za chwilę się zaloguje (idle timeout, ręczny logout
-        // i powrót), przywrócimy stan formularzy dokładnie w miejscu gdzie był.
-        // Snapshot przechowujemy w pamięci — storage zostanie zaraz wyczyszczone.
+        // WAŻNE: vault.lock() zeruje currentUserId PRZED wywołaniem notifyLock(),
+        // więc getCurrentUser() tu zawsze zwraca null. Używamy _trackedUserId
+        // przechwyconego wcześniej w onUnlock.
         _pendingSessionRestore = null;
-        if (reason !== 'user-removed') {
+        var lockedUserId = _trackedUserId;
+        _trackedUserId = null; // zużyty — wyczyść niezależnie od wyniku
+        if (reason !== 'user-removed' && lockedUserId) {
           try {
-            var currentUser = getVault().getCurrentUser ? getVault().getCurrentUser() : null;
-            if (currentUser && currentUser.userId) {
-              // Wymuś natychmiastowy zapis (debounce mógł nie zdążyć)
-              try {
-                if (global.vildaSession && typeof global.vildaSession.saveNow === 'function') {
-                  global.vildaSession.saveNow();
-                }
-              } catch (_) {}
-              // Odczytaj surowy JSON z sessionStorage zanim zostanie wyczyszczony
-              var rawSnap = null;
-              try { rawSnap = global.sessionStorage && global.sessionStorage.getItem('vildaMainSessionV1'); } catch (_) {}
-              if (rawSnap) {
-                _pendingSessionRestore = { userId: currentUser.userId, snapshot: rawSnap };
+            // Wymuś natychmiastowy zapis (debounce mógł nie zdążyć)
+            try {
+              if (global.vildaSession && typeof global.vildaSession.saveNow === 'function') {
+                global.vildaSession.saveNow();
               }
+            } catch (_) {}
+            // Odczytaj surowy JSON z sessionStorage zanim zostanie wyczyszczony
+            var rawSnap = null;
+            try { rawSnap = global.sessionStorage && global.sessionStorage.getItem('vildaMainSessionV1'); } catch (_) {}
+            if (rawSnap) {
+              _pendingSessionRestore = { userId: lockedUserId, snapshot: rawSnap };
             }
           } catch (_) {}
         }
@@ -2502,7 +2505,12 @@
         // po każdym innym rodzaju blokady wracamy do ekranu startowego
         showStartupScreen();
       });
-      getVault().onUnlock(function () {
+      getVault().onUnlock(function (payload) {
+        // Zapamiętaj userId zalogowanego użytkownika — vault.lock() zeruje go
+        // PRZED wywołaniem onLock listenerów, więc bez własnego śledzenia
+        // nie możemy odczytać userId w onLock.
+        _trackedUserId = (payload && payload.userId) ? payload.userId : null;
+
         // Logowanie zawsze unieważnia tryb gościa — także gdy user wszedł
         // wcześniej jako gość, a potem zalogował się przez przycisk w rogu.
         if (isGuestMode()) {
