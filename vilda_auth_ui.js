@@ -2831,7 +2831,7 @@
       const s = global.document.createElement('script');
       s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
       // SRI — chroni przed podmianą pliku po stronie CDN (supply-chain attack)
-      s.integrity = 'sha384-+bEGHOEBSTzTFzB3zMvDFSeiNFJSFlMJHQSrF7MBWdPFi8sPpOG6BHXNFQ66qGk';
+      s.integrity = 'sha384-3zSEDfvllQohrq0PHL1fOXJuC_jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2_bMnU';
       s.crossOrigin = 'anonymous';
       s.onload  = resolve;
       s.onerror = function () { reject(new Error('Nie udało się załadować biblioteki QR.')); };
