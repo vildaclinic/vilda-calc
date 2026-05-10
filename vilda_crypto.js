@@ -20,8 +20,8 @@
     return;
   }
 
-  const VERSION = '1.0.0';
-  const STEP = '8R-1';
+  const VERSION = '1.1.0';
+  const STEP = '8Q-9a';
   const ENVELOPE_FORMAT = 'vilda-vault/v1';
   const KDF_NAME = 'PBKDF2';
   const KDF_HASH = 'SHA-256';
@@ -988,6 +988,69 @@
     return masterBytes;
   }
 
+  // ============ QR TRANSFER2 — HMAC + PBKDF2 BITS (etap 8Q-9a) ============
+  //
+  // Dwie nowe funkcje do protokołu "komputer → telefon":
+  //   deriveWrappingBits — PBKDF2 → surowe 32 bajty (Uint8Array), extractable.
+  //                        Używane przez OBIE strony do obliczenia confirmToken.
+  //   hmacSHA256         — HMAC-SHA256(keyBytes, dataBytes) → Uint8Array 32B.
+  //                        Używane do wyliczenia i weryfikacji confirmToken.
+
+  /**
+   * Wyprowadza 256 bitów (32 bajty) z hasła przez PBKDF2-SHA256.
+   * W odróżnieniu od deriveKey() zwraca surową tablicę bajtów (Uint8Array),
+   * która może być użyta jako klucz HMAC.
+   *
+   * Uwaga: to NIE zastępuje deriveKey() — tamta funkcja tworzy CryptoKey
+   * (non-extractable) do szyfrowania masterKey. Ta funkcja służy wyłącznie
+   * do obliczenia confirmToken w protokole QR transfer2.
+   *
+   * @param {string}     password    — hasło użytkownika
+   * @param {string}     saltB64     — base64 (nie base64url) sól z meta vault
+   * @param {number}     iterations  — liczba iteracji PBKDF2 z meta vault
+   * @returns {Promise<Uint8Array>}  — 32 bajty
+   */
+  async function deriveWrappingBits(password, saltB64, iterations) {
+    const subtle  = getCryptoSubtle();
+    const pwBytes = stringToBytes(password);
+    const salt    = base64ToBytes(saltB64);
+
+    const keyMaterial = await subtle.importKey(
+      'raw', pwBytes, 'PBKDF2', false, ['deriveBits']
+    );
+
+    const bits = await subtle.deriveBits(
+      { name: 'PBKDF2', hash: 'SHA-256', salt, iterations },
+      keyMaterial,
+      256
+    );
+
+    return new Uint8Array(bits);
+  }
+
+  /**
+   * Oblicza HMAC-SHA256(keyBytes, dataBytes) → Uint8Array 32 bajty.
+   *
+   * Po stronie telefonu:  confirmToken = HMAC(wrappingBits, ph_pub || token)
+   * Po stronie komputera: verify:       HMAC(wrappingBits, ph_pub || token) === confirmToken
+   *
+   * @param {Uint8Array} keyBytes   — 32 bajty (wynik deriveWrappingBits)
+   * @param {Uint8Array} dataBytes  — dane do podpisania (konkatenacja)
+   * @returns {Promise<Uint8Array>} — 32 bajty podpisu
+   */
+  async function hmacSHA256(keyBytes, dataBytes) {
+    const subtle  = getCryptoSubtle();
+    const hmacKey = await subtle.importKey(
+      'raw',
+      keyBytes,
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+    const sig = await subtle.sign('HMAC', hmacKey, dataBytes);
+    return new Uint8Array(sig);
+  }
+
   const SYNC_HKDF_SALT_STR      = 'wagaiwzrost.pl:sync:v1';         // stały, domenowy
   const SYNC_INFO_SLOT_ID_STR   = 'wagaiwzrost.pl:sync:slot-id:v1';  // domain separation
   const SYNC_INFO_AUTH_STR      = 'wagaiwzrost.pl:sync:auth-token:v1';
@@ -1165,7 +1228,10 @@
     exportECDHPrivateKey:   exportECDHPrivateKey,
     importECDHPrivateKey:   importECDHPrivateKey,
     encryptForTransfer:     encryptForTransfer,
-    decryptFromTransfer:    decryptFromTransfer
+    decryptFromTransfer:    decryptFromTransfer,
+    // QR Transfer2 — HMAC + PBKDF2 bits (etap 8Q-9a)
+    deriveWrappingBits:     deriveWrappingBits,
+    hmacSHA256:             hmacSHA256
   };
 
   global.VildaCrypto = api;

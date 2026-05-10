@@ -491,9 +491,12 @@ function showTooltip(target, message) {
 // professionalMode = true  ➔ tryb profesjonalny: wyświetla Z‑score dla wagi,
 //                           wzrostu i BMI
 // professionalMode = false ➔ tryb standardowy: ukrywa te wartości
-// Wartość ta jest modyfikowana przez przełącznik umieszczony w karcie BMI
-// (resultsModeToggle) oraz zapisywana w localStorage, aby stan został
-// zachowany pomiędzy sesjami.
+//
+// Architektura (krok PRO-0+):
+//   Wartość jest ustawiana przez initResultsModeToggle() na podstawie
+//   window.VildaProAccess.hasAccess() — NIE przez bezpośredni odczyt z localStorage.
+//   Przełącznik resultsModeToggle jest blokowany jeśli VildaProAccess nie daje dostępu.
+//   W PRO-3+ hasAccess() sprawdzi status subskrypcji z VildaVault/VildaSync.
 let professionalMode = false;
 
 function dispatchResultsModeSyncEvent(isProfessional) {
@@ -2327,9 +2330,16 @@ if (typeof window !== 'undefined' && typeof window.vildaAppOnReady === 'function
   }
       }
     }
-    // Odczytaj poprzedni stan z localStorage
-    const storedMode = readResultsModeStorage();
-    professionalMode = (storedMode === 'professional');
+    // Ustal tryb PRO przez VildaProAccess (PRO-0: zawsze false).
+    // NIE czytamy tu z localStorage — decyzja należy do warstwy dostępu,
+    // nie do preferencji zapisanej przez użytkownika.
+    // PRO-3+: VildaProAccess.hasAccess() sprawdzi VildaVault/VildaSync.
+    const _proAccess = (typeof window !== 'undefined' &&
+      window.VildaProAccess &&
+      typeof window.VildaProAccess.hasAccess === 'function')
+      ? window.VildaProAccess.hasAccess()
+      : false;
+    professionalMode = _proAccess;
     // Zapamiętaj tryb także w obiekcie window, aby był dostępny dla
     // generateMetabolicSummary() (korzysta z window.professionalMode)
     try {
@@ -2379,6 +2389,19 @@ if (typeof window !== 'undefined' && typeof window.vildaAppOnReady === 'function
     }
     // Obsłuż zmianę stanu suwaka
     toggle.addEventListener('change', () => {
+      // Guard PRO-0+: blokuj włączenie trybu PRO jeśli użytkownik nie ma dostępu.
+      // Przełącznik może próbować ustawić checked=true, ale jeśli VildaProAccess
+      // nie potwierdza dostępu, natychmiast cofamy zmianę.
+      // W PRO-3+ gdy hasAccess() zwróci true, guard przepuści zmianę.
+      const _canEnablePro = (typeof window !== 'undefined' &&
+        window.VildaProAccess &&
+        typeof window.VildaProAccess.hasAccess === 'function')
+        ? window.VildaProAccess.hasAccess()
+        : false;
+      if (toggle.checked && !_canEnablePro) {
+        toggle.checked = false; // Przywróć stan — brak dostępu do PRO
+        return;                 // Nie wykonuj dalszej logiki change
+      }
       professionalMode = toggle.checked;
       // Zapisz bieżący stan również w obiekcie window, aby inne funkcje mogły
       // odczytać tryb profesjonalny za pomocą window.professionalMode.  Bez

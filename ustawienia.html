@@ -65,11 +65,11 @@
 <script src="vilda_persistence_adapter.js?v=7"></script>
 <script src="vilda_session_bridge.js?v=1"></script>
 <script src="vilda_init.js?v=4"></script>
-<script src="vilda_crypto.js?v=6"></script>
-<script src="vilda_vault.js?v=14"></script>
+<script src="vilda_crypto.js?v=7"></script>
+<script src="vilda_vault.js?v=15"></script>
 <script src="vilda_sync.js?v=2"></script>
 <script src="vilda_sync_integration.js?v=2"></script>
-<script src="vilda_auth_ui.js?v=45"></script>
+<script src="vilda_auth_ui.js?v=46"></script>
 <script src="vilda_file_export.js?v=4"></script>
 <script src="vilda_deps.js?v=6"></script>
   
@@ -661,6 +661,70 @@
                       </div>
                       <p class="settings-inline-note settings-backup-note" id="syncQRStatus"></p>
                     </div>
+                  </div>
+
+                  <div class="settings-backup-sep" role="separator"></div>
+
+                  <!-- ── Podsekcja 2d: Zaloguj telefon przez QR (etap 8Q-9) ── -->
+                  <!-- Strona komputera: komputer jest zalogowany i generuje QR dla telefonu -->
+                  <div class="settings-backup-section" id="syncQR2CompCard">
+                    <div class="settings-control-header">
+                      <h3 class="settings-control-title">Zaloguj telefon przez QR</h3>
+                      <span class="settings-tag" id="syncQR2CompTag">—</span>
+                    </div>
+                    <p class="settings-control-desc">
+                      Wygeneruj kod QR na tym urządzeniu i zeskanuj go telefonem, który chcesz zalogować.
+                      Telefon zostanie zalogowany po potwierdzeniu hasłem konta.
+                    </p>
+                    <div class="settings-card-toggle-row settings-backup-btn-row">
+                      <button type="button" id="syncQR2CompBtn"
+                              class="vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small settings-backup-btn"
+                              disabled>
+                        📱 Zaloguj telefon przez QR
+                      </button>
+                    </div>
+
+                    <!-- Panel generatora QR — domyślnie ukryty -->
+                    <div id="syncQR2CompPanel" style="display:none;margin-top:0.75rem;">
+
+                      <!-- Faza 0: re-enter hasło -->
+                      <div id="syncQR2PwPhase">
+                        <label style="display:block;font-size:0.85rem;color:var(--text-muted);margin-bottom:0.4rem;">
+                          Wpisz swoje hasło, aby potwierdzić tożsamość:
+                        </label>
+                        <input type="password" id="syncQR2PwInput"
+                               class="vilda-auth-input"
+                               placeholder="Twoje hasło"
+                               style="margin-bottom:0.5rem;" />
+                        <button type="button" id="syncQR2GenBtn"
+                                class="vilda-auth-btn vilda-auth-btn-primary vilda-auth-btn-small">
+                          Wygeneruj kod QR
+                        </button>
+                      </div>
+
+                      <!-- Faza 1: wyświetl QR + polling — domyślnie ukryta -->
+                      <div id="syncQR2QRPhase" style="display:none;">
+                        <div id="syncQR2QRWrap"
+                             style="display:flex;justify-content:center;margin:10px 0;">
+                          <!-- QR code generowany przez JS -->
+                        </div>
+                        <p id="syncQR2Timer"
+                           style="text-align:center;font-size:0.82rem;color:var(--text-muted);margin:4px 0;">
+                          Kod ważny przez 120 sekund
+                        </p>
+                        <p id="syncQR2PollStatus"
+                           style="text-align:center;font-size:0.82rem;color:#00838d;margin:4px 0;">
+                          Czekam na zeskanowanie przez telefon…
+                        </p>
+                        <button type="button" id="syncQR2CancelBtn"
+                                class="vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small"
+                                style="margin-top:0.5rem;">
+                          Anuluj
+                        </button>
+                      </div>
+
+                    </div>
+                    <p class="settings-inline-note settings-backup-note" id="syncQR2CompStatus"></p>
                   </div>
 
                   <div class="settings-backup-sep" role="separator"></div>
@@ -2122,8 +2186,9 @@
 
           if (!V || !V.isUnlocked()) {
             [syncNowBtn, syncPullBtn, syncClearStateBtn, syncDeleteSlotBtn].forEach(function(b) { if(b) b.disabled = true; });
-            if (syncShowCodeBtn) syncShowCodeBtn.disabled = true;
-            if (syncQRScanBtn)   syncQRScanBtn.disabled   = true;
+            if (syncShowCodeBtn)  syncShowCodeBtn.disabled  = true;
+            if (syncQRScanBtn)    syncQRScanBtn.disabled    = true;
+            if (syncQR2CompBtn)   syncQR2CompBtn.disabled   = true;
             setText(syncStatusNote, 'Zaloguj się, aby zarządzać synchronizacją.');
             if (syncStatusTag)  setText(syncStatusTag, 'wymaga logowania');
             if (syncSlotTag)    setText(syncSlotTag,   'wymaga logowania');
@@ -2166,9 +2231,10 @@
           // (np. na nowym urządzeniu gdzie sync jeszcze nie był włączony)
           if (syncPullBtn) syncPullBtn.disabled = false;
           if (syncDeleteSlotBtn) syncDeleteSlotBtn.disabled = !registered;
-          // Kod sync + QR approve — dostępne zawsze gdy vault odblokowany
-          if (syncShowCodeBtn) syncShowCodeBtn.disabled = false;
-          if (syncQRScanBtn)   syncQRScanBtn.disabled   = false;
+          // Kod sync + QR approve + QR2 comp — dostępne zawsze gdy vault odblokowany
+          if (syncShowCodeBtn)  syncShowCodeBtn.disabled  = false;
+          if (syncQRScanBtn)    syncQRScanBtn.disabled    = false;
+          if (syncQR2CompBtn)   syncQR2CompBtn.disabled   = false;
         }
 
         // Toggle włączenia sync
@@ -2499,6 +2565,185 @@
               syncQRApproveBtn.textContent = origText;
             }
           });
+        }
+
+        // ─── Sekcja 2d: Zaloguj telefon przez QR (etap 8Q-9 — strona komputera) ──
+        const syncQR2CompBtn     = $('syncQR2CompBtn');
+        const syncQR2CompPanel   = $('syncQR2CompPanel');
+        const syncQR2PwPhase     = $('syncQR2PwPhase');
+        const syncQR2PwInput     = $('syncQR2PwInput');
+        const syncQR2GenBtn      = $('syncQR2GenBtn');
+        const syncQR2QRPhase     = $('syncQR2QRPhase');
+        const syncQR2QRWrap      = $('syncQR2QRWrap');
+        const syncQR2Timer       = $('syncQR2Timer');
+        const syncQR2PollStatus  = $('syncQR2PollStatus');
+        const syncQR2CancelBtn   = $('syncQR2CancelBtn');
+        const syncQR2CompStatus  = $('syncQR2CompStatus');
+        const syncQR2CompTag     = $('syncQR2CompTag');
+
+        if (syncQR2CompBtn) {
+          let _qr2PollTimer = null;
+          let _qr2Countdown = null;
+          let _qr2TimeLeft  = 120;
+          let _qr2Token     = null;
+
+          function qr2Stop() {
+            if (_qr2PollTimer) { clearInterval(_qr2PollTimer); _qr2PollTimer = null; }
+            if (_qr2Countdown) { clearInterval(_qr2Countdown); _qr2Countdown = null; }
+            _qr2Token    = null;
+          }
+
+          function qr2Reset() {
+            qr2Stop();
+            if (syncQR2CompPanel)  syncQR2CompPanel.style.display  = 'none';
+            if (syncQR2CompBtn)    syncQR2CompBtn.disabled          = false;
+            if (syncQR2PwPhase)    syncQR2PwPhase.style.display     = '';
+            if (syncQR2QRPhase)    syncQR2QRPhase.style.display     = 'none';
+            if (syncQR2PwInput)    syncQR2PwInput.value             = '';
+            if (syncQR2QRWrap)     syncQR2QRWrap.innerHTML          = '';
+            if (syncQR2CompStatus) setText(syncQR2CompStatus, '');
+            if (syncQR2CompTag)    setText(syncQR2CompTag, '—');
+          }
+
+          syncQR2CompBtn.addEventListener('click', function () {
+            const V = window.VildaVault;
+            if (!V || !V.isUnlocked()) {
+              if (syncQR2CompStatus) setText(syncQR2CompStatus, '⚠ Zaloguj się przed wygenerowaniem kodu QR.');
+              return;
+            }
+            if (syncQR2CompPanel) syncQR2CompPanel.style.display = '';
+            syncQR2CompBtn.disabled = true;
+            if (syncQR2PwInput) syncQR2PwInput.focus();
+          });
+
+          if (syncQR2CancelBtn) {
+            syncQR2CancelBtn.addEventListener('click', qr2Reset);
+          }
+
+          if (syncQR2GenBtn) {
+            syncQR2GenBtn.addEventListener('click', async function () {
+              const V = window.VildaVault;
+              if (!V || typeof V.initiatePhoneQR !== 'function') {
+                if (syncQR2CompStatus) setText(syncQR2CompStatus, '⚠ Funkcja niedostępna w tej wersji.');
+                return;
+              }
+              if (!V.isUnlocked()) {
+                if (syncQR2CompStatus) setText(syncQR2CompStatus, '⚠ Zaloguj się przed wygenerowaniem kodu QR.');
+                return;
+              }
+
+              const pw = syncQR2PwInput ? syncQR2PwInput.value : '';
+              if (!pw) {
+                if (syncQR2CompStatus) setText(syncQR2CompStatus, '⚠ Podaj hasło.');
+                if (syncQR2PwInput) syncQR2PwInput.focus();
+                return;
+              }
+
+              syncQR2GenBtn.disabled = true;
+              syncQR2GenBtn.textContent = 'Generuję…';
+              if (syncQR2CompStatus) setText(syncQR2CompStatus, '');
+
+              let initResult;
+              try {
+                initResult = await V.initiatePhoneQR(pw);
+              } catch (err) {
+                const msg = err && err.message ? err.message : String(err);
+                const friendly = (err && err.code === 'BAD_PASSWORD') || msg.toLowerCase().includes('nieprawidłow')
+                  ? '⚠ Nieprawidłowe hasło.'
+                  : '⚠ Błąd generowania kodu QR: ' + msg;
+                if (syncQR2CompStatus) setText(syncQR2CompStatus, friendly);
+                syncQR2GenBtn.disabled = false;
+                syncQR2GenBtn.textContent = 'Wygeneruj kod QR';
+                return;
+              }
+
+              _qr2Token = initResult.transferToken;
+              _qr2TimeLeft = initResult.expiresIn || 120;
+
+              // Ukryj fazę 0, pokaż fazę 1 (QR)
+              if (syncQR2PwPhase) syncQR2PwPhase.style.display = 'none';
+              if (syncQR2QRPhase) syncQR2QRPhase.style.display = '';
+              syncQR2GenBtn.disabled = false;
+              syncQR2GenBtn.textContent = 'Wygeneruj kod QR';
+
+              // Wygeneruj QR (lazy-load QRCode.js — ta sama biblioteka co auth_ui)
+              if (syncQR2QRWrap) syncQR2QRWrap.innerHTML = '';
+              const qrInner = document.createElement('div');
+              qrInner.style.cssText = 'background:#fff;padding:10px;border-radius:10px;display:inline-block;box-shadow:0 2px 10px rgba(0,0,0,.10);';
+              if (syncQR2QRWrap) syncQR2QRWrap.appendChild(qrInner);
+
+              function generateQRCode(data) {
+                if (window.QRCode) {
+                  try {
+                    new QRCode(qrInner, {
+                      text: data,
+                      width: 190, height: 190,
+                      colorDark: '#00464d', colorLight: '#ffffff',
+                      correctLevel: QRCode.CorrectLevel.M
+                    });
+                  } catch (e) {
+                    qrInner.textContent = 'Błąd QR: ' + (e.message || e);
+                  }
+                  return;
+                }
+                const s = document.createElement('script');
+                s.src = 'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js';
+                s.onload = function () {
+                  try {
+                    new QRCode(qrInner, {
+                      text: data, width: 190, height: 190,
+                      colorDark: '#00464d', colorLight: '#ffffff',
+                      correctLevel: QRCode.CorrectLevel.M
+                    });
+                  } catch (e) {
+                    qrInner.textContent = 'Błąd QR: ' + (e.message || e);
+                  }
+                };
+                s.onerror = function () { qrInner.textContent = initResult.qrData; };
+                document.head.appendChild(s);
+              }
+              generateQRCode(initResult.qrData);
+
+              // Odliczanie
+              if (syncQR2Timer) setText(syncQR2Timer, 'Kod ważny przez ' + _qr2TimeLeft + ' sekund');
+              _qr2Countdown = setInterval(function () {
+                _qr2TimeLeft--;
+                if (syncQR2Timer) setText(syncQR2Timer, 'Kod ważny przez ' + _qr2TimeLeft + ' sekund');
+                if (_qr2TimeLeft <= 0) {
+                  qr2Stop();
+                  if (syncQR2PollStatus) setText(syncQR2PollStatus, '⏰ Kod wygasł. Kliknij Anuluj i wygeneruj nowy.');
+                  if (syncQR2CompTag) setText(syncQR2CompTag, 'wygasł');
+                }
+              }, 1000);
+
+              // Polling co 2s
+              if (syncQR2PollStatus) setText(syncQR2PollStatus, 'Czekam na zeskanowanie przez telefon…');
+              _qr2PollTimer = setInterval(async function () {
+                const token = _qr2Token;
+                if (!token || _qr2TimeLeft <= 0) return;
+                try {
+                  const result = await V.pollPhoneQRStatus(token);
+                  if (!_qr2PollTimer) return;
+                  if (result && result.ok) {
+                    qr2Stop();
+                    if (syncQR2PollStatus) setText(syncQR2PollStatus, '✓ Telefon zalogowany pomyślnie!');
+                    if (syncQR2CompTag) setText(syncQR2CompTag, 'sukces');
+                    setTimeout(qr2Reset, 4000);
+                  }
+                } catch (err) {
+                  if (!_qr2PollTimer) return;
+                  qr2Stop();
+                  const msg = err && err.message ? err.message : String(err);
+                  const friendly = (err && err.code === 'BAD_PHONE_PASSWORD')
+                    ? '⚠ Hasło wpisane na telefonie jest błędne. Wróć i spróbuj ponownie.'
+                    : '⚠ Błąd: ' + msg;
+                  if (syncQR2PollStatus) setText(syncQR2PollStatus, friendly);
+                  if (syncQR2CompTag) setText(syncQR2CompTag, 'błąd');
+                  setTimeout(qr2Reset, 5000);
+                }
+              }, 2000);
+            });
+          }
         }
 
         // ─── Przycisk: Pokaż kod synchronizacji ────────────────────────────────

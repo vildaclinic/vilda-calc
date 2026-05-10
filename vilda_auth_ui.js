@@ -27,8 +27,8 @@
     return;
   }
 
-  const VERSION = '2.5.1';
-  const STEP = '8R-7c';
+  const VERSION = '2.6.0';
+  const STEP = '8Q-9c';
   const ROOT_ID = 'vilda-auth-ui-root';
   const IDLE_EVENTS = ['mousedown', 'keydown', 'touchstart', 'scroll', 'pointerdown'];
   const PWA_GUEST_FLAG = 'VildaGuestMode';
@@ -2935,6 +2935,16 @@
     qrBtn.addEventListener('click', function () { showQRLoginScreen(); });
     qrSection.appendChild(qrBtn);
 
+    // Przycisk: Zeskanuj QR z komputera (etap 8Q-9c — flow odwrócony)
+    const qr2Btn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small',
+      type: 'button',
+      text: '📷 Zeskanuj QR z komputera',
+      style: 'margin-top:0.4rem;'
+    });
+    qr2Btn.addEventListener('click', function () { showPhoneQRScreen(); });
+    qrSection.appendChild(qr2Btn);
+
     // ── Separator ─────────────────────────────────────────────────────────────
     const orDiv = document.createElement('div');
     orDiv.style.cssText = 'display:flex;align-items:center;gap:0.6rem;margin:0.6rem 0;color:var(--text-muted,#888);font-size:0.82rem;';
@@ -3297,6 +3307,430 @@
     showPhase1();
   }
 
+  /**
+   * Ekran „Zeskanuj QR z komputera" — strona telefonu (nowego urządzenia).
+   * Etap 8Q-9c — flow odwrócony: telefon skanuje QR pokazany przez komputer.
+   *
+   * Faza 1: skaner QR (kamera lub ręczne wklejenie tokenu)
+   * Faza 2: formularz haseł (hasło konta + nowe hasło lokalne)
+   * Faza 3: polling + oczekiwanie na komputer → sukces
+   */
+  function showPhoneQRScreen() {
+    const V = getVault();
+    if (!V || typeof V.fetchPhoneQRParams !== 'function') {
+      return; // brak wsparcia w tej wersji vaultu
+    }
+
+    const SS2_PRIV  = 'vilda-qr2-ph-priv-v1';
+    const SS2_TOKEN = 'vilda-qr2-token-v1';
+
+    let _stream      = null;
+    let _scanActive  = false;
+    let _pollTimer   = null;
+    let _transferToken = null;
+    let _phPrivKeyB64u = null;
+
+    function stopCamera() {
+      _scanActive = false;
+      if (_stream) {
+        try { _stream.getTracks().forEach(function (t) { t.stop(); }); } catch (_) {}
+        _stream = null;
+      }
+    }
+
+    function stopAll() {
+      stopCamera();
+      if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
+      try {
+        if (global.sessionStorage) {
+          global.sessionStorage.removeItem(SS2_PRIV);
+          global.sessionStorage.removeItem(SS2_TOKEN);
+        }
+      } catch (_) {}
+    }
+
+    // ── Lazy-load jsQR (czytnik QR) ──────────────────────────────────────────
+    function loadJsQR() {
+      return new Promise(function (resolve) {
+        if (global.jsQR) { resolve(global.jsQR); return; }
+        const s = global.document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
+        s.integrity = 'sha384-9Q0jWoineiIq95JeIyBsNV90KKLfDsbkj29k_YFxf76a2JwkHDYkMuSbNGN6XJfV';
+        s.crossOrigin = 'anonymous';
+        s.onload  = function () { resolve(global.jsQR); };
+        s.onerror = function () { resolve(null); };
+        global.document.head.appendChild(s);
+      });
+    }
+
+    // Parsuje surowe dane QR — obsługuje prefix vsc1-qr2: lub czysty token (64 hex)
+    function parseQR2Token(raw) {
+      if (!raw) return null;
+      raw = raw.trim();
+      if (raw.startsWith('vsc1-qr2:')) {
+        raw = raw.slice('vsc1-qr2:'.length);
+      }
+      // token = 64 znaków hex
+      if (/^[0-9a-f]{64}$/i.test(raw)) return raw.toLowerCase();
+      return null;
+    }
+
+    // ── Faza 3: Polling — czekamy aż komputer prześle payload ────────────────
+    function showPhase3(msg) {
+      const statusEl = el('p', {
+        class: 'vilda-auth-side-note',
+        style: 'text-align:center;color:#00838d;',
+        text:  msg || 'Czekam aż komputer zatwierdzi transfer…'
+      });
+
+      const back = el('button', {
+        class: 'vilda-auth-btn vilda-auth-btn-ghost', type: 'button', text: '← Anuluj',
+        onclick: function () { stopAll(); showStartupScreen(); }
+      });
+
+      open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
+        el('h2', { class: 'vilda-auth-title', text: '✓ Claim wysłany' }),
+        el('p',  { class: 'vilda-auth-subtitle',
+          text: 'Komputer weryfikuje hasło i wysyła klucz. Poczekaj chwilę — to może zająć kilka sekund.'
+        }),
+        statusEl,
+        el('div', { class: 'vilda-auth-actions' }, [back])
+      ]));
+
+      let attempts = 0;
+      _pollTimer = setInterval(async function () {
+        if (!_transferToken || !_phPrivKeyB64u) return;
+        attempts++;
+        // Timeout po ~90s (45 ticków × 2s) — sesja wygaśnie za 120s
+        if (attempts > 45) {
+          stopAll();
+          open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
+            el('h2', { class: 'vilda-auth-title', text: 'Czas minął' }),
+            el('p',  { class: 'vilda-auth-error', text: 'Komputer nie odpowiedział w czasie. Wróć i spróbuj ponownie.' }),
+            el('button', { class: 'vilda-auth-btn vilda-auth-btn-ghost', type: 'button', text: '← Wróć',
+              onclick: function () { showStartupScreen(); }
+            })
+          ]));
+          return;
+        }
+
+        try {
+          const result = await V.completePhoneQR(_transferToken, _phPrivKeyB64u, {});
+          if (!_pollTimer) return; // anulowano
+          if (result) {
+            clearInterval(_pollTimer); _pollTimer = null;
+            stopCamera();
+            // Wyczyść sessionStorage
+            try {
+              if (global.sessionStorage) {
+                global.sessionStorage.removeItem(SS2_PRIV);
+                global.sessionStorage.removeItem(SS2_TOKEN);
+              }
+            } catch (_) {}
+            // Vault zalogowany — onUnlock w boot() obsłuży resztę
+            hide();
+          }
+        } catch (e) {
+          clearInterval(_pollTimer); _pollTimer = null;
+          statusEl.textContent = '⚠ Błąd: ' + (e && e.message ? e.message : String(e));
+        }
+      }, 2000);
+    }
+
+    // ── Faza 2: Formularz haseł ───────────────────────────────────────────────
+    function showPhase2(token, params) {
+      _transferToken = token;
+
+      const errBox = el('div', { class: 'vilda-auth-error' });
+      errBox.style.display = 'none';
+
+      const pwAccEl = el('input', {
+        type: 'password', class: 'vilda-auth-input',
+        placeholder: 'Hasło konta (na komputerze)'
+      });
+      const pwNewEl = el('input', {
+        type: 'password', class: 'vilda-auth-input',
+        placeholder: 'Nowe hasło lokalne (na tym urządzeniu)',
+        style: 'margin-top:0.5rem;'
+      });
+
+      const submitBtn = el('button', {
+        class: 'vilda-auth-btn vilda-auth-btn-primary', type: 'button',
+        text: 'Zaloguj się'
+      });
+
+      let inProgress = false;
+
+      async function doSubmit() {
+        if (inProgress) return;
+        errBox.style.display = 'none';
+        const pwAcc = pwAccEl.value;
+        const pwNew = pwNewEl.value;
+
+        if (!pwAcc) { errBox.textContent = 'Podaj hasło konta.'; errBox.style.display = ''; pwAccEl.focus(); return; }
+        if (!pwNew || pwNew.length < 8) { errBox.textContent = 'Nowe hasło lokalne musi mieć co najmniej 8 znaków.'; errBox.style.display = ''; pwNewEl.focus(); return; }
+
+        inProgress = true;
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Weryfikuję…';
+
+        try {
+          const claimRes = await V.claimPhoneQR(token, pwAcc, params);
+          _phPrivKeyB64u = claimRes.phPrivKeyB64u;
+
+          // Zapamiętaj w sessionStorage (na wypadek reload)
+          try {
+            if (global.sessionStorage) {
+              global.sessionStorage.setItem(SS2_PRIV,  _phPrivKeyB64u);
+              global.sessionStorage.setItem(SS2_TOKEN, token);
+            }
+          } catch (_) {}
+
+          // Zapamiętaj nowe hasło — przekaż do completePhoneQR przez closure
+          // Nadpisz _phPrivKeyB64u w module — completePhoneQR dostaje newPassword przez V.completePhoneQR options
+          // Używamy closure: przechowujemy pwNew lokalnie i wywołujemy completePhoneQR z nim
+          const _pwNew = pwNew;
+          const origComplete = V.completePhoneQR.bind(V);
+
+          // Patch: podmień polling aby przekazać newPassword
+          clearInterval(_pollTimer);
+          _pollTimer = null;
+          showPhase3('Claim wysłany — czekam na komputer…');
+
+          // Zastąp polling z newPassword
+          clearInterval(_pollTimer);
+          _pollTimer = setInterval(async function () {
+            if (!_transferToken || !_phPrivKeyB64u) return;
+            try {
+              const result = await origComplete(_transferToken, _phPrivKeyB64u, { newPassword: _pwNew });
+              if (!_pollTimer) return;
+              if (result) {
+                clearInterval(_pollTimer); _pollTimer = null;
+                try {
+                  if (global.sessionStorage) {
+                    global.sessionStorage.removeItem(SS2_PRIV);
+                    global.sessionStorage.removeItem(SS2_TOKEN);
+                  }
+                } catch (_) {}
+                hide();
+              }
+            } catch (e) {
+              clearInterval(_pollTimer); _pollTimer = null;
+              open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
+                el('h2', { class: 'vilda-auth-title', text: 'Błąd transferu' }),
+                el('p',  { class: 'vilda-auth-error', text: (e && e.message) || 'Nieznany błąd.' }),
+                el('button', { class: 'vilda-auth-btn vilda-auth-btn-ghost', type: 'button', text: '← Wróć',
+                  onclick: function () { stopAll(); showStartupScreen(); }
+                })
+              ]));
+            }
+          }, 2000);
+
+        } catch (e) {
+          inProgress = false;
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Zaloguj się';
+          const msg = (e && e.message) || String(e);
+          errBox.textContent = msg.includes('wygasł') || msg.includes('nie istnieje')
+            ? '⚠ Kod QR wygasł. Wróć do komputera i wygeneruj nowy.'
+            : msg.includes('wykorzystan')
+              ? '⚠ Ten kod QR już został użyty.'
+              : '⚠ ' + msg;
+          errBox.style.display = '';
+        }
+      }
+
+      pwNewEl.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') doSubmit(); });
+      submitBtn.addEventListener('click', doSubmit);
+
+      const back = el('button', {
+        class: 'vilda-auth-btn vilda-auth-btn-ghost', type: 'button', text: '← Wróć',
+        onclick: function () { stopAll(); showStartupScreen(); }
+      });
+
+      open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
+        el('h2', { class: 'vilda-auth-title', text: '✓ QR zeskanowany' }),
+        el('p',  { class: 'vilda-auth-subtitle',
+          text: 'Wpisz hasło konta (to samo co na komputerze) i ustaw nowe hasło lokalne dla tego urządzenia.'
+        }),
+        pwAccEl, pwNewEl, errBox, submitBtn,
+        el('div', { class: 'vilda-auth-actions' }, [back])
+      ]));
+
+      setTimeout(function () { try { pwAccEl.focus(); } catch (_) {} }, 30);
+    }
+
+    // ── Faza 1: Skaner QR ─────────────────────────────────────────────────────
+    async function showPhase1() {
+      // Skeleton
+      open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
+        el('h2', { class: 'vilda-auth-title', text: 'Zaloguj się przez QR z komputera' }),
+        el('p',  { class: 'vilda-auth-subtitle', text: 'Przygotowuję skaner…' })
+      ]));
+
+      const videoEl     = el('video',  { autoplay: true, playsinline: true,
+        style: 'width:100%;max-height:220px;border-radius:10px;background:#000;display:block;' });
+      const videoWrap   = el('div', { style: 'display:none;margin-bottom:0.75rem;' }, [
+        videoEl,
+        el('p', { class: 'vilda-auth-side-note', style: 'text-align:center;', text: 'Skieruj kamerę na kod QR wyświetlony na komputerze' })
+      ]);
+      const tokenInput  = el('input', {
+        type: 'text', class: 'vilda-auth-input',
+        placeholder: 'vsc1-qr2:… lub wklej token (64 znaki)'
+      });
+      const manualWrap  = el('div', { style: 'display:none;' }, [
+        el('p', { class: 'vilda-auth-side-note', text: 'Lub wpisz token QR ręcznie:' }),
+        tokenInput
+      ]);
+      const statusEl    = el('p', { class: 'vilda-auth-side-note', style: 'text-align:center;', text: '' });
+      const manualBtn   = el('button', {
+        class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small', type: 'button',
+        text: 'Wpisz token ręcznie'
+      });
+      const confirmBtn  = el('button', {
+        class: 'vilda-auth-btn vilda-auth-btn-primary', type: 'button',
+        text: 'Dalej →',
+        style: 'display:none;'
+      });
+      const back = el('button', {
+        class: 'vilda-auth-btn vilda-auth-btn-ghost', type: 'button', text: '← Wróć',
+        onclick: function () { stopAll(); showStartupScreen(); }
+      });
+
+      open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
+        el('h2', { class: 'vilda-auth-title', text: 'Zaloguj się przez QR z komputera' }),
+        el('p',  { class: 'vilda-auth-subtitle',
+          text: 'Na komputerze otwórz Ustawienia → „Zaloguj telefon przez QR" i zeskanuj wyświetlony kod.'
+        }),
+        videoWrap, manualWrap, statusEl, manualBtn, confirmBtn,
+        el('div', { class: 'vilda-auth-actions' }, [back])
+      ]));
+
+      // Po wykryciu tokenu — pobierz params i przejdź do fazy 2
+      async function onTokenDetected(rawToken, stream) {
+        stopCamera();
+        const token = parseQR2Token(rawToken);
+        if (!token) {
+          statusEl.textContent = '⚠ Nieprawidłowy kod QR (zły format lub błędny token).';
+          return;
+        }
+        statusEl.textContent = '⟳ Pobiera dane sesji…';
+        try {
+          const params = await V.fetchPhoneQRParams(token);
+          showPhase2(token, params);
+        } catch (e) {
+          const msg = (e && e.message) || String(e);
+          statusEl.textContent = '⚠ ' + (msg.includes('wygasł') ? 'Kod QR wygasł.' : msg);
+        }
+      }
+
+      // Ręczne wpisanie tokenu
+      manualBtn.addEventListener('click', function () {
+        stopCamera();
+        videoWrap.style.display  = 'none';
+        manualWrap.style.display = '';
+        confirmBtn.style.display = '';
+        statusEl.textContent = '';
+        setTimeout(function () { try { tokenInput.focus(); } catch (_) {} }, 30);
+      });
+
+      confirmBtn.addEventListener('click', async function () {
+        const raw = tokenInput.value;
+        await onTokenDetected(raw, null);
+      });
+
+      tokenInput.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter') confirmBtn.click();
+      });
+
+      // Sprawdź czy jest kamera
+      const hasCamera = !!(global.navigator && global.navigator.mediaDevices &&
+        global.navigator.mediaDevices.getUserMedia);
+
+      if (!hasCamera) {
+        manualWrap.style.display = '';
+        confirmBtn.style.display = '';
+        statusEl.textContent = '⚠ Brak kamery. Wklej token ręcznie.';
+        setTimeout(function () { try { tokenInput.focus(); } catch (_) {} }, 30);
+        return;
+      }
+
+      // Uruchom kamerę
+      let stream;
+      try {
+        stream = await global.navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 640 }, height: { ideal: 640 } }
+        });
+      } catch (_) {
+        manualWrap.style.display = '';
+        confirmBtn.style.display = '';
+        statusEl.textContent = '⚠ Brak uprawnień do kamery. Wklej token ręcznie.';
+        return;
+      }
+
+      _stream     = stream;
+      _scanActive = true;
+      videoEl.srcObject = stream;
+      videoWrap.style.display = '';
+      statusEl.textContent = '🔍 Skieruj kamerę na kod QR wyświetlony na komputerze…';
+
+      // ── Skanowanie: BarcodeDetector (natywne) lub jsQR ──
+      if (typeof global.BarcodeDetector !== 'undefined') {
+        try {
+          const detector = new global.BarcodeDetector({ formats: ['qr_code'] });
+          (function scanBD() {
+            if (!_scanActive) return;
+            if (!videoEl || videoEl.readyState < 2) { setTimeout(scanBD, 200); return; }
+            detector.detect(videoEl).then(function (codes) {
+              if (!_scanActive) return;
+              if (codes && codes.length > 0) {
+                const raw = codes[0].rawValue || '';
+                if (parseQR2Token(raw)) { _scanActive = false; onTokenDetected(raw, stream); return; }
+              }
+              setTimeout(scanBD, 250);
+            }).catch(function () { if (_scanActive) setTimeout(scanBD, 300); });
+          })();
+          return;
+        } catch (_) { /* fallback do jsQR */ }
+      }
+
+      // jsQR
+      const jsQRLib = await loadJsQR();
+      if (!jsQRLib) {
+        stopCamera();
+        manualWrap.style.display = '';
+        confirmBtn.style.display = '';
+        statusEl.textContent = '⚠ Nie można załadować skanera. Wklej token ręcznie.';
+        return;
+      }
+
+      const canvas = global.document.createElement('canvas');
+      const ctx    = canvas.getContext('2d');
+
+      (function scanCanvas() {
+        if (!_scanActive) return;
+        if (!videoEl || videoEl.readyState < 2 || videoEl.videoWidth === 0) {
+          setTimeout(scanCanvas, 200); return;
+        }
+        canvas.width  = videoEl.videoWidth;
+        canvas.height = videoEl.videoHeight;
+        ctx.drawImage(videoEl, 0, 0);
+        try {
+          const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const result  = jsQRLib(imgData.data, imgData.width, imgData.height,
+            { inversionAttempts: 'dontInvert' });
+          if (result && result.data) {
+            const raw = result.data;
+            if (parseQR2Token(raw)) { _scanActive = false; onTokenDetected(raw, stream); return; }
+          }
+        } catch (_) {}
+        setTimeout(scanCanvas, 250);
+      })();
+    }
+
+    showPhase1();
+  }
+
   // ============ EKSPORT API ============
   const api = {
     __vildaAuthUI: true,
@@ -3317,6 +3751,7 @@
     showRestoreVaultFlow: showRestoreVaultFlow,
     showSyncCodeRestoreScreen: showSyncCodeRestoreScreen,
     showQRLoginScreen: showQRLoginScreen,
+    showPhoneQRScreen: showPhoneQRScreen,
     hide: hide,
     lockAndShowLogin: lockAndShowLogin,
     isGuestMode: isGuestMode,

@@ -38,8 +38,8 @@
     return;
   }
 
-  const VERSION = '2.6.0';
-  const STEP = '8R-8a';
+  const VERSION = '2.7.0';
+  const STEP = '8Q-9b';
   const SCHEMA_VERSION = 2;
   const META_ID = 'singleton';
   const REGISTRY_DB_NAME = 'vilda_registry';
@@ -2641,6 +2641,446 @@
     return { ok: true };
   }
 
+  // ============ QR TRANSFER2 — LOGOWANIE TELEFONU Z KOMPUTERA ============
+  //
+  // Odwrócony flow: komputer (zalogowany) generuje QR → telefon (nowy) skanuje
+  // i loguje się przez potwierdzenie hasłem.
+  //
+  // Prefix QR:  "vsc1-qr2:{transferToken}"  (odróżnia od istniejącego "vsc1-qr:")
+  //
+  // Nowe funkcje:
+  //   initiatePhoneQR(password)                           — komputer
+  //   pollPhoneQRStatus(token, wkBytes, compPrivB64u)     — komputer
+  //   fetchPhoneQRParams(token)                           — telefon
+  //   claimPhoneQR(token, password, params)               — telefon
+  //   completePhoneQR(token, phPrivB64u, options)         — telefon
+  //
+  // Stan wewnętrzny po stronie komputera (moduł-level, czyszczony po zakończeniu):
+  var _qr2CompWkBytes  = null;  // Uint8Array 32B — wrappingKey bits komputera
+  var _qr2CompPrivB64u = null;  // string — PKCS#8 b64u klucza prywatnego ECDH komputera
+  var _qr2Token        = null;  // string — aktywny transferToken
+
+  var DEFAULT_WORKER_URL_QR2 = 'https://vilda-sync.maciej-4b9.workers.dev';
+  function getWorkerUrlQR2() {
+    var w = typeof window !== 'undefined' && window.VILDA_SYNC_WORKER_URL;
+    return (w || DEFAULT_WORKER_URL_QR2).replace(/\/$/, '');
+  }
+
+  async function fetchTransfer2(path, opts) {
+    var url = getWorkerUrlQR2() + path;
+    var controller = new AbortController();
+    var timer = setTimeout(function () { controller.abort(); }, 15000);
+    try {
+      return await fetch(url, Object.assign({ signal: controller.signal }, opts));
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  function _clearQR2CompState() {
+    if (_qr2CompWkBytes) {
+      try { _qr2CompWkBytes.fill(0); } catch (_) {}
+    }
+    _qr2CompWkBytes  = null;
+    _qr2CompPrivB64u = null;
+    _qr2Token        = null;
+  }
+
+  // Pomocnicze: konkatenuje bajty ph_pub i token string do użycia w HMAC
+  function _concatForHMAC(phPubB64u, token) {
+    const C = getCrypto();
+    const pubBytes = C.base64urlToBytes(phPubB64u);
+    const tokBytes = new TextEncoder().encode(token);
+    const out = new Uint8Array(pubBytes.length + tokBytes.length);
+    out.set(pubBytes, 0);
+    out.set(tokBytes, pubBytes.length);
+    return out;
+  }
+
+  /**
+   * STRONA KOMPUTERA — Inicjuje transfer masterKey na telefon.
+   *
+   * Prosi o ponowne wpisanie hasła, weryfikuje je lokalnie, generuje ECDH
+   * i rejestruje sesję na serwerze.
+   *
+   * Vault MUSI być odblokowany (komputer musi być zalogowany).
+   *
+   * @param {string} password — hasło bieżącego użytkownika (ponowne wpisanie)
+   * @returns {Promise<{
+   *   transferToken: string,
+   *   qrData:        string,  // "vsc1-qr2:{token}"
+   *   expiresIn:     number   // sekundy (120)
+   * }>}
+   */
+  async function initiatePhoneQR(password) {
+    if (!isUnlocked() || !masterKeyBytes) {
+      throw new Error('VildaVault.initiatePhoneQR: vault musi być odblokowany.');
+    }
+    if (typeof password !== 'string' || password.length < MIN_PASSWORD_LENGTH) {
+      throw new Error('VildaVault.initiatePhoneQR: nieprawidłowe hasło.');
+    }
+
+    const C    = getCrypto();
+    const meta = await getAdapter().getUserMeta(currentUserId);
+    if (!meta) throw new Error('VildaVault.initiatePhoneQR: brak metadanych użytkownika.');
+
+    // 1. Weryfikacja hasła: re-derive wrappingKey i spróbuj odszyfrować encryptedMasterByPassword
+    let wkBytes;
+    try {
+      wkBytes = await C.deriveWrappingBits(password, meta.passwordSalt, meta.kdfIterations);
+    } catch (e) {
+      throw new Error('VildaVault.initiatePhoneQR: błąd derywacji klucza — ' + (e.message || e));
+    }
+
+    // Weryfikacja przez próbę deszyfrowania masterKey
+    const wrappingKey = await C.deriveKey(password, meta.passwordSalt, meta.kdfIterations);
+    try {
+      await C.decryptBytes(wrappingKey, meta.encryptedMasterByPassword.iv, meta.encryptedMasterByPassword.data);
+    } catch (_) {
+      if (wkBytes) { try { wkBytes.fill(0); } catch (__) {} }
+      const e = new Error('VildaVault.initiatePhoneQR: nieprawidłowe hasło.');
+      e.code = 'BAD_PASSWORD';
+      throw e;
+    }
+
+    // 2. Generuj ECDH keypair po stronie komputera
+    const { privateKey: compPriv, publicKeyB64u: compPub } = await C.generateECDHKeypair();
+    const compPrivB64u = await C.exportECDHPrivateKey(compPriv);
+
+    // 3. Zarejestruj sesję na serwerze
+    let resp;
+    try {
+      resp = await fetchTransfer2('/v1/transfer2', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          comp_pub:      compPub,
+          passwordSalt:  meta.passwordSalt,
+          kdfIterations: meta.kdfIterations
+        })
+      });
+    } catch (e) {
+      _clearQR2CompState();
+      throw new Error('VildaVault.initiatePhoneQR: błąd sieci — ' + (e.message || e));
+    }
+
+    if (!resp.ok) {
+      _clearQR2CompState();
+      const err = await resp.json().catch(function () { return {}; });
+      throw new Error('VildaVault.initiatePhoneQR: serwer ' + resp.status +
+        ' — ' + (err && err.error && err.error.message || 'nieznany błąd'));
+    }
+
+    const data = await resp.json();
+    const transferToken = data.transferToken;
+
+    // 4. Zachowaj stan w pamięci modułu (nie sessionStorage — zbyt wrażliwe)
+    _clearQR2CompState(); // wymaż poprzednią sesję jeśli istnieje
+    _qr2CompWkBytes  = wkBytes;
+    _qr2CompPrivB64u = compPrivB64u;
+    _qr2Token        = transferToken;
+
+    return {
+      transferToken: transferToken,
+      qrData:        'vsc1-qr2:' + transferToken,
+      expiresIn:     data.expiresIn || 120
+    };
+  }
+
+  /**
+   * STRONA KOMPUTERA — Polluje status transferu (wywołuj co 2s).
+   *
+   * Gdy telefon wysłał claim: weryfikuje confirmToken, szyfruje masterKey,
+   * dostarcza payload na serwer.
+   * Zwraca null gdy nadal oczekuje, { ok: true } gdy payload dostarczony.
+   * Rzuca Error z code = 'BAD_PHONE_PASSWORD' gdy confirmToken nie pasuje.
+   *
+   * @param {string} transferToken
+   * @returns {Promise<null | { ok: true }>}
+   */
+  async function pollPhoneQRStatus(transferToken) {
+    if (!isUnlocked() || !masterKeyBytes) {
+      throw new Error('VildaVault.pollPhoneQRStatus: vault musi być odblokowany.');
+    }
+    if (!_qr2CompWkBytes || !_qr2CompPrivB64u || _qr2Token !== transferToken) {
+      throw new Error('VildaVault.pollPhoneQRStatus: brak aktywnej sesji QR2 dla tego tokenu.');
+    }
+
+    const C = getCrypto();
+    let resp;
+    try {
+      resp = await fetchTransfer2('/v1/transfer2/' + transferToken + '/poll', { method: 'GET' });
+    } catch (e) {
+      return null; // sieć — spróbujemy za 2s
+    }
+    if (!resp.ok) return null;
+
+    const data = await resp.json().catch(function () { return null; });
+    if (!data) return null;
+
+    if (data.status !== 'claimed') return null; // nadal pending lub inny stan
+
+    // Telefon wysłał claim — weryfikuj confirmToken
+    const { ph_pub, confirmToken } = data;
+    if (!ph_pub || !confirmToken) {
+      return null;
+    }
+
+    const dataToSign = _concatForHMAC(ph_pub, transferToken);
+    const expected   = await C.hmacSHA256(_qr2CompWkBytes, dataToSign);
+    const expectedB64u = C.bytesToBase64url(expected);
+
+    if (expectedB64u !== confirmToken) {
+      // Błędne hasło po stronie telefonu — odrzuć, wymaż stan
+      _clearQR2CompState();
+      const e = new Error('VildaVault.pollPhoneQRStatus: hasło wpisane na telefonie jest nieprawidłowe.');
+      e.code = 'BAD_PHONE_PASSWORD';
+      throw e;
+    }
+
+    // confirmToken poprawny — zaszyfruj masterKey kluczem publicznym telefonu
+    let payload;
+    try {
+      payload = await C.encryptForTransfer(masterKeyBytes, ph_pub);
+    } catch (e) {
+      throw new Error('VildaVault.pollPhoneQRStatus: błąd szyfrowania — ' + (e.message || e));
+    }
+
+    // Wyślij zaszyfrowany payload na serwer
+    let putResp;
+    try {
+      putResp = await fetchTransfer2('/v1/transfer2/' + transferToken + '/deliver', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ encryptedPayload: payload })
+      });
+    } catch (e) {
+      throw new Error('VildaVault.pollPhoneQRStatus: błąd sieci przy deliver — ' + (e.message || e));
+    }
+
+    if (!putResp.ok) {
+      const errBody = await putResp.json().catch(function () { return {}; });
+      throw new Error('VildaVault.pollPhoneQRStatus: serwer ' + putResp.status +
+        ' — ' + (errBody && errBody.error && errBody.error.message || 'nieznany błąd'));
+    }
+
+    _clearQR2CompState(); // wyczyść wrażliwy stan — już niepotrzebny
+    return { ok: true };
+  }
+
+  /**
+   * STRONA TELEFONU — Pobiera parametry KDF sesji QR2.
+   * Nie wymaga zalogowanego vaultu.
+   *
+   * @param {string} transferToken
+   * @returns {Promise<{ passwordSalt: string, kdfIterations: number, status: string }>}
+   */
+  async function fetchPhoneQRParams(transferToken) {
+    let resp;
+    try {
+      resp = await fetchTransfer2('/v1/transfer2/' + transferToken, { method: 'GET' });
+    } catch (e) {
+      throw new Error('VildaVault.fetchPhoneQRParams: błąd sieci — ' + (e.message || e));
+    }
+
+    if (resp.status === 404) {
+      throw new Error('VildaVault.fetchPhoneQRParams: kod QR wygasł lub jest nieprawidłowy.');
+    }
+    if (!resp.ok) {
+      throw new Error('VildaVault.fetchPhoneQRParams: błąd serwera ' + resp.status);
+    }
+
+    const data = await resp.json();
+    if (!data.passwordSalt || !data.kdfIterations) {
+      throw new Error('VildaVault.fetchPhoneQRParams: serwer zwrócił niekompletne dane.');
+    }
+
+    return {
+      passwordSalt:  data.passwordSalt,
+      kdfIterations: data.kdfIterations,
+      status:        data.status || 'pending'
+    };
+  }
+
+  /**
+   * STRONA TELEFONU — Zatwierdza claim: wysyła ph_pub + confirmToken.
+   * Vault NIE musi być odblokowany (to jest pierwsze logowanie na telefonie).
+   *
+   * @param {string} transferToken
+   * @param {string} password         — hasło konta (wpisane przez usera na telefonie)
+   * @param {object} params           — wynik fetchPhoneQRParams: { passwordSalt, kdfIterations }
+   * @returns {Promise<{ phPrivKeyB64u: string }>}
+   *   phPrivKeyB64u — klucz prywatny ECDH telefonu do zapamiętania w sessionStorage
+   */
+  async function claimPhoneQR(transferToken, password, params) {
+    if (typeof password !== 'string' || password.length < MIN_PASSWORD_LENGTH) {
+      throw new Error('VildaVault.claimPhoneQR: nieprawidłowe hasło.');
+    }
+
+    const C = getCrypto();
+
+    // 1. Generuj ECDH keypair po stronie telefonu
+    const { privateKey: phPriv, publicKeyB64u: phPub } = await C.generateECDHKeypair();
+    const phPrivB64u = await C.exportECDHPrivateKey(phPriv);
+
+    // 2. Derive wrapping bits z hasła (PBKDF2 → surowe bajty)
+    let wkBytes;
+    try {
+      wkBytes = await C.deriveWrappingBits(password, params.passwordSalt, params.kdfIterations);
+    } catch (e) {
+      throw new Error('VildaVault.claimPhoneQR: błąd derywacji klucza — ' + (e.message || e));
+    }
+
+    // 3. Oblicz confirmToken = HMAC-SHA256(wkBytes, ph_pub || transferToken)
+    const dataToSign   = _concatForHMAC(phPub, transferToken);
+    const hmacBytes    = await C.hmacSHA256(wkBytes, dataToSign);
+    const confirmToken = C.bytesToBase64url(hmacBytes);
+
+    // Wymaż wkBytes z pamięci
+    try { wkBytes.fill(0); } catch (_) {}
+
+    // 4. Wyślij claim na serwer
+    let resp;
+    try {
+      resp = await fetchTransfer2('/v1/transfer2/' + transferToken + '/claim', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ph_pub: phPub, confirmToken: confirmToken })
+      });
+    } catch (e) {
+      throw new Error('VildaVault.claimPhoneQR: błąd sieci — ' + (e.message || e));
+    }
+
+    if (resp.status === 409) {
+      throw new Error('VildaVault.claimPhoneQR: ten kod QR został już wykorzystany.');
+    }
+    if (resp.status === 404) {
+      throw new Error('VildaVault.claimPhoneQR: kod QR wygasł lub jest nieprawidłowy.');
+    }
+    if (!resp.ok) {
+      const err = await resp.json().catch(function () { return {}; });
+      throw new Error('VildaVault.claimPhoneQR: serwer ' + resp.status +
+        ' — ' + (err && err.error && err.error.message || 'nieznany błąd'));
+    }
+
+    return { phPrivKeyB64u: phPrivB64u };
+  }
+
+  /**
+   * STRONA TELEFONU — Polluje dostępność payload i tworzy lokalne konto.
+   * Wywołuj co 2s po claimPhoneQR.
+   * Vault NIE musi być odblokowany.
+   *
+   * Zwraca null gdy payload jeszcze niedostępny.
+   * Zwraca { userId, label, recoveryKey, needsPasswordReset } po sukcesie.
+   *
+   * @param {string} transferToken
+   * @param {string} phPrivKeyB64u  — z sessionStorage (wynik claimPhoneQR)
+   * @param {object} options        — { newPassword: string, label?: string }
+   * @returns {Promise<null | { userId, label, recoveryKey, needsPasswordReset }>}
+   */
+  async function completePhoneQR(transferToken, phPrivKeyB64u, options) {
+    if (isUnlocked()) {
+      throw new Error('VildaVault.completePhoneQR: vault musi być zablokowany przed importem QR.');
+    }
+
+    const C = getCrypto();
+
+    // Poll serwer
+    let resp;
+    try {
+      resp = await fetchTransfer2('/v1/transfer2/' + transferToken + '/payload', { method: 'GET' });
+    } catch (e) {
+      return null; // sieć — spróbujemy za 2s
+    }
+    if (!resp.ok) return null;
+
+    const data = await resp.json().catch(function () { return null; });
+    if (!data || data.status !== 'ready' || !data.encryptedPayload) {
+      return null; // nadal oczekuje
+    }
+
+    // Odtwórz klucz prywatny ECDH telefonu
+    let phPriv;
+    try {
+      phPriv = await C.importECDHPrivateKey(phPrivKeyB64u);
+    } catch (e) {
+      throw new Error('VildaVault.completePhoneQR: błąd odczytu klucza prywatnego — ' + (e.message || e));
+    }
+
+    // Odszyfruj masterKeyBytes
+    let masterBytes;
+    try {
+      masterBytes = await C.decryptFromTransfer(phPriv, data.encryptedPayload);
+    } catch (e) {
+      throw new Error('VildaVault.completePhoneQR: błąd deszyfrowania — ' + (e.message || e));
+    }
+
+    // Utwórz lokalne konto (identyczna logika jak completeQRLogin)
+    const opts = (options && typeof options === 'object') ? options : {};
+    const userId = generateUserId();
+    const iter   = C.KDF_ITERATIONS;
+    const passwordSalt  = C.generateSalt();
+    const recoverySalt  = C.generateSalt();
+    const recoveryKey   = C.generateRecoveryKey();
+
+    const password = (typeof opts.newPassword === 'string' && opts.newPassword.length >= MIN_PASSWORD_LENGTH)
+      ? opts.newPassword
+      : null;
+
+    let encryptedByPassword = null;
+    let passwordWrappingKey = null;
+    if (password) {
+      passwordWrappingKey = await C.deriveKey(password, passwordSalt, iter);
+      encryptedByPassword = await C.encryptBytes(passwordWrappingKey, masterBytes);
+    } else {
+      const randomPw = C.bytesToBase64url(C.generateSalt());
+      passwordWrappingKey = await C.deriveKey(randomPw, passwordSalt, iter);
+      encryptedByPassword = await C.encryptBytes(passwordWrappingKey, masterBytes);
+    }
+
+    const recoveryWrappingKey = await C.deriveKeyFromRecoveryKey(recoveryKey, recoverySalt, iter);
+    const encryptedByRecovery = await C.encryptBytes(recoveryWrappingKey, masterBytes);
+
+    let label = (typeof opts.label === 'string' && opts.label.trim().length) ? opts.label.trim() : '';
+    if (!label) {
+      const existing = await listUsers();
+      label = DEFAULT_LABEL + (existing.length > 0 ? ' ' + (existing.length + 1) : '');
+    }
+
+    const nowISO = new Date().toISOString();
+    const meta = {
+      schemaVersion: SCHEMA_VERSION,
+      createdAtISO:  nowISO,
+      kdfName:       C.KDF_NAME,
+      kdfHash:       C.KDF_HASH,
+      kdfIterations: iter,
+      passwordSalt:  C.bytesToBase64(passwordSalt),
+      recoverySalt:  C.bytesToBase64(recoverySalt),
+      encryptedMasterByPassword: {
+        iv:   C.bytesToBase64(encryptedByPassword.iv),
+        data: C.bytesToBase64(encryptedByPassword.data)
+      },
+      encryptedMasterByRecovery: {
+        iv:   C.bytesToBase64(encryptedByRecovery.iv),
+        data: C.bytesToBase64(encryptedByRecovery.data)
+      },
+      restoredFromQR2:    true,  // odróżnienie od restoredFromQR (stary flow)
+      needsPasswordReset: !password
+    };
+
+    await getAdapter().putUserMeta(userId, meta);
+    await getAdapter().putRegistryEntry({
+      userId:       userId,
+      label:        label,
+      createdAtISO: nowISO,
+      lastLoginAtISO: nowISO
+    });
+
+    await adoptMasterBytes(masterBytes, userId, label);
+    return { userId, label, recoveryKey, needsPasswordReset: !password };
+  }
+
   const api = {
     __vildaVault: true,
     VERSION: VERSION,
@@ -2701,11 +3141,18 @@
     unlockWithPasskey: unlockWithPasskey,
     listPasskeys: listPasskeys,
     removePasskey: removePasskey,
-    // QR Transfer — logowanie kodem QR
+    // QR Transfer — logowanie kodem QR (stary flow: komputer nowy ← telefon zalogowany)
     initiateQRLogin:   initiateQRLogin,
     pollQRLoginStatus: pollQRLoginStatus,
     completeQRLogin:   completeQRLogin,
-    approveQRLogin:    approveQRLogin
+    approveQRLogin:    approveQRLogin,
+    // QR Transfer2 — logowanie telefonu z komputera (etap 8Q-9b)
+    // Nowy flow: komputer zalogowany → telefon nowy
+    initiatePhoneQR:   initiatePhoneQR,
+    pollPhoneQRStatus: pollPhoneQRStatus,
+    fetchPhoneQRParams: fetchPhoneQRParams,
+    claimPhoneQR:      claimPhoneQR,
+    completePhoneQR:   completePhoneQR
   };
 
   global.VildaVault = api;
