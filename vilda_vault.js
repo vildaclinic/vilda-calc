@@ -2783,7 +2783,7 @@
 
     return {
       transferToken: transferToken,
-      qrData:        'vsc1-qr2:' + transferToken,
+      qrData:        'vsc1-qr2:' + transferToken + ':' + meta.passwordSalt + ':' + meta.kdfIterations,
       expiresIn:     data.expiresIn || 120
     };
   }

@@ -3363,16 +3363,28 @@
       });
     }
 
-    // Parsuje surowe dane QR — obsługuje prefix vsc1-qr2: lub czysty token (64 hex)
+    // Parsuje surowe dane QR — obsługuje:
+    //   nowy format:   vsc1-qr2:{token}:{passwordSalt}:{kdfIterations}
+    //   stary format:  vsc1-qr2:{token}  lub czysty token (64 hex)
+    // Zwraca { token, passwordSalt?, kdfIterations? } lub null.
     function parseQR2Token(raw) {
       if (!raw) return null;
       raw = raw.trim();
-      if (raw.startsWith('vsc1-qr2:')) {
-        raw = raw.slice('vsc1-qr2:'.length);
+      if (raw.startsWith('vsc1-qr2:')) raw = raw.slice('vsc1-qr2:'.length);
+      // Rozdziel na co najwyżej 3 części (salt może teoretycznie zawierać specjalne znaki,
+      // ale base64 standardowy nie zawiera ':', więc split(':') jest bezpieczny)
+      var parts = raw.split(':');
+      var token = parts[0];
+      if (!/^[0-9a-f]{64}$/i.test(token)) return null;
+      var result = { token: token.toLowerCase() };
+      if (parts.length >= 3 && parts[1] && parts[2]) {
+        var iter = parseInt(parts[2], 10);
+        if (parts[1].length >= 20 && iter >= 100000) {
+          result.passwordSalt    = parts[1];
+          result.kdfIterations   = iter;
+        }
       }
-      // token = 64 znaków hex
-      if (/^[0-9a-f]{64}$/i.test(raw)) return raw.toLowerCase();
-      return null;
+      return result;
     }
 
     // ── Faza 3: Polling — czekamy aż komputer prześle payload ────────────────
@@ -3401,8 +3413,8 @@
       _pollTimer = setInterval(async function () {
         if (!_transferToken || !_phPrivKeyB64u) return;
         attempts++;
-        // Timeout po ~90s (45 ticków × 2s) — sesja wygaśnie za 120s
-        if (attempts > 45) {
+        // Timeout po ~90s (180 ticków × 0.5s) — sesja wygaśnie za 120s
+        if (attempts > 180) {
           stopAll();
           open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
             el('h2', { class: 'vilda-auth-title', text: 'Czas minął' }),
@@ -3434,7 +3446,7 @@
           clearInterval(_pollTimer); _pollTimer = null;
           statusEl.textContent = '⚠ Błąd: ' + (e && e.message ? e.message : String(e));
         }
-      }, 2000);
+      }, 500);
     }
 
     // ── Faza 2: Formularz haseł ───────────────────────────────────────────────
@@ -3524,7 +3536,7 @@
                 })
               ]));
             }
-          }, 2000);
+          }, 500);
 
         } catch (e) {
           inProgress = false;
@@ -3606,14 +3618,25 @@
         el('div', { class: 'vilda-auth-actions' }, [back])
       ]));
 
-      // Po wykryciu tokenu — pobierz params i przejdź do fazy 2
+      // Po wykryciu tokenu — przejdź do fazy 2.
+      // Nowy format QR zawiera salt+iteracje → start PBKDF2 bez dodatkowego requestu.
+      // Stary format (samo 64 hex) → fallback do GET /v1/transfer2/{token}.
       async function onTokenDetected(rawToken, stream) {
         stopCamera();
-        const token = parseQR2Token(rawToken);
-        if (!token) {
+        const parsed = parseQR2Token(rawToken);
+        if (!parsed) {
           statusEl.textContent = '⚠ Nieprawidłowy kod QR (zły format lub błędny token).';
           return;
         }
+        const { token, passwordSalt, kdfIterations } = parsed;
+
+        // Nowy format — params są już w QR, skocz od razu do fazy 2
+        if (passwordSalt && kdfIterations) {
+          showPhase2(token, { passwordSalt: passwordSalt, kdfIterations: kdfIterations, status: 'pending' });
+          return;
+        }
+
+        // Stary format (lub ręcznie wpisany token) — pobierz params z serwera
         statusEl.textContent = '⟳ Pobiera dane sesji…';
         try {
           const params = await V.fetchPhoneQRParams(token);

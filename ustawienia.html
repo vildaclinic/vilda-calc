@@ -2716,7 +2716,7 @@
                 }
               }, 1000);
 
-              // Polling co 2s
+              // Polling co 500ms
               if (syncQR2PollStatus) setText(syncQR2PollStatus, 'Czekam na zeskanowanie przez telefon…');
               _qr2PollTimer = setInterval(async function () {
                 const token = _qr2Token;
@@ -2741,7 +2741,7 @@
                   if (syncQR2CompTag) setText(syncQR2CompTag, 'błąd');
                   setTimeout(qr2Reset, 5000);
                 }
-              }, 2000);
+              }, 500);
             });
           }
         }
