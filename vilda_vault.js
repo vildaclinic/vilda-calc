@@ -2756,7 +2756,8 @@
         body: JSON.stringify({
           comp_pub:      compPub,
           passwordSalt:  meta.passwordSalt,
-          kdfIterations: meta.kdfIterations
+          kdfIterations: meta.kdfIterations,
+          accountLabel:  currentUserLabel || ''
         })
       });
     } catch (e) {
@@ -3018,6 +3019,8 @@
 
     // Utwórz lokalne konto (identyczna logika jak completeQRLogin)
     const opts = (options && typeof options === 'object') ? options : {};
+    // Użyj nazwy konta przesłanej z komputera (jeśli UI nie nadpisało)
+    if (!opts.label && data.accountLabel) opts.label = data.accountLabel;
     const userId = generateUserId();
     const iter   = C.KDF_ITERATIONS;
     const passwordSalt  = C.generateSalt();
