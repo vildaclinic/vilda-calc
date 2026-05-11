@@ -1,5 +1,5 @@
 /**
- * vilda_pro_access_l3_regression_test.js — Test regresji warstwy 3 (8Q-10)
+ * vilda_pro_access_l3_regression_test.js — Test regresji warstwy 3 (8Q-10 + 2a)
  *
  * Uruchamianie:  node vilda_pro_access_l3_regression_test.js
  *
@@ -19,8 +19,9 @@
  *   T09 — Gdy server zwraca 404 → setPlan() NIE jest wywoływane
  *   T10 — Gdy server zwraca 401 → setPlan() NIE jest wywoływane
  *   T11 — Gdy fetch rzuca (offline) → żaden błąd nie wychodzi, app działa
- *   T12 — Cooldown 30s: drugi unlock w <30s NIE odpytuje serwera
- *   T13 — Cooldown resetuje się po 30s — kolejny unlock odpytuje serwera
+ *   T12 — Cooldown per-user: ten sam userId w <30s → NIE odpytuje serwera
+ *   T13 — Cooldown per-user: ten sam userId po 30s → odpytuje serwer
+ *   T13b— Cooldown per-user: INNY userId w <30s → ZAWSZE odpytuje serwer
  *   T14 — Pełny scenariusz: manual logout → re-login → PRO przywrócone z serwera
  *
  *   ── Warstwy 1 i 2 nadal zielone ─────────────────────────────────────────
@@ -293,8 +294,11 @@ function runT06() {
 // Wyciągamy ją do testowalnej funkcji żeby unikać inicjalizacji całego auth_ui.
 function makeProSyncFn(g, api, opts) {
   opts = opts || {};
-  // Stan cooldown — zewnętrzny żeby test mógł go kontrolować
-  let lastSyncAt = opts.lastSyncAt || 0;
+  // Stan cooldown per-user — odzwierciedla _proSyncLastAt = { userId, at } z auth_ui
+  let lastSyncState = {
+    userId: opts.lastSyncUserId !== undefined ? opts.lastSyncUserId : null,
+    at:     opts.lastSyncAt     !== undefined ? opts.lastSyncAt     : 0
+  };
 
   return async function proSync(fetchImpl) {
     try {
@@ -302,8 +306,14 @@ function makeProSyncFn(g, api, opts) {
       if (!g.VildaVault || !g.VildaVault.isUnlocked()) return 'skipped:vault_locked';
 
       var now = Date.now();
-      if ((now - lastSyncAt) <= 30000) return 'skipped:cooldown';
-      lastSyncAt = now;
+      var currentUserId = g.VildaVault.getCurrentUser
+        ? g.VildaVault.getCurrentUser().userId
+        : null;
+      // Cooldown: ten sam userId w <30s → pomiń. Inny userId → zawsze przejdź.
+      var cooldownOk = (lastSyncState.userId !== currentUserId) ||
+                       ((now - lastSyncState.at) > 30000);
+      if (!cooldownOk) return 'skipped:cooldown';
+      lastSyncState = { userId: currentUserId, at: now };
 
       var sm = await g.VildaVault.getSyncMaterial();
       var base = (g.VILDA_SYNC_WORKER_URL || 'https://vilda-sync.maciej-4b9.workers.dev').replace(/\/$/, '');
@@ -454,33 +464,33 @@ function runT11() {
 }
 
 function runT12() {
-  // T12 — cooldown 30s: drugi sync w <30s pomijany
-  console.log('\n' + BOLD + 'T12 — Cooldown 30s: drugi unlock w ciągu 30s pomijany' + RESET);
+  // T12 — cooldown per-user: ten sam userId w <30s → sync pomijany
+  console.log('\n' + BOLD + 'T12 — Cooldown per-user: ten sam userId w <30s pomijany' + RESET);
   (async function() {
     const g = makeGlobal();
     setSession(g, USER_A);
     g.VildaVault = makeMockVault(g, USER_A, SLOT_A, TOKEN_A);
     const api = loadAccessModule(g);
 
-    // Pierwsze wywołanie — przechodzi (lastSyncAt=0)
     let fetchCount = 0;
     const countingFetch = async function() {
       fetchCount++;
       return { ok: false, status: 404, async json() { return {}; } };
     };
 
-    const sync = makeProSyncFn(g, api, { lastSyncAt: Date.now() - 1000 }); // 1s temu
+    // Ostatni sync był 1s temu dla USER_A → cooldown aktywny
+    const sync = makeProSyncFn(g, api, { lastSyncUserId: USER_A, lastSyncAt: Date.now() - 1000 });
     const r1 = await sync(countingFetch);
 
-    assert('Pierwsze wywołanie: skipped (cooldown aktywny)', r1 === 'skipped:cooldown');
-    assert('fetch NIE wywołany podczas cooldown',            fetchCount === 0);
+    assert('Ten sam user w <30s: skipped:cooldown', r1 === 'skipped:cooldown');
+    assert('fetch NIE wywołany podczas cooldown',   fetchCount === 0);
     runT13();
   })();
 }
 
 function runT13() {
-  // T13 — po 30s cooldown się resetuje
-  console.log('\n' + BOLD + 'T13 — Po 30s cooldown wygasa i sync odpytuje serwer' + RESET);
+  // T13 — cooldown per-user: ten sam userId po 30s → sync przechodzi
+  console.log('\n' + BOLD + 'T13 — Cooldown per-user: ten sam userId po 30s odpytuje serwer' + RESET);
   (async function() {
     const g = makeGlobal();
     setSession(g, USER_A);
@@ -497,12 +507,44 @@ function runT13() {
       };
     };
 
-    // lastSyncAt = 31 sekund temu — cooldown wygasł
-    const sync = makeProSyncFn(g, api, { lastSyncAt: Date.now() - 31000 });
+    // Ostatni sync USER_A był 31s temu → cooldown wygasł
+    const sync = makeProSyncFn(g, api, { lastSyncUserId: USER_A, lastSyncAt: Date.now() - 31000 });
     const r = await sync(countingFetch);
 
     assert('Sync przeszedł po wygaśnięciu cooldown', r === 'synced');
     assert('fetch był wywołany',                     fetchCount === 1);
+    runT13b();
+  })();
+}
+
+function runT13b() {
+  // T13b — cooldown per-user: INNY userId w <30s → sync zawsze przechodzi
+  console.log('\n' + BOLD + 'T13b — Cooldown per-user: inny userId w <30s → sync przechodzi' + RESET);
+  (async function() {
+    const g = makeGlobal();
+    // Vault i sesja należą do USER_A (PRO)
+    setSession(g, USER_A);
+    g.VildaVault = makeMockVault(g, USER_A, SLOT_A, TOKEN_A);
+    const api = loadAccessModule(g);
+
+    let fetchCount = 0;
+    const countingFetch = async function() {
+      fetchCount++;
+      return {
+        ok: true,
+        status: 200,
+        async json() { return { ok: true, plan: 'pro', validUntil: FUTURE, activatedAt: ACTIVATED }; }
+      };
+    };
+
+    // Ostatni sync był zaledwie 5s temu — ale dla INNEGO userId (USER_B)
+    // → cooldown NIE powinien blokować syncu dla USER_A
+    const sync = makeProSyncFn(g, api, { lastSyncUserId: USER_B, lastSyncAt: Date.now() - 5000 });
+    const r = await sync(countingFetch);
+
+    assert('Inny userId: cooldown ignorowany → synced', r === 'synced');
+    assert('fetch był wywołany mimo <30s od ostatniego syncu', fetchCount === 1);
+    assert('[po] hasAccess() = true dla USER_A',              api.hasAccess() === true);
     runT14();
   })();
 }

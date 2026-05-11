@@ -27,8 +27,8 @@
     return;
   }
 
-  const VERSION = '2.5.1';
-  const STEP = '8R-7c';
+  const VERSION = '2.6.0';
+  const STEP = '8R-10';
   const ROOT_ID = 'vilda-auth-ui-root';
   const IDLE_EVENTS = ['mousedown', 'keydown', 'touchstart', 'scroll', 'pointerdown'];
   const PWA_GUEST_FLAG = 'VildaGuestMode';
@@ -38,29 +38,15 @@
   let logoutBtnEl = null;
   let pendingSetupOptions = null;
   let idleHandlersBound = false;
-  // Snapshot sesji przed wylogowaniem — umożliwia przywrócenie stanu po ponownym logowaniu
-  // tego samego użytkownika (idle timeout, ręczne wylogowanie i powrót).
-  let _pendingSessionRestore = null; // { userId: string, snapshot: string } | null
   // UWAGA: vilda_vault.lock() zeruje currentUserId PRZED wywołaniem notifyLock(),
   // więc getCurrentUser() w onLock zawsze zwraca null. Śledzimy userId sami —
   // aktualizujemy w onUnlock, używamy w onLock, zerujemy po użyciu.
   let _trackedUserId = null;
-  // Licznik generacji przywrócenia sesji. Każde onUnlock zwiększa _restoreCounter
-  // i zapisuje aktualną wartość w _restoreSerial. onLock zeruje _restoreSerial —
-  // jeśli setTimeout(0) z onUnlock odpali się PO wylogowaniu, nie znajdzie
-  // zgodności seryjnej i po prostu wyjdzie bez wywoływania restoreAll().
-  let _restoreCounter = 0;
-  let _restoreSerial  = 0;
-  // Timestamp ostatniej próby synchronizacji PRO z serwerem.
-  // Zapobiega wielokrotnym requestom gdy onUnlock odpala się szybko po sobie
-  // (np. podczas wieloetapowego QR transfer). Cooldown: 30 sekund.
-  let _proSyncLastAt = 0;
-
-  // Flaga aktywna podczas resetAppSessionState wywoływanego z onLock.
-  // Zapobiega skasowaniu _pendingSessionRestore przez listener 'vilda:user-state-cleared',
-  // który jest też emitowany przez clearAllData() wywołane w trakcie wylogowania.
-  // BEZ tej flagi: snapshot → clearAllData → event kasuje snapshot → brak restore po re-loginie.
-  let _lockClearInProgress = false;
+  // Stan ostatniej próby synchronizacji PRO z serwerem (per-user).
+  // Cooldown 30s obowiązuje tylko gdy TEN SAM userId loguje się ponownie szybko
+  // (idle-lock + natychmiastowy re-login, wieloetapowy QR transfer itp.).
+  // Inny userId → cooldown ignorowany, sync zawsze startuje.
+  let _proSyncLastAt = { userId: null, at: 0 };
 
   // ============ PLATFORM DETECTION ============
   /**
@@ -2486,50 +2472,17 @@
       getVault().onLock(function (reason) {
         hideLogoutButton();
 
-        // ── Snapshot sesji przed czyszczeniem ──────────────────────────────────
         // WAŻNE: vault.lock() zeruje currentUserId PRZED wywołaniem notifyLock(),
         // więc getCurrentUser() tu zawsze zwraca null. Używamy _trackedUserId
         // przechwyconego wcześniej w onUnlock.
-        //
-        // Autosave pól formularza żyje w localStorage['sharedUserData'].
-        // NIE wywołujemy vildaPersistFlushNow() — ma to efekty uboczne (m.in.
-        // clearSharedAutosaveResidue, resetLoadedComparisonUiResidue) które mogą
-        // zamrozić ekran. Debounce autosave wynosi 250ms, więc dane są już w
-        // localStorage do czasu kliknięcia "Wyloguj".
-        //
-        // Snapshot przechowujemy w DWÓCH miejscach:
-        //   1) _pendingSessionRestore (pamięć) — dla wylogowania bez przeładowania
-        //   2) localStorage['_vildaSnapRestore'] — przeżywa przeładowanie strony
-        _pendingSessionRestore = null;
-        _restoreSerial = 0; // anuluj oczekujący setTimeout z onUnlock (szybkie wylogowanie)
         var lockedUserId = _trackedUserId;
         _trackedUserId = null; // zużyty — wyczyść niezależnie od wyniku
-        if (reason !== 'user-removed' && lockedUserId) {
-          try {
-            var sharedSnap = null;
-            try { sharedSnap = global.localStorage && global.localStorage.getItem('sharedUserData'); } catch (_) {}
-            if (sharedSnap) {
-              _pendingSessionRestore = { userId: lockedUserId, sharedUserData: sharedSnap };
-              // Persystuj do localStorage aby przeżyć przeładowanie strony (ważność: 1h)
-              try {
-                global.localStorage.setItem('_vildaSnapRestore', JSON.stringify({
-                  userId: lockedUserId, data: sharedSnap, ts: Date.now()
-                }));
-              } catch (_) {}
-            }
-          } catch (_) {}
-        }
 
         // Wylogowanie/auto-lock = porzucenie tożsamości. Wyczyść stan aplikacji,
         // żeby kolejny user (lub gość) nie zobaczył danych poprzedniego.
-        // _lockClearInProgress chroni snapshot przed skasowaniem przez 'vilda:user-state-cleared'
-        // emitowane synchronicznie przez clearAllData() wewnątrz resetAppSessionState.
-        _lockClearInProgress = true;
         try {
           resetAppSessionState('on-lock');
-        } finally {
-          _lockClearInProgress = false;
-        }
+        } catch (_) {}
         // Kasuj lokalny cache PRO wylogowanego użytkownika (obrona wgłębna, warstwa 2).
         // lockedUserId jest niezbędny — vault.lock() wyczyścił currentUserId
         // i sessionStorage PRZED wywołaniem onLock, więc getCurrentUserIdSync()
@@ -2563,13 +2516,21 @@
         // nie możemy odczytać userId w onLock.
         _trackedUserId = (payload && payload.userId) ? payload.userId : null;
 
-        // Zaktualizuj bramkę PRO — vault odblokowany, sessionStorage zawiera userId
-        // (persistSession() wywołane wcześniej wewnątrz vaultu). refresh() wykryje
-        // userId i jeśli plan w localStorage należy do tego użytkownika — ustawi
-        // vilda-pro-active. Naprawia stan po wylogowaniu bez przeładowania strony.
+        // Zaktualizuj bramkę PRO — ale tylko gdy cache PRO już istnieje w localStorage.
+        // Przypadek idle re-auth (vault auto-zablokował, user ponownie się loguje):
+        //   cache ważny → refresh() od razu pokaże PRO bez żadnego flash.
+        // Przypadek świeżego logowania po manual logout (warstwa 2 wyczyściła cache):
+        //   hasAccess()=false → pomijamy, bo onLock już ustawił inactive przy wylogowaniu.
+        //   PRO zostanie odświeżone przez sync w tle (warstwa 3) → 2b wywoła refresh()
+        //   po sukcesie fetch — bez zbędnego "brak PRO" między logowaniem a synciem.
         try {
+          var _hasLocalPro = global.VildaProAccess &&
+                             typeof global.VildaProAccess.hasAccess === 'function' &&
+                             global.VildaProAccess.hasAccess();
           if (global.VildaProUi && typeof global.VildaProUi.refresh === 'function') {
-            global.VildaProUi.refresh();
+            if (_hasLocalPro || !global.VildaProAccess) {
+              global.VildaProUi.refresh();
+            }
           }
         } catch (_) {}
 
@@ -2592,15 +2553,9 @@
           sharedExists = !!(existingShared && existingShared !== 'null' && existingShared.length > 10);
         } catch (_) {}
 
-        // ── Przywróć sesję jeśli zalogował się ten sam użytkownik ──────────────
-        // Priorytet: pamięć (_pendingSessionRestore) > localStorage (_vildaSnapRestore).
-        // _vildaSnapRestore przeżywa przeładowanie strony więc obsługuje oba scenariusze.
-        var restore = _pendingSessionRestore;
-        _pendingSessionRestore = null;
-
         // Wczesny powrót dla tryRestoreSession (nawigacja między podstronami):
-        // dane są nienaruszone w localStorage, nie ma pending restore z wylogowania.
-        if (!restore && sharedExists) return;
+        // sharedUserData istnieje → dane nienaruszone, vildaAppOnReady obsłuży je.
+        if (sharedExists) return;
 
         // ── Synchronizacja stanu PRO z serwerem w tle (warstwa 3) ─────────────
         // Dociera tu tylko przy prawdziwym logowaniu (hasło, passkey, biometria,
@@ -2612,11 +2567,16 @@
           var _proAccess = global.VildaProAccess;
           var _proVault  = getVault();
           var _proNow    = Date.now();
+          // Cooldown per-user: ten sam userId w ciągu 30s → pomiń (idle re-login, QR).
+          // Inny userId → zawsze odpytaj serwer, ignoruj cooldown poprzednika.
+          var _proSyncUserId = _trackedUserId;
+          var _proCooldownOk = (_proSyncLastAt.userId !== _proSyncUserId) ||
+                               ((_proNow - _proSyncLastAt.at) > 30000);
           if (_proAccess && !_proAccess.hasAccess() &&
               _proVault && typeof _proVault.isUnlocked === 'function' && _proVault.isUnlocked() &&
               typeof _proVault.getSyncMaterial === 'function' &&
-              (_proNow - _proSyncLastAt) > 30000) {
-            _proSyncLastAt = _proNow;
+              _proCooldownOk) {
+            _proSyncLastAt = { userId: _proSyncUserId, at: _proNow };
             (async function () {
               try {
                 var _sm = await _proVault.getSyncMaterial();
@@ -2633,7 +2593,14 @@
                     var _pa = global.VildaProAccess;
                     if (_pa && typeof _pa.setPlan === 'function') {
                       _pa.setPlan(_d.plan, _d.validUntil, _d.activatedAt || null);
-                      // setPlan odpala 'vildaProAccessChanged' → VildaProUi.refresh()
+                      // setPlan odpala 'vildaProAccessChanged' → VildaProUi nasłuchuje.
+                      // Bezpośrednie refresh() jako obrona wgłębna — na wypadek gdy
+                      // event nie dotrze (race przy init, brak listenera na tej stronie).
+                      try {
+                        if (global.VildaProUi && typeof global.VildaProUi.refresh === 'function') {
+                          global.VildaProUi.refresh();
+                        }
+                      } catch (_) {}
                     }
                   }
                 }
@@ -2644,74 +2611,14 @@
           }
         } catch (_) {}
 
-        // Fallback: spróbuj localStorage jeśli brak snapshotu w pamięci
-        if (!restore || !restore.sharedUserData) {
-          try {
-            var snapRaw = global.localStorage && global.localStorage.getItem('_vildaSnapRestore');
-            if (snapRaw) {
-              var snap = JSON.parse(snapRaw);
-              // Snapshot ważny tylko przez 1 godzinę
-              if (snap && snap.userId && snap.data && (Date.now() - (snap.ts || 0)) < 3600000) {
-                restore = { userId: snap.userId, sharedUserData: snap.data };
-              }
-            }
-          } catch (_) {}
-        }
-
-        // UWAGA: NIE usuwamy _vildaSnapRestore tutaj.
-        // onLock zastąpi go nowym snapshotem przy następnym wylogowaniu.
-        // Dzięki temu jeśli strona zostanie przeładowana przed kolejnym wylogowaniem
-        // (np. po widocznym "freeze" biometrycznego logowania Touch ID), snapshot
-        // jest nadal dostępny i dane zostaną odtworzone po kolejnym zalogowaniu.
-
-        if (restore && restore.sharedUserData) {
-          try {
-            var unlockedUser = getVault().getCurrentUser ? getVault().getCurrentUser() : null;
-            if (unlockedUser && unlockedUser.userId === restore.userId) {
-              // Ten sam użytkownik — wpisz sharedUserData z powrotem do localStorage.
-              // clearAllData() go usunął, więc trzeba go przywrócić zanim restoreAll()
-              // zostanie wywołane (restoreAll czyta właśnie z localStorage).
-              try {
-                if (global.localStorage) {
-                  global.localStorage.setItem('sharedUserData', restore.sharedUserData);
-                }
-              } catch (_) {}
-              // Zaplanuj restoreAll() w osobnym macrotasku przez setTimeout(0).
-              // Dzięki temu:
-              //   (a) hide() natychmiast ukrywa auth UI bez blokowania głównego wątku
-              //       — brak widocznego "freeze" ekranu biometrycznego.
-              //   (b) Licznik seryjny (_restoreSerial) gwarantuje anulowanie jeśli
-              //       użytkownik wyloguje się zanim setTimeout odpali (onLock zeruje
-              //       _restoreSerial → callback widzi niezgodność i wychodzi).
-              var _s = (_restoreSerial = ++_restoreCounter);
-              setTimeout(function () {
-                if (_restoreSerial !== _s) return; // wylogowanie anulowało restore
-                try {
-                  if (typeof global.vildaPersistRestoreAll === 'function') {
-                    global.vildaPersistRestoreAll();
-                  }
-                } catch (_) {}
-              }, 0);
-            }
-            // Inny użytkownik — snapshot odrzucamy, stan pozostaje wyczyszczony
-          } catch (_) {}
-        }
       });
     } catch (e) { logError('boot: listenery', e); }
 
-    // Gdy użytkownik jawnie czyści dane ("Wyczyść wszystkie pola"), kasujemy snapshot
-    // żeby tryRestoreSession na kolejnej podstronie nie przywrócił starych danych.
-    // clearAllData → clearSharedAutosaveResidue → dispatchUserStateClearFallback
-    // wysyła ten event. Bez tego: sharedUserData gone, _vildaSnapRestore zostaje,
-    // onUnlock (z tryRestoreSession) widzi sharedExists=false i wchodzi w fallback.
+    // Usuń stary _vildaSnapRestore jeśli użytkownik jawnie czyści dane
+    // lub jeśli pozostał w localStorage z poprzedniej wersji aplikacji.
     try {
       if (typeof global.addEventListener === 'function') {
         global.addEventListener('vilda:user-state-cleared', function () {
-          // Jeśli event pochodzi z clearAllData() wywołanego przez onLock (wylogowanie),
-          // NIE kasuj snapshotu — jest potrzebny do przywrócenia stanu po re-loginie.
-          if (_lockClearInProgress) return;
-          _pendingSessionRestore = null;
-          _restoreSerial = 0; // anuluj oczekujący setTimeout jeśli user jawnie wyczyścił dane
           try {
             if (global.localStorage) global.localStorage.removeItem('_vildaSnapRestore');
           } catch (_) {}
