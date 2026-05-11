@@ -51,6 +51,11 @@
   // zgodności seryjnej i po prostu wyjdzie bez wywoływania restoreAll().
   let _restoreCounter = 0;
   let _restoreSerial  = 0;
+  // Timestamp ostatniej próby synchronizacji PRO z serwerem.
+  // Zapobiega wielokrotnym requestom gdy onUnlock odpala się szybko po sobie
+  // (np. podczas wieloetapowego QR transfer). Cooldown: 30 sekund.
+  let _proSyncLastAt = 0;
+
   // Flaga aktywna podczas resetAppSessionState wywoływanego z onLock.
   // Zapobiega skasowaniu _pendingSessionRestore przez listener 'vilda:user-state-cleared',
   // który jest też emitowany przez clearAllData() wywołane w trakcie wylogowania.
@@ -2525,6 +2530,18 @@
         } finally {
           _lockClearInProgress = false;
         }
+        // Kasuj lokalny cache PRO wylogowanego użytkownika (obrona wgłębna, warstwa 2).
+        // lockedUserId jest niezbędny — vault.lock() wyczyścił currentUserId
+        // i sessionStorage PRZED wywołaniem onLock, więc getCurrentUserIdSync()
+        // zwróciłby null. Nie czyścimy przy idle-lock: użytkownik zaloguje się
+        // z powrotem jako ta sama osoba i oczekuje że PRO będzie widoczne.
+        try {
+          if ((reason === 'manual' || reason === 'user-removed') &&
+              lockedUserId &&
+              global.VildaProAccess && typeof global.VildaProAccess.invalidateCache === 'function') {
+            global.VildaProAccess.invalidateCache(lockedUserId);
+          }
+        } catch (_) {}
         // Zaktualizuj bramkę PRO — vault zablokowany, sessionStorage wyczyszczone,
         // więc refresh() poprawnie ustawi vilda-pro-inactive na <html>.
         try {
@@ -2584,6 +2601,48 @@
         // Wczesny powrót dla tryRestoreSession (nawigacja między podstronami):
         // dane są nienaruszone w localStorage, nie ma pending restore z wylogowania.
         if (!restore && sharedExists) return;
+
+        // ── Synchronizacja stanu PRO z serwerem w tle (warstwa 3) ─────────────
+        // Dociera tu tylko przy prawdziwym logowaniu (hasło, passkey, biometria,
+        // QR, nowe konto) — tryRestoreSession (nawigacja) zawróciło wcześniej.
+        // Odpytujemy serwer tylko gdy brak aktywnego lokalnego cache — czyli po
+        // manual logout (warstwa 2 wyczyściła cache) lub na nowym urządzeniu.
+        // Fire-and-forget: nie blokuje UI, ciche błędy (offline, 404, 401).
+        try {
+          var _proAccess = global.VildaProAccess;
+          var _proVault  = getVault();
+          var _proNow    = Date.now();
+          if (_proAccess && !_proAccess.hasAccess() &&
+              _proVault && typeof _proVault.isUnlocked === 'function' && _proVault.isUnlocked() &&
+              typeof _proVault.getSyncMaterial === 'function' &&
+              (_proNow - _proSyncLastAt) > 30000) {
+            _proSyncLastAt = _proNow;
+            (async function () {
+              try {
+                var _sm = await _proVault.getSyncMaterial();
+                var _base = (global.VILDA_SYNC_WORKER_URL || 'https://vilda-sync.maciej-4b9.workers.dev')
+                              .replace(/\/$/, '');
+                var _resp = await fetch(
+                  _base + '/v1/slots/' + _sm.slotId + '/trial',
+                  { method: 'GET', headers: { 'Authorization': 'Bearer ' + _sm.authToken } }
+                );
+                if (_resp.ok) {
+                  var _d;
+                  try { _d = await _resp.json(); } catch (_) { return; }
+                  if (_d && _d.plan === 'pro' && _d.validUntil) {
+                    var _pa = global.VildaProAccess;
+                    if (_pa && typeof _pa.setPlan === 'function') {
+                      _pa.setPlan(_d.plan, _d.validUntil, _d.activatedAt || null);
+                      // setPlan odpala 'vildaProAccessChanged' → VildaProUi.refresh()
+                    }
+                  }
+                }
+                // 404 = brak triala (nowy użytkownik) — cicho ignorujemy
+                // 401 = slot niezarejestrowany — cicho ignorujemy
+              } catch (_) { /* błąd sieci lub offline — nie wpływa na działanie */ }
+            })();
+          }
+        } catch (_) {}
 
         // Fallback: spróbuj localStorage jeśli brak snapshotu w pamięci
         if (!restore || !restore.sharedUserData) {
