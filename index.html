@@ -105,6 +105,9 @@
 <style>
 /* Toggle wyszarzony gdy nie-PRO */
 html.vilda-pro-inactive #resultsModeToggleContainer .switch{opacity:.4;pointer-events:none;}
+/* pointer-events:none na .switch (labelu) nie blokuje dzieci — CSS nie dziedziczy
+   tej właściwości automatycznie. Jawnie blokujemy też elementy potomne (.slider itp.). */
+html.vilda-pro-inactive #resultsModeToggleContainer .switch *{pointer-events:none;}
 html.vilda-pro-inactive #resultsModeToggleContainer .label-left,
 html.vilda-pro-inactive #resultsModeToggleContainer .label-right{opacity:.5;}
 /* Pill "Odblokuj PRO" — domyślnie ukryta, widoczna tylko gdy nie-PRO */
@@ -140,8 +143,8 @@ html.vilda-pro-active   #resultsModeToggleContainer .pro-gate-pill{display:none;
 <script src="vilda_sync.js?v=2"></script>
 <script src="vilda_sync_integration.js?v=2"></script>
 <script src="vilda_auth_ui.js?v=46"></script>
-<script src="vilda_pro_access.js?v=1"></script>
-<script src="vilda_pro_ui.js?v=1"></script>
+<script src="vilda_pro_access.js?v=2"></script>
+<script src="vilda_pro_ui.js?v=2"></script>
 <script src="vilda_file_export.js?v=4"></script>
 <script src="vilda_deps.js?v=87"></script>
 <script src="vilda_update_hooks.js?v=7"></script>
