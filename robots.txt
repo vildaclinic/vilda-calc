@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://wagaiwzrost.pl/sitemap.xml
+Sitemap: https://wagaiwzrost.pl/video-sitemap.xml
