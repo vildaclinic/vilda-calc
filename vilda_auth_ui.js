@@ -2525,6 +2525,13 @@
         } finally {
           _lockClearInProgress = false;
         }
+        // Zaktualizuj bramkę PRO — vault zablokowany, sessionStorage wyczyszczone,
+        // więc refresh() poprawnie ustawi vilda-pro-inactive na <html>.
+        try {
+          if (global.VildaProUi && typeof global.VildaProUi.refresh === 'function') {
+            global.VildaProUi.refresh();
+          }
+        } catch (_) {}
         if (isGuestMode()) return;
         // Gdy konto zostało właśnie usunięte, ustawienia.html natychmiast
         // przekierowuje na index.html — nie otwieramy tu ekranu startowego,
@@ -2538,6 +2545,16 @@
         // PRZED wywołaniem onLock listenerów, więc bez własnego śledzenia
         // nie możemy odczytać userId w onLock.
         _trackedUserId = (payload && payload.userId) ? payload.userId : null;
+
+        // Zaktualizuj bramkę PRO — vault odblokowany, sessionStorage zawiera userId
+        // (persistSession() wywołane wcześniej wewnątrz vaultu). refresh() wykryje
+        // userId i jeśli plan w localStorage należy do tego użytkownika — ustawi
+        // vilda-pro-active. Naprawia stan po wylogowaniu bez przeładowania strony.
+        try {
+          if (global.VildaProUi && typeof global.VildaProUi.refresh === 'function') {
+            global.VildaProUi.refresh();
+          }
+        } catch (_) {}
 
         // Logowanie zawsze unieważnia tryb gościa — także gdy user wszedł
         // wcześniej jako gość, a potem zalogował się przez przycisk w rogu.
