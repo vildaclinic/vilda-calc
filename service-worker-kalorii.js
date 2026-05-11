@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '0.9.613';
+const SW_VERSION = '0.9.614';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -246,8 +246,10 @@ const CORE_SHELL_URLS = [
   '/growth-basic-module.js?v=8',
   '/vilda_pro_access.js',
   '/vilda_pro_access.js?v=1',
+  '/vilda_pro_access.js?v=2',
   '/vilda_pro_ui.js',
-  '/vilda_pro_ui.js?v=1'
+  '/vilda_pro_ui.js?v=1',
+  '/vilda_pro_ui.js?v=2'
 ];
 
 // Dodatkowe strony i zasoby próbujemy dociągnąć w tle podczas instalacji,

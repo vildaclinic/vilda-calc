@@ -50,6 +50,16 @@
       } else {
         root.classList.add('vilda-pro-inactive');
         root.classList.remove('vilda-pro-active');
+        // Powiadom app.js żeby zresetował przełącznik trybu wyników do standardowego.
+        // Listener w initResultsModeToggle() sprawdza czy toggle.checked — jeśli nie,
+        // event jest ignorowany (no-op).
+        try {
+          if (global.document) {
+            global.document.dispatchEvent(
+              new CustomEvent('vilda:pro-gate-active', { bubbles: false })
+            );
+          }
+        } catch (_) {}
       }
     } catch (_) {}
   }
@@ -59,12 +69,51 @@
   function refresh() {
     try {
       var proAccess = global.VildaProAccess;
-      var isActive  = proAccess && typeof proAccess.hasAccess === 'function'
+
+      // Krok 1: czy plan jest ważny datowo? (synchroniczne, bez vaulta)
+      var planValid = proAccess && typeof proAccess.hasAccess === 'function'
         ? proAccess.hasAccess()
         : false;
-      applyHtmlClass(isActive);
+
+      if (!planValid) {
+        applyHtmlClass(false);
+        return;
+      }
+
+      // Krok 2: weryfikacja user-bindingu — plan musi należeć do aktualnie
+      // zalogowanego użytkownika. Zapobiega korzystaniu z PRO przez inne konta
+      // na tym samym urządzeniu (w tym konta z identyczną nazwą / labelą).
+      var vault = global.VildaVault;
+      if (vault && typeof vault.getCurrentUser === 'function') {
+        var snapshot = proAccess.getSnapshot ? proAccess.getSnapshot() : null;
+        var planUserId   = snapshot && snapshot.userId  || null;
+        var currentUser  = vault.getCurrentUser();
+        var currentUserId = currentUser && currentUser.userId || null;
+
+        // Dane sprzed wprowadzenia user-bindingu (brak userId) → traktuj jako
+        // nieważne — użytkownik musi ponownie aktywować plan.
+        if (!planUserId) {
+          applyHtmlClass(false);
+          return;
+        }
+
+        // Brak zalogowanego użytkownika (gość, vault zablokowany) lub inny userId
+        if (!currentUserId || planUserId !== currentUserId) {
+          applyHtmlClass(false);
+          return;
+        }
+      } else {
+        // VildaVault niezaładowany — nie możemy zweryfikować bindingu.
+        // Fail-safe: deaktywuj PRO. Gdy vault załaduje sesję, odpali
+        // vilda:session-changed → refresh() zostanie wywołany ponownie.
+        applyHtmlClass(false);
+        return;
+      }
+
+      // Wszystkie sprawdzenia przeszły — PRO aktywne
+      applyHtmlClass(true);
     } catch (_) {
-      // Fail safe — brak PRO jest bezpiecznym domyślnym stanem
+      // Fail-safe — brak PRO jest bezpiecznym domyślnym stanem
       applyHtmlClass(false);
     }
   }

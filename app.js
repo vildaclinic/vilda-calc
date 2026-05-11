@@ -2329,7 +2329,16 @@ if (typeof window !== 'undefined' && typeof window.vildaAppOnReady === 'function
     }
     // Odczytaj poprzedni stan z localStorage
     const storedMode = readResultsModeStorage();
-    professionalMode = (storedMode === 'professional');
+    // Nie przywracaj trybu profesjonalnego jeśli PRO nie jest aktywne.
+    // Klasa vilda-pro-inactive jest ustawiana synchronicznie przez bootstrap
+    // w <head> — jej obecność jest wiarygodna już w tym momencie inicjalizacji.
+    const _hasPro = !document.documentElement.classList.contains('vilda-pro-inactive');
+    professionalMode = _hasPro && (storedMode === 'professional');
+    // Wyczyść zapisany tryb profesjonalny — PRO nie jest aktywne, więc przy
+    // kolejnym załadowaniu strony też nie powinno się pokazywać.
+    if (!_hasPro && storedMode === 'professional') {
+      writeResultsModeStorage('standard');
+    }
     // Zapamiętaj tryb także w obiekcie window, aby był dostępny dla
     // generateMetabolicSummary() (korzysta z window.professionalMode)
     try {
@@ -2546,6 +2555,22 @@ if (typeof window !== 'undefined' && typeof window.vildaAppOnReady === 'function
   }
       // Po wszystkim zaktualizuj tło karty BMI
       updateBmiCardBackground();
+    });
+
+    // Gdy vilda_pro_ui.js stwierdzi że PRO nie jest aktywne (np. po weryfikacji
+    // userId lub po wylogowaniu), zresetuj toggle do trybu standardowego i zaktualizuj
+    // wszystkie zależne elementy UI. Listener sprawdza toggle.checked — jeśli
+    // toggle już jest w trybie standardowym, event jest ignorowany (no-op).
+    document.addEventListener('vilda:pro-gate-active', function () {
+      if (!toggle.checked) return;
+      toggle.checked = false;
+      professionalMode = false;
+      try { window.professionalMode = false; } catch (_) {}
+      writeResultsModeStorage('standard');
+      dispatchResultsModeSyncEvent(false);
+      updateBmiCardBackground();
+      try { if (typeof updateAdvancedGrowthAccess === 'function') updateAdvancedGrowthAccess(); } catch (_) {}
+      try { if (typeof updatePalczewskaAccess    === 'function') updatePalczewskaAccess();    } catch (_) {}
     });
   }
   window.vildaAppOnReady('app:results-mode-toggle', initResultsModeToggle);

@@ -15,11 +15,13 @@
  * ─── Przechowywanie stanu ────────────────────────────────────────────────────
  *
  *   localStorage klucz: 'vilda-pro-plan-v1'
- *   Format: { plan, validUntil, activatedAt, cachedAt }
+ *   Format: { plan, validUntil, activatedAt, userId, cachedAt }
  *
- *   Klucz jest globalny (nie per-userId) bo w danej chwili może być zalogowany
- *   tylko jeden użytkownik. Przy wylogowaniu cache jest kasowany przez
- *   invalidateCache().
+ *   Pole userId (UUID konta z VildaVault) wiąże plan z konkretnym kontem —
+ *   zapobiega dostępowi do PRO przez innych użytkowników na tym samym urządzeniu.
+ *   Weryfikacja userId odbywa się w vilda_pro_ui.js po załadowaniu vaulta.
+ *   hasAccess() pozostaje synchroniczny (sprawdza tylko datę) — do użycia
+ *   w bootstrap <script> zanim vault się załaduje.
  *
  * ─── Zdarzenia ───────────────────────────────────────────────────────────────
  *
@@ -68,6 +70,7 @@
         plan:        data.plan        || null,
         validUntil:  data.validUntil  || null,
         activatedAt: data.activatedAt || null,
+        userId:      data.userId      || null,   // binding konta — weryfikowany przez vilda_pro_ui.js
         cachedAt:    new Date().toISOString()
       };
       global.localStorage.setItem(CACHE_KEY, JSON.stringify(entry));
@@ -116,10 +119,23 @@
    * @param {string} [activatedAt] - data ISO aktywacji (opcjonalna)
    */
   function setPlan(plan, validUntil, activatedAt) {
+    // Pobierz userId aktualnie zalogowanego użytkownika — wiąże plan z konkretnym
+    // kontem. Zapobiega to sytuacji gdzie różne konta z tą samą nazwą (labelą)
+    // lub kolejni użytkownicy na tym samym urządzeniu korzystają z jednego planu.
+    var userId = null;
+    try {
+      var vault = global.VildaVault;
+      var currentUser = vault && typeof vault.getCurrentUser === 'function'
+        ? vault.getCurrentUser()
+        : null;
+      userId = (currentUser && currentUser.userId) || null;
+    } catch (_) {}
+
     writeCache({
       plan:        plan,
       validUntil:  validUntil  || null,
-      activatedAt: activatedAt || new Date().toISOString()
+      activatedAt: activatedAt || new Date().toISOString(),
+      userId:      userId
     });
 
     // Powiadom resztę aplikacji (vilda_pro_ui.js nasłuchuje na to zdarzenie)
