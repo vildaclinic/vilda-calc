@@ -84,20 +84,39 @@
       // zalogowanego użytkownika. Zapobiega korzystaniu z PRO przez inne konta
       // na tym samym urządzeniu (w tym konta z identyczną nazwą / labelą).
       var vault = global.VildaVault;
+      var snapshot = proAccess.getSnapshot ? proAccess.getSnapshot() : null;
+      var planUserId = snapshot && snapshot.userId || null;
+
+      // Dane sprzed wprowadzenia user-bindingu (brak userId) → nieważne.
+      if (!planUserId) {
+        applyHtmlClass(false);
+        return;
+      }
+
+      // Pobierz userId aktualnie zalogowanego użytkownika.
+      // Źródło 1: VildaVault.getCurrentUser() — autorytatywne, gdy vault odblokowany.
+      // Źródło 2: sessionStorage — gdy vault załadowany ale sesja jeszcze przywracana
+      //           (asynchronicznie); czytamy tylko userId, nie dotykamy keyB64.
+      var currentUserId = null;
       if (vault && typeof vault.getCurrentUser === 'function') {
-        var snapshot = proAccess.getSnapshot ? proAccess.getSnapshot() : null;
-        var planUserId   = snapshot && snapshot.userId  || null;
-        var currentUser  = vault.getCurrentUser();
-        var currentUserId = currentUser && currentUser.userId || null;
+        var currentUser = vault.getCurrentUser();
+        currentUserId = currentUser && currentUser.userId || null;
+      }
+      if (!currentUserId) {
+        try {
+          var sessionRaw = global.sessionStorage
+            && global.sessionStorage.getItem('vilda-vault-session-v2');
+          if (sessionRaw) {
+            var sessionData = JSON.parse(sessionRaw);
+            currentUserId = (sessionData && sessionData.userId) || null;
+          }
+        } catch (_) {}
+      }
 
-        // Dane sprzed wprowadzenia user-bindingu (brak userId) → traktuj jako
-        // nieważne — użytkownik musi ponownie aktywować plan.
-        if (!planUserId) {
-          applyHtmlClass(false);
-          return;
-        }
-
-        // Brak zalogowanego użytkownika (gość, vault zablokowany) lub inny userId
+      if (vault && typeof vault.getCurrentUser === 'function') {
+        // Vault załadowany — robimy pełną weryfikację.
+        // Brak zalogowanego użytkownika (gość, vault zablokowany i brak sesji)
+        // lub inny userId → brak PRO.
         if (!currentUserId || planUserId !== currentUserId) {
           applyHtmlClass(false);
           return;
