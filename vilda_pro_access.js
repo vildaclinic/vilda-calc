@@ -124,12 +124,26 @@
     // lub kolejni użytkownicy na tym samym urządzeniu korzystają z jednego planu.
     var userId = null;
     try {
+      // Źródło 1: VildaVault.getCurrentUser() — dostępne gdy vault jest odblokowany.
       var vault = global.VildaVault;
       var currentUser = vault && typeof vault.getCurrentUser === 'function'
         ? vault.getCurrentUser()
         : null;
       userId = (currentUser && currentUser.userId) || null;
     } catch (_) {}
+    // Źródło 2: sessionStorage — vault może być załadowany ale jeszcze nie odblokowany
+    // (sesja przywracana asynchronicznie). Klucz sesji zawiera userId obok keyB64;
+    // czytamy tylko userId, materiał kryptograficzny pozostaje nienaruszony.
+    if (!userId) {
+      try {
+        var sessionRaw = global.sessionStorage
+          && global.sessionStorage.getItem('vilda-vault-session-v2');
+        if (sessionRaw) {
+          var sessionData = JSON.parse(sessionRaw);
+          userId = (sessionData && sessionData.userId) || null;
+        }
+      } catch (_) {}
+    }
 
     writeCache({
       plan:        plan,
