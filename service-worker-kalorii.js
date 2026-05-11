@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '0.9.616';
+const SW_VERSION = '0.9.617';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -33,7 +33,7 @@ const SW_FETCH_CACHE_STRATEGY_AUDIT = Object.freeze({
   latestValidationStep: '8R-5b',
   latestVaultStep: '8R-5a-vault-with-import-and-merge',
   latestFileExportStep: '8R-4d-file-export-fsa-and-fallback-download',
-  latestAuthUiStep: '8R-10-pro-isolation-sync',
+  latestAuthUiStep: '8R-11-index-redirect-on-lock',
   latestCryptoStep: '8R-1-vilda-crypto-aes-gcm-pbkdf2',
   latestHotfix: '8Q-4c1a-growth-source-default-olaf',
   latestAudit: '8Q-4b-klirens-quality-audit',
@@ -146,6 +146,7 @@ const CORE_SHELL_URLS = [
   '/vilda_auth_ui.js?v=46',
   '/vilda_auth_ui.js?v=47',
   '/vilda_auth_ui.js?v=48',
+  '/vilda_auth_ui.js?v=49',
   '/vilda_auth_ui.css',
   '/vilda_auth_ui.css?v=9',
   '/vilda_auth_ui.css?v=10',
