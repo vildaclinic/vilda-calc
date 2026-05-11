@@ -27,8 +27,8 @@
     return;
   }
 
-  const VERSION = '2.6.0';
-  const STEP = '8R-10';
+  const VERSION = '2.6.1';
+  const STEP = '8R-11';
   const ROOT_ID = 'vilda-auth-ui-root';
   const IDLE_EVENTS = ['mousedown', 'keydown', 'touchstart', 'scroll', 'pointerdown'];
   const PWA_GUEST_FLAG = 'VildaGuestMode';
@@ -2486,8 +2486,7 @@
         // Kasuj lokalny cache PRO wylogowanego użytkownika (obrona wgłębna, warstwa 2).
         // lockedUserId jest niezbędny — vault.lock() wyczyścił currentUserId
         // i sessionStorage PRZED wywołaniem onLock, więc getCurrentUserIdSync()
-        // zwróciłby null. Nie czyścimy przy idle-lock: użytkownik zaloguje się
-        // z powrotem jako ta sama osoba i oczekuje że PRO będzie widoczne.
+        // zwróciłby null.
         try {
           if ((reason === 'manual' || reason === 'user-removed') &&
               lockedUserId &&
@@ -2507,7 +2506,21 @@
         // przekierowuje na index.html — nie otwieramy tu ekranu startowego,
         // żeby uniknąć błysku starych danych przed nawigacją.
         if (reason === 'user-removed') return;
-        // po każdym innym rodzaju blokady wracamy do ekranu startowego
+        // Ekran logowania zawsze pojawia się nad index.html, nie nad podstroną.
+        // Logout = pełna izolacja — po wylogowaniu (manual) lub wygaśnięciu sesji (idle)
+        // wracamy do strony głównej, żeby następny użytkownik zaczynał od zera.
+        try {
+          if (reason === 'manual' || reason === 'idle') {
+            var _loc = global.location;
+            if (_loc && _loc.pathname &&
+                !_loc.pathname.endsWith('index.html') &&
+                _loc.pathname !== '/') {
+              _loc.replace('index.html');
+              return; // index.html załaduje auth UI samodzielnie
+            }
+          }
+        } catch (_) {}
+        // po każdym innym rodzaju blokady (lub gdy już jesteśmy na index.html) — ekran startowy
         showStartupScreen();
       });
       getVault().onUnlock(function (payload) {
