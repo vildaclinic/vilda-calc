@@ -2557,6 +2557,29 @@ if (typeof window !== 'undefined' && typeof window.vildaAppOnReady === 'function
       updateBmiCardBackground();
     });
 
+    // Gdy PRO zostanie potwierdzone (vildaProAccessChanged z serwera lub z cache),
+    // automatycznie przełącz toggle na wyniki profesjonalne — niezależnie od tego
+    // co użytkownik wybrał w poprzedniej sesji. Dzięki temu użytkownik PRO zawsze
+    // zaczyna sesję z widokiem profesjonalnym bez ręcznego przełączania.
+    document.addEventListener('vildaProAccessChanged', function () {
+      if (!toggle) return;
+      var nowHasPro = typeof window !== 'undefined' &&
+                      window.VildaProAccess &&
+                      typeof window.VildaProAccess.hasAccess === 'function' &&
+                      window.VildaProAccess.hasAccess();
+      if (!nowHasPro) return; // PRO wygasło lub event dotyczy innego stanu — nie ruszamy
+      if (toggle.checked) return; // już w trybie profesjonalnym — no-op
+      toggle.checked = true;
+      professionalMode = true;
+      try { window.professionalMode = true; } catch (_) {}
+      writeResultsModeStorage('professional');
+      dispatchResultsModeSyncEvent(true);
+      updateBmiCardBackground();
+      try { if (typeof updateAdvancedGrowthAccess       === 'function') updateAdvancedGrowthAccess();       } catch (_) {}
+      try { if (typeof updatePalczewskaAccess           === 'function') updatePalczewskaAccess();           } catch (_) {}
+      try { if (typeof updateCompareInstructionVisibility === 'function') updateCompareInstructionVisibility(); } catch (_) {}
+    });
+
     // Gdy vilda_pro_ui.js stwierdzi że PRO nie jest aktywne (np. po weryfikacji
     // userId lub po wylogowaniu), zresetuj toggle do trybu standardowego i zaktualizuj
     // wszystkie zależne elementy UI. Listener sprawdza toggle.checked — jeśli
