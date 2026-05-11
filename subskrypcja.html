@@ -1548,9 +1548,30 @@
 
     btn.onclick = activateTrial; /* reset handlera */
 
-    if (proAccess && typeof proAccess.hasAccess === 'function' && proAccess.hasAccess()) {
+    /* ── Weryfikacja userId: plan musi należeć do aktualnie zalogowanego użytkownika ──
+       proAccess.hasAccess() sprawdza tylko datę (synchronicznie, bez await).
+       Bez weryfikacji userId plan poprzedniego użytkownika byłby widoczny jako aktywny
+       dla nowo zarejestrowanego konta na tym samym urządzeniu. */
+    var snap = proAccess && proAccess.getSnapshot && proAccess.getSnapshot();
+    var planUserId = snap && snap.userId || null;
+    var isPlanMine = false;
+    if (planUserId) {
+      var _currentUser = vault && typeof vault.getCurrentUser === 'function' ? vault.getCurrentUser() : null;
+      var _currentUserId = _currentUser && _currentUser.userId || null;
+      if (!_currentUserId) {
+        try {
+          var _sessRaw = window.sessionStorage && window.sessionStorage.getItem('vilda-vault-session-v2');
+          if (_sessRaw) {
+            var _sessData = JSON.parse(_sessRaw);
+            _currentUserId = _sessData && _sessData.userId || null;
+          }
+        } catch (_) {}
+      }
+      isPlanMine = !!(_currentUserId && planUserId === _currentUserId);
+    }
+
+    if (isPlanMine && proAccess && typeof proAccess.hasAccess === 'function' && proAccess.hasAccess()) {
       /* ── PRO aktywne (okres próbny w toku) ── */
-      var snap = proAccess.getSnapshot && proAccess.getSnapshot();
       if (snap && snap.validUntil) {
         var daysLeft = Math.ceil((new Date(snap.validUntil).getTime() - Date.now()) / 86400000);
         var statusMsg = 'Okres próbny PRO aktywny do ' + formatDate(snap.validUntil) + '.';
@@ -1569,10 +1590,9 @@
     }
 
     /* ── Sprawdź czy trial wygasł (snapshot istnieje ale hasAccess() = false) ── */
-    var expSnap = proAccess && proAccess.getSnapshot && proAccess.getSnapshot();
-    if (expSnap && expSnap.validUntil && new Date(expSnap.validUntil).getTime() < Date.now()) {
+    if (isPlanMine && snap && snap.validUntil && new Date(snap.validUntil).getTime() < Date.now()) {
       /* ── PRO wygasłe ── */
-      showStatus('Twój okres próbny PRO wygasł ' + formatDate(expSnap.validUntil) + '.', 'warn');
+      showStatus('Twój okres próbny PRO wygasł ' + formatDate(snap.validUntil) + '.', 'warn');
       btn.textContent = 'Wykup subskrypcję →';
       btn.disabled    = false;
       btn.className   = 'sub-plan__cta sub-plan__cta--pro';
@@ -1582,7 +1602,7 @@
       return;
     }
 
-    /* ── Zalogowany, nigdy nie miał PRO ── */
+    /* ── Zalogowany, nigdy nie miał PRO (lub plan należy do innego konta) ── */
     btn.textContent = 'Odblokuj 30 dni PRO za darmo →';
     btn.disabled    = false;
     btn.className   = 'sub-plan__cta sub-plan__cta--pro';
