@@ -1,0 +1,1810 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <!-- ═══ Security headers ═══════════════════════════════════════════════ -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src  'self' 'unsafe-inline'
+                https://unpkg.com
+                https://cdnjs.cloudflare.com
+                https://cdn.jsdelivr.net
+                https://cdn.sheetjs.com
+                https://www.googletagmanager.com;
+    style-src   'self' 'unsafe-inline' https://fonts.googleapis.com;
+    font-src    'self' https://fonts.gstatic.com data:;
+    img-src     'self' data: blob: https:;
+    connect-src 'self'
+                https://www.google-analytics.com
+                https://analytics.google.com
+                https://vilda-sync.maciej-4b9.workers.dev
+                https://unpkg.com
+                https://region1.google-analytics.com
+                https://www.googletagmanager.com
+                https://cdn.jsdelivr.net;
+    worker-src  'self';
+    manifest-src 'self';
+    frame-ancestors 'none';
+    base-uri    'self';
+    form-action 'self';
+    object-src  'none';
+  ">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta http-equiv="Permissions-Policy"
+        content="geolocation=(), camera=(), microphone=(), payment=(), usb=(), bluetooth=()">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Vilda PRO — Plany i dostęp</title>
+  <meta name="description" content="Odkryj plan Vilda PRO — centyle Palczewskiej, wyniki Z-score i moduł DocPro dla klinicystów. Pierwsze 30 dni bezpłatnie." />
+  <meta name="robots" content="index, follow" />
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="ios26-v2.css?v=12" rel="stylesheet">
+  <link href="style.css?v=38" rel="stylesheet">
+  <link href="sidebar.css" rel="stylesheet">
+  <link href="vilda_chrome.css?v=10" rel="stylesheet">
+  <link href="vilda_auth_ui.css?v=17" rel="stylesheet">
+
+  <script src="https://unpkg.com/lucide@1.14.0/dist/umd/lucide.min.js" integrity="sha384-jB6ZXxyEV94yzTxgLMvrwwNbn/pTTqwrMDI+v8FV5o5FnId/yn3DJwSdrDujU9A7" crossorigin="anonymous" defer></script>
+
+  <script src="vilda_logger.js?v=2"></script>
+  <script src="vilda_html.js?v=4"></script>
+  <script src="vilda_persistence_adapter.js?v=7"></script>
+  <script src="vilda_session_bridge.js?v=1"></script>
+  <script src="vilda_init.js?v=4"></script>
+  <script src="vilda_crypto.js?v=6"></script>
+  <script src="vilda_vault.js?v=14"></script>
+  <script src="vilda_sync.js?v=2"></script>
+  <script src="vilda_sync_integration.js?v=2"></script>
+  <script src="vilda_auth_ui.js?v=46"></script>
+  <script src="vilda_deps.js?v=6"></script>
+
+  <style>
+    /* ── Zmienne PRO ───────────────────────────────────────────────────── */
+    :root {
+      --pro-color:       #9900ff;
+      --pro-dark:        #7700cc;
+      --pro-light:       #f5eeff;
+      --pro-border:      rgba(153, 0, 255, 0.35);
+      --pro-glow:        0 0 0 4px rgba(153, 0, 255, 0.10),
+                         0 12px 40px rgba(153, 0, 255, 0.18);
+      --sub-max:         960px;
+    }
+
+    /* ── Ogólny kontener strony ─────────────────────────────────────────── */
+    .sub-page {
+      max-width: var(--sub-max);
+      margin: 0 auto;
+      padding: 2.5rem 1rem 4rem;
+      box-sizing: border-box;
+    }
+
+    /* ── Hero ──────────────────────────────────────────────────────────── */
+    .sub-hero {
+      text-align: center;
+      padding: 1.5rem 1rem 2.5rem;
+      max-width: 660px;
+      margin: 0 auto 2.5rem;
+    }
+
+    .sub-hero__pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: var(--pro-light);
+      color: var(--pro-dark);
+      border: 1px solid var(--pro-border);
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      padding: 0.28rem 0.9rem;
+      margin-bottom: 1.1rem;
+      text-transform: uppercase;
+    }
+
+    .sub-hero__pill::before {
+      content: "★";
+      font-size: 0.7rem;
+    }
+
+    .sub-hero h1 {
+      font-size: clamp(1.7rem, 4vw, 2.4rem);
+      font-weight: 700;
+      color: #1a2e30;
+      margin: 0 0 0.75rem;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+    }
+
+    .sub-hero p {
+      font-size: 1.05rem;
+      color: #5a7274;
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    /* ── Siatka kart planów ─────────────────────────────────────────────── */
+    .sub-plans {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+      margin-bottom: 3rem;
+      align-items: start;
+    }
+
+    @media (max-width: 640px) {
+      .sub-plans { grid-template-columns: 1fr; }
+    }
+
+    /* ── Karta planu — baza ─────────────────────────────────────────────── */
+    .sub-plan {
+      background: #fff;
+      border: 1.5px solid #d0dede;
+      border-radius: 16px;
+      padding: 1.75rem 1.5rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.1rem;
+      position: relative;
+    }
+
+    /* ── Karta PRO — wyróżniona ─────────────────────────────────────────── */
+    .sub-plan--pro {
+      border-color: var(--pro-color);
+      border-width: 2px;
+      box-shadow: var(--pro-glow);
+      background: linear-gradient(180deg, #fffaff 0%, #ffffff 60%);
+    }
+
+    /* ── Badge "Polecany" ───────────────────────────────────────────────── */
+    .sub-plan__badge {
+      position: absolute;
+      top: -13px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(90deg, var(--pro-dark), var(--pro-color));
+      color: #fff;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      padding: 0.22rem 0.9rem;
+      border-radius: 999px;
+      white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(153, 0, 255, 0.35);
+    }
+
+    /* ── Nagłówek karty ─────────────────────────────────────────────────── */
+    .sub-plan__header {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .sub-plan__name {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #1a2e30;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .sub-plan__name-pro { color: var(--pro-color); }
+
+    .sub-plan__price {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #1a2e30;
+      line-height: 1;
+      letter-spacing: -0.03em;
+    }
+
+    .sub-plan__price span {
+      font-size: 1rem;
+      font-weight: 500;
+      color: #5a7274;
+      letter-spacing: 0;
+    }
+
+    .sub-plan__price-trial {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--pro-dark);
+      margin: 0;
+      line-height: 1.3;
+    }
+
+    .sub-plan__price-note {
+      font-size: 0.82rem;
+      color: #5a7274;
+      line-height: 1.4;
+    }
+
+    /* ── Separator ─────────────────────────────────────────────────────── */
+    .sub-plan__sep {
+      height: 1px;
+      background: #e8eded;
+      margin: 0;
+      border: none;
+    }
+
+    .sub-plan--pro .sub-plan__sep {
+      background: rgba(153, 0, 255, 0.12);
+    }
+
+    /* ── Lista cech ─────────────────────────────────────────────────────── */
+    .sub-plan__features {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+      flex: 1;
+    }
+
+    .sub-plan__features li {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      font-size: 0.9rem;
+      color: #2e4a4c;
+      line-height: 1.4;
+    }
+
+    .sub-plan__check {
+      flex-shrink: 0;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 0.05rem;
+    }
+
+    .sub-plan__check--teal {
+      background: #e0f5f5;
+      color: var(--primary);
+    }
+
+    .sub-plan__check--pro {
+      background: var(--pro-light);
+      color: var(--pro-color);
+    }
+
+    /* ── Przycisk CTA ───────────────────────────────────────────────────── */
+    .sub-plan__cta {
+      display: block;
+      width: 100%;
+      padding: 0.78rem 1rem;
+      border-radius: 10px;
+      font-size: 0.97rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      transition: background 0.15s, transform 0.1s, opacity 0.15s;
+      border: none;
+      text-decoration: none;
+    }
+
+    .sub-plan__cta--secondary {
+      background: #f0f5f5;
+      color: var(--primary);
+      border: 1.5px solid #d0dede;
+    }
+
+    .sub-plan__cta--secondary:hover {
+      background: #e0eded;
+    }
+
+    .sub-plan__cta--pro {
+      background: linear-gradient(135deg, var(--pro-dark), var(--pro-color));
+      color: #fff;
+      box-shadow: 0 4px 16px rgba(153, 0, 255, 0.30);
+    }
+
+    .sub-plan__cta--pro:hover:not(:disabled) {
+      background: linear-gradient(135deg, #6600bb, var(--pro-dark));
+      transform: translateY(-1px);
+    }
+
+    .sub-plan__cta--pro:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .sub-plan__cta--pro:disabled {
+      opacity: 0.65;
+      cursor: default;
+      transform: none;
+    }
+
+    .sub-plan__cta--active {
+      background: #e8faf0 !important;
+      color: #00693e !important;
+      border: 1.5px solid #a3e6c3 !important;
+      box-shadow: none !important;
+      cursor: default;
+    }
+
+    /* ── Status aktywacji ───────────────────────────────────────────────── */
+    .sub-trial-status {
+      font-size: 0.84rem;
+      text-align: center;
+      padding: 0.5rem 0.75rem;
+      border-radius: 8px;
+      line-height: 1.4;
+      display: none;
+    }
+
+    .sub-trial-status:not(:empty) { display: block; }
+
+    .sub-trial-status--success {
+      background: #e8faf0;
+      color: #00693e;
+      border: 1px solid #a3e6c3;
+    }
+
+    .sub-trial-status--warn {
+      background: #fff8e6;
+      color: #7a4f00;
+      border: 1px solid #ffd466;
+    }
+
+    .sub-trial-status--info {
+      background: #e8f0fe;
+      color: #1a3a8f;
+      border: 1px solid #93b4f7;
+    }
+
+    .sub-trial-status--error {
+      background: #fde8e8;
+      color: #9e1b1b;
+      border: 1px solid #f5a5a5;
+    }
+
+    .sub-login-note {
+      font-size: 0.8rem;
+      color: #7a9999;
+      text-align: center;
+      line-height: 1.45;
+    }
+
+    .sub-login-note a {
+      color: var(--primary);
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .sub-login-note a:hover { text-decoration: underline; }
+
+    /* ── Sygnały zaufania ────────────────────────────────────────────────── */
+    .sub-trust {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.5rem 1.5rem;
+      margin-bottom: 3rem;
+    }
+
+    .sub-trust__item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.83rem;
+      color: #5a7274;
+      font-weight: 500;
+    }
+
+    .sub-trust__icon {
+      color: var(--secondary);
+      font-size: 1rem;
+    }
+
+    /* ── Tabela porównania ──────────────────────────────────────────────── */
+    .sub-compare {
+      margin-bottom: 3rem;
+    }
+
+    .sub-compare__title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #1a2e30;
+      margin: 0 0 1.25rem;
+      text-align: center;
+    }
+
+    .sub-table-wrap {
+      overflow-x: auto;
+      border-radius: 12px;
+      border: 1px solid #d0dede;
+      box-shadow: 0 2px 8px rgba(0,70,80,0.05);
+    }
+
+    .sub-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      font-size: 0.9rem;
+    }
+
+    /* Nagłówek tabeli */
+    .sub-table thead th {
+      padding: 1rem 1.1rem 0.9rem;
+      font-weight: 700;
+      text-align: left;
+      background: #fff;
+      border-bottom: 2px solid #d0dede;
+      white-space: nowrap;
+    }
+
+    .sub-table thead th:first-child {
+      color: #1a2e30;
+      width: 56%;
+    }
+
+    .sub-table thead th.th-free {
+      color: #5a7274;
+      text-align: center;
+      width: 22%;
+    }
+
+    .sub-table thead th.th-pro {
+      color: var(--pro-color);
+      text-align: center;
+      width: 22%;
+    }
+
+    .sub-table thead .th-pro-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.15rem;
+    }
+
+    .sub-table thead .th-pro-star {
+      font-size: 0.75rem;
+      background: var(--pro-light);
+      color: var(--pro-dark);
+      padding: 0.12rem 0.5rem;
+      border-radius: 999px;
+      font-weight: 700;
+    }
+
+    /* Wiersze grupujące */
+    .sub-table .tr-group th {
+      padding: 0.55rem 1.1rem 0.4rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--primary);
+      background: #f5f9f9;
+      border-top: 1px solid #d0dede;
+      border-bottom: 1px solid #e0eded;
+      text-align: left;
+      colspan: 3;
+    }
+
+    /* Wiersze cech */
+    .sub-table tbody tr.tr-feature:hover {
+      background: #f8fbfb;
+    }
+
+    .sub-table tbody tr.tr-feature td {
+      padding: 0.7rem 1.1rem;
+      border-bottom: 1px solid #edf3f3;
+      vertical-align: middle;
+    }
+
+    .sub-table tbody tr.tr-feature:last-child td {
+      border-bottom: none;
+    }
+
+    .sub-table .td-feat-name {
+      color: #2e4a4c;
+      line-height: 1.4;
+    }
+
+    .sub-table .td-feat-name small {
+      display: block;
+      color: #7a9999;
+      font-size: 0.78rem;
+      margin-top: 0.1rem;
+    }
+
+    .sub-table .td-check {
+      text-align: center;
+    }
+
+    /* Ikonki check / dash */
+    .check-yes-teal,
+    .check-yes-pro,
+    .check-no {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      font-size: 0.75rem;
+      font-weight: 800;
+    }
+
+    .check-yes-teal {
+      background: #e0f5f5;
+      color: #00838d;
+    }
+
+    .check-yes-pro {
+      background: var(--pro-light);
+      color: var(--pro-color);
+    }
+
+    .check-no {
+      background: #f2f4f4;
+      color: #b0c4c4;
+    }
+
+    /* ── FAQ ───────────────────────────────────────────────────────────── */
+    .sub-faq {
+      max-width: 660px;
+      margin: 0 auto;
+    }
+
+    .sub-faq__title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #1a2e30;
+      margin: 0 0 1.1rem;
+      text-align: center;
+    }
+
+    .sub-faq__list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .sub-faq__item {
+      border: 1px solid #d0dede;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .sub-faq__q {
+      width: 100%;
+      background: none;
+      border: none;
+      padding: 0.9rem 1.1rem;
+      text-align: left;
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: #1a2e30;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .sub-faq__q:hover { background: #f8fbfb; }
+
+    .sub-faq__q::after {
+      content: "+";
+      font-size: 1.2rem;
+      color: var(--primary);
+      flex-shrink: 0;
+      font-weight: 400;
+      transition: transform 0.2s;
+    }
+
+    .sub-faq__item.open .sub-faq__q::after {
+      transform: rotate(45deg);
+    }
+
+    .sub-faq__a {
+      display: none;
+      padding: 0 1.1rem 0.9rem;
+      font-size: 0.88rem;
+      color: #5a7274;
+      line-height: 1.6;
+    }
+
+    .sub-faq__item.open .sub-faq__a {
+      display: block;
+    }
+
+    /* ── Przykłady PDF ──────────────────────────────────────────────────── */
+    .sub-samples {
+      margin-bottom: 2.5rem;
+    }
+
+    .sub-samples__lead {
+      text-align: center;
+      color: #5a7274;
+      font-size: 0.95rem;
+      margin: -0.5rem 0 1.25rem;
+    }
+
+    .sub-samples__grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+    }
+
+    @media (max-width: 640px) {
+      .sub-samples__grid { grid-template-columns: 1fr; }
+    }
+
+    .sub-samples__item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.55rem;
+      padding: 1.25rem 1rem 1rem;
+      border: 1.5px solid #d0dede;
+      border-radius: 14px;
+      background: #fff;
+      text-decoration: none;
+      color: inherit;
+      transition: border-color 0.15s, box-shadow 0.15s, transform 0.12s;
+    }
+
+    .sub-samples__item:hover {
+      border-color: var(--pro-color);
+      box-shadow: 0 4px 20px rgba(153, 0, 255, 0.13);
+      transform: translateY(-2px);
+    }
+
+    .sub-samples__item:active {
+      transform: translateY(0);
+    }
+
+    .sub-samples__icon {
+      color: #e53e3e;
+      flex-shrink: 0;
+    }
+
+    .sub-samples__name {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #1a2e30;
+      text-align: center;
+      line-height: 1.3;
+    }
+
+    .sub-samples__desc {
+      font-size: 0.78rem;
+      color: #7a9999;
+      text-align: center;
+      line-height: 1.4;
+      flex: 1;
+    }
+
+    .sub-samples__pill {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      background: var(--pro-light);
+      color: var(--pro-dark);
+      padding: 0.18rem 0.65rem;
+      border-radius: 999px;
+      margin-top: 0.1rem;
+    }
+
+    /* ── Podgląd PRO — sekcja porównawcza ──────────────────────────────── */
+    .sub-preview {
+      margin-bottom: 3rem;
+    }
+
+    .sub-preview__lead {
+      text-align: center;
+      color: #5a7274;
+      font-size: 0.95rem;
+      margin: -0.5rem 0 1.5rem;
+    }
+
+    .sub-preview__grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+      align-items: start;
+    }
+
+    @media (max-width: 600px) {
+      .sub-preview__grid { grid-template-columns: 1fr; }
+    }
+
+    .sub-preview__card {
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1.5px solid #d0dede;
+      background: #fff;
+    }
+
+    .sub-preview__card--pro {
+      border-color: var(--pro-color);
+      border-width: 2px;
+      box-shadow: var(--pro-glow);
+    }
+
+    .sub-preview__card-label {
+      padding: 0.55rem 1rem;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      background: #f5f9f9;
+      color: #5a7274;
+      border-bottom: 1px solid #e0eded;
+    }
+
+    .sub-preview__card-label--pro {
+      background: linear-gradient(90deg, var(--pro-dark), var(--pro-color));
+      color: #fff;
+      border-bottom: none;
+    }
+
+    .sub-preview__free-body {
+      padding: 1rem 1.1rem 1.25rem;
+    }
+
+    .sub-preview__free-metric {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.88rem;
+      color: #2e4a4c;
+      padding: 0.4rem 0;
+      border-bottom: 1px solid #f0f5f5;
+    }
+
+    .sub-preview__free-metric:last-of-type { border-bottom: none; }
+
+    .sub-preview__free-metric-name { color: #7a9999; }
+
+    .sub-preview__free-notice {
+      margin-top: 0.9rem;
+      padding: 0.6rem 0.8rem;
+      background: #f5f9f9;
+      border: 1px dashed #c0d0d0;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      color: #8aadad;
+      text-align: center;
+    }
+
+    .sub-preview__pro-body {
+      padding: 0.85rem 1.1rem 1.1rem;
+    }
+
+    .sub-preview__summary-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--pro-dark);
+      margin-bottom: 0.7rem;
+    }
+
+    .sub-preview__summary-copy {
+      font-size: 0.72rem;
+      font-weight: 500;
+      text-transform: none;
+      letter-spacing: 0;
+      color: #9b59b6;
+      opacity: 0.8;
+    }
+
+    .sub-preview__pro-metric {
+      display: flex;
+      align-items: baseline;
+      gap: 0.45rem;
+      padding: 0.32rem 0;
+      font-size: 0.86rem;
+      border-bottom: 1px solid #f5eeff;
+    }
+
+    .sub-preview__pro-metric:last-of-type { border-bottom: none; }
+
+    .sub-preview__dot {
+      flex-shrink: 0;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-top: 1px;
+    }
+
+    .sub-preview__pro-metric--danger .sub-preview__dot { background: #e53e3e; }
+    .sub-preview__pro-metric--warn   .sub-preview__dot { background: #d97706; }
+    .sub-preview__pro-metric--ok     .sub-preview__dot { background: #16a34a; }
+
+    .sub-preview__pro-metric--danger .sub-preview__mval strong { color: #c53030; }
+    .sub-preview__pro-metric--warn   .sub-preview__mval strong { color: #b45309; }
+    .sub-preview__pro-metric--ok     .sub-preview__mval strong { color: #15803d; }
+
+    .sub-preview__mname {
+      flex-shrink: 0;
+      width: 5.5rem;
+      color: #7a9999;
+      font-size: 0.8rem;
+    }
+
+    .sub-preview__mval {
+      color: #1a2e30;
+      line-height: 1.35;
+    }
+
+    .sub-preview__actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.9rem;
+    }
+
+    .sub-preview__action-btn {
+      flex: 1;
+      padding: 0.5rem 0.6rem;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      border: none;
+      cursor: default;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+    }
+
+    .sub-preview__action-btn--copy {
+      background: var(--pro-light);
+      color: var(--pro-dark);
+    }
+
+    .sub-preview__action-btn--pdf {
+      background: #f0fafa;
+      color: var(--primary, #009999);
+      border: 1px solid #c0dddd;
+    }
+
+    .sub-preview__caption {
+      text-align: center;
+      font-size: 0.78rem;
+      color: #8aadad;
+      margin-top: 1rem;
+      font-style: italic;
+    }
+
+    /* ── Responsywność ─────────────────────────────────────────────────── */
+    @media (max-width: 480px) {
+      .sub-hero { padding: 1rem 0.5rem 1.75rem; }
+      .sub-plan  { padding: 1.5rem 1.1rem 1.25rem; }
+      .sub-table thead th,
+      .sub-table tbody tr.tr-feature td { padding-left: 0.75rem; padding-right: 0.75rem; }
+    }
+  </style>
+</head>
+<body class="has-sidebar">
+
+<!-- ─── Chrome: header i sidebar wstrzykiwane przez vilda_chrome.js ─── -->
+<header></header>
+
+<div class="desktop-layout">
+  <aside class="sidebar"></aside>
+
+  <main class="main-content">
+    <div class="container sub-page">
+
+      <!-- ═══════════════════════════════════════════════ HERO ══════════ -->
+      <section class="sub-hero" aria-labelledby="subPageTitle">
+        <span class="sub-hero__pill">Pierwsze 30 dni bezpłatnie</span>
+        <h1 id="subPageTitle">Zaawansowane narzędzia<br>dla klinicystów</h1>
+        <p>Centyle Palczewskiej, wyniki Z-score i moduł DocPro —&nbsp;wszystko w jednym miejscu. Bez karty kredytowej.</p>
+      </section>
+
+      <!-- ════════════════════════════════════════════ KARTY PLANÓW ═════ -->
+      <div class="sub-plans" role="list">
+
+        <!-- ── Plan Bezpłatny ── -->
+        <div class="sub-plan" role="listitem" aria-label="Plan Bezpłatny">
+          <div class="sub-plan__header">
+            <div class="sub-plan__name">Bezpłatny</div>
+            <div class="sub-plan__price">0 zł <span>/ mies.</span></div>
+            <p class="sub-plan__price-note">Zawsze dostępny, bez rejestracji.</p>
+          </div>
+
+          <hr class="sub-plan__sep">
+
+          <ul class="sub-plan__features">
+            <li>
+              <span class="sub-plan__check sub-plan__check--teal" aria-hidden="true">
+                <svg width="10" height="10" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              Kalkulator BMI, wagi i wzrostu
+            </li>
+            <li>
+              <span class="sub-plan__check sub-plan__check--teal" aria-hidden="true">
+                <svg width="10" height="10" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              Centyle WHO (0–5 lat) i OLAF (3–18 lat)
+            </li>
+            <li>
+              <span class="sub-plan__check sub-plan__check--teal" aria-hidden="true">
+                <svg width="10" height="10" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              Plan diety i kaloryczności
+            </li>
+            <li>
+              <span class="sub-plan__check sub-plan__check--teal" aria-hidden="true">
+                <svg width="10" height="10" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              Kalkulatory HOMA-IR i klirens/eGFR
+            </li>
+          </ul>
+
+          <a href="index.html" class="sub-plan__cta sub-plan__cta--secondary">Przejdź do aplikacji</a>
+        </div>
+
+        <!-- ── Plan PRO ── -->
+        <div class="sub-plan sub-plan--pro" role="listitem" aria-label="Plan Vilda PRO">
+          <span class="sub-plan__badge">★ Polecany</span>
+
+          <div class="sub-plan__header">
+            <div class="sub-plan__name">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" class="sub-plan__name-pro" aria-hidden="true">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+              </svg>
+              <span class="sub-plan__name-pro">Vilda PRO</span>
+            </div>
+            <div class="sub-plan__price" id="subProPrice">49 zł <span>/ mies.</span></div>
+            <p class="sub-plan__price-trial">Pierwsze 30 dni bezpłatnie</p>
+            <p class="sub-plan__price-note">Bez karty kredytowej.</p>
+          </div>
+
+          <hr class="sub-plan__sep">
+
+          <ul class="sub-plan__features">
+            <li>
+              <span class="sub-plan__check sub-plan__check--pro" aria-hidden="true">
+                <svg width="10" height="10" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              Wszystko z planu bezpłatnego
+            </li>
+            <li>
+              <span class="sub-plan__check sub-plan__check--pro" aria-hidden="true">
+                <svg width="10" height="10" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              Centyle Palczewskiej (0–18 lat) — polskie siatki kliniczne
+            </li>
+            <li>
+              <span class="sub-plan__check sub-plan__check--pro" aria-hidden="true">
+                <svg width="10" height="10" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              Wyniki Z-score wagi, wzrostu i BMI
+            </li>
+            <li>
+              <span class="sub-plan__check sub-plan__check--pro" aria-hidden="true">
+                <svg width="10" height="10" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              Siatki obwodów głowy i klatki piersiowej
+            </li>
+            <li>
+              <span class="sub-plan__check sub-plan__check--pro" aria-hidden="true">
+                <svg width="10" height="10" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              Karta podsumowania z kopiowaniem wyników do HIS
+            </li>
+            <li>
+              <span class="sub-plan__check sub-plan__check--pro" aria-hidden="true">
+                <svg width="10" height="10" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              Raport PDF + zalecenia dietetyczne dla pacjenta
+            </li>
+            <li>
+              <span class="sub-plan__check sub-plan__check--pro" aria-hidden="true">
+                <svg width="10" height="10" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              Moduł DocPro — protokoły endokrynologiczne
+            </li>
+          </ul>
+
+          <!-- Status aktywacji -->
+          <div id="subTrialStatus" class="sub-trial-status" role="status" aria-live="polite"></div>
+
+          <!-- Przycisk CTA -->
+          <button type="button" id="subTrialBtn" class="sub-plan__cta sub-plan__cta--pro">
+            Odblokuj 30 dni PRO za darmo →
+          </button>
+
+        </div>
+
+      </div><!-- /sub-plans -->
+
+      <!-- ═════════════════════════════════════════ SYGNAŁY ZAUFANIA ════ -->
+      <div class="sub-trust" aria-label="Informacje o planie">
+        <div class="sub-trust__item">
+          <span class="sub-trust__icon">🔒</span>
+          Bez karty kredytowej
+        </div>
+        <div class="sub-trust__item">
+          <span class="sub-trust__icon">⚡</span>
+          Aktywacja natychmiastowa
+        </div>
+        <div class="sub-trust__item">
+          <span class="sub-trust__icon">🔄</span>
+          Anuluj w każdej chwili
+        </div>
+        <div class="sub-trust__item">
+          <span class="sub-trust__icon">🏥</span>
+          Dane wyłącznie na Twoim urządzeniu
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════ PRZYKŁADY PDF ══════════════ -->
+      <!-- Nazwy plików muszą odpowiadać plikom w katalogu głównym repozytorium -->
+      <section class="sub-samples" aria-labelledby="subSamplesTitle">
+        <h2 class="sub-compare__title" id="subSamplesTitle">Przykładowe dokumenty generowane przez Vilda PRO</h2>
+        <p class="sub-samples__lead">Kliknij, aby otworzyć przykładowy plik PDF.</p>
+
+        <div class="sub-samples__grid">
+
+          <!-- Raport po wizycie -->
+          <a href="Raport_po_wizycie_Przyk_ad.pdf" target="_blank" rel="noopener noreferrer" class="sub-samples__item" aria-label="Otwórz przykładowy raport po wizycie (PDF)">
+            <svg class="sub-samples__icon" width="40" height="48" viewBox="0 0 40 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <rect width="40" height="48" rx="5" fill="#fff1f0"/>
+              <path d="M8 6h16l8 8v28a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" fill="#fff" stroke="#fca5a5" stroke-width="1.5"/>
+              <path d="M24 6v8h8" stroke="#fca5a5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <text x="20" y="33" text-anchor="middle" font-family="Inter, sans-serif" font-size="8" font-weight="800" fill="#e53e3e">PDF</text>
+              <line x1="12" y1="22" x2="28" y2="22" stroke="#fca5a5" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="12" y1="27" x2="24" y2="27" stroke="#fca5a5" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            <span class="sub-samples__name">Raport po wizycie</span>
+            <span class="sub-samples__desc">Wyniki, normy żywieniowe i interpretacja — gotowy wydruk dla pacjenta</span>
+            <span class="sub-samples__pill">★ PRO</span>
+          </a>
+
+          <!-- Siatka centylowa Palczewska -->
+          <a href="Siatka_centylowa_Palczewska_Przyk_ad.pdf" target="_blank" rel="noopener noreferrer" class="sub-samples__item" aria-label="Otwórz przykładową siatkę centylową Palczewskiej (PDF)">
+            <svg class="sub-samples__icon" width="40" height="48" viewBox="0 0 40 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <rect width="40" height="48" rx="5" fill="#fff1f0"/>
+              <path d="M8 6h16l8 8v28a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" fill="#fff" stroke="#fca5a5" stroke-width="1.5"/>
+              <path d="M24 6v8h8" stroke="#fca5a5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <text x="20" y="33" text-anchor="middle" font-family="Inter, sans-serif" font-size="8" font-weight="800" fill="#e53e3e">PDF</text>
+              <line x1="12" y1="22" x2="28" y2="22" stroke="#fca5a5" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="12" y1="27" x2="24" y2="27" stroke="#fca5a5" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            <span class="sub-samples__name">Siatka centylowa Palczewskiej</span>
+            <span class="sub-samples__desc">Polskie siatki kliniczne (0–18 lat) z naniesioną pozycją pacjenta</span>
+            <span class="sub-samples__pill">★ PRO</span>
+          </a>
+
+          <!-- Siatka centylowa OLAF -->
+          <a href="Siatka_centylowa_OLAF_Przyk_ad.pdf" target="_blank" rel="noopener noreferrer" class="sub-samples__item" aria-label="Otwórz przykładową siatkę centylową OLAF (PDF)">
+            <svg class="sub-samples__icon" width="40" height="48" viewBox="0 0 40 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <rect width="40" height="48" rx="5" fill="#fff1f0"/>
+              <path d="M8 6h16l8 8v28a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" fill="#fff" stroke="#fca5a5" stroke-width="1.5"/>
+              <path d="M24 6v8h8" stroke="#fca5a5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <text x="20" y="33" text-anchor="middle" font-family="Inter, sans-serif" font-size="8" font-weight="800" fill="#e53e3e">PDF</text>
+              <line x1="12" y1="22" x2="28" y2="22" stroke="#fca5a5" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="12" y1="27" x2="24" y2="27" stroke="#fca5a5" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            <span class="sub-samples__name">Siatka centylowa OLAF</span>
+            <span class="sub-samples__desc">Siatki OLAF (3–18 lat) — generowane tym samym przyciskiem, dostępne obok siatek Palczewskiej</span>
+            <span class="sub-samples__pill">★ PRO</span>
+          </a>
+
+        </div>
+      </section>
+
+      <!-- ══════════════════════ PODGLĄD PRO — porównanie widoków ════════ -->
+      <section class="sub-preview" aria-labelledby="subPreviewTitle">
+        <h2 class="sub-compare__title" id="subPreviewTitle">Zobacz różnicę w praktyce</h2>
+        <p class="sub-preview__lead">Te same dane pacjenta — dwa różne widoki wyników.</p>
+
+        <div class="sub-preview__grid">
+
+          <!-- Widok bezpłatny -->
+          <div class="sub-preview__card">
+            <div class="sub-preview__card-label">Plan bezpłatny</div>
+            <div class="sub-preview__free-body">
+              <div class="sub-preview__free-metric">
+                <span class="sub-preview__free-metric-name">Waga (OLAF)</span>
+                <span>26&thinsp;kg, 48. centyl</span>
+              </div>
+              <div class="sub-preview__free-metric">
+                <span class="sub-preview__free-metric-name">Wzrost (OLAF)</span>
+                <span>116&thinsp;cm, &lt;1. centyla</span>
+              </div>
+              <div class="sub-preview__free-metric">
+                <span class="sub-preview__free-metric-name">BMI (OLAF)</span>
+                <span>19,3, 89. centyl</span>
+              </div>
+              <div class="sub-preview__free-metric">
+                <span class="sub-preview__free-metric-name">Pow. ciała</span>
+                <span>0,92&thinsp;m²</span>
+              </div>
+              <div class="sub-preview__free-notice">
+                Karta podsumowania, Z-score, zalecenia dietetyczne<br>i raporty PDF — dostępne w planie PRO.
+              </div>
+            </div>
+          </div>
+
+          <!-- Widok PRO -->
+          <div class="sub-preview__card sub-preview__card--pro">
+            <div class="sub-preview__card-label sub-preview__card-label--pro">★ Vilda PRO — Wyniki profesjonalne</div>
+            <div class="sub-preview__pro-body">
+              <div class="sub-preview__summary-title">
+                Podsumowanie wyników
+                <span class="sub-preview__summary-copy">— kliknij i skopiuj</span>
+              </div>
+              <div class="sub-preview__pro-metric sub-preview__pro-metric--ok">
+                <span class="sub-preview__dot"></span>
+                <span class="sub-preview__mname">Waga</span>
+                <span class="sub-preview__mval">26&thinsp;kg, 48 centyl (Z-score = −0,05)</span>
+              </div>
+              <div class="sub-preview__pro-metric sub-preview__pro-metric--danger">
+                <span class="sub-preview__dot"></span>
+                <span class="sub-preview__mname">Wzrost</span>
+                <span class="sub-preview__mval">116&thinsp;cm, &lt;1 centyla (<strong>Z-score = −2,48</strong>), brakuje 3,5&thinsp;cm do 3 centyla</span>
+              </div>
+              <div class="sub-preview__pro-metric sub-preview__pro-metric--warn">
+                <span class="sub-preview__dot"></span>
+                <span class="sub-preview__mname">BMI</span>
+                <span class="sub-preview__mval">19,3 – 89 centyl (Z-score = 1,24)</span>
+              </div>
+              <div class="sub-preview__pro-metric sub-preview__pro-metric--warn">
+                <span class="sub-preview__dot"></span>
+                <span class="sub-preview__mname">Cole'a</span>
+                <span class="sub-preview__mval"><strong>122,8%</strong> · tempo wzrastania: 3,3&thinsp;cm/rok</span>
+              </div>
+              <div class="sub-preview__pro-metric sub-preview__pro-metric--danger">
+                <span class="sub-preview__dot"></span>
+                <span class="sub-preview__mname">hSDS − mpSDS</span>
+                <span class="sub-preview__mval"><strong>−3,13</strong> · MPH: 181,0&thinsp;cm (Z-score: 0,65)</span>
+              </div>
+              <div class="sub-preview__pro-metric sub-preview__pro-metric--danger">
+                <span class="sub-preview__dot"></span>
+                <span class="sub-preview__mname">Prognoza RWT</span>
+                <span class="sub-preview__mval">167,2&thinsp;cm (±4,8&thinsp;cm)</span>
+              </div>
+              <div class="sub-preview__actions">
+                <button class="sub-preview__action-btn sub-preview__action-btn--copy" tabindex="-1" aria-hidden="true">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                  Kopiuj wyniki
+                </button>
+                <button class="sub-preview__action-btn sub-preview__action-btn--pdf" tabindex="-1" aria-hidden="true">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  Raport PDF dla pacjenta
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <p class="sub-preview__caption">Przykład: chłopiec 8 lat, waga 26&thinsp;kg, wzrost 116&thinsp;cm, wzrost mamy: 167&thinsp;cm, wzrost taty: 182&thinsp;cm. Z-score −2,48 wzrostu sugeruje niskorosłość wymagającą diagnostyki.</p>
+      </section>
+
+      <!-- ══════════════════════════════════════ TABELA PORÓWNANIA ══════ -->
+      <section class="sub-compare" aria-labelledby="subCompareTitle">
+        <h2 class="sub-compare__title" id="subCompareTitle">Pełne porównanie planów</h2>
+
+        <div class="sub-table-wrap">
+          <table class="sub-table" aria-label="Porównanie planów Bezpłatny i PRO">
+            <thead>
+              <tr>
+                <th scope="col">Funkcja</th>
+                <th scope="col" class="th-free">Bezpłatny</th>
+                <th scope="col" class="th-pro">
+                  <div class="th-pro-inner">
+                    <span>★ PRO</span>
+                    <span class="th-pro-star">30 dni gratis</span>
+                  </div>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+
+              <!-- GRUPA: Centyle i siatki wzrostowe -->
+              <tr class="tr-group">
+                <th colspan="3" scope="colgroup">Centyle i siatki wzrostowe</th>
+              </tr>
+              <tr class="tr-feature">
+                <td class="td-feat-name">Centyle WHO (0–5 lat)</td>
+                <td class="td-check"><span class="check-yes-teal" aria-label="dostępne"><svg width="10" height="8" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>
+                <td class="td-check"><span class="check-yes-pro" aria-label="dostępne"><svg width="10" height="8" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>
+              </tr>
+              <tr class="tr-feature">
+                <td class="td-feat-name">Centyle OLAF (3–18 lat)</td>
+                <td class="td-check"><span class="check-yes-teal" aria-label="dostępne"><svg width="10" height="8" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>
+                <td class="td-check"><span class="check-yes-pro" aria-label="dostępne"><svg width="10" height="8" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>
+              </tr>
+              <tr class="tr-feature">
+                <td class="td-feat-name">
+                  Centyle Palczewskiej (0–18 lat)
+                  <small>Polskie siatki kliniczne dla dzieci i młodzieży</small>
+                </td>
+                <td class="td-check"><span class="check-no" aria-label="niedostępne">—</span></td>
+                <td class="td-check"><span class="check-yes-pro" aria-label="dostępne"><svg width="10" height="8" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>
+              </tr>
+              <tr class="tr-feature">
+                <td class="td-feat-name">
+                  Siatki obwodów głowy i klatki
+                  <small>Normy dla niemowląt i dzieci</small>
+                </td>
+                <td class="td-check"><span class="check-no" aria-label="niedostępne">—</span></td>
+                <td class="td-check"><span class="check-yes-pro" aria-label="dostępne"><svg width="10" height="8" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>
+              </tr>
+
+              <!-- GRUPA: Wyniki kliniczne -->
+              <tr class="tr-group">
+                <th colspan="3" scope="colgroup">Wyniki kliniczne</th>
+              </tr>
+              <tr class="tr-feature">
+                <td class="td-feat-name">BMI, waga, wzrost — wyniki standardowe</td>
+                <td class="td-check"><span class="check-yes-teal" aria-label="dostępne"><svg width="10" height="8" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>
+                <td class="td-check"><span class="check-yes-pro" aria-label="dostępne"><svg width="10" height="8" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>
+              </tr>
+              <tr class="tr-feature">
+                <td class="td-feat-name">
+                  Wyniki Z-score (SDS)
+                  <small>Odchylenie standardowe dla wagi, wzrostu i BMI</small>
+                </td>
+                <td class="td-check"><span class="check-no" aria-label="niedostępne">—</span></td>
+                <td class="td-check"><span class="check-yes-pro" aria-label="dostępne"><svg width="10" height="8" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>
+              </tr>
+              <tr class="tr-feature">
+                <td class="td-feat-name">
+                  Zaawansowane obliczenia wzrostowe
+                  <small>Wzrost docelowy (MPH), prognoza wzrostu końcowego (Bayley-Pinneau)</small>
+                </td>
+                <td class="td-check"><span class="check-no" aria-label="niedostępne">—</span></td>
+                <td class="td-check"><span class="check-yes-pro" aria-label="dostępne"><svg width="10" height="8" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>
+              </tr>
+              <tr class="tr-feature">
+                <td class="td-feat-name">
+                  Tempo wzrastania
+                  <small>cm/rok z historii pomiarów, flaga słabego tempa wzrastania</small>
+                </td>
+                <td class="td-check"><span class="check-no" aria-label="niedostępne">—</span></td>
+                <td class="td-check"><span class="check-yes-pro" aria-label="dostępne"><svg width="10" height="8" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>
+              </tr>
+
+              <!-- GRUPA: Moduł DocPro -->
+              <tr class="tr-group">
+                <th colspan="3" scope="colgroup">Moduł DocPro</th>
+              </tr>
+              <tr class="tr-feature">
+                <td class="td-feat-name">
+                  Testy endokrynologiczne
+                  <small>GH, OGTT z insuliną, ACTH/TRH i inne</small>
+                </td>
+                <td class="td-check"><span class="check-no" aria-label="niedostępne">—</span></td>
+                <td class="td-check"><span class="check-yes-pro" aria-label="dostępne"><svg width="10" height="8" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>
+              </tr>
+              <tr class="tr-feature">
+                <td class="td-feat-name">
+                  Dawkowanie GH / IGF-1
+                  <small>Obliczenia dawki w leczeniu niedoboru hormonu wzrostu</small>
+                </td>
+                <td class="td-check"><span class="check-no" aria-label="niedostępne">—</span></td>
+                <td class="td-check"><span class="check-yes-pro" aria-label="dostępne"><svg width="10" height="8" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>
+              </tr>
+              <tr class="tr-feature">
+                <td class="td-feat-name">
+                  Antybiotykoterapia
+                  <small>Protokoły doboru i dawkowania antybiotyków</small>
+                </td>
+                <td class="td-check"><span class="check-no" aria-label="niedostępne">—</span></td>
+                <td class="td-check"><span class="check-yes-pro" aria-label="dostępne"><svg width="10" height="8" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>
+              </tr>
+              <tr class="tr-feature">
+                <td class="td-feat-name">
+                  Bisfosfoniany i inne protokoły
+                  <small>Dawkowanie leków metabolizmu kostnego</small>
+                </td>
+                <td class="td-check"><span class="check-no" aria-label="niedostępne">—</span></td>
+                <td class="td-check"><span class="check-yes-pro" aria-label="dostępne"><svg width="10" height="8" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>
+              </tr>
+
+              <!-- GRUPA: Podsumowanie i eksport -->
+              <tr class="tr-group">
+                <th colspan="3" scope="colgroup">Podsumowanie i eksport wyników</th>
+              </tr>
+              <tr class="tr-feature">
+                <td class="td-feat-name">
+                  Karta „Podsumowanie wyników"
+                  <small>Wszystkie metryki w jednym miejscu, kodowane kolorem (zielony / żółty / czerwony)</small>
+                </td>
+                <td class="td-check"><span class="check-no" aria-label="niedostępne">—</span></td>
+                <td class="td-check"><span class="check-yes-pro" aria-label="dostępne"><svg width="10" height="8" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>
+              </tr>
+              <tr class="tr-feature">
+                <td class="td-feat-name">
+                  Kopiowanie wyników jednym kliknięciem
+                  <small>Gotowy tekst do wklejenia do HIS, systemu gabinetowego lub dokumentacji</small>
+                </td>
+                <td class="td-check"><span class="check-no" aria-label="niedostępne">—</span></td>
+                <td class="td-check"><span class="check-yes-pro" aria-label="dostępne"><svg width="10" height="8" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>
+              </tr>
+              <tr class="tr-feature">
+                <td class="td-feat-name">
+                  Raport PDF dla pacjenta
+                  <small>Wyniki i normy żywieniowe — gotowy wydruk po wizycie</small>
+                </td>
+                <td class="td-check"><span class="check-no" aria-label="niedostępne">—</span></td>
+                <td class="td-check"><span class="check-yes-pro" aria-label="dostępne"><svg width="10" height="8" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>
+              </tr>
+              <tr class="tr-feature">
+                <td class="td-feat-name">
+                  Siatki centylowe jako PDF (Palczewska i OLAF)
+                  <small>Jednym kliknięciem — siatka z naniesioną pozycją pacjenta, gotowa do wydruku lub archiwizacji</small>
+                </td>
+                <td class="td-check"><span class="check-no" aria-label="niedostępne">—</span></td>
+                <td class="td-check"><span class="check-yes-pro" aria-label="dostępne"><svg width="10" height="8" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>
+              </tr>
+              <tr class="tr-feature">
+                <td class="td-feat-name">
+                  Zalecenia dietetyczne
+                  <small>Spersonalizowany plan, smart goals, mity żywieniowe — eksport PDF dla pacjenta</small>
+                </td>
+                <td class="td-check"><span class="check-no" aria-label="niedostępne">—</span></td>
+                <td class="td-check"><span class="check-yes-pro" aria-label="dostępne"><svg width="10" height="8" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>
+              </tr>
+
+              <!-- GRUPA: Kalkulatory ogólne -->
+              <tr class="tr-group">
+                <th colspan="3" scope="colgroup">Kalkulatory ogólne</th>
+              </tr>
+              <tr class="tr-feature">
+                <td class="td-feat-name">Kalkulator HOMA-IR</td>
+                <td class="td-check"><span class="check-yes-teal" aria-label="dostępne"><svg width="10" height="8" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>
+                <td class="td-check"><span class="check-yes-pro" aria-label="dostępne"><svg width="10" height="8" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>
+              </tr>
+              <tr class="tr-feature">
+                <td class="td-feat-name">Klirens kreatyniny / eGFR</td>
+                <td class="td-check"><span class="check-yes-teal" aria-label="dostępne"><svg width="10" height="8" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>
+                <td class="td-check"><span class="check-yes-pro" aria-label="dostępne"><svg width="10" height="8" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>
+              </tr>
+              <tr class="tr-feature">
+                <td class="td-feat-name">Plan diety i kaloryczności</td>
+                <td class="td-check"><span class="check-yes-teal" aria-label="dostępne"><svg width="10" height="8" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>
+                <td class="td-check"><span class="check-yes-pro" aria-label="dostępne"><svg width="10" height="8" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>
+              </tr>
+
+              <!-- GRUPA: Konto i synchronizacja -->
+              <tr class="tr-group">
+                <th colspan="3" scope="colgroup">Konto i synchronizacja</th>
+              </tr>
+              <tr class="tr-feature">
+                <td class="td-feat-name">
+                  Synchronizacja danych
+                  <small>Backup i dostęp z wielu urządzeń</small>
+                </td>
+                <td class="td-check"><span class="check-no" aria-label="niedostępne">—</span></td>
+                <td class="td-check"><span class="check-yes-pro" aria-label="dostępne"><svg width="10" height="8" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>
+              </tr>
+              <tr class="tr-feature">
+                <td class="td-feat-name">
+                  Tryb lekarza
+                  <small>Weryfikacja numeru PWZ, karty pacjentów</small>
+                </td>
+                <td class="td-check"><span class="check-no" aria-label="niedostępne">—</span></td>
+                <td class="td-check"><span class="check-yes-pro" aria-label="dostępne"><svg width="10" height="8" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>
+              </tr>
+
+            </tbody>
+          </table>
+        </div><!-- /sub-table-wrap -->
+      </section>
+
+      <!-- ══════════════════════════════════════════════════ FAQ ══════════ -->
+      <section class="sub-faq" aria-labelledby="subFaqTitle">
+        <h2 class="sub-faq__title" id="subFaqTitle">Często zadawane pytania</h2>
+        <div class="sub-faq__list">
+
+          <div class="sub-faq__item">
+            <button class="sub-faq__q" type="button" aria-expanded="false">
+              Czy po 30 dniach zostanę automatycznie obciążony?
+            </button>
+            <div class="sub-faq__a">
+              Nie. Okres próbny jest całkowicie bezpłatny i nie wymaga podania danych płatniczych. Po jego zakończeniu plan PRO wygaśnie automatycznie — aplikacja powróci do planu bezpłatnego. Jeśli chcesz kontynuować dostęp do PRO, możesz wykupić subskrypcję za 49&nbsp;zł&nbsp;/ miesiąc. Żadna opłata nie zostanie pobrana bez Twojej wyraźnej zgody.
+            </div>
+          </div>
+
+          <div class="sub-faq__item">
+            <button class="sub-faq__q" type="button" aria-expanded="false">
+              Czy moje dane pacjentów są bezpieczne?
+            </button>
+            <div class="sub-faq__a">
+              Tak. Wszystkie dane pacjentów są szyfrowane lokalnie na Twoim urządzeniu przed jakąkolwiek synchronizacją. Klucze szyfrowania nigdy nie opuszczają urządzenia. Serwery przechowują wyłącznie zaszyfrowany blob — bez możliwości odczytania danych przez kogokolwiek poza Tobą.
+            </div>
+          </div>
+
+          <div class="sub-faq__item">
+            <button class="sub-faq__q" type="button" aria-expanded="false">
+              Czy mogę aktywować okres próbny ponownie?
+            </button>
+            <div class="sub-faq__a">
+              Okres próbny można aktywować jednorazowo na każdym koncie. Po jego zakończeniu dostęp do planu PRO jest możliwy za 49&nbsp;zł&nbsp;/ miesiąc — bez zobowiązań, z możliwością rezygnacji w dowolnym momencie.
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </div><!-- /sub-page -->
+  </main>
+</div><!-- /desktop-layout -->
+
+<!-- ─── Stopka ─────────────────────────────────────────────────────────── -->
+<footer class="site-footer">
+  <div class="site-footer__inner">
+    <div class="site-footer__brand">
+      <a href="index.html" class="site-footer__brand-link">
+        <span class="site-footer__brand-icon" aria-hidden="true">
+          <img src="data:image/png;base64,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" alt="" width="22" height="22">
+        </span>
+        <span class="site-footer__brand-name">wagaiwzrost.pl</span>
+      </a>
+      <p class="site-footer__brand-meta">
+        Vilda Clinic sp. z o.o.<br>
+        Konsultacja merytoryczna: dr&nbsp;n.&nbsp;med.&nbsp;Maciej&nbsp;Flader
+      </p>
+    </div>
+    <nav class="site-footer__col" aria-label="Kalkulatory">
+      <h3 class="site-footer__col-title">Kalkulatory</h3>
+      <a href="index.html" class="site-footer__link">Strona główna</a>
+      <a href="homa-ir.html" class="site-footer__link">HOMA-IR</a>
+      <a href="kalkulator-klirens.html" class="site-footer__link">Klirens / eGFR</a>
+    </nav>
+    <nav class="site-footer__col" aria-label="Kalkulatory — ciąg dalszy">
+      <h3 class="site-footer__col-title site-footer__col-title--hidden" aria-hidden="true">&nbsp;</h3>
+      <a href="docpro.html" class="site-footer__link">DocPro</a>
+      <a href="steroidy.html" class="site-footer__link">Steroidy</a>
+      <a href="cukrzyca.html" class="site-footer__link">Cukrzyca</a>
+    </nav>
+    <nav class="site-footer__col" aria-label="Informacje">
+      <h3 class="site-footer__col-title">Informacje</h3>
+      <a href="o-aplikacji.html" class="site-footer__link">O aplikacji</a>
+      <a href="subskrypcja.html" class="site-footer__link" aria-current="page">Vilda PRO</a>
+      <a href="polityka-prywatnosci.html" class="site-footer__link">Polityka prywatności</a>
+    </nav>
+  </div>
+  <div class="site-footer__disclaimer-wrap">
+    <p class="site-footer__disclaimer">
+      Narzędzie do celów informacyjnych — nie zastępuje konsultacji lekarskiej ani samodzielnych decyzji klinicznych.
+    </p>
+  </div>
+  <div class="site-footer__bottom">
+    <span>© 2025 Vilda Clinic sp. z o.o.</span>
+    <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer" class="site-footer__vildaclinic">vildaclinic.pl</a>
+  </div>
+</footer>
+
+<!-- ─── Skrypty ────────────────────────────────────────────────────────── -->
+<script src="vilda_pro_access.js?v=1"></script>
+<script src="vilda_pro_ui.js?v=1"></script>
+<script src="vilda_chrome.js?v=7"></script>
+
+<script>
+/* ── Logika strony subskrypcji — PRO-2.5 ─────────────────────────────── */
+(function () {
+  'use strict';
+
+  var WORKER_URL = 'https://vilda-sync.maciej-4b9.workers.dev';
+
+  var btn        = document.getElementById('subTrialBtn');
+  var statusEl   = document.getElementById('subTrialStatus');
+
+  /* Pomocnik: formatowanie daty po polsku */
+  function formatDate(iso) {
+    try {
+      return new Date(iso).toLocaleDateString('pl-PL', {
+        day: '2-digit', month: 'long', year: 'numeric'
+      });
+    } catch (_) { return iso; }
+  }
+
+  /* Aktualizuje stan przycisku i komunikatów na podstawie stanu vault + PRO */
+  function updateUI() {
+    var vault     = window.VildaVault;
+    var proAccess = window.VildaProAccess;
+    var session   = window.VildaSession;
+
+    /* Na subskrypcja.html vault jest ładowany statycznie, więc vilda_session_bridge
+       NIE odpala vilda:session-changed przy starcie (wraca wcześniej z _autoLoadIfNeeded).
+       Dodatkowo vault.isUnlocked() może być false przez ułamek sekundy podczas
+       asynchronicznej inicjalizacji IndexedDB.
+       Fallback: VildaSession.hasSessionKey() sprawdza sessionStorage synchronicznie —
+       klucz istnieje gdy użytkownik zalogował się wcześniej w tej samej sesji. */
+    var vaultUnlocked = vault && typeof vault.isUnlocked === 'function' && vault.isUnlocked();
+    var sessionKey    = session && typeof session.hasSessionKey === 'function' && session.hasSessionKey();
+    var guestMode     = session && typeof session.isGuestMode === 'function' && session.isGuestMode();
+    var unlocked      = !guestMode && (vaultUnlocked || sessionKey);
+
+    if (!unlocked) {
+      /* ── Niezalogowany ── */
+      btn.textContent  = 'Zaloguj się, aby aktywować';
+      btn.disabled     = false;
+      btn.className    = 'sub-plan__cta sub-plan__cta--pro';
+      btn.onclick = function () {
+        var auth = window.VildaAuthUI;
+        if (auth) {
+          try {
+            if (typeof auth.isGuestMode === 'function' && auth.isGuestMode()) {
+              if (typeof auth.exitGuestMode === 'function') { auth.exitGuestMode(); return; }
+            }
+            if (typeof auth.showStartupScreen === 'function') { auth.showStartupScreen({ context: 'pro-signup' }); return; }
+          } catch (_) {}
+        }
+        window.location.href = 'index.html';
+      };
+      return;
+    }
+
+    btn.onclick = activateTrial; /* reset handlera */
+
+    if (proAccess && typeof proAccess.hasAccess === 'function' && proAccess.hasAccess()) {
+      /* ── PRO aktywne (okres próbny w toku) ── */
+      var snap = proAccess.getSnapshot && proAccess.getSnapshot();
+      if (snap && snap.validUntil) {
+        var daysLeft = Math.ceil((new Date(snap.validUntil).getTime() - Date.now()) / 86400000);
+        var statusMsg = 'Okres próbny PRO aktywny do ' + formatDate(snap.validUntil) + '.';
+        if (daysLeft <= 7 && daysLeft > 0) {
+          statusMsg += ' Pozostało ' + daysLeft + ' ' + (daysLeft === 1 ? 'dzień' : 'dni') + '.';
+        }
+        showStatus(statusMsg, 'success');
+      }
+      btn.textContent = 'Wykup subskrypcję →';
+      btn.disabled    = false;
+      btn.className   = 'sub-plan__cta sub-plan__cta--pro';
+      btn.onclick     = function () {
+        showStatus('Płatności online będą dostępne wkrótce. Dziękujemy za zainteresowanie! ✉ kontakt@wagaiwzrost.pl', 'warn');
+      };
+      return;
+    }
+
+    /* ── Sprawdź czy trial wygasł (snapshot istnieje ale hasAccess() = false) ── */
+    var expSnap = proAccess && proAccess.getSnapshot && proAccess.getSnapshot();
+    if (expSnap && expSnap.validUntil && new Date(expSnap.validUntil).getTime() < Date.now()) {
+      /* ── PRO wygasłe ── */
+      showStatus('Twój okres próbny PRO wygasł ' + formatDate(expSnap.validUntil) + '.', 'warn');
+      btn.textContent = 'Wykup subskrypcję →';
+      btn.disabled    = false;
+      btn.className   = 'sub-plan__cta sub-plan__cta--pro';
+      btn.onclick     = function () {
+        showStatus('Płatności online będą dostępne wkrótce. Dziękujemy za zainteresowanie! ✉ kontakt@wagaiwzrost.pl', 'warn');
+      };
+      return;
+    }
+
+    /* ── Zalogowany, nigdy nie miał PRO ── */
+    btn.textContent = 'Odblokuj 30 dni PRO za darmo →';
+    btn.disabled    = false;
+    btn.className   = 'sub-plan__cta sub-plan__cta--pro';
+  }
+
+  function showStatus(msg, type) {
+    statusEl.textContent  = msg;
+    statusEl.className    = 'sub-trial-status sub-trial-status--' + type;
+  }
+
+  function clearStatus() {
+    statusEl.textContent = '';
+    statusEl.className   = 'sub-trial-status';
+  }
+
+  async function activateTrial() {
+    var vault = window.VildaVault;
+    if (!vault || typeof vault.isUnlocked !== 'function' || !vault.isUnlocked()) {
+      window.location.href = 'index.html';
+      return;
+    }
+
+    btn.disabled    = true;
+    btn.textContent = 'Aktywuję…';
+    clearStatus();
+
+    var syncMat;
+    try {
+      syncMat = await vault.getSyncMaterial();
+    } catch (e) {
+      showStatus('Nie można odczytać danych konta. Spróbuj ponownie.', 'error');
+      btn.textContent = 'Odblokuj 30 dni PRO za darmo →';
+      btn.disabled    = false;
+      return;
+    }
+
+    var slotId    = syncMat.slotId;
+    var authToken = syncMat.authToken;
+
+    try {
+      var resp = await fetch(
+        WORKER_URL + '/v1/slots/' + slotId + '/trial',
+        {
+          method:  'POST',
+          headers: {
+            'Authorization': 'Bearer ' + authToken,
+            'Content-Type':  'application/json'
+          }
+        }
+      );
+
+      var data;
+      try { data = await resp.json(); } catch (_) { data = {}; }
+
+      if (resp.ok) {
+        /* Sukces — 201 (nowy trial) lub 200 (trial już istniał — sync między urządzeniami).
+           W obu przypadkach zapisujemy plan do localStorage i odświeżamy stronę. */
+        if (window.VildaProAccess && typeof window.VildaProAccess.setPlan === 'function') {
+          window.VildaProAccess.setPlan('pro', data.validUntil || null);
+        }
+        var msg = resp.status === 200
+          ? '✅ Plan PRO zsynchronizowany! Za chwilę aplikacja się odświeży…'
+          : '🎉 Plan PRO aktywowany! Za chwilę aplikacja się odświeży…';
+        showStatus(msg, 'success');
+        setTimeout(function () { window.location.reload(); }, 1800);
+
+      } else if (resp.status === 401 || resp.status === 403) {
+        /* Slot niezarejestrowany — zarejestruj tożsamość kryptograficzną i ponów.
+           Używamy lekkiego endpointu /register-identity który zapisuje tylko tokenHash
+           w KV (bez blobu danych). Działa niezależnie od tego czy użytkownik włączył
+           synchronizację — nie przesyła żadnych danych pacjentów.
+           Jeśli użytkownik kiedyś włączy sync, VildaSync.syncPush() dostanie 409
+           i automatycznie przejdzie do PUT /blob (standardowa ścieżka 409-handling). */
+        showStatus('Rejestruję konto…', 'info');
+        try {
+          /* Oblicz SHA-256(authToken) → hex; wymagany nagłówek X-Auth-Token-Hash */
+          var tokenHashBuf = await crypto.subtle.digest(
+            'SHA-256',
+            new TextEncoder().encode(authToken)
+          );
+          var tokenHashHex = Array.from(new Uint8Array(tokenHashBuf))
+            .map(function (b) { return b.toString(16).padStart(2, '0'); })
+            .join('');
+
+          var regResp = await fetch(
+            WORKER_URL + '/v1/slots/' + slotId + '/register-identity',
+            {
+              method:  'POST',
+              headers: { 'X-Auth-Token-Hash': tokenHashHex }
+            }
+          );
+
+          /* 201 = nowo zarejestrowany, 200 = slot już istniał — oba OK */
+          if (!regResp.ok) {
+            var regErrData;
+            try { regErrData = await regResp.json(); } catch (_) { regErrData = {}; }
+            var regErrObj = regErrData && regErrData.error;
+            throw new Error(
+              typeof regErrObj === 'string'
+                ? regErrObj
+                : (regErrObj && regErrObj.message) || ('Błąd rejestracji: ' + regResp.status)
+            );
+          }
+
+          /* Slot zarejestrowany — ponów aktywację PRO */
+          showStatus('Aktywuję plan PRO…', 'info');
+          var retryResp = await fetch(
+            WORKER_URL + '/v1/slots/' + slotId + '/trial',
+            {
+              method:  'POST',
+              headers: {
+                'Authorization': 'Bearer ' + authToken,
+                'Content-Type':  'application/json'
+              }
+            }
+          );
+          var retryData;
+          try { retryData = await retryResp.json(); } catch (_) { retryData = {}; }
+          if (retryResp.ok) {
+            if (window.VildaProAccess && typeof window.VildaProAccess.setPlan === 'function') {
+              window.VildaProAccess.setPlan('pro', retryData.validUntil || null);
+            }
+            showStatus('🎉 Plan PRO aktywowany! Za chwilę aplikacja się odświeży…', 'success');
+            setTimeout(function () { window.location.reload(); }, 1800);
+            return;
+          } else {
+            var retryErrObj = retryData && retryData.error;
+            var retryErrMsg = typeof retryErrObj === 'string'
+              ? retryErrObj
+              : (retryErrObj && retryErrObj.message) || ('Błąd serwera ' + retryResp.status);
+            throw new Error(retryErrMsg);
+          }
+        } catch (autoErr) {
+          showStatus('Błąd aktywacji: ' + (autoErr.message || 'Spróbuj ponownie.'), 'error');
+          btn.textContent = 'Odblokuj 30 dni PRO za darmo →';
+          btn.disabled    = false;
+          return;
+        }
+
+      } else {
+        /* Worker zwraca { error: { message: "..." } } — wyciągamy message */
+        var errObj = data && data.error;
+        var errMsg = typeof errObj === 'string'
+          ? errObj
+          : (errObj && errObj.message) || ('Błąd serwera ' + resp.status);
+        throw new Error(errMsg);
+      }
+
+    } catch (e) {
+      if (e.name === 'TypeError') {
+        showStatus('Brak połączenia z serwerem. Sprawdź internet i spróbuj ponownie.', 'error');
+      } else {
+        showStatus('Błąd: ' + (e.message || 'Spróbuj ponownie.'), 'error');
+      }
+      btn.textContent = 'Odblokuj 30 dni PRO za darmo →';
+      btn.disabled    = false;
+    }
+  }
+
+  /* ── Inicjalizacja i nasłuch na zmiany stanu ────────────────────────── */
+  function init() {
+    updateUI();
+
+    try {
+      document.addEventListener('vilda:session-changed',   updateUI);
+      document.addEventListener('vildaProAccessChanged',   updateUI);
+    } catch (_) {}
+
+    /* Siatka bezpieczeństwa: vault może skończyć async init po DOMContentLoaded.
+       Na subskrypcja.html vilda:session-changed nie jest automatycznie odpalane
+       (vault ładowany statycznie, _autoLoadIfNeeded zwraca wcześniej).
+       setTimeout pozwala złapać stan po zakończeniu inicjalizacji IndexedDB. */
+    setTimeout(updateUI, 100);
+
+    /* ── Nasłuch na zalogowanie w trakcie pobytu na tej stronie ─────────
+       vilda:session-changed NIE jest wysyłane po login gdy vault jest
+       załadowany statycznie (_autoLoadIfNeeded() zwraca wcześniej).
+       VildaVault.onUnlock() obsługuje wiele listenerów (tablica) — możemy
+       bezpiecznie dołączyć swój callback bez ingerencji w vilda_auth_ui.js. */
+    try {
+      var vault = window.VildaVault;
+      if (vault && typeof vault.onUnlock === 'function') {
+        vault.onUnlock(function () {
+          /* Krótkie opóźnienie: vault.isUnlocked() musi zwrócić true,
+             co dzieje się synchronicznie w notifyUnlock(), ale updateUI()
+             weryfikuje również sessionStorage — setTimeout(0) wystarczy. */
+          setTimeout(updateUI, 0);
+        });
+      }
+    } catch (_) {}
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init, { once: true });
+  } else {
+    init();
+  }
+
+})();
+</script>
+
+<!-- FAQ accordion -->
+<script>
+(function () {
+  document.querySelectorAll('.sub-faq__q').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var item = btn.closest('.sub-faq__item');
+      var isOpen = item.classList.contains('open');
+      /* Zamknij wszystkie */
+      document.querySelectorAll('.sub-faq__item.open').forEach(function (el) {
+        el.classList.remove('open');
+        el.querySelector('.sub-faq__q').setAttribute('aria-expanded', 'false');
+      });
+      /* Otwórz kliknięty jeśli był zamknięty */
+      if (!isOpen) {
+        item.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
+      }
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
