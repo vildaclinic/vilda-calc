@@ -1073,3 +1073,40 @@ body.chrome-drawer-open { overflow: hidden; }
   0%, 100% { opacity: 1;   transform: scale(1); }
   50%       { opacity: 0.4; transform: scale(0.88); }
 }
+
+/* ── Etykieta PRO w nagłówku ───────────────────────────────────────────────
+   Dwa stany:
+   [data-pro-state="active"]  — fioletowe tło, biały tekst „PRO"
+   [data-pro-state="upgrade"] — turkusowy obrys, tekst „↑ PRO"
+   Brak atrybutu (lub display:none) → użytkownik niezalogowany.         */
+.chrome-pro-badge {
+  display: none; /* JS przełącza na inline-flex po zalogowaniu */
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  white-space: nowrap;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  border: 1.5px solid transparent;
+}
+.chrome-pro-badge:hover {
+  opacity: 0.8;
+  transform: scale(0.96);
+}
+/* Aktywne PRO — fiolet z subskrypcja.html */
+.chrome-pro-badge[data-pro-state="active"] {
+  background: #9900ff;
+  color: #ffffff;
+  border-color: transparent;
+}
+/* Zalogowany bez PRO — turkus spójny z resztą aplikacji */
+.chrome-pro-badge[data-pro-state="upgrade"] {
+  background: transparent;
+  color: #00838d;
+  border-color: #00838d;
+}

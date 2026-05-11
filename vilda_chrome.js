@@ -324,6 +324,12 @@
       '    </span>',
       '  </a>',
       '  <div class="chrome-chips">',
+      // Etykieta PRO — widoczna tylko gdy użytkownik zalogowany.
+      // Stan ustawiany przez vilda_auth_ui.js (updateProBadge / hideProBadge).
+      // data-pro-state="active"  → fioletowe „PRO"  (aktywna subskrypcja)
+      // data-pro-state="upgrade" → turkusowe „↑ PRO" (zalogowany, brak PRO)
+      '    <a href="subskrypcja.html" class="chrome-pro-badge" id="vildaProBadge"',
+      '       title="Status planu PRO" aria-label="Status planu PRO">PRO</a>',
       // Przycisk statusu synchronizacji — widoczny tylko gdy sync włączony.
       // Klikniecie przenosi do sekcji sync w ustawieniach.
       // Stan ('syncing'|'ok'|'error') ustawiany przez vilda:sync-status-changed.

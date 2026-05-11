@@ -27,8 +27,8 @@
     return;
   }
 
-  const VERSION = '2.6.1';
-  const STEP = '8R-11';
+  const VERSION = '2.6.2';
+  const STEP = '8R-12';
   const ROOT_ID = 'vilda-auth-ui-root';
   const IDLE_EVENTS = ['mousedown', 'keydown', 'touchstart', 'scroll', 'pointerdown'];
   const PWA_GUEST_FLAG = 'VildaGuestMode';
@@ -277,10 +277,42 @@
     }
   }
 
-  function showLogoutButton() { rebuildCornerBtn('logout'); }
+  // ── Etykieta PRO w nagłówku ─────────────────────────────────────────────
+  // Aktualizuje #vildaProBadge (renderowany przez vilda_chrome.js):
+  //   VildaProAccess.hasAccess() → "active" (fiolet)
+  //   zalogowany, brak PRO       → "upgrade" (turkus „↑ PRO")
+  //   wylogowany                 → ukryty
+  function updateProBadge() {
+    try {
+      var badge = global.document && global.document.getElementById('vildaProBadge');
+      if (!badge) return;
+      var hasPro = global.VildaProAccess &&
+                   typeof global.VildaProAccess.hasAccess === 'function' &&
+                   global.VildaProAccess.hasAccess();
+      badge.style.display = 'inline-flex';
+      if (hasPro) {
+        badge.setAttribute('data-pro-state', 'active');
+        badge.textContent = 'PRO';
+      } else {
+        badge.setAttribute('data-pro-state', 'upgrade');
+        badge.textContent = '↑ PRO';
+      }
+    } catch (_) {}
+  }
+
+  function hideProBadge() {
+    try {
+      var badge = global.document && global.document.getElementById('vildaProBadge');
+      if (!badge) return;
+      badge.style.display = 'none';
+      badge.removeAttribute('data-pro-state');
+    } catch (_) {}
+  }
+
+  function showLogoutButton() { rebuildCornerBtn('logout'); updateProBadge(); }
   function showLoginButtonForGuest() { rebuildCornerBtn('login'); }
   function hideCornerBtn() { if (logoutBtnEl) logoutBtnEl.style.display = 'none'; }
-  function hideLogoutButton() { hideCornerBtn(); }
+  function hideLogoutButton() { hideCornerBtn(); hideProBadge(); }
 
   // ============ MOUNT ROOT ============
   function ensureRoot() {
@@ -2546,6 +2578,9 @@
             }
           }
         } catch (_) {}
+        // 2c: badge synchroniczny z wczesnym refresh — jeśli mamy cache PRO,
+        // od razu pokaż fioletowe „PRO" bez czekania na async sync z serwerem.
+        updateProBadge();
 
         // Logowanie zawsze unieważnia tryb gościa — także gdy user wszedł
         // wcześniej jako gość, a potem zalogował się przez przycisk w rogu.
@@ -2613,6 +2648,8 @@
                         if (global.VildaProUi && typeof global.VildaProUi.refresh === 'function') {
                           global.VildaProUi.refresh();
                         }
+                        // 2b: po udanym sync z serwerem badge przełącza się na „PRO"
+                        updateProBadge();
                       } catch (_) {}
                     }
                   }
