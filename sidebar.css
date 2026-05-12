@@ -611,6 +611,22 @@
     top: var(--chrome-strip-height, 64px);
     max-height: calc(100vh - var(--chrome-strip-height, 64px));
     overflow-y: auto;
+    /* Ukryj wizualnie zanim JS doda klasę --has-content.
+       Liquid Glass (ios26-v2.css) aplikuje tło szklane do wszystkich <aside>,
+       przez co pusty decor-sidebar renderował się jako wąski widoczny pasek
+       (ok. 18 px) zanim JS dodał klasę z treścią.
+       visibility:hidden zachowuje rezerwację kolumny w gridzie (brak skoku
+       layoutu), a `:not(.decor-sidebar--has-content)` przestaje działać
+       automatycznie po dodaniu klasy przez JS. */
+  }
+  .decor-sidebar:not(.decor-sidebar--has-content) {
+    visibility: hidden;
+    /* Reset tła i innych właściwości Liquid Glass, które robią element
+       widocznym nawet bez treści */
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: none !important;
   }
   /* Wizualny styl aktywowany przez JS gdy sidebar ma content */
   .decor-sidebar.decor-sidebar--has-content {
