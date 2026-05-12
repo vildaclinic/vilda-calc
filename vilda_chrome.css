@@ -663,8 +663,11 @@ body.chrome-drawer-open { overflow: hidden; }
   .has-vilda-chrome aside.sidebar.sidebar-v2,
   .has-vilda-chrome .desktop-layout > aside.sidebar {
     position: sticky;
-    /* Przyklejamy sidebar tuż pod sticky nagłówkiem (--chrome-strip-height = 64px). */
-    top: var(--chrome-strip-height, 64px);
+    /* Przyklejamy sidebar w tej samej pozycji co przy starcie strony.
+       .desktop-layout ma padding-top: 1rem, więc sidebar naturalnie zaczyna
+       16px poniżej dołu headera. Sticky musi uwzględniać ten offset,
+       żeby sidebar nie poruszył się ani o piksel przy scrollowaniu. */
+    top: calc(var(--chrome-strip-height, 64px) + 1rem);
     align-self: start;
     justify-self: stretch;
     grid-column: 1;
@@ -868,11 +871,12 @@ body.chrome-drawer-open { overflow: hidden; }
       border-radius: var(--chrome-radius-card) 0 0 var(--chrome-radius-card);
       border-right: 0;
       box-shadow: var(--chrome-glass-shadow);
-      /* Sticky podczas przewijania — przyklejony tuż pod nagłówkiem, analogicznie do lewego sidebara. */
+      /* Sticky podczas przewijania — analogicznie do lewego sidebara,
+         uwzględniamy padding-top: 1rem .desktop-layout żeby sidebar nie ruszył się przy scrollu. */
       position: sticky;
-      top: var(--chrome-strip-height, 64px);
+      top: calc(var(--chrome-strip-height, 64px) + 1rem);
       align-self: start;
-      max-height: calc(100vh - var(--chrome-strip-height, 64px));
+      max-height: calc(100vh - var(--chrome-strip-height, 64px) - 1rem);
       /* Zawartość (mini-summary + skróty + steroid-summary) potrafi być wyższa niż
          dostępna wysokość — pozwalamy scrollować wewnątrz panelu. */
       overflow-y: auto;
