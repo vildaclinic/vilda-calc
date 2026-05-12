@@ -115,6 +115,8 @@
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(246, 252, 252, 0.78));
   box-shadow: 0 18px 46px rgba(7, 54, 62, 0.06);
   overflow: hidden;
+  /* Offset dla sticky nagłówka przy scrollIntoView / nawigacji hashowej */
+  scroll-margin-top: calc(var(--chrome-strip-height, 64px) + 12px);
 }
 .settings-accordion[open] {
   border-color: rgba(0, 131, 141, 0.26);
