@@ -807,14 +807,18 @@
       }
       .ww-welcome-close:hover { background: rgba(255,255,255,0.32); }
       .ww-welcome-brand {
-        display: inline-flex; align-items: center; gap: 7px;
+        display: inline-flex; align-items: center; gap: 10px;
         background: rgba(255,255,255,0.18);
-        border-radius: 999px; padding: 4px 13px 4px 9px;
+        border-radius: 999px; padding: 6px 16px 6px 6px;
         margin-bottom: 1rem;
       }
-      .ww-welcome-brand svg { width: 15px; height: 15px; flex-shrink: 0; }
+      .ww-welcome-logo {
+        width: 40px; height: 40px; border-radius: 10px;
+        object-fit: contain; flex-shrink: 0;
+        background: rgba(255,255,255,0.15);
+      }
       .ww-welcome-brand span {
-        font-size: 0.75rem; font-weight: 700; color: #fff; letter-spacing: 0.04em;
+        font-size: 0.82rem; font-weight: 700; color: #fff; letter-spacing: 0.03em;
       }
       .ww-welcome-title {
         margin: 0 0 0.4rem; font-size: 1.3rem; font-weight: 700;
@@ -892,6 +896,18 @@
         padding: 0.9rem 1.6rem 0.5rem;
         display: flex; flex-direction: column; gap: 0.4rem;
         flex-shrink: 0;
+      }
+
+      @media (min-width: 721px) {
+        .ww-welcome-title { font-size: 1.45rem; }
+        .ww-welcome-subtitle { font-size: 0.88rem; }
+        .ww-pill-btn { font-size: 0.95rem; }
+        .ww-btn-pair .ww-pill-btn { font-size: 0.88rem; }
+        .ww-btn-ghost-small { font-size: 0.83rem; }
+        .ww-pro-feature-title { font-size: 0.9rem; }
+        .ww-pro-feature-desc { font-size: 0.8rem; }
+        .ww-welcome-logo { width: 48px; height: 48px; border-radius: 12px; }
+        .ww-welcome-brand span { font-size: 0.88rem; }
       }
 
       @media (max-width: 720px) {
@@ -1389,7 +1405,10 @@
         <div class="ww-screen ww-screen--1 is-active">
           <div class="ww-welcome-head">
             <button type="button" class="ww-welcome-close ww-js-dismiss" aria-label="Zamknij">${svgClose}</button>
-            <div class="ww-welcome-brand">${svgBrand}<span>wagaiwzrost.pl</span></div>
+            <div class="ww-welcome-brand">
+              <img src="pwa-icons/icon-192x192.png" alt="wagaiwzrost.pl" class="ww-welcome-logo">
+              <span>wagaiwzrost.pl</span>
+            </div>
             <h2 id="ww-onboarding-title" class="ww-welcome-title">Witaj w aplikacji</h2>
             <p class="ww-welcome-subtitle">Centyle, BMI i wskaźniki zdrowia — dla dzieci i dorosłych.</p>
           </div>
