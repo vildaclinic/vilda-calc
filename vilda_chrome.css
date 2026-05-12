@@ -41,6 +41,14 @@
 .has-sidebar aside.sidebar:not(.sidebar-v2) > * {
   display: none !important;
 }
+/* 1b. Ukryj wizualnie sam kontener sidebara (tło, cień, padding) przed
+       inicjalizacją JS. Używamy visibility:hidden zamiast display:none, żeby
+       zachować rezerwację kolumny w gridzie i uniknąć skoku layoutu.
+       Bez tej reguły pusty box sidebara renderował się jako wąski biały pasek
+       zanim JS dodał klasę .sidebar-v2 i wypełnił sidebar treścią. */
+.has-sidebar aside.sidebar:not(.sidebar-v2) {
+  visibility: hidden;
+}
 
 /* 2. Desktop: ustaw pełny layout gridu od razu — bez czekania na has-vilda-chrome.
       Każda właściwość opisana poniżej powodowała skok layoutu w chwili gdy JS
