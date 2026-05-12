@@ -175,111 +175,159 @@
    * other sidebar elements.
    */
   /* -----------------------------------------------------------------
-   * Chip-stack shortcuts section
-   *
-   * Sekcja skrótów utrzymana w tym samym języku wizualnym co chipy metryk:
-   * każdy skrót to mała, zaokrąglona pigułka z turkusowym obramowaniem.
-   * “Dodaj skrót” to pigułka z przerywana linią — zaproszenie do akcji.
-   * Tekst informacyjny jest bardzo mały i wyciszony.
-   * Pointer-events: auto !important na każdym elementu interaktywnym
-   * zabezpiecza przed globalnym wyłączeniem zdarzeń przez ios26-v2.css.
+   * Chip-stack shortcuts section — styl dokładnie jak w projekcie:
+   * nagłówek “SKRÓTY” (małe litery), każda pozycja to karta z turkusową
+   * kropką, przyciski × ukryte domyślnie, pojawiają się tylko gdy
+   * kontener ma klasę .is-editing (po kliknięciu “Edytuj”).
    * ----------------------------------------------------------------- */
   .mini-summary .mini-shortcuts {
     margin-top: 0.55rem;
     border-top: 1px solid rgba(0, 131, 141, 0.15);
     padding-top: 0.5rem;
   }
+  /* Nagłówek “SKRÓTY” */
   .mini-summary .shortcut-info {
-    font-size: 0.7rem;
-    color: #8aabac;
-    margin-bottom: 0.35rem;
-    text-align: center;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #5a7274;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    margin-bottom: 0.4rem;
+    padding-left: 0.1rem;
+    text-align: left;
   }
-  /* Każdy wiersz = jeden skrót (chip + przycisk usunięcia) */
+  /* Każdy wiersz = karta z turkusową kropką */
   .mini-summary .shortcut-row {
     display: flex;
     align-items: center;
-    gap: 0.3rem;
+    gap: 0;
     margin-top: 0.3rem;
+    padding: 0.45rem 0.75rem;
+    border-radius: 10px;
+    border: 1px solid rgba(0, 0, 0, 0.07);
+    background: #ffffff;
+    cursor: pointer;
     pointer-events: auto !important;
+    box-sizing: border-box;
   }
   .mini-summary .shortcut-row:first-child {
     margin-top: 0;
   }
+  /* Turkusowa kropka przed tekstem */
+  .mini-summary .shortcut-row::before {
+    content: '•';
+    color: var(--primary, #00838d);
+    font-size: 1.1rem;
+    line-height: 1;
+    margin-right: 0.55rem;
+    flex: 0 0 auto;
+  }
   .mini-summary .shortcut-row[title] {
     pointer-events: auto !important;
   }
-  /* Chip skrótu — turkusowa pigułka */
+  /* Tekst skrótu — bez własnego tła/bordera, wypełnia resztę wiersza */
   .mini-summary .shortcut-link {
     flex: 1 1 auto;
     display: inline-flex;
     align-items: center;
-    background: rgba(0, 131, 141, 0.05) !important;
-    border: 1px solid rgba(0, 131, 141, 0.25) !important;
-    border-radius: 999px !important;
-    color: var(--primary, #00838d) !important;
+    background: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    color: #1a3536 !important;
     text-decoration: none !important;
-    padding: 0.22rem 0.7rem !important;
-    font-size: 0.78rem;
+    padding: 0 !important;
+    font-size: 0.84rem;
     font-weight: 500;
     cursor: pointer;
+    text-align: left;
     pointer-events: auto !important;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
   .mini-summary .shortcut-link:hover {
-    background: rgba(0, 131, 141, 0.12) !important;
+    background: none !important;
+    color: var(--primary, #00838d) !important;
   }
-  /* Wyłączony skrót (np. WFL >2 lat) */
+  /* Wyłączony skrót (WFL > 2 lat) */
   .mini-summary .shortcut-link.disabled-shortcut {
-    background: rgba(0, 0, 0, 0.03) !important;
-    border-color: rgba(0, 0, 0, 0.1) !important;
     color: #9eb8bb !important;
     cursor: default !important;
     pointer-events: auto !important;
   }
   .mini-summary .shortcut-link.disabled-shortcut:hover {
-    background: rgba(0, 0, 0, 0.03) !important;
     color: #9eb8bb !important;
   }
-  /* Przycisk usunięcia (×) — mały, czerwony, bez tła */
+  /* Przycisk × — ukryty domyślnie */
   .mini-summary .shortcut-remove {
+    display: none !important;
+  }
+  /* × widoczny tylko w trybie edycji */
+  .mini-summary .mini-shortcuts.is-editing .shortcut-remove {
+    display: inline-flex !important;
     flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
     background: none !important;
     border: none !important;
     color: var(--danger, #c62828) !important;
-    cursor: pointer;
-    padding: 0.1rem 0.2rem !important;
-    font-size: 1rem;
+    font-size: 1.1rem;
     line-height: 1;
-    border-radius: 50%;
+    cursor: pointer;
+    padding: 0 0 0 0.4rem !important;
+    margin-left: auto;
     pointer-events: auto !important;
   }
-  .mini-summary .shortcut-remove:hover {
-    background: rgba(198, 40, 40, 0.08) !important;
+  /* W trybie edycji row nie jest klikalny → kursor normalny */
+  .mini-summary .mini-shortcuts.is-editing .shortcut-row {
+    cursor: default;
   }
-  /* Przycisk “Dodaj skrót” — przerywana pigułka */
-  .mini-summary .add-shortcut-btn {
-    display: inline-flex !important;
+  /* Przycisk “Edytuj” / “Gotowe” — karta identyczna jak shortcut-row */
+  .mini-summary .shortcut-edit-btn {
+    display: flex !important;
     align-items: center;
     justify-content: center;
     width: 100%;
-    background: transparent !important;
-    border: 1.5px dashed rgba(0, 131, 141, 0.3) !important;
-    border-radius: 999px !important;
+    margin-top: 0.3rem;
+    padding: 0.45rem 0.75rem !important;
+    border-radius: 10px !important;
+    border: 1px solid rgba(0, 0, 0, 0.07) !important;
+    background: #ffffff !important;
     color: var(--primary, #00838d) !important;
-    text-decoration: none !important;
-    padding: 0.22rem 0.7rem !important;
-    font-size: 0.78rem;
+    font-size: 0.84rem;
     font-weight: 500;
     cursor: pointer;
-    margin-top: 0.4rem;
+    box-sizing: border-box;
     pointer-events: auto !important;
   }
+  .mini-summary .shortcut-edit-btn:hover {
+    background: rgba(0, 131, 141, 0.05) !important;
+  }
+  /* Przycisk “Dodaj skrót” — ten sam styl co karta, z •  */
+  .mini-summary .add-shortcut-btn {
+    display: flex !important;
+    align-items: center;
+    width: 100%;
+    margin-top: 0.3rem;
+    padding: 0.45rem 0.75rem !important;
+    border-radius: 10px !important;
+    border: 1px solid rgba(0, 0, 0, 0.07) !important;
+    background: #ffffff !important;
+    color: #1a3536 !important;
+    font-size: 0.84rem;
+    font-weight: 500;
+    cursor: pointer;
+    box-sizing: border-box;
+    pointer-events: auto !important;
+    text-decoration: none !important;
+  }
+  .mini-summary .add-shortcut-btn::before {
+    content: '•';
+    color: var(--primary, #00838d);
+    font-size: 1.1rem;
+    line-height: 1;
+    margin-right: 0.55rem;
+    flex: 0 0 auto;
+  }
   .mini-summary .add-shortcut-btn:hover {
-    background: rgba(0, 131, 141, 0.06) !important;
-    border-style: solid !important;
+    background: rgba(0, 131, 141, 0.05) !important;
   }
   .mini-summary #shortcutSelect {
     /* Add a margin so the dropdown is separated from preceding content */
