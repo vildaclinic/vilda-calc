@@ -100,37 +100,80 @@
 })();
 </script>
 
-<!-- PRO-gate style — reguły dla blokady togglea gdy brak PRO.
-     Używa klas ustawionych przez bootstrap powyżej. -->
+<!-- PRO-gate style — banery zastępujące wyszarzony toggle gdy brak PRO.
+     Wariant B (fioletowy) — zalogowany, brak PRO.
+     Wariant E (turkus)    — niezalogowany.
+     Klasy HTML: vilda-pro-active/inactive (bootstrap), vilda-logged-in (auth_ui). -->
 <style>
-/* Toggle wyszarzony gdy nie-PRO */
-html.vilda-pro-inactive #resultsModeToggleContainer .switch{opacity:.4;pointer-events:none;}
-/* pointer-events:none na .switch (labelu) nie blokuje dzieci — CSS nie dziedziczy
-   tej właściwości automatycznie. Jawnie blokujemy też elementy potomne (.slider itp.). */
-html.vilda-pro-inactive #resultsModeToggleContainer .switch *{pointer-events:none;}
-html.vilda-pro-inactive #resultsModeToggleContainer .label-left,
-html.vilda-pro-inactive #resultsModeToggleContainer .label-right{opacity:.5;}
-/* Pill "Odblokuj PRO" — domyślnie ukryta, widoczna tylko gdy nie-PRO */
-.pro-gate-pill{
-  display:none;
-  align-items:center;
-  gap:.3rem;
-  font-size:.78rem;
-  font-weight:600;
-  color:#9900ff;
-  background:#f5eeff;
-  border:1px solid rgba(153,0,255,.3);
-  border-radius:999px;
-  padding:.22rem .75rem;
-  text-decoration:none;
-  white-space:nowrap;
-  margin:.45rem auto 0;
-  cursor:pointer;
-  transition:background .15s;
+/* === Domyślnie: ukryj oba banery, toggle widoczny === */
+.vilda-pro-gate-banner { display: none; }
+
+/* === PRO-inactive + zalogowany → pokaż baner B (fioletowy), ukryj toggle === */
+html.vilda-pro-inactive.vilda-logged-in #resultsModeToggleContainer .switch,
+html.vilda-pro-inactive.vilda-logged-in #resultsModeToggleContainer .switch *,
+html.vilda-pro-inactive.vilda-logged-in #resultsModeToggleContainer .label-left,
+html.vilda-pro-inactive.vilda-logged-in #resultsModeToggleContainer .label-right { display: none; }
+html.vilda-pro-inactive.vilda-logged-in .vilda-pro-gate-banner--upgrade { display: flex; }
+
+/* === PRO-inactive + niezalogowany → pokaż baner E (turkus), ukryj toggle === */
+html.vilda-pro-inactive:not(.vilda-logged-in) #resultsModeToggleContainer .switch,
+html.vilda-pro-inactive:not(.vilda-logged-in) #resultsModeToggleContainer .switch *,
+html.vilda-pro-inactive:not(.vilda-logged-in) #resultsModeToggleContainer .label-left,
+html.vilda-pro-inactive:not(.vilda-logged-in) #resultsModeToggleContainer .label-right { display: none; }
+html.vilda-pro-inactive:not(.vilda-logged-in) .vilda-pro-gate-banner--login { display: flex; }
+
+/* === Baner — wspólne === */
+.vilda-pro-gate-banner {
+  align-items: center;
+  gap: .5rem;
+  font-size: .82rem;
+  border-radius: 999px;
+  padding: .28rem .55rem .28rem .75rem;
+  white-space: nowrap;
+  line-height: 1.2;
 }
-.pro-gate-pill:hover{background:#ecdeff;}
-html.vilda-pro-inactive #resultsModeToggleContainer .pro-gate-pill{display:inline-flex;}
-html.vilda-pro-active   #resultsModeToggleContainer .pro-gate-pill{display:none;}
+.vilda-pro-gate-banner__text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.vilda-pro-gate-banner__btn {
+  border: none;
+  border-radius: 999px;
+  padding: .22rem .7rem;
+  font-size: .78rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background .15s;
+}
+
+/* === Baner B — upgrade (fioletowy) === */
+.vilda-pro-gate-banner--upgrade {
+  background: #f5eeff;
+  border: 1px solid rgba(153,0,255,.28);
+  color: #5c008a;
+}
+.vilda-pro-gate-banner--upgrade .vilda-pro-gate-banner__btn {
+  background: #9900ff;
+  color: #fff;
+}
+.vilda-pro-gate-banner--upgrade .vilda-pro-gate-banner__btn:hover { background: #7a00cc; }
+
+/* === Baner E — login (turkus) === */
+.vilda-pro-gate-banner--login {
+  background: #e5f9fb;
+  border: 1px solid rgba(0,131,141,.28);
+  color: #005a61;
+}
+.vilda-pro-gate-banner--login .vilda-pro-gate-banner__btn {
+  background: #00838d;
+  color: #fff;
+}
+.vilda-pro-gate-banner--login .vilda-pro-gate-banner__btn:hover { background: #006b73; }
 </style>
 
 <script src="vilda_logger.js?v=2"></script>
@@ -142,7 +185,7 @@ html.vilda-pro-active   #resultsModeToggleContainer .pro-gate-pill{display:none;
 <script src="vilda_vault.js?v=15"></script>
 <script src="vilda_sync.js?v=2"></script>
 <script src="vilda_sync_integration.js?v=2"></script>
-<script src="vilda_auth_ui.js?v=51"></script>
+<script src="vilda_auth_ui.js?v=52"></script>
 <script src="vilda_pro_access.js?v=2"></script>
 <script src="vilda_pro_ui.js?v=2"></script>
 <script src="vilda_file_export.js?v=4"></script>
@@ -593,11 +636,17 @@ html.vilda-pro-active   #resultsModeToggleContainer .pro-gate-pill{display:none;
         <input type="checkbox" id="resultsModeToggle">
         <span class="slider"></span>
       </label>
-      <!-- Dodano klasę pro-label oraz element <sup> z napisem PRO, aby
-           umożliwić stylowanie etykiety profesjonalnych wyników na fioletowo
-           i dodanie małego napisu PRO w formie indeksu górnego. -->
       <span class="label-right pro-label">Wyniki profesjonalne<sup class="pro-tag">PRO</sup></span>
-      <a href="subskrypcja.html" class="pro-gate-pill">🔒 Odblokuj PRO</a>
+      <!-- Baner B: zalogowany, brak PRO — fioletowy pill -->
+      <div class="vilda-pro-gate-banner vilda-pro-gate-banner--upgrade">
+        <span class="vilda-pro-gate-banner__text">⚡ Odblokuj wyniki profesjonalne</span>
+        <a href="subskrypcja.html" class="vilda-pro-gate-banner__btn">Sprawdź PRO</a>
+      </div>
+      <!-- Baner E: niezalogowany — turkusowy pill -->
+      <div class="vilda-pro-gate-banner vilda-pro-gate-banner--login">
+        <span class="vilda-pro-gate-banner__text">🔐 Zaloguj się, aby odblokować tryb profesjonalny</span>
+        <button class="vilda-pro-gate-banner__btn" onclick="try{window.VildaAuthUI.showStartupScreen();}catch(_){}">Zaloguj się</button>
+      </div>
     </div>
     <!-- Adnotacja informująca, że dla dzieci <2 lat preferowanym wskaźnikiem jest waga/długość.  
          Umieszczamy ją bezpośrednio pod nagłówkiem karty tak, aby pojawiała się pomiędzy etykietą a wynikami.
