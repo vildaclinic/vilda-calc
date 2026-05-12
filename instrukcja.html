@@ -459,7 +459,7 @@
     }
   }
 </style>
-<script src="vilda_chrome.js?v=8"></script>
+<script src="vilda_chrome.js?v=9"></script>
 </head>
 <body class="js-loading liquid-ios26 has-sidebar">
   <header>
@@ -1193,7 +1193,7 @@
       detailsSection.hidden = false;
       setActiveTile(pageId);
       // vildaScrollTo uwzględnia sticky nagłówek i daje 100 ms na przeliczenie layoutu
-      window.vildaScrollTo(detailsSection, { behavior: 'smooth', block: 'start' });
+      (window.vildaScrollTo || function(e, o) { e.scrollIntoView(o); })(detailsSection, { behavior: 'smooth', block: 'start' });
     }
 
     function closeGuide() {
