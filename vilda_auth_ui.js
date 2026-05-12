@@ -204,14 +204,26 @@
     try {
       if (typeof global.clearAllData === 'function') {
         global.clearAllData();
-        return;
-      }
-      if (global.VildaDataImportExport && typeof global.VildaDataImportExport.clearAllData === 'function') {
+      } else if (global.VildaDataImportExport && typeof global.VildaDataImportExport.clearAllData === 'function') {
         global.VildaDataImportExport.clearAllData();
       }
     } catch (e) {
       logError('resetAppSessionState (' + (reason || '') + ')', e);
     }
+    // BEZPIECZEŃSTWO DANYCH: natychmiast wyczyść mini-summary w decor-sidebarze.
+    // clearAllData() czyści pola formularza synchronicznie, ale odświeżenie
+    // mini-summary (updateMiniSummary) dzieje się asynchronicznie przez setTimeout
+    // w dispatchResetFieldEventsAfterClear. Gdy hide() usuwa nakładkę auth,
+    // decor-sidebar jest już widoczny, zanim async timer zdąży wyczyścić HTML —
+    // stare dane pacjenta poprzedniej sesji byłyby krótko (lub trwale) widoczne
+    // dla nowego użytkownika (gość, inny lekarz). To naruszenie danych w kontekście
+    // medycznym — dlatego czyścimy DOM synchronicznie tutaj, niezależnie od timera.
+    try {
+      var _miniContent = global.document && global.document.getElementById('miniSummaryContent');
+      if (_miniContent) _miniContent.innerHTML = '';
+      var _miniEl = global.document && global.document.getElementById('miniSummary');
+      if (_miniEl) _miniEl.style.display = 'none';
+    } catch (_) { /* nie blokuj resetu jeśli DOM niedostępny */ }
   }
 
   function formatRelativeISO(iso) {
