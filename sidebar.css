@@ -565,6 +565,177 @@
   .mini-summary .steroid-summary .shortcut-link {
     flex-grow: 1;
   }
+
+  /* -----------------------------------------------------------------
+   * Chip-stack layout for the mini-summary in the decor-sidebar.
+   *
+   * Three colour states driven by centile thresholds:
+   *   normal     10–90c  → teal   (#00838d)
+   *   borderline 3–10 / 90–97c → orange (#c75d00)
+   *   alert      <3 / >97c     → red    (#c62828)
+   *   neutral    adult or no centile data → muted gray
+   *
+   * JS adds state as a BEM modifier: .ms-chip--normal / --borderline /
+   * --alert / --neutral.  All chip styles live here; vilda_chrome.css
+   * only resets background/border on .decor-sidebar .mini-summary so
+   * these rules take precedence.
+   */
+
+  /* --- Patient chip (initials avatar + age) --- */
+  .ms-patient-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.6rem;
+    border-radius: 999px;
+    background: rgba(0, 131, 141, 0.08);
+    border: 1px solid rgba(0, 131, 141, 0.2);
+    margin-bottom: 0.5rem;
+  }
+  .ms-avatar {
+    flex: 0 0 auto;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--primary, #00838d);
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .ms-avatar--anon {
+    background: #8aabac;
+  }
+  .ms-patient-age {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--primary, #00838d);
+    line-height: 1.2;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  /* --- Metric chip stack --- */
+  .ms-chips {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .ms-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.5rem;
+    border-radius: 10px;
+    border: 1px solid #d0dede;
+    background: rgba(255, 255, 255, 0.55);
+    min-height: 36px;
+    box-sizing: border-box;
+  }
+
+  /* Color variants */
+  .ms-chip--normal {
+    border-color: rgba(0, 131, 141, 0.28);
+    background: rgba(0, 131, 141, 0.06);
+  }
+  .ms-chip--borderline {
+    border-color: rgba(199, 93, 0, 0.28);
+    background: rgba(199, 93, 0, 0.06);
+  }
+  .ms-chip--alert {
+    border-color: rgba(198, 40, 40, 0.3);
+    background: rgba(198, 40, 40, 0.06);
+  }
+  .ms-chip--neutral {
+    border-color: #d0dede;
+    background: rgba(255, 255, 255, 0.55);
+  }
+
+  /* Icon circle (single letter: W / H / B) */
+  .ms-chip-icon {
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: rgba(0, 131, 141, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #00535a;
+  }
+  .ms-chip--borderline .ms-chip-icon {
+    background: rgba(199, 93, 0, 0.12);
+    color: #7a3800;
+  }
+  .ms-chip--alert .ms-chip-icon {
+    background: rgba(198, 40, 40, 0.14);
+    color: #7a1a1a;
+  }
+  .ms-chip--neutral .ms-chip-icon {
+    background: rgba(90, 114, 116, 0.1);
+    color: #5a7274;
+  }
+
+  /* Label (small caps) + value (bold) */
+  .ms-chip-main {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.15;
+  }
+  .ms-chip-label {
+    font-size: 0.64rem;
+    color: #5a7274;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .ms-chip-value {
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: #1a3536;
+    line-height: 1.2;
+  }
+  /* Per-state text colours */
+  .ms-chip--normal .ms-chip-label,
+  .ms-chip--normal .ms-chip-value    { color: #00535a; }
+  .ms-chip--borderline .ms-chip-label,
+  .ms-chip--borderline .ms-chip-value { color: #7a3800; }
+  .ms-chip--alert .ms-chip-label,
+  .ms-chip--alert .ms-chip-value     { color: #7a1a1a; }
+  .ms-chip--neutral .ms-chip-label   { color: #5a7274; }
+  .ms-chip--neutral .ms-chip-value   { color: #1a3536; }
+
+  /* Centile badge (right side pill) */
+  .ms-chip-badge {
+    flex: 0 0 auto;
+    font-size: 0.64rem;
+    font-weight: 700;
+    padding: 0.12rem 0.38rem;
+    border-radius: 999px;
+    background: rgba(0, 131, 141, 0.14);
+    color: #00535a;
+    white-space: nowrap;
+    align-self: center;
+  }
+  .ms-chip--borderline .ms-chip-badge {
+    background: rgba(199, 93, 0, 0.14);
+    color: #7a3800;
+  }
+  .ms-chip--alert .ms-chip-badge {
+    background: rgba(198, 40, 40, 0.14);
+    color: #7a1a1a;
+  }
+  .ms-chip--neutral .ms-chip-badge {
+    background: rgba(90, 114, 116, 0.1);
+    color: #5a7274;
+  }
 }
 /* Aktywna pozycja w bocznym menu */
 .sidebar-nav a.is-active .sidebar-label,
