@@ -25,10 +25,11 @@
 
   // ── Wersje zależności auth – aktualizuj razem z HTML ──────────
   var AUTH_DEPS = [
-    { type: 'css',    src: 'vilda_auth_ui.css?v=17',  ready: function () { return false; } },
-    { type: 'script', src: 'vilda_crypto.js?v=4',     ready: function () { return !!global.VildaCrypto; } },
-    { type: 'script', src: 'vilda_vault.js?v=11',     ready: function () { return !!global.VildaVault; } },
-    { type: 'script', src: 'vilda_auth_ui.js?v=47',   ready: function () { return !!global.VildaAuthUI; } }
+    { type: 'css',    src: 'vilda_auth_ui.css?v=17',      ready: function () { return false; } },
+    { type: 'script', src: 'vilda_crypto.js?v=4',         ready: function () { return !!global.VildaCrypto; } },
+    { type: 'script', src: 'vilda_vault.js?v=11',         ready: function () { return !!global.VildaVault; } },
+    { type: 'script', src: 'vilda_auth_ui.js?v=53',       ready: function () { return !!global.VildaAuthUI; } },
+    { type: 'script', src: 'vilda_pro_access.js?v=2',     ready: function () { return !!global.VildaProAccess; } }
   ];
 
   // ════════════════════════════════════════════════════════════════

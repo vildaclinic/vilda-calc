@@ -32,16 +32,17 @@
       background: #ffffff !important;
       border-radius: var(--radius);
       box-shadow: var(--shadow);
-      margin-top: 1em;
-      margin-bottom: 1em;
+      margin: 0;
       padding: 1rem 0;
       /* Sticky: przyklejony tuż pod nagłówkiem; align-self:start konieczne,
          aby grid nie rozciągnął sidebara na pełną wysokość kolumny
-         (sticky działa tylko gdy element jest krótszy niż jego obszar gridu). */
+         (sticky działa tylko gdy element jest krótszy niż jego obszar gridu).
+         top: calc(64px + 1rem) zgadza się z wartością w vilda_chrome.css
+         (.has-vilda-chrome), eliminując skok przy dodaniu klasy has-vilda-chrome. */
       align-self: start;
       position: sticky;
-      top: var(--chrome-strip-height, 64px);
-      max-height: calc(100vh - var(--chrome-strip-height, 64px));
+      top: calc(var(--chrome-strip-height, 64px) + 1rem);
+      max-height: calc(100vh - var(--chrome-strip-height, 64px) - 1rem);
       overflow-y: auto;
     }
 

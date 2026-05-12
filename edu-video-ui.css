@@ -15,9 +15,8 @@
   --edu-text-muted: #567375;
 }
 
-.liquid-ios26 header {
-  position: static !important;
-}
+/* position: static usunięty — header jest sticky globalnie (ios26-v2.css),
+   wyłączany tylko na mobile przez @media (max-width: 991px). */
 
 .site-brand {
   margin: 0;

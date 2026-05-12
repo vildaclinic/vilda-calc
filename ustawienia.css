@@ -15,14 +15,8 @@
 }
 
 /* ============ NAGŁÓWEK STRONY ============
-   Header na stronie ustawień przewija się razem z treścią (nie jest sticky),
-   bo sekcja jest bardzo długa i sticky header zasłaniałby zawartość akordeonów. */
-body.page-settings.liquid-ios26 header,
-body.page-settings.liquid-ios26 header._glass {
-  position: static !important;
-  top: auto !important;
-  z-index: auto !important;
-}
+   Header jest sticky globalnie (ios26-v2.css), wyłączany tylko na mobile
+   przez @media (max-width: 991px). Nie nadpisujemy tutaj. */
 
 /* ============ TOGGLE SWITCH ============ */
 .switch {

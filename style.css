@@ -7466,7 +7466,7 @@ body.thy-modal-open {
 }
 
 /* --------------------------------------------------------------------
- * Strona ustawień – nagłówek nie powinien być sticky
+ * Strona ustawień – nagłówek sticky globalnie (ios26-v2.css), brak nadpisania tutaj
  *
  * ios26-v2.css ustawia nagłówek jako sticky (pozycjonowany przyklejony do górnej
  * krawędzi), co powoduje, że treść przewija się pod przezroczystą warstwą.
@@ -7503,20 +7503,8 @@ body.thy-modal-open {
  * na `var(--text)` oraz standardową szarą linię u dołu.  Zachowujemy cień i
  * rozmycie, aby uzyskać efekt uniesienia (hover).
  */
-.page-settings.liquid-ios26 header._glass,
-.page-settings.liquid-ios26 header {
-  /* Nagłówek przewija się razem z treścią */
-  position: static !important;
-  top: auto !important;
-  z-index: 900 !important;
-  background: var(--bg) !important;
-  color: var(--text) !important;
-  border-bottom: 1px solid #d0dede !important;
-  border-radius: 0 0 var(--lg-radius) var(--lg-radius) !important;
-  box-shadow: var(--lg-shadow) !important;
-  backdrop-filter: blur(18px) saturate(120%) !important;
-  -webkit-backdrop-filter: blur(18px) saturate(120%) !important;
-}
+/* .page-settings header — sticky globalnie (ios26-v2.css), wyłączany tylko na mobile.
+   Blok position:static usunięty. */
 /* Pozostawiamy logo w nagłówku na stronie ustawień.  Logotyp jest
  * przekazywany lokalnie wraz z projektem, dlatego możemy go
  * wyświetlić w sposób spójny z pozostałymi stronami.  Nie ustawiamy
@@ -7899,17 +7887,8 @@ body.js-loading .main-content {
   visibility: hidden;
 }
 
-/*
- * Keep the header on the settings page in the normal document flow.
- * Thanks to this, it scrolls together with the page and the content
- * does not slide underneath the translucent bar.
- */
-.page-settings.liquid-ios26 header,
-.page-settings.liquid-ios26 header._glass {
-  position: static !important;
-  top: auto !important;
-  z-index: auto !important;
-}
+/* Header na stronie ustawień — sticky globalnie (ios26-v2.css), wyłączany tylko na mobile.
+   Blok position:static usunięty. */
 
 /* ---------------------------------------------------------------------------
  * Eliminate entry animation on critical layout elements to avoid layout shift
