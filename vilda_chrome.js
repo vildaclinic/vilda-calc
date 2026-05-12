@@ -1224,3 +1224,54 @@
 
   boot();
 })(typeof window !== 'undefined' ? window : null);
+
+// ============================================================
+// === Globalna funkcja scrollowania uwzględniająca sticky header ===
+// ============================================================
+// scrollIntoView({block:'start'}) nie respektuje scroll-padding-top w Safari
+// i starszych wersjach Chrome. Na desktopie (≥992 px) nagłówek jest sticky
+// (position: sticky; top: 0) i pokrywa górę viewport, przez co element
+// wjeżdża pod nagłówek. window.vildaScrollTo() oblicza offset ręcznie
+// i używa window.scrollTo(), co działa poprawnie we wszystkich przeglądarkach.
+//
+// Użycie:
+//   window.vildaScrollTo(el)
+//   window.vildaScrollTo(el, { behavior: 'smooth', block: 'start' })
+//   window.vildaScrollTo(el, { behavior: 'smooth', block: 'start' }, 150)
+//
+// Parametry:
+//   el     — element DOM do przewinięcia
+//   opts   — { behavior: 'smooth'|'auto', block: 'start'|'center'|... }
+//   delay  — opóźnienie w ms (domyślnie 100 ms); użyj 150+ gdy przed
+//            scrollem otwierasz akordeon (<details open>) i trzeba dać
+//            czas na przeliczenie layoutu
+(function (global) {
+  'use strict';
+  global.vildaScrollTo = function (el, opts, delay) {
+    if (!el) return;
+    var ms       = (typeof delay === 'number') ? delay : 100;
+    var behavior = (opts && opts.behavior) ? opts.behavior : 'smooth';
+    var block    = (opts && opts.block)    ? opts.block    : 'start';
+
+    setTimeout(function () {
+      try {
+        if (global.innerWidth >= 992 && block === 'start') {
+          // Desktop + sticky header: ręczny offset zamiast scrollIntoView,
+          // bo scrollIntoView ignoruje scroll-padding-top w Safari
+          var header  = document.querySelector('header');
+          var headerH = header ? header.getBoundingClientRect().height : 64;
+          var gap     = 12; // dodatkowy margines wizualny pod nagłówkiem
+          var rect    = el.getBoundingClientRect();
+          var top     = Math.round(rect.top + global.pageYOffset - headerH - gap);
+          global.scrollTo({ top: top, behavior: behavior });
+        } else if (global.innerWidth >= 700) {
+          // Tablet (700–991 px) lub block != 'start': nagłówek nie jest sticky,
+          // natywny scrollIntoView wystarczy
+          el.scrollIntoView({ behavior: behavior, block: block });
+        }
+        // < 700 px (mobile): celowo no-op — automatyczny scroll przy zmianie
+        // trybu wyników byłby dezorientujący na małym ekranie
+      } catch (e) { /* ignoruj błędy scrollowania */ }
+    }, ms);
+  };
+})(typeof window !== 'undefined' ? window : {});

@@ -1192,9 +1192,8 @@
       buildAccordion(page.modules);
       detailsSection.hidden = false;
       setActiveTile(pageId);
-      requestAnimationFrame(function() {
-        detailsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
+      // vildaScrollTo uwzględnia sticky nagłówek i daje 100 ms na przeliczenie layoutu
+      window.vildaScrollTo(detailsSection, { behavior: 'smooth', block: 'start' });
     }
 
     function closeGuide() {

@@ -163,17 +163,34 @@ function vildaCustomHasHtmlContent(element) {
         };
       }
     } else if (window.innerWidth >= 992) {
-      // Desktop: sticky header aktywny — wrap w setTimeout dla poprawnego timingu layoutu
+      // Desktop: sticky header aktywny — kompensuj offset nagłówka dla block:'start'.
+      // Sam setTimeout(fn, 50) nie wystarczył, bo scrollIntoView nie respektuje
+      // scroll-padding-top w Safari — teraz używamy window.scrollTo z ręcznym offsetem.
       if (!Element.prototype._vildaOrigScrollIntoView) {
         Element.prototype._vildaOrigScrollIntoView = Element.prototype.scrollIntoView;
         Element.prototype.scrollIntoView = function(opts) {
           var el = this;
           var options = opts;
+          // Ustal block: jeśli opts to boolean lub brak block, traktuj jako 'start'
+          var block = (options && typeof options === 'object' && options.block)
+            ? options.block : 'start';
           setTimeout(function() {
             try {
-              Element.prototype._vildaOrigScrollIntoView.call(el, options);
+              if (block === 'start') {
+                // Ręczny offset — działa we wszystkich przeglądarkach
+                var header  = document.querySelector('header');
+                var headerH = header ? header.getBoundingClientRect().height : 64;
+                var rect    = el.getBoundingClientRect();
+                window.scrollTo({
+                  top: Math.round(rect.top + window.pageYOffset - headerH - 12),
+                  behavior: (options && options.behavior) || 'smooth'
+                });
+              } else {
+                // block:'center', 'end', 'nearest' — nagłówek nie blokuje, użyj natywnego
+                Element.prototype._vildaOrigScrollIntoView.call(el, options);
+              }
             } catch (e) { /* ignoruj błędy scrollowania */ }
-          }, 50);
+          }, 100);
         };
       }
     } else {
