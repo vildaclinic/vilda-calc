@@ -936,7 +936,16 @@
     // VildaSession.bridge uruchamia lazy-load auth na stronach bez VildaVault
     // i odpala 'vilda:auth-loaded' gdy skrypty się załadują.
     // Dzięki temu chip od razu pokazuje właściwy stan bez 10-sekundowego pollingu.
-    doc.addEventListener('vilda:auth-loaded',      function () { tryBindVault(); refreshUserChip(); });
+    doc.addEventListener('vilda:auth-loaded',      function () {
+      tryBindVault();
+      refreshUserChip();
+      // vilda_pro_access.js jest teraz załadowany — odśwież badge PRO.
+      try {
+        if (global.VildaAuthUI && typeof global.VildaAuthUI.updateProBadge === 'function') {
+          global.VildaAuthUI.updateProBadge();
+        }
+      } catch (_) {}
+    });
     doc.addEventListener('vilda:session-changed',  function () { refreshUserChip(); refreshPatientChip(); });
 
     // Próba natychmiastowa — VildaVault może być już gotowy (statycznie załadowany).

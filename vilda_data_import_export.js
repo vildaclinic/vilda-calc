@@ -1790,7 +1790,7 @@
       }
 
       mainSessionRestoreInProgress = true;
-      applyLoadedData(data);
+      applyLoadedData(data, { isSessionRestore: true });
       restoreQueuedFinalize = true;
       finalizeMainSessionRestore(prevPersistRestoring, opts);
       return true;
@@ -2687,8 +2687,11 @@
     const getPersistenceFn = resolveCallback(opts, 'getVildaPersistenceAdapter', 'getVildaPersistenceAdapter') || getVildaPersistenceAdapter || getPersistenceAdapter;
     const writeGhPoints = resolveCallback(opts, 'writeGhTherapyPointsToModuleStorage', 'writeGhTherapyPointsToModuleStorage');
     const clearGhPoints = resolveCallback(opts, 'clearGhTherapyPointsModuleStorage', 'clearGhTherapyPointsModuleStorage');
-    const renderPrevSummary = resolveCallback(opts, 'renderPrevSummary', '__renderPrevSummary');
-    const renderPrevClcrSummary = resolveCallback(opts, 'renderPrevClcrSummary', '__renderPrevClcrSummary');
+    // Przy przywracaniu bieżącej sesji (nawigacja między podstronami) nie pokazujemy
+    // karty "Ostatni pomiar" — ta karta służy wyłącznie do porównania z historycznym
+    // plikiem JSON wczytanym przez użytkownika explicite.
+    const renderPrevSummary = opts.isSessionRestore ? null : resolveCallback(opts, 'renderPrevSummary', '__renderPrevSummary');
+    const renderPrevClcrSummary = opts.isSessionRestore ? null : resolveCallback(opts, 'renderPrevClcrSummary', '__renderPrevClcrSummary');
     const pickLastMeasurement = resolveCallback(opts, 'pickLastMeasurement', '__pickLastMeasurement');
     const setAutoScrollDisabled = resolveCallback(opts, 'setAutoScrollDisabled', 'setAutoScrollDisabled');
     const closeMenuTooltip = resolveCallback(opts, 'closeMenuTooltip', 'closeMenuTooltip');
@@ -3104,11 +3107,17 @@
     }
 
     try {
-      global.lastLoadedData = cloneValue(data);
-      global.hasUserModifiedAfterLoad = false;
+      // Podczas przywracania sesji (nawigacja między podstronami) NIE ustawiamy
+      // lastLoadedData — uniknięcie zapisu loadedComparisonData do localStorage
+      // przez flushPersistNow, co powodowałoby pokazanie karty "Ostatni pomiar"
+      // na kolejnej podstronie przez ścieżkę restoreAll() w vilda_persist_runtime.js.
+      if (!opts.isSessionRestore) {
+        global.lastLoadedData = cloneValue(data);
+        global.hasUserModifiedAfterLoad = false;
+      }
     } catch (error) {
       logSwallowed('vilda_data_import_export:applyLoadedData:last-loaded-data', error);
-      try { global.lastLoadedData = data; } catch (innerError) { logSwallowed('vilda_data_import_export:applyLoadedData:last-loaded-data-fallback', innerError); }
+      try { if (!opts.isSessionRestore) global.lastLoadedData = data; } catch (innerError) { logSwallowed('vilda_data_import_export:applyLoadedData:last-loaded-data-fallback', innerError); }
     }
 
     if (!isClcrJsonImportPreviewOnly) {
