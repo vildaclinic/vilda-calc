@@ -899,3 +899,96 @@ html {
 .settings-lock-tip.is-visible {
   display: block;
 }
+
+/* ============ WARIANT B — KOMPAKTOWY AKAORDEON MOBILNY (≤560px) ============
+   Nadpisuje złożony layout z dwoma wierszami chipów na rzecz jednej
+   zwartej linii: [ikona] [tytuł] [chevron].
+   Chipy/pastylki ukryte, opis ukryty w zamkniętym stanie.
+   Otwarta sekcja wyróżniona delikatnym turkusowym gradientem.           */
+@media (max-width: 560px) {
+  .settings-accordion-list {
+    gap: 4px;
+  }
+
+  .settings-accordion {
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(7, 54, 62, 0.05);
+  }
+
+  .settings-accordion > summary {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    padding: 11px 13px;
+    gap: 10px;
+  }
+
+  .settings-accordion-index {
+    grid-row: 1;
+    align-self: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 0;
+    background: none;
+    color: #5a7274;
+  }
+  .settings-accordion-index svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .settings-accordion-copy {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .settings-accordion-title {
+    font-size: 0.88rem;
+    margin-bottom: 0;
+  }
+
+  .settings-accordion-text {
+    display: none;
+  }
+
+  .settings-accordion-meta {
+    display: none;
+  }
+
+  .settings-chevron {
+    grid-column: 3;
+    grid-row: 1;
+    align-self: center;
+    margin-top: 0;
+    width: 22px;
+    height: 22px;
+    border: none;
+    background: none;
+    color: #5a7274;
+    font-size: 1rem;
+  }
+
+  .settings-accordion[open] {
+    border-color: rgba(0, 131, 141, 0.28);
+  }
+
+  .settings-accordion[open] > summary {
+    background: linear-gradient(90deg, rgba(0, 131, 141, 0.08) 0%, rgba(255, 255, 255, 0) 80%);
+  }
+
+  .settings-accordion[open] .settings-accordion-index {
+    color: #00838d;
+  }
+
+  .settings-accordion[open] .settings-accordion-title {
+    color: #07363e;
+    font-weight: 600;
+  }
+
+  .settings-accordion[open] .settings-chevron {
+    color: #00838d;
+  }
+
+  .settings-accordion-panel {
+    padding: 0 13px 13px;
+  }
+}
