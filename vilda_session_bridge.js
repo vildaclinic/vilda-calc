@@ -227,6 +227,9 @@
         var existing = doc && doc.querySelector(sel);
         if (existing) {
           if (dep.ready && dep.ready()) { resolve(); return; }
+          // CSS załadowane statycznie nigdy nie odpali ponownie zdarzenia 'load' —
+          // element jest już gotowy, więc rozwiązujemy od razu (tak jak vilda_chrome.js).
+          if (dep.type === 'css') { resolve(); return; }
           existing.addEventListener('load',  resolve, { once: true });
           existing.addEventListener('error', reject,  { once: true });
           return;
