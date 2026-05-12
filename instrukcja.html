@@ -260,6 +260,8 @@
     background:#fff;
     box-shadow:0 18px 46px rgba(0,0,0,0.08);
     overflow:hidden;
+    /* Offset dla sticky nagłówka przy scrollIntoView */
+    scroll-margin-top: calc(var(--chrome-strip-height, 64px) + 12px);
   }
   .guide-inline-head{
     display:flex;
@@ -1192,8 +1194,9 @@
       buildAccordion(page.modules);
       detailsSection.hidden = false;
       setActiveTile(pageId);
-      // vildaScrollTo uwzględnia sticky nagłówek i daje 100 ms na przeliczenie layoutu
-      (window.vildaScrollTo || function(e, o) { e.scrollIntoView(o); })(detailsSection, { behavior: 'smooth', block: 'start' });
+      requestAnimationFrame(function() {
+        detailsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
     }
 
     function closeGuide() {
