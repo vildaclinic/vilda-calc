@@ -35,8 +35,14 @@
       margin-top: 1em;
       margin-bottom: 1em;
       padding: 1rem 0;
-      height: 100%;
-      /* wypełnij cały wiersz gridu (od góry do dołu .desktop-layout) */
+      /* Sticky: przyklejony tuż pod nagłówkiem; align-self:start konieczne,
+         aby grid nie rozciągnął sidebara na pełną wysokość kolumny
+         (sticky działa tylko gdy element jest krótszy niż jego obszar gridu). */
+      align-self: start;
+      position: sticky;
+      top: var(--chrome-strip-height, 64px);
+      max-height: calc(100vh - var(--chrome-strip-height, 64px));
+      overflow-y: auto;
     }
 
   /* Kontener z treścią po prawej */
@@ -600,7 +606,12 @@
     margin-top: 1em;
     margin-bottom: 1em;
     padding: 1rem 0;
-    height: 100%;
+    /* Sticky – identycznie jak lewy sidebar */
+    align-self: start;
+    position: sticky;
+    top: var(--chrome-strip-height, 64px);
+    max-height: calc(100vh - var(--chrome-strip-height, 64px));
+    overflow-y: auto;
   }
 
   /* When steroid shortcuts are placed in the right sidebar, allow the
