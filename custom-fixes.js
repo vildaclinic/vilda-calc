@@ -1421,6 +1421,46 @@ function vildaCustomHasHtmlContent(element) {
   }
 
   /**
+   * Usuwa mini-summary z DOM i dezaktywuje wizualny styl decor-sidebar.
+   * Wywoływana gdy plan PRO wygasa lub użytkownik wylogowuje się.
+   */
+  function teardownMiniSummary() {
+    try {
+      var mini = document.getElementById('miniSummary');
+      if (!mini) return;
+      var decorEl = (typeof mini.closest === 'function')
+        ? mini.closest('.decor-sidebar')
+        : document.querySelector('.desktop-layout .decor-sidebar');
+      if (decorEl) decorEl.classList.remove('decor-sidebar--has-content');
+      if (mini.parentElement) mini.parentElement.removeChild(mini);
+    } catch (ex) {
+      if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+        globalThis.vildaLogSwallowedCatch('custom-fixes.js', ex, { fn: 'teardownMiniSummary' });
+      }
+    }
+  }
+
+  /**
+   * Sprawdza aktualny stan PRO i odpowiednio inicjalizuje lub usuwa mini-summary.
+   * Wywoływana przez listenery 'vildaProAccessChanged' i 'vilda:session-changed'.
+   */
+  function handleProAccessChange() {
+    try {
+      var proAccess = (typeof window !== 'undefined') ? window.VildaProAccess : null;
+      var hasPro = proAccess && typeof proAccess.hasAccess === 'function' && proAccess.hasAccess();
+      if (hasPro) {
+        initMiniSummary(); // idempotentna — early return jeśli już istnieje
+      } else {
+        teardownMiniSummary();
+      }
+    } catch (ex) {
+      if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+        globalThis.vildaLogSwallowedCatch('custom-fixes.js', ex, { fn: 'handleProAccessChange' });
+      }
+    }
+  }
+
+  /**
    * Initialise the mini summary and attach observers.
    *
    * Etap "decor-sidebar mount": mini-summary i shortcuty montujemy w prawym
@@ -1431,6 +1471,14 @@ function vildaCustomHasHtmlContent(element) {
    * (bez fallbacku — zgodnie z decyzją UX z 2025-05).
    */
   function initMiniSummary() {
+    // Mini-summary dostępne tylko dla aktywnych użytkowników planu PRO.
+    // hasAccess() jest synchroniczne — bezpiecznie wywołać tutaj.
+    var proAccess = (typeof window !== 'undefined') ? window.VildaProAccess : null;
+    if (!proAccess || typeof proAccess.hasAccess !== 'function' || !proAccess.hasAccess()) {
+      // Jeśli element już istnieje (np. plan właśnie wygasł), usuń go.
+      if (document.getElementById('miniSummary')) teardownMiniSummary();
+      return;
+    }
     // Pokazuj tylko gdy widoczny jest decor-sidebar (>=1400px)
     if (window.innerWidth < 1400) return;
     var decor = document.querySelector('.desktop-layout .decor-sidebar');
@@ -3204,13 +3252,23 @@ function vildaCustomHasHtmlContent(element) {
   // Flaga __vildaAuthHidden obsługuje edge case gdy hide() zostało wywołane
   // zanim ten listener zdążył się zarejestrować (np. błyskawiczne przywrócenie sesji).
   window.vildaOnReady('custom-fixes:mini-summary', function () {
-    if (window.__vildaAuthHidden) {
+    // Pomocnik: uruchamia initMiniSummary (PRO check wewnątrz) i rejestruje
+    // listenery reagujące na zmiany stanu PRO oraz sesji (wylogowanie / zmiana konta).
+    function doInit() {
       initMiniSummary();
+      // Reaguj na aktywację/dezaktywację planu PRO w trakcie sesji
+      document.addEventListener('vildaProAccessChanged', handleProAccessChange);
+      // Reaguj na zmianę zalogowanego użytkownika (inny userId = inny plan PRO)
+      document.addEventListener('vilda:session-changed', handleProAccessChange);
+    }
+
+    if (window.__vildaAuthHidden) {
+      doInit();
       return;
     }
     document.addEventListener('vilda:auth-hidden', function onAuthHidden() {
       document.removeEventListener('vilda:auth-hidden', onAuthHidden);
-      initMiniSummary();
+      doInit();
     });
   });
   window.vildaOnReady('custom-fixes:steroid-shortcuts', initSteroidShortcuts);
