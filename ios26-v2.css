@@ -106,10 +106,19 @@ body.liquid-ios26::before {
   overflow: hidden;
   box-shadow: var(--lg-shadow);
   /* sticky działa poprawnie: header jest bezpośrednim dzieckiem body (flex container).
-     !important konieczne, bo ._glass (wyższa specyficzność) ustawia position:relative. */
+     !important konieczne, bo ._glass (wyższa specyficzność) ustawia position:relative.
+     Reguła poniżej wyłącza sticky w trybie jednokolumnowym (mobile, < 992 px). */
   position: sticky !important;
   top: 0 !important;
   z-index: 200;
+}
+
+/* Tryb jednokolumnowy / mobile (brak sidebara) – nagłówek przewija się normalnie */
+@media (max-width: 991px) {
+  .liquid-ios26 header {
+    position: relative !important;
+    top: auto !important;
+  }
 }
 
 /* Cień dla logo w nagłówku */
