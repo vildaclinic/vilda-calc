@@ -784,6 +784,125 @@
           width: 100%;
         }
       }
+
+      /* ── Welcome screen (Wariant 3) ── */
+      .ww-screen { display: none; flex-direction: column; }
+      .ww-screen.is-active { display: flex; }
+
+      .ww-welcome-head {
+        background: linear-gradient(135deg, #00838d, #00b0a6);
+        padding: 1.75rem 1.6rem 1.5rem;
+        text-align: center;
+        position: relative;
+        flex-shrink: 0;
+      }
+      .ww-welcome-close {
+        position: absolute;
+        top: 0.7rem; right: 0.7rem;
+        background: rgba(255,255,255,0.2);
+        border: none; border-radius: 999px;
+        width: 2rem; height: 2rem;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer; color: #fff; padding: 0;
+      }
+      .ww-welcome-close:hover { background: rgba(255,255,255,0.32); }
+      .ww-welcome-brand {
+        display: inline-flex; align-items: center; gap: 7px;
+        background: rgba(255,255,255,0.18);
+        border-radius: 999px; padding: 4px 13px 4px 9px;
+        margin-bottom: 1rem;
+      }
+      .ww-welcome-brand svg { width: 15px; height: 15px; flex-shrink: 0; }
+      .ww-welcome-brand span {
+        font-size: 0.75rem; font-weight: 700; color: #fff; letter-spacing: 0.04em;
+      }
+      .ww-welcome-title {
+        margin: 0 0 0.4rem; font-size: 1.3rem; font-weight: 700;
+        color: #fff; line-height: 1.3;
+      }
+      .ww-welcome-subtitle {
+        margin: 0; font-size: 0.82rem;
+        color: rgba(255,255,255,0.85); line-height: 1.5;
+      }
+      .ww-welcome-body { padding: 1.4rem 1.6rem; display: flex; flex-direction: column; gap: 0.55rem; }
+
+      .ww-pill-btn {
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+        border-radius: 999px; font-size: 0.9rem; font-weight: 700;
+        padding: 12px 18px; cursor: pointer; text-decoration: none;
+        border: none; font-family: inherit; box-sizing: border-box; width: 100%;
+        transition: opacity 0.15s;
+      }
+      .ww-pill-btn:hover { opacity: 0.88; }
+      .ww-pill-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+      .ww-btn-doctor-main { background: #00838d; color: #fff; }
+      .ww-btn-pair { display: flex; gap: 0.5rem; }
+      .ww-btn-pair .ww-pill-btn { flex: 1; font-size: 0.82rem; padding: 11px 10px; }
+      .ww-btn-secondary {
+        background: transparent; color: #00838d;
+        border: 1.5px solid rgba(0,131,141,0.35);
+      }
+      .ww-btn-ghost-small {
+        background: transparent; color: #8aa4a6;
+        font-size: 0.78rem; font-weight: 500; padding: 7px 12px;
+        border: none; width: auto; align-self: center;
+      }
+
+      .ww-pro-head {
+        background: linear-gradient(135deg, #00838d, #00b0a6);
+        padding: 1.2rem 1.6rem;
+        display: flex; align-items: center; gap: 10px;
+        flex-shrink: 0;
+      }
+      .ww-pro-back {
+        background: rgba(255,255,255,0.2); border: none; border-radius: 999px;
+        width: 2rem; height: 2rem; flex-shrink: 0;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer; color: #fff; padding: 0;
+      }
+      .ww-pro-back:hover { background: rgba(255,255,255,0.32); }
+      .ww-pro-back svg { width: 16px; height: 16px; }
+      .ww-pro-eyebrow {
+        margin: 0; font-size: 0.68rem; font-weight: 700;
+        color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 0.05em;
+      }
+      .ww-pro-title { margin: 0; font-size: 1.05rem; font-weight: 700; color: #fff; }
+
+      .ww-pro-features { padding: 0.25rem 1.6rem; overflow-y: auto; flex: 1; }
+      .ww-pro-feature {
+        display: flex; align-items: flex-start; gap: 12px;
+        padding: 0.75rem 0; border-bottom: 1px solid rgba(0,131,141,0.08);
+      }
+      .ww-pro-feature:last-child { border-bottom: none; }
+      .ww-pro-feature-icon {
+        flex-shrink: 0; width: 32px; height: 32px;
+        background: #e0f4f4; border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        margin-top: 1px;
+      }
+      .ww-pro-feature-icon svg { width: 16px; height: 16px; stroke: #00838d; }
+      .ww-pro-feature-title {
+        margin: 0 0 2px; font-size: 0.85rem; font-weight: 600; color: #14212b;
+      }
+      .ww-pro-feature-desc {
+        margin: 0; font-size: 0.75rem; color: #5a7274; line-height: 1.4;
+      }
+      .ww-pro-footer {
+        padding: 0.9rem 1.6rem 0.5rem;
+        display: flex; flex-direction: column; gap: 0.4rem;
+        flex-shrink: 0;
+      }
+
+      @media (max-width: 720px) {
+        .ww-welcome-head { padding: 1.4rem 1.25rem 1.2rem; }
+        .ww-welcome-body { padding: 1.2rem 1.25rem; }
+        .ww-pro-head { padding: 1rem 1.25rem; }
+        .ww-pro-features { padding: 0 1.25rem; }
+        .ww-pro-footer { padding: 0.8rem 1.25rem 0.3rem; }
+        .ww-btn-pair { flex-direction: column; }
+        .ww-btn-pair .ww-pill-btn { font-size: 0.88rem; }
+      }
     `;
 
     document.head.appendChild(style);
@@ -1248,93 +1367,148 @@
   function createOverlay() {
     if (state.overlay) return;
 
+    const svgClose = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18"/></svg>`;
+    const svgBack = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>`;
+    const svgBrand = `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`;
+    const svgDoc = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6 6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"/><path d="M8 15v1a6 6 0 0 0 6 6 6 6 0 0 0 6-6v-4"/><circle cx="20" cy="10" r="2"/></svg>`;
+    const svgReg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>`;
+    const svgLogin = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>`;
+    const svgArrow = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>`;
+    const svgZscore = `<svg viewBox="0 0 24 24" fill="none" stroke="#00838d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`;
+    const svgRuler = `<svg viewBox="0 0 24 24" fill="none" stroke="#00838d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.4 2.4 0 0 1 0-3.4l2.6-2.6a2.4 2.4 0 0 1 3.4 0Z"/><path d="m14.5 12.5 2-2"/><path d="m11.5 9.5 2-2"/><path d="m8.5 6.5 2-2"/><path d="m17.5 15.5 2-2"/></svg>`;
+    const svgFlask = `<svg viewBox="0 0 24 24" fill="none" stroke="#00838d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6l1 9H8Z"/><path d="M6.5 21a5.5 5.5 0 0 0 11 0c0-2-1.5-4-4-6H9c-2.5 2-4 4-4 6Z"/><line x1="12" y1="3" x2="12" y2="7"/></svg>`;
+    const svgLock = `<svg viewBox="0 0 24 24" fill="none" stroke="#00838d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
+    const svgDevices = `<svg viewBox="0 0 24 24" fill="none" stroke="#00838d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><rect x="2" y="7" width="6" height="13" rx="1"/><line x1="12" y1="18" x2="12" y2="18"/></svg>`;
+
     const overlay = document.createElement('div');
     overlay.className = 'ww-onboarding-overlay';
     tutorialSetTrustedHtml(overlay, `
       <section class="ww-onboarding-sheet" role="dialog" aria-modal="true" aria-labelledby="ww-onboarding-title">
-        <div class="ww-onboarding-head">
-          <div>
-            <span class="ww-onboarding-eyebrow">Szybki start</span>
-            <h2 id="ww-onboarding-title" class="ww-onboarding-title"></h2>
-            <p class="ww-onboarding-subtitle"></p>
+
+        <!-- EKRAN 1: Powitalny -->
+        <div class="ww-screen ww-screen--1 is-active">
+          <div class="ww-welcome-head">
+            <button type="button" class="ww-welcome-close ww-js-dismiss" aria-label="Zamknij">${svgClose}</button>
+            <div class="ww-welcome-brand">${svgBrand}<span>wagaiwzrost.pl</span></div>
+            <h2 id="ww-onboarding-title" class="ww-welcome-title">Witaj w aplikacji</h2>
+            <p class="ww-welcome-subtitle">Centyle, BMI i wskaźniki zdrowia — dla dzieci i dorosłych.</p>
           </div>
-          <button type="button" class="ww-onboarding-close" aria-label="Zamknij pomoc">${getCloseIconMarkup()}</button>
+          <div class="ww-welcome-body">
+            <button type="button" class="ww-pill-btn ww-btn-doctor-main ww-js-to-screen2">
+              ${svgDoc} Jestem lekarzem
+            </button>
+            <div class="ww-btn-pair">
+              <a href="subskrypcja.html" class="ww-pill-btn ww-btn-secondary">
+                ${svgReg} Zarejestruj się
+              </a>
+              <button type="button" class="ww-pill-btn ww-btn-secondary ww-js-login">
+                ${svgLogin} Zaloguj się
+              </button>
+            </div>
+            <button type="button" class="ww-pill-btn ww-btn-ghost-small ww-js-dismiss">
+              Kontynuuj bez konta ${svgArrow}
+            </button>
+          </div>
         </div>
 
-        <div class="ww-role-grid" role="group" aria-label="Wybierz sposób korzystania z aplikacji"></div>
-        <p class="ww-role-grid-note" aria-live="polite">Kliknij wybraną kartę, aby zaktualizować instrukcję poniżej.</p>
-
-        <div class="ww-dynamic-panel">
-          <h3></h3>
-          <p></p>
-          <ol class="ww-step-list"></ol>
+        <!-- EKRAN 2: PRO dla lekarzy -->
+        <div class="ww-screen ww-screen--2">
+          <div class="ww-pro-head">
+            <button type="button" class="ww-pro-back ww-js-to-screen1" aria-label="Wróć">${svgBack}</button>
+            <div>
+              <p class="ww-pro-eyebrow">Plan PRO</p>
+              <h2 class="ww-pro-title">Dla lekarzy i klinicystów</h2>
+            </div>
+          </div>
+          <div class="ww-pro-features">
+            <div class="ww-pro-feature">
+              <div class="ww-pro-feature-icon">${svgZscore}</div>
+              <div><p class="ww-pro-feature-title">Wyniki profesjonalne z Z-score</p><p class="ww-pro-feature-desc">Odchylenie standardowe dla wagi, wzrostu i BMI.</p></div>
+            </div>
+            <div class="ww-pro-feature">
+              <div class="ww-pro-feature-icon">${svgRuler}</div>
+              <div><p class="ww-pro-feature-title">Siatki centylowe Palczewskiej</p><p class="ww-pro-feature-desc">Polskie siatki referencyjne dla dzieci 0–18 lat.</p></div>
+            </div>
+            <div class="ww-pro-feature">
+              <div class="ww-pro-feature-icon">${svgFlask}</div>
+              <div><p class="ww-pro-feature-title">Moduły kliniczne DocPro</p><p class="ww-pro-feature-desc">Testy GH, OGTT, ACTH, TRH i antybiotykoterapia.</p></div>
+            </div>
+            <div class="ww-pro-feature">
+              <div class="ww-pro-feature-icon">${svgLock}</div>
+              <div><p class="ww-pro-feature-title">Zaszyfrowany vault pacjentów</p><p class="ww-pro-feature-desc">Historia pomiarów z szyfrowaniem AES-256.</p></div>
+            </div>
+            <div class="ww-pro-feature">
+              <div class="ww-pro-feature-icon">${svgDevices}</div>
+              <div><p class="ww-pro-feature-title">Synchronizacja między urządzeniami</p><p class="ww-pro-feature-desc">Dane dostępne na telefonie, tablecie i komputerze.</p></div>
+            </div>
+          </div>
+          <div class="ww-pro-footer">
+            <a href="subskrypcja.html" class="ww-pill-btn ww-btn-doctor-main">
+              ${svgReg} Zarejestruj się — 30 dni PRO gratis
+            </a>
+            <button type="button" class="ww-pill-btn ww-btn-ghost-small ww-js-login">
+              Mam już konto — zaloguj mnie
+            </button>
+          </div>
         </div>
 
-        <div class="ww-sheet-footer">
-          <button type="button" class="ww-btn ww-btn--primary"></button>
-          <a class="ww-link-btn" href="instrukcja.html">Pełna instrukcja</a>
-          <button type="button" class="ww-btn ww-btn--ghost">Zamknij</button>
-        </div>
       </section>
     `, 'tutorial:overlay');
 
-    const roleGrid = overlay.querySelector('.ww-role-grid');
-    const config = getRoleConfigs();
+    function switchToScreen(n) {
+      overlay.querySelector('.ww-screen--1').classList.toggle('is-active', n === 1);
+      overlay.querySelector('.ww-screen--2').classList.toggle('is-active', n === 2);
+    }
 
-    config.forEach((item) => {
-      const card = document.createElement('div');
-      card.className = 'ww-role-card';
-      card.dataset.role = item.id;
-      card.setAttribute('role', 'button');
-      card.setAttribute('tabindex', '0');
-      card.setAttribute('aria-pressed', 'false');
-      tutorialSetTrustedHtml(card, `
-        <span class="ww-role-card__title">${item.cardTitle}</span>
-        <span class="ww-role-card__desc">${item.cardDescription}</span>
-        <span class="ww-role-card__hint">Kliknij, aby wybrać</span>
-      `, 'tutorial:card');
-      const activateCard = () => {
-        selectRole(item.id);
-      };
-      card.addEventListener('click', activateCard);
-      card.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          activateCard();
-        }
-      });
-      roleGrid.appendChild(card);
+    overlay.querySelectorAll('.ww-js-to-screen2').forEach((btn) => {
+      btn.addEventListener('click', () => switchToScreen(2));
+    });
+    overlay.querySelectorAll('.ww-js-to-screen1').forEach((btn) => {
+      btn.addEventListener('click', () => switchToScreen(1));
     });
 
-    const closeBtn = overlay.querySelector('.ww-onboarding-close');
-    const dismissBtn = overlay.querySelector('.ww-btn--ghost');
+    overlay.querySelectorAll('.ww-js-dismiss').forEach((btn) => {
+      btn.addEventListener('click', () => hideSheet({ showLauncherHint: true }));
+    });
 
-    closeBtn.addEventListener('click', () => hideSheet({ showLauncherHint: true, renderInlineGuide: true }));
-    dismissBtn.addEventListener('click', () => hideSheet({ showLauncherHint: true, renderInlineGuide: true }));
+    function triggerLogin() {
+      hideSheet();
+      try {
+        const auth = window.VildaAuthUI;
+        if (!auth) return;
+        if (typeof auth.isGuestMode === 'function' && auth.isGuestMode()) {
+          if (typeof auth.exitGuestMode === 'function') { auth.exitGuestMode(); return; }
+        }
+        if (typeof auth.showStartupScreen === 'function') { auth.showStartupScreen(); return; }
+      } catch (_) {
+        if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+          globalThis.vildaLogSwallowedCatch('tutorial.js', _, { fn: 'triggerLogin' });
+        }
+      }
+    }
+
+    overlay.querySelectorAll('.ww-js-login').forEach((btn) => {
+      btn.addEventListener('click', triggerLogin);
+    });
 
     overlay.addEventListener('click', (event) => {
-      if (event.target === overlay) {
-        hideSheet({ showLauncherHint: true, renderInlineGuide: true });
-      }
+      if (event.target === overlay) hideSheet({ showLauncherHint: true });
     });
 
     document.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape' && state.helpVisible) {
-        hideSheet({ renderInlineGuide: true });
-      }
+      if (event.key === 'Escape' && state.helpVisible) hideSheet();
     });
 
     state.overlay = overlay;
     state.sheet = overlay.querySelector('.ww-onboarding-sheet');
-    state.dynamicTitle = overlay.querySelector('.ww-dynamic-panel h3');
-    state.dynamicText = overlay.querySelector('.ww-dynamic-panel p');
-    state.dynamicList = overlay.querySelector('.ww-step-list');
-    state.selectionNote = overlay.querySelector('.ww-role-grid-note');
-    state.primaryBtn = overlay.querySelector('.ww-btn--primary');
-    state.secondaryLink = overlay.querySelector('.ww-link-btn');
+    state.primaryBtn = overlay.querySelector('.ww-btn-doctor-main');
+    state.dynamicTitle = null;
+    state.dynamicText = null;
+    state.dynamicList = null;
+    state.selectionNote = null;
+    state.secondaryLink = null;
 
     document.body.appendChild(overlay);
-    selectRole(getSavedRole());
   }
 
   function getRoleConfigs() {
