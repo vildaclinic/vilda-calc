@@ -27,8 +27,8 @@
     return;
   }
 
-  const VERSION = '2.6.3';
-  const STEP = '8R-13';
+  const VERSION = '2.6.4';
+  const STEP = '8R-14';
   const ROOT_ID = 'vilda-auth-ui-root';
   const IDLE_EVENTS = ['mousedown', 'keydown', 'touchstart', 'scroll', 'pointerdown'];
   const PWA_GUEST_FLAG = 'VildaGuestMode';
@@ -329,10 +329,18 @@
     }
   }
 
-  function showLogoutButton() { rebuildCornerBtn('logout'); updateProBadge(); }
+  function showLogoutButton() {
+    rebuildCornerBtn('logout');
+    updateProBadge();
+    try { if (global.document) global.document.documentElement.classList.add('vilda-logged-in'); } catch (_) {}
+  }
   function showLoginButtonForGuest() { rebuildCornerBtn('login'); }
   function hideCornerBtn() { if (logoutBtnEl) logoutBtnEl.style.display = 'none'; }
-  function hideLogoutButton() { hideCornerBtn(); hideProBadge(); }
+  function hideLogoutButton() {
+    hideCornerBtn();
+    hideProBadge();
+    try { if (global.document) global.document.documentElement.classList.remove('vilda-logged-in'); } catch (_) {}
+  }
 
   // ============ MOUNT ROOT ============
   function ensureRoot() {
