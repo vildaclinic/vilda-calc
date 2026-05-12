@@ -935,30 +935,35 @@ function updateProfessionalSummaryCard(_retry) {
       // Widok mobilny: zachowaj dotychczasowy układ „dwie karty poniżej”
       wrap.style.display = 'none';
       if (fullWrap) {
-        fullWrap.style.display = 'block';
-        fullWrap.classList.add('current-summary-fullwrap'); // flex układ z CSS【turn6file4†:contentReference[oaicite:9]{index=9}】
+        // Wyczyść i zbuduj karty zanim kontener stanie się widoczny –
+        // unikamy migotania starej treści lub pustego kontenera.
         vildaAppClearHtml(fullWrap);
+        fullWrap.classList.add('current-summary-fullwrap');
         fullWrap.appendChild(buildCard(colA, 'currentSummaryCardLeft'));
         fullWrap.appendChild(buildCard(colB, 'currentSummaryCardRight'));
+        fullWrap.style.display = 'block';
       } else {
-        // DocPro nie ma #currentSummaryFullWrap – zrób „stack” wewnątrz wrap
+        // DocPro nie ma #currentSummaryFullWrap – zbuduj karty przed pokazaniem wrap
+        const fragDocPro = document.createDocumentFragment();
+        fragDocPro.appendChild(buildCard(colA, 'currentSummaryCardLeft'));
+        fragDocPro.appendChild(buildCard(colB, 'currentSummaryCardRight'));
+        wrap.appendChild(fragDocPro);
         wrap.style.display = 'block';
-        wrap.appendChild(buildCard(colA, 'currentSummaryCardLeft'));
-        wrap.appendChild(buildCard(colB, 'currentSummaryCardRight'));
       }
     }
   } else {
     // Brak „Ostatniego pomiaru”: jedna karta w prawej kolumnie (jak wcześniej)
     removeClones();
     if (fullWrap) { fullWrap.style.display = 'none'; vildaAppClearHtml(fullWrap); }
-    wrap.style.display = 'block';
-    card.style.display = 'block';
-    // wypełnij istniejącą kartę jedną kolumną wierszy
+    // Wypełnij treść zanim karta stanie się widoczna – unikamy migotania
+    // pustego pola (.card padding widoczne zanim content zostanie wyrenderowany).
     vildaAppClearHtml(content);
     const cols = document.createElement('div');
     cols.className = 'current-summary-columns';
     cols.appendChild(buildColumnRows(lines));
     content.appendChild(cols);
+    wrap.style.display = 'block';
+    card.style.display = 'block';
     // Po utworzeniu kart podsumowania w trybie desktopowym upewnij się,
     // że lewa i prawa karta podsumowania mają równą wysokość.  Funkcja
     // adjustSummaryCardsHeight ustawia wysokości obu kart w trybie
