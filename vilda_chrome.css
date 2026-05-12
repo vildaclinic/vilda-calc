@@ -124,6 +124,14 @@
   border-bottom: 1px solid var(--chrome-glass-border);
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 6px 18px rgba(0, 70, 80, 0.06);
 }
+/* Sticky header — tylko układ wielokolumnowy (≥992px).
+   Na mobile (jednokolumnowy) zostawiamy position: relative bez zmian. */
+@media (min-width: 992px) {
+  .has-vilda-chrome header {
+    position: sticky;
+    top: 0;
+  }
+}
 
 .has-vilda-chrome header > [data-vilda-chrome-wrap] {
   width: 100%;
