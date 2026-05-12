@@ -27,8 +27,8 @@
     return;
   }
 
-  const VERSION = '2.6.2';
-  const STEP = '8R-12';
+  const VERSION = '2.6.3';
+  const STEP = '8R-13';
   const ROOT_ID = 'vilda-auth-ui-root';
   const IDLE_EVENTS = ['mousedown', 'keydown', 'touchstart', 'scroll', 'pointerdown'];
   const PWA_GUEST_FLAG = 'VildaGuestMode';
@@ -47,6 +47,15 @@
   // (idle-lock + natychmiastowy re-login, wieloetapowy QR transfer itp.).
   // Inny userId → cooldown ignorowany, sync zawsze startuje.
   let _proSyncLastAt = { userId: null, at: 0 };
+  // AbortController dla aktywnego żądania WebAuthn (navigator.credentials.get).
+  // Jeden kontroler na raz — abort() przed każdym nowym żądaniem eliminuje problem
+  // "stale pending request" który blokuje kolejne wywołania przez do 60s i zamraża UI.
+  let _passkeyAbortCtrl = null;
+  // Per-sesja zbiór userId dla których auto-passkey już raz nie udał się (anulowanie,
+  // cooldown przeglądarki po odrzuceniu Touch ID/Face ID). Chroni przed kolejnymi
+  // automatycznymi próbami — użytkownik może kliknąć przycisk biometryczny ręcznie.
+  // Kasowany przy pomyślnym logowaniu dowolną metodą.
+  let _passkeyAutoFailed = new Set();
 
   // ============ PLATFORM DETECTION ============
   /**
@@ -309,6 +318,17 @@
     } catch (_) {}
   }
 
+  // Przerywa aktywne żądanie WebAuthn jeśli istnieje i natychmiast zwalnia UI
+  // (setBusy(false)) zanim wyrenderuje się nowy ekran. Bez tego stary pending
+  // navigator.credentials.get() żyje do 20s i może blokować nowe wywołania.
+  function abortPendingPasskey() {
+    if (_passkeyAbortCtrl) {
+      try { _passkeyAbortCtrl.abort(); } catch (_) {}
+      _passkeyAbortCtrl = null;
+      setBusy(false); // natychmiast odblokuj UI — nowy ekran musi być responsywny
+    }
+  }
+
   function showLogoutButton() { rebuildCornerBtn('logout'); updateProBadge(); }
   function showLoginButtonForGuest() { rebuildCornerBtn('login'); }
   function hideCornerBtn() { if (logoutBtnEl) logoutBtnEl.style.display = 'none'; }
@@ -362,6 +382,9 @@
 
   // ============ DYSPOZYTOR EKRANU STARTOWEGO ============
   async function showStartupScreen() {
+    // Przerwij aktywne żądanie WebAuthn przed przejściem do listy użytkowników.
+    // Bez tego stary pending navigator.credentials.get() blokuje nowe wywołania.
+    abortPendingPasskey();
     const V = getVault();
     if (!V) { logWarn('VildaVault niedostępny — pomijam ekran startowy.'); return; }
     // ekran startowy ZAWSZE = świeży stan tożsamości; przy okazji upewniamy się,
@@ -910,15 +933,25 @@
       });
       biometricBtn.addEventListener('click', async function () {
         showError(errBox, '');
+        // Przerwij ewentualny poprzedni pending request przed nowym
+        abortPendingPasskey();
+        _passkeyAbortCtrl = new AbortController();
+        const _sig = _passkeyAbortCtrl.signal;
         setBusy(true);
         try {
-          await V.unlockWithPasskey(userId, null);
+          await V.unlockWithPasskey(userId, null, _sig);
+          _passkeyAutoFailed.delete(userId); // sukces — resetuj flagę failed
           hide();
           startIdleWatch();
         } catch (e) {
-          showError(errBox, e && e.message ? e.message : 'Logowanie biometryczne nie powiodło się.');
+          if (!_sig.aborted) {
+            // Pokaż błąd tylko dla rzeczywistych problemów (nie abort)
+            showError(errBox, e && e.message ? e.message : 'Logowanie biometryczne nie powiodło się.');
+            logWarn('biometric-click', e && e.name ? e.name + ': ' + e.message : String(e));
+          }
         } finally {
-          setBusy(false);
+          _passkeyAbortCtrl = null;
+          if (!_sig.aborted) setBusy(false);
         }
       });
 
@@ -944,6 +977,7 @@
         setBusy(true);
         try {
           await V.unlockUser(userId, pw.value);
+          _passkeyAutoFailed.delete(userId); // sukces hasłem — resetuj flagę dla kolejnych sesji
           // Pokaż propozycję biometrii po pierwszym zalogowaniu hasłem (jeśli stosowne)
           showPostLoginBiometricPrompt(userId);
           hide();
@@ -982,19 +1016,36 @@
     const screen = el('div', { class: 'vilda-auth-screen vilda-auth-login' }, screenChildren);
     open(screen);
 
-    // Jeśli biometria dostępna — od razu uruchom Face ID, nie czekaj na klik
-    if (hasBiometric && !opts.skipAutoPasskey) {
+    // Jeśli biometria dostępna — od razu uruchom Face ID/Touch ID, nie czekaj na klik.
+    // Pomijamy auto-trigger jeśli: (a) opts.skipAutoPasskey, (b) poprzednia próba w tej
+    // sesji nie powiodła się (_passkeyAutoFailed) — chroni przed cooldown przeglądarki
+    // po anulowaniu biometrii który powoduje wielosekundowe zamrożenie UI.
+    if (hasBiometric && !opts.skipAutoPasskey && !_passkeyAutoFailed.has(userId)) {
       setTimeout(async function () {
+        abortPendingPasskey(); // anuluj ewentualny stary request z poprzedniego ekranu
+        _passkeyAbortCtrl = new AbortController();
+        const _sig = _passkeyAbortCtrl.signal;
         try {
           setBusy(true);
           showError(errBox, '');
-          await V.unlockWithPasskey(userId, null);
+          await V.unlockWithPasskey(userId, null, _sig);
+          _passkeyAutoFailed.delete(userId); // sukces — resetuj flagę
           hide();
           startIdleWatch();
-        } catch (_) {
-          // Użytkownik anulował lub coś poszło nie tak — pokaż formularz hasła
-          setBusy(false);
-          try { pw.focus(); } catch (_) {}
+        } catch (e) {
+          if (!_sig.aborted) {
+            // Nie logujemy NotAllowedError z anulowania — to normalne zachowanie użytkownika
+            if (e && e.name !== 'NotAllowedError') {
+              logWarn('auto-passkey', e && e.name ? e.name + ': ' + e.message : String(e));
+            }
+            // Zablokuj auto-trigger na pozostałą część sesji — użytkownik może kliknąć ręcznie
+            _passkeyAutoFailed.add(userId);
+            setBusy(false);
+            try { pw.focus(); } catch (_) {}
+          }
+          // jeśli _sig.aborted: abortPendingPasskey() już wywołało setBusy(false)
+        } finally {
+          _passkeyAbortCtrl = null;
         }
       }, 100);
     } else {

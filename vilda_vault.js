@@ -2153,7 +2153,9 @@
    * @param {string}      userId       - użytkownik do odblokowania
    * @param {string|null} [credentialId] - konkretny passkey lub null (przeglądarka wybiera)
    */
-  async function unlockWithPasskey(userId, credentialId) {
+  // signal — opcjonalny AbortSignal przekazywany z vilda_auth_ui.js przez AbortController.
+  // Pozwala przerwać oczekujące żądanie WebAuthn gdy użytkownik zmienia ekran w auth UI.
+  async function unlockWithPasskey(userId, credentialId, signal) {
     const C = getCrypto();
     if (typeof userId !== 'string' || !userId.length) {
       throw new Error('VildaVault: nieprawidłowy userId.');
@@ -2167,7 +2169,7 @@
 
     // 1. Uwierzytelnienie — przeglądarka weryfikuje biometrię i zwraca PRF secret
     const { credentialId: returnedId, prfSecretBytes } = await C.getPasskeyPrfSecret(
-      credentialId || null, rpId
+      credentialId || null, rpId, signal || null
     );
 
     // 2. Znajdź pasujący wpis w meta.passkeys

@@ -579,17 +579,21 @@
    * @param {string}      rpId         - np. 'wagaiwzrost.pl' lub 'localhost'
    * @returns {Promise<{ credentialId: string, prfSecretBytes: Uint8Array }>}
    */
-  async function getPasskeyPrfSecret(credentialId, rpId) {
+  // signal — opcjonalny AbortSignal z AbortController w vilda_auth_ui.js.
+  // Pozwala anulować oczekujące navigator.credentials.get() gdy użytkownik
+  // nawiguje między ekranami auth UI. Bez tego pending request żyje 60s
+  // i blokuje kolejne wywołania (NotAllowedError) oraz zamraża UI.
+  async function getPasskeyPrfSecret(credentialId, rpId, signal) {
     const challenge = crypto.getRandomValues(new Uint8Array(32));
     const allowCreds = credentialId
       ? [{ type: 'public-key', id: base64urlToBytes(credentialId) }]
       : [];
 
-    const assertion = await navigator.credentials.get({
+    const requestOptions = {
       publicKey: {
         rpId: rpId,
         challenge: challenge,
-        timeout: 60000,
+        timeout: 20000,          // skrócone z 60s → 20s: szybsze odblokowanie UI gdy dialog nie pojawia się
         userVerification: 'required',
         allowCredentials: allowCreds,
         extensions: {
@@ -598,7 +602,14 @@
           }
         }
       }
-    });
+    };
+    // Dołącz signal tylko gdy podany i jest aktywny — starsze Safari (<17) nie obsługuje
+    // AbortSignal w credentials.get() i może rzucić TypeError.
+    if (signal && typeof AbortSignal !== 'undefined' && signal instanceof AbortSignal) {
+      requestOptions.signal = signal;
+    }
+
+    const assertion = await navigator.credentials.get(requestOptions);
 
     if (!assertion) throw new Error('PRF: navigator.credentials.get zwrócił null');
 
