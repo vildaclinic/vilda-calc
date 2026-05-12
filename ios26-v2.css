@@ -105,9 +105,11 @@ body.liquid-ios26::before {
      a tooltopy są position:fixed — żaden z nich nie ucierpi na tym przycięciu. */
   overflow: hidden;
   box-shadow: var(--lg-shadow);
-  position: relative;
-  top: auto;
-  z-index: 1;
+  /* sticky działa poprawnie: header jest bezpośrednim dzieckiem body (flex container).
+     !important konieczne, bo ._glass (wyższa specyficzność) ustawia position:relative. */
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 200;
 }
 
 /* Cień dla logo w nagłówku */
