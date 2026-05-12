@@ -14,6 +14,14 @@
   --settings-card-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(246, 252, 252, 0.82));
 }
 
+/* ============ SCROLL OFFSET DLA STICKY HEADERA ============
+   scroll-padding-top na html koryguje pozycję scrollowania (#hash i scrollIntoView)
+   tak aby cel nie wjeżdżał pod sticky nagłówek.
+   Wartość = wysokość chrome-strip (64px) + mały margines wizualny (12px). */
+html {
+  scroll-padding-top: calc(var(--chrome-strip-height, 64px) + 12px);
+}
+
 /* ============ NAGŁÓWEK STRONY ============
    Header jest sticky globalnie (ios26-v2.css), wyłączany tylko na mobile
    przez @media (max-width: 991px). Nie nadpisujemy tutaj. */
