@@ -1175,7 +1175,7 @@ function vildaCustomHasHtmlContent(element) {
       heightClass = getStatusClass(heightPerc, ageYears);
     }
 
-    // Format age string (e.g. "3 lata i 5 mies.") if any non‑zero age
+    // Format age string (e.g. "3 lata i 5 miesięcy") with full Polish declension
     var ageStr = '';
     if (yrs > 0 || mos > 0) {
       var yearWord;
@@ -1188,10 +1188,19 @@ function vildaCustomHasHtmlContent(element) {
       }
       // If months are non‑integer (due to input) round to nearest integer
       var mosInt = Math.round(mos);
+      // Full Polish declension for months (0-11 range in this context):
+      //   1 → miesiąc, 2-4 → miesiące, 5-21 → miesięcy
+      var monthWord;
+      if (mosInt === 1) {
+        monthWord = 'miesiąc';
+      } else if (mosInt >= 2 && mosInt <= 4) {
+        monthWord = 'miesiące';
+      } else {
+        monthWord = 'miesięcy';
+      }
       ageStr = yrs + ' ' + yearWord;
       if (mosInt > 0) {
-        // "i" connector between years and months for readability in chip layout
-        ageStr += ' i ' + mosInt + ' mies.';
+        ageStr += ' i ' + mosInt + ' ' + monthWord;
       }
     }
 
@@ -1226,27 +1235,14 @@ function vildaCustomHasHtmlContent(element) {
     //   neutral    (adult or no centile): muted gray
     // -----------------------------------------------------------------------
 
-    // Extract initials from name (first letters of first two words)
-    var initials = '';
-    if (nameVal) {
-      var nameParts = nameVal.trim().split(/\s+/);
-      if (nameParts.length >= 2 && nameParts[0] && nameParts[1]) {
-        initials = (nameParts[0][0] + nameParts[1][0]).toUpperCase();
-      } else if (nameParts[0]) {
-        initials = nameParts[0].substring(0, 2).toUpperCase();
-      }
-    }
-
     var chipHtml = '';
 
-    // Patient chip — shown if we have initials or age
-    if (initials || ageStr) {
-      var avatarContent = initials ? escapeHtml(initials) : '?';
-      var avatarClass = initials ? 'ms-avatar' : 'ms-avatar ms-avatar--anon';
-      var ageDisplay = ageStr ? '<span class="ms-patient-age">' + escapeHtml(ageStr) + '</span>' : '';
+    // Patient chip — pokazywany gdy znamy wiek.  Etykieta "Wiek" w kółku
+    // zastępuje poprzednie inicjały; cały chip jest wyśrodkowany.
+    if (ageStr) {
       chipHtml += '<div class="ms-patient-chip">'
-        + '<div class="' + avatarClass + '">' + avatarContent + '</div>'
-        + ageDisplay
+        + '<div class="ms-avatar-wiek">Wiek</div>'
+        + '<span class="ms-patient-age">' + escapeHtml(ageStr) + '</span>'
         + '</div>';
     }
 
@@ -1290,6 +1286,20 @@ function vildaCustomHasHtmlContent(element) {
         + '<span class="ms-chip-value">' + escapeHtml(bmiVal.toFixed(1).replace('.', ',')) + '</span>'
         + '</div>'
         + bBadge + '</div>';
+    }
+    // BSA chip (Mosteller) — zawsze neutral, brak centyli
+    if (weightVal > 0 && heightVal > 0) {
+      var bsaVal = Math.sqrt((heightVal * weightVal) / 3600);
+      if (!isNaN(bsaVal)) {
+        var bsaStr = bsaVal.toFixed(2).replace('.', ',') + ' m²';
+        metricsHtml += '<div class="ms-chip ms-chip--neutral">'
+          + '<div class="ms-chip-icon">S</div>'
+          + '<div class="ms-chip-main">'
+          + '<span class="ms-chip-label">Pow. ciała</span>'
+          + '<span class="ms-chip-value">' + escapeHtml(bsaStr) + '</span>'
+          + '</div>'
+          + '</div>';
+      }
     }
     if (metricsHtml) {
       chipHtml += '<div class="ms-chips">' + metricsHtml + '</div>';

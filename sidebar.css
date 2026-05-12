@@ -174,131 +174,112 @@
    * displays a drop‑down when clicked.  Layout and spacing mirror
    * other sidebar elements.
    */
+  /* -----------------------------------------------------------------
+   * Chip-stack shortcuts section
+   *
+   * Sekcja skrótów utrzymana w tym samym języku wizualnym co chipy metryk:
+   * każdy skrót to mała, zaokrąglona pigułka z turkusowym obramowaniem.
+   * “Dodaj skrót” to pigułka z przerywana linią — zaproszenie do akcji.
+   * Tekst informacyjny jest bardzo mały i wyciszony.
+   * Pointer-events: auto !important na każdym elementu interaktywnym
+   * zabezpiecza przed globalnym wyłączeniem zdarzeń przez ios26-v2.css.
+   * ----------------------------------------------------------------- */
   .mini-summary .mini-shortcuts {
-    margin-top: 0.6rem;
-    border-top: 1px solid #d0dede;
-    padding-top: 0.6rem;
-    font-size: 0.9rem;
-    line-height: 1.35;
+    margin-top: 0.55rem;
+    border-top: 1px solid rgba(0, 131, 141, 0.15);
+    padding-top: 0.5rem;
   }
+  .mini-summary .shortcut-info {
+    font-size: 0.7rem;
+    color: #8aabac;
+    margin-bottom: 0.35rem;
+    text-align: center;
+  }
+  /* Każdy wiersz = jeden skrót (chip + przycisk usunięcia) */
   .mini-summary .shortcut-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    /* Increase vertical spacing between shortcut rows */
-    margin-top: 0.5rem;
-  /* Force pointer events on the row.  Without this, some global styles from
-     ios26-v2.css may disable pointer events on flex containers, preventing
-     click handlers attached to the row from firing. */
-  pointer-events: auto !important;
+    gap: 0.3rem;
+    margin-top: 0.3rem;
+    pointer-events: auto !important;
   }
   .mini-summary .shortcut-row:first-child {
     margin-top: 0;
   }
-  /* Style the shortcut link like a pill with ample padding.  We use
-     !important on several properties to override more generic rules in
-     ios26-v2.css, which apply to all buttons.  Adding padding and
-     border-radius creates a larger “otoczka” around the label so that
-     the text does not touch the edges. */
-  .mini-summary .shortcut-link {
-    background: var(--card) !important;
-    border: 1px solid #d0dede !important;
-    border-radius: var(--radius) !important;
-    /* Use black text for added shortcut links to match the dropdown options. */
-    color: #000 !important;
-    text-decoration: none !important;
-    cursor: pointer;
-    padding: 0.25rem 0.6rem !important;
-    font-size: 0.9rem;
-    flex-grow: 1;
-    text-align: left;
-    display: inline-flex;
-    align-items: center;
-  }
-
-  /* Style for disabled shortcuts (e.g. WFL when age > 2 years).  Use a
-     muted colour and disable pointer interactions to convey that the
-     link is not actionable.  The tooltip is provided via the title
-     attribute in JS. */
-  .mini-summary .shortcut-link.disabled-shortcut {
-    color: #9eb8bb !important;
-    background: var(--card) !important;
-    border-color: #d0dede !important;
-    cursor: default !important;
-    text-decoration: none !important;
-    /* Allow pointer interactions so that the native title tooltip appears
-       when hovering.  Without this explicit override, some global styles
-       may disable pointer events on certain buttons, preventing the
-       tooltip from being displayed. */
-    pointer-events: auto !important;
-  }
-
-  /* When a shortcut is disabled the row itself may also carry a title
-     attribute for tooltips.  Ensure the row allows pointer events so
-     that hovering over the area triggers the tooltip. */
   .mini-summary .shortcut-row[title] {
     pointer-events: auto !important;
   }
-  .mini-summary .shortcut-link.disabled-shortcut:hover {
-    color: #9eb8bb !important;
-    background: var(--card) !important;
-  }
-  /* Ensure the remove (×) icon is clearly red and spaced away from the label.
-     We use !important to override Liquid Glass styles that reset button
-     colours. */
-  .mini-summary .shortcut-remove {
-    background: none !important;
-    border: none !important;
-    color: var(--danger) !important;
+  /* Chip skrótu — turkusowa pigułka */
+  .mini-summary .shortcut-link {
+    flex: 1 1 auto;
+    display: inline-flex;
+    align-items: center;
+    background: rgba(0, 131, 141, 0.05) !important;
+    border: 1px solid rgba(0, 131, 141, 0.25) !important;
+    border-radius: 999px !important;
+    color: var(--primary, #00838d) !important;
+    text-decoration: none !important;
+    padding: 0.22rem 0.7rem !important;
+    font-size: 0.78rem;
+    font-weight: 500;
     cursor: pointer;
-    margin-left: 0.5rem;
-    padding: 0;
-    font-size: 1.1rem;
-    line-height: 1;
-    /* Allow pointer events explicitly; some global button styles may
-       disable pointer events on certain buttons which would prevent
-       the click handler from firing. */
+    pointer-events: auto !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .mini-summary .shortcut-link:hover {
+    background: rgba(0, 131, 141, 0.12) !important;
+  }
+  /* Wyłączony skrót (np. WFL >2 lat) */
+  .mini-summary .shortcut-link.disabled-shortcut {
+    background: rgba(0, 0, 0, 0.03) !important;
+    border-color: rgba(0, 0, 0, 0.1) !important;
+    color: #9eb8bb !important;
+    cursor: default !important;
     pointer-events: auto !important;
   }
-  /*
-   * Style the “Dodaj skrót” button to visually match the shortcut
-   * labels.  Use the same pill‑like appearance with a neutral
-   * background, border and radius.  Set the padding to provide a
-   * generous clickable area and make the button full‑width so it
-   * aligns with the list of shortcuts.  Remove underline and set
-   * colour to the primary hue.  Use !important overrides to ensure
-   * these styles take precedence over rules defined in ios26‑v2.css.
-   */
-  .mini-summary .add-shortcut-btn {
-    background: var(--card) !important;
-    border: 1px solid #d0dede !important;
-    border-radius: var(--radius) !important;
-    color: var(--primary) !important;
-    text-decoration: none !important;
+  .mini-summary .shortcut-link.disabled-shortcut:hover {
+    background: rgba(0, 0, 0, 0.03) !important;
+    color: #9eb8bb !important;
+  }
+  /* Przycisk usunięcia (×) — mały, czerwony, bez tła */
+  .mini-summary .shortcut-remove {
+    flex: 0 0 auto;
+    background: none !important;
+    border: none !important;
+    color: var(--danger, #c62828) !important;
     cursor: pointer;
-    padding: 0.25rem 0.6rem !important;
-    font-size: 0.9rem;
-    display: inline-flex;
+    padding: 0.1rem 0.2rem !important;
+    font-size: 1rem;
+    line-height: 1;
+    border-radius: 50%;
+    pointer-events: auto !important;
+  }
+  .mini-summary .shortcut-remove:hover {
+    background: rgba(198, 40, 40, 0.08) !important;
+  }
+  /* Przycisk “Dodaj skrót” — przerywana pigułka */
+  .mini-summary .add-shortcut-btn {
+    display: inline-flex !important;
     align-items: center;
     justify-content: center;
     width: 100%;
-    margin-top: 0.5rem;
-    /* Force pointer events on the add button.  Without this some global
-       styles (e.g. in ios26-v2.css) may disable pointer events on
-       buttons, preventing the click handler from firing. */
+    background: transparent !important;
+    border: 1.5px dashed rgba(0, 131, 141, 0.3) !important;
+    border-radius: 999px !important;
+    color: var(--primary, #00838d) !important;
+    text-decoration: none !important;
+    padding: 0.22rem 0.7rem !important;
+    font-size: 0.78rem;
+    font-weight: 500;
+    cursor: pointer;
+    margin-top: 0.4rem;
     pointer-events: auto !important;
   }
-
-  /*
-   * Informational text displayed above the list of shortcuts.  Use a
-   * muted colour and smaller font to differentiate it from action
-   * elements.  Provide some vertical spacing so it does not crowd the
-   * surrounding controls.
-   */
-  .mini-summary .shortcut-info {
-    font-size: 0.8rem;
-    color: #6c757d;
-    margin-bottom: 0.25rem;
+  .mini-summary .add-shortcut-btn:hover {
+    background: rgba(0, 131, 141, 0.06) !important;
+    border-style: solid !important;
   }
   .mini-summary #shortcutSelect {
     /* Add a margin so the dropdown is separated from preceding content */
@@ -581,41 +562,37 @@
    * these rules take precedence.
    */
 
-  /* --- Patient chip (initials avatar + age) --- */
+  /* --- Patient chip (etykieta "Wiek" + wiek pacjenta, wyśrodkowane) --- */
   .ms-patient-chip {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.4rem 0.6rem;
+    justify-content: center;
+    gap: 0.45rem;
+    padding: 0.4rem 0.7rem;
     border-radius: 999px;
     background: rgba(0, 131, 141, 0.08);
     border: 1px solid rgba(0, 131, 141, 0.2);
     margin-bottom: 0.5rem;
+    text-align: center;
   }
-  .ms-avatar {
+  /* Pill-label "Wiek" zastępuje kółko z inicjałami */
+  .ms-avatar-wiek {
     flex: 0 0 auto;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
+    padding: 0.1rem 0.45rem;
+    border-radius: 6px;
     background: var(--primary, #00838d);
     color: #fff;
-    font-size: 0.68rem;
+    font-size: 0.62rem;
     font-weight: 700;
-    letter-spacing: 0.02em;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .ms-avatar--anon {
-    background: #8aabac;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    line-height: 1.5;
   }
   .ms-patient-age {
     font-size: 0.82rem;
     font-weight: 600;
     color: var(--primary, #00838d);
     line-height: 1.2;
-    flex: 1 1 auto;
-    min-width: 0;
   }
 
   /* --- Metric chip stack --- */
