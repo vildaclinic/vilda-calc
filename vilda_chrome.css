@@ -663,8 +663,8 @@ body.chrome-drawer-open { overflow: hidden; }
   .has-vilda-chrome aside.sidebar.sidebar-v2,
   .has-vilda-chrome .desktop-layout > aside.sidebar {
     position: sticky;
-    /* 1rem odstępu od górnej krawędzi viewportu podczas przewijania. */
-    top: 1rem;
+    /* Przyklejamy sidebar tuż pod sticky nagłówkiem (--chrome-strip-height = 64px). */
+    top: var(--chrome-strip-height, 64px);
     align-self: start;
     justify-self: stretch;
     grid-column: 1;
@@ -682,7 +682,7 @@ body.chrome-drawer-open { overflow: hidden; }
     height: auto;
     width: 100%;
     max-width: 100%;
-    max-height: calc(100vh - 2rem);
+    max-height: calc(100vh - var(--chrome-strip-height, 64px));
     overflow: hidden;
     display: flex;
     transform: none !important;
@@ -868,11 +868,11 @@ body.chrome-drawer-open { overflow: hidden; }
       border-radius: var(--chrome-radius-card) 0 0 var(--chrome-radius-card);
       border-right: 0;
       box-shadow: var(--chrome-glass-shadow);
-      /* Sticky podczas przewijania, analogicznie do lewego sidebara — 1rem od góry. */
+      /* Sticky podczas przewijania — przyklejony tuż pod nagłówkiem, analogicznie do lewego sidebara. */
       position: sticky;
-      top: 1rem;
+      top: var(--chrome-strip-height, 64px);
       align-self: start;
-      max-height: calc(100vh - 2rem);
+      max-height: calc(100vh - var(--chrome-strip-height, 64px));
       /* Zawartość (mini-summary + skróty + steroid-summary) potrafi być wyższa niż
          dostępna wysokość — pozwalamy scrollować wewnątrz panelu. */
       overflow-y: auto;
