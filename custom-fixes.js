@@ -1441,8 +1441,8 @@ function vildaCustomHasHtmlContent(element) {
   }
 
   /**
-   * Sprawdza aktualny stan PRO i odpowiednio inicjalizuje lub usuwa mini-summary.
-   * Wywoływana przez listenery 'vildaProAccessChanged' i 'vilda:session-changed'.
+   * Wywoływana przez 'vildaProAccessChanged' — plan PRO aktywowany lub wygasł.
+   * Nie zakłada zmiany userId, więc NIE robi teardown gdy PRO jest aktywne.
    */
   function handleProAccessChange() {
     try {
@@ -1456,6 +1456,32 @@ function vildaCustomHasHtmlContent(element) {
     } catch (ex) {
       if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
         globalThis.vildaLogSwallowedCatch('custom-fixes.js', ex, { fn: 'handleProAccessChange' });
+      }
+    }
+  }
+
+  /**
+   * Wywoływana przez 'vilda:session-changed' — inny użytkownik zalogował się
+   * (lub wylogowanie). Zawsze robi pełny teardown + reinit, żeby skróty
+   * poprzedniego użytkownika nie były widoczne dla nowego.
+   * Dotyczy też skrótów sterydowych — przeładowuje je dla nowego userId.
+   */
+  function handleSessionChanged() {
+    try {
+      // Mini-summary: teardown bezwarunkowo (inny userId = inne skróty),
+      // potem initMiniSummary sprawdzi PRO i ewentualnie odbuduje element.
+      teardownMiniSummary();
+      initMiniSummary();
+
+      // Skróty sterydowe: przeładuj z nowego slotu storage dla nowego userId.
+      // renderSteroidShortcuts() odczytuje z aktualnego steroidShortcuts[].
+      try {
+        loadSteroidShortcuts();
+        renderSteroidShortcuts();
+      } catch (_) {}
+    } catch (ex) {
+      if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+        globalThis.vildaLogSwallowedCatch('custom-fixes.js', ex, { fn: 'handleSessionChanged' });
       }
     }
   }
@@ -1599,7 +1625,8 @@ function vildaCustomHasHtmlContent(element) {
    * specific to the steroide page and independent of other pages.
    */
   function getSteroidShortcutStorageKey() {
-    return 'shortcuts-steroidy.html';
+    var uid = getCurrentUserIdForStorage();
+    return 'vilda-shortcuts:' + (uid || '') + ':steroidy.html';
   }
 
   /**
@@ -2147,11 +2174,38 @@ function vildaCustomHasHtmlContent(element) {
     form.addEventListener('change', schedule, true);
   }
 
-  // Determine the localStorage key for the current page
+  /**
+   * Zwraca userId aktualnie zalogowanego użytkownika (synchronicznie).
+   * Ten sam wzorzec co getCurrentUserIdSync() w vilda_pro_access.js.
+   * Zwraca null gdy brak zalogowanego użytkownika (gość, vault zablokowany).
+   */
+  function getCurrentUserIdForStorage() {
+    try {
+      var vault = (typeof window !== 'undefined') ? window.VildaVault : null;
+      if (vault && typeof vault.getCurrentUser === 'function') {
+        var cu = vault.getCurrentUser();
+        if (cu && cu.userId) return String(cu.userId);
+      }
+    } catch (_) {}
+    try {
+      var raw = (typeof window !== 'undefined' && window.sessionStorage)
+        ? window.sessionStorage.getItem('vilda-vault-session-v2')
+        : null;
+      if (raw) {
+        var data = JSON.parse(raw);
+        if (data && data.userId) return String(data.userId);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  // Determine the localStorage key for the current page.
+  // Klucz zawiera userId — każdy użytkownik ma własny slot w localStorage.
   function getShortcutStorageKey() {
     var path = window.location.pathname;
     var file = path.substring(path.lastIndexOf('/') + 1) || 'index.html';
-    return 'shortcuts-' + file;
+    var uid = getCurrentUserIdForStorage();
+    return 'vilda-shortcuts:' + (uid || '') + ':' + file;
   }
 
   // Load shortcuts from localStorage
@@ -3256,10 +3310,10 @@ function vildaCustomHasHtmlContent(element) {
     // listenery reagujące na zmiany stanu PRO oraz sesji (wylogowanie / zmiana konta).
     function doInit() {
       initMiniSummary();
-      // Reaguj na aktywację/dezaktywację planu PRO w trakcie sesji
+      // Aktywacja / dezaktywacja planu PRO (ten sam użytkownik)
       document.addEventListener('vildaProAccessChanged', handleProAccessChange);
-      // Reaguj na zmianę zalogowanego użytkownika (inny userId = inny plan PRO)
-      document.addEventListener('vilda:session-changed', handleProAccessChange);
+      // Zmiana zalogowanego użytkownika — teardown + reinit z nowym userId
+      document.addEventListener('vilda:session-changed', handleSessionChanged);
     }
 
     if (window.__vildaAuthHidden) {
