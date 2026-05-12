@@ -1242,3 +1242,53 @@
   background: #f5fafb !important;
   box-shadow: 0 4px 14px rgba(0, 131, 141, 0.12) !important;
 }
+
+/* ── Overlay "Trwa wylogowywanie..." ───────────────────────────────────────
+ * Pojawia się natychmiast po kliknięciu "Wyloguj się", blokuje interakcję
+ * z UI podczas asynchronicznego teardownu biometrycznego (abort passkey,
+ * resetAppSessionState, nawigacja lub renderowanie ekranu startowego).
+ * Zdejmowany przez hideLogoutOverlay() gdy showStartupScreen() jest gotowy.
+ * ─────────────────────────────────────────────────────────────────────── */
+.vilda-logout-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000000; /* powyżej vilda-auth-root (999999) i overlay-sheet (1000000) */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: vildaLogoutOverlayFadeIn 0.12s ease;
+  pointer-events: all;
+}
+
+@keyframes vildaLogoutOverlayFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.vilda-logout-overlay__spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(0, 131, 141, 0.18);
+  border-top-color: #00838d;
+  border-radius: 50%;
+  animation: vildaLogoutSpinnerRotate 0.75s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes vildaLogoutSpinnerRotate {
+  to { transform: rotate(360deg); }
+}
+
+.vilda-logout-overlay__label {
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #002830;
+  letter-spacing: 0.01em;
+  user-select: none;
+}

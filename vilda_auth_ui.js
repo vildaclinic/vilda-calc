@@ -279,6 +279,14 @@
       logoutBtnEl.appendChild(el('span', { class: 'vilda-auth-logout-icon', 'aria-hidden': 'true', text: '⏻' }));
       logoutBtnEl.appendChild(el('span', { text: 'Wyloguj się' }));
       logoutBtnEl.addEventListener('click', function () {
+        // Pokaż overlay natychmiast — blokuje UI podczas całego async teardownu
+        // (abort passkey, resetAppSessionState, nawigacja lub ekran startowy).
+        showLogoutOverlay();
+        // Przerwij aktywne żądanie WebAuthn natychmiast — przed lock(), żeby zminimalizować
+        // okno race condition (biometria zdąży się rozwiązać między abort a lock).
+        // Bez tego abort następuje dopiero wewnątrz showStartupScreen(), co jest za późno
+        // i w ogóle pomija ścieżkę dla podstron (location.replace → return bez abort).
+        abortPendingPasskey();
         const V = getVault();
         if (V) { try { V.lock('manual'); } catch (_) {} }
       });
@@ -346,6 +354,48 @@
       _passkeyAbortCtrl = null;
       setBusy(false); // natychmiast odblokuj UI — nowy ekran musi być responsywny
     }
+  }
+
+  // ── Overlay "Trwa wylogowywanie..." ──────────────────────────────────────
+  // Pojawia się synchronicznie przy kliknięciu logout — natychmiast blokuje UI
+  // podczas asynchronicznego teardownu (abort passkey, resetAppSessionState,
+  // nawigacja lub renderowanie ekranu startowego). Szczególnie ważne gdy:
+  //   a) systemowy dialog biometryczny nie zamyka się od razu po abort(),
+  //   b) starsze Safari nie obsługuje AbortSignal w credentials.get() (timeout 20s),
+  //   c) aplikacja jest na podstronie i musi przeładować index.html.
+  // Zdejmowany przez hideLogoutOverlay() wywołane przez showStartupScreen()
+  // (tuż przed wyrenderowaniem ekranu startowego) lub przez onLock→location.replace
+  // (nowa strona montuje się od zera).
+  let _logoutOverlayEl = null;
+
+  function showLogoutOverlay() {
+    if (_logoutOverlayEl || !global.document) return; // idempotentne
+    try {
+      var overlay = global.document.createElement('div');
+      overlay.className = 'vilda-logout-overlay';
+      overlay.setAttribute('role', 'status');
+      overlay.setAttribute('aria-live', 'polite');
+      overlay.setAttribute('aria-label', 'Trwa wylogowywanie');
+
+      var spinner = global.document.createElement('div');
+      spinner.className = 'vilda-logout-overlay__spinner';
+      spinner.setAttribute('aria-hidden', 'true');
+
+      var label = global.document.createElement('div');
+      label.className = 'vilda-logout-overlay__label';
+      label.textContent = 'Trwa wylogowywanie…';
+
+      overlay.appendChild(spinner);
+      overlay.appendChild(label);
+      global.document.body.appendChild(overlay);
+      _logoutOverlayEl = overlay;
+    } catch (_) { /* nie blokuj logout jeśli DOM niedostępny */ }
+  }
+
+  function hideLogoutOverlay() {
+    if (!_logoutOverlayEl) return;
+    try { _logoutOverlayEl.parentNode && _logoutOverlayEl.parentNode.removeChild(_logoutOverlayEl); } catch (_) {}
+    _logoutOverlayEl = null;
   }
 
   function showLogoutButton() {
@@ -430,6 +480,8 @@
     hideCornerBtn();
     let users = [];
     try { users = await V.listUsers(); } catch (e) { logError('listUsers', e); }
+    // Zdejmij overlay "Trwa wylogowywanie..." — dane gotowe, zaraz pokazujemy ekran.
+    hideLogoutOverlay();
     if (users.length === 0) showEmptyStartupScreen();
     else showUserPicker(users);
   }
