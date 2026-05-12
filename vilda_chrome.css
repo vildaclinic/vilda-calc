@@ -667,7 +667,7 @@ body.chrome-drawer-open { overflow: hidden; }
        .desktop-layout ma padding-top: 1rem, więc sidebar naturalnie zaczyna
        16px poniżej dołu headera. Sticky musi uwzględniać ten offset,
        żeby sidebar nie poruszył się ani o piksel przy scrollowaniu. */
-    top: calc(var(--chrome-strip-height, 64px) + 1rem);
+    top: calc(var(--chrome-strip-height, 64px) + 1rem) !important;
     align-self: start;
     justify-self: stretch;
     grid-column: 1;
@@ -874,7 +874,7 @@ body.chrome-drawer-open { overflow: hidden; }
       /* Sticky podczas przewijania — analogicznie do lewego sidebara,
          uwzględniamy padding-top: 1rem .desktop-layout żeby sidebar nie ruszył się przy scrollu. */
       position: sticky;
-      top: calc(var(--chrome-strip-height, 64px) + 1rem);
+      top: calc(var(--chrome-strip-height, 64px) + 1rem) !important;
       align-self: start;
       max-height: calc(100vh - var(--chrome-strip-height, 64px) - 1rem);
       /* Zawartość (mini-summary + skróty + steroid-summary) potrafi być wyższa niż
