@@ -113,6 +113,7 @@ html.vilda-pro-inactive.vilda-logged-in #resultsModeToggleContainer .switch,
 html.vilda-pro-inactive.vilda-logged-in #resultsModeToggleContainer .switch *,
 html.vilda-pro-inactive.vilda-logged-in #resultsModeToggleContainer .label-left,
 html.vilda-pro-inactive.vilda-logged-in #resultsModeToggleContainer .label-right { display: none; }
+html.vilda-pro-inactive.vilda-logged-in #resultsModeToggleContainer { display: block; }
 html.vilda-pro-inactive.vilda-logged-in .vilda-pro-gate-banner--upgrade { display: flex; }
 
 /* === PRO-inactive + niezalogowany → pokaż baner E (turkus), ukryj toggle === */
@@ -120,17 +121,20 @@ html.vilda-pro-inactive:not(.vilda-logged-in) #resultsModeToggleContainer .switc
 html.vilda-pro-inactive:not(.vilda-logged-in) #resultsModeToggleContainer .switch *,
 html.vilda-pro-inactive:not(.vilda-logged-in) #resultsModeToggleContainer .label-left,
 html.vilda-pro-inactive:not(.vilda-logged-in) #resultsModeToggleContainer .label-right { display: none; }
+html.vilda-pro-inactive:not(.vilda-logged-in) #resultsModeToggleContainer { display: block; }
 html.vilda-pro-inactive:not(.vilda-logged-in) .vilda-pro-gate-banner--login { display: flex; }
 
 /* === Baner — wspólne === */
 .vilda-pro-gate-banner {
+  width: 100%;
+  box-sizing: border-box;
   align-items: center;
+  justify-content: space-between;
   gap: .5rem;
   font-size: .82rem;
-  border-radius: 999px;
-  padding: .28rem .55rem .28rem .75rem;
-  white-space: nowrap;
-  line-height: 1.2;
+  border-radius: 10px;
+  padding: .38rem .5rem .38rem .8rem;
+  line-height: 1.3;
 }
 .vilda-pro-gate-banner__text {
   flex: 1 1 auto;
@@ -139,7 +143,7 @@ html.vilda-pro-inactive:not(.vilda-logged-in) .vilda-pro-gate-banner--login { di
 .vilda-pro-gate-banner__btn {
   border: none;
   border-radius: 999px;
-  padding: .22rem .7rem;
+  padding: .24rem .75rem;
   font-size: .78rem;
   font-weight: 600;
   cursor: pointer;
