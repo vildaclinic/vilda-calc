@@ -1466,7 +1466,13 @@ function vildaCustomHasHtmlContent(element) {
       shortcutsDiv.style.display = 'none';
     } else {
       // Initialise generic shortcuts UI for other pages
-      initShortcuts();
+      try {
+        initShortcuts();
+      } catch (ex) {
+        if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+          globalThis.vildaLogSwallowedCatch('custom-fixes.js', ex, { fn: 'initShortcuts' });
+        }
+      }
     }
     // Update contents initially. Mini-summary jest teraz zawsze widoczne w
     // decor-sidebarze (>=1400px) — wcześniejszy IntersectionObserver na ostatniej
@@ -3170,7 +3176,13 @@ function vildaCustomHasHtmlContent(element) {
     }
   }
     // Render the list
-    renderShortcuts();
+    try {
+      renderShortcuts();
+    } catch (ex) {
+      if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+        globalThis.vildaLogSwallowedCatch('custom-fixes.js', ex, { fn: 'renderShortcuts-in-initShortcuts' });
+      }
+    }
   }
 
   // initMiniSummary() musi być uruchomione DOPIERO gdy auth UI zostanie schowane
