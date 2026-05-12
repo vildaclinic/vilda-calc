@@ -27,8 +27,8 @@
     return;
   }
 
-  const VERSION = '2.6.4';
-  const STEP = '8R-14';
+  const VERSION = '2.6.5';
+  const STEP = '8R-15';
   const ROOT_ID = 'vilda-auth-ui-root';
   const IDLE_EVENTS = ['mousedown', 'keydown', 'touchstart', 'scroll', 'pointerdown'];
   const PWA_GUEST_FLAG = 'VildaGuestMode';
@@ -2635,6 +2635,21 @@
             if (_hasLocalPro || !global.VildaProAccess) {
               global.VildaProUi.refresh();
             }
+          }
+          // Gdy PRO potwierdzone z lokalnego cache → odpal vildaProAccessChanged
+          // żeby app.js auto-włączył tryb profesjonalny przy każdym logowaniu.
+          // (Ścieżka serwera odpala setPlan → vildaProAccessChanged osobno;
+          //  ta gałąź obsługuje przypadek gdy cache jest ważny i serwer jest pomijany.)
+          if (_hasLocalPro && global.document) {
+            var _proSnap = (typeof global.VildaProAccess.getSnapshot === 'function')
+              ? global.VildaProAccess.getSnapshot() : null;
+            global.document.dispatchEvent(new CustomEvent('vildaProAccessChanged', {
+              bubbles: false,
+              detail: {
+                plan:       (_proSnap && _proSnap.plan)       || 'pro',
+                validUntil: (_proSnap && _proSnap.validUntil) || null
+              }
+            }));
           }
         } catch (_) {}
         // 2c: badge synchroniczny z wczesnym refresh — jeśli mamy cache PRO,
