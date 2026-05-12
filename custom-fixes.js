@@ -1344,13 +1344,14 @@ function vildaCustomHasHtmlContent(element) {
     if (!decor) return;
     // Avoid duplicate summary
     if (document.getElementById('miniSummary')) return;
-    // Create the summary element — mountujemy w decor-sidebarze i pokazujemy
-    // od razu (już nie ukrywamy/odsłaniamy przez IntersectionObserver, bo
-    // menu jest teraz sticky i zawsze widoczne).
+    // Tworzymy element bez ustawiania display — CSS .mini-summary ma domyślnie
+    // display:none. updateMiniSummary() pokaże element (display:block) dopiero
+    // gdy będą dane pacjenta. Wcześniejsze mini.style.display = 'block' przy
+    // tworzeniu elementu powodowało widoczne puste pole z paddingiem/borderem
+    // zanim updateMiniSummary() zdążyło element ukryć.
     var mini = document.createElement('div');
     mini.id = 'miniSummary';
     mini.className = 'mini-summary';
-    mini.style.display = 'block';
     decor.appendChild(mini);
     // Create subcontainers for summary content and shortcuts
     var contentDiv = document.createElement('div');
@@ -1415,7 +1416,8 @@ function vildaCustomHasHtmlContent(element) {
         if (miniEl) miniEl.style.display = 'none';
       } else {
         if (miniEl) {
-          miniEl.style.display = 'block';
+          // Nie ustawiamy display:block bezwarunkowo — updateMiniSummary()
+          // samo zdecyduje: pokaże (block) jeśli są dane, ukryje (none) jeśli nie.
           updateMiniSummary();
         } else {
           // Ponowna próba mountu (gdy decor-sidebar pojawił się dopiero teraz)
