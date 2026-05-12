@@ -807,18 +807,17 @@
       }
       .ww-welcome-close:hover { background: rgba(255,255,255,0.32); }
       .ww-welcome-brand {
-        display: inline-flex; align-items: center; gap: 10px;
-        background: rgba(255,255,255,0.18);
-        border-radius: 999px; padding: 6px 16px 6px 6px;
+        display: inline-flex; flex-direction: column; align-items: center; gap: 8px;
         margin-bottom: 1rem;
       }
       .ww-welcome-logo {
-        width: 40px; height: 40px; border-radius: 10px;
+        width: 64px; height: 64px; border-radius: 16px;
         object-fit: contain; flex-shrink: 0;
         background: rgba(255,255,255,0.15);
+        padding: 6px;
       }
       .ww-welcome-brand span {
-        font-size: 0.82rem; font-weight: 700; color: #fff; letter-spacing: 0.03em;
+        font-size: 0.82rem; font-weight: 700; color: rgba(255,255,255,0.85); letter-spacing: 0.03em;
       }
       .ww-welcome-title {
         margin: 0 0 0.4rem; font-size: 1.3rem; font-weight: 700;
@@ -906,7 +905,7 @@
         .ww-btn-ghost-small { font-size: 0.83rem; }
         .ww-pro-feature-title { font-size: 0.9rem; }
         .ww-pro-feature-desc { font-size: 0.8rem; }
-        .ww-welcome-logo { width: 48px; height: 48px; border-radius: 12px; }
+        .ww-welcome-logo { width: 72px; height: 72px; border-radius: 18px; }
         .ww-welcome-brand span { font-size: 0.88rem; }
       }
 
@@ -1406,11 +1405,11 @@
           <div class="ww-welcome-head">
             <button type="button" class="ww-welcome-close ww-js-dismiss" aria-label="Zamknij">${svgClose}</button>
             <div class="ww-welcome-brand">
-              <img src="pwa-icons/icon-192x192.png" alt="wagaiwzrost.pl" class="ww-welcome-logo">
+              <img src="/pwa-icons/icon-192x192.png" alt="wagaiwzrost.pl" class="ww-welcome-logo">
               <span>wagaiwzrost.pl</span>
             </div>
             <h2 id="ww-onboarding-title" class="ww-welcome-title">Witaj w aplikacji</h2>
-            <p class="ww-welcome-subtitle">Centyle, BMI i wskaźniki zdrowia — dla dzieci i dorosłych.</p>
+            <p class="ww-welcome-subtitle">Centyle, wskaźniki zdrowia i normy — dla dzieci i dorosłych.</p>
           </div>
           <div class="ww-welcome-body">
             <button type="button" class="ww-pill-btn ww-btn-doctor-main ww-js-to-screen2">
