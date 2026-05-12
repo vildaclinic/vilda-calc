@@ -3010,12 +3010,12 @@ function vildaCustomHasHtmlContent(element) {
       });
       listEl.appendChild(row);
     });
-    // Widoczność "Dodaj skrót" — tylko w trybie edycji i poniżej limitu
-    var addBtn = document.getElementById('addShortcutBtn');
-    if (addBtn) {
-      var editCont = document.getElementById('miniShortcutsContainer');
-      var isEditMode = editCont && editCont.classList.contains('is-editing');
-      addBtn.style.display = (isEditMode && currentShortcuts.length < shortcutMax) ? '' : 'none';
+    // Jeśli jesteśmy w trybie edycji i osiągnęliśmy limit skrótów,
+    // zamknij dropdown (brak wolnych slotów).
+    var editCont2 = document.getElementById('miniShortcutsContainer');
+    if (editCont2 && editCont2.classList.contains('is-editing') && currentShortcuts.length >= shortcutMax) {
+      var dropEl = document.getElementById('shortcutDropdown');
+      if (dropEl) dropEl.parentElement.removeChild(dropEl);
     }
   }
 
@@ -3039,119 +3039,79 @@ function vildaCustomHasHtmlContent(element) {
     renderShortcuts();
   }
 
-  // Show the dropdown list for adding a shortcut
+  // Pokaż listę dostępnych skrótów do dodania (wywoływana przez “Edytuj”).
+  // Nie zależy od przycisku “Dodaj skrót” — działa w kontekście trybu edycji.
+  // Po wyborze pozycji odświeża się sama, jeśli są jeszcze wolne sloty i tryb
+  // edycji jest aktywny.  Zamknięcie przez klik poza dropdown NIE wyłącza
+  // trybu edycji — to robi tylko przycisk “Gotowe”.
   function showShortcutSelect() {
-    var addBtn   = document.getElementById('addShortcutBtn');
-    var container = document.getElementById('miniShortcutsContainer');
-    if (!addBtn || !container) return;
-    // Remove any existing dropdown
-    var existingDropdown = document.getElementById('shortcutDropdown');
-    if (existingDropdown) {
-      existingDropdown.parentElement.removeChild(existingDropdown);
-    }
-    // Compute available items (cards or formulas depending on page)
+    var container = document.getElementById(‘miniShortcutsContainer’);
+    if (!container) return;
+    // Nie pokazuj jeśli tryb edycji nieaktywny lub osiągnięto limit
+    if (!container.classList.contains(‘is-editing’)) return;
+    if (currentShortcuts.length >= shortcutMax) return;
+
+    // Usuń istniejący dropdown
+    var existingDropdown = document.getElementById(‘shortcutDropdown’);
+    if (existingDropdown) existingDropdown.parentElement.removeChild(existingDropdown);
+
+    // Dostępne pozycje (jeszcze nie dodane)
     var list = [];
-    try {
-      list = computeAvailableCards();
-    } catch (ex) {
-      list = [];
-    }
-    // Filter out items that are already added
+    try { list = computeAvailableCards(); } catch (ex) { list = []; }
     var options = list.filter(function(item) {
       return currentShortcuts.indexOf(item.id) === -1;
     });
-    // If no options remain, do nothing
     if (!options.length) return;
-    // Build a custom dropdown using divs so we can control spacing and wrapping
-    var dd = document.createElement('div');
-    dd.id = 'shortcutDropdown';
-    dd.className = 'shortcut-dropdown';
-    // Apply inline styles to ensure the dropdown always has a solid white
-    // background and no backdrop blur, regardless of theme CSS.  Inline
-    // styles take precedence over most external rules unless those rules
-    // also specify !important.  We avoid !important here because the
-    // Liquid Glass theme does not mark the dropdown background as important.
-    dd.style.background = '#ffffff';
-    dd.style.backdropFilter = 'none';
-    dd.style.webkitBackdropFilter = 'none';
+
+    // Zbuduj dropdown
+    var dd = document.createElement(‘div’);
+    dd.id = ‘shortcutDropdown’;
+    dd.className = ‘shortcut-dropdown’;
+    dd.style.background = ‘#ffffff’;
+    dd.style.backdropFilter = ‘none’;
+    dd.style.webkitBackdropFilter = ‘none’;
+
     options.forEach(function(item) {
-      var optDiv = document.createElement('div');
-      optDiv.className = 'shortcut-option';
+      var optDiv = document.createElement(‘div’);
+      optDiv.className = ‘shortcut-option’;
       optDiv.textContent = item.title;
       optDiv.dataset.id = item.id;
-      // Allow long titles to wrap instead of being truncated
-      optDiv.style.whiteSpace = 'normal';
-      optDiv.style.wordBreak = 'break-word';
-      optDiv.addEventListener('click', function() {
-        addShortcut(item.id);
-        // Remove dropdown after selection
-        var drop = document.getElementById('shortcutDropdown');
-        if (drop) drop.parentElement.removeChild(drop);
-        // Restore the add button if we still have capacity
-        if (currentShortcuts.length < shortcutMax) {
-          addBtn.style.display = '';
+      optDiv.style.whiteSpace = ‘normal’;
+      optDiv.style.wordBreak = ‘break-word’;
+      optDiv.addEventListener(‘click’, function() {
+        if (typeof outsideClickHandler === ‘function’) {
+          document.removeEventListener(‘click’, outsideClickHandler, true);
         }
-        // Remove outside click handler since the dropdown is gone
-        if (typeof outsideClickHandler === 'function') {
-          document.removeEventListener('click', outsideClickHandler, true);
+        var drop = document.getElementById(‘shortcutDropdown’);
+        if (drop) drop.parentElement.removeChild(drop);
+        addShortcut(item.id);
+        // Jeśli tryb edycji nadal aktywny i są wolne sloty — odśwież listę
+        if (container.classList.contains(‘is-editing’) && currentShortcuts.length < shortcutMax) {
+          showShortcutSelect();
         }
       });
       dd.appendChild(optDiv);
     });
-    // Add a cancel option so the user can close the dropdown without adding a shortcut
-    var cancelRow = document.createElement('div');
-    cancelRow.className = 'shortcut-option cancel-option';
-    cancelRow.textContent = 'Anuluj';
-    cancelRow.addEventListener('click', function() {
-      var drop = document.getElementById('shortcutDropdown');
-      if (drop) drop.parentElement.removeChild(drop);
-      addBtn.style.display = '';
-      // Remove outside click handler when closing via cancel
-      if (typeof outsideClickHandler === 'function') {
-        document.removeEventListener('click', outsideClickHandler, true);
-      }
-    });
-    dd.appendChild(cancelRow);
-    // Insert the dropdown after the add button
-    container.insertBefore(dd, addBtn.nextSibling);
-    // Hide the add button while the dropdown is open
-    addBtn.style.display = 'none';
 
-    // Close the dropdown when clicking anywhere outside of it.  We attach
-    // this handler after a short delay to avoid capturing the click that
-    // triggered the dropdown to open.  By registering the listener in
-    // the capture phase (third argument `true`), we ensure it fires
-    // before other handlers and catches clicks even if they occur deep
-    // within nested elements.  Once a click outside the dropdown is
-    // detected, the dropdown is removed and the add button is shown
-    // again.  The handler is cleaned up automatically in all
-    // closure paths (selection, cancel, or outside click).
+    // Wstaw dropdown na końcu kontenera (za przyciskiem “Gotowe”)
+    container.appendChild(dd);
+
+    // Klik poza dropdown — tylko zamknij listę, nie wychodź z trybu edycji
     var outsideClickHandler;
     outsideClickHandler = function(ev) {
-      var drop = document.getElementById('shortcutDropdown');
-      // If the dropdown has already been removed, unregister the handler.
+      var drop = document.getElementById(‘shortcutDropdown’);
       if (!drop) {
-        document.removeEventListener('click', outsideClickHandler, true);
+        document.removeEventListener(‘click’, outsideClickHandler, true);
         return;
       }
-      // Ignore clicks on the dropdown itself (or within it) so that
-      // selecting an option doesn’t immediately close the list.
-      if (drop.contains(ev.target)) {
-        return;
-      }
-      // Also ignore the click if it’s on the “Add shortcut” button,
-      // which may still be hidden but could be clicked very quickly
-      // before display is toggled.
-      if (ev.target === addBtn) {
-        return;
-      }
-      // For any other click, close the dropdown and restore the add button.
+      if (drop.contains(ev.target)) return;
+      var editBtnEl = document.getElementById(‘editShortcutsBtn’);
+      if (editBtnEl && ev.target === editBtnEl) return;
       drop.parentElement.removeChild(drop);
-      addBtn.style.display = '';
-      document.removeEventListener('click', outsideClickHandler, true);
+      document.removeEventListener(‘click’, outsideClickHandler, true);
     };
     setTimeout(function() {
-      document.addEventListener('click', outsideClickHandler, true);
+      document.addEventListener(‘click’, outsideClickHandler, true);
     }, 0);
   }
 
@@ -3170,9 +3130,10 @@ function vildaCustomHasHtmlContent(element) {
     list.id = 'shortcutList';
     container.appendChild(list);
 
-    // Przycisk "Edytuj" — przełącza tryb edycji (wyświetla × obok każdego
-    // skrótu i pokazuje przycisk "Dodaj skrót").  Po ponownym kliknięciu
-    // zmienia się w "Gotowe" i wraca do widoku normalnego.
+    // Jeden przycisk "Edytuj" / "Gotowe":
+    // - wejście w tryb edycji: pojawia się ×, otwiera się lista dostępnych
+    //   skrótów do dodania (showShortcutSelect).
+    // - "Gotowe": wyjście z trybu edycji, zamknięcie dropdownu.
     var editBtn = document.createElement('button');
     editBtn.type = 'button';
     editBtn.id = 'editShortcutsBtn';
@@ -3181,43 +3142,16 @@ function vildaCustomHasHtmlContent(element) {
     editBtn.addEventListener('click', function() {
       var editing = container.classList.toggle('is-editing');
       editBtn.textContent = editing ? 'Gotowe' : 'Edytuj';
-      // Pokaż/ukryj przycisk "Dodaj skrót" zależnie od trybu i limitu
-      var addNewBtn = document.getElementById('addShortcutBtn');
-      if (addNewBtn) {
-        addNewBtn.style.display = (editing && currentShortcuts.length < shortcutMax) ? '' : 'none';
+      if (editing) {
+        // Otwórz listę dostępnych skrótów od razu po wejściu w tryb edycji
+        showShortcutSelect();
+      } else {
+        // Wyjście: zamknij dropdown jeśli otwarty
+        var drop = document.getElementById('shortcutDropdown');
+        if (drop) drop.parentElement.removeChild(drop);
       }
     });
     container.appendChild(editBtn);
-
-    // Przycisk "Dodaj skrót" — widoczny tylko w trybie edycji
-    var addBtn = document.createElement('button');
-    addBtn.type = 'button';
-    addBtn.id = 'addShortcutBtn';
-    addBtn.className = 'add-shortcut-btn';
-    addBtn.textContent = 'Dodaj skrót';
-    addBtn.style.display = 'none';
-    addBtn.addEventListener('click', function() {
-      showShortcutSelect();
-    });
-    container.appendChild(addBtn);
-    // Select element for choosing new card
-    var selectEl = document.createElement('select');
-    selectEl.id = 'shortcutSelect';
-    selectEl.style.display = 'none';
-    selectEl.addEventListener('change', function() {
-      var cid = selectEl.value;
-      if (cid) {
-        addShortcut(cid);
-      }
-      // Reset selection and hide
-      selectEl.selectedIndex = 0;
-      selectEl.style.display = 'none';
-      // Show add button again if capacity allows
-      if (currentShortcuts.length < shortcutMax) {
-        addBtn.style.display = '';
-      }
-    });
-    container.appendChild(selectEl);
     // Load from storage
     loadShortcuts();
     // Remove any shortcuts whose cards are no longer available (e.g. filtered
