@@ -2172,6 +2172,17 @@
       credentialId || null, rpId, signal || null
     );
 
+    // Guard: jeśli abort nastąpił w trakcie lub tuż po weryfikacji biometrycznej
+    // (race condition: credentials.get() zdążył się rozwiązać zanim sygnał abort
+    // dotarł do przeglądarki), nie kontynuujemy — adoptMasterBytes() wywołałoby
+    // notifyUnlock() po tym jak lock() już się wykonał, zostawiając vault w stanie
+    // sprzecznym (odblokowany po wylogowaniu).
+    if (signal && signal.aborted) {
+      const abortErr = new Error('AbortError: passkey authentication aborted');
+      abortErr.name = 'AbortError';
+      throw abortErr;
+    }
+
     // 2. Znajdź pasujący wpis w meta.passkeys
     const entry = meta.passkeys.find(p => p.credentialId === returnedId);
     if (!entry) {
