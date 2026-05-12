@@ -2206,7 +2206,7 @@ function vildaCustomHasHtmlContent(element) {
         }
         if (source) {
           // Sort the formulas by label using Polish locale to match the
-          // application’s alphabetical ordering.
+          // application's alphabetical ordering.
           var sorted = source.slice().sort(function(a, b) {
             return (a.label || '').localeCompare(b.label || '', 'pl', { sensitivity: 'base' });
           });
@@ -3051,14 +3051,14 @@ function vildaCustomHasHtmlContent(element) {
   // edycji jest aktywny.  Zamknięcie przez klik poza dropdown NIE wyłącza
   // trybu edycji — to robi tylko przycisk “Gotowe”.
   function showShortcutSelect() {
-    var container = document.getElementById(‘miniShortcutsContainer’);
+    var container = document.getElementById('miniShortcutsContainer');
     if (!container) return;
     // Nie pokazuj jeśli tryb edycji nieaktywny lub osiągnięto limit
-    if (!container.classList.contains(‘is-editing’)) return;
+    if (!container.classList.contains('is-editing')) return;
     if (currentShortcuts.length >= shortcutMax) return;
 
     // Usuń istniejący dropdown
-    var existingDropdown = document.getElementById(‘shortcutDropdown’);
+    var existingDropdown = document.getElementById('shortcutDropdown');
     if (existingDropdown) existingDropdown.parentElement.removeChild(existingDropdown);
 
     // Dostępne pozycje (jeszcze nie dodane)
@@ -3070,29 +3070,29 @@ function vildaCustomHasHtmlContent(element) {
     if (!options.length) return;
 
     // Zbuduj dropdown
-    var dd = document.createElement(‘div’);
-    dd.id = ‘shortcutDropdown’;
-    dd.className = ‘shortcut-dropdown’;
-    dd.style.background = ‘#ffffff’;
-    dd.style.backdropFilter = ‘none’;
-    dd.style.webkitBackdropFilter = ‘none’;
+    var dd = document.createElement('div');
+    dd.id = 'shortcutDropdown';
+    dd.className = 'shortcut-dropdown';
+    dd.style.background = '#ffffff';
+    dd.style.backdropFilter = 'none';
+    dd.style.webkitBackdropFilter = 'none';
 
     options.forEach(function(item) {
-      var optDiv = document.createElement(‘div’);
-      optDiv.className = ‘shortcut-option’;
+      var optDiv = document.createElement('div');
+      optDiv.className = 'shortcut-option';
       optDiv.textContent = item.title;
       optDiv.dataset.id = item.id;
-      optDiv.style.whiteSpace = ‘normal’;
-      optDiv.style.wordBreak = ‘break-word’;
-      optDiv.addEventListener(‘click’, function() {
-        if (typeof outsideClickHandler === ‘function’) {
-          document.removeEventListener(‘click’, outsideClickHandler, true);
+      optDiv.style.whiteSpace = 'normal';
+      optDiv.style.wordBreak = 'break-word';
+      optDiv.addEventListener('click', function() {
+        if (typeof outsideClickHandler === 'function') {
+          document.removeEventListener('click', outsideClickHandler, true);
         }
-        var drop = document.getElementById(‘shortcutDropdown’);
+        var drop = document.getElementById('shortcutDropdown');
         if (drop) drop.parentElement.removeChild(drop);
         addShortcut(item.id);
         // Jeśli tryb edycji nadal aktywny i są wolne sloty — odśwież listę
-        if (container.classList.contains(‘is-editing’) && currentShortcuts.length < shortcutMax) {
+        if (container.classList.contains('is-editing') && currentShortcuts.length < shortcutMax) {
           showShortcutSelect();
         }
       });
@@ -3105,19 +3105,19 @@ function vildaCustomHasHtmlContent(element) {
     // Klik poza dropdown — tylko zamknij listę, nie wychodź z trybu edycji
     var outsideClickHandler;
     outsideClickHandler = function(ev) {
-      var drop = document.getElementById(‘shortcutDropdown’);
+      var drop = document.getElementById('shortcutDropdown');
       if (!drop) {
-        document.removeEventListener(‘click’, outsideClickHandler, true);
+        document.removeEventListener('click', outsideClickHandler, true);
         return;
       }
       if (drop.contains(ev.target)) return;
-      var editBtnEl = document.getElementById(‘editShortcutsBtn’);
+      var editBtnEl = document.getElementById('editShortcutsBtn');
       if (editBtnEl && ev.target === editBtnEl) return;
       drop.parentElement.removeChild(drop);
-      document.removeEventListener(‘click’, outsideClickHandler, true);
+      document.removeEventListener('click', outsideClickHandler, true);
     };
     setTimeout(function() {
-      document.addEventListener(‘click’, outsideClickHandler, true);
+      document.addEventListener('click', outsideClickHandler, true);
     }, 0);
   }
 
