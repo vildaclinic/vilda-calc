@@ -405,6 +405,16 @@
     if (!rootEl) return;
     rootEl.style.display = 'none';
     clear(rootEl);
+    // Sygnalizuj że auth UI zostało schowane — użytkownik jest już w aplikacji
+    // (zalogowany, tryb gościa, lub przywrócona sesja). Używane przez custom-fixes.js
+    // do opóźnienia initMiniSummary() aż do tego momentu, by uniknąć pokazania
+    // mini-summary z danymi poprzedniej sesji zanim pojawi się nakładka logowania.
+    try { global.__vildaAuthHidden = true; } catch (_) {}
+    try {
+      if (global.document && typeof global.CustomEvent === 'function') {
+        global.document.dispatchEvent(new global.CustomEvent('vilda:auth-hidden'));
+      }
+    } catch (_) {}
   }
 
   // ============ DYSPOZYTOR EKRANU STARTOWEGO ============
