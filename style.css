@@ -10,6 +10,18 @@
 }
 *{box-sizing:border-box;}
 body{margin:0;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);display: flex;flex-direction: column;}
+
+/* ============ GLOBALNY SCROLL OFFSET DLA STICKY HEADERA ============
+   Sticky header działa tylko na ≥992px (vilda_chrome.css).
+   scroll-padding-top sprawia, że scrollIntoView i kotwice #hash
+   zatrzymują się z marginesem powyżej elementu docelowego,
+   tak aby header go nie zasłaniał.
+   Reguła działa na html jako kontenerze scrollowania (body: flex, bez overflow:hidden). */
+@media (min-width: 992px) {
+  html {
+    scroll-padding-top: calc(var(--chrome-strip-height, 64px) + 12px);
+  }
+}
 header{background:var(--primary);color:#fff;text-align:center;padding:1rem;}
 h1{margin:0;font-size:clamp(1.4rem,3vw,2rem);}  
 .container {

@@ -135,22 +135,52 @@ function vildaCustomHasHtmlContent(element) {
 
   /**
    * Disable or restore scrollIntoView based on viewport width.
-   * On narrow screens (<700 px) scrollIntoView is overridden with a
-   * no‑op to prevent automatic scrolling when toggling result modes.
-   * On wider screens the original method is restored.
+   *
+   * Narrow screens (<700 px):
+   *   scrollIntoView → no-op, aby zapobiec automatycznemu scrollowaniu
+   *   przy przełączaniu trybu wyników.
+   *
+   * Desktop (≥992 px):
+   *   scrollIntoView → wrappowany w setTimeout(fn, 50 ms), co daje
+   *   przeglądarce czas na przeliczenie layoutu po poprzedzających
+   *   zmianach DOM (np. el.open = true w akordeonach ustawień lub
+   *   toggle kart na głównej).  Bez tego delay scroll trafia w złe
+   *   miejsce, bo element nie zdążył jeszcze rozwinąć się w DOM.
+   *   Wartość 50 ms jest niezauważalna dla użytkownika, a wystarczająca
+   *   dla pełnego reflow.  Skróty mini-summary mają własny setTimeout
+   *   (150–200 ms), więc dodatkowe 50 ms jest dla nich nieistotne.
+   *
+   * Tablet (700–991 px):
+   *   Header nie jest sticky → oryginalne scrollIntoView bez zmian.
    */
   function toggleAutoScrollDisable() {
     if (window.innerWidth < 700) {
-      if (!Element.prototype._originalScrollIntoView) {
-        Element.prototype._originalScrollIntoView = Element.prototype.scrollIntoView;
+      // Mobile: no-op
+      if (!Element.prototype._vildaOrigScrollIntoView) {
+        Element.prototype._vildaOrigScrollIntoView = Element.prototype.scrollIntoView;
         Element.prototype.scrollIntoView = function() {
           // Intentionally do nothing on small screens
         };
       }
+    } else if (window.innerWidth >= 992) {
+      // Desktop: sticky header aktywny — wrap w setTimeout dla poprawnego timingu layoutu
+      if (!Element.prototype._vildaOrigScrollIntoView) {
+        Element.prototype._vildaOrigScrollIntoView = Element.prototype.scrollIntoView;
+        Element.prototype.scrollIntoView = function(opts) {
+          var el = this;
+          var options = opts;
+          setTimeout(function() {
+            try {
+              Element.prototype._vildaOrigScrollIntoView.call(el, options);
+            } catch (e) { /* ignoruj błędy scrollowania */ }
+          }, 50);
+        };
+      }
     } else {
-      if (Element.prototype._originalScrollIntoView) {
-        Element.prototype.scrollIntoView = Element.prototype._originalScrollIntoView;
-        delete Element.prototype._originalScrollIntoView;
+      // Tablet (700–991 px): header nie jest sticky, przywróć oryginał
+      if (Element.prototype._vildaOrigScrollIntoView) {
+        Element.prototype.scrollIntoView = Element.prototype._vildaOrigScrollIntoView;
+        delete Element.prototype._vildaOrigScrollIntoView;
       }
     }
   }
