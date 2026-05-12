@@ -206,12 +206,18 @@
     border-radius: 10px;
     border: 1px solid rgba(0, 0, 0, 0.07);
     background: #ffffff;
+    box-shadow: none !important;
     cursor: pointer;
     pointer-events: auto !important;
     box-sizing: border-box;
   }
   .mini-summary .shortcut-row:first-child {
     margin-top: 0;
+  }
+  /* Brak efektu hover na kartach skrótów */
+  .mini-summary .shortcut-row:hover {
+    background: #ffffff !important;
+    box-shadow: none !important;
   }
   /* Turkusowa kropka przed tekstem */
   .mini-summary .shortcut-row::before {
@@ -225,7 +231,7 @@
   .mini-summary .shortcut-row[title] {
     pointer-events: auto !important;
   }
-  /* Tekst skrótu — bez własnego tła/bordera, wypełnia resztę wiersza */
+  /* Tekst skrótu — bez własnego tła/bordera */
   .mini-summary .shortcut-link {
     flex: 1 1 auto;
     display: inline-flex;
@@ -238,22 +244,14 @@
     padding: 0 !important;
     font-size: 0.84rem;
     font-weight: 500;
-    cursor: pointer;
+    cursor: inherit;
     text-align: left;
-    pointer-events: auto !important;
-  }
-  .mini-summary .shortcut-link:hover {
-    background: none !important;
-    color: var(--primary, #00838d) !important;
+    pointer-events: none;  /* klik obsługuje row, nie link */
   }
   /* Wyłączony skrót (WFL > 2 lat) */
   .mini-summary .shortcut-link.disabled-shortcut {
     color: #9eb8bb !important;
-    cursor: default !important;
     pointer-events: auto !important;
-  }
-  .mini-summary .shortcut-link.disabled-shortcut:hover {
-    color: #9eb8bb !important;
   }
   /* Przycisk × — ukryty domyślnie */
   .mini-summary .shortcut-remove {
@@ -275,11 +273,11 @@
     margin-left: auto;
     pointer-events: auto !important;
   }
-  /* W trybie edycji row nie jest klikalny → kursor normalny */
+  /* W trybie edycji row nie jest klikalny */
   .mini-summary .mini-shortcuts.is-editing .shortcut-row {
     cursor: default;
   }
-  /* Przycisk “Edytuj” / “Gotowe” — karta identyczna jak shortcut-row */
+  /* Przycisk “Edytuj” / “Gotowe” */
   .mini-summary .shortcut-edit-btn {
     display: flex !important;
     align-items: center;
@@ -290,27 +288,8 @@
     border-radius: 10px !important;
     border: 1px solid rgba(0, 0, 0, 0.07) !important;
     background: #ffffff !important;
+    box-shadow: none !important;
     color: var(--primary, #00838d) !important;
-    font-size: 0.84rem;
-    font-weight: 500;
-    cursor: pointer;
-    box-sizing: border-box;
-    pointer-events: auto !important;
-  }
-  .mini-summary .shortcut-edit-btn:hover {
-    background: rgba(0, 131, 141, 0.05) !important;
-  }
-  /* Przycisk “Dodaj skrót” — ten sam styl co karta, z •  */
-  .mini-summary .add-shortcut-btn {
-    display: flex !important;
-    align-items: center;
-    width: 100%;
-    margin-top: 0.3rem;
-    padding: 0.45rem 0.75rem !important;
-    border-radius: 10px !important;
-    border: 1px solid rgba(0, 0, 0, 0.07) !important;
-    background: #ffffff !important;
-    color: #1a3536 !important;
     font-size: 0.84rem;
     font-weight: 500;
     cursor: pointer;
@@ -318,16 +297,9 @@
     pointer-events: auto !important;
     text-decoration: none !important;
   }
-  .mini-summary .add-shortcut-btn::before {
-    content: '•';
-    color: var(--primary, #00838d);
-    font-size: 1.1rem;
-    line-height: 1;
-    margin-right: 0.55rem;
-    flex: 0 0 auto;
-  }
-  .mini-summary .add-shortcut-btn:hover {
-    background: rgba(0, 131, 141, 0.05) !important;
+  .mini-summary .shortcut-edit-btn:hover {
+    background: #ffffff !important;
+    box-shadow: none !important;
   }
   .mini-summary #shortcutSelect {
     /* Add a margin so the dropdown is separated from preceding content */
