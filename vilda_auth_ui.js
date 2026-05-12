@@ -223,6 +223,13 @@
       if (_miniContent) _miniContent.innerHTML = '';
       var _miniEl = global.document && global.document.getElementById('miniSummary');
       if (_miniEl) _miniEl.style.display = 'none';
+      // Usuń też klasę wizualną z kontenera — bez tego decor-sidebar zostałby
+      // widoczny jako puste pudełko mimo braku contentu (sidebar.css wymaga klasy
+      // decor-sidebar--has-content żeby pokazać tło/cień/padding).
+      var _decorEl = _miniEl && (typeof _miniEl.closest === 'function')
+        ? _miniEl.closest('.decor-sidebar')
+        : (global.document && global.document.querySelector('.desktop-layout .decor-sidebar'));
+      if (_decorEl) _decorEl.classList.remove('decor-sidebar--has-content');
     } catch (_) { /* nie blokuj resetu jeśli DOM niedostępny */ }
   }
 
