@@ -833,6 +833,9 @@
     var valueEl = doc.getElementById('vildaPatientValue');
     if (!valueEl) return;
 
+    var labelEl = chip.querySelector('.chip-label');
+    if (labelEl) labelEl.style.display = (global.VildaGuestMode === true) ? 'none' : '';
+
     var drawerValueEl = doc.querySelector('[data-vilda-chrome-drawer-patient-value]');
 
     // VildaSession.getPatient() próbuje najpierw pól formularza, a gdy ich brak

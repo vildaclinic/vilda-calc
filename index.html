@@ -517,12 +517,14 @@ html.vilda-pro-inactive:not(.vilda-logged-in) .vilda-pro-gate-banner--login { di
          Przenosimy komunikat „Podaj jednocześnie wiek, wagę i wzrost” do prawej kolumny formularza
          oraz umieszczamy pod nim informację o konieczności podania imienia i zapisania danych,
          a także link do materiału wideo z instrukcją (href pozostaw pusty, aby uzupełnić później). -->
-    <div id="infoMessages" class="card info-card">
-      <div id="errorBox"></div>
-      <div id="compareInstruction" class="compare-instruction">
-        Podaj jednocześnie wiek, wagę i&nbsp;wzrost, aby natychmiast zobaczyć wyniki.
-        Zalogowani użytkownicy otrzymują pełniejszą analizę i&nbsp;dostęp do historii pomiarów&nbsp;—
-        <a href="subskrypcja.html">wypróbuj PRO bezpłatnie przez 30&nbsp;dni</a>.
+    <div id="infoMessages" class="card info-card" style="padding:0;overflow:hidden;">
+      <div id="errorBox" style="padding:1.1rem 1.4rem;margin:0;"></div>
+      <div id="compareInstruction" class="compare-instruction" style="padding:1.1rem 1.4rem;margin:0;border-top:1px solid #d0dede;">
+        <p style="margin:0 0 0.75rem;font-size:0.875rem;color:#555;line-height:1.6;">Zalogowani użytkownicy otrzymują <strong style="color:var(--text);font-weight:500;">pełniejszą analizę</strong> i&nbsp;dostęp do historii pomiarów.</p>
+        <a href="subskrypcja.html" style="display:inline-flex;align-items:center;gap:6px;background:var(--primary);color:#fff;font-size:0.82rem;font-weight:600;padding:8px 16px;border-radius:var(--radius);text-decoration:none;">
+          <i data-lucide="star" style="width:14px;height:14px;" aria-hidden="true"></i>
+          Wypróbuj PRO — 30&nbsp;dni za darmo
+        </a>
       </div>
     </div>
   </div>
