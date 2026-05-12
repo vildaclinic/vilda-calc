@@ -2997,6 +2997,11 @@ function vildaCustomHasHtmlContent(element) {
         if (e.target && e.target.classList.contains('shortcut-remove')) {
           return;
         }
+        // Nie nawiguj gdy aktywny tryb edycji
+        var cont = document.getElementById('miniShortcutsContainer');
+        if (cont && cont.classList.contains('is-editing')) {
+          return;
+        }
         if (isWfl && ageYears > 2) {
           // Disabled: do nothing
           return;
@@ -3005,14 +3010,12 @@ function vildaCustomHasHtmlContent(element) {
       });
       listEl.appendChild(row);
     });
-    // Update visibility of Add button
+    // Widoczność "Dodaj skrót" — tylko w trybie edycji i poniżej limitu
     var addBtn = document.getElementById('addShortcutBtn');
     if (addBtn) {
-      if (currentShortcuts.length >= shortcutMax) {
-        addBtn.style.display = 'none';
-      } else {
-        addBtn.style.display = '';
-      }
+      var editCont = document.getElementById('miniShortcutsContainer');
+      var isEditMode = editCont && editCont.classList.contains('is-editing');
+      addBtn.style.display = (isEditMode && currentShortcuts.length < shortcutMax) ? '' : 'none';
     }
   }
 
@@ -3156,38 +3159,43 @@ function vildaCustomHasHtmlContent(element) {
   function initShortcuts() {
     var container = document.getElementById('miniShortcutsContainer');
     if (!container) return;
-    // Insert an informational paragraph explaining the purpose of shortcuts and
-    // the maximum allowed.  This text appears above the list and the add
-    // button to orient the user.  It is styled via sidebar.css.
+    // Nagłówek sekcji "Skróty"
     var info = document.createElement('div');
     info.className = 'shortcut-info';
-    // Determine the current page to customise the explanatory text.  On
-    // the kidney clearance calculator the shortcuts lead to formulas
-    // rather than cards, so use a different description.  On other
-    // pages keep the generic wording referring to cards.  Use
-    // pathname and filename similar to other helpers.
-    var p = window.location.pathname || '';
-    var fname = p.substring(p.lastIndexOf('/') + 1) || 'index.html';
-    var infoText;
-    if (fname === 'kalkulator-klirens.html') {
-      infoText = 'Można dodać maksymalnie 3 skróty. Skróty prowadzą do wybranych formuł możliwych do obliczenia na stronie.';
-    } else {
-      infoText = 'Można dodać maksymalnie 3 skróty. Skróty prowadzą do wybranych kart na stronie.';
-    }
-    info.textContent = infoText;
+    info.textContent = 'Skróty';
     container.appendChild(info);
 
-    // Create header row for shortcuts list and controls
-    // List container
+    // Lista skrótów
     var list = document.createElement('div');
     list.id = 'shortcutList';
     container.appendChild(list);
-    // Add button
+
+    // Przycisk "Edytuj" — przełącza tryb edycji (wyświetla × obok każdego
+    // skrótu i pokazuje przycisk "Dodaj skrót").  Po ponownym kliknięciu
+    // zmienia się w "Gotowe" i wraca do widoku normalnego.
+    var editBtn = document.createElement('button');
+    editBtn.type = 'button';
+    editBtn.id = 'editShortcutsBtn';
+    editBtn.className = 'add-shortcut-btn shortcut-edit-btn';
+    editBtn.textContent = 'Edytuj';
+    editBtn.addEventListener('click', function() {
+      var editing = container.classList.toggle('is-editing');
+      editBtn.textContent = editing ? 'Gotowe' : 'Edytuj';
+      // Pokaż/ukryj przycisk "Dodaj skrót" zależnie od trybu i limitu
+      var addNewBtn = document.getElementById('addShortcutBtn');
+      if (addNewBtn) {
+        addNewBtn.style.display = (editing && currentShortcuts.length < shortcutMax) ? '' : 'none';
+      }
+    });
+    container.appendChild(editBtn);
+
+    // Przycisk "Dodaj skrót" — widoczny tylko w trybie edycji
     var addBtn = document.createElement('button');
     addBtn.type = 'button';
     addBtn.id = 'addShortcutBtn';
     addBtn.className = 'add-shortcut-btn';
     addBtn.textContent = 'Dodaj skrót';
+    addBtn.style.display = 'none';
     addBtn.addEventListener('click', function() {
       showShortcutSelect();
     });
