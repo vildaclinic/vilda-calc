@@ -253,7 +253,7 @@
    * Zwraca Promise. Idempotentna — drugi call zwraca ten sam Promise.
    */
   function ensureAuthLoaded() {
-    if (global.VildaVault && global.VildaAuthUI) return Promise.resolve();
+    if (global.VildaVault && global.VildaAuthUI && global.VildaProAccess) return Promise.resolve();
     if (_authLoadPromise) return _authLoadPromise;
     _authLoadPromise = AUTH_DEPS.reduce(function (chain, dep) {
       return chain.then(function () { return _loadOne(dep); });
@@ -277,7 +277,11 @@
   // ════════════════════════════════════════════════════════════════
 
   function _autoLoadIfNeeded() {
-    if (global.VildaVault) return; // statycznie załadowany — nic do roboty
+    // Jeśli VildaVault jest już załadowany statycznie, ale brakuje VildaProAccess
+    // (np. kalkulator-klirens.html), uruchamiamy łańcuch żeby doładować brakujący moduł.
+    // Łańcuch AUTH_DEPS pomija już załadowane skrypty (ready() → true), więc ładuje
+    // tylko to czego brakuje, a na końcu odpala vilda:auth-loaded → updateProBadge().
+    if (global.VildaVault && global.VildaProAccess) return; // wszystko gotowe
     if (!hasSessionKey()) return;  // brak sesji — niezalogowany, oszczędzamy requesty
     ensureAuthLoaded();
   }

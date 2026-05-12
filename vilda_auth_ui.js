@@ -3428,7 +3428,8 @@
     lockAndShowLogin: lockAndShowLogin,
     isGuestMode: isGuestMode,
     exitGuestMode: exitGuestMode,
-    setBusy: setBusy
+    setBusy: setBusy,
+    updateProBadge: updateProBadge
   };
 
   global.VildaAuthUI = api;
