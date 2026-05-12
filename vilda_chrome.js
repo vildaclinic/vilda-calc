@@ -1264,13 +1264,10 @@
           var rect    = el.getBoundingClientRect();
           var top     = Math.round(rect.top + global.pageYOffset - headerH - gap);
           global.scrollTo({ top: top, behavior: behavior });
-        } else if (global.innerWidth >= 700) {
-          // Tablet (700–991 px) lub block != 'start': nagłówek nie jest sticky,
-          // natywny scrollIntoView wystarczy
+        } else {
+          // Tablet, mobile, lub block != 'start': natywny scrollIntoView
           el.scrollIntoView({ behavior: behavior, block: block });
         }
-        // < 700 px (mobile): celowo no-op — automatyczny scroll przy zmianie
-        // trybu wyników byłby dezorientujący na małym ekranie
       } catch (e) { /* ignoruj błędy scrollowania */ }
     }, ms);
   };
