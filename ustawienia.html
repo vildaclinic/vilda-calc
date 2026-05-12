@@ -289,7 +289,7 @@ html.vilda-pro-active .pro-sync-note {
                   <span class="pro-sync-note__icon">☁️</span>
                   <span>Synchronizacja między urządzeniami jest dostępna w Twoim planie PRO.
                     <a href="#settings-section-sync"
-                       onclick="var el=document.getElementById('settings-section-sync');if(el){el.open=true;el.scrollIntoView({behavior:'smooth',block:'start'});}return false;">
+                       onclick="var el=document.getElementById('settings-section-sync');if(el){el.open=true;window.vildaScrollTo(el,{behavior:'smooth',block:'start'},150);}return false;">
                       Włącz synchronizację →
                     </a>
                   </span>
@@ -3112,8 +3112,8 @@ html.vilda-pro-active .pro-sync-note {
             // Otwórz accordion jeśli zamknięty
             if (!section.open) section.open = true;
 
-            // Przewiń płynnie
-            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            // Przewiń płynnie z uwzględnieniem sticky nagłówka
+            window.vildaScrollTo(section, { behavior: 'smooth', block: 'start' }, 150);
             setActive(targetId);
           });
         });
