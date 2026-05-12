@@ -1221,14 +1221,24 @@ function vildaCustomHasHtmlContent(element) {
       vildaCustomSetTrustedHtml(mini, lines.join(''), 'custom-fixes:mini-summary');
     }
 
-    // If there is no data, always hide the summary
+    // Kontrola widoczności mini-summary i wizualnego stylu decor-sidebar.
+    // Wcześniej widoczność była kontrolowana przez IntersectionObserver,
+    // który został usunięty. Teraz zarządzamy nią tu bezpośrednio:
+    // - hasContent=true  → pokazuj mini (display:block) + aktywuj styl sidebar
+    // - hasContent=false → ukryj mini (display:none)  + dezaktywuj styl sidebar
+    // Klasa decor-sidebar--has-content steruje wizualnym stylem (tło, cień,
+    // padding) w sidebar.css — bez niej sidebar jest przezroczystym kontenerem.
     var hasContent = lines.length > 0;
-    if (!hasContent) {
-      // On the steroid calculator page, keep the mini summary visible if the
-      // steroid shortcuts have been moved into it.  Without this, the mini
-      // summary would disappear when there is no patient data (e.g. weight,
-      // height) even though the steroid shortcuts are present.  Check if
-      // the steroid summary exists and is currently a child of the mini summary.
+    var decorEl = (typeof mini.closest === 'function')
+      ? mini.closest('.decor-sidebar')
+      : document.querySelector('.desktop-layout .decor-sidebar');
+
+    if (hasContent) {
+      mini.style.display = 'block';
+      if (decorEl) decorEl.classList.add('decor-sidebar--has-content');
+    } else {
+      // Na steroidy.html: jeśli skróty sterydowe są wewnątrz mini-summary,
+      // pozostaw mini widoczne (ma własną zawartość mimo braku danych pacjenta).
       var p = window.location.pathname || '';
       var fname = p.substring(p.lastIndexOf('/') + 1) || '';
       if (fname === 'steroidy.html') {
@@ -1239,12 +1249,16 @@ function vildaCustomHasHtmlContent(element) {
         }
         if (!steroidInMini) {
           mini.style.display = 'none';
+          if (decorEl) decorEl.classList.remove('decor-sidebar--has-content');
+        } else {
+          // Skróty sterydowe są w mini — sidebar powinien być widoczny
+          if (decorEl) decorEl.classList.add('decor-sidebar--has-content');
         }
       } else {
         mini.style.display = 'none';
+        if (decorEl) decorEl.classList.remove('decor-sidebar--has-content');
       }
     }
-    // Otherwise the IntersectionObserver callback will control visibility
 
     // If the mini summary has been hidden (display: none) but the steroid
     // shortcut container is still inside it, move the steroid shortcuts

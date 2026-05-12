@@ -598,21 +598,28 @@
   .desktop-layout {
     grid-template-columns: 230px 1fr 230px;
   }
-  /* Show and style the decorative sidebar */
+  /* Show the decorative sidebar — tylko właściwości layoutu.
+     Wizualny styl (tło, cień, padding) pojawia się dopiero gdy JS doda
+     klasę decor-sidebar--has-content, czyli gdy mini-summary ma content.
+     Bez tego pusty sidebar renderował się jako widoczne białe pudełko
+     na starcie aplikacji (zanim dane pacjenta zostaną wpisane/przywrócone). */
   .decor-sidebar {
     display: block;
-    background: #ffffff !important;
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    margin-top: 1em;
-    margin-bottom: 1em;
-    padding: 1rem 0;
     /* Sticky – identycznie jak lewy sidebar */
     align-self: start;
     position: sticky;
     top: var(--chrome-strip-height, 64px);
     max-height: calc(100vh - var(--chrome-strip-height, 64px));
     overflow-y: auto;
+  }
+  /* Wizualny styl aktywowany przez JS gdy sidebar ma content */
+  .decor-sidebar.decor-sidebar--has-content {
+    background: #ffffff !important;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    margin-top: 1em;
+    margin-bottom: 1em;
+    padding: 1rem 0;
   }
 
   /* When steroid shortcuts are placed in the right sidebar, allow the
