@@ -454,6 +454,11 @@
   function hide() {
     if (!rootEl) return;
     rootEl.style.display = 'none';
+    // Zawsze czyść data-busy przy chowaniu auth UI — obrona przed wyciekiem stanu
+    // busy do następnego otwarcia overlay. Bez tego pointer-events:none (CSS) zostaje
+    // na karcie gdy rootEl jest pokazywany ponownie (showPatientsList, showStartupScreen),
+    // co sprawia że UI wygląda na zamrożone mimo że JS działa.
+    rootEl.removeAttribute('data-busy');
     clear(rootEl);
     // Sygnalizuj że auth UI zostało schowane — użytkownik jest już w aplikacji
     // (zalogowany, tryb gościa, lub przywrócona sesja). Używane przez custom-fixes.js
@@ -1135,6 +1140,13 @@
           // jeśli _sig.aborted: abortPendingPasskey() już wywołało setBusy(false)
         } finally {
           _passkeyAbortCtrl = null;
+          // Symetria z ręcznym kliknięciem biometrii: zawsze czyść busy w finally.
+          // Na ścieżce sukcesu setBusy(false) nie było wołane — bez tego data-busy="1"
+          // zostaje na rootEl i przy kolejnym open() karta ma pointer-events:none (CSS),
+          // co sprawia że UI (lista pacjentów, ekran startowy po logout) wygląda na zamrożone.
+          // Gdy aborted: abortPendingPasskey() już wywołało setBusy(false) — removeAttribute
+          // na elemencie który już go nie ma jest bezpieczne (no-op).
+          if (!_sig.aborted) setBusy(false);
         }
       }, 100);
     } else {
