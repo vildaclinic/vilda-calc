@@ -277,6 +277,26 @@
   .mini-summary .mini-shortcuts.is-editing .shortcut-row {
     cursor: default;
   }
+  /* Globalny reset efektów szkła/3D dla wszystkich przycisków i wierszy w mini-summary.
+     ios26-v2.css nakłada na każdy <button> box-shadow, backdrop-filter i transition
+     z !important — nadpisujemy je tutaj dla całego kontenera mini-summary. */
+  .mini-summary button,
+  .mini-summary .shortcut-row {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+  .mini-summary button:hover,
+  .mini-summary button:active,
+  .mini-summary .shortcut-row:hover {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+
   /* Przycisk “Edytuj” / “Gotowe” */
   .mini-summary .shortcut-edit-btn {
     display: flex !important;
