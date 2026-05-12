@@ -3138,7 +3138,34 @@ function vildaCustomHasHtmlContent(element) {
     renderShortcuts();
   }
 
-  window.vildaOnReady('custom-fixes:mini-summary', initMiniSummary);
+  // initMiniSummary() musi być uruchomione DOPIERO gdy auth UI zostanie schowane
+  // (użytkownik jest zalogowany / wybrał tryb gościa / sesja przywrócona).
+  //
+  // Problem: userData.js (defer, linia 1646 index.html) uruchamia się przed
+  // custom-fixes.js (defer, linia 5966) i synchronicznie wypełnia pola formularza
+  // danymi z localStorage. Gdybyśmy wywołali initMiniSummary() od razu,
+  // updateMiniSummary() znalazłby dane w polach i pokazał mini-summary
+  // (display:block + klasa decor-sidebar--has-content) jako widoczna biała ramka
+  // zanim boot() w vilda_auth_ui.js zdążył pokazać nakładkę logowania.
+  //
+  // Rozwiązanie: czekamy na zdarzenie 'vilda:auth-hidden' wysyłane przez
+  // funkcję hide() w vilda_auth_ui.js we wszystkich ścieżkach zakończenia auth:
+  //   - tryRestoreSession() → hide()
+  //   - "Korzystaj bez logowania" → setGuestMode(true) → hide()
+  //   - logowanie hasłem/passkey → onUnlock → hide()
+  //
+  // Flaga __vildaAuthHidden obsługuje edge case gdy hide() zostało wywołane
+  // zanim ten listener zdążył się zarejestrować (np. błyskawiczne przywrócenie sesji).
+  window.vildaOnReady('custom-fixes:mini-summary', function () {
+    if (window.__vildaAuthHidden) {
+      initMiniSummary();
+      return;
+    }
+    document.addEventListener('vilda:auth-hidden', function onAuthHidden() {
+      document.removeEventListener('vilda:auth-hidden', onAuthHidden);
+      initMiniSummary();
+    });
+  });
   window.vildaOnReady('custom-fixes:steroid-shortcuts', initSteroidShortcuts);
   window.vildaOnReady('custom-fixes:steroid-auto-calc', initSteroidAutoCalc);
 })();
