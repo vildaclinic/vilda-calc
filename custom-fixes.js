@@ -1107,6 +1107,22 @@ function vildaCustomHasHtmlContent(element) {
   }
 
   /**
+   * Return a chip state string for the new chip-stack mini-summary design.
+   * States: 'normal' (10–90c, teal), 'borderline' (3–10c / 90–97c, orange),
+   * 'alert' (<3c / >97c, red), 'neutral' (adult or no centile data).
+   *
+   * @param {number|null} p   Percentile (0–100)
+   * @param {number} ageYrs   Age in decimal years
+   * @returns {'normal'|'borderline'|'alert'|'neutral'}
+   */
+  function getCentileState(p, ageYrs) {
+    if (p == null || isNaN(p) || ageYrs >= 18) return 'neutral';
+    if (p < 3 || p > 97) return 'alert';
+    if (p < 10 || p > 90) return 'borderline';
+    return 'normal';
+  }
+
+  /**
    * Build the content of the mini summary and update its visibility.
    */
   function updateMiniSummary() {
@@ -1159,7 +1175,7 @@ function vildaCustomHasHtmlContent(element) {
       heightClass = getStatusClass(heightPerc, ageYears);
     }
 
-    // Format age string (e.g. "3 lata 5 mies.") if any non‑zero age
+    // Format age string (e.g. "3 lata i 5 mies.") if any non‑zero age
     var ageStr = '';
     if (yrs > 0 || mos > 0) {
       var yearWord;
@@ -1174,51 +1190,117 @@ function vildaCustomHasHtmlContent(element) {
       var mosInt = Math.round(mos);
       ageStr = yrs + ' ' + yearWord;
       if (mosInt > 0) {
-        ageStr += ' ' + mosInt + ' mies.';
+        // "i" connector between years and months for readability in chip layout
+        ageStr += ' i ' + mosInt + ' mies.';
       }
     }
 
-    // Compute body surface area (Mosteller) if weight and height available
-    var bsaStr = '';
+    // Compute BMI and BMI percentile for chip-stack display
+    var bmiVal = null, bmiPerc = null, bmiPercStr = '';
     if (weightVal > 0 && heightVal > 0) {
-      var bsa = Math.sqrt((heightVal * weightVal) / 3600);
-      if (!isNaN(bsa)) {
-        bsaStr = bsa.toFixed(2) + ' m²';
+      bmiVal = weightVal / Math.pow(heightVal / 100, 2);
+      if (hasCompleteAnthro && ageYears > 0 && ageYears < 18) {
+        try {
+          if (typeof bmiPercentileChild === 'function') {
+            bmiPerc = bmiPercentileChild(bmiVal, sexVal, Math.round(ageYears * 12));
+          }
+        } catch (eBmi) {
+          if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+            globalThis.vildaLogSwallowedCatch('custom-fixes.js', eBmi, { line: 1201 });
+          }
+        }
       }
+      bmiPercStr = (bmiPerc != null) ? formatCentileDisplay(bmiPerc) : '';
     }
 
     // Format percentile strings
     var weightPercStr = (weightPerc != null) ? formatCentileDisplay(weightPerc) : '';
     var heightPercStr = (heightPerc != null) ? formatCentileDisplay(heightPerc) : '';
 
-    // Build summary lines
-    var lines = [];
+    // -----------------------------------------------------------------------
+    // Build chip-stack HTML for the new decor-sidebar mini-summary design.
+    // Three states based on centile thresholds:
+    //   normal     (10–90c): teal     #00838d
+    //   borderline (3–10 / 90–97c): orange #c75d00
+    //   alert      (<3 / >97c):     red    #c62828
+    //   neutral    (adult or no centile): muted gray
+    // -----------------------------------------------------------------------
+
+    // Extract initials from name (first letters of first two words)
+    var initials = '';
     if (nameVal) {
-      lines.push('<div class="ms-row"><strong>' + escapeHtml(nameVal) + '</strong></div>');
+      var nameParts = nameVal.trim().split(/\s+/);
+      if (nameParts.length >= 2 && nameParts[0] && nameParts[1]) {
+        initials = (nameParts[0][0] + nameParts[1][0]).toUpperCase();
+      } else if (nameParts[0]) {
+        initials = nameParts[0].substring(0, 2).toUpperCase();
+      }
     }
-    if (ageStr) {
-      lines.push('<div class="ms-row">Wiek: ' + escapeHtml(ageStr) + '</div>');
+
+    var chipHtml = '';
+
+    // Patient chip — shown if we have initials or age
+    if (initials || ageStr) {
+      var avatarContent = initials ? escapeHtml(initials) : '?';
+      var avatarClass = initials ? 'ms-avatar' : 'ms-avatar ms-avatar--anon';
+      var ageDisplay = ageStr ? '<span class="ms-patient-age">' + escapeHtml(ageStr) + '</span>' : '';
+      chipHtml += '<div class="ms-patient-chip">'
+        + '<div class="' + avatarClass + '">' + avatarContent + '</div>'
+        + ageDisplay
+        + '</div>';
     }
+
+    // Metric chips — weight, height, BMI
+    var metricsHtml = '';
     if (weightVal > 0) {
-      var weightHtml = '<span class="result-val' + weightClass + '">' + escapeHtml(weightVal.toFixed(1).replace('.', ',')) + ' kg</span>';
-      var centHtml = weightPercStr ? ' – <span class="muted">' + weightPercStr + '</span>' : '';
-      lines.push('<div class="ms-row">Waga: ' + weightHtml + centHtml + '</div>');
+      var wState = getCentileState(weightPerc, ageYears);
+      var wBadge = weightPercStr
+        ? '<div class="ms-chip-badge">' + weightPercStr + '</div>'
+        : '';
+      metricsHtml += '<div class="ms-chip ms-chip--' + wState + '">'
+        + '<div class="ms-chip-icon">W</div>'
+        + '<div class="ms-chip-main">'
+        + '<span class="ms-chip-label">Waga</span>'
+        + '<span class="ms-chip-value">' + escapeHtml(weightVal.toFixed(1).replace('.', ',')) + '&thinsp;kg</span>'
+        + '</div>'
+        + wBadge + '</div>';
     }
     if (heightVal > 0) {
-      var heightHtml = '<span class="result-val' + heightClass + '">' + escapeHtml(heightVal.toFixed(1).replace('.', ',')) + ' cm</span>';
-      var centHtmlH = heightPercStr ? ' – <span class="muted">' + heightPercStr + '</span>' : '';
-      lines.push('<div class="ms-row">Wzrost: ' + heightHtml + centHtmlH + '</div>');
+      var hState = getCentileState(heightPerc, ageYears);
+      var hBadge = heightPercStr
+        ? '<div class="ms-chip-badge">' + heightPercStr + '</div>'
+        : '';
+      metricsHtml += '<div class="ms-chip ms-chip--' + hState + '">'
+        + '<div class="ms-chip-icon">H</div>'
+        + '<div class="ms-chip-main">'
+        + '<span class="ms-chip-label">Wzrost</span>'
+        + '<span class="ms-chip-value">' + escapeHtml(heightVal.toFixed(1).replace('.', ',')) + '&thinsp;cm</span>'
+        + '</div>'
+        + hBadge + '</div>';
     }
-    if (bsaStr) {
-      lines.push('<div class="ms-row">Pow. ciała: ' + escapeHtml(bsaStr) + '</div>');
+    if (bmiVal != null) {
+      var bState = getCentileState(bmiPerc, ageYears);
+      var bBadge = bmiPercStr
+        ? '<div class="ms-chip-badge">' + bmiPercStr + '</div>'
+        : '';
+      metricsHtml += '<div class="ms-chip ms-chip--' + bState + '">'
+        + '<div class="ms-chip-icon">B</div>'
+        + '<div class="ms-chip-main">'
+        + '<span class="ms-chip-label">BMI</span>'
+        + '<span class="ms-chip-value">' + escapeHtml(bmiVal.toFixed(1).replace('.', ',')) + '</span>'
+        + '</div>'
+        + bBadge + '</div>';
+    }
+    if (metricsHtml) {
+      chipHtml += '<div class="ms-chips">' + metricsHtml + '</div>';
     }
 
     // Update inner HTML of the content container if present; otherwise update the mini summary itself
     var contentDiv = document.getElementById('miniSummaryContent');
     if (contentDiv) {
-      vildaCustomSetTrustedHtml(contentDiv, lines.join(''), 'custom-fixes:mini-summary-content');
+      vildaCustomSetTrustedHtml(contentDiv, chipHtml, 'custom-fixes:mini-summary-content');
     } else {
-      vildaCustomSetTrustedHtml(mini, lines.join(''), 'custom-fixes:mini-summary');
+      vildaCustomSetTrustedHtml(mini, chipHtml, 'custom-fixes:mini-summary');
     }
 
     // Kontrola widoczności mini-summary i wizualnego stylu decor-sidebar.
@@ -1228,7 +1310,8 @@ function vildaCustomHasHtmlContent(element) {
     // - hasContent=false → ukryj mini (display:none)  + dezaktywuj styl sidebar
     // Klasa decor-sidebar--has-content steruje wizualnym stylem (tło, cień,
     // padding) w sidebar.css — bez niej sidebar jest przezroczystym kontenerem.
-    var hasContent = lines.length > 0;
+    // hasContent: true if the patient chip or any metric chip was rendered
+    var hasContent = chipHtml.length > 0;
     var decorEl = (typeof mini.closest === 'function')
       ? mini.closest('.decor-sidebar')
       : document.querySelector('.desktop-layout .decor-sidebar');
