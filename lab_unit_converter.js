@@ -162,6 +162,170 @@
     return s ? s.units.slice() : [];
   }
 
+  /**
+   * Zwraca tablicę unikalnych identyfikatorów wskazań klinicznych
+   * (clinical_indications) zebraną ze wszystkich substancji.
+   * Kolejność: pierwszego wystąpienia w bazie (stabilna).
+   */
+  function listIndications() {
+    var raw = DATA_API.list();
+    var seen = {};
+    var out = [];
+    for (var i = 0; i < raw.length; i++) {
+      var inds = Array.isArray(raw[i].clinical_indications) ? raw[i].clinical_indications : [];
+      for (var j = 0; j < inds.length; j++) {
+        var key = inds[j];
+        if (!key || seen[key]) continue;
+        seen[key] = true;
+        out.push(key);
+      }
+    }
+    return out;
+  }
+
+  /**
+   * Zwraca listę substancji oznaczonych danym wskazaniem klinicznym.
+   * Format jak `list()` — { id, label, group } w kolejności źródłowej (po grupach).
+   */
+  function findByIndication(indicationId) {
+    if (!indicationId) return [];
+    var raw = DATA_API.list();
+    var out = [];
+    for (var i = 0; i < raw.length; i++) {
+      var inds = Array.isArray(raw[i].clinical_indications) ? raw[i].clinical_indications : [];
+      if (inds.indexOf(indicationId) === -1) continue;
+      out.push({ id: raw[i].id, label: raw[i].label_pl, group: raw[i].group });
+    }
+    return out;
+  }
+
+  // ────────────────────────────────────────────────────────────────
+  //  Dobór zakresu referencyjnego do kontekstu pacjenta
+  // ────────────────────────────────────────────────────────────────
+
+  /**
+   * Sprawdza, czy predykat `when` zakresu pasuje do kontekstu pacjenta.
+   *
+   * Reguła: każde POLE w `when` musi pasować do `patient`. Pole patient
+   * o wartości `undefined`/`null` jest traktowane jak "nieznane" i NIE
+   * pasuje do warunku, który wymaga konkretnej wartości (rygorystycznie),
+   * z wyjątkiem zakresów z `default: true`, które są fallbackiem.
+   *
+   * Obsługiwane klucze w `when`:
+   *   sex           – 'M'|'F'
+   *   life_stage    – 'adult'|'pediatric'|'newborn' (na razie używamy 'adult')
+   *   cycle_phase   – 'follicular'|'ovulation'|'luteal'|'postmenopause'|'pregnancy_t1..3'
+   *   age_min       – wiek pacjenta >= age_min
+   *   age_max       – wiek pacjenta < age_max (przedział lewo-domknięty)
+   *   tanner        – etap Tannera (1..5)
+   *   time_of_day   – 'morning'|'evening'|'midnight' — pora pobrania krwi
+   *   test_protocol – 'basal'|'post_dst'|'post_acth' — kontekst pomiaru
+   */
+  function matchesWhen(when, patient) {
+    if (!when) return true;
+    var p = patient || {};
+    if (when.sex && p.sex !== when.sex) return false;
+    if (when.life_stage && p.life_stage !== when.life_stage) return false;
+    if (when.cycle_phase && p.cycle_phase !== when.cycle_phase) return false;
+    if (when.tanner && String(p.tanner) !== String(when.tanner)) return false;
+    if (when.time_of_day && p.time_of_day !== when.time_of_day) return false;
+    if (when.test_protocol && p.test_protocol !== when.test_protocol) return false;
+    if (typeof when.age_min === 'number') {
+      if (typeof p.age !== 'number' || !isFinite(p.age)) return false;
+      if (p.age < when.age_min) return false;
+    }
+    if (typeof when.age_max === 'number') {
+      if (typeof p.age !== 'number' || !isFinite(p.age)) return false;
+      if (p.age >= when.age_max) return false;
+    }
+    return true;
+  }
+
+  /**
+   * Wybiera najlepszy zakres referencyjny dla danej substancji i kontekstu
+   * pacjenta. Strategia:
+   *   1. Iteruj `reference_ranges_si` w kolejności deklaracji.
+   *   2. Pomijaj zakresy z `default: true` w pierwszym przebiegu.
+   *   3. Pierwszy zakres, którego `when` pasuje (matchesWhen) — wygrywa.
+   *   4. Jeśli nic nie pasuje, użyj zakresu oznaczonego `default: true`.
+   *   5. Jeśli substancja nie ma `reference_ranges_si`, użyj starego
+   *      `default_range_si` (wsteczna kompatybilność) lub `null`.
+   *
+   * Zwraca obiekt:
+   *   { low, high, context_pl, source_ids, id, matched: true|false }
+   *   lub null, gdy substancja w ogóle nie ma zakresu (np. wit. D₃).
+   */
+  function selectRange(substance, patient) {
+    if (!substance) return null;
+    var ranges = Array.isArray(substance.reference_ranges_si) ? substance.reference_ranges_si : null;
+
+    if (ranges && ranges.length) {
+      // 1. Najpierw poszukaj prawdziwego matcha (pomijając default).
+      for (var i = 0; i < ranges.length; i++) {
+        var r = ranges[i];
+        if (r.default) continue;
+        if (matchesWhen(r.when, patient)) {
+          return {
+            id: r.id || null,
+            low: r.low, high: r.high,
+            context_pl: r.context_pl || '',
+            source_ids: Array.isArray(r.source_ids) ? r.source_ids.slice() : [],
+            no_interpretation: !!r.no_interpretation,
+            matched: true,
+            is_default: false
+          };
+        }
+      }
+      // 2. Fallback do default.
+      for (var j = 0; j < ranges.length; j++) {
+        var d = ranges[j];
+        if (d.default) {
+          return {
+            id: d.id || null,
+            low: d.low, high: d.high,
+            context_pl: d.context_pl || '',
+            source_ids: Array.isArray(d.source_ids) ? d.source_ids.slice() : [],
+            no_interpretation: !!d.no_interpretation,
+            matched: false,
+            is_default: true
+          };
+        }
+      }
+    }
+
+    // 3. Wsteczna kompatybilność: stare default_range_si.
+    if (substance.default_range_si) {
+      var legacy = substance.default_range_si;
+      return {
+        id: null,
+        low: legacy.low, high: legacy.high,
+        context_pl: legacy.context_pl || '',
+        source_ids: [],
+        matched: false,
+        is_default: true
+      };
+    }
+    return null;
+  }
+
+  /**
+   * Lista wszystkich zakresów referencyjnych substancji (do listy override
+   * w UI). Filtruje wpisy z `default: true`, żeby nie pokazywać "fallbacku"
+   * jako wyboru klinicznego — chyba że jest to JEDYNY wpis dla substancji
+   * (wtedy zwracamy go też, żeby UI miało co pokazać).
+   */
+  function rangesForOverride(substance) {
+    if (!substance) return [];
+    var ranges = Array.isArray(substance.reference_ranges_si) ? substance.reference_ranges_si : [];
+    var realOnes = [];
+    var defaults = [];
+    for (var i = 0; i < ranges.length; i++) {
+      if (ranges[i].default) defaults.push(ranges[i]);
+      else realOnes.push(ranges[i]);
+    }
+    return realOnes.length ? realOnes : defaults;
+  }
+
   function search(query) {
     var q = norm(query);
     if (!q) return list();
@@ -293,7 +457,15 @@
     convertAll: convertAll,
     parseNumber: parseNumber,
     formatNumber: formatNumber,
-    version: '1.0.0'
+    selectRange: selectRange,
+    rangesForOverride: rangesForOverride,
+    matchesWhen: matchesWhen,
+    listIndications: listIndications,
+    findByIndication: findByIndication,
+    findSource: function (id) {
+      return (DATA_API && typeof DATA_API.findSource === 'function') ? DATA_API.findSource(id) : null;
+    },
+    version: '2.0.0'
   };
 
   if (typeof module !== 'undefined' && module.exports) {

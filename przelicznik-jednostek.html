@@ -95,10 +95,30 @@
   <link rel="icon" type="image/png" sizes="96x96" href="/pwa-icons/icon-96x96.png">
 
   <style>
-    /* Kontener – analogiczny do .homa-container i .steroids-card. */
+    /* Kontener – analogiczny do .homa-container i .steroids-card.
+       Na desktop/tablet powyżej 880px przechodzi w siatkę 2-kolumnową
+       (formularz lewo, wyniki prawo, info i disclaimer pod spodem). */
     .lab-container {
-      max-width: 760px;
+      max-width: 1200px;
       margin: 2rem auto;
+    }
+
+    .lab-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    @media (min-width: 880px) {
+      .lab-grid {
+        display: grid;
+        grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr);
+        grid-template-rows: auto;
+        gap: 1.25rem 1.5rem;
+        align-items: start;
+      }
+      /* Karty oznaczone klasą "lab-full" rozpinają się na obie kolumny. */
+      .lab-grid > .lab-full { grid-column: 1 / -1; }
     }
 
     .lab-card {
@@ -107,7 +127,7 @@
       border-radius: var(--radius);
       box-shadow: var(--shadow);
       border: 1px solid #d0dede;
-      margin-bottom: 1.25rem;
+      margin-bottom: 0;
     }
 
     .lab-card h1 {
@@ -154,31 +174,40 @@
       box-sizing: border-box;
       background: #fff;
     }
+    /* Podpowiedź pod inputem substancji: pokazuje grupę kliniczną i aliasy
+       aktualnie rozpoznanej substancji albo komunikat „nie znaleziono". */
+    .lab-substance-hint {
+      margin-top: 0.35rem;
+      font-size: 0.82rem;
+      color: #5a6a6e;
+      line-height: 1.35;
+      min-height: 1.15em;
+    }
+    .lab-substance-hint.lab-hint-unknown { color: #a25500; }
 
-    /* Pole wartości + selektor jednostki obok siebie. */
+    /* Pole wartości + selektor jednostki obok siebie.
+       Używamy CSS Grid z jawnymi kolumnami: input rozciąga się do reszty,
+       select ma sztywne 10rem (mieści najdłuższą etykietę typu "nmol/L (SI)").
+       Wcześniejszy układ flex potrafił rozsadzać kontener, bo natywny <select>
+       w niektórych przeglądarkach puchnął do szerokości najdłuższej opcji. */
     .lab-input-row {
-      display: flex;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 10rem;
       gap: 0.5rem;
       align-items: stretch;
     }
-    .lab-input-row input {
-      flex: 1 1 auto;
+    .lab-input-row input,
+    .lab-input-row select {
       min-width: 0;
       padding: 0.6rem 0.75rem;
       font-size: 1rem;
       border: 1px solid #ccc;
       border-radius: 0.5rem;
       box-sizing: border-box;
+      width: 100%;
     }
     .lab-input-row select {
-      flex: 0 0 auto;
-      padding: 0.6rem 0.75rem;
-      font-size: 1rem;
-      border: 1px solid #ccc;
-      border-radius: 0.5rem;
-      box-sizing: border-box;
       background: #fff;
-      min-width: 8rem;
     }
 
     .lab-error {
@@ -223,6 +252,314 @@
       margin-left: 0.25rem;
     }
     .lab-results-table tbody tr:last-child td { border-bottom: none; }
+    /* Wiersze-placeholdery (myślnik zamiast wartości) wyciszone wizualnie,
+       żeby od razu było widać, że czekają na wpisanie liczby. */
+    .lab-results-table tr.lab-row-placeholder td.lab-unit { color: #7d8a8c; }
+    .lab-results-table tr.lab-row-placeholder td.lab-value {
+      color: #b0b8ba;
+      font-weight: 400;
+      font-style: italic;
+    }
+    /* Kolorowanie wierszy względem aktualnego zakresu normy. */
+    .lab-results-table tr.lab-row-normal td { background: rgba(42, 138, 42, 0.06); }
+    .lab-results-table tr.lab-row-normal td.lab-value { color: #2a8a2a; }
+    .lab-results-table tr.lab-row-below  td { background: rgba(199, 93, 0, 0.08); }
+    .lab-results-table tr.lab-row-below  td.lab-value { color: #b04500; }
+    .lab-results-table tr.lab-row-above  td { background: rgba(198, 40, 40, 0.08); }
+    .lab-results-table tr.lab-row-above  td.lab-value { color: #a02020; }
+    .lab-results-table tr.lab-row-below  td.lab-value::before { content: '↓ '; opacity: 0.7; }
+    .lab-results-table tr.lab-row-above  td.lab-value::before { content: '↑ '; opacity: 0.7; }
+    /* Komórki z wartością są klikalne (kopiowanie do schowka). */
+    .lab-results-table tr:not(.lab-row-placeholder) td.lab-value {
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+    .lab-results-table tr:not(.lab-row-placeholder) td.lab-value:hover {
+      background: rgba(42, 138, 138, 0.08);
+      color: var(--primary, #2a8a8a);
+    }
+    .lab-results-table tr:not(.lab-row-placeholder) td.lab-value:focus {
+      outline: 2px solid var(--primary, #2a8a8a);
+      outline-offset: -2px;
+    }
+    .lab-results-table tr:not(.lab-row-placeholder) td.lab-value.lab-just-copied {
+      background: rgba(42, 138, 138, 0.18);
+      color: var(--primary, #2a8a8a);
+    }
+    .lab-results-table tr:not(.lab-row-placeholder) td.lab-value::after {
+      content: '';
+      display: inline-block;
+      width: 0.9em;
+      height: 0.9em;
+      margin-left: 0.4em;
+      vertical-align: -0.12em;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237d8a8c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='9' y='9' width='13' height='13' rx='2'/><path d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/></svg>");
+      background-repeat: no-repeat;
+      background-size: contain;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+    }
+    .lab-results-table tr:not(.lab-row-placeholder) td.lab-value:hover::after { opacity: 1; }
+
+    /* Kontekst pacjenta — pasek z auto-doborem zakresu po wieku/płci.
+       Pojawia się nad paskiem normy. Selektor "Zmień" rozwija lokalne
+       nadpisanie (nie zapisuje do sharedUserData). */
+    .lab-patient-context {
+      margin-bottom: 0.4rem;
+      padding: 0.5rem 0.7rem;
+      background: rgba(42, 138, 138, 0.06);
+      border: 1px solid rgba(42, 138, 138, 0.18);
+      border-radius: 0.5rem;
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+    /* Pediatryczny kontekst — delikatny róż/fiolet jako sygnał wizualny. */
+    .lab-patient-context.is-pediatric {
+      background: rgba(155, 89, 182, 0.07);
+      border-color: rgba(155, 89, 182, 0.30);
+    }
+    .lab-patient-context.is-pediatric .lab-patient-summary { color: #5d2c75; }
+    .lab-patient-context.is-pediatric .lab-patient-toggle {
+      border-color: rgba(155, 89, 182, 0.4);
+      color: #5d2c75;
+    }
+    .lab-patient-context.is-pediatric .lab-patient-toggle:hover {
+      background: rgba(155, 89, 182, 0.10);
+    }
+    .lab-patient-summary {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.88rem;
+      color: #1d4f4f;
+      flex-wrap: wrap;
+    }
+    .lab-patient-summary svg { flex-shrink: 0; }
+    .lab-patient-summary .lab-patient-text { flex: 1 1 auto; min-width: 0; }
+    .lab-patient-summary .lab-patient-text.is-missing { color: #a25500; }
+    .lab-patient-summary button.lab-patient-toggle {
+      background: transparent;
+      border: 1px solid rgba(42, 138, 138, 0.4);
+      color: #1d4f4f;
+      padding: 0.2rem 0.55rem;
+      font-size: 0.82rem;
+      border-radius: 0.4rem;
+      cursor: pointer;
+    }
+    .lab-patient-summary button.lab-patient-toggle:hover {
+      background: rgba(42, 138, 138, 0.1);
+    }
+    .lab-patient-clinical-hint {
+      margin-top: 0.4rem;
+      padding: 0.35rem 0.55rem;
+      background: rgba(245, 166, 35, 0.10);
+      border: 1px solid rgba(245, 166, 35, 0.30);
+      border-radius: 0.4rem;
+      font-size: 0.82rem;
+      color: #6b4500;
+      line-height: 1.35;
+    }
+    .lab-patient-override {
+      margin-top: 0.55rem;
+      padding-top: 0.55rem;
+      border-top: 1px solid rgba(42, 138, 138, 0.2);
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.4rem 0.6rem;
+      align-items: end;
+    }
+    .lab-patient-override label {
+      display: flex;
+      flex-direction: column;
+      font-size: 0.78rem;
+      color: #1d4f4f;
+      gap: 0.15rem;
+    }
+    .lab-patient-override select,
+    .lab-patient-override input {
+      padding: 0.35rem 0.5rem;
+      font-size: 0.88rem;
+      border: 1px solid #ccc;
+      border-radius: 0.35rem;
+      background: #fff;
+    }
+    .lab-patient-override .lab-override-reset {
+      grid-column: 1 / -1;
+      justify-self: end;
+      background: transparent;
+      border: 1px solid rgba(198, 40, 40, 0.4);
+      color: var(--danger);
+      padding: 0.25rem 0.7rem;
+      font-size: 0.82rem;
+      border-radius: 0.35rem;
+      cursor: pointer;
+    }
+    .lab-patient-override .lab-override-reset:hover { background: rgba(198, 40, 40, 0.07); }
+
+    /* Sekcja źródeł — przycisk + rozwijana lista cytowań aktualnej substancji. */
+    .lab-sources-wrap {
+      margin-top: 0.9rem;
+      padding-top: 0.9rem;
+      border-top: 1px solid #e5ebed;
+    }
+    .lab-sources-wrap > button {
+      background: transparent;
+      border: 1px solid #ccc;
+      color: #333;
+      padding: 0.35rem 0.75rem;
+      font-size: 0.85rem;
+      border-radius: 0.4rem;
+      cursor: pointer;
+    }
+    .lab-sources-wrap > button:hover { background: #f3f5f5; }
+    .lab-sources-list {
+      list-style: decimal;
+      padding-left: 1.4rem;
+      margin: 0.6rem 0 0;
+      font-size: 0.82rem;
+      color: #444;
+      line-height: 1.5;
+    }
+    .lab-sources-list li { margin-bottom: 0.45rem; }
+    .lab-sources-list li a {
+      color: #1d4f4f;
+      text-decoration: underline;
+    }
+
+    /* Pasek-skala z oznaczeniem zakresu normy. Pojawia się pod tabelą wyników
+       gdy substancja ma zdefiniowany default_range_si i wpisana wartość jest
+       liczbą. Marker pokazuje, gdzie wynik pada względem normy. */
+    .lab-range-card {
+      margin-top: 1rem;
+      padding-top: 0.9rem;
+      border-top: 1px solid #e5ebed;
+    }
+    .lab-range-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.5rem;
+    }
+    .lab-range-title {
+      font-weight: 600;
+      font-size: 0.92rem;
+      color: #2a3a3c;
+    }
+    .lab-range-status {
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.15rem 0.55rem;
+      border-radius: 0.4rem;
+    }
+    .lab-range-status.is-normal { color: #2a8a2a; background: rgba(42, 138, 42, 0.10); }
+    .lab-range-status.is-below  { color: #c75d00; background: rgba(199, 93, 0, 0.10); }
+    .lab-range-status.is-above  { color: #c62828; background: rgba(198, 40, 40, 0.10); }
+    .lab-range-context {
+      font-size: 0.78rem;
+      color: #5a6a6e;
+      margin-top: 0.15rem;
+      line-height: 1.3;
+    }
+    .lab-range-scale {
+      position: relative;
+      height: 14px;
+      border-radius: 8px;
+      overflow: visible;
+      margin-top: 0.5rem;
+    }
+    .lab-range-scale::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 8px;
+      background: linear-gradient(to right,
+        rgba(199, 93, 0, 0.20) 0%, rgba(199, 93, 0, 0.20) var(--low-pct, 0%),
+        rgba(42, 138, 42, 0.30) var(--low-pct, 0%), rgba(42, 138, 42, 0.30) var(--high-pct, 100%),
+        rgba(199, 93, 0, 0.20) var(--high-pct, 100%), rgba(199, 93, 0, 0.20) 100%);
+    }
+    .lab-range-marker {
+      position: absolute;
+      top: 50%;
+      left: var(--marker-pct, 0%);
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #1f4f4f;
+      border: 2px solid #fff;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+      transition: left 0.2s ease, background 0.2s ease;
+      z-index: 2;
+    }
+    .lab-range-marker.is-normal { background: #2a8a2a; }
+    .lab-range-marker.is-below  { background: #c75d00; }
+    .lab-range-marker.is-above  { background: #c62828; }
+    /* Strzałka, gdy wartość wychodzi poza widoczną skalę. */
+    .lab-range-marker.out-left::after,
+    .lab-range-marker.out-right::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      width: 0;
+      height: 0;
+      border-top: 6px solid transparent;
+      border-bottom: 6px solid transparent;
+      transform: translateY(-50%);
+    }
+    .lab-range-marker.out-left::after {
+      right: 100%; margin-right: 2px;
+      border-right: 8px solid currentColor;
+    }
+    .lab-range-marker.out-right::after {
+      left: 100%; margin-left: 2px;
+      border-left: 8px solid currentColor;
+    }
+    .lab-range-labels {
+      position: relative;
+      height: 1.1rem;
+      margin-top: 0.35rem;
+      font-size: 0.74rem;
+      color: #5a6a6e;
+      font-variant-numeric: tabular-nums;
+    }
+    .lab-range-labels span {
+      position: absolute;
+      transform: translateX(-50%);
+      white-space: nowrap;
+    }
+    .lab-range-labels .lab-range-label-zero { left: 0; transform: none; }
+    .lab-range-labels .lab-range-label-max  { right: 0; transform: none; }
+    .lab-range-empty {
+      margin-top: 1rem;
+      padding-top: 0.9rem;
+      border-top: 1px solid #e5ebed;
+      font-size: 0.85rem;
+      color: #7a8587;
+      font-style: italic;
+    }
+
+    /* Toast „Skopiowano" — pojawia się na chwilę w prawym dolnym rogu. */
+    .lab-toast {
+      position: fixed;
+      right: 1.25rem;
+      bottom: 1.25rem;
+      padding: 0.6rem 1rem;
+      border-radius: 0.6rem;
+      background: rgba(30, 60, 60, 0.92);
+      color: #fff;
+      font-size: 0.9rem;
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+      opacity: 0;
+      transform: translateY(0.5rem);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      pointer-events: none;
+      z-index: 9999;
+    }
+    .lab-toast.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
 
     .lab-meta {
       margin-top: 0.5rem;
@@ -256,21 +593,12 @@
       margin-top: 0.4rem;
     }
 
-    /* Przycisk czyszczący (analogicznie do clear-btn z homa-ir). */
+    /* Przycisk czyszczący – używa globalnego stylu button (turkusowy,
+       tak jak #clearAllDataBtn na index.html). Tylko centrowanie i margines. */
     .lab-card .lab-clear-btn {
       display: block;
       margin: 1.25rem auto 0;
-      padding: 0.55rem 1.4rem;
-      font-size: 0.95rem;
-      font-weight: 600;
-      border: 2px solid var(--danger) !important;
-      border-radius: var(--radius);
-      background: transparent;
-      color: var(--danger);
-      cursor: pointer;
-      transition: background 0.25s;
     }
-    .lab-card .lab-clear-btn:hover { background: rgba(198, 40, 40, 0.1); }
 
     /* Krzyżowy link do kalkulatora dawek. */
     .lab-cross-link {
@@ -295,10 +623,287 @@
       margin: 0;
     }
 
+    /* ───── Karta "Zaproponuj badania" (Faza 4d) ─────
+       Pomaga lekarzowi/pacjentowi szybko wybrać panel badań
+       dopasowany do podejrzewanej jednostki klinicznej. */
+    .lab-suggest-card .lab-suggest-intro {
+      font-size: 0.9rem;
+      color: #555;
+      margin: 0 0 0.85rem;
+      line-height: 1.45;
+    }
+    .lab-suggest-field {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.35rem;
+      margin-bottom: 0.5rem;
+    }
+    .lab-suggest-field label {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+    .lab-suggest-field select {
+      padding: 0.55rem 0.75rem;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 0.5rem;
+      background: #fff;
+      box-sizing: border-box;
+      width: 100%;
+    }
+    .lab-suggest-results {
+      margin-top: 1rem;
+    }
+    .lab-suggest-results h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin: 0.25rem 0 0.5rem;
+      color: #333;
+    }
+    .lab-suggest-empty {
+      font-size: 0.9rem;
+      color: #777;
+      font-style: italic;
+      padding: 0.5rem 0;
+    }
+    .lab-suggest-group {
+      margin-bottom: 0.85rem;
+    }
+    .lab-suggest-group-name {
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      color: var(--secondary, #5a8a99);
+      margin: 0 0 0.35rem;
+    }
+    .lab-suggest-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+    /* Chip badania — białe tło na stałe. UWAGA: ios26-v2.css ma regułę
+       `.liquid-ios26 button { background: rgba(255,255,255,0.20) !important; }`
+       o swoistości (0,1,1). Aby ją przebić, używamy selektora
+       `button.lab-suggest-chip` (swoistość 0,1,1) + `!important`. */
+    button.lab-suggest-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.45rem 0.85rem;
+      border-radius: 1rem;
+      background: #fff !important;
+      border: 1px solid rgba(42, 138, 138, 0.45) !important;
+      color: #1d6363;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: background 0.15s ease, border-color 0.15s ease, transform 0.05s ease;
+      user-select: none;
+      position: relative;
+      font-family: inherit;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      box-shadow: none !important;
+    }
+    button.lab-suggest-chip:hover {
+      background: rgba(42, 138, 138, 0.08) !important;
+      border-color: rgba(42, 138, 138, 0.7) !important;
+    }
+    button.lab-suggest-chip:active { transform: scale(0.97); }
+    button.lab-suggest-chip:focus-visible {
+      outline: 2px solid var(--primary, #2a8a8a);
+      outline-offset: 2px;
+    }
+    /* Aktualnie wybrany chip — wyraźnie zaznaczony jako "ten o którym
+       czytam w info-panelu poniżej". */
+    button.lab-suggest-chip.is-selected {
+      background: rgba(42, 138, 138, 0.28) !important;
+      border-color: rgba(42, 138, 138, 0.85) !important;
+      color: #134848;
+      font-weight: 600;
+      box-shadow: 0 0 0 3px rgba(42, 138, 138, 0.12) !important;
+    }
+    /* Nagłówek sekcji panelu (Panel podstawowy / Etiologia / Testy dynamiczne…) */
+    .lab-panel-section {
+      margin-bottom: 1rem;
+    }
+    .lab-panel-section:last-child { margin-bottom: 0.25rem; }
+    .lab-panel-section-name {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #2a8a8a;
+      margin: 0 0 0.4rem;
+      padding: 0.25rem 0;
+      border-bottom: 1px solid rgba(42, 138, 138, 0.2);
+      letter-spacing: 0.01em;
+    }
+    .lab-panel-summary {
+      font-size: 0.88rem;
+      line-height: 1.5;
+      color: #555;
+      margin: 0 0 0.85rem;
+      padding: 0.65rem 0.85rem;
+      background: rgba(42, 138, 138, 0.05);
+      border-left: 3px solid var(--primary, #2a8a8a);
+      border-radius: 0 0.4rem 0.4rem 0;
+    }
+    .lab-panel-guideline {
+      font-size: 0.78rem;
+      color: #666;
+      margin-top: 0.65rem;
+      font-style: italic;
+    }
+    .lab-panel-guideline::before {
+      content: '📚 ';
+      font-style: normal;
+    }
+
+    /* Lista źródeł / cytowań panelu klinicznego. */
+    .lab-panel-sources {
+      margin-top: 0.85rem;
+      padding-top: 0.65rem;
+      border-top: 1px dashed #d0dede;
+    }
+    .lab-panel-sources-header {
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #5a8a99;
+      margin: 0 0 0.35rem;
+    }
+    .lab-panel-sources-list {
+      list-style: decimal;
+      padding-left: 1.25rem;
+      margin: 0;
+      font-size: 0.78rem;
+      line-height: 1.5;
+      color: #555;
+    }
+    .lab-panel-sources-list li {
+      margin-bottom: 0.25rem;
+    }
+
+    /* ───── Info-panel dla wybranego badania (Faza 4f) ─────
+       Pojawia się pod sekcjami chipów po kliknięciu w dowolny chip.
+       Pokazuje: nazwa badania, notatka kliniczna, (opcjonalnie) dłuższy
+       opis testu, oraz przycisk "Załaduj do przelicznika" jeśli badanie
+       jest dostępne w naszym konwerterze. */
+    .lab-test-details {
+      margin-top: 1rem;
+      padding: 0.9rem 1rem 1rem;
+      background: #fff;
+      border: 1px solid rgba(42, 138, 138, 0.35);
+      border-radius: 0.65rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    }
+    .lab-test-details-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+    .lab-test-details-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #1d6363;
+      margin: 0;
+      line-height: 1.35;
+    }
+    .lab-test-details-tag {
+      display: inline-block;
+      flex-shrink: 0;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 0.2rem 0.55rem;
+      border-radius: 0.35rem;
+      white-space: nowrap;
+    }
+    .lab-test-details-tag.is-internal {
+      background: rgba(42, 138, 138, 0.15);
+      color: #1d6363;
+    }
+    .lab-test-details-tag.is-external {
+      background: rgba(120, 95, 35, 0.12);
+      color: #785f23;
+    }
+    .lab-test-details-note {
+      font-size: 0.92rem;
+      color: #444;
+      line-height: 1.5;
+      margin: 0 0 0.5rem;
+    }
+    .lab-test-details-desc {
+      font-size: 0.88rem;
+      color: #555;
+      line-height: 1.55;
+      margin: 0.35rem 0 0;
+      padding: 0.55rem 0.75rem;
+      background: rgba(42, 138, 138, 0.05);
+      border-radius: 0.4rem;
+    }
+    .lab-test-details-actions {
+      margin-top: 0.85rem;
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .lab-test-details-load {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.5rem 0.95rem;
+      background: var(--primary, #2a8a8a);
+      color: #fff;
+      border: none;
+      border-radius: 0.45rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s ease;
+      font-family: inherit;
+    }
+    .lab-test-details-load:hover { background: #226e6e; }
+    .lab-test-details-load:active { transform: scale(0.98); }
+    .lab-test-details-close {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.5rem 0.85rem;
+      background: transparent;
+      color: #666;
+      border: 1px solid #ccc;
+      border-radius: 0.45rem;
+      font-size: 0.88rem;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .lab-test-details-close:hover { background: #f5f7f7; }
+    .lab-test-details-hint {
+      font-size: 0.78rem;
+      color: #777;
+      margin: 0.45rem 0 0;
+      font-style: italic;
+    }
+
+    .lab-suggest-footnote {
+      font-size: 0.78rem;
+      color: #777;
+      margin-top: 0.6rem;
+      line-height: 1.4;
+    }
+
     /* Małe ekrany: kolumna zamiast wiersza dla pola wartości. */
     @media (max-width: 480px) {
-      .lab-input-row { flex-direction: column; }
-      .lab-input-row select { min-width: 0; }
+      .lab-input-row {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 
@@ -315,24 +920,23 @@
     <div class="main-content">
       <div class="container">
         <div class="lab-container">
+         <div class="lab-grid">
 
-          <!-- ===== Karta nagłówkowa ===== -->
+          <!-- ===== Karta formularza (lewa kolumna na desktop) ===== -->
           <div class="lab-card">
             <h1>Przelicznik jednostek laboratoryjnych</h1>
             <p class="lab-subtitle">Hormony osi nadnerczowo‑gonadalnej, steroidy płciowe, witamina D — pomiędzy jednostkami konwencjonalnymi (μg/dL, ng/mL, pg/mL) a SI (nmol/L, pmol/L, μmol/L).</p>
 
             <div class="lab-field">
-              <label for="labSearch">Szukaj substancji</label>
-              <div class="lab-search-wrap">
-                <input type="text" id="labSearch" class="lab-search"
-                       placeholder="np. kortyzol, DHEA-S, estradiol, 25-OH wit. D…"
-                       autocomplete="off" inputmode="search" />
-              </div>
-            </div>
-
-            <div class="lab-field">
               <label for="labSubstance">Substancja</label>
-              <select id="labSubstance" class="lab-substance"></select>
+              <div class="lab-search-wrap">
+                <input type="text" id="labSubstance" class="lab-substance"
+                       list="labSubstanceList"
+                       placeholder="zacznij wpisywać: kortyzol, DHEA-S, E2, 25-OH wit. D, 17OHP…"
+                       autocomplete="off" spellcheck="false" inputmode="search" />
+                <datalist id="labSubstanceList"></datalist>
+                <div id="labSubstanceHint" class="lab-substance-hint" aria-live="polite"></div>
+              </div>
             </div>
 
             <div class="lab-field">
@@ -346,14 +950,92 @@
               <div id="labError" class="lab-error" style="display:none;"></div>
             </div>
 
+            <!-- Atrybuty pomiaru: pora pobrania i test diagnostyczny.
+                 Pojawiają się warunkowo, tylko dla substancji time-aware / DST-aware
+                 (kortyzol, ACTH, testosteron T/wolny). To są cechy danego oznaczenia,
+                 nie pacjenta — dlatego są tutaj, w polu „Przelicznik jednostek
+                 laboratoryjnych", nie w karcie kontekstu pacjenta. -->
+            <div class="lab-field" id="labMeasFieldTime" style="display:none;">
+              <label for="labMeasTime">Pora pobrania
+                <small style="font-weight:400;opacity:0.65;">(opcjonalnie)</small>
+              </label>
+              <select id="labMeasTime" class="lab-substance">
+                <option value="">— domyślnie (rano) —</option>
+                <option value="morning">Rano (7:00–10:00)</option>
+                <option value="evening">Popołudnie / wieczór (14:00–22:00)</option>
+                <option value="midnight">Północ (22:00–02:00) — diagnostyka Cushinga</option>
+              </select>
+            </div>
+            <div class="lab-field" id="labMeasFieldProtocol" style="display:none;">
+              <label for="labMeasProtocol">Test diagnostyczny
+                <small style="font-weight:400;opacity:0.65;">(opcjonalnie)</small>
+              </label>
+              <select id="labMeasProtocol" class="lab-substance">
+                <!-- Opcje wstawiane dynamicznie przez JS w updateMeasurementFields().
+                     Dla kortyzolu: DST. Dla Tg: pomiary po tyreoidektomii. -->
+                <option value="">— pomiar bazalny —</option>
+              </select>
+            </div>
+
             <button type="button" id="labClearBtn" class="lab-clear-btn">
-              <i data-lucide="eraser" aria-hidden="true"></i> Wyczyść
+              <i data-lucide="eraser" aria-hidden="true"></i> Wyczyść wszystkie pola
             </button>
           </div>
 
-          <!-- ===== Karta wyników ===== -->
-          <div class="lab-card" id="labResultsCard" style="display:none;">
+          <!-- ===== Karta wyników (prawa kolumna na desktop) – widoczna stale -->
+          <div class="lab-card" id="labResultsCard">
             <h2>Przeliczone wartości</h2>
+
+            <!-- Kontekst pacjenta: auto-dobór zakresu z sharedUserData (wiek + płeć),
+                 z możliwością nadpisania lokalnego. -->
+            <div class="lab-patient-context" id="labPatientCtx">
+              <div class="lab-patient-summary">
+                <i data-lucide="user" aria-hidden="true"></i>
+                <span class="lab-patient-text" id="labPatientText">Sprawdzanie danych pacjenta…</span>
+                <button type="button" class="lab-patient-toggle" id="labPatientToggle"
+                        aria-expanded="false" aria-controls="labPatientOverride">Zmień ▼</button>
+              </div>
+              <div class="lab-patient-clinical-hint" id="labClinicalHint" style="display:none;"></div>
+              <div class="lab-patient-override" id="labPatientOverride" style="display:none;">
+                <label>Płeć
+                  <select id="labOverrideSex">
+                    <option value="">(z danych pacjenta)</option>
+                    <option value="M">Mężczyzna</option>
+                    <option value="F">Kobieta</option>
+                  </select>
+                </label>
+                <label>Wiek [lata]
+                  <input type="number" id="labOverrideAge" min="0" max="120" step="1"
+                         placeholder="z danych pacjenta">
+                </label>
+                <label id="labOverrideCycleWrap" style="display:none;">Faza cyklu / ciąża
+                  <select id="labOverrideCycle">
+                    <option value="">(domyślnie)</option>
+                    <option value="follicular">Faza folikularna</option>
+                    <option value="ovulation">Pik owulacyjny</option>
+                    <option value="luteal">Faza lutealna</option>
+                    <option value="postmenopause">Postmenopauza</option>
+                    <option value="pregnancy_t1">Ciąża — I trymestr</option>
+                    <option value="pregnancy_t2">Ciąża — II trymestr</option>
+                    <option value="pregnancy_t3">Ciąża — III trymestr</option>
+                  </select>
+                </label>
+                <label id="labOverrideTannerWrap" style="display:none;">Etap Tannera
+                  <select id="labOverrideTanner">
+                    <option value="">(z danych pacjenta)</option>
+                    <option value="1">Tanner I — przedpokwitaniowy</option>
+                    <option value="2">Tanner II</option>
+                    <option value="3">Tanner III</option>
+                    <option value="4">Tanner IV</option>
+                    <option value="5">Tanner V — dojrzałość pełna</option>
+                  </select>
+                </label>
+                <button type="button" class="lab-override-reset" id="labOverrideReset">
+                  Resetuj do danych pacjenta
+                </button>
+              </div>
+            </div>
+
             <table class="lab-results-table" aria-live="polite">
               <thead>
                 <tr><th scope="col">Jednostka</th><th scope="col" style="text-align:right;">Wartość</th></tr>
@@ -361,10 +1043,20 @@
               <tbody id="labResultsBody"></tbody>
             </table>
             <p class="lab-meta" id="labMeta"></p>
+
+            <!-- Pasek-skala z oznaczeniem normy – wypełniany przez JS. -->
+            <div id="labRangeBlock"></div>
+
+            <!-- Sekcja źródeł — rozwijana lista cytowań dla aktualnego zakresu. -->
+            <div class="lab-sources-wrap" id="labSourcesWrap" style="display:none;">
+              <button type="button" id="labSourcesToggle" aria-expanded="false"
+                      aria-controls="labSourcesList">Źródła</button>
+              <ol class="lab-sources-list" id="labSourcesList" style="display:none;"></ol>
+            </div>
           </div>
 
-          <!-- ===== Karta zakresów referencyjnych / uwag / źródeł ===== -->
-          <div class="lab-card" id="labInfoCard" style="display:none;">
+          <!-- ===== Karta zakresów referencyjnych / uwag / źródeł (full-width) ===== -->
+          <div class="lab-card lab-full" id="labInfoCard" style="display:none;">
             <h2 id="labInfoTitle"></h2>
             <ul class="lab-list" id="labRanges"></ul>
             <p class="lab-meta" id="labNotes"></p>
@@ -375,8 +1067,39 @@
             </a>
           </div>
 
-          <!-- ===== Karta disclaimer ===== -->
-          <div class="lab-card">
+          <!-- ===== Karta "Zaproponuj badania" (Faza 4d, full-width) =====
+               Użytkownik wybiera podejrzewaną jednostkę kliniczną (np. PCOS,
+               hipogonadyzm, niedoczynność tarczycy), a system pokazuje listę
+               substancji w naszej bazie oznaczonych tym wskazaniem
+               (clinical_indications). Kliknięcie chipa wprowadza substancję
+               do formularza powyżej i przewija stronę. -->
+          <div class="lab-card lab-full lab-suggest-card" id="labSuggestCard">
+            <h2>Zaproponuj badania według wskazania klinicznego</h2>
+            <p class="lab-suggest-intro">
+              Wybierz podejrzewaną jednostkę kliniczną — pokażemy parametry
+              laboratoryjne najczęściej oznaczane w diagnostyce.
+            </p>
+            <div class="lab-suggest-field">
+              <label for="labClinicalIndication">Wskazanie kliniczne</label>
+              <select id="labClinicalIndication">
+                <option value="">— wybierz wskazanie —</option>
+                <!-- opcje dodawane dynamicznie w JS, pogrupowane przez <optgroup> -->
+              </select>
+            </div>
+            <div class="lab-suggest-results" id="labSuggestResults" style="display:none;">
+              <h3 id="labSuggestResultsTitle"></h3>
+              <div id="labSuggestResultsBody"></div>
+              <p class="lab-suggest-footnote">
+                Kliknij badanie, aby zobaczyć opis. Badania dostępne w naszym
+                przeliczniku można stamtąd załadować bezpośrednio do formularza.
+                Lista ma charakter pomocniczy — ostateczny dobór badań zależy
+                od lekarza i kontekstu klinicznego.
+              </p>
+            </div>
+          </div>
+
+          <!-- ===== Karta disclaimer (full-width) ===== -->
+          <div class="lab-card lab-full">
             <p class="lab-disclaimer">
               <strong>Uwaga:</strong> przelicznik ma charakter informacyjno‑edukacyjny.
               Współczynniki obliczono na podstawie mas cząsteczkowych wzorów sumarycznych
@@ -386,6 +1109,10 @@
             </p>
           </div>
 
+         </div><!-- /.lab-grid -->
+
+         <!-- Toast „Skopiowano" – pojawia się po kliknięciu wartości w tabeli. -->
+         <div id="labToast" class="lab-toast" role="status" aria-live="polite"></div>
         </div>
       </div>
     </div>
@@ -445,8 +1172,9 @@
   <script src="ios26-ui.js?v=18" defer></script>
 
   <!-- Dane + moduł logiki (dwa pliki przygotowane do reużycia w innych podstronach). -->
-  <script src="lab_units_data.js?v=1"></script>
-  <script src="lab_unit_converter.js?v=1"></script>
+  <script src="lab_units_data.js?v=4"></script>
+  <script src="lab_unit_converter.js?v=2"></script>
+  <script src="lab_clinical_panels.js?v=15"></script>
 
   <script>
   (function () {
@@ -460,19 +1188,42 @@
       return;
     }
 
-    var persistence = (window.VildaPersistence && typeof window.VildaPersistence.readPreference === 'function')
+    var persistence = (window.VildaPersistence && typeof window.VildaPersistence.readPreferenceRaw === 'function')
       ? window.VildaPersistence : null;
     var PREF_SUBSTANCE = 'LAB_CONV_SUBSTANCE';
     var PREF_UNIT      = 'LAB_CONV_UNIT';
 
-    var searchEl    = document.getElementById('labSearch');
-    var substanceEl = document.getElementById('labSubstance');
-    var valueEl     = document.getElementById('labValue');
-    var unitEl      = document.getElementById('labUnit');
-    var errorEl     = document.getElementById('labError');
-    var resultsCard = document.getElementById('labResultsCard');
-    var resultsBody = document.getElementById('labResultsBody');
-    var metaEl      = document.getElementById('labMeta');
+    var substanceEl     = document.getElementById('labSubstance');
+    var substanceListEl = document.getElementById('labSubstanceList');
+    var substanceHintEl = document.getElementById('labSubstanceHint');
+    var valueEl         = document.getElementById('labValue');
+    var unitEl          = document.getElementById('labUnit');
+    var errorEl         = document.getElementById('labError');
+    var resultsCard     = document.getElementById('labResultsCard');
+    var resultsBody     = document.getElementById('labResultsBody');
+    var metaEl          = document.getElementById('labMeta');
+    var rangeBlockEl    = document.getElementById('labRangeBlock');
+    var toastEl         = document.getElementById('labToast');
+    var patientCtxEl    = document.getElementById('labPatientCtx');
+    var patientTextEl   = document.getElementById('labPatientText');
+    var patientToggleEl = document.getElementById('labPatientToggle');
+    var patientOverrideEl = document.getElementById('labPatientOverride');
+    var overrideSexEl   = document.getElementById('labOverrideSex');
+    var overrideAgeEl   = document.getElementById('labOverrideAge');
+    var overrideCycleWrapEl = document.getElementById('labOverrideCycleWrap');
+    var overrideCycleEl = document.getElementById('labOverrideCycle');
+    var overrideTannerWrapEl = document.getElementById('labOverrideTannerWrap');
+    var overrideTannerEl = document.getElementById('labOverrideTanner');
+    var overrideResetEl = document.getElementById('labOverrideReset');
+    var clinicalHintEl  = document.getElementById('labClinicalHint');
+    // Atrybuty pomiaru (cechy oznaczenia, nie pacjenta) — pora pobrania i test diagnostyczny.
+    var measTimeFieldEl     = document.getElementById('labMeasFieldTime');
+    var measTimeEl          = document.getElementById('labMeasTime');
+    var measProtocolFieldEl = document.getElementById('labMeasFieldProtocol');
+    var measProtocolEl      = document.getElementById('labMeasProtocol');
+    var sourcesWrapEl   = document.getElementById('labSourcesWrap');
+    var sourcesToggleEl = document.getElementById('labSourcesToggle');
+    var sourcesListEl   = document.getElementById('labSourcesList');
 
     var infoCard    = document.getElementById('labInfoCard');
     var infoTitleEl = document.getElementById('labInfoTitle');
@@ -482,6 +1233,12 @@
     var crossLinkEl = document.getElementById('labCrossLink');
 
     var clearBtn    = document.getElementById('labClearBtn');
+
+    // Faza 4d — karta "Zaproponuj badania"
+    var suggestSelectEl   = document.getElementById('labClinicalIndication');
+    var suggestResultsEl  = document.getElementById('labSuggestResults');
+    var suggestTitleEl    = document.getElementById('labSuggestResultsTitle');
+    var suggestBodyEl     = document.getElementById('labSuggestResultsBody');
 
     // ID substancji, dla których proponujemy link do steroidy.html
     // (te, które są też w słowniku DRUGS na stronie kalkulatora dawek lub
@@ -521,48 +1278,926 @@
 
     function readPref(key) {
       if (!persistence) return null;
-      try { return persistence.readPreference(key, null); } catch (_) { return null; }
+      try { return persistence.readPreferenceRaw(key, null); } catch (_) { return null; }
     }
     function writePref(key, value) {
-      if (!persistence || typeof persistence.writePreference !== 'function') return;
-      try { persistence.writePreference(key, value); } catch (_) { /* noop */ }
+      if (!persistence || typeof persistence.writePreferenceRaw !== 'function') return;
+      try { persistence.writePreferenceRaw(key, value == null ? '' : String(value)); } catch (_) { /* noop */ }
     }
 
     // ────────────────────────────────────────────────────────────────
-    //  Budowa selektora substancji (z opcjami pogrupowanymi)
+    //  Schowek + toast
     // ────────────────────────────────────────────────────────────────
 
-    function buildSubstanceOptions(filterIds) {
-      var allowAll = !filterIds;
-      var allowSet = {};
-      if (filterIds) {
-        for (var i = 0; i < filterIds.length; i++) allowSet[filterIds[i]] = true;
+    function copyTextToClipboard(text) {
+      var str = String(text == null ? '' : text);
+      // Preferowany async API – wymaga secure context (https / localhost).
+      if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+        try { return navigator.clipboard.writeText(str); } catch (_) { /* spadnij niżej */ }
+      }
+      // Fallback: tymczasowa <textarea> + execCommand('copy').
+      return new Promise(function (resolve, reject) {
+        try {
+          var ta = document.createElement('textarea');
+          ta.value = str;
+          ta.setAttribute('readonly', '');
+          ta.style.position = 'fixed';
+          ta.style.top = '-1000px';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          var ok = document.execCommand('copy');
+          document.body.removeChild(ta);
+          if (ok) resolve(); else reject(new Error('execCommand returned false'));
+        } catch (err) { reject(err); }
+      });
+    }
+
+    var toastTimer = null;
+    function showToast(message) {
+      if (!toastEl) return;
+      toastEl.textContent = message;
+      toastEl.classList.add('is-visible');
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(function () {
+        toastEl.classList.remove('is-visible');
+      }, 1800);
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    //  Kontekst pacjenta (sharedUserData + lokalne override)
+    // ────────────────────────────────────────────────────────────────
+
+    // Substancje, dla których ma sens selektor "Faza cyklu / ciąża"
+    // (zakresy cycle-dependent lub pregnancy-dependent).
+    var CYCLE_AWARE = {
+      // faza 1/2 — sterydy płciowe
+      oh17_progesterone: true,
+      androstenedione: true,
+      estradiol: true,
+      estrone: true,
+      progesterone: true,
+      // faza 4a — tarczyca w ciąży (PTE 2021)
+      tsh: true,
+      ft4: true,
+      ft3: true,
+      // faza 4b — przysadka/gonady
+      prolactin: true,
+      lh: true,
+      fsh: true,
+      inhibin_b: true
+    };
+
+    // Substancje, dla których są tabele Tannera I–V — selektor Tannera
+    // ma kluczową wartość kliniczną przy pacjentach w wieku dziecięcym/młodzieżowym.
+    var TANNER_AWARE = {
+      // faza 2 — sterydy płciowe Mayo
+      oh17_pregnenolone: true,
+      pregnenolone: true,
+      dhea_s: true,
+      androstenedione: true,
+      dht: true,
+      estradiol: true,
+      estrone: true,
+      // faza 4b — przysadka/gonady
+      igf1: true,
+      igfbp3: true,
+      lh: true,
+      fsh: true,
+      shbg: true
+    };
+
+    // Substancje z silnym rytmem dobowym — pora pobrania zmienia interpretację.
+    var TIME_AWARE = {
+      cortisol: true,
+      acth: true,
+      testosterone_total: true,
+      testosterone_free: true
+    };
+
+    // Substancje, dla których ma sens test diagnostyczny (DST).
+    var DST_AWARE = {
+      cortisol: true
+    };
+
+    // Substancje z protokołami po tyreoidektomii (Tg).
+    var THYROIDECTOMY_AWARE = {
+      thyroglobulin: true
+    };
+
+    // Mapowanie protokołów na opcje selectu per substancja.
+    // Każda substancja, która ma `test_protocol` w `when` swoich zakresów,
+    // dostaje tu listę opcji wyświetlanych w selektorze "Test diagnostyczny".
+    var PROTOCOL_OPTIONS = {
+      cortisol: [
+        { value: '',         label: '— pomiar bazalny —' },
+        { value: 'post_dst', label: 'Po teście hamowania 1 mg deksametazonu (DST)' }
+      ],
+      thyroglobulin: [
+        { value: '',                           label: '— zachowana tarczyca / po lobektomii —' },
+        { value: 'post_thyroidectomy_basal',   label: 'Po total thyroidectomy — bazalny (na L-tyroksynie)' },
+        { value: 'post_thyroidectomy_stimulated', label: 'Po total thyroidectomy — stymulowany (rhTSH / odstawienie)' }
+      ],
+      tsh: [
+        { value: '',                       label: '— pomiar w surowicy (standardowy) —' },
+        { value: 'neonatal_dbs_first',     label: 'Bibuła pierwsza — przesiew noworodkowy (DBS, 3.–5. doba)' },
+        { value: 'neonatal_dbs_second',    label: 'Bibuła druga — powtórka przesiewu' }
+      ]
+    };
+
+    // ────────────────────────────────────────────────────────────────
+    //  Mapa wskazań klinicznych (Faza 4d)
+    // ────────────────────────────────────────────────────────────────
+    //  Identyfikatory clinical_indications używane w lab_units_data.js
+    //  → polska etykieta + grupa tematyczna (dla <optgroup>).
+    //  Kolejność grup definiuje kolejność wyświetlania w <select>.
+    var CLINICAL_INDICATION_GROUPS_ORDER = [
+      'Oś nadnerczowa',
+      'Steroidy / androgeny',
+      'Oś gonadalna',
+      'Tarczyca',
+      'Wzrost i rozwój',
+      'Metabolizm wapniowo-fosforanowy',
+      'Inne'
+    ];
+    var CLINICAL_INDICATIONS = {
+      // Oś nadnerczowa
+      adrenal_insufficiency:     { label: 'Niedoczynność kory nadnerczy', group: 'Oś nadnerczowa' },
+      cushing:                   { label: 'Zespół Cushinga / hiperkortyzolemia', group: 'Oś nadnerczowa' },
+      cah:                       { label: 'Wrodzony przerost nadnerczy (CAH)', group: 'Oś nadnerczowa' },
+      primary_aldosteronism:     { label: 'Pierwotny hiperaldosteronizm', group: 'Oś nadnerczowa' },
+      adrenal_tumor:             { label: 'Podejrzenie guza nadnercza (incidentaloma)', group: 'Oś nadnerczowa' },
+
+      // Steroidy / androgeny
+      hirsutism:                 { label: 'Hirsutyzm / androgenizacja', group: 'Steroidy / androgeny' },
+      pcos:                      { label: 'Zespół policystycznych jajników (PCOS)', group: 'Steroidy / androgeny' },
+      virilization:              { label: 'Wirylizacja', group: 'Steroidy / androgeny' },
+      '5a_reductase_deficiency': { label: 'Niedobór 5α-reduktazy', group: 'Steroidy / androgeny' },
+      dsd:                       { label: 'Zaburzenia różnicowania płci (DSD)', group: 'Steroidy / androgeny' },
+
+      // Oś gonadalna
+      hypogonadism_male:         { label: 'Hipogonadyzm męski', group: 'Oś gonadalna' },
+      hypogonadism_female:       { label: 'Hipogonadyzm żeński / niewydolność jajników', group: 'Oś gonadalna' },
+      andropause:                { label: 'Andropauza / hipogonadyzm wieku starszego', group: 'Oś gonadalna' },
+      menopause:                 { label: 'Menopauza / postmenopauza', group: 'Oś gonadalna' },
+      ovarian_failure:           { label: 'Przedwczesna niewydolność jajników (POI)', group: 'Oś gonadalna' },
+      klinefelter:               { label: 'Zespół Klinefeltera', group: 'Oś gonadalna' },
+      infertility:               { label: 'Niepłodność (M/F)', group: 'Oś gonadalna' },
+      ivf_reserve:               { label: 'Ocena rezerwy jajnikowej (IVF)', group: 'Oś gonadalna' },
+      hyperprolactinemia:        { label: 'Hiperprolaktynemia', group: 'Oś gonadalna' },
+      amenorrhea:                { label: 'Brak miesiączki', group: 'Oś gonadalna' },
+      galactorrhea:              { label: 'Mlekotok', group: 'Oś gonadalna' },
+      ovulation:                 { label: 'Ocena owulacji', group: 'Oś gonadalna' },
+      luteal_phase_defect:       { label: 'Niewydolność fazy lutealnej', group: 'Oś gonadalna' },
+      pregnancy:                 { label: 'Ciąża — kontrola laboratoryjna', group: 'Oś gonadalna' },
+      gynecomastia:              { label: 'Ginekomastia', group: 'Oś gonadalna' },
+      precocious_puberty:        { label: 'Przedwczesne dojrzewanie', group: 'Oś gonadalna' },
+      delayed_puberty:           { label: 'Opóźnione dojrzewanie', group: 'Oś gonadalna' },
+
+      // Tarczyca
+      hypothyroidism:            { label: 'Niedoczynność tarczycy', group: 'Tarczyca' },
+      hyperthyroidism:           { label: 'Nadczynność tarczycy', group: 'Tarczyca' },
+      thyroid_cancer_followup:   { label: 'Kontrola po raku tarczycy', group: 'Tarczyca' },
+      autoimmune_thyroid:        { label: 'Autoimmunologiczne choroby tarczycy', group: 'Tarczyca' },
+      neonatal_screening:        { label: 'Przesiew noworodkowy (tarczyca)', group: 'Tarczyca' },
+
+      // Wzrost i rozwój
+      GH_deficiency:             { label: 'Niedobór hormonu wzrostu (GHD)', group: 'Wzrost i rozwój' },
+      short_stature:             { label: 'Niedobór wzrostu (low stature)', group: 'Wzrost i rozwój' },
+      acromegaly:                { label: 'Akromegalia', group: 'Wzrost i rozwój' },
+
+      // Metabolizm wapniowo-fosforanowy
+      vitamin_d_status:          { label: 'Ocena zaopatrzenia w witaminę D', group: 'Metabolizm wapniowo-fosforanowy' },
+      osteoporosis:              { label: 'Osteoporoza', group: 'Metabolizm wapniowo-fosforanowy' },
+      rickets:                   { label: 'Krzywica / osteomalacja', group: 'Metabolizm wapniowo-fosforanowy' },
+      granulomatous_disease:     { label: 'Choroby ziarniniakowe (np. sarkoidoza)', group: 'Metabolizm wapniowo-fosforanowy' },
+      malabsorption:             { label: 'Zaburzenia wchłaniania', group: 'Metabolizm wapniowo-fosforanowy' },
+
+      // Inne
+      hypertension:              { label: 'Nadciśnienie tętnicze (przyczyny endokr.)', group: 'Inne' },
+      hypokalemia:               { label: 'Hipokaliemia', group: 'Inne' },
+      obesity:                   { label: 'Otyłość', group: 'Inne' },
+      metabolic_syndrome:        { label: 'Zespół metaboliczny', group: 'Inne' },
+      ckd:                       { label: 'Przewlekła choroba nerek (CKD)', group: 'Inne' }
+    };
+
+    // Atrybuty pomiaru (osobny stan od localOverride, bo dotyczą oznaczenia,
+    // nie pacjenta). Resetowane razem z polami formularza.
+    var measurementCtx = { time_of_day: null, test_protocol: null };
+
+    // Lokalne nadpisania – żyją tylko w pamięci tej karty, nie idą do sharedUserData.
+    var localOverride = { sex: null, age: null, tanner: null, cycle_phase: null };
+
+    /**
+     * Czyta wiek/płeć/Tanner z VildaPersistence.readShared(). Zwraca obiekt
+     * { sex, age, tanner, source: 'shared' } lub null.
+     */
+    function readPatientFromShared() {
+      if (!persistence || typeof persistence.readShared !== 'function') return null;
+      try {
+        var shared = persistence.readShared(null);
+        if (!shared) return null;
+        var ageRaw = shared.age;
+        var ageNum = (ageRaw == null || ageRaw === '') ? null : Number(ageRaw);
+        var monthsRaw = shared.ageMonths;
+        var monthsNum = (monthsRaw == null || monthsRaw === '') ? null : Number(monthsRaw);
+        if (ageNum != null && isFinite(ageNum) && monthsNum != null && isFinite(monthsNum)) {
+          ageNum = ageNum + monthsNum / 12;
+        }
+        var sex = (shared.sex === 'M' || shared.sex === 'F') ? shared.sex : null;
+        var tannerRaw = shared.tannerStage;
+        var tannerVal = null;
+        if (tannerRaw != null && tannerRaw !== '') {
+          var tn = parseInt(tannerRaw, 10);
+          if (isFinite(tn) && tn >= 1 && tn <= 5) tannerVal = tn;
+        }
+        if (sex == null && ageNum == null && tannerVal == null) return null;
+        return {
+          sex: sex,
+          age: (ageNum != null && isFinite(ageNum)) ? ageNum : null,
+          tanner: tannerVal,
+          source: 'shared'
+        };
+      } catch (_) { return null; }
+    }
+
+    /**
+     * Łączy dane z sharedUserData z lokalnym override. Override ma priorytet
+     * dla każdego pola, gdy nie jest puste/null. Dolicza life_stage z wieku.
+     */
+    function getEffectivePatient() {
+      var shared = readPatientFromShared() || {};
+      var p = {
+        sex: localOverride.sex || shared.sex || null,
+        age: (typeof localOverride.age === 'number' && isFinite(localOverride.age)) ? localOverride.age :
+             (typeof shared.age === 'number' && isFinite(shared.age)) ? shared.age : null,
+        tanner: (typeof localOverride.tanner === 'number' && isFinite(localOverride.tanner)) ? localOverride.tanner :
+                (typeof shared.tanner === 'number' && isFinite(shared.tanner)) ? shared.tanner : null,
+        cycle_phase: localOverride.cycle_phase || null,
+        // Atrybuty pomiaru — z formularza, nie z patient data
+        time_of_day: measurementCtx.time_of_day || null,
+        test_protocol: measurementCtx.test_protocol || null
+      };
+      if (typeof p.age === 'number') {
+        p.life_stage = p.age >= 18 ? 'adult' : 'pediatric';
+      } else if (typeof p.tanner === 'number') {
+        // Tanner V jest klinicznie tożsamy z dojrzałością dorosłą
+        p.life_stage = p.tanner >= 5 ? 'adult' : 'pediatric';
+      } else {
+        p.life_stage = null;
+      }
+      // Flagi pomocnicze do UI
+      p._has_shared = !!(shared.sex || (typeof shared.age === 'number') || (typeof shared.tanner === 'number'));
+      p._has_override = !!(localOverride.sex || localOverride.age != null ||
+                           localOverride.tanner != null || localOverride.cycle_phase);
+      return p;
+    }
+
+    /**
+     * Opis tekstowy aktualnego kontekstu pacjenta dla nagłówka.
+     */
+    function describePatient(p) {
+      if (!p || (!p.sex && p.age == null && p.tanner == null)) {
+        return { text: 'Brak danych pacjenta — zakres ogólny dorosły', missing: true };
+      }
+      var bits = [];
+      if (p.sex) bits.push(p.sex === 'M' ? 'Mężczyzna' : 'Kobieta');
+      if (p.age != null) {
+        var rounded = (p.age < 18) ? p.age.toFixed(1).replace(/\.0$/, '') : Math.round(p.age);
+        bits.push(rounded + ' ' + (p.age < 1 ? 'r.ż.' : 'lat'));
+      }
+      if (p.life_stage === 'pediatric') bits.push('wiek dziecięcy/młodzieńczy');
+      if (typeof p.tanner === 'number') {
+        bits.push('Tanner ' + ['I','II','III','IV','V'][p.tanner - 1]);
+      }
+      if (p.cycle_phase) {
+        var cyc = { follicular: 'faza folikularna', ovulation: 'pik owulacyjny',
+                    luteal: 'faza lutealna', postmenopause: 'postmenopauza' };
+        bits.push(cyc[p.cycle_phase] || p.cycle_phase);
+      }
+      var suffix = p._has_override ? ' · override lokalny' : '';
+      return { text: bits.join(' · ') + suffix, missing: false };
+    }
+
+    /**
+     * Buduje tekst „kliniczny hint" — sugestię, że uzupełnienie konkretnego
+     * pola (Tanner, faza cyklu) zaowocuje precyzyjniejszym zakresem normy.
+     * Zwraca pusty string, gdy nic nie warto sugerować.
+     */
+    function buildClinicalHint(patient) {
+      if (!currentSubstance || !patient) return '';
+      var hints = [];
+      var tannerAware = !!TANNER_AWARE[currentSubstance.id];
+      var cycleAware  = !!CYCLE_AWARE[currentSubstance.id];
+
+      if (tannerAware && patient.life_stage === 'pediatric' && patient.tanner == null) {
+        hints.push('Określ etap Tannera w „Zmień ▼" — dla precyzyjniejszego zakresu (Mayo udostępnia tabele Tanner I–V dla tej substancji).');
+      }
+      if (cycleAware && patient.sex === 'F' && patient.life_stage === 'adult' && !patient.cycle_phase) {
+        hints.push('Określ fazę cyklu / ciążę w „Zmień ▼" — domyślnie pokazujemy zakres folikularny.');
+      }
+      // Hint dla testosteronu popołudniowego — ES 2018 mówi że taki pomiar
+      // nie nadaje się do diagnostyki hipogonadyzmu.
+      if ((currentSubstance.id === 'testosterone_total' || currentSubstance.id === 'testosterone_free') &&
+          patient.time_of_day === 'evening') {
+        hints.push('Pobranie popołudniowe nie jest wskazane do diagnostyki hipogonadyzmu (Endocrine Society 2018) — wymagany pomiar 7:00–10:00.');
+      }
+      return hints.join(' ');
+    }
+
+    function renderPatientSummary() {
+      var p = getEffectivePatient();
+      var d = describePatient(p);
+      patientTextEl.textContent = d.text;
+      patientTextEl.classList.toggle('is-missing', !!d.missing);
+      // Wyróżnij wizualnie kontekst pediatryczny (różne tło/border).
+      patientCtxEl.classList.toggle('is-pediatric', p && p.life_stage === 'pediatric');
+      // Selektor fazy cyklu/ciąży tylko dla cycle-aware substancji.
+      var cycleAware = !!(currentSubstance && CYCLE_AWARE[currentSubstance.id]);
+      overrideCycleWrapEl.style.display = cycleAware ? '' : 'none';
+      // Selektor Tannera tylko dla Tanner-aware substancji LUB dla pacjenta
+      // pediatrycznego (wtedy lekarz może z dowolnym analitem doprecyzować
+      // dojrzałość, a my zaczerpniemy ją do oceny life_stage).
+      var tannerAware = !!(currentSubstance && TANNER_AWARE[currentSubstance.id]);
+      var showTanner = tannerAware || (p && p.life_stage === 'pediatric');
+      overrideTannerWrapEl.style.display = showTanner ? '' : 'none';
+      // Reset visible tylko gdy jest co resetować.
+      overrideResetEl.style.display = p._has_override ? '' : 'none';
+      // Hint kliniczny pod summary
+      if (clinicalHintEl) {
+        var hintText = buildClinicalHint(p);
+        if (hintText) {
+          clinicalHintEl.textContent = hintText;
+          clinicalHintEl.style.display = '';
+        } else {
+          clinicalHintEl.style.display = 'none';
+          clinicalHintEl.textContent = '';
+        }
+      }
+    }
+
+    /**
+     * Renderuje sekcję "Źródła" pod paskiem normy, na podstawie source_ids
+     * z wybranego zakresu. Jeśli źródeł brak — chowa sekcję.
+     */
+    function renderSources(rangeInfo) {
+      if (!sourcesWrapEl) return;
+      clearChildren(sourcesListEl);
+      var ids = (rangeInfo && Array.isArray(rangeInfo.source_ids)) ? rangeInfo.source_ids : [];
+      if (!ids.length) {
+        sourcesWrapEl.style.display = 'none';
+        return;
+      }
+      for (var i = 0; i < ids.length; i++) {
+        var src = Conv.findSource ? Conv.findSource(ids[i]) : null;
+        if (!src) continue;
+        var li = document.createElement('li');
+        // Krótki tytuł
+        var titleNode;
+        if (src.url) {
+          titleNode = document.createElement('a');
+          titleNode.href = src.url;
+          titleNode.target = '_blank';
+          titleNode.rel = 'noopener noreferrer';
+          titleNode.textContent = src.label_short || src.full_cite;
+        } else {
+          titleNode = document.createElement('strong');
+          titleNode.textContent = src.label_short || src.full_cite;
+        }
+        li.appendChild(titleNode);
+        // Pełne cytowanie pod krótkim tytułem
+        if (src.full_cite) {
+          var fullSpan = document.createElement('span');
+          fullSpan.style.display = 'block';
+          fullSpan.style.color = '#666';
+          fullSpan.style.marginTop = '0.15rem';
+          fullSpan.textContent = src.full_cite;
+          li.appendChild(fullSpan);
+        }
+        sourcesListEl.appendChild(li);
+      }
+      sourcesWrapEl.style.display = sourcesListEl.childNodes.length ? '' : 'none';
+      // Domyślnie lista zwinięta po przeładowaniu — przycisk pozostaje aktywny.
+      sourcesListEl.style.display = 'none';
+      sourcesToggleEl.setAttribute('aria-expanded', 'false');
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    //  Datalist z substancjami — jednorazowo budujemy zestaw opcji.
+    //  Każda opcja: value = label_pl (to widzi użytkownik), label = grupa
+    //  + opcjonalnie aliasy w nawiasie (niektóre przeglądarki je pokazują).
+    //  Rozpoznawanie substancji z wpisanego tekstu odbywa się w resolveSubstance().
+    // ────────────────────────────────────────────────────────────────
+
+    // Mapa: znormalizowana nazwa/alias → substancja. Budowana raz, używana
+    // przy rozpoznawaniu tego, co użytkownik wpisał. Zapisujemy obie wersje:
+    // ze spacjami oraz bez, dzięki czemu "17 OHP", "17-OHP" i "17OHP" trafiają
+    // w to samo wskazanie.
+    var ALIAS_INDEX = (function () {
+      var map = {};
+      function normalize(s) {
+        return String(s || '')
+          .normalize('NFD').replace(/[̀-ͯ]/g, '')
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+      }
+      function put(key, sub) {
+        if (!key) return;
+        if (!map[key]) map[key] = sub;
+        var collapsed = key.replace(/\s+/g, '');
+        if (collapsed && collapsed !== key && !map[collapsed]) map[collapsed] = sub;
+      }
+      var raw = Data.list();
+      for (var i = 0; i < raw.length; i++) {
+        var s = raw[i];
+        var keys = [s.label_pl, s.label_en, s.id];
+        if (Array.isArray(s.aliases)) keys = keys.concat(s.aliases);
+        for (var j = 0; j < keys.length; j++) {
+          put(normalize(keys[j]), s);
+        }
+      }
+      function lookup(text) {
+        var n = normalize(text);
+        if (!n) return null;
+        return map[n] || map[n.replace(/\s+/g, '')] || null;
+      }
+      return { lookup: lookup, normalize: normalize };
+    })();
+
+    function buildSubstanceOptions() {
+      clearChildren(substanceListEl);
+      var entries = Data.list();
+      for (var i = 0; i < entries.length; i++) {
+        var s = entries[i];
+        var opt = document.createElement('option');
+        opt.value = s.label_pl;                                  // to widzi użytkownik
+        // Niektóre przeglądarki (Firefox, Edge) pokazują dodatkowy hint po prawej.
+        var aliasBits = [s.group];
+        if (Array.isArray(s.aliases) && s.aliases.length) {
+          aliasBits.push(s.aliases.slice(0, 2).join(', '));
+        }
+        opt.label = aliasBits.join(' · ');
+        substanceListEl.appendChild(opt);
+      }
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    //  Faza 4d — karta "Zaproponuj badania"
+    // ────────────────────────────────────────────────────────────────
+
+    /**
+     * Buduje opcje selectu wskazań klinicznych. Tylko te wskazania,
+     * które mają choć jedną substancję w bazie, są pokazywane (filtr
+     * przeciw martwym wpisom w CLINICAL_INDICATIONS). Grupowane przez
+     * <optgroup> w kolejności CLINICAL_INDICATION_GROUPS_ORDER.
+     */
+    function buildClinicalIndicationOptions() {
+      if (!suggestSelectEl) return;
+      // Zostaw pierwszą opcję "— wybierz —" i wyczyść resztę.
+      while (suggestSelectEl.options.length > 1) {
+        suggestSelectEl.remove(1);
+      }
+      if (typeof Conv.listIndications !== 'function') return;
+      var live = Conv.listIndications();
+      if (!live || !live.length) return;
+      var liveSet = {};
+      for (var i = 0; i < live.length; i++) liveSet[live[i]] = true;
+
+      // Podziel na grupy zachowując kolejność CLINICAL_INDICATION_GROUPS_ORDER.
+      var grouped = {};
+      var allIds = Object.keys(CLINICAL_INDICATIONS);
+      for (var j = 0; j < allIds.length; j++) {
+        var key = allIds[j];
+        if (!liveSet[key]) continue;
+        var meta = CLINICAL_INDICATIONS[key];
+        var grp = meta.group || 'Inne';
+        if (!grouped[grp]) grouped[grp] = [];
+        grouped[grp].push({ id: key, label: meta.label });
+      }
+      // Doklej wskazania nieznane w mapie do grupy "Inne".
+      for (var k = 0; k < live.length; k++) {
+        var id = live[k];
+        if (!CLINICAL_INDICATIONS[id]) {
+          if (!grouped['Inne']) grouped['Inne'] = [];
+          grouped['Inne'].push({ id: id, label: id });
+        }
       }
 
-      clearChildren(substanceEl);
-      var groupMap = {};
-      var groupsOrder = Data.groups();
-      var entries = Conv.list();   // pełna lista w kolejności źródłowej
-      for (var k = 0; k < entries.length; k++) {
-        var e = entries[k];
-        if (!allowAll && !allowSet[e.id]) continue;
-        if (!groupMap[e.group]) groupMap[e.group] = [];
-        groupMap[e.group].push(e);
-      }
-      for (var g = 0; g < groupsOrder.length; g++) {
-        var groupName = groupsOrder[g];
-        var items = groupMap[groupName];
-        if (!items || !items.length) continue;
-        var optGroup = document.createElement('optgroup');
-        optGroup.label = groupName;
-        for (var j = 0; j < items.length; j++) {
+      var orderedGroups = CLINICAL_INDICATION_GROUPS_ORDER.slice();
+      // Dorzuć grupy nieznane na koniec.
+      var knownSet = {};
+      for (var m = 0; m < orderedGroups.length; m++) knownSet[orderedGroups[m]] = true;
+      Object.keys(grouped).forEach(function (g) {
+        if (!knownSet[g]) orderedGroups.push(g);
+      });
+
+      orderedGroups.forEach(function (groupName) {
+        var arr = grouped[groupName];
+        if (!arr || !arr.length) return;
+        // Sortuj alfabetycznie po etykiecie PL w obrębie grupy (locale PL).
+        arr.sort(function (a, b) {
+          try { return a.label.localeCompare(b.label, 'pl'); }
+          catch (_) { return a.label < b.label ? -1 : 1; }
+        });
+        var og = document.createElement('optgroup');
+        og.label = groupName;
+        arr.forEach(function (it) {
           var opt = document.createElement('option');
-          opt.value = items[j].id;
-          opt.textContent = items[j].label;
-          optGroup.appendChild(opt);
+          opt.value = it.id;
+          opt.textContent = it.label;
+          og.appendChild(opt);
+        });
+        suggestSelectEl.appendChild(og);
+      });
+    }
+
+    function clearChildrenSafe(el) {
+      if (!el) return;
+      while (el.firstChild) el.removeChild(el.firstChild);
+    }
+
+    /**
+     * Stan aktualnie podświetlonego chipa + cache testów aktualnie wyświetlanego
+     * panelu. Pozwala renderować info-panel pod sekcjami po kliknięciu chipa.
+     */
+    var currentPanelTests = [];   // tablica { chipKey, internalId?, ext?, label, note?, description? }
+
+    /**
+     * Buduje pojedynczy chip — jednolity styl, każdy klikalny. Funkcjonalna
+     * różnica: chipy internal (substancja w bazie) mają data-substance-id;
+     * external — data-ext-id (string-key z LabClinicalPanels EXT).
+     *
+     *  Internal:  { id: 'tsh', note?: '...' }
+     *  External:  { ext: 'anti_tpo', label: 'Przeciwciała anty-TPO', note: '...', description?: '...' }
+     */
+    function buildTestChip(test, chipKey) {
+      var li = document.createElement('li');
+      if (!test) return li;
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'lab-suggest-chip';
+      btn.dataset.chipKey = String(chipKey);
+
+      if (test.id) {
+        var s = Conv.find(test.id);
+        if (!s) {
+          btn.textContent = test.id + ' (?)';
+          btn.disabled = true;
+          li.appendChild(btn);
+          return li;
         }
-        substanceEl.appendChild(optGroup);
+        btn.dataset.substanceId = s.id;
+        // Pozwól na nadpisanie etykiety chipa (np. "Test hamowania 1 mg
+        // deksametazonu" zamiast "Kortyzol"). Konwerter dalej ładuje
+        // właściwą substancję po internalId.
+        var displayLabel = test.label || s.label_pl;
+        btn.textContent = displayLabel;
+        btn.setAttribute('aria-label', displayLabel + ' — kliknij po szczegóły');
+      } else if (test.ext) {
+        btn.dataset.extId = test.ext;
+        btn.textContent = test.label || test.ext;
+        btn.setAttribute('aria-label', (test.label || test.ext) + ' — kliknij po szczegóły');
+      } else {
+        btn.textContent = '?';
+        btn.disabled = true;
       }
+      li.appendChild(btn);
+      return li;
+    }
+
+    /**
+     * Renderuje info-panel dla wybranego badania BEZPOŚREDNIO POD sekcją
+     * zawierającą kliknięty chip. Sekcja źródeł zawsze zostaje na końcu.
+     * Jeżeli `chipKey` jest null/undefined, ukrywa panel.
+     */
+    function renderTestDetails(chipKey) {
+      // Wyczyść istniejący panel.
+      var existing = document.getElementById('labTestDetails');
+      if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+
+      // Odśwież stan "is-selected" wszystkich chipów.
+      var allChips = suggestBodyEl.querySelectorAll('.lab-suggest-chip');
+      for (var i = 0; i < allChips.length; i++) allChips[i].classList.remove('is-selected');
+
+      if (chipKey == null || chipKey === '') return;
+      var test = currentPanelTests[Number(chipKey)];
+      if (!test) return;
+
+      // Zaznacz wybrany chip.
+      var sel = suggestBodyEl.querySelector('.lab-suggest-chip[data-chip-key="' + chipKey + '"]');
+      if (sel) sel.classList.add('is-selected');
+
+      var panel = document.createElement('div');
+      panel.className = 'lab-test-details';
+      panel.id = 'labTestDetails';
+      panel.setAttribute('role', 'region');
+      panel.setAttribute('aria-live', 'polite');
+
+      var head = document.createElement('div');
+      head.className = 'lab-test-details-head';
+      var title = document.createElement('p');
+      title.className = 'lab-test-details-title';
+      title.textContent = test.label;
+      head.appendChild(title);
+      var tag = document.createElement('span');
+      tag.className = 'lab-test-details-tag '
+        + (test.isInternal ? 'is-internal' : 'is-external');
+      tag.textContent = test.isInternal
+        ? 'W przeliczniku'
+        : 'Badanie zewnętrzne';
+      head.appendChild(tag);
+      panel.appendChild(head);
+
+      if (test.note) {
+        var noteEl = document.createElement('p');
+        noteEl.className = 'lab-test-details-note';
+        noteEl.textContent = test.note;
+        panel.appendChild(noteEl);
+      }
+      if (test.description) {
+        var desc = document.createElement('p');
+        desc.className = 'lab-test-details-desc';
+        desc.textContent = test.description;
+        panel.appendChild(desc);
+      }
+
+      var actions = document.createElement('div');
+      actions.className = 'lab-test-details-actions';
+      if (test.isInternal && test.internalId) {
+        var loadBtn = document.createElement('button');
+        loadBtn.type = 'button';
+        loadBtn.className = 'lab-test-details-load';
+        loadBtn.dataset.substanceId = test.internalId;
+        loadBtn.textContent = '→ Załaduj do przelicznika';
+        actions.appendChild(loadBtn);
+      } else {
+        var hint = document.createElement('p');
+        hint.className = 'lab-test-details-hint';
+        hint.textContent = 'To badanie nie podlega konwersji jednostek w naszym przeliczniku — interpretacja wg wyniku z laboratorium.';
+        actions.appendChild(hint);
+      }
+      var closeBtn = document.createElement('button');
+      closeBtn.type = 'button';
+      closeBtn.className = 'lab-test-details-close';
+      closeBtn.dataset.action = 'close-details';
+      closeBtn.textContent = 'Zamknij';
+      actions.appendChild(closeBtn);
+      panel.appendChild(actions);
+
+      // Wstaw panel BEZPOŚREDNIO POD sekcją zawierającą kliknięty chip.
+      // Dzięki temu źródła (które są na końcu) zawsze pozostają na samym dole.
+      var section = sel ? sel.closest('.lab-panel-section') : null;
+      if (section && section.parentNode) {
+        section.parentNode.insertBefore(panel, section.nextSibling);
+      } else {
+        // Fallback: jeśli z jakiegoś powodu nie ma sekcji rodzicielskiej,
+        // wstaw przed sekcją źródeł (a jeśli źródeł nie ma — na końcu).
+        var sourcesEl = suggestBodyEl.querySelector('.lab-panel-sources');
+        if (sourcesEl && sourcesEl.parentNode) {
+          sourcesEl.parentNode.insertBefore(panel, sourcesEl);
+        } else {
+          suggestBodyEl.appendChild(panel);
+        }
+      }
+
+      // Przewiń panel do widoku, jeśli wystaje poza okno.
+      try {
+        var rect = panel.getBoundingClientRect();
+        var below = rect.bottom > (window.innerHeight - 20);
+        if (below) {
+          panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      } catch (_) { /* noop */ }
+    }
+
+    /**
+     * Renderuje pełny panel diagnostyczny dla wybranego wskazania klinicznego.
+     *
+     * Najpierw próbuje użyć pełnego panelu z `LabClinicalPanels` (zawiera
+     * sekcje, podsumowanie i wytyczne, też badania spoza apki). Jeśli brak —
+     * fallback: lista substancji ze "Zwykłego" wyszukiwania po
+     * clinical_indications (jak w fazie 4d).
+     */
+    function renderSuggestions(indicationId) {
+      if (!suggestResultsEl) return;
+      if (!indicationId) {
+        suggestResultsEl.style.display = 'none';
+        currentPanelTests = [];
+        return;
+      }
+      var meta = CLINICAL_INDICATIONS[indicationId];
+      var label = meta ? meta.label : indicationId;
+      clearChildrenSafe(suggestBodyEl);
+      currentPanelTests = [];   // reset cache
+
+      var Panels = global_LabClinicalPanels();
+      var panel = Panels && Panels.has(indicationId) ? Panels.get(indicationId) : null;
+
+      // Helper: zarejestruj test w cache i zwróć jego chipKey (index).
+      function registerTest(rawTest) {
+        var entry = null;
+        if (rawTest.id) {
+          var s = Conv.find(rawTest.id);
+          if (s) {
+            entry = {
+              isInternal: true,
+              internalId: s.id,
+              label: rawTest.label || s.label_pl,   // pozwól nadpisać etykietę
+              note: rawTest.note || '',
+              description: rawTest.description || ''
+            };
+          } else {
+            entry = { isInternal: false, label: rawTest.id + ' (?)', note: 'Substancja nieznana w bazie.', description: '' };
+          }
+        } else if (rawTest.ext) {
+          entry = {
+            isInternal: false,
+            label: rawTest.label || rawTest.ext,
+            note: rawTest.note || '',
+            description: rawTest.description || ''
+          };
+        } else {
+          return null;
+        }
+        currentPanelTests.push(entry);
+        return currentPanelTests.length - 1;
+      }
+
+      if (panel) {
+        // Liczenie testów dla tytułu (przed registerTest, żeby kolejność miała sens)
+        var totalCount = 0;
+        var internalCount = 0;
+        panel.sections.forEach(function (sec) {
+          (sec.tests || []).forEach(function (t) {
+            totalCount++;
+            if (t && t.id) internalCount++;
+          });
+        });
+        suggestTitleEl.textContent = 'Panel diagnostyczny — ' + label
+          + ' (' + totalCount + ' badań, ' + internalCount + ' w konwerterze)';
+
+        if (panel.summary) {
+          var sumP = document.createElement('p');
+          sumP.className = 'lab-panel-summary';
+          sumP.textContent = panel.summary;
+          suggestBodyEl.appendChild(sumP);
+        }
+
+        panel.sections.forEach(function (sec) {
+          if (!Array.isArray(sec.tests) || !sec.tests.length) return;
+          var wrap = document.createElement('div');
+          wrap.className = 'lab-panel-section';
+          var hdr = document.createElement('p');
+          hdr.className = 'lab-panel-section-name';
+          hdr.textContent = sec.name || '—';
+          wrap.appendChild(hdr);
+          var ul = document.createElement('ul');
+          ul.className = 'lab-suggest-list';
+          sec.tests.forEach(function (t) {
+            var key = registerTest(t);
+            if (key == null) return;
+            ul.appendChild(buildTestChip(t, key));
+          });
+          wrap.appendChild(ul);
+          suggestBodyEl.appendChild(wrap);
+        });
+
+        if (panel.guideline) {
+          var g = document.createElement('p');
+          g.className = 'lab-panel-guideline';
+          g.textContent = 'Wytyczne: ' + panel.guideline;
+          suggestBodyEl.appendChild(g);
+        }
+
+        // Sekcja źródeł / cytowań na końcu panelu.
+        if (Array.isArray(panel.sources) && panel.sources.length) {
+          var sourcesWrap = document.createElement('div');
+          sourcesWrap.className = 'lab-panel-sources';
+          var sh = document.createElement('p');
+          sh.className = 'lab-panel-sources-header';
+          sh.textContent = 'Źródła / cytowania';
+          sourcesWrap.appendChild(sh);
+          var ol = document.createElement('ol');
+          ol.className = 'lab-panel-sources-list';
+          panel.sources.forEach(function (src) {
+            var liS = document.createElement('li');
+            liS.textContent = src;
+            ol.appendChild(liS);
+          });
+          sourcesWrap.appendChild(ol);
+          suggestBodyEl.appendChild(sourcesWrap);
+        }
+
+        suggestResultsEl.style.display = '';
+        return;
+      }
+
+      // ─── Fallback: substancje z clinical_indications (tylko z bazy) ──
+      var matches = (typeof Conv.findByIndication === 'function')
+        ? Conv.findByIndication(indicationId) : [];
+
+      suggestTitleEl.textContent = 'Proponowane badania — ' + label
+        + ' (' + matches.length + ')';
+
+      if (!matches.length) {
+        var empty = document.createElement('p');
+        empty.className = 'lab-suggest-empty';
+        empty.textContent = 'Brak panelu zdefiniowanego dla tego wskazania.';
+        suggestBodyEl.appendChild(empty);
+        suggestResultsEl.style.display = '';
+        return;
+      }
+
+      var groups = [];
+      var groupMap = {};
+      for (var i = 0; i < matches.length; i++) {
+        var m = matches[i];
+        if (!groupMap[m.group]) {
+          groupMap[m.group] = { name: m.group, items: [] };
+          groups.push(groupMap[m.group]);
+        }
+        groupMap[m.group].items.push(m);
+      }
+      groups.forEach(function (g) {
+        var wrap = document.createElement('div');
+        wrap.className = 'lab-suggest-group';
+        var hdr = document.createElement('p');
+        hdr.className = 'lab-suggest-group-name';
+        hdr.textContent = g.name;
+        wrap.appendChild(hdr);
+        var ul = document.createElement('ul');
+        ul.className = 'lab-suggest-list';
+        g.items.forEach(function (item) {
+          var key = registerTest({ id: item.id });
+          if (key == null) return;
+          ul.appendChild(buildTestChip({ id: item.id }, key));
+        });
+        wrap.appendChild(ul);
+        suggestBodyEl.appendChild(wrap);
+      });
+      suggestResultsEl.style.display = '';
+    }
+
+    // Bezpieczny gettera dla LabClinicalPanels (może nie być załadowany).
+    function global_LabClinicalPanels() {
+      return (typeof window !== 'undefined' && window.LabClinicalPanels)
+        ? window.LabClinicalPanels : null;
+    }
+
+    /**
+     * Reakcja na klik chipa — ładuje substancję do konwertera i przewija
+     * widok do pola wartości, żeby od razu można było wpisać liczbę.
+     */
+    function applySuggestedSubstance(substanceId) {
+      if (!substanceId) return;
+      var s = Conv.find(substanceId);
+      if (!s) return;
+      substanceEl.value = s.label_pl;
+      applySubstance(s, s.label_pl);
+      // Przewiń do pola wartości, żeby workflow był ciągły.
+      try {
+        var top = valueEl.getBoundingClientRect().top + window.pageYOffset - 24;
+        window.scrollTo({ top: top, behavior: 'smooth' });
+        setTimeout(function () { try { valueEl.focus(); } catch (_) {} }, 350);
+      } catch (_) { try { valueEl.focus(); } catch (__) {} }
+      showToast('Załadowano: ' + s.label_pl);
+    }
+
+    /**
+     * Rozpoznaje substancję z dowolnego wpisanego tekstu.
+     * Kolejność prób:
+     *   1. dokładne dopasowanie do label_pl/label_en/aliasu (ALIAS_INDEX),
+     *   2. najwyżej oceniony wynik Conv.search(),
+     *   3. null (nie znaleziono).
+     */
+    function resolveSubstance(text) {
+      if (text == null) return null;
+      var t = String(text).trim();
+      if (!t) return null;
+      var exact = ALIAS_INDEX.lookup(t);
+      if (exact) return exact;
+      var matches = Conv.search(t);
+      if (matches && matches.length) return Conv.find(matches[0].id);
+      return null;
+    }
+
+    function renderSubstanceHint(substance, rawText) {
+      if (!substanceHintEl) return;
+      substanceHintEl.classList.remove('lab-hint-unknown');
+      if (!substance) {
+        if (rawText && rawText.trim()) {
+          substanceHintEl.classList.add('lab-hint-unknown');
+          substanceHintEl.textContent = 'Nie znaleziono substancji pasującej do „' + rawText + '". Spróbuj innej nazwy lub skrótu.';
+        } else {
+          substanceHintEl.textContent = '20 substancji: hormony osi nadnerczowo-gonadalnej, steroidy płciowe, witamina D.';
+        }
+        return;
+      }
+      var parts = [substance.group];
+      if (Array.isArray(substance.aliases) && substance.aliases.length) {
+        parts.push('synonimy: ' + substance.aliases.slice(0, 3).join(', '));
+      }
+      substanceHintEl.textContent = parts.join(' · ');
     }
 
     function buildUnitOptions(substance, preferredSymbol) {
@@ -594,52 +2229,277 @@
     //  Renderowanie wyników
     // ────────────────────────────────────────────────────────────────
 
+    // ────────────────────────────────────────────────────────────────
+    //  Pasek-skala z oznaczeniem zakresu normy
+    // ────────────────────────────────────────────────────────────────
+
+    function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
+
+    /**
+     * Buduje element paska-skali dla substancji, dla aktualnie wpisanej
+     * wartości w SI, dobierając zakres referencyjny do kontekstu pacjenta.
+     * Zwraca obiekt { element, rangeInfo } – rangeInfo idzie potem do
+     * renderSources(), żeby pokazać cytowania.
+     */
+    function buildRangeBlock(substance, siValueOrNull, patient) {
+      var range = Conv.selectRange(substance, patient);
+      if (!range) {
+        var empty = document.createElement('div');
+        empty.className = 'lab-range-empty';
+        empty.textContent = 'Brak jednolitego zakresu referencyjnego dla tej substancji – patrz uwagi poniżej.';
+        return { element: empty, rangeInfo: null };
+      }
+      // Flaga no_interpretation — pomiar w warunkach poza standardem klinicznym
+      // (np. testosteron popołudniowy). Pasek normy nie pokazujemy — zamiast tego
+      // mocny warning z cytowaniem.
+      if (range.no_interpretation) {
+        var warn = document.createElement('div');
+        warn.className = 'lab-range-empty';
+        warn.style.borderLeft = '4px solid #c75d00';
+        warn.style.background = 'rgba(199, 93, 0, 0.05)';
+        warn.style.padding = '0.6rem 0.8rem';
+        warn.style.color = '#6b4500';
+        warn.style.fontStyle = 'normal';
+        warn.innerHTML = '<strong>⚠ Pomiar nieinterpretowalny diagnostycznie:</strong> ' + safeEsc(range.context_pl);
+        return { element: warn, rangeInfo: range };
+      }
+      var low = range.low, high = range.high;
+      var siUnit = substance.canonical_si;
+      var precision = substance.precision || 3;
+
+      var card = document.createElement('div');
+      card.className = 'lab-range-card';
+
+      // Status / etykieta nad paskiem
+      var header = document.createElement('div');
+      header.className = 'lab-range-header';
+      var title = document.createElement('span');
+      title.className = 'lab-range-title';
+      title.textContent = 'Norma referencyjna';
+      header.appendChild(title);
+
+      var status = document.createElement('span');
+      status.className = 'lab-range-status';
+      if (siValueOrNull == null || !isFinite(siValueOrNull)) {
+        status.textContent = Conv.formatNumber(low, precision) + '–' + Conv.formatNumber(high, precision) + ' ' + siUnit;
+        status.className += ' is-normal';
+      } else if (siValueOrNull < low) {
+        status.textContent = '↓ poniżej normy';
+        status.className += ' is-below';
+      } else if (siValueOrNull > high) {
+        status.textContent = '↑ powyżej normy';
+        status.className += ' is-above';
+      } else {
+        status.textContent = '✓ w zakresie normy';
+        status.className += ' is-normal';
+      }
+      header.appendChild(status);
+      card.appendChild(header);
+
+      // Kontekst (kto, w jakich warunkach). Dla zakresów oznaczonych jako default
+      // (czyli fallback, gdy nic nie pasowało) dodajemy delikatne ostrzeżenie.
+      if (range.context_pl) {
+        var ctx = document.createElement('div');
+        ctx.className = 'lab-range-context';
+        if (range.is_default && !range.matched) {
+          ctx.textContent = '⚠ ' + range.context_pl + ' — wybrano zakres ogólny, bo dane pacjenta nie pasują do żadnego specyficznego wariantu.';
+        } else {
+          ctx.textContent = range.context_pl;
+        }
+        card.appendChild(ctx);
+      }
+
+      // Pasek + marker
+      var scaleMin = 0;
+      // Skala widoczna: tak, żeby norma zajmowała ~połowę szerokości
+      // i był widoczny zakres „powyżej normy". Jeśli wartość znacząco poza
+      // zakresem – rozciągamy skalę do max(value*1.1, high*1.6).
+      var defaultMax = high * 1.6;
+      var v = (siValueOrNull != null && isFinite(siValueOrNull)) ? siValueOrNull : null;
+      var scaleMax = defaultMax;
+      if (v != null) scaleMax = Math.max(defaultMax, v * 1.05);
+
+      var lowPct  = clamp((low - scaleMin) / (scaleMax - scaleMin) * 100, 0, 100);
+      var highPct = clamp((high - scaleMin) / (scaleMax - scaleMin) * 100, 0, 100);
+
+      var scale = document.createElement('div');
+      scale.className = 'lab-range-scale';
+      scale.style.setProperty('--low-pct',  lowPct.toFixed(2) + '%');
+      scale.style.setProperty('--high-pct', highPct.toFixed(2) + '%');
+
+      if (v != null) {
+        var rawPct = (v - scaleMin) / (scaleMax - scaleMin) * 100;
+        var outLeft  = rawPct < 0;
+        var outRight = rawPct > 100;
+        var markerPct = clamp(rawPct, 0, 100);
+        var marker = document.createElement('div');
+        marker.className = 'lab-range-marker ' +
+          (v < low ? 'is-below' : v > high ? 'is-above' : 'is-normal') +
+          (outLeft ? ' out-left' : '') +
+          (outRight ? ' out-right' : '');
+        marker.style.setProperty('--marker-pct', markerPct.toFixed(2) + '%');
+        marker.setAttribute('title', 'Twoja wartość: ' + Conv.formatNumber(v, precision) + ' ' + siUnit);
+        scale.appendChild(marker);
+      }
+      card.appendChild(scale);
+
+      // Etykiety: 0, low, high, max
+      var labels = document.createElement('div');
+      labels.className = 'lab-range-labels';
+      var span0 = document.createElement('span');
+      span0.className = 'lab-range-label-zero';
+      span0.textContent = '0';
+      labels.appendChild(span0);
+
+      // low/high label (gdy nie zachodzą na siebie i nie na 0)
+      function labelAt(pct, text) {
+        var el = document.createElement('span');
+        el.style.left = pct.toFixed(2) + '%';
+        el.textContent = text;
+        labels.appendChild(el);
+      }
+      if (lowPct > 6) labelAt(lowPct, Conv.formatNumber(low, precision));
+      if (highPct - lowPct > 10 && highPct < 94) labelAt(highPct, Conv.formatNumber(high, precision));
+
+      var spanMax = document.createElement('span');
+      spanMax.className = 'lab-range-label-max';
+      spanMax.textContent = Conv.formatNumber(scaleMax, precision) + ' ' + siUnit;
+      labels.appendChild(spanMax);
+
+      card.appendChild(labels);
+      return { element: card, rangeInfo: range };
+    }
+
+    function renderRangeBlock(substance, isValid, n, fromUnitObj) {
+      clearChildren(rangeBlockEl);
+      if (!substance) {
+        renderSources(null);
+        return;
+      }
+      var siValue = null;
+      if (isValid && fromUnitObj) siValue = n * fromUnitObj.factor_to_si;
+      var patient = getEffectivePatient();
+      var built = buildRangeBlock(substance, siValue, patient);
+      rangeBlockEl.appendChild(built.element);
+      renderSources(built.rangeInfo);
+    }
+
+    /**
+     * Rysuje tabelę przeliczeń.
+     *
+     * Tryby:
+     *   – substancja wybrana, pole wartości puste lub niepoprawne →
+     *     pokazujemy KARTĘ wyników ze szkieletem (każda jednostka,
+     *     w kolumnie wartości myślnik). Dzięki temu od pierwszego załadowania
+     *     wiadomo, że to konwerter i jakie jednostki dostępne dla substancji.
+     *   – wartość poprawna → wypełniamy szkielet liczbami.
+     */
     function renderResults(substance) {
       if (!substance) {
         resultsCard.style.display = 'none';
         return;
       }
-      var raw = valueEl.value;
-      if (raw == null || String(raw).trim() === '') {
-        resultsCard.style.display = 'none';
-        showError('');
-        return;
-      }
-      var n = Conv.parseNumber(raw);
-      if (!isFinite(n)) {
-        resultsCard.style.display = 'none';
-        showError('Nieprawidłowa liczba.');
-        return;
-      }
-      if (n < 0) {
-        resultsCard.style.display = 'none';
-        showError('Wartość nie może być ujemna.');
-        return;
-      }
-      showError('');
 
-      var res = Conv.convertAll({
-        substanceId: substance.id,
-        value: n,
-        fromUnit: unitEl.value
-      });
-      if (!res.ok) {
-        resultsCard.style.display = 'none';
-        showError(res.error || 'Nie udało się przeliczyć.');
-        return;
+      var raw = valueEl.value;
+      var hasInput = !(raw == null || String(raw).trim() === '');
+      var n = hasInput ? Conv.parseNumber(raw) : NaN;
+      var isValid = hasInput && isFinite(n) && n >= 0;
+
+      // Komunikat błędu pod inputem (osobno od karty wyników).
+      if (!hasInput) {
+        showError('');
+      } else if (!isFinite(n)) {
+        showError('Nieprawidłowa liczba.');
+      } else if (n < 0) {
+        showError('Wartość nie może być ujemna.');
+      } else {
+        showError('');
+      }
+
+      var fromUnitSym = unitEl.value;
+      // Bazowy zestaw wierszy: wszystkie jednostki INNE niż źródłowa.
+      var rows = [];
+      for (var i = 0; i < substance.units.length; i++) {
+        var u = substance.units[i];
+        if (u.symbol === fromUnitSym) continue;
+        rows.push({ unit: u.symbol, kind: u.kind, formatted: '—', siValue: null });
+      }
+
+      // Jeśli wartość poprawna, podmieniamy myślniki na liczby.
+      var precision = substance.precision || 3;
+      if (isValid) {
+        var res = Conv.convertAll({
+          substanceId: substance.id,
+          value: n,
+          fromUnit: fromUnitSym
+        });
+        if (res.ok) {
+          var lookup = {};
+          for (var k = 0; k < res.results.length; k++) {
+            lookup[res.results[k].unit] = res.results[k];
+          }
+          for (var j = 0; j < rows.length; j++) {
+            var matched = lookup[rows[j].unit];
+            if (matched) {
+              rows[j].formatted = matched.formatted;
+              rows[j].siValue = matched.value;   // wartość w docelowej jednostce (do statusu vs norma)
+            }
+          }
+        }
+      }
+
+      // Pobierz aktualny zakres normy (zależny od kontekstu pacjenta i pomiaru),
+      // żeby kolorować wiersze i pokazać go w meta.
+      var patient = getEffectivePatient();
+      var currentRange = Conv.selectRange(substance, patient);
+      // Pomocnik: status wartości w danej jednostce względem zakresu.
+      // Konwertujemy granice zakresu z SI na docelową jednostkę przez sprawdzenie
+      // factor_to_si jej definicji; potem klasyfikujemy below/normal/above.
+      // Gdy range ma flagę no_interpretation, zwraca null (brak kolorowania).
+      function statusForRow(unitSym, value) {
+        if (!currentRange || value == null || !isFinite(value)) return null;
+        if (currentRange.no_interpretation) return null;
+        if (currentRange.low == null || currentRange.high == null) return null;
+        // Odwracamy konwersję SI → docelowa jednostka: target_value = si / factor_to_si
+        var unitDef = null;
+        for (var x = 0; x < substance.units.length; x++) {
+          if (substance.units[x].symbol === unitSym) { unitDef = substance.units[x]; break; }
+        }
+        if (!unitDef) return null;
+        var lowInUnit  = currentRange.low  / unitDef.factor_to_si;
+        var highInUnit = currentRange.high / unitDef.factor_to_si;
+        if (value < lowInUnit)  return 'below';
+        if (value > highInUnit) return 'above';
+        return 'normal';
       }
 
       clearChildren(resultsBody);
-      for (var i = 0; i < res.results.length; i++) {
-        var r = res.results[i];
+      for (var r = 0; r < rows.length; r++) {
+        var row = rows[r];
         var tr = document.createElement('tr');
-        if (r.kind === 'si') tr.className = 'lab-row-si';
+        if (row.kind === 'si') tr.className = 'lab-row-si';
+        if (row.formatted === '—') tr.classList.add('lab-row-placeholder');
+        // Kolorowanie wiersza wg pozycji względem normy (tylko dla nieplaceholder)
+        if (row.formatted !== '—' && row.siValue != null) {
+          var st = statusForRow(row.unit, row.siValue);
+          if (st === 'below')  tr.classList.add('lab-row-below');
+          if (st === 'normal') tr.classList.add('lab-row-normal');
+          if (st === 'above')  tr.classList.add('lab-row-above');
+        }
         var td1 = document.createElement('td');
         td1.className = 'lab-unit';
-        td1.textContent = r.unit;
+        td1.textContent = row.unit;
         var td2 = document.createElement('td');
         td2.className = 'lab-value';
-        td2.textContent = r.formatted;
+        td2.textContent = row.formatted;
+        // Atrybuty pomocne dla copy-to-clipboard (placeholder ich nie dostaje).
+        if (row.formatted !== '—') {
+          td2.setAttribute('role', 'button');
+          td2.setAttribute('tabindex', '0');
+          td2.setAttribute('aria-label', 'Skopiuj: ' + row.formatted + ' ' + row.unit);
+          td2.setAttribute('title', 'Kliknij, aby skopiować');
+          td2.dataset.copyText = row.formatted + ' ' + row.unit;
+        }
         tr.appendChild(td1);
         tr.appendChild(td2);
         resultsBody.appendChild(tr);
@@ -647,10 +2507,39 @@
       resultsCard.style.display = '';
 
       var metaParts = [];
-      metaParts.push('<strong>Wartość źródłowa:</strong> ' + safeEsc(Conv.formatNumber(res.value, res.precision)) + ' ' + safeEsc(res.fromUnit));
-      metaParts.push('<strong>Masa cząsteczkowa:</strong> ' + safeEsc(substance.mw) + ' g/mol');
+      if (isValid) {
+        metaParts.push('<strong>Wartość źródłowa:</strong> ' +
+          safeEsc(Conv.formatNumber(n, precision)) + ' ' + safeEsc(fromUnitSym));
+      } else {
+        metaParts.push('<em>Wpisz wartość, aby zobaczyć przeliczone jednostki.</em>');
+      }
+      // Pokaż aktualny zakres normy nad paskiem — żeby zmiana kontekstu
+      // (pora pobrania, DST, faza cyklu, Tanner) była widoczna od razu w tekście.
+      // Pomijamy gdy range ma flagę no_interpretation (pasek normy też się nie rysuje).
+      if (currentRange && !currentRange.no_interpretation &&
+          currentRange.low != null && currentRange.high != null) {
+        metaParts.push('<strong>Aktualny zakres:</strong> ' +
+          safeEsc(Conv.formatNumber(currentRange.low, precision)) + '–' +
+          safeEsc(Conv.formatNumber(currentRange.high, precision)) + ' ' +
+          safeEsc(substance.canonical_si));
+      } else if (currentRange && currentRange.no_interpretation) {
+        metaParts.push('<strong style="color:#b04500;">⚠ Brak zakresu dla tej pory</strong>');
+      }
       metaParts.push('<strong>SI:</strong> ' + safeEsc(substance.canonical_si));
+      if (substance.biologic_units || substance.mw == null) {
+        metaParts.push('<em>Jednostka bioaktywności (WHO IS) — brak konwersji masowej</em>');
+      } else {
+        metaParts.push('<strong>MW:</strong> ' + safeEsc(substance.mw) + ' g/mol');
+      }
       metaEl.innerHTML = metaParts.join(' &nbsp;•&nbsp; ');
+
+      // Pasek-skala (norma referencyjna). Wymaga obiektu jednostki źródłowej,
+      // żeby przeliczyć value → SI.
+      var fromUnitObj = null;
+      for (var u = 0; u < substance.units.length; u++) {
+        if (substance.units[u].symbol === fromUnitSym) { fromUnitObj = substance.units[u]; break; }
+      }
+      renderRangeBlock(substance, isValid, n, fromUnitObj);
     }
 
     function renderInfo(substance) {
@@ -681,92 +2570,338 @@
       infoCard.style.display = '';
     }
 
-    function refreshFromSubstance() {
-      var s = Conv.find(substanceEl.value);
-      if (!s) {
-        resultsCard.style.display = 'none';
-        infoCard.style.display = 'none';
+    // Aktualnie rozpoznana substancja (cache, żeby nie szukać po ALIAS_INDEX
+    // przy każdym keypress'ie w polu wartości).
+    var currentSubstance = null;
+
+    /**
+     * Czyści całą prawą część widoku — tabela, meta i pasek normy idą w pusty
+     * stan z placeholderem. Karta info się chowa. Karta wyników pozostaje
+     * widoczna (zgodnie z wymaganiem), ale jest „pusta".
+     */
+    function clearResultsView() {
+      clearChildren(resultsBody);
+      clearChildren(rangeBlockEl);
+      // Pusta lista jednostek — żeby po wpisaniu nowej wartości nie liczono
+      // przy starej substancji.
+      clearChildren(unitEl);
+      metaEl.innerHTML = '<em>Wybierz substancję powyżej, żeby zobaczyć przeliczone jednostki.</em>';
+      infoCard.style.display = 'none';
+      // Schowaj sekcję źródeł — nie ma co cytować, gdy nic nie wybrano.
+      if (sourcesWrapEl) sourcesWrapEl.style.display = 'none';
+    }
+
+    /**
+     * Pokazuje/ukrywa pola atrybutów pomiaru (pora pobrania, test diagnostyczny)
+     * w zależności od tego, czy aktualnie wybrana substancja ich wymaga.
+     */
+    function updateMeasurementFields(substance) {
+      var showTime = !!(substance && TIME_AWARE[substance.id]);
+      // Pole "Test diagnostyczny" pojawia się dla substancji z protokołami
+      // (DST_AWARE, THYROIDECTOMY_AWARE, itd. — agregat z PROTOCOL_OPTIONS).
+      var showProtocol = !!(substance && PROTOCOL_OPTIONS[substance.id]);
+      if (measTimeFieldEl) measTimeFieldEl.style.display = showTime ? '' : 'none';
+      if (measProtocolFieldEl) measProtocolFieldEl.style.display = showProtocol ? '' : 'none';
+
+      // Dynamicznie wypełnij opcje selectu protokołu (różne per substancja)
+      if (measProtocolEl) {
+        clearChildren(measProtocolEl);
+        if (showProtocol) {
+          var opts = PROTOCOL_OPTIONS[substance.id];
+          for (var i = 0; i < opts.length; i++) {
+            var opt = document.createElement('option');
+            opt.value = opts[i].value;
+            opt.textContent = opts[i].label;
+            measProtocolEl.appendChild(opt);
+          }
+        }
+      }
+
+      // Jeśli pola znikły, czyścimy ich stan, żeby nie wpływały na inne substancje
+      if (!showTime && measurementCtx.time_of_day) {
+        measurementCtx.time_of_day = null;
+        if (measTimeEl) measTimeEl.value = '';
+      }
+      if (!showProtocol && measurementCtx.test_protocol) {
+        measurementCtx.test_protocol = null;
+        if (measProtocolEl) measProtocolEl.value = '';
+      }
+    }
+
+    function applySubstance(substance, rawText) {
+      renderSubstanceHint(substance, rawText || (substance ? substance.label_pl : ''));
+      if (!substance) {
+        // Pusty stan: zerujemy bieżącą substancję i czyścimy widok wyników.
+        currentSubstance = null;
+        updateMeasurementFields(null);
+        clearResultsView();
+        renderPatientSummary();   // i tak utrzymuj nagłówek kontekstu pacjenta
         return;
       }
-      writePref(PREF_SUBSTANCE, s.id);
-      var lastUnit = readPref(PREF_UNIT + ':' + s.id) || null;
-      buildUnitOptions(s, lastUnit);
-      renderInfo(s);
-      renderResults(s);
+      currentSubstance = substance;
+      writePref(PREF_SUBSTANCE, substance.id);
+      var lastUnit = readPref(PREF_UNIT + ':' + substance.id) || null;
+      buildUnitOptions(substance, lastUnit);
+      updateMeasurementFields(substance);
+      renderInfo(substance);
+      renderPatientSummary();    // pokaż selektor fazy cyklu, jeśli substancja cycle-aware
+      renderResults(substance);
+    }
+
+    /**
+     * Wywołuje się przy: zmianie sharedUserData (z innej karty), zmianie override,
+     * powrocie do okna. Odświeża pasek kontekstu i pasek normy bez tknięcia tabeli.
+     */
+    function refreshPatientContext() {
+      renderPatientSummary();
+      if (currentSubstance) renderResults(currentSubstance);
+    }
+
+    function onSubstanceInput() {
+      var raw = substanceEl.value;
+      // Pole wykasowane całkowicie → natychmiast pusty stan
+      // (nie czekamy na Enter/blur — user oczywiście chciał wyczyścić).
+      if (!raw || !raw.trim()) {
+        applySubstance(null, '');
+        return;
+      }
+      var s = resolveSubstance(raw);
+      // Jeśli wpisany tekst dokładnie pasuje do nazwy/aliasu — ładujemy substancję
+      // od razu. W przeciwnym razie tylko aktualizujemy hint i czekamy na commit
+      // (Enter/blur), żeby nie przebudowywać UI po każdej literze.
+      var exact = ALIAS_INDEX.lookup(raw);
+      if (exact) {
+        if (!currentSubstance || currentSubstance.id !== exact.id) {
+          applySubstance(exact, raw);
+        } else {
+          renderSubstanceHint(exact, raw);
+        }
+      } else {
+        renderSubstanceHint(s, raw);
+      }
+    }
+
+    function onSubstanceCommit() {
+      var raw = substanceEl.value;
+      var s = resolveSubstance(raw);
+      if (s) {
+        // Podmień wpisany tekst na kanoniczną etykietę polską (np. "DHEAS" → "DHEA-S (siarczan DHEA)").
+        substanceEl.value = s.label_pl;
+        applySubstance(s, s.label_pl);
+      } else {
+        applySubstance(null, raw);
+      }
     }
 
     function onUnitChange() {
-      var s = Conv.find(substanceEl.value);
-      if (s) writePref(PREF_UNIT + ':' + s.id, unitEl.value);
-      renderResults(s);
+      if (currentSubstance) writePref(PREF_UNIT + ':' + currentSubstance.id, unitEl.value);
+      renderResults(currentSubstance);
     }
 
     function onValueChange() {
-      renderResults(Conv.find(substanceEl.value));
-    }
-
-    function onSearch() {
-      var q = searchEl.value;
-      var matches = Conv.search(q);
-      var ids = matches.map(function (m) { return m.id; });
-      var previous = substanceEl.value;
-      if (!q) {
-        buildSubstanceOptions(null);
-      } else {
-        if (!ids.length) {
-          buildSubstanceOptions(null);
-        } else {
-          buildSubstanceOptions(ids);
-        }
-      }
-      // Spróbuj utrzymać poprzedni wybór; jeśli odpadł – wybierz pierwszy z listy.
-      var has = false;
-      for (var i = 0; i < substanceEl.options.length; i++) {
-        if (substanceEl.options[i].value === previous) { has = true; break; }
-      }
-      substanceEl.value = has ? previous : (substanceEl.options.length ? substanceEl.options[0].value : '');
-      refreshFromSubstance();
+      renderResults(currentSubstance);
     }
 
     function onClear() {
-      searchEl.value = '';
+      // Pełny reset podstrony do stanu startowego:
+      //   – oba pola wejściowe puste (substancja, wartość),
+      //   – brak wybranej substancji → karta wyników w pustym stanie
+      //     (placeholder, brak tabeli, brak paska normy),
+      //   – karta zakresów referencyjnych ukryta,
+      //   – atrybuty pomiaru (pora pobrania, test diagnostyczny) zresetowane,
+      //   – fokus wraca na pole substancji, żeby od razu można było wpisać kolejny wynik.
       valueEl.value = '';
+      substanceEl.value = '';
+      if (measTimeEl) measTimeEl.value = '';
+      if (measProtocolEl) measProtocolEl.value = '';
+      measurementCtx = { time_of_day: null, test_protocol: null };
       showError('');
-      buildSubstanceOptions(null);
-      var defaultId = readPref(PREF_SUBSTANCE) || 'cortisol';
-      var s = Conv.find(defaultId) || Conv.find('cortisol');
-      if (s) {
-        substanceEl.value = s.id;
-        refreshFromSubstance();
-      }
-      resultsCard.style.display = 'none';
-      try { valueEl.focus(); } catch (_) { /* noop */ }
+      applySubstance(null, '');
+      showToast('Wyczyszczono');
+      try { substanceEl.focus(); } catch (_) { /* noop */ }
     }
 
     // ────────────────────────────────────────────────────────────────
     //  Inicjalizacja
     // ────────────────────────────────────────────────────────────────
 
-    buildSubstanceOptions(null);
+    buildSubstanceOptions();
+    buildClinicalIndicationOptions();   // Faza 4d — wypełnij selektor wskazań
+
+    renderPatientSummary();   // pierwsze ustawienie tekstu kontekstu
 
     var initialId = readPref(PREF_SUBSTANCE);
     var initialSubstance = (initialId && Conv.find(initialId)) || Conv.find('cortisol');
     if (initialSubstance) {
-      substanceEl.value = initialSubstance.id;
-      var preferredUnit = readPref(PREF_UNIT + ':' + initialSubstance.id);
-      buildUnitOptions(initialSubstance, preferredUnit);
-      renderInfo(initialSubstance);
+      substanceEl.value = initialSubstance.label_pl;
+      applySubstance(initialSubstance, initialSubstance.label_pl);
+    } else {
+      renderSubstanceHint(null, '');
     }
 
-    substanceEl.addEventListener('change', refreshFromSubstance);
+    // Datalist „change" emitowane jest dopiero przy blur lub wyborze z listy.
+    // „input" reaguje na każde wpisanie/wybór z autocomplete — tu sprawdzamy
+    // exact match. Na Enter commitujemy ostateczne dopasowanie.
+    substanceEl.addEventListener('input', onSubstanceInput);
+    substanceEl.addEventListener('change', onSubstanceCommit);
+    substanceEl.addEventListener('blur', onSubstanceCommit);
+    substanceEl.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); onSubstanceCommit(); }
+    });
     unitEl.addEventListener('change', onUnitChange);
     valueEl.addEventListener('input', onValueChange);
-    searchEl.addEventListener('input', onSearch);
     clearBtn.addEventListener('click', onClear);
+
+    // Faza 4d — karta "Zaproponuj badania"
+    if (suggestSelectEl) {
+      suggestSelectEl.addEventListener('change', function () {
+        renderSuggestions(suggestSelectEl.value || '');
+      });
+    }
+    if (suggestBodyEl) {
+      suggestBodyEl.addEventListener('click', function (e) {
+        var t = e.target;
+        if (!t) return;
+        // 1) Przycisk "Załaduj do przelicznika" w info-panelu
+        var loadBtn = t.closest ? t.closest('.lab-test-details-load') : null;
+        if (loadBtn) {
+          e.preventDefault();
+          applySuggestedSubstance(loadBtn.dataset.substanceId);
+          return;
+        }
+        // 2) Przycisk "Zamknij" info-panelu
+        var closeBtn = t.closest ? t.closest('.lab-test-details-close') : null;
+        if (closeBtn) {
+          e.preventDefault();
+          renderTestDetails(null);
+          return;
+        }
+        // 3) Kliknięcie samego chipa → pokaż info-panel.
+        //    Ponowne kliknięcie tego samego chipa → zamknij panel (toggle).
+        var chip = t.closest ? t.closest('.lab-suggest-chip') : null;
+        if (chip && chip.dataset && chip.dataset.chipKey != null) {
+          e.preventDefault();
+          if (chip.classList.contains('is-selected')) {
+            renderTestDetails(null);
+          } else {
+            renderTestDetails(chip.dataset.chipKey);
+          }
+        }
+      });
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    //  Handlery dla kontekstu pacjenta + sources
+    // ────────────────────────────────────────────────────────────────
+
+    if (patientToggleEl) {
+      patientToggleEl.addEventListener('click', function () {
+        var open = patientOverrideEl.style.display !== 'none';
+        patientOverrideEl.style.display = open ? 'none' : '';
+        patientToggleEl.setAttribute('aria-expanded', open ? 'false' : 'true');
+        patientToggleEl.textContent = open ? 'Zmień ▼' : 'Zwiń ▲';
+      });
+    }
+
+    function onOverrideChange() {
+      var sexVal = overrideSexEl.value || null;
+      var ageRaw = overrideAgeEl.value;
+      var ageNum = (ageRaw === '' || ageRaw == null) ? null : Number(ageRaw);
+      if (ageNum != null && !isFinite(ageNum)) ageNum = null;
+      var cycleVal = overrideCycleEl.value || null;
+      var tannerRaw = overrideTannerEl ? overrideTannerEl.value : '';
+      var tannerNum = (tannerRaw === '' || tannerRaw == null) ? null : parseInt(tannerRaw, 10);
+      if (tannerNum != null && (!isFinite(tannerNum) || tannerNum < 1 || tannerNum > 5)) tannerNum = null;
+      localOverride.sex = sexVal;
+      localOverride.age = ageNum;
+      localOverride.cycle_phase = cycleVal;
+      localOverride.tanner = tannerNum;
+      refreshPatientContext();
+    }
+
+    if (overrideSexEl) overrideSexEl.addEventListener('change', onOverrideChange);
+    if (overrideAgeEl) overrideAgeEl.addEventListener('input', onOverrideChange);
+    if (overrideCycleEl) overrideCycleEl.addEventListener('change', onOverrideChange);
+    if (overrideTannerEl) overrideTannerEl.addEventListener('change', onOverrideChange);
+
+    // Atrybuty pomiaru
+    function onMeasurementChange() {
+      measurementCtx.time_of_day = (measTimeEl && measTimeEl.value) || null;
+      measurementCtx.test_protocol = (measProtocolEl && measProtocolEl.value) || null;
+      if (currentSubstance) renderResults(currentSubstance);
+      renderPatientSummary();   // żeby hint kliniczny się odświeżył
+    }
+    if (measTimeEl) measTimeEl.addEventListener('change', onMeasurementChange);
+    if (measProtocolEl) measProtocolEl.addEventListener('change', onMeasurementChange);
+    if (overrideResetEl) overrideResetEl.addEventListener('click', function () {
+      localOverride = { sex: null, age: null, tanner: null, cycle_phase: null };
+      overrideSexEl.value = '';
+      overrideAgeEl.value = '';
+      overrideCycleEl.value = '';
+      if (overrideTannerEl) overrideTannerEl.value = '';
+      refreshPatientContext();
+      showToast('Przywrócono dane pacjenta');
+    });
+
+    // Rozwijanie/zwijanie listy źródeł (na wzór toggleSources z index.html).
+    if (sourcesToggleEl) {
+      sourcesToggleEl.addEventListener('click', function () {
+        var isHidden = sourcesListEl.style.display === 'none' || sourcesListEl.style.display === '';
+        sourcesListEl.style.display = isHidden ? 'block' : 'none';
+        sourcesToggleEl.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+      });
+    }
+
+    // Nasłuch zmian w sharedUserData (z innej karty/strony głównej).
+    window.addEventListener('storage', function (e) {
+      // Klucz dla sharedUserData może mieć różne nazwy w zależności od wersji adaptera.
+      if (!e.key || /shared|user/i.test(e.key)) refreshPatientContext();
+    });
+    window.addEventListener('focus', refreshPatientContext);
+    window.addEventListener('vilda:user-state-cleared', function () {
+      localOverride = { sex: null, age: null, cycle_phase: null };
+      if (overrideSexEl) overrideSexEl.value = '';
+      if (overrideAgeEl) overrideAgeEl.value = '';
+      if (overrideCycleEl) overrideCycleEl.value = '';
+      refreshPatientContext();
+    });
+
+    // Delegacja kliknięć w komórkę wartości → kopiowanie do schowka.
+    function handleValueActivation(td) {
+      if (!td || !td.dataset || !td.dataset.copyText) return;
+      var text = td.dataset.copyText;
+      copyTextToClipboard(text).then(function () {
+        showToast('Skopiowano: ' + text);
+        td.classList.add('lab-just-copied');
+        setTimeout(function () { td.classList.remove('lab-just-copied'); }, 600);
+      }).catch(function () {
+        showToast('Nie udało się skopiować — skopiuj ręcznie.');
+      });
+    }
+    resultsBody.addEventListener('click', function (e) {
+      var td = e.target && e.target.closest ? e.target.closest('td.lab-value') : null;
+      handleValueActivation(td);
+    });
+    resultsBody.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      var td = e.target && e.target.closest ? e.target.closest('td.lab-value') : null;
+      if (!td) return;
+      e.preventDefault();
+      handleValueActivation(td);
+    });
 
     // Wstępne ustawienie focusu na wartość, jeśli substancja już jest wybrana.
     try { valueEl.focus(); } catch (_) { /* noop */ }
   })();
+  </script>
+
+  <!-- Zdejmij tymczasową klasę js-loading po inicjalizacji, żeby .main-content
+       stał się widoczny (zob. style.css linia ~7898). Bez tego strona pozostaje
+       pusta. -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      document.body.classList.remove('js-loading');
+    });
   </script>
 </body>
 </html>
