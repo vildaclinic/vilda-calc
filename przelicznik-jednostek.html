@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <!-- ═══ Security headers ═══════════════════════════════════════════════
+       Content-Security-Policy ogranicza skąd mogą być ładowane zasoby.
+       Referrer-Policy ukrywa pełne URL przed zewnętrznymi serwisami.
+       Permissions-Policy wyłącza dostęp do sprzętu (kamera, mikrofon, GPS). -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src  'self' 'unsafe-inline'
+                https://unpkg.com
+                https://cdnjs.cloudflare.com
+                https://cdn.jsdelivr.net
+                https://cdn.sheetjs.com
+                https://www.googletagmanager.com;
+    style-src   'self' 'unsafe-inline' https://fonts.googleapis.com;
+    font-src    'self' https://fonts.gstatic.com data:;
+    img-src     'self' data: blob: https:;
+    connect-src 'self'
+                https://www.google-analytics.com
+                https://analytics.google.com
+                https://region1.google-analytics.com
+                https://www.googletagmanager.com;
+    worker-src  'self';
+    manifest-src 'self';
+    frame-ancestors 'none';
+    base-uri    'self';
+    form-action 'self';
+    object-src  'none';
+  ">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta http-equiv="Permissions-Policy"
+        content="geolocation=(), camera=(), microphone=(), payment=(), usb=(), bluetooth=()">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+<!-- Google Consent Mode v2 — analogicznie jak na pozostałych podstronach. -->
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('consent', 'default', {
+    analytics_storage: 'denied',
+    ad_storage: 'denied',
+    ad_user_data: 'denied',
+    ad_personalization: 'denied',
+    wait_for_update: 500
+  });
+</script>
+  <meta charset="utf-8" />
+  <title>Przelicznik jednostek laboratoryjnych – wagaiwzrost.pl</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="description" content="Konwerter jednostek konwencjonalnych (μg/dL, ng/mL, pg/mL) na jednostki SI (nmol/L, pmol/L, μmol/L) dla hormonów osi nadnerczowo‑gonadalnej, steroidów płciowych i witaminy D." />
+  <meta name="robots" content="index, follow" />
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="ios26-v2.css?v=12" />
+  <link rel="stylesheet" href="style.css?v=5" />
+  <link rel="stylesheet" href="sidebar.css" />
+  <link href="vilda_chrome.css?v=12" rel="stylesheet">
+
+  <script src="vilda_logger.js?v=2"></script>
+  <script src="vilda_html.js?v=4"></script>
+  <script src="vilda_persistence_adapter.js?v=7"></script>
+  <script src="vilda_session_bridge.js?v=1"></script>
+  <script src="vilda_init.js?v=4"></script>
+  <script src="vilda_deps.js?v=6"></script>
+  <script>
+  (function() {
+    try {
+      var VERSION = 'v3';
+      var SIGNATURE = 'docpro.html|kalkulator-klirens.html|cukrzyca.html|steroidy.html|materialy-edukacyjne.html';
+      var persistence = window.VildaPersistence || null;
+      var parsed = persistence && typeof persistence.readPreferenceJSON === 'function'
+        ? persistence.readPreferenceJSON('MOBILE_TOP_NAV_FONT_CACHE', null)
+        : null;
+      if (!parsed) return;
+      if (!parsed || parsed.version !== VERSION || parsed.signature !== SIGNATURE) return;
+
+      var viewportWidth = Math.round(Math.max(
+        window.innerWidth || 0,
+        document.documentElement ? (document.documentElement.clientWidth || 0) : 0
+      ));
+      var cachedWidth = Math.round(Number(parsed.width) || 0);
+      var fontRem = Number(parsed.fontRem);
+      if (!viewportWidth || viewportWidth !== cachedWidth || !isFinite(fontRem)) return;
+      if (fontRem < 0.72 || fontRem > 0.98) return;
+
+      var style = document.createElement('style');
+      style.id = 'mobile-top-nav-font-cache-style';
+      style.textContent = '@media (max-width: 600px){.main-nav{--mobile-top-nav-font-size:' + fontRem.toFixed(2) + 'rem !important;}}';
+      document.head.appendChild(style);
+    } catch (e) { /* noop */ }
+  })();
+  </script>
+
+  <link rel="icon" type="image/png" sizes="48x48" href="/pwa-icons/icon-48x48.png">
+  <link rel="icon" type="image/png" sizes="96x96" href="/pwa-icons/icon-96x96.png">
+
+  <style>
+    /* Kontener – analogiczny do .homa-container i .steroids-card. */
+    .lab-container {
+      max-width: 760px;
+      margin: 2rem auto;
+    }
+
+    .lab-card {
+      background: var(--card);
+      padding: 1.5rem;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid #d0dede;
+      margin-bottom: 1.25rem;
+    }
+
+    .lab-card h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-top: 0;
+      margin-bottom: 0.25rem;
+      text-align: center;
+    }
+    .lab-card h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin: 0 0 0.75rem;
+    }
+    .lab-card .lab-subtitle {
+      text-align: center;
+      color: #555;
+      font-size: 0.95rem;
+      margin: 0 0 1.25rem;
+    }
+
+    .lab-field label {
+      display: block;
+      font-weight: 600;
+      margin: 0.85rem 0 0.35rem;
+    }
+
+    .lab-search-wrap { position: relative; }
+    .lab-search {
+      width: 100%;
+      padding: 0.55rem 0.75rem;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 0.5rem;
+      box-sizing: border-box;
+    }
+
+    .lab-substance {
+      width: 100%;
+      padding: 0.55rem 0.75rem;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 0.5rem;
+      box-sizing: border-box;
+      background: #fff;
+    }
+
+    /* Pole wartości + selektor jednostki obok siebie. */
+    .lab-input-row {
+      display: flex;
+      gap: 0.5rem;
+      align-items: stretch;
+    }
+    .lab-input-row input {
+      flex: 1 1 auto;
+      min-width: 0;
+      padding: 0.6rem 0.75rem;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 0.5rem;
+      box-sizing: border-box;
+    }
+    .lab-input-row select {
+      flex: 0 0 auto;
+      padding: 0.6rem 0.75rem;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 0.5rem;
+      box-sizing: border-box;
+      background: #fff;
+      min-width: 8rem;
+    }
+
+    .lab-error {
+      margin-top: 0.6rem;
+      padding: 0.4rem 0.7rem;
+      border: 1px solid var(--danger);
+      background: rgba(198, 40, 40, 0.07);
+      color: var(--danger);
+      border-radius: 0.5rem;
+      font-size: 0.9rem;
+    }
+
+    /* Tabela wyników – wszystkie inne jednostki. */
+    .lab-results-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.5rem;
+      font-size: 0.95rem;
+    }
+    .lab-results-table th,
+    .lab-results-table td {
+      border-bottom: 1px solid #e5ebed;
+      padding: 0.55rem 0.5rem;
+      text-align: left;
+    }
+    .lab-results-table th {
+      background: var(--secondary, #5a8a99);
+      color: #fff;
+      font-weight: 600;
+    }
+    .lab-results-table td.lab-value {
+      font-variant-numeric: tabular-nums;
+      font-weight: 600;
+      text-align: right;
+      white-space: nowrap;
+    }
+    .lab-results-table tr.lab-row-si td.lab-unit::after {
+      content: ' • SI';
+      color: #5a8a99;
+      font-weight: 600;
+      font-size: 0.78rem;
+      margin-left: 0.25rem;
+    }
+    .lab-results-table tbody tr:last-child td { border-bottom: none; }
+
+    .lab-meta {
+      margin-top: 0.5rem;
+      color: #555;
+      font-size: 0.85rem;
+      line-height: 1.45;
+    }
+    .lab-meta strong { color: #333; }
+
+    /* Karta z zakresami referencyjnymi / uwagami / źródłami. */
+    .lab-card ul.lab-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .lab-card ul.lab-list li {
+      padding: 0.35rem 0 0.35rem 1.2rem;
+      position: relative;
+      line-height: 1.4;
+    }
+    .lab-card ul.lab-list li::before {
+      content: '•';
+      position: absolute;
+      left: 0.35rem;
+      color: var(--primary, #2a8a8a);
+      font-weight: 700;
+    }
+    .lab-sources {
+      font-size: 0.85rem;
+      color: #555;
+      margin-top: 0.4rem;
+    }
+
+    /* Przycisk czyszczący (analogicznie do clear-btn z homa-ir). */
+    .lab-card .lab-clear-btn {
+      display: block;
+      margin: 1.25rem auto 0;
+      padding: 0.55rem 1.4rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border: 2px solid var(--danger) !important;
+      border-radius: var(--radius);
+      background: transparent;
+      color: var(--danger);
+      cursor: pointer;
+      transition: background 0.25s;
+    }
+    .lab-card .lab-clear-btn:hover { background: rgba(198, 40, 40, 0.1); }
+
+    /* Krzyżowy link do kalkulatora dawek. */
+    .lab-cross-link {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.65rem 0.9rem;
+      border-radius: var(--radius);
+      background: rgba(42, 138, 138, 0.07);
+      border: 1px solid rgba(42, 138, 138, 0.25);
+      color: #1d6363;
+      font-size: 0.9rem;
+      text-decoration: none;
+      margin-top: 1rem;
+    }
+    .lab-cross-link:hover { background: rgba(42, 138, 138, 0.13); }
+
+    .lab-disclaimer {
+      font-size: 0.85rem;
+      color: #666;
+      line-height: 1.45;
+      margin: 0;
+    }
+
+    /* Małe ekrany: kolumna zamiast wiersza dla pola wartości. */
+    @media (max-width: 480px) {
+      .lab-input-row { flex-direction: column; }
+      .lab-input-row select { min-width: 0; }
+    }
+  </style>
+
+  <script src="vilda_chrome.js?v=9"></script>
+  <script src="https://unpkg.com/lucide@1.14.0/dist/umd/lucide.min.js" integrity="sha384-jB6ZXxyEV94yzTxgLMvrwwNbn/pTTqwrMDI+v8FV5o5FnId/yn3DJwSdrDujU9A7" crossorigin="anonymous" defer></script>
+</head>
+
+<body class="js-loading liquid-ios26 has-sidebar">
+  <header></header>
+
+  <div class="desktop-layout">
+    <aside class="sidebar"></aside>
+
+    <div class="main-content">
+      <div class="container">
+        <div class="lab-container">
+
+          <!-- ===== Karta nagłówkowa ===== -->
+          <div class="lab-card">
+            <h1>Przelicznik jednostek laboratoryjnych</h1>
+            <p class="lab-subtitle">Hormony osi nadnerczowo‑gonadalnej, steroidy płciowe, witamina D — pomiędzy jednostkami konwencjonalnymi (μg/dL, ng/mL, pg/mL) a SI (nmol/L, pmol/L, μmol/L).</p>
+
+            <div class="lab-field">
+              <label for="labSearch">Szukaj substancji</label>
+              <div class="lab-search-wrap">
+                <input type="text" id="labSearch" class="lab-search"
+                       placeholder="np. kortyzol, DHEA-S, estradiol, 25-OH wit. D…"
+                       autocomplete="off" inputmode="search" />
+              </div>
+            </div>
+
+            <div class="lab-field">
+              <label for="labSubstance">Substancja</label>
+              <select id="labSubstance" class="lab-substance"></select>
+            </div>
+
+            <div class="lab-field">
+              <label for="labValue">Wartość wyniku</label>
+              <div class="lab-input-row">
+                <input type="text" id="labValue" inputmode="decimal"
+                       placeholder="np. 15,2"
+                       autocomplete="off" />
+                <select id="labUnit" aria-label="Jednostka źródłowa"></select>
+              </div>
+              <div id="labError" class="lab-error" style="display:none;"></div>
+            </div>
+
+            <button type="button" id="labClearBtn" class="lab-clear-btn">
+              <i data-lucide="eraser" aria-hidden="true"></i> Wyczyść
+            </button>
+          </div>
+
+          <!-- ===== Karta wyników ===== -->
+          <div class="lab-card" id="labResultsCard" style="display:none;">
+            <h2>Przeliczone wartości</h2>
+            <table class="lab-results-table" aria-live="polite">
+              <thead>
+                <tr><th scope="col">Jednostka</th><th scope="col" style="text-align:right;">Wartość</th></tr>
+              </thead>
+              <tbody id="labResultsBody"></tbody>
+            </table>
+            <p class="lab-meta" id="labMeta"></p>
+          </div>
+
+          <!-- ===== Karta zakresów referencyjnych / uwag / źródeł ===== -->
+          <div class="lab-card" id="labInfoCard" style="display:none;">
+            <h2 id="labInfoTitle"></h2>
+            <ul class="lab-list" id="labRanges"></ul>
+            <p class="lab-meta" id="labNotes"></p>
+            <p class="lab-sources" id="labSources"></p>
+            <a class="lab-cross-link" href="steroidy.html" id="labCrossLink" style="display:none;">
+              <i data-lucide="pill" aria-hidden="true"></i>
+              <span>Liczysz dawkę glikokortykosteroidu? Otwórz kalkulator równoważności dawek.</span>
+            </a>
+          </div>
+
+          <!-- ===== Karta disclaimer ===== -->
+          <div class="lab-card">
+            <p class="lab-disclaimer">
+              <strong>Uwaga:</strong> przelicznik ma charakter informacyjno‑edukacyjny.
+              Współczynniki obliczono na podstawie mas cząsteczkowych wzorów sumarycznych
+              wg PubChem/CAS. Drobne różnice (< 1 %) względem innych kalkulatorów wynikają
+              z zaokrągleń. Zakresy referencyjne podane wyłącznie pomocniczo — każde laboratorium
+              wydaje wynik z własnymi widełkami, do których należy się odnosić.
+            </p>
+          </div>
+
+        </div>
+      </div>
+    </div>
+    <aside class="decor-sidebar"></aside>
+  </div>
+
+  <!-- Stopka identyczna jak na innych podstronach. -->
+<footer class="site-footer">
+  <div class="site-footer__inner">
+    <div class="site-footer__brand">
+      <a href="index.html" class="site-footer__brand-link">
+        <span class="site-footer__brand-icon" aria-hidden="true">
+          <img src="/pwa-icons/icon-48x48.png" alt="" width="22" height="22">
+        </span>
+        <span class="site-footer__brand-name">wagaiwzrost.pl</span>
+      </a>
+      <p class="site-footer__brand-meta">
+        Vilda Clinic sp. z o.o.<br>
+        Konsultacja merytoryczna: dr&nbsp;n.&nbsp;med.&nbsp;Maciej&nbsp;Flader
+      </p>
+    </div>
+    <nav class="site-footer__col" aria-label="Kalkulatory">
+      <h3 class="site-footer__col-title">Kalkulatory</h3>
+      <a href="index.html" class="site-footer__link">Strona główna</a>
+      <a href="homa-ir.html" class="site-footer__link">HOMA-IR</a>
+      <a href="kalkulator-klirens.html" class="site-footer__link">Klirens / eGFR</a>
+    </nav>
+    <nav class="site-footer__col" aria-label="Kalkulatory — ciąg dalszy">
+      <h3 class="site-footer__col-title site-footer__col-title--hidden" aria-hidden="true">&nbsp;</h3>
+      <a href="docpro.html" class="site-footer__link">DocPro</a>
+      <a href="steroidy.html" class="site-footer__link">Steroidy</a>
+      <a href="przelicznik-jednostek.html" class="site-footer__link">Przelicznik jednostek</a>
+      <a href="cukrzyca.html" class="site-footer__link">Cukrzyca</a>
+    </nav>
+    <nav class="site-footer__col" aria-label="Informacje">
+      <h3 class="site-footer__col-title">Informacje</h3>
+      <a href="o-aplikacji.html" class="site-footer__link">O aplikacji</a>
+      <a href="kontakt.html" class="site-footer__link">Kontakt</a>
+      <a href="polityka-prywatnosci.html" class="site-footer__link">Polityka prywatności</a>
+    </nav>
+  </div>
+  <div class="site-footer__disclaimer-wrap">
+    <p class="site-footer__disclaimer">
+      Narzędzie do celów informacyjnych — nie zastępuje konsultacji lekarskiej ani samodzielnych decyzji klinicznych.
+    </p>
+  </div>
+  <div class="site-footer__bottom">
+    <span>© 2025 Vilda Clinic sp. z o.o.</span>
+    <a href="https://vildaclinic.pl" target="_blank" rel="noopener noreferrer" class="site-footer__vildaclinic">vildaclinic.pl</a>
+  </div>
+</footer>
+
+  <button id="scrollTopBtn" aria-label="Powrót na górę strony" type="button">
+    <i data-lucide="arrow-up"></i>
+  </button>
+
+  <script src="ios26-ui.js?v=18" defer></script>
+
+  <!-- Dane + moduł logiki (dwa pliki przygotowane do reużycia w innych podstronach). -->
+  <script src="lab_units_data.js?v=1"></script>
+  <script src="lab_unit_converter.js?v=1"></script>
+
+  <script>
+  (function () {
+    'use strict';
+
+    var Conv = window.LabUnitConverter;
+    var Data = window.LabUnitsData;
+    if (!Conv || !Data) {
+      // eslint-disable-next-line no-console
+      console.warn('[przelicznik-jednostek] Brak LabUnitConverter/LabUnitsData – moduł nie zostanie aktywowany.');
+      return;
+    }
+
+    var persistence = (window.VildaPersistence && typeof window.VildaPersistence.readPreference === 'function')
+      ? window.VildaPersistence : null;
+    var PREF_SUBSTANCE = 'LAB_CONV_SUBSTANCE';
+    var PREF_UNIT      = 'LAB_CONV_UNIT';
+
+    var searchEl    = document.getElementById('labSearch');
+    var substanceEl = document.getElementById('labSubstance');
+    var valueEl     = document.getElementById('labValue');
+    var unitEl      = document.getElementById('labUnit');
+    var errorEl     = document.getElementById('labError');
+    var resultsCard = document.getElementById('labResultsCard');
+    var resultsBody = document.getElementById('labResultsBody');
+    var metaEl      = document.getElementById('labMeta');
+
+    var infoCard    = document.getElementById('labInfoCard');
+    var infoTitleEl = document.getElementById('labInfoTitle');
+    var rangesEl    = document.getElementById('labRanges');
+    var notesEl     = document.getElementById('labNotes');
+    var sourcesEl   = document.getElementById('labSources');
+    var crossLinkEl = document.getElementById('labCrossLink');
+
+    var clearBtn    = document.getElementById('labClearBtn');
+
+    // ID substancji, dla których proponujemy link do steroidy.html
+    // (te, które są też w słowniku DRUGS na stronie kalkulatora dawek lub
+    //  istotne dla terapii glikokortykosteroidami).
+    var STEROID_RELATED = {
+      cortisol: true, deoxycortisol_11: true, corticosterone: true,
+      oh17_progesterone: true, dhea_s: true, dhea: true,
+      testosterone_total: true, testosterone_free: true, dht: true,
+      androstenedione: true
+    };
+
+    function safeEsc(str) {
+      var api = window.VildaHtml || window.vildaHtml;
+      if (api && typeof api.escapeHtml === 'function') return api.escapeHtml(str);
+      return String(str == null ? '' : str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function clearChildren(el) {
+      if (!el) return;
+      while (el.firstChild) el.removeChild(el.firstChild);
+    }
+
+    function showError(message) {
+      if (!message) {
+        errorEl.style.display = 'none';
+        errorEl.textContent = '';
+      } else {
+        errorEl.style.display = '';
+        errorEl.textContent = message;
+      }
+    }
+
+    function readPref(key) {
+      if (!persistence) return null;
+      try { return persistence.readPreference(key, null); } catch (_) { return null; }
+    }
+    function writePref(key, value) {
+      if (!persistence || typeof persistence.writePreference !== 'function') return;
+      try { persistence.writePreference(key, value); } catch (_) { /* noop */ }
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    //  Budowa selektora substancji (z opcjami pogrupowanymi)
+    // ────────────────────────────────────────────────────────────────
+
+    function buildSubstanceOptions(filterIds) {
+      var allowAll = !filterIds;
+      var allowSet = {};
+      if (filterIds) {
+        for (var i = 0; i < filterIds.length; i++) allowSet[filterIds[i]] = true;
+      }
+
+      clearChildren(substanceEl);
+      var groupMap = {};
+      var groupsOrder = Data.groups();
+      var entries = Conv.list();   // pełna lista w kolejności źródłowej
+      for (var k = 0; k < entries.length; k++) {
+        var e = entries[k];
+        if (!allowAll && !allowSet[e.id]) continue;
+        if (!groupMap[e.group]) groupMap[e.group] = [];
+        groupMap[e.group].push(e);
+      }
+      for (var g = 0; g < groupsOrder.length; g++) {
+        var groupName = groupsOrder[g];
+        var items = groupMap[groupName];
+        if (!items || !items.length) continue;
+        var optGroup = document.createElement('optgroup');
+        optGroup.label = groupName;
+        for (var j = 0; j < items.length; j++) {
+          var opt = document.createElement('option');
+          opt.value = items[j].id;
+          opt.textContent = items[j].label;
+          optGroup.appendChild(opt);
+        }
+        substanceEl.appendChild(optGroup);
+      }
+    }
+
+    function buildUnitOptions(substance, preferredSymbol) {
+      clearChildren(unitEl);
+      if (!substance) return;
+      var preferred = preferredSymbol;
+      var hasPreferred = false;
+      for (var i = 0; i < substance.units.length; i++) {
+        var u = substance.units[i];
+        var opt = document.createElement('option');
+        opt.value = u.symbol;
+        opt.textContent = u.label;
+        unitEl.appendChild(opt);
+        if (u.symbol === preferred) hasPreferred = true;
+      }
+      if (hasPreferred) {
+        unitEl.value = preferred;
+      } else {
+        // Domyślnie wybierz pierwszą jednostkę KONWENCJONALNĄ – to ona jest
+        // zwykle wpisywana przez użytkownika („mam wynik 12 μg/dL").
+        for (var k = 0; k < substance.units.length; k++) {
+          if (substance.units[k].kind === 'conv') { unitEl.value = substance.units[k].symbol; break; }
+        }
+        if (!unitEl.value && substance.units.length) unitEl.value = substance.units[0].symbol;
+      }
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    //  Renderowanie wyników
+    // ────────────────────────────────────────────────────────────────
+
+    function renderResults(substance) {
+      if (!substance) {
+        resultsCard.style.display = 'none';
+        return;
+      }
+      var raw = valueEl.value;
+      if (raw == null || String(raw).trim() === '') {
+        resultsCard.style.display = 'none';
+        showError('');
+        return;
+      }
+      var n = Conv.parseNumber(raw);
+      if (!isFinite(n)) {
+        resultsCard.style.display = 'none';
+        showError('Nieprawidłowa liczba.');
+        return;
+      }
+      if (n < 0) {
+        resultsCard.style.display = 'none';
+        showError('Wartość nie może być ujemna.');
+        return;
+      }
+      showError('');
+
+      var res = Conv.convertAll({
+        substanceId: substance.id,
+        value: n,
+        fromUnit: unitEl.value
+      });
+      if (!res.ok) {
+        resultsCard.style.display = 'none';
+        showError(res.error || 'Nie udało się przeliczyć.');
+        return;
+      }
+
+      clearChildren(resultsBody);
+      for (var i = 0; i < res.results.length; i++) {
+        var r = res.results[i];
+        var tr = document.createElement('tr');
+        if (r.kind === 'si') tr.className = 'lab-row-si';
+        var td1 = document.createElement('td');
+        td1.className = 'lab-unit';
+        td1.textContent = r.unit;
+        var td2 = document.createElement('td');
+        td2.className = 'lab-value';
+        td2.textContent = r.formatted;
+        tr.appendChild(td1);
+        tr.appendChild(td2);
+        resultsBody.appendChild(tr);
+      }
+      resultsCard.style.display = '';
+
+      var metaParts = [];
+      metaParts.push('<strong>Wartość źródłowa:</strong> ' + safeEsc(Conv.formatNumber(res.value, res.precision)) + ' ' + safeEsc(res.fromUnit));
+      metaParts.push('<strong>Masa cząsteczkowa:</strong> ' + safeEsc(substance.mw) + ' g/mol');
+      metaParts.push('<strong>SI:</strong> ' + safeEsc(substance.canonical_si));
+      metaEl.innerHTML = metaParts.join(' &nbsp;•&nbsp; ');
+    }
+
+    function renderInfo(substance) {
+      if (!substance) {
+        infoCard.style.display = 'none';
+        return;
+      }
+      infoTitleEl.textContent = substance.label_pl + ' — zakresy referencyjne i uwagi';
+      clearChildren(rangesEl);
+      var ranges = Array.isArray(substance.ranges_pl) ? substance.ranges_pl : [];
+      for (var i = 0; i < ranges.length; i++) {
+        var li = document.createElement('li');
+        li.textContent = ranges[i];
+        rangesEl.appendChild(li);
+      }
+      notesEl.innerHTML = '';
+      if (substance.notes_pl) {
+        var strong = document.createElement('strong');
+        strong.textContent = 'Uwaga: ';
+        notesEl.appendChild(strong);
+        notesEl.appendChild(document.createTextNode(substance.notes_pl));
+      }
+      sourcesEl.textContent = '';
+      if (Array.isArray(substance.sources) && substance.sources.length) {
+        sourcesEl.textContent = 'Źródła: ' + substance.sources.join('; ') + '.';
+      }
+      crossLinkEl.style.display = STEROID_RELATED[substance.id] ? 'flex' : 'none';
+      infoCard.style.display = '';
+    }
+
+    function refreshFromSubstance() {
+      var s = Conv.find(substanceEl.value);
+      if (!s) {
+        resultsCard.style.display = 'none';
+        infoCard.style.display = 'none';
+        return;
+      }
+      writePref(PREF_SUBSTANCE, s.id);
+      var lastUnit = readPref(PREF_UNIT + ':' + s.id) || null;
+      buildUnitOptions(s, lastUnit);
+      renderInfo(s);
+      renderResults(s);
+    }
+
+    function onUnitChange() {
+      var s = Conv.find(substanceEl.value);
+      if (s) writePref(PREF_UNIT + ':' + s.id, unitEl.value);
+      renderResults(s);
+    }
+
+    function onValueChange() {
+      renderResults(Conv.find(substanceEl.value));
+    }
+
+    function onSearch() {
+      var q = searchEl.value;
+      var matches = Conv.search(q);
+      var ids = matches.map(function (m) { return m.id; });
+      var previous = substanceEl.value;
+      if (!q) {
+        buildSubstanceOptions(null);
+      } else {
+        if (!ids.length) {
+          buildSubstanceOptions(null);
+        } else {
+          buildSubstanceOptions(ids);
+        }
+      }
+      // Spróbuj utrzymać poprzedni wybór; jeśli odpadł – wybierz pierwszy z listy.
+      var has = false;
+      for (var i = 0; i < substanceEl.options.length; i++) {
+        if (substanceEl.options[i].value === previous) { has = true; break; }
+      }
+      substanceEl.value = has ? previous : (substanceEl.options.length ? substanceEl.options[0].value : '');
+      refreshFromSubstance();
+    }
+
+    function onClear() {
+      searchEl.value = '';
+      valueEl.value = '';
+      showError('');
+      buildSubstanceOptions(null);
+      var defaultId = readPref(PREF_SUBSTANCE) || 'cortisol';
+      var s = Conv.find(defaultId) || Conv.find('cortisol');
+      if (s) {
+        substanceEl.value = s.id;
+        refreshFromSubstance();
+      }
+      resultsCard.style.display = 'none';
+      try { valueEl.focus(); } catch (_) { /* noop */ }
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    //  Inicjalizacja
+    // ────────────────────────────────────────────────────────────────
+
+    buildSubstanceOptions(null);
+
+    var initialId = readPref(PREF_SUBSTANCE);
+    var initialSubstance = (initialId && Conv.find(initialId)) || Conv.find('cortisol');
+    if (initialSubstance) {
+      substanceEl.value = initialSubstance.id;
+      var preferredUnit = readPref(PREF_UNIT + ':' + initialSubstance.id);
+      buildUnitOptions(initialSubstance, preferredUnit);
+      renderInfo(initialSubstance);
+    }
+
+    substanceEl.addEventListener('change', refreshFromSubstance);
+    unitEl.addEventListener('change', onUnitChange);
+    valueEl.addEventListener('input', onValueChange);
+    searchEl.addEventListener('input', onSearch);
+    clearBtn.addEventListener('click', onClear);
+
+    // Wstępne ustawienie focusu na wartość, jeśli substancja już jest wybrana.
+    try { valueEl.focus(); } catch (_) { /* noop */ }
+  })();
+  </script>
+</body>
+</html>

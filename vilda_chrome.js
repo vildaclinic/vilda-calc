@@ -72,6 +72,7 @@
         { href: 'kalkulator-klirens.html', label: 'Klirens', icon: 'droplets' },
         { href: 'cukrzyca.html', label: 'Cukrzyca', icon: 'syringe' },
         { href: 'steroidy.html', label: 'Steroidy', icon: 'pill' },
+        { href: 'przelicznik-jednostek.html', label: 'Jednostki lab.', icon: 'flask-conical' },
         { href: 'materialy-edukacyjne.html', label: 'Edu', icon: 'book-open' }
       ]
     },
