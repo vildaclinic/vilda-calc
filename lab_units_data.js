@@ -2,6 +2,19 @@
  * --------------------------------------------------------------------------
  *  Baza danych substancji dla przelicznika jednostek laboratoryjnych.
  *
+ *  STAN PEDIATRYCZNYCH ZAKRESÓW (faza 2b ukończona):
+ *    – kortyzol, aldosteron, 17-OH-progesteron, testosteron T: Soldin 2005/2009
+ *      (LC-MS/MS lub IMMULITE 1000, dane open-access)
+ *    – ACTH, 11-deoksykortyzol, kortykosteron, 17-OH-pregnenolon, pregnenolon,
+ *      DHEA, DHEA-S, androstendion, wolny testosteron, DHT, estradiol, estron,
+ *      progesteron: Mayo Clinic Test Catalog (snapshoty Wayback Machine, gdzie
+ *      relevant cytowane są oryginalne źródła Mayo: Kushnir 2006, Soldin AACC 2003/2005).
+ *    – Tanner-based stratyfikacja dla: 17-OH-pregnenolon, pregnenolon, DHEA-S,
+ *      androstendion, DHT, estradiol, estron (Mayo daje tabele Tannera I–V).
+ *    – Bez stratyfikacji pediatrycznej: 25-OH wit. D (Polski konsensus 2023 stosuje
+ *      jednolite progi dla wszystkich grup wiekowych), 1,25(OH)₂ wit. D (Mayo
+ *      podaje jeden zakres dorosły), wit. D₃ (brak ustalonego klinicznego zakresu).
+ *
  *  Każda substancja definiuje:
  *    id            – stabilny identyfikator (slug),
  *    label_pl      – etykieta po polsku (UI),
@@ -50,6 +63,345 @@
   // Pozostawiamy ją do ewentualnej rozbudowy o jednostki biologiczne (mIU/L itp.).
   var WHO_IS = 'WHO IS';                                       // (na razie nieużywane – placeholder)
 
+  // ────────────────────────────────────────────────────────────────────────
+  //  Globalna mapa źródeł literaturowych. Każda substancja referuje przez
+  //  source_ids do tej mapy, dzięki czemu unikamy duplikowania pełnych cytowań.
+  //
+  //  Pola:
+  //    label_short – krótka etykieta widoczna przy wyniku (np. "CALIPER 2013"),
+  //    full_cite   – pełne cytowanie w stylu Vancouver dla rozwijanej listy,
+  //    url         – link do artykułu/DOI (jeśli dostępny),
+  //    pmid, doi   – identyfikatory dla uzupełniania metadanych.
+  // ────────────────────────────────────────────────────────────────────────
+  var SOURCES = {
+    tietz_2018: {
+      label_short: 'Tietz 2018',
+      full_cite: 'Rifai N, Horvath AR, Wittwer CT, eds. Tietz Textbook of Clinical Chemistry and Molecular Diagnostics. 6th ed. St. Louis: Elsevier; 2018.',
+      url: null
+    },
+    bhasin_es_testosterone_2018: {
+      label_short: 'Endocrine Society 2018 — testosteron (Bhasin)',
+      full_cite: 'Bhasin S, Brito JP, Cunningham GR, Hayes FJ, Hodis HN, Matsumoto AM, Snyder PJ, Swerdloff RS, Wu FC, Yialamas MA. Testosterone Therapy in Men With Hypogonadism: An Endocrine Society Clinical Practice Guideline. J Clin Endocrinol Metab. 2018;103(5):1715–1744.',
+      doi: '10.1210/jc.2018-00229',
+      url: 'https://academic.oup.com/jcem/article/103/5/1715/4939465'
+    },
+    speiser_es_cah_2018: {
+      label_short: 'Endocrine Society CAH 2018 (Speiser)',
+      full_cite: 'Speiser PW, Arlt W, Auchus RJ, Baskin LS, Conway GS, Merke DP, Meyer-Bahlburg HFL, Miller WL, Murad MH, Oberfield SE, White PC. Congenital Adrenal Hyperplasia Due to Steroid 21-Hydroxylase Deficiency: An Endocrine Society Clinical Practice Guideline. J Clin Endocrinol Metab. 2018;103(11):4043–4088.',
+      doi: '10.1210/jc.2018-01865',
+      url: 'https://doi.org/10.1210/jc.2018-01865'
+    },
+    funder_es_pa_2016: {
+      label_short: 'Endocrine Society Primary Aldosteronism 2016 (Funder)',
+      full_cite: 'Funder JW, Carey RM, Mantero F, Murad MH, Reincke M, Shibata H, Stowasser M, Young WF Jr. The Management of Primary Aldosteronism: Case Detection, Diagnosis, and Treatment: An Endocrine Society Clinical Practice Guideline. J Clin Endocrinol Metab. 2016;101(5):1889–1916.',
+      doi: '10.1210/jc.2015-4061',
+      url: 'https://doi.org/10.1210/jc.2015-4061'
+    },
+    nieman_es_cushing_2008: {
+      label_short: 'Endocrine Society Cushing 2008 (Nieman)',
+      full_cite: 'Nieman LK, Biller BMK, Findling JW, Newell-Price J, Savage MO, Stewart PM, Montori VM. The Diagnosis of Cushing\'s Syndrome: An Endocrine Society Clinical Practice Guideline. J Clin Endocrinol Metab. 2008;93(5):1526–1540.',
+      doi: '10.1210/jc.2008-0125',
+      url: 'https://doi.org/10.1210/jc.2008-0125'
+    },
+    pludowski_vitd_2023: {
+      label_short: 'Polski konsensus wit. D 2023 (Płudowski)',
+      full_cite: 'Płudowski P, Kos-Kudła B, Walczak M, Fal A, Zozulińska-Ziółkiewicz D, Sieroszewski P, Peregud-Pogorzelski J, Lauterbach R, Targowski T, Lewiński A i wsp. Guidelines for Preventing and Treating Vitamin D Deficiency: A 2023 Update in Poland. Nutrients. 2023;15(3):695.',
+      doi: '10.3390/nu15030695',
+      url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC9920487/'
+    },
+    caliper_bailey_2013: {
+      label_short: 'CALIPER 2013 — sterydy LC-MS/MS (Bailey)',
+      full_cite: 'Bailey D, Colantonio D, Kyriakopoulou L, Cohen AH, Chan MK, Armbruster D, Adeli K. Marked biological variance in endocrine and biochemical markers in childhood: establishment of pediatric reference intervals using healthy community children from the CALIPER cohort. Clin Chem. 2013;59(9):1393–1405.',
+      pmid: '23637247',
+      url: 'https://pubmed.ncbi.nlm.nih.gov/23637247/'
+    },
+    caliper_konforte_2013: {
+      label_short: 'CALIPER 2013 — hormony płodności (Konforte)',
+      full_cite: 'Konforte D, Shea JL, Kyriakopoulou L, Colantonio D, Cohen AH, Shaw J, Bailey D, Chan MK, Armbruster D, Adeli K. Complex biological pattern of fertility hormones in children and adolescents: a study of healthy children from the CALIPER cohort and establishment of pediatric reference intervals. Clin Chem. 2013;59(8):1215–1227.',
+      pmid: '23637248',
+      url: 'https://pubmed.ncbi.nlm.nih.gov/23637248/'
+    },
+    caliper_kyriakopoulou_2013: {
+      label_short: 'CALIPER 2013 — 8 sterydów MS (Kyriakopoulou)',
+      full_cite: 'Kyriakopoulou L, Yazdanpanah M, Colantonio DA, Chan MK, Daly CH, Adeli K. A sensitive and rapid mass spectrometric method for the simultaneous measurement of eight steroid hormones and CALIPER pediatric reference intervals. Clin Biochem. 2013;46(7-8):642–651.',
+      pmid: '23337690',
+      url: 'https://pubmed.ncbi.nlm.nih.gov/23337690/'
+    },
+    caliper_bohn_2021: {
+      label_short: 'CALIPER 2021 — Siemens Atellica (Bohn)',
+      full_cite: 'Bohn MK, Higgins V, Tahmasebi H, Hall A, Liu E, Adeli K. Pediatric reference intervals for endocrine markers and fertility hormones in healthy children and adolescents on the Siemens Healthineers Atellica immunoassay system. Clin Chem Lab Med. 2021;59(8):1421–1430.',
+      pmid: '33957708',
+      url: 'https://pubmed.ncbi.nlm.nih.gov/33957708/'
+    },
+    mayo_test_catalog: {
+      label_short: 'Mayo Clinic Laboratories — Test Catalog',
+      full_cite: 'Mayo Clinic Laboratories. Test Catalog. Rochester, MN.',
+      url: 'https://www.mayocliniclabs.com/test-catalog'
+    },
+    soldin_2005_immulite: {
+      label_short: 'Soldin 2005 — IMMULITE 1000 (pediatria)',
+      full_cite: 'Soldin SJ, Hoffman EG, Waring MA, Soldin OP. Pediatric reference intervals for FSH, LH, estradiol, T3, free T3, cortisol, and growth hormone on the DPC IMMULITE 1000. Clin Chim Acta. 2005;355(1-2):205-210.',
+      pmid: '15820497',
+      url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC3636986/'
+    },
+    soldin_2009_lcms: {
+      label_short: 'Soldin 2009 — LC-MS/MS (pediatria)',
+      full_cite: 'Soldin OP, Sharma H, Husted L, Soldin SJ. Pediatric reference intervals for aldosterone, 17α-hydroxyprogesterone, dehydroepiandrosterone, testosterone and 25-hydroxy vitamin D3 using tandem mass spectrometry. Clin Biochem. 2009;42(9):823-827.',
+      pmid: '19318024',
+      url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC3637995/'
+    },
+    kushnir_2006_steroids: {
+      label_short: 'Kushnir 2006 — pediatryczne sterydy LC-MS/MS',
+      full_cite: 'Kushnir MM, Rockwood AL, Roberts WL, Pattison EG, Bunker AM, Fitzgerald RL, Meikle AW. Performance characteristics of a novel tandem mass spectrometry assay for serum testosterone. Clin Chem. 2006;52(8):1559-1567.',
+      pmid: '16823014',
+      url: 'https://academic.oup.com/clinchem/article/52/8/1559/5628186'
+    },
+    soldin_2005_aacc: {
+      label_short: 'Soldin Pediatric Reference Ranges (AACC) 2005',
+      full_cite: 'Soldin SJ, Brugnara C, Wong EC, eds. Pediatric Reference Ranges. 5th ed. Washington, DC: AACC Press; 2005.',
+      url: null
+    },
+    // — Poszczególne testy Mayo Clinic Test Catalog. Każdy URL prowadzi do
+    //   konkretnej strony testu, dzięki czemu w sekcji „Źródła" lekarz może
+    //   sięgnąć po pełną dokumentację metodyki, granic detekcji itd.
+    mayo_test_acth: {
+      label_short: 'Mayo Test 8411 — ACTH, Plasma',
+      full_cite: 'Mayo Clinic Laboratories. Test 8411 — Adrenocorticotropic Hormone (ACTH), Plasma. Rochester, MN.',
+      url: 'https://www.mayocliniclabs.com/test-catalog/Overview/8411'
+    },
+    mayo_test_11dc: {
+      label_short: 'Mayo Test 46920 — 11-Deoxycortisol',
+      full_cite: 'Mayo Clinic Laboratories. Test 46920 — 11-Deoxycortisol, Serum. Rochester, MN.',
+      url: 'https://www.mayocliniclabs.com/test-catalog/Overview/46920'
+    },
+    mayo_test_cortico: {
+      label_short: 'Mayo Test 88221 — Corticosterone',
+      full_cite: 'Mayo Clinic Laboratories. Test 88221 — Corticosterone, Serum. Rochester, MN.',
+      url: 'https://www.mayocliniclabs.com/test-catalog/Overview/88221'
+    },
+    mayo_test_17oh_preg: {
+      label_short: 'Mayo Test 81151 — 17-OH-Pregnenolon',
+      full_cite: 'Mayo Clinic Laboratories. Test 81151 — 17-Hydroxypregnenolone, Serum. Rochester, MN.',
+      url: 'https://www.mayocliniclabs.com/test-catalog/Overview/81151'
+    },
+    mayo_test_pregnenolone: {
+      label_short: 'Mayo Test 88645 — Pregnenolon',
+      full_cite: 'Mayo Clinic Laboratories. Test 88645 — Pregnenolone, Serum. Rochester, MN.',
+      url: 'https://www.mayocliniclabs.com/test-catalog/Overview/88645'
+    },
+    mayo_test_dhea: {
+      label_short: 'Mayo Test 81405 — DHEA',
+      full_cite: 'Mayo Clinic Laboratories. Test 81405 — Dehydroepiandrosterone (DHEA), Serum. Rochester, MN.',
+      url: 'https://www.mayocliniclabs.com/test-catalog/Overview/81405'
+    },
+    mayo_test_dheas: {
+      label_short: 'Mayo Test 113595 — DHEA-S',
+      full_cite: 'Mayo Clinic Laboratories. Test 113595 — Dehydroepiandrosterone Sulfate (DHEA-S), Serum. Rochester, MN.',
+      url: 'https://www.mayocliniclabs.com/test-catalog/Overview/113595'
+    },
+    mayo_test_androstenedione: {
+      label_short: 'Mayo Test 9709 — Androstendion',
+      full_cite: 'Mayo Clinic Laboratories. Test 9709 — Androstenedione, Serum. Rochester, MN.',
+      url: 'https://www.mayocliniclabs.com/test-catalog/Overview/9709'
+    },
+    mayo_test_free_t: {
+      label_short: 'Mayo Test 83686 — Testosteron wolny + całk. + biodostępny',
+      full_cite: 'Mayo Clinic Laboratories. Test 83686 — Testosterone, Total, Bioavailable, and Free, Serum. Rochester, MN.',
+      url: 'https://www.mayocliniclabs.com/test-catalog/Overview/83686'
+    },
+    mayo_test_dht: {
+      label_short: 'Mayo Test 81479 — DHT',
+      full_cite: 'Mayo Clinic Laboratories. Test 81479 — Dihydrotestosterone (DHT), Serum. Rochester, MN.',
+      url: 'https://www.mayocliniclabs.com/test-catalog/Overview/81479'
+    },
+    mayo_test_estradiol: {
+      label_short: 'Mayo Test 81816 — Estradiol (LC-MS/MS)',
+      full_cite: 'Mayo Clinic Laboratories. Test 81816 — Estradiol, Serum (HPLC-MS/MS). Rochester, MN.',
+      url: 'https://www.mayocliniclabs.com/test-catalog/Overview/81816'
+    },
+    mayo_test_estrone: {
+      label_short: 'Mayo Test 81418 — Estron',
+      full_cite: 'Mayo Clinic Laboratories. Test 81418 — Estrone (E1), Serum. Rochester, MN.',
+      url: 'https://www.mayocliniclabs.com/test-catalog/Overview/81418'
+    },
+    mayo_test_progesterone: {
+      label_short: 'Mayo Test 8141 — Progesteron',
+      full_cite: 'Mayo Clinic Laboratories. Test 8141 — Progesterone, Serum. Rochester, MN.',
+      url: 'https://www.mayocliniclabs.com/test-catalog/Overview/8141'
+    },
+    pyrzak_walczak_2023: {
+      label_short: 'Endokrynologia wieku rozwojowego (Pyrżak, Walczak 2023)',
+      full_cite: 'Pyrżak B, Walczak M, red. Endokrynologia wieku rozwojowego. Wyd. 2. Warszawa: PZWL Wydawnictwo Lekarskie; 2023.',
+      url: null
+    },
+
+    // ── Tarczyca (paczka 4a) ──────────────────────────────────────────────
+    mayo_test_tsh: {
+      label_short: 'Mayo Test 8939 — TSH',
+      full_cite: 'Mayo Clinic Laboratories. Test 8939 (STSH) — Thyroid-Stimulating Hormone (sensitive), Serum. Rochester, MN.',
+      url: 'https://www.mayocliniclabs.com/test-catalog/Overview/8939'
+    },
+    mayo_test_ft4: {
+      label_short: 'Mayo Test 8725 — fT4',
+      full_cite: 'Mayo Clinic Laboratories. Test 8725 (FRT4) — Thyroxine (T4), Free, Serum. Rochester, MN.',
+      url: 'https://www.mayocliniclabs.com/test-catalog/Overview/8725'
+    },
+    mayo_test_ft3: {
+      label_short: 'Mayo Test 621321 — fT3',
+      full_cite: 'Mayo Clinic Laboratories. Test 621321 (T3FR) — Triiodothyronine (T3), Free, Serum. Rochester, MN.',
+      url: 'https://www.mayocliniclabs.com/test-catalog/Overview/621321'
+    },
+    mayo_test_t4_total: {
+      label_short: 'Mayo Test 8724 — T4 całkowita',
+      full_cite: 'Mayo Clinic Laboratories. Test 8724 (T4) — Thyroxine (T4), Total Only, Serum. Rochester, MN.',
+      url: 'https://www.mayocliniclabs.com/test-catalog/Overview/8724'
+    },
+    mayo_test_t3_total: {
+      label_short: 'Mayo Test 8613 — T3 całkowita',
+      full_cite: 'Mayo Clinic Laboratories. Test 8613 (T3) — Triiodothyronine (T3), Total, Serum. Rochester, MN.',
+      url: 'https://www.mayocliniclabs.com/test-catalog/Overview/8613'
+    },
+    mayo_test_tg: {
+      label_short: 'Mayo Test 62800 — Tg (tyreoglobulina)',
+      full_cite: 'Mayo Clinic Laboratories. Test 62800 (HTG2) — Thyroglobulin, Tumor Marker, Serum. Rochester, MN.',
+      url: 'https://www.mayocliniclabs.com/test-catalog/Overview/62800'
+    },
+    pte_hubalewska_2021_pregnancy: {
+      label_short: 'PTE 2021 — tarczyca w ciąży (Hubalewska-Dydejczyk)',
+      full_cite: 'Hubalewska-Dydejczyk A, Trofimiuk-Müldner M, Ruchała M, Lewiński A, Bednarczuk T, Zgliczyński W, Syrenicz A, Kos-Kudła B, Jarząb B, Gietka-Czernel M, Hubalewska-Dydejczyk T, Ostrowska L, Kalicka-Kasperczyk A. Thyroid diseases in pregnancy: guidelines of the Polish Society of Endocrinology. Endokrynol Pol. 2021;72(5):425-488.',
+      pmid: '34855189',
+      doi: '10.5603/EP.a2021.0089',
+      url: 'https://journals.viamedica.pl/endokrynologia_polska/article/view/86218'
+    },
+    jarzab_dtc_adults_2022: {
+      label_short: 'Polskie wytyczne DTC dorośli 2022 (Jarząb)',
+      full_cite: 'Jarząb B, Dedecjus M, Lewiński A, Adamczewski Z, Bagłaj M, Bałdys-Waligórska A, Barczyński M, Biernat W, Bobek-Billewicz B i wsp. Diagnosis and treatment of thyroid cancer in adult patients — Recommendations of Polish Scientific Societies and the National Oncological Strategy. 2022 Update. Endokrynol Pol. 2022;73(2):173-300.',
+      pmid: '35593680',
+      doi: '10.5603/EP.a2022.0028',
+      url: 'https://journals.viamedica.pl/endokrynologia_polska/article/view/89101'
+    },
+    handkiewicz_junak_dtc_children_2024: {
+      label_short: 'Polskie wytyczne DTC dzieci 2024 (Handkiewicz-Junak)',
+      full_cite: 'Handkiewicz-Junak D, Niedziela M, Lewiński A i wsp. Diagnostics and treatment of differentiated thyroid carcinoma in children — Guidelines of the Polish National Scientific Societies, 2024 Update. Endokrynol Pol. 2024;75(6):565-591.',
+      pmid: '39829212',
+      doi: '10.5603/ep.103845',
+      url: 'https://journals.viamedica.pl/endokrynologia_polska/article/view/103845'
+    },
+    caliper_bohn_2021_atellica: {
+      label_short: 'CALIPER Bohn 2021 — Atellica (pediatria)',
+      full_cite: 'Bohn MK, Horn P, League D, Steele P, Hall A, Adeli K. Pediatric reference intervals for endocrine markers and fertility hormones in healthy children and adolescents on the Siemens Healthineers Atellica immunoassay system. Clin Chem Lab Med. 2021;59(8):1421-1430.',
+      pmid: '33957708',
+      doi: '10.1515/cclm-2021-0050',
+      url: 'https://doi.org/10.1515/cclm-2021-0050'
+    },
+    kapelari_thyroid_pediatric_2008: {
+      label_short: 'Kapelari 2008 — pediatryczne RI tarczycy',
+      full_cite: 'Kapelari K, Kirchlechner C, Högler W, Schweitzer K, Virgolini I, Moncayo R. Pediatric reference intervals for thyroid hormone levels from birth to adulthood: a retrospective study. BMC Endocr Disord. 2008;8:15.',
+      pmid: '19036169',
+      doi: '10.1186/1472-6823-8-15',
+      url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC2645400/'
+    },
+    kucharska_pte_chypo_2016: {
+      label_short: 'Polskie rekomendacje WNT 2016 (Kucharska)',
+      full_cite: 'Kucharska AM, Beń-Skowronek I, Walczak M, Ołtarzewski M, Szalecki M, Jackowska T, Bossowski A, Pyrżak B, Niedziela M. Congenital hypothyroidism — Polish recommendations for therapy, treatment monitoring, and screening tests in special categories of neonates with increased risk of hypothyroidism. Endokrynol Pol. 2016;67(5):536-547.',
+      pmid: '27759154',
+      doi: '10.5603/EP.2016.0062',
+      url: 'https://journals.viamedica.pl/endokrynologia_polska/article/view/EP.2016.0062/38001'
+    },
+    pl_screening_program_2019_2026: {
+      label_short: 'Polski program przesiewowy noworodków 2019–2026',
+      full_cite: 'Ministerstwo Zdrowia RP. Rządowy program badań przesiewowych noworodków w Rzeczypospolitej Polskiej na lata 2019-2026.',
+      url: 'https://www.gov.pl/web/zdrowie/program-badan-przesiewowych-noworodkow'
+    },
+
+    // ── Przysadka + gonady (paczka 4b) ────────────────────────────────────
+    mayo_test_igf1: {
+      label_short: 'Mayo Test 62750 — IGF-1 (LC-MS/MS)',
+      full_cite: 'Mayo Clinic Laboratories. Test 62750 (IGFMS) — Insulin-Like Growth Factor 1 (IGF-1), Serum, by LC-MS/MS. Rochester, MN.',
+      url: 'https://www.mayocliniclabs.com/test-catalog/Overview/62750'
+    },
+    mayo_test_igfbp3: {
+      label_short: 'Mayo Test 83300 — IGFBP-3',
+      full_cite: 'Mayo Clinic Laboratories. Test 83300 (IGFB3) — Insulin-Like Growth Factor Binding Protein 3, Serum. Rochester, MN.',
+      url: 'https://www.mayocliniclabs.com/test-catalog/Overview/83300'
+    },
+    mayo_test_prolactin: {
+      label_short: 'Mayo Test 85670 — Prolaktyna',
+      full_cite: 'Mayo Clinic Laboratories. Test 85670 (PRL) — Prolactin, Serum. Rochester, MN.',
+      url: 'https://www.mayocliniclabs.com/test-catalog/Overview/85670'
+    },
+    mayo_test_lh_adult: {
+      label_short: 'Mayo Test 602752 — LH (dorośli)',
+      full_cite: 'Mayo Clinic Laboratories. Test 602752 (LH) — Luteinizing Hormone (LH), Serum. Rochester, MN.',
+      url: 'https://www.mayocliniclabs.com/test-catalog/Overview/602752'
+    },
+    mayo_test_lh_pediatric: {
+      label_short: 'Mayo Test 62999 — LHPED (pediatria, czułość 0.02 IU/L)',
+      full_cite: 'Mayo Clinic Laboratories. Test 62999 (LHPED) — Luteinizing Hormone (LH), Pediatric, Serum. Rochester, MN.',
+      url: 'https://www.mayocliniclabs.com/test-catalog/Overview/62999'
+    },
+    mayo_test_fsh: {
+      label_short: 'Mayo Test 602753 — FSH',
+      full_cite: 'Mayo Clinic Laboratories. Test 602753 (FSH) — Follicle-Stimulating Hormone (FSH), Serum. Rochester, MN.',
+      url: 'https://www.mayocliniclabs.com/test-catalog/Overview/602753'
+    },
+    mayo_test_inhibin_b: {
+      label_short: 'Mayo Test 88722 — Inhibina B',
+      full_cite: 'Mayo Clinic Laboratories. Test 88722 (INHB) — Inhibin B, Serum. Rochester, MN.',
+      url: 'https://www.mayocliniclabs.com/test-catalog/Overview/88722'
+    },
+    mayo_test_amh: {
+      label_short: 'Mayo Test 608824 — AMH',
+      full_cite: 'Mayo Clinic Laboratories. Test 608824 (AMH1) — Antimüllerian Hormone (AMH), Serum. Rochester, MN.',
+      url: 'https://www.mayocliniclabs.com/test-catalog/Overview/608824'
+    },
+    mayo_test_shbg: {
+      label_short: 'Mayo Test 608102 — SHBG',
+      full_cite: 'Mayo Clinic Laboratories. Test 608102 (SHBG1) — Sex Hormone-Binding Globulin, Serum. Rochester, MN.',
+      url: 'https://www.mayocliniclabs.com/test-catalog/Overview/608102'
+    },
+    bidlingmaier_igf1_2014: {
+      label_short: 'Bidlingmaier 2014 — IGF-1 reference data',
+      full_cite: 'Bidlingmaier M, Friedrich N, Emeny RT i wsp. Reference intervals for insulin-like growth factor-1 (IGF-I) from birth to senescence: results from a multicenter study using a new automated chemiluminescence IGF-I immunoassay conforming to recent international recommendations. J Clin Endocrinol Metab. 2014;99(5):1712-1721.',
+      pmid: '24606072',
+      doi: '10.1210/jc.2013-3059',
+      url: 'https://academic.oup.com/jcem/article/99/5/1712/2537500'
+    },
+    andersson_inhibin_b_1998: {
+      label_short: 'Andersson 1998 — inhibina B w mini-puberty',
+      full_cite: 'Andersson AM, Toppari J, Haavisto AM, Petersen JH, Simell T, Simell O, Skakkebaek NE. Longitudinal reproductive hormone profiles in infants: peak of inhibin B levels in infant boys exceeds levels in adult men. J Clin Endocrinol Metab. 1998;83(11):4109-4113.',
+      pmid: '9814500',
+      doi: '10.1210/jcem.83.11.5306',
+      url: 'https://academic.oup.com/jcem/article/83/11/4109/2865499'
+    },
+    elmlinger_shbg_2005: {
+      label_short: 'Elmlinger 2005 — SHBG pediatria',
+      full_cite: 'Elmlinger MW, Kühnel W, Wormstall H, Döller PC. Reference intervals for testosterone, androstenedione and SHBG levels in healthy females and males from birth until old age. Clin Chem Lab Med. 2005;43(10):1098-1102.',
+      pmid: '16329620',
+      doi: '10.1515/CCLM.2005.193',
+      url: null
+    },
+    bohn_amh_caliper_2022: {
+      label_short: 'CALIPER Bohn 2022 — AMH pediatryczne',
+      full_cite: 'Bohn MK, Higgins V, Tahmasebi H, Hall A, Liu E, Adeli K. Establishment of pediatric reference intervals for anti-Müllerian hormone in healthy children and adolescents. Clin Biochem. 2022;107:33-38.',
+      pmid: '35760370',
+      doi: '10.1016/j.clinbiochem.2022.06.011',
+      url: null
+    },
+    nfz_ivf_2025: {
+      label_short: 'NFZ — kryteria refundacji IVF',
+      full_cite: 'Narodowy Fundusz Zdrowia. Kryteria refundacji procedur in vitro (próg AMH ≥ 0,7 ng/mL).',
+      url: 'https://www.nfz.gov.pl/'
+    },
+    eshre_pcos_2023: {
+      label_short: 'ESHRE 2023 — PCOS Rotterdam criteria',
+      full_cite: 'Teede HJ, Tay CT, Laven J i wsp. Recommendations from the 2023 International Evidence-based Guideline for the Assessment and Management of Polycystic Ovary Syndrome. Fertil Steril. 2023;120(4):767-793.',
+      pmid: '37589596',
+      doi: '10.1016/j.fertnstert.2023.07.025',
+      url: 'https://www.eshre.eu/Guidelines-and-Legal/Guidelines/Polycystic-Ovary-Syndrome'
+    }
+  };
+
   var SUBSTANCES = [
 
     /* ───────────── Glikokortykosteroidy / oś nadnerczowa ───────────── */
@@ -62,6 +414,7 @@
       group: 'Kora nadnerczy – glikokortykosteroidy',
       mw: 362.46,
       canonical_si: 'nmol/L',
+      clinical_indications: ['adrenal_insufficiency', 'cushing', 'short_stature', 'obesity', 'hypertension', 'cah'],
       units: [
         { symbol: 'nmol/L', label: 'nmol/L (SI)',  kind: 'si',   factor_to_si: 1 },
         { symbol: 'μmol/L', label: 'μmol/L',        kind: 'si',   factor_to_si: 1000 },
@@ -71,6 +424,106 @@
         { symbol: 'pg/mL',  label: 'pg/mL',         kind: 'conv', factor_to_si: 0.002759 }
       ],
       precision: 3,
+      default_range_si: { low: 138, high: 690, context_pl: 'Dorośli, rano (≈ 8:00)' },
+      reference_ranges_si: [
+        // ── Pediatria, time-aware ────────────────────────────────────────
+        //  Wartości poranne — Soldin 2005 (IMMULITE 1000, podejście Hoffmanna).
+        //  Wartości wieczorne — ekstrapolacja kliniczna z rytmu dobowego: u dzieci
+        //  > 6 mies. wartość wieczorna powinna spaść do ≤ 50 % porannej (Tietz).
+        //  Wartości nocne (midnight) — próg diagnostyczny Cushinga < 207 nmol/L
+        //  (Nieman ES 2008), wspólny dla dorosłych i dzieci > 12 mies.
+        //  Dla niemowląt 0–2 lat rytm dobowy NIE jest jeszcze ustalony — używamy
+        //  tego samego (porannego) zakresu niezależnie od pory.
+        //
+        //  0–2 lat (brak rytmu dobowego — wszystkie pory identyczne)
+        { id: 'cortisol_ped_0_2_morning',  when: { age_min: 0, age_max: 2, life_stage: 'pediatric', time_of_day: 'morning' },
+          low: 28, high: 966, context_pl: 'Dzieci 0–2 lat, pobranie poranne',
+          source_ids: ['soldin_2005_immulite'] },
+        { id: 'cortisol_ped_0_2_evening',  when: { age_min: 0, age_max: 2, life_stage: 'pediatric', time_of_day: 'evening' },
+          low: 28, high: 966, context_pl: 'Dzieci 0–2 lat — rytm dobowy nie jest jeszcze ustalony; ten sam zakres co rano',
+          source_ids: ['soldin_2005_immulite', 'tietz_2018'] },
+        { id: 'cortisol_ped_0_2_midnight', when: { age_min: 0, age_max: 2, life_stage: 'pediatric', time_of_day: 'midnight' },
+          low: 28, high: 966, context_pl: 'Dzieci 0–2 lat — rytm dobowy nie jest jeszcze ustalony',
+          source_ids: ['soldin_2005_immulite', 'tietz_2018'] },
+        { id: 'cortisol_ped_0_2',          when: { age_min: 0, age_max: 2, life_stage: 'pediatric' },
+          low: 28, high: 966, context_pl: 'Dzieci 0–2 lat (zakres ogólny, brak rytmu dobowego)',
+          source_ids: ['soldin_2005_immulite'] },
+        //  2–6 lat (rytm dobowy wykształcony)
+        { id: 'cortisol_ped_2_6_morning',  when: { age_min: 2, age_max: 6, life_stage: 'pediatric', time_of_day: 'morning' },
+          low: 28, high: 717, context_pl: 'Dzieci 2–6 lat, pobranie poranne',
+          source_ids: ['soldin_2005_immulite'] },
+        { id: 'cortisol_ped_2_6_evening',  when: { age_min: 2, age_max: 6, life_stage: 'pediatric', time_of_day: 'evening' },
+          low: 28, high: 360, context_pl: 'Dzieci 2–6 lat, pobranie wieczorne (≤ 50 % wartości porannej)',
+          source_ids: ['tietz_2018', 'soldin_2005_immulite'] },
+        { id: 'cortisol_ped_2_6_midnight', when: { age_min: 2, age_max: 6, life_stage: 'pediatric', time_of_day: 'midnight' },
+          low: 0, high: 207, context_pl: 'Dzieci 2–6 lat, pobranie nocne (diagnostyka Cushinga; próg < 207 nmol/L)',
+          source_ids: ['nieman_es_cushing_2008'] },
+        { id: 'cortisol_ped_2_6',          when: { age_min: 2, age_max: 6, life_stage: 'pediatric' },
+          low: 28, high: 717, context_pl: 'Dzieci 2–6 lat (domyślnie poranne)',
+          source_ids: ['soldin_2005_immulite'] },
+        //  6–11 lat
+        { id: 'cortisol_ped_6_11_morning',  when: { age_min: 6, age_max: 11, life_stage: 'pediatric', time_of_day: 'morning' },
+          low: 28, high: 1049, context_pl: 'Dzieci 6–11 lat, pobranie poranne',
+          source_ids: ['soldin_2005_immulite'] },
+        { id: 'cortisol_ped_6_11_evening',  when: { age_min: 6, age_max: 11, life_stage: 'pediatric', time_of_day: 'evening' },
+          low: 28, high: 525, context_pl: 'Dzieci 6–11 lat, pobranie wieczorne (≤ 50 % wartości porannej)',
+          source_ids: ['tietz_2018', 'soldin_2005_immulite'] },
+        { id: 'cortisol_ped_6_11_midnight', when: { age_min: 6, age_max: 11, life_stage: 'pediatric', time_of_day: 'midnight' },
+          low: 0, high: 207, context_pl: 'Dzieci 6–11 lat, pobranie nocne (próg Cushinga < 207 nmol/L)',
+          source_ids: ['nieman_es_cushing_2008'] },
+        { id: 'cortisol_ped_6_11',          when: { age_min: 6, age_max: 11, life_stage: 'pediatric' },
+          low: 28, high: 1049, context_pl: 'Dzieci 6–11 lat (domyślnie poranne)',
+          source_ids: ['soldin_2005_immulite'] },
+        //  11–15 lat
+        { id: 'cortisol_ped_11_15_morning',  when: { age_min: 11, age_max: 15, life_stage: 'pediatric', time_of_day: 'morning' },
+          low: 55, high: 690, context_pl: 'Młodzież 11–15 lat, pobranie poranne',
+          source_ids: ['soldin_2005_immulite'] },
+        { id: 'cortisol_ped_11_15_evening',  when: { age_min: 11, age_max: 15, life_stage: 'pediatric', time_of_day: 'evening' },
+          low: 28, high: 345, context_pl: 'Młodzież 11–15 lat, pobranie wieczorne (≤ 50 % wartości porannej)',
+          source_ids: ['tietz_2018', 'soldin_2005_immulite'] },
+        { id: 'cortisol_ped_11_15_midnight', when: { age_min: 11, age_max: 15, life_stage: 'pediatric', time_of_day: 'midnight' },
+          low: 0, high: 207, context_pl: 'Młodzież 11–15 lat, pobranie nocne (próg Cushinga < 207 nmol/L)',
+          source_ids: ['nieman_es_cushing_2008'] },
+        { id: 'cortisol_ped_11_15',          when: { age_min: 11, age_max: 15, life_stage: 'pediatric' },
+          low: 55, high: 690, context_pl: 'Młodzież 11–15 lat (domyślnie poranne)',
+          source_ids: ['soldin_2005_immulite'] },
+        //  15–18 lat
+        { id: 'cortisol_ped_15_18_morning',  when: { age_min: 15, age_max: 18, life_stage: 'pediatric', time_of_day: 'morning' },
+          low: 28, high: 856, context_pl: 'Młodzież 15–18 lat, pobranie poranne',
+          source_ids: ['soldin_2005_immulite'] },
+        { id: 'cortisol_ped_15_18_evening',  when: { age_min: 15, age_max: 18, life_stage: 'pediatric', time_of_day: 'evening' },
+          low: 28, high: 428, context_pl: 'Młodzież 15–18 lat, pobranie wieczorne (≤ 50 % wartości porannej)',
+          source_ids: ['tietz_2018', 'soldin_2005_immulite'] },
+        { id: 'cortisol_ped_15_18_midnight', when: { age_min: 15, age_max: 18, life_stage: 'pediatric', time_of_day: 'midnight' },
+          low: 0, high: 207, context_pl: 'Młodzież 15–18 lat, pobranie nocne (próg Cushinga < 207 nmol/L)',
+          source_ids: ['nieman_es_cushing_2008'] },
+        { id: 'cortisol_ped_15_18',          when: { age_min: 15, age_max: 18, life_stage: 'pediatric' },
+          low: 28, high: 856, context_pl: 'Młodzież 15–18 lat (domyślnie poranne)',
+          source_ids: ['soldin_2005_immulite'] },
+        // — Dorosły, time-aware. Wartości referencyjne ustanawiane standardowo
+        //   dla pobrania porannego. Dla wieczornego/midnight — osobne zakresy
+        //   (klinicznie istotne w diagnostyce zespołu Cushinga).
+        { id: 'cortisol_adult_post_dst', when: { test_protocol: 'post_dst' },
+          low: 0, high: 50,
+          context_pl: 'Po teście hamowania 1 mg deksametazonu (overnight DST). Wartość ≥ 50 nmol/L (≥ 1,8 μg/dL) sugeruje brak hamowania → diagnostyka Cushinga.',
+          source_ids: ['nieman_es_cushing_2008'] },
+        { id: 'cortisol_adult_midnight', when: { life_stage: 'adult', time_of_day: 'midnight' },
+          low: 0, high: 207,
+          context_pl: 'Dorośli, próbka o północy (22:00–24:00) — diagnostyka zespołu Cushinga. Wartość > 207 nmol/L (> 7,5 μg/dL) sugeruje utratę rytmu dobowego.',
+          source_ids: ['nieman_es_cushing_2008', 'tietz_2018'] },
+        { id: 'cortisol_adult_evening', when: { life_stage: 'adult', time_of_day: 'evening' },
+          low: 28, high: 276,
+          context_pl: 'Dorośli, pobranie popołudniowe/wieczorne (14:00–22:00). Wartości orientacyjne; pora niewskazana dla rutynowej oceny — diagnostyka tylko w kontekście zespołu Cushinga.',
+          source_ids: ['tietz_2018'] },
+        { id: 'cortisol_adult_morning', when: { life_stage: 'adult', time_of_day: 'morning' },
+          low: 138, high: 690,
+          context_pl: 'Dorośli, pobranie poranne (7:00–10:00)',
+          source_ids: ['tietz_2018', 'nieman_es_cushing_2008'] },
+        // Pozostały fallback — gdy brak ustalonej pory i protokołu, traktujemy jak poranne.
+        { id: 'cortisol_adult', when: {},
+          low: 138, high: 690, context_pl: 'Dorośli, rano (≈ 8:00) — zakres przyjęty domyślnie',
+          source_ids: ['tietz_2018', 'nieman_es_cushing_2008'] }
+      ],
       ranges_pl: [
         'Surowica, rano (≈ 8:00): 138–690 nmol/L (5–25 μg/dL)',
         'Surowica, wieczorem (≈ 23:00): < 138 nmol/L (< 5 μg/dL)',
@@ -88,12 +541,34 @@
       group: 'Kora nadnerczy – glikokortykosteroidy',
       mw: 4541.1,                                              // peptyd 39-aa (ludzki ACTH)
       canonical_si: 'pmol/L',
+      clinical_indications: ['adrenal_insufficiency', 'cushing', 'cah'],
       units: [
         { symbol: 'pmol/L', label: 'pmol/L (SI)', kind: 'si',   factor_to_si: 1 },
         { symbol: 'pg/mL',  label: 'pg/mL',        kind: 'conv', factor_to_si: 0.2203 },
         { symbol: 'ng/L',   label: 'ng/L',         kind: 'conv', factor_to_si: 0.2203 }
       ],
       precision: 3,
+      default_range_si: { low: 2.2, high: 13.3, context_pl: 'Dorośli, rano (≈ 8:00)' },
+      reference_ranges_si: [
+        // Mayo Test 8411 jawnie podaje: „Pediatric reference values are the same
+        // as adults" (cytowane: Petersen KE. Acta Paediatr Scand 1981;70:341-345).
+        // Górna granica Mayo 13.9 pmol/L (63 pg/mL) ≈ górnej Tietz 13.3.
+        { id: 'acth_morning', when: { time_of_day: 'morning' },
+          low: 1.6, high: 13.9, context_pl: 'Wszystkie grupy wiekowe, pobranie poranne (7:00–10:00)',
+          source_ids: ['mayo_test_acth', 'tietz_2018'] },
+        { id: 'acth_evening', when: { time_of_day: 'evening' },
+          low: 0, high: 5,
+          context_pl: 'Pobranie popołudniowe/wieczorne — wartości orientacyjne; Mayo nie ustanawia formalnego zakresu dla tej pory.',
+          source_ids: ['tietz_2018', 'mayo_test_acth'] },
+        { id: 'acth_midnight', when: { time_of_day: 'midnight' },
+          low: 0, high: 5,
+          context_pl: 'Pobranie nocne (22:00–02:00). Wartość > 5 pmol/L sugeruje utratę rytmu dobowego.',
+          source_ids: ['nieman_es_cushing_2008', 'tietz_2018'] },
+        // Fallback — gdy brak ustalonej pory, używamy zakresu porannego.
+        { id: 'acth_all_ages', when: {},
+          low: 1.6, high: 13.9, context_pl: 'Wszystkie grupy wiekowe, zakres poranny (domyślnie)',
+          source_ids: ['mayo_test_acth', 'tietz_2018'] }
+      ],
       ranges_pl: [
         'Surowica, rano (≈ 8:00): 2,2–13,3 pmol/L (10–60 pg/mL)',
         'Wieczorem: zwykle < 5 pmol/L (< 20 pg/mL)'
@@ -110,6 +585,7 @@
       group: 'Kora nadnerczy – mineralokortykosteroidy',
       mw: 360.44,
       canonical_si: 'pmol/L',
+      clinical_indications: ['hypertension', 'primary_aldosteronism', 'hypokalemia', 'cah', 'adrenal_insufficiency'],
       units: [
         { symbol: 'pmol/L', label: 'pmol/L (SI)', kind: 'si',   factor_to_si: 1 },
         { symbol: 'nmol/L', label: 'nmol/L',       kind: 'si',   factor_to_si: 1000 },
@@ -118,6 +594,21 @@
         { symbol: 'ng/L',   label: 'ng/L',         kind: 'conv', factor_to_si: 2.774 }
       ],
       precision: 3,
+      default_range_si: { low: 100, high: 860, context_pl: 'Dorośli, pozycja siedząca (po 2 h)' },
+      reference_ranges_si: [
+        // Pediatria — Soldin 2009 (LC-MS/MS, dwie szerokie grupy wiekowe, sex-neutral).
+        // CALIPER (Bailey 2013) ma drobniejszą stratyfikację z osobną grupą noworodków
+        // (< 30 dni), ale jest paywalled.
+        { id: 'aldo_ped_0_8',  when: { age_min: 0, age_max: 8,  life_stage: 'pediatric' },
+          low: 2.8, high: 546.5, context_pl: 'Dzieci 0–8 lat',
+          source_ids: ['soldin_2009_lcms'] },
+        { id: 'aldo_ped_8_18', when: { age_min: 8, age_max: 18, life_stage: 'pediatric' },
+          low: 5.5, high: 554.8, context_pl: 'Młodzież 8–18 lat',
+          source_ids: ['soldin_2009_lcms'] },
+        { id: 'aldo_adult', when: {},
+          low: 100, high: 860, context_pl: 'Dorośli, pozycja siedząca (po 2 h)',
+          source_ids: ['tietz_2018', 'funder_es_pa_2016'] }
+      ],
       ranges_pl: [
         'Pozycja leżąca (rano): 30–440 pmol/L (1–16 ng/dL)',
         'Pozycja siedząca (po 2 h): 100–860 pmol/L (4–31 ng/dL)',
@@ -129,12 +620,13 @@
 
     {
       id: 'deoxycortisol_11',
-      label_pl: '11-deoksykortyzol (związek S)',
+      label_pl: '11-deoksykortyzol',
       label_en: '11-Deoxycortisol',
       aliases: ['compound S', 'kortodoksyn', '11-DOC nie mylić z 11-deoksykortykosteronem'],
       group: 'Kora nadnerczy – prekursory steroidogenezy',
       mw: 346.46,
       canonical_si: 'nmol/L',
+      clinical_indications: ['cah', 'adrenal_insufficiency'],
       units: [
         { symbol: 'nmol/L', label: 'nmol/L (SI)', kind: 'si',   factor_to_si: 1 },
         { symbol: 'ng/dL',  label: 'ng/dL',        kind: 'conv', factor_to_si: 0.02886 },
@@ -142,6 +634,16 @@
         { symbol: 'pg/mL',  label: 'pg/mL',        kind: 'conv', factor_to_si: 0.002886 }
       ],
       precision: 3,
+      default_range_si: { low: 0.1, high: 1.5, context_pl: 'Dorośli bazalnie (bez metyraponu)' },
+      reference_ranges_si: [
+        // Pediatria — Mayo Test 46920 (LC-MS/MS, sex-neutral)
+        { id: 'dc11_ped', when: { life_stage: 'pediatric' },
+          low: 0, high: 9.93, context_pl: 'Dzieci i młodzież ≤ 18 lat (zakres szerszy niż dorosły)',
+          source_ids: ['mayo_test_11dc'] },
+        { id: 'dc11_adult', when: {},
+          low: 0.289, high: 2.28, context_pl: 'Dorośli, bazalnie (bez metyraponu) — Mayo LC-MS/MS',
+          source_ids: ['mayo_test_11dc', 'tietz_2018', 'speiser_es_cah_2018'] }
+      ],
       ranges_pl: [
         'Dorośli, bazalnie: < 1,5 nmol/L (< 52 ng/dL)',
         'Test z metyraponem (8 h po dawce): > 200 nmol/L (> 7 μg/dL) – prawidłowa rezerwa osi'
@@ -158,6 +660,7 @@
       group: 'Kora nadnerczy – prekursory steroidogenezy',
       mw: 346.46,
       canonical_si: 'nmol/L',
+      clinical_indications: ['cah'],
       units: [
         { symbol: 'nmol/L', label: 'nmol/L (SI)', kind: 'si',   factor_to_si: 1 },
         { symbol: 'ng/dL',  label: 'ng/dL',        kind: 'conv', factor_to_si: 0.02886 },
@@ -165,6 +668,16 @@
         { symbol: 'pg/mL',  label: 'pg/mL',        kind: 'conv', factor_to_si: 0.002886 }
       ],
       precision: 3,
+      default_range_si: { low: 3.5, high: 60, context_pl: 'Dorośli, rano' },
+      reference_ranges_si: [
+        // Pediatria — Mayo Test 88221 (LC-MS/MS, sex-neutral, 8:00 a.m.)
+        { id: 'cortico_ped', when: { life_stage: 'pediatric' },
+          low: 0.52, high: 56.86, context_pl: 'Dzieci i młodzież ≤ 18 lat (rano)',
+          source_ids: ['mayo_test_cortico'] },
+        { id: 'cortico_adult', when: {},
+          low: 1.53, high: 45.02, context_pl: 'Dorośli, rano (≈ 8:00)',
+          source_ids: ['mayo_test_cortico', 'tietz_2018'] }
+      ],
       ranges_pl: [
         'Dorośli, rano: 3,5–60 nmol/L (130–2 080 ng/dL)'
       ],
@@ -180,6 +693,7 @@
       group: 'Steroidogeneza nadnerczowo-gonadalna',
       mw: 330.46,
       canonical_si: 'nmol/L',
+      clinical_indications: ['cah', 'hirsutism', 'pcos', 'infertility', 'precocious_puberty'],
       units: [
         { symbol: 'nmol/L', label: 'nmol/L (SI)', kind: 'si',   factor_to_si: 1 },
         { symbol: 'ng/dL',  label: 'ng/dL',        kind: 'conv', factor_to_si: 0.03026 },
@@ -187,6 +701,42 @@
         { symbol: 'pg/mL',  label: 'pg/mL',        kind: 'conv', factor_to_si: 0.003026 }
       ],
       precision: 3,
+      default_range_si: { low: 0.3, high: 10, context_pl: 'Kobiety, faza lutealna (zakres szerszy: M < 6, F-fol. < 3)' },
+      reference_ranges_si: [
+        // Pediatria — Soldin 2009 (LC-MS/MS). Bardzo wysokie wartości w pierwszych
+        // 6 mies. (przejściowa hiperstymulacja nadnerczy noworodków).
+        { id: '17ohp_ped_infant',     when: { age_min: 0,   age_max: 0.5, life_stage: 'pediatric' },
+          low: 0.76, high: 7.50, context_pl: 'Niemowlęta 0–6 miesięcy (oba płcie)',
+          source_ids: ['soldin_2009_lcms'] },
+        { id: '17ohp_ped_male_infant_to_adult', when: { sex: 'M', age_min: 0.5, age_max: 18, life_stage: 'pediatric' },
+          low: 0.21, high: 3.03, context_pl: 'Chłopcy 6 miesięcy – 18 lat',
+          source_ids: ['soldin_2009_lcms'] },
+        { id: '17ohp_ped_female_6mo_6', when: { sex: 'F', age_min: 0.5, age_max: 6, life_stage: 'pediatric' },
+          low: 0.09, high: 3.24, context_pl: 'Dziewczynki 6 miesięcy – 6 lat',
+          source_ids: ['soldin_2009_lcms'] },
+        { id: '17ohp_ped_female_6_10', when: { sex: 'F', age_min: 6, age_max: 10, life_stage: 'pediatric' },
+          low: 0.18, high: 1.88, context_pl: 'Dziewczynki 6–10 lat',
+          source_ids: ['soldin_2009_lcms'] },
+        { id: '17ohp_ped_female_10_18', when: { sex: 'F', age_min: 10, age_max: 18, life_stage: 'pediatric' },
+          low: 0.45, high: 4.15, context_pl: 'Dziewczynki 10–18 lat',
+          source_ids: ['soldin_2009_lcms'] },
+        // Dorośli (z fazy 1)
+        { id: '17ohp_female_follicular', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'follicular' },
+          low: 0.3, high: 3.0, context_pl: 'Kobiety, faza folikularna',
+          source_ids: ['tietz_2018', 'speiser_es_cah_2018'] },
+        { id: '17ohp_female_luteal', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'luteal' },
+          low: 3.0, high: 10.0, context_pl: 'Kobiety, faza lutealna',
+          source_ids: ['tietz_2018'] },
+        { id: '17ohp_female_postmeno', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'postmenopause' },
+          low: 0.3, high: 3.0, context_pl: 'Kobiety, postmenopauza',
+          source_ids: ['tietz_2018'] },
+        { id: '17ohp_male', when: { sex: 'M', life_stage: 'adult' },
+          low: 0.3, high: 6.0, context_pl: 'Mężczyźni dorośli',
+          source_ids: ['tietz_2018'] },
+        { id: '17ohp_default', when: {}, default: true,
+          low: 0.3, high: 10.0, context_pl: 'Dorośli, zakres ogólny (najszerszy)',
+          source_ids: ['tietz_2018', 'speiser_es_cah_2018'] }
+      ],
       ranges_pl: [
         'Faza folikularna: < 3 nmol/L (< 100 ng/dL)',
         'Faza lutealna: 3–10 nmol/L (100–330 ng/dL)',
@@ -205,6 +755,7 @@
       group: 'Steroidogeneza nadnerczowo-gonadalna',
       mw: 332.48,
       canonical_si: 'nmol/L',
+      clinical_indications: ['cah'],
       units: [
         { symbol: 'nmol/L', label: 'nmol/L (SI)', kind: 'si',   factor_to_si: 1 },
         { symbol: 'ng/dL',  label: 'ng/dL',        kind: 'conv', factor_to_si: 0.03008 },
@@ -212,6 +763,94 @@
         { symbol: 'pg/mL',  label: 'pg/mL',        kind: 'conv', factor_to_si: 0.003008 }
       ],
       precision: 3,
+      default_range_si: { low: 1.1, high: 9.9, context_pl: 'Dorośli, bazalnie' },
+      reference_ranges_si: [
+        // — Pediatria, Mayo Test 81151 (Kushnir LC-MS/MS, dane z Kushnir 2006).
+        //   Wartości w nawiasie po prawej to dolne/górne w ng/dL × 0.03008 → nmol/L.
+        //   Wcześniaki — sex-neutral (oba płcie identyczne)
+        { id: '17ohp17_premature_26_28', when: { age_min: 0, age_max: 0.05, life_stage: 'pediatric' },
+          low: 38.5, high: 309.6, context_pl: 'Wcześniaki 26–28 tyg. ciąży',
+          source_ids: ['mayo_test_17oh_preg', 'kushnir_2006_steroids'] },
+        // — Tanner-based (preferowane gdy pacjent ma określony Tanner)
+        { id: 'ohp17preg_tanner1_M', when: { sex: 'M', tanner: 1 },
+          low: 0, high: 6.60, context_pl: 'Chłopcy Tanner I',
+          source_ids: ['mayo_test_17oh_preg'] },
+        { id: 'ohp17preg_tanner2_M', when: { sex: 'M', tanner: 2 },
+          low: 0, high: 11.25, context_pl: 'Chłopcy Tanner II',
+          source_ids: ['mayo_test_17oh_preg'] },
+        { id: 'ohp17preg_tanner3_M', when: { sex: 'M', tanner: 3 },
+          low: 0, high: 14.25, context_pl: 'Chłopcy Tanner III',
+          source_ids: ['mayo_test_17oh_preg'] },
+        { id: 'ohp17preg_tanner45_M', when: { sex: 'M', tanner: 4 },
+          low: 1.11, high: 15.10, context_pl: 'Chłopcy Tanner IV–V',
+          source_ids: ['mayo_test_17oh_preg'] },
+        { id: 'ohp17preg_tanner5_M', when: { sex: 'M', tanner: 5 },
+          low: 1.11, high: 15.10, context_pl: 'Chłopcy Tanner IV–V',
+          source_ids: ['mayo_test_17oh_preg'] },
+        { id: 'ohp17preg_tanner1_F', when: { sex: 'F', tanner: 1 },
+          low: 0, high: 7.46, context_pl: 'Dziewczynki Tanner I',
+          source_ids: ['mayo_test_17oh_preg'] },
+        { id: 'ohp17preg_tanner2_F', when: { sex: 'F', tanner: 2 },
+          low: 0, high: 11.63, context_pl: 'Dziewczynki Tanner II',
+          source_ids: ['mayo_test_17oh_preg'] },
+        { id: 'ohp17preg_tanner3_F', when: { sex: 'F', tanner: 3 },
+          low: 0, high: 13.62, context_pl: 'Dziewczynki Tanner III',
+          source_ids: ['mayo_test_17oh_preg'] },
+        { id: 'ohp17preg_tanner45_F', when: { sex: 'F', tanner: 4 },
+          low: 0, high: 13.05, context_pl: 'Dziewczynki Tanner IV–V',
+          source_ids: ['mayo_test_17oh_preg'] },
+        { id: 'ohp17preg_tanner5_F', when: { sex: 'F', tanner: 5 },
+          low: 0, high: 13.05, context_pl: 'Dziewczynki Tanner IV–V',
+          source_ids: ['mayo_test_17oh_preg'] },
+        // — Age-based pediatric (gdy brak Tannera)
+        { id: 'ohp17preg_infant_1_5mo', when: { age_min: 0.05, age_max: 0.5, life_stage: 'pediatric' },
+          low: 7.24, high: 98.08, context_pl: 'Niemowlęta 1–5 miesięcy (donoszone)',
+          source_ids: ['mayo_test_17oh_preg'] },
+        { id: 'ohp17preg_6mo_12mo', when: { age_min: 0.5, age_max: 1, life_stage: 'pediatric' },
+          low: 6.98, high: 62.59, context_pl: 'Niemowlęta 6–12 miesięcy',
+          source_ids: ['mayo_test_17oh_preg'] },
+        { id: 'ohp17preg_1_2', when: { age_min: 1, age_max: 3, life_stage: 'pediatric' },
+          low: 1.11, high: 22.50, context_pl: 'Dzieci 1–2 lat',
+          source_ids: ['mayo_test_17oh_preg'] },
+        { id: 'ohp17preg_3_6', when: { age_min: 3, age_max: 7, life_stage: 'pediatric' },
+          low: 0, high: 8.75, context_pl: 'Dzieci 3–6 lat',
+          source_ids: ['mayo_test_17oh_preg'] },
+        { id: 'ohp17preg_M_7_9', when: { sex: 'M', age_min: 7, age_max: 10, life_stage: 'pediatric' },
+          low: 0, high: 5.94, context_pl: 'Chłopcy 7–9 lat',
+          source_ids: ['mayo_test_17oh_preg'] },
+        { id: 'ohp17preg_M_10_12', when: { sex: 'M', age_min: 10, age_max: 13, life_stage: 'pediatric' },
+          low: 0, high: 12.42, context_pl: 'Chłopcy 10–12 lat',
+          source_ids: ['mayo_test_17oh_preg'] },
+        { id: 'ohp17preg_M_13_15', when: { sex: 'M', age_min: 13, age_max: 16, life_stage: 'pediatric' },
+          low: 1.11, high: 14.69, context_pl: 'Chłopcy 13–15 lat',
+          source_ids: ['mayo_test_17oh_preg'] },
+        { id: 'ohp17preg_M_16_17', when: { sex: 'M', age_min: 16, age_max: 18, life_stage: 'pediatric' },
+          low: 1.01, high: 15.10, context_pl: 'Chłopcy 16–17 lat',
+          source_ids: ['mayo_test_17oh_preg'] },
+        { id: 'ohp17preg_F_7_9', when: { sex: 'F', age_min: 7, age_max: 10, life_stage: 'pediatric' },
+          low: 0, high: 6.73, context_pl: 'Dziewczynki 7–9 lat',
+          source_ids: ['mayo_test_17oh_preg'] },
+        { id: 'ohp17preg_F_10_12', when: { sex: 'F', age_min: 10, age_max: 13, life_stage: 'pediatric' },
+          low: 0, high: 12.61, context_pl: 'Dziewczynki 10–12 lat',
+          source_ids: ['mayo_test_17oh_preg'] },
+        { id: 'ohp17preg_F_13_15', when: { sex: 'F', age_min: 13, age_max: 16, life_stage: 'pediatric' },
+          low: 0, high: 12.89, context_pl: 'Dziewczynki 13–15 lat',
+          source_ids: ['mayo_test_17oh_preg'] },
+        { id: 'ohp17preg_F_16_17', when: { sex: 'F', age_min: 16, age_max: 18, life_stage: 'pediatric' },
+          low: 0, high: 13.40, context_pl: 'Dziewczynki 16–17 lat',
+          source_ids: ['mayo_test_17oh_preg'] },
+        // — Dorośli: Tietz 1,1–9,9 (zachowane z fazy 1), Mayo M 1,74–14,38, F 0,98–14,38.
+        //   Wybieram szerszy Mayo jako default dla dorosłych (real-world).
+        { id: 'ohp17preg_male_adult', when: { sex: 'M', life_stage: 'adult' },
+          low: 1.74, high: 14.38, context_pl: 'Mężczyźni dorośli (≥ 18 lat)',
+          source_ids: ['mayo_test_17oh_preg', 'tietz_2018'] },
+        { id: 'ohp17preg_female_adult', when: { sex: 'F', life_stage: 'adult' },
+          low: 0.98, high: 14.38, context_pl: 'Kobiety dorosłe (≥ 18 lat)',
+          source_ids: ['mayo_test_17oh_preg', 'tietz_2018'] },
+        { id: 'ohp17preg_adult', when: {},
+          low: 1.1, high: 14.4, context_pl: 'Dorośli, bazalnie (zakres ogólny)',
+          source_ids: ['mayo_test_17oh_preg', 'tietz_2018'] }
+      ],
       ranges_pl: [
         'Dorośli, bazalnie: 1,1–9,9 nmol/L (36–330 ng/dL)',
         'Po stymulacji ACTH: > 30-krotny wzrost względem 17-OHP → 3β-HSD deficiency'
@@ -228,12 +867,76 @@
       group: 'Steroidogeneza nadnerczowo-gonadalna',
       mw: 316.48,
       canonical_si: 'nmol/L',
+      clinical_indications: ['cah', 'adrenal_insufficiency'],
       units: [
         { symbol: 'nmol/L', label: 'nmol/L (SI)', kind: 'si',   factor_to_si: 1 },
         { symbol: 'ng/dL',  label: 'ng/dL',        kind: 'conv', factor_to_si: 0.03160 },
         { symbol: 'ng/mL',  label: 'ng/mL',        kind: 'conv', factor_to_si: 3.160 }
       ],
       precision: 3,
+      default_range_si: { low: 0.3, high: 3.2, context_pl: 'Dorośli' },
+      reference_ranges_si: [
+        // — Tanner-based (Mayo Test 88645, Kushnir 2006 LC-MS/MS)
+        { id: 'preg_tanner1_M', when: { sex: 'M', tanner: 1 },
+          low: 0, high: 4.96, context_pl: 'Chłopcy Tanner I',
+          source_ids: ['mayo_test_pregnenolone'] },
+        { id: 'preg_tanner2_M', when: { sex: 'M', tanner: 2 },
+          low: 0, high: 4.55, context_pl: 'Chłopcy Tanner II',
+          source_ids: ['mayo_test_pregnenolone'] },
+        { id: 'preg_tanner3_M', when: { sex: 'M', tanner: 3 },
+          low: 0, high: 6.79, context_pl: 'Chłopcy Tanner III',
+          source_ids: ['mayo_test_pregnenolone'] },
+        { id: 'preg_tanner45_M', when: { sex: 'M', tanner: 4 },
+          low: 0.60, high: 6.35, context_pl: 'Chłopcy Tanner IV–V',
+          source_ids: ['mayo_test_pregnenolone'] },
+        { id: 'preg_tanner5_M', when: { sex: 'M', tanner: 5 },
+          low: 0.60, high: 6.35, context_pl: 'Chłopcy Tanner IV–V',
+          source_ids: ['mayo_test_pregnenolone'] },
+        { id: 'preg_tanner1_F', when: { sex: 'F', tanner: 1 },
+          low: 0, high: 5.43, context_pl: 'Dziewczynki Tanner I',
+          source_ids: ['mayo_test_pregnenolone'] },
+        { id: 'preg_tanner2_F', when: { sex: 'F', tanner: 2 },
+          low: 0.70, high: 7.24, context_pl: 'Dziewczynki Tanner II',
+          source_ids: ['mayo_test_pregnenolone'] },
+        { id: 'preg_tanner3_F', when: { sex: 'F', tanner: 3 },
+          low: 1.07, high: 6.79, context_pl: 'Dziewczynki Tanner III',
+          source_ids: ['mayo_test_pregnenolone'] },
+        { id: 'preg_tanner45_F', when: { sex: 'F', tanner: 4 },
+          low: 0.82, high: 7.43, context_pl: 'Dziewczynki Tanner IV–V',
+          source_ids: ['mayo_test_pregnenolone'] },
+        { id: 'preg_tanner5_F', when: { sex: 'F', tanner: 5 },
+          low: 0.82, high: 7.43, context_pl: 'Dziewczynki Tanner IV–V',
+          source_ids: ['mayo_test_pregnenolone'] },
+        // — Age-based pediatric (gdy brak Tannera). Mayo: 0–6 lat „Not established".
+        { id: 'preg_M_7_9', when: { sex: 'M', age_min: 7, age_max: 10, life_stage: 'pediatric' },
+          low: 0, high: 6.51, context_pl: 'Chłopcy 7–9 lat',
+          source_ids: ['mayo_test_pregnenolone'] },
+        { id: 'preg_M_10_12', when: { sex: 'M', age_min: 10, age_max: 13, life_stage: 'pediatric' },
+          low: 0, high: 4.80, context_pl: 'Chłopcy 10–12 lat',
+          source_ids: ['mayo_test_pregnenolone'] },
+        { id: 'preg_M_13_15', when: { sex: 'M', age_min: 13, age_max: 16, life_stage: 'pediatric' },
+          low: 0.57, high: 6.23, context_pl: 'Chłopcy 13–15 lat',
+          source_ids: ['mayo_test_pregnenolone'] },
+        { id: 'preg_M_16_17', when: { sex: 'M', age_min: 16, age_max: 18, life_stage: 'pediatric' },
+          low: 0.54, high: 7.20, context_pl: 'Chłopcy 16–17 lat',
+          source_ids: ['mayo_test_pregnenolone'] },
+        { id: 'preg_F_7_9', when: { sex: 'F', age_min: 7, age_max: 10, life_stage: 'pediatric' },
+          low: 0, high: 4.77, context_pl: 'Dziewczynki 7–9 lat',
+          source_ids: ['mayo_test_pregnenolone'] },
+        { id: 'preg_F_10_12', when: { sex: 'F', age_min: 10, age_max: 13, life_stage: 'pediatric' },
+          low: 0.60, high: 6.95, context_pl: 'Dziewczynki 10–12 lat',
+          source_ids: ['mayo_test_pregnenolone'] },
+        { id: 'preg_F_13_15', when: { sex: 'F', age_min: 13, age_max: 16, life_stage: 'pediatric' },
+          low: 0.70, high: 6.64, context_pl: 'Dziewczynki 13–15 lat',
+          source_ids: ['mayo_test_pregnenolone'] },
+        { id: 'preg_F_16_17', when: { sex: 'F', age_min: 16, age_max: 18, life_stage: 'pediatric' },
+          low: 0.70, high: 7.24, context_pl: 'Dziewczynki 16–17 lat',
+          source_ids: ['mayo_test_pregnenolone'] },
+        // — Dorośli (Mayo nie różnicuje płciowo)
+        { id: 'preg_adult', when: {},
+          low: 1.04, high: 7.84, context_pl: 'Dorośli (≥ 18 lat)',
+          source_ids: ['mayo_test_pregnenolone', 'tietz_2018'] }
+      ],
       ranges_pl: [
         'Dorośli mężczyźni: 0,3–3,2 nmol/L (10–100 ng/dL)',
         'Dorosłe kobiety: 0,3–3,2 nmol/L (10–100 ng/dL)'
@@ -252,12 +955,65 @@
       group: 'Androgeny',
       mw: 288.42,
       canonical_si: 'nmol/L',
+      clinical_indications: ['hirsutism', 'pcos', 'cah', 'adrenal_tumor', 'precocious_puberty'],
       units: [
         { symbol: 'nmol/L', label: 'nmol/L (SI)', kind: 'si',   factor_to_si: 1 },
         { symbol: 'ng/dL',  label: 'ng/dL',        kind: 'conv', factor_to_si: 0.03467 },
         { symbol: 'ng/mL',  label: 'ng/mL',        kind: 'conv', factor_to_si: 3.467 }
       ],
       precision: 3,
+      default_range_si: { low: 5, high: 25, context_pl: 'Dorośli (M: 6–25, K: 5–20 nmol/L)' },
+      reference_ranges_si: [
+        // — Pediatria, Mayo Test 81405 (LC-MS/MS, sex-neutral; Mayo cytuje Soldin AACC 2005).
+        //   ng/mL × 3.467 = nmol/L (MW 288.42)
+        { id: 'dhea_premature', when: { age_min: 0, age_max: 0.003, life_stage: 'pediatric' },
+          low: 0, high: 138.7, context_pl: 'Wcześniaki (do ≈ 1. dnia życia)',
+          source_ids: ['mayo_test_dhea', 'soldin_2005_aacc'] },
+        { id: 'dhea_0_1d', when: { age_min: 0, age_max: 0.006, life_stage: 'pediatric' },
+          low: 0, high: 38.1, context_pl: 'Noworodki 0–1 dzień',
+          source_ids: ['mayo_test_dhea', 'soldin_2005_aacc'] },
+        { id: 'dhea_2_6d', when: { age_min: 0.006, age_max: 0.020, life_stage: 'pediatric' },
+          low: 0, high: 30.2, context_pl: 'Noworodki 2–6 dni',
+          source_ids: ['mayo_test_dhea', 'soldin_2005_aacc'] },
+        { id: 'dhea_7d_1mo', when: { age_min: 0.020, age_max: 0.083, life_stage: 'pediatric' },
+          low: 0, high: 20.1, context_pl: 'Niemowlęta 7 dni – 1 miesiąc',
+          source_ids: ['mayo_test_dhea', 'soldin_2005_aacc'] },
+        { id: 'dhea_1mo_2y', when: { age_min: 0.083, age_max: 2, life_stage: 'pediatric' },
+          low: 0, high: 10.05, context_pl: 'Niemowlęta i małe dzieci 1 mies. – 2 lata',
+          source_ids: ['mayo_test_dhea', 'soldin_2005_aacc'] },
+        { id: 'dhea_2_5', when: { age_min: 2, age_max: 6, life_stage: 'pediatric' },
+          low: 0, high: 7.97, context_pl: 'Dzieci 2–5 lat',
+          source_ids: ['mayo_test_dhea', 'soldin_2005_aacc'] },
+        { id: 'dhea_6_10', when: { age_min: 6, age_max: 11, life_stage: 'pediatric' },
+          low: 0, high: 11.79, context_pl: 'Dzieci 6–10 lat (adrenarche)',
+          source_ids: ['mayo_test_dhea', 'soldin_2005_aacc'] },
+        { id: 'dhea_11_14', when: { age_min: 11, age_max: 15, life_stage: 'pediatric' },
+          low: 0, high: 17.34, context_pl: 'Młodzież 11–14 lat',
+          source_ids: ['mayo_test_dhea', 'soldin_2005_aacc'] },
+        { id: 'dhea_15_18', when: { age_min: 15, age_max: 18, life_stage: 'pediatric' },
+          low: 0, high: 22.88, context_pl: 'Młodzież 15–18 lat',
+          source_ids: ['mayo_test_dhea', 'soldin_2005_aacc'] },
+        // — Dorośli, Mayo (≥19 lat, stratyfikacja wiekowa, sex-neutral)
+        { id: 'dhea_19_30', when: { age_min: 19, age_max: 31, life_stage: 'adult' },
+          low: 0, high: 45.07, context_pl: 'Dorośli 19–30 lat',
+          source_ids: ['mayo_test_dhea', 'tietz_2018'] },
+        { id: 'dhea_31_40', when: { age_min: 31, age_max: 41, life_stage: 'adult' },
+          low: 0, high: 34.67, context_pl: 'Dorośli 31–40 lat',
+          source_ids: ['mayo_test_dhea'] },
+        { id: 'dhea_41_50', when: { age_min: 41, age_max: 51, life_stage: 'adult' },
+          low: 0, high: 27.74, context_pl: 'Dorośli 41–50 lat',
+          source_ids: ['mayo_test_dhea'] },
+        { id: 'dhea_51_60', when: { age_min: 51, age_max: 61, life_stage: 'adult' },
+          low: 0, high: 20.80, context_pl: 'Dorośli 51–60 lat',
+          source_ids: ['mayo_test_dhea'] },
+        { id: 'dhea_61_plus', when: { age_min: 61, life_stage: 'adult' },
+          low: 0, high: 17.34, context_pl: 'Dorośli ≥ 61 lat',
+          source_ids: ['mayo_test_dhea'] },
+        // — Default fallback gdy brak danych pacjenta
+        { id: 'dhea_default', when: {}, default: true,
+          low: 0, high: 45, context_pl: 'Dorośli, zakres ogólny (spada z wiekiem)',
+          source_ids: ['mayo_test_dhea', 'tietz_2018'] }
+      ],
       ranges_pl: [
         'Dorośli mężczyźni: 6–25 nmol/L (180–720 ng/dL)',
         'Dorosłe kobiety (premenopauza): 5–20 nmol/L (140–580 ng/dL)'
@@ -272,6 +1028,7 @@
       label_en: 'Dehydroepiandrosterone sulfate',
       aliases: ['DHEAS', 'DHA-S'],
       group: 'Androgeny',
+      clinical_indications: ['hirsutism', 'pcos', 'adrenal_tumor', 'precocious_puberty', 'cah'],
       mw: 368.49,                                              // wolny kwas; sól sodowa 390.49
       canonical_si: 'μmol/L',
       units: [
@@ -282,6 +1039,72 @@
         { symbol: 'ng/mL',  label: 'ng/mL',        kind: 'conv', factor_to_si: 0.002714 }
       ],
       precision: 3,
+      default_range_si: { low: 1.9, high: 12, context_pl: 'Dorośli, średnio (M 18–30: 4,3–12; K 18–30: 1,9–9,4 μmol/L)' },
+      reference_ranges_si: [
+        // — Pediatria, Mayo Test 113595 (LC-MS/MS, Mayo-derived intervals)
+        //   Tanner-based dla chłopców
+        { id: 'dheas_M_tanner1', when: { sex: 'M', tanner: 1 },
+          low: 0.299, high: 3.257, context_pl: 'Chłopcy Tanner I (>14 dni)',
+          source_ids: ['mayo_test_dheas'] },
+        { id: 'dheas_M_tanner2', when: { sex: 'M', tanner: 2 },
+          low: 0.380, high: 8.766, context_pl: 'Chłopcy Tanner II (śr. 11,5 lat)',
+          source_ids: ['mayo_test_dheas'] },
+        { id: 'dheas_M_tanner3', when: { sex: 'M', tanner: 3 },
+          low: 0.149, high: 8.468, context_pl: 'Chłopcy Tanner III (śr. 13,6 lat)',
+          source_ids: ['mayo_test_dheas'] },
+        { id: 'dheas_M_tanner4', when: { sex: 'M', tanner: 4 },
+          low: 0.787, high: 11.182, context_pl: 'Chłopcy Tanner IV (śr. 15,1 lat)',
+          source_ids: ['mayo_test_dheas'] },
+        { id: 'dheas_M_tanner5', when: { sex: 'M', tanner: 5 },
+          low: 2.823, high: 12.701, context_pl: 'Chłopcy Tanner V (śr. 18 lat)',
+          source_ids: ['mayo_test_dheas'] },
+        //   Tanner-based dla dziewczynek
+        { id: 'dheas_F_tanner1', when: { sex: 'F', tanner: 1 },
+          low: 0.434, high: 2.605, context_pl: 'Dziewczynki Tanner I (>14 dni)',
+          source_ids: ['mayo_test_dheas'] },
+        { id: 'dheas_F_tanner2', when: { sex: 'F', tanner: 2 },
+          low: 0.597, high: 4.994, context_pl: 'Dziewczynki Tanner II (śr. 10,5 lat)',
+          source_ids: ['mayo_test_dheas'] },
+        { id: 'dheas_F_tanner3', when: { sex: 'F', tanner: 3 },
+          low: 0.299, high: 8.033, context_pl: 'Dziewczynki Tanner III (śr. 11,6 lat)',
+          source_ids: ['mayo_test_dheas'] },
+        { id: 'dheas_F_tanner4', when: { sex: 'F', tanner: 4 },
+          low: 0.461, high: 9.309, context_pl: 'Dziewczynki Tanner IV (śr. 12,3 lat)',
+          source_ids: ['mayo_test_dheas'] },
+        { id: 'dheas_F_tanner5', when: { sex: 'F', tanner: 5 },
+          low: 1.547, high: 10.720, context_pl: 'Dziewczynki Tanner V (śr. 14,5 lat)',
+          source_ids: ['mayo_test_dheas'] },
+        // — Mężczyźni — 4 przedziały wiekowe (Mayo + Tietz)
+        { id: 'dheas_male_18_30', when: { sex: 'M', age_min: 18, age_max: 30, life_stage: 'adult' },
+          low: 4.3, high: 12.0, context_pl: 'Mężczyźni 18–30 lat',
+          source_ids: ['tietz_2018', 'mayo_test_catalog'] },
+        { id: 'dheas_male_30_50', when: { sex: 'M', age_min: 30, age_max: 50, life_stage: 'adult' },
+          low: 2.6, high: 10.5, context_pl: 'Mężczyźni 30–50 lat',
+          source_ids: ['mayo_test_catalog', 'tietz_2018'] },
+        { id: 'dheas_male_50_70', when: { sex: 'M', age_min: 50, age_max: 70, life_stage: 'adult' },
+          low: 1.1, high: 7.9, context_pl: 'Mężczyźni 50–70 lat',
+          source_ids: ['mayo_test_catalog'] },
+        { id: 'dheas_male_70_plus', when: { sex: 'M', age_min: 70, life_stage: 'adult' },
+          low: 0.8, high: 4.8, context_pl: 'Mężczyźni > 70 lat (adrenopauza)',
+          source_ids: ['mayo_test_catalog', 'tietz_2018'] },
+        // — Kobiety — 4 przedziały wiekowe (Mayo + Tietz)
+        { id: 'dheas_female_18_30', when: { sex: 'F', age_min: 18, age_max: 30, life_stage: 'adult' },
+          low: 1.9, high: 9.4, context_pl: 'Kobiety 18–30 lat',
+          source_ids: ['tietz_2018', 'mayo_test_catalog'] },
+        { id: 'dheas_female_30_50', when: { sex: 'F', age_min: 30, age_max: 50, life_stage: 'adult' },
+          low: 0.9, high: 6.5, context_pl: 'Kobiety 30–50 lat',
+          source_ids: ['mayo_test_catalog', 'tietz_2018'] },
+        { id: 'dheas_female_50_70', when: { sex: 'F', age_min: 50, age_max: 70, life_stage: 'adult' },
+          low: 0.4, high: 4.9, context_pl: 'Kobiety 50–70 lat (adrenopauza)',
+          source_ids: ['mayo_test_catalog'] },
+        { id: 'dheas_female_70_plus', when: { sex: 'F', age_min: 70, life_stage: 'adult' },
+          low: 0.3, high: 2.4, context_pl: 'Kobiety > 70 lat (adrenopauza)',
+          source_ids: ['mayo_test_catalog', 'tietz_2018'] },
+        // — Fallback dla braku danych pacjenta
+        { id: 'dheas_default', when: {}, default: true,
+          low: 1.9, high: 12, context_pl: 'Dorośli, zakres ogólny (spada z wiekiem)',
+          source_ids: ['tietz_2018', 'mayo_test_catalog'] }
+      ],
       ranges_pl: [
         'Mężczyźni 18–30 lat: 4,3–12 μmol/L (160–450 μg/dL)',
         'Mężczyźni 60–70 lat: 1,1–5,4 μmol/L (40–200 μg/dL)',
@@ -300,12 +1123,81 @@
       group: 'Androgeny',
       mw: 286.41,
       canonical_si: 'nmol/L',
+      clinical_indications: ['hirsutism', 'pcos', 'cah', 'adrenal_tumor', 'virilization', 'precocious_puberty'],
       units: [
         { symbol: 'nmol/L', label: 'nmol/L (SI)', kind: 'si',   factor_to_si: 1 },
         { symbol: 'ng/dL',  label: 'ng/dL',        kind: 'conv', factor_to_si: 0.03491 },
         { symbol: 'ng/mL',  label: 'ng/mL',        kind: 'conv', factor_to_si: 3.491 }
       ],
       precision: 3,
+      default_range_si: { low: 1.2, high: 10.5, context_pl: 'Dorośli (M: 1,2–8,7; K folikul.: 1,2–10,5 nmol/L)' },
+      reference_ranges_si: [
+        // — Pediatria, Mayo Test 9709 (LC-MS/MS dla dorosłych; pediatria Soldin AACC 4th ed. 2003)
+        //   Wcześniaki + niemowlęta (sex-neutral)
+        { id: 'a4_premature_26_28', when: { age_min: 0, age_max: 0.04, life_stage: 'pediatric' },
+          low: 3.21, high: 9.84, context_pl: 'Wcześniaki 26–28 tyg. (4. dzień życia)',
+          source_ids: ['mayo_test_androstenedione', 'soldin_2005_aacc'] },
+        { id: 'a4_premature_31_35', when: { age_min: 0, age_max: 0.10, life_stage: 'pediatric' },
+          low: 2.79, high: 15.57, context_pl: 'Wcześniaki 31–35 tyg. (4. dzień życia)',
+          source_ids: ['mayo_test_androstenedione', 'soldin_2005_aacc'] },
+        { id: 'a4_neonatal', when: { age_min: 0, age_max: 0.02, life_stage: 'pediatric' },
+          low: 0.70, high: 10.12, context_pl: 'Noworodki donoszone 1–7 dni',
+          source_ids: ['mayo_test_androstenedione', 'soldin_2005_aacc'] },
+        { id: 'a4_1mo_1y', when: { age_min: 0.083, age_max: 1, life_stage: 'pediatric' },
+          low: 0, high: 2.41, context_pl: 'Niemowlęta 1 miesiąc – 1 rok',
+          source_ids: ['mayo_test_androstenedione', 'soldin_2005_aacc'] },
+        //   Tanner-based dla chłopców
+        { id: 'a4_M_tanner1', when: { sex: 'M', tanner: 1 },
+          low: 0, high: 1.78, context_pl: 'Chłopcy Tanner I (prepubertal)',
+          source_ids: ['mayo_test_androstenedione', 'soldin_2005_aacc'] },
+        { id: 'a4_M_tanner2', when: { sex: 'M', tanner: 2 },
+          low: 1.08, high: 2.27, context_pl: 'Chłopcy Tanner II',
+          source_ids: ['mayo_test_androstenedione', 'soldin_2005_aacc'] },
+        { id: 'a4_M_tanner3', when: { sex: 'M', tanner: 3 },
+          low: 1.74, high: 3.49, context_pl: 'Chłopcy Tanner III',
+          source_ids: ['mayo_test_androstenedione', 'soldin_2005_aacc'] },
+        { id: 'a4_M_tanner4', when: { sex: 'M', tanner: 4 },
+          low: 1.68, high: 4.89, context_pl: 'Chłopcy Tanner IV',
+          source_ids: ['mayo_test_androstenedione', 'soldin_2005_aacc'] },
+        { id: 'a4_M_tanner5', when: { sex: 'M', tanner: 5 },
+          low: 2.27, high: 7.33, context_pl: 'Chłopcy Tanner V',
+          source_ids: ['mayo_test_androstenedione', 'soldin_2005_aacc'] },
+        //   Tanner-based dla dziewczynek
+        { id: 'a4_F_tanner1', when: { sex: 'F', tanner: 1 },
+          low: 0, high: 1.78, context_pl: 'Dziewczynki Tanner I (prepubertal)',
+          source_ids: ['mayo_test_androstenedione', 'soldin_2005_aacc'] },
+        { id: 'a4_F_tanner2', when: { sex: 'F', tanner: 2 },
+          low: 1.47, high: 3.49, context_pl: 'Dziewczynki Tanner II',
+          source_ids: ['mayo_test_androstenedione', 'soldin_2005_aacc'] },
+        { id: 'a4_F_tanner3', when: { sex: 'F', tanner: 3 },
+          low: 2.79, high: 6.63, context_pl: 'Dziewczynki Tanner III',
+          source_ids: ['mayo_test_androstenedione', 'soldin_2005_aacc'] },
+        { id: 'a4_F_tanner4', when: { sex: 'F', tanner: 4 },
+          low: 2.69, high: 7.85, context_pl: 'Dziewczynki Tanner IV',
+          source_ids: ['mayo_test_androstenedione', 'soldin_2005_aacc'] },
+        { id: 'a4_F_tanner5', when: { sex: 'F', tanner: 5 },
+          low: 2.79, high: 8.38, context_pl: 'Dziewczynki Tanner V',
+          source_ids: ['mayo_test_androstenedione', 'soldin_2005_aacc'] },
+        // — Dorośli Mayo (lepsze niż Tietz, sex-stratified)
+        { id: 'a4_male_adult', when: { sex: 'M', life_stage: 'adult' },
+          low: 1.40, high: 5.24, context_pl: 'Mężczyźni dorośli — Mayo LC-MS/MS',
+          source_ids: ['mayo_test_androstenedione', 'tietz_2018'] },
+        { id: 'a4_female_premeno', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'follicular' },
+          low: 1.2, high: 10.5, context_pl: 'Kobiety, faza folikularna',
+          source_ids: ['tietz_2018'] },
+        { id: 'a4_female_luteal', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'luteal' },
+          low: 1.2, high: 10.5, context_pl: 'Kobiety, faza lutealna',
+          source_ids: ['tietz_2018'] },
+        { id: 'a4_female_postmeno', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'postmenopause' },
+          low: 0.5, high: 4.2, context_pl: 'Kobiety, postmenopauza',
+          source_ids: ['tietz_2018'] },
+        { id: 'a4_female_default', when: { sex: 'F', life_stage: 'adult' },
+          low: 1.05, high: 6.98, context_pl: 'Kobiety dorosłe (zakres ogólny) — Mayo LC-MS/MS',
+          source_ids: ['mayo_test_androstenedione', 'tietz_2018'] },
+        { id: 'a4_default', when: {}, default: true,
+          low: 1.05, high: 6.98, context_pl: 'Dorośli, zakres ogólny — Mayo LC-MS/MS',
+          source_ids: ['mayo_test_androstenedione', 'tietz_2018'] }
+      ],
       ranges_pl: [
         'Mężczyźni dorośli: 1,2–8,7 nmol/L (35–250 ng/dL)',
         'Kobiety (faza folikularna): 1,2–10,5 nmol/L (35–300 ng/dL)',
@@ -323,6 +1215,7 @@
       group: 'Androgeny',
       mw: 288.42,
       canonical_si: 'nmol/L',
+      clinical_indications: ['hypogonadism_male', 'andropause', 'hirsutism', 'pcos', 'virilization', 'delayed_puberty', 'precocious_puberty', 'klinefelter', 'infertility'],
       units: [
         { symbol: 'nmol/L', label: 'nmol/L (SI)', kind: 'si',   factor_to_si: 1 },
         { symbol: 'ng/dL',  label: 'ng/dL',        kind: 'conv', factor_to_si: 0.03467 },
@@ -330,6 +1223,66 @@
         { symbol: 'pg/mL',  label: 'pg/mL',        kind: 'conv', factor_to_si: 0.003467 }
       ],
       precision: 3,
+      default_range_si: { low: 8.6, high: 29, context_pl: 'Mężczyźni dorośli, rano (kobiety: 0,3–2,4 nmol/L)' },
+      reference_ranges_si: [
+        // ── Pora pobrania krytyczna diagnostycznie (Bhasin ES 2018) ──
+        //  Popołudnie/wieczór — pomiar testosteronu nie jest interpretowalny do
+        //  diagnostyki hipogonadyzmu (wartości mogą spaść ~30% w porównaniu z porą
+        //  poranną). Flaga no_interpretation chowa pasek normy i wyłącza kolorowanie.
+        { id: 'tt_evening_no_interpret', when: { time_of_day: 'evening' },
+          no_interpretation: true,
+          low: null, high: null,
+          context_pl: 'Pobranie popołudniowe/wieczorne — brak ustalonego zakresu klinicznego. Bhasin ES 2018: do diagnostyki hipogonadyzmu wymagane pobranie 7:00–10:00. Wartości popołudniowe mogą być o ≈ 30 % niższe niż poranne.',
+          source_ids: ['bhasin_es_testosterone_2018'] },
+        { id: 'tt_midnight_no_interpret', when: { time_of_day: 'midnight' },
+          no_interpretation: true,
+          low: null, high: null,
+          context_pl: 'Pobranie nocne — brak ustalonego zakresu referencyjnego. Powtórzyć pobranie rano (7:00–10:00) wg Bhasin ES 2018.',
+          source_ids: ['bhasin_es_testosterone_2018'] },
+        // — Pediatria, dziewczynki (Soldin 2009 LC-MS/MS)
+        { id: 'tt_ped_female_0_5',   when: { sex: 'F', age_min: 0,  age_max: 6,  life_stage: 'pediatric' },
+          low: 0.07, high: 0.35, context_pl: 'Dziewczynki 0–5 lat',
+          source_ids: ['soldin_2009_lcms'] },
+        { id: 'tt_ped_female_6_9',   when: { sex: 'F', age_min: 6,  age_max: 10, life_stage: 'pediatric' },
+          low: 0.17, high: 0.45, context_pl: 'Dziewczynki 6–9 lat',
+          source_ids: ['soldin_2009_lcms'] },
+        { id: 'tt_ped_female_10_14', when: { sex: 'F', age_min: 10, age_max: 15, life_stage: 'pediatric' },
+          low: 0.49, high: 1.73, context_pl: 'Dziewczynki 10–14 lat (pokwitanie)',
+          source_ids: ['soldin_2009_lcms'] },
+        { id: 'tt_ped_female_15_18', when: { sex: 'F', age_min: 15, age_max: 18, life_stage: 'pediatric' },
+          low: 0.42, high: 1.84, context_pl: 'Dziewczynki 15–18 lat',
+          source_ids: ['soldin_2009_lcms'] },
+        // — Pediatria, chłopcy (Soldin 2009 LC-MS/MS). Szerokie zakresy 10–16 lat
+        // odzwierciedlają zmienność stadium Tannera w obrębie grupy wiekowej.
+        { id: 'tt_ped_male_0_6',     when: { sex: 'M', age_min: 0,  age_max: 7,  life_stage: 'pediatric' },
+          low: 0.14, high: 1.07, context_pl: 'Chłopcy 0–6 lat',
+          source_ids: ['soldin_2009_lcms'] },
+        { id: 'tt_ped_male_7_9',     when: { sex: 'M', age_min: 7,  age_max: 10, life_stage: 'pediatric' },
+          low: 0.14, high: 0.87, context_pl: 'Chłopcy 7–9 lat',
+          source_ids: ['soldin_2009_lcms'] },
+        { id: 'tt_ped_male_10_12',   when: { sex: 'M', age_min: 10, age_max: 13, life_stage: 'pediatric' },
+          low: 0.17, high: 14.49, context_pl: 'Chłopcy 10–12 lat (wczesne pokwitanie)',
+          source_ids: ['soldin_2009_lcms'] },
+        { id: 'tt_ped_male_13_14',   when: { sex: 'M', age_min: 13, age_max: 15, life_stage: 'pediatric' },
+          low: 0.21, high: 22.43, context_pl: 'Chłopcy 13–14 lat (pokwitanie)',
+          source_ids: ['soldin_2009_lcms'] },
+        { id: 'tt_ped_male_15_16',   when: { sex: 'M', age_min: 15, age_max: 17, life_stage: 'pediatric' },
+          low: 1.46, high: 30.51, context_pl: 'Chłopcy 15–16 lat (późne pokwitanie)',
+          source_ids: ['soldin_2009_lcms'] },
+        { id: 'tt_ped_male_17_18',   when: { sex: 'M', age_min: 17, age_max: 18, life_stage: 'pediatric' },
+          low: 4.20, high: 28.53, context_pl: 'Chłopcy 17–18 lat',
+          source_ids: ['soldin_2009_lcms'] },
+        // — Dorośli (z fazy 1)
+        { id: 'tt_male_adult', when: { sex: 'M', life_stage: 'adult' },
+          low: 8.6, high: 29, context_pl: 'Mężczyźni dorośli, rano (próg hipogonadyzmu < 9,2 nmol/L wg Bhasin 2018)',
+          source_ids: ['bhasin_es_testosterone_2018', 'tietz_2018'] },
+        { id: 'tt_female_adult', when: { sex: 'F', life_stage: 'adult' },
+          low: 0.3, high: 2.4, context_pl: 'Kobiety dorosłe',
+          source_ids: ['tietz_2018'] },
+        { id: 'tt_default', when: {}, default: true,
+          low: 8.6, high: 29, context_pl: 'Dorosły, zakres ogólny (mężczyźni)',
+          source_ids: ['bhasin_es_testosterone_2018', 'tietz_2018'] }
+      ],
       ranges_pl: [
         'Mężczyźni dorośli (rano): 8,6–29 nmol/L (250–840 ng/dL)',
         'Próg hipogonadyzmu (Endocrine Society 2018): < 9,2 nmol/L (< 264 ng/dL) potwierdzony 2-krotnie',
@@ -347,6 +1300,7 @@
       group: 'Androgeny',
       mw: 288.42,
       canonical_si: 'pmol/L',
+      clinical_indications: ['hypogonadism_male', 'andropause', 'hirsutism', 'pcos'],
       units: [
         { symbol: 'pmol/L', label: 'pmol/L (SI)', kind: 'si',   factor_to_si: 1 },
         { symbol: 'pg/mL',  label: 'pg/mL',        kind: 'conv', factor_to_si: 3.467 },
@@ -354,6 +1308,84 @@
         { symbol: 'ng/dL',  label: 'ng/dL',        kind: 'conv', factor_to_si: 34.67 }
       ],
       precision: 3,
+      default_range_si: { low: 174, high: 729, context_pl: 'Mężczyźni dorośli (kobiety: 1,7–22 pmol/L)' },
+      reference_ranges_si: [
+        // ── Pora pobrania krytyczna diagnostycznie (Bhasin ES 2018) ──
+        //  Wolny testosteron, jak całkowity, wymaga pobrania porannego.
+        { id: 'ft_evening_no_interpret', when: { time_of_day: 'evening' },
+          no_interpretation: true,
+          low: null, high: null,
+          context_pl: 'Pobranie popołudniowe/wieczorne — brak ustalonego zakresu klinicznego. Bhasin ES 2018: do diagnostyki hipogonadyzmu wymagane pobranie 7:00–10:00.',
+          source_ids: ['bhasin_es_testosterone_2018'] },
+        { id: 'ft_midnight_no_interpret', when: { time_of_day: 'midnight' },
+          no_interpretation: true,
+          low: null, high: null,
+          context_pl: 'Pobranie nocne — brak ustalonego zakresu referencyjnego.',
+          source_ids: ['bhasin_es_testosterone_2018'] },
+        // — Pediatria, Mayo Test 83686 (equilibrium dialysis + LC-MS/MS).
+        //   Wartości w ng/dL × 34.67 = pmol/L; Mayo podaje per rok 8–24 lata.
+        //   Łączę sąsiednie roczne grupy w 2-letnie zakresy gdy wartości są zbliżone.
+        //   Chłopcy
+        { id: 'ft_M_neonate', when: { sex: 'M', age_min: 0, age_max: 0.04, life_stage: 'pediatric' },
+          low: 6.93, high: 107.48, context_pl: 'Chłopcy 1–15 dni (donoszone)',
+          source_ids: ['mayo_test_free_t'] },
+        { id: 'ft_M_1_8', when: { sex: 'M', age_min: 0.04, age_max: 9, life_stage: 'pediatric' },
+          low: 0, high: 4.51, context_pl: 'Chłopcy 1–8 lat (prepubertal)',
+          source_ids: ['mayo_test_free_t'] },
+        { id: 'ft_M_9', when: { sex: 'M', age_min: 9, age_max: 10, life_stage: 'pediatric' },
+          low: 0, high: 15.60, context_pl: 'Chłopcy 9 lat',
+          source_ids: ['mayo_test_free_t'] },
+        { id: 'ft_M_10', when: { sex: 'M', age_min: 10, age_max: 11, life_stage: 'pediatric' },
+          low: 0, high: 43.68, context_pl: 'Chłopcy 10 lat',
+          source_ids: ['mayo_test_free_t'] },
+        { id: 'ft_M_11', when: { sex: 'M', age_min: 11, age_max: 12, life_stage: 'pediatric' },
+          low: 0, high: 191.4, context_pl: 'Chłopcy 11 lat',
+          source_ids: ['mayo_test_free_t'] },
+        { id: 'ft_M_12', when: { sex: 'M', age_min: 12, age_max: 13, life_stage: 'pediatric' },
+          low: 0, high: 321.7, context_pl: 'Chłopcy 12 lat',
+          source_ids: ['mayo_test_free_t'] },
+        { id: 'ft_M_13', when: { sex: 'M', age_min: 13, age_max: 14, life_stage: 'pediatric' },
+          low: 0, high: 436.8, context_pl: 'Chłopcy 13 lat',
+          source_ids: ['mayo_test_free_t'] },
+        { id: 'ft_M_14', when: { sex: 'M', age_min: 14, age_max: 15, life_stage: 'pediatric' },
+          low: 16.64, high: 530.5, context_pl: 'Chłopcy 14 lat',
+          source_ids: ['mayo_test_free_t'] },
+        { id: 'ft_M_15', when: { sex: 'M', age_min: 15, age_max: 16, life_stage: 'pediatric' },
+          low: 56.17, high: 613.7, context_pl: 'Chłopcy 15 lat',
+          source_ids: ['mayo_test_free_t'] },
+        { id: 'ft_M_16', when: { sex: 'M', age_min: 16, age_max: 17, life_stage: 'pediatric' },
+          low: 101.6, high: 676.1, context_pl: 'Chłopcy 16 lat',
+          source_ids: ['mayo_test_free_t'] },
+        { id: 'ft_M_17', when: { sex: 'M', age_min: 17, age_max: 18, life_stage: 'pediatric' },
+          low: 148.4, high: 724.6, context_pl: 'Chłopcy 17 lat',
+          source_ids: ['mayo_test_free_t'] },
+        //   Dziewczynki
+        { id: 'ft_F_neonate', when: { sex: 'F', age_min: 0, age_max: 0.04, life_stage: 'pediatric' },
+          low: 0, high: 8.67, context_pl: 'Dziewczynki 1–15 dni (donoszone)',
+          source_ids: ['mayo_test_free_t'] },
+        { id: 'ft_F_1_6', when: { sex: 'F', age_min: 0.04, age_max: 7, life_stage: 'pediatric' },
+          low: 0, high: 4.85, context_pl: 'Dziewczynki 1–6 lat',
+          source_ids: ['mayo_test_free_t'] },
+        { id: 'ft_F_7_9', when: { sex: 'F', age_min: 7, age_max: 10, life_stage: 'pediatric' },
+          low: 0, high: 15.95, context_pl: 'Dziewczynki 7–9 lat',
+          source_ids: ['mayo_test_free_t'] },
+        { id: 'ft_F_10_12', when: { sex: 'F', age_min: 10, age_max: 13, life_stage: 'pediatric' },
+          low: 0, high: 29.12, context_pl: 'Dziewczynki 10–12 lat',
+          source_ids: ['mayo_test_free_t'] },
+        { id: 'ft_F_13_18', when: { sex: 'F', age_min: 13, age_max: 18, life_stage: 'pediatric' },
+          low: 0, high: 37.79, context_pl: 'Dziewczynki 13–18 lat',
+          source_ids: ['mayo_test_free_t'] },
+        // — Dorośli (Bhasin Endocrine Society 2018 + Mayo)
+        { id: 'ft_male_adult', when: { sex: 'M', life_stage: 'adult' },
+          low: 174, high: 729, context_pl: 'Mężczyźni dorośli (ekwilibrium dialysis lub obliczenie ze SHBG)',
+          source_ids: ['bhasin_es_testosterone_2018', 'mayo_test_free_t'] },
+        { id: 'ft_female_adult', when: { sex: 'F', life_stage: 'adult' },
+          low: 1.7, high: 37.44, context_pl: 'Kobiety dorosłe (1,7–37 pmol/L, Mayo: do 1,08 ng/dL)',
+          source_ids: ['tietz_2018', 'mayo_test_free_t'] },
+        { id: 'ft_default', when: {}, default: true,
+          low: 174, high: 729, context_pl: 'Dorosły, zakres ogólny (mężczyźni)',
+          source_ids: ['bhasin_es_testosterone_2018'] }
+      ],
       ranges_pl: [
         'Mężczyźni dorośli: 174–729 pmol/L (50–210 pg/mL)',
         'Kobiety dorosłe: 1,7–22 pmol/L (0,5–6,3 pg/mL)'
@@ -370,6 +1402,7 @@
       group: 'Androgeny',
       mw: 290.44,
       canonical_si: 'nmol/L',
+      clinical_indications: ['dsd', 'hirsutism', '5a_reductase_deficiency', 'hypogonadism_male'],
       units: [
         { symbol: 'nmol/L', label: 'nmol/L (SI)', kind: 'si',   factor_to_si: 1 },
         { symbol: 'ng/dL',  label: 'ng/dL',        kind: 'conv', factor_to_si: 0.03443 },
@@ -377,6 +1410,69 @@
         { symbol: 'pg/mL',  label: 'pg/mL',        kind: 'conv', factor_to_si: 0.003443 }
       ],
       precision: 3,
+      default_range_si: { low: 1.0, high: 3.1, context_pl: 'Mężczyźni dorośli (kobiety: 0,1–0,9 nmol/L)' },
+      reference_ranges_si: [
+        // — Pediatria, Mayo Test 81479 (HPLC + LC-MS/MS).
+        //   Wartości w pg/mL × 0.003443 = nmol/L (MW 290.45). Krew pępowinowa
+        //   oraz fizjologiczny szczyt do 6. miesiąca życia ("mini-puberty").
+        { id: 'dht_M_cord', when: { sex: 'M', age_min: 0, age_max: 0.003, life_stage: 'pediatric' },
+          low: 0, high: 0.344, context_pl: 'Chłopcy — krew pępowinowa',
+          source_ids: ['mayo_test_dht'] },
+        { id: 'dht_M_under_6mo', when: { sex: 'M', age_min: 0, age_max: 0.5, life_stage: 'pediatric' },
+          low: 0, high: 4.132, context_pl: 'Chłopcy ≤ 6 miesięcy (mini-puberty)',
+          source_ids: ['mayo_test_dht'] },
+        { id: 'dht_F_cord', when: { sex: 'F', age_min: 0, age_max: 0.003, life_stage: 'pediatric' },
+          low: 0, high: 0.172, context_pl: 'Dziewczynki — krew pępowinowa',
+          source_ids: ['mayo_test_dht'] },
+        { id: 'dht_F_under_6mo', when: { sex: 'F', age_min: 0, age_max: 0.5, life_stage: 'pediatric' },
+          low: 0, high: 4.132, context_pl: 'Dziewczynki ≤ 6 miesięcy',
+          source_ids: ['mayo_test_dht'] },
+        //   Tanner-based dla chłopców
+        { id: 'dht_M_tanner1', when: { sex: 'M', tanner: 1 },
+          low: 0, high: 0.172, context_pl: 'Chłopcy Tanner I (śr. 7,1 lat)',
+          source_ids: ['mayo_test_dht'] },
+        { id: 'dht_M_tanner2', when: { sex: 'M', tanner: 2 },
+          low: 0, high: 0.689, context_pl: 'Chłopcy Tanner II (śr. 12,1 lat)',
+          source_ids: ['mayo_test_dht'] },
+        { id: 'dht_M_tanner3', when: { sex: 'M', tanner: 3 },
+          low: 0.275, high: 1.136, context_pl: 'Chłopcy Tanner III (śr. 13,6 lat)',
+          source_ids: ['mayo_test_dht'] },
+        { id: 'dht_M_tanner4', when: { sex: 'M', tanner: 4 },
+          low: 0.757, high: 1.790, context_pl: 'Chłopcy Tanner IV (śr. 15,1 lat)',
+          source_ids: ['mayo_test_dht'] },
+        { id: 'dht_M_tanner5', when: { sex: 'M', tanner: 5 },
+          low: 0.826, high: 2.238, context_pl: 'Chłopcy Tanner V (śr. 18 lat)',
+          source_ids: ['mayo_test_dht'] },
+        //   Tanner-based dla dziewczynek (Mayo: stała 0–300 pg/mL od II–V)
+        { id: 'dht_F_tanner1', when: { sex: 'F', tanner: 1 },
+          low: 0, high: 0.172, context_pl: 'Dziewczynki Tanner I',
+          source_ids: ['mayo_test_dht'] },
+        { id: 'dht_F_tanner2_5', when: { sex: 'F', tanner: 2 },
+          low: 0, high: 1.033, context_pl: 'Dziewczynki Tanner II–V',
+          source_ids: ['mayo_test_dht'] },
+        { id: 'dht_F_tanner3_5', when: { sex: 'F', tanner: 3 },
+          low: 0, high: 1.033, context_pl: 'Dziewczynki Tanner II–V',
+          source_ids: ['mayo_test_dht'] },
+        { id: 'dht_F_tanner4_5', when: { sex: 'F', tanner: 4 },
+          low: 0, high: 1.033, context_pl: 'Dziewczynki Tanner II–V',
+          source_ids: ['mayo_test_dht'] },
+        { id: 'dht_F_tanner5_5', when: { sex: 'F', tanner: 5 },
+          low: 0, high: 1.033, context_pl: 'Dziewczynki Tanner V',
+          source_ids: ['mayo_test_dht'] },
+        // — Dorośli (Mayo M szerszy niż Tietz; F do 55 lat 0–300 pg/mL, > 55 niżej)
+        { id: 'dht_male_adult', when: { sex: 'M', life_stage: 'adult' },
+          low: 0.386, high: 3.288, context_pl: 'Mężczyźni dorośli (>19 lat)',
+          source_ids: ['mayo_test_dht', 'tietz_2018'] },
+        { id: 'dht_female_premeno', when: { sex: 'F', age_min: 18, age_max: 55, life_stage: 'adult' },
+          low: 0, high: 1.033, context_pl: 'Kobiety dorosłe 20–55 lat',
+          source_ids: ['mayo_test_dht'] },
+        { id: 'dht_female_postmeno', when: { sex: 'F', age_min: 55, life_stage: 'adult' },
+          low: 0, high: 0.441, context_pl: 'Kobiety > 55 lat',
+          source_ids: ['mayo_test_dht'] },
+        { id: 'dht_default', when: {}, default: true,
+          low: 0.386, high: 3.288, context_pl: 'Dorosły, zakres ogólny (mężczyźni)',
+          source_ids: ['mayo_test_dht', 'tietz_2018'] }
+      ],
       ranges_pl: [
         'Mężczyźni dorośli: 1,0–3,1 nmol/L (30–90 ng/dL)',
         'Kobiety dorosłe: 0,1–0,9 nmol/L (3–25 ng/dL)',
@@ -396,6 +1492,7 @@
       group: 'Estrogeny / progesteron',
       mw: 272.38,
       canonical_si: 'pmol/L',
+      clinical_indications: ['hypogonadism_female', 'menopause', 'ovarian_failure', 'gynecomastia', 'precocious_puberty', 'delayed_puberty', 'ivf_reserve', 'infertility'],
       units: [
         { symbol: 'pmol/L', label: 'pmol/L (SI)', kind: 'si',   factor_to_si: 1 },
         { symbol: 'nmol/L', label: 'nmol/L',       kind: 'si',   factor_to_si: 1000 },
@@ -404,6 +1501,65 @@
         { symbol: 'ng/dL',  label: 'ng/dL',        kind: 'conv', factor_to_si: 36.71 }
       ],
       precision: 3,
+      default_range_si: { low: 70, high: 290, context_pl: 'Kobiety, faza folikularna (M: 40–160 pmol/L; pik owul. do 1460)' },
+      reference_ranges_si: [
+        // — Pediatria, Mayo Test 81816 (HPLC + LC-MS/MS).
+        //   Wartości w pg/mL × 3.671 = pmol/L (MW 272.38).
+        //   Tanner-based, chłopcy
+        { id: 'e2_M_tanner1', when: { sex: 'M', tanner: 1 },
+          low: 0, high: 47.79, context_pl: 'Chłopcy Tanner I (>14 dni, prepubertal)',
+          source_ids: ['mayo_test_estradiol'] },
+        { id: 'e2_M_tanner2', when: { sex: 'M', tanner: 2 },
+          low: 0, high: 58.82, context_pl: 'Chłopcy Tanner II',
+          source_ids: ['mayo_test_estradiol'] },
+        { id: 'e2_M_tanner3', when: { sex: 'M', tanner: 3 },
+          low: 0, high: 95.58, context_pl: 'Chłopcy Tanner III',
+          source_ids: ['mayo_test_estradiol'] },
+        { id: 'e2_M_tanner4', when: { sex: 'M', tanner: 4 },
+          low: 0, high: 139.69, context_pl: 'Chłopcy Tanner IV',
+          source_ids: ['mayo_test_estradiol'] },
+        { id: 'e2_M_tanner5', when: { sex: 'M', tanner: 5 },
+          low: 36.76, high: 147.04, context_pl: 'Chłopcy Tanner V',
+          source_ids: ['mayo_test_estradiol'] },
+        //   Tanner-based, dziewczynki
+        { id: 'e2_F_tanner1', when: { sex: 'F', tanner: 1 },
+          low: 0, high: 73.52, context_pl: 'Dziewczynki Tanner I (>14 dni, prepubertal)',
+          source_ids: ['mayo_test_estradiol'] },
+        { id: 'e2_F_tanner2', when: { sex: 'F', tanner: 2 },
+          low: 0, high: 88.22, context_pl: 'Dziewczynki Tanner II',
+          source_ids: ['mayo_test_estradiol'] },
+        { id: 'e2_F_tanner3', when: { sex: 'F', tanner: 3 },
+          low: 0, high: 220.56, context_pl: 'Dziewczynki Tanner III',
+          source_ids: ['mayo_test_estradiol'] },
+        { id: 'e2_F_tanner4', when: { sex: 'F', tanner: 4 },
+          low: 55.14, high: 312.46, context_pl: 'Dziewczynki Tanner IV',
+          source_ids: ['mayo_test_estradiol'] },
+        { id: 'e2_F_tanner5', when: { sex: 'F', tanner: 5 },
+          low: 55.14, high: 1286.60, context_pl: 'Dziewczynki Tanner V (już zakres dorosły premenopauzy)',
+          source_ids: ['mayo_test_estradiol'] },
+        // — Dorośli (z fazy 1) — zachowujemy fazę cyklu z Tietz
+        { id: 'e2_female_follicular', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'follicular' },
+          low: 70, high: 290, context_pl: 'Kobiety, faza folikularna',
+          source_ids: ['tietz_2018'] },
+        { id: 'e2_female_ovulation', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'ovulation' },
+          low: 380, high: 1460, context_pl: 'Kobiety, pik owulacyjny',
+          source_ids: ['tietz_2018'] },
+        { id: 'e2_female_luteal', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'luteal' },
+          low: 200, high: 770, context_pl: 'Kobiety, faza lutealna',
+          source_ids: ['tietz_2018'] },
+        { id: 'e2_female_postmeno', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'postmenopause' },
+          low: 18, high: 110, context_pl: 'Kobiety, postmenopauza',
+          source_ids: ['tietz_2018'] },
+        { id: 'e2_male_adult', when: { sex: 'M', life_stage: 'adult' },
+          low: 40, high: 160, context_pl: 'Mężczyźni dorośli',
+          source_ids: ['tietz_2018'] },
+        { id: 'e2_female_default', when: { sex: 'F', life_stage: 'adult' },
+          low: 70, high: 290, context_pl: 'Kobiety dorosłe (domyślnie: faza folikularna)',
+          source_ids: ['tietz_2018'] },
+        { id: 'e2_default', when: {}, default: true,
+          low: 70, high: 290, context_pl: 'Dorośli, zakres ogólny (kobiety, faza folikularna)',
+          source_ids: ['tietz_2018'] }
+      ],
       ranges_pl: [
         'Faza folikularna wczesna: 70–290 pmol/L (19–80 pg/mL)',
         'Pik owulacyjny: 380–1 460 pmol/L (105–400 pg/mL)',
@@ -421,6 +1577,7 @@
       label_en: 'Estrone',
       aliases: ['E1'],
       group: 'Estrogeny / progesteron',
+      clinical_indications: ['menopause', 'ovarian_failure', 'gynecomastia', 'precocious_puberty'],
       mw: 270.37,
       canonical_si: 'pmol/L',
       units: [
@@ -430,6 +1587,59 @@
         { symbol: 'ng/dL',  label: 'ng/dL',        kind: 'conv', factor_to_si: 36.99 }
       ],
       precision: 3,
+      default_range_si: { low: 110, high: 400, context_pl: 'Kobiety, faza folikularna (M: 40–180; postmenop.: 30–130 pmol/L)' },
+      reference_ranges_si: [
+        // — Pediatria, Mayo Test 81418 (HPLC + LC-MS/MS).
+        //   Wartości w pg/mL × 3.699 = pmol/L (MW 270.37).
+        //   Tanner-based, chłopcy
+        { id: 'e1_M_tanner1', when: { sex: 'M', tanner: 1 },
+          low: 0, high: 59.26, context_pl: 'Chłopcy Tanner I (>14 dni, prepubertal)',
+          source_ids: ['mayo_test_estrone'] },
+        { id: 'e1_M_tanner2', when: { sex: 'M', tanner: 2 },
+          low: 0, high: 81.49, context_pl: 'Chłopcy Tanner II',
+          source_ids: ['mayo_test_estrone'] },
+        { id: 'e1_M_tanner3', when: { sex: 'M', tanner: 3 },
+          low: 37.04, high: 92.60, context_pl: 'Chłopcy Tanner III',
+          source_ids: ['mayo_test_estrone'] },
+        { id: 'e1_M_tanner4', when: { sex: 'M', tanner: 4 },
+          low: 37.04, high: 170.38, context_pl: 'Chłopcy Tanner IV',
+          source_ids: ['mayo_test_estrone'] },
+        { id: 'e1_M_tanner5', when: { sex: 'M', tanner: 5 },
+          low: 37.04, high: 222.24, context_pl: 'Chłopcy Tanner V',
+          source_ids: ['mayo_test_estrone'] },
+        //   Tanner-based, dziewczynki
+        { id: 'e1_F_tanner1', when: { sex: 'F', tanner: 1 },
+          low: 0, high: 107.42, context_pl: 'Dziewczynki Tanner I (>14 dni)',
+          source_ids: ['mayo_test_estrone'] },
+        { id: 'e1_F_tanner2', when: { sex: 'F', tanner: 2 },
+          low: 37.04, high: 122.23, context_pl: 'Dziewczynki Tanner II',
+          source_ids: ['mayo_test_estrone'] },
+        { id: 'e1_F_tanner3', when: { sex: 'F', tanner: 3 },
+          low: 55.56, high: 159.27, context_pl: 'Dziewczynki Tanner III',
+          source_ids: ['mayo_test_estrone'] },
+        { id: 'e1_F_tanner4', when: { sex: 'F', tanner: 4 },
+          low: 59.26, high: 285.21, context_pl: 'Dziewczynki Tanner IV',
+          source_ids: ['mayo_test_estrone'] },
+        { id: 'e1_F_tanner5', when: { sex: 'F', tanner: 5 },
+          low: 62.97, high: 740.80, context_pl: 'Dziewczynki Tanner V',
+          source_ids: ['mayo_test_estrone'] },
+        // — Dorośli (z fazy 1 + Mayo)
+        { id: 'e1_female_follicular', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'follicular' },
+          low: 110, high: 400, context_pl: 'Kobiety, faza folikularna',
+          source_ids: ['tietz_2018', 'mayo_test_estrone'] },
+        { id: 'e1_female_postmeno', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'postmenopause' },
+          low: 30, high: 130, context_pl: 'Kobiety, postmenopauza',
+          source_ids: ['tietz_2018'] },
+        { id: 'e1_male_adult', when: { sex: 'M', life_stage: 'adult' },
+          low: 40, high: 180, context_pl: 'Mężczyźni dorośli',
+          source_ids: ['tietz_2018'] },
+        { id: 'e1_female_default', when: { sex: 'F', life_stage: 'adult' },
+          low: 110, high: 400, context_pl: 'Kobiety dorosłe (domyślnie: faza folikularna)',
+          source_ids: ['tietz_2018'] },
+        { id: 'e1_default', when: {}, default: true,
+          low: 110, high: 400, context_pl: 'Dorośli, zakres ogólny (kobiety, faza folikularna)',
+          source_ids: ['tietz_2018'] }
+      ],
       ranges_pl: [
         'Faza folikularna: 110–400 pmol/L (30–110 pg/mL)',
         'Postmenopauza: 30–130 pmol/L (7–35 pg/mL)',
@@ -447,12 +1657,63 @@
       group: 'Estrogeny / progesteron',
       mw: 314.46,
       canonical_si: 'nmol/L',
+      clinical_indications: ['infertility', 'ovulation', 'luteal_phase_defect', 'pregnancy', 'amenorrhea'],
       units: [
         { symbol: 'nmol/L', label: 'nmol/L (SI)', kind: 'si',   factor_to_si: 1 },
         { symbol: 'ng/mL',  label: 'ng/mL',        kind: 'conv', factor_to_si: 3.180 },
         { symbol: 'ng/dL',  label: 'ng/dL',        kind: 'conv', factor_to_si: 0.03180 }
       ],
       precision: 3,
+      default_range_si: { low: 16, high: 95, context_pl: 'Kobiety, środek fazy lutealnej (folikul. < 3,2; M: 0,3–1,3 nmol/L)' },
+      reference_ranges_si: [
+        // — Pediatria, Mayo Test 8141 (Roche immunoassay + CALIPER pediatryczne).
+        //   Wartości ng/mL × 3.18 = nmol/L (MW 314.47).
+        //   Chłopcy
+        { id: 'p4_M_4w_12mo', when: { sex: 'M', age_min: 0.077, age_max: 1, life_stage: 'pediatric' },
+          low: 0, high: 2.10, context_pl: 'Chłopcy 4 tyg. – 12 miesięcy',
+          source_ids: ['mayo_test_progesterone'] },
+        { id: 'p4_M_1_9', when: { sex: 'M', age_min: 1, age_max: 10, life_stage: 'pediatric' },
+          low: 0, high: 1.11, context_pl: 'Chłopcy 1–9 lat',
+          source_ids: ['mayo_test_progesterone'] },
+        // Mayo dla M 10–17 lat nie podaje wartości (komentarz: „concentrations increase
+        // through puberty"). Pacjent w tej grupie wpadnie w fallback (adult M).
+        //   Dziewczynki
+        { id: 'p4_F_4d_12mo', when: { sex: 'F', age_min: 0.011, age_max: 1, life_stage: 'pediatric' },
+          low: 0, high: 4.13, context_pl: 'Dziewczynki 4 dni – 12 miesięcy',
+          source_ids: ['mayo_test_progesterone'] },
+        { id: 'p4_F_1_9', when: { sex: 'F', age_min: 1, age_max: 10, life_stage: 'pediatric' },
+          low: 0, high: 1.11, context_pl: 'Dziewczynki 1–9 lat',
+          source_ids: ['mayo_test_progesterone'] },
+        // Dla F 10–17 lat Mayo: „adult concentrations attained by puberty" — fallback.
+        // — Dorośli (z fazy 1 + Mayo) + ciąża z Mayo
+        { id: 'p4_female_pregnancy_t1', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'pregnancy_t1' },
+          low: 34.98, high: 139.92, context_pl: 'Kobiety, I trymestr ciąży',
+          source_ids: ['mayo_test_progesterone'] },
+        { id: 'p4_female_pregnancy_t2', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'pregnancy_t2' },
+          low: 79.50, high: 263.94, context_pl: 'Kobiety, II trymestr ciąży',
+          source_ids: ['mayo_test_progesterone'] },
+        { id: 'p4_female_pregnancy_t3', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'pregnancy_t3' },
+          low: 184.44, high: 680.52, context_pl: 'Kobiety, III trymestr ciąży',
+          source_ids: ['mayo_test_progesterone'] },
+        { id: 'p4_female_follicular', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'follicular' },
+          low: 0.3, high: 3.2, context_pl: 'Kobiety, faza folikularna',
+          source_ids: ['tietz_2018'] },
+        { id: 'p4_female_luteal', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'luteal' },
+          low: 16, high: 95, context_pl: 'Kobiety, środek fazy lutealnej (potwierdza owulację)',
+          source_ids: ['tietz_2018'] },
+        { id: 'p4_female_postmeno', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'postmenopause' },
+          low: 0.3, high: 1.3, context_pl: 'Kobiety, postmenopauza',
+          source_ids: ['tietz_2018'] },
+        { id: 'p4_male_adult', when: { sex: 'M', life_stage: 'adult' },
+          low: 0.3, high: 1.3, context_pl: 'Mężczyźni dorośli',
+          source_ids: ['tietz_2018'] },
+        { id: 'p4_female_default', when: { sex: 'F', life_stage: 'adult' },
+          low: 16, high: 95, context_pl: 'Kobiety dorosłe (domyślnie: faza lutealna)',
+          source_ids: ['tietz_2018'] },
+        { id: 'p4_default', when: {}, default: true,
+          low: 16, high: 95, context_pl: 'Dorośli, zakres ogólny (kobiety, faza lutealna)',
+          source_ids: ['tietz_2018'] }
+      ],
       ranges_pl: [
         'Faza folikularna: < 3,2 nmol/L (< 1 ng/mL)',
         'Faza lutealna (środek): 16–95 nmol/L (5–30 ng/mL)',
@@ -473,12 +1734,19 @@
       group: 'Witamina D',
       mw: 400.64,                                              // domyślnie D3 (kalcydiol); D2 = 412,65
       canonical_si: 'nmol/L',
+      clinical_indications: ['vitamin_d_status', 'osteoporosis', 'rickets', 'malabsorption', 'obesity', 'short_stature'],
       units: [
         { symbol: 'nmol/L', label: 'nmol/L (SI)', kind: 'si',   factor_to_si: 1 },
         { symbol: 'ng/mL',  label: 'ng/mL',        kind: 'conv', factor_to_si: 2.496 },
         { symbol: 'μg/L',   label: 'μg/L',         kind: 'conv', factor_to_si: 2.496 }
       ],
       precision: 3,
+      default_range_si: { low: 75, high: 125, context_pl: 'Optymalne (suboptymalne 50–75; niedobór < 50; górny próg 250 nmol/L)' },
+      reference_ranges_si: [
+        { id: '25ohd_optimal', when: {},
+          low: 75, high: 125, context_pl: 'Stężenie optymalne (niedobór < 50; suboptym. 50–75; górny próg bezp. < 250 nmol/L) — jednolite dla wszystkich grup wiekowych',
+          source_ids: ['pludowski_vitd_2023'] }
+      ],
       ranges_pl: [
         'Niedobór: < 50 nmol/L (< 20 ng/mL)',
         'Stężenie suboptymalne: 50–75 nmol/L (20–30 ng/mL)',
@@ -497,6 +1765,7 @@
       group: 'Witamina D',
       mw: 416.64,
       canonical_si: 'pmol/L',
+      clinical_indications: ['rickets', 'granulomatous_disease', 'ckd', 'vitamin_d_status'],
       units: [
         { symbol: 'pmol/L', label: 'pmol/L (SI)', kind: 'si',   factor_to_si: 1 },
         { symbol: 'pg/mL',  label: 'pg/mL',        kind: 'conv', factor_to_si: 2.400 },
@@ -504,6 +1773,12 @@
         { symbol: 'pg/dL',  label: 'pg/dL',        kind: 'conv', factor_to_si: 0.2400 }
       ],
       precision: 3,
+      default_range_si: { low: 48, high: 168, context_pl: 'Dorośli (dzieci: 60–240 pmol/L)' },
+      reference_ranges_si: [
+        { id: 'd125_adult', when: {},
+          low: 48, high: 168, context_pl: 'Dorośli',
+          source_ids: ['tietz_2018'] }
+      ],
       ranges_pl: [
         'Dorośli: 48–168 pmol/L (20–70 pg/mL)',
         'Dzieci: 60–240 pmol/L (25–100 pg/mL)'
@@ -519,6 +1794,7 @@
       aliases: ['cholekalcyferol', 'D3'],
       group: 'Witamina D',
       mw: 384.64,
+      clinical_indications: ['vitamin_d_status'],
       canonical_si: 'nmol/L',
       units: [
         { symbol: 'nmol/L', label: 'nmol/L (SI)', kind: 'si',   factor_to_si: 1 },
@@ -533,6 +1809,915 @@
       ],
       notes_pl: 'Nie mylić z 25-OH-D. Wit. D₃ ma bardzo krótki t½ (24 h); nie odzwierciedla zaopatrzenia.',
       sources: ['Tietz', 'IOM 2011']
+    },
+
+    /* ═══════════════════════════════════════════════════════════════════════
+     *  PACZKA 4a — TARCZYCA (6 substancji)
+     *  TSH, fT4, fT3, T4, T3, Tg
+     *  Źródła: Mayo Clinic Labs (pediatric + adult), PTE 2021 (ciąża),
+     *  Jarząb 2022 (Tg po thyroidectomy u dorosłych),
+     *  Handkiewicz-Junak 2024 (Tg po thyroidectomy u dzieci)
+     * ═══════════════════════════════════════════════════════════════════ */
+
+    {
+      id: 'tsh',
+      label_pl: 'TSH (tyreotropina)',
+      label_en: 'Thyroid-Stimulating Hormone',
+      aliases: ['thyrotropin', 'tyreotropina', 'TSH-sensitive'],
+      group: 'Tarczyca — hormony',
+      mw: null,                                    // peptyd — jednostka bioaktywności WHO IS
+      biologic_units: true,                        // flaga: brak MW, jednostki nie konwertowalne masowo
+      canonical_si: 'mIU/L',
+      clinical_indications: ['hypothyroidism', 'hyperthyroidism', 'thyroid_cancer_followup', 'pregnancy', 'short_stature', 'autoimmune_thyroid', 'neonatal_screening', 'obesity'],
+      units: [
+        { symbol: 'mIU/L',  label: 'mIU/L (SI)', kind: 'si',   factor_to_si: 1 },
+        { symbol: 'μIU/mL', label: 'μIU/mL',     kind: 'conv', factor_to_si: 1 },
+        { symbol: 'mU/L',   label: 'mU/L',       kind: 'conv', factor_to_si: 1 }
+      ],
+      precision: 3,
+      reference_ranges_si: [
+        // ── Najpierw protokoły specjalistyczne (DBS przesiew) — bardziej
+        //    specyficzne niż reguły age-based, muszą być sprawdzane jako
+        //    pierwsze, bo inaczej age-based wygrywa wildcard match.
+        // ── Badanie przesiewowe z bibuły (DBS, Dried Blood Spot) ─────────
+        //   Algorytm rządowego programu badań przesiewowych noworodków
+        //   2019–2026 (ryc. 8). UWAGA: progi DBS są niższe niż w surowicy
+        //   (pełna krew rozcieńczona ~60–70 % wartości serum).
+        //   Pierwsza bibuła pobierana w 3.–5. dobie życia.
+        { id: 'tsh_dbs_first',  when: { test_protocol: 'neonatal_dbs_first' },
+          low: 0, high: 10,
+          context_pl: 'Pierwsza bibuła (DBS, Dried Blood Spot): < 10 mIU/L = norma; 10–24 → druga bibuła; ≥ 24 → bezpośrednie wezwanie do diagnostyki (rządowy program 2019–2026).',
+          source_ids: ['pl_screening_program_2019_2026'] },
+        { id: 'tsh_dbs_second', when: { test_protocol: 'neonatal_dbs_second' },
+          low: 0, high: 10,
+          context_pl: 'Druga bibuła (DBS): < 10 mIU/L = norma; ≥ 10 → wezwanie do diagnostyki potwierdzającej (TSH+fT4 w surowicy w 3.–5. dobie).',
+          source_ids: ['pl_screening_program_2019_2026'] },
+        // Pediatria — Mayo Clinic Labs + polskie wytyczne PTEDD (Kucharska 2016)
+        //   0–2 dni (do ~48–72h po porodzie): fizjologiczny TSH surge po porodzie
+        //   (peak ~80 mIU/L po 30 min, spadek do <20 po 24h). Mayo 0.7–15.2.
+        //   3–5 dni: polskie wytyczne przesiewowe PTEDD są ostrzejsze:
+        //     < 12 mIU/L (przy prawidłowym fT4) = norma fizjologiczna
+        //     12–28 = WNT (umiarkowana) → leczenie L-tyroksyną 10–15 μg/kg/d
+        //     > 28 = WNT (jawna)
+        //   Polski program przesiewowy pobiera bibułę w 36–72h życia,
+        //   potwierdzenie w surowicy w 3.–5. dobie.
+        { id: 'tsh_neonate_0_2d',    when: { age_min: 0,         age_max: 0.00821, life_stage: 'pediatric' },
+          low: 0.7, high: 15.2,
+          context_pl: 'Noworodki 0–2 dni (faza TSH surge po porodzie — wartości fizjologicznie wyższe; peak ~80 mIU/L po 30 min, spadek do < 20 mIU/L po 24h)',
+          source_ids: ['mayo_test_tsh'] },
+        { id: 'tsh_neonate_3_5d',    when: { age_min: 0.00821,   age_max: 0.0137,  life_stage: 'pediatric' },
+          low: 0.7, high: 12,
+          context_pl: 'Noworodki 3–5 dni (polski przesiew PTEDD: TSH < 12 = norma; 12–28 z ↓ fT4 = WNT do leczenia; > 28 = WNT jawna; < 0,7 z ↓ fT4 = wtórna niedoczynność przysadkowa)',
+          source_ids: ['kucharska_pte_chypo_2016', 'pl_screening_program_2019_2026'] },
+        { id: 'tsh_6d_2mo',          when: { age_min: 0.0137,  age_max: 0.1667, life_stage: 'pediatric' },
+          low: 0.7, high: 11.0, context_pl: 'Niemowlęta 6 dni – 2 miesiące',
+          source_ids: ['mayo_test_tsh'] },
+        { id: 'tsh_3_11mo',          when: { age_min: 0.1667,  age_max: 1,      life_stage: 'pediatric' },
+          low: 0.7, high: 8.4,  context_pl: 'Niemowlęta 3–11 miesięcy',
+          source_ids: ['mayo_test_tsh'] },
+        { id: 'tsh_1_5y',            when: { age_min: 1,       age_max: 6,      life_stage: 'pediatric' },
+          low: 0.7, high: 6.0,  context_pl: 'Dzieci 1–5 lat',
+          source_ids: ['mayo_test_tsh', 'kapelari_thyroid_pediatric_2008'] },
+        { id: 'tsh_6_10y',           when: { age_min: 6,       age_max: 11,     life_stage: 'pediatric' },
+          low: 0.6, high: 4.8,  context_pl: 'Dzieci 6–10 lat',
+          source_ids: ['mayo_test_tsh'] },
+        { id: 'tsh_11_19y',          when: { age_min: 11,      age_max: 20,     life_stage: 'pediatric' },
+          low: 0.5, high: 4.3,  context_pl: 'Młodzież 11–19 lat',
+          source_ids: ['mayo_test_tsh'] },
+        // Ciąża (PTE 2021 Hubalewska — polska populacja na ECL)
+        // I trymestr: zwężamy high do 2.5 mIU/L wg PTE (cel terapeutyczny). Populacyjne T1 0.009–3.18.
+        { id: 'tsh_pregnancy_t1', when: { sex: 'F', cycle_phase: 'pregnancy_t1' },
+          low: 0.009, high: 2.5,  context_pl: 'Ciąża, I trymestr (do 13 tyg.) — cel terapeutyczny < 2.5 mIU/L wg PTE 2021. Wartość 2.5–3.18 = górny zakres populacyjny, ale powyżej rekomendowanego celu.',
+          source_ids: ['pte_hubalewska_2021_pregnancy'] },
+        { id: 'tsh_pregnancy_t2', when: { sex: 'F', cycle_phase: 'pregnancy_t2' },
+          low: 0.05,  high: 3.44, context_pl: 'Ciąża, II trymestr',
+          source_ids: ['pte_hubalewska_2021_pregnancy'] },
+        { id: 'tsh_pregnancy_t3', when: { sex: 'F', cycle_phase: 'pregnancy_t3' },
+          low: 0.11,  high: 3.53, context_pl: 'Ciąża, III trymestr',
+          source_ids: ['pte_hubalewska_2021_pregnancy'] },
+        // Dorośli (Mayo, sex-neutral)
+        { id: 'tsh_adult',        when: { life_stage: 'adult' },
+          low: 0.3, high: 4.2, context_pl: 'Dorośli (≥ 20 lat)',
+          source_ids: ['mayo_test_tsh'] },
+        // Fallback default (gdy brak danych)
+        { id: 'tsh_default',      when: {}, default: true,
+          low: 0.3, high: 4.2, context_pl: 'Zakres ogólny dorosły (domyślnie)',
+          source_ids: ['mayo_test_tsh'] }
+      ],
+      ranges_pl: [
+        'Noworodki 0–2 dni: 0,7–15,2 mIU/L (faza TSH surge po porodzie)',
+        'Noworodki 3–5 dni: 0,7–12 mIU/L (polski przesiew PTEDD, Kucharska 2016)',
+        'Niemowlęta 6 dni – 2 mies.: 0,7–11,0',
+        'Niemowlęta 3–11 mies.: 0,7–8,4',
+        'Dzieci 1–5 lat: 0,7–6,0',
+        'Dzieci 6–10 lat: 0,6–4,8',
+        'Młodzież 11–19 lat: 0,5–4,3',
+        'Dorośli: 0,3–4,2',
+        'Ciąża T1: cel < 2,5 mIU/L (PTE 2021); populacyjny 0,009–3,18',
+        'Ciąża T2: 0,05–3,44',
+        'Ciąża T3: 0,11–3,53',
+        'WNT (3–5 dzień, surowica): 12–28 z ↓fT4 = umiarkowana, > 28 = jawna (Kucharska 2016)',
+        'Przesiew bibuła (DBS, ryc. 8): < 10 norma; 10–24 → druga bibuła; ≥ 24 → wezwanie',
+        'Próg supresji po thyroidectomy DTC: < 0,1 mIU/L (high-risk/persistent)',
+        'Cel TSH po excellent response: < 2,0 mIU/L'
+      ],
+      notes_pl: 'TSH = test pierwszego rzutu w diagnostyce chorób tarczycy. Po porodzie TSH wzrasta gwałtownie (peak 80 mIU/L po 30 min) i spada w ciągu 24–72h. Polski program przesiewowy noworodków (rządowy 2019–2026, PDF dostępny na gov.pl) pobiera bibułę w 36–72h życia; potwierdzenie TSH+fT4 w surowicy w 3.–5. dobie. Polskie progi PTEDD (Kucharska 2016, Endokrynol Pol): w 3.–5. dobie TSH < 12 = norma (przy prawidłowym fT4); 12–28 z ↓fT4 = WNT umiarkowana → L-tyroksyna 10–15 μg/kg/d; > 28 z ↓fT4 = WNT jawna; < 0,7 z ↓fT4 = wtórna niedoczynność przysadkowa → L-tyroksyna 7–10 μg/kg/d. Dla wcześniaków i SGA: te same progi stosuje się w 3.–5. dobie niezależnie od przesiewu. W ciąży I trymestr cel terapeutyczny < 2,5 mIU/L; rozważyć L-tyroksynę u kobiet z aTPO+ przy TSH 2,5–4,0 (Hubalewska 2021). Po thyroidectomy z powodu DTC: cel supresji zależy od oceny ryzyka (high-risk: < 0,1; intermediate: 0,1–0,5; excellent response: < 2,0). Polskie wytyczne: Jarząb 2022 (dorośli), Handkiewicz-Junak 2024 (dzieci).',
+      sources: ['Mayo Clinic Labs', 'Kucharska 2016 (PTEDD)', 'PL Program przesiewowy 2019–2026', 'PTE 2021', 'Jarząb 2022', 'Handkiewicz-Junak 2024']
+    },
+
+    {
+      id: 'ft4',
+      label_pl: 'fT4 (wolna tyroksyna)',
+      label_en: 'Free Thyroxine (FT4)',
+      aliases: ['free T4', 'free thyroxine', 'wolna tyroksyna'],
+      group: 'Tarczyca — hormony',
+      mw: 776.87,
+      canonical_si: 'pmol/L',
+      clinical_indications: ['hypothyroidism', 'hyperthyroidism', 'thyroid_cancer_followup', 'pregnancy', 'short_stature', 'autoimmune_thyroid', 'neonatal_screening'],
+      units: [
+        { symbol: 'pmol/L', label: 'pmol/L (SI)', kind: 'si',   factor_to_si: 1 },
+        { symbol: 'ng/dL',  label: 'ng/dL',        kind: 'conv', factor_to_si: 12.87 },
+        { symbol: 'ng/L',   label: 'ng/L',         kind: 'conv', factor_to_si: 1.287 }
+      ],
+      precision: 3,
+      reference_ranges_si: [
+        // Pediatria — Mayo (konwersja ng/dL × 12.87 = pmol/L)
+        { id: 'ft4_neonate_0_5d', when: { age_min: 0,       age_max: 0.0137, life_stage: 'pediatric' },
+          low: 11.6, high: 32.2, context_pl: 'Noworodki 0–5 dni',
+          source_ids: ['mayo_test_ft4'] },
+        { id: 'ft4_6d_2mo',       when: { age_min: 0.0137,  age_max: 0.1667, life_stage: 'pediatric' },
+          low: 11.6, high: 28.3, context_pl: 'Niemowlęta 6 dni – 2 mies.',
+          source_ids: ['mayo_test_ft4'] },
+        { id: 'ft4_3_11mo',       when: { age_min: 0.1667,  age_max: 1,      life_stage: 'pediatric' },
+          low: 11.6, high: 25.7, context_pl: 'Niemowlęta 3–11 mies.',
+          source_ids: ['mayo_test_ft4'] },
+        { id: 'ft4_1_5y',         when: { age_min: 1,       age_max: 6,      life_stage: 'pediatric' },
+          low: 12.9, high: 23.2, context_pl: 'Dzieci 1–5 lat',
+          source_ids: ['mayo_test_ft4'] },
+        { id: 'ft4_6_10y',        when: { age_min: 6,       age_max: 11,     life_stage: 'pediatric' },
+          low: 12.9, high: 21.9, context_pl: 'Dzieci 6–10 lat',
+          source_ids: ['mayo_test_ft4'] },
+        { id: 'ft4_11_19y',       when: { age_min: 11,      age_max: 20,     life_stage: 'pediatric' },
+          low: 12.9, high: 20.6, context_pl: 'Młodzież 11–19 lat',
+          source_ids: ['mayo_test_ft4'] },
+        // Ciąża (PTE 2021)
+        { id: 'ft4_pregnancy_t1', when: { sex: 'F', cycle_phase: 'pregnancy_t1' },
+          low: 11.99, high: 21.89, context_pl: 'Ciąża, I trymestr (PTE 2021, polska populacja)',
+          source_ids: ['pte_hubalewska_2021_pregnancy'] },
+        { id: 'ft4_pregnancy_t2', when: { sex: 'F', cycle_phase: 'pregnancy_t2' },
+          low: 10.46, high: 16.67, context_pl: 'Ciąża, II trymestr',
+          source_ids: ['pte_hubalewska_2021_pregnancy'] },
+        { id: 'ft4_pregnancy_t3', when: { sex: 'F', cycle_phase: 'pregnancy_t3' },
+          low: 8.96,  high: 17.23, context_pl: 'Ciąża, III trymestr',
+          source_ids: ['pte_hubalewska_2021_pregnancy'] },
+        // Dorośli (Mayo)
+        { id: 'ft4_adult', when: { life_stage: 'adult' },
+          low: 11.6, high: 21.9, context_pl: 'Dorośli (≥ 20 lat)',
+          source_ids: ['mayo_test_ft4'] },
+        { id: 'ft4_default', when: {}, default: true,
+          low: 11.6, high: 21.9, context_pl: 'Zakres ogólny dorosły',
+          source_ids: ['mayo_test_ft4'] }
+      ],
+      ranges_pl: [
+        'Noworodki 0–5 dni: 11,6–32,2 pmol/L (0,9–2,5 ng/dL)',
+        'Niemowlęta 3–11 mies.: 11,6–25,7 pmol/L',
+        'Dzieci 1–5 lat: 12,9–23,2',
+        'Dorośli: 11,6–21,9 pmol/L (0,9–1,7 ng/dL)',
+        'Ciąża T1: 11,99–21,89 pmol/L (PTE 2021)',
+        'Ciąża T2: 10,46–16,67',
+        'Ciąża T3: 8,96–17,23'
+      ],
+      notes_pl: 'fT4 = aktywna biologicznie wolna frakcja T4. W diagnostyce niedoczynności/nadczynności razem z TSH. W ciąży zakresy się obniżają (zwłaszcza T2/T3). Metoda LC-MS/MS (np. Lo 2016) daje wyższe wartości niż immunoassay (Mayo, AdviaCentaur, Atellica).',
+      sources: ['Mayo Clinic Labs', 'PTE 2021 (Hubalewska)']
+    },
+
+    {
+      id: 'ft3',
+      label_pl: 'fT3 (wolna trójjodotyronina)',
+      label_en: 'Free Triiodothyronine (FT3)',
+      aliases: ['free T3', 'free triiodothyronine', 'wolna trójjodotyronina'],
+      group: 'Tarczyca — hormony',
+      mw: 650.97,
+      canonical_si: 'pmol/L',
+      clinical_indications: ['hyperthyroidism', 'thyroid_cancer_followup', 'hypothyroidism', 'pregnancy'],
+      units: [
+        { symbol: 'pmol/L', label: 'pmol/L (SI)', kind: 'si',   factor_to_si: 1 },
+        { symbol: 'pg/mL',  label: 'pg/mL',        kind: 'conv', factor_to_si: 1.536 },
+        { symbol: 'ng/L',   label: 'ng/L',         kind: 'conv', factor_to_si: 1.536 },
+        { symbol: 'pg/dL',  label: 'pg/dL',        kind: 'conv', factor_to_si: 0.01536 }
+      ],
+      precision: 3,
+      reference_ranges_si: [
+        // Pediatria — Mayo (konwersja pg/mL × 1.536 = pmol/L)
+        { id: 'ft3_0_1mo',  when: { age_min: 0,      age_max: 0.0833, life_stage: 'pediatric' },
+          low: 4.15, high: 13.06, context_pl: 'Noworodki 0–1 m.ż.',
+          source_ids: ['mayo_test_ft3'] },
+        { id: 'ft3_1_12mo', when: { age_min: 0.0833, age_max: 1,      life_stage: 'pediatric' },
+          low: 5.22, high: 8.60,  context_pl: 'Niemowlęta 1–12 mies.',
+          source_ids: ['mayo_test_ft3'] },
+        { id: 'ft3_1_14y',  when: { age_min: 1,      age_max: 14,     life_stage: 'pediatric' },
+          low: 4.61, high: 7.83,  context_pl: 'Dzieci 1–14 lat',
+          source_ids: ['mayo_test_ft3'] },
+        { id: 'ft3_14_19y', when: { age_min: 14,     age_max: 20,     life_stage: 'pediatric' },
+          low: 3.07, high: 6.76,  context_pl: 'Młodzież 14–19 lat',
+          source_ids: ['mayo_test_ft3'] },
+        // Ciąża (PTE 2021)
+        { id: 'ft3_pregnancy_t1', when: { sex: 'F', cycle_phase: 'pregnancy_t1' },
+          low: 3.63, high: 6.55, context_pl: 'Ciąża, I trymestr (PTE 2021)',
+          source_ids: ['pte_hubalewska_2021_pregnancy'] },
+        { id: 'ft3_pregnancy_t2', when: { sex: 'F', cycle_phase: 'pregnancy_t2' },
+          low: 3.29, high: 5.45, context_pl: 'Ciąża, II trymestr',
+          source_ids: ['pte_hubalewska_2021_pregnancy'] },
+        { id: 'ft3_pregnancy_t3', when: { sex: 'F', cycle_phase: 'pregnancy_t3' },
+          low: 3.10, high: 5.37, context_pl: 'Ciąża, III trymestr',
+          source_ids: ['pte_hubalewska_2021_pregnancy'] },
+        // Dorośli (Mayo)
+        { id: 'ft3_adult', when: { life_stage: 'adult' },
+          low: 3.07, high: 6.76, context_pl: 'Dorośli (≥ 19 lat)',
+          source_ids: ['mayo_test_ft3'] },
+        { id: 'ft3_default', when: {}, default: true,
+          low: 3.07, high: 6.76, context_pl: 'Zakres ogólny dorosły',
+          source_ids: ['mayo_test_ft3'] }
+      ],
+      ranges_pl: [
+        'Noworodki 0–1 m.ż.: 4,15–13,06 pmol/L (2,7–8,5 pg/mL)',
+        'Dzieci 1–14 lat: 4,61–7,83',
+        'Młodzież 14–19 lat: 3,07–6,76',
+        'Dorośli: 3,07–6,76 pmol/L (2,0–4,4 pg/mL)',
+        'Ciąża T1: 3,63–6,55 pmol/L',
+        'Ciąża T2: 3,29–5,45',
+        'Ciąża T3: 3,10–5,37'
+      ],
+      notes_pl: 'fT3 — kluczowy w diagnostyce nadczynności (T3 toxicosis, gdzie fT3 wzrasta przy prawidłowym fT4). Czasem podwyższony w pierwszej fazie choroby Gravesa-Basedowa.',
+      sources: ['Mayo Clinic Labs', 'PTE 2021']
+    },
+
+    {
+      id: 't4_total',
+      label_pl: 'T4 (tyroksyna, całkowita)',
+      label_en: 'Total Thyroxine (T4)',
+      aliases: ['T4 total', 'tyroksyna', 'total T4'],
+      group: 'Tarczyca — hormony',
+      mw: 776.87,
+      canonical_si: 'nmol/L',
+      clinical_indications: ['hypothyroidism', 'hyperthyroidism', 'neonatal_screening'],
+      units: [
+        { symbol: 'nmol/L', label: 'nmol/L (SI)', kind: 'si',   factor_to_si: 1 },
+        { symbol: 'μg/dL',  label: 'μg/dL',        kind: 'conv', factor_to_si: 12.87 },
+        { symbol: 'μg/L',   label: 'μg/L',         kind: 'conv', factor_to_si: 1.287 }
+      ],
+      precision: 3,
+      reference_ranges_si: [
+        // Pediatria — Mayo (konwersja μg/dL × 12.87 = nmol/L)
+        { id: 't4_neonate_0_5d', when: { age_min: 0,       age_max: 0.0137, life_stage: 'pediatric' },
+          low: 64.4, high: 238.1, context_pl: 'Noworodki 0–5 dni',
+          source_ids: ['mayo_test_t4_total'] },
+        { id: 't4_6d_2mo',       when: { age_min: 0.0137,  age_max: 0.1667, life_stage: 'pediatric' },
+          low: 69.5, high: 218.8, context_pl: 'Niemowlęta 6 dni – 2 mies.',
+          source_ids: ['mayo_test_t4_total'] },
+        { id: 't4_3_11mo',       when: { age_min: 0.1667,  age_max: 1,      life_stage: 'pediatric' },
+          low: 73.4, high: 205.9, context_pl: 'Niemowlęta 3–11 mies.',
+          source_ids: ['mayo_test_t4_total'] },
+        { id: 't4_1_5y',         when: { age_min: 1,       age_max: 6,      life_stage: 'pediatric' },
+          low: 77.2, high: 189.2, context_pl: 'Dzieci 1–5 lat',
+          source_ids: ['mayo_test_t4_total'] },
+        { id: 't4_6_10y',        when: { age_min: 6,       age_max: 11,     life_stage: 'pediatric' },
+          low: 77.2, high: 177.6, context_pl: 'Dzieci 6–10 lat',
+          source_ids: ['mayo_test_t4_total'] },
+        { id: 't4_11_19y',       when: { age_min: 11,      age_max: 20,     life_stage: 'pediatric' },
+          low: 75.9, high: 169.9, context_pl: 'Młodzież 11–19 lat',
+          source_ids: ['mayo_test_t4_total'] },
+        { id: 't4_adult', when: { life_stage: 'adult' },
+          low: 57.9, high: 150.6, context_pl: 'Dorośli (≥ 20 lat)',
+          source_ids: ['mayo_test_t4_total'] },
+        { id: 't4_default', when: {}, default: true,
+          low: 57.9, high: 150.6, context_pl: 'Zakres ogólny dorosły',
+          source_ids: ['mayo_test_t4_total'] }
+      ],
+      ranges_pl: [
+        'Noworodki 0–5 dni: 64,4–238,1 nmol/L (5,0–18,5 μg/dL)',
+        'Dzieci 1–5 lat: 77,2–189,2',
+        'Dorośli: 57,9–150,6 nmol/L (4,5–11,7 μg/dL)'
+      ],
+      notes_pl: 'T4 całkowita zależna od TBG (białka transportującego). W ciąży rośnie ~1,5× przez ↑ TBG estrogenozależną. Preferowany pomiar fT4 dla rutynowej diagnostyki. T4 total wciąż stosowane w niektórych screeningach neonatalnych.',
+      sources: ['Mayo Clinic Labs']
+    },
+
+    {
+      id: 't3_total',
+      label_pl: 'T3 (trójjodotyronina, całkowita)',
+      label_en: 'Total Triiodothyronine (T3)',
+      aliases: ['T3 total', 'trójjodotyronina', 'total T3'],
+      group: 'Tarczyca — hormony',
+      mw: 650.97,
+      canonical_si: 'nmol/L',
+      clinical_indications: ['hyperthyroidism', 'hypothyroidism'],
+      units: [
+        { symbol: 'nmol/L', label: 'nmol/L (SI)', kind: 'si',   factor_to_si: 1 },
+        { symbol: 'ng/dL',  label: 'ng/dL',        kind: 'conv', factor_to_si: 0.01536 },
+        { symbol: 'ng/mL',  label: 'ng/mL',        kind: 'conv', factor_to_si: 1.536 }
+      ],
+      precision: 3,
+      reference_ranges_si: [
+        // Pediatria — Mayo (konwersja ng/dL × 0.01536 = nmol/L)
+        { id: 't3_neonate_0_5d', when: { age_min: 0,       age_max: 0.0137, life_stage: 'pediatric' },
+          low: 1.12, high: 4.42, context_pl: 'Noworodki 0–5 dni',
+          source_ids: ['mayo_test_t3_total'] },
+        { id: 't3_6d_2mo',       when: { age_min: 0.0137,  age_max: 0.1667, life_stage: 'pediatric' },
+          low: 1.23, high: 4.22, context_pl: 'Niemowlęta 6 dni – 2 mies.',
+          source_ids: ['mayo_test_t3_total'] },
+        { id: 't3_3_11mo',       when: { age_min: 0.1667,  age_max: 1,      life_stage: 'pediatric' },
+          low: 1.32, high: 4.07, context_pl: 'Niemowlęta 3–11 mies.',
+          source_ids: ['mayo_test_t3_total'] },
+        { id: 't3_1_5y',         when: { age_min: 1,       age_max: 6,      life_stage: 'pediatric' },
+          low: 1.41, high: 3.81, context_pl: 'Dzieci 1–5 lat',
+          source_ids: ['mayo_test_t3_total'] },
+        { id: 't3_6_10y',        when: { age_min: 6,       age_max: 11,     life_stage: 'pediatric' },
+          low: 1.43, high: 3.55, context_pl: 'Dzieci 6–10 lat',
+          source_ids: ['mayo_test_t3_total'] },
+        { id: 't3_11_19y',       when: { age_min: 11,      age_max: 20,     life_stage: 'pediatric' },
+          low: 1.40, high: 3.35, context_pl: 'Młodzież 11–19 lat',
+          source_ids: ['mayo_test_t3_total'] },
+        { id: 't3_adult', when: { life_stage: 'adult' },
+          low: 1.23, high: 3.07, context_pl: 'Dorośli (≥ 20 lat)',
+          source_ids: ['mayo_test_t3_total'] },
+        { id: 't3_default', when: {}, default: true,
+          low: 1.23, high: 3.07, context_pl: 'Zakres ogólny dorosły',
+          source_ids: ['mayo_test_t3_total'] }
+      ],
+      ranges_pl: [
+        'Noworodki 0–5 dni: 1,12–4,42 nmol/L',
+        'Dzieci 1–5 lat: 1,41–3,81',
+        'Dorośli: 1,23–3,07 nmol/L (80–200 ng/dL)'
+      ],
+      notes_pl: 'T3 całkowita — diagnostyka T3-toksykozy (rzadziej, fT3 preferowane). Zależna od TBG, w ciąży podobnie wzrasta jak T4. Klinicznie mniej użyteczna niż fT3.',
+      sources: ['Mayo Clinic Labs']
+    },
+
+    {
+      id: 'thyroglobulin',
+      label_pl: 'Tg (tyreoglobulina)',
+      label_en: 'Thyroglobulin',
+      aliases: ['Tg', 'thyroglobulin', 'tyreoglobulina'],
+      group: 'Tarczyca — autoprzeciwciała i Tg',
+      mw: null,
+      biologic_units: true,
+      canonical_si: 'ng/mL',
+      clinical_indications: ['thyroid_cancer_followup'],
+      units: [
+        { symbol: 'ng/mL', label: 'ng/mL (SI)', kind: 'si',   factor_to_si: 1 },
+        { symbol: 'μg/L',  label: 'μg/L',       kind: 'conv', factor_to_si: 1 }
+      ],
+      precision: 3,
+      reference_ranges_si: [
+        // Po total thyroidectomy — bazalny (na L-tyroksynie)
+        { id: 'tg_post_tt_basal_adult',
+          when: { life_stage: 'adult', test_protocol: 'post_thyroidectomy_basal' },
+          low: 0, high: 0.2,
+          context_pl: 'Dorośli, po total thyroidectomy (na L-tyroksynie, bazalny): excellent response < 0,2 ng/mL. Wartości 0,2–5 (po RAI) lub > 1 (bez RAI) = biochemical incomplete; > 5 = persistent disease.',
+          source_ids: ['jarzab_dtc_adults_2022'] },
+        { id: 'tg_post_tt_basal_ped',
+          when: { life_stage: 'pediatric', test_protocol: 'post_thyroidectomy_basal' },
+          low: 0, high: 1.0,
+          context_pl: 'Dzieci, po total thyroidectomy (bazalny): excellent response ≤ 1,0 ng/mL. Wartości > 1 = biochemical incomplete.',
+          source_ids: ['handkiewicz_junak_dtc_children_2024'] },
+        // Po total thyroidectomy — stymulowany (rhTSH / odstawienie L-tyr)
+        { id: 'tg_post_tt_stim_adult',
+          when: { life_stage: 'adult', test_protocol: 'post_thyroidectomy_stimulated' },
+          low: 0, high: 1.0,
+          context_pl: 'Dorośli, po total thyroidectomy + RAI (stymulowany): excellent response < 1 ng/mL. Po thyroidectomy bez RAI: próg excellent < 2 ng/mL. Wartość > 10 ng/mL = biochemical incomplete.',
+          source_ids: ['jarzab_dtc_adults_2022'] },
+        { id: 'tg_post_tt_stim_ped',
+          when: { life_stage: 'pediatric', test_protocol: 'post_thyroidectomy_stimulated' },
+          low: 0, high: 2.0,
+          context_pl: 'Dzieci, po total thyroidectomy (stymulowany): excellent response ≤ 2,0 ng/mL. Wartość > 10 = biochemical incomplete (wymaga indywidualnej oceny).',
+          source_ids: ['handkiewicz_junak_dtc_children_2024'] },
+        // Default: zachowana tarczyca (cała lub po lobektomii)
+        { id: 'tg_intact',
+          when: {}, default: true,
+          low: 0, high: 33,
+          context_pl: 'Zachowana tarczyca (cała lub po lobektomii) — zdrowi dorośli i dzieci',
+          source_ids: ['mayo_test_tg', 'jarzab_dtc_adults_2022'] }
+      ],
+      ranges_pl: [
+        'Zachowana tarczyca (cała / po lobektomii): < 33 ng/mL',
+        'Po total thyroidectomy DTC, dorośli, bazalny: < 0,2 ng/mL (excellent); 0,2–5 biochemical incomplete; > 5 persistent',
+        'Po total thyroidectomy DTC, dorośli, stymulowany: < 1 (z RAI) lub < 2 (bez RAI) ng/mL (excellent); > 10 incomplete',
+        'Po total thyroidectomy DTC, dzieci, bazalny: ≤ 1,0 ng/mL (excellent)',
+        'Po total thyroidectomy DTC, dzieci, stymulowany: ≤ 2,0 ng/mL (excellent)'
+      ],
+      notes_pl: 'Tg = marker nawrotu DTC po thyroidectomy. ZAWSZE oznaczać razem z anty-Tg (przeciwciała fałszują, zwykle zaniżają wynik immunoassay). Pomiar bazalny (na L-tyroksynie) vs stymulowany (rhTSH/odstawienie L-tyr) interpretuje się osobno. Granica oznaczalności assay powinna być ≤ 0,1 ng/mL. Polskie wytyczne: Jarząb 2022 (dorośli), Handkiewicz-Junak 2024 (dzieci) — różnią się progami!',
+      sources: ['Mayo Clinic Labs', 'Jarząb 2022 (DTC dorośli)', 'Handkiewicz-Junak 2024 (DTC dzieci)']
+    },
+
+    /* ═══════════════════════════════════════════════════════════════════════
+     *  PACZKA 4b — PRZYSADKA + GONADY (8 substancji)
+     *  IGF-1, IGFBP-3, prolaktyna, LH, FSH, inhibina B, AMH, SHBG
+     *  Źródła: Mayo + Bidlingmaier 2014 (IGF-1) + Andersson 1998 (inhibina B
+     *  mini-puberty) + Elmlinger 2005 (SHBG pediatria) + CALIPER Bohn 2022 (AMH)
+     *  + polskie progi NFZ/ESHRE 2023
+     * ═══════════════════════════════════════════════════════════════════ */
+
+    {
+      id: 'igf1',
+      label_pl: 'IGF-1 (insulinopodobny czynnik wzrostu 1)',
+      label_en: 'Insulin-like Growth Factor 1',
+      aliases: ['IGF1', 'somatomedin C', 'somatomedyna C', 'IGF I'],
+      group: 'Przysadka — somatotropowa',
+      mw: 7649,
+      canonical_si: 'nmol/L',
+      clinical_indications: ['GH_deficiency', 'short_stature', 'acromegaly', 'delayed_puberty', 'precocious_puberty'],
+      units: [
+        { symbol: 'nmol/L', label: 'nmol/L (SI)', kind: 'si',   factor_to_si: 1 },
+        { symbol: 'ng/mL',  label: 'ng/mL',        kind: 'conv', factor_to_si: 0.131 },
+        { symbol: 'μg/L',   label: 'μg/L',         kind: 'conv', factor_to_si: 0.131 }
+      ],
+      precision: 3,
+      reference_ranges_si: [
+        // Pediatryczne Tanner-based (Mayo, Bidlingmaier 2014)
+        { id: 'igf1_M_tanner1', when: { sex: 'M', tanner: 1 },
+          low: 10.6, high: 33.4, context_pl: 'Chłopcy Tanner I',
+          source_ids: ['mayo_test_igf1', 'bidlingmaier_igf1_2014'] },
+        { id: 'igf1_M_tanner2', when: { sex: 'M', tanner: 2 },
+          low: 13.9, high: 56.6, context_pl: 'Chłopcy Tanner II',
+          source_ids: ['mayo_test_igf1', 'bidlingmaier_igf1_2014'] },
+        { id: 'igf1_M_tanner3', when: { sex: 'M', tanner: 3 },
+          low: 32.1, high: 66.9, context_pl: 'Chłopcy Tanner III',
+          source_ids: ['mayo_test_igf1', 'bidlingmaier_igf1_2014'] },
+        { id: 'igf1_M_tanner4', when: { sex: 'M', tanner: 4 },
+          low: 29.2, high: 75.7, context_pl: 'Chłopcy Tanner IV',
+          source_ids: ['mayo_test_igf1', 'bidlingmaier_igf1_2014'] },
+        { id: 'igf1_M_tanner5', when: { sex: 'M', tanner: 5 },
+          low: 29.7, high: 67.9, context_pl: 'Chłopcy Tanner V',
+          source_ids: ['mayo_test_igf1', 'bidlingmaier_igf1_2014'] },
+        { id: 'igf1_F_tanner1', when: { sex: 'F', tanner: 1 },
+          low: 11.3, high: 42.3, context_pl: 'Dziewczynki Tanner I',
+          source_ids: ['mayo_test_igf1', 'bidlingmaier_igf1_2014'] },
+        { id: 'igf1_F_tanner2', when: { sex: 'F', tanner: 2 },
+          low: 15.5, high: 59.1, context_pl: 'Dziewczynki Tanner II',
+          source_ids: ['mayo_test_igf1', 'bidlingmaier_igf1_2014'] },
+        { id: 'igf1_F_tanner3', when: { sex: 'F', tanner: 3 },
+          low: 33.8, high: 69.3, context_pl: 'Dziewczynki Tanner III',
+          source_ids: ['mayo_test_igf1', 'bidlingmaier_igf1_2014'] },
+        { id: 'igf1_F_tanner4_5', when: { sex: 'F', tanner: 4 },
+          low: 29.3, high: 76.8, context_pl: 'Dziewczynki Tanner IV–V',
+          source_ids: ['mayo_test_igf1', 'bidlingmaier_igf1_2014'] },
+        { id: 'igf1_F_tanner5', when: { sex: 'F', tanner: 5 },
+          low: 29.3, high: 76.8, context_pl: 'Dziewczynki Tanner IV–V',
+          source_ids: ['mayo_test_igf1', 'bidlingmaier_igf1_2014'] },
+        // Dorośli wiek-stratified (Bidlingmaier 2014)
+        { id: 'igf1_adult_20_29', when: { age_min: 19, age_max: 30, life_stage: 'adult' },
+          low: 17.8, high: 55.2, context_pl: 'Dorośli 20–29 lat',
+          source_ids: ['bidlingmaier_igf1_2014'] },
+        { id: 'igf1_adult_30_39', when: { age_min: 30, age_max: 40, life_stage: 'adult' },
+          low: 11.8, high: 30.1, context_pl: 'Dorośli 30–39 lat',
+          source_ids: ['bidlingmaier_igf1_2014'] },
+        { id: 'igf1_adult_40_49', when: { age_min: 40, age_max: 50, life_stage: 'adult' },
+          low: 10.5, high: 27.5, context_pl: 'Dorośli 40–49 lat',
+          source_ids: ['bidlingmaier_igf1_2014'] },
+        { id: 'igf1_adult_50_59', when: { age_min: 50, age_max: 60, life_stage: 'adult' },
+          low: 7.9, high: 25.5, context_pl: 'Dorośli 50–59 lat',
+          source_ids: ['bidlingmaier_igf1_2014'] },
+        { id: 'igf1_adult_60_69', when: { age_min: 60, age_max: 70, life_stage: 'adult' },
+          low: 7.2, high: 23.6, context_pl: 'Dorośli 60–69 lat',
+          source_ids: ['bidlingmaier_igf1_2014'] },
+        { id: 'igf1_adult_70_plus', when: { age_min: 70, life_stage: 'adult' },
+          low: 6.6, high: 22.3, context_pl: 'Dorośli ≥ 70 lat',
+          source_ids: ['bidlingmaier_igf1_2014'] },
+        { id: 'igf1_default', when: {}, default: true,
+          low: 11.8, high: 55.2, context_pl: 'Dorośli, zakres ogólny',
+          source_ids: ['bidlingmaier_igf1_2014'] }
+      ],
+      ranges_pl: [
+        'Tanner-stratified (preferowane u dzieci/młodzieży) — Mayo i Bidlingmaier 2014',
+        'Dorośli silnie wiek-zależni: 20–29 lat: 17,8–55,2; 30–39: 11,8–30,1; 40–49: 10,5–27,5; 50–59: 7,9–25,5; 60–69: 7,2–23,6; ≥70: 6,6–22,3 nmol/L',
+        'IGF-1 < 2,5 percentyla dla wieku/Tanner = sugestia niedoboru GH (wymaga IGFBP-3 + test stymulacyjny)'
+      ],
+      notes_pl: 'IGF-1 to marker integracji osi GH-IGF, kluczowy w diagnostyce niedoboru GH (niskorosłość) i akromegalii. Mierzona razem z IGFBP-3 (panel GH-IGF). Polskie wytyczne PTEDD niskorosłości (Wąsikowa, Beń-Skowronek) wymagają łącznej oceny IGF-1 + IGFBP-3 + test stymulacyjny GH. Tanner stage ważniejszy klinicznie niż sam wiek między 8.–18. r.ż. (peak fizjologiczny w Tanner III–IV).',
+      sources: ['Mayo Clinic Labs', 'Bidlingmaier 2014 JCEM', 'PTEDD niskorosłości']
+    },
+
+    {
+      id: 'igfbp3',
+      label_pl: 'IGFBP-3 (białko wiążące IGF-3)',
+      label_en: 'Insulin-like Growth Factor Binding Protein 3',
+      aliases: ['IGFBP3', 'binding protein 3'],
+      group: 'Przysadka — somatotropowa',
+      mw: null,
+      biologic_units: true,
+      canonical_si: 'mg/L',
+      clinical_indications: ['GH_deficiency', 'short_stature', 'acromegaly'],
+      units: [
+        { symbol: 'mg/L',  label: 'mg/L (SI)', kind: 'si',   factor_to_si: 1 },
+        { symbol: 'μg/mL', label: 'μg/mL',     kind: 'conv', factor_to_si: 1 }
+      ],
+      precision: 3,
+      reference_ranges_si: [
+        // Mayo Tanner V (jedyny pełny zakres pobrany)
+        { id: 'igfbp3_tanner5', when: { tanner: 5 },
+          low: 2.6, high: 8.6, context_pl: 'Tanner V (dorosły młody)',
+          source_ids: ['mayo_test_igfbp3'] },
+        { id: 'igfbp3_default', when: {}, default: true,
+          low: 2.6, high: 8.6, context_pl: 'Dorośli (Tanner V — zakres ogólny). Dane pediatryczne pełnej tabeli niedostępne — porównaj z wartościami referencyjnymi laboratorium oznaczającego.',
+          source_ids: ['mayo_test_igfbp3'] }
+      ],
+      ranges_pl: [
+        'Tanner V (dorosły młody): 2,6–8,6 mg/L (Mayo)',
+        'Pediatryczne pełne tabele Tanner-stratified niedostępne w open-access — porównaj z laboratorium oznaczającym'
+      ],
+      notes_pl: 'IGFBP-3 mierzona razem z IGF-1. Ratio IGF-1/IGFBP-3 ma znaczenie diagnostyczne. Mniej zależna od posiłku niż IGF-1. IGFBP-3 < 2,5 percentyla dla wieku/Tanner = sugestia niedoboru GH. Pełnej tabeli pediatrycznej Mayo nie udało się pobrać; uzupełnij wartościami z Friedrich 2005 JCEM lub własnymi wartościami referencyjnymi laboratorium.',
+      sources: ['Mayo Clinic Labs', 'Friedrich 2005 (alt.)']
+    },
+
+    {
+      id: 'prolactin',
+      label_pl: 'Prolaktyna (PRL)',
+      label_en: 'Prolactin',
+      aliases: ['PRL', 'prolaktyna'],
+      group: 'Przysadka — laktotropowa',
+      mw: null,
+      biologic_units: true,
+      canonical_si: 'ng/mL',
+      clinical_indications: ['hyperprolactinemia', 'infertility', 'amenorrhea', 'pregnancy', 'hypogonadism_male', 'galactorrhea'],
+      units: [
+        { symbol: 'ng/mL', label: 'ng/mL (SI)', kind: 'si',   factor_to_si: 1 },
+        { symbol: 'μg/L',  label: 'μg/L',       kind: 'conv', factor_to_si: 1 },
+        { symbol: 'mIU/L', label: 'mIU/L (WHO 84/500)', kind: 'conv', factor_to_si: 0.04717 }
+      ],
+      precision: 3,
+      reference_ranges_si: [
+        // Ciąża — PRZED kobiety nieciężarne, bo te ostatnie nie mają wymogu
+        // cycle_phase w when i zmatchowałyby ciążarną fallbackiem.
+        { id: 'prl_pregnancy_t1', when: { sex: 'F', cycle_phase: 'pregnancy_t1' },
+          low: 10, high: 95, context_pl: 'Ciąża, I trymestr (fizjologiczny wzrost)',
+          source_ids: ['mayo_test_prolactin'] },
+        { id: 'prl_pregnancy_t2', when: { sex: 'F', cycle_phase: 'pregnancy_t2' },
+          low: 40, high: 170, context_pl: 'Ciąża, II trymestr',
+          source_ids: ['mayo_test_prolactin'] },
+        { id: 'prl_pregnancy_t3', when: { sex: 'F', cycle_phase: 'pregnancy_t3' },
+          low: 10, high: 209, context_pl: 'Ciąża, III trymestr (do 209 ng/mL fizjologicznie)',
+          source_ids: ['mayo_test_prolactin'] },
+        // Mayo PRL (dorośli nieciężarni)
+        { id: 'prl_male_adult', when: { sex: 'M', life_stage: 'adult' },
+          low: 2, high: 18, context_pl: 'Mężczyźni dorośli (Mayo). Próg hyperprolaktynemii > 15 ng/mL',
+          source_ids: ['mayo_test_prolactin'] },
+        { id: 'prl_female_nonpregnant', when: { sex: 'F', life_stage: 'adult' },
+          low: 2, high: 29, context_pl: 'Kobiety nieciężarne (Mayo). Próg hyperprolaktynemii > 25 ng/mL',
+          source_ids: ['mayo_test_prolactin'] },
+        { id: 'prl_default', when: {}, default: true,
+          low: 2, high: 29, context_pl: 'Dorośli, zakres ogólny',
+          source_ids: ['mayo_test_prolactin'] }
+      ],
+      ranges_pl: [
+        'Mężczyźni dorośli: 2–18 ng/mL (próg hyperprolaktynemii > 15)',
+        'Kobiety nieciężarne: 2–29 ng/mL (próg hyperprolaktynemii > 25)',
+        'Ciąża T1: 10–95; T2: 40–170; T3: 10–209 ng/mL',
+        'Próg prolaktynoma: > 200 ng/mL (makrogruczolak)',
+        'Macroprolactin: badanie zalecane gdy PRL > ~33 ng/mL (700 mU/L) bez objawów'
+      ],
+      notes_pl: 'Pobranie 7–10 rano, na czczo, po wypoczynku 30 min (stres, sen, stosunek, wysiłek, hipoglikemia podwyższają PRL). Wykluczyć ciążę, niedoczynność tarczycy (↑ TRH stymuluje PRL), leki (neuroleptyki, metoklopramid, opioidy, niektóre antydepresanty). Hyperprolaktynemia: u kobiet > 25 ng/mL, u mężczyzn > 15 ng/mL. Makroprolaktyna (kompleks IgG) — badanie różnicujące przy bezobjawowej hiperprolaktynemii. Konwersja: ng/mL × 21,2 = mIU/L (WHO IS 84/500).',
+      sources: ['Mayo Clinic Labs', 'WHO IS 84/500']
+    },
+
+    {
+      id: 'lh',
+      label_pl: 'LH (hormon luteinizujący)',
+      label_en: 'Luteinizing Hormone',
+      aliases: ['LH', 'lutropina', 'lutropin'],
+      group: 'Oś podwzgórze-przysadka-gonady',
+      mw: null,
+      biologic_units: true,
+      canonical_si: 'IU/L',
+      clinical_indications: ['hypogonadism_male', 'hypogonadism_female', 'pcos', 'infertility', 'menopause', 'precocious_puberty', 'delayed_puberty', 'klinefelter', 'ovarian_failure'],
+      units: [
+        { symbol: 'IU/L',   label: 'IU/L (SI)', kind: 'si',   factor_to_si: 1 },
+        { symbol: 'mIU/mL', label: 'mIU/mL',     kind: 'conv', factor_to_si: 1 }
+      ],
+      precision: 3,
+      reference_ranges_si: [
+        // Mini-puberty (Andersson 1998, Bergada 2006)
+        { id: 'lh_minipuberty_M', when: { sex: 'M', age_min: 0.083, age_max: 0.5, life_stage: 'pediatric' },
+          low: 1, high: 6, context_pl: 'Chłopcy 1–6 miesięcy (mini-puberty, peak ~3 mies.)',
+          source_ids: ['andersson_inhibin_b_1998'] },
+        { id: 'lh_minipuberty_F', when: { sex: 'F', age_min: 0.083, age_max: 0.5, life_stage: 'pediatric' },
+          low: 0, high: 2, context_pl: 'Dziewczynki 1–6 miesięcy (mini-puberty słabsza niż u M)',
+          source_ids: ['andersson_inhibin_b_1998'] },
+        // Tanner-based pediatryczne (Mayo LHPED, czułość 0.02 IU/L)
+        { id: 'lh_M_tanner1', when: { sex: 'M', tanner: 1 },
+          low: 0.02, high: 0.5, context_pl: 'Chłopcy Tanner I (prepubertal, 1–8 lat)',
+          source_ids: ['mayo_test_lh_pediatric'] },
+        { id: 'lh_M_tanner2', when: { sex: 'M', tanner: 2 },
+          low: 0.03, high: 3.7, context_pl: 'Chłopcy Tanner II',
+          source_ids: ['mayo_test_lh_pediatric'] },
+        { id: 'lh_M_tanner3', when: { sex: 'M', tanner: 3 },
+          low: 0.09, high: 4.2, context_pl: 'Chłopcy Tanner III',
+          source_ids: ['mayo_test_lh_pediatric'] },
+        { id: 'lh_M_tanner4', when: { sex: 'M', tanner: 4 },
+          low: 1.3, high: 9.8, context_pl: 'Chłopcy Tanner IV–V',
+          source_ids: ['mayo_test_lh_pediatric'] },
+        { id: 'lh_M_tanner5', when: { sex: 'M', tanner: 5 },
+          low: 1.3, high: 9.8, context_pl: 'Chłopcy Tanner IV–V',
+          source_ids: ['mayo_test_lh_pediatric'] },
+        { id: 'lh_F_tanner1', when: { sex: 'F', tanner: 1 },
+          low: 0.02, high: 0.3, context_pl: 'Dziewczynki Tanner I (prepubertal)',
+          source_ids: ['mayo_test_lh_pediatric'] },
+        { id: 'lh_F_tanner2', when: { sex: 'F', tanner: 2 },
+          low: 0.02, high: 4.1, context_pl: 'Dziewczynki Tanner II',
+          source_ids: ['mayo_test_lh_pediatric'] },
+        { id: 'lh_F_tanner3', when: { sex: 'F', tanner: 3 },
+          low: 0.6, high: 7.2, context_pl: 'Dziewczynki Tanner III',
+          source_ids: ['mayo_test_lh_pediatric'] },
+        { id: 'lh_F_tanner4', when: { sex: 'F', tanner: 4 },
+          low: 0.9, high: 13.3, context_pl: 'Dziewczynki Tanner IV–V',
+          source_ids: ['mayo_test_lh_pediatric'] },
+        { id: 'lh_F_tanner5', when: { sex: 'F', tanner: 5 },
+          low: 0.9, high: 13.3, context_pl: 'Dziewczynki Tanner IV–V',
+          source_ids: ['mayo_test_lh_pediatric'] },
+        // Dorośli, cycle-aware u kobiet
+        { id: 'lh_male_adult', when: { sex: 'M', life_stage: 'adult' },
+          low: 1.24, high: 8.62, context_pl: 'Mężczyźni dorośli',
+          source_ids: ['mayo_test_lh_adult'] },
+        { id: 'lh_female_follicular', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'follicular' },
+          low: 1.68, high: 15.0, context_pl: 'Kobiety, faza folikularna',
+          source_ids: ['mayo_test_lh_adult'] },
+        { id: 'lh_female_ovulation', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'ovulation' },
+          low: 21.9, high: 56.6, context_pl: 'Kobiety, pik owulacyjny (5–10× wyższy)',
+          source_ids: ['mayo_test_lh_adult'] },
+        { id: 'lh_female_luteal', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'luteal' },
+          low: 0.61, high: 16.3, context_pl: 'Kobiety, faza lutealna',
+          source_ids: ['mayo_test_lh_adult'] },
+        { id: 'lh_female_postmeno', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'postmenopause' },
+          low: 14.2, high: 52.3, context_pl: 'Kobiety, postmenopauza (> 40 IU/L diagnostyczne)',
+          source_ids: ['mayo_test_lh_adult'] },
+        { id: 'lh_female_default', when: { sex: 'F', life_stage: 'adult' },
+          low: 1.68, high: 15.0, context_pl: 'Kobiety dorosłe (domyślnie folikularna)',
+          source_ids: ['mayo_test_lh_adult'] },
+        { id: 'lh_default', when: {}, default: true,
+          low: 1.24, high: 8.62, context_pl: 'Dorośli, zakres ogólny (mężczyźni)',
+          source_ids: ['mayo_test_lh_adult'] }
+      ],
+      ranges_pl: [
+        'Mini-puberty: chłopcy 1–6 mies. peak 1–6 IU/L; dziewczynki słabsza dynamika',
+        'Tanner I (prepubertal): < 0,5 (M), < 0,3 (F) IU/L',
+        'Tanner V: 1,3–9,8 (M), 0,9–13,3 (F)',
+        'Dorośli M: 1,24–8,62 IU/L',
+        'K folikularna: 1,68–15; pik owul.: 21,9–56,6; lutealna: 0,61–16,3; postmenop.: 14,2–52,3',
+        'Próg hipogonadyzmu hipogonadotropowego: < 1,5 IU/L u dorosłych',
+        'LH/FSH > 2:1 lub > 3:1: wspomagająco PCOS'
+      ],
+      notes_pl: 'LH pulsacyjny — pojedynczy pomiar może być mylący. U kobiet zawsze podać dzień cyklu lub fazę. W mini-puberty (1–6 mies.) wartości LH/FSH są przejściowo podwyższone — to fizjologia "TSH surge" gonadal axis. Polskie wytyczne PTE hipogonadyzmu wymagają oceny LH + FSH + testosteron (M) lub estradiol (F). Mayo LHPED dla pediatrii ma 10× wyższą czułość niż standardowy test.',
+      sources: ['Mayo Clinic Labs', 'Andersson 1998 (mini-puberty)', 'CALIPER Konforte 2013']
+    },
+
+    {
+      id: 'fsh',
+      label_pl: 'FSH (hormon folikulotropowy)',
+      label_en: 'Follicle-Stimulating Hormone',
+      aliases: ['FSH', 'folikulotropina', 'folikulinotropina', 'folitropin'],
+      group: 'Oś podwzgórze-przysadka-gonady',
+      mw: null,
+      biologic_units: true,
+      canonical_si: 'IU/L',
+      clinical_indications: ['hypogonadism_male', 'hypogonadism_female', 'infertility', 'menopause', 'ovarian_failure', 'klinefelter', 'ivf_reserve', 'precocious_puberty', 'delayed_puberty'],
+      units: [
+        { symbol: 'IU/L',   label: 'IU/L (SI)', kind: 'si',   factor_to_si: 1 },
+        { symbol: 'mIU/mL', label: 'mIU/mL',     kind: 'conv', factor_to_si: 1 }
+      ],
+      precision: 3,
+      reference_ranges_si: [
+        // Mini-puberty (Andersson 1998)
+        { id: 'fsh_minipuberty_M', when: { sex: 'M', age_min: 0.083, age_max: 0.5, life_stage: 'pediatric' },
+          low: 0.2, high: 3.0, context_pl: 'Chłopcy 1–6 miesięcy (mini-puberty)',
+          source_ids: ['andersson_inhibin_b_1998'] },
+        { id: 'fsh_minipuberty_F', when: { sex: 'F', age_min: 0.083, age_max: 0.5, life_stage: 'pediatric' },
+          low: 1, high: 8, context_pl: 'Dziewczynki 1–6 miesięcy (mini-puberty, peak wyższy niż u M)',
+          source_ids: ['andersson_inhibin_b_1998'] },
+        // Tanner-based (Mayo FSH)
+        { id: 'fsh_tanner1', when: { tanner: 1 },
+          low: 0.4, high: 6.7, context_pl: 'Tanner I (prepubertal)',
+          source_ids: ['mayo_test_fsh'] },
+        { id: 'fsh_tanner2', when: { tanner: 2 },
+          low: 0.5, high: 8.7, context_pl: 'Tanner II',
+          source_ids: ['mayo_test_fsh'] },
+        { id: 'fsh_tanner3', when: { tanner: 3 },
+          low: 1.2, high: 11.4, context_pl: 'Tanner III',
+          source_ids: ['mayo_test_fsh'] },
+        { id: 'fsh_tanner4', when: { tanner: 4 },
+          low: 0.7, high: 12.8, context_pl: 'Tanner IV',
+          source_ids: ['mayo_test_fsh'] },
+        { id: 'fsh_tanner5', when: { tanner: 5 },
+          low: 1.0, high: 11.6, context_pl: 'Tanner V',
+          source_ids: ['mayo_test_fsh'] },
+        // Dorośli
+        { id: 'fsh_male_adult', when: { sex: 'M', life_stage: 'adult' },
+          low: 1.5, high: 12.4, context_pl: 'Mężczyźni dorośli',
+          source_ids: ['mayo_test_fsh'] },
+        { id: 'fsh_female_follicular', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'follicular' },
+          low: 3.9, high: 8.8, context_pl: 'Kobiety, faza folikularna (3. d.c. — ocena rezerwy)',
+          source_ids: ['mayo_test_fsh'] },
+        { id: 'fsh_female_ovulation', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'ovulation' },
+          low: 4.5, high: 22.5, context_pl: 'Kobiety, pik owulacyjny',
+          source_ids: ['mayo_test_fsh'] },
+        { id: 'fsh_female_luteal', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'luteal' },
+          low: 1.8, high: 5.1, context_pl: 'Kobiety, faza lutealna',
+          source_ids: ['mayo_test_fsh'] },
+        { id: 'fsh_female_postmeno', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'postmenopause' },
+          low: 16.7, high: 113.6, context_pl: 'Kobiety, postmenopauza (> 40 IU/L diagnostyczne)',
+          source_ids: ['mayo_test_fsh'] },
+        { id: 'fsh_female_default', when: { sex: 'F', life_stage: 'adult' },
+          low: 3.9, high: 8.8, context_pl: 'Kobiety dorosłe (domyślnie folikularna)',
+          source_ids: ['mayo_test_fsh'] },
+        { id: 'fsh_default', when: {}, default: true,
+          low: 1.5, high: 12.4, context_pl: 'Dorośli, zakres ogólny',
+          source_ids: ['mayo_test_fsh'] }
+      ],
+      ranges_pl: [
+        'Tanner I: 0,4–6,7; Tanner II: 0,5–8,7; Tanner III: 1,2–11,4; Tanner IV: 0,7–12,8; Tanner V: 1,0–11,6 IU/L',
+        'Dorośli M: 1,5–12,4 IU/L',
+        'K folikularna (3. d.c.): 3,9–8,8; pik owul.: 4,5–22,5; lutealna: 1,8–5,1; postmenop.: 16,7–113,6',
+        'Rezerwa jajnikowa: FSH > 10 (obniżona), > 25 IU/L (bardzo obniżona, 3. d.c.)',
+        'Postmenopauza: > 40 IU/L; Premature ovarian failure: FSH > 25 IU/L < 40 lat'
+      ],
+      notes_pl: 'FSH najczęściej w panelu z LH + estradiol/testosteron. Klin. próg rezerwy jajnikowej: > 10 IU/L w 3. d.c. = obniżona, > 25 = bardzo obniżona, > 40 = menopauza. Hipogonadyzm hipogonadotropowy: FSH < 1,5 IU/L + niski estradiol/testosteron. Hipogonadyzm hipergonadotropowy (niewydolność gonad): FSH ↑↑ + niskie hormony płciowe. AMH ostatecznie bardziej czuły marker rezerwy niż FSH.',
+      sources: ['Mayo Clinic Labs', 'Andersson 1998 (mini-puberty)', 'CALIPER Konforte 2013']
+    },
+
+    {
+      id: 'inhibin_b',
+      label_pl: 'Inhibina B',
+      label_en: 'Inhibin B',
+      aliases: ['inhibinB', 'inhibina-B'],
+      group: 'Oś podwzgórze-przysadka-gonady',
+      mw: null,
+      biologic_units: true,
+      canonical_si: 'pg/mL',
+      clinical_indications: ['hypogonadism_male', 'infertility', 'klinefelter', 'dsd', 'delayed_puberty', 'ovarian_failure', 'menopause', 'ivf_reserve'],
+      units: [
+        { symbol: 'pg/mL', label: 'pg/mL (SI)', kind: 'si',   factor_to_si: 1 },
+        { symbol: 'ng/L',  label: 'ng/L',       kind: 'conv', factor_to_si: 1 }
+      ],
+      precision: 3,
+      reference_ranges_si: [
+        // Mini-puberty u chłopców — kluczowe klinicznie (Andersson 1998)
+        { id: 'inhb_M_minipuberty_peak', when: { sex: 'M', age_min: 0.083, age_max: 0.5, life_stage: 'pediatric' },
+          low: 150, high: 400, context_pl: 'Chłopcy 1–6 miesięcy (mini-puberty, peak ~3–4 mies., mediana 270)',
+          source_ids: ['andersson_inhibin_b_1998'] },
+        { id: 'inhb_M_6_12mo', when: { sex: 'M', age_min: 0.5, age_max: 1, life_stage: 'pediatric' },
+          low: 100, high: 200, context_pl: 'Chłopcy 6–12 miesięcy (spadek z mini-puberty)',
+          source_ids: ['andersson_inhibin_b_1998'] },
+        // Dzieci prepubertal (Mayo uproszczone)
+        { id: 'inhb_M_prepubertal', when: { sex: 'M', age_min: 1, age_max: 9, life_stage: 'pediatric' },
+          low: 70, high: 150, context_pl: 'Chłopcy prepubertal 1–9 lat',
+          source_ids: ['mayo_test_inhibin_b'] },
+        { id: 'inhb_F_prepubertal', when: { sex: 'F', age_min: 1, age_max: 9, life_stage: 'pediatric' },
+          low: 0, high: 50, context_pl: 'Dziewczynki prepubertal 1–9 lat (znacznie niższe niż u M)',
+          source_ids: ['mayo_test_inhibin_b'] },
+        // Tanner-aware (Mayo uproszczone <16/≥16, literatura)
+        { id: 'inhb_M_pubertal', when: { sex: 'M', age_min: 9, age_max: 16, life_stage: 'pediatric' },
+          low: 80, high: 250, context_pl: 'Chłopcy 9–16 lat (pokwitanie, wzrost do plateau dorosłego w Tanner II)',
+          source_ids: ['mayo_test_inhibin_b'] },
+        { id: 'inhb_F_pubertal', when: { sex: 'F', age_min: 9, age_max: 16, life_stage: 'pediatric' },
+          low: 20, high: 90, context_pl: 'Dziewczynki 9–16 lat (pokwitanie)',
+          source_ids: ['mayo_test_inhibin_b'] },
+        // Dorośli
+        { id: 'inhb_male_adult', when: { sex: 'M', life_stage: 'adult' },
+          low: 80, high: 300, context_pl: 'Mężczyźni dorośli (mediana ~170; < 80 = niewydolność jąder; < 40 = azoospermia non-obstructive)',
+          source_ids: ['mayo_test_inhibin_b'] },
+        { id: 'inhb_female_follicular', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'follicular' },
+          low: 20, high: 90, context_pl: 'Kobiety, faza folikularna',
+          source_ids: ['mayo_test_inhibin_b'] },
+        { id: 'inhb_female_ovulation', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'ovulation' },
+          low: 50, high: 200, context_pl: 'Kobiety, pik owulacyjny',
+          source_ids: ['mayo_test_inhibin_b'] },
+        { id: 'inhb_female_luteal', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'luteal' },
+          low: 0, high: 50, context_pl: 'Kobiety, późna faza lutealna',
+          source_ids: ['mayo_test_inhibin_b'] },
+        { id: 'inhb_female_postmeno', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'postmenopause' },
+          low: 0, high: 5, context_pl: 'Kobiety, postmenopauza (poniżej granicy detekcji)',
+          source_ids: ['mayo_test_inhibin_b'] },
+        { id: 'inhb_female_default', when: { sex: 'F', life_stage: 'adult' },
+          low: 20, high: 90, context_pl: 'Kobiety dorosłe (domyślnie folikularna)',
+          source_ids: ['mayo_test_inhibin_b'] },
+        { id: 'inhb_default', when: {}, default: true,
+          low: 80, high: 300, context_pl: 'Dorośli, zakres ogólny (mężczyźni)',
+          source_ids: ['mayo_test_inhibin_b'] }
+      ],
+      ranges_pl: [
+        'Mini-puberty M (1–6 mies.): 150–400 pg/mL (peak ~3–4 mies.)',
+        'Dzieci prepubertal: M 70–150, F 0–50 pg/mL',
+        'Pokwitanie 9–16 lat: M 80–250, F 20–90',
+        'Mężczyźni dorośli: 80–300 (< 80 niewydolność jąder; < 40 azoospermia non-obstructive)',
+        'Kobiety: K folikularna 20–90; pik owul. 50–200; lutealna < 50; postmenop. < 5 pg/mL'
+      ],
+      notes_pl: 'Inhibina B u chłopców = marker funkcji komórek Sertoli i spermatogenezy. W mini-puberty (1–6 mies.) wartości peak (mediana 270 pg/mL, do 400) — kluczowe dla diagnostyki hipogonadyzmu wrodzonego i zespołu Klinefeltera. U kobiet komplementarny marker rezerwy jajnikowej (razem z AMH), spada szybciej z wiekiem niż AMH. Próg M < 80 pg/mL = niewydolność jąder, < 40 = azoospermia non-obstructive.',
+      sources: ['Mayo Clinic Labs', 'Andersson 1998 (mini-puberty)']
+    },
+
+    {
+      id: 'amh',
+      label_pl: 'AMH (hormon antymüllerowski)',
+      label_en: 'Anti-Müllerian Hormone',
+      aliases: ['AMH', 'antimullerian', 'antymüllerowski', 'MIS'],
+      group: 'Oś podwzgórze-przysadka-gonady',
+      mw: null,                     // białko ~140 kDa; factor 7.14 (ng/mL → pmol/L) jest empiryczny z literatury, nie masowy
+      biologic_units: true,
+      canonical_si: 'ng/mL',
+      clinical_indications: ['ivf_reserve', 'ovarian_failure', 'menopause', 'pcos', 'infertility', 'hypogonadism_male', 'klinefelter', 'dsd', 'delayed_puberty'],
+      units: [
+        { symbol: 'ng/mL',  label: 'ng/mL (SI)', kind: 'si',   factor_to_si: 1 },
+        { symbol: 'pmol/L', label: 'pmol/L',     kind: 'conv', factor_to_si: 0.1401 },   // 1 pmol/L = 1/7.14 ng/mL
+        { symbol: 'μg/L',   label: 'μg/L',       kind: 'conv', factor_to_si: 1 }
+      ],
+      precision: 3,
+      reference_ranges_si: [
+        // Kobiety: Mayo age-stratified
+        { id: 'amh_F_under_2', when: { sex: 'F', age_max: 2, life_stage: 'pediatric' },
+          low: 0, high: 4.7, context_pl: 'Dziewczynki < 2 lat',
+          source_ids: ['mayo_test_amh'] },
+        { id: 'amh_F_2_12', when: { sex: 'F', age_min: 2, age_max: 13, life_stage: 'pediatric' },
+          low: 0, high: 8.8, context_pl: 'Dziewczynki 2–12 lat (CALIPER 2022: mediana 3,18–4,16)',
+          source_ids: ['mayo_test_amh', 'bohn_amh_caliper_2022'] },
+        { id: 'amh_F_13_45', when: { sex: 'F', age_min: 13, age_max: 46, life_stage: 'adult' },
+          low: 0.9, high: 9.5, context_pl: 'Kobiety w wieku rozrodczym (13–45 lat). Próg PCOS > 5; niska rezerwa < 1; NFZ IVF ≥ 0,7',
+          source_ids: ['mayo_test_amh', 'eshre_pcos_2023', 'nfz_ivf_2025'] },
+        { id: 'amh_F_over_45', when: { sex: 'F', age_min: 45, life_stage: 'adult' },
+          low: 0, high: 1.0, context_pl: 'Kobiety > 45 lat (perimenopauza/menopauza)',
+          source_ids: ['mayo_test_amh'] },
+        // Mężczyźni
+        { id: 'amh_M_minipuberty', when: { sex: 'M', age_min: 0, age_max: 0.5, life_stage: 'pediatric' },
+          low: 100, high: 200, context_pl: 'Chłopcy 0–6 miesięcy (mini-puberty, bardzo wysoka — marker komórek Sertoli)',
+          source_ids: ['mayo_test_amh'] },
+        { id: 'amh_M_pediatric', when: { sex: 'M', age_min: 0.5, age_max: 18, life_stage: 'pediatric' },
+          low: 5, high: 100, context_pl: 'Chłopcy 6 mies. – 18 lat (spadek od pokwitania)',
+          source_ids: ['mayo_test_amh'] },
+        { id: 'amh_M_adult', when: { sex: 'M', life_stage: 'adult' },
+          low: 1.5, high: 10, context_pl: 'Mężczyźni dorośli (stabilne w wieku rozrodczym, spadek z wiekiem)',
+          source_ids: ['mayo_test_amh'] },
+        { id: 'amh_default', when: {}, default: true,
+          low: 0.9, high: 9.5, context_pl: 'Dorośli (zakres ogólny kobiet rozrodczych)',
+          source_ids: ['mayo_test_amh'] }
+      ],
+      ranges_pl: [
+        'Kobiety < 2 lat: < 4,7 ng/mL; 2–12 lat: < 8,8',
+        'Kobiety 13–45 lat (rozrodczy): 0,9–9,5',
+        'Próg PCOS: > 5 ng/mL (ESHRE 2023 jako wspomagający)',
+        'Niska rezerwa jajnikowa: < 1,0 ng/mL (kobiety > 35 lat)',
+        'Próg NFZ IVF: ≥ 0,7 ng/mL',
+        'Kobiety > 45 lat: < 1,0 ng/mL',
+        'Chłopcy mini-puberty (0–6 mies.): 100–200 ng/mL',
+        'Mężczyźni dorośli: 1,5–10 ng/mL'
+      ],
+      notes_pl: 'AMH = najczulszy marker rezerwy jajnikowej, stabilny w cyklu menstruacyjnym (w przeciwieństwie do FSH). U kobiet wartości peak ~25 r.ż., stopniowy spadek. U chłopców w mini-puberty (0–6 mies.) bardzo wysokie wartości (marker komórek Sertoli, sygnał zachowanych jąder). Konwersja: ng/mL × 7,14 = pmol/L. UWAGA: Beckman Gen II i picoAMH dają różne wyniki — sprawdź assay laboratorium. ESHRE 2023 PCOS: AMH > 5 ng/mL może zastąpić USG morfologii jajników w kryteriach Rotterdamskich.',
+      sources: ['Mayo Clinic Labs', 'CALIPER Bohn 2022 (PMID 35760370)', 'ESHRE 2023 PCOS', 'NFZ IVF']
+    },
+
+    {
+      id: 'shbg',
+      label_pl: 'SHBG (globulina wiążąca hormony płciowe)',
+      label_en: 'Sex Hormone-Binding Globulin',
+      aliases: ['SHBG', 'TeBG'],
+      group: 'Oś podwzgórze-przysadka-gonady',
+      mw: 90000,
+      canonical_si: 'nmol/L',
+      clinical_indications: ['hypogonadism_male', 'hypogonadism_female', 'pcos', 'hirsutism', 'andropause', 'hyperthyroidism', 'pregnancy', 'metabolic_syndrome'],
+      units: [
+        { symbol: 'nmol/L', label: 'nmol/L (SI)', kind: 'si',   factor_to_si: 1 },
+        { symbol: 'μg/dL',  label: 'μg/dL',        kind: 'conv', factor_to_si: 0.347 }
+      ],
+      precision: 3,
+      reference_ranges_si: [
+        // Pediatryczne Tanner (Elmlinger 2005)
+        { id: 'shbg_tanner1', when: { tanner: 1 },
+          low: 60, high: 100, context_pl: 'Tanner I (prepubertal, mediana ~78 nmol/L)',
+          source_ids: ['elmlinger_shbg_2005'] },
+        { id: 'shbg_M_tanner5', when: { sex: 'M', tanner: 5 },
+          low: 18, high: 38, context_pl: 'Chłopcy Tanner V (znaczny spadek w pokwitaniu)',
+          source_ids: ['elmlinger_shbg_2005'] },
+        { id: 'shbg_F_tanner5', when: { sex: 'F', tanner: 5 },
+          low: 32, high: 60, context_pl: 'Dziewczynki Tanner V',
+          source_ids: ['elmlinger_shbg_2005'] },
+        // Dorośli (Mayo)
+        { id: 'shbg_male_adult', when: { sex: 'M', life_stage: 'adult' },
+          low: 10, high: 57, context_pl: 'Mężczyźni dorośli',
+          source_ids: ['mayo_test_shbg', 'elmlinger_shbg_2005'] },
+        { id: 'shbg_female_adult', when: { sex: 'F', life_stage: 'adult' },
+          low: 18, high: 144, context_pl: 'Kobiety dorosłe, nieciężarne (znacznie wyższe niż u M, estrogen-stymulowane)',
+          source_ids: ['mayo_test_shbg', 'elmlinger_shbg_2005'] },
+        { id: 'shbg_default', when: {}, default: true,
+          low: 10, high: 144, context_pl: 'Dorośli, zakres ogólny',
+          source_ids: ['mayo_test_shbg'] }
+      ],
+      ranges_pl: [
+        'Tanner I (prepubertal): mediana ~78 nmol/L (60–100)',
+        'Tanner V: M 18–38 (znaczny spadek), F 32–60 nmol/L',
+        'Mężczyźni dorośli: 10–57 nmol/L',
+        'Kobiety dorosłe nieciężarne: 18–144 nmol/L',
+        'Niskie SHBG u M (Mayo cutoff < 13,3): zespół metaboliczny / insulinooporność',
+        'Niskie SHBG u K ≤ 46 lat (< 18,2): hiperandrogenizm/PCOS',
+        'Wysokie SHBG: hipertyreoza, ciąża, estrogeny terapeutyczne, doustna antykoncepcja'
+      ],
+      notes_pl: 'SHBG = transporter testosteronu i estradiolu. Wyższe u kobiet (estrogen-stymulowane). Klinicznie używany do obliczenia wolnego/biodostępnego testosteronu (Vermeulen formula): wymaga total T + SHBG + albumina. Niskie SHBG u M ostrzeżenie metaboliczne (zespół metaboliczny, insulinooporność, otyłość trzewna, ↑ ryzyko cukrzycy). W ciąży SHBG rośnie 3–10× przez estrogeny.',
+      sources: ['Mayo Clinic Labs', 'Elmlinger 2005']
     }
   ];
 
@@ -556,7 +2741,9 @@
       }
       return out;
     },
-    version: '1.0.0'
+    sources: function () { return SOURCES; },
+    findSource: function (id) { return SOURCES[id] || null; },
+    version: '2.0.0'
   };
 
   if (typeof module !== 'undefined' && module.exports) {

@@ -133,6 +133,10 @@
       { id: 'weight',   key: 'weight' },
       { id: 'height',   key: 'height' },
       { id: 'sex',      key: 'sex' },
+      // Etap dojrzewania (Tanner 1–5). Pole opcjonalne; gdy puste, podstrony
+      // medyczne (np. przelicznik jednostek laboratoryjnych) mogą wnioskować
+      // o etapie z samego wieku lub poprosić użytkownika o uzupełnienie.
+      { id: 'tannerStage', key: 'tannerStage' },
       // Zaawansowane pola dotyczące wzrostu rodziców. Przechowujemy je jako
       // wartości tekstowe (tak jak inne pola liczbowo‑tekstowe) i wstawiamy
       // tylko wtedy, gdy pole jest puste (analogicznie do pozostałych pól).

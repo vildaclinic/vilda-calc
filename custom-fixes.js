@@ -3508,9 +3508,10 @@ function vildaCustomHasHtmlContent(element) {
 // Co synchronizujemy:
 //   shared.age (liczba) → #age (tylko jeśli ≤ 18)
 //   shared.sex ('M'/'F') → #sex ('boy'/'girl')
+//   shared.tannerStage (1–5) → #stage ('pre'/'pub'/'full')
 //   [pochodna] age ≤ 18  → #groupToggle (checked) + #childFields (visible)
 //
-// Co pomijamy: #stage (etap dojrzewania), #glucose, #insulin — nie ma w shared.
+// Co pomijamy: #glucose, #insulin — to dane pomiarowe HOMA, nie pacjenta.
 (function () {
   if (typeof window === 'undefined') return;
   var path = window.location.pathname || '';
@@ -3518,6 +3519,9 @@ function vildaCustomHasHtmlContent(element) {
 
   // Mapowanie płci: format shared → format HOMA
   var SEX_MAP = { M: 'boy', F: 'girl' };
+  // Mapowanie etapu dojrzewania: Tanner 1–5 → HOMA 3 grupy.
+  // Tanner II–IV trafiają do "pub" (pokwitanie), V do "full" (plateau dojrzałości).
+  var TANNER_MAP = { '1': 'pre', '2': 'pub', '3': 'pub', '4': 'pub', '5': 'full' };
 
   function applySharedPatientToHoma() {
     try {
@@ -3564,7 +3568,18 @@ function vildaCustomHasHtmlContent(element) {
         changed = true;
       }
 
-      // 4. Przelicz HOMA jeśli wypełniono jakiekolwiek pole pacjenta
+      // 4. Ustaw etap dojrzewania z konwersją Tanner 1–5 → pre/pub/full —
+      //    tylko gdy pole jest puste, żeby nie nadpisywać ręcznego wyboru.
+      var stageEl = document.getElementById('stage');
+      var sharedTanner = shared.tannerStage != null ? String(shared.tannerStage).trim() : '';
+      var mappedStage = sharedTanner ? TANNER_MAP[sharedTanner] : '';
+      if (stageEl && mappedStage && !stageEl.value) {
+        stageEl.value = mappedStage;
+        try { stageEl.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+        changed = true;
+      }
+
+      // 5. Przelicz HOMA jeśli wypełniono jakiekolwiek pole pacjenta
       if (changed && typeof window.computeHoma === 'function') {
         try { window.computeHoma(true); } catch (_) {}
       }
