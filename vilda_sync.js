@@ -359,20 +359,30 @@
           }
           if (fetchStResp.ok) {
             var fetchStData = await fetchStResp.json();
-            state.localEtag = fetchStData.etag;
+            state.localEtag = fetchStData.etag || null;
             saveSyncState(slotId, state);
           }
+        }
+
+        // Brak ETag = slot "identity-only" (zarejestrowany bez danych, np.
+        // użytkownik najpierw odrzucił synchronizację, a włączył ją później).
+        // Pierwszy upload na taki slot wykonujemy bezwarunkowo — bez nagłówka
+        // If-Match. Worker rozpozna brak bloba i przyjmie go jako wpis
+        // początkowy. Dla slotów z danymi If-Match nadal zapewnia optimistic
+        // locking (ochrona przed cichym nadpisaniem zmian z innego urządzenia).
+        var putHeaders = {
+          'Content-Type':  'application/octet-stream',
+          'Authorization': 'Bearer ' + authToken
+        };
+        if (state.localEtag) {
+          putHeaders['If-Match'] = '"' + state.localEtag + '"';
         }
 
         var putResp = await fetchWithTimeout(
           workerUrl + '/v1/slots/' + slotId + '/blob',
           {
             method:  'PUT',
-            headers: {
-              'Content-Type':  'application/octet-stream',
-              'Authorization': 'Bearer ' + authToken,
-              'If-Match':      '"' + state.localEtag + '"'
-            },
+            headers: putHeaders,
             body: encBlob
           }
         );
@@ -534,6 +544,17 @@
       }
       if (blobResp.status === 401) {
         throw syncError('VildaSync: błąd uwierzytelnienia przy pobieraniu bloba.', 'AUTH_FAILED');
+      }
+      if (blobResp.status === 404) {
+        // Slot istnieje w metadanych, ale nie ma jeszcze bloba danych w R2.
+        // Dzieje się tak dla slotu "identity-only" — użytkownik włączył
+        // synchronizację po fakcie i jeszcze nic nie wysłał na serwer.
+        // To NIE jest błąd: nie ma po prostu czego pobierać. Kończymy pull
+        // bez wyjątku, żeby syncFull() mógł przejść dalej do syncPush()
+        // i wykonać pierwsze wysłanie danych.
+        var noRemoteBlobResult = { action: 'no-remote-blob' };
+        emit(syncCompleteListeners, { operation: 'pull', result: noRemoteBlobResult });
+        return noRemoteBlobResult;
       }
       if (!blobResp.ok) {
         throw syncError(
