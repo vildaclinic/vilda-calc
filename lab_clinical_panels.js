@@ -932,29 +932,47 @@
     },
 
     hyperprolactinemia: {
-      summary: 'Potwierdzić oznaczenie (2× pomiar). Wykluczyć makroprolaktynę, hipotyrozę, ciążę i leki. > 100 ng/mL → MRI przysadki.',
+      summary: 'Hiperprolaktynemia — podwyższone stężenie prolaktyny. Pojedynczy pomiar przy prawidłowym pobraniu (bez nadmiernego stresu, bez stymulacji piersi) zwykle wystarcza do rozpoznania; przy wartościach granicznych lub podejrzeniu wpływu stresu — powtórzyć. Przyczyny: fizjologiczne (ciąża, laktacja, stres), farmakologiczne (neuroleptyki, metoklopramid, leki przeciwdepresyjne, werapamil, estrogeny, opioidy — szczegółowy wywiad lekowy!), patologiczne (prolactinoma, inne guzy okolicy podwzgórzowo-przysadkowej z efektem przerwania szypuły, niedoczynność tarczycy, przewlekła choroba nerek, makroprolaktynemia). Algorytm: (1) potwierdzenie + wykluczenie częstych przyczyn; (2) MRI przysadki gdy hiperprolaktynemia niejasnego pochodzenia; (3) ocena funkcji przysadki przy makrogruczolaku; (4) pułapki interpretacyjne. Stopień podwyższenia PRL koreluje z prawdopodobieństwem prolactinoma: > 500 ng/mL jest diagnostyczne dla makroprolactinoma; 250–500 ng/mL zwykle wskazuje na prolactinoma (mikro lub makro); umiarkowane podwyższenie (25–100 ng/mL) — częściej efekt przerwania szypuły, leki lub mikroprolactinoma.',
       sections: [
-        { name: 'Panel podstawowy',
+        { name: 'Potwierdzenie i wykluczenie częstych przyczyn',
           tests: [
-            { id: 'prolactin', note: '2× pomiar, rano, na czczo, bez stymulacji piersi' },
-            EXT.macroprolactin,
-            { id: 'tsh' }, { id: 'ft4' },
-            EXT.bhcg,
-            EXT.egfr
+            { id: 'prolactin', note: 'Pojedynczy pomiar przy prawidłowym pobraniu wystarcza (rano, bez nadmiernego stresu venepunkcji, bez wcześniejszej stymulacji piersi). Przy wartościach granicznych lub podejrzeniu wpływu stresu — powtórzyć.', description: 'Prolaktyna — podstawowy parametr rozpoznania. Wg Endocrine Society 2011 pojedynczy pomiar przekraczający górną granicę normy potwierdza rozpoznanie, o ile próbka została pobrana bez nadmiernego stresu venepunkcji. Pobranie: rano, w spoczynku; unikać wcześniejszej stymulacji piersi i intensywnego wysiłku. Powtórzenie wskazane przy wartościach granicznych lub gdy podejrzewa się stres-zależny wzrost. Stopień podwyższenia ma wartość lokalizacyjną (wg Endocrine Society 2011): PRL > 500 ng/mL jest diagnostyczne dla makroprolactinoma; 250–500 ng/mL zwykle wskazuje na prolactinoma (mikro lub makro); 100–250 ng/mL — możliwe prolactinoma, ale też leki lub inne przyczyny; umiarkowane podwyższenie 25–100 ng/mL — częściej efekt przerwania szypuły przysadki, leki, mikroprolactinoma lub hiperprolaktynemia idiopatyczna.' },
+            { ext: 'macroprolactin', label: 'Makroprolaktyna (precypitacja PEG)', note: 'Wykluczenie pseudohiperprolaktynemii — szczególnie przy bezobjawowej hiperprolaktynemii.', description: 'Makroprolaktyna — biologicznie nieaktywny kompleks prolaktyny z immunoglobuliną (PRL-IgG) o dużej masie cząsteczkowej. Jest wykrywana przez immunoassaye jako „prolaktyna", dając fałszywie podwyższony wynik (pseudohiperprolaktynemia) — przy braku objawów klinicznych hiperprolaktynemii. Oznaczenie metodą precypitacji glikolem polietylenowym (PEG): jeśli po precypitacji odzysk prolaktyny monomerycznej jest niski (< ~40%), wynik sugeruje przewagę makroprolaktyny. Wskazanie: szczególnie przy bezobjawowej hiperprolaktynemii (brak mlekotoku, zaburzeń miesiączkowania, hipogonadyzmu) — pozwala uniknąć zbędnego MRI i leczenia.' },
+            { id: 'tsh', note: 'Wykluczenie pierwotnej niedoczynności tarczycy — podwyższone TRH stymuluje wydzielanie prolaktyny.' },
+            { ext: 'bhcg', label: 'β-hCG (test ciążowy)', note: 'Wykluczenie ciąży — fizjologicznej przyczyny hiperprolaktynemii u kobiet w wieku rozrodczym.', description: 'β-hCG (test ciążowy) — wykluczenie ciąży jako fizjologicznej przyczyny hiperprolaktynemii u kobiet w wieku rozrodczym. W ciąży prolaktyna fizjologicznie rośnie (do ~200–400 ng/mL pod koniec ciąży) pod wpływem estrogenów — to norma, nie patologia. Test ciążowy należy wykonać przed dalszą diagnostyką hiperprolaktynemii i przed badaniem MRI.' },
+            { ext: 'egfr', label: 'Kreatynina + eGFR', note: 'Wykluczenie przewlekłej choroby nerek — upośledzony klirens nerkowy prolaktyny prowadzi do jej kumulacji.', description: 'Kreatynina z obliczeniem eGFR — wykluczenie przewlekłej choroby nerek jako przyczyny hiperprolaktynemii. W zaawansowanej niewydolności nerek upośledzony jest klirens nerkowy prolaktyny, co prowadzi do jej kumulacji w surowicy; dodatkowo zaburzona jest regulacja podwzgórzowa wydzielania prolaktyny. Hiperprolaktynemia jest częsta u pacjentów dializowanych.' }
           ]
         },
-        { name: 'Lokalizacja (jeśli > 100 ng/mL lub utrzymujące się)',
+        { name: 'Lokalizacja (gdy wykluczono przyczyny wtórne)',
           tests: [
-            EXT.pituitary_mri,
-            EXT.eye_exam,
-            { id: 'igf1' }, { id: 'cortisol' },
-            { id: 'lh' }, { id: 'fsh' },
-            { id: 'testosterone_total', note: 'Mężczyźni' },
-            { id: 'estradiol', note: 'Kobiety' }
+            { ext: 'pituitary_mri_prl', label: 'MRI przysadki', note: 'Wskazane u każdego pacjenta z hiperprolaktynemią niejasnego pochodzenia — po wykluczeniu przyczyn fizjologicznych, farmakologicznych i wtórnych.', description: 'MRI przysadki mózgowej z kontrastem (gadolinium) — wskazane u każdego pacjenta z hiperprolaktynemią niejasnego pochodzenia, po wykluczeniu przyczyn fizjologicznych (ciąża), farmakologicznych (leki) i wtórnych (niedoczynność tarczycy, niewydolność nerek). Różnicuje: mikroprolactinoma (< 10 mm), makroprolactinoma (≥ 10 mm) oraz inne zmiany okolicy podwzgórzowo-przysadkowej dające „efekt przerwania szypuły" (stalk effect) — guzy uciskające szypułę przysadki przerywają dopaminergiczne hamowanie wydzielania prolaktyny, co daje umiarkowaną hiperprolaktynemię (zwykle < 100–150 ng/mL). UWAGA: u zdrowej populacji ~10% ma incidentaloma przysadki — wynik MRI należy korelować ze stopniem podwyższenia PRL i obrazem klinicznym.' },
+            { ext: 'eye_exam_prl', label: 'Badanie pola widzenia (perymetria)', note: 'Gdy makrogruczolak — ocena ucisku skrzyżowania wzrokowego (klasycznie niedowidzenie połowicze dwuskroniowe).', description: 'Badanie pola widzenia (perymetria) — wskazane gdy MRI ujawni makrogruczolak przysadki (≥ 10 mm), zwłaszcza z szerzeniem się nadsiodłowym. Makrogruczolak uciskający skrzyżowanie wzrokowe powoduje klasycznie niedowidzenie połowicze dwuskroniowe (ubytek skroniowych części pól widzenia obu oczu). Perymetria pozwala wykryć i monitorować ten ubytek; jego obecność jest wskazaniem do pilniejszego leczenia. Towarzyszące badanie dna oka ocenia tarczę nerwu wzrokowego.' }
+          ]
+        },
+        { name: 'Ocena funkcji przysadki (gdy makrogruczolak)',
+          tests: [
+            { id: 'ft4', note: 'Ocena osi tarczycowej — wtórna niedoczynność tarczycy przy ucisku przysadki przez makrogruczolak.' },
+            { id: 'igf1', note: 'Ocena osi somatotropowej — niedobór GH przy ucisku przysadki.' },
+            { id: 'cortisol', note: 'Ocena osi nadnerczowej — wtórna niedoczynność kory nadnerczy przy makrogruczolaku jest stanem zagrażającym życiu, wymaga pilnej oceny.' },
+            { id: 'lh', note: 'Ocena osi gonadalnej — hipogonadyzm hipogonadotropowy (wtórny do hiperprolaktynemii oraz do ucisku przysadki).' },
+            { id: 'fsh', note: 'Oznaczany razem z LH przy ocenie osi gonadalnej.' },
+            { id: 'testosterone_total', note: 'Mężczyźni — ocena hipogonadyzmu wtórnego do hiperprolaktynemii i/lub ucisku przysadki.' },
+            { id: 'estradiol', note: 'Kobiety — ocena hipogonadyzmu wtórnego do hiperprolaktynemii i/lub ucisku przysadki.' }
+          ]
+        },
+        { name: 'Pułapki interpretacyjne',
+          tests: [
+            { ext: 'hook_effect', label: 'Efekt haka (hook effect) — uwaga interpretacyjna', note: 'Przy makrogruczolaku przysadki z umiarkowanie podwyższoną lub prawidłową PRL → poprosić laboratorium o oznaczenie z rozcieńczeniem próbki.', description: 'Efekt haka (high-dose hook effect) — pułapka diagnostyczna immunoassayów. Przy bardzo wysokim stężeniu prolaktyny (duże makroprolactinoma) nadmiar antygenu wysyca przeciwciała testu, co paradoksalnie daje FAŁSZYWIE NISKI lub tylko umiarkowanie podwyższony wynik. Sytuacja podejrzana: MRI ujawnia duży makrogruczolak przysadki, a oznaczona PRL jest tylko umiarkowanie podwyższona lub prawidłowa (niespójność obrazu klinicznego z wynikiem). Postępowanie: poprosić laboratorium o powtórzenie oznaczenia z rozcieńczeniem próbki (np. 1:100) — po rozcieńczeniu ujawnia się prawdziwa, bardzo wysoka wartość PRL. Nowsze testy są mniej podatne na ten efekt, ale pułapka nadal występuje.' }
           ]
         }
       ],
-      guideline: 'Endocrine Society 2011 (Melmed i wsp.) / PTE 2018'
+      guideline: 'Endocrine Society 2011 (Melmed i wsp.) / Pituitary Society 2023 (Petersenn i wsp.) / PTE',
+      sources: [
+        'Melmed S, Casanueva FF, Hoffman AR, et al. Diagnosis and treatment of hyperprolactinemia: an Endocrine Society clinical practice guideline. J Clin Endocrinol Metab. 2011;96(2):273-288.',
+        'Petersenn S, Fleseriu M, Casanueva FF, et al. Diagnosis and management of prolactin-secreting pituitary adenomas: a Pituitary Society international Consensus Statement. Nat Rev Endocrinol. 2023;19(12):722-740.',
+        'Bolanowski M, Zgliczyński W, Kos-Kudła B i wsp. Rekomendacje Polskiego Towarzystwa Endokrynologicznego dotyczące diagnostyki i leczenia guzów przysadki. Endokrynologia Polska.',
+        'Vilar L, Vilar CF, Lyra R, Naves LA. Pitfalls in the diagnostic evaluation of hyperprolactinemia. Neuroendocrinology. 2019;109(1):7-19.'
+      ]
     },
 
     amenorrhea: {
@@ -1111,14 +1129,14 @@
             { id: 'lh', note: 'Wzorzec: ↑LH + ↓testosteron → hipogonadyzm pierwotny; ↓/prawidłowy LH + ↓testosteron → hipogonadyzm wtórny; ↑LH + ↑testosteron → oporność na androgeny lub guz wydzielający LH.' },
             { id: 'fsh', note: 'Oznaczany razem z LH. Wysoki FSH+LH przy niskim testosteronie → hipogonadyzm pierwotny (m.in. zespół Klinefeltera).' },
             { id: 'prolactin', note: 'Rzadko bezpośrednia przyczyna ginekomastii; podwyższona prolaktyna → hiperprolaktynemia prowadząca do wtórnego hipogonadyzmu.' },
-            { ext: 'bhcg', label: 'β-hCG (ilościowy)', note: 'Podwyższony → guz germinalny jądra lub guz pozagonadalny hCG-produkujący (płuco, wątroba) — wymaga pilnego obrazowania.', description: 'β-hCG (ilościowy) w diagnostyce ginekomastii — podwyższone stężenie wskazuje na guz produkujący hCG. hCG ma słabe działanie podobne do LH — stymuluje komórki Leydiga jądra do produkcji testosteronu, ale również nasila aromatyzację do estradiolu, co prowadzi do ginekomastii. Źródła: guzy germinalne jądra (najczęściej — nieseminomalne guzy zarodkowe), rzadziej guzy pozagonadalne hCG-produkujące (rak płuca, wątroby, nowotwory zaśródpiersiowe). Każdy podwyższony β-hCG u mężczyzny z ginekomastią wymaga pilnego USG jąder oraz, przy ujemnym USG, poszukiwania guza pozagonadalnego (TK klatki piersiowej i jamy brzusznej).' }
+            { ext: 'bhcg', label: 'β-hCG (ilościowy)', note: 'Podwyższony → guz germinalny jądra lub guz pozagonadalny hCG-produkujący (płuco, wątroba) — wymaga pilnego obrazowania.', description: 'β-hCG (ilościowy) w diagnostyce ginekomastii — podwyższone stężenie wskazuje na guz produkujący hCG. hCG ma słabe działanie podobne do LH — stymuluje komórki Leydiga jądra do produkcji testosteronu, ale również nasila aromatyzację do estradiolu, co prowadzi do ginekomastii. Źródła: guzy germinalne jądra (najczęściej — nieseminomalne guzy zarodkowe), rzadziej guzy pozagonadalne hCG-produkujące (rak płuca, wątroby, guzy zarodkowe śródpiersia). Każdy podwyższony β-hCG u mężczyzny z ginekomastią wymaga pilnego USG jąder oraz, przy ujemnym USG, poszukiwania guza pozagonadalnego (TK klatki piersiowej i jamy brzusznej).' }
           ]
         },
         { name: 'Wykluczenie przyczyn ogólnoustrojowych',
           tests: [
             { id: 'tsh', note: 'Wykluczenie nadczynności tarczycy — zwiększa obwodową aromatyzację androgenów do estrogenów oraz stężenie SHBG.' },
             { ext: 'liver_gyneco', label: 'ALAT, ASPAT (funkcja wątroby)', note: 'Marskość wątroby zwiększa obwodową aromatyzację androgenów do estrogenów — częsta przyczyna ginekomastii.', description: 'Aminotransferazy (ALAT, ASPAT) — ocena funkcji wątroby w diagnostyce ginekomastii. Marskość wątroby jest częstą przyczyną ginekomastii patologicznej: uszkodzona wątroba nasila obwodową aromatyzację androgenów do estrogenów oraz zmniejsza klirens estrogenów, dodatkowo wzrasta SHBG (wiąże preferencyjnie testosteron), co przesuwa równowagę w kierunku przewagi estrogenowej. Przy nieprawidłowych wynikach lub klinicznych cechach choroby wątroby — pełna diagnostyka hepatologiczna.' },
-            EXT.egfr
+            { ext: 'egfr', label: 'Kreatynina + eGFR', note: 'Przewlekła choroba nerek jest przyczyną ginekomastii — poprzez zaburzenia osi podwzgórze-przysadka-gonady.', description: 'Kreatynina z obliczeniem eGFR — ocena funkcji nerek w diagnostyce ginekomastii. Przewlekła choroba nerek (zwłaszcza w stadium zaawansowanym oraz u pacjentów dializowanych) jest przyczyną ginekomastii poprzez zaburzenia osi podwzgórze-przysadka-gonady: obniżone stężenie testosteronu, podwyższony LH (oporność komórek Leydiga oraz upośledzony klirens nerkowy gonadotropin), hiperprolaktynemia wynikająca z upośledzonego klirensu nerkowego prolaktyny. Efektem jest przewaga działania estrogenowego nad androgenowym. Ginekomastia bywa też obserwowana po rozpoczęciu dializoterapii — mechanizmem zbliżonym do ginekomastii z ponownego odżywienia (refeeding gynecomastia).' }
           ]
         },
         { name: 'Obrazowanie (zależnie od wzorca hormonalnego)',
