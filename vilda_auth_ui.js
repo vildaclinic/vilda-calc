@@ -3434,13 +3434,48 @@
         text:  'Czekam na zatwierdzenie przez telefon…'
       });
 
+      // ── Fallback ręczny: token jako tekst ──
+      // Gdy urządzenie skanujące (to już zalogowane) nie ma kamery, użytkownik
+      // może skopiować ten token i wkleić go ręcznie w polu „wklej token QR
+      // ręcznie" w Ustawieniach → „Zatwierdź logowanie QR". Token NIE jest
+      // sekretem sam w sobie — bez klucza prywatnego tego urządzenia jest
+      // bezużyteczny (patrz SYNC-QR.md, model bezpieczeństwa).
+      const manualNote = el('p', {
+        class: 'vilda-auth-side-note',
+        style: 'text-align:center;margin:10px 0 4px;',
+        text:  'Drugie urządzenie nie ma kamery? Skopiuj ten token i wklej go ręcznie:'
+      });
+      const tokenBox = el('div', {
+        style: 'font-family:monospace;font-size:0.82rem;word-break:break-all;' +
+               'user-select:all;-webkit-user-select:all;text-align:center;' +
+               'background:rgba(0,0,0,.05);border-radius:8px;padding:8px 10px;' +
+               'margin:0 auto;max-width:280px;',
+        text:  transferToken
+      });
+      const copyTokenBtn = el('button', {
+        class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small',
+        type:  'button',
+        text:  'Kopiuj token',
+        style: 'display:block;margin:6px auto 0;',
+        onclick: async function () {
+          try {
+            if (global.navigator && global.navigator.clipboard) {
+              await global.navigator.clipboard.writeText(transferToken);
+              copyTokenBtn.textContent = 'Skopiowano ✓';
+              setTimeout(function () { copyTokenBtn.textContent = 'Kopiuj token'; }, 2000);
+            }
+          } catch (e) { logWarn('clipboard write failed: ' + e); }
+        }
+      });
+      const manualWrap = el('div', { style: 'margin:4px 0 0;' }, [manualNote, tokenBox, copyTokenBtn]);
+
       const back = el('button', {
         class: 'vilda-auth-btn vilda-auth-btn-ghost', type: 'button', text: '← Wróć',
         onclick: function () { stopPolling(); showStartupScreen(); }
       });
 
       open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
-        title, sub, qrWrap, timerEl, statusEl,
+        title, sub, qrWrap, timerEl, manualWrap, statusEl,
         el('div', { class: 'vilda-auth-actions' }, [back])
       ]));
 
@@ -3467,6 +3502,7 @@
         if (timeLeft <= 0) {
           stopPolling();
           statusEl.textContent = '⏰ Kod wygasł. Wróć i wygeneruj nowy.';
+          manualWrap.style.display = 'none'; // token nieaktualny — ukryj fallback ręczny
           back.textContent = 'Wygeneruj nowy kod';
           back.onclick = function () { stopPolling(); showQRLoginScreen(); };
         }
