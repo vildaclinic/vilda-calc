@@ -679,74 +679,92 @@
      * ═══════════════════════════════════════════════════════════════ */
 
     hypogonadism_male: {
-      summary: 'Algorytm 2-stopniowy: 2× testosteron poranny (rano, na czczo) — jeśli < 9,2 nmol/L → dalsza diagnostyka. LH/FSH różnicują pierwotne vs wtórne.',
+      summary: 'Rozpoznanie wymaga objawów klinicznych ORAZ biochemicznie potwierdzonego niedoboru testosteronu: 2× testosteron całkowity pobrany rano (7:00–11:00), na czczo, w stanie stabilnym. Próg rozpoznania wg Endocrine Society 2018 (Bhasin) — testosteron całkowity < 9,2 nmol/L (264 ng/dL); przy wartościach granicznych (8–12 nmol/L) lub nieprawidłowej SHBG oblicza się testosteron wolny. Po potwierdzeniu niedoboru LH i FSH różnicują postać pierwotną (hipergonadotropową, ↑LH/FSH — uszkodzenie jąder) od wtórnej (hipogonadotropowej, ↓/prawidłowe LH/FSH — przyczyna przysadkowo-podwzgórzowa). Przed włączeniem testosteronoterapii obowiązkowa ocena hematokrytu, a u mężczyzn ≥ 40. r.ż. także gruczołu krokowego (PSA + DRE).',
       sections: [
-        { name: 'Panel podstawowy',
+        { name: 'Potwierdzenie niedoboru testosteronu',
           tests: [
-            { id: 'testosterone_total', note: 'Rano (7–10), 2× potwierdzenie; próg < 264 ng/dL (9,2 nmol/L)' },
-            { id: 'shbg' },
-            { id: 'testosterone_free' },
-            { id: 'lh' }, { id: 'fsh' },
-            { id: 'prolactin' }
+            { id: 'testosterone_total', note: 'Pobranie rano (7:00–11:00), na czczo, 2× potwierdzenie w odrębnych dniach, w stanie stabilnym. Próg rozpoznania (Endocrine Society 2018): < 9,2 nmol/L (264 ng/dL).', description: 'Testosteron całkowity — podstawowy parametr rozpoznania hipogonadyzmu męskiego. Pobranie: rano (7:00–11:00, szczyt rytmu dobowego), na czczo, wymagane DWUKROTNE potwierdzenie w odrębnych dniach. Próg rozpoznania wg Endocrine Society 2018 (Bhasin): testosteron całkowity < 9,2 nmol/L (264 ng/dL) u mężczyzny z objawami. UWAGA: testosteron jest przejściowo obniżony w chorobach ostrych, po dużym wysiłku, przy deprywacji snu oraz w otyłości (obniżona SHBG) — pomiar należy wykonać w stanie stabilnym, a wartości graniczne zweryfikować obliczeniem testosteronu wolnego. Metoda referencyjna: LC-MS/MS.' },
+            { id: 'shbg', note: 'Niezbędna do obliczenia testosteronu wolnego/biodostępnego. Obniżona w otyłości, cukrzycy typu 2 i niedoczynności tarczycy; podwyższona z wiekiem, w nadczynności tarczycy i chorobach wątroby.' },
+            { id: 'testosterone_free', note: 'Oznaczać gdy testosteron całkowity graniczny (8–12 nmol/L) lub SHBG nieprawidłowa. Preferowane obliczenie wzorem Vermeulena (testosteron całkowity + SHBG + albumina) — bezpośrednie immunoassaye są niezalecane.', description: 'Testosteron wolny — biologicznie aktywna frakcja (~2% testosteronu całkowitego), niezwiązana z SHBG ani albuminą. Wskazany gdy testosteron całkowity jest w strefie granicznej (8–12 nmol/L) lub gdy SHBG jest nieprawidłowa (co rozłącza testosteron całkowity od rzeczywistej aktywności androgenowej). Preferowana metoda: obliczenie wzorem Vermeulena z testosteronu całkowitego, SHBG i albuminy (kalkulatory online) lub bezpośredni pomiar metodą dializy równowagowej z LC-MS/MS. Bezpośrednie immunoassaye testosteronu wolnego są niezalecane (niedokładne). Wartość progowa zależy od metody — orientacyjnie < ~225 pmol/L wspiera rozpoznanie.' }
           ]
         },
-        { name: 'Etiologia (wtórne — przysadkowe)',
+        { name: 'Różnicowanie: pierwotny vs wtórny',
           tests: [
-            { id: 'igf1' },
-            { id: 'tsh' }, { id: 'ft4' },
-            EXT.pituitary_mri,
-            EXT.serum_iron,
-            EXT.copper_cerulo
+            { id: 'lh', note: '↑LH → hipogonadyzm pierwotny (uszkodzenie jąder); ↓/prawidłowe LH przy niskim testosteronie → hipogonadyzm wtórny (przysadkowo-podwzgórzowy).' },
+            { id: 'fsh', note: 'Oznaczany razem z LH. Wysoki FSH+LH przy niskim testosteronie → hipogonadyzm pierwotny (m.in. zespół Klinefeltera). Izolowany podwyższony FSH → uszkodzenie nabłonka plemnikotwórczego.' },
+            { id: 'prolactin', note: 'Wykluczenie hiperprolaktynemii — częsta odwracalna przyczyna hipogonadyzmu wtórnego (hamuje pulsacyjne wydzielanie GnRH). Szczególnie gdy niski testosteron przy niskim/prawidłowym LH.' }
           ]
         },
-        { name: 'Etiologia (pierwotne)',
+        { name: 'Etiologia hipogonadyzmu pierwotnego (hipergonadotropowego)',
           tests: [
             EXT.karyotype,
-            EXT.yq_microdel,
-            EXT.semen_analysis
+            { ext: 'semen_analysis', label: 'Spermiogram (badanie nasienia)', note: 'Gdy istotna jest kwestia płodności lub podejrzenie azoospermii (m.in. zespół Klinefeltera). Ocena wg kryteriów WHO 2021.' },
+            { ext: 'yq_microdel', label: 'Mikrodelecje AZF chromosomu Y', note: 'Przy azoospermii lub ciężkiej oligospermii — diagnostyka genetyczna podłoża niepłodności męskiej.' }
+          ]
+        },
+        { name: 'Etiologia hipogonadyzmu wtórnego (hipogonadotropowego)',
+          tests: [
+            { ext: 'pituitary_mri', label: 'MRI przysadki z gadolinium', note: 'Wskazane przy znacznie obniżonym testosteronie z niskimi/prawidłowymi gonadotropinami, hiperprolaktynemii lub objawach guza (ubytki pola widzenia, bóle głowy). Przy cechach niedoczynności wielohormonalnej przysadki ocenić pozostałe osie: IGF-1, TSH/fT4, kortyzol poranny.', description: 'Rezonans magnetyczny przysadki w sekwencjach T1/T2 z dynamicznym podaniem gadolinium — w diagnostyce hipogonadyzmu hipogonadotropowego służy wykryciu zmian okolicy podwzgórzowo-przysadkowej: gruczolaka (w tym prolactinoma), guza nieczynnego hormonalnie, czaszkogardlaka, zmian naciekowych (hemochromatoza, sarkoidoza, histiocytoza) oraz następstw urazu lub radioterapii. Wskazania: testosteron znacznie obniżony przy niskich/prawidłowych LH i FSH, współistniejąca hiperprolaktynemia, objawy efektu masy (ubytki pola widzenia, bóle głowy), cechy niedoczynności innych osi przysadki. Makrogruczolak (≥ 10 mm) wykrywany praktycznie zawsze; mikrogruczolaki — z niższą czułością. Należy pamiętać o częstych incydentaloma przysadki w zdrowej populacji — wynik MRI należy korelować z obrazem hormonalnym.' },
+            EXT.serum_iron
+          ]
+        },
+        { name: 'Konsekwencje i ocena przed testosteronoterapią',
+          tests: [
+            { ext: 'dxa', label: 'DXA (densytometria L1–L4, biodro)', note: 'Hipogonadyzm jest przyczyną wtórnej osteoporozy u mężczyzn — także młodych. U mężczyzn ≥ 50. r.ż. kryterium to T-score ≤ -2,5 = osteoporoza; u młodszych właściwy jest Z-score (≤ -2,0 = „poniżej zakresu oczekiwanego dla wieku").' },
+            { id: 'vit_d_25oh', note: 'Częsty niedobór; istotny dla zdrowia kości — komplementarny do DXA w ocenie ryzyka osteoporozy.' },
+            { ext: 'psa', label: 'PSA + badanie per rectum (DRE)', note: 'Ocena gruczołu krokowego przed testosteronoterapią — wg Endocrine Society 2018 zalecana u mężczyzn ≥ 40. r.ż.; u młodszych nie jest badaniem rutynowym. Cel: wykluczenie raka gruczołu krokowego (testosteron przeciwwskazany). Kontrola także w trakcie leczenia.', description: 'PSA (swoisty antygen sterczowy) wraz z badaniem per rectum (DRE) — ocena gruczołu krokowego przed rozpoczęciem testosteronoterapii; wg Endocrine Society 2018 zalecana u mężczyzn ≥ 40. r.ż., u młodszych nie jest badaniem rutynowym. Testosteron jest przeciwwskazany w raku gruczołu krokowego (może stymulować wzrost guza hormonowrażliwego). Orientacyjne wartości PSA: < 4 ng/mL — zwykle prawidłowe; 4–10 ng/mL — strefa szara, wskazana konsultacja urologiczna; > 10 ng/mL — wysokie ryzyko, wymaga diagnostyki urologicznej. Współcześnie coraz częściej stosuje się progi swoiste dla wieku — niższe u młodszych mężczyzn (np. < 2,5 ng/mL w 40.–49. r.ż.), wyższe u starszych (np. < 6,5 ng/mL w 70.–79. r.ż.). W trakcie testosteronoterapii: kontrola PSA po 3–6 miesiącach, następnie co 12 miesięcy; wzrost PSA > 1,4 ng/mL w ciągu roku lub przekroczenie 4 ng/mL → konsultacja urologiczna. Badanie per rectum ocenia konsystencję gruczołu i ewentualne guzki.' },
+            { ext: 'cbc', label: 'Morfologia krwi (hematokryt)', note: 'Wykluczenie erytrocytozy/policytemii — testosteron zwiększa hematokryt. PRZED rozpoczęciem terapii hematokryt > 48–50% → odroczenie; W TRAKCIE leczenia > 54% → wstrzymanie/modyfikacja. Morfologia wykrywa też niedokrwistość, która sama może być skutkiem hipogonadyzmu.' }
+          ]
+        }
+      ],
+      guideline: 'Endocrine Society 2018 (Bhasin i wsp.) / EAU 2023 (Salonia i wsp.)',
+      sources: [
+        'Bhasin S, Brito JP, Cunningham GR, et al. Testosterone Therapy in Men With Hypogonadism: An Endocrine Society Clinical Practice Guideline. J Clin Endocrinol Metab. 2018;103(5):1715-1744.',
+        'Salonia A, Bettocchi C, Boeri L, et al. European Association of Urology Guidelines on Sexual and Reproductive Health — Male Hypogonadism (aktualizacja 2023). Eur Urol. 2021;80(3):333-357.',
+        'Zgliczyński W (red.). Wielka Interna — Endokrynologia. Medical Tribune Polska — rozdział o hipogonadyzmie męskim.'
+      ]
+    },
+
+    hypogonadism_female: {
+      summary: 'Hipogonadyzm żeński = niedostateczna produkcja estrogenów przez jajniki; objawia się zaburzeniami miesiączkowania (oligo-/amenorrhea), niepłodnością, objawami hipoestrogenizmu (uderzenia gorąca, suchość pochwy), a długotrwale — osteoporozą. U kobiety w wieku rozrodczym diagnostykę zawsze poprzedza wykluczenie ciąży (β-hCG). Klasyfikacja opiera się na gonadotropinach: ↑FSH/LH przy niskim estradiolu → postać hipergonadotropowa (jajnikowa — m.in. przedwczesna niewydolność jajników POI, zespół Turnera); ↓/prawidłowe FSH/LH przy niskim estradiolu → postać hipogonadotropowa (centralna — czynnościowy podwzgórzowy brak miesiączki, hiperprolaktynemia, choroby przysadki). Szczegółowa diagnostyka POI prowadzona jest w ramach dedykowanego wskazania „Przedwczesna niewydolność jajników".',
+      sections: [
+        { name: 'Potwierdzenie i klasyfikacja hipogonadyzmu',
+          tests: [
+            { ext: 'bhcg', label: 'β-hCG (test ciążowy)', note: 'Wykluczenie ciąży u kobiet w wieku rozrodczym — pierwszy krok przed dalszą diagnostyką hormonalną i obrazową.', description: 'β-hCG (podjednostka β ludzkiej gonadotropiny kosmówkowej) — test ciążowy z krwi (ilościowy) lub z moczu (jakościowy). U kobiety w wieku rozrodczym ciążę należy wykluczyć przed rozpoczęciem diagnostyki hipogonadyzmu — jest najczęstszą przyczyną zatrzymania miesiączki i przejściowych zmian hormonalnych. Test z krwi (ilościowy) jest czulszy i wykrywa ciążę wcześniej niż test z moczu.' },
+            { id: 'fsh', note: 'Oznaczać 2× w odstępie 4–6 tygodni; u kobiet miesiączkujących we wczesnej fazie folikularnej (2.–5. dzień cyklu). ↑FSH (i LH) → hipogonadyzm hipergonadotropowy (jajnikowy — m.in. POI, zespół Turnera); próg rozpoznania POI wg ESHRE 2016: FSH > 25 IU/L w dwóch pomiarach. ↓/prawidłowy FSH przy niskim estradiolu → hipogonadyzm hipogonadotropowy (centralny).' },
+            { id: 'lh', note: 'Oznaczany razem z FSH. Wzorzec ↑FSH/↑LH → postać hipergonadotropowa; ↓/prawidłowe FSH/LH przy niskim estradiolu → postać hipogonadotropowa.' },
+            { id: 'estradiol', note: 'Niskie stężenie potwierdza hipoestrogenizm. Interpretować łącznie z FSH/LH — sam niski estradiol nie różnicuje przyczyny jajnikowej od centralnej.' },
+            { id: 'prolactin', note: 'Wykluczenie hiperprolaktynemii — częsta odwracalna przyczyna hipogonadyzmu hipogonadotropowego (hamuje pulsacyjne wydzielanie GnRH).' },
+            { id: 'tsh', note: 'Wykluczenie dysfunkcji tarczycy — zarówno nad-, jak i niedoczynność zaburzają cykl miesiączkowy i oś gonadalną.' }
+          ]
+        },
+        { name: 'Etiologia hipogonadyzmu hipergonadotropowego (jajnikowego)',
+          tests: [
+            EXT.karyotype,
+            EXT.fmr1,
+            { ext: 'anti_21oh', label: 'Przeciwciała anty-21-hydroksylazie', note: 'Marker autoimmunizacji nadnerczowej — autoimmunologiczne zapalenie jajników (autoimmunologiczne POI) często współwystępuje z autoimmunizacją kory nadnerczy / autoimmunologicznym zespołem wielogruczołowym.', description: 'Przeciwciała przeciwko 21-hydroksylazie nadnerczowej (CYP21A2) — w diagnostyce hipogonadyzmu hipergonadotropowego u kobiet służą wykryciu autoimmunologicznego tła przedwczesnej niewydolności jajników. Autoimmunologiczne zapalenie jajników jest rozpoznawalną, choć stosunkowo rzadką przyczyną POI — większość przypadków POI pozostaje idiopatyczna. Autoimmunizacja kory nadnerczy wykrywana przeciwciałami anty-21-OH dotyczy tylko niewielkiego odsetka (~4%) kobiet z POI; przeciwciała te są jednak istotne klinicznie, ponieważ identyfikują podgrupę zagrożoną chorobą Addisona (autoimmunologiczny zespół wielogruczołowy typu 1 i 2). Dodatni wynik wskazuje na potrzebę oceny czynności nadnerczy. Norma laboratoryjna zwykle < 1 IU/mL (zależy od metody).' },
+            { ext: 'anti_tpo', label: 'Przeciwciała anty-TPO', note: 'Autoimmunologiczna choroba tarczycy często towarzyszy autoimmunologicznej przedwczesnej niewydolności jajników (autoimmunologiczny zespół wielogruczołowy) — badanie przesiewowe w kierunku współistniejącej tyreopatii.' },
+            { id: 'amh', note: 'Bardzo niski lub nieoznaczalny AMH potwierdza wyczerpanie rezerwy jajnikowej — wspiera rozpoznanie postaci jajnikowej (POI). Stężenie AMH nie zależy istotnie od fazy cyklu.' }
+          ]
+        },
+        { name: 'Etiologia hipogonadyzmu hipogonadotropowego (centralnego)',
+          tests: [
+            { ext: 'pituitary_mri', label: 'MRI przysadki z gadolinium', note: 'Wskazane przy niskim estradiolu z niskimi/prawidłowymi FSH/LH — zwłaszcza z hiperprolaktynemią, objawami guza (ubytki pola widzenia, bóle głowy) lub cechami niedoczynności wielohormonalnej. Wcześniej rozważyć czynnościowy podwzgórzowy brak miesiączki (niska masa ciała, intensywny wysiłek, stres, zaburzenia odżywiania) — przyczynę odwracalną, niewymagającą obrazowania. Przy podejrzeniu niedoczynności wielohormonalnej ocenić pozostałe osie (IGF-1, kortyzol poranny).', description: 'Rezonans magnetyczny przysadki w sekwencjach T1/T2 z dynamicznym podaniem gadolinium — w diagnostyce hipogonadyzmu hipogonadotropowego u kobiet służy wykryciu zmian okolicy podwzgórzowo-przysadkowej: gruczolaka (w tym prolactinoma), guza nieczynnego hormonalnie, czaszkogardlaka, zmian naciekowych, zespołu pustego siodła czy następstw urazu lub radioterapii (m.in. zespół Sheehana po krwotoku poporodowym w wywiadzie). Przed skierowaniem na MRI należy wykluczyć najczęstszą przyczynę czynnościową — podwzgórzowy brak miesiączki (FHA) związany z niską masą ciała, intensywnym wysiłkiem, stresem lub zaburzeniami odżywiania — która jest odwracalna i nie wymaga obrazowania. Makrogruczolak (≥ 10 mm) wykrywany praktycznie zawsze; należy pamiętać o częstych incydentaloma przysadki w zdrowej populacji — wynik korelować z obrazem hormonalnym.' }
           ]
         },
         { name: 'Konsekwencje',
           tests: [
-            EXT.dxa,
-            EXT.lipid_panel,
-            EXT.cbc,
-            EXT.liver
+            { ext: 'dxa', label: 'DXA (densytometria L1–L4, biodro)', note: 'Przewlekły hipoestrogenizm prowadzi do utraty masy kostnej i osteoporozy. U kobiet przed menopauzą właściwym parametrem jest Z-score (≤ -2,0 = „poniżej zakresu oczekiwanego dla wieku"); kryterium T-score ≤ -2,5 dotyczy kobiet po menopauzie.' },
+            { id: 'vit_d_25oh', note: 'Częsty niedobór; istotny dla zdrowia kości — komplementarny do DXA w ocenie ryzyka osteoporozy.' }
           ]
         }
       ],
-      guideline: 'Endocrine Society 2018 (Bhasin i wsp.)'
-    },
-
-    hypogonadism_female: {
-      summary: 'FSH > 25 IU/L 2× → POI (hipergonadotropowy). FSH/LH niskie/normowe → centralny (hipogonadyzm hipogonadotropowy).',
-      sections: [
-        { name: 'Panel podstawowy',
-          tests: [
-            { id: 'fsh', note: '2× w odstępie 4–6 tyg., faza folikularna' },
-            { id: 'lh' },
-            { id: 'estradiol' },
-            { id: 'amh', note: 'Rezerwa jajnikowa' },
-            { id: 'prolactin' },
-            { id: 'tsh' }
-          ]
-        },
-        { name: 'Etiologia POI',
-          tests: [
-            EXT.karyotype,
-            EXT.fmr1,
-            EXT.anti_21oh,
-            EXT.anti_tpo
-          ]
-        },
-        { name: 'Centralny hipogonadyzm',
-          tests: [
-            EXT.pituitary_mri,
-            { id: 'igf1' }
-          ]
-        }
-      ],
-      guideline: 'ESHRE POI 2016 / PTE'
+      guideline: 'ESHRE POI 2016 (Webber i wsp.) / PTGiP',
+      sources: [
+        'Webber L, Davies M, Anderson R, et al. ESHRE Guideline: management of women with premature ovarian insufficiency. Hum Reprod. 2016;31(5):926-937.',
+        'Polskie Towarzystwo Ginekologów i Położników — rekomendacje dotyczące diagnostyki i postępowania w przedwczesnej niewydolności jajników i zaburzeniach miesiączkowania.',
+        'Zgliczyński W (red.). Wielka Interna — Endokrynologia. Medical Tribune Polska — rozdział o hipogonadyzmie i niewydolności jajników.'
+      ]
     },
 
     andropause: {
@@ -792,143 +810,194 @@
     },
 
     menopause: {
-      summary: 'Rozpoznanie kliniczne (12 mies. amenorrhea po 45 r.ż.). Hormonalna potwierdzenie tylko w wątpliwych sytuacjach lub przed 45 r.ż. (POI).',
+      summary: 'Rozpoznanie menopauzy jest kliniczne — 12 kolejnych miesięcy braku miesiączki u kobiety ≥ 45. r.ż. bez innej przyczyny, bez potrzeby badań hormonalnych. Diagnostyka laboratoryjna jest zarezerwowana dla sytuacji nietypowych: wiek 40–45 lat, brak macicy lub stosowanie antykoncepcji hormonalnej (niemożność oceny cyklu), nietypowy obraz kliniczny, podejrzenie innej przyczyny. Jeśli objawy wygasania czynności jajników występują przed 40. r.ż., właściwym rozpoznaniem jest przedwczesna niewydolność jajników (POI — osobne wskazanie), nie menopauza. Druga część panelu obejmuje ocenę przed włączeniem menopauzalnej terapii hormonalnej (MHT/HRT) — kwalifikacja opiera się na ocenie ryzyka sercowo-naczyniowego, onkologicznego (pierś, endometrium) i stanu kości.',
       sections: [
-        { name: 'Panel podstawowy (jeśli wątpliwe rozpoznanie)',
+        { name: 'Potwierdzenie hormonalne — tylko w sytuacjach wątpliwych',
           tests: [
-            { id: 'fsh', note: '> 25 IU/L (sugeruje), > 40 IU/L (potwierdza)' },
-            { id: 'estradiol' },
-            { id: 'tsh' }
+            { id: 'fsh', note: 'W perimenopauzie FSH silnie się waha — pojedynczy pomiar bywa zawodny. Orientacyjnie > 25 IU/L sugeruje, > 40 IU/L wspiera rozpoznanie. Niepotrzebny do rutynowego rozpoznania menopauzy u kobiety ≥ 45. r.ż. (rozpoznanie kliniczne).', description: 'FSH (hormon folikulotropowy) w diagnostyce menopauzy — wzrasta wskutek wygasania czynności pęcherzykowej jajników i utraty ujemnego sprzężenia zwrotnego (spadek estradiolu i inhibiny B). UWAGA: w okresie perimenopauzy FSH wykazuje dużą zmienność z cyklu na cykl — pojedynczy pomiar może być prawidłowy mimo zaawansowanej perimenopauzy, dlatego nie należy opierać na nim rozpoznania. Orientacyjnie FSH > 25 IU/L sugeruje, a > 40 IU/L wspiera rozpoznanie menopauzy. U kobiety ≥ 45. r.ż. z 12-miesięcznym brakiem miesiączki rozpoznanie jest kliniczne i nie wymaga oznaczania FSH; badanie ma wartość głównie w sytuacjach wątpliwych (wiek 40–45 lat, brak macicy, stosowanie antykoncepcji hormonalnej uniemożliwiające ocenę cyklu).' },
+            { id: 'estradiol', note: 'Niski estradiol odzwierciedla wygasanie czynności jajników. Interpretować łącznie z FSH; podobnie jak FSH waha się w perimenopauzie.' },
+            { id: 'tsh', note: 'Wykluczenie dysfunkcji tarczycy — zarówno nad-, jak i niedoczynność dają objawy naśladujące menopauzę (uderzenia gorąca, zmęczenie, zmiany nastroju, zaburzenia miesiączkowania).' }
           ]
         },
-        { name: 'Przed HRT — ocena ryzyka',
+        { name: 'Ocena przed menopauzalną terapią hormonalną (MHT/HRT)',
           tests: [
-            EXT.lipid_panel,
-            EXT.liver,
-            EXT.mammography,
-            EXT.endometrium_us,
-            EXT.pap_smear,
-            EXT.dxa,
-            { id: 'vit_d_25oh' }
+            { ext: 'mammography', label: 'Mammografia', note: 'Przesiew raka piersi przed rozpoczęciem menopauzalnej terapii hormonalnej oraz kontrolnie w jej trakcie — MHT (zwłaszcza estrogenowo-progestagenowa) wiąże się z niewielkim wzrostem ryzyka raka piersi.' },
+            { ext: 'endometrium_us', label: 'USG przezpochwowe', note: 'Wskazaniem jest krwawienie po menopauzie lub nieprawidłowe krwawienia w trakcie MHT — zawsze objaw alarmowy, wymagający wykluczenia rozrostu i raka endometrium. U kobiety bezobjawowej rutynowe wyjściowe USG przezpochwowe przed MHT nie jest wymagane.', description: 'USG przezpochwowe z oceną endometrium — ocena grubości i echostruktury błony śluzowej macicy. Podstawowym wskazaniem jest krwawienie po menopauzie (po 12 miesiącach od ostatniej miesiączki) lub nieprawidłowe krwawienia w trakcie MHT — każde takie krwawienie jest objawem alarmowym i wymaga diagnostyki w kierunku rozrostu (hiperplazji) i raka endometrium. U kobiety z krwawieniem po menopauzie grubość endometrium ≤ 4 mm ma wysoką negatywną wartość predykcyjną dla raka endometrium; endometrium pogrubiałe (> 4 mm) lub niejednorodne jest wskazaniem do biopsji/histeroskopii. UWAGA: próg ≤ 4 mm odnosi się do kobiet z krwawieniem — u kobiety bezobjawowej przypadkowo stwierdzone pogrubienie endometrium nie jest automatycznym wskazaniem do biopsji i wymaga indywidualnej oceny. W trakcie terapii estrogenowo-progestagenowej progestagen chroni endometrium przed rozrostem.' },
+            { ext: 'pap_smear', label: 'Cytologia (PAP)', note: 'Ogólny przesiew raka szyjki macicy — element rutynowej oceny ginekologicznej przy kwalifikacji do MHT, nie badanie swoiste dla menopauzy.' },
+            { ext: 'lipid_panel', label: 'Lipidogram (TC, LDL, HDL, TG)', note: 'Ocena ryzyka sercowo-naczyniowego przed MHT — wpływa na wybór drogi podania (przezskórna preferowana przy podwyższonym ryzyku sercowo-naczyniowym i hipertriglicerydemii — omija efekt pierwszego przejścia przez wątrobę). Uwzględnia też tzw. okno terapeutyczne: korzystny bilans korzyści i ryzyka MHT dotyczy kobiet rozpoczynających terapię przed 60. r.ż. lub w ciągu 10 lat od menopauzy; rozpoczęcie później przesuwa bilans w stronę ryzyka sercowo-naczyniowego i udaru.' },
+            { ext: 'liver', label: 'Próby wątrobowe (ALAT, ASPAT, GGTP, bilirubina)', note: 'Ocena czynności wątroby przed MHT — czynna choroba wątroby jest przeciwwskazaniem do doustnej terapii estrogenowej (metabolizm wątrobowy, efekt pierwszego przejścia); przy patologii wątroby preferowana jest droga przezskórna.' },
+            { ext: 'glucose_fasting', label: 'Glukoza na czczo', note: 'Element profilu metabolicznego i oceny ryzyka sercowo-naczyniowego przed MHT — wykrycie nieprawidłowej glikemii na czczo lub cukrzycy.' },
+            { ext: 'dxa', label: 'DXA (densytometria L1–L4, biodro)', note: 'Ocena gęstości mineralnej kości — po menopauzie spadek estrogenów przyspiesza utratę masy kostnej. U kobiet po menopauzie kryterium rozpoznania to T-score ≤ -2,5 = osteoporoza.' },
+            { id: 'vit_d_25oh', note: 'Częsty niedobór; istotny dla zdrowia kości — komplementarny do DXA w ocenie ryzyka osteoporozy pomenopauzalnej.' }
           ]
         }
       ],
-      guideline: 'NAMS 2022 / Polskie Towarzystwo Menopauzy i Andropauzy'
+      guideline: 'NAMS 2022 / Polskie Towarzystwo Menopauzy i Andropauzy (PTMiA)',
+      sources: [
+        'The 2022 Hormone Therapy Position Statement of The North American Menopause Society (NAMS). Menopause. 2022;29(7):767-794.',
+        'Polskie Towarzystwo Menopauzy i Andropauzy — rekomendacje dotyczące terapii hormonalnej okresu menopauzy.',
+        'Zgliczyński W (red.). Wielka Interna — Endokrynologia. Medical Tribune Polska — rozdział o menopauzie i terapii hormonalnej.'
+      ]
     },
 
     ovarian_failure: {
-      summary: 'POI: FSH > 25 IU/L 2× w odstępie 4–6 tyg., amenorrhea ≥ 4 mies., wiek < 40 lat. Etiologia w 70% nieznana.',
+      summary: 'Przedwczesna niewydolność jajników (POI) — kryteria rozpoznania wg ESHRE 2016: oligo-/amenorrhea utrzymująca się ≥ 4 miesiące, FSH > 25 IU/L w dwóch pomiarach w odstępie > 4 tygodni oraz wiek < 40 lat. U kobiety w wieku rozrodczym diagnostykę poprzedza wykluczenie ciąży (β-hCG). U większości przypadków etiologia pozostaje nieustalona (idiopatyczna); spośród przyczyn rozpoznawalnych istotne są: genetyczne (zespół Turnera, premutacja FMR1), autoimmunologiczne (autoimmunizacja nadnerczowa i tarczycowa) oraz jatrogenne (chemioterapia, radioterapia, operacje jajników — ustalane z wywiadu). POI wymaga oceny i monitorowania konsekwencji hipoestrogenizmu — utraty masy kostnej i podwyższonego ryzyka sercowo-naczyniowego.',
       sections: [
-        { name: 'Rozpoznanie',
+        { name: 'Rozpoznanie (potwierdzenie POI)',
           tests: [
-            { id: 'fsh', note: '2× > 25 IU/L w odstępie 4–6 tyg.' },
-            { id: 'lh' },
-            { id: 'estradiol' },
-            { id: 'amh', note: 'Bardzo niskie / nieoznaczalne' }
+            { ext: 'bhcg', label: 'β-hCG (test ciążowy)', note: 'Wykluczenie ciąży u kobiety w wieku rozrodczym — pierwszy krok przed dalszą diagnostyką hormonalną.', description: 'β-hCG (podjednostka β ludzkiej gonadotropiny kosmówkowej) — test ciążowy z krwi (ilościowy) lub z moczu (jakościowy). U kobiety w wieku rozrodczym ciążę należy wykluczyć przed rozpoczęciem diagnostyki niewydolności jajników — jest najczęstszą przyczyną zatrzymania miesiączki. Test z krwi (ilościowy) jest czulszy i wykrywa ciążę wcześniej niż test z moczu.' },
+            { id: 'fsh', note: 'Kryterium rozpoznania POI wg ESHRE 2016: FSH > 25 IU/L w dwóch pomiarach w odstępie > 4 tygodni, przy oligo-/amenorrhei ≥ 4 mies. i wieku < 40 lat. Pomiar wykonać poza antykoncepcją hormonalną — zahamowane gonadotropiny dają niemiarodajny wynik. U kobiet miesiączkujących pobranie we wczesnej fazie folikularnej.', description: 'FSH (hormon folikulotropowy) — kluczowy parametr rozpoznania przedwczesnej niewydolności jajników. Wzrasta wskutek wygasania czynności pęcherzykowej jajników i utraty ujemnego sprzężenia zwrotnego (spadek estradiolu i inhibiny B). Kryterium rozpoznania wg ESHRE 2016: FSH > 25 IU/L w dwóch oznaczeniach wykonanych w odstępie > 4 tygodni — wymóg dwóch pomiarów wynika z dużej zmienności FSH (możliwe przejściowe wahania, a nawet okresowy powrót czynności jajników w POI). Próg > 25 IU/L jest niższy niż dawniej stosowany > 40 IU/L — ESHRE obniżyło go, aby umożliwić wcześniejsze rozpoznanie. FSH należy oznaczać poza stosowaniem antykoncepcji hormonalnej, która hamuje wydzielanie gonadotropin i czyni wynik niemiarodajnym. Rozpoznanie wymaga łącznego spełnienia kryteriów: oligo-/amenorrhea ≥ 4 miesiące, podwyższony FSH ×2 oraz wiek < 40 lat.' },
+            { id: 'lh', note: 'Zwykle również podwyższony (postać hipergonadotropowa). Oznaczany razem z FSH; sam nie stanowi kryterium rozpoznania.' },
+            { id: 'estradiol', note: 'Niski estradiol potwierdza hipoestrogenizm. Interpretować łącznie z FSH; nie jest samodzielnym kryterium rozpoznania.' },
+            { id: 'amh', note: 'Bardzo niski lub nieoznaczalny AMH odzwierciedla wyczerpanie rezerwy jajnikowej i wspiera rozpoznanie — wg ESHRE 2016 NIE jest jednak kryterium diagnostycznym POI (rozpoznanie opiera się na FSH). Stężenie AMH nie zależy istotnie od fazy cyklu.' }
           ]
         },
-        { name: 'Etiologia',
+        { name: 'Etiologia POI',
           tests: [
             EXT.karyotype,
             EXT.fmr1,
-            EXT.anti_21oh,
-            EXT.anti_tpo,
-            { id: 'tsh' }, { id: 'ft4' }
+            { ext: 'anti_21oh', label: 'Przeciwciała anty-21-hydroksylazie', note: 'Marker autoimmunizacji nadnerczowej — autoimmunologiczne zapalenie jajników (autoimmunologiczne POI) często współwystępuje z autoimmunizacją kory nadnerczy / autoimmunologicznym zespołem wielogruczołowym. Dodatni wynik → ocena czynności nadnerczy, czujność w kierunku choroby Addisona.', description: 'Przeciwciała przeciwko 21-hydroksylazie nadnerczowej (CYP21A2) — w diagnostyce POI służą wykryciu autoimmunologicznego tła niewydolności jajników. Autoimmunologiczne zapalenie jajników jest rozpoznawalną, choć stosunkowo rzadką przyczyną POI — większość przypadków POI pozostaje idiopatyczna. Autoimmunizacja kory nadnerczy wykrywana przeciwciałami anty-21-OH dotyczy tylko niewielkiego odsetka (~4%) kobiet z POI; przeciwciała te są jednak istotne klinicznie, ponieważ identyfikują podgrupę zagrożoną chorobą Addisona (autoimmunologiczny zespół wielogruczołowy typu 1 i 2). Dodatni wynik wskazuje na potrzebę oceny czynności nadnerczy. Norma laboratoryjna zwykle < 1 IU/mL (zależy od metody).' },
+            { ext: 'anti_tpo', label: 'Przeciwciała anty-TPO', note: 'Autoimmunizacja tarczycy jest najczęstszą asocjacją autoimmunologiczną POI (~20% kobiet z POI) — ESHRE zaleca przesiewowe oznaczenie przeciwciał anty-TPO.' },
+            { id: 'tsh', note: 'Oznaczany łącznie z przeciwciałami anty-TPO — wykrycie współistniejącej dysfunkcji tarczycy (autoimmunizacja tarczycy częsta w POI).' },
+            { id: 'ft4', note: 'Łącznie z TSH — ocena czynności tarczycy przy podejrzeniu współistniejącej tyreopatii.' }
           ]
         },
-        { name: 'Konsekwencje (osteoporoza, sercowo-naczyniowe)',
+        { name: 'Konsekwencje i monitorowanie',
           tests: [
-            EXT.dxa,
-            { id: 'vit_d_25oh' },
-            EXT.lipid_panel
+            { ext: 'dxa', label: 'DXA (densytometria L1–L4, biodro)', note: 'Przewlekły hipoestrogenizm w POI prowadzi do utraty masy kostnej — ESHRE zaleca wyjściową densytometrię przy rozpoznaniu. U młodych kobiet właściwym parametrem jest Z-score (≤ -2,0 = „poniżej zakresu oczekiwanego dla wieku").' },
+            { id: 'vit_d_25oh', note: 'Częsty niedobór; istotny dla zdrowia kości — komplementarny do DXA w ocenie ryzyka osteoporozy.' },
+            { ext: 'lipid_panel', label: 'Lipidogram (TC, LDL, HDL, TG)', note: 'POI wiąże się z podwyższonym ryzykiem sercowo-naczyniowym (wczesna utrata ochronnego działania estrogenów) — lipidogram jest elementem oceny i monitorowania tego ryzyka.' },
+            { ext: 'glucose_fasting', label: 'Glukoza na czczo', note: 'Element profilu metabolicznego i oceny ryzyka sercowo-naczyniowego w POI — wykrycie nieprawidłowej glikemii na czczo lub cukrzycy.' }
           ]
         }
       ],
-      guideline: 'ESHRE 2016 (Webber i wsp.)'
+      guideline: 'ESHRE POI 2016 (Webber i wsp.) / PTGiP',
+      sources: [
+        'Webber L, Davies M, Anderson R, et al. ESHRE Guideline: management of women with premature ovarian insufficiency. Hum Reprod. 2016;31(5):926-937.',
+        'Polskie Towarzystwo Ginekologów i Położników — rekomendacje dotyczące diagnostyki i postępowania w przedwczesnej niewydolności jajników.',
+        'Zgliczyński W (red.). Wielka Interna — Endokrynologia. Medical Tribune Polska — rozdział o niewydolności jajników.'
+      ]
     },
 
     klinefelter: {
-      summary: 'Kariotyp 47,XXY (lub mozaicyzm) jest złotym standardem. Hormonalny obraz: pierwotny hipogonadyzm hipergonadotropowy (LH/FSH ↑, T ↓).',
+      summary: 'Zespół Klinefeltera (kariotyp 47,XXY lub mozaicyzm 47,XXY/46,XY) — najczęstsza aberracja chromosomów płciowych u mężczyzn i najczęstsza przyczyna pierwotnego (hipergonadotropowego) hipogonadyzmu męskiego. Złotym standardem rozpoznania jest kariotyp. Typowy obraz hormonalny: znacznie podwyższone LH i FSH przy testosteronie niskim lub w dolnej granicy normy oraz względnie podwyższonym estradiolu; inhibina B i AMH niskie (dysfunkcja komórek Sertoliego). Zespół wiąże się z azoospermią nieobstrukcyjną oraz licznymi powikłaniami ogólnoustrojowymi — osteoporozą, zespołem metabolicznym, cukrzycą typu 2 i dyslipidemią — które wymagają oceny i monitorowania.',
       sections: [
-        { name: 'Diagnostyka',
+        { name: 'Potwierdzenie rozpoznania',
           tests: [
-            EXT.karyotype,
-            { id: 'testosterone_total' },
-            { id: 'lh', note: 'Podwyższone — hipergonadotropowe' },
-            { id: 'fsh' },
-            { id: 'estradiol' },
-            { id: 'inhibin_b', note: 'Niskie/nieoznaczalne' },
-            { id: 'shbg' },
-            EXT.semen_analysis,
-            { id: 'amh' }
+            EXT.karyotype
           ]
         },
-        { name: 'Powikłania',
+        { name: 'Ocena hormonalna (hipogonadyzm hipergonadotropowy)',
           tests: [
-            EXT.dxa,
-            EXT.hba1c,
-            EXT.lipid_panel,
-            EXT.liver
+            { id: 'testosterone_total', note: 'W zespole Klinefeltera często niski lub w dolnej granicy normy. Częsta jest postać „skompensowana" — testosteron prawie prawidłowy przy podwyższonym LH; z wiekiem testosteron stopniowo spada. Pobranie rano, na czczo.', description: 'Testosteron całkowity w zespole Klinefeltera — odzwierciedla niewydolność komórek Leydiga. U części pacjentów testosteron jest wyraźnie obniżony, u części pozostaje w dolnej granicy normy mimo znacznie podwyższonego LH („hipogonadyzm skompensowany"). Z wiekiem rezerwa komórek Leydiga się wyczerpuje i testosteron stopniowo spada — dlatego konieczne jest okresowe monitorowanie. Pobranie rano (7:00–11:00), na czczo; przy wartościach granicznych ocenić testosteron wolny (z SHBG). Decyzję o testosteronoterapii podejmuje się na podstawie testosteronu i objawów klinicznych hipogonadyzmu.' },
+            { id: 'shbg', note: 'Niezbędna do obliczenia testosteronu wolnego/biodostępnego, gdy testosteron całkowity jest graniczny.' },
+            { id: 'testosterone_free', note: 'Oznaczać (lub obliczać wzorem Vermeulena) gdy testosteron całkowity jest w strefie granicznej — pomaga rozpoznać hipogonadyzm mimo prawie prawidłowego testosteronu całkowitego.' },
+            { id: 'lh', note: 'Znacznie podwyższony — obraz hipogonadyzmu hipergonadotropowego (pierwotna niewydolność jąder).' },
+            { id: 'fsh', note: 'Znacznie podwyższony, zwykle wyższy niż LH — odzwierciedla większe uszkodzenie kanalików plemnikotwórczych i komórek Sertoliego niż komórek Leydiga.' },
+            { id: 'estradiol', note: 'Względnie podwyższony (zaburzony stosunek estrogeny/androgeny) — współuczestniczy w rozwoju ginekomastii, częstej w zespole Klinefeltera.' }
+          ]
+        },
+        { name: 'Czynność jąder i płodność',
+          tests: [
+            { id: 'inhibin_b', note: 'Niska lub nieoznaczalna — marker dysfunkcji komórek Sertoliego i uszkodzenia nabłonka plemnikotwórczego.' },
+            { id: 'amh', note: 'Niski — odzwierciedla dysfunkcję komórek Sertoliego. Uwaga: żaden parametr hormonalny (w tym AMH, inhibina B, FSH) nie pozwala wiarygodnie przewidzieć powodzenia mikro-TESE u pacjentów z zespołem Klinefeltera.' },
+            { ext: 'semen_analysis', label: 'Spermiogram (badanie nasienia)', note: 'W zespole Klinefeltera typowa jest azoospermia nieobstrukcyjna. Mimo to u części pacjentów udaje się uzyskać plemniki metodą mikro-TESE (mikrochirurgiczne pobranie z jądra) do procedur rozrodu wspomaganego — kwalifikację prowadzi ośrodek andrologiczny / leczenia niepłodności.' }
+          ]
+        },
+        { name: 'Powikłania i monitorowanie',
+          tests: [
+            { ext: 'dxa', label: 'DXA (densytometria L1–L4, biodro)', note: 'Hipogonadyzm w zespole Klinefeltera prowadzi do obniżenia gęstości mineralnej kości i osteoporozy. U dorosłych mężczyzn kryterium rozpoznania to T-score ≤ -2,5.' },
+            { id: 'vit_d_25oh', note: 'Częsty niedobór; istotny dla zdrowia kości — komplementarny do DXA w ocenie ryzyka osteoporozy.' },
+            { ext: 'hba1c', label: 'HbA1c (hemoglobina glikowana)', note: 'Zespół Klinefeltera silnie wiąże się z insulinoopornością, zespołem metabolicznym i cukrzycą typu 2 — HbA1c służy przesiewowi i monitorowaniu gospodarki węglowodanowej.' },
+            { ext: 'lipid_panel', label: 'Lipidogram (TC, LDL, HDL, TG)', note: 'Dyslipidemia jest częsta w zespole Klinefeltera (składowa zespołu metabolicznego) — element oceny ryzyka sercowo-naczyniowego.' },
+            { ext: 'liver', label: 'Próby wątrobowe (ALAT, ASPAT, GGTP, bilirubina)', note: 'Ocena w kierunku stłuszczeniowej choroby wątroby związanej z zaburzeniami metabolicznymi, częstej w zespole Klinefeltera w przebiegu zespołu metabolicznego.' }
           ]
         }
       ],
-      guideline: 'Endocrine Society 2018 / EAA 2021'
+      guideline: 'Endocrine Society 2018 (Bhasin i wsp.) / EAA 2021 (Zitzmann i wsp.)',
+      sources: [
+        'Zitzmann M, Aksglaede L, Corona G, et al. European Academy of Andrology guidelines on Klinefelter Syndrome. Andrology. 2021;9(1):145-167.',
+        'Bhasin S, Brito JP, Cunningham GR, et al. Testosterone Therapy in Men With Hypogonadism: An Endocrine Society Clinical Practice Guideline. J Clin Endocrinol Metab. 2018;103(5):1715-1744.',
+        'Zgliczyński W (red.). Wielka Interna — Endokrynologia. Medical Tribune Polska — rozdział o hipogonadyzmie męskim i zespole Klinefeltera.'
+      ]
     },
 
     infertility: {
-      summary: 'Para 12 mies. bez ciąży: jednocześnie badamy oboje partnerów. Kobieta: oś gonadalna + tarczyca + rezerwa. Mężczyzna: spermiogram + testosteron + LH/FSH.',
+      summary: 'Niepłodność pary — brak ciąży po 12 miesiącach regularnego współżycia bez antykoncepcji (lub po 6 miesiącach, gdy kobieta ma ≥ 35 lat). Diagnostykę prowadzi się równolegle u obojga partnerów. U kobiety ocenia się oś podwzgórze-przysadka-jajnik, czynność tarczycy, owulację, rezerwę jajnikową oraz anatomię narządu rodnego (w tym drożność jajowodów). U mężczyzny podstawą jest spermiogram wg WHO 2021; przy nieprawidłowym wyniku rozszerza się diagnostykę o panel hormonalny, a przy azoospermii lub ciężkiej oligospermii — o badania genetyczne.',
       sections: [
-        { name: 'Kobieta — panel podstawowy',
+        { name: 'Kobieta — panel hormonalny i ocena owulacji',
           tests: [
-            { id: 'fsh', note: 'Dzień 3 cyklu' },
-            { id: 'lh' },
-            { id: 'estradiol', note: 'Dzień 3' },
-            { id: 'amh' },
-            { id: 'progesterone', note: 'Dzień 21 — ocena owulacji' },
-            { id: 'tsh' }, { id: 'prolactin' },
-            { id: 'oh17_progesterone', note: 'Wykluczenie NCAH' },
-            { id: 'testosterone_total' },
-            EXT.afc,
-            EXT.chorionic_us,
-            EXT.hsg
+            { id: 'fsh', note: 'Pobranie w 3. dniu cyklu (wczesna faza folikularna). Podwyższony FSH wskazuje na obniżoną rezerwę jajnikową; interpretować łącznie z estradiolem i AMH.' },
+            { id: 'lh', note: 'Pobranie w 3. dniu cyklu, łącznie z FSH. Podwyższony stosunek LH/FSH może sugerować PCOS.' },
+            { id: 'estradiol', note: 'Pobranie w 3. dniu cyklu. Podwyższony estradiol we wczesnej fazie folikularnej może maskować podwyższony FSH i fałszywie zawyżać ocenę rezerwy jajnikowej.' },
+            { id: 'progesterone', note: 'Pobranie w środku fazy lutealnej — ok. 7 dni przed spodziewaną miesiączką (klasycznie „21. dzień" przy cyklu 28-dniowym). Podwyższony progesteron potwierdza owulację.' },
+            { id: 'tsh', note: 'Dysfunkcja tarczycy (zarówno nad-, jak i niedoczynność) zaburza owulację i płodność — wykluczenie jako odwracalna przyczyna.' },
+            { id: 'prolactin', note: 'Hiperprolaktynemia hamuje pulsacyjne wydzielanie GnRH i prowadzi do braku owulacji — częsta odwracalna przyczyna niepłodności kobiecej.' },
+            { id: 'oh17_progesterone', note: 'Warunkowo — wykluczenie nieklasycznego wrodzonego przerostu nadnerczy (NC-CAH) przy cechach hiperandrogenizmu. Pobranie rano, we wczesnej fazie folikularnej.' },
+            { id: 'testosterone_total', note: 'Warunkowo — przy klinicznych cechach hiperandrogenizmu lub podejrzeniu PCOS. Znacznie podwyższony → poszukiwanie guza produkującego androgeny.' }
           ]
         },
-        { name: 'Mężczyzna — panel podstawowy',
+        { name: 'Kobieta — rezerwa jajnikowa i ocena anatomiczna',
           tests: [
-            EXT.semen_analysis,
-            { id: 'testosterone_total' },
-            { id: 'lh' }, { id: 'fsh' },
-            { id: 'prolactin' },
-            { id: 'inhibin_b' },
+            { id: 'amh', note: 'Marker rezerwy jajnikowej — stabilny w trakcie cyklu. Niski AMH wskazuje na obniżoną rezerwę; nie jest natomiast wskaźnikiem szans na spontaniczną ciążę.' },
+            { ext: 'afc', label: 'AFC (liczba pęcherzyków antralnych, USG TV)', note: 'Liczba pęcherzyków antralnych w USG przezpochwowym — ocena rezerwy jajnikowej komplementarna do AMH; przydatna przy planowaniu stymulacji jajeczkowania.' },
+            { ext: 'chorionic_us', label: 'USG narządów rodnych', note: 'USG przezpochwowe — ocena macicy (wady wrodzone, mięśniaki, polipy), jajników i endometrium. Element podstawowej diagnostyki niepłodności kobiecej.' },
+            { ext: 'hsg', label: 'HSG (histerosalpingografia)', note: 'Ocena drożności jajowodów i jamy macicy — kluczowa w diagnostyce niepłodności kobiecej (czynnik jajowodowy). Alternatywą jest sonohisterosalpingografia (HyCoSy/SIS).', description: 'Histerosalpingografia (HSG) — badanie radiologiczne z podaniem środka kontrastowego przez kanał szyjki macicy, oceniające jamę macicy i drożność jajowodów. Wskazanie: ocena czynnika jajowodowego i macicznego niepłodności (niedrożność jajowodów, zrosty, wady macicy, polipy, mięśniaki podśluzówkowe). Wykonywana we wczesnej fazie folikularnej (po miesiączce, przed owulacją), po wykluczeniu ciąży i czynnego zakażenia narządu rodnego. Alternatywy: sonohisterosalpingografia (HyCoSy/SIS) — bez promieniowania jonizującego; laparoskopia z próbą drożności (chromopertubacja) — gdy podejrzewa się patologię miednicy mniejszej lub endometriozę.' }
+          ]
+        },
+        { name: 'Mężczyzna — spermiogram i ocena hormonalna',
+          tests: [
+            { ext: 'semen_analysis', label: 'Spermiogram (badanie nasienia)', note: 'Podstawowe badanie w diagnostyce niepłodności męskiej, oceniane wg norm WHO 2021. Nieprawidłowy wynik należy potwierdzić powtórnym badaniem (zwykle po 4–12 tygodniach) i rozszerzyć diagnostykę o panel hormonalny.', description: 'Spermiogram (badanie nasienia) — podstawowe badanie diagnostyki niepłodności męskiej, oceniane wg 6. edycji podręcznika WHO (2021). Materiał pobiera się po 2–7 dniach abstynencji płciowej. Orientacyjne dolne wartości referencyjne WHO 2021 (5. percentyl): objętość ≥ 1,4 mL, koncentracja ≥ 16 mln/mL, liczba całkowita ≥ 39 mln, ruchliwość całkowita ≥ 42%, ruchliwość postępowa ≥ 30%, morfologia prawidłowa ≥ 4%, żywotność ≥ 54%. Ze względu na dużą zmienność biologiczną nieprawidłowy wynik wymaga potwierdzenia w powtórnym badaniu (zwykle po 4–12 tygodniach). Azoospermia (brak plemników) wymaga różnicowania na obstrukcyjną i nieobstrukcyjną oraz rozszerzenia diagnostyki o panel hormonalny i badania genetyczne.' },
+            { id: 'testosterone_total', note: 'Element panelu hormonalnego przy nieprawidłowym spermiogramie. Pobranie rano, na czczo. Niski testosteron + ↑LH/FSH → hipogonadyzm pierwotny; niski testosteron + ↓/prawidłowe LH/FSH → hipogonadyzm wtórny.' },
+            { id: 'lh', note: 'Oznaczany łącznie z FSH i testosteronem. Różnicuje hipogonadyzm pierwotny (↑LH) od wtórnego (↓/prawidłowy LH).' },
+            { id: 'fsh', note: 'Podwyższony FSH wskazuje na uszkodzenie nabłonka plemnikotwórczego (m.in. zespół Klinefeltera, stan po zapaleniu jąder, postać idiopatyczna). Prawidłowy FSH przy azoospermii sugeruje raczej przyczynę obstrukcyjną, nie wyklucza jednak postaci nieobstrukcyjnej — zwłaszcza zatrzymania dojrzewania plemników (maturation arrest), w którym FSH bywa prawidłowy.' },
+            { id: 'prolactin', note: 'Wykluczenie hiperprolaktynemii — może powodować hipogonadyzm wtórny i zaburzać spermatogenezę oraz funkcje seksualne.' },
+            { id: 'inhibin_b', note: 'Marker czynności komórek Sertoliego i spermatogenezy — niski/nieoznaczalny wskazuje na uszkodzenie nabłonka plemnikotwórczego. Komplementarny do FSH.' },
+            { ext: 'testicular_us', label: 'USG jąder', note: 'Element standardowej diagnostyki niepłodności męskiej (wytyczne EAU) — ocena objętości i echostruktury jąder, wykrycie żylaków powrózka nasiennego, zmian ogniskowych oraz cech sugerujących obstrukcję.', description: 'USG jąder (mosznowe) — element standardowej diagnostyki niepłodności męskiej wg wytycznych EAU. Ocena: objętości jąder (zmniejszona objętość sugeruje upośledzoną spermatogenezę), echostruktury miąższu, obecności żylaków powrózka nasiennego (varicocele — częsta, potencjalnie odwracalna przyczyna niepłodności męskiej; w USG poszerzone naczynia splotu wiciowatego z refluksem w próbie Valsalvy), zmian ogniskowych jąder (każdy guzek wymaga pilnej diagnostyki onkologicznej — niepłodni mężczyźni mają zwiększone ryzyko raka jądra) oraz cech sugerujących obstrukcję (poszerzenie sieci jądra, torbiele lub poszerzenie najądrza). Badanie uzupełnia spermiogram i panel hormonalny.' }
+          ]
+        },
+        { name: 'Mężczyzna — diagnostyka genetyczna (przy azoospermii / ciężkiej oligospermii)',
+          tests: [
             EXT.karyotype,
-            EXT.yq_microdel,
-            EXT.cftr_gen
+            { ext: 'yq_microdel', label: 'Mikrodelecje AZF chromosomu Y', note: 'Wskazane przy azoospermii nieobstrukcyjnej lub ciężkiej oligospermii — mikrodelecje regionów AZFa/AZFb/AZFc chromosomu Y są częstą genetyczną przyczyną zaburzeń spermatogenezy. Wynik wpływa na rokowanie pobrania plemników i jest przekazywany potomstwu płci męskiej.' },
+            { ext: 'cftr_gen', label: 'Mutacje CFTR', note: 'Wskazane przy azoospermii obstrukcyjnej, zwłaszcza przy wrodzonym obustronnym braku nasieniowodów (CBAVD) — mutacje genu CFTR. Przed leczeniem niepłodności wskazane badanie nosicielstwa również u partnerki (ryzyko mukowiscydozy u potomstwa).' }
           ]
         }
       ],
-      guideline: 'ESHRE 2023 / PTG 2020'
+      guideline: 'ESHRE / PTMRiE (Polskie Towarzystwo Medycyny Rozrodu i Embriologii)',
+      sources: [
+        'ESHRE Guideline Group on Unexplained Infertility. Evidence-based guideline: unexplained infertility. Hum Reprod Open. 2023.',
+        'WHO laboratory manual for the examination and processing of human semen, 6th edition. World Health Organization, 2021.',
+        'Polskie Towarzystwo Medycyny Rozrodu i Embriologii (PTMRiE) — rekomendacje dotyczące diagnostyki i leczenia niepłodności.'
+      ]
     },
 
     ivf_reserve: {
-      summary: 'AMH + AFC USG TV to złoty standard oceny rezerwy jajnikowej. FSH/E2 z 3. dnia cyklu uzupełniająco.',
+      summary: 'Ocena rezerwy jajnikowej — najczęściej w kontekście kwalifikacji i planowania leczenia metodą rozrodu wspomaganego (IVF). Najbardziej wiarygodne markery to AMH oraz liczba pęcherzyków antralnych (AFC w USG przezpochwowym) — równorzędne i wzajemnie komplementarne. FSH i estradiol z 3. dnia cyklu mają charakter uzupełniający (markery starsze, o dużej zmienności). KLUCZOWY NIUANS INTERPRETACYJNY: AMH i AFC przewidują przede wszystkim odpowiedź jajników na stymulację (liczbę uzyskanych komórek jajowych) — a nie jakość oocytów, szansę żywego urodzenia ani szansę na ciążę spontaniczną; głównym determinantem jakości oocytów i szansy żywego urodzenia pozostaje wiek kobiety. Markery rezerwy nie powinny służyć do odmawiania leczenia.',
       sections: [
-        { name: 'Panel podstawowy',
+        { name: 'Markery rezerwy jajnikowej',
           tests: [
-            { id: 'amh' },
-            EXT.afc,
-            { id: 'fsh', note: 'Dzień 3' },
-            { id: 'estradiol', note: 'Dzień 3' },
-            { id: 'lh' }
+            { id: 'amh', note: 'Najbardziej wiarygodny marker rezerwy jajnikowej oznaczany z krwi (obok AFC jako badania obrazowego) — stabilny w trakcie cyklu, można oznaczać w dowolnym dniu. Niski AMH wskazuje na obniżoną rezerwę i przewiduje słabszą odpowiedź na stymulację; nie przesądza o jakości oocytów ani o szansie na ciążę.', description: 'AMH (hormon antymüllerowski) — produkowany przez komórki ziarniste małych pęcherzyków preantralnych i antralnych; jego stężenie odzwierciedla pulę pęcherzyków, czyli ilościową rezerwę jajnikową. Zalety: względna stabilność w trakcie cyklu (oznaczanie w dowolnym dniu), wczesny spadek z wiekiem. Zastosowanie: przewidywanie odpowiedzi jajników na stymulację gonadotropinami (identyfikacja słabych i nadmiernych odpowiedzi — ryzyko zespołu hiperstymulacji), indywidualizacja dawki, poradnictwo. OGRANICZENIA: AMH przewiduje LICZBĘ uzyskanych oocytów, ale NIE ich jakość, NIE szansę żywego urodzenia i NIE szansę na ciążę spontaniczną — nie należy go używać do odmawiania leczenia ani jako samodzielnego testu „płodności". Wyniki mogą się różnić między metodami oznaczania; stężenie jest obniżone u kobiet stosujących antykoncepcję hormonalną.' },
+            { ext: 'afc', label: 'AFC (liczba pęcherzyków antralnych, USG TV)', note: 'Liczba pęcherzyków antralnych (2–10 mm) w obu jajnikach, oceniana w USG przezpochwowym we wczesnej fazie folikularnej — marker rezerwy równorzędny z AMH i wzajemnie z nim komplementarny; przydatny przy planowaniu protokołu stymulacji.' },
+            { id: 'fsh', note: 'Pobranie w 3. dniu cyklu, łącznie z estradiolem. Marker starszy niż AMH/AFC — o dużej zmienności międzycyklicznej i mniejszej czułości; podwyższony FSH wskazuje na obniżoną rezerwę, ale prawidłowy nie wyklucza jej obniżenia.' },
+            { id: 'estradiol', note: 'Pobranie w 3. dniu cyklu — interpretować ZAWSZE łącznie z FSH. Podwyższony estradiol we wczesnej fazie folikularnej może hamować FSH (fałszywie prawidłowy wynik) i zawyżać ocenę rezerwy.' }
           ]
         },
-        { name: 'Dodatkowe',
+        { name: 'Badania uzupełniające (przygotowanie do leczenia)',
           tests: [
-            { id: 'inhibin_b' },
-            { id: 'tsh' }, { id: 'prolactin' }
+            { id: 'lh', note: 'Pobranie w 3. dniu cyklu — element podstawowego panelu hormonalnego. Podwyższony stosunek LH/FSH może sugerować PCOS (częsta przyczyna zaburzeń owulacji i nadmiernej odpowiedzi na stymulację).' },
+            { id: 'inhibin_b', note: 'Marker czynności komórek ziarnistych. Współczesne wytyczne (ASRM, ESHRE) NIE zalecają inhibiny B jako testu rezerwy jajnikowej — ze względu na dużą zmienność i słabą wartość predykcyjną została zastąpiona przez AMH i AFC. Oznaczać tylko w wybranych sytuacjach.' },
+            { id: 'tsh', note: 'Wykluczenie dysfunkcji tarczycy przed leczeniem rozrodu — zaburza owulację, zagnieżdżenie i przebieg wczesnej ciąży.' },
+            { id: 'prolactin', note: 'Wykluczenie hiperprolaktynemii — odwracalna przyczyna zaburzeń owulacji.' }
           ]
         }
       ],
-      guideline: 'ESHRE/ASRM 2015'
+      guideline: 'ASRM (testowanie rezerwy jajnikowej) / ESHRE (stymulacja jajeczkowania) / PTMRiE',
+      sources: [
+        'Practice Committee of the American Society for Reproductive Medicine. Testing and interpretation of measures of ovarian reserve: a committee opinion. Fertil Steril. 2020.',
+        'ESHRE Working Group on Ovarian Stimulation. Ovarian stimulation for IVF/ICSI: ESHRE guideline. Hum Reprod Open. 2020.',
+        'Polskie Towarzystwo Medycyny Rozrodu i Embriologii (PTMRiE) — rekomendacje dotyczące diagnostyki i leczenia niepłodności.'
+      ]
     },
 
     hyperprolactinemia: {
@@ -1026,43 +1095,65 @@
     },
 
     galactorrhea: {
-      summary: 'Sprawdź ciążę, leki, hipotyrozę, MRI przysadki przy makroprolaktynemii.',
+      summary: 'Mlekotok (galactorrhea) — wydzielanie mlecznej treści z brodawek sutkowych niezwiązane z laktacją poporodową. Prawdziwy mlekotok jest zwykle obustronny, mleczny i wieloprzewodowy; wydzielina jednostronna, krwista lub surowicza albo współistniejący guz piersi przemawiają za patologią gruczołu piersiowego i wymagają odrębnej diagnostyki obrazowej piersi, nie hormonalnej. Kluczowym pytaniem diagnostycznym jest stężenie prolaktyny: mlekotok może przebiegać z hiperprolaktynemią (wtedy diagnostyka jak w hiperprolaktynemii — wykluczenie ciąży, leków, niedoczynności tarczycy, a następnie MRI przysadki) lub przy prawidłowej prolaktynie (mlekotok normoprolaktynemiczny — najczęściej idiopatyczny, o łagodnym przebiegu). Niezbędny jest szczegółowy wywiad lekowy (neuroleptyki, metoklopramid, leki przeciwdepresyjne, estrogeny, opioidy, werapamil).',
       sections: [
-        { name: 'Panel podstawowy',
+        { name: 'Potwierdzenie i ocena prolaktyny',
           tests: [
-            { id: 'prolactin', note: '2× pomiar' },
-            EXT.macroprolactin,
-            { id: 'tsh' }, { id: 'ft4' },
-            EXT.bhcg
+            { id: 'prolactin', note: 'Pojedynczy pomiar przy prawidłowym pobraniu zwykle wystarcza (rano, w spoczynku, bez nadmiernego stresu venepunkcji, bez wcześniejszej stymulacji piersi). Przy wartościach granicznych — powtórzyć. Uwaga: mlekotok może występować również przy prawidłowej prolaktynie (mlekotok normoprolaktynemiczny).', description: 'Prolaktyna — kluczowy parametr w diagnostyce mlekotoku, ponieważ rozstrzyga, czy mlekotok przebiega z hiperprolaktynemią, czy bez niej. Pobranie: rano, w spoczynku; unikać wcześniejszej stymulacji piersi i intensywnego wysiłku, które mogą przejściowo podnieść stężenie. Wg Endocrine Society 2011 pojedynczy pomiar przekraczający górną granicę normy przy prawidłowym pobraniu potwierdza hiperprolaktynemię; powtórzenie wskazane przy wartościach granicznych. Stopień podwyższenia ma wartość lokalizacyjną: PRL > 500 ng/mL jest diagnostyczne dla makroprolactinoma; 250–500 ng/mL zwykle wskazuje na prolactinoma; umiarkowane podwyższenie (25–100 ng/mL) — częściej leki, efekt przerwania szypuły lub mikroprolactinoma. WAŻNE: mlekotok przy PRAWIDŁOWEJ prolaktynie (mlekotok normoprolaktynemiczny) jest częsty i zwykle idiopatyczny — nie wymaga rozległej diagnostyki, jeśli wykluczono przyczyny wtórne.' },
+            { ext: 'macroprolactin', label: 'Makroprolaktyna (precypitacja PEG)', note: 'Wykluczenie pseudohiperprolaktynemii — biologicznie nieaktywny kompleks prolaktyny z immunoglobuliną daje fałszywie podwyższony wynik. Szczególnie istotne, gdy hiperprolaktynemia jest skąpoobjawowa.', description: 'Makroprolaktyna — biologicznie nieaktywny kompleks prolaktyny z immunoglobuliną (PRL-IgG) o dużej masie cząsteczkowej. Jest wykrywana przez immunoassaye jako „prolaktyna", dając fałszywie podwyższony wynik (pseudohiperprolaktynemia) przy braku objawów klinicznych. Oznaczenie metodą precypitacji glikolem polietylenowym (PEG): niski odzysk prolaktyny monomerycznej (< ~40%) sugeruje przewagę makroprolaktyny. Wskazanie: szczególnie przy hiperprolaktynemii skąpo- lub bezobjawowej — pozwala uniknąć zbędnego MRI i leczenia.' }
           ]
         },
-        { name: 'Rozszerzony',
+        { name: 'Wykluczenie częstych przyczyn',
           tests: [
-            EXT.pituitary_mri
+            { id: 'tsh', note: 'Wykluczenie pierwotnej niedoczynności tarczycy — podwyższone TRH stymuluje wydzielanie prolaktyny i może powodować mlekotok.' },
+            { id: 'ft4', note: 'Oznaczany łącznie z TSH przy ocenie czynności tarczycy.' },
+            { ext: 'bhcg', label: 'β-hCG (test ciążowy)', note: 'Wykluczenie ciąży i połogu — fizjologicznych przyczyn mlekotoku i hiperprolaktynemii u kobiet w wieku rozrodczym.', description: 'β-hCG (test ciążowy) — wykluczenie ciąży jako fizjologicznej przyczyny mlekotoku i hiperprolaktynemii u kobiet w wieku rozrodczym. W ciąży prolaktyna fizjologicznie rośnie pod wpływem estrogenów, a mlekotok/laktacja jest naturalnym następstwem; podobnie utrzymuje się w okresie poporodowym i w trakcie karmienia piersią. Test ciążowy należy wykonać przed dalszą diagnostyką hormonalną i obrazową.' },
+            { ext: 'egfr', label: 'Kreatynina + eGFR', note: 'Wykluczenie przewlekłej choroby nerek — upośledzony klirens nerkowy prolaktyny prowadzi do jej kumulacji w surowicy i może powodować mlekotok.', description: 'Kreatynina z obliczeniem eGFR — wykluczenie przewlekłej choroby nerek jako przyczyny hiperprolaktynemii i mlekotoku. W zaawansowanej niewydolności nerek upośledzony jest klirens nerkowy prolaktyny, co prowadzi do jej kumulacji w surowicy; dodatkowo zaburzona jest podwzgórzowa regulacja jej wydzielania. Hiperprolaktynemia jest częsta u pacjentów dializowanych.' }
+          ]
+        },
+        { name: 'Obrazowanie',
+          tests: [
+            { ext: 'pituitary_mri', label: 'MRI przysadki', note: 'Wskazane przy mlekotoku z hiperprolaktynemią niejasnego pochodzenia — po wykluczeniu przyczyn fizjologicznych (ciąża), farmakologicznych (leki) i wtórnych (niedoczynność tarczycy, niewydolność nerek). Przy mlekotoku normoprolaktynemicznym MRI zwykle nie jest potrzebne.', description: 'MRI przysadki mózgowej z kontrastem (gadolinium) — wskazane przy mlekotoku przebiegającym z hiperprolaktynemią niejasnego pochodzenia, po wykluczeniu przyczyn fizjologicznych, farmakologicznych i wtórnych. Różnicuje mikroprolactinoma (< 10 mm), makroprolactinoma (≥ 10 mm) oraz inne zmiany okolicy podwzgórzowo-przysadkowej dające efekt przerwania szypuły (stalk effect). Przy mlekotoku z prawidłową prolaktyną (normoprolaktynemicznym) MRI zwykle nie jest wskazane. UWAGA: ~10% zdrowej populacji ma incidentaloma przysadki — wynik MRI należy korelować ze stopniem podwyższenia PRL i obrazem klinicznym.' }
           ]
         }
       ],
-      guideline: 'Endocrine Society 2011'
+      guideline: 'Endocrine Society 2011 (Melmed i wsp.) / PTE',
+      sources: [
+        'Melmed S, Casanueva FF, Hoffman AR, et al. Diagnosis and treatment of hyperprolactinemia: an Endocrine Society clinical practice guideline. J Clin Endocrinol Metab. 2011;96(2):273-288.',
+        'Bolanowski M, Zgliczyński W, Kos-Kudła B i wsp. Rekomendacje Polskiego Towarzystwa Endokrynologicznego dotyczące diagnostyki i leczenia guzów przysadki. Endokrynologia Polska.',
+        'Zgliczyński W (red.). Wielka Interna — Endokrynologia. Medical Tribune Polska — rozdział o hiperprolaktynemii i chorobach przysadki.'
+      ]
     },
 
     ovulation: {
-      summary: 'Progesteron > 16 nmol/L (5 ng/mL) w środku fazy lutealnej (dzień ~21 cyklu 28-dniowego) potwierdza owulację.',
+      summary: 'Ocena owulacji — potwierdzenie, czy w cyklu doszło do jajeczkowania. Podstawową metodą jest oznaczenie progesteronu w środku fazy lutealnej (ok. 7 dni przed spodziewaną miesiączką; klasycznie „21. dzień" przy cyklu 28-dniowym). Wartości progowe: progesteron > 3 ng/mL (~10 nmol/L) potwierdza, że doszło do owulacji, a wartości wyższe (orientacyjnie > 10 ng/mL / ~30 nmol/L) świadczą o wydolnej funkcji ciałka żółtego — wynik należy interpretować względem momentu pobrania, bo progesteron jest wydzielany pulsacyjnie. Metody uzupełniające to bezpośrednia obserwacja w USG (folikulometria) oraz krzywa temperatury ciała (BBT — retrospektywna, mało precyzyjna). Przy potwierdzonym braku owulacji pierwszym krokiem poszukiwania przyczyny jest ocena tarczycy i prolaktyny.',
       sections: [
-        { name: 'Panel podstawowy',
+        { name: 'Potwierdzenie owulacji',
           tests: [
-            { id: 'progesterone', note: 'Dzień 21 (lub 7 dni przed spodziewaną miesiączką)' },
-            { id: 'lh', note: 'Szczyt LH w połowie cyklu' },
-            { id: 'estradiol' }
+            { id: 'progesterone', note: 'Pobranie w środku fazy lutealnej — ok. 7 dni przed spodziewaną miesiączką (klasycznie „21. dzień" przy cyklu 28-dniowym). Progesteron > 3 ng/mL (~10 nmol/L) potwierdza, że doszło do owulacji; > 10 ng/mL (~30 nmol/L) świadczy o wydolnej funkcji ciałka żółtego.', description: 'Progesteron — podstawowy parametr potwierdzający owulację. Po owulacji ciałko żółte produkuje progesteron, którego stężenie osiąga szczyt w środku fazy lutealnej. Pobranie: ok. 7 dni przed spodziewaną miesiączką (przy cyklu 28-dniowym — ok. 21. dnia; przy cyklach dłuższych lub krótszych odpowiednio później lub wcześniej). Interpretacja: progesteron > 3 ng/mL (~10 nmol/L) potwierdza, że do owulacji doszło; wartości > 10 ng/mL (~30 nmol/L) wskazują na wydolną funkcję ciałka żółtego. UWAGA: progesteron jest wydzielany pulsacyjnie, a jego stężenie zmienia się w trakcie fazy lutealnej — pojedynczy wynik należy interpretować względem rzeczywistego momentu pobrania w cyklu; niski wynik może wynikać z pobrania zbyt wcześnie lub zbyt późno, a nie tylko z braku owulacji.' },
+            { id: 'lh', note: 'Wyrzut LH w połowie cyklu poprzedza owulację — jego początek o ok. 36 godzin, a szczyt LH o ok. 10–12 godzin. Dodatni test LH z moczu (OPK) oznacza spodziewaną owulację w ciągu ok. 24–36 godzin; pojedyncze oznaczenie LH z surowicy ma ograniczoną wartość ze względu na pulsacyjne wydzielanie i krótki czas trwania szczytu.' },
+            { id: 'estradiol', note: 'Rośnie w późnej fazie folikularnej i osiąga szczyt tuż przed wyrzutem LH — marker pomocniczy monitorowania dojrzewania pęcherzyka; sam nie potwierdza owulacji.' }
           ]
         },
-        { name: 'Pomocnicze',
+        { name: 'Metody bezpośrednie i monitorowanie',
           tests: [
-            EXT.bbt,
-            EXT.chorionic_us
+            { ext: 'chorionic_us', label: 'Folikulometria (seryjne USG przezpochwowe)', note: 'Bezpośrednia obserwacja owulacji — seryjne USG przezpochwowe śledzi wzrost pęcherzyka dominującego, dokumentuje jego pęknięcie (zniknięcie pęcherzyka, pojawienie się wolnego płynu w zatoce Douglasa) oraz powstanie ciałka żółtego. Najbardziej bezpośrednia metoda, przydatna m.in. przy monitorowaniu cyklu stymulowanego.', description: 'Folikulometria — seryjne USG przezpochwowe wykonywane co 1–3 dni w okolicy spodziewanej owulacji. Pozwala bezpośrednio śledzić: wzrost pęcherzyka dominującego (przedowulacyjnie zwykle ~18–24 mm), moment owulacji (nagłe zmniejszenie lub zniknięcie pęcherzyka, pojawienie się wolnego płynu w zatoce Douglasa, zmiana echostruktury na ciałko żółte) oraz grubość i wygląd endometrium. Jest najbardziej bezpośrednią metodą oceny owulacji; szczególnie przydatna przy monitorowaniu cykli naturalnych i stymulowanych w leczeniu niepłodności. Wadą jest konieczność wielokrotnych wizyt.' },
+            { ext: 'bbt', label: 'BBT — krzywa podstawowej temperatury ciała', note: 'Krzywa dwufazowa: po owulacji progesteron podnosi podstawową temperaturę ciała o ~0,3–0,5°C. Metoda retrospektywna (potwierdza owulację dopiero po fakcie) i mało precyzyjna — niezalecana jako podstawowa metoda oceny owulacji.' }
+          ]
+        },
+        { name: 'Gdy potwierdzono brak owulacji — poszukiwanie przyczyny',
+          tests: [
+            { id: 'tsh', note: 'Dysfunkcja tarczycy (zarówno nad-, jak i niedoczynność) zaburza owulację — wykluczenie jako odwracalna przyczyna braku owulacji.' },
+            { id: 'prolactin', note: 'Hiperprolaktynemia hamuje pulsacyjne wydzielanie GnRH i prowadzi do braku owulacji — częsta odwracalna przyczyna.' }
           ]
         }
       ],
-      guideline: 'ASRM 2015'
+      guideline: 'ASRM / NICE / PTMRiE',
+      sources: [
+        'Practice Committee of the American Society for Reproductive Medicine. Diagnostic evaluation of the infertile female: a committee opinion. Fertil Steril. 2015.',
+        'National Institute for Health and Care Excellence (NICE). Fertility problems: assessment and treatment. Clinical guideline CG156.',
+        'Polskie Towarzystwo Medycyny Rozrodu i Embriologii (PTMRiE) — rekomendacje dotyczące diagnostyki i leczenia niepłodności.'
+      ]
     },
 
     luteal_phase_defect: {
