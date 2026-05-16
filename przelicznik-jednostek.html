@@ -1066,6 +1066,10 @@
                   <input type="number" id="labOverrideAge" min="0" max="120" step="1"
                          placeholder="z danych pacjenta">
                 </label>
+                <label>Wiek [mies.] <small style="font-weight:400;opacity:0.65;">(0–11, opcjonalnie)</small>
+                  <input type="number" id="labOverrideAgeMonths" min="0" max="11" step="1"
+                         placeholder="—">
+                </label>
                 <label id="labOverrideCycleWrap" style="display:none;">Faza cyklu / ciąża
                   <select id="labOverrideCycle">
                     <option value="">(domyślnie)</option>
@@ -1268,6 +1272,7 @@
     var patientOverrideEl = document.getElementById('labPatientOverride');
     var overrideSexEl   = document.getElementById('labOverrideSex');
     var overrideAgeEl   = document.getElementById('labOverrideAge');
+    var overrideAgeMonthsEl = document.getElementById('labOverrideAgeMonths');
     var overrideCycleWrapEl = document.getElementById('labOverrideCycleWrap');
     var overrideCycleEl = document.getElementById('labOverrideCycle');
     var overrideTannerWrapEl = document.getElementById('labOverrideTannerWrap');
@@ -1690,9 +1695,12 @@
       patientTextEl.classList.toggle('is-missing', !!d.missing);
       // Wyróżnij wizualnie kontekst pediatryczny (różne tło/border).
       patientCtxEl.classList.toggle('is-pediatric', p && p.life_stage === 'pediatric');
-      // Selektor fazy cyklu/ciąży tylko dla cycle-aware substancji.
+      // Selektor fazy cyklu/ciąży tylko dla cycle-aware substancji ORAZ tylko
+      // gdy płeć efektywna pacjenta NIE jest mężczyzną (M). Dla kobiety (F)
+      // lub gdy płeć nieznana — pokazujemy selektor; dla M — chowamy.
       var cycleAware = !!(currentSubstance && CYCLE_AWARE[currentSubstance.id]);
-      overrideCycleWrapEl.style.display = cycleAware ? '' : 'none';
+      var sexIsMale = (p && p.sex === 'M');
+      overrideCycleWrapEl.style.display = (cycleAware && !sexIsMale) ? '' : 'none';
       // Selektor Tannera tylko dla Tanner-aware substancji LUB dla pacjenta
       // pediatrycznego (wtedy lekarz może z dowolnym analitem doprecyzować
       // dojrzałość, a my zaczerpniemy ją do oceny life_stage).
@@ -3108,9 +3116,18 @@
 
     function onOverrideChange() {
       var sexVal = overrideSexEl.value || null;
-      var ageRaw = overrideAgeEl.value;
-      var ageNum = (ageRaw === '' || ageRaw == null) ? null : Number(ageRaw);
-      if (ageNum != null && !isFinite(ageNum)) ageNum = null;
+      // Wiek = lata + miesiące/12 (jak w sharedUserData). Pole miesięcy
+      // wymaga, by lata były podane — w przeciwnym razie miesiące ignorujemy.
+      var ageYearsRaw = overrideAgeEl.value;
+      var ageYearsNum = (ageYearsRaw === '' || ageYearsRaw == null) ? null : Number(ageYearsRaw);
+      if (ageYearsNum != null && !isFinite(ageYearsNum)) ageYearsNum = null;
+      var ageMonthsRaw = overrideAgeMonthsEl ? overrideAgeMonthsEl.value : '';
+      var ageMonthsNum = (ageMonthsRaw === '' || ageMonthsRaw == null) ? null : Number(ageMonthsRaw);
+      if (ageMonthsNum != null && !isFinite(ageMonthsNum)) ageMonthsNum = null;
+      var ageNum = ageYearsNum;
+      if (ageYearsNum != null && ageMonthsNum != null) {
+        ageNum = ageYearsNum + ageMonthsNum / 12;
+      }
       var cycleVal = overrideCycleEl.value || null;
       var tannerRaw = overrideTannerEl ? overrideTannerEl.value : '';
       var tannerNum = (tannerRaw === '' || tannerRaw == null) ? null : parseInt(tannerRaw, 10);
@@ -3119,11 +3136,20 @@
       localOverride.age = ageNum;
       localOverride.cycle_phase = cycleVal;
       localOverride.tanner = tannerNum;
+      // Jeśli efektywna płeć to mężczyzna (czy z override, czy z shared),
+      // czyścimy fazę cyklu — bo selektor jest schowany dla M, a stale cycle
+      // wpływałby na wybór zakresu (np. follicular u "M" złamałby logikę).
+      var effectiveSex = sexVal || (readPatientFromShared() || {}).sex || null;
+      if (effectiveSex === 'M' && localOverride.cycle_phase) {
+        localOverride.cycle_phase = null;
+        if (overrideCycleEl) overrideCycleEl.value = '';
+      }
       refreshPatientContext();
     }
 
     if (overrideSexEl) overrideSexEl.addEventListener('change', onOverrideChange);
     if (overrideAgeEl) overrideAgeEl.addEventListener('input', onOverrideChange);
+    if (overrideAgeMonthsEl) overrideAgeMonthsEl.addEventListener('input', onOverrideChange);
     if (overrideCycleEl) overrideCycleEl.addEventListener('change', onOverrideChange);
     if (overrideTannerEl) overrideTannerEl.addEventListener('change', onOverrideChange);
 
@@ -3142,6 +3168,7 @@
       localOverride = { sex: null, age: null, tanner: null, cycle_phase: null };
       overrideSexEl.value = '';
       overrideAgeEl.value = '';
+      if (overrideAgeMonthsEl) overrideAgeMonthsEl.value = '';
       overrideCycleEl.value = '';
       if (overrideTannerEl) overrideTannerEl.value = '';
       refreshPatientContext();
@@ -3164,10 +3191,12 @@
     });
     window.addEventListener('focus', refreshPatientContext);
     window.addEventListener('vilda:user-state-cleared', function () {
-      localOverride = { sex: null, age: null, cycle_phase: null };
+      localOverride = { sex: null, age: null, tanner: null, cycle_phase: null };
       if (overrideSexEl) overrideSexEl.value = '';
       if (overrideAgeEl) overrideAgeEl.value = '';
+      if (overrideAgeMonthsEl) overrideAgeMonthsEl.value = '';
       if (overrideCycleEl) overrideCycleEl.value = '';
+      if (overrideTannerEl) overrideTannerEl.value = '';
       refreshPatientContext();
     });
 
