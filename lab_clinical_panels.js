@@ -1145,7 +1145,85 @@
             kind: 'prose',
             icon: 'book-2',
             title: 'Definicja',
-            body: 'Niedobór 5α-reduktazy typu 2 — autosomalna recesywna choroba (mutacja SRD5A2). Enzym 5α-reduktaza konwertuje testosteron w DHT (5α-dihydrotestosteron) — NAJSILNIEJSZY androgen, kluczowy dla rozwoju zewnętrznych narządów płciowych męskich. Klinika u 46,XY: noworodek z NIEJEDNOZNACZNYMI narządami płciowymi (spodziectwo, mikropenis) lub fenotypem żeńskim przy obecnych jądrach (zwykle wewnątrz-jamiste); w okresie dojrzewania częściowa wirylizacja (głos, libido, masa mięśniowa), ale BRAK rozwoju zarostu, łysienia typu męskiego i pełnego rozwoju prącia.'
+            body: 'Niedobór 5α-reduktazy typu 2 (mutacja SRD5A2, dziedziczenie autosomalne recesywne) należy do zaburzeń różnicowania płci u chromosomalnego mężczyzny — DSD 46,XY. Dziecko ma kariotyp męski (46,XY), sprawne jądra i normalnie wysoki testosteron, ALE z powodu wadliwego enzymu nie potrafi wytwarzać DHT (5α-dihydrotestosteronu) — silniejszej formy androgenu. Powoduje to charakterystyczny rozdźwięk: niektóre cechy męskie rozwijają się normalnie (głos, mięśnie, libido — wystarcza im sam testosteron), inne nie (zarost, pełny rozwój prącia, łysienie typu męskiego — wymagają DHT). Klinicznie objawia się to nietypowymi narządami płciowymi u noworodka i „częściową" wirylizacją w pokwitaniu (patrz niżej).'
+          },
+          {
+            kind: 'callout',
+            variant: 'primary',
+            icon: 'flask',
+            title: 'Patofizjologia: testosteron (T) vs DHT — dwa różne androgeny',
+            body: 'Organizm męski produkuje DWA aktywne androgeny: TESTOSTERON (T) — wytwarzany w jądrach przez komórki Leydiga; DHT (dihydrotestosteron) — powstaje OBWODOWO z testosteronu pod wpływem enzymu 5α-reduktazy (głównie w skórze, mieszkach włosowych, prostacie). DHT jest ok. 2–3× silniejszy od T (większe powinowactwo do receptora androgenowego, dłuższy okres półtrwania kompleksu z receptorem). Oba hormony działają na ten SAM receptor (AR), ale w innych tkankach i w innych okresach życia. Cechy zależne TYLKO od testosteronu (rozwijają się normalnie w 5α-RD): pogłębienie głosu w pokwitaniu, wzrost masy mięśniowej, libido i wzwody, spermatogeneza, rozwój przewodów Wolffa (najądrza, nasieniowody, pęcherzyki nasienne — formowane w życiu płodowym BEZ konieczności DHT). Cechy WYMAGAJĄCE DHT (brak/upośledzone w 5α-RD): rozwój zewnętrznych narządów płciowych w życiu płodowym (prącie, moszna, ujście cewki na szczycie), zarost (broda, wąsy, owłosienie klatki piersiowej), łysienie typu męskiego (recesja czołowo-skroniowa), rozwój prostaty, trądzik młodzieńczy.'
+          },
+          {
+            kind: 'list',
+            icon: 'baby-bottle',
+            title: 'Obraz kliniczny — noworodek 46,XY',
+            items: [
+              {
+                label: 'Niejednoznaczne narządy płciowe (najczęstsza prezentacja)',
+                text: 'kombinacja cech męskich i nietypowych, wynikająca z braku DHT w życiu płodowym:',
+                detail: [
+                  'SPODZIECTWO — cewka moczowa otwiera się NIE na szczycie prącia, tylko po dolnej stronie (na trzonie, w okolicy moszny lub aż w kroczu — zależnie od ciężkości).',
+                  'MIKROPENIS — bardzo małe prącie (długość po rozciągnięciu < 2,5 cm u noworodka donoszonego); bywa mylone z powiększoną łechtaczką.',
+                  'Moszna NIEUFORMOWANA — niezamknięta, podzielona (bifid scrotum), wyglądająca jak wargi sromowe większe.',
+                  'Wnętrostwo — jądra zwykle nie zstąpiły do moszny (siedzą w jamie brzusznej lub kanale pachwinowym), bo moszna nie rozwinęła się prawidłowo.'
+                ]
+              },
+              {
+                label: 'Postać skrajna: fenotyp całkowicie żeński',
+                text: 'przy najcięższych mutacjach genu SRD5A2 zewnętrzne narządy wyglądają jak u dziewczynki:',
+                detail: [
+                  'Płytka „pochwa" (właściwie zachyłek tylko z fragmentem cewki) — bez macicy i jajowodów (zanikły pod wpływem AMH produkowanego przez sprawne jądra).',
+                  'Dziecko bywa wychowywane jako dziewczynka — diagnoza często stawiana DOPIERO w okresie dojrzewania, gdy pojawiają się męskie cechy.'
+                ]
+              },
+              {
+                label: 'Co jest ZACHOWANE u noworodka',
+                text: 'wewnętrzne narządy męskie rozwijają się normalnie:',
+                detail: [
+                  'Jądra są PRAWIDŁOWE — produkują testosteron i AMH.',
+                  'Przewody Wolffa (najądrza, nasieniowody, pęcherzyki nasienne) rozwinięte — bo wymagają tylko testosteronu, nie DHT.',
+                  'Macica i jajowody NIEOBECNE — AMH z jąder spowodował regresję przewodów Müllera.'
+                ]
+              }
+            ]
+          },
+          {
+            kind: 'list',
+            icon: 'arrow-up-right',
+            title: 'Obraz kliniczny — pokwitanie (kluczowy moment diagnostyczny)',
+            items: [
+              {
+                label: 'Co ROZWIJA SIĘ normalnie (wystarcza sam testosteron)',
+                text: 'jądra zaczynają produkować duże ilości T, który działa bez konwersji do DHT:',
+                detail: [
+                  'Pogłębienie głosu — typowo męska tessitura.',
+                  'Wzrost masy i siły mięśniowej.',
+                  'Libido (popęd seksualny), zwykle heteroseksualny (skierowany do kobiet).',
+                  'Wzwody i ejakulacja (rozwój anatomiczny przewodów Wolffa pozwala na ejakulację mimo niewielkiego prącia).',
+                  'Wzrost jąder do dorosłej wielkości; spermatogeneza często zachowana.'
+                ]
+              },
+              {
+                label: 'Czego BRAKUJE (wymaga DHT)',
+                text: 'cechy typowo „męskie" związane z mieszkami włosowymi i skórą:',
+                detail: [
+                  'BRAK ZAROSTU — broda, wąsy, owłosienie klatki piersiowej minimalne lub zupełnie nieobecne (mimo prawidłowego owłosienia łonowego i pachowego).',
+                  'BRAK łysienia typu męskiego — linia włosów na czole pozostaje „dziecięca".',
+                  'PRĄCIE pozostaje MAŁE — nie osiąga dorosłej wielkości mimo dojrzewania.',
+                  'Prostata pozostaje mała (rzadko obserwowane klinicznie u młodych mężczyzn).',
+                  'Trądzik młodzieńczy minimalny.'
+                ]
+              },
+              {
+                label: 'Konsekwencja — dramatyczna ścieżka kliniczna',
+                text: 'dziecko wychowywane jako dziewczynka nagle „męskieje" w pokwitaniu:',
+                detail: [
+                  'Klasyczna obserwacja — Dominikana, wioska Las Salinas (Imperato-McGinley 1974) — genetyczne ognisko 5α-RD2, dzieci nazywane „güevedoces" („jaja w dwunastym roku"). Odkrycie to było przełomem — pokazało, że DHT i T mają RÓŻNE funkcje fizjologiczne.',
+                  'Część pacjentów dokonuje wówczas zmiany płci społecznej (z żeńskiej na męską), część pozostaje przy żeńskiej identyfikacji — DSD 46,XY wymaga zawsze interdyscyplinarnej opieki (endokrynolog dziecięcy, urolog, psycholog, genetyk).'
+                ]
+              }
+            ]
           },
           {
             kind: 'list',
@@ -3027,22 +3105,44 @@
       sections: [
         { name: 'Rozpoznanie i klasyfikacja',
           tests: [
-            { id: 'tsh', note: 'Badanie I rzutu w diagnostyce tarczycy — najczulszy pojedynczy test. Górna granica normy u dorosłych ~4 mIU/L (zależna od laboratorium i wieku — u osób starszych wyższa). UWAGA: w ciąży obowiązują niższe, swoiste dla trymestru zakresy, a u dzieci zakresy zależne od wieku — nie stosować progów dorosłych.' },
-            { id: 'ft4', note: 'Różnicuje postać jawną (fT4 obniżone) od subklinicznej (fT4 prawidłowe). Obniżone fT4 przy nieadekwatnie niskim lub prawidłowym TSH → podejrzenie niedoczynności wtórnej/centralnej (choroba przysadki).' }
+            { id: 'tsh',
+              note: 'Badanie I rzutu w diagnostyce tarczycy — najczulszy pojedynczy test. Górna granica normy u dorosłych ~4 mIU/L (zależna od laboratorium i wieku — u osób starszych wyższa). UWAGA: w ciąży obowiązują niższe, swoiste dla trymestru zakresy, a u dzieci zakresy zależne od wieku — nie stosować progów dorosłych.',
+              description: 'TSH jest najczulszym pojedynczym testem funkcji tarczycy — fizjologiczna pętla ujemnego sprzężenia zwrotnego sprawia, że nawet niewielkie zmiany fT4/fT3 powodują nieproporcjonalnie duże zmiany TSH (logarytmiczna zależność). W pierwotnej niedoczynności TSH jest podwyższone (próba kompensacji niskim poziomem hormonów obwodowych); w niedoczynności wtórnej/centralnej TSH jest nieadekwatnie prawidłowe lub niskie przy obniżonym fT4. PROGI DOROSŁYCH: górna granica normy laboratoryjnej zwykle ~4 mIU/L; u osób > 70 r.ż. fizjologicznie wyższa (do ~6–7 mIU/L) — bezkrytyczne leczenie subklinicznej niedoczynności w tej grupie wiekowej jest niewskazane (ryzyko jatrogennej nadczynności: migotanie przedsionków, osteoporoza). PROGI PEDIATRYCZNE (PTEDD 2016, Kucharska i wsp.) są wiek-zależne — u noworodków i niemowląt znacznie wyższe niż u dorosłych (m.in. test bibułowy 3.–5. doba: TSH > 9 mIU/L → wezwanie; w surowicy noworodków normy do ~30 w 1.–2. dobie, spadek do ~10 do 14. doby; u niemowląt i małych dzieci stopniowo obniża się do wartości ~5 mIU/L). CIĄŻA (PTE 2021, Hubalewska-Dydejczyk): górne progi swoiste dla trymestru: I 3,18; II 3,44; III 3,53 mIU/L (cel terapeutyczny u leczonych < 2,5 w I trymestrze — nie próg diagnostyczny). PUŁAPKI: (1) BIOTYNA — w wysokich dawkach (≥ 5 mg/d, np. w suplementach „włosy/skóra/paznokcie") interferuje z immunoassay opartymi na streptawidynie — odstawić ≥ 48 h przed pobraniem; (2) LIT — może indukować niedoczynność (psychiatryczny lek); (3) AMIODARON — wzrost TSH wczesny (po 1–3 mies.) zwykle przejściowy, długotrwały wymaga oceny; (4) bilirubina i triglicerydy wysokie → interferencja immunoassay; (5) HOSPITALIZACJA, ostre choroby → „euthyroid sick syndrome" — TSH może być przejściowo obniżone lub podwyższone bez rzeczywistej dysfunkcji tarczycy. KONTROLA: po włączeniu/zmianie dawki L-tyroksyny TSH oznaczać po 6–8 tygodniach (czas półtrwania T4 ~7 dni, pełna stabilizacja farmakokinetyczna wymaga ≥ 5 t½).' },
+            { id: 'ft4',
+              note: 'Różnicuje postać jawną (fT4 obniżone) od subklinicznej (fT4 prawidłowe). Obniżone fT4 przy nieadekwatnie niskim lub prawidłowym TSH → podejrzenie niedoczynności wtórnej/centralnej (choroba przysadki).',
+              description: 'fT4 (wolna tyroksyna) — drugorzędowo po TSH, służy do RÓŻNICOWANIA postaci niedoczynności: (1) postać JAWNA — TSH ↑ + fT4 ↓ (jednoznaczne wskazanie do leczenia); (2) postać SUBKLINICZNA — TSH ↑ + fT4 PRAWIDŁOWE (decyzja o leczeniu zależna od wartości TSH, ciąży, objawów, wieku, anty-TPO); (3) postać WTÓRNA/CENTRALNA — fT4 ↓ + TSH nieadekwatnie prawidłowe lub niskie → konieczna diagnostyka osi przysadkowo-podwzgórzowej (MR przysadki, ocena innych osi hormonalnych: ACTH/kortyzol poranny, LH/FSH, GH, prolaktyna). MONITOROWANIE LECZENIA L-tyroksyną: cel to TSH w normie LUB w dolnej połowie normy (zwykle 0,4–2,5 mIU/L); fT4 zwykle utrzymuje się w środkowej/górnej połowie zakresu referencyjnego — wartości w górnym kwartylu nie są nieprawidłowe gdy TSH jest w normie. PUŁAPKI: (1) BIOTYNA (jak w TSH); (2) ostre choroby — fT4 może być obniżone wtórnie bez rzeczywistej niedoczynności (euthyroid sick syndrome — niska T3, czasem niska fT4, TSH zwykle prawidłowe lub niskie); (3) sezonowa zmienność u zdrowych ~3% (niższe latem); (4) różne metody immunoassay dają różne wyniki — zawsze porównuj z normami danego laboratorium; (5) zaawansowana CIĄŻA, leki estrogenowe (HRT, doustna antykoncepcja) — zwiększają TBG, prawidłowe fT4 mimo wzrostu T4 całkowitej (dlatego oznaczamy fT4 a nie T4 całk.).' }
           ]
         },
         { name: 'Etiologia (choroba Hashimoto — autoimmunologiczna)',
           tests: [
-            { ext: 'anti_tpo', label: 'Przeciwciała anty-TPO', note: 'Główny marker autoimmunologicznego zapalenia tarczycy (choroba Hashimoto) — najczęstszej przyczyny niedoczynności w obszarach z prawidłową podażą jodu. Dodatni wynik potwierdza etiologię autoimmunologiczną.' },
-            { ext: 'anti_tg_ab', label: 'Przeciwciała anty-TG', note: 'Marker uzupełniający — anty-TPO jest podstawowy. Anty-TG dodaje niewiele, gdy anty-TPO są dodatnie; bywają jednak jedynymi dodatnimi przeciwciałami u części pacjentów z chorobą Hashimoto.' },
-            { ext: 'thyroid_us', label: 'USG tarczycy', note: 'Choć samo rozpoznanie niedoczynności tarczycy opiera się na badaniach laboratoryjnych, USG tarczycy jest badaniem zalecanym u każdego pacjenta z wynikami laboratoryjnymi sugerującymi zaburzenie czynności tarczycy (niedoczynność lub nadczynność), a także u każdego dziecka z podejrzeniem choroby tarczycy przy dodatnim wywiadzie rodzinnym — zwłaszcza autoimmunologicznego zapalenia tarczycy. W chorobie Hashimoto typowy obraz to hipoechogeniczność i niejednorodność miąższu; USG uwidacznia również wole i guzki wymagające dalszej oceny.' }
+            { ext: 'anti_tpo', label: 'Przeciwciała anty-TPO',
+              note: 'Główny marker autoimmunologicznego zapalenia tarczycy (choroba Hashimoto) — najczęstszej przyczyny niedoczynności w obszarach z prawidłową podażą jodu. Dodatni wynik potwierdza etiologię autoimmunologiczną.',
+              description: 'Anty-TPO (przeciwciała przeciwko peroksydazie tarczycowej) — najczulszy marker autoimmunologicznego zapalenia tarczycy. CZUŁOŚĆ ~90% w chorobie Hashimoto, swoistość niższa (przeciwciała mogą występować u 5–15% populacji ogólnej, częściej u kobiet i z wiekiem — nie zawsze klinicznie istotne). INTERPRETACJA MIAN: norma zależy od metody (zwykle < 35 lub < 60 IU/mL); wartości umiarkowane (kilka × górnej granicy) potwierdzają obraz autoimmunologiczny; bardzo wysokie miana (> 1000 IU/mL) typowe dla aktywnej choroby Hashimoto i zwiększonego ryzyka progresji do jawnej niedoczynności. CIĄŻA: anty-TPO + zwiększa ryzyko (a) poporodowego zapalenia tarczycy (postpartum thyroiditis) ~50% w anty-TPO+ vs ~10% bez (ATA 2017); (b) progresji subklinicznej niedoczynności do jawnej; (c) poronień nawracających (kontrowersyjne — PTE 2021 wskazuje na potencjalny związek). U kobiet planujących ciążę z anty-TPO+ i TSH > 2,5 mIU/L — rozważyć profilaktyczną L-tyroksynę (indywidualnie). APS-2 / ZESPÓŁ SCHMIDTA: choroba Hashimoto często WSPÓŁWYSTĘPUJE z innymi chorobami autoimmunologicznymi — cukrzyca typu 1 (~10–20% pacjentów z Hashimoto ma przeciwciała trzustkowe), celiakia (~3–5% — przeglad anty-tTG/EMA wskazany), choroba Addisona (rzadka, ale konsekwencje śmiertelne — patrz cortisol w sekcji „Wykluczenia"), bielactwo, niedokrwistość Addisona-Biermera (anty-IF, anty-PCA). U pacjenta z potwierdzonym Hashimoto warto rozważyć skrining w kierunku tych asocjacji, zwłaszcza przy charakterystycznych objawach (utrata masy ciała, hipotensja, biegunki, niedokrwistość makrocytowa, hiperpigmentacja).' },
+            { ext: 'anti_tg_ab', label: 'Przeciwciała anty-TG',
+              note: 'Marker uzupełniający — anty-TPO jest podstawowy. Anty-TG dodaje niewiele, gdy anty-TPO są dodatnie; bywają jednak jedynymi dodatnimi przeciwciałami u części pacjentów z chorobą Hashimoto.' },
+            { ext: 'thyroid_us', label: 'USG tarczycy',
+              note: 'Choć samo rozpoznanie niedoczynności tarczycy opiera się na badaniach laboratoryjnych, USG tarczycy jest badaniem zalecanym u każdego pacjenta z wynikami laboratoryjnymi sugerującymi zaburzenie czynności tarczycy (niedoczynność lub nadczynność), a także u każdego dziecka z podejrzeniem choroby tarczycy przy dodatnim wywiadzie rodzinnym — zwłaszcza autoimmunologicznego zapalenia tarczycy. W chorobie Hashimoto typowy obraz to hipoechogeniczność i niejednorodność miąższu; USG uwidacznia również wole i guzki wymagające dalszej oceny.',
+              description: 'USG tarczycy w niedoczynności — badanie obrazowe uzupełniające diagnostykę laboratoryjną; nie jest niezbędne do samego rozpoznania (które opiera się na TSH/fT4), ale dostarcza KLUCZOWYCH INFORMACJI dla dalszego postępowania. OBRAZ TYPOWY DLA HASHIMOTO: (1) hipoechogeniczność miąższu (ciemniejsza niż mięśni szyi — w przeciwieństwie do zdrowej tarczycy, która jest hiperechogeniczna względem mięśni); (2) niejednorodność („marmurkowa" struktura — naprzemienne obszary niskiej i normalnej echogeniczności); (3) mikrobrodawkowanie/„mikrobrodawkowy" wzór (drobne hipoechogeniczne pola < 1–6 mm odpowiadające naciekom limfocytarnym); (4) zwłóknienia, czasem niewielkie torbiele; (5) wzmożone unaczynienie w aktywnych fazach (badanie Dopplera); (6) zmniejszenie/zanik miąższu w fazie końcowej (atrofii). WSKAZANIA: u dorosłych USG zalecane u każdego pacjenta z laboratoryjnymi cechami zaburzeń czynności tarczycy; u dzieci OBLIGATORYJNE według PTEDD przy każdym podejrzeniu choroby tarczycy. GUZKI: gdy USG wykrywa guzki — ocena wg klasyfikacji TIRADS (EU-TIRADS lub klasyfikacja PTE/PTU). Wskazania do biopsji aspiracyjnej cienkoigłowej (BAC/FNAB): EU-TIRADS 5 (≥ 10 mm) lub EU-TIRADS 4 (≥ 15 mm) lub EU-TIRADS 3 (≥ 20 mm) — uwaga, polskie kryteria mogą się nieco różnić (PTE wytyczne raka tarczycy 2022/Handkiewicz-Junak 2024 u dzieci). U PACJENTA Z HASHIMOTO: ryzyko chłoniaka tarczycy nieznacznie wyższe (rzadkie, ale wymaga uwagi przy szybko narastającym wolu lub guzku o atypowym obrazie).' }
           ]
         },
         { name: 'Konsekwencje i monitorowanie',
           tests: [
-            { ext: 'lipid_panel', label: 'Lipidogram (TC, LDL, HDL, TG)', note: 'Niedoczynność tarczycy powoduje dyslipidemię — podwyższenie cholesterolu całkowitego i frakcji LDL; leczenie substytucyjne zwykle ją koryguje.' },
-            { ext: 'cbc', label: 'Morfologia krwi', note: 'Niedoczynność tarczycy może powodować niedokrwistość (najczęściej normocytową; bywa też makrocytowa lub — przy współistniejącej autoimmunizacji — z niedoboru żelaza albo witaminy B12).' },
-            { ext: 'egfr', label: 'Kreatynina + eGFR', note: 'W cięższej niedoczynności tarczycy dochodzi do odwracalnego obniżenia przesączania kłębuszkowego (eGFR) — normalizuje się po wyrównaniu hormonalnym.' }
+            { ext: 'lipid_panel', label: 'Lipidogram (TC, LDL, HDL, TG)',
+              note: 'Niedoczynność tarczycy powoduje dyslipidemię — podwyższenie cholesterolu całkowitego i frakcji LDL; leczenie substytucyjne zwykle ją koryguje.',
+              description: 'Dyslipidemia w niedoczynności tarczycy — częsta i klinicznie istotna konsekwencja. ZMIANY TYPOWE: (1) podwyższenie cholesterolu całkowitego (TC) i frakcji LDL-C — najwyraźniejsza cecha (do 30–50% wzrostu w cięższej niedoczynności); mechanizm: zmniejszenie ekspresji wątrobowych receptorów LDL (LDLR) i zmniejszenie aktywności lipazy lipoproteinowej; (2) podwyższenie trójglicerydów (TG) — mniej stałe; (3) HDL-C zwykle prawidłowe lub niewielki wzrost (mechanizm: zmniejszenie aktywności CETP); (4) wzrost Lp(a) u niektórych pacjentów. NORMALIZACJA po włączeniu L-tyroksyny: zwykle widoczna po 6–8 tygodniach, pełna po 3 miesiącach prawidłowego TSH. OSTROŻNOŚĆ ZE STATYNAMI: nigdy nie włączać statyny u pacjenta z nierozpoznaną lub niewyrównaną niedoczynnością — statyny i niedoczynność niezależnie zwiększają ryzyko MIOPATII (bóle mięśni, podwyższenie CK), a kombinacja może wywołać ciężkie powikłania (rabdomioliza). Zalecenie: oznacz TSH przed włączeniem statyny u każdego pacjenta z dyslipidemią; jeśli dyslipidemia ↔ niedoczynność, najpierw wyrównaj niedoczynność, ponownie ocen lipidogram po 3 mies., dopiero wtedy decyzja o statynie. SUBKLINICZNA NIEDOCZYNNOŚĆ: sama dyslipidemia nie jest niezależnym wskazaniem do leczenia L-tyroksyną subklinicznej niedoczynności wg PTE/ATA — decyzja w kontekście całości obrazu (wartość TSH, anty-TPO, wiek, objawy, ryzyko sercowo-naczyniowe).' },
+            { ext: 'cbc', label: 'Morfologia krwi',
+              note: 'Niedoczynność tarczycy może powodować niedokrwistość (najczęściej normocytową; bywa też makrocytowa lub — przy współistniejącej autoimmunizacji — z niedoboru żelaza albo witaminy B12).',
+              description: 'Morfologia krwi w niedoczynności tarczycy — niedokrwistość występuje u ~20–60% pacjentów (w zależności od ciężkości). TYPY NIEDOKRWISTOŚCI: (1) NORMOCYTOWA NORMOCHROMICZNA — najczęstsza, łagodna; mechanizm: zmniejszone wytwarzanie erytropoetyny (osi tarczyca-nerka), bezpośredni wpływ hormonów tarczycy na proliferację erytrocytów; (2) MAKROCYTOWA (MCV ↑) — typowa przy współistniejącym NIEDOBORZE WITAMINY B12 (asocjacja autoimmunologiczna — Hashimoto + niedokrwistość Addisona-Biermera w ramach APS-2; oznacz B12, anty-IF/PCA, gastrin); (3) MIKROCYTOWA HIPOCHROMICZNA — typowa przy współistniejącym NIEDOBORZE ŻELAZA — częsta u kobiet (miesiączki, ciąża) i przy CELIAKII (asocjacja APS-2 — anty-tTG, anty-EMA); (4) zaburzenia leukocytów i płytek rzadkie — niedoczynność nie jest cytopeniczna jako taka, ale autoimmunologiczne zaburzenia płytek (ITP) lub neutropenia bywają w APS. NORMALIZACJA: po wyrównaniu TSH morfologia wraca do normy w ciągu 2–4 miesięcy (chyba że istnieje niezależny niedobór Fe/B12, wymagający suplementacji). PUŁAPKA: u pacjenta z niedokrwistością makrocytową i zmęczeniem — ZAWSZE oznacz TSH przed założeniem niedoboru B12 (i odwrotnie); diagnostyka różnicowa obejmuje obie.' },
+            { ext: 'egfr', label: 'Kreatynina + eGFR',
+              note: 'W cięższej niedoczynności tarczycy dochodzi do odwracalnego obniżenia przesączania kłębuszkowego (eGFR) — normalizuje się po wyrównaniu hormonalnym.' }
+          ]
+        },
+        { name: 'Wykluczenia przed leczeniem (APS-2 / zespół Schmidta)',
+          tests: [
+            { id: 'cortisol',
+              label: 'Kortyzol poranny (8:00–9:00)',
+              note: 'PRZED włączeniem L-tyroksyny rozważyć ocenę osi nadnerczowej, zwłaszcza przy podejrzeniu APS-2 / zespołu Schmidta (Hashimoto + choroba Addisona) lub współistniejących objawach niewydolności kory nadnerczy. Substytucja L-tyroksyną u pacjenta z NIEROZPOZNANĄ pierwotną niedoczynnością kory nadnerczy może wywołać PRZEŁOM NADNERCZOWY (zagrożenie życia). Próg < 138 nmol/L → wskazana dalsza diagnostyka (zob. wskazanie „Niedoczynność kory nadnerczy").',
+              description: 'Kortyzol poranny w kontekście niedoczynności tarczycy — kluczowe wykluczenie przed włączeniem L-tyroksyny. APS-2 (autoimmunologiczny zespół niedoczynności wielogruczołowej typu 2, zespół Schmidta) to współistnienie choroby Hashimoto z chorobą Addisona (pierwotna niedoczynność kory nadnerczy) ± cukrzycą typu 1. Mechanizm zagrożenia: hormony tarczycy zwiększają obwodowy metabolizm kortyzolu (przyspieszają jego klirens) — u pacjenta z dotychczas „skompensowaną" subkliniczną niedoczynnością nadnerczy (resztkowa rezerwa) wprowadzenie L-tyroksyny może DEKOMPENSOWAĆ oś nadnerczową i wywołać PRZEŁOM NADNERCZOWY (kryza, niewydolność krążenia, zaburzenia elektrolitowe — hiponatremia, hiperkaliemia — wymagająca natychmiastowego leczenia hydrokortyzonem). WSKAZANIA do oceny kortyzolu PRZED L-tyroksyną: (1) charakterystyczne objawy choroby Addisona — hiperpigmentacja (zwłaszcza fałdów skórnych, brodawek, jamy ustnej), hipotensja ortostatyczna, utrata masy ciała, łaknienie soli, hiponatremia, hiperkaliemia, hipoglikemia; (2) wywiad rodzinny APS lub innych chorób autoimmunologicznych (cukrzyca t.1, bielactwo, niedokrwistość Addisona-Biermera, celiakia); (3) ciężka niedoczynność tarczycy z objawami nieproporcjonalnymi (silne osłabienie, hipotensja, zaburzenia psychiczne). PROTOKÓŁ: pobranie kortyzolu w surowicy o godz. 8:00–9:00 (na czczo, w spoczynku). INTERPRETACJA (Bornstein ES 2016): kortyzol poranny > 500 nmol/L (18 μg/dL) → niewydolność praktycznie wykluczona; < 138 nmol/L (5 μg/dL) → niewydolność prawdopodobna (wymaga testu stymulacji Synacthen 250 μg z pomiarem kortyzolu w 30. i 60. min); 138–500 nmol/L → wynik niejednoznaczny, test Synacthen wskazany. POSTĘPOWANIE: gdy potwierdzona/podejrzewana niedoczynność nadnerczy — NAJPIERW włączyć hydrokortyzon (substytucja glikokortykosteroidem), DOPIERO POTEM L-tyroksynę (po ≥ 1 tygodniu adekwatnej substytucji glikokortykosteroidem); szczegóły: zobacz wskazanie „Niedoczynność kory nadnerczy".' }
           ]
         }
       ],
@@ -3051,6 +3151,8 @@
         'Rekomendacje Polskiego Towarzystwa Endokrynologicznego — postępowanie w niedoczynności tarczycy (Hubalewska-Dydejczyk A i wsp.).',
         'Jonklaas J, Bianco AC, Bauer AJ, et al. Guidelines for the treatment of hypothyroidism: prepared by the American Thyroid Association task force. Thyroid. 2014;24(12):1670-1751.',
         'Hubalewska-Dydejczyk A, Trofimiuk-Müldner M, Ruchała M i wsp. Thyroid diseases and pregnancy: guidelines of the Polish Society of Endocrinology. Endokrynologia Polska. 2021;72(5):425-488.',
+        'Kucharska AM i wsp. — Polskie wytyczne PTEDD: postępowanie w wrodzonej niedoczynności tarczycy. Pediatr Endocrinol Diabetes Metab. 2016.',
+        'Bornstein SR, Allolio B, Arlt W, et al. Diagnosis and Treatment of Primary Adrenal Insufficiency: An Endocrine Society Clinical Practice Guideline. J Clin Endocrinol Metab. 2016;101(2):364-389.',
         'Zgliczyński W (red.). Wielka Interna — Endokrynologia. Medical Tribune Polska — rozdział o niedoczynności tarczycy.'
       ]
     },
