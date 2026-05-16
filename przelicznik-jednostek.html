@@ -1015,6 +1015,25 @@
                 <option value="">— pomiar bazalny —</option>
               </select>
             </div>
+            <!-- Metoda oznaczenia: pojawia się dla substancji method-aware
+                 (np. 17-OH-progesteron). Domyślnie immunoassay PL (najczęściej
+                 stosowane w polskich laboratoriach: Maglumi/Synevo/ALAB),
+                 LC-MS/MS jako gold standard w wybranych ośrodkach. -->
+            <div class="lab-field" id="labMeasFieldMethod" style="display:none;">
+              <label for="labMeasMethod">Metoda oznaczenia
+                <small style="font-weight:400;opacity:0.65;">(sprawdź w wyniku z laboratorium)</small>
+              </label>
+              <select id="labMeasMethod" class="lab-substance">
+                <!-- Opcje wstawiane dynamicznie przez JS w updateMeasurementFields(). -->
+              </select>
+              <small id="labMeasMethodHint"
+                     style="display:block;margin-top:4px;font-size:0.78em;opacity:0.7;line-height:1.35;">
+                LC-MS/MS to metoda referencyjna (gold standard), ale w polskich
+                laboratoriach większość oznaczeń wykonuje się immunoassay
+                (CLIA/ECLIA — Maglumi, Synevo, ALAB). Zakresy referencyjne różnią
+                się znacząco między metodami.
+              </small>
+            </div>
 
             <button type="button" id="labClearBtn" class="lab-clear-btn">
               <i data-lucide="eraser" aria-hidden="true"></i> Wyczyść wszystkie pola
@@ -1211,8 +1230,8 @@
   <script src="ios26-ui.js?v=18" defer></script>
 
   <!-- Dane + moduł logiki (dwa pliki przygotowane do reużycia w innych podstronach). -->
-  <script src="lab_units_data.js?v=10"></script>
-  <script src="lab_unit_converter.js?v=2"></script>
+  <script src="lab_units_data.js?v=14"></script>
+  <script src="lab_unit_converter.js?v=3"></script>
   <script src="lab_clinical_panels.js?v=81"></script>
 
   <script>
@@ -1260,6 +1279,8 @@
     var measTimeEl          = document.getElementById('labMeasTime');
     var measProtocolFieldEl = document.getElementById('labMeasFieldProtocol');
     var measProtocolEl      = document.getElementById('labMeasProtocol');
+    var measMethodFieldEl   = document.getElementById('labMeasFieldMethod');
+    var measMethodEl        = document.getElementById('labMeasMethod');
     var sourcesWrapEl   = document.getElementById('labSourcesWrap');
     var sourcesToggleEl = document.getElementById('labSourcesToggle');
     var sourcesListEl   = document.getElementById('labSourcesList');
@@ -1441,7 +1462,24 @@
         { value: '',                       label: '— pomiar w surowicy (standardowy) —' },
         { value: 'neonatal_dbs_first',     label: 'Bibuła pierwsza — przesiew noworodkowy (DBS, 3.–5. doba)' },
         { value: 'neonatal_dbs_second',    label: 'Bibuła druga — powtórka przesiewu' }
+      ],
+      progesterone: [
+        { value: '',                 label: '— faza cyklu / pomiar bazowy —' },
+        { value: 'ovulation_check',  label: 'Potwierdzenie owulacji (7. dzień po owulacji / 21. d.c.) — PTMRiE 2018' }
       ]
+    };
+
+    // Substancje z różnymi metodami oznaczenia laboratoryjnego, dla których
+    // zakresy referencyjne istotnie się różnią (np. immunoassay vs LC-MS/MS).
+    // Default = najczęstsza metoda w polskich laboratoriach.
+    var METHOD_OPTIONS = {
+      oh17_progesterone: [
+        { value: 'immunoassay_pl', label: 'Immunoassay PL (CLIA/ECLIA) — Maglumi / Synevo / ALAB' },
+        { value: 'lcms',           label: 'LC-MS/MS — metoda referencyjna (gold standard)' }
+      ]
+    };
+    var DEFAULT_METHOD = {
+      oh17_progesterone: 'immunoassay_pl'
     };
 
     // ────────────────────────────────────────────────────────────────
@@ -1522,7 +1560,7 @@
 
     // Atrybuty pomiaru (osobny stan od localOverride, bo dotyczą oznaczenia,
     // nie pacjenta). Resetowane razem z polami formularza.
-    var measurementCtx = { time_of_day: null, test_protocol: null };
+    var measurementCtx = { time_of_day: null, test_protocol: null, method: null };
 
     // Lokalne nadpisania – żyją tylko w pamięci tej karty, nie idą do sharedUserData.
     var localOverride = { sex: null, age: null, tanner: null, cycle_phase: null };
@@ -1575,7 +1613,8 @@
         cycle_phase: localOverride.cycle_phase || null,
         // Atrybuty pomiaru — z formularza, nie z patient data
         time_of_day: measurementCtx.time_of_day || null,
-        test_protocol: measurementCtx.test_protocol || null
+        test_protocol: measurementCtx.test_protocol || null,
+        method: measurementCtx.method || null
       };
       if (typeof p.age === 'number') {
         p.life_stage = p.age >= 18 ? 'adult' : 'pediatric';
@@ -2832,8 +2871,12 @@
       // Pole "Test diagnostyczny" pojawia się dla substancji z protokołami
       // (DST_AWARE, THYROIDECTOMY_AWARE, itd. — agregat z PROTOCOL_OPTIONS).
       var showProtocol = !!(substance && PROTOCOL_OPTIONS[substance.id]);
+      // Pole "Metoda oznaczenia" pojawia się dla substancji z METHOD_OPTIONS
+      // (np. 17-OH-progesteron: immunoassay PL vs LC-MS/MS).
+      var showMethod = !!(substance && METHOD_OPTIONS[substance.id]);
       if (measTimeFieldEl) measTimeFieldEl.style.display = showTime ? '' : 'none';
       if (measProtocolFieldEl) measProtocolFieldEl.style.display = showProtocol ? '' : 'none';
+      if (measMethodFieldEl) measMethodFieldEl.style.display = showMethod ? '' : 'none';
 
       // Dynamicznie wypełnij opcje selectu protokołu (różne per substancja)
       if (measProtocolEl) {
@@ -2849,6 +2892,29 @@
         }
       }
 
+      // Dynamicznie wypełnij opcje selectu metody (różne per substancja)
+      // i ustaw default per substancja (DEFAULT_METHOD).
+      if (measMethodEl) {
+        clearChildren(measMethodEl);
+        if (showMethod) {
+          var mOpts = METHOD_OPTIONS[substance.id];
+          var defaultMethod = DEFAULT_METHOD[substance.id] || (mOpts[0] && mOpts[0].value) || null;
+          for (var k = 0; k < mOpts.length; k++) {
+            var mopt = document.createElement('option');
+            mopt.value = mOpts[k].value;
+            mopt.textContent = mOpts[k].label;
+            measMethodEl.appendChild(mopt);
+          }
+          // Default wartość: zachowaj poprzedni wybór jeśli pasuje do nowych
+          // opcji; w przeciwnym razie ustaw default per substancja.
+          var prev = measurementCtx.method;
+          var prevMatchesNewOpts = prev && mOpts.some(function (o) { return o.value === prev; });
+          var chosen = prevMatchesNewOpts ? prev : defaultMethod;
+          measMethodEl.value = chosen;
+          measurementCtx.method = chosen;
+        }
+      }
+
       // Jeśli pola znikły, czyścimy ich stan, żeby nie wpływały na inne substancje
       if (!showTime && measurementCtx.time_of_day) {
         measurementCtx.time_of_day = null;
@@ -2857,6 +2923,10 @@
       if (!showProtocol && measurementCtx.test_protocol) {
         measurementCtx.test_protocol = null;
         if (measProtocolEl) measProtocolEl.value = '';
+      }
+      if (!showMethod && measurementCtx.method) {
+        measurementCtx.method = null;
+        if (measMethodEl) measMethodEl.value = '';
       }
     }
 
@@ -2946,7 +3016,8 @@
       substanceEl.value = '';
       if (measTimeEl) measTimeEl.value = '';
       if (measProtocolEl) measProtocolEl.value = '';
-      measurementCtx = { time_of_day: null, test_protocol: null };
+      if (measMethodEl) measMethodEl.value = '';
+      measurementCtx = { time_of_day: null, test_protocol: null, method: null };
       showError('');
       applySubstance(null, '');
       showToast('Wyczyszczono');
@@ -3060,11 +3131,13 @@
     function onMeasurementChange() {
       measurementCtx.time_of_day = (measTimeEl && measTimeEl.value) || null;
       measurementCtx.test_protocol = (measProtocolEl && measProtocolEl.value) || null;
+      measurementCtx.method = (measMethodEl && measMethodEl.value) || null;
       if (currentSubstance) renderResults(currentSubstance);
       renderPatientSummary();   // żeby hint kliniczny się odświeżył
     }
     if (measTimeEl) measTimeEl.addEventListener('change', onMeasurementChange);
     if (measProtocolEl) measProtocolEl.addEventListener('change', onMeasurementChange);
+    if (measMethodEl) measMethodEl.addEventListener('change', onMeasurementChange);
     if (overrideResetEl) overrideResetEl.addEventListener('click', function () {
       localOverride = { sex: null, age: null, tanner: null, cycle_phase: null };
       overrideSexEl.value = '';

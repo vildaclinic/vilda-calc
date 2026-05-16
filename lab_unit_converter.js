@@ -220,6 +220,10 @@
    *   tanner        – etap Tannera (1..5)
    *   time_of_day   – 'morning'|'evening'|'midnight' — pora pobrania krwi
    *   test_protocol – 'basal'|'post_dst'|'post_acth' — kontekst pomiaru
+   *   method        – 'lcms'|'immunoassay_pl' — metoda oznaczenia laboratoryjnego
+   *                   (np. 17-OH-progesteron: LC-MS/MS vs immunoassay PL).
+   *                   Strict: jeśli `when.method` jest zdefiniowane, `patient.method`
+   *                   musi się zgadzać — w przeciwnym razie wpadnie do default.
    */
   function matchesWhen(when, patient) {
     if (!when) return true;
@@ -230,6 +234,7 @@
     if (when.tanner && String(p.tanner) !== String(when.tanner)) return false;
     if (when.time_of_day && p.time_of_day !== when.time_of_day) return false;
     if (when.test_protocol && p.test_protocol !== when.test_protocol) return false;
+    if (when.method && p.method !== when.method) return false;
     if (typeof when.age_min === 'number') {
       if (typeof p.age !== 'number' || !isFinite(p.age)) return false;
       if (p.age < when.age_min) return false;
