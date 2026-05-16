@@ -240,6 +240,16 @@
       full_cite: 'Pyrżak B, Walczak M, red. Endokrynologia wieku rozwojowego. Wyd. 2. Warszawa: PZWL Wydawnictwo Lekarskie; 2023.',
       url: null
     },
+    ptmrie_ptgp_2018: {
+      label_short: 'PTMRiE / PTGP 2018 — rekomendacje niepłodności',
+      full_cite: 'Rekomendacje Polskiego Towarzystwa Medycyny Rozrodu i Embriologii (PTMRiE) oraz Polskiego Towarzystwa Ginekologów i Położników (PTGP) dotyczące diagnostyki i leczenia niepłodności. 2018.',
+      url: 'https://www.ptmrie.org.pl/rekomendacje'
+    },
+    snibe_maglumi_v11: {
+      label_short: 'Maglumi V11.0 IFU (Snibe)',
+      full_cite: 'Snibe Diagnostic. Maglumi serum estradiol / progesterone / 17-OH-progesterone IFU (Instructions for Use), wersja V11.0. Shenzhen, China.',
+      url: 'https://www.snibe.com/'
+    },
 
     // ── Tarczyca (paczka 4a) ──────────────────────────────────────────────
     mayo_test_tsh: {
@@ -714,43 +724,136 @@
       precision: 3,
       default_range_si: { low: 0.3, high: 10, context_pl: 'Kobiety, faza lutealna (zakres szerszy: M < 6, F-fol. < 3)' },
       reference_ranges_si: [
-        // Pediatria — metoda LC-MS/MS. Noworodki: 17-OHP fizjologicznie WYSOKIE
-        // (aktywacja osi nadnerczowej po urodzeniu), spada stopniowo w ciągu 1–6 mies.
-        // Noworodkowy przedział wg Mayo / Von Schnakenburg 1980; pozostałe wg Soldin 2009.
-        { id: '17ohp_ped_neonate',    when: { age_min: 0, age_max: 0.077, life_stage: 'pediatric' },
-          low: 0, high: 19.0, context_pl: 'Noworodki donoszone 0–28 dni (LC-MS/MS; wcześniaki fizjologicznie wyżej — niekiedy do ~30 nmol/L)',
+        // ═══════════════════════════════════════════════════════════════════
+        //  METODA: LC-MS/MS (Soldin 2009 + Mayo / Von Schnakenburg 1980)
+        //  Tag: method: 'lcms'
+        //  Metoda referencyjna zalecana przez ESPE/Endocrine Society 2018
+        //  (Speiser), zwłaszcza u dzieci i w przesiewie noworodkowym.
+        //  Wartości NIŻSZE niż immunoassaye (brak reaktywności krzyżowej).
+        // ═══════════════════════════════════════════════════════════════════
+        { id: '17ohp_lcms_ped_neonate', when: { age_min: 0, age_max: 0.077, life_stage: 'pediatric', method: 'lcms' },
+          low: 0, high: 19.0, context_pl: 'LC-MS/MS — noworodki donoszone 0–28 dni (Mayo; wcześniaki fizjologicznie wyżej — niekiedy do ~30 nmol/L)',
           source_ids: ['mayo_ohpg_neonatal'] },
-        { id: '17ohp_ped_infant',     when: { age_min: 0.077, age_max: 0.5, life_stage: 'pediatric' },
-          low: 0.76, high: 7.50, context_pl: 'Niemowlęta 1–6 miesięcy, oba płcie (LC-MS/MS; stopniowy spadek do wartości prepubertalnych)',
+        { id: '17ohp_lcms_ped_infant', when: { age_min: 0.077, age_max: 0.5, life_stage: 'pediatric', method: 'lcms' },
+          low: 0.76, high: 7.50, context_pl: 'LC-MS/MS — niemowlęta 1–6 miesięcy, oba płcie (Soldin 2009; stopniowy spadek do wartości prepubertalnych)',
           source_ids: ['soldin_2009_lcms'] },
-        { id: '17ohp_ped_male_infant_to_adult', when: { sex: 'M', age_min: 0.5, age_max: 18, life_stage: 'pediatric' },
-          low: 0.21, high: 3.03, context_pl: 'Chłopcy 6 miesięcy – 18 lat (LC-MS/MS)',
+        { id: '17ohp_lcms_ped_male_infant_to_adult', when: { sex: 'M', age_min: 0.5, age_max: 18, life_stage: 'pediatric', method: 'lcms' },
+          low: 0.21, high: 3.03, context_pl: 'LC-MS/MS — chłopcy 6 miesięcy – 18 lat (Soldin 2009)',
           source_ids: ['soldin_2009_lcms'] },
-        { id: '17ohp_ped_female_6mo_6', when: { sex: 'F', age_min: 0.5, age_max: 6, life_stage: 'pediatric' },
-          low: 0.09, high: 3.24, context_pl: 'Dziewczynki 6 miesięcy – 6 lat (LC-MS/MS)',
+        { id: '17ohp_lcms_ped_female_6mo_6', when: { sex: 'F', age_min: 0.5, age_max: 6, life_stage: 'pediatric', method: 'lcms' },
+          low: 0.09, high: 3.24, context_pl: 'LC-MS/MS — dziewczynki 6 miesięcy – 6 lat (Soldin 2009)',
           source_ids: ['soldin_2009_lcms'] },
-        { id: '17ohp_ped_female_6_10', when: { sex: 'F', age_min: 6, age_max: 10, life_stage: 'pediatric' },
-          low: 0.18, high: 1.88, context_pl: 'Dziewczynki 6–10 lat (LC-MS/MS)',
+        { id: '17ohp_lcms_ped_female_6_10', when: { sex: 'F', age_min: 6, age_max: 10, life_stage: 'pediatric', method: 'lcms' },
+          low: 0.18, high: 1.88, context_pl: 'LC-MS/MS — dziewczynki 6–10 lat (Soldin 2009)',
           source_ids: ['soldin_2009_lcms'] },
-        { id: '17ohp_ped_female_10_18', when: { sex: 'F', age_min: 10, age_max: 18, life_stage: 'pediatric' },
-          low: 0.45, high: 4.15, context_pl: 'Dziewczynki 10–18 lat (LC-MS/MS)',
+        { id: '17ohp_lcms_ped_female_10_18', when: { sex: 'F', age_min: 10, age_max: 18, life_stage: 'pediatric', method: 'lcms' },
+          low: 0.45, high: 4.15, context_pl: 'LC-MS/MS — dziewczynki 10–18 lat (Soldin 2009)',
           source_ids: ['soldin_2009_lcms'] },
-        // Dorośli (z fazy 1)
-        { id: '17ohp_female_follicular', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'follicular' },
-          low: 0.3, high: 3.0, context_pl: 'Kobiety, faza folikularna',
+        { id: '17ohp_lcms_female_follicular', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'follicular', method: 'lcms' },
+          low: 0.3, high: 3.0, context_pl: 'LC-MS/MS — kobiety, faza folikularna (Tietz/ES 2018 Speiser)',
           source_ids: ['tietz_2018', 'speiser_es_cah_2018'] },
-        { id: '17ohp_female_luteal', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'luteal' },
-          low: 3.0, high: 10.0, context_pl: 'Kobiety, faza lutealna',
+        { id: '17ohp_lcms_female_luteal', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'luteal', method: 'lcms' },
+          low: 3.0, high: 10.0, context_pl: 'LC-MS/MS — kobiety, faza lutealna (Tietz)',
           source_ids: ['tietz_2018'] },
-        { id: '17ohp_female_postmeno', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'postmenopause' },
-          low: 0.3, high: 3.0, context_pl: 'Kobiety, postmenopauza',
+        { id: '17ohp_lcms_female_postmeno', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'postmenopause', method: 'lcms' },
+          low: 0.3, high: 3.0, context_pl: 'LC-MS/MS — kobiety, postmenopauza (Tietz)',
           source_ids: ['tietz_2018'] },
-        { id: '17ohp_male', when: { sex: 'M', life_stage: 'adult' },
-          low: 0.3, high: 6.0, context_pl: 'Mężczyźni dorośli',
+        { id: '17ohp_lcms_male', when: { sex: 'M', life_stage: 'adult', method: 'lcms' },
+          low: 0.3, high: 6.0, context_pl: 'LC-MS/MS — mężczyźni dorośli (Tietz)',
           source_ids: ['tietz_2018'] },
+
+        // ═══════════════════════════════════════════════════════════════════
+        //  METODA: IMMUNOASSAY POLSKIE LABORATORIA (Maglumi CLIA + Synevo ECLIA)
+        //  Tag: method: 'immunoassay_pl'
+        //  Pełna stratyfikacja wieku/płci uwzględniająca mini-puberty
+        //  (1–3 mies. — sex-stratified wg Maglumi V11.0 IFU).
+        //  Wartości typowo WYŻSZE niż LC-MS/MS — reaktywność krzyżowa
+        //  z 11-deoksykortyzolem, 17-OH-pregnenolonem, siarczanami.
+        //  Średnie z dostępnych polskich źródeł (max range Maglumi + Synevo).
+        //  Luki w danych Maglumi (0–28 dni, 4–12 mies., 1–3 lata) wypełnione
+        //  szacunkowo z buforem na wyższe wartości immunoassayu vs LC-MS/MS.
+        // ═══════════════════════════════════════════════════════════════════
+        { id: '17ohp_immuno_neonate_0_28d', when: { age_min: 0, age_max: 0.077, life_stage: 'pediatric', method: 'immunoassay_pl' },
+          low: 0, high: 20.0, context_pl: 'Immunoassay PL — noworodki donoszone 0–28 dni (Maglumi nie podaje 0–28 dni; orientacyjnie z Mayo + bufor na wyższe wartości immunoassayu; wcześniaki mogą sięgać 30 nmol/L)',
+          source_ids: ['mayo_ohpg_neonatal', 'maglumi_v11_ifu'] },
+        // ── Mini-puberty: 1 mies. (wczesna), 2 mies. (peak), 3 mies. (zanikająca)
+        //    Sex-stratified — Maglumi V11.0 IFU V11.0 (2019-11)
+        { id: '17ohp_immuno_1mo_M', when: { sex: 'M', age_min: 0.077, age_max: 0.165, life_stage: 'pediatric', method: 'immunoassay_pl' },
+          low: 0, high: 24.2, context_pl: 'Immunoassay PL — chłopcy 1 miesiąc życia (mini-puberty wczesna; Maglumi V11.0: 0,0–8,0 ng/mL)',
+          source_ids: ['maglumi_v11_ifu'] },
+        { id: '17ohp_immuno_1mo_F', when: { sex: 'F', age_min: 0.077, age_max: 0.165, life_stage: 'pediatric', method: 'immunoassay_pl' },
+          low: 7.3, high: 50.8, context_pl: 'Immunoassay PL — dziewczynki 1 miesiąc życia (mini-puberty wczesna; Maglumi V11.0: 2,4–16,8 ng/mL — fizjologicznie wyższe niż u chłopców)',
+          source_ids: ['maglumi_v11_ifu'] },
+        { id: '17ohp_immuno_2mo_M', when: { sex: 'M', age_min: 0.165, age_max: 0.247, life_stage: 'pediatric', method: 'immunoassay_pl' },
+          low: 10.9, high: 41.5, context_pl: 'Immunoassay PL — chłopcy 2 miesiące życia (mini-puberty peak; Maglumi V11.0: 3,6–13,7 ng/mL)',
+          source_ids: ['maglumi_v11_ifu'] },
+        { id: '17ohp_immuno_2mo_F', when: { sex: 'F', age_min: 0.165, age_max: 0.247, life_stage: 'pediatric', method: 'immunoassay_pl' },
+          low: 4.8, high: 29.4, context_pl: 'Immunoassay PL — dziewczynki 2 miesiące życia (mini-puberty peak; Maglumi V11.0: 1,6–9,7 ng/mL)',
+          source_ids: ['maglumi_v11_ifu'] },
+        { id: '17ohp_immuno_3mo_M', when: { sex: 'M', age_min: 0.247, age_max: 0.329, life_stage: 'pediatric', method: 'immunoassay_pl' },
+          low: 5.1, high: 12.1, context_pl: 'Immunoassay PL — chłopcy 3 miesiące życia (mini-puberty zanikająca; Maglumi V11.0: 1,7–4,0 ng/mL)',
+          source_ids: ['maglumi_v11_ifu'] },
+        { id: '17ohp_immuno_3mo_F', when: { sex: 'F', age_min: 0.247, age_max: 0.329, life_stage: 'pediatric', method: 'immunoassay_pl' },
+          low: 0.3, high: 9.4, context_pl: 'Immunoassay PL — dziewczynki 3 miesiące życia (mini-puberty zanikająca; Maglumi V11.0: 0,1–3,1 ng/mL)',
+          source_ids: ['maglumi_v11_ifu'] },
+        { id: '17ohp_immuno_4_12mo', when: { age_min: 0.329, age_max: 1, life_stage: 'pediatric', method: 'immunoassay_pl' },
+          low: 0.3, high: 7.5, context_pl: 'Immunoassay PL — niemowlęta 4–12 miesięcy, oba płcie (poza mini-puberty; Maglumi nie podaje, szacowane z Mayo + bufor immunoassay)',
+          source_ids: ['mayo_ohpg_neonatal', 'maglumi_v11_ifu'] },
+        { id: '17ohp_immuno_1_3y', when: { age_min: 1, age_max: 3, life_stage: 'pediatric', method: 'immunoassay_pl' },
+          low: 0.3, high: 5.5, context_pl: 'Immunoassay PL — dzieci 1–3 lat, oba płcie (luka w Maglumi; interpolacja między niemowlętami a Maglumi 3–14 lat)',
+          source_ids: ['maglumi_v11_ifu'] },
+        { id: '17ohp_immuno_3_14y', when: { age_min: 3, age_max: 14, life_stage: 'pediatric', method: 'immunoassay_pl' },
+          low: 0.3, high: 5.14, context_pl: 'Immunoassay PL — dzieci 3–14 lat, oba płcie prepubertal (Maglumi V11.0: 0,1–1,7 ng/mL)',
+          source_ids: ['maglumi_v11_ifu'] },
+        // Młodzież 14–18 lat — Maglumi NIE PODAJE osobnego zakresu pediatrycznego
+        // dla tej grupy (od 14 lat traktuje już jak dorosłych); stosujemy więc
+        // zakresy dorosłych z konkretnymi cycle_phase u dziewczynek po menarche.
+        // Definiujemy WYRAŹNE wpisy 14_18 dla immunoassay, aby uniknąć fallback
+        // do innych pediatrycznych zakresów.
+        { id: '17ohp_immuno_14_18_M', when: { sex: 'M', age_min: 14, age_max: 18, life_stage: 'pediatric', method: 'immunoassay_pl' },
+          low: 0.6, high: 7.0, context_pl: 'Immunoassay PL — chłopcy 14–18 lat (Maglumi traktuje od 14 lat jak dorosłych; uwzględnić stadium Tannera; uśrednione z Maglumi/Synevo: 0,2–2,3 ng/mL)',
+          source_ids: ['maglumi_v11_ifu', 'synevo_pl'] },
+        { id: '17ohp_immuno_14_18_F_follicular', when: { sex: 'F', age_min: 14, age_max: 18, life_stage: 'pediatric', cycle_phase: 'follicular', method: 'immunoassay_pl' },
+          low: 0.3, high: 3.9, context_pl: 'Immunoassay PL — dziewczynki 14–18 lat, faza folikularna (Maglumi traktuje od 14 lat jak dorosłych; uśrednione z Maglumi/Synevo: 0,1–1,3 ng/mL)',
+          source_ids: ['maglumi_v11_ifu', 'synevo_pl'] },
+        { id: '17ohp_immuno_14_18_F_ovulation', when: { sex: 'F', age_min: 14, age_max: 18, life_stage: 'pediatric', cycle_phase: 'ovulation', method: 'immunoassay_pl' },
+          low: 0.9, high: 4.2, context_pl: 'Immunoassay PL — dziewczynki 14–18 lat, owulacja (Maglumi V11.0: 0,3–1,4 ng/mL)',
+          source_ids: ['maglumi_v11_ifu'] },
+        { id: '17ohp_immuno_14_18_F_luteal', when: { sex: 'F', age_min: 14, age_max: 18, life_stage: 'pediatric', cycle_phase: 'luteal', method: 'immunoassay_pl' },
+          low: 1.8, high: 13.6, context_pl: 'Immunoassay PL — dziewczynki 14–18 lat, faza lutealna (uśrednione z Maglumi/Synevo: 0,6–4,5 ng/mL)',
+          source_ids: ['maglumi_v11_ifu', 'synevo_pl'] },
+        { id: '17ohp_immuno_14_18_F_default', when: { sex: 'F', age_min: 14, age_max: 18, life_stage: 'pediatric', method: 'immunoassay_pl' },
+          low: 0.3, high: 3.9, context_pl: 'Immunoassay PL — dziewczynki 14–18 lat (faza cyklu nieznana, używamy folikularnej jako domyślnej; gdy faza znana zob. cycle_phase)',
+          source_ids: ['maglumi_v11_ifu', 'synevo_pl'] },
+        // Dorośli — immunoassay PL (uśrednione Maglumi + Synevo, max range)
+        { id: '17ohp_immuno_female_follicular', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'follicular', method: 'immunoassay_pl' },
+          low: 0.3, high: 3.9, context_pl: 'Immunoassay PL — kobiety, faza folikularna (Maglumi 0,1–0,8 + Synevo 0,2–1,3 ng/mL; max range)',
+          source_ids: ['maglumi_v11_ifu', 'synevo_pl'] },
+        { id: '17ohp_immuno_female_ovulation', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'ovulation', method: 'immunoassay_pl' },
+          low: 0.9, high: 4.2, context_pl: 'Immunoassay PL — kobiety, owulacja (Maglumi V11.0: 0,3–1,4 ng/mL)',
+          source_ids: ['maglumi_v11_ifu'] },
+        { id: '17ohp_immuno_female_luteal', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'luteal', method: 'immunoassay_pl' },
+          low: 1.8, high: 13.6, context_pl: 'Immunoassay PL — kobiety, faza lutealna (Maglumi 0,6–2,3 + Synevo 1,0–4,5 ng/mL; max range)',
+          source_ids: ['maglumi_v11_ifu', 'synevo_pl'] },
+        { id: '17ohp_immuno_female_postmeno', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'postmenopause', method: 'immunoassay_pl' },
+          low: 0.4, high: 2.7, context_pl: 'Immunoassay PL — kobiety, menopauza (Maglumi 0,13–0,51 + Synevo 0,2–0,9 ng/mL; max range)',
+          source_ids: ['maglumi_v11_ifu', 'synevo_pl'] },
+        { id: '17ohp_immuno_post_acth_F', when: { sex: 'F', life_stage: 'adult', test_protocol: 'post_acth', method: 'immunoassay_pl' },
+          low: 0, high: 9.68, context_pl: 'Immunoassay PL — kobiety dorosłe po stymulacji ACTH (test Synacthen): norma < 9,68 nmol/L (< 3,2 ng/mL wg Maglumi). > 30 nmol/L (> 10 ng/mL) = potwierdzenie WPN wg PTEDD/ES.',
+          source_ids: ['maglumi_v11_ifu', 'speiser_es_cah_2018'] },
+        { id: '17ohp_immuno_male', when: { sex: 'M', life_stage: 'adult', method: 'immunoassay_pl' },
+          low: 0.6, high: 7.0, context_pl: 'Immunoassay PL — mężczyźni dorośli (Maglumi 0,5–2,1 + Synevo 0,2–2,3 ng/mL; max range)',
+          source_ids: ['maglumi_v11_ifu', 'synevo_pl'] },
+
+        // ═══════════════════════════════════════════════════════════════════
+        //  DEFAULT FALLBACK — bez `method` w when
+        //  Najszerszy zakres uwzględniający OBA metody; używany gdy
+        //  użytkownik nie wybrał metody. Po wdrożeniu UI selektora metody
+        //  (Krok 2) ten fallback będzie używany tylko w wypadku "Nie wiem".
+        // ═══════════════════════════════════════════════════════════════════
         { id: '17ohp_default', when: {}, default: true,
-          low: 0.3, high: 10.0, context_pl: 'Dorośli, zakres ogólny (najszerszy)',
-          source_ids: ['tietz_2018', 'speiser_es_cah_2018'] }
+          low: 0.3, high: 13.6, context_pl: 'Dorośli, zakres ogólny (najszerszy; metoda oznaczenia nieznana). KLINICZNIE: porównaj z zakresem laboratorium wykonującego badanie. LC-MS/MS daje wartości NIŻSZE (max ~10 nmol/L); immunoassay PL — WYŻSZE (max ~13,6 nmol/L w lutealnej).',
+          source_ids: ['tietz_2018', 'speiser_es_cah_2018', 'maglumi_v11_ifu', 'synevo_pl'] }
       ],
       ranges_pl: [
         'Faza folikularna: < 3 nmol/L (< 100 ng/dL)',
@@ -923,6 +1026,15 @@
           low: 0.82, high: 7.43, context_pl: 'Dziewczynki Tanner IV–V',
           source_ids: ['mayo_test_pregnenolone'] },
         // — Age-based pediatric (gdy brak Tannera). Mayo: 0–6 lat „Not established".
+        //   Faza 5d: dla < 7 lat używamy Tanner I (zakres prepubertalny) jako fallback wieku.
+        { id: 'preg_M_prepubertal_age', when: { sex: 'M', age_min: 0.5, age_max: 7, life_stage: 'pediatric' },
+          low: 0, high: 4.96,
+          context_pl: 'Chłopcy 0,5–7 lat (Tanner I — fallback wiek; Mayo „Not established" dla 0–6 lat)',
+          source_ids: ['mayo_test_pregnenolone'] },
+        { id: 'preg_F_prepubertal_age', when: { sex: 'F', age_min: 0.5, age_max: 7, life_stage: 'pediatric' },
+          low: 0, high: 5.43,
+          context_pl: 'Dziewczynki 0,5–7 lat (Tanner I — fallback wiek; Mayo „Not established" dla 0–6 lat)',
+          source_ids: ['mayo_test_pregnenolone'] },
         { id: 'preg_M_7_9', when: { sex: 'M', age_min: 7, age_max: 10, life_stage: 'pediatric' },
           low: 0, high: 6.51, context_pl: 'Chłopcy 7–9 lat',
           source_ids: ['mayo_test_pregnenolone'] },
@@ -1089,6 +1201,32 @@
         { id: 'dheas_F_tanner5', when: { sex: 'F', tanner: 5 },
           low: 1.547, high: 10.720, context_pl: 'Dziewczynki Tanner V (śr. 14,5 lat)',
           source_ids: ['mayo_test_dheas'] },
+        // — Age-based fallback (gdy Tanner nieznany; Faza 5d).
+        //   Mapowanie: 0,5–9 lat ≈ Tanner I; 9–14 ≈ Tanner II–IV (suma); 14–18 ≈ Tanner V.
+        { id: 'dheas_M_prepubertal_age', when: { sex: 'M', age_min: 0.5, age_max: 9, life_stage: 'pediatric' },
+          low: 0.299, high: 3.257,
+          context_pl: 'Chłopcy prepubertalni (0,5–9 lat, Tanner I — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_dheas'] },
+        { id: 'dheas_M_peripubertal_age', when: { sex: 'M', age_min: 9, age_max: 14, life_stage: 'pediatric' },
+          low: 0.149, high: 11.182,
+          context_pl: 'Chłopcy pubertalni (9–14 lat, suma Tanner II–IV — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_dheas'] },
+        { id: 'dheas_M_latepubertal_age', when: { sex: 'M', age_min: 14, age_max: 18, life_stage: 'pediatric' },
+          low: 2.823, high: 12.701,
+          context_pl: 'Chłopcy późnopubertalni (14–18 lat, Tanner V — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_dheas'] },
+        { id: 'dheas_F_prepubertal_age', when: { sex: 'F', age_min: 0.5, age_max: 9, life_stage: 'pediatric' },
+          low: 0.434, high: 2.605,
+          context_pl: 'Dziewczynki prepubertalne (0,5–9 lat, Tanner I — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_dheas'] },
+        { id: 'dheas_F_peripubertal_age', when: { sex: 'F', age_min: 9, age_max: 14, life_stage: 'pediatric' },
+          low: 0.299, high: 9.309,
+          context_pl: 'Dziewczynki pubertalne (9–14 lat, suma Tanner II–IV — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_dheas'] },
+        { id: 'dheas_F_latepubertal_age', when: { sex: 'F', age_min: 14, age_max: 18, life_stage: 'pediatric' },
+          low: 1.547, high: 10.720,
+          context_pl: 'Dziewczynki późnopubertalne (14–18 lat, Tanner V — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_dheas'] },
         // — Mężczyźni — 4 przedziały wiekowe (Mayo + Tietz)
         { id: 'dheas_male_18_30', when: { sex: 'M', age_min: 18, age_max: 30, life_stage: 'adult' },
           low: 4.3, high: 12.0, context_pl: 'Mężczyźni 18–30 lat',
@@ -1195,6 +1333,31 @@
           source_ids: ['mayo_test_androstenedione', 'soldin_2005_aacc'] },
         { id: 'a4_F_tanner5', when: { sex: 'F', tanner: 5 },
           low: 2.79, high: 8.38, context_pl: 'Dziewczynki Tanner V',
+          source_ids: ['mayo_test_androstenedione', 'soldin_2005_aacc'] },
+        // — Age-based fallback (gdy Tanner nieznany; Faza 5d).
+        { id: 'a4_M_prepubertal_age', when: { sex: 'M', age_min: 0.5, age_max: 9, life_stage: 'pediatric' },
+          low: 0, high: 1.78,
+          context_pl: 'Chłopcy prepubertalni (0,5–9 lat, Tanner I — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_androstenedione', 'soldin_2005_aacc'] },
+        { id: 'a4_M_peripubertal_age', when: { sex: 'M', age_min: 9, age_max: 14, life_stage: 'pediatric' },
+          low: 1.08, high: 4.89,
+          context_pl: 'Chłopcy pubertalni (9–14 lat, suma Tanner II–IV — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_androstenedione', 'soldin_2005_aacc'] },
+        { id: 'a4_M_latepubertal_age', when: { sex: 'M', age_min: 14, age_max: 18, life_stage: 'pediatric' },
+          low: 2.27, high: 7.33,
+          context_pl: 'Chłopcy późnopubertalni (14–18 lat, Tanner V — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_androstenedione', 'soldin_2005_aacc'] },
+        { id: 'a4_F_prepubertal_age', when: { sex: 'F', age_min: 0.5, age_max: 9, life_stage: 'pediatric' },
+          low: 0, high: 1.78,
+          context_pl: 'Dziewczynki prepubertalne (0,5–9 lat, Tanner I — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_androstenedione', 'soldin_2005_aacc'] },
+        { id: 'a4_F_peripubertal_age', when: { sex: 'F', age_min: 9, age_max: 14, life_stage: 'pediatric' },
+          low: 1.47, high: 7.85,
+          context_pl: 'Dziewczynki pubertalne (9–14 lat, suma Tanner II–IV — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_androstenedione', 'soldin_2005_aacc'] },
+        { id: 'a4_F_latepubertal_age', when: { sex: 'F', age_min: 14, age_max: 18, life_stage: 'pediatric' },
+          low: 2.79, high: 8.38,
+          context_pl: 'Dziewczynki późnopubertalne (14–18 lat, Tanner V — fallback wiek gdy Tanner nieznany)',
           source_ids: ['mayo_test_androstenedione', 'soldin_2005_aacc'] },
         // — Dorośli Mayo (lepsze niż Tietz, sex-stratified)
         { id: 'a4_male_adult', when: { sex: 'M', life_stage: 'adult' },
@@ -1483,6 +1646,31 @@
         { id: 'dht_F_tanner5_5', when: { sex: 'F', tanner: 5 },
           low: 0, high: 1.033, context_pl: 'Dziewczynki Tanner V',
           source_ids: ['mayo_test_dht'] },
+        // — Age-based fallback (gdy Tanner nieznany; Faza 5d).
+        { id: 'dht_M_prepubertal_age', when: { sex: 'M', age_min: 0.5, age_max: 9, life_stage: 'pediatric' },
+          low: 0, high: 0.172,
+          context_pl: 'Chłopcy prepubertalni (0,5–9 lat, Tanner I — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_dht'] },
+        { id: 'dht_M_peripubertal_age', when: { sex: 'M', age_min: 9, age_max: 14, life_stage: 'pediatric' },
+          low: 0, high: 1.79,
+          context_pl: 'Chłopcy pubertalni (9–14 lat, suma Tanner II–IV — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_dht'] },
+        { id: 'dht_M_latepubertal_age', when: { sex: 'M', age_min: 14, age_max: 18, life_stage: 'pediatric' },
+          low: 0.826, high: 2.238,
+          context_pl: 'Chłopcy późnopubertalni (14–18 lat, Tanner V — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_dht'] },
+        { id: 'dht_F_prepubertal_age', when: { sex: 'F', age_min: 0.5, age_max: 9, life_stage: 'pediatric' },
+          low: 0, high: 0.172,
+          context_pl: 'Dziewczynki prepubertalne (0,5–9 lat, Tanner I — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_dht'] },
+        { id: 'dht_F_peripubertal_age', when: { sex: 'F', age_min: 9, age_max: 14, life_stage: 'pediatric' },
+          low: 0, high: 1.033,
+          context_pl: 'Dziewczynki pubertalne (9–14 lat, Tanner II–IV — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_dht'] },
+        { id: 'dht_F_latepubertal_age', when: { sex: 'F', age_min: 14, age_max: 18, life_stage: 'pediatric' },
+          low: 0, high: 1.033,
+          context_pl: 'Dziewczynki późnopubertalne (14–18 lat, Tanner V — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_dht'] },
         // — Dorośli (Mayo M szerszy niż Tietz; F do 55 lat 0–300 pg/mL, > 55 niżej)
         { id: 'dht_male_adult', when: { sex: 'M', life_stage: 'adult' },
           low: 0.386, high: 3.288, context_pl: 'Mężczyźni dorośli (>19 lat)',
@@ -1531,6 +1719,14 @@
       precision: 3,
       default_range_si: { low: 70, high: 290, context_pl: 'Kobiety, faza folikularna (M: 40–160 pmol/L; pik owul. do 1460)' },
       reference_ranges_si: [
+        // — Mini-puberty (dziewczynki 14 dni – 6 mies). Literatura PL/EU:
+        //   Bizzarri 2014 + Endokrynologia Pediatryczna — u dziewczynek 1–3 mies
+        //   E2 dochodzi do ~50 pg/mL (~183 pmol/L), spadek < 10 pg/mL po 6. mies.
+        //   Mini-puberty u chłopców: E2 nieistotny (główne LH/FSH/T), więc tylko F.
+        { id: 'e2_F_mini_puberty', when: { sex: 'F', age_min: 0.038, age_max: 0.5, life_stage: 'pediatric' },
+          low: 0, high: 183,
+          context_pl: 'Dziewczynki 14 dni – 6 miesięcy (mini-puberty żeńska; do ~50 pg/mL)',
+          source_ids: ['mayo_test_estradiol'] },
         // — Pediatria, Mayo Test 81816 (HPLC + LC-MS/MS).
         //   Wartości w pg/mL × 3.671 = pmol/L (MW 272.38).
         //   Tanner-based, chłopcy
@@ -1563,8 +1759,34 @@
           low: 55.14, high: 312.46, context_pl: 'Dziewczynki Tanner IV',
           source_ids: ['mayo_test_estradiol'] },
         { id: 'e2_F_tanner5', when: { sex: 'F', tanner: 5 },
-          low: 55.14, high: 1286.60, context_pl: 'Dziewczynki Tanner V (już zakres dorosły premenopauzy)',
+          low: 0, high: 290,
+          context_pl: 'Dziewczynki Tanner V — domyślnie zakres premenopauzy fazy folikularnej (faza cyklu zmienia interpretację: owulacja 380–1460; lutealna 200–770 pmol/L)',
+          source_ids: ['mayo_test_estradiol', 'tietz_2018'] },
+        // — Age-based fallback (gdy Tanner nieznany; Faza 5d). Mini-puberty F (0–6 mies) wyżej.
+        { id: 'e2_M_prepubertal_age', when: { sex: 'M', age_min: 0.5, age_max: 9, life_stage: 'pediatric' },
+          low: 0, high: 47.79,
+          context_pl: 'Chłopcy prepubertalni (0,5–9 lat, Tanner I — fallback wiek gdy Tanner nieznany)',
           source_ids: ['mayo_test_estradiol'] },
+        { id: 'e2_M_peripubertal_age', when: { sex: 'M', age_min: 9, age_max: 14, life_stage: 'pediatric' },
+          low: 0, high: 139.69,
+          context_pl: 'Chłopcy pubertalni (9–14 lat, suma Tanner II–IV — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_estradiol'] },
+        { id: 'e2_M_latepubertal_age', when: { sex: 'M', age_min: 14, age_max: 18, life_stage: 'pediatric' },
+          low: 36.76, high: 147.04,
+          context_pl: 'Chłopcy późnopubertalni (14–18 lat, Tanner V — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_estradiol'] },
+        { id: 'e2_F_prepubertal_age', when: { sex: 'F', age_min: 0.5, age_max: 9, life_stage: 'pediatric' },
+          low: 0, high: 73.52,
+          context_pl: 'Dziewczynki prepubertalne (0,5–9 lat, Tanner I — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_estradiol'] },
+        { id: 'e2_F_peripubertal_age', when: { sex: 'F', age_min: 9, age_max: 14, life_stage: 'pediatric' },
+          low: 0, high: 312.46,
+          context_pl: 'Dziewczynki pubertalne (9–14 lat, suma Tanner II–IV — fallback wiek gdy Tanner nieznany; faza cyklu zmienia interpretację)',
+          source_ids: ['mayo_test_estradiol'] },
+        { id: 'e2_F_latepubertal_age', when: { sex: 'F', age_min: 14, age_max: 18, life_stage: 'pediatric' },
+          low: 0, high: 290,
+          context_pl: 'Dziewczynki późnopubertalne (14–18 lat, Tanner V — fallback wiek gdy Tanner nieznany; faza cyklu zmienia interpretację)',
+          source_ids: ['mayo_test_estradiol', 'tietz_2018'] },
         // — Dorośli (z fazy 1) — zachowujemy fazę cyklu z Tietz
         { id: 'e2_female_follicular', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'follicular' },
           low: 70, high: 290, context_pl: 'Kobiety, faza folikularna',
@@ -1576,8 +1798,9 @@
           low: 200, high: 770, context_pl: 'Kobiety, faza lutealna',
           source_ids: ['tietz_2018'] },
         { id: 'e2_female_postmeno', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'postmenopause' },
-          low: 18, high: 110, context_pl: 'Kobiety, postmenopauza',
-          source_ids: ['tietz_2018'] },
+          low: 0, high: 110,
+          context_pl: 'Kobiety, postmenopauza — kryterium menopauzy w PL: E2 < 30 pg/mL (~110 pmol/L) + FSH > 30 IU/L (PTMRiE/PTG, ESHRE 2016)',
+          source_ids: ['tietz_2018', 'ptmrie_ptgp_2018'] },
         { id: 'e2_male_adult', when: { sex: 'M', life_stage: 'adult' },
           low: 40, high: 160, context_pl: 'Mężczyźni dorośli',
           source_ids: ['tietz_2018'] },
@@ -1651,6 +1874,31 @@
         { id: 'e1_F_tanner5', when: { sex: 'F', tanner: 5 },
           low: 62.97, high: 740.80, context_pl: 'Dziewczynki Tanner V',
           source_ids: ['mayo_test_estrone'] },
+        // — Age-based fallback (gdy Tanner nieznany; Faza 5d).
+        { id: 'e1_M_prepubertal_age', when: { sex: 'M', age_min: 0.5, age_max: 9, life_stage: 'pediatric' },
+          low: 0, high: 59.26,
+          context_pl: 'Chłopcy prepubertalni (0,5–9 lat, Tanner I — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_estrone'] },
+        { id: 'e1_M_peripubertal_age', when: { sex: 'M', age_min: 9, age_max: 14, life_stage: 'pediatric' },
+          low: 0, high: 170.38,
+          context_pl: 'Chłopcy pubertalni (9–14 lat, suma Tanner II–IV — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_estrone'] },
+        { id: 'e1_M_latepubertal_age', when: { sex: 'M', age_min: 14, age_max: 18, life_stage: 'pediatric' },
+          low: 37.04, high: 222.24,
+          context_pl: 'Chłopcy późnopubertalni (14–18 lat, Tanner V — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_estrone'] },
+        { id: 'e1_F_prepubertal_age', when: { sex: 'F', age_min: 0.5, age_max: 9, life_stage: 'pediatric' },
+          low: 0, high: 107.42,
+          context_pl: 'Dziewczynki prepubertalne (0,5–9 lat, Tanner I — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_estrone'] },
+        { id: 'e1_F_peripubertal_age', when: { sex: 'F', age_min: 9, age_max: 14, life_stage: 'pediatric' },
+          low: 37.04, high: 285.21,
+          context_pl: 'Dziewczynki pubertalne (9–14 lat, suma Tanner II–IV — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_estrone'] },
+        { id: 'e1_F_latepubertal_age', when: { sex: 'F', age_min: 14, age_max: 18, life_stage: 'pediatric' },
+          low: 62.97, high: 740.80,
+          context_pl: 'Dziewczynki późnopubertalne (14–18 lat, Tanner V — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_estrone'] },
         // — Dorośli (z fazy 1 + Mayo)
         { id: 'e1_female_follicular', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'follicular' },
           low: 110, high: 400, context_pl: 'Kobiety, faza folikularna',
@@ -1673,7 +1921,7 @@
         'Postmenopauza: 30–130 pmol/L (7–35 pg/mL)',
         'Mężczyźni dorośli: 40–180 pmol/L (10–50 pg/mL)'
       ],
-      notes_pl: 'Główny estrogen po menopauzie (powstaje z androstendionu w tk. tłuszczowej). Może być pomocny w diagnostyce ekto- i feminizacji.',
+      notes_pl: 'Główny estrogen po menopauzie (powstaje z androstendionu w tk. tłuszczowej drogą aromatyzacji). W PL badanie rzadkie, zlecane do laboratoriów referencyjnych (Synevo, ALAB plus, Synlab DE) — głównie LC-MS/MS. Klinicznie istotny w: PCOS (E1 dominujący nad E2), monitorowaniu HRT u kobiet postmenopauzalnych, ocenie hiperestrogenizmu w otyłości i nadprodukcji estrogenów ektopowej (feminizacja, ginekomastia).',
       sources: ['Tietz']
     },
 
@@ -1726,9 +1974,20 @@
         { id: 'p4_female_follicular', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'follicular' },
           low: 0.3, high: 3.2, context_pl: 'Kobiety, faza folikularna',
           source_ids: ['tietz_2018'] },
+        // — Protokół diagnostyczny: potwierdzenie owulacji (PTMRiE 2018).
+        //   Próg: P4 > 10 ng/mL (> 31,8 nmol/L) na 7. dniu po owulacji
+        //   (klasycznie 21. d.c. w cyklu 28-dniowym).
+        //   MUSI być przed `p4_female_luteal`, bo użytkownik, który wybrał
+        //   protokół, ma najczęściej także ustawioną fazę lutealną — protokół
+        //   diagnostyczny powinien wtedy wygrać nad fizjologicznym zakresem fazy.
+        { id: 'p4_ovulation_check', when: { sex: 'F', life_stage: 'adult', test_protocol: 'ovulation_check' },
+          low: 31.8, high: 95,
+          context_pl: 'Kobiety, potwierdzenie owulacji — próg PTMRiE 2018: P4 > 10 ng/mL (> 31,8 nmol/L) na 7. dniu po owulacji (21. d.c. w cyklu 28-dniowym)',
+          source_ids: ['ptmrie_ptgp_2018'] },
         { id: 'p4_female_luteal', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'luteal' },
-          low: 16, high: 95, context_pl: 'Kobiety, środek fazy lutealnej (potwierdza owulację)',
-          source_ids: ['tietz_2018'] },
+          low: 5.82, high: 75.9,
+          context_pl: 'Kobiety, faza lutealna (cały przedział — pełny zakres referencyjny PL labów: Diagnostyka Roche ECLIA / Maglumi V11.0 CLIA = 1,83–23,9 ng/mL)',
+          source_ids: ['mayo_test_progesterone', 'snibe_maglumi_v11'] },
         { id: 'p4_female_postmeno', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'postmenopause' },
           low: 0.3, high: 1.3, context_pl: 'Kobiety, postmenopauza',
           source_ids: ['tietz_2018'] },
@@ -1744,12 +2003,13 @@
       ],
       ranges_pl: [
         'Faza folikularna: < 3,2 nmol/L (< 1 ng/mL)',
-        'Faza lutealna (środek): 16–95 nmol/L (5–30 ng/mL)',
-        'Progesteron 21. d.c. > 30 nmol/L (> 10 ng/mL) → potwierdza owulację',
+        'Faza lutealna (cały przedział): 5,8–75,9 nmol/L (1,8–23,9 ng/mL) — PL labs Roche / Maglumi V11.0',
+        'Potwierdzenie owulacji (7. dzień po owulacji, klasycznie 21. d.c.): P4 > 31,8 nmol/L (> 10 ng/mL) — PTMRiE 2018',
+        'Postmenopauza: 0,3–1,3 nmol/L (0,1–0,4 ng/mL)',
         'Mężczyźni dorośli: 0,3–1,3 nmol/L (0,1–0,4 ng/mL)'
       ],
-      notes_pl: 'Najczęstsze zastosowanie: potwierdzenie owulacji (21. d.c.), monitorowanie wczesnej ciąży.',
-      sources: ['Tietz']
+      notes_pl: 'Najczęstsze zastosowanie: potwierdzenie owulacji (7. dzień po owulacji = klasycznie 21. d.c.), monitorowanie wczesnej ciąży. Cut-off owulacji PTMRiE 2018: P4 > 10 ng/mL (> 31,8 nmol/L) — wybierz protokół „Potwierdzenie owulacji" w formularzu, by zobaczyć ten próg. PL laby (Diagnostyka, Synevo, ALAB, Maglumi V11.0) używają immunoassay (ECLIA Roche / CLIA Snibe) z porównywalnymi zakresami; LC-MS/MS rzadko.',
+      sources: ['Tietz', 'PTMRiE/PTGP 2018', 'Maglumi V11.0 IFU']
     },
 
     /* ───────────── Witamina D ───────────── */
@@ -1762,7 +2022,7 @@
       group: 'Witamina D',
       mw: 400.64,                                              // domyślnie D3 (kalcydiol); D2 = 412,65
       canonical_si: 'nmol/L',
-      clinical_indications: ['vitamin_d_status', 'osteoporosis', 'rickets', 'malabsorption', 'obesity', 'short_stature'],
+      clinical_indications: ['vitamin_d_status', 'osteoporosis', 'rickets', 'malabsorption', 'obesity', 'short_stature', 'ckd'],
       units: [
         { symbol: 'nmol/L', label: 'nmol/L (SI)', kind: 'si',   factor_to_si: 1 },
         { symbol: 'ng/mL',  label: 'ng/mL',        kind: 'conv', factor_to_si: 2.496 },
@@ -1803,13 +2063,20 @@
       precision: 3,
       default_range_si: { low: 48, high: 168, context_pl: 'Dorośli (dzieci: 60–240 pmol/L)' },
       reference_ranges_si: [
-        { id: 'd125_adult', when: {},
+        { id: 'd125_pediatric', when: { life_stage: 'pediatric' },
+          low: 60, high: 240,
+          context_pl: 'Dzieci — wyższy zakres niż u dorosłych (większa aktywność 1α-hydroksylazy nerkowej w okresie wzrostu)',
+          source_ids: ['tietz_2018', 'mayo_test_catalog'] },
+        { id: 'd125_adult', when: { life_stage: 'adult' },
           low: 48, high: 168, context_pl: 'Dorośli',
+          source_ids: ['tietz_2018'] },
+        { id: 'd125_default', when: {}, default: true,
+          low: 48, high: 168, context_pl: 'Zakres ogólny (dorośli)',
           source_ids: ['tietz_2018'] }
       ],
       ranges_pl: [
-        'Dorośli: 48–168 pmol/L (20–70 pg/mL)',
-        'Dzieci: 60–240 pmol/L (25–100 pg/mL)'
+        'Dzieci: 60–240 pmol/L (25–100 pg/mL)',
+        'Dorośli: 48–168 pmol/L (20–70 pg/mL)'
       ],
       notes_pl: 'Czas półtrwania ≈ 4 h; nie jest dobrym wskaźnikiem zaopatrzenia w wit. D. Oznaczać celowo: ChNN, sarkoidoza, granulomatozy, dziedziczne krzywice.',
       sources: ['Tietz']
@@ -2314,6 +2581,31 @@
         { id: 'igf1_F_tanner5', when: { sex: 'F', tanner: 5 },
           low: 29.3, high: 76.8, context_pl: 'Dziewczynki Tanner IV–V',
           source_ids: ['mayo_test_igf1', 'bidlingmaier_igf1_2014'] },
+        // — Age-based fallback (gdy Tanner nieznany; Faza 5d).
+        { id: 'igf1_M_prepubertal_age', when: { sex: 'M', age_min: 0.5, age_max: 9, life_stage: 'pediatric' },
+          low: 10.6, high: 33.4,
+          context_pl: 'Chłopcy prepubertalni (0,5–9 lat, Tanner I — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_igf1', 'bidlingmaier_igf1_2014'] },
+        { id: 'igf1_M_peripubertal_age', when: { sex: 'M', age_min: 9, age_max: 14, life_stage: 'pediatric' },
+          low: 13.9, high: 75.7,
+          context_pl: 'Chłopcy pubertalni (9–14 lat, suma Tanner II–IV — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_igf1', 'bidlingmaier_igf1_2014'] },
+        { id: 'igf1_M_latepubertal_age', when: { sex: 'M', age_min: 14, age_max: 18, life_stage: 'pediatric' },
+          low: 29.7, high: 67.9,
+          context_pl: 'Chłopcy późnopubertalni (14–18 lat, Tanner V — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_igf1', 'bidlingmaier_igf1_2014'] },
+        { id: 'igf1_F_prepubertal_age', when: { sex: 'F', age_min: 0.5, age_max: 9, life_stage: 'pediatric' },
+          low: 11.3, high: 42.3,
+          context_pl: 'Dziewczynki prepubertalne (0,5–9 lat, Tanner I — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_igf1', 'bidlingmaier_igf1_2014'] },
+        { id: 'igf1_F_peripubertal_age', when: { sex: 'F', age_min: 9, age_max: 14, life_stage: 'pediatric' },
+          low: 15.5, high: 76.8,
+          context_pl: 'Dziewczynki pubertalne (9–14 lat, suma Tanner II–IV — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_igf1', 'bidlingmaier_igf1_2014'] },
+        { id: 'igf1_F_latepubertal_age', when: { sex: 'F', age_min: 14, age_max: 18, life_stage: 'pediatric' },
+          low: 29.3, high: 76.8,
+          context_pl: 'Dziewczynki późnopubertalne (14–18 lat, Tanner V — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_igf1', 'bidlingmaier_igf1_2014'] },
         // Dorośli wiek-stratified (Bidlingmaier 2014)
         { id: 'igf1_adult_20_29', when: { age_min: 19, age_max: 30, life_stage: 'adult' },
           low: 17.8, high: 55.2, context_pl: 'Dorośli 20–29 lat',
@@ -2487,6 +2779,31 @@
         { id: 'lh_F_tanner5', when: { sex: 'F', tanner: 5 },
           low: 0.9, high: 13.3, context_pl: 'Dziewczynki Tanner IV–V',
           source_ids: ['mayo_test_lh_pediatric'] },
+        // — Age-based fallback (gdy Tanner nieznany; Faza 5d).
+        { id: 'lh_M_prepubertal_age', when: { sex: 'M', age_min: 0.5, age_max: 9, life_stage: 'pediatric' },
+          low: 0.02, high: 0.5,
+          context_pl: 'Chłopcy prepubertalni (0,5–9 lat, Tanner I — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_lh_pediatric'] },
+        { id: 'lh_M_peripubertal_age', when: { sex: 'M', age_min: 9, age_max: 14, life_stage: 'pediatric' },
+          low: 0.03, high: 9.8,
+          context_pl: 'Chłopcy pubertalni (9–14 lat, suma Tanner II–IV — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_lh_pediatric'] },
+        { id: 'lh_M_latepubertal_age', when: { sex: 'M', age_min: 14, age_max: 18, life_stage: 'pediatric' },
+          low: 1.3, high: 9.8,
+          context_pl: 'Chłopcy późnopubertalni (14–18 lat, Tanner V — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_lh_pediatric'] },
+        { id: 'lh_F_prepubertal_age', when: { sex: 'F', age_min: 0.5, age_max: 9, life_stage: 'pediatric' },
+          low: 0.02, high: 0.3,
+          context_pl: 'Dziewczynki prepubertalne (0,5–9 lat, Tanner I — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_lh_pediatric'] },
+        { id: 'lh_F_peripubertal_age', when: { sex: 'F', age_min: 9, age_max: 14, life_stage: 'pediatric' },
+          low: 0.02, high: 13.3,
+          context_pl: 'Dziewczynki pubertalne (9–14 lat, suma Tanner II–IV — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_lh_pediatric'] },
+        { id: 'lh_F_latepubertal_age', when: { sex: 'F', age_min: 14, age_max: 18, life_stage: 'pediatric' },
+          low: 0.9, high: 13.3,
+          context_pl: 'Dziewczynki późnopubertalne (14–18 lat, Tanner V — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_lh_pediatric'] },
         // Dorośli, cycle-aware u kobiet
         { id: 'lh_male_adult', when: { sex: 'M', life_stage: 'adult' },
           low: 1.24, high: 8.62, context_pl: 'Mężczyźni dorośli',
@@ -2561,6 +2878,20 @@
           source_ids: ['mayo_test_fsh'] },
         { id: 'fsh_tanner5', when: { tanner: 5 },
           low: 1.0, high: 11.6, context_pl: 'Tanner V',
+          source_ids: ['mayo_test_fsh'] },
+        // — Age-based fallback (gdy Tanner nieznany; Faza 5d). FSH Tanner Mayo nie dzieli
+        //   na M/F (single range per Tanner), więc fallbacki też pojedyncze (suma M/F).
+        { id: 'fsh_prepubertal_age', when: { age_min: 0.5, age_max: 9, life_stage: 'pediatric' },
+          low: 0.4, high: 6.7,
+          context_pl: 'Dzieci prepubertalne (0,5–9 lat, Tanner I — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_fsh'] },
+        { id: 'fsh_peripubertal_age', when: { age_min: 9, age_max: 14, life_stage: 'pediatric' },
+          low: 0.5, high: 12.8,
+          context_pl: 'Dzieci pubertalne (9–14 lat, suma Tanner II–IV — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['mayo_test_fsh'] },
+        { id: 'fsh_latepubertal_age', when: { age_min: 14, age_max: 18, life_stage: 'pediatric' },
+          low: 1.0, high: 11.6,
+          context_pl: 'Dzieci późnopubertalne (14–18 lat, Tanner V — fallback wiek gdy Tanner nieznany)',
           source_ids: ['mayo_test_fsh'] },
         // Dorośli
         { id: 'fsh_male_adult', when: { sex: 'M', life_stage: 'adult' },
@@ -2750,6 +3081,22 @@
           source_ids: ['elmlinger_shbg_2005'] },
         { id: 'shbg_F_tanner5', when: { sex: 'F', tanner: 5 },
           low: 32, high: 60, context_pl: 'Dziewczynki Tanner V',
+          source_ids: ['elmlinger_shbg_2005'] },
+        // — Age-based fallback (gdy Tanner nieznany; Faza 5d). Elmlinger 2005
+        //   nie podaje pełnej Tanner II–IV, więc tylko fallback prepubertalny i
+        //   późnopubertalny per płeć. Pubertalny (9–14) zostawiamy do fallback
+        //   default (znaczna zmienność osobnicza).
+        { id: 'shbg_prepubertal_age', when: { age_min: 0.5, age_max: 9, life_stage: 'pediatric' },
+          low: 60, high: 100,
+          context_pl: 'Dzieci prepubertalne (0,5–9 lat, Tanner I — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['elmlinger_shbg_2005'] },
+        { id: 'shbg_M_latepubertal_age', when: { sex: 'M', age_min: 14, age_max: 18, life_stage: 'pediatric' },
+          low: 18, high: 38,
+          context_pl: 'Chłopcy późnopubertalni (14–18 lat, Tanner V — fallback wiek gdy Tanner nieznany)',
+          source_ids: ['elmlinger_shbg_2005'] },
+        { id: 'shbg_F_latepubertal_age', when: { sex: 'F', age_min: 14, age_max: 18, life_stage: 'pediatric' },
+          low: 32, high: 60,
+          context_pl: 'Dziewczynki późnopubertalne (14–18 lat, Tanner V — fallback wiek gdy Tanner nieznany)',
           source_ids: ['elmlinger_shbg_2005'] },
         // Dorośli (Mayo)
         { id: 'shbg_male_adult', when: { sex: 'M', life_stage: 'adult' },
