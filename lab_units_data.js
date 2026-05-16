@@ -150,6 +150,12 @@
       pmid: '19318024',
       url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC3637995/'
     },
+    mayo_ohpg_neonatal: {
+      label_short: 'Mayo OHPG — noworodki / Von Schnakenburg 1980',
+      full_cite: 'Mayo Clinic Laboratories, Test ID OHPG (17-Hydroxyprogesterone, Serum) — wartości referencyjne dla noworodków. Von Schnakenburg K, Bidlingmaier F, Knorr D. 17-hydroxyprogesterone, androstenedione, and testosterone in normal children and in prepubertal patients with congenital adrenal hyperplasia. Eur J Pediatr. 1980;133(3):259-267.',
+      pmid: null,
+      url: 'https://pediatric.testcatalog.org/show/OHPG'
+    },
     kushnir_2006_steroids: {
       label_short: 'Kushnir 2006 — pediatryczne sterydy LC-MS/MS',
       full_cite: 'Kushnir MM, Rockwood AL, Roberts WL, Pattison EG, Bunker AM, Fitzgerald RL, Meikle AW. Performance characteristics of a novel tandem mass spectrometry assay for serum testosterone. Clin Chem. 2006;52(8):1559-1567.',
@@ -529,8 +535,8 @@
         'Surowica, wieczorem (≈ 23:00): < 138 nmol/L (< 5 μg/dL)',
         'Po 1 mg deksametazonu (overnight): < 50 nmol/L (< 1,8 μg/dL)'
       ],
-      notes_pl: 'Stężenie zależne od rytmu dobowego, stresu, ciąży, doustnej antykoncepcji (↑ CBG) oraz porze pobrania. Wartości progu po DST 50 nmol/L wg The Endocrine Society 2008/2016.',
-      sources: ['Tietz', 'Endocrine Society 2008']
+      notes_pl: 'Stężenie zależne od rytmu dobowego, stresu, ciąży, doustnej antykoncepcji (↑ CBG) oraz porze pobrania. POLSKIE WYTYCZNE: w diagnostyce ZESPOŁU CUSHINGA (PTE Bednarczuk i wsp., Endokrynol Pol): test hamowania 1 mg deksametazonu (DST overnight) — pobranie kortyzolu rano (8:00–9:00) po przyjęciu 1 mg deksametazonu o 23:00 dnia poprzedzającego; kortyzol < 50 nmol/L (1,8 μg/dL) wyklucza autonomię; 50–138 nmol/L niejednoznaczne; > 138 nmol/L (5 μg/dL) potwierdza autonomię (ES 2008/2015 Nieman). W diagnostyce NIEDOCZYNNOŚCI KORY NADNERCZY (PTE Bednarczuk, ES 2016 Bornstein): test stymulacji Synacthen (250 μg i.v., pomiar kortyzolu w 0 i 30/60 min) — szczytowy kortyzol < 500 nmol/L (18 μg/dL) potwierdza niedoczynność; > 500 wyklucza pierwotną postać; w postaci wtórnej (SAI) test może być prawidłowy w okresie ostrym (jądra nadnerczy nieuszkodzone).',
+      sources: ['Tietz', 'Endocrine Society 2008/2015 (Nieman, Cushing)', 'Endocrine Society 2016 (Bornstein, PAI)', 'PTE Bednarczuk (DST, Synacthen)']
     },
 
     {
@@ -612,10 +618,15 @@
       ranges_pl: [
         'Pozycja leżąca (rano): 30–440 pmol/L (1–16 ng/dL)',
         'Pozycja siedząca (po 2 h): 100–860 pmol/L (4–31 ng/dL)',
-        'Stosunek ARR (aldosteron pmol/L / PRA ng/mL/h) > 750 → podejrzenie PA'
+        'ARR > 30 (jednostki ng/dL ÷ ng/mL/h): próg skriningowy PHA wg PTNT 2021 (Januszewicz/Prejbisz)',
+        'ARR > 40: 100% czułość dla PHA (Giacchetti)',
+        'ARR > 750 (jednostki pmol/L ÷ ng/mL/h): równoważnik ~30 ng/dL/(ng/mL/h) — międzynarodowa starsza konwencja',
+        'Test obciążenia solą (2 L 0,9% NaCl i.v. w 4 h): aldosteron > 139 pmol/L (> 5 ng/dL) po teście = POTWIERDZENIE PHA (PTNT 2021)',
+        'Test z kaptoprilem (25 mg, pomiar 0 i 2 h): aldosteron > 416 pmol/L (> 15 ng/dL) + wysokie ARR = potwierdzenie PHA',
+        'Test fludrokortyzonowy (4 dni): aldosteron > 139 pmol/L (> 5 ng/dL) w 4. dobie = autonomiczna sekrecja aldosteronu'
       ],
-      notes_pl: 'Interpretacja wymaga znajomości pozycji ciała przy pobraniu, podaży sodu i przyjmowanych leków (β‑blokery, MRA, ACEI/ARB, NLPZ).',
-      sources: ['Tietz', 'Endocrine Society PA Guideline 2016']
+      notes_pl: 'Interpretacja wymaga znajomości pozycji ciała przy pobraniu, podaży sodu i przyjmowanych leków (β‑blokery, MRA, ACEI/ARB, NLPZ). POLSKIE WYTYCZNE: PTNT 2021 (Grupa Robocza Januszewicz/Prejbisz, Nadciśnienie Tętnicze): trzystopniowy algorytm PHA — (1) SKRINING — ARR > 30 (ng/dL ÷ ng/mL/h) lub > 750 (pmol/L ÷ ng/mL/h); warunki pobrania: rano 8:00–10:00, pacjent na nogach ≥ 2 h, ostatnie 5–15 min siedząc; KONIECZNE wyrównanie kaliemii > 4,0 mmol/L (hipokaliemia hamuje aldosteron — fałszywie ujemny wynik); odstawić MRA spironolakton/eplerenon 4–6 tyg., β-blokery 2 tyg. (2) POTWIERDZENIE — test obciążenia solą (najczęściej stosowany w Polsce, 2 L 0,9% NaCl i.v. w 4 h; aldosteron > 5 ng/dL = potwierdzenie) lub test z kaptoprilem (aldosteron > 15 ng/dL z wysokim ARR) lub test fludrokortyzonowy. (3) LOKALIZACJA — TK nadnerczy + AVS (cewnikowanie żył nadnerczowych) różnicuje jednostronny gruczolak Conn (leczenie operacyjne) od obustronnego przerostu (BAH; leczenie MRA). Wytyczne PTNT 2021 wskazują na istotne niedoszacowanie PHA w Polsce (~1% pacjentów z HT badanych mimo szacowanej częstości ~5–10% w HT ogółem i ~20% w HT opornym).',
+      sources: ['Tietz', 'Endocrine Society PA Guideline 2016 (Funder)', 'PTNT 2021 (Januszewicz/Prejbisz)']
     },
 
     {
@@ -648,8 +659,8 @@
         'Dorośli, bazalnie: < 1,5 nmol/L (< 52 ng/dL)',
         'Test z metyraponem (8 h po dawce): > 200 nmol/L (> 7 μg/dL) – prawidłowa rezerwa osi'
       ],
-      notes_pl: 'Marker testu z metyraponem oraz niedoboru 11β‑hydroksylazy (CAH typ IV). Łatwo pomylić z 11-deoksykortykosteronem (DOC) – to inna substancja.',
-      sources: ['Tietz', 'ESPE/Endocrine Society CAH 2018']
+      notes_pl: 'Marker testu z metyraponem oraz niedoboru 11β‑hydroksylazy (CAH typ IV — rzadka postać WPN z nadciśnieniem tętniczym i wirylizacją). Łatwo pomylić z 11-deoksykortykosteronem (DOC) – to inna substancja. Polskie wytyczne PTEDD Kucharska 2018 (Endokrynol Pediatr) wymieniają niedobór 11β-OH jako ~5% klasycznego WPN — diagnostyka rozszerzona dopiero przy podejrzeniu klinicznym (nadciśnienie + wirylizacja przy ujemnym 17-OHP).',
+      sources: ['Tietz', 'ESPE/Endocrine Society CAH 2018 (Speiser)', 'PTEDD Kucharska 2018 (rzadkie postaci WPN)']
     },
 
     {
@@ -681,8 +692,8 @@
       ranges_pl: [
         'Dorośli, rano: 3,5–60 nmol/L (130–2 080 ng/dL)'
       ],
-      notes_pl: 'Wzór sumaryczny C21H30O4 (taki sam jak 11-deoksykortyzol) – stąd identyczne czynniki przeliczeniowe. Marker niedoboru 17α‑hydroksylazy (↑ kortykosteron, ↓ kortyzol).',
-      sources: ['Tietz']
+      notes_pl: 'Wzór sumaryczny C21H30O4 (taki sam jak 11-deoksykortyzol) – stąd identyczne czynniki przeliczeniowe. Marker niedoboru 17α‑hydroksylazy (↑ kortykosteron, ↓ kortyzol) — bardzo rzadka postać WPN. Polskie wytyczne PTEDD Kucharska 2018 (Endokrynol Pediatr) wymieniają niedobór 17α-OH wśród rzadkich postaci WPN — obraz kliniczny: nadciśnienie tętnicze + brak rozwoju płciowego; oznaczać kortykosteron tylko przy podejrzeniu klinicznym.',
+      sources: ['Tietz', 'PTEDD Kucharska 2018 (rzadkie postaci WPN)']
     },
 
     {
@@ -703,22 +714,26 @@
       precision: 3,
       default_range_si: { low: 0.3, high: 10, context_pl: 'Kobiety, faza lutealna (zakres szerszy: M < 6, F-fol. < 3)' },
       reference_ranges_si: [
-        // Pediatria — Soldin 2009 (LC-MS/MS). Bardzo wysokie wartości w pierwszych
-        // 6 mies. (przejściowa hiperstymulacja nadnerczy noworodków).
-        { id: '17ohp_ped_infant',     when: { age_min: 0,   age_max: 0.5, life_stage: 'pediatric' },
-          low: 0.76, high: 7.50, context_pl: 'Niemowlęta 0–6 miesięcy (oba płcie)',
+        // Pediatria — metoda LC-MS/MS. Noworodki: 17-OHP fizjologicznie WYSOKIE
+        // (aktywacja osi nadnerczowej po urodzeniu), spada stopniowo w ciągu 1–6 mies.
+        // Noworodkowy przedział wg Mayo / Von Schnakenburg 1980; pozostałe wg Soldin 2009.
+        { id: '17ohp_ped_neonate',    when: { age_min: 0, age_max: 0.077, life_stage: 'pediatric' },
+          low: 0, high: 19.0, context_pl: 'Noworodki donoszone 0–28 dni (LC-MS/MS; wcześniaki fizjologicznie wyżej — niekiedy do ~30 nmol/L)',
+          source_ids: ['mayo_ohpg_neonatal'] },
+        { id: '17ohp_ped_infant',     when: { age_min: 0.077, age_max: 0.5, life_stage: 'pediatric' },
+          low: 0.76, high: 7.50, context_pl: 'Niemowlęta 1–6 miesięcy, oba płcie (LC-MS/MS; stopniowy spadek do wartości prepubertalnych)',
           source_ids: ['soldin_2009_lcms'] },
         { id: '17ohp_ped_male_infant_to_adult', when: { sex: 'M', age_min: 0.5, age_max: 18, life_stage: 'pediatric' },
-          low: 0.21, high: 3.03, context_pl: 'Chłopcy 6 miesięcy – 18 lat',
+          low: 0.21, high: 3.03, context_pl: 'Chłopcy 6 miesięcy – 18 lat (LC-MS/MS)',
           source_ids: ['soldin_2009_lcms'] },
         { id: '17ohp_ped_female_6mo_6', when: { sex: 'F', age_min: 0.5, age_max: 6, life_stage: 'pediatric' },
-          low: 0.09, high: 3.24, context_pl: 'Dziewczynki 6 miesięcy – 6 lat',
+          low: 0.09, high: 3.24, context_pl: 'Dziewczynki 6 miesięcy – 6 lat (LC-MS/MS)',
           source_ids: ['soldin_2009_lcms'] },
         { id: '17ohp_ped_female_6_10', when: { sex: 'F', age_min: 6, age_max: 10, life_stage: 'pediatric' },
-          low: 0.18, high: 1.88, context_pl: 'Dziewczynki 6–10 lat',
+          low: 0.18, high: 1.88, context_pl: 'Dziewczynki 6–10 lat (LC-MS/MS)',
           source_ids: ['soldin_2009_lcms'] },
         { id: '17ohp_ped_female_10_18', when: { sex: 'F', age_min: 10, age_max: 18, life_stage: 'pediatric' },
-          low: 0.45, high: 4.15, context_pl: 'Dziewczynki 10–18 lat',
+          low: 0.45, high: 4.15, context_pl: 'Dziewczynki 10–18 lat (LC-MS/MS)',
           source_ids: ['soldin_2009_lcms'] },
         // Dorośli (z fazy 1)
         { id: '17ohp_female_follicular', when: { sex: 'F', life_stage: 'adult', cycle_phase: 'follicular' },
@@ -743,8 +758,8 @@
         'Mężczyźni dorośli: < 6 nmol/L (< 200 ng/dL)',
         'Test ACTH – odcięcie dla CAH 21-OH: stymulowany 17-OHP > 30 nmol/L (> 1 000 ng/dL)'
       ],
-      notes_pl: 'Pobierać rano i w fazie folikularnej cyklu. Pułapki: ↑ w niedoborze 21-hydroksylazy, ale również w torbielach jajnika i NCAH.',
-      sources: ['Tietz', 'ESPE/Endocrine Society CAH 2018']
+      notes_pl: 'Pobierać rano i w fazie folikularnej cyklu. Pułapki: ↑ w niedoborze 21-hydroksylazy, ale również w torbielach jajnika i NCAH. POLSKIE WYTYCZNE: skrining noworodkowy 17-OHP wprowadzony do POLSKIEGO RZĄDOWEGO PROGRAMU BADAŃ PRZESIEWOWYCH NOWORODKÓW od 2018 r. (IMiD — Instytut Matki i Dziecka) — bibuła pobierana w 3.–5. dobie życia. Wytyczne PTEDD Kucharska et al. 2018 (Endokrynologia Pediatryczna): rozpoznanie WPN z niedoboru 21-hydroksylazy — > 30 nmol/L (10 ng/mL) = klasyczny WPN (postać z utratą soli lub prosta wirylizująca); 6–30 nmol/L = niejednoznaczne, wskazany test stymulacji ACTH (Synacthen 250 μg i.v., pomiar 17-OHP w 0 i 60 min); < 6 nmol/L wyklucza klasyczny WPN, ale część NCAH (nieklasyczny WPN — kobieta dorosła z hiperandrogenizmem/PCOS) ma wartości bazalne < 6 i ujawnia się dopiero PO STYMULACJI. Po stymulacji ACTH szczyt 17-OHP > 30 nmol/L potwierdza WPN (NCAH lub klasyczny). Pobranie u kobiet dorosłych: rano (7:00–9:00), w fazie FOLIKULARNEJ cyklu (dni 2–5; w II połowie cyklu i w ciąży wartości fizjologicznie wyższe — fałszywie dodatnie). ⚠ UWAGA METODOLOGICZNA: pediatryczne zakresy referencyjne w tym przeliczniku pochodzą z metody LC-MS/MS (Soldin 2009; noworodki — Mayo / Von Schnakenburg 1980) — metody referencyjnej zalecanej przez ESPE/Endocrine Society, zwłaszcza u dzieci i w przesiewie noworodkowym. Immunoassaye (RIA i in., powszechne w wielu laboratoriach) dają wartości WYŻSZE — szczególnie u dzieci, ze względu na reaktywność krzyżową z prekursorami steroidowymi (11-deoksykortyzol, 17-OH-pregnenolon i ich siarczany) — i nie mają jednolitego standardu zakresów referencyjnych (17-OHP nie figuruje na głównych platformach immunoassay; każde laboratorium waliduje własne zakresy). Wynik z immunoassayu należy ZAWSZE interpretować wg zakresu referencyjnego podanego przez laboratorium wykonujące badanie, a nie wg zakresów w tym przeliczniku.',
+      sources: ['Tietz', 'ESPE/Endocrine Society CAH 2018 (Speiser)', 'PTEDD Kucharska 2018 (CAH)', 'Polski Program Przesiewu Noworodków 2018 (IMiD)', 'Soldin 2009 (LC-MS/MS, pediatria)', 'Mayo Clinic Labs / Von Schnakenburg 1980 (noworodki)']
     },
 
     {
@@ -855,8 +870,8 @@
         'Dorośli, bazalnie: 1,1–9,9 nmol/L (36–330 ng/dL)',
         'Po stymulacji ACTH: > 30-krotny wzrost względem 17-OHP → 3β-HSD deficiency'
       ],
-      notes_pl: 'Marker niedoboru 3β‑HSD oraz CAH typu III; oznaczany razem z 17-OHP w teście z ACTH.',
-      sources: ['Tietz']
+      notes_pl: 'Marker niedoboru 3β‑HSD oraz CAH typu III (rzadka postać WPN, cechy interpłciowe u noworodków obu płci); oznaczany razem z 17-OHP w teście z ACTH. Polskie wytyczne PTEDD Kucharska 2018 (Endokrynol Pediatr) wymieniają niedobór 3β-HSD wśród rzadkich postaci WPN — diagnostyka rozszerzona przy podejrzeniu klinicznym (zaburzenie syntezy zarówno androgenów, jak i estrogenów; podwyższenie 17-OH-pregnenolonu / 17-OHP > 30 po stymulacji ACTH).',
+      sources: ['Tietz', 'PTEDD Kucharska 2018 (rzadkie postaci WPN)']
     },
 
     {
@@ -941,8 +956,8 @@
         'Dorośli mężczyźni: 0,3–3,2 nmol/L (10–100 ng/dL)',
         'Dorosłe kobiety: 0,3–3,2 nmol/L (10–100 ng/dL)'
       ],
-      notes_pl: 'Pierwszy steroid w szlaku z cholesterolu (StAR + CYP11A1). Oznaczany rzadko – głównie w diagnostyce wrodzonych defektów steroidogenezy.',
-      sources: ['Tietz']
+      notes_pl: 'Pierwszy steroid w szlaku z cholesterolu (StAR + CYP11A1). Oznaczany rzadko – głównie w diagnostyce wrodzonych defektów steroidogenezy. Polskie wytyczne PTEDD Kucharska 2018 (Endokrynol Pediatr) wymieniają niedobór StAR (lipoidalny WPN — najcięższa postać z brakiem syntezy wszystkich steroidów; klinika: krzywica nadnerczowa noworodkowa, fenotyp żeński nawet u 46,XY) — pregnenolon nieoznaczalny lub bardzo niski; oznaczać tylko w specjalistycznej diagnostyce wrodzonych zaburzeń steroidogenezy.',
+      sources: ['Tietz', 'PTEDD Kucharska 2018 (rzadkie postaci WPN, lipoidalny WPN)']
     },
 
     /* ───────────── Androgeny ───────────── */
@@ -1018,8 +1033,8 @@
         'Dorośli mężczyźni: 6–25 nmol/L (180–720 ng/dL)',
         'Dorosłe kobiety (premenopauza): 5–20 nmol/L (140–580 ng/dL)'
       ],
-      notes_pl: 'W laboratoriach częściej oznacza się DHEA-S (stabilniejszy, nie podlega rytmowi dobowemu).',
-      sources: ['Tietz']
+      notes_pl: 'DHEA = prekursor androgenów nadnerczowych. W diagnostyce klinicznej rutynowo oznacza się DHEA-S (stabilniejszy, nie podlega rytmowi dobowemu) — DHEA samego rzadko. Wzrasta razem z DHEA-S w przedwczesnym adrenarche (DHEA-S umiarkowanie podwyższony) oraz w guzach nadnerczy produkujących androgeny (DHEA znacznie podwyższone razem z DHEA-S). U dorosłych spada z wiekiem (adrenopauza). Polskie wytyczne PTE Bednarczuk incydentaloma 2016 i ES 2018 Martin (hirsutyzm) preferują DHEA-S jako podstawowy marker — DHEA oznaczane głównie przy rzadkich postaciach WPN (np. 3β-HSD).',
+      sources: ['Tietz', 'Mayo Clinic Labs / Soldin 2005']
     },
 
     {
@@ -1109,10 +1124,13 @@
         'Mężczyźni 18–30 lat: 4,3–12 μmol/L (160–450 μg/dL)',
         'Mężczyźni 60–70 lat: 1,1–5,4 μmol/L (40–200 μg/dL)',
         'Kobiety 18–30 lat: 1,9–9,4 μmol/L (70–350 μg/dL)',
-        'Kobiety > 60 lat: 0,3–4,1 μmol/L (10–150 μg/dL)'
+        'Kobiety > 60 lat: 0,3–4,1 μmol/L (10–150 μg/dL)',
+        '> 13 μmol/L (> 500 μg/dL): wymaga dalszej diagnostyki — NCAH, gruczolak androgenny lub rak kory nadnercza',
+        '> 18,9 μmol/L (> 700 μg/dL): SILNE PODEJRZENIE guza nadnercza wg ES 2018 Martin (hirsutyzm/wirylizacja); wskazana pilna diagnostyka obrazowa (TK nadnerczy wielofazowe)',
+        'W rakach kory nadnercza (ACC) wartości często wielokrotnie > 18,9 μmol/L'
       ],
-      notes_pl: 'Stężenie spada liniowo z wiekiem („adrenopauza"). Bardzo wysokie wartości (> 20 μmol/L u kobiet) – sygnał ostrzegawczy w kierunku guza nadnercza.',
-      sources: ['Tietz', 'Mayo Clinic Labs']
+      notes_pl: 'Stężenie spada liniowo z wiekiem („adrenopauza"). DHEA-S = marker źródła nadnerczowego androgenów (produkowany wyłącznie w korze nadnerczy, niezależny od rytmu dobowego i fazy cyklu). PROGI KLINICZNE (ES 2018 Martin, hirsutyzm): > 18,9 μmol/L (> 700 μg/dL) = silne podejrzenie guza nadnercza — wymaga pilnej diagnostyki obrazowej (TK nadnerczy wielofazowe z kontrastem). Łagodne podwyższenie (do ~13 μmol/L) typowe dla PCOS lub fizjologicznego adrenarche; umiarkowane (13–18,9 μmol/L) wymaga dalszej diagnostyki (NCAH, gruczolak androgenny, rak kory nadnercza). W raku kory nadnercza (ACC) wartości często wielokrotnie wyższe od progu (kilkadziesiąt μmol/L). Polskie wytyczne PTE Bednarczuk incydentaloma 2016: DHEA-S w panelu skriningu warunkowego u kobiet z wirylizacją (obok testosteronu i 17-OH-progesteronu).',
+      sources: ['Tietz', 'Mayo Clinic Labs', 'ES 2018 Martin (hirsutyzm)', 'PTE Bednarczuk 2016 (incydentaloma)']
     },
 
     {
@@ -1203,8 +1221,8 @@
         'Kobiety (faza folikularna): 1,2–10,5 nmol/L (35–300 ng/dL)',
         'Po menopauzie: < 4,2 nmol/L (< 120 ng/dL)'
       ],
-      notes_pl: 'Wzrasta w PCOS i NCAH; służy też do oceny skuteczności leczenia hydrokortyzonem w CAH (cel: w połowie zakresu normy dla wieku).',
-      sources: ['Tietz']
+      notes_pl: 'Androstendion = prekursor androgenowy, produkowany w korze nadnerczy (~50%) i jajnikach/jądrach (~50%). Wzrasta w PCOS, NCAH (nieklasyczny WPN) oraz w guzach nadnerczy i gonad produkujących androgeny (znacznie podwyższony razem z testosteronem i DHEA-S). Kluczowa rola jako MARKER MONITOROWANIA leczenia hydrokortyzonem w klasycznym i nieklasycznym WPN (PTEDD Kucharska 2018): cel terapeutyczny — środkowy zakres normy dla wieku i płci (zbyt niska wartość = nadmierna substytucja powodująca jatrogenny zespół Cushinga / zahamowanie wzrostu u dzieci; zbyt wysoka = niedostateczna substytucja z hiperandrogenizmem). ES 2018 Martin (hirsutyzm/PCOS): androstendion uzupełnia profil androgenowy podstawowy obok testosteronu całkowitego, SHBG, DHEA-S i 17-OH-progesteronu — pomocniczy gdy testosteron całkowity granicznie podwyższony.',
+      sources: ['Tietz', 'Mayo Clinic Labs / Soldin AACC', 'ES 2018 Martin (hirsutyzm)', 'PTEDD Kucharska 2018 (CAH monitoring)']
     },
 
     {
@@ -1285,11 +1303,15 @@
       ],
       ranges_pl: [
         'Mężczyźni dorośli (rano): 8,6–29 nmol/L (250–840 ng/dL)',
-        'Próg hipogonadyzmu (Endocrine Society 2018): < 9,2 nmol/L (< 264 ng/dL) potwierdzony 2-krotnie',
-        'Kobiety dorosłe: 0,3–2,4 nmol/L (8–70 ng/dL)'
+        'Próg HIPOGONADYZMU MĘSKIEGO: < 9,2 nmol/L (< 264 ng/dL) potwierdzony 2× pomiarem rano (Bhasin ES 2018)',
+        '< 8 nmol/L (< 230 ng/dL): wyraźny niedobór wymagający leczenia (Bhasin ES 2018)',
+        'Strefa graniczna 8–12 nmol/L (230–350 ng/dL): wymagane obliczenie testosteronu wolnego (wzór Vermeulena z SHBG + albuminą) lub powtórzenie pomiaru',
+        'Metoda referencyjna: LC-MS/MS (Bhasin ES 2018); bezpośrednie immunoassaye u kobiet zaniżają wyniki',
+        'Kobiety dorosłe: 0,3–2,4 nmol/L (8–70 ng/dL)',
+        'PRÓG GUZA ANDROGENNEGO u kobiety: > 7 nmol/L (> 200 ng/dL) = silne podejrzenie (ES 2018 Martin, hirsutyzm); > 14 nmol/L (> 400 ng/dL) = praktycznie pewny guz wymagający pilnej diagnostyki obrazowej (wirylizacja)'
       ],
-      notes_pl: 'Pobranie rano (7–10), na czczo. Powtórzyć w razie nieprawidłowego wyniku. Interpretacja w kontekście SHBG i albuminy.',
-      sources: ['Tietz', 'Endocrine Society Male Hypogonadism 2018']
+      notes_pl: 'Pobranie: RANO 7:00–10:00, na czczo, w stanie stabilnym (bez ostrych chorób, deprywacji snu, dużego wysiłku). WYMAGANE 2-KROTNE POTWIERDZENIE w odrębnych dniach (Bhasin ES 2018). METODA REFERENCYJNA: LC-MS/MS — preferowana zwłaszcza u kobiet i przy wartościach granicznych; bezpośrednie immunoassaye u kobiet zaniżają wyniki (Bhasin ES 2018, Endocrine Society / PTE 2018). PUŁAPKI: testosteron przejściowo OBNIŻONY w chorobach ostrych, po dużym wysiłku, deprywacji snu, otyłości (obniżona SHBG), niedoczynności tarczycy, leczeniu opioidami, glikokortykosteroidami, sterydami anabolicznymi (zahamowanie osi po odstawieniu). Interpretacja ZAWSZE w kontekście SHBG + albuminy: przy granicznej wartości obliczyć wolny T wzorem Vermeulena. POLSKIE WYTYCZNE: PTE / EAU 2023 (Salonia, hipogonadyzm M) potwierdzają próg < 9,2 nmol/L jako kryterium rozpoznania LOH (late-onset hypogonadism); EAU dodatkowo podaje próg < 12 nmol/L (350 ng/dL) jako strefę graniczną do dalszej oceny. ES 2018 Martin (hirsutyzm K): > 7 nmol/L = silne podejrzenie guza androgennego — wymaga pilnej diagnostyki obrazowej (USG narządów rodnych + TK nadnerczy wielofazowe). Wartości > 14 nmol/L u kobiety = praktycznie pewny guz.',
+      sources: ['Tietz', 'Endocrine Society Male Hypogonadism 2018 (Bhasin)', 'ES 2018 Martin (hirsutyzm — progi guza K)', 'EAU 2023 (Salonia, LOH)', 'Soldin 2009 (LC-MS/MS pediatria)']
     },
 
     {
@@ -1388,10 +1410,12 @@
       ],
       ranges_pl: [
         'Mężczyźni dorośli: 174–729 pmol/L (50–210 pg/mL)',
-        'Kobiety dorosłe: 1,7–22 pmol/L (0,5–6,3 pg/mL)'
+        'Próg HIPOGONADYZMU T wolny: orientacyjnie < ~220 pmol/L (~65 pg/mL); DOKŁADNY próg zależy od metody — porównaj z normami laboratorium (Bhasin ES 2018)',
+        'Kobiety dorosłe: 1,7–22 pmol/L (0,5–6,3 pg/mL)',
+        'Wzrost wolnego T u kobiety przy granicznym T całkowitym sugeruje hiperandrogenizm (PCOS, NCAH); FAI > 5 (z SHBG) czulszy parametr u kobiet'
       ],
-      notes_pl: 'Najwiarygodniejszy: ekwilibrium dialysis. Frakcja wolna obliczana ze SHBG/albuminy jest dopuszczalna; bezpośrednie immunoassaye są niezalecane.',
-      sources: ['Endocrine Society Male Hypogonadism 2018']
+      notes_pl: 'Frakcja BIOLOGICZNIE AKTYWNA testosteronu (~2% testosteronu całkowitego), niezwiązana z SHBG ani albuminą. METODY POMIARU (Bhasin ES 2018): (1) PREFEROWANE — ekwilibrium dialysis (equilibrium dialysis) + LC-MS/MS lub ultrafiltracja + LC-MS/MS (metody referencyjne); (2) AKCEPTOWALNA ALTERNATYWA — obliczenie WZOREM VERMEULENA (1999 JCEM) z testosteronu całkowitego + SHBG + albuminy (dostępne kalkulatory online, akceptowalne w rutynowej diagnostyce); (3) NIEZALECANE — bezpośrednie immunoassaye (RIA, ELISA) — niska dokładność w zakresie wartości kobiecych i granicznych męskich. WSKAZANIA do oznaczenia T wolnego (Bhasin ES 2018): testosteron całkowity w STREFIE GRANICZNEJ (8–12 nmol/L u mężczyzn) lub nieprawidłowa SHBG (otyłość/cukrzyca/zespół metaboliczny → ↓ SHBG → ↓ T całkowity przy zachowanym T wolny; starszy wiek/marskość/hipertyreoza/estrogeny → ↑ SHBG → ↑ T całkowity przy obniżonym T wolny). U kobiet z hiperandrogenizmem (hirsutyzm, PCOS): obliczenie FAI = T całk × 100 / SHBG jest czulszym parametrem niż sam T wolny (ES 2018 Martin).',
+      sources: ['Endocrine Society Male Hypogonadism 2018 (Bhasin)', 'Vermeulen 1999 JCEM', 'ES 2018 Martin (hirsutyzm — FAI)']
     },
 
     {
@@ -1476,10 +1500,14 @@
       ranges_pl: [
         'Mężczyźni dorośli: 1,0–3,1 nmol/L (30–90 ng/dL)',
         'Kobiety dorosłe: 0,1–0,9 nmol/L (3–25 ng/dL)',
-        'Stosunek T/DHT > 20 (po hCG) → podejrzenie niedoboru 5α-reduktazy'
+        'Stosunek T/DHT — KLUCZOWY w diagnostyce niedoboru 5α-reduktazy typu 2 (mutacja SRD5A2, autosomalna recesywna):',
+        '  - Norma T/DHT < 16',
+        '  - Bazalnie > 30 → silne podejrzenie niedoboru 5α-RD2 (Mendonça 2016)',
+        '  - Bazalnie 16–30 → niejednoznaczne, wskazany test stymulacji hCG',
+        '  - Po stymulacji hCG T/DHT > 10–20 → potwierdza niedobór 5α-RD2'
       ],
-      notes_pl: 'Stężenie zależy od aktywności 5α‑reduktazy; obniżone u osób na finasterydzie/dutasterydzie.',
-      sources: ['Tietz']
+      notes_pl: 'DHT = najsilniejszy androgen, powstaje z testosteronu pod wpływem 5α-reduktazy (głównie w skórze, mieszkach włosowych, prostacie, zewnętrznych narządach płciowych). Obniżone u osób na finasterydzie/dutasterydzie (inhibitory 5α-RD typ 2). KLUCZOWA ROLA DIAGNOSTYCZNA: niedobór 5α-reduktazy typu 2 (mutacja SRD5A2, autosomalna recesywna) u 46,XY z niejednoznacznymi narządami płciowymi lub niedostateczną wirylizacją w okresie dojrzewania — wzorzec hormonalny: T prawidłowy/podwyższony, DHT obniżony, stosunek T/DHT podwyższony (Mendonça 2016). DIAGNOSTYKA RÓŻNICOWA W DSD 46,XY: (1) niedobór 5α-RD2 — T/DHT > 30 bazalnie lub > 10–20 po hCG; (2) zespół niewrażliwości na androgeny (CAIS/PAIS) — T i DHT prawidłowe/podwyższone, LH wysoki (oporność receptora AR); (3) defekty syntezy testosteronu (17β-HSD3, StAR, HSD3B2) — T niski, LH wysoki. OPTYMALNY MOMENT POMIARU u niemowląt: mini-puberty 1.–6. miesiąc życia (peak ~3 mies.) — bazalne wartości T i DHT WIARYGODNE bez stymulacji. Poza tym oknem przed dojrzewaniem T bazalny niski/nieoznaczalny — KONIECZNY test stymulacji hCG.',
+      sources: ['Tietz', 'Mayo Clinic Labs', 'Mendonça 2016 (5α-RD2 diagnostyka)']
     },
 
     /* ───────────── Estrogeny / progesteron ───────────── */
@@ -1884,16 +1912,20 @@
         { id: 'tsh_11_19y',          when: { age_min: 11,      age_max: 20,     life_stage: 'pediatric' },
           low: 0.5, high: 4.3,  context_pl: 'Młodzież 11–19 lat',
           source_ids: ['mayo_test_tsh'] },
-        // Ciąża (PTE 2021 Hubalewska — polska populacja na ECL)
-        // I trymestr: zwężamy high do 2.5 mIU/L wg PTE (cel terapeutyczny). Populacyjne T1 0.009–3.18.
+        // Ciąża — PTE 2021 (Hubalewska-Dydejczyk i wsp., tab. 2)
+        // Polska populacja na elektrochemiluminescencji (ECL). Górny próg
+        // każdego trymestru = próg DIAGNOSTYCZNY: powyżej = subkliniczna
+        // niedoczynność wymagająca leczenia. CEL TERAPEUTYCZNY u pacjentki
+        // LECZONEJ lewotyroksyną w I trymestrze: < 2,5 mIU/L
+        // (to NIE jest próg diagnostyczny — patrz cytat z wytycznych w notes_pl).
         { id: 'tsh_pregnancy_t1', when: { sex: 'F', cycle_phase: 'pregnancy_t1' },
-          low: 0.009, high: 2.5,  context_pl: 'Ciąża, I trymestr (do 13 tyg.) — cel terapeutyczny < 2.5 mIU/L wg PTE 2021. Wartość 2.5–3.18 = górny zakres populacyjny, ale powyżej rekomendowanego celu.',
+          low: 0.01, high: 3.18, context_pl: 'Ciąża, I trymestr (do 13 tyg.) — polski populacyjny zakres referencyjny PTE 2021 (ECL): 0,01–3,18 mIU/L. > 3,18 = subkliniczna niedoczynność wymagająca leczenia. CEL TERAPEUTYCZNY u pacjentki LECZONEJ lewotyroksyną w I trymestrze: < 2,5 mIU/L (NIE jest to próg diagnostyczny).',
           source_ids: ['pte_hubalewska_2021_pregnancy'] },
         { id: 'tsh_pregnancy_t2', when: { sex: 'F', cycle_phase: 'pregnancy_t2' },
-          low: 0.05,  high: 3.44, context_pl: 'Ciąża, II trymestr',
+          low: 0.05, high: 3.44, context_pl: 'Ciąża, II trymestr — polski populacyjny zakres PTE 2021 (ECL): 0,05–3,44 mIU/L. > 3,44 = subkliniczna niedoczynność wymagająca leczenia.',
           source_ids: ['pte_hubalewska_2021_pregnancy'] },
         { id: 'tsh_pregnancy_t3', when: { sex: 'F', cycle_phase: 'pregnancy_t3' },
-          low: 0.11,  high: 3.53, context_pl: 'Ciąża, III trymestr',
+          low: 0.11, high: 3.53, context_pl: 'Ciąża, III trymestr — polski populacyjny zakres PTE 2021 (ECL): 0,11–3,53 mIU/L. > 3,53 = subkliniczna niedoczynność wymagająca leczenia.',
           source_ids: ['pte_hubalewska_2021_pregnancy'] },
         // Dorośli (Mayo, sex-neutral)
         { id: 'tsh_adult',        when: { life_stage: 'adult' },
@@ -1913,15 +1945,15 @@
         'Dzieci 6–10 lat: 0,6–4,8',
         'Młodzież 11–19 lat: 0,5–4,3',
         'Dorośli: 0,3–4,2',
-        'Ciąża T1: cel < 2,5 mIU/L (PTE 2021); populacyjny 0,009–3,18',
-        'Ciąża T2: 0,05–3,44',
-        'Ciąża T3: 0,11–3,53',
+        'Ciąża T1: populacyjny 0,01–3,18 mIU/L (PTE 2021 ECL); > 3,18 = subkliniczna niedoczynność do leczenia; cel terapeutyczny u pacjentki leczonej: < 2,5',
+        'Ciąża T2: populacyjny 0,05–3,44 (PTE 2021); > 3,44 = subkliniczna niedoczynność do leczenia',
+        'Ciąża T3: populacyjny 0,11–3,53 (PTE 2021); > 3,53 = subkliniczna niedoczynność do leczenia',
         'WNT (3–5 dzień, surowica): 12–28 z ↓fT4 = umiarkowana, > 28 = jawna (Kucharska 2016)',
         'Przesiew bibuła (DBS, ryc. 8): < 10 norma; 10–24 → druga bibuła; ≥ 24 → wezwanie',
         'Próg supresji po thyroidectomy DTC: < 0,1 mIU/L (high-risk/persistent)',
         'Cel TSH po excellent response: < 2,0 mIU/L'
       ],
-      notes_pl: 'TSH = test pierwszego rzutu w diagnostyce chorób tarczycy. Po porodzie TSH wzrasta gwałtownie (peak 80 mIU/L po 30 min) i spada w ciągu 24–72h. Polski program przesiewowy noworodków (rządowy 2019–2026, PDF dostępny na gov.pl) pobiera bibułę w 36–72h życia; potwierdzenie TSH+fT4 w surowicy w 3.–5. dobie. Polskie progi PTEDD (Kucharska 2016, Endokrynol Pol): w 3.–5. dobie TSH < 12 = norma (przy prawidłowym fT4); 12–28 z ↓fT4 = WNT umiarkowana → L-tyroksyna 10–15 μg/kg/d; > 28 z ↓fT4 = WNT jawna; < 0,7 z ↓fT4 = wtórna niedoczynność przysadkowa → L-tyroksyna 7–10 μg/kg/d. Dla wcześniaków i SGA: te same progi stosuje się w 3.–5. dobie niezależnie od przesiewu. W ciąży I trymestr cel terapeutyczny < 2,5 mIU/L; rozważyć L-tyroksynę u kobiet z aTPO+ przy TSH 2,5–4,0 (Hubalewska 2021). Po thyroidectomy z powodu DTC: cel supresji zależy od oceny ryzyka (high-risk: < 0,1; intermediate: 0,1–0,5; excellent response: < 2,0). Polskie wytyczne: Jarząb 2022 (dorośli), Handkiewicz-Junak 2024 (dzieci).',
+      notes_pl: 'TSH = test pierwszego rzutu w diagnostyce chorób tarczycy. Po porodzie TSH wzrasta gwałtownie (peak 80 mIU/L po 30 min) i spada w ciągu 24–72h. Polski program przesiewowy noworodków (rządowy 2019–2026, PDF dostępny na gov.pl) pobiera bibułę w 36–72h życia; potwierdzenie TSH+fT4 w surowicy w 3.–5. dobie. Polskie progi PTEDD (Kucharska 2016, Endokrynol Pol): w 3.–5. dobie TSH < 12 = norma (przy prawidłowym fT4); 12–28 z ↓fT4 = WNT umiarkowana → L-tyroksyna 10–15 μg/kg/d; > 28 z ↓fT4 = WNT jawna; < 0,7 z ↓fT4 = wtórna niedoczynność przysadkowa → L-tyroksyna 7–10 μg/kg/d. Dla wcześniaków i SGA: te same progi stosuje się w 3.–5. dobie niezależnie od przesiewu. W ciąży PTE 2021 (Hubalewska-Dydejczyk i wsp.) podaje polskie populacyjne zakresy referencyjne TSH (elektrochemiluminescencja, tab. 2): I trymestr 0,01–3,18; II 0,05–3,44; III 0,11–3,53 mIU/L. Wartości > 3,18 / 3,44 / 3,53 mIU/L (odpowiednio dla trymestru) są nieprawidłowe i świadczą o subklinicznej niedoczynności wymagającej leczenia lewotyroksyną. PTE 2021 wprost odstąpiło od progu ATA 2017 = 4,0 mIU/L (zbyt liberalny) na rzecz polskich progów populacyjnych. CEL TERAPEUTYCZNY u pacjentki LECZONEJ lewotyroksyną w I trymestrze: < 2,5 mIU/L (to NIE jest próg diagnostyczny). U kobiet z aTPO+ przy TSH 2,5–3,18 rozważyć leczenie (Hubalewska 2021). Po thyroidectomy z powodu DTC: cel supresji zależy od dynamicznej stratyfikacji odpowiedzi na leczenie (zob. wskazanie kliniczne thyroid_cancer_followup). Polskie wytyczne: Jarząb 2022 (dorośli), Handkiewicz-Junak 2024 (dzieci).',
       sources: ['Mayo Clinic Labs', 'Kucharska 2016 (PTEDD)', 'PL Program przesiewowy 2019–2026', 'PTE 2021', 'Jarząb 2022', 'Handkiewicz-Junak 2024']
     },
 
@@ -2192,15 +2224,32 @@
           low: 0, high: 2.0,
           context_pl: 'Dzieci, po total thyroidectomy (stymulowany): excellent response ≤ 2,0 ng/mL. Wartość > 10 = biochemical incomplete (wymaga indywidualnej oceny).',
           source_ids: ['handkiewicz_junak_dtc_children_2024'] },
-        // Default: zachowana tarczyca (cała lub po lobektomii)
+        // Zachowana tarczyca — stratyfikacja pediatryczna
+        // U noworodków i niemowląt Tg jest fizjologicznie wyższa wskutek
+        // utrzymującej się przebudowy tarczycy po urodzeniu. Wartości spadają
+        // do zakresu adult-like ~ 2 r.ż. (Spencer 2007, Endocrine Reviews;
+        // van Trotsenburg 2021).
+        { id: 'tg_intact_infant',
+          when: { age_min: 0, age_max: 2, life_stage: 'pediatric' },
+          low: 0, high: 78,
+          context_pl: 'Niemowlęta i dzieci 0–2 lat z zachowaną tarczycą — zakres rozszerzony (do ~78 ng/mL); fizjologiczna podwyższona Tg ze względu na utrzymującą się przebudowę tarczycy po urodzeniu.',
+          source_ids: ['mayo_test_tg'] },
+        { id: 'tg_intact_child',
+          when: { age_min: 2, age_max: 20, life_stage: 'pediatric' },
+          low: 0, high: 40,
+          context_pl: 'Dzieci 2–19 lat z zachowaną tarczycą — zakres zbliżony do dorosłych z możliwą fizjologiczną elewacją w okresach intensywnego wzrostu/pokwitania.',
+          source_ids: ['mayo_test_tg'] },
+        // Default: zachowana tarczyca (cała lub po lobektomii) — dorośli
         { id: 'tg_intact',
           when: {}, default: true,
           low: 0, high: 33,
-          context_pl: 'Zachowana tarczyca (cała lub po lobektomii) — zdrowi dorośli i dzieci',
+          context_pl: 'Zachowana tarczyca (cała lub po lobektomii) — zdrowi dorośli (Mayo adult range).',
           source_ids: ['mayo_test_tg', 'jarzab_dtc_adults_2022'] }
       ],
       ranges_pl: [
-        'Zachowana tarczyca (cała / po lobektomii): < 33 ng/mL',
+        'Zachowana tarczyca — niemowlęta i dzieci 0–2 lat: < 78 ng/mL (fizjologicznie wyższa wskutek przebudowy)',
+        'Zachowana tarczyca — dzieci 2–19 lat: < 40 ng/mL',
+        'Zachowana tarczyca (cała / po lobektomii) — dorośli: < 33 ng/mL',
         'Po total thyroidectomy DTC, dorośli, bazalny: < 0,2 ng/mL (excellent); 0,2–5 biochemical incomplete; > 5 persistent',
         'Po total thyroidectomy DTC, dorośli, stymulowany: < 1 (z RAI) lub < 2 (bez RAI) ng/mL (excellent); > 10 incomplete',
         'Po total thyroidectomy DTC, dzieci, bazalny: ≤ 1,0 ng/mL (excellent)',
@@ -2293,8 +2342,8 @@
         'Dorośli silnie wiek-zależni: 20–29 lat: 17,8–55,2; 30–39: 11,8–30,1; 40–49: 10,5–27,5; 50–59: 7,9–25,5; 60–69: 7,2–23,6; ≥70: 6,6–22,3 nmol/L',
         'IGF-1 < 2,5 percentyla dla wieku/Tanner = sugestia niedoboru GH (wymaga IGFBP-3 + test stymulacyjny)'
       ],
-      notes_pl: 'IGF-1 to marker integracji osi GH-IGF, kluczowy w diagnostyce niedoboru GH (niskorosłość) i akromegalii. Mierzona razem z IGFBP-3 (panel GH-IGF). Polskie wytyczne PTEDD niskorosłości (Wąsikowa, Beń-Skowronek) wymagają łącznej oceny IGF-1 + IGFBP-3 + test stymulacyjny GH. Tanner stage ważniejszy klinicznie niż sam wiek między 8.–18. r.ż. (peak fizjologiczny w Tanner III–IV).',
-      sources: ['Mayo Clinic Labs', 'Bidlingmaier 2014 JCEM', 'PTEDD niskorosłości']
+      notes_pl: 'IGF-1 to marker integracji osi GH-IGF, kluczowy w diagnostyce niedoboru GH (niskorosłość) i akromegalii. Mierzona razem z IGFBP-3 (panel GH-IGF). Polskie wytyczne PTEDD (Oczkowska 2009, Endokrynol Ped vol. 9/Suppl. 1): niedobór wzrostu = wzrost < -2 SD od średniej dla wieku i płci; IGF-1 < -1 SD dla wieku i płci jest wskazaniem do testu stymulacji GH (czułość 88% dla GH < 7 ng/mL w testach stymulacyjnych). Diagnostyka ZAWSZE łączona: IGF-1 + IGFBP-3 + test stymulacyjny GH (po wykluczeniu chorób przewlekłych, celiakii, niedoczynności tarczycy). Ciężki niedobór GH u dorosłych i młodzieży po zakończeniu terapii promującej wzrastanie — kwalifikacja do leczenia wg programu Ministerstwa Zdrowia (Lewiński/Stawerska i wsp. 2018, Endokrynol Pol 69(5):468-496). Tanner stage ważniejszy klinicznie niż sam wiek między 8.–18. r.ż. (peak fizjologiczny w Tanner III–IV).',
+      sources: ['Mayo Clinic Labs', 'Bidlingmaier 2014 JCEM', 'Oczkowska 2009 PTEDD', 'Lewiński 2018 Endokrynol Pol']
     },
 
     {
@@ -2318,15 +2367,16 @@
           low: 2.6, high: 8.6, context_pl: 'Tanner V (dorosły młody)',
           source_ids: ['mayo_test_igfbp3'] },
         { id: 'igfbp3_default', when: {}, default: true,
-          low: 2.6, high: 8.6, context_pl: 'Dorośli (Tanner V — zakres ogólny). Dane pediatryczne pełnej tabeli niedostępne — porównaj z wartościami referencyjnymi laboratorium oznaczającego.',
+          low: 2.6, high: 8.6, context_pl: 'Dorośli (Tanner V — zakres ogólny Mayo). UWAGA — pediatryczne tabele age/Tanner-stratified NIE są wprowadzone do bazy: ZAWSZE porównuj z wartościami referencyjnymi laboratorium oznaczającego. Interpretacja wg polskich wytycznych PTEDD: IGFBP-3 < -1 SD dla wieku/płci łącznie z niskim IGF-1 = wskazanie do testu stymulacji GH.',
           source_ids: ['mayo_test_igfbp3'] }
       ],
       ranges_pl: [
-        'Tanner V (dorosły młody): 2,6–8,6 mg/L (Mayo)',
-        'Pediatryczne pełne tabele Tanner-stratified niedostępne w open-access — porównaj z laboratorium oznaczającym'
+        'Tanner V / dorosły młody: 2,6–8,6 mg/L (Mayo)',
+        'OSTRZEŻENIE: pediatryczne pełne tabele Tanner-stratified NIE są zawarte w tej bazie — wartości referencyjne dla dzieci/młodzieży należy ZAWSZE odczytać z laboratorium oznaczającego (zalecane Friedrich 2005 JCEM lub własne normy laboratorium)',
+        'Interpretacja kliniczna (PTEDD Oczkowska 2009): IGFBP-3 < -1 SD dla wieku/płci łącznie z niskim IGF-1 = wskazanie do testu stymulacji GH'
       ],
-      notes_pl: 'IGFBP-3 mierzona razem z IGF-1. Ratio IGF-1/IGFBP-3 ma znaczenie diagnostyczne. Mniej zależna od posiłku niż IGF-1. IGFBP-3 < 2,5 percentyla dla wieku/Tanner = sugestia niedoboru GH. Pełnej tabeli pediatrycznej Mayo nie udało się pobrać; uzupełnij wartościami z Friedrich 2005 JCEM lub własnymi wartościami referencyjnymi laboratorium.',
-      sources: ['Mayo Clinic Labs', 'Friedrich 2005 (alt.)']
+      notes_pl: 'IGFBP-3 ZAWSZE mierzona razem z IGF-1 (panel GH-IGF). Mniej zależna od posiłku niż IGF-1 i bardziej stabilna w ciągu dnia. Polskie wytyczne PTEDD (Oczkowska 2009, Endokrynol Ped vol. 9/Suppl. 1): IGFBP-3 jest głównym z sześciu białek wiążących IGF, najsilniej zależnym od hormonu wzrostu; jej stężenie odzwierciedla stan czynności GH i jest stabilne w ciągu dnia. Diagnostyka łączona: IGF-1 + IGFBP-3 + test stymulacyjny GH (oba < -1 SD = wskazanie do dalszej diagnostyki). UWAGA WAŻNA: w aktualnej bazie wprowadzono TYLKO zakres dla Tanner V (Mayo). Pełne tabele pediatryczne age-stratified i Tanner-stratified nie są dostępne w open-access — należy odczytać z laboratorium oznaczającego lub uzupełnić z Friedrich 2005 JCEM. Dotyczy to zwłaszcza dzieci < 18 lat, gdzie IGFBP-3 ma istotną zmienność wiekową.',
+      sources: ['Mayo Clinic Labs', 'Oczkowska 2009 PTEDD', 'Friedrich 2005 JCEM (alt.)']
     },
 
     {
@@ -2369,14 +2419,18 @@
           source_ids: ['mayo_test_prolactin'] }
       ],
       ranges_pl: [
-        'Mężczyźni dorośli: 2–18 ng/mL (próg hyperprolaktynemii > 15)',
-        'Kobiety nieciężarne: 2–29 ng/mL (próg hyperprolaktynemii > 25)',
+        'Mężczyźni dorośli (Mayo): 2–18 ng/mL (próg hyperprolaktynemii > 15; PL Karasek 2006 > 15)',
+        'Kobiety nieciężarne (Mayo): 2–29 ng/mL (próg hyperprolaktynemii > 25; PL Karasek 2006 > 20)',
         'Ciąża T1: 10–95; T2: 40–170; T3: 10–209 ng/mL',
-        'Próg prolaktynoma: > 200 ng/mL (makrogruczolak)',
+        'PRL 25–200 ng/mL: możliwa każda przyczyna hiperprolaktynemii — leki, idiopatyczna, niedoczynność tarczycy, niewydolność nerek (Karasek 2006 PL)',
+        'PRL > 200 ng/mL z zaburzonym rytmem dobowym: zwykle prolactinoma (mikro/makro) wg Karasek 2006 PL',
+        'PRL > 250 ng/mL: silnie sugeruje prolactinoma — ES 2011 Melmed',
+        'PRL > 500 ng/mL: diagnostyczne dla makroprolactinoma — ES 2011 Melmed',
+        'PRL < 150 ng/mL przy stwierdzonym gruczolaku przysadki: guz mieszany (somato-mammotropowy) lub guz niewydzielający Prl z uciskiem szypuły (Karasek 2006 PL)',
         'Macroprolactin: badanie zalecane gdy PRL > ~33 ng/mL (700 mU/L) bez objawów'
       ],
-      notes_pl: 'Pobranie 7–10 rano, na czczo, po wypoczynku 30 min (stres, sen, stosunek, wysiłek, hipoglikemia podwyższają PRL). Wykluczyć ciążę, niedoczynność tarczycy (↑ TRH stymuluje PRL), leki (neuroleptyki, metoklopramid, opioidy, niektóre antydepresanty). Hyperprolaktynemia: u kobiet > 25 ng/mL, u mężczyzn > 15 ng/mL. Makroprolaktyna (kompleks IgG) — badanie różnicujące przy bezobjawowej hiperprolaktynemii. Konwersja: ng/mL × 21,2 = mIU/L (WHO IS 84/500).',
-      sources: ['Mayo Clinic Labs', 'WHO IS 84/500']
+      notes_pl: 'Pobranie 7–10 rano, na czczo, po wypoczynku 30 min (stres, sen, stosunek, wysiłek, hipoglikemia podwyższają PRL). Wykluczyć ciążę, niedoczynność tarczycy (↑ TRH stymuluje PRL), leki (neuroleptyki, metoklopramid, opioidy, niektóre antydepresanty). Polskie wytyczne Karasek/Pawlikowski/Lewiński 2006 (Endokrynol Pol 57(6):656-662): hiperprolaktynemia > 20 ng/mL (K) / > 15 ng/mL (M); 25–200 ng/mL = możliwa każda przyczyna; > 200 ng/mL z zaburzonym rytmem dobowym = zwykle prolactinoma (mikro/makro); < 150 ng/mL przy stwierdzonym gruczolaku = guz mieszany lub niewydzielający Prl. Międzynarodowe wytyczne ES 2011 (Melmed): > 250 ng/mL silnie sugeruje prolactinoma; > 500 ng/mL diagnostyczne dla makroprolactinoma. Makroprolaktyna (kompleks IgG) — badanie różnicujące przy bezobjawowej hiperprolaktynemii (precypitacja PEG; odzysk < ~40% sugeruje przewagę makroprolaktyny). Konwersja: ng/mL × 21,2 = mIU/L (WHO IS 84/500).',
+      sources: ['Mayo Clinic Labs', 'Karasek 2006 (Endokrynol Pol)', 'Melmed/ES 2011', 'WHO IS 84/500']
     },
 
     {
@@ -2465,8 +2519,8 @@
         'Próg hipogonadyzmu hipogonadotropowego: < 1,5 IU/L u dorosłych',
         'LH/FSH > 2:1 lub > 3:1: wspomagająco PCOS'
       ],
-      notes_pl: 'LH pulsacyjny — pojedynczy pomiar może być mylący. U kobiet zawsze podać dzień cyklu lub fazę. W mini-puberty (1–6 mies.) wartości LH/FSH są przejściowo podwyższone — to fizjologia "TSH surge" gonadal axis. Polskie wytyczne PTE hipogonadyzmu wymagają oceny LH + FSH + testosteron (M) lub estradiol (F). Mayo LHPED dla pediatrii ma 10× wyższą czułość niż standardowy test.',
-      sources: ['Mayo Clinic Labs', 'Andersson 1998 (mini-puberty)', 'CALIPER Konforte 2013']
+      notes_pl: 'LH pulsacyjny — pojedynczy pomiar może być mylący. U kobiet zawsze podać dzień cyklu lub fazę. W mini-puberty (1–6 mies.) wartości LH/FSH są przejściowo podwyższone — fizjologiczna aktywacja osi podwzgórze-przysadka-gonady ("postnatal gonadal axis activation", peak ~3 mies.). Polskie wytyczne PTMRiE/PTGP 2018 (Diagnostyka i leczenie niepłodności): u kobiet w diagnostyce niepłodności oznaczać LH + FSH + estradiol w 3.–5. dniu cyklu; podwyższony stosunek LH/FSH (> 2:1 lub > 3:1) wspomagająco sugeruje PCOS. U mężczyzn w diagnostyce hipogonadyzmu — LH + FSH + testosteron całkowity: ↑LH + ↓testosteron = pierwotny (hipergonadotropowy); ↓/N LH + ↓testosteron = wtórny (hipogonadotropowy — wskazanie do MRI przysadki). Mayo LHPED dla pediatrii ma 10× wyższą czułość niż standardowy test (czułość 0,02 IU/L) — istotne w diagnostyce CPP (centralne przedwczesne dojrzewanie).',
+      sources: ['Mayo Clinic Labs', 'Andersson 1998 (mini-puberty)', 'CALIPER Konforte 2013', 'PTMRiE/PTGP 2018']
     },
 
     {
@@ -2536,10 +2590,11 @@
         'Dorośli M: 1,5–12,4 IU/L',
         'K folikularna (3. d.c.): 3,9–8,8; pik owul.: 4,5–22,5; lutealna: 1,8–5,1; postmenop.: 16,7–113,6',
         'Rezerwa jajnikowa: FSH > 10 (obniżona), > 25 IU/L (bardzo obniżona, 3. d.c.)',
-        'Postmenopauza: > 40 IU/L; Premature ovarian failure: FSH > 25 IU/L < 40 lat'
+        'Postmenopauza: > 40 IU/L (postmenopauza pewna)',
+        'POI (Premature Ovarian Insufficiency): FSH > 25 IU/L w 2× pomiarach > 4 tyg. odstępu + amenorrhea ≥ 4 mies. + wiek < 40 lat (PTMRiE/PTGP 2018, ESHRE 2016)'
       ],
-      notes_pl: 'FSH najczęściej w panelu z LH + estradiol/testosteron. Klin. próg rezerwy jajnikowej: > 10 IU/L w 3. d.c. = obniżona, > 25 = bardzo obniżona, > 40 = menopauza. Hipogonadyzm hipogonadotropowy: FSH < 1,5 IU/L + niski estradiol/testosteron. Hipogonadyzm hipergonadotropowy (niewydolność gonad): FSH ↑↑ + niskie hormony płciowe. AMH ostatecznie bardziej czuły marker rezerwy niż FSH.',
-      sources: ['Mayo Clinic Labs', 'Andersson 1998 (mini-puberty)', 'CALIPER Konforte 2013']
+      notes_pl: 'FSH najczęściej w panelu z LH + estradiol/testosteron. Klin. próg rezerwy jajnikowej: > 10 IU/L w 3. d.c. = obniżona, > 25 = bardzo obniżona, > 40 = menopauza. Polskie wytyczne PTMRiE/PTGP 2018 (Diagnostyka i leczenie niepłodności): oznaczenie FSH + LH + estradiol w 3.–5. dniu cyklu u kobiet; POI (przedwczesna niewydolność jajników) rozpoznawana wg kryteriów ESHRE 2016 — FSH > 25 IU/L w DWÓCH pomiarach w odstępie > 4 tygodni + amenorrhea ≥ 4 mies. + wiek < 40 lat. Hipogonadyzm hipogonadotropowy: FSH < 1,5 IU/L + niski estradiol/testosteron. Hipogonadyzm hipergonadotropowy (niewydolność gonad): FSH ↑↑ + niskie hormony płciowe. AMH ostatecznie bardziej czuły marker rezerwy niż FSH.',
+      sources: ['Mayo Clinic Labs', 'Andersson 1998 (mini-puberty)', 'CALIPER Konforte 2013', 'PTMRiE/PTGP 2018', 'ESHRE 2016 (POI)']
     },
 
     {
@@ -2609,8 +2664,8 @@
         'Mężczyźni dorośli: 80–300 (< 80 niewydolność jąder; < 40 azoospermia non-obstructive)',
         'Kobiety: K folikularna 20–90; pik owul. 50–200; lutealna < 50; postmenop. < 5 pg/mL'
       ],
-      notes_pl: 'Inhibina B u chłopców = marker funkcji komórek Sertoli i spermatogenezy. W mini-puberty (1–6 mies.) wartości peak (mediana 270 pg/mL, do 400) — kluczowe dla diagnostyki hipogonadyzmu wrodzonego i zespołu Klinefeltera. U kobiet komplementarny marker rezerwy jajnikowej (razem z AMH), spada szybciej z wiekiem niż AMH. Próg M < 80 pg/mL = niewydolność jąder, < 40 = azoospermia non-obstructive.',
-      sources: ['Mayo Clinic Labs', 'Andersson 1998 (mini-puberty)']
+      notes_pl: 'Inhibina B u chłopców = marker funkcji komórek Sertoli i spermatogenezy. W mini-puberty (1–6 mies.) wartości peak (mediana 270 pg/mL, do 400) — kluczowe dla diagnostyki hipogonadyzmu wrodzonego i zespołu Klinefeltera. U kobiet komplementarny marker rezerwy jajnikowej (razem z AMH), spada szybciej z wiekiem niż AMH. Próg M < 80 pg/mL = niewydolność jąder, < 40 = azoospermia non-obstructive. KLUCZOWY KONTEKST KLINICZNY: (1) Zespół Klinefeltera — niska inhibina B + niska AMH + wysokie FSH/LH = pierwotna niewydolność komórek Sertoli (osobne wskazanie kliniczne klinefelter). (2) Różnicowanie CDGP (konstytucjonalne opóźnienie wzrastania i dojrzewania) vs trwały wrodzony hipogonadyzm hipogonadotropowy u chłopców z opóźnionym dojrzewaniem — inhibina B ZACHOWANA w CDGP, OBNIŻONA/nieoznaczalna w trwałym HH; jeden z lepszych pojedynczych parametrów różnicujących wg PTEDD / ESPE (osobne wskazanie kliniczne delayed_puberty). UWAGA: polskie wytyczne PTMRiE/PTGP 2018 (Diagnostyka i leczenie niepłodności) NIE wymieniają inhibiny B jako standardowego markera rezerwy jajnikowej — interpretacja kliniczna jako uzupełnienie AMH, bez konkretnych polskich progów.',
+      sources: ['Mayo Clinic Labs', 'Andersson 1998 (mini-puberty)', 'PTEDD/ESPE (delayed puberty, CDGP)']
     },
 
     {
@@ -2667,8 +2722,8 @@
         'Chłopcy mini-puberty (0–6 mies.): 100–200 ng/mL',
         'Mężczyźni dorośli: 1,5–10 ng/mL'
       ],
-      notes_pl: 'AMH = najczulszy marker rezerwy jajnikowej, stabilny w cyklu menstruacyjnym (w przeciwieństwie do FSH). U kobiet wartości peak ~25 r.ż., stopniowy spadek. U chłopców w mini-puberty (0–6 mies.) bardzo wysokie wartości (marker komórek Sertoli, sygnał zachowanych jąder). Konwersja: ng/mL × 7,14 = pmol/L. UWAGA: Beckman Gen II i picoAMH dają różne wyniki — sprawdź assay laboratorium. ESHRE 2023 PCOS: AMH > 5 ng/mL może zastąpić USG morfologii jajników w kryteriach Rotterdamskich.',
-      sources: ['Mayo Clinic Labs', 'CALIPER Bohn 2022 (PMID 35760370)', 'ESHRE 2023 PCOS', 'NFZ IVF']
+      notes_pl: 'AMH = najczulszy marker rezerwy jajnikowej, stabilny w cyklu menstruacyjnym (w przeciwieństwie do FSH). U kobiet wartości peak ~25 r.ż., stopniowy spadek. U chłopców w mini-puberty (0–6 mies.) bardzo wysokie wartości (marker komórek Sertoli, sygnał zachowanych jąder). Konwersja: ng/mL × 7,14 = pmol/L. UWAGA: Beckman Gen II i picoAMH dają różne wyniki — sprawdź assay laboratorium. POLSKIE WYTYCZNE PTMRiE/PTGP 2018 (Diagnostyka i leczenie niepłodności): AMH zalecany jako element przesiewowego badania rezerwy jajnikowej u kobiet planujących późną prokreację oraz przed leczeniem gonadotoksycznym (chemio-/radioterapia onkologiczna) — wytyczne NIE podają konkretnych progów liczbowych, interpretacja indywidualna z laboratorium i AFC w USG. Refundacja NFZ IVF wymaga AMH ≥ 0,7 ng/mL jako warunku kwalifikacji. ESHRE 2023 PCOS: AMH > 5 ng/mL może zastąpić USG morfologii jajników w kryteriach Rotterdamskich (kryterium pomocnicze, nie wykluczające).',
+      sources: ['Mayo Clinic Labs', 'CALIPER Bohn 2022 (PMID 35760370)', 'ESHRE 2023 PCOS', 'PTMRiE/PTGP 2018', 'NFZ IVF']
     },
 
     {
@@ -2714,10 +2769,12 @@
         'Kobiety dorosłe nieciężarne: 18–144 nmol/L',
         'Niskie SHBG u M (Mayo cutoff < 13,3): zespół metaboliczny / insulinooporność',
         'Niskie SHBG u K ≤ 46 lat (< 18,2): hiperandrogenizm/PCOS',
-        'Wysokie SHBG: hipertyreoza, ciąża, estrogeny terapeutyczne, doustna antykoncepcja'
+        'Wysokie SHBG: hipertyreoza, ciąża, estrogeny terapeutyczne, doustna antykoncepcja',
+        'FAI = T całk. × 100 / SHBG (jednostki nmol/L); FAI > 5 = biochemiczny hiperandrogenizm (ES 2018 Martin, hirsutyzm/PCOS)',
+        'Wolny T u mężczyzn: obliczany wzorem Vermeulena z T całkowitego + SHBG + albuminy (ES 2018 Bhasin, hipogonadyzm)'
       ],
-      notes_pl: 'SHBG = transporter testosteronu i estradiolu. Wyższe u kobiet (estrogen-stymulowane). Klinicznie używany do obliczenia wolnego/biodostępnego testosteronu (Vermeulen formula): wymaga total T + SHBG + albumina. Niskie SHBG u M ostrzeżenie metaboliczne (zespół metaboliczny, insulinooporność, otyłość trzewna, ↑ ryzyko cukrzycy). W ciąży SHBG rośnie 3–10× przez estrogeny.',
-      sources: ['Mayo Clinic Labs', 'Elmlinger 2005']
+      notes_pl: 'SHBG = transporter testosteronu i estradiolu. Wyższe u kobiet (estrogen-stymulowane). Klinicznie używana do obliczenia wolnego/biodostępnego testosteronu wzorem Vermeulena (Vermeulen 1999 JCEM, kalkulatory online): wymaga T całkowity + SHBG + albumina. ES 2018 BHASIN (hipogonadyzm męski, Tabela 2): oznaczenie SHBG zalecane u mężczyzn z T całkowitym na granicy lub w stanach zmieniających SHBG. STANY OBNIŻAJĄCE SHBG (zaniżają T całkowity): otyłość, cukrzyca typu 2, zespół metaboliczny, niedoczynność tarczycy, glikokortykosteroidy, progestyny, sterydy anaboliczne, niedożywienie, akromegalia. STANY PODWYŻSZAJĄCE SHBG (zawyżają T całkowity): starszy wiek, marskość wątroby, nadczynność tarczycy, leki przeciwpadaczkowe, estrogeny (doustna antykoncepcja, HRT), HIV, hiperestrogenizm. ES 2018 MARTIN (hirsutyzm/PCOS): FAI (Free Androgen Index) = T całk. × 100 / SHBG; FAI > 5 = biochemiczny hiperandrogenizm — czulszy niż sam T całkowity u kobiet z PCOS, gdzie SHBG fizjologicznie obniżona przez insulinooporność. W ciąży SHBG rośnie 3–10× przez estrogeny — pomiar T u ciężarnych wymaga interpretacji w kontekście podwyższonej SHBG.',
+      sources: ['Mayo Clinic Labs', 'Elmlinger 2005', 'ES 2018 Bhasin (hipogonadyzm M)', 'ES 2018 Martin (hirsutyzm)', 'Vermeulen 1999 JCEM']
     }
   ];
 
