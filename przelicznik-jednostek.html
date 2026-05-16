@@ -788,6 +788,45 @@
       margin-bottom: 0.25rem;
     }
 
+    /* ───── Strukturalny summary (Krok 1) — sekcje, listy klikalne, callout-y ─────
+       Renderer rozpoznaje obiektowy summary (z polem sections) i renderuje go
+       jako stos kart sekcyjnych w palecie Vildy. Klasy z prefiksem .lab-summary-*
+       są izolowane od istniejących .lab-panel-*. */
+    .lab-summary-stack { display: flex; flex-direction: column; gap: 0.65rem; margin: 0 0 1rem; }
+    .lab-summary-card { background: #fff; border: 0.5px solid rgba(0, 131, 141, 0.15); border-radius: 0.85rem; padding: 0.85rem 1rem; }
+    .lab-summary-section-h { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; font-weight: 500; color: var(--primary, #00838d); margin: 0 0 0.5rem; letter-spacing: 0.01em; }
+    .lab-summary-section-h svg { flex-shrink: 0; width: 17px; height: 17px; }
+    .lab-summary-count { margin-left: auto; font-size: 0.68rem; color: #6b7280; font-weight: 400; background: rgba(0, 131, 141, 0.05); padding: 2px 8px; border-radius: 999px; }
+    .lab-summary-body { font-size: 0.88rem; line-height: 1.65; color: #08202C; margin: 0; }
+    .lab-summary-hint { font-size: 0.7rem; color: #6b7280; margin: 0 0 0.35rem; font-style: italic; padding-left: 1rem; }
+    .lab-summary-list { list-style: none; padding: 0; margin: 0.25rem 0 0; }
+    .lab-summary-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem 0.6rem; margin: 0 -0.6rem; font-size: 0.85rem; line-height: 1.5; color: #08202C; border-radius: 0.5rem; transition: background 0.15s; }
+    .lab-summary-row-static { cursor: default; }
+    .lab-summary-row-clickable { cursor: pointer; }
+    .lab-summary-row-clickable:hover { background: rgba(0, 131, 141, 0.05); }
+    .lab-summary-row.active { background: rgba(0, 131, 141, 0.05); }
+    .lab-summary-row.active .lab-summary-row-toggle { color: var(--primary, #00838d); transform: rotate(180deg); }
+    .lab-summary-bullet { width: 6px; height: 6px; border-radius: 50%; background: var(--primary, #00838d); opacity: 0.7; flex-shrink: 0; }
+    .lab-summary-row-text { flex: 1; }
+    .lab-summary-row-toggle { flex-shrink: 0; color: #6b7280; transition: transform 0.2s, color 0.15s; width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; }
+    .lab-summary-row-toggle svg { width: 16px; height: 16px; }
+    .lab-summary-label-inline { font-weight: 500; color: #08202C; }
+    .lab-summary-detail { background: rgba(0, 131, 141, 0.05); border: 0.5px solid rgba(0, 131, 141, 0.15); border-radius: 0.6rem; padding: 0.7rem 0.9rem; margin: 0.25rem 0 0.35rem 1rem; font-size: 0.85rem; line-height: 1.6; color: #08202C; }
+    .lab-summary-detail-title { font-weight: 500; color: var(--primary, #00838d); margin: 0 0 0.4rem; font-size: 0.85rem; }
+    .lab-summary-detail p { margin: 0 0 0.4rem; }
+    .lab-summary-detail p:last-child { margin-bottom: 0; }
+    .lab-summary-callout { position: relative; border-radius: 0.75rem; padding: 0.7rem 0.9rem 0.7rem 1.15rem; overflow: hidden; }
+    .lab-summary-callout-accent { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
+    .lab-summary-callout-h { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 0.3rem; display: flex; align-items: center; gap: 0.35rem; font-weight: 500; }
+    .lab-summary-callout-h svg { width: 16px; height: 16px; flex-shrink: 0; }
+    .lab-summary-callout-b { font-size: 0.8rem; margin: 0; line-height: 1.6; color: #08202C; }
+    .lab-summary-callout-primary { background: rgba(0, 131, 141, 0.08); }
+    .lab-summary-callout-primary .lab-summary-callout-accent { background: var(--primary, #00838d); }
+    .lab-summary-callout-primary .lab-summary-callout-h { color: var(--primary, #00838d); }
+    .lab-summary-callout-purple { background: rgba(153, 0, 255, 0.07); }
+    .lab-summary-callout-purple .lab-summary-callout-accent { background: #9900ff; }
+    .lab-summary-callout-purple .lab-summary-callout-h { color: #5a1f99; }
+
     /* ───── Info-panel dla wybranego badania (Faza 4f) ─────
        Pojawia się pod sekcjami chipów po kliknięciu w dowolny chip.
        Pokazuje: nazwa badania, notatka kliniczna, (opcjonalnie) dłuższy
@@ -1172,9 +1211,9 @@
   <script src="ios26-ui.js?v=18" defer></script>
 
   <!-- Dane + moduł logiki (dwa pliki przygotowane do reużycia w innych podstronach). -->
-  <script src="lab_units_data.js?v=5"></script>
+  <script src="lab_units_data.js?v=10"></script>
   <script src="lab_unit_converter.js?v=2"></script>
-  <script src="lab_clinical_panels.js?v=49"></script>
+  <script src="lab_clinical_panels.js?v=81"></script>
 
   <script>
   (function () {
@@ -1978,6 +2017,193 @@
      * fallback: lista substancji ze "Zwykłego" wyszukiwania po
      * clinical_indications (jak w fazie 4d).
      */
+    // ───── Strukturalny summary renderer (Krok 1) ─────
+    // Dispatcher dla pola panel.summary:
+    //   - string  → stary format (renderer dotychczasowy w renderSuggestions)
+    //   - obiekt z polem sections[] → nowy format strukturalny
+    // Sekcje: prose (kafelek z prozą), list (kafelek z listą — pozycje opcjonalnie
+    // klikalne z rozwijanym detailem), callout (kolorowy callout — primary | purple).
+
+    function labSummarySvgIcon(name) {
+      var paths = {
+        'book-2':       '<path d="M19 4v16h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12z"/><path d="M19 16h-12a2 2 0 0 0 -2 2"/><path d="M9 8h6"/>',
+        'tags':         '<path d="M16 4l5 5l-9 9h-5v-5z"/><path d="M3 14l4 -4"/><path d="M15 5l4 4"/>',
+        'list-search':  '<path d="M15 15m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/><path d="M18.5 18.5l2.5 2.5"/><path d="M4 6h16"/><path d="M4 12h4"/><path d="M4 18h4"/>',
+        'baby-bottle':  '<path d="M9 3h6v3h-6z"/><path d="M6 6h12l-1 13a2 2 0 0 1 -2 2h-6a2 2 0 0 1 -2 -2z"/><path d="M9 12h2"/><path d="M9 16h3"/>',
+        'mood-kid':     '<circle cx="12" cy="12" r="9"/><path d="M9 10l.01 0"/><path d="M15 10l.01 0"/><path d="M9.5 15a3.5 3.5 0 0 0 5 0"/><path d="M12 3a2 2 0 0 0 0 4"/>',
+        'chevron-down': '<path d="M6 9l6 6l6 -6"/>'
+      };
+      var p = paths[name] || '';
+      return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + p + '</svg>';
+    }
+
+    function labSummaryAppendIcon(host, name) {
+      if (!name) return;
+      var tmp = document.createElement('div');
+      tmp.innerHTML = labSummarySvgIcon(name);
+      var svg = tmp.firstChild;
+      if (svg) host.appendChild(svg);
+    }
+
+    function labSummaryBuildCardShell(iconName, title) {
+      var card = document.createElement('div');
+      card.className = 'lab-summary-card';
+      var h = document.createElement('div');
+      h.className = 'lab-summary-section-h';
+      if (iconName) labSummaryAppendIcon(h, iconName);
+      var t = document.createElement('span');
+      t.textContent = title || '';
+      h.appendChild(t);
+      card.appendChild(h);
+      return { card: card, header: h };
+    }
+
+    function labSummaryBuildProseCard(sec) {
+      var shell = labSummaryBuildCardShell(sec.icon, sec.title || '');
+      var p = document.createElement('p');
+      p.className = 'lab-summary-body';
+      p.textContent = sec.body || '';
+      shell.card.appendChild(p);
+      return shell.card;
+    }
+
+    function labSummaryBuildDetailPanel(item) {
+      var box = document.createElement('div');
+      box.className = 'lab-summary-detail';
+      var headTitle = item.detailTitle || item.label;
+      if (headTitle) {
+        var t = document.createElement('p');
+        t.className = 'lab-summary-detail-title';
+        t.textContent = headTitle;
+        box.appendChild(t);
+      }
+      var det = item.detail;
+      if (typeof det === 'string') {
+        var p = document.createElement('p');
+        p.textContent = det;
+        box.appendChild(p);
+      } else if (Array.isArray(det)) {
+        det.forEach(function (entry) {
+          var p = document.createElement('p');
+          if (typeof entry === 'string') {
+            p.textContent = entry;
+          } else if (entry && typeof entry === 'object') {
+            if (entry.label) {
+              var lbl = document.createElement('span');
+              lbl.className = 'lab-summary-label-inline';
+              lbl.textContent = entry.label;
+              p.appendChild(lbl);
+              if (entry.text) {
+                p.appendChild(document.createTextNode(' — ' + entry.text));
+              }
+            } else if (entry.text) {
+              p.textContent = entry.text;
+            }
+          }
+          box.appendChild(p);
+        });
+      }
+      return box;
+    }
+
+    function labSummaryBuildListRow(item) {
+      var li = document.createElement('li');
+      li.className = 'lab-summary-row';
+      var bullet = document.createElement('span');
+      bullet.className = 'lab-summary-bullet';
+      li.appendChild(bullet);
+      var textWrap = document.createElement('span');
+      textWrap.className = 'lab-summary-row-text';
+      if (typeof item === 'string') {
+        textWrap.textContent = item;
+      } else if (item && typeof item === 'object') {
+        if (item.label) {
+          var lbl = document.createElement('span');
+          lbl.className = 'lab-summary-label-inline';
+          lbl.textContent = item.label;
+          textWrap.appendChild(lbl);
+          if (item.text) {
+            textWrap.appendChild(document.createTextNode(' — ' + item.text));
+          }
+        } else if (item.text) {
+          textWrap.textContent = item.text;
+        }
+      }
+      li.appendChild(textWrap);
+      var hasDetail = item && typeof item === 'object' && item.detail;
+      if (hasDetail) {
+        li.classList.add('lab-summary-row-clickable');
+        var toggle = document.createElement('span');
+        toggle.className = 'lab-summary-row-toggle';
+        labSummaryAppendIcon(toggle, 'chevron-down');
+        li.appendChild(toggle);
+        var detail = labSummaryBuildDetailPanel(item);
+        detail.style.display = 'none';
+        li.addEventListener('click', function () {
+          var open = li.classList.toggle('active');
+          detail.style.display = open ? '' : 'none';
+        });
+        return { row: li, detail: detail };
+      }
+      li.classList.add('lab-summary-row-static');
+      return { row: li, detail: null };
+    }
+
+    function labSummaryBuildListCard(sec) {
+      var shell = labSummaryBuildCardShell(sec.icon, sec.title || '');
+      var items = Array.isArray(sec.items) ? sec.items : [];
+      var hasClickable = items.some(function (it) { return it && typeof it === 'object' && it.detail; });
+      if (hasClickable) {
+        var hint = document.createElement('p');
+        hint.className = 'lab-summary-hint';
+        hint.textContent = 'Kliknij pozycję, aby rozwinąć opis kliniczny';
+        shell.card.appendChild(hint);
+      }
+      var ul = document.createElement('ul');
+      ul.className = 'lab-summary-list';
+      items.forEach(function (it) {
+        var built = labSummaryBuildListRow(it);
+        if (built.row) ul.appendChild(built.row);
+        if (built.detail) ul.appendChild(built.detail);
+      });
+      shell.card.appendChild(ul);
+      return shell.card;
+    }
+
+    function labSummaryBuildCallout(sec) {
+      var co = document.createElement('div');
+      var variant = (sec.variant === 'purple') ? 'lab-summary-callout-purple' : 'lab-summary-callout-primary';
+      co.className = 'lab-summary-callout ' + variant;
+      var accent = document.createElement('div');
+      accent.className = 'lab-summary-callout-accent';
+      co.appendChild(accent);
+      var h = document.createElement('p');
+      h.className = 'lab-summary-callout-h';
+      if (sec.icon) labSummaryAppendIcon(h, sec.icon);
+      var t = document.createElement('span');
+      t.textContent = sec.title || '';
+      h.appendChild(t);
+      co.appendChild(h);
+      var b = document.createElement('p');
+      b.className = 'lab-summary-callout-b';
+      b.textContent = sec.body || '';
+      co.appendChild(b);
+      return co;
+    }
+
+    function renderStructuredSummary(summary, container) {
+      if (!summary || !Array.isArray(summary.sections)) return;
+      var stack = document.createElement('div');
+      stack.className = 'lab-summary-stack';
+      summary.sections.forEach(function (sec) {
+        if (!sec || typeof sec !== 'object') return;
+        if (sec.kind === 'prose')   stack.appendChild(labSummaryBuildProseCard(sec));
+        else if (sec.kind === 'list')    stack.appendChild(labSummaryBuildListCard(sec));
+        else if (sec.kind === 'callout') stack.appendChild(labSummaryBuildCallout(sec));
+      });
+      container.appendChild(stack);
+    }
+
     function renderSuggestions(indicationId) {
       if (!suggestResultsEl) return;
       if (!indicationId) {
@@ -2037,10 +2263,16 @@
           + ' (' + totalCount + ' badań, ' + internalCount + ' w konwerterze)';
 
         if (panel.summary) {
-          var sumP = document.createElement('p');
-          sumP.className = 'lab-panel-summary';
-          sumP.textContent = panel.summary;
-          suggestBodyEl.appendChild(sumP);
+          if (typeof panel.summary === 'string') {
+            // STARY format — proza w pojedynczym <p>
+            var sumP = document.createElement('p');
+            sumP.className = 'lab-panel-summary';
+            sumP.textContent = panel.summary;
+            suggestBodyEl.appendChild(sumP);
+          } else if (panel.summary && Array.isArray(panel.summary.sections)) {
+            // NOWY format — strukturalne sekcje (kafelki + listy + callout-y)
+            renderStructuredSummary(panel.summary, suggestBodyEl);
+          }
         }
 
         panel.sections.forEach(function (sec) {
