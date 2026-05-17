@@ -251,25 +251,39 @@
     urine_k_creat: { ext: 'urine_k_creat', label: 'K/kreatynina w spot urine (preferowane nad TTKG)', note: 'Wskaźnik różnicujący hipo-/hiperkaliemii. W hipokaliemii: < 13 mmol/g → utrata pozanerkowa; > 13 mmol/g → nerkowa. Zalecane wg Kamel-Halperin JASN 2011.' },
     urine_k_spot: { ext: 'urine_k_spot', label: 'Potas w moczu (próbka przygodna lub DZM)', note: '> 20 mmol/L w hipokaliemii — utrata nerkowa; < 20 — pozanerkowa. W DZM: > 25 mmol/24 h — nerkowa.' },
     urine_creat: { ext: 'urine_creat', label: 'Kreatynina w moczu (spot)', note: 'Element wskaźnika Na/kreatynina lub K/kreatynina w spot urine — alternatywa dla DZM.' },
+    copeptin_basal: {
+      ext: 'copeptin_basal',
+      label: 'Kopeptyna podstawowa (basal, bez stymulacji)',
+      note: 'Pierwszy biomarker do filtrowania NDI (AVP resistance). Próg ≥ 21,4 pmol/L silnie wspiera NDI — nie wymaga stymulacji (Fenske NEJM 2018: 100%/100% w prospektywnej kohorcie, choć małej liczbowo). Wartości < 21,4 pmol/L nie rozróżniają samodzielnie CDI od polidypsji pierwotnej — wymagają testu stymulacyjnego.',
+      description: 'Kopeptyna — C-końcowy fragment prowazopresyny, wydzielany w równomolowym stosunku do ADH (wazopresyny). Mierzona w surowicy, stabilna ex vivo (w przeciwieństwie do AVP). Wartość podstawowa wysoka oznacza, że oś podwzgórze-przysadka wydziela ADH prawidłowo, ale nerki nie reagują — to klasyczny obraz AVP resistance. Po potwierdzeniu — diagnostyka przyczyn nabytych (lit, Ca, K, CKD, przeszkoda w odpływie) i wrodzonych (AVPR2, AQP2).'
+    },
     copeptin_stim: {
       ext: 'copeptin_stim',
-      label: 'Test stymulacji kopeptyną hipertonicznym NaCl (3%)',
-      note: 'Nowoczesny standard różnicowania moczówki prostej (Christ-Crain NEJM 2019). Stymulacja hipertonicznym NaCl 3% (250 mL infuzji) → pomiar kopeptyny po osiągnięciu Na ≥ 150 mmol/L. Kopeptyna < 4,9 pmol/L → moczówka centralna; > 4,9 pmol/L → moczówka nerkowa.',
-      description: 'Kopeptyna — C-końcowy fragment prowazopresyny, wydzielany w równomolowym stosunku do ADH (wazopresyny). Mierzona w surowicy. Test stymulacji hipertonicznym NaCl jest preferowany ze względu na lepszą czułość i swoistość niż klasyczny test pragnienia. Protokół: infuzja 3% NaCl 0,15 mL/kg/min (zwykle 250 mL) do osiągnięcia stężenia Na ≥ 150 mmol/L lub osmolalności surowicy ≥ 295 mOsm/kg → pobranie krwi na kopeptynę. Interpretacja: kopeptyna < 4,9 pmol/L = moczówka centralna (CDI — brak adekwatnej odpowiedzi); > 4,9 pmol/L = moczówka nerkowa (NDI — wysokie ADH, ale brak odpowiedzi nerek). Test bezpieczniejszy niż klasyczny test pragnienia (ryzyko nasilonej dehydratacji u pacjentów z poliurią).'
+      label: 'Kopeptyna po stymulacji 3% NaCl',
+      note: 'Preferowany test różnicujący AVP deficiency (CDI) vs polidypsja pierwotna (Fenske NEJM 2018, accuracy ~97%; Refardt NEJM 2023, ~95,6%). Protokół: bolus 250 mL 3% NaCl + 0,15 mL/kg/min, endpoint Na ≥ 149–150 mmol/L. Kopeptyna ≤ 4,9 pmol/L → AVP deficiency (CDI); > 4,9 pmol/L → polidypsja pierwotna. UWAGA: NDI rozpoznajemy WCZEŚNIEJ przez basal copeptin ≥ 21,4 — NIE z testu stymulacyjnego.',
+      description: 'Test stymulacji hipertonicznym NaCl 3% z pomiarem kopeptyny po osiągnięciu Na ≥ 149–150 mmol/L (NIE „osmolalność ≥ 295 mOsm/kg" — to za niska stymulacja). Protokół: bolus 250 mL 3% NaCl, następnie wlew 0,15 mL/kg/min; kontrola Na co 30 min. Interpretacja: kopeptyna ≤ 4,9 pmol/L = AVP deficiency (CDI); > 4,9 pmol/L = polidypsja pierwotna (oś ADH działa, problem leży w nadmiernym piciu). Działania niepożądane: silne pragnienie, ból głowy, zawroty, nudności; ryzyko Na > 155 mmol/L. Przeciwwskazania: niewydolność serca, ciężka kardiopatia, niekontrolowane nadciśnienie, padaczka — rozważyć test argininowy.'
     },
     water_deprivation_test: {
       ext: 'water_deprivation_test',
-      label: 'Test pragnienia (klasyczny, w ośrodku referencyjnym)',
-      note: 'Stopniowo zwiększający się deficyt wody przez 8–12 h. Brak wzrostu osmolalności moczu mimo wzrostu osmolalności surowicy → moczówka. Następnie podanie desmopresyny: wzrost osmolalności moczu > 50% → CDI; brak wzrostu → NDI. Wymaga ścisłego monitoringu (ryzyko ciężkiej dehydratacji).'
+      label: 'Test deprywacji wody (WDT) + DDAVP — drugi wybór',
+      note: 'Test pośredni; accuracy całego podejścia 70–77% (Refardt 2024). Pierwszy wybór tylko gdy kopeptyna niedostępna. Strefa 300–800 mOsm/kg jest niejednoznaczna — postacie częściowe słabo rozróżniane. Stop rules: spadek masy 3–5%, Na > 150 mmol/L, objawy ortostatyczne.'
     },
-    avp_arg: { ext: 'avp_arg', label: 'AVP (wazopresyna arginiowa) w surowicy', note: 'Klasyczny pomiar; aktualnie zastępowany przez kopeptynę (lepsza stabilność próbki, krótszy okres półtrwania AVP).' },
+    avp_arg: {
+      ext: 'avp_arg',
+      label: 'Kopeptyna po stymulacji argininą',
+      note: 'Alternatywa gdy 3% NaCl przeciwwskazany. Lepiej tolerowana, ALE niższa accuracy: Refardt NEJM 2023 (RCT) — 74,4% vs 95,6% dla hipertonicznej soli. Protokół: 0,5 g/kg L-argininy chlorowodorku w 500 mL 0,9% NaCl wlew 30 min; kopeptyna po 60 min. Lepsze progi skrajne: ≤ 3,0 pmol/L silnie wspiera AVP-D; > 5,2 pmol/L silnie wspiera polidypsję pierwotną; 3,0–5,2 — strefa niejednoznaczna.'
+    },
     saline_05: { ext: 'saline_05', label: '0,9% NaCl (sól fizjologiczna) — wlew testowy', note: 'Diagnostyka różnicowa SIADH vs CSW: w CSW podanie 1–2 L 0,9% NaCl skutkuje poprawą Na; w SIADH — pogorszeniem (efekt „desalinacji").' },
     hypertonic_saline: { ext: 'hypertonic_saline', label: '3% NaCl (hipertoniczny) — leczenie ostrej ciężko objawowej hiponatremii', note: 'Bolus 100–150 mL i.v. w 10 min, powtarzać do 3 razy. Cel: wzrost Na o 4–6 mmol/L w pierwszej godzinie.' },
     tolvaptan_test: { ext: 'tolvaptan_test', label: 'Tolwaptan (Samsca) — antagonista receptora V2', note: 'W SIADH opornym na restrykcję płynów. Maks. 30 dni leczenia (FDA — hepatotoksyczność). Tylko w szpitalu pod monitoringiem Na (ryzyko zbyt szybkiego wyrównania → ODS).' },
     urea_oral: { ext: 'urea_oral', label: 'Mocznik doustnie (15–30 g/dobę)', note: 'Popularna w Europie alternatywa do tolwaptanu w SIADH; indukuje diurezę osmotyczną z wydalaniem wody.' },
     desmopressin: { ext: 'desmopressin', label: 'Desmopresyna (DDAVP)', note: 'Syntetyczny analog ADH; preparat donosowy, podjęzykowy lub doustny. Leczenie z wyboru w moczówce prostej centralnej (CDI). Także stosowana doraźnie do cofnięcia zbyt szybkiego wzrostu Na („re-lowering").' },
     fludrocortisone: { ext: 'fludrocortisone', label: 'Fludrokortyzon 0,1–0,4 mg/dobę', note: 'Leczenie wspomagające w opornym CSW; działanie mineralokortykoidowe zwiększa reabsorpcję Na w cewce dystalnej.' },
-    brain_mri: { ext: 'brain_mri', label: 'MRI mózgu', note: 'Diagnostyka SIADH centralnego (guz, udar, krwawienie SAH), moczówki centralnej (brak hiperintensywności tylnego płata przysadki w T1 — utrata „bright spot"), CSW.' },
+    brain_mri: {
+      ext: 'brain_mri',
+      label: 'MRI okolicy podwzgórzowo-przysadkowej z kontrastem',
+      note: 'Po potwierdzonym lub silnie podejrzewanym AVP deficiency (CDI). UWAGA: brak hiperintensywności tylnego płata („bright spot") jest NIESWOISTY — występuje u ~70% AVP-D, ale też u ~39% polidypsji pierwotnej i części osób zdrowych. MRI ma znaczenie ETIOLOGICZNE, nie rozpoznaje samodzielnie CDI. Pogrubienie szypuły przysadki → konieczne MRI kontrolne (ryzyko germinoma ujawniającego się dopiero w toku obserwacji).'
+    },
 
     // Metabolizm / cukier
     glucose_fasting: { ext: 'glucose_fasting', label: 'Glukoza na czczo', note: 'IGT / cukrzyca / metabolic syndrome' },
@@ -7830,14 +7844,15 @@
               'Moczówka prosta (DI — diabetes insipidus) — zaburzenie polegające na masywnej diurezie hipoosmotycznej (> 3 L/dobę u dorosłych, > 2 L/m² u dzieci) z polidypsją kompensacyjną, wynikające z niedoboru lub oporności na hormon antydiuretyczny ADH (wazopresynę).',
               { heading: 'Etymologia nazwy' },
               'Łac. „insipidus" = bezsmakowy — w odróżnieniu od „diabetes mellitus" (cukrzycy), gdzie mocz jest słodki z powodu glukozurii. Historycznie lekarze różnicowali oba zaburzenia smakując mocz.',
-              { heading: 'Typy moczówki prostej' },
+              { heading: 'Typy zespołu poliuria-polidypsja' },
               { items: [
-                { label: 'CDI — centralna (central DI)', text: 'niedobór wydzielania ADH przez tylny płat przysadki.' },
-                { label: 'NDI — nerkowa (nephrogenic DI)', text: 'oporność receptora V2 w cewce zbiorczej na ADH (ADH wydzielane prawidłowo, ale nerki nie reagują).' },
-                { label: 'Polidypsja pierwotna (psychogenic DI)', text: 'rzadszy „pseudo-typ" — nadmierne spożycie wody → fizjologiczne zahamowanie ADH; nie jest prawdziwą moczówką.' }
+                { label: 'CDI / AVP deficiency — centralna moczówka', text: 'niedobór wydzielania wazopresyny przez tylny płat przysadki (uszkodzenie podwzgórza/szypuły/tylnego płata).' },
+                { label: 'NDI / AVP resistance — nerkowa moczówka', text: 'oporność receptora V2 i/lub AQP2 w cewce zbiorczej na ADH (wazopresyna wydzielana, ale nerki nie reagują).' },
+                { label: 'Polidypsja pierwotna', text: 'odrębna przyczyna zespołu poliuria-polidypsja — nie jest „odmianą DI". Nadmierne spożycie wody → fizjologiczne zahamowanie ADH. Określenie „psychogenic DI" jest dziś niezalecane (Working Group 2022).' },
+                { label: 'DI ciążowa (gestational DI)', text: 'rzadka — wynika z nadmiernej aktywności wazopresynazy łożyskowej rozkładającej endogenną ADH; pojawia się w III trymestrze, ustępuje po porodzie. Leczenie: desmopresyna (oporna na wazopresynazę).' }
               ] },
               { heading: 'Wytyczne i nowa nomenklatura' },
-              'Christ-Crain M i wsp. 2019 (NEJM). Working Group 2022 zaproponowało zmianę nomenklatury — „arginine vasopressin deficiency" (zamiast CDI) i „arginine vasopressin resistance" (zamiast NDI). Aktualna nomenklatura kliniczna nadal najczęściej DI.'
+              'Working Group 2022 (Lancet Diabetes Endocrinol) zarekomendowała przejście na nomenklaturę AVP deficiency / AVP resistance / primary polydipsia (zamiast central DI / nephrogenic DI / psychogenic DI). Stary skrót DI pozostaje w codziennej praktyce. Najnowsza prospektywna baza dowodów: Fenske 2018 NEJM, Refardt 2023 NEJM, Tomkins 2022 JCEM, Refardt 2024 Reviews Endocr Metab Disord, ERKNet/Nature Rev Nephrol 2024 (wrodzona NDI). Oficjalna wspólna wytyczna ESE/Endocrine Society dla AVP deficiency oczekiwana ~czerwiec 2026.'
             ]
           },
           {
@@ -7881,136 +7896,212 @@
           {
             kind: 'algorithm',
             icon: 'list-numbers',
-            title: 'Algorytm diagnostyczny — rozróżnianie CDI / NDI / polidipsji pierwotnej',
+            title: 'Algorytm diagnostyczny — różnicowanie AVP-D (CDI) / AVP-R (NDI) / polidypsji pierwotnej',
             steps: [
               {
                 number: 1,
-                title: 'Potwierdzenie poliurii hipoosmotycznej',
-                sublabel: 'pierwszy krok — diureza i osmolalność moczu',
+                title: 'Potwierdzenie poliurii hipoosmotycznej i wykluczenie diurezy osmotycznej',
+                sublabel: 'pierwszy krok — bramka diagnostyczna',
                 options: [
                   {
-                    threshold: 'Diureza > 3 L/dobę + osmol. moczu < 200 mOsm/kg',
-                    action: 'Spełnione kryteria moczówki — przejść do różnicowania (krok 2). Wykluczyć cukrzycę (glukozuria osmotyczna), hipokaliemię i hiperkalcemię.',
+                    threshold: 'Diureza > 40–50 mL/kg/24 h (lub > 3 L/dobę) + osmol. moczu < 300 mOsm/kg',
+                    action: 'Potwierdzona poliuria hipoosmotyczna — przejść do różnicowania (krok 2). RÓWNOCZEŚNIE wykluczyć diurezę osmotyczną i odwracalne przyczyny imitujące DI.',
                     variant: 'success', icon: 'check',
                     detail: [
-                      'Diureza dobowa (24-godzinna zbiórka moczu) — ścisły pomiar.',
-                      'Osmolalność moczu i sodu w pojedynczej próbce — wyklucza diurezę osmotyczną.',
-                      'Glukozuria (cukrzyca, SGLT2-inhibitory) — wyklucza moczówkę.',
-                      'Hiperkalcemia, hipokaliemia — odwracalne przyczyny NDI.',
-                      'Niewydolność nerek z poliurią poliuryczną — diagnostyka różnicowa.'
+                      '24-godzinna zbiórka moczu (DZM) — ścisły pomiar; > 40–50 mL/kg/24 h u dorosłych albo > 3 L/dobę.',
+                      'Sparowane osmolalności surowicy i moczu, najlepiej na próbkach porannych.',
+                      'Uosm porannego moczu > 750–800 mOsm/kg — DI mało prawdopodobna.',
+                      'Wyklucz diurezę osmotyczną: glukozuria (cukrzyca, SGLT2-i), Ca > 2,7 mmol/L (hiperkalcemia), K < 3,0 mmol/L (hipokaliemia), mocznik (hiperkatabolizm).',
+                      'Wyklucz niewydolność nerek (CKD): eGFR, kreatynina, ocena przeszkody w odpływie moczu (USG).',
+                      'Sód w moczu ma znaczenie POMOCNICZE, nie rozstrzygające w różnicowaniu CDI/NDI/PP.'
                     ]
                   }
                 ]
               },
               {
                 number: 2,
-                title: 'Test stymulacji kopeptyną hipertonicznym NaCl 3%',
-                sublabel: 'aktualny standard (Christ-Crain NEJM 2019)',
+                title: 'Kopeptyna podstawowa (basal) — filtr na AVP resistance (NDI)',
+                sublabel: 'pierwszy test biomarkerowy — szybki screening NDI (Fenske NEJM 2018)',
                 options: [
                   {
-                    threshold: 'Kopeptyna < 4,9 pmol/L',
-                    action: 'Moczówka centralna (CDI) — niedobór wydzielania ADH; tylny płat przysadki nie reaguje na hiperosmię.',
-                    variant: 'warning', icon: 'alert-triangle',
-                    detail: [
-                      'Protokół: infuzja 3% NaCl 0,15 mL/kg/min do osiągnięcia Na ≥ 150 mmol/L lub osmol. ≥ 295 mOsm/kg → pomiar kopeptyny.',
-                      'Czułość ok. 95%, swoistość ok. 95% (lepsza niż klasyczny test pragnienia).',
-                      'Kopeptyna — C-końcowy fragment prowazopresyny, wydzielany w równomolowym stosunku do ADH; mierzona w surowicy; stabilna ex vivo.',
-                      'Następnie diagnostyka MRI mózgu — wykluczenie przyczyny strukturalnej (guz, krwawienie, sarkoidoza, zapalenie autoimmunologiczne, histiocytoza Langerhansa).'
-                    ]
-                  },
-                  {
-                    threshold: 'Kopeptyna > 4,9 pmol/L',
-                    action: 'Moczówka nerkowa (NDI) — oporność cewki zbiorczej na ADH; ADH wysokie, ale brak odpowiedzi nerek.',
-                    variant: 'warning', icon: 'alert-triangle',
-                    detail: [
-                      'Wykluczenie przyczyn wtórnych (najczęstsze):',
-                      { items: [
-                        'Lit (terapia przewlekła > 5 lat) — najczęstsza nabyta przyczyna NDI.',
-                        'Hiperkalcemia (> 3,0 mmol/L) i hipokaliemia (< 3,0 mmol/L) — odwracalne.',
-                        'Inne leki: demeklocyklina, foskarnet, amfoterycyna B, ifosfamid, cydofowir.',
-                        'Niewydolność nerek (CKD), zespół po niedrożności moczowodów.'
-                      ] },
-                      'NDI wrodzona (rzadka): mutacje genu AVPR2 (sprzężona z X — recesywna, dotyczy chłopców) lub AQP2 (aquaporina 2 — autosomalna recesywna lub dominująca).',
-                      'W razie braku przyczyny wtórnej i obrazu rodzinnego — diagnostyka genetyczna.'
-                    ]
-                  },
-                  {
-                    threshold: 'Kopeptyna podstawowa wysoka (> 21,4 pmol/L) — bez stymulacji',
-                    action: 'NDI bardzo prawdopodobna nawet bez testu stymulacji.',
+                    threshold: 'Kopeptyna podstawowa ≥ 21,4 pmol/L',
+                    action: 'AVP resistance (NDI) bardzo prawdopodobna — wysoka endogenna ADH przy poliurii oznacza, że nerki nie reagują. Pomijamy stymulację, idziemy bezpośrednio do diagnostyki przyczyn NDI (krok 5).',
                     variant: 'success', icon: 'check',
                     detail: [
-                      'Wysoka kopeptyna w warunkach normonatremii / dehydratacji wskazuje, że nerki nie reagują na ADH mimo wysokiego stężenia.',
-                      'Test stymulacji niepotrzebny — bezpośrednio diagnostyka przyczyn NDI (lit, hiperkalcemia, hipokaliemia).'
+                      'W badaniu prospektywnym (Fenske 2018, NEJM) próg ≥ 21,4 pmol/L dał 100% czułości i 100% swoistości dla NDI vs CDI/PP, choć na małej liczbie chorych z NDI.',
+                      'Pomiar jednorazowy bez stymulacji — szybki, mało obciążający.',
+                      'Wysoka kopeptyna w warunkach normonatremii oznacza, że oś podwzgórze-przysadka wydziela ADH, ale nerki nie reagują (AVP resistance).',
+                      'Po potwierdzeniu — przejść do kroku 5 (etiologia NDI: lit, Ca, K, CKD, przeszkoda, genetyka).'
                     ]
                   },
                   {
-                    threshold: 'Alternatywa — test stymulacji argininą (Refardt 2023)',
-                    action: 'Infuzja argininy chlorowodorku 0,5 g/kg w 250 mL 0,9% NaCl w 30 min → pomiar kopeptyny po 60 min od rozpoczęcia infuzji. Próg interpretacyjny ten sam jak w teście hipertonicznej soli (~3,8–4,9 pmol/L).',
-                    variant: 'success', icon: 'check',
+                    threshold: 'Kopeptyna podstawowa < 21,4 pmol/L',
+                    action: 'NDI mało prawdopodobna. Konieczny test stymulacyjny dla różnicowania AVP deficiency (CDI) vs polidypsja pierwotna — przejść do kroku 3.',
+                    variant: 'warning', icon: 'alert-triangle',
                     detail: [
-                      'Zaleta: dużo mniej obciążający dla pacjenta niż hipertoniczna sól — brak ryzyka hipernatremii, dehydratacji, drgawek; krótszy czas testu (60 min vs 2–4 h).',
-                      'Mechanizm: arginina stymuluje wydzielanie wazopresyny przez podwzgórze (mechanizm niezależny od osmolalności).',
-                      'Czułość i swoistość zbliżone do testu hipertonicznej soli (oba ok. 95% wg Refardt 2023 randomized trial NEJM).',
-                      'Rekomendowany przez Christ-Crain 2019 jako alternatywa pierwszego wyboru w ośrodkach bez doświadczenia w teście z hipertoniczną solą lub u pacjentów wysokiego ryzyka (kardiopatia, niewydolność serca, dzieci).',
-                      'Działania niepożądane argininy: nudności (~30%), zaczerwienienie twarzy, przemijająca hipoglikemia.'
+                      'Niska/umiarkowana kopeptyna podstawowa może oznaczać zarówno CDI (bo brak ADH), jak i polidypsję pierwotną (bo nadmiar wody hamuje wydzielanie ADH).',
+                      'Sam pomiar podstawowy NIE rozróżnia CDI od PP — wymaga stymulacji osmotycznej (3% NaCl) lub argininowej.'
                     ]
                   }
                 ]
               },
               {
                 number: 3,
-                title: 'Klasyczny test pragnienia (gdy kopeptyna niedostępna)',
-                sublabel: 'tradycyjna metoda, w ośrodkach referencyjnych',
+                title: 'Test z 3% NaCl + kopeptyna — różnicowanie AVP deficiency (CDI) vs polidypsja pierwotna',
+                sublabel: 'preferowany test (Fenske NEJM 2018, accuracy ~97%; Refardt NEJM 2023, ~95,6%)',
                 options: [
                   {
-                    threshold: 'Protokół',
-                    action: 'Wstrzymanie podaży płynów 8–12 h pod ścisłym monitoringiem (waga, ciśnienie, osmolalność moczu i surowicy co 1–2 h). Test przerwać przy spadku masy > 3% lub Na > 150 mmol/L.',
+                    threshold: 'Protokół wykonania',
+                    action: 'Bolus 250 mL 3% NaCl, następnie wlew ciągły 0,15 mL/kg/min. Kontrola sodu surowicy co 30 min. Po osiągnięciu Na ≥ 149–150 mmol/L (zwykle ~305–310 mOsm/kg) — pobranie próbki na kopeptynę.',
                     variant: 'success', icon: 'check',
                     detail: [
-                      'Norma: osmol. moczu rośnie do > 600 mOsm/kg przy wzroście osmol. surowicy do 290–295.',
-                      'CDI / NDI: brak adekwatnego zagęszczenia moczu mimo wzrostu osmolalności surowicy.',
-                      'Następnie podanie desmopresyny 4 μg s.c.: wzrost osmol. moczu > 50% w 1–2 h → CDI; brak wzrostu → NDI.',
-                      'Polidipsja pierwotna: osmol. moczu rośnie do > 500 mOsm/kg podczas pragnienia (nerki działają prawidłowo, ale do tej pory były „wyłączone" przez nadmiar wody).',
-                      'WADA: test bardzo obciążający, ryzyko ciężkiej dehydratacji; aktualnie test kopeptyną jest preferowany.'
+                      'Endpoint: Na ≥ 149–150 mmol/L (NIE „osmolalność ≥ 295 mOsm/kg" — to za niska stymulacja).',
+                      'Czas testu: zwykle 2–4 h.',
+                      'Wymaga monitoringu hemodynamicznego, szybkich oznaczeń Na i doświadczonego zespołu — możliwość natychmiastowego „odwrócenia" hipernatremii po teście.',
+                      'Działania niepożądane: silne pragnienie, ból głowy, zawroty, nudności; w NEJM 2018 część chorych przekroczyła Na > 155 mmol/L — wymaga ostrożności.',
+                      'Przeciwwskazania: niewydolność serca, ciężka kardiopatia, niekontrolowane nadciśnienie, padaczka, dzieci małe — wówczas rozważyć test argininowy (krok 4).'
+                    ]
+                  },
+                  {
+                    threshold: 'Kopeptyna po stymulacji ≤ 4,9 pmol/L (przy Na ≥ 149 mmol/L)',
+                    action: 'AVP deficiency (CDI / centralna moczówka) — brak adekwatnej odpowiedzi ADH na hipertonię. Krok 5: MRI okolicy podwzgórzowo-przysadkowej z kontrastem.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'W badaniu Fenske 2018: czułość 93,2%, swoistość 100%, accuracy ~97%.',
+                      'Kopeptyna — C-końcowy fragment prowazopresyny, wydzielany w równomolowym stosunku do ADH; mierzona w surowicy; stabilna ex vivo (w przeciwieństwie do AVP).',
+                      'Po potwierdzeniu — MRI okolicy podwzgórzowo-przysadkowej z gadolinem (krok 5).'
+                    ]
+                  },
+                  {
+                    threshold: 'Kopeptyna po stymulacji > 4,9 pmol/L (przy Na ≥ 149 mmol/L)',
+                    action: 'Polidypsja pierwotna — oś ADH działa prawidłowo, problem leży w nadmiernym spożyciu wody. Diagnostyka psychiatryczna i poszukiwanie przyczyny (schizofrenia, OCD, lęk, leki psychotropowe).',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'WAŻNE: > 4,9 pmol/L NIE oznacza NDI — to NDI wyłapaliśmy już w kroku 2 (basal ≥ 21,4).',
+                      '> 4,9 po stymulacji oznacza zachowaną odpowiedź osmotyczną wydzielania ADH — wyklucza CDI/AVP deficiency.',
+                      'Polidypsja pierwotna NIE jest „odmianą DI" tylko odrębną przyczyną zespołu poliuria-polidypsja (Working Group 2022).',
+                      'Pułapka terapeutyczna: NIE STOSOWAĆ desmopresyny — może wywołać śmiertelną hiponatremię.'
                     ]
                   }
                 ]
               },
               {
                 number: 4,
-                title: 'Diagnostyka przyczyny (po potwierdzeniu typu)',
-                sublabel: 'CDI vs NDI — kierunkowa diagnostyka',
+                title: 'Test argininowy + kopeptyna — alternatywa gdy 3% NaCl przeciwwskazany',
+                sublabel: 'lepiej tolerowany, ALE niższa accuracy (Refardt NEJM 2023)',
                 options: [
                   {
-                    threshold: 'CDI — przyczyny strukturalne i autoimmunologiczne',
-                    action: 'MRI mózgu z gadolinium — pierwsze badanie; brak hiperintensywności tylnego płata przysadki w sekwencji T1 (tzw. „bright spot" — jasny punkt fizjologicznie obecny u zdrowych osób, odpowiadający granulkom z wazopresyną) sugeruje CDI.',
+                    threshold: 'Protokół wykonania',
+                    action: '0,5 g/kg L-argininy chlorowodorku w 500 mL 0,9% NaCl, wlew 30 min. Pomiar kopeptyny 60 min od rozpoczęcia infuzji.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'Mechanizm: arginina stymuluje wydzielanie wazopresyny przez podwzgórze (niezależnie od osmolalności).',
+                      'Zaleta: lepiej tolerowany, brak ryzyka hipernatremii, krótszy.',
+                      'Działania niepożądane: nudności (~30%), zaczerwienienie twarzy, przemijająca hipoglikemia.'
+                    ]
+                  },
+                  {
+                    threshold: 'Interpretacja wyniku',
+                    action: 'WAŻNE: nowsze RCT (Refardt 2023, NEJM) wykazało wyraźnie niższą accuracy niż test z 3% NaCl — 74,4% vs 95,6%. Wynik pojedynczego progu 3,8 pmol/L jest mniej wiarygodny.',
                     variant: 'warning', icon: 'alert-triangle',
                     detail: [
+                      'Lepiej operować progami skrajnymi: kopeptyna ≤ 3,0 pmol/L silnie wspiera AVP deficiency (CDI), > 5,2 pmol/L silnie wspiera polidypsję pierwotną.',
+                      'Wartości pośrednie 3,0–5,2 pmol/L — strefa niejednoznaczna; rozważyć potwierdzenie testem 3% NaCl lub WDT.',
+                      'Test argininowy pozostaje rozsądną alternatywą u pacjentów z przeciwwskazaniami do 3% NaCl (kardiopatia, niewydolność serca, dzieci), ale NIE jest równorzędny pod względem dokładności.',
+                      'Starsze opracowanie Winzeler 2019 sugerowało accuracy 93% przy progu 3,8 pmol/L — to dane zastąpione nowszym RCT.'
+                    ]
+                  }
+                ]
+              },
+              {
+                number: 5,
+                title: 'Klasyczny test deprywacji wody (WDT) + DDAVP — DRUGI WYBÓR, gdy kopeptyna niedostępna',
+                sublabel: 'tradycyjny test pośredni; accuracy całego podejścia 70–77%',
+                options: [
+                  {
+                    threshold: 'Protokół wykonania',
+                    action: 'Pomiar masy ciała wyjściowo. Ścisły zakaz płynów, pobieranie surowicy i moczu co 2 h: Na, osmolalność surowicy i moczu, diureza godzinowa. Stop rules: spadek masy 3–5% (zależnie od lokalnego SOP), Na > 150 mmol/L, objawy ortostatyczne, niestabilność hemodynamiczna.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'Czas testu zwykle 8–16 h, w zależności od ciężkości DI; w pełnej CDI/NDI końcowy etap osiągany szybciej.',
+                      'Nadzór: pielęgniarka co 1–2 h, lekarz przy stop rules — test obciążający i niebezpieczny przy nieadekwatnym nadzorze.',
+                      'Hospitalizacja zalecana — zwłaszcza u pacjentów z ryzykiem ciężkiej dehydratacji.'
+                    ]
+                  },
+                  {
+                    threshold: 'Interpretacja — strefy wyników',
+                    action: 'Uosm > 750 mOsm/kg → praktycznie wyklucza DI (zachowana zdolność zagęszczania). Uosm < 300 mOsm/kg mimo wzrostu osmol. surowicy → silnie wspiera DI. Strefa 300–800 mOsm/kg jest NIEJEDNOZNACZNA — nakładają się postać częściowa CDI, częściowa NDI i polidypsja pierwotna.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'Refardt 2024: prospektywne badania szacują accuracy całego podejścia WDT + DDAVP na 70–77% — historyczne progi nigdy nie zostały dobrze zwalidowane.',
+                      'Postacie częściowe (zwłaszcza CDI częściowa) są słabo rozróżniane przez WDT.',
+                      'Norma: Uosm wzrasta do > 600 mOsm/kg przy osmol. surowicy 290–295.',
+                      'CDI / NDI: brak adekwatnego zagęszczenia mimo wzrostu osmol. surowicy.',
+                      'PP: Uosm zwykle wzrasta do > 500 mOsm/kg (nerki działają, były „wyłączone" nadmiarem wody).'
+                    ]
+                  },
+                  {
+                    threshold: 'Test desmopresyny (DDAVP) — po zakończeniu WDT',
+                    action: 'Podanie DDAVP wg lokalnego SOP (klasycznie 2 µg i.v. lub 4 µg s.c.; w NEJM 2018 użyto 2 µg i.v.). Pomiar Uosm po 1–2 h.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'Wzrost Uosm > 50% → silnie wspiera PEŁNĄ centralną DI (AVP deficiency).',
+                      'Brak wzrostu Uosm (< 9%) → silnie wspiera pełną NDI.',
+                      'Wzrost 9–50% (zwłaszcza przy wyjściowym Uosm 300–800) → strefa niejednoznaczna, nie zamyka rozpoznania; rozważyć stymulację kopeptyną lub powtórzenie z dłuższą WDT.',
+                      'Po teście — kontrolowana podaż płynów; największe ryzyko: hiponatremia po „przepiciu" desmopresyny.'
+                    ]
+                  }
+                ]
+              },
+              {
+                number: 6,
+                title: 'MRI okolicy podwzgórzowo-przysadkowej + etiologia (po rozpoznaniu typu)',
+                sublabel: 'rozpoznanie strukturalne i przyczyn wtórnych',
+                options: [
+                  {
+                    threshold: 'CDI / AVP deficiency potwierdzona',
+                    action: 'MRI okolicy podwzgórzowo-przysadkowej Z KONTRASTEM (gadolin) — ocena tylnego płata, lejka, regionu nad- i przysiodłowego. Brak hiperintensywności tylnego płata (tzw. „bright spot") jest NIESWOISTY — nie rozpoznaje samodzielnie CDI.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'WAŻNE: brak „bright spot" występuje u ~70% chorych z AVP-D, ALE TAKŻE u ~39% chorych z polidypsją pierwotną i u części osób zdrowych. To element układanki obrazowej, nie samodzielny test rozpoznający.',
+                      'Pogrubienie szypuły przysadki (pituitary stalk thickening) — wymaga MRI KONTROLNEGO; istotny odsetek przyczyn nowotworowych (germinoma może ujawnić się dopiero w toku obserwacji).',
+                      'Idiopatyczna CDI — wymaga długoterminowej obserwacji obrazowej (3–6 mies. przez 2 lata, potem rocznie).',
+                      'Przyczyny strukturalne i autoimmunologiczne CDI:',
                       { items: [
-                        'Guzy: kraniofaryngioma, czaszkogardlak, germinoma, makrogruczolak przysadki, przerzuty (rak płuca, piersi).',
+                        'Guzy: kraniofaryngioma (czaszkogardlak), germinoma, makrogruczolak przysadki, przerzuty (rak płuca, piersi).',
                         'Pooperacyjne (po operacjach przysadki): klasyczna „faza trzech faz" — CDI ostra (1–2 doby) → SIADH (5–7 dni) → trwała CDI lub ozdrowienie.',
                         'Krwawienia: udar krwotoczny, krwotok podpajęczynówkowy, zespół Sheehana (poporodowa martwica przysadki).',
-                        'Zapalne i autoimmunologiczne: limfocytarne zapalenie przysadki (ang. lymphocytic hypophysitis) — szczególnie u kobiet w ciąży i po porodzie; sarkoidoza; histiocytoza komórek Langerhansa (zwłaszcza u dzieci); IgG4-RD (choroba związana z IgG4, ang. IgG4-related disease — wieloukładowa choroba autoimmunologiczna z naciekami komórek plazmatycznych IgG4-dodatnich).',
+                        'Zapalne/autoimmunologiczne: limfocytarne zapalenie przysadki (lymphocytic hypophysitis) — szczególnie u kobiet w ciąży/po porodzie; sarkoidoza; histiocytoza Langerhansa (zwłaszcza u dzieci); IgG4-RD (choroba związana z IgG4).',
                         'Urazy głowy — zwłaszcza po urazach podstawy czaszki.',
-                        'Idiopatyczna (autoimmunologiczna) — przeciwciała przeciw wazopresynie (anty-AVP autoprzeciwciała) — wykrywane w ok. 30% przypadków CDI.',
+                        'Autoprzeciwciała anty-AVP — wykrywane w ~30% „idiopatycznych" CDI.',
                         'Wrodzona: mutacje genu AVP-NPII (autosomalna dominująca neurohypophysial DI).'
                       ] }
                     ]
                   },
                   {
-                    threshold: 'NDI — przyczyny',
-                    action: 'Najpierw wykluczyć odwracalne przyczyny (lit, hiperkalcemia, hipokaliemia, niewydolność nerek); następnie diagnostyka genetyczna w razie braku.',
+                    threshold: 'NDI / AVP resistance potwierdzona — etiologia nabyta',
+                    action: 'Aktywnie szukaj przyczyn nabytych w tej kolejności priorytetów: LEKI (zwłaszcza lit) → ZABURZENIA ELEKTROLITOWE (Ca, K) → CKD → PRZESZKODA W ODPŁYWIE MOCZU.',
                     variant: 'warning', icon: 'alert-triangle',
                     detail: [
                       { items: [
-                        'Lit — najczęstsza nabyta przyczyna; rozwija się po > 5 latach terapii; częściowo odwracalna po odstawieniu.',
-                        'Hiperkalcemia ciężka i przewlekła — pierwotna nadczynność przytarczyc, hiperkalcemia z nowotworu, zatrucie wit. D.',
-                        'Hipokaliemia ciężka i przewlekła (zespół Bartera, hiperaldosteronizm).',
-                        'Leki nefrotoksyczne: amfoterycyna B, demeklocyklina (historycznie używana — paradoksalnie powoduje NDI), foskarnet, cydofowir.',
-                        'Niedrożność moczowodów (przewlekła) — uszkodzenie cewki zbiorczej.',
-                        'CKD zaawansowana (G4–G5).',
-                        'Wrodzona NDI sprzężona z X (mutacje AVPR2 — receptora V2) lub autosomalna (mutacje AQP2 — aquaporiny 2).'
+                        'Lit — najczęstsza nabyta przyczyna NDI; ryzyko rośnie po > 5 latach terapii; częściowo odwracalna po odstawieniu (czasem dopiero po > 1 roku).',
+                        'Inne leki: amfoterycyna B, demeklocyklina (historycznie używana), foskarnet, cydofowir, ifosfamid.',
+                        'Hiperkalcemia ciężka (Ca > 3,0 mmol/L) i przewlekła — pierwotna nadczynność przytarczyc, hiperkalcemia nowotworowa, zatrucie wit. D. PTH ma sens tylko gdy Ca podwyższone lub przy obrazie sugerującym nadczynność przytarczyc.',
+                        'Hipokaliemia ciężka (K < 3,0 mmol/L) — zespół Bartera, hiperaldosteronizm pierwotny.',
+                        'CKD zaawansowana (G4–G5) — utrata zdolności zagęszczania moczu.',
+                        'Przeszkoda w odpływie moczu (przewlekła) — uszkodzenie cewki zbiorczej; obowiązkowo USG dróg moczowych.',
+                        'DI ciążowa: III trymestr → desmopresyna (oporna na wazopresynazę łożyskową); różnicowanie z preeklampsją.'
                       ] }
+                    ]
+                  },
+                  {
+                    threshold: 'NDI / AVP resistance bez przyczyny nabytej — wrodzona',
+                    action: 'Po wykluczeniu wszystkich przyczyn nabytych — diagnostyka genetyczna. Wskazania: wczesny początek (dzieciństwo), rodzinność, ciężka NDI u chłopców, wielokrotne epizody hipernatremii.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'AVPR2 (receptor V2) — sprzężona z X, recesywna; dotyczy głównie chłopców; klasyczny obraz pediatryczny (Reye-like, niewytłumaczalne hipernatremie noworodków).',
+                      'AQP2 (akwaporyna 2) — autosomalna recesywna lub (rzadziej) dominująca.',
+                      'ERKNet/Nature 2024: poradnictwo genetyczne integralną częścią opieki nad wrodzoną NDI.'
                     ]
                   }
                 ]
@@ -8043,12 +8134,19 @@
                 'Dieta niskosolna i niskobiałkowa — zmniejsza ładunek osmotyczny do wydalenia.',
                 'Kombinacja: tiazyd + NLPZ + amyloryd — klasyczna „terapia trójskładnikowa" w wrodzonej NDI.'
               ] },
-              { heading: 'Polidipsja pierwotna' },
+              { heading: 'Polidypsja pierwotna' },
               { items: [
                 'Leczenie psychiatryczne podstawowej choroby (schizofrenia, OCD, lęk).',
                 'Stopniowe ograniczenie podaży wody — monitorować pod kątem objawów odstawiennych.',
-                'Olanzapina, klozapina — w wybranych przypadkach mogą zmniejszyć polidipsję.',
+                'Olanzapina, klozapina — w wybranych przypadkach mogą zmniejszyć polidypsję.',
                 'NIE stosować desmopresyny — pogarsza retencję wody i może wywołać śmiertelną hiponatremię.'
+              ] },
+              { heading: 'DI ciążowa (gestational DI)' },
+              { items: [
+                'Desmopresyna (DDAVP) — leczenie z wyboru. Syntetyczny analog wazopresyny jest oporny na rozkład przez wazopresynazę łożyskową.',
+                'Stosowanie ostrożne — kontrola Na i bilansu płynów; ryzyko hiponatremii (zwłaszcza okołoporodowej).',
+                'Ustępuje samoistnie po porodzie wraz z usunięciem łożyska — substytucja zwykle do połogu.',
+                'Różnicowanie: preeklampsja może maskować/symulować zaburzenia gospodarki wodnej; konieczna ocena ciśnienia, białkomoczu, czynności wątroby.'
               ] },
               { heading: 'Faza trzech faz po neurochirurgii przysadki' },
               { items: [
@@ -8074,59 +8172,69 @@
         ]
       },
       sections: [
-        { name: 'Panel podstawowy',
+        { name: 'Krok 1 — potwierdzenie poliurii hipoosmotycznej',
           tests: [
-            EXT.sodium, EXT.potassium, EXT.cmp,
-            EXT.egfr,
-            EXT.glucose_fasting,
+            { ext: 'urine_volume_24h', label: 'Diureza dobowa (DZM)', note: '> 40–50 mL/kg/24 h u dorosłych lub > 3 L/dobę.' },
             EXT.serum_osm,
-            EXT.ca_total
-          ]
-        },
-        { name: 'Panel moczu',
-          tests: [
             EXT.urine_osm,
-            EXT.urine_na,
-            { ext: 'urine_glucose', label: 'Glukoza w moczu', note: 'Wykluczenie diurezy osmotycznej z glukozurii (cukrzyca, SGLT2-inhibitory).' },
-            { ext: 'urine_volume_24h', label: 'Diureza dobowa (DZM)', note: 'Potwierdzenie poliurii > 3 L/dobę.' }
+            EXT.sodium,
+            EXT.potassium,
+            EXT.ca_total,
+            EXT.glucose_fasting,
+            { ext: 'urine_glucose', label: 'Glukoza w moczu', note: 'Wykluczenie diurezy osmotycznej (cukrzyca, SGLT2-i).' },
+            EXT.egfr,
+            EXT.cmp,
+            EXT.urine_na
           ]
         },
-        { name: 'Testy stymulacyjne (różnicowanie CDI vs NDI)',
+        { name: 'Krok 2 — kopeptyna podstawowa (filtr NDI)',
           tests: [
-            EXT.copeptin_stim,
+            { ext: 'copeptin_basal', label: 'Kopeptyna podstawowa', note: 'Próg ≥ 21,4 pmol/L silnie wspiera AVP resistance (NDI); nie wymaga stymulacji.' }
+          ]
+        },
+        { name: 'Krok 3/4 — testy stymulacyjne (CDI vs polidypsja pierwotna)',
+          tests: [
+            { ext: 'copeptin_stim', label: 'Kopeptyna po 3% NaCl', note: 'Preferowany test: endpoint Na ≥ 149–150 mmol/L; ≤ 4,9 pmol/L = CDI, > 4,9 = polidypsja pierwotna.' },
+            { ext: 'avp_arg', label: 'Kopeptyna po argininie', note: 'Alternatywa przy przeciwwskazaniach do 3% NaCl; UWAGA: niższa accuracy (74% vs 96% w Refardt 2023).' },
             EXT.water_deprivation_test,
-            EXT.avp_arg,
             EXT.desmopressin
           ]
         },
-        { name: 'Diagnostyka przyczyny',
+        { name: 'Krok 5/6 — diagnostyka etiologii (po rozpoznaniu typu)',
           tests: [
-            EXT.brain_mri,
-            EXT.pth,
-            { id: 'cortisol', note: 'Wykluczenie niedoczynności nadnerczy maskującej CDI.' },
-            { id: 'tsh' }
+            { ext: 'brain_mri', label: 'MRI okolicy podwzgórzowo-przysadkowej z kontrastem', note: 'Po potwierdzeniu CDI — ocena tylnego płata, lejka, regionu nad- i przysiodłowego; brak „bright spot" jest nieswoisty.' },
+            { id: 'cortisol', note: 'Wykluczenie niedoczynności nadnerczy maskującej CDI (utrata GCS ujawnia CDI po substytucji).' },
+            { id: 'tsh', note: 'Niedoczynność tarczycy w panelu wielohormonalnym przysadki.' }
           ]
         },
-        { name: 'Genetyka (gdy CDI/NDI wrodzona)',
+        { name: 'Krok 5 (NDI) — warunkowe, przy podejrzeniu konkretnej przyczyny',
           tests: [
-            { ext: 'avp_npii_gene', label: 'Genetyka AVP-NPII (CDI wrodzona)', note: 'Autosomalna dominująca neurohypophysial DI; ujawnia się w dzieciństwie.' },
-            { ext: 'avpr2_gene', label: 'Genetyka AVPR2 (receptor V2 — NDI wrodzona)', note: 'Sprzężona z X recesywna; dotyczy głównie chłopców.' },
-            { ext: 'aqp2_gene', label: 'Genetyka AQP2 (aquaporina 2 — NDI wrodzona)', note: 'Autosomalna recesywna lub dominująca.' }
+            EXT.pth,
+            { ext: 'urine_obstruction_us', label: 'USG dróg moczowych', note: 'Wykluczenie przeszkody w odpływie moczu (przewlekła niedrożność → uszkodzenie cewki zbiorczej → NDI nabyta).' }
+          ]
+        },
+        { name: 'Genetyka — gdy NDI/CDI wrodzona (wczesny początek, rodzinność, brak przyczyny nabytej)',
+          tests: [
+            { ext: 'avp_npii_gene', label: 'AVP-NPII (CDI wrodzona)', note: 'Autosomalna dominująca neurohypophysial DI; ujawnia się w dzieciństwie.' },
+            { ext: 'avpr2_gene', label: 'AVPR2 (receptor V2 — NDI wrodzona)', note: 'Sprzężona z X, recesywna; dotyczy głównie chłopców; ciężka NDI noworodków.' },
+            { ext: 'aqp2_gene', label: 'AQP2 (akwaporyna 2 — NDI wrodzona)', note: 'Autosomalna recesywna lub (rzadziej) dominująca.' }
           ]
         }
       ],
-      guideline: 'Christ-Crain M i wsp. 2019 (NEJM — Diabetes Insipidus) / Working Group Definition 2022 (zmiana nomenklatury — AVP-deficiency) / Robertson GL 2016 (classics review) / Bichet DG UpToDate 2024.',
+      guideline: 'Fenske 2018 NEJM (kopeptyna po 3% NaCl) / Refardt 2023 NEJM (arginina vs sól hipertoniczna RCT) / Tomkins 2022 JCEM (CDI u dorosłych) / Working Group 2022 (zmiana nomenklatury → AVP deficiency/resistance) / Refardt 2024 Rev Endocr Metab Disord (WDT/DDAVP, MRI bright spot) / ERKNet/Nature Rev Nephrol 2024 (wrodzona NDI). Oficjalna wspólna wytyczna ESE/Endocrine Society dla AVP deficiency oczekiwana ~czerwiec 2026.',
       sources: [
-        'Christ-Crain M, Bichet DG, Fenske WK i wsp. Diabetes insipidus. Nat Rev Dis Primers. 2019;5(1):54.',
-        'Fenske W, Refardt J, Chifu I i wsp. A Copeptin-Based Approach in the Diagnosis of Diabetes Insipidus. N Engl J Med. 2018;379(5):428-439.',
-        'Refardt J, Atila C, Chifu I i wsp. Arginine or Hypertonic Saline-Stimulated Copeptin to Diagnose AVP Deficiency. N Engl J Med. 2023;389(20):1813-1821.',
+        'Fenske W, Refardt J, Chifu I i wsp. A Copeptin-Based Approach in the Diagnosis of Diabetes Insipidus. N Engl J Med. 2018;379(5):428-439. (próg basal ≥21,4 dla NDI; po stymulacji ≤4,9 = CDI, >4,9 = polidypsja pierwotna; accuracy ~97%)',
+        'Refardt J, Atila C, Chifu I i wsp. Arginine or Hypertonic Saline-Stimulated Copeptin to Diagnose AVP Deficiency. N Engl J Med. 2023;389(20):1813-1821. (RCT: accuracy argininy 74,4% vs 95,6% dla 3% NaCl)',
+        'Tomkins M, Lawless S, Martin-Grace J i wsp. Diagnosis and Management of Central Diabetes Insipidus in Adults. J Clin Endocrinol Metab. 2022;107(10):2701-2715.',
         'Working Group for Renaming Diabetes Insipidus. Changing the terminology to arginine vasopressin deficiency and arginine vasopressin resistance. Lancet Diabetes Endocrinol. 2022;10(11):777-779.',
+        'Refardt J. Diagnosis and management of arginine vasopressin disorders. Rev Endocr Metab Disord. 2024. (WDT accuracy 70–77%; MRI bright spot nieswoisty; pogrubienie szypuły → kontrolne MRI)',
+        'Bockenhauer D i wsp. (ERKNet). Inherited and acquired nephrogenic diabetes insipidus. Nat Rev Nephrol. 2024. (wrodzona NDI; AVPR2/AQP2; poradnictwo genetyczne)',
+        'Boot CS. Laboratory investigation of polyuria-polydipsia syndrome. Ann Clin Biochem. 2024. (preanalityka, kopeptyna vs AVP, protokoły lab.)',
+        'Christ-Crain M, Bichet DG, Fenske WK i wsp. Diabetes insipidus. Nat Rev Dis Primers. 2019;5(1):54.',
         'Robertson GL. Diabetes insipidus: Differential diagnosis and management. Best Pract Res Clin Endocrinol Metab. 2016;30(2):205-218.',
         'Garrahy A, Moran C, Thompson CJ. Diagnosis and management of central diabetes insipidus in adults. Clin Endocrinol (Oxf). 2019;90(1):23-30.',
-        'Bichet DG. Nephrogenic diabetes insipidus. UpToDate; aktualizacja 2024.',
-        'Bichet DG. Central diabetes insipidus. UpToDate; aktualizacja 2024.',
-        'Tomkins M, Lawless S, Martin-Grace J i wsp. Diagnosis and Management of Central Diabetes Insipidus in Adults. J Clin Endocrinol Metab. 2022;107(10):2701-2715.',
-        'Adam P. Evaluation and Management of Diabetes Insipidus. Am Fam Physician. 1997;55(6):2146-2153 (klasyka).'
+        'Bichet DG. Nephrogenic / Central diabetes insipidus. UpToDate; aktualizacja 2024.',
+        'Atila C i wsp. Pituitary stalk thickening and central diabetes insipidus — long-term outcomes and germinoma risk. (kontrolne MRI przy szypule)'
       ]
     },
 
