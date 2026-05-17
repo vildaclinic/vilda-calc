@@ -196,7 +196,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <script src="vilda_data_import_export.js?v=17"></script>
 <script src="vilda_advanced_growth.js?v=15"></script>
 <script src="vilda_estimated_intake.js?v=3"></script>
-<script src="vilda_update_prep.js?v=61" defer></script>
+<script src="vilda_update_prep.js?v=62" defer></script>
 
 <script>
 (function() {
@@ -3329,6 +3329,10 @@ html.vilda-pro-active   #proGateBanner { display: none; }
       <p id="coleExplanation" class="cole-explanation"></p>
       <!-- Tabela norm wskaźnika Cole'a; wypełniana i wyświetlana przez JS -->
       <div id="coleNormTable" style="display:none;"></div>
+      <!-- Faza 14b — baner sugerujący panel diagnostyczny otyłości u dziecka.
+           Wyświetlany przez vildaUpdatePrepRenderColeMetrics gdy kategoria
+           wskaźnika Cole'a to Nadwaga lub Otyłość. -->
+      <div id="coleObesityKidsBanner" style="display:none;"></div>
     </div>
     <!-- ===== WHR: Wskaźnik talia-biodra ===== -->
     <div class="card" id="whrCard" style="display:none;">
@@ -3511,7 +3515,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <script src="vilda_growth_reference_data.js?v=1"></script>
 <script src="vilda_professional_module.js?v=1"></script>
 <script src="vilda_persist_runtime.js?v=4"></script>
-<script src="vilda_summary_cards.js?v=1"></script>
+<script src="vilda_summary_cards.js?v=2"></script>
 <script src="vilda_diet_plan_ui.js?v=1"></script>
 <script src="vilda_estimated_intake_ui.js?v=1"></script>
 <script src="vilda_estimated_intake_runtime.js?v=1"></script>

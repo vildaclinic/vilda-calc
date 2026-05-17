@@ -430,7 +430,7 @@
       group: 'Kora nadnerczy – glikokortykosteroidy',
       mw: 362.46,
       canonical_si: 'nmol/L',
-      clinical_indications: ['adrenal_insufficiency', 'cushing', 'short_stature', 'obesity', 'hypertension', 'cah'],
+      clinical_indications: ['adrenal_insufficiency', 'cushing', 'short_stature', 'obesity', 'obesity_kids', 'hypertension', 'cah', 'hyponatremia', 'diabetes_insipidus'],
       units: [
         { symbol: 'nmol/L', label: 'nmol/L (SI)',  kind: 'si',   factor_to_si: 1 },
         { symbol: 'μmol/L', label: 'μmol/L',        kind: 'si',   factor_to_si: 1000 },
@@ -589,7 +589,7 @@
       group: 'Kora nadnerczy – glikokortykosteroidy',
       mw: 4541.1,                                              // peptyd 39-aa (ludzki ACTH)
       canonical_si: 'pmol/L',
-      clinical_indications: ['adrenal_insufficiency', 'cushing', 'cah'],
+      clinical_indications: ['adrenal_insufficiency', 'cushing', 'cah', 'hyponatremia'],
       units: [
         { symbol: 'pmol/L', label: 'pmol/L (SI)', kind: 'si',   factor_to_si: 1 },
         { symbol: 'pg/mL',  label: 'pg/mL',        kind: 'conv', factor_to_si: 0.2203 },
@@ -678,14 +678,46 @@
       ranges_pl: [
         'Pozycja leżąca (rano): 30–440 pmol/L (1–16 ng/dL)',
         'Pozycja siedząca (po 2 h): 100–860 pmol/L (4–31 ng/dL)',
-        'ARR > 30 (jednostki ng/dL ÷ ng/mL/h): próg skriningowy PHA wg PTNT 2021 (Januszewicz/Prejbisz)',
-        'ARR > 40: 100% czułość dla PHA (Giacchetti)',
-        'ARR > 750 (jednostki pmol/L ÷ ng/mL/h): równoważnik ~30 ng/dL/(ng/mL/h) — międzynarodowa starsza konwencja',
-        'Test obciążenia solą (2 L 0,9% NaCl i.v. w 4 h): aldosteron > 139 pmol/L (> 5 ng/dL) po teście = POTWIERDZENIE PHA (PTNT 2021)',
-        'Test z kaptoprilem (25 mg, pomiar 0 i 2 h): aldosteron > 416 pmol/L (> 15 ng/dL) + wysokie ARR = potwierdzenie PHA',
-        'Test fludrokortyzonowy (4 dni): aldosteron > 139 pmol/L (> 5 ng/dL) w 4. dobie = autonomiczna sekrecja aldosteronu'
+        'Algorytm diagnostyczny PHA (skrining ARR, testy potwierdzające, lokalizacja) — zob. sekcję „Trzystopniowy algorytm PHA — PTNT 2021" poniżej.'
       ],
-      notes_pl: 'Interpretacja wymaga znajomości pozycji ciała przy pobraniu, podaży sodu i przyjmowanych leków (β‑blokery, MRA, ACEI/ARB, NLPZ). POLSKIE WYTYCZNE: PTNT 2021 (Grupa Robocza Januszewicz/Prejbisz, Nadciśnienie Tętnicze): trzystopniowy algorytm PHA — (1) SKRINING — ARR > 30 (ng/dL ÷ ng/mL/h) lub > 750 (pmol/L ÷ ng/mL/h); warunki pobrania: rano 8:00–10:00, pacjent na nogach ≥ 2 h, ostatnie 5–15 min siedząc; KONIECZNE wyrównanie kaliemii > 4,0 mmol/L (hipokaliemia hamuje aldosteron — fałszywie ujemny wynik); odstawić MRA spironolakton/eplerenon 4–6 tyg., β-blokery 2 tyg. (2) POTWIERDZENIE — test obciążenia solą (najczęściej stosowany w Polsce, 2 L 0,9% NaCl i.v. w 4 h; aldosteron > 5 ng/dL = potwierdzenie) lub test z kaptoprilem (aldosteron > 15 ng/dL z wysokim ARR) lub test fludrokortyzonowy. (3) LOKALIZACJA — TK nadnerczy + AVS (cewnikowanie żył nadnerczowych) różnicuje jednostronny gruczolak Conn (leczenie operacyjne) od obustronnego przerostu (BAH; leczenie MRA). Wytyczne PTNT 2021 wskazują na istotne niedoszacowanie PHA w Polsce (~1% pacjentów z HT badanych mimo szacowanej częstości ~5–10% w HT ogółem i ~20% w HT opornym).',
+      notes_pl: {
+        sections: [
+          {
+            title: 'Najważniejsze',
+            open: true,
+            body: 'Aldosteron — główny mineralokortykoid, regulator gospodarki sodowo-potasowej i ciśnienia tętniczego. Główne wskazanie do oznaczenia: diagnostyka pierwotnego hiperaldosteronizmu (PHA, zespół Conna) — najczęstsza wtórna przyczyna nadciśnienia tętniczego, znacznie niedoszacowana w Polsce. Interpretacja zawsze wymaga znajomości pozycji ciała przy pobraniu, podaży sodu i przyjmowanych leków.'
+          },
+          {
+            title: 'Trzystopniowy algorytm PHA — PTNT 2021 (Januszewicz/Prejbisz)',
+            body: [
+              'Polskie wytyczne PTNT 2021 (Grupa Robocza, Nadciśnienie Tętnicze) — trzystopniowy algorytm rozpoznania pierwotnego hiperaldosteronizmu: skrining → potwierdzenie → lokalizacja.',
+              { label: 'Krok 1 — skrining (ARR)' },
+              { items: [
+                { label: 'Próg ARR (aldosterone-to-renin ratio)', text: '> 30 (ng/dL ÷ ng/mL/h) LUB > 750 (pmol/L ÷ ng/mL/h).' },
+                { label: 'Warunki pobrania', text: 'rano 8:00–10:00, pacjent na nogach ≥ 2 h, ostatnie 5–15 min siedząc.' },
+                { label: 'Wyrównanie kaliemii > 4,0 mmol/L', text: 'konieczne — hipokaliemia hamuje aldosteron i daje fałszywie ujemny wynik.' },
+                { label: 'Odstawienie leków zakłócających', text: 'MRA (spironolakton, eplerenon) — 4–6 tyg.; β-blokery — 2 tyg.; ACEI/ARB i NLPZ także wpływają.' }
+              ]},
+              { label: 'Krok 2 — potwierdzenie' },
+              { items: [
+                { label: 'Test obciążenia solą (NaCl 0,9%)', text: 'najczęściej stosowany w Polsce — 2 L 0,9% NaCl i.v. w ciągu 4 h. Aldosteron po teście > 5 ng/dL = potwierdzenie PHA.' },
+                { label: 'Test z kaptoprilem', text: 'aldosteron > 15 ng/dL z wysokim ARR potwierdza PHA.' },
+                { label: 'Test fludrokortyzonowy', text: 'alternatywa rzadziej stosowana.' }
+              ]},
+              { label: 'Krok 3 — lokalizacja' },
+              'TK nadnerczy + AVS (adrenal venous sampling — cewnikowanie żył nadnerczowych) różnicuje:',
+              { items: [
+                { label: 'Jednostronny gruczolak Conn', text: 'AVS wykazuje asymetrię — leczenie operacyjne (adrenalektomia).' },
+                { label: 'Obustronny przerost (BAH)', text: 'AVS symetryczne — leczenie zachowawcze (MRA).' }
+              ]}
+            ]
+          },
+          {
+            title: 'Niedoszacowanie PHA w Polsce',
+            body: 'Wytyczne PTNT 2021 wskazują na istotne niedoszacowanie PHA w Polsce — tylko ~1% pacjentów z nadciśnieniem jest badanych w kierunku PHA, mimo szacowanej częstości ~5–10% w HT ogółem i ~20% w HT opornym na leczenie. PTNT zaleca skrining ARR u: HT opornego, HT + hipokaliemia (samoistna lub po diuretykach), HT + incydentaloma nadnercza, HT u młodych < 40 lat, HT z udarami < 40 lat.'
+          }
+        ]
+      },
       sources: ['Tietz', 'Endocrine Society PA Guideline 2016 (Funder)', 'PTNT 2021 (Januszewicz/Prejbisz)']
     },
 
@@ -796,7 +828,7 @@
       group: 'Steroidogeneza nadnerczowo-gonadalna',
       mw: 330.46,
       canonical_si: 'nmol/L',
-      clinical_indications: ['cah', 'hirsutism', 'pcos', 'infertility', 'precocious_puberty'],
+      clinical_indications: ['cah', 'hirsutism', 'pcos', 'infertility', 'precocious_puberty', 'obesity_kids'],
       units: [
         { symbol: 'nmol/L', label: 'nmol/L (SI)', kind: 'si',   factor_to_si: 1 },
         { symbol: 'ng/dL',  label: 'ng/dL',        kind: 'conv', factor_to_si: 0.03026 },
@@ -1631,7 +1663,7 @@
       group: 'Androgeny',
       mw: 288.42,
       canonical_si: 'nmol/L',
-      clinical_indications: ['hypogonadism_male', 'andropause', 'hirsutism', 'pcos', 'virilization', 'delayed_puberty', 'precocious_puberty', 'klinefelter', 'infertility'],
+      clinical_indications: ['hypogonadism_male', 'andropause', 'hirsutism', 'pcos', 'virilization', 'delayed_puberty', 'precocious_puberty', 'klinefelter', 'infertility', 'obesity_kids'],
       units: [
         { symbol: 'nmol/L', label: 'nmol/L (SI)', kind: 'si',   factor_to_si: 1 },
         { symbol: 'ng/dL',  label: 'ng/dL',        kind: 'conv', factor_to_si: 0.03467 },
@@ -1701,12 +1733,8 @@
       ],
       ranges_pl: [
         'Mężczyźni dorośli (rano): 8,6–29 nmol/L (250–840 ng/dL)',
-        'Próg HIPOGONADYZMU MĘSKIEGO: < 9,2 nmol/L (< 264 ng/dL) potwierdzony 2× pomiarem rano (Bhasin ES 2018)',
-        '< 8 nmol/L (< 230 ng/dL): wyraźny niedobór wymagający leczenia (Bhasin ES 2018)',
-        'Strefa graniczna 8–12 nmol/L (230–350 ng/dL): wymagane obliczenie testosteronu wolnego (wzór Vermeulena z SHBG + albuminą) lub powtórzenie pomiaru',
-        'Metoda referencyjna: LC-MS/MS (Bhasin ES 2018); bezpośrednie immunoassaye u kobiet zaniżają wyniki',
         'Kobiety dorosłe: 0,3–2,4 nmol/L (8–70 ng/dL)',
-        'PRÓG GUZA ANDROGENNEGO u kobiety: > 7 nmol/L (> 200 ng/dL) = silne podejrzenie (ES 2018 Martin, hirsutyzm); > 14 nmol/L (> 400 ng/dL) = praktycznie pewny guz wymagający pilnej diagnostyki obrazowej (wirylizacja)'
+        'Progi diagnostyczne (hipogonadyzm M, guzy androgenne K, metoda LC-MS/MS) — zob. sekcje poniżej.'
       ],
       notes_pl: {
         sections: [
@@ -2433,7 +2461,7 @@
       group: 'Witamina D',
       mw: 400.64,                                              // domyślnie D3 (kalcydiol); D2 = 412,65
       canonical_si: 'nmol/L',
-      clinical_indications: ['vitamin_d_status', 'osteoporosis', 'rickets', 'malabsorption', 'obesity', 'short_stature', 'ckd'],
+      clinical_indications: ['vitamin_d_status', 'osteoporosis', 'rickets_kids', 'osteomalacia', 'malabsorption', 'obesity', 'obesity_kids', 'short_stature', 'ckd'],
       units: [
         { symbol: 'nmol/L', label: 'nmol/L (SI)', kind: 'si',   factor_to_si: 1 },
         { symbol: 'ng/mL',  label: 'ng/mL',        kind: 'conv', factor_to_si: 2.496 },
@@ -2452,7 +2480,28 @@
         'Optymalne: 75–125 nmol/L (30–50 ng/mL)',
         'Górny próg bezpieczny: < 250 nmol/L (< 100 ng/mL)'
       ],
-      notes_pl: 'Współczynnik 2,496 dotyczy 25-OH-D3. Dla 25-OH-D2 dokładny współczynnik to 2,422; różnica < 4 % i klinicznie nieistotna.',
+      notes_pl: {
+        sections: [
+          {
+            title: 'Najważniejsze',
+            open: true,
+            body: '25-OH wit. D (25-hydroksywitamina D, kalcydiol) — podstawowy marker oceny zasobów ustrojowych witaminy D. Odzwierciedla łącznie syntezę skórną i podaż z dietą/suplementami. Długi okres półtrwania (~2–3 tyg.) i stabilne stężenie czynią ją parametrem z wyboru do oceny zaopatrzenia.'
+          },
+          {
+            title: 'Klasyfikacja stężeń (polski konsensus Płudowski 2023)',
+            body: 'Pełna tabela kategorii stężeń (ciężki niedobór / niedobór / niewystarczające / optymalne / wysokie / toksyczne) z opisem postępowania — zob. lista zakresów referencyjnych powyżej.'
+          },
+          {
+            title: 'Uwagi techniczne',
+            body: [
+              { items: [
+                { label: 'Współczynnik konwersji', text: '2,496 dotyczy 25-OH-D3. Dla 25-OH-D2 dokładny współczynnik to 2,422 — różnica < 4% i klinicznie nieistotna.' },
+                { label: 'Co mierzy assay', text: 'większość immunoassayów mierzy SUMĘ 25-OH-D3 + 25-OH-D2 (Total 25-OHD). LC-MS/MS pozwala je rozdzielić — istotne tylko w wybranych przypadkach (suplementacja ergokalcyferolem D2 w niewydolności nerek).' }
+              ]}
+            ]
+          }
+        ]
+      },
       sources: ['Endocrine Society Vit D 2024', 'Polski konsensus wit. D 2023']
     },
 
@@ -2464,7 +2513,7 @@
       group: 'Witamina D',
       mw: 416.64,
       canonical_si: 'pmol/L',
-      clinical_indications: ['rickets', 'granulomatous_disease', 'ckd', 'vitamin_d_status'],
+      clinical_indications: ['rickets_kids', 'osteomalacia', 'granulomatous_disease', 'ckd', 'vitamin_d_status'],
       units: [
         { symbol: 'pmol/L', label: 'pmol/L (SI)', kind: 'si',   factor_to_si: 1 },
         { symbol: 'pg/mL',  label: 'pg/mL',        kind: 'conv', factor_to_si: 2.400 },
@@ -2489,7 +2538,27 @@
         'Dzieci: 60–240 pmol/L (25–100 pg/mL)',
         'Dorośli: 48–168 pmol/L (20–70 pg/mL)'
       ],
-      notes_pl: 'Czas półtrwania ≈ 4 h; nie jest dobrym wskaźnikiem zaopatrzenia w wit. D. Oznaczać celowo: ChNN, sarkoidoza, granulomatozy, dziedziczne krzywice.',
+      notes_pl: {
+        sections: [
+          {
+            title: 'Najważniejsze',
+            open: true,
+            body: '1,25(OH)₂ wit. D (kalcytriol) — aktywna hormonalna postać witaminy D. Bardzo krótki okres półtrwania (~4 h), regulowana hormonalnie (PTH, FGF23). NIE jest dobrym wskaźnikiem zasobów ustrojowych witaminy D — do oceny zaopatrzenia służy 25-OHD.'
+          },
+          {
+            title: 'Kiedy oznaczać 1,25(OH)₂D',
+            body: [
+              'Oznaczać celowo, w wybranych sytuacjach klinicznych:',
+              { items: [
+                { label: 'Przewlekła choroba nerek (PChN)', text: 'ocena upośledzenia hydroksylacji 1α w nerkach.' },
+                { label: 'Sarkoidoza i inne granulomatozy', text: '↑ pozanerkowa produkcja 1,25(OH)₂D przez makrofagi → hiperkalcemia.' },
+                { label: 'Dziedziczne krzywice', text: 'krzywica zależna od witaminy D typu I (1α-hydroksylaza) lub typu II (oporność receptora VDR).' },
+                { label: 'Hiperkalcemia o niejasnej etiologii', text: 'różnicowanie PTH-zależnej vs niezależnej.' }
+              ]}
+            ]
+          }
+        ]
+      },
       sources: ['Tietz']
     },
 
@@ -2513,7 +2582,19 @@
         'Macierzysta wit. D₃ rzadko oznaczana w rutynie; służy do oceny niedawnej podaży/suplementacji.',
         'Przelicznik: 1 μg D₃ ≡ 40 IU'
       ],
-      notes_pl: 'Nie mylić z 25-OH-D. Wit. D₃ ma bardzo krótki t½ (24 h); nie odzwierciedla zaopatrzenia.',
+      notes_pl: {
+        sections: [
+          {
+            title: 'Najważniejsze',
+            open: true,
+            body: 'Wit. D₃ (cholekalcyferol) — natywna forma witaminy D powstająca w skórze pod wpływem UVB oraz pochodząca z diety. Bardzo krótki okres półtrwania (~24 h) — pomiar Wit. D₃ NIE odzwierciedla zasobów ustrojowych i nie ma wartości diagnostycznej w ocenie zaopatrzenia.'
+          },
+          {
+            title: 'Nie mylić z 25-OH wit. D',
+            body: 'Wit. D₃ ≠ 25-OH wit. D (kalcydiol). Do oceny zaopatrzenia w witaminę D zawsze oznaczaj 25-OHD (długi okres półtrwania, stabilne stężenie). Pomiar samej Wit. D₃ ma znaczenie wyłącznie naukowe / badawcze.'
+          }
+        ]
+      },
       sources: ['Tietz', 'IOM 2011']
     },
 
@@ -2534,7 +2615,7 @@
       mw: null,                                    // peptyd — jednostka bioaktywności WHO IS
       biologic_units: true,                        // flaga: brak MW, jednostki nie konwertowalne masowo
       canonical_si: 'mIU/L',
-      clinical_indications: ['hypothyroidism', 'hyperthyroidism', 'thyroid_cancer_followup', 'thyroid_cancer_followup_kids', 'pregnancy', 'short_stature', 'autoimmune_thyroid', 'neonatal_screening', 'obesity'],
+      clinical_indications: ['hypothyroidism', 'hyperthyroidism', 'thyroid_cancer_followup', 'thyroid_cancer_followup_kids', 'pregnancy', 'short_stature', 'autoimmune_thyroid', 'neonatal_screening', 'obesity', 'obesity_kids', 'hyponatremia', 'diabetes_insipidus'],
       units: [
         { symbol: 'mIU/L',  label: 'mIU/L (SI)', kind: 'si',   factor_to_si: 1 },
         { symbol: 'μIU/mL', label: 'μIU/mL',     kind: 'conv', factor_to_si: 1 },
@@ -2713,7 +2794,7 @@
       group: 'Tarczyca — hormony',
       mw: 776.87,
       canonical_si: 'pmol/L',
-      clinical_indications: ['hypothyroidism', 'hyperthyroidism', 'thyroid_cancer_followup', 'thyroid_cancer_followup_kids', 'pregnancy', 'short_stature', 'autoimmune_thyroid', 'neonatal_screening'],
+      clinical_indications: ['hypothyroidism', 'hyperthyroidism', 'thyroid_cancer_followup', 'thyroid_cancer_followup_kids', 'pregnancy', 'short_stature', 'autoimmune_thyroid', 'neonatal_screening', 'obesity_kids', 'hyponatremia', 'diabetes_insipidus'],
       units: [
         { symbol: 'pmol/L', label: 'pmol/L (SI)', kind: 'si',   factor_to_si: 1 },
         { symbol: 'ng/dL',  label: 'ng/dL',        kind: 'conv', factor_to_si: 12.87 },
@@ -3133,7 +3214,7 @@
       group: 'Przysadka — somatotropowa',
       mw: 7649,
       canonical_si: 'nmol/L',
-      clinical_indications: ['GH_deficiency', 'GH_deficiency_kids', 'short_stature', 'acromegaly', 'delayed_puberty', 'precocious_puberty'],
+      clinical_indications: ['GH_deficiency', 'GH_deficiency_kids', 'short_stature', 'acromegaly', 'delayed_puberty', 'precocious_puberty', 'obesity_kids'],
       units: [
         { symbol: 'nmol/L', label: 'nmol/L (SI)', kind: 'si',   factor_to_si: 1 },
         { symbol: 'ng/mL',  label: 'ng/mL',        kind: 'conv', factor_to_si: 0.131 },
@@ -3357,15 +3438,13 @@
           source_ids: ['mayo_test_prolactin'] }
       ],
       ranges_pl: [
-        'Mężczyźni dorośli (Mayo): 2–18 ng/mL (próg hyperprolaktynemii > 15; PL Karasek 2006 > 15)',
-        'Kobiety nieciężarne (Mayo): 2–29 ng/mL (próg hyperprolaktynemii > 25; PL Karasek 2006 > 20)',
-        'Ciąża T1: 10–95; T2: 40–170; T3: 10–209 ng/mL',
-        'PRL 25–200 ng/mL: możliwa każda przyczyna hiperprolaktynemii — leki, idiopatyczna, niedoczynność tarczycy, niewydolność nerek (Karasek 2006 PL)',
-        'PRL > 200 ng/mL z zaburzonym rytmem dobowym: zwykle prolactinoma (mikro/makro) wg Karasek 2006 PL',
-        'PRL > 250 ng/mL: silnie sugeruje prolactinoma — ES 2011 Melmed',
-        'PRL > 500 ng/mL: diagnostyczne dla makroprolactinoma — ES 2011 Melmed',
-        'PRL < 150 ng/mL przy stwierdzonym gruczolaku przysadki: guz mieszany (somato-mammotropowy) lub guz niewydzielający Prl z uciskiem szypuły (Karasek 2006 PL)',
-        'Macroprolactin: badanie zalecane gdy PRL > ~33 ng/mL (700 mU/L) bez objawów'
+        'Mężczyźni dorośli: 2–18 ng/mL',
+        'Kobiety nieciężarne: 2–29 ng/mL',
+        'Ciąża, I trymestr: 10–95 ng/mL',
+        'Ciąża, II trymestr: 40–170 ng/mL',
+        'Ciąża, III trymestr: 10–209 ng/mL',
+        'Polskie i międzynarodowe progi diagnostyczne hiperprolaktynemii (Karasek 2006, ES 2011 Melmed) — zob. sekcje poniżej.',
+        'Makroprolaktyna — zalecane gdy PRL > ~33 ng/mL (700 mU/L) bez objawów.'
       ],
       notes_pl: {
         sections: [
@@ -3438,7 +3517,7 @@
       mw: null,
       biologic_units: true,
       canonical_si: 'IU/L',
-      clinical_indications: ['hypogonadism_male', 'hypogonadism_female', 'pcos', 'infertility', 'menopause', 'precocious_puberty', 'delayed_puberty', 'klinefelter', 'ovarian_failure'],
+      clinical_indications: ['hypogonadism_male', 'hypogonadism_female', 'pcos', 'infertility', 'menopause', 'precocious_puberty', 'delayed_puberty', 'klinefelter', 'ovarian_failure', 'obesity_kids'],
       units: [
         { symbol: 'IU/L',   label: 'IU/L (SI)', kind: 'si',   factor_to_si: 1 },
         { symbol: 'mIU/mL', label: 'mIU/mL',     kind: 'conv', factor_to_si: 1 }
@@ -3587,7 +3666,7 @@
       mw: null,
       biologic_units: true,
       canonical_si: 'IU/L',
-      clinical_indications: ['hypogonadism_male', 'hypogonadism_female', 'infertility', 'menopause', 'ovarian_failure', 'klinefelter', 'ivf_reserve', 'precocious_puberty', 'delayed_puberty'],
+      clinical_indications: ['hypogonadism_male', 'hypogonadism_female', 'infertility', 'menopause', 'ovarian_failure', 'klinefelter', 'ivf_reserve', 'precocious_puberty', 'delayed_puberty', 'obesity_kids'],
       units: [
         { symbol: 'IU/L',   label: 'IU/L (SI)', kind: 'si',   factor_to_si: 1 },
         { symbol: 'mIU/mL', label: 'mIU/mL',     kind: 'conv', factor_to_si: 1 }
@@ -3655,12 +3734,13 @@
           source_ids: ['mayo_test_fsh'] }
       ],
       ranges_pl: [
-        'Tanner I: 0,4–6,7; Tanner II: 0,5–8,7; Tanner III: 1,2–11,4; Tanner IV: 0,7–12,8; Tanner V: 1,0–11,6 IU/L',
-        'Dorośli M: 1,5–12,4 IU/L',
-        'K folikularna (3. d.c.): 3,9–8,8; pik owul.: 4,5–22,5; lutealna: 1,8–5,1; postmenop.: 16,7–113,6',
-        'Rezerwa jajnikowa: FSH > 10 (obniżona), > 25 IU/L (bardzo obniżona, 3. d.c.)',
-        'Postmenopauza: > 40 IU/L (postmenopauza pewna)',
-        'POI (Premature Ovarian Insufficiency): FSH > 25 IU/L w 2× pomiarach > 4 tyg. odstępu + amenorrhea ≥ 4 mies. + wiek < 40 lat (PTMRiE/PTGP 2018, ESHRE 2016)'
+        'Tanner I: 0,4–6,7 IU/L; Tanner II: 0,5–8,7; Tanner III: 1,2–11,4; Tanner IV: 0,7–12,8; Tanner V: 1,0–11,6',
+        'Mężczyźni dorośli: 1,5–12,4 IU/L',
+        'Kobiety — faza folikularna (3. d.c.): 3,9–8,8 IU/L',
+        'Kobiety — pik owulacyjny: 4,5–22,5 IU/L',
+        'Kobiety — faza lutealna: 1,8–5,1 IU/L',
+        'Kobiety — postmenopauza: 16,7–113,6 IU/L',
+        'Progi rezerwy jajnikowej i kryteria POI (ESHRE 2016 / PTMRiE 2018) — zob. sekcje poniżej.'
       ],
       notes_pl: {
         sections: [
@@ -3918,7 +3998,7 @@
       group: 'Oś podwzgórze-przysadka-gonady',
       mw: 90000,
       canonical_si: 'nmol/L',
-      clinical_indications: ['hypogonadism_male', 'hypogonadism_female', 'pcos', 'hirsutism', 'andropause', 'hyperthyroidism', 'pregnancy', 'metabolic_syndrome'],
+      clinical_indications: ['hypogonadism_male', 'hypogonadism_female', 'pcos', 'hirsutism', 'andropause', 'hyperthyroidism', 'pregnancy', 'metabolic_syndrome', 'obesity_kids'],
       units: [
         { symbol: 'nmol/L', label: 'nmol/L (SI)', kind: 'si',   factor_to_si: 1 },
         { symbol: 'μg/dL',  label: 'μg/dL',        kind: 'conv', factor_to_si: 0.347 }

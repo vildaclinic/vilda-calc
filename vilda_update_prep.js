@@ -3175,6 +3175,18 @@ function vildaUpdatePrepResetColeElements(elements) {
     vildaAppClearHtml(elements.coleNormTableEl);
     elements.coleNormTableEl.style.display = 'none';
   }
+  // Faza 14b — reset banera obesity_kids razem z kartą Cole'a.
+  try {
+    const banner = (typeof document !== 'undefined') ? document.getElementById('coleObesityKidsBanner') : null;
+    if (banner) {
+      banner.style.display = 'none';
+      vildaAppClearHtml(banner);
+    }
+  } catch (_) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('vilda_update_prep.js', _, { context: 'resetColeObesityKidsBanner' });
+    }
+  }
   if (typeof window !== 'undefined') {
     window.coleCatValue = null;
     window.colePercentValue = null;
@@ -3406,6 +3418,51 @@ function vildaUpdatePrepRenderColeMetrics(context, options = {}, elements) {
     els.coleNormTableEl.style.display = 'block';
   }
   vildaAppSetTrustedHtml(els.coleExplanationEl, state.explanationHtml, 'app:coleExplanationEl');
+
+  // Faza 14b — baner sugerujący panel diagnostyczny otyłości u dziecka.
+  // Wyświetlany gdy kategoria wskaźnika Cole'a to Nadwaga lub Otyłość.
+  try {
+    const banner = document.getElementById('coleObesityKidsBanner');
+    if (banner) {
+      const isOverweightOrObese = (state.coleCat === 'Nadwaga' || String(state.coleCat).startsWith('Otyłość'));
+      if (isOverweightOrObese) {
+        const ageYears = Number(options.age) || 0;
+        const sex = options.sex || 'M';
+        const sexLabel = (sex === 'M') ? 'chłopca' : (sex === 'F' ? 'dziewczynki' : 'dziecka');
+        let suggestedTests;
+        if (ageYears < 5) {
+          suggestedTests = 'TSH, 25-OHD; konsultacja genetyczna (MC4R, zespół Pradera-Williego)';
+        } else if (ageYears < 10) {
+          suggestedTests = 'TSH, 25-OHD, glukoza na czczo, lipidogram, ALT/AST (skrining MASLD)';
+        } else {
+          suggestedTests = 'TSH, 25-OHD, oGTT 75 g lub HbA1c, lipidogram, ALT/AST, ciśnienie tętnicze';
+        }
+        const ageStr = ageYears > 0 ? ageYears.toFixed(1).replace('.', ',') : '?';
+        const bannerHtml = '' +
+          '<div style="margin-top: 0.75rem; padding: 0.75rem 1rem; border-left: 4px solid #f59e0b; background: rgba(245, 158, 11, 0.08); border-radius: 6px; font-size: 0.95rem; line-height: 1.5;">' +
+            '<div style="font-weight: 600; margin-bottom: 0.35rem;">' +
+              'Wskaźnik Cole’a sugeruje ' + (state.coleCat === 'Nadwaga' ? 'nadwagę' : 'otyłość') + ' u ' + sexLabel + '.' +
+            '</div>' +
+            '<div style="margin-bottom: 0.5rem; color: #6b7280;">' +
+              'Zalecane badania pierwszego rzutu (wiek ' + ageStr + ' lat): ' + suggestedTests + '.' +
+            '</div>' +
+            '<a href="przelicznik-jednostek.html?wskazanie=obesity_kids" target="_blank" rel="noopener" style="display: inline-block; padding: 0.4rem 0.85rem; background: #2563eb; color: #fff; text-decoration: none; border-radius: 5px; font-weight: 500; font-size: 0.9rem;">' +
+              'Otwórz panel diagnostyczny otyłości u dziecka →' +
+            '</a>' +
+          '</div>';
+        vildaAppSetTrustedHtml(banner, bannerHtml, 'app:coleObesityKidsBanner');
+        banner.style.display = 'block';
+      } else {
+        banner.style.display = 'none';
+        vildaAppClearHtml(banner);
+      }
+    }
+  } catch (_) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('vilda_update_prep.js', _, { context: 'coleObesityKidsBanner' });
+    }
+  }
+
   els.coleCardEl.style.display = 'block';
   state.rendered = true;
   vildaUpdatePrepMarkSection(context, 'child-metrics', 'cole', {

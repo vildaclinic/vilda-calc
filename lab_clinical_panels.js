@@ -139,7 +139,7 @@
       ext: 'pituitary_mri',
       label: 'MRI przysadki z gadolinium (dynamiczne sekwencje)',
       note: 'Lokalizacja gruczolaka przy ACTH-zależnym zespole Cushinga. Czułość: mikrogruczolak ≥ 6 mm w ~80%; < 6 mm w ~50%.',
-      description: 'Rezonans magnetyczny przysadki mózgowej w sekwencjach T1 i T2, z dodatkową dynamiczną sekwencją T1 po dożylnym podaniu środka kontrastowego (gadolinium). Mikrogruczolak (< 10 mm) wykazuje opóźnioną perfuzję — jest hipointensywny w fazie wczesnej (60–90 s po kontraście) w porównaniu do prawidłowej tkanki przysadki, izointensywny w fazie późnej. Makrogruczolak (≥ 10 mm) wykrywany praktycznie zawsze. Czułość: mikrogruczolak ≥ 6 mm w ~80% przypadków; < 6 mm w ~50%; łącznie ~60% wszystkich mikrogruczolaków w chorobie Cushinga. UWAGA: ~10% zdrowej populacji ma incidentaloma przysadki (przypadkowy gruczolak niewydzielający), więc dodatni wynik MRI nie zawsze jest etiologiczny w Cushingu — konieczna korelacja z testami funkcjonalnymi. Gdy MRI przysadki ujemny przy potwierdzonym ACTH-zależnym Cushingu (dodatni test CRH lub wysokodawkowy DST) → wskazane IPSS. MRI 3T daje wyższą rozdzielczość przestrzenną niż 1,5T i jest preferowany w diagnostyce mikrogruczolaków.'
+      description: 'Rezonans magnetyczny przysadki mózgowej w sekwencjach T1 i T2, z dodatkową dynamiczną sekwencją T1 po dożylnym podaniu środka kontrastowego (gadolinium). Mikrogruczolak (< 10 mm) wykazuje opóźnioną perfuzję — jest hipointensywny w fazie wczesnej (60–90 s po kontraście) w porównaniu do prawidłowej tkanki przysadki, izointensywny w fazie późnej. Makrogruczolak (≥ 10 mm) wykrywany praktycznie zawsze. Czułość: mikrogruczolak ≥ 6 mm w ~80% przypadków; < 6 mm w ~50%; łącznie ~60% wszystkich mikrogruczolaków w chorobie Cushinga. Uwaga: ~10% zdrowej populacji ma incidentaloma przysadki (przypadkowy gruczolak niewydzielający), więc dodatni wynik MRI nie zawsze jest etiologiczny w Cushingu — konieczna korelacja z testami funkcjonalnymi. Gdy MRI przysadki ujemny przy potwierdzonym ACTH-zależnym Cushingu (dodatni test CRH lub wysokodawkowy DST) → wskazane IPSS. MRI 3T daje wyższą rozdzielczość przestrzenną niż 1,5T i jest preferowany w diagnostyce mikrogruczolaków.'
     },
     anti_21oh: {
       ext: 'anti_21oh',
@@ -213,8 +213,63 @@
     alp:        { ext: 'alp',        label: 'ALP (fosfataza alkaliczna)', note: 'Znacznie podwyższona w krzywicy' },
     ctx_p1np:   { ext: 'ctx_p1np',   label: 'CTX / P1NP (markery przebudowy kości)', note: 'Monitorowanie leczenia osteoporozy' },
     dxa:        { ext: 'dxa',        label: 'DXA (densytometria L1–L4, biodro)', note: 'T-score ≤ -2,5 = osteoporoza' },
-    fgf23:      { ext: 'fgf23',      label: 'FGF23',                    note: 'Krzywice oporne na wit. D, CKD-MBD' },
+    fgf23:      { ext: 'fgf23',      label: 'FGF23',                    note: 'Krzywice oporne na wit. D, CKD-MBD, TIO (onkogenna osteomalacja)' },
     sclerostin: { ext: 'sclerostin', label: 'Sklerostyna',              note: 'Diagnostyka różnicowa rzadkich osteopatii' },
+    bone_alp:   { ext: 'bone_alp',   label: 'Kostna izoforma ALP (bone ALP)', note: 'Swoiście odzwierciedla aktywność osteoblastów; przydatna gdy ALP całkowita podwyższona z niejasnej przyczyny (różnicowanie wątrobowej vs kostnej frakcji).' },
+    urine_calcium: { ext: 'urine_calcium', label: 'Wapń w DZM (dobowa zbiórka moczu)', note: 'Norma 2,5–7,5 mmol/24 h (≤ 0,1 mmol/kg/24 h u dzieci). Wartość kluczowa w krzywicach opornych — hiperkalciuria w HHRH (gen SLC34A3), niska w krzywicy niedoborowej.' },
+    urine_phosphate_tmp: {
+      ext: 'urine_phosphate_tmp',
+      label: 'TmP/GFR (cewkowy próg reabsorpcji fosforanów)',
+      note: 'Ocena cewkowego utrzymywania fosforu. Norma 0,80–1,35 mmol/L (dorośli), wyższe normy wiekowe u dzieci. Obniżona w XLH, TIO, HHRH (utrata fosforu z moczem) — odróżnia od krzywicy niedoborowej.',
+      description: 'TmP/GFR (transport tubular maximum of phosphate per glomerular filtration rate) — wskaźnik cewkowej reabsorpcji fosforu, niezależny od stężenia fosforu we krwi i czynności nerek. Obliczany z dwóch równoczesnych pomiarów fosforu i kreatyniny w surowicy i w porannej próbce moczu (lub w DZM): TmP/GFR = P_serum − (P_urine × Cr_serum / Cr_urine). Norma 0,80–1,35 mmol/L u dorosłych (wyższe u dzieci, wiekowo zmienne nomogramy Walton i Bijvoet). Wskaźnik fundamentalny w różnicowaniu krzywic — obniżony w postaciach z utratą fosforu z moczem (XLH, TIO, HHRH, krzywice hipofosfatemiczne ADHR/ARHR/Fanconi), prawidłowy w krzywicy niedoborowej (utrata fosforu wtórna do PTH — TmP/GFR początkowo zachowane).'
+    },
+    alpl_gene:  { ext: 'alpl_gene',  label: 'Genetyka ALPL (hipofosfatazja)', note: 'Mutacja genu ALPL → niedobór TNSALP (tissue-nonspecific alkaline phosphatase) → OBNIŻONA ALP (paradoksalnie!) + krzywicopodobny obraz radiologiczny.' },
+    phex_gene:  { ext: 'phex_gene',  label: 'Genetyka PHEX (XLH)',     note: 'Najczęstsza dziedziczna krzywica oporna. Dziedziczenie dominujące sprzężone z X. Potwierdzenie konieczne przed kwalifikacją do burosumabu (program lekowy B.130).' },
+    cyp27b1_gene: { ext: 'cyp27b1_gene', label: 'Genetyka CYP27B1 (VDDR-1)', note: 'Defekt 1-α-hydroksylazy nerkowej — krzywica zależna od witaminy D typu 1 (wymaga aktywnej witaminy D, nie cholekalcyferolu).' },
+    vdr_gene:   { ext: 'vdr_gene',   label: 'Genetyka VDR (VDDR-2)',    note: 'Oporność receptora witaminy D. Łysienie (alopecia) jako patognomoniczny dodatkowy fenotyp.' },
+    slc34a3_gene: { ext: 'slc34a3_gene', label: 'Genetyka SLC34A3 (HHRH)', note: 'Krzywica hipofosfatemiczna z hiperkalciurią. WAŻNE — leczenie aktywną witaminą D PRZECIWWSKAZANE (nasila hiperkalciurię i nefrokalcynozę); leczenie wyłącznie fosforem.' },
+    dopa_pet:   { ext: 'dopa_pet',   label: '¹⁸F-DOPA PET/CT',          note: 'Lokalizacja guza w TIO (onkogenna osteomalacja). Mała ekspresja receptorów dopaminergicznych w guzach mezenchymalnych produkujących FGF23.' },
+    octreoscan: { ext: 'octreoscan', label: '⁶⁸Ga-DOTATATE PET/CT',     note: 'Alternatywa w lokalizacji guza w TIO. Wykrywa guzy z ekspresją receptorów somatostatynowych — większa czułość niż ¹⁸F-DOPA PET (Florenzano 2020).' },
+
+    // Antropometria pediatryczna (obliczana w głównym kalkulatorze aplikacji)
+    bmi_percentile: { ext: 'bmi_percentile', label: 'BMI percentyl (siatki Palczewska / OLAF / WHO)', note: 'Obliczany automatycznie w głównym kalkulatorze po wprowadzeniu wzrostu i masy. Klasyfikacja: < 3 niedowaga; 3–85 norma; 85–95 nadwaga; ≥ 95 otyłość; ≥ 99 otyłość ciężka.' },
+    cole_index: { ext: 'cole_index', label: 'Wskaźnik Cole\'a (% BMI wzgl. 50. percentyla)', note: 'Klasyfikacja: < 90 niedowaga; 90–110 norma; 110–119 nadwaga; ≥ 120 otyłość; ≥ 140 otyłość znacznego stopnia.' },
+    waist_pediatric: { ext: 'waist_pediatric', label: 'Obwód talii — percentyl pediatryczny', note: 'Percentyl ≥ 90 sugeruje otyłość brzuszną (trzewną); niezależny czynnik ryzyka metabolicznego u dzieci.' },
+    bp_pediatric: { ext: 'bp_pediatric', label: 'Ciśnienie tętnicze — siatki pediatryczne (NHLBI 2017)', note: 'Wartości percentylowe dla wieku, wzrostu i płci. ≥ 90. percentyla — ciśnienie podwyższone; ≥ 95. — nadciśnienie tętnicze.' },
+
+    // Genetyka monogenetycznej otyłości i zespołów dziedzicznych z otyłością
+    mc4r_gene: { ext: 'mc4r_gene', label: 'Genetyka MC4R', note: 'Najczęstsza monogenetyczna postać otyłości u dzieci (1–6% otyłości znacznego stopnia). Dziedziczenie autosomalne dominujące.' },
+    pomc_pcsk1_lepr_gene: { ext: 'pomc_pcsk1_lepr_gene', label: 'Genetyka POMC / PCSK1 / LepR / leptyna', note: 'Bardzo rzadkie monogenetyczne postaci otyłości; mutacje POMC dodatkowo dają rude włosy + niedoczynność nadnerczy. Możliwe leczenie setmelanotydem (Imcivree) przy potwierdzonej mutacji.' },
+    prader_willi_test: { ext: 'prader_willi_test', label: 'MS-MLPA chr 15q11-13 (zespół Pradera-Williego)', note: 'Hipotonia okołoporodowa + hiperfagia od 2. r.ż. + niski wzrost + hipogonadyzm + dysmorfia twarzy.' },
+    bardet_biedl_panel: { ext: 'bardet_biedl_panel', label: 'Panel genetyczny zespołów rzęsek (Bardet-Biedl, Alström, McKusick-Kaufman)', note: 'Otyłość + polidaktylia / retinopatia barwnikowa / głuchota / niewydolność nerek — wskazania do panelu BBSome.' },
+
+    // Hiponatremia i moczówka prosta — osmolalności, wskaźniki moczowe, testy stymulacyjne
+    serum_osm: { ext: 'serum_osm', label: 'Osmolalność surowicy', note: 'Norma 275–295 mOsm/kg. < 275 → hiponatremia hipotoniczna (najczęstsza); norma lub > 295 → pseudohiponatremia (hiperlipidemia, paraproteinemie) lub hiponatremia hipertoniczna (hiperglikemia, mannitol).' },
+    urine_osm: { ext: 'urine_osm', label: 'Osmolalność moczu', note: 'Norma 50–1200 mOsm/kg. W hiponatremii: < 100 sugeruje polidipsję pierwotną lub nadmierną podaż wody; > 100 = ADH aktywne (SIADH, CSW, hipowolemia, hipoteza wymuszonej polidipsji).' },
+    urine_na: { ext: 'urine_na', label: 'Sód w moczu (spot urine)', note: 'W hiponatremii: < 30 mmol/L → hipowolemia rzeczywista lub hiperwolemia z zatrzymaniem (CHF, marskość, nerczyca); > 30 mmol/L → utrata nerkowa (diuretyki), SIADH, CSW, niedoczynność nadnerczy.' },
+    urine_cl: { ext: 'urine_cl', label: 'Chlor w moczu (spot urine)', note: 'Pomocniczy w hiponatremii i zasadowicy. < 20 mmol/L sugeruje utratę z wymiotami (w tym ukrytymi); > 40 mmol/L — diuretyki tiazydowe / hiperaldosteronizm.' },
+    urine_k_creat: { ext: 'urine_k_creat', label: 'K/kreatynina w spot urine (preferowane nad TTKG)', note: 'Wskaźnik różnicujący hipo-/hiperkaliemii. W hipokaliemii: < 13 mmol/g → utrata pozanerkowa; > 13 mmol/g → nerkowa. Zalecane wg Kamel-Halperin JASN 2011.' },
+    urine_k_spot: { ext: 'urine_k_spot', label: 'Potas w moczu (próbka przygodna lub DZM)', note: '> 20 mmol/L w hipokaliemii — utrata nerkowa; < 20 — pozanerkowa. W DZM: > 25 mmol/24 h — nerkowa.' },
+    urine_creat: { ext: 'urine_creat', label: 'Kreatynina w moczu (spot)', note: 'Element wskaźnika Na/kreatynina lub K/kreatynina w spot urine — alternatywa dla DZM.' },
+    copeptin_stim: {
+      ext: 'copeptin_stim',
+      label: 'Test stymulacji kopeptyną hipertonicznym NaCl (3%)',
+      note: 'Nowoczesny standard różnicowania moczówki prostej (Christ-Crain NEJM 2019). Stymulacja hipertonicznym NaCl 3% (250 mL infuzji) → pomiar kopeptyny po osiągnięciu Na ≥ 150 mmol/L. Kopeptyna < 4,9 pmol/L → moczówka centralna; > 4,9 pmol/L → moczówka nerkowa.',
+      description: 'Kopeptyna — C-końcowy fragment prowazopresyny, wydzielany w równomolowym stosunku do ADH (wazopresyny). Mierzona w surowicy. Test stymulacji hipertonicznym NaCl jest preferowany ze względu na lepszą czułość i swoistość niż klasyczny test pragnienia. Protokół: infuzja 3% NaCl 0,15 mL/kg/min (zwykle 250 mL) do osiągnięcia stężenia Na ≥ 150 mmol/L lub osmolalności surowicy ≥ 295 mOsm/kg → pobranie krwi na kopeptynę. Interpretacja: kopeptyna < 4,9 pmol/L = moczówka centralna (CDI — brak adekwatnej odpowiedzi); > 4,9 pmol/L = moczówka nerkowa (NDI — wysokie ADH, ale brak odpowiedzi nerek). Test bezpieczniejszy niż klasyczny test pragnienia (ryzyko nasilonej dehydratacji u pacjentów z poliurią).'
+    },
+    water_deprivation_test: {
+      ext: 'water_deprivation_test',
+      label: 'Test pragnienia (klasyczny, w ośrodku referencyjnym)',
+      note: 'Stopniowo zwiększający się deficyt wody przez 8–12 h. Brak wzrostu osmolalności moczu mimo wzrostu osmolalności surowicy → moczówka. Następnie podanie desmopresyny: wzrost osmolalności moczu > 50% → CDI; brak wzrostu → NDI. Wymaga ścisłego monitoringu (ryzyko ciężkiej dehydratacji).'
+    },
+    avp_arg: { ext: 'avp_arg', label: 'AVP (wazopresyna arginiowa) w surowicy', note: 'Klasyczny pomiar; aktualnie zastępowany przez kopeptynę (lepsza stabilność próbki, krótszy okres półtrwania AVP).' },
+    saline_05: { ext: 'saline_05', label: '0,9% NaCl (sól fizjologiczna) — wlew testowy', note: 'Diagnostyka różnicowa SIADH vs CSW: w CSW podanie 1–2 L 0,9% NaCl skutkuje poprawą Na; w SIADH — pogorszeniem (efekt „desalinacji").' },
+    hypertonic_saline: { ext: 'hypertonic_saline', label: '3% NaCl (hipertoniczny) — leczenie ostrej ciężko objawowej hiponatremii', note: 'Bolus 100–150 mL i.v. w 10 min, powtarzać do 3 razy. Cel: wzrost Na o 4–6 mmol/L w pierwszej godzinie.' },
+    tolvaptan_test: { ext: 'tolvaptan_test', label: 'Tolwaptan (Samsca) — antagonista receptora V2', note: 'W SIADH opornym na restrykcję płynów. Maks. 30 dni leczenia (FDA — hepatotoksyczność). Tylko w szpitalu pod monitoringiem Na (ryzyko zbyt szybkiego wyrównania → ODS).' },
+    urea_oral: { ext: 'urea_oral', label: 'Mocznik doustnie (15–30 g/dobę)', note: 'Popularna w Europie alternatywa do tolwaptanu w SIADH; indukuje diurezę osmotyczną z wydalaniem wody.' },
+    desmopressin: { ext: 'desmopressin', label: 'Desmopresyna (DDAVP)', note: 'Syntetyczny analog ADH; preparat donosowy, podjęzykowy lub doustny. Leczenie z wyboru w moczówce prostej centralnej (CDI). Także stosowana doraźnie do cofnięcia zbyt szybkiego wzrostu Na („re-lowering").' },
+    fludrocortisone: { ext: 'fludrocortisone', label: 'Fludrokortyzon 0,1–0,4 mg/dobę', note: 'Leczenie wspomagające w opornym CSW; działanie mineralokortykoidowe zwiększa reabsorpcję Na w cewce dystalnej.' },
+    brain_mri: { ext: 'brain_mri', label: 'MRI mózgu', note: 'Diagnostyka SIADH centralnego (guz, udar, krwawienie SAH), moczówki centralnej (brak hiperintensywności tylnego płata przysadki w T1 — utrata „bright spot"), CSW.' },
 
     // Metabolizm / cukier
     glucose_fasting: { ext: 'glucose_fasting', label: 'Glukoza na czczo', note: 'IGT / cukrzyca / metabolic syndrome' },
@@ -276,7 +331,7 @@
             kind: 'prose',
             icon: 'book-2',
             title: 'Definicja i klasyfikacja',
-            body: 'Niedoczynność kory nadnerczy — niedostateczne wytwarzanie kortyzolu. Dwa typy: PAI (pierwotna — uszkodzenie na poziomie nadnerczy) vs SAI (wtórna — niedobór ACTH przysadkowego). W Polsce ~70–80% PAI to autoimmunologiczna choroba Addisona (przeciwciała anty-21-OH). SAI najczęściej JATROGENNA — wskutek długotrwałej steroidoterapii (zahamowanie osi podwzgórze-przysadka-nadnercza). Rozróżnienie PAI/SAI ma istotne znaczenie kliniczne — różnicuje wzorzec hormonalny, etiologię i sposób substytucji (PAI wymaga substytucji glikokortykosteroidem + mineralokortykosteroidem; SAI tylko glikokortykosteroidem).'
+            body: 'Niedoczynność kory nadnerczy — niedostateczne wytwarzanie kortyzolu. Dwa typy: PAI (pierwotna — uszkodzenie na poziomie nadnerczy) vs SAI (wtórna — niedobór ACTH przysadkowego). W Polsce ~70–80% PAI to autoimmunologiczna choroba Addisona (przeciwciała anty-21-OH). SAI najczęściej jatrogenna — wskutek długotrwałej steroidoterapii (zahamowanie osi podwzgórze-przysadka-nadnercza). Rozróżnienie PAI/SAI ma istotne znaczenie kliniczne — różnicuje wzorzec hormonalny, etiologię i sposób substytucji (PAI wymaga substytucji glikokortykosteroidem + mineralokortykosteroidem; SAI tylko glikokortykosteroidem).'
           },
           {
             kind: 'list',
@@ -284,8 +339,8 @@
             title: 'Algorytm 2-stopniowy + wzorce różnicujące',
             items: [
               { label: 'I krok — skrining', text: 'kortyzol poranny (7:00–9:00, na czczo) + ACTH + elektrolity (Na, K) + glukoza na czczo.' },
-              { label: 'Wzorzec PAI (pierwotna)', text: '↓ kortyzol + ↑↑ ACTH + hiponatremia + HIPERKALIEMIA + hipoglikemia (niedobór kortyzolu i aldosteronu).' },
-              { label: 'Wzorzec SAI (wtórna)', text: '↓ kortyzol + N/↓ ACTH + hiponatremia (łagodniejsza) + BEZ hiperkaliemii (aldosteron zachowany — regulowany przez RAA niezależnie od ACTH).' },
+              { label: 'Wzorzec PAI (pierwotna)', text: '↓ kortyzol + ↑↑ ACTH + hiponatremia + hiperkaliemia + hipoglikemia (niedobór kortyzolu i aldosteronu).' },
+              { label: 'Wzorzec SAI (wtórna)', text: '↓ kortyzol + N/↓ ACTH + hiponatremia (łagodniejsza) + bez hiperkaliemii (aldosteron zachowany — regulowany przez RAA niezależnie od ACTH).' },
               { label: 'II krok — potwierdzenie', text: 'test stymulacji Synacthen (250 μg ACTH i.v., pomiar kortyzolu w 0 i 30/60 min) — szczyt kortyzolu < 500 nmol/L (18 μg/dL) potwierdza niedoczynność.' }
             ]
           },
@@ -310,7 +365,7 @@
                 label: 'SAI (wtórna)',
                 text: 'niedobór ACTH przysadkowego:',
                 detail: [
-                  'Długotrwałe leczenie glikokortykosteroidami — NAJCZĘSTSZA przyczyna SAI w praktyce klinicznej; zahamowanie osi przysadka-nadnercza wymaga STOPNIOWEJ redukcji dawki przy odstawianiu.',
+                  'Długotrwałe leczenie glikokortykosteroidami — najczęstsza przyczyna SAI w praktyce klinicznej; zahamowanie osi przysadka-nadnercza wymaga stopniowej redukcji dawki przy odstawianiu.',
                   'Gruczolaki przysadki i ich leczenie operacyjne lub radioterapia.',
                   'Zespół Sheehana — martwica niedokrwienna przysadki po krwotoku poporodowym.',
                   'Urazy czaszki, krwotok do przysadki (apopleksja).',
@@ -351,9 +406,9 @@
           tests: [
             { id: 'cortisol', note: 'Pobranie 7:00–9:00, na czczo. < 138 nmol/L (5 μg/dL) → PAI prawdopodobna (wymaga testu potwierdzającego); > 500 nmol/L (18 μg/dL) → PAI wykluczona; przedział 138–500 nmol/L → wynik niejednoznaczny, wskazany test stymulacji Synacthen (Bornstein ES 2016).' },
             { id: 'acth',     note: 'Różnicuje PAI (↑↑) od SAI (norma/↓). Pobierać razem z kortyzolem porannym.' },
-            { ext: 'sodium', label: 'Sód (Na)', note: 'Hiponatremia to najczęstsze zaburzenie elektrolitowe w niedoczynności kory nadnerczy — występuje u ~70–80% pacjentów z postacią pierwotną (PAI) w momencie rozpoznania.', description: 'W niedoczynności kory nadnerczy typowo stwierdza się HIPONATREMIĘ (Na < 135 mmol/L). Mechanizm w postaci pierwotnej (PAI): niedobór aldosteronu powoduje utratę sodu przez nerki, a niedobór kortyzolu prowadzi do zwiększonego wydzielania wazopresyny (ADH) i retencji wody — co dodatkowo rozcieńcza sód. W postaci wtórnej (SAI) hiponatremia także może wystąpić (z powodu niedoboru kortyzolu i zwiększonego ADH), ale jest zwykle łagodniejsza, ponieważ wydzielanie aldosteronu jest zachowane (oś renina-angiotensyna-aldosteron nie zależy od ACTH przysadkowego). Hiponatremia jest objawem częstym, ale niespecyficznym — wymaga interpretacji łącznie z potasem, kortyzolem i ACTH.' },
-            { ext: 'potassium', label: 'Potas (K)', note: 'Hiperkaliemia występuje u ~30–50% pacjentów z pierwotną niedoczynnością kory nadnerczy (PAI). W postaci wtórnej (SAI) zwykle NIE występuje — wydzielanie aldosteronu jest zachowane.', description: 'W pierwotnej niedoczynności kory nadnerczy (PAI) typowo stwierdza się HIPERKALIEMIĘ (K > 5,0 mmol/L) — występuje u ~30–50% pacjentów. Mechanizm: niedobór aldosteronu zmniejsza wydalanie potasu przez nerki. W postaci wtórnej (SAI — niedobór ACTH przysadkowego) hiperkaliemia zwykle NIE występuje, ponieważ wydzielanie aldosteronu pozostaje prawidłowe (oś mineralokortykoidowa jest regulowana przez układ renina-angiotensyna, niezależnie od ACTH). Współwystępowanie HIPERKALIEMII I HIPONATREMII jest charakterystyczne dla pierwotnej niedoczynności kory nadnerczy z niedoborem mineralokortykosteroidów (klasyczna choroba Addisona) i pomaga różnicować PAI od SAI.' },
-            { ext: 'glucose_fasting', label: 'Glukoza na czczo', note: 'Hipoglikemia (zwłaszcza na czczo) — wynik niedoboru kortyzolu. Częściej jawna u dzieci, gdzie może być pierwszym objawem; u dorosłych zwykle łagodna, ale w przełomie nadnerczowym bywa ciężka.', description: 'W niedoczynności kory nadnerczy typowo stwierdza się HIPOGLIKEMIĘ na czczo. Mechanizm: niedobór kortyzolu zmniejsza glukoneogenezę wątrobową i zwiększa obwodową wrażliwość na insulinę, co prowadzi do spadku glikemii — szczególnie w okresie głodzenia. Hipoglikemia występuje zarówno w postaci pierwotnej (PAI), jak i wtórnej (SAI). U dzieci hipoglikemia jest częstsza i może być pierwszym objawem niedoczynności kory nadnerczy (drgawki hipoglikemiczne u niemowlęcia). U dorosłych zwykle jest łagodna lub subkliniczna, ale w przełomie nadnerczowym może być ciężka i zagrażająca życiu. Hipoglikemia na czczo u pacjenta bez cukrzycy powinna nasuwać podejrzenie niedoczynności kory nadnerczy w diagnostyce różnicowej.' }
+            { ext: 'sodium', label: 'Sód (Na)', note: 'Hiponatremia to najczęstsze zaburzenie elektrolitowe w niedoczynności kory nadnerczy — występuje u ~70–80% pacjentów z postacią pierwotną (PAI) w momencie rozpoznania.', description: 'W niedoczynności kory nadnerczy typowo stwierdza się hiponatremię (Na < 135 mmol/L). Mechanizm w postaci pierwotnej (PAI): niedobór aldosteronu powoduje utratę sodu przez nerki, a niedobór kortyzolu prowadzi do zwiększonego wydzielania wazopresyny (ADH) i retencji wody — co dodatkowo rozcieńcza sód. W postaci wtórnej (SAI) hiponatremia także może wystąpić (z powodu niedoboru kortyzolu i zwiększonego ADH), ale jest zwykle łagodniejsza, ponieważ wydzielanie aldosteronu jest zachowane (oś renina-angiotensyna-aldosteron nie zależy od ACTH przysadkowego). Hiponatremia jest objawem częstym, ale niespecyficznym — wymaga interpretacji łącznie z potasem, kortyzolem i ACTH.' },
+            { ext: 'potassium', label: 'Potas (K)', note: 'Hiperkaliemia występuje u ~30–50% pacjentów z pierwotną niedoczynnością kory nadnerczy (PAI). W postaci wtórnej (SAI) zwykle nie występuje — wydzielanie aldosteronu jest zachowane.', description: 'W pierwotnej niedoczynności kory nadnerczy (PAI) typowo stwierdza się hiperkaliemię (K > 5,0 mmol/L) — występuje u ~30–50% pacjentów. Mechanizm: niedobór aldosteronu zmniejsza wydalanie potasu przez nerki. W postaci wtórnej (SAI — niedobór ACTH przysadkowego) hiperkaliemia zwykle nie występuje, ponieważ wydzielanie aldosteronu pozostaje prawidłowe (oś mineralokortykoidowa jest regulowana przez układ renina-angiotensyna, niezależnie od ACTH). Współwystępowanie hiperkaliemii i hiponatremii jest charakterystyczne dla pierwotnej niedoczynności kory nadnerczy z niedoborem mineralokortykosteroidów (klasyczna choroba Addisona) i pomaga różnicować PAI od SAI.' },
+            { ext: 'glucose_fasting', label: 'Glukoza na czczo', note: 'Hipoglikemia (zwłaszcza na czczo) — wynik niedoboru kortyzolu. Częściej jawna u dzieci, gdzie może być pierwszym objawem; u dorosłych zwykle łagodna, ale w przełomie nadnerczowym bywa ciężka.', description: 'W niedoczynności kory nadnerczy typowo stwierdza się hipoglikemię na czczo. Mechanizm: niedobór kortyzolu zmniejsza glukoneogenezę wątrobową i zwiększa obwodową wrażliwość na insulinę, co prowadzi do spadku glikemii — szczególnie w okresie głodzenia. Hipoglikemia występuje zarówno w postaci pierwotnej (PAI), jak i wtórnej (SAI). U dzieci hipoglikemia jest częstsza i może być pierwszym objawem niedoczynności kory nadnerczy (drgawki hipoglikemiczne u niemowlęcia). U dorosłych zwykle jest łagodna lub subkliniczna, ale w przełomie nadnerczowym może być ciężka i zagrażająca życiu. Hipoglikemia na czczo u pacjenta bez cukrzycy powinna nasuwać podejrzenie niedoczynności kory nadnerczy w diagnostyce różnicowej.' }
           ]
         },
         { name: 'Test potwierdzający',
@@ -390,7 +445,7 @@
             kind: 'prose',
             icon: 'book-2',
             title: 'Definicja i klasyfikacja etiologiczna',
-            body: 'Zespół Cushinga — stan hiperkortyzolemii o różnej etiologii. ACTH-zależny (~80% przypadków): centralny — CHOROBA Cushinga (gruczolak przysadki produkujący ACTH, ~70%), ektopowy (guz pozaprzysadkowy produkujący ACTH — drobnokomórkowy rak płuca, rakowiak oskrzelowy, NET trzustki, ~10%). ACTH-niezależny (~20%): gruczolak nadnercza produkujący kortyzol (~10%), rak kory nadnercza (ACC, ~8%), przerost obustronny nadnerczy (zespoły genetyczne — Carney complex, McCune-Albright, PPNAD).'
+            body: 'Zespół Cushinga — stan hiperkortyzolemii o różnej etiologii. ACTH-zależny (~80% przypadków): centralny — choroba Cushinga (gruczolak przysadki produkujący ACTH, ~70%), ektopowy (guz pozaprzysadkowy produkujący ACTH — drobnokomórkowy rak płuca, rakowiak oskrzelowy, NET trzustki, ~10%). ACTH-niezależny (~20%): gruczolak nadnercza produkujący kortyzol (~10%), rak kory nadnercza (ACC, ~8%), przerost obustronny nadnerczy (zespoły genetyczne — Carney complex, McCune-Albright, PPNAD).'
           },
           {
             kind: 'list',
@@ -418,7 +473,7 @@
                 ]
               },
               { label: 'Kortyzol w dobowej zbiórce moczu (UDFC)', text: 'pomiar wolnego kortyzolu w 24-godzinnej zbiórce moczu — ocenia całkowitą produkcję kortyzolu; wartości > 3-krotnie powyżej górnej granicy normy są diagnostyczne.' },
-              { label: 'Kortyzol w ślinie nocnej', text: 'metoda NIEINWAZYJNA, oceniana w warunkach domowych; pobranie o godz. 23:00; ocenia rytm dobowy kortyzolu — utracony w zespole Cushinga.' }
+              { label: 'Kortyzol w ślinie nocnej', text: 'metoda nieinwazyjna, oceniana w warunkach domowych; pobranie o godz. 23:00; ocenia rytm dobowy kortyzolu — utracony w zespole Cushinga.' }
             ]
           },
           {
@@ -506,7 +561,7 @@
             kind: 'prose',
             icon: 'book-2',
             title: 'Definicja i postacie kliniczne',
-            body: 'Wrodzony Przerost Nadnerczy (WPN) — w ~95% przypadków niedobór 21-hydroksylazy (mutacje genu CYP21A2). Dziedziczenie autosomalne recesywne. Trzy główne postacie kliniczne: KLASYCZNA z utratą soli (~75% klasycznej — noworodek z odwodnieniem, hiponatremią, HIPERKALIEMIĄ, możliwym przełomem solnym); KLASYCZNA prosta wirylizująca (~25% klasycznej — dziewczynka z wirylizacją genitaliów lub chłopak z przedwczesnym pokwitaniem rzekomym); NIEKLASYCZNA (NCAH, późno ujawniająca się — kobieta dorosła z hiperandrogenizmem, PCOS, niepłodnością).'
+            body: 'Wrodzony Przerost Nadnerczy (WPN) — w ~95% przypadków niedobór 21-hydroksylazy (mutacje genu CYP21A2). Dziedziczenie autosomalne recesywne. Trzy główne postacie kliniczne: klasyczna z utratą soli (~75% klasycznej — noworodek z odwodnieniem, hiponatremią, hiperkaliemią, możliwym przełomem solnym); klasyczna prosta wirylizująca (~25% klasycznej — dziewczynka z wirylizacją genitaliów lub chłopak z przedwczesnym pokwitaniem rzekomym); nieklasyczna (NCAH, późno ujawniająca się — kobieta dorosła z hiperandrogenizmem, PCOS, niepłodnością).'
           },
           {
             kind: 'list',
@@ -534,15 +589,15 @@
                   'Pobranie: rano (7:00–9:00); kobiety w fazie folikularnej (dni 2–5) — fizjologicznie wyższe wartości w fazie lutealnej, ciąży i u noworodków w pierwszych dobach życia.'
                 ]
               },
-              { label: 'Androstendion', text: 'wzrasta równolegle z 17-OHP; marker MONITOROWANIA leczenia hydrokortyzonem — cel: środkowy zakres normy dla wieku (zbyt niska wartość = nadmierna substytucja, zbyt wysoka = niedostateczna).' },
+              { label: 'Androstendion', text: 'wzrasta równolegle z 17-OHP; marker monitorowania leczenia hydrokortyzonem — cel: środkowy zakres normy dla wieku (zbyt niska wartość = nadmierna substytucja, zbyt wysoka = niedostateczna).' },
               { label: 'Testosteron całkowity + DHEA-S', text: 'profil androgenowy — podwyższone w klasycznym WPN i NCAH, odzwierciedlają hiperandrogenizm.' },
               {
                 label: 'Postać z utratą soli — elektrolity + PRA',
                 text: 'u noworodków/niemowląt z odwodnieniem:',
                 detail: [
                   'Hiponatremia (Na < 135 mmol/L) — niedobór aldosteronu → utrata sodu z moczem.',
-                  'HIPERKALIEMIA (K > 5,0 mmol/L) — niedobór aldosteronu → zmniejszone wydalanie potasu.',
-                  'PRA (aktywność reninowa osocza) WYSOKA — kompensacyjna aktywacja RAA wobec niedoboru aldosteronu; służy także do monitorowania leczenia mineralokortykosteroidami (fludrokortyzon).'
+                  'hiperkaliemia (K > 5,0 mmol/L) — niedobór aldosteronu → zmniejszone wydalanie potasu.',
+                  'PRA (aktywność reninowa osocza) wysoka — kompensacyjna aktywacja RAA wobec niedoboru aldosteronu; służy także do monitorowania leczenia mineralokortykosteroidami (fludrokortyzon).'
                 ]
               }
             ]
@@ -556,8 +611,8 @@
                 label: 'Niedobór 11β-hydroksylazy (~5% klasycznego WPN)',
                 text: 'CYP11B1 — odmienny obraz hormonalny:',
                 detail: [
-                  'NADCIŚNIENIE TĘTNICZE + wirylizacja (gromadzenie 11-deoksykortykosteronu o aktywności mineralokortykoidowej).',
-                  '11-deoksykortyzol PODWYŻSZONY — kluczowy marker.',
+                  'nadciśnienie tętnicze + wirylizacja (gromadzenie 11-deoksykortykosteronu o aktywności mineralokortykoidowej).',
+                  '11-deoksykortyzol podwyższony — kluczowy marker.',
                   '17-OHP może być umiarkowanie podwyższony, ale androstendion znacznie podwyższony.'
                 ]
               },
@@ -588,7 +643,7 @@
         { name: 'Test potwierdzający i genetyka',
           tests: [
             { ext: 'synacthen_acth_cah', label: 'Test stymulacji ACTH (Synacthen, pomiar 17-OHP)', note: 'Gdy 17-OHP bazalny 6–30 nmol/L. Szczyt 17-OHP po stymulacji > 30 nmol/L (10 ng/mL) potwierdza NCAH lub klasyczny WPN.', description: 'Test stymulacji ACTH w diagnostyce WPN — wariant z pomiarem 17-OH-progesteronu (a nie kortyzolu jak w PAI). Wskazany gdy 17-OHP bazalny w zakresie niejednoznacznym (6–30 nmol/L). Protokół: podanie i.m. lub i.v. 250 μg tetracosactide (Synacthen) rano. Pomiar 17-OHP przed (0 min) i w 60. minucie po podaniu. Kryterium: szczyt 17-OHP > 30 nmol/L (10 ng/mL) → potwierdza NCAH lub klasyczny WPN; > 100 nmol/L sugeruje klasyczny WPN, 30–100 nmol/L sugeruje NCAH. Nomogram White\'a–Speisera pozwala różnicować homozygot, heterozygot i osoby zdrowe na podstawie stężeń 17-OHP przed i po stymulacji. Test można rozszerzyć o równoległy pomiar innych prekursorów (17-OH-pregnenolon, 11-deoksykortyzol) — wskazane przy podejrzeniu rzadkich postaci WPN.' },
-            { ext: 'cyp21a2_gen', label: 'Genetyka CYP21A2', note: 'Potwierdza rozpoznanie. Kluczowe dla poradnictwa genetycznego (autosomalna recesywna, ryzyko 25% u rodzeństwa).', description: 'Sekwencjonowanie genu CYP21A2 (chromosom 6p21.3) — potwierdza rozpoznanie WPN z niedoboru 21-hydroksylazy. Najczęstsze mutacje sprawcze: I2G (~30%, splice-site), I172N (~20%, postać prosta wirylizująca), V281L (~50% NCAH), delecja genu / konwersja z pseudogenem CYP21A1P (~20%, klasyczna z utratą soli). Dziedziczenie autosomalne recesywne. Ryzyko zachorowania u rodzeństwa probanta: 25%. Diagnostyka prenatalna (kosmówka 10.–12. tydzień ciąży) możliwa po identyfikacji mutacji u rodziców — pozwala wczesne rozpoznanie u płodu. **UWAGA: prenatalne leczenie deksametazonem płodów żeńskich w celu zapobiegania wirylizacji genitaliów jest obecnie traktowane jako EKSPERYMENTALNE i NIE jest zalecane rutynowo wg wytycznych Endocrine Society 2018 (Speiser i wsp.) — powinno być wykonywane wyłącznie w ramach zatwierdzonych protokołów badawczych ze względu na obawy długoterminowe (potencjalne skutki neurorozwojowe u płodów, niepotrzebna ekspozycja 7 z 8 płodów które nie wymagają leczenia).**' }
+            { ext: 'cyp21a2_gen', label: 'Genetyka CYP21A2', note: 'Potwierdza rozpoznanie. Kluczowe dla poradnictwa genetycznego (autosomalna recesywna, ryzyko 25% u rodzeństwa).', description: 'Sekwencjonowanie genu CYP21A2 (chromosom 6p21.3) — potwierdza rozpoznanie WPN z niedoboru 21-hydroksylazy. Najczęstsze mutacje sprawcze: I2G (~30%, splice-site), I172N (~20%, postać prosta wirylizująca), V281L (~50% NCAH), delecja genu / konwersja z pseudogenem CYP21A1P (~20%, klasyczna z utratą soli). Dziedziczenie autosomalne recesywne. Ryzyko zachorowania u rodzeństwa probanta: 25%. Diagnostyka prenatalna (kosmówka 10.–12. tydzień ciąży) możliwa po identyfikacji mutacji u rodziców — pozwala wczesne rozpoznanie u płodu. **Uwaga: prenatalne leczenie deksametazonem płodów żeńskich w celu zapobiegania wirylizacji genitaliów jest obecnie traktowane jako EKSPERYMENTALNE i nie jest zalecane rutynowo wg wytycznych Endocrine Society 2018 (Speiser i wsp.) — powinno być wykonywane wyłącznie w ramach zatwierdzonych protokołów badawczych ze względu na obawy długoterminowe (potencjalne skutki neurorozwojowe u płodów, niepotrzebna ekspozycja 7 z 8 płodów które nie wymagają leczenia).**' }
           ]
         },
         { name: 'Sytuacje szczególne (rzadkie postaci WPN)',
@@ -616,7 +671,7 @@
             kind: 'prose',
             icon: 'book-2',
             title: 'Definicja i epidemiologia',
-            body: 'Pierwotny hiperaldosteronizm (PHA) — autonomiczne nadmierne wydzielanie aldosteronu przez nadnercza (jednostronny gruczolak Conn lub obustronny przerost). Odpowiada za ~5–10% nadciśnienia tętniczego ogółem i ~20% nadciśnienia opornego. W Polsce skrining wykonywany u ~1% pacjentów z HT — istotnie NIEDODIAGNOZOWANY. Rozpoznanie pozwala na celowane leczenie: w postaci jednostronnej — adrenalektomia laparoskopowa (potencjalnie wyleczenie), w obustronnej — antagoniści receptora mineralokortykoidowego (MRA — spironolakton, eplerenon).'
+            body: 'Pierwotny hiperaldosteronizm (PHA) — autonomiczne nadmierne wydzielanie aldosteronu przez nadnercza (jednostronny gruczolak Conn lub obustronny przerost). Odpowiada za ~5–10% nadciśnienia tętniczego ogółem i ~20% nadciśnienia opornego. W Polsce skrining wykonywany u ~1% pacjentów z HT — istotnie niedodiagnozowany. Rozpoznanie pozwala na celowane leczenie: w postaci jednostronnej — adrenalektomia laparoskopowa (potencjalnie wyleczenie), w obustronnej — antagoniści receptora mineralokortykoidowego (MRA — spironolakton, eplerenon).'
           },
           {
             kind: 'list',
@@ -624,8 +679,8 @@
             title: 'Wskazania do skriningu (Endocrine Society 2016 / PTNT 2019)',
             items: [
               { label: 'Nadciśnienie z hipokaliemią', text: 'jawną lub indukowaną diuretykami; klasyczne wskazanie.' },
-              { label: 'Nadciśnienie OPORNE', text: '≥ 3 leki w pełnych dawkach, w tym diuretyk.' },
-              { label: 'Nadciśnienie CIĘŻKIE', text: '≥ 160/100 mmHg.' },
+              { label: 'Nadciśnienie oporne', text: '≥ 3 leki w pełnych dawkach, w tym diuretyk.' },
+              { label: 'Nadciśnienie ciężkie', text: '≥ 160/100 mmHg.' },
               { label: 'Nadciśnienie u młodych', text: '< 40 lat — wczesne nadciśnienie wymaga wykluczenia wtórnych przyczyn endokrynologicznych.' },
               { label: 'Incidentaloma nadnercza + nadciśnienie', text: 'ocena czynności hormonalnej guza nadnercza.' },
               { label: 'Nadciśnienie + bezdech senny (OSA)', text: 'częsta asocjacja kliniczna.' },
@@ -642,8 +697,8 @@
                 text: 'kluczowe są warunki pobrania i przygotowanie:',
                 detail: [
                   'Warunki pobrania: rano (8:00–10:00), pacjent na nogach ≥ 2 h przed pobraniem, ostatnie 5–15 min siedząc.',
-                  'WYRÓWNANIE kaliemii > 4,0 mmol/L PRZED pobraniem — hipokaliemia hamuje aldosteron i daje fałszywie ujemny wynik.',
-                  'Odstawienie leków wpływających: MRA (spironolakton, eplerenon) 4–6 tygodni; β-blokery 2 tygodnie; ACEI, ARB, diuretyki w miarę możliwości; α-blokery (doksazosyna) i blokery kanału wapniowego (werapamil, diltiazem) NIE wpływają istotnie i mogą być kontynuowane.',
+                  'Wyrównanie kaliemii > 4,0 mmol/L przed pobraniem — hipokaliemia hamuje aldosteron i daje fałszywie ujemny wynik.',
+                  'Odstawienie leków wpływających: MRA (spironolakton, eplerenon) 4–6 tygodni; β-blokery 2 tygodnie; ACEI, ARB, diuretyki w miarę możliwości; α-blokery (doksazosyna) i blokery kanału wapniowego (werapamil, diltiazem) nie wpływają istotnie i mogą być kontynuowane.',
                   'ARR > 30 (z aldosteronem w ng/dL i reniną w ng/mL/h) jest progiem skriningowym — wskazane potwierdzenie.'
                 ]
               },
@@ -668,7 +723,7 @@
             { id: 'aldosterone', note: 'Pobranie rano (8:00–10:00), pacjent na nogach ≥ 2 h, ostatnie 5–15 min siedząc.' },
             EXT.pra_pac,
             EXT.arr,
-            { ext: 'potassium', label: 'Potas (K)', note: 'Uwaga: ~50% pacjentów z PHA ma normokaliemię — brak hipokaliemii NIE wyklucza rozpoznania.', description: 'Przed pobraniem wyrównać kaliemię (K > 4,0 mmol/L) — jest to warunek wiarygodności wskaźnika ARR i testu obciążenia solą. Hipokaliemia hamuje wydzielanie aldosteronu, co daje fałszywie ujemny wynik.' },
+            { ext: 'potassium', label: 'Potas (K)', note: 'Uwaga: ~50% pacjentów z PHA ma normokaliemię — brak hipokaliemii nie wyklucza rozpoznania.', description: 'Przed pobraniem wyrównać kaliemię (K > 4,0 mmol/L) — jest to warunek wiarygodności wskaźnika ARR i testu obciążenia solą. Hipokaliemia hamuje wydzielanie aldosteronu, co daje fałszywie ujemny wynik.' },
             { ext: 'sodium', label: 'Sód (Na)', note: 'W PHA zwykle prawidłowy lub w górnym zakresie normy (140–145 mmol/L) — niediagnostyczny, ale przydatny w różnicowaniu.', description: 'W PHA nadmiar mineralokortykoidów powoduje retencję sodu, ale nerki "uciekają" przed nadmierną hipernatremią poprzez zjawisko aldosterone escape — stąd sód jest zwykle w górnym zakresie normy. Hiponatremia przemawia przeciwko PHA i sugeruje wtórny hiperaldosteronizm (np. niewydolność serca, marskość, zespół nerczycowy) lub PAI.' }
           ]
         },
@@ -702,7 +757,7 @@
             kind: 'prose',
             icon: 'book-2',
             title: 'Definicja',
-            body: 'Incidentaloma nadnercza — zmiana przypadkowo wykryta w obrazowaniu wykonanym z innego powodu (najczęściej w TK jamy brzusznej z innych wskazań), o wymiarze > 1 cm. Częstość w populacji dorosłych: ~4–7% w TK, rośnie z wiekiem. KAŻDY incidentaloma > 1 cm wymaga DWUSTOPNIOWEJ oceny: (1) czynności hormonalnej (czy zmiana jest czynna), (2) ryzyka złośliwości (na podstawie cech radiologicznych).'
+            body: 'Incidentaloma nadnercza — zmiana przypadkowo wykryta w obrazowaniu wykonanym z innego powodu (najczęściej w TK jamy brzusznej z innych wskazań), o wymiarze > 1 cm. Częstość w populacji dorosłych: ~4–7% w TK, rośnie z wiekiem. Każdy incidentaloma > 1 cm wymaga dwustopniowej oceny: (1) czynności hormonalnej (czy zmiana jest czynna), (2) ryzyka złośliwości (na podstawie cech radiologicznych).'
           },
           {
             kind: 'list',
@@ -710,7 +765,7 @@
             title: 'Skrining hormonalny obowiązkowy (każdy incidentaloma)',
             items: [
               { label: 'Subkliniczny zespół Cushinga', text: 'test hamowania 1 mg DST — najczęstsza nadczynność wykrywana w incidentaloma (~5–10% przypadków).' },
-              { label: 'Pheochromocytoma', text: 'wolne metoksykatecholaminy w osoczu LUB frakcjonowane metanefryny w DZM. KRYTYCZNE: oznaczenie obowiązkowe przed jakąkolwiek operacją lub biopsją — biopsja nierozpoznanego pheochromocytoma może wywołać PRZEŁOM KATECHOLAMINOWY (zagrażający życiu kryzys nadciśnieniowy).' }
+              { label: 'Pheochromocytoma', text: 'wolne metoksykatecholaminy w osoczu LUB frakcjonowane metanefryny w DZM. Krytyczne: oznaczenie obowiązkowe przed jakąkolwiek operacją lub biopsją — biopsja nierozpoznanego pheochromocytoma może wywołać przełom katecholaminowy (zagrażający życiu kryzys nadciśnieniowy).' }
             ]
           },
           {
@@ -751,7 +806,7 @@
                 text: 'na podstawie wymiaru, cech radiologicznych i czynności hormonalnej:',
                 detail: [
                   'Wymiar > 4 cm + cechy złośliwości w obrazowaniu → kwalifikacja do operacji (adrenalektomia).',
-                  'obowiązkowe wykluczenie pheo metanefrynami PRZED operacją lub biopsją.',
+                  'Obowiązkowe wykluczenie pheo metanefrynami przed operacją lub biopsją.',
                   'Łagodne, niewydzielające gruczolaki < 4 cm → obserwacja (kontrolne TK/MRI po 6–12 mies., później mniej często).'
                 ]
               }
@@ -802,7 +857,7 @@
             kind: 'prose',
             icon: 'book-2',
             title: 'Definicja i ocena',
-            body: 'Hirsutyzm — nadmierne owłosienie typu męskiego u kobiety (włosy terminalne w obszarach androgenozależnych: twarz, klatka piersiowa, brzuch, plecy, uda). Ocena półilościowa: skala Ferrimana-Gallwaya (mFG) > 8 punktów u kobiet rasy białej; > 6 u Azjatek. UWAGA: cechy wirylizacji (klitoromegalia, rozległe łysienie typu męskiego, obniżenie głosu, zanik piersi) + szybki początek objawów → PILNE wykluczenie guza androgennego (testosteron całkowity, DHEA-S, obrazowanie).'
+            body: 'Hirsutyzm — nadmierne owłosienie typu męskiego u kobiety (włosy terminalne w obszarach androgenozależnych: twarz, klatka piersiowa, brzuch, plecy, uda). Ocena półilościowa: skala Ferrimana-Gallwaya (mFG) > 8 punktów u kobiet rasy białej; > 6 u Azjatek. Uwaga: cechy wirylizacji (klitoromegalia, rozległe łysienie typu męskiego, obniżenie głosu, zanik piersi) + szybki początek objawów → pilne wykluczenie guza androgennego (testosteron całkowity, DHEA-S, obrazowanie).'
           },
           {
             kind: 'list',
@@ -831,7 +886,7 @@
             items: [
               { label: 'Hirsutyzm umiarkowany/ciężki (mFG > 8)', text: 'pełna diagnostyka różnicowa — profil androgenowy + wykluczenie chorób współistniejących.' },
               { label: 'Szybkie narastanie objawów', text: 'czas trwania < 1 rok lub gwałtowne pogorszenie — wymaga szczegółowej oceny.' },
-              { label: 'Cechy wirylizacji', text: 'klitoromegalia, rozległe łysienie typu męskiego, obniżenie głosu, zanik piersi — PILNE wykluczenie guza androgennego.' },
+              { label: 'Cechy wirylizacji', text: 'klitoromegalia, rozległe łysienie typu męskiego, obniżenie głosu, zanik piersi — pilne wykluczenie guza androgennego.' },
               { label: 'Zaburzenia miesiączki', text: 'oligo-/amenorrhea, niepłodność — często towarzyszą hiperandrogenizmowi w PCOS lub NCAH.' }
             ]
           },
@@ -871,7 +926,7 @@
           tests: [
             { id: 'testosterone_total', note: 'Pobranie rano (7:00–10:00), faza folikularna (dni 2–5 cyklu). > 7 nmol/L (200 ng/dL) → podejrzenie guza androgennego.', description: 'Testosteron całkowity — pomiar w surowicy rano (7:00–10:00) na czczo. U kobiet z regularnym cyklem optymalne pobranie w fazie folikularnej (dni 2–5 cyklu menstruacyjnego); w PCOS lub innej anowulacji moment pobrania mniej istotny. Norma laboratoryjna u kobiet: 0,3–2,4 nmol/L (8–70 ng/dL). Interpretacja w kontekście hirsutyzmu: wartości w górnej granicy normy lub łagodnie podwyższone (2,4–7 nmol/L) → typowe dla PCOS lub NCAH; > 7 nmol/L (200 ng/dL) → silne podejrzenie guza androgennego (gonadalnego lub nadnerczowego), pilna dalsza diagnostyka obrazowa (USG narządów rodnych, TK nadnerczy). Metoda referencyjna: LC-MS/MS; bezpośrednie immunoassaye mogą zaniżać wyniki u kobiet (Endocrine Society 2018).' },
             { id: 'shbg', note: 'Niska w insulinooporności (PCOS, otyłość). Służy do obliczenia FAI (free androgen index) = T całkowity × 100 / SHBG; FAI > 5 → biochemiczny hiperandrogenizm.', description: 'SHBG (Sex Hormone-Binding Globulin) — globulina wiążąca hormony płciowe, produkowana w wątrobie. Wiąże testosteron z wysoką afinicją, regulując frakcję wolną (biologicznie aktywną). W warunkach insulinooporności (PCOS, otyłość, zespół metaboliczny) produkcja SHBG w wątrobie jest zmniejszona — prowadzi to do względnego wzrostu wolnego testosteronu nawet przy prawidłowym lub łagodnie podwyższonym testosteronie całkowitym. Norma: 20–130 nmol/L (zależy od metody). Zastosowanie kliniczne: obliczenie FAI (Free Androgen Index) wg wzoru: FAI = (testosteron całkowity × 100) / SHBG. FAI > 5 → biochemiczny hiperandrogenizm (czulszy parametr niż sam testosteron całkowity). FAI > 10 — wartości wyraźnie patologiczne.' },
-            { id: 'testosterone_free', note: 'Bezpośredni pomiar wolnej frakcji (~2% testosteronu). Preferowane metody: dializa równowagowa (LC-MS/MS) lub obliczenie z testosteronu całkowitego + SHBG + albuminy.', description: 'Testosteron wolny stanowi ~2% testosteronu całkowitego i jest biologicznie aktywną frakcją hormonu. Metody pomiaru: (1) dializa równowagowa z pomiarem LC-MS/MS — referencyjna, najczulsza; (2) ultrafiltracja + LC-MS/MS; (3) obliczenie z testosteronu całkowitego + SHBG + albuminy wg wzoru Vermeulena (dostępne w kalkulatorach online). Bezpośrednie immunoassaye (RIA, ELISA) są NIEZALECANE u kobiet — niska dokładność w zakresie kobiecych stężeń (PTE 2018, Endocrine Society 2018). Norma laboratoryjna u kobiet: 1,7–22 pmol/L (0,5–6,3 pg/mL); w hirsutyzmie zwykle podwyższony nawet przy granicznych wartościach testosteronu całkowitego.' },
+            { id: 'testosterone_free', note: 'Bezpośredni pomiar wolnej frakcji (~2% testosteronu). Preferowane metody: dializa równowagowa (LC-MS/MS) lub obliczenie z testosteronu całkowitego + SHBG + albuminy.', description: 'Testosteron wolny stanowi ~2% testosteronu całkowitego i jest biologicznie aktywną frakcją hormonu. Metody pomiaru: (1) dializa równowagowa z pomiarem LC-MS/MS — referencyjna, najczulsza; (2) ultrafiltracja + LC-MS/MS; (3) obliczenie z testosteronu całkowitego + SHBG + albuminy wg wzoru Vermeulena (dostępne w kalkulatorach online). Bezpośrednie immunoassaye (RIA, ELISA) są niezalecane u kobiet — niska dokładność w zakresie kobiecych stężeń (PTE 2018, Endocrine Society 2018). Norma laboratoryjna u kobiet: 1,7–22 pmol/L (0,5–6,3 pg/mL); w hirsutyzmie zwykle podwyższony nawet przy granicznych wartościach testosteronu całkowitego.' },
             { id: 'dhea_s', note: 'Marker źródła nadnerczowego androgenów (DHEA-S produkowany wyłącznie w korze nadnerczy). > 18,9 μmol/L (700 μg/dL) → silne podejrzenie guza nadnercza.', description: 'DHEA-S (siarczan dehydroepiandrosteronu) — produkowany niemal wyłącznie w warstwie siateczkowatej kory nadnerczy. Bardzo stabilny w surowicy (długi okres półtrwania), niezależny od rytmu dobowego i fazy cyklu — wygodny marker źródła nadnerczowego androgenów. Wartości u kobiet w wieku rozrodczym: 1,9–9,4 μmol/L (70–350 μg/dL). Interpretacja w hirsutyzmie: łagodne podwyższenie (do ~13 μmol/L) → typowe dla PCOS lub fizjologicznej adrenarchy; > 13 μmol/L (500 μg/dL) → wymaga dalszej diagnostyki (NCAH, hiperplazja, gruczolak androgenny); > 18,9 μmol/L (700 μg/dL) → silne podejrzenie guza nadnercza (gruczolak androgenny lub rak kory nadnercza), wskazane TK nadnerczy.' },
             { id: 'oh17_progesterone', note: 'Wykluczenie NCAH (z niedoboru 21-hydroksylazy). Pobranie rano, faza folikularna; bazalnie > 6 nmol/L (2 ng/mL) wymaga testu stymulacji ACTH.', description: 'Wykluczenie nieklasycznego wrodzonego przerostu nadnerczy (NCAH) z niedoboru 21-hydroksylazy. Pobranie: rano (7:00–9:00), kobiety w fazie folikularnej cyklu (dni 2–5; w II połowie cyklu wartości fizjologicznie wyższe — fałszywie dodatnie wyniki). Bazalne 17-OH-progesteron: < 6 nmol/L (2 ng/mL) → wyklucza klasyczny WPN, jednak część NCAH ma wartości bazalne < 6 (ujawnia się dopiero po stymulacji); 6–30 nmol/L → wynik niejednoznaczny, wskazany test stymulacji ACTH (Synacthen) z pomiarem 17-OHP w 0 i 60 min; > 30 nmol/L → potwierdza WPN (klasyczny lub NCAH). Częstość NCAH: 1:200–1:1000 w populacji ogólnej; znacznie wyższa u Aszkenazyjczyków (do 1:27), Hiszpanów i Włochów.' },
             { id: 'androstenedione', note: 'Uzupełnia profil androgenowy, wzrasta w PCOS i NCAH. Pomocne w monitorowaniu leczenia WPN.', description: 'Androstendion (Δ4-androstendion) — prekursor steroidowy o słabej aktywności androgennej, produkowany w korze nadnerczy (~50%) oraz jajnikach (~50%). Wzrasta w stanach hiperandrogenizmu (PCOS, NCAH, guz androgenny). Norma u kobiet w wieku rozrodczym: 1,2–10,5 nmol/L (35–300 ng/dL). Zastosowanie: uzupełnia profil androgenowy obok testosteronu i DHEA-S, służy też do monitorowania skuteczności leczenia WPN hydrokortyzonem (cel terapeutyczny: środkowy zakres normy dla wieku i płci). W guzach androgennych zwykle znacznie podwyższony razem z testosteronem.' }
@@ -918,8 +973,8 @@
             items: [
               { label: 'Rozpoznanie wymaga 2 z 3 kryteriów', text: '(1) oligo-/anowulacja; (2) hiperandrogenizm kliniczny (hirsutyzm, trądzik, łysienie typu męskiego) lub biochemiczny; (3) polycystic w USG.' },
               { label: 'Kryterium USG (aktualizacja 2018)', text: '≥ 20 pęcherzyków o średnicy 2–9 mm w jednym jajniku LUB objętość jajnika > 10 mL (wcześniejszy próg z 2003 r. ≥ 12 pęcherzyków — zmieniony ze względu na wyższą rozdzielczość nowoczesnych aparatów USG).' },
-              { label: 'U młodzieży < 8 lat od menarche', text: 'USG NIE jest stosowane jako kryterium diagnostyczne — obraz wielopęcherzykowy w tym wieku fizjologiczny.' },
-              { label: 'AMH NIE jako kryterium', text: 'międzynarodowy konsensus 2023 (Teede) — brak standaryzacji metod między laboratoriami; AMH pełni rolę POMOCNICZĄ.' }
+              { label: 'U młodzieży < 8 lat od menarche', text: 'USG nie jest stosowane jako kryterium diagnostyczne — obraz wielopęcherzykowy w tym wieku fizjologiczny.' },
+              { label: 'AMH nie jako kryterium', text: 'międzynarodowy konsensus 2023 (Teede) — brak standaryzacji metod między laboratoriami; AMH pełni rolę pomocniczą.' }
             ]
           },
           {
@@ -940,12 +995,12 @@
               },
               {
                 label: 'Wykluczenie innych przyczyn — kryterium Rotterdam',
-                text: 'PRZED rozpoznaniem PCOS należy wykluczyć:',
+                text: 'Przed rozpoznaniem PCOS należy wykluczyć:',
                 detail: [
                   '17-OH-progesteron (rano, faza folikularna) — wykluczenie NCAH (z niedoboru 21-hydroksylazy); bazalnie > 6 nmol/L → test stymulacji ACTH.',
                   'TSH — wykluczenie dysfunkcji tarczycy (może imitować lub współwystępować z PCOS).',
                   'Prolaktyna — wykluczenie hiperprolaktynemii (pobranie w spoczynku, przy wartościach granicznych powtórzyć).',
-                  'Test hamowania 1 mg DST — TYLKO gdy cechy cushingoidalne; rutynowy skrining Cushinga w PCOS NIE jest zalecany.'
+                  'Test hamowania 1 mg DST — TYLKO gdy cechy cushingoidalne; rutynowy skrining Cushinga w PCOS nie jest zalecany.'
                 ]
               },
               {
@@ -962,8 +1017,8 @@
             kind: 'callout',
             variant: 'purple',
             icon: 'mood-kid',
-            title: 'obowiązkowa ocena metaboliczna u KAŻDEJ pacjentki z PCOS',
-            body: 'Międzynarodowy konsensus PCOS 2018/2023 (Teede i wsp.): u każdej pacjentki z rozpoznanym PCOS należy wykonać ocenę metaboliczną przy rozpoznaniu i powtarzać co 1–3 lata. PCOS wiąże się ze ZNACZNIE podwyższonym ryzykiem: cukrzycy typu 2 (~2–4× wyższe niż w populacji ogólnej, niezależnie od BMI), zespołu metabolicznego, niealkoholowej stłuszczeniowej choroby wątroby (NAFLD/MASLD — ~40% kobiet z PCOS), dyslipidemii, powikłań sercowo-naczyniowych. Ocena metaboliczna w PCOS jest tak samo ważna jak diagnostyka hormonalna.'
+            title: 'Obowiązkowa ocena metaboliczna u każdej pacjentki z PCOS',
+            body: 'Międzynarodowy konsensus PCOS 2018/2023 (Teede i wsp.): u każdej pacjentki z rozpoznanym PCOS należy wykonać ocenę metaboliczną przy rozpoznaniu i powtarzać co 1–3 lata. PCOS wiąże się ze znacznie podwyższonym ryzykiem: cukrzycy typu 2 (~2–4× wyższe niż w populacji ogólnej, niezależnie od BMI), zespołu metabolicznego, niealkoholowej stłuszczeniowej choroby wątroby (NAFLD/MASLD — ~40% kobiet z PCOS), dyslipidemii, powikłań sercowo-naczyniowych. Ocena metaboliczna w PCOS jest tak samo ważna jak diagnostyka hormonalna.'
           },
           {
             kind: 'list',
@@ -972,7 +1027,7 @@
             items: [
               { label: 'oGTT 75 g (preferowany skrining cukrzycy w PCOS)', text: 'pomiar glikemii na czczo i po 120 min; bardziej czuły niż HbA1c we wczesnym wykrywaniu IGT w PCOS; powtarzać co 1–3 lata.' },
               { label: 'HbA1c (hemoglobina glikowana)', text: 'alternatywa lub uzupełnienie oGTT; stan przedcukrzycowy 5,7–6,4%; cukrzyca ≥ 6,5%.' },
-              { label: 'Insulina + HOMA-IR', text: 'ocena insulinooporności (HOMA-IR > 2,5); w międzynarodowym konsensusie OPCJONALNE (brak standaryzacji), w polskiej praktyce powszechne.' },
+              { label: 'Insulina + HOMA-IR', text: 'ocena insulinooporności (HOMA-IR > 2,5); w międzynarodowym konsensusie opcjonalne (brak standaryzacji), w polskiej praktyce powszechne.' },
               { label: 'Lipidogram (TC, LDL, HDL, TG)', text: 'ryzyko dyslipidemii znacznie podwyższone; typowo ↓ HDL i ↑ trójglicerydy.' },
               { label: 'ALAT, ASPAT', text: 'skrining NAFLD/MASLD — występuje u ~40% kobiet z PCOS, częściej u otyłych z insulinoopornością.' },
               { label: 'Witamina D 25-OH', text: 'niedobór częsty w PCOS (~70%), może nasilać insulinooporność; cel terapeutyczny > 75 nmol/L (30 ng/mL).' }
@@ -985,7 +1040,7 @@
           tests: [
             { id: 'testosterone_total', note: 'Pobranie rano, faza folikularna. W PCOS zwykle łagodnie podwyższony; > 7 nmol/L (200 ng/dL) → wykluczyć guz androgenny.', description: 'Testosteron całkowity w PCOS — pomiar w surowicy rano (7:00–10:00), u kobiet z regularnym cyklem w fazie folikularnej (dni 2–5); w anowulacji moment pobrania mniej istotny. W PCOS testosteron jest zwykle łagodnie podwyższony (do ~5 nmol/L) lub w górnej granicy normy. Wartości > 7 nmol/L (200 ng/dL) → konieczne pilne wykluczenie guza androgennego (gonadalnego lub nadnerczowego). Metoda referencyjna LC-MS/MS; bezpośrednie immunoassaye mogą zaniżać wyniki u kobiet (Endocrine Society / PTE 2018).' },
             { id: 'shbg', note: 'W PCOS zwykle obniżona (insulinooporność hamuje produkcję wątrobową). Służy do obliczenia FAI = T całkowity × 100 / SHBG; FAI > 5 → biochemiczny hiperandrogenizm.', description: 'SHBG (globulina wiążąca hormony płciowe) — w PCOS często obniżona, ponieważ insulinooporność hamuje jej syntezę w wątrobie. Skutkuje to względnym wzrostem wolnej (biologicznie aktywnej) frakcji testosteronu nawet przy prawidłowym lub łagodnie podwyższonym testosteronie całkowitym. Zastosowanie kliniczne: obliczenie FAI (Free Androgen Index) = (testosteron całkowity × 100) / SHBG. FAI > 5 → biochemiczny hiperandrogenizm (czulszy parametr niż sam testosteron całkowity).' },
-            { id: 'testosterone_free', note: 'Czulszy parametr biochemicznego hiperandrogenizmu niż testosteron całkowity. LC-MS/MS lub obliczenie z T całkowitego + SHBG + albuminy.', description: 'Testosteron wolny stanowi ~2% testosteronu całkowitego i jest biologicznie aktywną frakcją. W PCOS często podwyższony nawet przy granicznych wartościach testosteronu całkowitego (z powodu obniżonej SHBG). Metody: dializa równowagowa lub ultrafiltracja z LC-MS/MS (referencyjne) lub obliczenie z testosteronu całkowitego + SHBG + albuminy wg wzoru Vermeulena. Bezpośrednie immunoassaye u kobiet NIEZALECANE (niska dokładność w zakresie kobiecych stężeń).' },
+            { id: 'testosterone_free', note: 'Czulszy parametr biochemicznego hiperandrogenizmu niż testosteron całkowity. LC-MS/MS lub obliczenie z T całkowitego + SHBG + albuminy.', description: 'Testosteron wolny stanowi ~2% testosteronu całkowitego i jest biologicznie aktywną frakcją. W PCOS często podwyższony nawet przy granicznych wartościach testosteronu całkowitego (z powodu obniżonej SHBG). Metody: dializa równowagowa lub ultrafiltracja z LC-MS/MS (referencyjne) lub obliczenie z testosteronu całkowitego + SHBG + albuminy wg wzoru Vermeulena. Bezpośrednie immunoassaye u kobiet niezalecane (niska dokładność w zakresie kobiecych stężeń).' },
             { id: 'dhea_s', note: 'W PCOS zwykle łagodnie podwyższony. > 18,9 μmol/L (700 μg/dL) → podejrzenie guza nadnercza.', description: 'DHEA-S (siarczan dehydroepiandrosteronu) — marker źródła nadnerczowego androgenów. W PCOS u części pacjentek łagodnie podwyższony (do ~13 μmol/L). Wartości > 18,9 μmol/L (700 μg/dL) → silne podejrzenie guza nadnercza — wymaga pilnej dalszej diagnostyki obrazowej. DHEA-S jest stabilny w surowicy, niezależny od rytmu dobowego i fazy cyklu.' },
             { id: 'androstenedione', note: 'Uzupełnia profil androgenowy — często podwyższony w PCOS. Wzrasta także w NCAH.' }
           ]
@@ -999,15 +1054,15 @@
         },
         { name: 'Obrazowanie i rezerwa jajnikowa',
           tests: [
-            { ext: 'chorionic_us_pcos', label: 'USG narządów rodnych', note: 'Kryterium Rotterdam: ≥ 20 pęcherzyków o średnicy 2–9 mm w jednym jajniku LUB objętość jajnika > 10 mL.', description: 'USG narządów rodnych — preferowane przezpochwowe (TVS), u młodszych pacjentek lub bez współżycia przezbrzuszne. Kryterium Rotterdam obrazu polycystic (aktualizacja 2018, Teede): ≥ 20 pęcherzyków o średnicy 2–9 mm w jednym jajniku LUB objętość jajnika > 10 mL (wcześniejszy próg z 2003 r. to ≥ 12 pęcherzyków — zmieniony ze względu na wyższą rozdzielczość nowoczesnych aparatów USG). Oceniać oba jajniki. UWAGA: u nastolatek (≤ 8 lat od menarche) USG NIE powinno być stosowane jako kryterium diagnostyczne PCOS — obraz wielopęcherzykowy jest w tym wieku fizjologiczny. USG pomaga też wykluczyć guz jajnika produkujący androgeny.' },
-            { id: 'amh', note: 'W PCOS znacznie podwyższona (mediana 3–5× wyższa niż u zdrowych). NIE jest jeszcze samodzielnym kryterium diagnostycznym (brak standaryzacji metody — Teede 2023); pomocnicza gdy USG niejednoznaczne.', description: 'AMH (hormon antymüllerowski) — w PCOS jest znacznie podwyższona, ponieważ odzwierciedla zwiększoną liczbę małych pęcherzyków antralnych. Mediana AMH u kobiet z PCOS jest 3–5× wyższa niż u zdrowych. Wartości > 35 pmol/L (~5 ng/mL) sugerują PCOS. UWAGA: międzynarodowy konsensus 2023 (Teede i wsp.) stwierdza, że AMH NIE jest jeszcze rekomendowane jako samodzielne kryterium diagnostyczne PCOS — głównym ograniczeniem jest brak standaryzacji metod oznaczania między laboratoriami i brak ustalonych progów wiekowych. AMH pełni rolę pomocniczą, zwłaszcza gdy obraz USG jest niejednoznaczny lub gdy USG przezpochwowe nie jest możliwe.' }
+            { ext: 'chorionic_us_pcos', label: 'USG narządów rodnych', note: 'Kryterium Rotterdam: ≥ 20 pęcherzyków o średnicy 2–9 mm w jednym jajniku LUB objętość jajnika > 10 mL.', description: 'USG narządów rodnych — preferowane przezpochwowe (TVS), u młodszych pacjentek lub bez współżycia przezbrzuszne. Kryterium Rotterdam obrazu polycystic (aktualizacja 2018, Teede): ≥ 20 pęcherzyków o średnicy 2–9 mm w jednym jajniku LUB objętość jajnika > 10 mL (wcześniejszy próg z 2003 r. to ≥ 12 pęcherzyków — zmieniony ze względu na wyższą rozdzielczość nowoczesnych aparatów USG). Oceniać oba jajniki. Uwaga: u nastolatek (≤ 8 lat od menarche) USG NIE powinno być stosowane jako kryterium diagnostyczne PCOS — obraz wielopęcherzykowy jest w tym wieku fizjologiczny. USG pomaga też wykluczyć guz jajnika produkujący androgeny.' },
+            { id: 'amh', note: 'W PCOS znacznie podwyższona (mediana 3–5× wyższa niż u zdrowych). nie jest jeszcze samodzielnym kryterium diagnostycznym (brak standaryzacji metody — Teede 2023); pomocnicza gdy USG niejednoznaczne.', description: 'AMH (hormon antymüllerowski) — w PCOS jest znacznie podwyższona, ponieważ odzwierciedla zwiększoną liczbę małych pęcherzyków antralnych. Mediana AMH u kobiet z PCOS jest 3–5× wyższa niż u zdrowych. Wartości > 35 pmol/L (~5 ng/mL) sugerują PCOS. Uwaga: międzynarodowy konsensus 2023 (Teede i wsp.) stwierdza, że AMH nie jest jeszcze rekomendowane jako samodzielne kryterium diagnostyczne PCOS — głównym ograniczeniem jest brak standaryzacji metod oznaczania między laboratoriami i brak ustalonych progów wiekowych. AMH pełni rolę pomocniczą, zwłaszcza gdy obraz USG jest niejednoznaczny lub gdy USG przezpochwowe nie jest możliwe.' }
           ]
         },
         { name: 'Ocena metaboliczna (obowiązkowa u każdej pacjentki z PCOS)',
           tests: [
             { ext: 'ogtt_75g_pcos', label: 'Glukoza na czczo + oGTT 75 g', note: 'Standard skriningu cukrzycy / nieprawidłowej tolerancji glukozy (IGT) w PCOS. Powtarzać co 1–3 lata.', description: 'Doustny test obciążenia glukozą (oGTT) — 75 g glukozy, pomiar glikemii na czczo (0 min) i po 120 min. Standard skriningu cukrzycy typu 2 i nieprawidłowej tolerancji glukozy (IGT) u kobiet z PCOS — ryzyko cukrzycy w PCOS jest ~2–4× wyższe niż w populacji ogólnej, niezależnie od BMI. Interpretacja (kryteria ADA/PTD): glikemia na czczo 100–125 mg/dL → nieprawidłowa glikemia na czczo (IFG); ≥ 126 mg/dL → cukrzyca; glikemia 120 min 140–199 mg/dL → nieprawidłowa tolerancja glukozy (IGT); ≥ 200 mg/dL → cukrzyca. Międzynarodowy konsensus 2018/2023 zaleca oGTT u wszystkich kobiet z PCOS przy rozpoznaniu i powtarzanie co 1–3 lata (częściej u otyłych i z dodatkowymi czynnikami ryzyka).' },
-            { ext: 'hba1c_pcos', label: 'HbA1c (hemoglobina glikowana)', note: 'Alternatywa lub uzupełnienie oGTT — ocena średniej glikemii ostatnich 2–3 miesięcy.', description: 'HbA1c (hemoglobina glikowana) — odzwierciedla średnią glikemię z ostatnich 2–3 miesięcy. W diagnostyce PCOS stosowana jako uzupełnienie lub alternatywa oGTT. Interpretacja: HbA1c 5,7–6,4% (39–46 mmol/mol) → stan przedcukrzycowy; ≥ 6,5% (48 mmol/mol) → cukrzyca. UWAGA: HbA1c jest mniej czuła niż oGTT we wczesnym wykrywaniu zaburzeń gospodarki węglowodanowej u kobiet z PCOS — oGTT pozostaje preferowanym testem skriningowym.' },
-            { ext: 'insulin_pcos', label: 'Insulina + HOMA-IR', note: 'Ocena insulinooporności (HOMA-IR = insulina × glukoza / 22,5). W PCOS często podwyższony niezależnie od BMI. Powszechnie zlecane w Polsce, w konsensusie międzynarodowym uznawane za opcjonalne.', description: 'Insulina na czczo wraz z glukozą na czczo pozwala obliczyć wskaźnik HOMA-IR (Homeostatic Model Assessment of Insulin Resistance) = (insulina [μIU/mL] × glukoza [mmol/L]) / 22,5. Wartość > 2,5 sugeruje insulinooporność (progi zależą od laboratorium i populacji). W PCOS insulinooporność występuje u ~50–70% pacjentek, często niezależnie od masy ciała. UWAGA: międzynarodowy konsensus PCOS 2018/2023 uznaje rutynowy pomiar insuliny/HOMA-IR za OPCJONALNY (brak standaryzacji oznaczeń insuliny, ograniczona wartość dla decyzji terapeutycznych), choć w polskiej praktyce klinicznej jest powszechnie zlecany.' },
+            { ext: 'hba1c_pcos', label: 'HbA1c (hemoglobina glikowana)', note: 'Alternatywa lub uzupełnienie oGTT — ocena średniej glikemii ostatnich 2–3 miesięcy.', description: 'HbA1c (hemoglobina glikowana) — odzwierciedla średnią glikemię z ostatnich 2–3 miesięcy. W diagnostyce PCOS stosowana jako uzupełnienie lub alternatywa oGTT. Interpretacja: HbA1c 5,7–6,4% (39–46 mmol/mol) → stan przedcukrzycowy; ≥ 6,5% (48 mmol/mol) → cukrzyca. Uwaga: HbA1c jest mniej czuła niż oGTT we wczesnym wykrywaniu zaburzeń gospodarki węglowodanowej u kobiet z PCOS — oGTT pozostaje preferowanym testem skriningowym.' },
+            { ext: 'insulin_pcos', label: 'Insulina + HOMA-IR', note: 'Ocena insulinooporności (HOMA-IR = insulina × glukoza / 22,5). W PCOS często podwyższony niezależnie od BMI. Powszechnie zlecane w Polsce, w konsensusie międzynarodowym uznawane za opcjonalne.', description: 'Insulina na czczo wraz z glukozą na czczo pozwala obliczyć wskaźnik HOMA-IR (Homeostatic Model Assessment of Insulin Resistance) = (insulina [μIU/mL] × glukoza [mmol/L]) / 22,5. Wartość > 2,5 sugeruje insulinooporność (progi zależą od laboratorium i populacji). W PCOS insulinooporność występuje u ~50–70% pacjentek, często niezależnie od masy ciała. Uwaga: międzynarodowy konsensus PCOS 2018/2023 uznaje rutynowy pomiar insuliny/HOMA-IR za opcjonalny (brak standaryzacji oznaczeń insuliny, ograniczona wartość dla decyzji terapeutycznych), choć w polskiej praktyce klinicznej jest powszechnie zlecany.' },
             { ext: 'lipid_panel_pcos', label: 'Lipidogram (cholesterol całkowity, LDL, HDL, trójglicerydy)', note: 'Ryzyko dyslipidemii w PCOS znacznie podwyższone. Powtarzać co 1–3 lata.', description: 'Lipidogram — cholesterol całkowity, LDL, HDL, trójglicerydy. U kobiet z PCOS ryzyko dyslipidemii jest znacznie wyższe niż w populacji ogólnej (typowo: ↓ HDL, ↑ trójglicerydy, ↑ LDL) — niezależnie od BMI, częściowo związane z insulinoopornością. Międzynarodowy konsensus 2018/2023 zaleca ocenę lipidogramu u każdej pacjentki z PCOS przy rozpoznaniu i powtarzanie co 1–3 lata w zależności od wyniku wyjściowego i obecności dodatkowych czynników ryzyka sercowo-naczyniowego.' },
             { ext: 'liver_pcos', label: 'ALAT, ASPAT', note: 'Skrining niealkoholowej stłuszczeniowej choroby wątroby (NAFLD) — występuje u ~40% kobiet z PCOS.', description: 'Aminotransferazy (ALAT, ASPAT) — skrining niealkoholowej stłuszczeniowej choroby wątroby (NAFLD, obecnie nazywanej także MASLD — metabolic dysfunction-associated steatotic liver disease). NAFLD występuje u ~40% kobiet z PCOS, częściej u otyłych z insulinoopornością. Podwyższenie ALAT (zwykle ALAT > ASPAT) może być pierwszym sygnałem stłuszczenia wątroby. Przy nieprawidłowych wynikach lub czynnikach ryzyka wskazane USG jamy brzusznej i ocena hepatologiczna.' },
             { id: 'vit_d_25oh', note: 'Niedobór witaminy D częsty w PCOS (~70%), może nasilać insulinooporność. Cel terapeutyczny > 75 nmol/L (30 ng/mL).' }
@@ -1015,10 +1070,10 @@
         },
         { name: 'Sytuacje szczególne',
           tests: [
-            { id: 'lh', note: 'Historycznie stosunek LH/FSH > 2 był kryterium pomocniczym PCOS, ale konsensus 2018/2023 NIE zaleca LH/FSH jako kryterium diagnostyczne. Zlecane fakultatywnie przy ocenie osi gonadowej (niepłodność).', description: 'LH (hormon luteinizujący) w PCOS — historycznie stosunek LH/FSH > 2 uznawano za pomocnicze kryterium PCOS (odzwierciedla zwiększoną pulsatylność GnRH i przewagę LH nad FSH typową dla PCOS). Jednak międzynarodowy konsensus PCOS 2018 i 2023 (Teede i wsp.) NIE zaleca LH/FSH jako kryterium diagnostyczne — wartości są zmienne (zależą od fazy cyklu, BMI, metody oznaczania). LH/FSH zlecane fakultatywnie przy szerszej ocenie osi gonadowej, szczególnie w kontekście niepłodności.' },
+            { id: 'lh', note: 'Historycznie stosunek LH/FSH > 2 był kryterium pomocniczym PCOS, ale konsensus 2018/2023 nie zaleca LH/FSH jako kryterium diagnostyczne. Zlecane fakultatywnie przy ocenie osi gonadowej (niepłodność).', description: 'LH (hormon luteinizujący) w PCOS — historycznie stosunek LH/FSH > 2 uznawano za pomocnicze kryterium PCOS (odzwierciedla zwiększoną pulsatylność GnRH i przewagę LH nad FSH typową dla PCOS). Jednak międzynarodowy konsensus PCOS 2018 i 2023 (Teede i wsp.) nie zaleca LH/FSH jako kryterium diagnostyczne — wartości są zmienne (zależą od fazy cyklu, BMI, metody oznaczania). LH/FSH zlecane fakultatywnie przy szerszej ocenie osi gonadowej, szczególnie w kontekście niepłodności.' },
             { id: 'fsh', note: 'Oznaczany razem z LH przy ocenie osi gonadowej. W PCOS zwykle prawidłowy lub w dolnej granicy normy. Pomaga wykluczyć przedwczesną niewydolność jajników (FSH wysoki).' },
             { ext: 'afc_pcos', label: 'AFC (Antral Follicle Count, USG TV)', note: 'Komplementarne do AMH w ocenie rezerwy jajnikowej — szczególnie przy planowaniu leczenia niepłodności.', description: 'AFC (Antral Follicle Count) — liczba pęcherzyków antralnych (2–9 mm) policzona w USG przezpochwowym, sumarycznie w obu jajnikach. Komplementarne do AMH w ocenie rezerwy jajnikowej. W PCOS AFC jest zwykle podwyższone (odzwierciedla zwiększoną pulę małych pęcherzyków). Główne zastosowanie: planowanie leczenia niepłodności (przewidywanie odpowiedzi na stymulację jajeczkowania w procedurach wspomaganego rozrodu) oraz ocena ryzyka zespołu hiperstymulacji jajników (OHSS).' },
-            { id: 'cortisol', label: 'Test hamowania z 1 mg deksametazonu', note: 'TYLKO gdy obecne są cechy cushingoidalne (otyłość brzuszna, rozstępy purpurowe > 1 cm, twarz księżycowata, oporne nadciśnienie) — wykluczenie zespołu Cushinga.', description: 'Test skriningu zespołu Cushinga u pacjentki z podejrzeniem PCOS, ALE TYLKO gdy obecne są cechy cushingoidalne (otyłość brzuszna, rozstępy purpurowe > 1 cm, twarz księżycowata, łatwe siniaczenie, miopatia proksymalna, oporne nadciśnienie). Rutynowy skrining Cushinga u wszystkich pacjentek z PCOS NIE jest zalecany — zespół Cushinga jest rzadki. Protokół: 1 mg deksametazonu o godz. 23:00, kortyzol rano (8:00–9:00). Interpretacja: < 50 nmol/L (1,8 μg/dL) → wyklucza autonomię kortyzolu; 50–138 nmol/L → wynik niejednoznaczny; > 138 nmol/L → potwierdza autonomię. Pełne kryteria — zobacz wskazanie "Zespół Cushinga".' }
+            { id: 'cortisol', label: 'Test hamowania z 1 mg deksametazonu', note: 'TYLKO gdy obecne są cechy cushingoidalne (otyłość brzuszna, rozstępy purpurowe > 1 cm, twarz księżycowata, oporne nadciśnienie) — wykluczenie zespołu Cushinga.', description: 'Test skriningu zespołu Cushinga u pacjentki z podejrzeniem PCOS, ale TYLKO gdy obecne są cechy cushingoidalne (otyłość brzuszna, rozstępy purpurowe > 1 cm, twarz księżycowata, łatwe siniaczenie, miopatia proksymalna, oporne nadciśnienie). Rutynowy skrining Cushinga u wszystkich pacjentek z PCOS nie jest zalecany — zespół Cushinga jest rzadki. Protokół: 1 mg deksametazonu o godz. 23:00, kortyzol rano (8:00–9:00). Interpretacja: < 50 nmol/L (1,8 μg/dL) → wyklucza autonomię kortyzolu; 50–138 nmol/L → wynik niejednoznaczny; > 138 nmol/L → potwierdza autonomię. Pełne kryteria — zobacz wskazanie "Zespół Cushinga".' }
           ]
         }
       ],
@@ -1040,14 +1095,14 @@
             kind: 'prose',
             icon: 'book-2',
             title: 'Definicja i alarm kliniczny',
-            body: 'Wirylizacja u dorosłej kobiety — obecność cech męskich: klitoromegalia, rozległe łysienie typu męskiego, pogłębienie głosu, zanik piersi, rozwój masy mięśniowej typu męskiego. SZYBKO NARASTAJĄCA wirylizacja → silne podejrzenie GUZA ANDROGENNEGO (jajnika lub nadnercza); wymaga PILNEJ diagnostyki obrazowej (USG narządów rodnych + TK nadnerczy wielofazowy). Wirylizacja różni się od hirsutyzmu: hirsutyzm to samo nadmierne owłosienie, wirylizacja obejmuje pełne cechy męskie i sygnalizuje znacznie wyższe stężenia androgenów.'
+            body: 'Wirylizacja u dorosłej kobiety — obecność cech męskich: klitoromegalia, rozległe łysienie typu męskiego, pogłębienie głosu, zanik piersi, rozwój masy mięśniowej typu męskiego. Szybko narastająca wirylizacja → silne podejrzenie guza androgennego (jajnika lub nadnercza); wymaga pilnej diagnostyki obrazowej (USG narządów rodnych + TK nadnerczy wielofazowy). Wirylizacja różni się od hirsutyzmu: hirsutyzm to samo nadmierne owłosienie, wirylizacja obejmuje pełne cechy męskie i sygnalizuje znacznie wyższe stężenia androgenów.'
           },
           {
             kind: 'callout',
             variant: 'primary',
             icon: 'book-2',
-            title: 'obowiązkowy szczegółowy wywiad lekowy PRZED diagnostyką',
-            body: 'Przed rozpoczęciem diagnostyki hormonalnej i obrazowej należy wykluczyć wirylizację JATROGENNĄ: sterydy anaboliczno-androgenne (sport, kulturystyka — często zatajane w wywiadzie), testosteron egzogenny (suplementy, błędne stosowanie HRT męskiego), danazol, niektóre starsze progestageny o działaniu androgennym (m.in. noretysteron). Wirylizacja jatrogenna zwykle ustępuje po odstawieniu czynnika sprawczego — wczesna identyfikacja oszczędza pacjentce zbędnej diagnostyki obrazowej.'
+            title: 'Obowiązkowy szczegółowy wywiad lekowy przed diagnostyką',
+            body: 'Przed rozpoczęciem diagnostyki hormonalnej i obrazowej należy wykluczyć wirylizację jatrogenną: sterydy anaboliczno-androgenne (sport, kulturystyka — często zatajane w wywiadzie), testosteron egzogenny (suplementy, błędne stosowanie HRT męskiego), danazol, niektóre starsze progestageny o działaniu androgennym (m.in. noretysteron). Wirylizacja jatrogenna zwykle ustępuje po odstawieniu czynnika sprawczego — wczesna identyfikacja oszczędza pacjentce zbędnej diagnostyki obrazowej.'
           },
           {
             kind: 'list',
@@ -1068,7 +1123,7 @@
                 text: 'rzadsze niż gonadalne, ale wysokie ryzyko złośliwości:',
                 detail: [
                   'Gruczolak androgenny — rzadki; izolowana androgenizacja u kobiety silnie sugeruje raczej rak niż gruczolak.',
-                  'Rak kory nadnercza (ACC) — WYSOKI odsetek złośliwości przy czysto androgennym fenotypie; DHEA-S znacznie podwyższony (często znacznie > 18,9 μmol/L); wymiar zwykle > 4 cm w TK.'
+                  'Rak kory nadnercza (ACC) — wysoki odsetek złośliwości przy czysto androgennym fenotypie; DHEA-S znacznie podwyższony (często znacznie > 18,9 μmol/L); wymiar zwykle > 4 cm w TK.'
                 ]
               },
               {
@@ -1090,7 +1145,7 @@
                 label: '(1) Profil androgenowy podstawowy',
                 text: 'progi wskazujące na guz androgenny:',
                 detail: [
-                  'Testosteron całkowity > 7 nmol/L (200 ng/dL) → SILNE podejrzenie guza; > 14 nmol/L (400 ng/dL) → praktycznie pewny guz.',
+                  'Testosteron całkowity > 7 nmol/L (200 ng/dL) → silne podejrzenie guza; > 14 nmol/L (400 ng/dL) → praktycznie pewny guz.',
                   'DHEA-S > 18,9 μmol/L (700 μg/dL) → silne podejrzenie guza nadnercza (gruczolak androgenny lub rak kory).',
                   'SHBG (zwykle obniżona w wirylizacji), testosteron wolny (znacznie podwyższony nawet przy granicznych T całkowitym), androstendion (wzrasta w guzach gonadalnych i nadnerczowych), 17-OH-progesteron (wykluczenie WPN późno rozpoznanego).'
                 ]
@@ -1103,7 +1158,7 @@
                   'TK nadnerczy wielofazowe z kontrastem — różnicuje gruczolak (HU natywne < 25, wash-out > 60%) od raka kory ACC (HU > 30, niski wash-out, > 4 cm, niejednorodna struktura, naciekanie).'
                 ]
               },
-              { label: '(3) Sytuacje szczególne', text: 'test hamowania 1 mg deksametazonu przy współistniejących cechach cushingoidalnych — MIESZANY guz nadnercza produkujący ZARÓWNO kortyzol jak i androgeny (częściej w ACC niż gruczolaku) daje obraz Cushinga z wirylizacją.' }
+              { label: '(3) Sytuacje szczególne', text: 'test hamowania 1 mg deksametazonu przy współistniejących cechach cushingoidalnych — mieszany guz nadnercza produkujący zarówno kortyzol, jak i androgeny (częściej w ACC niż gruczolaku) daje obraz Cushinga z wirylizacją.' }
             ]
           }
         ]
@@ -1114,20 +1169,20 @@
             { id: 'testosterone_total', note: '> 7 nmol/L (200 ng/dL) → silne podejrzenie guza androgennego; > 14 nmol/L (400 ng/dL) → praktycznie pewny guz.', description: 'Testosteron całkowity u kobiety z wirylizacją — kluczowy parametr różnicowy. Wartości: < 2,4 nmol/L (70 ng/dL) → norma u kobiet w wieku rozrodczym; 2,4–7 nmol/L → typowe dla PCOS, NCAH, idiopatycznego hirsutyzmu; 7–14 nmol/L (200–400 ng/dL) → silne podejrzenie guza androgennego (gonadalnego lub nadnerczowego); > 14 nmol/L (400 ng/dL) → praktycznie pewny guz, wymagana pilna diagnostyka obrazowa. Pobranie: rano (7:00–10:00), na czczo; u kobiet z regularnym cyklem w fazie folikularnej (dni 2–5); w wirylizacji moment cyklu mniej istotny (anowulacja częsta). Metoda referencyjna: LC-MS/MS.' },
             { id: 'shbg', note: 'Zwykle obniżona (efekt androgenów na wątrobę) — wzmaga aktywność testosteronu wolnego.' },
             { id: 'testosterone_free', note: 'Znacznie podwyższony w wirylizacji nawet przy granicznych wartościach T całkowitego.' },
-            { id: 'dhea_s', note: '> 18,9 μmol/L (700 μg/dL) → silne podejrzenie guza nadnercza (gruczolak androgenny lub rak kory nadnercza).', description: 'DHEA-S (siarczan dehydroepiandrosteronu) — marker źródła nadnerczowego androgenów. W wirylizacji: norma u kobiet 1,9–9,4 μmol/L (70–350 μg/dL); łagodne podwyższenie (do ~13 μmol/L) → PCOS lub adrenarche; > 13 μmol/L (500 μg/dL) → wymaga dalszej diagnostyki; > 18,9 μmol/L (700 μg/dL) → silne podejrzenie guza nadnercza. UWAGA: czysto androgen-wydzielające guzy nadnercza są rzadkie i charakteryzują się wysokim odsetkiem złośliwości — częściej są rakami kory nadnercza (ACC) niż gruczolakami. Bardzo wysokie wartości DHEA-S (znacznie przekraczające 18,9 μmol/L / 700 μg/dL) u kobiety z szybko narastającą wirylizacją silnie przemawiają za rakiem kory nadnercza i wymagają pilnej diagnostyki obrazowej (TK nadnerczy wielofazowe z kontrastem).' },
+            { id: 'dhea_s', note: '> 18,9 μmol/L (700 μg/dL) → silne podejrzenie guza nadnercza (gruczolak androgenny lub rak kory nadnercza).', description: 'DHEA-S (siarczan dehydroepiandrosteronu) — marker źródła nadnerczowego androgenów. W wirylizacji: norma u kobiet 1,9–9,4 μmol/L (70–350 μg/dL); łagodne podwyższenie (do ~13 μmol/L) → PCOS lub adrenarche; > 13 μmol/L (500 μg/dL) → wymaga dalszej diagnostyki; > 18,9 μmol/L (700 μg/dL) → silne podejrzenie guza nadnercza. Uwaga: czysto androgen-wydzielające guzy nadnercza są rzadkie i charakteryzują się wysokim odsetkiem złośliwości — częściej są rakami kory nadnercza (ACC) niż gruczolakami. Bardzo wysokie wartości DHEA-S (znacznie przekraczające 18,9 μmol/L / 700 μg/dL) u kobiety z szybko narastającą wirylizacją silnie przemawiają za rakiem kory nadnercza i wymagają pilnej diagnostyki obrazowej (TK nadnerczy wielofazowe z kontrastem).' },
             { id: 'androstenedione', note: 'Znacznie podwyższony w guzach androgennych (nadnercze + jajnik) — uzupełnia profil różnicowy.' },
             { id: 'oh17_progesterone', note: 'Wykluczenie WPN z niedoboru 21-hydroksylazy późno rozpoznanego — rzadkie u dorosłej kobiety, ale obowiązkowe wykluczenie.' }
           ]
         },
         { name: 'Obrazowanie pilne (gdy podejrzenie guza androgennego)',
           tests: [
-            { ext: 'chorionic_us_virilization', label: 'USG narządów rodnych (przezpochwowe)', note: 'Poszukiwanie guza jajnika. Guzy androgenne często MAŁE (1–5 cm), hipoechogeniczne, jednostronne.', description: 'USG przezpochwowe (TVS) narządów rodnych w diagnostyce wirylizacji. Najczęstsze guzy androgenne jajnika: (1) guzy z komórek Sertoliego-Leydiga (SLCT) — wymiar zwykle 4–15 cm, hipo- lub mieszane echogeniczne, jednostronne; histologicznie 1–5% guzów jajnika; (2) hilus cell tumor (guz z komórek Leydiga) — drobny (1–3 cm), hipoechogeniczny, jednostronny, zlokalizowany przy wnęce jajnika; (3) guzy z komórek tekalno-ziarnistych z androgenizacją (rzadko, częściej estrogenizacja). Przy ujemnym USG i wysokim testosteronie konieczne MRI miednicy (czułość wyższa dla drobnych guzów). U młodych pacjentek (< 18 lat lub kobiety bez współżycia) preferowane USG przezbrzuszne z pełnym pęcherzem moczowym.' },
-            { ext: 'adrenal_ct_multiphase', label: 'TK nadnerczy wielofazowe z kontrastem', note: 'Standard diagnostyczny przy podejrzeniu czynnego hormonalnie guza nadnercza (ESE 2018, ACC guidelines).', description: 'TK nadnerczy wielofazowe z kontrastem dożylnym — standard diagnostyczny przy klinicznym i biochemicznym podejrzeniu czynnego hormonalnie guza nadnercza (wirylizacja, hiperaldosteronizm, zespół Cushinga nadnerczowy) wg wytycznych ESE 2018 (Fassnacht i wsp.). Protokół 4-fazowy: (1) faza natywna (bez kontrastu) — pomiar densytometrii w jednostkach Hounsfielda (HU); (2) faza tętnicza (~25–40 s po podaniu kontrastu) — ocena unaczynienia; (3) faza żylna (~70 s) — ocena charakteru zmiany; (4) faza opóźniona (10–15 min) — obliczenie wash-out kontrastu. Interpretacja: (1) gruczolak androgenny — wymiar 2–5 cm, HU natywne zwykle 10–25 (lipid-poor — większość gruczolaków produkujących androgeny; wartości > 25 HU sugerują podejrzenie złośliwości), absolute wash-out > 60% lub relative wash-out > 40% potwierdza gruczolaka; (2) rak kory nadnercza (ACC) — wymiar zwykle > 4 cm (często > 6 cm), HU natywne > 30, niejednorodna struktura (martwica wewnątrzguzowa, zwapnienia), nieregularny brzeg, naciekanie tkanek przyległych, niski wash-out (< 50%); (3) przy wymiarze > 4 cm i podejrzeniu ACC — kwalifikacja do operacji; NIE wykonywać biopsji przed wykluczeniem pheochromocytoma (metanefryny)! Alternatywa dla osób z przeciwwskazaniami do kontrastu jodowego: MRI nadnerczy z sekwencjami chemical-shift.' }
+            { ext: 'chorionic_us_virilization', label: 'USG narządów rodnych (przezpochwowe)', note: 'Poszukiwanie guza jajnika. Guzy androgenne często małe (1–5 cm), hipoechogeniczne, jednostronne.', description: 'USG przezpochwowe (TVS) narządów rodnych w diagnostyce wirylizacji. Najczęstsze guzy androgenne jajnika: (1) guzy z komórek Sertoliego-Leydiga (SLCT) — wymiar zwykle 4–15 cm, hipo- lub mieszane echogeniczne, jednostronne; histologicznie 1–5% guzów jajnika; (2) hilus cell tumor (guz z komórek Leydiga) — drobny (1–3 cm), hipoechogeniczny, jednostronny, zlokalizowany przy wnęce jajnika; (3) guzy z komórek tekalno-ziarnistych z androgenizacją (rzadko, częściej estrogenizacja). Przy ujemnym USG i wysokim testosteronie konieczne MRI miednicy (czułość wyższa dla drobnych guzów). U młodych pacjentek (< 18 lat lub kobiety bez współżycia) preferowane USG przezbrzuszne z pełnym pęcherzem moczowym.' },
+            { ext: 'adrenal_ct_multiphase', label: 'TK nadnerczy wielofazowe z kontrastem', note: 'Standard diagnostyczny przy podejrzeniu czynnego hormonalnie guza nadnercza (ESE 2018, ACC guidelines).', description: 'TK nadnerczy wielofazowe z kontrastem dożylnym — standard diagnostyczny przy klinicznym i biochemicznym podejrzeniu czynnego hormonalnie guza nadnercza (wirylizacja, hiperaldosteronizm, zespół Cushinga nadnerczowy) wg wytycznych ESE 2018 (Fassnacht i wsp.). Protokół 4-fazowy: (1) faza natywna (bez kontrastu) — pomiar densytometrii w jednostkach Hounsfielda (HU); (2) faza tętnicza (~25–40 s po podaniu kontrastu) — ocena unaczynienia; (3) faza żylna (~70 s) — ocena charakteru zmiany; (4) faza opóźniona (10–15 min) — obliczenie wash-out kontrastu. Interpretacja: (1) gruczolak androgenny — wymiar 2–5 cm, HU natywne zwykle 10–25 (lipid-poor — większość gruczolaków produkujących androgeny; wartości > 25 HU sugerują podejrzenie złośliwości), absolute wash-out > 60% lub relative wash-out > 40% potwierdza gruczolaka; (2) rak kory nadnercza (ACC) — wymiar zwykle > 4 cm (często > 6 cm), HU natywne > 30, niejednorodna struktura (martwica wewnątrzguzowa, zwapnienia), nieregularny brzeg, naciekanie tkanek przyległych, niski wash-out (< 50%); (3) przy wymiarze > 4 cm i podejrzeniu ACC — kwalifikacja do operacji; nie wykonywać biopsji przed wykluczeniem pheochromocytoma (metanefryny)! Alternatywa dla osób z przeciwwskazaniami do kontrastu jodowego: MRI nadnerczy z sekwencjami chemical-shift.' }
           ]
         },
         { name: 'Sytuacje szczególne',
           tests: [
-            { id: 'cortisol', label: 'Test hamowania z 1 mg deksametazonu', note: 'Przy współistnieniu cech cushingoidalnych — wykluczenie zespołu Cushinga nadnerczowego z hipersekrecją androgenów.', description: 'Test skriningu zespołu Cushinga u kobiety z wirylizacją i obecnymi cechami cushingoidalnymi (otyłość brzuszna, rozstępy purpurowe > 1 cm, twarz księżycowata, oporne nadciśnienie). Rzadki, ale ważny podtyp guza nadnercza — rak kory nadnercza (ACC) lub duży gruczolak — może produkować ZARÓWNO kortyzol jak i androgeny, dając mieszany obraz Cushinga z wirylizacją. Protokół: 1 mg deksametazonu o godz. 23:00 (przed snem), kortyzol rano (8:00–9:00). Interpretacja: < 50 nmol/L (1,8 μg/dL) → wyklucza autonomię; 50–138 nmol/L → wynik niejednoznaczny; > 138 nmol/L → potwierdza autonomię. Pełne kryteria — zobacz wskazanie "Zespół Cushinga".' }
+            { id: 'cortisol', label: 'Test hamowania z 1 mg deksametazonu', note: 'Przy współistnieniu cech cushingoidalnych — wykluczenie zespołu Cushinga nadnerczowego z hipersekrecją androgenów.', description: 'Test skriningu zespołu Cushinga u kobiety z wirylizacją i obecnymi cechami cushingoidalnymi (otyłość brzuszna, rozstępy purpurowe > 1 cm, twarz księżycowata, oporne nadciśnienie). Rzadki, ale ważny podtyp guza nadnercza — rak kory nadnercza (ACC) lub duży gruczolak — może produkować zarówno kortyzol, jak i androgeny, dając mieszany obraz Cushinga z wirylizacją. Protokół: 1 mg deksametazonu o godz. 23:00 (przed snem), kortyzol rano (8:00–9:00). Interpretacja: < 50 nmol/L (1,8 μg/dL) → wyklucza autonomię; 50–138 nmol/L → wynik niejednoznaczny; > 138 nmol/L → potwierdza autonomię. Pełne kryteria — zobacz wskazanie "Zespół Cushinga".' }
           ]
         }
       ],
@@ -1149,14 +1204,14 @@
             kind: 'prose',
             icon: 'book-2',
             title: 'Definicja',
-            body: 'Niedobór 5α-reduktazy typu 2 (mutacja SRD5A2, dziedziczenie autosomalne recesywne) należy do zaburzeń różnicowania płci u chromosomalnego mężczyzny — DSD 46,XY. Dziecko ma kariotyp męski (46,XY), sprawne jądra i normalnie wysoki testosteron, ALE z powodu wadliwego enzymu nie potrafi wytwarzać DHT (5α-dihydrotestosteronu) — silniejszej formy androgenu. Powoduje to charakterystyczny rozdźwięk: niektóre cechy męskie rozwijają się normalnie (głos, mięśnie, libido — wystarcza im sam testosteron), inne nie (zarost, pełny rozwój prącia, łysienie typu męskiego — wymagają DHT). Klinicznie objawia się to nietypowymi narządami płciowymi u noworodka i „częściową" wirylizacją w pokwitaniu (patrz niżej).'
+            body: 'Niedobór 5α-reduktazy typu 2 (mutacja SRD5A2, dziedziczenie autosomalne recesywne) należy do zaburzeń różnicowania płci u chromosomalnego mężczyzny — DSD 46,XY. Dziecko ma kariotyp męski (46,XY), sprawne jądra i normalnie wysoki testosteron, ale z powodu wadliwego enzymu nie potrafi wytwarzać DHT (5α-dihydrotestosteronu) — silniejszej formy androgenu. Powoduje to charakterystyczny rozdźwięk: niektóre cechy męskie rozwijają się normalnie (głos, mięśnie, libido — wystarcza im sam testosteron), inne nie (zarost, pełny rozwój prącia, łysienie typu męskiego — wymagają DHT). Klinicznie objawia się to nietypowymi narządami płciowymi u noworodka i „częściową" wirylizacją w pokwitaniu (patrz niżej).'
           },
           {
             kind: 'callout',
             variant: 'primary',
             icon: 'flask',
             title: 'Patofizjologia: testosteron (T) vs DHT — dwa różne androgeny',
-            body: 'Organizm męski produkuje DWA aktywne androgeny: TESTOSTERON (T) — wytwarzany w jądrach przez komórki Leydiga; DHT (dihydrotestosteron) — powstaje OBWODOWO z testosteronu pod wpływem enzymu 5α-reduktazy (głównie w skórze, mieszkach włosowych, prostacie). DHT jest ok. 2–3× silniejszy od T (większe powinowactwo do receptora androgenowego, dłuższy okres półtrwania kompleksu z receptorem). Oba hormony działają na ten SAM receptor (AR), ale w innych tkankach i w innych okresach życia. Cechy zależne TYLKO od testosteronu (rozwijają się normalnie w 5α-RD): pogłębienie głosu w pokwitaniu, wzrost masy mięśniowej, libido i wzwody, spermatogeneza, rozwój przewodów Wolffa (najądrza, nasieniowody, pęcherzyki nasienne — formowane w życiu płodowym BEZ konieczności DHT). Cechy WYMAGAJĄCE DHT (brak/upośledzone w 5α-RD): rozwój zewnętrznych narządów płciowych w życiu płodowym (prącie, moszna, ujście cewki na szczycie), zarost (broda, wąsy, owłosienie klatki piersiowej), łysienie typu męskiego (recesja czołowo-skroniowa), rozwój prostaty, trądzik młodzieńczy.'
+            body: 'Organizm męski produkuje dwa aktywne androgeny: testosteron (T) — wytwarzany w jądrach przez komórki Leydiga; DHT (dihydrotestosteron) — powstaje obwodowo z testosteronu pod wpływem enzymu 5α-reduktazy (głównie w skórze, mieszkach włosowych, prostacie). DHT jest ok. 2–3× silniejszy od T (większe powinowactwo do receptora androgenowego, dłuższy okres półtrwania kompleksu z receptorem). Oba hormony działają na ten sam receptor (AR), ale w innych tkankach i w innych okresach życia. Cechy zależne tylko od testosteronu (rozwijają się normalnie w 5α-RD): pogłębienie głosu w pokwitaniu, wzrost masy mięśniowej, libido i wzwody, spermatogeneza, rozwój przewodów Wolffa (najądrza, nasieniowody, pęcherzyki nasienne — formowane w życiu płodowym bez konieczności DHT). Cechy wymagające DHT (brak/upośledzone w 5α-RD): rozwój zewnętrznych narządów płciowych w życiu płodowym (prącie, moszna, ujście cewki na szczycie), zarost (broda, wąsy, owłosienie klatki piersiowej), łysienie typu męskiego (recesja czołowo-skroniowa), rozwój prostaty, trądzik młodzieńczy.'
           },
           {
             kind: 'list',
@@ -1167,9 +1222,9 @@
                 label: 'Niejednoznaczne narządy płciowe (najczęstsza prezentacja)',
                 text: 'kombinacja cech męskich i nietypowych, wynikająca z braku DHT w życiu płodowym:',
                 detail: [
-                  'SPODZIECTWO — cewka moczowa otwiera się NIE na szczycie prącia, tylko po dolnej stronie (na trzonie, w okolicy moszny lub aż w kroczu — zależnie od ciężkości).',
-                  'MIKROPENIS — bardzo małe prącie (długość po rozciągnięciu < 2,5 cm u noworodka donoszonego); bywa mylone z powiększoną łechtaczką.',
-                  'Moszna NIEUFORMOWANA — niezamknięta, podzielona (bifid scrotum), wyglądająca jak wargi sromowe większe.',
+                  'Spodziectwo — cewka moczowa otwiera się nie na szczycie prącia, tylko po dolnej stronie (na trzonie, w okolicy moszny lub aż w kroczu — zależnie od ciężkości).',
+                  'Mikropenis — bardzo małe prącie (długość po rozciągnięciu < 2,5 cm u noworodka donoszonego); bywa mylone z powiększoną łechtaczką.',
+                  'Moszna nieuformowana — niezamknięta, podzielona (bifid scrotum), wyglądająca jak wargi sromowe większe.',
                   'Wnętrostwo — jądra zwykle nie zstąpiły do moszny (siedzą w jamie brzusznej lub kanale pachwinowym), bo moszna nie rozwinęła się prawidłowo.'
                 ]
               },
@@ -1178,16 +1233,16 @@
                 text: 'przy najcięższych mutacjach genu SRD5A2 zewnętrzne narządy wyglądają jak u dziewczynki:',
                 detail: [
                   'Płytka „pochwa" (właściwie zachyłek tylko z fragmentem cewki) — bez macicy i jajowodów (zanikły pod wpływem AMH produkowanego przez sprawne jądra).',
-                  'Dziecko bywa wychowywane jako dziewczynka — diagnoza często stawiana DOPIERO w okresie dojrzewania, gdy pojawiają się męskie cechy.'
+                  'Dziecko bywa wychowywane jako dziewczynka — diagnoza często stawiana dopiero w okresie dojrzewania, gdy pojawiają się męskie cechy.'
                 ]
               },
               {
-                label: 'Co jest ZACHOWANE u noworodka',
+                label: 'Co jest zachowane u noworodka',
                 text: 'wewnętrzne narządy męskie rozwijają się normalnie:',
                 detail: [
-                  'Jądra są PRAWIDŁOWE — produkują testosteron i AMH.',
+                  'Jądra są prawidłowe — produkują testosteron i AMH.',
                   'Przewody Wolffa (najądrza, nasieniowody, pęcherzyki nasienne) rozwinięte — bo wymagają tylko testosteronu, nie DHT.',
-                  'Macica i jajowody NIEOBECNE — AMH z jąder spowodował regresję przewodów Müllera.'
+                  'Macica i jajowody nieobecne — AMH z jąder spowodował regresję przewodów Müllera.'
                 ]
               }
             ]
@@ -1198,7 +1253,7 @@
             title: 'Obraz kliniczny — pokwitanie (kluczowy moment diagnostyczny)',
             items: [
               {
-                label: 'Co ROZWIJA SIĘ normalnie (wystarcza sam testosteron)',
+                label: 'Co rozwija się normalnie (wystarcza sam testosteron)',
                 text: 'jądra zaczynają produkować duże ilości T, który działa bez konwersji do DHT:',
                 detail: [
                   'Pogłębienie głosu — typowo męska tessitura.',
@@ -1209,12 +1264,12 @@
                 ]
               },
               {
-                label: 'Czego BRAKUJE (wymaga DHT)',
+                label: 'Czego brakuje (wymaga DHT)',
                 text: 'cechy typowo „męskie" związane z mieszkami włosowymi i skórą:',
                 detail: [
-                  'BRAK ZAROSTU — broda, wąsy, owłosienie klatki piersiowej minimalne lub zupełnie nieobecne (mimo prawidłowego owłosienia łonowego i pachowego).',
-                  'BRAK łysienia typu męskiego — linia włosów na czole pozostaje „dziecięca".',
-                  'PRĄCIE pozostaje MAŁE — nie osiąga dorosłej wielkości mimo dojrzewania.',
+                  'Brak zarostu — broda, wąsy, owłosienie klatki piersiowej minimalne lub zupełnie nieobecne (mimo prawidłowego owłosienia łonowego i pachowego).',
+                  'Brak łysienia typu męskiego — linia włosów na czole pozostaje „dziecięca".',
+                  'Prącie pozostaje małe — nie osiąga dorosłej wielkości mimo dojrzewania.',
                   'Prostata pozostaje mała (rzadko obserwowane klinicznie u młodych mężczyzn).',
                   'Trądzik młodzieńczy minimalny.'
                 ]
@@ -1223,7 +1278,7 @@
                 label: 'Konsekwencja — dramatyczna ścieżka kliniczna',
                 text: 'dziecko wychowywane jako dziewczynka nagle „męskieje" w pokwitaniu:',
                 detail: [
-                  'Klasyczna obserwacja — Dominikana, wioska Las Salinas (Imperato-McGinley 1974) — genetyczne ognisko 5α-RD2, dzieci nazywane „güevedoces" („jaja w dwunastym roku"). Odkrycie to było przełomem — pokazało, że DHT i T mają RÓŻNE funkcje fizjologiczne.',
+                  'Klasyczna obserwacja — Dominikana, wioska Las Salinas (Imperato-McGinley 1974) — genetyczne ognisko 5α-RD2, dzieci nazywane „güevedoces" („jaja w dwunastym roku"). Odkrycie to było przełomem — pokazało, że DHT i T mają różne funkcje fizjologiczne.',
                   'Część pacjentów dokonuje wówczas zmiany płci społecznej (z żeńskiej na męską), część pozostaje przy żeńskiej identyfikacji — DSD 46,XY wymaga zawsze interdyscyplinarnej opieki (endokrynolog dziecięcy, urolog, psycholog, genetyk).'
                 ]
               }
@@ -1248,7 +1303,7 @@
               { label: 'Testosteron', text: 'prawidłowy lub podwyższony — enzym 5α-reduktaza NIE wpływa na produkcję testosteronu (zaburzona jest tylko konwersja obwodowa do DHT).' },
               { label: 'DHT', text: 'obniżony — brak konwersji T → DHT; metoda referencyjna LC-MS/MS (immunoassaye dają wyniki zaniżone u dzieci).' },
               {
-                label: 'Stosunek T/DHT — KLUCZOWY diagnostycznie',
+                label: 'Stosunek T/DHT — kluczowy diagnostycznie',
                 text: 'progi interpretacyjne:',
                 detail: [
                   'Norma: T/DHT < 16.',
@@ -1261,8 +1316,8 @@
                 label: 'Optymalny moment pomiaru',
                 text: 'okno czasowe wpływa na wiarygodność wyników:',
                 detail: [
-                  'Niemowlę 1.–6. miesiąc życia — MINI-PUBERTY (przejściowa aktywacja osi przysadkowo-gonadowej, peak ~3 mies.); bazalne wartości T i DHT WIARYGODNE bez stymulacji.',
-                  'Dziecko 6 mies. – pokwitanie — oś HPG fizjologicznie uśpiona; bazalne T i DHT niskie/nieoznaczalne → KONIECZNY test stymulacji hCG.',
+                  'Niemowlę 1.–6. miesiąc życia — mini-puberty (przejściowa aktywacja osi przysadkowo-gonadowej, peak ~3 mies.); bazalne wartości T i DHT wiarygodne bez stymulacji.',
+                  'Dziecko 6 mies. – pokwitanie — oś HPG fizjologicznie uśpiona; bazalne T i DHT niskie/nieoznaczalne → konieczny test stymulacji hCG.',
                   'Okres dojrzewania — pomiar bazalny rano (7:00–10:00) wiarygodny.'
                 ]
               }
@@ -1279,7 +1334,7 @@
                 detail: [
                   'CAIS (complete) — fenotyp w pełni żeński przy 46,XY i obecnych jądrach (wewnątrz-jamiste); pierwotny brak miesiączki w okresie dojrzewania.',
                   'PAIS (partial) — częściowa wirylizacja; obraz pośredni między CAIS a 5α-RD2.',
-                  'Wzorzec hormonalny: T i DHT prawidłowe lub PODWYŻSZONE (komórki Leydiga sprawne); LH wysoki (brak ujemnego sprzężenia zwrotnego); AMH i inhibina B prawidłowe.',
+                  'Wzorzec hormonalny: T i DHT prawidłowe lub podwyższone (komórki Leydiga sprawne); LH wysoki (brak ujemnego sprzężenia zwrotnego); AMH i inhibina B prawidłowe.',
                   'Różnicowanie z 5α-RD2: w AIS DHT prawidłowe/podwyższone (przeciwnie niż w 5α-RD2 gdzie DHT obniżone).'
                 ]
               },
@@ -1291,7 +1346,7 @@
                   'Niedobór StAR (lipoidalny WPN) — defekt transportu cholesterolu do mitochondriów; ciężkie zaburzenie obu osi (steroidów płciowych i nadnerczowych).',
                   'Niedobór HSD3B2 (3β-HSD) — defekt wczesnej steroidogenezy; gromadzenie DHEA i pregnenolonu.',
                   'Niedobór 17α-hydroksylazy — defekt syntezy steroidów płciowych i kortyzolu; nadciśnienie tętnicze + brak rozwoju płciowego.',
-                  'Wzorzec wspólny: T NISKI; LH WYSOKI (brak sprzężenia zwrotnego); różnicowanie wymaga pomiaru prekursorów steroidowych.'
+                  'Wzorzec wspólny: T niski; LH wysoki (brak sprzężenia zwrotnego); różnicowanie wymaga pomiaru prekursorów steroidowych.'
                 ]
               }
             ]
@@ -1335,21 +1390,21 @@
             kind: 'prose',
             icon: 'book-2',
             title: 'Definicja',
-            body: 'Zaburzenia różnicowania płci (DSD — disorders of sex development) — wrodzone stany z nietypowym rozwojem płci chromosomalnej, gonadalnej lub anatomicznej. Najczęstsza sytuacja: noworodek z NIEJEDNOZNACZNYMI zewnętrznymi narządami płciowymi (skala Prader 2–4). Wymaga PILNEJ diagnostyki multidyscyplinarnej — kierowanie do OŚRODKA SPECJALISTYCZNEGO. Zespół diagnostyczny: endokrynolog pediatryczny + genetyk kliniczny + chirurg dziecięcy + psycholog + neonatolog; wybór płci wychowawczej wymaga starannej oceny biologicznej, psychologicznej i etycznej (Chicago Consensus 2006, aktualizacja 2016).'
+            body: 'Zaburzenia różnicowania płci (DSD — disorders of sex development) — wrodzone stany z nietypowym rozwojem płci chromosomalnej, gonadalnej lub anatomicznej. Najczęstsza sytuacja: noworodek z niejednoznacznymi zewnętrznymi narządami płciowymi (skala Prader 2–4). Wymaga pilnej diagnostyki multidyscyplinarnej — kierowanie do ośrodka specjalistycznego. Zespół diagnostyczny: endokrynolog pediatryczny + genetyk kliniczny + chirurg dziecięcy + psycholog + neonatolog; wybór płci wychowawczej wymaga starannej oceny biologicznej, psychologicznej i etycznej (Chicago Consensus 2006, aktualizacja 2016).'
           },
           {
             kind: 'callout',
             variant: 'primary',
             icon: 'book-2',
             title: 'PILNE: wykluczenie WPN z utratą soli',
-            body: 'U dziecka z wirylizacją + fenotypem żeńskim PIERWSZY krok diagnostyczny to WYKLUCZENIE wrodzonego przerostu nadnerczy (WPN) z utratą soli. Przełom solny jest potencjalnie ŚMIERTELNY i typowo ujawnia się w 2.–4. tygodniu życia (hiponatremia, HIPERKALIEMIA, kwasica, odwodnienie). Bezzwłocznie: 17-OH-progesteron + elektrolity (Na, K) + glukoza + ocena równowagi kwasowo-zasadowej. W Polsce od 2018 r. obowiązuje skrining bibułowy 17-OHP w 3.–5. dobie życia — ale u dziecka z niejednoznacznymi narządami płciowymi należy oznaczyć NIEZWŁOCZNIE, bez oczekiwania na wynik skriningu.'
+            body: 'U dziecka z wirylizacją + fenotypem żeńskim pierwszy krok diagnostyczny to wykluczenie wrodzonego przerostu nadnerczy (WPN) z utratą soli. Przełom solny jest potencjalnie śmiertelny i typowo ujawnia się w 2.–4. tygodniu życia (hiponatremia, hiperkaliemia, kwasica, odwodnienie). Bezzwłocznie: 17-OH-progesteron + elektrolity (Na, K) + glukoza + ocena równowagi kwasowo-zasadowej. W Polsce od 2018 r. obowiązuje skrining bibułowy 17-OHP w 3.–5. dobie życia — ale u dziecka z niejednoznacznymi narządami płciowymi należy oznaczyć niezwłocznie, bez oczekiwania na wynik skriningu.'
           },
           {
             kind: 'callout',
             variant: 'purple',
             icon: 'mood-kid',
             title: 'Okno mini-puberty (1.–6. miesiąc życia)',
-            body: 'Mini-puberty — przejściowa aktywacja osi przysadkowo-gonadowej u niemowląt (peak ~3 mies., wygasa ~6 mies.). W tym oknie pomiary T, DHT, AMH, inhibiny B, LH i FSH są WIARYGODNE bez konieczności testów dynamicznych i mają wartość PROGNOSTYCZNĄ dla przyszłej funkcji gonad i płodności — informacja kluczowa dla poradnictwa rodzicom i planowania długoterminowego leczenia. poza tym oknem (po 6. mies., przed dojrzewaniem) oś HPG fizjologicznie uśpiona — testosteron bazalny niski/nieoznaczalny, KONIECZNY test stymulacji hCG dla wiarygodnej oceny.'
+            body: 'Mini-puberty — przejściowa aktywacja osi przysadkowo-gonadowej u niemowląt (peak ~3 mies., wygasa ~6 mies.). W tym oknie pomiary T, DHT, AMH, inhibiny B, LH i FSH są wiarygodne bez konieczności testów dynamicznych i mają wartość prognostyczną dla przyszłej funkcji gonad i płodności — informacja kluczowa dla poradnictwa rodzicom i planowania długoterminowego leczenia. poza tym oknem (po 6. mies., przed dojrzewaniem) oś HPG fizjologicznie uśpiona — testosteron bazalny niski/nieoznaczalny, konieczny test stymulacji hCG dla wiarygodnej oceny.'
           },
           {
             kind: 'list',
@@ -1389,7 +1444,7 @@
               },
               { label: 'N/↑LH + N/↑T + ↓DHT → niedobór 5α-reduktazy typu 2', text: 'osobne wskazanie; stosunek T/DHT > 30 bazalnie lub > 10–20 po stymulacji hCG; mutacja SRD5A2.' },
               { label: '↓LH + ↓T → centralny hipogonadyzm', text: 'wrodzony hipopituitaryzm (mutacje PROP1, POU1F1), niedobór GnRH (zespół Kallmanna, izolowany IHH); konieczne MRI przysadki.' },
-              { label: 'AMH/inhibina B niskie → dysgenezja gonad; prawidłowe → komórki Sertoliego sprawne', text: 'KLUCZOWY wzorzec różnicujący CAIS (Sertoli sprawne, AMH prawidłowa) od dysgenezji jąder (AMH niska/nieoznaczalna).' }
+              { label: 'AMH/inhibina B niskie → dysgenezja gonad; prawidłowe → komórki Sertoliego sprawne', text: 'Kluczowy wzorzec różnicujący CAIS (Sertoli sprawne, AMH prawidłowa) od dysgenezji jąder (AMH niska/nieoznaczalna).' }
             ]
           }
         ]
@@ -1398,8 +1453,8 @@
         { name: 'PILNE w pierwszych dobach (wykluczenie WPN z utratą soli)',
           tests: [
             { id: 'oh17_progesterone', note: 'Skrining bibułowy obowiązkowy w Polsce od 2018 r. (3.–5. doba życia).', description: 'Skrining noworodkowy 17-OH-progesteronu w bibule (DBS) — obowiązkowy w Polsce od 2018 r. (rozporządzenie Ministra Zdrowia). Pobranie: 3.–5. doba życia z piętki noworodka, ta sama bibuła co inne skriningi (TSH, fenyloketonuria itd.). U noworodków pierwszej doby życia wartości fizjologicznie podwyższone — interpretacja wg progów wiekowych skriningu i masy urodzeniowej (osobne odcięcia dla wcześniaków). Wartości > 30 nmol/L (10 ng/mL) → klasyczny WPN; > 100 nmol/L → wysokie podejrzenie postaci z utratą soli. Pomocniczo pomiar w surowicy potwierdza rozpoznanie.' },
-            { ext: 'sodium', label: 'Sód (Na)', note: 'W postaci WPN z utratą soli typowo hiponatremia — element przełomu nadnerczowego u noworodka (typowo 2.–4. tydzień życia).', description: 'W klasycznej postaci wrodzonego przerostu nadnerczy (WPN) z utratą soli typowo stwierdza się HIPONATREMIĘ (Na < 135 mmol/L). Mechanizm: niedobór 21-hydroksylazy uniemożliwia syntezę aldosteronu, co powoduje utratę sodu przez nerki. Hiponatremia wraz z hiperkaliemią, kwasicą metaboliczną i odwodnieniem składają się na obraz przełomu nadnerczowego z utratą soli — stan bezpośredniego zagrożenia życia, który u noworodka z nierozpoznanym WPN pojawia się typowo w 2.–4. tygodniu życia. U dziewczynki 46,XX z WPN narządy płciowe zewnętrzne są zwirylizowane (rozpoznanie często wcześniejsze, na podstawie fenotypu); u chłopca 46,XY narządy płciowe są prawidłowe — przełom solny bywa pierwszym objawem choroby.' },
-            { ext: 'potassium', label: 'Potas (K)', note: 'W postaci WPN z utratą soli typowo hiperkaliemia — element przełomu nadnerczowego u noworodka (typowo 2.–4. tydzień życia).', description: 'W klasycznej postaci WPN z utratą soli typowo stwierdza się HIPERKALIEMIĘ (u noworodka K > 5,5 mmol/L). Mechanizm: niedobór aldosteronu zmniejsza wydalanie potasu przez nerki. Hiperkaliemia wraz z hiponatremią i kwasicą metaboliczną składają się na obraz przełomu nadnerczowego z utratą soli — stan bezpośredniego zagrożenia życia u noworodka z nierozpoznanym WPN, typowo w 2.–4. tygodniu życia. Współwystępowanie hiperkaliemii i hiponatremii u noworodka z niejednoznacznymi narządami płciowymi lub z objawami odwodnienia/wymiotami → pilne podejrzenie WPN z utratą soli, wymaga natychmiastowego leczenia.' }
+            { ext: 'sodium', label: 'Sód (Na)', note: 'W postaci WPN z utratą soli typowo hiponatremia — element przełomu nadnerczowego u noworodka (typowo 2.–4. tydzień życia).', description: 'W klasycznej postaci wrodzonego przerostu nadnerczy (WPN) z utratą soli typowo stwierdza się hiponatremię (Na < 135 mmol/L). Mechanizm: niedobór 21-hydroksylazy uniemożliwia syntezę aldosteronu, co powoduje utratę sodu przez nerki. Hiponatremia wraz z hiperkaliemią, kwasicą metaboliczną i odwodnieniem składają się na obraz przełomu nadnerczowego z utratą soli — stan bezpośredniego zagrożenia życia, który u noworodka z nierozpoznanym WPN pojawia się typowo w 2.–4. tygodniu życia. U dziewczynki 46,XX z WPN narządy płciowe zewnętrzne są zwirylizowane (rozpoznanie często wcześniejsze, na podstawie fenotypu); u chłopca 46,XY narządy płciowe są prawidłowe — przełom solny bywa pierwszym objawem choroby.' },
+            { ext: 'potassium', label: 'Potas (K)', note: 'W postaci WPN z utratą soli typowo hiperkaliemia — element przełomu nadnerczowego u noworodka (typowo 2.–4. tydzień życia).', description: 'W klasycznej postaci WPN z utratą soli typowo stwierdza się hiperkaliemię (u noworodka K > 5,5 mmol/L). Mechanizm: niedobór aldosteronu zmniejsza wydalanie potasu przez nerki. Hiperkaliemia wraz z hiponatremią i kwasicą metaboliczną składają się na obraz przełomu nadnerczowego z utratą soli — stan bezpośredniego zagrożenia życia u noworodka z nierozpoznanym WPN, typowo w 2.–4. tygodniu życia. Współwystępowanie hiperkaliemii i hiponatremii u noworodka z niejednoznacznymi narządami płciowymi lub z objawami odwodnienia/wymiotami → pilne podejrzenie WPN z utratą soli, wymaga natychmiastowego leczenia.' }
           ]
         },
         { name: 'Diagnostyka genetyczna',
@@ -1411,8 +1466,8 @@
           tests: [
             { id: 'testosterone_total', note: 'Preferowany pomiar w mini-puberty (1.–6. mies., peak ~3 mies.). Poza tym oknem testosteron bazalny niski — konieczny test stymulacji hCG.', description: 'Testosteron całkowity u dziecka z DSD — w okresie mini-puberty (1.–6. miesiąc życia) oś przysadkowo-gonadalna jest fizjologicznie aktywna, a testosteron u chłopców 46,XY osiąga wartości pubertalne (typowo 6–12 nmol/L w peak ~3 mies.; pełny zakres mini-puberty 1–15 nmol/L w zależności od metody pomiaru i dokładnego wieku — wg Kuiri-Hänninen 2014 i Forest 1980). To okno diagnostyczne pozwala ocenić czynność komórek Leydiga bez testu stymulacji hCG. Poza oknem mini-puberty (po 6. miesiącu życia, przed dojrzewaniem) testosteron bazalny jest niski/nieoznaczalny — konieczny test stymulacji hCG dla wiarygodnej oceny. Metoda referencyjna: LC-MS/MS.' },
             { id: 'dht', note: 'Wraz z testosteronem ocena stosunku T/DHT (> 10–20 po hCG → niedobór 5α-reduktazy typu 2).' },
-            { id: 'amh', note: 'Marker komórek Sertoliego — obecność i czynność jąder. U chłopców 46,XY wysokie wartości od urodzenia do dojrzewania; brak/niskie → dysgenezja jąder lub anorchia.', description: 'AMH (hormon antymüllerowski) — produkowany przez komórki Sertoliego od ~7. tygodnia życia płodowego, hamuje rozwój struktur Müllerowskich u płodu męskiego. W diagnostyce DSD: (1) marker obecności i czynności jąder (u chłopców 46,XY mediana 500–1500 pmol/L do dojrzewania); (2) niskie/brak AMH → dysgenezja jąder, anorchia, ciężka niewydolność komórek Sertoliego; (3) AMH prawidłowy/podwyższony + WYSOKI T + WYSOKI LH + fenotyp żeński z obecnymi jądrami → zespół niewrażliwości na androgeny (CAIS — oporność receptora androgenowego, komórki Sertoliego i Leydiga prawidłowe; brak ujemnego sprzężenia zwrotnego → wzrost LH → wzrost T); (4) AMH prawidłowy + niski T + niski DHT → izolowana dysfunkcja komórek Leydiga lub zaburzenia syntezy testosteronu (np. niedobór 17β-HSD3, StAR, HSD3B2 — komórki Sertoliego prawidłowe, ale zaburzona synteza testosteronu); (5) u dziewczynek 46,XX wartości bardzo niskie. AMH jest komplementarna do inhibiny B (oba markery Sertoliego, ale różne pule funkcjonalne).' },
-            { id: 'inhibin_b', note: 'Marker komórek Sertoliego, komplementarny do AMH. W mini-puberty wartości pubertalne (peak ~3 mies.). Wartość PROGNOSTYCZNA dla przyszłej funkcji gonad.', description: 'Inhibina B — produkowana przez komórki Sertoliego (u chłopców) i komórki ziarniste (u dziewczynek). Wartości referencyjne mini-puberty u chłopców: 100–400 pg/mL (peak ~3 mies.); u dziewczynek <50 pg/mL. Komplementarna do AMH (oba markery komórek Sertoliego, ale różne aspekty czynności): (1) niska inhibina B + niska AMH → dysgenezja jąder, ciężka niewydolność komórek Sertoliego; (2) prawidłowa inhibina B → komórki Sertoliego prawidłowe (PAIS, CAIS — funkcja Sertolich zachowana); (3) inhibina B podwyższona w niektórych guzach jajnika (granulosa cell tumor). KLUCZOWE: inhibina B ma wartość PROGNOSTYCZNĄ — pomaga przewidzieć przyszłą funkcję gonad w okresie dojrzewania i płodność (informacja istotna dla poradnictwa rodzicom i planowania długoterminowego leczenia).' },
+            { id: 'amh', note: 'Marker komórek Sertoliego — obecność i czynność jąder. U chłopców 46,XY wysokie wartości od urodzenia do dojrzewania; brak/niskie → dysgenezja jąder lub anorchia.', description: 'AMH (hormon antymüllerowski) — produkowany przez komórki Sertoliego od ~7. tygodnia życia płodowego, hamuje rozwój struktur Müllerowskich u płodu męskiego. W diagnostyce DSD: (1) marker obecności i czynności jąder (u chłopców 46,XY mediana 500–1500 pmol/L do dojrzewania); (2) niskie/brak AMH → dysgenezja jąder, anorchia, ciężka niewydolność komórek Sertoliego; (3) AMH prawidłowy/podwyższony + wysoki T + wysoki LH + fenotyp żeński z obecnymi jądrami → zespół niewrażliwości na androgeny (CAIS — oporność receptora androgenowego, komórki Sertoliego i Leydiga prawidłowe; brak ujemnego sprzężenia zwrotnego → wzrost LH → wzrost T); (4) AMH prawidłowy + niski T + niski DHT → izolowana dysfunkcja komórek Leydiga lub zaburzenia syntezy testosteronu (np. niedobór 17β-HSD3, StAR, HSD3B2 — komórki Sertoliego prawidłowe, ale zaburzona synteza testosteronu); (5) u dziewczynek 46,XX wartości bardzo niskie. AMH jest komplementarna do inhibiny B (oba markery Sertoliego, ale różne pule funkcjonalne).' },
+            { id: 'inhibin_b', note: 'Marker komórek Sertoliego, komplementarny do AMH. W mini-puberty wartości pubertalne (peak ~3 mies.). Wartość prognostyczna dla przyszłej funkcji gonad.', description: 'Inhibina B — produkowana przez komórki Sertoliego (u chłopców) i komórki ziarniste (u dziewczynek). Wartości referencyjne mini-puberty u chłopców: 100–400 pg/mL (peak ~3 mies.); u dziewczynek <50 pg/mL. Komplementarna do AMH (oba markery komórek Sertoliego, ale różne aspekty czynności): (1) niska inhibina B + niska AMH → dysgenezja jąder, ciężka niewydolność komórek Sertoliego; (2) prawidłowa inhibina B → komórki Sertoliego prawidłowe (PAIS, CAIS — funkcja Sertolich zachowana); (3) inhibina B podwyższona w niektórych guzach jajnika (granulosa cell tumor). Kluczowe: inhibina B ma wartość prognostyczną — pomaga przewidzieć przyszłą funkcję gonad w okresie dojrzewania i płodność (informacja istotna dla poradnictwa rodzicom i planowania długoterminowego leczenia).' },
             { id: 'lh', note: 'W mini-puberty wartości pubertalne (0,5–6 IU/L u chłopców). LH wysoki + niski T → dysgenezja jąder lub defekt biosyntezy testosteronu; LH wysoki + wysoki T → zespół niewrażliwości na androgeny (CAIS/PAIS).', description: 'LH (hormon luteinizujący) w DSD u dziecka — kluczowy parametr osi przysadkowo-gonadowej w oknie mini-puberty (1.–6. miesiąc życia). Wartości referencyjne u chłopców w mini-puberty: 0,5–6 IU/L (peak ~3 mies.); u dziewczynek niższe (0–2 IU/L). Interpretacja w DSD: (1) LH wysoki + niski T → dysgenezja jąder, anorchia lub defekt biosyntezy testosteronu (17β-HSD3, StAR, HSD3B2 — komórki Leydiga obecne, ale nie produkują testosteronu); (2) LH wysoki + wysoki T → zespół niewrażliwości na androgeny (CAIS lub PAIS — komórki Leydiga prawidłowe, oporność receptora androgenowego → brak ujemnego sprzężenia zwrotnego → wzrost LH → wzrost T); (3) LH prawidłowy lub łagodnie podwyższony + prawidłowy/wysoki T + niski DHT → niedobór 5α-reduktazy typu 2 (komórki Leydiga sprawne, uszkodzony enzym konwersji testosteronu w DHT — komórki Leydiga NIE są uszkodzone); (4) LH niski/normalny + niski T → centralny hipogonadyzm (wrodzony hipopituitaryzm, niedobór GnRH). Pomiar poza oknem mini-puberty (po 6. miesiącu życia, przed dojrzewaniem) — niewiarygodny, oś HPG fizjologicznie uśpiona.' },
             { id: 'fsh', note: 'W mini-puberty wartości pubertalne (0,5–3 IU/L u chłopców). Wysoki → pierwotna dysfunkcja gonad (Klinefelter 47,XXY, dysgenezja jąder/jajników).', description: 'FSH (hormon folikulotropowy) w DSD u dziecka — marker funkcji komórek Sertoliego (u chłopców) lub komórek ziarnistych pęcherzyków jajnikowych (u dziewczynek). Wartości referencyjne mini-puberty u chłopców: 0,5–3 IU/L; u dziewczynek mogą być wyższe (do 8 IU/L). Interpretacja w DSD: (1) FSH wysoki → pierwotna dysfunkcja gonad (Klinefelter 47,XXY, dysgenezja jąder lub jajników, anorchia); (2) FSH niski/normalny → centralny hipogonadyzm (hipopituitaryzm wrodzony, niedobór GnRH); (3) FSH > LH w mini-puberty u chłopca → silne podejrzenie pierwotnej dysfunkcji gonad. Razem z LH stanowi parę różnicującą pierwotny vs centralny hipogonadyzm.' }
           ]
@@ -1452,7 +1507,7 @@
             kind: 'prose',
             icon: 'book-2',
             title: 'Definicja i kryteria rozpoznania',
-            body: 'Hipogonadyzm męski — rozpoznanie wymaga OBU elementów: objawów klinicznych ORAZ biochemicznie potwierdzonego niedoboru testosteronu (2× testosteron całkowity pobrany rano 7:00–11:00, na czczo, w stanie stabilnym — bez chorób ostrych, deprywacji snu, dużego wysiłku). Próg rozpoznania wg Endocrine Society 2018 (Bhasin): testosteron całkowity < 9,2 nmol/L (264 ng/dL). Przy wartościach granicznych (8–12 nmol/L) lub nieprawidłowej SHBG oblicza się testosteron wolny (wzór Vermeulena).'
+            body: 'Hipogonadyzm męski — rozpoznanie wymaga OBU elementów: objawów klinicznych oraz biochemicznie potwierdzonego niedoboru testosteronu (2× testosteron całkowity pobrany rano 7:00–11:00, na czczo, w stanie stabilnym — bez chorób ostrych, deprywacji snu, dużego wysiłku). Próg rozpoznania wg Endocrine Society 2018 (Bhasin): testosteron całkowity < 9,2 nmol/L (264 ng/dL). Przy wartościach granicznych (8–12 nmol/L) lub nieprawidłowej SHBG oblicza się testosteron wolny (wzór Vermeulena).'
           },
           {
             kind: 'list',
@@ -1509,7 +1564,7 @@
       sections: [
         { name: 'Potwierdzenie niedoboru testosteronu',
           tests: [
-            { id: 'testosterone_total', note: 'Pobranie rano (7:00–11:00), na czczo, 2× potwierdzenie w odrębnych dniach, w stanie stabilnym. Próg rozpoznania (Endocrine Society 2018): < 9,2 nmol/L (264 ng/dL).', description: 'Testosteron całkowity — podstawowy parametr rozpoznania hipogonadyzmu męskiego. Pobranie: rano (7:00–11:00, szczyt rytmu dobowego), na czczo, wymagane dwukrotne potwierdzenie w odrębnych dniach. Próg rozpoznania wg Endocrine Society 2018 (Bhasin): testosteron całkowity < 9,2 nmol/L (264 ng/dL) u mężczyzny z objawami. UWAGA: testosteron jest przejściowo obniżony w chorobach ostrych, po dużym wysiłku, przy deprywacji snu oraz w otyłości (obniżona SHBG) — pomiar należy wykonać w stanie stabilnym, a wartości graniczne zweryfikować obliczeniem testosteronu wolnego. Metoda referencyjna: LC-MS/MS.' },
+            { id: 'testosterone_total', note: 'Pobranie rano (7:00–11:00), na czczo, 2× potwierdzenie w odrębnych dniach, w stanie stabilnym. Próg rozpoznania (Endocrine Society 2018): < 9,2 nmol/L (264 ng/dL).', description: 'Testosteron całkowity — podstawowy parametr rozpoznania hipogonadyzmu męskiego. Pobranie: rano (7:00–11:00, szczyt rytmu dobowego), na czczo, wymagane dwukrotne potwierdzenie w odrębnych dniach. Próg rozpoznania wg Endocrine Society 2018 (Bhasin): testosteron całkowity < 9,2 nmol/L (264 ng/dL) u mężczyzny z objawami. Uwaga: testosteron jest przejściowo obniżony w chorobach ostrych, po dużym wysiłku, przy deprywacji snu oraz w otyłości (obniżona SHBG) — pomiar należy wykonać w stanie stabilnym, a wartości graniczne zweryfikować obliczeniem testosteronu wolnego. Metoda referencyjna: LC-MS/MS.' },
             { id: 'shbg', note: 'Niezbędna do obliczenia testosteronu wolnego/biodostępnego. Obniżona w otyłości, cukrzycy typu 2 i niedoczynności tarczycy; podwyższona z wiekiem, w nadczynności tarczycy i chorobach wątroby.' },
             { id: 'testosterone_free', note: 'Oznaczać gdy testosteron całkowity graniczny (8–12 nmol/L) lub SHBG nieprawidłowa. Preferowane obliczenie wzorem Vermeulena (testosteron całkowity + SHBG + albumina) — bezpośrednie immunoassaye są niezalecane.', description: 'Testosteron wolny — biologicznie aktywna frakcja (~2% testosteronu całkowitego), niezwiązana z SHBG ani albuminą. Wskazany gdy testosteron całkowity jest w strefie granicznej (8–12 nmol/L) lub gdy SHBG jest nieprawidłowa (co rozłącza testosteron całkowity od rzeczywistej aktywności androgenowej). Preferowana metoda: obliczenie wzorem Vermeulena z testosteronu całkowitego, SHBG i albuminy (kalkulatory online) lub bezpośredni pomiar metodą dializy równowagowej z LC-MS/MS. Bezpośrednie immunoassaye testosteronu wolnego są niezalecane (niedokładne). Wartość progowa zależy od metody — orientacyjnie < ~225 pmol/L wspiera rozpoznanie.' }
           ]
@@ -1539,7 +1594,7 @@
             { ext: 'dxa', label: 'DXA (densytometria L1–L4, biodro)', note: 'Hipogonadyzm jest przyczyną wtórnej osteoporozy u mężczyzn — także młodych. U mężczyzn ≥ 50. r.ż. kryterium to T-score ≤ -2,5 = osteoporoza; u młodszych właściwy jest Z-score (≤ -2,0 = „poniżej zakresu oczekiwanego dla wieku").' },
             { id: 'vit_d_25oh', note: 'Częsty niedobór; istotny dla zdrowia kości — komplementarny do DXA w ocenie ryzyka osteoporozy.' },
             { ext: 'psa', label: 'PSA + badanie per rectum (DRE)', note: 'Ocena gruczołu krokowego przed testosteronoterapią — wg Endocrine Society 2018 zalecana u mężczyzn ≥ 40. r.ż.; u młodszych nie jest badaniem rutynowym. Cel: wykluczenie raka gruczołu krokowego (testosteron przeciwwskazany). Kontrola także w trakcie leczenia.', description: 'PSA (swoisty antygen sterczowy) wraz z badaniem per rectum (DRE) — ocena gruczołu krokowego przed rozpoczęciem testosteronoterapii; wg Endocrine Society 2018 zalecana u mężczyzn ≥ 40. r.ż., u młodszych nie jest badaniem rutynowym. Testosteron jest przeciwwskazany w raku gruczołu krokowego (może stymulować wzrost guza hormonowrażliwego). Orientacyjne wartości PSA: < 4 ng/mL — zwykle prawidłowe; 4–10 ng/mL — strefa szara, wskazana konsultacja urologiczna; > 10 ng/mL — wysokie ryzyko, wymaga diagnostyki urologicznej. Współcześnie coraz częściej stosuje się progi swoiste dla wieku — niższe u młodszych mężczyzn (np. < 2,5 ng/mL w 40.–49. r.ż.), wyższe u starszych (np. < 6,5 ng/mL w 70.–79. r.ż.). W trakcie testosteronoterapii: kontrola PSA po 3–6 miesiącach, następnie co 12 miesięcy; wzrost PSA > 1,4 ng/mL w ciągu roku lub przekroczenie 4 ng/mL → konsultacja urologiczna. Badanie per rectum ocenia konsystencję gruczołu i ewentualne guzki.' },
-            { ext: 'cbc', label: 'Morfologia krwi (hematokryt)', note: 'Wykluczenie erytrocytozy/policytemii — testosteron zwiększa hematokryt. PRZED rozpoczęciem terapii hematokryt > 48–50% → odroczenie; W TRAKCIE leczenia > 54% → wstrzymanie/modyfikacja. Morfologia wykrywa też niedokrwistość, która sama może być skutkiem hipogonadyzmu.' }
+            { ext: 'cbc', label: 'Morfologia krwi (hematokryt)', note: 'Wykluczenie erytrocytozy/policytemii — testosteron zwiększa hematokryt. przed rozpoczęciem terapii hematokryt > 48–50% → odroczenie; W trakcie leczenia > 54% → wstrzymanie/modyfikacja. Morfologia wykrywa też niedokrwistość, która sama może być skutkiem hipogonadyzmu.' }
           ]
         }
       ],
@@ -1596,7 +1651,7 @@
             icon: 'tags',
             title: 'Sekwencja diagnostyczna',
             items: [
-              '(1) β-hCG ZAWSZE pierwszy — wykluczenie ciąży u kobiet w wieku rozrodczym.',
+              '(1) β-hCG zawsze pierwszy — wykluczenie ciąży u kobiet w wieku rozrodczym.',
               '(2) Panel hormonalny: FSH + LH + estradiol — klasyfikacja postaci (hipergonadotropowy vs hipogonadotropowy).',
               '(3) Prolaktyna + TSH — wykluczenie odwracalnych przyczyn osi gonadalnej.',
               '(4) Etiologia zależnie od wzorca: w postaci jajnikowej — kariotyp + FMR1 + autoimmunologia; w postaci centralnej — MRI przysadki (po wykluczeniu FHA).',
@@ -1652,7 +1707,7 @@
             kind: 'prose',
             icon: 'book-2',
             title: 'Definicja i kontekst',
-            body: 'Andropauza = hipogonadyzm późnego początku (LOH — late-onset hypogonadism) u starzejących się mężczyzn. Rozpoznanie wymaga OBU elementów: objawów klinicznych (obniżone libido, zaburzenia erekcji, zmęczenie, obniżenie nastroju, spadek masy mięśniowej i gęstości kości) ORAZ biochemicznie potwierdzonego niedoboru testosteronu (2× pomiar rano).'
+            body: 'Andropauza = hipogonadyzm późnego początku (LOH — late-onset hypogonadism) u starzejących się mężczyzn. Rozpoznanie wymaga OBU elementów: objawów klinicznych (obniżone libido, zaburzenia erekcji, zmęczenie, obniżenie nastroju, spadek masy mięśniowej i gęstości kości) oraz biochemicznie potwierdzonego niedoboru testosteronu (2× pomiar rano).'
           },
           {
             kind: 'list',
@@ -1681,7 +1736,7 @@
       sections: [
         { name: 'Rozpoznanie (potwierdzenie niedoboru testosteronu)',
           tests: [
-            { id: 'testosterone_total', note: 'Pobranie rano (7:00–11:00), na czczo, 2× potwierdzenie. Progi (EAU): < 12 nmol/L (350 ng/dL) u objawowego mężczyzny → strefa wymagająca dalszej oceny; < 8 nmol/L (230 ng/dL) → wyraźny niedobór.', description: 'Testosteron całkowity — podstawowy parametr rozpoznania hipogonadyzmu późnego początku (LOH). Pobranie: rano (7:00–11:00), na czczo, wymagane dwukrotne potwierdzenie w odstępie (rytm dobowy testosteronu — najwyższe stężenia rano). Progi interpretacyjne: wg EAU 2023 — < 12 nmol/L (350 ng/dL) u mężczyzny z objawami → strefa wymagająca dalszej oceny (SHBG, wolny testosteron); < 8 nmol/L (230 ng/dL) → wyraźny niedobór wymagający leczenia. Endocrine Society 2018 (Bhasin) stosuje próg < 9,2 nmol/L (264 ng/dL) dla rozpoznania hipogonadyzmu. UWAGA: testosteron jest obniżony przejściowo w chorobach ostrych, po wysiłku, przy niedoborze snu — pomiar należy wykonać w stanie stabilnym. Metoda referencyjna: LC-MS/MS.' },
+            { id: 'testosterone_total', note: 'Pobranie rano (7:00–11:00), na czczo, 2× potwierdzenie. Progi (EAU): < 12 nmol/L (350 ng/dL) u objawowego mężczyzny → strefa wymagająca dalszej oceny; < 8 nmol/L (230 ng/dL) → wyraźny niedobór.', description: 'Testosteron całkowity — podstawowy parametr rozpoznania hipogonadyzmu późnego początku (LOH). Pobranie: rano (7:00–11:00), na czczo, wymagane dwukrotne potwierdzenie w odstępie (rytm dobowy testosteronu — najwyższe stężenia rano). Progi interpretacyjne: wg EAU 2023 — < 12 nmol/L (350 ng/dL) u mężczyzny z objawami → strefa wymagająca dalszej oceny (SHBG, wolny testosteron); < 8 nmol/L (230 ng/dL) → wyraźny niedobór wymagający leczenia. Endocrine Society 2018 (Bhasin) stosuje próg < 9,2 nmol/L (264 ng/dL) dla rozpoznania hipogonadyzmu. Uwaga: testosteron jest obniżony przejściowo w chorobach ostrych, po wysiłku, przy niedoborze snu — pomiar należy wykonać w stanie stabilnym. Metoda referencyjna: LC-MS/MS.' },
             { id: 'shbg', note: 'Rośnie z wiekiem — u starszych mężczyzn często podwyższona. Niezbędna do obliczenia wolnego/biodostępnego testosteronu gdy testosteron całkowity jest graniczny.', description: 'SHBG (globulina wiążąca hormony płciowe) — u starzejących się mężczyzn jej stężenie zwykle rośnie z wiekiem, co może maskować niedobór testosteronu (testosteron całkowity prawidłowy, ale wolny obniżony). SHBG jest natomiast obniżona w otyłości, cukrzycy typu 2, zespole metabolicznym, niedoczynności tarczycy. Pomiar SHBG jest niezbędny do obliczenia wolnego i biodostępnego testosteronu — kluczowy gdy testosteron całkowity jest w strefie granicznej (8–12 nmol/L).' },
             { id: 'testosterone_free', note: 'Oznaczać gdy testosteron całkowity graniczny (8–12 nmol/L) lub gdy SHBG nieprawidłowa. Próg wolnego testosteronu < 225 pmol/L (~65 pg/mL, zależnie od metody).', description: 'Testosteron wolny — biologicznie aktywna frakcja (~2% testosteronu całkowitego). Wskazany gdy testosteron całkowity jest w strefie granicznej (8–12 nmol/L) lub gdy SHBG jest nieprawidłowa (podwyższona u starszych, obniżona w otyłości). Próg: wolny testosteron < 225 pmol/L (~65 pg/mL) wspiera rozpoznanie hipogonadyzmu — wartość progowa różni się jednak między metodami (część źródeł podaje 180–250 pmol/L). Preferowana metoda: obliczenie z testosteronu całkowitego + SHBG + albuminy wg wzoru Vermeulena (dostępne w kalkulatorach online) lub bezpośredni pomiar metodą dializy równowagowej z LC-MS/MS. Bezpośrednie immunoassaye wolnego testosteronu są niezalecane.' }
           ]
@@ -1696,7 +1751,7 @@
         { name: 'Przed rozpoczęciem testosteronoterapii (obowiązkowe)',
           tests: [
             EXT.psa,
-            { ext: 'cbc', label: 'Morfologia krwi (hematokryt)', note: 'Wykluczenie erytrocytozy/policytemii — testosteron zwiększa hematokryt. PRZED rozpoczęciem terapii hematokryt > 48–50% → odroczenie; W TRAKCIE leczenia > 54% → wstrzymanie/modyfikacja.', description: 'Morfologia krwi z oceną hematokrytu — obowiązkowa przed rozpoczęciem testosteronoterapii i w trakcie leczenia. Testosteron stymuluje erytropoezę i zwiększa hematokryt; nadmierny wzrost (erytrocytoza/policytemia) zwiększa ryzyko powikłań zakrzepowo-zatorowych. Progi (Bhasin ES 2018): PRZED rozpoczęciem terapii — hematokryt > 48–50% stanowi przeciwwskazanie względne, terapię należy odroczyć do wyjaśnienia przyczyny i normalizacji. W TRAKCIE leczenia — kontrola morfologii po 3–6 miesiącach, następnie co 12 miesięcy; przy hematokrycie > 54% wskazana redukcja dawki, zmiana preparatu lub czasowe wstrzymanie terapii. Morfologia pozwala też wykryć niedokrwistość, która sama może być skutkiem hipogonadyzmu (testosteron stymuluje erytropoezę).' }
+            { ext: 'cbc', label: 'Morfologia krwi (hematokryt)', note: 'Wykluczenie erytrocytozy/policytemii — testosteron zwiększa hematokryt. przed rozpoczęciem terapii hematokryt > 48–50% → odroczenie; W trakcie leczenia > 54% → wstrzymanie/modyfikacja.', description: 'Morfologia krwi z oceną hematokrytu — obowiązkowa przed rozpoczęciem testosteronoterapii i w trakcie leczenia. Testosteron stymuluje erytropoezę i zwiększa hematokryt; nadmierny wzrost (erytrocytoza/policytemia) zwiększa ryzyko powikłań zakrzepowo-zatorowych. Progi (Bhasin ES 2018): przed rozpoczęciem terapii — hematokryt > 48–50% stanowi przeciwwskazanie względne, terapię należy odroczyć do wyjaśnienia przyczyny i normalizacji. W trakcie leczenia — kontrola morfologii po 3–6 miesiącach, następnie co 12 miesięcy; przy hematokrycie > 54% wskazana redukcja dawki, zmiana preparatu lub czasowe wstrzymanie terapii. Morfologia pozwala też wykryć niedokrwistość, która sama może być skutkiem hipogonadyzmu (testosteron stymuluje erytropoezę).' }
           ]
         },
         { name: 'Ocena chorób towarzyszących i konsekwencji',
@@ -1725,7 +1780,7 @@
             kind: 'prose',
             icon: 'book-2',
             title: 'Definicja i kontekst rozpoznania',
-            body: 'Rozpoznanie menopauzy jest KLINICZNE — 12 kolejnych miesięcy braku miesiączki u kobiety ≥ 45. r.ż. bez innej przyczyny, bez potrzeby badań hormonalnych. Jeśli objawy wygasania czynności jajników występują przed 40. r.ż., właściwym rozpoznaniem jest przedwczesna niewydolność jajników (POI — osobne wskazanie), nie menopauza. Druga część panelu obejmuje ocenę przed włączeniem menopauzalnej terapii hormonalnej (MHT/HRT).'
+            body: 'Rozpoznanie menopauzy jest kliniczne — 12 kolejnych miesięcy braku miesiączki u kobiety ≥ 45. r.ż. bez innej przyczyny, bez potrzeby badań hormonalnych. Jeśli objawy wygasania czynności jajników występują przed 40. r.ż., właściwym rozpoznaniem jest przedwczesna niewydolność jajników (POI — osobne wskazanie), nie menopauza. Druga część panelu obejmuje ocenę przed włączeniem menopauzalnej terapii hormonalnej (MHT/HRT).'
           },
           {
             kind: 'list',
@@ -1746,10 +1801,10 @@
                 label: 'Pułapki interpretacji FSH w perimenopauzie',
                 text: 'pojedynczy pomiar bywa zawodny — silne wahania międzycykliczne:',
                 detail: [
-                  'FSH w perimenopauzie wykazuje DUŻĄ zmienność z cyklu na cykl — pojedynczy pomiar może być prawidłowy mimo zaawansowanej perimenopauzy.',
+                  'FSH w perimenopauzie wykazuje dużą zmienność z cyklu na cykl — pojedynczy pomiar może być prawidłowy mimo zaawansowanej perimenopauzy.',
                   'Orientacyjnie: FSH > 25 IU/L sugeruje, > 40 IU/L wspiera rozpoznanie — żaden próg nie jest jednak rozstrzygający w pojedynczym pomiarze.',
-                  'U kobiety ≥ 45. r.ż. z 12-miesięcznym brakiem miesiączki rozpoznanie pozostaje kliniczne — oznaczanie FSH NIE jest potrzebne.',
-                  'Niski estradiol jest zgodny z menopauzą, ale również waha się w perimenopauzie — interpretować ZAWSZE łącznie z FSH.'
+                  'U kobiety ≥ 45. r.ż. z 12-miesięcznym brakiem miesiączki rozpoznanie pozostaje kliniczne — oznaczanie FSH nie jest potrzebne.',
+                  'Niski estradiol jest zgodny z menopauzą, ale również waha się w perimenopauzie — interpretować zawsze łącznie z FSH.'
                 ]
               }
             ]
@@ -1764,7 +1819,7 @@
                 text: 'przesiew nowotworów hormonowrażliwych:',
                 detail: [
                   'Mammografia — przesiew raka piersi przed rozpoczęciem MHT oraz kontrolnie w trakcie (MHT estrogenowo-progestagenowa wiąże się z niewielkim wzrostem ryzyka raka piersi).',
-                  'USG przezpochwowe — WSKAZANIE jest krwawienie po menopauzie lub nieprawidłowe krwawienia w trakcie MHT (każde takie krwawienie wymaga wykluczenia rozrostu/raka endometrium); rutynowe wyjściowe USG przed MHT u kobiety bezobjawowej NIE jest wymagane.',
+                  'USG przezpochwowe — wskazanie jest krwawienie po menopauzie lub nieprawidłowe krwawienia w trakcie MHT (każde takie krwawienie wymaga wykluczenia rozrostu/raka endometrium); rutynowe wyjściowe USG przed MHT u kobiety bezobjawowej nie jest wymagane.',
                   'Cytologia szyjki macicy (PAP) — element rutynowej oceny ginekologicznej.'
                 ]
               },
@@ -1772,7 +1827,7 @@
                 label: 'Sercowo-naczyniowa i metaboliczna',
                 text: 'wpływa na wybór drogi podania i ocenę „okna terapeutycznego":',
                 detail: [
-                  'Lipidogram (TC, LDL, HDL, TG) — przy podwyższonym ryzyku CV i hipertriglicerydemii preferowana droga PRZEZSKÓRNA (omija efekt pierwszego przejścia przez wątrobę).',
+                  'Lipidogram (TC, LDL, HDL, TG) — przy podwyższonym ryzyku CV i hipertriglicerydemii preferowana droga przezskórna (omija efekt pierwszego przejścia przez wątrobę).',
                   'Glukoza na czczo — element profilu metabolicznego, wykrycie nieprawidłowej glikemii lub cukrzycy.',
                   '„Okno terapeutyczne": korzystny bilans korzyści i ryzyka MHT dotyczy kobiet rozpoczynających terapię przed 60. r.ż. lub w ciągu 10 lat od menopauzy; rozpoczęcie później przesuwa bilans w stronę ryzyka sercowo-naczyniowego i udaru.'
                 ]
@@ -1782,7 +1837,7 @@
                 text: 'czynna choroba wątroby jest przeciwwskazaniem do doustnej terapii estrogenowej:',
                 detail: [
                   'Próby wątrobowe (ALAT, ASPAT, GGTP, bilirubina) — ocena czynności wątroby przed MHT.',
-                  'Przy patologii wątroby preferowana droga PRZEZSKÓRNA (omija metabolizm wątrobowy i efekt pierwszego przejścia).'
+                  'Przy patologii wątroby preferowana droga przezskórna (omija metabolizm wątrobowy i efekt pierwszego przejścia).'
                 ]
               },
               { label: 'Kości', text: 'DXA (densytometria) — po menopauzie spadek estrogenów przyspiesza utratę masy kostnej; kryterium rozpoznania osteoporozy to T-score ≤ -2,5. Komplementarnie witamina D (25-OH).' }
@@ -1793,7 +1848,7 @@
       sections: [
         { name: 'Potwierdzenie hormonalne — tylko w sytuacjach wątpliwych',
           tests: [
-            { id: 'fsh', note: 'W perimenopauzie FSH silnie się waha — pojedynczy pomiar bywa zawodny. Orientacyjnie > 25 IU/L sugeruje, > 40 IU/L wspiera rozpoznanie. Niepotrzebny do rutynowego rozpoznania menopauzy u kobiety ≥ 45. r.ż. (rozpoznanie kliniczne).', description: 'FSH (hormon folikulotropowy) w diagnostyce menopauzy — wzrasta wskutek wygasania czynności pęcherzykowej jajników i utraty ujemnego sprzężenia zwrotnego (spadek estradiolu i inhibiny B). UWAGA: w okresie perimenopauzy FSH wykazuje dużą zmienność z cyklu na cykl — pojedynczy pomiar może być prawidłowy mimo zaawansowanej perimenopauzy, dlatego nie należy opierać na nim rozpoznania. Orientacyjnie FSH > 25 IU/L sugeruje, a > 40 IU/L wspiera rozpoznanie menopauzy. U kobiety ≥ 45. r.ż. z 12-miesięcznym brakiem miesiączki rozpoznanie jest kliniczne i nie wymaga oznaczania FSH; badanie ma wartość głównie w sytuacjach wątpliwych (wiek 40–45 lat, brak macicy, stosowanie antykoncepcji hormonalnej uniemożliwiające ocenę cyklu).' },
+            { id: 'fsh', note: 'W perimenopauzie FSH silnie się waha — pojedynczy pomiar bywa zawodny. Orientacyjnie > 25 IU/L sugeruje, > 40 IU/L wspiera rozpoznanie. Niepotrzebny do rutynowego rozpoznania menopauzy u kobiety ≥ 45. r.ż. (rozpoznanie kliniczne).', description: 'FSH (hormon folikulotropowy) w diagnostyce menopauzy — wzrasta wskutek wygasania czynności pęcherzykowej jajników i utraty ujemnego sprzężenia zwrotnego (spadek estradiolu i inhibiny B). Uwaga: w okresie perimenopauzy FSH wykazuje dużą zmienność z cyklu na cykl — pojedynczy pomiar może być prawidłowy mimo zaawansowanej perimenopauzy, dlatego nie należy opierać na nim rozpoznania. Orientacyjnie FSH > 25 IU/L sugeruje, a > 40 IU/L wspiera rozpoznanie menopauzy. U kobiety ≥ 45. r.ż. z 12-miesięcznym brakiem miesiączki rozpoznanie jest kliniczne i nie wymaga oznaczania FSH; badanie ma wartość głównie w sytuacjach wątpliwych (wiek 40–45 lat, brak macicy, stosowanie antykoncepcji hormonalnej uniemożliwiające ocenę cyklu).' },
             { id: 'estradiol', note: 'Niski estradiol odzwierciedla wygasanie czynności jajników. Interpretować łącznie z FSH; podobnie jak FSH waha się w perimenopauzie.' },
             { id: 'tsh', note: 'Wykluczenie dysfunkcji tarczycy — zarówno nad-, jak i niedoczynność dają objawy naśladujące menopauzę (uderzenia gorąca, zmęczenie, zmiany nastroju, zaburzenia miesiączkowania).' }
           ]
@@ -1801,7 +1856,7 @@
         { name: 'Ocena przed menopauzalną terapią hormonalną (MHT/HRT)',
           tests: [
             { ext: 'mammography', label: 'Mammografia', note: 'Przesiew raka piersi przed rozpoczęciem menopauzalnej terapii hormonalnej oraz kontrolnie w jej trakcie — MHT (zwłaszcza estrogenowo-progestagenowa) wiąże się z niewielkim wzrostem ryzyka raka piersi.' },
-            { ext: 'endometrium_us', label: 'USG przezpochwowe', note: 'Wskazaniem jest krwawienie po menopauzie lub nieprawidłowe krwawienia w trakcie MHT — zawsze objaw alarmowy, wymagający wykluczenia rozrostu i raka endometrium. U kobiety bezobjawowej rutynowe wyjściowe USG przezpochwowe przed MHT nie jest wymagane.', description: 'USG przezpochwowe z oceną endometrium — ocena grubości i echostruktury błony śluzowej macicy. Podstawowym wskazaniem jest krwawienie po menopauzie (po 12 miesiącach od ostatniej miesiączki) lub nieprawidłowe krwawienia w trakcie MHT — każde takie krwawienie jest objawem alarmowym i wymaga diagnostyki w kierunku rozrostu (hiperplazji) i raka endometrium. U kobiety z krwawieniem po menopauzie grubość endometrium ≤ 4 mm ma wysoką negatywną wartość predykcyjną dla raka endometrium; endometrium pogrubiałe (> 4 mm) lub niejednorodne jest wskazaniem do biopsji/histeroskopii. UWAGA: próg ≤ 4 mm odnosi się do kobiet z krwawieniem — u kobiety bezobjawowej przypadkowo stwierdzone pogrubienie endometrium nie jest automatycznym wskazaniem do biopsji i wymaga indywidualnej oceny. W trakcie terapii estrogenowo-progestagenowej progestagen chroni endometrium przed rozrostem.' },
+            { ext: 'endometrium_us', label: 'USG przezpochwowe', note: 'Wskazaniem jest krwawienie po menopauzie lub nieprawidłowe krwawienia w trakcie MHT — zawsze objaw alarmowy, wymagający wykluczenia rozrostu i raka endometrium. U kobiety bezobjawowej rutynowe wyjściowe USG przezpochwowe przed MHT nie jest wymagane.', description: 'USG przezpochwowe z oceną endometrium — ocena grubości i echostruktury błony śluzowej macicy. Podstawowym wskazaniem jest krwawienie po menopauzie (po 12 miesiącach od ostatniej miesiączki) lub nieprawidłowe krwawienia w trakcie MHT — każde takie krwawienie jest objawem alarmowym i wymaga diagnostyki w kierunku rozrostu (hiperplazji) i raka endometrium. U kobiety z krwawieniem po menopauzie grubość endometrium ≤ 4 mm ma wysoką negatywną wartość predykcyjną dla raka endometrium; endometrium pogrubiałe (> 4 mm) lub niejednorodne jest wskazaniem do biopsji/histeroskopii. Uwaga: próg ≤ 4 mm odnosi się do kobiet z krwawieniem — u kobiety bezobjawowej przypadkowo stwierdzone pogrubienie endometrium nie jest automatycznym wskazaniem do biopsji i wymaga indywidualnej oceny. W trakcie terapii estrogenowo-progestagenowej progestagen chroni endometrium przed rozrostem.' },
             { ext: 'pap_smear', label: 'Cytologia (PAP)', note: 'Ogólny przesiew raka szyjki macicy — element rutynowej oceny ginekologicznej przy kwalifikacji do MHT, nie badanie swoiste dla menopauzy.' },
             { ext: 'lipid_panel', label: 'Lipidogram (TC, LDL, HDL, TG)', note: 'Ocena ryzyka sercowo-naczyniowego przed MHT — wpływa na wybór drogi podania (przezskórna preferowana przy podwyższonym ryzyku sercowo-naczyniowym i hipertriglicerydemii — omija efekt pierwszego przejścia przez wątrobę). Uwzględnia też tzw. okno terapeutyczne: korzystny bilans korzyści i ryzyka MHT dotyczy kobiet rozpoczynających terapię przed 60. r.ż. lub w ciągu 10 lat od menopauzy; rozpoczęcie później przesuwa bilans w stronę ryzyka sercowo-naczyniowego i udaru.' },
             { ext: 'liver', label: 'Próby wątrobowe (ALAT, ASPAT, GGTP, bilirubina)', note: 'Ocena czynności wątroby przed MHT — czynna choroba wątroby jest przeciwwskazaniem do doustnej terapii estrogenowej (metabolizm wątrobowy, efekt pierwszego przejścia); przy patologii wątroby preferowana jest droga przezskórna.' },
@@ -1826,7 +1881,7 @@
             kind: 'prose',
             icon: 'book-2',
             title: 'Kryteria rozpoznania ESHRE 2016',
-            body: 'Przedwczesna niewydolność jajników (POI) — rozpoznanie wymaga JEDNOCZESNEGO spełnienia wszystkich trzech kryteriów wg ESHRE 2016: (1) oligo- lub amenorrhea utrzymująca się ≥ 4 miesiące; (2) FSH > 25 IU/L w dwóch pomiarach w odstępie > 4 tygodni; (3) wiek < 40 lat. U kobiety w wieku rozrodczym diagnostykę poprzedza wykluczenie ciąży (β-hCG). Próg FSH > 25 IU/L jest niższy niż dawniej stosowany > 40 IU/L — ESHRE obniżyło go, aby umożliwić wcześniejsze rozpoznanie. AMH nie jest kryterium diagnostycznym (choć niski/nieoznaczalny wspiera rozpoznanie).'
+            body: 'Przedwczesna niewydolność jajników (POI) — rozpoznanie wymaga jednoczesnego spełnienia wszystkich trzech kryteriów wg ESHRE 2016: (1) oligo- lub amenorrhea utrzymująca się ≥ 4 miesiące; (2) FSH > 25 IU/L w dwóch pomiarach w odstępie > 4 tygodni; (3) wiek < 40 lat. U kobiety w wieku rozrodczym diagnostykę poprzedza wykluczenie ciąży (β-hCG). Próg FSH > 25 IU/L jest niższy niż dawniej stosowany > 40 IU/L — ESHRE obniżyło go, aby umożliwić wcześniejsze rozpoznanie. AMH nie jest kryterium diagnostycznym (choć niski/nieoznaczalny wspiera rozpoznanie).'
           },
           {
             kind: 'list',
@@ -1883,7 +1938,7 @@
             { id: 'fsh', note: 'Kryterium rozpoznania POI wg ESHRE 2016: FSH > 25 IU/L w dwóch pomiarach w odstępie > 4 tygodni, przy oligo-/amenorrhei ≥ 4 mies. i wieku < 40 lat. Pomiar wykonać poza antykoncepcją hormonalną — zahamowane gonadotropiny dają niemiarodajny wynik. U kobiet miesiączkujących pobranie we wczesnej fazie folikularnej.', description: 'FSH (hormon folikulotropowy) — kluczowy parametr rozpoznania przedwczesnej niewydolności jajników. Wzrasta wskutek wygasania czynności pęcherzykowej jajników i utraty ujemnego sprzężenia zwrotnego (spadek estradiolu i inhibiny B). Kryterium rozpoznania wg ESHRE 2016: FSH > 25 IU/L w dwóch oznaczeniach wykonanych w odstępie > 4 tygodni — wymóg dwóch pomiarów wynika z dużej zmienności FSH (możliwe przejściowe wahania, a nawet okresowy powrót czynności jajników w POI). Próg > 25 IU/L jest niższy niż dawniej stosowany > 40 IU/L — ESHRE obniżyło go, aby umożliwić wcześniejsze rozpoznanie. FSH należy oznaczać poza stosowaniem antykoncepcji hormonalnej, która hamuje wydzielanie gonadotropin i czyni wynik niemiarodajnym. Rozpoznanie wymaga łącznego spełnienia kryteriów: oligo-/amenorrhea ≥ 4 miesiące, podwyższony FSH ×2 oraz wiek < 40 lat.' },
             { id: 'lh', note: 'Zwykle również podwyższony (postać hipergonadotropowa). Oznaczany razem z FSH; sam nie stanowi kryterium rozpoznania.' },
             { id: 'estradiol', note: 'Niski estradiol potwierdza hipoestrogenizm. Interpretować łącznie z FSH; nie jest samodzielnym kryterium rozpoznania.' },
-            { id: 'amh', note: 'Bardzo niski lub nieoznaczalny AMH odzwierciedla wyczerpanie rezerwy jajnikowej i wspiera rozpoznanie — wg ESHRE 2016 NIE jest jednak kryterium diagnostycznym POI (rozpoznanie opiera się na FSH). Stężenie AMH nie zależy istotnie od fazy cyklu.' }
+            { id: 'amh', note: 'Bardzo niski lub nieoznaczalny AMH odzwierciedla wyczerpanie rezerwy jajnikowej i wspiera rozpoznanie — wg ESHRE 2016 nie jest jednak kryterium diagnostycznym POI (rozpoznanie opiera się na FSH). Stężenie AMH nie zależy istotnie od fazy cyklu.' }
           ]
         },
         { name: 'Etiologia POI',
@@ -1996,7 +2051,7 @@
             kind: 'prose',
             icon: 'book-2',
             title: 'Definicja',
-            body: 'Niepłodność pary — brak ciąży po 12 miesiącach regularnego współżycia bez antykoncepcji (lub po 6 miesiącach, gdy kobieta ma ≥ 35 lat). Diagnostykę prowadzi się RÓWNOLEGLE u obojga partnerów. U kobiety ocenia się oś podwzgórze-przysadka-jajnik, czynność tarczycy, owulację, rezerwę jajnikową oraz anatomię narządu rodnego (w tym drożność jajowodów). U mężczyzny podstawą jest spermiogram wg WHO 2021.'
+            body: 'Niepłodność pary — brak ciąży po 12 miesiącach regularnego współżycia bez antykoncepcji (lub po 6 miesiącach, gdy kobieta ma ≥ 35 lat). Diagnostykę prowadzi się równolegle u obojga partnerów. U kobiety ocenia się oś podwzgórze-przysadka-jajnik, czynność tarczycy, owulację, rezerwę jajnikową oraz anatomię narządu rodnego (w tym drożność jajowodów). U mężczyzny podstawą jest spermiogram wg WHO 2021.'
           },
           {
             kind: 'list',
@@ -2020,7 +2075,7 @@
                 detail: [
                   'AMH — stabilny w trakcie cyklu; oznaczanie w dowolnym dniu.',
                   'AFC (liczba pęcherzyków antralnych) w USG przezpochwowym we wczesnej fazie folikularnej — równorzędna z AMH.',
-                  'WAŻNE: AMH/AFC przewidują liczbę uzyskanych oocytów przy stymulacji — NIE jakość, NIE szansę żywego urodzenia, NIE szansę na ciążę spontaniczną.'
+                  'Ważne: AMH/AFC przewidują liczbę uzyskanych oocytów przy stymulacji — NIE jakość, NIE szansę żywego urodzenia, NIE szansę na ciążę spontaniczną.'
                 ]
               },
               {
@@ -2045,7 +2100,7 @@
                 detail: [
                   'Materiał pobrany po 2–7 dniach abstynencji płciowej.',
                   'Orientacyjne dolne wartości referencyjne WHO 2021 (5. percentyl): objętość ≥ 1,4 mL; koncentracja ≥ 16 mln/mL; liczba całkowita ≥ 39 mln; ruchliwość całkowita ≥ 42%; ruchliwość postępowa ≥ 30%; morfologia prawidłowa ≥ 4%; żywotność ≥ 54%.',
-                  'Ze względu na dużą zmienność biologiczną nieprawidłowy wynik wymaga POTWIERDZENIA w powtórnym badaniu (zwykle po 4–12 tygodniach).',
+                  'Ze względu na dużą zmienność biologiczną nieprawidłowy wynik wymaga potwierdzenia w powtórnym badaniu (zwykle po 4–12 tygodniach).',
                   'Azoospermia (brak plemników) wymaga różnicowania na obstrukcyjną i nieobstrukcyjną — rozszerzenie diagnostyki o panel hormonalny i badania genetyczne.'
                 ]
               },
@@ -2145,7 +2200,7 @@
             kind: 'prose',
             icon: 'book-2',
             title: 'Definicja i kluczowy niuans interpretacyjny',
-            body: 'Ocena rezerwy jajnikowej — najczęściej w kontekście kwalifikacji i planowania leczenia metodą rozrodu wspomaganego (IVF). KLUCZOWE: AMH i AFC przewidują przede wszystkim ODPOWIEDŹ jajników na stymulację (liczbę uzyskanych komórek jajowych) — a NIE jakość oocytów, NIE szansę żywego urodzenia ani szansę na ciążę spontaniczną. Głównym determinantem jakości oocytów i szansy żywego urodzenia pozostaje WIEK kobiety. Markery rezerwy nie powinny służyć do odmawiania leczenia.'
+            body: 'Ocena rezerwy jajnikowej — najczęściej w kontekście kwalifikacji i planowania leczenia metodą rozrodu wspomaganego (IVF). kluczowe: AMH i AFC przewidują przede wszystkim odpowiedź jajników na stymulację (liczbę uzyskanych komórek jajowych) — a NIE jakość oocytów, NIE szansę żywego urodzenia ani szansę na ciążę spontaniczną. Głównym determinantem jakości oocytów i szansy żywego urodzenia pozostaje wiek kobiety. Markery rezerwy nie powinny służyć do odmawiania leczenia.'
           },
           {
             kind: 'list',
@@ -2156,10 +2211,10 @@
                 label: 'AMH — najbardziej wiarygodny marker z krwi',
                 text: 'oznaczany w dowolnym dniu cyklu:',
                 detail: [
-                  'Produkowany przez komórki ziarniste małych pęcherzyków preantralnych i antralnych — odzwierciedla ILOŚCIOWĄ rezerwę jajnikową.',
+                  'Produkowany przez komórki ziarniste małych pęcherzyków preantralnych i antralnych — odzwierciedla ilościową rezerwę jajnikową.',
                   'Zalety: stabilność w trakcie cyklu (oznaczanie w dowolnym dniu), wczesny spadek z wiekiem (wyprzedza FSH).',
                   'Zastosowanie: przewidywanie odpowiedzi na stymulację gonadotropinami, identyfikacja słabych i nadmiernych odpowiedzi (ryzyko OHSS), indywidualizacja dawki.',
-                  'Ograniczenia: różnice wyników między metodami oznaczania; stężenie OBNIŻONE u kobiet stosujących antykoncepcję hormonalną (interpretować po jej odstawieniu).'
+                  'Ograniczenia: różnice wyników między metodami oznaczania; stężenie obniżone u kobiet stosujących antykoncepcję hormonalną (interpretować po jej odstawieniu).'
                 ]
               },
               {
@@ -2167,17 +2222,17 @@
                 text: 'USG przezpochwowe we wczesnej fazie folikularnej:',
                 detail: [
                   'Liczba pęcherzyków antralnych (2–10 mm) w obu jajnikach, oceniana w USG TV.',
-                  'Marker rezerwy RÓWNORZĘDNY z AMH i wzajemnie z nim komplementarny.',
+                  'Marker rezerwy równorzędny z AMH i wzajemnie z nim komplementarny.',
                   'Szczególnie przydatny przy planowaniu protokołu stymulacji jajeczkowania.'
                 ]
               },
               {
                 label: 'FSH + estradiol w 3. dniu cyklu — markery starsze',
-                text: 'mają charakter UZUPEŁNIAJĄCY, nie zastępują AMH/AFC:',
+                text: 'mają charakter uzupełniający, nie zastępują AMH/AFC:',
                 detail: [
                   'Duża zmienność międzycykliczna i mniejsza czułość niż AMH/AFC.',
-                  'Podwyższony FSH (> ~10 IU/L) sugeruje obniżoną rezerwę; prawidłowy FSH NIE wyklucza obniżonej rezerwy.',
-                  'PUŁAPKA: podwyższony estradiol we wczesnej fazie folikularnej może hamować FSH (fałszywie prawidłowy wynik) i ZAWYŻAĆ ocenę rezerwy — interpretować ZAWSZE łącznie.'
+                  'Podwyższony FSH (> ~10 IU/L) sugeruje obniżoną rezerwę; prawidłowy FSH nie wyklucza obniżonej rezerwy.',
+                  'Pułapka: podwyższony estradiol we wczesnej fazie folikularnej może hamować FSH (fałszywie prawidłowy wynik) i zawyżać ocenę rezerwy — interpretować zawsze łącznie.'
                 ]
               },
               { label: 'Inhibina B — niezalecana rutynowo', text: 'ASRM/ESHRE NIE zalecają inhibiny B jako rutynowego testu rezerwy jajnikowej — ze względu na dużą zmienność i słabą wartość predykcyjną została zastąpiona przez AMH i AFC. Oznaczać tylko w wybranych sytuacjach.' },
@@ -2189,10 +2244,10 @@
       sections: [
         { name: 'Markery rezerwy jajnikowej',
           tests: [
-            { id: 'amh', note: 'Najbardziej wiarygodny marker rezerwy jajnikowej oznaczany z krwi (obok AFC jako badania obrazowego) — stabilny w trakcie cyklu, można oznaczać w dowolnym dniu. Niski AMH wskazuje na obniżoną rezerwę i przewiduje słabszą odpowiedź na stymulację; nie przesądza o jakości oocytów ani o szansie na ciążę.', description: 'AMH (hormon antymüllerowski) — produkowany przez komórki ziarniste małych pęcherzyków preantralnych i antralnych; jego stężenie odzwierciedla pulę pęcherzyków, czyli ilościową rezerwę jajnikową. Zalety: względna stabilność w trakcie cyklu (oznaczanie w dowolnym dniu), wczesny spadek z wiekiem. Zastosowanie: przewidywanie odpowiedzi jajników na stymulację gonadotropinami (identyfikacja słabych i nadmiernych odpowiedzi — ryzyko zespołu hiperstymulacji), indywidualizacja dawki, poradnictwo. Ograniczenia: AMH przewiduje LICZBĘ uzyskanych oocytów, ale NIE ich jakość, NIE szansę żywego urodzenia i NIE szansę na ciążę spontaniczną — nie należy go używać do odmawiania leczenia ani jako samodzielnego testu „płodności". Wyniki mogą się różnić między metodami oznaczania; stężenie jest obniżone u kobiet stosujących antykoncepcję hormonalną.' },
+            { id: 'amh', note: 'Najbardziej wiarygodny marker rezerwy jajnikowej oznaczany z krwi (obok AFC jako badania obrazowego) — stabilny w trakcie cyklu, można oznaczać w dowolnym dniu. Niski AMH wskazuje na obniżoną rezerwę i przewiduje słabszą odpowiedź na stymulację; nie przesądza o jakości oocytów ani o szansie na ciążę.', description: 'AMH (hormon antymüllerowski) — produkowany przez komórki ziarniste małych pęcherzyków preantralnych i antralnych; jego stężenie odzwierciedla pulę pęcherzyków, czyli ilościową rezerwę jajnikową. Zalety: względna stabilność w trakcie cyklu (oznaczanie w dowolnym dniu), wczesny spadek z wiekiem. Zastosowanie: przewidywanie odpowiedzi jajników na stymulację gonadotropinami (identyfikacja słabych i nadmiernych odpowiedzi — ryzyko zespołu hiperstymulacji), indywidualizacja dawki, poradnictwo. Ograniczenia: AMH przewiduje liczbę uzyskanych oocytów, ale NIE ich jakość, NIE szansę żywego urodzenia i NIE szansę na ciążę spontaniczną — nie należy go używać do odmawiania leczenia ani jako samodzielnego testu „płodności". Wyniki mogą się różnić między metodami oznaczania; stężenie jest obniżone u kobiet stosujących antykoncepcję hormonalną.' },
             { ext: 'afc', label: 'AFC (liczba pęcherzyków antralnych, USG TV)', note: 'Liczba pęcherzyków antralnych (2–10 mm) w obu jajnikach, oceniana w USG przezpochwowym we wczesnej fazie folikularnej — marker rezerwy równorzędny z AMH i wzajemnie z nim komplementarny; przydatny przy planowaniu protokołu stymulacji.' },
             { id: 'fsh', note: 'Pobranie w 3. dniu cyklu, łącznie z estradiolem. Marker starszy niż AMH/AFC — o dużej zmienności międzycyklicznej i mniejszej czułości; podwyższony FSH wskazuje na obniżoną rezerwę, ale prawidłowy nie wyklucza jej obniżenia.' },
-            { id: 'estradiol', note: 'Pobranie w 3. dniu cyklu — interpretować ZAWSZE łącznie z FSH. Podwyższony estradiol we wczesnej fazie folikularnej może hamować FSH (fałszywie prawidłowy wynik) i zawyżać ocenę rezerwy.' }
+            { id: 'estradiol', note: 'Pobranie w 3. dniu cyklu — interpretować zawsze łącznie z FSH. Podwyższony estradiol we wczesnej fazie folikularnej może hamować FSH (fałszywie prawidłowy wynik) i zawyżać ocenę rezerwy.' }
           ]
         },
         { name: 'Badania uzupełniające (przygotowanie do leczenia)',
@@ -2289,7 +2344,7 @@
         },
         { name: 'Lokalizacja (gdy wykluczono przyczyny wtórne)',
           tests: [
-            { ext: 'pituitary_mri_prl', label: 'MRI przysadki', note: 'Wskazane u każdego pacjenta z hiperprolaktynemią niejasnego pochodzenia — po wykluczeniu przyczyn fizjologicznych, farmakologicznych i wtórnych.', description: 'MRI przysadki mózgowej z kontrastem (gadolinium) — wskazane u każdego pacjenta z hiperprolaktynemią niejasnego pochodzenia, po wykluczeniu przyczyn fizjologicznych (ciąża), farmakologicznych (leki) i wtórnych (niedoczynność tarczycy, niewydolność nerek). Różnicuje: mikroprolactinoma (< 10 mm), makroprolactinoma (≥ 10 mm) oraz inne zmiany okolicy podwzgórzowo-przysadkowej dające „efekt przerwania szypuły" (stalk effect) — guzy uciskające szypułę przysadki przerywają dopaminergiczne hamowanie wydzielania prolaktyny, co daje umiarkowaną hiperprolaktynemię (zwykle < 100–150 ng/mL). UWAGA: u zdrowej populacji ~10% ma incidentaloma przysadki — wynik MRI należy korelować ze stopniem podwyższenia PRL i obrazem klinicznym.' },
+            { ext: 'pituitary_mri_prl', label: 'MRI przysadki', note: 'Wskazane u każdego pacjenta z hiperprolaktynemią niejasnego pochodzenia — po wykluczeniu przyczyn fizjologicznych, farmakologicznych i wtórnych.', description: 'MRI przysadki mózgowej z kontrastem (gadolinium) — wskazane u każdego pacjenta z hiperprolaktynemią niejasnego pochodzenia, po wykluczeniu przyczyn fizjologicznych (ciąża), farmakologicznych (leki) i wtórnych (niedoczynność tarczycy, niewydolność nerek). Różnicuje: mikroprolactinoma (< 10 mm), makroprolactinoma (≥ 10 mm) oraz inne zmiany okolicy podwzgórzowo-przysadkowej dające „efekt przerwania szypuły" (stalk effect) — guzy uciskające szypułę przysadki przerywają dopaminergiczne hamowanie wydzielania prolaktyny, co daje umiarkowaną hiperprolaktynemię (zwykle < 100–150 ng/mL). Uwaga: u zdrowej populacji ~10% ma incidentaloma przysadki — wynik MRI należy korelować ze stopniem podwyższenia PRL i obrazem klinicznym.' },
             { ext: 'eye_exam_prl', label: 'Badanie pola widzenia (perymetria)', note: 'Gdy makrogruczolak — ocena ucisku skrzyżowania wzrokowego (klasycznie niedowidzenie połowicze dwuskroniowe).', description: 'Badanie pola widzenia (perymetria) — wskazane gdy MRI ujawni makrogruczolak przysadki (≥ 10 mm), zwłaszcza z szerzeniem się nadsiodłowym. Makrogruczolak uciskający skrzyżowanie wzrokowe powoduje klasycznie niedowidzenie połowicze dwuskroniowe (ubytek skroniowych części pól widzenia obu oczu). Perymetria pozwala wykryć i monitorować ten ubytek; jego obecność jest wskazaniem do pilniejszego leczenia. Towarzyszące badanie dna oka ocenia tarczę nerwu wzrokowego.' }
           ]
         },
@@ -2306,7 +2361,7 @@
         },
         { name: 'Pułapki interpretacyjne',
           tests: [
-            { ext: 'hook_effect', label: 'Efekt haka (hook effect) — uwaga interpretacyjna', note: 'Przy makrogruczolaku przysadki z umiarkowanie podwyższoną lub prawidłową PRL → poprosić laboratorium o oznaczenie z rozcieńczeniem próbki.', description: 'Efekt haka (high-dose hook effect) — pułapka diagnostyczna immunoassayów. Przy bardzo wysokim stężeniu prolaktyny (duże makroprolactinoma) nadmiar antygenu wysyca przeciwciała testu, co paradoksalnie daje FAŁSZYWIE NISKI lub tylko umiarkowanie podwyższony wynik. Sytuacja podejrzana: MRI ujawnia duży makrogruczolak przysadki, a oznaczona PRL jest tylko umiarkowanie podwyższona lub prawidłowa (niespójność obrazu klinicznego z wynikiem). Postępowanie: poprosić laboratorium o powtórzenie oznaczenia z rozcieńczeniem próbki (np. 1:100) — po rozcieńczeniu ujawnia się prawdziwa, bardzo wysoka wartość PRL. Nowsze testy są mniej podatne na ten efekt, ale pułapka nadal występuje.' }
+            { ext: 'hook_effect', label: 'Efekt haka (hook effect) — uwaga interpretacyjna', note: 'Przy makrogruczolaku przysadki z umiarkowanie podwyższoną lub prawidłową PRL → poprosić laboratorium o oznaczenie z rozcieńczeniem próbki.', description: 'Efekt haka (high-dose hook effect) — pułapka diagnostyczna immunoassayów. Przy bardzo wysokim stężeniu prolaktyny (duże makroprolactinoma) nadmiar antygenu wysyca przeciwciała testu, co paradoksalnie daje fałszywie niski lub tylko umiarkowanie podwyższony wynik. Sytuacja podejrzana: MRI ujawnia duży makrogruczolak przysadki, a oznaczona PRL jest tylko umiarkowanie podwyższona lub prawidłowa (niespójność obrazu klinicznego z wynikiem). Postępowanie: poprosić laboratorium o powtórzenie oznaczenia z rozcieńczeniem próbki (np. 1:100) — po rozcieńczeniu ujawnia się prawdziwa, bardzo wysoka wartość PRL. Nowsze testy są mniej podatne na ten efekt, ale pułapka nadal występuje.' }
           ]
         }
       ],
@@ -2326,14 +2381,14 @@
             kind: 'prose',
             icon: 'book-2',
             title: 'Definicja',
-            body: 'Brak miesiączki — PIERWOTNY (brak wystąpienia pierwszej miesiączki do 16. r.ż. przy prawidłowo rozwiniętych drugorzędowych cechach płciowych — pokwitanie się rozpoczęło, ale miesiączka nie wystąpiła) lub WTÓRNY (brak miesiączki ≥ 3 miesiące u kobiety wcześniej miesiączkującej regularnie lub ≥ 6 miesięcy u miesiączkującej nieregularnie). Jeśli u dziewczynki do 13.–14. r.ż. nie pojawiają się żadne oznaki pokwitania (brak rozwoju piersi), diagnostyka powinna iść torem opóźnionego dojrzewania (osobne wskazanie) — brak miesiączki jest tam konsekwencją braku pokwitania, nie samodzielnym objawem.'
+            body: 'Brak miesiączki — PIERWOTNY (brak wystąpienia pierwszej miesiączki do 16. r.ż. przy prawidłowo rozwiniętych drugorzędowych cechach płciowych — pokwitanie się rozpoczęło, ale miesiączka nie wystąpiła) lub wtórny (brak miesiączki ≥ 3 miesiące u kobiety wcześniej miesiączkującej regularnie lub ≥ 6 miesięcy u miesiączkującej nieregularnie). Jeśli u dziewczynki do 13.–14. r.ż. nie pojawiają się żadne oznaki pokwitania (brak rozwoju piersi), diagnostyka powinna iść torem opóźnionego dojrzewania (osobne wskazanie) — brak miesiączki jest tam konsekwencją braku pokwitania, nie samodzielnym objawem.'
           },
           {
             kind: 'callout',
             variant: 'primary',
             icon: 'book-2',
-            title: 'TEST CIĄŻOWY ZAWSZE PIERWSZY',
-            body: 'Ciąża jest najczęstszą przyczyną wtórnego braku miesiączki. Oznaczenie β-hCG musi POPRZEDZAĆ każdą dalszą diagnostykę hormonalną i obrazową — test z krwi (ilościowy) jest czulszy i wykrywa ciążę wcześniej niż test z moczu. Dodatni wynik kończy diagnostykę braku miesiączki i kieruje pacjentkę do opieki położniczej.'
+            title: 'Test ciążowy zawsze pierwszy',
+            body: 'Ciąża jest najczęstszą przyczyną wtórnego braku miesiączki. Oznaczenie β-hCG musi poprzedzać każdą dalszą diagnostykę hormonalną i obrazową — test z krwi (ilościowy) jest czulszy i wykrywa ciążę wcześniej niż test z moczu. Dodatni wynik kończy diagnostykę braku miesiączki i kieruje pacjentkę do opieki położniczej.'
           },
           {
             kind: 'list',
@@ -2370,7 +2425,7 @@
             icon: 'tags',
             title: 'Algorytm diagnostyczny',
             items: [
-              '(1) β-hCG ZAWSZE pierwszy — wykluczenie ciąży.',
+              '(1) β-hCG zawsze pierwszy — wykluczenie ciąży.',
               '(2) Panel hormonalny podstawowy: FSH, LH, estradiol, TSH, prolaktyna — klasyfikacja przyczyn (centralna vs jajnikowa vs tyreoidalna vs hiperprolaktynemia).',
               '(3) Przy cechach hiperandrogenizmu (hirsutyzm, trądzik, cechy PCOS) — profil androgenowy: testosteron całkowity, SHBG, DHEA-S, 17-OH-progesteron (wykluczenie NCAH).',
               '(4) Obrazowanie: USG narządów rodnych (kluczowe w braku pierwotnym dla wad anatomicznych, w braku wtórnym dla oceny endometrium/jajników); MRI przysadki gdy hiperprolaktynemia lub podejrzenie zmiany podwzgórzowo-przysadkowej.',
@@ -2380,9 +2435,9 @@
         ]
       },
       sections: [
-        { name: 'Pierwszy krok (ZAWSZE)',
+        { name: 'Pierwszy krok (zawsze)',
           tests: [
-            { ext: 'bhcg', label: 'β-hCG (test ciążowy)', note: 'Ciąża jest najczęstszą przyczyną wtórnego braku miesiączki — oznaczenie β-hCG musi poprzedzać każdą dalszą diagnostykę.', description: 'β-hCG (podjednostka β ludzkiej gonadotropiny kosmówkowej) — test ciążowy z krwi (ilościowy) lub z moczu (jakościowy). Ciąża jest najczęstszą przyczyną wtórnego braku miesiączki i musi być wykluczona PRZED rozpoczęciem jakiejkolwiek dalszej diagnostyki hormonalnej czy obrazowej. Test z krwi (ilościowy β-hCG) jest czulszy i wykrywa ciążę wcześniej niż test z moczu. Dodatni wynik kończy diagnostykę braku miesiączki — kieruje pacjentkę do opieki położniczej.' }
+            { ext: 'bhcg', label: 'β-hCG (test ciążowy)', note: 'Ciąża jest najczęstszą przyczyną wtórnego braku miesiączki — oznaczenie β-hCG musi poprzedzać każdą dalszą diagnostykę.', description: 'β-hCG (podjednostka β ludzkiej gonadotropiny kosmówkowej) — test ciążowy z krwi (ilościowy) lub z moczu (jakościowy). Ciąża jest najczęstszą przyczyną wtórnego braku miesiączki i musi być wykluczona przed rozpoczęciem jakiejkolwiek dalszej diagnostyki hormonalnej czy obrazowej. Test z krwi (ilościowy β-hCG) jest czulszy i wykrywa ciążę wcześniej niż test z moczu. Dodatni wynik kończy diagnostykę braku miesiączki — kieruje pacjentkę do opieki położniczej.' }
           ]
         },
         { name: 'Panel hormonalny podstawowy',
@@ -2404,13 +2459,13 @@
         },
         { name: 'Obrazowanie',
           tests: [
-            { ext: 'chorionic_us_amenorrhea', label: 'USG narządów rodnych', note: 'Ocena anatomii: obecność i budowa macicy, jajniki, grubość endometrium.', description: 'USG narządów rodnych — przezpochwowe (TVS) u kobiet współżyjących, przezbrzuszne u młodych pacjentek lub niewspółżyjących. W braku miesiączki cele: (1) w braku PIERWOTNYM — kluczowe dla wykrycia wad anatomicznych: agenezja macicy i górnej części pochwy (zespół Mayera-Rokitansky\'ego-Küstera-Hausera), zarośnięcie błony dziewiczej, przegroda pochwy; ocena obecności jajników i ich budowy; (2) w braku WTÓRNYM — ocena grubości i echostruktury endometrium (cienkie endometrium → hipoestrogenizm lub zespół Ashermana), morfologii jajników (obraz polycystic w PCOS, zanik w POI). USG jest badaniem pierwszego rzutu w obrazowaniu narządu rodnego.' },
+            { ext: 'chorionic_us_amenorrhea', label: 'USG narządów rodnych', note: 'Ocena anatomii: obecność i budowa macicy, jajniki, grubość endometrium.', description: 'USG narządów rodnych — przezpochwowe (TVS) u kobiet współżyjących, przezbrzuszne u młodych pacjentek lub niewspółżyjących. W braku miesiączki cele: (1) w braku pierwotnym — kluczowe dla wykrycia wad anatomicznych: agenezja macicy i górnej części pochwy (zespół Mayera-Rokitansky\'ego-Küstera-Hausera), zarośnięcie błony dziewiczej, przegroda pochwy; ocena obecności jajników i ich budowy; (2) w braku wtórnym — ocena grubości i echostruktury endometrium (cienkie endometrium → hipoestrogenizm lub zespół Ashermana), morfologii jajników (obraz polycystic w PCOS, zanik w POI). USG jest badaniem pierwszego rzutu w obrazowaniu narządu rodnego.' },
             { ext: 'pituitary_mri', label: 'MRI przysadki', note: 'Gdy hiperprolaktynemia lub podejrzenie zmiany w okolicy podwzgórzowo-przysadkowej.', description: 'MRI przysadki mózgowej z kontrastem (gadolinium) — wskazane w diagnostyce braku miesiączki gdy: stwierdzono hiperprolaktynemię (poszukiwanie gruczolaka prolaktynowego — prolactinoma), podejrzenie hipopituitaryzmu (niskie FSH/LH/estradiol + objawy niedoczynności innych osi), objawy masy w okolicy siodła tureckiego (bóle głowy, zaburzenia pola widzenia). Pozwala wykryć mikrogruczolak (< 10 mm) lub makrogruczolak przysadki, a także inne zmiany (czaszkogardlak, zespół pustego siodła).' }
           ]
         },
         { name: 'Diagnostyka pogłębiona (zależnie od kontekstu)',
           tests: [
-            { ext: 'karyotype', label: 'Kariotyp', note: 'W pierwotnym braku miesiączki oraz w POI rozpoznanej przed 40. r.ż. — wykrycie zespołu Turnera (45,X), dysgenezji gonad, CAIS (46,XY).', description: 'Kariotyp — ocena chromosomów z hodowli limfocytów krwi obwodowej. W diagnostyce braku miesiączki wskazany: (1) w braku PIERWOTNYM — wykrycie zespołu Turnera (45,X lub mozaicyzm — najczęstsza chromosomalna przyczyna pierwotnego braku miesiączki), czystej dysgenezji gonad (46,XY — zespół Swyera; lub 46,XX gonadal dysgenesis — osobna jednostka), zespołu niewrażliwości na androgeny (CAIS, 46,XY z fenotypem żeńskim); (2) w przedwczesnej niewydolności jajników (POI) rozpoznanej przed 40. r.ż. — wykrycie nieprawidłowości chromosomu X. Wynik opisuje się wg ISCN.' },
+            { ext: 'karyotype', label: 'Kariotyp', note: 'W pierwotnym braku miesiączki oraz w POI rozpoznanej przed 40. r.ż. — wykrycie zespołu Turnera (45,X), dysgenezji gonad, CAIS (46,XY).', description: 'Kariotyp — ocena chromosomów z hodowli limfocytów krwi obwodowej. W diagnostyce braku miesiączki wskazany: (1) w braku pierwotnym — wykrycie zespołu Turnera (45,X lub mozaicyzm — najczęstsza chromosomalna przyczyna pierwotnego braku miesiączki), czystej dysgenezji gonad (46,XY — zespół Swyera; lub 46,XX gonadal dysgenesis — osobna jednostka), zespołu niewrażliwości na androgeny (CAIS, 46,XY z fenotypem żeńskim); (2) w przedwczesnej niewydolności jajników (POI) rozpoznanej przed 40. r.ż. — wykrycie nieprawidłowości chromosomu X. Wynik opisuje się wg ISCN.' },
             { ext: 'fmr1', label: 'FMR1 (premutacja zespołu łamliwego chromosomu X)', note: 'W przedwczesnej niewydolności jajników (POI) — premutacja FMR1 odpowiada za ~13–15% rodzinnych i ~3–5% sporadycznych przypadków POI.', description: 'Badanie premutacji genu FMR1 (zespół łamliwego chromosomu X, Fragile X) — wskazane u kobiet z przedwczesną niewydolnością jajników (POI). Premutacja FMR1 (55–200 powtórzeń CGG) jest najczęstszą znaną pojedynczą przyczyną genetyczną POI — odpowiada za ~13–15% przypadków rodzinnych i ~3–5% sporadycznych (wg ESHRE POI 2016). Wykrycie premutacji ma znaczenie dla poradnictwa genetycznego: nosicielki są zagrożone urodzeniem dziecka z pełną mutacją (zespół łamliwego chromosomu X — najczęstsza dziedziczna przyczyna niepełnosprawności intelektualnej u chłopców), a same są w grupie ryzyka zespołu drżenia/ataksji związanego z łamliwym X (FXTAS).' },
             { id: 'amh', note: 'Badanie pomocnicze w diagnostyce różnicowej: niski/nieoznaczalny → przedwczesna niewydolność jajników (POI; może wyprzedzać wzrost FSH); wysoki → wspiera rozpoznanie PCOS; prawidłowy → przyczyna centralna (FHA) lub anatomiczna.', description: 'AMH (hormon antymüllerowski) — marker rezerwy jajnikowej, badanie POMOCNICZE w diagnostyce różnicowej braku miesiączki (nie pierwszego rzutu). Interpretacja: (1) niski lub nieoznaczalny AMH → przedwczesna niewydolność jajników (POI) — AMH może obniżyć się wcześniej niż wzrośnie FSH, bywa wczesnym markerem; (2) wysoki AMH (mediana 3–5× wyższa niż u zdrowych) → wspiera rozpoznanie PCOS; (3) prawidłowy AMH → jajniki sprawne, przyczyna braku miesiączki jest centralna (czynnościowy podwzgórzowy brak miesiączki, hipopituitaryzm) lub anatomiczna (zespół Ashermana, wady wrodzone). AMH jest stabilny w cyklu i niezależny od fazy — można go oznaczać w dowolnym momencie. Uzupełnia ocenę FSH/estradiolu, szczególnie przy planowaniu prokreacji.' }
           ]
@@ -2434,7 +2489,7 @@
             kind: 'prose',
             icon: 'book-2',
             title: 'Definicja i charakter kliniczny',
-            body: 'Mlekotok (galactorrhea) — wydzielanie mlecznej treści z brodawek sutkowych NIEZWIĄZANE z laktacją poporodową. Cechy prawdziwego mlekotoku: obustronny, mleczny, wieloprzewodowy. WAŻNE — cechy alarmowe: wydzielina jednostronna, krwista lub surowicza albo współistniejący guz piersi przemawiają za patologią gruczołu piersiowego i wymagają odrębnej diagnostyki OBRAZOWEJ piersi (mammografia, USG, ewentualnie MRI piersi), NIE diagnostyki hormonalnej.'
+            body: 'Mlekotok (galactorrhea) — wydzielanie mlecznej treści z brodawek sutkowych niezwiązane z laktacją poporodową. Cechy prawdziwego mlekotoku: obustronny, mleczny, wieloprzewodowy. Ważne — cechy alarmowe: wydzielina jednostronna, krwista lub surowicza albo współistniejący guz piersi przemawiają za patologią gruczołu piersiowego i wymagają odrębnej diagnostyki obrazowej piersi (mammografia, USG, ewentualnie MRI piersi), nie diagnostyki hormonalnej.'
           },
           {
             kind: 'list',
@@ -2455,7 +2510,7 @@
                 text: 'częsty — zwykle łagodny:',
                 detail: [
                   'Najczęściej idiopatyczny, o łagodnym przebiegu.',
-                  'MRI przysadki ZWYKLE NIEPOTRZEBNE — pod warunkiem, że wykluczono przyczyny wtórne i nie ma cech alarmowych.',
+                  'MRI przysadki zwykle niepotrzebne — pod warunkiem, że wykluczono przyczyny wtórne i nie ma cech alarmowych.',
                   'Pamiętać o ewentualnej pseudohiperprolaktynemii z makroprolaktyną (precypitacja PEG) — może maskować rzeczywistą wartość prolaktyny biologicznie aktywnej.'
                 ]
               }
@@ -2498,7 +2553,7 @@
       sections: [
         { name: 'Potwierdzenie i ocena prolaktyny',
           tests: [
-            { id: 'prolactin', note: 'Pojedynczy pomiar przy prawidłowym pobraniu zwykle wystarcza (rano, w spoczynku, bez nadmiernego stresu venepunkcji, bez wcześniejszej stymulacji piersi). Przy wartościach granicznych — powtórzyć. Uwaga: mlekotok może występować również przy prawidłowej prolaktynie (mlekotok normoprolaktynemiczny).', description: 'Prolaktyna — kluczowy parametr w diagnostyce mlekotoku, ponieważ rozstrzyga, czy mlekotok przebiega z hiperprolaktynemią, czy bez niej. Pobranie: rano, w spoczynku; unikać wcześniejszej stymulacji piersi i intensywnego wysiłku, które mogą przejściowo podnieść stężenie. Wg Endocrine Society 2011 pojedynczy pomiar przekraczający górną granicę normy przy prawidłowym pobraniu potwierdza hiperprolaktynemię; powtórzenie wskazane przy wartościach granicznych. Stopień podwyższenia ma wartość lokalizacyjną: PRL > 500 ng/mL jest diagnostyczne dla makroprolactinoma; 250–500 ng/mL zwykle wskazuje na prolactinoma; umiarkowane podwyższenie (25–100 ng/mL) — częściej leki, efekt przerwania szypuły lub mikroprolactinoma. WAŻNE: mlekotok przy PRAWIDŁOWEJ prolaktynie (mlekotok normoprolaktynemiczny) jest częsty i zwykle idiopatyczny — nie wymaga rozległej diagnostyki, jeśli wykluczono przyczyny wtórne.' },
+            { id: 'prolactin', note: 'Pojedynczy pomiar przy prawidłowym pobraniu zwykle wystarcza (rano, w spoczynku, bez nadmiernego stresu venepunkcji, bez wcześniejszej stymulacji piersi). Przy wartościach granicznych — powtórzyć. Uwaga: mlekotok może występować również przy prawidłowej prolaktynie (mlekotok normoprolaktynemiczny).', description: 'Prolaktyna — kluczowy parametr w diagnostyce mlekotoku, ponieważ rozstrzyga, czy mlekotok przebiega z hiperprolaktynemią, czy bez niej. Pobranie: rano, w spoczynku; unikać wcześniejszej stymulacji piersi i intensywnego wysiłku, które mogą przejściowo podnieść stężenie. Wg Endocrine Society 2011 pojedynczy pomiar przekraczający górną granicę normy przy prawidłowym pobraniu potwierdza hiperprolaktynemię; powtórzenie wskazane przy wartościach granicznych. Stopień podwyższenia ma wartość lokalizacyjną: PRL > 500 ng/mL jest diagnostyczne dla makroprolactinoma; 250–500 ng/mL zwykle wskazuje na prolactinoma; umiarkowane podwyższenie (25–100 ng/mL) — częściej leki, efekt przerwania szypuły lub mikroprolactinoma. Ważne: mlekotok przy prawidłowej prolaktynie (mlekotok normoprolaktynemiczny) jest częsty i zwykle idiopatyczny — nie wymaga rozległej diagnostyki, jeśli wykluczono przyczyny wtórne.' },
             { ext: 'macroprolactin', label: 'Makroprolaktyna (precypitacja PEG)', note: 'Wykluczenie pseudohiperprolaktynemii — biologicznie nieaktywny kompleks prolaktyny z immunoglobuliną daje fałszywie podwyższony wynik. Szczególnie istotne, gdy hiperprolaktynemia jest skąpoobjawowa.', description: 'Makroprolaktyna — biologicznie nieaktywny kompleks prolaktyny z immunoglobuliną (PRL-IgG) o dużej masie cząsteczkowej. Jest wykrywana przez immunoassaye jako „prolaktyna", dając fałszywie podwyższony wynik (pseudohiperprolaktynemia) przy braku objawów klinicznych. Oznaczenie metodą precypitacji glikolem polietylenowym (PEG): niski odzysk prolaktyny monomerycznej (< ~40%) sugeruje przewagę makroprolaktyny. Wskazanie: szczególnie przy hiperprolaktynemii skąpo- lub bezobjawowej — pozwala uniknąć zbędnego MRI i leczenia.' }
           ]
         },
@@ -2512,7 +2567,7 @@
         },
         { name: 'Obrazowanie',
           tests: [
-            { ext: 'pituitary_mri', label: 'MRI przysadki', note: 'Wskazane przy mlekotoku z hiperprolaktynemią niejasnego pochodzenia — po wykluczeniu przyczyn fizjologicznych (ciąża), farmakologicznych (leki) i wtórnych (niedoczynność tarczycy, niewydolność nerek). Przy mlekotoku normoprolaktynemicznym MRI zwykle nie jest potrzebne.', description: 'MRI przysadki mózgowej z kontrastem (gadolinium) — wskazane przy mlekotoku przebiegającym z hiperprolaktynemią niejasnego pochodzenia, po wykluczeniu przyczyn fizjologicznych, farmakologicznych i wtórnych. Różnicuje mikroprolactinoma (< 10 mm), makroprolactinoma (≥ 10 mm) oraz inne zmiany okolicy podwzgórzowo-przysadkowej dające efekt przerwania szypuły (stalk effect). Przy mlekotoku z prawidłową prolaktyną (normoprolaktynemicznym) MRI zwykle nie jest wskazane. UWAGA: ~10% zdrowej populacji ma incidentaloma przysadki — wynik MRI należy korelować ze stopniem podwyższenia PRL i obrazem klinicznym.' }
+            { ext: 'pituitary_mri', label: 'MRI przysadki', note: 'Wskazane przy mlekotoku z hiperprolaktynemią niejasnego pochodzenia — po wykluczeniu przyczyn fizjologicznych (ciąża), farmakologicznych (leki) i wtórnych (niedoczynność tarczycy, niewydolność nerek). Przy mlekotoku normoprolaktynemicznym MRI zwykle nie jest potrzebne.', description: 'MRI przysadki mózgowej z kontrastem (gadolinium) — wskazane przy mlekotoku przebiegającym z hiperprolaktynemią niejasnego pochodzenia, po wykluczeniu przyczyn fizjologicznych, farmakologicznych i wtórnych. Różnicuje mikroprolactinoma (< 10 mm), makroprolactinoma (≥ 10 mm) oraz inne zmiany okolicy podwzgórzowo-przysadkowej dające efekt przerwania szypuły (stalk effect). Przy mlekotoku z prawidłową prolaktyną (normoprolaktynemicznym) MRI zwykle nie jest wskazane. Uwaga: ~10% zdrowej populacji ma incidentaloma przysadki — wynik MRI należy korelować ze stopniem podwyższenia PRL i obrazem klinicznym.' }
           ]
         }
       ],
@@ -2531,7 +2586,7 @@
             kind: 'prose',
             icon: 'book-2',
             title: 'Definicja i podstawowa metoda',
-            body: 'Ocena owulacji — potwierdzenie, czy w cyklu doszło do jajeczkowania. Podstawowym narzędziem jest progesteron w środku fazy lutealnej (~7 dni przed spodziewaną miesiączką, klasycznie „21. dzień" przy cyklu 28-dniowym; przy cyklach dłuższych/krótszych odpowiednio później/wcześniej). Progi interpretacyjne: progesteron > 3 ng/mL (~10 nmol/L) potwierdza, że doszło do owulacji; > 10 ng/mL (~30 nmol/L) wskazuje na wydolną funkcję ciałka żółtego. UWAGA: progesteron jest wydzielany PULSACYJNIE — wynik należy interpretować względem rzeczywistego momentu pobrania w cyklu.'
+            body: 'Ocena owulacji — potwierdzenie, czy w cyklu doszło do jajeczkowania. Podstawowym narzędziem jest progesteron w środku fazy lutealnej (~7 dni przed spodziewaną miesiączką, klasycznie „21. dzień" przy cyklu 28-dniowym; przy cyklach dłuższych/krótszych odpowiednio później/wcześniej). Progi interpretacyjne: progesteron > 3 ng/mL (~10 nmol/L) potwierdza, że doszło do owulacji; > 10 ng/mL (~30 nmol/L) wskazuje na wydolną funkcję ciałka żółtego. Uwaga: progesteron jest wydzielany pulsacyjnie — wynik należy interpretować względem rzeczywistego momentu pobrania w cyklu.'
           },
           {
             kind: 'list',
@@ -2545,12 +2600,12 @@
                   'Pobranie: ok. 7 dni przed spodziewaną miesiączką (cykl 28-dniowy → ok. 21. dnia; dłuższy/krótszy → odpowiednio później/wcześniej).',
                   'Progesteron > 3 ng/mL (~10 nmol/L) potwierdza, że doszło do owulacji.',
                   'Progesteron > 10 ng/mL (~30 nmol/L) świadczy o wydolnej funkcji ciałka żółtego.',
-                  'PUŁAPKA: progesteron wydzielany pulsacyjnie (wahania w ciągu godzin); niski wynik może wynikać z pobrania zbyt wcześnie/zbyt późno — a nie tylko z braku owulacji.'
+                  'Pułapka: progesteron wydzielany pulsacyjnie (wahania w ciągu godzin); niski wynik może wynikać z pobrania zbyt wcześnie/zbyt późno — a nie tylko z braku owulacji.'
                 ]
               },
               {
                 label: 'Wyrzut LH — pomocniczy w predykcji owulacji',
-                text: 'identyfikuje moment ZBLIŻAJĄCEJ SIĘ owulacji, nie potwierdza jej post factum:',
+                text: 'identyfikuje moment zbliżającej SIĘ owulacji, nie potwierdza jej post factum:',
                 detail: [
                   'Test OPK z moczu — dodatni wynik oznacza spodziewaną owulację w ciągu ok. 24–36 h; przydatny w planowaniu współżycia/punkcji.',
                   'Pojedyncze oznaczenie LH z surowicy — ograniczona wartość: pulsacyjne wydzielanie i krótki czas trwania szczytu (10–12 h).',
@@ -2567,7 +2622,7 @@
                   'Wada: konieczność wielokrotnych wizyt w określonych dniach cyklu.'
                 ]
               },
-              { label: 'BBT — krzywa podstawowej temperatury ciała', text: 'krzywa dwufazowa: po owulacji progesteron podnosi BBT o ~0,3–0,5°C. Metoda RETROSPEKTYWNA (potwierdza owulację dopiero po fakcie) i mało precyzyjna — NIEZALECANA jako podstawowa metoda oceny owulacji.' }
+              { label: 'BBT — krzywa podstawowej temperatury ciała', text: 'krzywa dwufazowa: po owulacji progesteron podnosi BBT o ~0,3–0,5°C. Metoda retrospektywna (potwierdza owulację dopiero po fakcie) i mało precyzyjna — niezalecana jako podstawowa metoda oceny owulacji.' }
             ]
           },
           {
@@ -2584,7 +2639,7 @@
       sections: [
         { name: 'Potwierdzenie owulacji',
           tests: [
-            { id: 'progesterone', note: 'Pobranie w środku fazy lutealnej — ok. 7 dni przed spodziewaną miesiączką (klasycznie „21. dzień" przy cyklu 28-dniowym). Progesteron > 3 ng/mL (~10 nmol/L) potwierdza, że doszło do owulacji; > 10 ng/mL (~30 nmol/L) świadczy o wydolnej funkcji ciałka żółtego.', description: 'Progesteron — podstawowy parametr potwierdzający owulację. Po owulacji ciałko żółte produkuje progesteron, którego stężenie osiąga szczyt w środku fazy lutealnej. Pobranie: ok. 7 dni przed spodziewaną miesiączką (przy cyklu 28-dniowym — ok. 21. dnia; przy cyklach dłuższych lub krótszych odpowiednio później lub wcześniej). Interpretacja: progesteron > 3 ng/mL (~10 nmol/L) potwierdza, że do owulacji doszło; wartości > 10 ng/mL (~30 nmol/L) wskazują na wydolną funkcję ciałka żółtego. UWAGA: progesteron jest wydzielany pulsacyjnie, a jego stężenie zmienia się w trakcie fazy lutealnej — pojedynczy wynik należy interpretować względem rzeczywistego momentu pobrania w cyklu; niski wynik może wynikać z pobrania zbyt wcześnie lub zbyt późno, a nie tylko z braku owulacji.' },
+            { id: 'progesterone', note: 'Pobranie w środku fazy lutealnej — ok. 7 dni przed spodziewaną miesiączką (klasycznie „21. dzień" przy cyklu 28-dniowym). Progesteron > 3 ng/mL (~10 nmol/L) potwierdza, że doszło do owulacji; > 10 ng/mL (~30 nmol/L) świadczy o wydolnej funkcji ciałka żółtego.', description: 'Progesteron — podstawowy parametr potwierdzający owulację. Po owulacji ciałko żółte produkuje progesteron, którego stężenie osiąga szczyt w środku fazy lutealnej. Pobranie: ok. 7 dni przed spodziewaną miesiączką (przy cyklu 28-dniowym — ok. 21. dnia; przy cyklach dłuższych lub krótszych odpowiednio później lub wcześniej). Interpretacja: progesteron > 3 ng/mL (~10 nmol/L) potwierdza, że do owulacji doszło; wartości > 10 ng/mL (~30 nmol/L) wskazują na wydolną funkcję ciałka żółtego. Uwaga: progesteron jest wydzielany pulsacyjnie, a jego stężenie zmienia się w trakcie fazy lutealnej — pojedynczy wynik należy interpretować względem rzeczywistego momentu pobrania w cyklu; niski wynik może wynikać z pobrania zbyt wcześnie lub zbyt późno, a nie tylko z braku owulacji.' },
             { id: 'lh', note: 'Wyrzut LH w połowie cyklu poprzedza owulację — jego początek o ok. 36 godzin, a szczyt LH o ok. 10–12 godzin. Dodatni test LH z moczu (OPK) oznacza spodziewaną owulację w ciągu ok. 24–36 godzin; pojedyncze oznaczenie LH z surowicy ma ograniczoną wartość ze względu na pulsacyjne wydzielanie i krótki czas trwania szczytu.' },
             { id: 'estradiol', note: 'Rośnie w późnej fazie folikularnej i osiąga szczyt tuż przed wyrzutem LH — marker pomocniczy monitorowania dojrzewania pęcherzyka; sam nie potwierdza owulacji.' }
           ]
@@ -2618,20 +2673,20 @@
             variant: 'purple',
             icon: 'book-2',
             title: 'Encja klinicznie kontrowersyjna — opinia ASRM 2015',
-            body: 'Wg opinii komitetu ASRM (2015) nie istnieje zwalidowany, powtarzalny test diagnostyczny niewydolności fazy lutealnej, a sama niewydolność jako NIEZALEŻNA przyczyna niepłodności nie jest poparta wystarczającymi dowodami. Pojedynczy progesteron z fazy lutealnej NIE nadaje się do rozpoznania (pulsacyjne wydzielanie z wahaniami w ciągu godzin, trudna synchronizacja pobrania z owulacją, brak zwalidowanego progu „niedoboru"). Historyczna biopsja endometrium z datowaniem histologicznym (kryteria Noyesa) została zdyskredytowana jako nieodtwarzalna i nieróżnicująca kobiet płodnych od niepłodnych.'
+            body: 'Wg opinii komitetu ASRM (2015) nie istnieje zwalidowany, powtarzalny test diagnostyczny niewydolności fazy lutealnej, a sama niewydolność jako niezależna przyczyna niepłodności nie jest poparta wystarczającymi dowodami. Pojedynczy progesteron z fazy lutealnej NIE nadaje się do rozpoznania (pulsacyjne wydzielanie z wahaniami w ciągu godzin, trudna synchronizacja pobrania z owulacją, brak zwalidowanego progu „niedoboru"). Historyczna biopsja endometrium z datowaniem histologicznym (kryteria Noyesa) została zdyskredytowana jako nieodtwarzalna i nieróżnicująca kobiet płodnych od niepłodnych.'
           },
           {
             kind: 'prose',
             icon: 'book-2',
             title: 'Praktyczna wartość diagnostyki',
-            body: 'Przy podejrzeniu zaburzeń fazy lutealnej praktyczne cele diagnostyki to: (1) POTWIERDZIĆ, że w cyklu doszło do owulacji (progesteron > 3 ng/mL); (2) wykluczyć rzeczywiste, odwracalne przyczyny zaburzeń cyklu — przede wszystkim dysfunkcję tarczycy i hiperprolaktynemię. Diagnostyka NIE ma na celu rozpoznania samego „niedoboru fazy lutealnej" jako jednostki — tylko identyfikację leczalnych przyczyn zaburzeń cyklu.'
+            body: 'Przy podejrzeniu zaburzeń fazy lutealnej praktyczne cele diagnostyki to: (1) potwierdzić, że w cyklu doszło do owulacji (progesteron > 3 ng/mL); (2) wykluczyć rzeczywiste, odwracalne przyczyny zaburzeń cyklu — przede wszystkim dysfunkcję tarczycy i hiperprolaktynemię. Diagnostyka NIE ma na celu rozpoznania samego „niedoboru fazy lutealnej" jako jednostki — tylko identyfikację leczalnych przyczyn zaburzeń cyklu.'
           },
           {
             kind: 'list',
             icon: 'tags',
             title: 'Co rzeczywiście warto zrobić',
             items: [
-              { label: 'Progesteron w środku fazy lutealnej', text: 'jako POTWIERDZENIE owulacji (> 3 ng/mL / ~10 nmol/L), NIE jako test „niedoboru". Pobranie ok. 7 dni przed spodziewaną miesiączką.' },
+              { label: 'Progesteron w środku fazy lutealnej', text: 'jako Potwierdzenie owulacji (> 3 ng/mL / ~10 nmol/L), NIE jako test „niedoboru". Pobranie ok. 7 dni przed spodziewaną miesiączką.' },
               { label: 'TSH', text: 'wykluczenie dysfunkcji tarczycy — zarówno nadczynność, jak i niedoczynność realnie zaburzają cykl i fazę lutealną; konkretna, leczalna przyczyna.' },
               { label: 'Prolaktyna', text: 'wykluczenie hiperprolaktynemii — hamuje pulsacyjne wydzielanie GnRH i zaburza cykl; odwracalna przyczyna.' },
               { label: 'Szerszy kontekst hormonalny gdy potrzebny', text: 'FSH + LH + estradiol w 3. dniu cyklu — ocena rezerwy jajnikowej i wzorca cyklu; podwyższony stosunek LH/FSH może sugerować PCOS.' }
@@ -2642,7 +2697,7 @@
       sections: [
         { name: 'Potwierdzenie owulacji i ocena fazy lutealnej',
           tests: [
-            { id: 'progesterone', note: 'Pobranie w środku fazy lutealnej (ok. 7 dni przed spodziewaną miesiączką). Wartość > 3 ng/mL (~10 nmol/L) potwierdza, że doszło do owulacji. UWAGA: pojedynczy niski wynik NIE rozpoznaje niewydolności fazy lutealnej — progesteron jest pulsacyjny, trudno zsynchronizować pobranie z owulacją, a żaden próg „niedoboru" nie został zwalidowany.', description: 'Progesteron w środku fazy lutealnej — w kontekście podejrzenia niewydolności fazy lutealnej służy przede wszystkim potwierdzeniu, że w cyklu doszło do owulacji (wartość > 3 ng/mL / ~10 nmol/L), a nie rozpoznaniu samego „niedoboru". Ograniczenia jako testu niewydolności fazy lutealnej: (1) progesteron jest wydzielany pulsacyjnie — jego stężenie zmienia się kilkukrotnie w ciągu godzin; (2) trudno precyzyjnie zsynchronizować moment pobrania z rzeczywistą owulacją; (3) żaden próg odróżniający „wydolną" od „niewydolnej" fazy lutealnej nie został zwalidowany. Z tych powodów ASRM (2015) nie zaleca opierania rozpoznania na pojedynczym ani seryjnym oznaczeniu progesteronu. Niewiarygodna jest również historyczna metoda referencyjna — biopsja endometrium z datowaniem histologicznym (kryteria Noyesa) — którą ASRM 2015 wprost zdyskredytowała jako nieodtwarzalną i nieróżnicującą kobiet płodnych od niepłodnych. Pobranie: ok. 7 dni przed spodziewaną miesiączką (przy cyklu 28-dniowym — ok. 21. dnia).' }
+            { id: 'progesterone', note: 'Pobranie w środku fazy lutealnej (ok. 7 dni przed spodziewaną miesiączką). Wartość > 3 ng/mL (~10 nmol/L) potwierdza, że doszło do owulacji. Uwaga: pojedynczy niski wynik NIE rozpoznaje niewydolności fazy lutealnej — progesteron jest pulsacyjny, trudno zsynchronizować pobranie z owulacją, a żaden próg „niedoboru" nie został zwalidowany.', description: 'Progesteron w środku fazy lutealnej — w kontekście podejrzenia niewydolności fazy lutealnej służy przede wszystkim potwierdzeniu, że w cyklu doszło do owulacji (wartość > 3 ng/mL / ~10 nmol/L), a nie rozpoznaniu samego „niedoboru". Ograniczenia jako testu niewydolności fazy lutealnej: (1) progesteron jest wydzielany pulsacyjnie — jego stężenie zmienia się kilkukrotnie w ciągu godzin; (2) trudno precyzyjnie zsynchronizować moment pobrania z rzeczywistą owulacją; (3) żaden próg odróżniający „wydolną" od „niewydolnej" fazy lutealnej nie został zwalidowany. Z tych powodów ASRM (2015) nie zaleca opierania rozpoznania na pojedynczym ani seryjnym oznaczeniu progesteronu. Niewiarygodna jest również historyczna metoda referencyjna — biopsja endometrium z datowaniem histologicznym (kryteria Noyesa) — którą ASRM 2015 wprost zdyskredytowała jako nieodtwarzalną i nieróżnicującą kobiet płodnych od niepłodnych. Pobranie: ok. 7 dni przed spodziewaną miesiączką (przy cyklu 28-dniowym — ok. 21. dnia).' }
           ]
         },
         { name: 'Wykluczenie rzeczywistych, odwracalnych przyczyn zaburzeń fazy lutealnej',
@@ -2680,14 +2735,14 @@
             kind: 'prose',
             icon: 'baby-bottle',
             title: 'Fizjologiczne zmiany hormonalne w ciąży',
-            body: 'W ciąży fizjologicznie wzrastają: prolaktyna, SHBG, kortyzol oraz hormony tarczycowe całkowite (T4 i T3 — wskutek wzrostu TBG, białka wiążącego). TSH w I trymestrze fizjologicznie spada (hCG, mając wspólną podjednostkę α z TSH, stymuluje tarczycę), a wolne frakcje (fT4, fT3) pozostają w normie lub nieco się obniżają w II i III trymestrze. TSH i fT4 należy więc interpretować wg zakresów referencyjnych specyficznych dla trymestru — optymalnie własnych laboratoryjnych, a gdy niedostępne — wg polskich wytycznych PTE 2021 (Hubalewska-Dydejczyk i wsp., elektrochemiluminescencja, polska populacja, tab. 2): TSH I trymestr 0,01–3,18 mIU/L; II 0,05–3,44; III 0,11–3,53. Wartość > 3,18 / 3,44 / 3,53 mIU/L (odpowiednio dla trymestru) świadczy o subklinicznej niedoczynności wymagającej leczenia. CEL terapeutyczny u pacjentki LECZONEJ lewotyroksyną w I trymestrze: < 2,5 mIU/L (NIE jest to próg diagnostyczny).'
+            body: 'W ciąży fizjologicznie wzrastają: prolaktyna, SHBG, kortyzol oraz hormony tarczycowe całkowite (T4 i T3 — wskutek wzrostu TBG, białka wiążącego). TSH w I trymestrze fizjologicznie spada (hCG, mając wspólną podjednostkę α z TSH, stymuluje tarczycę), a wolne frakcje (fT4, fT3) pozostają w normie lub nieco się obniżają w II i III trymestrze. TSH i fT4 należy więc interpretować wg zakresów referencyjnych specyficznych dla trymestru — optymalnie własnych laboratoryjnych, a gdy niedostępne — wg polskich wytycznych PTE 2021 (Hubalewska-Dydejczyk i wsp., elektrochemiluminescencja, polska populacja, tab. 2): TSH I trymestr 0,01–3,18 mIU/L; II 0,05–3,44; III 0,11–3,53. Wartość > 3,18 / 3,44 / 3,53 mIU/L (odpowiednio dla trymestru) świadczy o subklinicznej niedoczynności wymagającej leczenia. CEL terapeutyczny u pacjentki leczonej lewotyroksyną w I trymestrze: < 2,5 mIU/L (nie jest to próg diagnostyczny).'
           }
         ]
       },
       sections: [
         { name: 'Czynność tarczycy w ciąży',
           tests: [
-            { id: 'tsh', note: 'Optymalnie zakresy referencyjne specyficzne dla trymestru i laboratorium. Gdy niedostępne — polskie wytyczne PTE 2021 (ECL): I trymestr 0,01–3,18; II 0,05–3,44; III 0,11–3,53 mIU/L. Cel terapeutyczny u pacjentki leczonej w I trymestrze: < 2,5.', description: 'TSH — podstawowy parametr oceny czynności tarczycy w ciąży. Optymalnie należy stosować zakresy referencyjne specyficzne dla trymestru oraz danego laboratorium/populacji. Gdy własne zakresy laboratoryjne są niedostępne, polskie wytyczne PTE 2021 (Hubalewska-Dydejczyk i wsp., elektrochemiluminescencja, polska populacja, tab. 2) podają następujące POPULACYJNE zakresy referencyjne TSH: I trymestr 0,01–3,18 mIU/L; II trymestr 0,05–3,44; III trymestr 0,11–3,53. Wartość > 3,18 / 3,44 / 3,53 mIU/L (odpowiednio dla trymestru) jest nieprawidłowa i świadczy o subklinicznej niedoczynności tarczycy wymagającej leczenia lewotyroksyną. PTE 2021 wprost odstąpiło od progu ATA 2017 = 4,0 mIU/L na rzecz polskich progów populacyjnych. Dolna granica TSH w I trymestrze bywa fizjologicznie obniżona (hCG, mając wspólną podjednostkę α z TSH, stymuluje tarczycę). CEL TERAPEUTYCZNY u pacjentki LECZONEJ lewotyroksyną w I trymestrze: < 2,5 mIU/L (NIE jest to próg diagnostyczny). Niewyrównana niedoczynność tarczycy w ciąży zwiększa ryzyko powikłań położniczych (poronienie, poród przedwczesny, nadciśnienie indukowane ciążą) i zaburzeń neurorozwojowych płodu. Kobiety leczone z powodu niedoczynności tarczycy zwykle wymagają zwiększenia dawki lewotyroksyny zaraz po potwierdzeniu ciąży — typowo o 25–30% (orientacyjnie +2 tabletki tygodniowo wg ATA 2017); monitorowanie TSH co 4–6 tygodni w I połowie ciąży.' },
+            { id: 'tsh', note: 'Optymalnie zakresy referencyjne specyficzne dla trymestru i laboratorium. Gdy niedostępne — polskie wytyczne PTE 2021 (ECL): I trymestr 0,01–3,18; II 0,05–3,44; III 0,11–3,53 mIU/L. Cel terapeutyczny u pacjentki leczonej w I trymestrze: < 2,5.', description: 'TSH — podstawowy parametr oceny czynności tarczycy w ciąży. Optymalnie należy stosować zakresy referencyjne specyficzne dla trymestru oraz danego laboratorium/populacji. Gdy własne zakresy laboratoryjne są niedostępne, polskie wytyczne PTE 2021 (Hubalewska-Dydejczyk i wsp., elektrochemiluminescencja, polska populacja, tab. 2) podają następujące populacyjne zakresy referencyjne TSH: I trymestr 0,01–3,18 mIU/L; II trymestr 0,05–3,44; III trymestr 0,11–3,53. Wartość > 3,18 / 3,44 / 3,53 mIU/L (odpowiednio dla trymestru) jest nieprawidłowa i świadczy o subklinicznej niedoczynności tarczycy wymagającej leczenia lewotyroksyną. PTE 2021 wprost odstąpiło od progu ATA 2017 = 4,0 mIU/L na rzecz polskich progów populacyjnych. Dolna granica TSH w I trymestrze bywa fizjologicznie obniżona (hCG, mając wspólną podjednostkę α z TSH, stymuluje tarczycę). CEL terapeutyczny u pacjentki leczonej lewotyroksyną w I trymestrze: < 2,5 mIU/L (nie jest to próg diagnostyczny). Niewyrównana niedoczynność tarczycy w ciąży zwiększa ryzyko powikłań położniczych (poronienie, poród przedwczesny, nadciśnienie indukowane ciążą) i zaburzeń neurorozwojowych płodu. Kobiety leczone z powodu niedoczynności tarczycy zwykle wymagają zwiększenia dawki lewotyroksyny zaraz po potwierdzeniu ciąży — typowo o 25–30% (orientacyjnie +2 tabletki tygodniowo wg ATA 2017); monitorowanie TSH co 4–6 tygodni w I połowie ciąży.' },
             { id: 'ft4', note: 'Oznaczać gdy TSH nieprawidłowe. Interpretować wg zakresów trymestr-specyficznych — fT4 fizjologicznie nieco spada w II i III trymestrze.', description: 'fT4 (wolna tyroksyna) — oznaczana gdy TSH jest nieprawidłowe lub przy podejrzeniu zaburzeń czynności tarczycy. W ciąży fT4 należy interpretować wg zakresów referencyjnych specyficznych dla trymestru — fizjologicznie fT4 nieznacznie spada w II i III trymestrze. Polskie wytyczne PTE 2021 zwracają uwagę, że niektóre metody immunochemiczne oznaczania fT4 są zawodne w ciąży (wpływ zmienionego stężenia białek wiążących, m.in. wzrost TBG) — w razie wątpliwości pomocne jest oznaczenie T4 całkowitej (z interpretacją wg zakresów ciążowych) lub metoda LC-MS/MS. Izolowana hipotyroksynemia (niskie fT4 przy prawidłowym TSH) — postępowanie zgodnie z PTE 2021.' },
             { ext: 'anti_tpo', label: 'Przeciwciała anty-TPO', note: 'Wykrycie autoimmunologicznej choroby tarczycy. Dodatnie anty-TPO zwiększają ryzyko niedoczynności tarczycy w ciąży i poporodowego zapalenia tarczycy.', description: 'Przeciwciała przeciwko peroksydazie tarczycowej (anty-TPO) — marker autoimmunologicznej choroby tarczycy. W ciąży dodatni wynik ma istotne znaczenie: (1) zwiększa ryzyko rozwoju lub nasilenia niedoczynności tarczycy w trakcie ciąży — kobiety z dodatnimi anty-TPO wymagają częstszego monitorowania TSH (co ~4–6 tygodni); (2) zwiększa ryzyko poporodowego zapalenia tarczycy; (3) wiąże się ze zwiększonym ryzykiem poronienia i porodu przedwczesnego. Wg PTE 2021 oznaczenie anty-TPO jest wskazane m.in. u kobiet z TSH w górnym zakresie normy, z wywiadem chorób tarczycy, poronień lub porodów przedwczesnych.' }
           ]
@@ -2695,7 +2750,7 @@
         { name: 'Skrining cukrzycy ciążowej (GDM)',
           tests: [
             { ext: 'glucose_fasting', label: 'Glukoza na czczo', note: 'Oznaczenie przy pierwszej wizycie położniczej — wykrycie cukrzycy przedciążowej lub wczesnej cukrzycy ciążowej. Glukoza na czczo ≥ 92 mg/dL w ciąży → cukrzyca ciążowa.', description: 'Glukoza na czczo — oznaczana przy pierwszej wizycie położniczej u każdej ciężarnej (skrining wczesny). Cele: wykrycie cukrzycy przedciążowej nierozpoznanej przed ciążą oraz wczesnej cukrzycy ciążowej. Interpretacja w ciąży (kryteria PTD / WHO 2013, przyjęte w Polsce): glukoza na czczo 92–125 mg/dL → cukrzyca ciążowa (GDM); ≥ 126 mg/dL (lub przygodna ≥ 200 mg/dL, lub HbA1c ≥ 6,5%) → cukrzyca w ciąży (najpewniej przedciążowa, nierozpoznana). Prawidłowa glukoza na czczo na początku ciąży NIE zwalnia z wykonania oGTT w 24.–28. tygodniu.' },
-            { ext: 'ogtt_75g_pregnancy', label: 'oGTT 75 g (24.–28. tydzień ciąży)', note: 'Standardowy test skriningu cukrzycy ciążowej. Pomiar glikemii 0 / 60 / 120 min. Jedna nieprawidłowa wartość wystarcza do rozpoznania GDM.', description: 'Doustny test obciążenia 75 g glukozy — standardowy skrining cukrzycy ciążowej (GDM), wykonywany u wszystkich ciężarnych w 24.–28. tygodniu ciąży (u kobiet z czynnikami ryzyka — wcześniej, już w I trymestrze). Pomiar glikemii: na czczo (0), po 60 min i po 120 min. Kryteria rozpoznania GDM (PTD / WHO 2013, obowiązujące w Polsce): na czczo ≥ 92 mg/dL (5,1 mmol/L); po 60 min ≥ 180 mg/dL (10,0 mmol/L); po 120 min ≥ 153 mg/dL (8,5 mmol/L). JEDNA nieprawidłowa wartość wystarcza do rozpoznania cukrzycy ciążowej. Test wykonuje się rano, na czczo (8–14 h od ostatniego posiłku), po ≥ 3 dniach zwykłej diety bez ograniczeń węglowodanów.' }
+            { ext: 'ogtt_75g_pregnancy', label: 'oGTT 75 g (24.–28. tydzień ciąży)', note: 'Standardowy test skriningu cukrzycy ciążowej. Pomiar glikemii 0 / 60 / 120 min. Jedna nieprawidłowa wartość wystarcza do rozpoznania GDM.', description: 'Doustny test obciążenia 75 g glukozy — standardowy skrining cukrzycy ciążowej (GDM), wykonywany u wszystkich ciężarnych w 24.–28. tygodniu ciąży (u kobiet z czynnikami ryzyka — wcześniej, już w I trymestrze). Pomiar glikemii: na czczo (0), po 60 min i po 120 min. Kryteria rozpoznania GDM (PTD / WHO 2013, obowiązujące w Polsce): na czczo ≥ 92 mg/dL (5,1 mmol/L); po 60 min ≥ 180 mg/dL (10,0 mmol/L); po 120 min ≥ 153 mg/dL (8,5 mmol/L). jedna nieprawidłowa wartość wystarcza do rozpoznania cukrzycy ciążowej. Test wykonuje się rano, na czczo (8–14 h od ostatniego posiłku), po ≥ 3 dniach zwykłej diety bez ograniczeń węglowodanów.' }
           ]
         },
         { name: 'Diagnostyka wczesnej ciąży i zagrożeń',
@@ -2707,7 +2762,7 @@
         },
         { name: 'Pułapki interpretacyjne',
           tests: [
-            { id: 'prolactin', note: 'W ciąży prolaktyna FIZJOLOGICZNIE znacznie wzrasta (do ~200–400 ng/mL pod koniec ciąży) — NIE oznaczać rutynowo ani interpretować wg zakresów nieciążowych.', description: 'Prolaktyna w ciąży — pod wpływem rosnącego stężenia estrogenów prolaktyna FIZJOLOGICZNIE znacznie wzrasta w czasie ciąży, osiągając pod jej koniec wartości rzędu ~200–400 ng/mL (przygotowanie gruczołów piersiowych do laktacji). Z tego powodu prolaktyny NIE należy oznaczać rutynowo w ciąży ani interpretować wg zakresów nieciążowych — „nieprawidłowo wysoki" wynik jest tu zjawiskiem fizjologicznym, a nie patologią. Wyjątkowo, u kobiet z wcześniej rozpoznanym gruczolakiem prolaktynowym, monitorowanie w ciąży prowadzi się głównie klinicznie (objawy ucisku, pole widzenia), nie poprzez rutynowy pomiar prolaktyny.' }
+            { id: 'prolactin', note: 'W ciąży prolaktyna fizjologicznie znacznie wzrasta (do ~200–400 ng/mL pod koniec ciąży) — NIE oznaczać rutynowo ani interpretować wg zakresów nieciążowych.', description: 'Prolaktyna w ciąży — pod wpływem rosnącego stężenia estrogenów prolaktyna fizjologicznie znacznie wzrasta w czasie ciąży, osiągając pod jej koniec wartości rzędu ~200–400 ng/mL (przygotowanie gruczołów piersiowych do laktacji). Z tego powodu prolaktyny NIE należy oznaczać rutynowo w ciąży ani interpretować wg zakresów nieciążowych — „nieprawidłowo wysoki" wynik jest tu zjawiskiem fizjologicznym, a nie patologią. Wyjątkowo, u kobiet z wcześniej rozpoznanym gruczolakiem prolaktynowym, monitorowanie w ciąży prowadzi się głównie klinicznie (objawy ucisku, pole widzenia), nie poprzez rutynowy pomiar prolaktyny.' }
           ]
         }
       ],
@@ -2821,7 +2876,7 @@
             kind: 'prose',
             icon: 'book-2',
             title: 'Definicja i kryteria PTEDD',
-            body: 'Przedwczesne dojrzewanie płciowe (PDP) — wg kryteriów polskich (PTEDD) rozwój drugorzędowych cech płciowych PRZED 8. rokiem życia u dziewczynek i PRZED 9. rokiem życia u chłopców (u chłopców — powiększenie jąder ≥ 4 mL). Klasyfikacja na podstawie zależności od GnRH: postać centralna (GnRH-zależna) — przedwczesna aktywacja osi podwzgórze-przysadka-gonady; postać obwodowa (GnRH-niezależna, przedwczesne dojrzewanie rzekome) — źródło steroidów płciowych gonadalne, nadnerczowe lub egzogenne, niezależne od GnRH.'
+            body: 'Przedwczesne dojrzewanie płciowe (PDP) — wg kryteriów polskich (PTEDD) rozwój drugorzędowych cech płciowych przed 8. rokiem życia u dziewczynek i przed 9. rokiem życia u chłopców (u chłopców — powiększenie jąder ≥ 4 mL). Klasyfikacja na podstawie zależności od GnRH: postać centralna (GnRH-zależna) — przedwczesna aktywacja osi podwzgórze-przysadka-gonady; postać obwodowa (GnRH-niezależna, przedwczesne dojrzewanie rzekome) — źródło steroidów płciowych gonadalne, nadnerczowe lub egzogenne, niezależne od GnRH.'
           },
           {
             kind: 'list',
@@ -2832,8 +2887,8 @@
                 label: 'Centralna (GnRH-zależna)',
                 text: 'przedwczesna aktywacja osi podwzgórze-przysadka-gonady:',
                 detail: [
-                  'U DZIEWCZYNEK — w większości przypadków idiopatyczna; zmiany organiczne OUN rzadkie, zwłaszcza > 6. r.ż.',
-                  'U CHŁOPCÓW — znacznie częściej ma podłoże organiczne; wymagane aktywne poszukiwanie przyczyny.',
+                  'U dziewczynek — w większości przypadków idiopatyczna; zmiany organiczne OUN rzadkie, zwłaszcza > 6. r.ż.',
+                  'U chłopców — znacznie częściej ma podłoże organiczne; wymagane aktywne poszukiwanie przyczyny.',
                   'MRI podwzgórzowo-przysadkowe: obowiązkowe u wszystkich chłopców z CPP; u dziewczynek selektywnie — bezwzględnie < 6. r.ż., przy objawach neurologicznych, bólach głowy lub szybkiej progresji.',
                   'Najczęstsze zmiany organiczne: hamartoma guza popielatego (najczęstsza), glejaki (m.in. NF1), inne guzy okolicy, wodogłowie, następstwa urazu/radioterapii.',
                   'Złoty standard potwierdzenia: test stymulacji GnRH — szczytowe LH ≥ ~5 IU/L po podaniu GnRH (próg zależny od metody).'
@@ -2848,7 +2903,7 @@
                   'Guzy gonad: u dziewczynek — torbiele lub guzy jajnika produkujące estrogeny; u chłopców — guzy z komórek Leydiga jądra (produkcja testosteronu).',
                   'Guzy wydzielające hCG (germinalne — szyszynka, jądra, wątroba, śródpiersie) — u chłopców powodują obwodowe dojrzewanie (hCG stymuluje komórki Leydiga); β-hCG do oznaczenia w każdym PDP.',
                   'Zespół McCune-Albrighta (mutacja GNAS, plamy café-au-lait, dysplazja włóknista) — autonomiczna aktywacja jajników.',
-                  'Ciężka, długotrwała pierwotna niedoczynność tarczycy → zespół Van Wyka-Grumbacha (paradoks: cechy dojrzewania przy OPÓŹNIONYM wieku kostnym — odwracalne po wyrównaniu).',
+                  'Ciężka, długotrwała pierwotna niedoczynność tarczycy → zespół Van Wyka-Grumbacha (paradoks: cechy dojrzewania przy opóźnionym wieku kostnym — odwracalne po wyrównaniu).',
                   'Egzogenne źródła steroidów (kremy hormonalne, sterydy anaboliczne, preparaty estrogenowe).'
                 ]
               }
@@ -2866,7 +2921,7 @@
                 detail: [
                   'DHEA-S — umiarkowanie podwyższony potwierdza adrenarche.',
                   '17-OH-progesteron — wykluczenie nieklasycznego WPN (NCAH); pobranie rano.',
-                  'Wiek kostny — w adrenarche zwykle prawidłowy lub TYLKO NIEZNACZNIE przyspieszony.',
+                  'Wiek kostny — w adrenarche zwykle prawidłowy lub TYLKO nieznacznie przyspieszony.',
                   'Cechy atypowe wymagające pogłębienia (poszukiwanie guza): szybka progresja, wirylizacja, znacznie zaawansowany wiek kostny, znacznie podwyższone androgeny.'
                 ]
               }
@@ -2892,13 +2947,13 @@
             { id: 'estradiol', note: 'Dziewczynki — stężenie pokwitaniowe wspiera rozpoznanie PDP. Bardzo wysoki estradiol przy zahamowanych gonadotropinach → postać obwodowa (torbiel lub guz jajnika, zespół McCune-Albrighta).' },
             { id: 'testosterone_total', note: 'Chłopcy — stężenie pokwitaniowe wspiera rozpoznanie PDP. Wysoki testosteron przy zahamowanych gonadotropinach → postać obwodowa (WPN, guz nadnercza lub jądra, guz wydzielający hCG).' },
             { ext: 'gnrh_test', label: 'Test stymulacji GnRH (LHRH)', note: 'Złoty standard potwierdzenia i klasyfikacji PDP. Pokwitaniowa odpowiedź LH (szczytowe LH ≥ ~5 IU/L — próg zależny od metody oznaczania) potwierdza postać centralną (GnRH-zależną); brak odpowiedzi LH przy obecnych cechach dojrzewania → postać obwodowa.', description: 'Test stymulacji GnRH (LHRH) — kluczowe badanie różnicujące centralne i obwodowe przedwczesne dojrzewanie. Po dożylnym podaniu GnRH lub jego analogu oznacza się LH i FSH w punktach czasowych (zwykle 0, 30, 60 min). Interpretacja: pokwitaniowy wzrost LH — szczytowe LH ≥ ~5 IU/L (próg zależny od metody; nowoczesne testy immunochemiluminescencyjne mają niższe progi niż starsze metody RIA) — potwierdza przedwczesne dojrzewanie centralne (aktywacja osi podwzgórze-przysadka-gonady). Brak pokwitaniowej odpowiedzi LH u dziecka z cechami dojrzewania wskazuje na postać obwodową (GnRH-niezależną). Pomocniczo ocenia się stosunek szczytowego LH do FSH (przewaga LH przemawia za postacią centralną). U dzieci z jednoznacznie pokwitaniowym LH podstawowym (metoda ultraczuła) test bywa niekonieczny.' },
-            { id: 'tsh', note: 'Wykluczenie ciężkiej, długotrwałej pierwotnej niedoczynności tarczycy — zespół Van Wyka-Grumbacha — rzadkiej, ale odwracalnej przyczyny przedwczesnego dojrzewania. Charakterystyczny paradoks: cechy dojrzewania przy OPÓŹNIONYM (nie przyspieszonym) wieku kostnym.' },
+            { id: 'tsh', note: 'Wykluczenie ciężkiej, długotrwałej pierwotnej niedoczynności tarczycy — zespół Van Wyka-Grumbacha — rzadkiej, ale odwracalnej przyczyny przedwczesnego dojrzewania. Charakterystyczny paradoks: cechy dojrzewania przy opóźnionym (nie przyspieszonym) wieku kostnym.' },
             { ext: 'bhcg', label: 'β-hCG (ilościowy)', note: 'Zalecane do oznaczenia w każdym przypadku przedwczesnego dojrzewania, ze szczególnym znaczeniem u chłopców. Wykrycie guzów wydzielających hCG (guzy germinalne — m.in. wewnątrzczaszkowe, jąder, wątroby, śródpiersia). hCG działa podobnie do LH, stymulując komórki Leydiga u chłopców → obwodowe przedwczesne dojrzewanie u chłopców.', description: 'β-hCG (ilościowy) w diagnostyce przedwczesnego dojrzewania — podwyższone stężenie wskazuje na guz wydzielający ludzką gonadotropinę kosmówkową. hCG ma działanie podobne do LH: u chłopców stymuluje komórki Leydiga jądra do produkcji testosteronu, dając obwodowe przedwczesne dojrzewanie (powiększenie prącia i owłosienia bez proporcjonalnego powiększenia jąder); u dziewczynek hCG samodzielnie nie wywołuje dojrzewania. Źródła: guzy germinalne wewnątrzczaszkowe (okolica szyszynki — mogą dawać też objawy neurologiczne), guzy germinalne jąder, wątroby, śródpiersia i przestrzeni zaotrzewnowej. Podwyższony β-hCG u chłopca z przedwczesnym dojrzewaniem wymaga poszukiwania guza pierwotnego (obrazowanie OUN, jąder, jamy brzusznej i klatki piersiowej).' }
           ]
         },
         { name: 'Ocena zaawansowania i obrazowanie',
           tests: [
-            { ext: 'bone_age', label: 'RTG ocena wieku kostnego', note: 'W przedwczesnym dojrzewaniu wiek kostny jest zwykle przyspieszony względem wieku metrykalnego (działanie steroidów płciowych) — odzwierciedla tempo procesu i służy prognozie wzrostu ostatecznego. WYJĄTEK: w zespole Van Wyka-Grumbacha wiek kostny jest opóźniony.', description: 'RTG oceny wieku kostnego metodą Greulicha-Pyle (zdjęcie dłoni ręki niedominującej) — w diagnostyce przedwczesnego dojrzewania ocenia stopień zaawansowania i tempo procesu. Steroidy płciowe przyspieszają dojrzewanie kości, dlatego w PDP wiek kostny jest zwykle znacznie przyspieszony względem wieku metrykalnego; znaczna akceleracja i szybka progresja są argumentem za wdrożeniem leczenia hamującego — w postaci centralnej (CPP) stosuje się analogi GnRH, natomiast w postaci obwodowej leczenie kieruje się na źródło steroidów płciowych (analogi GnRH są tu nieskuteczne). Wiek kostny służy też prognozie wzrostu ostatecznego — przedwczesne dojrzewanie bez leczenia prowadzi do wczesnego zarośnięcia chrząstek wzrostowych i niskiego wzrostu ostatecznego mimo przejściowo wysokiego tempa wzrastania. WYJĄTEK diagnostyczny: w zespole Van Wyka-Grumbacha (ciężka niedoczynność tarczycy) wiek kostny jest opóźniony — co odróżnia go od pozostałych postaci PDP.' },
+            { ext: 'bone_age', label: 'RTG ocena wieku kostnego', note: 'W przedwczesnym dojrzewaniu wiek kostny jest zwykle przyspieszony względem wieku metrykalnego (działanie steroidów płciowych) — odzwierciedla tempo procesu i służy prognozie wzrostu ostatecznego. Wyjątek: w zespole Van Wyka-Grumbacha wiek kostny jest opóźniony.', description: 'RTG oceny wieku kostnego metodą Greulicha-Pyle (zdjęcie dłoni ręki niedominującej) — w diagnostyce przedwczesnego dojrzewania ocenia stopień zaawansowania i tempo procesu. Steroidy płciowe przyspieszają dojrzewanie kości, dlatego w PDP wiek kostny jest zwykle znacznie przyspieszony względem wieku metrykalnego; znaczna akceleracja i szybka progresja są argumentem za wdrożeniem leczenia hamującego — w postaci centralnej (CPP) stosuje się analogi GnRH, natomiast w postaci obwodowej leczenie kieruje się na źródło steroidów płciowych (analogi GnRH są tu nieskuteczne). Wiek kostny służy też prognozie wzrostu ostatecznego — przedwczesne dojrzewanie bez leczenia prowadzi do wczesnego zarośnięcia chrząstek wzrostowych i niskiego wzrostu ostatecznego mimo przejściowo wysokiego tempa wzrastania. Wyjątek diagnostyczny: w zespole Van Wyka-Grumbacha (ciężka niedoczynność tarczycy) wiek kostny jest opóźniony — co odróżnia go od pozostałych postaci PDP.' },
             { ext: 'pituitary_mri', label: 'MRI podwzgórzowo-przysadkowe', note: 'Wskazane przy potwierdzonej postaci centralnej (CPP) — wykrycie zmian organicznych OUN. Wg PTEDD/ESPE: obowiązkowe u wszystkich chłopców z CPP; u dziewczynek szczególnie < 6. r.ż. lub przy objawach neurologicznych albo szybkiej progresji — u dziewczynek 6–8 lat odsetek zmian organicznych jest niski (przeważnie postać idiopatyczna).', description: 'MRI okolicy podwzgórzowo-przysadkowej z kontrastem — w diagnostyce centralnego przedwczesnego dojrzewania służy wykryciu zmian organicznych ośrodkowego układu nerwowego odpowiedzialnych za przedwczesną aktywację osi: hamartoma guza popielatego (najczęstsza zmiana organiczna), glejaki (m.in. w przebiegu nerwiakowłókniakowatości typu 1), inne guzy okolicy, wodogłowie, następstwa urazu lub radioterapii. Wskazania wg PTEDD/ESPE: badanie obowiązkowe u wszystkich chłopców z CPP (wysoki odsetek podłoża organicznego); u dziewczynek wskazania są selektywne — bezwzględne przy wieku < 6 lat, objawach neurologicznych, bólach głowy lub szybkiej progresji, natomiast u dziewczynek w wieku 6–8 lat bez objawów neurologicznych odsetek zmian organicznych jest niski (postać przeważnie idiopatyczna) i decyzję o MRI podejmuje się indywidualnie.' },
             { ext: 'chorionic_us', label: 'USG narządów rodnych / miednicy', note: 'Dziewczynki — w postaci centralnej macica i jajniki ulegają powiększeniu (dojrzewaniu); izolowana duża torbiel lub guz jajnika sugeruje postać obwodową. U chłopców obrazowanie ukierunkowane na jądra (asymetria, guz) i nadnercza.', description: 'USG narządów rodnych i miednicy (u dzieci zwykle przezbrzuszne, z wypełnionym pęcherzem moczowym) — w diagnostyce przedwczesnego dojrzewania u dziewczynek ocenia: wielkość i kształt macicy (w dojrzewaniu macica powiększa się, zmienia kształt na gruszkowaty, pojawia się echo endometrium), objętość jajników i obecność pęcherzyków. Obraz dojrzewający macicy i jajników wspiera rozpoznanie postaci centralnej; izolowana duża torbiel jajnika lub guz jajnika przemawia za postacią obwodową (m.in. zespół McCune-Albrighta, guz wydzielający estrogeny). U chłopców badanie obrazowe ukierunkowuje się na ocenę jąder (asymetria, guz z komórek Leydiga) oraz nadnerczy.' }
           ]
@@ -2951,7 +3006,7 @@
                 text: 'przyczyny czynnościowe/odwracalne lub trwałe wrodzone:',
                 detail: [
                   'Czynnościowy/odwracalny: choroby przewlekłe (m.in. nieswoiste choroby jelit, mukowiscydoza, niedoczynność tarczycy, przewlekła choroba nerek), niedożywienie, zaburzenia odżywiania (anoreksja), intensywny wysiłek fizyczny, stres.',
-                  'Trwały wrodzony: zespół Kallmanna (wrodzony izolowany niedobór GnRH z ANOSMIĄ — kluczowy objaw kierunkujący), izolowany IHH bez anosmii, wrodzona niedoczynność przysadki (mutacje genów PROP1, POU1F1).',
+                  'Trwały wrodzony: zespół Kallmanna (wrodzony izolowany niedobór GnRH z anosmią — kluczowy objaw kierunkujący), izolowany IHH bez anosmii, wrodzona niedoczynność przysadki (mutacje genów PROP1, POU1F1).',
                   'Zmiany organiczne OUN: guzy okolicy podwzgórzowo-przysadkowej (czaszkogardlak, glejak, gruczolak), następstwa urazu, radioterapii, chorób naciekowych.'
                 ]
               },
@@ -2972,18 +3027,18 @@
             icon: 'tags',
             title: 'Centralny dylemat diagnostyczny — CDGP vs trwały wrodzony HH',
             items: [
-              { label: 'Brak jednego rozstrzygającego testu', text: 'obie postaci dają niskie gonadotropiny i niskie steroidy płciowe — wzorce hormonalne się NAKŁADAJĄ.' },
+              { label: 'Brak jednego rozstrzygającego testu', text: 'obie postaci dają niskie gonadotropiny i niskie steroidy płciowe — wzorce hormonalne się nakładają.' },
               {
                 label: 'Co pomaga w różnicowaniu',
                 text: 'łączna ocena wielu elementów + obserwacja w czasie:',
                 detail: [
                   'Wywiad rodzinny — dodatni dla CDGP (rodzice/rodzeństwo z opóźnionym dojrzewaniem).',
-                  'Inhibina B — ZACHOWANA w CDGP, NISKA lub nieoznaczalna w trwałym wrodzonym HH (jeden z lepszych pojedynczych parametrów różnicujących).',
+                  'Inhibina B — zachowana w CDGP, niska lub nieoznaczalna w trwałym wrodzonym HH (jeden z lepszych pojedynczych parametrów różnicujących).',
                   'Badanie węchu (anosmia → zespół Kallmanna — przemawia za trwałym HH).',
                   'Obserwacja w czasie: w CDGP dojrzewanie ostatecznie postępuje; w trwałym HH nie ma spontanicznej aktywacji osi.'
                 ]
               },
-              { label: 'Test stymulacji GnRH — ograniczona wartość', text: 'pokwitaniowa odpowiedź LH sugeruje CDGP, słaba — trwały HH, ale zakresy odpowiedzi się NAKŁADAJĄ. Test nie pozwala jednoznacznie odróżnić CDGP od trwałego wrodzonego HH.' }
+              { label: 'Test stymulacji GnRH — ograniczona wartość', text: 'pokwitaniowa odpowiedź LH sugeruje CDGP, słaba — trwały HH, ale zakresy odpowiedzi się nakładają. Test nie pozwala jednoznacznie odróżnić CDGP od trwałego wrodzonego HH.' }
             ]
           },
           {
@@ -3020,9 +3075,9 @@
         },
         { name: 'Diagnostyka pogłębiona i obrazowanie',
           tests: [
-            { ext: 'bone_age', label: 'RTG ocena wieku kostnego', note: 'W opóźnionym dojrzewaniu wiek kostny jest zwykle opóźniony względem wieku metrykalnego — typowe dla CDGP (gdzie odpowiada w przybliżeniu wiekowi wzrostowemu) i dla większości przyczyn opóźnienia. Służy też prognozie wzrostu ostatecznego.', description: 'RTG oceny wieku kostnego metodą Greulicha-Pyle (zdjęcie dłoni ręki niedominującej) — w diagnostyce opóźnionego dojrzewania wiek kostny jest zwykle opóźniony względem wieku metrykalnego. W konstytucjonalnym opóźnieniu (CDGP) wiek kostny jest opóźniony i odpowiada w przybliżeniu wiekowi wzrostowemu dziecka — co jest argumentem za korzystną prognozą wzrostu ostatecznego i postępowaniem wyczekującym. WAŻNE: sam stopień opóźnienia wieku kostnego NIE różnicuje CDGP od trwałego hipogonadyzmu — w obu stanach wiek kostny bywa opóźniony.' },
+            { ext: 'bone_age', label: 'RTG ocena wieku kostnego', note: 'W opóźnionym dojrzewaniu wiek kostny jest zwykle opóźniony względem wieku metrykalnego — typowe dla CDGP (gdzie odpowiada w przybliżeniu wiekowi wzrostowemu) i dla większości przyczyn opóźnienia. Służy też prognozie wzrostu ostatecznego.', description: 'RTG oceny wieku kostnego metodą Greulicha-Pyle (zdjęcie dłoni ręki niedominującej) — w diagnostyce opóźnionego dojrzewania wiek kostny jest zwykle opóźniony względem wieku metrykalnego. W konstytucjonalnym opóźnieniu (CDGP) wiek kostny jest opóźniony i odpowiada w przybliżeniu wiekowi wzrostowemu dziecka — co jest argumentem za korzystną prognozą wzrostu ostatecznego i postępowaniem wyczekującym. Ważne: sam stopień opóźnienia wieku kostnego NIE różnicuje CDGP od trwałego hipogonadyzmu — w obu stanach wiek kostny bywa opóźniony.' },
             { ext: 'karyotype', label: 'Kariotyp', note: 'Wskazany przy hipogonadyzmie hipergonadotropowym (wysokie LH/FSH) — wykrycie zespołu Turnera (45,X) u dziewcząt i zespołu Klinefeltera (47,XXY) u chłopców z opóźnionym dojrzewaniem.', description: 'Kariotyp — ocena chromosomów z hodowli limfocytów krwi obwodowej. W diagnostyce opóźnionego dojrzewania wskazany przede wszystkim przy obrazie hipogonadyzmu hipergonadotropowego (wysokie LH i FSH przy niskich steroidach płciowych), wskazującym na pierwotną niewydolność gonad. Najczęstsze rozpoznania: zespół Turnera (45,X i warianty/mozaicyzmy) u dziewcząt — częsta przyczyna pierwotnej niewydolności jajników i niedoboru wzrostu; zespół Klinefeltera (47,XXY) u chłopców — najczęstsza przyczyna pierwotnego hipogonadyzmu męskiego. Wynik opisuje się wg ISCN (International System for Cytogenetic Nomenclature).' },
-            { ext: 'gnrh_test', label: 'Test stymulacji GnRH (LHRH)', note: 'Ocena rezerwy gonadotropowej przysadki: pokwitaniowa odpowiedź LH wskazuje na rozpoczynającą się aktywację osi (CDGP), słaba odpowiedź — na hipogonadyzm hipogonadotropowy. UWAGA: test ma OGRANICZONĄ zdolność jednoznacznego odróżnienia CDGP od trwałego wrodzonego HH — zakresy odpowiedzi nakładają się.', description: 'Test stymulacji GnRH (LHRH) — po dożylnym podaniu GnRH ocenia się wzrost LH i FSH. W diagnostyce opóźnionego dojrzewania służy ocenie rezerwy gonadotropowej przysadki: pokwitaniowa odpowiedź LH sugeruje rozpoczynającą się aktywację osi podwzgórze-przysadka-gonady (typowe dla konstytucjonalnego opóźnienia), a słaba lub przedpokwitaniowa odpowiedź przemawia za hipogonadyzmem hipogonadotropowym. ISTOTNE OGRANICZENIE: test nie pozwala jednoznacznie odróżnić CDGP od trwałego wrodzonego hipogonadyzmu hipogonadotropowego — zakresy odpowiedzi w obu stanach się nakładają, dlatego rozpoznanie często wymaga obserwacji w czasie oraz łącznej oceny z wywiadem rodzinnym, inhibiną B i badaniem węchu.' },
+            { ext: 'gnrh_test', label: 'Test stymulacji GnRH (LHRH)', note: 'Ocena rezerwy gonadotropowej przysadki: pokwitaniowa odpowiedź LH wskazuje na rozpoczynającą się aktywację osi (CDGP), słaba odpowiedź — na hipogonadyzm hipogonadotropowy. Uwaga: test ma ograniczoną zdolność jednoznacznego odróżnienia CDGP od trwałego wrodzonego HH — zakresy odpowiedzi nakładają się.', description: 'Test stymulacji GnRH (LHRH) — po dożylnym podaniu GnRH ocenia się wzrost LH i FSH. W diagnostyce opóźnionego dojrzewania służy ocenie rezerwy gonadotropowej przysadki: pokwitaniowa odpowiedź LH sugeruje rozpoczynającą się aktywację osi podwzgórze-przysadka-gonady (typowe dla konstytucjonalnego opóźnienia), a słaba lub przedpokwitaniowa odpowiedź przemawia za hipogonadyzmem hipogonadotropowym. istotne ograniczenie: test nie pozwala jednoznacznie odróżnić CDGP od trwałego wrodzonego hipogonadyzmu hipogonadotropowego — zakresy odpowiedzi w obu stanach się nakładają, dlatego rozpoznanie często wymaga obserwacji w czasie oraz łącznej oceny z wywiadem rodzinnym, inhibiną B i badaniem węchu.' },
             { ext: 'hcg_test', label: 'Test stymulacji hCG', note: 'Chłopcy — ocena czynności komórek Leydiga jąder i potwierdzenie obecności czynnej tkanki jądrowej. Wzrost testosteronu po stymulacji hCG świadczy o sprawnych komórkach Leydiga; brak odpowiedzi → anorchia lub ciężkie uszkodzenie jąder.', description: 'Test stymulacji hCG — hCG działa na komórki Leydiga jąder podobnie jak LH. U chłopców z opóźnionym dojrzewaniem służy ocenie czynności komórek Leydiga i potwierdzeniu obecności czynnej tkanki jądrowej (m.in. przy obustronnym wnętrostwie lub podejrzeniu anorchii). Protokół: podanie hCG i pomiar testosteronu przed oraz po stymulacji. Interpretacja: znaczny wzrost testosteronu → sprawne komórki Leydiga (jądra obecne i czynne); brak odpowiedzi → anorchia, ciężkie uszkodzenie jąder lub zaburzenie biosyntezy testosteronu.' },
             { ext: 'pituitary_mri', label: 'MRI podwzgórzowo-przysadkowe', note: 'Wskazane gdy podejrzewa się trwały lub wrodzony hipogonadyzm hipogonadotropowy albo przyczynę organiczną OUN — nie rutynowo u każdego dziecka z niskimi gonadotropinami (większość ma CDGP). Cele: wykrycie guzów i zmian okolicy podwzgórzowo-przysadkowej oraz ocena opuszek węchowych (ich brak lub hipoplazja potwierdza zespół Kallmanna). Bezwzględnie wskazane przy objawach neurologicznych, bólach głowy lub zaburzeniach pola widzenia.', description: 'MRI okolicy podwzgórzowo-przysadkowej z kontrastem — w diagnostyce opóźnionego dojrzewania wskazane, gdy podejrzewa się trwały lub wrodzony hipogonadyzm hipogonadotropowy albo przyczynę organiczną OUN; nie jest natomiast rutynowo potrzebne u każdego dziecka z niskimi gonadotropinami, ponieważ większość z nich ma konstytucjonalne opóźnienie dojrzewania (CDGP). Cele: wykrycie guzów i zmian okolicy podwzgórzowo-przysadkowej (m.in. czaszkogardlak, glejak, gruczolak, zmiany naciekowe), ocena przysadki przy podejrzeniu jej niedoczynności oraz ocena opuszek i bruzd węchowych — ich brak lub hipoplazja potwierdza zespół Kallmanna (wrodzony hipogonadyzm hipogonadotropowy z anosmią). Badanie jest bezwzględnie wskazane przy współistniejących objawach neurologicznych, bólach głowy lub zaburzeniach pola widzenia.' }
           ]
@@ -3037,7 +3092,7 @@
     },
 
     /* ═══════════════════════════════════════════════════════════════
-     *  TARCZYCA
+     *  tarczyca
      * ═══════════════════════════════════════════════════════════════ */
 
     hypothyroidism: {
@@ -3055,7 +3110,7 @@
             title: 'Klasyfikacja (wg PTE / ATA)',
             items: [
               { label: 'Jawna', text: 'TSH podwyższone + fT4 obniżone.' },
-              { label: 'Subkliniczna łagodna', text: 'TSH ~4–10 mIU/L + fT4 prawidłowe. Leczenie zwykle nie jest zalecane rutynowo — rozważyć przy: dodatnich anty-TPO, ciąży lub planowaniu prokreacji, niepłodności, objawach niedoczynności, u młodszych pacjentów. U osób starszych (> 70 r.ż.) OSTROŻNIE — fizjologicznie wyższa norma TSH (~6–7 mIU/L); bezkrytyczne leczenie może być szkodliwe (ryzyko migotania przedsionków, osteoporozy).' },
+              { label: 'Subkliniczna łagodna', text: 'TSH ~4–10 mIU/L + fT4 prawidłowe. Leczenie zwykle nie jest zalecane rutynowo — rozważyć przy: dodatnich anty-TPO, ciąży lub planowaniu prokreacji, niepłodności, objawach niedoczynności, u młodszych pacjentów. U osób starszych (> 70 r.ż.) ostrożnie — fizjologicznie wyższa norma TSH (~6–7 mIU/L); bezkrytyczne leczenie może być szkodliwe (ryzyko migotania przedsionków, osteoporozy).' },
               { label: 'Subkliniczna znaczna', text: 'TSH > 10 mIU/L + fT4 prawidłowe (leczenie zalecane).' },
               { label: 'Wtórna/centralna', text: 'fT4 obniżone przy nieadekwatnie niskim lub prawidłowym TSH — rzadka, w chorobach przysadki.' }
             ]
@@ -3095,14 +3150,14 @@
             variant: 'primary',
             icon: 'baby-bottle',
             title: 'W ciąży',
-            body: 'Obowiązują niższe, swoiste dla trymestru zakresy referencyjne TSH — optymalnie własne laboratoryjne, a gdy niedostępne — wg polskich wytycznych PTE 2021 (Hubalewska-Dydejczyk i wsp., elektrochemiluminescencja, polska populacja, tab. 2): I trymestr 0,01–3,18 mIU/L; II trymestr 0,05–3,44; III trymestr 0,11–3,53. Wartość TSH > 3,18 / 3,44 / 3,53 mIU/L (odpowiednio dla trymestru) świadczy o subklinicznej niedoczynności wymagającej leczenia (PTE 2021 wprost odstąpiło od progu ATA 2017 = 4,0). CEL TERAPEUTYCZNY u pacjentki LECZONEJ lewotyroksyną w I trymestrze: < 2,5 mIU/L (NIE jest to próg diagnostyczny). Niewyrównana niedoczynność tarczycy zwiększa ryzyko powikłań położniczych i zaburzeń neurorozwojowych płodu. Kobiety leczone lewotyroksyną zwykle wymagają ZWIĘKSZENIA dawki zaraz po potwierdzeniu ciąży — typowo o 25–30% (orientacyjnie +2 tabletki tygodniowo wg ATA 2017). Monitorowanie TSH co 4–6 tygodni w I połowie ciąży i co najmniej raz w II i III trymestrze.'
+            body: 'Obowiązują niższe, swoiste dla trymestru zakresy referencyjne TSH — optymalnie własne laboratoryjne, a gdy niedostępne — wg polskich wytycznych PTE 2021 (Hubalewska-Dydejczyk i wsp., elektrochemiluminescencja, polska populacja, tab. 2): I trymestr 0,01–3,18 mIU/L; II trymestr 0,05–3,44; III trymestr 0,11–3,53. Wartość TSH > 3,18 / 3,44 / 3,53 mIU/L (odpowiednio dla trymestru) świadczy o subklinicznej niedoczynności wymagającej leczenia (PTE 2021 wprost odstąpiło od progu ATA 2017 = 4,0). CEL terapeutyczny u pacjentki leczonej lewotyroksyną w I trymestrze: < 2,5 mIU/L (nie jest to próg diagnostyczny). Niewyrównana niedoczynność tarczycy zwiększa ryzyko powikłań położniczych i zaburzeń neurorozwojowych płodu. Kobiety leczone lewotyroksyną zwykle wymagają zwiększenia dawki zaraz po potwierdzeniu ciąży — typowo o 25–30% (orientacyjnie +2 tabletki tygodniowo wg ATA 2017). Monitorowanie TSH co 4–6 tygodni w I połowie ciąży i co najmniej raz w II i III trymestrze.'
           },
           {
             kind: 'callout',
             variant: 'purple',
             icon: 'mood-kid',
             title: 'U dzieci',
-            body: 'Zakresy referencyjne TSH i fT4 są zależne OD WIEKU — u noworodków i niemowląt znacznie wyższe niż u dorosłych. Nie wolno stosować progów dorosłych. Wrodzona niedoczynność tarczycy jest wykrywana w przesiewie noworodkowym (osobne wskazanie); u starszych dzieci niedoczynność wpływa przede wszystkim na wzrastanie i rozwój neurologiczny — wymaga oceny tempa wzrastania, wieku kostnego i rozwoju psychoruchowego.'
+            body: 'Zakresy referencyjne TSH i fT4 są zależne OD wieku — u noworodków i niemowląt znacznie wyższe niż u dorosłych. Nie wolno stosować progów dorosłych. Wrodzona niedoczynność tarczycy jest wykrywana w przesiewie noworodkowym (osobne wskazanie); u starszych dzieci niedoczynność wpływa przede wszystkim na wzrastanie i rozwój neurologiczny — wymaga oceny tempa wzrastania, wieku kostnego i rozwoju psychoruchowego.'
           }
         ]
       },
@@ -3110,33 +3165,33 @@
         { name: 'Rozpoznanie i klasyfikacja',
           tests: [
             { id: 'tsh',
-              note: 'Badanie I rzutu w diagnostyce tarczycy — najczulszy pojedynczy test. Górna granica normy u dorosłych ~4 mIU/L (zależna od laboratorium i wieku — u osób starszych wyższa). UWAGA: w ciąży obowiązują niższe, swoiste dla trymestru zakresy, a u dzieci zakresy zależne od wieku — nie stosować progów dorosłych.',
-              description: 'TSH jest najczulszym pojedynczym testem funkcji tarczycy — fizjologiczna pętla ujemnego sprzężenia zwrotnego sprawia, że nawet niewielkie zmiany fT4/fT3 powodują nieproporcjonalnie duże zmiany TSH (logarytmiczna zależność). W pierwotnej niedoczynności TSH jest podwyższone (próba kompensacji niskim poziomem hormonów obwodowych); w niedoczynności wtórnej/centralnej TSH jest nieadekwatnie prawidłowe lub niskie przy obniżonym fT4. PROGI DOROSŁYCH: górna granica normy laboratoryjnej zwykle ~4 mIU/L; u osób > 70 r.ż. fizjologicznie wyższa (do ~6–7 mIU/L) — bezkrytyczne leczenie subklinicznej niedoczynności w tej grupie wiekowej jest niewskazane (ryzyko jatrogennej nadczynności: migotanie przedsionków, osteoporoza). PROGI PEDIATRYCZNE (PTEDD 2016, Kucharska i wsp.) są wiek-zależne — u noworodków i niemowląt znacznie wyższe niż u dorosłych (m.in. test bibułowy 3.–5. doba: TSH > 9 mIU/L → wezwanie; w surowicy noworodków normy do ~30 w 1.–2. dobie, spadek do ~10 do 14. doby; u niemowląt i małych dzieci stopniowo obniża się do wartości ~5 mIU/L). CIĄŻA (PTE 2021, Hubalewska-Dydejczyk): górne progi swoiste dla trymestru: I 3,18; II 3,44; III 3,53 mIU/L (cel terapeutyczny u leczonych < 2,5 w I trymestrze — nie próg diagnostyczny). PUŁAPKI: (1) BIOTYNA — w wysokich dawkach (≥ 5 mg/d, np. w suplementach „włosy/skóra/paznokcie") interferuje z immunoassay opartymi na streptawidynie — odstawić ≥ 48 h przed pobraniem; (2) LIT — może indukować niedoczynność (psychiatryczny lek); (3) AMIODARON — wzrost TSH wczesny (po 1–3 mies.) zwykle przejściowy, długotrwały wymaga oceny; (4) bilirubina i triglicerydy wysokie → interferencja immunoassay; (5) HOSPITALIZACJA, ostre choroby → „euthyroid sick syndrome" — TSH może być przejściowo obniżone lub podwyższone bez rzeczywistej dysfunkcji tarczycy. KONTROLA: po włączeniu/zmianie dawki L-tyroksyny TSH oznaczać po 6–8 tygodniach (czas półtrwania T4 ~7 dni, pełna stabilizacja farmakokinetyczna wymaga ≥ 5 t½).' },
+              note: 'Badanie I rzutu w diagnostyce tarczycy — najczulszy pojedynczy test. Górna granica normy u dorosłych ~4 mIU/L (zależna od laboratorium i wieku — u osób starszych wyższa). Uwaga: w ciąży obowiązują niższe, swoiste dla trymestru zakresy, a u dzieci zakresy zależne od wieku — nie stosować progów dorosłych.',
+              description: 'TSH jest najczulszym pojedynczym testem funkcji tarczycy — fizjologiczna pętla ujemnego sprzężenia zwrotnego sprawia, że nawet niewielkie zmiany fT4/fT3 powodują nieproporcjonalnie duże zmiany TSH (logarytmiczna zależność). W pierwotnej niedoczynności TSH jest podwyższone (próba kompensacji niskim poziomem hormonów obwodowych); w niedoczynności wtórnej/centralnej TSH jest nieadekwatnie prawidłowe lub niskie przy obniżonym fT4. progi dorosłych: górna granica normy laboratoryjnej zwykle ~4 mIU/L; u osób > 70 r.ż. fizjologicznie wyższa (do ~6–7 mIU/L) — bezkrytyczne leczenie subklinicznej niedoczynności w tej grupie wiekowej jest niewskazane (ryzyko jatrogennej nadczynności: migotanie przedsionków, osteoporoza). progi pediatryczne (PTEDD 2016, Kucharska i wsp.) są wiek-zależne — u noworodków i niemowląt znacznie wyższe niż u dorosłych (m.in. test bibułowy 3.–5. doba: TSH > 9 mIU/L → wezwanie; w surowicy noworodków normy do ~30 w 1.–2. dobie, spadek do ~10 do 14. doby; u niemowląt i małych dzieci stopniowo obniża się do wartości ~5 mIU/L). ciąża (PTE 2021, Hubalewska-Dydejczyk): górne progi swoiste dla trymestru: I 3,18; II 3,44; III 3,53 mIU/L (cel terapeutyczny u leczonych < 2,5 w I trymestrze — nie próg diagnostyczny). Pułapki: (1) biotyna — w wysokich dawkach (≥ 5 mg/d, np. w suplementach „włosy/skóra/paznokcie") interferuje z immunoassay opartymi na streptawidynie — odstawić ≥ 48 h przed pobraniem; (2) LIT — może indukować niedoczynność (psychiatryczny lek); (3) amiodaron — wzrost TSH wczesny (po 1–3 mies.) zwykle przejściowy, długotrwały wymaga oceny; (4) bilirubina i triglicerydy wysokie → interferencja immunoassay; (5) hospitalizacja, ostre choroby → „euthyroid sick syndrome" — TSH może być przejściowo obniżone lub podwyższone bez rzeczywistej dysfunkcji tarczycy. kontrola: po włączeniu/zmianie dawki L-tyroksyny TSH oznaczać po 6–8 tygodniach (czas półtrwania T4 ~7 dni, pełna stabilizacja farmakokinetyczna wymaga ≥ 5 t½).' },
             { id: 'ft4',
               note: 'Różnicuje postać jawną (fT4 obniżone) od subklinicznej (fT4 prawidłowe). Obniżone fT4 przy nieadekwatnie niskim lub prawidłowym TSH → podejrzenie niedoczynności wtórnej/centralnej (choroba przysadki).',
-              description: 'fT4 (wolna tyroksyna) — drugorzędowo po TSH, służy do RÓŻNICOWANIA postaci niedoczynności: (1) postać JAWNA — TSH ↑ + fT4 ↓ (jednoznaczne wskazanie do leczenia); (2) postać SUBKLINICZNA — TSH ↑ + fT4 PRAWIDŁOWE (decyzja o leczeniu zależna od wartości TSH, ciąży, objawów, wieku, anty-TPO); (3) postać WTÓRNA/CENTRALNA — fT4 ↓ + TSH nieadekwatnie prawidłowe lub niskie → konieczna diagnostyka osi przysadkowo-podwzgórzowej (MR przysadki, ocena innych osi hormonalnych: ACTH/kortyzol poranny, LH/FSH, GH, prolaktyna). MONITOROWANIE LECZENIA L-tyroksyną: cel to TSH w normie LUB w dolnej połowie normy (zwykle 0,4–2,5 mIU/L); fT4 zwykle utrzymuje się w środkowej/górnej połowie zakresu referencyjnego — wartości w górnym kwartylu nie są nieprawidłowe gdy TSH jest w normie. PUŁAPKI: (1) BIOTYNA (jak w TSH); (2) ostre choroby — fT4 może być obniżone wtórnie bez rzeczywistej niedoczynności (euthyroid sick syndrome — niska T3, czasem niska fT4, TSH zwykle prawidłowe lub niskie); (3) sezonowa zmienność u zdrowych ~3% (niższe latem); (4) różne metody immunoassay dają różne wyniki — zawsze porównuj z normami danego laboratorium; (5) zaawansowana CIĄŻA, leki estrogenowe (HRT, doustna antykoncepcja) — zwiększają TBG, prawidłowe fT4 mimo wzrostu T4 całkowitej (dlatego oznaczamy fT4 a nie T4 całk.).' }
+              description: 'fT4 (wolna tyroksyna) — drugorzędowo po TSH, służy do różnicowania postaci niedoczynności: (1) postać jawna — TSH ↑ + fT4 ↓ (jednoznaczne wskazanie do leczenia); (2) postać subkliniczna — TSH ↑ + fT4 prawidłowe (decyzja o leczeniu zależna od wartości TSH, ciąży, objawów, wieku, anty-TPO); (3) postać wtórna/centralna — fT4 ↓ + TSH nieadekwatnie prawidłowe lub niskie → konieczna diagnostyka osi przysadkowo-podwzgórzowej (MR przysadki, ocena innych osi hormonalnych: ACTH/kortyzol poranny, LH/FSH, GH, prolaktyna). monitorowanie leczenia L-tyroksyną: cel to TSH w normie LUB w dolnej połowie normy (zwykle 0,4–2,5 mIU/L); fT4 zwykle utrzymuje się w środkowej/górnej połowie zakresu referencyjnego — wartości w górnym kwartylu nie są nieprawidłowe gdy TSH jest w normie. Pułapki: (1) biotyna (jak w TSH); (2) ostre choroby — fT4 może być obniżone wtórnie bez rzeczywistej niedoczynności (euthyroid sick syndrome — niska T3, czasem niska fT4, TSH zwykle prawidłowe lub niskie); (3) sezonowa zmienność u zdrowych ~3% (niższe latem); (4) różne metody immunoassay dają różne wyniki — zawsze porównuj z normami danego laboratorium; (5) zaawansowana ciąża, leki estrogenowe (HRT, doustna antykoncepcja) — zwiększają TBG, prawidłowe fT4 mimo wzrostu T4 całkowitej (dlatego oznaczamy fT4 a nie T4 całk.).' }
           ]
         },
         { name: 'Etiologia (choroba Hashimoto — autoimmunologiczna)',
           tests: [
             { ext: 'anti_tpo', label: 'Przeciwciała anty-TPO',
               note: 'Główny marker autoimmunologicznego zapalenia tarczycy (choroba Hashimoto) — najczęstszej przyczyny niedoczynności w obszarach z prawidłową podażą jodu. Dodatni wynik potwierdza etiologię autoimmunologiczną.',
-              description: 'Anty-TPO (przeciwciała przeciwko peroksydazie tarczycowej) — najczulszy marker autoimmunologicznego zapalenia tarczycy. CZUŁOŚĆ ~90% w chorobie Hashimoto, swoistość niższa (przeciwciała mogą występować u 5–15% populacji ogólnej, częściej u kobiet i z wiekiem — nie zawsze klinicznie istotne). Interpretacja MIAN: norma zależy od metody (zwykle < 35 lub < 60 IU/mL); wartości umiarkowane (kilka × górnej granicy) potwierdzają obraz autoimmunologiczny; bardzo wysokie miana (> 1000 IU/mL) typowe dla aktywnej choroby Hashimoto i zwiększonego ryzyka progresji do jawnej niedoczynności. CIĄŻA: anty-TPO + zwiększa ryzyko (a) poporodowego zapalenia tarczycy (postpartum thyroiditis) ~50% w anty-TPO+ vs ~10% bez (ATA 2017); (b) progresji subklinicznej niedoczynności do jawnej; (c) poronień nawracających (kontrowersyjne — PTE 2021 wskazuje na potencjalny związek). U kobiet planujących ciążę z anty-TPO+ i TSH > 2,5 mIU/L — rozważyć profilaktyczną L-tyroksynę (indywidualnie). APS-2 / ZESPÓŁ SCHMIDTA: choroba Hashimoto często WSPÓŁWYSTĘPUJE z innymi chorobami autoimmunologicznymi — cukrzyca typu 1 (~10–20% pacjentów z Hashimoto ma przeciwciała trzustkowe), celiakia (~3–5% — przeglad anty-tTG/EMA wskazany), choroba Addisona (rzadka, ale konsekwencje śmiertelne — patrz cortisol w sekcji „Wykluczenia"), bielactwo, niedokrwistość Addisona-Biermera (anty-IF, anty-PCA). U pacjenta z potwierdzonym Hashimoto warto rozważyć skrining w kierunku tych asocjacji, zwłaszcza przy charakterystycznych objawach (utrata masy ciała, hipotensja, biegunki, niedokrwistość makrocytowa, hiperpigmentacja).' },
+              description: 'Anty-TPO (przeciwciała przeciwko peroksydazie tarczycowej) — najczulszy marker autoimmunologicznego zapalenia tarczycy. czułość ~90% w chorobie Hashimoto, swoistość niższa (przeciwciała mogą występować u 5–15% populacji ogólnej, częściej u kobiet i z wiekiem — nie zawsze klinicznie istotne). Interpretacja mian: norma zależy od metody (zwykle < 35 lub < 60 IU/mL); wartości umiarkowane (kilka × górnej granicy) potwierdzają obraz autoimmunologiczny; bardzo wysokie miana (> 1000 IU/mL) typowe dla aktywnej choroby Hashimoto i zwiększonego ryzyka progresji do jawnej niedoczynności. ciąża: anty-TPO + zwiększa ryzyko (a) poporodowego zapalenia tarczycy (postpartum thyroiditis) ~50% w anty-TPO+ vs ~10% bez (ATA 2017); (b) progresji subklinicznej niedoczynności do jawnej; (c) poronień nawracających (kontrowersyjne — PTE 2021 wskazuje na potencjalny związek). U kobiet planujących ciążę z anty-TPO+ i TSH > 2,5 mIU/L — rozważyć profilaktyczną L-tyroksynę (indywidualnie). APS-2 / zespół SCHMIDTA: choroba Hashimoto często współwystępuje z innymi chorobami autoimmunologicznymi — cukrzyca typu 1 (~10–20% pacjentów z Hashimoto ma przeciwciała trzustkowe), celiakia (~3–5% — przeglad anty-tTG/EMA wskazany), choroba Addisona (rzadka, ale konsekwencje śmiertelne — patrz cortisol w sekcji „Wykluczenia"), bielactwo, niedokrwistość Addisona-Biermera (anty-IF, anty-PCA). U pacjenta z potwierdzonym Hashimoto warto rozważyć skrining w kierunku tych asocjacji, zwłaszcza przy charakterystycznych objawach (utrata masy ciała, hipotensja, biegunki, niedokrwistość makrocytowa, hiperpigmentacja).' },
             { ext: 'anti_tg_ab', label: 'Przeciwciała anty-TG',
               note: 'Marker uzupełniający — anty-TPO jest podstawowy. Anty-TG dodaje niewiele, gdy anty-TPO są dodatnie; bywają jednak jedynymi dodatnimi przeciwciałami u części pacjentów z chorobą Hashimoto.' },
             { ext: 'thyroid_us', label: 'USG tarczycy',
               note: 'Choć samo rozpoznanie niedoczynności tarczycy opiera się na badaniach laboratoryjnych, USG tarczycy jest badaniem zalecanym u każdego pacjenta z wynikami laboratoryjnymi sugerującymi zaburzenie czynności tarczycy (niedoczynność lub nadczynność), a także u każdego dziecka z podejrzeniem choroby tarczycy przy dodatnim wywiadzie rodzinnym — zwłaszcza autoimmunologicznego zapalenia tarczycy. W chorobie Hashimoto typowy obraz to hipoechogeniczność i niejednorodność miąższu; USG uwidacznia również wole i guzki wymagające dalszej oceny.',
-              description: 'USG tarczycy w niedoczynności — badanie obrazowe uzupełniające diagnostykę laboratoryjną; nie jest niezbędne do samego rozpoznania (które opiera się na TSH/fT4), ale dostarcza KLUCZOWYCH INFORMACJI dla dalszego postępowania. OBRAZ TYPOWY DLA HASHIMOTO: (1) hipoechogeniczność miąższu (ciemniejsza niż mięśni szyi — w przeciwieństwie do zdrowej tarczycy, która jest hiperechogeniczna względem mięśni); (2) niejednorodność („marmurkowa" struktura — naprzemienne obszary niskiej i normalnej echogeniczności); (3) mikrobrodawkowanie/„mikrobrodawkowy" wzór (drobne hipoechogeniczne pola < 1–6 mm odpowiadające naciekom limfocytarnym); (4) zwłóknienia, czasem niewielkie torbiele; (5) wzmożone unaczynienie w aktywnych fazach (badanie Dopplera); (6) zmniejszenie/zanik miąższu w fazie końcowej (atrofii). WSKAZANIA: u dorosłych USG zalecane u każdego pacjenta z laboratoryjnymi cechami zaburzeń czynności tarczycy; u dzieci OBLIGATORYJNE według PTEDD przy każdym podejrzeniu choroby tarczycy. GUZKI: gdy USG wykrywa guzki — ocena wg klasyfikacji TIRADS (EU-TIRADS lub klasyfikacja PTE/PTU). Wskazania do biopsji aspiracyjnej cienkoigłowej (BAC/FNAB): EU-TIRADS 5 (≥ 10 mm) lub EU-TIRADS 4 (≥ 15 mm) lub EU-TIRADS 3 (≥ 20 mm) — uwaga, polskie kryteria mogą się nieco różnić (PTE wytyczne raka tarczycy 2022/Handkiewicz-Junak 2024 u dzieci). U PACJENTA Z HASHIMOTO: ryzyko chłoniaka tarczycy nieznacznie wyższe (rzadkie, ale wymaga uwagi przy szybko narastającym wolu lub guzku o atypowym obrazie).' }
+              description: 'USG tarczycy w niedoczynności — badanie obrazowe uzupełniające diagnostykę laboratoryjną; nie jest niezbędne do samego rozpoznania (które opiera się na TSH/fT4), ale dostarcza kluczowych informacji dla dalszego postępowania. obraz typowy DLA HASHIMOTO: (1) hipoechogeniczność miąższu (ciemniejsza niż mięśni szyi — w przeciwieństwie do zdrowej tarczycy, która jest hiperechogeniczna względem mięśni); (2) niejednorodność („marmurkowa" struktura — naprzemienne obszary niskiej i normalnej echogeniczności); (3) mikrobrodawkowanie/„mikrobrodawkowy" wzór (drobne hipoechogeniczne pola < 1–6 mm odpowiadające naciekom limfocytarnym); (4) zwłóknienia, czasem niewielkie torbiele; (5) wzmożone unaczynienie w aktywnych fazach (badanie Dopplera); (6) zmniejszenie/zanik miąższu w fazie końcowej (atrofii). wskazania: u dorosłych USG zalecane u każdego pacjenta z laboratoryjnymi cechami zaburzeń czynności tarczycy; u dzieci obligatoryjne według PTEDD przy każdym podejrzeniu choroby tarczycy. guzki: gdy USG wykrywa guzki — ocena wg klasyfikacji TIRADS (EU-TIRADS lub klasyfikacja PTE/PTU). Wskazania do biopsji aspiracyjnej cienkoigłowej (BAC/FNAB): EU-TIRADS 5 (≥ 10 mm) lub EU-TIRADS 4 (≥ 15 mm) lub EU-TIRADS 3 (≥ 20 mm) — uwaga, polskie kryteria mogą się nieco różnić (PTE wytyczne raka tarczycy 2022/Handkiewicz-Junak 2024 u dzieci). U pacjenta Z HASHIMOTO: ryzyko chłoniaka tarczycy nieznacznie wyższe (rzadkie, ale wymaga uwagi przy szybko narastającym wolu lub guzku o atypowym obrazie).' }
           ]
         },
         { name: 'Konsekwencje i monitorowanie',
           tests: [
             { ext: 'lipid_panel', label: 'Lipidogram (TC, LDL, HDL, TG)',
               note: 'Niedoczynność tarczycy powoduje dyslipidemię — podwyższenie cholesterolu całkowitego i frakcji LDL; leczenie substytucyjne zwykle ją koryguje.',
-              description: 'Dyslipidemia w niedoczynności tarczycy — częsta i klinicznie istotna konsekwencja. ZMIANY TYPOWE: (1) podwyższenie cholesterolu całkowitego (TC) i frakcji LDL-C — najwyraźniejsza cecha (do 30–50% wzrostu w cięższej niedoczynności); mechanizm: zmniejszenie ekspresji wątrobowych receptorów LDL (LDLR) i zmniejszenie aktywności lipazy lipoproteinowej; (2) podwyższenie trójglicerydów (TG) — mniej stałe; (3) HDL-C zwykle prawidłowe lub niewielki wzrost (mechanizm: zmniejszenie aktywności CETP); (4) wzrost Lp(a) u niektórych pacjentów. NORMALIZACJA po włączeniu L-tyroksyny: zwykle widoczna po 6–8 tygodniach, pełna po 3 miesiącach prawidłowego TSH. OSTROŻNOŚĆ ZE STATYNAMI: nigdy nie włączać statyny u pacjenta z nierozpoznaną lub niewyrównaną niedoczynnością — statyny i niedoczynność niezależnie zwiększają ryzyko MIOPATII (bóle mięśni, podwyższenie CK), a kombinacja może wywołać ciężkie powikłania (rabdomioliza). Zalecenie: oznacz TSH przed włączeniem statyny u każdego pacjenta z dyslipidemią; jeśli dyslipidemia ↔ niedoczynność, najpierw wyrównaj niedoczynność, ponownie ocen lipidogram po 3 mies., dopiero wtedy decyzja o statynie. SUBKLINICZNA NIEDOCZYNNOŚĆ: sama dyslipidemia nie jest niezależnym wskazaniem do leczenia L-tyroksyną subklinicznej niedoczynności wg PTE/ATA — decyzja w kontekście całości obrazu (wartość TSH, anty-TPO, wiek, objawy, ryzyko sercowo-naczyniowe).' },
+              description: 'Dyslipidemia w niedoczynności tarczycy — częsta i klinicznie istotna konsekwencja. zmiany typowe: (1) podwyższenie cholesterolu całkowitego (TC) i frakcji LDL-C — najwyraźniejsza cecha (do 30–50% wzrostu w cięższej niedoczynności); mechanizm: zmniejszenie ekspresji wątrobowych receptorów LDL (LDLR) i zmniejszenie aktywności lipazy lipoproteinowej; (2) podwyższenie trójglicerydów (TG) — mniej stałe; (3) HDL-C zwykle prawidłowe lub niewielki wzrost (mechanizm: zmniejszenie aktywności CETP); (4) wzrost Lp(a) u niektórych pacjentów. normalizacja po włączeniu L-tyroksyny: zwykle widoczna po 6–8 tygodniach, pełna po 3 miesiącach prawidłowego TSH. ostrożność ZE statynami: nigdy nie włączać statyny u pacjenta z nierozpoznaną lub niewyrównaną niedoczynnością — statyny i niedoczynność niezależnie zwiększają ryzyko miopatii (bóle mięśni, podwyższenie CK), a kombinacja może wywołać ciężkie powikłania (rabdomioliza). Zalecenie: oznacz TSH przed włączeniem statyny u każdego pacjenta z dyslipidemią; jeśli dyslipidemia ↔ niedoczynność, najpierw wyrównaj niedoczynność, ponownie ocen lipidogram po 3 mies., dopiero wtedy decyzja o statynie. subkliniczna niedoczynność: sama dyslipidemia nie jest niezależnym wskazaniem do leczenia L-tyroksyną subklinicznej niedoczynności wg PTE/ATA — decyzja w kontekście całości obrazu (wartość TSH, anty-TPO, wiek, objawy, ryzyko sercowo-naczyniowe).' },
             { ext: 'cbc', label: 'Morfologia krwi',
               note: 'Niedoczynność tarczycy może powodować niedokrwistość (najczęściej normocytową; bywa też makrocytowa lub — przy współistniejącej autoimmunizacji — z niedoboru żelaza albo witaminy B12).',
-              description: 'Morfologia krwi w niedoczynności tarczycy — niedokrwistość występuje u ~20–60% pacjentów (w zależności od ciężkości). TYPY NIEDOKRWISTOŚCI: (1) NORMOCYTOWA NORMOCHROMICZNA — najczęstsza, łagodna; mechanizm: zmniejszone wytwarzanie erytropoetyny (osi tarczyca-nerka), bezpośredni wpływ hormonów tarczycy na proliferację erytrocytów; (2) MAKROCYTOWA (MCV ↑) — typowa przy współistniejącym NIEDOBORZE WITAMINY B12 (asocjacja autoimmunologiczna — Hashimoto + niedokrwistość Addisona-Biermera w ramach APS-2; oznacz B12, anty-IF/PCA, gastrin); (3) MIKROCYTOWA HIPOCHROMICZNA — typowa przy współistniejącym NIEDOBORZE ŻELAZA — częsta u kobiet (miesiączki, ciąża) i przy CELIAKII (asocjacja APS-2 — anty-tTG, anty-EMA); (4) zaburzenia leukocytów i płytek rzadkie — niedoczynność nie jest cytopeniczna jako taka, ale autoimmunologiczne zaburzenia płytek (ITP) lub neutropenia bywają w APS. NORMALIZACJA: po wyrównaniu TSH morfologia wraca do normy w ciągu 2–4 miesięcy (chyba że istnieje niezależny niedobór Fe/B12, wymagający suplementacji). PUŁAPKA: u pacjenta z niedokrwistością makrocytową i zmęczeniem — ZAWSZE oznacz TSH przed założeniem niedoboru B12 (i odwrotnie); diagnostyka różnicowa obejmuje obie.' },
+              description: 'Morfologia krwi w niedoczynności tarczycy — niedokrwistość występuje u ~20–60% pacjentów (w zależności od ciężkości). typy niedokrwistości: (1) normocytowa normochromiczna — najczęstsza, łagodna; mechanizm: zmniejszone wytwarzanie erytropoetyny (osi tarczyca-nerka), bezpośredni wpływ hormonów tarczycy na proliferację erytrocytów; (2) makrocytowa (MCV ↑) — typowa przy współistniejącym niedoborze witaminy B12 (asocjacja autoimmunologiczna — Hashimoto + niedokrwistość Addisona-Biermera w ramach APS-2; oznacz B12, anty-IF/PCA, gastrin); (3) mikrocytowa hipochromiczna — typowa przy współistniejącym niedoborze żelaza — częsta u kobiet (miesiączki, ciąża) i przy celiakii (asocjacja APS-2 — anty-tTG, anty-EMA); (4) zaburzenia leukocytów i płytek rzadkie — niedoczynność nie jest cytopeniczna jako taka, ale autoimmunologiczne zaburzenia płytek (ITP) lub neutropenia bywają w APS. normalizacja: po wyrównaniu TSH morfologia wraca do normy w ciągu 2–4 miesięcy (chyba że istnieje niezależny niedobór Fe/B12, wymagający suplementacji). Pułapka: u pacjenta z niedokrwistością makrocytową i zmęczeniem — zawsze oznacz TSH przed założeniem niedoboru B12 (i odwrotnie); diagnostyka różnicowa obejmuje obie.' },
             { ext: 'egfr', label: 'Kreatynina + eGFR',
               note: 'W cięższej niedoczynności tarczycy dochodzi do odwracalnego obniżenia przesączania kłębuszkowego (eGFR) — normalizuje się po wyrównaniu hormonalnym.' }
           ]
@@ -3145,8 +3200,8 @@
           tests: [
             { id: 'cortisol',
               label: 'Kortyzol poranny (8:00–9:00)',
-              note: 'PRZED włączeniem L-tyroksyny rozważyć ocenę osi nadnerczowej, zwłaszcza przy podejrzeniu APS-2 / zespołu Schmidta (Hashimoto + choroba Addisona) lub współistniejących objawach niewydolności kory nadnerczy. Substytucja L-tyroksyną u pacjenta z NIEROZPOZNANĄ pierwotną niedoczynnością kory nadnerczy może wywołać PRZEŁOM NADNERCZOWY (zagrożenie życia). Próg < 138 nmol/L → wskazana dalsza diagnostyka (zob. wskazanie „Niedoczynność kory nadnerczy").',
-              description: 'Kortyzol poranny w kontekście niedoczynności tarczycy — kluczowe wykluczenie przed włączeniem L-tyroksyny. APS-2 (autoimmunologiczny zespół niedoczynności wielogruczołowej typu 2, zespół Schmidta) to współistnienie choroby Hashimoto z chorobą Addisona (pierwotna niedoczynność kory nadnerczy) ± cukrzycą typu 1. Mechanizm zagrożenia: hormony tarczycy zwiększają obwodowy metabolizm kortyzolu (przyspieszają jego klirens) — u pacjenta z dotychczas „skompensowaną" subkliniczną niedoczynnością nadnerczy (resztkowa rezerwa) wprowadzenie L-tyroksyny może DEKOMPENSOWAĆ oś nadnerczową i wywołać PRZEŁOM NADNERCZOWY (kryza, niewydolność krążenia, zaburzenia elektrolitowe — hiponatremia, hiperkaliemia — wymagająca natychmiastowego leczenia hydrokortyzonem). WSKAZANIA do oceny kortyzolu PRZED L-tyroksyną: (1) charakterystyczne objawy choroby Addisona — hiperpigmentacja (zwłaszcza fałdów skórnych, brodawek, jamy ustnej), hipotensja ortostatyczna, utrata masy ciała, łaknienie soli, hiponatremia, hiperkaliemia, hipoglikemia; (2) wywiad rodzinny APS lub innych chorób autoimmunologicznych (cukrzyca t.1, bielactwo, niedokrwistość Addisona-Biermera, celiakia); (3) ciężka niedoczynność tarczycy z objawami nieproporcjonalnymi (silne osłabienie, hipotensja, zaburzenia psychiczne). PROTOKÓŁ: pobranie kortyzolu w surowicy o godz. 8:00–9:00 (na czczo, w spoczynku). Interpretacja (Bornstein ES 2016): kortyzol poranny > 500 nmol/L (18 μg/dL) → niewydolność praktycznie wykluczona; < 138 nmol/L (5 μg/dL) → niewydolność prawdopodobna (wymaga testu stymulacji Synacthen 250 μg z pomiarem kortyzolu w 30. i 60. min); 138–500 nmol/L → wynik niejednoznaczny, test Synacthen wskazany. POSTĘPOWANIE: gdy potwierdzona/podejrzewana niedoczynność nadnerczy — NAJPIERW włączyć hydrokortyzon (substytucja glikokortykosteroidem), DOPIERO POTEM L-tyroksynę (po ≥ 1 tygodniu adekwatnej substytucji glikokortykosteroidem); szczegóły: zobacz wskazanie „Niedoczynność kory nadnerczy".' }
+              note: 'przed włączeniem L-tyroksyny rozważyć ocenę osi nadnerczowej, zwłaszcza przy podejrzeniu APS-2 / zespołu Schmidta (Hashimoto + choroba Addisona) lub współistniejących objawach niewydolności kory nadnerczy. Substytucja L-tyroksyną u pacjenta z NIEROZPOZNANĄ pierwotną niedoczynnością kory nadnerczy może wywołać PRZEŁOM NADNERCZOWY (zagrożenie życia). Próg < 138 nmol/L → wskazana dalsza diagnostyka (zob. wskazanie „Niedoczynność kory nadnerczy").',
+              description: 'Kortyzol poranny w kontekście niedoczynności tarczycy — kluczowe wykluczenie przed włączeniem L-tyroksyny. APS-2 (autoimmunologiczny zespół niedoczynności wielogruczołowej typu 2, zespół Schmidta) to współistnienie choroby Hashimoto z chorobą Addisona (pierwotna niedoczynność kory nadnerczy) ± cukrzycą typu 1. Mechanizm zagrożenia: hormony tarczycy zwiększają obwodowy metabolizm kortyzolu (przyspieszają jego klirens) — u pacjenta z dotychczas „skompensowaną" subkliniczną niedoczynnością nadnerczy (resztkowa rezerwa) wprowadzenie L-tyroksyny może DEKOMPENSOWAĆ oś nadnerczową i wywołać PRZEŁOM NADNERCZOWY (kryza, niewydolność krążenia, zaburzenia elektrolitowe — hiponatremia, hiperkaliemia — wymagająca natychmiastowego leczenia hydrokortyzonem). wskazania do oceny kortyzolu przed L-tyroksyną: (1) charakterystyczne objawy choroby Addisona — hiperpigmentacja (zwłaszcza fałdów skórnych, brodawek, jamy ustnej), hipotensja ortostatyczna, utrata masy ciała, łaknienie soli, hiponatremia, hiperkaliemia, hipoglikemia; (2) wywiad rodzinny APS lub innych chorób autoimmunologicznych (cukrzyca t.1, bielactwo, niedokrwistość Addisona-Biermera, celiakia); (3) ciężka niedoczynność tarczycy z objawami nieproporcjonalnymi (silne osłabienie, hipotensja, zaburzenia psychiczne). PROTOKÓŁ: pobranie kortyzolu w surowicy o godz. 8:00–9:00 (na czczo, w spoczynku). Interpretacja (Bornstein ES 2016): kortyzol poranny > 500 nmol/L (18 μg/dL) → niewydolność praktycznie wykluczona; < 138 nmol/L (5 μg/dL) → niewydolność prawdopodobna (wymaga testu stymulacji Synacthen 250 μg z pomiarem kortyzolu w 30. i 60. min); 138–500 nmol/L → wynik niejednoznaczny, test Synacthen wskazany. POSTĘPOWANIE: gdy potwierdzona/podejrzewana niedoczynność nadnerczy — NAJPIERW włączyć hydrokortyzon (substytucja glikokortykosteroidem), DOPIERO POTEM L-tyroksynę (po ≥ 1 tygodniu adekwatnej substytucji glikokortykosteroidem); szczegóły: zobacz wskazanie „Niedoczynność kory nadnerczy".' }
           ]
         }
       ],
@@ -3242,7 +3297,7 @@
       sections: [
         { name: 'Rozpoznanie i klasyfikacja',
           tests: [
-            { id: 'tsh', note: 'Badanie I rzutu — w jawnej nadczynności zahamowane. Postać subkliniczna: TSH ↓ przy prawidłowym fT4 i fT3, podzielona wg PTE/ATA na łagodną (TSH 0,1–0,4 mIU/L) i znaczną (TSH < 0,1 mIU/L). UWAGA: w ciąży obowiązują niższe, swoiste dla trymestru zakresy wg PTE 2021 (zob. wskazanie „Ciąża — kontrola laboratoryjna"), a u dzieci zakresy zależne od wieku.' },
+            { id: 'tsh', note: 'Badanie I rzutu — w jawnej nadczynności zahamowane. Postać subkliniczna: TSH ↓ przy prawidłowym fT4 i fT3, podzielona wg PTE/ATA na łagodną (TSH 0,1–0,4 mIU/L) i znaczną (TSH < 0,1 mIU/L). Uwaga: w ciąży obowiązują niższe, swoiste dla trymestru zakresy wg PTE 2021 (zob. wskazanie „Ciąża — kontrola laboratoryjna"), a u dzieci zakresy zależne od wieku.' },
             { id: 'ft4', note: 'Różnicuje postać jawną (fT4 podwyższone) od subklinicznej (fT4 prawidłowe). Magnituda podwyższenia odzwierciedla nasilenie nadczynności.' },
             { id: 'ft3', note: 'Inaczej niż w niedoczynności — w nadczynności fT3 jest przydatne. Wykrywa T3-tyreotoksykozę: TSH ↓ + fT3 ↑ + fT4 prawidłowe, częstą we wczesnej chorobie Gravesa-Basedowa i w guzkach toksycznych. Pominięcie fT3 może spowodować przeoczenie nadczynności.', description: 'fT3 w diagnostyce nadczynności tarczycy — pełni odrębną rolę niż w niedoczynności. T3-tyreotoksykoza (izolowane podwyższenie fT3 przy zahamowanym TSH i prawidłowym fT4) występuje u części pacjentów z wczesną chorobą Gravesa-Basedowa, gruczolakiem toksycznym i wolem guzkowatym toksycznym — wynika z preferencyjnej syntezy lub konwersji T4→T3 w gruczole. Oznaczenie fT3 pozwala wykryć te przypadki. fT3 bywa też pomocne w monitorowaniu skuteczności leczenia tyreostatykiem oraz w różnicowaniu nadczynności od zespołu niskiej T3 (low-T3 syndrome) w stanach ostrych, gdzie TSH bywa wtórnie obniżone.' }
           ]
@@ -3281,7 +3336,7 @@
             kind: 'prose',
             icon: 'book-2',
             title: 'Cel monitorowania DTC po tyreoidektomii (dorośli)',
-            body: 'Monitorowanie pacjenta dorosłego po leczeniu zróżnicowanego raka tarczycy (DTC — rak brodawkowaty i pęcherzykowy) służy: (1) wykryciu nawrotu/przetrwałej choroby; (2) ocenie skuteczności supresji TSH lewotyroksyną; (3) DYNAMICZNEJ stratyfikacji odpowiedzi na leczenie wg PTE 2022 (Jarząb i wsp.) — która (a NIE samo początkowe ryzyko nawrotu) decyduje o docelowym progu TSH oraz o intensywności monitorowania serologicznego i obrazowego. UWAGA: u dzieci z DTC obowiązują INNE progi i ramy czasowe — patrz osobne wskazanie „Kontrola po raku tarczycy (dzieci)".'
+            body: 'Monitorowanie pacjenta dorosłego po leczeniu zróżnicowanego raka tarczycy (DTC — rak brodawkowaty i pęcherzykowy) służy: (1) wykryciu nawrotu/przetrwałej choroby; (2) ocenie skuteczności supresji TSH lewotyroksyną; (3) DYNAMICZNEJ stratyfikacji odpowiedzi na leczenie wg PTE 2022 (Jarząb i wsp.) — która (a NIE samo początkowe ryzyko nawrotu) decyduje o docelowym progu TSH oraz o intensywności monitorowania serologicznego i obrazowego. Uwaga: u dzieci z DTC obowiązują INNE progi i ramy czasowe — patrz osobne wskazanie „Kontrola po raku tarczycy (dzieci)".'
           },
           {
             kind: 'algorithm',
@@ -3302,7 +3357,7 @@
                       'Tg niestymulowana = pomiar przy normalnym dawkowaniu L-tyroksyny (bez stymulacji rhTSH ani wycofania LT4). Cel: < 0,2 ng/mL w metodzie super-sensitive (funkcjonalna czułość ≤ 0,1 ng/mL).',
                       'Tg stymulowana = pomiar po podaniu rhTSH (Thyrogen) lub po wycofaniu L-tyroksyny przez ~4 tygodnie (cel TSH ≥ 30 mU/L). Cel: < 1 ng/mL.',
                       'Obrazowanie ujemne = USG szyi bez podejrzanych zmian w loży po tyreoidektomii i bez patologicznych węzłów chłonnych II–VI; przy wątpliwościach scyntygrafia WBS lub PET/CT.',
-                      'Anty-Tg nieoznaczalne = przeciwciała anty-tyreoglobulinie poniżej granicy detekcji testu (np. < 20 IU/mL); WAŻNE: ich obecność interferuje z immunoassay Tg i fałszywie zaniża wynik.',
+                      'Anty-Tg nieoznaczalne = przeciwciała anty-tyreoglobulinie poniżej granicy detekcji testu (np. < 20 IU/mL); Ważne: ich obecność interferuje z immunoassay Tg i fałszywie zaniża wynik.',
                       'Częstość uzyskania: 74–94,5% w niskim ryzyku, 36–61% w pośrednim, 0–21% w wysokim ryzyku nawrotu.',
                       'POSTĘPOWANIE: deeskalacja supresji TSH — przejście na dawki substytucyjne (TSH 0,5–2,0 mU/L) przy pT1aN0M0 od razu po operacji; pT1b–T2N0M0 — substytucja lub łagodna supresja indywidualnie; po ≥ 5 latach utrzymywanej remisji — substytucja.'
                     ]
@@ -3346,7 +3401,7 @@
                       'Choroba LOKALNA: wznowa w loży po tyreoidektomii (USG, MR szyi).',
                       'Choroba REGIONALNA: powiększone, podejrzane węzły chłonne szyi (poziomy II–VI) — cechy alarmowe: okrągły kształt, utrata wnęki, niejednorodność, torbielowate degeneracje, mikrozwapnienia → BAC z oznaczeniem Tg w popłuczynach z igły.',
                       'Choroba ODLEGŁA (M1): płuca, kości, mózg, wątroba — CT/MR/PET/CT.',
-                      'WAŻNE: rozpoznanie postawione W OBRAZOWANIU, niezależnie od poziomu Tg (czasem nawet przy niewykrywalnym Tg w obecności anty-Tg).',
+                      'Ważne: rozpoznanie postawione W OBRAZOWANIU, niezależnie od poziomu Tg (czasem nawet przy niewykrywalnym Tg w obecności anty-Tg).',
                       'Częstość: 1–2% w niskim ryzyku, 3,5–19% w pośrednim, 24–67% w wysokim.',
                       'POSTĘPOWANIE: pełna supresja TSH < 0,1 mU/L; reoperacja gdy zmiana resekcyjna; leczenie ¹³¹I gdy choroba wychwytuje jod; w jodorefrakcyjnym DTC — terapia ukierunkowana (TKI: sorafenib, lenwatynib).'
                     ]
@@ -3471,7 +3526,7 @@
                 detail: [
                   'Metody PREFEROWANE: super-sensitive (LC-MS/MS lub immunoassaye 4. generacji) o funkcjonalnej czułości ≤ 0,1 ng/mL.',
                   'Standaryzacja do CRM 457 (Certified Reference Material 457).',
-                  'KLUCZOWE: jedno laboratorium, jedna metoda — kinetyka Tg w czasie zależy od porównywalności kolejnych pomiarów.',
+                  'kluczowe: jedno laboratorium, jedna metoda — kinetyka Tg w czasie zależy od porównywalności kolejnych pomiarów.',
                   'Po TT + ablacji ¹³¹I cel: Tg niestymulowana < 0,2 ng/mL (super-sensitive) lub niewykrywalna przy normalnym dawkowaniu L-tyroksyny.',
                   'Czas oceny efektu leczenia: 6–18 miesięcy po pooperacyjnym ¹³¹I.',
                   'Kinetyka Tg (czas podwojenia) ma wartość prognostyczną — szybki wzrost przemawia za bardziej agresywnym nawrotem.'
@@ -3500,7 +3555,7 @@
                 ]
               },
               { label: 'USG szyi co 6–12 mies. przez pierwsze 5 lat', text: 'ocena loży po tyreoidektomii i regionalnych węzłów chłonnych (poziomy II–VI). Po 5 latach odstępy rzadsze, ale ryzyko wznowy DTC utrzymuje się przez DZIESIĘCIOLECIA. Cechy ALARMOWE węzła: okrągły kształt, utrata wnęki, niejednorodność, torbielowate degeneracje, mikrozwapnienia. Każda podejrzana zmiana → BAC z oznaczeniem Tg w popłuczynach z igły.' },
-              { label: 'WBS z ¹³¹I (whole body scan)', text: 'diagnostyczny WBS przed leczeniem RAI NIE jest konieczny; POSTtherapy WBS obowiązkowy po każdej dawce RAI. Rutynowy okresowy WBS w remisji niekonieczny — wzrost Tg jest pierwszym sygnałem. ¹⁸FDG-PET/CT przy stymulowanym Tg > 10 ng/mL i Tg-DT < 2 lata.' },
+              { label: 'WBS z ¹³¹I (whole body scan)', text: 'diagnostyczny WBS przed leczeniem RAI nie jest konieczny; POSTtherapy WBS obowiązkowy po każdej dawce RAI. Rutynowy okresowy WBS w remisji niekonieczny — wzrost Tg jest pierwszym sygnałem. ¹⁸FDG-PET/CT przy stymulowanym Tg > 10 ng/mL i Tg-DT < 2 lata.' },
               { label: 'Rak rdzeniasty (MTC) — odrębny algorytm', text: 'kalcytonina + CEA jako markery serologiczne nawrotu; czas podwojenia kalcytoniny i CEA ma wartość prognostyczną (krótszy → szybsza progresja); ocena MEN2 (mutacja RET) u krewnych I stopnia.' }
             ]
           }
@@ -3515,13 +3570,13 @@
             { id: 'thyroglobulin',
               label: 'Tg (tyreoglobulina) — bazalna',
               note: 'Po TT + ¹³¹I: cel < 0,2 ng/mL (super-sensitive). Wybrać protokół „Po total thyroidectomy — bazalny (na LT4)" w polu „Test diagnostyczny". Jedno laboratorium, jedna metoda — kinetyka Tg w czasie zależy od porównywalności pomiarów.',
-              description: 'Tyreoglobulina (Tg) niestymulowana — pomiar przy normalnym dawkowaniu L-tyroksyny, GŁÓWNY marker nawrotu po totalnej tyreoidektomii. Tg jest produkowana wyłącznie przez komórki pęcherzykowe tarczycy (zdrowe lub nowotworowe) — po TT+¹³¹I, jeżeli pozostała tkanka została zniszczona, Tg powinna być NIEWYKRYWALNA. WARTOŚCI DIAGNOSTYCZNE (PTE 2022): super-sensitive Tg < 0,2 ng/mL = doskonała odpowiedź; 0,2–1 ng/mL = odpowiedź nieokreślona; ≥ 1 ng/mL = niepełna odpowiedź biochemiczna. KINETYKA: czas podwojenia Tg (Tg-DT) krótszy niż 1 rok przemawia za agresywnym nawrotem; Tg-DT > 1 rok — mniej agresywny przebieg. METODOLOGIA: metoda PREFEROWANA — super-sensitive (LC-MS/MS lub immunoassay 4. generacji o funkcjonalnej czułości ≤ 0,1 ng/mL), standaryzacja do CRM 457. KLUCZOWE: jedno laboratorium, jedna metoda przez cały okres obserwacji — porównanie wyników z różnych laboratoriów jest niemiarodajne. PUŁAPKI: (1) anty-Tg INTERFERUJĄ z immunoassay Tg (fałszywie niskie); (2) biotyna w wysokich dawkach (suplementy „włosy/skóra") interferuje; (3) heterofilne przeciwciała → fałszywie wysokie wyniki.' },
+              description: 'Tyreoglobulina (Tg) niestymulowana — pomiar przy normalnym dawkowaniu L-tyroksyny, GŁÓWNY marker nawrotu po totalnej tyreoidektomii. Tg jest produkowana wyłącznie przez komórki pęcherzykowe tarczycy (zdrowe lub nowotworowe) — po TT+¹³¹I, jeżeli pozostała tkanka została zniszczona, Tg powinna być NIEWYKRYWALNA. WARTOŚCI DIAGNOSTYCZNE (PTE 2022): super-sensitive Tg < 0,2 ng/mL = doskonała odpowiedź; 0,2–1 ng/mL = odpowiedź nieokreślona; ≥ 1 ng/mL = niepełna odpowiedź biochemiczna. KINETYKA: czas podwojenia Tg (Tg-DT) krótszy niż 1 rok przemawia za agresywnym nawrotem; Tg-DT > 1 rok — mniej agresywny przebieg. METODOLOGIA: metoda PREFEROWANA — super-sensitive (LC-MS/MS lub immunoassay 4. generacji o funkcjonalnej czułości ≤ 0,1 ng/mL), standaryzacja do CRM 457. kluczowe: jedno laboratorium, jedna metoda przez cały okres obserwacji — porównanie wyników z różnych laboratoriów jest niemiarodajne. Pułapki: (1) anty-Tg INTERFERUJĄ z immunoassay Tg (fałszywie niskie); (2) biotyna w wysokich dawkach (suplementy „włosy/skóra") interferuje; (3) heterofilne przeciwciała → fałszywie wysokie wyniki.' },
             { ext: 'anti_tg_ab', label: 'Przeciwciała anty-TG (anty-Tg)',
               note: 'obowiązkowe razem z Tg w każdym pomiarze monitorującym — interferują z immunoassay Tg (fałszywie niskie). Min. raz w roku. Wzrost anty-Tg = możliwy sygnał nawrotu (kryterium biochemical incomplete wg PTE 2022).',
               description: 'Anty-Tg w kontroli pooperacyjnej DTC — pełnią DWA równoległe role: (1) WARTOŚCIOWY MARKER NAWROTU — pojawienie się, wzrost lub utrzymywanie się mierzalnych anty-Tg po radykalnym leczeniu może być pierwszym sygnałem nawrotu (nawet przy ujemnym USG); (2) ALERT METODYCZNY — interferują z immunoassay Tg, dając FAŁSZYWIE NISKIE wartości Tg, maskując nawrót. DLATEGO anty-Tg muszą być oznaczane W KAŻDYM pomiarze razem z Tg. Interpretacja wg PTE 2022 / ATA 2015: (a) SPADEK anty-Tg po radykalnym leczeniu = dobry prognostyk, obniżanie trwa typowo 1–4 lata; (b) STABILNE lub SPADAJĄCE anty-Tg + brak choroby strukturalnej = odpowiedź indeterminate; (c) WZROST anty-Tg w czasie = kryterium biochemical incomplete response, nawet przy niewykrywalnym Tg; (d) ujawnienie nowych anty-Tg u pacjenta wcześniej ujemnego = silne podejrzenie nawrotu autoimmunologicznego/strukturalnego. POSTĘPOWANIE: przy obecnych anty-Tg USG SZYI staje się PODSTAWOWĄ metodą monitorowania (Tg niemiarodajne), uzupełniającą bywa PET/CT.' },
             { ext: 'neck_us', label: 'USG szyi (loża + węzły II–VI)',
               note: 'Podstawowa metoda obrazowa monitorowania. Co 6–12 mies. przez pierwsze 5 lat, dalej rzadziej. Cechy alarmowe węzła: okrągły kształt, utrata wnęki, niejednorodność, torbielowatość, mikrozwapnienia → BAC z oznaczeniem Tg w popłuczynach.',
-              description: 'USG szyi w monitorowaniu pooperacyjnym DTC u dorosłych — PODSTAWOWA metoda obrazowa wykrywania nawrotów lokalnych i regionalnych. ANATOMIA OCENY: (1) LOŻA po tyreoidektomii — szukamy resztkowej tkanki tarczycowej lub wznowy miejscowej; (2) WĘZŁY CHŁONNE poziomu II–VI obustronnie (klasyfikacja Robbins) — pole drenażu chłonnego tarczycy. CZĘSTOTLIWOŚĆ: co 6–12 miesięcy przez pierwsze 5 lat, dalej co 12–24 miesięcy (ryzyko nawrotu DTC utrzymuje się przez dziesięciolecia). CECHY ALARMOWE WĘZŁA (każda jedna wskazuje na BAC): (a) okrągły kształt (zwykle owalny u zdrowych); (b) utrata wnęki echogenicznej (hilum); (c) hipoechogeniczność niejednorodna; (d) torbielowate degeneracje (typowe dla przerzutów raka brodawkowatego); (e) mikrozwapnienia; (f) wzmożone, chaotyczne unaczynienie obwodowe (Doppler); (g) wzrost rozmiaru w czasie. BAC: przy podejrzanym węźle ZAWSZE z oznaczeniem Tg w popłuczynach z igły (FNA-Tg) — czulszą metodą niż sama cytologia (próg > 10 ng/mL w popłuczynach przemawia za przerzutem DTC). W obecności anty-Tg w surowicy USG staje się jeszcze ważniejsze, bo Tg w surowicy jest niemiarodajne.' }
+              description: 'USG szyi w monitorowaniu pooperacyjnym DTC u dorosłych — PODSTAWOWA metoda obrazowa wykrywania nawrotów lokalnych i regionalnych. ANATOMIA OCENY: (1) LOŻA po tyreoidektomii — szukamy resztkowej tkanki tarczycowej lub wznowy miejscowej; (2) WĘZŁY CHŁONNE poziomu II–VI obustronnie (klasyfikacja Robbins) — pole drenażu chłonnego tarczycy. CZĘSTOTLIWOŚĆ: co 6–12 miesięcy przez pierwsze 5 lat, dalej co 12–24 miesięcy (ryzyko nawrotu DTC utrzymuje się przez dziesięciolecia). CECHY ALARMOWE WĘZŁA (każda jedna wskazuje na BAC): (a) okrągły kształt (zwykle owalny u zdrowych); (b) utrata wnęki echogenicznej (hilum); (c) hipoechogeniczność niejednorodna; (d) torbielowate degeneracje (typowe dla przerzutów raka brodawkowatego); (e) mikrozwapnienia; (f) wzmożone, chaotyczne unaczynienie obwodowe (Doppler); (g) wzrost rozmiaru w czasie. BAC: przy podejrzanym węźle zawsze z oznaczeniem Tg w popłuczynach z igły (FNA-Tg) — czulszą metodą niż sama cytologia (próg > 10 ng/mL w popłuczynach przemawia za przerzutem DTC). W obecności anty-Tg w surowicy USG staje się jeszcze ważniejsze, bo Tg w surowicy jest niemiarodajne.' }
           ]
         },
         { name: 'Stymulacja TSH (jeśli wskazana)',
@@ -3535,11 +3590,11 @@
         { name: 'WBS i obrazowanie funkcjonalne',
           tests: [
             { ext: 'wbs_i131', label: 'WBS — scyntygrafia całego ciała z ¹³¹I',
-              note: 'Diagnostyczny WBS przed leczeniem RAI NIE jest konieczny. Post-therapy WBS obowiązkowy po każdej dawce RAI. W remisji rutynowy okresowy WBS niewskazany — wzrost Tg jest pierwszym sygnałem.',
-              description: 'WBS (whole body scan) z ¹³¹I — obrazowanie funkcjonalne wykorzystujące pobierający jod tkanka tarczycowa/nowotworowa. ROLA w monitorowaniu DTC u dorosłych (PTE 2022): (1) POST-THERAPY WBS — obowiązkowy po każdej dawce RAI (5–7 dni po podaniu); pozwala ocenić skuteczność ablacji i wykryć nieoczekiwane przerzuty; (2) DIAGNOSTYCZNY WBS przed leczeniem RAI — NIE jest konieczny rutynowo (Cz. VII, 11.2 PTE 2022); (3) W REMISJI — rutynowy okresowy WBS NIE jest wskazany — wzrost Tg jest pierwszym, czulszym sygnałem nawrotu; (4) POSZUKIWANIE OGNISKA przy stymulowanym Tg > 10 ng/mL bez lokalizacji w USG/PET — uzasadniony empiryczny WBS po terapii ¹³¹I. STYMULACJA TSH: preferowana rhTSH lub wycofanie LT4 (jak dla Tg stim).' },
+              note: 'Diagnostyczny WBS przed leczeniem RAI nie jest konieczny. Post-therapy WBS obowiązkowy po każdej dawce RAI. W remisji rutynowy okresowy WBS niewskazany — wzrost Tg jest pierwszym sygnałem.',
+              description: 'WBS (whole body scan) z ¹³¹I — obrazowanie funkcjonalne wykorzystujące pobierający jod tkanka tarczycowa/nowotworowa. ROLA w monitorowaniu DTC u dorosłych (PTE 2022): (1) POST-THERAPY WBS — obowiązkowy po każdej dawce RAI (5–7 dni po podaniu); pozwala ocenić skuteczność ablacji i wykryć nieoczekiwane przerzuty; (2) DIAGNOSTYCZNY WBS przed leczeniem RAI — nie jest konieczny rutynowo (Cz. VII, 11.2 PTE 2022); (3) W REMISJI — rutynowy okresowy WBS nie jest wskazany — wzrost Tg jest pierwszym, czulszym sygnałem nawrotu; (4) POSZUKIWANIE OGNISKA przy stymulowanym Tg > 10 ng/mL bez lokalizacji w USG/PET — uzasadniony empiryczny WBS po terapii ¹³¹I. STYMULACJA TSH: preferowana rhTSH lub wycofanie LT4 (jak dla Tg stim).' },
             { ext: 'pet_ct', label: '¹⁸F-FDG PET/CT',
               note: 'Wskazane przy stymulowanym Tg > 10 ng/mL z czasem podwojenia < 2 lat i ujemnym WBS (DTC jodorefrakcyjny). PET/CT wykrywa odróżnicowane ogniska niewychwytujące jodu.',
-              description: '¹⁸F-FDG PET/CT w monitorowaniu DTC — wykrywa ogniska o WYSOKIM METABOLIZMIE GLUKOZY (typowo nowotworowe). Komplementarne do WBS — gdy WBS jest ujemny (brak wychwytu jodu), PET/CT może wykryć odróżnicowane ogniska o niskim wychwycie jodu („flip-flop phenomenon"). WSKAZANIA (PTE 2022): (1) stymulowane Tg > 10 ng/mL z czasem podwojenia < 2 lat + ujemny WBS — silna sugestia nawrotu jodorefrakcyjnego; (2) high-risk DTC z mutacją BRAF (cechy bardziej agresywne, częściej jodorefrakcyjne); (3) ocena rozległości nawrotu przed leczeniem operacyjnym lub TKI. PRZYGOTOWANIE: na czczo 4–6 h, glikemia < 200 mg/dL (hiperglikemia zaburza wynik). KOSZTY i DOSTĘPNOŚĆ: badanie drogie i ograniczone do ośrodków referencyjnych w PL — wskazania ścisłe.' }
+              description: '¹⁸F-FDG PET/CT w monitorowaniu DTC — wykrywa ogniska o WYSOKIM METABOLIZMIE GLUKOZY (typowo nowotworowe). Komplementarne do WBS — gdy WBS jest ujemny (brak wychwytu jodu), PET/CT może wykryć odróżnicowane ogniska o niskim wychwycie jodu („flip-flop phenomenon"). wskazania (PTE 2022): (1) stymulowane Tg > 10 ng/mL z czasem podwojenia < 2 lat + ujemny WBS — silna sugestia nawrotu jodorefrakcyjnego; (2) high-risk DTC z mutacją BRAF (cechy bardziej agresywne, częściej jodorefrakcyjne); (3) ocena rozległości nawrotu przed leczeniem operacyjnym lub TKI. PRZYGOTOWANIE: na czczo 4–6 h, glikemia < 200 mg/dL (hiperglikemia zaburza wynik). KOSZTY i DOSTĘPNOŚĆ: badanie drogie i ograniczone do ośrodków referencyjnych w PL — wskazania ścisłe.' }
           ]
         },
         { name: 'Rak rdzeniasty tarczycy (MTC) — kontrola',
@@ -3568,7 +3623,7 @@
             kind: 'prose',
             icon: 'book-2',
             title: 'Cel monitorowania DTC po tyreoidektomii (dzieci)',
-            body: 'Monitorowanie dziecka po leczeniu zróżnicowanego raka tarczycy (DTC — głównie rak brodawkowaty, rzadziej pęcherzykowy/onkocytarny) wg polskich wytycznych Handkiewicz-Junak i wsp. 2024. U dzieci DTC najczęściej rozpoznawany jest w stadium bardziej zaawansowanym niż u dorosłych (większy odsetek N1 i M1 — głównie płucnych), ale ROKOWANIE DŁUGOTERMINOWE jest LEPSZE niż u dorosłych (śmiertelność < 2% w 10-letnim follow-up). UWAGA — różnice względem dorosłych: (1) inne progi dynamicznej stratyfikacji odpowiedzi (Tg pediatryczne wyższe); (2) inne ramy czasowe supresji TSH zależnej od ryzyka (12 mies. low / 5 lat intermediate / ≥ 10 lat high); (3) większy nacisk na monitorowanie powikłań długotrwałej supresji (ECHO, DXA, wzrost dziecka); (4) cała pediatryczna ścieżka diagnostyczno-terapeutyczna dostępna w module DocPro „Rak tarczycy u dzieci".'
+            body: 'Monitorowanie dziecka po leczeniu zróżnicowanego raka tarczycy (DTC — głównie rak brodawkowaty, rzadziej pęcherzykowy/onkocytarny) wg polskich wytycznych Handkiewicz-Junak i wsp. 2024. U dzieci DTC najczęściej rozpoznawany jest w stadium bardziej zaawansowanym niż u dorosłych (większy odsetek N1 i M1 — głównie płucnych), ale ROKOWANIE DŁUGOTERMINOWE jest LEPSZE niż u dorosłych (śmiertelność < 2% w 10-letnim follow-up). Uwaga — różnice względem dorosłych: (1) inne progi dynamicznej stratyfikacji odpowiedzi (Tg pediatryczne wyższe); (2) inne ramy czasowe supresji TSH zależnej od ryzyka (12 mies. low / 5 lat intermediate / ≥ 10 lat high); (3) większy nacisk na monitorowanie powikłań długotrwałej supresji (ECHO, DXA, wzrost dziecka); (4) cała pediatryczna ścieżka diagnostyczno-terapeutyczna dostępna w module DocPro „Rak tarczycy u dzieci".'
           },
           {
             kind: 'callout',
@@ -3596,7 +3651,7 @@
                       'Tg niestymulowana = pomiar tyreoglobuliny przy normalnym dawkowaniu L-tyroksyny u dziecka (bez stymulacji rhTSH ani wycofania LT4). Cel pediatryczny: ≤ 1 ng/mL — wyższy próg niż u dorosłych (< 0,2), bo u dzieci dopuszcza się większą rezerwę diagnostyczną.',
                       'Tg stymulowana = pomiar po podaniu rhTSH (Thyrogen — preferowane u dziecka, bo bez objawów hipotyreozy) lub po wycofaniu L-tyroksyny przez ~4 tygodnie (cel TSH ≥ 30 mU/L). Cel pediatryczny: ≤ 2 ng/mL.',
                       'Obrazowanie ujemne = USG szyi (preferowane — bez promieniowania) bez podejrzanych zmian; w razie wątpliwości WBS lub CT klatki piersiowej (poszukiwanie M1 płucnych — typowych u dzieci).',
-                      'Anty-Tg nieoznaczalne = przeciwciała anty-tyreoglobulinie poniżej granicy detekcji testu. UWAGA: u dzieci anty-Tg częściej współwystępują wyjściowo z autoimmunologicznym tłem (Hashimoto + DTC) niż u dorosłych.',
+                      'Anty-Tg nieoznaczalne = przeciwciała anty-tyreoglobulinie poniżej granicy detekcji testu. Uwaga: u dzieci anty-Tg częściej współwystępują wyjściowo z autoimmunologicznym tłem (Hashimoto + DTC) niż u dorosłych.',
                       'POSTĘPOWANIE: deeskalacja supresji TSH zgodnie z ramami czasowymi ryzyka (niskie ryzyko — substytucja po 12 miesiącach; pośrednie — po 5 latach; wysokie — po ≥ 10 latach). Cel substytucji: TSH < 2 mU/L.'
                     ]
                   },
@@ -3633,7 +3688,7 @@
                       'Choroba LOKALNA: wznowa w loży po tyreoidektomii (USG, MR szyi).',
                       'Choroba REGIONALNA: podejrzane węzły chłonne szyi (poziomy II–VI) — cechy alarmowe: okrągły kształt, utrata wnęki, niejednorodność, torbielowate degeneracje, mikrozwapnienia → BAC z oznaczeniem Tg w popłuczynach z igły.',
                       'Choroba ODLEGŁA (M1): u DZIECI najczęściej PŁUCNA (~30% przypadków wysokiego ryzyka), znacznie rzadziej kości; ogniska bywają submillimetrowe, niewidoczne w CT, ale wychwytujące jod w WBS.',
-                      'WAŻNE: rozpoznanie postawione W OBRAZOWANIU, niezależnie od poziomu Tg.',
+                      'Ważne: rozpoznanie postawione W OBRAZOWANIU, niezależnie od poziomu Tg.',
                       'POSTĘPOWANIE: pełna supresja TSH < 0,1 mU/L; reoperacja gdy zmiana resekcyjna; leczenie ¹³¹I (dziecko z M1 płucnym dobrze odpowiada na RAI); w jodorefrakcyjnym DTC — terapia ukierunkowana (TKI: sorafenib, lenwatynib) w ośrodku referencyjnym pediatrycznym.'
                     ]
                   }
@@ -3770,12 +3825,12 @@
         { name: 'Panel podstawowy (po total thyroidectomy u dziecka)',
           tests: [
             { id: 'tsh',
-              note: 'Cel TSH zależny od ryzyka pooperacyjnego (ATA 2015 pediatryczne) ORAZ dynamicznej stratyfikacji odpowiedzi (Handkiewicz 2024). Niskie ryzyko — 12 mies. supresji 0,1–0,5; pośrednie — 5 lat; wysokie — ≥ 10 lat. Po doskonałej odpowiedzi utrzymywanej w ramach ryzyka — przejście na substytucję (TSH < 2 mU/L). Powikłania długotrwałej supresji u dziecka — patrz callout w summary.',
+              note: 'Cel TSH zależny od ryzyka pooperacyjnego (ATA 2015 pediatryczne) oraz dynamicznej stratyfikacji odpowiedzi (Handkiewicz 2024). Niskie ryzyko — 12 mies. supresji 0,1–0,5; pośrednie — 5 lat; wysokie — ≥ 10 lat. Po doskonałej odpowiedzi utrzymywanej w ramach ryzyka — przejście na substytucję (TSH < 2 mU/L). Powikłania długotrwałej supresji u dziecka — patrz callout w summary.',
               description: 'TSH w kontroli pooperacyjnej DTC u dziecka — sterownik leczenia supresyjnego L-tyroksyną, dawkowanego inaczej niż u dorosłych. RAMY CZASOWE wg Handkiewicz-Junak 2024: (1) niskie ryzyko (pT1–T2N0M0, brak ETE, klasyczny PTC) — supresja 0,1–0,5 mU/L przez 12 miesięcy, po roku przy doskonałej odpowiedzi → substytucja; (2) pośrednie ryzyko (mikroprzerzuty LN, ETE micro, wieloogniskowość, agresywne warianty histologiczne) — supresja 5 lat; (3) wysokie ryzyko (rozległe ETE, makroprzerzuty LN, M1, nieradykalna resekcja) — supresja ≥ 10 lat. PRZETRWAŁA CHOROBA lub NAWRÓT — pełna supresja < 0,1 mU/L do remisji. POWIKŁANIA u dziecka (krytyczne!): kardiotoksyczność rozwojowa (przerost LK), utrata masy kostnej, zaburzenia wzrostu, opóźnienie dojrzewania. MONITORING POWIKŁAŃ: ECHO z oceną kurczliwości oraz DXA co 12–24 mies. przy supresji > 12 mies., ocena tempa wzrostu i wieku kostnego raz w roku.' },
             { id: 'thyroglobulin',
               label: 'Tg (tyreoglobulina) — bazalna',
               note: 'Po TT u dziecka: progi pediatryczne wyższe niż dorosłe — Tg niestymulowana ≤ 1 lub Tg stymulowana ≤ 2 ng/mL = doskonała odpowiedź. Wybrać protokół „Po total thyroidectomy — bazalny (na LT4)" w polu „Test diagnostyczny". Jedno laboratorium, jedna metoda przez cały follow-up.',
-              description: 'Tyreoglobulina (Tg) w pediatrycznym DTC — główny marker odpowiedzi na leczenie. PROGI PEDIATRYCZNE wg Handkiewicz 2024: (a) po TT+¹³¹I — doskonała odpowiedź: Tg niestymulowana ≤ 1 lub Tg stymulowana ≤ 2 ng/mL (wyższe niż u dorosłych — 0,2 i 1); (b) po TT bez ¹³¹I — analogicznie; (c) po lobektomii — Tg niestymulowana stabilna < 30 ng/mL. KINETYKA: czas podwojenia Tg (Tg-DT) ma wartość prognostyczną podobnie jak u dorosłych. METODOLOGIA: super-sensitive (czułość funkcjonalna ≤ 0,1 ng/mL), standaryzacja CRM 457, jedno laboratorium przez cały follow-up. PUŁAPKI takie same jak u dorosłych: anty-Tg interferują, biotyna interferuje, heterofilne przeciwciała. RÓŻNICE WZGLĘDEM DOROSŁYCH: (1) progi pediatryczne wyższe — większa rezerwa diagnostyczna; (2) dziecko może mieć fizjologicznie nieco wyższe Tg do zakończenia wzrostu; (3) anty-Tg ujawniają się częściej u dzieci z autoimmunologicznym tłem (Hashimoto + DTC).' },
+              description: 'Tyreoglobulina (Tg) w pediatrycznym DTC — główny marker odpowiedzi na leczenie. PROGI PEDIATRYCZNE wg Handkiewicz 2024: (a) po TT+¹³¹I — doskonała odpowiedź: Tg niestymulowana ≤ 1 lub Tg stymulowana ≤ 2 ng/mL (wyższe niż u dorosłych — 0,2 i 1); (b) po TT bez ¹³¹I — analogicznie; (c) po lobektomii — Tg niestymulowana stabilna < 30 ng/mL. KINETYKA: czas podwojenia Tg (Tg-DT) ma wartość prognostyczną podobnie jak u dorosłych. METODOLOGIA: super-sensitive (czułość funkcjonalna ≤ 0,1 ng/mL), standaryzacja CRM 457, jedno laboratorium przez cały follow-up. Pułapki takie same jak u dorosłych: anty-Tg interferują, biotyna interferuje, heterofilne przeciwciała. RÓŻNICE WZGLĘDEM DOROSŁYCH: (1) progi pediatryczne wyższe — większa rezerwa diagnostyczna; (2) dziecko może mieć fizjologicznie nieco wyższe Tg do zakończenia wzrostu; (3) anty-Tg ujawniają się częściej u dzieci z autoimmunologicznym tłem (Hashimoto + DTC).' },
             { ext: 'anti_tg_ab', label: 'Przeciwciała anty-TG (anty-Tg)',
               note: 'obowiązkowe razem z Tg w każdym pomiarze monitorującym u dziecka. Min. raz w roku. Wzrost = kryterium biochemical incomplete (Handkiewicz 2024). Spadek w 1–4 lat po radykalnym leczeniu = dobry prognostyk.',
               description: 'Anty-Tg w pediatrycznym monitorowaniu DTC — pełnią identyczną rolę jak u dorosłych: marker nawrotu + alert metodyczny (interferują z immunoassay Tg → fałszywie niskie). Interpretacja PEDIATRYCZNA: SPADEK po radykalnym leczeniu (1–4 lat) = dobry prognostyk; STABILNE/SPADAJĄCE + brak choroby strukt. = odpowiedź nieokreślona; WZROST w czasie = kryterium niepełnej odpowiedzi biochemicznej (nawet przy niewykrywalnym Tg). U DZIECI częste współistnienie autoimmunologicznego tła (Hashimoto) — wyjściowo dodatnie anty-Tg u ~20–30% pacjentów pediatrycznych z DTC; wymaga to interpretacji kinetyki, nie pojedynczej wartości.' },
@@ -3789,7 +3844,7 @@
             { id: 'thyroglobulin',
               label: 'Tg (tyreoglobulina) — stymulowana',
               note: 'U dziecka stymulacja preferowana rhTSH (Thyrogen) — bez objawów hipotyreozy. Alternatywa: wycofanie LT4 ~4 tyg., cel TSH ≥ 30 mU/L. Wybrać protokół „Po total thyroidectomy — stymulowany" w polu „Test diagnostyczny". Cel pediatryczny: Tg stymulowana ≤ 2 ng/mL (doskonała odpowiedź).',
-              description: 'Tg stymulowane u dziecka — analogicznie do dorosłych, ale z pediatrycznymi progami interpretacyjnymi. WSKAZANIA: niepewny Tg bazalny przy follow-up DTC, przed planowaną terapią ¹³¹I, podejrzenie nawrotu przy niejednoznacznym USG. METODA: PREFEROWANA rhTSH 0,9 mg i.m. × 2 dni — bez objawów hipotyreozy (krytyczne u dziecka — wpływ na wzrost, naukę). Wycofanie LT4 ~4 tyg. jest dopuszczalne, ale skutkuje miesiącem objawów hipotyreozy → znaczący wpływ na funkcjonowanie dziecka. PROGI PEDIATRYCZNE: Tg stim ≤ 2 ng/mL → doskonała odpowiedź; 2–10 → możliwa przetrwała choroba; > 10 → biochemical incomplete; > 100 → empiryczne leczenie ¹³¹I (pusty WBS).' }
+              description: 'Tg stymulowane u dziecka — analogicznie do dorosłych, ale z pediatrycznymi progami interpretacyjnymi. wskazania: niepewny Tg bazalny przy follow-up DTC, przed planowaną terapią ¹³¹I, podejrzenie nawrotu przy niejednoznacznym USG. METODA: PREFEROWANA rhTSH 0,9 mg i.m. × 2 dni — bez objawów hipotyreozy (krytyczne u dziecka — wpływ na wzrost, naukę). Wycofanie LT4 ~4 tyg. jest dopuszczalne, ale skutkuje miesiącem objawów hipotyreozy → znaczący wpływ na funkcjonowanie dziecka. PROGI PEDIATRYCZNE: Tg stim ≤ 2 ng/mL → doskonała odpowiedź; 2–10 → możliwa przetrwała choroba; > 10 → biochemical incomplete; > 100 → empiryczne leczenie ¹³¹I (pusty WBS).' }
           ]
         },
         { name: 'WBS i obrazowanie funkcjonalne (pediatryczne)',
@@ -3799,7 +3854,7 @@
               description: 'WBS u dziecka — kluczowy w wysokim ryzyku, gdzie M1 (najczęściej płucne) występuje u ~30% pacjentów pediatrycznych. POST-THERAPY WBS po każdej dawce ¹³¹I obowiązkowy — ocena skuteczności ablacji oraz wykrycie nieoczekiwanych ognisk (zwłaszcza płucnych — mogą być submillimetrowe, niewidoczne w CT, ale wychwytujące jod). DIAGNOSTYCZNY WBS przed RAI — niekonieczny rutynowo, podobnie jak u dorosłych. STYMULACJA TSH: preferowana rhTSH u dziecka.' },
             { ext: 'pet_ct', label: '¹⁸F-FDG PET/CT (wybrane przypadki)',
               note: 'U dziecka stosowane oszczędnie ze względu na dawkę promieniowania. Wskazania: stymulowane Tg > 10 ng/mL z czasem podwojenia < 1–2 lat i ujemnym WBS (DTC jodorefrakcyjny — rzadkie u dzieci, ale możliwe).',
-              description: 'PET/CT u dziecka — stosowane z większą ostrożnością niż u dorosłych ze względu na kumulacyjną dawkę promieniowania w wieku rozwojowym. WSKAZANIA wąskie: (1) podejrzenie nawrotu jodorefrakcyjnego (stymulowane Tg > 10 ng/mL + ujemny WBS, zwłaszcza z mutacją BRAF lub TERT — bardzo rzadkie u dzieci); (2) ocena rozległości nawrotu przed leczeniem operacyjnym. ALTERNATYWY: u dziecka w pierwszej kolejności rozważyć CT klatki piersiowej (skuteczne wykrywanie M1 płucnych), MR szyi/wątroby — mniejsza dawka promieniowania niż PET.' }
+              description: 'PET/CT u dziecka — stosowane z większą ostrożnością niż u dorosłych ze względu na kumulacyjną dawkę promieniowania w wieku rozwojowym. wskazania wąskie: (1) podejrzenie nawrotu jodorefrakcyjnego (stymulowane Tg > 10 ng/mL + ujemny WBS, zwłaszcza z mutacją BRAF lub TERT — bardzo rzadkie u dzieci); (2) ocena rozległości nawrotu przed leczeniem operacyjnym. ALTERNATYWY: u dziecka w pierwszej kolejności rozważyć CT klatki piersiowej (skuteczne wykrywanie M1 płucnych), MR szyi/wątroby — mniejsza dawka promieniowania niż PET.' }
           ]
         }
       ],
@@ -3873,36 +3928,36 @@
           tests: [
             { id: 'tsh',
               note: 'Badanie I rzutu w ocenie czynności tarczycy — w AITD wynik wskazuje stadium choroby (eutyreoza vs subkliniczna niedoczynność vs jawna niedoczynność w Hashimoto; vs tyreotoksykoza subkliniczna lub jawna w Gravesie). Sam dodatni wynik przeciwciał przy prawidłowym TSH nie jest wskazaniem do leczenia.',
-              description: 'TSH w AITD — kluczowy wskaźnik do oceny FAZY i KIERUNKU autoimmunologicznego procesu. (1) WCZESNA EUTYREOTYCZNA AITD: prawidłowe TSH + dodatnie anty-TPO/anty-TG — częsta sytuacja u kobiet po 30 r.ż., zwłaszcza z wywiadem rodzinnym AITD. Sam dodatni wynik przeciwciał NIE jest wskazaniem do leczenia — monitorowanie TSH co 6–12 miesięcy. (2) HASHIMOTO Z SUBKLINICZNĄ NIEDOCZYNNOŚCIĄ: TSH 4–10 mIU/L + fT4 prawidłowe + anty-TPO dodatnie. Decyzja o leczeniu indywidualna — czynniki za leczeniem: planowanie ciąży lub ciąża, objawy kliniczne niedoczynności, młodszy wiek, bardzo wysoki tytuł anty-TPO (szybsza progresja). U > 70 r.ż. ostrożność (norma TSH fizjologicznie wyższa). (3) HASHIMOTO JAWNE: TSH > 10 mIU/L lub TSH ↑ + fT4 ↓ — JEDNOZNACZNE wskazanie do leczenia L-tyroksyną. (4) GRAVES SUBKLINICZNY: TSH < 0,4 mIU/L (zwłaszcza < 0,1) + fT4 prawidłowe + TRAb dodatnie. (5) GRAVES JAWNY: TSH < 0,1 + fT4 i/lub fT3 ↑ + TRAb dodatnie. CIĄŻA W AITD: zastosować progi PTE 2021 swoiste dla trymestru (3,18 / 3,44 / 3,53 mIU/L) — kobieta z anty-TPO+ i TSH > 2,5 w I trymestrze ma zwiększone ryzyko poronienia → rozważyć profilaktyczną L-tyroksynę.' },
+              description: 'TSH w AITD — kluczowy wskaźnik do oceny FAZY i KIERUNKU autoimmunologicznego procesu. (1) WCZESNA EUTYREOTYCZNA AITD: prawidłowe TSH + dodatnie anty-TPO/anty-TG — częsta sytuacja u kobiet po 30 r.ż., zwłaszcza z wywiadem rodzinnym AITD. Sam dodatni wynik przeciwciał nie jest wskazaniem do leczenia — monitorowanie TSH co 6–12 miesięcy. (2) HASHIMOTO Z SUBKLINICZNĄ NIEDOCZYNNOŚCIĄ: TSH 4–10 mIU/L + fT4 prawidłowe + anty-TPO dodatnie. Decyzja o leczeniu indywidualna — czynniki za leczeniem: planowanie ciąży lub ciąża, objawy kliniczne niedoczynności, młodszy wiek, bardzo wysoki tytuł anty-TPO (szybsza progresja). U > 70 r.ż. ostrożność (norma TSH fizjologicznie wyższa). (3) HASHIMOTO JAWNE: TSH > 10 mIU/L lub TSH ↑ + fT4 ↓ — JEDNOZNACZNE wskazanie do leczenia L-tyroksyną. (4) GRAVES SUBKLINICZNY: TSH < 0,4 mIU/L (zwłaszcza < 0,1) + fT4 prawidłowe + TRAb dodatnie. (5) GRAVES JAWNY: TSH < 0,1 + fT4 i/lub fT3 ↑ + TRAb dodatnie. CIĄŻA W AITD: zastosować progi PTE 2021 swoiste dla trymestru (3,18 / 3,44 / 3,53 mIU/L) — kobieta z anty-TPO+ i TSH > 2,5 w I trymestrze ma zwiększone ryzyko poronienia → rozważyć profilaktyczną L-tyroksynę.' },
             { id: 'ft4',
               note: 'Różnicuje stadium AITD — w Hashimoto: prawidłowe (postać kompensowana/subkliniczna) lub obniżone (jawna niedoczynność); w Gravesie: prawidłowe (postać subkliniczna) lub podwyższone (jawna tyreotoksykoza).',
-              description: 'fT4 w AITD — uzupełnia TSH do oceny ciężkości i kierunku zaburzenia. W HASHIMOTO: jawna niedoczynność = TSH ↑ + fT4 ↓; postać subkliniczna = TSH ↑ + fT4 prawidłowe; rzadko (Hashitoxicosis, początkowa faza destrukcyjnego zapalenia) — przejściowo fT4 ↑ przed dekompensacją do niedoczynności. W GRAVESIE: jawna tyreotoksykoza = TSH ↓ + fT4 ↑; postać subkliniczna = TSH ↓ + fT4 prawidłowe. MONITOROWANIE LECZENIA: u Hashimoto leczonej L-tyroksyną cel — TSH w normie (zwykle 0,4–2,5), fT4 w połowie/górnej normie; u Gravesa leczonego tyreostatykami — TSH może długo pozostawać zahamowane (do roku po normalizacji obwodowych hormonów), dlatego w pierwszych miesiącach kierujemy się fT4 i fT3.' },
+              description: 'fT4 w AITD — uzupełnia TSH do oceny ciężkości i kierunku zaburzenia. W HASHIMOTO: jawna niedoczynność = TSH ↑ + fT4 ↓; postać subkliniczna = TSH ↑ + fT4 prawidłowe; rzadko (Hashitoxicosis, początkowa faza destrukcyjnego zapalenia) — przejściowo fT4 ↑ przed dekompensacją do niedoczynności. W GRAVESIE: jawna tyreotoksykoza = TSH ↓ + fT4 ↑; postać subkliniczna = TSH ↓ + fT4 prawidłowe. monitorowanie LECZENIA: u Hashimoto leczonej L-tyroksyną cel — TSH w normie (zwykle 0,4–2,5), fT4 w połowie/górnej normie; u Gravesa leczonego tyreostatykami — TSH może długo pozostawać zahamowane (do roku po normalizacji obwodowych hormonów), dlatego w pierwszych miesiącach kierujemy się fT4 i fT3.' },
             { ext: 'anti_tpo', label: 'Przeciwciała anty-TPO',
-              note: 'Podstawowy marker AITD — czułość ~90% w Hashimoto, dodatnie też w ~50–80% chorób Gravesa. Pierwsze do oznaczenia przy podejrzeniu autoimmunologicznego tła. Sam dodatni wynik bez zaburzeń czynności tarczycy NIE jest wskazaniem do leczenia.',
+              note: 'Podstawowy marker AITD — czułość ~90% w Hashimoto, dodatnie też w ~50–80% chorób Gravesa. Pierwsze do oznaczenia przy podejrzeniu autoimmunologicznego tła. Sam dodatni wynik bez zaburzeń czynności tarczycy nie jest wskazaniem do leczenia.',
               description: 'Anty-TPO (przeciwciała przeciwko peroksydazie tarczycowej) — najczulszy marker AITD. Antygen TPO to enzym kluczowy dla biosyntezy hormonów tarczycy (jodowanie tyrozyny, sprzęganie MIT/DIT). CZUŁOŚĆ: ~90% w chorobie Hashimoto; 50–80% w chorobie Gravesa-Basedowa (dodatkowo do TRAb). SWOISTOŚĆ: niższa — przeciwciała występują u 5–15% populacji ogólnej (częściej u kobiet, z wiekiem, w rodzinach z AITD) i NIE WSZYSTKIE osoby z dodatnim anty-TPO rozwiną klinicznie istotną chorobę. Interpretacja MIAN: przy bardzo wysokich tytułach (> 1000 IU/mL) ryzyko progresji subklinicznej niedoczynności do jawnej znacznie wyższe (rocznie ~5%). Przy umiarkowanych tytułach (kilka × górnej granicy) ryzyko niższe, ale wciąż istotne. CIĄŻA: anty-TPO+ zwiększa ryzyko (a) poporodowego zapalenia tarczycy (PPT) ~50% vs 10% (ATA 2017), (b) poronień nawracających (związek istotny choć kontrowersyjny), (c) zaburzeń neurorozwojowych płodu przy niedoczynności matki — dlatego u kobiet w ciąży lub planujących ciążę z anty-TPO+ i TSH > 2,5 rozważyć profilaktyczną L-tyroksynę. SKRINING RODZINNY: u krewnych I stopnia osób z AITD ryzyko wystąpienia AITD jest 7–10× wyższe niż w populacji ogólnej — celowy skrining przy objawach lub planowaniu ciąży.' },
             { ext: 'anti_tg_ab', label: 'Przeciwciała anty-TG',
-              note: 'Marker uzupełniający — anty-TPO jest podstawowy; przy dodatnim TPO anty-TG dodaje niewiele. WAŻNE: anty-TG musi być oznaczane RAZEM Z TG po tyreoidektomii (interferują z metodą immunoassay Tg → wynik fałszywie zaniżony).',
-              description: 'Anty-TG (przeciwciała przeciwko tyreoglobulinie) — przeciwciała przeciwko głównemu białku magazynującemu hormony tarczycy w pęcherzykach tarczycowych. WYSTĘPOWANIE: dodatnie u 60–80% pacjentów z Hashimoto i 40–60% z Gravesem; w populacji ogólnej ~5–10%. ZASTOSOWANIE: (1) w diagnostyce AITD jako badanie uzupełniające — przy DODATNIM anty-TPO dodaje niewiele, ale w ~3–5% przypadków Hashimoto JEDYNYMI dodatnimi przeciwciałami są anty-TG (anty-TPO ujemne); (2) BARDZO WAŻNE — u pacjentów po TOTAL THYROIDECTOMY (rak tarczycy) — anty-TG MUSI być oznaczane razem z tyreoglobuliną (Tg), ponieważ INTERFERUJĄ z immunoassay Tg (fałszywie zaniżają wynik Tg, co może maskować wznowę raka). Wzrastający tytuł anty-TG po tyreoidektomii (mimo „prawidłowej" Tg) MOŻE oznaczać aktywność resztkowego/wznowy tkanki tarczycy lub raka. Szczegóły patrz wskazanie „Kontrola po raku tarczycy".' },
+              note: 'Marker uzupełniający — anty-TPO jest podstawowy; przy dodatnim TPO anty-TG dodaje niewiele. Ważne: anty-TG musi być oznaczane RAZEM Z TG po tyreoidektomii (interferują z metodą immunoassay Tg → wynik fałszywie zaniżony).',
+              description: 'Anty-TG (przeciwciała przeciwko tyreoglobulinie) — przeciwciała przeciwko głównemu białku magazynującemu hormony tarczycy w pęcherzykach tarczycowych. WYSTĘPOWANIE: dodatnie u 60–80% pacjentów z Hashimoto i 40–60% z Gravesem; w populacji ogólnej ~5–10%. ZASTOSOWANIE: (1) w diagnostyce AITD jako badanie uzupełniające — przy DODATNIM anty-TPO dodaje niewiele, ale w ~3–5% przypadków Hashimoto JEDYNYMI dodatnimi przeciwciałami są anty-TG (anty-TPO ujemne); (2) BARDZO Ważne — u pacjentów po TOTAL THYROIDECTOMY (rak tarczycy) — anty-TG MUSI być oznaczane razem z tyreoglobuliną (Tg), ponieważ INTERFERUJĄ z immunoassay Tg (fałszywie zaniżają wynik Tg, co może maskować wznowę raka). Wzrastający tytuł anty-TG po tyreoidektomii (mimo „prawidłowej" Tg) MOŻE oznaczać aktywność resztkowego/wznowy tkanki tarczycy lub raka. Szczegóły patrz wskazanie „Kontrola po raku tarczycy".' },
             { ext: 'thyroid_us', label: 'USG tarczycy',
-              note: 'Badanie zalecane u każdego pacjenta z laboratoryjnymi cechami AITD; u dzieci OBLIGATORYJNE wg PTEDD. Różnicuje Hashimoto vs Graves vs podostre zapalenie tarczycy; uwidacznia guzki wymagające oceny.',
-              description: 'USG tarczycy w AITD — kluczowe badanie obrazowe uzupełniające diagnostykę laboratoryjną; pozwala różnicować podtypy AITD i wykrywać współistniejące zmiany ogniskowe. OBRAZ TYPOWY DLA HASHIMOTO: rozlana hipoechogeniczność (ciemniejsza niż mięśni szyi), niejednorodność miąższu („pseudo-guzkowy" wzór), drobne hipoechogeniczne pola (1–6 mm — odpowiadające naciekom limfocytarnym), brak wzmożonego unaczynienia w doplerze (różnicuje od Gravesa). Postać wolowa (powiększenie gruczołu) lub atroficzna (zanik miąższu — późna faza). OBRAZ TYPOWY DLA GRAVESA-BASEDOWA: rozlana hipoechogeniczność + WZMOŻONE UNACZYNIENIE w badaniu doplerowskim — tzw. „thyroid inferno" (mnogie sygnały przepływu w całym miąższu). Często wole rozlane (powiększenie bez guzków). RÓŻNICOWANIE z PODOSTRYM ZAPALENIEM (de Quervain): bólowa hipoechogenne ogniska bez wzmożonego unaczynienia, miejscowo bolesne pole sondą. WSKAZANIA: u dorosłych zalecane przy każdym potwierdzonym AITD; u DZIECI z laboratoryjnymi cechami zaburzenia czynności tarczycy — OBLIGATORYJNE wg PTEDD. GUZKI w przebiegu Hashimoto: zwiększone ryzyko CHŁONIAKA tarczycy (rzadkie, ale wymaga uwagi przy szybko narastającym wolu, guzku atypowym, objawach ucisku); ocena guzków wg klasyfikacji EU-TIRADS — wskazania do biopsji (BAC/FNAB) zgodnie z polskimi wytycznymi PTE 2022.' }
+              note: 'Badanie zalecane u każdego pacjenta z laboratoryjnymi cechami AITD; u dzieci obligatoryjne wg PTEDD. Różnicuje Hashimoto vs Graves vs podostre zapalenie tarczycy; uwidacznia guzki wymagające oceny.',
+              description: 'USG tarczycy w AITD — kluczowe badanie obrazowe uzupełniające diagnostykę laboratoryjną; pozwala różnicować podtypy AITD i wykrywać współistniejące zmiany ogniskowe. OBRAZ TYPOWY DLA HASHIMOTO: rozlana hipoechogeniczność (ciemniejsza niż mięśni szyi), niejednorodność miąższu („pseudo-guzkowy" wzór), drobne hipoechogeniczne pola (1–6 mm — odpowiadające naciekom limfocytarnym), brak wzmożonego unaczynienia w doplerze (różnicuje od Gravesa). Postać wolowa (powiększenie gruczołu) lub atroficzna (zanik miąższu — późna faza). OBRAZ TYPOWY DLA GRAVESA-BASEDOWA: rozlana hipoechogeniczność + WZMOŻONE UNACZYNIENIE w badaniu doplerowskim — tzw. „thyroid inferno" (mnogie sygnały przepływu w całym miąższu). Często wole rozlane (powiększenie bez guzków). RÓŻNICOWANIE z PODOSTRYM ZAPALENIEM (de Quervain): bólowa hipoechogenne ogniska bez wzmożonego unaczynienia, miejscowo bolesne pole sondą. wskazania: u dorosłych zalecane przy każdym potwierdzonym AITD; u DZIECI z laboratoryjnymi cechami zaburzenia czynności tarczycy — obligatoryjne wg PTEDD. GUZKI w przebiegu Hashimoto: zwiększone ryzyko CHŁONIAKA tarczycy (rzadkie, ale wymaga uwagi przy szybko narastającym wolu, guzku atypowym, objawach ucisku); ocena guzków wg klasyfikacji EU-TIRADS — wskazania do biopsji (BAC/FNAB) zgodnie z polskimi wytycznymi PTE 2022.' }
           ]
         },
         { name: 'Hashimoto — diagnostyka i monitorowanie (gdy niedoczynność lub eutyreoza z dodatnimi przeciwciałami)',
           tests: [
             { id: 'ft3',
               note: 'Rzadko przydatne w Hashimoto — w niedoczynności fT3 jest zachowane długo (zmniejszona obwodowa konwersja T4→T3 to mechanizm kompensacyjny). Oznaczać tylko w wybranych sytuacjach: podejrzenie ciężkiej niedoczynności (przed śpiączką hipotyreozową), zespół niskiej T3 w ostrych chorobach (euthyroid sick), monitorowanie nietypowych terapii (np. T3 dodatkowo do T4 — kontrowersyjne).',
-              description: 'fT3 w Hashimoto — rola DRUGORZĘDOWA w odróżnieniu od nadczynności tarczycy (gdzie fT3 jest często kluczowe). Powód: w niedoczynności tarczycy obwodowa konwersja T4 → T3 jest fizjologicznie zachowana (a nawet wzmożona przez deiodynazy typu 1 i 2) jako mechanizm kompensacyjny — fT3 pozostaje w normie nawet przy znacznym spadku fT4. WSKAZANIA do oznaczenia fT3 w Hashimoto: (1) ciężka, długo nieleczona niedoczynność z ryzykiem ŚPIĄCZKI HIPOTYREOZOWEJ (przed dekompensacją fT3 spada); (2) ZESPÓŁ NISKIEJ T3 (low-T3 syndrome / euthyroid sick syndrome) u pacjenta hospitalizowanego z ostrą chorobą — fT3 obniżone, TSH zwykle prawidłowe lub nieznacznie obniżone, fT4 zwykle prawidłowe — NIE jest to prawdziwa niedoczynność; (3) ocena nietypowych terapii (kombinacja L-T4 + L-T3 — kontrowersyjne wskazanie wg ATA 2014/PTE).' }
+              description: 'fT3 w Hashimoto — rola DRUGORZĘDOWA w odróżnieniu od nadczynności tarczycy (gdzie fT3 jest często kluczowe). Powód: w niedoczynności tarczycy obwodowa konwersja T4 → T3 jest fizjologicznie zachowana (a nawet wzmożona przez deiodynazy typu 1 i 2) jako mechanizm kompensacyjny — fT3 pozostaje w normie nawet przy znacznym spadku fT4. wskazania do oznaczenia fT3 w Hashimoto: (1) ciężka, długo nieleczona niedoczynność z ryzykiem ŚPIĄCZKI HIPOTYREOZOWEJ (przed dekompensacją fT3 spada); (2) ZESPÓŁ NISKIEJ T3 (low-T3 syndrome / euthyroid sick syndrome) u pacjenta hospitalizowanego z ostrą chorobą — fT3 obniżone, TSH zwykle prawidłowe lub nieznacznie obniżone, fT4 zwykle prawidłowe — nie jest to prawdziwa niedoczynność; (3) ocena nietypowych terapii (kombinacja L-T4 + L-T3 — kontrowersyjne wskazanie wg ATA 2014/PTE).' }
           ]
         },
         { name: 'Graves-Basedow — diagnostyka i różnicowanie (gdy nadczynność)',
           tests: [
             { id: 'ft3',
               note: 'W przeciwieństwie do Hashimoto, w Gravesie fT3 jest klinicznie ISTOTNE. Wykrywa T3-tyreotoksykozę (TSH ↓ + fT3 ↑ + fT4 prawidłowe) — częstą we wczesnej chorobie Gravesa. Pominięcie fT3 może spowodować przeoczenie aktywnej nadczynności.',
-              description: 'fT3 w chorobie Gravesa — w przeciwieństwie do Hashimoto pełni KLUCZOWĄ rolę diagnostyczną. T3-TYREOTOKSYKOZA (izolowane podwyższenie fT3 przy zahamowanym TSH i prawidłowym fT4) występuje u części pacjentów z wczesną chorobą Gravesa, gruczolakiem toksycznym i wolem guzkowatym toksycznym — wynika z preferencyjnej syntezy lub wzmożonej konwersji T4→T3 w aktywnym gruczole. Pominięcie fT3 → przeoczenie nadczynności. MONITOROWANIE LECZENIA tyreostatykami: fT3 normalizuje się szybciej niż fT4 i może wyprzedzać normalizację TSH (które bywa zahamowane przez wiele miesięcy) — fT3 i fT4 są w pierwszym roku leczenia ważniejsze niż TSH. RÓŻNICOWANIE z zespołem niskiej T3 w ostrej chorobie: w Gravesie fT3 ↑↑, w euthyroid sick syndrome fT3 ↓ z TSH zwykle prawidłowym.' },
+              description: 'fT3 w chorobie Gravesa — w przeciwieństwie do Hashimoto pełni KLUCZOWĄ rolę diagnostyczną. T3-TYREOTOKSYKOZA (izolowane podwyższenie fT3 przy zahamowanym TSH i prawidłowym fT4) występuje u części pacjentów z wczesną chorobą Gravesa, gruczolakiem toksycznym i wolem guzkowatym toksycznym — wynika z preferencyjnej syntezy lub wzmożonej konwersji T4→T3 w aktywnym gruczole. Pominięcie fT3 → przeoczenie nadczynności. monitorowanie LECZENIA tyreostatykami: fT3 normalizuje się szybciej niż fT4 i może wyprzedzać normalizację TSH (które bywa zahamowane przez wiele miesięcy) — fT3 i fT4 są w pierwszym roku leczenia ważniejsze niż TSH. RÓŻNICOWANIE z zespołem niskiej T3 w ostrej chorobie: w Gravesie fT3 ↑↑, w euthyroid sick syndrome fT3 ↓ z TSH zwykle prawidłowym.' },
             { ext: 'trab', label: 'TRAb (przeciwciała anty-TSHR)',
               note: 'SWOISTY marker choroby Gravesa-Basedowa — wg ATA 2016 i PTE badanie PIERWSZEGO RZUTU w różnicowaniu przyczyn tyreotoksykozy. Dodatni TRAb praktycznie potwierdza Gravesa; ujemny → wskazane scyntygrafia lub jodochwytność. W ciąży monitorowanie — przeciwciała IgG przechodzą przez łożysko.',
-              description: 'TRAb (przeciwciała przeciwko receptorowi TSH) — KLUCZOWY MARKER choroby Gravesa-Basedowa, swoisty dla autoimmunologicznej nadczynności z pobudzeniem receptora TSH. WYTYCZNE: ATA 2016 i PTE jednoznacznie zalecają TRAb jako badanie PIERWSZEGO RZUTU w różnicowaniu przyczyn tyreotoksykozy (czulsze i bardziej dostępne niż scyntygrafia). DODATNI TRAb praktycznie potwierdza Gravesa — scyntygrafia/RAIU nie są wtedy konieczne. UJEMNY TRAb przy aktywnej tyreotoksykozie → wskazana dalsza diagnostyka różnicowa (scyntygrafia/RAIU różnicują: gruczolak toksyczny, wole guzkowate toksyczne, podostre zapalenie tarczycy, tyreotoksykoza egzogenna). TYPY TRAb: (a) TSAb (stymulujące) — wywołują Gravesa; (b) TBAb (blokujące) — rzadko, paradoksalnie powodują niedoczynność; (c) neutralne (cTRAb). Standardowe immunoassay nie różnicują tych typów; bioassay (TSI) — drogie i niedostępne rutynowo. CIĄŻA: u kobiet z chorobą Gravesa w wywiadzie lub w trakcie ciąży TRAb oznaczany w II trymestrze — wysokie miano (orientacyjnie > 3× górna granica normy) zwiększa ryzyko TYREOTOKSYKOZY PŁODOWEJ i NOWORODKOWEJ (przeciwciała IgG przechodzą przez łożysko). U leczonych w wywiadzie ¹³¹I/tyreoidektomią — TRAb może pozostawać podwyższone latami mimo niedoczynności klinicznej.' },
+              description: 'TRAb (przeciwciała przeciwko receptorowi TSH) — Kluczowy MARKER choroby Gravesa-Basedowa, swoisty dla autoimmunologicznej nadczynności z pobudzeniem receptora TSH. WYTYCZNE: ATA 2016 i PTE jednoznacznie zalecają TRAb jako badanie PIERWSZEGO RZUTU w różnicowaniu przyczyn tyreotoksykozy (czulsze i bardziej dostępne niż scyntygrafia). DODATNI TRAb praktycznie potwierdza Gravesa — scyntygrafia/RAIU nie są wtedy konieczne. UJEMNY TRAb przy aktywnej tyreotoksykozie → wskazana dalsza diagnostyka różnicowa (scyntygrafia/RAIU różnicują: gruczolak toksyczny, wole guzkowate toksyczne, podostre zapalenie tarczycy, tyreotoksykoza egzogenna). TYPY TRAb: (a) TSAb (stymulujące) — wywołują Gravesa; (b) TBAb (blokujące) — rzadko, paradoksalnie powodują niedoczynność; (c) neutralne (cTRAb). Standardowe immunoassay nie różnicują tych typów; bioassay (TSI) — drogie i niedostępne rutynowo. CIĄŻA: u kobiet z chorobą Gravesa w wywiadzie lub w trakcie ciąży TRAb oznaczany w II trymestrze — wysokie miano (orientacyjnie > 3× górna granica normy) zwiększa ryzyko TYREOTOKSYKOZY PŁODOWEJ i NOWORODKOWEJ (przeciwciała IgG przechodzą przez łożysko). U leczonych w wywiadzie ¹³¹I/tyreoidektomią — TRAb może pozostawać podwyższone latami mimo niedoczynności klinicznej.' },
             { ext: 'thyroid_scinti', label: 'Scyntygrafia tarczycy (¹²³I / ⁹⁹ᵐTc)',
               note: 'Wskazana gdy TRAb ujemne lub niejednoznaczne — różnicuje: Gravesa (rozlany wzmożony wychwyt) vs guzek toksyczny vs wole guzkowate toksyczne vs zapalenie/egzogenne (niski wychwyt). PRZECIWWSKAZANA w ciąży i laktacji.',
               description: 'Scyntygrafia tarczycy z izotopem (¹²³I lub ⁹⁹ᵐTc-nadtechnecjan) — badanie czynnościowo-obrazowe pokazujące rozkład wychwytu radioznacznika w gruczole. ROLA w AITD: różnicowanie przyczyn tyreotoksykozy gdy TRAb jest ujemne, niejednoznaczne lub gdy podejrzewa się współistnienie Gravesa z autonomią guzkową (mieszane przyczyny). WZORCE: (1) Graves-Basedow — rozlany, znacznie wzmożony wychwyt w całym miąższu; (2) gruczolak toksyczny — pojedyncze „gorące" ognisko z zahamowanym wychwytem reszty gruczołu; (3) wole wieloguzkowe toksyczne — niejednorodny obraz z licznymi ogniskami; (4) zapalenie tarczycy (podostre, poporodowe, nieme, polekowe — amiodaron, immunoterapia) lub tyreotoksykoza egzogenna (przyjmowanie L-tyroksyny zewnętrznie) — niski lub zerowy wychwyt. PRZECIWWSKAZANIA: ciąża, karmienie piersią (narażenie płodu/dziecka na promieniowanie); u kobiet w wieku rozrodczym wykluczyć ciążę przed badaniem.' },
@@ -3916,7 +3971,7 @@
             { id: 'cortisol',
               label: 'Kortyzol poranny (8:00–9:00)',
               note: 'Rozważyć przy podejrzeniu APS-2 / zespołu Schmidta (AITD + niedoczynność kory nadnerczy) — objawy: hiperpigmentacja, hipotensja ortostatyczna, hiponatremia, hipoglikemia, łaknienie soli. Hashimoto + nierozpoznana niedoczynność nadnerczy → wprowadzenie L-tyroksyny może wywołać przełom nadnerczowy. Próg < 138 nmol/L → diagnostyka rozszerzona (zobacz „Niedoczynność kory nadnerczy").',
-              description: 'Kortyzol poranny w AITD — wykluczenie współistniejącej pierwotnej niedoczynności kory nadnerczy (PAI) w ramach APS-2 / zespołu Schmidta (Hashimoto + choroba Addisona ± cukrzyca typu 1). Bardzo ważne PRZED WŁĄCZENIEM L-tyroksyny u pacjenta z Hashimoto i charakterystycznymi objawami Addisona — hormony tarczycy przyspieszają obwodowy metabolizm kortyzolu i mogą zdekompensować dotychczas skompensowaną subkliniczną niedoczynność nadnerczy → PRZEŁOM NADNERCZOWY. PROTOKÓŁ: pobranie 8:00–9:00, na czczo, w spoczynku. Interpretacja: > 500 nmol/L → PAI wykluczona; < 138 nmol/L → PAI prawdopodobna, test Synacthen; 138–500 nmol/L → wynik niejednoznaczny, test Synacthen wskazany. Pełna diagnostyka — zobacz „Niedoczynność kory nadnerczy".' },
+              description: 'Kortyzol poranny w AITD — wykluczenie współistniejącej pierwotnej niedoczynności kory nadnerczy (PAI) w ramach APS-2 / zespołu Schmidta (Hashimoto + choroba Addisona ± cukrzyca typu 1). Bardzo ważne przed WŁĄCZENIEM L-tyroksyny u pacjenta z Hashimoto i charakterystycznymi objawami Addisona — hormony tarczycy przyspieszają obwodowy metabolizm kortyzolu i mogą zdekompensować dotychczas skompensowaną subkliniczną niedoczynność nadnerczy → PRZEŁOM NADNERCZOWY. PROTOKÓŁ: pobranie 8:00–9:00, na czczo, w spoczynku. Interpretacja: > 500 nmol/L → PAI wykluczona; < 138 nmol/L → PAI prawdopodobna, test Synacthen; 138–500 nmol/L → wynik niejednoznaczny, test Synacthen wskazany. Pełna diagnostyka — zobacz „Niedoczynność kory nadnerczy".' },
             { ext: 'anti_gad', label: 'Anty-GAD65, anty-IA2, anty-ZnT8 (skrining cukrzycy t.1)',
               note: 'Rozważyć u pacjentów z AITD i objawami sugerującymi cukrzycę t.1 (utrata masy ciała, polidypsja, hiperglikemia, młody wiek). APS-2 najczęściej łączy Hashimoto z DM1. Sam dodatni wynik bez hiperglikemii nie wymaga interwencji — monitorowanie glikemii.' },
             { ext: 'anti_ttg', label: 'Anty-tTG IgA + IgA całkowite (skrining celiakii)',
@@ -3966,7 +4021,7 @@
                       'Wynik prawidłowy — wrodzona niedoczynność tarczycy (WNT) WYKLUCZONA na podstawie przesiewu.',
                       'Bez dalszej diagnostyki w ramach programu przesiewowego.',
                       'Wynik komunikowany rodzicom jedynie pośrednio — brak wezwania = wynik prawidłowy (nie przekazuje się aktywnie wyników ujemnych).',
-                      'UWAGA — sytuacje wymagające dalszej oceny mimo prawidłowego TSH przesiewowego: (1) niedoczynność WTÓRNA / CENTRALNA (TSH nieadekwatnie niskie — przesiew jej nie wykrywa); (2) wcześniactwo skrajne (< 28 tyg.) — w pierwszych tygodniach życia oś przysadkowo-tarczycowa niedojrzała; (3) niedoczynność z opóźnionym wzrostem TSH (przesiew miał miejsce za wcześnie — przed wzrostem TSH); (4) objawy kliniczne sugerujące niedoczynność (przedłużająca się żółtaczka, hipotonia, trudności w karmieniu, opóźniony stolec smółkowy) niezależnie od wyniku przesiewu.',
+                      'Uwaga — sytuacje wymagające dalszej oceny mimo prawidłowego TSH przesiewowego: (1) niedoczynność WTÓRNA / CENTRALNA (TSH nieadekwatnie niskie — przesiew jej nie wykrywa); (2) wcześniactwo skrajne (< 28 tyg.) — w pierwszych tygodniach życia oś przysadkowo-tarczycowa niedojrzała; (3) niedoczynność z opóźnionym wzrostem TSH (przesiew miał miejsce za wcześnie — przed wzrostem TSH); (4) objawy kliniczne sugerujące niedoczynność (przedłużająca się żółtaczka, hipotonia, trudności w karmieniu, opóźniony stolec smółkowy) niezależnie od wyniku przesiewu.',
                       'Pediatra powinien znać podejrzenia objawowe — przesiew jest narzędziem populacyjnym, nie zastępuje oceny klinicznej.'
                     ]
                   },
@@ -3989,7 +4044,7 @@
                     detail: [
                       'Wynik wysoki — silne podejrzenie WRODZONEJ NIEDOCZYNNOŚCI TARCZYCY (WNT). NATYCHMIASTOWE wezwanie rodziców na potwierdzenie diagnostyczne.',
                       'Postępowanie po wezwaniu: pobranie krwi ŻYLNEJ (nie z bibuły) — oznaczenie TSH + fT4 (+ ewentualnie T4 całkowite) w surowicy. Wynik dostępny zwykle tego samego dnia.',
-                      'Interpretacja SUROWICY: TSH ↑ + fT4 ↓ = JAWNA WNT — natychmiastowe włączenie L-tyroksyny 10–15 μg/kg/dobę (zwykle 37,5–50 μg/dobę dla donoszonego noworodka). TSH ↑ + fT4 prawidłowe = SUBKLINICZNA WNT — decyzja indywidualna w ośrodku referencyjnym pediatrycznym.',
+                      'Interpretacja SUROWICY: TSH ↑ + fT4 ↓ = JAWNA WNT — natychmiastowe włączenie L-tyroksyny 10–15 μg/kg/dobę (zwykle 37,5–50 μg/dobę dla donoszonego noworodka). TSH ↑ + fT4 prawidłowe = subkliniczna WNT — decyzja indywidualna w ośrodku referencyjnym pediatrycznym.',
                       'Diagnostyka morfologiczna RÓWNOLEGLE, ale NIE OPÓŹNIA leczenia: USG tarczycy (pierwszorzędowe) + tyreoglobulina; scyntygrafia opcjonalnie, gdy USG nie uwidacznia tarczycy w typowym miejscu (różnicowanie aplazji vs ektopii).',
                       'KRYTYCZNE OKNO TERAPEUTYCZNE: rozpoczęcie L-tyroksyny w ciągu PIERWSZYCH 2 TYGODNI życia daje prawidłowy rozwój neurologiczny i intelektualny. Każdy tydzień opóźnienia w pierwszych 2–4 tygodniach życia obniża IQ dziecka — nie wolno zwlekać z leczeniem czekając na diagnostykę obrazową.',
                       'Wytłumaczyć rodzicom: WNT jest CHOROBĄ UWLECZALNĄ przy wczesnym rozpoznaniu; leczenie L-tyroksyną zapewnia prawidłowy rozwój; lek podawany rano, na czczo, rozkruszony i podany z mlekiem (UNIKAĆ podawania z preparatami sojowymi, żelazem, wapniem — zmniejszają wchłanianie).'
@@ -4011,7 +4066,7 @@
                       'Wrodzona niedoczynność tarczycy WYKLUCZONA na podstawie przesiewu.',
                       'Bez dalszej diagnostyki w ramach programu przesiewowego.',
                       'Wynik komunikowany rodzicom jako negatywny (brak wezwania = wynik prawidłowy).',
-                      'UWAGA: nawet przy prawidłowym wyniku przesiewu, dziecko powinno być oceniane klinicznie przez pediatrę — przesiew nie wyklucza niedoczynności wtórnej/centralnej ani niedoczynności z opóźnionym wzrostem TSH (rzadkie).'
+                      'Uwaga: nawet przy prawidłowym wyniku przesiewu, dziecko powinno być oceniane klinicznie przez pediatrę — przesiew nie wyklucza niedoczynności wtórnej/centralnej ani niedoczynności z opóźnionym wzrostem TSH (rzadkie).'
                     ]
                   },
                   {
@@ -4022,9 +4077,9 @@
                       'Wynik drugiej bibuły potwierdza utrzymującą się hipertyreotropinemię — silne podejrzenie WNT (już nie przejściowa).',
                       'Wezwanie rodziców na potwierdzenie diagnostyczne — pobranie krwi ŻYLNEJ: TSH + fT4 z surowicy.',
                       'Postępowanie identyczne jak przy bibule I ≥ 24: pełne potwierdzenie z surowicy, rozpoczęcie L-tyroksyny przy potwierdzonej WNT (cel: pierwsze 2 tygodnie życia), diagnostyka morfologiczna (USG + Tg; scyntygrafia opcjonalnie) równolegle.',
-                      'Interpretacja SUROWICY: TSH ↑ + fT4 ↓ = JAWNA WNT → L-tyroksyna 10–15 μg/kg/dobę. TSH ↑ + fT4 prawidłowe = SUBKLINICZNA WNT lub przejściowa hipertyreotropinemia o przedłużonym przebiegu — decyzja indywidualna w ośrodku referencyjnym.',
+                      'Interpretacja SUROWICY: TSH ↑ + fT4 ↓ = JAWNA WNT → L-tyroksyna 10–15 μg/kg/dobę. TSH ↑ + fT4 prawidłowe = subkliniczna WNT lub przejściowa hipertyreotropinemia o przedłużonym przebiegu — decyzja indywidualna w ośrodku referencyjnym.',
                       'W przypadkach subklinicznych można rozważyć obserwację bez leczenia z kontrolą TSH za 4–6 tygodni; jeżeli TSH nadal podwyższone — wprowadzić L-tyroksynę.',
-                      'WAŻNE: u dziecka z opóźnionym rozpoznaniem (po 2.–4. tygodniu życia) i jawną WNT — leczenie nadal włącza się jak najszybciej, choć rokowanie neurologiczne może być nieco gorsze niż przy rozpoznaniu w pierwszych dniach.'
+                      'Ważne: u dziecka z opóźnionym rozpoznaniem (po 2.–4. tygodniu życia) i jawną WNT — leczenie nadal włącza się jak najszybciej, choć rokowanie neurologiczne może być nieco gorsze niż przy rozpoznaniu w pierwszych dniach.'
                     ]
                   }
                 ]
@@ -4076,11 +4131,11 @@
               },
               {
                 label: 'Scyntygrafia tarczycy — badanie OPCJONALNE / drugorzędowe (wybrane wskazania)',
-                text: 'NIE jest obligatoryjna w polskim programie przesiewowym; wykorzystywana wybiórczo:',
+                text: 'nie jest obligatoryjna w polskim programie przesiewowym; wykorzystywana wybiórczo:',
                 detail: [
                   'STATUS w wytycznych: Kucharska PTEDD 2016 oraz ESPE 2014 (Léger) wymieniają scyntygrafię jako badanie pomocnicze, NIE obowiązkowe. Polski program przesiewowy 2019–2026 nie wymaga scyntygrafii do potwierdzenia WNT.',
                   'GŁÓWNE wskazania DODATKOWE do USG: (1) USG nie uwidacznia tarczycy w typowym miejscu — różnicowanie aplazji (brak wychwytu) vs ektopii (wychwyt w nietypowej lokalizacji, najczęściej u podstawy języka); (2) tarczyca prawidłowa w USG + Tg nieoznaczalna (rozbieżność wymaga oceny funkcjonalnej); (3) podejrzenie defektu organifikacji jodu — test z nadchloranem potasu.',
-                  'MOMENT WYKONANIA: optymalnie PRZED rozpoczęciem L-tyroksyny lub w pierwszych 5–7 dniach leczenia (po dłuższej supresji TSH wychwyt zanika). Jeśli pominięta — można wykonać po próbie odstawienia L-tyroksyny w wieku ≥ 3 lat (reewaluacja trwała vs przemijająca WNT).',
+                  'MOMENT WYKONANIA: optymalnie przed rozpoczęciem L-tyroksyny lub w pierwszych 5–7 dniach leczenia (po dłuższej supresji TSH wychwyt zanika). Jeśli pominięta — można wykonać po próbie odstawienia L-tyroksyny w wieku ≥ 3 lat (reewaluacja trwała vs przemijająca WNT).',
                   'IZOTOP: preferowany ¹²³I (krótki T½, brak promieniowania β; dawka 0,1–0,3 MBq/kg p.o.) lub ⁹⁵ᵐTc-nadtechnecjan. NIGDY ¹³¹I u noworodka (zbyt wysoka dawka).',
                   'Zasada ALARA: u noworodka badania izotopowe wykonuje się TYLKO w niezbędnych przypadkach. Większość pacjentów z WNT NIE wymaga scyntygrafii — USG + Tg + przebieg kliniczny są zwykle wystarczające do rozpoznania i prowadzenia leczenia.'
                 ]
@@ -4148,7 +4203,7 @@
             { id: 'tsh',
               label: 'TSH z bibuły (DBS) — pierwsza bibuła',
               note: 'Aby zobaczyć progi DBS w przeliczniku: kliknij ten chip → załaduj TSH do formularza → w polu „Test diagnostyczny" (pod polem wartości w karcie „Przelicznik jednostek laboratoryjnych") wybierz „Bibuła pierwsza — przesiew noworodkowy (DBS, 3.–5. doba)". Algorytm: TSH ≥ 24 mIU/L → WEZWANIE; 10–23,9 → DRUGA BIBUŁA; < 10 → norma.',
-              description: 'TSH z bibuły (DBS — dried blood spot) — podstawowe badanie w polskim przesiewie noworodkowym w kierunku wrodzonej niedoczynności tarczycy (WNT). MATERIAŁ: pełna krew włośniczkowa pobrana z pięty noworodka na specjalną bibułę filtracyjną (zwykle Whatman 903). Próbka jest suszona, transportowana do regionalnej pracowni przesiewu, analizowana metodami immunoassay (FEIA, ELISA, FIA). MOMENT POBRANIA: 36.–72. godzina życia (klasycznie „3.–5. doba") — dobierany tak, by minąć fizjologiczny szczyt TSH (pierwsze 24 godziny) i zachować wysoką czułość. PROGI INTERPRETACYJNE (Rządowy Program Przesiewowy 2019–2026): (1) TSH < 10 mIU/L → wynik prawidłowy, KONIEC procedury; (2) TSH 10–23,9 mIU/L → wynik graniczny, wymaga POTWIERDZENIA z drugiej bibuły; (3) TSH ≥ 24 mIU/L → wynik nieprawidłowy, BEZPOŚREDNIE WEZWANIE rodziców z dzieckiem do diagnostyki potwierdzającej (TSH + fT4 z surowicy). UWAGA: progi DBS są NIŻSZE niż w surowicy — patrz callout „Dlaczego progi TSH w przesiewie noworodkowym wyglądają inaczej…" w sekcji „Podsumowanie" powyżej. Po WEZWANIU jak najszybciej rozpoczyna się leczenie L-tyroksyną (jeszcze przed pełną diagnostyką obrazową), bo każdy tydzień opóźnienia w pierwszych 2–4 tygodniach życia obniża IQ dziecka.' },
+              description: 'TSH z bibuły (DBS — dried blood spot) — podstawowe badanie w polskim przesiewie noworodkowym w kierunku wrodzonej niedoczynności tarczycy (WNT). MATERIAŁ: pełna krew włośniczkowa pobrana z pięty noworodka na specjalną bibułę filtracyjną (zwykle Whatman 903). Próbka jest suszona, transportowana do regionalnej pracowni przesiewu, analizowana metodami immunoassay (FEIA, ELISA, FIA). MOMENT POBRANIA: 36.–72. godzina życia (klasycznie „3.–5. doba") — dobierany tak, by minąć fizjologiczny szczyt TSH (pierwsze 24 godziny) i zachować wysoką czułość. PROGI INTERPRETACYJNE (Rządowy Program Przesiewowy 2019–2026): (1) TSH < 10 mIU/L → wynik prawidłowy, KONIEC procedury; (2) TSH 10–23,9 mIU/L → wynik graniczny, wymaga POTWIERDZENIA z drugiej bibuły; (3) TSH ≥ 24 mIU/L → wynik nieprawidłowy, BEZPOŚREDNIE WEZWANIE rodziców z dzieckiem do diagnostyki potwierdzającej (TSH + fT4 z surowicy). Uwaga: progi DBS są NIŻSZE niż w surowicy — patrz callout „Dlaczego progi TSH w przesiewie noworodkowym wyglądają inaczej…" w sekcji „Podsumowanie" powyżej. Po WEZWANIU jak najszybciej rozpoczyna się leczenie L-tyroksyną (jeszcze przed pełną diagnostyką obrazową), bo każdy tydzień opóźnienia w pierwszych 2–4 tygodniach życia obniża IQ dziecka.' },
             { id: 'tsh',
               label: 'TSH z bibuły (DBS) — druga bibuła (powtórka)',
               note: 'Aby zobaczyć progi DBS w przeliczniku: kliknij ten chip → załaduj TSH do formularza → w polu „Test diagnostyczny" (pod polem wartości w karcie „Przelicznik jednostek laboratoryjnych") wybierz „Bibuła druga — powtórka przesiewu". Wskazana gdy I bibuła wykazała TSH 10–23,9 mIU/L. Algorytm: TSH ≥ 10 mIU/L → WEZWANIE; < 10 → norma.',
@@ -4159,22 +4214,22 @@
           tests: [
             { id: 'tsh',
               note: 'Pomiar z krwi żylnej (NIE z bibuły). U noworodka norma TSH w surowicy jest WIEKOZALEŻNA: w 1.–2. dobie do ~30 mIU/L; do 14. doby spadek do < 10; potem stopniowo do wartości dorosłych. Wartość > 12 mIU/L w 3.–5. dobie + prawidłowe fT4 → subkliniczna WNT; TSH > 28 → jawna WNT.',
-              description: 'TSH w surowicy u noworodka po wezwaniu z przesiewu — KLUCZOWE potwierdzenie rozpoznania. Materiał: krew żylna (nie z bibuły, bo dokładność diagnostyczna jest wyższa). NORMY WIEKOZALEŻNE (PTEDD 2016, Kucharska i wsp.): (a) 0.–2. doba — fizjologiczny szczyt TSH (do 30, czasem do 50 mIU/L); pomiar w tym okresie ma ograniczoną wartość; (b) 3.–5. doba (standard interpretacji): < 12 mIU/L = norma; 12–28 mIU/L + prawidłowe fT4 = SUBKLINICZNA WNT; > 28 mIU/L = JAWNA WNT; (c) 1.–4. tydzień: stopniowy spadek do < 10 mIU/L; (d) niemowlęta > 1 mies.: 0,5–4,5 mIU/L. Interpretacja z fT4: TSH ↑ + fT4 ↓ = JAWNA WNT, jednoznaczne wskazanie do leczenia; TSH ↑ + fT4 prawidłowe = SUBKLINICZNA WNT, decyzja indywidualna (zwykle leczenie przy TSH > 20, monitorowanie przy 10–20). NORMA SUROWICY ≠ NORMA DBS — przesiewowa bibuła ma niższe progi (< 10) bo zawiera pełną krew (krwinki rozcieńczają osocze).' },
+              description: 'TSH w surowicy u noworodka po wezwaniu z przesiewu — kluczowe potwierdzenie rozpoznania. Materiał: krew żylna (nie z bibuły, bo dokładność diagnostyczna jest wyższa). NORMY WIEKOZALEŻNE (PTEDD 2016, Kucharska i wsp.): (a) 0.–2. doba — fizjologiczny szczyt TSH (do 30, czasem do 50 mIU/L); pomiar w tym okresie ma ograniczoną wartość; (b) 3.–5. doba (standard interpretacji): < 12 mIU/L = norma; 12–28 mIU/L + prawidłowe fT4 = subkliniczna WNT; > 28 mIU/L = JAWNA WNT; (c) 1.–4. tydzień: stopniowy spadek do < 10 mIU/L; (d) niemowlęta > 1 mies.: 0,5–4,5 mIU/L. Interpretacja z fT4: TSH ↑ + fT4 ↓ = JAWNA WNT, jednoznaczne wskazanie do leczenia; TSH ↑ + fT4 prawidłowe = subkliniczna WNT, decyzja indywidualna (zwykle leczenie przy TSH > 20, monitorowanie przy 10–20). NORMA SUROWICY ≠ NORMA DBS — przesiewowa bibuła ma niższe progi (< 10) bo zawiera pełną krew (krwinki rozcieńczają osocze).' },
             { id: 'ft4',
               note: 'Pomiar z krwi żylnej. U noworodka norma fT4 jest WIEKOZALEŻNA: 1.–4. tydzień życia ~15–35 pmol/L (znacznie wyższa niż u dorosłych); w 2.–6. miesiącu spada do ~12–22 pmol/L. Obniżone fT4 + podwyższone TSH = jawna WNT. Cel leczenia: fT4 w górnej połowie normy dla wieku.',
-              description: 'fT4 (wolna tyroksyna) u noworodka — uzupełnia TSH dla różnicowania postaci WNT i monitorowania leczenia. NORMY WIEKOZALEŻNE: (a) 1.–4. tydzień życia: ~15–35 pmol/L (znacznie wyższa niż u dorosłych — szczyt fT4 u noworodka odzwierciedla fizjologiczne nasilenie syntezy hormonów po porodzie); (b) 1.–6. miesiąc: stopniowy spadek do ~12–22 pmol/L; (c) starsze dzieci i dorośli: standardowe normy laboratoryjne. Interpretacja: TSH ↑ + fT4 ↓ → JAWNA WNT (jednoznaczne wskazanie do natychmiastowego leczenia L-tyroksyną w pełnej dawce 10–15 μg/kg/dobę); TSH ↑ + fT4 prawidłowe → SUBKLINICZNA WNT lub przejściowa hipertyreotropinemia (decyzja o leczeniu indywidualna — zwykle leczyć przy TSH > 20 utrzymującym się). CEL TERAPEUTYCZNY u dziecka z WNT: fT4 w GÓRNEJ POŁOWIE NORMY dla wieku (preferowane wyższe wartości niż u dorosłych — kluczowe dla rozwoju mózgu w pierwszych miesiącach życia).' },
+              description: 'fT4 (wolna tyroksyna) u noworodka — uzupełnia TSH dla różnicowania postaci WNT i monitorowania leczenia. NORMY WIEKOZALEŻNE: (a) 1.–4. tydzień życia: ~15–35 pmol/L (znacznie wyższa niż u dorosłych — szczyt fT4 u noworodka odzwierciedla fizjologiczne nasilenie syntezy hormonów po porodzie); (b) 1.–6. miesiąc: stopniowy spadek do ~12–22 pmol/L; (c) starsze dzieci i dorośli: standardowe normy laboratoryjne. Interpretacja: TSH ↑ + fT4 ↓ → JAWNA WNT (jednoznaczne wskazanie do natychmiastowego leczenia L-tyroksyną w pełnej dawce 10–15 μg/kg/dobę); TSH ↑ + fT4 prawidłowe → subkliniczna WNT lub przejściowa hipertyreotropinemia (decyzja o leczeniu indywidualna — zwykle leczyć przy TSH > 20 utrzymującym się). CEL TERAPEUTYCZNY u dziecka z WNT: fT4 w GÓRNEJ POŁOWIE NORMY dla wieku (preferowane wyższe wartości niż u dorosłych — kluczowe dla rozwoju mózgu w pierwszych miesiącach życia).' },
             { id: 't4_total',
               note: 'Pomiar z krwi żylnej. T4 całkowite (suma wolnej i związanej) — historycznie używane przed standardyzacją fT4; obecnie wykorzystywane jako uzupełnienie, zwłaszcza w okresie noworodkowym, gdy fizjologiczne wahania TBG mogą wpływać na interpretację.',
-              description: 'T4 całkowite u noworodka — pomiar sumy wolnej i związanej z białkami (głównie TBG — thyroxine-binding globulin) tyroksyny. ROLA: historycznie podstawowy parametr funkcji tarczycy (przed wprowadzeniem standardowych metod oznaczania fT4); obecnie pełni rolę uzupełniającą. NORMY WIEKOZALEŻNE — wyższe niż u dorosłych (fizjologicznie zwiększone TBG u noworodka). PUŁAPKI: T4 całkowite zależy od stężenia TBG, które może być zmienione w stanach (a) wzrost TBG: leki estrogenowe (HRT u matki w ciąży/karmiącej), hiperestrogenizm; (b) spadek TBG: niedobór TBG (rzadki defekt genetyczny, X-recesywny), zespół nerczycowy, ciężkie choroby ogólne. Z tego powodu fT4 jest preferowane do interpretacji funkcji tarczycy; T4 całkowite zachowuje wartość w sytuacjach gdy fT4 jest nieoznaczalne lub immunoassay daje nietypowe wyniki.' },
+              description: 'T4 całkowite u noworodka — pomiar sumy wolnej i związanej z białkami (głównie TBG — thyroxine-binding globulin) tyroksyny. ROLA: historycznie podstawowy parametr funkcji tarczycy (przed wprowadzeniem standardowych metod oznaczania fT4); obecnie pełni rolę uzupełniającą. NORMY WIEKOZALEŻNE — wyższe niż u dorosłych (fizjologicznie zwiększone TBG u noworodka). Pułapki: T4 całkowite zależy od stężenia TBG, które może być zmienione w stanach (a) wzrost TBG: leki estrogenowe (HRT u matki w ciąży/karmiącej), hiperestrogenizm; (b) spadek TBG: niedobór TBG (rzadki defekt genetyczny, X-recesywny), zespół nerczycowy, ciężkie choroby ogólne. Z tego powodu fT4 jest preferowane do interpretacji funkcji tarczycy; T4 całkowite zachowuje wartość w sytuacjach gdy fT4 jest nieoznaczalne lub immunoassay daje nietypowe wyniki.' },
             { id: 'thyroglobulin',
-              note: 'KLUCZOWE w różnicowaniu strukturalnym WNT po wezwaniu. Tg nieoznaczalna/bardzo niska → APLAZJA (atyreoza); Tg obniżona proporcjonalnie → HIPOPLAZJA; Tg prawidłowa lub PODWYŻSZONA → DYSHORMONOGENEZA (jest tarczyca, ale nie produkuje hormonów). Pomaga w poradnictwie genetycznym (dyshormonogenezy są dziedziczne AR).',
-              description: 'Tyreoglobulina (Tg) u noworodka z potwierdzoną WNT — KLUCZOWY marker różnicowania typu wady tarczycowej. Tg jest produkowana wyłącznie przez komórki pęcherzykowe tarczycy (zdrowe lub nowotworowe) — stężenie Tg odzwierciedla MASĘ tkanki tarczycowej obecnej w organizmie. WZORCE w WNT: (1) APLAZJA (atyreoza) — całkowity brak tkanki tarczycowej; Tg NIEOZNACZALNA lub bardzo niska (< 1 ng/mL); poradnictwo: rzadko dziedziczne, zwykle sporadyczne; (2) HIPOPLAZJA — mała tarczyca w prawidłowym położeniu; Tg obniżona PROPORCJONALNIE do ilości tkanki (np. 5–20 ng/mL); (3) EKTOPIA — tarczyca przemieszczona poza zwykłe miejsce (najczęściej u podstawy języka); Tg często prawidłowa lub obniżona, USG „brak tarczycy w typowym miejscu" + scyntygrafia wychwyt w nietypowej lokalizacji; (4) DYSHORMONOGENEZA — strukturalnie prawidłowa lub powiększona tarczyca, ale defekt biosyntezy hormonów (mutacje TPO, DUOX2, NIS, TG, DEHAL1, PDS); Tg PRAWIDŁOWA lub PODWYŻSZONA; postaci AR z 25% ryzykiem powtórzenia w rodzinie — wskazane poradnictwo genetyczne i badania genetyczne. ZASTOSOWANIE PRAKTYCZNE: Tg + USG + scyntygrafia razem pozwalają w 95% przypadków określić typ WNT, co ma znaczenie dla: (a) rokowania długoterminowego, (b) poradnictwa genetycznego rodziny, (c) decyzji o ewentualnej próbie odstawienia L-tyroksyny w wieku 3 lat (postacie przejściowe).' },
+              note: 'kluczowe w różnicowaniu strukturalnym WNT po wezwaniu. Tg nieoznaczalna/bardzo niska → APLAZJA (atyreoza); Tg obniżona proporcjonalnie → HIPOPLAZJA; Tg prawidłowa lub PODWYŻSZONA → DYSHORMONOGENEZA (jest tarczyca, ale nie produkuje hormonów). Pomaga w poradnictwie genetycznym (dyshormonogenezy są dziedziczne AR).',
+              description: 'Tyreoglobulina (Tg) u noworodka z potwierdzoną WNT — Kluczowy marker różnicowania typu wady tarczycowej. Tg jest produkowana wyłącznie przez komórki pęcherzykowe tarczycy (zdrowe lub nowotworowe) — stężenie Tg odzwierciedla MASĘ tkanki tarczycowej obecnej w organizmie. WZORCE w WNT: (1) APLAZJA (atyreoza) — całkowity brak tkanki tarczycowej; Tg NIEOZNACZALNA lub bardzo niska (< 1 ng/mL); poradnictwo: rzadko dziedziczne, zwykle sporadyczne; (2) HIPOPLAZJA — mała tarczyca w prawidłowym położeniu; Tg obniżona PROPORCJONALNIE do ilości tkanki (np. 5–20 ng/mL); (3) EKTOPIA — tarczyca przemieszczona poza zwykłe miejsce (najczęściej u podstawy języka); Tg często prawidłowa lub obniżona, USG „brak tarczycy w typowym miejscu" + scyntygrafia wychwyt w nietypowej lokalizacji; (4) DYSHORMONOGENEZA — strukturalnie prawidłowa lub powiększona tarczyca, ale defekt biosyntezy hormonów (mutacje TPO, DUOX2, NIS, TG, DEHAL1, PDS); Tg PRAWIDŁOWA lub PODWYŻSZONA; postaci AR z 25% ryzykiem powtórzenia w rodzinie — wskazane poradnictwo genetyczne i badania genetyczne. ZASTOSOWANIE PRAKTYCZNE: Tg + USG + scyntygrafia razem pozwalają w 95% przypadków określić typ WNT, co ma znaczenie dla: (a) rokowania długoterminowego, (b) poradnictwa genetycznego rodziny, (c) decyzji o ewentualnej próbie odstawienia L-tyroksyny w wieku 3 lat (postacie przejściowe).' },
             { ext: 'thyroid_us', label: 'USG tarczycy (noworodek) — pierwszorzędowe',
               note: 'Pierwszorzędowe badanie morfologiczne u noworodka z potwierdzoną WNT (wytyczne PTEDD, ESPE). Pozwala uwidocznić aplazję (brak gruczołu), hipoplazję (mała tarczyca), prawidłową lub powiększoną tarczycę (dyshormonogeneza). OGRANICZENIE: nie wykrywa skutecznie ektopii (tarczyca u podstawy języka może być poza polem badania USG szyi) — wówczas dodać scyntygrafię.',
-              description: 'USG tarczycy u noworodka z WNT — PIERWSZORZĘDOWE badanie obrazowe wg wytycznych PTEDD i ESPE. Wykonywane sondą wysokoczęstotliwościową (12–18 MHz, „mała pediatryczna") w pozycji noworodka na plecach z uniesieniem ramion. Interpretacja: (1) BRAK TARCZYCY w typowym miejscu → możliwa APLAZJA (atyreoza — brak tkanki) lub EKTOPIA (tarczyca przemieszczona); różnicowanie wymaga scyntygrafii; (2) MAŁA tarczyca → hipoplazja; (3) PRAWIDŁOWA lub POWIĘKSZONA tarczyca → najpewniej dyshormonogeneza (przy potwierdzonej WNT laboratoryjnie); (4) STRUKTURA niejednorodna z hipoechogenicznością + małe → może sugerować dysgenezję. Ograniczenia USG: nie wykrywa skutecznie EKTOPII u podstawy języka — gdy USG „nie widzi tarczycy" w typowym miejscu, dopiero wtedy DODAĆ scyntygrafię. Zaleta: brak promieniowania, szeroko dostępne, możliwe do powtórzenia. WAŻNE: USG NIE OPÓŹNIA leczenia — diagnostyka morfologiczna jest robiona równolegle z włączeniem L-tyroksyny, nie zamiast.' },
+              description: 'USG tarczycy u noworodka z WNT — PIERWSZORZĘDOWE badanie obrazowe wg wytycznych PTEDD i ESPE. Wykonywane sondą wysokoczęstotliwościową (12–18 MHz, „mała pediatryczna") w pozycji noworodka na plecach z uniesieniem ramion. Interpretacja: (1) BRAK TARCZYCY w typowym miejscu → możliwa APLAZJA (atyreoza — brak tkanki) lub EKTOPIA (tarczyca przemieszczona); różnicowanie wymaga scyntygrafii; (2) MAŁA tarczyca → hipoplazja; (3) PRAWIDŁOWA lub POWIĘKSZONA tarczyca → najpewniej dyshormonogeneza (przy potwierdzonej WNT laboratoryjnie); (4) STRUKTURA niejednorodna z hipoechogenicznością + małe → może sugerować dysgenezję. Ograniczenia USG: nie wykrywa skutecznie EKTOPII u podstawy języka — gdy USG „nie widzi tarczycy" w typowym miejscu, dopiero wtedy DODAĆ scyntygrafię. Zaleta: brak promieniowania, szeroko dostępne, możliwe do powtórzenia. Ważne: USG NIE OPÓŹNIA leczenia — diagnostyka morfologiczna jest robiona równolegle z włączeniem L-tyroksyny, nie zamiast.' },
             { ext: 'thyroid_scinti', label: 'Scyntygrafia tarczycy (¹²³I / ⁹⁹ᵐTc-nadtechnecjan)',
-              note: 'Badanie OPCJONALNE — NIE jest obligatoryjne w polskim programie przesiewowym (Kucharska PTEDD 2016, ESPE Léger 2014). Wskazania DODATKOWE do USG: (1) USG nie uwidacznia tarczycy w typowym miejscu (różnicowanie aplazji vs ektopii); (2) USG prawidłowe + Tg nieoznaczalna; (3) podejrzenie defektu organifikacji jodu. Preferowany ¹²³I lub ⁹⁹ᵐTc-nadtechnecjan u noworodka.',
-              description: 'Scyntygrafia tarczycy u noworodka z WNT — badanie czynnościowo-obrazowe z radio-jodem (¹²³I) lub technetem (⁹⁹ᵐTc-nadtechnecjan). STATUS w wytycznych: Kucharska PTEDD 2016 oraz ESPE 2014 (Léger) wymieniają scyntygrafię jako badanie POMOCNICZE — NIE obligatoryjne u każdego noworodka z WNT. Polski Program Przesiewowy 2019–2026 nie wymaga scyntygrafii do potwierdzenia rozpoznania. ROLA: różnicowanie typu wady tarczycowej W WYBRANYCH SYTUACJACH (USG i Tg zwykle wystarczają). WSKAZANIA: (1) USG nie uwidacznia tarczycy w typowym miejscu — różnicowanie aplazji vs ektopii; (2) USG prawidłowe morfologicznie + Tg nieoznaczalna (rozbieżność wymaga oceny funkcjonalnej); (3) podejrzenie defektu organifikacji jodu — test z nadchloranem potasu. WZORCE INTERPRETACJI: (1) APLAZJA → brak wychwytu w jakimkolwiek miejscu; (2) EKTOPIA → wychwyt w nietypowej lokalizacji (najczęściej u podstawy języka — „struma lingualis", ~70% WNT z ektopią); (3) HIPOPLAZJA → wychwyt zmniejszony w prawidłowym położeniu; (4) DYSHORMONOGENEZA → wychwyt PRAWIDŁOWY lub WZMOŻONY (tarczyca strukturalnie działa, ale nie produkuje hormonów). MOMENT WYKONANIA: optymalnie PRZED L-tyroksyną lub w pierwszych 5–7 dniach leczenia (potem supresja TSH znosi wychwyt); alternatywnie po próbie odstawienia w wieku ≥ 3 lat (reewaluacja trwała vs przemijająca WNT). IZOTOP: preferowany ¹²³I (krótki T½, brak promieniowania β, dawka 0,1–0,3 MBq/kg p.o.) lub ⁹⁹ᵐTc-nadtechnecjan. NIGDY ¹³¹I u noworodka. Zasada ALARA: u noworodka badania izotopowe wykonuje się tylko w niezbędnych przypadkach — badanie nie powinno opóźniać włączenia L-tyroksyny.' }
+              note: 'Badanie OPCJONALNE — nie jest obligatoryjne w polskim programie przesiewowym (Kucharska PTEDD 2016, ESPE Léger 2014). Wskazania DODATKOWE do USG: (1) USG nie uwidacznia tarczycy w typowym miejscu (różnicowanie aplazji vs ektopii); (2) USG prawidłowe + Tg nieoznaczalna; (3) podejrzenie defektu organifikacji jodu. Preferowany ¹²³I lub ⁹⁹ᵐTc-nadtechnecjan u noworodka.',
+              description: 'Scyntygrafia tarczycy u noworodka z WNT — badanie czynnościowo-obrazowe z radio-jodem (¹²³I) lub technetem (⁹⁹ᵐTc-nadtechnecjan). STATUS w wytycznych: Kucharska PTEDD 2016 oraz ESPE 2014 (Léger) wymieniają scyntygrafię jako badanie POMOCNICZE — NIE obligatoryjne u każdego noworodka z WNT. Polski Program Przesiewowy 2019–2026 nie wymaga scyntygrafii do potwierdzenia rozpoznania. ROLA: różnicowanie typu wady tarczycowej W WYBRANYCH SYTUACJACH (USG i Tg zwykle wystarczają). wskazania: (1) USG nie uwidacznia tarczycy w typowym miejscu — różnicowanie aplazji vs ektopii; (2) USG prawidłowe morfologicznie + Tg nieoznaczalna (rozbieżność wymaga oceny funkcjonalnej); (3) podejrzenie defektu organifikacji jodu — test z nadchloranem potasu. WZORCE INTERPRETACJI: (1) APLAZJA → brak wychwytu w jakimkolwiek miejscu; (2) EKTOPIA → wychwyt w nietypowej lokalizacji (najczęściej u podstawy języka — „struma lingualis", ~70% WNT z ektopią); (3) HIPOPLAZJA → wychwyt zmniejszony w prawidłowym położeniu; (4) DYSHORMONOGENEZA → wychwyt PRAWIDŁOWY lub WZMOŻONY (tarczyca strukturalnie działa, ale nie produkuje hormonów). MOMENT WYKONANIA: optymalnie przed L-tyroksyną lub w pierwszych 5–7 dniach leczenia (potem supresja TSH znosi wychwyt); alternatywnie po próbie odstawienia w wieku ≥ 3 lat (reewaluacja trwała vs przemijająca WNT). IZOTOP: preferowany ¹²³I (krótki T½, brak promieniowania β, dawka 0,1–0,3 MBq/kg p.o.) lub ⁹⁹ᵐTc-nadtechnecjan. NIGDY ¹³¹I u noworodka. Zasada ALARA: u noworodka badania izotopowe wykonuje się tylko w niezbędnych przypadkach — badanie nie powinno opóźniać włączenia L-tyroksyny.' }
           ]
         }
       ],
@@ -4313,7 +4368,7 @@
                 options: [
                   {
                     threshold: 'IGF-I obniżone',
-                    action: 'OBNIŻONE IGF-I + spełnione warunki Programu B.111 — wystarcza do kwalifikacji bez testów stymulacyjnych',
+                    action: 'obniżone IGF-I + spełnione warunki Programu B.111 — wystarcza do kwalifikacji bez testów stymulacyjnych',
                     variant: 'success', icon: 'check',
                     detail: [
                       'Warunki do ODSTĄPIENIA od testów stymulacyjnych wg Programu B.111: (a) wielohormonalna niedoczynność przysadki w zakresie WSZYSTKICH OSI (z wyjątkiem prolaktyny); (b) potwierdzona przyczyna ORGANICZNA lub GENETYCZNA tego stanu.',
@@ -4339,9 +4394,9 @@
               { label: '5. IGF-I', text: 'kluczowy marker rezerwy somatotropinowej.' },
               { label: '6. Gospodarka węglowodanowa', text: 'glikemia na czczo + HbA1c LUB OGTT (75 g) z oceną glikemii i insulinemii.' },
               { label: '7. Lipidogram', text: 'TG + TC + HDL-C + LDL-C.' },
-              { label: '8. TSH + fT4', text: 'ocena osi tarczycowej (wyrównać niedoczynność PRZED testami stymulacyjnymi).' },
+              { label: '8. TSH + fT4', text: 'ocena osi tarczycowej (wyrównać niedoczynność przed testami stymulacyjnymi).' },
               { label: '9. Kwestionariusz QoL', text: 'ocena jakości życia wg kwestionariusza opublikowanego w Endokrynol. Pol. 2008;59(5):374-384.' },
-              { label: '10. Kortyzol poranny', text: 'wykluczenie niedoczynności kory nadnerczy (wyrównać hydrokortyzonem PRZED testami stymulacyjnymi).' },
+              { label: '10. Kortyzol poranny', text: 'wykluczenie niedoczynności kory nadnerczy (wyrównać hydrokortyzonem przed testami stymulacyjnymi).' },
               { label: '11. Test(y) stymulacji GH', text: 'jeden lub dwa testy stymulujące sekrecję GH zgodnie z Kryteriami Kwalifikacji; podstawowy — test z insuliną i.v.; przy przeciwwskazaniach lub konieczności drugiego testu — test z glukagonem, L-DOPA lub argininą.' },
               { label: '12. Obrazowanie okolicy podwzgórzowo-przysadkowej', text: 'MRI lub TK z kontrastem — wykluczenie czynnego procesu nowotworowego.' },
               { label: '13. USG jamy brzusznej', text: 'wstępna ocena onkologiczna i metaboliczna.' },
@@ -4430,8 +4485,8 @@
             icon: 'list-search',
             title: 'Ocena reszty osi przysadkowej (wielohormonalna niedoczynność)',
             items: [
-              { label: 'Tarczyca — TSH + fT4', text: 'wykluczenie WTÓRNEJ niedoczynności tarczycy (TSH nieadekwatnie prawidłowe / niskie + fT4 obniżone). Wyrównać L-tyroksyną PRZED testami stymulacyjnymi.' },
-              { label: 'Kora nadnerczy — kortyzol poranny + ACTH', text: 'wykluczenie wtórnej niedoczynności kory nadnerczy — STAN ZAGRAŻAJĄCY ŻYCIU. Pilna substytucja hydrokortyzonem PRZED innymi terapiami; test z insuliną bezwzględnie wymaga wykluczenia niedoczynności nadnerczy (ryzyko kryzy podczas hipoglikemii).' },
+              { label: 'Tarczyca — TSH + fT4', text: 'wykluczenie WTÓRNEJ niedoczynności tarczycy (TSH nieadekwatnie prawidłowe / niskie + fT4 obniżone). Wyrównać L-tyroksyną przed testami stymulacyjnymi.' },
+              { label: 'Kora nadnerczy — kortyzol poranny + ACTH', text: 'wykluczenie wtórnej niedoczynności kory nadnerczy — STAN ZAGRAŻAJĄCY ŻYCIU. Pilna substytucja hydrokortyzonem przed innymi terapiami; test z insuliną bezwzględnie wymaga wykluczenia niedoczynności nadnerczy (ryzyko kryzy podczas hipoglikemii).' },
               { label: 'Gonady — LH + FSH + testosteron / estradiol', text: 'wykluczenie hipogonadyzmu hipogonadotropowego; substytucja steroidami płciowymi przed testami stymulacyjnymi (steroidy modulują wydzielanie GH).' },
               { label: 'Prolaktyna', text: 'w niedoczynności przysadki zwykle obniżona; PODWYŻSZONA przy efekcie przerwania szypuły przez makrogruczolaka (kompresja szypuły blokuje hamujący wpływ dopaminy podwzgórzowej).' },
               { label: 'MRI przysadki z gadolinium', text: 'wykluczenie zmian organicznych w okolicy podwzgórzowo-przysadkowej (gruczolak, czaszkogardlak, naciek, krwawienie, zespół pustego siodła) — także wymagane przy kwalifikacji do Programu B.111 (pkt 12).' }
@@ -4455,7 +4510,7 @@
               note: 'Test z wyboru u dorosłego (Program B.111 wskazuje go jako podstawowy). Wymaga indukcji hipoglikemii (glikemia < 40 mg/dL = 2,2 mmol/L) insuliną i.v. 0,05–0,15 IU/kg. Próg Programu B.111: szczyt GH < 3,0 ng/mL — jednolity dla dorosłych i młodzieży po terapii promującej wzrastanie. Przeciwwskazania bezwzględne: choroba niedokrwienna serca, padaczka, nieleczona niedoczynność kory nadnerczy; ostrożnie przy wieku > 65 lat. Wykonywać wyłącznie w ośrodku z doświadczeniem (ryzyko ciężkiej hipoglikemii — glukoza 40% gotowa do podania).',
               description: 'Test z insuliną (insulin tolerance test, ITT) — złoty standard diagnostyki GHD u dorosłych. Zasada: farmakologicznie indukowana hipoglikemia jest najsilniejszym fizjologicznym stymulatorem GH poprzez mechanizm kontrregulacji (kortyzol + GH + glukagon + adrenalina). Protokół: pacjent na czczo, dostęp żylny w obu rękach (jeden do podania insuliny i pobierania krwi, drugi do glukozy ratunkowej — 40% gotowej do podania). Insulina krystaliczna i.v. w dawce 0,05–0,15 IU/kg (większa dawka przy podejrzeniu insulinooporności — otyłość, akromegalia, choroby przysadki). Punkty pomiaru GH (+ kortyzol jako kontrola): wyjściowe −30 i 0 min (przed insuliną — baseline), następnie 30, 45, 60, 90, 120 min po insulinie. Pomiar glikemii i objawów hipoglikemii co 15–30 min. Cel: glikemia < 40 mg/dL (2,2 mmol/L) + objawy hipoglikemii (drżenie, pocenie, tachykardia) — bez tego test jest nieinterpretowalny. Próg Programu B.111: szczyt GH < 3,0 ng/mL = ciężki GHD u dorosłych i u młodzieży po zakończeniu terapii promującej wzrastanie (jednolity próg, niezależny od wieku). Kortyzol: równoczesna ocena rezerwy nadnerczowej (szczyt > 500 nmol/L = prawidłowa; < 500 = niewydolność wtórna). Ryzyko: ciężka hipoglikemia, drgawki, arytmie — test wyłącznie w ośrodku z doświadczeniem.' },
             { ext: 'ghrh_arg', label: 'GHRH + arginina (alternatywa)',
-              note: 'Bezpieczna alternatywa dla ITT (bez hipoglikemii) — wskazana przy przeciwwskazaniach do ITT. PROGI zależne OD BMI (Lewiński 2018): BMI < 25 kg/m² → szczyt GH < 11,0 ng/mL = GHD; BMI 25–30 → < 8,0; BMI > 30 → < 4,0 (otyłość fizjologicznie obniża odpowiedź). UWAGA: ocenia jedynie maksymalną zdolność wydzielniczą PRZYSADKI (NIE całej osi podwzgórze-przysadka) — może nie wykryć GHD podwzgórzowego.',
+              note: 'Bezpieczna alternatywa dla ITT (bez hipoglikemii) — wskazana przy przeciwwskazaniach do ITT. PROGI zależne OD BMI (Lewiński 2018): BMI < 25 kg/m² → szczyt GH < 11,0 ng/mL = GHD; BMI 25–30 → < 8,0; BMI > 30 → < 4,0 (otyłość fizjologicznie obniża odpowiedź). Uwaga: ocenia jedynie maksymalną zdolność wydzielniczą PRZYSADKI (NIE całej osi podwzgórze-przysadka) — może nie wykryć GHD podwzgórzowego.',
               description: 'GHRH + arginina — kombinowany test stymulacji wydzielania GH, ALTERNATYWA dla ITT u dorosłego z przeciwwskazaniami do hipoglikemii. Zasada: GHRH bezpośrednio pobudza komórki somatotropowe przysadki; arginina hamuje somatostatynę podwzgórzową (znosi tonus hamujący). Razem dają mocną stymulację bez konieczności wywoływania hipoglikemii. PROTOKÓŁ: pacjent na czczo; GHRH 1 μg/kg i.v. bolus + arginina 0,5 g/kg (max 30 g) w 30-min wlewie i.v.; pomiar GH w punktach 0, 15, 30, 45, 60, 90 min. PROGI POLSKIE (Lewiński 2018, zależne od BMI): BMI < 25 kg/m² → szczyt GH < 11,0 ng/mL; BMI 25–30 → < 8,0; BMI > 30 → < 4,0. Zaleta: bezpieczny (bez hipoglikemii), powtarzalny, dobrze tolerowany. OGRANICZENIE: ocenia jedynie REZERWĘ wydzielniczą przysadki, NIE funkcję całej osi podwzgórze-przysadka — może NIE wykryć GHD podwzgórzowego (gdy uszkodzenie jest na poziomie podwzgórza). Z tego powodu przy ujemnym wyniku GHRH+arg u pacjenta z silnym klinicznym podejrzeniem GHD i zmianami organicznymi w okolicy podwzgórza → dodatkowo wykonać ITT (jeśli możliwe).' },
             { ext: 'glucagon_test', label: 'Test z glukagonem',
               note: 'U dorosłych: alternatywa dla testu z insuliną (zwykle gdy ITT przeciwwskazany, a GHRH+arginina niedostępna). U dzieci: jeden z 2 testów stymulacji. Próg Programu B.111: szczyt GH < 3,0 ng/mL u dorosłego i młodzieży po terapii promującej wzrastanie (jednolity). Próg pediatryczny w B.19: szczyt GH < 10 ng/mL. Protokół: glukagon 1 mg i.m. (< 90 kg) lub 1,5 mg (≥ 90 kg); pomiar GH w punktach 0, 90, 120, 150, 180 min. Działa wolniej niż test z insuliną, czas trwania 3 h. Skutki uboczne: nudności, wymioty, opóźniona hipoglikemia po 4–5 h (pacjent musi zjeść po teście).',
@@ -4474,7 +4529,7 @@
       ],
       guideline: 'Program Lekowy B.111 NFZ — "Leczenie ciężkiego niedoboru hormonu wzrostu u pacjentów dorosłych oraz u młodzieży po zakończeniu terapii promującej wzrastanie" (ICD-10 E23.0; Załącznik B.111 do Obwieszczenia Ministra Zdrowia, obowiązujący od XI.2020). Źródła pomocnicze: Lewiński/Smyczyńska/Stawerska 2018 (Endokrynol Pol), Endocrine Society 2011 (Molitch), GH Research Society 2007. Dla DZIECI — zob. osobny panel "Niedobór hormonu wzrostu (dzieci — programy lekowe)".',
       sources: [
-        'Załącznik B.111 do Obwieszczenia Ministra Zdrowia — LECZENIE CIĘŻKIEGO NIEDOBORU HORMONU WZROSTU U PACJENTÓW DOROSŁYCH ORAZ U MŁODZIEŻY PO ZAKOŃCZENIU TERAPII PROMUJĄCEJ WZRASTANIE (ICD-10 E23.0). Program Lekowy obowiązujący w Polsce od listopada 2020 r. Realizator: Zespół Koordynacyjny ds. Stosowania Hormonu Wzrostu u Pacjentów Dorosłych. URL: https://www.gov.pl/web/zdrowie/programy-lekowe',
+        'Załącznik B.111 do Obwieszczenia Ministra Zdrowia — LECZENIE CIĘŻKIEGO NIEDOBORU HORMONU WZROSTU U PACJENTÓW DOROSŁYCH oraz U MŁODZIEŻY PO ZAKOŃCZENIU TERAPII PROMUJĄCEJ WZRASTANIE (ICD-10 E23.0). Program Lekowy obowiązujący w Polsce od listopada 2020 r. Realizator: Zespół Koordynacyjny ds. Stosowania Hormonu Wzrostu u Pacjentów Dorosłych. URL: https://www.gov.pl/web/zdrowie/programy-lekowe',
         'Lewiński A, Smyczyńska J, Stawerska R, Hilczer M, Stasiak M, Bednarczuk T, Bolanowski M i wsp. Ogólnopolski Program Leczenia Ciężkiego Niedoboru Hormonu Wzrostu u Osób Dorosłych oraz u Młodzieży po Zakończeniu Terapii Promującej Wzrastanie. Endokrynologia Polska. 2018;69(5):497-524.',
         'Molitch ME, Clemmons DR, Malozowski S, Merriam GR, Vance ML. Evaluation and Treatment of Adult Growth Hormone Deficiency: An Endocrine Society Clinical Practice Guideline. J Clin Endocrinol Metab. 2011;96(6):1587-1609.',
         'Cook DM, Yuen KC, Biller BMK i wsp. American Association of Clinical Endocrinologists Medical Guidelines for Clinical Practice for Growth Hormone Use in Growth Hormone-Deficient Adults and Transition Patients — 2009 Update. Endocr Pract. 2009;15(Suppl 2):1-29.',
@@ -4583,7 +4638,7 @@
                       { heading: 'Kryteria włączenia' },
                       { items: [
                         { label: 'Stygmaty ZT + kariotyp', text: '45,X lub mozaicyzm — konsultacja genetyczna potwierdzona dodatnim wynikiem badania kariotypu.' },
-                        { label: 'FISH dla regionów chromosomu Y', text: 'konieczne przy podejrzeniu mozaicyzmu z linią Y. Wykrycie markerów Y wymaga profilaktycznej gonadektomii PRZED włączeniem rhGH (ryzyko gonadoblastoma).' },
+                        { label: 'FISH dla regionów chromosomu Y', text: 'konieczne przy podejrzeniu mozaicyzmu z linią Y. Wykrycie markerów Y wymaga profilaktycznej gonadektomii przed włączeniem rhGH (ryzyko gonadoblastoma).' },
                         { label: 'Niskorosłość', text: 'wzrost < 3. centyla dla wieku, na siatkach centylowych dla populacji DZIEWCZĄT POLSKICH.' },
                         { label: 'Upośledzone tempo wzrastania', text: 'HV < −1 SDS w odniesieniu do tempa wzrastania dziewcząt polskich (≥ 6-MIESIĘCZNY okres obserwacji) — z określeniem przewidywanego wzrostu ostatecznego metodą BAYLEY-PINEAU.' },
                         { label: 'Wiek kostny opóźniony', text: 'oceniany metodą Greulich-Pyle.' },
@@ -4806,7 +4861,7 @@
                 options: [
                   {
                     threshold: 'Kryteria',
-                    action: 'Skrajna niskorosłość < −3 SDS + IGF-1 < −2,5 SDS + PRAWIDŁOWE stężenie GH (test nocnego wyrzutu, ew. 2 testy stymulacji) + wykluczenie innych przyczyn niskorosłości + rozpoznanie potwierdzone TESTEM GENERACJI SOMATOMEDYN.',
+                    action: 'Skrajna niskorosłość < −3 SDS + IGF-1 < −2,5 SDS + prawidłowe stężenie GH (test nocnego wyrzutu, ew. 2 testy stymulacji) + wykluczenie innych przyczyn niskorosłości + rozpoznanie potwierdzone TESTEM GENERACJI SOMATOMEDYN.',
                     variant: 'success', icon: 'check',
                     detail: [
                       { heading: 'Specyfika programu' },
@@ -4819,7 +4874,7 @@
                         { label: 'Niedobór IGF-1', text: 'stężenie IGF-1 < −2,5 SDS w odniesieniu do płci i wieku.' },
                         { label: 'Prawidłowe stężenie GH', text: 'test krótkiego nocnego wyrzutu (≥ 5 pomiarów), w uzasadnionych przypadkach poszerzony o 2 testy stymulacji sekrecji GH.' },
                         { label: 'Wykluczenie innych przyczyn niskorosłości', text: 'niedokrwistość, choroby wątroby, niedoczynność tarczycy, zaburzenia wchłaniania i trawienia jelitowego, obciążenia okresu okołoporodowego.' },
-                        { label: 'Test generacji somatomedyn', text: 'POTWIERDZENIE rozpoznania — podanie egzogennego GH przez kilka dni: w prawidłowej osi powoduje wzrost IGF-1; brak wzrostu = pierwotny niedobór IGF-1.' },
+                        { label: 'Test generacji somatomedyn', text: 'Potwierdzenie rozpoznania — podanie egzogennego GH przez kilka dni: w prawidłowej osi powoduje wzrost IGF-1; brak wzrostu = pierwotny niedobór IGF-1.' },
                         { label: 'Badania molekularne (w przypadkach wątpliwych)', text: 'mutacje GHR (zespół Larona — defekt receptora GH); mutacje genu IGF1 lub promotora tego genu.' }
                       ]},
                       { heading: 'Badania przy kwalifikacji' },
@@ -4836,7 +4891,7 @@
                       ]},
                       { heading: 'Dawkowanie' },
                       { items: [
-                        { label: 'Mecasermina (rhIGF-1, Increlex)', text: '0,04–0,12 mg/kg masy ciała DWA RAZY NA DOBĘ s.c. UWAGA — inaczej niż przy rhGH, lek podawany 2× dziennie.' }
+                        { label: 'Mecasermina (rhIGF-1, Increlex)', text: '0,04–0,12 mg/kg masy ciała DWA RAZY NA DOBĘ s.c. Uwaga — inaczej niż przy rhGH, lek podawany 2× dziennie.' }
                       ]},
                       { heading: 'Monitorowanie' },
                       { items: [
@@ -4883,7 +4938,7 @@
               { label: 'MRI/TK okolicy podwzgórzowo-przysadkowej', text: 'obowiązkowe w B.19 (SNP — wykluczenie zmian organicznych: czaszkogardlak, hipoplazja, zespół przerwania szypuły), B.64 (SGA — wykluczenie przeciwwskazań do rhGH), B.20 (pierwotny niedobór IGF-1).' },
               { label: 'Test metylacji SNRPN', text: 'rozpoznanie PWS w B.41 (delecja 15q11 / mUPD15 / defekt imprintingu).' },
               { label: 'Klirens kreatyniny / eGFR Schwartz', text: 'rozpoznanie PNN; w B.38 wymagany klirens < 75 ml/1,73 m²/min.' },
-              { label: 'Test generacji somatomedyn', text: 'POTWIERDZENIE pierwotnego niedoboru IGF-1 w B.20 (podanie egzogennego GH — brak wzrostu IGF-1 = defekt poniżej receptora GH).' },
+              { label: 'Test generacji somatomedyn', text: 'Potwierdzenie pierwotnego niedoboru IGF-1 w B.20 (podanie egzogennego GH — brak wzrostu IGF-1 = defekt poniżej receptora GH).' },
               { label: 'Test stymulacji GH (2 niezależne)', text: 'obowiązkowy w B.19 (szczyt GH < 10 ng/mL — przy WNP lub udokumentowanej mutacji wystarczy 1 test) oraz B.64 (szczyt GH ≥ 10 ng/mL — wykluczenie współistniejącego GHD). Test insulinowy — DOPIERO po 5. r.ż.; pozostałe testy — po 2. r.ż.' }
             ]
           }
@@ -4901,16 +4956,16 @@
           tests: [
             { ext: 'itt', label: 'Test z insuliną (test hipoglikemii poinsulinowej)',
               note: 'Złoty standard. Hipoglikemia bezwzględna po insulinie 0,1 IU/kg i.v. (0,05 IU/kg przy podejrzeniu ciężkiego GHD lub u dzieci < 5 r.ż.). Glikemia < 40 mg% (< 2,2 mmol/L) lub spadek ≥ 50% od wyjściowej. PUNKTY POMIARU GH: -30, 0 min (baseline przed insuliną); 30, 45, 60, 90, 120 min (po insulinie). Próg PL: szczyt GH < 10 ng/mL = SNP. PRZECIWWSKAZANIA: nieleczona niedoczynność tarczycy, choroba sercowo-naczyniowa, drgawki/OUN, ostry stan chorobowy; NIE rekomendowany u dzieci < 5 r.ż.',
-              description: 'Test z insuliną (insulin tolerance test, ITT) u dziecka — historycznie pierwszy i obecnie ZŁOTY STANDARD diagnostyki SNP. MECHANIZM: dożylna insulina wywołuje hipoglikemię, która przez ośrodkowe mechanizmy stresowe stymuluje wydzielanie GH (wzrost GHRH + spadek somatostatyny + wzrost katecholamin). Równolegle ocenia oś ACTH-nadnercza (kortyzol). WARUNKI: rano, na czczo (≥ 8 h u dzieci > 4 lat, ≥ 4 h u młodszych), stały nadzór, glikemia przyłóżkowa, kaniulizacja żyły obwodowej, glukoza 10–20% + glukagon + hydrokortyzon gotowe do podania, masa ciała sprawdzona, posiłek po teście. METODA: (1) PRZED podaniem insuliny — dwukrotne pobranie wyjściowe glukozy + kortyzolu + GH w punktach -30 min i 0 min (baseline > 3,0 mmol/L); (2) insulina krótko działająca 0,1 IU/kg i.v. (np. Actrapid HM Novo Nordisk) — 0,05 IU/kg przy podejrzeniu ciężkiego GHD lub u dzieci < 5 r.ż.; (3) glikemia w 15, 30, 45, 60, 90, 120 min (najniższa zwykle ~20 min); (4) GH + kortyzol w punktach 30, 45, 60, 90, 120 min (po insulinie). PEŁNA SERIA POMIARU GH: -30, 0, 30, 45, 60, 90, 120 min (7 punktów). Interpretacja (Polska, GH Research Society 2000): szczyt GH < 10 ng/mL = SNP w dwóch testach; < 5 ng/mL = ciężki GHD. PRZEDŁUŻAJĄCA SIĘ HIPOGLIKEMIA < 40 mg% lub objawy kliniczne — natychmiast 10–20% glukoza i.v. (2 ml/kg 10% glukozy) + hydrokortyzon 100 mg i.v. (zwłaszcza przy podejrzeniu niedoczynności przysadki). PRZECIWWSKAZANIA bezwzględne: nieleczona niedoczynność tarczycy, choroba sercowo-naczyniowa, drgawki/OUN, hipoglikemia, ostry stan; NIE rekomendowany u dzieci < 5 r.ż. — w tej grupie preferowany glukagon.' },
+              description: 'Test z insuliną (insulin tolerance test, ITT) u dziecka — historycznie pierwszy i obecnie ZŁOTY STANDARD diagnostyki SNP. MECHANIZM: dożylna insulina wywołuje hipoglikemię, która przez ośrodkowe mechanizmy stresowe stymuluje wydzielanie GH (wzrost GHRH + spadek somatostatyny + wzrost katecholamin). Równolegle ocenia oś ACTH-nadnercza (kortyzol). WARUNKI: rano, na czczo (≥ 8 h u dzieci > 4 lat, ≥ 4 h u młodszych), stały nadzór, glikemia przyłóżkowa, kaniulizacja żyły obwodowej, glukoza 10–20% + glukagon + hydrokortyzon gotowe do podania, masa ciała sprawdzona, posiłek po teście. METODA: (1) przed podaniem insuliny — dwukrotne pobranie wyjściowe glukozy + kortyzolu + GH w punktach -30 min i 0 min (baseline > 3,0 mmol/L); (2) insulina krótko działająca 0,1 IU/kg i.v. (np. Actrapid HM Novo Nordisk) — 0,05 IU/kg przy podejrzeniu ciężkiego GHD lub u dzieci < 5 r.ż.; (3) glikemia w 15, 30, 45, 60, 90, 120 min (najniższa zwykle ~20 min); (4) GH + kortyzol w punktach 30, 45, 60, 90, 120 min (po insulinie). PEŁNA SERIA POMIARU GH: -30, 0, 30, 45, 60, 90, 120 min (7 punktów). Interpretacja (Polska, GH Research Society 2000): szczyt GH < 10 ng/mL = SNP w dwóch testach; < 5 ng/mL = ciężki GHD. PRZEDŁUŻAJĄCA SIĘ HIPOGLIKEMIA < 40 mg% lub objawy kliniczne — natychmiast 10–20% glukoza i.v. (2 ml/kg 10% glukozy) + hydrokortyzon 100 mg i.v. (zwłaszcza przy podejrzeniu niedoczynności przysadki). PRZECIWWSKAZANIA bezwzględne: nieleczona niedoczynność tarczycy, choroba sercowo-naczyniowa, drgawki/OUN, hipoglikemia, ostry stan; NIE rekomendowany u dzieci < 5 r.ż. — w tej grupie preferowany glukagon.' },
             { ext: 'glucagon_test', label: 'Test z glukagonem',
               note: 'Rekomendowany u małych dzieci < 5 r.ż. (alternatywa ITT u niemowląt). Glukagon 0,03 mg/kg s.c./i.m. (max 1 mg; 1,5 mg gdy masa > 90 kg). Pomiar GH w 0, 60, 90, 120, 150, 180 min. Mechanizm: hiperglikemizujące działanie → wyrzut insuliny → następcza hipoglikemia → wyrzut GH (łagodniejszy niż ITT). PRZECIWWSKAZANIE: cukrzyca.',
-              description: 'Test z glukagonem — szeroko dostępny i postrzegany jako bezpieczny, drugi po ITT najczęściej stosowany test stymulacji GH u dzieci. MECHANIZM: glukagon NIE stymuluje wprost przysadki — działa POŚREDNIO przez podanie domięśniowe lub podskórne (NIE dożylne): hiperglikemizujące działanie → wyrzut endogennej insuliny → następcza hipoglikemia → wyrzut GH (łagodniejszy niż w ITT, bo bufory regulacyjne nie dopuszczają do skrajnej hipoglikemii). Z tego powodu efekt GH pojawia się PÓŹNIEJ niż w ITT. WSKAZANIA: ocena rezerwy GH i ACTH; zwłaszcza REKOMENDOWANY U MAŁYCH DZIECI < 5 r.ż. (w tym niemowląt) — gdy ITT jest przeciwwskazany. WARUNKI: takie same jak ITT (rano, na czczo, monitorowanie glikemii). METODA: (1) próbka 0: glukoza + GH + kortyzol; (2) glukagon 0,03 mg/kg s.c./i.m. (max 1 mg; 1,5 mg gdy masa > 90 kg) — preferowane i.m.; (3) pomiar GH w 60, 90, 120, 150, 180 min (niektórzy do 240 min). Polski preparat: GlucaGen Hypokit 1 mg (Novo Nordisk). PRZECIWWSKAZANIE: cukrzyca (niepewne warunki stymulacji — endogenny wyrzut insuliny zaburzony). Próg interpretacji: szczyt GH < 10 ng/mL = SNP. SKUTKI UBOCZNE: nudności, opóźniona hipoglikemia po 4–5 h (pacjent MUSI zjeść po teście).' },
+              description: 'Test z glukagonem — szeroko dostępny i postrzegany jako bezpieczny, drugi po ITT najczęściej stosowany test stymulacji GH u dzieci. MECHANIZM: glukagon NIE stymuluje wprost przysadki — działa POŚREDNIO przez podanie domięśniowe lub podskórne (NIE dożylne): hiperglikemizujące działanie → wyrzut endogennej insuliny → następcza hipoglikemia → wyrzut GH (łagodniejszy niż w ITT, bo bufory regulacyjne nie dopuszczają do skrajnej hipoglikemii). Z tego powodu efekt GH pojawia się PÓŹNIEJ niż w ITT. wskazania: ocena rezerwy GH i ACTH; zwłaszcza REKOMENDOWANY U MAŁYCH DZIECI < 5 r.ż. (w tym niemowląt) — gdy ITT jest przeciwwskazany. WARUNKI: takie same jak ITT (rano, na czczo, monitorowanie glikemii). METODA: (1) próbka 0: glukoza + GH + kortyzol; (2) glukagon 0,03 mg/kg s.c./i.m. (max 1 mg; 1,5 mg gdy masa > 90 kg) — preferowane i.m.; (3) pomiar GH w 60, 90, 120, 150, 180 min (niektórzy do 240 min). Polski preparat: GlucaGen Hypokit 1 mg (Novo Nordisk). PRZECIWWSKAZANIE: cukrzyca (niepewne warunki stymulacji — endogenny wyrzut insuliny zaburzony). Próg interpretacji: szczyt GH < 10 ng/mL = SNP. SKUTKI UBOCZNE: nudności, opóźniona hipoglikemia po 4–5 h (pacjent MUSI zjeść po teście).' },
             { ext: 'clonidine_test', label: 'Test z klonidyną',
               note: 'Test skriningowy u dzieci. Klonidyna 0,15 mg/m² p.o. (alternatywnie 0,05 lub 0,10 mg/m²). Mechanizm: pobudzenie receptorów α2-adrenergicznych → wzrost GHRH. Test 120 min, krew co 30 min. Szczyt GH w 30–60 min. Dokładność (Ranke): ~80% przy cut-off 10 ng/mL. PRZECIWWSKAZANIA: zaburzenia rytmu serca, blok II/III°, hipotensja, zespół Raynauda, niewydolność wątroby/nerek.',
-              description: 'Test z klonidyną — szeroko stosowany u dzieci, zwykle jako test skriningowy lub jeden z dwóch wymaganych do potwierdzenia SNP. MECHANIZM: klonidyna (agonista α2-adrenergiczny) stymuluje wydzielanie GH przez pobudzenie presynaptycznego receptora α2 → wzrost GHRH. Dawka jest wprost proporcjonalna do wyrzutu GH. DAWKA: najczęściej 0,15 mg/m² powierzchni ciała p.o.; w niektórych ośrodkach 0,05 lub 0,10 mg/m². POLSKIE PREPARATY: Iporel (Jelfa) 0,075 mg; Haemiton (Asta Medica) 0,075/0,15/0,3 mg; Catapresan (Boehringer) 0,075 mg. METODA: pacjent na czczo, pomiar ciśnienia tętniczego PRZED testem (konieczne), klonidyna p.o.; pomiar GH w 0, 30, 60, 90, 120 min (niektórzy ośrodki do 150–180 min). Szczyt GH zwykle w 30–60 min. PRZECIWWSKAZANIA: zaburzenia rytmu serca (zespół chorego węzła zatokowego, blok II/III°), umiarkowana bradyarytmia, hipotensja, zespół Raynauda, niewydolność wątroby/nerek, zaburzenia krążenia mózgowego. SKUTKI UBOCZNE: senność, osłabienie, OBNIŻENIE CIŚNIENIA TĘTNICZEGO — kontrola RR co 30 min w trakcie testu + przez godzinę po nim. Długotrwała senność może spowodować hipoglikemię → posiłek po teście. Interpretacja: Ranke ~80% dokładność przy cut-off GH 10 ng/mL; średni szczyt GH u zdrowych dzieci 23–37 ng/mL; Obara dokładność 72%, czułość 50%, swoistość 86,7%.' },
+              description: 'Test z klonidyną — szeroko stosowany u dzieci, zwykle jako test skriningowy lub jeden z dwóch wymaganych do potwierdzenia SNP. MECHANIZM: klonidyna (agonista α2-adrenergiczny) stymuluje wydzielanie GH przez pobudzenie presynaptycznego receptora α2 → wzrost GHRH. Dawka jest wprost proporcjonalna do wyrzutu GH. DAWKA: najczęściej 0,15 mg/m² powierzchni ciała p.o.; w niektórych ośrodkach 0,05 lub 0,10 mg/m². POLSKIE PREPARATY: Iporel (Jelfa) 0,075 mg; Haemiton (Asta Medica) 0,075/0,15/0,3 mg; Catapresan (Boehringer) 0,075 mg. METODA: pacjent na czczo, pomiar ciśnienia tętniczego przed testem (konieczne), klonidyna p.o.; pomiar GH w 0, 30, 60, 90, 120 min (niektórzy ośrodki do 150–180 min). Szczyt GH zwykle w 30–60 min. PRZECIWWSKAZANIA: zaburzenia rytmu serca (zespół chorego węzła zatokowego, blok II/III°), umiarkowana bradyarytmia, hipotensja, zespół Raynauda, niewydolność wątroby/nerek, zaburzenia krążenia mózgowego. SKUTKI UBOCZNE: senność, osłabienie, OBNIŻENIE CIŚNIENIA TĘTNICZEGO — kontrola RR co 30 min w trakcie testu + przez godzinę po nim. Długotrwała senność może spowodować hipoglikemię → posiłek po teście. Interpretacja: Ranke ~80% dokładność przy cut-off GH 10 ng/mL; średni szczyt GH u zdrowych dzieci 23–37 ng/mL; Obara dokładność 72%, czułość 50%, swoistość 86,7%.' },
             { ext: 'arginine_test', label: 'Test z argininą',
-              note: 'Stymulacja GH u dzieci wlewem dożylnym argininy. Dawka 0,5 g/kg (max 30 g) jako 10% chlorowodorek argininy w 30-min wlewie i.v. w 0,9% NaCl. Test 150 min, krew co 30 min (-30, 0, 30, 60, 90, 120 min). Mechanizm: zahamowanie somatostatyny + stymulacja GHRH. Szczyt GH w 30–60 min. Dokładność (Ranke): 75–86%. UWAGA: późna hipoglikemia (arginina stymuluje insulinę).',
-              description: 'Test z argininą — L-arginina jest aminokwasem stosowanym jako bodziec do wydzielania GH od lat 60. XX wieku. MECHANIZM: arginina powoduje wyrzut GH przez (1) zahamowanie wydzielania somatostatyny i (2) prawdopodobnie stymulację wydzielania GHRH przez pobudzenie receptorów α-adrenergicznych. DAWKA: 0,5 g/kg m.c., maksymalnie 30 g. W postaci 10% chlorowodorku argininy (np. L-Arginin-hydrochlorid 21% Braun, amp. 20 ml) podaje się w 30-MINUTOWYM WLEWIE DOŻYLNYM w roztworze 0,9% NaCl. METODA: test trwa łącznie 150 minut. Krew na GH pobiera się w odstępach półgodzinnych — pierwsze pobranie -30 min (PRZED wlewem), następne 0 min (po zakończeniu wlewu), 30, 60, 90, 120 min. U dzieci z podejrzeniem wielohormonalnej niedoczynności przysadki dodatkowo glikemia. Szczyt GH zwykle w 30–60 min. PRZECIWWSKAZANIA: ciężkie choroby wątroby, niewydolność nerek, kwasica metaboliczna i oddechowa. SKUTKI UBOCZNE: rzadkie — nudności, wymioty, zaczerwienienie skóry w miejscu wlewu, bóle głowy. ISTOTNE: PÓŹNA HIPOGLIKEMIA (arginina stymuluje wyrzut insuliny) — może ujawnić się po zakończeniu badania, dlatego pacjent musi zjeść po teście. Interpretacja: Ranke 75% (cut-off GH 10 ng/mL) — 86% (cut-off 3 ng/mL) dokładność predykcji SNP. Zadik — średni szczyt GH u zdrowych dzieci 13,1 ± 6,1 ng/mL.' },
+              note: 'Stymulacja GH u dzieci wlewem dożylnym argininy. Dawka 0,5 g/kg (max 30 g) jako 10% chlorowodorek argininy w 30-min wlewie i.v. w 0,9% NaCl. Test 150 min, krew co 30 min (-30, 0, 30, 60, 90, 120 min). Mechanizm: zahamowanie somatostatyny + stymulacja GHRH. Szczyt GH w 30–60 min. Dokładność (Ranke): 75–86%. Uwaga: późna hipoglikemia (arginina stymuluje insulinę).',
+              description: 'Test z argininą — L-arginina jest aminokwasem stosowanym jako bodziec do wydzielania GH od lat 60. XX wieku. MECHANIZM: arginina powoduje wyrzut GH przez (1) zahamowanie wydzielania somatostatyny i (2) prawdopodobnie stymulację wydzielania GHRH przez pobudzenie receptorów α-adrenergicznych. DAWKA: 0,5 g/kg m.c., maksymalnie 30 g. W postaci 10% chlorowodorku argininy (np. L-Arginin-hydrochlorid 21% Braun, amp. 20 ml) podaje się w 30-MINUTOWYM WLEWIE DOŻYLNYM w roztworze 0,9% NaCl. METODA: test trwa łącznie 150 minut. Krew na GH pobiera się w odstępach półgodzinnych — pierwsze pobranie -30 min (przed wlewem), następne 0 min (po zakończeniu wlewu), 30, 60, 90, 120 min. U dzieci z podejrzeniem wielohormonalnej niedoczynności przysadki dodatkowo glikemia. Szczyt GH zwykle w 30–60 min. PRZECIWWSKAZANIA: ciężkie choroby wątroby, niewydolność nerek, kwasica metaboliczna i oddechowa. SKUTKI UBOCZNE: rzadkie — nudności, wymioty, zaczerwienienie skóry w miejscu wlewu, bóle głowy. ISTOTNE: PÓŹNA HIPOGLIKEMIA (arginina stymuluje wyrzut insuliny) — może ujawnić się po zakończeniu badania, dlatego pacjent musi zjeść po teście. Interpretacja: Ranke 75% (cut-off GH 10 ng/mL) — 86% (cut-off 3 ng/mL) dokładność predykcji SNP. Zadik — średni szczyt GH u zdrowych dzieci 13,1 ± 6,1 ng/mL.' },
             { ext: 'ldopa_test', label: 'Test z L-DOPA',
               note: 'L-DOPA (lewodopa) 300 mg/m² p.o. lub wg masy: < 15 kg → 125 mg; 15–35 kg → 250 mg; > 35 kg → 500 mg. Test 2 h, szczyt GH w 60–120 min. Mechanizm: stymulacja receptorów α-adrenergicznych i dopaminergicznych → wzrost GHRH. Dokładność (Ranke): 56–81%. Uwaga: nudności u ~1/3 pacjentów (z tego powodu w IPCZD obecnie nie stosowany). Czasem łączony z propranololem (β-bloker).',
               description: 'Test z L-DOPA (lewodopa, 3-hydroksy-L-tyrozyna) — naturalny aminokwas, prekursor dopaminy, najczęściej stosowany jako lek w chorobie Parkinsona. Mechanizm: L-DOPA stymuluje wyrzut GH poprzez pobudzenie GHRH za pośrednictwem receptorów α-adrenergicznych i dopaminergicznych. Uwaga: L-DOPA jednocześnie hamuje sekrecję GH przez pobudzenie receptorów β-adrenergicznych — niekiedy stosowana w testach łącznie z β-blokerem (propranolol) w celu pełniejszej oceny rezerwy GH. Dawka: 300 mg/m² p.o. lub w zależności od masy ciała: < 15 kg → 125 mg; 15–35 kg → 250 mg; > 35 kg → 500 mg (np. preparat Larodopa, tabletki 500 mg). Metoda: test trwa 2 godziny, krew co 30 min (0, 30, 60, 90, 120 min; niektóre ośrodki do 150–180 min). Szczyt GH zwykle w 60–120 min. Przeciwwskazania: zaburzenia psychiczne; ostrożność w jaskrze, niewydolności wątroby/nerek, zmianach skórnych typu czerniaka. Skutki uboczne: u ~1/3 pacjentów — najczęściej nudności, rzadziej wymioty, zawroty i bóle głowy, zmęczenie. Z tego powodu w IPCZD (Instytut „Pomnik — Centrum Zdrowia Dziecka") test z L-DOPA obecnie nie jest stosowany — wybierane są inne testy o lepszej tolerancji. Interpretacja: dokładność wg Ranke 56% (cut-off GH 7 ng/mL) — 81% (cut-off 6 ng/mL). Średni szczyt GH u zdrowych dzieci 11–21 ng/mL. Obara: dokładność 75%, czułość 77,8%, swoistość 72,7%.' }
@@ -4939,7 +4994,7 @@
       guideline: 'Polskie Programy Lekowe NFZ — 6 wskazań: B.19 (SNP, wersja z 10.2024), B.42 (ZT), B.41 (PWS), B.64 (SGA/IUGR), B.38 (PNN), B.20 (pierwotny niedobór IGF-1 — mecasermin). Aktualne Obwieszczenie Ministra Zdrowia. Kwalifikacja: Zespół Koordynacyjny ds. Stosowania Hormonu Wzrostu (IPCZD).',
       sources: [
         'Załącznik B.19 do Obwieszczenia Ministra Zdrowia — LECZENIE NISKOROSŁYCH DZIECI Z SOMATOTROPINOWĄ NIEDOCZYNNOŚCIĄ PRZYSADKI (ICD-10 E23). Wersja od 10.2024 (uwzględnia Somatrogon). URL: https://www.gov.pl/web/zdrowie/programy-lekowe',
-        'Załącznik B.20 do Obwieszczenia Ministra Zdrowia — LECZENIE NISKOROSŁYCH DZIECI Z CIĘŻKIM PIERWOTNYM NIEDOBOREM IGF-1 (ICD-10 E34.3). Lek: mecasermina (rhIGF-1, Increlex).',
+        'Załącznik B.20 do Obwieszczenia Ministra Zdrowia — LECZENIE NISKOROSŁYCH DZIECI Z CIĘŻKIM pierwotnym NIEDOBOREM IGF-1 (ICD-10 E34.3). Lek: mecasermina (rhIGF-1, Increlex).',
         'Załącznik B.38 do Obwieszczenia Ministra Zdrowia — LECZENIE NISKOROSŁYCH DZIECI Z PRZEWLEKŁĄ NIEWYDOLNOŚCIĄ NEREK (PNN) (ICD-10 N18).',
         'Załącznik B.41 do Obwieszczenia Ministra Zdrowia — LECZENIE ZESPOŁU PRADERA-WILLI (ICD-10 Q87.1).',
         'Załącznik B.42 do Obwieszczenia Ministra Zdrowia — LECZENIE NISKOROSŁYCH DZIECI Z ZESPOŁEM TURNERA (ZT) (ICD-10 Q96).',
@@ -5149,7 +5204,7 @@
                       { heading: 'Diagnostyka gastrologiczna' },
                       { items: [
                         'Kalprotektyna w kale — marker stanu zapalnego jelit.',
-                        'Gastroduodenoskopia z biopsją błony śluzowej dwunastnicy — POTWIERDZENIE celiakii (atrofia kosmków, klasyfikacja Marsh).',
+                        'Gastroduodenoskopia z biopsją błony śluzowej dwunastnicy — Potwierdzenie celiakii (atrofia kosmków, klasyfikacja Marsh).',
                         'Kolonoskopia z biopsją — przy podejrzeniu NChZJ (choroba Crohna, wrzodziejące zapalenie jelita grubego).',
                         'Lipidogram + próby wątrobowe (ALT, AST, GGT) — wykluczenie chorób wątroby.',
                         'Konsultacja gastroenterologa dziecięcego.'
@@ -5204,7 +5259,7 @@
                     'Wiek kostny PRAWIDŁOWY (zgodny z metrykalnym).',
                     'Dojrzewanie w czasie i postępuje zgodnie z normami.',
                     'Wzrost dorosły zgodny z wzrostem docelowym — niski, ale nie patologiczny.',
-                    'Brak wskazań do leczenia rhGH (NIE jest objęty żadnym programem refundowanym w Polsce).'
+                    'Brak wskazań do leczenia rhGH (nie jest objęty żadnym programem refundowanym w Polsce).'
                   ]},
                   { heading: 'Konstytucjonalne opóźnienie wzrastania i dojrzewania (CDGP)' },
                   { items: [
@@ -5693,7 +5748,7 @@
             kind: 'prose',
             icon: 'book-2',
             title: 'Definicja statusu witaminy D',
-            body: '25-OHD (25-hydroksywitamina D) jest podstawowym markerem oceny zasobów ustrojowych witaminy D — odzwierciedla łącznie syntezę skórną i podaż z dietą/suplementami. 1,25(OH)2D (aktywna postać hormonalna) NIE służy rutynowej ocenie statusu — jest regulowana hormonalnie (PTH, FGF23) i nie odzwierciedla zasobów; oznaczanie 1,25(OH)2D ma sens głównie w chorobach metabolizmu Ca/P, niewydolności nerek oraz w chorobach ziarniniakowych. Polskie zalecenia: konsensus Płudowski i wsp. 2023; międzynarodowe — Endocrine Society 2024.'
+            body: '25-OHD (25-hydroksywitamina D) jest podstawowym markerem oceny zasobów ustrojowych witaminy D — odzwierciedla łącznie syntezę skórną i podaż z dietą/suplementami. 1,25(OH)₂D (aktywna postać hormonalna) nie służy rutynowej ocenie statusu — jest regulowana hormonalnie (PTH, FGF23) i nie odzwierciedla zasobów; oznaczanie 1,25(OH)₂D ma sens głównie w chorobach metabolizmu Ca/P, niewydolności nerek oraz w chorobach ziarniniakowych. Polskie zalecenia: konsensus Płudowski i wsp. 2023; międzynarodowe — Endocrine Society 2024.'
           },
           {
             kind: 'list',
@@ -5742,7 +5797,7 @@
             icon: 'list-search',
             title: 'Diagnostyka rozszerzona przy zaburzeniach Ca/P',
             items: [
-              { label: '1,25(OH)2D (aktywna postać)', text: 'wskazana w chorobach ziarniniakowych (paradoksalnie podwyższona), CKD (ocena substytucji kalcytriolem), wrodzonych krzywicach opornych.' },
+              { label: '1,25(OH)₂D (aktywna postać)', text: 'wskazana w chorobach ziarniniakowych (paradoksalnie podwyższona), CKD (ocena substytucji kalcytriolem), wrodzonych krzywicach opornych.' },
               { label: 'PTH (parathormon)', text: 'różnicuje przyczyny hipo-/hiperkalcemii oraz hiperfosfatemii.' },
               { label: 'Wapń całkowity (skorygowany o albuminę) i zjonizowany', text: 'podstawowa ocena gospodarki wapniowej.' },
               { label: 'Fosfor nieorganiczny', text: 'kluczowy w diagnostyce krzywic (niski w niedoborowej i XLH; wysoki w nerkowej).' },
@@ -5766,7 +5821,12 @@
           ]
         }
       ],
-      guideline: 'Polski konsensus wit. D 2023 (Płudowski i wsp.) / Endocrine Society 2024'
+      guideline: 'Polski konsensus suplementacji witaminą D 2023 (Płudowski i wsp.) / Endocrine Society 2024 (Demay) — wytyczne dla populacji ogólnej.',
+      sources: [
+        'Płudowski P, Kos-Kudła B, Walczak M i wsp. Guidelines for Preventing and Treating Vitamin D Deficiency: A 2023 Update in Poland. Nutrients. 2023;15(3):695.',
+        'Demay MB, Pittas AG, Bikle DD i wsp. Vitamin D for the Prevention of Disease: An Endocrine Society Clinical Practice Guideline. J Clin Endocrinol Metab. 2024;109(8):1907-1947.',
+        'Holick MF i wsp. Evaluation, Treatment, and Prevention of Vitamin D Deficiency: an Endocrine Society Clinical Practice Guideline. J Clin Endocrinol Metab. 2011;96(7):1911-1930.'
+      ]
     },
 
     osteoporosis: {
@@ -5776,7 +5836,7 @@
             kind: 'prose',
             icon: 'book-2',
             title: 'Definicja i kryteria rozpoznania',
-            body: 'Osteoporoza — choroba szkieletu charakteryzująca się zmniejszoną masą kostną i zaburzoną mikroarchitekturą, prowadząca do zwiększonej łamliwości kości. Rozpoznanie DENSYTOMETRYCZNE: T-score ≤ -2,5 w DXA (L1–L4 lub biodro). Rozpoznanie KLINICZNE: po przebytym złamaniu niskoenergetycznym biodra lub kręgosłupa — niezależnie od wartości T-score. WAŻNE: T-score stosuje się u kobiet po menopauzie i u mężczyzn ≥ 50. r.ż.; u kobiet przed menopauzą i mężczyzn < 50. r.ż. właściwy jest Z-score (≤ -2,0 = „poniżej zakresu oczekiwanego dla wieku"). Wytyczne: IOF 2019 / NOF 2014 / PTOPiOO 2017.'
+            body: 'Osteoporoza — choroba szkieletu charakteryzująca się zmniejszoną masą kostną i zaburzoną mikroarchitekturą, prowadząca do zwiększonej łamliwości kości. Rozpoznanie densytometryczne: T-score ≤ −2,5 w DXA (L1–L4 lub biodro). Rozpoznanie kliniczne: po przebytym złamaniu niskoenergetycznym biodra lub kręgosłupa — niezależnie od wartości T-score. T-score stosuje się u kobiet po menopauzie i u mężczyzn ≥ 50. r.ż.; u kobiet przed menopauzą i mężczyzn < 50. r.ż. właściwy jest Z-score (≤ −2,0 = „poniżej zakresu oczekiwanego dla wieku"). Wytyczne: IOF 2019, NOF 2014, PTOPiOO 2017.'
           },
           {
             kind: 'list',
@@ -5855,10 +5915,10 @@
                 label: 'CTX i P1NP — zastosowanie i ograniczenia',
                 text: 'markery serologiczne metabolizmu kostnego:',
                 detail: [
-                  'CTX (marker resorpcji kości — fragment C-końcowy kolagenu typu I) — preferowany do monitorowania leczenia ANTYRESORPCYJNEGO (bisfosfoniany, denozumab); spadek CTX po wdrożeniu terapii potwierdza skuteczność.',
-                  'P1NP (marker tworzenia kości — N-końcowy peptyd prokolagenu typu I) — preferowany do monitorowania leczenia ANABOLICZNEGO (teryparatyd, romosozumab).',
-                  'Pobranie RANO, NA CZCZO — duża zmienność dobowo-żywieniowa.',
-                  'Markery NIE służą do rozpoznania osteoporozy — wyłącznie do oceny obrotu kostnego i odpowiedzi na leczenie.'
+                  'CTX (marker resorpcji kości — fragment C-końcowy kolagenu typu I) — preferowany do monitorowania leczenia antyresorpcyjnego (bisfosfoniany, denozumab); spadek CTX po wdrożeniu terapii potwierdza skuteczność.',
+                  'P1NP (marker tworzenia kości — N-końcowy peptyd prokolagenu typu I) — preferowany do monitorowania leczenia anabolicznego (teryparatyd, romosozumab).',
+                  'Pobranie rano, na czczo — markery wykazują dużą zmienność dobową i żywieniową.',
+                  'Markery nie służą do rozpoznania osteoporozy — wyłącznie do oceny obrotu kostnego i odpowiedzi na leczenie.'
                 ]
               }
             ]
@@ -5891,78 +5951,264 @@
           ]
         }
       ],
-      guideline: 'IOF 2019 / NOF 2014 / PTOPiOO 2017'
+      guideline: 'IOF 2019 (International Osteoporosis Foundation) / NOF 2014 (National Osteoporosis Foundation) / PTOPiOO 2017 (Polskie Towarzystwo Osteoartrologii i Polskie Towarzystwo Endokrynologiczne) / Endocrine Society 2019 (Eastell).',
+      sources: [
+        'Lorenc R, Głuszko P, Karczmarewicz E i wsp. Zalecenia postępowania diagnostycznego i leczniczego w osteoporozie w Polsce — aktualizacja 2017 (PTOPiOO).',
+        'Kanis JA, Cooper C, Rizzoli R, Reginster JY (IOF/ESCEO). European guidance for the diagnosis and management of osteoporosis in postmenopausal women. Osteoporos Int. 2019;30(1):3-44.',
+        'Eastell R, Rosen CJ, Black DM i wsp. Pharmacological Management of Osteoporosis in Postmenopausal Women: An Endocrine Society Clinical Practice Guideline. J Clin Endocrinol Metab. 2019;104(5):1595-1622.',
+        'Cosman F, de Beur SJ, LeBoff MS i wsp. Clinician\'s Guide to Prevention and Treatment of Osteoporosis (NOF). Osteoporos Int. 2014;25(10):2359-2381.',
+        'Watts NB, Adler RA, Bilezikian JP i wsp. Osteoporosis in Men: An Endocrine Society Clinical Practice Guideline. J Clin Endocrinol Metab. 2012;97(6):1802-1822.'
+      ]
     },
 
-    rickets: {
+    rickets_kids: {
       summary: {
         sections: [
           {
             kind: 'prose',
             icon: 'book-2',
-            title: 'Definicja',
-            body: 'Krzywica — zaburzenie mineralizacji kości w okresie wzrostu (osteomalacja jest analogiem u dorosłych — po zakończeniu wzrostu i zamknięciu chrząstek wzrostowych). Najczęstsza przyczyna w Polsce: niedobór witaminy D u dzieci. Istnieją jednak liczne postacie OPORNE wymagające diagnostyki różnicowej — m.in. krzywica hipofosfatemiczna sprzężona z X (XLH), krzywice zależne od witaminy D (VDDR-1, VDDR-2), krzywica nerkowa (w CKD), onkogeniczna osteomalacja (u dorosłych). Wytyczne: Global Consensus 2016 (Munns i wsp.).'
+            title: 'Definicja krzywicy dziecięcej',
+            body: 'Krzywica (rachitis) — zaburzenie mineralizacji rosnącej kości u dzieci przed zamknięciem chrząstek wzrostowych. Najczęstsza w Polsce postać niedoborowa wynika z niedoboru witaminy D i/lub wapnia; istnieją także postacie oporne wymagające diagnostyki różnicowej (XLH, VDDR-1/2, HHRH, hipofosfatazja, postacie genetyczne ADHR/ARHR, krzywica nerkowa w CKD). Krzywica u dorosłych po zamknięciu chrząstek wzrostowych nie powstaje — analogicznym zaburzeniem mineralizacji u dorosłych jest osteomalacja (osobny panel). Wytyczne: Global Consensus on Nutritional Rickets 2016 (Munns i wsp.), Haffner 2019 (XLH), Płudowski 2023 (PL).'
+          },
+          {
+            kind: 'callout',
+            variant: 'primary',
+            icon: 'alert-triangle',
+            title: 'PILNE — krzywica wcześniaków (MBD wcześniaków)',
+            collapsible: true,
+            open: false,
+            body: [
+              { heading: 'Definicja' },
+              'MBD (metabolic bone disease of prematurity) — zaburzenie mineralizacji u noworodków urodzonych przed 32. tygodniem ciąży, najczęściej z masą urodzeniową < 1500 g. Wynika z niedoboru wapnia i fosforu w trzecim trymestrze (transfer matczyno-płodowy zachodzi głównie w 3. trymestrze) oraz nieadekwatnej podaży po urodzeniu.',
+              { heading: 'Skrining' },
+              { items: [
+                'ALP — początek skriningu od 4.–6. tygodnia życia, co 2 tygodnie do osiągnięcia stabilnej trajektorii. ALP > 900 U/L → wysokie ryzyko MBD; ALP > 1200 U/L + fosfor < 1,8 mmol/L (5,6 mg/dL) → MBD prawdopodobna.',
+                'Fosfor — < 1,8 mmol/L wskazuje na niewystarczającą podaż lub utratę.',
+                'TmP/GFR — wartość obniżona potwierdza niedobór fosforu (a nie utratę z moczem).',
+                'RTG nadgarstka / kolana — gdy laboratoryjne wskaźniki sugerują MBD i utrzymują się ≥ 4 tyg.'
+              ] },
+              { heading: 'Postępowanie' },
+              'Wzbogacanie mleka matki (HMF — human milk fortifier) lub mleko modyfikowane dla wcześniaków (po-discharge formula); suplementacja wapnia 120–140 mg/kg/dobę i fosforu 60–90 mg/kg/dobę; witamina D 400–800 IU/dobę. Cel: ALP w trendzie spadkowym, fosfor > 1,8 mmol/L.'
+            ]
           },
           {
             kind: 'list',
             icon: 'tags',
-            title: 'Obraz laboratoryjny krzywicy niedoborowej (z niedoboru witaminy D)',
+            title: 'Obraz kliniczny krzywicy u dziecka',
             items: [
-              { label: '25-OHD', text: 'ZNACZNIE OBNIŻONA (zwykle < 30 nmol/L) — kluczowy parametr potwierdzający niedoborowe tło.' },
-              { label: '1,25(OH)2D', text: 'paradoksalnie często PRAWIDŁOWA lub PODWYŻSZONA — kompensacja indukowana wtórnie podwyższonym PTH (nie odzwierciedla statusu witaminy D w organizmie).' },
-              { label: 'PTH', text: 'PODWYŻSZONE — wtórna nadczynność przytarczyc kompensacyjna do hipokalcemii.' },
-              { label: 'Wapń', text: 'prawidłowy lub obniżony — początkowo utrzymywany przez kompensację PTH, później obniża się.' },
-              { label: 'Fosfor', text: 'OBNIŻONY — fosfaturia indukowana podwyższonym PTH.' },
-              { label: 'ALP (fosfataza alkaliczna)', text: 'ZNACZNIE PODWYŻSZONA — charakterystyczny marker remodelingu kości w krzywicy.' },
-              { label: 'RTG nadgarstków/kolan', text: 'diagnostyczne — rozszerzenie nasad kości długich, frędzelkowanie, demineralizacja, paciorek pierśniowy (na żebrach).' }
+              { label: 'Deformacje kostne', text: 'koślawość / szpotawość kolan, „paciorek różańcowy" (rachitic rosary — rozszerzenie chrząstek żebrowo-mostkowych), bransolety nadgarstkowe i kostkowe, bruzda Harrisona, czaszka tabes (caput quadratum), opóźnione zamykanie ciemiączek, opóźnione ząbkowanie i wady szkliwa.' },
+              { label: 'Niedobór wzrostu', text: 'spowolnienie tempa wzrastania, krótka długość kości długich (zwłaszcza dolnych — chodzenie po 18. m.ż. utrudnione).' },
+              { label: 'Miopatia i hipotonia mięśniowa', text: 'opóźnienie kamieni milowych motorycznych (siadanie, stanie, chodzenie), wiotkość mięśni, „brzuch żabi", trudności w utrzymywaniu pozycji wyprostowanej.' },
+              { label: 'Objawy hipokalcemii', text: 'drażliwość, drżenia, w skrajnych przypadkach tężyczka jawna (skurcze tężyczkowe, objaw Chvostka i Trousseau, drgawki hipokalcemiczne — pilne wskazanie do hospitalizacji).' },
+              { label: 'Objawy alarmowe — wskazania do pogłębionej diagnostyki', text: 'opóźniona reakcja na suplementację witaminy D ≥ 3 mies., współistniejąca hiperkalciuria, łysienie (sugeruje VDDR-2), wywiad rodzinny krzywicy.' }
+            ]
+          },
+          {
+            kind: 'algorithm',
+            icon: 'list-numbers',
+            title: 'Algorytm diagnostyczny krzywicy',
+            steps: [
+              {
+                number: 1,
+                title: 'Panel podstawowy',
+                sublabel: 'badania pierwszego rzutu + obrazowanie',
+                options: [
+                  {
+                    threshold: 'Co oznaczyć',
+                    action: '25-OHD, PTH, wapń całkowity + skorygowany o albuminę, fosfor, ALP, kreatynina + eGFR. RTG nadgarstka i kolana — kluczowe radiologiczne potwierdzenie.',
+                    variant: 'success', icon: 'flask',
+                    detail: [
+                      'Cechy radiologiczne krzywicy: rozszerzenie i rozmycie konturów nasad kości długich, frędzelkowanie, demineralizacja, „paciorek różańcowy" na żebrach.',
+                      'Wywiad: dieta (mleko matki bez suplementacji?, ograniczenia dietetyczne), ekspozycja słoneczna, suplementacja witaminy D.',
+                      'Choroby przewlekłe: NChZJ, celiakia, choroby wątroby, CKD.'
+                    ]
+                  }
+                ]
+              },
+              {
+                number: 2,
+                title: 'Interpretacja wyników',
+                sublabel: 'obraz klasyczny vs nietypowy',
+                options: [
+                  {
+                    threshold: 'Klasyczny obraz krzywicy niedoborowej',
+                    action: '25-OHD znacznie obniżona, PTH podwyższone, wapń prawidłowy/obniżony, fosfor obniżony, ALP znacznie podwyższona — wdroż leczenie wg Munns 2016.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      '25-OHD znacznie obniżona (< 30 nmol/L = < 12 ng/mL).',
+                      'PTH podwyższone (wtórna nadczynność przytarczyc).',
+                      'Wapń prawidłowy lub obniżony.',
+                      'Fosfor obniżony (fosfaturia indukowana PTH).',
+                      'ALP znacznie podwyższona (typowo > 3× ULN dla wieku).',
+                      '1,25(OH)₂D paradoksalnie często prawidłowa lub podwyższona — kompensacja przez wtórnie podwyższone PTH (nie odzwierciedla statusu witaminy D).',
+                      'Postępowanie: leczenie wg schematu Munns 2016 (callout niżej). Kontrola po 3 miesiącach: ALP, wapń, fosfor, 25-OHD.'
+                    ]
+                  },
+                  {
+                    threshold: 'Obraz nietypowy',
+                    action: 'Sygnały krzywic opornych → pogłębić diagnostykę (FGF23, DZM, genetyka).',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      { heading: 'Sygnały kierujące do diagnostyki krzywic opornych' },
+                      { items: [
+                        '25-OHD prawidłowa + objawy krzywicy.',
+                        'Fosfor głęboko obniżony przy prawidłowej 25-OHD.',
+                        'Hiperkalciuria w DZM.',
+                        'Łysienie (alopecia) — sugeruje VDDR-2.',
+                        'ALP paradoksalnie OBNIŻONA — sugeruje hipofosfatazję.',
+                        'Brak odpowiedzi na leczenie po 3 miesiącach.',
+                        'Wywiad rodzinny krzywicy / niskiego wzrostu z deformacjami.'
+                      ] },
+                      { heading: 'Rozszerzenie panelu' },
+                      { items: [
+                        'FGF23 — podwyższony w XLH, TIO, ADHR.',
+                        'Wapń w DZM — hiperkalciuria w HHRH.',
+                        'Fosfor w DZM + TmP/GFR — obniżony w XLH/HHRH/TIO.',
+                        'Bone ALP — gdy podejrzenie hipofosfatazji.'
+                      ] },
+                      { heading: 'Konsultacja genetyczna' },
+                      { items: [
+                        'PHEX — XLH.',
+                        'CYP27B1 — VDDR-1.',
+                        'VDR — VDDR-2.',
+                        'SLC34A3 — HHRH.',
+                        'ALPL — hipofosfatazja.'
+                      ] }
+                    ]
+                  }
+                ]
+              },
+              {
+                number: 3,
+                title: 'Monitoring leczenia',
+                sublabel: 'kontrola odpowiedzi i bezpieczeństwa',
+                options: [
+                  {
+                    threshold: 'Harmonogram',
+                    action: 'Kontrola po 1 / 3 / 6 miesiącach — laboratoryjna + radiologiczna.',
+                    variant: 'success', icon: 'activity',
+                    detail: [
+                      { heading: 'Po 1 miesiącu' },
+                      'Wapń, fosfor — ocena bezpieczeństwa (wykluczenie hiperkalcemii).',
+                      { heading: 'Po 3 miesiącach' },
+                      { items: [
+                        'ALP — powinna spadać.',
+                        '25-OHD — cel > 75 nmol/L (30 ng/mL).',
+                        'PTH — powinno się normalizować.',
+                        'RTG — gdy oporność na leczenie lub niejasny obraz.'
+                      ] },
+                      { heading: 'Po 6 miesiącach' },
+                      'Pełna remisja kliniczna i radiologiczna w krzywicy niedoborowej. Brak remisji → diagnostyka różnicowa krzywic opornych.'
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            kind: 'callout',
+            variant: 'purple',
+            icon: 'pill',
+            title: 'Leczenie krzywicy niedoborowej (Munns 2016)',
+            collapsible: true,
+            open: false,
+            body: [
+              { heading: 'Schemat standardowy — preferowany' },
+              { items: [
+                'Cholekalcyferol (D₃): niemowlęta < 12 mies. — 2000 IU/dobę × 3 mies.; dzieci 1–12 lat — 3000–6000 IU/dobę × 3 mies.; > 12 lat — 6000 IU/dobę × 3 mies.',
+                'Następnie dawka podtrzymująca (Płudowski 2023): niemowlęta 400–600 IU/dobę, dzieci 600–1000 IU/dobę.',
+                'Wapń elementarny doustnie — 500 mg/dobę przez ≥ 2 tygodnie, niezależnie od podaży z dietą (Munns 2016 — silne zalecenie).'
+              ] },
+              { heading: 'Schemat alternatywny („stoss therapy")' },
+              'Wysokodawkowa pojedyncza dawka — cholekalcyferol 50 000 IU (< 1. r.ż.), 150 000 IU (1–12 lat), 300 000 IU (> 12 lat) jednorazowo doustnie lub i.m. Stosowany wyłącznie w przypadkach niskiej compliance lub braku możliwości codziennej suplementacji. Wymaga ścisłej kontroli wapnia i kalciurii — ryzyko hiperkalcemii.',
+              { heading: 'Krzywica oporna — leczenie specyficzne' },
+              { items: [
+                'XLH — burosumab (program lekowy B.130 w Polsce) lub klasyczna terapia fosforem + kalcytriolem.',
+                'VDDR-1 — kalcytriol 0,5–2 μg/dobę (nie cholekalcyferol!).',
+                'VDDR-2 — wysokie dawki kalcytriolu + wapń; częsta oporność.',
+                'HHRH (SLC34A3) — wyłącznie suplementacja fosforu! Aktywna witamina D PRZECIWWSKAZANA (nasila hiperkalciurię).',
+                'Hipofosfatazja — asfotaza alfa (Strensiq®) — postacie pediatryczne ciężkie.'
+              ] }
             ]
           },
           {
             kind: 'list',
             icon: 'list-search',
-            title: 'Postacie oporne i różnicowanie',
+            title: 'Krzywice oporne — diagnostyka różnicowa',
             items: [
               {
-                label: 'Krzywica hipofosfatemiczna sprzężona z X (XLH)',
-                text: 'najczęstsza dziedziczna postać krzywicy opornej:',
+                label: 'XLH — krzywica hipofosfatemiczna sprzężona z X',
+                text: 'najczęstsza dziedziczna postać krzywicy opornej (1:20 000):',
                 detail: [
                   'Mechanizm: mutacja w genie PHEX → wzrost FGF23 → fosfaturia → głęboka hipofosfatemia.',
-                  'Obraz: fosfor głęboko obniżony, ALP znacznie podwyższona, 25-OHD prawidłowa, PTH prawidłowe lub łagodnie podwyższone.',
-                  'OPORNA na standardową suplementację witaminą D — wymaga leczenia fosforem doustnym + aktywną witaminą D lub burosumabem (przeciwciało anty-FGF23).'
+                  'Obraz laboratoryjny: fosfor głęboko obniżony, TmP/GFR obniżona, FGF23 podwyższony, ALP znacznie podwyższona, 25-OHD prawidłowa, PTH prawidłowe lub łagodnie podwyższone.',
+                  'Dziedziczenie dominujące sprzężone z X — kobiety i mężczyźni chorują, ale przebieg często łagodniejszy u kobiet.',
+                  'Leczenie w Polsce: program lekowy B.130 — burosumab (przeciwciało monoklonalne anty-FGF23) u dzieci ≥ 1. r.ż. i u dorosłych. Klasyczna terapia: fosfor doustny 20–60 mg/kg/dobę + kalcytriol 20–60 ng/kg/dobę.',
+                  'Wytyczne: Haffner 2019 (consensus statement on diagnosis and management of XLH).'
                 ]
               },
               {
-                label: 'Krzywica zależna od witaminy D typu 1 (VDDR-1)',
+                label: 'VDDR-1 — krzywica zależna od witaminy D typu 1',
                 text: 'defekt 1-α-hydroksylazy nerkowej (mutacja CYP27B1):',
                 detail: [
-                  '1,25(OH)2D NISKA mimo prawidłowej 25-OHD — brak konwersji do aktywnej postaci.',
-                  'Wymaga substytucji aktywną witaminą D (kalcytriol, alfakalcydol), a nie cholekalcyferolem.'
+                  '1,25(OH)₂D niska mimo prawidłowej 25-OHD — brak konwersji do aktywnej postaci.',
+                  'PTH wysoki, wapń obniżony, ALP podwyższona, fosfor zmienny (zwykle obniżony wtórnie do PTH).',
+                  'Leczenie: kalcytriol (Rocaltrol) 0,25–1,5 μg/dobę lub alfakalcydol — substytucja aktywnej postaci witaminy D.'
                 ]
               },
               {
-                label: 'Krzywica zależna od witaminy D typu 2 (VDDR-2)',
+                label: 'VDDR-2 — krzywica zależna od witaminy D typu 2',
                 text: 'oporność receptora witaminy D (mutacja VDR):',
                 detail: [
-                  '1,25(OH)2D WYSOKA (brak hamowania ujemnym sprzężeniem) + ŁYSIENIE (charakterystyczne) — receptor obecny też w mieszkach włosowych.',
-                  'Bardzo trudna do leczenia — wysokie dawki aktywnej witaminy D + wapń; czasem zmiany ustępują w wieku dorosłym.'
+                  '1,25(OH)₂D wysoka (brak hamowania ujemnym sprzężeniem zwrotnym).',
+                  'Łysienie (alopecia) — patognomoniczny dodatkowy fenotyp; receptor witaminy D obecny także w mieszkach włosowych.',
+                  'Bardzo trudna do leczenia — wysokie dawki kalcytriolu + wapń; czasem zmiany ustępują w wieku dorosłym.'
+                ]
+              },
+              {
+                label: 'HHRH — dziedziczna hipofosfatemiczna krzywica z hiperkalciurią',
+                text: 'mutacja genu SLC34A3 (kotransporter Na/P NaPi-2c):',
+                detail: [
+                  'Fosfor głęboko obniżony, TmP/GFR znacznie obniżona, 1,25(OH)₂D PODWYŻSZONA (kompensacja w nerkach), PTH prawidłowe, wapń w surowicy prawidłowy.',
+                  'Hiperkalciuria z nefrokalcynozą — odróżnia od XLH.',
+                  'Leczenie: WYŁĄCZNIE suplementacja fosforu doustnie (1–3 g/dobę). Aktywna witamina D PRZECIWWSKAZANA — nasila hiperkalciurię.'
+                ]
+              },
+              {
+                label: 'ADHR / ARHR — krzywice hipofosfatemiczne autosomalne',
+                text: 'rzadsze dziedziczne postacie z podwyższonym FGF23:',
+                detail: [
+                  'ADHR (autosomal dominant hypophosphatemic rickets) — mutacja w genie FGF23 (mutacja oporna na proteolizę).',
+                  'ARHR (autosomal recessive) — mutacje DMP1, ENPP1.',
+                  'Obraz biochemiczny podobny do XLH; leczenie analogiczne (fosfor + kalcytriol; burosumab off-label / w programach badawczych).'
+                ]
+              },
+              {
+                label: 'Hipofosfatazja',
+                text: 'mutacja genu ALPL — niedobór TNSALP:',
+                detail: [
+                  'Paradoksalny obraz: ALP OBNIŻONA (< dolnej granicy normy dla wieku — kluczowy marker), fosfor podwyższony, wapń podwyższony lub prawidłowy.',
+                  'Pirofosforan i fosfoetanoloamina (PEA) w moczu — substraty TNSALP, w hipofosfatazji ich stężenie wzrasta.',
+                  'Postacie kliniczne od noworodkowej letalnej do dorosłej skąpoobjawowej. Może być błędnie rozpoznana jako krzywica niedoborowa — niedobór ALP umyka uwadze.',
+                  'Leczenie: asfotaza alfa (Strensiq®) w postaciach pediatrycznych ciężkich (program lekowy w wybranych krajach).'
                 ]
               },
               {
                 label: 'Krzywica nerkowa (CKD-MBD)',
-                text: 'w przewlekłej chorobie nerek — odrębny mechanizm:',
+                text: 'w przewlekłej chorobie nerek u dziecka — odrębny mechanizm:',
                 detail: [
-                  'Fosfor PODWYŻSZONY (odmiennie niż w krzywicy niedoborowej) — wskutek upośledzonej fosfaturii.',
-                  'Wtórna nadczynność przytarczyc (PTH wysoki), 1,25(OH)2D niska (defekt nerkowej 1-α-hydroksylazy).',
-                  'Leczenie wieloskładnikowe: kontrola fosforanów w diecie, chelatory fosforu, aktywna witamina D, kalcymimetyki.'
+                  'Fosfor podwyższony (odwrotnie niż w krzywicy niedoborowej) — wskutek upośledzonej fosfaturii.',
+                  'Wtórna nadczynność przytarczyc (PTH wysoki), 1,25(OH)₂D niska (defekt nerkowej 1-α-hydroksylazy).',
+                  'Leczenie wieloskładnikowe: kontrola fosforanów w diecie, chelatory fosforu (bez Al³⁺ u dzieci), aktywna witamina D, kalcymimetyki. Wytyczne KDIGO 2017.'
                 ]
               },
               {
-                label: 'Onkogeniczna osteomalacja (TIO) — u dorosłych',
-                text: 'rzadki zespół paranowotworowy:',
+                label: 'Krzywica w zespole Fanconiego',
+                text: 'globalne zaburzenie wchłaniania zwrotnego w kanalikach proksymalnych:',
                 detail: [
-                  'Guz mezenchymalny produkujący FGF23 (najczęściej małe, trudne do zlokalizowania guzy tkanek miękkich lub kości).',
-                  'Fosfor głęboko obniżony, 1,25(OH)2D niska — podobnie jak w XLH, ale u dorosłych i ostro objawowo (bóle kostne, złamania, miopatia).',
-                  'Leczenie przyczynowe — resekcja guza; do tego czasu suplementacja fosforem + aktywną witaminą D.'
+                  'Glikozuria (przy prawidłowej glikemii), aminoaciduria, fosfaturia, kwasica cewkowa proksymalna (typ 2).',
+                  'Przyczyny dziedziczne (cystynoza, choroba Lowe\'a, choroba Wilsona, tyrozynemia) i nabyte (mielomatoza, leki — tenofowir, cisplatyna, walproinian).',
+                  'Leczenie etiologiczne + substytucja fosforu, dwuwęglanów, witaminy D.'
                 ]
               }
             ]
@@ -5973,19 +6219,335 @@
         { name: 'Panel podstawowy',
           tests: [
             { id: 'vit_d_25oh' },
-            { id: 'vit_d_1_25' },
-            EXT.pth, EXT.ca_total, EXT.phosphorus, EXT.alp
+            EXT.pth, EXT.ca_total, EXT.albumin, EXT.phosphorus, EXT.alp,
+            EXT.egfr
           ]
         },
-        { name: 'Postacie oporne',
+        { name: 'Diagnostyka rozszerzona (obraz nietypowy / brak odpowiedzi)',
           tests: [
+            { id: 'vit_d_1_25' },
             EXT.fgf23,
-            EXT.egfr,
-            EXT.chest_xray
+            EXT.urine_calcium,
+            EXT.urine_phosphate_tmp,
+            EXT.bone_alp
+          ]
+        },
+        { name: 'Genetyka (krzywice oporne)',
+          tests: [
+            EXT.phex_gene,
+            EXT.cyp27b1_gene,
+            EXT.vdr_gene,
+            EXT.slc34a3_gene,
+            EXT.alpl_gene
           ]
         }
       ],
-      guideline: 'Global Consensus 2016 (Munns i wsp.)'
+      guideline: 'Global Consensus on Prevention and Management of Nutritional Rickets 2016 (Munns CF, Shaw N, Kiely M i wsp.) / Haffner D i wsp. 2019 (XLH consensus) / Whyte MP 2017 (hipofosfatazja) / KDIGO 2017 (CKD-MBD) / Płudowski P i wsp. 2023 (PL).',
+      sources: [
+        'Munns CF, Shaw N, Kiely M i wsp. Global Consensus Recommendations on Prevention and Management of Nutritional Rickets. J Clin Endocrinol Metab. 2016;101(2):394-415.',
+        'Haffner D, Emma F, Eastwood DM i wsp. Clinical practice recommendations for the diagnosis and management of X-linked hypophosphataemia. Nat Rev Nephrol. 2019;15(7):435-455.',
+        'Carpenter TO, Imel EA, Holm IA, Jan de Beur SM, Insogna KL. A clinician\'s guide to X-linked hypophosphatemia. J Bone Miner Res. 2011;26(7):1381-1388.',
+        'Whyte MP. Hypophosphatasia: An overview For 2017. Bone. 2017;102:15-25.',
+        'Kidney Disease: Improving Global Outcomes (KDIGO) CKD-MBD Update Work Group. KDIGO 2017 Clinical Practice Guideline Update for the Diagnosis, Evaluation, Prevention, and Treatment of CKD-MBD. Kidney Int Suppl. 2017;7(1):1-59.',
+        'Płudowski P, Kos-Kudła B, Walczak M i wsp. Guidelines for Preventing and Treating Vitamin D Deficiency: A 2023 Update in Poland. Nutrients. 2023;15(3):695.',
+        'Polskie zalecenia profilaktyki i leczenia metabolicznej choroby kości u wcześniaków — Polskie Towarzystwo Neonatologiczne.'
+      ]
+    },
+
+    osteomalacia: {
+      summary: {
+        sections: [
+          {
+            kind: 'prose',
+            icon: 'book-2',
+            title: 'Definicja osteomalacji u dorosłych',
+            body: 'Osteomalacja — zaburzenie mineralizacji nowo tworzonej macierzy kostnej u dorosłych po zamknięciu chrząstek wzrostowych. Analog krzywicy dziecięcej (osobny panel — rickets_kids), ale obraz kliniczny inny — dominują rozlane bóle kostne, miopatia proksymalna i pseudozłamania, a nie deformacje. Najczęstsze przyczyny w Polsce: ciężki długotrwały niedobór witaminy D, zaburzenia wchłaniania (NChZJ, celiakia, stan po operacjach bariatrycznych), CKD, leki indukujące CYP3A4 (długotrwałe leczenie antykonwulsantami, glikokortykosteroidami). Rzadko, ale ważnie — onkogenna osteomalacja (TIO) wymagająca aktywnej diagnostyki obrazowej i pomiaru FGF23. Często niedostatecznie rozpoznawana — błędnie traktowana jako fibromialgia, choroba zwyrodnieniowa lub depresja somatyzacyjna.'
+          },
+          {
+            kind: 'list',
+            icon: 'tags',
+            title: 'Obraz kliniczny osteomalacji',
+            items: [
+              { label: 'Rozlane bóle kostne', text: 'uogólnione bóle szkieletu osiowego (kręgosłup, miednica, klatka piersiowa), nasilające się przy ucisku i wysiłku — często mylone z chorobą zwyrodnieniową lub fibromialgią.' },
+              { label: 'Miopatia proksymalna', text: 'osłabienie mięśni obręczy biodrowej i barkowej — trudność wstawania z krzesła, chodzenia po schodach, podnoszenia ramion; chód kaczkowaty. Mechanizm: hipofosfatemia + niedobór witaminy D upośledzają funkcję komórek mięśniowych.' },
+              { label: 'Pseudozłamania (linie Loosera-Milkmana)', text: 'pasma rozjaśnienia poprzeczne do osi długiej kości, najczęściej w gałęziach kości łonowych, kości udowej, kości łopatce, żebrach — patognomoniczne dla osteomalacji w RTG.' },
+              { label: 'Złamania niskoenergetyczne', text: 'najczęściej trzonów kręgowych, biodra, żeber — często mylone z osteoporozą; różnicowanie wymaga oceny biochemicznej.' },
+              { label: 'Objawy hipokalcemii (w zaawansowanej osteomalacji)', text: 'parestezje, skurcze mięśni, w skrajnych przypadkach tężyczka jawna.' }
+            ]
+          },
+          {
+            kind: 'algorithm',
+            icon: 'list-numbers',
+            title: 'Algorytm diagnostyczny osteomalacji',
+            steps: [
+              {
+                number: 1,
+                title: 'Panel podstawowy',
+                sublabel: 'badania pierwszego rzutu + obrazowanie',
+                options: [
+                  {
+                    threshold: 'Co oznaczyć',
+                    action: '25-OHD, PTH, wapń całkowity + skorygowany o albuminę, fosfor, ALP, kreatynina + eGFR. RTG kości miednicy, kości udowych, klatki piersiowej — poszukiwanie pseudozłamań.',
+                    variant: 'success', icon: 'flask',
+                    detail: [
+                      'Obraz osteomalacji niedoborowej: 25-OHD znacznie obniżona, PTH podwyższone, wapń obniżony lub prawidłowy, fosfor obniżony, ALP znacznie podwyższona.',
+                      'Pseudozłamania (linie Loosera-Milkmana) — patognomoniczne; najczęściej w gałęziach kości łonowych, kości udowej, łopatce, żebrach.',
+                      'Albumina — niezbędna do skorygowania wapnia całkowitego (hipoalbuminemia zaniża wapń).'
+                    ]
+                  }
+                ]
+              },
+              {
+                number: 2,
+                title: 'Etiologia osteomalacji niedoborowej',
+                sublabel: 'najczęstsze odwracalne przyczyny',
+                options: [
+                  {
+                    threshold: 'Wywiad i panel etiologiczny',
+                    action: 'Wywiad + badania w kierunku malabsorpcji, chorób wątroby, CKD, leków sprawczych.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      { heading: 'Wywiad ukierunkowany' },
+                      { items: [
+                        'Dieta, ekspozycja słoneczna, suplementacja witaminy D.',
+                        'Leki: antykonwulsanty, glikokortykosteroidy, antyretrowirusowe (tenofowir), dożylne żelazo karboksymaltoza.',
+                        'Operacje bariatryczne (Roux-en-Y), choroby układu pokarmowego.'
+                      ] },
+                      { heading: 'Badania ukierunkowane' },
+                      { items: [
+                        'Celiakia — anty-tTG IgA + IgA całkowite (niedobór IgA fałszuje wynik).',
+                        'NChZJ — kalprotektyna kałowa, kolonoskopia (gdy podejrzenie).',
+                        'Choroby wątroby — ALT, AST, GGT, bilirubina.',
+                        'CKD — eGFR.'
+                      ] }
+                    ]
+                  }
+                ]
+              },
+              {
+                number: 3,
+                title: 'Obraz nietypowy',
+                sublabel: 'diagnostyka TIO / postaci opornych',
+                options: [
+                  {
+                    threshold: 'Sygnały kierujące do TIO/postaci opornych',
+                    action: '25-OHD prawidłowa + objawy osteomalacji, fosfor głęboko obniżony, brak odpowiedzi na suplementację po 3–6 miesiącach.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      { heading: 'Markery różnicujące' },
+                      { items: [
+                        'FGF23 — podwyższony w TIO, XLH ujawnionej w dorosłości, ADHR, polekowej (tenofowir, FCM).',
+                        'TmP/GFR — obniżona potwierdza utratę fosforu z moczem (TIO, XLH, leki).',
+                        'Wapń w DZM — różnicowanie hiperkalciurii (HHRH) od krzywicy niedoborowej.',
+                        'Bone ALP — gdy podejrzenie hipofosfatazji (paradoksalnie ALP obniżona).'
+                      ] },
+                      'Konsultacja w ośrodku referencyjnym — wymagana w podejrzeniu TIO.'
+                    ]
+                  }
+                ]
+              },
+              {
+                number: 4,
+                title: 'Lokalizacja guza w TIO',
+                sublabel: 'algorytm obrazowania Florenzano 2020',
+                options: [
+                  {
+                    threshold: 'Algorytm obrazowania',
+                    action: '⁶⁸Ga-DOTATATE PET/CT (1. rzut) → ¹⁸F-DOPA PET/CT → MRI ciała w całości → selektywne cewnikowanie żylne z pomiarem FGF23.',
+                    variant: 'success', icon: 'search',
+                    detail: [
+                      { heading: 'Kolejność obrazowania' },
+                      { items: [
+                        '⁶⁸Ga-DOTATATE PET/CT — badanie pierwszego rzutu (Florenzano 2020), wykrywa guzy mezenchymalne z ekspresją receptorów somatostatynowych (czułość ~80%).',
+                        '¹⁸F-DOPA PET/CT — alternatywa lub uzupełnienie gdy DOTATATE ujemne mimo silnego podejrzenia.',
+                        'MRI ciała w całości — gdy PET niedostępny.',
+                        'Selektywne cewnikowanie żylne z pomiarem FGF23 — w wyselekcjonowanych ośrodkach referencyjnych.'
+                      ] },
+                      'Guzy często małe (< 3 cm), zlokalizowane w kościach kończyn, miednicy, tkankach miękkich — wymagają wytrwałości diagnostycznej.'
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            kind: 'list',
+            icon: 'list-search',
+            title: 'Przyczyny osteomalacji u dorosłych',
+            items: [
+              {
+                label: 'Niedoborowa (najczęstsza w Polsce)',
+                text: 'wynik długotrwałego niedoboru witaminy D i/lub wapnia:',
+                detail: [
+                  'Niedobór witaminy D — ograniczona ekspozycja słoneczna, mieszkańcy domów opieki, osoby z ciemną karnacją, otyłość (BMI ≥ 30 — sekwestracja w tkance tłuszczowej).',
+                  'Niedobór wapnia w diecie — głównie kraje rozwijające się; w Polsce rzadko jako pojedyncza przyczyna.'
+                ]
+              },
+              {
+                label: 'Z zaburzeń wchłaniania',
+                text: 'częste i odwracalne po wyrównaniu pierwotnej choroby:',
+                detail: [
+                  'Celiakia — wykluczyć u każdego dorosłego z niewyjaśnioną osteomalacją.',
+                  'NChZJ (choroba Crohna, wrzodziejące zapalenie jelita grubego).',
+                  'Mukowiscydoza (postać dorosła z zaburzeniami trzustkowymi).',
+                  'Stan po operacjach bariatrycznych (Roux-en-Y gastric bypass — utrata powierzchni wchłaniania witaminy D i wapnia).',
+                  'Przewlekłe choroby wątroby z cholestazą (PBC — pierwotne stwardniające zapalenie dróg żółciowych).'
+                ]
+              },
+              {
+                label: 'Polekowa',
+                text: 'częsta jatrogenna przyczyna:',
+                detail: [
+                  'Antykonwulsanty długotrwale (fenytoina, fenobarbital, karbamazepina) — indukują CYP3A4, przyspieszają katabolizm witaminy D.',
+                  'Glikokortykosteroidy długotrwale — bezpośredni wpływ na osteoblasty + zmniejszone wchłanianie wapnia.',
+                  'Antyretrowirusowe (tenofowir — uszkadza cewki proksymalne → zespół Fanconi-podobny, hipofosfatemia).',
+                  'Żelazo karboksymaltoza dożylnie (FCM) — może indukować ciężką hipofosfatemię z FGF23-zależnym mechanizmem (osteomalacja polekowa).'
+                ]
+              },
+              {
+                label: 'Krzywica nerkowa (CKD-MBD) u dorosłych',
+                text: 'forma kostna CKD-MBD:',
+                detail: [
+                  'Fosfor podwyższony, PTH wysoki (wtórna nadczynność przytarczyc), 1,25(OH)₂D niska.',
+                  'Wytyczne KDIGO 2017 — szczegółowe postępowanie (chelatory fosforu, kalcymimetyki, aktywna witamina D).'
+                ]
+              },
+              {
+                label: 'TIO — onkogenna osteomalacja (paraneoplastyczna)',
+                text: 'rzadki, ale ważny zespół (osobny callout niżej):',
+                detail: [
+                  'Guz mezenchymalny produkujący FGF23 — najczęściej małe guzy łagodne (PMTMCT — phosphaturic mesenchymal tumor mixed connective tissue), trudne do zlokalizowania.',
+                  'Lokalizacja: kości kończyn (40%), tkanki miękkie (50%), zatoki przynosowe / czaszka (10%).',
+                  'Leczenie etiologiczne — resekcja guza skutkuje pełną remisją; do tego czasu suplementacja fosforu doustnie + kalcytriol; burosumab off-label w przypadkach nieoperacyjnych.'
+                ]
+              },
+              {
+                label: 'XLH ujawniona w wieku dorosłym',
+                text: 'część pacjentów z łagodnymi formami XLH przegapiona w dzieciństwie:',
+                detail: [
+                  'Dorośli z chronicznymi bólami kostnymi, niskim wzrostem, deformacjami nóg w wywiadzie, wapń prawidłowy, fosfor obniżony, FGF23 podwyższony.',
+                  'Często dopiero wtedy rozpoznana w rodzinie wieloosobowej (badanie genetyczne PHEX potwierdza).'
+                ]
+              },
+              {
+                label: 'Hipofosfatazja (postać dorosła)',
+                text: 'częściej skąpoobjawowa, ale możliwa do przegapienia:',
+                detail: [
+                  'ALP paradoksalnie OBNIŻONA (a nie podwyższona jak w innych krzywicach/osteomalacjach!) — kluczowy marker różnicujący.',
+                  'Złamania niskoenergetyczne, bóle kostne, utrata zębów stałych przed 60. r.ż. (postać kostno-zębowa).',
+                  'Mutacja ALPL — diagnostyka genetyczna potwierdza rozpoznanie.'
+                ]
+              }
+            ]
+          },
+          {
+            kind: 'callout',
+            variant: 'primary',
+            icon: 'target',
+            title: 'TIO — onkogenna osteomalacja (gdzie szukać guza)',
+            collapsible: true,
+            open: false,
+            body: [
+              { heading: 'Kiedy podejrzewać' },
+              'Dorosły z osteomalacją: hipofosfatemia + niska TmP/GFR + FGF23 podwyższony + wykluczone postacie dziedziczne (PHEX, FGF23, DMP1 — ujemne) + 25-OHD prawidłowa + obraz nagłego początku w wieku dorosłym.',
+              { heading: 'Algorytm obrazowania (Florenzano 2020)' },
+              { items: [
+                'Krok 1 — ⁶⁸Ga-DOTATATE PET/CT (badanie z wyboru, najwyższa czułość ~80%).',
+                'Krok 2 — ¹⁸F-DOPA PET/CT lub ¹⁸F-FDG PET/CT (gdy ⁶⁸Ga-DOTATATE niedostępne lub ujemne, mimo silnego podejrzenia).',
+                'Krok 3 — MRI ciała w całości (whole-body MRI) lub MRI okolic „typowych" (kończyny, miednica).',
+                'Krok 4 — Selektywne cewnikowanie żylne z pomiarem FGF23 (próbkowanie regionalne) — w wyselekcjonowanych ośrodkach referencyjnych.',
+                'Lokalizacja typowa: kości kończyn dolnych (zwłaszcza okolice stóp i podudzi), tkanki miękkie (mięśnie, tkanka tłuszczowa), zatoki przynosowe, podstawa czaszki.'
+              ] },
+              { heading: 'Leczenie' },
+              'Resekcja guza — leczenie z wyboru, skutkuje pełną remisją objawów i normalizacją FGF23 / fosforu w ciągu dni–tygodni. Do czasu lokalizacji i resekcji: fosfor doustny (1–3 g/dobę w 4–6 dawkach podzielonych) + kalcytriol 0,5–2 μg/dobę. Burosumab — off-label w przypadkach nieoperacyjnych lub gdy guz niedostępny do resekcji (badania kliniczne w toku).'
+            ]
+          },
+          {
+            kind: 'callout',
+            variant: 'purple',
+            icon: 'pill',
+            title: 'Leczenie wg etiologii',
+            collapsible: true,
+            open: false,
+            body: [
+              { heading: 'Osteomalacja niedoborowa' },
+              { items: [
+                'Cholekalcyferol (D₃) — dawka nasycenia: 7000–10 000 IU/dobę × 8–12 tyg. lub 50 000 IU/tydz. × 8–12 tyg. doustnie. Kontrola 25-OHD po 12 tygodniach (cel > 75 nmol/L = > 30 ng/mL).',
+                'Wapń elementarny doustnie 1000–1500 mg/dobę.',
+                'Następnie dawka podtrzymująca: 1000–2000 IU/dobę cholekalcyferolu (Płudowski 2023).',
+                'Leczenie pierwotnej przyczyny (np. dieta bezglutenowa w celiakii, leczenie NChZJ).'
+              ] },
+              { heading: 'Osteomalacja w CKD' },
+              'Wg KDIGO 2017 — kalcytriol lub analogi (parikalcytol), chelatory fosforu (sevelamer, lantanu węglan), kalcymimetyki (cynakalcet, etelkalcetyd), w zaawansowanych przypadkach paratyreoidektomia.',
+              { heading: 'Osteomalacja polekowa' },
+              'Odstawić lub zmienić lek sprawczy (gdy możliwe). Przy konieczności kontynuacji leczenia (antykonwulsanty) — wyższa dawka cholekalcyferolu (2000–4000 IU/dobę) i monitoring 25-OHD co 6 mies.',
+              { heading: 'TIO' },
+              'Resekcja guza — leczenie z wyboru. Do czasu lokalizacji: fosfor doustny 1–3 g/dobę + kalcytriol 0,5–2 μg/dobę.',
+              { heading: 'Hipofosfatazja u dorosłych' },
+              'Asfotaza alfa — dla postaci ciężkich pediatrycznych; u dorosłych głównie leczenie objawowe (analgezja, fizjoterapia, monitorowanie złamań).'
+            ]
+          },
+          {
+            kind: 'list',
+            icon: 'tags',
+            title: 'Powiązane panele',
+            items: [
+              { label: 'Krzywica u dzieci', text: 'krzywica dziecięca — analogiczne zaburzenie u dzieci przed zamknięciem chrząstek wzrostowych (panel rickets_kids).' },
+              { label: 'Osteoporoza', text: 'różnicowanie kliniczne — osteomalacja często mylona z osteoporozą; podstawowa różnica — w osteomalacji ALP znacznie podwyższona, w osteoporozie zwykle prawidłowa (panel osteoporosis).' },
+              { label: 'Status witaminy D', text: 'panel oceny zaopatrzenia w witaminę D (panel vitamin_d_status).' }
+            ]
+          }
+        ]
+      },
+      sections: [
+        { name: 'Panel podstawowy',
+          tests: [
+            { id: 'vit_d_25oh' },
+            EXT.pth, EXT.ca_total, EXT.albumin, EXT.phosphorus, EXT.alp,
+            EXT.egfr
+          ]
+        },
+        { name: 'Etiologia (wchłanianie / autoimmunologia)',
+          tests: [
+            EXT.ttg_iga,
+            EXT.iga_total,
+            EXT.liver
+          ]
+        },
+        { name: 'Postaci oporne / TIO',
+          tests: [
+            { id: 'vit_d_1_25' },
+            EXT.fgf23,
+            EXT.urine_calcium,
+            EXT.urine_phosphate_tmp,
+            EXT.bone_alp
+          ]
+        },
+        { name: 'Lokalizacja guza (TIO)',
+          tests: [
+            EXT.octreoscan,
+            EXT.dopa_pet,
+            EXT.pet_ct,
+            EXT.chest_ct
+          ]
+        },
+        { name: 'Genetyka (postacie dziedziczne ujawnione w wieku dorosłym)',
+          tests: [
+            EXT.phex_gene,
+            EXT.alpl_gene
+          ]
+        }
+      ],
+      guideline: 'Bhan A i wsp. 2018 (osteomalacja — przegląd diagnostyki i leczenia) / Florenzano P i wsp. 2020 (TIO — NEJM przegląd) / Haffner D 2019 (XLH) / KDIGO 2017 (CKD-MBD) / Płudowski P 2023 (PL).',
+      sources: [
+        'Bhan A, Rao AD, Rao DS. Osteomalacia as a result of vitamin D deficiency. Endocrinol Metab Clin North Am. 2018;47(1):69-78.',
+        'Florenzano P, Hartley IR, Jimenez M, Roszko K, Gafni RI, Collins MT. Tumor-Induced Osteomalacia. Calcif Tissue Int. 2021;108(1):128-142.',
+        'Minisola S, Peacock M, Fukumoto S i wsp. Tumour-induced osteomalacia. Nat Rev Dis Primers. 2017;3:17044.',
+        'Haffner D, Emma F, Eastwood DM i wsp. Clinical practice recommendations for the diagnosis and management of X-linked hypophosphataemia. Nat Rev Nephrol. 2019;15(7):435-455.',
+        'Kidney Disease: Improving Global Outcomes (KDIGO) CKD-MBD Update Work Group. KDIGO 2017 Clinical Practice Guideline Update for the Diagnosis, Evaluation, Prevention, and Treatment of CKD-MBD. Kidney Int Suppl. 2017;7(1):1-59.',
+        'Whyte MP. Hypophosphatasia: An overview For 2017. Bone. 2017;102:15-25.',
+        'Płudowski P, Kos-Kudła B, Walczak M i wsp. Guidelines for Preventing and Treating Vitamin D Deficiency: A 2023 Update in Poland. Nutrients. 2023;15(3):695.'
+      ]
     },
 
     granulomatous_disease: {
@@ -5995,7 +6557,7 @@
             kind: 'prose',
             icon: 'book-2',
             title: 'Mechanizm hiperkalcemii w chorobach ziarniniakowych',
-            body: 'Makrofagi ziarniniaka wykazują EKTOPOWĄ aktywność 1-α-hydroksylazy — niezależną od regulacji PTH i ujemnego sprzężenia zwrotnego. Prowadzi to do nadmiernej konwersji 25-OHD → 1,25(OH)2D. Wynika z tego paradoksalny obraz: 1,25(OH)2D PODWYŻSZONA mimo często prawidłowej lub obniżonej 25-OHD; hiperkalcemia; PTH ZAHAMOWANE (potwierdza, że hiperkalcemia jest PTH-niezależna). Suplementacja witaminą D u takich pacjentów może paradoksalnie pogłębić hiperkalcemię — wymaga ostrożności.'
+            body: 'Makrofagi ziarniniaka wykazują ektopową aktywność 1-α-hydroksylazy — niezależną od regulacji PTH i ujemnego sprzężenia zwrotnego. Prowadzi to do nadmiernej konwersji 25-OHD → 1,25(OH)₂D. Wynika z tego paradoksalny obraz: 1,25(OH)₂D podwyższona mimo często prawidłowej lub obniżonej 25-OHD; hiperkalcemia; PTH zahamowane (potwierdza, że hiperkalcemia jest PTH-niezależna). Suplementacja witaminą D u takich pacjentów może paradoksalnie pogłębić hiperkalcemię — wymaga ostrożności.'
           },
           {
             kind: 'list',
@@ -6033,11 +6595,11 @@
             icon: 'tags',
             title: 'Diagnostyka',
             items: [
-              { label: '1,25(OH)2D — KLUCZOWY marker', text: 'PODWYŻSZONA — patognomoniczne dla hiperkalcemii ziarniniakowej; pozwala odróżnić od pierwotnej nadczynności przytarczyc.' },
+              { label: '1,25(OH)₂D — kluczowy marker', text: 'podwyższona — patognomoniczne dla hiperkalcemii ziarniniakowej; pozwala odróżnić od pierwotnej nadczynności przytarczyc.' },
               { label: '25-OHD', text: 'często prawidłowa lub obniżona — sama nie różnicuje od innych przyczyn.' },
               { label: 'Wapń całkowity (skorygowany o albuminę) i zjonizowany', text: 'podwyższony — potwierdzenie hiperkalcemii.' },
-              { label: 'PTH', text: 'ZAHAMOWANE — potwierdza, że hiperkalcemia jest PTH-niezależna (różnicuje od pierwotnej nadczynności przytarczyc, w której PTH jest podwyższone).' },
-              { label: 'ACE (konwertaza angiotensyny)', text: 'sarkoidoza — uzupełniająco; podwyższona w ~50–80%, ale NIESWOISTE; nie potwierdza ani nie wyklucza rozpoznania.' },
+              { label: 'PTH', text: 'zahamowane — potwierdza, że hiperkalcemia jest PTH-niezależna (różnicuje od pierwotnej nadczynności przytarczyc, w której PTH jest podwyższone).' },
+              { label: 'ACE (konwertaza angiotensyny)', text: 'sarkoidoza — badanie uzupełniające; podwyższona w ~50–80% przypadków, ale wynik nieswoisty — nie potwierdza ani nie wyklucza rozpoznania.' },
               { label: 'RTG i TK klatki piersiowej', text: 'wykrycie typowych zmian — powiększenie wnęk (limfadenopatia), zmiany śródmiąższowe (sarkoidoza); inne kierunki diagnostyczne — biopsja zmiany z badaniem histopatologicznym.' },
               { label: 'Konsultacja specjalistyczna', text: 'pulmonologiczna (sarkoidoza, gruźlica), reumatologiczna (GPA), hematologiczna (chłoniaki) — w zależności od kierunku diagnostycznego.' }
             ]
@@ -6058,7 +6620,14 @@
           ]
         }
       ],
-      guideline: 'ATS/ERS/WASOG 1999 (sarkoidoza) / aktualizacje'
+      guideline: 'ATS/ERS/WASOG 1999 (sarkoidoza) i aktualizacje / Crowley LE i wsp. 2019 (hiperkalcemia ziarniniakowa) / NICE Guideline NG33 (gruźlica).',
+      sources: [
+        'Statement on Sarcoidosis. American Thoracic Society / European Respiratory Society / World Association of Sarcoidosis and Other Granulomatous Disorders. Am J Respir Crit Care Med. 1999;160(2):736-755 (i aktualizacje 2020).',
+        'Crowley LE, Herbert R, Moline JM i wsp. „Sarcoid like" granulomatous pulmonary disease in World Trade Center disaster responders. Am J Ind Med. 2011;54(3):175-184.',
+        'Tebben PJ, Singh RJ, Kumar R. Vitamin D-Mediated Hypercalcemia: Mechanisms, Diagnosis, and Treatment. Endocr Rev. 2016;37(5):521-547.',
+        'Hawkes CP, Schnellbacher S, Singh RJ, Levine MA. 25-Hydroxyvitamin D Can Interfere With a Common Assay for 1,25-Dihydroxyvitamin D in Vitamin D Intoxication. J Clin Endocrinol Metab. 2015;100(8):2883-2889.',
+        'National Institute for Health and Care Excellence (NICE). Tuberculosis. NG33. London: NICE; 2016 (aktualizacja 2019).'
+      ]
     },
 
     malabsorption: {
@@ -6068,7 +6637,7 @@
             kind: 'prose',
             icon: 'book-2',
             title: 'Definicja i obraz kliniczny',
-            body: 'Zespół złego wchłaniania — upośledzenie wchłaniania substancji odżywczych w przewodzie pokarmowym. Klinicznie: biegunki tłuszczowe (steatorrhea — luźne, tłuste, cuchnące stolce), spadek masy ciała mimo zachowanego apetytu, niedobory makro- i mikroelementów (zwłaszcza witamin rozpuszczalnych w tłuszczach: A, D, E, K) oraz minerałów. U DZIECI dodatkowo: zahamowanie wzrostu, opóźnione dojrzewanie płciowe, niedokrwistość niedoborowa, opóźnienie rozwoju.'
+            body: 'Zespół złego wchłaniania — upośledzenie wchłaniania substancji odżywczych w przewodzie pokarmowym. Klinicznie: biegunki tłuszczowe (steatorrhea — luźne, tłuste, cuchnące stolce), spadek masy ciała mimo zachowanego apetytu, niedobory makro- i mikroelementów (zwłaszcza witamin rozpuszczalnych w tłuszczach: A, D, E, K) oraz minerałów. U dzieci dodatkowo: zahamowanie wzrostu, opóźnione dojrzewanie płciowe, niedokrwistość niedoborowa, opóźnienie rozwoju.'
           },
           {
             kind: 'list',
@@ -6101,7 +6670,7 @@
                 text: 'zmiany anatomiczne wpływające na wchłanianie:',
                 detail: [
                   'Operacje bariatryczne — bypass żołądkowy (Roux-en-Y), sleeve gastrectomy.',
-                  'Resekcje jelita krętego — niedobór B12 i kwasów żółciowych (biegunka cholertyczna).',
+                  'Resekcje jelita krętego — niedobór wit. B12 i kwasów żółciowych (biegunka cholerogenna).',
                   'Zespół krótkiego jelita po rozległych resekcjach.'
                 ]
               },
@@ -6123,7 +6692,7 @@
             items: [
               { label: 'Witamina D 25-OH', text: 'niedobór typowy w zespołach złego wchłaniania (zwłaszcza tłuszczowego).' },
               { label: 'Morfologia + ferrytyna + Fe + TIBC', text: 'niedokrwistość z niedoboru żelaza — częsta przy celiakii, NChZJ, SIBO.' },
-              { label: 'Witamina B12', text: 'niedobór po resekcji jelita krętego, w SIBO, atroficznym zapaleniu żołądka, chorobie Crohna.' },
+              { label: 'Witamina B12 (kobalamina)', text: 'niedobór po resekcji jelita krętego, w SIBO, atroficznym zapaleniu żołądka, chorobie Crohna.' },
               { label: 'Wapń + ALP + albumina', text: 'metabolizm wapnia (niedobór witaminy D → hipokalcemia) i ocena białek (albumina jako marker odżywienia).' },
               { label: 'Celiakia — przesiew', text: 'anty-tTG IgA + IgA całkowite (wykluczenie niedoboru IgA, który fałszuje wynik); EMA przy pogłębionej diagnostyce.' },
               { label: 'Konsultacja gastroenterologiczna', text: 'endoskopia + biopsja jelita cienkiego (potwierdzenie celiakii — kryteria Marsha); elastaza trzustkowa w kale (niewydolność trzustki); testy oddechowe SIBO; badania obrazowe (USG, MR-enterografia).' }
@@ -6146,7 +6715,14 @@
           ]
         }
       ],
-      guideline: 'ESPGHAN 2020 / AGA 2023'
+      guideline: 'ESPGHAN 2020 (Husby — celiakia u dzieci) / AGA 2023 (American Gastroenterological Association — celiakia u dorosłych) / wytyczne PTGE i PTG-E nt. SIBO i przewlekłego zapalenia trzustki.',
+      sources: [
+        'Husby S, Koletzko S, Korponay-Szabó I i wsp. European Society Paediatric Gastroenterology, Hepatology and Nutrition Guidelines for Diagnosing Coeliac Disease 2020. J Pediatr Gastroenterol Nutr. 2020;70(1):141-156.',
+        'Rubio-Tapia A, Hill ID, Semrad C i wsp. American College of Gastroenterology Guidelines Update: Diagnosis and Management of Celiac Disease. Am J Gastroenterol. 2023;118(1):59-76.',
+        'Pimentel M, Saad RJ, Long MD, Rao SSC. ACG Clinical Guideline: Small Intestinal Bacterial Overgrowth. Am J Gastroenterol. 2020;115(2):165-178.',
+        'Conwell DL, Lee LS, Yadav D i wsp. American Pancreatic Association Practice Guidelines in Chronic Pancreatitis. Pancreas. 2014;43(8):1143-1162.',
+        'Stanaway JD, Afshin A, Gakidou E i wsp. (GBD 2017). The global burden of vitamin and mineral deficiencies. Lancet. 2018;392(10159):1923-1994.'
+      ]
     },
 
     /* ═══════════════════════════════════════════════════════════════
@@ -6160,72 +6736,251 @@
             kind: 'prose',
             icon: 'book-2',
             title: 'Definicja i kontekst',
-            body: 'Nadciśnienie tętnicze jest typowo PIERWOTNE (~90–95% przypadków). Diagnostyka wtórnych przyczyn endokrynologicznych jest wskazana w wybranej grupie pacjentów ze zwiększonym prawdopodobieństwem wtórnej etiologii (~5–10%). Identyfikacja przyczyny wtórnej może prowadzić do WYLECZENIA (np. operacyjne — pheochromocytoma, jednostronny gruczolak Conn) lub znaczącej poprawy kontroli ciśnienia (leczenie celowane MRA, leczenie zespołu Cushinga).'
-          },
-          {
-            kind: 'list',
-            icon: 'tags',
-            title: 'Wskazania do diagnostyki wtórnej (ESC/ESH 2023 / PTNT 2019)',
-            items: [
-              { label: 'Nadciśnienie OPORNE', text: '≥ 3 leki w pełnych dawkach, w tym diuretyk; klasyczne wskazanie do skriningu PHA.' },
-              { label: 'Nadciśnienie u młodych', text: '< 40 lat — wczesne nadciśnienie wymaga wykluczenia przyczyn wtórnych.' },
-              { label: 'Nadciśnienie z hipokaliemią', text: 'jawną lub indukowaną diuretykami — silny wskaźnik PHA.' },
-              { label: 'Nadciśnienie ciężkie lub gwałtowny początek', text: '≥ 180/110 mmHg; szybki wzrost ciśnienia bez czynników usposabiających.' },
-              { label: 'Incidentaloma nadnercza + nadciśnienie', text: 'ocena czynności hormonalnej guza nadnercza.' },
-              { label: 'Cechy specyficznych zespołów endokrynologicznych', text: 'cushingoidalne (rozstępy, twarz księżycowata), akromegaliczne (powiększenie rąk/stóp, prognatyzm), przełomy hiperergiczne (pheochromocytoma).' }
+            body: [
+              'Nadciśnienie tętnicze (HT) — wartości ciśnienia przekraczające progi diagnostyczne w pomiarze.',
+              { heading: 'Progi diagnostyczne' },
+              { items: [
+                { label: 'Pomiar gabinetowy', text: '≥ 140/90 mmHg.' },
+                { label: 'Pomiary domowe', text: '≥ 135/85 mmHg.' },
+                { label: 'ABPM 24 h', text: '≥ 130/80 mmHg (ABPM — ang. ambulatory blood pressure monitoring, całodobowe monitorowanie ciśnienia tętniczego).' }
+              ] },
+              { heading: 'Etiologia — 90–95% pierwotne' },
+              'Diagnostyka wtórnych przyczyn endokrynologicznych (~5–10%) jest wskazana w wybranej grupie pacjentów — może prowadzić do wyleczenia (operacyjnego: pheochromocytoma, jednostronny gruczolak Conna) lub znaczącej poprawy kontroli ciśnienia (leczenie antagonistami receptora mineralokortykoidowego — MRA; leczenie zespołu Cushinga, akromegalii).',
+              { heading: 'Wytyczne' },
+              'ESC 2024 (Europejskie Towarzystwo Kardiologiczne), PTNT 2024 (Polskie Towarzystwo Nadciśnienia Tętniczego).'
             ]
           },
           {
             kind: 'list',
-            icon: 'list-search',
-            title: 'Endokrynologiczne przyczyny wtórnego nadciśnienia',
+            icon: 'tags',
+            title: 'Wskazania do diagnostyki wtórnej (PTNT 2024 / ESC 2024)',
             items: [
+              { label: 'Nadciśnienie oporne', text: '≥ 3 leki w pełnych dawkach, w tym diuretyk tiazydowy lub tiazydopodobny — klasyczne wskazanie do skriningu pierwotnego hiperaldosteronizmu (PHA).' },
+              { label: 'Wczesne nadciśnienie', text: '< 40. roku życia — wymagana ocena pod kątem przyczyn wtórnych (PHA, pheochromocytoma, koarktacja aorty, choroby nerek).' },
+              { label: 'Nadciśnienie z hipokaliemią', text: 'jawną lub łatwo wywoływaną niskimi dawkami diuretyków — silny wskaźnik PHA.' },
+              { label: 'Nadciśnienie ciężkie lub nagły początek', text: '≥ 180/110 mmHg; gwałtowne pogorszenie kontroli ciśnienia bez czynników usposabiających.' },
+              { label: 'Incidentaloma (przypadkowo wykryty guz) nadnercza + nadciśnienie', text: 'obowiązkowa ocena czynności hormonalnej guza — test hamowania deksametazonem DST 1 mg, metanefryny, aldosteron/renina.' },
+              { label: 'Charakterystyczne objawy zespołów endokrynologicznych', text: 'cechy zespołu Cushinga (rozstępy purpurowe, twarz księżycowata, miopatia), akromegalii (powiększenie rąk i stóp, prognatyzm), przełomy hiperergiczne (pheochromocytoma).' },
+              { label: 'Obturacyjny bezdech senny (OSA, ang. obstructive sleep apnea)', text: 'współwystępuje z opornym HT — polisomnografia + leczenie CPAP może poprawić kontrolę ciśnienia.' }
+            ]
+          },
+          {
+            kind: 'callout',
+            variant: 'primary',
+            icon: 'alert-triangle',
+            title: 'Przygotowanie do skriningu PHA (pierwotnego hiperaldosteronizmu) — kluczowe warunki',
+            collapsible: true,
+            body: [
+              { heading: 'Wyrównanie kaliemii' },
+              'Potas > 4,0 mmol/L przed pobraniem (hipokaliemia hamuje wydzielanie aldosteronu → fałszywie ujemny ARR — ang. aldosterone-renin ratio, stosunek aldosteron/renina). W razie potrzeby substytucja doustna 1–2 tygodnie wcześniej.',
+              { heading: 'Leki do odstawienia' },
+              { items: [
+                'MRA — antagoniści receptora mineralokortykoidowego (spironolakton, eplerenon): 4–6 tygodni wcześniej (bezwzględnie).',
+                'Diuretyki: 2 tygodnie wcześniej (jeśli możliwe).',
+                'β-blokery: 2 tygodnie (hamują reninę → fałszywie wysokie ARR).',
+                'ACE-I (inhibitory konwertazy angiotensyny), ARB (sartany — antagoniści receptora angiotensyny), DRI (inhibitory reniny — aliskiren): 2 tygodnie (zwiększają reninę → fałszywie niskie ARR).',
+                'NLPZ (niesteroidowe leki przeciwzapalne): 2 tygodnie.'
+              ] },
+              { heading: 'Leki neutralne (mogą być kontynuowane)' },
+              { items: [
+                'Werapamil SR — preferowany.',
+                'Doksazosyna lub inny α-bloker — preferowany.',
+                'Hydralazyna — opcja.'
+              ] },
+              { heading: 'Warunki pobrania' },
+              'Rano, pacjent w pozycji siedzącej ≥ 15 min (lub na nogach ≥ 2 h przy protokole ortostatycznym). Sód w diecie normalny (> 6 g NaCl/dobę przez 3–5 dni).'
+            ]
+          },
+          {
+            kind: 'algorithm',
+            icon: 'list-numbers',
+            title: 'Algorytm diagnostyki nadciśnienia wtórnego',
+            steps: [
               {
-                label: 'Pierwotny hiperaldosteronizm (PHA) — najczęstsza endokrynna przyczyna',
-                text: 'odpowiada za ~5–10% HT ogółem i ~20% opornego:',
-                detail: [
-                  'Skrining: aldosteron + PRA/DRC + obliczenie ARR (stosunek aldosteron/renina).',
-                  'Warunki pobrania: rano, pacjent na nogach ≥ 2 h, wyrównanie kaliemii > 4,0 mmol/L, odstawienie MRA 4–6 tyg.',
-                  'Potwierdzenie: test obciążenia solą lub fludrokortyzonowy.',
-                  'Lokalizacja: TK nadnerczy + AVS (cewnikowanie żył nadnerczowych) — różnicuje jednostronny gruczolak Conn (leczenie chirurgiczne) od obustronnego przerostu BAH (leczenie MRA). Osobne wskazanie.'
+                number: 1,
+                title: 'Panel podstawowy',
+                sublabel: 'przed pogłębioną diagnostyką endokrynologiczną',
+                options: [
+                  {
+                    threshold: 'Co oznaczyć',
+                    action: 'Sód, potas, kreatynina + eGFR (oszacowany współczynnik filtracji kłębuszkowej), glukoza na czczo, lipidogram, badanie ogólne moczu + albuminuria/kreatyninuria. EKG, USG nerek. Echokardiografia (przerost lewej komory jako powikłanie).',
+                    variant: 'success', icon: 'flask',
+                    detail: [
+                      'Hipokaliemia spontaniczna lub indukowana diuretykiem — sygnał wskazujący na PHA, zwężenie tętnicy nerkowej (RAS — ang. renal artery stenosis), nadmiar kortykosteroidów lub nieprawidłowo stosowane diuretyki.',
+                      'Albuminuria — niezależny czynnik ryzyka sercowo-naczyniowego (CV), marker uszkodzenia narządowego.',
+                      'eGFR < 60 — może wskazywać na nadciśnienie nerkowopochodne lub powikłanie nerkowe HT.',
+                      'USG nerek — wyklucza miąższową chorobę nerek; asymetria wymiarów nerek sugeruje zwężenie tętnicy nerkowej.'
+                    ]
+                  }
                 ]
               },
               {
-                label: 'Pheochromocytoma / paraganglioma',
-                text: 'guz produkujący katecholaminy:',
-                detail: [
-                  'Klasyczna triada: bóle głowy, kołatania serca, poty + przełomy nadciśnieniowe (paroksyzmalne lub utrzymujące się).',
-                  'Skrining biochemiczny: WOLNE metoksykatecholaminy (metanefryny) w osoczu LUB frakcjonowane metanefryny w DZM — wysoka czułość.',
-                  'Po potwierdzeniu biochemicznym: lokalizacja (TK/MRI nadnerczy + jamy brzusznej; scyntygrafia MIBG lub ⁶⁸Ga-DOTATATE PET przy podejrzeniu paraganglioma).',
-                  'Przed operacją obowiązkowa blokada α-adrenergiczna (fenoksybenzamina, doksazosyna) 10–14 dni — zapobieganie przełomowi okołooperacyjnemu.'
+                number: 2,
+                title: 'Skrining PHA — wskaźnik ARR',
+                sublabel: 'najczęstsza endokrynna przyczyna (~5–10% HT)',
+                options: [
+                  {
+                    threshold: 'Wykonanie',
+                    action: 'Aldosteron + PRA (aktywność reninowa osocza, ang. plasma renin activity) lub DRC (bezpośrednie stężenie reniny, ang. direct renin concentration) → obliczenie ARR (stosunek aldosteron/renina). Próg dodatni: ARR > 30 ng/dL : ng/mL/h przy aldosteronie ≥ 15 ng/dL.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'Warunki pobrania: zobacz sekcję „Przygotowanie do skriningu PHA" wyżej (kaliemia, leki do odstawienia).',
+                      'Wynik dodatni → potwierdzenie testem obciążenia 0,9% NaCl, testem kaptoprilowym lub fludrokortyzonowym.',
+                      'Lokalizacja po potwierdzeniu: TK nadnerczy + AVS (ang. adrenal vein sampling — cewnikowanie żył nadnerczowych) — różnicuje jednostronny gruczolak Conna (leczenie operacyjne) od obustronnego przerostu nadnerczy BAH (ang. bilateral adrenal hyperplasia — leczenie MRA).',
+                      'Pełny algorytm — osobne wskazanie hiperaldosteronizm.'
+                    ]
+                  }
                 ]
               },
-              { label: 'Zespół Cushinga', text: 'DST 1 mg + kortyzol w DZM lub ślinie nocnej — TYLKO przy stigmatach cushingoidalnych; rutynowy skrining nie jest zalecany. Pełny algorytm w osobnym wskazaniu.' },
-              { label: 'Akromegalia', text: 'IGF-1 wg norm dla wieku; przy podwyższonym IGF-1 → oGTT z pomiarem GH (brak supresji < 1 μg/L potwierdza). Nadciśnienie występuje u znacznej części pacjentów z akromegalią.' },
-              { label: 'Dysfunkcja tarczycy', text: 'TSH — nadczynność daje skurczowe NT z szeroką ampiulą tętna; niedoczynność daje rozkurczowe NT z wąską amplitudą.' },
-              { label: 'Pierwotna nadczynność przytarczyc', text: 'PTH + wapń skorygowany — częsta asocjacja z nadciśnieniem; mechanizm wieloczynnikowy (hiperkalcemia, wpływ na endotelium).' },
-              { label: 'WPN z niedoboru 11β-OH lub 17α-OH', text: 'rzadkie postaci WPN dają nadciśnienie + cechy płciowe (wirylizacja lub brak rozwoju); 11-deoksykortyzol lub kortykosteron podwyższone.' }
+              {
+                number: 3,
+                title: 'Skrining pheochromocytoma',
+                sublabel: 'gdy paroksyzmy lub triada objawów lub incidentaloma nadnercza',
+                options: [
+                  {
+                    threshold: 'Wskazania i badania',
+                    action: 'Wolne metoksykatecholaminy w osoczu lub frakcjonowane metanefryny w dobowej zbiórce moczu (DZM). Przy wartościach > 4× ULN (ang. upper limit of normal — górnej granicy normy) — wysokie prawdopodobieństwo pheochromocytoma.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      { heading: 'Wskazania kliniczne' },
+                      { items: [
+                        'Paroksyzmy nadciśnieniowe + triada objawów (ból głowy, kołatania serca, poty).',
+                        'Incidentaloma nadnercza — obowiązkowo przed planowanym zabiegiem.',
+                        'Wywiad rodzinny zespołów dziedzicznych — MEN2 (mnoga gruczolakowatość wewnątrzwydzielnicza typu 2), VHL (zespół von Hippla-Lindaua), NF1 (neurofibromatoza typu 1), zespoły paraganglioma — diagnostyka genetyczna w wybranych przypadkach.'
+                      ] },
+                      { heading: 'Lokalizacja po potwierdzeniu biochemicznym' },
+                      { items: [
+                        'TK nadnerczy + jamy brzusznej — badanie pierwszego rzutu.',
+                        'Scyntygrafia MIBG (z metajodobenzyloguanidyną) lub ⁶⁸Ga-DOTATATE PET (z ligandem receptorów somatostatynowych) — przy podejrzeniu paraganglioma pozanadnerczowego lub przerzutów.',
+                        'Diagnostyka genetyczna — w młodszym wieku, lokalizacji pozanadnerczowej, mnogich guzach.'
+                      ] },
+                      { heading: 'Przygotowanie do operacji' },
+                      'Bezwzględnie blokada α-adrenergiczna (fenoksybenzamina lub doksazosyna) ≥ 10–14 dni przed operacją; po osiągnięciu α-blokady można dołączyć β-bloker. Zapobieganie przełomowi okołooperacyjnemu.'
+                    ]
+                  }
+                ]
+              },
+              {
+                number: 4,
+                title: 'Inne przyczyny endokrynne',
+                sublabel: 'celowana diagnostyka według objawów klinicznych',
+                options: [
+                  {
+                    threshold: 'Zespół Cushinga',
+                    action: 'Test hamowania deksametazonem DST (ang. dexamethasone suppression test) 1 mg + kortyzol w DZM lub w ślinie nocnej — wyłącznie przy charakterystycznych objawach klinicznych zespołu Cushinga.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'Rutynowy skrining zespołu Cushinga u wszystkich pacjentów z HT nie jest zalecany.',
+                      'Wskazania kliniczne: rozstępy purpurowe > 1 cm, twarz księżycowata, miopatia proksymalna, otyłość brzuszna nieproporcjonalna, hipokaliemia w połączeniu z innymi objawami klinicznymi.',
+                      'Pełen algorytm — osobne wskazanie zespół Cushinga.'
+                    ]
+                  },
+                  {
+                    threshold: 'Akromegalia',
+                    action: 'IGF-1 (somatomedyna C, czynnik wzrostu zależny od hormonu wzrostu) wg norm dla wieku i płci → przy podwyższeniu doustny test obciążenia glukozą (oGTT) 75 g z pomiarem hormonu wzrostu (GH).',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'Nadciśnienie występuje u 30–50% pacjentów z akromegalią — często rozpoznanie postawione późno.',
+                      'Wskazania kliniczne: powiększenie rąk i stóp (wzrost rozmiaru butów, obrączki), prognatyzm, rozstępy szczęk, charakterystyczna gruba twarz, obturacyjny bezdech senny (OSA), kardiomiopatia.',
+                      'Pełen algorytm — osobne wskazanie akromegalia.'
+                    ]
+                  },
+                  {
+                    threshold: 'Dysfunkcja tarczycy',
+                    action: 'TSH — ocena nadczynności (skurczowe HT z szeroką amplitudą tętna) lub niedoczynności (rozkurczowe HT z wąską amplitudą).',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'TSH zlecane rutynowo u wszystkich pacjentów z nowo rozpoznanym HT.',
+                      'Wyrównanie tarczycy często samodzielnie normalizuje ciśnienie tętnicze.'
+                    ]
+                  },
+                  {
+                    threshold: 'Pierwotna nadczynność przytarczyc',
+                    action: 'PTH + wapń skorygowany o albuminę.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'HT występuje u znacznej części pacjentów z pierwotną nadczynnością przytarczyc — mechanizm wieloczynnikowy (wpływ wapnia na śródbłonek naczyniowy).',
+                      'Paratyreoidektomia może poprawić kontrolę ciśnienia.'
+                    ]
+                  },
+                  {
+                    threshold: 'WPN — postaci nadciśnieniowe (rzadkie)',
+                    action: 'Wrodzony przerost nadnerczy (WPN) z niedoborem 11β-hydroksylazy (gen CYP11B1) lub 17α-hydroksylazy (gen CYP17A1) — głównie u młodych pacjentów z HT współistniejącym z zaburzeniami cech płciowych.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'Niedobór 11β-hydroksylazy: wirylizacja (u dziewczynek) lub przedwczesne dojrzewanie rzekome (u chłopców) + HT + hipokaliemia; 11-deoksykortyzol podwyższony.',
+                      'Niedobór 17α-hydroksylazy: brak rozwoju cech płciowych w pokwitaniu + HT + hipokaliemia; DOC (deoksykortykosteron) i kortykosteron podwyższone.',
+                      'Diagnostyka w ośrodku referencyjnym; wymaga badania genetycznego.'
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            kind: 'callout',
+            variant: 'purple',
+            icon: 'pill',
+            title: 'Cele leczenia (PTNT 2024 / ESC 2024)',
+            collapsible: true,
+            body: [
+              { heading: 'Cele ciśnieniowe — populacja ogólna' },
+              { items: [
+                'Pacjenci 18–64 lat: < 130/80 mmHg (jeśli tolerowane).',
+                'Pacjenci ≥ 65 lat: 130–139 / 70–79 mmHg.',
+                'Cukrzyca: < 130/80 mmHg.',
+                'Przewlekła choroba nerek (CKD): < 130/80 mmHg (zwłaszcza z białkomoczem); ostrożność z ACE-I/ARB przy eGFR < 30 mL/min/1,73 m².'
+              ] },
+              { heading: 'Pierwsza linia farmakoterapii (ESC 2024)' },
+              { items: [
+                'Kombinacja dwulekowa w pojedynczej tabletce: ACE-I lub ARB + CCB (bloker kanału wapniowego — calcium channel blocker, długodziałający) lub diuretyk tiazydopodobny (indapamid, chlortalidon).',
+                'Eskalacja do terapii trójlekowej: ACE-I lub ARB + CCB + diuretyk.',
+                'Oporne HT: dodać spironolakton 25–50 mg/dobę (preferowany u pacjentów z PHA) lub α- albo β-bloker.'
+              ] },
+              { heading: 'Leczenie celowane przyczyn wtórnych' },
+              { items: [
+                'Gruczolak Conna — adrenalektomia laparoskopowa.',
+                'Pheochromocytoma — adrenalektomia po wcześniejszej blokady α-adrenergicznej.',
+                'Zespół Cushinga — leczenie etiologiczne (operacja przysadki, operacja nadnerczy lub radioterapia w zależności od źródła).',
+                'Akromegalia — chirurgia transsfenoidalna, analogi somatostatyny, pegwisomant.',
+                'BAH — obustronny przerost nadnerczy w PHA — leczenie MRA dożywotnio (spironolakton lub eplerenon).'
+              ] }
             ]
           }
         ]
       },
       sections: [
+        { name: 'Panel podstawowy',
+          tests: [
+            EXT.sodium, EXT.potassium, EXT.egfr, EXT.cmp,
+            EXT.glucose_fasting, EXT.lipid_panel
+          ]
+        },
         { name: 'Wtórne przyczyny endokrynne',
           tests: [
             { id: 'aldosterone' }, EXT.pra_pac, EXT.arr,
-            { id: 'cortisol', note: 'Po 1 mg DST' },
+            { id: 'cortisol', note: 'Po teście hamowania deksametazonem (DST) 1 mg — gdy charakterystyczne objawy zespołu Cushinga' },
             EXT.metanephrines_plasma, EXT.metanephrines_urine,
             { id: 'tsh' },
-            { id: 'igf1', note: 'Akromegalia' }
+            { id: 'igf1', note: 'Akromegalia' },
+            EXT.pth, EXT.ca_total
           ]
         },
-        { name: 'Obrazowanie',
+        { name: 'Obrazowanie i lokalizacja',
           tests: [
-            EXT.adrenal_ct
+            EXT.adrenal_ct, EXT.adrenal_mri,
+            EXT.avs
           ]
         }
       ],
-      guideline: 'ESC/ESH 2023 / PTNT 2019'
+      guideline: 'ESC 2024 (McEvoy i wsp.) / PTNT 2024 (Tykarski A i wsp.) / Endocrine Society 2014 (Pheochromocytoma, Lenders) / Endocrine Society 2016 (PHA, Funder).',
+      sources: [
+        'McEvoy JW, McCarthy CP, Bruno RM i wsp. 2024 ESC Guidelines for the management of elevated blood pressure and hypertension. Eur Heart J. 2024;45(38):3912-4018.',
+        'Tykarski A, Filipiak KJ, Januszewicz A i wsp. Zasady postępowania w nadciśnieniu tętniczym — 2024 rok. Wytyczne PTNT. Nadciśnienie Tętnicze w Praktyce. 2024;10(1):1-122.',
+        'Funder JW, Carey RM, Mantero F i wsp. The Management of Primary Aldosteronism: Case Detection, Diagnosis, and Treatment: An Endocrine Society Clinical Practice Guideline. J Clin Endocrinol Metab. 2016;101(5):1889-1916.',
+        'Lenders JW, Duh QY, Eisenhofer G i wsp. Pheochromocytoma and paraganglioma: an endocrine society clinical practice guideline. J Clin Endocrinol Metab. 2014;99(6):1915-1942.',
+        'Williams B, Mancia G, Spiering W i wsp. 2018 ESC/ESH Guidelines for the management of arterial hypertension. Eur Heart J. 2018;39(33):3021-3104.'
+      ]
     },
 
     hypokalemia: {
@@ -6234,57 +6989,262 @@
           {
             kind: 'prose',
             icon: 'book-2',
-            title: 'Definicja i objawy',
-            body: 'Hipokaliemia — stężenie potasu w surowicy < 3,5 mmol/L; klinicznie istotna od < 3,0 mmol/L. Objawy: osłabienie mięśniowe (zwłaszcza kończyn dolnych), zaburzenia rytmu serca (szczególnie przy współistniejącej hipomagnezemii — np. torsade de pointes), parestezje, niedrożność porażenna jelit, w ciężkich przypadkach (< 2,5 mmol/L) porażenia mięśni i niewydolność oddechowa. EKG: spłaszczenie/odwrócenie załamka T, obecność fali U, wydłużenie QT.'
+            title: 'Definicja i kategorie ciężkości',
+            body: [
+              'Hipokaliemia — stężenie potasu w surowicy < 3,5 mmol/L.',
+              { heading: 'Klasyfikacja ciężkości' },
+              { items: [
+                { label: 'Łagodna (3,0–3,4 mmol/L)', text: 'zwykle bezobjawowa; leczenie doustne.' },
+                { label: 'Umiarkowana (2,5–2,9 mmol/L)', text: 'objawy mięśniowe, zmiany w EKG; leczenie doustne lub dożylne.' },
+                { label: 'Ciężka (< 2,5 mmol/L)', text: 'zaburzenia rytmu zagrażające życiu, porażenia, niewydolność oddechowa — bezwzględne wskazanie do leczenia dożylnego.' }
+              ] },
+              { heading: 'Przed diagnostyką — wykluczyć pseudohipokaliemię' },
+              'Fałszywie obniżony wynik wskutek leukocytozy > 100 × 10⁹/L (białaczki) lub długiego przechowywania próbki w niskiej temperaturze.',
+              { heading: 'Kluczowe parametry różnicujące' },
+              { items: [
+                { label: 'Potas w moczu (lub wskaźnik K/kreatynina w spot urine)', text: 'różnicuje utratę nerkową od pozanerkowej.' },
+                { label: 'Magnez w surowicy', text: 'hipomagnezemia utrwala hipokaliemię — substytucja samego potasu bez wyrównania magnezu jest nieskuteczna.' }
+              ] }
+            ]
           },
           {
-            kind: 'list',
-            icon: 'list-search',
-            title: 'Najczęstsze przyczyny',
-            items: [
-              { label: 'Utrata jelitowa', text: 'biegunki (najczęstsza przyczyna ostrej hipokaliemii), wymioty (poprzez alkalozę i wtórny hiperaldosteronizm), nadużywanie środków przeczyszczających, przetoki jelitowe.' },
+            kind: 'callout',
+            variant: 'primary',
+            icon: 'alert-triangle',
+            title: 'Pilne — hipokaliemia ciężka (< 2,5 mmol/L) lub objawowa',
+            collapsible: true,
+            body: [
+              { heading: 'Sygnały alarmowe' },
+              { items: [
+                'EKG: spłaszczenie lub odwrócenie załamka T, obecność fali U, wydłużenie odstępu QT, w skrajnych przypadkach pojawienie się zaburzeń rytmu — przedwczesne pobudzenia komorowe (PVC, ang. premature ventricular contractions), tachyarytmie nadkomorowe i komorowe, torsade de pointes (zwłaszcza przy współistniejącej hipomagnezemii).',
+                'Objawy mięśniowe: ciężkie osłabienie, porażenia, w skrajnych przypadkach niewydolność oddechowa wymagająca wentylacji.',
+                'Niedrożność porażenna jelit.'
+              ] },
+              { heading: 'Krytyczne zasady substytucji dożylnej' },
+              { items: [
+                { label: 'Rozcieńczalnik', text: 'wyłącznie 0,9% NaCl. NIE rozcieńczać KCl w roztworach glukozy ani dekstrozy — glukoza stymuluje wydzielanie endogennej insuliny, która przemieszcza potas do komórek i paradoksalnie pogłębia hipokaliemię oraz ryzyko arytmii. To częsty błąd kliniczny na oddziałach niewyspecjalizowanych.' },
+                { label: 'Stężenie infuzji', text: 'przez żyłę obwodową maks. 40 mmol/L (powyżej tego — silny ból, ryzyko zapalenia żyły i zakrzepicy chemicznej). Przez wkłucie centralne rutynowo do 80 mmol/L; w sytuacjach krytycznych do 200 mmol/L (KDIGO 2020).' },
+                { label: 'Szybkość infuzji', text: 'standardowo 10 mmol/h przez wenflon obwodowy; pod monitoringiem EKG na oddziale ogólnym do 20 mmol/h; w OIT przy K < 2,0 mmol/L i arytmii zagrażającej życiu (torsade de pointes) — do 40 mmol/h pod ciągłym EKG (wyjątkowo do 60 mmol/h w skrajnym zagrożeniu, wyłącznie przez wkłucie centralne).' },
+                { label: 'Hospitalizacja', text: 'oddział z monitoringiem EKG; OIT przy K < 2,0 mmol/L, ciężkich arytmiach lub niewydolności oddechowej.' }
+              ] },
+              { heading: 'Wyrównanie magnezu — obowiązkowe' },
+              { items: [
+                'Mechanizm: hipomagnezemia zwiększa aktywność kanałów ROMK w cewce nerkowej → wzmożona ucieczka potasu z moczem; bez wyrównania magnezu substytucja samego potasu jest nieskuteczna (hipokaliemia oporna na leczenie).',
+                'Dożylnie: siarczan magnezu (MgSO₄) 1–2 g (8–16 mmol Mg) w 100 mL 0,9% NaCl przez 30 min; w ciężkiej hipomagnezemii do 4–6 g (32–48 mmol Mg) w pierwszej dobie.',
+                'Doustnie: preferowane organiczne sole magnezu — glukonian, cytrynian, asparaginian (lepsza biodostępność). Tlenek magnezu (MgO) jest słabo wchłaniany, daje biegunkę osmotyczną i nie powinien być pierwszym wyborem.'
+              ] },
+              { heading: 'Monitoring' },
+              { items: [
+                'Ciągłe EKG przy substytucji > 10 mmol/h.',
+                'Pomiar potasu co 2–4 godziny w ciężkiej hipokaliemii; co 6–12 h w umiarkowanej.',
+                'Pomiar magnezu i kreatyniny równocześnie — ostrożność u pacjentów z eGFR < 30 mL/min/1,73 m² (ryzyko hiperkaliemii odwrotnej; dawki zmniejszyć o połowę, kontrola częstsza).',
+                'Cel terapeutyczny — potas > 3,5 mmol/L; nie należy dążyć do szybkiej normalizacji u pacjentów stabilnych (ryzyko hiperkaliemii).'
+              ] }
+            ]
+          },
+          {
+            kind: 'algorithm',
+            icon: 'list-numbers',
+            title: 'Algorytm diagnostyczny',
+            steps: [
               {
-                label: 'Utrata nerkowa',
-                text: 'najczęstsza przewlekła przyczyna:',
-                detail: [
-                  'Diuretyki pętlowe (furosemid) i tiazydowe — NAJCZĘSTSZA jatrogenna przyczyna utraty nerkowej.',
-                  'Kwasica cewkowa nerkowa (RTA) — zwłaszcza typ 1 (dystalna).',
-                  'Zespół Bartera (mutacje pętli Henlego — naśladuje diuretyki pętlowe).',
-                  'Zespół Gitelmana (mutacje cewki dystalnej — naśladuje tiazydy).'
+                number: 1,
+                title: 'Panel podstawowy + ocena ciężkości',
+                sublabel: 'wykluczenie pseudohipokaliemii, ocena stanu klinicznego',
+                options: [
+                  {
+                    threshold: 'Co oznaczyć',
+                    action: 'Potas, sód, kreatynina + eGFR, glukoza, magnez, gazometria (pH, HCO₃⁻), EKG. Dla różnicowania utraty — potas i kreatynina w próbce moczu (wskaźnik K/Cr) lub stężenie potasu w moczu z DZM.',
+                    variant: 'success', icon: 'flask',
+                    detail: [
+                      'Powtórzyć pomiar potasu — wykluczenie pseudohipokaliemii (leukocytoza > 100 × 10⁹/L w białaczkach; długie przechowywanie próbki w niskiej temperaturze).',
+                      'Magnez — towarzyszy hipokaliemii w 40–60% przypadków. Substytucja samego potasu bez wyrównania magnezu jest nieskuteczna.',
+                      'Gazometria — alkaloza wskazuje na utratę potasu z wymiotami lub hiperaldosteronizm; kwasica sugeruje kwasicę cewkową nerkową (RTA — ang. renal tubular acidosis), biegunkę lub cukrzycową kwasicę ketonową (DKA — ang. diabetic ketoacidosis).',
+                      'Czas trwania: ostra (< 48 h) zwykle redystrybucja lub jatrogenna; przewlekła — utrata nerkowa lub pozanerkowa.',
+                      'Hipokaliemia ciężka (< 2,5 mmol/L) lub objawowa → zobacz sekcję „Pilne" wyżej.'
+                    ]
+                  }
                 ]
               },
               {
-                label: 'Endokrynologiczne',
-                text: 'wymagają wykluczenia po przyczynach nerkowych/jelitowych:',
-                detail: [
-                  'Pierwotny hiperaldosteronizm (PHA) — nadmiar aldosteronu → wzmożone wydalanie K przez nerki; osobne wskazanie.',
-                  'Zespół Cushinga — wysokie stężenia kortyzolu mogą działać mineralokortykoidowo (zwłaszcza w ektopowym ACTH lub ACC).',
-                  'Glikokortykosteroidy egzogenne w dużych dawkach.',
-                  'Lukrecja (kwas glicyrrynowy) — hamuje 11β-HSD2 → kortyzol działa na receptor mineralokortykoidowy → pseudohiperaldosteronizm (renina i aldosteron NISKIE).'
+                number: 2,
+                title: 'Wywiad + ocena utraty',
+                sublabel: 'pozanerkowa vs nerkowa vs redystrybucja',
+                options: [
+                  {
+                    threshold: 'Utrata pozanerkowa (najczęściej oczywista z wywiadu)',
+                    action: 'Biegunki, wymioty, środki przeczyszczające, przetoki, stomie. Klasyczny wzorzec: stężenie potasu w moczu < 20 mmol/L lub wskaźnik K/kreatynina w spot urine < 13 mmol/g (zachowana funkcja oszczędzania potasu przez nerki).',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'Biegunka — najczęstsza ostra przyczyna; gazometria z kwasicą (utrata wodorowęglanów HCO₃⁻).',
+                      'Wymioty — mechanizm pośredni: utrata HCl → alkaloza metaboliczna → wtórny hiperaldosteronizm → utrata potasu przez nerki (potas w moczu może być paradoksalnie wysoki mimo pozanerkowej przyczyny pierwotnej; chlor w moczu < 20 mmol/L sugeruje wymioty ukryte).',
+                      'Nadużywanie środków przeczyszczających — często ukrywane w wywiadzie (np. w zaburzeniach odżywiania); badanie kału na obecność fenoloftaleiny lub bisakodylu.',
+                      'Przetoki jelitowe, stomie o wysokim wydzielaniu, drenaż żółciowy — bilans płynów + analiza składu wydzielin.',
+                      'VIP-oma (zespół Verner-Morrisona, ang. WDHA syndrome) — rzadki guz neuroendokrynny trzustki produkujący VIP; klasyczna triada: masywna wodnista biegunka (> 3 L/dobę) + hipokaliemia + achlorhydria. Pomiar VIP w surowicy + CT/MR jamy brzusznej.'
+                    ]
+                  },
+                  {
+                    threshold: 'Utrata nerkowa',
+                    action: 'Stężenie potasu w moczu z próbki przygodnej > 20 mmol/L lub wskaźnik K/kreatynina w spot urine > 13 mmol/g mimo hipokaliemii. Pierwsza rzecz do sprawdzenia w wywiadzie — diuretyki.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      { heading: 'Uwaga metodyczna — TTKG vs K/kreatynina' },
+                      'Wskaźnik TTKG (ang. transtubular potassium gradient) jest od 2011 r. kwestionowany przez samego autora (Halperin, JASN 2011) — założenie stabilnej osmolalności mocznika w cewce zbiorczej okazało się nieprawdziwe. Aktualnie preferowany wskaźnik to K/kreatynina w spot urine (< 13 mmol/g sugeruje utratę pozanerkową; > 13 mmol/g — utratę nerkową).',
+                      { heading: 'Jatrogenne — najczęstsze' },
+                      { items: [
+                        'Diuretyki pętlowe (furosemid, torasemid) i tiazydowe (hydrochlorotiazyd, indapamid, chlortalidon) — najczęstsza jatrogenna przyczyna.',
+                        'Amfoterycyna B — nefrotoksyczność cewkowa.',
+                        'Aminoglikozydy w wysokich dawkach.',
+                        'Cytostatyki — cisplatyna (klasyczna nefrotoksyczność cewkowa z utratą K i Mg), ifosfamid (zespół Fanconiego), kapecytabina.',
+                        'Inhibitory immunoterapii (ipilimumab, niwolumab, pembrolizumab) — mogą indukować autoimmunologiczną nefropatię cewkowo-śródmiąższową z hipokaliemią.',
+                        'Inhibitory kalcyneuryny (cyklosporyna, takrolimus).'
+                      ] },
+                      { heading: 'Kwasica cewkowa nerkowa (RTA)' },
+                      { items: [
+                        'RTA typ 1 (dystalna) — kwasica metaboliczna + hipokaliemia + alkaliczne pH moczu (> 5,5 mimo kwasicy). Przyczyny: autoimmunologiczne (zespół Sjögrena, toczeń), leki (amfoterycyna, ifosfamid), dziedziczne.',
+                        'RTA typ 2 (proksymalna) — często w zespole Fanconiego; hipokaliemia zwykle łagodna i odwracalna po leczeniu przyczynowym.'
+                      ] },
+                      { heading: 'Tubulopatie dziedziczne (rzadkie)' },
+                      { items: [
+                        'Zespół Bartera — naśladuje działanie diuretyków pętlowych (mutacje SLC12A1, KCNJ1, CLCNKB); objawia się w dzieciństwie.',
+                        'Zespół Gitelmana — naśladuje działanie diuretyków tiazydowych (mutacja SLC12A3); często ujawnia się u młodych dorosłych z hipokaliemią + hipomagnezemią + hipokalciurią + alkalozą.',
+                        'Zespół EAST/SeSAME — mutacja KCNJ10; charakterystyczna konstelacja: epilepsja + ataksja + głuchota czuciowo-nerwowa + tubulopatia z hipokaliemią.',
+                        'Diagnostyka genetyczna w ośrodku referencyjnym.'
+                      ] }
+                    ]
+                  },
+                  {
+                    threshold: 'Redystrybucja wewnątrzkomórkowa',
+                    action: 'Brak rzeczywistej utraty potasu z organizmu — potas przenika do komórek pod wpływem insuliny, β2-agonisty, alkalozy lub zwiększonej aktywności pompy Na/K-ATPazy.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'Insulinoterapia — zwłaszcza w leczeniu cukrzycowej kwasicy ketonowej (DKA); substytucja potasu obowiązkowa już od stężenia K < 5,5 mmol/L przed rozpoczęciem insulinoterapii.',
+                      'β2-agoniści (salbutamol, formoterol) — przejściowo; klinicznie istotne w napadowych dawkach nebulizowanych.',
+                      'Alkaloza metaboliczna lub oddechowa — przesunięcie jonów H⁺ z komórek w wymianie za K⁺.',
+                      'Okresowe porażenie hipokaliemiczne (paralysis periodica) — rodzinne (mutacje CACNA1S, SCN4A) lub wtórne do tyreotoksykozy (najczęstsze u młodych mężczyzn pochodzenia azjatyckiego). Triada: napad porażenia + hipokaliemia + ustąpienie objawów po wyrównaniu potasu.',
+                      'Zespół ponownego odżywiania (refeeding syndrome) — pułapka kliniczna u pacjentów z anoreksją, długotrwałym głodzeniem, alkoholizmem, po dużych operacjach. Po rozpoczęciu żywienia (zwłaszcza węglowodanowego) gwałtowny spadek K, P, Mg + tiaminy. Profilaktyka: oznaczyć K, P, Mg, tiaminę przed wprowadzeniem żywienia; rozpoczynać żywienie ostrożnie, z suplementacją.',
+                      'Stan po reanimacji — przejściowa redystrybucja potasu do komórek po przywróceniu krążenia.',
+                      'Intoksykacje: teofilina, kofeina w wysokich dawkach, werapamil i inne blokery kanału wapniowego w przedawkowaniu, chlorochina / hydroksychlorochina (mechanizm pompy Na/K-ATPazy + aktywacja β-adrenergiczna).'
+                    ]
+                  }
                 ]
               },
               {
-                label: 'Redystrybucja wewnątrzkomórkowa',
-                text: 'potas przemieszcza się do komórek bez utraty z organizmu:',
-                detail: [
-                  'Insulinoterapia (zwłaszcza w leczeniu DKA — pilna substytucja K obowiązkowa).',
-                  'β2-agoniści (salbutamol, formoterol).',
-                  'Alkaloza metaboliczna lub oddechowa.',
-                  'Paraliż okresowy hipokaliemiczny (rodzinny lub w tyreotoksykozie — częstszy u Azjatów).'
+                number: 3,
+                title: 'Diagnostyka endokrynna',
+                sublabel: 'gdy utrata nerkowa nie jest wytłumaczona lekami ani kwasicą cewkową',
+                options: [
+                  {
+                    threshold: 'Pierwotny hiperaldosteronizm (PHA)',
+                    action: 'Aldosteron + PRA (aktywność reninowa osocza) lub DRC (bezpośrednie stężenie reniny) → obliczenie ARR (stosunek aldosteron/renina). Wzorzec: aldosteron wysoki + renina niska → ARR > 30 = wynik dodatni.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'Najczęstsza endokrynna przyczyna hipokaliemii z utratą nerkową.',
+                      'Często współistnieje z opornym nadciśnieniem tętniczym.',
+                      'Warunki pobrania — zobacz panel nadciśnienia tętniczego (sekcja „Przygotowanie do skriningu PHA").',
+                      'Pełen algorytm — osobne wskazanie hiperaldosteronizm.'
+                    ]
+                  },
+                  {
+                    threshold: 'GRA — glikokortykoidozależny hiperaldosteronizm (FH typ 1)',
+                    action: 'Chimera genowa CYP11B1/CYP11B2 — produkcja aldosteronu pod kontrolą ACTH. Diagnostyka: test supresji deksametazonem (aldosteron spada > 80%) lub bezpośrednio badanie genetyczne.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'Rzadka, ale ważna postać hiperaldosteronizmu — często ujawnia się w młodym wieku (< 20 r.ż.) z nadciśnieniem tętniczym, hipokaliemią i dodatnim wywiadem rodzinnym (dziedziczenie autosomalne dominujące).',
+                      'Wzorzec biochemiczny taki sam jak w PHA (aldosteron wysoki + renina niska), ale dodatkowo: 18-hydroksykortyzol i 18-okso-kortyzol w moczu znacznie podwyższone.',
+                      'Leczenie: deksametazon 0,125–0,5 mg/dobę (supresja ACTH → spadek aldosteronu) lub spironolakton/eplerenon. NIE wykonywać adrenalektomii.',
+                      'Wskazanie do diagnostyki: pacjent < 20 r.ż. z hiperaldosteronizmem + dodatnim wywiadem rodzinnym lub udarami krwotocznymi u młodych krewnych.'
+                    ]
+                  },
+                  {
+                    threshold: 'Zespół Cushinga ACTH-zależny',
+                    action: 'Test hamowania deksametazonem (DST) 1 mg + kortyzol w DZM lub w ślinie nocnej — przy charakterystycznych objawach klinicznych + opornym HT + hipokaliemii.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'Kortyzol w wysokich stężeniach (zwłaszcza w ektopowym wydzielaniu ACTH lub w raku kory nadnerczy — ACC, ang. adrenocortical carcinoma) działa mineralokortykoidowo wskutek wysycenia enzymu 11β-HSD2 (dehydrogenazy 11β-hydroksysteroidowej typu 2), co powoduje wiązanie kortyzolu z receptorem mineralokortykoidowym (MR).',
+                      'Typowy obraz kliniczny: ciężka hipokaliemia + alkaloza metaboliczna + oporne HT + szybko narastające objawy + miopatia.'
+                    ]
+                  },
+                  {
+                    threshold: 'Pseudohiperaldosteronizm',
+                    action: 'Wzorzec laboratoryjny: aldosteron niski + renina niska + hipokaliemia → przyczyna niealdosteronowa.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'Lukrecja (kwas glicyryzowy) — hamuje 11β-HSD2 → kortyzol działa na receptor mineralokortykoidowy. Źródła: niektóre cukierki (np. Haribo, Salmiakki), herbatki ziołowe, niektóre suplementy diety. Może wywołać efekty przy spożyciu już 50–100 g lukrecji dziennie przez tygodnie.',
+                      'Zespół Liddle\'a — mutacja kanału sodowego ENaC dziedziczona dominująco; skrajnie rzadki; leczenie: amyloryd (bezpośredni inhibitor ENaC), NIE spironolakton.',
+                      'Zespół pozornego nadmiaru mineralokortykoidów (AME, ang. apparent mineralocorticoid excess) — wrodzony defekt enzymu 11β-HSD2; ujawnia się w dzieciństwie.'
+                    ]
+                  }
                 ]
-              },
-              { label: 'Niedostateczna podaż w diecie', text: 'rzadko izolowana przyczyna ciężkiej hipokaliemii — wymaga współistniejącej utraty.' }
+              }
+            ]
+          },
+          {
+            kind: 'callout',
+            variant: 'purple',
+            icon: 'pill',
+            title: 'Substytucja potasu — szczegółowe schematy',
+            collapsible: true,
+            body: [
+              { heading: 'Hipokaliemia łagodna (3,0–3,4 mmol/L)' },
+              { items: [
+                'Doustnie: chlorek potasu (KCl) w tabletkach o przedłużonym uwalnianiu (Kaldyum, Kalipoz prolongatum) — 20–60 mmol/dobę w 2–3 dawkach podzielonych.',
+                'Każde 10 mmol KCl podane doustnie zwiększa potas w surowicy o ok. 0,1 mmol/L (orientacyjnie, tylko przy niewielkich niedoborach).',
+                'Wyrównanie magnezu, jeśli stężenie obniżone.',
+                'Kontrola potasu po 1–2 tygodniach.'
+              ] },
+              { heading: 'Hipokaliemia umiarkowana (2,5–2,9 mmol/L)' },
+              { items: [
+                'Doustnie KCl 40–100 mmol/dobę w dawkach podzielonych (jeśli pacjent toleruje doustnie i nie ma ciężkich objawów).',
+                'Alternatywnie dożylnie KCl 10 mmol/h przez wenflon obwodowy (do 20 mmol/h pod monitoringiem EKG).',
+                'Wyrównanie magnezu — obowiązkowo.',
+                'Kontrola potasu co 6–12 godzin.'
+              ] },
+              { heading: 'Hipokaliemia ciężka (< 2,5 mmol/L) lub objawowa' },
+              { items: [
+                'Hospitalizacja z monitoringiem EKG; w razie K < 2,0 mmol/L lub arytmii — przeniesienie na OIT.',
+                'Dożylnie KCl 10–20 mmol/h przez wenflon obwodowy lub do 40 mmol/h przez wkłucie centralne (pod ciągłym monitoringiem EKG); wyjątkowo do 60 mmol/h w skrajnym zagrożeniu życia (torsade de pointes + K < 2,0 mmol/L).',
+                'Rozcieńczalnik wyłącznie 0,9% NaCl — nigdy nie w glukozie ani dekstrozie (jak wyjaśniono w sekcji „Pilne" powyżej).',
+                'Siarczan magnezu (MgSO₄) 1–2 g i.v. równolegle.',
+                'Kontrola potasu co 2–4 godziny; cel terapeutyczny — K > 3,5 mmol/L. Nie dążyć do szybkiej normalizacji u pacjenta stabilnego (ryzyko hiperkaliemii odwrotnej).'
+              ] },
+              { heading: 'Przewlekła hipokaliemia z utratą nerkową — diuretyki oszczędzające potas' },
+              { items: [
+                'Alternatywa lub uzupełnienie suplementacji KCl u pacjentów z trwałą utratą potasu (PHA, leczenie diuretykami pętlowymi lub tiazydowymi).',
+                'Spironolakton 25–100 mg/dobę — pierwsza linia, zwłaszcza w pierwotnym hiperaldosteronizmie i opornym nadciśnieniu tętniczym; działania niepożądane: ginekomastia u mężczyzn, zaburzenia miesiączkowania u kobiet (efekt antyandrogenowy).',
+                'Eplerenon 25–50 mg/dobę — selektywny antagonista receptora mineralokortykoidowego, mniej działań niepożądanych płciowych niż spironolakton; preferowany u młodszych pacjentów.',
+                'Amyloryd 5–10 mg/dobę — bezpośredni inhibitor kanału ENaC; najsilniejszy w zespole Liddle\'a (gdzie spironolakton nie działa) i tubulopatiach.',
+                'Triamteren 50–100 mg/dobę — rzadziej stosowany.',
+                'OSTROŻNOŚĆ przy łączeniu z ACE-I / ARB / NLPZ + niewydolnością nerek — wysokie ryzyko hiperkaliemii.'
+              ] },
+              { heading: 'Profilaktyka u pacjentów leczonych diuretykami pętlowymi / tiazydowymi' },
+              { items: [
+                'Kontrola potasu co 1–3 miesiące na początku leczenia, później co 6–12 miesięcy.',
+                'Suplementacja doustna KCl 20–40 mmol/dobę lub dodanie diuretyku oszczędzającego potas (spironolakton 25 mg, eplerenon 25 mg, amyloryd 5 mg).',
+                'Inhibitory konwertazy angiotensyny (ACE-I) lub sartany (ARB) — zmniejszają wydalanie potasu, mogą być korzystne u pacjentów z HT i tendencją do hipokaliemii.',
+                'Dieta bogata w potas: banany, pomarańcze, pomidory, ziemniaki, suszone owoce, warzywa zielone, awokado, fasola.'
+              ] },
+              { heading: 'Pułapki kliniczne i ostrzeżenia' },
+              { items: [
+                { label: 'Tabletki KCl o przedłużonym uwalnianiu', text: 'mogą powodować owrzodzenia przewodu pokarmowego (zatrzymanie tabletki w przełyku lub żołądku). Unikać u pacjentów z dysfagią, achalazją, opóźnionym opróżnianiem żołądka (np. gastropareza cukrzycowa), leczonych lekami antycholinergicznymi. W tych grupach preferowana postać płynna (syrop KCl) lub musująca.' },
+                { label: 'Niewydolność nerek', text: 'u pacjentów z eGFR < 30 mL/min/1,73 m² ryzyko hiperkaliemii odwrotnej jest znaczne — dawki KCl o połowę mniejsze, kontrola K co 12–24 h, ostrożność z lekami zatrzymującymi potas (ACE-I/ARB/MRA, NLPZ).' },
+                { label: 'DKA (cukrzycowa kwasica ketonowa)', text: 'substytucja K obowiązkowa już od stężenia K < 5,5 mmol/L PRZED rozpoczęciem insulinoterapii; insulinoterapia wstrzymana jeśli K < 3,3 mmol/L do czasu wyrównania.' },
+                { label: 'Refeeding syndrome', text: 'profilaktyczna substytucja K + P + Mg + tiamina u pacjentów z anoreksją, długotrwałym głodzeniem, alkoholizmem przed rozpoczęciem żywienia; rozpoczynać z 25–50% docelowej dawki kalorycznej.' },
+                { label: 'Niewskazane łączenia', text: 'KCl + sole magnezu w jednej infuzji — wytrącanie; potas z lekami zatrzymującymi potas (spironolakton + amyloryd + ACE-I/ARB) bez ścisłej kontroli — wysokie ryzyko ciężkiej hiperkaliemii.' }
+              ] }
             ]
           },
           {
             kind: 'list',
             icon: 'tags',
-            title: 'Algorytm diagnostyczny — gdy wykluczono przyczyny nerkowe/jelitowe',
+            title: 'Powiązane panele',
             items: [
-              { label: 'Potas + sód + panel biochemiczny + MAGNEZ', text: 'magnez często towarzysząco obniżony — hipomagnezemia UTRWALA hipokaliemię (substytucja samego K bez wyrównania Mg jest nieskuteczna).' },
-              { label: 'Aldosteron + PRA/DRC + ARR', text: 'wykluczenie pierwotnego hiperaldosteronizmu; warunki pobrania jak w osobnym wskazaniu PHA.' },
-              { label: 'DST 1 mg', text: 'przy cechach cushingoidalnych (rozstępy purpurowe, twarz księżycowata, otyłość brzuszna, miopatia, oporne nadciśnienie).' },
-              { label: 'Wzorzec różnicujący — pseudohiperaldosteronizm', text: 'renina NISKA + aldosteron NISKI + hipokaliemia → wykluczyć lukrecję (przewlekłe spożycie produktów z kwasem glicyrrynowym — niektóre cukierki, herbatki ziołowe) lub ektopową produkcję steroidów o aktywności mineralokortykoidowej.' }
+              { label: 'Hiperaldosteronizm', text: 'najczęstsza endokrynna przyczyna hipokaliemii z utratą nerkową (panel hyperaldosteronism).' },
+              { label: 'Zespół Cushinga', text: 'ektopowy ACTH i ACC mogą powodować ciężką hipokaliemię z efektem mineralokortykoidowym kortyzolu (panel cushing).' },
+              { label: 'Nadciśnienie tętnicze', text: 'hipokaliemia + HT — kluczowy zwiastun PHA (panel hypertension).' },
+              { label: 'Nadczynność tarczycy', text: 'tyreotoksykozne porażenie okresowe — hipokaliemia z redystrybucją (panel hyperthyroidism).' },
+              { label: 'Przewlekła choroba nerek (CKD)', text: 'może paradoksalnie sprzyjać hipokaliemii (zwłaszcza w łagodnych stadiach przy diuretykach pętlowych lub w RTA cewkowej) — panel ckd.' },
+              { label: 'Otyłość u dorosłych', text: 'pacjenci z otyłością często leczeni diuretykami z powodu HT (panel obesity).' }
             ]
           }
         ]
@@ -6293,12 +7253,881 @@
         { name: 'Panel podstawowy',
           tests: [
             EXT.potassium, EXT.sodium, EXT.cmp,
+            EXT.egfr,
+            EXT.albumin
+          ]
+        },
+        { name: 'Magnez + gazometria + EKG',
+          tests: [
+            { ext: 'magnesium', label: 'Magnez (Mg)', note: 'Hipomagnezemia utrwala hipokaliemię — substytucja samego potasu bez wyrównania magnezu jest nieskuteczna. Cel: Mg > 0,7 mmol/L.' },
+            { ext: 'abg', label: 'Gazometria krwi (pH, HCO₃⁻)', note: 'Alkaloza → utrata z wymiotami lub hiperaldosteronizm; kwasica → kwasica cewkowa nerkowa (RTA), biegunka, cukrzycowa kwasica ketonowa (DKA).' },
+            { ext: 'ekg', label: 'EKG', note: 'Spłaszczenie lub odwrócenie załamka T, obecność fali U, wydłużenie QT, ryzyko torsade de pointes.' }
+          ]
+        },
+        { name: 'Ocena utraty (wskaźniki moczowe)',
+          tests: [
+            { ext: 'urine_k_creat', label: 'K/kreatynina w spot urine (preferowane)', note: '< 13 mmol/g sugeruje utratę pozanerkową; > 13 mmol/g — nerkową. Nowoczesna alternatywa dla TTKG (zalecana wg Kamel-Halperin JASN 2011).' },
+            { ext: 'urine_k_spot', label: 'Potas w moczu (próbka przygodna lub DZM)', note: '> 20 mmol/L w hipokaliemii sugeruje utratę nerkową; < 20 mmol/L — utratę pozanerkową lub redystrybucję. W DZM: > 25 mmol/24 h — utrata nerkowa.' },
+            { ext: 'urine_cl', label: 'Chlor w moczu (uzupełniająco)', note: 'W zasadowicy metabolicznej: Cl w moczu < 20 mmol/L → utrata z wymiotami lub ukryte wymioty; > 40 mmol/L → diuretyki lub hiperaldosteronizm.' },
+            { ext: 'ttkg', label: 'TTKG (gradient stężenia potasu w cewce nerkowej) — wskaźnik historyczny', note: 'Ang. transtubular potassium gradient. Kwestionowany od 2011 r. (Halperin); preferowany K/kreatynina w spot urine. Wartość > 4 w hipokaliemii sugeruje utratę nerkową. Wzór: (K w moczu × osmolalność surowicy) / (K w surowicy × osmolalność moczu).' }
+          ]
+        },
+        { name: 'Diagnostyka endokrynna',
+          tests: [
             { id: 'aldosterone' }, EXT.pra_pac, EXT.arr,
-            { id: 'cortisol' }
+            { id: 'cortisol', note: 'Po teście hamowania deksametazonem (DST) 1 mg — gdy charakterystyczne objawy zespołu Cushinga.' },
+            { id: 'tsh', note: 'Wykluczenie nadczynności tarczycy — porażenie okresowe tyreotoksykozne (zwłaszcza u młodych mężczyzn pochodzenia azjatyckiego).' }
+          ]
+        },
+        { name: 'VIP-oma (gdy masywna biegunka z hipokaliemią)',
+          tests: [
+            { ext: 'vip_serum', label: 'VIP w surowicy (wazoaktywny peptyd jelitowy)', note: 'Diagnostyka guza neuroendokrynnego trzustki w zespole Verner-Morrisona (WDHA syndrome — wodnista biegunka, hipokaliemia, achlorhydria).' },
+            EXT.chest_ct
+          ]
+        },
+        { name: 'Genetyka (gdy podejrzenie postaci dziedzicznej)',
+          tests: [
+            { ext: 'slc12a3_gene', label: 'Genetyka SLC12A3 (zespół Gitelmana)', note: 'Wskazania: hipokaliemia + hipomagnezemia + hipokalciuria + alkaloza u młodego dorosłego.' },
+            { ext: 'slc12a1_kcnj1_clcnkb_gene', label: 'Geny zespołu Bartera (SLC12A1, KCNJ1, CLCNKB)', note: 'Objawy w dzieciństwie — niedowaga, niski wzrost, polidypsja.' },
+            { ext: 'cyp11b1_cyp11b2_chimera', label: 'Chimera CYP11B1/CYP11B2 (GRA)', note: 'Glikokortykoidozależny hiperaldosteronizm; u młodych z HT + hipokaliemią + dodatnim wywiadem rodzinnym.' }
           ]
         }
       ],
-      guideline: 'KDIGO 2024'
+      guideline: 'KDIGO 2020 (Clase i wsp.) / Mount DB 2024 (UpToDate, przegląd) / BMJ Best Practice 2024 (Hypokalaemia) / Endocrine Society 2016 (Pierwotny hiperaldosteronizm, Funder) / Kamel & Halperin 2011 (krytyka TTKG, JASN).',
+      sources: [
+        'Clase CM, Carrero JJ, Ellison DH i wsp. Potassium homeostasis and management of dyskalemia in kidney diseases: conclusions from a Kidney Disease: Improving Global Outcomes (KDIGO) Controversies Conference. Kidney Int. 2020;97(1):42-61.',
+        'Mount DB. Causes of hypokalemia in adults. UpToDate; aktualizacja 2024.',
+        'Mount DB. Clinical manifestations and treatment of hypokalemia in adults. UpToDate; aktualizacja 2024.',
+        'Kamel KS, Halperin ML. Intelligent and Wise Use of the Transtubular Potassium Concentration Gradient (TTKG): A Time for Reappraisal. J Am Soc Nephrol. 2011;22(7):1245-1248.',
+        'Funder JW, Carey RM, Mantero F i wsp. The Management of Primary Aldosteronism: Case Detection, Diagnosis, and Treatment: An Endocrine Society Clinical Practice Guideline. J Clin Endocrinol Metab. 2016;101(5):1889-1916.',
+        'Unwin RJ, Luft FC, Shirley DG. Pathophysiology and management of hypokalemia: a clinical perspective. Nat Rev Nephrol. 2011;7(2):75-84.',
+        'Kardalas E, Paschou SA, Anagnostis P i wsp. Hypokalemia: a clinical update. Endocr Connect. 2018;7(4):R135-R146.',
+        'Viera AJ, Wouk N. Potassium Disorders: Hypokalemia and Hyperkalemia. Am Fam Physician. 2015;92(6):487-495.',
+        'Asmar A, Mohandas R, Wingo CS. A physiologic-based approach to the treatment of a patient with hypokalemia. Am J Kidney Dis. 2012;60(3):492-497.',
+        'Litchman BL i wsp. Reefeeding syndrome — clinical update. Curr Opin Clin Nutr Metab Care. 2020;23(4):219-226.',
+        'Stowasser M, Gordon RD. Primary Aldosteronism: Changing Definitions and New Concepts of Physiology and Pathophysiology Both Inside and Outside the Kidney. Physiol Rev. 2016;96(4):1327-1384 (zawiera szczegółowe omówienie GRA / FH typ 1).'
+      ]
+    },
+
+    hyponatremia: {
+      summary: {
+        sections: [
+          {
+            kind: 'prose',
+            icon: 'book-2',
+            title: 'Definicja i klasyfikacja',
+            body: [
+              'Hiponatremia — stężenie sodu w surowicy < 135 mmol/L. Najczęstsze zaburzenie elektrolitowe w praktyce klinicznej (4–7% pacjentów hospitalizowanych).',
+              { heading: 'Klasyfikacja wieloparametryczna' },
+              { items: [
+                { label: 'Wg ciężkości', text: 'łagodna 130–134; umiarkowana 125–129; ciężka < 125 mmol/L.' },
+                { label: 'Wg czasu trwania', text: 'ostra (< 48 h) — większe ryzyko obrzęku mózgu, szerszy zakres bezpiecznego wyrównywania; przewlekła (≥ 48 h lub czas nieznany) — większe ryzyko zespołu demielinizacji osmotycznej przy zbyt szybkim wyrównaniu.' },
+                { label: 'Wg objawów', text: 'bezobjawowa; umiarkowanie objawowa (nudności, ból głowy, splątanie, niezborność ruchowa); ciężko objawowa (wymioty, drgawki, śpiączka, niewydolność oddechowa).' },
+                { label: 'Wg wolemii', text: 'hipowolemia; euwolemia (najczęstsza — SIADH); hiperwolemia.' }
+              ] },
+              { heading: 'Diagnostyka różnicowa — kluczowe parametry' },
+              'Wymaga oceny: osmolalności surowicy, osmolalności moczu, sodu w moczu oraz stanu wolemii klinicznej.',
+              { heading: 'Wytyczne' },
+              'Spasovski 2014 (ESE/EAN/ERA-EDTA — europejskie wytyczne kliniczne), Verbalis 2013 (Am J Med — Expert Panel), Hoorn 2017 (JASN — przegląd kliniczny).'
+            ]
+          },
+          {
+            kind: 'list',
+            icon: 'tags',
+            title: 'Kryteria diagnostyczne i kategoryzacja',
+            items: [
+              { label: 'Stężenie sodu', text: 'norma 135–145 mmol/L; łagodna 130–134; umiarkowana 125–129; ciężka < 125 mmol/L.' },
+              { label: 'Czas trwania', text: 'ostra < 48 h (większy zakres bezpiecznego wyrównywania, ryzyko obrzęku mózgu); przewlekła ≥ 48 h lub nieznany (większe ryzyko zespołu demielinizacji osmotycznej — ODS).' },
+              { label: 'Osmolalność surowicy', text: '< 275 mOsm/kg → hiponatremia hipotoniczna (najczęstsza); 275–295 → izotoniczna (pseudohiponatremia); > 295 → hipertoniczna (hiperglikemia, mannitol).' },
+              { label: 'Pseudohiponatremia', text: 'fałszywie obniżony wynik metodą pośrednią potencjometryczną (płomieniowa) wskutek hiperlipidemii (TG > 1500 mg/dL) lub hiperproteinemii (szpiczak, gammapatie). Metoda bezpośrednia (gazometria) daje prawidłowy wynik.' },
+              { label: 'Hiponatremia hipertoniczna', text: 'wzrost glukozy o 100 mg/dL obniża Na o ok. 1,6 mmol/L (klasyczna formuła Katza); aktualnie preferowana 2,4 mmol/L (Hillier 1999). Dotyczy DKA, HHS (zespół hiperglikemiczny hiperosmolarny), masywnej infuzji mannitolu.' },
+              { label: 'Klasyfikacja wg objawów', text: 'bezobjawowa (Na > 130, brak objawów); umiarkowanie objawowa (ból głowy, splątanie, niezborność — Na 125–129); ciężko objawowa (wymioty, drgawki, śpiączka — zwykle Na < 120 lub szybki spadek niezależnie od wartości). Skala Glasgow (GCS — Glasgow Coma Scale) pomocna w ocenie zaburzeń świadomości.' }
+            ]
+          },
+          {
+            kind: 'callout',
+            variant: 'primary',
+            icon: 'alert-triangle',
+            title: 'Pilne — hiponatremia ciężko objawowa (drgawki, śpiączka, wymioty)',
+            collapsible: true,
+            body: [
+              { heading: 'Sygnały alarmowe' },
+              { items: [
+                'Drgawki — toniczno-kloniczne uogólnione lub ogniskowe.',
+                'Śpiączka, znaczne zaburzenia świadomości (GCS ≤ 8).',
+                'Wymioty (zwłaszcza nagłe, bez bólu brzucha) — często pierwszy objaw.',
+                'Niewydolność oddechowa (rzadziej, w ciężkim obrzęku mózgu).',
+                'Zaburzenia ruchowe, niezborność, zatrzymanie oddechu.'
+              ] },
+              { heading: 'Postępowanie natychmiastowe — 3% NaCl' },
+              { items: [
+                '100–150 mL 3% NaCl (hipertonicznego) i.v. w bolusie w 10 min.',
+                'Cel pierwszej godziny: wzrost Na o 4–6 mmol/L (zwykle wystarcza do ustąpienia objawów neurologicznych).',
+                'W razie utrzymywania się objawów — powtórzyć bolus, do 3 razy łącznie.',
+                'Po ustąpieniu objawów neurologicznych — przerwa, wolniejsza substytucja (zwykle nie ma potrzeby kontynuowania 3% NaCl).',
+                'Monitoring Na co 2 godziny w pierwszych 6–12 h; co 4–6 h w następnych dobach.'
+              ] },
+              { heading: 'KRYTYCZNE — zespół demielinizacji osmotycznej (ODS, ang. osmotic demyelination syndrome; dawniej nazywany CPM — central pontine myelinolysis, czyli mielinoliza centralna mostu)' },
+              { items: [
+                { label: 'Mechanizm', text: 'zbyt szybkie wyrównanie hiponatremii przewlekłej → cytotoksyczne uszkodzenie oligodendrocytów (mielinoliza centralna i pozamostowa); objawia się 2–6 dni po wyrównaniu.' },
+                { label: 'Objawy ODS', text: 'porażenie spastyczne, dysartria, dysfagia, zaburzenia okoruchowe, w skrajnych przypadkach „locked-in syndrome" — często nieodwracalne.' },
+                { label: 'Limit wyrównywania — pacjenci wysokiego ryzyka ODS', text: 'maks. wzrost Na ≤ 8 mmol/L/dobę. Czynniki ryzyka: hiponatremia przewlekła, Na < 105 mmol/L wyjściowo, alkoholizm, niedożywienie, niewydolność wątroby, hipokaliemia, leczenie tiazydami.' },
+                { label: 'Limit u pacjentów bez ryzyka ODS', text: 'klasycznie maks. 10–12 mmol/L/dobę i 18 mmol/L/48 h (Spasovski 2014). Nowsze publikacje (Sterns 2018, Adrogué 2022) zalecają konserwatywniejsze podejście — preferowane utrzymywanie wzrostu Na na poziomie ≤ 6–8 mmol/L/dobę u każdego pacjenta z przewlekłą hiponatremią, ze względu na trudność precyzyjnego określenia czasu trwania i ryzyka ODS.' },
+                { label: 'Postępowanie po przekroczeniu limitu', text: '„re-lowering" Na: 5% glukoza i.v. (D5W — ang. 5% dextrose in water) 6 mL/kg w 1–2 h (lub 1 L w 6 h) i/lub desmopresyna 2–4 μg s.c. — celowo obniżyć Na do zakresu < limitu.' }
+              ] }
+            ]
+          },
+          {
+            kind: 'algorithm',
+            icon: 'list-numbers',
+            title: 'Algorytm diagnostyczny — 5 kroków',
+            steps: [
+              {
+                number: 1,
+                title: 'Osmolalność surowicy — wykluczenie pseudohiponatremii i hipertonicznej',
+                sublabel: 'pierwszy krok różnicowania',
+                options: [
+                  {
+                    threshold: 'Osmol. < 275 mOsm/kg',
+                    action: 'Hiponatremia hipotoniczna — najczęstsza; przejść do kroku 2.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'Norma osmolalności surowicy: 275–295 mOsm/kg.',
+                      'Obliczana też wzorem: 2 × [Na] + [glukoza]/18 + [mocznik]/2,8 (w mg/dL).',
+                      'Hiponatremia hipotoniczna oznacza prawdziwy nadmiar wolnej wody względem sodu — wymaga dalszej diagnostyki różnicowej.'
+                    ]
+                  },
+                  {
+                    threshold: 'Osmol. 275–295 mOsm/kg',
+                    action: 'Pseudohiponatremia (izotoniczna) — laboratoryjny artefakt pomiarowy; rzeczywiste stężenie sodu jest prawidłowe.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      { heading: 'Co to jest pseudohiponatremia?' },
+                      'To NIE jest prawdziwa hiponatremia. Pacjent ma normalne stężenie sodu w organizmie, ale aparat laboratoryjny pokazuje wartość zaniżoną z powodu sposobu w jaki mierzy próbkę. Klucz do rozpoznania: osmolalność surowicy jest prawidłowa (275–295 mOsm/kg) — gdyby był to prawdziwy spadek Na, osmolalność też by spadła.',
+                      { heading: 'Dlaczego się tak dzieje — w skrócie' },
+                      'Sód jest rozpuszczony tylko w wodnej (płynnej) części osocza. Normalnie woda zajmuje ok. 93% objętości osocza, a pozostałe 7% to białka i lipidy. Gdy pacjent ma dużo tłuszczu lub białka we krwi, woda zajmuje mniej miejsca (np. tylko 80% objętości). Sodu w tej wodzie jest tyle samo co u zdrowego, ale gdy aparat liczy „ile mmol sodu na litr CAŁEJ próbki" — wynik wychodzi pozornie niski.',
+                      { heading: 'Analogia' },
+                      'Wyobraź sobie szklankę soli z wodą. Jeśli dolejesz oleju, stężenie soli W WODZIE się nie zmieni, ale stężenie soli „w całej szklance" zmaleje, bo część objętości zajmuje teraz olej. Tak samo działa pseudohiponatremia.',
+                      { heading: 'Kiedy podejrzewać' },
+                      { items: [
+                        { label: 'Hiperlipidemia', text: 'trójglicerydy > 1500 mg/dL (np. w ciężkim zespole metabolicznym, mleczna surowica „lipemiczna" — wyraźnie biaława przy odwirowaniu).' },
+                        { label: 'Hiperproteinemia', text: 'szpiczak mnogi (mieloma), gammapatie monoklonalne (białka monoklonalne IgG/IgA/IgM > 10 g/dL); może też wystąpić przy dożylnej podaży immunoglobulin (IVIG).' }
+                      ] },
+                      { heading: 'Jak potwierdzić rozpoznanie — metoda bezpośrednia vs pośrednia' },
+                      { items: [
+                        { label: 'Metoda pośrednia (problematyczna)', text: 'aparaty biochemiczne pracujące na rozcieńczonej próbce (autoanalizery, dawniej fotometria płomieniowa) — zakładają stałą zawartość wody w osoczu, więc dają fałszywie niskie Na.' },
+                        { label: 'Metoda bezpośrednia (poprawna)', text: 'pomiar Na w gazometrii lub ISE (elektroda jonoselektywna, ang. ion-selective electrode) bez rozcieńczania próbki — mierzy aktywność sodu bezpośrednio w fazie wodnej, więc daje prawidłowy wynik. W praktyce: jeśli „normalne" Na z biochemii ≠ Na z gazometrii → pseudohiponatremia.' }
+                      ] },
+                      { heading: 'Postępowanie' },
+                      'Nie leczyć „hiponatremii" — nie ma jej. Leczyć przyczynę pierwotną: hipertrójglicerydemię (dieta, fibraty, redukcja masy ciała), szpiczaka mnogiego (hematologia). Klasyczna pułapka: jeśli pomylimy pseudohiponatremię z prawdziwą i zaczniemy podawać hipertoniczny NaCl, możemy spowodować rzeczywistą hipernatremię i zespół demielinizacji osmotycznej.'
+                    ]
+                  },
+                  {
+                    threshold: 'Osmol. > 295 mOsm/kg',
+                    action: 'Hiponatremia hipertoniczna — substancje osmotycznie aktywne ściągają wodę z komórek.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'Najczęstsza przyczyna: hiperglikemia (DKA, HHS — zespół hiperglikemiczny hiperosmolarny).',
+                      'Korekcja: wzrost glukozy o 100 mg/dL obniża Na o ok. 2,4 mmol/L (Hillier 1999, dokładniejszy niż klasyczna formuła Katza 1,6).',
+                      'Inne przyczyny: masywna infuzja mannitolu, glicyny (TURP — przezcewkowa resekcja prostaty z roztworem glicyny), substancje kontrastowe i.v.',
+                      'Leczenie: korekcja przyczyny (insulina w hiperglikemii); Na zwykle normalizuje się samoistnie po obniżeniu glukozy.'
+                    ]
+                  }
+                ]
+              },
+              {
+                number: 2,
+                title: 'Osmolalność moczu — ocena działania ADH',
+                sublabel: 'różnicowanie ADH aktywne vs nieaktywne',
+                options: [
+                  {
+                    threshold: 'Osmol. moczu < 100 mOsm/kg',
+                    action: 'ADH zahamowane prawidłowo — diureza wodna; nadmiar podaży wody przekracza wydalanie.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'Polidipsja pierwotna — zaburzenie psychiczne (schizofrenia, zaburzenia obsesyjno-kompulsywne, zaburzenia lękowe).',
+                      'EAH (exercise-associated hyponatremia) — hiponatremia indukowana wysiłkiem fizycznym, klasyczna u maratończyków, triathlonistów, uczestników wieloetapowych biegów. Mechanizm: SIADH wysiłkowe + nadmierna podaż wody „z ostrożności" + utrata sodu z potem. Może być śmiertelna (obrzęk mózgu, drgawki). Postępowanie: 3% NaCl bolus + restrykcja płynów; profilaktyka — picie wg pragnienia, nie „na zapas" (zalecenia Wilderness Medical Society — Hew-Butler 2015).',
+                      'Wymuszone nawodnienie (np. po MDMA — „ecstasy" + nadmierna podaż wody w połączeniu z SIADH polekowym; klasyczna pułapka — śmiertelna hiponatremia u młodych dorosłych).',
+                      '„Beer potomania" — wysokie spożycie piwa przy niskiej podaży sodu i białka; niedostateczny ładunek osmotyczny do wydalenia wody.',
+                      '„Tea and toast" syndrome — niedostateczna podaż osmoli (białek, sodu) z dietą u starszych osób z minimalistycznym jadłospisem.',
+                      'Leczenie: ograniczenie podaży wody; w EAH ciężko objawowej — leczenie szpitalne 3% NaCl jak w innych ostrych hiponatremiach.'
+                    ]
+                  },
+                  {
+                    threshold: 'Osmol. moczu > 100 mOsm/kg',
+                    action: 'ADH aktywne (adekwatnie lub nieadekwatnie) — kontynuuj diagnostykę: sód w moczu (krok 3) + ocena wolemii (krok 4).',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'Mocz nieadekwatnie stężony przy obecnej hiponatremii → nadmiar wody w organizmie ale nerki nadal koncentrują mocz (mechanizm hormonalny lub fizjologiczny).',
+                      'Etap kluczowy: różnicowanie SIADH (euwolemia + ADH nieadekwatne), hipowolemii (ADH stymulowane fizjologicznie), hiperwolemii (CHF, marskość — efektywna objętość krwi krążącej obniżona mimo retencji płynów).'
+                    ]
+                  }
+                ]
+              },
+              {
+                number: 3,
+                title: 'Sód w moczu (spot urine) — ocena utraty',
+                sublabel: 'różnicowanie utraty pozanerkowej vs nerkowej',
+                options: [
+                  {
+                    threshold: 'Sód w moczu < 30 mmol/L',
+                    action: 'Niski sód w moczu sugeruje aktywną retencję sodu — albo hipowolemia rzeczywista, albo hiperwolemia z aktywacją RAS.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'Hipowolemia rzeczywista (utrata pozanerkowa): biegunki, wymioty, oparzenia, krwawienia, sekwestracja do „trzeciej przestrzeni" (zapalenie trzustki, niedrożność jelit).',
+                      'Hiperwolemia z efektywnym hipowolemizmem: niewydolność serca (CHF), marskość wątroby (zwłaszcza z wodobrzuszem), zespół nerczycowy — wszystkie z aktywacją RAS (układu renina-angiotensyna) mimo retencji płynów.',
+                      'Diuretyki tiazydowe — paradoksalnie mogą dawać Na w moczu < 30 (zwłaszcza po odstawieniu); świeże tiazydy > 30.',
+                      'Różnicowanie: ocena wolemii klinicznej (krok 4).'
+                    ]
+                  },
+                  {
+                    threshold: 'Sód w moczu > 30 mmol/L',
+                    action: 'Wysoki sód w moczu → utrata nerkowa lub SIADH/CSW lub niewydolność nadnerczy.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'Diuretyki — tiazydowe (klasyczna przyczyna ostrej hiponatremii u starszych), pętlowe (rzadziej), MRA.',
+                      'SIADH — najczęstsza przyczyna hiponatremii euwolemicznej; pełna definicja niżej.',
+                      'CSW — zespół mózgowej utraty soli (Cerebral Salt Wasting); klinicznie z hipowolemią; tabela różnicująca w callout-cie niżej.',
+                      'Niewydolność nadnerczy — wtórna (ACTH-zależna) lub pierwotna (Addison); wymaga oznaczenia kortyzolu porannego + ACTH.',
+                      'Tubulopatie z utratą sodu — zespół Bartera, Gitelmana (rzadkie).'
+                    ]
+                  }
+                ]
+              },
+              {
+                number: 4,
+                title: 'Ocena wolemii klinicznej',
+                sublabel: 'najtrudniejszy krok — niska czułość badania fizykalnego',
+                options: [
+                  {
+                    threshold: 'Hipowolemia',
+                    action: 'Suche błony śluzowe, tachykardia, niskie ciśnienie ortostatyczne, niskie centralne ciśnienie żylne (CVP, ang. central venous pressure), spadek napięcia turgoru skóry, oliguria, podwyższona urea (mocznik) względem kreatyniny (> 20:1), wysoki hematokryt (hemokoncentracja).',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'Przyczyny: utrata pozanerkowa (biegunki, wymioty, oparzenia, krwawienia, sekwestracja); utrata nerkowa (diuretyki, niewydolność nadnerczy, CSW).',
+                      'Leczenie: 0,9% NaCl i.v. — wyrównanie wolemii. UWAGA: po wyrównaniu wolemii ADH spada gwałtownie → ryzyko szybkiego wzrostu Na (> 10 mmol/L w 24 h) → ryzyko ODS. Monitorować Na co 2–4 h.',
+                      'Czułość badania fizykalnego dla hipowolemii: ok. 50% — niska. Pomocniczo: pomiar CVP, USG żyły głównej dolnej, ocena reakcji na 1–2 L 0,9% NaCl.'
+                    ]
+                  },
+                  {
+                    threshold: 'Euwolemia',
+                    action: 'Brak oznak hipo- ani hiperwolemii; klinicznie SIADH najczęstsza przyczyna.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'SIADH — kryteria klasyczne (Bartter-Schwartz 1967, zaktualizowane): hiponatremia hipotoniczna + osmolalność moczu > 100 mOsm/kg + euwolemia + sód w moczu > 30 mmol/L (przy normalnej podaży NaCl) + wykluczenie niedoczynności tarczycy, niewydolności nadnerczy, diuretyków. Kwas moczowy < 4 mg/dL (240 μmol/L) jako parametr pomocniczy.',
+                      'Inne przyczyny euwolemicznej: niedoczynność tarczycy ciężka (rzadko jako jedyna przyczyna), niewydolność nadnerczy wtórna (kortyzol niedostateczny → utrata hamowania ADH).',
+                      'Polidipsja pierwotna — formalnie euwolemiczna, ale różnicowana w kroku 2 (osmol. moczu < 100).'
+                    ]
+                  },
+                  {
+                    threshold: 'Hiperwolemia',
+                    action: 'Obrzęki obwodowe, wodobrzusze, jugularne wypełnienie, rzężenia, podwyższone CVP, hepatomegalia.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'Niewydolność serca (CHF): NT-proBNP podwyższone, echo serca z obniżoną EF.',
+                      'Marskość wątroby z wodobrzuszem: ALT/AST/GGT, albumina, INR, USG/CT jamy brzusznej, paracenteza.',
+                      'Zespół nerczycowy: białkomocz > 3,5 g/dobę, hipoalbuminemia, hiperlipidemia, obrzęki.',
+                      'Mechanizm: efektywna objętość krwi krążącej obniżona → aktywacja RAS → retencja sodu i wody, ale wody więcej (przez ADH) → hiponatremia rozcieńczeniowa.',
+                      'Leczenie: restrykcja płynów + diuretyki pętlowe; w marskości albuminy, tolwaptan w wybranych przypadkach.'
+                    ]
+                  }
+                ]
+              },
+              {
+                number: 5,
+                title: 'Diagnostyka endokrynologiczna',
+                sublabel: 'wykluczenie niedoczynności nadnerczy i tarczycy',
+                options: [
+                  {
+                    threshold: 'Kortyzol poranny + ACTH',
+                    action: 'Kortyzol < 138 nmol/L (< 5 μg/dL) sugeruje niedoczynność nadnerczy; > 500 nmol/L (> 18 μg/dL) ją wyklucza. Wartości pośrednie → test stymulacji ACTH (Synacthen).',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'Hiponatremia jest klasycznym, czasem jedynym, objawem niedoczynności nadnerczy.',
+                      'Niewydolność pierwotna (Addison) — kortyzol niski + ACTH wysoki + hiponatremia + hiperkaliemia + hipotensja ortostatyczna + hiperpigmentacja.',
+                      'Niewydolność wtórna (przysadkowa) — kortyzol niski + ACTH niski lub niski-normalny; kaliemia zwykle prawidłowa (mineralokortykoidy zachowane).',
+                      'Pełen algorytm: panel adrenal_insufficiency.'
+                    ]
+                  },
+                  {
+                    threshold: 'TSH + fT4',
+                    action: 'Niedoczynność tarczycy może powodować hiponatremię, ale zwykle dopiero w ciężkich postaciach (np. śpiączka mikretowa).',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'TSH > 4 mU/L + fT4 obniżona → niedoczynność tarczycy.',
+                      'Mechanizm: obniżona perfuzja nerkowa + zaburzenia wydalania wolnej wody.',
+                      'Klinicznie istotna hiponatremia z niedoczynności tarczycy zwykle wymaga ciężkiej postaci (śpiączka mikretowa) — łagodna niedoczynność rzadko jest pełną przyczyną.'
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            kind: 'callout',
+            variant: 'primary',
+            icon: 'list-search',
+            title: 'Tabela różnicowa — SIADH vs CSW vs moczówka prosta',
+            collapsible: false,
+            body: [
+              'Najtrudniejsze różnicowanie kliniczne, zwłaszcza po krwotokach podpajęczynówkowych (SAH), operacjach przysadki i urazach mózgu — w tych kontekstach mogą występować jednocześnie.',
+              { table: {
+                headers: ['Parametr', 'SIADH', 'CSW (mózgowa utrata soli)', 'Moczówka prosta (DI)'],
+                rows: [
+                  ['Wolemia', 'Euwolemia', { text: 'Hipowolemia', highlight: true }, 'Zmienna (zwykle hipowolemia)'],
+                  ['Sód w surowicy', 'Niski (< 135)', 'Niski (< 135)', { text: 'Wysoki (> 145) lub norma', highlight: true }],
+                  ['Osmolalność moczu', { text: 'Wysoka (> 100)', highlight: true }, 'Wysoka (> 100)', { text: 'Niska (< 200)', highlight: true }],
+                  ['Diureza', 'Normalna', { text: 'Poliuria (> 3 L/d)', highlight: true }, { text: 'Poliuria masywna (> 3–5 L/d)', highlight: true }],
+                  ['Sód w moczu', '> 30 mmol/L', '> 40 mmol/L', 'Zmienny'],
+                  ['Kwas moczowy', { text: 'Niski (< 4 mg/dL)', highlight: true }, 'Niski', 'Norma'],
+                  ['Hematokryt', 'Normalny', { text: 'Podwyższony (hemokoncentracja)', highlight: true }, 'Norma'],
+                  ['Mocznik (BUN)', 'Niski/norma', { text: 'Podwyższony', highlight: true }, 'Norma'],
+                  ['CVP / RAS (ciśnienie żylne centralne / układ renina-angiotensyna)', 'Niskie / nieaktywny', 'Niskie / aktywny', 'Norma'],
+                  ['Pragnienie', 'Brak nasilenia', 'Może być wzmożone', { text: 'Polidipsja (silna)', highlight: true }],
+                  ['Reakcja na 0,9% NaCl', { text: 'Pogorszenie hiponatremii', highlight: true }, { text: 'Poprawa', highlight: true }, 'Bez istotnego wpływu'],
+                  ['Leczenie', { text: 'Restrykcja płynów ± tolwaptan', highlight: true }, { text: 'Substytucja Na + płyny', highlight: true }, { text: 'Desmopresyna (CDI) lub tiazydy + NLPZ (NDI)', highlight: true }]
+                ]
+              } },
+              { heading: 'Patofizjologia — różnice mechanizmu' },
+              { items: [
+                { label: 'SIADH', text: 'nieadekwatne wydzielanie ADH mimo prawidłowej osmolalności surowicy → retencja wolnej wody → euwolemia (lub łagodna hiperwolemia subkliniczna) + rozcieńczenie sodu. Sód w moczu wysoki wskutek „desalinacji" — nerki wydalają sód, żeby utrzymać objętość krwi krążącej.' },
+                { label: 'CSW', text: 'pierwotna utrata sodu z moczem (mechanizm niejasny — hipotetycznie wpływ peptydów natriuretycznych BNP / ANP — peptydów natriuretycznych typu mózgowego i przedsionkowego — po krwotoku podpajęczynówkowym (SAH) lub po operacji mózgu) → rzeczywista hipowolemia → wtórna stymulacja ADH → dalsze pogorszenie hiponatremii. Klucz: hipowolemia odróżnia od SIADH.' },
+                { label: 'Moczówka prosta (DI)', text: 'brak działania ADH (centralna — defekt wydzielania; nerkowa — oporność receptora V2) → masywna diureza wodna → odwodnienie + hipernatremia (z reguły, jeśli pacjent nie pije adekwatnie). Pełen algorytm — osobne wskazanie diabetes_insipidus.' }
+              ] },
+              { heading: 'Kontekst kliniczny' },
+              'SIADH i CSW najczęściej współistnieją lub mylą się po krwotokach podpajęczynówkowych (SAH), urazach mózgu, operacjach przysadki i guzach mózgu. Klucz różnicujący — STAN WOLEMII (CVP, ortostatyka, hematokryt, mocznik) oraz odpowiedź na 0,9% NaCl. W razie wątpliwości — wlew próbny 1–2 L 0,9% NaCl: w SIADH pogarsza hiponatremię (Na spada o 2–4 mmol/L po 4 h); w CSW poprawia (Na rośnie).'
+            ]
+          },
+          {
+            kind: 'callout',
+            variant: 'purple',
+            icon: 'pill',
+            title: 'Leczenie — wg przyczyny i ciężkości',
+            collapsible: true,
+            body: [
+              { heading: 'Hiponatremia ostra ciężko objawowa (drgawki, śpiączka, wymioty)' },
+              { items: [
+                '3% NaCl 100–150 mL i.v. w bolusie w 10 min; powtarzać do 3 razy.',
+                'Cel pierwszej godziny: wzrost Na o 4–6 mmol/L; zwykle wystarcza do ustąpienia objawów neurologicznych.',
+                'Monitoring Na co 2 godziny; ograniczenie do +8 mmol/L/dobę u wysokiego ryzyka ODS, +10–12 mmol/L u innych (preferowane konserwatywne ≤ 6–8 mmol/L/dobę wg Sterns 2018).',
+                'Hospitalizacja na oddziale z monitoringiem (OIT przy GCS ≤ 8, niewydolności oddechowej, drgawkach).'
+              ] },
+              { heading: 'Planowanie substytucji — wzór Adrogué-Madias' },
+              { items: [
+                { label: 'Wzór', text: 'oczekiwana zmiana Na po 1 L wlewu = (Na infuzji − Na pacjenta) / (TBW + 1), gdzie TBW (całkowita woda ustrojowa) = 0,6 × masa ciała (mężczyźni dorośli) lub 0,5 × masa (kobiety dorosłe i starsi mężczyźni); u dzieci 0,6–0,7 × masa.' },
+                { label: 'Przykład', text: 'pacjent 70 kg, mężczyzna, Na 115 mmol/L, plan podania 1 L 3% NaCl (Na 513 mmol/L): TBW = 0,6 × 70 = 42 L; zmiana Na = (513 − 115) / (42 + 1) = 9,3 mmol/L na 1 L. Aby uzyskać wzrost 6 mmol/L, podać 0,65 L 3% NaCl w 6–12 h.' },
+                { label: 'Zastosowanie', text: 'wzór umożliwia planowanie szybkości wlewu i objętości; uwzględnia rozcieńczenie z całkowitej wody ustrojowej. UWAGA — wzór nie uwzględnia trwającej diurezy ani strat — w SIADH wlew może być mniej skuteczny niż wzór sugeruje; przy odwodnieniu hipowolemicznym z aktywnym ADH — po wyrównaniu wolemii ADH spada gwałtownie i Na rośnie szybciej niż przewidziane.' },
+                { label: 'Stężenia Na typowych roztworów', text: '0,9% NaCl = 154 mmol/L; 3% NaCl = 513 mmol/L; 5% NaCl = 855 mmol/L; mleczan Ringera = 130 mmol/L.' }
+              ] },
+              { heading: 'SIADH — restrykcja płynów (pierwsza linia)' },
+              { items: [
+                'Restrykcja płynów: zwykle 500–800 mL/dobę (cel: ujemny bilans wody).',
+                'Czas oczekiwania na efekt: 24–72 h.',
+                'Czynniki predykcyjne niepowodzenia restrykcji: stosunek Na+K w moczu / Na w surowicy > 1; osmolalność moczu > 500 mOsm/kg; wysoka diureza < 1500 mL/dobę.',
+                'Druga linia: tolwaptan (Samsca) 15 mg/dobę doustnie, eskalacja do 60 mg — antagonista receptora V2; tylko w szpitalu pod monitoringiem Na co 6 h (ryzyko zbyt szybkiego wzrostu). Maks. 30 dni leczenia (FDA — hepatotoksyczność).',
+                'Alternatywa europejska: mocznik doustnie 15–30 g/dobę — indukuje diurezę osmotyczną; tani, dostępny, mniej ryzyka hepatotoksyczności.',
+                'Demeklocyklina — historyczna; nie zalecana (nefrotoksyczność).',
+                'Leczenie przyczyny: odstawienie leku sprawczego (SSRI, karbamazepina), leczenie SCC płuc, leczenie zapalenia płuc/encefalopatii.'
+              ] },
+              { heading: 'CSW (zespół mózgowej utraty soli)' },
+              { items: [
+                'Substytucja soli + płynów: 0,9% NaCl 2–3 L/dobę i.v., w cięższych przypadkach 3% NaCl pod monitoringiem.',
+                'Doustnie NaCl 3–9 g/dobę (3–9 g soli kuchennej).',
+                'W opornych przypadkach: fludrokortyzon 0,1–0,4 mg/dobę — wzmacnia reabsorpcję sodu w cewce dystalnej.',
+                'CSW ustępuje samoistnie w 2–4 tyg. po krwotoku/urazie/operacji.',
+                'PRZECIWWSKAZANIE: restrykcja płynów (jak w SIADH) — pogłębia hipowolemię i mózgowe powikłania!'
+              ] },
+              { heading: 'Hipowolemia rzeczywista (biegunki, wymioty, krwawienia)' },
+              { items: [
+                '0,9% NaCl i.v. — wyrównanie utraty (zwykle 2–4 L w pierwszych 24 h).',
+                'UWAGA: po wyrównaniu wolemii ADH spada gwałtownie → ryzyko szybkiego wzrostu Na > 10 mmol/L/24 h → ryzyko ODS.',
+                'Monitoring Na co 2–4 h w pierwszych 12 h.',
+                'W razie zbyt szybkiego wzrostu — desmopresyna 2–4 μg s.c. + 5% glukoza i.v. (re-lowering Na).'
+              ] },
+              { heading: 'Hiperwolemia (CHF, marskość, nerczyca)' },
+              { items: [
+                'Restrykcja płynów: 1000–1500 mL/dobę (mniej restrykcyjna niż w SIADH).',
+                'Restrykcja sodu w diecie: < 2 g/dobę (CHF) lub < 1,5 g/dobę (marskość z wodobrzuszem).',
+                'Diuretyki pętlowe (furosemid, torasemid) — zwiększają wydalanie wolnej wody.',
+                'W marskości z opornym wodobrzuszem: albuminy + terlipresyna (zespół wątrobowo-nerkowy typ 1).',
+                'Tolwaptan — krótkoterminowo (≤ 30 dni) w wybranych przypadkach (SIADH-podobny obraz w marskości).',
+                'Leczenie przyczyny pierwotnej: w CHF — ARNI (inhibitor neprylizyny + sartan, np. sakubitril/walsartan), β-bloker, MRA (antagonista receptora mineralokortykoidowego); w marskości — TIPS (przezżylne wewnątrzwątrobowe zespolenie wrotno-systemowe, ang. transjugular intrahepatic portosystemic shunt), transplantacja wątroby; w nerczycy — leczenie immunosupresyjne i etiologiczne.'
+              ] },
+              { heading: 'Niedoczynność nadnerczy (gdy przyczyna)' },
+              { items: [
+                'Hydrokortyzon 100 mg i.v. natychmiast; następnie 50–100 mg co 6 h.',
+                'Hiponatremia zwykle ustępuje w 24–48 h po włączeniu glikokortykosteroidów.',
+                'Po stabilizacji — przejście na doustny hydrokortyzon 15–25 mg/dobę w 2–3 dawkach (substytucja fizjologiczna).',
+                'Niewydolność pierwotna (Addison) — dodać fludrokortyzon 0,05–0,2 mg/dobę.'
+              ] },
+              { heading: 'Śpiączka mikretowa (myxedema coma) — bardzo rzadka, ciężka' },
+              { items: [
+                { label: 'Definicja i obraz kliniczny', text: 'skrajna, dekompensowana niedoczynność tarczycy z zaburzeniami świadomości, hipotermią, bradykardią, hipoksją, niewydolnością oddechową, hipoglikemią i hiponatremią. Śmiertelność 30–60% nawet przy leczeniu.' },
+                { label: 'KOLEJNOŚĆ KRYTYCZNA — hydrokortyzon PRZED L-tyroksyną', text: 'hydrokortyzon 100 mg i.v. natychmiast (jeszcze przed potwierdzeniem niedoczynności nadnerczy) — wymuszony przez ryzyko współistniejącej wtórnej niedoczynności nadnerczy w zespole podwzgórzowo-przysadkowym (Schmidt) i ryzyko, że L-tyroksyna sama przyspieszy metabolizm i wywoła ostry kryz adrenalny.' },
+                { label: 'Następnie L-tyroksyna i.v.', text: 'dawka nasycająca 200–400 μg i.v. w bolusie (lub doustnie zgłębnikiem żołądkowym), następnie 50–100 μg/dobę. Alternatywnie L-trójjodotyronina (T3) 5–20 μg i.v. co 8 h u pacjentów w skrajnym stanie (szybsze działanie, ale większe ryzyko arytmii).' },
+                { label: 'Wsparcie ogólne', text: 'ogrzewanie pasywne (bez aktywnego — ryzyko wstrząsu), wentylacja w razie niewydolności oddechowej, korekcja hipoglikemii (5% glukoza), ostrożne wyrównanie hiponatremii (jak w innych przewlekłych hiponatremiach — limit ODS).' },
+                { label: 'Diagnostyka równoległa', text: 'TSH, fT4, fT3, kortyzol poranny, ACTH, glukoza, gazometria — wszystko ASAP, ale leczenie hydrokortyzonem + L-tyroksyną NIE czekać na wyniki.' }
+              ] }
+            ]
+          },
+          {
+            kind: 'list',
+            icon: 'list-search',
+            title: 'Przyczyny SIADH — różnicowanie celowane',
+            items: [
+              {
+                label: 'Choroby ośrodkowego układu nerwowego',
+                text: 'częsta lokalizacja przyczyny:',
+                detail: [
+                  'Udar mózgu (zwłaszcza krwotoczny — krwotok podpajęczynówkowy SAH, krwotok śródmózgowy).',
+                  'Guzy mózgu — pierwotne (gleja) i przerzutowe.',
+                  'Zapalenie opon mózgowo-rdzeniowych i mózgu (bakteryjne, wirusowe).',
+                  'Urazy głowy (TBI, ang. traumatic brain injury — pourazowe uszkodzenie mózgu) — w ostrym i przewlekłym następstwie.',
+                  'Pooperacyjnie po neurochirurgii — często przejściowe.',
+                  'Stwardnienie rozsiane, zespół Guillaina-Barrégo, polineuropatie.'
+                ]
+              },
+              {
+                label: 'Choroby płuc',
+                text: 'druga główna kategoria:',
+                detail: [
+                  'Rak płaskonabłonkowy płuc (SCC) — najczęstsza nowotworowa przyczyna SIADH (do 15% pacjentów z SCC).',
+                  'Drobnokomórkowy rak płuca (SCLC) — może wydzielać ADH ektopowo.',
+                  'Zapalenie płuc (bakteryjne, wirusowe, atypowe), ropień płuca.',
+                  'Gruźlica.',
+                  'Mukowiscydoza, ARDS (zespół ostrej niewydolności oddechowej, ang. acute respiratory distress syndrome), ostra niewydolność oddechowa.'
+                ]
+              },
+              {
+                label: 'Leki',
+                text: 'częste pułapki polifarmakoterapii:',
+                detail: [
+                  'SSRI (selektywne inhibitory wychwytu zwrotnego serotoniny) — paroksetyna, fluoksetyna, sertralina (najczęściej u starszych); SNRI (inhibitory wychwytu zwrotnego serotoniny i noradrenaliny) — wenlafaksyna, duloksetyna.',
+                  'Antydepresanty trójcykliczne — amitryptylina, klomipramina.',
+                  'Antykonwulsanty — karbamazepina (klasyczna przyczyna), okskarbazepina, kwas walproinowy, lamotrygina.',
+                  'Cytostatyki — cyklofosfamid i.v., winkrystyna, winblastyna, cisplatyna, ifosfamid.',
+                  'Inhibitory pompy protonowej (IPP) — kontrowersyjne, słabszy efekt.',
+                  'MDMA („ecstasy") — klasyczna kombinacja z polidypsja u młodych dorosłych, śmiertelna.',
+                  'Opioidy — morfina, hydromorfina.',
+                  'NLPZ.',
+                  'Desmopresyna stosowana niewłaściwie.'
+                ]
+              },
+              {
+                label: 'Endokrynologiczne i metaboliczne',
+                text: 'do wykluczenia w każdym SIADH:',
+                detail: [
+                  'Niedoczynność nadnerczy wtórna — kortyzol porany + ACTH; jest klasyczną „pseudo-SIADH" — wymaga hydrokortyzonu, nie restrykcji płynów!',
+                  'Niedoczynność tarczycy ciężka (śpiączka mikretowa) — rzadko jako jedyna przyczyna.',
+                  'Stres fizyczny / emocjonalny — przejściowo.',
+                  'Nudności / wymioty — silny stimulus dla ADH.'
+                ]
+              },
+              {
+                label: 'Inne',
+                text: 'rzadkie i idiopatyczne:',
+                detail: [
+                  'Porfiria ostra przerywana.',
+                  'AIDS.',
+                  'SIADH idiopatyczny — często u starszych osób, diagnoza wykluczeniowa.',
+                  'Zespół Schwartza-Barttera (klasyczna nazwa SIADH).'
+                ]
+              }
+            ]
+          },
+          {
+            kind: 'list',
+            icon: 'tags',
+            title: 'Powiązane panele',
+            items: [
+              { label: 'Moczówka prosta (diabetes insipidus)', text: 'osobne wskazanie — różnicowanie poliurii hiposomotycznej, test stymulacji kopeptyną (panel diabetes_insipidus).' },
+              { label: 'Niedoczynność nadnerczy', text: 'klasyczna przyczyna hiponatremii — wykluczyć w każdym przypadku (panel adrenal_insufficiency).' },
+              { label: 'Niedoczynność tarczycy', text: 'rzadko jako jedyna przyczyna, ale warto wykluczyć (panel hypothyroidism).' },
+              { label: 'Hipokaliemia', text: 'współistnienie z hiponatremią — wymioty, biegunki, diuretyki tiazydowe (panel hypokalemia).' },
+              { label: 'Nadciśnienie tętnicze', text: 'diuretyki tiazydowe — klasyczna jatrogenna przyczyna hiponatremii u starszych (panel hypertension).' },
+              { label: 'CKD', text: 'może powodować hiponatremię w zaawansowanych stadiach (panel ckd).' }
+            ]
+          }
+        ]
+      },
+      sections: [
+        { name: 'Panel podstawowy',
+          tests: [
+            EXT.sodium, EXT.potassium, EXT.cmp,
+            EXT.egfr,
+            EXT.glucose_fasting,
+            EXT.serum_osm
+          ]
+        },
+        { name: 'Panel moczu (różnicowanie utraty)',
+          tests: [
+            EXT.urine_osm,
+            EXT.urine_na,
+            EXT.urine_k_spot,
+            EXT.urine_creat,
+            EXT.urine_cl
+          ]
+        },
+        { name: 'Diagnostyka endokrynologiczna',
+          tests: [
+            { id: 'tsh' }, { id: 'ft4' },
+            { id: 'cortisol', note: 'Kortyzol poranny — wykluczenie niedoczynności nadnerczy (klasyczna przyczyna hiponatremii).' },
+            { id: 'acth', note: 'Różnicowanie pierwotnej (Addison) vs wtórnej niedoczynności nadnerczy.' }
+          ]
+        },
+        { name: 'Diagnostyka SIADH (markery pomocnicze)',
+          tests: [
+            { ext: 'uric_acid', label: 'Kwas moczowy', note: 'Niski (< 4 mg/dL / 240 μmol/L) — charakterystyczny dla SIADH; pomocniczy w różnicowaniu z hipowolemią (gdzie kwas moczowy jest podwyższony).' },
+            EXT.albumin,
+            EXT.lipid_panel,
+            { ext: 'spep', label: 'SPEP (elektroforeza białek surowicy)', note: 'Wykluczenie szpiczaka — przyczyny pseudohiponatremii.' }
+          ]
+        },
+        { name: 'Diagnostyka rozszerzona (gdy podejrzenie moczówki w różnicowaniu)',
+          tests: [
+            EXT.copeptin_stim,
+            EXT.water_deprivation_test,
+            EXT.avp_arg
+          ]
+        },
+        { name: 'Obrazowanie (gdy podejrzenie centralnej przyczyny)',
+          tests: [
+            EXT.brain_mri,
+            EXT.chest_xray,
+            EXT.chest_ct
+          ]
+        }
+      ],
+      guideline: 'Spasovski G i wsp. 2014 (ESE/EAN/ERA-EDTA — European Clinical Practice Guideline) / Verbalis JG i wsp. 2013 (Am J Med — Expert Panel Recommendations) / Hoorn EJ, Zietse R 2017 (JASN — Review) / Adrogué HJ, Madias NE 2022 (NEJM — SIADH).',
+      sources: [
+        'Spasovski G, Vanholder R, Allolio B i wsp. Clinical practice guideline on diagnosis and treatment of hyponatraemia. Eur J Endocrinol. 2014;170(3):G1-G47.',
+        'Verbalis JG, Goldsmith SR, Greenberg A i wsp. Diagnosis, evaluation, and treatment of hyponatremia: expert panel recommendations. Am J Med. 2013;126(10 Suppl 1):S1-S42.',
+        'Hoorn EJ, Zietse R. Diagnosis and Treatment of Hyponatremia: Compilation of the Guidelines. J Am Soc Nephrol. 2017;28(5):1340-1349.',
+        'Adrogué HJ, Madias NE. The Syndrome of Inappropriate Antidiuresis. N Engl J Med. 2022;387(15):1414-1424.',
+        'Sterns RH. Disorders of plasma sodium — causes, consequences, and correction. N Engl J Med. 2015;372(1):55-65.',
+        'Sterns RH, Hix JK, Silver SM. Treating profound hyponatremia: a strategy for controlled correction. Am J Kidney Dis. 2010;56(4):774-779.',
+        'Berl T, Quittnat-Pelletier F, Verbalis JG i wsp. (SALTWATER investigators) Oral tolvaptan is safe and effective in chronic hyponatremia. J Am Soc Nephrol. 2010;21(4):705-712.',
+        'Cesar KR, Magaldi AJ. Thiazide induces water absorption in the inner medullary collecting duct of normal and Brattleboro rats. Am J Physiol. 1999;277(5):F756-F760.',
+        'Cui H, He G, Yang S i wsp. Inappropriate Antidiuretic Hormone Secretion and Cerebral Salt-Wasting Syndromes in Neurological Patients. Front Neurosci. 2019;13:1170.',
+        'Kim DK, Joo KW. Hyponatremia in patients with neurologic disorders. Electrolyte Blood Press. 2009;7(2):51-57.',
+        'Burst V. Etiology and Epidemiology of Hyponatremia. Front Horm Res. 2019;52:24-35.',
+        'Maesaka JK, Imbriano LJ, Miyawaki N. Determining Fractional Urate Excretion Rates in Hyponatremic Conditions and Improved Methods to Distinguish Cerebral/Renal Salt Wasting From the Syndrome of Inappropriate Secretion of Antidiuretic Hormone. Front Med (Lausanne). 2018;5:319.',
+        'Hew-Butler T, Rosner MH, Fowkes-Godek S i wsp. Statement of the 3rd International Exercise-Associated Hyponatremia Consensus Development Conference (Wilderness Med Soc). Clin J Sport Med. 2015;25(4):303-320.',
+        'Adrogué HJ, Madias NE. Hyponatremia. N Engl J Med. 2000;342(21):1581-1589 (klasyczny artykuł z wzorem do planowania substytucji — Adrogué-Madias formula).',
+        'Wartofsky L. Myxedema coma. Endocrinol Metab Clin North Am. 2006;35(4):687-698, vii-viii (myxedema coma — postępowanie).',
+        'Sterns RH. Treatment of Severe Hyponatremia. Clin J Am Soc Nephrol. 2018;13(4):641-649 (konserwatywne podejście do tempa wyrównywania).'
+      ]
+    },
+
+    diabetes_insipidus: {
+      summary: {
+        sections: [
+          {
+            kind: 'prose',
+            icon: 'book-2',
+            title: 'Definicja i klasyfikacja',
+            body: [
+              'Moczówka prosta (DI — diabetes insipidus) — zaburzenie polegające na masywnej diurezie hipoosmotycznej (> 3 L/dobę u dorosłych, > 2 L/m² u dzieci) z polidypsją kompensacyjną, wynikające z niedoboru lub oporności na hormon antydiuretyczny ADH (wazopresynę).',
+              { heading: 'Etymologia nazwy' },
+              'Łac. „insipidus" = bezsmakowy — w odróżnieniu od „diabetes mellitus" (cukrzycy), gdzie mocz jest słodki z powodu glukozurii. Historycznie lekarze różnicowali oba zaburzenia smakując mocz.',
+              { heading: 'Typy moczówki prostej' },
+              { items: [
+                { label: 'CDI — centralna (central DI)', text: 'niedobór wydzielania ADH przez tylny płat przysadki.' },
+                { label: 'NDI — nerkowa (nephrogenic DI)', text: 'oporność receptora V2 w cewce zbiorczej na ADH (ADH wydzielane prawidłowo, ale nerki nie reagują).' },
+                { label: 'Polidypsja pierwotna (psychogenic DI)', text: 'rzadszy „pseudo-typ" — nadmierne spożycie wody → fizjologiczne zahamowanie ADH; nie jest prawdziwą moczówką.' }
+              ] },
+              { heading: 'Wytyczne i nowa nomenklatura' },
+              'Christ-Crain M i wsp. 2019 (NEJM). Working Group 2022 zaproponowało zmianę nomenklatury — „arginine vasopressin deficiency" (zamiast CDI) i „arginine vasopressin resistance" (zamiast NDI). Aktualna nomenklatura kliniczna nadal najczęściej DI.'
+            ]
+          },
+          {
+            kind: 'list',
+            icon: 'tags',
+            title: 'Kryteria diagnostyczne — sygnały kliniczne',
+            items: [
+              { label: 'Poliuria', text: 'diureza > 3 L/dobę u dorosłych, > 2 L/m² powierzchni ciała u dzieci, > 150 mL/kg u noworodków. Średnio 3–18 L/dobę.' },
+              { label: 'Polidipsja', text: 'pragnienie nasilone, charakterystyczna preferencja zimnych napojów; spożycie 3–20 L/dobę.' },
+              { label: 'Nocturia / enureza', text: 'oddawanie moczu w nocy z koniecznością picia — częste i charakterystyczne.' },
+              { label: 'Osmolalność moczu', text: 'niska (< 200 mOsm/kg, zwykle 50–150), nieadekwatna do osmolalności surowicy.' },
+              { label: 'Osmolalność surowicy', text: 'norma lub podwyższona (> 295) — w razie niewystarczającego napoju kompensacyjnego.' },
+              { label: 'Sód w surowicy', text: 'norma lub podwyższony (zwykle > 145 mmol/L); u pacjentów z dostępem do wody Na może być prawidłowy.' },
+              { label: 'Hipernatremia z dehydratacją', text: 'sygnał alarmowy — pacjent nie ma dostępu do wody lub utracił mechanizm pragnienia (uszkodzenie podwzgórza).' }
+            ]
+          },
+          {
+            kind: 'callout',
+            variant: 'primary',
+            icon: 'alert-triangle',
+            title: 'Pilne — hipernatremia z dehydratacją u pacjenta z poliurią',
+            collapsible: true,
+            body: [
+              { heading: 'Sygnały alarmowe' },
+              { items: [
+                'Na > 150 mmol/L z dehydratacją — sygnał, że pacjent nie kompensuje utraty wody (brak dostępu, zaburzenia świadomości, uszkodzenie ośrodka pragnienia w podwzgórzu — moczówka z adipsją, ang. adipsic DI — brak fizjologicznego odczuwania pragnienia).',
+                'Zaburzenia świadomości, drgawki, śpiączka — zwłaszcza przy szybkim wzroście Na.',
+                'Hipotensja ortostatyczna, tachykardia, sucha skóra, niskie napięcie gałek ocznych.',
+                'Diureza > 200 mL/h utrzymująca się ≥ 2 h u dorosłego (zwłaszcza po neurochirurgii) — pilne podejrzenie CDI pooperacyjnej.'
+              ] },
+              { heading: 'Postępowanie natychmiastowe' },
+              { items: [
+                'Dostęp żylny, pomiar Na, osmolalności surowicy i moczu, oznaczenie diurezy ścisłej.',
+                'Wyrównanie wody wolnej: 5% glukoza i.v. lub 0,45% NaCl; TEMPO MAKS. 0,5 mmol/L/h obniżenia Na (lub 10–12 mmol/L/dobę) — szybkie obniżenie hipernatremii powoduje obrzęk mózgu i drgawki!',
+                'Wzór do obliczenia deficytu wody wolnej: deficyt (L) = 0,6 × masa ciała × ([Na aktualne / Na docelowe] − 1).',
+                'W CDI: desmopresyna i.v. 0,5–2 μg lub s.c. 1–4 μg co 12 h; alternatywnie donosowa 5–20 μg lub doustna 100–200 μg.',
+                'Pooperacyjna „faza trzech faz" — CDI → SIADH → trwała CDI lub ozdrowienie — wymaga ostrożnego monitorowania (Na co 4–6 h).'
+              ] }
+            ]
+          },
+          {
+            kind: 'algorithm',
+            icon: 'list-numbers',
+            title: 'Algorytm diagnostyczny — rozróżnianie CDI / NDI / polidipsji pierwotnej',
+            steps: [
+              {
+                number: 1,
+                title: 'Potwierdzenie poliurii hipoosmotycznej',
+                sublabel: 'pierwszy krok — diureza i osmolalność moczu',
+                options: [
+                  {
+                    threshold: 'Diureza > 3 L/dobę + osmol. moczu < 200 mOsm/kg',
+                    action: 'Spełnione kryteria moczówki — przejść do różnicowania (krok 2). Wykluczyć cukrzycę (glukozuria osmotyczna), hipokaliemię i hiperkalcemię.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'Diureza dobowa (24-godzinna zbiórka moczu) — ścisły pomiar.',
+                      'Osmolalność moczu i sodu w pojedynczej próbce — wyklucza diurezę osmotyczną.',
+                      'Glukozuria (cukrzyca, SGLT2-inhibitory) — wyklucza moczówkę.',
+                      'Hiperkalcemia, hipokaliemia — odwracalne przyczyny NDI.',
+                      'Niewydolność nerek z poliurią poliuryczną — diagnostyka różnicowa.'
+                    ]
+                  }
+                ]
+              },
+              {
+                number: 2,
+                title: 'Test stymulacji kopeptyną hipertonicznym NaCl 3%',
+                sublabel: 'aktualny standard (Christ-Crain NEJM 2019)',
+                options: [
+                  {
+                    threshold: 'Kopeptyna < 4,9 pmol/L',
+                    action: 'Moczówka centralna (CDI) — niedobór wydzielania ADH; tylny płat przysadki nie reaguje na hiperosmię.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'Protokół: infuzja 3% NaCl 0,15 mL/kg/min do osiągnięcia Na ≥ 150 mmol/L lub osmol. ≥ 295 mOsm/kg → pomiar kopeptyny.',
+                      'Czułość ok. 95%, swoistość ok. 95% (lepsza niż klasyczny test pragnienia).',
+                      'Kopeptyna — C-końcowy fragment prowazopresyny, wydzielany w równomolowym stosunku do ADH; mierzona w surowicy; stabilna ex vivo.',
+                      'Następnie diagnostyka MRI mózgu — wykluczenie przyczyny strukturalnej (guz, krwawienie, sarkoidoza, zapalenie autoimmunologiczne, histiocytoza Langerhansa).'
+                    ]
+                  },
+                  {
+                    threshold: 'Kopeptyna > 4,9 pmol/L',
+                    action: 'Moczówka nerkowa (NDI) — oporność cewki zbiorczej na ADH; ADH wysokie, ale brak odpowiedzi nerek.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'Wykluczenie przyczyn wtórnych (najczęstsze):',
+                      { items: [
+                        'Lit (terapia przewlekła > 5 lat) — najczęstsza nabyta przyczyna NDI.',
+                        'Hiperkalcemia (> 3,0 mmol/L) i hipokaliemia (< 3,0 mmol/L) — odwracalne.',
+                        'Inne leki: demeklocyklina, foskarnet, amfoterycyna B, ifosfamid, cydofowir.',
+                        'Niewydolność nerek (CKD), zespół po niedrożności moczowodów.'
+                      ] },
+                      'NDI wrodzona (rzadka): mutacje genu AVPR2 (sprzężona z X — recesywna, dotyczy chłopców) lub AQP2 (aquaporina 2 — autosomalna recesywna lub dominująca).',
+                      'W razie braku przyczyny wtórnej i obrazu rodzinnego — diagnostyka genetyczna.'
+                    ]
+                  },
+                  {
+                    threshold: 'Kopeptyna podstawowa wysoka (> 21,4 pmol/L) — bez stymulacji',
+                    action: 'NDI bardzo prawdopodobna nawet bez testu stymulacji.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'Wysoka kopeptyna w warunkach normonatremii / dehydratacji wskazuje, że nerki nie reagują na ADH mimo wysokiego stężenia.',
+                      'Test stymulacji niepotrzebny — bezpośrednio diagnostyka przyczyn NDI (lit, hiperkalcemia, hipokaliemia).'
+                    ]
+                  },
+                  {
+                    threshold: 'Alternatywa — test stymulacji argininą (Refardt 2023)',
+                    action: 'Infuzja argininy chlorowodorku 0,5 g/kg w 250 mL 0,9% NaCl w 30 min → pomiar kopeptyny po 60 min od rozpoczęcia infuzji. Próg interpretacyjny ten sam jak w teście hipertonicznej soli (~3,8–4,9 pmol/L).',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'Zaleta: dużo mniej obciążający dla pacjenta niż hipertoniczna sól — brak ryzyka hipernatremii, dehydratacji, drgawek; krótszy czas testu (60 min vs 2–4 h).',
+                      'Mechanizm: arginina stymuluje wydzielanie wazopresyny przez podwzgórze (mechanizm niezależny od osmolalności).',
+                      'Czułość i swoistość zbliżone do testu hipertonicznej soli (oba ok. 95% wg Refardt 2023 randomized trial NEJM).',
+                      'Rekomendowany przez Christ-Crain 2019 jako alternatywa pierwszego wyboru w ośrodkach bez doświadczenia w teście z hipertoniczną solą lub u pacjentów wysokiego ryzyka (kardiopatia, niewydolność serca, dzieci).',
+                      'Działania niepożądane argininy: nudności (~30%), zaczerwienienie twarzy, przemijająca hipoglikemia.'
+                    ]
+                  }
+                ]
+              },
+              {
+                number: 3,
+                title: 'Klasyczny test pragnienia (gdy kopeptyna niedostępna)',
+                sublabel: 'tradycyjna metoda, w ośrodkach referencyjnych',
+                options: [
+                  {
+                    threshold: 'Protokół',
+                    action: 'Wstrzymanie podaży płynów 8–12 h pod ścisłym monitoringiem (waga, ciśnienie, osmolalność moczu i surowicy co 1–2 h). Test przerwać przy spadku masy > 3% lub Na > 150 mmol/L.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'Norma: osmol. moczu rośnie do > 600 mOsm/kg przy wzroście osmol. surowicy do 290–295.',
+                      'CDI / NDI: brak adekwatnego zagęszczenia moczu mimo wzrostu osmolalności surowicy.',
+                      'Następnie podanie desmopresyny 4 μg s.c.: wzrost osmol. moczu > 50% w 1–2 h → CDI; brak wzrostu → NDI.',
+                      'Polidipsja pierwotna: osmol. moczu rośnie do > 500 mOsm/kg podczas pragnienia (nerki działają prawidłowo, ale do tej pory były „wyłączone" przez nadmiar wody).',
+                      'WADA: test bardzo obciążający, ryzyko ciężkiej dehydratacji; aktualnie test kopeptyną jest preferowany.'
+                    ]
+                  }
+                ]
+              },
+              {
+                number: 4,
+                title: 'Diagnostyka przyczyny (po potwierdzeniu typu)',
+                sublabel: 'CDI vs NDI — kierunkowa diagnostyka',
+                options: [
+                  {
+                    threshold: 'CDI — przyczyny strukturalne i autoimmunologiczne',
+                    action: 'MRI mózgu z gadolinium — pierwsze badanie; brak hiperintensywności tylnego płata przysadki w sekwencji T1 (tzw. „bright spot" — jasny punkt fizjologicznie obecny u zdrowych osób, odpowiadający granulkom z wazopresyną) sugeruje CDI.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      { items: [
+                        'Guzy: kraniofaryngioma, czaszkogardlak, germinoma, makrogruczolak przysadki, przerzuty (rak płuca, piersi).',
+                        'Pooperacyjne (po operacjach przysadki): klasyczna „faza trzech faz" — CDI ostra (1–2 doby) → SIADH (5–7 dni) → trwała CDI lub ozdrowienie.',
+                        'Krwawienia: udar krwotoczny, krwotok podpajęczynówkowy, zespół Sheehana (poporodowa martwica przysadki).',
+                        'Zapalne i autoimmunologiczne: limfocytarne zapalenie przysadki (ang. lymphocytic hypophysitis) — szczególnie u kobiet w ciąży i po porodzie; sarkoidoza; histiocytoza komórek Langerhansa (zwłaszcza u dzieci); IgG4-RD (choroba związana z IgG4, ang. IgG4-related disease — wieloukładowa choroba autoimmunologiczna z naciekami komórek plazmatycznych IgG4-dodatnich).',
+                        'Urazy głowy — zwłaszcza po urazach podstawy czaszki.',
+                        'Idiopatyczna (autoimmunologiczna) — przeciwciała przeciw wazopresynie (anty-AVP autoprzeciwciała) — wykrywane w ok. 30% przypadków CDI.',
+                        'Wrodzona: mutacje genu AVP-NPII (autosomalna dominująca neurohypophysial DI).'
+                      ] }
+                    ]
+                  },
+                  {
+                    threshold: 'NDI — przyczyny',
+                    action: 'Najpierw wykluczyć odwracalne przyczyny (lit, hiperkalcemia, hipokaliemia, niewydolność nerek); następnie diagnostyka genetyczna w razie braku.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      { items: [
+                        'Lit — najczęstsza nabyta przyczyna; rozwija się po > 5 latach terapii; częściowo odwracalna po odstawieniu.',
+                        'Hiperkalcemia ciężka i przewlekła — pierwotna nadczynność przytarczyc, hiperkalcemia z nowotworu, zatrucie wit. D.',
+                        'Hipokaliemia ciężka i przewlekła (zespół Bartera, hiperaldosteronizm).',
+                        'Leki nefrotoksyczne: amfoterycyna B, demeklocyklina (historycznie używana — paradoksalnie powoduje NDI), foskarnet, cydofowir.',
+                        'Niedrożność moczowodów (przewlekła) — uszkodzenie cewki zbiorczej.',
+                        'CKD zaawansowana (G4–G5).',
+                        'Wrodzona NDI sprzężona z X (mutacje AVPR2 — receptora V2) lub autosomalna (mutacje AQP2 — aquaporiny 2).'
+                      ] }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            kind: 'callout',
+            variant: 'purple',
+            icon: 'pill',
+            title: 'Leczenie — wg typu',
+            collapsible: true,
+            body: [
+              { heading: 'CDI — moczówka centralna' },
+              { items: [
+                'Desmopresyna (DDAVP, syntetyczny analog ADH) — leczenie pierwszego wyboru. Selektywny agonista receptora V2 (brak działania presyjnego V1).',
+                'Postaci: donosowa (Minirin/Aerrane) 5–20 μg 1–2× dziennie; podjęzykowa (Minirin Melt) 60–240 μg 1–3× dziennie; doustna (Minirin) 100–400 μg 1–3× dziennie; podskórna/dożylna 1–4 μg co 12 h (sytuacje ostre, pooperacyjne).',
+                'Dawkowanie indywidualne — miareczkować do skutecznej kontroli poliurii (zwykle pacjent „omija" jedną dawkę co kilka dni, aby uniknąć hiponatremii rozcieńczeniowej).',
+                'Monitoring: Na co 1–2 tyg. w pierwszych miesiącach, później co 3–6 mies.; bilans płynów; masa ciała.',
+                'Ostrzeżenie: zbyt wysoka dawka → hiponatremia rozcieńczeniowa (przy nadmiarze podaży wody) — klasyczna pułapka.',
+                'Leczenie przyczyny pierwotnej (guz, zapalenie autoimmunologiczne) — jeśli odwracalne.'
+              ] },
+              { heading: 'NDI — moczówka nerkowa' },
+              { items: [
+                'Odstawienie / zmiana leku sprawczego (zwłaszcza litu — często możliwe częściowe ozdrowienie po > 1 roku po odstawieniu).',
+                'Wyrównanie hiperkalcemii i hipokaliemii — odwracalne przyczyny.',
+                'Diuretyki tiazydowe (hydrochlorotiazyd 25–50 mg/dobę, indapamid) — paradoksalnie zmniejszają poliurię; mechanizm: hipowolemia → wzmożona reabsorpcja sodu i wody w cewce proksymalnej. Skuteczne także w NDI wrodzonej.',
+                'Amyloryd 5–10 mg/dobę — szczególnie skuteczny w NDI indukowanym litem (blokuje wejście litu do komórek cewki zbiorczej).',
+                'NLPZ (indometacyna 50 mg 2× dziennie lub ibuprofen) — hamuje syntezę prostaglandyn nerkowych (które antagonizują ADH); skuteczne w wrodzonej NDI.',
+                'Dieta niskosolna i niskobiałkowa — zmniejsza ładunek osmotyczny do wydalenia.',
+                'Kombinacja: tiazyd + NLPZ + amyloryd — klasyczna „terapia trójskładnikowa" w wrodzonej NDI.'
+              ] },
+              { heading: 'Polidipsja pierwotna' },
+              { items: [
+                'Leczenie psychiatryczne podstawowej choroby (schizofrenia, OCD, lęk).',
+                'Stopniowe ograniczenie podaży wody — monitorować pod kątem objawów odstawiennych.',
+                'Olanzapina, klozapina — w wybranych przypadkach mogą zmniejszyć polidipsję.',
+                'NIE stosować desmopresyny — pogarsza retencję wody i może wywołać śmiertelną hiponatremię.'
+              ] },
+              { heading: 'Faza trzech faz po neurochirurgii przysadki' },
+              { items: [
+                'Faza 1 (1–4 dni po operacji): CDI ostra — poliuria, hipernatremia → desmopresyna i.v. lub s.c.',
+                'Faza 2 (5–10 dni): SIADH — uwolnienie zmagazynowanego ADH z umierających neuronów → hiponatremia, retencja wody → przerwa w desmopresynie, ostrożna restrykcja płynów.',
+                'Faza 3 (po 10–14 dniach): trwała CDI (50–60% przypadków) → przewlekła substytucja desmopresyną; lub ozdrowienie.',
+                'Monitoring: Na co 4–6 h, diureza, bilans płynów; wymaga doświadczonego ośrodka.'
+              ] }
+            ]
+          },
+          {
+            kind: 'list',
+            icon: 'tags',
+            title: 'Powiązane panele',
+            items: [
+              { label: 'Hiponatremia', text: 'różnicowanie poliurii w hiponatremii (gdzie moczówka rzadko, ale możliwa) oraz pułapka SIADH w „fazie 2" po neurochirurgii (panel hyponatremia).' },
+              { label: 'Niedoczynność nadnerczy', text: 'może maskować CDI przez utratę glikokortykoidów (które fizjologicznie hamują ADH); po włączeniu glikokortykosteroidów może ujawnić się CDI (panel adrenal_insufficiency).' },
+              { label: 'Hiperkalcemia', text: 'najczęstsza odwracalna przyczyna NDI; pierwotna nadczynność przytarczyc — wskazanie do PTH.' },
+              { label: 'Hipokaliemia', text: 'odwracalna przyczyna NDI (panel hypokalemia).' },
+              { label: 'CKD', text: 'NDI w zaawansowanych stadiach (panel ckd).' }
+            ]
+          }
+        ]
+      },
+      sections: [
+        { name: 'Panel podstawowy',
+          tests: [
+            EXT.sodium, EXT.potassium, EXT.cmp,
+            EXT.egfr,
+            EXT.glucose_fasting,
+            EXT.serum_osm,
+            EXT.ca_total
+          ]
+        },
+        { name: 'Panel moczu',
+          tests: [
+            EXT.urine_osm,
+            EXT.urine_na,
+            { ext: 'urine_glucose', label: 'Glukoza w moczu', note: 'Wykluczenie diurezy osmotycznej z glukozurii (cukrzyca, SGLT2-inhibitory).' },
+            { ext: 'urine_volume_24h', label: 'Diureza dobowa (DZM)', note: 'Potwierdzenie poliurii > 3 L/dobę.' }
+          ]
+        },
+        { name: 'Testy stymulacyjne (różnicowanie CDI vs NDI)',
+          tests: [
+            EXT.copeptin_stim,
+            EXT.water_deprivation_test,
+            EXT.avp_arg,
+            EXT.desmopressin
+          ]
+        },
+        { name: 'Diagnostyka przyczyny',
+          tests: [
+            EXT.brain_mri,
+            EXT.pth,
+            { id: 'cortisol', note: 'Wykluczenie niedoczynności nadnerczy maskującej CDI.' },
+            { id: 'tsh' }
+          ]
+        },
+        { name: 'Genetyka (gdy CDI/NDI wrodzona)',
+          tests: [
+            { ext: 'avp_npii_gene', label: 'Genetyka AVP-NPII (CDI wrodzona)', note: 'Autosomalna dominująca neurohypophysial DI; ujawnia się w dzieciństwie.' },
+            { ext: 'avpr2_gene', label: 'Genetyka AVPR2 (receptor V2 — NDI wrodzona)', note: 'Sprzężona z X recesywna; dotyczy głównie chłopców.' },
+            { ext: 'aqp2_gene', label: 'Genetyka AQP2 (aquaporina 2 — NDI wrodzona)', note: 'Autosomalna recesywna lub dominująca.' }
+          ]
+        }
+      ],
+      guideline: 'Christ-Crain M i wsp. 2019 (NEJM — Diabetes Insipidus) / Working Group Definition 2022 (zmiana nomenklatury — AVP-deficiency) / Robertson GL 2016 (classics review) / Bichet DG UpToDate 2024.',
+      sources: [
+        'Christ-Crain M, Bichet DG, Fenske WK i wsp. Diabetes insipidus. Nat Rev Dis Primers. 2019;5(1):54.',
+        'Fenske W, Refardt J, Chifu I i wsp. A Copeptin-Based Approach in the Diagnosis of Diabetes Insipidus. N Engl J Med. 2018;379(5):428-439.',
+        'Refardt J, Atila C, Chifu I i wsp. Arginine or Hypertonic Saline-Stimulated Copeptin to Diagnose AVP Deficiency. N Engl J Med. 2023;389(20):1813-1821.',
+        'Working Group for Renaming Diabetes Insipidus. Changing the terminology to arginine vasopressin deficiency and arginine vasopressin resistance. Lancet Diabetes Endocrinol. 2022;10(11):777-779.',
+        'Robertson GL. Diabetes insipidus: Differential diagnosis and management. Best Pract Res Clin Endocrinol Metab. 2016;30(2):205-218.',
+        'Garrahy A, Moran C, Thompson CJ. Diagnosis and management of central diabetes insipidus in adults. Clin Endocrinol (Oxf). 2019;90(1):23-30.',
+        'Bichet DG. Nephrogenic diabetes insipidus. UpToDate; aktualizacja 2024.',
+        'Bichet DG. Central diabetes insipidus. UpToDate; aktualizacja 2024.',
+        'Tomkins M, Lawless S, Martin-Grace J i wsp. Diagnosis and Management of Central Diabetes Insipidus in Adults. J Clin Endocrinol Metab. 2022;107(10):2701-2715.',
+        'Adam P. Evaluation and Management of Diabetes Insipidus. Am Fam Physician. 1997;55(6):2146-2153 (klasyka).'
+      ]
     },
 
     obesity: {
@@ -6307,32 +8136,185 @@
           {
             kind: 'prose',
             icon: 'book-2',
-            title: 'Definicja i kontekst',
-            body: 'Otyłość — BMI ≥ 30 kg/m²; nadwaga — BMI 25–30. Endokrynologiczne przyczyny otyłości to < 1% przypadków (przede wszystkim niedoczynność tarczycy, rzadziej zespół Cushinga, GHD dorosłych, hipogonadyzm wtórny), ale KAŻDY pacjent z otyłością zasługuje na MINIMALNY skrining endokrynologiczny oraz pełną ocenę chorób towarzyszących i powikłań metabolicznych — ryzyko cukrzycy, MASLD, dyslipidemii i powikłań sercowo-naczyniowych jest znacznie zwiększone.'
-          },
-          {
-            kind: 'list',
-            icon: 'list-search',
-            title: 'Skrining endokrynologiczny',
-            items: [
-              { label: 'Niedoczynność tarczycy — TSH + fT4', text: 'NAJCZĘSTSZA endokrynna przyczyna otyłości, choć efekt na masę ciała zwykle umiarkowany (2–5 kg); subkliniczna niedoczynność tarczycy zwykle nie tłumaczy otyłości znacznego stopnia.' },
-              { label: 'Zespół Cushinga — DST 1 mg', text: 'TYLKO przy stigmatach cushingoidalnych (rozstępy purpurowe > 1 cm, twarz księżycowata, otyłość brzuszna nieproporcjonalna, miopatia proksymalna, oporne nadciśnienie). Rutynowy skrining Cushinga u wszystkich z otyłością NIE jest zalecany.' },
-              { label: 'GHD dorosłych — IGF-1', text: 'przy podejrzeniu klinicznym (zmiana składu ciała na rzecz tkanki tłuszczowej trzewnej, obniżona jakość życia, dyslipidemia oporna na leczenie); szczególnie u pacjentów po leczeniu gruczolaka przysadki, po RT okolicy CSN.' },
-              { label: 'Wtórny hipogonadyzm u mężczyzn z otyłością', text: 'testosteron całkowity rano; mechanizm: otyłość → spadek SHBG (insulinooporność) → spadek T całkowitego; często odwracalny po redukcji masy ciała. Rozważyć osobne wskazanie hipogonadyzm męski.' },
-              { label: 'Witamina D 25-OH', text: 'niedobór częsty w otyłości (sekwestracja w tkance tłuszczowej, mniejsza ekspozycja słoneczna); suplementacja zalecana zgodnie z konsensusem Polskim 2023.' }
+            title: 'Definicja i klasyfikacja (dorośli ≥ 18 r.ż.)',
+            body: [
+              'Otyłość — przewlekła, postępująca choroba o złożonej etiologii, definiowana u dorosłych wskaźnikiem masy ciała BMI (ang. body mass index) ≥ 30 kg/m² i/lub nadmiernym obwodem talii.',
+              { heading: 'Zakres panelu' },
+              'Panel dotyczy osób dorosłych (≥ 18. r.ż.). Dla dzieci i młodzieży — osobne wskazanie „Otyłość u dziecka" (siatki centylowe BMI dla wieku i płci, wskaźnik Cole\'a, odmienny skrining powikłań i wskazania do leczenia).',
+              { heading: 'Endokrynologiczne przyczyny otyłości (< 1% przypadków)' },
+              { items: [
+                'Niedoczynność tarczycy.',
+                'Zespół Cushinga.',
+                'Niedobór hormonu wzrostu u dorosłych (GHD, ang. growth hormone deficiency).',
+                'Hipogonadyzm wtórny.'
+              ] },
+              'Każdy pacjent z otyłością wymaga skriningu endokrynologicznego oraz oceny powikłań metabolicznych.',
+              { heading: 'Powikłania o znacznie zwiększonym ryzyku' },
+              { items: [
+                'Cukrzyca typu 2.',
+                'MASLD (stłuszczeniowa choroba wątroby związana z zaburzeniami metabolicznymi; dawniej NAFLD — niealkoholowa stłuszczeniowa choroba wątroby) i jej postać zapalna MASH.',
+                'Dyslipidemia aterogenna.',
+                'Obturacyjny bezdech senny (OSA, ang. obstructive sleep apnea).',
+                'Choroby układu krążenia i niektóre nowotwory.'
+              ] },
+              { heading: 'Wytyczne' },
+              'PTLO 2022 (Polskie Towarzystwo Leczenia Otyłości), Endocrine Society 2015, AACE 2016 (American Association of Clinical Endocrinologists).'
             ]
           },
           {
             kind: 'list',
             icon: 'tags',
-            title: 'Ocena metaboliczna i powikłania',
+            title: 'Klasyfikacja BMI i obwodu talii',
             items: [
-              { label: 'Glukoza na czczo + HbA1c + oGTT 75 g', text: 'skrining cukrzycy typu 2 i nieprawidłowej tolerancji glukozy (IGT); oGTT preferowany do wczesnego wykrywania zaburzeń u osób z grupy ryzyka.' },
-              { label: 'Insulina + HOMA-IR', text: 'ocena insulinooporności (HOMA-IR > 2,5); insulinooporność jest mechanizmem patofizjologicznym łączącym otyłość z powikłaniami metabolicznymi.' },
-              { label: 'Lipidogram (TC, LDL, HDL, TG)', text: 'dyslipidemia aterogenna — typowo ↑ TG, ↓ HDL, drobne gęste LDL.' },
-              { label: 'Próby wątrobowe (ALAT, ASPAT, GGTP)', text: 'skrining MASLD/NAFLD (niealkoholowa stłuszczeniowa choroba wątroby); występuje u znacznego odsetka pacjentów z otyłością.' },
-              { label: 'CRP', text: 'przewlekły stan zapalny niskiego stopnia — komponent otyłości; podwyższone CRP wiąże się ze zwiększonym ryzykiem sercowo-naczyniowym.' },
-              { label: 'Ocena ryzyka sercowo-naczyniowego', text: 'ciśnienie tętnicze, kalkulatory ryzyka (Pol-SCORE2); ryzyko CV znacznie podwyższone w otyłości — ocena celów lipidowych i wskazań do leczenia.' }
+              { label: 'Niedowaga', text: 'BMI < 18,5 kg/m².' },
+              { label: 'Norma', text: 'BMI 18,5–24,9 kg/m².' },
+              { label: 'Nadwaga', text: 'BMI 25,0–29,9 kg/m².' },
+              { label: 'Otyłość I stopnia', text: 'BMI 30,0–34,9 kg/m² (umiarkowane ryzyko sercowo-naczyniowe).' },
+              { label: 'Otyłość II stopnia', text: 'BMI 35,0–39,9 kg/m² (znaczne ryzyko sercowo-naczyniowe).' },
+              { label: 'Otyłość III stopnia („olbrzymia")', text: 'BMI ≥ 40 kg/m² (skrajnie wysokie ryzyko sercowo-naczyniowe; wskazanie do chirurgii bariatrycznej).' },
+              { label: 'Otyłość brzuszna (trzewna)', text: 'obwód talii ≥ 102 cm (mężczyźni) lub ≥ 88 cm (kobiety) wg NCEP-ATP III; ≥ 94/80 cm wg IDF (International Diabetes Federation) dla osób rasy białej. Niezależny czynnik ryzyka sercowo-naczyniowego.' }
+            ]
+          },
+          {
+            kind: 'algorithm',
+            icon: 'list-numbers',
+            title: 'Algorytm diagnostyki otyłości',
+            steps: [
+              {
+                number: 1,
+                title: 'Antropometria + wywiad',
+                sublabel: 'klasyfikacja, czynniki etiologiczne, powikłania',
+                options: [
+                  {
+                    threshold: 'Co ocenić',
+                    action: 'BMI, obwód talii, ciśnienie tętnicze, wywiad rodzinny, dieta, aktywność fizyczna, leki sprawcze, choroby towarzyszące.',
+                    variant: 'success', icon: 'flask',
+                    detail: [
+                      { heading: 'Wywiad ukierunkowany' },
+                      { items: [
+                        'Tempo przyrostu masy ciała (nagły wzrost > 5 kg w ciągu 3 miesięcy — sygnał alarmowy).',
+                        'Dieta — typowy skład jadłospisu, zaburzenia odżywiania: kompulsywne objadanie się (BED, ang. binge eating disorder) i bulimia (BN, ang. bulimia nervosa).',
+                        'Aktywność fizyczna — ile minut tygodniowo strukturalnego wysiłku.',
+                        'Sen — chrapanie, bezdechy obserwowane przez bliskich (skrining OSA — obturacyjnego bezdechu sennego), sen < 6 h/dobę.',
+                        'Stres, depresja, leki psychiatryczne.'
+                      ] },
+                      { heading: 'Leki jatrogenne powodujące przyrost masy' },
+                      { items: [
+                        'Leki przeciwpsychotyczne II generacji (olanzapina, klozapina, kwetiapina, risperidon).',
+                        'Leki przeciwdepresyjne (mirtazapina, paroksetyna, amitryptylina; częściowo SSRI — selektywne inhibitory wychwytu zwrotnego serotoniny przy długotrwałym leczeniu).',
+                        'Stabilizatory nastroju (lit, walproinian).',
+                        'Glikokortykosteroidy stosowane długotrwale.',
+                        'Leki przeciwcukrzycowe (sulfonylureje, tiazolidynodiony, insulina).',
+                        'β-blokery (zwłaszcza nieselektywne).',
+                        'Niektóre leki przeciwdrgawkowe (pregabalina, gabapentyna).'
+                      ] }
+                    ]
+                  }
+                ]
+              },
+              {
+                number: 2,
+                title: 'Skrining endokrynologiczny',
+                sublabel: 'wykluczenie przyczyn endokrynnych',
+                options: [
+                  {
+                    threshold: 'Standardowo u wszystkich',
+                    action: 'TSH — niedoczynność tarczycy jest najczęstszą endokrynną przyczyną otyłości; 25-OHD (kalcydiol) — niedobór częsty w otyłości.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'TSH > 4 mU/L → fT4. Efekt niedoczynności tarczycy na masę ciała jest umiarkowany (2–5 kg) — subkliniczna niedoczynność zwykle nie tłumaczy otyłości znacznego stopnia.',
+                      '25-OHD < 50 nmol/L → suplementacja zgodnie z polskim konsensusem Płudowski 2023 (w otyłości dochodzi do sekwestracji witaminy D w tkance tłuszczowej i zmniejszonej syntezy skórnej).'
+                    ]
+                  },
+                  {
+                    threshold: 'Tylko przy charakterystycznych objawach klinicznych',
+                    action: 'Test hamowania deksametazonem (DST) 1 mg → ocena zespołu Cushinga; IGF-1 (somatomedyna C) → ocena niedoboru hormonu wzrostu u dorosłych (GHD); testosteron całkowity rano → ocena wtórnego hipogonadyzmu u mężczyzn.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      { heading: 'Zespół Cushinga — wskazania do skriningu' },
+                      'Charakterystyczne objawy: rozstępy purpurowe > 1 cm, twarz księżycowata, nieproporcjonalna otyłość brzuszna, miopatia proksymalna, oporne nadciśnienie tętnicze, hipokaliemia, łatwe powstawanie siniaków. Rutynowy skrining Cushinga u wszystkich pacjentów z otyłością nie jest zalecany.',
+                      { heading: 'Niedobór hormonu wzrostu u dorosłych (GHD) — wskazania' },
+                      'Pacjenci po leczeniu gruczolaka przysadki, po radioterapii (RT) okolicy ośrodkowego układu nerwowego (OUN), po urazie OUN, z zespołem Sheehana. Otyłość trzewna + obniżona jakość życia + dyslipidemia oporna na leczenie.',
+                      { heading: 'Wtórny hipogonadyzm u mężczyzn' },
+                      'Otyłość → spadek SHBG (ang. sex hormone-binding globulin — globulina wiążąca hormony płciowe, w przebiegu insulinooporności) → spadek testosteronu całkowitego → obniżenie stężeń LH (hormon luteinizujący) i FSH (hormon folikulotropowy) wskutek działania leptyny oraz estronu konwertowanego z androstendionu w tkance tłuszczowej. Często odwracalny po redukcji masy ciała ≥ 10%. Diagnostyka i ewentualne TRT (ang. testosterone replacement therapy — testosteronoterapia substytucyjna) w osobnym wskazaniu (hipogonadyzm męski).'
+                    ]
+                  }
+                ]
+              },
+              {
+                number: 3,
+                title: 'Ocena metaboliczna i powikłań',
+                sublabel: 'obowiązkowa u każdego pacjenta',
+                options: [
+                  {
+                    threshold: 'Panel metaboliczny',
+                    action: 'Glukoza na czczo + HbA1c (hemoglobina glikowana) z ewentualnym oGTT (doustny test obciążenia 75 g glukozy) jeśli stan przedcukrzycowy, lipidogram, ALT/AST/GGT, kreatynina + eGFR, kwas moczowy.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'Cukrzyca typu 2: glukoza ≥ 126 mg/dL na czczo lub ≥ 200 mg/dL w 120. minucie oGTT lub HbA1c ≥ 6,5%. Stan przedcukrzycowy: IFG (ang. impaired fasting glucose — nieprawidłowa glikemia na czczo) 100–125 mg/dL / IGT (ang. impaired glucose tolerance — nieprawidłowa tolerancja glukozy) 140–199 mg/dL w oGTT / HbA1c 5,7–6,4%.',
+                      'MASLD (stłuszczeniowa choroba wątroby zw. z zaburzeniami metabolicznymi; dawna nazwa NAFLD) — ALT przekraczająca górną granicę normy + obraz USG; FIB-4 jako nieinwazyjny wskaźnik fibrozy (wyliczany ze wzoru wiek × AST / [płytki × √ALT]); wartość FIB-4 > 1,3 → konsultacja hepatologiczna, ewentualnie FibroScan.',
+                      'Dyslipidemia aterogenna — podwyższone trójglicerydy (TG), obniżony cholesterol HDL, drobne gęste cząsteczki LDL; non-HDL (TC minus HDL) jako dodatkowy marker ryzyka sercowo-naczyniowego.',
+                      'Insulinooporność oceniana wskaźnikiem HOMA-IR (ang. homeostasis model assessment of insulin resistance), wartość > 2,5 — głównie do oceny klinicznej; HOMA-IR nie jest standardem rozpoznawania zespołu metabolicznego ani otyłości wg PTLO 2022.'
+                    ]
+                  },
+                  {
+                    threshold: 'Skrining obturacyjnego bezdechu sennego',
+                    action: 'Kwestionariusz STOP-BANG (ang. Snoring, Tiredness, Observed apnea, blood Pressure, BMI, Age, Neck circumference, Gender) lub skala Epworth → polisomnografia w razie wyniku dodatniego.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'OSA współwystępuje z opornym nadciśnieniem tętniczym, migotaniem przedsionków, insulinoopornością i pogarsza rokowanie sercowo-naczyniowe.',
+                      'STOP-BANG ≥ 3 — wysokie prawdopodobieństwo OSA.',
+                      'Leczenie CPAP (ang. continuous positive airway pressure — ciągłe dodatnie ciśnienie w drogach oddechowych) może poprawić kontrolę ciśnienia tętniczego oraz ułatwić redukcję masy ciała (lepszy sen ułatwia kontrolę apetytu).'
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            kind: 'callout',
+            variant: 'purple',
+            icon: 'pill',
+            title: 'Leczenie otyłości (PTLO 2022 / Endocrine Society 2015)',
+            collapsible: true,
+            body: [
+              { heading: 'Krok 1 — Modyfikacja stylu życia (podstawa zawsze)' },
+              { items: [
+                'Dieta — deficyt energetyczny 500–750 kcal/dobę; cel: redukcja 5–10% masy ciała w 3–6 mies.',
+                'Aktywność fizyczna — minimum 150 min/tydz. umiarkowanej aktywności aerobowej + 2× tygodniowo trening siłowy.',
+                'Terapia behawioralna — wsparcie psychologiczne, dziennik żywieniowy.',
+                'Sen ≥ 7 godz./dobę.'
+              ] },
+              { heading: 'Krok 2 — Farmakoterapia (BMI ≥ 30 lub BMI ≥ 27 z powikłaniami)' },
+              { items: [
+                'Liraglutyd 3 mg podskórnie raz dziennie (Saxenda) — agonista receptora GLP-1, średnia utrata masy ok. 5–8%.',
+                'Semaglutyd 2,4 mg podskórnie raz w tygodniu (Wegovy) — agonista receptora GLP-1, średnia utrata masy ok. 12–15% (badania STEP).',
+                'Tirzepatyd 5–15 mg podskórnie raz w tygodniu (Mounjaro / Zepbound) — podwójny agonista receptorów GLP-1 i GIP, średnia utrata masy ok. 15–22% (badania SURMOUNT).',
+                'Naltrekson + bupropion (Mysimba) — opcja u pacjentów z komponentem behawioralno-emocjonalnym, średnia utrata masy ok. 5%.',
+                'Orlistat 120 mg 3 razy dziennie — inhibitor lipazy, średnia utrata masy ok. 3–5%; działania niepożądane jelitowe.'
+              ] },
+              { heading: 'Krok 3 — Chirurgia bariatryczna' },
+              { items: [
+                'Wskazania: BMI ≥ 40 lub BMI ≥ 35 z powikłaniami (cukrzyca typu 2, obturacyjny bezdech senny, oporne nadciśnienie tętnicze, MASH — zapalenie wątroby zw. z zaburzeniami metabolicznymi).',
+                'Techniki: ominięcie żołądkowo-jelitowe sposobem Roux-en-Y (RYGB), rękawowa resekcja żołądka (sleeve gastrectomy), jednozespoleniowe ominięcie żołądkowe (OAGB).',
+                'Wymaga przygotowania psychologicznego, dietetycznego oraz oceny chorób towarzyszących.',
+                'Skuteczność: redukcja masy 20–35% w 1–2 lata; remisja cukrzycy typu 2 u 60–80% pacjentów.',
+                'Substytucja witamin i mikroelementów dożywotnio (witamina D, witamina B12, żelazo, wapń, kwas foliowy oraz witaminy A, D, E, K po operacji metodą Roux-en-Y).'
+              ] },
+              { heading: 'Monitorowanie' },
+              'Kontrole co 3 miesiące w pierwszym roku farmakoterapii lub po operacji; ocena masy ciała, składu ciała (analiza bioimpedancji BIA lub densytometria DEXA, jeśli dostępne), parametrów metabolicznych, mikroelementów po operacji bariatrycznej.'
+            ]
+          },
+          {
+            kind: 'list',
+            icon: 'tags',
+            title: 'Powiązane panele',
+            items: [
+              { label: 'Zespół metaboliczny', text: 'większość pacjentów z otyłością trzewną spełnia kryteria zespołu metabolicznego (panel metabolic_syndrome).' },
+              { label: 'PCOS — zespół policystycznych jajników', text: 'częsta przyczyna otyłości u kobiet w wieku rozrodczym — osobne wskazanie.' },
+              { label: 'Zespół Cushinga', text: 'wykluczyć przy charakterystycznych objawach klinicznych (panel cushing).' },
+              { label: 'Hipogonadyzm męski', text: 'otyłość ↔ hipogonadyzm — błędne koło; osobne wskazanie.' },
+              { label: 'Nadciśnienie tętnicze', text: 'powikłanie i czynnik ryzyka sercowo-naczyniowego (panel hypertension).' }
             ]
           }
         ]
@@ -6341,21 +8323,349 @@
         { name: 'Skrining endokrynologiczny',
           tests: [
             { id: 'tsh' }, { id: 'ft4' },
-            { id: 'cortisol', note: 'Po 1 mg DST tylko jeśli stigmaty Cushinga' },
-            { id: 'igf1', note: 'Wykluczenie GHD u dorosłych' },
+            { id: 'cortisol', note: 'Po teście hamowania deksametazonem (DST) 1 mg — tylko gdy charakterystyczne objawy zespołu Cushinga' },
+            { id: 'igf1', note: 'Wykluczenie niedoboru hormonu wzrostu (GHD) u dorosłych — gdy w wywiadzie schorzenia OUN (ośrodkowego układu nerwowego)' },
             { id: 'testosterone_total', note: 'Mężczyźni — wtórny hipogonadyzm' },
+            { id: 'shbg', note: 'Insulinooporność → niska SHBG (globulina wiążąca hormony płciowe)' },
             { id: 'vit_d_25oh' }
           ]
         },
-        { name: 'Metabolizm',
+        { name: 'Metabolizm i powikłania',
           tests: [
             EXT.glucose_fasting, EXT.hba1c, EXT.ogtt_75g, EXT.insulin,
             EXT.lipid_panel, EXT.liver,
+            EXT.cmp, EXT.egfr,
             EXT.crp
           ]
         }
       ],
-      guideline: 'Endocrine Society 2015 (Apovian i wsp.) / PTBO 2022'
+      guideline: 'PTLO 2022 (Polskie Towarzystwo Leczenia Otyłości) / Endocrine Society 2015 (Apovian i wsp.) / AACE/ACE 2016 (Garvey i wsp.) / EASO 2024.',
+      sources: [
+        'Olszanecka-Glinianowicz M, Mamcarz A, Filipiak KJ i wsp. Otyłość — choroba przewlekła. Stanowisko PTLO 2022. Forum Medycyny Rodzinnej. 2022.',
+        'Apovian CM, Aronne LJ, Bessesen DH i wsp. Pharmacological management of obesity: an endocrine Society clinical practice guideline. J Clin Endocrinol Metab. 2015;100(2):342-362.',
+        'Garvey WT, Mechanick JI, Brett EM i wsp. American Association of Clinical Endocrinologists and American College of Endocrinology comprehensive clinical practice guidelines for medical care of patients with obesity. Endocr Pract. 2016;22(Suppl 3):1-203.',
+        'Wilding JPH, Batterham RL, Calanna S i wsp. Once-Weekly Semaglutide in Adults with Overweight or Obesity (STEP 1). N Engl J Med. 2021;384(11):989-1002.',
+        'Jastreboff AM, Aronne LJ, Ahmad NN i wsp. Tirzepatide Once Weekly for the Treatment of Obesity (SURMOUNT-1). N Engl J Med. 2022;387(3):205-216.',
+        'Mechanick JI, Apovian C, Brethauer S i wsp. Clinical practice guidelines for the perioperative nutritional, metabolic, and nonsurgical support of the bariatric surgery patient. Endocr Pract. 2020;26(Suppl 1):1-39.'
+      ]
+    },
+
+    obesity_kids: {
+      summary: {
+        sections: [
+          {
+            kind: 'prose',
+            icon: 'book-2',
+            title: 'Definicja otyłości u dzieci i młodzieży',
+            body: [
+              'Otyłość u dziecka — nadmierne nagromadzenie tkanki tłuszczowej oceniane na podstawie BMI odniesionego do siatek centylowych dla wieku i płci (NIE wg progu BMI ≥ 30 kg/m² jak u dorosłych).',
+              { heading: 'Stosowane siatki centylowe' },
+              { items: [
+                { label: 'Palczewska', text: 'polskie siatki dla wieku przedszkolnego.' },
+                { label: 'OLAF', text: 'polskie siatki dla wieku szkolnego i młodzieży.' },
+                { label: 'WHO Growth Reference', text: 'alternatywa międzynarodowa.' }
+              ] },
+              { heading: 'Trzy wymiary oceny dziecka z otyłością' },
+              { items: [
+                'Wykluczenie zespołów dziedzicznych i przyczyn endokrynologicznych (~5% przypadków) — szczególnie istotne u dzieci < 5. r.ż. oraz przy współistniejącym niskim wzroście.',
+                'Skrining powikłań metabolicznych — narastający z wiekiem.',
+                'Wczesna interwencja behawioralno-dietetyczna z udziałem całej rodziny.'
+              ] },
+              { heading: 'Wytyczne' },
+              'PTLO 2022 (dział pediatryczny), Endocrine Society 2017 (Pediatric Obesity — Styne), AAP 2023 (American Academy of Pediatrics — Hampl), ESPGHAN 2017 (MASLD u dzieci), NHLBI 2017 (nadciśnienie tętnicze u dzieci).'
+            ]
+          },
+          {
+            kind: 'list',
+            icon: 'tags',
+            title: 'Kryteria diagnostyczne wg wieku',
+            items: [
+              { label: 'Niemowlęta i dzieci 0–5 lat (WHO 2006)', text: 'Z-score BMI dla wieku: −1 do +1 norma; +1 do +2 nadwaga; > +2 otyłość; > +3 otyłość ciężka.' },
+              { label: 'Dzieci i młodzież 5–19 lat (WHO 2007 / polskie siatki Palczewska / OLAF)', text: 'BMI percentyl dla wieku i płci: 5–85 norma; 85–95 nadwaga; ≥ 95 otyłość; ≥ 99 otyłość ciężka.' },
+              { label: 'Wskaźnik Cole\'a (polska praktyka kliniczna)', text: '90–110% normy — masa prawidłowa; 110–119% — nadwaga; ≥ 120% — otyłość; ≥ 140% — otyłość znacznego stopnia.' },
+              { label: 'Obwód talii — percentyl pediatryczny', text: '≥ 90. percentyla dla wieku i płci sugeruje otyłość brzuszną (trzewną) — niezależny czynnik ryzyka metabolicznego u dzieci.' },
+              { label: 'Ciśnienie tętnicze u dzieci', text: 'oceniane wg siatek pediatrycznych NHLBI 2017 (wartości dla wieku, wzrostu i płci). Wartości ≥ 90. percentyla — ciśnienie podwyższone; ≥ 95. percentyla — nadciśnienie tętnicze.' }
+            ]
+          },
+          {
+            kind: 'callout',
+            variant: 'primary',
+            icon: 'alert-triangle',
+            title: 'Sygnały alarmowe — pilna konsultacja endokrynologa pediatrycznego',
+            collapsible: true,
+            body: [
+              { heading: 'Wskazania pilne — patologia hormonalna lub zespół dziedziczny' },
+              { items: [
+                'BMI ≥ 99. percentyla lub Z-score BMI > +3 SD.',
+                'Otyłość współistniejąca z niskim wzrostem (< 3. percentyla wzrostu) — sygnał patologii hormonalnej: zespół Cushinga, niedoczynność tarczycy, niedobór hormonu wzrostu, pseudohipoparatyreoza.',
+                'Otyłość + cechy dysmorficzne lub opóźnienie rozwoju psychoruchowego — podejrzenie zespołu genetycznego: zespół Pradera-Williego, Bardeta-Biedla, Cohena, Alströma.',
+                'Otyłość + cechy zespołu Cushinga (rozstępy purpurowe szersze niż 1 cm, twarz księżycowata, miopatia proksymalna, łatwe powstawanie siniaków).',
+                'Otyłość + opóźnione dojrzewanie (brak rozpoczęcia pokwitania po 13. r.ż. u dziewcząt lub 14. r.ż. u chłopców) lub przedwczesne dojrzewanie.',
+                'Otyłość gwałtownie postępująca — przyrost masy > 5 kg w ciągu 3 miesięcy bez zmiany trybu życia.',
+                'Otyłość u niemowlęcia lub dziecka < 5. r.ż. — w tym wieku rzadko występuje izolowanie; sygnał alarmowy do diagnostyki genetycznej (MC4R, POMC, LepR, zespoły dziedziczne).'
+              ] }
+            ]
+          },
+          {
+            kind: 'algorithm',
+            icon: 'list-numbers',
+            title: 'Algorytm diagnostyki otyłości u dziecka',
+            steps: [
+              {
+                number: 1,
+                title: 'Pomiary antropometryczne i klasyfikacja',
+                sublabel: 'integrowane z głównym kalkulatorem aplikacji',
+                options: [
+                  {
+                    threshold: 'Co zmierzyć',
+                    action: 'Wzrost, masa ciała, BMI (z odniesieniem do siatek centylowych Palczewska / OLAF / WHO), wskaźnik Cole\'a, obwód talii (percentyl pediatryczny), ciśnienie tętnicze (siatki NHLBI 2017 wg wieku, wzrostu i płci).',
+                    variant: 'success', icon: 'flask',
+                    detail: [
+                      'Główny kalkulator aplikacji automatycznie oblicza wszystkie te parametry po wprowadzeniu wzrostu i masy w karcie pomiarów. Wyniki są oznaczone kolorystycznie (zielony — norma; pomarańczowy — nadwaga; czerwony — otyłość).',
+                      'Siatki centylowe — w Polsce preferowane Palczewska (dzieci przedszkolne) i OLAF (szkoła i młodzież); WHO Growth Reference 5–19 jako alternatywa międzynarodowa.',
+                      'Pomiar obwodu talii: dziecko stojące, brzuch swobodny (nie wciągnięty), na wydechu, taśma w połowie odległości między dolnym łukiem żebrowym a górnym grzebieniem biodrowym.',
+                      'Ciśnienie tętnicze u dzieci — wartości percentylowe wg siatek NHLBI 2017; podwyższone jeśli ≥ 90. percentyla.'
+                    ]
+                  }
+                ]
+              },
+              {
+                number: 2,
+                title: 'Wykluczenie sygnałów alarmowych',
+                sublabel: 'wywiad + badanie fizykalne — czerwone flagi',
+                options: [
+                  {
+                    threshold: 'Niski wzrost + otyłość',
+                    action: 'Wykluczyć patologię hormonalną: TSH + fT4, kortyzol (DST 1 mg na noc lub w ślinie nocnej), IGF-1 (niedobór hormonu wzrostu), wapń + PTH (pseudohipoparatyreoza Albrighta).',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'Klasyczna obserwacja: w otyłości prostej dzieci są zwykle WYŻSZE niż rówieśnicy (efekt wczesnej leptynemicznej stymulacji). Spadek tempa wzrastania mimo przyrostu masy = sygnał patologii.',
+                      'Wiek kostny — w otyłości prostej zwykle przyspieszony lub zgodny z wiekiem; opóźniony wiek kostny sugeruje niedoczynność tarczycy lub niedobór hormonu wzrostu.',
+                      'Zespół Cushinga u dziecka — najczęściej egzogenny (przewlekłe glikokortykosteroidy); endogenny rzadki (gruczolak nadnercza, ACTH-zależny).'
+                    ]
+                  },
+                  {
+                    threshold: 'Dysmorfia / opóźnienie rozwoju + otyłość',
+                    action: 'Konsultacja genetyczna obligatoryjna; rozważ panel genetyczny zespołów dziedzicznych z otyłością.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      { heading: 'Zespół Pradera-Williego' },
+                      'Hipotonia okołoporodowa + trudności w karmieniu w pierwszych miesiącach → hiperfagia od 2. r.ż. + niski wzrost + hipogonadyzm + dysmorfia twarzy (czoło wąskie, oczy migdałowe). Diagnostyka: MS-MLPA chr 15q11-13.',
+                      { heading: 'Zespół Bardeta-Biedla' },
+                      'Otyłość + polidaktylia (palce dodatkowe) + retinopatia barwnikowa + niewydolność nerek + hipogonadyzm + opóźnienie umysłowe. Panel genetyczny BBSome.',
+                      { heading: 'Zespół Alströma' },
+                      'Otyłość + retinopatia + głuchota + kardiomiopatia + cukrzyca typu 2 wczesna.',
+                      { heading: 'Zespół Cohena' },
+                      'Mikrocefalia + długie ręce + niedobór neutrofilów + retinopatia + dysmorfia twarzy.'
+                    ]
+                  },
+                  {
+                    threshold: 'Otyłość ciężka przed 5. r.ż. + skrajny apetyt',
+                    action: 'Diagnostyka monogenetycznej otyłości: MC4R, POMC, PCSK1, LepR, leptyna.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'MC4R — najczęstsza monogenetyczna postać otyłości (1–6% otyłości znacznego stopnia u dzieci); dziedziczenie autosomalne dominujące, częstość heterozygot ok. 1/1000.',
+                      'POMC — otyłość + rude włosy + niedoczynność nadnerczy (wtórna ACTH-zależna).',
+                      'PCSK1 — otyłość + biegunka noworodków + hipoglikemia poposiłkowa.',
+                      'LepR (receptor leptyny) — otyłość znacznego stopnia + hipogonadyzm hipogonadotropowy.',
+                      'Niedobór leptyny — bardzo rzadki; leczenie metreleptyną (rekombinowaną leptyną).',
+                      'W przypadku potwierdzonych mutacji POMC / PCSK1 / LepR dostępna nowa opcja: setmelanotyd (Imcivree) — agonista MC4R, zarejestrowany dla pacjentów ≥ 6. r.ż.'
+                    ]
+                  }
+                ]
+              },
+              {
+                number: 3,
+                title: 'Skrining powikłań metabolicznych wg wieku',
+                sublabel: 'rozszerzanie panelu z wiekiem dziecka',
+                options: [
+                  {
+                    threshold: 'Niemowlęta i dzieci 0–5 lat',
+                    action: 'Rutynowy skrining metaboliczny nie jest wskazany — w tym wieku otyłość sama w sobie jest sygnałem alarmowym i wymaga diagnostyki genetycznej / endokrynologicznej.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'TSH (wrodzona niedoczynność tarczycy zwykle wykryta w skriningu noworodkowym, ale warto powtórzyć w wieku 2–5 lat).',
+                      'Konsultacja genetyczna — diagnostyka zespołu Pradera-Williego, MC4R, POMC, LepR przy BMI > +4 SD lub fenotypie zespołowym.',
+                      '25-OHD (kalcydiol) — częsty niedobór; suplementacja zgodnie z polskim konsensusem Płudowski 2023.'
+                    ]
+                  },
+                  {
+                    threshold: 'Dzieci szkolne 6–10 lat',
+                    action: 'TSH + 25-OHD + glukoza na czczo + lipidogram + ALT, AST — skrining stłuszczeniowej choroby wątroby od 9. r.ż. (ESPGHAN 2017).',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'Glukoza na czczo — skrining cukrzycy typu 2; zalecane przy BMI ≥ 95. percentyla + dodatkowe czynniki ryzyka (wywiad rodzinny T2DM, akantoza ciemna na karku/pachach, pochodzenie etniczne wysokiego ryzyka).',
+                      'Lipidogram — od 9.–11. r.ż. u wszystkich dzieci wg NHLBI 2011 i AAP; wcześniej tylko przy wywiadzie rodzinnym dyslipidemii lub przedwczesnej choroby sercowo-naczyniowej.',
+                      'ALT, AST — skrining MASLD (stłuszczeniowej choroby wątroby związanej z zaburzeniami metabolicznymi) od 9. r.ż. wg ESPGHAN 2017; ALT > 2× górnej granicy normy → USG jamy brzusznej + dalsza diagnostyka hepatologiczna.',
+                      '25-OHD — niedobór bardzo częsty w otyłości (sekwestracja w tkance tłuszczowej + zmniejszona ekspozycja słoneczna); suplementacja cholekalcyferolem zgodnie z konsensusem Płudowski 2023.'
+                    ]
+                  },
+                  {
+                    threshold: 'Młodzież 10–18 lat',
+                    action: 'Pełny panel metaboliczny + ocena Tannera + ciśnienie tętnicze + skrining obturacyjnego bezdechu sennego + diagnostyka hormonalna wg płci.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      { heading: 'Standardowo u każdej osoby w okresie dojrzewania' },
+                      { items: [
+                        'TSH, 25-OHD, glukoza na czczo + oGTT 75 g (doustny test obciążenia glukozą) lub HbA1c przy BMI ≥ 95. percentyla.',
+                        'Lipidogram pełny — cholesterol całkowity, LDL, HDL, trójglicerydy, non-HDL (TC minus HDL).',
+                        'ALT, AST, GGT + USG jamy brzusznej (skrining MASLD).',
+                        'Pomiar ciśnienia tętniczego wg pediatrycznych siatek NHLBI 2017.',
+                        'Insulinooporność (HOMA-IR > 2,5–3,16 w zależności od stadium Tannera) — pomocniczo.'
+                      ] },
+                      { heading: 'U dziewcząt — skrining PCOS (po menarche, zwłaszcza przy oligomenorrhei / hirsutyzmie / trądziku)' },
+                      'LH (hormon luteinizujący), FSH (hormon folikulotropowy), testosteron całkowity, SHBG (globulina wiążąca hormony płciowe), 17-OHP (17-hydroksyprogesteron — wykluczenie nieklasycznego wrodzonego przerostu nadnerczy), USG jajników. Pełna diagnostyka w osobnym wskazaniu PCOS.',
+                      { heading: 'U chłopców — ocena hipogonadyzmu wtórnego' },
+                      'Testosteron całkowity rano (otyłość → wtórny hipogonadyzm wskutek aromatyzacji testosteronu do estronu w tkance tłuszczowej + spadek SHBG); częściowo odwracalny po redukcji masy ciała ≥ 10%.',
+                      { heading: 'Skrining obturacyjnego bezdechu sennego (OSA)' },
+                      'Wywiad: chrapanie, bezdechy obserwowane przez bliskich, senność dzienna, zaburzenia koncentracji w szkole. Przy podejrzeniu — polisomnografia w ośrodku pediatrycznym.'
+                    ]
+                  }
+                ]
+              },
+              {
+                number: 4,
+                title: 'Diagnostyka endokrynologiczna celowana',
+                sublabel: 'gdy sygnały alarmowe — różnicowanie patologii hormonalnej',
+                options: [
+                  {
+                    threshold: 'Zespół Cushinga u dziecka',
+                    action: 'DST 1 mg na noc lub kortyzol w ślinie nocnej lub kortyzol w dobowej zbiórce moczu — przy charakterystycznych objawach klinicznych.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'U dziecka spadek tempa wzrastania mimo przyrostu masy ciała to klasyczny sygnał patologii hormonalnej — w otyłości prostej tempo wzrostu jest zachowane lub przyspieszone.',
+                      'Cushing dziecięcy najczęściej egzogenny (długotrwałe glikokortykosteroidy); endogenny rzadki — głównie z guza nadnercza lub ACTH-zależny (gruczolak przysadki).',
+                      'Pełen algorytm w osobnym panelu (cushing).'
+                    ]
+                  },
+                  {
+                    threshold: 'Niedoczynność tarczycy',
+                    action: 'TSH + fT4. Obraz: otyłość + niski wzrost + opóźnienie wieku kostnego + sucha skóra + zaparcia + bradykardia.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'Niedoczynność tarczycy może spowolnić tempo wzrastania zanim jeszcze rozwinie się otyłość — ważne badanie w obu kontekstach.',
+                      'U dzieci szkolnych i młodzieży najczęściej wtórna do autoimmunologicznego zapalenia tarczycy typu Hashimoto (anty-TPO dodatnie).'
+                    ]
+                  },
+                  {
+                    threshold: 'Niedobór hormonu wzrostu (GHD)',
+                    action: 'IGF-1 i IGFBP-3 wg norm dla wieku i płci → przy obniżeniu testy stymulacyjne wydzielania GH w ośrodku endokrynologicznym.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'GHD u dziecka — otyłość trzewna + niski wzrost + opóźnienie wieku kostnego + brak skoku pokwitaniowego.',
+                      'Pełen algorytm w osobnym panelu (GH_deficiency_kids — program lekowy B.19 NFZ).'
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            kind: 'callout',
+            variant: 'purple',
+            icon: 'pill',
+            title: 'Leczenie otyłości u dzieci i młodzieży',
+            collapsible: true,
+            body: [
+              { heading: 'Modyfikacja stylu życia — fundament zawsze (od najwcześniejszego rozpoznania)' },
+              { items: [
+                'Dieta zbilansowana wg zaleceń IMID/IPCZD i AAP — ograniczenie napojów słodzonych (główne źródło pustych kalorii u dzieci), słodyczy, żywności wysokoprzetworzonej; zwiększenie udziału warzyw, owoców, produktów pełnoziarnistych, nabiału półtłustego.',
+                'Aktywność fizyczna — minimum 60 minut/dobę umiarkowanej do intensywnej aktywności u dzieci 6–17 lat (zalecenie WHO).',
+                'Ograniczenie czasu ekranowego — < 2 godziny dziennie poza zajęciami szkolnymi.',
+                'Sen — adekwatny do wieku: niemowlęta 12–16 h, przedszkolaki 10–13 h, dzieci szkolne 9–12 h, młodzież 8–10 h. Niedobór snu sprzyja przyrostowi masy.',
+                'Terapia behawioralna rodzinna — programy redukcji masy z udziałem całej rodziny dają najlepsze efekty u dzieci i młodzieży (AAP 2023 — silne zalecenie).'
+              ] },
+              { heading: 'Farmakoterapia (młodzież ≥ 12 r.ż.)' },
+              { items: [
+                'Liraglutyd 3 mg podskórnie raz dziennie (Saxenda) — agonista receptora GLP-1; zarejestrowany przez EMA w 2021 r. dla młodzieży ≥ 12 r.ż. z BMI ≥ 95. percentyla i masą ciała > 60 kg.',
+                'Semaglutyd 2,4 mg podskórnie raz w tygodniu (Wegovy) — agonista receptora GLP-1; zarejestrowany przez EMA w 2024 r. dla młodzieży ≥ 12 r.ż. (badanie STEP TEENS — średnia utrata masy ok. 16% w 68 tygodni).',
+                'Szczegółowe schematy dawkowania, eskalacja, kryteria kwalifikacji wg ChPL — w osobnym module aplikacji „Leczenie otyłości" (Saxenda, Wegovy).'
+              ] },
+              { heading: 'Farmakoterapia monogenetycznej otyłości' },
+              'Setmelanotyd (Imcivree) — agonista receptora MC4R; zarejestrowany dla pacjentów ≥ 6. r.ż. z potwierdzoną mutacją POMC, PCSK1 lub LepR. Skrajnie rzadkie wskazanie; dostępność w Polsce ograniczona do ośrodków referencyjnych. Diagnostyka genetyczna obligatoryjna przed rozpoczęciem leczenia.',
+              { heading: 'Chirurgia bariatryczna u młodzieży' },
+              { items: [
+                'Wskazania: BMI ≥ 40 lub BMI ≥ 35 z poważnymi powikłaniami (cukrzyca typu 2, obturacyjny bezdech senny ciężki, oporne nadciśnienie tętnicze, MASH); dojrzałość kostna ≥ 95% wieku dorosłego (rzadko < 14. r.ż.).',
+                'Wykonywana wyłącznie w wyselekcjonowanych ośrodkach pediatrycznych z zespołem wielospecjalistycznym (chirurg bariatryczny, endokrynolog dziecięcy, psycholog, dietetyk, pielęgniarka koordynująca).',
+                'Najczęstsze techniki: rękawowa resekcja żołądka (sleeve gastrectomy) lub ominięcie żołądkowo-jelitowe Roux-en-Y.',
+                'Substytucja witamin i mikroelementów dożywotnio (witamina D, witamina B12, żelazo, wapń, kwas foliowy oraz witaminy A, D, E, K po Roux-en-Y).',
+                'Wymagane przygotowanie psychologiczne i dietetyczne ≥ 6 miesięcy przed operacją.'
+              ] }
+            ]
+          },
+          {
+            kind: 'list',
+            icon: 'tags',
+            title: 'Powiązane panele',
+            items: [
+              { label: 'Otyłość u dorosłych', text: 'kontynuacja diagnostyki po 18. roku życia (panel obesity).' },
+              { label: 'Zespół metaboliczny', text: 'młodzież z otyłością + powikłaniami metabolicznymi może spełniać kryteria zespołu metabolicznego (panel metabolic_syndrome).' },
+              { label: 'PCOS — zespół policystycznych jajników', text: 'częste współwystępowanie u dziewcząt z otyłością po menarche (osobne wskazanie).' },
+              { label: 'Niedobór wzrostu', text: 'gdy otyłość + niski wzrost — sygnał patologii hormonalnej; pełen algorytm w panelu „Niedobór wzrostu" (short_stature).' },
+              { label: 'Niedobór hormonu wzrostu u dzieci', text: 'gdy spełnione kryteria — program lekowy NFZ B.19 (panel GH_deficiency_kids).' },
+              { label: 'Zespół Cushinga', text: 'wykluczyć przy charakterystycznych objawach klinicznych (panel cushing).' },
+              { label: 'Opóźnione dojrzewanie', text: 'gdy otyłość + brak pokwitania ≥ 13. r.ż. (dziewczęta) lub ≥ 14. r.ż. (chłopcy) — osobne wskazanie.' },
+              { label: 'Status witaminy D', text: 'niedobór bardzo częsty w otyłości (panel vitamin_d_status).' }
+            ]
+          }
+        ]
+      },
+      sections: [
+        { name: 'Pomiary antropometryczne (kalkulator główny)',
+          tests: [
+            EXT.bmi_percentile,
+            EXT.cole_index,
+            EXT.waist_pediatric,
+            EXT.bp_pediatric
+          ]
+        },
+        { name: 'Skrining endokrynologiczny',
+          tests: [
+            { id: 'tsh' }, { id: 'ft4' },
+            { id: 'vit_d_25oh' },
+            { id: 'cortisol', note: 'Po DST 1 mg lub w ślinie nocnej — gdy charakterystyczne objawy zespołu Cushinga (rozstępy purpurowe, niski wzrost, miopatia).' },
+            { id: 'igf1', note: 'Wykluczenie niedoboru hormonu wzrostu — gdy otyłość + niski wzrost.' }
+          ]
+        },
+        { name: 'Metabolizm i powikłania (od wieku szkolnego)',
+          tests: [
+            EXT.glucose_fasting, EXT.hba1c, EXT.ogtt_75g,
+            EXT.lipid_panel, EXT.liver,
+            EXT.insulin
+          ]
+        },
+        { name: 'Diagnostyka rozszerzona (młodzież)',
+          tests: [
+            { id: 'testosterone_total', note: 'Chłopcy — wtórny hipogonadyzm w otyłości; dziewczęta — skrining PCOS po menarche.' },
+            { id: 'lh' }, { id: 'fsh' },
+            { id: 'shbg', note: 'Insulinooporność → niska SHBG.' },
+            { id: 'oh17_progesterone', note: 'Wykluczenie nieklasycznego wrodzonego przerostu nadnerczy u dziewcząt z PCOS-podobnym obrazem klinicznym.' }
+          ]
+        },
+        { name: 'Genetyka (gdy sygnały alarmowe)',
+          tests: [
+            EXT.mc4r_gene,
+            EXT.pomc_pcsk1_lepr_gene,
+            EXT.prader_willi_test,
+            EXT.bardet_biedl_panel
+          ]
+        }
+      ],
+      guideline: 'PTLO 2022 (dział pediatryczny) / Endocrine Society 2017 (Styne — Pediatric Obesity) / AAP 2023 (Hampl — Clinical Practice Guideline) / IMID/IPCZD / ESPGHAN 2017 (Vajro — MASLD u dzieci) / NHLBI 2017 (Flynn — nadciśnienie tętnicze u dzieci) / NHLBI 2011 (lipidogram pediatryczny).',
+      sources: [
+        'Olszanecka-Glinianowicz M, Mamcarz A, Filipiak KJ i wsp. Otyłość — choroba przewlekła. Stanowisko PTLO 2022. Forum Medycyny Rodzinnej. 2022.',
+        'Styne DM, Arslanian SA, Connor EL i wsp. Pediatric Obesity-Assessment, Treatment, and Prevention: An Endocrine Society Clinical Practice Guideline. J Clin Endocrinol Metab. 2017;102(3):709-757.',
+        'Hampl SE, Hassink SG, Skinner AC i wsp. Clinical Practice Guideline for the Evaluation and Treatment of Children and Adolescents With Obesity (AAP). Pediatrics. 2023;151(2):e2022060640.',
+        'Vajro P, Lenta S, Socha P i wsp. Diagnosis of nonalcoholic fatty liver disease in children and adolescents: position paper of the ESPGHAN Hepatology Committee. J Pediatr Gastroenterol Nutr. 2012;54(5):700-713.',
+        'Flynn JT, Kaelber DC, Baker-Smith CM i wsp. Clinical Practice Guideline for Screening and Management of High Blood Pressure in Children and Adolescents (NHLBI). Pediatrics. 2017;140(3):e20171904.',
+        'Expert Panel on Integrated Guidelines for Cardiovascular Health and Risk Reduction in Children and Adolescents. NHLBI 2011 Guidelines. Pediatrics. 2011;128(Suppl 5):S213-S256.',
+        'Kelly AS, Auerbach P, Barrientos-Perez M i wsp. A Randomized, Controlled Trial of Liraglutide for Adolescents with Obesity. N Engl J Med. 2020;382(22):2117-2128.',
+        'Weghuber D, Barrett T, Barrientos-Pérez M i wsp. Once-Weekly Semaglutide in Adolescents with Obesity (STEP TEENS). N Engl J Med. 2022;387(24):2245-2257.',
+        'Clément K, van den Akker E, Argente J i wsp. Efficacy and safety of setmelanotide, an MC4R agonist, in individuals with severe obesity due to LEPR or POMC deficiency. Lancet Diabetes Endocrinol. 2020;8(12):960-970.',
+        'Pratt JSA, Browne A, Browne NT i wsp. ASMBS pediatric metabolic and bariatric surgery guidelines, 2018. Surg Obes Relat Dis. 2018;14(7):882-901.',
+        'Kułaga Z, Litwin M, Tkaczyk M i wsp. Polish 2010 growth references for school-aged children and adolescents. Eur J Pediatr. 2011;170(5):599-609 (siatki centylowe OLAF).',
+        'Palczewska I, Niedźwiedzka Z. Wskaźniki rozwoju somatycznego dzieci i młodzieży warszawskiej. Medycyna Wieku Rozwojowego. 2001;5(2):17-118 (siatki Palczewska).'
+      ]
     },
 
     metabolic_syndrome: {
@@ -6364,64 +8674,226 @@
           {
             kind: 'prose',
             icon: 'book-2',
-            title: 'Definicja kliniczna',
-            body: 'Zespół metaboliczny rozpoznawany KLINICZNIE wg kryteriów NCEP-ATP III 2005 lub IDF 2009 — istotnie zwiększa ryzyko cukrzycy typu 2 i powikłań sercowo-naczyniowych. Patofizjologicznie centralna jest INSULINOOPORNOŚĆ i otyłość trzewna. Diagnostyka wymaga pomiarów antropometrycznych (obwód talii — wskaźnik otyłości trzewnej) oraz badań biochemicznych (glukoza, lipidogram). Rozpoznanie zespołu metabolicznego jest sygnałem do intensywnej modyfikacji stylu życia i indywidualnej oceny ryzyka sercowo-naczyniowego.'
-          },
-          {
-            kind: 'list',
-            icon: 'tags',
-            title: 'Kryteria rozpoznania (≥ 3 z 5)',
-            items: [
-              { label: 'Otyłość brzuszna (obwód talii)', text: '≥ 102 cm (M) / ≥ 88 cm (K) wg NCEP-ATP III; IDF stosuje kryteria etniczne — dla Europoidów ≥ 94 cm (M) / ≥ 80 cm (K).' },
-              { label: 'Trójglicerydy ≥ 150 mg/dL', text: '(1,7 mmol/L) lub farmakoterapia hipertriglicerydemii.' },
-              { label: 'HDL niski', text: '< 40 mg/dL (1,0 mmol/L) u mężczyzn; < 50 mg/dL (1,3 mmol/L) u kobiet; lub farmakoterapia dyslipidemii.' },
-              { label: 'Ciśnienie tętnicze ≥ 130/85 mmHg', text: 'lub farmakoterapia nadciśnienia.' },
-              { label: 'Glukoza na czczo ≥ 100 mg/dL', text: '(5,6 mmol/L) lub farmakoterapia cukrzycy/IGT.' }
+            title: 'Definicja i patofizjologia',
+            body: [
+              'Zespół metaboliczny — kliniczna konstelacja powiązanych czynników ryzyka sercowo-naczyniowego, istotnie zwiększająca ryzyko cukrzycy typu 2 i powikłań sercowo-naczyniowych.',
+              { heading: 'Składowe zespołu' },
+              { items: [
+                'Otyłość brzuszna (trzewna).',
+                'Dyslipidemia aterogenna.',
+                'Zaburzenia glikemii (stan przedcukrzycowy lub cukrzyca).',
+                'Podwyższone ciśnienie tętnicze.'
+              ] },
+              { heading: 'Patofizjologia' },
+              'Centralne miejsce zajmują: insulinooporność i otyłość trzewna z towarzyszącym przewlekłym stanem zapalnym niskiego stopnia.',
+              { heading: 'Aktualna definicja międzynarodowa — Alberti 2009 (harmonized definition)' },
+              'Wspólne stanowisko 5 organizacji:',
+              { items: [
+                { label: 'NHLBI', text: 'National Heart, Lung, and Blood Institute (USA).' },
+                { label: 'AHA', text: 'American Heart Association.' },
+                { label: 'IDF', text: 'International Diabetes Federation.' },
+                { label: 'WHF', text: 'World Heart Federation.' },
+                { label: 'IAS', text: 'International Atherosclerosis Society.' }
+              ] },
+              { heading: 'Znaczenie kliniczne' },
+              'Rozpoznanie zespołu metabolicznego jest sygnałem do intensywnej modyfikacji stylu życia i oceny ryzyka sercowo-naczyniowego — nie jest osobną chorobą, lecz konstelacją wskaźników wymagającą skoordynowanego leczenia.'
             ]
           },
           {
             kind: 'list',
-            icon: 'list-search',
-            title: 'Diagnostyka endokrynologiczno-metaboliczna',
+            icon: 'tags',
+            title: 'Kryteria rozpoznania (≥ 3 z 5) — harmonized definition Alberti 2009',
             items: [
+              { label: 'Otyłość brzuszna (obwód talii)', text: 'osoby rasy białej: ≥ 94 cm (mężczyźni) lub ≥ 80 cm (kobiety) wg IDF; alternatywnie wg NCEP-ATP III (National Cholesterol Education Program Adult Treatment Panel III) — ≥ 102 cm (mężczyźni) lub ≥ 88 cm (kobiety). Inne grupy etniczne mają kryteria specyficzne (np. Azjaci południowo-wschodni: ≥ 90 / ≥ 80 cm).' },
+              { label: 'Trójglicerydy', text: '≥ 150 mg/dL (1,7 mmol/L) lub farmakoterapia hipertrójglicerydemii.' },
+              { label: 'Cholesterol HDL niski', text: '< 40 mg/dL (1,0 mmol/L) u mężczyzn; < 50 mg/dL (1,3 mmol/L) u kobiet; lub farmakoterapia dyslipidemii.' },
+              { label: 'Ciśnienie tętnicze', text: '≥ 130/85 mmHg lub farmakoterapia nadciśnienia.' },
+              { label: 'Glikemia na czczo', text: '≥ 100 mg/dL (5,6 mmol/L) lub rozpoznana cukrzyca lub leczenie hipoglikemizujące.' }
+            ]
+          },
+          {
+            kind: 'algorithm',
+            icon: 'list-numbers',
+            title: 'Algorytm diagnostyczny',
+            steps: [
               {
-                label: 'Gospodarka węglowodanowa',
-                text: 'insulinooporność jest mechanizmem patofizjologicznym:',
-                detail: [
-                  'Glukoza na czczo — podstawowy parametr (≥ 100 mg/dL = nieprawidłowa glikemia na czczo IFG; ≥ 126 = cukrzyca).',
-                  'oGTT 75 g — preferowany do wczesnego wykrywania nieprawidłowej tolerancji glukozy (IGT) i wczesnej cukrzycy; bardziej czuły niż HbA1c.',
-                  'HbA1c — średnia glikemia ostatnich 2–3 miesięcy; stan przedcukrzycowy 5,7–6,4%; cukrzyca ≥ 6,5%.',
-                  'Insulina + HOMA-IR — ocena insulinooporności (HOMA-IR > 2,5); bezpośredni marker patofizjologii zespołu.'
+                number: 1,
+                title: 'Pomiary antropometryczne + ciśnienie',
+                sublabel: 'pomiar w pozycji stojącej, brzuch luźny',
+                options: [
+                  {
+                    threshold: 'Co zmierzyć',
+                    action: 'BMI (wskaźnik masy ciała), obwód talii (na wysokości środka między dolnym łukiem żebrowym a grzebieniem biodrowym), ciśnienie tętnicze (2 pomiary, średnia).',
+                    variant: 'success', icon: 'flask',
+                    detail: [
+                      'Obwód talii lepiej niż BMI przewiduje ryzyko sercowo-naczyniowe — odzwierciedla otyłość trzewną (metabolicznie aktywną).',
+                      'Pomiar obwodu talii: pacjent w pozycji stojącej, brzuch swobodny (nie wciągany), na wydechu, taśma na wysokości środka między dolnym łukiem żebrowym a górnym grzebieniem biodrowym.',
+                      'Ciśnienie tętnicze: 2 pomiary z 1-minutowym odstępem, średnia; przy podwyższonych wartościach kontynuować pomiary domowe przez 7 dni lub wykonać całodobowe monitorowanie ciśnienia tętniczego ABPM (ang. ambulatory blood pressure monitoring).'
+                    ]
+                  }
                 ]
               },
-              { label: 'Lipidogram (TC, LDL, HDL, TG)', text: 'dyslipidemia aterogenna: ↑ trójglicerydy, ↓ HDL, drobne gęste LDL; obliczenie non-HDL cholesterolu (TC − HDL) jest dodatkowym markerem ryzyka CV.' },
               {
-                label: 'Markery hormonalne u mężczyzn',
-                text: 'specyficzne dla zespołu metabolicznego u mężczyzn:',
-                detail: [
-                  'SHBG NISKA — wczesny marker insulinooporności (insulina hamuje syntezę wątrobową SHBG); może wyprzedzać rozwój pełnoobjawowego zespołu metabolicznego.',
-                  'Testosteron całkowity NISKI — częsty w zespole metabolicznym; mechanizm dwukierunkowy: otyłość → hipogonadyzm wtórny, ale hipogonadyzm również nasila otyłość.',
-                  'Rozważyć osobne wskazanie hipogonadyzm męski przy ocenie testosteronoterapii.'
+                number: 2,
+                title: 'Panel laboratoryjny podstawowy',
+                sublabel: 'biochemiczne kryteria rozpoznania',
+                options: [
+                  {
+                    threshold: 'Co oznaczyć',
+                    action: 'Glukoza na czczo, lipidogram pełny — cholesterol całkowity (TC), LDL, HDL, trójglicerydy (TG); obliczenie cholesterolu nie-HDL (TC − HDL); hemoglobina glikowana (HbA1c). Doustny test obciążenia glukozą (oGTT) 75 g jeśli stan przedcukrzycowy lub pacjent młody.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      { heading: 'Gospodarka węglowodanowa' },
+                      { items: [
+                        'Glikemia na czczo ≥ 100 mg/dL = IFG (nieprawidłowa glikemia na czczo); ≥ 126 mg/dL = cukrzyca.',
+                        'HbA1c: stan przedcukrzycowy 5,7–6,4%; cukrzyca ≥ 6,5%.',
+                        'oGTT 75 g — preferowany do wczesnego wykrywania IGT (nieprawidłowa tolerancja glukozy, 140–199 mg/dL w 120. minucie) i wczesnej cukrzycy (≥ 200 mg/dL); bardziej czuły niż HbA1c u osób z grupy ryzyka.',
+                        'Insulina + wskaźnik HOMA-IR (homeostasis model assessment of insulin resistance, wartość > 2,5) — pomocnicze; nie są kryterium rozpoznawania zespołu metabolicznego.'
+                      ] },
+                      { heading: 'Lipidogram' },
+                      'Dyslipidemia aterogenna: podwyższone TG, obniżony HDL, drobne gęste cząsteczki LDL. Cholesterol nie-HDL (TC minus HDL) lepiej niż sam LDL przewiduje ryzyko sercowo-naczyniowe u pacjentów z hipertrójglicerydemią.'
+                    ]
+                  }
                 ]
               },
-              { label: 'Próby wątrobowe (ALAT, ASPAT, GGTP)', text: 'MASLD/NAFLD (niealkoholowa stłuszczeniowa choroba wątroby) jest hepatologiczną manifestacją zespołu metabolicznego — dotyczy ~40% pacjentów. Podwyższenie ALAT zwykle przewyższa ASPAT; przy znacznym wzroście — diagnostyka różnicowa z MASH/NASH.' }
+              {
+                number: 3,
+                title: 'Ocena powikłań i ryzyka CV',
+                sublabel: 'MASLD, kalkulator ryzyka, markery dodatkowe',
+                options: [
+                  {
+                    threshold: 'MASLD/MASH — manifestacja hepatologiczna',
+                    action: 'ALT, AST, GGT + USG jamy brzusznej; wskaźnik FIB-4 jako nieinwazyjny marker fibrozy wątroby.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'MASLD (ang. metabolic dysfunction-associated steatotic liver disease — stłuszczeniowa choroba wątroby związana z zaburzeniami metabolicznymi, nowa nomenklatura od 2023; dawna nazwa NAFLD) — występuje u ok. 40% pacjentów z zespołem metabolicznym.',
+                      'Wskaźnik FIB-4 wyliczany ze wzoru: wiek × AST / (liczba płytek × √ALT). Interpretacja: < 1,3 — niskie ryzyko fibrozy; 1,3–2,67 — pośrednie; > 2,67 — wysokie. Wartości pośrednie i wysokie → konsultacja hepatologiczna + FibroScan (VCTE, ang. vibration-controlled transient elastography — przyłóżkowa elastografia).',
+                      'MASH (ang. metabolic dysfunction-associated steatohepatitis — stłuszczeniowe zapalenie wątroby zw. z zaburzeniami metabolicznymi) — postać z zapaleniem i fibrozą; może postępować do marskości i raka wątrobowokomórkowego (HCC, ang. hepatocellular carcinoma).',
+                      'Leczenie: redukcja masy ciała ≥ 10%, leczenie cukrzycy typu 2, dieta śródziemnomorska; resmetirom (Rezdiffra) — pierwszy lek zarejestrowany przez FDA w 2024 r. dla MASH z fibrozą w stadium F2-F3.'
+                    ]
+                  },
+                  {
+                    threshold: 'Ryzyko sercowo-naczyniowe',
+                    action: 'Kalkulator Pol-SCORE2 (40–69 lat) lub SCORE2-OP (≥ 70 lat) — szacowanie 10-letniego ryzyka zgonu z przyczyn sercowo-naczyniowych.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'Pol-SCORE2 — dostępny online (PTKL — Polskie Towarzystwo Kardiologiczne); uwzględnia wiek, płeć, palenie, ciśnienie skurczowe oraz cholesterol nie-HDL.',
+                      'Kategorie ryzyka 10-letniego: niskie < 5%, umiarkowane 5–10%, wysokie 10–15%, bardzo wysokie ≥ 15%.',
+                      'Docelowe stężenie cholesterolu LDL zależy od kategorii ryzyka: bardzo wysokie < 55 mg/dL; wysokie < 70 mg/dL; umiarkowane < 100 mg/dL.',
+                      'Cukrzyca typu 2 z powikłaniami → automatycznie kategoria bardzo wysokiego ryzyka sercowo-naczyniowego.'
+                    ]
+                  },
+                  {
+                    threshold: 'Markery dodatkowe (przy pośrednim ryzyku sercowo-naczyniowym)',
+                    action: 'CRP (białko C-reaktywne — marker przewlekłego stanu zapalnego niskiego stopnia), kwas moczowy, mikroalbuminuria.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'CRP > 3 mg/L → niezależny czynnik ryzyka sercowo-naczyniowego; wskazówka do bardziej intensywnej prewencji.',
+                      'Podwyższony kwas moczowy — wiąże się z opornym nadciśnieniem tętniczym, MASLD oraz cukrzycą typu 2.',
+                      'Mikroalbuminuria — wczesny marker uszkodzenia narządowego (śródbłonek naczyniowy, nerki) w przebiegu zespołu metabolicznego i cukrzycy.'
+                    ]
+                  }
+                ]
+              },
+              {
+                number: 4,
+                title: 'Markery hormonalne (mężczyźni)',
+                sublabel: 'opcjonalne — przy klinicznym podejrzeniu hipogonadyzmu',
+                options: [
+                  {
+                    threshold: 'SHBG + testosteron całkowity',
+                    action: 'Niska SHBG (globulina wiążąca hormony płciowe) jest markerem insulinooporności — insulina hamuje syntezę wątrobową SHBG; testosteron często obniżony wtórnie.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'Spadek SHBG może wyprzedzać rozwój pełnoobjawowego zespołu metabolicznego.',
+                      'Mechanizm dwukierunkowy: otyłość → hipogonadyzm wtórny (obniżenie LH i FSH wskutek działania leptyny i estronu konwertowanego z androstendionu przez aromatazę w tkance tłuszczowej); hipogonadyzm z kolei pogłębia otyłość.',
+                      'Częściowo odwracalny po redukcji masy ciała ≥ 10%.',
+                      'Kwalifikacja do testosteronoterapii substytucyjnej (TRT) — osobne wskazanie (hipogonadyzm męski).'
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            kind: 'callout',
+            variant: 'purple',
+            icon: 'pill',
+            title: 'Leczenie — intensywna modyfikacja stylu życia + farmakoterapia komponentów',
+            collapsible: true,
+            body: [
+              { heading: 'Modyfikacja stylu życia — podstawa zawsze' },
+              { items: [
+                'Dieta śródziemnomorska — najlepsza dowodowo dla redukcji ryzyka CV w zespole metabolicznym (PREDIMED 2013).',
+                'Aktywność fizyczna — ≥ 150 min/tydz. umiarkowanej + 2× tygodniowo trening siłowy.',
+                'Redukcja masy ciała ≥ 5–10% — istotna poprawa wszystkich komponentów zespołu.',
+                'Zaprzestanie palenia — niezależny czynnik ryzyka CV.',
+                'Umiarkowane spożycie alkoholu (lub abstynencja w MASLD).',
+                'Sen ≥ 7 godz./dobę; leczenie OSA jeśli rozpoznany.'
+              ] },
+              { heading: 'Farmakoterapia poszczególnych komponentów' },
+              { items: [
+                'Hiperglikemia → metformina (pierwsza linia w cukrzycy typu 2 oraz w stanie przedcukrzycowym z BMI ≥ 30 wg zaleceń PTD 2024 — Polskiego Towarzystwa Diabetologicznego).',
+                'Otyłość → agoniści receptora GLP-1 (semaglutyd, liraglutyd) lub tirzepatyd przy BMI ≥ 27 z powikłaniami — szczegóły w panelu „Otyłość".',
+                'Dyslipidemia → statyny (docelowe stężenie LDL wg kategorii ryzyka sercowo-naczyniowego); ezetymib jako dodatek; inhibitory PCSK9 (alirokumab, ewolokumab — białka konwertazy proproteinowej subtylizyny/keksyny typu 9) lub bempedoinian przy nietolerancji statyn.',
+                'Hipertrójglicerydemia → fibraty (fenofibrat) lub wysokie dawki kwasów omega-3 EPA (icosapent ethyl).',
+                'Nadciśnienie tętnicze → ACE-I (inhibitory konwertazy angiotensyny) lub ARB (sartany) + CCB (bloker kanału wapniowego) albo diuretyk tiazydopodobny (indapamid, chlortalidon) — szczegóły w panelu „Nadciśnienie tętnicze".'
+              ] },
+              { heading: 'Cel terapeutyczny' },
+              { items: [
+                'BMI < 25 kg/m² (lub redukcja masy ciała ≥ 10% przy wyjściowym BMI > 30).',
+                'HbA1c < 7,0% w cukrzycy typu 2, < 5,7% w prewencji.',
+                'Cholesterol LDL — zgodnie z kategorią ryzyka sercowo-naczyniowego.',
+                'Ciśnienie tętnicze < 130/80 mmHg.'
+              ] }
+            ]
+          },
+          {
+            kind: 'list',
+            icon: 'tags',
+            title: 'Powiązane panele',
+            items: [
+              { label: 'Otyłość', text: 'wspólna patofizjologia, częsta nakładka diagnostyczna (panel obesity).' },
+              { label: 'Nadciśnienie tętnicze', text: 'jedno z 5 kryteriów rozpoznania; farmakoterapia w osobnym panelu (hypertension).' },
+              { label: 'PCOS — zespół policystycznych jajników', text: 'u kobiety z zespołem metabolicznym wykluczyć PCOS — osobne wskazanie.' },
+              { label: 'Hipogonadyzm męski', text: 'częsta choroba towarzysząca u mężczyzn z zespołem metabolicznym — osobne wskazanie.' }
             ]
           }
         ]
       },
       sections: [
-        { name: 'Panel podstawowy',
+        { name: 'Kryteria biochemiczne',
           tests: [
             EXT.glucose_fasting, EXT.hba1c, EXT.ogtt_75g,
-            EXT.lipid_panel,
+            EXT.lipid_panel
+          ]
+        },
+        { name: 'Insulinooporność i hormony',
+          tests: [
             EXT.insulin,
-            { id: 'shbg', note: 'Niski w insulinooporności' },
-            { id: 'testosterone_total', note: 'Niski w mtb. syndrome (mężczyźni)' },
-            EXT.liver
+            { id: 'shbg', note: 'Niska w insulinooporności' },
+            { id: 'testosterone_total', note: 'Mężczyźni — wtórny hipogonadyzm' }
+          ]
+        },
+        { name: 'Powikłania i ocena ryzyka',
+          tests: [
+            EXT.liver,
+            EXT.crp,
+            EXT.cmp, EXT.egfr,
+            { ext: 'uric_acid', label: 'Kwas moczowy', note: 'Marker ryzyka sercowo-naczyniowego i MASLD; współwystępuje z opornym nadciśnieniem tętniczym.' },
+            { ext: 'fib4', label: 'FIB-4 (kalkulator)', note: 'Nieinwazyjny marker fibrozy wątroby; > 1,3 → konsultacja hepatologiczna.' }
           ]
         }
       ],
-      guideline: 'NCEP-ATP III 2005 / IDF 2009'
+      guideline: 'Alberti 2009 (harmonized definition NHLBI/AHA/IDF/WHF/IAS) / PTD 2024 / Endocrine Society 2014 (dyslipidemia) / ESC 2024 (CV prevention) / EASL-EASD-EASO 2024 (MASLD).',
+      sources: [
+        'Alberti KG, Eckel RH, Grundy SM i wsp. Harmonizing the metabolic syndrome: a joint interim statement of the International Diabetes Federation Task Force on Epidemiology and Prevention; National Heart, Lung, and Blood Institute; American Heart Association; World Heart Federation; International Atherosclerosis Society; and International Association for the Study of Obesity. Circulation. 2009;120(16):1640-1645.',
+        'Polskie Towarzystwo Diabetologiczne. Zalecenia kliniczne dotyczące postępowania u chorych na cukrzycę — 2024. Curr Top Diabetes. 2024;4(1):1-115.',
+        'Visseren FLJ, Mach F, Smulders YM i wsp. 2021 ESC Guidelines on cardiovascular disease prevention in clinical practice. Eur Heart J. 2021;42(34):3227-3337.',
+        'Estruch R, Ros E, Salas-Salvadó J i wsp. Primary Prevention of Cardiovascular Disease with a Mediterranean Diet Supplemented with Extra-Virgin Olive Oil or Nuts (PREDIMED). N Engl J Med. 2018;378(25):e34.',
+        'Rinella ME, Lazarus JV, Ratziu V i wsp. A multisociety Delphi consensus statement on new fatty liver disease nomenclature (MASLD). Hepatology. 2023;78(6):1966-1986.',
+        'European Association for the Study of the Liver (EASL), EASD, EASO. EASL-EASD-EASO Clinical Practice Guidelines on the management of metabolic dysfunction-associated steatotic liver disease (MASLD). J Hepatol. 2024;81(3):492-542.'
+      ]
     },
 
     ckd: {
@@ -6431,63 +8903,257 @@
             kind: 'prose',
             icon: 'book-2',
             title: 'Definicja i kontekst CKD-MBD',
-            body: 'Przewlekła choroba nerek (CKD — Chronic Kidney Disease) w stadium G3+ (eGFR < 60 mL/min/1,73 m²) prowadzi do zaburzeń metabolizmu wapniowo-fosforanowego — zespołu CKD-MBD (Chronic Kidney Disease-Mineral and Bone Disorder). Mechanizm: upośledzona aktywacja witaminy D w nerkach (spadek aktywności 1-α-hydroksylazy) → spadek 1,25(OH)2D → hipokalcemia → WTÓRNA nadczynność przytarczyc → osteodystrofia nerkowa, retencja fosforu i przebudowa naczyniowa. Postępowanie wg wytycznych KDIGO CKD-MBD 2017.'
-          },
-          {
-            kind: 'list',
-            icon: 'tags',
-            title: 'CKD-MBD — parametry monitorowania (KDIGO 2017)',
-            items: [
-              { label: 'Wapń całkowity i zjonizowany', text: 'początkowo prawidłowy lub niski (hipokalcemia z niedoboru kalcytriolu); w późnym CKD może być WYSOKI w wyniku rozwoju autonomicznej (trzeciorzędowej) nadczynności przytarczyc.' },
-              { label: 'Fosfor — PODWYŻSZONY', text: 'odmiennie niż w krzywicy niedoborowej — upośledzona fosfaturia w niewydolnych nerkach prowadzi do retencji fosforu (najwyraźniej od stadium G4).' },
-              { label: 'PTH — WYSOKI (wtórna nadczynność przytarczyc)', text: 'cel terapeutyczny zależy od stadium CKD i metody leczenia nerkozastępczego; u dializowanych zwykle 2–9× górnej granicy normy (zachowanie kompensacji bez tertiary hyperPTH).' },
-              { label: '25-OHD', text: 'często obniżona — suplementacja zalecana (cholekalcyferol) niezależnie od stadium CKD.' },
-              { label: '1,25(OH)2D — OBNIŻONA', text: 'defekt nerkowej 1-α-hydroksylazy; suplementacja aktywną witaminą D (kalcytriol, alfakalcydol) lub analogami (parikalcytol) w zaawansowanym CKD.' },
-              { label: 'ALP (fosfataza alkaliczna)', text: 'marker przebudowy kostnej — pomocniczy do monitorowania osteodystrofii nerkowej; znacznie podwyższona w wysokoobrotowej postaci.' },
-              { label: 'FGF23 — WZRASTA WCZEŚNIE', text: 'wzrasta przed wzrostem PTH; wczesny marker CKD-MBD; podwyższenie FGF23 wiąże się ze zwiększoną śmiertelnością sercowo-naczyniową w CKD.' }
+            body: [
+              'Przewlekła choroba nerek (CKD — ang. chronic kidney disease) — eGFR (ang. estimated glomerular filtration rate, oszacowany współczynnik filtracji kłębuszkowej) < 60 mL/min/1,73 m² i/lub markery uszkodzenia utrzymujące się ≥ 3 miesiące.',
+              { heading: 'Markery uszkodzenia nerek' },
+              { items: [
+                'Albuminuria ≥ 30 mg/g.',
+                'Zmiany strukturalne w obrazowaniu.',
+                'Nieprawidłowości w osadzie moczu.'
+              ] },
+              { heading: 'CKD-MBD — zaburzenia mineralne i kostne (od stadium G3)' },
+              'CKD-MBD (ang. chronic kidney disease – mineral and bone disorder) — kaskada zaburzeń pojawiających się od stadium G3+:',
+              { items: [
+                'Spadek aktywności nerkowej 1-α-hydroksylazy → spadek 1,25(OH)₂D (kalcytriol — aktywna postać witaminy D).',
+                'Hipokalcemia + retencja fosforu wskutek upośledzonej fosfaturii.',
+                'Wtórna nadczynność przytarczyc.',
+                'Osteodystrofia nerkowa + przebudowa naczyniowa (zwapnienia ścian naczyń).',
+                'Skutek końcowy — znacznie zwiększone ryzyko sercowo-naczyniowe.'
+              ] },
+              { heading: 'Wytyczne KDIGO (Kidney Disease: Improving Global Outcomes)' },
+              { items: [
+                { label: 'KDIGO 2012', text: 'klasyfikacja CKD wg eGFR i albuminurii.' },
+                { label: 'KDIGO 2017', text: 'CKD-MBD — zaburzenia mineralne i kostne.' },
+                { label: 'KDIGO 2024', text: 'niedokrwistość w CKD oraz ostre uszkodzenie nerek (AKI).' }
+              ] }
             ]
           },
           {
             kind: 'list',
-            icon: 'list-search',
-            title: 'Ocena funkcji nerek i powikłań',
+            icon: 'tags',
+            title: 'Klasyfikacja stadiów CKD (KDIGO 2012)',
             items: [
+              { label: 'G1', text: 'eGFR ≥ 90 mL/min/1,73 m² — prawidłowy lub wysoki; CKD rozpoznajemy wyłącznie przy współistniejącym białkomoczu lub innych markerach uszkodzenia.' },
+              { label: 'G2', text: 'eGFR 60–89 — łagodnie obniżony; CKD rozpoznajemy tylko z markerami uszkodzenia.' },
+              { label: 'G3a', text: 'eGFR 45–59 — umiarkowanie obniżony; początek monitorowania CKD-MBD.' },
+              { label: 'G3b', text: 'eGFR 30–44 — umiarkowanie obniżony, narastające ryzyko powikłań.' },
+              { label: 'G4', text: 'eGFR 15–29 — znacznie obniżony; przygotowanie do leczenia nerkozastępczego (planowanie dostępu naczyniowego, edukacja pacjenta).' },
+              { label: 'G5', text: 'eGFR < 15 — niewydolność końcowa (dializoterapia lub transplantacja).' },
+              { label: 'Albuminuria — kategorie', text: 'A1 — < 30 mg/g (norma); A2 — 30–300 mg/g (umiarkowana); A3 — > 300 mg/g (ciężka). Niezależny czynnik prognostyczny — A3 niesie zwiększone ryzyko sercowo-naczyniowe i progresji CKD nawet przy zachowanym eGFR.' }
+            ]
+          },
+          {
+            kind: 'algorithm',
+            icon: 'list-numbers',
+            title: 'Algorytm monitorowania CKD-MBD wg stadium',
+            steps: [
               {
-                label: 'eGFR (CKD-EPI) — klasyfikacja stadiów',
-                text: 'wg KDIGO 2012:',
-                detail: [
-                  'G1: ≥ 90 mL/min/1,73 m² (prawidłowy lub wysoki — z białkomoczem lub markerami uszkodzenia).',
-                  'G2: 60–89 (łagodnie obniżony).',
-                  'G3a: 45–59; G3b: 30–44 (umiarkowanie obniżony — wymagane monitorowanie CKD-MBD).',
-                  'G4: 15–29 (znacznie obniżony — przygotowanie do leczenia nerkozastępczego).',
-                  'G5: < 15 (niewydolność końcowa — dializy lub transplantacja).',
-                  'Ocena dodatkowa: albuminuria A1 (< 30 mg/g), A2 (30–300), A3 (> 300) — istotny niezależny czynnik prognostyczny.'
+                number: 1,
+                title: 'Stadia G3a–G3b (eGFR 30–59)',
+                sublabel: 'początek monitorowania CKD-MBD',
+                options: [
+                  {
+                    threshold: 'Badania co 6–12 miesięcy',
+                    action: 'Wapń skorygowany o albuminę, fosfor, PTH, 25-OHD, fosfataza alkaliczna (ALP), eGFR, albuminuria, morfologia krwi.',
+                    variant: 'success', icon: 'flask',
+                    detail: [
+                      { heading: 'Cele wg KDIGO 2017' },
+                      { items: [
+                        'Wapń — w zakresie normy laboratoryjnej.',
+                        'Fosfor — w zakresie normy laboratoryjnej.',
+                        'PTH — wartości graniczne (1–2× ULN, ang. upper limit of normal — górnej granicy normy); brak wskazania do aktywnego leczenia, jeśli wapń i fosfor nie są zaburzone i jeśli PTH nie rośnie istotnie.',
+                        '25-OHD > 30 ng/mL — suplementacja cholekalcyferolem zgodnie z polskim konsensusem suplementacji witaminy D z 2023 r.'
+                      ] },
+                      { heading: 'Postępowanie' },
+                      { items: [
+                        'Kontrola fosforu w diecie (ograniczenie produktów o wysokiej zawartości fosforu: nabiał, mięso przetworzone, napoje gazowane typu cola).',
+                        'Suplementacja cholekalcyferolu (np. 2000 IU/dobę), jeśli 25-OHD < 30 ng/mL.',
+                        'Brak rutynowego wskazania do kalcytriolu lub parikalcytolu na tym etapie.'
+                      ] }
+                    ]
+                  }
                 ]
               },
-              { label: 'Niedokrwistość nerkowa — morfologia krwi', text: 'niedobór erytropoetyny (EPO) — przy eGFR < 30 zwykle istotna; może wymagać leczenia czynnikami stymulującymi erytropoezę (ESA) oraz substytucji żelaza; cel Hb 100–115 g/L.' },
-              { label: 'CRP', text: 'przewlekły stan zapalny niskiego stopnia w CKD — niezależny czynnik ryzyka sercowo-naczyniowego.' },
-              { label: 'Bilans płynowo-elektrolitowy', text: 'Na, K (hiperkaliemia w zaawansowanym CKD — wskazanie do diuretyków pętlowych, kayexalate, ostrożność z ACEI/ARB/MRA); równowaga kwasowo-zasadowa (kwasica metaboliczna w CKD G4–G5 — suplementacja wodorowęglanami).' }
+              {
+                number: 2,
+                title: 'Stadium G4 (eGFR 15–29)',
+                sublabel: 'znaczące zaburzenia CKD-MBD',
+                options: [
+                  {
+                    threshold: 'Badania co 3–6 miesięcy',
+                    action: 'Wapń, fosfor, PTH, 25-OHD, ALP — częstsze monitorowanie; bilans elektrolitowy (Na, K), gazometria.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      { heading: 'Cele wg KDIGO 2017' },
+                      { items: [
+                        'Wapń: 8,4–10,4 mg/dL (skorygowany o albuminę).',
+                        'Fosfor: 2,5–4,5 mg/dL (KDIGO sugeruje obniżenie podwyższonego stężenia do zakresu normy).',
+                        'PTH: 2–9× ULN (górnej granicy normy) — gdy wzrasta progresywnie, rozważyć leczenie aktywną witaminą D lub kalcymimetykiem (cynakalcet).',
+                        '25-OHD > 30 ng/mL — kontynuacja suplementacji cholekalcyferolu.'
+                      ] },
+                      { heading: 'Postępowanie farmakologiczne' },
+                      { items: [
+                        'Aktywna witamina D (kalcytriol 0,25 μg/dobę lub alfakalcydol) — przy wzroście PTH > 2× ULN mimo wyrównanej 25-OHD.',
+                        'Parikalcytol — selektywny agonista receptora witaminy D (VDR, ang. vitamin D receptor); cechuje się mniejszą tendencją do wywoływania hiperkalcemii niż kalcytriol.',
+                        'Kontrola fosforu — chelatory niezawierające wapnia (sevelamer 800 mg 3 × dziennie, lantanu węglan).',
+                        'Kalcymimetyki (cynakalcet) — przy wtórnej nadczynności przytarczyc opornej na leczenie witaminą D.'
+                      ] },
+                      { heading: 'Przygotowanie do leczenia nerkozastępczego' },
+                      'Planowanie dostępu naczyniowego — przetoka tętniczo-żylna AVF (ang. arteriovenous fistula) wykonywana ≥ 6 miesięcy przed planowanymi dializami; edukacja pacjenta o opcjach leczenia (hemodializy, dializa otrzewnowa, transplantacja).'
+                    ]
+                  }
+                ]
+              },
+              {
+                number: 3,
+                title: 'Stadium G5 (eGFR < 15) — przeddializacyjne lub dializy',
+                sublabel: 'pełne CKD-MBD, intensywne leczenie',
+                options: [
+                  {
+                    threshold: 'Badania co 1–3 miesiące',
+                    action: 'Wapń, fosfor, PTH co miesiąc u pacjentów dializowanych; morfologia krwi, żelazo, ferrytyna, TSAT (saturacja transferyny) co 1–3 miesiące.',
+                    variant: 'danger', icon: 'alert-triangle',
+                    detail: [
+                      { heading: 'Cele dla pacjentów dializowanych wg KDIGO 2017' },
+                      { items: [
+                        'Wapń: w zakresie normy laboratoryjnej (8,4–10,4 mg/dL); unikanie hiperkalcemii (przyczyna kalcyfikacji ścian naczyń).',
+                        'Fosfor: w zakresie normy lub blisko jej górnej granicy (2,5–4,5 mg/dL).',
+                        'PTH: 2–9× ULN — uzasadnione utrzymanie umiarkowanego wzrostu (jeśli PTH zbyt niskie → ryzyko adynamicznej choroby kostnej).',
+                        'Iloczyn Ca × P < 55 (w jednostkach mg² · dL⁻²) — wyższe wartości zwiększają ryzyko kalcyfikacji metastatycznych.'
+                      ] },
+                      { heading: 'Postępowanie' },
+                      { items: [
+                        'Chelatory fosforu — sevelamer, lantanu węglan, ostrożnie węglan wapnia CaCO₃ (łączna dawka wapnia elementarnego < 1500 mg/dobę u pacjentów dializowanych).',
+                        'Aktywna witamina D — kalcytriol, alfakalcydol, parikalcytol.',
+                        'Kalcymimetyki — cynakalcet doustnie lub etelkalcetyd dożylnie (u pacjentów hemodializowanych).',
+                        'W przypadku autonomicznej (trzeciorzędowej) nadczynności przytarczyc — paratyreoidektomia.'
+                      ] }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            kind: 'callout',
+            variant: 'primary',
+            icon: 'alert-triangle',
+            title: 'Niedokrwistość nerkowa (KDIGO 2024 anemia)',
+            collapsible: true,
+            body: [
+              { heading: 'Definicja' },
+              'Hemoglobina (Hb) < 13 g/dL u mężczyzn lub < 12 g/dL u kobiet, lub Hb < 11 g/dL u dzieci ≥ 6 mies. Niedokrwistość zwykle istotna od stadium G3b–G4; mechanizm: niedobór erytropoetyny (EPO) + niedobór żelaza + przewlekły stan zapalny + skrócenie czasu przeżycia erytrocytów.',
+              { heading: 'Diagnostyka' },
+              { items: [
+                'Morfologia krwi, retikulocyty, MCV (średnia objętość erytrocytu), MCH (średnia masa hemoglobiny w erytrocycie).',
+                'Żelazo, ferrytyna, TSAT (ang. transferrin saturation — saturacja transferyny, czyli % wysycenia transferyny żelazem) — przed rozpoczęciem terapii ESA.',
+                'Witamina B12, kwas foliowy — wykluczenie innych przyczyn niedokrwistości.',
+                'TSH — wykluczenie niedoczynności tarczycy.'
+              ] },
+              { heading: 'Cele leczenia' },
+              { items: [
+                'Docelowe stężenie hemoglobiny 10–11,5 g/dL — KDIGO 2024 nie rekomenduje wartości > 11,5 g/dL (zwiększone ryzyko zdarzeń sercowo-naczyniowych i udarów).',
+                'TSAT ≥ 20% i ferrytyna ≥ 100 ng/mL (u pacjentów niedializowanych) lub ≥ 200 ng/mL (u dializowanych) — przed rozpoczęciem terapii ESA.'
+              ] },
+              { heading: 'Leczenie' },
+              { items: [
+                'Substytucja żelaza — pierwsza linia; preferowana dożylnie u pacjentów z eGFR < 30 mL/min/1,73 m² lub na dializoterapii.',
+                'ESA (ang. erythropoiesis-stimulating agents — czynniki stymulujące erytropoezę): epoetyna α lub β, darbepoetyna, metoksy-glikol-epoetyna β; włączane po wyrównaniu zasobów żelaza.',
+                'HIF-PHI (ang. hypoxia-inducible factor prolyl hydroxylase inhibitors — inhibitory hydroksylazy prolylowej czynnika indukowanego hipoksją): daprodustat, roksadustat (alternatywa doustna); w Polsce ich dostępność jest ograniczona.'
+              ] }
+            ]
+          },
+          {
+            kind: 'callout',
+            variant: 'purple',
+            icon: 'pill',
+            title: 'Inne powikłania CKD — kluczowe interwencje',
+            collapsible: true,
+            body: [
+              { heading: 'Hiperkaliemia' },
+              { items: [
+                'Wczesne stadium: dieta z ograniczeniem potasu, ostrożność przy stosowaniu ACE-I (inhibitorów konwertazy angiotensyny), ARB (sartanów) oraz MRA (antagonistów receptora mineralokortykoidowego).',
+                'Ostra hiperkaliemia: kayexalate (sulfonian polistyrenu sodu) lub patiromer doustnie; insulina + glukoza i.v. + wodorowęglan sodu NaHCO₃ przy zagrożeniu życia (K > 6,5 mmol/L + zmiany w EKG).',
+                'Przewlekła hiperkaliemia: patiromer doustnie (Veltassa) — wiąże potas w jelicie; umożliwia kontynuowanie ACE-I, ARB lub MRA mimo zaawansowanego CKD.'
+              ] },
+              { heading: 'Kwasica metaboliczna (CKD G4–G5)' },
+              { items: [
+                'Cel terapeutyczny: HCO₃⁻ ≥ 22 mmol/L.',
+                'Wodorowęglan sodu (NaHCO₃) doustnie 0,5–1,0 mEq/kg/dobę (zwykle 600–1800 mg/dobę).',
+                'Korekta kwasicy spowalnia progresję CKD i poprawia stan kostny.'
+              ] },
+              { heading: 'Ryzyko sercowo-naczyniowe' },
+              { items: [
+                'CKD = niezależny czynnik ryzyka sercowo-naczyniowego — pacjent automatycznie kwalifikowany do kategorii wysokiego lub bardzo wysokiego ryzyka.',
+                'Statyny — wskazane u wszystkich pacjentów ≥ 50. roku życia z CKD w stadium G3–G5 (KDIGO 2013).',
+                'Docelowe stężenie cholesterolu LDL: < 70 mg/dL (wysokie ryzyko) lub < 55 mg/dL (bardzo wysokie ryzyko).',
+                'Inhibitory SGLT2 — kotransportera sodowo-glukozowego 2 (ang. sodium-glucose cotransporter 2): dapagliflozyna, empagliflozyna. KDIGO 2024 rekomenduje stosowanie ich w CKD z białkomoczem (niezależnie od występowania cukrzycy) — spowalniają progresję choroby i redukują ryzyko sercowo-naczyniowe (badania DAPA-CKD, EMPA-KIDNEY).',
+                'Finerenon — niesteroidowy antagonista receptora mineralokortykoidowego; wskazany w CKD u pacjentów z cukrzycą typu 2; redukuje progresję i zdarzenia sercowo-naczyniowe (badania FIDELIO-DKD i FIGARO-DKD).'
+              ] },
+              { heading: 'Przygotowanie do leczenia nerkozastępczego (G4–G5)' },
+              { items: [
+                'Planowanie dostępu naczyniowego — przetoka tętniczo-żylna AVF wykonywana ≥ 6 miesięcy przed planowanymi dializami.',
+                'Szczepienia — przeciw wirusowemu zapaleniu wątroby typu B (WZW B), pneumokokom, grypie.',
+                'Edukacja pacjenta o opcjach: hemodializy, dializa otrzewnowa, transplantacja (zwłaszcza wyprzedzająca — preemptive transplantation, wykonywana przed rozpoczęciem dializ).'
+              ] }
+            ]
+          },
+          {
+            kind: 'list',
+            icon: 'tags',
+            title: 'Powiązane panele',
+            items: [
+              { label: 'Status witaminy D', text: 'kluczowy w monitorowaniu CKD-MBD (panel vitamin_d_status).' },
+              { label: 'Osteoporoza', text: 'wtórna osteoporoza nakładająca się na CKD-MBD u starszych pacjentów (panel osteoporosis).' },
+              { label: 'Hipokaliemia', text: 'ostrożność przy stosowaniu diuretyków u pacjentów z CKD i tendencją do hipokaliemii (panel hypokalemia).' },
+              { label: 'Nadciśnienie tętnicze', text: 'CKD jako częsta przyczyna i jednocześnie powikłanie nadciśnienia tętniczego (panel hypertension).' }
             ]
           }
         ]
       },
       sections: [
-        { name: 'CKD-MBD (mineral & bone disorder)',
+        { name: 'Funkcja nerek',
+          tests: [
+            EXT.egfr, EXT.cmp,
+            { ext: 'urine_albumin_creat', label: 'Albuminuria / kreatyninuria (ACR)', note: 'Wskaźnik albumina/kreatynina w moczu (ang. albumin-creatinine ratio). Kategorie A1/A2/A3 wg KDIGO 2012 — niezależny czynnik prognostyczny.' },
+            EXT.albumin
+          ]
+        },
+        { name: 'CKD-MBD (zaburzenia mineralne i kostne w CKD)',
           tests: [
             { id: 'vit_d_25oh' },
-            { id: 'vit_d_1_25', note: 'Niskie — niedobór ektopowy w CKD' },
+            { id: 'vit_d_1_25', note: 'Niskie stężenie — wtórnie do niedoboru nerkowej 1-α-hydroksylazy w CKD' },
             EXT.pth, EXT.ca_total, EXT.phosphorus, EXT.alp,
             EXT.fgf23
           ]
         },
-        { name: 'Funkcja nerek',
+        { name: 'Niedokrwistość (KDIGO 2024)',
           tests: [
-            EXT.egfr, EXT.cbc,
-            EXT.crp
+            EXT.cbc,
+            EXT.serum_iron,
+            { ext: 'tsat', label: 'TSAT — saturacja transferyny', note: 'TSAT ≥ 20% wymagane przed rozpoczęciem leczenia ESA (KDIGO 2024).' }
+          ]
+        },
+        { name: 'Bilans i powikłania',
+          tests: [
+            EXT.potassium, EXT.sodium,
+            { ext: 'abg', label: 'Gazometria (HCO₃⁻, pH)', note: 'Kwasica metaboliczna w CKD G4–G5 — wskazanie do suplementacji wodorowęglanu sodu (NaHCO₃).' },
+            EXT.crp,
+            EXT.lipid_panel
           ]
         }
       ],
-      guideline: 'KDIGO CKD-MBD 2017'
+      guideline: 'KDIGO 2012 (klasyfikacja CKD) / KDIGO 2017 (CKD-MBD) / KDIGO 2024 (niedokrwistość w CKD, ostre uszkodzenie nerek AKI) / KDIGO 2021 (zarządzanie ciśnieniem w CKD) / Zalecenia PTNFD i PTN 2022.',
+      sources: [
+        'Kidney Disease: Improving Global Outcomes (KDIGO) CKD Work Group. KDIGO 2012 Clinical Practice Guideline for the Evaluation and Management of Chronic Kidney Disease. Kidney Int Suppl. 2013;3:1-150.',
+        'Kidney Disease: Improving Global Outcomes (KDIGO) CKD-MBD Update Work Group. KDIGO 2017 Clinical Practice Guideline Update for the Diagnosis, Evaluation, Prevention, and Treatment of CKD-MBD. Kidney Int Suppl. 2017;7(1):1-59.',
+        'KDIGO Anemia Work Group. KDIGO 2024 Clinical Practice Guideline for the Evaluation and Management of Anemia in Chronic Kidney Disease. Kidney Int. 2024;105(Suppl):S1-S95.',
+        'Cheung AK, Chang TI, Cushman WC i wsp. KDIGO 2021 Clinical Practice Guideline for the Management of Blood Pressure in Chronic Kidney Disease. Kidney Int. 2021;99(3S):S1-S87.',
+        'Heerspink HJL, Stefánsson BV, Correa-Rotter R i wsp. Dapagliflozin in Patients with Chronic Kidney Disease (DAPA-CKD). N Engl J Med. 2020;383(15):1436-1446.',
+        'The EMPA-KIDNEY Collaborative Group. Empagliflozin in Patients with Chronic Kidney Disease. N Engl J Med. 2023;388(2):117-127.',
+        'Bakris GL, Agarwal R, Anker SD i wsp. Effect of Finerenone on Chronic Kidney Disease Outcomes in Type 2 Diabetes (FIDELIO-DKD). N Engl J Med. 2020;383(23):2219-2229.',
+        'Polskie Towarzystwo Nefrologii Dziecięcej i Polskie Towarzystwo Nefrologiczne. Zalecenia kliniczne dotyczące postępowania u chorych z PChN. 2022.'
+      ]
     }
   };
 

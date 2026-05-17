@@ -428,11 +428,29 @@
     /* Pasek-skala z oznaczeniem zakresu normy. Pojawia się pod tabelą wyników
        gdy substancja ma zdefiniowany default_range_si i wpisana wartość jest
        liczbą. Marker pokazuje, gdzie wynik pada względem normy. */
+    /* Faza 17c — pakiet 5 stanów wyniku (Linear Flow). Paleta vilda turkus
+       jako tło aury + symetryczne strefy pomarańcz/czerwień. Marker:
+       biały środek z grubą obwódką, halo ripple, animowane breath.
+       Stan „Uwaga" (>200% górnej lub <50% dolnej): shake + szybkie halo + glow. */
     .lab-range-card {
       margin-top: 1rem;
       padding-top: 0.9rem;
-      border-top: 1px solid #e5ebed;
+      border-top: 0.5px solid rgba(0,131,141,0.15);
+      position: relative;
     }
+    .lab-range-card::before {
+      content: '';
+      position: absolute;
+      top: -10%;
+      left: 50%;
+      width: 110%;
+      height: 130%;
+      transform: translateX(-50%);
+      background: radial-gradient(ellipse at center top, rgba(0,131,141,0.04), transparent 65%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .lab-range-card > * { position: relative; z-index: 1; }
     .lab-range-header {
       display: flex;
       align-items: baseline;
@@ -442,19 +460,40 @@
       margin-bottom: 0.5rem;
     }
     .lab-range-title {
-      font-weight: 600;
-      font-size: 0.92rem;
-      color: #2a3a3c;
+      font-weight: 500;
+      font-size: 0.74rem;
+      color: #7a8587;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
     .lab-range-status {
-      font-size: 0.85rem;
-      font-weight: 600;
-      padding: 0.15rem 0.55rem;
-      border-radius: 0.4rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.78rem;
+      font-weight: 500;
+      padding: 0.25rem 0.7rem;
+      border-radius: 999px;
     }
-    .lab-range-status.is-normal { color: #2a8a2a; background: rgba(42, 138, 42, 0.10); }
-    .lab-range-status.is-below  { color: #c75d00; background: rgba(199, 93, 0, 0.10); }
-    .lab-range-status.is-above  { color: #c62828; background: rgba(198, 40, 40, 0.10); }
+    .lab-range-status::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+    .lab-range-status.is-normal { color: #0f6e56; background: rgba(29,158,117,0.12); }
+    .lab-range-status.is-normal::before { background: #1D9E75; animation: lab-marker-breath-normal 1.8s ease-in-out infinite; }
+    .lab-range-status.is-below  { color: #8a4a18; background: rgba(216,90,48,0.12); }
+    .lab-range-status.is-below::before  { background: #d8632a; animation: lab-marker-breath-amber 1.6s ease-in-out infinite; }
+    .lab-range-status.is-above  { color: #8a1818; background: rgba(185,28,28,0.10); }
+    .lab-range-status.is-above::before  { background: #b91c1c; animation: lab-marker-breath-red 1.4s ease-in-out infinite; }
+    .lab-range-status.is-uwaga-high { color: #7a1414; background: rgba(145,28,28,0.15); border: 0.5px solid rgba(145,28,28,0.30); }
+    .lab-range-status.is-uwaga-high::before { background: #911c1c; animation: lab-marker-breath-red 0.7s ease-in-out infinite; }
+    .lab-range-status.is-uwaga-low { color: #6a3a14; background: rgba(166,73,30,0.15); border: 0.5px solid rgba(166,73,30,0.30); }
+    .lab-range-status.is-uwaga-low::before { background: #a6491e; animation: lab-marker-breath-amber 0.7s ease-in-out infinite; }
+    .lab-range-status .lab-range-status-icon { width: 11px; height: 11px; flex-shrink: 0; }
+    .lab-range-status.is-uwaga-high .lab-range-status-icon,
+    .lab-range-status.is-uwaga-low .lab-range-status-icon { animation: lab-icon-blink 0.7s ease-in-out infinite; }
     .lab-range-context {
       font-size: 0.78rem;
       color: #5a6a6e;
@@ -463,63 +502,137 @@
     }
     .lab-range-scale {
       position: relative;
-      height: 14px;
-      border-radius: 8px;
+      height: 10px;
+      border-radius: 5px;
       overflow: visible;
-      margin-top: 0.5rem;
+      margin-top: 0.7rem;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.06);
     }
     .lab-range-scale::before {
       content: '';
       position: absolute;
       inset: 0;
-      border-radius: 8px;
+      border-radius: 5px;
       background: linear-gradient(to right,
-        rgba(199, 93, 0, 0.20) 0%, rgba(199, 93, 0, 0.20) var(--low-pct, 0%),
-        rgba(42, 138, 42, 0.30) var(--low-pct, 0%), rgba(42, 138, 42, 0.30) var(--high-pct, 100%),
-        rgba(199, 93, 0, 0.20) var(--high-pct, 100%), rgba(199, 93, 0, 0.20) 100%);
+        rgba(166, 73, 30, 0.55) 0%,
+        rgba(216, 90, 48, 0.35) 12%,
+        rgba(216, 90, 48, 0.35) var(--low-pct, 25%),
+        rgba(29, 158, 117, 0.50) var(--low-pct, 25%),
+        rgba(29, 158, 117, 0.50) var(--high-pct, 75%),
+        rgba(185, 28, 28, 0.45) var(--high-pct, 75%),
+        rgba(185, 28, 28, 0.45) 88%,
+        rgba(167, 16, 16, 0.55) 100%);
     }
     .lab-range-marker {
       position: absolute;
       top: 50%;
-      left: var(--marker-pct, 0%);
-      width: 14px;
-      height: 14px;
+      left: var(--marker-pct, 50%);
+      width: 20px;
+      height: 20px;
       border-radius: 50%;
-      background: #1f4f4f;
-      border: 2px solid #fff;
+      background: #fff;
+      border: 3px solid #1D9E75;
       transform: translate(-50%, -50%);
-      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
-      transition: left 0.2s ease, background 0.2s ease;
-      z-index: 2;
+      transition: left 0.25s ease;
+      z-index: 3;
     }
-    .lab-range-marker.is-normal { background: #2a8a2a; }
-    .lab-range-marker.is-below  { background: #c75d00; }
-    .lab-range-marker.is-above  { background: #c62828; }
-    /* Strzałka, gdy wartość wychodzi poza widoczną skalę. */
-    .lab-range-marker.out-left::after,
-    .lab-range-marker.out-right::after {
+    .lab-range-marker::after {
       content: '';
       position: absolute;
       top: 50%;
-      width: 0;
-      height: 0;
-      border-top: 6px solid transparent;
-      border-bottom: 6px solid transparent;
-      transform: translateY(-50%);
+      left: 50%;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      border: 2px solid currentColor;
+      pointer-events: none;
     }
-    .lab-range-marker.out-left::after {
-      right: 100%; margin-right: 2px;
-      border-right: 8px solid currentColor;
+    .lab-range-marker.is-normal {
+      border-color: #1D9E75;
+      color: #1D9E75;
+      animation: lab-marker-breath-normal 2s ease-in-out infinite;
     }
-    .lab-range-marker.out-right::after {
-      left: 100%; margin-left: 2px;
-      border-left: 8px solid currentColor;
+    .lab-range-marker.is-normal::after { animation: lab-halo-ripple 2s ease-out infinite; }
+    .lab-range-marker.is-below {
+      border-color: #d8632a;
+      color: #d8632a;
+      animation: lab-marker-breath-amber 1.6s ease-in-out infinite;
     }
+    .lab-range-marker.is-below::after { animation: lab-halo-ripple 1.6s ease-out infinite; }
+    .lab-range-marker.is-above {
+      border-color: #b91c1c;
+      color: #b91c1c;
+      animation: lab-marker-breath-red 1.4s ease-in-out infinite;
+    }
+    .lab-range-marker.is-above::after { animation: lab-halo-ripple 1.4s ease-out infinite; }
+    .lab-range-marker.is-uwaga-high {
+      border-color: #911c1c;
+      color: #911c1c;
+      background: #fff5f5;
+      animation: lab-marker-shake 0.45s ease-in-out infinite, lab-marker-pulse-red 0.7s ease-in-out infinite;
+    }
+    .lab-range-marker.is-uwaga-high::after { animation: lab-halo-ripple-fast 0.9s ease-out infinite; }
+    .lab-range-marker.is-uwaga-high::before {
+      content: '!';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #911c1c;
+      line-height: 1;
+    }
+    .lab-range-marker.is-uwaga-low {
+      border-color: #a6491e;
+      color: #a6491e;
+      background: #fff7f0;
+      animation: lab-marker-shake 0.45s ease-in-out infinite, lab-marker-pulse-amber 0.7s ease-in-out infinite;
+    }
+    .lab-range-marker.is-uwaga-low::after { animation: lab-halo-ripple-fast 0.9s ease-out infinite; }
+    .lab-range-marker.is-uwaga-low::before {
+      content: '!';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #a6491e;
+      line-height: 1;
+    }
+    /* Główna wartość — kolor zależny od stanu (Stan 4 z animowanym glow). */
+    .lab-range-value-num.is-normal { color: #00838d; }
+    .lab-range-value-num.is-below  { color: #c75d00; }
+    .lab-range-value-num.is-above  { color: #b91c1c; }
+    .lab-range-value-num.is-uwaga-high {
+      color: #911c1c;
+      animation: lab-value-glow-red 0.9s ease-in-out infinite;
+    }
+    .lab-range-value-num.is-uwaga-low {
+      color: #a6491e;
+      animation: lab-value-glow-amber 0.9s ease-in-out infinite;
+    }
+    /* Callout pod paskiem dla stanu „Uwaga" — komunikat kliniczny. */
+    .lab-range-uwaga-note {
+      margin-top: 0.7rem;
+      padding: 0.55rem 0.75rem;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      line-height: 1.4;
+    }
+    .lab-range-uwaga-note.is-uwaga-high { color: #7a1414; background: rgba(145,28,28,0.06); border-left: 3px solid #911c1c; }
+    .lab-range-uwaga-note.is-uwaga-low  { color: #6a3a14; background: rgba(166,73,30,0.06); border-left: 3px solid #a6491e; }
+    .lab-range-uwaga-note svg { flex-shrink: 0; width: 14px; height: 14px; }
     .lab-range-labels {
       position: relative;
       height: 1.1rem;
-      margin-top: 0.35rem;
-      font-size: 0.74rem;
+      margin-top: 0.45rem;
+      font-size: 0.72rem;
       color: #5a6a6e;
       font-variant-numeric: tabular-nums;
     }
@@ -533,11 +646,23 @@
     .lab-range-empty {
       margin-top: 1rem;
       padding-top: 0.9rem;
-      border-top: 1px solid #e5ebed;
+      border-top: 0.5px solid rgba(0,131,141,0.15);
       font-size: 0.85rem;
       color: #7a8587;
       font-style: italic;
     }
+    /* Animacje — Linear Flow 5 stanów */
+    @keyframes lab-marker-breath-normal { 0%, 100% { box-shadow: 0 0 0 0 rgba(29,158,117,0.5), 0 0 12px rgba(29,158,117,0.5); } 50% { box-shadow: 0 0 0 8px transparent, 0 0 20px rgba(29,158,117,0.6); } }
+    @keyframes lab-marker-breath-amber  { 0%, 100% { box-shadow: 0 0 0 0 rgba(216,90,48,0.55), 0 0 12px rgba(216,90,48,0.55); } 50% { box-shadow: 0 0 0 8px transparent, 0 0 20px rgba(216,90,48,0.65); } }
+    @keyframes lab-marker-breath-red    { 0%, 100% { box-shadow: 0 0 0 0 rgba(185,28,28,0.55), 0 0 12px rgba(185,28,28,0.55); } 50% { box-shadow: 0 0 0 8px transparent, 0 0 20px rgba(185,28,28,0.65); } }
+    @keyframes lab-halo-ripple          { 0% { transform: translate(-50%, -50%) scale(0.6); opacity: 0.8; } 100% { transform: translate(-50%, -50%) scale(2.6); opacity: 0; } }
+    @keyframes lab-halo-ripple-fast     { 0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(3.2); opacity: 0; } }
+    @keyframes lab-marker-shake         { 0%, 100% { transform: translate(-50%, -50%); } 10% { transform: translate(-58%, -50%); } 20% { transform: translate(-42%, -50%); } 30% { transform: translate(-55%, -52%); } 40% { transform: translate(-45%, -48%); } 50% { transform: translate(-52%, -50%); } 60% { transform: translate(-48%, -50%); } }
+    @keyframes lab-marker-pulse-red     { 0%, 100% { box-shadow: 0 0 0 0 rgba(185,28,28,0.7), 0 0 16px rgba(185,28,28,0.8); border-width: 3px; } 50% { box-shadow: 0 0 0 10px rgba(185,28,28,0.05), 0 0 28px rgba(185,28,28,0.9); border-width: 4px; } }
+    @keyframes lab-marker-pulse-amber   { 0%, 100% { box-shadow: 0 0 0 0 rgba(216,90,48,0.7), 0 0 16px rgba(216,90,48,0.8); border-width: 3px; } 50% { box-shadow: 0 0 0 10px rgba(216,90,48,0.05), 0 0 28px rgba(216,90,48,0.9); border-width: 4px; } }
+    @keyframes lab-value-glow-red       { 0%, 100% { text-shadow: 0 0 12px rgba(185,28,28,0.35); } 50% { text-shadow: 0 0 24px rgba(185,28,28,0.7); } }
+    @keyframes lab-value-glow-amber     { 0%, 100% { text-shadow: 0 0 12px rgba(216,90,48,0.35); } 50% { text-shadow: 0 0 24px rgba(216,90,48,0.7); } }
+    @keyframes lab-icon-blink           { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 
     /* Toast „Skopiowano" — pojawia się na chwilę w prawym dolnym rogu. */
     .lab-toast {
@@ -1523,9 +1648,9 @@
   <script src="ios26-ui.js?v=18" defer></script>
 
   <!-- Dane + moduł logiki (dwa pliki przygotowane do reużycia w innych podstronach). -->
-  <script src="lab_units_data.js?v=26"></script>
+  <script src="lab_units_data.js?v=31"></script>
   <script src="lab_unit_converter.js?v=3"></script>
-  <script src="lab_clinical_panels.js?v=113"></script>
+  <script src="lab_clinical_panels.js?v=132"></script>
 
   <script>
   (function () {
@@ -1842,14 +1967,18 @@
       // Metabolizm wapniowo-fosforanowy
       vitamin_d_status:          { label: 'Ocena zaopatrzenia w witaminę D', group: 'Metabolizm wapniowo-fosforanowy' },
       osteoporosis:              { label: 'Osteoporoza', group: 'Metabolizm wapniowo-fosforanowy' },
-      rickets:                   { label: 'Krzywica / osteomalacja', group: 'Metabolizm wapniowo-fosforanowy' },
+      rickets_kids:              { label: 'Krzywica u dzieci', group: 'Metabolizm wapniowo-fosforanowy' },
+      osteomalacia:              { label: 'Osteomalacja u dorosłych', group: 'Metabolizm wapniowo-fosforanowy' },
       granulomatous_disease:     { label: 'Choroby ziarniniakowe (np. sarkoidoza)', group: 'Metabolizm wapniowo-fosforanowy' },
       malabsorption:             { label: 'Zaburzenia wchłaniania', group: 'Metabolizm wapniowo-fosforanowy' },
 
       // Inne
       hypertension:              { label: 'Nadciśnienie tętnicze (przyczyny endokr.)', group: 'Inne' },
       hypokalemia:               { label: 'Hipokaliemia', group: 'Inne' },
-      obesity:                   { label: 'Otyłość', group: 'Inne' },
+      hyponatremia:              { label: 'Hiponatremia (SIADH / CSW / inne)', group: 'Inne' },
+      diabetes_insipidus:        { label: 'Moczówka prosta (DI — CDI / NDI)', group: 'Inne' },
+      obesity:                   { label: 'Otyłość u dorosłych', group: 'Inne' },
+      obesity_kids:              { label: 'Otyłość u dzieci i młodzieży', group: 'Inne' },
       metabolic_syndrome:        { label: 'Zespół metaboliczny', group: 'Inne' },
       ckd:                       { label: 'Przewlekła choroba nerek (CKD)', group: 'Inne' }
     };
@@ -2402,10 +2531,81 @@
 
     function labSummaryBuildProseCard(sec) {
       var shell = labSummaryBuildCardShell(sec.icon, sec.title || '');
-      var p = document.createElement('p');
-      p.className = 'lab-summary-body';
-      p.textContent = sec.body || '';
-      shell.card.appendChild(p);
+      // Backward compatibility: body jako string → renderuj jako pojedynczy paragraf.
+      if (typeof sec.body === 'string' || sec.body == null) {
+        var p = document.createElement('p');
+        p.className = 'lab-summary-body';
+        p.textContent = sec.body || '';
+        shell.card.appendChild(p);
+        return shell.card;
+      }
+      // Faza 16: body jako tablica — struktura mieszana: stringi (paragraf),
+      // { heading } (śródtytuł), { items: [...] } (lista bullet z opcjonalnym label).
+      if (Array.isArray(sec.body)) {
+        var container = document.createElement('div');
+        container.className = 'lab-summary-body lab-summary-body-structured';
+        sec.body.forEach(function (entry) {
+          if (entry == null) return;
+          if (typeof entry === 'string') {
+            var pp = document.createElement('p');
+            pp.style.cssText = 'margin: 0 0 0.6rem 0; line-height: 1.5;';
+            pp.textContent = entry;
+            container.appendChild(pp);
+            return;
+          }
+          if (typeof entry === 'object' && entry.heading) {
+            var hh = document.createElement('p');
+            hh.className = 'lab-summary-detail-section';
+            hh.style.cssText = 'margin: 0.8rem 0 0.35rem 0; font-weight: 600; font-size: 0.95rem;';
+            hh.textContent = entry.heading;
+            container.appendChild(hh);
+            return;
+          }
+          if (typeof entry === 'object' && Array.isArray(entry.items)) {
+            var ul = document.createElement('ul');
+            ul.className = 'lab-summary-detail-bullets';
+            ul.style.cssText = 'margin: 0 0 0.6rem 0; padding-left: 1.25rem; line-height: 1.5;';
+            entry.items.forEach(function (it) {
+              var li = document.createElement('li');
+              li.style.cssText = 'margin-bottom: 0.3rem;';
+              if (typeof it === 'string') {
+                li.textContent = it;
+              } else if (it && typeof it === 'object') {
+                if (it.label) {
+                  var lbl = document.createElement('span');
+                  lbl.className = 'lab-summary-label-inline';
+                  lbl.style.cssText = 'font-weight: 600;';
+                  lbl.textContent = it.label;
+                  li.appendChild(lbl);
+                  if (it.text) li.appendChild(document.createTextNode(' — ' + it.text));
+                } else if (it.text) {
+                  li.textContent = it.text;
+                }
+              }
+              ul.appendChild(li);
+            });
+            container.appendChild(ul);
+            return;
+          }
+          // Fallback: obiekt z label/text bez listy — pojedynczy paragraf z labelem.
+          if (typeof entry === 'object' && (entry.label || entry.text)) {
+            var pp2 = document.createElement('p');
+            pp2.style.cssText = 'margin: 0 0 0.5rem 0; line-height: 1.5;';
+            if (entry.label) {
+              var lbl2 = document.createElement('span');
+              lbl2.className = 'lab-summary-label-inline';
+              lbl2.style.cssText = 'font-weight: 600;';
+              lbl2.textContent = entry.label;
+              pp2.appendChild(lbl2);
+              if (entry.text) pp2.appendChild(document.createTextNode(' — ' + entry.text));
+            } else if (entry.text) {
+              pp2.textContent = entry.text;
+            }
+            container.appendChild(pp2);
+          }
+        });
+        shell.card.appendChild(container);
+      }
       return shell.card;
     }
 
@@ -2568,6 +2768,53 @@
             hh.className = 'lab-summary-detail-section';
             hh.textContent = entry.heading;
             b.appendChild(hh);
+            return;
+          }
+          // Tabela różnicowa — { table: { headers: [...], rows: [[...], [...]] } }
+          // Renderowana jako siatka HTML z accentem stylistycznym.
+          if (entry && typeof entry === 'object' && entry.table && Array.isArray(entry.table.headers) && Array.isArray(entry.table.rows)) {
+            var tableWrap = document.createElement('div');
+            tableWrap.className = 'lab-summary-callout-table-wrap';
+            tableWrap.style.cssText = 'overflow-x: auto; margin: 0.5rem 0; -webkit-overflow-scrolling: touch;';
+            var table = document.createElement('table');
+            table.className = 'lab-summary-callout-table';
+            table.style.cssText = 'width: 100%; min-width: 100%; border-collapse: collapse; font-size: 0.88rem;';
+            // Nagłówek tabeli
+            var thead = document.createElement('thead');
+            var headRow = document.createElement('tr');
+            entry.table.headers.forEach(function (h, i) {
+              var th = document.createElement('th');
+              th.textContent = (typeof h === 'string') ? h : (h && h.text ? h.text : '');
+              th.style.cssText = 'padding: 0.45rem 0.6rem; text-align: left; border-bottom: 2px solid rgba(0,0,0,0.18); font-weight: 600; vertical-align: top; white-space: nowrap;';
+              if (i === 0) th.style.textAlign = 'left';
+              headRow.appendChild(th);
+            });
+            thead.appendChild(headRow);
+            table.appendChild(thead);
+            // Wiersze
+            var tbody = document.createElement('tbody');
+            entry.table.rows.forEach(function (row, ri) {
+              var tr = document.createElement('tr');
+              if (ri % 2 === 1) tr.style.background = 'rgba(0,0,0,0.025)';
+              (Array.isArray(row) ? row : []).forEach(function (cell, ci) {
+                var td = document.createElement('td');
+                // Komórka może być stringiem lub { text, highlight }
+                var cellText = (typeof cell === 'string') ? cell : (cell && cell.text ? cell.text : '');
+                td.textContent = cellText;
+                td.style.cssText = 'padding: 0.4rem 0.6rem; border-bottom: 1px solid rgba(0,0,0,0.08); vertical-align: top; line-height: 1.4;';
+                if (ci === 0) td.style.fontWeight = '600';
+                // Wyróżnienie konkretnej komórki (np. kluczowy parametr różnicujący)
+                if (cell && typeof cell === 'object' && cell.highlight) {
+                  td.style.fontWeight = '600';
+                  td.style.color = '#d97706'; // pomarańczowy akcent
+                }
+                tr.appendChild(td);
+              });
+              tbody.appendChild(tr);
+            });
+            table.appendChild(tbody);
+            tableWrap.appendChild(table);
+            b.appendChild(tableWrap);
             return;
           }
           if (entry && typeof entry === 'object' && Array.isArray(entry.items)) {
@@ -3066,20 +3313,42 @@
       title.textContent = 'Norma referencyjna';
       header.appendChild(title);
 
-      var status = document.createElement('span');
-      status.className = 'lab-range-status';
+      // Faza 17c — klasyfikacja stanu wyniku (5 stanów):
+      // is-normal / is-below / is-above (umiarkowane) /
+      // is-uwaga-high (> 200% górnej granicy) / is-uwaga-low (< 50% dolnej granicy)
+      var resultState = 'is-normal';
+      var statusText = '';
       if (siValueOrNull == null || !isFinite(siValueOrNull)) {
-        status.textContent = Conv.formatNumber(low, precision) + '–' + Conv.formatNumber(high, precision) + ' ' + siUnit;
-        status.className += ' is-normal';
+        statusText = Conv.formatNumber(low, precision) + '–' + Conv.formatNumber(high, precision) + ' ' + siUnit;
+        resultState = 'is-normal';
+      } else if (siValueOrNull > high * 2) {
+        statusText = '⚠ Uwaga — znacznie powyżej normy';
+        resultState = 'is-uwaga-high';
+      } else if (low > 0 && siValueOrNull < low * 0.5) {
+        statusText = '⚠ Uwaga — znacznie poniżej normy';
+        resultState = 'is-uwaga-low';
       } else if (siValueOrNull < low) {
-        status.textContent = '↓ poniżej normy';
-        status.className += ' is-below';
+        statusText = '↓ poniżej normy';
+        resultState = 'is-below';
       } else if (siValueOrNull > high) {
-        status.textContent = '↑ powyżej normy';
-        status.className += ' is-above';
+        statusText = '↑ powyżej normy';
+        resultState = 'is-above';
       } else {
-        status.textContent = '✓ w zakresie normy';
-        status.className += ' is-normal';
+        statusText = '✓ w zakresie normy';
+        resultState = 'is-normal';
+      }
+      var status = document.createElement('span');
+      status.className = 'lab-range-status ' + resultState;
+      // Ikona ostrzegawcza dla stanów „Uwaga" (mrugająca, ostre wezwanie do reakcji).
+      if (resultState === 'is-uwaga-high' || resultState === 'is-uwaga-low') {
+        var iconWrap = document.createElement('span');
+        iconWrap.innerHTML = '<svg class="lab-range-status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>';
+        status.appendChild(iconWrap.firstChild);
+        var statusTextNode = document.createElement('span');
+        statusTextNode.textContent = statusText.replace('⚠ ', '');
+        status.appendChild(statusTextNode);
+      } else {
+        status.textContent = statusText;
       }
       header.appendChild(status);
       card.appendChild(header);
@@ -3121,8 +3390,8 @@
         var outRight = rawPct > 100;
         var markerPct = clamp(rawPct, 0, 100);
         var marker = document.createElement('div');
-        marker.className = 'lab-range-marker ' +
-          (v < low ? 'is-below' : v > high ? 'is-above' : 'is-normal') +
+        // Faza 17c — klasa markera używa resultState wyliczonego wyżej (5 stanów).
+        marker.className = 'lab-range-marker ' + resultState +
           (outLeft ? ' out-left' : '') +
           (outRight ? ' out-right' : '');
         marker.style.setProperty('--marker-pct', markerPct.toFixed(2) + '%');
@@ -3130,6 +3399,28 @@
         scale.appendChild(marker);
       }
       card.appendChild(scale);
+
+      // Faza 17c — callout pod paskiem dla stanów „Uwaga" (komunikat kliniczny).
+      if (v != null && (resultState === 'is-uwaga-high' || resultState === 'is-uwaga-low')) {
+        var pct;
+        if (resultState === 'is-uwaga-high') {
+          pct = Math.round((v / high) * 100);
+        } else {
+          pct = Math.round((v / low) * 100);
+        }
+        var note = document.createElement('div');
+        note.className = 'lab-range-uwaga-note ' + resultState;
+        var noteIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>';
+        var noteText;
+        if (resultState === 'is-uwaga-high') {
+          noteText = pct + '% górnej granicy normy — wynik wymagający szczególnej uwagi; rozważ pogłębioną diagnostykę i konsultację specjalistyczną.';
+        } else {
+          noteText = pct + '% dolnej granicy normy — wynik wymagający szczególnej uwagi; rozważ pogłębioną diagnostykę i konsultację specjalistyczną.';
+        }
+        note.innerHTML = noteIcon + '<span></span>';
+        note.querySelector('span').textContent = noteText;
+        card.appendChild(note);
+      }
 
       // Etykiety: 0, low, high, max
       var labels = document.createElement('div');
@@ -3691,6 +3982,42 @@
         renderSuggestions(suggestSelectEl.value || '');
       });
     }
+
+    // Faza 14 — deep link: ?wskazanie=<id> lub #wskazanie=<id> automatycznie
+    // wybiera wskazanie kliniczne (np. z głównego kalkulatora dziecka po
+    // wykryciu otyłości → otwarcie obesity_kids).
+    (function applyIndicationDeepLink() {
+      try {
+        var indicationParam = null;
+        // 1) Sprawdź ?wskazanie= w query string.
+        if (window.location.search) {
+          var params = new URLSearchParams(window.location.search);
+          indicationParam = params.get('wskazanie') || params.get('indication');
+        }
+        // 2) Fallback — sprawdź #wskazanie= w hashu.
+        if (!indicationParam && window.location.hash) {
+          var hash = window.location.hash.replace(/^#/, '');
+          var hashParams = new URLSearchParams(hash);
+          indicationParam = hashParams.get('wskazanie') || hashParams.get('indication');
+        }
+        if (!indicationParam) return;
+        if (!CLINICAL_INDICATIONS[indicationParam]) return;
+        if (!suggestSelectEl) return;
+        // Ustaw wartość selektora i wyrenderuj panel; przewiń do sekcji wskazań.
+        suggestSelectEl.value = indicationParam;
+        renderSuggestions(indicationParam);
+        setTimeout(function () {
+          try {
+            var anchor = suggestSelectEl.closest('section, .lab-card, #suggest-section') || suggestSelectEl;
+            if (anchor && typeof anchor.scrollIntoView === 'function') {
+              anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          } catch (_) {}
+        }, 150);
+      } catch (_) {
+        // Cicho ignoruj — deep link jest opcjonalny.
+      }
+    })();
     if (suggestBodyEl) {
       suggestBodyEl.addEventListener('click', function (e) {
         var t = e.target;
