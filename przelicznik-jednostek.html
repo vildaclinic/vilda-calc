@@ -579,10 +579,16 @@
        border:..; backdrop-filter:..; box-shadow:..; transition: transform .. }`
        wszystko z !important. Żeby to przebić — używamy selektora
        `.lab-step button.lab-substance-clear` (swoistość 0,2,1) + !important.
-       Faza 18-fix5: zero ruchu na hover (no transform, no shift). */
+       Faza 18-fix5: zero ruchu na hover (no transform, no shift).
+       Faza 18-fix6: kontener .lab-substance-input-wrap zamyka SAM input + X,
+       żeby `top: 50%` było centrowane na inpucie, nie na całym wrapie z hintem. */
+    .lab-substance-input-wrap {
+      position: relative;
+      display: block;
+    }
     .lab-step #labSubstance { padding-right: 2.4rem; }
-    .lab-step button.lab-substance-clear,
-    .liquid-ios26 .lab-step button.lab-substance-clear {
+    .lab-step .lab-substance-input-wrap button.lab-substance-clear,
+    .liquid-ios26 .lab-step .lab-substance-input-wrap button.lab-substance-clear {
       position: absolute !important;
       right: 0.5rem !important;
       top: 50% !important;
@@ -609,25 +615,25 @@
       transition: color 0.12s !important;
       font-family: inherit !important;
     }
-    .lab-step button.lab-substance-clear:hover,
-    .liquid-ios26 .lab-step button.lab-substance-clear:hover {
+    .lab-step .lab-substance-input-wrap button.lab-substance-clear:hover,
+    .liquid-ios26 .lab-step .lab-substance-input-wrap button.lab-substance-clear:hover {
       color: #b71c1c !important;
       background: transparent !important;
       transform: translateY(-50%) !important;   /* zero ruchu — ta sama transformacja */
       box-shadow: none !important;
     }
-    .lab-step button.lab-substance-clear:active,
-    .liquid-ios26 .lab-step button.lab-substance-clear:active {
+    .lab-step .lab-substance-input-wrap button.lab-substance-clear:active,
+    .liquid-ios26 .lab-step .lab-substance-input-wrap button.lab-substance-clear:active {
       transform: translateY(-50%) !important;   /* zero scale */
       background: transparent !important;
       box-shadow: none !important;
     }
-    .lab-step button.lab-substance-clear:focus,
-    .lab-step button.lab-substance-clear:focus-visible {
+    .lab-step .lab-substance-input-wrap button.lab-substance-clear:focus,
+    .lab-step .lab-substance-input-wrap button.lab-substance-clear:focus-visible {
       outline: none !important;
       box-shadow: 0 0 0 2px rgba(211,47,47,0.20) !important;
     }
-    .lab-step button.lab-substance-clear[hidden] { display: none !important; }
+    .lab-step .lab-substance-input-wrap button.lab-substance-clear[hidden] { display: none !important; }
     .lab-substance-dropdown {
       position: fixed;
       max-height: 340px;
@@ -1898,13 +1904,15 @@
               <div class="lab-step-body">
                 <div class="lab-step-label">Substancja</div>
                 <div class="lab-search-wrap">
-                  <input type="text" id="labSubstance" class="lab-substance"
-                         placeholder="kliknij i wybierz lub zacznij wpisywać…"
-                         autocomplete="off" spellcheck="false" inputmode="search"
-                         role="combobox" aria-autocomplete="list"
-                         aria-controls="labSubstanceDropdown" aria-expanded="false" />
-                  <button type="button" id="labSubstanceClear" class="lab-substance-clear"
-                          aria-label="Wyczyść pole substancji" title="Wyczyść" hidden>×</button>
+                  <div class="lab-substance-input-wrap">
+                    <input type="text" id="labSubstance" class="lab-substance"
+                           placeholder="kliknij i wybierz lub zacznij wpisywać…"
+                           autocomplete="off" spellcheck="false" inputmode="search"
+                           role="combobox" aria-autocomplete="list"
+                           aria-controls="labSubstanceDropdown" aria-expanded="false" />
+                    <button type="button" id="labSubstanceClear" class="lab-substance-clear"
+                            aria-label="Wyczyść pole substancji" title="Wyczyść" hidden>×</button>
+                  </div>
                   <div id="labSubstanceDropdown" class="lab-substance-dropdown"
                        role="listbox" hidden></div>
                   <div id="labSubstanceHint" class="lab-substance-hint" aria-live="polite"></div>
