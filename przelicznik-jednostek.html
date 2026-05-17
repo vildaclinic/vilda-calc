@@ -569,6 +569,63 @@
     }
     .lab-meta strong { color: #333; }
 
+    /* ───── Sekcje rozwijalne w notes_pl (Faza 10a) ─────
+       Każda sekcja to klikalna karta z chevronem; pierwsza otwarta. */
+    .lab-notes-section {
+      margin: 0.5rem 0;
+      border: 1px solid #d8e3e4;
+      border-radius: 0.55rem;
+      background: #fbfcfc;
+      overflow: hidden;
+      transition: border-color 0.15s;
+    }
+    .lab-notes-section.is-open { border-color: rgba(0, 131, 141, 0.45); background: #fff; }
+    .lab-notes-section-h {
+      display: flex; align-items: center; gap: 0.55rem;
+      padding: 0.55rem 0.8rem;
+      cursor: pointer;
+      font-size: 0.92rem;
+      font-weight: 500;
+      color: var(--primary, #00838d);
+      user-select: none;
+      transition: background 0.15s;
+    }
+    .lab-notes-section-h:hover { background: rgba(0, 131, 141, 0.05); }
+    .lab-notes-section-h-title { flex: 1; }
+    .lab-notes-section-toggle {
+      display: inline-flex; align-items: center;
+      transition: transform 0.18s ease;
+      opacity: 0.7;
+    }
+    .lab-notes-section-toggle svg { width: 16px; height: 16px; }
+    .lab-notes-section.is-open .lab-notes-section-toggle { transform: rotate(180deg); }
+    .lab-notes-section-body {
+      padding: 0 0.85rem 0.7rem;
+      font-size: 0.92rem;
+      line-height: 1.55;
+      color: #1d4f4f;
+    }
+    .lab-notes-section-body p { margin: 0.4rem 0; }
+    .lab-notes-section-body p:first-child { margin-top: 0; }
+    .lab-notes-section-body p:last-child { margin-bottom: 0; }
+    .lab-notes-section-body ul {
+      list-style: none; margin: 0.4rem 0; padding: 0;
+    }
+    .lab-notes-section-body li {
+      position: relative; padding-left: 0.95rem; margin: 0.25rem 0; line-height: 1.5;
+    }
+    .lab-notes-section-body li::before {
+      content: ''; position: absolute; left: 0; top: 0.55rem;
+      width: 5px; height: 5px; border-radius: 50%;
+      background: rgba(0, 131, 141, 0.6);
+    }
+    .lab-notes-section-body .lab-notes-label {
+      font-weight: 500; color: #08202C;
+    }
+    @media (max-width: 600px) {
+      .lab-notes-section-body { padding: 0 0.65rem 0.6rem; }
+    }
+
     /* Karta z zakresami referencyjnymi / uwagami / źródłami. */
     .lab-card ul.lab-list {
       list-style: none;
@@ -815,17 +872,249 @@
     .lab-summary-detail-title { font-weight: 500; color: var(--primary, #00838d); margin: 0 0 0.4rem; font-size: 0.85rem; }
     .lab-summary-detail p { margin: 0 0 0.4rem; }
     .lab-summary-detail p:last-child { margin-bottom: 0; }
+    .lab-summary-detail-section { font-size: 0.72rem; font-weight: 600; color: var(--primary, #00838d); text-transform: uppercase; letter-spacing: 0.06em; margin: 0.7rem 0 0.35rem; padding-bottom: 0.2rem; border-bottom: 1px solid rgba(0, 131, 141, 0.2); }
+    .lab-summary-detail-section:first-child { margin-top: 0; }
+    .lab-summary-detail-bullets { list-style: none; margin: 0 0 0.4rem; padding: 0; }
+    .lab-summary-detail-bullets li { position: relative; padding-left: 0.85rem; margin: 0 0 0.3rem; line-height: 1.5; }
+    .lab-summary-detail-bullets li:last-child { margin-bottom: 0; }
+    .lab-summary-detail-bullets li::before { content: ''; position: absolute; left: 0; top: 0.55rem; width: 4px; height: 4px; border-radius: 50%; background: rgba(0, 131, 141, 0.6); }
     .lab-summary-callout { position: relative; border-radius: 0.75rem; padding: 0.7rem 0.9rem 0.7rem 1.15rem; overflow: hidden; }
     .lab-summary-callout-accent { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
     .lab-summary-callout-h { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 0.3rem; display: flex; align-items: center; gap: 0.35rem; font-weight: 500; }
     .lab-summary-callout-h svg { width: 16px; height: 16px; flex-shrink: 0; }
     .lab-summary-callout-b { font-size: 0.8rem; margin: 0; line-height: 1.6; color: #08202C; }
+    .lab-summary-callout-b > p { margin: 0 0 0.4rem; }
+    .lab-summary-callout-b > p:last-child { margin-bottom: 0; }
+    .lab-summary-callout-b .lab-summary-detail-section { margin: 0.6rem 0 0.3rem; }
+    .lab-summary-callout-b .lab-summary-detail-section:first-child { margin-top: 0; }
+    .lab-summary-callout-b .lab-summary-detail-bullets { margin-bottom: 0.4rem; }
     .lab-summary-callout-primary { background: rgba(0, 131, 141, 0.08); }
     .lab-summary-callout-primary .lab-summary-callout-accent { background: var(--primary, #00838d); }
     .lab-summary-callout-primary .lab-summary-callout-h { color: var(--primary, #00838d); }
     .lab-summary-callout-purple { background: rgba(153, 0, 255, 0.07); }
     .lab-summary-callout-purple .lab-summary-callout-accent { background: #9900ff; }
     .lab-summary-callout-purple .lab-summary-callout-h { color: #5a1f99; }
+    /* Tryb rozwijany — nagłówek jako trigger, body schowane domyślnie */
+    .lab-summary-callout-collapsible .lab-summary-callout-h {
+      gap: 0.35rem; user-select: none;
+    }
+    .lab-summary-callout-toggle {
+      margin-left: auto;
+      display: inline-flex; align-items: center;
+      transition: transform 0.18s ease;
+      opacity: 0.75;
+    }
+    .lab-summary-callout-toggle svg { width: 14px; height: 14px; }
+    .lab-summary-callout-collapsible.is-open .lab-summary-callout-toggle {
+      transform: rotate(180deg);
+    }
+    .lab-summary-callout-collapsible .lab-summary-callout-b {
+      margin-top: 0.4rem;
+    }
+
+    /* ───── Wizualizacja algorytmu klinicznego (kind: 'algorithm') ─────
+       Pionowe karty decyzyjne — każdy krok algorytmu w osobnej karcie z
+       numerem; wewnątrz wiersze decyzyjne z lewym kolorowym paskiem,
+       progiem, akcją i ikoną. Mobile-first — wiersze pełnoszerokościowe. */
+    .lab-summary-algorithm {
+      background: #f5f9f9;
+      border: 1px solid #d0dede;
+      border-radius: 0.85rem;
+      padding: 0.85rem 0.9rem 0.95rem;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    }
+    .lab-summary-algorithm-h {
+      display: flex; align-items: center; gap: 0.5rem;
+      font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--primary, #00838d); font-weight: 500;
+      margin: 0 0 0.7rem;
+    }
+    .lab-summary-algorithm-h svg { width: 16px; height: 16px; flex-shrink: 0; }
+    .lab-summary-algo-step {
+      background: #fff;
+      border: 1px solid #d0dede;
+      border-radius: 0.7rem;
+      padding: 0.7rem 0.85rem 0.8rem;
+    }
+    .lab-summary-algo-step + .lab-summary-algo-step { margin-top: 0.65rem; }
+    .lab-summary-algo-step-head {
+      display: flex; align-items: center; gap: 0.6rem;
+      padding-bottom: 0.55rem;
+      border-bottom: 1px solid #d0dede;
+      margin-bottom: 0.6rem;
+    }
+    .lab-summary-algo-step-num {
+      width: 28px; height: 28px; flex-shrink: 0;
+      border-radius: 50%;
+      background: var(--primary, #00838d);
+      color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 500; font-size: 0.85rem;
+    }
+    .lab-summary-algo-step-titles { display: flex; flex-direction: column; min-width: 0; }
+    .lab-summary-algo-step-title {
+      font-weight: 500; font-size: 0.9rem;
+      color: var(--primary, #00838d);
+      line-height: 1.3;
+    }
+    .lab-summary-algo-step-sublabel {
+      font-size: 0.72rem;
+      color: #5a7274;
+      margin-top: 1px;
+      line-height: 1.3;
+    }
+    .lab-summary-algo-options { display: flex; flex-direction: column; gap: 6px; }
+    .lab-summary-algo-option {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      column-gap: 0.55rem;
+      row-gap: 0.2rem;
+      align-items: start;
+      padding: 0.55rem 0.7rem;
+      border-radius: 0.5rem;
+      border-left-style: solid;
+      border-left-width: 4px;
+      font-size: 0.78rem;
+      line-height: 1.4;
+    }
+    .lab-summary-algo-option-threshold {
+      grid-column: 1; grid-row: 1;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      opacity: 0.85;
+    }
+    .lab-summary-algo-option-action {
+      grid-column: 1; grid-row: 2;
+      min-width: 0;
+    }
+    .lab-summary-algo-option svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .lab-summary-algo-option.is-success {
+      background: #e0f3f4;
+      border-left-color: var(--primary, #00838d);
+      color: #015e66;
+    }
+    .lab-summary-algo-option.is-success svg { color: var(--primary, #00838d); }
+    .lab-summary-algo-option.is-warning {
+      background: #fff4e0;
+      border-left-color: #c47600;
+      color: #7a4900;
+    }
+    .lab-summary-algo-option.is-warning svg { color: #c47600; }
+    .lab-summary-algo-option.is-danger {
+      background: #fdecec;
+      border-left-color: var(--danger, #c62828);
+      color: #a01e1e;
+    }
+    .lab-summary-algo-option.is-danger svg { color: var(--danger, #c62828); }
+    .lab-summary-algo-option.is-clickable {
+      cursor: pointer;
+      transition: filter 0.12s ease;
+    }
+    .lab-summary-algo-option.is-clickable:hover { filter: brightness(0.97); }
+    .lab-summary-algo-option-toggle {
+      grid-column: 2; grid-row: 1 / span 2;
+      align-self: center;
+      display: inline-flex;
+      align-items: center;
+      transition: transform 0.18s ease;
+      opacity: 0.7;
+    }
+    .lab-summary-algo-option-toggle svg { width: 16px; height: 16px; }
+    .lab-summary-algo-option.active .lab-summary-algo-option-toggle {
+      transform: rotate(180deg);
+    }
+    .lab-summary-algo-hint {
+      font-size: 0.7rem; color: #5a7274; margin: 0 0 0.45rem;
+      font-style: italic; line-height: 1.35;
+    }
+    .lab-summary-algo-detail {
+      margin-top: -2px;
+      margin-bottom: 0.15rem;
+      background: #fff;
+      border: 1px solid #d0dede;
+      border-radius: 0 0 0.5rem 0.5rem;
+      padding: 0.6rem 0.75rem 0.7rem;
+    }
+    .lab-summary-algo-detail .lab-summary-detail-title {
+      font-size: 0.75rem; font-weight: 500; color: #015e66;
+      margin: 0 0 0.35rem; line-height: 1.3;
+    }
+    .lab-summary-algo-detail p {
+      font-size: 0.76rem; line-height: 1.5; margin: 0.25rem 0; color: #1d4f4f;
+    }
+    @media (max-width: 480px) {
+      .lab-summary-algo-option { column-gap: 0.4rem; padding: 0.5rem 0.6rem; }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       Faza 9f — Powiększenie czcionek + mobile fix dla zagnieżdżeń
+       ═══════════════════════════════════════════════════════════════════
+       Zasada: treść kliniczna (czytana) min 0.95rem.
+       Drobne uppercase etykiety/nagłówki — min 0.82rem (pełnią rolę
+       wizualnego separatora; nie są właściwą treścią).
+       Mobile: zmniejszone paddingi i marginesy zagnieżdżonych warstw,
+       żeby tekst na wąskich ekranach miał maksymalnie dużo szerokości. */
+
+    /* Treść kliniczna — czcionka 0.95rem */
+    .lab-summary-body,
+    .lab-summary-row,
+    .lab-summary-detail,
+    .lab-summary-detail-title,
+    .lab-summary-callout-b,
+    .lab-summary-algo-option,
+    .lab-summary-algo-step-title,
+    .lab-summary-algo-detail p,
+    .lab-panel-section-name,
+    .lab-panel-summary,
+    .lab-range-status,
+    .lab-sources,
+    .lab-disclaimer,
+    .lab-test-details-desc { font-size: 0.95rem; }
+
+    /* Pomocnicze (nagłówki kart, footnoty, hinty, guideline) — min 0.85rem */
+    .lab-summary-section-h,
+    .lab-summary-hint,
+    .lab-summary-algo-hint,
+    .lab-summary-algo-detail .lab-summary-detail-title,
+    .lab-summary-algo-step-sublabel,
+    .lab-panel-guideline,
+    .lab-panel-sources-header,
+    .lab-panel-sources-list,
+    .lab-range-context,
+    .lab-suggest-group-name,
+    .lab-suggest-footnote,
+    .lab-test-details-hint { font-size: 0.85rem; }
+
+    /* Uppercase mini-etykiety/separatory — min 0.78rem */
+    .lab-summary-detail-section,
+    .lab-summary-callout-h,
+    .lab-summary-algo-option-threshold { font-size: 0.78rem; }
+
+    /* Mobile (≤ 600px) — redukcja paddingów i marginesów zagnieżdżeń */
+    @media (max-width: 600px) {
+      .lab-summary-card { padding: 0.7rem 0.7rem; }
+      /* Detal pod wierszem listy — usuwamy wcięcie po lewej, zmniejszamy padding */
+      .lab-summary-detail { margin-left: 0; padding: 0.6rem 0.65rem; border-radius: 0.5rem; }
+      /* Detal pod opcją algorytmu — szczelniej */
+      .lab-summary-algo-detail { padding: 0.5rem 0.6rem 0.55rem; }
+      /* Bullety w detalu — mniejszy wcisk */
+      .lab-summary-detail-bullets li { padding-left: 0.7rem; }
+      /* Opcje algorytmu — bez zmian z wcześniejszej reguły (0.5rem 0.6rem) */
+      /* Callout — zmniejszone paddingi */
+      .lab-summary-callout { padding: 0.6rem 0.7rem 0.6rem 0.95rem; }
+      /* Krok algorytmu — szczelniej (jeśli ma własny padding) */
+      .lab-summary-algo-step-head { gap: 0.4rem; }
+      /* Card padding na bardzo małym ekranie */
+    }
+    @media (max-width: 380px) {
+      .lab-summary-card { padding: 0.6rem 0.55rem; }
+      .lab-summary-detail { padding: 0.55rem 0.55rem; }
+      .lab-summary-algo-detail { padding: 0.45rem 0.5rem 0.5rem; }
+      .lab-summary-detail-bullets li { padding-left: 0.65rem; }
+    }
+    /* ═══════════════════════════════════════════════════════════════════ */
 
     /* ───── Info-panel dla wybranego badania (Faza 4f) ─────
        Pojawia się pod sekcjami chipów po kliknięciu w dowolny chip.
@@ -1121,7 +1410,7 @@
           <div class="lab-card lab-full" id="labInfoCard" style="display:none;">
             <h2 id="labInfoTitle"></h2>
             <ul class="lab-list" id="labRanges"></ul>
-            <p class="lab-meta" id="labNotes"></p>
+            <div class="lab-meta" id="labNotes"></div>
             <p class="lab-sources" id="labSources"></p>
             <a class="lab-cross-link" href="steroidy.html" id="labCrossLink" style="display:none;">
               <i data-lucide="pill" aria-hidden="true"></i>
@@ -1234,9 +1523,9 @@
   <script src="ios26-ui.js?v=18" defer></script>
 
   <!-- Dane + moduł logiki (dwa pliki przygotowane do reużycia w innych podstronach). -->
-  <script src="lab_units_data.js?v=14"></script>
+  <script src="lab_units_data.js?v=26"></script>
   <script src="lab_unit_converter.js?v=3"></script>
-  <script src="lab_clinical_panels.js?v=83"></script>
+  <script src="lab_clinical_panels.js?v=113"></script>
 
   <script>
   (function () {
@@ -1539,12 +1828,14 @@
       // Tarczyca
       hypothyroidism:            { label: 'Niedoczynność tarczycy', group: 'Tarczyca' },
       hyperthyroidism:           { label: 'Nadczynność tarczycy', group: 'Tarczyca' },
-      thyroid_cancer_followup:   { label: 'Kontrola po raku tarczycy', group: 'Tarczyca' },
+      thyroid_cancer_followup:       { label: 'Kontrola po raku tarczycy (dorośli)', group: 'Tarczyca' },
+      thyroid_cancer_followup_kids:  { label: 'Kontrola po raku tarczycy (dzieci)', group: 'Tarczyca' },
       autoimmune_thyroid:        { label: 'Autoimmunologiczne choroby tarczycy', group: 'Tarczyca' },
       neonatal_screening:        { label: 'Przesiew noworodkowy (tarczyca)', group: 'Tarczyca' },
 
       // Wzrost i rozwój
-      GH_deficiency:             { label: 'Niedobór hormonu wzrostu (GHD)', group: 'Wzrost i rozwój' },
+      GH_deficiency:             { label: 'Niedobór hormonu wzrostu (dorośli)', group: 'Wzrost i rozwój' },
+      GH_deficiency_kids:        { label: 'Niedobór hormonu wzrostu (dzieci — programy lekowe)', group: 'Wzrost i rozwój' },
       short_stature:             { label: 'Niedobór wzrostu (low stature)', group: 'Wzrost i rozwój' },
       acromegaly:                { label: 'Akromegalia', group: 'Wzrost i rozwój' },
 
@@ -2078,7 +2369,11 @@
         'list-search':  '<path d="M15 15m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/><path d="M18.5 18.5l2.5 2.5"/><path d="M4 6h16"/><path d="M4 12h4"/><path d="M4 18h4"/>',
         'baby-bottle':  '<path d="M9 3h6v3h-6z"/><path d="M6 6h12l-1 13a2 2 0 0 1 -2 2h-6a2 2 0 0 1 -2 -2z"/><path d="M9 12h2"/><path d="M9 16h3"/>',
         'mood-kid':     '<circle cx="12" cy="12" r="9"/><path d="M9 10l.01 0"/><path d="M15 10l.01 0"/><path d="M9.5 15a3.5 3.5 0 0 0 5 0"/><path d="M12 3a2 2 0 0 0 0 4"/>',
-        'chevron-down': '<path d="M6 9l6 6l6 -6"/>'
+        'chevron-down': '<path d="M6 9l6 6l6 -6"/>',
+        'check':           '<path d="M5 12l5 5l10 -10"/>',
+        'refresh':         '<path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4"/><path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"/>',
+        'alert-triangle':  '<path d="M12 9v4"/><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z"/><path d="M12 16h.01"/>',
+        'route':           '<path d="M6 19m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M18 5m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M12 19h4.5a3.5 3.5 0 0 0 0 -7h-8a3.5 3.5 0 0 1 0 -7h3.5"/>'
       };
       var p = paths[name] || '';
       return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + p + '</svg>';
@@ -2131,6 +2426,38 @@
         box.appendChild(p);
       } else if (Array.isArray(det)) {
         det.forEach(function (entry) {
+          // Section heading: { heading: 'KRYTERIA WŁĄCZENIA' } → renders as styled subheader
+          if (entry && typeof entry === 'object' && entry.heading) {
+            var h = document.createElement('p');
+            h.className = 'lab-summary-detail-section';
+            h.textContent = entry.heading;
+            box.appendChild(h);
+            return;
+          }
+          // Items array under heading: { items: ['a', 'b', {label,text}] } → bullet list
+          if (entry && typeof entry === 'object' && Array.isArray(entry.items)) {
+            var ul = document.createElement('ul');
+            ul.className = 'lab-summary-detail-bullets';
+            entry.items.forEach(function (it) {
+              var li = document.createElement('li');
+              if (typeof it === 'string') {
+                li.textContent = it;
+              } else if (it && typeof it === 'object') {
+                if (it.label) {
+                  var lbl2 = document.createElement('span');
+                  lbl2.className = 'lab-summary-label-inline';
+                  lbl2.textContent = it.label;
+                  li.appendChild(lbl2);
+                  if (it.text) li.appendChild(document.createTextNode(' — ' + it.text));
+                } else if (it.text) {
+                  li.textContent = it.text;
+                }
+              }
+              ul.appendChild(li);
+            });
+            box.appendChild(ul);
+            return;
+          }
           var p = document.createElement('p');
           if (typeof entry === 'string') {
             p.textContent = entry;
@@ -2231,11 +2558,192 @@
       t.textContent = sec.title || '';
       h.appendChild(t);
       co.appendChild(h);
-      var b = document.createElement('p');
+      var b = document.createElement('div');
       b.className = 'lab-summary-callout-b';
-      b.textContent = sec.body || '';
+      if (Array.isArray(sec.body)) {
+        // Strukturalny body z sekcjami {heading} i listami {items}
+        sec.body.forEach(function (entry) {
+          if (entry && typeof entry === 'object' && entry.heading) {
+            var hh = document.createElement('p');
+            hh.className = 'lab-summary-detail-section';
+            hh.textContent = entry.heading;
+            b.appendChild(hh);
+            return;
+          }
+          if (entry && typeof entry === 'object' && Array.isArray(entry.items)) {
+            var ul = document.createElement('ul');
+            ul.className = 'lab-summary-detail-bullets';
+            entry.items.forEach(function (it) {
+              var li = document.createElement('li');
+              if (typeof it === 'string') {
+                li.textContent = it;
+              } else if (it && typeof it === 'object') {
+                if (it.label) {
+                  var lbl3 = document.createElement('span');
+                  lbl3.className = 'lab-summary-label-inline';
+                  lbl3.textContent = it.label;
+                  li.appendChild(lbl3);
+                  if (it.text) li.appendChild(document.createTextNode(' — ' + it.text));
+                } else if (it.text) {
+                  li.textContent = it.text;
+                }
+              }
+              ul.appendChild(li);
+            });
+            b.appendChild(ul);
+            return;
+          }
+          var p = document.createElement('p');
+          if (typeof entry === 'string') {
+            p.textContent = entry;
+          } else if (entry && typeof entry === 'object') {
+            if (entry.label) {
+              var lbl4 = document.createElement('span');
+              lbl4.className = 'lab-summary-label-inline';
+              lbl4.textContent = entry.label;
+              p.appendChild(lbl4);
+              if (entry.text) p.appendChild(document.createTextNode(' — ' + entry.text));
+            } else if (entry.text) {
+              p.textContent = entry.text;
+            }
+          }
+          b.appendChild(p);
+        });
+      } else {
+        var p0 = document.createElement('p');
+        p0.style.margin = '0';
+        p0.textContent = sec.body || '';
+        b.appendChild(p0);
+      }
       co.appendChild(b);
+      // Tryb rozwijany (collapsible: true) — body schowane domyślnie,
+      // nagłówek jako trigger, chevron obracający się 180° po otwarciu.
+      if (sec.collapsible) {
+        co.classList.add('lab-summary-callout-collapsible');
+        b.style.display = 'none';
+        var caret = document.createElement('span');
+        caret.className = 'lab-summary-callout-toggle';
+        labSummaryAppendIcon(caret, 'chevron-down');
+        h.appendChild(caret);
+        h.style.cursor = 'pointer';
+        h.setAttribute('role', 'button');
+        h.setAttribute('aria-expanded', 'false');
+        h.addEventListener('click', function () {
+          var open = co.classList.toggle('is-open');
+          b.style.display = open ? '' : 'none';
+          h.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+      }
       return co;
+    }
+
+    /**
+     * Buduje wizualizację algorytmu klinicznego — pionowe karty decyzyjne.
+     * Struktura sec:
+     *   { kind: 'algorithm', title, icon, steps: [
+     *       { number, title, sublabel, options: [
+     *           { threshold, action, variant: 'success'|'warning'|'danger', icon }
+     *       ] }
+     *   ] }
+     */
+    function labSummaryBuildAlgorithm(sec) {
+      var wrap = document.createElement('div');
+      wrap.className = 'lab-summary-algorithm';
+      if (sec.title) {
+        var h = document.createElement('p');
+        h.className = 'lab-summary-algorithm-h';
+        if (sec.icon) labSummaryAppendIcon(h, sec.icon);
+        var t = document.createElement('span');
+        t.textContent = sec.title;
+        h.appendChild(t);
+        wrap.appendChild(h);
+      }
+      var steps = Array.isArray(sec.steps) ? sec.steps : [];
+      steps.forEach(function (step) {
+        if (!step || typeof step !== 'object') return;
+        var stepEl = document.createElement('div');
+        stepEl.className = 'lab-summary-algo-step';
+        var head = document.createElement('div');
+        head.className = 'lab-summary-algo-step-head';
+        if (step.number != null) {
+          var num = document.createElement('div');
+          num.className = 'lab-summary-algo-step-num';
+          num.textContent = String(step.number);
+          head.appendChild(num);
+        }
+        var titles = document.createElement('div');
+        titles.className = 'lab-summary-algo-step-titles';
+        if (step.title) {
+          var tt = document.createElement('span');
+          tt.className = 'lab-summary-algo-step-title';
+          tt.textContent = step.title;
+          titles.appendChild(tt);
+        }
+        if (step.sublabel) {
+          var sl = document.createElement('span');
+          sl.className = 'lab-summary-algo-step-sublabel';
+          sl.textContent = step.sublabel;
+          titles.appendChild(sl);
+        }
+        head.appendChild(titles);
+        stepEl.appendChild(head);
+        var opts = document.createElement('div');
+        opts.className = 'lab-summary-algo-options';
+        var hasAnyDetail = false;
+        (Array.isArray(step.options) ? step.options : []).forEach(function (opt) {
+          if (!opt || typeof opt !== 'object') return;
+          var row = document.createElement('div');
+          var variant = (opt.variant === 'warning' || opt.variant === 'danger') ? opt.variant : 'success';
+          row.className = 'lab-summary-algo-option is-' + variant;
+          var hasDetail = !!(opt.detail && (typeof opt.detail === 'string' || (Array.isArray(opt.detail) && opt.detail.length)));
+          if (hasDetail) { row.classList.add('is-clickable'); hasAnyDetail = true; }
+          if (opt.threshold) {
+            var th = document.createElement('span');
+            th.className = 'lab-summary-algo-option-threshold';
+            th.textContent = opt.threshold;
+            row.appendChild(th);
+          }
+          if (opt.action) {
+            var ac = document.createElement('span');
+            ac.className = 'lab-summary-algo-option-action';
+            ac.textContent = opt.action;
+            row.appendChild(ac);
+          }
+          if (hasDetail) {
+            var caret = document.createElement('span');
+            caret.className = 'lab-summary-algo-option-toggle';
+            labSummaryAppendIcon(caret, 'chevron-down');
+            row.appendChild(caret);
+          } else if (opt.icon) {
+            labSummaryAppendIcon(row, opt.icon);
+          }
+          opts.appendChild(row);
+          if (hasDetail) {
+            // Panel szczegółowy — domyślnie schowany, rozwijany po kliknięciu wiersza.
+            // Wykorzystujemy istniejący labSummaryBuildDetailPanel ze stylem lab-summary-detail.
+            var det = labSummaryBuildDetailPanel({
+              detail: opt.detail,
+              detailTitle: opt.detailTitle || opt.threshold
+            });
+            det.classList.add('lab-summary-algo-detail');
+            det.style.display = 'none';
+            opts.appendChild(det);
+            row.addEventListener('click', function () {
+              var open = row.classList.toggle('active');
+              det.style.display = open ? '' : 'none';
+            });
+          }
+        });
+        stepEl.appendChild(opts);
+        if (hasAnyDetail) {
+          var hint = document.createElement('p');
+          hint.className = 'lab-summary-algo-hint';
+          hint.textContent = 'Kliknij wiersz, aby zobaczyć szczegółowe kryteria i postępowanie';
+          stepEl.insertBefore(hint, opts);
+        }
+        wrap.appendChild(stepEl);
+      });
+      return wrap;
     }
 
     function renderStructuredSummary(summary, container) {
@@ -2244,9 +2752,10 @@
       stack.className = 'lab-summary-stack';
       summary.sections.forEach(function (sec) {
         if (!sec || typeof sec !== 'object') return;
-        if (sec.kind === 'prose')   stack.appendChild(labSummaryBuildProseCard(sec));
+        if (sec.kind === 'prose')        stack.appendChild(labSummaryBuildProseCard(sec));
         else if (sec.kind === 'list')    stack.appendChild(labSummaryBuildListCard(sec));
         else if (sec.kind === 'callout') stack.appendChild(labSummaryBuildCallout(sec));
+        else if (sec.kind === 'algorithm') stack.appendChild(labSummaryBuildAlgorithm(sec));
       });
       container.appendChild(stack);
     }
@@ -2821,6 +3330,71 @@
       renderRangeBlock(substance, isValid, n, fromUnitObj);
     }
 
+    /**
+     * Renderuje body sekcji notes_pl. Obsługuje 3 formaty:
+     *   - string  → pojedynczy <p>
+     *   - array of (string | {label, text} | {items: [...]} | {heading: ''} | {p: ''})
+     *               → mieszane akapity i bullety
+     */
+    function renderNotesBody(container, body) {
+      if (typeof body === 'string') {
+        var p = document.createElement('p');
+        p.textContent = body;
+        container.appendChild(p);
+        return;
+      }
+      if (!Array.isArray(body)) return;
+      body.forEach(function (entry) {
+        // Bullet list: { items: [...] }
+        if (entry && typeof entry === 'object' && Array.isArray(entry.items)) {
+          var ul = document.createElement('ul');
+          entry.items.forEach(function (it) {
+            var li = document.createElement('li');
+            if (typeof it === 'string') {
+              li.textContent = it;
+            } else if (it && typeof it === 'object') {
+              if (it.label) {
+                var lbl = document.createElement('span');
+                lbl.className = 'lab-notes-label';
+                lbl.textContent = it.label;
+                li.appendChild(lbl);
+                if (it.text) li.appendChild(document.createTextNode(' — ' + it.text));
+              } else if (it.text) {
+                li.textContent = it.text;
+              }
+            }
+            ul.appendChild(li);
+          });
+          container.appendChild(ul);
+          return;
+        }
+        // Paragraph with label: { label: '...', text: '...' }
+        if (entry && typeof entry === 'object' && entry.label) {
+          var pa = document.createElement('p');
+          var lblP = document.createElement('span');
+          lblP.className = 'lab-notes-label';
+          lblP.textContent = entry.label;
+          pa.appendChild(lblP);
+          if (entry.text) pa.appendChild(document.createTextNode(' — ' + entry.text));
+          container.appendChild(pa);
+          return;
+        }
+        // Plain paragraph string
+        if (typeof entry === 'string') {
+          var pp = document.createElement('p');
+          pp.textContent = entry;
+          container.appendChild(pp);
+          return;
+        }
+        // { text: '...' }
+        if (entry && typeof entry === 'object' && entry.text) {
+          var pt = document.createElement('p');
+          pt.textContent = entry.text;
+          container.appendChild(pt);
+        }
+      });
+    }
+
     function renderInfo(substance) {
       if (!substance) {
         infoCard.style.display = 'none';
@@ -2836,10 +3410,58 @@
       }
       notesEl.innerHTML = '';
       if (substance.notes_pl) {
-        var strong = document.createElement('strong');
-        strong.textContent = 'Uwaga: ';
-        notesEl.appendChild(strong);
-        notesEl.appendChild(document.createTextNode(substance.notes_pl));
+        if (typeof substance.notes_pl === 'string') {
+          // Format klasyczny — string z pojedynczym blokiem "Uwaga: ..."
+          var strong = document.createElement('strong');
+          strong.textContent = 'Uwaga: ';
+          notesEl.appendChild(strong);
+          notesEl.appendChild(document.createTextNode(substance.notes_pl));
+        } else if (substance.notes_pl.sections && Array.isArray(substance.notes_pl.sections)) {
+          // Format strukturalny — sekcje rozwijalne (Faza 10a)
+          substance.notes_pl.sections.forEach(function (sec, idx) {
+            if (!sec || typeof sec !== 'object') return;
+            var card = document.createElement('div');
+            card.className = 'lab-notes-section';
+            if (sec.open) card.classList.add('is-open');
+
+            var header = document.createElement('div');
+            header.className = 'lab-notes-section-h';
+            header.setAttribute('role', 'button');
+            header.setAttribute('aria-expanded', sec.open ? 'true' : 'false');
+            header.setAttribute('tabindex', '0');
+
+            var titleSpan = document.createElement('span');
+            titleSpan.className = 'lab-notes-section-h-title';
+            titleSpan.textContent = sec.title || '';
+            header.appendChild(titleSpan);
+
+            var caret = document.createElement('span');
+            caret.className = 'lab-notes-section-toggle';
+            caret.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6l6 -6"/></svg>';
+            header.appendChild(caret);
+
+            var body = document.createElement('div');
+            body.className = 'lab-notes-section-body';
+            body.style.display = sec.open ? '' : 'none';
+
+            // Body może być: string (jeden <p>), tablica stringów/obiektów, lub mieszane
+            renderNotesBody(body, sec.body);
+
+            card.appendChild(header);
+            card.appendChild(body);
+            notesEl.appendChild(card);
+
+            function toggle() {
+              var isOpen = card.classList.toggle('is-open');
+              body.style.display = isOpen ? '' : 'none';
+              header.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            }
+            header.addEventListener('click', toggle);
+            header.addEventListener('keydown', function (e) {
+              if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+            });
+          });
+        }
       }
       sourcesEl.textContent = '';
       if (Array.isArray(substance.sources) && substance.sources.length) {
