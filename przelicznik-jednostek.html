@@ -428,6 +428,489 @@
     /* Pasek-skala z oznaczeniem zakresu normy. Pojawia się pod tabelą wyników
        gdy substancja ma zdefiniowany default_range_si i wpisana wartość jest
        liczbą. Marker pokazuje, gdzie wynik pada względem normy. */
+    /* Faza 18 — Smart Form (jedna karta, numerowane kroki).
+       Lewa i prawa karta scalone w pojedynczą sekcję ze stylem D3. */
+    .lab-smart-card {
+      background: #ffffff;
+      border-radius: 16px;
+      border: 0.5px solid rgba(0,131,141,0.18);
+      padding: 1.6rem 1.7rem;
+      position: relative;
+      overflow: hidden;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    .lab-smart-card::before {
+      content: '';
+      position: absolute;
+      top: -30%; left: 50%;
+      width: 110%; height: 180%;
+      transform: translateX(-50%);
+      background: radial-gradient(ellipse at center top, rgba(0,131,141,0.05), transparent 65%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .lab-smart-card > * { position: relative; z-index: 1; }
+    .lab-smart-card h1 {
+      font-size: 1.3rem;
+      font-weight: 500;
+      color: #00838d;
+      margin: 0 0 0.3rem 0;
+      text-align: center;
+    }
+    .lab-smart-card .lab-subtitle {
+      font-size: 0.85rem;
+      color: #7a8587;
+      text-align: center;
+      margin: 0 0 1.4rem 0;
+      line-height: 1.45;
+    }
+    .lab-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.85rem;
+      padding-bottom: 1rem;
+      margin-bottom: 1rem;
+      border-bottom: 0.5px solid rgba(0,131,141,0.10);
+      animation: lab-step-slidein 0.3s ease-out;
+    }
+    .lab-step:last-of-type {
+      border-bottom: none;
+      padding-bottom: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .lab-step.is-hidden { display: none; }
+    .lab-step-num {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 500;
+      flex-shrink: 0;
+      background: rgba(0,131,141,0.08);
+      color: #7a8587;
+    }
+    .lab-step-num.is-done {
+      background: #1D9E75;
+      color: #fff;
+    }
+    .lab-step-num.is-active {
+      background: #00838d;
+      color: #fff;
+      box-shadow: 0 0 0 4px rgba(0,131,141,0.15);
+      animation: lab-step-glow 2s ease-in-out infinite;
+    }
+    .lab-step-body { flex: 1; min-width: 0; }
+    .lab-step-label {
+      font-size: 0.72rem;
+      color: #7a8587;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.35rem;
+      font-weight: 500;
+    }
+    .lab-step-label-hint {
+      color: #00838d;
+      text-transform: none;
+      letter-spacing: 0;
+      font-weight: 400;
+      margin-left: 0.4rem;
+    }
+    .lab-step-label-opt {
+      color: #7a8587;
+      text-transform: none;
+      letter-spacing: 0;
+      font-weight: 400;
+      margin-left: 0.4rem;
+    }
+    .lab-step input[type="text"],
+    .lab-step input[type="number"],
+    .lab-step select {
+      width: 100%;
+      padding: 0.55rem 0.85rem;
+      border: 0.5px solid rgba(0,131,141,0.25);
+      border-radius: 8px;
+      background: #fff;
+      font-size: 0.92rem;
+      color: #2a3a3c;
+      font-family: inherit;
+      outline: none;
+      box-sizing: border-box;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .lab-step input:focus,
+    .lab-step select:focus {
+      border-color: #00838d;
+      box-shadow: 0 0 0 3px rgba(0,131,141,0.08);
+    }
+    .lab-step .lab-input-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .lab-step .lab-input-row input[type="text"] {
+      font-size: 1.25rem;
+      font-weight: 500;
+      color: #00838d;
+      padding: 0.5rem 0.85rem;
+      font-variant-numeric: tabular-nums;
+    }
+    /* Faza 18-fix: blady placeholder w polu wartości — żeby nie konkurował
+       wizualnie z prawdziwymi liczbami wpisanymi przez użytkownika. */
+    .lab-step .lab-input-row input[type="text"]::placeholder {
+      color: #c7cfd1;
+      opacity: 1;
+      font-weight: 400;
+    }
+    .lab-step input::placeholder {
+      color: #c7cfd1;
+      opacity: 1;
+    }
+    /* ─── Faza 18-fix: custom dropdown wyboru substancji ─── */
+    /* Faza 18-fix3: position: fixed, żeby uciec spod overflow:hidden
+       z .lab-smart-card. Pozycja ustalana dynamicznie w JS. */
+    .lab-search-wrap { position: relative; }
+    /* Faza 18-fix4: czerwony X po prawej — czyści pole substancji.
+       UWAGA: ios26-v2.css ma `.liquid-ios26 button { color:#111; background:rgba(255,255,255,.2);
+       border:..; backdrop-filter:..; box-shadow:..; transition: transform .. }`
+       wszystko z !important. Żeby to przebić — używamy selektora
+       `.lab-step button.lab-substance-clear` (swoistość 0,2,1) + !important.
+       Faza 18-fix5: zero ruchu na hover (no transform, no shift). */
+    .lab-step #labSubstance { padding-right: 2.4rem; }
+    .lab-step button.lab-substance-clear,
+    .liquid-ios26 .lab-step button.lab-substance-clear {
+      position: absolute !important;
+      right: 0.5rem !important;
+      top: 50% !important;
+      transform: translateY(-50%) !important;
+      width: 24px !important;
+      height: 24px !important;
+      min-width: 24px !important;
+      border: none !important;
+      background: transparent !important;
+      color: #d32f2f !important;
+      font-size: 1.25rem !important;
+      font-weight: 700 !important;
+      line-height: 1 !important;
+      cursor: pointer !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      border-radius: 50% !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      box-shadow: none !important;
+      transition: color 0.12s !important;
+      font-family: inherit !important;
+    }
+    .lab-step button.lab-substance-clear:hover,
+    .liquid-ios26 .lab-step button.lab-substance-clear:hover {
+      color: #b71c1c !important;
+      background: transparent !important;
+      transform: translateY(-50%) !important;   /* zero ruchu — ta sama transformacja */
+      box-shadow: none !important;
+    }
+    .lab-step button.lab-substance-clear:active,
+    .liquid-ios26 .lab-step button.lab-substance-clear:active {
+      transform: translateY(-50%) !important;   /* zero scale */
+      background: transparent !important;
+      box-shadow: none !important;
+    }
+    .lab-step button.lab-substance-clear:focus,
+    .lab-step button.lab-substance-clear:focus-visible {
+      outline: none !important;
+      box-shadow: 0 0 0 2px rgba(211,47,47,0.20) !important;
+    }
+    .lab-step button.lab-substance-clear[hidden] { display: none !important; }
+    .lab-substance-dropdown {
+      position: fixed;
+      max-height: 340px;
+      overflow-y: auto;
+      background: #ffffff;
+      border: 0.5px solid rgba(0,131,141,0.25);
+      border-radius: 10px;
+      box-shadow: 0 12px 32px rgba(0,131,141,0.18),
+                  0 4px 8px rgba(0,0,0,0.08);
+      z-index: 9999;
+      padding: 0.35rem 0;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(0,131,141,0.25) transparent;
+      opacity: 1;
+    }
+    .lab-substance-dropdown[hidden] { display: none; }
+    .lab-substance-dropdown::-webkit-scrollbar { width: 6px; }
+    .lab-substance-dropdown::-webkit-scrollbar-thumb {
+      background: rgba(0,131,141,0.20);
+      border-radius: 3px;
+    }
+    .lab-substance-group-label {
+      padding: 0.45rem 0.85rem 0.2rem;
+      font-size: 0.66rem;
+      color: #00838d;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 600;
+      background: rgba(0,131,141,0.04);
+      border-bottom: 0.5px solid rgba(0,131,141,0.08);
+      margin-top: 0.25rem;
+    }
+    .lab-substance-group-label:first-child { margin-top: 0; }
+    .lab-substance-option {
+      padding: 0.55rem 0.85rem;
+      cursor: pointer;
+      font-size: 0.92rem;
+      color: #2a3a3c;
+      display: flex;
+      justify-content: space-between;
+      gap: 0.6rem;
+      align-items: baseline;
+      transition: background 0.12s;
+      border-left: 2px solid transparent;
+    }
+    .lab-substance-option:hover {
+      background: rgba(0,131,141,0.06);
+      border-left-color: rgba(0,131,141,0.30);
+    }
+    .lab-substance-option.is-active {
+      background: rgba(0,131,141,0.10);
+      border-left-color: #00838d;
+    }
+    .lab-substance-option-label {
+      flex: 1;
+      min-width: 0;
+      word-break: break-word;
+    }
+    .lab-substance-option-meta {
+      font-size: 0.74rem;
+      color: #8a9596;
+      text-align: right;
+      flex-shrink: 0;
+      max-width: 38%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .lab-substance-option mark {
+      background: rgba(0,131,141,0.18);
+      color: #00838d;
+      font-weight: 500;
+      padding: 0 0.1em;
+      border-radius: 3px;
+    }
+    .lab-substance-option-empty {
+      padding: 0.8rem 0.85rem;
+      color: #8a9596;
+      font-style: italic;
+      font-size: 0.86rem;
+      text-align: center;
+    }
+    .lab-step-target-row {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0.6rem;
+      align-items: center;
+    }
+    .lab-step-target-arrow {
+      font-size: 1.3rem;
+      color: #00838d;
+      line-height: 1;
+    }
+    .lab-mini-pills {
+      display: flex;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+    }
+    .lab-mini-pill {
+      padding: 0.4rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      background: rgba(0,131,141,0.05);
+      color: #5a6a6e;
+      border: 0.5px solid transparent;
+      user-select: none;
+      transition: all 0.15s;
+    }
+    .lab-mini-pill:hover { background: rgba(0,131,141,0.10); }
+    .lab-mini-pill.is-active {
+      background: #00838d;
+      color: #fff;
+      font-weight: 500;
+    }
+    .lab-step-hint {
+      font-size: 0.78rem;
+      color: #7a8587;
+      margin-top: 0.45rem;
+      line-height: 1.45;
+    }
+    .lab-step-hint strong { color: #2a3a3c; font-weight: 500; }
+    .lab-step-current {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 0.5rem;
+    }
+    .lab-step-current-value {
+      font-size: 0.95rem;
+      color: #2a3a3c;
+      font-weight: 500;
+    }
+    .lab-step-current-value.is-empty {
+      color: #7a8587;
+      font-weight: 400;
+    }
+    .lab-step-edit {
+      font-size: 0.78rem;
+      color: #00838d;
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 0;
+      font-family: inherit;
+    }
+    .lab-step-edit:hover { text-decoration: underline; }
+    /* Sekcja wyniku — pełna szerokość karty, ta sama aura, oddzielona linią. */
+    .lab-result-section {
+      margin: 1.2rem -1.7rem -1.6rem;
+      padding: 1.4rem 1.7rem 1.6rem;
+      border-top: 0.5px solid rgba(0,131,141,0.15);
+      position: relative;
+      overflow: hidden;
+    }
+    .lab-result-section::before {
+      content: '';
+      position: absolute;
+      top: -30%; left: 50%;
+      width: 110%; height: 180%;
+      transform: translateX(-50%);
+      background: radial-gradient(ellipse at center top, rgba(0,131,141,0.05), transparent 65%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .lab-result-section > * { position: relative; z-index: 1; }
+    .lab-result-section.is-empty .lab-result-big,
+    .lab-result-section.is-empty .lab-result-source,
+    .lab-result-section.is-empty .lab-show-all-toggle { opacity: 0.4; }
+    .lab-result-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.7rem;
+    }
+    .lab-result-title {
+      font-size: 0.74rem;
+      color: #7a8587;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 500;
+    }
+    .lab-result-big {
+      display: flex;
+      align-items: baseline;
+      gap: 0.55rem;
+      margin-bottom: 0.45rem;
+      flex-wrap: wrap;
+    }
+    .lab-result-big-value {
+      font-size: 2.6rem;
+      font-weight: 500;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+      color: #00838d;
+      transition: color 0.25s;
+    }
+    .lab-result-big-value.is-below  { color: #c75d00; }
+    .lab-result-big-value.is-above  { color: #b91c1c; }
+    .lab-result-big-value.is-uwaga-high {
+      color: #911c1c;
+      animation: lab-value-glow-red 0.9s ease-in-out infinite;
+    }
+    .lab-result-big-value.is-uwaga-low  {
+      color: #a6491e;
+      animation: lab-value-glow-amber 0.9s ease-in-out infinite;
+    }
+    .lab-result-big-unit {
+      font-size: 1rem;
+      color: #5a6a6e;
+    }
+    .lab-result-big-placeholder {
+      font-size: 1.05rem;
+      color: #7a8587;
+      font-style: italic;
+    }
+    .lab-result-source {
+      font-size: 0.82rem;
+      color: #5a6a6e;
+      margin: 0 0 1rem 0;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.5;
+    }
+    .lab-result-source strong { color: #2a3a3c; font-weight: 500; }
+    .lab-show-all-toggle {
+      margin-top: 1rem;
+      padding: 0.6rem 0.85rem;
+      background: rgba(0,131,141,0.04);
+      border: 0.5px solid rgba(0,131,141,0.12);
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.83rem;
+      color: #5a6a6e;
+      width: 100%;
+      font-family: inherit;
+      transition: background 0.15s;
+    }
+    .lab-show-all-toggle:hover { background: rgba(0,131,141,0.08); }
+    .lab-show-all-toggle .arr {
+      color: #00838d;
+      transition: transform 0.2s;
+    }
+    .lab-show-all-toggle[aria-expanded="true"] .arr { transform: rotate(180deg); }
+    .lab-conversions-table {
+      margin-top: 0.7rem;
+    }
+    .lab-conversions-table table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.86rem;
+    }
+    .lab-conversions-table th,
+    .lab-conversions-table td {
+      padding: 0.45rem 0.7rem;
+      text-align: left;
+      border-bottom: 0.5px solid rgba(0,131,141,0.10);
+    }
+    .lab-conversions-table th {
+      font-weight: 500;
+      color: #5a6a6e;
+      background: rgba(0,131,141,0.04);
+      font-size: 0.78rem;
+    }
+    .lab-conversions-table td.lab-conv-val {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      font-weight: 500;
+      color: #00838d;
+    }
+    .lab-conversions-table tr.is-si td.lab-conv-unit::after {
+      content: ' • SI';
+      color: #00838d;
+      font-size: 0.74rem;
+      font-weight: 500;
+    }
+    /* Animacje Smart Form */
+    @keyframes lab-step-slidein { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes lab-step-glow    { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
     /* Faza 17c — pakiet 5 stanów wyniku (Linear Flow). Paleta vilda turkus
        jako tło aury + symetryczne strefy pomarańcz/czerwień. Marker:
        biały środek z grubą obwódką, halo ripple, animowane breath.
@@ -630,19 +1113,47 @@
     .lab-range-uwaga-note svg { flex-shrink: 0; width: 14px; height: 14px; }
     .lab-range-labels {
       position: relative;
-      height: 1.1rem;
-      margin-top: 0.45rem;
+      height: 1.4rem;
+      margin-top: 0.2rem;
       font-size: 0.72rem;
       color: #5a6a6e;
       font-variant-numeric: tabular-nums;
     }
+    /* Faza 18-fix5: tick marks i etykiety zakresu.
+       Tick (mała pionowa kreska) jest dokładnie na granicy zakresu (lowPct/highPct).
+       Etykieta jest centrowana NA tickiem (transform: translateX(-50%)) — tym
+       sposobem wizualnie kotwiczy się do granicy zielonego paska, a nie wpada
+       na sąsiedni kolorowy obszar. */
     .lab-range-labels span {
       position: absolute;
-      transform: translateX(-50%);
       white-space: nowrap;
+      top: 0.45rem;
+      transform: translateX(-50%);
     }
+    .lab-range-labels span::before {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: -0.45rem;
+      width: 1px;
+      height: 0.35rem;
+      background: rgba(0,131,141,0.45);
+      transform: translateX(-50%);
+    }
+    /* Edge clamp — gdy etykieta jest tuż przy lewej/prawej krawędzi, lekko
+       wyrównaj do krawędzi (ale tick zostaje na granicy). */
+    .lab-range-labels .lab-range-label-edge-left  { transform: translateX(0); }
+    .lab-range-labels .lab-range-label-edge-left::before  { left: 0; }
+    .lab-range-labels .lab-range-label-edge-right { transform: translateX(-100%); }
+    .lab-range-labels .lab-range-label-edge-right::before { left: 100%; }
+    .lab-range-labels .lab-range-label-combined {
+      transform: translateX(-50%);
+    }
+    .lab-range-labels .lab-range-label-combined::before { display: none; }
     .lab-range-labels .lab-range-label-zero { left: 0; transform: none; }
+    .lab-range-labels .lab-range-label-zero::before { display: none; }
     .lab-range-labels .lab-range-label-max  { right: 0; transform: none; }
+    .lab-range-labels .lab-range-label-max::before { display: none; }
     .lab-range-empty {
       margin-top: 1rem;
       padding-top: 0.9rem;
@@ -1376,159 +1887,192 @@
          <div class="lab-grid">
 
           <!-- ===== Karta formularza (lewa kolumna na desktop) ===== -->
-          <div class="lab-card">
+          <!-- ===== Faza 18 — Smart Form (jedna karta, jedna kolumna, 5 kroków) ===== -->
+          <div class="lab-card lab-full lab-smart-card" id="labResultsCard">
             <h1>Przelicznik jednostek laboratoryjnych</h1>
             <p class="lab-subtitle">Hormony osi nadnerczowo‑gonadalnej, steroidy płciowe, witamina D — pomiędzy jednostkami konwencjonalnymi (μg/dL, ng/mL, pg/mL) a SI (nmol/L, pmol/L, μmol/L).</p>
 
-            <div class="lab-field">
-              <label for="labSubstance">Substancja</label>
-              <div class="lab-search-wrap">
-                <input type="text" id="labSubstance" class="lab-substance"
-                       list="labSubstanceList"
-                       placeholder="zacznij wpisywać: kortyzol, DHEA-S, E2, 25-OH wit. D, 17OHP…"
-                       autocomplete="off" spellcheck="false" inputmode="search" />
-                <datalist id="labSubstanceList"></datalist>
-                <div id="labSubstanceHint" class="lab-substance-hint" aria-live="polite"></div>
+            <!-- Krok 1: Substancja -->
+            <div class="lab-step" id="labStep1">
+              <div class="lab-step-num" id="labStep1Num">1</div>
+              <div class="lab-step-body">
+                <div class="lab-step-label">Substancja</div>
+                <div class="lab-search-wrap">
+                  <input type="text" id="labSubstance" class="lab-substance"
+                         placeholder="kliknij i wybierz lub zacznij wpisywać…"
+                         autocomplete="off" spellcheck="false" inputmode="search"
+                         role="combobox" aria-autocomplete="list"
+                         aria-controls="labSubstanceDropdown" aria-expanded="false" />
+                  <button type="button" id="labSubstanceClear" class="lab-substance-clear"
+                          aria-label="Wyczyść pole substancji" title="Wyczyść" hidden>×</button>
+                  <div id="labSubstanceDropdown" class="lab-substance-dropdown"
+                       role="listbox" hidden></div>
+                  <div id="labSubstanceHint" class="lab-substance-hint" aria-live="polite"></div>
+                </div>
               </div>
             </div>
 
-            <div class="lab-field">
-              <label for="labValue">Wartość wyniku</label>
-              <div class="lab-input-row">
-                <input type="text" id="labValue" inputmode="decimal"
-                       placeholder="np. 15,2"
-                       autocomplete="off" />
-                <select id="labUnit" aria-label="Jednostka źródłowa"></select>
+            <!-- Krok 2: Wartość + jednostka źródłowa -->
+            <div class="lab-step" id="labStep2">
+              <div class="lab-step-num" id="labStep2Num">2</div>
+              <div class="lab-step-body">
+                <div class="lab-step-label">Wartość wyniku + jednostka źródłowa</div>
+                <div class="lab-input-row">
+                  <input type="text" id="labValue" inputmode="decimal"
+                         placeholder="np. 15,2"
+                         autocomplete="off" />
+                  <select id="labUnit" aria-label="Jednostka źródłowa"></select>
+                </div>
+                <div id="labError" class="lab-error" style="display:none;"></div>
               </div>
-              <div id="labError" class="lab-error" style="display:none;"></div>
             </div>
 
-            <!-- Atrybuty pomiaru: pora pobrania i test diagnostyczny.
-                 Pojawiają się warunkowo, tylko dla substancji time-aware / DST-aware
-                 (kortyzol, ACTH, testosteron T/wolny). To są cechy danego oznaczenia,
-                 nie pacjenta — dlatego są tutaj, w polu „Przelicznik jednostek
-                 laboratoryjnych", nie w karcie kontekstu pacjenta. -->
-            <div class="lab-field" id="labMeasFieldTime" style="display:none;">
-              <label for="labMeasTime">Pora pobrania
-                <small style="font-weight:400;opacity:0.65;">(opcjonalnie)</small>
-              </label>
-              <select id="labMeasTime" class="lab-substance">
-                <option value="">— domyślnie (rano) —</option>
-                <option value="morning">Rano (7:00–10:00)</option>
-                <option value="evening">Popołudnie / wieczór (14:00–22:00)</option>
-                <option value="midnight">Północ (22:00–02:00) — diagnostyka Cushinga</option>
-              </select>
-            </div>
-            <div class="lab-field" id="labMeasFieldProtocol" style="display:none;">
-              <label for="labMeasProtocol">Test diagnostyczny
-                <small style="font-weight:400;opacity:0.65;">(opcjonalnie)</small>
-              </label>
-              <select id="labMeasProtocol" class="lab-substance">
-                <!-- Opcje wstawiane dynamicznie przez JS w updateMeasurementFields().
-                     Dla kortyzolu: DST. Dla Tg: pomiary po tyreoidektomii. -->
-                <option value="">— pomiar bazalny —</option>
-              </select>
-            </div>
-            <!-- Metoda oznaczenia: pojawia się dla substancji method-aware
-                 (np. 17-OH-progesteron). Domyślnie immunoassay PL (najczęściej
-                 stosowane w polskich laboratoriach: Maglumi/Synevo/ALAB),
-                 LC-MS/MS jako gold standard w wybranych ośrodkach. -->
-            <div class="lab-field" id="labMeasFieldMethod" style="display:none;">
-              <label for="labMeasMethod">Metoda oznaczenia
-                <small style="font-weight:400;opacity:0.65;">(sprawdź w wyniku z laboratorium)</small>
-              </label>
-              <select id="labMeasMethod" class="lab-substance">
-                <!-- Opcje wstawiane dynamicznie przez JS w updateMeasurementFields(). -->
-              </select>
-              <small id="labMeasMethodHint"
-                     style="display:block;margin-top:4px;font-size:0.78em;opacity:0.7;line-height:1.35;">
-                LC-MS/MS to metoda referencyjna (gold standard), ale w polskich
-                laboratoriach większość oznaczeń wykonuje się immunoassay
-                (CLIA/ECLIA — Maglumi, Synevo, ALAB). Zakresy referencyjne różnią
-                się znacząco między metodami.
-              </small>
+            <!-- Krok 3: Przelicz na (jednostka docelowa) -->
+            <div class="lab-step" id="labStep3">
+              <div class="lab-step-num" id="labStep3Num">3</div>
+              <div class="lab-step-body">
+                <div class="lab-step-label">Przelicz na <span class="lab-step-label-hint" id="labStep3Hint">— domyślnie SI</span></div>
+                <div class="lab-step-target-row">
+                  <span class="lab-step-target-arrow">→</span>
+                  <select id="labUnitTarget" aria-label="Jednostka docelowa"></select>
+                </div>
+                <div class="lab-step-hint" id="labUnitTargetHint"></div>
+              </div>
             </div>
 
-            <button type="button" id="labClearBtn" class="lab-clear-btn">
+            <!-- Krok 4: Pora pomiaru / protokół / metoda (widoczne warunkowo) -->
+            <div class="lab-step" id="labStep4">
+              <div class="lab-step-num" id="labStep4Num">4</div>
+              <div class="lab-step-body">
+                <div class="lab-step-label">Pora pomiaru i protokół <span class="lab-step-label-opt">— opcjonalnie</span></div>
+                <!-- Pora pobrania — pills (zsynchronizowane z labMeasTime select) -->
+                <div class="lab-field" id="labMeasFieldTime" style="display:none;">
+                  <div class="lab-mini-pills" id="labMeasTimePills"></div>
+                  <select id="labMeasTime" style="display:none;" aria-hidden="true">
+                    <option value="">— domyślnie (rano) —</option>
+                    <option value="morning">Rano (7:00–10:00)</option>
+                    <option value="evening">Popołudnie / wieczór (14:00–22:00)</option>
+                    <option value="midnight">Północ (22:00–02:00) — diagnostyka Cushinga</option>
+                  </select>
+                  <div class="lab-step-hint" id="labMeasTimeHint"></div>
+                </div>
+                <!-- Test diagnostyczny -->
+                <div class="lab-field" id="labMeasFieldProtocol" style="display:none; margin-top:0.7rem;">
+                  <div class="lab-step-label" style="margin-bottom:0.25rem;">Test diagnostyczny</div>
+                  <select id="labMeasProtocol">
+                    <option value="">— pomiar bazalny —</option>
+                  </select>
+                </div>
+                <!-- Metoda oznaczenia -->
+                <div class="lab-field" id="labMeasFieldMethod" style="display:none; margin-top:0.7rem;">
+                  <div class="lab-step-label" style="margin-bottom:0.25rem;">Metoda oznaczenia <span class="lab-step-label-opt">— sprawdź w wyniku z laboratorium</span></div>
+                  <select id="labMeasMethod"></select>
+                  <small id="labMeasMethodHint" class="lab-step-hint">
+                    LC-MS/MS to metoda referencyjna (gold standard), ale w polskich laboratoriach większość oznaczeń wykonuje się immunoassay (CLIA/ECLIA — Maglumi, Synevo, ALAB). Zakresy referencyjne różnią się znacząco między metodami.
+                  </small>
+                </div>
+                <div class="lab-step-hint" id="labStep4DefaultHint" style="font-style:italic;">Dla wybranej substancji pora i protokół nie wpływają na zakres referencyjny — pomijamy.</div>
+              </div>
+            </div>
+
+            <!-- Krok 5: Pacjent (z karty lub override) -->
+            <div class="lab-step" id="labStep5">
+              <div class="lab-step-num" id="labStep5Num">5</div>
+              <div class="lab-step-body">
+                <div class="lab-step-label">Pacjent <span class="lab-step-label-opt">— opcjonalnie, wpływa na zakres normy</span></div>
+                <div class="lab-patient-context" id="labPatientCtx">
+                  <div class="lab-patient-summary">
+                    <i data-lucide="user" aria-hidden="true"></i>
+                    <span class="lab-patient-text" id="labPatientText">Sprawdzanie danych pacjenta…</span>
+                    <button type="button" class="lab-patient-toggle lab-step-edit" id="labPatientToggle"
+                            aria-expanded="false" aria-controls="labPatientOverride">zmień ▼</button>
+                  </div>
+                  <div class="lab-patient-clinical-hint" id="labClinicalHint" style="display:none;"></div>
+                  <div class="lab-patient-override" id="labPatientOverride" style="display:none;">
+                    <label>Płeć
+                      <select id="labOverrideSex">
+                        <option value="">(z danych pacjenta)</option>
+                        <option value="M">Mężczyzna</option>
+                        <option value="F">Kobieta</option>
+                      </select>
+                    </label>
+                    <label>Wiek [lata]
+                      <input type="number" id="labOverrideAge" min="0" max="120" step="1"
+                             placeholder="z danych pacjenta">
+                    </label>
+                    <label>Wiek [mies.] <small style="font-weight:400;opacity:0.65;">(0–11, opcjonalnie)</small>
+                      <input type="number" id="labOverrideAgeMonths" min="0" max="11" step="1"
+                             placeholder="—">
+                    </label>
+                    <label id="labOverrideCycleWrap" style="display:none;">Faza cyklu / ciąża
+                      <select id="labOverrideCycle">
+                        <option value="">(domyślnie)</option>
+                        <option value="follicular">Faza folikularna</option>
+                        <option value="ovulation">Pik owulacyjny</option>
+                        <option value="luteal">Faza lutealna</option>
+                        <option value="postmenopause">Postmenopauza</option>
+                        <option value="pregnancy_t1">Ciąża — I trymestr</option>
+                        <option value="pregnancy_t2">Ciąża — II trymestr</option>
+                        <option value="pregnancy_t3">Ciąża — III trymestr</option>
+                      </select>
+                    </label>
+                    <label id="labOverrideTannerWrap" style="display:none;">Etap Tannera
+                      <select id="labOverrideTanner">
+                        <option value="">(z danych pacjenta)</option>
+                        <option value="1">Tanner I — przedpokwitaniowy</option>
+                        <option value="2">Tanner II</option>
+                        <option value="3">Tanner III</option>
+                        <option value="4">Tanner IV</option>
+                        <option value="5">Tanner V — dojrzałość pełna</option>
+                      </select>
+                    </label>
+                    <button type="button" class="lab-override-reset" id="labOverrideReset">
+                      Resetuj do danych pacjenta
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ===== Sekcja wyniku (jedna karta, dolna sekcja) ===== -->
+            <div class="lab-result-section is-empty" id="labResultSection">
+              <div class="lab-result-head">
+                <span class="lab-result-title">Wynik</span>
+                <span id="labResultStatus"></span>
+              </div>
+              <div class="lab-result-big" id="labResultBig">
+                <span class="lab-result-big-placeholder">Wpisz wartość, aby zobaczyć wynik…</span>
+              </div>
+              <div class="lab-result-source" id="labResultSourceLine"></div>
+              <!-- Pasek-skala (Faza 17c — Linear Flow z markerem) -->
+              <div id="labRangeBlock"></div>
+              <!-- „Pokaż wszystkie konwersje" — rozwijana tabela 5 jednostek -->
+              <button type="button" class="lab-show-all-toggle" id="labShowAllToggle"
+                      aria-expanded="false" aria-controls="labConversionsTableWrap"
+                      style="display:none;">
+                <span>Pokaż wszystkie konwersje</span>
+                <span class="arr">▼</span>
+              </button>
+              <div class="lab-conversions-table" id="labConversionsTableWrap" style="display:none;">
+                <table class="lab-results-table" aria-live="polite">
+                  <thead>
+                    <tr><th scope="col">Jednostka</th><th scope="col" style="text-align:right;">Wartość</th></tr>
+                  </thead>
+                  <tbody id="labResultsBody"></tbody>
+                </table>
+                <p class="lab-meta" id="labMeta"></p>
+              </div>
+              <!-- Sekcja źródeł zakresu referencyjnego -->
+              <div class="lab-sources-wrap" id="labSourcesWrap" style="display:none; margin-top:1rem;">
+                <button type="button" id="labSourcesToggle" aria-expanded="false"
+                        aria-controls="labSourcesList">Źródła</button>
+                <ol class="lab-sources-list" id="labSourcesList" style="display:none;"></ol>
+              </div>
+            </div>
+
+            <button type="button" id="labClearBtn" class="lab-clear-btn" style="margin-top:1rem;">
               <i data-lucide="eraser" aria-hidden="true"></i> Wyczyść wszystkie pola
             </button>
-          </div>
-
-          <!-- ===== Karta wyników (prawa kolumna na desktop) – widoczna stale -->
-          <div class="lab-card" id="labResultsCard">
-            <h2>Przeliczone wartości</h2>
-
-            <!-- Kontekst pacjenta: auto-dobór zakresu z sharedUserData (wiek + płeć),
-                 z możliwością nadpisania lokalnego. -->
-            <div class="lab-patient-context" id="labPatientCtx">
-              <div class="lab-patient-summary">
-                <i data-lucide="user" aria-hidden="true"></i>
-                <span class="lab-patient-text" id="labPatientText">Sprawdzanie danych pacjenta…</span>
-                <button type="button" class="lab-patient-toggle" id="labPatientToggle"
-                        aria-expanded="false" aria-controls="labPatientOverride">Zmień ▼</button>
-              </div>
-              <div class="lab-patient-clinical-hint" id="labClinicalHint" style="display:none;"></div>
-              <div class="lab-patient-override" id="labPatientOverride" style="display:none;">
-                <label>Płeć
-                  <select id="labOverrideSex">
-                    <option value="">(z danych pacjenta)</option>
-                    <option value="M">Mężczyzna</option>
-                    <option value="F">Kobieta</option>
-                  </select>
-                </label>
-                <label>Wiek [lata]
-                  <input type="number" id="labOverrideAge" min="0" max="120" step="1"
-                         placeholder="z danych pacjenta">
-                </label>
-                <label>Wiek [mies.] <small style="font-weight:400;opacity:0.65;">(0–11, opcjonalnie)</small>
-                  <input type="number" id="labOverrideAgeMonths" min="0" max="11" step="1"
-                         placeholder="—">
-                </label>
-                <label id="labOverrideCycleWrap" style="display:none;">Faza cyklu / ciąża
-                  <select id="labOverrideCycle">
-                    <option value="">(domyślnie)</option>
-                    <option value="follicular">Faza folikularna</option>
-                    <option value="ovulation">Pik owulacyjny</option>
-                    <option value="luteal">Faza lutealna</option>
-                    <option value="postmenopause">Postmenopauza</option>
-                    <option value="pregnancy_t1">Ciąża — I trymestr</option>
-                    <option value="pregnancy_t2">Ciąża — II trymestr</option>
-                    <option value="pregnancy_t3">Ciąża — III trymestr</option>
-                  </select>
-                </label>
-                <label id="labOverrideTannerWrap" style="display:none;">Etap Tannera
-                  <select id="labOverrideTanner">
-                    <option value="">(z danych pacjenta)</option>
-                    <option value="1">Tanner I — przedpokwitaniowy</option>
-                    <option value="2">Tanner II</option>
-                    <option value="3">Tanner III</option>
-                    <option value="4">Tanner IV</option>
-                    <option value="5">Tanner V — dojrzałość pełna</option>
-                  </select>
-                </label>
-                <button type="button" class="lab-override-reset" id="labOverrideReset">
-                  Resetuj do danych pacjenta
-                </button>
-              </div>
-            </div>
-
-            <table class="lab-results-table" aria-live="polite">
-              <thead>
-                <tr><th scope="col">Jednostka</th><th scope="col" style="text-align:right;">Wartość</th></tr>
-              </thead>
-              <tbody id="labResultsBody"></tbody>
-            </table>
-            <p class="lab-meta" id="labMeta"></p>
-
-            <!-- Pasek-skala z oznaczeniem normy – wypełniany przez JS. -->
-            <div id="labRangeBlock"></div>
-
-            <!-- Sekcja źródeł — rozwijana lista cytowań dla aktualnego zakresu. -->
-            <div class="lab-sources-wrap" id="labSourcesWrap" style="display:none;">
-              <button type="button" id="labSourcesToggle" aria-expanded="false"
-                      aria-controls="labSourcesList">Źródła</button>
-              <ol class="lab-sources-list" id="labSourcesList" style="display:none;"></ol>
-            </div>
           </div>
 
           <!-- ===== Karta zakresów referencyjnych / uwag / źródeł (full-width) ===== -->
@@ -1670,7 +2214,14 @@
     var PREF_UNIT      = 'LAB_CONV_UNIT';
 
     var substanceEl     = document.getElementById('labSubstance');
-    var substanceListEl = document.getElementById('labSubstanceList');
+    // Faza 18-fix: custom dropdown zamiast natywnego <datalist>.
+    var substanceDropdownEl = document.getElementById('labSubstanceDropdown');
+    // Faza 18-fix4: czerwony X — czyści pole substancji
+    var substanceClearEl = document.getElementById('labSubstanceClear');
+    // Stan dropdownu — wszystkie opcje + aktualnie wybrana w trakcie nawigacji klawiaturą.
+    var substanceDropdownItems = [];      // wszystkie itemy {el, substance, labelLower, aliasesLower}
+    var substanceDropdownVisible = [];    // aktualnie wyfiltrowane itemy
+    var substanceDropdownActive = -1;     // indeks aktywnego w substanceDropdownVisible
     var substanceHintEl = document.getElementById('labSubstanceHint');
     var valueEl         = document.getElementById('labValue');
     var unitEl          = document.getElementById('labUnit');
@@ -1696,6 +2247,8 @@
     // Atrybuty pomiaru (cechy oznaczenia, nie pacjenta) — pora pobrania i test diagnostyczny.
     var measTimeFieldEl     = document.getElementById('labMeasFieldTime');
     var measTimeEl          = document.getElementById('labMeasTime');
+    var measTimePillsEl     = document.getElementById('labMeasTimePills');
+    var measTimeHintEl      = document.getElementById('labMeasTimeHint');
     var measProtocolFieldEl = document.getElementById('labMeasFieldProtocol');
     var measProtocolEl      = document.getElementById('labMeasProtocol');
     var measMethodFieldEl   = document.getElementById('labMeasFieldMethod');
@@ -1703,6 +2256,28 @@
     var sourcesWrapEl   = document.getElementById('labSourcesWrap');
     var sourcesToggleEl = document.getElementById('labSourcesToggle');
     var sourcesListEl   = document.getElementById('labSourcesList');
+
+    // Faza 18 — Smart Form references
+    var unitTargetEl        = document.getElementById('labUnitTarget');
+    var unitTargetHintEl    = document.getElementById('labUnitTargetHint');
+    var resultSectionEl     = document.getElementById('labResultSection');
+    var resultStatusEl      = document.getElementById('labResultStatus');
+    var resultBigEl         = document.getElementById('labResultBig');
+    var resultSourceLineEl  = document.getElementById('labResultSourceLine');
+    var showAllToggleEl     = document.getElementById('labShowAllToggle');
+    var conversionsTableWrapEl = document.getElementById('labConversionsTableWrap');
+    var step3HintEl         = document.getElementById('labStep3Hint');
+    var step4DefaultHintEl  = document.getElementById('labStep4DefaultHint');
+    var stepNums = {
+      step1: document.getElementById('labStep1Num'),
+      step2: document.getElementById('labStep2Num'),
+      step3: document.getElementById('labStep3Num'),
+      step4: document.getElementById('labStep4Num'),
+      step5: document.getElementById('labStep5Num')
+    };
+    // Pamięta jednostkę docelową wybraną świadomie przez użytkownika dla danej
+    // substancji — domyślnie auto (canonical_si).
+    var userSelectedTargetUnit = null;
 
     var infoCard    = document.getElementById('labInfoCard');
     var infoTitleEl = document.getElementById('labInfoTitle');
@@ -2230,21 +2805,216 @@
       return { lookup: lookup, normalize: normalize };
     })();
 
+    /**
+     * Faza 18-fix: buduje custom dropdown z listą substancji.
+     * Grupuje wg `s.group` (Tarczyca, Oś nadnerczowa, …), sortuje alfabetycznie
+     * w obrębie grupy, wstawia nagłówki grup. Każdy item ma:
+     *   – data-id, .lab-substance-option-label, .lab-substance-option-meta
+     *   – delegowany click → wybiera substancję,
+     *   – śledzenie aktywnego itema (kursor klawiatury).
+     */
     function buildSubstanceOptions() {
-      clearChildren(substanceListEl);
-      var entries = Data.list();
+      if (!substanceDropdownEl) return;
+      clearChildren(substanceDropdownEl);
+      substanceDropdownItems = [];
+      var entries = Data.list().slice();
+      // Sortuj alfabetycznie wg label_pl (lokalne PL — uwzględnia ą/ć/ł/…)
+      entries.sort(function (a, b) {
+        var ga = a.group || 'Inne';
+        var gb = b.group || 'Inne';
+        if (ga !== gb) return ga.localeCompare(gb, 'pl');
+        return (a.label_pl || '').localeCompare(b.label_pl || '', 'pl');
+      });
+      var lastGroup = null;
       for (var i = 0; i < entries.length; i++) {
         var s = entries[i];
-        var opt = document.createElement('option');
-        opt.value = s.label_pl;                                  // to widzi użytkownik
-        // Niektóre przeglądarki (Firefox, Edge) pokazują dodatkowy hint po prawej.
-        var aliasBits = [s.group];
-        if (Array.isArray(s.aliases) && s.aliases.length) {
-          aliasBits.push(s.aliases.slice(0, 2).join(', '));
+        var grp = s.group || 'Inne';
+        if (grp !== lastGroup) {
+          var hdr = document.createElement('div');
+          hdr.className = 'lab-substance-group-label';
+          hdr.textContent = grp;
+          substanceDropdownEl.appendChild(hdr);
+          lastGroup = grp;
         }
-        opt.label = aliasBits.join(' · ');
-        substanceListEl.appendChild(opt);
+        var item = document.createElement('div');
+        item.className = 'lab-substance-option';
+        item.setAttribute('role', 'option');
+        item.setAttribute('data-id', s.id);
+        item.setAttribute('data-label', s.label_pl);
+
+        var labelSpan = document.createElement('span');
+        labelSpan.className = 'lab-substance-option-label';
+        labelSpan.textContent = s.label_pl;
+        item.appendChild(labelSpan);
+
+        // Meta po prawej — pierwsze 2 aliasy (skróty: DHEAS, 17-OHP, …).
+        if (Array.isArray(s.aliases) && s.aliases.length) {
+          var meta = document.createElement('span');
+          meta.className = 'lab-substance-option-meta';
+          meta.textContent = s.aliases.slice(0, 2).join(' · ');
+          item.appendChild(meta);
+        }
+        substanceDropdownEl.appendChild(item);
+
+        substanceDropdownItems.push({
+          el: item,
+          labelEl: labelSpan,
+          substance: s,
+          labelLower: (s.label_pl || '').toLocaleLowerCase('pl'),
+          aliasesLower: (s.aliases || []).map(function (a) { return String(a).toLocaleLowerCase('pl'); }).join('|')
+        });
       }
+      substanceDropdownVisible = substanceDropdownItems.slice();
+      substanceDropdownActive = -1;
+    }
+
+    /**
+     * Filtruje dropdown wg wpisanego tekstu — pokazuje tylko itemy
+     * zawierające tekst w label_pl LUB w którymś z aliasów.
+     * Highlightuje match w label za pomocą <mark>.
+     */
+    function filterSubstanceDropdown(query) {
+      if (!substanceDropdownEl) return;
+      var q = String(query || '').trim().toLocaleLowerCase('pl');
+      substanceDropdownVisible = [];
+
+      // Pokaż / ukryj itemy + ukryj nagłówki grup gdy żaden item w grupie nie pasuje.
+      var lastVisibleHdr = null;
+      var hdrHasMatch = false;
+      // Iteruj po DOM children żeby też móc obsłużyć nagłówki.
+      var children = substanceDropdownEl.children;
+      var hdrToFlush = null;
+      for (var i = 0; i < children.length; i++) {
+        var ch = children[i];
+        if (ch.classList.contains('lab-substance-group-label')) {
+          // Flush poprzedni nagłówek
+          if (hdrToFlush) hdrToFlush.style.display = hdrHasMatch ? '' : 'none';
+          hdrToFlush = ch;
+          hdrHasMatch = false;
+          continue;
+        }
+        if (!ch.classList.contains('lab-substance-option')) continue;
+        var labelEl = ch.querySelector('.lab-substance-option-label');
+        var data = null;
+        for (var k = 0; k < substanceDropdownItems.length; k++) {
+          if (substanceDropdownItems[k].el === ch) { data = substanceDropdownItems[k]; break; }
+        }
+        if (!data) continue;
+        var match = !q ||
+          data.labelLower.indexOf(q) !== -1 ||
+          data.aliasesLower.indexOf(q) !== -1;
+        ch.style.display = match ? '' : 'none';
+        ch.classList.remove('is-active');
+        if (match) {
+          substanceDropdownVisible.push(data);
+          hdrHasMatch = true;
+          // Highlight match w labelu
+          if (q && labelEl) {
+            var raw = data.substance.label_pl || '';
+            var idx = raw.toLocaleLowerCase('pl').indexOf(q);
+            if (idx !== -1) {
+              labelEl.innerHTML = safeEsc(raw.substring(0, idx)) +
+                '<mark>' + safeEsc(raw.substring(idx, idx + q.length)) + '</mark>' +
+                safeEsc(raw.substring(idx + q.length));
+            } else {
+              labelEl.textContent = raw;
+            }
+          } else if (labelEl) {
+            labelEl.textContent = data.substance.label_pl || '';
+          }
+        }
+      }
+      // Flush ostatni nagłówek
+      if (hdrToFlush) hdrToFlush.style.display = hdrHasMatch ? '' : 'none';
+
+      // Empty state — pokaż „brak wyników"
+      var emptyEl = substanceDropdownEl.querySelector('.lab-substance-option-empty');
+      if (!substanceDropdownVisible.length) {
+        if (!emptyEl) {
+          emptyEl = document.createElement('div');
+          emptyEl.className = 'lab-substance-option-empty';
+          emptyEl.textContent = 'Brak substancji pasującej do „' + (query || '') + '". Spróbuj innej nazwy lub skrótu.';
+          substanceDropdownEl.appendChild(emptyEl);
+        } else {
+          emptyEl.textContent = 'Brak substancji pasującej do „' + (query || '') + '". Spróbuj innej nazwy lub skrótu.';
+          emptyEl.style.display = '';
+        }
+      } else if (emptyEl) {
+        emptyEl.style.display = 'none';
+      }
+
+      substanceDropdownActive = substanceDropdownVisible.length ? 0 : -1;
+      highlightActiveDropdownItem();
+    }
+
+    function highlightActiveDropdownItem() {
+      for (var i = 0; i < substanceDropdownVisible.length; i++) {
+        substanceDropdownVisible[i].el.classList.toggle('is-active', i === substanceDropdownActive);
+      }
+      // Scroll do aktywnego itema jeśli wystaje
+      if (substanceDropdownActive >= 0 && substanceDropdownVisible[substanceDropdownActive]) {
+        var activeEl = substanceDropdownVisible[substanceDropdownActive].el;
+        if (activeEl && typeof activeEl.scrollIntoView === 'function') {
+          var rect = activeEl.getBoundingClientRect();
+          var parentRect = substanceDropdownEl.getBoundingClientRect();
+          if (rect.top < parentRect.top || rect.bottom > parentRect.bottom) {
+            activeEl.scrollIntoView({ block: 'nearest' });
+          }
+        }
+      }
+    }
+
+    /**
+     * Faza 18-fix3: pozycjonowanie dropdownu względem inputa (position: fixed).
+     * Kalkulujemy top/left/width z getBoundingClientRect inputa za każdym
+     * otwarciem oraz przy scroll/resize — żeby lista zawsze klejała się
+     * pod inputem nawet po przewinięciu.
+     */
+    function positionSubstanceDropdown() {
+      if (!substanceDropdownEl || substanceDropdownEl.hidden) return;
+      var rect = substanceEl.getBoundingClientRect();
+      var vh = window.innerHeight || document.documentElement.clientHeight;
+      var spaceBelow = vh - rect.bottom;
+      var spaceAbove = rect.top;
+      var openUpward = spaceBelow < 240 && spaceAbove > spaceBelow;
+      substanceDropdownEl.style.left = rect.left + 'px';
+      substanceDropdownEl.style.width = rect.width + 'px';
+      if (openUpward) {
+        substanceDropdownEl.style.top = '';
+        substanceDropdownEl.style.bottom = (vh - rect.top + 4) + 'px';
+        substanceDropdownEl.style.maxHeight = Math.max(140, spaceAbove - 16) + 'px';
+      } else {
+        substanceDropdownEl.style.bottom = '';
+        substanceDropdownEl.style.top = (rect.bottom + 4) + 'px';
+        substanceDropdownEl.style.maxHeight = Math.max(140, spaceBelow - 16) + 'px';
+      }
+    }
+
+    function openSubstanceDropdown() {
+      if (!substanceDropdownEl) return;
+      // Przenieś dropdown do <body>, żeby nie był klipowany przez ancestorów
+      // z overflow:hidden (np. .lab-smart-card).
+      if (substanceDropdownEl.parentNode !== document.body) {
+        document.body.appendChild(substanceDropdownEl);
+      }
+      substanceDropdownEl.hidden = false;
+      substanceEl.setAttribute('aria-expanded', 'true');
+      filterSubstanceDropdown(substanceEl.value);
+      positionSubstanceDropdown();
+    }
+
+    function closeSubstanceDropdown() {
+      if (!substanceDropdownEl) return;
+      substanceDropdownEl.hidden = true;
+      substanceEl.setAttribute('aria-expanded', 'false');
+    }
+
+    function selectSubstanceFromDropdown(substance) {
+      if (!substance) return;
+      substanceEl.value = substance.label_pl;
+      applySubstance(substance, substance.label_pl);
+      closeSubstanceDropdown();
+      updateSubstanceClearVisibility();
     }
 
     // ────────────────────────────────────────────────────────────────
@@ -3337,34 +4107,14 @@
         statusText = '✓ w zakresie normy';
         resultState = 'is-normal';
       }
-      var status = document.createElement('span');
-      status.className = 'lab-range-status ' + resultState;
-      // Ikona ostrzegawcza dla stanów „Uwaga" (mrugająca, ostre wezwanie do reakcji).
-      if (resultState === 'is-uwaga-high' || resultState === 'is-uwaga-low') {
-        var iconWrap = document.createElement('span');
-        iconWrap.innerHTML = '<svg class="lab-range-status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>';
-        status.appendChild(iconWrap.firstChild);
-        var statusTextNode = document.createElement('span');
-        statusTextNode.textContent = statusText.replace('⚠ ', '');
-        status.appendChild(statusTextNode);
-      } else {
-        status.textContent = statusText;
-      }
-      header.appendChild(status);
+      // Faza 18-fix: status pill jest już w nagłówku sekcji wyniku
+      // (resultStatusEl) — nie duplikujemy go tutaj.
       card.appendChild(header);
 
-      // Kontekst (kto, w jakich warunkach). Dla zakresów oznaczonych jako default
-      // (czyli fallback, gdy nic nie pasowało) dodajemy delikatne ostrzeżenie.
-      if (range.context_pl) {
-        var ctx = document.createElement('div');
-        ctx.className = 'lab-range-context';
-        if (range.is_default && !range.matched) {
-          ctx.textContent = '⚠ ' + range.context_pl + ' — wybrano zakres ogólny, bo dane pacjenta nie pasują do żadnego specyficznego wariantu.';
-        } else {
-          ctx.textContent = range.context_pl;
-        }
-        card.appendChild(ctx);
-      }
+      // Faza 18-fix2: usunęliśmy blok lab-range-context — kliniczne adnotacje,
+      // ostrzeżenia o "zakresie ogólnym" i opisy metod (immunoassay PL, LC-MS/MS)
+      // ładujemy teraz tylko w karcie info-zakresów poniżej. Sekcja wyniku
+      // jest minimalna: status pill + duża liczba + pasek + zakres + tabela.
 
       // Pasek + marker
       var scaleMin = 0;
@@ -3422,28 +4172,53 @@
         card.appendChild(note);
       }
 
-      // Etykiety: 0, low, high, max
+      // Faza 18-fix2: tylko etykiety dolnej i górnej granicy w wybranej
+      // jednostce docelowej (bez 0, bez max).
       var labels = document.createElement('div');
       labels.className = 'lab-range-labels';
-      var span0 = document.createElement('span');
-      span0.className = 'lab-range-label-zero';
-      span0.textContent = '0';
-      labels.appendChild(span0);
 
-      // low/high label (gdy nie zachodzą na siebie i nie na 0)
-      function labelAt(pct, text) {
+      // Konwertuj granice SI → jednostka docelowa (jeśli user wybrał inną).
+      var labelLow = low, labelHigh = high, labelUnit = siUnit;
+      var targetSym = (unitTargetEl && unitTargetEl.value) || siUnit;
+      if (targetSym && targetSym !== siUnit) {
+        var targetObj = null;
+        for (var ti = 0; ti < substance.units.length; ti++) {
+          if (substance.units[ti].symbol === targetSym) { targetObj = substance.units[ti]; break; }
+        }
+        if (targetObj && targetObj.factor_to_si) {
+          labelLow = low / targetObj.factor_to_si;
+          labelHigh = high / targetObj.factor_to_si;
+          labelUnit = targetSym;
+        }
+      }
+
+      function labelAt(pct, text, cls) {
         var el = document.createElement('span');
+        if (cls) el.className = cls;
         el.style.left = pct.toFixed(2) + '%';
         el.textContent = text;
         labels.appendChild(el);
       }
-      if (lowPct > 6) labelAt(lowPct, Conv.formatNumber(low, precision));
-      if (highPct - lowPct > 10 && highPct < 94) labelAt(highPct, Conv.formatNumber(high, precision));
-
-      var spanMax = document.createElement('span');
-      spanMax.className = 'lab-range-label-max';
-      spanMax.textContent = Conv.formatNumber(scaleMax, precision) + ' ' + siUnit;
-      labels.appendChild(spanMax);
+      // Faza 18-fix5: etykiety centrowane na ticku (granica zielonego paska).
+      // Edge-clamp: gdy bardzo blisko 0% lub 100%, etykieta nie ucieka poza
+      // pasek — tick zostaje na pozycji, etykieta przesuwa się do krawędzi.
+      function pickClass(pct, role) {
+        if (pct < 10) return 'lab-range-label-edge-left';
+        if (pct > 90) return 'lab-range-label-edge-right';
+        return role;   // domyślnie centrowanie translateX(-50%)
+      }
+      if (highPct - lowPct > 14) {
+        labelAt(lowPct, Conv.formatNumber(labelLow, precision),
+                pickClass(lowPct, 'lab-range-label-low'));
+        labelAt(highPct, Conv.formatNumber(labelHigh, precision) + ' ' + labelUnit,
+                pickClass(highPct, 'lab-range-label-high'));
+      } else {
+        // Etykiety nakładałyby się — pokaż wspólny zakres centrowany między nimi.
+        var mid = (lowPct + highPct) / 2;
+        labelAt(mid, Conv.formatNumber(labelLow, precision) + '–' +
+                     Conv.formatNumber(labelHigh, precision) + ' ' + labelUnit,
+                'lab-range-label-combined');
+      }
 
       card.appendChild(labels);
       return { element: card, rangeInfo: range };
@@ -3475,7 +4250,10 @@
      */
     function renderResults(substance) {
       if (!substance) {
-        resultsCard.style.display = 'none';
+        // Faza 18: smart-card jest zawsze widoczna; tylko sekcja wyniku
+        // przechodzi w stan placeholdera.
+        renderBigResult(null, false, NaN, null);
+        updateStepStates();
         return;
       }
 
@@ -3583,7 +4361,7 @@
         tr.appendChild(td2);
         resultsBody.appendChild(tr);
       }
-      resultsCard.style.display = '';
+      // Faza 18: smart-card zawsze widoczna — nie toggle'ujemy display.
 
       var metaParts = [];
       if (isValid) {
@@ -3619,6 +4397,9 @@
         if (substance.units[u].symbol === fromUnitSym) { fromUnitObj = substance.units[u]; break; }
       }
       renderRangeBlock(substance, isValid, n, fromUnitObj);
+      // Faza 18 — duży wynik + status pill + linia źródła + show-all toggle
+      renderBigResult(substance, isValid, n, fromUnitObj);
+      updateStepStates();
     }
 
     /**
@@ -3777,10 +4558,21 @@
       // Pusta lista jednostek — żeby po wpisaniu nowej wartości nie liczono
       // przy starej substancji.
       clearChildren(unitEl);
+      if (unitTargetEl) clearChildren(unitTargetEl);
       metaEl.innerHTML = '<em>Wybierz substancję powyżej, żeby zobaczyć przeliczone jednostki.</em>';
       infoCard.style.display = 'none';
       // Schowaj sekcję źródeł — nie ma co cytować, gdy nic nie wybrano.
       if (sourcesWrapEl) sourcesWrapEl.style.display = 'none';
+      // Faza 18: zresetuj sekcję wyniku i pigułki pora pobrania.
+      renderBigResult(null, false, NaN, null);
+      if (measTimePillsEl) clearChildren(measTimePillsEl);
+      if (measTimeHintEl) measTimeHintEl.innerHTML = '';
+      // Zwiń tabelę "Pokaż wszystkie konwersje" jeśli była rozwinięta.
+      if (conversionsTableWrapEl) conversionsTableWrapEl.style.display = 'none';
+      if (showAllToggleEl) {
+        showAllToggleEl.setAttribute('aria-expanded', 'false');
+        showAllToggleEl.style.display = 'none';
+      }
     }
 
     /**
@@ -3851,6 +4643,344 @@
       }
     }
 
+    // ════════════════════════════════════════════════════════════════
+    //  Faza 18 — Smart Form helpers
+    // ════════════════════════════════════════════════════════════════
+
+    // Hints kontekstowe dla pora pobrania — kluczowe dla kortyzolu (Cushing),
+    // ACTH (oś podwzgórze-przysadka-nadnercze), testosteronu (rytm dobowy).
+    // Tekst HTML; <strong> dla highlight'ów.
+    var TIME_OF_DAY_HINTS = {
+      cortisol: {
+        morning:  '<strong>Standardowy pomiar bazowy</strong> — najwyższe stężenie dobowe (rytm dobowy). Pobieraj między 7:00–10:00. Norma poranna dorosłych ≈ 138–690 nmol/L (5–25 µg/dL).',
+        evening:  '<strong>Pomiar popołudniowo-wieczorny</strong> — norma znacząco niższa (fizjologiczne obniżenie). Brak spadku wieczornego sugeruje utratę rytmu dobowego.',
+        midnight: '<strong>Diagnostyka zespołu Cushinga</strong> — pomiar o północy (nadir rytmu). Wartość > 50 nmol/L (1,8 µg/dL) silnie sugeruje hiperkortyzolemię (Endocrine Society 2008).'
+      },
+      acth: {
+        morning:  '<strong>Standardowy pomiar bazowy</strong> — najwyższe stężenie dobowe.',
+        evening:  '<strong>Pomiar wieczorny</strong> — fizjologicznie obniżona. Podwyższona = utrata rytmu dobowego.',
+        midnight: '<strong>Diagnostyka Cushinga ACTH-zależnego</strong> — równocześnie z pomiarem kortyzolu o północy.'
+      },
+      testosterone_total: {
+        morning:  '<strong>Standardowy pomiar</strong> — między 7:00–10:00 (rytm dobowy androgenów).',
+        evening:  '<strong>Pomiar popołudniowy/wieczorny</strong> — niediagnostyczny dla hipogonadyzmu; powtórz rano.',
+        midnight: '<strong>Pomiar nocny</strong> — niediagnostyczny dla hipogonadyzmu.'
+      },
+      testosterone_free: {
+        morning:  '<strong>Standardowy pomiar</strong> — między 7:00–10:00.',
+        evening:  '<strong>Pomiar popołudniowy/wieczorny</strong> — niediagnostyczny dla hipogonadyzmu.',
+        midnight: '<strong>Pomiar nocny</strong> — niediagnostyczny dla hipogonadyzmu.'
+      }
+    };
+
+    /**
+     * Wypełnia <select id="labUnitTarget"> opcjami jednostek substancji.
+     * Domyślnie wybiera canonical_si (SI). Zachowuje wybór użytkownika
+     * dla bieżącej substancji jeśli pasuje do nowych opcji.
+     */
+    function populateUnitTargetSelect(substance, preferredSymbol) {
+      if (!unitTargetEl) return;
+      clearChildren(unitTargetEl);
+      if (!substance) return;
+      var preferred = preferredSymbol || substance.canonical_si;
+      var hasPreferred = false;
+      for (var i = 0; i < substance.units.length; i++) {
+        var u = substance.units[i];
+        var opt = document.createElement('option');
+        opt.value = u.symbol;
+        opt.textContent = u.label + (u.symbol === substance.canonical_si ? ' • SI' : '');
+        unitTargetEl.appendChild(opt);
+        if (u.symbol === preferred) hasPreferred = true;
+      }
+      unitTargetEl.value = hasPreferred ? preferred : substance.canonical_si;
+    }
+
+    /**
+     * Buduje pigułki (pills) dla pory pobrania zsynchronizowane z hidden
+     * <select id="labMeasTime">. Kliknięcie pigułki ustawia wartość
+     * w hidden select i dispatchuje 'change' — co odpala onMeasurementChange
+     * i przelicza zakres normy (zwłaszcza kluczowe dla kortyzolu o północy).
+     */
+    function populateMeasTimePills() {
+      if (!measTimePillsEl) return;
+      clearChildren(measTimePillsEl);
+      var options = [
+        { value: 'morning',  label: 'Rano (7–10)' },
+        { value: 'evening',  label: 'Popołudnie / wieczór' },
+        { value: 'midnight', label: 'Północ — Cushing' }
+      ];
+      var current = (measTimeEl && measTimeEl.value) || 'morning';
+      // Pusta wartość w hidden select = "domyślnie (rano)" — traktujemy jak 'morning'
+      if (current === '') current = 'morning';
+
+      for (var i = 0; i < options.length; i++) {
+        var opt = options[i];
+        var pill = document.createElement('button');
+        pill.type = 'button';
+        pill.className = 'lab-mini-pill';
+        pill.setAttribute('data-value', opt.value);
+        pill.textContent = opt.label;
+        if (current === opt.value) pill.classList.add('is-active');
+        pill.addEventListener('click', function () {
+          var v = this.getAttribute('data-value') || 'morning';
+          if (measTimeEl) {
+            measTimeEl.value = v;
+            try { measTimeEl.dispatchEvent(new Event('change')); }
+            catch (_) {
+              var ev = document.createEvent('Event');
+              ev.initEvent('change', true, true);
+              measTimeEl.dispatchEvent(ev);
+            }
+          }
+          // Update active state
+          var pills = measTimePillsEl.querySelectorAll('.lab-mini-pill[data-value]');
+          for (var j = 0; j < pills.length; j++) {
+            var p = pills[j];
+            // Tylko pigułki czasu (nie DST)
+            var pv = p.getAttribute('data-value');
+            if (pv === 'morning' || pv === 'evening' || pv === 'midnight') {
+              p.classList.remove('is-active');
+            }
+          }
+          this.classList.add('is-active');
+          updateMeasTimeHint();
+        });
+        measTimePillsEl.appendChild(pill);
+      }
+
+      // Dodatkowa pigułka "Po DST" — tylko dla kortyzolu (DST_AWARE).
+      // Toggle (włącz/wyłącz). Modyfikuje labMeasProtocol → post_dst.
+      if (currentSubstance && DST_AWARE[currentSubstance.id]) {
+        var dstPill = document.createElement('button');
+        dstPill.type = 'button';
+        dstPill.className = 'lab-mini-pill';
+        dstPill.setAttribute('data-value', 'dst');
+        dstPill.textContent = 'Po DST';
+        if (measProtocolEl && measProtocolEl.value === 'post_dst') {
+          dstPill.classList.add('is-active');
+        }
+        dstPill.addEventListener('click', function () {
+          var isOn = this.classList.contains('is-active');
+          if (isOn) {
+            this.classList.remove('is-active');
+            if (measProtocolEl) {
+              measProtocolEl.value = '';
+              try { measProtocolEl.dispatchEvent(new Event('change')); } catch (_) {
+                var ev = document.createEvent('Event'); ev.initEvent('change', true, true);
+                measProtocolEl.dispatchEvent(ev);
+              }
+            }
+          } else {
+            this.classList.add('is-active');
+            if (measProtocolEl) {
+              measProtocolEl.value = 'post_dst';
+              try { measProtocolEl.dispatchEvent(new Event('change')); } catch (_) {
+                var ev2 = document.createEvent('Event'); ev2.initEvent('change', true, true);
+                measProtocolEl.dispatchEvent(ev2);
+              }
+            }
+          }
+        });
+        measTimePillsEl.appendChild(dstPill);
+      }
+    }
+
+    function updateMeasTimeHint() {
+      if (!measTimeHintEl) return;
+      if (!currentSubstance) { measTimeHintEl.innerHTML = ''; return; }
+      var current = (measTimeEl && measTimeEl.value) || 'morning';
+      if (current === '') current = 'morning';
+      var hints = TIME_OF_DAY_HINTS[currentSubstance.id];
+      if (!hints) {
+        measTimeHintEl.innerHTML = 'Pora pobrania wpływa na zakres referencyjny dla tej substancji.';
+        return;
+      }
+      measTimeHintEl.innerHTML = hints[current] || '';
+    }
+
+    /**
+     * Klasyfikuje wynik względem zakresu normy (5 stanów):
+     * is-normal / is-below / is-above / is-uwaga-high / is-uwaga-low.
+     * Zwraca { state, text } lub { state: '', text: '' } gdy brak interpretacji.
+     */
+    function classifyResultState(siValue, range) {
+      if (!range || range.no_interpretation || range.low == null || range.high == null) {
+        return { state: '', text: '' };
+      }
+      if (siValue == null || !isFinite(siValue)) return { state: '', text: '' };
+      if (siValue > range.high * 2) return { state: 'is-uwaga-high', text: '⚠ Uwaga — znacznie powyżej normy' };
+      if (range.low > 0 && siValue < range.low * 0.5) return { state: 'is-uwaga-low', text: '⚠ Uwaga — znacznie poniżej normy' };
+      if (siValue < range.low)  return { state: 'is-below', text: '↓ poniżej normy' };
+      if (siValue > range.high) return { state: 'is-above', text: '↑ powyżej normy' };
+      return { state: 'is-normal', text: '✓ w zakresie normy' };
+    }
+
+    /**
+     * Aktualizuje wizualny stan numerków kroków: ✓ (done) / aktywny (pulsuje) / pending.
+     * Wyniki są deduplikowane wedle tego, co użytkownik faktycznie wypełnił.
+     */
+    function updateStepStates() {
+      var s1 = !!currentSubstance;
+      var raw = valueEl.value;
+      var hasInput = !(raw == null || String(raw).trim() === '');
+      var n = hasInput ? Conv.parseNumber(raw) : NaN;
+      var s2 = s1 && hasInput && isFinite(n) && n >= 0;
+      var s3 = s2;  // krok 3 (jednostka docelowa) ma default = SI → done gdy s2
+      var s4 = s2;  // krok 4 (opcjonalny) — mark as done gdy mamy wartość
+      var s5 = s2;  // krok 5 (opcjonalny) — mark as done gdy mamy wartość
+      var states = [
+        { num: stepNums.step1, done: s1, active: !s1 },
+        { num: stepNums.step2, done: s2, active: s1 && !s2 },
+        { num: stepNums.step3, done: s3, active: false },
+        { num: stepNums.step4, done: s4, active: false },
+        { num: stepNums.step5, done: s5, active: false }
+      ];
+      for (var i = 0; i < states.length; i++) {
+        var st = states[i];
+        if (!st.num) continue;
+        st.num.classList.remove('is-done', 'is-active');
+        if (st.done) {
+          st.num.classList.add('is-done');
+          st.num.textContent = '✓';
+        } else if (st.active) {
+          st.num.classList.add('is-active');
+          st.num.textContent = String(i + 1);
+        } else {
+          st.num.textContent = String(i + 1);
+        }
+      }
+      // Hint w kroku 3 — zaktualizuj etykietę "domyślnie SI" → konkretna jednostka.
+      if (step3HintEl) {
+        var lbl = substance_label_for_target();
+        if (lbl) step3HintEl.textContent = '— ' + lbl;
+        else step3HintEl.textContent = '— domyślnie SI';
+      }
+      // Hint w kroku 4 — domyślny placeholder gdy brak pola czasu/protokołu/metody
+      if (step4DefaultHintEl) {
+        var anyVisible = (measTimeFieldEl && measTimeFieldEl.style.display !== 'none') ||
+                         (measProtocolFieldEl && measProtocolFieldEl.style.display !== 'none') ||
+                         (measMethodFieldEl && measMethodFieldEl.style.display !== 'none');
+        step4DefaultHintEl.style.display = anyVisible ? 'none' : '';
+      }
+    }
+
+    function substance_label_for_target() {
+      if (!currentSubstance || !unitTargetEl) return '';
+      var sym = unitTargetEl.value;
+      if (!sym) return '';
+      if (sym === currentSubstance.canonical_si) return 'SI (' + sym + ')';
+      return sym;
+    }
+
+    /**
+     * Renderuje DUŻY wynik w sekcji wynikowej:
+     * – wartość liczbowa w jednostce DOCELOWEJ (kolor wg stanu),
+     * – pigułka statusu w nagłówku,
+     * – linia źródłowa (wartość źródła + współczynnik + MW).
+     * Stan 'is-empty' pokazuje placeholder.
+     */
+    function renderBigResult(substance, isValid, n, fromUnitObj) {
+      if (!resultBigEl || !resultStatusEl || !resultSourceLineEl || !resultSectionEl) return;
+      if (!substance) {
+        resultSectionEl.classList.add('is-empty');
+        resultBigEl.innerHTML = '<span class="lab-result-big-placeholder">Wybierz substancję, aby zobaczyć wynik…</span>';
+        resultStatusEl.innerHTML = '';
+        resultSourceLineEl.innerHTML = '';
+        if (showAllToggleEl) showAllToggleEl.style.display = 'none';
+        return;
+      }
+      if (!isValid) {
+        resultSectionEl.classList.add('is-empty');
+        resultBigEl.innerHTML = '<span class="lab-result-big-placeholder">Wpisz wartość, aby zobaczyć wynik…</span>';
+        resultStatusEl.innerHTML = '';
+        resultSourceLineEl.innerHTML = '';
+        if (showAllToggleEl) showAllToggleEl.style.display = 'none';
+        return;
+      }
+      resultSectionEl.classList.remove('is-empty');
+
+      // Wartość źródłowa → SI (do klasyfikacji statusu)
+      var siValue = (fromUnitObj && fromUnitObj.factor_to_si) ? n * fromUnitObj.factor_to_si : n;
+
+      // Wybór jednostki docelowej
+      var targetSym = (unitTargetEl && unitTargetEl.value) || substance.canonical_si;
+      var targetUnitObj = null;
+      for (var i = 0; i < substance.units.length; i++) {
+        if (substance.units[i].symbol === targetSym) { targetUnitObj = substance.units[i]; break; }
+      }
+      if (!targetUnitObj) {
+        targetSym = substance.canonical_si;
+        for (var k = 0; k < substance.units.length; k++) {
+          if (substance.units[k].symbol === targetSym) { targetUnitObj = substance.units[k]; break; }
+        }
+      }
+      // Wartość w jednostce docelowej (SI → docelowa: targetVal = SI / factor)
+      var targetValue = siValue;
+      if (targetUnitObj && targetUnitObj.factor_to_si) {
+        targetValue = siValue / targetUnitObj.factor_to_si;
+      }
+
+      // Klasyfikacja stanu (na podstawie SI vs zakres normy)
+      var patient = getEffectivePatient();
+      var range = Conv.selectRange(substance, patient);
+      var cls = classifyResultState(siValue, range);
+
+      // Big value
+      var precision = substance.precision || 3;
+      clearChildren(resultBigEl);
+      var valueSpan = document.createElement('span');
+      valueSpan.className = 'lab-result-big-value' + (cls.state ? ' ' + cls.state : '');
+      valueSpan.textContent = Conv.formatNumber(targetValue, precision);
+      var unitSpan = document.createElement('span');
+      unitSpan.className = 'lab-result-big-unit';
+      unitSpan.textContent = targetSym;
+      resultBigEl.appendChild(valueSpan);
+      resultBigEl.appendChild(unitSpan);
+
+      // Status pill (ten sam styl co lab-range-status)
+      clearChildren(resultStatusEl);
+      if (cls.text) {
+        var pill = document.createElement('span');
+        pill.className = 'lab-range-status ' + cls.state;
+        if (cls.state === 'is-uwaga-high' || cls.state === 'is-uwaga-low') {
+          var iconWrap = document.createElement('span');
+          iconWrap.innerHTML = '<svg class="lab-range-status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>';
+          pill.appendChild(iconWrap.firstChild);
+          var txt = document.createElement('span');
+          txt.textContent = cls.text.replace('⚠ ', '');
+          pill.appendChild(txt);
+        } else {
+          pill.textContent = cls.text;
+        }
+        resultStatusEl.appendChild(pill);
+      } else if (range && range.no_interpretation) {
+        var warn = document.createElement('span');
+        warn.className = 'lab-range-status is-above';
+        warn.textContent = '⚠ Brak interpretacji dla tej pory';
+        resultStatusEl.appendChild(warn);
+      }
+
+      // Faza 18-fix2: tylko zakres normy w wybranej jednostce docelowej.
+      // Wartość źródłowa, współczynnik konwersji i MW idą do rozwijanej tabeli
+      // "Pokaż wszystkie konwersje" — sekcja wyniku ma być czysta.
+      if (range && !range.no_interpretation && range.low != null && range.high != null) {
+        // Przelicz granice SI → jednostka docelowa
+        var lowInTarget = (targetUnitObj && targetUnitObj.factor_to_si) ?
+          range.low / targetUnitObj.factor_to_si : range.low;
+        var highInTarget = (targetUnitObj && targetUnitObj.factor_to_si) ?
+          range.high / targetUnitObj.factor_to_si : range.high;
+        resultSourceLineEl.innerHTML = '<strong>zakres:</strong> ' +
+          safeEsc(Conv.formatNumber(lowInTarget, precision)) + '–' +
+          safeEsc(Conv.formatNumber(highInTarget, precision)) + ' ' +
+          safeEsc(targetSym);
+      } else {
+        resultSourceLineEl.innerHTML = '';
+      }
+
+      // Pokaż toggle „Pokaż wszystkie konwersje"
+      if (showAllToggleEl) showAllToggleEl.style.display = '';
+    }
+
     function applySubstance(substance, rawText) {
       renderSubstanceHint(substance, rawText || (substance ? substance.label_pl : ''));
       if (!substance) {
@@ -3859,16 +4989,33 @@
         updateMeasurementFields(null);
         clearResultsView();
         renderPatientSummary();   // i tak utrzymuj nagłówek kontekstu pacjenta
+        updateStepStates();
         return;
+      }
+      // Faza 18-fix: każda zmiana substancji resetuje pole wartości i błędy,
+      // żeby uniknąć przelewania liczby z poprzedniego badania (np. wynik
+      // kortyzolu w µg/dL nie ma sensu po przełączeniu na TSH).
+      var substanceChanged = !currentSubstance || currentSubstance.id !== substance.id;
+      if (substanceChanged) {
+        valueEl.value = '';
+        showError('');
       }
       currentSubstance = substance;
       writePref(PREF_SUBSTANCE, substance.id);
       var lastUnit = readPref(PREF_UNIT + ':' + substance.id) || null;
       buildUnitOptions(substance, lastUnit);
+      // Faza 18: jednostka docelowa — domyślnie SI lub zachowana z poprzedniego wyboru
+      var lastTargetUnit = readPref(PREF_UNIT + ':target:' + substance.id) || substance.canonical_si;
+      populateUnitTargetSelect(substance, lastTargetUnit);
       updateMeasurementFields(substance);
+      // Faza 18: zbuduj pigułki pora pobrania (po updateMeasurementFields,
+      // bo to ono pokazuje/ukrywa labMeasFieldTime).
+      populateMeasTimePills();
+      updateMeasTimeHint();
       renderInfo(substance);
       renderPatientSummary();    // pokaż selektor fazy cyklu, jeśli substancja cycle-aware
       renderResults(substance);
+      updateStepStates();
     }
 
     /**
@@ -3880,35 +5027,44 @@
       if (currentSubstance) renderResults(currentSubstance);
     }
 
+    // Faza 18-fix4: pokaż/ukryj X w zależności od zawartości pola.
+    function updateSubstanceClearVisibility() {
+      if (!substanceClearEl) return;
+      var hasText = !!(substanceEl.value && substanceEl.value.length);
+      substanceClearEl.hidden = !hasText;
+    }
+
+    // Faza 18-fix: input — filtruj custom dropdown + uaktualnij hint.
+    // NIE wybieramy substancji „on-the-fly" — użytkownik musi kliknąć opcję
+    // lub nacisnąć Enter na aktywnej opcji.
     function onSubstanceInput() {
       var raw = substanceEl.value;
-      // Pole wykasowane całkowicie → natychmiast pusty stan
-      // (nie czekamy na Enter/blur — user oczywiście chciał wyczyścić).
+      updateSubstanceClearVisibility();
+      openSubstanceDropdown();      // pokaż listę (i przefiltruj wg query)
       if (!raw || !raw.trim()) {
+        // Pole wykasowane całkowicie → zerujemy stan + hint
         applySubstance(null, '');
         return;
       }
+      // Update hint (np. „21 substancji…") — bez przeładowania UI.
       var s = resolveSubstance(raw);
-      // Jeśli wpisany tekst dokładnie pasuje do nazwy/aliasu — ładujemy substancję
-      // od razu. W przeciwnym razie tylko aktualizujemy hint i czekamy na commit
-      // (Enter/blur), żeby nie przebudowywać UI po każdej literze.
-      var exact = ALIAS_INDEX.lookup(raw);
-      if (exact) {
-        if (!currentSubstance || currentSubstance.id !== exact.id) {
-          applySubstance(exact, raw);
-        } else {
-          renderSubstanceHint(exact, raw);
-        }
-      } else {
-        renderSubstanceHint(s, raw);
-      }
+      renderSubstanceHint(s, raw);
     }
 
+    // Faza 18-fix: commit następuje przez klik w dropdown LUB Enter (z dropdownu),
+    // a nie automatycznie. Ale jeśli użytkownik wkleił całą nazwę i blur'uje
+    // pole, możemy spróbować rozwiązać.
     function onSubstanceCommit() {
       var raw = substanceEl.value;
+      if (!raw || !raw.trim()) { applySubstance(null, ''); return; }
+      // Najpierw — wybór z dropdownu (aktywna opcja).
+      if (substanceDropdownVisible.length && substanceDropdownActive >= 0) {
+        selectSubstanceFromDropdown(substanceDropdownVisible[substanceDropdownActive].substance);
+        return;
+      }
+      // Fallback: rozwiąż z tekstu.
       var s = resolveSubstance(raw);
       if (s) {
-        // Podmień wpisany tekst na kanoniczną etykietę polską (np. "DHEAS" → "DHEA-S (siarczan DHEA)").
         substanceEl.value = s.label_pl;
         applySubstance(s, s.label_pl);
       } else {
@@ -3923,6 +5079,19 @@
 
     function onValueChange() {
       renderResults(currentSubstance);
+      updateStepStates();
+    }
+
+    /**
+     * Faza 18 — zmiana jednostki docelowej. Zapisujemy do preferencji
+     * (per substancja) i przeliczamy wynik bez ruszania innych pól.
+     */
+    function onUnitTargetChange() {
+      if (currentSubstance && unitTargetEl) {
+        writePref(PREF_UNIT + ':target:' + currentSubstance.id, unitTargetEl.value);
+        userSelectedTargetUnit = unitTargetEl.value;
+      }
+      renderResults(currentSubstance);
     }
 
     function onClear() {
@@ -3932,6 +5101,7 @@
       //     (placeholder, brak tabeli, brak paska normy),
       //   – karta zakresów referencyjnych ukryta,
       //   – atrybuty pomiaru (pora pobrania, test diagnostyczny) zresetowane,
+      //   – jednostka docelowa zresetowana (Faza 18),
       //   – fokus wraca na pole substancji, żeby od razu można było wpisać kolejny wynik.
       valueEl.value = '';
       substanceEl.value = '';
@@ -3939,8 +5109,12 @@
       if (measProtocolEl) measProtocolEl.value = '';
       if (measMethodEl) measMethodEl.value = '';
       measurementCtx = { time_of_day: null, test_protocol: null, method: null };
+      userSelectedTargetUnit = null;
       showError('');
       applySubstance(null, '');
+      if (typeof updateSubstanceClearVisibility === 'function') {
+        updateSubstanceClearVisibility();
+      }
       showToast('Wyczyszczono');
       try { substanceEl.focus(); } catch (_) { /* noop */ }
     }
@@ -3962,19 +5136,112 @@
     } else {
       renderSubstanceHint(null, '');
     }
+    updateSubstanceClearVisibility();    // Faza 18-fix4 — pokaż X jeśli już jest wartość
 
-    // Datalist „change" emitowane jest dopiero przy blur lub wyborze z listy.
-    // „input" reaguje na każde wpisanie/wybór z autocomplete — tu sprawdzamy
-    // exact match. Na Enter commitujemy ostateczne dopasowanie.
+    // Faza 18-fix4: klik na czerwony X — wyczyść pole + zerowy stan przelicznika.
+    if (substanceClearEl) {
+      // mousedown żeby ubiec blur inputu (focus zostaje na inpucie)
+      substanceClearEl.addEventListener('mousedown', function (e) {
+        e.preventDefault();
+      });
+      substanceClearEl.addEventListener('click', function (e) {
+        e.preventDefault();
+        substanceEl.value = '';
+        applySubstance(null, '');
+        updateSubstanceClearVisibility();
+        closeSubstanceDropdown();
+        try { substanceEl.focus(); } catch (_) { /* noop */ }
+      });
+    }
+
+    // Faza 18-fix: custom dropdown — input filtruje, focus/click otwiera,
+    // klawiatura nawiguje, click outside zamyka.
     substanceEl.addEventListener('input', onSubstanceInput);
-    substanceEl.addEventListener('change', onSubstanceCommit);
-    substanceEl.addEventListener('blur', onSubstanceCommit);
-    substanceEl.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') { e.preventDefault(); onSubstanceCommit(); }
+    substanceEl.addEventListener('focus', function () {
+      openSubstanceDropdown();
     });
+    substanceEl.addEventListener('mousedown', function () {
+      // Otwórz nawet jeśli już ma focus (klik ponowny).
+      // setTimeout, żeby focus event mógł się odpalić wcześniej.
+      setTimeout(openSubstanceDropdown, 0);
+    });
+    substanceEl.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (substanceDropdownEl.hidden) openSubstanceDropdown();
+        if (substanceDropdownVisible.length) {
+          substanceDropdownActive = Math.min(substanceDropdownVisible.length - 1, substanceDropdownActive + 1);
+          if (substanceDropdownActive < 0) substanceDropdownActive = 0;
+          highlightActiveDropdownItem();
+        }
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (substanceDropdownEl.hidden) openSubstanceDropdown();
+        if (substanceDropdownVisible.length) {
+          substanceDropdownActive = Math.max(0, substanceDropdownActive - 1);
+          highlightActiveDropdownItem();
+        }
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        onSubstanceCommit();
+      } else if (e.key === 'Escape') {
+        closeSubstanceDropdown();
+      }
+    });
+    // Click w opcję — wybierz substancję (delegacja)
+    if (substanceDropdownEl) {
+      // Użyj mousedown żeby uniknąć utraty fokusu pomiędzy klikiem a blurem.
+      substanceDropdownEl.addEventListener('mousedown', function (e) {
+        var opt = e.target && e.target.closest ? e.target.closest('.lab-substance-option') : null;
+        if (!opt) return;
+        e.preventDefault();   // żeby input nie stracił fokusu
+        var id = opt.getAttribute('data-id');
+        var s = id ? Conv.find(id) : null;
+        if (s) selectSubstanceFromDropdown(s);
+      });
+      // Hover → aktywuj item dla synchronizacji z klawiaturą
+      substanceDropdownEl.addEventListener('mouseover', function (e) {
+        var opt = e.target && e.target.closest ? e.target.closest('.lab-substance-option') : null;
+        if (!opt) return;
+        for (var i = 0; i < substanceDropdownVisible.length; i++) {
+          if (substanceDropdownVisible[i].el === opt) {
+            substanceDropdownActive = i;
+            highlightActiveDropdownItem();
+            return;
+          }
+        }
+      });
+    }
+    // Click outside — zamknij dropdown.
+    // Dropdown jest w <body>, więc wystarczy sprawdzić czy klik trafił w niego
+    // lub w sam input substancji.
+    document.addEventListener('mousedown', function (e) {
+      if (!substanceDropdownEl || substanceDropdownEl.hidden) return;
+      if (substanceEl.contains && substanceEl.contains(e.target)) return;
+      if (e.target === substanceEl) return;
+      if (substanceDropdownEl.contains && substanceDropdownEl.contains(e.target)) return;
+      closeSubstanceDropdown();
+    });
+    // Repositioning przy scroll i resize, żeby fixed-dropdown nadal kleił
+    // się pod inputem.
+    window.addEventListener('scroll', positionSubstanceDropdown, true);
+    window.addEventListener('resize', positionSubstanceDropdown);
     unitEl.addEventListener('change', onUnitChange);
     valueEl.addEventListener('input', onValueChange);
     clearBtn.addEventListener('click', onClear);
+    // Faza 18 — jednostka docelowa
+    if (unitTargetEl) unitTargetEl.addEventListener('change', onUnitTargetChange);
+    // Faza 18 — toggle "Pokaż wszystkie konwersje"
+    if (showAllToggleEl) {
+      showAllToggleEl.addEventListener('click', function () {
+        if (!conversionsTableWrapEl) return;
+        var isOpen = conversionsTableWrapEl.style.display !== 'none';
+        conversionsTableWrapEl.style.display = isOpen ? 'none' : '';
+        showAllToggleEl.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+        var label = showAllToggleEl.querySelector('span:first-child');
+        if (label) label.textContent = isOpen ? 'Pokaż wszystkie konwersje' : 'Ukryj wszystkie konwersje';
+      });
+    }
 
     // Faza 4d — karta "Zaproponuj badania"
     if (suggestSelectEl) {
@@ -4109,6 +5376,8 @@
       measurementCtx.method = (measMethodEl && measMethodEl.value) || null;
       if (currentSubstance) renderResults(currentSubstance);
       renderPatientSummary();   // żeby hint kliniczny się odświeżył
+      // Faza 18 — odśwież podpowiedź pod pigułkami (kortyzol/ACTH/testosteron).
+      updateMeasTimeHint();
     }
     if (measTimeEl) measTimeEl.addEventListener('change', onMeasurementChange);
     if (measProtocolEl) measProtocolEl.addEventListener('change', onMeasurementChange);
