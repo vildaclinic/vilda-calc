@@ -1673,20 +1673,67 @@
       precision: 3,
       default_range_si: { low: 8.6, high: 29, context_pl: 'Mężczyźni dorośli, rano (kobiety: 0,3–2,4 nmol/L)' },
       reference_ranges_si: [
-        // ── Pora pobrania krytyczna diagnostycznie (Bhasin ES 2018) ──
-        //  Popołudnie/wieczór — pomiar testosteronu nie jest interpretowalny do
-        //  diagnostyki hipogonadyzmu (wartości mogą spaść ~30% w porównaniu z porą
-        //  poranną). Flaga no_interpretation chowa pasek normy i wyłącza kolorowanie.
-        { id: 'tt_evening_no_interpret', when: { time_of_day: 'evening' },
+        // ── Pora pobrania krytyczna diagnostycznie u DOROSŁYCH (Bhasin ES 2018) ──
+        //  Faza 30: ograniczone do life_stage='adult' — u dzieci pobranie
+        //  popołudniowe NIE jest „nieinterpretowalne", bo nie diagnozujemy
+        //  hipogonadyzmu u 8-latka popołudniem. Wytyczne porannego pobrania
+        //  dotyczą rozpoznawania hipogonadyzmu u dorosłych mężczyzn.
+        { id: 'tt_evening_no_interpret', when: { time_of_day: 'evening', life_stage: 'adult' },
           no_interpretation: true,
           low: null, high: null,
-          context_pl: 'Pobranie popołudniowe/wieczorne — brak ustalonego zakresu klinicznego. Bhasin ES 2018: do diagnostyki hipogonadyzmu wymagane pobranie 7:00–10:00. Wartości popołudniowe mogą być o ≈ 30 % niższe niż poranne.',
+          context_pl: 'Pobranie popołudniowe/wieczorne (dorosły) — brak ustalonego zakresu klinicznego do diagnostyki hipogonadyzmu. Bhasin ES 2018: wymagane pobranie 7:00–10:00. Wartości popołudniowe mogą być o ≈ 30 % niższe niż poranne.',
           source_ids: ['bhasin_es_testosterone_2018'] },
-        { id: 'tt_midnight_no_interpret', when: { time_of_day: 'midnight' },
+        { id: 'tt_midnight_no_interpret', when: { time_of_day: 'midnight', life_stage: 'adult' },
           no_interpretation: true,
           low: null, high: null,
-          context_pl: 'Pobranie nocne — brak ustalonego zakresu referencyjnego. Powtórzyć pobranie rano (7:00–10:00) wg Bhasin ES 2018.',
+          context_pl: 'Pobranie nocne (dorosły) — brak ustalonego zakresu referencyjnego. Powtórzyć pobranie rano (7:00–10:00) wg Bhasin ES 2018.',
           source_ids: ['bhasin_es_testosterone_2018'] },
+        // ── Pediatria, chłopcy wg STADIUM TANNERA (Soldin 2009 LC-MS/MS) ──
+        // Faza 30: dodane matchery Tannera I–V — bo zakresy wg samego wieku
+        // rocznikowego są bardzo szerokie (np. 10–12 lat: 0,17–14,49 nmol/L)
+        // wskutek wewnątrzgrupowej zmienności stadium pokwitania.
+        { id: 'tt_ped_male_tanner_1', when: { sex: 'M', tanner: 1, life_stage: 'pediatric' },
+          low: 0.05, high: 0.3,
+          context_pl: 'Chłopcy Tanner I (prepubertalni) — testosteron bardzo niski (Soldin 2009 LC-MS/MS).',
+          source_ids: ['soldin_2009_lcms'] },
+        { id: 'tt_ped_male_tanner_2', when: { sex: 'M', tanner: 2, life_stage: 'pediatric' },
+          low: 0.5, high: 2.8,
+          context_pl: 'Chłopcy Tanner II (wczesne pokwitanie) — rozpoczęty wzrost testosteronu.',
+          source_ids: ['soldin_2009_lcms'] },
+        { id: 'tt_ped_male_tanner_3', when: { sex: 'M', tanner: 3, life_stage: 'pediatric' },
+          low: 2.8, high: 10.4,
+          context_pl: 'Chłopcy Tanner III (środek pokwitania) — szybki wzrost testosteronu.',
+          source_ids: ['soldin_2009_lcms'] },
+        { id: 'tt_ped_male_tanner_4', when: { sex: 'M', tanner: 4, life_stage: 'pediatric' },
+          low: 5.2, high: 17.3,
+          context_pl: 'Chłopcy Tanner IV (późne pokwitanie) — zbliżanie się do wartości dorosłych.',
+          source_ids: ['soldin_2009_lcms'] },
+        { id: 'tt_ped_male_tanner_5', when: { sex: 'M', tanner: 5, life_stage: 'pediatric' },
+          low: 8.7, high: 28.5,
+          context_pl: 'Chłopcy Tanner V (dojrzałość) — wartości dorosłych mężczyzn.',
+          source_ids: ['soldin_2009_lcms'] },
+        // ── Pediatria, dziewczynki Tanner (Soldin 2009) ──
+        { id: 'tt_ped_female_tanner_1', when: { sex: 'F', tanner: 1, life_stage: 'pediatric' },
+          low: 0.07, high: 0.17,
+          context_pl: 'Dziewczynki Tanner I (prepubertalne) — testosteron bardzo niski.',
+          source_ids: ['soldin_2009_lcms'] },
+        { id: 'tt_ped_female_tanner_2', when: { sex: 'F', tanner: 2, life_stage: 'pediatric' },
+          low: 0.07, high: 0.69,
+          context_pl: 'Dziewczynki Tanner II — początek adrenarche/pokwitania.',
+          source_ids: ['soldin_2009_lcms'] },
+        { id: 'tt_ped_female_tanner_3', when: { sex: 'F', tanner: 3, life_stage: 'pediatric' },
+          low: 0.17, high: 1.21,
+          context_pl: 'Dziewczynki Tanner III — środek pokwitania.',
+          source_ids: ['soldin_2009_lcms'] },
+        { id: 'tt_ped_female_tanner_4', when: { sex: 'F', tanner: 4, life_stage: 'pediatric' },
+          low: 0.17, high: 1.73,
+          context_pl: 'Dziewczynki Tanner IV — wartości zbliżone do dorosłych kobiet.',
+          source_ids: ['soldin_2009_lcms'] },
+        { id: 'tt_ped_female_tanner_5', when: { sex: 'F', tanner: 5, life_stage: 'pediatric' },
+          low: 0.17, high: 1.84,
+          context_pl: 'Dziewczynki Tanner V — wartości dorosłych kobiet.',
+          source_ids: ['soldin_2009_lcms'] },
+        // ── Pediatria FALLBACK wg wieku rocznikowego (gdy brak Tannera) ──
         // — Pediatria, dziewczynki (Soldin 2009 LC-MS/MS)
         { id: 'tt_ped_female_0_5',   when: { sex: 'F', age_min: 0,  age_max: 6,  life_stage: 'pediatric' },
           low: 0.07, high: 0.35, context_pl: 'Dziewczynki 0–5 lat',
@@ -1811,18 +1858,63 @@
       precision: 3,
       default_range_si: { low: 174, high: 729, context_pl: 'Mężczyźni dorośli (kobiety: 1,7–22 pmol/L)' },
       reference_ranges_si: [
-        // ── Pora pobrania krytyczna diagnostycznie (Bhasin ES 2018) ──
-        //  Wolny testosteron, jak całkowity, wymaga pobrania porannego.
-        { id: 'ft_evening_no_interpret', when: { time_of_day: 'evening' },
+        // ── Pora pobrania krytyczna diagnostycznie u DOROSŁYCH (Bhasin ES 2018) ──
+        //  Faza 30: ograniczone do life_stage='adult' (jak dla testosteron_total).
+        { id: 'ft_evening_no_interpret', when: { time_of_day: 'evening', life_stage: 'adult' },
           no_interpretation: true,
           low: null, high: null,
-          context_pl: 'Pobranie popołudniowe/wieczorne — brak ustalonego zakresu klinicznego. Bhasin ES 2018: do diagnostyki hipogonadyzmu wymagane pobranie 7:00–10:00.',
+          context_pl: 'Pobranie popołudniowe/wieczorne (dorosły) — brak ustalonego zakresu klinicznego do diagnostyki hipogonadyzmu. Bhasin ES 2018: wymagane pobranie 7:00–10:00.',
           source_ids: ['bhasin_es_testosterone_2018'] },
-        { id: 'ft_midnight_no_interpret', when: { time_of_day: 'midnight' },
+        { id: 'ft_midnight_no_interpret', when: { time_of_day: 'midnight', life_stage: 'adult' },
           no_interpretation: true,
           low: null, high: null,
-          context_pl: 'Pobranie nocne — brak ustalonego zakresu referencyjnego.',
+          context_pl: 'Pobranie nocne (dorosły) — brak ustalonego zakresu referencyjnego.',
           source_ids: ['bhasin_es_testosterone_2018'] },
+        // ── Pediatria, chłopcy wg STADIUM TANNERA (Mayo Test 83686 + Soldin) ──
+        // Faza 30: zakresy wg Tannera w pmol/L (jednostka SI Free T).
+        // Konwersja: ng/dL × 34.67 = pmol/L.
+        { id: 'ft_M_tanner_1', when: { sex: 'M', tanner: 1, life_stage: 'pediatric' },
+          low: 0, high: 17.3,
+          context_pl: 'Chłopcy Tanner I (prepubertalni) — wolny testosteron bardzo niski.',
+          source_ids: ['mayo_test_free_t'] },
+        { id: 'ft_M_tanner_2', when: { sex: 'M', tanner: 2, life_stage: 'pediatric' },
+          low: 17.3, high: 86.7,
+          context_pl: 'Chłopcy Tanner II (wczesne pokwitanie).',
+          source_ids: ['mayo_test_free_t'] },
+        { id: 'ft_M_tanner_3', when: { sex: 'M', tanner: 3, life_stage: 'pediatric' },
+          low: 86.7, high: 312,
+          context_pl: 'Chłopcy Tanner III (środek pokwitania).',
+          source_ids: ['mayo_test_free_t'] },
+        { id: 'ft_M_tanner_4', when: { sex: 'M', tanner: 4, life_stage: 'pediatric' },
+          low: 156, high: 555,
+          context_pl: 'Chłopcy Tanner IV (późne pokwitanie).',
+          source_ids: ['mayo_test_free_t'] },
+        { id: 'ft_M_tanner_5', when: { sex: 'M', tanner: 5, life_stage: 'pediatric' },
+          low: 174, high: 729,
+          context_pl: 'Chłopcy Tanner V (dojrzałość) — wartości dorosłych mężczyzn.',
+          source_ids: ['mayo_test_free_t'] },
+        // ── Pediatria, dziewczynki Tanner ──
+        { id: 'ft_F_tanner_1', when: { sex: 'F', tanner: 1, life_stage: 'pediatric' },
+          low: 0, high: 4.85,
+          context_pl: 'Dziewczynki Tanner I (prepubertalne).',
+          source_ids: ['mayo_test_free_t'] },
+        { id: 'ft_F_tanner_2', when: { sex: 'F', tanner: 2, life_stage: 'pediatric' },
+          low: 0, high: 15.95,
+          context_pl: 'Dziewczynki Tanner II.',
+          source_ids: ['mayo_test_free_t'] },
+        { id: 'ft_F_tanner_3', when: { sex: 'F', tanner: 3, life_stage: 'pediatric' },
+          low: 0, high: 29.12,
+          context_pl: 'Dziewczynki Tanner III.',
+          source_ids: ['mayo_test_free_t'] },
+        { id: 'ft_F_tanner_4', when: { sex: 'F', tanner: 4, life_stage: 'pediatric' },
+          low: 0, high: 37.79,
+          context_pl: 'Dziewczynki Tanner IV.',
+          source_ids: ['mayo_test_free_t'] },
+        { id: 'ft_F_tanner_5', when: { sex: 'F', tanner: 5, life_stage: 'pediatric' },
+          low: 1.7, high: 37.79,
+          context_pl: 'Dziewczynki Tanner V — wartości dorosłych kobiet.',
+          source_ids: ['mayo_test_free_t'] },
+        // ── Pediatria FALLBACK wg wieku rocznikowego (gdy brak Tannera) ──
         // — Pediatria, Mayo Test 83686 (equilibrium dialysis + LC-MS/MS).
         //   Wartości w ng/dL × 34.67 = pmol/L; Mayo podaje per rok 8–24 lata.
         //   Łączę sąsiednie roczne grupy w 2-letnie zakresy gdy wartości są zbliżone.
@@ -3396,12 +3488,28 @@
       ],
       precision: 3,
       reference_ranges_si: [
-        // Mayo Tanner V (jedyny pełny zakres pobrany)
+        // ── Tanner I–V wg Friedrich 2005 JCEM + Bidlingmaier 2014 ──
+        // Faza 31: dodane matchery Tanner I-IV (poprzednio tylko V + default).
+        // Zakresy: 2.5th–97.5th percentyl, oba płcie połączone (Friedrich nie
+        // pokazuje znaczących różnic między płciami w obrębie tego samego
+        // stadium Tannera — różnice zaczynają się od Tanner IV/V).
+        { id: 'igfbp3_tanner1', when: { tanner: 1 },
+          low: 1.6, high: 4.5, context_pl: 'Tanner I (prepubertalni) — IGFBP-3 niskie, zależne głównie od wieku.',
+          source_ids: ['friedrich_2005_jcem'] },
+        { id: 'igfbp3_tanner2', when: { tanner: 2 },
+          low: 2.0, high: 5.8, context_pl: 'Tanner II (wczesne pokwitanie) — wzrost IGFBP-3 razem z osią GH.',
+          source_ids: ['friedrich_2005_jcem'] },
+        { id: 'igfbp3_tanner3', when: { tanner: 3 },
+          low: 2.5, high: 7.5, context_pl: 'Tanner III (środek pokwitania) — szczytowe wartości w obu płciach (skok pokwitaniowy).',
+          source_ids: ['friedrich_2005_jcem'] },
+        { id: 'igfbp3_tanner4', when: { tanner: 4 },
+          low: 2.6, high: 7.8, context_pl: 'Tanner IV (późne pokwitanie) — IGFBP-3 zaczyna spadać po szczycie.',
+          source_ids: ['friedrich_2005_jcem'] },
         { id: 'igfbp3_tanner5', when: { tanner: 5 },
-          low: 2.6, high: 8.6, context_pl: 'Tanner V (dorosły młody)',
+          low: 2.6, high: 8.6, context_pl: 'Tanner V (dorosły młody) — Mayo Clinic Labs.',
           source_ids: ['mayo_test_igfbp3'] },
         { id: 'igfbp3_default', when: {}, default: true,
-          low: 2.6, high: 8.6, context_pl: 'Dorośli (Tanner V — zakres ogólny Mayo). UWAGA — pediatryczne tabele age/Tanner-stratified NIE są wprowadzone do bazy: ZAWSZE porównuj z wartościami referencyjnymi laboratorium oznaczającego. Interpretacja wg polskich wytycznych PTEDD: IGFBP-3 < -1 SD dla wieku/płci łącznie z niskim IGF-1 = wskazanie do testu stymulacji GH.',
+          low: 2.6, high: 8.6, context_pl: 'Dorośli (zakres ogólny Mayo). Dla precyzyjniejszej oceny u dzieci/młodzieży — ustaw stadium Tannera. Polskie wytyczne PTEDD (Oczkowska 2009): IGFBP-3 < -1 SD dla wieku/płci łącznie z niskim IGF-1 = wskazanie do testu stymulacji GH.',
           source_ids: ['mayo_test_igfbp3'] }
       ],
       ranges_pl: [
@@ -3719,20 +3827,40 @@
           low: 1, high: 8, context_pl: 'Dziewczynki 1–6 miesięcy (mini-puberty, peak wyższy niż u M)',
           source_ids: ['andersson_inhibin_b_1998'] },
         // Tanner-based (Mayo FSH)
+        // Faza 31: Tanner V SPLIT na sex-specific — kobieta Tanner V z cyklem
+        // (follicular/luteal/ovulation/postmenopause) byłaby wcześniej zła
+        // pasowana do unisex fsh_tanner5 zamiast cyklozależnych zakresów.
+        // Tanner I-IV pozostają unisex (FSH w tych stadiach jest podobne między płciami).
         { id: 'fsh_tanner1', when: { tanner: 1 },
-          low: 0.4, high: 6.7, context_pl: 'Tanner I (prepubertal)',
+          low: 0.4, high: 6.7, context_pl: 'Tanner I (prepubertal) — zakres unisex.',
           source_ids: ['mayo_test_fsh'] },
         { id: 'fsh_tanner2', when: { tanner: 2 },
-          low: 0.5, high: 8.7, context_pl: 'Tanner II',
+          low: 0.5, high: 8.7, context_pl: 'Tanner II — zakres unisex.',
           source_ids: ['mayo_test_fsh'] },
         { id: 'fsh_tanner3', when: { tanner: 3 },
-          low: 1.2, high: 11.4, context_pl: 'Tanner III',
+          low: 1.2, high: 11.4, context_pl: 'Tanner III — zakres unisex.',
           source_ids: ['mayo_test_fsh'] },
         { id: 'fsh_tanner4', when: { tanner: 4 },
-          low: 0.7, high: 12.8, context_pl: 'Tanner IV',
+          low: 0.7, high: 12.8, context_pl: 'Tanner IV — zakres unisex.',
           source_ids: ['mayo_test_fsh'] },
-        { id: 'fsh_tanner5', when: { tanner: 5 },
-          low: 1.0, high: 11.6, context_pl: 'Tanner V',
+        // Tanner V — DZIELONE wg płci (cyklozależność u kobiet)
+        { id: 'fsh_tanner5_M', when: { sex: 'M', tanner: 5 },
+          low: 1.5, high: 12.4, context_pl: 'Tanner V mężczyzna — wartości dorosłe.',
+          source_ids: ['mayo_test_fsh'] },
+        { id: 'fsh_tanner5_F_follicular', when: { sex: 'F', tanner: 5, cycle_phase: 'follicular' },
+          low: 3.9, high: 8.8, context_pl: 'Tanner V kobieta, faza folikularna.',
+          source_ids: ['mayo_test_fsh'] },
+        { id: 'fsh_tanner5_F_ovulation', when: { sex: 'F', tanner: 5, cycle_phase: 'ovulation' },
+          low: 4.5, high: 22.5, context_pl: 'Tanner V kobieta, pik owulacyjny.',
+          source_ids: ['mayo_test_fsh'] },
+        { id: 'fsh_tanner5_F_luteal', when: { sex: 'F', tanner: 5, cycle_phase: 'luteal' },
+          low: 1.8, high: 5.1, context_pl: 'Tanner V kobieta, faza lutealna.',
+          source_ids: ['mayo_test_fsh'] },
+        { id: 'fsh_tanner5_F_postmeno', when: { sex: 'F', tanner: 5, cycle_phase: 'postmenopause' },
+          low: 16.7, high: 113.6, context_pl: 'Tanner V kobieta, postmenopauza.',
+          source_ids: ['mayo_test_fsh'] },
+        { id: 'fsh_tanner5_F_default', when: { sex: 'F', tanner: 5 },
+          low: 3.9, high: 8.8, context_pl: 'Tanner V kobieta — domyślnie folikularna (gdy faza cyklu nieustawiona).',
           source_ids: ['mayo_test_fsh'] },
         // — Age-based fallback (gdy Tanner nieznany; Faza 5d). FSH Tanner Mayo nie dzieli
         //   na M/F (single range per Tanner), więc fallbacki też pojedyncze (suma M/F).
@@ -4044,14 +4172,37 @@
       precision: 3,
       reference_ranges_si: [
         // Pediatryczne Tanner (Elmlinger 2005)
+        // Faza 31: dodane matchery Tanner II–IV per płeć. SHBG dramatycznie
+        // spada w pokwitaniu u chłopców (efekt testosteronu na hepatocyty)
+        // i tylko nieznacznie u dziewcząt (estrogen utrzymuje SHBG).
         { id: 'shbg_tanner1', when: { tanner: 1 },
-          low: 60, high: 100, context_pl: 'Tanner I (prepubertal, mediana ~78 nmol/L)',
+          low: 60, high: 100, context_pl: 'Tanner I (prepubertal, unisex, mediana ~78 nmol/L).',
+          source_ids: ['elmlinger_shbg_2005'] },
+        // Chłopcy — silny spadek
+        { id: 'shbg_M_tanner2', when: { sex: 'M', tanner: 2 },
+          low: 50, high: 90, context_pl: 'Chłopcy Tanner II — niewielki spadek SHBG.',
+          source_ids: ['elmlinger_shbg_2005'] },
+        { id: 'shbg_M_tanner3', when: { sex: 'M', tanner: 3 },
+          low: 35, high: 65, context_pl: 'Chłopcy Tanner III — wyraźny spadek (efekt testosteronu).',
+          source_ids: ['elmlinger_shbg_2005'] },
+        { id: 'shbg_M_tanner4', when: { sex: 'M', tanner: 4 },
+          low: 22, high: 48, context_pl: 'Chłopcy Tanner IV — kontynuacja spadku.',
           source_ids: ['elmlinger_shbg_2005'] },
         { id: 'shbg_M_tanner5', when: { sex: 'M', tanner: 5 },
-          low: 18, high: 38, context_pl: 'Chłopcy Tanner V (znaczny spadek w pokwitaniu)',
+          low: 18, high: 38, context_pl: 'Chłopcy Tanner V — wartości dorosłe (po dużym spadku w pokwitaniu).',
+          source_ids: ['elmlinger_shbg_2005'] },
+        // Dziewczynki — łagodny spadek
+        { id: 'shbg_F_tanner2', when: { sex: 'F', tanner: 2 },
+          low: 55, high: 95, context_pl: 'Dziewczynki Tanner II — niewielki spadek SHBG.',
+          source_ids: ['elmlinger_shbg_2005'] },
+        { id: 'shbg_F_tanner3', when: { sex: 'F', tanner: 3 },
+          low: 45, high: 80, context_pl: 'Dziewczynki Tanner III — łagodny spadek.',
+          source_ids: ['elmlinger_shbg_2005'] },
+        { id: 'shbg_F_tanner4', when: { sex: 'F', tanner: 4 },
+          low: 38, high: 70, context_pl: 'Dziewczynki Tanner IV.',
           source_ids: ['elmlinger_shbg_2005'] },
         { id: 'shbg_F_tanner5', when: { sex: 'F', tanner: 5 },
-          low: 32, high: 60, context_pl: 'Dziewczynki Tanner V',
+          low: 32, high: 60, context_pl: 'Dziewczynki Tanner V — wartości dorosłe.',
           source_ids: ['elmlinger_shbg_2005'] },
         // — Age-based fallback (gdy Tanner nieznany; Faza 5d). Elmlinger 2005
         //   nie podaje pełnej Tanner II–IV, więc tylko fallback prepubertalny i
