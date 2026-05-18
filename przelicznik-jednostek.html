@@ -1268,6 +1268,45 @@
       .lab-notes-section-body { padding: 0 0.65rem 0.6rem; }
     }
 
+    /* ─── Faza 21: zapobieganie auto-zoom iOS na mobilkach ──────────
+       iOS Safari (i Chrome iOS) automatycznie powiększa stronę przy
+       focus inputa/selectu, jeśli jego font-size < 16 px. Bumpujemy
+       WSZYSTKIE pola formularza przelicznika do min 16 px na mobile,
+       zachowując desktop bez zmian. !important — żeby przebić bardziej
+       specyficzne reguły (.lab-step input, .lab-patient-override input). */
+    @media (max-width: 600px) {
+      .lab-step input[type="text"],
+      .lab-step input[type="number"],
+      .lab-step input[type="search"],
+      .lab-step select,
+      .lab-step textarea,
+      .lab-patient-override input,
+      .lab-patient-override select,
+      .lab-substance,
+      #labSubstance,
+      #labValue,
+      #labUnit,
+      #labUnitTarget,
+      #labMeasTime,
+      #labMeasProtocol,
+      #labMeasMethod,
+      #labOverrideSex,
+      #labOverrideAge,
+      #labOverrideAgeMonths,
+      #labOverrideCycle,
+      #labOverrideTanner,
+      #labClinicalIndication {
+        font-size: 16px !important;
+      }
+      /* Dropdown opcji substancji — też min 16 px, żeby konsystentnie
+         wyglądał w trybie filtrowania. */
+      .lab-substance-option,
+      .lab-substance-option-label,
+      .lab-substance-option-empty {
+        font-size: 16px !important;
+      }
+    }
+
     /* Karta z zakresami referencyjnymi / uwagami / źródłami. */
     .lab-card ul.lab-list {
       list-style: none;
