@@ -1090,6 +1090,14 @@
   vertical-align: middle;
   margin-right: 4px;
 }
+.vilda-patient-chart-disclaimer {
+  font-size: 11px;
+  font-style: italic;
+  color: #6a8089;
+  line-height: 1.4;
+  margin: 4px 4px 12px;
+  padding: 0;
+}
 
 /* Pusty stan */
 .vilda-patient-empty-msg {
