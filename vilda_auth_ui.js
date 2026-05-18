@@ -1525,15 +1525,44 @@
   // ============ HELPERY DLA KARTY PACJENTA (Faza 42 — koncepcja C) ============
 
   /**
-   * Faza 42: inwersja formuły LMS — z parametrów L, M, S oblicza wartość BMI
-   * dla zadanego z-score (np. -1.881 dla 3. centyla, +1.881 dla 97.).
+   * Faza 42: inwersja formuły LMS — z parametrów L, M, S oblicza wartość
+   * (BMI / wzrost / waga) dla zadanego z-score (np. -1.881 dla 3. centyla).
    */
-  function bmiAtZ(L, M, S, z) {
+  function valueAtZ(L, M, S, z) {
     if (!isFinite(L) || !isFinite(M) || !isFinite(S)) return NaN;
     if (Math.abs(L) < 1e-6) return M * Math.exp(S * z);
     var base = 1 + L * S * z;
     if (base <= 0) return NaN;
     return M * Math.pow(base, 1 / L);
+  }
+
+  /**
+   * Faza 42b: konwertuje tablicę punktów {x, y} na ścieżkę SVG z gładkimi
+   * krzywymi Béziera (Catmull-Rom przez 4 sąsiednie punkty). Daje
+   * naturalnie wyglądające siatki centylowe bez „kantów" polyline.
+   */
+  function pointsToSmoothPath(pts) {
+    if (!pts || pts.length === 0) return '';
+    if (pts.length === 1) return 'M ' + pts[0].x.toFixed(1) + ',' + pts[0].y.toFixed(1);
+    if (pts.length === 2) {
+      return 'M ' + pts[0].x.toFixed(1) + ',' + pts[0].y.toFixed(1) +
+             ' L ' + pts[1].x.toFixed(1) + ',' + pts[1].y.toFixed(1);
+    }
+    var d = 'M ' + pts[0].x.toFixed(1) + ',' + pts[0].y.toFixed(1);
+    for (var i = 0; i < pts.length - 1; i++) {
+      var p0 = pts[i - 1] || pts[i];
+      var p1 = pts[i];
+      var p2 = pts[i + 1];
+      var p3 = pts[i + 2] || pts[i + 1];
+      var c1x = p1.x + (p2.x - p0.x) / 6;
+      var c1y = p1.y + (p2.y - p0.y) / 6;
+      var c2x = p2.x - (p3.x - p1.x) / 6;
+      var c2y = p2.y - (p3.y - p1.y) / 6;
+      d += ' C ' + c1x.toFixed(1) + ',' + c1y.toFixed(1) +
+           ' '  + c2x.toFixed(1) + ',' + c2y.toFixed(1) +
+           ' '  + p2.x.toFixed(1) + ',' + p2.y.toFixed(1);
+    }
+    return d;
   }
 
   /**
@@ -1559,23 +1588,96 @@
   }
 
   /**
-   * Faza 42: buduje SVG siatki centylowej BMI z trajektorią pomiarów pacjenta.
-   * Linie: 3, 10, 50, 90, 97 percentyl (mediana pogrubiona).
-   * Wymaga globalnego getLMS(sex, months). Dla dorosłych zwraca null.
-   * @param {Array} measurements — [{ageYears, ageMonths, height, weight}, …]
+   * Faza 42b: generyczny builder siatki centylowej (BMI / wzrost / waga)
+   * z wygładzonymi krzywymi (Catmull-Rom) i trajektorią pomiarów pacjenta.
+   * Dla dorosłych (≥18 lat) zwraca null. Linie 3/10/50/90/97 percentyl.
+   * @param {string} type — 'bmi' | 'height' | 'weight'
+   * @param {Array}  measurements — [{ageYears, ageMonths, height, weight}, …]
    * @param {string} sexForCalc — M/K/chłopiec/dziewczynka
    * @param {number} currentAgeMonths — wiek bieżący (total months)
-   * @param {number} currentBmi — bieżące BMI
+   * @param {number} currentValue — bieżąca wartość metryki (BMI/cm/kg)
    * @returns {SVGElement|null}
    */
-  function buildBmiPercentileChart(measurements, sexForCalc, currentAgeMonths, currentBmi) {
-    if (typeof global.getLMS !== 'function') return null;
+  function buildPercentileChart(type, measurements, sexForCalc, currentAgeMonths, currentValue) {
     if (currentAgeMonths == null) return null;
-    if (currentAgeMonths > 216) return null; // dorosły — brak siatki centylowej
+    if (currentAgeMonths > 216) return null; // dorosły — brak siatki
+
+    // ── Konfiguracja per typ ──
+    var typeConfig;
+    if (type === 'bmi') {
+      typeConfig = {
+        title: 'BMI',
+        unit: 'kg/m²',
+        minAgeAllowed: 24,
+        yAxisStep: 4,
+        yMinClamp: 10,
+        normalizeSex: function (s) {
+          var sl = (s || '').toLowerCase();
+          if (sl === 'm' || sl === 'ch' || sl === 'chłopiec' || sl === 'male') return 'M';
+          return 'K';
+        },
+        getLms: function (sex, months) {
+          if (typeof global.getLMS !== 'function') return null;
+          var nSex = (typeof this.normalizeSex === 'function') ? this.normalizeSex(sex) : sex;
+          return global.getLMS(nSex, months);
+        },
+        extractValue: function (m) {
+          var h = parseFloat(m.height), w = parseFloat(m.weight);
+          if (!isFinite(h) || !isFinite(w) || h <= 0) return null;
+          return w / Math.pow(h / 100, 2);
+        }
+      };
+    } else if (type === 'height') {
+      typeConfig = {
+        title: 'Wzrost',
+        unit: 'cm',
+        minAgeAllowed: 0,
+        yAxisStep: 10,
+        yMinClamp: 40,
+        normalizeSex: function (s) {
+          var sl = (s || '').toLowerCase();
+          if (sl === 'm' || sl === 'ch' || sl === 'chłopiec' || sl === 'male') return 'M';
+          return 'K';
+        },
+        getLms: function (sex, months) {
+          if (typeof global.getChildLMS !== 'function') return null;
+          var nSex = (typeof this.normalizeSex === 'function') ? this.normalizeSex(sex) : sex;
+          return global.getChildLMS(nSex, months / 12, 'HT');
+        },
+        extractValue: function (m) {
+          var v = parseFloat(m.height);
+          return (isFinite(v) && v > 0) ? v : null;
+        }
+      };
+    } else if (type === 'weight') {
+      typeConfig = {
+        title: 'Waga',
+        unit: 'kg',
+        minAgeAllowed: 0,
+        yAxisStep: 5,
+        yMinClamp: 2,
+        normalizeSex: function (s) {
+          var sl = (s || '').toLowerCase();
+          if (sl === 'm' || sl === 'ch' || sl === 'chłopiec' || sl === 'male') return 'M';
+          return 'K';
+        },
+        getLms: function (sex, months) {
+          if (typeof global.getChildLMS !== 'function') return null;
+          var nSex = (typeof this.normalizeSex === 'function') ? this.normalizeSex(sex) : sex;
+          return global.getChildLMS(nSex, months / 12, 'WT');
+        },
+        extractValue: function (m) {
+          var v = parseFloat(m.weight);
+          return (isFinite(v) && v > 0) ? v : null;
+        }
+      };
+    } else {
+      return null;
+    }
 
     var svgNS = 'http://www.w3.org/2000/svg';
 
-    // ── Zakres wieku ──
+    // ── Zakres wieku z pomiarów ──
     var ages = [];
     (measurements || []).forEach(function (m) {
       if (!m) return;
@@ -1587,11 +1689,11 @@
 
     var minAgeM = Math.min.apply(null, ages);
     var maxAgeM = Math.max.apply(null, ages);
-    var ageStart = Math.max(24, Math.floor((minAgeM - 12) / 12) * 12);
+    var ageStart = Math.max(typeConfig.minAgeAllowed, Math.floor((minAgeM - 12) / 12) * 12);
     var ageEnd   = Math.min(216, Math.ceil((maxAgeM + 12) / 12) * 12);
     if (ageEnd - ageStart < 36) ageEnd = Math.min(216, ageStart + 36);
 
-    // ── Próbkowanie krzywych ──
+    // ── Próbkowanie krzywych centylowych ──
     var Z_VALUES = [
       { z: -1.881, label: '3',  color: '#9FE1CB' },
       { z: -1.282, label: '10', color: '#5DCAA5' },
@@ -1600,70 +1702,68 @@
       { z:  1.881, label: '97', color: '#9FE1CB' }
     ];
     var curves = Z_VALUES.map(function () { return []; });
-    var minBmi = Infinity, maxBmi = -Infinity;
+    var minVal = Infinity, maxVal = -Infinity;
 
     for (var mAge = ageStart; mAge <= ageEnd; mAge += 3) {
-      var lms = global.getLMS(sexForCalc, mAge);
+      var lms = typeConfig.getLms(sexForCalc, mAge);
       if (!lms) continue;
       Z_VALUES.forEach(function (zv, idx) {
-        var bmiVal = bmiAtZ(lms[0], lms[1], lms[2], zv.z);
-        if (isFinite(bmiVal)) {
-          curves[idx].push({ age: mAge, bmi: bmiVal });
-          if (bmiVal < minBmi) minBmi = bmiVal;
-          if (bmiVal > maxBmi) maxBmi = bmiVal;
+        var val = valueAtZ(lms[0], lms[1], lms[2], zv.z);
+        if (isFinite(val)) {
+          curves[idx].push({ age: mAge, val: val });
+          if (val < minVal) minVal = val;
+          if (val > maxVal) maxVal = val;
         }
       });
     }
-    if (!isFinite(minBmi) || !isFinite(maxBmi)) return null;
+    if (!isFinite(minVal) || !isFinite(maxVal)) return null;
 
     // ── Trajektoria pomiarów pacjenta ──
     var trajectory = [];
     (measurements || []).forEach(function (meas) {
       if (!meas) return;
       var ageMo = ((meas.ageYears || 0) * 12) + (meas.ageMonths || 0);
-      var h = parseFloat(meas.height), w = parseFloat(meas.weight);
-      if (!isFinite(ageMo) || !isFinite(h) || !isFinite(w) || h <= 0) return;
-      var bmiP = w / Math.pow(h / 100, 2);
-      if (ageMo >= ageStart && ageMo <= ageEnd && isFinite(bmiP)) {
-        trajectory.push({ age: ageMo, bmi: bmiP });
-      }
+      if (!isFinite(ageMo) || ageMo < ageStart || ageMo > ageEnd) return;
+      var v = typeConfig.extractValue(meas);
+      if (v == null || !isFinite(v)) return;
+      trajectory.push({ age: ageMo, val: v });
     });
-    if (currentBmi != null && isFinite(currentBmi)) {
-      if (currentBmi < minBmi) minBmi = currentBmi;
-      if (currentBmi > maxBmi) maxBmi = currentBmi;
+    if (currentValue != null && isFinite(currentValue)) {
+      if (currentValue < minVal) minVal = currentValue;
+      if (currentValue > maxVal) maxVal = currentValue;
       var inTraj = trajectory.some(function (p) {
-        return Math.abs(p.age - currentAgeMonths) < 1 && Math.abs(p.bmi - currentBmi) < 0.05;
+        return Math.abs(p.age - currentAgeMonths) < 1 && Math.abs(p.val - currentValue) < 0.05;
       });
       if (!inTraj && currentAgeMonths >= ageStart && currentAgeMonths <= ageEnd) {
-        trajectory.push({ age: currentAgeMonths, bmi: currentBmi });
+        trajectory.push({ age: currentAgeMonths, val: currentValue });
       }
     }
     trajectory.forEach(function (p) {
-      if (p.bmi < minBmi) minBmi = p.bmi;
-      if (p.bmi > maxBmi) maxBmi = p.bmi;
+      if (p.val < minVal) minVal = p.val;
+      if (p.val > maxVal) maxVal = p.val;
     });
     trajectory.sort(function (a, b) { return a.age - b.age; });
 
-    // ── Pad BMI range ──
-    var bmiRangePad = (maxBmi - minBmi) * 0.06;
-    minBmi = Math.max(10, minBmi - bmiRangePad);
-    maxBmi = maxBmi + bmiRangePad;
+    // ── Pad Y range ──
+    var rangePad = (maxVal - minVal) * 0.06;
+    minVal = Math.max(typeConfig.yMinClamp, minVal - rangePad);
+    maxVal = maxVal + rangePad;
 
     // ── Geometria SVG ──
     var W = 360, H = 220;
-    var PAD_L = 30, PAD_R = 22, PAD_T = 10, PAD_B = 24;
+    var PAD_L = 32, PAD_R = 22, PAD_T = 10, PAD_B = 24;
     var chartW = W - PAD_L - PAD_R;
     var chartH = H - PAD_T - PAD_B;
 
     function toX(ageM) { return PAD_L + (ageM - ageStart) / (ageEnd - ageStart) * chartW; }
-    function toY(bmiV) { return PAD_T + (1 - (bmiV - minBmi) / (maxBmi - minBmi)) * chartH; }
+    function toY(v)    { return PAD_T + (1 - (v - minVal) / (maxVal - minVal)) * chartH; }
 
     var svg = global.document.createElementNS(svgNS, 'svg');
     svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
     svg.setAttribute('class', 'vilda-patient-chart');
-    svg.setAttribute('aria-label', 'Siatka centylowa BMI');
+    svg.setAttribute('aria-label', 'Siatka centylowa ' + typeConfig.title);
 
-    // ── Grid X (pełne lata) + etykiety ──
+    // ── Grid X (co 2 lata) + etykiety ──
     var startY = Math.ceil(ageStart / 12) * 12;
     for (var ag = startY; ag <= ageEnd; ag += 24) {
       var xg = toX(ag);
@@ -1681,9 +1781,10 @@
       svg.appendChild(xLbl);
     }
 
-    // ── Grid Y (co 4 BMI) + etykiety ──
-    var bmiStart = Math.ceil(minBmi / 4) * 4;
-    for (var b = bmiStart; b <= maxBmi; b += 4) {
+    // ── Grid Y + etykiety ──
+    var yStep = typeConfig.yAxisStep;
+    var yStart = Math.ceil(minVal / yStep) * yStep;
+    for (var b = yStart; b <= maxVal; b += yStep) {
       var yg = toY(b);
       var gy = global.document.createElementNS(svgNS, 'line');
       gy.setAttribute('x1', PAD_L); gy.setAttribute('x2', W - PAD_R);
@@ -1712,42 +1813,47 @@
     axisY.setAttribute('stroke', '#08202C'); axisY.setAttribute('stroke-width', '0.8');
     svg.appendChild(axisY);
 
-    // ── Krzywe percentyli + etykiety ──
+    // ── Krzywe percentyli (gładkie Bézier) + etykiety końca ──
     Z_VALUES.forEach(function (zv, idx) {
       if (curves[idx].length < 2) return;
-      var pts = curves[idx].map(function (p) {
-        return toX(p.age).toFixed(1) + ',' + toY(p.bmi).toFixed(1);
-      }).join(' ');
-      var line = global.document.createElementNS(svgNS, 'polyline');
-      line.setAttribute('points', pts);
-      line.setAttribute('fill', 'none');
-      line.setAttribute('stroke', zv.color);
-      line.setAttribute('stroke-width', zv.label === '50' ? '1.5' : '1');
-      svg.appendChild(line);
+      var screenPts = curves[idx].map(function (p) {
+        return { x: toX(p.age), y: toY(p.val) };
+      });
+      var d = pointsToSmoothPath(screenPts);
+      var path = global.document.createElementNS(svgNS, 'path');
+      path.setAttribute('d', d);
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke', zv.color);
+      path.setAttribute('stroke-width', zv.label === '50' ? '1.6' : '1');
+      path.setAttribute('stroke-linecap', 'round');
+      path.setAttribute('stroke-linejoin', 'round');
+      svg.appendChild(path);
 
-      // Etykieta na końcu krzywej
       var lastPt = curves[idx][curves[idx].length - 1];
       var endLbl = global.document.createElementNS(svgNS, 'text');
       endLbl.setAttribute('x', toX(lastPt.age) + 2);
-      endLbl.setAttribute('y', toY(lastPt.bmi) + 3);
+      endLbl.setAttribute('y', toY(lastPt.val) + 3);
       endLbl.setAttribute('font-size', '9');
       endLbl.setAttribute('fill', zv.label === '50' ? '#0F6E56' : '#3a7062');
       endLbl.textContent = zv.label + 'c';
       svg.appendChild(endLbl);
     });
 
-    // ── Trajektoria pacjenta — linia ──
+    // ── Trajektoria pacjenta — gładka linia ──
     if (trajectory.length >= 2) {
-      var trajPts = trajectory.map(function (p) {
-        return toX(p.age).toFixed(1) + ',' + toY(p.bmi).toFixed(1);
-      }).join(' ');
-      var trajLine = global.document.createElementNS(svgNS, 'polyline');
-      trajLine.setAttribute('points', trajPts);
-      trajLine.setAttribute('fill', 'none');
-      trajLine.setAttribute('stroke', '#b71c1c');
-      trajLine.setAttribute('stroke-width', '1.8');
-      trajLine.setAttribute('opacity', '0.7');
-      svg.appendChild(trajLine);
+      var trajScreenPts = trajectory.map(function (p) {
+        return { x: toX(p.age), y: toY(p.val) };
+      });
+      var dTraj = pointsToSmoothPath(trajScreenPts);
+      var trajPath = global.document.createElementNS(svgNS, 'path');
+      trajPath.setAttribute('d', dTraj);
+      trajPath.setAttribute('fill', 'none');
+      trajPath.setAttribute('stroke', '#b71c1c');
+      trajPath.setAttribute('stroke-width', '1.8');
+      trajPath.setAttribute('opacity', '0.75');
+      trajPath.setAttribute('stroke-linecap', 'round');
+      trajPath.setAttribute('stroke-linejoin', 'round');
+      svg.appendChild(trajPath);
     }
 
     // ── Trajektoria pacjenta — kropki ──
@@ -1755,7 +1861,7 @@
       var isLast = idx === trajectory.length - 1;
       var c = global.document.createElementNS(svgNS, 'circle');
       c.setAttribute('cx', toX(p.age).toFixed(1));
-      c.setAttribute('cy', toY(p.bmi).toFixed(1));
+      c.setAttribute('cy', toY(p.val).toFixed(1));
       c.setAttribute('r', isLast ? '5' : '3');
       c.setAttribute('fill', isLast ? '#b71c1c' : '#fff');
       c.setAttribute('stroke', '#b71c1c');
@@ -1764,6 +1870,14 @@
     });
 
     return svg;
+  }
+
+  /**
+   * Faza 42 (zachowane dla wstecznej kompatybilności) — opakowuje generyczny
+   * builder dla typu 'bmi'. Może być usunięte gdy nic z zewnątrz nie woła.
+   */
+  function buildBmiPercentileChart(measurements, sexForCalc, currentAgeMonths, currentBmi) {
+    return buildPercentileChart('bmi', measurements, sexForCalc, currentAgeMonths, currentBmi);
   }
 
   /**
@@ -2117,21 +2231,43 @@
       antroContent.appendChild(el('p', { class: 'vilda-patient-empty-msg', text: 'Brak danych antropometrycznych do wyświetlenia.' }));
     }
 
-    // ── ZAKŁADKA „Trajektoria" — siatka centylowa + sparkline ──
+    // ── ZAKŁADKA „Trajektoria" — siatki centylowe wzrost/waga/BMI ──
     var trajContent = el('div', { class: 'vilda-patient-tab-content vilda-patient-tab-content--hidden', 'data-tab': 'traj' });
 
-    // Wykres siatki centylowej BMI (tylko dla dzieci/młodzieży)
-    var chartEl = null;
-    if (!isAdult && measurements.length > 0) {
-      try { chartEl = buildBmiPercentileChart(measurements, sexForCalc, totalAgeMonths, bmi); }
-      catch (e) { logError('buildBmiPercentileChart', e); }
+    // Helper — buduje sekcję wykresu (heading + chart wrap + legenda); zwraca count
+    function appendChartSection(label, chartElem, isFirst) {
+      if (!chartElem) return false;
+      var hClass = 'vilda-patient-section-h' + (isFirst ? '' : ' vilda-patient-section-h--secondary');
+      trajContent.appendChild(el('p', { class: hClass, text: label }));
+      trajContent.appendChild(el('div', { class: 'vilda-patient-chart-wrap' }, [chartElem]));
+      return true;
     }
-    if (chartEl) {
-      var chartTitle = 'Siatka centylowa BMI';
-      if (dataSourceLabel) chartTitle += ' · ' + dataSourceLabel;
-      trajContent.appendChild(el('p', { class: 'vilda-patient-section-h', text: chartTitle }));
-      trajContent.appendChild(el('div', { class: 'vilda-patient-chart-wrap' }, [chartEl]));
-      // Legenda
+
+    var chartsBuilt = 0;
+    if (!isAdult && measurements.length > 0) {
+      var srcSuffix = dataSourceLabel ? ' · ' + dataSourceLabel : '';
+
+      // 1) Wzrost (OLAF/WHO Hybrid)
+      try {
+        var heightChart = buildPercentileChart('height', measurements, sexForCalc, totalAgeMonths, height);
+        if (appendChartSection('Siatka centylowa wzrostu' + srcSuffix, heightChart, chartsBuilt === 0)) chartsBuilt++;
+      } catch (e) { logError('buildPercentileChart(height)', e); }
+
+      // 2) Waga (OLAF/WHO Hybrid)
+      try {
+        var weightChart = buildPercentileChart('weight', measurements, sexForCalc, totalAgeMonths, weight);
+        if (appendChartSection('Siatka centylowa wagi' + srcSuffix, weightChart, chartsBuilt === 0)) chartsBuilt++;
+      } catch (e) { logError('buildPercentileChart(weight)', e); }
+
+      // 3) BMI (OLAF lub WHO 5-19)
+      try {
+        var bmiChart = buildPercentileChart('bmi', measurements, sexForCalc, totalAgeMonths, bmi);
+        if (appendChartSection('Siatka centylowa BMI' + srcSuffix, bmiChart, chartsBuilt === 0)) chartsBuilt++;
+      } catch (e) { logError('buildPercentileChart(bmi)', e); }
+    }
+
+    // Legenda — wspólna dla wszystkich wykresów
+    if (chartsBuilt > 0) {
       trajContent.appendChild(
         el('div', { class: 'vilda-patient-chart-legend' }, [
           el('span', { class: 'vilda-patient-legend-item' }, [
@@ -2144,25 +2280,16 @@
           ])
         ])
       );
+      trajContent.appendChild(
+        el('p', { class: 'vilda-patient-chart-disclaimer', text: 'Podgląd — siatki uproszczone (5 linii percentylowych), służą do oceny trajektorii. Pełne siatki dostępne w głównym module wzrastania.' })
+      );
     }
 
-    // Sparkline wzrostu w czasie (dodatkowo, jeśli ≥ 2 pomiary)
-    if (measurements.length >= 2) {
-      var svgEl2 = buildHeightSparkline(measurements);
-      if (svgEl2) {
-        trajContent.appendChild(el('p', { class: 'vilda-patient-section-h vilda-patient-section-h--secondary', text: 'Wzrost w czasie' }));
-        trajContent.appendChild(el('div', { class: 'vilda-patient-sparkline-wrap' }, [
-          el('div', { class: 'vilda-patient-sparkline-label', text: 'wzrost (cm)' }),
-          svgEl2
-        ]));
-      }
-    }
-
-    // Fallback gdy brak czego pokazać w trajektorii
-    if (!chartEl && measurements.length < 2) {
+    // Fallback gdy nic się nie zbudowało
+    if (chartsBuilt === 0) {
       trajContent.appendChild(el('p', { class: 'vilda-patient-empty-msg', text: isAdult
-        ? 'Siatka centylowa BMI dostępna tylko dla dzieci i młodzieży (< 18 lat).'
-        : 'Brak wystarczających danych do wyświetlenia trajektorii. Wprowadź co najmniej 2 pomiary wzrostu.'
+        ? 'Siatki centylowe dostępne tylko dla dzieci i młodzieży (< 18 lat).'
+        : 'Brak wystarczających danych do wyświetlenia trajektorii. Wprowadź wzrost, wagę i wiek pacjenta.'
       }));
     }
 
