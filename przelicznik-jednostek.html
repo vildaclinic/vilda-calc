@@ -2470,9 +2470,9 @@
   <script src="ios26-ui.js?v=18" defer></script>
 
   <!-- Dane + moduł logiki (dwa pliki przygotowane do reużycia w innych podstronach). -->
-  <script src="lab_units_data.js?v=32"></script>
+  <script src="lab_units_data.js?v=34"></script>
   <script src="lab_unit_converter.js?v=3"></script>
-  <script src="lab_clinical_panels.js?v=135"></script>
+  <script src="lab_clinical_panels.js?v=136"></script>
 
   <script>
   (function () {
@@ -2696,7 +2696,11 @@
       igfbp3: true,
       lh: true,
       fsh: true,
-      shbg: true
+      shbg: true,
+      // Faza 30: testosteron jest klasycznie Tanner-zależny
+      // (Soldin 2009 + Mayo Test 83686) — szczególnie u chłopców I–V.
+      testosterone_total: true,
+      testosterone_free: true
     };
 
     // Substancje z silnym rytmem dobowym — pora pobrania zmienia interpretację.
@@ -4997,10 +5001,21 @@
     function populateMeasTimePills() {
       if (!measTimePillsEl) return;
       clearChildren(measTimePillsEl);
+      // Faza 30: etykieta dla midnight kontekstowa per substancja —
+      // „Cushing" sensowne tylko dla cortisol/ACTH; dla testosteronu midnight
+      // oznacza brak interpretacji diagnostycznej.
+      var midnightLabel = 'Północ';
+      if (currentSubstance) {
+        if (currentSubstance.id === 'cortisol' || currentSubstance.id === 'acth') {
+          midnightLabel = 'Północ — Cushing';
+        } else if (currentSubstance.id === 'testosterone_total' || currentSubstance.id === 'testosterone_free') {
+          midnightLabel = 'Noc — niediagnostyczne';
+        }
+      }
       var options = [
         { value: 'morning',  label: 'Rano (7–10)' },
         { value: 'evening',  label: 'Popołudnie / wieczór' },
-        { value: 'midnight', label: 'Północ — Cushing' }
+        { value: 'midnight', label: midnightLabel }
       ];
       var current = (measTimeEl && measTimeEl.value) || 'morning';
       // Pusta wartość w hidden select = "domyślnie (rano)" — traktujemy jak 'morning'
