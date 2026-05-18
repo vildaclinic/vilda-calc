@@ -2470,9 +2470,9 @@
   <script src="ios26-ui.js?v=18" defer></script>
 
   <!-- Dane + moduł logiki (dwa pliki przygotowane do reużycia w innych podstronach). -->
-  <script src="lab_units_data.js?v=34"></script>
-  <script src="lab_unit_converter.js?v=3"></script>
-  <script src="lab_clinical_panels.js?v=136"></script>
+  <script src="lab_units_data.js?v=35"></script>
+  <script src="lab_unit_converter.js?v=4"></script>
+  <script src="lab_clinical_panels.js?v=137"></script>
 
   <script>
   (function () {
@@ -2993,13 +2993,33 @@
       var tannerAware = !!TANNER_AWARE[currentSubstance.id];
       var cycleAware  = !!CYCLE_AWARE[currentSubstance.id];
 
-      // Hint Tannera pokazuj TYLKO gdy:
-      //   1) Tanner nie został określony (ani w main form, ani w override)
-      //   2) Substancja jest TANNER_AWARE
-      //   3) Dla tego pacjenta zakres normy realnie ZMIENIŁBY się po podaniu Tannera
-      //      (sprawdzane przez tannerMattersForPatient — porównuje matchowanie range'a
-      //      bez Tannera vs z Tannerem 1–5; jeśli żaden by nie zmienił, hint pomijamy).
-      if (tannerAware && patient.tanner == null && tannerMattersForPatient(currentSubstance, patient)) {
+      // Hint Tannera pokazuj TYLKO gdy WSZYSTKIE 4 warunki spełnione:
+      //   1) Substancja jest TANNER_AWARE
+      //   2) Pacjent jest PEDIATRYCZNY (Tanner nie ma sensu klinicznego dla dorosłych)
+      //   3) Tanner NIE został określony (ani w main form, ani w override)
+      //   4) Dla tego pacjenta zakres normy realnie ZMIENIŁBY się po podaniu Tannera
+      //
+      // Faza 32 fix regresji: przywrócony warunek (2) life_stage === 'pediatric'.
+      // Bez niego dorosły z FSH/SHBG/IGFBP-3 (substancje z unisex matcherami
+      // tanner: N bez life_stage: 'pediatric') dostawał fałszywy hint, bo
+      // hipotetyczne wstawienie tanner=2 do dorosłego matchowało fsh_tanner2
+      // (unisex), zamiast pozostać przy fsh_male_adult.
+      var tannerSetFromShared = false;
+      try {
+        if (persistence && typeof persistence.readShared === 'function') {
+          var sharedRaw = persistence.readShared(null);
+          if (sharedRaw && sharedRaw.tannerStage != null && sharedRaw.tannerStage !== '') {
+            var pStg = parseInt(sharedRaw.tannerStage, 10);
+            if (isFinite(pStg) && pStg >= 1 && pStg <= 5) tannerSetFromShared = true;
+          }
+        }
+      } catch (_) {}
+      var tannerSet = (typeof patient.tanner === 'number' && isFinite(patient.tanner)) || tannerSetFromShared;
+
+      if (tannerAware &&
+          patient.life_stage === 'pediatric' &&
+          !tannerSet &&
+          tannerMattersForPatient(currentSubstance, patient)) {
         hints.push('Określ etap Tannera w „Zmień ▼" — dla precyzyjniejszego zakresu (Mayo udostępnia tabele Tanner I–V dla tej substancji).');
       }
       // Analogicznie dla cykl/ciąża — pokaż tylko gdy fenotyp realnie wymaga.
