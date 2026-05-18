@@ -4775,27 +4775,20 @@
         if (current === opt.value) pill.classList.add('is-active');
         pill.addEventListener('click', function () {
           var v = this.getAttribute('data-value') || 'morning';
-          if (measTimeEl) {
-            measTimeEl.value = v;
-            try { measTimeEl.dispatchEvent(new Event('change')); }
-            catch (_) {
-              var ev = document.createEvent('Event');
-              ev.initEvent('change', true, true);
-              measTimeEl.dispatchEvent(ev);
-            }
-          }
+          if (measTimeEl) measTimeEl.value = v;
           // Update active state
           var pills = measTimePillsEl.querySelectorAll('.lab-mini-pill[data-value]');
           for (var j = 0; j < pills.length; j++) {
             var p = pills[j];
-            // Tylko pigułki czasu (nie DST)
             var pv = p.getAttribute('data-value');
             if (pv === 'morning' || pv === 'evening' || pv === 'midnight') {
               p.classList.remove('is-active');
             }
           }
           this.classList.add('is-active');
-          updateMeasTimeHint();
+          // Faza 22: wywołaj renderer BEZPOŚREDNIO — w iOS dispatch syntetycznego
+          // change na hidden selectie bywa zawodny. Najpewniejszy jest direct call.
+          onMeasurementChange();
         });
         measTimePillsEl.appendChild(pill);
       }
@@ -4815,23 +4808,13 @@
           var isOn = this.classList.contains('is-active');
           if (isOn) {
             this.classList.remove('is-active');
-            if (measProtocolEl) {
-              measProtocolEl.value = '';
-              try { measProtocolEl.dispatchEvent(new Event('change')); } catch (_) {
-                var ev = document.createEvent('Event'); ev.initEvent('change', true, true);
-                measProtocolEl.dispatchEvent(ev);
-              }
-            }
+            if (measProtocolEl) measProtocolEl.value = '';
           } else {
             this.classList.add('is-active');
-            if (measProtocolEl) {
-              measProtocolEl.value = 'post_dst';
-              try { measProtocolEl.dispatchEvent(new Event('change')); } catch (_) {
-                var ev2 = document.createEvent('Event'); ev2.initEvent('change', true, true);
-                measProtocolEl.dispatchEvent(ev2);
-              }
-            }
+            if (measProtocolEl) measProtocolEl.value = 'post_dst';
           }
+          // Faza 22: direct call zamiast dispatch — niezawodny na iOS.
+          onMeasurementChange();
         });
         measTimePillsEl.appendChild(dstPill);
       }
@@ -5426,14 +5409,33 @@
       measurementCtx.time_of_day = (measTimeEl && measTimeEl.value) || null;
       measurementCtx.test_protocol = (measProtocolEl && measProtocolEl.value) || null;
       measurementCtx.method = (measMethodEl && measMethodEl.value) || null;
+      // Faza 22: wymuszamy synchroniczne renderowanie + dodatkowy frame na iOS.
       if (currentSubstance) renderResults(currentSubstance);
       renderPatientSummary();   // żeby hint kliniczny się odświeżył
-      // Faza 18 — odśwież podpowiedź pod pigułkami (kortyzol/ACTH/testosteron).
       updateMeasTimeHint();
+      // Faza 22: drugi pass w następnym frame — gwarantuje repaint na iOS Safari,
+      // gdzie czasem JS-driven DOM mutations nie są commitowane przed kolejnym
+      // user event (race między native select dismiss a JS state update).
+      if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(function () {
+          if (currentSubstance) renderResults(currentSubstance);
+        });
+      }
     }
-    if (measTimeEl) measTimeEl.addEventListener('change', onMeasurementChange);
-    if (measProtocolEl) measProtocolEl.addEventListener('change', onMeasurementChange);
-    if (measMethodEl) measMethodEl.addEventListener('change', onMeasurementChange);
+    // Faza 22: na iOS Safari `change` na <select> bywa opóźnione lub niespójne
+    // z natywnym pickerem — bindujemy DWA event types ('change' + 'input') na
+    // wszystkie measure-selecty. `input` fires na większości urządzeń od razu po
+    // wyborze opcji, `change` później przy commit; oba ostatecznie wywołują tę
+    // samą funkcję (idempotentną).
+    function bindMeasListeners(el) {
+      if (!el) return;
+      el.addEventListener('change', onMeasurementChange);
+      el.addEventListener('input',  onMeasurementChange);
+      el.addEventListener('blur',   onMeasurementChange);
+    }
+    bindMeasListeners(measTimeEl);
+    bindMeasListeners(measProtocolEl);
+    bindMeasListeners(measMethodEl);
     if (overrideResetEl) overrideResetEl.addEventListener('click', function () {
       localOverride = { sex: null, age: null, tanner: null, cycle_phase: null };
       overrideSexEl.value = '';
