@@ -852,14 +852,18 @@
       color: #7a8587;
       font-style: italic;
     }
+    /* Faza 22b — zakres normy: pod paskiem, duża, czarna, jednolita czcionka.
+       Wszystkie elementy w jednym kolorze #1a1a1a (czarny). */
     .lab-result-source {
-      font-size: 0.82rem;
-      color: #5a6a6e;
-      margin: 0 0 1rem 0;
+      font-size: 1.05rem;
+      color: #1a1a1a;
+      margin: 1rem 0 0.5rem 0;
       font-variant-numeric: tabular-nums;
       line-height: 1.5;
+      text-align: center;
+      font-weight: 500;
     }
-    .lab-result-source strong { color: #2a3a3c; font-weight: 500; }
+    .lab-result-source strong { color: #1a1a1a; font-weight: 600; }
     .lab-show-all-toggle {
       margin-top: 1rem;
       padding: 0.6rem 0.85rem;
@@ -2090,9 +2094,10 @@
               <div class="lab-result-big" id="labResultBig">
                 <span class="lab-result-big-placeholder">Wpisz wartość, aby zobaczyć wynik…</span>
               </div>
-              <div class="lab-result-source" id="labResultSourceLine"></div>
               <!-- Pasek-skala (Faza 17c — Linear Flow z markerem) -->
               <div id="labRangeBlock"></div>
+              <!-- Faza 22b — zakres normy POD paskiem, duża czarna czcionka -->
+              <div class="lab-result-source" id="labResultSourceLine"></div>
               <!-- „Pokaż wszystkie konwersje" — rozwijana tabela 5 jednostek -->
               <button type="button" class="lab-show-all-toggle" id="labShowAllToggle"
                       aria-expanded="false" aria-controls="labConversionsTableWrap"
@@ -4224,55 +4229,9 @@
         card.appendChild(note);
       }
 
-      // Faza 18-fix2: tylko etykiety dolnej i górnej granicy w wybranej
-      // jednostce docelowej (bez 0, bez max).
-      var labels = document.createElement('div');
-      labels.className = 'lab-range-labels';
-
-      // Konwertuj granice SI → jednostka docelowa (jeśli user wybrał inną).
-      var labelLow = low, labelHigh = high, labelUnit = siUnit;
-      var targetSym = (unitTargetEl && unitTargetEl.value) || siUnit;
-      if (targetSym && targetSym !== siUnit) {
-        var targetObj = null;
-        for (var ti = 0; ti < substance.units.length; ti++) {
-          if (substance.units[ti].symbol === targetSym) { targetObj = substance.units[ti]; break; }
-        }
-        if (targetObj && targetObj.factor_to_si) {
-          labelLow = low / targetObj.factor_to_si;
-          labelHigh = high / targetObj.factor_to_si;
-          labelUnit = targetSym;
-        }
-      }
-
-      function labelAt(pct, text, cls) {
-        var el = document.createElement('span');
-        if (cls) el.className = cls;
-        el.style.left = pct.toFixed(2) + '%';
-        el.textContent = text;
-        labels.appendChild(el);
-      }
-      // Faza 18-fix5: etykiety centrowane na ticku (granica zielonego paska).
-      // Edge-clamp: gdy bardzo blisko 0% lub 100%, etykieta nie ucieka poza
-      // pasek — tick zostaje na pozycji, etykieta przesuwa się do krawędzi.
-      function pickClass(pct, role) {
-        if (pct < 10) return 'lab-range-label-edge-left';
-        if (pct > 90) return 'lab-range-label-edge-right';
-        return role;   // domyślnie centrowanie translateX(-50%)
-      }
-      if (highPct - lowPct > 14) {
-        labelAt(lowPct, Conv.formatNumber(labelLow, precision),
-                pickClass(lowPct, 'lab-range-label-low'));
-        labelAt(highPct, Conv.formatNumber(labelHigh, precision) + ' ' + labelUnit,
-                pickClass(highPct, 'lab-range-label-high'));
-      } else {
-        // Etykiety nakładałyby się — pokaż wspólny zakres centrowany między nimi.
-        var mid = (lowPct + highPct) / 2;
-        labelAt(mid, Conv.formatNumber(labelLow, precision) + '–' +
-                     Conv.formatNumber(labelHigh, precision) + ' ' + labelUnit,
-                'lab-range-label-combined');
-      }
-
-      card.appendChild(labels);
+      // Faza 22b: usunięto etykiety low/high pod paskiem — zakres jest teraz
+      // pokazywany poniżej całego paska jako wyraźna, czarna etykieta
+      // (resultSourceLineEl). Marker pozycji zostaje.
       return { element: card, rangeInfo: range };
     }
 
