@@ -100,7 +100,7 @@
        (formularz lewo, wyniki prawo, info i disclaimer pod spodem). */
     .lab-container {
       max-width: 1200px;
-      margin: 2rem auto;
+      margin: 1rem auto;
     }
 
     .lab-grid {
@@ -1035,6 +1035,11 @@
       margin-top: 0.7rem;
       box-shadow: inset 0 1px 2px rgba(0,0,0,0.06);
     }
+    /* Faza 27: --low-dark-pct i --high-dark-pct są dynamicznie wyliczane w JS
+       żeby gdy low=0 (np. Tg post-TT basal) ciemnopomarańczowa strefa
+       „głęboko poniżej normy" zniknęła całkowicie, a nie pozostała widoczna
+       od 0% do 12% — co dotychczas powodowało, że marker normalnej wartości
+       wpadał wizualnie na pomarańczowe tło. */
     .lab-range-scale::before {
       content: '';
       position: absolute;
@@ -1042,12 +1047,12 @@
       border-radius: 5px;
       background: linear-gradient(to right,
         rgba(166, 73, 30, 0.55) 0%,
-        rgba(216, 90, 48, 0.35) 12%,
+        rgba(216, 90, 48, 0.35) var(--low-dark-pct, 12%),
         rgba(216, 90, 48, 0.35) var(--low-pct, 25%),
         rgba(29, 158, 117, 0.50) var(--low-pct, 25%),
         rgba(29, 158, 117, 0.50) var(--high-pct, 75%),
         rgba(185, 28, 28, 0.45) var(--high-pct, 75%),
-        rgba(185, 28, 28, 0.45) 88%,
+        rgba(185, 28, 28, 0.45) var(--high-dark-pct, 88%),
         rgba(167, 16, 16, 0.55) 100%);
     }
     .lab-range-marker {
@@ -2944,6 +2949,36 @@
     }
 
     /**
+     * Sprawdza CZY Tanner realnie zmieniłby zakres referencyjny dla TEGO
+     * pacjenta. Algorytm: bierze bieżący match (bez Tannera) i sprawdza,
+     * czy wybór któregokolwiek z Tanner 1–5 dawałby INNY range (po id).
+     * Jeśli wszystkie warianty Tannera dają ten sam range co bieżący —
+     * Tanner jest nieistotny i hint nie ma sensu.
+     */
+    function tannerMattersForPatient(substance, patient) {
+      if (!substance || !patient) return false;
+      if (!Array.isArray(substance.reference_ranges_si)) return false;
+      var Conv2 = (window.LabUnitConverter || window.Conv);
+      if (!Conv2 || typeof Conv2.selectRange !== 'function') return true;  // brak narzędzia → bezpieczny fallback
+      var baselineRange = Conv2.selectRange(substance, patient);
+      var baselineId = baselineRange && baselineRange.id;
+      for (var t = 1; t <= 5; t++) {
+        var modified = {};
+        for (var k in patient) { if (Object.prototype.hasOwnProperty.call(patient, k)) modified[k] = patient[k]; }
+        modified.tanner = t;
+        // Tanner V w izolacji = dorosły, niższe = pediatryczny — przelicz life_stage
+        // tak jak getEffectivePatient gdy brak age.
+        if (typeof modified.age !== 'number') {
+          modified.life_stage = (t >= 5) ? 'adult' : 'pediatric';
+        }
+        var hypoRange = Conv2.selectRange(substance, modified);
+        var hypoId = hypoRange && hypoRange.id;
+        if (hypoId !== baselineId) return true;
+      }
+      return false;
+    }
+
+    /**
      * Buduje tekst „kliniczny hint" — sugestię, że uzupełnienie konkretnego
      * pola (Tanner, faza cyklu) zaowocuje precyzyjniejszym zakresem normy.
      * Zwraca pusty string, gdy nic nie warto sugerować.
@@ -2954,9 +2989,16 @@
       var tannerAware = !!TANNER_AWARE[currentSubstance.id];
       var cycleAware  = !!CYCLE_AWARE[currentSubstance.id];
 
-      if (tannerAware && patient.life_stage === 'pediatric' && patient.tanner == null) {
+      // Hint Tannera pokazuj TYLKO gdy:
+      //   1) Tanner nie został określony (ani w main form, ani w override)
+      //   2) Substancja jest TANNER_AWARE
+      //   3) Dla tego pacjenta zakres normy realnie ZMIENIŁBY się po podaniu Tannera
+      //      (sprawdzane przez tannerMattersForPatient — porównuje matchowanie range'a
+      //      bez Tannera vs z Tannerem 1–5; jeśli żaden by nie zmienił, hint pomijamy).
+      if (tannerAware && patient.tanner == null && tannerMattersForPatient(currentSubstance, patient)) {
         hints.push('Określ etap Tannera w „Zmień ▼" — dla precyzyjniejszego zakresu (Mayo udostępnia tabele Tanner I–V dla tej substancji).');
       }
+      // Analogicznie dla cykl/ciąża — pokaż tylko gdy fenotyp realnie wymaga.
       if (cycleAware && patient.sex === 'F' && patient.life_stage === 'adult' && !patient.cycle_phase) {
         hints.push('Określ fazę cyklu / ciążę w „Zmień ▼" — domyślnie pokazujemy zakres folikularny.');
       }
@@ -4415,10 +4457,21 @@
       var lowPct  = clamp((low - scaleMin) / (scaleMax - scaleMin) * 100, 0, 100);
       var highPct = clamp((high - scaleMin) / (scaleMax - scaleMin) * 100, 0, 100);
 
+      // Faza 27: dynamiczne pozycje stopów „dark zone" (głęboko poniżej / powyżej
+      // normy). Gdy low_pct = 0 (np. Tg post-TT basal, low=0) — strefa
+      // ciemnopomarańczowa znika (lowDarkPct = 0), więc pasek zaczyna się od
+      // razu zielono. Analogicznie dla high_pct bliskiego 100% — strefa
+      // ciemnoczerwona kurczy się. Zapobiega to wizualnemu zaliczaniu markera
+      // normalnej wartości na pomarańczowe tło.
+      var lowDarkPct  = Math.min(12, lowPct * 0.5);
+      var highDarkPct = Math.max(88, highPct + (100 - highPct) * 0.5);
+
       var scale = document.createElement('div');
       scale.className = 'lab-range-scale';
-      scale.style.setProperty('--low-pct',  lowPct.toFixed(2) + '%');
-      scale.style.setProperty('--high-pct', highPct.toFixed(2) + '%');
+      scale.style.setProperty('--low-pct',       lowPct.toFixed(2) + '%');
+      scale.style.setProperty('--high-pct',      highPct.toFixed(2) + '%');
+      scale.style.setProperty('--low-dark-pct',  lowDarkPct.toFixed(2) + '%');
+      scale.style.setProperty('--high-dark-pct', highDarkPct.toFixed(2) + '%');
 
       if (v != null) {
         var rawPct = (v - scaleMin) / (scaleMax - scaleMin) * 100;
