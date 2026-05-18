@@ -504,13 +504,15 @@
       animation: lab-step-glow 2s ease-in-out infinite;
     }
     .lab-step-body { flex: 1; min-width: 0; }
+    /* Faza 34: czarne etykiety kroków (Substancja, Wartość, Pora pomiaru,
+       Pacjent, Wynik) — lepsza czytelność na produkcji. */
     .lab-step-label {
       font-size: 0.72rem;
-      color: #7a8587;
+      color: #1a1a1a;
       text-transform: uppercase;
       letter-spacing: 0.05em;
       margin-bottom: 0.35rem;
-      font-weight: 500;
+      font-weight: 600;
     }
     .lab-step-label-hint {
       color: #00838d;
@@ -520,7 +522,7 @@
       margin-left: 0.4rem;
     }
     .lab-step-label-opt {
-      color: #7a8587;
+      color: #1a1a1a;
       text-transform: none;
       letter-spacing: 0;
       font-weight: 400;
@@ -847,10 +849,10 @@
     }
     .lab-result-title {
       font-size: 0.74rem;
-      color: #7a8587;
+      color: #1a1a1a;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      font-weight: 500;
+      font-weight: 600;
     }
     .lab-result-big {
       display: flex;
@@ -2165,7 +2167,6 @@
           <!-- ===== Faza 18 — Smart Form (jedna karta, jedna kolumna, 5 kroków) ===== -->
           <div class="lab-card lab-full lab-smart-card" id="labResultsCard">
             <h1>Przelicznik jednostek laboratoryjnych</h1>
-            <p class="lab-subtitle">Hormony osi nadnerczowo‑gonadalnej, steroidy płciowe, witamina D — pomiędzy jednostkami konwencjonalnymi (μg/dL, ng/mL, pg/mL) a SI (nmol/L, pmol/L, μmol/L).</p>
 
             <!-- Krok 1: Substancja -->
             <div class="lab-step" id="labStep1">
@@ -5121,22 +5122,27 @@
     function populateMeasTimePills() {
       if (!measTimePillsEl) return;
       clearChildren(measTimePillsEl);
+      // Faza 34: dla testosteronu USUWAMY pill „Północ" całkowicie —
+      // pomiar nocny testosteronu nie ma żadnego zastosowania diagnostycznego
+      // (nie ma jak dla kortyzolu/ACTH diagnostyki Cushinga), więc nie ma sensu
+      // pokazywać tej opcji w UI.
+      var isTestosterone = currentSubstance && (
+        currentSubstance.id === 'testosterone_total' ||
+        currentSubstance.id === 'testosterone_free'
+      );
       // Faza 30: etykieta dla midnight kontekstowa per substancja —
-      // „Cushing" sensowne tylko dla cortisol/ACTH; dla testosteronu midnight
-      // oznacza brak interpretacji diagnostycznej.
+      // „Cushing" sensowne tylko dla cortisol/ACTH.
       var midnightLabel = 'Północ';
-      if (currentSubstance) {
-        if (currentSubstance.id === 'cortisol' || currentSubstance.id === 'acth') {
-          midnightLabel = 'Północ — Cushing';
-        } else if (currentSubstance.id === 'testosterone_total' || currentSubstance.id === 'testosterone_free') {
-          midnightLabel = 'Noc — niediagnostyczne';
-        }
+      if (currentSubstance && (currentSubstance.id === 'cortisol' || currentSubstance.id === 'acth')) {
+        midnightLabel = 'Północ — Cushing';
       }
       var options = [
         { value: 'morning',  label: 'Rano (7–10)' },
-        { value: 'evening',  label: 'Popołudnie / wieczór' },
-        { value: 'midnight', label: midnightLabel }
+        { value: 'evening',  label: 'Popołudnie / wieczór' }
       ];
+      if (!isTestosterone) {
+        options.push({ value: 'midnight', label: midnightLabel });
+      }
       var current = (measTimeEl && measTimeEl.value) || 'morning';
       // Pusta wartość w hidden select = "domyślnie (rano)" — traktujemy jak 'morning'
       if (current === '') current = 'morning';
