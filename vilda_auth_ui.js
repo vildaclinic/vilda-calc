@@ -2255,9 +2255,9 @@
     }
 
     // Faza 42 — usunięto stary płaski statsChildren; statystyki są teraz pogrupowane
-    // (Pomiar / Wzrastanie i genetyka) i budowane wewnątrz zakładki „Antropometria".
+    // (Pomiar / Wzrastanie i genetyka) i budowane wewnątrz zakładki „Status".
 
-    // ── Faza 42 — KONCEPCJA C: kompaktowy hero + zakładki Antropometria / Trajektoria ──
+    // ── Faza 42 — KONCEPCJA C: kompaktowy hero + zakładki Status / Siatki centylowe ──
     var ageStr = '';
     if (age != null) {
       ageStr = age + ' lat';
@@ -2297,18 +2297,18 @@
     var tabAntro = el('button', {
       class: 'vilda-patient-tab vilda-patient-tab--active',
       type: 'button',
-      text: 'Antropometria',
+      text: 'Status',
       'data-tab': 'antro'
     });
     var tabTraj = el('button', {
       class: 'vilda-patient-tab',
       type: 'button',
-      text: 'Trajektoria',
+      text: 'Siatki centylowe',
       'data-tab': 'traj'
     });
     var tabBar = el('div', { class: 'vilda-patient-tabs', role: 'tablist' }, [tabAntro, tabTraj]);
 
-    // ── ZAKŁADKA „Antropometria" — pogrupowane statystyki ──
+    // ── ZAKŁADKA „Status" — pogrupowane statystyki ──
     var antroContent = el('div', { class: 'vilda-patient-tab-content', 'data-tab': 'antro' });
 
     // Grupa: Pomiar (Wzrost / Waga / BMI / Cole)
@@ -2359,7 +2359,7 @@
       antroContent.appendChild(el('p', { class: 'vilda-patient-empty-msg', text: 'Brak danych antropometrycznych do wyświetlenia.' }));
     }
 
-    // ── ZAKŁADKA „Trajektoria" — siatki centylowe wzrost/waga/BMI ──
+    // ── ZAKŁADKA „Siatki centylowe" — wzrost/waga/BMI ──
     var trajContent = el('div', { class: 'vilda-patient-tab-content vilda-patient-tab-content--hidden', 'data-tab': 'traj' });
 
     // Helper — buduje sekcję wykresu (heading + chart wrap + legenda); zwraca count
