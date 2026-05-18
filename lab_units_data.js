@@ -3107,6 +3107,48 @@
       ],
       precision: 3,
       reference_ranges_si: [
+        // ─── Jawne dopasowania przez test_protocol (Faza 20) ───
+        // Te wpisy mają PRIORYTET — gdy użytkownik wybierze z dropdownu konkretną
+        // opcję, dopasowanie idzie bezpośrednio po test_protocol, niezależnie od
+        // danych pacjenta. To pozwala lekarzowi szybko sprawdzić wynik wg dowolnej
+        // kategorii bez ustawiania wieku pacjenta.
+        { id: 'tg_intact_infant_explicit',
+          when: { test_protocol: 'tg_intact_infant' },
+          low: 0, high: 78,
+          context_pl: 'Niemowlęta i dzieci 0–2 lat z zachowaną tarczycą — zakres rozszerzony (do ~78 ng/mL); fizjologiczna podwyższona Tg wskutek przebudowy tarczycy po urodzeniu (Spencer 2007; van Trotsenburg 2021).',
+          source_ids: ['mayo_test_tg'] },
+        { id: 'tg_intact_child_explicit',
+          when: { test_protocol: 'tg_intact_child' },
+          low: 0, high: 40,
+          context_pl: 'Dzieci 2–19 lat z zachowaną tarczycą — zakres zbliżony do dorosłych z możliwą fizjologiczną elewacją w okresach intensywnego wzrostu/pokwitania.',
+          source_ids: ['mayo_test_tg'] },
+        { id: 'tg_intact_adult_explicit',
+          when: { test_protocol: 'tg_intact_adult' },
+          low: 0, high: 33,
+          context_pl: 'Zachowana tarczyca (cała lub po lobektomii) — zdrowi dorośli (Mayo adult range).',
+          source_ids: ['mayo_test_tg', 'jarzab_dtc_adults_2022'] },
+        { id: 'tg_post_tt_basal_adult_explicit',
+          when: { test_protocol: 'tg_post_tt_basal_adult' },
+          low: 0, high: 0.2,
+          context_pl: 'Dorośli, po total thyroidectomy (na L-tyroksynie, bazalny): excellent response < 0,2 ng/mL. Wartości 0,2–5 (po RAI) lub > 1 (bez RAI) = biochemical incomplete; > 5 = persistent disease.',
+          source_ids: ['jarzab_dtc_adults_2022'] },
+        { id: 'tg_post_tt_stim_adult_explicit',
+          when: { test_protocol: 'tg_post_tt_stim_adult' },
+          low: 0, high: 1.0,
+          context_pl: 'Dorośli, po total thyroidectomy + RAI (stymulowany): excellent response < 1 ng/mL. Po thyroidectomy bez RAI: próg excellent < 2 ng/mL. Wartość > 10 ng/mL = biochemical incomplete.',
+          source_ids: ['jarzab_dtc_adults_2022'] },
+        { id: 'tg_post_tt_basal_ped_explicit',
+          when: { test_protocol: 'tg_post_tt_basal_ped' },
+          low: 0, high: 1.0,
+          context_pl: 'Dzieci, po total thyroidectomy (bazalny): excellent response ≤ 1,0 ng/mL. Wartości > 1 = biochemical incomplete.',
+          source_ids: ['handkiewicz_junak_dtc_children_2024'] },
+        { id: 'tg_post_tt_stim_ped_explicit',
+          when: { test_protocol: 'tg_post_tt_stim_ped' },
+          low: 0, high: 2.0,
+          context_pl: 'Dzieci, po total thyroidectomy (stymulowany): excellent response ≤ 2,0 ng/mL. Wartość > 10 = biochemical incomplete (wymaga indywidualnej oceny).',
+          source_ids: ['handkiewicz_junak_dtc_children_2024'] },
+        // ─── Stara ścieżka — fallback gdy test_protocol pusty (auto) ───
+        // Dopasowanie via life_stage / age (wymaga ustawienia kontekstu pacjenta).
         // Po total thyroidectomy — bazalny (na L-tyroksynie)
         { id: 'tg_post_tt_basal_adult',
           when: { life_stage: 'adult', test_protocol: 'post_thyroidectomy_basal' },
@@ -3129,11 +3171,7 @@
           low: 0, high: 2.0,
           context_pl: 'Dzieci, po total thyroidectomy (stymulowany): excellent response ≤ 2,0 ng/mL. Wartość > 10 = biochemical incomplete (wymaga indywidualnej oceny).',
           source_ids: ['handkiewicz_junak_dtc_children_2024'] },
-        // Zachowana tarczyca — stratyfikacja pediatryczna
-        // U noworodków i niemowląt Tg jest fizjologicznie wyższa wskutek
-        // utrzymującej się przebudowy tarczycy po urodzeniu. Wartości spadają
-        // do zakresu adult-like ~ 2 r.ż. (Spencer 2007, Endocrine Reviews;
-        // van Trotsenburg 2021).
+        // Zachowana tarczyca — stratyfikacja pediatryczna (Spencer 2007; van Trotsenburg 2021)
         { id: 'tg_intact_infant',
           when: { age_min: 0, age_max: 2, life_stage: 'pediatric' },
           low: 0, high: 78,
