@@ -1627,6 +1627,8 @@
         minAgeAllowed: 24,
         yAxisStep: 4,
         yMinClamp: 10,
+        sampleStep: 12,    // Faza 42d: rzadziej dla BMI (co rok) — krzywe gładsze
+        smoothWindow: 2,   // 5-punktowy moving average eliminuje szum LMS
         normalizeSex: function (s) {
           var sl = (s || '').toLowerCase();
           if (sl === 'm' || sl === 'ch' || sl === 'chłopiec' || sl === 'male') return 'M';
@@ -1650,6 +1652,8 @@
         minAgeAllowed: 0,
         yAxisStep: 10,
         yMinClamp: 40,
+        sampleStep: 3,
+        smoothWindow: 0,
         normalizeSex: function (s) {
           var sl = (s || '').toLowerCase();
           if (sl === 'm' || sl === 'ch' || sl === 'chłopiec' || sl === 'male') return 'M';
@@ -1672,6 +1676,8 @@
         minAgeAllowed: 0,
         yAxisStep: 5,
         yMinClamp: 2,
+        sampleStep: 3,
+        smoothWindow: 0,
         normalizeSex: function (s) {
           var sl = (s || '').toLowerCase();
           if (sl === 'm' || sl === 'ch' || sl === 'chłopiec' || sl === 'male') return 'M';
@@ -1720,18 +1726,43 @@
     var curves = Z_VALUES.map(function () { return []; });
     var minVal = Infinity, maxVal = -Infinity;
 
-    for (var mAge = ageStart; mAge <= ageEnd; mAge += 3) {
+    var step = (typeConfig.sampleStep && typeConfig.sampleStep > 0) ? typeConfig.sampleStep : 3;
+    for (var mAge = ageStart; mAge <= ageEnd; mAge += step) {
       var lms = typeConfig.getLms(sexForCalc, mAge);
       if (!lms) continue;
       Z_VALUES.forEach(function (zv, idx) {
         var val = valueAtZ(lms[0], lms[1], lms[2], zv.z);
         if (isFinite(val)) {
           curves[idx].push({ age: mAge, val: val });
-          if (val < minVal) minVal = val;
-          if (val > maxVal) maxVal = val;
         }
       });
     }
+
+    // Faza 42d — moving average smoothing dla krzywych percentyli (głównie BMI).
+    // Eliminuje miesięczne wahania w tabelach LMS i artefakty na granicy WHO/OLAF.
+    var sw = (typeConfig.smoothWindow && typeConfig.smoothWindow > 0) ? typeConfig.smoothWindow : 0;
+    if (sw > 0) {
+      curves = curves.map(function (curve) {
+        if (curve.length < 3) return curve;
+        var smoothed = [];
+        for (var i = 0; i < curve.length; i++) {
+          var lo = Math.max(0, i - sw);
+          var hi = Math.min(curve.length - 1, i + sw);
+          var sum = 0, count = 0;
+          for (var j = lo; j <= hi; j++) { sum += curve[j].val; count++; }
+          smoothed.push({ age: curve[i].age, val: sum / count });
+        }
+        return smoothed;
+      });
+    }
+
+    // Po smoothingu — aktualny zakres min/max
+    curves.forEach(function (curve) {
+      curve.forEach(function (p) {
+        if (p.val < minVal) minVal = p.val;
+        if (p.val > maxVal) maxVal = p.val;
+      });
+    });
     if (!isFinite(minVal) || !isFinite(maxVal)) return null;
 
     // ── Trajektoria pomiarów pacjenta ──
