@@ -2856,33 +2856,122 @@
      * Czyta wiek/płeć/Tanner z VildaPersistence.readShared(). Zwraca obiekt
      * { sex, age, tanner, source: 'shared' } lub null.
      */
-    function readPatientFromShared() {
-      if (!persistence || typeof persistence.readShared !== 'function') return null;
+    /**
+     * Faza 33: BULLETPROOF lookup wartości pacjenta z wielu źródeł.
+     * Niektóre wersje VildaPersistence / iOS PWA mogą inaczej obsługiwać readShared,
+     * dlatego oprócz adaptera czytamy też BEZPOŚREDNIO z localStorage/sessionStorage
+     * i sprawdzamy wszystkie znane wzory zapisu Tannera/wieku/płci.
+     */
+    function readRawFromStorage(key) {
       try {
-        var shared = persistence.readShared(null);
-        if (!shared) return null;
-        var ageRaw = shared.age;
-        var ageNum = (ageRaw == null || ageRaw === '') ? null : Number(ageRaw);
-        var monthsRaw = shared.ageMonths;
-        var monthsNum = (monthsRaw == null || monthsRaw === '') ? null : Number(monthsRaw);
-        if (ageNum != null && isFinite(ageNum) && monthsNum != null && isFinite(monthsNum)) {
-          ageNum = ageNum + monthsNum / 12;
+        if (typeof localStorage !== 'undefined' && localStorage.getItem) {
+          var v = localStorage.getItem(key);
+          if (v != null) return v;
         }
-        var sex = (shared.sex === 'M' || shared.sex === 'F') ? shared.sex : null;
-        var tannerRaw = shared.tannerStage;
-        var tannerVal = null;
-        if (tannerRaw != null && tannerRaw !== '') {
-          var tn = parseInt(tannerRaw, 10);
-          if (isFinite(tn) && tn >= 1 && tn <= 5) tannerVal = tn;
+      } catch (_) {}
+      try {
+        if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem) {
+          var s = sessionStorage.getItem(key);
+          if (s != null) return s;
         }
-        if (sex == null && ageNum == null && tannerVal == null) return null;
-        return {
-          sex: sex,
-          age: (ageNum != null && isFinite(ageNum)) ? ageNum : null,
-          tanner: tannerVal,
-          source: 'shared'
-        };
-      } catch (_) { return null; }
+      } catch (_) {}
+      return null;
+    }
+
+    function extractTannerFromAny(obj) {
+      if (!obj || typeof obj !== 'object') return null;
+      // 1. Bezpośrednio na obiekcie
+      var candidates = [obj.tannerStage, obj.tanner, obj.tanner_stage, obj.tannerstage];
+      // 2. W _vildaPersist.byId / byName
+      try {
+        var persist = obj._vildaPersist;
+        if (persist && typeof persist === 'object') {
+          if (persist.byId && typeof persist.byId === 'object') {
+            candidates.push(persist.byId.tannerStage, persist.byId.tanner);
+          }
+          if (persist.byName && typeof persist.byName === 'object') {
+            candidates.push(persist.byName.tannerStage, persist.byName.tanner);
+          }
+          if (persist.globals && typeof persist.globals === 'object') {
+            candidates.push(persist.globals.tannerStage, persist.globals.tanner);
+          }
+        }
+      } catch (_) {}
+      for (var i = 0; i < candidates.length; i++) {
+        var c = candidates[i];
+        if (c == null || c === '') continue;
+        // Obsługuj string, number, lub obiekt z value
+        var raw = c;
+        if (typeof c === 'object' && c !== null) {
+          raw = c.value != null ? c.value : c.val != null ? c.val : null;
+        }
+        if (raw == null || raw === '') continue;
+        var parsed = parseInt(raw, 10);
+        if (isFinite(parsed) && parsed >= 1 && parsed <= 5) return parsed;
+      }
+      return null;
+    }
+
+    function readPatientFromShared() {
+      var shared = null;
+
+      // ŹRÓDŁO 1 — adapter VildaPersistence (preferowane)
+      if (persistence && typeof persistence.readShared === 'function') {
+        try { shared = persistence.readShared(null); } catch (_) { shared = null; }
+      }
+
+      // ŹRÓDŁO 2 — BEZPOŚREDNIE odczytanie z localStorage/sessionStorage
+      // (fallback jeśli adapter zawiódł lub klucz został zapisany inną drogą)
+      if (!shared || typeof shared !== 'object') {
+        var keysToTry = ['sharedUserData', 'vilda:sharedUserData', 'shared_user_data', 'userdata', 'userData'];
+        for (var k = 0; k < keysToTry.length; k++) {
+          var rawStr = readRawFromStorage(keysToTry[k]);
+          if (rawStr != null) {
+            try {
+              var parsed = JSON.parse(rawStr);
+              if (parsed && typeof parsed === 'object') { shared = parsed; break; }
+            } catch (_) {}
+          }
+        }
+      }
+
+      if (!shared || typeof shared !== 'object') return null;
+
+      // Wyciąganie wieku
+      var ageRaw = shared.age;
+      var ageNum = (ageRaw == null || ageRaw === '') ? null : Number(ageRaw);
+      var monthsRaw = shared.ageMonths;
+      var monthsNum = (monthsRaw == null || monthsRaw === '') ? null : Number(monthsRaw);
+      if (ageNum != null && isFinite(ageNum) && monthsNum != null && isFinite(monthsNum)) {
+        ageNum = ageNum + monthsNum / 12;
+      }
+
+      // Wyciąganie płci
+      var sex = (shared.sex === 'M' || shared.sex === 'F') ? shared.sex : null;
+
+      // Wyciąganie Tannera — DEFENSYWNE z wielu pól
+      var tannerVal = extractTannerFromAny(shared);
+
+      // Faza 33: także sprawdź główny formularz w DOM jeśli jesteśmy w iframe/MPA
+      // i select #tannerStage mógł zostać wczytany przez userData.js zanim
+      // wartość trafi do localStorage.
+      if (tannerVal == null) {
+        try {
+          var tannerEl = document.getElementById('tannerStage');
+          if (tannerEl && tannerEl.value) {
+            var fromDom = parseInt(tannerEl.value, 10);
+            if (isFinite(fromDom) && fromDom >= 1 && fromDom <= 5) tannerVal = fromDom;
+          }
+        } catch (_) {}
+      }
+
+      if (sex == null && ageNum == null && tannerVal == null) return null;
+      return {
+        sex: sex,
+        age: (ageNum != null && isFinite(ageNum)) ? ageNum : null,
+        tanner: tannerVal,
+        source: 'shared'
+      };
     }
 
     /**
@@ -3004,16 +3093,27 @@
       // tanner: N bez life_stage: 'pediatric') dostawał fałszywy hint, bo
       // hipotetyczne wstawienie tanner=2 do dorosłego matchowało fsh_tanner2
       // (unisex), zamiast pozostać przy fsh_male_adult.
+      // Faza 33: defensywny check — używa nowego extractTannerFromAny
+      // który probuje WIELU źródeł (persistence, localStorage, sessionStorage,
+      // DOM #tannerStage, _vildaPersist.byId/byName/globals).
       var tannerSetFromShared = false;
       try {
-        if (persistence && typeof persistence.readShared === 'function') {
-          var sharedRaw = persistence.readShared(null);
-          if (sharedRaw && sharedRaw.tannerStage != null && sharedRaw.tannerStage !== '') {
-            var pStg = parseInt(sharedRaw.tannerStage, 10);
-            if (isFinite(pStg) && pStg >= 1 && pStg <= 5) tannerSetFromShared = true;
-          }
+        var multiSourceLookup = readPatientFromShared();
+        if (multiSourceLookup && typeof multiSourceLookup.tanner === 'number' && isFinite(multiSourceLookup.tanner)) {
+          tannerSetFromShared = true;
         }
       } catch (_) {}
+      // Dodatkowo — sprawdź też DOM select bezpośrednio (gdyby userData.js
+      // jeszcze nie zdążył zapisać do storage przy szybkim przejściu między stronami).
+      if (!tannerSetFromShared) {
+        try {
+          var domTanner = document.getElementById('tannerStage');
+          if (domTanner && domTanner.value) {
+            var domVal = parseInt(domTanner.value, 10);
+            if (isFinite(domVal) && domVal >= 1 && domVal <= 5) tannerSetFromShared = true;
+          }
+        } catch (_) {}
+      }
       var tannerSet = (typeof patient.tanner === 'number' && isFinite(patient.tanner)) || tannerSetFromShared;
 
       if (tannerAware &&
