@@ -2034,6 +2034,26 @@
 
     var payload = snap.payload;
 
+    // ── Faza 42f — tymczasowe przełączenie globalnego bmiSource ──
+    // Wszystkie funkcje obliczeniowe (calcPercentileStats, bmiPercentileChild)
+    // i LMS-gettery (getChildLMS, getLMS) w głębi sprawdzają window.bmiSource,
+    // żeby wybrać OLAF / WHO / Palczewska. W kalkulatorze głównym ustawia to
+    // suwak; Karta pacjenta sama z siebie tego nie wie, więc używała wartości
+    // globalnej (zwykle OLAF defaultu) i ignorowała preferencję pacjenta.
+    // Tutaj odczytujemy zapisaną siatkę z payload.zscore.dataSource i
+    // ustawiamy bmiSource na ten sam okres. Przywracamy przed `open(...)`,
+    // żeby nie wpłynąć na resztę aplikacji.
+    var _origBmiSource = (typeof global.bmiSource !== 'undefined') ? global.bmiSource : null;
+    var _bmiSourceOverridden = false;
+    try {
+      var _pds = (payload.zscore && payload.zscore.dataSource)
+        ? String(payload.zscore.dataSource).toUpperCase() : null;
+      if (_pds && /^(OLAF|WHO|PALCZEWSKA)$/.test(_pds)) {
+        global.bmiSource = _pds;
+        _bmiSourceOverridden = true;
+      }
+    } catch (_) {}
+
     // ── Dane z formularza (struktura collectUserData) ──
     var user      = payload.user     || {};
     var advanced  = payload.advanced || {};
@@ -2119,14 +2139,21 @@
     var heightPerc = null, weightPerc = null, bmiPerc = null;
     var isAdult = (totalAgeMonths != null && totalAgeMonths >= 216); // 18 lat
     var sexForCalc = sex; // M/K lub chłopiec/dziewczynka — funkcje obsługują oba formaty
+    // Faza 42e — używaj pełnego wieku w ułamkowych latach (z miesiącami), żeby
+    // percentyl w kafelku był spójny z pozycją kropki na wykresie. Wcześniejsza
+    // wersja używała `age` (samo całe lata) — co zawyżało percentyl np. o 10
+    // punktów u dziecka kilka miesięcy po urodzinach.
+    var ageForStats = (totalAgeMonths != null && isFinite(totalAgeMonths))
+      ? (totalAgeMonths / 12)
+      : age;
     try {
-      if (!isAdult && age != null && typeof calcPercentileStats === 'function') {
+      if (!isAdult && ageForStats != null && isFinite(ageForStats) && typeof calcPercentileStats === 'function') {
         if (height != null) {
-          var sH = calcPercentileStats(height, sexForCalc, age, 'HT');
+          var sH = calcPercentileStats(height, sexForCalc, ageForStats, 'HT');
           if (sH && sH.percentile != null) heightPerc = sH.percentile;
         }
         if (weight != null) {
-          var sW = calcPercentileStats(weight, sexForCalc, age, 'WT');
+          var sW = calcPercentileStats(weight, sexForCalc, ageForStats, 'WT');
           if (sW && sW.percentile != null) weightPerc = sW.percentile;
         }
       }
@@ -2444,6 +2471,13 @@
         loadBtn ? [backBtn, loadBtn] : [backBtn]
       )
     ];
+
+    // ── Faza 42f — przywrócenie oryginalnego bmiSource przed pokazaniem karty ──
+    // Wykres jest już zbudowany w pamięci (SVG nie odczytuje bmiSource przy
+    // wyświetlaniu), więc restore jest bezpieczny i nie zaburza wyglądu karty.
+    if (_bmiSourceOverridden) {
+      try { global.bmiSource = _origBmiSource; } catch (_) {}
+    }
 
     open(el('div', { class: 'vilda-auth-screen vilda-auth-patient-card' }, screenChildren), { noLogo: true });
   }
