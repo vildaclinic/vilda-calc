@@ -2200,7 +2200,7 @@
   <script src="ios26-ui.js?v=18" defer></script>
 
   <!-- Dane + moduł logiki (dwa pliki przygotowane do reużycia w innych podstronach). -->
-  <script src="lab_units_data.js?v=31"></script>
+  <script src="lab_units_data.js?v=32"></script>
   <script src="lab_unit_converter.js?v=3"></script>
   <script src="lab_clinical_panels.js?v=133"></script>
 
@@ -2456,9 +2456,14 @@
         { value: 'post_dst', label: 'Po teście hamowania 1 mg deksametazonu (DST)' }
       ],
       thyroglobulin: [
-        { value: '',                           label: '— zachowana tarczyca / po lobektomii —' },
-        { value: 'post_thyroidectomy_basal',   label: 'Po total thyroidectomy — bazalny (na L-tyroksynie)' },
-        { value: 'post_thyroidectomy_stimulated', label: 'Po total thyroidectomy — stymulowany (rhTSH / odstawienie)' }
+        { value: '',                          label: '— auto (z danych pacjenta) —' },
+        { value: 'tg_intact_infant',          label: 'Zachowana tarczyca, 0–2 lat (< 78 ng/mL)' },
+        { value: 'tg_intact_child',           label: 'Zachowana tarczyca, 2–19 lat (< 40 ng/mL)' },
+        { value: 'tg_intact_adult',           label: 'Zachowana / po lobektomii, dorośli (< 33 ng/mL)' },
+        { value: 'tg_post_tt_basal_adult',    label: 'Po TT (DTC) — dorośli, bazalny (< 0,2 excellent)' },
+        { value: 'tg_post_tt_stim_adult',     label: 'Po TT (DTC) — dorośli, stymulowany (< 1–2 excellent)' },
+        { value: 'tg_post_tt_basal_ped',      label: 'Po TT (DTC) — dzieci, bazalny (≤ 1,0 excellent)' },
+        { value: 'tg_post_tt_stim_ped',       label: 'Po TT (DTC) — dzieci, stymulowany (≤ 2,0 excellent)' }
       ],
       tsh: [
         { value: '',                       label: '— pomiar w surowicy (standardowy) —' },
