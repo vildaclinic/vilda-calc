@@ -732,22 +732,51 @@
       gap: 0.35rem;
       flex-wrap: wrap;
     }
-    .lab-mini-pill {
-      padding: 0.4rem 0.75rem;
-      border-radius: 6px;
-      font-size: 0.8rem;
-      cursor: pointer;
-      background: rgba(0,131,141,0.05);
-      color: #5a6a6e;
-      border: 0.5px solid transparent;
-      user-select: none;
-      transition: all 0.15s;
+    /* Faza 22d: pille są <button>, więc ios26-v2.css aplikuje
+       `.liquid-ios26 button { background:rgba(255,255,255,.2) !important; color:#111 !important }`
+       Żeby przebić — używamy selektora `button.lab-mini-pill` (specyficzność 0,1,1)
+       + !important. Stan aktywny: biała czcionka + zielono-turkusowe tło #1D9E75
+       (ten sam kolor co ✓ w numerkach kroków). */
+    .lab-mini-pill,
+    button.lab-mini-pill,
+    .liquid-ios26 button.lab-mini-pill {
+      padding: 0.4rem 0.75rem !important;
+      border-radius: 6px !important;
+      font-size: 0.8rem !important;
+      cursor: pointer !important;
+      background: rgba(0,131,141,0.06) !important;
+      color: #2a3a3c !important;
+      border: 0.5px solid rgba(0,131,141,0.18) !important;
+      user-select: none !important;
+      transition: background 0.15s, color 0.15s, border-color 0.15s !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      box-shadow: none !important;
+      font-weight: 400 !important;
+      font-family: inherit !important;
     }
-    .lab-mini-pill:hover { background: rgba(0,131,141,0.10); }
-    .lab-mini-pill.is-active {
-      background: #00838d;
-      color: #fff;
-      font-weight: 500;
+    .lab-mini-pill:hover,
+    button.lab-mini-pill:hover,
+    .liquid-ios26 button.lab-mini-pill:hover {
+      background: rgba(0,131,141,0.12) !important;
+      border-color: rgba(0,131,141,0.30) !important;
+      color: #2a3a3c !important;
+    }
+    .lab-mini-pill.is-active,
+    button.lab-mini-pill.is-active,
+    .liquid-ios26 button.lab-mini-pill.is-active {
+      background: #1D9E75 !important;
+      color: #ffffff !important;
+      border-color: #1D9E75 !important;
+      font-weight: 600 !important;
+      box-shadow: 0 1px 3px rgba(29,158,117,0.25) !important;
+    }
+    .lab-mini-pill.is-active:hover,
+    button.lab-mini-pill.is-active:hover,
+    .liquid-ios26 button.lab-mini-pill.is-active:hover {
+      background: #1a8d6a !important;
+      border-color: #1a8d6a !important;
+      color: #ffffff !important;
     }
     .lab-step-hint {
       font-size: 0.78rem;
