@@ -736,7 +736,9 @@
        `.liquid-ios26 button { background:rgba(255,255,255,.2) !important; color:#111 !important }`
        Żeby przebić — używamy selektora `button.lab-mini-pill` (specyficzność 0,1,1)
        + !important. Stan aktywny: biała czcionka + zielono-turkusowe tło #1D9E75
-       (ten sam kolor co ✓ w numerkach kroków). */
+       (ten sam kolor co ✓ w numerkach kroków).
+       Faza 22e: `touch-action: manipulation` zapobiega double-tap zoom
+       i usuwa 300 ms opóźnienia tap-a na iOS. */
     .lab-mini-pill,
     button.lab-mini-pill,
     .liquid-ios26 button.lab-mini-pill {
@@ -748,12 +750,15 @@
       color: #2a3a3c !important;
       border: 0.5px solid rgba(0,131,141,0.18) !important;
       user-select: none !important;
+      -webkit-user-select: none !important;
       transition: background 0.15s, color 0.15s, border-color 0.15s !important;
       backdrop-filter: none !important;
       -webkit-backdrop-filter: none !important;
       box-shadow: none !important;
       font-weight: 400 !important;
       font-family: inherit !important;
+      touch-action: manipulation !important;
+      -webkit-tap-highlight-color: transparent !important;
     }
     .lab-mini-pill:hover,
     button.lab-mini-pill:hover,
@@ -1337,6 +1342,22 @@
       .lab-substance-option-label,
       .lab-substance-option-empty {
         font-size: 16px !important;
+      }
+
+      /* Faza 22e: pille pora pomiaru — większe tap targets na mobile.
+         Apple HIG/Material rekomendują min 44 × 44 px. Bigger pills =
+         mniej przypadkowych tap-ów obok = mniej akcydentalnych
+         pinch-zoomów (palce użytkownika dalej od siebie). */
+      .lab-mini-pill,
+      button.lab-mini-pill,
+      .liquid-ios26 button.lab-mini-pill {
+        font-size: 16px !important;
+        min-height: 44px !important;
+        padding: 0.6rem 1rem !important;
+        border-radius: 8px !important;
+      }
+      .lab-mini-pills {
+        gap: 0.5rem !important;
       }
     }
 
