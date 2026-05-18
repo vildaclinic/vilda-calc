@@ -1007,7 +1007,7 @@
 /* Tab-switcher */
 .vilda-patient-tabs {
   display: flex;
-  gap: 0;
+  gap: 1rem;
   border-bottom: 1px solid #e0eef0;
   margin-bottom: 14px;
 }
@@ -1023,6 +1023,13 @@
   cursor: pointer;
   transition: color 0.12s ease, border-color 0.12s ease;
   -webkit-tap-highlight-color: transparent;
+}
+/* Faza 42g — gwarantowana przerwa 1rem między tabami nawet w trybie liquid-ios26
+   (gdzie button ma własny background + border + box-shadow). Używamy margin-left
+   na drugim tabie (sąsiednim) — działa we wszystkich przeglądarkach, niezależnie
+   od supportu flex `gap`, i przebija się przez efekty szklanej kapsuły. */
+.vilda-patient-tab + .vilda-patient-tab {
+  margin-left: 1rem;
 }
 .vilda-patient-tab:hover { color: #00838d; }
 .vilda-patient-tab--active {
