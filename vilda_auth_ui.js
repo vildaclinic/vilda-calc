@@ -1537,6 +1537,22 @@
   }
 
   /**
+   * Faza 42c: kanoniczny odczyt wieku z obiektu pomiaru.
+   * UWAGA: `growth-basic-module.js` zapisuje JEDNOCZEŚNIE:
+   *   - `ageYears` jako ułamkowe lata (np. 8.5)
+   *   - `ageMonths` jako TOTAL miesięcy (np. 102), NIE jako część miesiącową
+   * Wcześniejsza formuła `ageYears*12 + ageMonths` dawała dublowanie (8.5*12+102=204).
+   * Tu preferujemy `ageMonths` (jeśli istnieje) jako TOTAL; fallback do `ageYears*12`.
+   * Akceptujemy też migawki ze snapshotów historycznych zapisane jako `{ageMonths: total}`.
+   */
+  function measurementAgeInMonths(m) {
+    if (!m) return NaN;
+    if (m.ageMonths != null && isFinite(m.ageMonths)) return Number(m.ageMonths);
+    if (m.ageYears != null && isFinite(m.ageYears)) return Number(m.ageYears) * 12;
+    return NaN;
+  }
+
+  /**
    * Faza 42b: konwertuje tablicę punktów {x, y} na ścieżkę SVG z gładkimi
    * krzywymi Béziera (Catmull-Rom przez 4 sąsiednie punkty). Daje
    * naturalnie wyglądające siatki centylowe bez „kantów" polyline.
@@ -1681,7 +1697,7 @@
     var ages = [];
     (measurements || []).forEach(function (m) {
       if (!m) return;
-      var ageMo = ((m.ageYears || 0) * 12) + (m.ageMonths || 0);
+      var ageMo = measurementAgeInMonths(m);
       if (isFinite(ageMo)) ages.push(ageMo);
     });
     if (isFinite(currentAgeMonths)) ages.push(currentAgeMonths);
@@ -1722,7 +1738,7 @@
     var trajectory = [];
     (measurements || []).forEach(function (meas) {
       if (!meas) return;
-      var ageMo = ((meas.ageYears || 0) * 12) + (meas.ageMonths || 0);
+      var ageMo = measurementAgeInMonths(meas);
       if (!isFinite(ageMo) || ageMo < ageStart || ageMo > ageEnd) return;
       var v = typeConfig.extractValue(meas);
       if (v == null || !isFinite(v)) return;
@@ -1893,7 +1909,7 @@
     for (var i = 0; i < measurements.length; i++) {
       var m = measurements[i];
       if (!m || m.height == null) continue;
-      var ageMo = ((m.ageYears || 0) * 12) + (m.ageMonths || 0);
+      var ageMo = measurementAgeInMonths(m);
       var h = parseFloat(m.height);
       if (isFinite(ageMo) && isFinite(h)) points.push({ age: ageMo, height: h });
     }
@@ -1961,10 +1977,15 @@
     ]), { noLogo: true });
     setBusy(true);
 
-    var snap = null;
-    try { snap = await V.getLatestSnapshot(patientId); }
-    catch (e) { logError('showPatientCard getLatestSnapshot', e); }
+    // Faza 42c — ładujemy pełny rekord pacjenta (wszystkie snapshoty), żeby zbudować
+    // trajektorię z całej historii zapisów, a nie tylko z najnowszego snapshota.
+    var patientFull = null;
+    try { patientFull = await V.getPatient(patientId); }
+    catch (e) { logError('showPatientCard getPatient', e); }
     setBusy(false);
+
+    var allSnapshots = (patientFull && Array.isArray(patientFull.snapshots)) ? patientFull.snapshots : [];
+    var snap = allSnapshots.length ? allSnapshots[0] : null; // najnowszy (sortowane malejąco po dacie)
 
     if (!snap || !snap.payload) {
       open(el('div', { class: 'vilda-auth-screen vilda-auth-patient-card' }, [
@@ -2007,6 +2028,55 @@
     var growthVelocity = growthData.growthVelocity != null ? growthData.growthVelocity : null;
     var isLosingGrowth = !!growthData.isLosingGrowth;
     var isSlowVelocity = !!growthData.isSlowVelocity;
+
+    // ── Faza 42c — dołączenie migawek wzrostu/wagi ze WSZYSTKICH snapshotów ──
+    // Z każdego historycznego snapshota wyciągamy user.{height, weight, age, ageMonths}
+    // (każdy zapis Karty pacjenta = jedna „wizyta") i dorzucamy do trajektorii.
+    // Dzięki temu wykres rośnie naturalnie z każdym zapisem, nawet jeśli user nie
+    // wpisuje ręcznie historycznych pomiarów do tabeli growthBasic.
+    allSnapshots.forEach(function (s) {
+      if (!s || !s.payload) return;
+      var su = s.payload.user || {};
+      var sAge       = su.age       != null ? parseInt(su.age, 10)       : null;
+      var sAgeMonths = su.ageMonths != null ? parseInt(su.ageMonths, 10) : null;
+      var sHeight    = su.height    != null ? parseFloat(su.height)      : null;
+      var sWeight    = su.weight    != null ? parseFloat(su.weight)      : null;
+      if (sAge == null || !isFinite(sAge)) return;
+      if (sHeight == null || !isFinite(sHeight) || sHeight <= 0) return;
+      // Konwencja: ageMonths jako TOTAL miesięcy
+      var totalMo = sAge * 12 + (sAgeMonths != null && isFinite(sAgeMonths) ? sAgeMonths : 0);
+      measurements.push({
+        ageYears:  totalMo / 12,
+        ageMonths: totalMo,
+        height:    sHeight,
+        weight:    (sWeight != null && isFinite(sWeight)) ? sWeight : null,
+        _fromSnapshot: true,
+        _snapshotAtISO: s.savedAtISO || null
+      });
+    });
+
+    // Deduplikacja po (totalMonths bucket + height precyzja 0.1cm + weight precyzja 0.1kg).
+    // Preferujemy wpisy NIE z snapshota (czyli z tabeli growthBasic) gdy są duplikaty.
+    measurements.sort(function (a, b) {
+      var fa = a._fromSnapshot ? 1 : 0;
+      var fb = b._fromSnapshot ? 1 : 0;
+      return fa - fb; // non-snapshot first
+    });
+    var _seen = Object.create(null);
+    measurements = measurements.filter(function (m) {
+      var totalMo = measurementAgeInMonths(m);
+      if (!isFinite(totalMo)) return false;
+      var key = Math.round(totalMo) + '|' +
+        (m.height != null ? Math.round(parseFloat(m.height) * 10) : '') + '|' +
+        (m.weight != null ? Math.round(parseFloat(m.weight) * 10) : '');
+      if (_seen[key]) return false;
+      _seen[key] = true;
+      return true;
+    });
+    // Posortuj końcowo po wieku rosnąco
+    measurements.sort(function (a, b) {
+      return measurementAgeInMonths(a) - measurementAgeInMonths(b);
+    });
 
     // ── BMI ──
     var bmi = null;
