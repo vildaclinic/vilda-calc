@@ -7012,12 +7012,20 @@
                 { label: 'Umiarkowana (2,5–2,9 mmol/L)', text: 'objawy mięśniowe, zmiany w EKG; leczenie doustne lub dożylne.' },
                 { label: 'Ciężka (< 2,5 mmol/L)', text: 'zaburzenia rytmu zagrażające życiu, porażenia, niewydolność oddechowa — bezwzględne wskazanie do leczenia dożylnego.' }
               ] },
-              { heading: 'Przed diagnostyką — wykluczyć pseudohipokaliemię' },
-              'Fałszywie obniżony wynik wskutek leukocytozy > 100 × 10⁹/L (białaczki) lub długiego przechowywania próbki w niskiej temperaturze.',
+              { heading: 'Przed diagnostyką — protokół wykluczania artefaktu' },
+              { items: [
+                'Powtórzyć pomiar K+ z nowej próbki, najlepiej natychmiast po pobraniu.',
+                'Przy podejrzeniu artefaktu (skrajna leukocytoza > 100 × 10⁹/L w białaczkach, opóźniona analiza, niska temperatura) — oznaczyć K+ z krwi pełnej / osocza analizowanego natychmiast (POCT, gazometria).',
+                'Pseudohipokaliemia (rzadsza niż pseudohiperkaliemia) — komórki białaczkowe metabolizują potas in vitro przy opóźnionej analizie próbki w temperaturze pokojowej.'
+              ] },
+              { heading: 'EKG — badanie TRIAGE, nie etiologiczne' },
+              'EKG służy do oceny pilności klinicznej (potrzeba pilnego leczenia), NIE do rozpoznawania przyczyny. Brak uniwersalnych progów EKG dla konkretnych poziomów K+ — nawet ciężka hipokaliemia może mieć prawidłowe EKG. Najwcześniejsza zmiana: spadek amplitudy załamka T.',
               { heading: 'Kluczowe parametry różnicujące' },
               { items: [
-                { label: 'Potas w moczu (lub wskaźnik K/kreatynina w spot urine)', text: 'różnicuje utratę nerkową od pozanerkowej.' },
-                { label: 'Magnez w surowicy', text: 'hipomagnezemia utrwala hipokaliemię — substytucja samego potasu bez wyrównania magnezu jest nieskuteczna.' }
+                { label: 'Magnez w surowicy', text: 'hipomagnezemia utrwala hipokaliemię — substytucja samego potasu bez wyrównania magnezu jest nieskuteczna.' },
+                { label: 'Profil kwasowo-zasadowy + chlorki w moczu', text: 'Cl/HCO₃/gazometria + Cl w moczu uruchamia konkretne gałęzie diagnostyczne — to centralna oś różnicowania.' },
+                { label: 'Wskaźniki moczowe (K/Cr w spot urine)', text: 'różnicuje utratę nerkową od pozanerkowej.' },
+                { label: 'Profil ciśnienia tętniczego', text: 'HT + hipokaliemia → renina/aldosteron/ARR; normotensja → tubulopatie.' }
               ] }
             ]
           },
@@ -7063,18 +7071,18 @@
             steps: [
               {
                 number: 1,
-                title: 'Panel podstawowy + ocena ciężkości',
-                sublabel: 'wykluczenie pseudohipokaliemii, ocena stanu klinicznego',
+                title: 'Krok 1 — potwierdzenie + pilność + panel pierwszej linii',
+                sublabel: 'jednoczasowo krew + mocz, przed leczeniem',
                 options: [
                   {
-                    threshold: 'Co oznaczyć',
-                    action: 'Potas, sód, kreatynina + eGFR, glukoza, magnez, gazometria (pH, HCO₃⁻), EKG. Dla różnicowania utraty — potas i kreatynina w próbce moczu (wskaźnik K/Cr) lub stężenie potasu w moczu z DZM.',
+                    threshold: 'Pakiet pierwszej linii (jednoczasowo krew + mocz, przed substytucją K)',
+                    action: 'KREW: K+, Na+, Cl⁻, HCO₃⁻, gazometria, magnez, glukoza, kreatynina/eGFR, EKG. SPOT URINE (z tej samej godziny): K+, kreatynina, Cl⁻, Na+, pH.',
                     variant: 'success', icon: 'flask',
                     detail: [
-                      'Powtórzyć pomiar potasu — wykluczenie pseudohipokaliemii (leukocytoza > 100 × 10⁹/L w białaczkach; długie przechowywanie próbki w niskiej temperaturze).',
-                      'Magnez — towarzyszy hipokaliemii w 40–60% przypadków. Substytucja samego potasu bez wyrównania magnezu jest nieskuteczna.',
-                      'Gazometria — alkaloza wskazuje na utratę potasu z wymiotami lub hiperaldosteronizm; kwasica sugeruje kwasicę cewkową nerkową (RTA — ang. renal tubular acidosis), biegunkę lub cukrzycową kwasicę ketonową (DKA — ang. diabetic ketoacidosis).',
-                      'Czas trwania: ostra (< 48 h) zwykle redystrybucja lub jatrogenna; przewlekła — utrata nerkowa lub pozanerkowa.',
+                      'Powtórzyć pomiar K+ przed dalszą diagnostyką — wykluczenie pseudohipokaliemii (leukocytoza > 100 × 10⁹/L, opóźniona analiza). Przy podejrzeniu artefaktu — POCT lub gazometria.',
+                      'Magnez ma WYSOKI priorytet — hipomagnezemia w 40–60% hipokaliemii; bez wyrównania Mg substytucja K jest nieskuteczna.',
+                      'Profil kwasowo-zasadowy + chlorki w moczu = centralna oś różnicowania (zob. krok 3).',
+                      'EKG: badanie TRIAGE pilności, NIE etiologiczne. Brak uniwersalnych progów EKG dla konkretnych poziomów K+.',
                       'Hipokaliemia ciężka (< 2,5 mmol/L) lub objawowa → zobacz sekcję „Pilne" wyżej.'
                     ]
                   }
@@ -7145,17 +7153,77 @@
               },
               {
                 number: 3,
-                title: 'Diagnostyka endokrynna',
-                sublabel: 'gdy utrata nerkowa nie jest wytłumaczona lekami ani kwasicą cewkową',
+                title: 'Krok 3 — różnicowanie wg fenotypu (gazometria + chlorki w moczu + BP)',
+                sublabel: 'centralna oś diagnostyczna',
                 options: [
                   {
-                    threshold: 'Pierwotny hiperaldosteronizm (PHA)',
-                    action: 'Aldosteron + PRA (aktywność reninowa osocza) lub DRC (bezpośrednie stężenie reniny) → obliczenie ARR (stosunek aldosteron/renina). Wzorzec: aldosteron wysoki + renina niska → ARR > 30 = wynik dodatni.',
+                    threshold: 'Zasadowica metaboliczna + niski Cl w moczu (< 25 mmol/L)',
+                    action: 'Zasadowica chlorkowrażliwa — utrata HCl z wymiotami (jawne lub ukryte — np. zaburzenia odżywiania), odsysanie treści żołądkowej, wczesny okres po diuretykach (po odstawieniu).',
                     variant: 'success', icon: 'check',
                     detail: [
-                      'Najczęstsza endokrynna przyczyna hipokaliemii z utratą nerkową.',
-                      'Często współistnieje z opornym nadciśnieniem tętniczym.',
-                      'Warunki pobrania — zobacz panel nadciśnienia tętniczego (sekcja „Przygotowanie do skriningu PHA").',
+                      'Wymioty utajone — klasyczna pułapka w zaburzeniach odżywiania; mogą dawać paradoksalnie wysoki UNa/UK (wtórny hiperaldosteronizm), ale Cl w moczu < 25 mmol/L jest kluczowym wskaźnikiem.',
+                      'Leczenie: korekcja wolemii 0,9% NaCl + KCl; przyczynowe (psychiatria w zaburzeniach odżywiania).',
+                      'Cl w moczu jest TAŃSZY I SZYBSZY niż diagnostyka endokrynologiczna — preferować jako pierwszy filtr przed renina/aldosteron.'
+                    ]
+                  },
+                  {
+                    threshold: 'Zasadowica metaboliczna + wysoki Cl w moczu (> 40 mmol/L) + nadciśnienie',
+                    action: 'Aktywny nadmiar mineralokortykoidów (PHA, GRA, AME, Cushing ektopowy) lub diuretyki czynnie działające. Idź do kroku 4 (diagnostyka hormonalna).',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'Sprawdź pierwsze: czy pacjent przyjmuje diuretyki tiazydowe lub pętlowe.',
+                      'Lukrecja w wywiadzie (cukierki, herbatki ziołowe, suplementy) — pseudohyperaldosteronizm — sprawdź zawsze!',
+                      'Bez diuretyków i lukrecji → renina + aldosteron + ARR po korekcji K (zob. krok 4).'
+                    ]
+                  },
+                  {
+                    threshold: 'Zasadowica metaboliczna + wysoki Cl w moczu + normotensja',
+                    action: 'Tubulopatie nerkowe — Bartter, Gitelman. Idź do kroku 5 (Ca/Cr + USG nerek + genetyka).',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'Gitelman: młody dorosły, hipokalciuria, hipomagnezemia, łagodny przebieg.',
+                      'Bartter: ujawnia się w dzieciństwie, hiperkalciuria, możliwa nefrokalcynoza, ciężki przebieg.',
+                      'Diuretyki tiazydowe/pętlowe „naśladują" odpowiednio Gitelmana/Bartter — wyklucz w wywiadzie.'
+                    ]
+                  },
+                  {
+                    threshold: 'Kwasica metaboliczna z prawidłową luką anionową (AG)',
+                    action: 'Kwasica cewkowa nerkowa (RTA) — interpretuj pH moczu w kontekście kwasicy. pH moczu > 5,5 mimo kwasicy → dRTA (typ 1). pH < 5,5 → utrata HCO₃⁻ (typ 2 / proksymalna).',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'WAŻNE: pH moczu interpretuj WYŁĄCZNIE w kontekście jawnej kwasicy hiperchloremicznej z prawidłową AG. Samo pH bez kwasicy = mylące.',
+                      'dRTA (typ 1) — pH moczu > 5,5 + kwasica + hipokaliemia + nefrokalcynoza/kamica + hiperkalciuria. Przyczyny: autoimmunologiczne (Sjögren), leki (amfoterycyna, ifosfamid), dziedziczne.',
+                      'RTA typ 2 — często w zespole Fanconiego, hipokaliemia łagodna, hipofosfatemia, glukozuria nerkowa, aminoacyduria.',
+                      'Przy podejrzeniu niepełnej dRTA (mimo prawidłowej AG bez ewidentnej kwasicy) — rozważyć test zakwaszania (NH4Cl PO 0,1 g/kg, ocena pH moczu po 6h) lub test furosemidowo-fludrokortyzonowy (preferowany — mniej działań niepożądanych) w ośrodku specjalistycznym.'
+                    ]
+                  },
+                  {
+                    threshold: 'Brak istotnego zaburzenia kwasowo-zasadowego — utrata pozanerkowa lub redystrybucja',
+                    action: 'Sprawdź K/Cr w moczu: niska wartość (< 13 mmol/g) → utrata pozanerkowa (biegunka, środki przeczyszczające, przetoki) lub redystrybucja (insulina, β2-agoniści, TPP). Wysoka wartość → utrata nerkowa (zob. wyżej).',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'TPP (thyrotoxic periodic paralysis) — oznacz TSH/fT4 WCZEŚNIE przy nawrotowej hipokaliemii z osłabieniem/porażeniem, zwłaszcza u młodych mężczyzn pochodzenia azjatyckiego.',
+                      'Refeeding syndrome — pacjenci po długim głodzeniu, anoreksji, alkoholizmie po rozpoczęciu żywienia.'
+                    ]
+                  }
+                ]
+              },
+              {
+                number: 4,
+                title: 'Krok 4 — diagnostyka endokrynna (gdy HT lub utrata nerkowa bez przyczyny)',
+                sublabel: 'protokół zaktualizowany do Endocrine Society 2026',
+                options: [
+                  {
+                    threshold: 'Pierwotny hiperaldosteronizm (PHA) — protokół Endocrine Society 2026',
+                    action: 'Aldosteron + renina (PRA lub DRC) → ARR. Protokół: RANO, w pozycji SIEDZĄCEJ (po 5–15 min), BEZ restrykcji sodu w poprzednich dniach, PO KOREKCJI hipokaliemii (do K > 4,0 mmol/L). Interpretacja: niska/supresyjna renina + bezwzględnie wysoki aldosteron + podwyższony ARR (próg ZALEŻNY OD METODY).',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'KRYTYCZNE: hipokaliemia sztucznie obniża aldosteron → wynik fałszywie ujemny. Przed badaniem skoryguj K > 4,0 mmol/L.',
+                      'Sam zapis „ARR > 30" jest UPROSZCZONY (Endocrine Society 2026) — wymaga jednoczesnej oceny: bezwzględne stężenie aldosteronu (zwykle > 15 ng/dL / 416 pmol/L), supresja reniny (PRA < 1,0 ng/mL/h), ARR z progiem zależnym od metody oznaczeń.',
+                      'Leki interferujące: MRA (spironolakton, eplerenon) odstawić 4 tyg.; ACE-I/ARB, β-blokery, NLPZ — indywidualnie wg ryzyka klinicznego. Diuretyki, jeśli możliwe — odstawić.',
+                      'Jeśli wynik UJEMNY przy utrzymującej się hipokaliemii — POWTÓRZYĆ po korekcji K.',
+                      'Wynik DODATNI — wg Endocrine Society 2026 testy supresyjne (NaCl i.v., kaptopryl, fludrokortyzon) NIE są obowiązkowe przy opornym HT + jawnej hipokaliemii + jawnym fenotypie renino-niezależnym — można od razu CT nadnerczy + AVS.',
+                      'CT nadnerczy NIE wystarcza do lateralizacji przed adrenalektomią — wymagane AVS, z wąskim wyjątkiem dla młodych pacjentów < 35 r.ż. z jednostronnym gruczolakiem > 1 cm + nasilonym PA + hipokaliemią.',
                       'Pełen algorytm — osobne wskazanie hiperaldosteronizm.'
                     ]
                   },
@@ -7180,13 +7248,69 @@
                     ]
                   },
                   {
-                    threshold: 'Pseudohiperaldosteronizm',
+                    threshold: 'Pseudohiperaldosteronizm (aldosteron niski + renina niska)',
                     action: 'Wzorzec laboratoryjny: aldosteron niski + renina niska + hipokaliemia → przyczyna niealdosteronowa.',
                     variant: 'warning', icon: 'alert-triangle',
                     detail: [
                       'Lukrecja (kwas glicyryzowy) — hamuje 11β-HSD2 → kortyzol działa na receptor mineralokortykoidowy. Źródła: niektóre cukierki (np. Haribo, Salmiakki), herbatki ziołowe, niektóre suplementy diety. Może wywołać efekty przy spożyciu już 50–100 g lukrecji dziennie przez tygodnie.',
-                      'Zespół Liddle\'a — mutacja kanału sodowego ENaC dziedziczona dominująco; skrajnie rzadki; leczenie: amyloryd (bezpośredni inhibitor ENaC), NIE spironolakton.',
+                      'Zespół Liddle\'a — aktywujące mutacje SCNN1A/SCNN1B/SCNN1G (kanał ENaC), dziedziczone dominująco. Klasyczny obraz: wczesne/oporne HT + hipokaliemia + zasadowica + niska renina + NISKI aldosteron. Leczenie: amyloryd (bezpośredni inhibitor ENaC), NIE spironolakton. Diagnostyka: panel genetyczny SCNN1A/B/G — bardziej wartościowy niż powtarzanie testów hormonalnych przy klasycznym fenotypie.',
                       'Zespół pozornego nadmiaru mineralokortykoidów (AME, ang. apparent mineralocorticoid excess) — wrodzony defekt enzymu 11β-HSD2; ujawnia się w dzieciństwie.'
+                    ]
+                  }
+                ]
+              },
+              {
+                number: 5,
+                title: 'Krok 5 — tubulopatie (Bartter / Gitelman / dRTA) przy normotensji',
+                sublabel: 'Ca/Cr w moczu + USG nerek + panel genetyczny NGS',
+                options: [
+                  {
+                    threshold: 'Ca/kreatynina w moczu (lub kalciuria w DZM)',
+                    action: 'KLUCZOWY parametr różnicujący tubulopatie. Hipokalciuria (Ca/Cr < 0,1 mmol/mmol lub Ca w DZM < 2,5 mmol/d) → Gitelman; hiperkalciuria (Ca/Cr > 0,5 mmol/mmol) → klasyczny Bartter lub dRTA.',
+                    variant: 'success', icon: 'flask',
+                    detail: [
+                      'Gitelman: hipokalciuria + hipomagnezemia + alkaloza + normotensja + ujawnia się u młodych dorosłych.',
+                      'Bartter: hiperkalciuria + nefrokalcynoza + ujawnia się w dzieciństwie + cięższy fenotyp.',
+                      'dRTA: hiperkalciuria + kamica/nefrokalcynoza + kwasica hiperchloremiczna + pH moczu > 5,5.'
+                    ]
+                  },
+                  {
+                    threshold: 'USG nerek',
+                    action: 'Obowiązkowe w podejrzeniu Bartter/Gitelman/dRTA — ocena nefrokalcynozy, kamicy, nieprawidłowości morfologicznych.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'Nefrokalcynoza w USG → silne wsparcie dla Bartter typu 1/2/4 lub dRTA.',
+                      'Brak nefrokalcynozy + hipokalciuria → Gitelman.',
+                      'Wyklucz też przeszkodę w odpływie moczu, torbielowatość, anomalie rozwojowe.'
+                    ]
+                  },
+                  {
+                    threshold: 'Panel genetyczny NGS — przy klinicznym podejrzeniu',
+                    action: 'Preferowane podejście wg KDIGO 2017 (Gitelman) i ERKNet 2021 (Bartter). Panel NGS obejmujący nakładające się geny.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'Gitelman: SLC12A3 (główny) + CLCNKB + HNF1B; czułość analityczna 90–100%, swoistość 100%, czułość kliniczna 65–80% (KDIGO 2017).',
+                      'Bartter: panel z genami właściwymi dla BS (SLC12A1, KCNJ1, CLCNKB, BSND, CLCNKA, MAGED2) + nakładające się fenotypowo (SLC12A3 dla GS).',
+                      'Liddle: SCNN1A, SCNN1B, SCNN1G — przy HT z hipokaliemią + niska renina + niski aldosteron.',
+                      'dRTA dziedziczna: ATP6V1B1, ATP6V0A4, SLC4A1 — przy klinicznym podejrzeniu.',
+                      'Wskazania: wczesny początek, nawrotowość, wywiad rodzinny, oporność na leczenie. Testy funkcjonalne z diuretykami (klasyczne różnicowanie BS vs GS) — zdegradowane przez ERKNet 2021/KDIGO 2017 do roli niszowej, gdy genetyka niedostępna.'
+                    ]
+                  }
+                ]
+              },
+              {
+                number: 6,
+                title: 'Krok 6 — FEK (frakcyjne wydalanie potasu) opcjonalnie',
+                sublabel: 'pomocniczo przy niejednoznacznym K/Cr',
+                options: [
+                  {
+                    threshold: 'FEK > 9,8% — sugeruje utratę nerkową',
+                    action: 'FEK = (K w moczu × kreatynina w surowicy) / (K w surowicy × kreatynina w moczu) × 100%. Wymaga jednoczasowych próbek surowicy i moczu.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'Czułość 86,7%, swoistość 87,1% dla nerkowej utraty potasu (badanie 2023, populacja z HT/PA).',
+                      'NIE jest jeszcze standardem wytycznych ogólnych — ograniczona walidacja zewnętrzna.',
+                      'Może być pomocniczy gdy spot K/Cr daje wynik graniczny lub nie pasuje do obrazu klinicznego.'
                     ]
                   }
                 ]
@@ -7264,62 +7388,92 @@
         ]
       },
       sections: [
-        { name: 'Panel podstawowy',
+        { name: 'Krok 1 — pakiet pierwszego rzutu (jednoczasowo krew + mocz, PRZED leczeniem)',
           tests: [
-            EXT.potassium, EXT.sodium, EXT.cmp,
-            EXT.egfr,
-            EXT.albumin
+            EXT.potassium, EXT.sodium,
+            { ext: 'magnesium', label: 'Magnez (Mg) — WYSOKI priorytet', note: 'Hipomagnezemia w 40–60% hipokaliemii; bez wyrównania Mg substytucja K jest nieskuteczna. Cel: Mg > 0,7 mmol/L.' },
+            { ext: 'chloride', label: 'Chlorki w surowicy', note: 'Razem z HCO₃⁻ — ocena równowagi kwasowo-zasadowej.' },
+            { ext: 'abg', label: 'Gazometria krwi (pH, HCO₃⁻)', note: 'Alkaloza → wymioty, mineralokortykoidy, tubulopatie; kwasica → RTA, biegunka, DKA. Centralna oś różnicowania.' },
+            EXT.cmp, EXT.egfr,
+            EXT.glucose_fasting,
+            { ext: 'ekg', label: 'EKG — TRIAGE (nie etiologia)', note: 'Spłaszczenie/odwrócenie T, fala U, wydłużenie QT, torsade de pointes. Brak uniwersalnych progów EKG dla konkretnych poziomów K+ — służy ocenie PILNOŚCI, nie rozpoznawaniu przyczyny.' }
           ]
         },
-        { name: 'Magnez + gazometria + EKG',
+        { name: 'Krok 2 — pakiet moczowy (jednoczasowo z krwią, z TEJ samej próbki)',
           tests: [
-            { ext: 'magnesium', label: 'Magnez (Mg)', note: 'Hipomagnezemia utrwala hipokaliemię — substytucja samego potasu bez wyrównania magnezu jest nieskuteczna. Cel: Mg > 0,7 mmol/L.' },
-            { ext: 'abg', label: 'Gazometria krwi (pH, HCO₃⁻)', note: 'Alkaloza → utrata z wymiotami lub hiperaldosteronizm; kwasica → kwasica cewkowa nerkowa (RTA), biegunka, cukrzycowa kwasica ketonowa (DKA).' },
-            { ext: 'ekg', label: 'EKG', note: 'Spłaszczenie lub odwrócenie załamka T, obecność fali U, wydłużenie QT, ryzyko torsade de pointes.' }
+            { ext: 'urine_cl', label: 'Cl⁻ w moczu — PIERWSZA LINIA przy zasadowicy', note: 'NAJWAŻNIEJSZY test moczowy przy hipokaliemii z zasadowicą metaboliczną. < 25 mmol/L → zasadowica chlorkowrażliwa (wymioty, NGT, świeże po diuretykach); > 40 mmol/L → aktywne diuretyki, mineralokortykoidy lub tubulopatie. Tańszy i szybszy niż diagnostyka hormonalna — preferować jako pierwszy filtr.' },
+            EXT.urine_na,
+            { ext: 'urine_k_creat', label: 'K/kreatynina w spot urine (preferowane)', note: '< 13 mmol/g sugeruje utratę pozanerkową; > 13 mmol/g — nerkową. Nowoczesna alternatywa dla TTKG (Kamel-Halperin JASN 2011).' },
+            { ext: 'urine_k_spot', label: 'Potas w moczu (próbka przygodna lub DZM)', note: '> 20 mmol/L w hipokaliemii sugeruje utratę nerkową. W DZM: > 25 mmol/24 h — utrata nerkowa.' },
+            EXT.urine_creat,
+            { ext: 'urine_ph', label: 'pH moczu — TYLKO w kontekście kwasicy', note: 'Interpretuj WYŁĄCZNIE z gazometrią + AG. pH > 5,5 mimo jawnej kwasicy hiperchloremicznej z prawidłową AG → dRTA (typ 1). Samo pH bez kwasicy = mylące.' }
           ]
         },
-        { name: 'Ocena utraty (wskaźniki moczowe)',
+        { name: 'Krok 3 — Ca/kreatynina + USG nerek (różnicowanie tubulopatii)',
           tests: [
-            { ext: 'urine_k_creat', label: 'K/kreatynina w spot urine (preferowane)', note: '< 13 mmol/g sugeruje utratę pozanerkową; > 13 mmol/g — nerkową. Nowoczesna alternatywa dla TTKG (zalecana wg Kamel-Halperin JASN 2011).' },
-            { ext: 'urine_k_spot', label: 'Potas w moczu (próbka przygodna lub DZM)', note: '> 20 mmol/L w hipokaliemii sugeruje utratę nerkową; < 20 mmol/L — utratę pozanerkową lub redystrybucję. W DZM: > 25 mmol/24 h — utrata nerkowa.' },
-            { ext: 'urine_cl', label: 'Chlor w moczu (uzupełniająco)', note: 'W zasadowicy metabolicznej: Cl w moczu < 20 mmol/L → utrata z wymiotami lub ukryte wymioty; > 40 mmol/L → diuretyki lub hiperaldosteronizm.' },
-            { ext: 'ttkg', label: 'TTKG (gradient stężenia potasu w cewce nerkowej) — wskaźnik historyczny', note: 'Ang. transtubular potassium gradient. Kwestionowany od 2011 r. (Halperin); preferowany K/kreatynina w spot urine. Wartość > 4 w hipokaliemii sugeruje utratę nerkową. Wzór: (K w moczu × osmolalność surowicy) / (K w surowicy × osmolalność moczu).' }
+            { ext: 'urine_ca_creat', label: 'Ca/kreatynina w moczu (lub kalciuria w DZM)', note: 'KLUCZOWE dla różnicowania: hipokalciuria (< 0,1 mmol/mmol lub < 2,5 mmol/d) → Gitelman; hiperkalciuria (> 0,5 mmol/mmol) → Bartter klasyczny lub dRTA.' },
+            EXT.ca_total,
+            { ext: 'renal_us', label: 'USG nerek', note: 'Nefrokalcynoza → Bartter typu 1/2/4 lub dRTA. Brak + hipokalciuria → Gitelman. Obowiązkowe przy podejrzeniu tubulopatii.' }
           ]
         },
-        { name: 'Diagnostyka endokrynna',
+        { name: 'Krok 4 — diagnostyka endokrynna (HT + hipokaliemia)',
           tests: [
-            { id: 'aldosterone' }, EXT.pra_pac, EXT.arr,
-            { id: 'cortisol', note: 'Po teście hamowania deksametazonem (DST) 1 mg — gdy charakterystyczne objawy zespołu Cushinga.' },
-            { id: 'tsh', note: 'Wykluczenie nadczynności tarczycy — porażenie okresowe tyreotoksykozne (zwłaszcza u młodych mężczyzn pochodzenia azjatyckiego).' }
+            { id: 'aldosterone', note: 'Endocrine Society 2026: RANO, w pozycji SIEDZĄCEJ, BEZ restrykcji sodu, PO KOREKCJI K > 4,0 mmol/L. Bezwzględnie wysoki aldosteron + supresja reniny.' },
+            EXT.pra_pac,
+            EXT.arr,
+            { id: 'cortisol', note: 'Po DST 1 mg lub kortyzol w DZM/ślinie nocnej — TYLKO przy charakterystycznym fenotypie Cushinga, opornym HT, niejasnym przypadku.' },
+            { id: 'tsh', note: 'PRIORYTETOWO przy podejrzeniu TPP (thyrotoxic periodic paralysis) — nawrotowa hipokaliemia + porażenie, zwłaszcza młodzi mężczyźni pochodzenia azjatyckiego.' }
           ]
         },
-        { name: 'VIP-oma (gdy masywna biegunka z hipokaliemią)',
+        { name: 'Krok 5 — FEK (frakcyjne wydalanie potasu) — opcjonalnie',
           tests: [
-            { ext: 'vip_serum', label: 'VIP w surowicy (wazoaktywny peptyd jelitowy)', note: 'Diagnostyka guza neuroendokrynnego trzustki w zespole Verner-Morrisona (WDHA syndrome — wodnista biegunka, hipokaliemia, achlorhydria).' },
+            { ext: 'fek', label: 'FEK (Fractional Excretion of Potassium)', note: 'FEK = (Kmoczu × kreatynina_surowicy) / (Ksurowicy × kreatynina_moczu) × 100%. Próg > 9,8% wspiera nerkową utratę K (czułość 86,7%, swoistość 87,1%, badanie 2023). NIE jest jeszcze standardem wytycznych — pomocniczo gdy spot K/Cr graniczny.' }
+          ]
+        },
+        { name: 'Krok 6 — TTKG (historyczny, eksperckie)',
+          tests: [
+            { ext: 'ttkg', label: 'TTKG — wskaźnik HISTORYCZNY, NIE RUTYNOWO', note: 'Kwestionowany od 2011 r. przez samego Halperina (JASN 2011) — założenie stabilnej osmolalności mocznika w cewce zbiorczej okazało się nieprawdziwe. Wymaga Uosm ≥ Posm i odpowiednio wysokiego UNa. Preferowany K/kreatynina w spot urine.' }
+          ]
+        },
+        { name: 'VIP-oma (gdy masywna wodnista biegunka + hipokaliemia + achlorhydria)',
+          tests: [
+            { ext: 'vip_serum', label: 'VIP w surowicy (wazoaktywny peptyd jelitowy)', note: 'Diagnostyka guza neuroendokrynnego trzustki w zespole Verner-Morrisona (WDHA syndrome). Triada: biegunka > 3 L/d + hipokaliemia + achlorhydria.' },
             EXT.chest_ct
           ]
         },
-        { name: 'Genetyka (gdy podejrzenie postaci dziedzicznej)',
+        { name: 'Testy specjalistyczne (ośrodkowe)',
           tests: [
-            { ext: 'slc12a3_gene', label: 'Genetyka SLC12A3 (zespół Gitelmana)', note: 'Wskazania: hipokaliemia + hipomagnezemia + hipokalciuria + alkaloza u młodego dorosłego.' },
-            { ext: 'slc12a1_kcnj1_clcnkb_gene', label: 'Geny zespołu Bartera (SLC12A1, KCNJ1, CLCNKB)', note: 'Objawy w dzieciństwie — niedowaga, niski wzrost, polidypsja.' },
-            { ext: 'cyp11b1_cyp11b2_chimera', label: 'Chimera CYP11B1/CYP11B2 (GRA)', note: 'Glikokortykoidozależny hiperaldosteronizm; u młodych z HT + hipokaliemią + dodatnim wywiadem rodzinnym.' }
+            { ext: 'acid_loading_nh4cl', label: 'Test zakwaszania NH4Cl', note: 'Dla idRTA (niepełnej dystalnej RTA) — NH4Cl PO 0,1 g/kg, ocena pH moczu po 6 h. Działania niepożądane: nudności, wymioty. W praktyce wypierany przez test furosemidowo-fludrokortyzonowy.' },
+            { ext: 'furosemide_fludro_test', label: 'Test furosemidowo-fludrokortyzonowy', note: 'Preferowany nad NH4Cl dla idRTA — mniej działań niepożądanych. Tylko w ośrodku specjalistycznym.' }
+          ]
+        },
+        { name: 'Genetyka (panel NGS) — przy klinicznym podejrzeniu',
+          tests: [
+            { ext: 'gitelman_ngs_panel', label: 'Panel Gitelman: SLC12A3 + CLCNKB + HNF1B', note: 'KDIGO 2017: czułość analityczna 90–100%, swoistość 100%, czułość kliniczna 65–80%. Wskazania: hipokaliemia + hipomagnezemia + hipokalciuria + alkaloza u młodego dorosłego.' },
+            { ext: 'bartter_ngs_panel', label: 'Panel Bartter: SLC12A1, KCNJ1, CLCNKB, BSND, CLCNKA, MAGED2 + nakładające się geny GS', note: 'ERKNet 2021: oferować wszystkim z klinicznym podejrzeniem BS. Objawy w dzieciństwie — niedowaga, niski wzrost, polidypsja, nefrokalcynoza.' },
+            { ext: 'liddle_scnn1_panel', label: 'Panel Liddle: SCNN1A, SCNN1B, SCNN1G', note: 'Aktywujące mutacje ENaC. Wskazania: wczesne/oporne HT + hipokaliemia + zasadowica + NISKA renina + NISKI aldosteron.' },
+            { ext: 'drta_genes', label: 'Geny dRTA: ATP6V1B1, ATP6V0A4, SLC4A1', note: 'Wrodzona dystalna RTA — przy klinicznym podejrzeniu z kwasicą hiperchloremiczną i nefrokalcynozą.' },
+            { ext: 'cyp11b1_cyp11b2_chimera', label: 'Chimera CYP11B1/CYP11B2 (GRA / FH typ 1)', note: 'Glikokortykoidozależny hiperaldosteronizm; u młodych z HT + hipokaliemią + dodatnim wywiadem rodzinnym (autosomalna dominująca).' }
           ]
         }
       ],
-      guideline: 'KDIGO 2020 (Clase i wsp.) / Mount DB 2024 (UpToDate, przegląd) / BMJ Best Practice 2024 (Hypokalaemia) / Endocrine Society 2016 (Pierwotny hiperaldosteronizm, Funder) / Kamel & Halperin 2011 (krytyka TTKG, JASN).',
+      guideline: 'Endocrine Society 2026 (PA — zaktualizowany protokół ARR, AVS, opcjonalność testów supresyjnych) / KDIGO 2020 (Clase — gospodarka potasowa) / KDIGO 2017 (zespół Gitelmana — Blanchard, panel NGS) / ERKNet 2021 (zespół Bartera — Konrad, panel genetyczny) / ERKNet/NDT 2021 (dystalna RTA) / Kamel & Halperin 2011 (krytyka TTKG, JASN) / Mount DB 2024 (UpToDate).',
       sources: [
-        'Clase CM, Carrero JJ, Ellison DH i wsp. Potassium homeostasis and management of dyskalemia in kidney diseases: conclusions from a Kidney Disease: Improving Global Outcomes (KDIGO) Controversies Conference. Kidney Int. 2020;97(1):42-61.',
-        'Mount DB. Causes of hypokalemia in adults. UpToDate; aktualizacja 2024.',
-        'Mount DB. Clinical manifestations and treatment of hypokalemia in adults. UpToDate; aktualizacja 2024.',
+        'Endocrine Society 2026. Management of Primary Aldosteronism: Clinical Practice Guideline (aktualizacja Funder 2016). Protokół ARR — pozycja siedząca, korekcja K, leki interferujące, bezwzględny aldosteron + supresja reniny. CT + AVS przed adrenalektomią z wąskim wyjątkiem dla młodych.',
+        'Clase CM, Carrero JJ, Ellison DH i wsp. Potassium homeostasis and management of dyskalemia in kidney diseases: KDIGO Controversies Conference. Kidney Int. 2020;97(1):42-61.',
+        'Blanchard A i wsp. Gitelman syndrome: consensus and guidance from a Kidney Disease: Improving Global Outcomes (KDIGO) Controversies Conference. Kidney Int. 2017;91(1):24-33. (panel NGS SLC12A3 + CLCNKB + HNF1B; czułość 65–80%)',
+        'Konrad M i wsp. (ERKNet 2021). Diagnosis and management of Bartter syndrome: executive summary of the consensus and recommendations from a European Reference Network. Kidney Int. 2021. (panel genetyczny BS + nakładające się geny GS)',
+        'Trepiccione F i wsp. (ERKNet 2021). Distal renal tubular acidosis: ERKNet/ESPN clinical practice points. Nephrol Dial Transplant. 2021. (interpretacja pH moczu + AG; testy zakwaszania)',
+        'Mount DB. Causes / Clinical manifestations / Treatment of hypokalemia in adults. UpToDate; aktualizacja 2024.',
         'Kamel KS, Halperin ML. Intelligent and Wise Use of the Transtubular Potassium Concentration Gradient (TTKG): A Time for Reappraisal. J Am Soc Nephrol. 2011;22(7):1245-1248.',
-        'Funder JW, Carey RM, Mantero F i wsp. The Management of Primary Aldosteronism: Case Detection, Diagnosis, and Treatment: An Endocrine Society Clinical Practice Guideline. J Clin Endocrinol Metab. 2016;101(5):1889-1916.',
+        'Funder JW, Carey RM, Mantero F i wsp. The Management of Primary Aldosteronism: Endocrine Society 2016 Guideline. J Clin Endocrinol Metab. 2016;101(5):1889-1916. (poprzednia wytyczna — zastąpiona przez 2026)',
         'Unwin RJ, Luft FC, Shirley DG. Pathophysiology and management of hypokalemia: a clinical perspective. Nat Rev Nephrol. 2011;7(2):75-84.',
         'Kardalas E, Paschou SA, Anagnostis P i wsp. Hypokalemia: a clinical update. Endocr Connect. 2018;7(4):R135-R146.',
+        'Wang FZ i wsp. Fractional Excretion of Potassium as a Predictor of Hypokalemia in Primary Aldosteronism. 2023. (FEK > 9,8% — czułość 86,7%, swoistość 87,1%)',
         'Viera AJ, Wouk N. Potassium Disorders: Hypokalemia and Hyperkalemia. Am Fam Physician. 2015;92(6):487-495.',
         'Asmar A, Mohandas R, Wingo CS. A physiologic-based approach to the treatment of a patient with hypokalemia. Am J Kidney Dis. 2012;60(3):492-497.',
-        'Litchman BL i wsp. Reefeeding syndrome — clinical update. Curr Opin Clin Nutr Metab Care. 2020;23(4):219-226.',
-        'Stowasser M, Gordon RD. Primary Aldosteronism: Changing Definitions and New Concepts of Physiology and Pathophysiology Both Inside and Outside the Kidney. Physiol Rev. 2016;96(4):1327-1384 (zawiera szczegółowe omówienie GRA / FH typ 1).'
+        'Litchman BL i wsp. Refeeding syndrome — clinical update. Curr Opin Clin Nutr Metab Care. 2020;23(4):219-226.',
+        'Stowasser M, Gordon RD. Primary Aldosteronism: Changing Definitions and New Concepts. Physiol Rev. 2016;96(4):1327-1384. (szczegółowe omówienie GRA / FH typ 1)'
       ]
     },
 
@@ -7334,15 +7488,17 @@
               'Hiponatremia — stężenie sodu w surowicy < 135 mmol/L. Najczęstsze zaburzenie elektrolitowe w praktyce klinicznej (4–7% pacjentów hospitalizowanych).',
               { heading: 'Klasyfikacja wieloparametryczna' },
               { items: [
-                { label: 'Wg ciężkości', text: 'łagodna 130–134; umiarkowana 125–129; ciężka < 125 mmol/L.' },
+                { label: 'Wg ciężkości biochemicznej', text: 'łagodna 130–134; umiarkowana 125–129; ciężka < 125 mmol/L.' },
                 { label: 'Wg czasu trwania', text: 'ostra (< 48 h) — większe ryzyko obrzęku mózgu, szerszy zakres bezpiecznego wyrównywania; przewlekła (≥ 48 h lub czas nieznany) — większe ryzyko zespołu demielinizacji osmotycznej przy zbyt szybkim wyrównaniu.' },
-                { label: 'Wg objawów', text: 'bezobjawowa; umiarkowanie objawowa (nudności, ból głowy, splątanie, niezborność ruchowa); ciężko objawowa (wymioty, drgawki, śpiączka, niewydolność oddechowa).' },
-                { label: 'Wg wolemii', text: 'hipowolemia; euwolemia (najczęstsza — SIADH); hiperwolemia.' }
+                { label: 'Wg objawów (decydujące o pilności)', text: 'bezobjawowa; umiarkowanie objawowa (nudności, ból głowy, splątanie, niezborność ruchowa); ciężko objawowa (wymioty, drgawki, śpiączka, niewydolność oddechowa). UWAGA: nasilenie objawów może NIE odpowiadać stopniowi biochemicznej hiponatremii — pacjent z Na < 125 może być bezobjawowy, a pacjent z umiarkowaną hiponatremią może mieć ciężkie objawy (zwłaszcza przy szybkim spadku). Decyzje pilne opieramy na OBJAWACH, nie samym Na+ (Society for Endocrinology 2022).' },
+                { label: 'Wg wolemii (pomocniczo, nie decydujące)', text: 'hipowolemia; euwolemia (najczęstsza — SIAD); hiperwolemia. ESE 2014 świadomie odsunął ocenę wolemii klinicznej z głównego algorytmu — ocena ta ma ograniczoną trafność (czułość ~50%) i może prowadzić lekarza złą ścieżką.' }
               ] },
+              { heading: 'Nomenklatura — SIAD vs SIADH' },
+              'Współczesne piśmiennictwo (Endocrine Reviews 2023, JAMA 2022) preferuje skrót SIAD — „syndrome of inappropriate antidiuresis" (zamiast SIADH), bo nieadekwatna antydiureza nie zawsze wynika z nadmiaru ADH (np. nephrogenic SIAD przy aktywujących mutacjach AVPR2). W tym panelu używamy obu form wymiennie.',
               { heading: 'Diagnostyka różnicowa — kluczowe parametry' },
-              'Wymaga oceny: osmolalności surowicy, osmolalności moczu, sodu w moczu oraz stanu wolemii klinicznej.',
+              'Wymaga oceny: osmolalności surowicy, osmolalności moczu, sodu w moczu oraz selektywnych testów hormonalnych. Ocena wolemii — POMOCNICZA, nie decydująca.',
               { heading: 'Wytyczne' },
-              'Spasovski 2014 (ESE/EAN/ERA-EDTA — europejskie wytyczne kliniczne), Verbalis 2013 (Am J Med — Expert Panel), Hoorn 2017 (JASN — przegląd kliniczny).'
+              'Spasovski 2014 (ESE/EAN/ERA-EDTA — europejskie wytyczne) / Verbalis 2013 (Am J Med — Expert Panel) / Hoorn 2017 (JASN — przegląd) / Society for Endocrinology 2022 (objawowa hiponatremia) / Adrogué-Madias 2022 (NEJM — SIAD) / Endocrine Reviews 2023 (SIAD) / austriacki konsensus 2024 (aktualizacja praktyki).'
             ]
           },
           {
@@ -7355,7 +7511,7 @@
               { label: 'Osmolalność surowicy', text: '< 275 mOsm/kg → hiponatremia hipotoniczna (najczęstsza); 275–295 → izotoniczna (pseudohiponatremia); > 295 → hipertoniczna (hiperglikemia, mannitol).' },
               { label: 'Pseudohiponatremia', text: 'fałszywie obniżony wynik metodą pośrednią potencjometryczną (płomieniowa) wskutek hiperlipidemii (TG > 1500 mg/dL) lub hiperproteinemii (szpiczak, gammapatie). Metoda bezpośrednia (gazometria) daje prawidłowy wynik.' },
               { label: 'Hiponatremia hipertoniczna', text: 'wzrost glukozy o 100 mg/dL obniża Na o ok. 1,6 mmol/L (klasyczna formuła Katza); aktualnie preferowana 2,4 mmol/L (Hillier 1999). Dotyczy DKA, HHS (zespół hiperglikemiczny hiperosmolarny), masywnej infuzji mannitolu.' },
-              { label: 'Klasyfikacja wg objawów', text: 'bezobjawowa (Na > 130, brak objawów); umiarkowanie objawowa (ból głowy, splątanie, niezborność — Na 125–129); ciężko objawowa (wymioty, drgawki, śpiączka — zwykle Na < 120 lub szybki spadek niezależnie od wartości). Skala Glasgow (GCS — Glasgow Coma Scale) pomocna w ocenie zaburzeń świadomości.' }
+              { label: 'Klasyfikacja wg objawów', text: 'objawy ZALEŻĄ od tempa spadku Na+, toniczności i zdolności adaptacji OUN — poziom Na+ sam w sobie nie klasyfikuje ciężkości. Typowy obraz (NIE deterministyczny): bezobjawowa (zwykle wolny spadek, dobra adaptacja); umiarkowanie objawowa (ból głowy, splątanie, niezborność); ciężko objawowa (wymioty, drgawki, śpiączka, niewydolność oddechowa). Decyzje pilne opieramy na OBJAWACH, nie na liczbie Na+ (Society for Endocrinology 2022). Skala Glasgow (GCS — Glasgow Coma Scale) pomocna w ocenie zaburzeń świadomości.' }
             ]
           },
           {
@@ -7389,6 +7545,22 @@
                 { label: 'Limit u pacjentów bez ryzyka ODS', text: 'klasycznie maks. 10–12 mmol/L/dobę i 18 mmol/L/48 h (Spasovski 2014). Nowsze publikacje (Sterns 2018, Adrogué 2022) zalecają konserwatywniejsze podejście — preferowane utrzymywanie wzrostu Na na poziomie ≤ 6–8 mmol/L/dobę u każdego pacjenta z przewlekłą hiponatremią, ze względu na trudność precyzyjnego określenia czasu trwania i ryzyka ODS.' },
                 { label: 'Postępowanie po przekroczeniu limitu', text: '„re-lowering" Na: 5% glukoza i.v. (D5W — ang. 5% dextrose in water) 6 mL/kg w 1–2 h (lub 1 L w 6 h) i/lub desmopresyna 2–4 μg s.c. — celowo obniżyć Na do zakresu < limitu.' }
               ] }
+            ]
+          },
+          {
+            kind: 'callout',
+            variant: 'primary',
+            icon: 'flask',
+            title: 'KLUCZOWE — przed leczeniem pobierz jednoczasowo',
+            collapsible: false,
+            body: [
+              'U każdego chorego z hiponatremią — jeśli stan kliniczny pozwala — PRZED rozpoczęciem płynoterapii lub diuretyków pobrać jednoczasowo:',
+              { items: [
+                'KREW: Na+, osmolalność surowicy (zmierzona, nie liczona), glukoza, kreatynina/eGFR, K+',
+                'MOCZ (spot): osmolalność moczu, sód w moczu (UNa), kreatynina w moczu — najlepiej z tej samej godziny',
+                'Selektywnie: kortyzol poranny + ACTH (gdy euwolemia / hipotensja / podejrzenie AI), TSH/fT4 (gdy niewyjaśniona)'
+              ] },
+              'To minimum pozwala wykonać cały algorytm różnicowania (ESE 2014, JAMA 2022, konsensus austriacki 2024). Wlewy płynów i diuretyki przed pobraniem zniekształcają UNa i osmolalność moczu — najważniejsze parametry różnicujące.'
             ]
           },
           {
@@ -7473,7 +7645,8 @@
                     variant: 'warning', icon: 'alert-triangle',
                     detail: [
                       'Mocz nieadekwatnie stężony przy obecnej hiponatremii → nadmiar wody w organizmie ale nerki nadal koncentrują mocz (mechanizm hormonalny lub fizjologiczny).',
-                      'Etap kluczowy: różnicowanie SIADH (euwolemia + ADH nieadekwatne), hipowolemii (ADH stymulowane fizjologicznie), hiperwolemii (CHF, marskość — efektywna objętość krwi krążącej obniżona mimo retencji płynów).'
+                      'Etap kluczowy: różnicowanie SIADH (euwolemia + ADH nieadekwatne), hipowolemii (ADH stymulowane fizjologicznie), hiperwolemii (CHF, marskość — efektywna objętość krwi krążącej obniżona mimo retencji płynów).',
+                      'UWAGA — „szara strefa" 100 mOsm/kg do wartości osmolalności surowicy: ESE 2014 wprost zaznacza, że w tym zakresie NIE można pewnie stwierdzić czy wazopresyna jest całkowicie zahamowana czy tylko częściowo. Możliwe są etiologie mieszane. ESE: brak dobrych danych czułości/swoistości dla progu 100 mOsm/kg.'
                     ]
                   }
                 ]
@@ -7496,14 +7669,23 @@
                   },
                   {
                     threshold: 'Sód w moczu > 30 mmol/L',
-                    action: 'Wysoki sód w moczu → utrata nerkowa lub SIADH/CSW lub niewydolność nadnerczy.',
+                    action: 'Wysoki sód w moczu → utrata nerkowa lub SIAD/CSW lub niewydolność nadnerczy. UWAGA: u pacjentów na diuretykach NIE rozstrzyga (swoistość spada do ~0,24 — ESE 2014).',
                     variant: 'warning', icon: 'alert-triangle',
                     detail: [
+                      'Parametry diagnostyczne (ESE 2014 meta-analiza):',
+                      { items: [
+                        { label: 'Czułość', text: '0,87–1,0 (wysoka — dobry test wykluczający niską efektywną objętość)' },
+                        { label: 'Swoistość ogólnie', text: '0,52–0,83 (umiarkowana)' },
+                        { label: 'Swoistość na diuretykach', text: '~0,24 (NIE rozstrzyga — diuretyk powoduje natriurezę niezależnie od etiologii)' }
+                      ] },
+                      'WAŻNE: niski UNa NIE wyklucza SIADH gdy pacjent ma małą podaż sodu w diecie, małą diurezę lub etiologię mieszaną.',
+                      { heading: 'Możliwe etiologie' },
                       'Diuretyki — tiazydowe (klasyczna przyczyna ostrej hiponatremii u starszych), pętlowe (rzadziej), MRA.',
-                      'SIADH — najczęstsza przyczyna hiponatremii euwolemicznej; pełna definicja niżej.',
+                      'SIAD — najczęstsza przyczyna hiponatremii euwolemicznej; pełna definicja niżej.',
                       'CSW — zespół mózgowej utraty soli (Cerebral Salt Wasting); klinicznie z hipowolemią; tabela różnicująca w callout-cie niżej.',
                       'Niewydolność nadnerczy — wtórna (ACTH-zależna) lub pierwotna (Addison); wymaga oznaczenia kortyzolu porannego + ACTH.',
-                      'Tubulopatie z utratą sodu — zespół Bartera, Gitelmana (rzadkie).'
+                      'Tubulopatie z utratą sodu — zespół Bartera, Gitelmana (rzadkie).',
+                      'Przewlekła choroba nerek (CKD) z utratą zdolności zagęszczania moczu.'
                     ]
                   }
                 ]
@@ -7549,28 +7731,56 @@
               },
               {
                 number: 5,
-                title: 'Diagnostyka endokrynologiczna',
-                sublabel: 'wykluczenie niedoczynności nadnerczy i tarczycy',
+                title: 'Kortyzol + ACTH — PRIORYTET (wtórna niewydolność nadnerczy = klasyczny groźny naśladowca SIAD)',
+                sublabel: 'aktywnie wykluczyć w euwolemii, hipotensji, podejrzeniu AI',
                 options: [
                   {
-                    threshold: 'Kortyzol poranny + ACTH',
-                    action: 'Kortyzol < 138 nmol/L (< 5 μg/dL) sugeruje niedoczynność nadnerczy; > 500 nmol/L (> 18 μg/dL) ją wyklucza. Wartości pośrednie → test stymulacji ACTH (Synacthen).',
+                    threshold: 'Kortyzol poranny (8:00) + ACTH — pobrać PRZED steroidami',
+                    action: 'Kortyzol < 140 nmol/L (< 5 μg/dL) z wysokim ACTH silnie wspiera pierwotną AI; > 500 nmol/L (> 18 μg/dL) zwykle wyklucza AI; wartości pośrednie → test stymulacji ACTH (Synacthen 250 μg).',
                     variant: 'warning', icon: 'alert-triangle',
                     detail: [
-                      'Hiponatremia jest klasycznym, czasem jedynym, objawem niedoczynności nadnerczy.',
+                      'Hiponatremia jest klasycznym, czasem jedynym objawem niedoczynności nadnerczy (wtórna AI to ważniejszy i częściej niebezpieczny naśladowca SIAD niż ciężka hipotyreoza).',
                       'Niewydolność pierwotna (Addison) — kortyzol niski + ACTH wysoki + hiponatremia + hiperkaliemia + hipotensja ortostatyczna + hiperpigmentacja.',
                       'Niewydolność wtórna (przysadkowa) — kortyzol niski + ACTH niski lub niski-normalny; kaliemia zwykle prawidłowa (mineralokortykoidy zachowane).',
+                      'Test Synacthen: kortyzol 0/30/60 min po 250 μg ACTH; szczyt < 500 nmol/L sugeruje AI (próg metodozależny — assay dependence!).',
+                      'KRYTYCZNE: w stanie ciężkim NIE opóźniać leczenia. Pobrać próbki i podać hydrokortyzon 100 mg i.v. niezwłocznie przy podejrzeniu kryzysu nadnerczowego.',
                       'Pełen algorytm: panel adrenal_insufficiency.'
                     ]
-                  },
+                  }
+                ]
+              },
+              {
+                number: 6,
+                title: 'TSH + fT4 — selektywnie',
+                sublabel: 'tylko gdy brak innej przyczyny lub są objawy tarczycowe',
+                options: [
                   {
-                    threshold: 'TSH + fT4',
-                    action: 'Niedoczynność tarczycy może powodować hiponatremię, ale zwykle dopiero w ciężkich postaciach (np. śpiączka mikretowa).',
+                    threshold: 'TSH + fT4 (selektywnie w niewyjaśnionej euwolemicznej hiponatremii)',
+                    action: 'TSH > 4 mU/L + fT4 obniżona → niedoczynność tarczycy. UWAGA: ESE 2014 podkreśla, że ciężka jawna niedoczynność tarczycy jest RZADKĄ przyczyną klinicznie istotnej hiponatremii.',
                     variant: 'success', icon: 'check',
                     detail: [
-                      'TSH > 4 mU/L + fT4 obniżona → niedoczynność tarczycy.',
                       'Mechanizm: obniżona perfuzja nerkowa + zaburzenia wydalania wolnej wody.',
-                      'Klinicznie istotna hiponatremia z niedoczynności tarczycy zwykle wymaga ciężkiej postaci (śpiączka mikretowa) — łagodna niedoczynność rzadko jest pełną przyczyną.'
+                      'Klinicznie istotna hiponatremia z niedoczynności tarczycy zwykle wymaga ciężkiej postaci (śpiączka mikretowa) — łagodna lub subkliniczna niedoczynność rzadko jest pełną przyczyną.',
+                      'Wykonać selektywnie, nie rutynowo u każdego z hiponatremią.'
+                    ]
+                  }
+                ]
+              },
+              {
+                number: 7,
+                title: 'FEUA (frakcyjne wydalanie kwasu moczowego) — pomocniczo',
+                sublabel: 'zwłaszcza u pacjentów na diuretykach, gdy UNa nie rozstrzyga',
+                options: [
+                  {
+                    threshold: 'Protokół + interpretacja',
+                    action: 'FEUA = (kwas moczowy w moczu × kreatynina w surowicy) / (kwas moczowy w surowicy × kreatynina w moczu) × 100%. Wynik > 12% wspiera SIAD lub RSW (renal salt wasting) u pacjentów na diuretykach.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'Parametry diagnostyczne (ESE 2014, dla pacjentów na diuretykach): czułość ~0,86, swoistość ~1,0.',
+                      'Wymaga jednoczasowych próbek: surowica (Na, kreatynina, kwas moczowy) + mocz (Na, kreatynina, kwas moczowy).',
+                      'Najlepsza dyskryminacja: SIAD/RSW vs utrata przy diuretykach pętlowych lub MRA.',
+                      'Gorzej różnicuje: SIAD vs hiponatremia tiazydowa — nakładanie wzorców biochemicznych.',
+                      'NIE jest badaniem rutynowym pierwszego rzutu — zalecane jako pomocnicze przy hiponatremii na diuretykach lub niejednoznacznym UNa.'
                     ]
                   }
                 ]
@@ -7626,11 +7836,12 @@
                 'Monitoring Na co 2 godziny; ograniczenie do +8 mmol/L/dobę u wysokiego ryzyka ODS, +10–12 mmol/L u innych (preferowane konserwatywne ≤ 6–8 mmol/L/dobę wg Sterns 2018).',
                 'Hospitalizacja na oddziale z monitoringiem (OIT przy GCS ≤ 8, niewydolności oddechowej, drgawkach).'
               ] },
-              { heading: 'Planowanie substytucji — wzór Adrogué-Madias' },
+              { heading: 'Planowanie substytucji — wzór Adrogué-Madias (z OSTRZEŻENIEM 2022)' },
               { items: [
+                { label: '⚠ KRYTYCZNE — Adrogué-Madias 2022', text: 'NIE należy polegać na wzorze Adrogué-Madias do ustalania ilości/rate 3% NaCl w OBJAWOWEJ hiponatremii — może to zwiększać ryzyko nadkorekcji. W objawowej hiponatremii stosujemy **bolusy 100–150 mL 3% NaCl** z celem +4–6 mmol/L w pierwszej godzinie. Wzór ma zastosowanie głównie w PRZEWLEKŁEJ, bezobjawowej hiponatremii do planowania powolnej korekcji (Society for Endocrinology 2022).' },
                 { label: 'Wzór', text: 'oczekiwana zmiana Na po 1 L wlewu = (Na infuzji − Na pacjenta) / (TBW + 1), gdzie TBW (całkowita woda ustrojowa) = 0,6 × masa ciała (mężczyźni dorośli) lub 0,5 × masa (kobiety dorosłe i starsi mężczyźni); u dzieci 0,6–0,7 × masa.' },
                 { label: 'Przykład', text: 'pacjent 70 kg, mężczyzna, Na 115 mmol/L, plan podania 1 L 3% NaCl (Na 513 mmol/L): TBW = 0,6 × 70 = 42 L; zmiana Na = (513 − 115) / (42 + 1) = 9,3 mmol/L na 1 L. Aby uzyskać wzrost 6 mmol/L, podać 0,65 L 3% NaCl w 6–12 h.' },
-                { label: 'Zastosowanie', text: 'wzór umożliwia planowanie szybkości wlewu i objętości; uwzględnia rozcieńczenie z całkowitej wody ustrojowej. UWAGA — wzór nie uwzględnia trwającej diurezy ani strat — w SIADH wlew może być mniej skuteczny niż wzór sugeruje; przy odwodnieniu hipowolemicznym z aktywnym ADH — po wyrównaniu wolemii ADH spada gwałtownie i Na rośnie szybciej niż przewidziane.' },
+                { label: 'Zastosowanie', text: 'wzór umożliwia planowanie szybkości wlewu i objętości w PRZEWLEKŁEJ hiponatremii. UWAGA — nie uwzględnia trwającej diurezy ani strat. W SIAD wlew może być mniej skuteczny niż wzór sugeruje; przy odwodnieniu hipowolemicznym z aktywnym ADH — po wyrównaniu wolemii ADH spada gwałtownie i Na rośnie szybciej niż przewidziane.' },
                 { label: 'Stężenia Na typowych roztworów', text: '0,9% NaCl = 154 mmol/L; 3% NaCl = 513 mmol/L; 5% NaCl = 855 mmol/L; mleczan Ringera = 130 mmol/L.' }
               ] },
               { heading: 'SIADH — restrykcja płynów (pierwsza linia)' },
@@ -7765,59 +7976,85 @@
         ]
       },
       sections: [
-        { name: 'Panel podstawowy',
+        { name: 'Krok 1 — pakiet pierwszego rzutu (przed leczeniem, jednoczasowo krew + mocz)',
           tests: [
-            EXT.sodium, EXT.potassium, EXT.cmp,
-            EXT.egfr,
+            EXT.sodium, EXT.potassium,
             EXT.glucose_fasting,
-            EXT.serum_osm
-          ]
-        },
-        { name: 'Panel moczu (różnicowanie utraty)',
-          tests: [
+            EXT.serum_osm,
             EXT.urine_osm,
             EXT.urine_na,
+            EXT.egfr, EXT.cmp,
+            EXT.urine_creat
+          ]
+        },
+        { name: 'Krok 2 — PRIORYTET: oś nadnerczowa (gdy euwolemia / hipotensja / niewyjaśniona)',
+          tests: [
+            { id: 'cortisol', note: 'Kortyzol poranny 8:00 — PRZED steroidami. < 140 nmol/L + ACTH wysokie → silna sugestia pierwotnej AI; > 500 nmol/L zwykle wyklucza AI; wartości pośrednie → test Synacthen.' },
+            { id: 'acth', note: 'Różnicowanie pierwotnej (Addison) vs wtórnej (przysadkowej) niedoczynności nadnerczy. ESE 2014: AI należy aktywnie wykluczać w SIAD — jest częstym i niebezpiecznym naśladowcą.' }
+          ]
+        },
+        { name: 'Krok 3 — TSH/fT4 selektywnie (rzadka przyczyna)',
+          tests: [
+            { id: 'tsh', note: 'ESE 2014: ciężka jawna niedoczynność tarczycy jest RZADKĄ przyczyną klinicznie istotnej hiponatremii. Wykonać selektywnie w niewyjaśnionej euwolemii lub przy objawach tarczycowych.' },
+            { id: 'ft4' }
+          ]
+        },
+        { name: 'Krok 4 — pakiet pomocniczy (markery SIAD vs hipowolemia)',
+          tests: [
+            { ext: 'uric_acid', label: 'Kwas moczowy', note: 'Niski (< 4 mg/dL / 240 μmol/L) — charakterystyczny dla SIAD; pomocniczy w różnicowaniu z hipowolemią (kwas moczowy wówczas podwyższony).' },
             EXT.urine_k_spot,
-            EXT.urine_creat,
             EXT.urine_cl
           ]
         },
-        { name: 'Diagnostyka endokrynologiczna',
+        { name: 'Krok 5 — FEUA przy diuretykach lub niejednoznacznym UNa',
           tests: [
-            { id: 'tsh' }, { id: 'ft4' },
-            { id: 'cortisol', note: 'Kortyzol poranny — wykluczenie niedoczynności nadnerczy (klasyczna przyczyna hiponatremii).' },
-            { id: 'acth', note: 'Różnicowanie pierwotnej (Addison) vs wtórnej niedoczynności nadnerczy.' }
+            { ext: 'feua', label: 'FEUA (frakcyjne wydalanie kwasu moczowego)', note: 'FEUA > 12% wspiera SIAD/RSW. Czułość ~0,86, swoistość ~1,0 u pacjentów na diuretykach (ESE 2014). Wymaga jednoczasowych próbek: surowica (Na, kreatynina, kwas moczowy) + mocz (Na, kreatynina, kwas moczowy). NIE rutynowo pierwszego rzutu.' }
           ]
         },
-        { name: 'Diagnostyka SIADH (markery pomocnicze)',
+        { name: 'Krok 6 — pseudohiponatremia (gdy osmol. 275–295)',
           tests: [
-            { ext: 'uric_acid', label: 'Kwas moczowy', note: 'Niski (< 4 mg/dL / 240 μmol/L) — charakterystyczny dla SIADH; pomocniczy w różnicowaniu z hipowolemią (gdzie kwas moczowy jest podwyższony).' },
-            EXT.albumin,
             EXT.lipid_panel,
-            { ext: 'spep', label: 'SPEP (elektroforeza białek surowicy)', note: 'Wykluczenie szpiczaka — przyczyny pseudohiponatremii.' }
+            EXT.albumin,
+            { ext: 'spep', label: 'SPEP (elektroforeza białek surowicy)', note: 'Wykluczenie szpiczaka mnogiego / gammapatii monoklonalnych — przyczyn hiperproteinemii i fałszywej pseudohiponatremii.' },
+            { ext: 'sodium_direct_ise', label: 'Na+ metodą bezpośredniej ISE (gazometria)', note: 'Przy normalnej osmolalności i hiperTG/hiperproteinemii — direct ISE daje prawidłowy Na+. Jeśli Na z biochemii (indirect ISE) ≠ Na z gazometrii → pseudohiponatremia.' }
           ]
         },
-        { name: 'Diagnostyka rozszerzona (gdy podejrzenie moczówki w różnicowaniu)',
+        { name: 'Krok 7 — ocena przyczyn wtórnych (warunkowo wg wywiadu i fenotypu)',
           tests: [
-            EXT.copeptin_stim,
-            EXT.water_deprivation_test,
-            EXT.avp_arg
+            { ext: 'liver', label: 'Próby wątrobowe (ALT, AST, GGT, ALP, bilirubina, INR)', note: 'Marskość z wodobrzuszem — klasyczna przyczyna hiperwolemicznej hiponatremii.' },
+            { ext: 'nt_probnp', label: 'NT-proBNP / echo serca', note: 'Niewydolność serca — efektywna hipowolemia mimo retencji płynów.' },
+            { ext: 'urine_protein_24h', label: 'Białkomocz dobowy (DZM)', note: 'Zespół nerczycowy: > 3,5 g/dobę + hipoalbuminemia + hiperlipidemia + obrzęki.' },
+            { ext: 'med_review', label: 'Przegląd farmakoterapii', note: 'Diuretyki tiazydowe, SSRI/SNRI, karbamazepina, okskarbazepina, neuroleptyki, opioidy, cytostatyki (cyklofosfamid, winkrystyna), desmopresyna. Alkohol/beer potomania.' }
           ]
         },
-        { name: 'Obrazowanie (gdy podejrzenie centralnej przyczyny)',
+        { name: 'Obrazowanie — KIERUNKOWO (nie rutynowo dla wszystkich)',
           tests: [
-            EXT.brain_mri,
-            EXT.chest_xray,
-            EXT.chest_ct
+            { ext: 'chest_xray', label: 'RTG klatki piersiowej', note: 'TYLKO przy objawach oddechowych, paleniu, podejrzeniu nowotworu/zapalenia płuc, utrzymującym się niewyjaśnionym SIAD.' },
+            { ext: 'chest_ct', label: 'TK klatki piersiowej', note: 'Eskalacja gdy RTG niejednoznaczny + utrzymujące się podejrzenie nowotworu (SCC/SCLC).' },
+            { ext: 'brain_mri', label: 'TK/MRI głowy', note: 'TYLKO przy objawach neurologicznych, świeżym incydencie OUN, podejrzeniu krwawienia podpajęczynówkowego, guza, urazu, zapalenia.' },
+            { ext: 'pituitary_mri', label: 'MRI przysadki z kontrastem', note: 'TYLKO gdy testy hormonalne sugerują wtórną AI lub inne niedobory przysadkowe — NIE rutynowo w hiponatremii.' }
+          ]
+        },
+        { name: 'Badania niszowe / eksperckie — NIE rutynowo',
+          tests: [
+            { ext: 'avp_basal', label: 'AVP (wazopresyna) — ESE: NIE rekomendowana rutynowo', note: 'ESE 2014 wprost SUGERUJE NIE oznaczać AVP do potwierdzania SIAD. Brak użytecznych progów, niestabilność analityczna. Tylko ośrodki specjalistyczne / naukowe.' },
+            { ext: 'copeptin_hyponatremia', label: 'Kopeptyna w hiponatremii — selektywnie', note: 'Nigro 2017: ograniczona ogólna użyteczność diagnostyczna w głębokiej hiponatremii. Indeks kopeptyna/UNa może poprawiać różnicowanie EABV, ale nie standard rutynowy. NIE do potwierdzania SIAD.' },
+            { ext: 'avpr2_gene_nsiad', label: 'Genetyka AVPR2 (NSIAD)', note: 'NSIAD — nephrogenic syndrome of inappropriate antidiuresis. Wskazania: nawrotowa, przewlekła, euwolemiczna hiponatremia bez przyczyny, wywiad rodzinny, obraz „SIAD z bardzo niskim AVP", dzieci/młodzi dorośli.' }
           ]
         }
       ],
-      guideline: 'Spasovski G i wsp. 2014 (ESE/EAN/ERA-EDTA — European Clinical Practice Guideline) / Verbalis JG i wsp. 2013 (Am J Med — Expert Panel Recommendations) / Hoorn EJ, Zietse R 2017 (JASN — Review) / Adrogué HJ, Madias NE 2022 (NEJM — SIADH).',
+      guideline: 'Spasovski G i wsp. 2014 (ESE/EAN/ERA-EDTA — European Clinical Practice Guideline — rdzeń algorytmu) / Society for Endocrinology UK 2022 (emergency guidance — objawy decydują o pilności) / Adrogué HJ, Madias NE 2022 (NEJM — SIAD) / Hoorn EJ 2023 (Endocrine Reviews — SIAD) / austriacki konsensus 2024 (aktualizacja praktyki) / Endocrine Society 2016 (AI — Bornstein).',
       sources: [
-        'Spasovski G, Vanholder R, Allolio B i wsp. Clinical practice guideline on diagnosis and treatment of hyponatraemia. Eur J Endocrinol. 2014;170(3):G1-G47.',
-        'Verbalis JG, Goldsmith SR, Greenberg A i wsp. Diagnosis, evaluation, and treatment of hyponatremia: expert panel recommendations. Am J Med. 2013;126(10 Suppl 1):S1-S42.',
+        'Spasovski G, Vanholder R, Allolio B i wsp. Clinical practice guideline on diagnosis and treatment of hyponatraemia. Eur J Endocrinol. 2014;170(3):G1-G47. (rdzeń algorytmu, czułość/swoistość UNa, FEUA, AVP nie rekomendowana)',
+        'Society for Endocrinology UK. Emergency management of severe symptomatic hyponatraemia in adult patients. 2022. (objawy decydują o pilności, nie liczba Na+)',
+        'Adrogué HJ, Madias NE. The Syndrome of Inappropriate Antidiuresis. N Engl J Med. 2022;387(15):1414-1424. (uwaga: NIE polegać na wzorze Adrogué-Madias do ustalania objętości/rate 3% NaCl w objawowej hiponatremii — ryzyko nadkorekcji)',
         'Hoorn EJ, Zietse R. Diagnosis and Treatment of Hyponatremia: Compilation of the Guidelines. J Am Soc Nephrol. 2017;28(5):1340-1349.',
-        'Adrogué HJ, Madias NE. The Syndrome of Inappropriate Antidiuresis. N Engl J Med. 2022;387(15):1414-1424.',
+        'Mentrasti G, Vella V i wsp. Diagnosis and Management of Hyponatremia: A Review. JAMA. 2022.',
+        'Hoorn EJ, Spasovski G. Hyponatremia in Hospitalized Patients. Endocrine Reviews. 2023. (SIAD nomenklatura, kopeptyna w hiponatremii)',
+        'Austriacki konsensus diagnostyki i leczenia hiponatremii 2024 (Krones, Vella i wsp.).',
+        'Bornstein SR i wsp. Diagnosis and Treatment of Primary Adrenal Insufficiency: An Endocrine Society Clinical Practice Guideline. J Clin Endocrinol Metab. 2016;101(2):364-389. (progi kortyzolu, test Synacthen)',
+        'Nigro N i wsp. Copeptin and the diagnosis of polyuria-polydipsia syndrome. (ograniczona przydatność kopeptyny w hiponatremii)',
+        'Verbalis JG, Goldsmith SR, Greenberg A i wsp. Diagnosis, evaluation, and treatment of hyponatremia: expert panel recommendations. Am J Med. 2013;126(10 Suppl 1):S1-S42.',
         'Sterns RH. Disorders of plasma sodium — causes, consequences, and correction. N Engl J Med. 2015;372(1):55-65.',
         'Sterns RH, Hix JK, Silver SM. Treating profound hyponatremia: a strategy for controlled correction. Am J Kidney Dis. 2010;56(4):774-779.',
         'Berl T, Quittnat-Pelletier F, Verbalis JG i wsp. (SALTWATER investigators) Oral tolvaptan is safe and effective in chronic hyponatremia. J Am Soc Nephrol. 2010;21(4):705-712.',

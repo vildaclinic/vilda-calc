@@ -1968,6 +1968,177 @@
         grid-template-columns: 1fr;
       }
     }
+
+    /* ════════════════════════════════════════════════════════════════════
+     *  Faza 25 — integracja z sekcją „Wygląd aplikacji"
+     *  body classes są aplikowane przez ios26-ui.js (applyThemeCustom):
+     *    - body.dark-bg-level-{0|1|2}      (ciemne tło 0–2)
+     *    - body.glass-level-{0..4}.liquid-ios26  (płynne szkło 0–4)
+     *    - body.high-contrast-level-{0..3}.liquid-ios26  (wysoki kontrast)
+     *
+     *  Każda kategoria nadpisuje wybrane właściwości komponentów przelicznika
+     *  (smart-card, sekcja wyniku, dropdown substancji, inputy, pasek zakresu).
+     *  Pille (.lab-mini-pill) w stanie aktywnym pozostają zielono-turkusowe.
+     * ════════════════════════════════════════════════════════════════════ */
+
+    /* ─── Ciemne tło (poziomy 1–2) — przyciemnienie KART względem tła ─── */
+    body.dark-bg-level-1 .lab-smart-card,
+    body.dark-bg-level-1 .lab-card.lab-full,
+    body.dark-bg-level-1 .lab-range-card {
+      background: #fafafa;
+      border-color: rgba(0,131,141,0.22);
+    }
+    body.dark-bg-level-2 .lab-smart-card,
+    body.dark-bg-level-2 .lab-card.lab-full,
+    body.dark-bg-level-2 .lab-range-card {
+      background: #ffffff;
+      border-color: rgba(0,131,141,0.28);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    body.dark-bg-level-2 .lab-result-section {
+      border-top-color: rgba(0,131,141,0.22);
+    }
+
+    /* ─── Płynne szkło (poziomy 1–4) w trybie iOS26 — wzmocnienie kontrastu kart ─── */
+    body.liquid-ios26.glass-level-1 .lab-smart-card,
+    body.liquid-ios26.glass-level-1 .lab-card.lab-full {
+      background: #ffffff;
+      border-color: rgba(0,131,141,0.22);
+      box-shadow: 0 4px 14px rgba(0,131,141,0.06);
+    }
+    body.liquid-ios26.glass-level-2 .lab-smart-card,
+    body.liquid-ios26.glass-level-2 .lab-card.lab-full {
+      background: #ffffff;
+      border-color: rgba(0,131,141,0.28);
+      box-shadow: 0 6px 18px rgba(0,131,141,0.08);
+    }
+    body.liquid-ios26.glass-level-3 .lab-smart-card,
+    body.liquid-ios26.glass-level-3 .lab-card.lab-full {
+      background: #ffffff;
+      border-color: rgba(0,131,141,0.34);
+      box-shadow: 0 8px 24px rgba(0,131,141,0.10);
+    }
+    body.liquid-ios26.glass-level-4 .lab-smart-card,
+    body.liquid-ios26.glass-level-4 .lab-card.lab-full {
+      background: #ffffff;
+      border: 1px solid rgba(0,131,141,0.40);
+      box-shadow: 0 10px 28px rgba(0,131,141,0.12);
+    }
+    /* Glass-level wzmacnia też dropdown substancji */
+    body.liquid-ios26.glass-level-2 .lab-substance-dropdown,
+    body.liquid-ios26.glass-level-3 .lab-substance-dropdown,
+    body.liquid-ios26.glass-level-4 .lab-substance-dropdown {
+      border-color: rgba(0,131,141,0.34);
+      box-shadow: 0 14px 36px rgba(0,131,141,0.20),
+                  0 6px 12px rgba(0,0,0,0.10);
+    }
+
+    /* ─── Wysoki kontrast (poziomy 1–3) — używamy zmiennych HC ze style.css ─── */
+    /* Karty i sekcja wyniku */
+    body.liquid-ios26.high-contrast-level-1 .lab-smart-card,
+    body.liquid-ios26.high-contrast-level-2 .lab-smart-card,
+    body.liquid-ios26.high-contrast-level-3 .lab-smart-card,
+    body.liquid-ios26.high-contrast-level-1 .lab-card.lab-full,
+    body.liquid-ios26.high-contrast-level-2 .lab-card.lab-full,
+    body.liquid-ios26.high-contrast-level-3 .lab-card.lab-full {
+      background: var(--hc-surface) !important;
+      border: var(--hc-card-border-width) solid var(--hc-border) !important;
+      box-shadow: var(--hc-shadow) !important;
+      backdrop-filter: var(--hc-blur) !important;
+      -webkit-backdrop-filter: var(--hc-blur) !important;
+    }
+    body.liquid-ios26.high-contrast-level-1 .lab-result-section,
+    body.liquid-ios26.high-contrast-level-2 .lab-result-section,
+    body.liquid-ios26.high-contrast-level-3 .lab-result-section {
+      background: var(--hc-result-bg);
+      border-top: var(--hc-card-border-width) solid var(--hc-border) !important;
+    }
+    /* Tekst i etykiety w HC — ciemniejszy, czytelniejszy */
+    body.liquid-ios26.high-contrast-level-1 .lab-step-label,
+    body.liquid-ios26.high-contrast-level-2 .lab-step-label,
+    body.liquid-ios26.high-contrast-level-3 .lab-step-label,
+    body.liquid-ios26.high-contrast-level-1 .lab-result-title,
+    body.liquid-ios26.high-contrast-level-2 .lab-result-title,
+    body.liquid-ios26.high-contrast-level-3 .lab-result-title {
+      color: var(--hc-muted) !important;
+    }
+    body.liquid-ios26.high-contrast-level-1 .lab-step input[type="text"],
+    body.liquid-ios26.high-contrast-level-2 .lab-step input[type="text"],
+    body.liquid-ios26.high-contrast-level-3 .lab-step input[type="text"],
+    body.liquid-ios26.high-contrast-level-1 .lab-step input[type="number"],
+    body.liquid-ios26.high-contrast-level-2 .lab-step input[type="number"],
+    body.liquid-ios26.high-contrast-level-3 .lab-step input[type="number"],
+    body.liquid-ios26.high-contrast-level-1 .lab-step select,
+    body.liquid-ios26.high-contrast-level-2 .lab-step select,
+    body.liquid-ios26.high-contrast-level-3 .lab-step select {
+      background: var(--hc-input-bg) !important;
+      border: var(--hc-card-border-width) solid var(--hc-input-border) !important;
+      color: var(--hc-text) !important;
+    }
+    body.liquid-ios26.high-contrast-level-1 .lab-step input:focus,
+    body.liquid-ios26.high-contrast-level-2 .lab-step input:focus,
+    body.liquid-ios26.high-contrast-level-3 .lab-step input:focus,
+    body.liquid-ios26.high-contrast-level-1 .lab-step select:focus,
+    body.liquid-ios26.high-contrast-level-2 .lab-step select:focus,
+    body.liquid-ios26.high-contrast-level-3 .lab-step select:focus {
+      border-color: rgba(0,131,141,0.65) !important;
+      box-shadow: 0 0 0 var(--hc-focus-width) var(--hc-focus-color) !important;
+    }
+    /* Dropdown substancji w HC */
+    body.liquid-ios26.high-contrast-level-1 .lab-substance-dropdown,
+    body.liquid-ios26.high-contrast-level-2 .lab-substance-dropdown,
+    body.liquid-ios26.high-contrast-level-3 .lab-substance-dropdown {
+      background: var(--hc-surface) !important;
+      border: var(--hc-card-border-width) solid var(--hc-border) !important;
+      box-shadow: var(--hc-shadow) !important;
+      backdrop-filter: var(--hc-blur) !important;
+      -webkit-backdrop-filter: var(--hc-blur) !important;
+    }
+    body.liquid-ios26.high-contrast-level-1 .lab-substance-option,
+    body.liquid-ios26.high-contrast-level-2 .lab-substance-option,
+    body.liquid-ios26.high-contrast-level-3 .lab-substance-option {
+      color: var(--hc-text) !important;
+    }
+    body.liquid-ios26.high-contrast-level-1 .lab-substance-option.is-active,
+    body.liquid-ios26.high-contrast-level-2 .lab-substance-option.is-active,
+    body.liquid-ios26.high-contrast-level-3 .lab-substance-option.is-active {
+      background: rgba(0,131,141,0.16) !important;
+      border-left-color: #00838d !important;
+    }
+    /* Numerki kroków w HC — wyraźniejsze obwody */
+    body.liquid-ios26.high-contrast-level-2 .lab-step-num,
+    body.liquid-ios26.high-contrast-level-3 .lab-step-num {
+      border: var(--hc-card-border-width) solid var(--hc-border);
+    }
+    /* Pille (.lab-mini-pill) w HC — wzmocnione border dla nieaktywnych,
+       stan aktywny pozostaje zielono-turkusowy #1D9E75 (kolor ✓) */
+    body.liquid-ios26.high-contrast-level-2 .lab-step .lab-mini-pill:not(.is-active),
+    body.liquid-ios26.high-contrast-level-3 .lab-step .lab-mini-pill:not(.is-active),
+    body.liquid-ios26.high-contrast-level-2 .lab-step button.lab-mini-pill:not(.is-active),
+    body.liquid-ios26.high-contrast-level-3 .lab-step button.lab-mini-pill:not(.is-active) {
+      border-color: rgba(0,131,141,0.36) !important;
+      color: var(--hc-text) !important;
+    }
+    /* Pasek zakresu (Linear Flow) w HC — wzmocniony marker */
+    body.liquid-ios26.high-contrast-level-2 .lab-range-marker,
+    body.liquid-ios26.high-contrast-level-3 .lab-range-marker {
+      box-shadow: 0 0 0 2px rgba(255,255,255,0.95),
+                  0 2px 6px rgba(0,0,0,0.18);
+    }
+    /* Linia zakresu pod paskiem w HC — czarniejsza */
+    body.liquid-ios26.high-contrast-level-2 .lab-result-source,
+    body.liquid-ios26.high-contrast-level-3 .lab-result-source {
+      color: var(--hc-text) !important;
+    }
+    body.liquid-ios26.high-contrast-level-2 .lab-result-source strong,
+    body.liquid-ios26.high-contrast-level-3 .lab-result-source strong {
+      color: var(--hc-text) !important;
+    }
+    /* Status pill w HC — wyraźniejsze obwody */
+    body.liquid-ios26.high-contrast-level-2 .lab-range-status,
+    body.liquid-ios26.high-contrast-level-3 .lab-range-status {
+      border: var(--hc-card-border-width) solid currentColor;
+    }
   </style>
 
   <script src="vilda_chrome.js?v=9"></script>
@@ -2296,7 +2467,7 @@
   <!-- Dane + moduł logiki (dwa pliki przygotowane do reużycia w innych podstronach). -->
   <script src="lab_units_data.js?v=32"></script>
   <script src="lab_unit_converter.js?v=3"></script>
-  <script src="lab_clinical_panels.js?v=133"></script>
+  <script src="lab_clinical_panels.js?v=135"></script>
 
   <script>
   (function () {
