@@ -98,9 +98,26 @@
     /* Kontener – analogiczny do .homa-container i .steroids-card.
        Na desktop/tablet powyżej 880px przechodzi w siatkę 2-kolumnową
        (formularz lewo, wyniki prawo, info i disclaimer pod spodem). */
+    /* Faza 38: zapobieganie layout shift gdy pojawia się/znika pionowy
+       scrollbar (przy rozwijaniu Źródła, override Zmień, „Pokaż wszystkie
+       konwersje" itp.). `scrollbar-gutter: stable` rezerwuje miejsce na
+       scrollbar zawsze, więc viewport ma stałą szerokość niezależnie od
+       wysokości treści. Skutek: Przelicznik nie skacze szerokością. */
+    html {
+      scrollbar-gutter: stable;
+    }
     .lab-container {
       max-width: 1200px;
       margin: 0 auto;
+    }
+    /* Faza 38: smart-card z deterministyczną szerokością — width min(720px,100%)
+       gwarantuje że karta nigdy nie urośnie powyżej 720 px ale może się zwężać
+       gdy viewport jest węższy. min-width: 0 pozwala internalom flex/grid
+       szczękać do zera. box-sizing pewność że padding nie dodaje do width. */
+    .lab-smart-card {
+      width: min(720px, 100%);
+      min-width: 0;
+      box-sizing: border-box;
     }
 
     .lab-grid {
@@ -2326,14 +2343,14 @@
                   <div class="lab-patient-override" id="labPatientOverride" style="display:none;">
                     <label>Płeć
                       <select id="labOverrideSex">
-                        <option value="">(z danych pacjenta)</option>
+                        <option value="">(z danych)</option>
                         <option value="M">Mężczyzna</option>
                         <option value="F">Kobieta</option>
                       </select>
                     </label>
                     <label>Wiek [lata]
                       <input type="number" id="labOverrideAge" min="0" max="120" step="1"
-                             placeholder="z danych pacjenta">
+                             placeholder="(z danych)">
                     </label>
                     <label>Wiek [mies.]
                       <input type="number" id="labOverrideAgeMonths" min="0" max="11" step="1"
@@ -2353,7 +2370,7 @@
                     </label>
                     <label id="labOverrideTannerWrap" style="display:none;">Etap Tannera
                       <select id="labOverrideTanner">
-                        <option value="">(z danych pacjenta)</option>
+                        <option value="">(z danych)</option>
                         <option value="1">Tanner I — przedpokwitaniowy</option>
                         <option value="2">Tanner II</option>
                         <option value="3">Tanner III</option>
