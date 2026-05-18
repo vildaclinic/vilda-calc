@@ -326,7 +326,93 @@
     chest_ct:   { ext: 'chest_ct',   label: 'TK klatki piersiowej',      note: 'Sarkoidoza, MEN1/2, pheo ektopowy' },
     eye_exam:   { ext: 'eye_exam',   label: 'Badanie okulistyczne (pole widzenia)', note: 'Makrogruczolak przysadki — uciska skrzyżowanie' },
     vit_b12:    { ext: 'vit_b12',    label: 'Wit. B12 + kwas foliowy',   note: 'Anemia megaloblastyczna, autoimmunologiczne zapalenie żołądka' },
-    parathyroid_us: { ext: 'parathyroid_us', label: 'USG przytarczyc + scyntygrafia MIBI', note: 'Pierwotna nadczynność przytarczyc' }
+    parathyroid_us: { ext: 'parathyroid_us', label: 'USG przytarczyc + scyntygrafia MIBI', note: 'Pierwotna nadczynność przytarczyc' },
+
+    // Nefrologia — CKD (rozpoznanie, etiologia, monitorowanie, KRT) — dodane w Fazie 43b
+    urinalysis: {
+      ext: 'urinalysis',
+      label: 'Badanie ogólne moczu + osad',
+      note: 'OBOWIĄZKOWE w pierwszym rzucie diagnostyki CKD. Białko, krew, leukocyty, ciężar właściwy, glukoza. Mikroskopia osadu: wałeczki erytrocytarne → glomerulopatia; leukocytarne → cewkowo-śródmiąższowe; ziarniste → uszkodzenie cewek.',
+      description: 'Świeża próbka, najlepiej pierwsza poranna. Ocena fizykochemiczna paskowa (białko, krew, leukocyty, azotyny, ciężar właściwy, pH, glukoza, ciała ketonowe, urobilinogen, bilirubina) + mikroskopia osadu (erytrocyty, leukocyty, nabłonki, wałeczki, kryształy, bakterie). Wartość: wykrywa hematurię, leukocyturię, białkomocz semi-ilościowy. Wałeczki erytrocytarne — bardzo swoiste dla glomerulopatii (KDIGO marker uszkodzenia). Dipstick dodatni dla białka → potwierdź ilościowo ACR. Ograniczenia: niska swoistość przy infekcji, wysiłku, miesiączce.'
+    },
+    cystatin_c: {
+      ext: 'cystatin_c',
+      label: 'Cystatyna C + eGFRcr-cys',
+      note: 'WARUNKOWO — gdy kreatynina może fałszować GFR: otyłość III°, wyniszczenie, marskość, niewydolność serca, nowotwory, przewlekły stan zapalny, zanik mięśni, paraplegia. KDIGO 2024: eGFRcr-cys ma lepszą zgodność z mGFR niż pojedynczy marker.',
+      description: 'Cystatyna C — niskocząsteczkowe białko produkowane przez wszystkie komórki jądrzaste, filtrowane swobodnie w kłębuszku, reabsorbowane i katabolizowane w cewkach. Mniej zależna od masy mięśniowej niż kreatynina. Równanie eGFRcr-cys (np. CKD-EPI 2021) łączy oba markery i poprawia oszacowanie GFR. Wskazania selektywne: gdy kreatynina źle odzwierciedla GFR. NIE rutynowo (koszt). Ograniczenia: wpływ steroidów (sztucznie zwiększają), nadczynności tarczycy, niektórych chorób zapalnych.'
+    },
+    us_kidneys: {
+      ext: 'us_kidneys',
+      label: 'USG nerek i dróg moczowych',
+      note: 'Podstawowe etiologiczne. Wskazania (NICE): przyspieszona progresja CKD, hematuria utrwalona, objawy przeszkody, rodzinny ADPKD u > 20 r.ż., eGFR < 30, planowana biopsja.',
+      description: 'USG przezbrzuszne nerek i dróg moczowych. Ocena: wielkość (norma 9–13 cm długości u dorosłych), symetria, kształt, grubość miąższu (norma 1,5–2 cm), echogeniczność miąższu (wzmożona w CKD), zatoka nerkowa, układ kielichowo-miedniczkowy (poszerzenie → przeszkoda), torbiele (proste vs ADPKD), kamica, blizny korowe. Wartości diagnostyczne: małe nerki obustronnie (< 9 cm) → przewlekłe CKD; powiększone nerki → ADPKD, amyloidoza, nefropatia HIV, hydronefroza, ostre zapalenie; asymetria > 1,5 cm → zwężenie tętnicy nerkowej, blizny po refluksie, agenezja. Ograniczenia: zależność od operatora, słaba ocena drobnych zmian miąższowych i zmian naczyniowych.'
+    },
+    ana_panel: {
+      ext: 'ana_panel',
+      label: 'ANA + dsDNA + C3/C4',
+      note: 'CELOWANE — podejrzenie toczniowej nefropatii (LN) lub innej choroby układowej z aktywnym osadem. NIE rutyna w CKD.',
+      description: 'ANA (przeciwciała przeciwjądrowe) — skrining tocznia rumieniowatego układowego (SLE) i innych chorób układowych. Anty-dsDNA — bardzo swoiste dla SLE, korelują z aktywnością nefropatii toczniowej. C3/C4 (składniki dopełniacza) — niskie w aktywnej LN, MPGN, krioglobulinemii, post-streptococcal GN. Wskazania w CKD: aktywny osad (wałeczki erytrocytarne), hematuria + białkomocz, objawy układowe (rumień motyli, zapalenie stawów, surowicówki, cytopenie), nagłe pogorszenie eGFR z aktywnym osadem.'
+    },
+    anca: {
+      ext: 'anca',
+      label: 'ANCA (c-ANCA / p-ANCA, anty-PR3 / anty-MPO)',
+      note: 'CELOWANE — podejrzenie vasculitis ANCA-zależnego (GPA, MPA, EGPA) — gwałtownie postępująca glomerulopatia z hematurią i wałeczkami erytrocytarnymi.',
+      description: 'Przeciwciała przeciwko cytoplazmie neutrofilów (ANCA, antineutrophil cytoplasmic antibodies). c-ANCA (cytoplazmatyczne, anty-PR3) — typowo w ziarniniakowatości z zapaleniem naczyń (GPA, dawniej Wegener). p-ANCA (perinukleowe, anty-MPO) — typowo w mikroskopowym zapaleniu naczyń (MPA) i eozynofilowym ziarniniakowatym zapaleniu naczyń (EGPA, dawniej Churg-Strauss). Test ELISA + IF. Wskazania: gwałtownie postępująca glomerulopatia (RPGN, rapidly progressive GN), hematuria z wałeczkami erytrocytarnymi + spadek eGFR > 50% w tygodniach, objawy ogólnoustrojowe (gorączka, utrata masy, krwioplucie). Wynik dodatni + RPGN → pilna biopsja nerki + leczenie immunosupresyjne.'
+    },
+    anti_gbm: {
+      ext: 'anti_gbm',
+      label: 'Anti-GBM (przeciwciała przeciw błonie podstawnej kłębuszka)',
+      note: 'CELOWANE — podejrzenie choroby Goodpasture (krwawienie z dróg oddechowych + szybko postępująca glomerulopatia).',
+      description: 'Przeciwciała przeciwko kolagenowi typu IV w błonie podstawnej kłębuszka nerkowego (GBM, glomerular basement membrane). Wysoce swoiste dla zespołu Goodpasture (anti-GBM disease) — choroby autoimmunologicznej z krwawieniem pęcherzykowym + szybko postępującą glomerulopatią. Test ELISA. Czułość ~95%, swoistość bliska 100%. Wskazania: RPGN + krwioplucie/krwawienie pęcherzykowe + dyspnea, młodzi pacjenci z hematurią i nagłą niewydolnością nerek. Współistnienie z ANCA u ~30% pacjentów. Leczenie pilne: plazmafereza + cyklofosfamid + glikokortykosteroidy — odroczenie pogarsza rokowanie (szybki spadek do dializ).'
+    },
+    anti_pla2r: {
+      ext: 'anti_pla2r',
+      label: 'Anti-PLA2R (przeciwciała przeciw receptorowi M-fosfolipazy A2)',
+      note: 'CELOWANE — podejrzenie idiopatycznej nefropatii błoniastej (MGN/MN) — białkomocz nerczycowy bez choroby układowej.',
+      description: 'Przeciwciała przeciwko receptorowi typu M dla fosfolipazy A2 (PLA2R, phospholipase A2 receptor). Antygen znajdujący się na podocytach. Wysoce swoiste dla pierwotnej (idiopatycznej) nefropatii błoniastej — najczęstszej przyczyny zespołu nerczycowego u dorosłych. Czułość ~70%, swoistość ~99%. Wskazania: białkomocz nerczycowy (> 3,5 g/dobę) lub białkomocz subnerczycowy z hipoalbuminemią u dorosłego, biopsja sugerująca MGN. Dodatni wynik często **eliminuje konieczność biopsji** u typowego pacjenta. Wartości pomocne w monitorowaniu odpowiedzi na leczenie (spadek miana → remisja).'
+    },
+    viral_panel_ckd: {
+      ext: 'viral_panel_ckd',
+      label: 'HBsAg + anty-HCV + anty-HIV',
+      note: 'CELOWANE — podejrzenie wtórnej glomerulopatii (HBV→MGN, HCV→MPGN, HIVAN). OBOWIĄZKOWE przed KRT/transplantacją.',
+      description: 'Pakiet wirusologiczny: HBsAg (antygen powierzchniowy HBV), anty-HCV (przeciwciała przeciwko HCV), anty-HIV (lub kombinowany test antygen p24 + przeciwciała). Wskazania w CKD: (1) podejrzenie wtórnej glomerulopatii — HBV najczęściej powoduje błoniastą nefropatię (MGN) u dorosłych, błoniasto-rozrostową (MPGN) u dzieci; HCV — MPGN, krioglobulinemia, FSGS; HIV — HIVAN (HIV-associated nephropathy, klasyczna FSGS kolapsowa); (2) **OBOWIĄZKOWE** przed KRT/transplantacją (informacja epidemiologiczna + decyzje terapeutyczne: HBV/HCV wymagają leczenia przeciwwirusowego przed transplantacją, HIV przy CD4 > 200 nie jest przeciwwskazaniem); (3) wybór typu dializoterapii (HD vs PD) i izolacji.'
+    },
+    kfre_score: {
+      ext: 'kfre_score',
+      label: 'KFRE — Kidney Failure Risk Equation (4-variable)',
+      note: 'Kalkulator ryzyka KRT. Wymaga eGFR + ACR jednocześnie. Oblicza 2- i 5-letnie ryzyko KRT. C-statistic 0,88–0,91.',
+      description: 'KFRE (Kidney Failure Risk Equation) — model predykcyjny opracowany przez Tangri 2011 (JAMA), przewiduje ryzyko progresji CKD do potrzeby leczenia nerkozastępczego (KRT) w ciągu 2 i 5 lat. Wersja 4-variable wymaga: wiek, płeć, eGFR, ACR. Wersja 8-variable dodatkowo: Ca, P, albumina, wodorowęglany. C-statistic dla 4V: 0,88–0,91 dla 2–5-letniego ryzyka. Walidacja w wielu populacjach (USA, Kanada, Europa, Azja). Wykorzystanie: (1) decyzja o skierowaniu do nefrologa — NICE rekomenduje skierowanie przy 5-letnim ryzyku > 5%; (2) decyzja o planowaniu KRT — przy 2-letnim ryzyku > 40% rozważyć dostęp naczyniowy, edukację, transplantację wyprzedzającą; (3) rozmowa z pacjentem o rokowaniu. Kalkulator: kidneyfailurerisk.com.'
+    },
+    kidney_biopsy: {
+      ext: 'kidney_biopsy',
+      label: 'Biopsja nerki',
+      note: 'WSKAZANIA: ustalenie przyczyny, ocena aktywności/przewlekłości, dobór leczenia immunosupresyjnego. Najczęściej: IgA, FSGS, MGN, LN, AAV, amyloidoza.',
+      description: 'Biopsja nerki — pobranie wycinka tkanki nerkowej do badania histopatologicznego. Najczęściej technika przezskórna pod kontrolą USG (dystalne biegun lewej nerki — najmniej ryzyka uszkodzenia naczyń). Materiał: mikroskopia świetlna (LM), immunofluorescencja (IF), mikroskopia elektronowa (EM), opcjonalnie patologia molekularna. Wskazania: (1) niewyjaśniona glomerulopatia (zespół nerczycowy, RPGN z aktywnym osadem); (2) podejrzenie LN, AAV, anti-GBM, MGN, FSGS, IgA, amyloidozy; (3) ostre uszkodzenie nerek bez jasnej przyczyny; (4) ocena rokowania w znanej chorobie; (5) niewyjaśnione pogorszenie funkcji nerki przeszczepionej. Przeciwwskazania: niekontrolowane NT (> 160/100), koagulopatia (INR > 1,5, PLT < 50), pojedyncza nerka (względne), małe nerki < 9 cm (zwykle mało informacyjne). Ryzyko: krwiak okołonerkowy ok. 16% (KDIGO 2024), makroskopowy krwiomocz ok. 3,5%, transfuzja krwi ok. 0,9%, śmiertelność < 0,1%. W zaawansowanym CKD (G5) biopsja często mało informacyjna — wynik dominuje włóknieniem; rozważyć genetykę.'
+    },
+    genetic_panel_ckd: {
+      ext: 'genetic_panel_ckd',
+      label: 'Panel genetyczny nefropatii monogenowych',
+      note: 'WSKAZANIA: CKD < 25 r.ż., fenotyp zespołowy, wywiad rodzinny, consanguinity, niejasna etiologia, gdy biopsja mało informacyjna.',
+      description: 'Badania genetyczne ukierunkowane na monogenowe choroby nerek. Test pojedynczego genu (np. PKD1/PKD2 dla ADPKD, COL4A3-5 dla zespołu Alporta) lub szeroki panel NGS (next-generation sequencing) obejmujący 100–400+ genów nefropatii. Wskazania (KDIGO 2024): (1) wczesny początek CKD (< 25 r.ż.); (2) fenotyp zespołowy — głuchota (Alport), siatkówka (zespół Bardeta-Biedla), trudność intelektualna; (3) dodatni wywiad rodzinny CKD; (4) consanguinity rodziców; (5) torbielowatość nerek (ADPKD, ARPKD, nefronoftiza); (6) niejasna etiologia CKD u młodego dorosłego po wyczerpaniu standardowej diagnostyki; (7) sytuacja gdy biopsja w zaawansowanym CKD nie da odpowiedzi (małe nerki, włóknienie). Konsultacja z nefrologiem + genetykiem klinicznym. Aspekt rodzinny: diagnoza często wpływa na członków rodziny i decyzje o dawstwie nerki. Interpretacja wariantów wymaga doświadczenia (warianty „o niepewnym znaczeniu klinicznym" — VUS).'
+    },
+    mgfr: {
+      ext: 'mgfr',
+      label: 'mGFR — pomiar referencyjny GFR (iohexol / 51Cr-EDTA / 125I-iotalamat)',
+      note: 'WSKAZANIA krytyczne: ocena dawcy nerki, chemioterapia, leki o wąskim indeksie terapeutycznym. NIE do rutynowego screeningu.',
+      description: 'mGFR (measured GFR) — bezpośredni pomiar filtracji kłębuszkowej z użyciem markera egzogennego. Metody referencyjne: (1) **iohexol** (Omnipaque, kontrast jodowy niskoosmolarny) — najczęstsza w Europie; (2) **51Cr-EDTA** (radioznaczony) — historyczna „złoty standard"; (3) **125I-iotalamat** — częsta w USA. Protokół: jednorazowa iniekcja markera + seria pobrań krwi (zwykle 2–4 h po podaniu) → obliczenie klirensu z krzywej decay. Zaleta: dokładność wyższa niż eGFR (zwłaszcza w skrajnych GFR i u pacjentów z nietypową masą mięśniową). Wskazania KDIGO 2024 + NICE: (1) ocena potencjalnego dawcy nerki (krytyczne dla bezpieczeństwa); (2) monitorowanie chemioterapii (np. cisplatyna, metotrexat); (3) dawkowanie leków o wąskim indeksie terapeutycznym (karboplatyna formuła AUC, antybiotyki); (4) transplantacja skojarzona (serca, wątroby); (5) gdy eGFRcr-cys jest niewiarygodne. Alternatywa: 24-godzinny klirens kreatyniny — substytut, gdy mGFR niedostępne (mniej dokładny, problemy ze zbiórką).'
+    },
+    pcr_24h: {
+      ext: 'pcr_24h',
+      label: 'PCR / 24-godzinna zbiórka moczu (białko całkowite)',
+      note: 'SYTUACYJNIE — gdy ACR ≥ 70 mg/mmol (NICE alternatywa) lub gdy mierzymy białko całkowite zamiast albuminy. NIE rutynowo.',
+      description: 'PCR (protein/creatinine ratio) — wskaźnik białko/kreatynina w moczu, alternatywa ACR przy bardzo wysokiej proteinurii. NICE dopuszcza PCR przy ACR ≥ 70 mg/mmol. KDIGO: PCR akceptowalne gdy mierzymy białko całkowite zamiast albuminy (np. podejrzenie nefropatii łańcuchami lekkimi w szpiczaku). 24-godzinna zbiórka moczu — historycznie „złoty standard" oceny proteinurii. Praktyczne ograniczenia: błędy kompletności (pomijanie porcji, przepełnienie pojemnika), błędy czasu zbiórki, błędy przechowywania (kortyzol, mocz). ACR z pojedynczej próbki ma podobną użyteczność diagnostyczną do 24h AER (KDIGO 2024). Wskazania 24h zbiórki: gdy proteinuria jest decyzyjna i pojedyncza próbka niewystarcza; ocena natriuresis (kontrola spożycia soli); kreatyninuria do oceny masy mięśniowej. NIE rutyna w CKD.'
+    },
+    doppler_renal: {
+      ext: 'doppler_renal',
+      label: 'Doppler tętnic nerkowych / CT-angio / MR-angio',
+      note: 'CELOWANE — podejrzenie zwężenia tętnic nerkowych (oporne NT, asymetria nerek, nagłe pogorszenie po ACE-I), kamica, guz.',
+      description: 'Doppler tętnic nerkowych — pierwsza linia oceny przepływu nerkowego. Pomiar: szczytowa prędkość skurczowa (PSV) w tętnicy nerkowej, stosunek PSV nerkowa/aortalna (RAR), wskaźniki oporu (RI) w naczyniach segmentowych. Zwężenie > 60% → PSV > 180 cm/s, RAR > 3,5. Ograniczenia: zależność od operatora, otyłość, gazy jelitowe. CT-angio (z kontrastem jodowym) — wyższa rozdzielczość, ocena anatomii. MR-angio (z kontrastem gadolinium lub time-of-flight bez kontrastu) — alternatywa przy CKD G4–G5 (ostrożność z gadolinem — preferuj grupy macrocyclic, ogranicz dawkę). Wskazania: nagły wzrost ciśnienia tętniczego u starszego pacjenta, oporne NT mimo 4 leków, asymetria nerek > 1,5 cm, nagłe pogorszenie eGFR po wprowadzeniu ACE-I/ARB, szmer w nadbrzuszu, młodzi pacjenci (fibromuscular dysplasia — kobiety 30–50 r.ż.). U CKD G4–G5 ostrożność z kontrastem: jod — CA-AKI (ocena ryzyka, ograniczenie dawki, odstawienie nefrotoksyn na 48 h, nawodnienie); gadolin — NSF (nephrogenic systemic fibrosis) — preferuj grupy macrocyclic II klasy.'
+    }
   };
 
   // ────────────────────────────────────────────────────────────────
@@ -9946,132 +10032,254 @@
           {
             kind: 'prose',
             icon: 'book-2',
-            title: 'Definicja i kontekst CKD-MBD',
+            title: 'Definicja CKD i model diagnostyczno-monitorujący',
             body: [
-              'Przewlekła choroba nerek (CKD — ang. chronic kidney disease) — eGFR (ang. estimated glomerular filtration rate, oszacowany współczynnik filtracji kłębuszkowej) < 60 mL/min/1,73 m² i/lub markery uszkodzenia utrzymujące się ≥ 3 miesiące.',
-              { heading: 'Markery uszkodzenia nerek' },
+              'Przewlekła choroba nerek (CKD — ang. chronic kidney disease) — eGFR (ang. estimated glomerular filtration rate, oszacowany współczynnik filtracji kłębuszkowej) < 60 mL/min/1,73 m² **i/lub** markery uszkodzenia nerek utrzymujące się **≥ 3 miesiące**. Pojedynczy nieprawidłowy wynik **NIE** wystarczy do rozpoznania — wymaga potwierdzenia i wykluczenia ostrego uszkodzenia (AKI/AKD).',
+              { heading: 'Markery uszkodzenia nerek (wg KDIGO 2024)' },
               { items: [
-                'Albuminuria ≥ 30 mg/g.',
-                'Zmiany strukturalne w obrazowaniu.',
-                'Nieprawidłowości w osadzie moczu.'
+                'Albuminuria ≥ 30 mg/g (≥ 3 mg/mmol) — preferowane oznaczenie z **pierwszej porannej, środkowej próbki**.',
+                '**Nieprawidłowości w osadzie moczu** — krwinkomocz utrwalony, wałeczki erytrocytarne, leukocyturia (markery glomerulopatii).',
+                'Zaburzenia cewkowe (kwasica cewkowa, glikozuria, fosfaturia bez hiperfosfatemii).',
+                'Nieprawidłowości histologiczne (potwierdzone biopsją).',
+                'Nieprawidłowości strukturalne w obrazowaniu (USG/CT/MR — torbiele, blizny, asymetria, przeszkoda).',
+                'Stan po transplantacji nerki.'
               ] },
-              { heading: 'CKD-MBD — zaburzenia mineralne i kostne (od stadium G3)' },
-              'CKD-MBD (ang. chronic kidney disease – mineral and bone disorder) — kaskada zaburzeń pojawiających się od stadium G3+:',
+              { heading: 'Sześć celów diagnostyczno-monitorujących (model KDIGO 2024)' },
               { items: [
-                'Spadek aktywności nerkowej 1-α-hydroksylazy → spadek 1,25(OH)₂D (kalcytriol — aktywna postać witaminy D).',
-                'Hipokalcemia + retencja fosforu wskutek upośledzonej fosfaturii.',
-                'Wtórna nadczynność przytarczyc.',
-                'Osteodystrofia nerkowa + przebudowa naczyniowa (zwapnienia ścian naczyń).',
-                'Skutek końcowy — znacznie zwiększone ryzyko sercowo-naczyniowe.'
+                '**Rozpoznanie** — wstępne wykrycie nieprawidłowości (eGFR < 60 lub markery uszkodzenia).',
+                '**Potwierdzenie** — utrzymanie nieprawidłowości ≥ 3 miesięcy + wykluczenie AKI/AKD. NICE: przy świeżym eGFR < 60 u dorosłego powtórzyć w ciągu 2 tygodni.',
+                '**Ocena przyczyny (etiologia)** — wywiad, leki nefrotoksyczne, wywiad rodzinny, osad moczu, USG, immunologia/serologia celowana, biopsja, genetyka.',
+                '**Klasyfikacja CGA** — Cause + GFR category (G1–G5) + Albuminuria category (A1–A3) wg KDIGO 2012.',
+                '**Monitorowanie** — eGFR + ACR co najmniej 1×/rok; częściej w wyższym ryzyku. Zmiana eGFR > 20% = wyjaśnij.',
+                '**Ryzyko progresji + moment skierowania** — KFRE (4-variable) + progi skierowania do nefrologa (NICE: 5-letnie KRT > 5%, ACR ≥ 70 mg/mmol, A3 + hematuria, szybki spadek eGFR, oporne NT, podejrzenie genetyki).'
               ] },
-              { heading: 'Wytyczne KDIGO (Kidney Disease: Improving Global Outcomes)' },
+              { heading: 'Wytyczne' },
               { items: [
-                { label: 'KDIGO 2012', text: 'klasyfikacja CKD wg eGFR i albuminurii.' },
-                { label: 'KDIGO 2017', text: 'CKD-MBD — zaburzenia mineralne i kostne.' },
-                { label: 'KDIGO 2024', text: 'niedokrwistość w CKD oraz ostre uszkodzenie nerek (AKI).' }
+                { label: 'KDIGO 2024 (CKD Evaluation)', text: 'aktualny standard rozpoznawania, klasyfikacji CGA, oceny przyczyny i monitorowania CKD.' },
+                { label: 'NICE NG203 (2024/2026)', text: 'brytyjski standard — progi skierowania, KFRE, protokół potwierdzania ACR.' },
+                { label: 'KDIGO 2012', text: 'klasyfikacja CKD wg eGFR i albuminurii (CGA).' },
+                { label: 'KDIGO 2017', text: 'CKD-MBD — zaburzenia mineralne i kostne (monitorowanie powikłań).' },
+                { label: 'KDIGO 2024 (Anemia)', text: 'niedokrwistość w CKD.' },
+                { label: 'KDIGO 2021', text: 'zarządzanie ciśnieniem w CKD.' }
               ] }
             ]
           },
           {
             kind: 'list',
             icon: 'tags',
-            title: 'Klasyfikacja stadiów CKD (KDIGO 2012)',
+            title: 'Klasyfikacja CGA (KDIGO 2012) — Cause + GFR + Albuminuria',
             items: [
-              { label: 'G1', text: 'eGFR ≥ 90 mL/min/1,73 m² — prawidłowy lub wysoki; CKD rozpoznajemy wyłącznie przy współistniejącym białkomoczu lub innych markerach uszkodzenia.' },
-              { label: 'G2', text: 'eGFR 60–89 — łagodnie obniżony; CKD rozpoznajemy tylko z markerami uszkodzenia.' },
-              { label: 'G3a', text: 'eGFR 45–59 — umiarkowanie obniżony; początek monitorowania CKD-MBD.' },
-              { label: 'G3b', text: 'eGFR 30–44 — umiarkowanie obniżony, narastające ryzyko powikłań.' },
-              { label: 'G4', text: 'eGFR 15–29 — znacznie obniżony; przygotowanie do leczenia nerkozastępczego (planowanie dostępu naczyniowego, edukacja pacjenta).' },
-              { label: 'G5', text: 'eGFR < 15 — niewydolność końcowa (dializoterapia lub transplantacja).' },
-              { label: 'Albuminuria — kategorie', text: 'A1 — < 30 mg/g (norma); A2 — 30–300 mg/g (umiarkowana); A3 — > 300 mg/g (ciężka). Niezależny czynnik prognostyczny — A3 niesie zwiększone ryzyko sercowo-naczyniowe i progresji CKD nawet przy zachowanym eGFR.' }
+              { label: 'G1', text: 'eGFR ≥ 90 mL/min/1,73 m² — prawidłowy lub wysoki; CKD rozpoznajemy **wyłącznie** przy współistniejącym białkomoczu, krwinkomoczu utrwalonym, osadzie aktywnym lub innych markerach uszkodzenia ≥ 3 mies.' },
+              { label: 'G2', text: 'eGFR 60–89 — łagodnie obniżony; CKD rozpoznajemy tylko z markerami uszkodzenia ≥ 3 mies.' },
+              { label: 'G3a', text: 'eGFR 45–59 — umiarkowanie obniżony; początek monitorowania CKD-MBD i niedokrwistości.' },
+              { label: 'G3b', text: 'eGFR 30–44 — umiarkowanie obniżony, narastające ryzyko powikłań; **rozważ skierowanie do nefrologa** przy A2/A3 lub szybkim spadku.' },
+              { label: 'G4', text: 'eGFR 15–29 — znacznie obniżony; **skierowanie do nefrologa**, przygotowanie do leczenia nerkozastępczego (planowanie dostępu naczyniowego ≥ 6 mies. przed planowanymi dializami, edukacja).' },
+              { label: 'G5', text: 'eGFR < 15 — niewydolność końcowa; leczenie nerkozastępcze (hemodializy / dializa otrzewnowa / transplantacja, najlepiej wyprzedzająca).' },
+              { label: 'Albuminuria — kategorie (KDIGO 2012)', text: 'A1 — ACR < 30 mg/g (< 3 mg/mmol) — norma. A2 — ACR 30–300 mg/g (3–30 mg/mmol) — umiarkowana. A3 — ACR > 300 mg/g (> 30 mg/mmol) — ciężka. Niezależny czynnik prognostyczny: A3 niesie zwiększone ryzyko sercowo-naczyniowe i progresji CKD nawet przy zachowanym eGFR. **Preferowane oznaczenie: pierwsza poranna, środkowa próbka.**' },
+              { label: 'Protokół potwierdzania ACR (KDIGO 2024 + NICE)', text: 'Dodatni dipstick → potwierdzić ilościowo ACR. ACR ≥ 30 mg/g (3 mg/mmol) z próbki przygodnej → **potwierdzić kolejną poranną próbką**. NICE: ACR 3–70 mg/mmol — powtórz w porannej; ACR ≥ 70 mg/mmol — potwierdzenie zbędne.' },
+              { label: 'Cause (C) — przyczyny CKD', text: 'Glomerulopatie pierwotne/wtórne; cewkowo-śródmiąższowe; naczyniowe (NT, miażdżyca); przeszkodowe; torbielowate/genetyczne (ADPKD, Alport); cukrzycowe (DKD); polekowe; nieustalone (CKD of unknown cause).' }
             ]
           },
           {
             kind: 'algorithm',
             icon: 'list-numbers',
-            title: 'Algorytm monitorowania CKD-MBD wg stadium',
+            title: 'Algorytm diagnostyczno-monitorujący CKD (KDIGO 2024)',
             steps: [
               {
                 number: 1,
-                title: 'Stadia G3a–G3b (eGFR 30–59)',
-                sublabel: 'początek monitorowania CKD-MBD',
+                title: 'Rozpoznanie + potwierdzenie',
+                sublabel: 'eGFR < 60 LUB markery uszkodzenia ≥ 3 mies. + wykluczenie AKI',
                 options: [
                   {
-                    threshold: 'Badania co 6–12 miesięcy',
-                    action: 'Wapń skorygowany o albuminę, fosfor, PTH, 25-OHD, fosfataza alkaliczna (ALP), eGFR, albuminuria, morfologia krwi.',
-                    variant: 'success', icon: 'flask',
+                    threshold: 'Świeży eGFR < 60 mL/min/1,73 m²',
+                    action: '**Powtórz w ciągu 2 tygodni** (NICE). Wyklucz AKI/AKD (kontekst kliniczny, leki, odwodnienie, infekcja). Rozpoznanie CKD dopiero przy utrzymaniu nieprawidłowości ≥ 3 miesiące.',
+                    variant: 'warning', icon: 'alert-triangle',
                     detail: [
-                      { heading: 'Cele wg KDIGO 2017' },
-                      { items: [
-                        'Wapń — w zakresie normy laboratoryjnej.',
-                        'Fosfor — w zakresie normy laboratoryjnej.',
-                        'PTH — wartości graniczne (1–2× ULN, ang. upper limit of normal — górnej granicy normy); brak wskazania do aktywnego leczenia, jeśli wapń i fosfor nie są zaburzone i jeśli PTH nie rośnie istotnie.',
-                        '25-OHD > 30 ng/mL — suplementacja cholekalcyferolem zgodnie z polskim konsensusem suplementacji witaminy D z 2023 r.'
-                      ] },
-                      { heading: 'Postępowanie' },
-                      { items: [
-                        'Kontrola fosforu w diecie (ograniczenie produktów o wysokiej zawartości fosforu: nabiał, mięso przetworzone, napoje gazowane typu cola).',
-                        'Suplementacja cholekalcyferolu (np. 2000 IU/dobę), jeśli 25-OHD < 30 ng/mL.',
-                        'Brak rutynowego wskazania do kalcytriolu lub parikalcytolu na tym etapie.'
-                      ] }
+                      'Pojedynczy nieprawidłowy wynik kreatyniny/eGFR **NIE** wystarczy do rozpoznania CKD. Wymaga uwzględnienia biologicznej i analitycznej zmienności kreatyniny.',
+                      'AKI/AKD (acute kidney injury / acute kidney disease) ma inną patogenezę, ścieżkę i rokowanie — błędne rozpoznanie CKD u pacjenta z AKI może opóźnić leczenie odwracalnej przyczyny.',
+                      'Kontekst kliniczny przy AKI: świeże leki nefrotoksyczne (NLPZ, ACE-I/ARB w hipowolemii, gentamycyna, kontrast), odwodnienie, sepsa, zawał, niewydolność serca, przeszkoda.',
+                      'Po wykluczeniu AKI: ustal czy nieprawidłowość trwa ≥ 3 mies. (dokumentacja, archiwalne wyniki).'
+                    ]
+                  },
+                  {
+                    threshold: 'Markery uszkodzenia bez spadku eGFR',
+                    action: 'Albuminuria, krwinkomocz utrwalony, osad aktywny, torbiele, blizny w obrazowaniu, kwasica cewkowa — **też wymagają utrzymania ≥ 3 mies.** żeby rozpoznać CKD G1/G2.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'KDIGO: markery uszkodzenia są równoprawne z eGFR < 60 jako kryterium CKD.',
+                      'Najczęstsza pułapka: pacjent po infekcji moczu z przemijającym krwinkomoczem — nie jest CKD. Powtórz po 6–12 tyg.'
                     ]
                   }
                 ]
               },
               {
                 number: 2,
-                title: 'Stadium G4 (eGFR 15–29)',
-                sublabel: 'znaczące zaburzenia CKD-MBD',
+                title: 'Badania pierwszego rzutu',
+                sublabel: 'wstępna ocena u każdego z podejrzeniem CKD',
                 options: [
                   {
-                    threshold: 'Badania co 3–6 miesięcy',
-                    action: 'Wapń, fosfor, PTH, 25-OHD, ALP — częstsze monitorowanie; bilans elektrolitowy (Na, K), gazometria.',
+                    threshold: 'Pakiet podstawowy',
+                    action: '**Kreatynina + eGFR** (zwalidowane równanie CKD-EPI/EKFC) + **badanie ogólne moczu z osadem** + **ACR z pierwszej porannej próbki** + ciśnienie tętnicze + glukoza/HbA1c (jeśli ryzyko DM) + biochemia podstawowa.',
+                    variant: 'success', icon: 'flask',
+                    detail: [
+                      { heading: 'Kreatynina + eGFR' },
+                      'Używaj zwalidowanego równania (CKD-EPI 2021 bez rasy lub EKFC). U dzieci — CKiD U25 lub EKFC pediatryczne. Powtórz przy świeżym eGFR < 60.',
+                      { heading: 'Badanie ogólne moczu + osad — OBOWIĄZKOWE' },
+                      'Świeża próbka. Ocena: białko, krew, leukocyty, ciężar właściwy, glukoza. Gdy możliwa — mikroskopia osadu (wałeczki erytrocytarne → glomerulopatia; wałeczki leukocytarne → cewkowo-śródmiąższowe; wałeczki ziarniste → uszkodzenie cewek).',
+                      { heading: 'ACR z pierwszej porannej próbki — PROTOKÓŁ' },
+                      'Dipstick dodatni → potwierdź ACR ilościowo. ACR ≥ 30 mg/g (3 mg/mmol) z próbki przygodnej → potwierdź **kolejną pierwszą poranną próbką**. NICE: ACR 3–70 mg/mmol — powtórz w porannej; ACR ≥ 70 mg/mmol — potwierdzenie zbędne.',
+                      'PCR (białko/kreatynina) — alternatywa przy bardzo wysokiej albuminurii (ACR ≥ 70 mg/mmol) lub gdy mierzymy białko całkowite zamiast albuminy.',
+                      '24-godzinna zbiórka — sytuacyjnie, nie rutynowo (częste błędy kompletności/przechowywania).'
+                    ]
+                  },
+                  {
+                    threshold: 'Cystatyna C / eGFRcr-cys — gdy kreatynina niewiarygodna',
+                    action: 'Otyłość III°, wyniszczenie, marskość, niewydolność serca, nowotwory, przewlekły stan zapalny, zanik mięśni, dużej zmiany masy mięśniowej (sportowcy, paraplegia).',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'eGFRcr-cys ma lepszą zgodność z mGFR niż równania oparte na pojedynczym markerze (KDIGO 2024).',
+                      'NIE rutynowo — tylko gdy kreatynina może fałszować GFR.'
+                    ]
+                  },
+                  {
+                    threshold: 'mGFR (referencyjny pomiar) — wyjątkowo',
+                    action: 'iohexol, 51Cr-EDTA, 125I-iotalamat. Wskazania: ocena dawcy nerki, monitorowanie chemioterapii, leki o wąskim indeksie terapeutycznym, decyzje dotyczące transplantacji skojarzonej.',
                     variant: 'warning', icon: 'alert-triangle',
                     detail: [
-                      { heading: 'Cele wg KDIGO 2017' },
-                      { items: [
-                        'Wapń: 8,4–10,4 mg/dL (skorygowany o albuminę).',
-                        'Fosfor: 2,5–4,5 mg/dL (KDIGO sugeruje obniżenie podwyższonego stężenia do zakresu normy).',
-                        'PTH: 2–9× ULN (górnej granicy normy) — gdy wzrasta progresywnie, rozważyć leczenie aktywną witaminą D lub kalcymimetykiem (cynakalcet).',
-                        '25-OHD > 30 ng/mL — kontynuacja suplementacji cholekalcyferolu.'
-                      ] },
-                      { heading: 'Postępowanie farmakologiczne' },
-                      { items: [
-                        'Aktywna witamina D (kalcytriol 0,25 μg/dobę lub alfakalcydol) — przy wzroście PTH > 2× ULN mimo wyrównanej 25-OHD.',
-                        'Parikalcytol — selektywny agonista receptora witaminy D (VDR, ang. vitamin D receptor); cechuje się mniejszą tendencją do wywoływania hiperkalcemii niż kalcytriol.',
-                        'Kontrola fosforu — chelatory niezawierające wapnia (sevelamer 800 mg 3 × dziennie, lantanu węglan).',
-                        'Kalcymimetyki (cynakalcet) — przy wtórnej nadczynności przytarczyc opornej na leczenie witaminą D.'
-                      ] },
-                      { heading: 'Przygotowanie do leczenia nerkozastępczego' },
-                      'Planowanie dostępu naczyniowego — przetoka tętniczo-żylna AVF (ang. arteriovenous fistula) wykonywana ≥ 6 miesięcy przed planowanymi dializami; edukacja pacjenta o opcjach leczenia (hemodializy, dializa otrzewnowa, transplantacja).'
+                      '24-godzinny klirens kreatyniny — substytut, gdy mGFR niedostępne.',
+                      'NIE do rutynowego screeningu — koszt i złożoność.'
                     ]
                   }
                 ]
               },
               {
                 number: 3,
-                title: 'Stadium G5 (eGFR < 15) — przeddializacyjne lub dializy',
-                sublabel: 'pełne CKD-MBD, intensywne leczenie',
+                title: 'Ocena przyczyny CKD (etiologia)',
+                sublabel: 'wywiad + USG + badania celowane wg fenotypu',
                 options: [
                   {
-                    threshold: 'Badania co 1–3 miesiące',
-                    action: 'Wapń, fosfor, PTH co miesiąc u pacjentów dializowanych; morfologia krwi, żelazo, ferrytyna, TSAT (saturacja transferyny) co 1–3 miesiące.',
-                    variant: 'danger', icon: 'alert-triangle',
+                    threshold: 'USG nerek i dróg moczowych — podstawowe etiologiczne',
+                    action: 'Wskazania (NICE): przyspieszona progresja, hematuria utrwalona, objawy przeszkody, dodatni wywiad rodzinny ADPKD u > 20. r.ż., eGFR < 30, planowana biopsja.',
+                    variant: 'success', icon: 'check',
                     detail: [
-                      { heading: 'Cele dla pacjentów dializowanych wg KDIGO 2017' },
-                      { items: [
-                        'Wapń: w zakresie normy laboratoryjnej (8,4–10,4 mg/dL); unikanie hiperkalcemii (przyczyna kalcyfikacji ścian naczyń).',
-                        'Fosfor: w zakresie normy lub blisko jej górnej granicy (2,5–4,5 mg/dL).',
-                        'PTH: 2–9× ULN — uzasadnione utrzymanie umiarkowanego wzrostu (jeśli PTH zbyt niskie → ryzyko adynamicznej choroby kostnej).',
-                        'Iloczyn Ca × P < 55 (w jednostkach mg² · dL⁻²) — wyższe wartości zwiększają ryzyko kalcyfikacji metastatycznych.'
-                      ] },
-                      { heading: 'Postępowanie' },
-                      { items: [
-                        'Chelatory fosforu — sevelamer, lantanu węglan, ostrożnie węglan wapnia CaCO₃ (łączna dawka wapnia elementarnego < 1500 mg/dobę u pacjentów dializowanych).',
-                        'Aktywna witamina D — kalcytriol, alfakalcydol, parikalcytol.',
-                        'Kalcymimetyki — cynakalcet doustnie lub etelkalcetyd dożylnie (u pacjentów hemodializowanych).',
-                        'W przypadku autonomicznej (trzeciorzędowej) nadczynności przytarczyc — paratyreoidektomia.'
-                      ] }
+                      'Ocena: wielkość, symetria, kształt, struktura miąższu, torbiele, blizny, przeszkoda w odpływie (poszerzenie układu kielichowo-miedniczkowego).',
+                      'Doppler tętnic nerkowych — przy podejrzeniu zwężenia (oporne NT, asymetria nerek, > 50 r.ż. z CVD, nagłe pogorszenie eGFR po ACE-I).',
+                      'CT/MR (z kontrastem) — celowane (kamica, guz, złożone wady, masy okołonerkowe). U CKD G4–G5 ostrożność z kontrastem (gadolin — preferuj bezpieczniejsze grupy, jod — ocena ryzyka CA-AKI, ograniczenie dawki, odstawienie nefrotoksyn).'
+                    ]
+                  },
+                  {
+                    threshold: 'Hematuria / osad aktywny / szybka progresja → glomerulopatie',
+                    action: 'Immunologia/serologia **celowana wg fenotypu**: ANA, dsDNA, ANCA (c-/p-), anti-GBM, anti-PLA2R, C3/C4, IgA, krioglobuliny. SPEP/UPEP + immunofiksacja + free light chains (przy podejrzeniu MGRS, szpiczaka, łańcuchowości).',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'NIE jako rutyna „dla każdego CKD" — tylko przy aktywnym osadzie, hematurii z proteinurią, podejrzeniu glomerulopatii lub choroby układowej.',
+                      { heading: 'Najczęstsze powiązania' },
+                      'ANCA → vasculitis (GPA, MPA, EGPA). Anti-GBM → choroba Goodpasture. Anti-PLA2R → idiopatyczna nefropatia błoniasta. C3/C4 niskie → toczniowa nefropatia, MPGN, choroba C3. ANA + dsDNA → LN (lupus nephritis). IgA wysokie → możliwa nefropatia IgA.'
+                    ]
+                  },
+                  {
+                    threshold: 'Wirusologia ukierunkowana — selektywnie',
+                    action: 'HBsAg, anty-HCV, anty-HIV. Wskazania: podejrzenie wtórnej glomerulopatii (HBV → MGN; HCV → MPGN, krioglobulinemia; HIV-associated nephropathy), **przygotowanie do KRT/transplantacji** (obowiązkowe).',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'NIE rutyna dla każdego CKD — celowane wg fenotypu lub w kontekście kwalifikacji do KRT.'
+                    ]
+                  },
+                  {
+                    threshold: 'Genetyka — wczesny początek, fenotyp zespołowy',
+                    action: 'Wskazania: CKD < 25 r.ż., fenotyp zespołowy (głuchota → Alport; siatkówka → BBS), wywiad rodzinny CKD, consanguinity, torbielowatość (ADPKD), niejasna etiologia, gdy biopsja mało informacyjna w zaawansowanej chorobie.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'Konsultacja nefrologa/genetyka. Test ukierunkowany (np. PKD1/PKD2 dla ADPKD) lub panel monogenowych nefropatii.',
+                      'Aspekt rodzinny — diagnoza często wpływa na członków rodziny i decyzje o dawstwie.'
+                    ]
+                  },
+                  {
+                    threshold: 'Biopsja nerki — gdy wynik zmieni postępowanie',
+                    action: 'Wskazania: ustalenie przyczyny, ocena aktywności/przewlekłości, dobór leczenia immunosupresyjnego, ocena rokowania. Najczęściej: nefropatia IgA, FSGS, MGN, LN, AAV, choroba minimalnych zmian, amyloidoza.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'Technika: biopsja przezskórna pod kontrolą USG. Materiał: LM (mikroskopia świetlna) + IF (immunofluorescencja) + EM (mikroskopia elektronowa), czasem patologia molekularna.',
+                      'Ryzyko: krwiak okołonerkowy ok. 16% (KDIGO 2024 — dane zebrane), śmiertelność niska. Przeciwwskazania: niekontrolowane NT, koagulopatia, jedyna funkcjonująca nerka (względnie).',
+                      'W zaawansowanym CKD (G5, nerki małe < 9 cm) biopsja często mało informacyjna — wynik dominuje włóknieniem.'
+                    ]
+                  }
+                ]
+              },
+              {
+                number: 4,
+                title: 'Monitorowanie — eGFR + ACR jako rdzeń',
+                sublabel: 'częstość zależna od stadium i ryzyka',
+                options: [
+                  {
+                    threshold: 'Stadia G1–G2 (eGFR ≥ 60) z markerami uszkodzenia',
+                    action: 'eGFR + ACR co 6–12 mies. (KDIGO). Częściej przy szybkim spadku, A2/A3, niestabilności klinicznej. Zmiana eGFR > 20% między oznaczeniami = wyjaśnij.',
+                    variant: 'success', icon: 'check'
+                  },
+                  {
+                    threshold: 'Stadium G3a–G3b (eGFR 30–59)',
+                    action: 'eGFR + ACR co 3–6 mies. **Plus monitorowanie powikłań CKD-MBD** (Ca, P, PTH, 25-OHD, ALP), niedokrwistości (morfologia, żelazo, ferrytyna, TSAT) — szczegóły w callout CKD-MBD i Niedokrwistość poniżej.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'KDIGO 2017 monitoring CKD-MBD: co 6–12 mies. dla G3, co 3–6 mies. dla G4, co 1–3 mies. dla G5.',
+                      'KDIGO 2024 Anemia: morfologia + parametry żelaza min. raz/rok lub przy objawach. Częściej u dializowanych.'
+                    ]
+                  },
+                  {
+                    threshold: 'Stadium G4 (eGFR 15–29)',
+                    action: 'eGFR + ACR co 1–3 mies. Pełne monitorowanie powikłań (CKD-MBD, niedokrwistość, kwasica, elektrolity). **Edukacja o KRT i planowanie dostępu naczyniowego** (przetoka AVF ≥ 6 mies. przed planowanymi dializami).',
+                    variant: 'danger', icon: 'alert-triangle'
+                  },
+                  {
+                    threshold: 'Stadium G5 (eGFR < 15) — przeddializacyjne / dializy',
+                    action: 'Pełne monitorowanie co 1–3 mies. (lub co miesiąc Ca/P/PTH u dializowanych). Aktywne leczenie powikłań — szczegóły w callout CKD-MBD i Niedokrwistość.',
+                    variant: 'danger', icon: 'alert-triangle'
+                  }
+                ]
+              },
+              {
+                number: 5,
+                title: 'Ocena ryzyka progresji + moment skierowania',
+                sublabel: 'KFRE + kryteria nefrologa wg NICE',
+                options: [
+                  {
+                    threshold: 'KFRE — Kidney Failure Risk Equation (4-variable)',
+                    action: 'Oparty na wieku, płci, eGFR i ACR. Oblicz **2-letnie i 5-letnie ryzyko KRT** (leczenia nerkozastępczego). C-statistic 0,88–0,91. Używaj do rozmowy z pacjentem i decyzji o skierowaniu.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'NICE zaleca informować dorosłych z CKD o ich 5-letnim ryzyku KRT obliczonym przez KFRE.',
+                      'Kalkulator: kidneyfailurerisk.com lub wbudowane w EHR. Wymaga eGFR + ACR jednocześnie.'
+                    ]
+                  },
+                  {
+                    threshold: 'Skierowanie do nefrologa (NICE NG203)',
+                    action: '**5-letnie ryzyko KRT > 5% (KFRE)** LUB **ACR ≥ 70 mg/mmol** LUB **A3 (ACR > 300 mg/g) + utrwalona hematuria** LUB spadek eGFR ≥ 25% z przejściem do niższej kategorii w 12 mies. LUB spadek eGFR ≥ 15 mL/min/1,73 m²/rok LUB oporne NT mimo 4 leków LUB podejrzenie przyczyny genetycznej/zwężenia tętnic nerkowych.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'KDIGO dodaje: utrzymujące się zaburzenia potasu, kwasica oporna, anemia oporna na leczenie, choroba kostna, niedożywienie, wałeczki erytrocytarne lub RBC > 20/HPF w osadzie.',
+                      'Idea: wcześniejsze skierowanie poprawia rokowanie, daje czas na przygotowanie dostępu naczyniowego, edukację, transplantację wyprzedzającą.'
+                    ]
+                  },
+                  {
+                    threshold: '⚠ Szybki spadek eGFR (rapid progression)',
+                    action: 'Spadek eGFR > 5 mL/min/1,73 m²/rok = szybki. **Zawsze szukaj odwracalnej przyczyny**: leki (NLPZ, ACE-I/ARB w hipowolemii), odwodnienie, infekcja, AKI, przeszkoda, niewyrównane NT. Skierowanie do nefrologa.',
+                    variant: 'danger', icon: 'alert-triangle'
+                  }
+                ]
+              },
+              {
+                number: 6,
+                title: 'Planowanie leczenia nerkozastępczego (KRT)',
+                sublabel: 'wczesna kwalifikacja — nie tylko próg eGFR < 15',
+                options: [
+                  {
+                    threshold: 'Wczesne planowanie KRT',
+                    action: 'Przy **GFR < 15–20 mL/min/1,73 m²** LUB **2-letnim ryzyku KRT > 40% (KFRE)**: edukacja o opcjach (HD/PD/transplantacja, najlepiej **wyprzedzająca**), planowanie dostępu naczyniowego (AVF ≥ 6 mies. przed dializami), szczepienia (WZW B, pneumokoki, grypa).',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'KDIGO 2024: inicjacja dializy NIE wyłącznie na podstawie progu eGFR. Złożona ocena: objawy mocznicowe, jakość życia, preferencje chorego, GFR (typowo 5–10), odchylenia laboratoryjne (kwasica, hiperkaliemia oporne).',
+                      'Transplantacja wyprzedzająca (preemptive) — przed rozpoczęciem dializ; preferowane jeśli możliwe (dawca żywy, listа KRT).',
+                      'Wirusologia obowiązkowa przed KRT: HBsAg, anty-HCV, anty-HIV (+ CMV, EBV, VZV — przed transplantacją).'
                     ]
                   }
                 ]
@@ -10080,9 +10288,44 @@
           },
           {
             kind: 'callout',
+            variant: 'warning',
+            icon: 'pill',
+            title: 'Monitorowanie powikłań — CKD-MBD (KDIGO 2017)',
+            collapsible: true,
+            body: [
+              { heading: 'Mechanizm CKD-MBD' },
+              'CKD-MBD (chronic kidney disease – mineral and bone disorder) — kaskada zaburzeń od stadium G3+: spadek 1-α-hydroksylazy nerkowej → spadek 1,25(OH)₂D (kalcytriol) → hipokalcemia + retencja fosforu (upośledzona fosfaturia) → wtórna nadczynność przytarczyc → osteodystrofia nerkowa + zwapnienia naczyniowe → wzrost ryzyka sercowo-naczyniowego.',
+              { heading: 'G3a–G3b (eGFR 30–59) — początek monitorowania' },
+              { items: [
+                'Badania **co 6–12 miesięcy**: Ca skorygowany o albuminę, P, PTH, 25-OHD, ALP.',
+                'Cele: Ca w normie laboratoryjnej, P w normie, PTH 1–2× ULN (brak wskazania do aktywnego leczenia, jeśli Ca/P w normie i PTH nie rośnie), 25-OHD > 30 ng/mL.',
+                'Postępowanie: ograniczenie P w diecie, cholekalcyferol 2000 IU/dobę jeśli 25-OHD < 30 ng/mL. Brak rutynowego wskazania do kalcytriolu na tym etapie.'
+              ] },
+              { heading: 'G4 (eGFR 15–29) — znaczące zaburzenia' },
+              { items: [
+                'Badania **co 3–6 miesięcy**: Ca, P, PTH, 25-OHD, ALP + bilans Na/K + gazometria.',
+                'Cele: Ca 8,4–10,4 mg/dL, P 2,5–4,5 mg/dL, PTH 2–9× ULN, 25-OHD > 30 ng/mL.',
+                'Aktywna witamina D (kalcytriol 0,25 μg/dobę lub alfakalcydol) — przy wzroście PTH > 2× ULN mimo wyrównanej 25-OHD.',
+                'Parikalcytol — selektywny agonista VDR; mniejsza tendencja do hiperkalcemii niż kalcytriol.',
+                'Chelatory fosforu niezawierające wapnia (sevelamer 800 mg 3× dziennie, lantanu węglan) — przy hiperfosfatemii.',
+                'Kalcymimetyki (cynakalcet) — przy wtórnej nadczynności opornej na witaminę D.'
+              ] },
+              { heading: 'G5 (eGFR < 15) — przeddializacyjne / dializy' },
+              { items: [
+                'Badania **co 1–3 miesiące** (lub co miesiąc Ca/P/PTH u dializowanych).',
+                'Cele: Ca 8,4–10,4 mg/dL (unikać hiperkalcemii — kalcyfikacje naczyniowe), P w normie/górnej granicy (2,5–4,5 mg/dL), PTH 2–9× ULN (nie za niskie — adynamiczna choroba kostna), iloczyn Ca × P < 55 mg²/dL².',
+                'Chelatory P: sevelamer, lantanu węglan, ostrożnie CaCO₃ (Ca elementarny < 1500 mg/dobę).',
+                'Aktywna witamina D: kalcytriol/alfakalcydol/parikalcytol.',
+                'Kalcymimetyki: cynakalcet doustnie lub etelkalcetyd dożylnie (hemodializa).',
+                'Paratyreoidektomia — autonomiczna (trzeciorzędowa) nadczynność przytarczyc.'
+              ] }
+            ]
+          },
+          {
+            kind: 'callout',
             variant: 'primary',
             icon: 'alert-triangle',
-            title: 'Niedokrwistość nerkowa (KDIGO 2024 anemia)',
+            title: 'Monitorowanie powikłań — niedokrwistość nerkowa (KDIGO 2024 Anemia)',
             collapsible: true,
             body: [
               { heading: 'Definicja' },
@@ -10156,43 +10399,84 @@
         ]
       },
       sections: [
-        { name: 'Funkcja nerek',
+        { name: 'Krok 1 — badania pierwszego rzutu (pakiet rutynowy)',
           tests: [
-            EXT.egfr, EXT.cmp,
-            { ext: 'urine_albumin_creat', label: 'Albuminuria / kreatyninuria (ACR)', note: 'Wskaźnik albumina/kreatynina w moczu (ang. albumin-creatinine ratio). Kategorie A1/A2/A3 wg KDIGO 2012 — niezależny czynnik prognostyczny.' },
+            EXT.egfr,
+            { ext: 'urine_albumin_creat', label: 'ACR z pierwszej porannej próbki', note: 'Preferowane oznaczenie (KDIGO 2024). Dipstick dodatni → potwierdź ilościowo. ACR ≥ 30 mg/g (3 mg/mmol) — potwierdź kolejną poranną próbką. NICE: ACR 3–70 mg/mmol — powtórz; ≥ 70 — potwierdzenie zbędne.' },
+            { ext: 'urinalysis', label: 'Badanie ogólne moczu + osad', note: 'OBOWIĄZKOWE. Białko, krew, leukocyty, ciężar właściwy. Mikroskopia osadu: wałeczki erytrocytarne → glomerulopatia; leukocytarne → cewkowo-śródmiąższowe; ziarniste → uszkodzenie cewek.' },
+            EXT.cmp,
             EXT.albumin
           ]
         },
-        { name: 'CKD-MBD (zaburzenia mineralne i kostne w CKD)',
+        { name: 'Krok 2 — cystatyna C / eGFRcr-cys (warunkowo)',
           tests: [
-            { id: 'vit_d_25oh' },
-            { id: 'vit_d_1_25', note: 'Niskie stężenie — wtórnie do niedoboru nerkowej 1-α-hydroksylazy w CKD' },
-            EXT.pth, EXT.ca_total, EXT.phosphorus, EXT.alp,
+            { ext: 'cystatin_c', label: 'Cystatyna C', note: 'WARUNKOWO — gdy kreatynina może fałszować GFR: otyłość III°, wyniszczenie, marskość, niewydolność serca, nowotwory, przewlekły stan zapalny, zanik mięśni, paraplegia, sportowcy. KDIGO 2024: eGFRcr-cys ma lepszą zgodność z mGFR niż pojedynczy marker.' }
+          ]
+        },
+        { name: 'Krok 3 — ocena przyczyny CKD (CELOWANE wg fenotypu)',
+          tests: [
+            { ext: 'us_kidneys', label: 'USG nerek i dróg moczowych', note: 'Wskazania (NICE): przyspieszona progresja, hematuria utrwalona, objawy przeszkody, dodatni wywiad rodzinny ADPKD u > 20 r.ż., eGFR < 30, planowana biopsja. Ocena: wielkość, symetria, struktura, torbiele, przeszkoda.' },
+            { ext: 'ana_panel', label: 'ANA + dsDNA + C3/C4', note: 'Podejrzenie toczniowej nefropatii lub innej choroby układowej z aktywnym osadem.' },
+            { ext: 'anca', label: 'ANCA (c-ANCA, p-ANCA)', note: 'Podejrzenie vasculitis ANCA-zależnego (GPA, MPA, EGPA) — gwałtownie postępująca glomerulopatia z hematurią i wałeczkami erytrocytarnymi.' },
+            { ext: 'anti_gbm', label: 'Anti-GBM', note: 'Podejrzenie choroby Goodpasture (krwawienie z dróg oddechowych + szybko postępująca glomerulopatia).' },
+            { ext: 'anti_pla2r', label: 'Anti-PLA2R', note: 'Podejrzenie idiopatycznej nefropatii błoniastej (białkomocz nerczycowy bez układowej choroby).' },
+            { ext: 'spep_upep', label: 'SPEP / UPEP + immunofiksacja + free light chains', note: 'Podejrzenie MGRS, szpiczaka, dyskrazji plazmocytowej, amyloidozy AL — białkomocz Bence-Jonesa, łańcuchy lekkie nieproporcjonalne.' },
+            { ext: 'viral_panel_ckd', label: 'HBsAg + anty-HCV + anty-HIV (warunkowo)', note: 'Podejrzenie wtórnej glomerulopatii (HBV→MGN, HCV→MPGN, HIVAN). OBOWIĄZKOWE przed KRT/transplantacją.' }
+          ]
+        },
+        { name: 'Krok 4 — monitorowanie CKD-MBD (KDIGO 2017)',
+          tests: [
+            { id: 'vit_d_25oh', note: 'Cel: > 30 ng/mL. Suplementacja cholekalcyferolu 2000 IU/dobę (G3) lub wyższa.' },
+            { id: 'vit_d_1_25', note: 'Niskie wtórnie do niedoboru nerkowej 1-α-hydroksylazy w CKD.' },
+            EXT.pth,
+            EXT.ca_total,
+            EXT.phosphorus,
+            EXT.alp,
             EXT.fgf23
           ]
         },
-        { name: 'Niedokrwistość (KDIGO 2024)',
+        { name: 'Krok 4 — monitorowanie niedokrwistości (KDIGO 2024)',
           tests: [
             EXT.cbc,
             EXT.serum_iron,
-            { ext: 'tsat', label: 'TSAT — saturacja transferyny', note: 'TSAT ≥ 20% wymagane przed rozpoczęciem leczenia ESA (KDIGO 2024).' }
+            { ext: 'tsat', label: 'TSAT — saturacja transferyny', note: 'TSAT ≥ 20% wymagane przed rozpoczęciem leczenia ESA (KDIGO 2024). Ferrytyna ≥ 100 ng/mL (niedializowani) lub ≥ 200 (dializowani).' }
           ]
         },
-        { name: 'Bilans i powikłania',
+        { name: 'Krok 4 — bilans + powikłania metaboliczne',
           tests: [
-            EXT.potassium, EXT.sodium,
-            { ext: 'abg', label: 'Gazometria (HCO₃⁻, pH)', note: 'Kwasica metaboliczna w CKD G4–G5 — wskazanie do suplementacji wodorowęglanu sodu (NaHCO₃).' },
-            EXT.crp,
-            EXT.lipid_panel
+            EXT.potassium,
+            EXT.sodium,
+            { ext: 'abg', label: 'Gazometria (HCO₃⁻, pH)', note: 'Kwasica metaboliczna w CKD G4–G5. Cel: HCO₃⁻ ≥ 22 mmol/L. NaHCO₃ doustnie 0,5–1,0 mEq/kg/dobę (zwykle 600–1800 mg/dobę).' },
+            EXT.lipid_panel,
+            EXT.crp
+          ]
+        },
+        { name: 'Krok 5–6 — KFRE + KRT (decyzje organizacyjne, nie laboratoryjne)',
+          tests: [
+            { ext: 'kfre_score', label: 'KFRE 4-variable (kalkulator)', note: 'Wymaga eGFR + ACR jednoczasowo. Oblicza 2- i 5-letnie ryzyko KRT (c-statistic 0,88–0,91). Kalkulator: kidneyfailurerisk.com. NICE: skierowanie do nefrologa przy 5-letnim ryzyku > 5%. Planowanie KRT przy 2-letnim ryzyku > 40%.' }
+          ]
+        },
+        { name: 'Badania specjalistyczne — biopsja, genetyka, mGFR (NIE rutynowe)',
+          tests: [
+            { ext: 'kidney_biopsy', label: 'Biopsja nerki', note: 'WSKAZANIA: ustalenie przyczyny, ocena aktywności/przewlekłości, dobór leczenia, ocena rokowania. Najczęściej: IgA, FSGS, MGN, LN, AAV, amyloidoza. Materiał: LM + IF + EM. Ryzyko krwiaka ok. 16% (KDIGO 2024). NIE w zaawansowanym G5 z nerkami < 9 cm — mało informacyjne.' },
+            { ext: 'genetic_panel_ckd', label: 'Panel genetyczny nefropatii monogenowych', note: 'WSKAZANIA: CKD < 25 r.ż., fenotyp zespołowy (Alport — głuchota, BBS — siatkówka), wywiad rodzinny, consanguinity, niejasna etiologia. Test ukierunkowany (PKD1/2 dla ADPKD) lub szeroki panel.' },
+            { ext: 'mgfr', label: 'mGFR (iohexol / 51Cr-EDTA / 125I-iotalamat)', note: 'WSKAZANIA krytyczne: ocena dawcy nerki, chemioterapia, leki o wąskim indeksie terapeutycznym, transplantacja skojarzona. NIE do rutynowego screeningu.' },
+            { ext: 'pcr_24h', label: 'PCR / 24h zbiórka moczu', note: 'PCR — alternatywa przy ACR ≥ 70 mg/mmol lub gdy mierzymy białko całkowite. 24h zbiórka — sytuacyjnie (częste błędy kompletności). NIE rutynowo.' },
+            { ext: 'doppler_renal', label: 'Doppler tętnic nerkowych / CT / MR', note: 'CELOWANE: zwężenie tętnic (oporne NT, asymetria nerek, nagłe pogorszenie po ACE-I), kamica, guz. U CKD G4–G5 ostrożność z kontrastem (gadolin/jod).' }
           ]
         }
       ],
-      guideline: 'KDIGO 2012 (klasyfikacja CKD) / KDIGO 2017 (CKD-MBD) / KDIGO 2024 (niedokrwistość w CKD, ostre uszkodzenie nerek AKI) / KDIGO 2021 (zarządzanie ciśnieniem w CKD) / Zalecenia PTNFD i PTN 2022.',
+      guideline: 'KDIGO 2024 CKD (Evaluation & Management) / NICE NG203 (2024/2026) / KDIGO 2012 (klasyfikacja CGA) / KDIGO 2017 (CKD-MBD) / KDIGO 2024 (niedokrwistość w CKD, AKI) / KDIGO 2021 (zarządzanie ciśnieniem w CKD) / Tangri 2011 (KFRE) / Zalecenia PTNFD i PTN 2022.',
       sources: [
+        'KDIGO CKD Work Group. KDIGO 2024 Clinical Practice Guideline for the Evaluation and Management of Chronic Kidney Disease. Kidney Int. 2024;105(4S):S117-S314.',
+        'National Institute for Health and Care Excellence. Chronic kidney disease: assessment and management (NG203). Aktualizacja 2024–2026.',
         'Kidney Disease: Improving Global Outcomes (KDIGO) CKD Work Group. KDIGO 2012 Clinical Practice Guideline for the Evaluation and Management of Chronic Kidney Disease. Kidney Int Suppl. 2013;3:1-150.',
         'Kidney Disease: Improving Global Outcomes (KDIGO) CKD-MBD Update Work Group. KDIGO 2017 Clinical Practice Guideline Update for the Diagnosis, Evaluation, Prevention, and Treatment of CKD-MBD. Kidney Int Suppl. 2017;7(1):1-59.',
         'KDIGO Anemia Work Group. KDIGO 2024 Clinical Practice Guideline for the Evaluation and Management of Anemia in Chronic Kidney Disease. Kidney Int. 2024;105(Suppl):S1-S95.',
         'Cheung AK, Chang TI, Cushman WC i wsp. KDIGO 2021 Clinical Practice Guideline for the Management of Blood Pressure in Chronic Kidney Disease. Kidney Int. 2021;99(3S):S1-S87.',
+        'Tangri N, Stevens LA, Griffith J i wsp. A predictive model for progression of chronic kidney disease to kidney failure (KFRE 4-variable). JAMA. 2011;305(15):1553-1559. C-statistic 0,88–0,91 dla 2–5-letniego ryzyka KRT.',
+        'Inker LA, Eneanya ND, Coresh J i wsp. New Creatinine- and Cystatin C-Based Equations to Estimate GFR without Race (CKD-EPI 2021). N Engl J Med. 2021;385:1737-1749.',
+        'Pottel H, Björk J, Courbebaisse M i wsp. Development and Validation of a Modified Full Age Spectrum Creatinine-Based Equation to Estimate Glomerular Filtration Rate (EKFC). Ann Intern Med. 2021;174(2):183-191.',
         'Heerspink HJL, Stefánsson BV, Correa-Rotter R i wsp. Dapagliflozin in Patients with Chronic Kidney Disease (DAPA-CKD). N Engl J Med. 2020;383(15):1436-1446.',
         'The EMPA-KIDNEY Collaborative Group. Empagliflozin in Patients with Chronic Kidney Disease. N Engl J Med. 2023;388(2):117-127.',
         'Bakris GL, Agarwal R, Anker SD i wsp. Effect of Finerenone on Chronic Kidney Disease Outcomes in Type 2 Diabetes (FIDELIO-DKD). N Engl J Med. 2020;383(23):2219-2229.',
