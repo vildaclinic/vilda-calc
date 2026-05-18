@@ -2679,7 +2679,15 @@
         // Tanner V jest klinicznie tożsamy z dojrzałością dorosłą
         p.life_stage = p.tanner >= 5 ? 'adult' : 'pediatric';
       } else {
-        p.life_stage = null;
+        // Faza 22c: bez danych pacjenta zakładamy DOROSŁEGO — to racjonalna
+        // domyślna w narzędziu laboratoryjnym (większość użytkowników to
+        // dorośli pacjenci albo lekarze sprawdzający wyniki dla dorosłych).
+        // KLUCZOWE: bez tego, time-aware zakresy kortyzolu (które wymagają
+        // jawnego life_stage) NIE matchują się dla użytkowników bez ustawionego
+        // wieku → wybranie „Północ — Cushing" nie zmienia zakresu na 50 nmol/L.
+        // Tryb pediatryczny włącza się jawnie przez ustawienie wieku
+        // < 18 lat lub etapu Tannera < V w override pacjenta.
+        p.life_stage = 'adult';
       }
       // Flagi pomocnicze do UI
       p._has_shared = !!(shared.sex || (typeof shared.age === 'number') || (typeof shared.tanner === 'number'));
