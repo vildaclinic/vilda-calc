@@ -9221,21 +9221,24 @@
             icon: 'book-2',
             title: 'Definicja otyłości u dzieci i młodzieży',
             body: [
-              'Otyłość u dziecka — nadmierne nagromadzenie tkanki tłuszczowej oceniane na podstawie BMI odniesionego do siatek centylowych dla wieku i płci (NIE wg progu BMI ≥ 30 kg/m² jak u dorosłych).',
-              { heading: 'Stosowane siatki centylowe' },
+              'Otyłość u dziecka — nadmierne nagromadzenie tkanki tłuszczowej z odmiennymi narzędziami oceny zależnie od wieku: u dzieci < 2 lat **weight-for-length** (NIE BMI) wg siatek WHO; u dzieci ≥ 2 lat BMI odniesione do siatek centylowych dla wieku i płci.',
+              { heading: 'Narzędzia antropometryczne — hierarchia' },
               { items: [
-                { label: 'Palczewska', text: 'polskie siatki dla wieku przedszkolnego.' },
-                { label: 'OLAF', text: 'polskie siatki dla wieku szkolnego i młodzieży.' },
-                { label: 'WHO Growth Reference', text: 'alternatywa międzynarodowa.' }
+                { label: '< 2 lata', text: 'weight-for-length na siatkach WHO Child Growth Standards. BMI w tym wieku NIE jest zalecane (AAP 2023, ES 2017).' },
+                { label: '≥ 2 lata', text: 'BMI percentyl/Z-score wg siatek wieku i płci. W Polsce: Palczewska (przedszkole), OLAF (szkoła/młodzież). Alternatywa międzynarodowa: WHO 5–19 lat.' },
+                { label: '≥ 5 lat — WHtR (NICE 2025/26)', text: 'waist-to-height ratio jako uzupełnienie BMI: 0,4–0,49 prawidłowe; 0,5–0,59 zwiększone; ≥ 0,6 wysokie ryzyko centralnej adiposity.' },
+                { label: 'Wskaźnik Cole\'a', text: 'polska praktyka kliniczna — uzupełniający; nie zastępuje BMI percentyla.' },
+                { label: 'BIA / DXA', text: 'NIE zalecane do rutynowego rozpoznawania otyłości (NICE). BIA nie zastępuje BMI; DXA tylko w specjalistycznych wskazaniach badawczych.' }
               ] },
-              { heading: 'Trzy wymiary oceny dziecka z otyłością' },
+              { heading: 'Cztery cele diagnostyczne — rozdzielone, nie pomieszane' },
               { items: [
-                'Wykluczenie zespołów dziedzicznych i przyczyn endokrynologicznych (~5% przypadków) — szczególnie istotne u dzieci < 5. r.ż. oraz przy współistniejącym niskim wzroście.',
-                'Skrining powikłań metabolicznych — narastający z wiekiem.',
-                'Wczesna interwencja behawioralno-dietetyczna z udziałem całej rodziny.'
+                'Rozpoznanie otyłości i ocena tempa wzrastania.',
+                'Identyfikacja **czerwonych flag** wskazujących na wtórną etiologię endokrynologiczną lub genetyczną (~5% przypadków).',
+                'Skrining **powikłań narządowych i metabolicznych** wg wieku i ryzyka — NIE szeroki panel rutynowy dla każdego dziecka.',
+                'Kwalifikacja do leczenia: IHBLT (intensywne, rodzinne, wieloskładnikowe), farmakoterapii (≥ 12 r.ż.), bariatrii (ciężka otyłość).'
               ] },
               { heading: 'Wytyczne' },
-              'PTLO 2022 (dział pediatryczny), Endocrine Society 2017 (Pediatric Obesity — Styne), AAP 2023 (American Academy of Pediatrics — Hampl), ESPGHAN 2017 (MASLD u dzieci), NHLBI 2017 (nadciśnienie tętnicze u dzieci).'
+              'AAP 2023 (Hampl — Clinical Practice Guideline), Endocrine Society 2017 (Styne — Pediatric Obesity), NICE NG246 (aktualizacje 2025/2026), AAP 2017 (Flynn — nadciśnienie u dzieci), NASPGHAN/Vajro 2017 (MASLD u dzieci), ASMBS 2018 (bariatria u młodzieży — Pratt), EMA SmPC (semaglutyd, liraglutyd, setmelanotyd), PTLO 2022 (dział pediatryczny).'
             ]
           },
           {
@@ -9243,11 +9246,13 @@
             icon: 'tags',
             title: 'Kryteria diagnostyczne wg wieku',
             items: [
-              { label: 'Niemowlęta i dzieci 0–5 lat (WHO 2006)', text: 'Z-score BMI dla wieku: −1 do +1 norma; +1 do +2 nadwaga; > +2 otyłość; > +3 otyłość ciężka.' },
-              { label: 'Dzieci i młodzież 5–19 lat (WHO 2007 / polskie siatki Palczewska / OLAF)', text: 'BMI percentyl dla wieku i płci: 5–85 norma; 85–95 nadwaga; ≥ 95 otyłość; ≥ 99 otyłość ciężka.' },
-              { label: 'Wskaźnik Cole\'a (polska praktyka kliniczna)', text: '90–110% normy — masa prawidłowa; 110–119% — nadwaga; ≥ 120% — otyłość; ≥ 140% — otyłość znacznego stopnia.' },
-              { label: 'Obwód talii — percentyl pediatryczny', text: '≥ 90. percentyla dla wieku i płci sugeruje otyłość brzuszną (trzewną) — niezależny czynnik ryzyka metabolicznego u dzieci.' },
-              { label: 'Ciśnienie tętnicze u dzieci', text: 'oceniane wg siatek pediatrycznych NHLBI 2017 (wartości dla wieku, wzrostu i płci). Wartości ≥ 90. percentyla — ciśnienie podwyższone; ≥ 95. percentyla — nadciśnienie tętnicze.' }
+              { label: 'Niemowlęta i dzieci < 2 lat (WHO Child Growth Standards)', text: '**Weight-for-length** Z-score, NIE BMI: > +2 SD nadwaga; > +3 SD otyłość. BMI w tym wieku jest metodologicznie nieprecyzyjne (AAP 2023, ES 2017).' },
+              { label: 'Dzieci 2–5 lat (WHO 2006)', text: 'BMI dla wieku Z-score: −2 do +1 norma; +1 do +2 nadwaga; > +2 otyłość; > +3 otyłość ciężka. Można już używać BMI (siatki WHO 0–5 lub Palczewska).' },
+              { label: 'Dzieci i młodzież 5–19 lat (WHO 2007 / polskie siatki Palczewska / OLAF)', text: 'BMI percentyl dla wieku i płci: 5–85 norma; 85–95 nadwaga; ≥ 95 otyłość; **≥ 99 (lub ≥ 120% 95. percentyla, ≥ 35 kg/m²) — otyłość ciężka**. Definicja ciężkiej otyłości wg ASMBS/AAP używana do kwalifikacji do leczenia intensywnego/bariatrii.' },
+              { label: 'WHtR (waist-to-height ratio) — od 5. r.ż. (NICE NG246 2025/26)', text: '0,4–0,49 prawidłowe; **0,5–0,59 zwiększone ryzyko centralne; ≥ 0,6 wysokie ryzyko**. Praktyczne uzupełnienie BMI; talia liczona w połowie odległości między łukiem żebrowym a grzebieniem biodrowym.' },
+              { label: 'Wskaźnik Cole\'a (polska praktyka kliniczna)', text: '90–110% normy — masa prawidłowa; 110–119% — nadwaga; ≥ 120% — otyłość; ≥ 140% — otyłość znacznego stopnia. Uzupełnienie do BMI percentyla, nie zastępuje go.' },
+              { label: 'Obwód talii — percentyl pediatryczny', text: '≥ 90. percentyla dla wieku i płci sugeruje otyłość brzuszną. Praktycznie ustępuje WHtR jako bardziej operacyjnemu kryterium.' },
+              { label: 'Ciśnienie tętnicze u dzieci (AAP 2017 — Flynn)', text: 'Mierzone na każdej wizycie od 3. r.ż. wg siatek wieku/wzrostu/płci. **Wartości ≥ 90. percentyla — ciśnienie podwyższone; ≥ 95. percentyla — nadciśnienie**. Mankiet: długość 80–100% obwodu ramienia, szerokość ≥ 40%. Pomiar nieprawidłowy: 2–3× potwierdzić w gabinecie, następnie **ABPM** (monitoring 24-h) dla wykrycia nadciśnienia maskowanego i białego fartucha.' }
             ]
           },
           {
@@ -9276,35 +9281,66 @@
             steps: [
               {
                 number: 1,
-                title: 'Pomiary antropometryczne i klasyfikacja',
-                sublabel: 'integrowane z głównym kalkulatorem aplikacji',
+                title: 'Antropometria + wywiad + BP',
+                sublabel: '< 2 lat: weight-for-length; ≥ 2 lat: BMI + WHtR od 5. r.ż.; BP od 3. r.ż.',
                 options: [
                   {
-                    threshold: 'Co zmierzyć',
-                    action: 'Wzrost, masa ciała, BMI (z odniesieniem do siatek centylowych Palczewska / OLAF / WHO), wskaźnik Cole\'a, obwód talii (percentyl pediatryczny), ciśnienie tętnicze (siatki NHLBI 2017 wg wieku, wzrostu i płci).',
+                    threshold: 'Dzieci < 2 lat',
+                    action: 'Weight-for-length Z-score wg siatek WHO (NIE BMI). Ocena karmienia, wzrastania, czerwonych flag genetycznych.',
                     variant: 'success', icon: 'flask',
                     detail: [
-                      'Główny kalkulator aplikacji automatycznie oblicza wszystkie te parametry po wprowadzeniu wzrostu i masy w karcie pomiarów. Wyniki są oznaczone kolorystycznie (zielony — norma; pomarańczowy — nadwaga; czerwony — otyłość).',
-                      'Siatki centylowe — w Polsce preferowane Palczewska (dzieci przedszkolne) i OLAF (szkoła i młodzież); WHO Growth Reference 5–19 jako alternatywa międzynarodowa.',
-                      'Pomiar obwodu talii: dziecko stojące, brzuch swobodny (nie wciągnięty), na wydechu, taśma w połowie odległości między dolnym łukiem żebrowym a górnym grzebieniem biodrowym.',
-                      'Ciśnienie tętnicze u dzieci — wartości percentylowe wg siatek NHLBI 2017; podwyższone jeśli ≥ 90. percentyla.'
+                      'AAP 2023 i Endocrine Society 2017: BMI dla wieku < 2 lat NIE jest zalecane — narzędziem przesiewowym jest weight-for-length.',
+                      'W tym wieku otyłość jest niezwykle rzadka — jeśli występuje, jest sygnałem alarmowym do diagnostyki genetycznej (PWS, MC4R, POMC, LepR) i konsultacji genetycznej.'
+                    ]
+                  },
+                  {
+                    threshold: 'Dzieci ≥ 2 lat',
+                    action: 'BMI percentyl/Z-score na siatkach (Palczewska/OLAF/WHO) + wzrost i tempo wzrastania + BP od 3. r.ż. + WHtR od 5. r.ż. + obwód talii.',
+                    variant: 'success', icon: 'flask',
+                    detail: [
+                      'Główny kalkulator aplikacji oblicza BMI percentyl, wskaźnik Cole\'a, percentyl talii i BP po wprowadzeniu wzrostu i masy.',
+                      'WHtR (NICE 2025/26): 0,4–0,49 prawidłowe; 0,5–0,59 zwiększone; ≥ 0,6 wysokie ryzyko centralnej adiposity. Praktyczniejsze niż samodzielny percentyl talii.',
+                      'BP wg AAP 2017 (Flynn): mankiet 80–100% obwodu ramienia, szerokość ≥ 40%. Pomiar nieprawidłowy: powtórzyć 2–3× i rozważyć **ABPM** (monitoring 24-h) dla wykrycia nadciśnienia maskowanego/białego fartucha.',
+                      'BIA i DXA NIE są zalecane do rutynowego rozpoznawania (NICE).'
+                    ]
+                  },
+                  {
+                    threshold: 'Wywiad — co zebrać',
+                    action: 'Czas pojawienia się otyłości, dynamika, dieta, aktywność fizyczna, sen, leki sprawcze (glikokortykosteroidy, neuroleptyki, leki przeciwpadaczkowe), wywiad rodzinny ciężkiej otyłości i T2DM, fenotyp zespołowy.',
+                    variant: 'success', icon: 'flask',
+                    detail: [
+                      'Wczesny początek (< 5. r.ż.) + skrajna hiperfagia + dodatni wywiad rodzinny ciężkiej otyłości → wskazania do konsultacji genetycznej (ES 2017).',
+                      'Otyłość prosta w typowych warunkach: dzieci są normalnego lub PRZYSPIESZONEGO wzrostu. Spowolnienie wzrastania = sygnał patologii hormonalnej.'
                     ]
                   }
                 ]
               },
               {
                 number: 2,
-                title: 'Wykluczenie sygnałów alarmowych',
-                sublabel: 'wywiad + badanie fizykalne — czerwone flagi',
+                title: 'Czerwone flagi — diagnostyka celowana',
+                sublabel: 'NIE rutynowy panel hormonalny; tylko gdy fenotyp alarmowy',
                 options: [
                   {
-                    threshold: 'Niski wzrost + otyłość',
-                    action: 'Wykluczyć patologię hormonalną: TSH + fT4, kortyzol (DST 1 mg na noc lub w ślinie nocnej), IGF-1 (niedobór hormonu wzrostu), wapń + PTH (pseudohipoparatyreoza Albrighta).',
+                    threshold: 'Otyłość + spowolnienie wzrastania / niski wzrost',
+                    action: 'Wykluczyć patologię hormonalną: TSH + fT4, IGF-1 + IGFBP-3, kortyzol (DST 1 mg na noc / w ślinie nocnej / dobowy mocz), wapń + PTH (PHP Albrighta).',
                     variant: 'warning', icon: 'alert-triangle',
                     detail: [
-                      'Klasyczna obserwacja: w otyłości prostej dzieci są zwykle WYŻSZE niż rówieśnicy (efekt wczesnej leptynemicznej stymulacji). Spadek tempa wzrastania mimo przyrostu masy = sygnał patologii.',
-                      'Wiek kostny — w otyłości prostej zwykle przyspieszony lub zgodny z wiekiem; opóźniony wiek kostny sugeruje niedoczynność tarczycy lub niedobór hormonu wzrostu.',
-                      'Zespół Cushinga u dziecka — najczęściej egzogenny (przewlekłe glikokortykosteroidy); endogenny rzadki (gruczolak nadnercza, ACTH-zależny).'
+                      'Endocrine Society 2017: NIE zalecaj rutynowych badań endokrynologicznych u dzieci z otyłością prostą i prawidłowym wzrostem. Te badania mają sens **tylko** przy spowolnieniu wzrastania, fenotypie cushingoidalnym lub innych czerwonych flagach.',
+                      'Wiek kostny — w otyłości prostej zwykle przyspieszony lub zgodny z wiekiem; opóźniony wiek kostny sugeruje niedoczynność tarczycy lub GHD.',
+                      'Zespół Cushinga u dziecka — najczęściej egzogenny (długotrwałe glikokortykosteroidy); endogenny rzadki.',
+                      'Niewielki wzrost TSH (5–10 mIU/L) u dziecka z otyłością prostą i prawidłowym fT4 jest często **skutkiem, nie przyczyną** otyłości — należy go interpretować z rozwagą.'
+                    ]
+                  },
+                  {
+                    threshold: 'Wczesny początek (< 5. r.ż.) + skrajna hiperfagia',
+                    action: 'Konsultacja genetyczna + diagnostyka monogenetycznej otyłości: MC4R, POMC, PCSK1, LepR, leptyna. Setmelanotyd (Imcivree) dostępny od 2. r.ż. wg EMA przy potwierdzonych mutacjach POMC / PCSK1 / LepR oraz BBS.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'MC4R — najczęstsza monogenetyczna postać otyłości (1–6% otyłości znacznego stopnia u dzieci); dziedziczenie autosomalne dominujące, częstość heterozygot ok. 1/1000.',
+                      'POMC — otyłość + rude włosy + niedoczynność nadnerczy wtórna ACTH-zależna.',
+                      'PCSK1 — otyłość + biegunka noworodków + hipoglikemia poposiłkowa.',
+                      'LepR (receptor leptyny) — otyłość znacznego stopnia + hipogonadyzm hipogonadotropowy.',
+                      '**Setmelanotyd (Imcivree)** — agonista MC4R; wg aktualnego SmPC EMA wskazany **od 2. r.ż.** przy potwierdzonej mutacji POMC, PCSK1, LepR lub w BBS. Skrajnie rzadkie wskazanie; dostępność w PL ograniczona do ośrodków referencyjnych.'
                     ]
                   },
                   {
@@ -9313,9 +9349,9 @@
                     variant: 'warning', icon: 'alert-triangle',
                     detail: [
                       { heading: 'Zespół Pradera-Williego' },
-                      'Hipotonia okołoporodowa + trudności w karmieniu w pierwszych miesiącach → hiperfagia od 2. r.ż. + niski wzrost + hipogonadyzm + dysmorfia twarzy (czoło wąskie, oczy migdałowe). Diagnostyka: MS-MLPA chr 15q11-13.',
-                      { heading: 'Zespół Bardeta-Biedla' },
-                      'Otyłość + polidaktylia (palce dodatkowe) + retinopatia barwnikowa + niewydolność nerek + hipogonadyzm + opóźnienie umysłowe. Panel genetyczny BBSome.',
+                      'Hipotonia okołoporodowa + trudności w karmieniu w pierwszych miesiącach → hiperfagia od 2. r.ż. + niski wzrost + hipogonadyzm + dysmorfia twarzy. Diagnostyka: MS-MLPA chr 15q11-13.',
+                      { heading: 'Zespół Bardeta-Biedla (BBS)' },
+                      'Otyłość + polidaktylia + retinopatia barwnikowa + niewydolność nerek + hipogonadyzm + opóźnienie umysłowe. Panel genetyczny BBSome. **Setmelanotyd dostępny od 2. r.ż. wg EMA.**',
                       { heading: 'Zespół Alströma' },
                       'Otyłość + retinopatia + głuchota + kardiomiopatia + cukrzyca typu 2 wczesna.',
                       { heading: 'Zespół Cohena' },
@@ -9323,100 +9359,214 @@
                     ]
                   },
                   {
-                    threshold: 'Otyłość ciężka przed 5. r.ż. + skrajny apetyt',
-                    action: 'Diagnostyka monogenetycznej otyłości: MC4R, POMC, PCSK1, LepR, leptyna.',
+                    threshold: 'Otyłość + objawy cushingoidalne',
+                    action: 'Spowolnienie wzrastania + rozstępy purpurowe szersze niż 1 cm + twarz księżycowata + miopatia → DST 1 mg, kortyzol w ślinie nocnej.',
                     variant: 'warning', icon: 'alert-triangle',
                     detail: [
-                      'MC4R — najczęstsza monogenetyczna postać otyłości (1–6% otyłości znacznego stopnia u dzieci); dziedziczenie autosomalne dominujące, częstość heterozygot ok. 1/1000.',
-                      'POMC — otyłość + rude włosy + niedoczynność nadnerczy (wtórna ACTH-zależna).',
-                      'PCSK1 — otyłość + biegunka noworodków + hipoglikemia poposiłkowa.',
-                      'LepR (receptor leptyny) — otyłość znacznego stopnia + hipogonadyzm hipogonadotropowy.',
-                      'Niedobór leptyny — bardzo rzadki; leczenie metreleptyną (rekombinowaną leptyną).',
-                      'W przypadku potwierdzonych mutacji POMC / PCSK1 / LepR dostępna nowa opcja: setmelanotyd (Imcivree) — agonista MC4R, zarejestrowany dla pacjentów ≥ 6. r.ż.'
+                      'Pełen algorytm w osobnym panelu (cushing).'
                     ]
                   }
                 ]
               },
               {
                 number: 3,
-                title: 'Skrining powikłań metabolicznych wg wieku',
-                sublabel: 'rozszerzanie panelu z wiekiem dziecka',
+                title: 'Skrining powikłań — pakiet rutynowy wg wieku',
+                sublabel: 'wąski, pragmatyczny; NIE rutynowy panel hormonalny',
                 options: [
                   {
-                    threshold: 'Niemowlęta i dzieci 0–5 lat',
-                    action: 'Rutynowy skrining metaboliczny nie jest wskazany — w tym wieku otyłość sama w sobie jest sygnałem alarmowym i wymaga diagnostyki genetycznej / endokrynologicznej.',
+                    threshold: 'Dzieci 2–5 lat',
+                    action: 'BMI + BP od 3. r.ż. + ocena karmienia/dynamiki masy. Rutynowy skrining metaboliczny **nie jest wskazany** — fokus na rozpoznanie, terapię behawioralną rodzinną i wykluczenie czerwonych flag.',
                     variant: 'success', icon: 'check',
                     detail: [
-                      'TSH (wrodzona niedoczynność tarczycy zwykle wykryta w skriningu noworodkowym, ale warto powtórzyć w wieku 2–5 lat).',
-                      'Konsultacja genetyczna — diagnostyka zespołu Pradera-Williego, MC4R, POMC, LepR przy BMI > +4 SD lub fenotypie zespołowym.',
-                      '25-OHD (kalcydiol) — częsty niedobór; suplementacja zgodnie z polskim konsensusem Płudowski 2023.'
+                      'Lipidogram, glukoza, ALT — TYLKO przy dodatkowych czynnikach ryzyka (akantoza ciemna, wywiad rodzinny T2DM/dyslipidemii, otyłość ciężka).',
+                      'TSH, 25-OHD, IGF-1 — NIE rutynowo; tylko przy klinicznych wskazaniach (krok 2).'
                     ]
                   },
                   {
-                    threshold: 'Dzieci szkolne 6–10 lat',
-                    action: 'TSH + 25-OHD + glukoza na czczo + lipidogram + ALT, AST — skrining stłuszczeniowej choroby wątroby od 9. r.ż. (ESPGHAN 2017).',
+                    threshold: 'Dzieci 6–9 lat (otyłość ≥ 95. centyla)',
+                    action: 'BP na każdej wizycie. Lipidogram do rozważenia. Glukoza/HbA1c/ALT tylko przy czynnikach ryzyka.',
                     variant: 'success', icon: 'check',
                     detail: [
-                      'Glukoza na czczo — skrining cukrzycy typu 2; zalecane przy BMI ≥ 95. percentyla + dodatkowe czynniki ryzyka (wywiad rodzinny T2DM, akantoza ciemna na karku/pachach, pochodzenie etniczne wysokiego ryzyka).',
-                      'Lipidogram — od 9.–11. r.ż. u wszystkich dzieci wg NHLBI 2011 i AAP; wcześniej tylko przy wywiadzie rodzinnym dyslipidemii lub przedwczesnej choroby sercowo-naczyniowej.',
-                      'ALT, AST — skrining MASLD (stłuszczeniowej choroby wątroby związanej z zaburzeniami metabolicznymi) od 9. r.ż. wg ESPGHAN 2017; ALT > 2× górnej granicy normy → USG jamy brzusznej + dalsza diagnostyka hepatologiczna.',
-                      '25-OHD — niedobór bardzo częsty w otyłości (sekwestracja w tkance tłuszczowej + zmniejszona ekspozycja słoneczna); suplementacja cholekalcyferolem zgodnie z konsensusem Płudowski 2023.'
+                      'Lipidogram na czczo u dzieci 2–9 lat z otyłością — **do rozważenia** (AAP 2023); nie obligatoryjny u wszystkich.',
+                      'Glukoza na czczo / HbA1c — gdy dodatkowe czynniki ryzyka T2DM (wywiad rodzinny, akantoza, pochodzenie wysokiego ryzyka).',
+                      'ALT (screening MASLD) — można rozpocząć między 9–11 r.ż., wcześniej tylko przy nasilonych czynnikach ryzyka (NASPGHAN 2017).'
                     ]
                   },
                   {
-                    threshold: 'Młodzież 10–18 lat',
-                    action: 'Pełny panel metaboliczny + ocena Tannera + ciśnienie tętnicze + skrining obturacyjnego bezdechu sennego + diagnostyka hormonalna wg płci.',
-                    variant: 'warning', icon: 'alert-triangle',
+                    threshold: 'Dzieci i młodzież ≥ 10 lat (otyłość lub nadwaga z ryzykiem)',
+                    action: 'Pakiet rutynowy: lipidogram na czczo + glukoza na czczo (± HbA1c lub OGTT) + ALT (screening MASLD) + BP na każdej wizycie.',
+                    variant: 'success', icon: 'check',
                     detail: [
-                      { heading: 'Standardowo u każdej osoby w okresie dojrzewania' },
-                      { items: [
-                        'TSH, 25-OHD, glukoza na czczo + oGTT 75 g (doustny test obciążenia glukozą) lub HbA1c przy BMI ≥ 95. percentyla.',
-                        'Lipidogram pełny — cholesterol całkowity, LDL, HDL, trójglicerydy, non-HDL (TC minus HDL).',
-                        'ALT, AST, GGT + USG jamy brzusznej (skrining MASLD).',
-                        'Pomiar ciśnienia tętniczego wg pediatrycznych siatek NHLBI 2017.',
-                        'Insulinooporność (HOMA-IR > 2,5–3,16 w zależności od stadium Tannera) — pomocniczo.'
-                      ] },
-                      { heading: 'U dziewcząt — skrining PCOS (po menarche, zwłaszcza przy oligomenorrhei / hirsutyzmie / trądziku)' },
-                      'LH (hormon luteinizujący), FSH (hormon folikulotropowy), testosteron całkowity, SHBG (globulina wiążąca hormony płciowe), 17-OHP (17-hydroksyprogesteron — wykluczenie nieklasycznego wrodzonego przerostu nadnerczy), USG jajników. Pełna diagnostyka w osobnym wskazaniu PCOS.',
-                      { heading: 'U chłopców — ocena hipogonadyzmu wtórnego' },
-                      'Testosteron całkowity rano (otyłość → wtórny hipogonadyzm wskutek aromatyzacji testosteronu do estronu w tkance tłuszczowej + spadek SHBG); częściowo odwracalny po redukcji masy ciała ≥ 10%.',
-                      { heading: 'Skrining obturacyjnego bezdechu sennego (OSA)' },
-                      'Wywiad: chrapanie, bezdechy obserwowane przez bliskich, senność dzienna, zaburzenia koncentracji w szkole. Przy podejrzeniu — polisomnografia w ośrodku pediatrycznym.'
+                      { heading: 'Lipidogram (AAP 2023)' },
+                      'Otyłość ≥ 10 r.ż.: panel na czczo. Nadwaga ≥ 10 r.ż.: tylko z dodatkowymi czynnikami ryzyka.',
+                      'Cut-offy pediatryczne: non-HDL ≥ 145 mg/dL, HDL < 40 mg/dL, LDL ≥ 130 mg/dL, TG ≥ 130 mg/dL (10–19 lat) wymagają dalszej oceny.',
+                      { heading: 'Glikemia (AAP 2023, ADA)' },
+                      'FPG 100–125 mg/dL — prediabetes; ≥ 126 — cukrzyca. HbA1c 5,7–6,4% — prediabetes; ≥ 6,5% — cukrzyca. OGTT 1,75 g/kg max 75 g — 2 h: 140–199 prediabetes; ≥ 200 cukrzyca.',
+                      'OGTT bywa bardziej przydatny przy granicznych FPG/HbA1c i wysokim podejrzeniu klinicznym.',
+                      { heading: 'ALT — pediatryczne ULN (NASPGHAN 2017)' },
+                      '**Dziewczęta: ≥ 22 U/L; chłopcy: ≥ 26 U/L** to próg wymagający uwagi. NIE używać dorosłych ULN.',
+                      'Wartości > 2× pediatryczne ULN utrzymujące się > 3 miesięcy → dalsza diagnostyka (krok 4).',
+                      'Czułość progu 2× pediatryczne ULN ~88%, swoistość ~26% dla NAFLD — to test przesiewowy, nie rozstrzygający.'
+                    ]
+                  },
+                  {
+                    threshold: 'NIE rutynowo (powszechne błędy)',
+                    action: 'Insulina na czczo / HOMA-IR; rutynowe USG jamy brzusznej jako screening; rutynowe 25-OHD; USG jajników w PCOS u nastolatek; rutynowe TSH/IGF-1 u dziecka z prawidłowym wzrostem.',
+                    variant: 'danger', icon: 'alert-triangle',
+                    detail: [
+                      'Insulina/HOMA-IR — brak wartości diagnostycznej w rutynowej praktyce (ES 2017, AAP 2023); duża zmienność, słaba standaryzacja.',
+                      'USG jamy brzusznej — nie jest zalecane jako screening MASLD (czułość/swoistość niewystarczająca); robić tylko po nieprawidłowym ALT i przy podejrzeniu innych chorób wątroby.',
+                      '25-OHD — selektywnie (objawy kostne, ciężka otyłość, przed bariatrią, choroby współistniejące); nie u każdego dziecka z otyłością.',
+                      'USG jajników w PCOS u nastolatek — **nie zalecane**; międzynarodowe wytyczne dla PCOS w adolescencji opierają się na zaburzeniach owulacji i hiperandrogenizmie klinicznym/biochemicznym.',
+                      'TSH przy otyłości prostej z prawidłowym wzrostem — często fałszywie podwyższony jako skutek otyłości; interpretować ostrożnie.'
                     ]
                   }
                 ]
               },
               {
                 number: 4,
-                title: 'Diagnostyka endokrynologiczna celowana',
-                sublabel: 'gdy sygnały alarmowe — różnicowanie patologii hormonalnej',
+                title: 'MASLD + OSA + PCOS — krok celowany',
+                sublabel: 'tylko gdy nieprawidłowy ALT, objawy OSA lub fenotyp PCOS',
                 options: [
                   {
-                    threshold: 'Zespół Cushinga u dziecka',
-                    action: 'DST 1 mg na noc lub kortyzol w ślinie nocnej lub kortyzol w dobowej zbiórce moczu — przy charakterystycznych objawach klinicznych.',
+                    threshold: 'ALT podwyższony (> pediatryczne ULN przez > 3 mies.)',
+                    action: 'Dalsza diagnostyka MASLD: powtórzenie ALT, AST, GGT, lipidogram, glikemia, USG jamy brzusznej (TERAZ — nie przesiewowo), wykluczenie innych chorób wątroby (wirusy, autoimmunologiczne).',
                     variant: 'warning', icon: 'alert-triangle',
                     detail: [
-                      'U dziecka spadek tempa wzrastania mimo przyrostu masy ciała to klasyczny sygnał patologii hormonalnej — w otyłości prostej tempo wzrostu jest zachowane lub przyspieszone.',
-                      'Cushing dziecięcy najczęściej egzogenny (długotrwałe glikokortykosteroidy); endogenny rzadki — głównie z guza nadnercza lub ACTH-zależny (gruczolak przysadki).',
-                      'Pełen algorytm w osobnym panelu (cushing).'
+                      'ALT > 80 U/L lub > 2× pediatryczne ULN przez > 3 miesięcy → pilna ocena hepatologiczna.',
+                      'USG NIE jako pierwszy krok — robione TERAZ po nieprawidłowym ALT i przy podejrzeniu różnicowania chorób wątroby.',
+                      'Elastografia (Fibroscan/SWE) — w ośrodku specjalistycznym, przy podejrzeniu zaawansowanego włóknienia.'
                     ]
                   },
                   {
-                    threshold: 'Niedoczynność tarczycy',
-                    action: 'TSH + fT4. Obraz: otyłość + niski wzrost + opóźnienie wieku kostnego + sucha skóra + zaparcia + bradykardia.',
-                    variant: 'success', icon: 'check',
+                    threshold: 'Objawy OSA — chrapanie, bezdechy, senność dzienna',
+                    action: 'Polisomnografia (PSG) w ośrodku pediatrycznym — złoty standard rozpoznania. Kwestionariusze przesiewowe (np. PSQ Chervin) tylko jako filtr wstępny.',
+                    variant: 'warning', icon: 'alert-triangle',
                     detail: [
-                      'Niedoczynność tarczycy może spowolnić tempo wzrastania zanim jeszcze rozwinie się otyłość — ważne badanie w obu kontekstach.',
-                      'U dzieci szkolnych i młodzieży najczęściej wtórna do autoimmunologicznego zapalenia tarczycy typu Hashimoto (anty-TPO dodatnie).'
+                      'OSA u dzieci nie jest skriningowane rutynowo — robione **objawowo**.',
+                      'Wywiad: chrapanie głośne, obserwowane bezdechy, oddychanie ustami w nocy, senność dzienna, zaburzenia koncentracji, problemy w szkole.',
+                      'PSG = standard referencyjny; HSAT (home sleep test) ma ograniczone zastosowanie u dzieci.'
                     ]
                   },
                   {
-                    threshold: 'Niedobór hormonu wzrostu (GHD)',
-                    action: 'IGF-1 i IGFBP-3 wg norm dla wieku i płci → przy obniżeniu testy stymulacyjne wydzielania GH w ośrodku endokrynologicznym.',
+                    threshold: 'Nastolatka z oligomenorrheą/hirsutyzmem/ciężkim trądzikiem',
+                    action: 'Diagnostyka PCOS: wywiad menstruacyjny + hiperandrogenizm kliniczny/biochemiczny (testosteron całkowity, SHBG, 17-OHP). **USG jajników NIE w adolescencji.**',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'International PCOS Guideline 2023: USG jajników **nie jest rekomendowane** do rozpoznania PCOS u nastolatek — brak wiarygodnych kryteriów w tej grupie wiekowej.',
+                      'Rozpoznanie u nastolatek: zaburzenia owulacji (oligo-/amenorrhea) + hiperandrogenizm (kliniczny lub biochemiczny) po wykluczeniu innych przyczyn (np. nieklasyczny CAH → 17-OHP).',
+                      'Pełen algorytm w osobnym panelu (pcos).'
+                    ]
+                  },
+                  {
+                    threshold: 'Chłopiec — testosteron całkowity rano',
+                    action: 'Otyłość → wtórny hipogonadyzm (aromatyzacja testosteronu do estronu w tkance tłuszczowej + spadek SHBG). Częściowo odwracalny po redukcji masy ≥ 10%.',
                     variant: 'success', icon: 'check',
                     detail: [
-                      'GHD u dziecka — otyłość trzewna + niski wzrost + opóźnienie wieku kostnego + brak skoku pokwitaniowego.',
-                      'Pełen algorytm w osobnym panelu (GH_deficiency_kids — program lekowy B.19 NFZ).'
+                      'Nie wymaga leczenia substytucyjnego u większości chłopców — fokus na redukcji masy.'
+                    ]
+                  }
+                ]
+              },
+              {
+                number: 5,
+                title: 'Ocena psychospołeczna i ortopedyczna',
+                sublabel: 'AAP 2023: standardowy element oceny otyłości',
+                options: [
+                  {
+                    threshold: 'Depresja — ocena formalna od 12. r.ż. (corocznie)',
+                    action: 'Narzędzie samoopisowe: PHQ-A (Patient Health Questionnaire for Adolescents) lub PHQ-9 modyfikowane dla młodzieży. Wynik ≥ 10 → konsultacja psychiatry/psychologa.',
+                    variant: 'success', icon: 'flask',
+                    detail: [
+                      'AAP 2023 zaleca **coroczną formalną ocenę depresji u młodzieży ≥ 12 r.ż.** z otyłością — depresja i otyłość pediatryczna mają dwukierunkowy związek.',
+                      'U młodszych dzieci — obserwacja kliniczna (zmiana nastroju, izolacja społeczna, spadek osiągnięć szkolnych, problemy ze snem) i skierowanie do psychologa przy podejrzeniu.',
+                      'Pamiętaj o ocenie myśli samobójczych przy potwierdzonej depresji.'
+                    ]
+                  },
+                  {
+                    threshold: 'Przegląd ortopedyczny — układ ruchu',
+                    action: 'Badanie biodrowe (test koślawego/szpotawego), kolana, stopy, oś kończyn dolnych. Ból kolan/biodra/utykania → pilna ocena ortopedyczna.',
+                    variant: 'success', icon: 'flask',
+                    detail: [
+                      'SCFE (slipped capital femoral epiphysis — złuszczenie głowy kości udowej): typowo u nastolatków z otyłością; ból biodra/kolana, utykanie, ograniczenie rotacji wewnętrznej.',
+                      'Choroba Blounta (tibia vara) — koślawość/szpotawość piszczeli; częstsza u dzieci z otyłością wczesną.',
+                      'AAP 2023: rutynowy przegląd układu ruchu na każdej wizycie u dziecka z otyłością.'
+                    ]
+                  },
+                  {
+                    threshold: 'Motivational interviewing',
+                    action: 'Standard prowadzenia wizyt z dzieckiem/młodzieżą i rodziną — buduje motywację wewnętrzną do zmiany stylu życia. Otwarte pytania, refleksyjne słuchanie, empatia, brak konfrontacji.',
+                    variant: 'success', icon: 'flask',
+                    detail: [
+                      'AAP 2023 zaleca MI jako podstawowy styl rozmowy w prowadzeniu otyłości pediatrycznej.',
+                      'Unikać piętnowania, koncentracji wyłącznie na wadze, sformułowań stygmatyzujących.'
+                    ]
+                  }
+                ]
+              },
+              {
+                number: 6,
+                title: 'Leczenie i kwalifikacja specjalistyczna',
+                sublabel: 'IHBLT → farmakoterapia ≥ 12 r.ż. → bariatria (ASMBS 2018)',
+                options: [
+                  {
+                    threshold: 'IHBLT — Intensywne, rodzinne leczenie behawioralne',
+                    action: 'AAP 2023 (silne zalecenie): ≥ 26 godzin kontaktu twarzą w twarz w 3–12 miesięcy, wieloskładnikowe (dieta + aktywność + sen + behawioralne + rodzinne).',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'Aktywność fizyczna: ≥ 60 min/dobę umiarkowanej do intensywnej (zgodnie z WHO, 6–17 lat).',
+                      'Ograniczenie ekranów: < 2 h/dobę poza zajęciami szkolnymi.',
+                      'Sen adekwatny do wieku.',
+                      'Skuteczność rośnie z liczbą godzin kontaktu — programy < 26 h mają znikomy efekt.'
+                    ]
+                  },
+                  {
+                    threshold: 'Farmakoterapia ≥ 12 r.ż. — semaglutyd / liraglutyd',
+                    action: 'Uzupełnienie IHBLT (NIE zamiennik). Semaglutyd 2,4 mg/tydz. s.c. (Wegovy) lub liraglutyd 3 mg/dzień s.c. (Saxenda). Reocena po 12 tyg. — przy braku redukcji BMI ≥ 5% rozważyć odstawienie.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'Semaglutyd: EMA — młodzież ≥ 12 r.ż. z otyłością, masa > 60 kg. Badanie STEP TEENS — średnia utrata ok. 16% w 68 tyg.',
+                      'Liraglutyd: EMA — młodzież ≥ 12 r.ż. z BMI ≥ 95. percentyla, masa > 60 kg.',
+                      'Reocena: po 12 tyg. na dawce 2,4 mg (lub max tolerowanej) — przy braku redukcji BMI ≥ 5% rozważyć odstawienie.',
+                      'Pełen schemat w osobnym module aplikacji (Saxenda, Wegovy).'
+                    ]
+                  },
+                  {
+                    threshold: 'Setmelanotyd — monogenetyczna otyłość',
+                    action: 'Agonista MC4R; EMA: ≥ 2. r.ż. przy potwierdzonej mutacji POMC, PCSK1, LepR lub BBS. Dostępność w PL: ośrodki referencyjne.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'Diagnostyka genetyczna obligatoryjna przed rozpoczęciem leczenia.',
+                      'Wcześniej zarejestrowany ≥ 6. r.ż. — aktualny SmPC EMA: **≥ 2. r.ż.**'
+                    ]
+                  },
+                  {
+                    threshold: 'Bariatria — ASMBS 2018 (amerykańskie kryteria)',
+                    action: 'Kryteria masy: **BMI ≥ 120% 95. percentyla (≈ 35 kg/m²) z chorobą współistniejącą** LUB **BMI ≥ 140% 95. percentyla (≈ 40 kg/m²) bez chorób**. Stadium Tannera, wiek kostny i dojrzałość kostna NIE są warunkami odcinającymi.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'ASMBS 2018 (Pratt): wczesne skierowanie do ośrodka bariatrycznego u młodzieży z ciężką otyłością — **dojrzałość kostna ≥ 95% NIE jest wymagana**. Tanner stage i wzrastanie liniowe nie powinny być barierą.',
+                      'Choroby współistniejące kwalifikujące: T2DM, OSA ciężki, oporne nadciśnienie, MASH, idiopatyczne nadciśnienie wewnątrzczaszkowe, ciężkie powikłania ortopedyczne, GERD.',
+                      'Najczęstsze techniki: rękawowa resekcja żołądka (sleeve), Roux-en-Y.',
+                      'Zespół wielospecjalistyczny: chirurg bariatryczny pediatryczny, endokrynolog, psycholog, dietetyk, pielęgniarka koordynująca.',
+                      'Przygotowanie psychologiczne i dietetyczne ≥ 6 miesięcy.',
+                      'Substytucja witamin i mikroelementów dożywotnio (D, B12, żelazo, wapń, kwas foliowy; po Roux-en-Y dodatkowo A, E, K).'
+                    ]
+                  },
+                  {
+                    threshold: 'Bariatria — NICE (brytyjskie podejście — bardziej zachowawcze)',
+                    action: 'NICE NG246: chirurgia u młodych osób tylko wyjątkowo, blisko fizjologicznej dojrzałości, w ośrodku z pełną ekspertyzą pediatryczną. Różnica względem ASMBS — odnotuj.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'Polskie ośrodki w praktyce częściej zbliżają się do podejścia NICE (zachowawczego) — ale dane na temat skuteczności i bezpieczeństwa wczesnej bariatrii adolescencyjnej wspierają model amerykański.'
+                    ]
+                  },
+                  {
+                    threshold: 'SCORE2 / SCORE2-OP — NIE u dzieci',
+                    action: 'Kalkulatory SCORE2 (40–69 lat) i SCORE2-OP (≥ 70 lat) NIE mają zastosowania u dzieci i młodzieży. Ocena ryzyka u dziecka — wywiad rodzinny, palenie, BP, lipidogram, glikemia, MASLD, aktywność, sen.',
+                    variant: 'danger', icon: 'alert-triangle',
+                    detail: [
+                      'Powszechny błąd: stosowanie skali dla dorosłych u nastolatków — nie ma uzasadnienia walidacyjnego.'
                     ]
                   }
                 ]
@@ -9430,29 +9580,39 @@
             title: 'Leczenie otyłości u dzieci i młodzieży',
             collapsible: true,
             body: [
-              { heading: 'Modyfikacja stylu życia — fundament zawsze (od najwcześniejszego rozpoznania)' },
+              { heading: 'IHBLT — Intensywne, rodzinne, wieloskładnikowe leczenie behawioralne (fundament; AAP 2023 — silne zalecenie)' },
               { items: [
-                'Dieta zbilansowana wg zaleceń IMID/IPCZD i AAP — ograniczenie napojów słodzonych (główne źródło pustych kalorii u dzieci), słodyczy, żywności wysokoprzetworzonej; zwiększenie udziału warzyw, owoców, produktów pełnoziarnistych, nabiału półtłustego.',
-                'Aktywność fizyczna — minimum 60 minut/dobę umiarkowanej do intensywnej aktywności u dzieci 6–17 lat (zalecenie WHO).',
-                'Ograniczenie czasu ekranowego — < 2 godziny dziennie poza zajęciami szkolnymi.',
-                'Sen — adekwatny do wieku: niemowlęta 12–16 h, przedszkolaki 10–13 h, dzieci szkolne 9–12 h, młodzież 8–10 h. Niedobór snu sprzyja przyrostowi masy.',
-                'Terapia behawioralna rodzinna — programy redukcji masy z udziałem całej rodziny dają najlepsze efekty u dzieci i młodzieży (AAP 2023 — silne zalecenie).'
+                '**≥ 26 godzin kontaktu twarzą w twarz** w ciągu 3–12 miesięcy; programy < 26 h mają znikomy efekt.',
+                'Skuteczność rośnie z liczbą godzin — najlepsze efekty w programach 40+ h.',
+                'Komponenty: dieta + aktywność + sen + terapia behawioralna + udział rodziny.',
+                'Dieta wg AAP — ograniczenie napojów słodzonych (główne źródło pustych kalorii), słodyczy, żywności wysokoprzetworzonej; więcej warzyw/owoców/pełnoziarnistych.',
+                'Aktywność fizyczna ≥ 60 min/dobę umiarkowanej do intensywnej (WHO, 6–17 lat).',
+                'Ograniczenie ekranów < 2 h/dobę poza zajęciami szkolnymi.',
+                'Sen adekwatny do wieku: niemowlęta 12–16 h, przedszkole 10–13 h, szkoła 9–12 h, młodzież 8–10 h.'
               ] },
-              { heading: 'Farmakoterapia (młodzież ≥ 12 r.ż.)' },
+              { heading: 'Motivational interviewing — standard prowadzenia wizyt' },
+              'AAP 2023 zaleca motivational interviewing jako podstawowy styl rozmowy z dzieckiem/młodzieżą i rodziną: otwarte pytania, refleksyjne słuchanie, empatia, brak konfrontacji. Unikać piętnowania i koncentracji wyłącznie na wadze.',
+              { heading: 'Ocena depresji i wsparcie psychologiczne' },
+              'AAP 2023: **coroczna formalna ocena depresji u młodzieży ≥ 12 r.ż.** narzędziem samoopisowym (PHQ-A, PHQ-9 mod.). Wynik ≥ 10 → konsultacja psychiatryczna. Ocena myśli samobójczych przy podejrzeniu depresji.',
+              { heading: 'Farmakoterapia (młodzież ≥ 12 r.ż.) — uzupełnienie IHBLT, NIE zamiennik' },
               { items: [
-                'Liraglutyd 3 mg podskórnie raz dziennie (Saxenda) — agonista receptora GLP-1; zarejestrowany przez EMA w 2021 r. dla młodzieży ≥ 12 r.ż. z BMI ≥ 95. percentyla i masą ciała > 60 kg.',
-                'Semaglutyd 2,4 mg podskórnie raz w tygodniu (Wegovy) — agonista receptora GLP-1; zarejestrowany przez EMA w 2024 r. dla młodzieży ≥ 12 r.ż. (badanie STEP TEENS — średnia utrata masy ok. 16% w 68 tygodni).',
-                'Szczegółowe schematy dawkowania, eskalacja, kryteria kwalifikacji wg ChPL — w osobnym module aplikacji „Leczenie otyłości" (Saxenda, Wegovy).'
+                'Liraglutyd 3 mg s.c./dobę (Saxenda) — agonista GLP-1; EMA 2021 dla młodzieży ≥ 12 r.ż. z BMI ≥ 95. percentyla i masą > 60 kg.',
+                'Semaglutyd 2,4 mg s.c./tydz. (Wegovy) — agonista GLP-1; EMA 2024 dla młodzieży ≥ 12 r.ż. (STEP TEENS — średnia utrata ok. 16% w 68 tyg.).',
+                '**Reocena po 12 tygodniach** na dawce 2,4 mg (lub max tolerowanej): brak redukcji BMI ≥ 5% → rozważyć odstawienie.',
+                'Pełen schemat w osobnym module „Leczenie otyłości" (Saxenda, Wegovy).'
               ] },
               { heading: 'Farmakoterapia monogenetycznej otyłości' },
-              'Setmelanotyd (Imcivree) — agonista receptora MC4R; zarejestrowany dla pacjentów ≥ 6. r.ż. z potwierdzoną mutacją POMC, PCSK1 lub LepR. Skrajnie rzadkie wskazanie; dostępność w Polsce ograniczona do ośrodków referencyjnych. Diagnostyka genetyczna obligatoryjna przed rozpoczęciem leczenia.',
-              { heading: 'Chirurgia bariatryczna u młodzieży' },
+              '**Setmelanotyd (Imcivree)** — agonista MC4R; aktualne SmPC EMA: **od 2. r.ż.** (wcześniej ≥ 6 r.ż.) przy potwierdzonej mutacji POMC, PCSK1, LepR lub w zespole Bardeta-Biedla (BBS). Skrajnie rzadkie wskazanie; dostępność w PL ograniczona do ośrodków referencyjnych. Diagnostyka genetyczna obligatoryjna przed rozpoczęciem leczenia.',
+              { heading: 'Chirurgia bariatryczna u młodzieży — ASMBS 2018 (Pratt)' },
               { items: [
-                'Wskazania: BMI ≥ 40 lub BMI ≥ 35 z poważnymi powikłaniami (cukrzyca typu 2, obturacyjny bezdech senny ciężki, oporne nadciśnienie tętnicze, MASH); dojrzałość kostna ≥ 95% wieku dorosłego (rzadko < 14. r.ż.).',
-                'Wykonywana wyłącznie w wyselekcjonowanych ośrodkach pediatrycznych z zespołem wielospecjalistycznym (chirurg bariatryczny, endokrynolog dziecięcy, psycholog, dietetyk, pielęgniarka koordynująca).',
-                'Najczęstsze techniki: rękawowa resekcja żołądka (sleeve gastrectomy) lub ominięcie żołądkowo-jelitowe Roux-en-Y.',
-                'Substytucja witamin i mikroelementów dożywotnio (witamina D, witamina B12, żelazo, wapń, kwas foliowy oraz witaminy A, D, E, K po Roux-en-Y).',
-                'Wymagane przygotowanie psychologiczne i dietetyczne ≥ 6 miesięcy przed operacją.'
+                '**Kryteria masy: BMI ≥ 120% 95. percentyla (≈ 35 kg/m²) z chorobą współistniejącą** LUB **BMI ≥ 140% 95. percentyla (≈ 40 kg/m²) bez chorób**.',
+                '**Tanner stage, wzrastanie liniowe i wiek kostny NIE są warunkami odcinającymi dostęp do oceny w ośrodku bariatrycznym.** Wczesne skierowanie u młodzieży z ciężką otyłością.',
+                'Choroby współistniejące kwalifikujące: T2DM, OSA ciężki, oporne nadciśnienie, MASH, idiopatyczne nadciśnienie wewnątrzczaszkowe, ciężkie powikłania ortopedyczne, GERD.',
+                'Najczęstsze techniki: rękawowa resekcja żołądka (sleeve) lub Roux-en-Y.',
+                'Zespół wielospecjalistyczny: chirurg bariatryczny pediatryczny, endokrynolog, psycholog, dietetyk, pielęgniarka koordynująca.',
+                'Substytucja witamin i mikroelementów dożywotnio (D, B12, żelazo, wapń, kwas foliowy; po Roux-en-Y dodatkowo A, E, K).',
+                'Przygotowanie psychologiczne i dietetyczne ≥ 6 miesięcy.',
+                'NICE (brytyjskie podejście) — bardziej zachowawcze: chirurgia wyjątkowo, blisko dojrzałości fizjologicznej, w ośrodku z pełną ekspertyzą pediatryczną.'
               ] }
             ]
           },
@@ -9474,7 +9634,7 @@
         ]
       },
       sections: [
-        { name: 'Pomiary antropometryczne (kalkulator główny)',
+        { name: 'Krok 1 — antropometria + BP (kalkulator główny)',
           tests: [
             EXT.bmi_percentile,
             EXT.cole_index,
@@ -9482,50 +9642,71 @@
             EXT.bp_pediatric
           ]
         },
-        { name: 'Skrining endokrynologiczny',
+        { name: 'Krok 3 — pakiet rutynowy ≥ 10 r.ż. (otyłość lub nadwaga z ryzykiem)',
           tests: [
-            { id: 'tsh' }, { id: 'ft4' },
-            { id: 'vit_d_25oh' },
-            { id: 'cortisol', note: 'Po DST 1 mg lub w ślinie nocnej — gdy charakterystyczne objawy zespołu Cushinga (rozstępy purpurowe, niski wzrost, miopatia).' },
-            { id: 'igf1', note: 'Wykluczenie niedoboru hormonu wzrostu — gdy otyłość + niski wzrost.' }
-          ]
-        },
-        { name: 'Metabolizm i powikłania (od wieku szkolnego)',
-          tests: [
+            EXT.lipid_panel,
             EXT.glucose_fasting, EXT.hba1c, EXT.ogtt_75g,
-            EXT.lipid_panel, EXT.liver,
-            EXT.insulin
+            EXT.liver
           ]
         },
-        { name: 'Diagnostyka rozszerzona (młodzież)',
+        { name: 'Krok 2 — czerwone flagi endokrynologiczne (CELOWANE, NIE rutynowo)',
           tests: [
-            { id: 'testosterone_total', note: 'Chłopcy — wtórny hipogonadyzm w otyłości; dziewczęta — skrining PCOS po menarche.' },
-            { id: 'lh' }, { id: 'fsh' },
-            { id: 'shbg', note: 'Insulinooporność → niska SHBG.' },
-            { id: 'oh17_progesterone', note: 'Wykluczenie nieklasycznego wrodzonego przerostu nadnerczy u dziewcząt z PCOS-podobnym obrazem klinicznym.' }
+            { id: 'tsh', note: 'TYLKO przy spowolnieniu wzrastania, niskim wzroście lub objawach niedoczynności tarczycy (sucha skóra, zaparcia, bradykardia, opóźniony wiek kostny). NIE rutynowo u dziecka z prawidłowym wzrostem (ES 2017).' },
+            { id: 'ft4', note: 'Po nieprawidłowym TSH lub przy silnym podejrzeniu klinicznym.' },
+            { id: 'igf1', note: 'Wykluczenie GHD — gdy otyłość + niski wzrost + spowolnienie wzrastania. NIE rutynowo (ES 2017).' },
+            { id: 'cortisol', note: 'DST 1 mg / ślina nocna / dobowy mocz — TYLKO przy fenotypie cushingoidalnym: spowolnienie wzrastania + rozstępy purpurowe > 1 cm + twarz księżycowata + miopatia.' },
+            { id: 'vit_d_25oh', note: 'SELEKTYWNIE: objawy kostne, ciężka otyłość, przed bariatrią, choroby współistniejące. NIE rutynowo u każdego dziecka z otyłością (ES 2017, AAP 2023).' }
           ]
         },
-        { name: 'Genetyka (gdy sygnały alarmowe)',
+        { name: 'Krok 4 — MASLD warunkowo (po nieprawidłowym ALT)',
+          tests: [
+            { id: 'liver', note: 'ALT, AST, GGT — interpretacja wg pediatrycznych ULN: ALT ♀ ≥ 22 U/L, ♂ ≥ 26 U/L. > 2× ULN przez > 3 mies. → dalsza diagnostyka. USG jamy brzusznej TUTAJ (nie przesiewowo).' }
+          ]
+        },
+        { name: 'Krok 4 — PCOS u nastolatek (bez USG jajników)',
+          tests: [
+            { id: 'testosterone_total', note: 'Hiperandrogenizm biochemiczny — dziewczęta z oligomenorrheą/hirsutyzmem/trądzikiem.' },
+            { id: 'shbg', note: 'Insulinooporność → niska SHBG. Wolny testosteron = T całkowity / SHBG.' },
+            { id: 'oh17_progesterone', note: 'Wykluczenie nieklasycznego wrodzonego przerostu nadnerczy (CAH) u dziewcząt z PCOS-podobnym obrazem.' },
+            { id: 'lh', note: 'Pomocniczo — LH:FSH > 2 sugeruje PCOS, ale nie jest kryterium rozpoznania.' },
+            { id: 'fsh' }
+          ]
+        },
+        { name: 'Krok 4 — chłopcy (hipogonadyzm wtórny)',
+          tests: [
+            { id: 'testosterone_total', note: 'Otyłość → aromatyzacja T do estronu + spadek SHBG → wtórny hipogonadyzm. Częściowo odwracalny po redukcji masy ≥ 10%. Pomiar rano.' }
+          ]
+        },
+        { name: 'Genetyka (CELOWANE — wczesny początek/hiperfagia/dysmorfia)',
           tests: [
             EXT.mc4r_gene,
             EXT.pomc_pcsk1_lepr_gene,
             EXT.prader_willi_test,
             EXT.bardet_biedl_panel
           ]
+        },
+        { name: 'Badania dodatkowe (NIE rutynowe — powszechne błędy)',
+          tests: [
+            { id: 'insulin', note: '**NIE w rutynowym screeningu** (ES 2017, AAP 2023). Insulina/HOMA-IR — brak wartości diagnostycznej, duża zmienność, słaba standaryzacja. Jeśli używane — tylko w badaniach lub specjalistycznie.' }
+          ]
         }
       ],
-      guideline: 'PTLO 2022 (dział pediatryczny) / Endocrine Society 2017 (Styne — Pediatric Obesity) / AAP 2023 (Hampl — Clinical Practice Guideline) / IMID/IPCZD / ESPGHAN 2017 (Vajro — MASLD u dzieci) / NHLBI 2017 (Flynn — nadciśnienie tętnicze u dzieci) / NHLBI 2011 (lipidogram pediatryczny).',
+      guideline: 'AAP 2023 (Hampl — Clinical Practice Guideline) / Endocrine Society 2017 (Styne — Pediatric Obesity) / NICE NG246 (2025–2026) / AAP 2017 (Flynn — nadciśnienie u dzieci) / NASPGHAN 2017 (Vajro — MASLD u dzieci) / ASMBS 2018 (Pratt — bariatria u młodzieży) / EMA SmPC (semaglutyd, liraglutyd, setmelanotyd) / International PCOS Guideline 2023 / PTLO 2022 (dział pediatryczny).',
       sources: [
-        'Olszanecka-Glinianowicz M, Mamcarz A, Filipiak KJ i wsp. Otyłość — choroba przewlekła. Stanowisko PTLO 2022. Forum Medycyny Rodzinnej. 2022.',
-        'Styne DM, Arslanian SA, Connor EL i wsp. Pediatric Obesity-Assessment, Treatment, and Prevention: An Endocrine Society Clinical Practice Guideline. J Clin Endocrinol Metab. 2017;102(3):709-757.',
         'Hampl SE, Hassink SG, Skinner AC i wsp. Clinical Practice Guideline for the Evaluation and Treatment of Children and Adolescents With Obesity (AAP). Pediatrics. 2023;151(2):e2022060640.',
-        'Vajro P, Lenta S, Socha P i wsp. Diagnosis of nonalcoholic fatty liver disease in children and adolescents: position paper of the ESPGHAN Hepatology Committee. J Pediatr Gastroenterol Nutr. 2012;54(5):700-713.',
-        'Flynn JT, Kaelber DC, Baker-Smith CM i wsp. Clinical Practice Guideline for Screening and Management of High Blood Pressure in Children and Adolescents (NHLBI). Pediatrics. 2017;140(3):e20171904.',
-        'Expert Panel on Integrated Guidelines for Cardiovascular Health and Risk Reduction in Children and Adolescents. NHLBI 2011 Guidelines. Pediatrics. 2011;128(Suppl 5):S213-S256.',
+        'Styne DM, Arslanian SA, Connor EL i wsp. Pediatric Obesity-Assessment, Treatment, and Prevention: An Endocrine Society Clinical Practice Guideline. J Clin Endocrinol Metab. 2017;102(3):709-757.',
+        'NICE NG246. Overweight and obesity in children and young people: assessment and management. 2025–2026 updates. National Institute for Health and Care Excellence.',
+        'Flynn JT, Kaelber DC, Baker-Smith CM i wsp. Clinical Practice Guideline for Screening and Management of High Blood Pressure in Children and Adolescents (AAP). Pediatrics. 2017;140(3):e20171904.',
+        'Vajro P, Lenta S, Socha P i wsp. Diagnosis of nonalcoholic fatty liver disease in children and adolescents: position paper of the NASPGHAN Hepatology Committee. J Pediatr Gastroenterol Nutr. 2017 (recommendations); pediatric ALT ULN: girls 22 U/L, boys 26 U/L (Schwimmer).',
+        'Pratt JSA, Browne A, Browne NT i wsp. ASMBS pediatric metabolic and bariatric surgery guidelines, 2018. Surg Obes Relat Dis. 2018;14(7):882-901.',
+        'European Medicines Agency. SmPC Wegovy (semaglutyd) — wskazania pediatryczne ≥ 12 r.ż. EMA, aktualizacja 2024.',
+        'European Medicines Agency. SmPC Saxenda (liraglutyd) — wskazania pediatryczne ≥ 12 r.ż. EMA.',
+        'European Medicines Agency. SmPC Imcivree (setmelanotyd) — wskazania ≥ 2 r.ż. (POMC, PCSK1, LepR, BBS). EMA, aktualizacja.',
         'Kelly AS, Auerbach P, Barrientos-Perez M i wsp. A Randomized, Controlled Trial of Liraglutide for Adolescents with Obesity. N Engl J Med. 2020;382(22):2117-2128.',
         'Weghuber D, Barrett T, Barrientos-Pérez M i wsp. Once-Weekly Semaglutide in Adolescents with Obesity (STEP TEENS). N Engl J Med. 2022;387(24):2245-2257.',
+        'Teede HJ, Tay CT, Laven JJE i wsp. Recommendations from the 2023 International Evidence-based Guideline for the Assessment and Management of Polycystic Ovary Syndrome. Hum Reprod. 2023 — USG jajników NIE rekomendowane w adolescencji.',
         'Clément K, van den Akker E, Argente J i wsp. Efficacy and safety of setmelanotide, an MC4R agonist, in individuals with severe obesity due to LEPR or POMC deficiency. Lancet Diabetes Endocrinol. 2020;8(12):960-970.',
-        'Pratt JSA, Browne A, Browne NT i wsp. ASMBS pediatric metabolic and bariatric surgery guidelines, 2018. Surg Obes Relat Dis. 2018;14(7):882-901.',
+        'Olszanecka-Glinianowicz M, Mamcarz A, Filipiak KJ i wsp. Otyłość — choroba przewlekła. Stanowisko PTLO 2022. Forum Medycyny Rodzinnej. 2022.',
         'Kułaga Z, Litwin M, Tkaczyk M i wsp. Polish 2010 growth references for school-aged children and adolescents. Eur J Pediatr. 2011;170(5):599-609 (siatki centylowe OLAF).',
         'Palczewska I, Niedźwiedzka Z. Wskaźniki rozwoju somatycznego dzieci i młodzieży warszawskiej. Medycyna Wieku Rozwojowego. 2001;5(2):17-118 (siatki Palczewska).'
       ]
