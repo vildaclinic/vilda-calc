@@ -1392,11 +1392,51 @@
       margin-top: 0.4rem;
     }
 
-    /* Przycisk czyszczący – używa globalnego stylu button (turkusowy,
-       tak jak #clearAllDataBtn na index.html). Tylko centrowanie i margines. */
-    .lab-card .lab-clear-btn {
-      display: block;
-      margin: 1.25rem auto 0;
+    /* Faza 35: przycisk czyszczący — IDENTYCZNY z #clearAllDataBtn na
+       index.html (ios26-v2.css linia 811). Transparent tło + turkusowa
+       ramka + flex centrowanie ikony eraser. */
+    #labClearBtn,
+    button#labClearBtn,
+    .liquid-ios26 button#labClearBtn {
+      background: transparent !important;
+      color: var(--primary, #00838d) !important;
+      border: 1.5px solid var(--primary, #00838d) !important;
+      border-radius: var(--radius) !important;
+      padding: 0.55rem 1.1rem !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 0.45em !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      margin: 1.25rem auto 0 !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      box-shadow: none !important;
+      transition: background 0.18s, color 0.18s !important;
+      font-family: inherit !important;
+      font-weight: 500 !important;
+      cursor: pointer !important;
+      line-height: 1.2 !important;
+    }
+    #labClearBtn:hover,
+    button#labClearBtn:hover,
+    .liquid-ios26 button#labClearBtn:hover {
+      background: rgba(0, 131, 141, 0.07) !important;
+      color: var(--primary, #00838d) !important;
+      box-shadow: none !important;
+    }
+    /* Ikona eraser — flex zapewnia idealną centerację w pionie z tekstem */
+    #labClearBtn i[data-lucide],
+    #labClearBtn svg,
+    .liquid-ios26 #labClearBtn i[data-lucide],
+    .liquid-ios26 #labClearBtn svg {
+      width: 1em !important;
+      height: 1em !important;
+      flex-shrink: 0 !important;
+      stroke: currentColor !important;
+      display: inline-block !important;
+      vertical-align: middle !important;
     }
 
     /* Krzyżowy link do kalkulatora dawek. */
@@ -2197,7 +2237,7 @@
                 <div class="lab-step-label">Wartość wyniku + jednostka źródłowa</div>
                 <div class="lab-input-row">
                   <input type="text" id="labValue" inputmode="decimal"
-                         placeholder="np. 15,2"
+                         placeholder=""
                          autocomplete="off" />
                   <select id="labUnit" aria-label="Jednostka źródłowa"></select>
                 </div>
@@ -2349,7 +2389,7 @@
               </div>
             </div>
 
-            <button type="button" id="labClearBtn" class="lab-clear-btn" style="margin-top:1rem;">
+            <button type="button" id="labClearBtn" class="lab-clear-btn">
               <i data-lucide="eraser" aria-hidden="true"></i> Wyczyść wszystkie pola
             </button>
           </div>
