@@ -6751,17 +6751,66 @@
             icon: 'book-2',
             title: 'Definicja i kontekst',
             body: [
-              'Nadciśnienie tętnicze (HT) — wartości ciśnienia przekraczające progi diagnostyczne w pomiarze.',
-              { heading: 'Progi diagnostyczne' },
+              'Nadciśnienie tętnicze (HT) — wartości ciśnienia przekraczające progi diagnostyczne w POTWIERDZONYM pomiarze (gabinet + ABPM/HBPM).',
+              { heading: 'Progi diagnostyczne (ESC 2024 / PTNT 2024)' },
               { items: [
                 { label: 'Pomiar gabinetowy', text: '≥ 140/90 mmHg.' },
-                { label: 'Pomiary domowe', text: '≥ 135/85 mmHg.' },
-                { label: 'ABPM 24 h', text: '≥ 130/80 mmHg (ABPM — ang. ambulatory blood pressure monitoring, całodobowe monitorowanie ciśnienia tętniczego).' }
+                { label: 'Pomiary domowe HBPM', text: '≥ 135/85 mmHg.' },
+                { label: 'ABPM 24 h', text: '≥ 130/80 mmHg (średnia dobowa).' },
+                { label: 'ABPM — dzień', text: '≥ 135/85 mmHg.' },
+                { label: 'ABPM — noc', text: '≥ 120/70 mmHg.' }
               ] },
+              { heading: 'Uwaga o standardach ACC/AHA' },
+              'Amerykański ACC/AHA 2017 stosuje niższy próg — ≥ 130/80 mmHg w pomiarze gabinetowym. W Polsce/Europie stosujemy progi ESC 2024 / PTNT 2024 (≥ 140/90).',
               { heading: 'Etiologia — 90–95% pierwotne' },
               'Diagnostyka wtórnych przyczyn endokrynologicznych (~5–10%) jest wskazana w wybranej grupie pacjentów — może prowadzić do wyleczenia (operacyjnego: pheochromocytoma, jednostronny gruczolak Conna) lub znaczącej poprawy kontroli ciśnienia (leczenie antagonistami receptora mineralokortykoidowego — MRA; leczenie zespołu Cushinga, akromegalii).',
               { heading: 'Wytyczne' },
-              'ESC 2024 (Europejskie Towarzystwo Kardiologiczne), PTNT 2024 (Polskie Towarzystwo Nadciśnienia Tętniczego).'
+              'ESC 2024 (McEvoy — rdzeń algorytmu) / PTNT 2024 (Tykarski) / Endocrine Society 2025/2026 (PA — zaktualizowany protokół ARR, AVS) / ESE 2023 (incidentaloma nadnerczy) / USPSTF 2021 (technika pomiaru BP) / Endocrine Society 2014 (PPGL, Lenders) / Endocrine Society 2008 (Cushing screening).'
+            ]
+          },
+          {
+            kind: 'callout',
+            variant: 'primary',
+            icon: 'gauge',
+            title: 'KLUCZOWE — potwierdzenie nadciśnienia PRZED diagnostyką wtórnych przyczyn',
+            collapsible: false,
+            body: [
+              'PIERWSZY KROK to nie diagnostyka — to standardowy pomiar BP + ABPM/HBPM. Bez tego wpadamy w pułapkę „white-coat hypertension" i pseudooporności.',
+              { heading: 'Standaryzowany pomiar gabinetowy (USPSTF 2021, ESC 2024)' },
+              { items: [
+                'Zwalidowany automatyczny aparat na ramię (NIE nadgarstkowy, NIE rtęciowy ręczny).',
+                'Bez kofeiny, palenia, jedzenia, wysiłku przez 30 min PRZED pomiarem.',
+                '3–5 min spokojnego odpoczynku w pozycji siedzącej.',
+                'Bez rozmowy w trakcie i pomiędzy pomiarami.',
+                'Plecy oparte, stopy płasko na podłodze, ramię na wysokości serca.',
+                '3 odczyty w odstępach 1 minuty → uśrednij DWA OSTATNIE (pierwszy odrzuć).',
+                'Pojedyncza wizyta zwykle NIE wystarcza do rozpoznania (chyba że BP > 180/110 lub objawy stanu nagłego).'
+              ] },
+              { heading: 'ABPM — centralny element rozpoznania' },
+              { items: [
+                'Wskazania: potwierdzenie rozpoznania (zwłaszcza BP 140–159/90–99 mmHg), white-coat hypertension, masked hypertension, oporność, ocena nocnego BP.',
+                'Protokół: 24 h, pomiary co 15–30 min w dzień, co 30–60 min w nocy.',
+                'Wiarygodność zapisu: ≥ 70% spodziewanych pomiarów, min. ~20 pomiarów dziennych + ~7 nocnych.',
+                'ABPM jest metodą REFERENCYJNĄ — bez równoważnego substytutu w wykrywaniu nocnego nadciśnienia i pseudooporności.'
+              ] },
+              { heading: 'HBPM — protokół standaryzowany' },
+              { items: [
+                '5 min odpoczynku przed pomiarem, bez kofeiny/alkoholu/palenia przez 30 min.',
+                '2 pomiary RANO + 2 pomiary WIECZÓR, z 1-minutowym odstępem między nimi.',
+                'Przez 7 dni (minimum 5 dni dla rozpoznania).',
+                'Średnia z dni 2–7 (dzień 1 odrzuć).',
+                'Skuteczność (vs ABPM, próg > 135/85): czułość ~85,7%, swoistość ~62,4% (USPSTF 2021).',
+                'HBPM jest tańszy i bardziej dostępny niż ABPM, ale NIE OCENIA nocnego BP — ABPM jest preferowany przy podejrzeniu nocnego nadciśnienia lub oporności.'
+              ] },
+              { heading: 'Wykluczenie pseudooporności (przed diagnostyką wtórną!)' },
+              { items: [
+                'Adherencja terapeutyczna — pacjent rzeczywiście bierze leki (pytanie wprost; w trudnych przypadkach — DOT, monitorowanie poziomu leków).',
+                'Technika pomiaru — odpowiednia mankiet/pozycja/odpoczynek.',
+                'White-coat effect — ABPM/HBPM wyklucza.',
+                'Leki podwyższające BP: NLPZ, kortykosteroidy (systemowe), estrogenowe antykoncepcyjne, sympatykomimetyki (efedryna, pseudoefedryna), cyklosporyna/takrolimus, niektóre onkologiczne (VEGF-i, inhibitory tyrozynowych kinaz), erytropoetyna, lukrecja.',
+                'Alkohol — > 2 standardowych jednostek/d (oporne HT u ~25% pacjentów z alkoholem).',
+                'Sól w diecie — > 5 g/d, otyłość, brak aktywności fizycznej.'
+              ] }
             ]
           },
           {
@@ -6812,43 +6861,135 @@
             steps: [
               {
                 number: 1,
-                title: 'Panel podstawowy',
-                sublabel: 'przed pogłębioną diagnostyką endokrynologiczną',
+                title: 'Krok 1 — rutynowy panel + ocena HMOD',
+                sublabel: 'u WSZYSTKICH chorych po potwierdzeniu rozpoznania',
                 options: [
                   {
-                    threshold: 'Co oznaczyć',
-                    action: 'Sód, potas, kreatynina + eGFR (oszacowany współczynnik filtracji kłębuszkowej), glukoza na czczo, lipidogram, badanie ogólne moczu + albuminuria/kreatyninuria. EKG, USG nerek. Echokardiografia (przerost lewej komory jako powikłanie).',
+                    threshold: 'Rutynowe badania laboratoryjne',
+                    action: 'Sód, potas, kreatynina + eGFR, glukoza na czczo (lub HbA1c), lipidogram, badanie ogólne moczu + ACR/UACR (stosunek albumina/kreatynina w moczu), TSH, Ca, kwas moczowy.',
                     variant: 'success', icon: 'flask',
                     detail: [
-                      'Hipokaliemia spontaniczna lub indukowana diuretykiem — sygnał wskazujący na PHA, zwężenie tętnicy nerkowej (RAS — ang. renal artery stenosis), nadmiar kortykosteroidów lub nieprawidłowo stosowane diuretyki.',
-                      'Albuminuria — niezależny czynnik ryzyka sercowo-naczyniowego (CV), marker uszkodzenia narządowego.',
+                      'ESC 2024: ACR/UACR jest RUTYNOWY u wszystkich chorych z HT — albuminuria to równocześnie marker HMOD, choroby nerek i ryzyka sercowo-naczyniowego.',
+                      'Hipokaliemia spontaniczna lub indukowana diuretykiem — sygnał wskazujący na PHA, zwężenie tętnicy nerkowej (RAS), nadmiar kortykosteroidów lub diuretyki.',
                       'eGFR < 60 — może wskazywać na nadciśnienie nerkowopochodne lub powikłanie nerkowe HT.',
-                      'USG nerek — wyklucza miąższową chorobę nerek; asymetria wymiarów nerek sugeruje zwężenie tętnicy nerkowej.'
+                      'Aktualizacja terminologii: „albuminuria" (NIE „mikroalbuminuria") — zgodnie z KDIGO i ESC 2024.'
+                    ]
+                  },
+                  {
+                    threshold: 'EKG 12-odprowadzeniowe — rutynowo',
+                    action: '12-odprowadzeniowe EKG u WSZYSTKICH chorych z HT — ocena LVH, niedokrwienia, zaburzeń rytmu.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'Czułość pojedynczych klasycznych kryteriów EKG dla echo-LVH: ~9–34% (NISKA), swoistość ~78–100% (wysoka).',
+                      'WAŻNE: prawidłowe EKG NIE wyklucza HMOD — nieprawidłowe EKG otwiera drogę do echokardiografii.'
+                    ]
+                  },
+                  {
+                    threshold: 'Echokardiografia — WARUNKOWO',
+                    action: 'Echo NIE rutynowo. Wskazania: nieprawidłowe EKG, objawy/cechy choroby serca, podejrzenie LVH, ocena funkcji rozkurczowej u starszych, ocena przed planowaną intensyfikacją leczenia.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'ESC 2024 zaleca echo u chorych z nadciśnieniem i nieprawidłowym EKG ALBO objawami/przesłankami choroby serca.',
+                      'ACC/AHA 2017: echo jako badanie OPCJONALNE.',
+                      'Echo jest lepszy od EKG do wykrywania LVH, ale jako badanie CELOWANE, nie odruchowe.'
+                    ]
+                  },
+                  {
+                    threshold: 'USG nerek — WARUNKOWO',
+                    action: 'USG nerek NIE rutynowo. Wskazania: CKD, nieprawidłowości w moczu, asymetria nerek, szybkie pogorszenie funkcji nerek, podejrzenie przyczyny renoparenchymalnej/renowaskularnej.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'ESC 2024 NIE zaleca rutynowego USG nerek u każdego chorego z nadciśnieniem.',
+                      'Asymetria wymiarów nerek (różnica > 1,5 cm) → silne podejrzenie zwężenia tętnicy nerkowej → krok 6 (Doppler/CTA/MRA).'
+                    ]
+                  },
+                  {
+                    threshold: 'Fundoskopia — gdy BP > 180/110 lub cukrzyca',
+                    action: 'Badanie dna oka przy BP ≥ 180/110 (podejrzenie stanu nagłego / nadciśnienia złośliwego) oraz u chorych z cukrzycą i nadciśnieniem.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'Krwotoki, wysięki, obrzęk tarczy → nadciśnienie złośliwe (urgent treatment).',
+                      'NIE rutynowo u każdego pacjenta z HT.'
                     ]
                   }
                 ]
               },
               {
                 number: 2,
-                title: 'Skrining PHA — wskaźnik ARR',
-                sublabel: 'najczęstsza endokrynna przyczyna (~5–10% HT)',
+                title: 'Krok 2 — Skrining pierwotnego aldosteronizmu (PA) — protokół Endocrine Society 2025/2026',
+                sublabel: 'rozszerzone wskazania — szersza grupa pacjentów niż w starszych wytycznych',
                 options: [
                   {
-                    threshold: 'Wykonanie',
-                    action: 'Aldosteron + PRA (aktywność reninowa osocza, ang. plasma renin activity) lub DRC (bezpośrednie stężenie reniny, ang. direct renin concentration) → obliczenie ARR (stosunek aldosteron/renina). Próg dodatni: ARR > 30 ng/dL : ng/mL/h przy aldosteronie ≥ 15 ng/dL.',
+                    threshold: 'Wskazania do ARR — ROZSZERZONE wg Endocrine Society 2025/2026 i ESC 2024',
+                    action: 'Nowsze wytyczne SUGERUJĄ rozważenie skriningu ARR u WSZYSTKICH chorych z potwierdzonym nadciśnieniem (szersze niż klasyczne wskazania: oporność, hipokaliemia, incidentaloma). To istotna zmiana wobec Funder 2016.',
                     variant: 'success', icon: 'check',
                     detail: [
-                      'Warunki pobrania: zobacz sekcję „Przygotowanie do skriningu PHA" wyżej (kaliemia, leki do odstawienia).',
-                      'Wynik dodatni → potwierdzenie testem obciążenia 0,9% NaCl, testem kaptoprilowym lub fludrokortyzonowym.',
-                      'Lokalizacja po potwierdzeniu: TK nadnerczy + AVS (ang. adrenal vein sampling — cewnikowanie żył nadnerczowych) — różnicuje jednostronny gruczolak Conna (leczenie operacyjne) od obustronnego przerostu nadnerczy BAH (ang. bilateral adrenal hyperplasia — leczenie MRA).',
+                      'Klasyczne (mocne) wskazania: nadciśnienie oporne (≥ 3 leki w pełnych dawkach + diuretyk); spontaniczna lub indukowana diuretykiem hipokaliemia; incidentaloma nadnercza + HT; rodzinny wczesny PA lub udar przed 40 r.ż.',
+                      'Rozszerzone (sugerowane): wszyscy z nadciśnieniem ze względu na wysoką częstość niedoszacowanego PA (~5–10% HT, do 20% w opornym).',
+                      'PRAKTYCZNA REKOMENDACJA: u każdego nowego pacjenta z potwierdzonym HT — rozważyć ARR jednorazowo na początku diagnostyki.'
+                    ]
+                  },
+                  {
+                    threshold: 'Protokół pobrania — Endocrine Society 2025/2026',
+                    action: 'Rano, w pozycji SIEDZĄCEJ po 5–15 min, BEZ restrykcji sodu w poprzednich dniach. Korekta K+ > 4,0 mmol/L PRZED pobraniem. Leki modyfikuj INDYWIDUALNIE (nie sztywne odstawianie wszystkiego).',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'NIE „rano siedząc bez restrykcji sodu" + sztywne 4-tygodniowe odstawienie wszystkich leków — Endocrine Society 2025/2026 dopuszcza strategie minimal-withdrawal lub even no-withdrawal jeśli bezpieczeństwo pacjenta tego wymaga.',
+                      'Leki problematyczne (do indywidualnej oceny):',
+                      { items: [
+                        { label: 'MRA (spironolakton, eplerenon)', text: 'BEZWZGLĘDNIE odstawić 4 tyg. wcześniej — fałszywie ujemny ARR.' },
+                        { label: 'β-blokery', text: 'hamują reninę → fałszywie WYSOKI ARR.' },
+                        { label: 'ACE-I / ARB / DRI (aliskiren)', text: 'zwiększają reninę → fałszywie NISKI ARR.' },
+                        { label: 'Diuretyki tiazydowe / pętlowe', text: 'zwiększają reninę przez hipowolemię.' },
+                        { label: 'NLPZ', text: 'hamują reninę → fałszywie wysoki ARR.' }
+                      ] },
+                      { label: 'Leki neutralne (kontynuować)', text: 'werapamil SR (preferowany), doksazosyna (α-bloker), hydralazyna.' },
+                      'Hipokaliemia SZTUCZNIE obniża aldosteron → wynik fałszywie ujemny. Skoryguj K > 4,0 PRZED badaniem.',
+                      'Pobranie: rano, w pozycji siedzącej (NIE leżącej — zmniejsza reninę przez ortostazę), po 5–15 min spokoju.'
+                    ]
+                  },
+                  {
+                    threshold: 'Interpretacja — kombinacja 3 elementów, NIE tylko ARR > 30',
+                    action: 'Wynik dodatni wymaga: (1) supresja reniny (PRA ≤ 1,0 ng/mL/h lub DRC poniżej granicy), (2) nieadekwatnie WYSOKI aldosteron (typowo ≥ 10–15 ng/dL / 280–415 pmol/L, zależnie od metody), (3) podwyższony ARR — próg ZALEŻNY OD METODY oznaczenia.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'Sztywny próg „ARR > 30" jest UPROSZCZENIEM — Endocrine Society 2025/2026 podkreśla zależność od metody (immunoassay vs LC-MS/MS) i lokalnego laboratorium.',
+                      'Metaanaliza 2024: ARR w skriningu PA — czułość ~81,6%, swoistość ~93,3% (zależnie od progu, populacji, metody).',
+                      'Jeśli wynik ujemny przy utrzymującej się hipokaliemii — POWTÓRZ po korekcji K.',
+                      'PRAKTYCZNA WSKAZÓWKA: zawsze konsultuj progi z LOKALNYM laboratorium (różne metody = różne cutoffs).'
+                    ]
+                  },
+                  {
+                    threshold: 'Po dodatnim ARR — test potwierdzający',
+                    action: 'Endocrine Society 2025/2026: test potwierdzający NIE zawsze konieczny. Można pominąć przy: opornym HT + spontanicznej hipokaliemii + jawnym fenotypie biochemicznym (supresja reniny + wysoki aldosteron).',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'Alternatywy testów potwierdzających (dobór zależny od ośrodka i chorego):',
+                      { items: [
+                        { label: 'Test hamowania solą i.v.', text: '2 L 0,9% NaCl i.v. przez 4 h; pomiar aldosteronu po. Seated SLT (siedzący) preferowany w nowszych badaniach — cutoff 6,6 ng/dL: czułość 83,3%, swoistość 92,2%. Przeciwwskazania: niewydolność serca, ciężkie HT, znacząca CKD.' },
+                        { label: 'Test obciążenia doustnego solą', text: '6 g NaCl/dobę przez 3 dni, aldosteron w DZM.' },
+                        { label: 'Test kaptoprilowy', text: '25–50 mg kaptoprilu PO, pomiar aldosteronu po 1–2 h. Bezpieczniejszy przy CKD/HF.' },
+                        { label: 'Test fludrokortyzonowy (klasyczny)', text: 'mniej używany, wymagający (4 dni hospitalizacji).' }
+                      ] },
                       'Pełny algorytm — osobne wskazanie hiperaldosteronizm.'
+                    ]
+                  },
+                  {
+                    threshold: 'Lokalizacja po potwierdzeniu — CT nadnerczy + AVS',
+                    action: 'CT nadnerczy do ANATOMII; AVS (cewnikowanie żył nadnerczowych) do LATERALIZACJI przed adrenalektomią. Sam CT NIE wystarcza do lateralizacji.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'AVS jest INWAZYJNE — mediana powikłań ~0,85%, ale 5–10% procedur wymaga powtórzenia z powodu niepowodzenia kaniulacji.',
+                      'WYJĄTEK dla AVS: można pominąć u młodych pacjentów < 35 r.ż. z wyraźnym PA + spontaniczną hipokaliemią + jednostronnym gruczolakiem > 1 cm w CT (Endocrine Society 2025/2026).',
+                      'NOWE z 2025/2026: 1-mg DST u KAŻDEGO chorego z PA + guzem nadnercza — wykluczenie współwydzielania kortyzolu (autonomous cortisol secretion / ACS) — wpływa na interpretację AVS i okres okołooperacyjny.',
+                      'Różnicowanie: jednostronny gruczolak Conna (APA — adenoma, leczenie operacyjne) vs obustronny przerost nadnerczy (BAH — bilateral adrenal hyperplasia, leczenie MRA dożywotnio).'
                     ]
                   }
                 ]
               },
               {
                 number: 3,
-                title: 'Skrining pheochromocytoma',
+                title: 'Krok 3 — Skrining pheochromocytoma / paraganglioma (PPGL)',
                 sublabel: 'gdy paroksyzmy lub triada objawów lub incidentaloma nadnercza',
                 options: [
                   {
@@ -6876,17 +7017,19 @@
               },
               {
                 number: 4,
-                title: 'Inne przyczyny endokrynne',
-                sublabel: 'celowana diagnostyka według objawów klinicznych',
+                title: 'Krok 4 — Inne przyczyny endokrynne (celowanie wg fenotypu)',
+                sublabel: 'NIE rutynowo u wszystkich — tylko przy konkretnych objawach',
                 options: [
                   {
-                    threshold: 'Zespół Cushinga',
-                    action: 'Test hamowania deksametazonem DST (ang. dexamethasone suppression test) 1 mg + kortyzol w DZM lub w ślinie nocnej — wyłącznie przy charakterystycznych objawach klinicznych zespołu Cushinga.',
+                    threshold: 'Zespół Cushinga — protokół Endocrine Society',
+                    action: 'Badania pierwszego rzutu: 1-mg overnight DST (test hamowania deksametazonem), późnonocny kortyzol ślinowy (LNSC — late-night salivary cortisol) lub wolny kortyzol w DZM (UFC). KRYTYCZNE: NIE używać losowego kortyzolu ani ACTH jako skriningu.',
                     variant: 'success', icon: 'check',
                     detail: [
-                      'Rutynowy skrining zespołu Cushinga u wszystkich pacjentów z HT nie jest zalecany.',
-                      'Wskazania kliniczne: rozstępy purpurowe > 1 cm, twarz księżycowata, miopatia proksymalna, otyłość brzuszna nieproporcjonalna, hipokaliemia w połączeniu z innymi objawami klinicznymi.',
-                      'Pełen algorytm — osobne wskazanie zespół Cushinga.'
+                      'Endocrine Society 2008 (Nieman): losowy kortyzol w surowicy ma BARDZO słabe parametry diagnostyczne (zmienność dobowo) — NIE jest testem przesiewowym.',
+                      'Test wykonuje się PO wykluczeniu egzogennej podaży GKS (jatrogenny Cushing).',
+                      'Wskazania kliniczne: rozstępy purpurowe > 1 cm, twarz księżycowata, miopatia proksymalna, otyłość brzuszna nieproporcjonalna, hipokaliemia + objawy, incidentaloma nadnercza, wielokrotne lub postępujące cechy.',
+                      'Rutynowy skrining Cushinga u WSZYSTKICH pacjentów z HT NIE jest zalecany.',
+                      'Po nieprawidłowym skriningu → ACTH + dalsze obrazowanie. Pełny algorytm — osobne wskazanie zespół Cushinga.'
                     ]
                   },
                   {
@@ -6928,6 +7071,109 @@
                     ]
                   }
                 ]
+              },
+              {
+                number: 5,
+                title: 'Krok 5 — Nadciśnienie naczyniowo-nerkowe (renovascular HT)',
+                sublabel: 'jedna z najczęstszych wtórnych przyczyn obok PA i OSA',
+                options: [
+                  {
+                    threshold: 'Wskazania do badań naczyniowo-nerkowych',
+                    action: 'Aktywuj badania przy: szmer nad tętnicą nerkową, asymetria nerek > 1,5 cm, wzrost kreatyniny ≥ 30% po ACE-I/ARB, nawracające obrzęki płuc (flash pulmonary edema), nagły/późny początek HT (po 55 r.ż.), oporne HT, miażdżyca uogólniona.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'Etiologia: miażdżycowe zwężenie tętnicy nerkowej (RAS — najczęstsze u starszych), dysplazja włóknisto-mięśniowa (FMD — fibromuscular dysplasia, u młodszych kobiet), urazy, tętniaki.'
+                    ]
+                  },
+                  {
+                    threshold: 'Diagnostyka — wybór modalności',
+                    action: 'Doppler tętnic nerkowych (pierwsza linia), CTA (CT angiografia), MRA (MR angiografia) — wybór zależy od funkcji nerek, dostępności, doświadczenia ośrodka.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      { items: [
+                        { label: 'Doppler tętnic nerkowych', text: 'Czułość ~75–85%, swoistość ~90–92%. Tani, nieinwazyjny, bez kontrastu, dobry przy CKD. Operator-dependent (wymaga doświadczonego radiologa).' },
+                        { label: 'CTA (CT angiografia)', text: 'Czułość ~96%, swoistość ~99% dla istotnego zwężenia. Doskonała anatomia. Wada: promieniowanie + kontrast jodowy (problem przy CKD).' },
+                        { label: 'MRA (MR angiografia)', text: 'Czułość/swoistość porównywalna do CTA, lepsza anatomia tkanek miękkich. Wada: kontrast gadolinowy przeciwwskazany przy eGFR < 30 (ryzyko NSF — nephrogenic systemic fibrosis).' }
+                      ] },
+                      'Po potwierdzeniu RAS — decyzja o angioplastyce/stentowaniu w zależności od etiologii (FMD — często rewaskularyzacja; miażdżycowe — leczenie zachowawcze ma priorytet wg badań CORAL, ASTRAL).'
+                    ]
+                  }
+                ]
+              },
+              {
+                number: 6,
+                title: 'Krok 6 — OSA (obturacyjny bezdech senny)',
+                sublabel: 'częsta przyczyna opornego HT — diagnostyka dwustopniowa',
+                options: [
+                  {
+                    threshold: 'Wskazania do oceny OSA',
+                    action: 'Aktywuj diagnostykę przy: chrapanie + senność dzienna (skala Epworth ≥ 10), otyłość + chwiejne HT, oporne HT, bezdechy obserwowane przez partnera, BMI > 30, krótka szyja (obwód > 40 cm), nadciśnienie nocne w ABPM (non-dipping).',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'OSA jest jedną z najczęstszych przyczyn opornego HT — ESC 2024 wymienia ją obok PA jako kluczową przyczynę wtórną.',
+                      'Skala Epworth Sleepiness Scale (ESS) — 8 pytań o senność, próg ≥ 10/24 = patologia.'
+                    ]
+                  },
+                  {
+                    threshold: 'Diagnostyka — dwustopniowa',
+                    action: '1. SKRINING: kwestionariusze (Epworth, STOP-BANG), domowy aparat do skriningu (HSAT — home sleep apnea test). 2. POTWIERDZENIE: polisomnografia w pracowni snu (PSG) — pełna ocena AHI (apnea-hypopnea index).',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'AHI ≥ 5 + objawy lub AHI ≥ 15 → OSA. AHI ≥ 30 → ciężka OSA.',
+                      'Leczenie: redukcja masy ciała, CPAP (continuous positive airway pressure), BiPAP, leczenie pozycyjne, urządzenia stomatologiczne. CPAP może poprawić kontrolę BP w opornym HT.',
+                      'Polisomnografia NIE jest badaniem rutynowym dla wszystkich z HT — wykonuj wg wskazań klinicznych.'
+                    ]
+                  }
+                ]
+              },
+              {
+                number: 7,
+                title: 'Krok 7 — Koarktacja aorty (młodzi pacjenci, różnica BP kończyn)',
+                sublabel: 'rzadka, ale ważna — często niedoszacowana',
+                options: [
+                  {
+                    threshold: 'Wskazania kliniczne',
+                    action: 'Aktywuj diagnostykę przy: młody wiek (< 30 r.ż.) + HT, różnica BP kończyna górna vs dolna > 20 mmHg, opóźnione lub osłabione tętno udowe, szmer skurczowy nad plecami / między łopatkami, niewspółmiernie ciężkie HT bez czynników ryzyka.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'Klasyczny zespół Turnerowski (XO) — koarktacja w 15–20% przypadków.',
+                      'Często współwystępuje z dwupłatkową zastawką aortalną (BAV).'
+                    ]
+                  },
+                  {
+                    threshold: 'Diagnostyka',
+                    action: 'Echo serca (TTE — ocena gradientu w cieśni aorty + zastawki aortalnej) → CTA lub MRA aorty (potwierdzenie morfologiczne i ocena długości zwężenia).',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'MRA preferowana u dzieci/młodych dorosłych (brak promieniowania).',
+                      'Leczenie: stentowanie lub operacja (resekcja zwężenia + anastomoza koniec-do-końca).'
+                    ]
+                  }
+                ]
+              },
+              {
+                number: 8,
+                title: 'Krok 8 — Badania genetyczne (CELOWANE, NIE rutynowo)',
+                sublabel: 'tylko przy bardzo wczesnym początku, wywiadzie rodzinnym, opornym fenotypie',
+                options: [
+                  {
+                    threshold: 'Wskazania',
+                    action: 'ESC 2024: rutynowe testy genetyczne w HT NIE są zalecane. Celowane testowanie tylko przy: bardzo wczesny początek (< 20 r.ż.), dodatni wywiad rodzinny, nietypowe zaburzenia K i supresja reniny, oporność na leczenie standardowe.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'Postaci monogenowe HT (rzadkie):',
+                      { items: [
+                        { label: 'Liddle (SCNN1A/B/G)', text: 'aktywacja ENaC — HT + hipokaliemia + zasadowica + niska renina + niski aldosteron.' },
+                        { label: 'GRA / FH typ 1 (chimera CYP11B1/B2)', text: 'glikokortykoidozależny hiperaldosteronizm — leczenie deksametazonem.' },
+                        { label: 'AME (HSD11B2)', text: 'wrodzony defekt 11β-HSD2 — kortyzol działa na MR.' },
+                        { label: 'WPN 11β-OH (CYP11B1)', text: 'wirylizacja + HT + hipokaliemia + 11-deoksykortyzol podwyższony.' },
+                        { label: 'WPN 17α-OH (CYP17A1)', text: 'brak rozwoju cech płciowych + HT + hipokaliemia + DOC i kortykosteron podwyższone.' },
+                        { label: 'Gordon (FHHt — pseudohypoaldosteronizm typu II)', text: 'HT + hiperkaliemia + kwasica + mutacje WNK1, WNK4, KLHL3, CUL3.' }
+                      ] },
+                      'Ryzyko nadrozpoznania VUS (variants of uncertain significance) — wymaga poradnictwa genetycznego.'
+                    ]
+                  }
+                ]
               }
             ]
           },
@@ -6964,36 +7210,121 @@
         ]
       },
       sections: [
-        { name: 'Panel podstawowy',
+        { name: 'Krok 0 — POTWIERDZENIE rozpoznania (przed całą diagnostyką)',
           tests: [
-            EXT.sodium, EXT.potassium, EXT.egfr, EXT.cmp,
-            EXT.glucose_fasting, EXT.lipid_panel
+            { ext: 'office_bp_standardized', label: 'Standaryzowany pomiar gabinetowy', note: 'Zwalidowany aparat na ramię; bez kofeiny/palenia 30 min; 3–5 min odpoczynku; 3 odczyty + uśrednij 2 ostatnie. Pojedyncza wizyta NIE wystarcza.' },
+            { ext: 'abpm_24h', label: 'ABPM 24 h (preferowane)', note: 'Centralny element rozpoznania — pomiary co 15–30 min w dzień, co 30–60 min w nocy. Wykrywa white-coat, masked HT, nocne BP. Próg ABPM 24h ≥ 130/80 mmHg.' },
+            { ext: 'hbpm_7days', label: 'HBPM 7-dniowy (alternatywa)', note: '2 pomiary rano + 2 wieczór × 7 dni; średnia z dni 2–7. Próg ≥ 135/85 mmHg. Tańszy niż ABPM, ale NIE ocenia nocnego BP.' }
           ]
         },
-        { name: 'Wtórne przyczyny endokrynne',
+        { name: 'Krok 1 — pakiet rutynowy (u wszystkich z potwierdzonym HT)',
           tests: [
-            { id: 'aldosterone' }, EXT.pra_pac, EXT.arr,
-            { id: 'cortisol', note: 'Po teście hamowania deksametazonem (DST) 1 mg — gdy charakterystyczne objawy zespołu Cushinga' },
-            EXT.metanephrines_plasma, EXT.metanephrines_urine,
-            { id: 'tsh' },
-            { id: 'igf1', note: 'Akromegalia' },
-            EXT.pth, EXT.ca_total
+            EXT.sodium, EXT.potassium,
+            EXT.egfr, EXT.cmp,
+            EXT.glucose_fasting,
+            { ext: 'hba1c', label: 'HbA1c', note: 'Współwystępowanie cukrzycy — wpływa na cel BP < 130/80.' },
+            EXT.lipid_panel,
+            { ext: 'urine_general', label: 'Badanie ogólne moczu', note: 'ESC 2024: rutynowo u wszystkich z HT.' },
+            { ext: 'acr_uacr', label: 'ACR/UACR (albumina/kreatynina w moczu)', note: 'ESC 2024: rutynowo u WSZYSTKICH chorych z HT. Albuminuria = marker HMOD + choroby nerek + ryzyka CV. Aktualna nomenklatura (NIE „mikroalbuminuria").' },
+            { id: 'tsh', note: 'Skrining tarczycy — nadczynność (skurczowe HT z szeroką amplitudą) lub niedoczynność (rozkurczowe HT). Wyrównanie często normalizuje BP.' },
+            EXT.ca_total,
+            { ext: 'uric_acid', label: 'Kwas moczowy', note: 'Czynnik ryzyka CV; niski (< 4 mg/dL) charakterystyczny dla PA/SIAD.' },
+            { ext: 'ekg_12lead', label: 'EKG 12-odprowadzeniowe', note: 'Rutynowo u wszystkich z HT (ESC 2024). Ocena LVH, niedokrwienia, rytmu. Czułość pojedynczych kryteriów dla LVH ~9–34% — prawidłowe EKG NIE wyklucza HMOD.' }
           ]
         },
-        { name: 'Obrazowanie i lokalizacja',
+        { name: 'Krok 1b — ocena HMOD i ryzyka CV (warunkowe)',
           tests: [
-            EXT.adrenal_ct, EXT.adrenal_mri,
-            EXT.avs
+            { ext: 'echocardiography', label: 'Echokardiografia (warunkowo)', note: 'NIE rutynowo. Wskazania: nieprawidłowe EKG, objawy/cechy choroby serca, podejrzenie LVH, ocena funkcji rozkurczowej u starszych.' },
+            { ext: 'fundoscopy', label: 'Fundoskopia (badanie dna oka)', note: 'TYLKO przy BP > 180/110 mmHg (stan nagły / nadciśnienie złośliwe) lub u chorych z cukrzycą.' },
+            { ext: 'score2', label: 'SCORE2 / SCORE2-OP — ocena ryzyka CV', note: 'ESC 2024 przesunął ciężar na ocenę CAŁKOWITEGO ryzyka CV (nie tylko BP). SCORE2 dla 40–69 lat, SCORE2-OP dla ≥ 70 lat. Wpływa na intensywność interwencji.' }
+          ]
+        },
+        { name: 'Krok 2 — Skrining pierwotnego aldosteronizmu (PA)',
+          tests: [
+            { id: 'aldosterone', note: 'Endocrine Society 2025/2026: rano, w pozycji SIEDZĄCEJ, bez restrykcji sodu, po korekcji K > 4,0. Leki indywidualnie.' },
+            EXT.pra_pac,
+            EXT.arr,
+            { ext: 'saline_infusion_test', label: 'Test hamowania solą i.v. (seated SLT)', note: '2 L 0,9% NaCl i.v. przez 4 h. Seated SLT cutoff aldosteronu 6,6 ng/dL: czułość 83,3%, swoistość 92,2%. Przeciwwskazania: HF, ciężkie HT, znacząca CKD.' },
+            { ext: 'captopril_test', label: 'Test kaptoprilowy', note: '25–50 mg PO, aldosteron po 1–2 h. Bezpieczniejszy przy HF/CKD niż saline.' }
+          ]
+        },
+        { name: 'Krok 3 — Pheochromocytoma / paraganglioma (PPGL)',
+          tests: [
+            { ext: 'metanephrines_plasma', label: 'Wolne metanefryny w osoczu (preferowane)', note: 'Endocrine Society 2014: pierwsza linia. Czułość 95,8–100%, swoistość 79,4–97,6%. Pobranie w pozycji LEŻĄCEJ — zmniejsza fałszywie dodatnie.' },
+            { ext: 'metanephrines_urine', label: 'Frakcjonowane metanefryny w DZM', note: 'Alternatywa. Czułość 85,7–97,1%, swoistość 68,6–95,1%.' },
+            { ext: 'clonidine_suppression', label: 'Test klonidynowy', note: 'Przy granicznych wynikach normetanefryny — różnicowanie prawdziwego pheo od wzrostu reaktywnego.' }
+          ]
+        },
+        { name: 'Krok 4 — Cushing (NIE losowy kortyzol/ACTH)',
+          tests: [
+            { ext: 'dst_1mg', label: '1-mg overnight DST', note: 'Pierwszego rzutu wg Endocrine Society. Kortyzol po 1 mg deksametazonu o północy. Cutoff 1,8 µg/dL (50 nmol/L).' },
+            { ext: 'lnsc', label: 'Późnonocny kortyzol ślinowy (LNSC)', note: 'Alternatywa pierwszego rzutu. Próbka między 23:00–24:00. Cutoff zależny od metody.' },
+            { ext: 'ufc_24h', label: 'Wolny kortyzol w DZM (UFC)', note: 'Trzecia opcja pierwszego rzutu. > 4× ULN — silne wsparcie dla Cushinga.' },
+            { id: 'cortisol', note: 'UWAGA: losowy kortyzol w surowicy NIE jest testem przesiewowym dla Cushinga (Endocrine Society).' },
+            { id: 'acth', note: 'NIE jako pierwszy test skriningowy — DOPIERO po nieprawidłowym DST/LNSC/UFC, dla różnicowania ACTH-zależnego vs niezależnego.' }
+          ]
+        },
+        { name: 'Krok 5 — Nadciśnienie naczyniowo-nerkowe',
+          tests: [
+            { ext: 'renal_doppler', label: 'Doppler tętnic nerkowych (pierwsza linia)', note: 'Tani, nieinwazyjny, bez kontrastu. Czułość ~75–85%, swoistość ~90–92%. Operator-dependent.' },
+            { ext: 'cta_renal', label: 'CTA tętnic nerkowych', note: 'Czułość ~96%, swoistość ~99%. Wada: promieniowanie + kontrast jodowy.' },
+            { ext: 'mra_renal', label: 'MRA tętnic nerkowych', note: 'Porównywalna z CTA. Wada: kontrast gadolinowy przeciwwskazany przy eGFR < 30.' }
+          ]
+        },
+        { name: 'Krok 6 — OSA (obturacyjny bezdech senny)',
+          tests: [
+            { ext: 'epworth_scale', label: 'Skala Epworth Sleepiness Scale (ESS)', note: 'Skrining kwestionariuszowy. Próg ≥ 10/24 = patologia → eskalacja do PSG.' },
+            { ext: 'stop_bang', label: 'STOP-BANG kwestionariusz', note: 'Snoring, Tired, Observed apneas, BP, BMI, Age, Neck, Gender. ≥ 3/8 — średnie/wysokie ryzyko OSA.' },
+            { ext: 'hsat_home_sleep', label: 'HSAT (home sleep apnea test)', note: 'Domowy aparat skriningowy — przy umiarkowanym ryzyku przed PSG.' },
+            { ext: 'polysomnography', label: 'Polisomnografia (PSG)', note: 'Złoty standard. AHI ≥ 5 + objawy lub ≥ 15 → OSA. AHI ≥ 30 → ciężka OSA.' }
+          ]
+        },
+        { name: 'Krok 7 — Koarktacja aorty (młodzi, różnica BP kończyn)',
+          tests: [
+            { ext: 'echo_aortic_arch', label: 'Echo TTE (ocena cieśni aorty)', note: 'Gradient w cieśni > 20 mmHg + obraz zwężenia → potwierdzenie. Ocena BAV (dwupłatkowa zastawka).' },
+            { ext: 'cta_aorta', label: 'CTA aorty', note: 'Potwierdzenie morfologiczne + ocena długości zwężenia. Wada: promieniowanie + kontrast.' },
+            { ext: 'mra_aorta', label: 'MRA aorty', note: 'Preferowana u dzieci i młodych dorosłych (brak promieniowania).' }
+          ]
+        },
+        { name: 'Krok 8 — Obrazowanie i lokalizacja (po biochemii)',
+          tests: [
+            EXT.adrenal_ct,
+            EXT.adrenal_mri,
+            { ext: 'avs_adrenal', label: 'AVS (cewnikowanie żył nadnerczowych)', note: 'Do LATERALIZACJI przed adrenalektomią w PA. Inwazyjne — mediana powikłań ~0,85%, 5–10% wymaga powtórzenia. WYJĄTEK: można pominąć u młodych < 35 r.ż. z wyraźnym PA + hipokaliemią + jednostronnym guzem > 1 cm.' },
+            { ext: 'mibg_scintigraphy', label: 'Scyntygrafia MIBG', note: 'Przy podejrzeniu paraganglioma pozanadnerczowego lub przerzutów PPGL.' },
+            { ext: 'dotatate_pet', label: '⁶⁸Ga-DOTATATE PET', note: 'Receptory somatostatynowe — paraganglioma, przerzuty, NET.' }
+          ]
+        },
+        { name: 'Krok 9 — Inne przyczyny endokrynne (warunkowo)',
+          tests: [
+            { id: 'igf1', note: 'Akromegalia — przy charakterystycznych objawach (wzrost rąk/stóp, prognatyzm). HT u 30–50% pacjentów z akromegalią.' },
+            { ext: 'ogtt_75g_gh', label: 'oGTT 75 g z pomiarem GH', note: 'Potwierdzenie akromegalii — brak supresji GH < 1 ng/mL po obciążeniu glukozą.' },
+            EXT.pth
+          ]
+        },
+        { name: 'Krok 10 — Genetyka (CELOWANE, nie rutynowo)',
+          tests: [
+            { ext: 'liddle_scnn1_panel', label: 'Liddle: SCNN1A, SCNN1B, SCNN1G', note: 'Wczesne/oporne HT + hipokaliemia + zasadowica + niska renina + niski aldosteron.' },
+            { ext: 'cyp11b1_cyp11b2_chimera', label: 'GRA / FH typ 1: chimera CYP11B1/B2', note: 'Glikokortykoidozależny hiperaldosteronizm; HT + hipokaliemia + wczesny wiek + wywiad rodzinny.' },
+            { ext: 'hsd11b2_gene', label: 'AME: HSD11B2', note: 'Wrodzony defekt 11β-HSD2 — kortyzol działa na MR; pojawia się w dzieciństwie.' },
+            { ext: 'wpn_cyp11b1_cyp17a1', label: 'WPN nadciśnieniowy: CYP11B1, CYP17A1', note: 'Wrodzony przerost nadnerczy z HT — niedobór 11β-OH (wirylizacja + HT) lub 17α-OH (brak rozwoju cech płciowych + HT).' },
+            { ext: 'gordon_wnk_panel', label: 'Gordon / FHHt: WNK1, WNK4, KLHL3, CUL3', note: 'HT + hiperkaliemia + kwasica + niska renina. Pseudohypoaldosteronizm typu II.' }
           ]
         }
       ],
-      guideline: 'ESC 2024 (McEvoy i wsp.) / PTNT 2024 (Tykarski A i wsp.) / Endocrine Society 2014 (Pheochromocytoma, Lenders) / Endocrine Society 2016 (PHA, Funder).',
+      guideline: 'ESC 2024 (McEvoy — rdzeń algorytmu, HMOD, ryzyko CV) / PTNT 2024 (Tykarski) / Endocrine Society 2025/2026 (PA — protokół ARR, AVS, 1-mg DST przy PA + guzie) / ESE 2023 (incidentaloma nadnerczy) / USPSTF 2021 (technika pomiaru BP, walidacja HBPM vs ABPM) / Endocrine Society 2014 (PPGL, Lenders) / Endocrine Society 2008 (Cushing screening, Nieman).',
       sources: [
-        'McEvoy JW, McCarthy CP, Bruno RM i wsp. 2024 ESC Guidelines for the management of elevated blood pressure and hypertension. Eur Heart J. 2024;45(38):3912-4018.',
+        'McEvoy JW, McCarthy CP, Bruno RM i wsp. 2024 ESC Guidelines for the management of elevated blood pressure and hypertension. Eur Heart J. 2024;45(38):3912-4018. (rdzeń algorytmu, ACR/UACR rutynowo, ARR rozszerzony, ABPM/HBPM jako centralny element)',
         'Tykarski A, Filipiak KJ, Januszewicz A i wsp. Zasady postępowania w nadciśnieniu tętniczym — 2024 rok. Wytyczne PTNT. Nadciśnienie Tętnicze w Praktyce. 2024;10(1):1-122.',
-        'Funder JW, Carey RM, Mantero F i wsp. The Management of Primary Aldosteronism: Case Detection, Diagnosis, and Treatment: An Endocrine Society Clinical Practice Guideline. J Clin Endocrinol Metab. 2016;101(5):1889-1916.',
-        'Lenders JW, Duh QY, Eisenhofer G i wsp. Pheochromocytoma and paraganglioma: an endocrine society clinical practice guideline. J Clin Endocrinol Metab. 2014;99(6):1915-1942.',
-        'Williams B, Mancia G, Spiering W i wsp. 2018 ESC/ESH Guidelines for the management of arterial hypertension. Eur Heart J. 2018;39(33):3021-3104.'
+        'Endocrine Society 2025/2026. Management of Primary Aldosteronism: Clinical Practice Guideline (aktualizacja Funder 2016). Protokół ARR pozycja siedząca, leki indywidualnie, CT + AVS przed operacją z wyjątkiem młodych, 1-mg DST u każdego z PA + guzem.',
+        'Funder JW, Carey RM, Mantero F i wsp. The Management of Primary Aldosteronism: Endocrine Society 2016. J Clin Endocrinol Metab. 2016;101(5):1889-1916. (poprzednia wytyczna — zastąpiona)',
+        'Fassnacht M i wsp. (ESE 2023). European Society of Endocrinology clinical practice guideline on the management of adrenal incidentalomas. Eur J Endocrinol. 2023. (1-mg DST u wszystkich z incidentaloma, ARR przy HT/hipokaliemii)',
+        'USPSTF 2021. Screening for Hypertension in Adults. JAMA. 2021. (technika pomiaru, HBPM vs ABPM — czułość 84%, swoistość 60%)',
+        'Lenders JW, Duh QY, Eisenhofer G i wsp. Pheochromocytoma and paraganglioma: Endocrine Society Clinical Practice Guideline. J Clin Endocrinol Metab. 2014;99(6):1915-1942. (metanefryny preferowane nad katecholaminami)',
+        'Nieman LK i wsp. The Diagnosis of Cushing\'s Syndrome: An Endocrine Society Clinical Practice Guideline. J Clin Endocrinol Metab. 2008;93(5):1526-1540. (DST/LNSC/UFC jako pierwsza linia, NIE losowy kortyzol/ACTH)',
+        'Wang FZ i wsp. Meta-analysis of ARR as PA screening test. 2024. (czułość 81,6%, swoistość 93,3% — zależnie od metody i progu)',
+        'Sang X i wsp. Seated saline infusion test for PA confirmation. 2022. (cutoff 6,6 ng/dL: czułość 83,3%, swoistość 92,2%)',
+        'Williams B, Mancia G, Spiering W i wsp. 2018 ESC/ESH Guidelines for the management of arterial hypertension. Eur Heart J. 2018;39(33):3021-3104. (poprzednia wytyczna ESC/ESH)'
       ]
     },
 
@@ -8483,41 +8814,44 @@
             icon: 'book-2',
             title: 'Definicja i klasyfikacja (dorośli ≥ 18 r.ż.)',
             body: [
-              'Otyłość — przewlekła, postępująca choroba o złożonej etiologii, definiowana u dorosłych wskaźnikiem masy ciała BMI (ang. body mass index) ≥ 30 kg/m² i/lub nadmiernym obwodem talii.',
+              'Otyłość — przewlekła, postępująca choroba o złożonej etiologii, definiowana u dorosłych wskaźnikiem masy ciała BMI ≥ 30 kg/m² i/lub nadmiernym obwodem talii. EASO 2024 rozszerza definicję na osoby z BMI 25–29,9 kg/m² gdy współistnieje WHtR > 0,5 i powikłania związane z nadmiarem tkanki tłuszczowej.',
               { heading: 'Zakres panelu' },
-              'Panel dotyczy osób dorosłych (≥ 18. r.ż.). Dla dzieci i młodzieży — osobne wskazanie „Otyłość u dziecka" (siatki centylowe BMI dla wieku i płci, wskaźnik Cole\'a, odmienny skrining powikłań i wskazania do leczenia).',
+              'Panel dotyczy osób dorosłych (≥ 18. r.ż.). Dla dzieci i młodzieży — osobne wskazanie „Otyłość u dziecka".',
+              { heading: 'Etniczne progi BMI (NICE 2025)' },
+              'Dla osób pochodzenia południowoazjatyckiego, chińskiego, innego azjatyckiego, bliskowschodniego, czarnoskórego afrykańskiego i afro-karaibskiego — niższe progi: nadwaga BMI 23–27,4 kg/m²; otyłość ≥ 27,5 kg/m². Bez tego rozróżnienia część pacjentów z istotnym ryzykiem kardiometabolicznym jest niedoszacowana.',
               { heading: 'Endokrynologiczne przyczyny otyłości (< 1% przypadków)' },
               { items: [
                 'Niedoczynność tarczycy.',
                 'Zespół Cushinga.',
-                'Niedobór hormonu wzrostu u dorosłych (GHD, ang. growth hormone deficiency).',
+                'Niedobór hormonu wzrostu u dorosłych (GHD).',
                 'Hipogonadyzm wtórny.'
               ] },
-              'Każdy pacjent z otyłością wymaga skriningu endokrynologicznego oraz oceny powikłań metabolicznych.',
+              'WAŻNE (PTLO 2024): rutynowo u każdego chorego z otyłością wykonuje się TYLKO ocenę funkcji tarczycy (TSH). Pozostałe badania hormonalne — wyłącznie celowanie wg objawów klinicznych (NIE „pełny skrining endokrynologiczny u wszystkich").',
               { heading: 'Powikłania o znacznie zwiększonym ryzyku' },
               { items: [
                 'Cukrzyca typu 2.',
-                'MASLD (stłuszczeniowa choroba wątroby związana z zaburzeniami metabolicznymi; dawniej NAFLD — niealkoholowa stłuszczeniowa choroba wątroby) i jej postać zapalna MASH.',
+                'MASLD (stłuszczeniowa choroba wątroby zw. z zaburzeniami metabolicznymi; dawna nazwa NAFLD) i jej postać zapalna MASH.',
                 'Dyslipidemia aterogenna.',
-                'Obturacyjny bezdech senny (OSA, ang. obstructive sleep apnea).',
-                'Choroby układu krążenia i niektóre nowotwory.'
+                'Obturacyjny bezdech senny (OSA).',
+                'Choroby układu krążenia, CKD i niektóre nowotwory.'
               ] },
               { heading: 'Wytyczne' },
-              'PTLO 2022 (Polskie Towarzystwo Leczenia Otyłości), Endocrine Society 2015, AACE 2016 (American Association of Clinical Endocrinologists).'
+              'PTLO 2024 (Polskie Towarzystwo Leczenia Otyłości — aktualizacja) / EASO 2024 (European Association for the Study of Obesity — ramy kliniczno-funkcjonalne) / NICE 2025 (WHtR + etniczne progi BMI) / Endocrine Society 2024 (witamina D — odradza rutynowy 25-OHD w otyłości) / EASL–EASD–EASO 2024 (MASLD — algorytm FIB-4) / KDIGO 2024 (UACR w populacjach ryzyka) / ASMBS/IFSO 2022 (bariatria — rozszerzone kryteria).'
             ]
           },
           {
             kind: 'list',
             icon: 'tags',
-            title: 'Klasyfikacja BMI i obwodu talii',
+            title: 'Klasyfikacja BMI + WHtR + obwód talii',
             items: [
               { label: 'Niedowaga', text: 'BMI < 18,5 kg/m².' },
               { label: 'Norma', text: 'BMI 18,5–24,9 kg/m².' },
-              { label: 'Nadwaga', text: 'BMI 25,0–29,9 kg/m².' },
-              { label: 'Otyłość I stopnia', text: 'BMI 30,0–34,9 kg/m² (umiarkowane ryzyko sercowo-naczyniowe).' },
+              { label: 'Nadwaga', text: 'BMI 25,0–29,9 kg/m² (osoby azjatyckiego/afrykańskiego pochodzenia: 23,0–27,4 wg NICE 2025).' },
+              { label: 'Otyłość I stopnia', text: 'BMI 30,0–34,9 kg/m² (Azjaci ≥ 27,5).' },
               { label: 'Otyłość II stopnia', text: 'BMI 35,0–39,9 kg/m² (znaczne ryzyko sercowo-naczyniowe).' },
-              { label: 'Otyłość III stopnia („olbrzymia")', text: 'BMI ≥ 40 kg/m² (skrajnie wysokie ryzyko sercowo-naczyniowe; wskazanie do chirurgii bariatrycznej).' },
-              { label: 'Otyłość brzuszna (trzewna)', text: 'obwód talii ≥ 102 cm (mężczyźni) lub ≥ 88 cm (kobiety) wg NCEP-ATP III; ≥ 94/80 cm wg IDF (International Diabetes Federation) dla osób rasy białej. Niezależny czynnik ryzyka sercowo-naczyniowego.' }
+              { label: 'Otyłość III stopnia („olbrzymia")', text: 'BMI ≥ 40 kg/m² (skrajnie wysokie ryzyko; wskazanie do chirurgii bariatrycznej).' },
+              { label: 'WHtR (waist-to-height ratio) — NICE 2025 zaleca PRZY BMI < 35', text: 'Obwód talii podzielony przez wzrost. Interpretacja: 0,4–0,49 — brak zwiększonego ryzyka; **0,5–0,59 — zwiększone ryzyko**; **≥ 0,6 — wysokie ryzyko**. Bardziej czuły dla otyłości trzewnej niż samo BMI.' },
+              { label: 'Otyłość brzuszna (trzewna) — klasyczne progi obwodu talii', text: 'IDF 2005 dla rasy białej: ≥ 94 cm M / ≥ 80 cm F. NCEP-ATP III: ≥ 102 cm M / ≥ 88 cm F. IDF dla Azjatów: ≥ 90 cm M / ≥ 80 cm F. Pomiar: między dolnym łukiem żebrowym a grzebieniem biodrowym, na wydechu.' }
             ]
           },
           {
@@ -8559,57 +8893,180 @@
               },
               {
                 number: 2,
-                title: 'Skrining endokrynologiczny',
-                sublabel: 'wykluczenie przyczyn endokrynnych',
+                title: 'Krok 2 — Skrining wtórnych przyczyn endokrynnych (CELOWANY)',
+                sublabel: 'PTLO 2024: rutynowo tylko TSH; pozostałe wg fenotypu',
                 options: [
                   {
-                    threshold: 'Standardowo u wszystkich',
-                    action: 'TSH — niedoczynność tarczycy jest najczęstszą endokrynną przyczyną otyłości; 25-OHD (kalcydiol) — niedobór częsty w otyłości.',
+                    threshold: 'RUTYNOWO u wszystkich — TYLKO TSH',
+                    action: 'TSH (± fT4 jeśli TSH nieprawidłowy ± anty-TPO przy podejrzeniu Hashimoto). Niedoczynność tarczycy jest jedyną endokrynną przyczyną wymagającą rutynowego skriningu (PTLO 2024).',
                     variant: 'success', icon: 'check',
                     detail: [
-                      'TSH > 4 mU/L → fT4. Efekt niedoczynności tarczycy na masę ciała jest umiarkowany (2–5 kg) — subkliniczna niedoczynność zwykle nie tłumaczy otyłości znacznego stopnia.',
-                      '25-OHD < 50 nmol/L → suplementacja zgodnie z polskim konsensusem Płudowski 2023 (w otyłości dochodzi do sekwestracji witaminy D w tkance tłuszczowej i zmniejszonej syntezy skórnej).'
+                      'TSH > 4 mU/L → fT4 + anty-TPO.',
+                      'Efekt niedoczynności tarczycy na masę ciała jest umiarkowany (2–5 kg) — subkliniczna niedoczynność zwykle nie tłumaczy otyłości znacznego stopnia.',
+                      'PTLO 2024 wprost: „nie ma wskazań do rutynowej pełnej oceny hormonalnej u wszystkich chorych z otyłością poza oceną funkcji tarczycy".'
                     ]
                   },
                   {
-                    threshold: 'Tylko przy charakterystycznych objawach klinicznych',
-                    action: 'Test hamowania deksametazonem (DST) 1 mg → ocena zespołu Cushinga; IGF-1 (somatomedyna C) → ocena niedoboru hormonu wzrostu u dorosłych (GHD); testosteron całkowity rano → ocena wtórnego hipogonadyzmu u mężczyzn.',
+                    threshold: 'CELOWANY — tylko przy charakterystycznych objawach klinicznych',
+                    action: 'NIE wykonuj rutynowo. Sięgnij po konkretne testy hormonalne TYLKO gdy obraz kliniczny wyraźnie sugeruje konkretną etiologię.',
                     variant: 'warning', icon: 'alert-triangle',
                     detail: [
-                      { heading: 'Zespół Cushinga — wskazania do skriningu' },
-                      'Charakterystyczne objawy: rozstępy purpurowe > 1 cm, twarz księżycowata, nieproporcjonalna otyłość brzuszna, miopatia proksymalna, oporne nadciśnienie tętnicze, hipokaliemia, łatwe powstawanie siniaków. Rutynowy skrining Cushinga u wszystkich pacjentów z otyłością nie jest zalecany.',
-                      { heading: 'Niedobór hormonu wzrostu u dorosłych (GHD) — wskazania' },
-                      'Pacjenci po leczeniu gruczolaka przysadki, po radioterapii (RT) okolicy ośrodkowego układu nerwowego (OUN), po urazie OUN, z zespołem Sheehana. Otyłość trzewna + obniżona jakość życia + dyslipidemia oporna na leczenie.',
+                      { heading: 'Zespół Cushinga — wskazania (Endocrine Society 2008)' },
+                      'Charakterystyczne objawy: rozstępy purpurowe > 1 cm, twarz księżycowata, nieproporcjonalna otyłość brzuszna, miopatia proksymalna, oporne nadciśnienie tętnicze, hipokaliemia, łatwe powstawanie siniaków. Testy pierwszego rzutu: 1-mg DST / LNSC (late-night salivary cortisol) / UFC (wolny kortyzol w DZM). NIE losowy kortyzol/ACTH.',
+                      { heading: 'GHD u dorosłych — wskazania' },
+                      'Pacjenci po leczeniu gruczolaka przysadki, po radioterapii OUN, po urazie OUN, z zespołem Sheehana. Otyłość trzewna + obniżona jakość życia + dyslipidemia oporna na leczenie. Test: IGF-1, potwierdzenie testem stymulacyjnym GH.',
                       { heading: 'Wtórny hipogonadyzm u mężczyzn' },
-                      'Otyłość → spadek SHBG (ang. sex hormone-binding globulin — globulina wiążąca hormony płciowe, w przebiegu insulinooporności) → spadek testosteronu całkowitego → obniżenie stężeń LH (hormon luteinizujący) i FSH (hormon folikulotropowy) wskutek działania leptyny oraz estronu konwertowanego z androstendionu w tkance tłuszczowej. Często odwracalny po redukcji masy ciała ≥ 10%. Diagnostyka i ewentualne TRT (ang. testosterone replacement therapy — testosteronoterapia substytucyjna) w osobnym wskazaniu (hipogonadyzm męski).'
+                      'Otyłość → spadek SHBG (insulinooporność) → spadek testosteronu całkowitego. Często ODWRACALNY po redukcji masy ≥ 10%. Test: testosteron całkowity 7:00–10:00 + SHBG → wolny T (Vermeulen). NIE rutynowo skrining u każdego mężczyzny z otyłością.'
+                    ]
+                  },
+                  {
+                    threshold: '25-OHD (witamina D) — TYLKO WARUNKOWO (Endocrine Society 2024)',
+                    action: 'Endocrine Society 2024 SUGERUJE NIE wykonywać rutynowego skriningu 25(OH)D u dorosłych z otyłością.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'Wskazania do oznaczenia 25-OHD u chorego z otyłością — TYLKO przy konkretnych przesłankach klinicznych:',
+                      { items: [
+                        'Hipokalcemia objawowa lub w badaniu.',
+                        'Osteomalacja — bóle kości, niewyjaśnione złamania.',
+                        'Zaburzenia gospodarki wapniowo-fosforanowej (podwyższone PTH, niski/wysoki wapń).',
+                        'Choroby kości (osteoporoza diagnostyczna).',
+                        'Planowana operacja bariatryczna — w ramach przedoperacyjnej oceny stanu odżywienia i mikroskładników.',
+                        'Zaburzenia wchłaniania (po RYGB, w celiakii, w IBD).'
+                      ] },
+                      'Endocrine Society 2024: rutynowy skrining 25(OH)D u dorosłych z otyłością BEZ tych wskazań nie ma udokumentowanej korzyści outcome-based.'
                     ]
                   }
                 ]
               },
               {
                 number: 3,
-                title: 'Ocena metaboliczna i powikłań',
-                sublabel: 'obowiązkowa u każdego pacjenta',
+                title: 'Krok 3 — Panel metaboliczny + powikłania nerkowe',
+                sublabel: 'pakiet rutynowy u każdego pacjenta z otyłością',
                 options: [
                   {
-                    threshold: 'Panel metaboliczny',
-                    action: 'Glukoza na czczo + HbA1c (hemoglobina glikowana) z ewentualnym oGTT (doustny test obciążenia 75 g glukozy) jeśli stan przedcukrzycowy, lipidogram, ALT/AST/GGT, kreatynina + eGFR, kwas moczowy.',
-                    variant: 'success', icon: 'check',
+                    threshold: 'Pakiet podstawowy',
+                    action: 'Glukoza na czczo + HbA1c (oGTT jeśli stan przedcukrzycowy lub wysokie ryzyko), lipidogram (TC, LDL-C, HDL-C, TG, non-HDL), ALT/AST + płytki (do FIB-4), kreatynina + eGFR, BADANIE OGÓLNE MOCZU, kwas moczowy.',
+                    variant: 'success', icon: 'flask',
                     detail: [
-                      'Cukrzyca typu 2: glukoza ≥ 126 mg/dL na czczo lub ≥ 200 mg/dL w 120. minucie oGTT lub HbA1c ≥ 6,5%. Stan przedcukrzycowy: IFG (ang. impaired fasting glucose — nieprawidłowa glikemia na czczo) 100–125 mg/dL / IGT (ang. impaired glucose tolerance — nieprawidłowa tolerancja glukozy) 140–199 mg/dL w oGTT / HbA1c 5,7–6,4%.',
-                      'MASLD (stłuszczeniowa choroba wątroby zw. z zaburzeniami metabolicznymi; dawna nazwa NAFLD) — ALT przekraczająca górną granicę normy + obraz USG; FIB-4 jako nieinwazyjny wskaźnik fibrozy (wyliczany ze wzoru wiek × AST / [płytki × √ALT]); wartość FIB-4 > 1,3 → konsultacja hepatologiczna, ewentualnie FibroScan.',
-                      'Dyslipidemia aterogenna — podwyższone trójglicerydy (TG), obniżony cholesterol HDL, drobne gęste cząsteczki LDL; non-HDL (TC minus HDL) jako dodatkowy marker ryzyka sercowo-naczyniowego.',
-                      'Insulinooporność oceniana wskaźnikiem HOMA-IR (ang. homeostasis model assessment of insulin resistance), wartość > 2,5 — głównie do oceny klinicznej; HOMA-IR nie jest standardem rozpoznawania zespołu metabolicznego ani otyłości wg PTLO 2022.'
+                      'PTLO 2024: badanie ogólne moczu w pakiecie rutynowym (dotychczas pomijane w tym panelu).',
+                      'Cukrzyca typu 2: glukoza ≥ 126 mg/dL na czczo lub ≥ 200 mg/dL w 120. min oGTT lub HbA1c ≥ 6,5%.',
+                      'Stan przedcukrzycowy: IFG 100–125 mg/dL / IGT 140–199 mg/dL / HbA1c 5,7–6,4%.',
+                      'Dyslipidemia aterogenna: podwyższone TG, obniżone HDL, drobne gęste cząsteczki LDL; non-HDL = TC minus HDL jako dodatkowy marker ryzyka CV.',
+                      'Insulina i HOMA-IR NIE są rutynowe (PTLO 2024) — pomocnicze przy podejrzeniu zespołu metabolicznego z niepełnym fenotypem.',
+                      'CRP — nie jest częścią standardowego panelu otyłości — pomocniczo w wybranych kontekstach klinicznych.'
                     ]
                   },
                   {
-                    threshold: 'Skrining obturacyjnego bezdechu sennego',
-                    action: 'Kwestionariusz STOP-BANG (ang. Snoring, Tiredness, Observed apnea, blood Pressure, BMI, Age, Neck circumference, Gender) lub skala Epworth → polisomnografia w razie wyniku dodatniego.',
+                    threshold: 'UACR/ACR — WARUNKOWO przy ryzyku CKD',
+                    action: 'Albumina/kreatynina w moczu (preferowane spot urine poranny) gdy: cukrzyca, nadciśnienie tętnicze, zespół metaboliczny, eGFR < 60, dodatni wywiad rodzinny CKD, BMI > 35.',
                     variant: 'success', icon: 'check',
                     detail: [
-                      'OSA współwystępuje z opornym nadciśnieniem tętniczym, migotaniem przedsionków, insulinoopornością i pogarsza rokowanie sercowo-naczyniowe.',
-                      'STOP-BANG ≥ 3 — wysokie prawdopodobieństwo OSA.',
-                      'Leczenie CPAP (ang. continuous positive airway pressure — ciągłe dodatnie ciśnienie w drogach oddechowych) może poprawić kontrolę ciśnienia tętniczego oraz ułatwić redukcję masy ciała (lepszy sen ułatwia kontrolę apetytu).'
+                      'KDIGO 2024: w populacjach ryzyka łącz ocenę GFR z oceną albuminurii. Sama otyłość zwiększa ryzyko CKD przez insulinooporność, NT i hiperfiltrację.',
+                      'Próg: ACR ≥ 30 mg/g → albuminuria istotna (dawniej mikroalbuminuria), ≥ 300 mg/g → makroalbuminuria.',
+                      'Aktualna nomenklatura: „albuminuria" (NIE „mikroalbuminuria") — zgodnie z KDIGO.'
+                    ]
+                  }
+                ]
+              },
+              {
+                number: 4,
+                title: 'Krok 4 — MASLD: algorytm FIB-4 → elastografia',
+                sublabel: 'EASL–EASD–EASO 2024 — case-finding u wszystkich z otyłością + czynnikami metabolicznymi',
+                options: [
+                  {
+                    threshold: 'Wskazania do case-finding',
+                    action: 'Wszyscy chorzy z otyłością + co najmniej jednym dodatkowym czynnikiem metabolicznym (T2D, NT, dyslipidemia, zespół metaboliczny). NIE czekaj na podwyższone ALT — prawidłowe ALT NIE wyklucza MASLD.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'EASL–EASD–EASO 2024: aktywne wykrywanie MASLD u osób z otyłością i czynnikami metabolicznymi.',
+                      'USG ma OGRANICZONĄ czułość dla łagodnej steatozy — nie jest dobrym pierwszym filtrem.'
+                    ]
+                  },
+                  {
+                    threshold: 'FIB-4 — PIERWSZY krok algorytmu (zamiast ALT + USG)',
+                    action: 'FIB-4 = (wiek × AST) / (płytki × √ALT). Próg zależy od wieku — < 65 lat: ≥ 1,3 = ryzyko; > 65 lat: ≥ 2,0 (z powodu spadku płytek). FIB-4 niskie WYKLUCZA zaawansowaną fibrozę z wysoką wartością predykcyjną.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'Interpretacja FIB-4 (EASL–EASD–EASO 2024):',
+                      { items: [
+                        'FIB-4 < 1,3 (lub < 2,0 u > 65 r.ż.) — niskie ryzyko zaawansowanej fibrozy → kontrola rok-rok.',
+                        'FIB-4 1,3–2,67 (lub 2,0–2,67 u > 65 r.ż.) — strefa szara → elastografia (VCTE/FibroScan) lub inny test drugiej linii.',
+                        'FIB-4 > 2,67 — wysokie ryzyko zaawansowanej fibrozy → konsultacja hepatologiczna.'
+                      ] }
+                    ]
+                  },
+                  {
+                    threshold: 'Elastografia (VCTE/FibroScan) — drugi krok przy strefie szarej',
+                    action: 'LSM (liver stiffness measurement): < 8 kPa — niskie ryzyko; 8–12 kPa — pośrednie; > 12 kPa — wysokie ryzyko zaawansowanej fibrozy → hepatolog.',
+                    variant: 'warning', icon: 'alert-triangle',
+                    detail: [
+                      'Alternatywy second-line: ELF test (Enhanced Liver Fibrosis), MR elastografia (gold standard, ale ograniczona dostępność).',
+                      'Biopsja wątroby — TYLKO w wybranych przypadkach (oporne podejrzenie MASH, kwalifikacja do badań klinicznych).'
+                    ]
+                  }
+                ]
+              },
+              {
+                number: 5,
+                title: 'Krok 5 — Skrining OSA (obturacyjny bezdech senny)',
+                sublabel: 'kwestionariusz STOP-BANG / Epworth → badanie snu',
+                options: [
+                  {
+                    threshold: 'STOP-BANG — pierwszy filtr',
+                    action: 'STOP-BANG (Snoring, Tiredness, Observed apnea, blood Pressure, BMI, Age, Neck, Gender). Próg ≥ 3 → wysokie prawdopodobieństwo OSA → eskalacja do badania snu.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'Czułość STOP-BANG ≥ 3 dla umiarkowanego/ciężkiego OSA: > 90% (metaanaliza 2021).',
+                      'OSA współwystępuje z opornym nadciśnieniem, AF, insulinoopornością — pogarsza rokowanie CV.'
+                    ]
+                  },
+                  {
+                    threshold: 'Polisomnografia / domowy test snu',
+                    action: 'PSG — złoty standard. NICE 2024 dopuszcza domowe testy snu (HSAT — home sleep apnea test) u części dorosłych jako alternatywę przed PSG.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'AHI ≥ 5 + objawy lub ≥ 15 → OSA. AHI ≥ 30 → ciężka OSA.',
+                      'Leczenie CPAP może poprawić kontrolę BP i ułatwić redukcję masy (lepszy sen → łatwiejsza kontrola apetytu).'
+                    ]
+                  }
+                ]
+              },
+              {
+                number: 6,
+                title: 'Krok 6 — Ocena ryzyka sercowo-naczyniowego (SCORE2/SCORE2-OP)',
+                sublabel: 'TYLKO u pacjentów pozornie zdrowych (bez ASCVD/DM/CKD)',
+                options: [
+                  {
+                    threshold: 'SCORE2 (40–69 lat) / SCORE2-OP (≥ 70 lat)',
+                    action: 'Ocena 10-letniego ryzyka CVD u osób BEZ rozpoznanej choroby sercowo-naczyniowej, cukrzycy, CKD G3+ ani innych stanów bardzo wysokiego ryzyka.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      'Czynniki: wiek, płeć, palenie, skurczowe BP, non-HDL-C, region geograficzny (Polska — strefa wysokiego ryzyka).',
+                      'Wynik wpływa na intensywność interwencji (cele LDL-C, BP, terapia farmakologiczna).',
+                      'ESC 2024: u chorych z otyłością z już rozpoznaną cukrzycą lub CKD — NIE używać SCORE2 (ryzyko już w klasie wysokiej/bardzo wysokiej).'
+                    ]
+                  }
+                ]
+              },
+              {
+                number: 7,
+                title: 'Krok 7 — Ocena gotowości do leczenia (NICE 2025)',
+                sublabel: 'formalna ocena PRZED rozpoczęciem farmakoterapii lub kwalifikacją bariatryczną',
+                options: [
+                  {
+                    threshold: 'Komponenty oceny',
+                    action: 'NICE 2025 wymaga FORMALNEJ oceny przed rozpoczęciem interwencji: motywacja, wcześniejsze próby redukcji, depresja/BED, sen, możliwości adherencji, wsparcie społeczne.',
+                    variant: 'success', icon: 'check',
+                    detail: [
+                      { items: [
+                        'Motywacja i gotowość do zmiany (skale typu Readiness Ruler).',
+                        'Wcześniejsze próby redukcji masy — co działało / co nie.',
+                        'Skrining BED (binge eating disorder) — kwestionariusz np. BES (Binge Eating Scale).',
+                        'Depresja i lęk — PHQ-9, GAD-7.',
+                        'Wsparcie społeczne / partner — kluczowe dla utrzymania zmian.',
+                        'Możliwości adherencji do farmakoterapii (Saxenda 1×/d s.c., Wegovy 1×/tydz., tabletki).',
+                        'EASO 2024 dodatkowo: ocena upośledzeń funkcjonalnych i psychologicznych jako część stadializacji choroby otyłościowej (nie tylko BMI).'
+                      ] }
                     ]
                   }
                 ]
@@ -8640,11 +9097,12 @@
               ] },
               { heading: 'Krok 3 — Chirurgia bariatryczna' },
               { items: [
-                'Wskazania: BMI ≥ 40 lub BMI ≥ 35 z powikłaniami (cukrzyca typu 2, obturacyjny bezdech senny, oporne nadciśnienie tętnicze, MASH — zapalenie wątroby zw. z zaburzeniami metabolicznymi).',
+                { label: 'Kryteria klasyczne NICE/PTLO', text: 'BMI ≥ 40 lub BMI ≥ 35 z powikłaniami (T2D, OSA, oporne NT, MASH).' },
+                { label: 'Kryteria rozszerzone ASMBS/IFSO 2022', text: 'BMI > 35 NIEZALEŻNIE od współchorobowości. BMI 30–34,9 z chorobą metaboliczną lub nieskutecznością leczenia zachowawczego — rozważyć. Ta liberalizacja jest ewoluującym standardem.' },
                 'Techniki: ominięcie żołądkowo-jelitowe sposobem Roux-en-Y (RYGB), rękawowa resekcja żołądka (sleeve gastrectomy), jednozespoleniowe ominięcie żołądkowe (OAGB).',
-                'Wymaga przygotowania psychologicznego, dietetycznego oraz oceny chorób towarzyszących.',
+                { label: 'Pełny work-up przedoperacyjny (Mechanick 2020)', text: 'wielodyscyplinarna ocena medyczna + żywieniowa + psychologiczna + anestezjologiczna. Korekta niedoborów żywieniowych (Fe, B12, witD, Ca, foliany, ZN, Mg). Ocena OSA + leczenie CPAP przed operacją. Ocena MASLD/MASH.' },
                 'Skuteczność: redukcja masy 20–35% w 1–2 lata; remisja cukrzycy typu 2 u 60–80% pacjentów.',
-                'Substytucja witamin i mikroelementów dożywotnio (witamina D, witamina B12, żelazo, wapń, kwas foliowy oraz witaminy A, D, E, K po operacji metodą Roux-en-Y).'
+                'Substytucja witamin i mikroelementów DOŻYWOTNIO (witamina D, B12, żelazo, wapń, kwas foliowy oraz witaminy A, D, E, K po RYGB).'
               ] },
               { heading: 'Monitorowanie' },
               'Kontrole co 3 miesiące w pierwszym roku farmakoterapii lub po operacji; ocena masy ciała, składu ciała (analiza bioimpedancji BIA lub densytometria DEXA, jeśli dostępne), parametrów metabolicznych, mikroelementów po operacji bariatrycznej.'
@@ -8665,33 +9123,93 @@
         ]
       },
       sections: [
-        { name: 'Skrining endokrynologiczny',
+        { name: 'Krok 1 — pakiet rutynowy (każdy chory z otyłością)',
           tests: [
-            { id: 'tsh' }, { id: 'ft4' },
-            { id: 'cortisol', note: 'Po teście hamowania deksametazonem (DST) 1 mg — tylko gdy charakterystyczne objawy zespołu Cushinga' },
-            { id: 'igf1', note: 'Wykluczenie niedoboru hormonu wzrostu (GHD) u dorosłych — gdy w wywiadzie schorzenia OUN (ośrodkowego układu nerwowego)' },
-            { id: 'testosterone_total', note: 'Mężczyźni — wtórny hipogonadyzm' },
-            { id: 'shbg', note: 'Insulinooporność → niska SHBG (globulina wiążąca hormony płciowe)' },
-            { id: 'vit_d_25oh' }
+            { id: 'tsh', note: 'PTLO 2024: jedyny rutynowy test endokrynologiczny u każdego pacjenta z otyłością.' },
+            EXT.glucose_fasting, EXT.hba1c,
+            EXT.lipid_panel,
+            { ext: 'alt_ast_platelets', label: 'ALT, AST + płytki (do FIB-4)', note: 'FIB-4 = (wiek × AST) / (płytki × √ALT) — pierwszy krok algorytmu MASLD. Próg: < 65 lat ≥ 1,3; > 65 lat ≥ 2,0.' },
+            EXT.liver,
+            EXT.egfr, EXT.cmp,
+            { ext: 'urine_general', label: 'Badanie ogólne moczu (PTLO 2024)', note: 'W standardowym pakiecie podstawowym.' },
+            { ext: 'uric_acid', label: 'Kwas moczowy', note: 'Czynnik ryzyka CV; często podwyższony w otyłości.' }
           ]
         },
-        { name: 'Metabolizm i powikłania',
+        { name: 'Krok 1b — UACR/ACR (warunkowo)',
           tests: [
-            EXT.glucose_fasting, EXT.hba1c, EXT.ogtt_75g, EXT.insulin,
-            EXT.lipid_panel, EXT.liver,
-            EXT.cmp, EXT.egfr,
-            EXT.crp
+            { ext: 'acr_uacr', label: 'ACR/UACR (albumina/kreatynina w moczu)', note: 'KDIGO 2024: u pacjentów z otyłością + DM lub NT lub eGFR < 60 lub BMI > 35. Próg: ACR ≥ 30 mg/g = albuminuria.' }
+          ]
+        },
+        { name: 'Krok 2 — TSH/fT4 + endokrynologia celowana (TYLKO przy fenotypie)',
+          tests: [
+            { id: 'ft4', note: 'Tylko gdy TSH nieprawidłowy.' },
+            { ext: 'anti_tpo', label: 'Anty-TPO', note: 'Przy podejrzeniu Hashimoto (PTLO 2024).' },
+            { ext: 'dst_1mg', label: '1-mg overnight DST (Cushing)', note: 'CELOWANIE — tylko przy klasycznych objawach (rozstępy purpurowe, twarz księżycowata, miopatia proksymalna, oporne HT, hipokaliemia). NIE rutynowo.' },
+            { id: 'cortisol', note: 'NIE losowy kortyzol jako skrining (Endocrine Society 2008).' },
+            { id: 'igf1', note: 'CELOWANIE — wskazania: po operacji przysadki, RT OUN, zespół Sheehana, otyłość trzewna + dyslipidemia oporna.' },
+            { id: 'testosterone_total', note: 'CELOWANIE — mężczyźni z objawami hipogonadyzmu. NIE rutynowo (otyłość sama obniża testosteron — efekt często odwracalny po redukcji masy ≥ 10%).' },
+            { id: 'shbg', note: 'Pomocniczo do obliczenia wolnego T (Vermeulen) przy ocenie hipogonadyzmu.' },
+            { id: 'vit_d_25oh', note: 'Endocrine Society 2024: NIE rutynowo. TYLKO przy: hipokalcemii, osteomalacji, zaburzeniach Ca/P, chorobach kości, przedoperacyjnie do bariatrii, zaburzeniach wchłaniania.' }
+          ]
+        },
+        { name: 'Krok 4 — MASLD: elastografia (drugi krok algorytmu)',
+          tests: [
+            { ext: 'vcte_fibroscan', label: 'VCTE / FibroScan (elastografia)', note: 'Drugi krok przy FIB-4 ≥ 1,3 (lub ≥ 2,0 u > 65 r.ż.). LSM: < 8 kPa niskie ryzyko, 8–12 pośrednie, > 12 wysokie → hepatolog.' },
+            { ext: 'elf_test', label: 'ELF test (Enhanced Liver Fibrosis)', note: 'Alternatywa second-line gdy elastografia niedostępna.' },
+            EXT.liver_us
+          ]
+        },
+        { name: 'Krok 5 — OSA',
+          tests: [
+            { ext: 'stop_bang_questionnaire', label: 'STOP-BANG (kwestionariusz)', note: 'Pierwszy filtr. Próg ≥ 3 → wysokie ryzyko OSA → eskalacja do badania snu. Czułość > 90% dla umiarkowanego/ciężkiego OSA.' },
+            { ext: 'epworth_scale', label: 'Epworth Sleepiness Scale', note: 'Skala senności dziennej. Próg ≥ 10/24 = patologia.' },
+            { ext: 'polysomnography', label: 'Polisomnografia / HSAT', note: 'PSG — złoty standard. NICE 2024 dopuszcza HSAT (home sleep apnea test) jako alternatywę.' }
+          ]
+        },
+        { name: 'Krok 6 — SCORE2 / SCORE2-OP (ocena ryzyka CV)',
+          tests: [
+            { ext: 'score2', label: 'SCORE2 (40–69 lat) / SCORE2-OP (≥ 70 lat)', note: 'TYLKO u pacjentów BEZ rozpoznanej ASCVD, DM, CKD G3+. Polska — strefa wysokiego ryzyka.' }
+          ]
+        },
+        { name: 'Badania dodatkowe (NIE rutynowe — wybrane konteksty)',
+          tests: [
+            { ext: 'insulin_homa', label: 'Insulina + HOMA-IR', note: 'NIE rutynowo (PTLO 2024). Pomocnicze przy podejrzeniu zespołu metabolicznego z niepełnym fenotypem. HOMA-IR > 2,5 — orientacyjnie.' },
+            { ext: 'crp_hscrp', label: 'CRP / hs-CRP', note: 'NIE rutynowo w panelu otyłości. Pomocnicze w wybranych kontekstach klinicznych.' },
+            EXT.ogtt_75g
+          ]
+        },
+        { name: 'Antropometria + ocena gotowości do leczenia (NICE 2025)',
+          tests: [
+            { ext: 'bmi_calc', label: 'BMI (z masy + wzrost)', note: 'Punkt wyjścia — pamiętaj o etnicznych progach NICE 2025 dla osób azjatyckiego/afrykańskiego pochodzenia (≥ 27,5 dla otyłości).' },
+            { ext: 'waist_circumference', label: 'Obwód talii', note: 'Pomiar między dolnym łukiem żebrowym a grzebieniem biodrowym. Progi IDF/NCEP-ATP III różne dla populacji.' },
+            { ext: 'whtr_ratio', label: 'WHtR (waist-to-height ratio)', note: 'NICE 2025: PRZY BMI < 35. Próg 0,5 — zwiększone ryzyko; ≥ 0,6 — wysokie. Bardziej czuły dla otyłości trzewnej.' },
+            { ext: 'bia_optional', label: 'BIA — bioimpedancja (opcjonalnie)', note: 'NICE: NIE zastępuje BMI. Pomocniczo do monitorowania składu ciała lub przy podejrzeniu sarkopenicznej otyłości.' },
+            { ext: 'readiness_assessment', label: 'Ocena gotowości do leczenia', note: 'NICE 2025 wymaga przed farmakoterapią/bariatrią: motywacja, BED (BES), depresja (PHQ-9), lęk (GAD-7), wsparcie społeczne, możliwości adherencji.' }
+          ]
+        },
+        { name: 'Bariatria — work-up przedoperacyjny',
+          tests: [
+            { ext: 'bariatric_multi', label: 'Wielodyscyplinarna ocena (Mechanick 2020)', note: 'Medyczna + żywieniowa + psychologiczna + anestezjologiczna. Kryteria: BMI ≥ 40 lub ≥ 35 z powikłaniami (NICE/PTLO); ASMBS/IFSO 2022: BMI > 35 niezależnie od współchorobowości; rozważyć BMI 30–34,9 z chorobą metaboliczną.' },
+            { ext: 'preop_nutrition', label: 'Skrining niedoborów żywieniowych', note: 'Fe, ferrytyna, B12, foliany, witD, Ca, Mg, Zn, A, E, K. Korekta PRZED operacją.' },
+            { ext: 'preop_psych', label: 'Ocena psychologiczna przedoperacyjna', note: 'BED, depresja, lęk, motywacja, wsparcie. Wykluczenie ciężkich zaburzeń psychicznych w fazie ostrej.' }
           ]
         }
       ],
-      guideline: 'PTLO 2022 (Polskie Towarzystwo Leczenia Otyłości) / Endocrine Society 2015 (Apovian i wsp.) / AACE/ACE 2016 (Garvey i wsp.) / EASO 2024.',
+      guideline: 'PTLO 2024 (aktualizacja stanowiska — TSH jedyny rutynowy hormon) / EASO 2024 (kliniczno-funkcjonalna stadializacja, WHtR > 0,5) / NICE 2025 (WHtR, etniczne progi BMI) / Endocrine Society 2024 (NIE rutynowy 25-OHD w otyłości) / EASL–EASD–EASO 2024 (MASLD: FIB-4 → elastografia) / KDIGO 2024 (UACR w populacjach ryzyka) / ASMBS/IFSO 2022 (bariatria — rozszerzone kryteria) / Endocrine Society 2015 (farmakoterapia) / Mechanick 2020 (perioperative).',
       sources: [
-        'Olszanecka-Glinianowicz M, Mamcarz A, Filipiak KJ i wsp. Otyłość — choroba przewlekła. Stanowisko PTLO 2022. Forum Medycyny Rodzinnej. 2022.',
-        'Apovian CM, Aronne LJ, Bessesen DH i wsp. Pharmacological management of obesity: an endocrine Society clinical practice guideline. J Clin Endocrinol Metab. 2015;100(2):342-362.',
-        'Garvey WT, Mechanick JI, Brett EM i wsp. American Association of Clinical Endocrinologists and American College of Endocrinology comprehensive clinical practice guidelines for medical care of patients with obesity. Endocr Pract. 2016;22(Suppl 3):1-203.',
-        'Wilding JPH, Batterham RL, Calanna S i wsp. Once-Weekly Semaglutide in Adults with Overweight or Obesity (STEP 1). N Engl J Med. 2021;384(11):989-1002.',
-        'Jastreboff AM, Aronne LJ, Ahmad NN i wsp. Tirzepatide Once Weekly for the Treatment of Obesity (SURMOUNT-1). N Engl J Med. 2022;387(3):205-216.',
-        'Mechanick JI, Apovian C, Brethauer S i wsp. Clinical practice guidelines for the perioperative nutritional, metabolic, and nonsurgical support of the bariatric surgery patient. Endocr Pract. 2020;26(Suppl 1):1-39.'
+        'PTLO 2024 — aktualizacja stanowiska Polskiego Towarzystwa Leczenia Otyłości. (TSH jako jedyny rutynowy hormon; badanie ogólne moczu w pakiecie podstawowym; rutynowa pełna ocena hormonalna NIE zalecana)',
+        'EASO 2024. European Practical and Patient-Centred Guidelines for Adult Obesity Management. Nat Med. 2024. (kliniczno-funkcjonalna stadializacja; WHtR > 0,5 + powikłania → otyłość nawet przy BMI 25–29,9)',
+        'NICE 2025 (NG246 update). Obesity: identification, assessment and management. (WHtR przy BMI < 35; etniczne progi BMI — Azjaci/Afrykańczycy nadwaga 23,0–27,4 / otyłość ≥ 27,5)',
+        'Demay MB i wsp. (Endocrine Society 2024). Vitamin D for the Prevention of Disease: Endocrine Society Clinical Practice Guideline. J Clin Endocrinol Metab. 2024. (sugeruje NIE rutynowy 25(OH)D u dorosłych z otyłością bez wskazań klinicznych)',
+        'EASL–EASD–EASO 2024. Clinical Practice Guidelines on the management of metabolic dysfunction-associated steatotic liver disease (MASLD). J Hepatol. 2024. (algorytm FIB-4 → VCTE/FibroScan; prawidłowe ALT NIE wyklucza MASLD)',
+        'KDIGO 2024. Clinical Practice Guideline for the Evaluation and Management of CKD. (UACR + eGFR w populacjach ryzyka — DM, NT, otyłość, zespół metaboliczny)',
+        'Eisenberg D i wsp. (ASMBS/IFSO 2022). 2022 ASMBS/IFSO Indications for Metabolic and Bariatric Surgery. Surg Obes Relat Dis. 2022. (BMI > 35 niezależnie od współchorobowości; rozważyć BMI 30–34,9 z chorobą metaboliczną)',
+        'Olszanecka-Glinianowicz M, Mamcarz A, Filipiak KJ i wsp. Otyłość — choroba przewlekła. Stanowisko PTLO 2022. Forum Medycyny Rodzinnej. 2022. (poprzednia wersja — zastąpiona PTLO 2024)',
+        'Apovian CM, Aronne LJ, Bessesen DH i wsp. Pharmacological management of obesity: Endocrine Society 2015. J Clin Endocrinol Metab. 2015;100(2):342-362.',
+        'Wilding JPH i wsp. Once-Weekly Semaglutide in Adults with Overweight or Obesity (STEP 1). N Engl J Med. 2021;384(11):989-1002.',
+        'Jastreboff AM i wsp. Tirzepatide Once Weekly for the Treatment of Obesity (SURMOUNT-1). N Engl J Med. 2022;387(3):205-216.',
+        'Mechanick JI i wsp. Clinical practice guidelines for the perioperative nutritional, metabolic, and nonsurgical support of the bariatric surgery patient. Endocr Pract. 2020;26(Suppl 1):1-39.',
+        'SCORE2 working group. SCORE2 risk prediction algorithms. Eur Heart J. 2021. (do oceny 10-letniego ryzyka CV u pozornie zdrowych dorosłych)'
       ]
     },
 
