@@ -1,0 +1,220 @@
+/* vilda_save_status_indicator.css — Faza 2
+ * Wskaźnik statusu zapisu danych pacjenta (Google Docs / VSCode pattern).
+ *
+ * Mount: body level (fixed position). Na desktopie wizualnie obok sidebara,
+ * na mobile w prawym górnym rogu. Niezależny od display:none parenta sidebara.
+ */
+
+.vilda-save-status {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 9000;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  cursor: help;
+  user-select: none;
+  transition: background-color 150ms ease, color 150ms ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  backdrop-filter: saturate(180%) blur(8px);
+  -webkit-backdrop-filter: saturate(180%) blur(8px);
+}
+
+/* Ikona inline SVG */
+.vilda-save-status-icon {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.vilda-save-status-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Tekst (główny) i czas (drugorzędny) */
+.vilda-save-status-text { font-weight: 500; }
+.vilda-save-status-time {
+  opacity: 0.7;
+  font-weight: 400;
+  margin-left: 4px;
+}
+
+/* ── Stany kolorystyczne ─────────────────────────────────────── */
+
+.vilda-save-status--saved {
+  background: rgba(34, 197, 94, 0.14);
+  color: #15803d;
+}
+.vilda-save-status--dirty {
+  background: rgba(245, 158, 11, 0.18);
+  color: #b45309;
+}
+.vilda-save-status--saving {
+  background: rgba(59, 130, 246, 0.14);
+  color: #1d4ed8;
+}
+.vilda-save-status--error {
+  background: rgba(239, 68, 68, 0.14);
+  color: #b91c1c;
+}
+.vilda-save-status--new_patient {
+  background: rgba(107, 114, 128, 0.14);
+  color: #374151;
+}
+
+/* Hidden state — display:none ustawiane też przez JS, ale tu jako fallback */
+.vilda-save-status--hidden { display: none !important; }
+
+/* ── Spinner dla SAVING ──────────────────────────────────────── */
+
+.vilda-save-status--saving .vilda-save-status-icon svg {
+  animation: vilda-save-status-spin 0.9s linear infinite;
+  transform-origin: 50% 50%;
+}
+@keyframes vilda-save-status-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Responsive ──────────────────────────────────────────────── */
+
+/* Mobile (< 992px): wskaźnik w prawym górnym rogu, kompaktowy (tylko ikona) */
+@media (max-width: 991.98px) {
+  .vilda-save-status {
+    top: 0.5rem;
+    left: auto;
+    right: 0.5rem;
+    padding: 6px 8px;
+    border-radius: 999px;
+  }
+  .vilda-save-status .vilda-save-status-text,
+  .vilda-save-status .vilda-save-status-time { display: none; }
+  .vilda-save-status .vilda-save-status-icon { width: 18px; height: 18px; }
+  .vilda-save-status .vilda-save-status-icon svg { width: 18px; height: 18px; }
+}
+
+/* Desktop (≥ 992px): wskaźnik wyrównany do lewej (w obszarze sidebara) */
+@media (min-width: 992px) {
+  .vilda-save-status {
+    top: 1rem;
+    left: 1rem;
+  }
+}
+
+/* ── Dark mode ────────────────────────────────────────────────── */
+
+@media (prefers-color-scheme: dark) {
+  .vilda-save-status {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  }
+  .vilda-save-status--saved {
+    background: rgba(34, 197, 94, 0.22);
+    color: #4ade80;
+  }
+  .vilda-save-status--dirty {
+    background: rgba(245, 158, 11, 0.24);
+    color: #fbbf24;
+  }
+  .vilda-save-status--saving {
+    background: rgba(59, 130, 246, 0.24);
+    color: #60a5fa;
+  }
+  .vilda-save-status--error {
+    background: rgba(239, 68, 68, 0.22);
+    color: #f87171;
+  }
+  .vilda-save-status--new_patient {
+    background: rgba(156, 163, 175, 0.22);
+    color: #d1d5db;
+  }
+}
+
+/* ── Reduced motion ──────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .vilda-save-status { transition: none; }
+  .vilda-save-status--saving .vilda-save-status-icon svg {
+    animation-duration: 3s; /* spowolnij, ale nie wyłączaj — to feedback "trwa zapis" */
+  }
+}
+
+/* ── Focus ring (a11y) ──────────────────────────────────────── */
+
+.vilda-save-status:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+.vilda-save-status:focus:not(:focus-visible) { outline: none; }
+
+/* ──────────────────────────────────────────────────────────────
+ * Faza 3: dedykowany tooltip
+ * ────────────────────────────────────────────────────────────── */
+
+.vilda-save-tooltip {
+  position: fixed;
+  z-index: 9001;
+  max-width: 280px;
+  min-width: 160px;
+  padding: 10px 14px;
+  background: rgba(28, 28, 30, 0.96);
+  color: #fff;
+  font-size: 12.5px;
+  line-height: 1.5;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28), 0 1px 3px rgba(0, 0, 0, 0.12);
+  pointer-events: auto;
+  opacity: 0;
+  transform: translateY(-4px) scale(0.97);
+  transition: opacity 150ms ease, transform 150ms ease;
+  word-wrap: break-word;
+  -webkit-font-smoothing: antialiased;
+}
+.vilda-save-tooltip--visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.vilda-save-tooltip strong {
+  font-weight: 600;
+  display: inline-block;
+  margin-bottom: 2px;
+}
+.vilda-save-tooltip .vilda-save-tooltip-hint {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 11.5px;
+  opacity: 0.85;
+}
+.vilda-save-tooltip .vilda-save-tooltip-time {
+  display: inline-block;
+  margin-top: 2px;
+  opacity: 0.78;
+  font-style: italic;
+  font-size: 11.5px;
+}
+
+/* Dark mode: jasny tooltip (inwersja, żeby się wyróżniał od ciemnego tła aplikacji) */
+@media (prefers-color-scheme: dark) {
+  .vilda-save-tooltip {
+    background: rgba(245, 245, 247, 0.97);
+    color: #1c1c1e;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55), 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* Reduced motion: bez transformacji, natychmiastowy fade */
+@media (prefers-reduced-motion: reduce) {
+  .vilda-save-tooltip {
+    transition: opacity 100ms ease;
+    transform: none;
+  }
+  .vilda-save-tooltip--visible { transform: none; }
+}
