@@ -10,23 +10,13 @@
 
 /* ── Host kontenery (per breakpoint) ────────────────────────── */
 
-/* Desktop: wewnątrz .sidebar-logo (które jest flex-column),
-   ten host łączy h1 + wskaźnik w jednej linii poziomej */
-.vilda-save-status-host--desktop {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.vilda-save-status-host--desktop > h1 {
-  margin: 0; /* override domyślnych marginesów h1 */
-}
-
-/* Mobile/Tablet: wstrzyknięty obok hamburgera w .chrome-strip (flex row).
-   Host sam jest też flex (na wypadek wewnętrznych elementów) */
-.vilda-save-status-host--mobile {
+/* Oba hosty są wstrzykiwane jako sibling w .chrome-strip (flex row).
+   Strip ma gap: 0.75rem, więc dodatkowy margin nie jest potrzebny.
+   Mount points:
+   - Desktop: po .chrome-brand (etykieta "wagaiwzrost.pl")
+   - Mobile:  po .chrome-mobile-menu-btn (hamburger)
+*/
+.vilda-save-status-host {
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
