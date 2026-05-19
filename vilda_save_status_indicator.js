@@ -85,7 +85,10 @@
    * Warunki „minimalny pacjent": nazwa + co najmniej jeden pomiar (waga/wzrost/wiek).
    */
   function isFormMostlyEmpty() {
-    if (typeof global.collectUserData !== 'function') return true;
+    if (typeof global.collectUserData !== 'function') {
+      try { console.debug('[SSI] isFormMostlyEmpty: collectUserData niedostępne'); } catch (_) {}
+      return true;
+    }
     try {
       var data = global.collectUserData({ source: 'save-status-indicator-empty-check' });
       if (!data) return true;
@@ -93,8 +96,13 @@
       var u = data.user || {};
       var hasName = !!name;
       var hasMeasure = !!(u.weight || u.height || (u.age != null && u.age !== ''));
-      return !(hasName && hasMeasure);
-    } catch (_) { return true; }
+      // OR (nie AND): wystarczy imię ALBO pomiar żeby uznać że formularz jest "wypełniany".
+      // Wcześniejsze AND było zbyt restrykcyjne — user wpisał tylko imię, wskaźnik zostawał HIDDEN.
+      return !(hasName || hasMeasure);
+    } catch (e) {
+      try { console.debug('[SSI] isFormMostlyEmpty: exception', e); } catch (_) {}
+      return true;
+    }
   }
 
   /**
@@ -390,7 +398,10 @@
     _currentBreakpoint = isDesktop ? 'desktop' : 'mobile';
 
     var strip = doc.querySelector('[data-vilda-chrome-strip], .chrome-strip');
-    if (!strip) return null; // chrome-strip jeszcze nie wyrenderowany
+    if (!strip) {
+      try { console.debug('[SSI] findMountPoint: brak .chrome-strip — czekam na vilda_chrome'); } catch (_) {}
+      return null;
+    }
 
     var hostClass = isDesktop ? 'vilda-save-status-host--desktop' : 'vilda-save-status-host--mobile';
     var existing = strip.querySelector('.' + hostClass);
@@ -412,6 +423,7 @@
     var host = doc.createElement('div');
     host.className = 'vilda-save-status-host ' + hostClass;
     anchor.parentNode.insertBefore(host, anchor.nextSibling);
+    try { console.debug('[SSI] findMountPoint: utworzony host ' + hostClass + ' po', anchor); } catch (_) {}
     return host;
   }
 
@@ -449,18 +461,19 @@
     if (host) {
       if (_indicatorEl.parentNode !== host) {
         host.appendChild(_indicatorEl);
+        try { console.debug('[SSI] mount: wskaźnik dołączony do', host); } catch (_) {}
       }
       disconnectMountObserver();
       return;
     }
 
-    // Brak hosta — vilda_chrome jeszcze nie wyrenderował sidebar/chrome-strip.
-    // MutationObserver: gdy dowolne dziecko body się zmieni, próbujemy ponownie.
     if (!_mountObserver && typeof global.MutationObserver === 'function') {
+      try { console.debug('[SSI] mount: brak hosta, uruchamiam MutationObserver'); } catch (_) {}
       _mountObserver = new global.MutationObserver(function () {
         var h = findMountPoint();
         if (h && _indicatorEl) {
           h.appendChild(_indicatorEl);
+          try { console.debug('[SSI] mount via observer: dołączony do', h); } catch (_) {}
           disconnectMountObserver();
         }
       });
@@ -731,22 +744,40 @@
 
   function init() {
     if (typeof global.document === 'undefined') {
-      // Headless (node test) — tylko vault hooks
       attachVaultListeners();
       return;
     }
     if (global.document.readyState === 'loading') {
+      try { console.debug('[SSI] init: czeka na DOMContentLoaded'); } catch (_) {}
       global.document.addEventListener('DOMContentLoaded', init, { once: true });
       return;
     }
+    try { console.debug('[SSI] init: DOM ready, attaching listeners. VildaVault=' + (!!global.VildaVault) + ', collectUserData=' + (typeof global.collectUserData)); } catch (_) {}
     attachVaultListeners();
     attachDomListeners();
     startRefreshTick();
-    // Jeśli vault już unlocked w momencie init (refresh strony z aktywną sesją)
-    // — natychmiast spróbuj wejść w stan SAVED / NEW_PATIENT.
     var V = global.VildaVault;
     if (V && typeof V.isUnlocked === 'function' && V.isUnlocked()) {
+      try { console.debug('[SSI] init: vault already unlocked, calling onUnlock'); } catch (_) {}
       onUnlock();
+    } else {
+      try { console.debug('[SSI] init: vault not yet unlocked, waiting for notifyUnlock'); } catch (_) {}
+    }
+    // Faza 6 fallback — jeśli vault unlock'uje się PO naszym init przez tryRestoreSession
+    // (async), spróbuj ponownie po window.load. W praktyce nasz onUnlock listener powinien
+    // już wtedy odpalić, ale to dodatkowy safety net dla wolnych połączeń / dużych vaultów.
+    if (typeof global.addEventListener === 'function') {
+      global.addEventListener('load', function () {
+        try {
+          var V2 = global.VildaVault;
+          if (V2 && typeof V2.isUnlocked === 'function' && V2.isUnlocked() && !_vaultUnlocked) {
+            console.debug('[SSI] window.load fallback: vault unlocked, syncing state');
+            onUnlock();
+          }
+        } catch (_) {}
+        // Spróbuj jeszcze raz mount (chrome może być wyrenderowany dopiero teraz)
+        try { ensureIndicatorMounted(); } catch (_) {}
+      }, { once: true });
     }
   }
 
@@ -780,6 +811,64 @@
     _setDirtyStartedAt: function (t) { _dirtyStartedAt = t; },
     _setLastError: function (e) { _lastError = e; }
   };
+
+  // ── DEBUG API (do diagnozy w DevTools) ────────────────────────
+  if (typeof global !== 'undefined') {
+    global.__vildaSaveStatusDebug = function () {
+      var V = global.VildaVault;
+      var vaultUnlocked = !!(V && typeof V.isUnlocked === 'function' && V.isUnlocked());
+      var info = {
+        state: _state,
+        vaultUnlocked: vaultUnlocked,
+        myVaultUnlockedFlag: _vaultUnlocked,
+        referenceFingerprint: _referenceFingerprint ? '[' + _referenceFingerprint.length + ' znaków]' : null,
+        lastSavedAtISO: _lastSavedAtISO,
+        lastSnapshotCount: _lastSnapshotCount,
+        lastPatientName: _lastPatientName,
+        currentBreakpoint: _currentBreakpoint,
+        indicatorInDom: !!(_indicatorEl && _indicatorEl.parentNode),
+        indicatorParent: _indicatorEl && _indicatorEl.parentNode ? _indicatorEl.parentNode.className : null,
+        indicatorDisplay: _indicatorEl ? (_indicatorEl.style.display || 'default') : null,
+        indicatorClassName: _indicatorEl ? _indicatorEl.className : null,
+        chromeStripExists: !!(global.document && global.document.querySelector('[data-vilda-chrome-strip], .chrome-strip')),
+        collectUserDataExists: typeof global.collectUserData,
+        formData: null,
+        formMostlyEmpty: null
+      };
+      try {
+        if (typeof global.collectUserData === 'function') {
+          var d = global.collectUserData({ source: 'debug' });
+          info.formData = d ? { name: d.name, user: d.user } : null;
+          info.formMostlyEmpty = isFormMostlyEmpty();
+        }
+      } catch (e) {
+        info.formDataError = String(e);
+      }
+      console.table(info);
+      return info;
+    };
+
+    /**
+     * Wymusza pokazanie wskaźnika w stanie test (DIRTY). Diagnostyczne — sprawdza
+     * czy DOM/CSS w ogóle pozwalają na widoczność. Wywołaj w konsoli.
+     */
+    global.__vildaSaveStatusForceShow = function () {
+      try {
+        ensureIndicatorMounted();
+        _state = STATES.DIRTY;
+        _dirtyStartedAt = Date.now();
+        render();
+        console.log('[SSI] force-show: state ustawiony na DIRTY, render() wywołany.');
+        console.log('[SSI] element:', _indicatorEl);
+        if (_indicatorEl) {
+          console.log('[SSI] computed style:', global.getComputedStyle ? global.getComputedStyle(_indicatorEl) : '(brak getComputedStyle)');
+          console.log('[SSI] parent:', _indicatorEl.parentNode);
+        }
+      } catch (e) {
+        console.error('[SSI] force-show error:', e);
+      }
+    };
+  }
 
   init();
 })(typeof window !== 'undefined' ? window : globalThis);
