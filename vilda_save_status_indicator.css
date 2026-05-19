@@ -56,16 +56,20 @@
   50%      { box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.32); }
 }
 
-/* ── NEW_PATIENT — turkus (jak domyślny has-patient) plus delikatne wyróżnienie ── */
+/* ── NEW_PATIENT — fiolet (wyraźnie różny od SAVED zielonego i DIRTY bursztynu) ──
+ * Semantyka: "nowy stan, wymagana akcja zapisu". Wcześniej był turkus (jak
+ * domyślny has-patient), ale to wyglądało zbyt podobnie do SAVED i sugerowało
+ * "wszystko OK" — wprowadzało w błąd. Fiolet czytelnie sygnalizuje że to NIE
+ * jest stan końcowy. */
 .chrome-patient-chip.vilda-save-state--new_patient .chip-icon {
-  /* Zostawiamy domyślny turkusowy gradient z chrome.css, ale dodajemy
-     łagodny puls że "czeka na pierwszy zapis". */
-  animation: vilda-save-status-new-pulse 3s ease-in-out infinite;
+  background: linear-gradient(135deg, #6d28d9, #a855f7) !important;
+  color: #fff !important;
+  animation: vilda-save-status-new-pulse 2.4s ease-in-out infinite;
 }
 
 @keyframes vilda-save-status-new-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 131, 141, 0); }
-  50%      { box-shadow: 0 0 0 3px rgba(0, 176, 166, 0.18); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0); }
+  50%      { box-shadow: 0 0 0 5px rgba(168, 85, 247, 0.28); }
 }
 
 /* ── Reduced motion: wyłącz animacje ─────────────────────── */
