@@ -21,6 +21,14 @@
  *   > .chrome-patient-chip.has-patient .chip-icon
  */
 
+/* ── HIDDEN — explicit blady szary (jak chrome's is-empty) ──
+ * Dodajemy explicit klasę żeby NIGDY nie polegać na has-patient (turkus)
+ * w intermediate state — eliminuje "zielony przelot". Mój CSS ZAWSZE decyduje. */
+.chrome-patient-chip.vilda-save-state--hidden .chip-icon {
+  background: #e8eded !important;
+  color: #9eb8bb !important;
+}
+
 /* ── SAVED — zielony gradient ──────────────────────────────── */
 .chrome-patient-chip.vilda-save-state--saved .chip-icon {
   background: linear-gradient(135deg, #15803d, #22c55e) !important;
