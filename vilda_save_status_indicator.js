@@ -1,7 +1,7 @@
 /**
  * vilda_save_status_indicator.js — Wskaźnik statusu zapisu danych pacjenta.
  *
- * Wersja: 0.5 (Faza 5 — event vilda:json-imported)
+ * Wersja: 0.6 (Faza 6 — mount w nagłówku + fix bug pustego formularza)
  *
  * Cel: pokazać użytkownikowi, czy aktualny stan formularza odpowiada ostatniemu
  * zapisanemu snapshotowi w vault (analogicznie do paska statusu Google Docs).
@@ -47,12 +47,16 @@
   var _lastError = null;
   var _refreshTickInterval = null;
   var _debounceTimer = null;
-  var _indicatorEl = null; // <div id="saveStatusIndicator"> w body, lazy mounted
+  var _indicatorEl = null; // <div id="saveStatusIndicator"> wewnątrz nagłówka, lazy mounted
   var _tooltipEl = null;   // <div id="saveStatusTooltip"> w body, lazy mounted
   var _tooltipVisible = false;
   var _tooltipShowTimer = null;
   var _tooltipHideTimer = null;
   var _tooltipHandlersAttached = false;
+  var _mountObserver = null;     // MutationObserver czekający na pojawienie się hosta
+  var _resizeDebounceTimer = null;
+  var _currentBreakpoint = null; // 'desktop' | 'mobile' — żeby remountować przy resize
+  var _vaultUnlocked = false;    // własny snapshot stanu vault (niezależny od polling)
 
   // ── Pure functions ─────────────────────────────────────────────
 
@@ -70,6 +74,27 @@
       delete data.timestampISO;
       return JSON.stringify(data);
     } catch (_) { return null; }
+  }
+
+  /**
+   * Heurystyka „formularz w zasadzie pusty" — gdy zwraca true, wskaźnik powinien
+   * pozostać HIDDEN zamiast pokazywać NEW_PATIENT/SAVED. Stosowane głównie tuż po
+   * unlock vault — świeży login bez wybranego pacjenta NIE powinien sugerować
+   * że coś jest „zapisane".
+   *
+   * Warunki „minimalny pacjent": nazwa + co najmniej jeden pomiar (waga/wzrost/wiek).
+   */
+  function isFormMostlyEmpty() {
+    if (typeof global.collectUserData !== 'function') return true;
+    try {
+      var data = global.collectUserData({ source: 'save-status-indicator-empty-check' });
+      if (!data) return true;
+      var name = data.name && String(data.name).trim();
+      var u = data.user || {};
+      var hasName = !!name;
+      var hasMeasure = !!(u.weight || u.height || (u.age != null && u.age !== ''));
+      return !(hasName && hasMeasure);
+    } catch (_) { return true; }
   }
 
   /**
@@ -115,10 +140,29 @@
   // ── Event handlers ─────────────────────────────────────────────
 
   function onFormChange() {
-    if (_state === STATES.HIDDEN || _state === STATES.SAVING) return;
+    if (_state === STATES.SAVING) return;
+    if (global.VildaGuestMode === true) return; // guest mode pozostaje HIDDEN
+    // Vault zalokowany / niezainicjalizowany → no-op (HIDDEN się utrzymuje).
+    // _vaultUnlocked jest ustawiana w onUnlock/onLock (własny snapshot stanu,
+    // nie polling) — bezpieczna w kontekście testów i nawigacji między podstronami.
+    if (!_vaultUnlocked) return;
+    // Specjalny przypadek: wskaźnik HIDDEN przy unlocked vault (pusty formularz po
+    // świeżym loginie) — gdy user wpisze dane pacjenta, przechodzimy w NEW_PATIENT.
+    if (_state === STATES.HIDDEN) {
+      if (!isFormMostlyEmpty()) {
+        _referenceFingerprint = null;
+        transition(STATES.NEW_PATIENT);
+      }
+      return;
+    }
     if (_referenceFingerprint == null) {
-      // Brak referencji = NEW_PATIENT (lub po imporcie JSON, lub gdy collectUserData zwraca null)
-      if (_state !== STATES.NEW_PATIENT) transition(STATES.NEW_PATIENT);
+      // Brak referencji = NEW_PATIENT (po imporcie JSON, lub świeżo wpisany pacjent).
+      // Ale jeśli user wyczyścił wszystkie pola → wracamy do HIDDEN.
+      if (isFormMostlyEmpty()) {
+        transition(STATES.HIDDEN);
+      } else if (_state !== STATES.NEW_PATIENT) {
+        transition(STATES.NEW_PATIENT);
+      }
       return;
     }
     var current = computeFormFingerprint();
@@ -136,19 +180,26 @@
   }
 
   function onUnlock() {
+    _vaultUnlocked = true;
     // Tryb gość → wskaźnik niedostępny
     if (global.VildaGuestMode === true) { transition(STATES.HIDDEN); return; }
-    // Po unlock: jeśli formularz ma dane (po restoreAll z vault), ustaw referencję = aktualny stan → SAVED.
-    // Jeśli nie ma danych (świeży login), pozostaje NEW_PATIENT.
-    _referenceFingerprint = computeFormFingerprint();
-    if (_referenceFingerprint == null) {
-      transition(STATES.NEW_PATIENT);
-    } else {
-      transition(STATES.SAVED);
+    // Pusty formularz po świeżym loginie (bez wybranego pacjenta) → HIDDEN.
+    // Wskaźnik nie powinien sugerować „Zapisane" gdy nie ma czego zapisywać.
+    // Dopiero gdy user wpisze dane lub wczyta pacjenta (event patient-loaded),
+    // wskaźnik się pojawi.
+    if (isFormMostlyEmpty()) {
+      _referenceFingerprint = null;
+      transition(STATES.HIDDEN);
+      return;
     }
+    // Formularz ma dane → przyjmujemy że pochodzą z ostatniego snapshotu
+    // (restoreAll po tryRestoreSession lub po wczytaniu pacjenta).
+    _referenceFingerprint = computeFormFingerprint();
+    transition(STATES.SAVED);
   }
 
   function onLock() {
+    _vaultUnlocked = false;
     // Reset wszystkich pól stanu, ukryj wskaźnik
     _referenceFingerprint = null;
     _lastSavedAtISO = null;
@@ -317,23 +368,123 @@
   }
 
   /**
-   * Lazy-mount wskaźnika do body. Idempotentne.
+   * Wybiera mount point zależnie od viewport.
+   * Desktop (≥992px): wstrzyknij wskaźnik do .sidebar .sidebar-logo, w wewnętrznym
+   *   wrapperze obok h1 (host = .vilda-save-status-host--desktop).
+   * Mobile/Tablet (<992px): wstrzyknij obok hamburgera (.chrome-mobile-menu-btn)
+   *   w .chrome-strip (host = .vilda-save-status-host--mobile).
+   *
+   * Zwraca element-host (parent dla wskaźnika) lub null jeśli vilda_chrome jeszcze
+   * nie wyrenderował struktury — wtedy wywołujący ustawia MutationObserver.
+   */
+  function findMountPoint() {
+    if (typeof global.document === 'undefined') return null;
+    var doc = global.document;
+    var vw = global.innerWidth
+      || (doc.documentElement && doc.documentElement.clientWidth)
+      || 1024;
+    var isDesktop = vw >= 992;
+    _currentBreakpoint = isDesktop ? 'desktop' : 'mobile';
+
+    if (isDesktop) {
+      var sidebarLogo = doc.querySelector('.sidebar .sidebar-logo');
+      if (!sidebarLogo) return null; // sidebar jeszcze nie wyrenderowany
+      // Reuse existing host jeśli już go stworzyliśmy
+      var existing = sidebarLogo.querySelector('.vilda-save-status-host--desktop');
+      if (existing) return existing;
+      // Stwórz wrapper obok h1: <div class="host">{h1}{indicator}</div>
+      var h1 = sidebarLogo.querySelector('h1');
+      var host = doc.createElement('div');
+      host.className = 'vilda-save-status-host vilda-save-status-host--desktop';
+      if (h1 && h1.parentNode === sidebarLogo) {
+        sidebarLogo.insertBefore(host, h1);
+        host.appendChild(h1);
+      } else {
+        sidebarLogo.appendChild(host);
+      }
+      return host;
+    } else {
+      var hamburger = doc.querySelector('[data-vilda-chrome-menu-btn], .chrome-mobile-menu-btn');
+      if (!hamburger || !hamburger.parentNode) return null;
+      var existingMobile = hamburger.parentNode.querySelector('.vilda-save-status-host--mobile');
+      if (existingMobile) return existingMobile;
+      var hostMobile = doc.createElement('div');
+      hostMobile.className = 'vilda-save-status-host vilda-save-status-host--mobile';
+      // Wstrzyknij jako sibling tuż po hamburgerze
+      hamburger.parentNode.insertBefore(hostMobile, hamburger.nextSibling);
+      return hostMobile;
+    }
+  }
+
+  function disconnectMountObserver() {
+    if (_mountObserver) {
+      try { _mountObserver.disconnect(); } catch (_) {}
+      _mountObserver = null;
+    }
+  }
+
+  /**
+   * Lazy-mount wskaźnika. Idempotentne. Jeśli mount point niedostępny
+   * (vilda_chrome jeszcze nie wyrenderował), uruchamia MutationObserver
+   * który próbuje ponownie gdy DOM się zmieni.
    */
   function ensureIndicatorMounted() {
-    if (_indicatorEl && _indicatorEl.parentNode) return;
     if (typeof global.document === 'undefined') return; // headless
     var doc = global.document;
     if (!doc.body) return;
-    _indicatorEl = doc.createElement('div');
-    _indicatorEl.id = 'saveStatusIndicator';
-    _indicatorEl.className = 'vilda-save-status vilda-save-status--hidden';
-    _indicatorEl.style.display = 'none';
-    _indicatorEl.setAttribute('role', 'status');
-    _indicatorEl.setAttribute('aria-live', 'polite');
-    _indicatorEl.setAttribute('aria-atomic', 'true');
-    _indicatorEl.setAttribute('aria-describedby', 'saveStatusTooltip');
-    _indicatorEl.setAttribute('tabindex', '0'); // keyboard focusable
-    doc.body.appendChild(_indicatorEl);
+
+    // Lazy create element
+    if (!_indicatorEl) {
+      _indicatorEl = doc.createElement('div');
+      _indicatorEl.id = 'saveStatusIndicator';
+      _indicatorEl.className = 'vilda-save-status vilda-save-status--hidden';
+      _indicatorEl.style.display = 'none';
+      _indicatorEl.setAttribute('role', 'status');
+      _indicatorEl.setAttribute('aria-live', 'polite');
+      _indicatorEl.setAttribute('aria-atomic', 'true');
+      _indicatorEl.setAttribute('aria-describedby', 'saveStatusTooltip');
+      _indicatorEl.setAttribute('tabindex', '0');
+    }
+
+    var host = findMountPoint();
+    if (host) {
+      if (_indicatorEl.parentNode !== host) {
+        host.appendChild(_indicatorEl);
+      }
+      disconnectMountObserver();
+      return;
+    }
+
+    // Brak hosta — vilda_chrome jeszcze nie wyrenderował sidebar/chrome-strip.
+    // MutationObserver: gdy dowolne dziecko body się zmieni, próbujemy ponownie.
+    if (!_mountObserver && typeof global.MutationObserver === 'function') {
+      _mountObserver = new global.MutationObserver(function () {
+        var h = findMountPoint();
+        if (h && _indicatorEl) {
+          h.appendChild(_indicatorEl);
+          disconnectMountObserver();
+        }
+      });
+      _mountObserver.observe(doc.body, { childList: true, subtree: true });
+    }
+  }
+
+  /**
+   * Handler resize — gdy breakpoint się zmienił, remountuj wskaźnik
+   * do właściwego hosta dla nowego viewportu.
+   */
+  function handleResize() {
+    if (_resizeDebounceTimer) clearTimeout(_resizeDebounceTimer);
+    _resizeDebounceTimer = setTimeout(function () {
+      var vw = global.innerWidth
+        || (global.document.documentElement && global.document.documentElement.clientWidth)
+        || 1024;
+      var newBreakpoint = (vw >= 992) ? 'desktop' : 'mobile';
+      if (newBreakpoint !== _currentBreakpoint) {
+        ensureIndicatorMounted();
+        if (_tooltipVisible) repositionTooltip();
+      }
+    }, 200);
   }
 
   /**
@@ -564,6 +715,8 @@
     global.document.addEventListener('vilda:json-imported', function (ev) {
       try { onJsonImportedHandler((ev && ev.detail) || {}); } catch (_) {}
     });
+    // Faza 6: resize → remount do właściwego hosta gdy zmienił się breakpoint
+    global.addEventListener('resize', handleResize);
   }
 
   function startRefreshTick() {
