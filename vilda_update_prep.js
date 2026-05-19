@@ -3427,8 +3427,6 @@ function vildaUpdatePrepRenderColeMetrics(context, options = {}, elements) {
       const isOverweightOrObese = (state.coleCat === 'Nadwaga' || String(state.coleCat).startsWith('Otyłość'));
       if (isOverweightOrObese) {
         const ageYears = Number(options.age) || 0;
-        const sex = options.sex || 'M';
-        const sexLabel = (sex === 'M') ? 'chłopca' : (sex === 'F' ? 'dziewczynki' : 'dziecka');
         let suggestedTests;
         if (ageYears < 5) {
           suggestedTests = 'TSH, 25-OHD; konsultacja genetyczna (MC4R, zespół Pradera-Williego)';
@@ -3438,11 +3436,10 @@ function vildaUpdatePrepRenderColeMetrics(context, options = {}, elements) {
           suggestedTests = 'TSH, 25-OHD, oGTT 75 g lub HbA1c, lipidogram, ALT/AST, ciśnienie tętnicze';
         }
         const ageStr = ageYears > 0 ? ageYears.toFixed(1).replace('.', ',') : '?';
-        const kindLabel = (state.coleCat === 'Nadwaga') ? 'nadwaga' : 'otyłość';
         // Koncepcja C — Glass mini-card (vilda_obesity_banner.css). Klasy CSS
         // zamiast inline styles. Link otwiera w tym samym oknie (bez target=_blank).
-        // Lista zalecanych badań przeniesiona do `title` (tooltip natywny) —
-        // pełna lista dostępna w panelu diagnostycznym po kliknięciu.
+        // Tekst statyczny — pełna lista zalecanych badań (zależna od wieku)
+        // przeniesiona do `title` (tooltip natywny na hover) + panel po kliknięciu.
         const titleAttr = 'Zalecane badania pierwszego rzutu (wiek ' + ageStr + ' lat): ' + suggestedTests + '.';
         const bannerHtml = '' +
           '<div class="vilda-obesity-banner" title="' + titleAttr.replace(/"/g, '&quot;') + '">' +
@@ -3455,10 +3452,7 @@ function vildaUpdatePrepRenderColeMetrics(context, options = {}, elements) {
             '</span>' +
             '<div class="vilda-obesity-banner__content">' +
               '<div class="vilda-obesity-banner__title">' +
-                'Sugerowana ' + kindLabel + ' u ' + sexLabel + ' (' + ageStr + ' lat)' +
-              '</div>' +
-              '<div class="vilda-obesity-banner__sub">' +
-                'Badania pierwszego rzutu w panelu diagnostycznym' +
+                'Sprawdź informacje o otyłości u dzieci w panelu diagnostycznym' +
               '</div>' +
             '</div>' +
             '<a href="przelicznik-jednostek.html?wskazanie=obesity_kids" class="vilda-obesity-banner__btn">' +
