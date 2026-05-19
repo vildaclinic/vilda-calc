@@ -1,30 +1,54 @@
-/* vilda_save_status_indicator.css — Faza 2
+/* vilda_save_status_indicator.css — Faza 6
  * Wskaźnik statusu zapisu danych pacjenta (Google Docs / VSCode pattern).
  *
- * Mount: body level (fixed position). Na desktopie wizualnie obok sidebara,
- * na mobile w prawym górnym rogu. Niezależny od display:none parenta sidebara.
+ * Mount inline (nie fixed):
+ *   • Desktop (≥992px): wewnątrz .sidebar .sidebar-logo, w hoście obok h1
+ *   • Mobile/Tablet (<992px): obok hamburgera w .chrome-strip
+ *
+ * Host kontenery (vilda-save-status-host) ustawiają layout flex per breakpoint.
  */
 
+/* ── Host kontenery (per breakpoint) ────────────────────────── */
+
+/* Desktop: wewnątrz .sidebar-logo (które jest flex-column),
+   ten host łączy h1 + wskaźnik w jednej linii poziomej */
+.vilda-save-status-host--desktop {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.vilda-save-status-host--desktop > h1 {
+  margin: 0; /* override domyślnych marginesów h1 */
+}
+
+/* Mobile/Tablet: wstrzyknięty obok hamburgera w .chrome-strip (flex row).
+   Host sam jest też flex (na wypadek wewnętrznych elementów) */
+.vilda-save-status-host--mobile {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* ── Wskaźnik (pill) — INLINE, nie fixed ────────────────────── */
+
 .vilda-save-status {
-  position: fixed;
-  top: 1rem;
-  left: 1rem;
-  z-index: 9000;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
-  border-radius: 10px;
-  font-size: 13px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 12.5px;
   font-weight: 500;
   line-height: 1;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   cursor: help;
   user-select: none;
   transition: background-color 150ms ease, color 150ms ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  backdrop-filter: saturate(180%) blur(8px);
-  -webkit-backdrop-filter: saturate(180%) blur(8px);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* Ikona inline SVG */
@@ -85,26 +109,18 @@
 
 /* ── Responsive ──────────────────────────────────────────────── */
 
-/* Mobile (< 992px): wskaźnik w prawym górnym rogu, kompaktowy (tylko ikona) */
+/* Mobile/Tablet (< 992px): wskaźnik kompaktowy obok hamburgera — tylko ikona */
 @media (max-width: 991.98px) {
   .vilda-save-status {
-    top: 0.5rem;
-    left: auto;
-    right: 0.5rem;
-    padding: 6px 8px;
-    border-radius: 999px;
+    padding: 6px;
+    gap: 0;
   }
   .vilda-save-status .vilda-save-status-text,
   .vilda-save-status .vilda-save-status-time { display: none; }
-  .vilda-save-status .vilda-save-status-icon { width: 18px; height: 18px; }
-  .vilda-save-status .vilda-save-status-icon svg { width: 18px; height: 18px; }
-}
-
-/* Desktop (≥ 992px): wskaźnik wyrównany do lewej (w obszarze sidebara) */
-@media (min-width: 992px) {
-  .vilda-save-status {
-    top: 1rem;
-    left: 1rem;
+  .vilda-save-status .vilda-save-status-icon,
+  .vilda-save-status .vilda-save-status-icon svg {
+    width: 18px;
+    height: 18px;
   }
 }
 
