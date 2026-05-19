@@ -368,14 +368,17 @@
   }
 
   /**
-   * Wybiera mount point zależnie od viewport.
-   * Desktop (≥992px): wstrzyknij wskaźnik do .sidebar .sidebar-logo, w wewnętrznym
-   *   wrapperze obok h1 (host = .vilda-save-status-host--desktop).
-   * Mobile/Tablet (<992px): wstrzyknij obok hamburgera (.chrome-mobile-menu-btn)
-   *   w .chrome-strip (host = .vilda-save-status-host--mobile).
+   * Wybiera mount point zależnie od viewport. Oba breakpointy używają
+   * .chrome-strip (top bar wyrenderowany przez vilda_chrome.js) — różni się
+   * tylko miejsce w strukturze:
+   *   Desktop (≥992px): sibling po .chrome-brand (czyli po napisie "wagaiwzrost.pl")
+   *   Mobile/Tablet (<992px): sibling po hamburgerze (.chrome-mobile-menu-btn)
    *
-   * Zwraca element-host (parent dla wskaźnika) lub null jeśli vilda_chrome jeszcze
-   * nie wyrenderował struktury — wtedy wywołujący ustawia MutationObserver.
+   * Uwaga: vilda_chrome.js nadpisuje aside.innerHTML nowym sidebarem BEZ .sidebar-logo,
+   * więc desktop też musi mountować do chrome-strip, nie do sidebara.
+   *
+   * Zwraca element-host lub null jeśli vilda_chrome jeszcze nie wyrenderował
+   * chrome-strip — wtedy wywołujący ustawia MutationObserver.
    */
   function findMountPoint() {
     if (typeof global.document === 'undefined') return null;
@@ -386,34 +389,30 @@
     var isDesktop = vw >= 992;
     _currentBreakpoint = isDesktop ? 'desktop' : 'mobile';
 
+    var strip = doc.querySelector('[data-vilda-chrome-strip], .chrome-strip');
+    if (!strip) return null; // chrome-strip jeszcze nie wyrenderowany
+
+    var hostClass = isDesktop ? 'vilda-save-status-host--desktop' : 'vilda-save-status-host--mobile';
+    var existing = strip.querySelector('.' + hostClass);
+    if (existing) return existing;
+
+    var anchor; // sibling, po którym wstawiamy host
     if (isDesktop) {
-      var sidebarLogo = doc.querySelector('.sidebar .sidebar-logo');
-      if (!sidebarLogo) return null; // sidebar jeszcze nie wyrenderowany
-      // Reuse existing host jeśli już go stworzyliśmy
-      var existing = sidebarLogo.querySelector('.vilda-save-status-host--desktop');
-      if (existing) return existing;
-      // Stwórz wrapper obok h1: <div class="host">{h1}{indicator}</div>
-      var h1 = sidebarLogo.querySelector('h1');
-      var host = doc.createElement('div');
-      host.className = 'vilda-save-status-host vilda-save-status-host--desktop';
-      if (h1 && h1.parentNode === sidebarLogo) {
-        sidebarLogo.insertBefore(host, h1);
-        host.appendChild(h1);
-      } else {
-        sidebarLogo.appendChild(host);
-      }
-      return host;
+      anchor = strip.querySelector('.chrome-brand');
     } else {
-      var hamburger = doc.querySelector('[data-vilda-chrome-menu-btn], .chrome-mobile-menu-btn');
-      if (!hamburger || !hamburger.parentNode) return null;
-      var existingMobile = hamburger.parentNode.querySelector('.vilda-save-status-host--mobile');
-      if (existingMobile) return existingMobile;
-      var hostMobile = doc.createElement('div');
-      hostMobile.className = 'vilda-save-status-host vilda-save-status-host--mobile';
-      // Wstrzyknij jako sibling tuż po hamburgerze
-      hamburger.parentNode.insertBefore(hostMobile, hamburger.nextSibling);
-      return hostMobile;
+      anchor = strip.querySelector('[data-vilda-chrome-menu-btn], .chrome-mobile-menu-btn');
     }
+    // Fallback gdy konkretny anchor nie istnieje: użyj drugiego znanego
+    if (!anchor || !anchor.parentNode) {
+      anchor = strip.querySelector('.chrome-brand')
+        || strip.querySelector('[data-vilda-chrome-menu-btn], .chrome-mobile-menu-btn');
+    }
+    if (!anchor || !anchor.parentNode) return null;
+
+    var host = doc.createElement('div');
+    host.className = 'vilda-save-status-host ' + hostClass;
+    anchor.parentNode.insertBefore(host, anchor.nextSibling);
+    return host;
   }
 
   function disconnectMountObserver() {
