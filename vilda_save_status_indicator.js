@@ -305,18 +305,28 @@
     var chip = global.document.getElementById('vildaPatientChip');
     if (!chip) return; // chrome-strip jeszcze nie wyrenderowany — retry przy następnej transition
 
-    // Usuń wszystkie nasze klasy stanu, ustaw nową
-    for (var i = 0; i < ALL_STATE_CLASSES.length; i++) {
-      chip.classList.remove(ALL_STATE_CLASSES[i]);
+    // ATOMICZNA zmiana className — w jednym tick podmieniamy całą wartość
+    // class. Bez tego classList.remove + classList.add to DWIE operacje
+    // i przeglądarka może wyrenderować chwilowy stan między nimi (chip tylko
+    // z has-patient turkusowym gradientem, który wygląda jak "zielony przelot").
+    var currentClasses = (chip.className || '').split(/\s+/);
+    var newClasses = [];
+    for (var i = 0; i < currentClasses.length; i++) {
+      var c = currentClasses[i];
+      if (c && c.indexOf('vilda-save-state--') !== 0) newClasses.push(c);
     }
     if (_state && _state !== STATES.HIDDEN) {
-      chip.classList.add('vilda-save-state--' + _state);
-    } else {
+      newClasses.push('vilda-save-state--' + _state);
+    }
+    var newClassName = newClasses.join(' ');
+    if (chip.className !== newClassName) {
+      chip.className = newClassName; // single atomic write
+    }
+    if (_state === STATES.HIDDEN) {
       // Przejście do HIDDEN — wymuś refresh chrome żeby is-empty/has-patient
       // było natychmiast aktualne. Bez tego chip krótko pokazuje domyślny
       // has-patient (turkusowy gradient) zanim refreshPatientChip wykryje
-      // pusty formularz przez input/change events — wygląda to jak "zielony
-      // przelot" przez SAVED przy clear/lock.
+      // pusty formularz przez input/change events.
       try {
         var vc = global.VildaChrome;
         if (vc && typeof vc.refreshPatientChip === 'function') {
