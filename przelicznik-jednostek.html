@@ -704,11 +704,13 @@
     }
     .lab-substance-group-label:first-child { margin-top: 0; }
     .lab-substance-option {
-      /* Hardening (Opcja C audytu listy):
+      /* Hardening (Opcja Y audytu listy):
        * • min-height 44px → Apple HIG dla touch targets, łatwiej trafić palcem
-       * • touch-action: manipulation → wyłącza próby double-tap-zoom (~300ms limbo)
        * • user-select: none → zapobiega niezamierzonej selekcji tekstu na tap-hold
        * • zwiększony padding poprawia margines błędu trafienia
+       * • tap-highlight w kolorze Vilda — wizualne potwierdzenie kliknięcia na iOS
+       * UWAGA: NIE używamy touch-action: manipulation — to interferowało ze
+       * scrollem listy (overflow-y: auto), użytkownik nie mógł płynnie przewijać.
        */
       min-height: 44px;
       box-sizing: border-box;
@@ -722,7 +724,6 @@
       align-items: center;
       transition: background 0.12s;
       border-left: 2px solid transparent;
-      touch-action: manipulation;
       -webkit-user-select: none;
       -moz-user-select: none;
       user-select: none;
@@ -5696,8 +5697,25 @@
 
     // Faza 18-fix: custom dropdown — input filtruje, focus/click otwiera,
     // klawiatura nawiguje, click outside zamyka.
+    // (Opcja Y audytu): na touch device DYNAMICZNIE ustawiamy inputmode="none"
+    // gdy input dostaje focus — klawiatura ekranowa się NIE pokazuje,
+    // viewport pozostaje stabilny, dropdown nie skacze. User wybiera z listy
+    // przez scroll + tap. Filtrowanie wciąż możliwe z physical keyboard,
+    // paste lub wpisywaniem tekstu (jeśli IME oddzielne).
+    var _isTouchDevice = false;
+    try {
+      _isTouchDevice = window.matchMedia
+        && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+    } catch (_) {}
+
     substanceEl.addEventListener('input', onSubstanceInput);
     substanceEl.addEventListener('focus', function () {
+      if (_isTouchDevice) {
+        // Ustaw przed pokazaniem dropdownu, żeby focus event nie zdążył
+        // wywołać klawiatury. Na iOS Safari/Chrome inputmode="none" instant
+        // zapobiega keyboard popup mimo focus.
+        substanceEl.setAttribute('inputmode', 'none');
+      }
       openSubstanceDropdown();
     });
     substanceEl.addEventListener('mousedown', function () {
@@ -5728,22 +5746,42 @@
         closeSubstanceDropdown();
       }
     });
-    // Click w opcję — wybierz substancję (delegacja).
-    // (Opcja A audytu listy substancji)
-    // Wcześniej był 'mousedown' żeby zapobiec utracie fokusu, ale na iOS
-    // Chrome/Safari mousedown wystrzeliwany jest PRZED ustabilizowaniem
-    // viewport po momentum scroll — hit-test trafiał w niewłaściwy item.
-    // 'click' czeka aż user świadomie skończy interakcję (touchstart+touchend
-    // bez touchmove, layout stable). Utrata fokusu nieistotna bo
-    // selectSubstanceFromDropdown i tak zamyka dropdown.
+    // Select w opcję — wybierz substancję (delegacja).
+    // (Opcja Y audytu listy substancji)
+    //
+    // ROOT CAUSE problemu "klik wybiera złą substancję" — gdy user tap-uje
+    // opcję bez aktywnej klawiatury ekranowej, iOS dispatcha focus na input,
+    // klawiatura wyskakuje, viewport reflowuje (~300px), dropdown przesuwa
+    // się w górę, a click/mousedown trafia w sąsiedni item.
+    //
+    // OPCJA Y fix:
+    //   1. mousedown + e.preventDefault() — blokuje natural focus shift
+    //      i utrzymuje stabilny viewport (oryginalny pattern, ale teraz wiemy
+    //      DLACZEGO działa — keeping viewport stable, nie tylko "no blur").
+    //   2. touchstart + e.preventDefault() — iOS-specific defense, blokuje
+    //      focus management ZANIM mousedown w ogóle się odpali (touchstart
+    //      jest pierwszy w sekwencji eventów na touch).
+    //   3. inputmode="none" na touch device — klawiatura ekranowa NIGDY nie
+    //      wyskakuje przy focus na inpucie, eliminując root cause u źródła.
+    //      Patrz handler `substanceEl.addEventListener('focus', ...)`.
     if (substanceDropdownEl) {
-      substanceDropdownEl.addEventListener('click', function (e) {
+      // Touch defense — przechwytuj touchstart na items ZANIM mousedown odpali.
+      // passive: false bo musimy preventDefault.
+      substanceDropdownEl.addEventListener('touchstart', function (e) {
         var opt = e.target && e.target.closest ? e.target.closest('.lab-substance-option') : null;
         if (!opt) return;
+        e.preventDefault(); // blokuje focus shift / klawiaturę
+      }, { passive: false });
+
+      substanceDropdownEl.addEventListener('mousedown', function (e) {
+        var opt = e.target && e.target.closest ? e.target.closest('.lab-substance-option') : null;
+        if (!opt) return;
+        e.preventDefault();   // utrzymaj stabilny viewport (no focus shift)
         var id = opt.getAttribute('data-id');
         var s = id ? Conv.find(id) : null;
         if (s) selectSubstanceFromDropdown(s);
       });
+
       // Hover → aktywuj item TYLKO na urządzeniach z prawdziwym hoverem (mysz).
       // Na touch (iOS Chrome) mouseover odpala się też podczas tap PRZED click,
       // zmieniając aktywny item i myląc detekcję. matchMedia eliminuje to czysto.
