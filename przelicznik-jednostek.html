@@ -704,16 +704,29 @@
     }
     .lab-substance-group-label:first-child { margin-top: 0; }
     .lab-substance-option {
-      padding: 0.55rem 0.85rem;
+      /* Hardening (Opcja C audytu listy):
+       * • min-height 44px → Apple HIG dla touch targets, łatwiej trafić palcem
+       * • touch-action: manipulation → wyłącza próby double-tap-zoom (~300ms limbo)
+       * • user-select: none → zapobiega niezamierzonej selekcji tekstu na tap-hold
+       * • zwiększony padding poprawia margines błędu trafienia
+       */
+      min-height: 44px;
+      box-sizing: border-box;
+      padding: 0.7rem 0.85rem;
       cursor: pointer;
       font-size: 0.92rem;
       color: #2a3a3c;
       display: flex;
       justify-content: space-between;
       gap: 0.6rem;
-      align-items: baseline;
+      align-items: center;
       transition: background 0.12s;
       border-left: 2px solid transparent;
+      touch-action: manipulation;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      user-select: none;
+      -webkit-tap-highlight-color: rgba(0, 131, 141, 0.15);
     }
     .lab-substance-option:hover {
       background: rgba(0,131,141,0.06);
@@ -5715,29 +5728,43 @@
         closeSubstanceDropdown();
       }
     });
-    // Click w opcję — wybierz substancję (delegacja)
+    // Click w opcję — wybierz substancję (delegacja).
+    // (Opcja A audytu listy substancji)
+    // Wcześniej był 'mousedown' żeby zapobiec utracie fokusu, ale na iOS
+    // Chrome/Safari mousedown wystrzeliwany jest PRZED ustabilizowaniem
+    // viewport po momentum scroll — hit-test trafiał w niewłaściwy item.
+    // 'click' czeka aż user świadomie skończy interakcję (touchstart+touchend
+    // bez touchmove, layout stable). Utrata fokusu nieistotna bo
+    // selectSubstanceFromDropdown i tak zamyka dropdown.
     if (substanceDropdownEl) {
-      // Użyj mousedown żeby uniknąć utraty fokusu pomiędzy klikiem a blurem.
-      substanceDropdownEl.addEventListener('mousedown', function (e) {
+      substanceDropdownEl.addEventListener('click', function (e) {
         var opt = e.target && e.target.closest ? e.target.closest('.lab-substance-option') : null;
         if (!opt) return;
-        e.preventDefault();   // żeby input nie stracił fokusu
         var id = opt.getAttribute('data-id');
         var s = id ? Conv.find(id) : null;
         if (s) selectSubstanceFromDropdown(s);
       });
-      // Hover → aktywuj item dla synchronizacji z klawiaturą
-      substanceDropdownEl.addEventListener('mouseover', function (e) {
-        var opt = e.target && e.target.closest ? e.target.closest('.lab-substance-option') : null;
-        if (!opt) return;
-        for (var i = 0; i < substanceDropdownVisible.length; i++) {
-          if (substanceDropdownVisible[i].el === opt) {
-            substanceDropdownActive = i;
-            highlightActiveDropdownItem();
-            return;
+      // Hover → aktywuj item TYLKO na urządzeniach z prawdziwym hoverem (mysz).
+      // Na touch (iOS Chrome) mouseover odpala się też podczas tap PRZED click,
+      // zmieniając aktywny item i myląc detekcję. matchMedia eliminuje to czysto.
+      var hasFineHover = false;
+      try {
+        hasFineHover = window.matchMedia
+          && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+      } catch (_) {}
+      if (hasFineHover) {
+        substanceDropdownEl.addEventListener('mouseover', function (e) {
+          var opt = e.target && e.target.closest ? e.target.closest('.lab-substance-option') : null;
+          if (!opt) return;
+          for (var i = 0; i < substanceDropdownVisible.length; i++) {
+            if (substanceDropdownVisible[i].el === opt) {
+              substanceDropdownActive = i;
+              highlightActiveDropdownItem();
+              return;
+            }
           }
-        }
-      });
+        });
+      }
     }
     // Click outside — zamknij dropdown.
     // Dropdown jest w <body>, więc wystarczy sprawdzić czy klik trafił w niego
