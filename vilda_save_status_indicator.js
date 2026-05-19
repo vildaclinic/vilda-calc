@@ -244,6 +244,34 @@
     }, 150);
   }
 
+  /**
+   * Handler eventu vilda:user-state-cleared (przycisk „Wyczyść wszystkie pola").
+   * Wszystko wyzerowane → wskaźnik wraca do HIDDEN (chip pokazuje domyślny
+   * is-empty / has-patient z vilda_chrome). Vault może być wciąż unlocked —
+   * NIE zmieniamy _vaultUnlocked, tylko czyścimy dane wskaźnika.
+   *
+   * Anulujemy też pending debouncedOnFormChange, bo clearAllData wystrzeli
+   * mnóstwo input/change events (setowanie val='' na każdym polu), które
+   * mogłyby zaraz po naszym HIDDEN przeskoczyć w NEW_PATIENT.
+   */
+  function onUserStateClearedHandler() {
+    _referenceFingerprint = null;
+    _lastSavedAtISO = null;
+    _lastSnapshotCount = null;
+    _lastPatientName = null;
+    _dirtyStartedAt = null;
+    _lastError = null;
+    if (_debounceTimer) { clearTimeout(_debounceTimer); _debounceTimer = null; }
+    transition(STATES.HIDDEN);
+    // Drugi tick — clearAllData kończy wysypywanie input events asynchronicznie,
+    // więc po nich znów sprawdzamy stan (powinien zostać HIDDEN bo formularz pusty).
+    setTimeout(function () {
+      if (_state !== STATES.HIDDEN && isFormMostlyEmpty()) {
+        transition(STATES.HIDDEN);
+      }
+    }, 300);
+  }
+
   function onSaveClicked() {
     if (_state === STATES.DIRTY || _state === STATES.NEW_PATIENT || _state === STATES.ERROR) {
       transition(STATES.SAVING);
@@ -320,6 +348,13 @@
     global.document.addEventListener('vilda:json-imported', function (ev) {
       try { onJsonImportedHandler((ev && ev.detail) || {}); } catch (_) {}
     });
+    // Przycisk „Wyczyść wszystkie pola" → HIDDEN.
+    // Event dispatched na window (nie document) przez vilda_persistence_adapter.
+    if (typeof global.addEventListener === 'function') {
+      global.addEventListener('vilda:user-state-cleared', function () {
+        try { onUserStateClearedHandler(); } catch (_) {}
+      });
+    }
     // Save button może być wyrenderowany później (vilda_chrome wstrzykuje sidebar).
     // Periodically retry przez 5 s żeby podpiąć handler.
     var retries = 0;
@@ -397,6 +432,7 @@
     _onPatientSaved: onPatientSavedHandler,
     _onPatientLoaded: onPatientLoadedHandler,
     _onJsonImported: onJsonImportedHandler,
+    _onUserStateCleared: onUserStateClearedHandler,
     _onSaveClicked: onSaveClicked,
     _computeFormFingerprint: computeFormFingerprint,
     _setReferenceFingerprint: function (f) { _referenceFingerprint = f; },
