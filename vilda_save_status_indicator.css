@@ -1,3 +1,10 @@
+/* Skróć domyślne transition chip-icon (chrome.css ma 0.15s) tylko gdy
+ * mamy aktywny stan zapisu — eliminuje "przelot kolorów" przez bazowy
+ * has-patient gradient przy zmianie naszej klasy stanu. */
+.chrome-patient-chip[class*="vilda-save-state--"] .chip-icon {
+  transition: background 60ms ease, color 60ms ease;
+}
+
 /* vilda_save_status_indicator.css — v0.7 (pivot na chrome-patient-chip)
  *
  * Nie tworzymy własnego elementu w nagłówku. Zamiast tego kolorujemy

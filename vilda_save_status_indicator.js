@@ -311,6 +311,18 @@
     }
     if (_state && _state !== STATES.HIDDEN) {
       chip.classList.add('vilda-save-state--' + _state);
+    } else {
+      // Przejście do HIDDEN — wymuś refresh chrome żeby is-empty/has-patient
+      // było natychmiast aktualne. Bez tego chip krótko pokazuje domyślny
+      // has-patient (turkusowy gradient) zanim refreshPatientChip wykryje
+      // pusty formularz przez input/change events — wygląda to jak "zielony
+      // przelot" przez SAVED przy clear/lock.
+      try {
+        var vc = global.VildaChrome;
+        if (vc && typeof vc.refreshPatientChip === 'function') {
+          vc.refreshPatientChip();
+        }
+      } catch (_) {}
     }
 
     // Title (krótki tooltip natywny — pokazuje się obok ikony pacjenta na hover)
