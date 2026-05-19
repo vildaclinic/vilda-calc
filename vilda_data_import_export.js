@@ -3923,6 +3923,17 @@
     }
   }
       }
+      // ── Dispatch dla VildaSaveStatusIndicator ──
+      // "Odtwórz zapisany stan" przywraca dane pacjenta, które user widział
+      // poprzednio → wskaźnik traktuje to jako SAVED (kontynuacja pracy).
+      // Bez tego eventu input/change od restore wpychałyby wskaźnik w NEW_PATIENT.
+      try {
+        if (typeof window !== 'undefined' && typeof window.CustomEvent === 'function' && document) {
+          document.dispatchEvent(new window.CustomEvent('vilda:state-restored', {
+            detail: { source: 'restoreLoadedState' }
+          }));
+        }
+      } catch (_) { /* fail-silent */ }
     } catch (_) {
     if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
       globalThis.vildaLogSwallowedCatch('app.js', _, { line: 36471 });

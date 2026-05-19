@@ -60,6 +60,11 @@
   var _refreshTickInterval = null;
   var _debounceTimer = null;
   var _vaultUnlocked = false;
+  // Tłumi vilda:json-imported na 500ms po vilda:patient-loaded. applyLoadedData
+  // (wywoływane przez onPick w vault load) dispatchuje json-imported zawsze, więc
+  // bez tej flagi vault load → race: patient-loaded (SAVED) vs json-imported
+  // (NEW_PATIENT) — niedeterministyczny wynik, najczęściej NEW_PATIENT (fiolet).
+  var _suppressJsonImportedUntil = 0;
 
   // ── Pure functions ─────────────────────────────────────────────
 
@@ -190,6 +195,7 @@
 
   function onUnlock() {
     _vaultUnlocked = true;
+    _suppressJsonImportedUntil = 0; // fresh start — zeruj suppress
     if (global.VildaGuestMode === true) { transition(STATES.HIDDEN); return; }
     if (isFormMostlyEmpty()) {
       _referenceFingerprint = null;
@@ -202,6 +208,7 @@
 
   function onLock() {
     _vaultUnlocked = false;
+    _suppressJsonImportedUntil = 0;
     _referenceFingerprint = null;
     _lastSavedAtISO = null;
     _lastSnapshotCount = null;
@@ -225,6 +232,10 @@
     _lastSnapshotCount = (info && info.snapshotCount) || null;
     _lastPatientName = (info && info.name) || null;
     _lastError = null;
+    // Aktywuj suppress dla json-imported na 500ms — applyLoadedData (wywoływane
+    // w trakcie vault load) dispatchuje też json-imported, który bez suppress
+    // przeskakiwałby nas z SAVED → NEW_PATIENT (fioletowy bug).
+    _suppressJsonImportedUntil = Date.now() + 500;
     if (_debounceTimer) { clearTimeout(_debounceTimer); _debounceTimer = null; }
     setTimeout(function () {
       _referenceFingerprint = computeFormFingerprint();
@@ -233,6 +244,16 @@
   }
 
   function onJsonImportedHandler(info) {
+    // Suppress: jeśli to fragment vault load (applyLoadedData→json-imported tuż
+    // po patient-loaded), zignoruj. Inaczej nadpisalibyśmy SAVED przez NEW_PATIENT.
+    if (Date.now() < _suppressJsonImportedUntil) {
+      try {
+        if (global.console && typeof global.console.debug === 'function') {
+          global.console.debug('[vilda-save-status] json-imported zignorowane (vault load w toku)');
+        }
+      } catch (_) {}
+      return;
+    }
     _lastSavedAtISO = null;
     _lastSnapshotCount = null;
     _lastPatientName = (info && info.name) || null;
@@ -241,6 +262,24 @@
     if (_debounceTimer) { clearTimeout(_debounceTimer); _debounceTimer = null; }
     setTimeout(function () {
       transition(STATES.NEW_PATIENT);
+    }, 150);
+  }
+
+  /**
+   * Handler eventu vilda:state-restored — przycisk "Odtwórz zapisany stan"
+   * przywraca poprzedni stan formularza (np. po wylogowaniu/reload). Z punktu
+   * widzenia user: "to są moje dane, kontynuuję pracę" → SAVED (z aktualną
+   * referencją). Edycja pól po restore → DIRTY, jak normalnie.
+   *
+   * NIE ustawiamy metadanych snapshot (savedAtISO/snapshotCount) — bo to nie
+   * jest snapshot z vault, tylko persisted state formularza.
+   */
+  function onStateRestoredHandler() {
+    _lastError = null;
+    if (_debounceTimer) { clearTimeout(_debounceTimer); _debounceTimer = null; }
+    setTimeout(function () {
+      _referenceFingerprint = computeFormFingerprint();
+      transition(STATES.SAVED);
     }, 150);
   }
 
@@ -365,6 +404,10 @@
     global.document.addEventListener('vilda:json-imported', function (ev) {
       try { onJsonImportedHandler((ev && ev.detail) || {}); } catch (_) {}
     });
+    // Event z vilda_data_import_export po kliknięciu „Odtwórz zapisany stan"
+    global.document.addEventListener('vilda:state-restored', function (ev) {
+      try { onStateRestoredHandler((ev && ev.detail) || {}); } catch (_) {}
+    });
     // Przycisk „Wyczyść wszystkie pola" → HIDDEN.
     // Event dispatched na window (nie document) przez vilda_persistence_adapter.
     if (typeof global.addEventListener === 'function') {
@@ -449,6 +492,7 @@
     _onPatientSaved: onPatientSavedHandler,
     _onPatientLoaded: onPatientLoadedHandler,
     _onJsonImported: onJsonImportedHandler,
+    _onStateRestored: onStateRestoredHandler,
     _onUserStateCleared: onUserStateClearedHandler,
     _onSaveClicked: onSaveClicked,
     _computeFormFingerprint: computeFormFingerprint,
