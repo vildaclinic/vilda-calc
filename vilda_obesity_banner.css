@@ -83,15 +83,25 @@
   transform: translateY(0);
 }
 
-/* Mobile (< 600px) — przycisk pod treścią */
+/* Mobile (< 600px) — ikona + tekst w jednym wierszu, button pod spodem.
+ * Wymuszamy ten układ przez flex: 1 0 100% na buttonie (basis 100% rozpycha
+ * go do nowego wiersza). Ikona zostaje obok contentu dzięki min-width: 0
+ * + flex-shrink na content. */
 @media (max-width: 599px) {
   .vilda-obesity-banner {
     flex-wrap: wrap;
+    align-items: flex-start;
+    padding: 8px 10px;
+  }
+  .vilda-obesity-banner__content {
+    flex: 1 1 0;
+    min-width: 0; /* pozwala zawijać tekst zamiast pchać ikonę do nowego wiersza */
   }
   .vilda-obesity-banner__btn {
+    flex: 1 0 100%;  /* basis 100% → nowy wiersz, pełna szerokość */
     width: 100%;
     justify-content: center;
-    margin-top: 4px;
+    margin-top: 8px;
   }
 }
 

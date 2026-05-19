@@ -5800,14 +5800,33 @@
         // Ustaw wartość selektora i wyrenderuj panel; przewiń do sekcji wskazań.
         suggestSelectEl.value = indicationParam;
         renderSuggestions(indicationParam);
+        // Scroll do sekcji — używamy window.scrollTo z manualnie obliczonym
+        // offsetem (sticky header), bo natywne scrollIntoView({behavior:'smooth'})
+        // jest słabo wspierane na iOS Chrome/Safari (WebKit) i często albo nie
+        // przewija w ogóle, albo nie kompensuje wysokości sticky headera.
+        // Większy delay (400 ms zamiast 150) daje czas renderSuggestions
+        // na zakończenie + layoutowi na ustabilizowanie się na wolniejszych
+        // urządzeniach mobilnych.
         setTimeout(function () {
           try {
             var anchor = suggestSelectEl.closest('section, .lab-card, #suggest-section') || suggestSelectEl;
-            if (anchor && typeof anchor.scrollIntoView === 'function') {
-              anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            if (!anchor) return;
+            var header = document.querySelector('header');
+            var headerH = header ? header.getBoundingClientRect().height : 64;
+            // Dodatkowy gap pod nagłówkiem (na mobile często jest też brand-bar)
+            var gap = 16;
+            var rect = anchor.getBoundingClientRect();
+            var top = Math.round(rect.top + window.pageYOffset - headerH - gap);
+            if (top < 0) top = 0;
+            // window.scrollTo({behavior:'smooth'}) działa na iOS Chrome od 15.4;
+            // fallback do instant scroll dla starszych przeglądarek.
+            try {
+              window.scrollTo({ top: top, behavior: 'smooth' });
+            } catch (e) {
+              window.scrollTo(0, top);
             }
           } catch (_) {}
-        }, 150);
+        }, 400);
       } catch (_) {
         // Cicho ignoruj — deep link jest opcjonalny.
       }
