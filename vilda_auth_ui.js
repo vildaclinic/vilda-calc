@@ -2356,7 +2356,7 @@
     }
 
     if (pomiarStats.length === 0 && growthStats.length === 0) {
-      antroContent.appendChild(el('p', { class: 'vilda-patient-empty-msg', text: 'Brak danych antropometrycznych do wyświetlenia.' }));
+      antroContent.appendChild(el('p', { class: 'vilda-patient-empty-msg', text: 'Brak danych do wyświetlenia.' }));
     }
 
     // ── ZAKŁADKA „Siatki centylowe" — wzrost/waga/BMI ──
@@ -2455,6 +2455,22 @@
             if (!global.confirm(msg)) return;
           }
           onPick(payload);
+          // ── Faza 4: dispatch event dla wskaźnika statusu zapisu ──
+          // VildaSaveStatusIndicator nasłuchuje tego eventu, żeby od razu wejść
+          // w stan SAVED z prawidłowym fingerprintem (zamiast czekać na pierwszą
+          // zmianę formularza i błędnie zaczynać od NEW_PATIENT lub DIRTY).
+          try {
+            if (typeof global.CustomEvent === 'function' && global.document) {
+              global.document.dispatchEvent(new global.CustomEvent('vilda:patient-loaded', {
+                detail: {
+                  patientId: patientId,
+                  savedAtISO: (snap && snap.savedAtISO) || null,
+                  snapshotCount: (patientFull && patientFull.snapshotCount) || allSnapshots.length || null,
+                  name: (payload && payload.name) || null
+                }
+              }));
+            }
+          } catch (_) { /* fail-silent — nie blokuj wczytania pacjenta */ }
           hide();
         }
       });

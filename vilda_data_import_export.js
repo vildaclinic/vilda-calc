@@ -3130,6 +3130,20 @@
           } catch (error) {
             logSwallowed('vilda_data_import_export:applyLoadedData:persist-flush', error);
           }
+          // ── Faza 5: dispatch event dla wskaźnika statusu zapisu ──
+          // VildaSaveStatusIndicator nasłuchuje i przechodzi w NEW_PATIENT —
+          // plik JSON to NIE snapshot w vault. User musi kliknąć „Zapisz dane",
+          // żeby utworzyć kartę pacjenta dla tych danych w karcie pacjenta.
+          try {
+            if (typeof global.CustomEvent === 'function' && global.document) {
+              global.document.dispatchEvent(new global.CustomEvent('vilda:json-imported', {
+                detail: {
+                  name: (data && data.name) || null,
+                  source: opts.source || 'json-import'
+                }
+              }));
+            }
+          } catch (_) { /* fail-silent — nie blokuj importu */ }
         }, 0);
       } catch (error) {
         logSwallowed('vilda_data_import_export:applyLoadedData:persist-flush-timeout', error);

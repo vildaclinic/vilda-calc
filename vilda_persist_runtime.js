@@ -1138,6 +1138,46 @@ if (hasIntakeModule) {
   }
   }, true);
 
+  // ── Ochrona PII przy nagłym zamknięciu okna (audyt — Opcja A) ──────────
+  // Gdy okno zamyka się BEZ wykonania normalnego lock (crash przeglądarki,
+  // wymuszone zamknięcie laptopa, kill -9 procesu), listener onLock z
+  // vilda_auth_ui.js nie zdąży uruchomić clearAllData() i pole `name` pacjenta
+  // zostaje w plaintext w localStorage.sharedUserData. Ten helper sprawdza
+  // stan vault i — jeśli zalokowany lub brak (tryb gość) — usuwa name/fullName/
+  // nameLocked z sharedUserData. Wywoływany PO flushPersistNow w listenerach
+  // lifecycle, więc nadpisuje wynik flushu (kolejność deterministyczna w obrębie
+  // tego samego dispatch tick).
+  //
+  // Gdy vault jest UNLOCKED, helper no-opuje. Feature inter-page persistence
+  // pola name (userData.js + custom-fixes.js — przenoszenie imienia między
+  // index.html / docpro.html / kalkulator-klirens.html w aktywnej sesji)
+  // działa bez zmian. Ochrona dotyczy wyłącznie scenariusza „vault zalokowany
+  // lub trybu gość przy zamykaniu okna".
+  function clearLockedNameInShared(source) {
+    try {
+      var V = (typeof window !== 'undefined') ? window.VildaVault : null;
+      var unlocked = !!(V && typeof V.isUnlocked === 'function' && V.isUnlocked());
+      if (unlocked) return; // vault aktywny — feature inter-page persistence name zostaje
+      if (typeof window === 'undefined' || !window.localStorage) return;
+      var raw = window.localStorage.getItem('sharedUserData');
+      if (!raw) return;
+      var data;
+      try { data = JSON.parse(raw); } catch (_) { return; }
+      if (!data || typeof data !== 'object') return;
+      if (data.name == null && data.fullName == null && data.nameLocked == null) return;
+      delete data.name;
+      delete data.fullName;
+      delete data.nameLocked;
+      try {
+        window.localStorage.setItem('sharedUserData', JSON.stringify(data));
+      } catch (writeErr) {
+        vildaLogAppError('app:persistence', 'Błąd usunięcia name z sharedUserData (' + (source || '') + ')', writeErr);
+      }
+    } catch (error) {
+      try { vildaLogAppError('app:persistence', 'Błąd clearLockedNameInShared (' + (source || '') + ')', error); } catch (_) {}
+    }
+  }
+
   try {
     if (typeof window !== 'undefined') {
       window.vildaPersistScheduleSave = scheduleSave;
@@ -1148,18 +1188,23 @@ if (hasIntakeModule) {
       window.vildaPersistRestoreAll = restoreAll;
       window.addEventListener('pagehide', function () {
         try { flushPersistNow({ force: true }); } catch (error) { vildaLogAppError('app:persistence', 'Błąd flushPersistNow przy pagehide', error); }
+        clearLockedNameInShared('pagehide');
       }, true);
       window.addEventListener('beforeunload', function () {
         try { flushPersistNow({ force: true }); } catch (error) { vildaLogAppError('app:persistence', 'Błąd flushPersistNow przy beforeunload', error); }
+        clearLockedNameInShared('beforeunload');
       }, true);
     }
     if (typeof document !== 'undefined') {
       document.addEventListener('visibilitychange', function () {
+        var isHidden = false;
         try {
-          if (document.visibilityState === 'hidden') flushPersistNow({ force: true });
+          isHidden = (document.visibilityState === 'hidden');
+          if (isHidden) flushPersistNow({ force: true });
         } catch (error) {
           vildaLogAppError('app:persistence', 'Błąd flushPersistNow przy visibilitychange', error);
         }
+        if (isHidden) clearLockedNameInShared('visibilitychange-hidden');
       }, true);
     }
   } catch (error) {
