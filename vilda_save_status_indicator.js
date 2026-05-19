@@ -305,34 +305,29 @@
     var chip = global.document.getElementById('vildaPatientChip');
     if (!chip) return; // chrome-strip jeszcze nie wyrenderowany — retry przy następnej transition
 
-    // ATOMICZNA zmiana className — w jednym tick podmieniamy całą wartość
-    // class. Bez tego classList.remove + classList.add to DWIE operacje
-    // i przeglądarka może wyrenderować chwilowy stan między nimi (chip tylko
-    // z has-patient turkusowym gradientem, który wygląda jak "zielony przelot").
+    // ATOMICZNA zmiana className — ZAWSZE ustawiamy klasę vilda-save-state--<state>
+    // (włącznie z hidden). To eliminuje "zielony przelot" bo nasz CSS z !important
+    // ZAWSZE decyduje o kolorze chip-icon — nigdy nie polegamy na bazowym
+    // has-patient (turkus #00838d→#00b0a6 wyglądający jak zielony) z chrome.css.
+    //
+    // Wcześniejsze podejście "HIDDEN = brak klasy stanu, chrome decyduje" miało
+    // race condition: VildaSession.getPatient() czyta dane formularza ZANIM
+    // clearAllData je wyczyści — refreshPatientChip zostawia has-patient
+    // i chip pokazuje turkus do następnego ticka. Tu eliminujemy ten problem
+    // u źródła — chip ZAWSZE pokazuje kolor naszego stanu, niezależnie od
+    // tego co myśli chrome.
     var currentClasses = (chip.className || '').split(/\s+/);
     var newClasses = [];
     for (var i = 0; i < currentClasses.length; i++) {
       var c = currentClasses[i];
       if (c && c.indexOf('vilda-save-state--') !== 0) newClasses.push(c);
     }
-    if (_state && _state !== STATES.HIDDEN) {
+    if (_state) {
       newClasses.push('vilda-save-state--' + _state);
     }
     var newClassName = newClasses.join(' ');
     if (chip.className !== newClassName) {
       chip.className = newClassName; // single atomic write
-    }
-    if (_state === STATES.HIDDEN) {
-      // Przejście do HIDDEN — wymuś refresh chrome żeby is-empty/has-patient
-      // było natychmiast aktualne. Bez tego chip krótko pokazuje domyślny
-      // has-patient (turkusowy gradient) zanim refreshPatientChip wykryje
-      // pusty formularz przez input/change events.
-      try {
-        var vc = global.VildaChrome;
-        if (vc && typeof vc.refreshPatientChip === 'function') {
-          vc.refreshPatientChip();
-        }
-      } catch (_) {}
     }
 
     // Title (krótki tooltip natywny — pokazuje się obok ikony pacjenta na hover)
