@@ -486,51 +486,12 @@
     }
     // Usunięto wiersz "Do normy BMI" – nie pokazujemy tego parametru ani jego zmian.
 
-    // Faza 14 — integracja z panelem diagnostycznym otyłości u dzieci.
-    // Gdy pacjent jest dzieckiem (< 18. r.ż.) i wskaźniki sugerują nadwagę
-    // lub otyłość (BMI percentyl ≥ 85, lub wskaźnik Cole'a ≥ 110, lub waga
-    // ≥ 90. percentyla), pokaż dyskretny link do panelu obesity_kids
-    // w „Przeliczniku jednostek laboratoryjnych".
-    try {
-      if (!isAdult && ageMonths != null) {
-        const isOverweightOrObese =
-          (bmiPerc != null && bmiPerc >= 85) ||
-          (cole != null && cole >= 110) ||
-          (weightPerc != null && weightPerc >= 90);
-        if (isOverweightOrObese) {
-          const ageYears = (ageMonths / 12);
-          const sexLabel = (sex === 'M') ? 'chłopca' : (sex === 'F' ? 'dziewczynki' : 'dziecka');
-          // Krótki tekst kontekstu wg wieku
-          let suggestedTests;
-          if (ageYears < 5) {
-            suggestedTests = 'TSH, 25-OHD; konsultacja genetyczna (MC4R, zespół Pradera-Williego)';
-          } else if (ageYears < 10) {
-            suggestedTests = 'TSH, 25-OHD, glukoza na czczo, lipidogram, ALT/AST (skrining MASLD)';
-          } else {
-            suggestedTests = 'TSH, 25-OHD, oGTT 75 g lub HbA1c, lipidogram, ALT/AST, ciśnienie tętnicze';
-          }
-          // Zbuduj baner; kotwica otwiera panel obesity_kids w nowej karcie.
-          const banner = `
-            <div class="lab-obesity-kids-banner" style="grid-column: 1 / -1; margin-top: 0.75rem; padding: 0.75rem 1rem; border-left: 4px solid var(--color-warning, #f59e0b); background: rgba(245, 158, 11, 0.08); border-radius: 6px; font-size: 0.95rem; line-height: 1.5;">
-              <div style="font-weight: 600; margin-bottom: 0.35rem;">
-                Wskaźniki sugerują nadwagę lub otyłość u ${sexLabel}.
-              </div>
-              <div style="margin-bottom: 0.5rem; color: var(--color-text-muted, #6b7280);">
-                Zalecane badania pierwszego rzutu (wiek ${ageYears.toFixed(1).replace('.', ',')} lat): ${suggestedTests}.
-              </div>
-              <a href="przelicznik-jednostek.html?wskazanie=obesity_kids" target="_blank" rel="noopener" style="display: inline-block; padding: 0.4rem 0.85rem; background: var(--color-primary, #2563eb); color: #fff; text-decoration: none; border-radius: 5px; font-weight: 500; font-size: 0.9rem;">
-                Otwórz panel diagnostyczny otyłości u dziecka →
-              </a>
-            </div>
-          `;
-          rows.push(banner);
-        }
-      }
-    } catch (_) {
-      if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-        globalThis.vildaLogSwallowedCatch('vilda_summary_cards.js', _, { context: 'obesity_kids_banner' });
-      }
-    }
+    // Faza 14 — duplikat baneru obesity_kids USUNIĘTY z karty "Ostatni pomiar".
+    // Baner pozostaje tylko w karcie Wskaźnik Cole'a (#coleObesityKidsBanner
+    // generowany przez vildaUpdatePrepRenderColeMetrics w vilda_update_prep.js,
+    // styling: vilda_obesity_banner.css). W karcie "Ostatni pomiar" baner był
+    // postrzegany jako szum — user widzi już wszystkie wskaźniki w głównej
+    // karcie + dedykowanej karcie Cole'a.
 
     // Insert into DOM
     vildaAppSetTrustedHtml(content, rows.join(''), 'app:content');

@@ -3438,16 +3438,31 @@ function vildaUpdatePrepRenderColeMetrics(context, options = {}, elements) {
           suggestedTests = 'TSH, 25-OHD, oGTT 75 g lub HbA1c, lipidogram, ALT/AST, ciśnienie tętnicze';
         }
         const ageStr = ageYears > 0 ? ageYears.toFixed(1).replace('.', ',') : '?';
+        const kindLabel = (state.coleCat === 'Nadwaga') ? 'nadwaga' : 'otyłość';
+        // Koncepcja C — Glass mini-card (vilda_obesity_banner.css). Klasy CSS
+        // zamiast inline styles. Link otwiera w tym samym oknie (bez target=_blank).
+        // Lista zalecanych badań przeniesiona do `title` (tooltip natywny) —
+        // pełna lista dostępna w panelu diagnostycznym po kliknięciu.
+        const titleAttr = 'Zalecane badania pierwszego rzutu (wiek ' + ageStr + ' lat): ' + suggestedTests + '.';
         const bannerHtml = '' +
-          '<div style="margin-top: 0.75rem; padding: 0.75rem 1rem; border-left: 4px solid #f59e0b; background: rgba(245, 158, 11, 0.08); border-radius: 6px; font-size: 0.95rem; line-height: 1.5;">' +
-            '<div style="font-weight: 600; margin-bottom: 0.35rem;">' +
-              'Wskaźnik Cole’a sugeruje ' + (state.coleCat === 'Nadwaga' ? 'nadwagę' : 'otyłość') + ' u ' + sexLabel + '.' +
+          '<div class="vilda-obesity-banner" title="' + titleAttr.replace(/"/g, '&quot;') + '">' +
+            '<span class="vilda-obesity-banner__icon" aria-hidden="true">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">' +
+                '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>' +
+                '<line x1="12" y1="9" x2="12" y2="13"/>' +
+                '<line x1="12" y1="17" x2="12.01" y2="17"/>' +
+              '</svg>' +
+            '</span>' +
+            '<div class="vilda-obesity-banner__content">' +
+              '<div class="vilda-obesity-banner__title">' +
+                'Sugerowana ' + kindLabel + ' u ' + sexLabel + ' (' + ageStr + ' lat)' +
+              '</div>' +
+              '<div class="vilda-obesity-banner__sub">' +
+                'Badania pierwszego rzutu w panelu diagnostycznym' +
+              '</div>' +
             '</div>' +
-            '<div style="margin-bottom: 0.5rem; color: #6b7280;">' +
-              'Zalecane badania pierwszego rzutu (wiek ' + ageStr + ' lat): ' + suggestedTests + '.' +
-            '</div>' +
-            '<a href="przelicznik-jednostek.html?wskazanie=obesity_kids" target="_blank" rel="noopener" style="display: inline-block; padding: 0.4rem 0.85rem; background: #2563eb; color: #fff; text-decoration: none; border-radius: 5px; font-weight: 500; font-size: 0.9rem;">' +
-              'Otwórz panel diagnostyczny otyłości u dziecka →' +
+            '<a href="przelicznik-jednostek.html?wskazanie=obesity_kids" class="vilda-obesity-banner__btn">' +
+              'Otwórz panel →' +
             '</a>' +
           '</div>';
         vildaAppSetTrustedHtml(banner, bannerHtml, 'app:coleObesityKidsBanner');
