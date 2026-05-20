@@ -321,6 +321,20 @@
   background: linear-gradient(135deg, var(--primary, #00838d), var(--secondary, #00b0a6));
   color: #fff;
 }
+/* Avatar + nazwa konta klikalne (zalogowany) → ustawienia konta. */
+.chrome-user-chip.is-logged-in .chip-avatar,
+.chrome-user-chip.is-logged-in .chip-value {
+  cursor: pointer;
+}
+.chrome-user-chip.is-logged-in .chip-value:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.chrome-user-chip.is-logged-in .chip-value:focus-visible {
+  outline: 2px solid var(--primary, #00838d);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
 
 /* Przycisk wyloguj/zaloguj — bez własnej pastylki, ikona-only, wbudowany
    w prawą krawędź user-chipa. Nie wchodzi wizualnie na avatar i tekst chipa. */
