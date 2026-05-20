@@ -5754,25 +5754,24 @@
     // klawiatura wyskakuje, viewport reflowuje (~300px), dropdown przesuwa
     // się w górę, a click/mousedown trafia w sąsiedni item.
     //
-    // OPCJA Y fix:
-    //   1. mousedown + e.preventDefault() — blokuje natural focus shift
-    //      i utrzymuje stabilny viewport (oryginalny pattern, ale teraz wiemy
-    //      DLACZEGO działa — keeping viewport stable, nie tylko "no blur").
-    //   2. touchstart + e.preventDefault() — iOS-specific defense, blokuje
-    //      focus management ZANIM mousedown w ogóle się odpali (touchstart
-    //      jest pierwszy w sekwencji eventów na touch).
-    //   3. inputmode="none" na touch device — klawiatura ekranowa NIGDY nie
+    // OPCJA Y fix (po iteracji):
+    //   1. mousedown + e.preventDefault() na items — blokuje natural focus
+    //      shift i utrzymuje stabilny viewport (oryginalny pattern, ale teraz
+    //      wiemy DLACZEGO działa — keeping viewport stable, nie tylko "no blur").
+    //   2. inputmode="none" na touch device — klawiatura ekranowa NIGDY nie
     //      wyskakuje przy focus na inpucie, eliminując root cause u źródła.
     //      Patrz handler `substanceEl.addEventListener('focus', ...)`.
+    //
+    // UWAGA: NIE używamy touchstart.preventDefault — to całkowicie blokuje
+    // scroll listy i tap-to-select (klasyczny iOS quirk). mousedown z
+    // preventDefault wystarczy do utrzymania focusu, a inputmode="none"
+    // dodatkowo blokuje klawiaturę u źródła.
     if (substanceDropdownEl) {
-      // Touch defense — przechwytuj touchstart na items ZANIM mousedown odpali.
-      // passive: false bo musimy preventDefault.
-      substanceDropdownEl.addEventListener('touchstart', function (e) {
-        var opt = e.target && e.target.closest ? e.target.closest('.lab-substance-option') : null;
-        if (!opt) return;
-        e.preventDefault(); // blokuje focus shift / klawiaturę
-      }, { passive: false });
-
+      // UWAGA: NIE używamy touchstart.preventDefault na items — to blokuje
+      // wszystkie touch interakcje (scroll listy + tap-to-select). iOS treat
+      // touchstart.preventDefault() jako "ta strona blokuje natywny touch
+      // handling", co kompletnie unieruchamia listę.
+      // Klawiaturę kontrolujemy przez inputmode="none" (Opcja Y core).
       substanceDropdownEl.addEventListener('mousedown', function (e) {
         var opt = e.target && e.target.closest ? e.target.closest('.lab-substance-option') : null;
         if (!opt) return;
