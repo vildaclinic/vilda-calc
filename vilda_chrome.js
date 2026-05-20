@@ -343,12 +343,13 @@
       '        <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>',
       '      </svg>',
       '    </a>',
-      '    <div class="chrome-chip chrome-patient-chip is-empty" id="vildaPatientChip" aria-live="polite">',
+      '    <div class="chrome-chip chrome-patient-chip is-empty" id="vildaPatientChip" aria-live="polite" role="button" tabindex="0" aria-haspopup="dialog" aria-expanded="false" title="Status zapisu — kliknij, aby zobaczyć legendę">',
       '      <span class="chip-icon" data-lucide="user-round" aria-hidden="true"></span>',
       '      <span class="chip-content">',
       '        <span class="chip-label">Pacjent</span>',
       '        <span class="chip-value" id="vildaPatientValue">—</span>',
       '      </span>',
+      '      <span class="chrome-chip-caret" aria-hidden="true">▾</span>',
       '    </div>',
       '    <div class="chrome-chip chrome-user-chip is-loading" id="vildaUserChip" aria-live="polite">',
       '      <span class="chip-avatar" id="vildaUserAvatar" aria-hidden="true">…</span>',
@@ -683,6 +684,36 @@
         try { global.location.href = 'ustawienia.html#settings-section-account'; } catch (_) {}
       }
     }
+    // Patient chip → toggle popover legendy statusu zapisu.
+    var patientChipEl = header.querySelector('#vildaPatientChip');
+    if (patientChipEl) {
+      patientChipEl.addEventListener('click', function (e) {
+        e.stopPropagation(); // żeby document-click (close) nie odpalił od razu
+        toggleSavePopover();
+      });
+      patientChipEl.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+          e.preventDefault();
+          toggleSavePopover();
+        }
+      });
+    }
+    // Klik poza popoverem → zamknij.
+    doc.addEventListener('click', function (e) {
+      if (!_savePopoverOpen) return;
+      if (_savePopoverEl && _savePopoverEl.contains(e.target)) return;
+      var pc = doc.getElementById('vildaPatientChip');
+      if (pc && pc.contains(e.target)) return;
+      closeSavePopover();
+    });
+    // Esc → zamknij.
+    doc.addEventListener('keydown', function (e) {
+      if ((e.key === 'Escape' || e.key === 'Esc') && _savePopoverOpen) closeSavePopover();
+    });
+    // Reposition przy scroll/resize.
+    global.addEventListener('resize', function () { if (_savePopoverOpen) positionSavePopover(); });
+    global.addEventListener('scroll', function () { if (_savePopoverOpen) positionSavePopover(); }, true);
+
     var userAvatar = header.querySelector('#vildaUserAvatar');
     var userValue = header.querySelector('#vildaUserValue');
     if (userAvatar) userAvatar.addEventListener('click', onUserChipNavigate);
@@ -723,6 +754,140 @@
     drawer.hidden = true;
     drawer.setAttribute('aria-hidden', 'true');
     doc.body.classList.remove('chrome-drawer-open');
+  }
+
+  // ============ POPOVER LEGENDA STATUSU ZAPISU ============
+  // Otwierany po kliknięciu w patient chip. Hero (aktualny stan + szczegóły)
+  // + legenda pozostałych stanów. Czyta stan z window.VildaSaveStatusIndicator.
+  var SAVE_STATE_INFO = {
+    saved:       { c1:'#15803d', c2:'#22c55e', name:'Zapisane',          desc:'wszystko w karcie pacjenta jest aktualne',
+                   heroBg:'linear-gradient(135deg, rgba(34,197,94,0.14), rgba(21,128,61,0.05))',
+                   icon:'<polyline points="20 6 9 17 4 12"/>' },
+    dirty:       { c1:'#b45309', c2:'#f59e0b', name:'Niezapisane zmiany', desc:'kliknij „Zapisz dane", aby zapisać snapshot',
+                   heroBg:'linear-gradient(135deg, rgba(245,158,11,0.16), rgba(180,83,9,0.05))',
+                   icon:'<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>' },
+    new_patient: { c1:'#6d28d9', c2:'#a855f7', name:'Nowy pacjent',       desc:'brak snapshotu — zapisz, aby utworzyć kartę',
+                   heroBg:'linear-gradient(135deg, rgba(168,85,247,0.16), rgba(109,40,217,0.05))',
+                   icon:'<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/>' },
+    saving:      { c1:'#1d4ed8', c2:'#3b82f6', name:'Zapisywanie…',       desc:'trwa zapis snapshotu do vault',
+                   heroBg:'linear-gradient(135deg, rgba(59,130,246,0.16), rgba(29,78,216,0.05))',
+                   icon:'<path d="M21 12a9 9 0 1 1-6.219-8.56"/>' },
+    error:       { c1:'#b91c1c', c2:'#ef4444', name:'Błąd zapisu',        desc:'spróbuj ponownie — kliknij „Zapisz dane"',
+                   heroBg:'linear-gradient(135deg, rgba(239,68,68,0.16), rgba(185,28,28,0.05))',
+                   icon:'<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>' },
+    hidden:      { c1:'#5f7274', c2:'#9eb8bb', name:'Brak danych pacjenta', desc:'wpisz dane pacjenta, aby rozpocząć',
+                   heroBg:'linear-gradient(135deg, rgba(158,184,187,0.18), rgba(95,114,116,0.05))',
+                   icon:'<circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/>' }
+  };
+  var SAVE_STATE_ORDER = ['saved', 'dirty', 'new_patient', 'saving', 'error'];
+
+  var _savePopoverEl = null;
+  var _savePopoverOpen = false;
+
+  function escHtmlPop(s) {
+    return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function buildSaveStatusPopoverHtml() {
+    var SSI = global.VildaSaveStatusIndicator;
+    var state = (SSI && typeof SSI.getState === 'function') ? SSI.getState() : 'hidden';
+    if (!SAVE_STATE_INFO[state]) state = 'hidden';
+    var cur = SAVE_STATE_INFO[state];
+
+    // Hero subtitle — dla SAVED pokazuj snapshot/czas, dla reszty opis stanu.
+    var sub = cur.desc;
+    if (SSI && state === 'saved') {
+      var iso = (typeof SSI.getLastSavedAtISO === 'function') ? SSI.getLastSavedAtISO() : null;
+      var cnt = (typeof SSI.getLastSnapshotCount === 'function') ? SSI.getLastSnapshotCount() : null;
+      var bits = [];
+      if (cnt) bits.push('Snapshot #' + cnt);
+      if (iso && typeof SSI._relativeTime === 'function') bits.push(SSI._relativeTime(iso));
+      sub = bits.length ? bits.join(' · ') : 'Dane są aktualne';
+    }
+
+    var heroIc = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + cur.icon + '</svg>';
+    var hero = '' +
+      '<div class="vsp-hero" style="background:' + cur.heroBg + '">' +
+        '<span class="vsp-hero-ic" style="background:linear-gradient(135deg,' + cur.c1 + ',' + cur.c2 + ')">' + heroIc + '</span>' +
+        '<span class="vsp-hero-txt">' +
+          '<span class="vsp-hero-title" style="color:' + cur.c1 + '">' + escHtmlPop(cur.name) + '</span>' +
+          '<span class="vsp-hero-sub">' + escHtmlPop(sub) + '</span>' +
+        '</span>' +
+      '</div>';
+
+    var legend = '<div class="vsp-legend-head">Pozostałe stany</div><div class="vsp-legend">';
+    for (var i = 0; i < SAVE_STATE_ORDER.length; i++) {
+      var k = SAVE_STATE_ORDER[i];
+      if (k === state) continue;
+      var info = SAVE_STATE_INFO[k];
+      legend += '<div class="vsp-row">' +
+        '<span class="vsp-dot" style="background:linear-gradient(135deg,' + info.c1 + ',' + info.c2 + ')"></span>' +
+        '<span class="vsp-name">' + escHtmlPop(info.name) + '</span>' +
+      '</div>';
+    }
+    legend += '</div>';
+
+    return hero + legend;
+  }
+
+  function ensureSavePopover() {
+    if (_savePopoverEl && _savePopoverEl.parentNode) return;
+    _savePopoverEl = doc.createElement('div');
+    _savePopoverEl.className = 'vilda-save-popover';
+    _savePopoverEl.setAttribute('role', 'dialog');
+    _savePopoverEl.setAttribute('aria-label', 'Status zapisu danych pacjenta');
+    _savePopoverEl.hidden = true;
+    doc.body.appendChild(_savePopoverEl);
+  }
+
+  function positionSavePopover() {
+    var chip = doc.getElementById('vildaPatientChip');
+    if (!chip || !_savePopoverEl) return;
+    var rect = chip.getBoundingClientRect();
+    var vw = global.innerWidth || (doc.documentElement && doc.documentElement.clientWidth) || 360;
+    var popW = _savePopoverEl.offsetWidth || 290;
+    var top = rect.bottom + 8;
+    var right = vw - rect.right;
+    if (right < 8) right = 8;
+    // Klamp lewej krawędzi
+    if (vw - right - popW < 8) right = Math.max(8, vw - popW - 8);
+    _savePopoverEl.style.top = top + 'px';
+    _savePopoverEl.style.right = right + 'px';
+    _savePopoverEl.style.left = 'auto';
+  }
+
+  function openSavePopover() {
+    ensureSavePopover();
+    if (!_savePopoverEl) return;
+    _savePopoverEl.innerHTML = buildSaveStatusPopoverHtml();
+    _savePopoverEl.hidden = false;
+    positionSavePopover();
+    if (typeof global.requestAnimationFrame === 'function') {
+      global.requestAnimationFrame(function () {
+        if (_savePopoverEl) _savePopoverEl.classList.add('is-visible');
+      });
+    } else {
+      _savePopoverEl.classList.add('is-visible');
+    }
+    _savePopoverOpen = true;
+    var chip = doc.getElementById('vildaPatientChip');
+    if (chip) chip.setAttribute('aria-expanded', 'true');
+  }
+
+  function closeSavePopover() {
+    if (!_savePopoverEl) return;
+    _savePopoverEl.classList.remove('is-visible');
+    _savePopoverOpen = false;
+    var chip = doc.getElementById('vildaPatientChip');
+    if (chip) chip.setAttribute('aria-expanded', 'false');
+    setTimeout(function () {
+      if (_savePopoverEl && !_savePopoverOpen) _savePopoverEl.hidden = true;
+    }, 180);
+  }
+
+  function toggleSavePopover() {
+    if (_savePopoverOpen) closeSavePopover(); else openSavePopover();
   }
 
   // ============ USER CHIP ============
