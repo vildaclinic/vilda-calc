@@ -1,7 +1,8 @@
 /**
  * vilda_save_status_indicator.js — Wskaźnik statusu zapisu danych pacjenta.
  *
- * Wersja: 0.7 (pivot na chrome-patient-chip — bez własnego DOM)
+ * Wersja: 0.8 (trwała referencja w sessionStorage + kanoniczny page-independent
+ *   fingerprint — naprawia fałszywy SAVED po nawigacji między podstronami i reloadzie)
  *
  * Cel: pokazać użytkownikowi, czy aktualny stan formularza odpowiada ostatniemu
  * zapisanemu snapshotowi w vault. Zamiast wstawiać własny pill, kolorujemy
@@ -78,10 +79,154 @@
     } catch (_) { return null; }
   }
 
+  // ── Kanoniczny fingerprint (page-independent) ─────────────────────
+  // PROBLEM (sprzed v0.8): _referenceFingerprint był liczony z collectUserData(),
+  // które czyta WYŁĄCZNIE z DOM bieżącej strony. Na podstronach (np. klirens)
+  // brakuje pól z głównej, więc fingerprint był nieporównywalny między stronami,
+  // a onUnlock brał bieżący stan jako „zapisany" → fałszywy SAVED po nawigacji.
+  //
+  // ROZWIĄZANIE: licz fingerprint z page-niezależnego źródła kanonicznego:
+  //   • główna/docpro (pełny formularz obecny) → live collectUserData (dokładne),
+  //   • podstrony (klirens) → VildaPersistence.readMainSession() (sessionStorage,
+  //     ten sam snapshot zapisany przez główną, przeżywa nawigację i reload),
+  //   • clcr zawsze z readClcrSession() (page-independent), by edycje na klirensie
+  //     też były wykrywane jako zmiana.
+
+  function stripVolatile(obj) {
+    if (!obj || typeof obj !== 'object') return obj;
+    var c;
+    try { c = JSON.parse(JSON.stringify(obj)); } catch (_) { return obj; }
+    delete c.timestampISO;
+    delete c.timestamp;
+    delete c.version;
+    return c;
+  }
+
+  function readCanonicalClcr() {
+    var P = global.VildaPersistence;
+    try {
+      if (P && typeof P.readClcrSession === 'function') return P.readClcrSession();
+    } catch (_) {}
+    return null;
+  }
+
+  function clcrHasValue(clcr) {
+    if (!clcr || typeof clcr !== 'object') return false;
+    return Object.keys(clcr).some(function (k) {
+      if (k === 'timestampISO' || k === 'timestamp' || k === 'version') return false;
+      var v = clcr[k];
+      if (v == null || v === '') return false;
+      if (typeof v === 'number') return isFinite(v) && v !== 0;
+      if (typeof v === 'boolean') return v === true;
+      if (typeof v === 'string') return v.trim().length > 0;
+      return true;
+    });
+  }
+
   /**
-   * Heurystyka „formularz pusty" — wystarczy imię ALBO pomiar.
+   * Kanoniczny rdzeń pacjenta — page-independent.
+   * Preferuje live collectUserData, gdy bieżąca strona ma pełny formularz
+   * (hasMeaningfulMainSessionData). Inaczej sięga po main session z sessionStorage.
+   */
+  function readCanonicalCore() {
+    // 1) Strona z pełnym formularzem (główna/docpro): collectUserData jest live i pełne.
+    if (typeof global.collectUserData === 'function'
+        && typeof global.hasMeaningfulMainSessionData === 'function') {
+      try {
+        var live = global.collectUserData({ source: 'save-status-canonical' });
+        if (live && global.hasMeaningfulMainSessionData(live)) {
+          return stripVolatile(live);
+        }
+      } catch (_) {}
+    }
+    // 2) Podstrona bez pełnego formularza (klirens): kanoniczny main session.
+    var P = global.VildaPersistence;
+    try {
+      if (P && typeof P.readMainSession === 'function') {
+        var main = P.readMainSession();
+        if (main && typeof main === 'object') return stripVolatile(main);
+      }
+    } catch (_) {}
+    // 3) Fallback (headless / przed pierwszym autosave): live collectUserData.
+    if (typeof global.collectUserData === 'function') {
+      try { return stripVolatile(global.collectUserData({ source: 'save-status-canonical-fallback' })); }
+      catch (_) {}
+    }
+    return null;
+  }
+
+  function computeCanonicalFingerprint() {
+    var core = readCanonicalCore();
+    if (core == null) return null;
+    // clcr trzymamy osobno (page-independent), usuwamy z core by nie liczyć podwójnie.
+    if (core && typeof core === 'object' && core.clcr !== undefined) {
+      try { delete core.clcr; } catch (_) {}
+    }
+    var clcr = readCanonicalClcr();
+    var payload = { core: core, clcr: clcr ? stripVolatile(clcr) : null };
+    try { return JSON.stringify(payload); } catch (_) { return null; }
+  }
+
+  // ── Trwała referencja (sessionStorage, przeżywa nawigację + reload) ──
+  // Zapisujemy fingerprint ostatniego PRAWDZIWEGO zapisu/wczytania z vault,
+  // żeby każda świeżo załadowana podstrona porównywała się do tej samej
+  // referencji zamiast brać bieżący stan jako „zapisany".
+  var REF_KEY = 'vilda-save-ref-v1';
+  var _memRef = null; // fallback gdy sessionStorage niedostępne (headless/test)
+
+  function readPersistedRef() {
+    try {
+      var ss = global.sessionStorage;
+      if (!ss) return _memRef;
+      var raw = ss.getItem(REF_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch (_) { return _memRef; }
+  }
+
+  function writePersistedRef(rec) {
+    _memRef = rec || null;
+    try {
+      var ss = global.sessionStorage;
+      if (!ss) return;
+      if (rec) ss.setItem(REF_KEY, JSON.stringify(rec));
+      else ss.removeItem(REF_KEY);
+    } catch (_) {}
+  }
+
+  function persistRef() {
+    writePersistedRef(_referenceFingerprint ? {
+      fp: _referenceFingerprint,
+      savedAtISO: _lastSavedAtISO || null,
+      snapshotCount: _lastSnapshotCount || null,
+      patientName: _lastPatientName || null
+    } : null);
+  }
+
+  function clearRef() {
+    _referenceFingerprint = null;
+    writePersistedRef(null);
+  }
+
+  /**
+   * Heurystyka „formularz pusty" — page-independent.
+   * Sprawdza kanoniczny main session (sessionStorage) + clcr, a dopiero w
+   * ostateczności bieżący DOM (collectUserData) — bo na podstronach DOM nie ma
+   * pól pacjenta z głównej.
    */
   function isFormMostlyEmpty() {
+    // 1) Kanoniczny main session (page-independent).
+    var P = global.VildaPersistence;
+    try {
+      if (P && typeof P.readMainSession === 'function'
+          && typeof global.hasMeaningfulMainSessionData === 'function') {
+        var main = P.readMainSession();
+        if (main && global.hasMeaningfulMainSessionData(main)) return false;
+      }
+    } catch (_) {}
+    // 2) clcr (page-independent).
+    if (clcrHasValue(readCanonicalClcr())) return false;
+    // 3) Fallback: bieżący DOM (główna przed autosave / headless).
     if (typeof global.collectUserData !== 'function') return true;
     try {
       var data = global.collectUserData({ source: 'save-status-indicator-empty-check' });
@@ -166,7 +311,7 @@
     if (!_vaultUnlocked) return;
     if (_state === STATES.HIDDEN) {
       if (!isFormMostlyEmpty()) {
-        _referenceFingerprint = null;
+        clearRef(); // nowy pacjent od zera — porzuć ewentualną nieaktualną referencję
         transition(STATES.NEW_PATIENT);
       }
       return;
@@ -179,7 +324,7 @@
       }
       return;
     }
-    var current = computeFormFingerprint();
+    var current = computeCanonicalFingerprint();
     if (current === null) return;
     if (current === _referenceFingerprint) {
       if (_state !== STATES.SAVED) transition(STATES.SAVED);
@@ -193,23 +338,52 @@
     _debounceTimer = setTimeout(onFormChange, 250);
   }
 
-  function onUnlock() {
-    _vaultUnlocked = true;
-    _suppressJsonImportedUntil = 0; // fresh start — zeruj suppress
+  /**
+   * Wspólna logika ustalenia stanu na podstawie TRWAŁEJ referencji (sessionStorage)
+   * i bieżącego kanonicznego fingerprintu. Używana przez onUnlock (każda podstrona)
+   * oraz onStateRestored. Eliminuje fałszywy SAVED po nawigacji/reloadzie — moduł
+   * nie zakłada już, że „formularz ma dane ⇒ zapisane".
+   */
+  function reconcileState() {
     if (global.VildaGuestMode === true) { transition(STATES.HIDDEN); return; }
-    if (isFormMostlyEmpty()) {
+    var ref = readPersistedRef();
+    if (ref && ref.fp) {
+      _referenceFingerprint = ref.fp;
+      _lastSavedAtISO = ref.savedAtISO || null;
+      _lastSnapshotCount = ref.snapshotCount || null;
+      _lastPatientName = ref.patientName || _lastPatientName;
+    } else {
       _referenceFingerprint = null;
+    }
+    if (isFormMostlyEmpty()) {
       transition(STATES.HIDDEN);
       return;
     }
-    _referenceFingerprint = computeFormFingerprint();
-    transition(STATES.SAVED);
+    if (_referenceFingerprint == null) {
+      // Są dane, ale nigdy nie zapisano do vault → realnie nowy pacjent.
+      transition(STATES.NEW_PATIENT);
+      return;
+    }
+    var current = computeCanonicalFingerprint();
+    if (current != null && current === _referenceFingerprint) {
+      transition(STATES.SAVED);
+    } else {
+      transition(STATES.DIRTY);
+    }
+  }
+
+  function onUnlock() {
+    _vaultUnlocked = true;
+    _suppressJsonImportedUntil = 0; // fresh start — zeruj suppress
+    reconcileState();
   }
 
   function onLock() {
     _vaultUnlocked = false;
     _suppressJsonImportedUntil = 0;
-    _referenceFingerprint = null;
+    // Czyść trwałą referencję — vault zablokowany / wylogowanie. Zapobiega temu,
+    // by inny użytkownik w tej samej karcie zobaczył referencję poprzednika.
+    clearRef();
     _lastSavedAtISO = null;
     _lastSnapshotCount = null;
     _lastPatientName = null;
@@ -223,7 +397,10 @@
     _lastSnapshotCount = info && info.snapshotCount || null;
     _lastPatientName = (info && info.header && info.header.name) || _lastPatientName;
     _lastError = null;
-    _referenceFingerprint = computeFormFingerprint();
+    // Wymuś świeży main session, by kanoniczny rdzeń == zapisany snapshot (best-effort).
+    try { if (typeof global.saveMainSessionNow === 'function') global.saveMainSessionNow(); } catch (_) {}
+    _referenceFingerprint = computeCanonicalFingerprint();
+    persistRef(); // utrwal referencję — przeżyje nawigację i reload
     transition(STATES.SAVED);
   }
 
@@ -238,7 +415,9 @@
     _suppressJsonImportedUntil = Date.now() + 500;
     if (_debounceTimer) { clearTimeout(_debounceTimer); _debounceTimer = null; }
     setTimeout(function () {
-      _referenceFingerprint = computeFormFingerprint();
+      try { if (typeof global.saveMainSessionNow === 'function') global.saveMainSessionNow(); } catch (_) {}
+      _referenceFingerprint = computeCanonicalFingerprint();
+      persistRef(); // utrwal referencję wczytanego pacjenta
       transition(STATES.SAVED);
     }, 150);
   }
@@ -258,7 +437,9 @@
     _lastSnapshotCount = null;
     _lastPatientName = (info && info.name) || null;
     _lastError = null;
-    _referenceFingerprint = null;
+    // Import JSON to NIE snapshot w vault — czyść trwałą referencję, by po
+    // nawigacji/reloadzie zaimportowany (niezapisany) pacjent dalej był NEW_PATIENT.
+    clearRef();
     if (_debounceTimer) { clearTimeout(_debounceTimer); _debounceTimer = null; }
     setTimeout(function () {
       transition(STATES.NEW_PATIENT);
@@ -278,8 +459,10 @@
     _lastError = null;
     if (_debounceTimer) { clearTimeout(_debounceTimer); _debounceTimer = null; }
     setTimeout(function () {
-      _referenceFingerprint = computeFormFingerprint();
-      transition(STATES.SAVED);
+      // „Odtwórz zapisany stan" przywraca formularz, który NIE musi odpowiadać
+      // snapshotowi w vault. Uzgadniamy stan z trwałą referencją (jak onUnlock):
+      // zgodny z zapisem → SAVED, różny → DIRTY, brak referencji → NEW_PATIENT.
+      reconcileState();
     }, 150);
   }
 
@@ -294,7 +477,7 @@
    * mogłyby zaraz po naszym HIDDEN przeskoczyć w NEW_PATIENT.
    */
   function onUserStateClearedHandler() {
-    _referenceFingerprint = null;
+    clearRef(); // wyczyść trwałą referencję — pacjent usunięty z formularza
     _lastSavedAtISO = null;
     _lastSnapshotCount = null;
     _lastPatientName = null;
@@ -496,6 +679,11 @@
     _onUserStateCleared: onUserStateClearedHandler,
     _onSaveClicked: onSaveClicked,
     _computeFormFingerprint: computeFormFingerprint,
+    _computeCanonicalFingerprint: computeCanonicalFingerprint,
+    _reconcileState: reconcileState,
+    _readPersistedRef: readPersistedRef,
+    _writePersistedRef: writePersistedRef,
+    _clearPersistedRef: clearRef,
     _setReferenceFingerprint: function (f) { _referenceFingerprint = f; },
     _forceTransition: function (s) { transition(s); },
     _relativeTime: relativeTime,

@@ -1837,6 +1837,28 @@
       logSwallowed('vilda_data_import_export:initMainSessionPersistence:pagehide', error);
     }
 
+    // Flush sesji głównej także na visibilitychange→hidden. Na iOS/Safari zdarzenie
+    // 'pagehide' bywa zawodne przy przełączaniu kart/podstron i usypianiu aplikacji,
+    // a 'visibilitychange' (hidden) jest tam rekomendowanym, niezawodnym triggerem.
+    // Zamyka to szczelinę, w której świeża (debounced 300 ms) edycja nie zdążyłaby
+    // trafić do main session przed nawigacją — dzięki czemu wskaźnik statusu zapisu
+    // poprawnie pokazuje DIRTY na kolejnej podstronie (np. klirensie).
+    try {
+      if (doc && typeof doc.addEventListener === 'function') {
+        doc.addEventListener('visibilitychange', () => {
+          try {
+            if (doc.visibilityState === 'hidden' || doc.hidden === true) {
+              saveMainSessionNow(opts);
+            }
+          } catch (innerError) {
+            logSwallowed('vilda_data_import_export:initMainSessionPersistence:visibilitychange', innerError);
+          }
+        }, { capture: true });
+      }
+    } catch (error) {
+      logSwallowed('vilda_data_import_export:initMainSessionPersistence:visibilitychange-attach', error);
+    }
+
     const initAfterDomReady = () => {
       attachMainSessionClearHandler('clearAllDataBtn', opts);
       attachMainSessionClearHandler('clearBtn', opts);
