@@ -406,16 +406,9 @@
 }
 .vilda-save-popover .vsp-name { color: #2a3a3c; font-weight: 500; }
 
-@media (prefers-color-scheme: dark) {
-  .vilda-save-popover {
-    background: rgba(28, 30, 34, 0.95);
-    border-color: rgba(0, 176, 166, 0.22);
-    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.5);
-  }
-  .vilda-save-popover .vsp-name { color: #e5e7eb; }
-  .vilda-save-popover .vsp-hero-sub { color: #9ca3af; }
-  .vilda-save-popover .vsp-hero { border-bottom-color: rgba(255,255,255,0.08); }
-}
+/* Brak dark-mode override — aplikacja Vilda używa zawsze jasnego motywu
+   (liquid-ios26 nie podąża za prefers-color-scheme). Ciemne tło tutaj byłoby
+   niespójne z jasnym nagłówkiem i kartami. Popover zawsze jasny. */
 @media (prefers-reduced-motion: reduce) {
   .vilda-save-popover { transition: opacity 0.1s ease; transform: none; }
   .vilda-save-popover.is-visible { transform: none; }
