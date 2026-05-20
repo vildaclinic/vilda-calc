@@ -459,10 +459,20 @@
     _lastError = null;
     if (_debounceTimer) { clearTimeout(_debounceTimer); _debounceTimer = null; }
     setTimeout(function () {
-      // „Odtwórz zapisany stan" przywraca formularz, który NIE musi odpowiadać
-      // snapshotowi w vault. Uzgadniamy stan z trwałą referencją (jak onUnlock):
-      // zgodny z zapisem → SAVED, różny → DIRTY, brak referencji → NEW_PATIENT.
-      reconcileState();
+      // „Odtwórz zapisany stan" to świadoma akcja użytkownika: „to są moje dane,
+      // jak je zostawiłem". Odtworzony stan staje się NOWĄ bazą odniesienia → SAVED.
+      // NIE uzgadniamy przez reconcileState, bo odtworzenie formularza z innego
+      // źródła (persisted form-state) daje minimalnie inny kanoniczny fingerprint
+      // niż referencja uchwycona przy wczytaniu pliku/pacjenta — co fałszywie
+      // dawało DIRTY (bursztyn) tuż po odtworzeniu, mimo braku jakiejkolwiek edycji.
+      // Utrwalamy referencję, żeby SAVED przeżył nawigację; edycja po odtworzeniu
+      // → kanoniczny fingerprint się zmieni → DIRTY (poprawnie).
+      // Metadanych snapshot (savedAtISO/snapshotCount) NIE ustawiamy — to nie jest
+      // snapshot z vault, tylko przywrócony stan formularza.
+      try { if (typeof global.saveMainSessionNow === 'function') global.saveMainSessionNow(); } catch (_) {}
+      _referenceFingerprint = computeCanonicalFingerprint();
+      persistRef();
+      transition(STATES.SAVED);
     }, 150);
   }
 
