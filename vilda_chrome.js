@@ -672,6 +672,32 @@
     var actionBtn = header.querySelector('#vildaUserAction');
     if (actionBtn) actionBtn.addEventListener('click', onUserActionClick);
 
+    // Klik w avatar (inicjały) lub nazwę konta → zakładka „Konto i bezpieczeństwo"
+    // w Ustawieniach. Tylko dla zalogowanego użytkownika (gość/niezalogowany
+    // używa przycisku akcji do logowania). Standardowy pattern: avatar → ustawienia.
+    function onUserChipNavigate() {
+      var v = global.VildaVault;
+      var isGuest = global.VildaGuestMode === true;
+      var user = (v && typeof v.getCurrentUser === 'function') ? v.getCurrentUser() : null;
+      if (user && !isGuest) {
+        try { global.location.href = 'ustawienia.html#settings-section-account'; } catch (_) {}
+      }
+    }
+    var userAvatar = header.querySelector('#vildaUserAvatar');
+    var userValue = header.querySelector('#vildaUserValue');
+    if (userAvatar) userAvatar.addEventListener('click', onUserChipNavigate);
+    if (userValue) {
+      userValue.addEventListener('click', onUserChipNavigate);
+      // a11y — nazwa konta jest focusable (role/tabindex ustawiane w refreshUserChip
+      // gdy zalogowany); Enter/Space wywołuje nawigację.
+      userValue.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+          e.preventDefault();
+          onUserChipNavigate();
+        }
+      });
+    }
+
     // Ten sam handler na przycisku w drawerze. Drawer mountuje się raz
     // (lazy w mountHeader), więc bindujemy bezpośrednio.
     var drawerActionBtn = doc.querySelector('[data-vilda-chrome-drawer-user-action]');
@@ -721,6 +747,10 @@
       loggedInLabel = user.label || 'Użytkownik';
       valueEl.textContent = loggedInLabel;
       avatarEl.textContent = getInitials(loggedInLabel);
+      // Avatar + nazwa są klikalne → ustawienia konta (handler w mountHeader).
+      valueEl.setAttribute('role', 'link');
+      valueEl.setAttribute('tabindex', '0');
+      valueEl.setAttribute('title', 'Przejdź do ustawień konta');
       actionBtn.title = 'Wyloguj się';
       actionBtn.setAttribute('aria-label', 'Wyloguj się');
       // Inline SVG (log-out) — niezależne od Lucide.
@@ -729,6 +759,10 @@
       chip.classList.remove('is-logged-in');
       chip.classList.add('is-guest');
       valueEl.textContent = isGuest ? 'Tryb gościa' : 'Niezalogowany';
+      // Niezalogowany/gość — nazwa nie jest klikalna (brak konta do ustawień).
+      valueEl.removeAttribute('role');
+      valueEl.removeAttribute('tabindex');
+      valueEl.removeAttribute('title');
       // Inline SVG (user-round) — niezależne od Lucide.
       avatarEl.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="5"></circle><path d="M20 21a8 8 0 0 0-16 0"></path></svg>';
       actionBtn.title = 'Zaloguj się';
