@@ -108,6 +108,31 @@
     }
   }
 
+  // Mapuje błąd logowania passkey efemerycznego na komunikat dla użytkownika
+  // + decyzję, czy proponować fallback QR. Pure — testowalne bez DOM.
+  function mapEphemeralLoginError(err) {
+    const code = err && err.code;
+    if (code === 'EPH_PRF_UNSUPPORTED') {
+      return { message: 'To urządzenie lub przeglądarka nie obsługuje logowania passkey. Użyj logowania kodem QR.', offerQrFallback: true };
+    }
+    if (code === 'EPH_NO_ENVELOPE') {
+      return { message: 'Ten passkey nie ma jeszcze koperty w chmurze. Dodaj passkey do logowania mobilnego na swoim urządzeniu (Ustawienia → Synchronizacja).', offerQrFallback: false };
+    }
+    if (code === 'EPH_CHALLENGE_FAILED' || code === 'EPH_UNLOCK_NETWORK') {
+      return { message: 'Brak połączenia z serwerem. Sprawdź internet i spróbuj ponownie.', offerQrFallback: false };
+    }
+    if (code === 'EPH_UNLOCK_REJECTED') {
+      return { message: 'Serwer odrzucił logowanie passkey. Spróbuj ponownie.', offerQrFallback: false };
+    }
+    if (code === 'EPH_DECRYPT_FAILED') {
+      return { message: 'Nie udało się odszyfrować danych tym passkey.', offerQrFallback: false };
+    }
+    if (err && err.name === 'AbortError') {
+      return { message: 'Logowanie passkey przerwane.', offerQrFallback: false };
+    }
+    return { message: (err && err.message) ? err.message : 'Logowanie passkey nie powiodło się.', offerQrFallback: true };
+  }
+
   function el(tag, attrs, children) {
     const node = global.document.createElement(tag);
     if (attrs) {
@@ -3728,6 +3753,36 @@
       text: 'Wybierz sposób logowania przy użyciu już zalogowanego urządzenia (np. telefonu).'
     });
 
+    // ── Sekcja passkey — komputer współdzielony (nic nie zostaje) ──────────────
+    let passkeySection = null;
+    if (typeof V.unlockWithPasskeyEphemeral === 'function') {
+      passkeySection = document.createElement('div');
+      passkeySection.style.cssText = [
+        'background:var(--surface-alt,#f0f4ff)',
+        'border:1px solid var(--border,#d0d5e8)',
+        'border-radius:10px',
+        'padding:0.9rem 1rem',
+        'margin:0 0 0.5rem'
+      ].join(';');
+      passkeySection.innerHTML = [
+        '<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem;">',
+        '<span style="font-size:1.1rem;">📱</span>',
+        '<strong style="font-size:0.95rem;">Komputer współdzielony</strong>',
+        '<span style="font-size:0.75rem;background:#15803d;color:#fff;border-radius:4px;padding:1px 7px;margin-left:auto;">Nic nie zostaje</span>',
+        '</div>',
+        '<p style="margin:0 0 0.55rem;font-size:0.84rem;color:var(--text-secondary,#555);line-height:1.5;">',
+        'Zaloguj passkey z telefonu (biometria). Dane pacjentów tylko w chmurze — po zamknięciu nic nie zostaje na tym komputerze.',
+        '</p>'
+      ].join('');
+      const passkeyBtn = el('button', {
+        class: 'vilda-auth-btn vilda-auth-btn-primary vilda-auth-btn-small',
+        type: 'button',
+        text: '📱 Zaloguj passkey z telefonu'
+      });
+      passkeyBtn.addEventListener('click', function () { showPasskeyEphemeralLoginScreen(); });
+      passkeySection.appendChild(passkeyBtn);
+    }
+
     // ── Sekcja QR — zalecana metoda ───────────────────────────────────────────
     const qrSection = document.createElement('div');
     qrSection.style.cssText = [
@@ -3859,10 +3914,79 @@
       onclick: function () { showStartupScreen(); }
     });
 
-    const wrapper = el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
-      title, sub, qrSection, orDiv, codeSection, back
-    ]);
+    const children = [title, sub];
+    if (passkeySection) children.push(passkeySection);
+    children.push(qrSection, orDiv, codeSection, back);
+    const wrapper = el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, children);
     open(wrapper);
+  }
+
+  // ============ EKRAN LOGOWANIA PASSKEY (efemeryczne / współdzielony komputer) ============
+
+  /**
+   * Ekran „Zaloguj passkey z telefonu" dla współdzielonego komputera.
+   * Uruchamia VildaVault.unlockWithPasskeyEphemeral() — telefon potwierdza biometrią,
+   * master key trafia do RAM, a po sesji nic nie zostaje na tym komputerze.
+   * Przy braku wsparcia PRF lub błędzie — proponuje fallback QR (też efemeryczny).
+   */
+  function showPasskeyEphemeralLoginScreen() {
+    const V = getVault();
+    if (!V || typeof V.unlockWithPasskeyEphemeral !== 'function') {
+      showSyncCodeRestoreScreen();
+      return;
+    }
+
+    const title = el('h2', { class: 'vilda-auth-title', text: 'Zaloguj passkey z telefonu' });
+    const sub = el('p', {
+      class: 'vilda-auth-subtitle',
+      text: 'Komputer współdzielony — po sesji nie zostanie na nim żadna kopia. Potwierdź logowanie na telefonie biometrią.'
+    });
+
+    const errBox = el('div', { class: 'vilda-auth-error' });
+    errBox.style.display = 'none';
+    function showErr(msg) { errBox.textContent = msg || ''; errBox.style.display = msg ? '' : 'none'; }
+
+    const startBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-primary', type: 'button', text: '📱 Zaloguj passkey z telefonu'
+    });
+
+    const qrFallbackBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small', type: 'button',
+      text: 'Nie działa? Zaloguj kodem QR'
+    });
+    qrFallbackBtn.style.display = 'none';
+    qrFallbackBtn.addEventListener('click', function () { showQRLoginScreen({ ephemeral: true }); });
+
+    let inProgress = false;
+    startBtn.addEventListener('click', async function () {
+      if (inProgress) return;
+      inProgress = true;
+      showErr('');
+      qrFallbackBtn.style.display = 'none';
+      const orig = startBtn.textContent;
+      startBtn.disabled = true;
+      startBtn.textContent = 'Czekam na telefon…';
+      try {
+        await V.unlockWithPasskeyEphemeral({});
+        hide(); // onUnlock w boot() przejmie dalej (render aplikacji)
+      } catch (e) {
+        const m = mapEphemeralLoginError(e);
+        showErr(m.message);
+        if (m.offerQrFallback) qrFallbackBtn.style.display = '';
+        inProgress = false;
+        startBtn.disabled = false;
+        startBtn.textContent = orig;
+      }
+    });
+
+    const back = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost', type: 'button', text: '← Wróć',
+      onclick: function () { showSyncCodeRestoreScreen(); }
+    });
+
+    open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
+      title, sub, startBtn, errBox, qrFallbackBtn, back
+    ]));
   }
 
   // ============ EKRAN LOGOWANIA KODEM QR ============
@@ -3892,11 +4016,15 @@
    * Faza 2 (po zatwierdzeniu przez telefon): prosi o hasło i nazwę konta,
    *          tworzy lokalne konto z przeniesionym masterKey.
    */
-  function showQRLoginScreen() {
+  function showQRLoginScreen(options) {
     const V = getVault();
     if (!V || typeof V.initiateQRLogin !== 'function') {
       return; // brak wsparcia
     }
+    // Tryb efemeryczny: po transferze adoptujemy master key do RAM (bez tworzenia
+    // lokalnego konta i bez nowego hasła) — fallback dla współdzielonego komputera.
+    const ephemeralMode = !!(options && options.ephemeral)
+      && typeof V.completeQRLoginEphemeral === 'function';
 
     // ── klucze sessionStorage ──
     const SS_PRIV  = 'vilda-qr-priv-v1';
@@ -3933,9 +4061,13 @@
       const title2 = el('h2', { class: 'vilda-auth-title', text: '✓ Prawie gotowe!' });
       const sub2   = el('p',  {
         class: 'vilda-auth-subtitle',
-        text:  'Podaj hasło, aby zalogować się na tym urządzeniu.'
+        text:  ephemeralMode
+          ? 'Zaloguj się na tę sesję — po zamknięciu nic nie zostanie na tym komputerze.'
+          : 'Podaj hasło, aby zalogować się na tym urządzeniu.'
       });
-      const pwIn = el('input', {
+      // W trybie efemerycznym hasło nie jest potrzebne (master key przyszedł transferem,
+      // konto nie jest tworzone lokalnie).
+      const pwIn = ephemeralMode ? null : el('input', {
         type: 'password', class: 'vilda-auth-input',
         placeholder: 'Twoje hasło'
       });
@@ -3943,20 +4075,25 @@
       errBox2.style.display = 'none';
 
       const finishBtn = el('button', {
-        class: 'vilda-auth-btn vilda-auth-btn-primary', type: 'button', text: 'Zaloguj się'
+        class: 'vilda-auth-btn vilda-auth-btn-primary', type: 'button',
+        text: ephemeralMode ? 'Zaloguj (ta sesja)' : 'Zaloguj się'
       });
 
       finishBtn.addEventListener('click', async function () {
         if (completeInProgress) return; // mutex — blokuj równoległe wywołania
         errBox2.style.display = 'none';
-        const password = pwIn.value;
-        if (!password) { errBox2.textContent = 'Podaj hasło.'; errBox2.style.display = ''; return; }
+        const password = pwIn ? pwIn.value : null;
+        if (!ephemeralMode && !password) { errBox2.textContent = 'Podaj hasło.'; errBox2.style.display = ''; return; }
 
         completeInProgress = true;
         finishBtn.disabled = true;
         finishBtn.textContent = 'Loguję…';
         try {
-          await V.completeQRLogin(savedPrivKey, encryptedPayload, { newPassword: password, label: transferredLabel });
+          if (ephemeralMode) {
+            await V.completeQRLoginEphemeral(savedPrivKey, encryptedPayload);
+          } else {
+            await V.completeQRLogin(savedPrivKey, encryptedPayload, { newPassword: password, label: transferredLabel });
+          }
           clearSessionKeys(); // defence-in-depth: usuń klucz prywatny jeśli stopPolling go nie wyczyścił
           hide();
           // onUnlock w boot() uruchomi interstitial sync automatycznie
@@ -3965,16 +4102,17 @@
           errBox2.textContent = (e && e.message) ? e.message : 'Błąd logowania. Sprawdź hasło.';
           errBox2.style.display = '';
           finishBtn.disabled = false;
-          finishBtn.textContent = 'Zaloguj się';
+          finishBtn.textContent = ephemeralMode ? 'Zaloguj (ta sesja)' : 'Zaloguj się';
         }
       });
 
-      pwIn.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') finishBtn.click(); });
+      if (pwIn) pwIn.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') finishBtn.click(); });
 
-      open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
-        title2, sub2, pwIn, errBox2, finishBtn
-      ]));
-      setTimeout(function () { try { pwIn.focus(); } catch(_) {} }, 30);
+      const phase2Children = [title2, sub2];
+      if (pwIn) phase2Children.push(pwIn);
+      phase2Children.push(errBox2, finishBtn);
+      open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, phase2Children));
+      if (pwIn) setTimeout(function () { try { pwIn.focus(); } catch(_) {} }, 30);
     }
 
     // ── Faza 1: wyświetl QR ──
@@ -4176,6 +4314,8 @@
     showRestoreVaultFlow: showRestoreVaultFlow,
     showSyncCodeRestoreScreen: showSyncCodeRestoreScreen,
     showQRLoginScreen: showQRLoginScreen,
+    showPasskeyEphemeralLoginScreen: showPasskeyEphemeralLoginScreen,
+    mapEphemeralLoginError: mapEphemeralLoginError,
     hide: hide,
     lockAndShowLogin: lockAndShowLogin,
     isGuestMode: isGuestMode,

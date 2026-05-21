@@ -136,14 +136,14 @@ html.vilda-pro-active .pro-sync-note {
 
   <script src="vilda_logger.js?v=2"></script>
 <script src="vilda_html.js?v=4"></script>
-<script src="vilda_persistence_adapter.js?v=7"></script>
+<script src="vilda_persistence_adapter.js?v=8"></script>
 <script src="vilda_session_bridge.js?v=1"></script>
 <script src="vilda_init.js?v=4"></script>
-<script src="vilda_crypto.js?v=7"></script>
-<script src="vilda_vault.js?v=15"></script>
-<script src="vilda_sync.js?v=3"></script>
+<script src="vilda_crypto.js?v=8"></script>
+<script src="vilda_vault.js?v=16"></script>
+<script src="vilda_sync.js?v=4"></script>
 <script src="vilda_sync_integration.js?v=2"></script>
-<script src="vilda_auth_ui.js?v=60"></script>
+<script src="vilda_auth_ui.js?v=62"></script>
 <script src="vilda_pro_access.js?v=2"></script>
 <script src="vilda_pro_ui.js?v=2"></script>
 <script src="vilda_file_export.js?v=4"></script>
@@ -731,6 +731,27 @@ html.vilda-pro-active .pro-sync-note {
                   </div>
 
                   <div class="settings-backup-sep" role="separator"></div>
+
+                  <div class="settings-backup-sep" role="separator"></div>
+
+                  <!-- ── Podsekcja 2c1: Passkey na współdzielonym komputerze ── -->
+                  <div class="settings-backup-section" id="roamingPasskeyCard">
+                    <div class="settings-control-header">
+                      <h3 class="settings-control-title">Logowanie passkey na współdzielonym komputerze</h3>
+                      <span class="settings-tag" id="registerRoamingPasskeyTag">—</span>
+                    </div>
+                    <p class="settings-control-desc">
+                      Dodaj passkey, którym zalogujesz się z telefonu na komputerze w gabinecie/szpitalu — bez wpisywania hasła i bez pozostawiania kopii danych na tym komputerze. Potwierdzisz biometrią na telefonie.
+                    </p>
+                    <div class="settings-card-toggle-row settings-backup-btn-row">
+                      <button type="button" id="registerRoamingPasskeyBtn"
+                              class="vilda-auth-btn vilda-auth-btn-primary vilda-auth-btn-small settings-backup-btn"
+                              disabled>
+                        📱 Dodaj passkey do logowania mobilnego
+                      </button>
+                    </div>
+                    <p class="settings-inline-note settings-backup-note" id="registerRoamingPasskeyStatus"></p>
+                  </div>
 
                   <div class="settings-backup-sep" role="separator"></div>
 
@@ -2201,6 +2222,11 @@ html.vilda-pro-active .pro-sync-note {
         const syncSlotTag       = $('syncSlotTag');
         const syncSlotStatus    = $('syncSlotStatus');
 
+        // Passkey roaming (logowanie na współdzielonym komputerze)
+        const registerRoamingPasskeyBtn    = $('registerRoamingPasskeyBtn');
+        const registerRoamingPasskeyTag    = $('registerRoamingPasskeyTag');
+        const registerRoamingPasskeyStatus = $('registerRoamingPasskeyStatus');
+
         // Kod synchronizacji
         const syncShowCodeBtn     = $('syncShowCodeBtn');
         const syncCodePanel       = $('syncCodePanel');
@@ -2236,7 +2262,7 @@ html.vilda-pro-active .pro-sync-note {
             setText(syncEnabledChip, 'Brak modułu');
             if (syncToggleTag) setText(syncToggleTag, 'Brak modułu');
             if (syncEnabledToggle) syncEnabledToggle.disabled = true;
-            [syncNowBtn, syncPullBtn, syncClearStateBtn, syncDeleteSlotBtn].forEach(function(b) { if(b) b.disabled = true; });
+            [syncNowBtn, syncPullBtn, syncClearStateBtn, syncDeleteSlotBtn, registerRoamingPasskeyBtn].forEach(function(b) { if(b) b.disabled = true; });
             setText(syncStatusNote, 'Moduł synchronizacji nie jest załadowany.');
             return;
           }
@@ -2250,7 +2276,7 @@ html.vilda-pro-active .pro-sync-note {
           }
 
           if (!V || !V.isUnlocked()) {
-            [syncNowBtn, syncPullBtn, syncClearStateBtn, syncDeleteSlotBtn].forEach(function(b) { if(b) b.disabled = true; });
+            [syncNowBtn, syncPullBtn, syncClearStateBtn, syncDeleteSlotBtn, registerRoamingPasskeyBtn].forEach(function(b) { if(b) b.disabled = true; });
             if (syncShowCodeBtn) syncShowCodeBtn.disabled = true;
             if (syncQRScanBtn)   syncQRScanBtn.disabled   = true;
             setText(syncStatusNote, 'Zaloguj się, aby zarządzać synchronizacją.');
@@ -2298,6 +2324,60 @@ html.vilda-pro-active .pro-sync-note {
           // Kod sync + QR approve — dostępne zawsze gdy vault odblokowany
           if (syncShowCodeBtn) syncShowCodeBtn.disabled = false;
           if (syncQRScanBtn)   syncQRScanBtn.disabled   = false;
+
+          // Passkey roaming — dostępny gdy vault wspiera rejestrację roaming.
+          // Wsparcie PRF sprawdzamy asynchronicznie i ewentualnie wyłączamy z notką.
+          if (registerRoamingPasskeyBtn) {
+            const supportsRoaming = typeof V.registerPasskeyForRoaming === 'function';
+            registerRoamingPasskeyBtn.disabled = !supportsRoaming;
+            if (registerRoamingPasskeyTag) setText(registerRoamingPasskeyTag, supportsRoaming ? 'dostępne' : 'niewspierane');
+            if (supportsRoaming && typeof V.isPrfSupported === 'function') {
+              V.isPrfSupported().then(function (ok) {
+                if (!ok) {
+                  registerRoamingPasskeyBtn.disabled = true;
+                  if (registerRoamingPasskeyTag) setText(registerRoamingPasskeyTag, 'niewspierane na tym urządzeniu');
+                  setText(registerRoamingPasskeyStatus, 'To urządzenie/przeglądarka nie obsługuje passkey z PRF. Dodaj passkey na urządzeniu, które to wspiera (np. telefon z Face ID/odciskiem).');
+                }
+              }).catch(function () {});
+            }
+          }
+        }
+
+        // Rejestracja passkey roaming (logowanie na współdzielonym komputerze)
+        if (registerRoamingPasskeyBtn) {
+          registerRoamingPasskeyBtn.addEventListener('click', async function () {
+            const V = window.VildaVault;
+            if (!V || typeof V.registerPasskeyForRoaming !== 'function') {
+              setText(registerRoamingPasskeyStatus, 'Funkcja niedostępna w tej wersji.');
+              return;
+            }
+            if (!V.isUnlocked || !V.isUnlocked()) {
+              setText(registerRoamingPasskeyStatus, 'Zaloguj się, aby dodać passkey.');
+              return;
+            }
+            const orig = registerRoamingPasskeyBtn.textContent;
+            registerRoamingPasskeyBtn.disabled = true;
+            registerRoamingPasskeyBtn.textContent = 'Potwierdź na urządzeniu…';
+            setText(registerRoamingPasskeyStatus, '');
+            try {
+              const res = await V.registerPasskeyForRoaming();
+              setText(registerRoamingPasskeyStatus, '✓ Dodano passkey „' + (res && res.deviceLabel ? res.deviceLabel : 'urządzenie') + '". Możesz teraz logować się nim na współdzielonym komputerze.');
+            } catch (e) {
+              const code = e && e.code;
+              let msg;
+              if (code === 'ESCROW_UPLOAD_FAILED' || code === 'ESCROW_UPLOAD_REJECTED' || code === 'ESCROW_NO_SYNC') {
+                msg = 'Passkey utworzony, ale nie udało się zapisać go w chmurze — sprawdź internet i spróbuj ponownie.';
+              } else if (e && e.name === 'NotAllowedError') {
+                msg = 'Rejestracja przerwana lub odrzucona.';
+              } else {
+                msg = (e && e.message) ? e.message : 'Nie udało się dodać passkey.';
+              }
+              setText(registerRoamingPasskeyStatus, msg);
+            } finally {
+              registerRoamingPasskeyBtn.disabled = false;
+              registerRoamingPasskeyBtn.textContent = orig;
+            }
+          });
         }
 
         // Toggle włączenia sync

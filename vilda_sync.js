@@ -115,9 +115,25 @@
     return SYNC_STATE_KEY_PREFIX + ':' + slotId;
   }
 
+  // Storage stanu sync — ephemeral-aware. W trybie efemerycznym
+  // VildaPersistence.getStorage('local') zwraca shim PAMIĘCIOWY, więc stan sync
+  // (registered/etag/lastSyncAt) NIE trafia na dysk współdzielonego komputera.
+  // Fallback (gdy VildaPersistence niedostępne): realny localStorage jak dotąd.
+  function syncStateStorage() {
+    try {
+      var P = global.VildaPersistence;
+      if (P && typeof P.getStorage === 'function') {
+        var s = P.getStorage('local');
+        if (s) return s;
+      }
+    } catch (_) {}
+    return global.localStorage || null;
+  }
+
   function loadSyncState(slotId) {
     try {
-      var raw = global.localStorage && global.localStorage.getItem(syncStateKey(slotId));
+      var store = syncStateStorage();
+      var raw = store && store.getItem(syncStateKey(slotId));
       if (!raw) return { registered: false, localEtag: null, lastSyncAt: null };
       var parsed = JSON.parse(raw);
       return (parsed && typeof parsed === 'object')
@@ -130,16 +146,18 @@
 
   function saveSyncState(slotId, state) {
     try {
-      if (global.localStorage) {
-        global.localStorage.setItem(syncStateKey(slotId), JSON.stringify(state));
+      var store = syncStateStorage();
+      if (store) {
+        store.setItem(syncStateKey(slotId), JSON.stringify(state));
       }
     } catch (_) {}
   }
 
   function clearSyncStateForSlot(slotId) {
     try {
-      if (global.localStorage) {
-        global.localStorage.removeItem(syncStateKey(slotId));
+      var store = syncStateStorage();
+      if (store) {
+        store.removeItem(syncStateKey(slotId));
       }
     } catch (_) {}
   }
@@ -783,7 +801,12 @@
      * Sprawdź czy to nowe urządzenie z danymi na serwerze.
      * @returns {Promise<{ isNewDevice: boolean, lastModified: string|null }>}
      */
-    probeNewDevice: probeNewDevice
+    probeNewDevice: probeNewDevice,
+
+    // Hooki testowe (routing stanu sync — ephemeral-aware).
+    _loadSyncState: loadSyncState,
+    _saveSyncState: saveSyncState,
+    _clearSyncStateForSlot: clearSyncStateForSlot
   };
 
 })(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : null));
