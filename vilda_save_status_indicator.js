@@ -388,12 +388,23 @@
     }
   }
 
-  function debouncedOnFormChange() {
+  function debouncedOnFormChange(ev) {
+    // KLUCZOWE rozróżnienie W MOMENCIE ZDARZENIA (nie po debounce):
+    // odbudowa formularza przez restore/nawigację dispatchuje SYNTETYCZNE zdarzenia
+    // 'input'/'change' (new Event(...)), które mają isTrusted=false. Prawdziwa
+    // interakcja użytkownika ma isTrusted=true. Tylko ona może oznaczyć dane jako
+    // zmienione. Sprawdzanie flagi restore dopiero w onFormChange było nieskuteczne,
+    // bo debounce (400 ms) odraczał je poza okno, w którym flaga jest ustawiona —
+    // stąd fałszywy DIRTY po zmianie podstrony. isTrusted jest dostępne natychmiast.
+    if (ev && ev.isTrusted === false) return;
+    // Druga warstwa: ignoruj, jeśli w MOMENCIE zdarzenia trwa restore/odbudowa.
+    try {
+      if (global.__vildaPersistRestoring === true) return;
+      if (Date.now() < Number(global.__vildaPersistPauseUntil || 0)) return;
+    } catch (_) {}
     if (_debounceTimer) clearTimeout(_debounceTimer);
     // 400 ms > 300 ms (autosave main session aplikacji). Dzięki temu onFormChange
-    // czyta JUŻ zaktualizowany przez autosave page-niezależny main session, więc
-    // edycja jest poprawnie wykryta jako DIRTY — bez własnych zapisów main session
-    // z poziomu wskaźnika (co groziłoby nadpisaniem danych innej podstrony).
+    // czyta JUŻ zaktualizowany przez autosave page-niezależny main session.
     _debounceTimer = setTimeout(onFormChange, 400);
   }
 
@@ -744,6 +755,7 @@
     getLastPatientName: function () { return _lastPatientName; },
     // Test hooks
     _onFormChange: onFormChange,
+    _debouncedOnFormChange: debouncedOnFormChange,
     _onUnlock: onUnlock,
     _onLock: onLock,
     _onPatientSaved: onPatientSavedHandler,
