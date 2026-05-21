@@ -2382,6 +2382,17 @@
     await getAdapter().updateRegistryEntry(userId, { lastLoginAtISO: new Date().toISOString() });
   }
 
+  // Pobranie danych z chmury do RAM po zalogowaniu efemerycznym. Odporny na brak
+  // VildaSync (np. lekka strona bez modułu) i offline — błąd nie blokuje sesji
+  // (użytkownik dostanie pusty RAM zamiast wywalonego logowania).
+  async function ephemeralSyncPull() {
+    try {
+      if (global.VildaSync && typeof global.VildaSync.syncPull === 'function') {
+        await global.VildaSync.syncPull();
+      }
+    } catch (_) { void _; }
+  }
+
   /**
    * Logowanie passkey EFEMERYCZNE — na współdzielonym komputerze, bez śladu lokalnie.
    * Przepływ:
@@ -2520,6 +2531,14 @@
     // 6. Adopcja do RAM — bez zapisu meta na dysk (adapter in-memory).
     const userId = 'eph:' + asrt.credentialId.slice(0, 32);
     await adoptMasterBytes(masterBytes, userId, ephLabel);
+
+    // 7. Pobierz dane pacjentów z chmury do RAM. W trybie efemerycznym nic nie ma
+    //    lokalnie, a normalny pull po onUnlock jest bramkowany isSyncEnabled (na
+    //    współdzielonym komputerze sync nigdy nie był włączony) — więc pull MUSIMY
+    //    wymusić tutaj. syncPull działa z samego master key (getSyncMaterial), a
+    //    mergeSyncPayload scala tylko pacjentów (nie nadpisuje etykiety/inicjałów).
+    await ephemeralSyncPull();
+
     return { ok: true, ephemeral: true, credentialId: asrt.credentialId, userId: userId };
   }
 
@@ -2545,6 +2564,8 @@
     catch (e) { const err = new Error('completeQRLoginEphemeral: błąd deszyfrowania transferu.'); err.code = 'EPH_QR_DECRYPT'; throw err; }
     const userId = 'eph-qr:' + Date.now().toString(36);
     await adoptMasterBytes(masterBytes, userId, 'Sesja QR (efemeryczna)');
+    // Pobierz dane pacjentów z chmury do RAM (jak w passkey — pull wymuszony).
+    await ephemeralSyncPull();
     return { ok: true, ephemeral: true, userId: userId };
   }
 
