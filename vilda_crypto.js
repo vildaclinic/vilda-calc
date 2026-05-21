@@ -621,10 +621,15 @@
 
     if (!cred) throw new Error('PRF: navigator.credentials.create zwrócił null');
 
-    const prfResults = cred.getClientExtensionResults()?.prf?.results;
-    if (!prfResults?.first) {
-      throw new Error('PRF: przeglądarka nie zwróciła wyniku PRF — prawdopodobnie brak wsparcia');
+    // UWAGA: NIE używamy sekretu PRF z create() do wyprowadzenia klucza szyfrującego —
+    // bywa on niespójny z PRF z get() (logowanie) na części authenticatorów. Tutaj
+    // jedynie POTWIERDZAMY wsparcie PRF (enabled lub results). Sekret do szyfrowania
+    // pobiera registerPasskeyForRoaming osobno przez get() — gwarancja zgodności z logowaniem.
+    const prfExt = cred.getClientExtensionResults()?.prf;
+    if (!prfExt || (prfExt.enabled !== true && !prfExt.results?.first)) {
+      throw new Error('PRF: przeglądarka nie potwierdziła wsparcia PRF — prawdopodobnie brak wsparcia');
     }
+    const prfSecretBytes = prfExt.results?.first ? new Uint8Array(prfExt.results.first) : null;
 
     // Klucz publiczny — wymagany przez escrow do weryfikacji asercji.
     const resp = cred.response;
@@ -638,7 +643,7 @@
 
     return {
       credentialId: bytesToBase64url(new Uint8Array(cred.rawId)),
-      prfSecretBytes: new Uint8Array(prfResults.first),
+      prfSecretBytes: prfSecretBytes, // może być null — wrapping i tak liczymy z get()
       publicKeyRawB64u: publicKeyRawB64u,
       prfInputB64u: bytesToBase64url(PRF_INPUT)
     };

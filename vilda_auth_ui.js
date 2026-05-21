@@ -125,6 +125,12 @@
       return { message: 'Serwer odrzucił logowanie passkey. Spróbuj ponownie.', offerQrFallback: false };
     }
     if (code === 'EPH_DECRYPT_FAILED') {
+      if (err && err.diagnostic === 'envelope-legacy-create-prf') {
+        return { message: 'Ten passkey ma w chmurze starszą kopertę. Zarejestruj passkey ponownie w Ustawieniach na swoim zaufanym urządzeniu, a potem zaloguj się jeszcze raz.', offerQrFallback: true };
+      }
+      if (err && err.diagnostic === 'envelope-current-prf-mismatch') {
+        return { message: 'Nie udało się odszyfrować danych tym passkey. Jeśli wybrałeś passkey zapisany na tym komputerze, użyj zamiast tego opcji „Użyj telefonu" i potwierdź logowanie na telefonie.', offerQrFallback: true };
+      }
       return { message: 'Nie udało się odszyfrować danych tym passkey.', offerQrFallback: false };
     }
     if (err && err.name === 'AbortError') {
