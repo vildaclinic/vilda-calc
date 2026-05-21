@@ -124,22 +124,46 @@
   }
 
   /**
-   * Kanoniczny rdzeń pacjenta — page-independent.
-   * Preferuje live collectUserData, gdy bieżąca strona ma pełny formularz
-   * (hasMeaningfulMainSessionData). Inaczej sięga po main session z sessionStorage.
+   * Czy bieżąca strona ma pełny formularz pacjenta (główna/docpro), tj. czy
+   * collectUserData() zwraca sensowne dane pacjenta. Na podstronie bez tego
+   * formularza (np. klirens) collectUserData zwraca okrojony obiekt.
+   */
+  function isFullFormPage() {
+    if (typeof global.collectUserData !== 'function'
+        || typeof global.hasMeaningfulMainSessionData !== 'function') return false;
+    try {
+      var live = global.collectUserData({ source: 'save-status-fullform-check' });
+      return !!(live && global.hasMeaningfulMainSessionData(live));
+    } catch (_) { return false; }
+  }
+
+  /**
+   * Flush sesji głównej do sessionStorage — TYLKO na stronie z pełnym formularzem.
+   * Na podstronie (klirens) NIE wolno: saveMainSessionNow wyczyściłby main session,
+   * bo collectUserData(klirens) jest „niemeaningful". Używane przy uchwyceniu
+   * referencji (save/load/restore), by main session == zapisany stan zanim
+   * policzymy fingerprint (inaczej referencja rozjeżdża się z tym, co odczytają
+   * inne podstrony).
+   */
+  function flushMainSessionIfFullForm() {
+    if (typeof global.saveMainSessionNow !== 'function') return;
+    if (!isFullFormPage()) return;
+    try { global.saveMainSessionNow(); } catch (_) {}
+  }
+
+  /**
+   * Kanoniczny rdzeń pacjenta — ZAWSZE page-independent.
+   *
+   * KLUCZOWE: źródłem jest main session z sessionStorage (vildaMainSessionV1),
+   * który jest IDENTYCZNY na każdej podstronie (zapisywany przez autosave strony
+   * z pełnym formularzem). NIE używamy tu live collectUserData strony bieżącej —
+   * bo collectUserData zwraca RÓŻNE pola na różnych stronach (główna: jedzenie/
+   * intake; docpro: pola lekarskie), więc ten sam pacjent dawałby różne
+   * fingerprinty na różnych podstronach → fałszywy DIRTY po nawigacji.
+   * Live collectUserData służy WYŁĄCZNIE jako fallback, gdy main session jeszcze
+   * nie istnieje (nowy pacjent przed pierwszym autosave / headless test).
    */
   function readCanonicalCore() {
-    // 1) Strona z pełnym formularzem (główna/docpro): collectUserData jest live i pełne.
-    if (typeof global.collectUserData === 'function'
-        && typeof global.hasMeaningfulMainSessionData === 'function') {
-      try {
-        var live = global.collectUserData({ source: 'save-status-canonical' });
-        if (live && global.hasMeaningfulMainSessionData(live)) {
-          return stripVolatile(live);
-        }
-      } catch (_) {}
-    }
-    // 2) Podstrona bez pełnego formularza (klirens): kanoniczny main session.
     var P = global.VildaPersistence;
     try {
       if (P && typeof P.readMainSession === 'function') {
@@ -147,10 +171,20 @@
         if (main && typeof main === 'object') return stripVolatile(main);
       }
     } catch (_) {}
-    // 3) Fallback (headless / przed pierwszym autosave): live collectUserData.
+    // Fallback (brak main session): live collectUserData — ALE tylko, gdy to PEŁNY
+    // formularz (sensowne dane pacjenta). Na podstronie bez formularza (klirens)
+    // okrojony collectUserData NIE reprezentuje pacjenta, więc zwracamy null
+    // („nie potrafię policzyć") zamiast mylącego okrojonego fingerprintu —
+    // dzięki temu nie pojawia się fałszywy DIRTY, gdy main session chwilowo zniknie.
     if (typeof global.collectUserData === 'function') {
-      try { return stripVolatile(global.collectUserData({ source: 'save-status-canonical-fallback' })); }
-      catch (_) {}
+      try {
+        var live = global.collectUserData({ source: 'save-status-canonical-fallback' });
+        if (typeof global.hasMeaningfulMainSessionData === 'function') {
+          if (live && global.hasMeaningfulMainSessionData(live)) return stripVolatile(live);
+          return null; // podstrona bez pełnych danych pacjenta → brak porównania
+        }
+        return live ? stripVolatile(live) : null; // headless bez heurystyki
+      } catch (_) {}
     }
     return null;
   }
@@ -335,7 +369,11 @@
 
   function debouncedOnFormChange() {
     if (_debounceTimer) clearTimeout(_debounceTimer);
-    _debounceTimer = setTimeout(onFormChange, 250);
+    // 400 ms > 300 ms (autosave main session aplikacji). Dzięki temu onFormChange
+    // czyta JUŻ zaktualizowany przez autosave page-niezależny main session, więc
+    // edycja jest poprawnie wykryta jako DIRTY — bez własnych zapisów main session
+    // z poziomu wskaźnika (co groziłoby nadpisaniem danych innej podstrony).
+    _debounceTimer = setTimeout(onFormChange, 400);
   }
 
   /**
@@ -365,7 +403,14 @@
       return;
     }
     var current = computeCanonicalFingerprint();
-    if (current != null && current === _referenceFingerprint) {
+    if (current == null) {
+      // Mamy referencję, ale na tej podstronie nie potrafimy policzyć bieżącego
+      // kanonicznego fingerprintu (np. brak main session). NIE alarmujemy fałszywym
+      // DIRTY — pokazujemy SAVED (referencja istnieje, brak dowodu na zmianę).
+      transition(STATES.SAVED);
+      return;
+    }
+    if (current === _referenceFingerprint) {
       transition(STATES.SAVED);
     } else {
       transition(STATES.DIRTY);
@@ -398,7 +443,7 @@
     _lastPatientName = (info && info.header && info.header.name) || _lastPatientName;
     _lastError = null;
     // Wymuś świeży main session, by kanoniczny rdzeń == zapisany snapshot (best-effort).
-    try { if (typeof global.saveMainSessionNow === 'function') global.saveMainSessionNow(); } catch (_) {}
+    flushMainSessionIfFullForm();
     _referenceFingerprint = computeCanonicalFingerprint();
     persistRef(); // utrwal referencję — przeżyje nawigację i reload
     transition(STATES.SAVED);
@@ -415,7 +460,7 @@
     _suppressJsonImportedUntil = Date.now() + 500;
     if (_debounceTimer) { clearTimeout(_debounceTimer); _debounceTimer = null; }
     setTimeout(function () {
-      try { if (typeof global.saveMainSessionNow === 'function') global.saveMainSessionNow(); } catch (_) {}
+      flushMainSessionIfFullForm();
       _referenceFingerprint = computeCanonicalFingerprint();
       persistRef(); // utrwal referencję wczytanego pacjenta
       transition(STATES.SAVED);
@@ -469,7 +514,7 @@
       // → kanoniczny fingerprint się zmieni → DIRTY (poprawnie).
       // Metadanych snapshot (savedAtISO/snapshotCount) NIE ustawiamy — to nie jest
       // snapshot z vault, tylko przywrócony stan formularza.
-      try { if (typeof global.saveMainSessionNow === 'function') global.saveMainSessionNow(); } catch (_) {}
+      flushMainSessionIfFullForm();
       _referenceFingerprint = computeCanonicalFingerprint();
       persistRef();
       transition(STATES.SAVED);
