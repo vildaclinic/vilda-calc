@@ -53,6 +53,12 @@
   // ── Stan modułu ────────────────────────────────────────────────
   var _state = STATES.HIDDEN;
   var _referenceFingerprint = null;
+  // Jawna, TRWAŁA (sessionStorage) flaga „edytowano od ostatniego zapisu/wczytania".
+  // To ona — a NIE porównanie fingerprintów — decyduje o SAVED/DIRTY przy nawigacji
+  // między podstronami i reloadzie. Fingerprint służy tylko do wykrycia edycji/undo
+  // na tej samej stronie. Eliminuje fałszywy DIRTY wynikający z niestabilności
+  // kanonicznego fingerprintu między podstronami (różne pola DOM, autosave per strona).
+  var _dirty = false;
   var _lastSavedAtISO = null;
   var _lastSnapshotCount = null;
   var _lastPatientName = null;
@@ -231,6 +237,7 @@
   function persistRef() {
     writePersistedRef(_referenceFingerprint ? {
       fp: _referenceFingerprint,
+      dirty: !!_dirty,
       savedAtISO: _lastSavedAtISO || null,
       snapshotCount: _lastSnapshotCount || null,
       patientName: _lastPatientName || null
@@ -239,6 +246,7 @@
 
   function clearRef() {
     _referenceFingerprint = null;
+    _dirty = false;
     writePersistedRef(null);
   }
 
@@ -343,6 +351,14 @@
     if (_state === STATES.SAVING) return;
     if (global.VildaGuestMode === true) return;
     if (!_vaultUnlocked) return;
+    // GUARD: ignoruj zmiany pól wywołane PROGRAMOWO przez restore/nawigację
+    // (vilda_persist_runtime ustawia __vildaPersistRestoring / __vildaPersistPauseUntil
+    // na czas odbudowy formularza). To NIE są edycje użytkownika — bez tego guardu
+    // odtworzenie formularza po wczytaniu/nawigacji fałszywie ustawiałoby DIRTY.
+    try {
+      if (global.__vildaPersistRestoring === true) return;
+      if (Date.now() < Number(global.__vildaPersistPauseUntil || 0)) return;
+    } catch (_) {}
     if (_state === STATES.HIDDEN) {
       if (!isFormMostlyEmpty()) {
         clearRef(); // nowy pacjent od zera — porzuć ewentualną nieaktualną referencję
@@ -358,11 +374,16 @@
       }
       return;
     }
+    // Mamy baseline (zapisany/wczytany pacjent). Porównanie fingerprintu z baseline
+    // jest miarodajne TYLKO na tej samej stronie (te same pola DOM). Wynik zapisujemy
+    // w TRWAŁEJ fladze _dirty, którą nawigacja odczyta bez ponownego porównania.
     var current = computeCanonicalFingerprint();
     if (current === null) return;
     if (current === _referenceFingerprint) {
+      if (_dirty) { _dirty = false; persistRef(); }
       if (_state !== STATES.SAVED) transition(STATES.SAVED);
     } else {
+      if (!_dirty) { _dirty = true; persistRef(); }
       if (_state !== STATES.DIRTY) transition(STATES.DIRTY);
     }
   }
@@ -387,34 +408,29 @@
     var ref = readPersistedRef();
     if (ref && ref.fp) {
       _referenceFingerprint = ref.fp;
+      _dirty = !!ref.dirty;
       _lastSavedAtISO = ref.savedAtISO || null;
       _lastSnapshotCount = ref.snapshotCount || null;
       _lastPatientName = ref.patientName || _lastPatientName;
     } else {
       _referenceFingerprint = null;
+      _dirty = false;
     }
     if (isFormMostlyEmpty()) {
       transition(STATES.HIDDEN);
       return;
     }
     if (_referenceFingerprint == null) {
-      // Są dane, ale nigdy nie zapisano do vault → realnie nowy pacjent.
+      // Są dane, ale nigdy nie zapisano/wczytano → realnie nowy pacjent.
       transition(STATES.NEW_PATIENT);
       return;
     }
-    var current = computeCanonicalFingerprint();
-    if (current == null) {
-      // Mamy referencję, ale na tej podstronie nie potrafimy policzyć bieżącego
-      // kanonicznego fingerprintu (np. brak main session). NIE alarmujemy fałszywym
-      // DIRTY — pokazujemy SAVED (referencja istnieje, brak dowodu na zmianę).
-      transition(STATES.SAVED);
-      return;
-    }
-    if (current === _referenceFingerprint) {
-      transition(STATES.SAVED);
-    } else {
-      transition(STATES.DIRTY);
-    }
+    // KLUCZOWE: przy nawigacji NIE przeliczamy ani nie porównujemy fingerprintu —
+    // kanoniczny fingerprint nie jest stabilny między podstronami (różne pola DOM,
+    // autosave per strona, asynchroniczne dopełnianie po wczytaniu), więc porównanie
+    // dawało fałszywy DIRTY. Ufamy TRWAŁEJ fladze _dirty, którą ustawia tylko
+    // realna edycja użytkownika (onFormChange poza trybem restore).
+    transition(_dirty ? STATES.DIRTY : STATES.SAVED);
   }
 
   function onUnlock() {
@@ -445,6 +461,7 @@
     // Wymuś świeży main session, by kanoniczny rdzeń == zapisany snapshot (best-effort).
     flushMainSessionIfFullForm();
     _referenceFingerprint = computeCanonicalFingerprint();
+    _dirty = false; // świeżo zapisane → czysto
     persistRef(); // utrwal referencję — przeżyje nawigację i reload
     transition(STATES.SAVED);
   }
@@ -462,6 +479,7 @@
     setTimeout(function () {
       flushMainSessionIfFullForm();
       _referenceFingerprint = computeCanonicalFingerprint();
+      _dirty = false; // świeżo wczytany pacjent → czysto
       persistRef(); // utrwal referencję wczytanego pacjenta
       transition(STATES.SAVED);
     }, 150);
@@ -516,6 +534,7 @@
       // snapshot z vault, tylko przywrócony stan formularza.
       flushMainSessionIfFullForm();
       _referenceFingerprint = computeCanonicalFingerprint();
+      _dirty = false; // odtworzony stan = bieżąca baza, brak edycji
       persistRef();
       transition(STATES.SAVED);
     }, 150);
