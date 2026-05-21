@@ -54,6 +54,7 @@
   const MIN_PASSWORD_LENGTH = 8;
   const DEFAULT_LABEL = 'Użytkownik';
   const SESSION_STORAGE_KEY = 'vilda-vault-session-v2';
+  const EPHEMERAL_MARKER_KEY = 'vilda-ephemeral-session-v1';
   // Rate-limit logowania per user (chroni przed brute-force gdy ktoś ma fizyczny
   // dostęp do urządzenia). Po N błędnych próbach kolejne unlocki dla tego usera
   // są blokowane na ttlMs, niezależnie czy hasło/recovery key są poprawne.
@@ -459,6 +460,39 @@
     storageAdapter = adapter || null;
   }
 
+  // ── Tryb efemeryczny (współdzielony komputer) ─────────────────────────────
+  // Przełącza vault na adapter PAMIĘCIOWY (meta użytkownika + migawki pacjentów
+  // NIE trafiają do IndexedDB) i koordynuje warstwę aplikacji (VildaPersistence),
+  // która kieruje sharedUserData/sesje/preferencje do shimu pamięciowego.
+  // Skutek: po zakończeniu sesji na współdzielonym komputerze nie zostaje nic
+  // trwałego. Klucz sesji w sessionStorage (ciągłość między podstronami) jest
+  // świadomym wyjątkiem — z krótkim TTL i czyszczeniem na pagehide (dalsze kroki).
+  // UWAGA: wywołać PRZED jakąkolwiek operacją vaultu w danej sesji.
+  let _ephemeralMode = false;
+  function setEphemeralMode(on) {
+    _ephemeralMode = !!on;
+    if (_ephemeralMode) {
+      setStorageAdapter(createInMemoryAdapter());
+      // Marker w REALNYM sessionStorage (nie przez VildaPersistence) — przeżywa
+      // nawigację między podstronami, dzięki czemu tryRestoreSession na świeżej
+      // podstronie wie, że ma wejść w tryb efemeryczny PRZED odtworzeniem (bez zapisu
+      // na dysk). Ginie po zamknięciu karty (sessionStorage), więc po sesji nic nie zostaje.
+      try { if (global.sessionStorage) global.sessionStorage.setItem(EPHEMERAL_MARKER_KEY, '1'); } catch (_) {}
+    } else {
+      // Wyjście z trybu efemerycznego: zresetuj adapter, by getAdapter() ponownie
+      // utworzył IndexedDB (inaczej kolejne normalne logowanie pisałoby do RAM).
+      setStorageAdapter(null);
+      try { if (global.sessionStorage) global.sessionStorage.removeItem(EPHEMERAL_MARKER_KEY); } catch (_) {}
+    }
+    try {
+      if (global.VildaPersistence && typeof global.VildaPersistence.setEphemeralMode === 'function') {
+        global.VildaPersistence.setEphemeralMode(_ephemeralMode);
+      }
+    } catch (_) {}
+    return _ephemeralMode;
+  }
+  function isEphemeralMode() { return _ephemeralMode; }
+
   // ============ PERSYSTENCJA SESJI (sessionStorage) ============
   // Po zalogowaniu kopia master key bytes ląduje w sessionStorage konkretnej karty
   // przeglądarki. Dzięki temu nawigacja między podstronami (index → docpro →
@@ -516,9 +550,18 @@
         clearPersistedSession();
         return false;
       }
+      // ── Sesja EFEMERYCZNA (współdzielony komputer) ─────────────────────────────
+      // Marker w sessionStorage oznacza, że ta sesja jest efemeryczna. MUSIMY wejść
+      // w tryb efemeryczny ZANIM dotkniemy adaptera (in-memory + uszczelnienie warstwy
+      // aplikacji), inaczej odtworzenie pisałoby na dysk. W tym trybie NIE ma lokalnej
+      // meta użytkownika (nigdy jej nie persystujemy) — pomijamy więc wymóg meta.
+      let ephemeral = false;
+      try { ephemeral = !!(global.sessionStorage && global.sessionStorage.getItem(EPHEMERAL_MARKER_KEY)); } catch (_) {}
+      if (ephemeral) setEphemeralMode(true);
+
       // sprawdź, czy user nadal istnieje (mógł zostać usunięty w innej karcie)
       const meta = await getAdapter().getUserMeta(blob.userId);
-      if (!meta) {
+      if (!meta && !ephemeral) {
         clearPersistedSession();
         return false;
       }
@@ -732,6 +775,9 @@
     lockReason = reason || 'manual';
     stopIdleTimer();
     clearPersistedSession();
+    // Wyjście z trybu efemerycznego — usuwa marker, resetuje adapter do IndexedDB,
+    // odznacza warstwę aplikacji. Po zablokowaniu nie zostaje nic z sesji efemerycznej.
+    try { if (_ephemeralMode) setEphemeralMode(false); } catch (_) {}
     notifyLock(lockReason);
   }
 
@@ -2147,6 +2193,90 @@
   }
 
   /**
+   * Rejestruje passkey ROAMING + wgrywa kopertę do escrow na serwerze.
+   * Dzięki temu można później zalogować się tym passkey z telefonu na DOWOLNYM
+   * (współdzielonym) komputerze w trybie efemerycznym — komputer pobierze kopertę
+   * z serwera i odszyfruje master key sekretem PRF (bez śladu lokalnie).
+   * Wywoływać na ZAUFANYM urządzeniu, przy odblokowanym vaultcie.
+   *
+   * @param {string} [deviceLabel]
+   * @returns {Promise<{ credentialId, deviceLabel, escrowed: true }>}
+   */
+  async function registerPasskeyForRoaming(deviceLabel) {
+    const C = getCrypto();
+    if (!isUnlocked() || !masterKeyBytes) {
+      throw new Error('VildaVault: vault musi być odblokowany przed rejestracją passkey.');
+    }
+    const userId = currentUserId;
+    const rpId = (typeof window !== 'undefined' && window.location && window.location.hostname) || 'localhost';
+    const label = deviceLabel || C.generateDeviceLabel();
+
+    // 1. Passkey roaming (bez wymuszania platform) + PRF secret + klucz publiczny.
+    const { credentialId, prfSecretBytes, publicKeyRawB64u, prfInputB64u } =
+      await C.createRoamingPasskeyAndGetPrfSecret(userId, rpId, currentUserLabel);
+
+    // 2. Klucz wrappujący + zaszyfrowany master key (iv/data jako Uint8Array).
+    const wrappingKey = await C.deriveKeyFromPrfSecret(prfSecretBytes);
+    const encryptedMasterByPasskey = await C.encryptBytes(wrappingKey, masterKeyBytes);
+
+    // 3. Zapis lokalny (jak registerPasskey) — passkey użyteczny też na tym urządzeniu.
+    const meta = await getAdapter().getUserMeta(userId);
+    const passkeys = Array.isArray(meta.passkeys) ? meta.passkeys : [];
+    passkeys.push({
+      credentialId:             credentialId,
+      deviceLabel:              label,
+      createdAtISO:             new Date().toISOString(),
+      encryptedMasterByPasskey: encryptedMasterByPasskey,
+      publicKeyB64u:            publicKeyRawB64u,
+      roaming:                  true
+    });
+    await getAdapter().putUserMeta(userId, { ...meta, passkeys });
+
+    // 4. Upload koperty do escrow — Bearer authToken (dowód posiadania master key).
+    let sync;
+    try {
+      sync = await getSyncMaterial();
+    } catch (e) {
+      const err = new Error('VildaVault: passkey zapisany lokalnie, ale brak materiału sync do escrow.');
+      err.code = 'ESCROW_NO_SYNC';
+      throw err;
+    }
+    const workerUrl = ((typeof window !== 'undefined' && window.VILDA_SYNC_WORKER_URL)
+      || 'https://vilda-sync.maciej-4b9.workers.dev').replace(/\/$/, '');
+    const escrowBody = {
+      encryptedMasterByPasskey: {
+        iv:   C.bytesToBase64url(encryptedMasterByPasskey.iv),
+        data: C.bytesToBase64url(encryptedMasterByPasskey.data)
+      },
+      prfSalt:       prfInputB64u,
+      hkdfInfo:      'wagaiwzrost.pl:wrapping-key:v1',
+      publicKeyB64u: publicKeyRawB64u
+    };
+    let resp;
+    try {
+      resp = await fetch(
+        workerUrl + '/v1/slots/' + sync.slotId + '/passkey/' + encodeURIComponent(credentialId),
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sync.authToken },
+          body: JSON.stringify(escrowBody)
+        }
+      );
+    } catch (e) {
+      const err = new Error('VildaVault: passkey zapisany lokalnie, ale upload koperty do chmury nie powiódł się (sieć).');
+      err.code = 'ESCROW_UPLOAD_FAILED';
+      throw err;
+    }
+    if (!resp.ok) {
+      const err = new Error('VildaVault: serwer odrzucił zapis koperty passkey (' + resp.status + ').');
+      err.code = 'ESCROW_UPLOAD_REJECTED';
+      throw err;
+    }
+
+    return { credentialId, deviceLabel: label, escrowed: true };
+  }
+
+  /**
    * Odblokowuje vault przez passkey — bez hasła.
    * Jeśli credentialId pominięty, przeglądarka wyświetli listę passkey dla danego rpId.
    *
@@ -2207,6 +2337,130 @@
     const label = (regEntry && regEntry.label) || 'Użytkownik';
     await adoptMasterBytes(masterBytes, userId, label);
     await getAdapter().updateRegistryEntry(userId, { lastLoginAtISO: new Date().toISOString() });
+  }
+
+  /**
+   * Logowanie passkey EFEMERYCZNE — na współdzielonym komputerze, bez śladu lokalnie.
+   * Przepływ:
+   *   1. setEphemeralMode(true) — adapter in-memory + uszczelnienie warstwy aplikacji.
+   *   2. POST /v1/passkey/challenge → challenge.
+   *   3. Asercja WebAuthn (PRF) z tym challenge (telefon przez hybrid).
+   *   4. POST /v1/passkey/:credentialId/unlock (asercja) → koperta.
+   *   5. PRF secret → klucz wrappujący → odszyfruj koperta → masterKeyBytes.
+   *   6. adoptMasterBytes → vault odblokowany w RAM (sessionStorage tylko klucz sesji).
+   *
+   * @param {{ credentialId?: string, signal?: AbortSignal }} [options]
+   * @returns {Promise<{ ok: true, ephemeral: true, credentialId, userId }>}
+   */
+  async function unlockWithPasskeyEphemeral(options) {
+    const C = getCrypto();
+    const opts = (options && typeof options === 'object') ? options : {};
+
+    // 0. Wymagane wsparcie PRF — inaczej sygnalizuj fallback (QR efemeryczny).
+    let prfOk = false;
+    try { prfOk = await C.isPrfSupported(); } catch (_) { prfOk = false; }
+    if (!prfOk) {
+      const err = new Error('VildaVault: passkey PRF nie jest wspierany na tym urządzeniu — użyj logowania QR.');
+      err.code = 'EPH_PRF_UNSUPPORTED';
+      throw err;
+    }
+
+    // 1. Tryb efemeryczny — nic trwałego lokalnie.
+    setEphemeralMode(true);
+
+    const rpId = (typeof window !== 'undefined' && window.location && window.location.hostname) || 'localhost';
+    const workerUrl = ((typeof window !== 'undefined' && window.VILDA_SYNC_WORKER_URL)
+      || 'https://vilda-sync.maciej-4b9.workers.dev').replace(/\/$/, '');
+
+    // 2. Challenge z serwera (anti-replay).
+    let challengeB64u;
+    try {
+      const chResp = await fetch(workerUrl + '/v1/passkey/challenge', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }
+      });
+      if (!chResp.ok) throw new Error('challenge http ' + chResp.status);
+      challengeB64u = (await chResp.json()).challenge;
+    } catch (e) {
+      const err = new Error('VildaVault: nie udało się pobrać challenge z serwera.');
+      err.code = 'EPH_CHALLENGE_FAILED';
+      throw err;
+    }
+    const challengeBytes = C.base64urlToBytes(challengeB64u);
+
+    // 3. Asercja WebAuthn (PRF) z challenge serwera (telefon przez hybrid).
+    const asrt = await C.getPasskeyAssertionAndPrf(opts.credentialId || null, rpId, challengeBytes, opts.signal || null);
+    if (opts.signal && opts.signal.aborted) {
+      const a = new Error('AbortError: passkey authentication aborted'); a.name = 'AbortError'; throw a;
+    }
+
+    // 4. Pobierz kopertę (bramka asercją po stronie serwera).
+    let koperta;
+    try {
+      const unlockResp = await fetch(
+        workerUrl + '/v1/passkey/' + encodeURIComponent(asrt.credentialId) + '/unlock',
+        {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            clientDataJSON: asrt.clientDataJSONB64u,
+            authenticatorData: asrt.authenticatorDataB64u,
+            signature: asrt.signatureB64u
+          })
+        }
+      );
+      if (unlockResp.status === 404) {
+        const e = new Error('VildaVault: ten passkey nie ma koperty w chmurze (nie zarejestrowano roaming).');
+        e.code = 'EPH_NO_ENVELOPE'; throw e;
+      }
+      if (!unlockResp.ok) {
+        const e = new Error('VildaVault: serwer odrzucił asercję (' + unlockResp.status + ').');
+        e.code = 'EPH_UNLOCK_REJECTED'; throw e;
+      }
+      koperta = await unlockResp.json();
+    } catch (e) {
+      if (e && e.code) throw e;
+      const err = new Error('VildaVault: błąd sieci przy pobieraniu koperty.');
+      err.code = 'EPH_UNLOCK_NETWORK'; throw err;
+    }
+
+    // 5. Odszyfruj master key sekretem PRF.
+    const wrappingKey = await C.deriveKeyFromPrfSecret(asrt.prfSecretBytes);
+    let masterBytes;
+    try {
+      const ivBytes = C.base64urlToBytes(koperta.encryptedMasterByPasskey.iv);
+      const dataBytes = C.base64urlToBytes(koperta.encryptedMasterByPasskey.data);
+      masterBytes = await C.decryptBytes(wrappingKey, ivBytes, dataBytes);
+    } catch (e) {
+      const err = new Error('VildaVault: nie udało się odszyfrować koperty sekretem PRF.');
+      err.code = 'EPH_DECRYPT_FAILED'; throw err;
+    }
+
+    // 6. Adopcja do RAM — bez zapisu meta na dysk (adapter in-memory).
+    const userId = 'eph:' + asrt.credentialId.slice(0, 32);
+    await adoptMasterBytes(masterBytes, userId, 'Sesja passkey (efemeryczna)');
+    return { ok: true, ephemeral: true, credentialId: asrt.credentialId, userId: userId };
+  }
+
+  /**
+   * Fallback QR EFEMERYCZNY — gdy passkey/PRF niedostępne. Adoptuje master key
+   * przekazany przez QR-ECDH do vaultu w RAM (bez tworzenia lokalnego konta,
+   * w przeciwieństwie do completeQRLogin).
+   *
+   * @param {string} privateKeyB64u   - klucz prywatny ECDH komputera (z initiateQRLogin)
+   * @param {object} encryptedPayload - z pollQRLoginStatus
+   * @returns {Promise<{ ok: true, ephemeral: true, userId }>}
+   */
+  async function completeQRLoginEphemeral(privateKeyB64u, encryptedPayload) {
+    const C = getCrypto();
+    setEphemeralMode(true);
+    let privateKey;
+    try { privateKey = await C.importECDHPrivateKey(privateKeyB64u); }
+    catch (e) { const err = new Error('completeQRLoginEphemeral: błąd klucza prywatnego.'); err.code = 'EPH_QR_KEY'; throw err; }
+    let masterBytes;
+    try { masterBytes = await C.decryptFromTransfer(privateKey, encryptedPayload); }
+    catch (e) { const err = new Error('completeQRLoginEphemeral: błąd deszyfrowania transferu.'); err.code = 'EPH_QR_DECRYPT'; throw err; }
+    const userId = 'eph-qr:' + Date.now().toString(36);
+    await adoptMasterBytes(masterBytes, userId, 'Sesja QR (efemeryczna)');
+    return { ok: true, ephemeral: true, userId: userId };
   }
 
   /**
@@ -2711,14 +2965,21 @@
     // WebAuthn passkeys
     isPrfSupported: isPrfSupported,
     registerPasskey: registerPasskey,
+    registerPasskeyForRoaming: registerPasskeyForRoaming,
     unlockWithPasskey: unlockWithPasskey,
+    unlockWithPasskeyEphemeral: unlockWithPasskeyEphemeral,
+    completeQRLoginEphemeral: completeQRLoginEphemeral,
     listPasskeys: listPasskeys,
     removePasskey: removePasskey,
     // QR Transfer — logowanie kodem QR
     initiateQRLogin:   initiateQRLogin,
     pollQRLoginStatus: pollQRLoginStatus,
     completeQRLogin:   completeQRLogin,
-    approveQRLogin:    approveQRLogin
+    approveQRLogin:    approveQRLogin,
+    // Tryb efemeryczny (współdzielony komputer) — nic trwałego lokalnie
+    setEphemeralMode:  setEphemeralMode,
+    isEphemeralMode:   isEphemeralMode,
+    setStorageAdapter: setStorageAdapter
   };
 
   global.VildaVault = api;

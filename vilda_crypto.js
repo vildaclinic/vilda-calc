@@ -573,6 +573,78 @@
   }
 
   /**
+   * Wyciąga klucz publiczny P-256 w formacie raw uncompressed (0x04||X||Y, 65 bajtów)
+   * z SPKI (DER) zwracanego przez PublicKeyCredential.response.getPublicKey().
+   * Dla P-256 surowy punkt to ostatnie 65 bajtów SPKI (BIT STRING zawiera 0x04||X||Y).
+   * @param {ArrayBuffer|Uint8Array} spki
+   * @returns {string} base64url 87 znaków
+   */
+  function spkiP256ToRawB64u(spki) {
+    const bytes = spki instanceof Uint8Array ? spki : new Uint8Array(spki);
+    if (bytes.length < 65) throw new Error('spkiP256ToRawB64u: SPKI zbyt krótkie');
+    const raw = bytes.slice(bytes.length - 65);
+    if (raw[0] !== 0x04) throw new Error('spkiP256ToRawB64u: brak prefiksu 0x04 (nie P-256 uncompressed)');
+    return bytesToBase64url(raw);
+  }
+
+  /**
+   * Rejestruje passkey ROAMING (do logowania na współdzielonym komputerze przez telefon).
+   * W odróżnieniu od createPasskeyAndGetPrfSecret NIE wymusza authenticatorAttachment:
+   * 'platform' — dzięki temu użytkownik może wybrać passkey na telefonie (discoverable,
+   * używany cross-device przez hybrid). Dodatkowo zwraca klucz publiczny (raw P-256),
+   * którego serwer (escrow) używa do weryfikacji asercji przy logowaniu.
+   *
+   * @returns {Promise<{ credentialId, prfSecretBytes, publicKeyRawB64u, prfInputB64u }>}
+   */
+  async function createRoamingPasskeyAndGetPrfSecret(userId, rpId, userName) {
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    const userIdBytes = new TextEncoder().encode(userId);
+
+    const cred = await navigator.credentials.create({
+      publicKey: {
+        rp: { name: 'wagaiwzrost.pl', id: rpId },
+        user: { id: userIdBytes, name: userName || userId, displayName: userName || userId },
+        pubKeyCredParams: [
+          { type: 'public-key', alg: -7 }   // tylko ES256 — escrow weryfikuje wyłącznie P-256
+        ],
+        authenticatorSelection: {
+          // BEZ authenticatorAttachment — pozwala wybrać telefon (hybrid/cross-device)
+          requireResidentKey: true,
+          residentKey: 'required',
+          userVerification: 'required'
+        },
+        challenge: challenge,
+        timeout: 60000,
+        extensions: { prf: { eval: { first: PRF_INPUT } } }
+      }
+    });
+
+    if (!cred) throw new Error('PRF: navigator.credentials.create zwrócił null');
+
+    const prfResults = cred.getClientExtensionResults()?.prf?.results;
+    if (!prfResults?.first) {
+      throw new Error('PRF: przeglądarka nie zwróciła wyniku PRF — prawdopodobnie brak wsparcia');
+    }
+
+    // Klucz publiczny — wymagany przez escrow do weryfikacji asercji.
+    const resp = cred.response;
+    if (typeof resp.getPublicKey !== 'function' || typeof resp.getPublicKeyAlgorithm !== 'function') {
+      throw new Error('PRF: przeglądarka nie udostępnia getPublicKey() — brak wsparcia dla escrow.');
+    }
+    if (resp.getPublicKeyAlgorithm() !== -7) {
+      throw new Error('PRF: passkey nie jest ES256 (P-256) — escrow obsługuje tylko ES256.');
+    }
+    const publicKeyRawB64u = spkiP256ToRawB64u(resp.getPublicKey());
+
+    return {
+      credentialId: bytesToBase64url(new Uint8Array(cred.rawId)),
+      prfSecretBytes: new Uint8Array(prfResults.first),
+      publicKeyRawB64u: publicKeyRawB64u,
+      prfInputB64u: bytesToBase64url(PRF_INPUT)
+    };
+  }
+
+  /**
    * Uwierzytelnia przez istniejący passkey i zwraca PRF secret (32 bajty).
    *
    * @param {string|null} credentialId - base64url id passkey lub null (przeglądarka wybierze)
@@ -622,6 +694,53 @@
     const prfSecretBytes = new Uint8Array(prfResults.first);
 
     return { credentialId: returnedCredId, prfSecretBytes };
+  }
+
+  /**
+   * Asercja WebAuthn z PRF, używająca challenge WYDANEGO PRZEZ SERWER, i zwracająca
+   * KOMPONENTY asercji do weryfikacji serwerowej (escrow). Dla logowania efemerycznego
+   * na współdzielonym komputerze: allowCredentials puste → przeglądarka oferuje „użyj
+   * telefonu" (hybrid). Zwraca też sekret PRF do odszyfrowania koperty.
+   *
+   * @param {string|null} credentialId  - konkretny passkey lub null (przeglądarka/telefon wybiera)
+   * @param {string}      rpId
+   * @param {Uint8Array}  challengeBytes - challenge z serwera (NIE losowy lokalnie!)
+   * @param {AbortSignal} [signal]
+   * @returns {Promise<{ credentialId, prfSecretBytes, clientDataJSONB64u, authenticatorDataB64u, signatureB64u }>}
+   */
+  async function getPasskeyAssertionAndPrf(credentialId, rpId, challengeBytes, signal) {
+    const allowCreds = credentialId
+      ? [{ type: 'public-key', id: base64urlToBytes(credentialId) }]
+      : [];
+    const requestOptions = {
+      publicKey: {
+        rpId: rpId,
+        challenge: challengeBytes,
+        timeout: 60000,
+        userVerification: 'required',
+        allowCredentials: allowCreds,
+        extensions: { prf: { eval: { first: PRF_INPUT } } }
+      }
+    };
+    if (signal && typeof AbortSignal !== 'undefined' && signal instanceof AbortSignal) {
+      requestOptions.signal = signal;
+    }
+
+    const assertion = await navigator.credentials.get(requestOptions);
+    if (!assertion) throw new Error('PRF: navigator.credentials.get zwrócił null');
+
+    const prfResults = assertion.getClientExtensionResults()?.prf?.results;
+    if (!prfResults?.first) {
+      throw new Error('PRF: przeglądarka nie zwróciła wyniku PRF przy logowaniu — brak wsparcia.');
+    }
+    const r = assertion.response;
+    return {
+      credentialId:          bytesToBase64url(new Uint8Array(assertion.rawId)),
+      prfSecretBytes:        new Uint8Array(prfResults.first),
+      clientDataJSONB64u:    bytesToBase64url(new Uint8Array(r.clientDataJSON)),
+      authenticatorDataB64u: bytesToBase64url(new Uint8Array(r.authenticatorData)),
+      signatureB64u:         bytesToBase64url(new Uint8Array(r.signature))
+    };
   }
 
   /**
@@ -1158,6 +1277,9 @@
     isPrfSupported: isPrfSupported,
     generateDeviceLabel: generateDeviceLabel,
     createPasskeyAndGetPrfSecret: createPasskeyAndGetPrfSecret,
+    createRoamingPasskeyAndGetPrfSecret: createRoamingPasskeyAndGetPrfSecret,
+    getPasskeyAssertionAndPrf: getPasskeyAssertionAndPrf,
+    spkiP256ToRawB64u: spkiP256ToRawB64u,
     getPasskeyPrfSecret: getPasskeyPrfSecret,
     deriveKeyFromPrfSecret: deriveKeyFromPrfSecret,
     bytesToBase64url: bytesToBase64url,

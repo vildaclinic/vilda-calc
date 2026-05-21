@@ -14,9 +14,48 @@
     return;
   }
 
-  const VERSION = '1.5.1';
+  const VERSION = '1.6.0';
   const PERSIST_KEY = '_vildaPersist';
   const storageCache = Object.create(null);
+
+  // ── Tryb efemeryczny (współdzielony komputer) ─────────────────────────────
+  // Gdy włączony, WSZYSTKIE odczyty/zapisy local/session tej warstwy idą do
+  // shimu PAMIĘCIOWEGO (Map), a nie do realnego localStorage/sessionStorage.
+  // Dzięki temu dane aplikacji (m.in. sharedUserData z imieniem pacjenta, sesja
+  // główna, clcr, docpro, preferencje modułów) NIE lądują na dysku i znikają
+  // wraz z kartą. To centralny punkt „uszczelnienia" trybu efemerycznego.
+  // Klucz sesji vaultu (vilda-vault-session-v2) jest zapisywany osobno przez
+  // vilda_vault.js i NIE przechodzi przez tę warstwę — to świadomy wyjątek dla
+  // ciągłości między podstronami (krótki TTL + czyszczenie na pagehide w dalszych krokach).
+  let _ephemeralMode = false;
+  let _memLocal = null;
+  let _memSession = null;
+
+  function createMemoryStorage() {
+    let m = Object.create(null);
+    return {
+      __vildaMemoryStorage: true,
+      getItem: function (k) { k = String(k); return Object.prototype.hasOwnProperty.call(m, k) ? m[k] : null; },
+      setItem: function (k, v) { m[String(k)] = String(v); },
+      removeItem: function (k) { delete m[String(k)]; },
+      clear: function () { m = Object.create(null); }
+    };
+  }
+
+  function getMemoryStorage(type) {
+    if (type === 'session') { if (!_memSession) _memSession = createMemoryStorage(); return _memSession; }
+    if (!_memLocal) _memLocal = createMemoryStorage();
+    return _memLocal;
+  }
+
+  function setEphemeralMode(on) {
+    _ephemeralMode = !!on;
+    // Czysty start sesji efemerycznej — porzuć ewentualny poprzedni shim.
+    if (_ephemeralMode) { _memLocal = null; _memSession = null; }
+    return _ephemeralMode;
+  }
+
+  function isEphemeralMode() { return _ephemeralMode; }
   const KEYS = Object.freeze({
     SHARED_USER_DATA: 'sharedUserData',
     DOCPRO_UI: 'wagaiwzrost:docproUi:v2',
@@ -154,7 +193,10 @@
   }
 
   function getStorage(type) {
-    return storageAvailable(type === 'session' ? 'session' : 'local');
+    const t = type === 'session' ? 'session' : 'local';
+    // Tryb efemeryczny: kieruj wszystko do shimu pamięciowego — nic na dysk.
+    if (_ephemeralMode) return getMemoryStorage(t);
+    return storageAvailable(t);
   }
 
   function logPersistenceError(message, error, meta) {
@@ -681,6 +723,8 @@
     MODULE_KEYS,
     MODULE_KEY_META,
     PERSIST_KEY,
+    setEphemeralMode,
+    isEphemeralMode,
     getStorage,
     safeParse,
     safeStringify,
