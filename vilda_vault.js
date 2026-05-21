@@ -2202,6 +2202,20 @@
    * @param {string} [deviceLabel]
    * @returns {Promise<{ credentialId, deviceLabel, escrowed: true }>}
    */
+  // Inicjały z etykiety konta — max 2 znaki, wielkimi literami (locale PL).
+  // Używane TYLKO do wyświetlenia na współdzielonym komputerze w trybie efemerycznym:
+  // niesiemy w kopercie wyłącznie inicjały (zaszyfrowane), nigdy pełnego imienia.
+  function computeInitials(label) {
+    if (typeof label !== 'string') return '';
+    const words = label.trim().split(/\s+/).filter(Boolean);
+    let ini = '';
+    for (let i = 0; i < words.length && ini.length < 2; i++) {
+      const ch = words[i].charAt(0);
+      if (/\p{L}/u.test(ch)) ini += ch;
+    }
+    try { return ini.toLocaleUpperCase('pl-PL'); } catch (_) { return ini.toUpperCase(); }
+  }
+
   async function registerPasskeyForRoaming(deviceLabel) {
     const C = getCrypto();
     if (!isUnlocked() || !masterKeyBytes) {
@@ -2211,13 +2225,26 @@
     const rpId = (typeof window !== 'undefined' && window.location && window.location.hostname) || 'localhost';
     const label = deviceLabel || C.generateDeviceLabel();
 
-    // 1. Passkey roaming (bez wymuszania platform) + PRF secret + klucz publiczny.
-    const { credentialId, prfSecretBytes, publicKeyRawB64u, prfInputB64u } =
+    // 1. Passkey roaming (bez wymuszania platform) + klucz publiczny.
+    const { credentialId, publicKeyRawB64u, prfInputB64u } =
       await C.createRoamingPasskeyAndGetPrfSecret(userId, rpId, currentUserLabel);
 
-    // 2. Klucz wrappujący + zaszyfrowany master key (iv/data jako Uint8Array).
+    // 2. Sekret PRF pobierz przez get() (NIE z create) — PRF z create bywa niespójny
+    //    z PRF z get() na części authenticatorów, co powodowało „nie udało się
+    //    odszyfrować koperty" przy logowaniu. get() przy rejestracji i przy logowaniu
+    //    daje TEN SAM sekret → spójne szyfrowanie/odszyfrowanie.
+    const { prfSecretBytes } = await C.getPasskeyPrfSecret(credentialId, rpId);
     const wrappingKey = await C.deriveKeyFromPrfSecret(prfSecretBytes);
     const encryptedMasterByPasskey = await C.encryptBytes(wrappingKey, masterKeyBytes);
+
+    // Inicjały (opcja C) — szyfrujemy TYM SAMYM kluczem co master key. Serwer trzyma
+    // tylko szyfrogram; pełna nazwa nigdy nie opuszcza tego urządzenia. Na współdzielonym
+    // komputerze pokażemy wyłącznie inicjały (mniejsza ekspozycja niż pełne nazwisko).
+    const initials = computeInitials(currentUserLabel);
+    let encryptedInitials = null;
+    if (initials) {
+      encryptedInitials = await C.encryptBytes(wrappingKey, new TextEncoder().encode(initials));
+    }
 
     // 3. Zapis lokalny (jak registerPasskey) — passkey użyteczny też na tym urządzeniu.
     const meta = await getAdapter().getUserMeta(userId);
@@ -2227,7 +2254,11 @@
       deviceLabel:              label,
       createdAtISO:             new Date().toISOString(),
       encryptedMasterByPasskey: encryptedMasterByPasskey,
+      encryptedInitials:        encryptedInitials,
       publicKeyB64u:            publicKeyRawB64u,
+      // wrapVersion 2 = klucz wrappujący wyprowadzony z PRF z get() (spójny z logowaniem).
+      // Brak pola / 1 = starsza koperta sprzed poprawki create→get (potencjalnie create-PRF).
+      wrapVersion:              2,
       roaming:                  true
     });
     await getAdapter().putUserMeta(userId, { ...meta, passkeys });
@@ -2250,8 +2281,15 @@
       },
       prfSalt:       prfInputB64u,
       hkdfInfo:      'wagaiwzrost.pl:wrapping-key:v1',
+      wrapVersion:   2,
       publicKeyB64u: publicKeyRawB64u
     };
+    if (encryptedInitials) {
+      escrowBody.encryptedInitials = {
+        iv:   C.bytesToBase64url(encryptedInitials.iv),
+        data: C.bytesToBase64url(encryptedInitials.data)
+      };
+    }
     let resp;
     try {
       resp = await fetch(
@@ -2329,7 +2367,12 @@
         entry.encryptedMasterByPasskey.data
       );
     } catch (_) {
-      throw new Error('VildaVault: nie udało się odszyfrować master key passkey\'em.');
+      const wv = (entry && typeof entry.wrapVersion === 'number') ? entry.wrapVersion : 1;
+      const err = new Error('VildaVault: nie udało się odszyfrować master key passkey\'em.');
+      err.code = 'PASSKEY_DECRYPT_FAILED';
+      err.wrapVersion = wv;
+      err.diagnostic = (wv >= 2) ? 'envelope-current-prf-mismatch' : 'envelope-legacy-create-prf';
+      throw err;
     }
 
     // 4. Załaduj vault — identycznie jak przy logowaniu hasłem
@@ -2430,13 +2473,49 @@
       const dataBytes = C.base64urlToBytes(koperta.encryptedMasterByPasskey.data);
       masterBytes = await C.decryptBytes(wrappingKey, ivBytes, dataBytes);
     } catch (e) {
+      // Diagnostyka: rozróżnij DWIE przyczyny tego samego objawu.
+      //  - wrapVersion < 2 (lub brak): koperta starsza, sprzed poprawki create→get —
+      //    mogła zostać owinięta sekretem PRF z create(); rozwiązanie = re-rejestracja.
+      //  - wrapVersion >= 2: koperta aktualna (owinięta PRF z get()), więc skoro sekret
+      //    PRF z logowania nie pasuje, to niespójność samego authenticatora — typowo
+      //    passkey Apple użyty LOKALNIE na Macu daje inny PRF niż przez telefon (hybrid).
+      const wv = (koperta && typeof koperta.wrapVersion === 'number') ? koperta.wrapVersion : 1;
       const err = new Error('VildaVault: nie udało się odszyfrować koperty sekretem PRF.');
-      err.code = 'EPH_DECRYPT_FAILED'; throw err;
+      err.code = 'EPH_DECRYPT_FAILED';
+      err.wrapVersion = wv;
+      err.diagnostic = (wv >= 2) ? 'envelope-current-prf-mismatch' : 'envelope-legacy-create-prf';
+      try {
+        if (typeof console !== 'undefined' && console.warn) {
+          console.warn(
+            '[Vilda passkey] EPH_DECRYPT_FAILED: wrapVersion=' + wv +
+            ' diagnostic=' + err.diagnostic +
+            (wv >= 2
+              ? ' → koperta AKTUALNA (PRF z get()); sekret PRF z logowania nie pasuje. Prawdopodobna niespójność authenticatora (np. Apple Passwords lokalnie vs telefon). Zaloguj się przez „Użyj telefonu".'
+              : ' → koperta STARSZA (sprzed poprawki create→get). Zarejestruj passkey ponownie na zaufanym urządzeniu, potem zaloguj się jeszcze raz.')
+          );
+        }
+      } catch (_) { void _; }
+      throw err;
     }
+
+    // 5b. Inicjały (opcja C) — odszyfruj TYM SAMYM kluczem. Na współdzielonym ekranie
+    //     pokazujemy tylko inicjały zamiast pełnego nazwiska. Fallback: neutralna etykieta.
+    let ephLabel = 'Konto (passkey)';
+    try {
+      if (koperta.encryptedInitials && koperta.encryptedInitials.iv && koperta.encryptedInitials.data) {
+        const iniBytes = await C.decryptBytes(
+          wrappingKey,
+          C.base64urlToBytes(koperta.encryptedInitials.iv),
+          C.base64urlToBytes(koperta.encryptedInitials.data)
+        );
+        const ini = new TextDecoder().decode(iniBytes).trim();
+        if (ini) ephLabel = ini;
+      }
+    } catch (_) { void _; /* brak/uszkodzone inicjały → etykieta neutralna */ }
 
     // 6. Adopcja do RAM — bez zapisu meta na dysk (adapter in-memory).
     const userId = 'eph:' + asrt.credentialId.slice(0, 32);
-    await adoptMasterBytes(masterBytes, userId, 'Sesja passkey (efemeryczna)');
+    await adoptMasterBytes(masterBytes, userId, ephLabel);
     return { ok: true, ephemeral: true, credentialId: asrt.credentialId, userId: userId };
   }
 
