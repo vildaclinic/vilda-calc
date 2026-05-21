@@ -14,22 +14,30 @@
     return;
   }
 
-  const VERSION = '1.6.0';
+  const VERSION = '1.7.0';
   const PERSIST_KEY = '_vildaPersist';
   const storageCache = Object.create(null);
 
   // ── Tryb efemeryczny (współdzielony komputer) ─────────────────────────────
   // Gdy włączony, WSZYSTKIE odczyty/zapisy local/session tej warstwy idą do
-  // shimu PAMIĘCIOWEGO (Map), a nie do realnego localStorage/sessionStorage.
-  // Dzięki temu dane aplikacji (m.in. sharedUserData z imieniem pacjenta, sesja
-  // główna, clcr, docpro, preferencje modułów) NIE lądują na dysku i znikają
-  // wraz z kartą. To centralny punkt „uszczelnienia" trybu efemerycznego.
-  // Klucz sesji vaultu (vilda-vault-session-v2) jest zapisywany osobno przez
-  // vilda_vault.js i NIE przechodzi przez tę warstwę — to świadomy wyjątek dla
-  // ciągłości między podstronami (krótki TTL + czyszczenie na pagehide w dalszych krokach).
+  // sessionStorage pod wydzielonym prefiksem `veph:` (zamiast do localStorage).
+  // sessionStorage:
+  //   • przeżywa nawigację między podstronami w tej samej karcie (aplikacja jest
+  //     wielostronicowa — pełne przeładowania), więc dane aplikacji i zgoda GA
+  //     trzymają się przez całą sesję,
+  //   • znika automatycznie po zamknięciu karty → „zero śladu po sesji",
+  //   • jest izolowany do karty → inna osoba w nowej karcie nic nie zobaczy.
+  // Dane aplikacji (sharedUserData z imieniem pacjenta, sesja główna, clcr, docpro,
+  // preferencje modułów) NIE trafiają więc do localStorage. Przy wylogowaniu /
+  // wyjściu z trybu efemerycznego jawnie kasujemy WSZYSTKIE klucze `veph:` —
+  // żeby na wciąż otwartej karcie kolejny użytkownik nie zobaczył poprzednich danych.
+  // Fallback: gdy sessionStorage niedostępny, degradujemy do pamięci (jak dawniej).
+  // Klucz sesji vaultu (vilda-vault-session-v2) zapisuje osobno vilda_vault.js i
+  // NIE przechodzi przez tę warstwę — świadomy wyjątek dla ciągłości między podstronami.
+  const EPHEMERAL_PREFIX = 'veph:';
   let _ephemeralMode = false;
-  let _memLocal = null;
-  let _memSession = null;
+  let _ephLocal = null;
+  let _ephSession = null;
 
   function createMemoryStorage() {
     let m = Object.create(null);
@@ -42,16 +50,57 @@
     };
   }
 
-  function getMemoryStorage(type) {
-    if (type === 'session') { if (!_memSession) _memSession = createMemoryStorage(); return _memSession; }
-    if (!_memLocal) _memLocal = createMemoryStorage();
-    return _memLocal;
+  // Usuwa wszystkie klucze efemeryczne (`veph:`) z realnego sessionStorage.
+  function purgeEphemeralSessionKeys() {
+    try {
+      const ss = global.sessionStorage;
+      if (!ss) return;
+      const toRemove = [];
+      for (let i = 0; i < ss.length; i++) {
+        const key = ss.key(i);
+        if (key && key.indexOf(EPHEMERAL_PREFIX) === 0) toRemove.push(key);
+      }
+      toRemove.forEach(function (k) { try { ss.removeItem(k); } catch (_) { void _; } });
+    } catch (_) { void _; }
+  }
+
+  // Shim oparty o sessionStorage z prefiksem. Klucze izolowane przez `prefix`
+  // (np. veph:l: dla 'local', veph:s: dla 'session'). Degraduje do pamięci, gdy
+  // sessionStorage niedostępny (np. tryb prywatny niektórych przeglądarek).
+  function createSessionEphemeralStorage(prefix) {
+    let ss = null;
+    try {
+      ss = global.sessionStorage;
+      const t = prefix + '__probe';
+      ss.setItem(t, '1'); ss.removeItem(t); // test realnej dostępności
+    } catch (_) { ss = null; }
+    if (!ss) return createMemoryStorage();
+    return {
+      __vildaEphemeralSessionStorage: true,
+      getItem: function (k) { return ss.getItem(prefix + String(k)); },
+      setItem: function (k, v) { ss.setItem(prefix + String(k), String(v)); },
+      removeItem: function (k) { ss.removeItem(prefix + String(k)); },
+      clear: function () { purgeEphemeralSessionKeys(); }
+    };
+  }
+
+  function getEphemeralStorage(type) {
+    if (type === 'session') {
+      if (!_ephSession) _ephSession = createSessionEphemeralStorage(EPHEMERAL_PREFIX + 's:');
+      return _ephSession;
+    }
+    if (!_ephLocal) _ephLocal = createSessionEphemeralStorage(EPHEMERAL_PREFIX + 'l:');
+    return _ephLocal;
   }
 
   function setEphemeralMode(on) {
     _ephemeralMode = !!on;
-    // Czysty start sesji efemerycznej — porzuć ewentualny poprzedni shim.
-    if (_ephemeralMode) { _memLocal = null; _memSession = null; }
+    // Porzuć cache shimów; przy każdej zmianie trybu czyść klucze veph:
+    //   • wejście: czysty start sesji (gdyby coś zostało po awarii),
+    //   • wyjście/wylogowanie: usuń dane sesji z sessionStorage natychmiast.
+    _ephLocal = null;
+    _ephSession = null;
+    purgeEphemeralSessionKeys();
     return _ephemeralMode;
   }
 
@@ -194,8 +243,9 @@
 
   function getStorage(type) {
     const t = type === 'session' ? 'session' : 'local';
-    // Tryb efemeryczny: kieruj wszystko do shimu pamięciowego — nic na dysk.
-    if (_ephemeralMode) return getMemoryStorage(t);
+    // Tryb efemeryczny: kieruj wszystko do sessionStorage (prefiks veph:) — nic do
+    // localStorage; dane przeżywają nawigację, znikają po zamknięciu karty/wylogowaniu.
+    if (_ephemeralMode) return getEphemeralStorage(t);
     return storageAvailable(t);
   }
 
