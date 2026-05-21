@@ -156,6 +156,7 @@ const CORE_SHELL_URLS = [
   '/vilda_auth_ui.js?v=52',
   '/vilda_auth_ui.js?v=53',
   '/vilda_auth_ui.js?v=60',
+  '/vilda_auth_ui.js?v=61',
   '/vilda_chrome.js?v=8',
   '/vilda_chrome.css?v=11',
   '/vilda_chrome.css?v=12',
