@@ -168,7 +168,17 @@
       // anonimowego bez przeładowania strony.
       showLoginButtonForGuest();
     } else {
-      hideCornerBtn();
+      // Wyjście z trybu gościa. UWAGA: nie chowaj bezwarunkowo corner-btn — przy
+      // przywróceniu sesji (boot→tryRestoreSession→onUnlock pokazał „Wyloguj się")
+      // wołane jest setGuestMode(false); ślepy hideCornerBtn() ukrywał wtedy przycisk
+      // wylogowania na każdej podstronie po nawigacji. Gdy vault jest odblokowany
+      // (użytkownik zalogowany) → pokaż „Wyloguj się”; w innym wypadku schowaj.
+      var _vGuestExit = getVault();
+      if (_vGuestExit && typeof _vGuestExit.isUnlocked === 'function' && _vGuestExit.isUnlocked()) {
+        showLogoutButton();
+      } else {
+        hideCornerBtn();
+      }
     }
     try {
       const evt = new global.CustomEvent('vilda:guest-mode-changed', { detail: { guest: !!flag } });
