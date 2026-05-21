@@ -2410,6 +2410,10 @@
 
     // 1. Tryb efemeryczny — nic trwałego lokalnie.
     setEphemeralMode(true);
+    // Świeży start NOWEJ sesji: usuń ewentualne resztki veph: po poprzedniej sesji
+    // (np. po awarii bez wylogowania). Restore na nawigacji NIE woła tej funkcji,
+    // więc dane między podstronami przetrwają — czyścimy tylko przy realnym logowaniu.
+    try { if (global.VildaPersistence && global.VildaPersistence.purgeEphemeralData) global.VildaPersistence.purgeEphemeralData(); } catch (_) { void _; }
 
     const rpId = (typeof window !== 'undefined' && window.location && window.location.hostname) || 'localhost';
     const workerUrl = ((typeof window !== 'undefined' && window.VILDA_SYNC_WORKER_URL)
@@ -2531,6 +2535,8 @@
   async function completeQRLoginEphemeral(privateKeyB64u, encryptedPayload) {
     const C = getCrypto();
     setEphemeralMode(true);
+    // Świeży start nowej sesji QR — usuń resztki veph: po poprzedniej sesji (restore nie woła).
+    try { if (global.VildaPersistence && global.VildaPersistence.purgeEphemeralData) global.VildaPersistence.purgeEphemeralData(); } catch (_) { void _; }
     let privateKey;
     try { privateKey = await C.importECDHPrivateKey(privateKeyB64u); }
     catch (e) { const err = new Error('completeQRLoginEphemeral: błąd klucza prywatnego.'); err.code = 'EPH_QR_KEY'; throw err; }

@@ -95,12 +95,16 @@
 
   function setEphemeralMode(on) {
     _ephemeralMode = !!on;
-    // Porzuć cache shimów; przy każdej zmianie trybu czyść klucze veph:
-    //   • wejście: czysty start sesji (gdyby coś zostało po awarii),
-    //   • wyjście/wylogowanie: usuń dane sesji z sessionStorage natychmiast.
+    // Porzuć cache shimów (re-odczyt sessionStorage przy następnym getStorage).
     _ephLocal = null;
     _ephSession = null;
-    purgeEphemeralSessionKeys();
+    // Czyść klucze veph: WYŁĄCZNIE przy WYJŚCIU (wylogowanie / lock).
+    // NIE czyścimy przy wejściu — tryb efemeryczny jest włączany ponownie przy KAŻDEJ
+    // nawigacji (tryRestoreSession na świeżej podstronie woła setEphemeralMode(true)),
+    // a dane MUSZĄ przetrwać między podstronami. Czyszczenie tutaj kasowałoby je za
+    // każdym razem (reset aplikacji + powracający baner zgody GA). Świeży start nowej
+    // sesji robi jawnie purgeEphemeralData() z funkcji logowania (restore tego nie woła).
+    if (!_ephemeralMode) purgeEphemeralSessionKeys();
     return _ephemeralMode;
   }
 
@@ -775,6 +779,7 @@
     PERSIST_KEY,
     setEphemeralMode,
     isEphemeralMode,
+    purgeEphemeralData: purgeEphemeralSessionKeys,
     getStorage,
     safeParse,
     safeStringify,
