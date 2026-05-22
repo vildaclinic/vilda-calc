@@ -2584,15 +2584,14 @@
       }
     }
 
-    editContent.appendChild(el('div', {
-      class: 'vilda-auth-actions vilda-patient-edit-actions',
-      style: 'justify-content:space-between; gap:8px; flex-wrap:wrap;'
-    }, [
-      el('button', { class: 'vilda-auth-btn vilda-auth-btn-danger', type: 'button', text: 'Usuń pacjenta', onclick: _deletePatient }),
-      el('div', { style: 'display:flex; gap:8px;' }, [
-        el('button', { class: 'vilda-auth-btn vilda-auth-btn-ghost', type: 'button', text: 'Przywróć', onclick: _resetEditForm }),
-        el('button', { class: 'vilda-auth-btn vilda-auth-btn-primary', type: 'button', text: 'Zapisz zmiany', onclick: _saveEdits })
-      ])
+    // Układ A: równa para Przywróć/Zapisz (50/50 dzięki .vilda-auth-actions .vilda-auth-btn{flex:1}),
+    // a niżej, pod separatorem, dyskretne „Usuń pacjenta" (danger-outline, wyśrodkowane).
+    editContent.appendChild(el('div', { class: 'vilda-auth-actions' }, [
+      el('button', { class: 'vilda-auth-btn vilda-auth-btn-ghost', type: 'button', text: 'Przywróć', onclick: _resetEditForm }),
+      el('button', { class: 'vilda-auth-btn vilda-auth-btn-primary', type: 'button', text: 'Zapisz zmiany', onclick: _saveEdits })
+    ]));
+    editContent.appendChild(el('div', { class: 'vilda-patient-delete-row' }, [
+      el('button', { class: 'vilda-auth-btn vilda-patient-delete-btn', type: 'button', text: 'Usuń pacjenta', onclick: _deletePatient })
     ]));
 
     // ── Przełączanie zakładek ──
