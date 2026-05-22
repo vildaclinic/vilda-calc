@@ -52,6 +52,15 @@
   flex-direction: column;
 }
 
+/* Karta pacjenta — na desktopie ~25% szersza niż pozostałe ekrany auth (540 → 675px).
+   Tylko gdy karta zawiera ekran pacjenta (:has) i tylko na szerokich ekranach;
+   na wąskich/mobile karta i tak zajmuje 100% szerokości. */
+@media (min-width: 760px) {
+  .vilda-auth-card:has(.vilda-auth-patient-card) {
+    max-width: 675px;
+  }
+}
+
 /* --- BRAND HEADER --- */
 .vilda-auth-brand {
   display: flex;
