@@ -207,6 +207,10 @@ select.vilda-auth-input {
   line-height: 1.45;
   border: 1px solid #f3cfd2;
 }
+/* Pusty kontener błędu nie może pokazywać różowego paska — chowamy go, gdy brak treści. */
+.vilda-auth-error:empty {
+  display: none;
+}
 
 /* --- PRZYCISKI --- */
 .vilda-auth-buttons {
@@ -310,9 +314,18 @@ select.vilda-auth-input {
 .vilda-patient-delete-row {
   display: flex;
   justify-content: center;
-  margin-top: 12px;
-  padding-top: 12px;
+  align-items: center;
+  padding: 14px 0;          /* symetrycznie góra/dół → przycisk wyśrodkowany w pionie pasma */
   border-top: 1px solid #e4eef0;
+}
+
+/* Wyrównanie wysokości pól w zakładce Edycja: WSZYSTKIE pola (w tym <select> Płeć)
+   mają tę samą stałą wysokość, niezależnie od natywnych różnic selecta między
+   przeglądarkami. Specyficzność (0,2,1) bije globalne reguły select. */
+.vilda-patient-tab-content[data-tab="edit"] .vilda-auth-input {
+  height: 50px;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 .vilda-patient-delete-btn {
   flex: 0 0 auto;
