@@ -315,8 +315,7 @@ select.vilda-auth-input {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 14px 0;          /* symetrycznie góra/dół → przycisk wyśrodkowany w pionie pasma */
-  border-top: 1px solid #e4eef0;
+  margin: 1rem 0;           /* 1rem odstępu nad i pod przyciskiem „Usuń" */
 }
 
 /* Wyrównanie wysokości pól w zakładce Edycja: WSZYSTKIE pola (w tym <select> Płeć)
@@ -327,20 +326,21 @@ select.vilda-auth-input {
   padding-top: 0;
   padding-bottom: 0;
 }
-.vilda-patient-delete-btn {
+/* „Usuń pacjenta": ten sam rozmiar i font co inne przyciski (dziedziczy z .vilda-auth-btn),
+   ale w odcieniach czerwieni jako danger-outline. Reguła z prefiksem .vilda-auth-root i
+   !important — inaczej globalne button{…!important} ze style.css nadpisują kolory. */
+.vilda-auth-root .vilda-patient-delete-btn {
   flex: 0 0 auto;
-  padding: 10px 18px;
-  font-size: 14px;
-  border-radius: 10px;
-  background: #ffffff;
-  color: #b00020;
-  border-color: #f0c4cf;
-  box-shadow: none;
+  background: #ffffff !important;
+  color: #b00020 !important;
+  border: 1.5px solid #f0c4cf !important;
+  box-shadow: none !important;
 }
-.vilda-patient-delete-btn:hover {
-  background: #fff5f6;
-  border-color: #b00020;
-  color: #8e0019;
+.vilda-auth-root .vilda-patient-delete-btn:hover {
+  background: #fff5f6 !important;
+  border-color: #b00020 !important;
+  color: #8e0019 !important;
+  box-shadow: none !important;
 }
 
 .vilda-auth-link {
