@@ -45,11 +45,19 @@
   const REGISTRY_DB_NAME = 'vilda_registry';
   const REGISTRY_DB_VERSION = 1;
   const USER_DB_PREFIX = 'vilda_user_';
-  const USER_DB_VERSION = 1;
+  // v2: dodany store 'tombstones' (znaczniki usunięcia pacjenta do synchronizacji).
+  // Migracja w onupgradeneeded jest addytywna — istniejące store'y (meta/patients/
+  // snapshots) i ich dane pozostają nietknięte.
+  const USER_DB_VERSION = 2;
   const STORE_REGISTRY_USERS = 'users';
   const STORE_META = 'meta';
   const STORE_PATIENTS = 'patients';
   const STORE_SNAPSHOTS = 'snapshots';
+  const STORE_TOMBSTONES = 'tombstones';
+  // GC znaczników usunięcia: po tym czasie tombstone jest przycinany (drobny, ale nie
+  // może rosnąć w nieskończoność). 90 dni to bezpieczne okno — urządzenie offline
+  // dłużej niż to przy ponownej synchronizacji to skrajny przypadek.
+  const TOMBSTONE_TTL_MS = 90 * 24 * 60 * 60 * 1000;
   const DEFAULT_IDLE_LOCK_MS = 20 * 60 * 1000;
   const MIN_PASSWORD_LENGTH = 8;
   const DEFAULT_LABEL = 'Użytkownik';
@@ -242,6 +250,9 @@
             const s = db.createObjectStore(STORE_SNAPSHOTS, { keyPath: 'snapshotId' });
             s.createIndex('byPatient', 'patientId', { unique: false });
           }
+          if (!db.objectStoreNames.contains(STORE_TOMBSTONES)) {
+            db.createObjectStore(STORE_TOMBSTONES, { keyPath: 'patientId' });
+          }
         };
         req.onsuccess = function () { resolve(req.result); };
         req.onerror = function () { reject(req.error); };
@@ -351,6 +362,25 @@
         const store = db.transaction(STORE_SNAPSHOTS, 'readwrite').objectStore(STORE_SNAPSHOTS);
         await reqToPromise(store.delete(snapshotId));
         return true;
+      },
+      // --- tombstones (znaczniki usunięcia pacjenta do synchronizacji) ---
+      async listTombstonesForUser(userId) {
+        const db = await openUser(userId);
+        const store = db.transaction(STORE_TOMBSTONES, 'readonly').objectStore(STORE_TOMBSTONES);
+        return reqToPromise(store.getAll());
+      },
+      async putTombstoneForUser(userId, record) {
+        const db = await openUser(userId);
+        const store = db.transaction(STORE_TOMBSTONES, 'readwrite').objectStore(STORE_TOMBSTONES);
+        const rec = { patientId: record.patientId, deletedAtISO: record.deletedAtISO };
+        await reqToPromise(store.put(rec));
+        return rec;
+      },
+      async removeTombstoneForUser(userId, patientId) {
+        const db = await openUser(userId);
+        const store = db.transaction(STORE_TOMBSTONES, 'readwrite').objectStore(STORE_TOMBSTONES);
+        await reqToPromise(store.delete(patientId));
+        return true;
       }
     };
   }
@@ -370,9 +400,11 @@
 
     function ensureUserDb(userId) {
       if (!userDbs.has(userId)) {
-        userDbs.set(userId, { meta: null, patients: new Map(), snapshots: new Map() });
+        userDbs.set(userId, { meta: null, patients: new Map(), snapshots: new Map(), tombstones: new Map() });
       }
-      return userDbs.get(userId);
+      const db = userDbs.get(userId);
+      if (!db.tombstones) db.tombstones = new Map(); // dla wpisów zhydratowanych ze starego stanu
+      return db;
     }
 
     function persistNow() {
@@ -386,7 +418,8 @@
             return [kv[0], {
               meta: db.meta || null,
               patients: Array.from(db.patients.entries()),
-              snapshots: Array.from(db.snapshots.entries())
+              snapshots: Array.from(db.snapshots.entries()),
+              tombstones: Array.from((db.tombstones || new Map()).entries())
             }];
           })
         };
@@ -407,7 +440,8 @@
               userDbs.set(kv[0], {
                 meta: d.meta || null,
                 patients: new Map(d.patients || []),
-                snapshots: new Map(d.snapshots || [])
+                snapshots: new Map(d.snapshots || []),
+                tombstones: new Map(d.tombstones || [])
               });
             });
           }
@@ -496,6 +530,27 @@
       async removeSnapshotForUser(userId, snapshotId) {
         if (!userDbs.has(userId)) return true;
         userDbs.get(userId).snapshots.delete(snapshotId);
+        persistNow();
+        return true;
+      },
+      // --- tombstones (znaczniki usunięcia pacjenta do synchronizacji) ---
+      async listTombstonesForUser(userId) {
+        if (!userDbs.has(userId)) return [];
+        const tomb = userDbs.get(userId).tombstones;
+        if (!tomb) return [];
+        return Array.from(tomb.values()).map(function (r) { return Object.assign({}, r); });
+      },
+      async putTombstoneForUser(userId, record) {
+        const db = ensureUserDb(userId);
+        const rec = { patientId: record.patientId, deletedAtISO: record.deletedAtISO };
+        db.tombstones.set(rec.patientId, rec);
+        persistNow();
+        return rec;
+      },
+      async removeTombstoneForUser(userId, patientId) {
+        if (!userDbs.has(userId)) return true;
+        const tomb = userDbs.get(userId).tombstones;
+        if (tomb) tomb.delete(patientId);
         persistNow();
         return true;
       },
@@ -1120,6 +1175,16 @@
     };
     await getAdapter().putPatientForUser(currentUserId, patientRec);
 
+    // Zapis = pacjent jest ŻYWY → zdejmij ewentualny tombstone (resurrect przez edycję).
+    // lastSavedAtISO (= teraz) jest nowsze niż deletedAtISO, więc znacznik przedawniony.
+    // Feature-detect: starsze adaptery testowe mogą nie mieć metody.
+    try {
+      const _adp = getAdapter();
+      if (_adp && typeof _adp.removeTombstoneForUser === 'function') {
+        await _adp.removeTombstoneForUser(currentUserId, patientId);
+      }
+    } catch (_) { /* nie blokuj zapisu pacjenta */ }
+
     const result = {
       patientId: patientId,
       snapshotId: snapshotId,
@@ -1171,6 +1236,28 @@
   async function removePatient(patientId) {
     if (!isUnlocked()) throw new Error('VildaVault: zaloguj się, by usunąć pacjenta.');
     await getAdapter().removePatientForUser(currentUserId, patientId);
+    // Zapisz tombstone, by usunięcie rozeszło się na inne urządzenia (synchronizacja).
+    // Dane pacjenta są już skasowane lokalnie; znacznik niesie samą informację „usunięty".
+    // Feature-detect: starsze adaptery testowe mogą nie mieć metody.
+    try {
+      const _adp = getAdapter();
+      if (_adp && typeof _adp.putTombstoneForUser === 'function') {
+        await _adp.putTombstoneForUser(currentUserId, { patientId: patientId, deletedAtISO: new Date().toISOString() });
+      }
+    } catch (_) { /* nie blokuj usunięcia */ }
+
+    // Powiadom subskrybentów (VildaSyncIntegration) — w trybie NORMALNYM wypchną tombstone.
+    notifyPatientDeleted({ patientId: patientId });
+
+    // Tryb EFEMERYCZNY: automatyczny push integracji jest wyłączony (sync nie jest
+    // „enabled" na współdzielonym komputerze), więc usunięcie wypychamy tu jednorazowo,
+    // żeby tombstone dotarł do innych urządzeń. Best-effort, w tle, nie blokuje UI.
+    try {
+      if (_ephemeralMode && global.VildaSync && typeof global.VildaSync.syncPush === 'function') {
+        Promise.resolve(global.VildaSync.syncPush()).catch(function () {});
+      }
+    } catch (_) { void _; }
+
     return true;
   }
 
@@ -1986,12 +2073,40 @@
       });
     }
 
+    // Tombstones (znaczniki usunięcia) — przenoszone w blobie, żeby usunięcie pacjenta
+    // propagowało się między urządzeniami. Pole addytywne: starszy klient ignoruje je,
+    // nowszy czytający stary blob przyjmie []. Dlatego NIE bumpujemy współdzielonego
+    // SCHEMA_VERSION (to wersja schematu meta, nie payloadu sync). Feature-detect na
+    // wypadek adaptera bez metody (zwraca []).
+    let tombstones = [];
+    try {
+      const _adp = getAdapter();
+      if (_adp && typeof _adp.listTombstonesForUser === 'function') {
+        tombstones = await _adp.listTombstonesForUser(currentUserId);
+        // GC: przytnij znaczniki starsze niż TTL (lokalnie i w payloadzie).
+        if (typeof _adp.removeTombstoneForUser === 'function' && tombstones.length) {
+          const cutoffISO = new Date(Date.now() - TOMBSTONE_TTL_MS).toISOString();
+          const kept = [];
+          for (let t = 0; t < tombstones.length; t++) {
+            const ts = tombstones[t];
+            if (ts && ts.deletedAtISO && ts.deletedAtISO < cutoffISO) {
+              await _adp.removeTombstoneForUser(currentUserId, ts.patientId);
+            } else {
+              kept.push(ts);
+            }
+          }
+          tombstones = kept;
+        }
+      }
+    } catch (_) { tombstones = []; }
+
     return {
       schemaVersion:  SCHEMA_VERSION,
       userId:         currentUserId,
       label:          currentUserLabel,
       exportedAtISO:  new Date().toISOString(),
-      patients:       fullPatients
+      patients:       fullPatients,
+      tombstones:     Array.isArray(tombstones) ? tombstones : []
     };
   }
 
@@ -2025,10 +2140,47 @@
     let addedPatientCount    = 0;
     let addedSnapshotCount   = 0;
     let skippedSnapshotCount = 0;
+    let deletedPatientCount  = 0;
+
+    // ── Tombstones (znaczniki usunięcia) — reguła „nowszy wygrywa" (LWW) ─────────
+    // Pacjent jest USUNIĘTY, gdy najnowszy znacznik (lokalny ∪ przychodzący) jest
+    // nie starszy niż najnowsza edycja (lokalna ∪ przychodząca). Edycja nowsza niż
+    // usunięcie „przywraca" pacjenta. Feature-detect: starsze adaptery bez tombstone
+    // pomijają całą logikę (zachowanie addytywne jak dawniej).
+    const _adp = getAdapter();
+    const _tombSupported = _adp
+      && typeof _adp.listTombstonesForUser === 'function'
+      && typeof _adp.putTombstoneForUser === 'function'
+      && typeof _adp.removeTombstoneForUser === 'function';
+    const incomingTombArr = Array.isArray(rawData.tombstones) ? rawData.tombstones : [];
+    const localTombArr = _tombSupported ? (await _adp.listTombstonesForUser(currentUserId)) : [];
+
+    const deleteAt = Object.create(null);
+    function _noteDelete(id, iso) {
+      if (!id || !iso) return;
+      if (!deleteAt[id] || iso > deleteAt[id]) deleteAt[id] = iso;
+    }
+    incomingTombArr.forEach(function (t) { if (t) _noteDelete(t.patientId, t.deletedAtISO); });
+    localTombArr.forEach(function (t) { if (t) _noteDelete(t.patientId, t.deletedAtISO); });
+
+    const editAt = Object.create(null);
+    function _noteEdit(id, iso) {
+      if (!id || !iso) return;
+      if (!editAt[id] || iso > editAt[id]) editAt[id] = iso;
+    }
+    currentPatientsRaw.forEach(function (p) { if (p) _noteEdit(p.patientId, p.lastSavedAtISO); });
+    sourcePatients.forEach(function (p) { if (p) _noteEdit(p.patientId, p.lastSavedAtISO); });
+
+    const deletedIds = new Set();
+    Object.keys(deleteAt).forEach(function (id) {
+      const ed = editAt[id] || null;
+      if (!ed || deleteAt[id] >= ed) deletedIds.add(id);
+    });
 
     for (let i = 0; i < sourcePatients.length; i++) {
       const sp = sourcePatients[i];
       if (!sp || !sp.patientId || !sp.header) continue;
+      if (deletedIds.has(sp.patientId)) continue; // usunięty (nowszy znacznik) — nie dodawaj
 
       const backupSnapshots = Array.isArray(sp.snapshots) ? sp.snapshots : [];
       const headerCipher    = await encryptPayloadForCurrentUser(sp.header);
@@ -2098,11 +2250,34 @@
       }
     }
 
+    // ── Zastosuj tombstones po scaleniu ─────────────────────────────────────────
+    if (_tombSupported) {
+      // Usunięci (nowszy znacznik): skasuj dane lokalne (jeśli są) + utrwal znacznik,
+      // by usunięcie propagowało się dalej (ten device też je wypchnie).
+      const _deletedList = Array.from(deletedIds);
+      for (let d = 0; d < _deletedList.length; d++) {
+        const id = _deletedList[d];
+        if (currentPatientIds.has(id)) {
+          await getAdapter().removePatientForUser(currentUserId, id);
+          deletedPatientCount++;
+        }
+        await getAdapter().putTombstoneForUser(currentUserId, { patientId: id, deletedAtISO: deleteAt[id] });
+      }
+      // Przedawnione znaczniki lokalne (pacjent ożył nowszą edycją) — zdejmij.
+      for (let k = 0; k < localTombArr.length; k++) {
+        const lt = localTombArr[k];
+        if (lt && lt.patientId && !deletedIds.has(lt.patientId)) {
+          await getAdapter().removeTombstoneForUser(currentUserId, lt.patientId);
+        }
+      }
+    }
+
     return {
       mergedPatientCount,
       addedPatientCount,
       addedSnapshotCount,
-      skippedSnapshotCount
+      skippedSnapshotCount,
+      deletedPatientCount
     };
   }
 
@@ -2169,6 +2344,20 @@
   function notifyPatientSaved(payload) {
     onPatientSavedListeners.forEach(function (fn) {
       try { fn(payload); } catch (_) { /* listener errors swallowed */ }
+    });
+  }
+
+  // ============ EVENT onPatientDeleted ============
+  // Informuje po usunięciu pacjenta (zapisaniu tombstone). VildaSyncIntegration
+  // używa tego, by od razu wypchnąć stan (tombstone) do innych urządzeń w trybie
+  // normalnym — bez czekania na kolejny zapis/sync.
+  const onPatientDeletedListeners = [];
+  function onPatientDeleted(fn) {
+    if (typeof fn === 'function') onPatientDeletedListeners.push(fn);
+  }
+  function notifyPatientDeleted(info) {
+    onPatientDeletedListeners.forEach(function (fn) {
+      try { fn(info); } catch (_) { /* listener errors swallowed */ }
     });
   }
 
@@ -3088,6 +3277,7 @@
     DEFAULT_IDLE_LOCK_MS: DEFAULT_IDLE_LOCK_MS,
     MIN_PASSWORD_LENGTH: MIN_PASSWORD_LENGTH,
     setStorageAdapter: setStorageAdapter,
+    createInMemoryAdapter: createInMemoryAdapter,
     listUsers: listUsers,
     isUnlocked: isUnlocked,
     getCurrentUser: getCurrentUser,
@@ -3117,6 +3307,7 @@
     looksLikeLegacyPayload: looksLikeLegacyPayload,
     shortHashOfPatientId: shortHashOfPatientId,
     onPatientSaved: onPatientSaved,
+    onPatientDeleted: onPatientDeleted,
     startIdleTimer: startIdleTimer,
     stopIdleTimer: stopIdleTimer,
     resetIdleTimer: resetIdleTimer,
