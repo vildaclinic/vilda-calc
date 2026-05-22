@@ -177,6 +177,19 @@
   box-shadow: 0 0 0 4px rgba(0, 131, 141, 0.12);
 }
 
+/* <select> z klasą vilda-auth-input: zerujemy natywny wygląd (inaczej silnik dokłada
+   własną wysokość do paddingu 14px → select był ~1.5× wyższy niż inputy) i rysujemy
+   własną strzałkę. Dzięki temu select ma DOKŁADNIE tę samą wysokość co pola tekstowe. */
+select.vilda-auth-input {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  padding-right: 40px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239ca8ad' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+}
+
 .vilda-auth-recovery-input {
   font-family: 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
   letter-spacing: 0.08em;
@@ -289,6 +302,32 @@
   background: #8e0019;
   border-color: #8e0019;
   box-shadow: 0 8px 22px rgba(176, 0, 32, 0.3);
+}
+
+/* Karta pacjenta → zakładka Edycja, układ A: akcja destrukcyjna oddzielona pod
+   separatorem, wyśrodkowana, jako lekki danger-outline (nie wielki pełny czerwony
+   blok) — żeby nie konkurowała wizualnie z „Zapisz zmiany" i nie łamała symetrii. */
+.vilda-patient-delete-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e4eef0;
+}
+.vilda-patient-delete-btn {
+  flex: 0 0 auto;
+  padding: 10px 18px;
+  font-size: 14px;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #b00020;
+  border-color: #f0c4cf;
+  box-shadow: none;
+}
+.vilda-patient-delete-btn:hover {
+  background: #fff5f6;
+  border-color: #b00020;
+  color: #8e0019;
 }
 
 .vilda-auth-link {
