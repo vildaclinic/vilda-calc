@@ -55,6 +55,11 @@
   const DEFAULT_LABEL = 'Użytkownik';
   const SESSION_STORAGE_KEY = 'vilda-vault-session-v2';
   const EPHEMERAL_MARKER_KEY = 'vilda-ephemeral-session-v1';
+  // Klucz utrwalania efemerycznego adaptera vaultu (pacjenci/snapshoty/meta) w
+  // sessionStorage. Prefiks `veph:` → czyszczony przy wylogowaniu razem z resztą
+  // danych efemerycznych (VildaPersistence.purgeEphemeralData) i znika z kartą.
+  // Dzięki niemu dane pacjentów przeżywają nawigację między podstronami.
+  const EPHEMERAL_ADAPTER_KEY = 'veph:vault:adapter-v1';
   // Rate-limit logowania per user (chroni przed brute-force gdy ktoś ma fizyczny
   // dostęp do urządzenia). Po N błędnych próbach kolejne unlocki dla tego usera
   // są blokowane na ttlMs, niezależnie czy hasło/recovery key są poprawne.
@@ -351,7 +356,15 @@
   }
 
   // ============ ADAPTER — fallback / testy ============
-  function createInMemoryAdapter() {
+  // options.persistKey (opcjonalne): klucz w sessionStorage, pod którym adapter
+  // utrwala swój stan. Używane w trybie efemerycznym (klucz z prefiksem `veph:`),
+  // żeby dane pacjentów PRZEŻYŁY nawigację między podstronami (każda podstrona to
+  // pełne przeładowanie — bez tego Mapy startują puste). Stan to szyfrogramy
+  // (payloady pacjentów są już zaszyfrowane master keyem), a klucz `veph:` jest
+  // czyszczony przy wylogowaniu (VildaPersistence.purgeEphemeralData) i znika z
+  // zamknięciem karty. Bez persistKey adapter jest czysto pamięciowy (testy, fallback).
+  function createInMemoryAdapter(options) {
+    const persistKey = (options && typeof options.persistKey === 'string') ? options.persistKey : null;
     const registry = new Map();
     const userDbs = new Map();
 
@@ -360,6 +373,46 @@
         userDbs.set(userId, { meta: null, patients: new Map(), snapshots: new Map() });
       }
       return userDbs.get(userId);
+    }
+
+    function persistNow() {
+      if (!persistKey) return;
+      try {
+        if (typeof global.sessionStorage === 'undefined' || !global.sessionStorage) return;
+        const state = {
+          registry: Array.from(registry.entries()),
+          userDbs: Array.from(userDbs.entries()).map(function (kv) {
+            const db = kv[1];
+            return [kv[0], {
+              meta: db.meta || null,
+              patients: Array.from(db.patients.entries()),
+              snapshots: Array.from(db.snapshots.entries())
+            }];
+          })
+        };
+        global.sessionStorage.setItem(persistKey, JSON.stringify(state));
+      } catch (_) { void _; }
+    }
+
+    // Hydratacja z poprzedniej podstrony tej samej sesji efemerycznej.
+    if (persistKey) {
+      try {
+        if (typeof global.sessionStorage !== 'undefined' && global.sessionStorage) {
+          const raw = global.sessionStorage.getItem(persistKey);
+          if (raw) {
+            const state = JSON.parse(raw);
+            (state.registry || []).forEach(function (kv) { registry.set(kv[0], kv[1]); });
+            (state.userDbs || []).forEach(function (kv) {
+              const d = kv[1] || {};
+              userDbs.set(kv[0], {
+                meta: d.meta || null,
+                patients: new Map(d.patients || []),
+                snapshots: new Map(d.snapshots || [])
+              });
+            });
+          }
+        }
+      } catch (_) { void _; }
     }
 
     return {
@@ -371,16 +424,19 @@
       },
       async putRegistryEntry(record) {
         registry.set(record.userId, Object.assign({}, record));
+        persistNow();
         return record;
       },
       async updateRegistryEntry(userId, partial) {
         if (!registry.has(userId)) return null;
         const merged = Object.assign({}, registry.get(userId), partial);
         registry.set(userId, merged);
+        persistNow();
         return merged;
       },
       async removeRegistryEntry(userId) {
         registry.delete(userId);
+        persistNow();
         return true;
       },
       async getUserMeta(userId) {
@@ -390,10 +446,12 @@
       async putUserMeta(userId, record) {
         const db = ensureUserDb(userId);
         db.meta = Object.assign({}, record, { id: META_ID, userId: userId });
+        persistNow();
         return db.meta;
       },
       async deleteUserDatabase(userId) {
         userDbs.delete(userId);
+        persistNow();
         return true;
       },
       // --- pacjenci i snapshoty per-user ---
@@ -409,6 +467,7 @@
       async putPatientForUser(userId, record) {
         const db = ensureUserDb(userId);
         db.patients.set(record.patientId, Object.assign({}, record));
+        persistNow();
         return record;
       },
       async removePatientForUser(userId, patientId) {
@@ -419,6 +478,7 @@
         Array.from(db.snapshots.entries()).forEach(function (kv) {
           if (kv[1].patientId === patientId) db.snapshots.delete(kv[0]);
         });
+        persistNow();
         return true;
       },
       async listSnapshotsForUser(userId, patientId) {
@@ -430,11 +490,13 @@
       async putSnapshotForUser(userId, record) {
         const db = ensureUserDb(userId);
         db.snapshots.set(record.snapshotId, Object.assign({}, record));
+        persistNow();
         return record;
       },
       async removeSnapshotForUser(userId, snapshotId) {
         if (!userDbs.has(userId)) return true;
         userDbs.get(userId).snapshots.delete(snapshotId);
+        persistNow();
         return true;
       },
       _peek: function () {
@@ -472,7 +534,8 @@
   function setEphemeralMode(on) {
     _ephemeralMode = !!on;
     if (_ephemeralMode) {
-      setStorageAdapter(createInMemoryAdapter());
+      // Adapter utrwalany do sessionStorage (veph:) — pacjenci przeżywają nawigację.
+      setStorageAdapter(createInMemoryAdapter({ persistKey: EPHEMERAL_ADAPTER_KEY }));
       // Marker w REALNYM sessionStorage (nie przez VildaPersistence) — przeżywa
       // nawigację między podstronami, dzięki czemu tryRestoreSession na świeżej
       // podstronie wie, że ma wejść w tryb efemeryczny PRZED odtworzeniem (bez zapisu
@@ -2419,12 +2482,13 @@
       throw err;
     }
 
-    // 1. Tryb efemeryczny — nic trwałego lokalnie.
-    setEphemeralMode(true);
-    // Świeży start NOWEJ sesji: usuń ewentualne resztki veph: po poprzedniej sesji
-    // (np. po awarii bez wylogowania). Restore na nawigacji NIE woła tej funkcji,
-    // więc dane między podstronami przetrwają — czyścimy tylko przy realnym logowaniu.
+    // 1. Świeży start NOWEJ sesji: usuń resztki veph: po poprzedniej sesji (np. po
+    //    awarii bez wylogowania) ZANIM utworzymy adapter — inaczej zhydratowałby
+    //    cudze/stare dane. Restore na nawigacji NIE woła purge, więc dane między
+    //    podstronami przetrwają (adapter hydratuje świeży stan tej sesji).
     try { if (global.VildaPersistence && global.VildaPersistence.purgeEphemeralData) global.VildaPersistence.purgeEphemeralData(); } catch (_) { void _; }
+    // Tryb efemeryczny — adapter in-memory utrwalany do veph:, nic trwałego na dysk.
+    setEphemeralMode(true);
 
     const rpId = (typeof window !== 'undefined' && window.location && window.location.hostname) || 'localhost';
     const workerUrl = ((typeof window !== 'undefined' && window.VILDA_SYNC_WORKER_URL)
@@ -2553,9 +2617,9 @@
    */
   async function completeQRLoginEphemeral(privateKeyB64u, encryptedPayload) {
     const C = getCrypto();
-    setEphemeralMode(true);
-    // Świeży start nowej sesji QR — usuń resztki veph: po poprzedniej sesji (restore nie woła).
+    // Świeży start nowej sesji QR — purge PRZED utworzeniem adaptera (restore nie woła).
     try { if (global.VildaPersistence && global.VildaPersistence.purgeEphemeralData) global.VildaPersistence.purgeEphemeralData(); } catch (_) { void _; }
+    setEphemeralMode(true);
     let privateKey;
     try { privateKey = await C.importECDHPrivateKey(privateKeyB64u); }
     catch (e) { const err = new Error('completeQRLoginEphemeral: błąd klucza prywatnego.'); err.code = 'EPH_QR_KEY'; throw err; }

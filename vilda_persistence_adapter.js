@@ -109,6 +109,21 @@
   }
 
   function isEphemeralMode() { return _ephemeralMode; }
+
+  // Auto-detekcja sesji efemerycznej NIEZALEŻNIE od vaultu. Marker w sessionStorage
+  // (ustawiony przez logowanie efemeryczne na innej podstronie) przeżywa nawigację.
+  // Na „lekkich" podstronach (homa-ir, cukrzyca, steroidy, jednostki, edu) vault jest
+  // doładowywany leniwie w starszej wersji i może nie skoordynować trybu efemerycznego
+  // — bez tej detekcji warstwa trwałości pisałaby do localStorage zamiast veph:, przez
+  // co zgoda GA „nie pamięta się" (baner wraca co stronę). Czytamy marker bezpośrednio,
+  // bez czyszczenia (to NIE jest nowa sesja — to ta sama, kontynuowana między stronami).
+  (function autodetectEphemeral() {
+    try {
+      if (global.sessionStorage && global.sessionStorage.getItem('vilda-ephemeral-session-v1')) {
+        _ephemeralMode = true;
+      }
+    } catch (_) { void _; }
+  })();
   const KEYS = Object.freeze({
     SHARED_USER_DATA: 'sharedUserData',
     DOCPRO_UI: 'wagaiwzrost:docproUi:v2',
