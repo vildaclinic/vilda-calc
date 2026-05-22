@@ -1189,6 +1189,14 @@ select.vilda-auth-input {
   margin-top: 14px;
 }
 
+/* Zakładka Edycja: dolny pasek (Wróć/Wczytaj) jest osobną sekcją ekranu, więc nad nim
+   sumują się flex-gap ekranu (18px) + jego margines (14px) → odstęp pod „Usuń" robił
+   się ~4rem. Tylko gdy zakładka Edycja jest aktywna, niwelujemy te dodatki, żeby odstęp
+   pod „Usuń" był ~1rem (symetryczny z górnym). Inne zakładki bez zmian. */
+.vilda-patient-tab-content[data-tab="edit"]:not(.vilda-patient-tab-content--hidden) ~ .vilda-patient-actions {
+  margin-top: -18px;
+}
+
 /* Mobile (≤ 480px) — gęściej */
 @media (max-width: 480px) {
   .vilda-patient-hero { padding: 8px 10px; gap: 10px; }
@@ -1199,6 +1207,8 @@ select.vilda-auth-input {
   .vilda-patient-tab { padding: 9px 4px; font-size: 12px; }
   .vilda-patient-chart-wrap { padding: 6px 2px 4px; }
   .vilda-patient-chart-legend { font-size: 10px; gap: 10px; }
+  /* Mobile: „Usuń pacjenta" na całą szerokość (jak pozostałe akcje na wąskim ekranie). */
+  .vilda-auth-root .vilda-patient-delete-btn { width: 100% !important; flex: 1 1 auto; }
 }
 
 /* ============ KONIEC FAZA 42 ============ */
