@@ -4231,7 +4231,7 @@
         finishBtn.textContent = 'Loguję…';
         try {
           if (ephemeralMode) {
-            await V.completeQRLoginEphemeral(savedPrivKey, encryptedPayload);
+            await V.completeQRLoginEphemeral(savedPrivKey, encryptedPayload, transferredLabel);
           } else {
             await V.completeQRLogin(savedPrivKey, encryptedPayload, { newPassword: password, label: transferredLabel });
           }
