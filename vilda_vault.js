@@ -2804,7 +2804,7 @@
    * @param {object} encryptedPayload - z pollQRLoginStatus
    * @returns {Promise<{ ok: true, ephemeral: true, userId }>}
    */
-  async function completeQRLoginEphemeral(privateKeyB64u, encryptedPayload) {
+  async function completeQRLoginEphemeral(privateKeyB64u, encryptedPayload, accountLabel) {
     const C = getCrypto();
     // Świeży start nowej sesji QR — purge PRZED utworzeniem adaptera (restore nie woła).
     try { if (global.VildaPersistence && global.VildaPersistence.purgeEphemeralData) global.VildaPersistence.purgeEphemeralData(); } catch (_) { void _; }
@@ -2816,7 +2816,11 @@
     try { masterBytes = await C.decryptFromTransfer(privateKey, encryptedPayload); }
     catch (e) { const err = new Error('completeQRLoginEphemeral: błąd deszyfrowania transferu.'); err.code = 'EPH_QR_DECRYPT'; throw err; }
     const userId = 'eph-qr:' + Date.now().toString(36);
-    await adoptMasterBytes(masterBytes, userId, 'Sesja QR (efemeryczna)');
+    // Inicjały z nazwy konta przekazanej w transferze (opcja C — parytet z passkey).
+    // Wyświetlamy tylko inicjały, nie pełną nazwę. Fallback: neutralna etykieta.
+    const ini = computeInitials(accountLabel);
+    const ephLabel = ini ? ini : 'Konto (QR)';
+    await adoptMasterBytes(masterBytes, userId, ephLabel);
     // Pobierz dane pacjentów z chmury do RAM (jak w passkey — pull wymuszony).
     await ephemeralSyncPull();
     return { ok: true, ephemeral: true, userId: userId };
