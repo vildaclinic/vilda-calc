@@ -1207,8 +1207,6 @@ select.vilda-auth-input {
   .vilda-patient-tab { padding: 9px 4px; font-size: 12px; }
   .vilda-patient-chart-wrap { padding: 6px 2px 4px; }
   .vilda-patient-chart-legend { font-size: 10px; gap: 10px; }
-  /* Mobile: „Usuń pacjenta" na całą szerokość (jak pozostałe akcje na wąskim ekranie). */
-  .vilda-auth-root .vilda-patient-delete-btn { width: 100% !important; flex: 1 1 auto; }
 }
 
 /* ============ KONIEC FAZA 42 ============ */
@@ -1303,6 +1301,10 @@ select.vilda-auth-input {
   .vilda-auth-recovery-key { font-size: 15px; padding: 18px; letter-spacing: 0.06em; }
   .vilda-auth-actions { flex-direction: column-reverse; }
   .vilda-auth-actions-end .vilda-auth-btn { width: 100%; }
+  /* Wąski ekran: „Usuń pacjenta" na całą szerokość — ten sam próg (520px), przy którym
+     Przywróć/Zapisz przechodzą w pion na pełną szerokość. !important bije .vilda-auth-root
+     button{width:auto !important}. */
+  .vilda-auth-root .vilda-patient-delete-btn { width: 100% !important; flex: 1 1 auto; }
 }
 
 /* ============ WEBAUTHN / BIOMETRIA ============ */
