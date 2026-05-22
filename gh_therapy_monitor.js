@@ -29,10 +29,7 @@
       element.textContent = html;
       return true;
     } catch (error) {
-      logGhMonitorWarn('gh-monitor:html', 'Nie udało się ustawić kontrolowanego HTML.', {
-        context: context || '',
-        error: error && error.message ? error.message : String(error || '')
-      });
+      logGhMonitorWarn('Nie udało się ustawić kontrolowanego HTML.', error, { context: context || 'gh-monitor:html' });
       return false;
     }
   }
@@ -44,9 +41,7 @@
       element.textContent = '';
       return true;
     } catch (error) {
-      logGhMonitorWarn('gh-monitor:html', 'Nie udało się wyczyścić elementu.', {
-        error: error && error.message ? error.message : String(error || '')
-      });
+      logGhMonitorWarn('Nie udało się wyczyścić elementu.', error, { context: 'gh-monitor:html' });
       return false;
     }
   }
@@ -297,6 +292,108 @@
   }
 
   registerGHTherapyBroadcastChannelLifecycleCleanup();
+
+  /**
+   * Podpina dostępność (a11y) i obsługę zamykania do overlaya modalnego:
+   * role/aria, zamykanie klawiszem Escape, kliknięciem w tło oraz fokus na
+   * przycisku głównym.  Zwraca funkcję close(), której powinny używać przyciski,
+   * aby przy zamykaniu odpiąć nasłuch klawiatury (brak wycieku listenera).
+   *
+   * @param {HTMLElement} overlay półprzezroczyste tło
+   * @param {HTMLElement} modal okno modalne
+   * @param {{label?:string, labelledBy?:HTMLElement, primaryBtn?:HTMLElement, onClose?:Function}} [opts]
+   * @returns {Function} close
+   */
+  function attachOverlayA11y(overlay, modal, opts){
+    const o = opts || {};
+    try {
+      modal.setAttribute('role', 'dialog');
+      modal.setAttribute('aria-modal', 'true');
+      if (o.labelledBy && o.labelledBy.id) {
+        modal.setAttribute('aria-labelledby', o.labelledBy.id);
+      } else if (o.label) {
+        modal.setAttribute('aria-label', o.label);
+      }
+    } catch (error) { logGhMonitorWarn('Nie udało się ustawić atrybutów a11y overlaya GH', error); }
+    function onKey(ev){
+      if (ev && (ev.key === 'Escape' || ev.keyCode === 27)) {
+        if (typeof ev.preventDefault === 'function') ev.preventDefault();
+        close();
+      }
+    }
+    function close(){
+      try { document.removeEventListener('keydown', onKey, true); } catch (error) { logGhMonitorWarn('Zignorowany błąd pomocniczy w monitorze terapii GH/IGF-1', error); }
+      if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+      if (typeof o.onClose === 'function') { try { o.onClose(); } catch (error) { logGhMonitorWarn('Zignorowany błąd pomocniczy w monitorze terapii GH/IGF-1', error); } }
+    }
+    try { document.addEventListener('keydown', onKey, true); } catch (error) { logGhMonitorWarn('Zignorowany błąd pomocniczy w monitorze terapii GH/IGF-1', error); }
+    try {
+      overlay.addEventListener('click', function(ev){ if (ev && ev.target === overlay) close(); });
+      modal.addEventListener('click', function(ev){ if (ev && typeof ev.stopPropagation === 'function') ev.stopPropagation(); });
+    } catch (error) { logGhMonitorWarn('Zignorowany błąd pomocniczy w monitorze terapii GH/IGF-1', error); }
+    try { if (o.primaryBtn && typeof o.primaryBtn.focus === 'function') o.primaryBtn.focus(); } catch (error) { logGhMonitorWarn('Zignorowany błąd pomocniczy w monitorze terapii GH/IGF-1', error); }
+    return close;
+  }
+
+  /**
+   * Wyświetla prosty, dostępny komunikat informacyjny (zamiennik blokującego
+   * natywnego okna dialogowego).  Pojedynczy przycisk „OK", zamykanie Esc i kliknięciem w tło.
+   *
+   * @param {string} message treść komunikatu
+   * @param {string} [header] nagłówek (domyślnie „Informacja")
+   */
+  function showInfoOverlay(message, header){
+    const existing = document.getElementById('ghInfoOverlay');
+    if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+    const overlay = document.createElement('div');
+    overlay.id = 'ghInfoOverlay';
+    overlay.style.position = 'fixed';
+    overlay.style.top = '0';
+    overlay.style.left = '0';
+    overlay.style.width = '100%';
+    overlay.style.height = '100%';
+    overlay.style.background = 'rgba(0,0,0,0.5)';
+    overlay.style.display = 'flex';
+    overlay.style.alignItems = 'center';
+    overlay.style.justifyContent = 'center';
+    overlay.style.zIndex = '10000';
+    const modal = document.createElement('div');
+    modal.style.background = '#fff';
+    modal.style.color = '#111';
+    modal.style.padding = '1.5rem';
+    modal.style.borderRadius = '12px';
+    modal.style.boxShadow = '0 4px 12px rgba(0,0,0,0.25)';
+    modal.style.maxWidth = '90%';
+    modal.style.width = '360px';
+    modal.style.textAlign = 'center';
+    const hdr = document.createElement('strong');
+    hdr.id = 'ghInfoOverlayHeader';
+    hdr.textContent = header || 'Informacja';
+    hdr.style.display = 'block';
+    hdr.style.fontSize = '1.1rem';
+    hdr.style.marginBottom = '0.6rem';
+    const msg = document.createElement('p');
+    msg.textContent = message == null ? '' : String(message);
+    msg.style.fontSize = '1rem';
+    msg.style.margin = '0 0 1rem';
+    msg.style.lineHeight = '1.4';
+    const okBtn = document.createElement('button');
+    okBtn.type = 'button';
+    okBtn.textContent = 'OK';
+    okBtn.classList.add('btn-accent');
+    okBtn.style.padding = '0.5rem 1rem';
+    okBtn.style.borderRadius = '8px';
+    okBtn.style.border = 'none';
+    okBtn.style.cursor = 'pointer';
+    modal.appendChild(hdr);
+    modal.appendChild(msg);
+    modal.appendChild(okBtn);
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    const close = attachOverlayA11y(overlay, modal, { labelledBy: hdr, primaryBtn: okBtn });
+    okBtn.addEventListener('click', function(){ close(); });
+  }
+
   /**
    * Wyświetla pełnoekranowe ostrzeżenie przed usunięciem punktu leczenia.
    * Użytkownik musi potwierdzić decyzję, aby punkt został faktycznie usunięty.
@@ -377,11 +474,8 @@
     cancelBtn.style.border = '1px solid #ccc';
     // Kolor tekstu zgodny z motywem; tekstColor został obliczony wcześniej
     cancelBtn.style.color = textColor;
-    cancelBtn.addEventListener('click', () => {
-      if (overlay && overlay.parentNode) {
-        overlay.parentNode.removeChild(overlay);
-      }
-    });
+    let closeOverlay = function(){ if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay); };
+    cancelBtn.addEventListener('click', () => { closeOverlay(); });
     // Przycisk potwierdzający usunięcie
     const confirmBtn = document.createElement('button');
     confirmBtn.type = 'button';
@@ -401,20 +495,21 @@
       } catch(error) {
         logGhMonitorWarn('Nie udało się usunąć punktu terapii GH z overlaya potwierdzenia', error, { id });
       }
-      if (overlay && overlay.parentNode) {
-        overlay.parentNode.removeChild(overlay);
-      }
+      closeOverlay();
     });
     // Dodaj przyciski do kontenera
     btnWrap.appendChild(cancelBtn);
     btnWrap.appendChild(confirmBtn);
     // Złóż elementy modalu
+    header.id = 'ghDeleteOverlayHeader';
     modal.appendChild(header);
     modal.appendChild(msg);
     modal.appendChild(btnWrap);
     overlay.appendChild(modal);
     // Dodaj overlay do dokumentu
     document.body.appendChild(overlay);
+    // a11y + zamykanie Esc/tło; fokus na przycisku Anuluj (bezpieczny domyślny).
+    closeOverlay = attachOverlayA11y(overlay, modal, { labelledBy: header, primaryBtn: cancelBtn });
   }
   /**
    * Wyświetla pełnoekranową informację po wczytaniu danych do edycji.
@@ -455,6 +550,7 @@
     // nad istniejącym punktem, a nie wczytuje nowe dane. Nadajemy
     // bardziej profesjonalny tytuł.
     header.textContent = 'Edytujesz punkt leczenia';
+    header.id = 'ghEditOverlayHeader';
     header.style.display = 'block';
     header.style.fontSize = '1.1rem';
     header.style.marginBottom = '0.6rem';
@@ -477,11 +573,6 @@
     closeBtn.style.borderRadius = '8px';
     closeBtn.style.border = 'none';
     closeBtn.style.cursor = 'pointer';
-    closeBtn.addEventListener('click', () => {
-      if (overlay && overlay.parentNode) {
-        overlay.parentNode.removeChild(overlay);
-      }
-    });
     // Złóż elementy
     modal.appendChild(header);
     modal.appendChild(msg);
@@ -489,6 +580,9 @@
     overlay.appendChild(modal);
     // Dodaj overlay do dokumentu
     document.body.appendChild(overlay);
+    // a11y + zamykanie Esc/tło; fokus na przycisku „Rozumiem".
+    const closeEditInfo = attachOverlayA11y(overlay, modal, { labelledBy: header, primaryBtn: closeBtn });
+    closeBtn.addEventListener('click', () => { closeEditInfo(); });
   }
 
   /**
@@ -708,31 +802,12 @@
       }
       const doseAbsEl = document.getElementById('therDailyDoseAbs');
       if (doseAbsEl && pt.dose != null && pt.weight != null) {
-        // Oblicz dawkę absolutną (mg/d) dla podglądu w karcie terapii
-        let doseVal = parseFloat(pt.dose);
-        let weightVal = parseFloat(pt.weight);
-        if (isFinite(doseVal) && isFinite(weightVal)) {
-          let mgKgPerDay = doseVal;
-          if (pt.doseUnit && pt.doseUnit.toLowerCase().includes('tydz')) {
-            mgKgPerDay = doseVal / 7;
-          }
-          const mgPerDay = mgKgPerDay * weightVal;
-          const dec = (function(){
-            const drugName = pt.drug || '';
-            switch (drugName) {
-              case 'Genotropin 12 mg':
-              case 'Omnitrope 10 mg':
-                return 1;
-              case 'Omnitrope 5 mg':
-              case 'Genotropin 5,3 mg':
-                return 2;
-              default:
-                return 3;
-            }
-          })();
-          if (isFinite(mgPerDay)) {
-            doseAbsEl.value = mgPerDay.toFixed(dec);
-          }
+        // Oblicz dawkę absolutną (mg/d) dla podglądu w karcie terapii.
+        // Używamy wspólnych helperów computeDoseAbs/doseDecimals, aby podgląd
+        // i tabela zawsze prezentowały dawkę identycznie.
+        const mgPerDay = computeDoseAbs(pt.dose, pt.weight, pt.doseUnit);
+        if (mgPerDay != null && isFinite(mgPerDay)) {
+          doseAbsEl.value = mgPerDay.toFixed(doseDecimals(pt.drug));
         }
       }
     } catch(error) {
@@ -840,25 +915,57 @@
       dosePerDayMg = dosePerKgPerDay * weight;
     }
     // Dobierz liczbę miejsc po przecinku dla dawki bezwzględnej (mg/d)
-    let absDec;
-    switch ((pt.drug || '').trim()) {
-      case 'Genotropin 12 mg':
-        absDec = 2;
-        break;
-      case 'Omnitrope 10 mg':
-        absDec = 1;
-        break;
-      case 'Omnitrope 5 mg':
-      case 'Genotropin 5,3 mg':
-        absDec = 2;
-        break;
-      default:
-        absDec = 3;
-    }
+    const absDec = doseDecimals(pt.drug);
     const absFormatted = fmtNum(dosePerDayMg, absDec);
     // Dawka mg/kg/d pozostaje wyświetlana z trzema miejscami po przecinku
     const perKgFormatted = fmtNum(dosePerKgPerDay, 3);
     return `${absFormatted} mg/d = ${perKgFormatted} mg/kg/d`;
+  }
+
+  /**
+   * Liczy dawkę bezwzględną (mg/d) z dawki na kg i wagi.  Jeżeli jednostka
+   * jest tygodniowa (mg/kg/tydz), przelicza na dawkę dzienną dzieląc przez 7.
+   * Zwraca undefined, gdy dane są niekompletne lub nieliczbowe.  Pojedyncze
+   * źródło prawdy dla wszystkich miejsc, które wcześniej duplikowały tę logikę.
+   *
+   * @param {number|string} dose Dawka w mg/kg (na dobę lub na tydzień wg doseUnit)
+   * @param {number|string} weight Waga w kg
+   * @param {string} doseUnit Jednostka dawki (np. 'mg/kg/d' lub 'mg/kg/tydz')
+   * @returns {number|undefined}
+   */
+  function computeDoseAbs(dose, weight, doseUnit){
+    const d = parseFloat(dose);
+    const w = parseFloat(weight);
+    if (!isFinite(d) || !isFinite(w)) return undefined;
+    let mgKgPerDay = d;
+    if (doseUnit && String(doseUnit).toLowerCase().includes('tydz')) {
+      mgKgPerDay = d / 7;
+    }
+    const val = mgKgPerDay * w;
+    return isFinite(val) ? val : undefined;
+  }
+
+  /**
+   * Zwraca liczbę miejsc po przecinku dla wyświetlania dawki bezwzględnej (mg/d)
+   * w zależności od preparatu.  Pojedyncze źródło prawdy — wcześniej ta sama
+   * logika była zduplikowana w formatDoseForDisplay i editTherapyPoint, przy czym
+   * dla „Genotropin 12 mg" wartości się rozjeżdżały (1 vs 2 miejsca).  Ujednolicone
+   * do 2 miejsc, zgodnie z prezentacją w tabeli.
+   *
+   * @param {string} drug Nazwa preparatu
+   * @returns {number}
+   */
+  function doseDecimals(drug){
+    switch (String(drug == null ? '' : drug).trim()) {
+      case 'Omnitrope 10 mg':
+        return 1;
+      case 'Genotropin 12 mg':
+      case 'Omnitrope 5 mg':
+      case 'Genotropin 5,3 mg':
+        return 2;
+      default:
+        return 3;
+    }
   }
 
   /**
@@ -975,18 +1082,40 @@
         }
         ageDisplay = `${yVal}\u00a0l. i ${mVal}\u00a0m.`;
       }
-      ghMonitorSetTrustedHtml(tr, `
-        <td>${translateType(pt.type)}</td>
-        <td>${ageDisplay}</td>
-        <td>${weightStr}</td>
-        <td>${heightStr}</td>
-        <td>${boneAgeStr}</td>
-        <td>${pt.drug ? pt.drug : '—'}</td>
-        <td>${doseStr}</td>
-        <td>
-          <button type="button" class="edit-gh-pt-btn" data-id="${pt.id}">Edytuj</button>
-          <button type="button" class="delete-gh-pt-btn" data-id="${pt.id}">Usuń</button>
-        </td>`, 'gh-monitor:tr');
+      // Bezpieczne budowanie wiersza: wartości dynamiczne wstawiamy przez
+      // textContent / setAttribute, aby uniknąć wstrzyknięcia HTML z danych.
+      // Pola tekstowe pt.drug oraz pt.type (przez translateType) mogą pochodzić
+      // z niezaufanego źródła (zaimportowany plik lub synchronizacja), a wcześniej
+      // były interpolowane do innerHTML, co stwarzało ryzyko stored XSS.
+      const appendTextCell = (text) => {
+        const td = document.createElement('td');
+        td.textContent = (text == null) ? '—' : String(text);
+        tr.appendChild(td);
+      };
+      appendTextCell(translateType(pt.type));
+      appendTextCell(ageDisplay);
+      appendTextCell(weightStr);
+      appendTextCell(heightStr);
+      appendTextCell(boneAgeStr);
+      appendTextCell(pt.drug ? pt.drug : '—');
+      appendTextCell(doseStr);
+      // Komórka akcji z przyciskami Edytuj/Usuń; data-id ustawiamy przez setAttribute,
+      // aby uniknąć rozbicia atrybutu przez wartość pt.id z niezaufanego źródła.
+      const actionTd = document.createElement('td');
+      const editBtn = document.createElement('button');
+      editBtn.type = 'button';
+      editBtn.className = 'edit-gh-pt-btn';
+      editBtn.setAttribute('data-id', String(pt.id));
+      editBtn.textContent = 'Edytuj';
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.className = 'delete-gh-pt-btn';
+      delBtn.setAttribute('data-id', String(pt.id));
+      delBtn.textContent = 'Usuń';
+      actionTd.appendChild(editBtn);
+      actionTd.appendChild(document.createTextNode(' '));
+      actionTd.appendChild(delBtn);
+      tr.appendChild(actionTd);
       tbody.appendChild(tr);
     });
     // Podłącz obsługę usuwania
@@ -1431,14 +1560,14 @@
     if (type === 'start') {
       const existsStart = window.ghTherapyPoints.some(pt => pt.type === 'start' && String(pt.id) !== String(currentEditingId));
       if (existsStart) {
-        alert('Punkt „Włączenie leczenia” został już dodany.');
+        showInfoOverlay('Punkt „Włączenie leczenia” został już dodany.');
         return;
       }
     }
     if (type === 'end') {
       const existsEnd = window.ghTherapyPoints.some(pt => pt.type === 'end' && String(pt.id) !== String(currentEditingId));
       if (existsEnd) {
-        alert('Punkt „Zakończenie leczenia” został już dodany.');
+        showInfoOverlay('Punkt „Zakończenie leczenia” został już dodany.');
         return;
       }
     }
@@ -1446,7 +1575,7 @@
       // Upewnij się, że istnieje punkt start poza trybem edycji lub ten edytowany to start
       const hasStart = window.ghTherapyPoints.some(pt => pt.type === 'start') || (currentEditingId && (window.ghTherapyPoints.find(pt => String(pt.id) === String(currentEditingId))?.type === 'start'));
       if (!hasStart) {
-        alert('Najpierw dodaj punkt włączenia leczenia.');
+        showInfoOverlay('Najpierw dodaj punkt włączenia leczenia.');
         return;
       }
     }
@@ -1502,9 +1631,20 @@
     } else {
       doseUnit = 'mg/kg/d';
     }
-    // Walidacja minimalnych danych
-    if (!isFinite(ageYears) || !isFinite(weight) || !isFinite(height) || !isFinite(dose)) {
-      alert('Upewnij się, że wprowadziłeś poprawne dane: wiek, wagę, wzrost oraz dawkę.');
+    // Normalizacja wieku: przenieś nadmiarowe/nieprawidłowe miesiące do lat,
+    // tak aby ageMonths mieściło się w zakresie 0–11 (np. 15 mies. -> +1 rok, 3 mies.).
+    if (isFinite(ageYears) && isFinite(ageMonthsVal)) {
+      const totalMonths = Math.round(ageYears * 12 + ageMonthsVal);
+      if (isFinite(totalMonths)) {
+        ageYears = Math.floor(totalMonths / 12);
+        ageMonthsVal = ((totalMonths % 12) + 12) % 12;
+      }
+    }
+    // Walidacja minimalnych danych: wszystkie pola liczbowe muszą być dodatnie.
+    const totalAgeMonths = (isFinite(ageYears) ? ageYears * 12 : NaN) + (isFinite(ageMonthsVal) ? ageMonthsVal : 0);
+    if (!isFinite(ageYears) || !isFinite(weight) || !isFinite(height) || !isFinite(dose)
+        || !(totalAgeMonths > 0) || weight <= 0 || height <= 0 || dose <= 0) {
+      showInfoOverlay('Upewnij się, że wprowadziłeś poprawne, dodatnie dane: wiek, wagę, wzrost oraz dawkę.');
       return;
     }
     if (currentEditingId) {
@@ -1522,25 +1662,11 @@
         point.doseUnit = doseUnit;
         point.drug = drug;
         point.program = program;
-        // Oblicz lub odczytaj dawkę bezwzględną (mg/d) – pobierz z pola therDailyDoseAbs, jeśli istnieje
-        try {
-          const doseAbsField = document.getElementById('therDailyDoseAbs');
-          let doseAbsVal = null;
-          if (doseAbsField && doseAbsField.value !== '' && !isNaN(parseFloat(doseAbsField.value))) {
-            doseAbsVal = parseFloat(doseAbsField.value);
-          }
-          if (doseAbsVal == null && isFinite(dose) && isFinite(weight)) {
-            // Oblicz mg/kg/d na dobę, przeliczając jednostkę tygodniową, jeśli dotyczy
-            let mgKgPerDay = dose;
-            if (doseUnit && doseUnit.toLowerCase().includes('tydz')) {
-              mgKgPerDay = dose / 7;
-            }
-            doseAbsVal = mgKgPerDay * weight;
-          }
-          point.doseAbs = (doseAbsVal != null && isFinite(doseAbsVal)) ? doseAbsVal : undefined;
-        } catch(_) {
-          point.doseAbs = undefined;
-        }
+        // Dawka bezwzględna (mg/d): w trybie edycji liczymy ją z aktualnie
+        // edytowanej dawki (dose pochodzi z ghEditDose) i wagi (ghEditWeight),
+        // a NIE z pola therDailyDoseAbs z innej karty — to pole nie odzwierciedla
+        // zmian wprowadzonych w formularzu edycji i dawało niespójny wynik.
+        point.doseAbs = computeDoseAbs(dose, weight, doseUnit);
       } else {
         // Nie znaleziono punktu – dodaj jako nowy
         window.ghTherapyPoints.push({
@@ -1555,26 +1681,8 @@
           doseUnit: doseUnit,
           drug: drug,
           program: program,
-          // Dodaj dawkę bezwzględną (mg/d), korzystając z pola therDailyDoseAbs lub przeliczając z dawki/kg
-          doseAbs: (function(){
-            try {
-              const doseAbsField = document.getElementById('therDailyDoseAbs');
-              let val = null;
-              if (doseAbsField && doseAbsField.value !== '' && !isNaN(parseFloat(doseAbsField.value))) {
-                val = parseFloat(doseAbsField.value);
-              }
-              if (val == null && isFinite(dose) && isFinite(weight)) {
-                let mgKgPerDay = dose;
-                if (doseUnit && doseUnit.toLowerCase().includes('tydz')) {
-                  mgKgPerDay = dose / 7;
-                }
-                val = mgKgPerDay * weight;
-              }
-              return (val != null && isFinite(val)) ? val : undefined;
-            } catch(_) {
-              return undefined;
-            }
-          })()
+          // Dawka bezwzględna (mg/d) liczona z edytowanej dawki i wagi (jak wyżej).
+          doseAbs: computeDoseAbs(dose, weight, doseUnit)
         });
       }
       // Zakończ tryb edycji
@@ -1603,23 +1711,18 @@
         drug: drug,
         program: program
       };
-      // Oblicz dawkę bezwzględną (mg/d) i przypisz do punktu
+      // Dawka bezwzględna (mg/d): dla nowego punktu preferujemy wartość z pola
+      // therDailyDoseAbs (ta sama karta terapii, utrzymywana w synchronizacji),
+      // a gdy jej brak — liczymy z dawki i wagi przez computeDoseAbs.
       try {
         const doseAbsField = document.getElementById('therDailyDoseAbs');
         let val = null;
         if (doseAbsField && doseAbsField.value !== '' && !isNaN(parseFloat(doseAbsField.value))) {
           val = parseFloat(doseAbsField.value);
         }
-        if (val == null && isFinite(dose) && isFinite(weight)) {
-          let mgKgPerDay = dose;
-          if (doseUnit && doseUnit.toLowerCase().includes('tydz')) {
-            mgKgPerDay = dose / 7;
-          }
-          val = mgKgPerDay * weight;
-        }
-        point.doseAbs = (val != null && isFinite(val)) ? val : undefined;
+        point.doseAbs = (val != null && isFinite(val)) ? val : computeDoseAbs(dose, weight, doseUnit);
       } catch(_) {
-        point.doseAbs = undefined;
+        point.doseAbs = computeDoseAbs(dose, weight, doseUnit);
       }
       window.ghTherapyPoints.push(point);
     }

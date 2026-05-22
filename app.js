@@ -357,7 +357,16 @@ const ghTherapyBroadcastChannel = (typeof BroadcastChannel !== 'undefined') ? ne
 let ghTherapyBroadcastChannelClosed = false;
 
 function handleGHTherapyBroadcastMessage(){
-  // Po otrzymaniu komunikatu spróbuj ponownie zaimportować punkty z bazy
+  // Odśwież najpierw własną tabelę monitora (ze storage), potem kartę zaawansowaną.
+  try {
+    if (typeof window !== 'undefined' && typeof window.refreshGHTherapyMonitor === 'function') {
+      window.refreshGHTherapyMonitor();
+    }
+  } catch (_) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('app.js', _, { context: 'gh-broadcast-refresh' });
+    }
+  }
   try {
     if (typeof importTherapyPointsToAdvancedGrowth === 'function') {
       importTherapyPointsToAdvancedGrowth();
