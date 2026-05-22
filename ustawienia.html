@@ -77,6 +77,10 @@
 
 <!-- PRO — style dla sekcji Plan w ustawieniach -->
 <style>
+/* Strzałka przy zaawansowanych opcjach sync */
+#syncSlotCard[open] .sync-adv-chevron { transform: rotate(90deg); }
+#syncSlotCard summary::-webkit-details-marker { display: none; }
+
 .pro-status-banner {
   display: flex;
   align-items: center;
@@ -234,6 +238,12 @@ html.vilda-pro-active .pro-sync-note {
             </a>
             <a class="settings-subnav-link" data-target="settings-section-sync" href="#settings-section-sync">
               <i data-lucide="cloud-upload"></i>Synchronizacja
+            </a>
+          </div>
+          <div class="settings-subnav-group">
+            <div class="settings-subnav-group-label">Logowanie</div>
+            <a class="settings-subnav-link" data-target="settings-section-login" href="#settings-section-login">
+              <i data-lucide="log-in"></i>Inne urządzenia
             </a>
           </div>
           <div class="settings-subnav-group">
@@ -613,7 +623,7 @@ html.vilda-pro-active .pro-sync-note {
                       <p class="settings-control-desc">
                         Po każdym zapisie pacjenta aplikacja w tle aktualizuje plik <code>wagaiwzrost_konto_<i>imię</i>.wiw</code>
                         w wybranym folderze kopii (lub w Pobranych). Plik jest <strong>nadpisywany</strong> — w OneDrive masz historię wersji w chmurze.
-                        Throttle: minimum kilka minut między backupami, żeby nie spowalniać szybkich kolejnych zapisów.
+                        Aplikacja nie nadpisuje pliku częściej niż co kilka minut — nawet przy szybkich kolejnych zapisach.
                       </p>
                       <div class="settings-backup-controls-row">
                         <label class="settings-backup-checkbox-label">
@@ -653,7 +663,7 @@ html.vilda-pro-active .pro-sync-note {
               <span class="settings-accordion-index" aria-hidden="true"><i data-lucide="cloud-upload"></i></span>
               <div class="settings-accordion-copy">
                 <h2 class="settings-accordion-title">Synchronizacja między urządzeniami</h2>
-                <p class="settings-accordion-text">Zero-knowledge relay — serwer przechowuje wyłącznie zaszyfrowane bajty. Klucz główny nigdy nie opuszcza urządzenia.</p>
+                <p class="settings-accordion-text">Twoje dane są szyfrowane na urządzeniu przed wysłaniem. Serwer nie zna Twojego hasła ani danych pacjentów.</p>
               </div>
               <div class="settings-accordion-meta">
                 <span class="settings-mini-chip" id="syncEnabledChip">ładowanie…</span>
@@ -664,9 +674,9 @@ html.vilda-pro-active .pro-sync-note {
             <div class="settings-accordion-panel">
               <div class="settings-panel-inner">
                 <p class="settings-section-note">
-                  Dane są szyfrowane kluczem wyprowadzonym z Twojego hasła (HKDF → AES-256-GCM) przed wysłaniem na serwer.
-                  Serwer nie może odczytać danych medycznych — nawet przy pełnym dostępie do bazy.
-                  Synchronizacja działa automatycznie: po zalogowaniu i po każdym zapisie pacjenta (z opóźnieniem 5 s).
+                  Dane są szyfrowane Twoim hasłem na urządzeniu — zanim cokolwiek trafi na serwer.
+                  Nawet gdyby ktoś przejął dane z serwera, bez Twojego hasła są dla niego bezużyteczne.
+                  Synchronizacja działa automatycznie: po zalogowaniu i po każdym zapisie pacjenta.
                 </p>
 
                 <div class="settings-control-card settings-control-card--wide" id="syncControlCard">
@@ -687,6 +697,20 @@ html.vilda-pro-active .pro-sync-note {
                       </label>
                     </div>
                     <p class="settings-inline-note settings-backup-note" id="syncToggleStatus"></p>
+                    <div id="syncBackupCodeReminder" style="display:none;margin-top:0.75rem;
+                         padding:0.65rem 0.85rem;border-radius:0.6rem;
+                         background:#fffbeb;border:1px solid rgba(217,119,6,.3);
+                         font-size:0.82rem;color:#92400e;line-height:1.45;
+                         display:none;align-items:flex-start;gap:0.5rem;">
+                      <span style="flex-shrink:0;font-size:1rem;">⚠️</span>
+                      <span>
+                        Synchronizacja jest włączona. Aby nie stracić dostępu do konta gdy wysiądą wszystkie urządzenia — wygeneruj zapasowy kod dostępu.
+                        <a href="#syncCodeCard" id="syncBackupCodeReminderLink"
+                           style="color:#b45309;font-weight:600;white-space:nowrap;text-decoration:underline;">
+                          Wygeneruj kod →
+                        </a>
+                      </span>
+                    </div>
                   </div>
 
                   <div class="settings-backup-sep" role="separator"></div>
@@ -732,37 +756,90 @@ html.vilda-pro-active .pro-sync-note {
 
                   <div class="settings-backup-sep" role="separator"></div>
 
-                  <div class="settings-backup-sep" role="separator"></div>
+                  <!-- ── Podsekcja 4: Zaawansowane (zwinięte domyślnie) ── -->
+                  <details class="settings-backup-section" id="syncSlotCard" style="border:none;padding:0;margin:0;">
+                    <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;
+                                    gap:0.4rem;font-size:0.83rem;color:var(--text-muted,#666);
+                                    padding:0.15rem 0;user-select:none;">
+                      <span style="font-size:0.75rem;transition:transform .2s;" class="sync-adv-chevron">▶</span>
+                      Pokaż opcje zaawansowane
+                    </summary>
+                    <div style="margin-top:0.75rem;">
+                      <div class="settings-control-header">
+                        <h3 class="settings-control-title">Zaawansowane opcje synchronizacji</h3>
+                        <span class="settings-tag" id="syncSlotTag">—</span>
+                      </div>
+                      <p class="settings-control-desc" id="syncSlotDesc">
+                        Opcje dla zaawansowanych: zresetuj lokalny stan synchronizacji lub usuń dane synchronizacji z serwera.
+                      </p>
+                      <div class="settings-card-toggle-row settings-backup-btn-row">
+                        <button type="button" id="syncClearStateBtn" class="vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small settings-backup-btn" disabled>
+                          Zresetuj stan synchronizacji
+                        </button>
+                        <button type="button" id="syncDeleteSlotBtn" class="vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small settings-backup-btn" style="color:#dc2626;" disabled>
+                          Usuń dane synchronizacji z serwera
+                        </button>
+                      </div>
+                      <p class="settings-inline-note settings-backup-note" id="syncSlotStatus"></p>
+                    </div>
+                  </details>
 
-                  <!-- ── Podsekcja 2c1: Passkey na współdzielonym komputerze ── -->
+                </div><!-- /syncControlCard -->
+              </div>
+            </div>
+          </details>
+          <!-- ══ /Synchronizacja ════════════════════════════════════════════ -->
+
+          <!-- ══ Sekcja: Logowanie na innych urządzeniach ══════════════════ -->
+          <div class="settings-group-label">Logowanie</div>
+          <details class="settings-accordion" id="settings-section-login">
+            <summary>
+              <span class="settings-accordion-index" aria-hidden="true"><i data-lucide="log-in"></i></span>
+              <div class="settings-accordion-copy">
+                <h2 class="settings-accordion-title">Logowanie na innych urządzeniach</h2>
+                <p class="settings-accordion-text">Zaloguj się na nowym komputerze telefonem, kodem QR lub zapasowym kodem konta — bez zostawiania danych na obcym urządzeniu.</p>
+              </div>
+              <div class="settings-accordion-meta">
+                <span class="settings-mini-chip">3 metody</span>
+              </div>
+              <span class="settings-chevron" aria-hidden="true">⌄</span>
+            </summary>
+            <div class="settings-accordion-panel">
+              <div class="settings-panel-inner">
+                <div class="settings-control-card settings-control-card--wide">
+
+                  <!-- ── Passkey na współdzielonym komputerze ── -->
                   <div class="settings-backup-section" id="roamingPasskeyCard">
                     <div class="settings-control-header">
-                      <h3 class="settings-control-title">Logowanie passkey na współdzielonym komputerze</h3>
+                      <h3 class="settings-control-title">Szybkie logowanie w gabinecie lub szpitalu</h3>
                       <span class="settings-tag" id="registerRoamingPasskeyTag">—</span>
                     </div>
                     <p class="settings-control-desc">
-                      Dodaj passkey, którym zalogujesz się z telefonu na komputerze w gabinecie/szpitalu — bez wpisywania hasła i bez pozostawiania kopii danych na tym komputerze. Potwierdzisz biometrią na telefonie.
+                      Skonfiguruj logowanie telefonem — zamiast wpisywać hasło na komputerze w gabinecie, potwierdzasz biometrią (Face ID lub odcisk palca) na własnym telefonie. Żadne dane nie zostają na obcym komputerze.
                     </p>
                     <div class="settings-card-toggle-row settings-backup-btn-row">
                       <button type="button" id="registerRoamingPasskeyBtn"
                               class="vilda-auth-btn vilda-auth-btn-primary vilda-auth-btn-small settings-backup-btn"
                               disabled>
-                        📱 Dodaj passkey do logowania mobilnego
+                        📱 Skonfiguruj logowanie telefonem
                       </button>
                     </div>
                     <p class="settings-inline-note settings-backup-note" id="registerRoamingPasskeyStatus"></p>
+                    <p class="settings-inline-note" style="margin-top:0.6rem;">
+                      💡 <strong>Kiedy używać:</strong> logujesz się na komputerze w gabinecie lub szpitalu, który nie jest Twój — potwierdzasz logowanie biometrią na własnym telefonie, a po wylogowaniu nie ma śladu danych na obcym sprzęcie.
+                    </p>
                   </div>
 
                   <div class="settings-backup-sep" role="separator"></div>
 
-                  <!-- ── Podsekcja 2c: Zatwierdź logowanie QR ── -->
+                  <!-- ── Logowanie QR ── -->
                   <div class="settings-backup-section" id="syncQRApproveCard">
                     <div class="settings-control-header">
-                      <h3 class="settings-control-title">Zatwierdź logowanie QR</h3>
+                      <h3 class="settings-control-title">Zaloguj się na nowym komputerze przez telefon</h3>
                       <span class="settings-tag" id="syncQRApproveTag">—</span>
                     </div>
                     <p class="settings-control-desc">
-                      Jeśli na innym urządzeniu (np. komputerze) wyświetla się kod QR do logowania — zeskanuj go tutaj i potwierdź hasłem. Klucz konta zostanie bezpiecznie przesłany.
+                      Na komputerze wyświetla się kod QR? Zeskanuj go tutaj telefonem i potwierdź hasłem — Twój telefon autoryzuje logowanie bez wpisywania hasła na obcym komputerze.
                     </p>
                     <div class="settings-card-toggle-row settings-backup-btn-row">
                       <button type="button" id="syncQRScanBtn"
@@ -785,10 +862,10 @@ html.vilda-pro-active .pro-sync-note {
                         </p>
                       </div>
 
-                      <!-- Fallback: wklej token ręcznie -->
+                      <!-- Fallback: wpisz kod ręcznie -->
                       <div id="syncQRManualWrap">
                         <label style="display:block;font-size:0.85rem;color:var(--text-muted);margin-bottom:0.4rem;">
-                          Lub wklej token QR ręcznie (ostatnie 43 znaki z kodu QR):
+                          Lub wpisz kod ręcznie (jeśli kamera nie działa):
                         </label>
                         <input type="text" id="syncQRTokenInput"
                                class="vilda-auth-input"
@@ -811,22 +888,25 @@ html.vilda-pro-active .pro-sync-note {
                       </div>
                       <p class="settings-inline-note settings-backup-note" id="syncQRStatus"></p>
                     </div>
+                    <p class="settings-inline-note" style="margin-top:0.6rem;">
+                      💡 <strong>Kiedy używać:</strong> siedzisz przy cudzym komputerze (nowy sprzęt, komputer na dyżurce, recepcji) i chcesz się zalogować na swoje konto — zamiast wpisywać hasło na obcej klawiaturze, skanujesz QR telefonem.
+                    </p>
                   </div>
 
                   <div class="settings-backup-sep" role="separator"></div>
 
-                  <!-- ── Podsekcja 3: Kod synchronizacji ── -->
+                  <!-- ── Zapasowy kod dostępu ── -->
                   <div class="settings-backup-section" id="syncCodeCard">
                     <div class="settings-control-header">
-                      <h3 class="settings-control-title">Kod synchronizacji</h3>
+                      <h3 class="settings-control-title">Zapasowy kod dostępu do konta</h3>
                       <span class="settings-tag" id="syncCodeTag">—</span>
                     </div>
                     <p class="settings-control-desc">
-                      Kod synchronizacji pozwala odtworzyć konto na nowym urządzeniu <strong>bez pliku kopii .wiw</strong> — wystarczy kod + hasło. Zapisz go w bezpiecznym miejscu (menedżer haseł, zaszyfrowane notatki).
+                      Jeśli kiedykolwiek stracisz dostęp do wszystkich swoich urządzeń i nie będziesz mieć pliku kopii zapasowej — ten kod razem z hasłem pozwoli odtworzyć konto na nowym sprzęcie. <strong>Działa tylko przy włączonej synchronizacji</strong>, bo dane muszą być dostępne na serwerze.
                     </p>
                     <div class="settings-card-toggle-row settings-backup-btn-row">
                       <button type="button" id="syncShowCodeBtn" class="vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small settings-backup-btn" disabled>
-                        ☁ Pokaż kod synchronizacji
+                        ☁ Pokaż zapasowy kod dostępu
                       </button>
                     </div>
                     <!-- Panel z kodem — domyślnie ukryty -->
@@ -846,7 +926,7 @@ html.vilda-pro-active .pro-sync-note {
                       </div>
                       <div id="syncCodeOutput" style="display:none;margin-top:0.75rem;">
                         <label style="display:block;font-size:0.85rem;color:var(--text-muted);margin-bottom:0.4rem;">
-                          Twój kod synchronizacji (skopiuj i zachowaj):
+                          Twój zapasowy kod dostępu (skopiuj i zachowaj):
                         </label>
                         <textarea id="syncCodeText" readonly
                                   style="width:100%;box-sizing:border-box;font-family:monospace;font-size:0.75rem;
@@ -869,35 +949,16 @@ html.vilda-pro-active .pro-sync-note {
                       </div>
                     </div>
                     <p class="settings-inline-note settings-backup-note" id="syncCodeStatus"></p>
-                  </div>
-
-                  <div class="settings-backup-sep" role="separator"></div>
-
-                  <!-- ── Podsekcja 4: Zarządzanie slotem ── -->
-                  <div class="settings-backup-section" id="syncSlotCard">
-                    <div class="settings-control-header">
-                      <h3 class="settings-control-title">Zarządzanie slotem sync</h3>
-                      <span class="settings-tag" id="syncSlotTag">—</span>
-                    </div>
-                    <p class="settings-control-desc" id="syncSlotDesc">
-                      Slot to zaszyfrowany pojemnik na Twoim koncie serwera. Możesz wyczyścić lokalny stan lub usunąć slot z serwera.
+                    <p class="settings-inline-note" style="margin-top:0.6rem;">
+                      💡 <strong>Kiedy używać:</strong> scenariusz awaryjny — telefon skradziony, komputer uszkodzony, brak pliku kopii w chmurze. Kod + hasło = odtworzenie konta na nowym urządzeniu. Przechowuj oba razem w menedżerze haseł.
                     </p>
-                    <div class="settings-card-toggle-row settings-backup-btn-row">
-                      <button type="button" id="syncClearStateBtn" class="vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small settings-backup-btn" disabled>
-                        Wyczyść lokalny stan
-                      </button>
-                      <button type="button" id="syncDeleteSlotBtn" class="vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small settings-backup-btn" style="color:#dc2626;" disabled>
-                        Usuń slot z serwera
-                      </button>
-                    </div>
-                    <p class="settings-inline-note settings-backup-note" id="syncSlotStatus"></p>
                   </div>
 
-                </div><!-- /syncControlCard -->
+                </div>
               </div>
             </div>
           </details>
-          <!-- ══ /Synchronizacja ════════════════════════════════════════════ -->
+          <!-- ══ /Logowanie na innych urządzeniach ════════════════════════ -->
 
           <div class="settings-group-label">Prywatność</div>
           <details class="settings-accordion" id="settings-section-privacy">
@@ -963,7 +1024,7 @@ html.vilda-pro-active .pro-sync-note {
                   <div class="settings-control-card" id="changePasswordCard">
                     <div class="settings-control-header">
                       <h3 class="settings-control-title">Zmień hasło</h3>
-                      <span class="settings-tag">PBKDF2</span>
+                      <span class="settings-tag">Hasło</span>
                     </div>
                     <p class="settings-control-desc">Klucz odzyskiwania pozostaje bez zmian. Nowe hasło będzie wymagane przy następnym logowaniu.</p>
                     <input type="password" id="cpOldInput" class="vilda-auth-input" placeholder="Stare hasło" autocomplete="current-password" style="margin-bottom:8px;">
@@ -980,7 +1041,7 @@ html.vilda-pro-active .pro-sync-note {
                   <div class="settings-control-card" id="regenerateRecoveryCard">
                     <div class="settings-control-header">
                       <h3 class="settings-control-title">Wygeneruj nowy klucz odzyskiwania</h3>
-                      <span class="settings-tag">Recovery</span>
+                      <span class="settings-tag">Klucz</span>
                     </div>
                     <p class="settings-control-desc">Stary klucz przestanie działać natychmiast. Zapisz nowy w bezpiecznym miejscu — bez niego utrata hasła = utrata danych.</p>
                     <div class="settings-card-toggle-row" style="gap:10px; flex-wrap:wrap;">
@@ -995,7 +1056,7 @@ html.vilda-pro-active .pro-sync-note {
                   <div class="settings-control-card" id="passkeyCard">
                     <div class="settings-control-header">
                       <h3 class="settings-control-title">Logowanie biometryczne</h3>
-                      <span class="settings-tag">WebAuthn</span>
+                      <span class="settings-tag">Biometria</span>
                     </div>
                     <p class="settings-control-desc">Face ID, Touch ID lub odcisk palca — zamiast hasła. Każde urządzenie rejestrujesz osobno.</p>
                     <div id="passkeyList" style="margin-bottom:12px;">
@@ -2217,10 +2278,12 @@ html.vilda-pro-active .pro-sync-note {
         const syncNowBtn        = $('syncNowBtn');
         const syncPullBtn       = $('syncPullBtn');
         const syncStatusNote    = $('syncStatusNote');
-        const syncClearStateBtn = $('syncClearStateBtn');
-        const syncDeleteSlotBtn = $('syncDeleteSlotBtn');
-        const syncSlotTag       = $('syncSlotTag');
-        const syncSlotStatus    = $('syncSlotStatus');
+        const syncClearStateBtn       = $('syncClearStateBtn');
+        const syncDeleteSlotBtn       = $('syncDeleteSlotBtn');
+        const syncSlotTag             = $('syncSlotTag');
+        const syncSlotStatus          = $('syncSlotStatus');
+        const syncBackupCodeReminder  = $('syncBackupCodeReminder');
+        const syncBackupCodeReminderLink = $('syncBackupCodeReminderLink');
 
         // Passkey roaming (logowanie na współdzielonym komputerze)
         const registerRoamingPasskeyBtn    = $('registerRoamingPasskeyBtn');
@@ -2275,6 +2338,11 @@ html.vilda-pro-active .pro-sync-note {
             syncEnabledToggle.checked  = enabled;
           }
 
+          // Żółta notka — pokaż gdy sync włączony (bez względu na stan logowania)
+          if (syncBackupCodeReminder) {
+            syncBackupCodeReminder.style.display = enabled ? 'flex' : 'none';
+          }
+
           if (!V || !V.isUnlocked()) {
             [syncNowBtn, syncPullBtn, syncClearStateBtn, syncDeleteSlotBtn, registerRoamingPasskeyBtn].forEach(function(b) { if(b) b.disabled = true; });
             if (syncShowCodeBtn) syncShowCodeBtn.disabled = true;
@@ -2294,16 +2362,16 @@ html.vilda-pro-active .pro-sync-note {
           const registered  = status && !!status.registered;
 
           if (syncStatusTag) {
-            setText(syncStatusTag, registered ? ('ETag: ' + (localEtag || '—')) : 'niezarejestrowany');
+            setText(syncStatusTag, registered ? 'aktywna' : 'nieaktywna');
           }
           if (syncSlotTag) {
-            setText(syncSlotTag, registered ? 'aktywny' : 'brak slotu');
+            setText(syncSlotTag, registered ? 'aktywna' : 'nieaktywna');
           }
 
           const relTime = lastSyncAt ? formatRelativeMs(lastSyncAt) : null;
           if (syncLastSyncChip) {
             if (relTime) {
-              setText(syncLastSyncChip, 'Ostatni sync: ' + relTime);
+              setText(syncLastSyncChip, 'Zsynchronizowano: ' + relTime);
               syncLastSyncChip.style.display = '';
             } else {
               syncLastSyncChip.style.display = 'none';
@@ -2311,8 +2379,8 @@ html.vilda-pro-active .pro-sync-note {
           }
 
           const noteText = lastSyncAt
-            ? ('Ostatnia synchronizacja: ' + formatRelativeMs(lastSyncAt) + (localEtag ? ' · ETag: ' + localEtag : ''))
-            : (registered ? 'Slot zarejestrowany. Jeszcze nie synchronizowano.' : 'Slot nie jest jeszcze zarejestrowany — uruchom sync, aby go utworzyć.');
+            ? ('Ostatnia synchronizacja: ' + formatRelativeMs(lastSyncAt))
+            : (registered ? 'Konto jest połączone z serwerem. Synchronizacja jeszcze nie była uruchamiana.' : 'Synchronizacja nie była jeszcze uruchomiona — włącz ją powyżej, aby rozpocząć.');
           setText(syncStatusNote, noteText);
 
           // syncNowBtn i syncClearStateBtn wymagają włączonego sync
@@ -2380,6 +2448,20 @@ html.vilda-pro-active .pro-sync-note {
           });
         }
 
+        // Link w żółtej notce — otwiera akordeon logowania i scrolluje do karty kodu
+        if (syncBackupCodeReminderLink) {
+          syncBackupCodeReminderLink.addEventListener('click', function (e) {
+            e.preventDefault();
+            var loginSection = document.getElementById('settings-section-login');
+            var codeCard     = document.getElementById('syncCodeCard');
+            if (loginSection) loginSection.open = true;
+            setTimeout(function () {
+              var target = codeCard || loginSection;
+              if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 80);
+          });
+        }
+
         // Toggle włączenia sync
         if (syncEnabledToggle) {
           syncEnabledToggle.addEventListener('change', async function () {
@@ -2416,7 +2498,7 @@ html.vilda-pro-active .pro-sync-note {
               const result = await S.syncFull();
               const action = result && result.action ? result.action : 'ok';
               setText(syncStatusNote,
-                action === 'not-registered' ? '⚠ Slot nie jest zarejestrowany — sync push zarejestrował slot.' :
+                action === 'not-registered' ? '✓ Konto zostało właśnie zarejestrowane na serwerze.' :
                 action === 'up-to-date'     ? '✓ Dane są aktualne — brak zmian do pobrania.' :
                 action === 'merged'         ? '✓ Dane scalone z serwera i wysłane.' :
                 '✓ Synchronizacja zakończona.');
@@ -2443,7 +2525,7 @@ html.vilda-pro-active .pro-sync-note {
               const action = result && result.action ? result.action : 'ok';
               const merge  = result && result.mergeResult;
               setText(syncStatusNote,
-                action === 'not-registered' ? '⚠ Slot nie istnieje na serwerze.' :
+                action === 'not-registered' ? '⚠ Konto nie istnieje jeszcze na serwerze — uruchom synchronizację, aby je utworzyć.' :
                 action === 'up-to-date'     ? '✓ Masz najnowszą wersję danych.' :
                 (action === 'merged' && merge)
                   ? ('✓ Scalono: +' + merge.addedSnapshotCount + ' snapshotów, +' + merge.addedPatientCount + ' pacjentów.')
@@ -2465,7 +2547,7 @@ html.vilda-pro-active .pro-sync-note {
             if (!S || typeof S.clearSyncState !== 'function') return;
             try {
               S.clearSyncState();
-              setText(syncSlotStatus, '✓ Lokalny stan wyczyszczony. Przy następnym sync slot zostanie ponownie zweryfikowany.');
+              setText(syncSlotStatus, '✓ Stan synchronizacji zresetowany. Przy następnym uruchomieniu dane zostaną ponownie zweryfikowane.');
               refreshSyncSection();
             } catch (err) {
               setText(syncSlotStatus, 'Błąd: ' + (err && err.message ? err.message : err));
@@ -2476,7 +2558,7 @@ html.vilda-pro-active .pro-sync-note {
         // Przycisk: Usuń slot z serwera
         if (syncDeleteSlotBtn) {
           syncDeleteSlotBtn.addEventListener('click', async function () {
-            if (!confirm('Czy na pewno chcesz usunąć slot synchronizacji z serwera?\nDane na innych urządzeniach zostaną odłączone — przy następnym sync zostanie utworzony nowy slot.')) {
+            if (!confirm('Czy na pewno chcesz usunąć dane synchronizacji z serwera?\nInne urządzenia zostaną odłączone. Przy następnym uruchomieniu synchronizacji konto zostanie utworzone od nowa.')) {
               return;
             }
             const S = window.VildaSync;
@@ -2486,7 +2568,7 @@ html.vilda-pro-active .pro-sync-note {
             syncDeleteSlotBtn.textContent = 'Usuwanie…';
             try {
               await S.deleteSyncSlot();
-              setText(syncSlotStatus, '✓ Slot usunięty z serwera. Lokalny stan wyczyszczony.');
+              setText(syncSlotStatus, '✓ Dane synchronizacji usunięte z serwera. Stan lokalny zresetowany.');
               await refreshSyncSection();
             } catch (err) {
               setText(syncSlotStatus, 'Błąd: ' + (err && err.message ? err.message : err));
@@ -2553,7 +2635,7 @@ html.vilda-pro-active .pro-sync-note {
             if (!hasCamera) {
               if (syncQRManualWrap) syncQRManualWrap.style.display = '';
               if (syncQRVideoWrap)  syncQRVideoWrap.style.display  = 'none';
-              if (syncQRStatus) setText(syncQRStatus, '⚠ Brak dostępu do kamery. Wklej token QR ręcznie.');
+              if (syncQRStatus) setText(syncQRStatus, '⚠ Brak dostępu do kamery. Wpisz kod ręcznie poniżej.');
               if (syncQRTokenInput) syncQRTokenInput.focus();
               return;
             }
@@ -2566,7 +2648,7 @@ html.vilda-pro-active .pro-sync-note {
               });
             } catch (camErr) {
               if (syncQRManualWrap) syncQRManualWrap.style.display = '';
-              if (syncQRStatus) setText(syncQRStatus, '⚠ Brak uprawnień do kamery. Wklej token QR ręcznie.');
+              if (syncQRStatus) setText(syncQRStatus, '⚠ Brak uprawnień do kamery. Wpisz kod ręcznie poniżej.');
               if (syncQRTokenInput) syncQRTokenInput.focus();
               return;
             }
@@ -2610,7 +2692,7 @@ html.vilda-pro-active .pro-sync-note {
               if (stream) stream.getTracks().forEach(function (t) { t.stop(); });
               if (syncQRVideoWrap)  syncQRVideoWrap.style.display  = 'none';
               if (syncQRManualWrap) syncQRManualWrap.style.display = '';
-              if (syncQRStatus) setText(syncQRStatus, '⚠ Nie można załadować skanera. Wklej token QR ręcznie.');
+              if (syncQRStatus) setText(syncQRStatus, '⚠ Nie można załadować skanera. Wpisz kod ręcznie poniżej.');
               if (syncQRTokenInput) syncQRTokenInput.focus();
               return;
             }
@@ -2668,7 +2750,7 @@ html.vilda-pro-active .pro-sync-note {
             const pw = syncQRPwInput ? syncQRPwInput.value : '';
 
             if (!rawToken || rawToken.length !== 43) {
-              if (syncQRStatus) setText(syncQRStatus, '⚠ Nieprawidłowy token QR (musi mieć 43 znaki).');
+              if (syncQRStatus) setText(syncQRStatus, '⚠ Nieprawidłowy kod QR — sprawdź czy wklejony tekst jest kompletny.');
               return;
             }
             if (!pw) {
