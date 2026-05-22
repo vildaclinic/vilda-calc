@@ -36,6 +36,8 @@
 
   var SYNC_ENABLED_KEY        = 'vilda-sync-enabled-v1';
   var DEBOUNCE_MS             = 5000; // debounce push po zapisie pacjenta
+  var DELETE_DEBOUNCE_MS      = 800;  // krótszy debounce po usunięciu (propagacja „na żywo")
+  var POLL_INTERVAL_MS        = 45000; // lekki polling syncPull — wyłapuje usunięcia z innych urządzeń
   var UNLOCK_DELAY_MS         = 600;  // krótkie opóźnienie po onUnlock (vault init)
   var NEW_DEVICE_SHOWN_KEY    = 'vilda-new-device-restore-shown-v1'; // sessionStorage flag
 
@@ -50,6 +52,10 @@
   // Flaga: ustaw po błędzie blokującym, wyczyść przy onUnlock.
   // Zapobiega nieskończonej pętli: AUTH_FAILED → clear state → re-register → 409 → AUTH_FAILED...
   var syncBlockedUntilUnlock = false;
+  // ─── Polling „na żywo" ───────────────────────────────────────────────────────
+  var pollTimer        = null;
+  var pollInProgress   = false;
+  var visibilityBound  = false;
 
   // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -81,6 +87,59 @@
 
   function getSync()  { return global.VildaSync  || null; }
   function getVault() { return global.VildaVault || null; }
+
+  // ─── Polling „na żywo": okresowy syncPull, by usunięcia (i edycje) z innych ──
+  // urządzeń pojawiały się na otwartej karcie bez czekania na ponowne logowanie.
+  function isEphemeralActive() {
+    var V = getVault();
+    try { return !!(V && typeof V.isEphemeralMode === 'function' && V.isEphemeralMode()); }
+    catch (_) { return false; }
+  }
+  function isTabHidden() {
+    try { return typeof global.document !== 'undefined' && global.document.hidden === true; }
+    catch (_) { return false; }
+  }
+  function shouldPoll() {
+    var V = getVault();
+    if (!V || typeof V.isUnlocked !== 'function' || !V.isUnlocked()) return false;
+    if (syncBlockedUntilUnlock) return false;
+    if (isTabHidden()) return false;
+    // Pull ma sens tylko, gdy jest co synchronizować: sync włączony LUB sesja efemeryczna.
+    return isSyncEnabled() || isEphemeralActive();
+  }
+  function pollOnce() {
+    if (pollInProgress || !shouldPoll()) return;
+    var S = getSync();
+    if (!S || typeof S.syncPull !== 'function') return;
+    pollInProgress = true;
+    Promise.resolve(S.syncPull())
+      .catch(function () {})
+      .then(function () { pollInProgress = false; });
+  }
+  function startPolling() {
+    if (pollTimer) return;
+    try {
+      pollTimer = global.setInterval(pollOnce, POLL_INTERVAL_MS);
+    } catch (_) { pollTimer = null; }
+  }
+  function stopPolling() {
+    if (pollTimer) { try { global.clearInterval(pollTimer); } catch (_) {} pollTimer = null; }
+  }
+  function bindVisibility() {
+    if (visibilityBound) return;
+    try {
+      if (typeof global.document !== 'undefined' && typeof global.document.addEventListener === 'function') {
+        global.document.addEventListener('visibilitychange', function () {
+          if (isTabHidden()) { stopPolling(); }
+          else {
+            var V = getVault();
+            if (V && typeof V.isUnlocked === 'function' && V.isUnlocked()) { startPolling(); pollOnce(); }
+          }
+        });
+        visibilityBound = true;
+      }
+    } catch (_) { void _; }
+  }
 
   // Wyciągnij kod błędu z obiektu emitowanego przez VildaSync.onSyncError
   // Format: { operation: 'push'|'pull', error: { message, code, ... } }
@@ -145,6 +204,10 @@
       V.onUnlock(function () {
         // Każdy nowy unlock resetuje flagę blokady
         syncBlockedUntilUnlock = false;
+
+        // Polling „na żywo" — startuj po zalogowaniu, reaguj na ukrycie/pokazanie karty.
+        bindVisibility();
+        startPolling();
 
         var S = getSync();
         if (!S) return;
@@ -233,11 +296,28 @@
       });
     }
 
+    // onPatientDeleted → szybki syncPush (propagacja tombstone do innych urządzeń).
+    // Krótszy debounce niż przy zapisie: usunięcie ma znikać „na żywo".
+    if (typeof V.onPatientDeleted === 'function') {
+      V.onPatientDeleted(function () {
+        if (!isSyncEnabled()) return;
+        if (syncBlockedUntilUnlock) return;
+        var S = getSync();
+        if (!S || typeof S.syncPush !== 'function') return;
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(function () {
+          if (syncBlockedUntilUnlock) return;
+          S.syncPush().catch(function () {});
+        }, DELETE_DEBOUNCE_MS);
+      });
+    }
+
     // onLock → anuluj oczekujący debounce
     if (typeof V.onLock === 'function') {
       V.onLock(function () {
         clearTimeout(debounceTimer);
         debounceTimer = null;
+        stopPolling(); // zatrzymaj polling po wylogowaniu
         // Nie resetujemy syncBlockedUntilUnlock przy lock — dopiero unlock jest "fresh start"
       });
     }
