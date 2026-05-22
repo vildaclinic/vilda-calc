@@ -234,7 +234,13 @@
       });
     }
 
+    // Cache otwartych połączeń per-user — zapobiega blokowaniu deleteDatabase()
+    const userDbConnections = new Map();
+
     function openUser(userId) {
+      if (userDbConnections.has(userId)) {
+        return Promise.resolve(userDbConnections.get(userId));
+      }
       const dbName = USER_DB_PREFIX + userId;
       return new Promise(function (resolve, reject) {
         const req = global.indexedDB.open(dbName, USER_DB_VERSION);
@@ -254,7 +260,10 @@
             db.createObjectStore(STORE_TOMBSTONES, { keyPath: 'patientId' });
           }
         };
-        req.onsuccess = function () { resolve(req.result); };
+        req.onsuccess = function () {
+          userDbConnections.set(userId, req.result);
+          resolve(req.result);
+        };
         req.onerror = function () { reject(req.error); };
       });
     }
@@ -305,12 +314,18 @@
         return merged;
       },
       async deleteUserDatabase(userId) {
+        // Zamknij cached połączenie zanim poprosimy o usunięcie bazy —
+        // dzięki temu deleteDatabase() nie dostanie onblocked i od razu usuwa.
+        if (userDbConnections.has(userId)) {
+          userDbConnections.get(userId).close();
+          userDbConnections.delete(userId);
+        }
         const dbName = USER_DB_PREFIX + userId;
         return new Promise(function (resolve, reject) {
           const req = global.indexedDB.deleteDatabase(dbName);
           req.onsuccess = function () { resolve(true); };
           req.onerror = function () { reject(req.error); };
-          req.onblocked = function () { /* inny tab — czeka aż się zwolni */ };
+          req.onblocked = function () { /* nie powinno wystąpić po close() */ };
         });
       },
       // --- pacjenci i snapshoty per-user ---
