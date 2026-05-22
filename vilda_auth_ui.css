@@ -446,8 +446,10 @@
   max-height: min(248px, 36vh);
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 4px 6px 4px 4px;
-  margin-right: -2px;
+  /* overflow-y:auto wymusza przycinanie w poziomie, więc karta na hover (turkusowa
+     ramka + poświata box-shadow ~14px) była obcinana z prawej/lewej. Dajemy w poziomie
+     tyle marginesu, by efekt hover w pełni się mieścił; pionowo zostawiamy mniej. */
+  padding: 6px 16px;
   scrollbar-width: thin;
   scrollbar-color: rgba(0, 131, 141, 0.3) transparent;
 }
