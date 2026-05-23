@@ -113,30 +113,30 @@
   function mapEphemeralLoginError(err) {
     const code = err && err.code;
     if (code === 'EPH_PRF_UNSUPPORTED') {
-      return { message: 'To urządzenie lub przeglądarka nie obsługuje logowania passkey. Użyj logowania kodem QR.', offerQrFallback: true };
+      return { message: 'Ta przeglądarka nie obsługuje logowania biometrycznego. Zaloguj się kodem QR — działa w każdej przeglądarce.', offerQrFallback: true };
     }
     if (code === 'EPH_NO_ENVELOPE') {
-      return { message: 'Ten passkey nie ma jeszcze koperty w chmurze. Dodaj passkey do logowania mobilnego na swoim urządzeniu (Ustawienia → Synchronizacja).', offerQrFallback: false };
+      return { message: 'Ten passkey nie jest skonfigurowany do logowania na cudzym komputerze. Aby to włączyć, wejdź na swoim telefonie w: Ustawienia → Synchronizacja → Dodaj passkey do logowania zdalnego.', offerQrFallback: false };
     }
     if (code === 'EPH_CHALLENGE_FAILED' || code === 'EPH_UNLOCK_NETWORK') {
-      return { message: 'Brak połączenia z serwerem. Sprawdź internet i spróbuj ponownie.', offerQrFallback: false };
+      return { message: 'Nie można połączyć się z serwerem. Sprawdź połączenie z internetem i spróbuj ponownie.', offerQrFallback: false };
     }
     if (code === 'EPH_UNLOCK_REJECTED') {
-      return { message: 'Serwer odrzucił logowanie passkey. Spróbuj ponownie.', offerQrFallback: false };
+      return { message: 'Uwierzytelnienie odrzucone. Upewnij się, że używasz właściwego passkey (z telefonu, nie z tego komputera) i spróbuj ponownie.', offerQrFallback: true };
     }
     if (code === 'EPH_DECRYPT_FAILED') {
       if (err && err.diagnostic === 'envelope-legacy-create-prf') {
-        return { message: 'Ten passkey ma w chmurze starszą kopertę. Zarejestruj passkey ponownie w Ustawieniach na swoim zaufanym urządzeniu, a potem zaloguj się jeszcze raz.', offerQrFallback: true };
+        return { message: 'Passkey wymaga aktualizacji. Na swoim telefonie wejdź w Ustawienia → Synchronizacja, usuń passkey i dodaj go ponownie, a potem zaloguj się jeszcze raz.', offerQrFallback: true };
       }
       if (err && err.diagnostic === 'envelope-current-prf-mismatch') {
-        return { message: 'Nie udało się odszyfrować danych tym passkey. Jeśli wybrałeś passkey zapisany na tym komputerze, użyj zamiast tego opcji „Użyj telefonu" i potwierdź logowanie na telefonie.', offerQrFallback: true };
+        return { message: 'Wybrałeś passkey zapisany na tym komputerze — to nie zadziała na cudzym urządzeniu. Wybierz passkey ze swojego telefonu i potwierdź biometrią na nim.', offerQrFallback: true };
       }
-      return { message: 'Nie udało się odszyfrować danych tym passkey.', offerQrFallback: false };
+      return { message: 'Nie udało się zweryfikować tożsamości. Spróbuj ponownie lub zaloguj się kodem QR.', offerQrFallback: true };
     }
     if (err && err.name === 'AbortError') {
-      return { message: 'Logowanie passkey przerwane.', offerQrFallback: false };
+      return { message: 'Logowanie anulowane.', offerQrFallback: false };
     }
-    return { message: (err && err.message) ? err.message : 'Logowanie passkey nie powiodło się.', offerQrFallback: true };
+    return { message: (err && err.message) ? err.message : 'Logowanie nie powiodło się. Spróbuj ponownie lub użyj kodu QR.', offerQrFallback: true };
   }
 
   function el(tag, attrs, children) {
@@ -547,12 +547,6 @@
     extraPanel.appendChild(el('button', {
       class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle',
       type: 'button',
-      text: '☁ Mam kod synchronizacji',
-      onclick: function () { showSyncCodeRestoreScreen(); }
-    }));
-    extraPanel.appendChild(el('button', {
-      class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle',
-      type: 'button',
       text: 'Odtwórz konto z pliku kopii (.wiw)',
       onclick: function () { showRestoreVaultFlow(); }
     }));
@@ -574,6 +568,12 @@
       type: 'button',
       text: 'Załóż konto',
       onclick: function () { showSetupWizard(); }
+    }));
+    mainButtons.appendChild(el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost',
+      type: 'button',
+      text: 'Loguję się na nowym lub obcym komputerze',
+      onclick: function () { showSyncCodeRestoreScreen(); }
     }));
     mainButtons.appendChild(el('button', {
       class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle',
@@ -626,12 +626,6 @@
     extraPanel.appendChild(el('button', {
       class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle',
       type: 'button',
-      text: '☁ Mam kod synchronizacji',
-      onclick: function () { showSyncCodeRestoreScreen(); }
-    }));
-    extraPanel.appendChild(el('button', {
-      class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle',
-      type: 'button',
       text: 'Odtwórz konto z pliku kopii (.wiw)',
       onclick: function () { showRestoreVaultFlow(); }
     }));
@@ -647,6 +641,13 @@
       toggleBtn.textContent = expanded ? 'Opcje dodatkowe ▾' : 'Opcje dodatkowe ▴';
     });
 
+    const newDeviceBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost',
+      type: 'button',
+      text: 'Loguję się na nowym lub obcym komputerze',
+      onclick: function () { showSyncCodeRestoreScreen(); }
+    });
+
     const guestBtn = el('button', {
       class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle',
       type: 'button',
@@ -656,7 +657,7 @@
 
     open(el('div', { class: 'vilda-auth-screen vilda-auth-picker' }, [
       title, subtitle, userList,
-      el('div', { class: 'vilda-auth-buttons' }, [guestBtn, toggleBtn]),
+      el('div', { class: 'vilda-auth-buttons' }, [newDeviceBtn, guestBtn, toggleBtn]),
       extraPanel
     ]));
   }
@@ -763,10 +764,10 @@
     pendingSetupOptions.step = 2;
 
     const stepLabel = el('div', { class: 'vilda-auth-step', text: 'Krok 2 z 4' });
-    const title = el('h2', { class: 'vilda-auth-title', text: 'Klucz odzyskiwania' });
+    const title = el('h2', { class: 'vilda-auth-title', text: 'Twój klucz zapasowy' });
     const sub = el('p', {
       class: 'vilda-auth-subtitle',
-      text: 'Zapisz ten klucz w bezpiecznym miejscu (kartka w sejfie, menedżer haseł). Bez niego utrata hasła = utrata wszystkich danych pacjentów.'
+      text: 'Zapisz go teraz — to jedyny sposób na odzyskanie konta, jeśli zapomnisz hasła. Możesz go skopiować lub pobrać jako plik.'
     });
     const keyBox = el('div', { class: 'vilda-auth-recovery-key', text: opts.recoveryKey });
 
@@ -794,12 +795,18 @@
 
     const tools = el('div', { class: 'vilda-auth-tools' }, [copyBtn, downloadBtn]);
 
-    const confirmInput = el('input', {
-      type: 'text',
-      class: 'vilda-auth-input vilda-auth-recovery-input',
-      placeholder: 'Wpisz klucz, aby potwierdzić, że go zapisałeś',
-      autocomplete: 'off'
+    const confirmCheckboxId = 'vilda-confirm-key-' + Date.now();
+    const confirmCheckbox = el('input', {
+      type: 'checkbox',
+      id: confirmCheckboxId
     });
+    const confirmLabel = el('label', {
+      class: 'vilda-auth-checkbox-label',
+      text: 'Zapisałem klucz zapasowy w bezpiecznym miejscu'
+    });
+    confirmLabel.setAttribute('for', confirmCheckboxId);
+    const confirmRow = el('div', { class: 'vilda-auth-checkbox-row' }, [confirmCheckbox, confirmLabel]);
+
     const errBox = el('div', { class: 'vilda-auth-error' });
     errBox.style.display = 'none';
 
@@ -809,12 +816,8 @@
       text: 'Dalej',
       onclick: async function () {
         showError(errBox, '');
-        const C = getCrypto();
-        if (!C) { showError(errBox, 'Brak modułu kryptograficznego.'); return; }
-        const expected = C.normalizeRecoveryKey(opts.recoveryKey);
-        const typed = C.normalizeRecoveryKey(confirmInput.value);
-        if (expected !== typed) {
-          showError(errBox, 'Wpisany klucz nie zgadza się z wygenerowanym. Skopiuj go ponownie albo pobierz plik.');
+        if (!confirmCheckbox.checked) {
+          showError(errBox, 'Zaznacz, że zapisałeś klucz zapasowy, zanim przejdziesz dalej.');
           return;
         }
         setBusy(true);
@@ -842,7 +845,7 @@
     });
 
     open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
-      stepLabel, title, sub, keyBox, tools, confirmInput, errBox,
+      stepLabel, title, sub, keyBox, tools, confirmRow, errBox,
       el('div', { class: 'vilda-auth-actions' }, [back, next])
     ]));
   }
@@ -853,7 +856,7 @@
     const title = el('h2', { class: 'vilda-auth-title', text: 'Korzystasz z kilku urządzeń?' });
     const sub = el('p', {
       class: 'vilda-auth-subtitle',
-      text: 'Włącz synchronizację, a Twoje dane będą dostępne na każdym urządzeniu po zalogowaniu. Dane są zaszyfrowane — serwer nigdy nie widzi danych pacjentów.'
+      text: 'Jeśli używasz aplikacji na kilku komputerach lub chcesz mieć kopię danych w chmurze — włącz synchronizację. Dane są szyfrowane po Twojej stronie, serwer nigdy nie widzi danych pacjentów. Możesz to zmienić w każdej chwili w Ustawieniach.'
     });
 
     const yesBtn = el('button', {
@@ -899,6 +902,15 @@
         ? 'Konto skonfigurowane, synchronizacja włączona. Możesz zapisywać dane pacjentów. Po 20 minutach bezczynności zostaniesz automatycznie wylogowany.'
         : 'Konto skonfigurowane i odblokowane. Możesz zapisywać dane pacjentów. Synchronizację możesz włączyć w Ustawieniach. Po 20 minutach bezczynności zostaniesz automatycznie wylogowany.'
     });
+
+    let syncWarning = null;
+    if (syncOn) {
+      syncWarning = el('div', { class: 'vilda-auth-warning-banner' });
+      syncWarning.appendChild(el('strong', { text: 'Aby zalogować się na innym urządzeniu' }));
+      syncWarning.appendChild(global.document.createTextNode(
+        ', będziesz potrzebować kodu synchronizacji. Możesz go zobaczyć w Ustawieniach → Synchronizacja → Pokaż kod synchronizacji. Zapisz go razem z kluczem zapasowym.'
+      ));
+    }
 
     // Sekcja kopii zapasowych — tytuł + opis NAD przyciskiem, przycisk
     // wyśrodkowany, status folderu i krótka adnotacja POD.
@@ -994,10 +1006,11 @@
       text: 'Przejdź do aplikacji',
       onclick: function () { hide(); startIdleWatch(); }
     });
-    open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
-      stepLabel, check, title, sub, backupSection, importSection,
-      el('div', { class: 'vilda-auth-actions vilda-auth-actions-center' }, [done])
-    ]));
+    const screenChildren = [stepLabel, check, title, sub];
+    if (syncWarning) screenChildren.push(syncWarning);
+    screenChildren.push(backupSection, importSection,
+      el('div', { class: 'vilda-auth-actions vilda-auth-actions-center' }, [done]));
+    open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, screenChildren));
   }
 
   function downloadRecoveryKeyFile(rk, label) {
@@ -1404,7 +1417,7 @@
         const lbl = (parsedMeta && parsedMeta.label) ? parsedMeta.label : '(bez nazwy)';
         const pCount = parsedMeta && typeof parsedMeta.patientCount === 'number' ? parsedMeta.patientCount : '?';
         const sCount = parsedMeta && typeof parsedMeta.snapshotCount === 'number' ? parsedMeta.snapshotCount : '?';
-        fileLabel.textContent = '✓ Pełna kopia konta „' + lbl + '" — pacjenci: ' + pCount + ', snapshoty: ' + sCount;
+        fileLabel.textContent = '✓ Pełna kopia konta „' + lbl + '" — pacjenci: ' + pCount + ', wpisów z wizyt: ' + sCount;
         pwInput.style.display = '';
         labelInput.style.display = '';
         submit.style.display = '';
@@ -1486,7 +1499,7 @@
           reportBox.appendChild(el('br'));
           reportBox.appendChild(global.document.createTextNode('Nazwa: ' + result.label));
           reportBox.appendChild(el('br'));
-          reportBox.appendChild(global.document.createTextNode('Pacjenci: ' + result.patientCount + ' · snapshoty: ' + result.snapshotCount));
+          reportBox.appendChild(global.document.createTextNode('Pacjenci: ' + result.patientCount + ' · wpisów z wizyt: ' + result.snapshotCount));
           if (result.newRecoveryKey) {
             reportBox.appendChild(el('br'));
             reportBox.appendChild(el('br'));
@@ -3358,7 +3371,7 @@
       const lines = [
         'Nowych pacjentów: ' + summary.addedPatients,
         'Zaktualizowanych (merge): ' + summary.mergedPatients,
-        'Dodanych snapshotów: ' + summary.addedSnapshots,
+        'Nowych wpisów z wizyt: ' + summary.addedSnapshots,
         'Pominiętych (już istniały): ' + summary.skippedSnapshots
       ];
       if (summary.legacyImported > 0) {
@@ -3960,13 +3973,20 @@
 
     // ── Sekcja kodu synchronizacji ────────────────────────────────────────────
     const codeSection = document.createElement('div');
-    codeSection.style.cssText = 'border:1px solid var(--border,#ddd);border-radius:10px;padding:0.9rem 1rem;';
+    codeSection.style.cssText = [
+      'background:var(--surface-alt,#f0f4ff)',
+      'border:1px solid var(--border,#d0d5e8)',
+      'border-radius:10px',
+      'padding:0.9rem 1rem',
+      'margin:0 0 0.5rem'
+    ].join(';');
 
     const codeSectionTitle = document.createElement('div');
     codeSectionTitle.style.cssText = 'display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem;';
     codeSectionTitle.innerHTML = [
       '<span style="font-size:1.1rem;">☁</span>',
-      '<strong style="font-size:0.95rem;">Kod synchronizacji</strong>'
+      '<strong style="font-size:0.95rem;">Kod synchronizacji</strong>',
+      '<span style="font-size:0.75rem;background:#6b7280;color:#fff;border-radius:4px;padding:1px 7px;margin-left:auto;">Bez telefonu</span>'
     ].join('');
 
     const codeSectionDesc = document.createElement('p');
@@ -3978,7 +3998,7 @@
 
     const codeInput = el('textarea', {
       class: 'vilda-auth-input',
-      placeholder: 'vsc1.XXXXXX.XXXXXX.XXXXXX',
+      placeholder: 'vsc1.AbCd1234.XyZw5678.…',
       rows: '3',
       style: 'font-family:monospace;font-size:0.82rem;resize:vertical;min-height:68px;margin-bottom:0.5rem;'
     });
@@ -4054,9 +4074,9 @@
       onclick: function () { showStartupScreen(); }
     });
 
-    const children = [title, sub];
+    const children = [title, sub, qrSection];
     if (passkeySection) children.push(passkeySection);
-    children.push(qrSection, orDiv, codeSection, back);
+    children.push(orDiv, codeSection, back);
     const wrapper = el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, children);
     open(wrapper);
   }

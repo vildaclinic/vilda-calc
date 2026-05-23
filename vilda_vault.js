@@ -81,7 +81,7 @@
   function getCrypto() {
     const C = global.VildaCrypto;
     if (!C || !C.__vildaCrypto) {
-      throw new Error('VildaVault: VildaCrypto niedostępny (załaduj vilda_crypto.js przed vilda_vault.js).');
+      throw new Error('VildaCrypto niedostępny (załaduj vilda_crypto.js przed vilda_vault.js).');
     }
     return C;
   }
@@ -101,7 +101,7 @@
   // ============ POMOCNICZE ============
   function generateUserId() {
     if (!global.crypto || typeof global.crypto.getRandomValues !== 'function') {
-      throw new Error('VildaVault: brak getRandomValues do generowania userId.');
+      throw new Error('Brak getRandomValues do generowania userId.');
     }
     const buf = new Uint8Array(16);
     global.crypto.getRandomValues(buf);
@@ -165,7 +165,7 @@
     if (entry.blockedUntil > now) {
       const remainingMs = entry.blockedUntil - now;
       const remainingSec = Math.ceil(remainingMs / 1000);
-      const e = new Error('VildaVault: za dużo błędnych prób logowania. Spróbuj za ' + remainingSec + ' sek.');
+      const e = new Error('Za dużo błędnych prób logowania. Spróbuj ponownie za ' + remainingSec + ' sekund.');
       e.code = 'LOGIN_THROTTLED';
       e.remainingMs = remainingMs;
       throw e;
@@ -754,7 +754,7 @@
   // ============ TWORZENIE UŻYTKOWNIKA ============
   async function createUser(password, options) {
     if (typeof password !== 'string' || password.length < MIN_PASSWORD_LENGTH) {
-      throw new Error('VildaVault: hasło musi mieć minimum ' + MIN_PASSWORD_LENGTH + ' znaków.');
+      throw new Error('Hasło musi mieć co najmniej ' + MIN_PASSWORD_LENGTH + ' znaków.');
     }
     const C = getCrypto();
     const opts = (options && typeof options === 'object') ? options : {};
@@ -838,12 +838,12 @@
   async function unlockUser(userId, password) {
     const C = getCrypto();
     if (typeof userId !== 'string' || !userId.length) {
-      throw new Error('VildaVault: nieprawidłowy userId.');
+      throw new Error('Nieprawidłowy userId.');
     }
     checkLoginThrottle(userId);
     const meta = await getAdapter().getUserMeta(userId);
     if (!meta) {
-      throw new Error('VildaVault: użytkownik nie istnieje.');
+      throw new Error('Użytkownik nie istnieje.');
     }
     const wrappingKey = await C.deriveKey(password, meta.passwordSalt, meta.kdfIterations);
     let masterBytes;
@@ -855,7 +855,7 @@
       );
     } catch (_) {
       recordLoginFailure(userId);
-      throw new Error('VildaVault: nieprawidłowe hasło.');
+      throw new Error('Nieprawidłowe hasło. Sprawdź, czy Caps Lock nie jest włączony.');
     }
     const entry = await getAdapter().getRegistryEntry(userId);
     const label = (entry && entry.label) || DEFAULT_LABEL;
@@ -868,15 +868,15 @@
   async function unlockUserWithRecoveryKey(userId, recoveryKey) {
     const C = getCrypto();
     if (typeof userId !== 'string' || !userId.length) {
-      throw new Error('VildaVault: nieprawidłowy userId.');
+      throw new Error('Nieprawidłowy userId.');
     }
     if (!C.isValidRecoveryKeyShape(recoveryKey)) {
-      throw new Error('VildaVault: klucz odzyskiwania ma nieprawidłowy format.');
+      throw new Error('Klucz odzyskiwania ma nieprawidłowy format. Powinien wyglądać jak: XXXX-XXXX-XXXX-XXXX-XXXX-XXXX.');
     }
     checkLoginThrottle(userId);
     const meta = await getAdapter().getUserMeta(userId);
     if (!meta) {
-      throw new Error('VildaVault: użytkownik nie istnieje.');
+      throw new Error('Użytkownik nie istnieje.');
     }
     const wrappingKey = await C.deriveKeyFromRecoveryKey(recoveryKey, meta.recoverySalt, meta.kdfIterations);
     let masterBytes;
@@ -888,7 +888,7 @@
       );
     } catch (_) {
       recordLoginFailure(userId);
-      throw new Error('VildaVault: klucz odzyskiwania nie pasuje do tego konta.');
+      throw new Error('Ten klucz odzyskiwania nie pasuje do wybranego konta.');
     }
     const entry = await getAdapter().getRegistryEntry(userId);
     const label = (entry && entry.label) || DEFAULT_LABEL;
@@ -917,10 +917,10 @@
   // ============ ZMIANA HASŁA / RESET / REGEN RECOVERY ============
   async function changePassword(oldPassword, newPassword) {
     if (!isUnlocked()) {
-      throw new Error('VildaVault: zaloguj się, aby zmienić hasło.');
+      throw new Error('Zaloguj się, aby zmienić hasło.');
     }
     if (typeof newPassword !== 'string' || newPassword.length < MIN_PASSWORD_LENGTH) {
-      throw new Error('VildaVault: nowe hasło musi mieć minimum ' + MIN_PASSWORD_LENGTH + ' znaków.');
+      throw new Error('Nowe hasło musi mieć co najmniej ' + MIN_PASSWORD_LENGTH + ' znaków.');
     }
     const C = getCrypto();
     const meta = await getAdapter().getUserMeta(currentUserId);
@@ -933,7 +933,7 @@
         meta.encryptedMasterByPassword.data
       );
     } catch (_) {
-      throw new Error('VildaVault: nieprawidłowe stare hasło.');
+      throw new Error('Podane stare hasło jest nieprawidłowe.');
     }
     const newSalt = C.generateSalt();
     const newWrappingKey = await C.deriveKey(newPassword, newSalt, meta.kdfIterations);
@@ -952,10 +952,10 @@
 
   async function resetPasswordWhileUnlocked(newPassword) {
     if (!isUnlocked() || !masterKeyBytes) {
-      throw new Error('VildaVault: zaloguj się przez klucz odzyskiwania przed resetem hasła.');
+      throw new Error('Zaloguj się przez klucz odzyskiwania przed resetem hasła.');
     }
     if (typeof newPassword !== 'string' || newPassword.length < MIN_PASSWORD_LENGTH) {
-      throw new Error('VildaVault: nowe hasło musi mieć minimum ' + MIN_PASSWORD_LENGTH + ' znaków.');
+      throw new Error('Nowe hasło musi mieć co najmniej ' + MIN_PASSWORD_LENGTH + ' znaków.');
     }
     const C = getCrypto();
     const meta = await getAdapter().getUserMeta(currentUserId);
@@ -975,7 +975,7 @@
 
   async function regenerateRecoveryKey() {
     if (!isUnlocked() || !masterKeyBytes) {
-      throw new Error('VildaVault: zaloguj się przed regeneracją klucza odzyskiwania.');
+      throw new Error('Zaloguj się przed regeneracją klucza odzyskiwania.');
     }
     const C = getCrypto();
     const meta = await getAdapter().getUserMeta(currentUserId);
@@ -997,7 +997,7 @@
   // ============ USUWANIE UŻYTKOWNIKA ============
   async function removeUser(userId, password) {
     if (typeof userId !== 'string' || !userId.length) {
-      throw new Error('VildaVault: nieprawidłowy userId.');
+      throw new Error('Nieprawidłowy userId.');
     }
     const C = getCrypto();
     const meta = await getAdapter().getUserMeta(userId);
@@ -1018,7 +1018,7 @@
           meta.encryptedMasterByPassword.data
         );
       } catch (_) {
-        throw new Error('VildaVault: nieprawidłowe hasło — nie można usunąć konta.');
+        throw new Error('Nieprawidłowe hasło. Konto nie zostało usunięte.');
       }
     }
 
@@ -1037,7 +1037,7 @@
   // ============ CRUD PACJENTÓW (wymagają zalogowanego użytkownika) ============
   function generateUuid() {
     if (!global.crypto || typeof global.crypto.getRandomValues !== 'function') {
-      throw new Error('VildaVault: brak getRandomValues do generowania uuid.');
+      throw new Error('Brak getRandomValues do generowania uuid.');
     }
     const buf = new Uint8Array(16);
     global.crypto.getRandomValues(buf);
@@ -1054,7 +1054,7 @@
 
   async function encryptPayloadForCurrentUser(value) {
     const C = getCrypto();
-    if (!isUnlocked()) throw new Error('VildaVault: zaloguj się przed zapisem pacjenta.');
+    if (!isUnlocked()) throw new Error('Zaloguj się przed zapisem pacjenta.');
     const json = JSON.stringify(value);
     const enc = await C.encryptString(masterKey, json);
     return { iv: enc.iv, data: enc.data };
@@ -1062,7 +1062,7 @@
 
   async function decryptPayloadForCurrentUser(iv, data) {
     const C = getCrypto();
-    if (!isUnlocked()) throw new Error('VildaVault: zaloguj się przed odczytem pacjenta.');
+    if (!isUnlocked()) throw new Error('Zaloguj się przed odczytem pacjenta.');
     const text = await C.decryptString(masterKey, iv, data);
     return JSON.parse(text);
   }
@@ -1103,7 +1103,7 @@
   }
 
   async function listPatients() {
-    if (!isUnlocked()) throw new Error('VildaVault: zaloguj się, by wyświetlić pacjentów.');
+    if (!isUnlocked()) throw new Error('Zaloguj się, by wyświetlić pacjentów.');
     const records = await getAdapter().listPatientsForUser(currentUserId);
     // każdy rekord ma headerCipher (iv, data); deszyfrujemy nagłówki, żeby UI mogło
     // pokazać imię + datę bez ładowania pełnych snapshotów.
@@ -1135,11 +1135,11 @@
   }
 
   async function savePatient(payload, options) {
-    if (!isUnlocked()) throw new Error('VildaVault: zaloguj się, by zapisać pacjenta.');
-    if (!payload || typeof payload !== 'object') throw new Error('VildaVault.savePatient: brak payloadu.');
+    if (!isUnlocked()) throw new Error('Zaloguj się, by zapisać pacjenta.');
+    if (!payload || typeof payload !== 'object') throw new Error('savePatient: brak payloadu.');
     const opts = (options && typeof options === 'object') ? options : {};
     const header = extractHeaderFromPayload(payload);
-    if (!header.name) throw new Error('VildaVault.savePatient: brak imienia pacjenta w payloadzie.');
+    if (!header.name) throw new Error('savePatient: brak imienia pacjenta w payloadzie.');
 
     // wybór patientId: explicit z opcji > z payloadu > dedup po nagłówku > nowy uuid
     const allPatientsRaw = await getAdapter().listPatientsForUser(currentUserId);
@@ -1214,7 +1214,7 @@
   }
 
   async function getPatient(patientId) {
-    if (!isUnlocked()) throw new Error('VildaVault: zaloguj się, by pobrać pacjenta.');
+    if (!isUnlocked()) throw new Error('Zaloguj się, by pobrać pacjenta.');
     const rec = await getAdapter().getPatientForUser(currentUserId, patientId);
     if (!rec) return null;
     const header = await decryptPayloadForCurrentUser(rec.headerCipher.iv, rec.headerCipher.data);
@@ -1249,7 +1249,7 @@
   }
 
   async function removePatient(patientId) {
-    if (!isUnlocked()) throw new Error('VildaVault: zaloguj się, by usunąć pacjenta.');
+    if (!isUnlocked()) throw new Error('Zaloguj się, by usunąć pacjenta.');
     await getAdapter().removePatientForUser(currentUserId, patientId);
     // Zapisz tombstone, by usunięcie rozeszło się na inne urządzenia (synchronizacja).
     // Dane pacjenta są już skasowane lokalnie; znacznik niesie samą informację „usunięty".
@@ -1290,12 +1290,12 @@
   // odszyfrować dane tym samym hasłem co w aktualnym koncie. Plik jest
   // przenośny — można go zaimportować na innym urządzeniu (etap 5+).
   async function exportPatientEnvelope(patientId) {
-    if (!isUnlocked()) throw new Error('VildaVault: zaloguj się przed eksportem pacjenta.');
+    if (!isUnlocked()) throw new Error('Zaloguj się przed eksportem pacjenta.');
     const C = getCrypto();
     const meta = await getAdapter().getUserMeta(currentUserId);
-    if (!meta) throw new Error('VildaVault: brak meta użytkownika.');
+    if (!meta) throw new Error('Brak meta użytkownika.');
     const patientRec = await getAdapter().getPatientForUser(currentUserId, patientId);
-    if (!patientRec) throw new Error('VildaVault: pacjent nie istnieje.');
+    if (!patientRec) throw new Error('Pacjent nie istnieje.');
     const snapshotsRaw = await getAdapter().listSnapshotsForUser(currentUserId, patientId);
 
     const headerPlain = await decryptPayloadForCurrentUser(patientRec.headerCipher.iv, patientRec.headerCipher.data);
@@ -1368,7 +1368,7 @@
 
   function parseEnvelopeFromInput(input) {
     const C = getCrypto();
-    if (!input) throw new Error('VildaVault: brak pliku do importu.');
+    if (!input) throw new Error('Brak pliku do importu.');
     if (typeof input === 'string') return C.parseEnvelope(input);
     return C.parseEnvelope(input);
   }
@@ -1382,11 +1382,11 @@
   // zapisu, liczba snapshotów (z metadata jeśli jest), czy potrzebne hasło.
   // NIE odszyfrowuje payload-u, tylko nagłówek.
   async function previewPatientEnvelope(input, password) {
-    if (!isUnlocked()) throw new Error('VildaVault: zaloguj się przed podglądem pliku.');
+    if (!isUnlocked()) throw new Error('Zaloguj się przed podglądem pliku.');
     const C = getCrypto();
     const envelope = parseEnvelopeFromInput(input);
     if (envelope.kind !== 'patient') {
-      throw new Error('VildaVault: plik nie zawiera pacjenta (kind=' + envelope.kind + ').');
+      throw new Error('Plik nie zawiera pacjenta (kind=' + envelope.kind + ').');
     }
     let header = null;
     let needsPassword = false;
@@ -1406,13 +1406,13 @@
         };
       }
       if (!envelope.wrappedMasterKey) {
-        throw new Error('VildaVault: plik nie zawiera wrappedMasterKey — nie można otworzyć innym hasłem.');
+        throw new Error('Plik nie zawiera danych potrzebnych do otwarcia innym hasłem.');
       }
       let recovered;
       try {
         recovered = await C.unwrapMasterFromEnvelope(envelope, password);
       } catch (_) {
-        throw new Error('VildaVault: nieprawidłowe hasło — nie można otworzyć tego pliku.');
+        throw new Error('Nieprawidłowe hasło dla tego pliku.');
       }
       header = await tryDecryptHeaderWithKey(envelope, recovered);
       methodUsed = 'password';
@@ -1428,11 +1428,11 @@
 
   // Pełny import: deszyfracja + merge w aktualnym koncie.
   async function importPatientFromEnvelope(input, password) {
-    if (!isUnlocked()) throw new Error('VildaVault: zaloguj się przed importem.');
+    if (!isUnlocked()) throw new Error('Zaloguj się przed importem.');
     const C = getCrypto();
     const envelope = parseEnvelopeFromInput(input);
     if (envelope.kind !== 'patient') {
-      throw new Error('VildaVault: plik nie zawiera pacjenta (kind=' + envelope.kind + ').');
+      throw new Error('Plik nie zawiera pacjenta (kind=' + envelope.kind + ').');
     }
 
     // 1) Wybierz klucz, który odszyfrowuje plik.
@@ -1442,17 +1442,17 @@
       sourceKey = masterKey;
     } catch (_) {
       if (typeof password !== 'string' || !password.length) {
-        const e = new Error('VildaVault: plik wymaga hasła ze starego konta.');
+        const e = new Error('Ten plik był zaszyfrowany innym hasłem. Wpisz hasło ze starego konta.');
         e.code = 'NEEDS_PASSWORD';
         throw e;
       }
       if (!envelope.wrappedMasterKey) {
-        throw new Error('VildaVault: plik nie zawiera wrappedMasterKey — nie można otworzyć innym hasłem.');
+        throw new Error('Plik nie zawiera danych potrzebnych do otwarcia innym hasłem.');
       }
       try {
         sourceKey = await C.unwrapMasterFromEnvelope(envelope, password);
       } catch (_) {
-        const e = new Error('VildaVault: nieprawidłowe hasło dla tego pliku.');
+        const e = new Error('Nieprawidłowe hasło dla tego pliku.');
         e.code = 'BAD_PASSWORD';
         throw e;
       }
@@ -1557,10 +1557,10 @@
   // same dane. W przeciwieństwie do per-pacjent eksportu (gdzie po imporcie
   // dane są re-szyfrowane nowym master keyem nowego konta).
   async function exportVaultBackup() {
-    if (!isUnlocked()) throw new Error('VildaVault: zaloguj się przed eksportem backupu vaultu.');
+    if (!isUnlocked()) throw new Error('Zaloguj się przed eksportem kopii konta.');
     const C = getCrypto();
     const meta = await getAdapter().getUserMeta(currentUserId);
-    if (!meta) throw new Error('VildaVault: brak meta użytkownika.');
+    if (!meta) throw new Error('Brak meta użytkownika.');
 
     const patientsRaw = await getAdapter().listPatientsForUser(currentUserId);
     const fullPatients = [];
@@ -1642,7 +1642,7 @@
     try {
       envelope = (typeof input === 'string') ? C.parseEnvelope(input) : C.parseEnvelope(input);
     } catch (e) {
-      throw new Error('VildaVault: nieprawidłowy plik kopii vaultu.');
+      throw new Error('Wybrany plik nie wygląda na kopię z tej aplikacji.');
     }
     if (envelope.kind !== 'vault-backup') {
       if (envelope.kind === 'patient') {
@@ -1655,7 +1655,7 @@
       throw e;
     }
     if (!envelope.wrappedMasterKey) {
-      throw new Error('VildaVault: kopia nie zawiera wrappedMasterKey — nie da się odtworzyć.');
+      throw new Error('Ten plik kopii jest niekompletny — brakuje danych potrzebnych do odtworzenia konta.');
     }
 
     // Odzyskaj master key — przez hasło lub recovery key
@@ -1664,12 +1664,12 @@
     const useRecovery = !!opts.useRecoveryKey;
     if (useRecovery) {
       if (!envelope.wrappedMasterByRecovery || !envelope.recoverySalt) {
-        throw new Error('VildaVault: kopia nie zawiera danych do odzyskania kluczem odzyskiwania.');
+        throw new Error('Ten plik kopii nie obsługuje odtwarzania kluczem odzyskiwania.');
       }
       try {
         sourceMasterKey = await C.unwrapMasterFromEnvelopeRecovery(envelope, password);
       } catch (_) {
-        const e = new Error('VildaVault: nieprawidłowy klucz odzyskiwania.');
+        const e = new Error('Ten klucz odzyskiwania nie pasuje do tej kopii konta.');
         e.code = 'BAD_RECOVERY_KEY';
         throw e;
       }
@@ -1677,7 +1677,7 @@
       try {
         sourceMasterKey = await C.unwrapMasterFromEnvelope(envelope, password);
       } catch (_) {
-        const e = new Error('VildaVault: nieprawidłowe hasło dla tej kopii.');
+        const e = new Error('Nieprawidłowe hasło dla tej kopii konta.');
         e.code = 'BAD_PASSWORD';
         throw e;
       }
@@ -1816,19 +1816,19 @@
    * }>}
    */
   async function previewVaultBackupMerge(input, password) {
-    if (!isUnlocked()) throw new Error('VildaVault: zaloguj się przed podglądem scalania.');
+    if (!isUnlocked()) throw new Error('Zaloguj się przed podglądem scalania.');
     const C = getCrypto();
 
     const envelope = parseEnvelopeFromInput(input);
     if (envelope.kind !== 'vault-backup') {
-      throw new Error('VildaVault: wybrany plik to nie kopia całego konta (kind=' + envelope.kind + ').');
+      throw new Error('Wybrany plik to nie kopia całego konta (kind=' + envelope.kind + ').');
     }
 
     let sourceMasterKey;
     try {
       sourceMasterKey = await C.unwrapMasterFromEnvelope(envelope, password);
     } catch (_) {
-      const e = new Error('VildaVault: nieprawidłowe hasło dla tej kopii konta.');
+      const e = new Error('Nieprawidłowe hasło dla tej kopii konta.');
       e.code = 'BAD_PASSWORD';
       throw e;
     }
@@ -1900,19 +1900,19 @@
    * @returns {Promise<{mergedPatientCount, addedPatientCount, addedSnapshotCount, skippedSnapshotCount}>}
    */
   async function mergeVaultBackup(input, password) {
-    if (!isUnlocked()) throw new Error('VildaVault: zaloguj się przed scalaniem.');
+    if (!isUnlocked()) throw new Error('Zaloguj się przed scalaniem.');
     const C = getCrypto();
 
     const envelope = parseEnvelopeFromInput(input);
     if (envelope.kind !== 'vault-backup') {
-      throw new Error('VildaVault: wybrany plik to nie kopia całego konta.');
+      throw new Error('Wybrany plik to nie kopia całego konta.');
     }
 
     let sourceMasterKey;
     try {
       sourceMasterKey = await C.unwrapMasterFromEnvelope(envelope, password);
     } catch (_) {
-      const e = new Error('VildaVault: nieprawidłowe hasło dla tej kopii konta.');
+      const e = new Error('Nieprawidłowe hasło dla tej kopii konta.');
       e.code = 'BAD_PASSWORD';
       throw e;
     }
@@ -2312,7 +2312,7 @@
   }
 
   async function importLegacyJsonPatient(input, options) {
-    if (!isUnlocked()) throw new Error('VildaVault: zaloguj się przed importem.');
+    if (!isUnlocked()) throw new Error('Zaloguj się przed importem.');
     let payload;
     if (typeof input === 'string') {
       try { payload = JSON.parse(input); }
@@ -2428,7 +2428,7 @@
   async function registerPasskey(deviceLabel) {
     const C = getCrypto();
     if (!isUnlocked() || !masterKeyBytes) {
-      throw new Error('VildaVault: vault musi być odblokowany przed rejestracją passkey.');
+      throw new Error('Zaloguj się przed rejestracją biometrii.');
     }
     const userId = currentUserId;
     const rpId = window.location.hostname || 'localhost';
@@ -2486,7 +2486,7 @@
   async function registerPasskeyForRoaming(deviceLabel) {
     const C = getCrypto();
     if (!isUnlocked() || !masterKeyBytes) {
-      throw new Error('VildaVault: vault musi być odblokowany przed rejestracją passkey.');
+      throw new Error('Zaloguj się przed rejestracją biometrii.');
     }
     const userId = currentUserId;
     const rpId = (typeof window !== 'undefined' && window.location && window.location.hostname) || 'localhost';
@@ -2535,7 +2535,7 @@
     try {
       sync = await getSyncMaterial();
     } catch (e) {
-      const err = new Error('VildaVault: passkey zapisany lokalnie, ale brak materiału sync do escrow.');
+      const err = new Error('Biometria zapisana lokalnie, ale brak materiału sync do escrow.');
       err.code = 'ESCROW_NO_SYNC';
       throw err;
     }
@@ -2568,12 +2568,12 @@
         }
       );
     } catch (e) {
-      const err = new Error('VildaVault: passkey zapisany lokalnie, ale upload koperty do chmury nie powiódł się (sieć).');
+      const err = new Error('Biometria zapisana lokalnie, ale nie udało się wysłać danych do chmury (brak sieci).');
       err.code = 'ESCROW_UPLOAD_FAILED';
       throw err;
     }
     if (!resp.ok) {
-      const err = new Error('VildaVault: serwer odrzucił zapis koperty passkey (' + resp.status + ').');
+      const err = new Error('Serwer odrzucił zapis koperty biometrii (' + resp.status + ').');
       err.code = 'ESCROW_UPLOAD_REJECTED';
       throw err;
     }
@@ -2593,11 +2593,11 @@
   async function unlockWithPasskey(userId, credentialId, signal) {
     const C = getCrypto();
     if (typeof userId !== 'string' || !userId.length) {
-      throw new Error('VildaVault: nieprawidłowy userId.');
+      throw new Error('Nieprawidłowy userId.');
     }
     const meta = await getAdapter().getUserMeta(userId);
     if (!meta || !Array.isArray(meta.passkeys) || !meta.passkeys.length) {
-      throw new Error('VildaVault: ten użytkownik nie ma zarejestrowanych passkeys.');
+      throw new Error('Ten użytkownik nie ma zarejestrowanej biometrii.');
     }
 
     const rpId = window.location.hostname || 'localhost';
@@ -2621,7 +2621,7 @@
     // 2. Znajdź pasujący wpis w meta.passkeys
     const entry = meta.passkeys.find(p => p.credentialId === returnedId);
     if (!entry) {
-      throw new Error('VildaVault: nieznany credentialId — passkey nie jest zarejestrowany dla tego konta.');
+      throw new Error('Nieznany credentialId — biometria nie jest zarejestrowana dla tego konta.');
     }
 
     // 3. Wyprowaź klucz wrappujący i odszyfruj master key
@@ -2635,7 +2635,7 @@
       );
     } catch (_) {
       const wv = (entry && typeof entry.wrapVersion === 'number') ? entry.wrapVersion : 1;
-      const err = new Error('VildaVault: nie udało się odszyfrować master key passkey\'em.');
+      const err = new Error('Nie udało się odblokować konta biometrią.');
       err.code = 'PASSKEY_DECRYPT_FAILED';
       err.wrapVersion = wv;
       err.diagnostic = (wv >= 2) ? 'envelope-current-prf-mismatch' : 'envelope-legacy-create-prf';
@@ -2681,7 +2681,7 @@
     let prfOk = false;
     try { prfOk = await C.isPrfSupported(); } catch (_) { prfOk = false; }
     if (!prfOk) {
-      const err = new Error('VildaVault: passkey PRF nie jest wspierany na tym urządzeniu — użyj logowania QR.');
+      const err = new Error('Ta przeglądarka nie obsługuje logowania biometrycznego. Użyj logowania QR.');
       err.code = 'EPH_PRF_UNSUPPORTED';
       throw err;
     }
@@ -2707,7 +2707,7 @@
       if (!chResp.ok) throw new Error('challenge http ' + chResp.status);
       challengeB64u = (await chResp.json()).challenge;
     } catch (e) {
-      const err = new Error('VildaVault: nie udało się pobrać challenge z serwera.');
+      const err = new Error('Nie udało się nawiązać połączenia z serwerem. Sprawdź internet.');
       err.code = 'EPH_CHALLENGE_FAILED';
       throw err;
     }
@@ -2734,17 +2734,17 @@
         }
       );
       if (unlockResp.status === 404) {
-        const e = new Error('VildaVault: ten passkey nie ma koperty w chmurze (nie zarejestrowano roaming).');
+        const e = new Error('Ten passkey nie jest skonfigurowany do logowania na obcym komputerze.');
         e.code = 'EPH_NO_ENVELOPE'; throw e;
       }
       if (!unlockResp.ok) {
-        const e = new Error('VildaVault: serwer odrzucił asercję (' + unlockResp.status + ').');
+        const e = new Error('Serwer odrzucił logowanie biometryczne (' + unlockResp.status + ').');
         e.code = 'EPH_UNLOCK_REJECTED'; throw e;
       }
       koperta = await unlockResp.json();
     } catch (e) {
       if (e && e.code) throw e;
-      const err = new Error('VildaVault: błąd sieci przy pobieraniu koperty.');
+      const err = new Error('Błąd sieci przy pobieraniu danych logowania.');
       err.code = 'EPH_UNLOCK_NETWORK'; throw err;
     }
 
@@ -2763,7 +2763,7 @@
       //    PRF z logowania nie pasuje, to niespójność samego authenticatora — typowo
       //    passkey Apple użyty LOKALNIE na Macu daje inny PRF niż przez telefon (hybrid).
       const wv = (koperta && typeof koperta.wrapVersion === 'number') ? koperta.wrapVersion : 1;
-      const err = new Error('VildaVault: nie udało się odszyfrować koperty sekretem PRF.');
+      const err = new Error('Nie udało się odszyfrować danych tym passkey.');
       err.code = 'EPH_DECRYPT_FAILED';
       err.wrapVersion = wv;
       err.diagnostic = (wv >= 2) ? 'envelope-current-prf-mismatch' : 'envelope-legacy-create-prf';
