@@ -340,3 +340,76 @@ RATE_LIMIT_TRANSFER_RPM = "5"   # max nowych sesji QR/minutę per IP (domyślnie
 ```
 
 Pozostałe stałe (TTL tokenów, limity rozmiaru payloadu) są hardcoded w `transfer.js`.
+
+---
+
+## Obsługa błędów i stany wyjątkowe
+
+### Token wygasł (timeout 120s)
+
+- **Komputer:** odliczanie osiąga 0 → UI wyświetla „Kod QR wygasł. Wygeneruj nowy." + przycisk „Generuj nowy QR"
+- Stary `privateKey` jest usuwany z `sessionStorage`; wywołanie `initiateQRLogin()` od nowa
+- Telefon który zdąży zeskanować wygasły kod otrzyma HTTP 404 → UI: „Ten kod QR wygasł. Poproś o wygenerowanie nowego."
+
+### Błędne hasło po stronie telefonu
+
+- `approveQRLogin` rzuca błąd kryptograficzny (decrypt fail) zanim wyśle cokolwiek na serwer
+- Komunikat: „Nieprawidłowe hasło. Spróbuj ponownie."
+- Token pozostaje aktywny (pending); telefon może ponowić próbę
+
+### Sesja już zatwierdzona (409 Conflict)
+
+- Telefon spróbuje PUT drugi raz (np. po retry) → HTTP 409
+- UI telefonu: „Sesja QR była już zatwierdzona." (idempotency guard)
+- Komputer: jeśli zdążył pobrać payload (GET zwrócił `ready`) — wszystko OK, 409 jest oczekiwane
+
+### Brak połączenia sieciowego
+
+- Komputer: polling `pollQRLoginStatus` zwraca błąd sieci → UI pokazuje ikonę ostrzeżenia, polling kontynuuje; po 3 kolejnych niepowodzeniach pod rząd: „Brak połączenia — sprawdź internet."
+- Telefon: `approveQRLogin` rzuca błąd sieci przed PUT → UI: „Błąd sieci. Spróbuj ponownie." — token nadal aktywny
+
+### Kamera niedostępna / brak BarcodeDetector
+
+- `ustawienia.html`: próba `getUserMedia` lub `new BarcodeDetector()` rzuca wyjątek → automatyczne przełączenie na tryb ręczny (input tekstowy na token)
+- Nie ma żadnego komunikatu błędu — UI przeskakuje od razu do pola tekstowego
+
+### Interstitial overlay po zalogowaniu (strona komputera)
+
+Po `completeQRLogin` vault jest odblokowany. Jeśli `vilda_sync_integration.js` wykryje dostępne dane
+w chmurze (probe `GET /v1/device/{userId}`), dispatchuje event `newDeviceRestoreAvailable`, który
+uruchamia interstitial overlay (pełnoekranowy dialog):
+- **„Znaleziono dane w chmurze. Wczytać dane?"** → sync pull → dane pacjentów dostępne od razu
+- „Nie, zacznij od nowa" → czyste konto z tym samym masterKey
+
+Bez danych w chmurze interstitial się nie pojawia; logowanie kończy się w trybie cichym.
+
+---
+
+## Wdrożenie (deployment checklist)
+
+- [ ] Worker wdrożony: `wrangler deploy` w katalogu `vilda-sync-worker/`
+- [ ] KV namespace `VILDA_KV` przypisany do workera (`wrangler.toml`: `[[kv_namespaces]]`)
+- [ ] Route `vilda-sync.maciej-4b9.workers.dev/*` dodany do CSP `connect-src` we wszystkich HTML
+- [ ] `QRCode.js` (`cdnjs.cloudflare.com`) dodany do CSP `script-src` (jest — patrz `docpro.html`)
+- [ ] HTTPS na docelowej domenie (wymagane przez `getUserMedia` i Web Crypto)
+
+---
+
+## Testowanie przepływu
+
+### Test manualny (środowisko lokalne)
+
+Lokalny server nie zadziała dla QR — wymagany HTTPS i dostępny Worker.  
+Zalecane: `vildaclinic.github.io` lub dowolny deploy na domenie z TLS.
+
+### Weryfikacja kryptografii (node)
+
+```bash
+# Wszystkie testy krypto + vault są w:
+node tools/crypto_basic_smoke.js
+node tools/vault_patient_crud_smoke.js
+```
+
+Nie ma dedykowanego testu dla QR transfer (wymaga dwóch kontekstów przeglądarki).
+Kryptografia ECIES jest weryfikowana pośrednio przez `encryptSyncCode` / `decryptSyncCode`
+(ten sam stack: ECDH P-256, HKDF, AES-256-GCM).
