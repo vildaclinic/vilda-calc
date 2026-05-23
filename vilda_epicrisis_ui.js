@@ -171,40 +171,107 @@
     var mphSds    = (adv.targetStats && isFinite(adv.targetStats.sd))       ? adv.targetStats.sd        : null;
     var mphPerc   = (adv.targetStats && isFinite(adv.targetStats.percentile)) ? adv.targetStats.percentile : null;
 
-    /* SDS i centyl wzrostu (wywołanie globalnej calcPercentileStats) */
-    var heightSds = null, heightPercentile = null;
-    if (isFinite(height) && isFinite(ageM) && typeof global.calcPercentileStats === 'function') {
-      var statsH = global.calcPercentileStats(height, sex, ageM / 12, 'HT');
-      if (statsH) { heightSds = statsH.sd; heightPercentile = statsH.percentile; }
+    /* ── Statystyki antropometryczne ─ ŹRÓDŁO ZGODNE Z KARTĄ „PODSUMOWANIE
+       WYNIKÓW": ten sam resolver źródła (Palczewska/OLAF/WHO) i te same globalne
+       funkcje co generateMetabolicSummary(). Dzięki temu liczby w epikryzie są
+       identyczne jak w karcie, niezależnie od wybranych siatek centylowych. ── */
+    var ageYearsExact = isFinite(ageM) ? ageM / 12 : NaN;
+    var months = isFinite(ageM) ? Math.round(ageM) : NaN;
+    var Z3  = -1.8808;   // 3. centyl  (≈ −2 SD) — jak app.js
+    var Z97 =  1.8808;   // 97. centyl (≈ +2 SD)
+    var OLAF_MIN_AGE = 3;
+
+    var prefSource = (typeof global.patientReportGetPreferredSource === 'function')
+      ? String(global.patientReportGetPreferredSource() || 'OLAF').toUpperCase()
+      : ((typeof global.bmiSource !== 'undefined' && global.bmiSource) ? String(global.bmiSource).toUpperCase() : 'OLAF');
+    var usePal = (prefSource === 'PALCZEWSKA' ||
+                  (prefSource === 'OLAF' && isFinite(ageYearsExact) && ageYearsExact < OLAF_MIN_AGE));
+
+    /* Centyl + Z-score dla WT/HT — wg źródła (jak karta). */
+    function anthroStats(value, param) {
+      if (!isFinite(value) || !isFinite(ageYearsExact)) return null;
+      if (usePal && typeof global.calcPercentileStatsPal === 'function') {
+        return global.calcPercentileStatsPal(value, sex, ageYearsExact, param);
+      }
+      if (typeof global.calcPercentileStats === 'function') {
+        return global.calcPercentileStats(value, sex, ageYearsExact, param);
+      }
+      return null;
     }
+
+    /* Wartość parametru przy granicznym centylu (3./97.) — wg źródła. */
+    function valueAtCentile(param, centile, zVal) {
+      if (usePal && typeof global.getPalCentile === 'function' && isFinite(months)) {
+        var pv = global.getPalCentile(sex, months, centile, param);
+        return isFinite(pv) ? pv : null;
+      }
+      if (typeof global.getChildLMS === 'function' && isFinite(ageYearsExact)) {
+        var lms = global.getChildLMS(sex, ageYearsExact, param);
+        if (lms) {
+          return (lms[0] !== 0)
+            ? lms[1] * Math.pow(1 + lms[0] * lms[2] * zVal, 1 / lms[0])
+            : lms[1] * Math.exp(lms[2] * zVal);
+        }
+      }
+      return null;
+    }
+
+    /* Niedobór do 3. centyla / nadmiar ponad 97. centyl — jak karta:
+       deficyt gdy centyl ≤ 2, nadmiar gdy centyl ≥ 98. */
+    function deficitExcess(value, param, percentile) {
+      var out = { deficit3: null, excess97: null };
+      if (!isFinite(value) || percentile == null) return out;
+      if (Math.round(percentile) <= 2) {
+        var p3 = valueAtCentile(param, 3, Z3);
+        if (isFinite(p3) && p3 > value) out.deficit3 = Math.round((p3 - value) * 10) / 10;
+      }
+      if (percentile >= 98) {
+        var p97 = valueAtCentile(param, 97, Z97);
+        if (isFinite(p97) && value > p97) out.excess97 = Math.round((value - p97) * 10) / 10;
+      }
+      return out;
+    }
+
+    /* Wzrost */
+    var heightSds = null, heightPercentile = null;
+    var statsH = anthroStats(height, 'HT');
+    if (statsH) { heightSds = statsH.sd; heightPercentile = statsH.percentile; }
+
+    /* Masa */
+    var weightSds = null, weightPercentile = null;
+    var statsW = anthroStats(weight, 'WT');
+    if (statsW) { weightSds = statsW.sd; weightPercentile = statsW.percentile; }
 
     /* hSDS − mpSDS */
     var hSdsMpSds = (heightSds != null && mphSds != null) ? (heightSds - mphSds) : null;
 
-    /* Niedobór do 3. centyla (binary search) */
-    var heightDeficitTo3rd = null;
-    if (heightPercentile != null && heightPercentile < 3 && isFinite(height) &&
-        typeof global.calcPercentileStats === 'function') {
-      var lo = height, hi = height + 35;
-      for (var i = 0; i < 24; i++) {
-        var mid = (lo + hi) / 2;
-        var sm  = global.calcPercentileStats(mid, sex, ageM / 12, 'HT');
-        if (!sm) break;
-        if (sm.percentile < 3) lo = mid; else hi = mid;
+    var hDE = deficitExcess(height, 'HT', heightPercentile);
+    var wDE = deficitExcess(weight, 'WT', weightPercentile);
+    var heightDeficitTo3rd = hDE.deficit3;
+
+    /* BMI — percentyl i Z-score wg źródła (OLAF/WHO/Palczewska), jak karta.
+       NIE używamy calcPercentileStats('BMI') (brak gałęzi BMI → liczyłaby
+       względem referencji wzrostu). */
+    var bmi = null, bmiPerc = null, bmiSds = null;
+    if (isFinite(height) && height > 0 && isFinite(weight)) {
+      bmi = Math.round((weight / Math.pow(height / 100, 2)) * 10) / 10;
+      if (typeof global.bmiPercentileChild === 'function' && isFinite(months)) {
+        var bpv = global.bmiPercentileChild(bmi, sex, months);
+        if (bpv != null && isFinite(bpv)) bmiPerc = bpv;
       }
-      var deficit = Math.round(((lo + hi) / 2 - height) * 10) / 10;
-      if (deficit > 0.1) heightDeficitTo3rd = deficit;
+      if (typeof global.bmiZscore === 'function' && isFinite(months)) {
+        var bzv = global.bmiZscore(bmi, sex, months);
+        if (bzv != null && isFinite(bzv)) bmiSds = bzv;
+      }
     }
 
-    /* BMI i centyl BMI */
-    var bmi = null, bmiPerc = null;
-    if (isFinite(height) && height > 0 && isFinite(weight)) {
-      bmi = weight / Math.pow(height / 100, 2);
-      bmi = Math.round(bmi * 10) / 10;
-      if (typeof global.calcPercentileStats === 'function') {
-        var statsB = global.calcPercentileStats(bmi, sex, ageM / 12, 'BMI');
-        if (statsB) bmiPerc = statsB.percentile;
-      }
+    /* Wskaźnik Cole'a — preferuj globalną wartość (jak karta), fallback getLMS. */
+    var coleIndex = null;
+    if (typeof global.colePercentValue === 'number' && isFinite(global.colePercentValue)) {
+      coleIndex = global.colePercentValue;
+    } else if (bmi != null && typeof global.getLMS === 'function' && isFinite(months)) {
+      var lmsBMI = global.getLMS(sex, months);
+      if (lmsBMI && isFinite(lmsBMI[1]) && lmsBMI[1] > 0) coleIndex = (bmi / lmsBMI[1]) * 100;
     }
 
     /* Wiek kostny */
@@ -241,9 +308,16 @@
       heightSds:           heightSds,
       heightPercentile:    heightPercentile,
       heightDeficitTo3rd:  heightDeficitTo3rd,
+      heightExcessOver97th: hDE.excess97,
       weight:              isFinite(weight)  ? weight  : null,
+      weightSds:           weightSds,
+      weightPercentile:    weightPercentile,
+      weightDeficitTo3rd:  wDE.deficit3,
+      weightExcessOver97th: wDE.excess97,
       bmi:                 bmi,
       bmiPercentile:       bmiPerc,
+      bmiSds:              bmiSds,
+      coleIndex:           coleIndex,
       motherHeight:        motherHeight,
       fatherHeight:        fatherHeight,
       mph:                 mph,

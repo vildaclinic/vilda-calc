@@ -210,10 +210,16 @@
    *   {number}  pd.height            - wzrost (cm)
    *   {number}  [pd.heightSds]       - hSDS (Z-score wzrostu)
    *   {number}  [pd.heightPercentile]- centyl wzrostu
-   *   {number}  [pd.heightDeficitTo3rd] - niedobór do 3. centyla (cm), 0 gdy powyżej
+   *   {number}  [pd.heightDeficitTo3rd] - niedobór wzrostu do 3. centyla (cm)
+   *   {number}  [pd.heightExcessOver97th] - nadmiar wzrostu ponad 97. centyl (cm)
    *   {number}  [pd.weight]          - masa (kg)
+   *   {number}  [pd.weightSds]       - Z-score masy
+   *   {number}  [pd.weightPercentile]- centyl masy
+   *   {number}  [pd.weightDeficitTo3rd]  - niedobór masy do 3. centyla (kg)
+   *   {number}  [pd.weightExcessOver97th] - nadmiar masy ponad 97. centyl (kg)
    *   {number}  [pd.bmi]             - BMI
-   *   {number}  [pd.bmiPercentile]   - centyl BMI
+   *   {number}  [pd.bmiPercentile]   - centyl BMI (źródło: bmiPercentileChild, OLAF/WHO/Palczewska)
+   *   {number}  [pd.bmiSds]          - Z-score BMI
    *   {number}  [pd.coleIndex]       - wskaźnik Cole'a (%)
    *   {number}  [pd.motherHeight]    - wzrost matki (cm)
    *   {number}  [pd.fatherHeight]    - wzrost ojca (cm)
@@ -388,6 +394,8 @@
     const hParens = [];
     if (pd.heightDeficitTo3rd != null && pd.heightDeficitTo3rd > 0) {
       hParens.push(fmt1(pd.heightDeficitTo3rd) + ' cm poniżej 3. centyla');
+    } else if (pd.heightExcessOver97th != null && pd.heightExcessOver97th > 0) {
+      hParens.push(fmt1(pd.heightExcessOver97th) + ' cm ponad 97. centyl');
     } else {
       const hCent = centileLabel(pd.heightPercentile);
       if (hCent) hParens.push(hCent);
@@ -398,10 +406,18 @@
 
     if (pd.weight != null) {
       let wStr = 'masa ciała ' + round1(pd.weight) + ' kg';
-      const wCent = centileLabel(pd.weightPercentile);
-      if (wCent) wStr += ' (' + wCent + ')';
+      const wParens = [];
+      if (pd.weightDeficitTo3rd != null && pd.weightDeficitTo3rd > 0) {
+        wParens.push(fmt1(pd.weightDeficitTo3rd) + ' kg poniżej 3. centyla');
+      } else if (pd.weightExcessOver97th != null && pd.weightExcessOver97th > 0) {
+        wParens.push(fmt1(pd.weightExcessOver97th) + ' kg ponad 97. centyl');
+      } else {
+        const wCent = centileLabel(pd.weightPercentile);
+        if (wCent) wParens.push(wCent);
+      }
+      if (wParens.length) wStr += ' (' + wParens.join(', ') + ')';
       if (pd.bmi != null) {
-        wStr += ', BMI ' + round1(pd.bmi);
+        wStr += ', BMI ' + fmt1(pd.bmi);
         const bCent = centileLabel(pd.bmiPercentile);
         if (bCent) wStr += ' (' + bCent + ')';
       }
