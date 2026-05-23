@@ -168,6 +168,17 @@
     return str.charAt(0).toUpperCase() + str.slice(1);
   }
 
+  /**
+   * Łączy listę powodów hospitalizacji w naturalne polskie zdanie.
+   * @param {string[]} reasons
+   */
+  function joinReasons(reasons) {
+    if (!reasons || !reasons.length) return 'oceny auksometrycznej';
+    const lower = reasons.map(function (r) { return r.toLowerCase(); });
+    if (lower.length === 1) return lower[0];
+    return lower.slice(0, -1).join(', ') + ' oraz ' + lower[lower.length - 1];
+  }
+
   /* ── EC-2: GENEROWANIE SEKCJI ─────────────────────────────────────────── */
 
   /**
@@ -274,7 +285,7 @@
     /* ── 1. Wprowadzenie ─────────────────────────────────────────────────── */
     const ageStr  = formatAge(pd.ageYears, pd.ageMonths);
     const reasons = Array.isArray(sa.reasons) && sa.reasons.length
-      ? sa.reasons.join(', ').toLowerCase()
+      ? joinReasons(sa.reasons)
       : 'oceny auksometrycznej';
     sections.push(
       capitalize(s.mianownik) + ' w wieku ' + ageStr + ' ' + s.czasownik +
@@ -519,25 +530,8 @@
     }
 
     /* ── 8. Testy stymulacyjne GH ───────────────────────────────────────── */
-    const ghTests = sa.ghTests || {};
-    if (ghTests.performed === 'yes') {
-      const testSentences = [];
-      [ghTests.test1, ghTests.test2].forEach(function (test) {
-        if (!test || test.peakGh == null) return;
-        const vStr = fmt1(parseFloat(test.peakGh)) + ' ng/mL';
-        const normality = ghNormalityLabel(test.peakGh);
-        testSentences.push(
-          'W trakcie hospitalizacji przeprowadzono test stymulacji wydzielania hormonu wzrostu z ' +
-          testNameInstrumental(test.type) + ', gdzie uzyskano maksymalne stężenie hormonu wzrostu ' +
-          vStr + ' (norma powyżej 10 ng/mL), co wskazuje na ' + normality + ' u dziecka.'
-        );
-      });
-      if (testSentences.length) {
-        let ghBlock = testSentences.join(' ');
-        if (ghTests.priming === 'yes') ghBlock += ' Zastosowano priming estrogenowy.';
-        sections.push(ghBlock);
-      }
-    }
+    const ghSectionText = buildGhSection(sa.ghTests);
+    if (ghSectionText) sections.push(ghSectionText);
 
     /* ── 9. MRI przysadki ───────────────────────────────────────────────── */
     const mri = sa.mri || {};
@@ -655,26 +649,149 @@
     return { text: sections.join('\n\n'), sections: sections };
   }
 
+  /* ── EC-2b: SEKCJA TESTÓW STYMULACYJNYCH GH (helper) ────────────────── */
+
+  /**
+   * Buduje tekst sekcji 8 na podstawie kontekstu i wyników testów.
+   * @param {Object} ghTests - sa.ghTests
+   * @returns {string|null}
+   */
+  function buildGhSection(ghTests) {
+    if (!ghTests || ghTests.performed !== 'yes') return null;
+
+    const context = ghTests.context || 'both';
+    const t1 = ghTests.test1;
+    const t2 = ghTests.test2;
+    const p1 = t1 && t1.peakGh != null ? parseFloat(t1.peakGh) : null;
+    const p2 = t2 && t2.peakGh != null ? parseFloat(t2.peakGh) : null;
+
+    let text = '';
+
+    if (context === 'first_only') {
+      /* Tylko 1. test; 2. test potwierdzający planowany */
+      if (p1 == null) return null;
+      const v1 = fmt1(p1) + ' ng/mL';
+      if (p1 >= 10) {
+        text = 'W trakcie hospitalizacji przeprowadzono test stymulacji wydzielania hormonu wzrostu z ' +
+          testNameInstrumental(t1.type) + ', gdzie uzyskano maksymalne stężenie hormonu wzrostu ' +
+          v1 + ' (norma powyżej 10 ng/mL), co wskazuje na prawidłowe wydzielanie hormonu wzrostu u dziecka.' +
+          ' Drugi test stymulacyjny nie jest wymagany.';
+      } else {
+        text = 'W trakcie hospitalizacji przeprowadzono pierwszy test stymulacji wydzielania hormonu wzrostu z ' +
+          testNameInstrumental(t1.type) + ', gdzie uzyskano maksymalne stężenie hormonu wzrostu ' +
+          v1 + ' (norma powyżej 10 ng/mL). Wynik poniżej normy wymaga potwierdzenia w drugim teście stymulacyjnym' +
+          ' z innym preparatem.';
+      }
+
+    } else if (context === 'second_only') {
+      /* 2. test potwierdzający wykonany w tej hospitalizacji;
+         test1 = wynik 1. testu z poprzedniej hospitalizacji (opcjonalnie) */
+      if (p2 == null) return null;
+      const v2 = fmt1(p2) + ' ng/mL';
+      if (p2 >= 10) {
+        text = 'W trakcie bieżącej hospitalizacji przeprowadzono test stymulacji wydzielania hormonu wzrostu z ' +
+          testNameInstrumental(t2.type) + ', gdzie uzyskano maksymalne stężenie hormonu wzrostu ' +
+          v2 + ' (norma powyżej 10 ng/mL), co wskazuje na prawidłowe wydzielanie hormonu wzrostu u dziecka.';
+        if (p1 != null) {
+          text += ' W pierwszym teście stymulacyjnym (z ' + testNameInstrumental(t1.type) +
+            ', wykonanym w poprzedniej hospitalizacji) uzyskano szczyt GH ' + fmt1(p1) + ' ng/mL.';
+        }
+      } else {
+        if (p1 != null) {
+          text = 'W ramach diagnostyki przeprowadzono dwa testy stymulacji wydzielania hormonu wzrostu:' +
+            ' w poprzedniej hospitalizacji test z ' + testNameInstrumental(t1.type) +
+            ' (szczyt GH ' + fmt1(p1) + ' ng/mL) oraz w trakcie bieżącej hospitalizacji test z ' +
+            testNameInstrumental(t2.type) + ' (szczyt GH ' + v2 + ') — norma powyżej 10 ng/mL.' +
+            ' Oba wyniki poniżej normy, co potwierdza niedobór hormonu wzrostu u dziecka.';
+        } else {
+          text = 'W trakcie bieżącej hospitalizacji przeprowadzono drugi (potwierdzający) test stymulacji' +
+            ' wydzielania hormonu wzrostu z ' + testNameInstrumental(t2.type) +
+            ', gdzie uzyskano maksymalne stężenie hormonu wzrostu ' + v2 +
+            ' (norma powyżej 10 ng/mL). W połączeniu z wynikiem pierwszego testu stymulacyjnego,' +
+            ' oba wyniki poniżej normy potwierdzają niedobór hormonu wzrostu u dziecka.';
+        }
+      }
+
+    } else {
+      /* context === 'both': oba testy wykonane w tej hospitalizacji (domyślne) */
+      if (p1 != null && p2 != null) {
+        const v1 = fmt1(p1) + ' ng/mL';
+        const v2 = fmt1(p2) + ' ng/mL';
+        const anyNormal = p1 >= 10 || p2 >= 10;
+        text = 'W trakcie hospitalizacji przeprowadzono dwa testy stymulacji wydzielania hormonu wzrostu:' +
+          ' z ' + testNameInstrumental(t1.type) + ', gdzie uzyskano maksymalne stężenie hormonu wzrostu ' + v1 + ',' +
+          ' oraz z ' + testNameInstrumental(t2.type) + ', gdzie uzyskano ' + v2 + ' (norma powyżej 10 ng/mL). ';
+        if (anyNormal) {
+          text += 'Uzyskanie szczytu GH powyżej 10 ng/mL w co najmniej jednym teście wskazuje na' +
+            ' prawidłowe wydzielanie hormonu wzrostu u dziecka.';
+        } else {
+          text += 'Oba wyniki poniżej normy, co potwierdza niedobór hormonu wzrostu u dziecka.';
+        }
+      } else if (p1 != null) {
+        /* Jeden test w kontekście 'both' (fallback) */
+        text = 'W trakcie hospitalizacji przeprowadzono test stymulacji wydzielania hormonu wzrostu z ' +
+          testNameInstrumental(t1.type) + ', gdzie uzyskano maksymalne stężenie hormonu wzrostu ' +
+          fmt1(p1) + ' ng/mL (norma powyżej 10 ng/mL), co wskazuje na ' + ghNormalityLabel(p1) + ' u dziecka.';
+      } else {
+        return null;
+      }
+    }
+
+    if (text && ghTests.priming === 'yes') text += ' Zastosowano priming estrogenowy.';
+    return text || null;
+  }
+
   /* ── EC-3: WNIOSKI PER PROFIL ─────────────────────────────────────────── */
 
   function buildConclusionGhd(pd, sa) {
     const gh = sa.ghTests || {};
     const sf = sexForms(pd.sex);
+    const context = gh.context || 'both';
     const peak1 = gh.test1 && gh.test1.peakGh != null ? parseFloat(gh.test1.peakGh) : null;
     const peak2 = gh.test2 && gh.test2.peakGh != null ? parseFloat(gh.test2.peakGh) : null;
-    const bothLow = peak1 != null && peak1 < 10 && (peak2 == null || peak2 < 10);
+
+    /* Określ status wydzielania GH */
+    let ghStatus; // 'confirmed' | 'pending' | 'normal' | 'unknown'
+    if (context === 'first_only') {
+      if (peak1 == null)    ghStatus = 'unknown';
+      else if (peak1 >= 10) ghStatus = 'normal';
+      else                  ghStatus = 'pending';
+    } else if (context === 'second_only') {
+      if (peak2 == null)    ghStatus = 'unknown';
+      else if (peak2 >= 10) ghStatus = 'normal';
+      else                  ghStatus = 'confirmed';
+    } else {
+      /* 'both' */
+      const anyNormal = (peak1 != null && peak1 >= 10) || (peak2 != null && peak2 >= 10);
+      const hasData   = peak1 != null || peak2 != null;
+      if (!hasData)         ghStatus = 'unknown';
+      else if (anyNormal)   ghStatus = 'normal';
+      else                  ghStatus = 'confirmed';
+    }
 
     let c = 'Na podstawie przeprowadzonej diagnostyki';
-    if (bothLow && peak2 != null) {
-      c += ' rozpoznano niedobór hormonu wzrostu (szczyt GH poniżej 10 ng/mL w obydwu testach stymulacyjnych).';
-    } else if (bothLow) {
-      c += ' obraz kliniczny i wynik testu stymulacyjnego odpowiadają niedoborowi hormonu wzrostu' +
-        ' (szczyt GH ' + round1(peak1).toString().replace('.', ',') + ' ng/mL).';
+    if (ghStatus === 'confirmed') {
+      if (context === 'both' && peak1 != null && peak2 != null) {
+        c += ' rozpoznano niedobór hormonu wzrostu (szczyt GH poniżej 10 ng/mL w obydwu testach stymulacyjnych).';
+      } else {
+        c += ' obraz kliniczny i wyniki testów stymulacyjnych odpowiadają niedoborowi hormonu wzrostu.';
+      }
+    } else if (ghStatus === 'normal') {
+      c += ' wydzielanie hormonu wzrostu jest prawidłowe (szczyt GH powyżej 10 ng/mL).';
+    } else if (ghStatus === 'pending') {
+      c += ' wynik pierwszego testu stymulacyjnego (szczyt GH ' + fmt1(peak1) +
+        ' ng/mL) jest poniżej normy i wymaga potwierdzenia w drugim teście.';
     } else {
       c += ' obraz kliniczny sugeruje niedobór hormonu wzrostu — wyniki wymagają weryfikacji.';
     }
-    c += ' ' + capitalize(sf.mianownik) + ' wymaga dalszej opieki endokrynologicznej.' +
-      ' Po wykonaniu wszystkich zaplanowanych badań dziecko w stanie ogólnym dobrym zwolniono do domu z zaleceniami jak niżej.';
+
+    if (ghStatus === 'pending') {
+      c += ' ' + capitalize(sf.mianownik) + ' wymaga dalszej opieki endokrynologicznej' +
+        ' z uwagi na konieczność przeprowadzenia drugiego testu stymulacyjnego.';
+    } else {
+      c += ' ' + capitalize(sf.mianownik) + ' wymaga dalszej opieki endokrynologicznej.' +
+        ' Po wykonaniu wszystkich zaplanowanych badań dziecko w stanie ogólnym dobrym zwolniono do domu z zaleceniami jak niżej.';
+    }
     return c;
   }
 
@@ -812,6 +929,11 @@
       testName:             testName,
       testNameInstrumental: testNameInstrumental,
       ghNormalityLabel:     ghNormalityLabel,
+      joinReasons:          joinReasons,
+    },
+    /** Eksponowane tylko do testów jednostkowych — funkcje sekcji */
+    _sections: {
+      buildGhSection: buildGhSection,
     },
   };
 }));
