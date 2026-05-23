@@ -528,28 +528,76 @@
   }
 
   /* ─── Krok 2: Wywiad urodzeniowy ──────────────────────────────────────── */
+  /* Źródła norm urodzeniowych (SGA) — patrz window.VildaSgaBirth.
+     Wybór JEDNEGO źródła; Malewski obejmuje wyłącznie masę urodzeniową. */
+  var SGA_SOURCE_LABELS = {
+    niklasson:   'Niklasson / Albertsson-Wikland',
+    intergrowth: 'INTERGROWTH-21st',
+    malewski:    'Malewski i wsp. (PL — tylko masa)'
+  };
+  var SGA_SOURCE_RANGE = {
+    niklasson:   '24–42 tc · masa, długość, obwód głowy',
+    intergrowth: '24+0–42+6 tc · masa, długość, obwód głowy',
+    malewski:    '22–43 tc · wyłącznie masa urodzeniowa'
+  };
+
   function buildStep2() {
     var wrap = el('div', '');
     var sa   = state.answers;
     var birth = sa.birth || {};
 
+    /* ── Źródło norm SGA (jeden wybór, niezależne od modułu docpro) ── */
+    var secSrc = section('Źródło norm SDS urodzeniowych');
+    var srcSel = birth.sdsSource || 'niklasson';
+    append(secSrc,
+      radioRow('sga-source', 'niklasson',   SGA_SOURCE_LABELS.niklasson,   srcSel === 'niklasson'),
+      radioRow('sga-source', 'intergrowth', SGA_SOURCE_LABELS.intergrowth, srcSel === 'intergrowth'),
+      radioRow('sga-source', 'malewski',    SGA_SOURCE_LABELS.malewski,    srcSel === 'malewski')
+    );
+    var srcNote = el('p',
+      'font-size:0.8rem;color:' + clr.muted + ';margin:6px 2px 0;',
+      null, ''
+    );
+    secSrc.appendChild(srcNote);
+
     var sec = section('Dane urodzeniowe');
     append(sec,
-      inputField('epi-gest-weeks',     'Wiek ciążowy (tygodnie)',         'number', {'min':'24','max':'44','step':'1',    'placeholder':'np. 40'}, null),
-      inputField('epi-birth-weight',   'Masa urodzeniowa (g)',             'number', {'min':'500','max':'6000','step':'10',  'placeholder':'np. 3400'}, null),
+      inputField('epi-gest-weeks',     'Wiek ciążowy — pełne tygodnie',  'number', {'min':'22','max':'43','step':'1',    'placeholder':'np. 40'}, null),
+      inputField('epi-gest-days',      'Dodatkowe dni (0–6)',             'number', {'min':'0','max':'6','step':'1',     'placeholder':'np. 3'}, null),
+      inputField('epi-birth-weight',   'Masa urodzeniowa (g)',             'number', {'min':'300','max':'6000','step':'10',  'placeholder':'np. 3400'}, null),
       inputField('epi-birth-length',   'Długość urodzeniowa (cm)',         'number', {'min':'20','max':'60','step':'0.5',  'placeholder':'np. 53'}, null)
     );
     if (birth.gestationalWeeks) sec.querySelector('#epi-gest-weeks').value   = birth.gestationalWeeks;
+    if (birth.gestationalDays != null) sec.querySelector('#epi-gest-days').value = birth.gestationalDays;
     if (birth.birthWeightG)     sec.querySelector('#epi-birth-weight').value  = birth.birthWeightG;
     if (birth.birthLengthCm)    sec.querySelector('#epi-birth-length').value  = birth.birthLengthCm;
+
+    var lengthFieldWrap = sec.querySelector('#epi-birth-length').parentNode;
 
     var hint = el('p',
       'font-size:0.8rem;color:' + clr.muted + ';background:#f0f9ff;border:1px solid #bae6fd;' +
       'border-radius:6px;padding:8px 10px;margin:10px 0 0;',
       null,
-      'SDS masy i długości urodzeniowej zostanie obliczone automatycznie przez aparat statystyczny aplikacji.'
+      'SDS masy i długości urodzeniowej zostanie obliczone automatycznie wg wybranego źródła.'
     );
     sec.appendChild(hint);
+
+    /* Dynamiczna podpowiedź + wygaszenie pola długości dla źródła Malewski. */
+    function syncSourceUI() {
+      var checkedSrc = secSrc.querySelector('input[name="sga-source"]:checked');
+      var s = (checkedSrc && checkedSrc.value) || 'niklasson';
+      srcNote.textContent = 'Zakres: ' + (SGA_SOURCE_RANGE[s] || '') + '.';
+      var malewski = (s === 'malewski');
+      lengthFieldWrap.style.opacity = malewski ? '0.45' : '1';
+      lengthFieldWrap.style.pointerEvents = malewski ? 'none' : 'auto';
+      hint.textContent = malewski
+        ? 'Źródło Malewski obejmuje wyłącznie masę urodzeniową — długość zostanie pominięta w epikryzie. SDS masy obliczany automatycznie.'
+        : 'SDS masy i długości urodzeniowej zostanie obliczone automatycznie wg wybranego źródła.';
+    }
+    secSrc.querySelectorAll('input[name="sga-source"]').forEach(function (inp) {
+      inp.addEventListener('change', syncSourceUI);
+    });
+    syncSourceUI();
 
     /* SGA catch-up — zawsze pokazuj, jeśli wypełnione dane */
     var sec2 = section('Nadgonienie wzrostu (dotyczy dzieci SGA)');
@@ -560,7 +608,7 @@
       radioRow('catchup', 'unknown', 'Nie dotyczy / nieznane',                                cupVal === 'unknown')
     );
 
-    append(wrap, sec, hr(), sec2);
+    append(wrap, secSrc, hr(), sec, hr(), sec2);
     return wrap;
   }
 
@@ -1098,7 +1146,9 @@
 
     if (state.step === 2) {
       sa.birth = {
+        sdsSource:        radioVal('sga-source') || 'niklasson',
         gestationalWeeks: fieldNum('epi-gest-weeks'),
+        gestationalDays:  fieldNum('epi-gest-days'),
         birthWeightG:     fieldNum('epi-birth-weight'),
         birthLengthCm:    fieldNum('epi-birth-length'),
         catchUp:          radioVal('catchup') || null,
@@ -1481,18 +1531,33 @@
     if (sa.birth) {
       var b = {};
       if (sa.birth.gestationalWeeks != null) b.gestationalWeeks = sa.birth.gestationalWeeks;
+      if (sa.birth.gestationalDays  != null) b.gestationalDays  = sa.birth.gestationalDays;
       if (sa.birth.birthWeightG     != null) b.birthWeightG     = sa.birth.birthWeightG;
       if (sa.birth.birthLengthCm    != null) b.birthLengthCm    = sa.birth.birthLengthCm;
       if (sa.birth.catchUp)                  b.catchUp          = sa.birth.catchUp;
-      /* Oblicz SDS urodzeniowych masy i długości jeśli możliwe */
-      if (typeof global.calcBirthSds === 'function' && sa.birth.birthWeightG && sa.birth.gestationalWeeks) {
+
+      /* Oblicz SDS urodzeniowy dla JEDNEGO wybranego źródła przez API SGA
+         (window.VildaSgaBirth). Malewski → tylko masa (długość pominięta). */
+      var sdsSource = sa.birth.sdsSource || 'niklasson';
+      b.sdsSource = sdsSource;
+      if (global.VildaSgaBirth && typeof global.VildaSgaBirth.compute === 'function' &&
+          sa.birth.gestationalWeeks != null &&
+          (sa.birth.birthWeightG != null || sa.birth.birthLengthCm != null)) {
         try {
-          var wsds = global.calcBirthSds(sa.birth.birthWeightG, 'weight', sa.birth.gestationalWeeks, state.pd.sex);
-          var lsds = (sa.birth.birthLengthCm)
-            ? global.calcBirthSds(sa.birth.birthLengthCm, 'length', sa.birth.gestationalWeeks, state.pd.sex)
-            : null;
-          if (isFinite(wsds)) b.birthWeightSds = wsds;
-          if (isFinite(lsds)) b.birthLengthSds = lsds;
+          var sgaRes = global.VildaSgaBirth.compute(sdsSource, {
+            sex:      state.pd.sex,
+            weeks:    sa.birth.gestationalWeeks,
+            days:     sa.birth.gestationalDays,
+            weightG:  sa.birth.birthWeightG,
+            lengthCm: sa.birth.birthLengthCm
+          });
+          if (sgaRes) {
+            b.sdsSourceLabel  = sgaRes.sourceShortLabel || null;
+            b.sdsSourceError  = sgaRes.error || null;
+            b.lengthSdsAvailable = sgaRes.lengthAvailable !== false;
+            if (sgaRes.weightSds != null && isFinite(sgaRes.weightSds)) b.birthWeightSds = sgaRes.weightSds;
+            if (sgaRes.lengthSds != null && isFinite(sgaRes.lengthSds)) b.birthLengthSds = sgaRes.lengthSds;
+          }
         } catch (_) {}
       }
       out.birth = b;

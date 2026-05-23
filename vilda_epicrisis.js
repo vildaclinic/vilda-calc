@@ -334,16 +334,30 @@
     const hasBirthData = birth.birthWeightG != null || birth.birthLengthCm != null;
     if (hasBirthData) {
       let bp = 'Wywiad okołoporodowy: dziecko urodzone';
-      if (birth.gestationalWeeks) bp += ' w ' + birth.gestationalWeeks + '. tygodniu ciąży';
+      if (birth.gestationalWeeks) {
+        bp += (birth.gestationalDays)
+          ? ' w ' + birth.gestationalWeeks + '+' + birth.gestationalDays + ' tygodniu ciąży'
+          : ' w ' + birth.gestationalWeeks + '. tygodniu ciąży';
+      }
+      /* Etykieta źródła norm SDS (Niklasson / INTERGROWTH-21st / Malewski) —
+         dołączana raz, przy pierwszym prezentowanym SDS. */
+      const srcSuffix = birth.sdsSourceLabel ? ' wg ' + birth.sdsSourceLabel : '';
+      let srcShown = false;
       const bParts = [];
       if (birth.birthWeightG) {
         let wStr = 'masa urodzeniowa ' + birth.birthWeightG + ' g';
-        if (birth.birthWeightSds != null) wStr += ' (' + sdsLabel(birth.birthWeightSds) + ')';
+        if (birth.birthWeightSds != null) {
+          wStr += ' (' + sdsLabel(birth.birthWeightSds) + (srcShown ? '' : srcSuffix) + ')';
+          srcShown = true;
+        }
         bParts.push(wStr);
       }
       if (birth.birthLengthCm) {
         let lStr = 'długość ' + birth.birthLengthCm + ' cm';
-        if (birth.birthLengthSds != null) lStr += ' (' + sdsLabel(birth.birthLengthSds) + ')';
+        if (birth.birthLengthSds != null) {
+          lStr += ' (' + sdsLabel(birth.birthLengthSds) + (srcShown ? '' : srcSuffix) + ')';
+          srcShown = true;
+        }
         bParts.push(lStr);
       }
       if (bParts.length) bp += ', ' + bParts.join(', ');
@@ -550,7 +564,7 @@
     }
 
     /* ── 8. Testy stymulacyjne GH ───────────────────────────────────────── */
-    const ghSectionText = buildGhSection(sa.ghTests);
+    const ghSectionText = buildGhSection(sa.ghTests, sa.diagnosis);
     if (ghSectionText) sections.push(ghSectionText);
 
     /* ── 9. MRI przysadki ───────────────────────────────────────────────── */
@@ -676,7 +690,7 @@
    * @param {Object} ghTests - sa.ghTests
    * @returns {string|null}
    */
-  function buildGhSection(ghTests) {
+  function buildGhSection(ghTests, diagnosis) {
     if (!ghTests || ghTests.performed !== 'yes') return null;
 
     const context = ghTests.context || 'both';
@@ -753,6 +767,20 @@
           fmt1(p1) + ' ng/mL (norma powyżej 10 ng/mL), co wskazuje na ' + ghNormalityLabel(p1) + ' u dziecka.';
       } else {
         return null;
+      }
+    }
+
+    /* Doprecyzowanie dla ścieżki SGA — prawidłowe GH jest tu oczekiwane i nie
+       zamyka drogi do leczenia; niedobór GH kieruje na ścieżkę B.19 (SNP). */
+    if (text && diagnosis === 'sga') {
+      const sgaPeaks = [p1, p2].filter(function (v) { return v != null && !isNaN(v); });
+      if (sgaPeaks.length) {
+        const anyNormal = sgaPeaks.some(function (v) { return v >= 10; });
+        text += anyNormal
+          ? ' W kontekście niskorosłości na tle SGA prawidłowe wydzielanie hormonu wzrostu jest wynikiem' +
+            ' oczekiwanym i nie zamyka drogi do leczenia hormonem wzrostu.'
+          : ' W kontekście niskorosłości na tle SGA niedobór hormonu wzrostu kieruje dalszą diagnostykę' +
+            ' na ścieżkę somatotropinowej niedoczynności przysadki (B.19).';
       }
     }
 
@@ -856,7 +884,35 @@
     } else if (bp && bp.value != null) {
       c += ' Prognoza wzrostu ostatecznego metodą Bayley‑Pinneau: ' + fmt1(bp.value) + ' cm.';
     }
-    c += ' Wskazane rozważenie kwalifikacji do leczenia hormonem wzrostu w ramach programu lekowego B.64 NFZ.';
+
+    /* Interpretacja testu stymulacyjnego GH w ścieżce SGA — ODWROTNIE niż w GHD:
+       prawidłowe wydzielanie GH jest wymagane i NIE zamyka drogi do leczenia;
+       niedobór GH przenosi dziecko do programu SNP (B.19), nie do programu SGA. */
+    const gh = sa.ghTests || {};
+    let ghDeficient = false;
+    if (gh.performed === 'yes') {
+      const p1 = gh.test1 && gh.test1.peakGh != null ? parseFloat(gh.test1.peakGh) : null;
+      const p2 = gh.test2 && gh.test2.peakGh != null ? parseFloat(gh.test2.peakGh) : null;
+      const peaks = [p1, p2].filter(function (v) { return v != null && !isNaN(v); });
+      if (peaks.length) {
+        const anyNormal = peaks.some(function (v) { return v >= 10; });
+        if (anyNormal) {
+          c += ' Prawidłowe wydzielanie hormonu wzrostu w teście stymulacyjnym jest zgodne z programem' +
+            ' leczenia niskorosłych dzieci urodzonych jako zbyt małe w porównaniu do czasu trwania ciąży' +
+            ' i nie stanowi przeciwwskazania do leczenia hormonem wzrostu.';
+        } else {
+          ghDeficient = true;
+          c += ' Stwierdzony w testach stymulacyjnych niedobór hormonu wzrostu (szczyt poniżej 10 ng/mL)' +
+            ' wskazuje na współistniejącą somatotropinową niedoczynność przysadki — kwalifikację należy' +
+            ' prowadzić ścieżką programu leczenia somatotropinowej niedoczynności przysadki (B.19),' +
+            ' a nie programu dla dzieci urodzonych jako zbyt małe w porównaniu do czasu trwania ciąży.';
+        }
+      }
+    }
+
+    if (!ghDeficient) {
+      c += ' Wskazane rozważenie kwalifikacji do leczenia hormonem wzrostu w ramach programu lekowego B.64 NFZ.';
+    }
     return c;
   }
 
