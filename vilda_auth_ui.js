@@ -4067,6 +4067,19 @@
     codeSection.appendChild(errBox);
     codeSection.appendChild(submitBtn);
 
+    codeSection.style.display = 'none';
+
+    const advancedToggle = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle',
+      type: 'button',
+      text: 'Zaawansowane ▾'
+    });
+    advancedToggle.addEventListener('click', function () {
+      const expanded = codeSection.style.display !== 'none';
+      codeSection.style.display = expanded ? 'none' : '';
+      advancedToggle.textContent = expanded ? 'Zaawansowane ▾' : 'Zaawansowane ▴';
+    });
+
     const back = el('button', {
       class: 'vilda-auth-btn vilda-auth-btn-ghost',
       type: 'button',
@@ -4076,7 +4089,7 @@
 
     const children = [title, sub, qrSection];
     if (passkeySection) children.push(passkeySection);
-    children.push(orDiv, codeSection, back);
+    children.push(orDiv, advancedToggle, codeSection, back);
     const wrapper = el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, children);
     open(wrapper);
   }
