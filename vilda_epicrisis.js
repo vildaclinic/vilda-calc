@@ -251,8 +251,12 @@
    *     {string}   [sa.clinical.chronicDisease]   - 'yes'|'no'
    *   {string}   [sa.boneAgeMethod]   - 'Greulich-Pyle'|'TW3'|'Thiemann-Nitz'|'inne'
    *   {Object}   [sa.labs]
-   *     {number}   [sa.labs.igf1]
-   *     {number}   [sa.labs.igf1Sds]
+   *     {number}   [sa.labs.igf1]            - IGF-1 (ng/mL)
+   *     {string}   [sa.labs.igf1Status]      - 'far_below'|'below'|'within'|'above'|'far_above'
+   *                                            (auto-ocena z przelicznika; bez SDS)
+   *     {number}   [sa.labs.igf1RefLow]      - dolna granica normy (ng/mL)
+   *     {number}   [sa.labs.igf1RefHigh]     - górna granica normy (ng/mL)
+   *     {boolean}  [sa.labs.igf1TannerUsed]  - czy normę dobrano wg Tannera (vs wieku)
    *     {number}   [sa.labs.igfbp3]
    *     {string}   [sa.labs.thyroidNormal]   - 'yes'|'no'
    *     {number}   [sa.labs.tsh]
@@ -517,15 +521,25 @@
 
     if (labs.igf1 != null) {
       let igfStr = 'IGF‑1 ' + round1(labs.igf1) + ' ng/mL';
-      if (labs.igf1Sds != null) {
-        igfStr += ' (' + sdsLabel(labs.igf1Sds) + ')';
-        const igf1v = parseFloat(labs.igf1Sds);
-        if (igf1v < -2) {
-          igfStr += ' — stężenie obniżone';
-        } else if (igf1v > 2) {
-          igfStr += ' — stężenie podwyższone';
+      /* Auto-ocena względem zakresu referencyjnego dla wieku/stadium Tannera
+         (przelicznik jednostek laboratoryjnych). Brak SDS — klasyfikacja
+         interwałowa; sformułowania ostrożne klinicznie. */
+      const st = labs.igf1Status;
+      if (st && st !== 'no_interpretation' && st !== 'no_range') {
+        const basis = labs.igf1TannerUsed ? 'dla stadium Tannera' : 'dla wieku';
+        const refTxt = (labs.igf1RefLow != null && labs.igf1RefHigh != null)
+          ? ' (norma ' + labs.igf1RefLow + '–' + labs.igf1RefHigh + ' ng/mL ' + basis + ')'
+          : '';
+        if (st === 'far_below' || st === 'below') {
+          igfStr += ' — ' + (st === 'far_below' ? 'znacznie ' : '') +
+            'poniżej zakresu referencyjnego' + refTxt +
+            '; wynik wspiera podejrzenie niedoboru hormonu wzrostu — wymaga potwierdzenia IGFBP‑3 i testem stymulacyjnym';
+        } else if (st === 'far_above' || st === 'above') {
+          igfStr += ' — ' + (st === 'far_above' ? 'znacznie ' : '') +
+            'powyżej zakresu referencyjnego' + refTxt;
         } else {
-          igfStr += ' — stężenie w normie dla wieku';
+          igfStr += ' — w zakresie referencyjnym' + refTxt +
+            '; prawidłowe stężenie nie wyklucza niedoboru hormonu wzrostu';
         }
       }
       labParts.push(igfStr);

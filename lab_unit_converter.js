@@ -448,6 +448,95 @@
     };
   }
 
+  /**
+   * Ocenia pojedynczy wynik laboratoryjny względem zakresu referencyjnego
+   * dobranego do kontekstu pacjenta. Bez DOM — do użycia np. w epikryzie.
+   * Klasyfikacja jest odtworzeniem 1:1 logiki z UI przelicznika (5 stanów
+   * + obsługa no_interpretation).
+   *
+   * @param {string} substanceId    np. 'igf1'
+   * @param {Object} args
+   *   {number|string} args.value     wartość wyniku
+   *   {string}        args.unit      jednostka wartości (musi istnieć w units[])
+   *   {Object}        [args.patient] { sex:'M'|'F', age:<lata>, tanner:1..5,
+   *                                    life_stage:'pediatric'|'adult', ... }
+   * @returns {Object}
+   *   { ok:false, error }  albo
+   *   { ok:true, substanceId, label, value, unit, siValue, siUnit, precision,
+   *     status: 'far_below'|'below'|'within'|'above'|'far_above'|'no_interpretation'|'no_range',
+   *     low, high,            // granice w SI (nmol/L itd.)
+   *     lowInUnit, highInUnit,// granice w jednostce wejściowej
+   *     context_pl, source_ids, matched, is_default }
+   */
+  function evaluate(substanceId, args) {
+    args = args || {};
+    var s = DATA_API.find(substanceId);
+    if (!s) return { ok: false, error: 'Nie znaleziono substancji.' };
+
+    var v = (typeof args.value === 'number') ? args.value : parseNumber(args.value);
+    if (!isFinite(v)) return { ok: false, error: 'Wartość nie jest liczbą.' };
+    if (v < 0)        return { ok: false, error: 'Wartość nie może być ujemna.' };
+
+    var from = findUnit(s, args.unit);
+    if (!from) return { ok: false, error: 'Nieznana jednostka: ' + args.unit };
+
+    var siValue = v * from.factor_to_si;
+    var precision = s.precision || DEFAULT_PRECISION;
+    var range = selectRange(s, args.patient || {});
+
+    var out = {
+      ok: true,
+      substanceId: s.id,
+      label: s.label_pl,
+      value: v,
+      unit: from.symbol,
+      siValue: siValue,
+      siUnit: s.canonical_si,
+      precision: precision,
+      low: null, high: null,
+      lowInUnit: null, highInUnit: null,
+      context_pl: '',
+      source_ids: [],
+      matched: false,
+      is_default: false,
+      status: 'no_range'
+    };
+
+    if (!range) return out;
+
+    out.context_pl = range.context_pl || '';
+    out.source_ids = Array.isArray(range.source_ids) ? range.source_ids.slice() : [];
+    out.matched = !!range.matched;
+    out.is_default = !!range.is_default;
+
+    if (range.no_interpretation) {
+      out.status = 'no_interpretation';
+      return out;
+    }
+    if (range.low == null || range.high == null) {
+      out.status = 'no_range';
+      return out;
+    }
+
+    out.low = range.low;
+    out.high = range.high;
+    out.lowInUnit = range.low / from.factor_to_si;
+    out.highInUnit = range.high / from.factor_to_si;
+
+    if (siValue > range.high * 2) {
+      out.status = 'far_above';
+    } else if (range.low > 0 && siValue < range.low * 0.5) {
+      out.status = 'far_below';
+    } else if (siValue < range.low) {
+      out.status = 'below';
+    } else if (siValue > range.high) {
+      out.status = 'above';
+    } else {
+      out.status = 'within';
+    }
+    return out;
+  }
+
   // ────────────────────────────────────────────────────────────────
   //  Eksport
   // ────────────────────────────────────────────────────────────────
@@ -460,6 +549,7 @@
     search: search,
     convert: convert,
     convertAll: convertAll,
+    evaluate: evaluate,
     parseNumber: parseNumber,
     formatNumber: formatNumber,
     selectRange: selectRange,

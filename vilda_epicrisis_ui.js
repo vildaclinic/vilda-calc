@@ -817,15 +817,13 @@
     var sa   = state.answers;
     var labs = sa.labs || {};
 
-    /* IGF-1 */
+    /* IGF-1 — ocena automatyczna względem normy dla wieku/stadium Tannera
+       (przelicznik jednostek laboratoryjnych); pole SDS usunięte. */
     var sec1 = section('IGF-1 i IGFBP-3');
-    var igf1Row = el('div', 'display:grid;grid-template-columns:1fr 1fr;gap:8px;');
-    var igf1F  = inputField('epi-igf1',     'IGF-1 (ng/mL)',    'number', {'min':'0','step':'0.1','placeholder':'np. 52'}, null);
-    var igf1SF = inputField('epi-igf1-sds', 'IGF-1 SDS',        'number', {'min':'-10','max':'10','step':'0.01','placeholder':'np. -2,30'}, null);
-    if (labs.igf1)    igf1F.querySelector('input').value  = labs.igf1;
-    if (labs.igf1Sds) igf1SF.querySelector('input').value = labs.igf1Sds;
-    append(igf1Row, igf1F, igf1SF);
-    sec1.appendChild(igf1Row);
+    var igf1F  = inputField('epi-igf1', 'IGF-1 (ng/mL)', 'number', {'min':'0','step':'0.1','placeholder':'np. 52'},
+      'Wynik zostanie automatycznie oceniony względem normy dla wieku i stadium Tannera (z kroku „Stan kliniczny").');
+    if (labs.igf1) igf1F.querySelector('input').value = labs.igf1;
+    sec1.appendChild(igf1F);
 
     var igfbp3F = inputField('epi-igfbp3', 'IGFBP-3 (mg/L)', 'number', {'min':'0','step':'0.01','placeholder':'np. 2,1'}, null);
     if (labs.igfbp3) igfbp3F.querySelector('input').value = labs.igfbp3;
@@ -1198,7 +1196,6 @@
         var cortisol = radioVal('cortisol');
         sa.labs = {
           igf1:            fieldNum('epi-igf1')     || null,
-          igf1Sds:         fieldNum('epi-igf1-sds') || null,
           igfbp3:          fieldNum('epi-igfbp3')   || null,
           thyroidNormal:   (thyroid  === 'skip' || !thyroid)  ? null : thyroid,
           tsh:             fieldNum('epi-tsh')       || null,
@@ -1571,6 +1568,38 @@
       Object.keys(sa.labs).forEach(function (k) {
         if (sa.labs[k] != null) labs[k] = sa.labs[k];
       });
+
+      /* Auto-ocena IGF-1 względem normy dla wieku i stadium Tannera GONADALNEGO
+         (chłopcy — Tanner genitalia; dziewczynki — Tanner breasts) przez
+         przelicznik jednostek laboratoryjnych (window.LabUnitConverter). */
+      if (labs.igf1 != null && global.LabUnitConverter &&
+          typeof global.LabUnitConverter.evaluate === 'function') {
+        try {
+          var clin = sa.clinical || {};
+          var tannerGonadal = (state.pd.sex === 'M') ? clin.tannerGenitalia : clin.tannerBreasts;
+          var hasTanner = tannerGonadal != null && isFinite(tannerGonadal);
+          var ageY = state.pd.ageYears + (state.pd.ageMonths ? state.pd.ageMonths / 12 : 0);
+          var igfEval = global.LabUnitConverter.evaluate('igf1', {
+            value: labs.igf1,
+            unit:  'ng/mL',
+            patient: {
+              sex:        state.pd.sex,
+              age:        ageY,
+              tanner:     hasTanner ? tannerGonadal : undefined,
+              life_stage: 'pediatric'
+            }
+          });
+          if (igfEval && igfEval.ok) {
+            labs.igf1Status  = igfEval.status;
+            labs.igf1Context = igfEval.context_pl || null;
+            labs.igf1Sources = (igfEval.source_ids && igfEval.source_ids.length) ? igfEval.source_ids : null;
+            if (igfEval.lowInUnit  != null) labs.igf1RefLow  = Math.round(igfEval.lowInUnit);
+            if (igfEval.highInUnit != null) labs.igf1RefHigh = Math.round(igfEval.highInUnit);
+            labs.igf1TannerUsed = hasTanner && /Tanner/i.test(igfEval.context_pl || '');
+          }
+        } catch (_) {}
+      }
+
       if (Object.keys(labs).length) out.labs = labs;
     }
     /* GH */
