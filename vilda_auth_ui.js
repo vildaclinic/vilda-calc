@@ -3903,70 +3903,83 @@
     const title = el('h2', { class: 'vilda-auth-title', text: 'Logowanie z innego urządzenia' });
     const sub = el('p', {
       class: 'vilda-auth-subtitle',
-      text: 'Wybierz sposób logowania przy użyciu już zalogowanego urządzenia (np. telefonu).'
+      text: 'Wybierz sposób logowania.'
     });
 
-    // ── Sekcja passkey — komputer współdzielony (nic nie zostaje) ──────────────
+    // ── Sekcja QR — wyróżniona karta (własny komputer) ────────────────────────
+    const qrSection = document.createElement('div');
+    qrSection.style.cssText = [
+      'border:2px solid #1d9e75',
+      'border-radius:10px',
+      'padding:0.9rem 1rem',
+      'margin:0 0 0.5rem'
+    ].join(';');
+
+    const qrTag = document.createElement('span');
+    qrTag.style.cssText = 'display:inline-block;font-size:0.75rem;font-weight:500;background:#e1f5ee;color:#0f6e56;border-radius:4px;padding:2px 8px;margin-bottom:0.55rem;';
+    qrTag.textContent = 'Konto zostaje na tym komputerze';
+
+    const qrHead = document.createElement('div');
+    qrHead.style.cssText = 'display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem;';
+    qrHead.innerHTML = '<strong style="font-size:0.95rem;">Zaloguj przez kod QR</strong>';
+
+    const qrDesc = document.createElement('p');
+    qrDesc.style.cssText = 'margin:0 0 0.7rem;font-size:0.84rem;color:var(--text-secondary,#555);line-height:1.5;';
+    qrDesc.textContent = 'Zeskanuj telefonem kod QR i potwierdź hasłem. Konto zapisuje się na tym komputerze — następnym razem wystarczy hasło.';
+
+    const qrBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-primary vilda-auth-btn-small',
+      type: 'button',
+      text: 'Wyświetl kod QR'
+    });
+    qrBtn.addEventListener('click', function () { showQRLoginScreen(); });
+
+    qrSection.appendChild(qrTag);
+    qrSection.appendChild(qrHead);
+    qrSection.appendChild(qrDesc);
+    qrSection.appendChild(qrBtn);
+
+    // ── Separator między kartami (cienka linia) ───────────────────────────────
+    const cardSep = document.createElement('div');
+    cardSep.style.cssText = 'height:1px;background:var(--border,#e5e7eb);margin:0.3rem 0 0.5rem;';
+
+    // ── Sekcja passkey — obcy/współdzielony komputer ──────────────────────────
     let passkeySection = null;
     if (typeof V.unlockWithPasskeyEphemeral === 'function') {
       passkeySection = document.createElement('div');
       passkeySection.style.cssText = [
-        'background:var(--surface-alt,#f0f4ff)',
         'border:1px solid var(--border,#d0d5e8)',
         'border-radius:10px',
         'padding:0.9rem 1rem',
         'margin:0 0 0.5rem'
       ].join(';');
-      passkeySection.innerHTML = [
-        '<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem;">',
-        '<span style="font-size:1.1rem;">📱</span>',
-        '<strong style="font-size:0.95rem;">Komputer współdzielony</strong>',
-        '<span style="font-size:0.75rem;background:#15803d;color:#fff;border-radius:4px;padding:1px 7px;margin-left:auto;">Nic nie zostaje</span>',
-        '</div>',
-        '<p style="margin:0 0 0.55rem;font-size:0.84rem;color:var(--text-secondary,#555);line-height:1.5;">',
-        'Zaloguj passkey z telefonu (biometria). Dane pacjentów tylko w chmurze — po zamknięciu nic nie zostaje na tym komputerze.',
-        '</p>'
-      ].join('');
+
+      const pkTag = document.createElement('span');
+      pkTag.style.cssText = 'display:inline-block;font-size:0.75rem;font-weight:500;background:#faeeda;color:#854f0b;border-radius:4px;padding:2px 8px;margin-bottom:0.55rem;';
+      pkTag.textContent = 'Nic nie zostaje po wylogowaniu';
+
+      const pkHead = document.createElement('div');
+      pkHead.style.cssText = 'display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem;';
+      pkHead.innerHTML = '<strong style="font-size:0.95rem;">Jednorazowe logowanie (obcy komputer)</strong>';
+
+      const pkDesc = document.createElement('p');
+      pkDesc.style.cssText = 'margin:0 0 0.7rem;font-size:0.84rem;color:var(--text-secondary,#555);line-height:1.5;';
+      pkDesc.textContent = 'Pracujesz na komputerze, który nie jest Twój? Po zakończeniu pracy żadne dane nie zostaną na tym komputerze.';
+
       const passkeyBtn = el('button', {
-        class: 'vilda-auth-btn vilda-auth-btn-primary vilda-auth-btn-small',
+        class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small',
         type: 'button',
-        text: '📱 Zaloguj passkey z telefonu'
+        text: 'Zaloguj jednorazowo'
       });
       passkeyBtn.addEventListener('click', function () { showPasskeyEphemeralLoginScreen(); });
+
+      passkeySection.appendChild(pkTag);
+      passkeySection.appendChild(pkHead);
+      passkeySection.appendChild(pkDesc);
       passkeySection.appendChild(passkeyBtn);
     }
 
-    // ── Sekcja QR — zalecana metoda ───────────────────────────────────────────
-    const qrSection = document.createElement('div');
-    qrSection.style.cssText = [
-      'background:var(--surface-alt,#f0f4ff)',
-      'border:1px solid var(--border,#d0d5e8)',
-      'border-radius:10px',
-      'padding:0.9rem 1rem',
-      'margin:0 0 0.5rem'
-    ].join(';');
-    qrSection.innerHTML = [
-      '<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem;">',
-      '<span style="font-size:1.1rem;">📱</span>',
-      '<strong style="font-size:0.95rem;">Zaloguj przez kod QR</strong>',
-      '<span style="font-size:0.75rem;background:var(--color-accent,#4f6ef7);color:#fff;',
-      'border-radius:4px;padding:1px 7px;margin-left:auto;">Zalecane</span>',
-      '</div>',
-      '<p style="margin:0 0 0.55rem;font-size:0.84rem;color:var(--text-secondary,#555);line-height:1.5;">',
-      'Komputer wyświetli kod QR — zeskanuj go telefonem i potwierdź hasłem.',
-      ' Nie wymaga przepisywania żadnych kodów.',
-      '</p>'
-    ].join('');
-
-    const qrBtn = el('button', {
-      class: 'vilda-auth-btn vilda-auth-btn-primary vilda-auth-btn-small',
-      type: 'button',
-      text: '📱 Wyświetl kod QR'
-    });
-    qrBtn.addEventListener('click', function () { showQRLoginScreen(); });
-    qrSection.appendChild(qrBtn);
-
-    // ── Separator ─────────────────────────────────────────────────────────────
+    // ── Separator "lub" przed sekcją zaawansowaną ─────────────────────────────
     const orDiv = document.createElement('div');
     orDiv.style.cssText = 'display:flex;align-items:center;gap:0.6rem;margin:0.6rem 0;color:var(--text-muted,#888);font-size:0.82rem;';
     orDiv.innerHTML = '<hr style="flex:1;border:none;border-top:1px solid var(--border,#ddd)"><span>lub</span><hr style="flex:1;border:none;border-top:1px solid var(--border,#ddd)">';
@@ -4088,7 +4101,7 @@
     });
 
     const children = [title, sub, qrSection];
-    if (passkeySection) children.push(passkeySection);
+    if (passkeySection) { children.push(cardSep); children.push(passkeySection); }
     children.push(orDiv, advancedToggle, codeSection, back);
     const wrapper = el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, children);
     open(wrapper);
