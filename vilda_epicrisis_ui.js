@@ -474,7 +474,7 @@
     /* 1a. Powody hospitalizacji */
     var sec1 = section('Powód hospitalizacji');
     var growthReasons = [
-      { id: 'epi-r1', val: 'diagnostyki i oceny niskorosłości',               label: 'diagnostyki i oceny niskorosłości' },
+      { id: 'epi-r1', val: 'diagnostyki niskorosłości',                        label: 'diagnostyki niskorosłości' },
       { id: 'epi-r2', val: 'oceny wydzielania hormonu wzrostu',                label: 'oceny wydzielania hormonu wzrostu' },
       { id: 'epi-r3', val: 'oceny wzrastania i dojrzewania',                   label: 'oceny wzrastania i dojrzewania' },
       { id: 'epi-r5', val: 'kwalifikacji do leczenia hormonem wzrostu',        label: 'kwalifikacji do leczenia hormonem wzrostu' },

@@ -168,6 +168,25 @@
     return str.charAt(0).toUpperCase() + str.slice(1);
   }
 
+  /** Zaokrągla do 0,5 (np. 1,9 → 2,0; 2,2 → 2,0; 2,5 → 2,5). */
+  function roundHalf(v) {
+    return Math.round(v * 2) / 2;
+  }
+
+  /**
+   * Formatuje opóźnienie/przyspieszenie wieku kostnego (zaokrąglone do 0,5 roku)
+   * z poprawną polską odmianą, np. "2 lata", "1,5 roku", "3 lat".
+   * @param {number} d - wartość bezwzględna opóźnienia
+   */
+  function fmtBoneAgeDelay(d) {
+    const r = roundHalf(Math.abs(d));
+    if (r === Math.floor(r)) {
+      const n = Math.floor(r);
+      return String(n) + ' ' + pluralYears(n);
+    }
+    return r.toFixed(1).replace('.', ',') + ' roku';
+  }
+
   /**
    * Łączy listę powodów hospitalizacji w naturalne polskie zdanie.
    * @param {string[]} reasons
@@ -305,7 +324,7 @@
       if (sa.familyDelayedPuberty === 'yes' && pd.sex === 'M') {
         fp += ' W wywiadzie rodzinnym stwierdzono konstytucjonalne opóźnienie wzrastania i dojrzewania.';
       } else if (sa.familyDelayedPuberty === 'no') {
-        fp += ' Wywiad rodzinny w kierunku konstytucjonalnego opóźnienia wzrastania i dojrzewania ujemny.';
+        fp += ' Wywiad rodzinny w kierunku konstytucjonalnego opóźnienia wzrastania i dojrzewania jest negatywny.';
       }
       sections.push(fp);
     }
@@ -314,7 +333,7 @@
     const birth = sa.birth || {};
     const hasBirthData = birth.birthWeightG != null || birth.birthLengthCm != null;
     if (hasBirthData) {
-      let bp = 'Dziecko urodzone';
+      let bp = 'Wywiad okołoporodowy: dziecko urodzone';
       if (birth.gestationalWeeks) bp += ' w ' + birth.gestationalWeeks + '. tygodniu ciąży';
       const bParts = [];
       if (birth.birthWeightG) {
@@ -403,7 +422,7 @@
       tannerParts.push('P' + clinical.tannerPubic);
     }
     if (tannerParts.length) {
-      clinParts.push('stopień dojrzewania wg Tannera: ' + tannerParts.join(', '));
+      clinParts.push('dojrzewanie w skali Tannera oceniono na: ' + tannerParts.join(', '));
     }
 
     if (clinParts.length) {
@@ -431,15 +450,15 @@
 
     if (pd.boneAge != null) {
       const baMethod = sa.boneAgeMethod ? ' (metoda ' + sa.boneAgeMethod + ')' : '';
-      let baStr = 'wiek kostny ' + round1(pd.boneAge) + ' lat' + baMethod;
+      let baStr = 'wiek kostny oceniono na ' + round1(pd.boneAge) + ' lat' + baMethod;
       if (pd.boneAgeDelay != null) {
         const d = round1(pd.boneAgeDelay);
         if (d > 0.5) {
-          baStr += ', opóźniony o ' + fmt1(d) + ' ' + (d < 2 ? 'rok' : d < 5 ? 'lata' : 'lat');
+          baStr += ' i jest on opóźniony o ' + fmtBoneAgeDelay(d) + ' w stosunku do wieku metrykalnego';
         } else if (d < -0.5) {
-          baStr += ', przyspieszony o ' + fmt1(Math.abs(d)) + ' lat';
+          baStr += ' i jest on przyspieszony o ' + fmtBoneAgeDelay(d) + ' w stosunku do wieku metrykalnego';
         } else {
-          baStr += ', zgodny z wiekiem metrycznym';
+          baStr += ' i jest on zgodny z wiekiem metrycznym';
         }
       }
       auxParts.push(baStr);
@@ -465,16 +484,17 @@
     const bp  = pd.predictions && pd.predictions.bp;
     const rwt = pd.predictions && pd.predictions.rwt;
     if ((bp && bp.value != null) || (rwt && rwt.value != null)) {
-      const predParts = [];
-      if (bp && bp.value != null) {
-        predParts.push('metodą Bayley‑Pinneau ' + fmt1(bp.value) + ' cm' +
-          (bp.error ? ' (±' + fmt1(bp.error) + ' cm)' : ''));
+      const bpStr  = bp  && bp.value  != null ? fmt1(bp.value)  + ' cm' + (bp.error  ? ' (±' + fmt1(bp.error)  + ' cm)' : '') : null;
+      const rwtStr = rwt && rwt.value != null ? fmt1(rwt.value) + ' cm' + (rwt.error ? ' (±' + fmt1(rwt.error) + ' cm)' : '') : null;
+      let predText = 'Na podstawie zgromadzonych informacji prognoza wzrostu ostatecznego u dziecka ';
+      if (bpStr && rwtStr) {
+        predText += 'metodą Bayley‑Pinneau wynosi ' + bpStr + ', a metodą RWT (Roche-Wainer-Thissen) ' + rwtStr + '.';
+      } else if (bpStr) {
+        predText += 'metodą Bayley‑Pinneau wynosi ' + bpStr + '.';
+      } else {
+        predText += 'metodą RWT (Roche-Wainer-Thissen) wynosi ' + rwtStr + '.';
       }
-      if (rwt && rwt.value != null) {
-        predParts.push('metodą RWT ' + fmt1(rwt.value) + ' cm' +
-          (rwt.error ? ' (±' + fmt1(rwt.error) + ' cm)' : ''));
-      }
-      sections.push('Prognoza wzrostu ostatecznego: ' + predParts.join('; ') + '.');
+      sections.push(predText);
     }
 
     /* ── 7. Badania laboratoryjne ────────────────────────────────────────── */
@@ -674,13 +694,12 @@
       if (p1 >= 10) {
         text = 'W trakcie hospitalizacji przeprowadzono test stymulacji wydzielania hormonu wzrostu z ' +
           testNameInstrumental(t1.type) + ', gdzie uzyskano maksymalne stężenie hormonu wzrostu ' +
-          v1 + ' (norma powyżej 10 ng/mL), co wskazuje na prawidłowe wydzielanie hormonu wzrostu u dziecka.' +
-          ' Drugi test stymulacyjny nie jest wymagany.';
+          v1 + ' (norma powyżej 10 ng/mL), co wskazuje na prawidłowe wydzielanie hormonu wzrostu u dziecka.';
       } else {
         text = 'W trakcie hospitalizacji przeprowadzono pierwszy test stymulacji wydzielania hormonu wzrostu z ' +
           testNameInstrumental(t1.type) + ', gdzie uzyskano maksymalne stężenie hormonu wzrostu ' +
-          v1 + ' (norma powyżej 10 ng/mL). Wynik poniżej normy wymaga potwierdzenia w drugim teście stymulacyjnym' +
-          ' z innym preparatem.';
+          v1 + ' (norma powyżej 10 ng/mL). Wynik poniżej normy — konieczne jest uzupełnienie diagnostyki' +
+          ' o drugi test stymulacyjny z innym preparatem.';
       }
 
     } else if (context === 'second_only') {
@@ -777,7 +796,7 @@
         c += ' obraz kliniczny i wyniki testów stymulacyjnych odpowiadają niedoborowi hormonu wzrostu.';
       }
     } else if (ghStatus === 'normal') {
-      c += ' wydzielanie hormonu wzrostu jest prawidłowe (szczyt GH powyżej 10 ng/mL).';
+      c += ' wykluczono niedobór hormonu wzrostu jako przyczynę niskiego wzrostu u dziecka.';
     } else if (ghStatus === 'pending') {
       c += ' wynik pierwszego testu stymulacyjnego (szczyt GH ' + fmt1(peak1) +
         ' ng/mL) jest poniżej normy i wymaga potwierdzenia w drugim teście.';
@@ -789,7 +808,7 @@
       c += ' ' + capitalize(sf.mianownik) + ' wymaga dalszej opieki endokrynologicznej' +
         ' z uwagi na konieczność przeprowadzenia drugiego testu stymulacyjnego.';
     } else {
-      c += ' ' + capitalize(sf.mianownik) + ' wymaga dalszej opieki endokrynologicznej.' +
+      c += ' ' + capitalize(sf.mianownik) + ' wymaga dalszej opieki endokrynologicznej oraz okresowej oceny tempa wzrastania.' +
         ' Po wykonaniu wszystkich zaplanowanych badań dziecko w stanie ogólnym dobrym zwolniono do domu z zaleceniami jak niżej.';
     }
     return c;
