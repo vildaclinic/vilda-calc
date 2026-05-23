@@ -589,6 +589,317 @@
     };
   }
 
+  /* ════════════════════════════════════════════════════════════════════════
+   * API obliczeniowe bez DOM — window.VildaSgaBirth
+   *
+   * Wystawia czyste obliczenie SDS masy / długości / obwodu głowy przy
+   * urodzeniu dla JEDNEGO wybranego źródła. Współdzieli te same dane
+   * referencyjne i pomocniki matematyczne co panel docpro
+   * (getInterpolatedRef / computeWeightSds / computeLinearSds /
+   * getIntergrowthRow / zFromAnchorTable / getInterpolatedMalewskiRow),
+   * więc nie duplikuje matematyki — różni się jedynie tym, że nie buduje
+   * HTML-a i nie dotyka DOM. Walidatory i pomocniki Malewskiego są tutaj
+   * (poziom modułu), więc widzi je zarówno setupSgaBirthModule, jak i to API.
+   * ════════════════════════════════════════════════════════════════════════ */
+
+  function isNiklassonSupported(weeks) {
+    return Number.isFinite(weeks) && weeks >= 24 && weeks <= 42;
+  }
+
+  function isIntergrowthSupported(weeks, days) {
+    return Number.isFinite(weeks) && weeks >= 24 && weeks <= 42 && Number.isFinite(days) && days >= 0 && days <= 6;
+  }
+
+  function isMalewskiSupported(weeks) {
+    return Number.isFinite(weeks) && weeks >= 22 && weeks <= 43;
+  }
+
+  function isSourceSupportedForAge(sourceKey, weeks, days) {
+    if (sourceKey === 'intergrowth') return isIntergrowthSupported(weeks, days);
+    if (sourceKey === 'malewski') return isMalewskiSupported(weeks);
+    return isNiklassonSupported(weeks);
+  }
+
+  function getMalewskiRawRow(sex, weeks) {
+    try {
+      const root = (typeof window !== 'undefined' && window.SGA_MALEWSKI_WEIGHT && typeof window.SGA_MALEWSKI_WEIGHT === 'object')
+        ? window.SGA_MALEWSKI_WEIGHT
+        : null;
+      const sexKey = sex === 'female' ? 'female' : 'male';
+      const bySex = root && root[sexKey] && typeof root[sexKey] === 'object' ? root[sexKey] : null;
+      const row = bySex ? bySex[String(weeks)] : null;
+      return row && typeof row === 'object' ? row : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function estimateMalewskiTail(meanG, sdG, direction) {
+    if (!Number.isFinite(meanG) || !Number.isFinite(sdG) || sdG <= 0) return null;
+    const sign = direction === 'lower' ? -1 : 1;
+    return Math.round(meanG + sign * 1.6448536269514722 * sdG);
+  }
+
+  function normalizeMalewskiRow(raw, week) {
+    if (!raw || typeof raw !== 'object') return null;
+    const out = {
+      week: Number(week),
+      n: toFiniteNumberOrNull(raw.n),
+      meanG: toFiniteNumberOrNull(raw.meanG),
+      sdG: toFiniteNumberOrNull(raw.sdG),
+      p5G: toFiniteNumberOrNull(raw.p5G),
+      p10G: toFiniteNumberOrNull(raw.p10G),
+      p25G: toFiniteNumberOrNull(raw.p25G),
+      p50G: toFiniteNumberOrNull(raw.p50G),
+      p75G: toFiniteNumberOrNull(raw.p75G),
+      p90G: toFiniteNumberOrNull(raw.p90G),
+      p95G: toFiniteNumberOrNull(raw.p95G),
+      estimatedTailFields: []
+    };
+
+    if (!Number.isFinite(out.p5G)) {
+      const est = estimateMalewskiTail(out.meanG, out.sdG, 'lower');
+      if (Number.isFinite(est)) {
+        out.p5G = est;
+        out.estimatedTailFields.push('p5G');
+      }
+    }
+    if (!Number.isFinite(out.p95G)) {
+      const est = estimateMalewskiTail(out.meanG, out.sdG, 'upper');
+      if (Number.isFinite(est)) {
+        out.p95G = est;
+        out.estimatedTailFields.push('p95G');
+      }
+    }
+    if (Number.isFinite(out.p5G) && Number.isFinite(out.p10G) && out.p5G >= out.p10G) {
+      out.p5G = out.p10G - 1;
+    }
+    if (Number.isFinite(out.p90G) && Number.isFinite(out.p95G) && out.p95G <= out.p90G) {
+      out.p95G = out.p90G + 1;
+    }
+    return out;
+  }
+
+  function interpolateMalewskiRows(base, next, ratio) {
+    const keys = ['meanG', 'sdG', 'p5G', 'p10G', 'p25G', 'p50G', 'p75G', 'p90G', 'p95G'];
+    if (!base) return null;
+    if (!next || !Number.isFinite(ratio) || ratio <= 0) {
+      return Object.assign({}, base, {
+        interpolated: false,
+        baseWeek: base.week,
+        nextWeek: null,
+        ratio: 0,
+        clampedToLastWeek: false,
+        estimatedTailFields: Array.isArray(base.estimatedTailFields) ? base.estimatedTailFields.slice() : []
+      });
+    }
+    const out = {
+      week: base.week + ratio,
+      n: null,
+      interpolated: true,
+      baseWeek: base.week,
+      nextWeek: next.week,
+      ratio,
+      clampedToLastWeek: false,
+      estimatedTailFields: Array.from(new Set([...(base.estimatedTailFields || []), ...(next.estimatedTailFields || [])]))
+    };
+    keys.forEach((key) => {
+      const a = toFiniteNumberOrNull(base[key]);
+      const b = toFiniteNumberOrNull(next[key]);
+      if (Number.isFinite(a) && Number.isFinite(b)) {
+        out[key] = a + ratio * (b - a);
+      } else if (Number.isFinite(a)) {
+        out[key] = a;
+      } else if (Number.isFinite(b)) {
+        out[key] = b;
+      } else {
+        out[key] = null;
+      }
+    });
+    return out;
+  }
+
+  function getInterpolatedMalewskiRow(sex, weeks, days) {
+    const base = normalizeMalewskiRow(getMalewskiRawRow(sex, weeks), weeks);
+    if (!base) return null;
+    if (!Number.isFinite(days) || days <= 0 || weeks >= 43) {
+      return Object.assign({}, base, {
+        interpolated: false,
+        baseWeek: weeks,
+        nextWeek: null,
+        ratio: 0,
+        clampedToLastWeek: Number.isFinite(days) && days > 0 && weeks >= 43,
+        estimatedTailFields: Array.isArray(base.estimatedTailFields) ? base.estimatedTailFields.slice() : []
+      });
+    }
+    const next = normalizeMalewskiRow(getMalewskiRawRow(sex, weeks + 1), weeks + 1);
+    if (!next) {
+      return Object.assign({}, base, {
+        interpolated: false,
+        baseWeek: weeks,
+        nextWeek: null,
+        ratio: 0,
+        clampedToLastWeek: false,
+        estimatedTailFields: Array.isArray(base.estimatedTailFields) ? base.estimatedTailFields.slice() : []
+      });
+    }
+    const ratio = Math.min(Math.max(days / 7, 0), 1);
+    return interpolateMalewskiRows(base, next, ratio);
+  }
+
+  /* ── Czyste obliczenia SDS per źródło (bez DOM, bez HTML) ─────────────── */
+
+  function computeNiklassonSds(sex, weeks, days, weightG, lengthCm, headCm) {
+    const ref = getInterpolatedRef(sex, weeks, days);
+    if (!ref) return { error: 'Brak danych referencyjnych Niklasson dla podanego wieku ciążowego.' };
+    return {
+      weightSds: Number.isFinite(weightG) ? computeWeightSds(weightG, ref) : null,
+      lengthSds: Number.isFinite(lengthCm) ? computeLinearSds(lengthCm, ref.lengthMean, ref.lengthSd) : null,
+      headSds:   Number.isFinite(headCm) ? computeLinearSds(headCm, ref.headMean, ref.headSd) : null,
+      lengthAvailable: true,
+      headAvailable: true
+    };
+  }
+
+  function computeIntergrowthSds(sex, weeks, days, weightG, lengthCm, headCm) {
+    if (!(typeof window !== 'undefined' && window.SGA_INTERGROWTH_ZS)) {
+      return { error: 'Brak załadowanych danych referencyjnych INTERGROWTH-21st.' };
+    }
+    const weightRow = getIntergrowthRow(sex, 'weight', weeks, days);
+    const lengthRow = getIntergrowthRow(sex, 'length', weeks, days);
+    const headRow = getIntergrowthRow(sex, 'head', weeks, days);
+    return {
+      /* masa w danych INTERGROWTH jest w kg → zamiana g → kg */
+      weightSds: (Number.isFinite(weightG) && weightRow) ? zFromAnchorTable(weightG / 1000, weightRow) : null,
+      lengthSds: (Number.isFinite(lengthCm) && lengthRow) ? zFromAnchorTable(lengthCm, lengthRow) : null,
+      headSds:   (Number.isFinite(headCm) && headRow) ? zFromAnchorTable(headCm, headRow) : null,
+      lengthAvailable: true,
+      headAvailable: true
+    };
+  }
+
+  function computeMalewskiSds(sex, weeks, days, weightG, lengthCm, headCm) {
+    if (!(typeof window !== 'undefined' && window.SGA_MALEWSKI_WEIGHT)) {
+      return { error: 'Brak załadowanych danych referencyjnych Malewski i wsp.' };
+    }
+    /* Malewski obejmuje wyłącznie masę urodzeniową */
+    if (!Number.isFinite(weightG)) {
+      return { weightSds: null, lengthSds: null, headSds: null, lengthAvailable: false, headAvailable: false };
+    }
+    const ref = getInterpolatedMalewskiRow(sex, weeks, days);
+    if (!ref) return { error: 'Nie udało się odczytać danych referencyjnych Malewski i wsp. dla podanego wieku ciążowego.' };
+    const anchors = [ref.p5G, ref.p10G, ref.p25G, ref.p50G, ref.p75G, ref.p90G, ref.p95G];
+    let weightSds = zFromAnchorTable(weightG, anchors, MALEWSKI_PERCENTILE_Z_GRID);
+    if (!Number.isFinite(weightSds)) {
+      weightSds = computeLinearSds(weightG, ref.meanG, ref.sdG);
+    }
+    return {
+      weightSds: weightSds,
+      lengthSds: null,
+      headSds: null,
+      lengthAvailable: false,
+      headAvailable: false,
+      interpolated: !!ref.interpolated,
+      estimatedTailFields: Array.isArray(ref.estimatedTailFields) ? ref.estimatedTailFields.slice() : []
+    };
+  }
+
+  function normalizeSgaSex(sex) {
+    if (sex === 'female' || sex === 'F' || sex === 'f') return 'female';
+    return 'male';
+  }
+
+  /**
+   * Czyste obliczenie SDS przy urodzeniu dla JEDNEGO źródła.
+   * @param {'niklasson'|'intergrowth'|'malewski'} sourceKey
+   * @param {Object} opts
+   *   {'M'|'F'|'male'|'female'} opts.sex
+   *   {number} opts.weeks   - pełne tygodnie ciąży
+   *   {number} [opts.days]  - dodatkowe dni (0–6); domyślnie 0
+   *   {number} [opts.weightG]  - masa urodzeniowa (g)
+   *   {number} [opts.lengthCm] - długość ciała (cm)
+   *   {number} [opts.headCm]   - obwód głowy (cm)
+   * @returns {{ sourceKey, sourceShortLabel, sourceLabel,
+   *             weightSds, lengthSds, headSds,
+   *             weightAvailable, lengthAvailable, headAvailable,
+   *             supportedForAge, note, error }}
+   */
+  function computeSgaBirthSds(sourceKey, opts) {
+    const o = (opts && typeof opts === 'object') ? opts : {};
+    const source = SGA_SOURCE_KEYS.indexOf(sourceKey) !== -1 ? sourceKey : 'niklasson';
+    const sex = normalizeSgaSex(o.sex);
+    const weeks = toFiniteNumberOrNull(o.weeks);
+    const daysRaw = toFiniteNumberOrNull(o.days);
+    const days = Number.isFinite(daysRaw) ? daysRaw : 0;
+    const weightG = toFiniteNumberOrNull(o.weightG);
+    const lengthCm = toFiniteNumberOrNull(o.lengthCm);
+    const headCm = toFiniteNumberOrNull(o.headCm);
+
+    const cfg = SGA_SOURCE_CONFIG[source] || {};
+    const out = {
+      sourceKey: source,
+      sourceShortLabel: cfg.shortLabel || source,
+      sourceLabel: cfg.sourceLabel || '',
+      weightSds: null,
+      lengthSds: null,
+      headSds: null,
+      weightAvailable: true,
+      lengthAvailable: source !== 'malewski',
+      headAvailable: source !== 'malewski',
+      supportedForAge: Number.isFinite(weeks) ? isSourceSupportedForAge(source, weeks, days) : false,
+      note: null,
+      error: null
+    };
+
+    if (!Number.isFinite(weeks)) {
+      out.error = 'Brak wieku ciążowego (tygodnie).';
+      return out;
+    }
+    if (!out.supportedForAge) {
+      out.error = 'Źródło „' + out.sourceShortLabel + '" nie obejmuje podanego wieku ciążowego (zakres: ' + sourceRangeText(source) + ').';
+      return out;
+    }
+
+    let res;
+    if (source === 'intergrowth') {
+      res = computeIntergrowthSds(sex, weeks, days, weightG, lengthCm, headCm);
+    } else if (source === 'malewski') {
+      res = computeMalewskiSds(sex, weeks, days, weightG, lengthCm, headCm);
+    } else {
+      res = computeNiklassonSds(sex, weeks, days, weightG, lengthCm, headCm);
+    }
+
+    if (res && res.error) {
+      out.error = res.error;
+      return out;
+    }
+
+    out.weightSds = (res && Number.isFinite(res.weightSds)) ? res.weightSds : null;
+    out.lengthSds = (res && Number.isFinite(res.lengthSds)) ? res.lengthSds : null;
+    out.headSds   = (res && Number.isFinite(res.headSds)) ? res.headSds : null;
+    if (res && res.lengthAvailable === false) out.lengthAvailable = false;
+    if (res && res.headAvailable === false) out.headAvailable = false;
+    if (res && res.interpolated) {
+      out.note = 'Wartości interpolowane między pełnymi tygodniami ciąży.';
+    }
+    return out;
+  }
+
+  var VildaSgaBirthApi = {
+    SOURCE_KEYS: SGA_SOURCE_KEYS.slice(),
+    sourceShortLabel: function (k) { return SGA_SOURCE_CONFIG[k] ? SGA_SOURCE_CONFIG[k].shortLabel : k; },
+    sourceRange: sourceRangeText,
+    isSupportedForAge: isSourceSupportedForAge,
+    compute: computeSgaBirthSds
+  };
+
+  if (typeof window !== 'undefined') {
+    window.VildaSgaBirth = VildaSgaBirthApi;
+  }
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = VildaSgaBirthApi;
+  }
+
   function setupSgaBirthModule() {
     const buttonWrapper = document.getElementById('sgaBirthButtonWrapper');
     const toggleBtn = document.getElementById('toggleSgaBirth');
@@ -787,150 +1098,11 @@
       return { weightStatus, lengthStatus };
     }
 
-    function isNiklassonSupported(weeks) {
-      return Number.isFinite(weeks) && weeks >= 24 && weeks <= 42;
-    }
-
-    function isIntergrowthSupported(weeks, days) {
-      return Number.isFinite(weeks) && weeks >= 24 && weeks <= 42 && Number.isFinite(days) && days >= 0 && days <= 6;
-    }
-
-    function isMalewskiSupported(weeks) {
-      return Number.isFinite(weeks) && weeks >= 22 && weeks <= 43;
-    }
-
-    function isSourceSupportedForAge(sourceKey, weeks, days) {
-      if (sourceKey === 'intergrowth') return isIntergrowthSupported(weeks, days);
-      if (sourceKey === 'malewski') return isMalewskiSupported(weeks);
-      return isNiklassonSupported(weeks);
-    }
-
-    function getMalewskiRawRow(sex, weeks) {
-      try {
-        const root = (typeof window !== 'undefined' && window.SGA_MALEWSKI_WEIGHT && typeof window.SGA_MALEWSKI_WEIGHT === 'object')
-          ? window.SGA_MALEWSKI_WEIGHT
-          : null;
-        const sexKey = sex === 'female' ? 'female' : 'male';
-        const bySex = root && root[sexKey] && typeof root[sexKey] === 'object' ? root[sexKey] : null;
-        const row = bySex ? bySex[String(weeks)] : null;
-        return row && typeof row === 'object' ? row : null;
-      } catch (_) {
-        return null;
-      }
-    }
-
-    function estimateMalewskiTail(meanG, sdG, direction) {
-      if (!Number.isFinite(meanG) || !Number.isFinite(sdG) || sdG <= 0) return null;
-      const sign = direction === 'lower' ? -1 : 1;
-      return Math.round(meanG + sign * 1.6448536269514722 * sdG);
-    }
-
-    function normalizeMalewskiRow(raw, week) {
-      if (!raw || typeof raw !== 'object') return null;
-      const out = {
-        week: Number(week),
-        n: toFiniteNumberOrNull(raw.n),
-        meanG: toFiniteNumberOrNull(raw.meanG),
-        sdG: toFiniteNumberOrNull(raw.sdG),
-        p5G: toFiniteNumberOrNull(raw.p5G),
-        p10G: toFiniteNumberOrNull(raw.p10G),
-        p25G: toFiniteNumberOrNull(raw.p25G),
-        p50G: toFiniteNumberOrNull(raw.p50G),
-        p75G: toFiniteNumberOrNull(raw.p75G),
-        p90G: toFiniteNumberOrNull(raw.p90G),
-        p95G: toFiniteNumberOrNull(raw.p95G),
-        estimatedTailFields: []
-      };
-
-      if (!Number.isFinite(out.p5G)) {
-        const est = estimateMalewskiTail(out.meanG, out.sdG, 'lower');
-        if (Number.isFinite(est)) {
-          out.p5G = est;
-          out.estimatedTailFields.push('p5G');
-        }
-      }
-      if (!Number.isFinite(out.p95G)) {
-        const est = estimateMalewskiTail(out.meanG, out.sdG, 'upper');
-        if (Number.isFinite(est)) {
-          out.p95G = est;
-          out.estimatedTailFields.push('p95G');
-        }
-      }
-      if (Number.isFinite(out.p5G) && Number.isFinite(out.p10G) && out.p5G >= out.p10G) {
-        out.p5G = out.p10G - 1;
-      }
-      if (Number.isFinite(out.p90G) && Number.isFinite(out.p95G) && out.p95G <= out.p90G) {
-        out.p95G = out.p90G + 1;
-      }
-      return out;
-    }
-
-    function interpolateMalewskiRows(base, next, ratio) {
-      const keys = ['meanG', 'sdG', 'p5G', 'p10G', 'p25G', 'p50G', 'p75G', 'p90G', 'p95G'];
-      if (!base) return null;
-      if (!next || !Number.isFinite(ratio) || ratio <= 0) {
-        return Object.assign({}, base, {
-          interpolated: false,
-          baseWeek: base.week,
-          nextWeek: null,
-          ratio: 0,
-          clampedToLastWeek: false,
-          estimatedTailFields: Array.isArray(base.estimatedTailFields) ? base.estimatedTailFields.slice() : []
-        });
-      }
-      const out = {
-        week: base.week + ratio,
-        n: null,
-        interpolated: true,
-        baseWeek: base.week,
-        nextWeek: next.week,
-        ratio,
-        clampedToLastWeek: false,
-        estimatedTailFields: Array.from(new Set([...(base.estimatedTailFields || []), ...(next.estimatedTailFields || [])]))
-      };
-      keys.forEach((key) => {
-        const a = toFiniteNumberOrNull(base[key]);
-        const b = toFiniteNumberOrNull(next[key]);
-        if (Number.isFinite(a) && Number.isFinite(b)) {
-          out[key] = a + ratio * (b - a);
-        } else if (Number.isFinite(a)) {
-          out[key] = a;
-        } else if (Number.isFinite(b)) {
-          out[key] = b;
-        } else {
-          out[key] = null;
-        }
-      });
-      return out;
-    }
-
-    function getInterpolatedMalewskiRow(sex, weeks, days) {
-      const base = normalizeMalewskiRow(getMalewskiRawRow(sex, weeks), weeks);
-      if (!base) return null;
-      if (!Number.isFinite(days) || days <= 0 || weeks >= 43) {
-        return Object.assign({}, base, {
-          interpolated: false,
-          baseWeek: weeks,
-          nextWeek: null,
-          ratio: 0,
-          clampedToLastWeek: Number.isFinite(days) && days > 0 && weeks >= 43,
-          estimatedTailFields: Array.isArray(base.estimatedTailFields) ? base.estimatedTailFields.slice() : []
-        });
-      }
-      const next = normalizeMalewskiRow(getMalewskiRawRow(sex, weeks + 1), weeks + 1);
-      if (!next) {
-        return Object.assign({}, base, {
-          interpolated: false,
-          baseWeek: weeks,
-          nextWeek: null,
-          ratio: 0,
-          clampedToLastWeek: false,
-          estimatedTailFields: Array.isArray(base.estimatedTailFields) ? base.estimatedTailFields.slice() : []
-        });
-      }
-      const ratio = Math.min(Math.max(days / 7, 0), 1);
-      return interpolateMalewskiRows(base, next, ratio);
-    }
+    /* Walidatory zakresu wieku ciążowego oraz pomocniki źródła Malewski
+       przeniesiono na poziom modułu (sekcja „API obliczeniowe bez DOM" powyżej,
+       przed setupSgaBirthModule), aby współdzielić je z window.VildaSgaBirth.compute().
+       Tutaj pozostają widoczne przez łańcuch zakresów — kod panelu docpro
+       działa bez zmian. */
 
     function computeNiklassonResult(sex, weeks, days, weightG, lengthCm, headCm) {
       const ref = getInterpolatedRef(sex, weeks, days);
@@ -1673,6 +1845,9 @@
   }
 
   function bootSgaBirthModule() {
+    /* Środowisko bez DOM (np. testy Node) — API obliczeniowe jest już
+       wystawione na poziomie modułu; panel docpro nie ma czego montować. */
+    if (typeof document === 'undefined') return;
     if (typeof window !== 'undefined' && typeof window.vildaOnReady === 'function') {
       window.vildaOnReady('sga-birth-module:setup', setupSgaBirthModule);
       return;

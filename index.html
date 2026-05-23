@@ -231,8 +231,8 @@ html.vilda-pro-inactive:not(.vilda-logged-in) .vilda-pro-gate-banner--login { di
 <script src="vilda_data_import_export.js?v=18"></script>
 <script src="vilda_save_status_indicator.js?v=10"></script>
 <script src="vilda_advanced_growth.js?v=15"></script>
-<script src="vilda_epicrisis.js?v=2"></script>
-<script src="vilda_epicrisis_ui.js?v=3"></script>
+<script src="vilda_epicrisis.js?v=3"></script>
+<script src="vilda_epicrisis_ui.js?v=4"></script>
 <script src="vilda_estimated_intake.js?v=3"></script>
 <script src="vilda_update_prep.js?v=62" defer></script>
 
@@ -5605,6 +5605,13 @@ async function generateCentileChart() {
 <!-- Dane INTERGROWTH-21st wykorzystywane w module obwodu głowy u noworodków
      i dzieci w 1. miesiącu życia (odniesienie do wieku ciążowego z modułu SGA). -->
 <script src="sga_intergrowth_data.js" defer></script>
+
+<!-- Dane Malewski i wsp. (PL) oraz moduł obliczeniowy SGA. Na index.html panel
+     SGA nie jest montowany (brak jego DOM — setupSgaBirthModule kończy się bez
+     efektu), ale wystawiane jest API window.VildaSgaBirth.compute() używane przez
+     generator epikryzy do obliczenia SDS urodzeniowego wg wybranego źródła. -->
+<script src="sga_malewski_data.js" defer></script>
+<script src="sga_birth_module.js?v=7" defer></script>
 
 <!-- Moduł obwodów głowy i klatki piersiowej.  
      Skrypt powinien być ładowany po module ciśnienia krwi oraz po danych INTERGROWTH-21st,
