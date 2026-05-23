@@ -122,6 +122,35 @@
   }
 
   /**
+   * Zwraca narzędnikową formę nazwy substancji stymulującej (do zdania "test z ...").
+   * @param {string} type - klucz jak w testName
+   */
+  function testNameInstrumental(type) {
+    const map = {
+      clonidine: 'klonidyną',
+      glucagon:  'glukagonem',
+      insulin:   'insuliną',
+      ldopa:     'L‑DOPĄ',
+      arginine:  'argininą',
+      ghrh:      'GHRH',
+      other:     'substancją stymulującą',
+    };
+    return map[type] || 'substancją stymulującą';
+  }
+
+  /**
+   * Zwraca ocenę kliniczną wydzielania GH na podstawie szczytu (ng/mL).
+   * @param {number|string} peakGh
+   */
+  function ghNormalityLabel(peakGh) {
+    const v = parseFloat(peakGh);
+    if (isNaN(v)) return 'wydzielanie hormonu wzrostu do oceny';
+    if (v >= 10) return 'prawidłowe wydzielanie hormonu wzrostu';
+    if (v >=  5) return 'częściowy niedobór hormonu wzrostu';
+    return 'niedobór hormonu wzrostu';
+  }
+
+  /**
    * Tworzy odmienne formy gramatyczne dla płci.
    * @param {'M'|'F'} s
    */
@@ -306,17 +335,23 @@
     const clinical = sa.clinical || {};
     const clinParts = [];
 
-    const hCent = centileLabel(pd.heightPercentile);
     const hSds  = sdsLabel(pd.heightSds);
     let hStr = 'wzrost ' + round1(pd.height) + ' cm';
-    if (hCent || hSds) hStr += ' (' + [hCent, hSds].filter(Boolean).join(', ') + ')';
+    const hParens = [];
     if (pd.heightDeficitTo3rd != null && pd.heightDeficitTo3rd > 0) {
-      hStr += ', niedobór ' + fmt1(pd.heightDeficitTo3rd) + ' cm do 3. centyla';
+      hParens.push(fmt1(pd.heightDeficitTo3rd) + ' cm poniżej 3. centyla');
+    } else {
+      const hCent = centileLabel(pd.heightPercentile);
+      if (hCent) hParens.push(hCent);
     }
+    if (hSds) hParens.push(hSds);
+    if (hParens.length) hStr += ' (' + hParens.join(', ') + ')';
     clinParts.push(hStr);
 
     if (pd.weight != null) {
       let wStr = 'masa ciała ' + round1(pd.weight) + ' kg';
+      const wCent = centileLabel(pd.weightPercentile);
+      if (wCent) wStr += ' (' + wCent + ')';
       if (pd.bmi != null) {
         wStr += ', BMI ' + round1(pd.bmi);
         const bCent = centileLabel(pd.bmiPercentile);
@@ -345,41 +380,42 @@
 
     const tannerParts = [];
     if (pd.sex === 'F' && clinical.tannerBreasts) {
-      tannerParts.push('piersi B' + clinical.tannerBreasts);
+      tannerParts.push('B' + clinical.tannerBreasts);
     }
     if (pd.sex === 'M' && clinical.tannerGenitalia) {
-      tannerParts.push('genitalia G' + clinical.tannerGenitalia);
+      tannerParts.push('G' + clinical.tannerGenitalia);
       if (pd.testicularVolume && pd.testicularVolume !== 'unknown') {
         tannerParts.push('obj. jąder ' + pd.testicularVolume);
       }
     }
     if (clinical.tannerPubic) {
-      tannerParts.push('owłosienie łonowe P' + clinical.tannerPubic);
+      tannerParts.push('P' + clinical.tannerPubic);
     }
     if (tannerParts.length) {
       clinParts.push('stopień dojrzewania wg Tannera: ' + tannerParts.join(', '));
     }
 
     if (clinParts.length) {
-      sections.push('W badaniu przedmiotowym: ' + clinParts.join('; ') + '.');
+      sections.push('Przy przyjęciu do szpitala w badaniu przedmiotowym stwierdzono: ' + clinParts.join('; ') + '.');
     }
 
-    /* ── 5. Ocena auksometryczna ────────────────────────────────────────── */
+    /* ── 5. Ocena wzrastania ────────────────────────────────────────────── */
     const auxParts = [];
 
     if (hasMph && pd.hSdsMpSds != null) {
       const gap = round2(pd.hSdsMpSds);
-      const absGap = Math.abs(gap);
       const gapStr = (gap >= 0 ? '+' : '−') + Math.abs(gap).toFixed(2).replace('.', ',');
-      if (gap < -0.5) {
-        auxParts.push('wzrost dziecka jest o ' + absGap.toFixed(2).replace('.', ',') +
-          ' SDS poniżej wzrostu docelowego (hSDS − mpSDS = ' + gapStr + ')' +
-          ' — wzrastanie poniżej potencjału genetycznego');
+      let geneticPotential;
+      if (gap < -2.0) {
+        geneticPotential = 'rośnie poniżej swojego potencjału genetycznego';
+      } else if (gap < -1.5) {
+        geneticPotential = 'rośnie na granicy swojego potencjału genetycznego';
       } else if (gap > 0.5) {
-        auxParts.push('wzrost dziecka przewyższa wzrost docelowy (hSDS − mpSDS = ' + gapStr + ')');
+        geneticPotential = 'przewyższa wzrost docelowy';
       } else {
-        auxParts.push('wzrost dziecka zgodny z potencjałem genetycznym (hSDS − mpSDS = ' + gapStr + ')');
+        geneticPotential = 'rośnie w granicach swojego potencjału genetycznego';
       }
+      auxParts.push(capitalize(s.mianownik) + ' ' + geneticPotential + ' (hSDS − mpSDS = ' + gapStr + ')');
     }
 
     if (pd.boneAge != null) {
@@ -399,9 +435,9 @@
     }
 
     if (pd.growthVelocity != null) {
-      let gvStr = 'tempo wzrastania ' + round1(pd.growthVelocity) + ' cm/rok';
+      let gvStr = 'aktualne tempo wzrastania dziecka to ' + fmt1(pd.growthVelocity) + ' cm/rok';
       if (pd.growthVelocityMonths) gvStr += ' (obliczone z ' + pd.growthVelocityMonths + ' mies.)';
-      if (pd.growthVelocityLow) gvStr += ' — poniżej normy dla wieku';
+      gvStr += ' i jest ono ' + (pd.growthVelocityLow ? 'poniżej normy' : 'w normie') + ' dla wieku';
       auxParts.push(gvStr);
     }
 
@@ -410,7 +446,8 @@
     }
 
     if (auxParts.length) {
-      sections.push('Ocena auksometryczna: ' + auxParts.join('; ') + '.');
+      const auxFirst = auxParts[0].charAt(0).toUpperCase() + auxParts[0].slice(1);
+      sections.push(auxFirst + (auxParts.length > 1 ? '; ' + auxParts.slice(1).join('; ') : '') + '.');
     }
 
     /* ── 6. Prognozy wzrostu ────────────────────────────────────────────── */
@@ -435,7 +472,17 @@
 
     if (labs.igf1 != null) {
       let igfStr = 'IGF‑1 ' + round1(labs.igf1) + ' ng/mL';
-      if (labs.igf1Sds != null) igfStr += ' (' + sdsLabel(labs.igf1Sds) + ')';
+      if (labs.igf1Sds != null) {
+        igfStr += ' (' + sdsLabel(labs.igf1Sds) + ')';
+        const igf1v = parseFloat(labs.igf1Sds);
+        if (igf1v < -2) {
+          igfStr += ' — stężenie obniżone';
+        } else if (igf1v > 2) {
+          igfStr += ' — stężenie podwyższone';
+        } else {
+          igfStr += ' — stężenie w normie dla wieku';
+        }
+      }
       labParts.push(igfStr);
     }
     if (labs.igfbp3 != null) {
@@ -450,9 +497,9 @@
       labParts.push(thStr);
     }
     if (labs.cortisolNormal === 'yes') {
-      labParts.push('kortyzol poranny w normie');
+      labParts.push('poranne stężenie kortyzolu w granicach normy');
     } else if (labs.cortisolNormal === 'no') {
-      let cStr = 'kortyzol poranny obniżony';
+      let cStr = 'poranne stężenie kortyzolu obniżone';
       if (labs.cortisolMorning != null) cStr += ' (' + labs.cortisolMorning + ' nmol/L)';
       labParts.push(cStr);
     }
@@ -468,30 +515,28 @@
       labParts.push('odchylenia w biochemii krwi');
     }
     if (labParts.length) {
-      sections.push('Wyniki badań laboratoryjnych: ' + labParts.join('; ') + '.');
+      sections.push('W badaniach laboratoryjnych przeprowadzonych w szpitalu stwierdzono: ' + labParts.join('; ') + '.');
     }
 
     /* ── 8. Testy stymulacyjne GH ───────────────────────────────────────── */
     const ghTests = sa.ghTests || {};
     if (ghTests.performed === 'yes') {
-      const testParts = [];
-      if (ghTests.test1 && ghTests.test1.peakGh != null) {
-        const r = ghResultLabel(ghTests.test1.peakGh);
-        if (r) testParts.push('test ' + testName(ghTests.test1.type) + ': ' + r);
+      const testSentences = [];
+      [ghTests.test1, ghTests.test2].forEach(function (test) {
+        if (!test || test.peakGh == null) return;
+        const vStr = fmt1(parseFloat(test.peakGh)) + ' ng/mL';
+        const normality = ghNormalityLabel(test.peakGh);
+        testSentences.push(
+          'W trakcie hospitalizacji przeprowadzono test stymulacji wydzielania hormonu wzrostu z ' +
+          testNameInstrumental(test.type) + ', gdzie uzyskano maksymalne stężenie hormonu wzrostu ' +
+          vStr + ' (norma powyżej 10 ng/mL), co wskazuje na ' + normality + ' u dziecka.'
+        );
+      });
+      if (testSentences.length) {
+        let ghBlock = testSentences.join(' ');
+        if (ghTests.priming === 'yes') ghBlock += ' Zastosowano priming estrogenowy.';
+        sections.push(ghBlock);
       }
-      if (ghTests.test2 && ghTests.test2.peakGh != null) {
-        const r = ghResultLabel(ghTests.test2.peakGh);
-        if (r) testParts.push('test ' + testName(ghTests.test2.type) + ': ' + r);
-      }
-      if (testParts.length) {
-        let ghPart = 'Testy stymulacji wydzielania hormonu wzrostu: ' + testParts.join('; ') + '.';
-        if (ghTests.priming === 'yes') ghPart += ' Zastosowano priming estrogenowy.';
-        sections.push(ghPart);
-      }
-    } else if (ghTests.performed === 'no') {
-      sections.push(
-        'Testy stymulacji wydzielania hormonu wzrostu nie były wykonywane w trakcie bieżącej hospitalizacji.'
-      );
     }
 
     /* ── 9. MRI przysadki ───────────────────────────────────────────────── */
@@ -510,8 +555,6 @@
         'Badanie MRI okolicy podwzgórzowo‑przysadkowej: ' +
         (mriMap[mri.result] || (mri.result || 'wynik do uzupełnienia')) + '.'
       );
-    } else if (mri.performed === 'no') {
-      sections.push('Badanie MRI okolicy podwzgórzowo‑przysadkowej nie było wykonywane.');
     }
 
     /* ── 10. Badania genetyczne ─────────────────────────────────────────── */
@@ -616,6 +659,7 @@
 
   function buildConclusionGhd(pd, sa) {
     const gh = sa.ghTests || {};
+    const sf = sexForms(pd.sex);
     const peak1 = gh.test1 && gh.test1.peakGh != null ? parseFloat(gh.test1.peakGh) : null;
     const peak2 = gh.test2 && gh.test2.peakGh != null ? parseFloat(gh.test2.peakGh) : null;
     const bothLow = peak1 != null && peak1 < 10 && (peak2 == null || peak2 < 10);
@@ -629,8 +673,8 @@
     } else {
       c += ' obraz kliniczny sugeruje niedobór hormonu wzrostu — wyniki wymagają weryfikacji.';
     }
-    c += ' Pacjent może spełniać kryteria kwalifikacji do leczenia hormonem wzrostu w ramach programu lekowego B.19 NFZ —' +
-      ' ostateczna decyzja terapeutyczna wymaga potwierdzenia w ośrodku referencyjnym.';
+    c += ' ' + capitalize(sf.mianownik) + ' wymaga dalszej opieki endokrynologicznej.' +
+      ' Po wykonaniu wszystkich zaplanowanych badań dziecko w stanie ogólnym dobrym zwolniono do domu z zaleceniami jak niżej.';
     return c;
   }
 
@@ -761,11 +805,13 @@
     generate:  generate,
     /** Eksponowane tylko do testów jednostkowych */
     _helpers: {
-      formatAge:     formatAge,
-      sdsLabel:      sdsLabel,
-      centileLabel:  centileLabel,
-      ghResultLabel: ghResultLabel,
-      testName:      testName,
+      formatAge:            formatAge,
+      sdsLabel:             sdsLabel,
+      centileLabel:         centileLabel,
+      ghResultLabel:        ghResultLabel,
+      testName:             testName,
+      testNameInstrumental: testNameInstrumental,
+      ghNormalityLabel:     ghNormalityLabel,
     },
   };
 }));
