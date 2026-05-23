@@ -4387,23 +4387,18 @@
       // ręcznie" w Ustawieniach → „Zatwierdź logowanie QR". Token NIE jest
       // sekretem sam w sobie — bez klucza prywatnego tego urządzenia jest
       // bezużyteczny (patrz SYNC-QR.md, model bezpieczeństwa).
-      const manualNote = el('p', {
-        class: 'vilda-auth-side-note',
-        style: 'text-align:center;margin:10px 0 4px;',
-        text:  'Drugie urządzenie nie ma kamery? Skopiuj ten token i wklej go ręcznie:'
-      });
       const tokenBox = el('div', {
         style: 'font-family:monospace;font-size:0.82rem;word-break:break-all;' +
                'user-select:all;-webkit-user-select:all;text-align:center;' +
                'background:rgba(0,0,0,.05);border-radius:8px;padding:8px 10px;' +
-               'margin:0 auto;max-width:280px;',
+               'margin:0 auto 12px;max-width:280px;display:none;',
         text:  transferToken
       });
       const copyTokenBtn = el('button', {
         class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small',
         type:  'button',
         text:  'Kopiuj token',
-        style: 'display:block;margin:6px auto 0;',
+        style: 'display:none;margin:0 auto;',
         onclick: async function () {
           try {
             if (global.navigator && global.navigator.clipboard) {
@@ -4414,7 +4409,21 @@
           } catch (e) { logWarn('clipboard write failed: ' + e); }
         }
       });
-      const manualWrap = el('div', { style: 'margin:4px 0 0;' }, [manualNote, tokenBox, copyTokenBtn]);
+      const noCameraToggle = el('button', {
+        class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle',
+        type:  'button',
+        text:  'Drugie urządzenie nie ma kamery? ▾',
+        style: 'display:block;margin:10px auto 0;font-size:0.82rem;'
+      });
+      noCameraToggle.addEventListener('click', function () {
+        const expanded = tokenBox.style.display !== 'none';
+        tokenBox.style.display    = expanded ? 'none' : '';
+        copyTokenBtn.style.display = expanded ? 'none' : 'block';
+        noCameraToggle.textContent = expanded
+          ? 'Drugie urządzenie nie ma kamery? ▾'
+          : 'Drugie urządzenie nie ma kamery? ▴';
+      });
+      const manualWrap = el('div', { style: 'margin:4px 0 0;text-align:center;' }, [noCameraToggle, tokenBox, copyTokenBtn]);
 
       const back = el('button', {
         class: 'vilda-auth-btn vilda-auth-btn-ghost', type: 'button', text: '← Wróć',
