@@ -732,13 +732,74 @@
     tannerGrid.appendChild(pSel);
     sec3.appendChild(tannerGrid);
 
-    /* Choroba przewlekła */
+    /* Choroby przewlekłe — checklista rozwijana po zaznaczeniu „obecne" */
     var sec4 = section('Choroby przewlekłe i objawy dodatkowe');
     var chroVal = clin.chronicDisease || '';
     append(sec4,
-      radioRow('chronic', 'yes', 'Objawy sugerujące chorobę przewlekłą',             chroVal === 'yes'),
-      radioRow('chronic', 'no',  'Bez objawów sugerujących chorobę przewlekłą',     chroVal === 'no')
+      radioRow('chronic', 'yes', 'Choroby przewlekłe / objawy sugerujące chorobę przewlekłą — obecne', chroVal === 'yes'),
+      radioRow('chronic', 'no',  'Bez chorób przewlekłych / objawów sugerujących',                     chroVal === 'no')
     );
+
+    var CHRONIC_LIST = [
+      ['astma', 'Astma oskrzelowa'],           ['alergia', 'Alergia'],
+      ['azs', 'Atopowe zapalenie skóry'],      ['celiakia', 'Celiakia'],
+      ['cukrzyca1', 'Cukrzyca typu 1'],        ['tarczyca', 'Choroby tarczycy (Hashimoto / niedoczynność)'],
+      ['nzj', 'Nieswoiste zapalenia jelit (Crohn / WZJG)'], ['pchn', 'Przewlekła choroba nerek'],
+      ['padaczka', 'Padaczka'],                ['wadaserca', 'Wrodzona wada serca']
+    ];
+    var chronicSel = Array.isArray(clin.chronicDiseases) ? clin.chronicDiseases : [];
+
+    var chronicBox = el('div', 'margin-top:10px;padding:10px 12px;border:1px solid ' + clr.border + ';border-radius:8px;background:' + clr.card + ';');
+    chronicBox.appendChild(el('p', 'font-size:0.82rem;color:' + clr.muted + ';margin:0 0 8px;', null,
+      'Zaznacz rozpoznane choroby przewlekłe:'));
+
+    var chronicGrid = el('div', 'display:grid;grid-template-columns:1fr 1fr;gap:4px 14px;');
+    function chronicCheck(id, label) {
+      var rowId = 'epi-chronic-' + id;
+      var row = el('label', 'display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 6px;border-radius:6px;font-size:0.88rem;color:' + clr.text + ';', {'for': rowId});
+      var inp = el('input', 'flex-shrink:0;accent-color:' + clr.primary + ';width:16px;height:16px;',
+        {'type': 'checkbox', 'id': rowId, 'value': id, 'class': 'epi-chronic'});
+      if (chronicSel.indexOf(id) !== -1) inp.checked = true;
+      append(row, inp, document.createTextNode(label));
+      return row;
+    }
+    CHRONIC_LIST.forEach(function (d) { chronicGrid.appendChild(chronicCheck(d[0], d[1])); });
+    chronicBox.appendChild(chronicGrid);
+
+    /* Podtyp alergii — widoczny po zaznaczeniu „Alergia" */
+    var allergyWrap = selectField('epi-allergy-subtype', 'Typ alergii', [
+      { value: '',          label: '— wybierz —' },
+      { value: 'wziewna',   label: 'Wziewna' },
+      { value: 'pokarmowa', label: 'Pokarmowa' },
+      { value: 'mieszana',  label: 'Mieszana' }
+    ]);
+    allergyWrap.style.marginTop = '8px';
+    if (clin.allergySubtype) allergyWrap.querySelector('select').value = clin.allergySubtype;
+    chronicBox.appendChild(allergyWrap);
+
+    /* Inne choroby przewlekłe — wolny tekst */
+    var otherWrap = inputField('epi-chronic-other', 'Inne choroby przewlekłe (opcjonalnie)', 'text', {'placeholder': 'np. mukowiscydoza'}, null);
+    otherWrap.style.marginTop = '8px';
+    if (clin.chronicOther) otherWrap.querySelector('input').value = clin.chronicOther;
+    chronicBox.appendChild(otherWrap);
+
+    sec4.appendChild(chronicBox);
+
+    function syncChronicUI() {
+      var checked = sec4.querySelector('input[name="chronic"]:checked');
+      chronicBox.style.display = (checked && checked.value === 'yes') ? 'block' : 'none';
+    }
+    function syncAllergyUI() {
+      var cb = chronicGrid.querySelector('#epi-chronic-alergia');
+      allergyWrap.style.display = (cb && cb.checked) ? 'block' : 'none';
+    }
+    sec4.querySelectorAll('input[name="chronic"]').forEach(function (inp) {
+      inp.addEventListener('change', syncChronicUI);
+    });
+    var allergyCb = chronicGrid.querySelector('#epi-chronic-alergia');
+    if (allergyCb) allergyCb.addEventListener('change', syncAllergyUI);
+    syncChronicUI();
+    syncAllergyUI();
 
     /* Metoda oceny wieku kostnego */
     var sec5 = section('Metoda oceny wieku kostnego (jeśli wykonano)');
@@ -1235,6 +1296,9 @@
         tannerGenitalia:  fieldNum('epi-tanner-g')     || null,
         tannerPubic:      fieldNum('epi-tanner-p')     || null,
         chronicDisease:   radioVal('chronic')          || null,
+        chronicDiseases:  checkedVals('epi-chronic'),
+        allergySubtype:   fieldVal('epi-allergy-subtype') || null,
+        chronicOther:     fieldVal('epi-chronic-other')   || null,
       };
       sa.boneAgeMethod = fieldVal('epi-ba-method') || null;
     }
