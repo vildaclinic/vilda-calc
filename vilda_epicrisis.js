@@ -43,6 +43,16 @@
   }
 
   /**
+   * Formatuje liczbę do prezentacji: 1 miejsce po przecinku, separator PL,
+   * bez zbędnego „,0" (np. 173,5 → "173,5"; 26 → "26"). Do wartości
+   * wyświetlanych w tekście (zastępuje round1, które zwracało liczbę z kropką).
+   */
+  function fmtN(v) {
+    if (v == null || isNaN(parseFloat(v))) return null;
+    return (Math.round(parseFloat(v) * 10) / 10).toFixed(1).replace('.', ',').replace(/,0$/, '');
+  }
+
+  /**
    * Formatuje wiek jako tekst polski, np. "12 lat i 5 miesięcy".
    * @param {number} ageYears - pełne lata
    * @param {number} [ageMonths=0] - dodatkowe miesiące (0-11)
@@ -306,48 +316,59 @@
    * @returns {{ text: string, sections: string[] }}
    */
 
-  /* Mapowanie ID chorób przewlekłych (z checklisty ankiety) na nazwy PL. */
-  const CHRONIC_DISEASE_NAMES = {
-    astma:     'astma oskrzelowa',
+  /* Nazwy chorób przewlekłych w BIERNIKU (po „rozpoznano …"). */
+  const CHRONIC_DISEASE_ACC = {
+    astma:     'astmę oskrzelową',
     azs:       'atopowe zapalenie skóry',
-    celiakia:  'celiakia',
-    cukrzyca1: 'cukrzyca typu 1',
-    tarczyca:  'choroba tarczycy (np. Hashimoto / niedoczynność)',
+    celiakia:  'celiakię',
+    cukrzyca1: 'cukrzycę typu 1',
+    tarczyca:  'chorobę tarczycy (Hashimoto / niedoczynność)',
     nzj:       'nieswoiste zapalenie jelit',
-    pchn:      'przewlekła choroba nerek',
-    padaczka:  'padaczka',
-    wadaserca: 'wrodzona wada serca',
+    pchn:      'przewlekłą chorobę nerek',
+    padaczka:  'padaczkę',
+    wadaserca: 'wrodzoną wadę serca',
   };
 
-  function allergyName(subtype) {
-    const map = { wziewna: 'alergia wziewna', pokarmowa: 'alergia pokarmowa', mieszana: 'alergia mieszana' };
-    return map[subtype] || 'alergia';
+  function allergyNameAcc(subtype) {
+    const map = { wziewna: 'alergię wziewną', pokarmowa: 'alergię pokarmową', mieszana: 'alergię mieszaną' };
+    return map[subtype] || 'alergię';
+  }
+
+  /** Łączy listę naturalnie po polsku: „a, b oraz c". */
+  function joinAnd(arr) {
+    if (!arr || !arr.length) return '';
+    if (arr.length === 1) return arr[0];
+    return arr.slice(0, -1).join(', ') + ' oraz ' + arr[arr.length - 1];
   }
 
   /**
    * Sekcja „Wywiad chorobowy" — choroby przewlekłe z checklisty ankiety.
    * @param {Object} clinical - sa.clinical { chronicDisease, chronicDiseases[], allergySubtype, chronicOther }
+   * @param {'M'|'F'} sex
    * @returns {string|null}
    */
-  function buildDiseaseHistory(clinical) {
+  function buildDiseaseHistory(clinical, sex) {
     const c = clinical || {};
     if (c.chronicDisease === 'no') {
       return 'W wywiadzie chorobowym nie stwierdzono istotnych chorób przewlekłych.';
     }
     if (c.chronicDisease !== 'yes') return null;
 
+    const sf = sexForms(sex);
     const list = [];
     const ids = Array.isArray(c.chronicDiseases) ? c.chronicDiseases : [];
     ids.forEach(function (id) {
-      if (id === 'alergia') list.push(allergyName(c.allergySubtype));
-      else if (CHRONIC_DISEASE_NAMES[id]) list.push(CHRONIC_DISEASE_NAMES[id]);
+      if (id === 'alergia') list.push(allergyNameAcc(c.allergySubtype));
+      else if (CHRONIC_DISEASE_ACC[id]) list.push(CHRONIC_DISEASE_ACC[id]);
     });
     const other = (typeof c.chronicOther === 'string') ? c.chronicOther.trim() : '';
-    if (other) list.push(other);
 
     if (list.length) {
-      return 'W wywiadzie chorobowym stwierdzono: ' + list.join(', ') + '.';
+      let t = 'U ' + sf.dopelniacz + ' rozpoznano ' + joinAnd(list) + '.';
+      if (other) t += ' W wywiadzie ponadto: ' + other + '.';
+      return t;
     }
+    if (other) return 'W wywiadzie chorobowym: ' + other + '.';
     return 'W wywiadzie chorobowym stwierdzono chorobę przewlekłą.';
   }
 
@@ -374,14 +395,14 @@
       ' przyjęt' + s.przyrostek + ' do szpitala w celu ' + reasons + '.';
 
     /* ── 2. Wywiad chorobowy (choroby przewlekłe) ───────────────────────── */
-    secDisease = buildDiseaseHistory(sa.clinical || {});
+    secDisease = buildDiseaseHistory(sa.clinical || {}, pd.sex);
 
     /* ── 3. Wywiad rodzicielski ──────────────────────────────────────────── */
     const hasMph = pd.motherHeight != null && pd.fatherHeight != null && pd.mph != null;
     if (hasMph) {
-      let fp = 'Wywiad rodzicielski: matka ' + Math.round(pd.motherHeight) + ' cm, ojciec ' +
+      let fp = 'Wywiad rodzinny: wzrost matki ' + Math.round(pd.motherHeight) + ' cm, wzrost ojca ' +
         Math.round(pd.fatherHeight) + ' cm.';
-      fp += ' Wzrost docelowy (mid-parental height, MPH) wynosi ' + round1(pd.mph) + ' cm';
+      fp += ' Wzrost docelowy (mid-parental height, MPH) wynosi ' + fmtN(pd.mph) + ' cm';
       const cL = centileLabel(pd.mphPercentile);
       const sL = sdsLabel(pd.mphSds);
       if (cL || sL) fp += ' (' + [cL, sL].filter(Boolean).join(', ') + ')';
@@ -389,7 +410,7 @@
       if (sa.familyDelayedPuberty === 'yes' && pd.sex === 'M') {
         fp += ' W wywiadzie rodzinnym stwierdzono konstytucjonalne opóźnienie wzrastania i dojrzewania.';
       } else if (sa.familyDelayedPuberty === 'no') {
-        fp += ' Wywiad rodzinny w kierunku konstytucjonalnego opóźnienia wzrastania i dojrzewania jest negatywny.';
+        fp += ' Wywiad w kierunku konstytucjonalnego opóźnienia wzrastania i dojrzewania jest negatywny.';
       }
       secFamily = fp;
     }
@@ -442,10 +463,10 @@
 
     /* ── 6. Badanie przedmiotowe (stan kliniczny) ───────────────────────── */
     const clinical = sa.clinical || {};
-    const clinParts = [];
+    const measureParts = [];
 
     const hSds  = sdsLabel(pd.heightSds);
-    let hStr = 'wzrost ' + round1(pd.height) + ' cm';
+    let hStr = 'wzrost ' + fmtN(pd.height) + ' cm';
     const hParens = [];
     if (pd.heightDeficitTo3rd != null && pd.heightDeficitTo3rd > 0) {
       hParens.push(fmt1(pd.heightDeficitTo3rd) + ' cm poniżej 3. centyla');
@@ -457,10 +478,10 @@
     }
     if (hSds) hParens.push(hSds);
     if (hParens.length) hStr += ' (' + hParens.join(', ') + ')';
-    clinParts.push(hStr);
+    measureParts.push(hStr);
 
     if (pd.weight != null) {
-      let wStr = 'masa ciała ' + round1(pd.weight) + ' kg';
+      let wStr = 'masa ciała ' + fmtN(pd.weight) + ' kg';
       const wParens = [];
       if (pd.weightDeficitTo3rd != null && pd.weightDeficitTo3rd > 0) {
         wParens.push(fmt1(pd.weightDeficitTo3rd) + ' kg poniżej 3. centyla');
@@ -471,26 +492,37 @@
         if (wCent) wParens.push(wCent);
       }
       if (wParens.length) wStr += ' (' + wParens.join(', ') + ')';
-      if (pd.bmi != null) {
-        wStr += ', BMI ' + fmt1(pd.bmi);
-        const bCent = centileLabel(pd.bmiPercentile);
-        if (bCent) wStr += ' (' + bCent + ')';
+      measureParts.push(wStr);
+    }
+
+    if (pd.bmi != null) {
+      let bmiStr = 'BMI ' + fmt1(pd.bmi);
+      const bCent = centileLabel(pd.bmiPercentile);
+      if (bCent) bmiStr += ' (' + bCent + ')';
+      measureParts.push(bmiStr);
+      /* Wskaźnik Cole'a — zawsze bezpośrednio po wyniku BMI. */
+      if (pd.coleIndex != null) {
+        measureParts.push('wskaźnik Cole\'a ' + fmtN(pd.coleIndex) + '%');
       }
-      clinParts.push(wStr);
+    }
+
+    const examSentences = [];
+    if (measureParts.length) {
+      examSentences.push('W badaniu przedmiotowym przy przyjęciu: ' + measureParts.join(', ') + '.');
     }
 
     if (clinical.proportionality === 'proportional') {
-      clinParts.push('sylwetka proporcjonalna');
+      examSentences.push('Budowa ciała proporcjonalna.');
     } else if (clinical.proportionality === 'short_limbs') {
-      clinParts.push('niskorosłość nieproporcjonalna — skrócenie kończyn');
+      examSentences.push('Stwierdzono niskorosłość nieproporcjonalną ze skróceniem kończyn.');
     } else if (clinical.proportionality === 'short_trunk') {
-      clinParts.push('niskorosłość nieproporcjonalna — skrócenie tułowia');
+      examSentences.push('Stwierdzono niskorosłość nieproporcjonalną ze skróceniem tułowia.');
     }
 
     if (clinical.dysmorphic === 'yes') {
-      clinParts.push('cechy dysmorficzne obecne');
+      examSentences.push('Stwierdzono cechy dysmorficzne.');
     } else if (clinical.dysmorphic === 'no') {
-      clinParts.push('bez widocznych cech dysmorficznych');
+      examSentences.push('Bez widocznych cech dysmorficznych.');
     }
 
     /* Choroby przewlekłe przeniesiono do sekcji „Wywiad chorobowy" (sekcja 2). */
@@ -509,15 +541,15 @@
       tannerParts.push('P' + clinical.tannerPubic);
     }
     if (tannerParts.length) {
-      clinParts.push('dojrzewanie w skali Tannera oceniono na: ' + tannerParts.join(', '));
+      examSentences.push('Stopień dojrzewania wg Tannera: ' + tannerParts.join(', ') + '.');
     }
 
-    if (clinParts.length) {
-      secExam = 'Przy przyjęciu do szpitala w badaniu przedmiotowym stwierdzono: ' + clinParts.join('; ') + '.';
+    if (examSentences.length) {
+      secExam = examSentences.join(' ');
     }
 
-    /* ── 5. Ocena wzrastania ────────────────────────────────────────────── */
-    const auxParts = [];
+    /* ── 5. Ocena wzrastania (osobne zdania, nie wyliczenie ze średnikami) ─ */
+    const growthSentences = [];
 
     if (hasMph && pd.hSdsMpSds != null) {
       const gap = round2(pd.hSdsMpSds);
@@ -532,39 +564,34 @@
       } else {
         geneticPotential = 'rośnie w granicach swojego potencjału genetycznego';
       }
-      auxParts.push(capitalize(s.mianownik) + ' ' + geneticPotential + ' (hSDS − mpSDS = ' + gapStr + ')');
+      growthSentences.push(capitalize(s.mianownik) + ' ' + geneticPotential + ' (hSDS − mpSDS = ' + gapStr + ').');
     }
 
     if (pd.boneAge != null) {
       const baMethod = sa.boneAgeMethod ? ' (metoda ' + sa.boneAgeMethod + ')' : '';
-      let baStr = 'wiek kostny oceniono na ' + round1(pd.boneAge) + ' lat' + baMethod;
+      let baStr = 'Wiek kostny oceniono na ' + fmtN(pd.boneAge) + ' lat' + baMethod;
       if (pd.boneAgeDelay != null) {
         const d = round1(pd.boneAgeDelay);
         if (d > 0.5) {
-          baStr += ' i jest on opóźniony o ' + fmtBoneAgeDelay(d) + ' w stosunku do wieku metrykalnego';
+          baStr += ' i jest opóźniony o ' + fmtBoneAgeDelay(d) + ' w stosunku do wieku metrykalnego';
         } else if (d < -0.5) {
-          baStr += ' i jest on przyspieszony o ' + fmtBoneAgeDelay(d) + ' w stosunku do wieku metrykalnego';
+          baStr += ' i jest przyspieszony o ' + fmtBoneAgeDelay(d) + ' w stosunku do wieku metrykalnego';
         } else {
-          baStr += ' i jest on zgodny z wiekiem metrycznym';
+          baStr += ' i jest zgodny z wiekiem metrykalnym';
         }
       }
-      auxParts.push(baStr);
+      growthSentences.push(baStr + '.');
     }
 
     if (pd.growthVelocity != null) {
-      let gvStr = 'aktualne tempo wzrastania dziecka to ' + fmt1(pd.growthVelocity) + ' cm/rok';
-      if (pd.growthVelocityMonths) gvStr += ' (obliczone z ' + pd.growthVelocityMonths + ' mies.)';
-      gvStr += ' i jest ono ' + (pd.growthVelocityLow ? 'poniżej normy' : 'w normie') + ' dla wieku';
-      auxParts.push(gvStr);
+      let gvStr = 'Aktualne tempo wzrastania wynosi ' + fmt1(pd.growthVelocity) + ' cm/rok';
+      if (pd.growthVelocityMonths) gvStr += ' (z ' + pd.growthVelocityMonths + '-miesięcznej obserwacji)';
+      gvStr += ' i jest ' + (pd.growthVelocityLow ? 'poniżej normy' : 'w normie') + ' dla wieku';
+      growthSentences.push(gvStr + '.');
     }
 
-    if (pd.coleIndex != null) {
-      auxParts.push('wskaźnik Cole\'a ' + round1(pd.coleIndex) + '%');
-    }
-
-    if (auxParts.length) {
-      const auxFirst = auxParts[0].charAt(0).toUpperCase() + auxParts[0].slice(1);
-      secGrowth = auxFirst + (auxParts.length > 1 ? '; ' + auxParts.slice(1).join('; ') : '') + '.';
+    if (growthSentences.length) {
+      secGrowth = growthSentences.join(' ');
     }
 
     /* ── 8. Prognoza wzrostu ostatecznego (składana po laboratorium) ────── */
@@ -573,7 +600,7 @@
     if ((bp && bp.value != null) || (rwt && rwt.value != null)) {
       const bpStr  = bp  && bp.value  != null ? fmt1(bp.value)  + ' cm' + (bp.error  ? ' (±' + fmt1(bp.error)  + ' cm)' : '') : null;
       const rwtStr = rwt && rwt.value != null ? fmt1(rwt.value) + ' cm' + (rwt.error ? ' (±' + fmt1(rwt.error) + ' cm)' : '') : null;
-      let predText = 'Na podstawie zgromadzonych informacji prognoza wzrostu ostatecznego u dziecka ';
+      let predText = 'Na podstawie zgromadzonych informacji prognozowany wzrost ostateczny ';
       if (bpStr && rwtStr) {
         predText += 'metodą Bayley‑Pinneau wynosi ' + bpStr + ', a metodą RWT (Roche-Wainer-Thissen) ' + rwtStr + '.';
       } else if (bpStr) {
@@ -589,10 +616,13 @@
     const labParts = [];
 
     if (labs.igf1 != null) {
-      let igfStr = 'IGF‑1 ' + round1(labs.igf1) + ' ng/mL';
+      let igfStr = 'IGF‑1 ' + fmtN(labs.igf1) + ' ng/mL';
       /* Auto-ocena względem zakresu referencyjnego dla wieku/stadium Tannera
          (przelicznik jednostek laboratoryjnych). Brak SDS — klasyfikacja
          interwałowa; sformułowania ostrożne klinicznie. */
+      /* Tu ograniczamy się do INTERPRETACJI wyniku IGF-1 (poniżej / w zakresie /
+         powyżej normy dla wieku lub stadium Tannera). Powiązanie niskiego IGF-1
+         z wynikiem testu stymulacyjnego pada w podsumowaniu (buildConclusionGhd). */
       const st = labs.igf1Status;
       if (st && st !== 'no_interpretation' && st !== 'no_range') {
         const basis = labs.igf1TannerUsed ? 'dla stadium Tannera' : 'dla wieku';
@@ -600,21 +630,17 @@
           ? ' (norma ' + labs.igf1RefLow + '–' + labs.igf1RefHigh + ' ng/mL ' + basis + ')'
           : '';
         if (st === 'far_below' || st === 'below') {
-          igfStr += ' — ' + (st === 'far_below' ? 'znacznie ' : '') +
-            'poniżej zakresu referencyjnego' + refTxt +
-            '; wynik wspiera podejrzenie niedoboru hormonu wzrostu — wymaga potwierdzenia IGFBP‑3 i testem stymulacyjnym';
+          igfStr += ' — ' + (st === 'far_below' ? 'znacznie ' : '') + 'poniżej zakresu referencyjnego' + refTxt;
         } else if (st === 'far_above' || st === 'above') {
-          igfStr += ' — ' + (st === 'far_above' ? 'znacznie ' : '') +
-            'powyżej zakresu referencyjnego' + refTxt;
+          igfStr += ' — ' + (st === 'far_above' ? 'znacznie ' : '') + 'powyżej zakresu referencyjnego' + refTxt;
         } else {
-          igfStr += ' — w zakresie referencyjnym' + refTxt +
-            '; prawidłowe stężenie nie wyklucza niedoboru hormonu wzrostu';
+          igfStr += ' — w zakresie referencyjnym' + refTxt;
         }
       }
       labParts.push(igfStr);
     }
     if (labs.igfbp3 != null) {
-      labParts.push('IGFBP‑3 ' + round1(labs.igfbp3) + ' mg/L');
+      labParts.push('IGFBP‑3 ' + fmtN(labs.igfbp3) + ' mg/L');
     }
     if (labs.thyroidNormal === 'yes') {
       labParts.push('czynność tarczycy prawidłowa');
@@ -643,7 +669,7 @@
       labParts.push('odchylenia w biochemii krwi');
     }
     if (labParts.length) {
-      secLabs = 'W badaniach laboratoryjnych przeprowadzonych w szpitalu stwierdzono: ' + labParts.join('; ') + '.';
+      secLabs = 'W badaniach laboratoryjnych przeprowadzonych w szpitalu: ' + labParts.join('; ') + '.';
     }
 
     /* ── Testy stymulacyjne GH (składane w bloku laboratoryjnym) ────────── */
@@ -674,7 +700,7 @@
       const kMap = {
         '46XX':  'kariotyp 46,XX — prawidłowy żeński',
         '46XY':  'kariotyp 46,XY — prawidłowy męski',
-        '45X':   'kariotyp 45,X — Zespół Turnera',
+        '45X':   'kariotyp 45,X — zespół Turnera',
         'mosaic':'kariotyp — mozaicyzm (wynik wymaga opisu)',
         'other': 'kariotyp — wynik niestandardowy (wynik wymaga opisu)',
       };
@@ -732,7 +758,7 @@
 
       if (ob.altElevated === 'yes') {
         let altStr = 'podwyższona aktywność ALT';
-        if (ob.alt != null) altStr += ' (' + round1(ob.alt) + ' U/L)';
+        if (ob.alt != null) altStr += ' (' + fmtN(ob.alt) + ' U/L)';
         obParts.push(altStr + ' — podejrzenie NAFLD');
       }
 
@@ -805,11 +831,11 @@
       const v1 = fmt1(p1) + ' ng/mL';
       if (p1 >= 10) {
         text = 'W trakcie hospitalizacji przeprowadzono test stymulacji wydzielania hormonu wzrostu z ' +
-          testNameInstrumental(t1.type) + ', gdzie uzyskano maksymalne stężenie hormonu wzrostu ' +
+          testNameInstrumental(t1.type) + ', w którym uzyskano szczytowe stężenie GH ' +
           v1 + ' (norma powyżej 10 ng/mL), co wskazuje na prawidłowe wydzielanie hormonu wzrostu u dziecka.';
       } else {
         text = 'W trakcie hospitalizacji przeprowadzono pierwszy test stymulacji wydzielania hormonu wzrostu z ' +
-          testNameInstrumental(t1.type) + ', gdzie uzyskano maksymalne stężenie hormonu wzrostu ' +
+          testNameInstrumental(t1.type) + ', w którym uzyskano szczytowe stężenie GH ' +
           v1 + ' (norma powyżej 10 ng/mL). Wynik poniżej normy — konieczne jest uzupełnienie diagnostyki' +
           ' o drugi test stymulacyjny z innym preparatem.';
       }
@@ -821,7 +847,7 @@
       const v2 = fmt1(p2) + ' ng/mL';
       if (p2 >= 10) {
         text = 'W trakcie bieżącej hospitalizacji przeprowadzono test stymulacji wydzielania hormonu wzrostu z ' +
-          testNameInstrumental(t2.type) + ', gdzie uzyskano maksymalne stężenie hormonu wzrostu ' +
+          testNameInstrumental(t2.type) + ', w którym uzyskano szczytowe stężenie GH ' +
           v2 + ' (norma powyżej 10 ng/mL), co wskazuje na prawidłowe wydzielanie hormonu wzrostu u dziecka.';
         if (p1 != null) {
           text += ' W pierwszym teście stymulacyjnym (z ' + testNameInstrumental(t1.type) +
@@ -837,7 +863,7 @@
         } else {
           text = 'W trakcie bieżącej hospitalizacji przeprowadzono drugi (potwierdzający) test stymulacji' +
             ' wydzielania hormonu wzrostu z ' + testNameInstrumental(t2.type) +
-            ', gdzie uzyskano maksymalne stężenie hormonu wzrostu ' + v2 +
+            ', w którym uzyskano szczytowe stężenie GH ' + v2 +
             ' (norma powyżej 10 ng/mL). W połączeniu z wynikiem pierwszego testu stymulacyjnego,' +
             ' oba wyniki poniżej normy potwierdzają niedobór hormonu wzrostu u dziecka.';
         }
@@ -850,8 +876,8 @@
         const v2 = fmt1(p2) + ' ng/mL';
         const anyNormal = p1 >= 10 || p2 >= 10;
         text = 'W trakcie hospitalizacji przeprowadzono dwa testy stymulacji wydzielania hormonu wzrostu:' +
-          ' z ' + testNameInstrumental(t1.type) + ', gdzie uzyskano maksymalne stężenie hormonu wzrostu ' + v1 + ',' +
-          ' oraz z ' + testNameInstrumental(t2.type) + ', gdzie uzyskano ' + v2 + ' (norma powyżej 10 ng/mL). ';
+          ' z ' + testNameInstrumental(t1.type) + ', w którym uzyskano szczytowe stężenie GH ' + v1 + ',' +
+          ' oraz z ' + testNameInstrumental(t2.type) + ', w którym uzyskano ' + v2 + ' (norma powyżej 10 ng/mL). ';
         if (anyNormal) {
           text += 'Uzyskanie szczytu GH powyżej 10 ng/mL w co najmniej jednym teście wskazuje na' +
             ' prawidłowe wydzielanie hormonu wzrostu u dziecka.';
@@ -861,7 +887,7 @@
       } else if (p1 != null) {
         /* Jeden test w kontekście 'both' (fallback) */
         text = 'W trakcie hospitalizacji przeprowadzono test stymulacji wydzielania hormonu wzrostu z ' +
-          testNameInstrumental(t1.type) + ', gdzie uzyskano maksymalne stężenie hormonu wzrostu ' +
+          testNameInstrumental(t1.type) + ', w którym uzyskano szczytowe stężenie GH ' +
           fmt1(p1) + ' ng/mL (norma powyżej 10 ng/mL), co wskazuje na ' + ghNormalityLabel(p1) + ' u dziecka.';
       } else {
         return null;
@@ -930,6 +956,14 @@
       c += ' obraz kliniczny sugeruje niedobór hormonu wzrostu — wyniki wymagają weryfikacji.';
     }
 
+    /* Powiązanie niskiego IGF-1 z wynikiem testu stymulacyjnego (przeniesione
+       z sekcji laboratoryjnej, by interpretacja kliniczna padła w podsumowaniu). */
+    const labsGhd = sa.labs || {};
+    const igfLow = labsGhd.igf1Status === 'below' || labsGhd.igf1Status === 'far_below';
+    if (igfLow && (ghStatus === 'confirmed' || ghStatus === 'pending')) {
+      c += ' Niskie stężenie IGF‑1 w połączeniu ze szczytem hormonu wzrostu poniżej normy w teście stymulacyjnym wspiera rozpoznanie niedoboru hormonu wzrostu.';
+    }
+
     if (ghStatus === 'pending') {
       c += ' ' + capitalize(sf.mianownik) + ' wymaga dalszej opieki endokrynologicznej' +
         ' z uwagi na konieczność przeprowadzenia drugiego testu stymulacyjnego.';
@@ -945,7 +979,7 @@
     let c = 'Całość obrazu klinicznego';
     const features = [];
     if (baDelay != null && baDelay > 1) {
-      features.push('opóźnienie wieku kostnego o ' + fmt1(baDelay) + ' ' + (baDelay < 2 ? 'rok' : baDelay < 5 ? 'lata' : 'lat'));
+      features.push('opóźnienie wieku kostnego o ' + fmtBoneAgeDelay(baDelay));
     }
     if (sa.familyDelayedPuberty === 'yes') {
       features.push('dodatni wywiad rodzinny w kierunku KOWD');
@@ -1018,11 +1052,11 @@
     const gen = sa.genetics || {};
     let c;
     if (gen.karyotype === 'done' && gen.karyotypeResult === '45X') {
-      c = 'Na podstawie badania kariotypu (45,X) rozpoznano Zespół Turnera.';
+      c = 'Na podstawie badania kariotypu (45,X) rozpoznano zespół Turnera.';
     } else if (gen.karyotype === 'done' && gen.karyotypeResult === 'mosaic') {
-      c = 'Na podstawie badania kariotypu rozpoznano mozaicyzm odpowiadający Zespołowi Turnera.';
+      c = 'Na podstawie badania kariotypu rozpoznano mozaicyzm odpowiadający zespołowi Turnera.';
     } else {
-      c = 'Obraz kliniczny sugeruje Zespół Turnera — wymagana weryfikacja kariotypem.';
+      c = 'Obraz kliniczny sugeruje zespół Turnera — wymagana weryfikacja kariotypem.';
     }
     c += ' Wskazana kwalifikacja do leczenia hormonem wzrostu (program B.42 NFZ) oraz pilna konsultacja kardiologiczna i endokrynologiczna.';
     return c;
