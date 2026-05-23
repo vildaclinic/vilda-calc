@@ -477,7 +477,6 @@
       { id: 'epi-r1', val: 'diagnostyki i oceny niskorosłości',               label: 'diagnostyki i oceny niskorosłości' },
       { id: 'epi-r2', val: 'oceny wydzielania hormonu wzrostu',                label: 'oceny wydzielania hormonu wzrostu' },
       { id: 'epi-r3', val: 'oceny wzrastania i dojrzewania',                   label: 'oceny wzrastania i dojrzewania' },
-      { id: 'epi-r4', val: 'badania bilansowego i oceny rozwoju',              label: 'badania bilansowego i oceny rozwoju' },
       { id: 'epi-r5', val: 'kwalifikacji do leczenia hormonem wzrostu',        label: 'kwalifikacji do leczenia hormonem wzrostu' },
     ];
     var obesityReasons = [
@@ -884,13 +883,31 @@
     sec1.appendChild(ghRadios);
 
     var ghExtra = el('div', 'margin-top:12px;');
+
+    /* Kontekst testów — który to test */
+    var ctxVal = gh.context || 'both';
+    var ctxBlock = el('div', 'margin-bottom:10px;');
+    var ctxLbl2 = el('p', 'font-size:0.85rem;color:' + clr.muted + ';margin:0 0 5px;', null,
+      'Podczas tej hospitalizacji wykonano:');
+    ctxBlock.appendChild(ctxLbl2);
+    var ctxOpts = [
+      { value: 'both',        label: 'Oba testy stymulacyjne (ta hospitalizacja)' },
+      { value: 'first_only',  label: 'Tylko 1. test (2. test potwierdzający planowany)' },
+      { value: 'second_only', label: '2. test potwierdzający (1. test wykonano wcześniej)' },
+    ];
+    ctxOpts.forEach(function (o) {
+      ctxBlock.appendChild(radioRow('gh-context', o.value, o.label, ctxVal === o.value));
+    });
+    ghExtra.appendChild(ctxBlock);
+    ghExtra.appendChild(hr());
+
     /* Priming */
     var primVal = gh.priming || '';
     var primRow = el('div', 'margin-bottom:10px;');
     var primLbl = el('p', 'font-size:0.85rem;color:' + clr.muted + ';margin:0 0 5px;', null, 'Priming estrogenowy/androgenowy:');
     append(primRow, primLbl,
-      radioRow('priming', 'yes', 'Tak',             primVal === 'yes'),
-      radioRow('priming', 'no',  'Nie',              primVal === 'no')
+      radioRow('priming', 'yes', 'Tak', primVal === 'yes'),
+      radioRow('priming', 'no',  'Nie', primVal === 'no')
     );
     ghExtra.appendChild(primRow);
     ghExtra.appendChild(hr());
@@ -904,35 +921,80 @@
       { value: 'ghrh',      label: 'GHRH' },
       { value: 'other',     label: 'Inny' },
     ];
-    /* Test 1 */
+
+    /* Blok testu 1 */
     var t1 = gh.test1 || {};
     var test1Block = el('div', 'margin-bottom:10px;');
     var t1Lbl = el('p', 'font-size:0.85rem;color:' + clr.muted + ';margin:0 0 5px;font-weight:600;', null, 'Test 1');
     var t1Grid = el('div', 'display:grid;grid-template-columns:1fr 1fr;gap:8px;');
-    var t1Type = selectField('epi-t1-type',   'Rodzaj testu', testTypeOpts);
-    var t1Peak = inputField('epi-t1-peak',    'Szczyt GH (ng/mL)', 'number', {'min':'0','step':'0.1','placeholder':'np. 3,2'}, null);
+    /* Dla second_only: test1 jest opcjonalny (dodaj pusty option) */
+    var testTypeOptsOpt = [{ value: '', label: '— opcjonalny —' }].concat(testTypeOpts);
+    var t1Type = selectField('epi-t1-type', 'Rodzaj testu', testTypeOpts);
+    var t1Peak = inputField('epi-t1-peak', 'Szczyt GH (ng/mL)', 'number', {'min':'0','step':'0.1','placeholder':'np. 3,2'}, null);
     if (t1.type)   t1Type.querySelector('select').value = t1.type;
     if (t1.peakGh) t1Peak.querySelector('input').value  = t1.peakGh;
     append(t1Grid, t1Type, t1Peak);
     append(test1Block, t1Lbl, t1Grid);
     ghExtra.appendChild(test1Block);
 
-    /* Test 2 (opcjonalny) */
+    /* Blok testu 2 */
     var t2 = gh.test2 || {};
     var test2Block = el('div', '');
     var t2Lbl = el('p', 'font-size:0.85rem;color:' + clr.muted + ';margin:0 0 5px;font-weight:600;', null, 'Test 2 (opcjonalnie)');
     var t2Grid = el('div', 'display:grid;grid-template-columns:1fr 1fr;gap:8px;');
-    var noOptObj = { value: '', label: '— opcjonalny —' };
-    var testTypeOpts2 = [noOptObj].concat(testTypeOpts);
-    var t2Type = selectField('epi-t2-type',   'Rodzaj testu', testTypeOpts2);
-    var t2Peak = inputField('epi-t2-peak',    'Szczyt GH (ng/mL)', 'number', {'min':'0','step':'0.1','placeholder':'np. 4,1'}, null);
+    var t2Type = selectField('epi-t2-type', 'Rodzaj testu', [{ value: '', label: '— opcjonalny —' }].concat(testTypeOpts));
+    var t2Peak = inputField('epi-t2-peak', 'Szczyt GH (ng/mL)', 'number', {'min':'0','step':'0.1','placeholder':'np. 4,1'}, null);
     if (t2.type)   t2Type.querySelector('select').value = t2.type;
     if (t2.peakGh) t2Peak.querySelector('input').value  = t2.peakGh;
     append(t2Grid, t2Type, t2Peak);
     append(test2Block, t2Lbl, t2Grid);
     ghExtra.appendChild(test2Block);
 
-    /* Pokaż/ukryj extra GH */
+    /* Aktualizuj etykiety i widoczność bloków na podstawie kontekstu */
+    function updateGhContextUI(ctx) {
+      var t1TypeSel = t1Type.querySelector('select');
+      if (ctx === 'first_only') {
+        /* Tylko 1. test: ukryj blok 2, t1 wymagany */
+        t1Lbl.textContent = 'Test stymulacyjny (wykonany w tej hospitalizacji)';
+        test2Block.style.display = 'none';
+        /* Upewnij się, że t1 nie ma pustego option */
+        if (t1TypeSel.options[0] && t1TypeSel.options[0].value === '') {
+          t1TypeSel.removeChild(t1TypeSel.options[0]);
+        }
+      } else if (ctx === 'second_only') {
+        /* 2. test potwierdzający: t2 = ta hospitalizacja (główny), t1 = poprzednia (opcjonalny) */
+        t1Lbl.textContent = '1. test (z poprzedniej hospitalizacji — opcjonalnie)';
+        t2Lbl.textContent = 'Test z tej hospitalizacji (2. test potwierdzający)';
+        test2Block.style.display = '';
+        /* Dodaj pusty option do t1 jeśli go nie ma */
+        if (t1TypeSel.options[0] && t1TypeSel.options[0].value !== '') {
+          var emptyOpt = document.createElement('option');
+          emptyOpt.value = ''; emptyOpt.textContent = '— opcjonalny —';
+          t1TypeSel.insertBefore(emptyOpt, t1TypeSel.options[0]);
+        }
+      } else {
+        /* 'both': oba testy — domyślne */
+        t1Lbl.textContent = 'Test 1';
+        t2Lbl.textContent = 'Test 2 (opcjonalnie)';
+        test2Block.style.display = '';
+        /* Usuń pusty option z t1 jeśli jest */
+        if (t1TypeSel.options[0] && t1TypeSel.options[0].value === '') {
+          t1TypeSel.removeChild(t1TypeSel.options[0]);
+        }
+      }
+    }
+
+    /* Inicjalne ustawienie */
+    updateGhContextUI(ctxVal);
+
+    /* Nasłuchuj zmian kontekstu */
+    ctxBlock.querySelectorAll('input[type="radio"]').forEach(function (r) {
+      r.addEventListener('change', function () {
+        updateGhContextUI(radioVal('gh-context') || 'both');
+      });
+    });
+
+    /* Pokaż/ukryj cały blok ghExtra */
     ghExtra.style.display = (ghPerVal === 'yes') ? '' : 'none';
     ghRadios.querySelectorAll('input[type="radio"]').forEach(function (r) {
       r.addEventListener('change', function () {
@@ -1114,19 +1176,23 @@
         sa.diagnosis = radioVal('diagnosis') || 'obesity';
       } else {
         /* ── Profil niskorosłości: pełen krok 5 ── */
-        var ghPer = radioVal('gh-performed');
+        var ghPer    = radioVal('gh-performed');
+        var ghCtx    = radioVal('gh-context') || 'both';
+        var t1TypeVal = fieldVal('epi-t1-type');
         var t1PeakVal = fieldNum('epi-t1-peak');
         var t2TypeVal = fieldVal('epi-t2-type');
         var t2PeakVal = fieldNum('epi-t2-peak');
+        /* Dla second_only: test2 = ta hospitalizacja (główny); test1 = poprzednia (opcjonalny) */
         sa.ghTests = {
           performed: ghPer || null,
+          context:   ghPer === 'yes' ? ghCtx : null,
           priming:   radioVal('priming') || null,
-          test1: (ghPer === 'yes' && t1PeakVal != null) ? {
-            type: fieldVal('epi-t1-type') || 'other',
+          test1: (ghPer === 'yes' && t1TypeVal && t1PeakVal != null) ? {
+            type:   t1TypeVal,
             peakGh: t1PeakVal
           } : null,
           test2: (ghPer === 'yes' && t2TypeVal && t2PeakVal != null) ? {
-            type: t2TypeVal,
+            type:   t2TypeVal,
             peakGh: t2PeakVal
           } : null,
         };
