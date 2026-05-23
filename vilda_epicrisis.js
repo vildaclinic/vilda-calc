@@ -305,23 +305,78 @@
    *
    * @returns {{ text: string, sections: string[] }}
    */
+
+  /* Mapowanie ID chorób przewlekłych (z checklisty ankiety) na nazwy PL. */
+  const CHRONIC_DISEASE_NAMES = {
+    astma:     'astma oskrzelowa',
+    azs:       'atopowe zapalenie skóry',
+    celiakia:  'celiakia',
+    cukrzyca1: 'cukrzyca typu 1',
+    tarczyca:  'choroba tarczycy (np. Hashimoto / niedoczynność)',
+    nzj:       'nieswoiste zapalenie jelit',
+    pchn:      'przewlekła choroba nerek',
+    padaczka:  'padaczka',
+    wadaserca: 'wrodzona wada serca',
+  };
+
+  function allergyName(subtype) {
+    const map = { wziewna: 'alergia wziewna', pokarmowa: 'alergia pokarmowa', mieszana: 'alergia mieszana' };
+    return map[subtype] || 'alergia';
+  }
+
+  /**
+   * Sekcja „Wywiad chorobowy" — choroby przewlekłe z checklisty ankiety.
+   * @param {Object} clinical - sa.clinical { chronicDisease, chronicDiseases[], allergySubtype, chronicOther }
+   * @returns {string|null}
+   */
+  function buildDiseaseHistory(clinical) {
+    const c = clinical || {};
+    if (c.chronicDisease === 'no') {
+      return 'W wywiadzie chorobowym nie stwierdzono istotnych chorób przewlekłych.';
+    }
+    if (c.chronicDisease !== 'yes') return null;
+
+    const list = [];
+    const ids = Array.isArray(c.chronicDiseases) ? c.chronicDiseases : [];
+    ids.forEach(function (id) {
+      if (id === 'alergia') list.push(allergyName(c.allergySubtype));
+      else if (CHRONIC_DISEASE_NAMES[id]) list.push(CHRONIC_DISEASE_NAMES[id]);
+    });
+    const other = (typeof c.chronicOther === 'string') ? c.chronicOther.trim() : '';
+    if (other) list.push(other);
+
+    if (list.length) {
+      return 'W wywiadzie chorobowym stwierdzono: ' + list.join(', ') + '.';
+    }
+    return 'W wywiadzie chorobowym stwierdzono chorobę przewlekłą.';
+  }
+
   function generate(pd, sa) {
     if (!pd || !sa) throw new Error('VildaEpicrisis.generate: brak wymaganych argumentów');
 
     const s   = sexForms(pd.sex);
     const sections = [];
+    /* Sekcje budowane do nazwanych zmiennych i składane w ustalonej kolejności
+       na końcu (tablica `order`) — pozwala przenieść „Wywiad chorobowy" na
+       początek i prognozę wzrostu za badania laboratoryjne bez zmiany logiki
+       poszczególnych bloków. */
+    let secIntro = null, secDisease = null, secFamily = null, secBirth = null,
+        secExam = null, secGrowth = null, secPred = null, secLabs = null,
+        secGh = null, secMri = null, secGen = null, secObesity = null, secConclusion = null;
 
-    /* ── 1. Wprowadzenie ─────────────────────────────────────────────────── */
+    /* ── 1. Wprowadzenie (powód przyjęcia) ───────────────────────────────── */
     const ageStr  = formatAge(pd.ageYears, pd.ageMonths);
     const reasons = Array.isArray(sa.reasons) && sa.reasons.length
       ? joinReasons(sa.reasons)
       : 'oceny auksometrycznej';
-    sections.push(
+    secIntro =
       capitalize(s.mianownik) + ' w wieku ' + ageStr + ' ' + s.czasownik +
-      ' przyjęt' + s.przyrostek + ' do szpitala w celu ' + reasons + '.'
-    );
+      ' przyjęt' + s.przyrostek + ' do szpitala w celu ' + reasons + '.';
 
-    /* ── 2. Wywiad rodzinny ──────────────────────────────────────────────── */
+    /* ── 2. Wywiad chorobowy (choroby przewlekłe) ───────────────────────── */
+    secDisease = buildDiseaseHistory(sa.clinical || {});
+
+    /* ── 3. Wywiad rodzicielski ──────────────────────────────────────────── */
     const hasMph = pd.motherHeight != null && pd.fatherHeight != null && pd.mph != null;
     if (hasMph) {
       let fp = 'Wywiad rodzicielski: matka ' + Math.round(pd.motherHeight) + ' cm, ojciec ' +
@@ -336,10 +391,10 @@
       } else if (sa.familyDelayedPuberty === 'no') {
         fp += ' Wywiad rodzinny w kierunku konstytucjonalnego opóźnienia wzrastania i dojrzewania jest negatywny.';
       }
-      sections.push(fp);
+      secFamily = fp;
     }
 
-    /* ── 3. Wywiad urodzeniowy ───────────────────────────────────────────── */
+    /* ── 4. Wywiad okołoporodowy ─────────────────────────────────────────── */
     const birth = sa.birth || {};
     const hasBirthData = birth.birthWeightG != null || birth.birthLengthCm != null;
     if (hasBirthData) {
@@ -382,10 +437,10 @@
           bp += ' Brak nadgonienia wzrostu do 4. roku życia — spełnione kryterium SGA bez catch-up.';
         }
       }
-      sections.push(bp);
+      secBirth = bp;
     }
 
-    /* ── 4. Stan kliniczny ──────────────────────────────────────────────── */
+    /* ── 6. Badanie przedmiotowe (stan kliniczny) ───────────────────────── */
     const clinical = sa.clinical || {};
     const clinParts = [];
 
@@ -438,9 +493,7 @@
       clinParts.push('bez widocznych cech dysmorficznych');
     }
 
-    if (clinical.chronicDisease === 'yes') {
-      clinParts.push('objawy sugerujące chorobę przewlekłą');
-    }
+    /* Choroby przewlekłe przeniesiono do sekcji „Wywiad chorobowy" (sekcja 2). */
 
     const tannerParts = [];
     if (pd.sex === 'F' && clinical.tannerBreasts) {
@@ -460,7 +513,7 @@
     }
 
     if (clinParts.length) {
-      sections.push('Przy przyjęciu do szpitala w badaniu przedmiotowym stwierdzono: ' + clinParts.join('; ') + '.');
+      secExam = 'Przy przyjęciu do szpitala w badaniu przedmiotowym stwierdzono: ' + clinParts.join('; ') + '.';
     }
 
     /* ── 5. Ocena wzrastania ────────────────────────────────────────────── */
@@ -511,10 +564,10 @@
 
     if (auxParts.length) {
       const auxFirst = auxParts[0].charAt(0).toUpperCase() + auxParts[0].slice(1);
-      sections.push(auxFirst + (auxParts.length > 1 ? '; ' + auxParts.slice(1).join('; ') : '') + '.');
+      secGrowth = auxFirst + (auxParts.length > 1 ? '; ' + auxParts.slice(1).join('; ') : '') + '.';
     }
 
-    /* ── 6. Prognozy wzrostu ────────────────────────────────────────────── */
+    /* ── 8. Prognoza wzrostu ostatecznego (składana po laboratorium) ────── */
     const bp  = pd.predictions && pd.predictions.bp;
     const rwt = pd.predictions && pd.predictions.rwt;
     if ((bp && bp.value != null) || (rwt && rwt.value != null)) {
@@ -528,7 +581,7 @@
       } else {
         predText += 'metodą RWT (Roche-Wainer-Thissen) wynosi ' + rwtStr + '.';
       }
-      sections.push(predText);
+      secPred = predText;
     }
 
     /* ── 7. Badania laboratoryjne ────────────────────────────────────────── */
@@ -590,12 +643,12 @@
       labParts.push('odchylenia w biochemii krwi');
     }
     if (labParts.length) {
-      sections.push('W badaniach laboratoryjnych przeprowadzonych w szpitalu stwierdzono: ' + labParts.join('; ') + '.');
+      secLabs = 'W badaniach laboratoryjnych przeprowadzonych w szpitalu stwierdzono: ' + labParts.join('; ') + '.';
     }
 
-    /* ── 8. Testy stymulacyjne GH ───────────────────────────────────────── */
+    /* ── Testy stymulacyjne GH (składane w bloku laboratoryjnym) ────────── */
     const ghSectionText = buildGhSection(sa.ghTests, sa.diagnosis);
-    if (ghSectionText) sections.push(ghSectionText);
+    if (ghSectionText) secGh = ghSectionText;
 
     /* ── 9. MRI przysadki ───────────────────────────────────────────────── */
     const mri = sa.mri || {};
@@ -609,10 +662,9 @@
         macroadenoma: 'makrogruczolak przysadki',
         other:        mri.resultOther || 'wynik niestandardowy — wymaga opisu',
       };
-      sections.push(
+      secMri =
         'Badanie MRI okolicy podwzgórzowo‑przysadkowej: ' +
-        (mriMap[mri.result] || (mri.result || 'wynik do uzupełnienia')) + '.'
-      );
+        (mriMap[mri.result] || (mri.result || 'wynik do uzupełnienia')) + '.';
     }
 
     /* ── 10. Badania genetyczne ─────────────────────────────────────────── */
@@ -634,7 +686,7 @@
       genParts.push('badanie w kierunku mutacji SHOX ujemne');
     }
     if (genParts.length) {
-      sections.push('Badania genetyczne: ' + genParts.join('; ') + '.');
+      secGen = 'Badania genetyczne: ' + genParts.join('; ') + '.';
     }
 
     /* ── 10b. Profil otyłości — powikłania metaboliczne ─────────────────── */
@@ -691,7 +743,7 @@
       }
 
       if (obParts.length) {
-        sections.push('Metaboliczne powikłania otyłości: ' + obParts.join('; ') + '.');
+        secObesity = 'Metaboliczne powikłania otyłości: ' + obParts.join('; ') + '.';
       }
     }
 
@@ -706,10 +758,26 @@
       obesity: buildConclusionObesity,
     };
     if (sa.diagnosis && conclusionBuilders[sa.diagnosis]) {
-      sections.push(conclusionBuilders[sa.diagnosis](pd, sa));
+      secConclusion = conclusionBuilders[sa.diagnosis](pd, sa);
     }
 
-    /* ── Złożenie tekstu ────────────────────────────────────────────────── */
+    /* ── Złożenie tekstu w docelowej kolejności epikryzy niskorosłości ──── */
+    const order = [
+      secIntro,       // 1. Powód przyjęcia
+      secDisease,     // 2. Wywiad chorobowy
+      secFamily,      // 3. Wywiad rodzicielski
+      secBirth,       // 4. Wywiad okołoporodowy
+      secExam,        // 5. Badanie przedmiotowe
+      secGrowth,      // 6. Ocena wzrastania
+      secLabs,        // 7. Badania laboratoryjne …
+      secGh,          //    … testy stymulacyjne GH
+      secMri,         //    … MRI przysadki
+      secGen,         //    … badania genetyczne
+      secObesity,     //    … powikłania metaboliczne (profil otyłości)
+      secPred,        // 8. Prognoza wzrostu ostatecznego
+      secConclusion,  // 9. Podsumowanie
+    ];
+    order.forEach(function (x) { if (x) sections.push(x); });
     return { text: sections.join('\n\n'), sections: sections };
   }
 
