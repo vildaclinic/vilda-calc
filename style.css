@@ -804,7 +804,10 @@ header img {
 html, body{
   height:100%;
   -webkit-overflow-scrolling:touch;
-  overscroll-behavior-y:contain;
+  /* Faza 1 nawigacji gestem: contain na OBU osiach. Oś X powstrzymuje poziomą
+     nawigację przez overscroll (Chrome/Android „swipe to go back"), która często
+     powodowała przypadkowe wyjście z PWA. */
+  overscroll-behavior:contain;
   scroll-behavior:smooth;
   /* Ukryj poziomy pasek przewijania – zapobiega przesuwaniu w poziomie na małych urządzeniach */
   overflow-x:hidden;
@@ -7897,6 +7900,47 @@ body.glass-level-4.liquid-ios26 {
  */
 body.js-loading .main-content {
   visibility: hidden;
+}
+
+/*
+ * Auth-gate (anti-flash) — wspólna reguła dla wszystkich podstron.
+ *
+ * Chowa interfejs aplikacji, gdy na <html> jest klasa `vilda-auth-locked`, żeby
+ * przy wylogowaniu (oraz w rzadkim przypadku ekranu logowania nad podstroną)
+ * nie błyskała treść aplikacji. Klasę zakłada/zdejmuje vilda_auth_ui.js:
+ *   • onLock (wylogowanie/idle) → dodaje synchronicznie, zanim ruszy reset i
+ *     nawigacja na index.html (eliminuje po-wylogowaniowy błysk na podstronie),
+ *   • showStartupScreen() → dodaje (ekran logowania nad podstroną),
+ *   • onUnlock / wejście gościa → zdejmuje.
+ *
+ * UWAGA: na podstronach NIE ma synchronicznego skryptu w <head> zakładającego tę
+ * klasę przy braku sesji — podstrony (kalkulatory) są dostępne anonimowo, więc
+ * bramkujemy je TYLKO dynamicznie przy wylogowaniu. Pierwsze malowanie po
+ * (zalogowanym lub anonimowym) wejściu na podstronę nie jest bramkowane.
+ * index.html ma własną kopię tej reguły inline + skrypt w <head> (bramkowanie
+ * przed pierwszym malowaniem, bo to tam pojawia się ekran logowania).
+ *
+ * Nakładka logowania (#vilda-auth-ui-root) i overlay wylogowania
+ * (.vilda-logout-overlay) są spod reguły wyłączone — malują się normalnie.
+ */
+html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overlay) {
+  visibility: hidden !important;
+}
+
+/*
+ * Faza 1 nawigacji gestem — poziome kontenery przewijane.
+ *
+ * Tabele i inne elementy z `overflow-x:auto` mogą być przewijane palcem w poziomie.
+ * Bez `overscroll-behavior-x: contain` dojechanie do końca takiego przewijania
+ * „przecieka" w nawigację strony (swipe-to-back) → przypadkowe wyjście z PWA.
+ * `contain` zatrzymuje łańcuchowanie scrolla na granicy kontenera, nie zmieniając
+ * samego przewijania w obrębie elementu.
+ */
+.table-scroll,
+#intakeResults .intake-results-table-wrap,
+.adult-vitals-mini-table-wrap,
+.nutrition-micros-table-wrap {
+  overscroll-behavior-x: contain;
 }
 
 /* Header na stronie ustawień — sticky globalnie (ios26-v2.css), wyłączany tylko na mobile.
