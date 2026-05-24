@@ -147,7 +147,7 @@ html.vilda-pro-active .pro-sync-note {
 <script src="vilda_vault.js?v=26"></script>
 <script src="vilda_sync.js?v=5"></script>
 <script src="vilda_sync_integration.js?v=3"></script>
-<script src="vilda_auth_ui.js?v=69"></script>
+<script src="vilda_auth_ui.js?v=70"></script>
 <script src="vilda_pro_access.js?v=2"></script>
 <script src="vilda_pro_ui.js?v=2"></script>
 <script src="vilda_file_export.js?v=4"></script>
@@ -950,7 +950,7 @@ html.vilda-pro-active .pro-sync-note {
                     </div>
                     <p class="settings-inline-note settings-backup-note" id="syncCodeStatus"></p>
                     <p class="settings-inline-note" style="margin-top:0.6rem;">
-                      💡 <strong>Kiedy używać:</strong> scenariusz awaryjny — telefon skradziony, komputer uszkodzony, brak pliku kopii w chmurze. Kod + hasło = odtworzenie konta na nowym urządzeniu. Przechowuj oba razem w menedżerze haseł.
+                      💡 <strong>Kiedy używać:</strong> kod + hasło logują Twoje konto na <strong>dowolnym nowym urządzeniu</strong> (nowy telefon, drugi komputer w gabinecie) i pobierają dane z serwera — to nie tylko awaryjne odzyskiwanie. <strong>Warunek:</strong> synchronizacja musi być włączona, bo dane są pobierane z serwera. Kod bez hasła jest bezużyteczny — przechowuj oba razem w menedżerze haseł.
                     </p>
                   </div>
 
@@ -2309,7 +2309,7 @@ html.vilda-pro-active .pro-sync-note {
         const registerRoamingPasskeyTag    = $('registerRoamingPasskeyTag');
         const registerRoamingPasskeyStatus = $('registerRoamingPasskeyStatus');
 
-        // Kod synchronizacji
+        // Zapasowy kod dostępu
         const syncShowCodeBtn     = $('syncShowCodeBtn');
         const syncCodePanel       = $('syncCodePanel');
         const syncCodePwInput     = $('syncCodePwInput');
@@ -2811,7 +2811,7 @@ html.vilda-pro-active .pro-sync-note {
           });
         }
 
-        // ─── Przycisk: Pokaż kod synchronizacji ────────────────────────────────
+        // ─── Przycisk: Pokaż zapasowy kod dostępu ──────────────────────────────
         if (syncShowCodeBtn) {
           syncShowCodeBtn.addEventListener('click', function () {
             if (!syncCodePanel) return;
