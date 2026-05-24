@@ -242,19 +242,39 @@
   }
 
   /**
+   * Czy main session zawiera dane PACJENTA (a nie tylko poświadczenie lekarza /
+   * przełączniki UI). hasMeaningfulMainSessionData() zwraca true także gdy jedyną
+   * „treścią" jest numer PWZ lekarza (doctor.pwzNumber/isDoctor), tryb wyników
+   * (zscore.resultsMode) czy przełącznik bpDataToggle — to są sygnały „warto
+   * odtworzyć sesję", ale NIE „jest pacjent do zapisania". Dla wskaźnika statusu
+   * odejmujemy te pola, by samo wpisanie PWZ na DocPro (np. przez lekarza PRO,
+   * by odblokować stronę) nie zmieniało ikony z hidden na new_patient.
+   */
+  function hasMeaningfulPatientData(data) {
+    if (!data || typeof global.hasMeaningfulMainSessionData !== 'function') return false;
+    if (!global.hasMeaningfulMainSessionData(data)) return false;
+    var clone;
+    try { clone = JSON.parse(JSON.stringify(data)); } catch (_) { return true; }
+    delete clone.doctor;       // poświadczenie lekarza (PWZ) — nie pacjent
+    delete clone.zscore;       // resultsMode to tryb UI
+    delete clone.bpDataToggle; // przełącznik UI
+    return global.hasMeaningfulMainSessionData(clone);
+  }
+
+  /**
    * Heurystyka „formularz pusty" — page-independent.
-   * Sprawdza kanoniczny main session (sessionStorage) + clcr, a dopiero w
-   * ostateczności bieżący DOM (collectUserData) — bo na podstronach DOM nie ma
-   * pól pacjenta z głównej.
+   * Sprawdza kanoniczny main session (sessionStorage), a dopiero w ostateczności
+   * bieżący DOM (collectUserData) — bo na podstronach DOM nie ma pól pacjenta
+   * z głównej. clcr i poświadczenie lekarza (PWZ) NIE są tu sygnałem „są dane".
    */
   function isFormMostlyEmpty() {
-    // 1) Kanoniczny main session (page-independent).
+    // 1) Kanoniczny main session (page-independent) — tylko dane PACJENTA.
     var P = global.VildaPersistence;
     try {
       if (P && typeof P.readMainSession === 'function'
           && typeof global.hasMeaningfulMainSessionData === 'function') {
         var main = P.readMainSession();
-        if (main && global.hasMeaningfulMainSessionData(main)) return false;
+        if (main && hasMeaningfulPatientData(main)) return false;
       }
     } catch (_) {}
     // 2) clcr (klirens) NIE jest samodzielnym sygnałem „są dane pacjenta".
