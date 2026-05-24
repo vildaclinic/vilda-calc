@@ -206,6 +206,33 @@ html.vilda-pro-inactive:not(.vilda-logged-in) .vilda-pro-gate-banner--login { di
 .vilda-pro-gate-banner--login .vilda-pro-gate-banner__btn:hover { background: #006b73 !important; }
 </style>
 
+<!-- Auth-gate — chowa interfejs aplikacji do czasu rozstrzygnięcia logowania,
+     żeby przed pojawieniem się ekranu logowania (oraz po wylogowaniu) na ułamek
+     sekundy NIE błyskała normalna treść aplikacji. Bliźniaczy wzorzec do PRO-gate
+     powyżej: synchroniczny skrypt w <head>, po CSS, przed renderem <body>.
+     Klasa html.vilda-auth-locked jest dodawana, gdy nie ma sesji vaulta i nie ma
+     trybu gościa; zdejmowana w onUnlock (vilda_auth_ui.js) po autoryzacji.
+     Nakładka logowania (#vilda-auth-ui-root) oraz overlay wylogowania
+     (.vilda-logout-overlay) są spod tej reguły wyłączone, więc malują się
+     normalnie na neutralnym tle. -->
+<style>
+html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overlay) {
+  visibility: hidden !important;
+}
+</style>
+<script>
+(function(){
+  try{
+    var ss = window.sessionStorage;
+    var hasSession = !!(ss && ss.getItem('vilda-vault-session-v2'));
+    var isGuest = !!(ss && ss.getItem('VildaGuestMode') === '1');
+    if(!hasSession && !isGuest){
+      document.documentElement.classList.add('vilda-auth-locked');
+    }
+  }catch(_){ /* brak dostępu do sessionStorage → nie blokujemy, by nie zostawić pustej strony */ }
+})();
+</script>
+
 <script src="vilda_logger.js?v=2"></script>
 <script src="vilda_html.js?v=4"></script>
 <script src="vilda_persistence_adapter.js?v=11"></script>
