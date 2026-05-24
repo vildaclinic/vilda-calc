@@ -5669,8 +5669,12 @@
 
     renderPatientSummary();   // pierwsze ustawienie tekstu kontekstu
 
+    // Bez twardego domyślnego Kortyzolu — pole „Substancja" startuje puste, jeśli
+    // nie ma zapamiętanej (w obrębie sesji) preferencji. Preferencja LAB_CONV_SUBSTANCE
+    // jest czyszczona przy resecie sesji (logowanie/wylogowanie), więc po zalogowaniu
+    // pole jest puste; w trakcie sesji pamięta ostatni wybór przy nawigacji.
     var initialId = readPref(PREF_SUBSTANCE);
-    var initialSubstance = (initialId && Conv.find(initialId)) || Conv.find('cortisol');
+    var initialSubstance = (initialId && Conv.find(initialId)) || null;
     if (initialSubstance) {
       substanceEl.value = initialSubstance.label_pl;
       applySubstance(initialSubstance, initialSubstance.label_pl);
