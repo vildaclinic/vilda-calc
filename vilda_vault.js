@@ -90,6 +90,12 @@
   let storageAdapter = null;
   let masterKey = null;             // CryptoKey (AES-GCM) gdy unlocked
   let masterKeyBytes = null;        // Uint8Array gdy unlocked, null gdy locked
+  // SIS = Sync Identity Secret (Opcja B, pęczek DEK/SIS). Rotowalny sekret
+  // tożsamości synchronizacji, NIEZALEŻNY od materiału szyfrowania danych
+  // (którym pozostaje masterKeyBytes = DEK). Dla istniejących kont migracja
+  // ustawia SIS = kopia mastera, więc slotId/authToken/syncEncKey pozostają
+  // bit-w-bit identyczne (zgodność wsteczna — patrz establishSis()).
+  let sisBytes = null;              // Uint8Array gdy unlocked, null gdy locked
   let currentUserId = null;
   let currentUserLabel = null;
   let lockReason = null;
@@ -671,6 +677,60 @@
     } catch (_) {}
   }
 
+  // ============ SIS (Sync Identity Secret) — Opcja B, pęczek DEK/SIS ============
+  // Ustanawia `sisBytes` po odblokowaniu. Trzy ścieżki:
+  //   • meta ma poprawne `encryptedSisByMaster` → odszyfruj masterKeyem (SIS już istnieje),
+  //   • meta BEZ tego pola (stare konto) lub pole uszkodzone → MIGRACJA: SIS = kopia
+  //     mastera, zapakuj masterKeyem i zapisz w meta (slotId/authToken/syncEncKey
+  //     pozostają IDENTYCZNE, bo deriveSyncMaterialFromBundle({dek:master,sis:master})
+  //     == deriveSyncMaterial(master) — udowodnione w key_bundle_crypto_smoke),
+  //   • brak meta / tryb efemeryczny → SIS = kopia mastera tylko w pamięci, bez zapisu.
+  // Best-effort: jakikolwiek błąd zostawia sisBytes=null, a getSyncMaterial i tak
+  // użyje masterKeyBytes jako SIS (zachowanie identyczne ze stanem sprzed migracji).
+  async function establishSis(opts) {
+    const ephemeral = !!(opts && opts.ephemeral) || _ephemeralMode;
+    if (!masterKey || !masterKeyBytes) { sisBytes = null; return; }
+    try {
+      const C = getCrypto();
+      // Tryb efemeryczny lub brak userId → nie dotykamy adaptera, SIS = master w pamięci.
+      if (ephemeral || !currentUserId) {
+        sisBytes = new Uint8Array(masterKeyBytes);
+        return;
+      }
+      const meta = await getAdapter().getUserMeta(currentUserId);
+      if (!meta) {
+        // Brak meta (np. konto efemeryczne bez persystencji) — SIS = master, bez zapisu.
+        sisBytes = new Uint8Array(masterKeyBytes);
+        return;
+      }
+      const field = meta.encryptedSisByMaster;
+      if (field && typeof field.iv === 'string' && typeof field.data === 'string') {
+        try {
+          const dec = await C.decryptBytes(masterKey, field.iv, field.data);
+          const arr = new Uint8Array(dec);
+          if (arr.length === masterKeyBytes.length) {
+            sisBytes = arr;
+            return;
+          }
+          // Zła długość → traktuj jak uszkodzone, migruj ponownie.
+        } catch (_) { /* uszkodzone pole → migracja poniżej */ }
+      }
+      // MIGRACJA: SIS = kopia mastera (zgodność wsteczna), zapakuj masterKeyem, zapisz.
+      const fresh = new Uint8Array(masterKeyBytes);
+      const wrapped = await C.encryptBytes(masterKey, fresh);
+      meta.encryptedSisByMaster = {
+        iv: C.bytesToBase64(wrapped.iv),
+        data: C.bytesToBase64(wrapped.data)
+      };
+      if (typeof meta.bundleSchemaVersion !== 'number') meta.bundleSchemaVersion = 1;
+      await getAdapter().putUserMeta(currentUserId, meta);
+      sisBytes = fresh;
+    } catch (_) {
+      // Best-effort: zostaw sisBytes=null; getSyncMaterial użyje mastera jako SIS.
+      sisBytes = null;
+    }
+  }
+
   async function tryRestoreSession() {
     try {
       if (!global.sessionStorage || isUnlocked()) return false;
@@ -710,6 +770,7 @@
       currentUserId = blob.userId;
       currentUserLabel = blob.label || (await getAdapter().getRegistryEntry(blob.userId) || {}).label || DEFAULT_LABEL;
       lockReason = null;
+      await establishSis({ ephemeral: ephemeral });
       // Odśwież TTL sesji — każda nawigacja przesuwa expiresAtISO do przodu,
       // więc aktywny użytkownik nie zostanie wylogowany podczas pracy.
       persistSession();
@@ -816,6 +877,7 @@
     currentUserLabel = label;
     lockReason = null;
     zeroBytes(masterBytes);
+    await establishSis();
     persistSession();
     notifyUnlock();
 
@@ -836,6 +898,7 @@
     currentUserLabel = label;
     lockReason = null;
     zeroBytes(rawBytes);
+    await establishSis();
     persistSession();
     notifyUnlock();
   }
@@ -907,6 +970,7 @@
   function lock(reason) {
     zeroBytes(masterKeyBytes);
     masterKeyBytes = null;
+    if (sisBytes) { zeroBytes(sisBytes); sisBytes = null; }
     masterKey = null;
     currentUserId = null;
     currentUserLabel = null;
@@ -996,6 +1060,69 @@
       }
     });
     await getAdapter().putUserMeta(currentUserId, updated);
+    return { recoveryKey: newRecoveryKey };
+  }
+
+  // ============ ROTACJA TOŻSAMOŚCI SYNCHRONIZACJI (Opcja B, Faza 4) ============
+  /**
+   * Rotuje tożsamość synchronizacji ("wyloguj wszystkie urządzenia" — część
+   * LOKALNA). Generuje NOWY SIS i regeneruje klucz odzyskiwania. DEK (= master,
+   * materiał szyfrowania danych) pozostaje BEZ ZMIAN, więc:
+   *   • dane lokalne i blob na serwerze NIE wymagają ponownego szyfrowania
+   *     (syncEncKey wyprowadzany z DEK jest stały),
+   *   • zmienia się slotId/authToken (z nowego SIS) → po skasowaniu starego slotu
+   *     przez koordynatora (VildaSync) inne urządzenia tracą dostęp do sync.
+   *
+   * Regeneracja klucza odzyskiwania to decyzja produktowa: rewokacja unieważnia
+   * także stary klucz odzyskiwania. Hasło pozostaje BEZ ZMIAN (user loguje się dalej
+   * tym samym hasłem). Wymaga hasła jako bramki. NIE dotyka serwera.
+   *
+   * @param {string} password
+   * @returns {Promise<{ recoveryKey: string }>}  — NOWY klucz odzyskiwania
+   */
+  async function rotateSyncIdentity(password) {
+    if (!isUnlocked() || !masterKeyBytes || !masterKey) {
+      throw new Error('VildaVault.rotateSyncIdentity: vault nie jest odblokowany.');
+    }
+    const C = getCrypto();
+    const meta = await getAdapter().getUserMeta(currentUserId);
+    if (!meta) throw new Error('VildaVault.rotateSyncIdentity: brak metadanych użytkownika.');
+    // Bramka bezpieczeństwa: weryfikacja hasła.
+    const pwKey = await C.deriveKey(password, meta.passwordSalt, meta.kdfIterations);
+    try {
+      await C.decryptBytes(pwKey, meta.encryptedMasterByPassword.iv, meta.encryptedMasterByPassword.data);
+    } catch (_) {
+      throw new Error('VildaVault.rotateSyncIdentity: nieprawidłowe hasło.');
+    }
+
+    // Nowy SIS, opakowany masterKeyem (jak w establishSis).
+    const newSis = C.generateMasterKeyBytes();
+    const wrappedSis = await C.encryptBytes(masterKey, newSis);
+
+    // Nowy klucz odzyskiwania (unieważnia stary).
+    const newRecoveryKey = C.generateRecoveryKey();
+    const newRecoverySalt = C.generateSalt();
+    const recWrappingKey = await C.deriveKeyFromRecoveryKey(newRecoveryKey, newRecoverySalt, meta.kdfIterations);
+    const newRecEnc = await C.encryptBytes(recWrappingKey, masterKeyBytes);
+
+    const updated = Object.assign({}, meta, {
+      encryptedSisByMaster: {
+        iv: C.bytesToBase64(wrappedSis.iv),
+        data: C.bytesToBase64(wrappedSis.data)
+      },
+      bundleSchemaVersion: 1,
+      recoverySalt: C.bytesToBase64(newRecoverySalt),
+      encryptedMasterByRecovery: {
+        iv: C.bytesToBase64(newRecEnc.iv),
+        data: C.bytesToBase64(newRecEnc.data)
+      }
+    });
+    await getAdapter().putUserMeta(currentUserId, updated);
+
+    // Przełącz SIS w pamięci (zeruj stary).
+    if (sisBytes) zeroBytes(sisBytes);
+    sisBytes = newSis;
+
     return { recoveryKey: newRecoveryKey };
   }
 
@@ -1759,6 +1886,7 @@
     currentUserLabel = label;
     lockReason = null;
     zeroBytes(sourceMasterBytes);
+    await establishSis();
     persistSession();
     notifyUnlock();
 
@@ -2041,7 +2169,10 @@
       throw new Error('VildaVault.getSyncMaterial: vault nie jest odblokowany.');
     }
     const C = getCrypto();
-    return C.deriveSyncMaterial(masterKeyBytes);
+    // Pęczek DEK/SIS: DEK = masterKeyBytes (materiał danych), SIS = sisBytes
+    // (rotowalna tożsamość sync). Dla kont przed migracją lub gdy SIS się nie
+    // ustanowił, sis = master → wynik IDENTYCZNY z deriveSyncMaterial(master).
+    return C.deriveSyncMaterialFromBundle({ dek: masterKeyBytes, sis: sisBytes || masterKeyBytes });
   }
 
   /**
@@ -2904,7 +3035,10 @@
     } catch (_) {
       throw new Error('VildaVault.exportSyncCode: nieprawidłowe hasło.');
     }
-    return C.encryptSyncCode(masterKeyBytes, password);
+    // Kod v2 niesie PĘCZEK {dek, sis}: DEK = master (materiał danych), SIS =
+    // aktualna tożsamość synchronizacji. Dzięki temu po rotacji nowe urządzenie
+    // odtworzy WŁAŚCIWY slotId (a nie nieaktualny, wyprowadzony z samego mastera).
+    return C.encryptSyncCodeBundle({ dek: masterKeyBytes, sis: sisBytes || masterKeyBytes }, password);
   }
 
   /**
@@ -2929,10 +3063,15 @@
     const C = getCrypto();
     const opts = (options && typeof options === 'object') ? options : {};
 
-    // Odszyfruj masterKeyBytes z kodu synchronizacji
-    let masterBytes;
+    // Odszyfruj PĘCZEK {dek, sis} z kodu synchronizacji (obsługuje vsc1 i vsc2).
+    // DEK = master (materiał danych). SIS = tożsamość synchronizacji — dla kodów
+    // vsc1 (legacy) SIS == master, dla vsc2 może być rotowanym sekretem.
+    let masterBytes;     // = DEK
+    let importedSis;     // = SIS z kodu
     try {
-      masterBytes = await C.decryptSyncCode(syncCode, password);
+      const bundle = await C.decryptSyncCodeBundle(syncCode, password);
+      masterBytes = bundle.dek;
+      importedSis = bundle.sis;
     } catch (e) {
       throw new Error('VildaVault.importSyncCode: ' + (e.message || 'nieprawidłowy kod lub hasło.'));
     }
@@ -2977,6 +3116,23 @@
       restoredFromSyncCode: true
     };
 
+    // Utrwal SIS z kodu OPAKOWANY masterKeyem ZANIM zawołamy adoptMasterBytes.
+    // adoptMasterBytes → establishSis() znajdzie to pole i przyjmie zaimportowany
+    // SIS (zamiast migrować na świeży SIS=master). Dzięki temu po rotacji nowe
+    // urządzenie odtwarza WŁAŚCIWY slotId niesiony przez kod vsc2.
+    try {
+      const importedMasterKey = await C.importMasterKeyFromBytes(masterBytes);
+      const wrappedSis = await C.encryptBytes(importedMasterKey, importedSis);
+      meta.encryptedSisByMaster = {
+        iv:   C.bytesToBase64(wrappedSis.iv),
+        data: C.bytesToBase64(wrappedSis.data)
+      };
+      meta.bundleSchemaVersion = 1;
+    } catch (_) {
+      // Best-effort: jeśli się nie uda, establishSis() zmigruje SIS=master przy
+      // adoptMasterBytes — slotId będzie zgodny wstecznie (poprawny dla kodów vsc1).
+    }
+
     await getAdapter().putUserMeta(userId, meta);
     await getAdapter().putRegistryEntry({
       userId: userId,
@@ -2986,6 +3142,7 @@
     });
 
     await adoptMasterBytes(masterBytes, userId, label);
+    if (importedSis) zeroBytes(importedSis);
     return { userId: userId, label: label, recoveryKey: recoveryKey };
   }
 
@@ -3315,6 +3472,7 @@
     changePassword: changePassword,
     resetPasswordWhileUnlocked: resetPasswordWhileUnlocked,
     regenerateRecoveryKey: regenerateRecoveryKey,
+    rotateSyncIdentity: rotateSyncIdentity,
     removeUser: removeUser,
     listPatients: listPatients,
     savePatient: savePatient,

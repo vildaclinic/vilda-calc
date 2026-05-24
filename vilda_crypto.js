@@ -837,7 +837,17 @@
   //   Kompromitacja kodu bez hasła nie ujawnia danych.
 
   const SYNC_CODE_PREFIX   = 'vsc1';
-  const SYNC_CODE_KDF_ITER = 200000;
+  // Iteracje PBKDF2 dla NOWYCH kodów (vsc3). Wyrównane do logowania (KDF_ITERATIONS=600k):
+  // kod synchronizacji chroni master tak samo jak hasło logowania, więc koszt brute-force
+  // MUSI być co najmniej taki sam. Wcześniej kod używał 200k (3× słabiej) — to była luka.
+  const SYNC_CODE_KDF_ITER        = 600000;
+  // Iteracje kodów LEGACY (vsc1/vsc2) — zachowane WYŁĄCZNIE do odczytu starych kodów.
+  const SYNC_CODE_KDF_ITER_LEGACY = 200000;
+  // Dozwolony zakres iteracji przyjmowany z samoopisującego się kodu vsc3:
+  //   • dolna granica chroni przed osłabieniem KDF przez spreparowany kod,
+  //   • górna granica to anty-DoS (złośliwy kod nie zamrozi urządzenia absurdalną liczbą iteracji).
+  const SYNC_CODE_KDF_ITER_MIN    = 200000;
+  const SYNC_CODE_KDF_ITER_MAX    = 4000000;
   const SYNC_CODE_KDF_HASH = 'SHA-256';
   const SYNC_CODE_SALT_LEN = 16;
 
@@ -860,7 +870,7 @@
       'raw', stringToBytes(password), 'PBKDF2', false, ['deriveKey']
     );
     const wrappingKey = await subtle.deriveKey(
-      { name: 'PBKDF2', hash: SYNC_CODE_KDF_HASH, salt: salt, iterations: SYNC_CODE_KDF_ITER },
+      { name: 'PBKDF2', hash: SYNC_CODE_KDF_HASH, salt: salt, iterations: SYNC_CODE_KDF_ITER_LEGACY },
       pwMaterial,
       { name: 'AES-GCM', length: 256 },
       false,
@@ -903,7 +913,7 @@
       'raw', stringToBytes(password), 'PBKDF2', false, ['deriveKey']
     );
     const wrappingKey = await subtle.deriveKey(
-      { name: 'PBKDF2', hash: SYNC_CODE_KDF_HASH, salt: salt, iterations: SYNC_CODE_KDF_ITER },
+      { name: 'PBKDF2', hash: SYNC_CODE_KDF_HASH, salt: salt, iterations: SYNC_CODE_KDF_ITER_LEGACY },
       pwMaterial,
       { name: 'AES-GCM', length: 256 },
       false,
@@ -920,6 +930,136 @@
       throw new Error('VildaCrypto.decryptSyncCode: kod zawiera nieprawidłowe dane.');
     }
     return masterBytes;
+  }
+
+  // ─── Kod synchronizacji v3 — pęczek {dek,sis} + samoopisujący się KDF ────────
+  //
+  // Format: "vsc3.{iter}.{salt_b64url}.{iv_b64url}.{cipher_b64url}"
+  //   iter   — liczba iteracji PBKDF2 (dziesiętnie) użyta do wyprowadzenia klucza,
+  //   cipher = AES-256-GCM(PBKDF2-SHA256(password, salt, iter), bundleToBytes({dek,sis}))
+  //            payload = DEK(32) || SIS(32) = 64 bajty.
+  //
+  // HARTOWANIE (względem vsc1/vsc2): iteracje podniesione z 200k do 600k — tyle samo co
+  // przy logowaniu (KDF_ITERATIONS). Kod synchronizacji chroni master tak samo jak hasło
+  // logowania, więc koszt brute-force MUSI być co najmniej taki sam. Liczba iteracji jest
+  // WPISANA w kod (samoopisująco), więc przyszłe podniesienie progu nie unieważnia starych
+  // kodów, a import zna właściwy koszt. Przy dekodowaniu iteracje są walidowane do
+  // [SYNC_CODE_KDF_ITER_MIN, SYNC_CODE_KDF_ITER_MAX] (anty-DoS + ochrona przed osłabieniem KDF).
+  //
+  // ZGODNOŚĆ WSTECZNA: decryptSyncCodeBundle czyta też vsc2 (pęczek, 200k) oraz vsc1
+  // (sam master, 200k → {dek:master, sis:kopia mastera}; deriveSyncMaterialFromBundle
+  // ({dek:m,sis:m}) == deriveSyncMaterial(m), więc slotId identyczny jak przed pęczkiem).
+  //
+  // MODEL ZAGROŻEŃ: bezpieczeństwo kodu opiera się na ENTROPII HASŁA — sam ciąg kodu to
+  // tylko szyfrogram+sól+iv, bez dodatkowego sekretu. PBKDF2 spowalnia brute-force, ale nie
+  // zastąpi mocnego hasła; UI powinno zachęcać do silnego hasła do konta.
+
+  const SYNC_CODE_PREFIX_V2 = 'vsc2';
+  const SYNC_CODE_PREFIX_V3 = 'vsc3';
+
+  // Wyprowadza klucz opakowujący kod synchronizacji (AES-GCM-256) z hasła.
+  async function deriveSyncCodeWrappingKey(password, salt, iterations, usage) {
+    const subtle = getCryptoSubtle();
+    const pwMaterial = await subtle.importKey('raw', stringToBytes(password), 'PBKDF2', false, ['deriveKey']);
+    return subtle.deriveKey(
+      { name: 'PBKDF2', hash: SYNC_CODE_KDF_HASH, salt: salt, iterations: iterations },
+      pwMaterial,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      [usage]
+    );
+  }
+
+  /**
+   * Szyfruje pęczek {dek, sis} hasłem i zwraca przenośny kod synchronizacji v3
+   * (hartowany: 600k iteracji PBKDF2, liczba iteracji wpisana w kod).
+   * @param {{dek:Uint8Array, sis:Uint8Array}} bundle  — DEK(32) + SIS(32)
+   * @param {string} password  — hasło użytkownika (do ochrony kodu)
+   * @returns {Promise<string>}  — kod "vsc3.iter.salt.iv.cipher"
+   */
+  async function encryptSyncCodeBundle(bundle, password) {
+    const subtle = getCryptoSubtle();
+    const payload = bundleToBytes(bundle); // waliduje rozmiary dek/sis; 64 B
+    const salt = crypto.getRandomValues(new Uint8Array(SYNC_CODE_SALT_LEN));
+    const iv   = crypto.getRandomValues(new Uint8Array(12));
+    const iter = SYNC_CODE_KDF_ITER;
+    const wrappingKey = await deriveSyncCodeWrappingKey(password, salt, iter, 'encrypt');
+    const cipherBuf = await subtle.encrypt({ name: 'AES-GCM', iv: iv }, wrappingKey, payload);
+    return [
+      SYNC_CODE_PREFIX_V3,
+      String(iter),
+      bytesToBase64url(salt),
+      bytesToBase64url(iv),
+      bytesToBase64url(new Uint8Array(cipherBuf))
+    ].join('.');
+  }
+
+  /**
+   * Deszyfruje kod synchronizacji do pęczka {dek, sis}. Obsługuje formaty:
+   *   • vsc3 → samoopisujący się (iter wpisany), 64-bajtowy pęczek,
+   *   • vsc2 → pęczek 64 B, iteracje LEGACY (200k),
+   *   • vsc1 → 32-bajtowy master, iteracje LEGACY → { dek: master, sis: kopia mastera }.
+   * @param {string} syncCode
+   * @param {string} password
+   * @returns {Promise<{dek:Uint8Array, sis:Uint8Array}>}
+   */
+  async function decryptSyncCodeBundle(syncCode, password) {
+    const subtle = getCryptoSubtle();
+    if (typeof syncCode !== 'string') {
+      throw new Error('VildaCrypto.decryptSyncCodeBundle: kod synchronizacji musi być tekstem.');
+    }
+    const parts = syncCode.trim().split('.');
+    const prefix = parts[0];
+    let iter, saltP, ivP, cipherP, expectBundle;
+    if (prefix === SYNC_CODE_PREFIX_V3) {
+      if (parts.length !== 5) {
+        throw new Error('VildaCrypto.decryptSyncCodeBundle: nieprawidłowy format kodu vsc3.');
+      }
+      iter = parseInt(parts[1], 10);
+      if (!isFinite(iter) || iter < SYNC_CODE_KDF_ITER_MIN || iter > SYNC_CODE_KDF_ITER_MAX) {
+        throw new Error('VildaCrypto.decryptSyncCodeBundle: liczba iteracji kodu poza dozwolonym zakresem.');
+      }
+      saltP = parts[2]; ivP = parts[3]; cipherP = parts[4]; expectBundle = true;
+    } else if (prefix === SYNC_CODE_PREFIX_V2) {
+      if (parts.length !== 4) {
+        throw new Error('VildaCrypto.decryptSyncCodeBundle: nieprawidłowy format kodu vsc2.');
+      }
+      iter = SYNC_CODE_KDF_ITER_LEGACY; saltP = parts[1]; ivP = parts[2]; cipherP = parts[3]; expectBundle = true;
+    } else if (prefix === SYNC_CODE_PREFIX) {
+      if (parts.length !== 4) {
+        throw new Error('VildaCrypto.decryptSyncCodeBundle: nieprawidłowy format kodu vsc1.');
+      }
+      iter = SYNC_CODE_KDF_ITER_LEGACY; saltP = parts[1]; ivP = parts[2]; cipherP = parts[3]; expectBundle = false;
+    } else {
+      throw new Error('VildaCrypto.decryptSyncCodeBundle: nieprawidłowy format kodu. Upewnij się że kopiujesz pełny kod zaczynający się od "vsc1.", "vsc2." lub "vsc3."');
+    }
+    let salt, iv, cipherBytes;
+    try {
+      salt        = base64urlToBytes(saltP);
+      iv          = base64urlToBytes(ivP);
+      cipherBytes = base64urlToBytes(cipherP);
+    } catch (_) {
+      throw new Error('VildaCrypto.decryptSyncCodeBundle: błąd dekodowania kodu synchronizacji.');
+    }
+    const wrappingKey = await deriveSyncCodeWrappingKey(password, salt, iter, 'decrypt');
+    let plain;
+    try {
+      const plainBuf = await subtle.decrypt({ name: 'AES-GCM', iv: iv }, wrappingKey, cipherBytes);
+      plain = new Uint8Array(plainBuf);
+    } catch (_) {
+      throw new Error('VildaCrypto.decryptSyncCodeBundle: nieprawidłowe hasło lub uszkodzony kod synchronizacji.');
+    }
+    if (expectBundle) {
+      if (plain.length !== KEY_BUNDLE_BYTES) {
+        throw new Error('VildaCrypto.decryptSyncCodeBundle: kod zawiera nieprawidłowe dane (pęczek).');
+      }
+      return bundleFromBytes(plain);
+    }
+    // vsc1 (legacy): payload to sam master → DEK=SIS=master (zgodność wsteczna).
+    if (plain.length !== MASTER_KEY_BYTES) {
+      throw new Error('VildaCrypto.decryptSyncCodeBundle: kod v1 zawiera nieprawidłowe dane.');
+    }
+    return { dek: new Uint8Array(plain), sis: new Uint8Array(plain) };
   }
 
   // ============ QR TRANSFER — ECDH P-256 ============
@@ -1237,6 +1377,109 @@
     return { slotId, authToken, authTokenHash, syncEncKey };
   }
 
+  // ============ PĘCZEK KLUCZY (Opcja B — rozdzielenie DEK / SIS) ============
+  //
+  // Cel architektoniczny: rozdzielić jeden „master" na:
+  //   • DEK (Data Encryption Key) — szyfruje dane (lokalnie + blob sync). STAŁY.
+  //   • SIS (Sync Identity Secret) — wyprowadza slotId/authToken. ROTOWALNY.
+  // Pęczek = { dek: 32 B, sis: 32 B } (łącznie 64 B). Przy migracji istniejących
+  // kont ustawiamy dek = sis = dotychczasowy master → identyczne wyjścia (zero
+  // przeszyfrowania, zero migracji slotu). Rotacja zmienia tylko SIS → nowy slot,
+  // dane (DEK) nietknięte.
+  //
+  // KLUCZOWA GWARANCJA ZGODNOŚCI WSTECZNEJ:
+  //   deriveSyncIdentity(master) == { slotId, authToken, authTokenHash } z
+  //   deriveSyncMaterial(master), a deriveBlobKey(master) daje ten sam materiał
+  //   klucza co deriveSyncMaterial(master).syncEncKey — bo używają tych samych
+  //   stałych SYNC_HKDF_SALT_STR / SYNC_INFO_*.
+  const KEY_BUNDLE_BYTES = MASTER_KEY_BYTES * 2; // DEK(32) || SIS(32) = 64
+
+  function bytesToHexLocal(bytes) {
+    let hex = '';
+    for (let i = 0; i < bytes.length; i += 1) {
+      const b = bytes[i].toString(16);
+      hex += b.length === 1 ? '0' + b : b;
+    }
+    return hex;
+  }
+
+  function bundleToBytes(bundle) {
+    if (!bundle || !(bundle.dek instanceof Uint8Array) || !(bundle.sis instanceof Uint8Array) ||
+        bundle.dek.length !== MASTER_KEY_BYTES || bundle.sis.length !== MASTER_KEY_BYTES) {
+      throw new Error('VildaCrypto.bundleToBytes: pęczek musi mieć dek(' + MASTER_KEY_BYTES + ')+sis(' + MASTER_KEY_BYTES + ').');
+    }
+    const out = new Uint8Array(KEY_BUNDLE_BYTES);
+    out.set(bundle.dek, 0);
+    out.set(bundle.sis, MASTER_KEY_BYTES);
+    return out;
+  }
+
+  function bundleFromBytes(bytes) {
+    const view = (bytes instanceof Uint8Array) ? bytes : new Uint8Array(bytes);
+    if (view.length !== KEY_BUNDLE_BYTES) {
+      throw new Error('VildaCrypto.bundleFromBytes: oczekiwano ' + KEY_BUNDLE_BYTES + ' bajtów (otrzymano ' + view.length + ').');
+    }
+    return { dek: view.slice(0, MASTER_KEY_BYTES), sis: view.slice(MASTER_KEY_BYTES) };
+  }
+
+  function generateKeyBundle() {
+    return { dek: generateMasterKeyBytes(), sis: generateMasterKeyBytes() };
+  }
+
+  // slotId/authToken/authTokenHash z SIS (te same parametry HKDF co deriveSyncMaterial).
+  async function deriveSyncIdentity(sisBytes) {
+    const view = (sisBytes instanceof Uint8Array) ? sisBytes : new Uint8Array(sisBytes);
+    if (view.length !== MASTER_KEY_BYTES) {
+      throw new Error('VildaCrypto.deriveSyncIdentity: SIS musi mieć ' + MASTER_KEY_BYTES + ' bajtów (otrzymano ' + view.length + ').');
+    }
+    const subtle = getCryptoSubtle();
+    const hkdfKey = await subtle.importKey('raw', view, { name: 'HKDF' }, false, ['deriveBits']);
+    const salt = stringToBytes(SYNC_HKDF_SALT_STR);
+    const slotIdBits = await subtle.deriveBits(
+      { name: 'HKDF', hash: 'SHA-256', salt: salt, info: stringToBytes(SYNC_INFO_SLOT_ID_STR) }, hkdfKey, 256);
+    const slotId = bytesToHexLocal(new Uint8Array(slotIdBits));
+    const authBits = await subtle.deriveBits(
+      { name: 'HKDF', hash: 'SHA-256', salt: salt, info: stringToBytes(SYNC_INFO_AUTH_STR) }, hkdfKey, 256);
+    const authToken = bytesToBase64url(new Uint8Array(authBits));
+    const hashBuf = await subtle.digest('SHA-256', stringToBytes(authToken));
+    const authTokenHash = bytesToHexLocal(new Uint8Array(hashBuf));
+    return { slotId: slotId, authToken: authToken, authTokenHash: authTokenHash };
+  }
+
+  // syncEncKey (AES-GCM, non-extractable) z DEK (ten sam parametr HKDF co deriveSyncMaterial).
+  async function deriveBlobKey(dekBytes) {
+    const view = (dekBytes instanceof Uint8Array) ? dekBytes : new Uint8Array(dekBytes);
+    if (view.length !== MASTER_KEY_BYTES) {
+      throw new Error('VildaCrypto.deriveBlobKey: DEK musi mieć ' + MASTER_KEY_BYTES + ' bajtów (otrzymano ' + view.length + ').');
+    }
+    const subtle = getCryptoSubtle();
+    const hkdfKey = await subtle.importKey('raw', view, { name: 'HKDF' }, false, ['deriveKey']);
+    const salt = stringToBytes(SYNC_HKDF_SALT_STR);
+    return subtle.deriveKey(
+      { name: 'HKDF', hash: 'SHA-256', salt: salt, info: stringToBytes(SYNC_INFO_BLOB_ENC_STR) },
+      hkdfKey, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  }
+
+  // Pełny materiał sync z pęczka: tożsamość z SIS, klucz bloba z DEK.
+  async function deriveSyncMaterialFromBundle(bundle) {
+    if (!bundle || !(bundle.dek instanceof Uint8Array) || !(bundle.sis instanceof Uint8Array)) {
+      throw new Error('VildaCrypto.deriveSyncMaterialFromBundle: nieprawidłowy pęczek.');
+    }
+    const id = await deriveSyncIdentity(bundle.sis);
+    const syncEncKey = await deriveBlobKey(bundle.dek);
+    return { slotId: id.slotId, authToken: id.authToken, authTokenHash: id.authTokenHash, syncEncKey: syncEncKey };
+  }
+
+  // Opakowanie/odpakowanie pęczka kluczem KEK (AES-GCM CryptoKey). Cienkie wrappery
+  // na encryptBytes/decryptBytes — pęczek jest serializowany do 64 B.
+  async function wrapBundle(kekKey, bundle) {
+    return encryptBytes(kekKey, bundleToBytes(bundle)); // { iv, data }
+  }
+  async function unwrapBundle(kekKey, iv, data) {
+    const bytes = await decryptBytes(kekKey, iv, data);
+    return bundleFromBytes(bytes);
+  }
+
   // ============ EKSPORT API ============
   const api = {
     __vildaCrypto: true,
@@ -1262,6 +1505,15 @@
     generateIv: generateIv,
     generateMasterKeyBytes: generateMasterKeyBytes,
     importMasterKeyFromBytes: importMasterKeyFromBytes,
+    KEY_BUNDLE_BYTES: KEY_BUNDLE_BYTES,
+    bundleToBytes: bundleToBytes,
+    bundleFromBytes: bundleFromBytes,
+    generateKeyBundle: generateKeyBundle,
+    deriveSyncIdentity: deriveSyncIdentity,
+    deriveBlobKey: deriveBlobKey,
+    deriveSyncMaterialFromBundle: deriveSyncMaterialFromBundle,
+    wrapBundle: wrapBundle,
+    unwrapBundle: unwrapBundle,
     generateRecoveryKey: generateRecoveryKey,
     normalizeRecoveryKey: normalizeRecoveryKey,
     isValidRecoveryKeyShape: isValidRecoveryKeyShape,
@@ -1298,6 +1550,8 @@
     // Kod synchronizacji (cross-device restore bez pliku .wiw)
     encryptSyncCode: encryptSyncCode,
     decryptSyncCode: decryptSyncCode,
+    encryptSyncCodeBundle: encryptSyncCodeBundle,
+    decryptSyncCodeBundle: decryptSyncCodeBundle,
     // QR Transfer — ECDH P-256 key exchange
     generateECDHKeypair:    generateECDHKeypair,
     exportECDHPrivateKey:   exportECDHPrivateKey,

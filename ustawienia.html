@@ -143,9 +143,9 @@ html.vilda-pro-active .pro-sync-note {
 <script src="vilda_persistence_adapter.js?v=11"></script>
 <script src="vilda_session_bridge.js?v=1"></script>
 <script src="vilda_init.js?v=4"></script>
-<script src="vilda_crypto.js?v=9"></script>
-<script src="vilda_vault.js?v=25"></script>
-<script src="vilda_sync.js?v=4"></script>
+<script src="vilda_crypto.js?v=11"></script>
+<script src="vilda_vault.js?v=26"></script>
+<script src="vilda_sync.js?v=5"></script>
 <script src="vilda_sync_integration.js?v=3"></script>
 <script src="vilda_auth_ui.js?v=69"></script>
 <script src="vilda_pro_access.js?v=2"></script>
@@ -1051,6 +1051,25 @@ html.vilda-pro-active .pro-sync-note {
                     </div>
                     <div id="regenRecoveryResult" style="display:none; margin-top:10px; padding:14px; background:#f5fafb; border:2px dashed #b0d4d8; border-radius:12px; font-family:'SF Mono',Menlo,Consolas,monospace; font-size:16px; letter-spacing:0.08em; color:#00838d; font-weight:600; text-align:center; user-select:all; word-break:break-all;"></div>
                     <p class="settings-inline-note" id="regenRecoveryStatus" style="margin-top:10px;">&nbsp;</p>
+                  </div>
+
+                  <div class="settings-control-card" id="revokeDevicesCard">
+                    <div class="settings-control-header">
+                      <h3 class="settings-control-title">Wyloguj wszystkie urządzenia</h3>
+                      <span class="settings-tag">Bezpieczeństwo</span>
+                    </div>
+                    <p class="settings-control-desc">
+                      Rotuje tożsamość synchronizacji: inne urządzenia tracą dostęp do synchronizacji, a stary klucz odzyskiwania
+                      przestaje działać. Twoje dane i hasło pozostają bez zmian. Otrzymasz NOWY klucz odzyskiwania — zapisz go.
+                    </p>
+                    <input type="password" id="revokeDevicesPwInput" class="vilda-auth-input" placeholder="Hasło do konta" autocomplete="current-password" style="margin-bottom:8px;">
+                    <div class="settings-card-toggle-row" style="gap:10px; flex-wrap:wrap;">
+                      <button type="button" id="revokeDevicesBtn" class="vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small" style="min-width:200px;">
+                        Wyloguj wszystkie urządzenia
+                      </button>
+                    </div>
+                    <div id="revokeDevicesResult" style="display:none; margin-top:10px; padding:14px; background:#f5fafb; border:2px dashed #b0d4d8; border-radius:12px; font-family:'SF Mono',Menlo,Consolas,monospace; font-size:16px; letter-spacing:0.08em; color:#00838d; font-weight:600; text-align:center; user-select:all; word-break:break-all;"></div>
+                    <p class="settings-inline-note" id="revokeDevicesStatus" style="margin-top:10px;">&nbsp;</p>
                   </div>
 
                   <div class="settings-control-card" id="passkeyCard">
@@ -2909,6 +2928,10 @@ html.vilda-pro-active .pro-sync-note {
       const regenRecoveryBtn = $('regenRecoveryBtn');
       const regenRecoveryResult = $('regenRecoveryResult');
       const regenRecoveryStatus = $('regenRecoveryStatus');
+      const revokeDevicesBtn = $('revokeDevicesBtn');
+      const revokeDevicesPwInput = $('revokeDevicesPwInput');
+      const revokeDevicesResult = $('revokeDevicesResult');
+      const revokeDevicesStatus = $('revokeDevicesStatus');
       const removeUserPwInput = $('removeUserPwInput');
       const removeUserBtn = $('removeUserBtn');
       const removeUserStatus = $('removeUserStatus');
@@ -2969,6 +2992,45 @@ html.vilda-pro-active .pro-sync-note {
             setText(regenRecoveryStatus, 'Nie udało się wygenerować klucza: ' + (e && e.message ? e.message : e));
           } finally {
             regenRecoveryBtn.disabled = false;
+          }
+        });
+      }
+
+      if (revokeDevicesBtn) {
+        revokeDevicesBtn.addEventListener('click', async function () {
+          const V = window.VildaVault;
+          const S = window.VildaSync;
+          if (!V || !V.isUnlocked()) { setText(revokeDevicesStatus, 'Zaloguj się przed tą operacją.'); return; }
+          if (!S || typeof S.revokeAllDevices !== 'function') {
+            setText(revokeDevicesStatus, '⚠ Moduł synchronizacji nie obsługuje tej funkcji.');
+            return;
+          }
+          const pw = revokeDevicesPwInput ? revokeDevicesPwInput.value : '';
+          if (!pw) { setText(revokeDevicesStatus, 'Wpisz hasło, aby potwierdzić.'); if (revokeDevicesPwInput) revokeDevicesPwInput.focus(); return; }
+          if (!confirm('Wylogować wszystkie urządzenia? Inne urządzenia stracą dostęp do synchronizacji, a stary klucz odzyskiwania przestanie działać. Otrzymasz nowy klucz odzyskiwania.')) return;
+          revokeDevicesBtn.disabled = true;
+          const orig = revokeDevicesBtn.textContent;
+          revokeDevicesBtn.textContent = 'Wykonuję…';
+          revokeDevicesResult.style.display = 'none';
+          setText(revokeDevicesStatus, 'Rotuję tożsamość synchronizacji…');
+          try {
+            const r = await S.revokeAllDevices(pw);
+            revokeDevicesResult.textContent = r.recoveryKey;
+            revokeDevicesResult.style.display = 'block';
+            const revokedNote = r.oldSlotRevoked
+              ? 'Stary slot synchronizacji został skasowany.'
+              : 'Stary slot nie został skasowany (brak sieci?) — powtórz operację później, by go usunąć.';
+            setText(revokeDevicesStatus, '✓ Gotowe. ' + revokedNote + ' Zapisz NOWY klucz odzyskiwania powyżej — stary już nie działa.');
+            if (revokeDevicesPwInput) revokeDevicesPwInput.value = '';
+          } catch (e) {
+            const msg = e && e.message ? e.message : String(e);
+            const friendly = msg.toLowerCase().includes('nieprawidłow') || msg.toLowerCase().includes('hasło')
+              ? '⚠ Nieprawidłowe hasło.'
+              : '⚠ Nie udało się: ' + msg;
+            setText(revokeDevicesStatus, friendly);
+          } finally {
+            revokeDevicesBtn.disabled = false;
+            revokeDevicesBtn.textContent = orig;
           }
         });
       }
