@@ -5679,7 +5679,10 @@
       substanceEl.value = initialSubstance.label_pl;
       applySubstance(initialSubstance, initialSubstance.label_pl);
     } else {
-      renderSubstanceHint(null, '');
+      // Brak zapamiętanej preferencji → pole startuje puste (jawnie zerujemy,
+      // bez polegania na pustym stanie markupu).
+      substanceEl.value = '';
+      applySubstance(null, '');
     }
     updateSubstanceClearVisibility();    // Faza 18-fix4 — pokaż X jeśli już jest wartość
 
@@ -6048,6 +6051,25 @@
       if (overrideAgeMonthsEl) overrideAgeMonthsEl.value = '';
       if (overrideCycleEl) overrideCycleEl.value = '';
       if (overrideTannerEl) overrideTannerEl.value = '';
+      // Świeża sesja = puste formularze. Pole „Substancja" mogło zostać
+      // wypełnione przy inicjalizacji podstrony ze starej preferencji
+      // LAB_CONV_SUBSTANCE (gdy user logował się będąc już na przeliczniku,
+      // init zdążył odczytać preferencję, zanim reset ją wyczyścił). Reset sesji
+      // czyści preferencję, ale nie tknie już wpisanej wartości w polu — dlatego
+      // tutaj jawnie zerujemy selektor substancji do stanu startowego.
+      try {
+        if (valueEl) valueEl.value = '';
+        if (substanceEl) substanceEl.value = '';
+        if (measTimeEl) measTimeEl.value = '';
+        if (measProtocolEl) measProtocolEl.value = '';
+        if (measMethodEl) measMethodEl.value = '';
+        measurementCtx = { time_of_day: null, test_protocol: null, method: null };
+        userSelectedTargetUnit = null;
+        showError('');
+        applySubstance(null, '');
+        if (typeof updateSubstanceClearVisibility === 'function') updateSubstanceClearVisibility();
+        if (typeof closeSubstanceDropdown === 'function') closeSubstanceDropdown();
+      } catch (_) { /* noop */ }
       refreshPatientContext();
     });
 
