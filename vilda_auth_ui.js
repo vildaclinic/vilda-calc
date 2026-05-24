@@ -251,6 +251,19 @@
     } catch (e) {
       logError('resetAppSessionState (' + (reason || '') + ')', e);
     }
+    // Selektor „Substancja" w przeliczniku jednostek to PREFERENCJA urządzenia
+    // (LAB_CONV_SUBSTANCE) — clearAllData jej NIE czyści (preferencje są celowo
+    // zachowywane). Przy resecie sesji (logowanie, wylogowanie, gość, ekran startowy)
+    // czyścimy ją, aby po zalogowaniu pole „Substancja" startowało puste, zgodnie
+    // z zasadą „świeża sesja = puste formularze". W trakcie sesji (nawigacja między
+    // podstronami) resetAppSessionState NIE jest wołane, więc wybór jest pamiętany.
+    try {
+      if (global.VildaPersistence && typeof global.VildaPersistence.writePreferenceRaw === 'function') {
+        global.VildaPersistence.writePreferenceRaw('LAB_CONV_SUBSTANCE', '');
+      }
+    } catch (e2) {
+      logError('resetAppSessionState:lab-conv-substance (' + (reason || '') + ')', e2);
+    }
     // BEZPIECZEŃSTWO DANYCH: natychmiast wyczyść mini-summary w decor-sidebarze.
     // clearAllData() czyści pola formularza synchronicznie, ale odświeżenie
     // mini-summary (updateMiniSummary) dzieje się asynchronicznie przez setTimeout
