@@ -531,6 +531,11 @@
   display: flex;
 }
 .chrome-drawer[hidden] { display: none; }
+/* Drawer mobilny — płynne otwieranie/zamykanie sterowane klasą
+   `body.chrome-drawer-open` (dodawaną/zdejmowaną w vilda_chrome.js).
+   Stan domyślny = zamknięty (panel poza ekranem po lewej, tło przezroczyste);
+   po dodaniu klasy panel wjeżdża, a tło się rozjaśnia. Przy zamykaniu animacja
+   leci w drugą stronę, a element jest chowany (display:none) dopiero po jej końcu. */
 .chrome-drawer-backdrop {
   position: absolute;
   inset: 0;
@@ -538,7 +543,8 @@
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
   cursor: pointer;
-  animation: chromeFadeIn 0.18s ease;
+  opacity: 0;
+  transition: opacity 0.26s ease;
 }
 .chrome-drawer-panel {
   position: relative;
@@ -549,10 +555,20 @@
   display: flex;
   flex-direction: column;
   box-shadow: 4px 0 24px rgba(0, 50, 60, 0.18);
-  animation: chromeSlideIn 0.22s ease;
+  transform: translateX(-100%);
+  transition: transform 0.28s cubic-bezier(.4, 0, .2, 1);
+  will-change: transform;
 }
-@keyframes chromeFadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes chromeSlideIn { from { transform: translateX(-12px); opacity: 0; } to { transform: none; opacity: 1; } }
+body.chrome-drawer-open .chrome-drawer-backdrop { opacity: 1; }
+body.chrome-drawer-open .chrome-drawer-panel { transform: none; }
+
+/* Redukcja ruchu: bez animacji — drawer pojawia się/znika natychmiast. */
+@media (prefers-reduced-motion: reduce) {
+  .chrome-drawer-backdrop,
+  .chrome-drawer-panel {
+    transition: none;
+  }
+}
 
 .chrome-drawer-head {
   display: flex;

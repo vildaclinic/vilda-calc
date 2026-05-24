@@ -805,16 +805,31 @@
   }
 
   function openDrawer(drawer) {
+    // Anuluj ewentualne odroczone ukrycie z poprzedniego zamykania (szybkie toggle).
+    if (drawer.__vildaCloseTimer) { clearTimeout(drawer.__vildaCloseTimer); drawer.__vildaCloseTimer = null; }
     drawer.hidden = false;
     drawer.setAttribute('aria-hidden', 'false');
+    // Wymuś przeliczenie układu w stanie zamkniętym (panel poza ekranem) ZANIM
+    // dodamy klasę otwarcia — inaczej przeglądarka „połknie" przejście i panel
+    // pojawi się skokowo zamiast wjechać.
+    try { void drawer.offsetWidth; } catch (_) {}
     doc.body.classList.add('chrome-drawer-open');
     safeCreateIcons(drawer);
   }
 
   function closeDrawer(drawer) {
-    drawer.hidden = true;
     drawer.setAttribute('aria-hidden', 'true');
     doc.body.classList.remove('chrome-drawer-open');
+    // Element chowamy (display:none) dopiero PO animacji zamykania, żeby panel
+    // zdążył wyjechać, a tło się wygasić. Przy redukcji ruchu — natychmiast.
+    if (drawer.__vildaCloseTimer) { clearTimeout(drawer.__vildaCloseTimer); }
+    var reduce = false;
+    try { reduce = !!(global.matchMedia && global.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (_) {}
+    drawer.__vildaCloseTimer = setTimeout(function () {
+      drawer.__vildaCloseTimer = null;
+      // Tylko jeśli w międzyczasie nie otwarto ponownie.
+      if (!doc.body.classList.contains('chrome-drawer-open')) drawer.hidden = true;
+    }, reduce ? 0 : 320);
   }
 
   // ============ POPOVER LEGENDA STATUSU ZAPISU ============
