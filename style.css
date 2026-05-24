@@ -7956,12 +7956,36 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
  */
 @view-transition { navigation: auto; }
 
-/* Subtelny cross-fade. Tylko gdy użytkownik nie prosił o redukcję ruchu. */
+/* Subtelny cross-fade — domyślny dla nawigacji bez kierunku (klik w menu, wstecz).
+   Tylko gdy użytkownik nie prosił o redukcję ruchu. */
 @media (prefers-reduced-motion: no-preference) {
   ::view-transition-old(root),
   ::view-transition-new(root) {
     animation-duration: 220ms;
     animation-timing-function: cubic-bezier(.4, 0, .2, 1);
+  }
+}
+
+/* Krok 3 — kierunkowy slide dla nawigacji swipe. Typ vilda-forward/back ustawia
+   vilda_chrome.js (pageswap/pagereveal) na podstawie kierunku gestu. Gdy typu brak,
+   obowiązuje cross-fade powyżej. */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes vilda-vt-out-left  { to   { transform: translateX(-100%); } }
+  @keyframes vilda-vt-in-right  { from { transform: translateX(100%);  } }
+  @keyframes vilda-vt-out-right { to   { transform: translateX(100%);  } }
+  @keyframes vilda-vt-in-left   { from { transform: translateX(-100%); } }
+
+  :root:active-view-transition-type(vilda-forward)::view-transition-old(root) {
+    animation: 260ms cubic-bezier(.4, 0, .2, 1) both vilda-vt-out-left;
+  }
+  :root:active-view-transition-type(vilda-forward)::view-transition-new(root) {
+    animation: 260ms cubic-bezier(.4, 0, .2, 1) both vilda-vt-in-right;
+  }
+  :root:active-view-transition-type(vilda-back)::view-transition-old(root) {
+    animation: 260ms cubic-bezier(.4, 0, .2, 1) both vilda-vt-out-right;
+  }
+  :root:active-view-transition-type(vilda-back)::view-transition-new(root) {
+    animation: 260ms cubic-bezier(.4, 0, .2, 1) both vilda-vt-in-left;
   }
 }
 

@@ -96,26 +96,63 @@
   var doc = global.document;
   if (!doc) return;
 
-  // ============ VIEW TRANSITIONS — most do treści (Opcja 1, Krok 2) ============
-  // pagereveal odpala się na WCHODZĄCEJ stronie tuż przed pierwszym malowaniem.
-  // Ten plik ładuje się synchronicznie w <head>, więc listener zdąży się zarejestrować.
-  // Cel: gdy trwa cross-document View Transition, „zdjęcie" nowej strony nie może być
-  // puste — .main-content bywa jeszcze ukryte przez klasę `js-loading`. Odsłaniamy je
-  // na czas zdjęcia. Gdy aktywny jest auth-gate (ekran logowania), pomijamy animację,
-  // żeby nie animować wjazdu w pustą/zalogowania stronę. Bez aktywnej VT (np. pierwsze
-  // wejście) handler nic nie robi — `js-loading` działa jak dotąd.
+  // ============ VIEW TRANSITIONS (Opcja 1, Kroki 2–3) ============
+  // pageswap odpala się na WYCHODZĄCEJ stronie, pagereveal na WCHODZĄCEJ — tuż przed
+  // pierwszym malowaniem. Ten plik ładuje się synchronicznie w <head>, więc listenery
+  // zdążą się zarejestrować.
+  //
+  // Krok 2 (most do treści): gdy trwa cross-document View Transition, „zdjęcie" nowej
+  // strony nie może być puste — .main-content bywa jeszcze ukryte przez `js-loading`.
+  // Odsłaniamy je na czas zdjęcia; przy aktywnym auth-gate (ekran logowania) pomijamy
+  // animację. Bez aktywnej VT (np. pierwsze wejście) nic nie zmieniamy.
+  //
+  // Krok 3 (kierunek): handler swipe zapisuje kierunek do sessionStorage tuż przed
+  // nawigacją; tu odczytujemy go (z guardem świeżości) i dodajemy typ
+  // `vilda-forward`/`vilda-back` do viewTransition.types, co w CSS wybiera slide w
+  // odpowiednią stronę. Nawigacja BEZ flagi (klik w menu, wstecz) → domyślny cross-fade.
+  var VT_DIR_KEY = 'vilda-vt-dir';
+  function readVtDir() {
+    try {
+      var raw = global.sessionStorage && global.sessionStorage.getItem(VT_DIR_KEY);
+      if (!raw) return null;
+      var o = JSON.parse(raw);
+      if (!o || (o.d !== 'forward' && o.d !== 'back')) return null;
+      if (typeof o.t !== 'number' || (Date.now() - o.t) > 4000) return null; // przeterminowane
+      return o.d === 'forward' ? 'vilda-forward' : 'vilda-back';
+    } catch (_) { return null; }
+  }
+  function clearVtDir() {
+    try { if (global.sessionStorage) global.sessionStorage.removeItem(VT_DIR_KEY); } catch (_) {}
+  }
+  function addVtType(vt, type) {
+    try {
+      if (type && vt && vt.types && typeof vt.types.add === 'function') vt.types.add(type);
+    } catch (_) {}
+  }
   try {
     if (global.addEventListener) {
+      // Strona wychodząca — oznacz typ na jej „zdjęciu".
+      global.addEventListener('pageswap', function (e) {
+        try {
+          if (!e || !e.viewTransition) return;
+          addVtType(e.viewTransition, readVtDir());   // bez czyszczenia — pagereveal sprząta
+        } catch (_) { /* noop */ }
+      });
+      // Strona wchodząca — most do treści + typ kierunku, a na końcu sprzątanie flagi.
       global.addEventListener('pagereveal', function (e) {
         try {
-          if (!e || !e.viewTransition) return;          // brak aktywnej VT → nic nie zmieniamy
+          var dirType = readVtDir();                  // odczyt zanim wyczyścimy
+          if (!e || !e.viewTransition) { clearVtDir(); return; } // brak VT → tylko sprzątanie
           var de = doc.documentElement;
           if (de && de.classList && de.classList.contains('vilda-auth-locked')) {
             if (typeof e.viewTransition.skipTransition === 'function') e.viewTransition.skipTransition();
+            clearVtDir();
             return;
           }
           if (doc.body && doc.body.classList) doc.body.classList.remove('js-loading');
-        } catch (_) { /* noop */ }
+          addVtType(e.viewTransition, dirType);
+          clearVtDir();
+        } catch (_) { clearVtDir(); }
       });
     }
   } catch (_) { /* noop */ }
@@ -1520,6 +1557,16 @@
     if (idx < 0) return;                       // strona poza kolejnością → no-op
     var target = (dir === 'next') ? order[idx + 1] : order[idx - 1];
     if (!target || target === cur) return;     // koniec kolejności → no-op
+    // Krok 3: zapamiętaj kierunek dla View Transition (slide w odpowiednią stronę).
+    // sessionStorage przeżywa zamianę dokumentu w tej samej karcie; flagę konsumuje
+    // pagereveal na stronie docelowej (z guardem świeżości).
+    try {
+      if (global.sessionStorage) {
+        global.sessionStorage.setItem(VT_DIR_KEY, JSON.stringify({
+          d: (dir === 'next') ? 'forward' : 'back', t: Date.now()
+        }));
+      }
+    } catch (_) {}
     try { global.location.assign(target); } catch (_) {}
   }
 
