@@ -118,8 +118,13 @@
     for (let i = 0; i < arr.length; i += 1) arr[i] = 0;
   }
 
-  function notifyUnlock() {
-    const payload = { userId: currentUserId, label: currentUserLabel };
+  // trigger rozróżnia źródło odblokowania:
+  //   'restore' — tryRestoreSession (nawigacja między podstronami / auto-przywrócenie
+  //               sesji przy starcie) → dane bieżącej sesji są nienaruszone,
+  //   'login'   — prawdziwe interaktywne logowanie (hasło, passkey, recovery, QR,
+  //               nowe konto, odtworzenie backupu) → nowa sesja, należy zacząć od czysta.
+  function notifyUnlock(trigger) {
+    const payload = { userId: currentUserId, label: currentUserLabel, trigger: trigger || 'login' };
     onUnlockListeners.forEach(function (fn) {
       try { fn(payload); } catch (_) { /* listener errors swallowed */ }
     });
@@ -708,7 +713,7 @@
       // Odśwież TTL sesji — każda nawigacja przesuwa expiresAtISO do przodu,
       // więc aktywny użytkownik nie zostanie wylogowany podczas pracy.
       persistSession();
-      notifyUnlock();
+      notifyUnlock('restore');
       return true;
     } catch (_) {
       clearPersistedSession();
