@@ -7956,35 +7956,48 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
  */
 @view-transition { navigation: auto; }
 
-/* Subtelny cross-fade — domyślny dla nawigacji bez kierunku (klik w menu, wstecz).
-   Tylko gdy użytkownik nie prosił o redukcję ruchu. */
+/* Opcja A — stały „shell": nagłówek i sidebar dostają własne `view-transition-name`,
+   więc są wyjmowane z grupy `root`. Mając tę samą nazwę i pozycję na każdej podstronie,
+   morfują „w miejscu" → wyglądają na nieruchome, a animuje się tylko treść
+   (`.main-content` → vilda-main). Warunkiem jest obecność chrome w „zdjęciu" nowej
+   strony — zapewnia to wczesny montaż w vilda_chrome.js (pagereveal). Sidebar nazywamy
+   tylko na desktopie (≥992 px), bo na mobile jest ukryty. Nazwy muszą być unikalne w
+   dokumencie, więc celujemy w `body > header` (nie w zagnieżdżone nagłówki kart). */
+body > header { view-transition-name: vilda-header; }
+.main-content { view-transition-name: vilda-main; }
+@media (min-width: 992px) {
+  aside.sidebar { view-transition-name: vilda-sidebar; }
+}
+
+/* Subtelny cross-fade TREŚCI — domyślny dla nawigacji bez kierunku (menu, wstecz).
+   Animujemy grupę vilda-main; chrome ma własne grupy i pozostaje nieruchomy. */
 @media (prefers-reduced-motion: no-preference) {
-  ::view-transition-old(root),
-  ::view-transition-new(root) {
+  ::view-transition-old(vilda-main),
+  ::view-transition-new(vilda-main) {
     animation-duration: 220ms;
     animation-timing-function: cubic-bezier(.4, 0, .2, 1);
   }
 }
 
-/* Krok 3 — kierunkowy slide dla nawigacji swipe. Typ vilda-forward/back ustawia
+/* Krok 3 — kierunkowy slide TREŚCI dla nawigacji swipe. Typ vilda-forward/back ustawia
    vilda_chrome.js (pageswap/pagereveal) na podstawie kierunku gestu. Gdy typu brak,
-   obowiązuje cross-fade powyżej. */
+   obowiązuje cross-fade powyżej. Slide dotyczy tylko vilda-main — chrome stoi. */
 @media (prefers-reduced-motion: no-preference) {
   @keyframes vilda-vt-out-left  { to   { transform: translateX(-100%); } }
   @keyframes vilda-vt-in-right  { from { transform: translateX(100%);  } }
   @keyframes vilda-vt-out-right { to   { transform: translateX(100%);  } }
   @keyframes vilda-vt-in-left   { from { transform: translateX(-100%); } }
 
-  :root:active-view-transition-type(vilda-forward)::view-transition-old(root) {
+  :root:active-view-transition-type(vilda-forward)::view-transition-old(vilda-main) {
     animation: 260ms cubic-bezier(.4, 0, .2, 1) both vilda-vt-out-left;
   }
-  :root:active-view-transition-type(vilda-forward)::view-transition-new(root) {
+  :root:active-view-transition-type(vilda-forward)::view-transition-new(vilda-main) {
     animation: 260ms cubic-bezier(.4, 0, .2, 1) both vilda-vt-in-right;
   }
-  :root:active-view-transition-type(vilda-back)::view-transition-old(root) {
+  :root:active-view-transition-type(vilda-back)::view-transition-old(vilda-main) {
     animation: 260ms cubic-bezier(.4, 0, .2, 1) both vilda-vt-out-right;
   }
-  :root:active-view-transition-type(vilda-back)::view-transition-new(root) {
+  :root:active-view-transition-type(vilda-back)::view-transition-new(vilda-main) {
     animation: 260ms cubic-bezier(.4, 0, .2, 1) both vilda-vt-in-left;
   }
 }

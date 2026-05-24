@@ -132,9 +132,17 @@
   try {
     if (global.addEventListener) {
       // Strona wychodząca — oznacz typ na jej „zdjęciu".
+      // Krok 4: gdy w chwili nawigacji otwarta jest nakładka/modal/drawer
+      // (lub aktywny auth-gate), pomijamy animację — nie chcemy animować strony
+      // z otwartą warstwą w stronę, która jej nie ma. swipeBlockedByOverlay()
+      // jest wspólnym źródłem tych warunków (ta sama lista co dla gestu swipe).
       global.addEventListener('pageswap', function (e) {
         try {
           if (!e || !e.viewTransition) return;
+          if (swipeBlockedByOverlay()) {
+            if (typeof e.viewTransition.skipTransition === 'function') e.viewTransition.skipTransition();
+            return;
+          }
           addVtType(e.viewTransition, readVtDir());   // bez czyszczenia — pagereveal sprząta
         } catch (_) { /* noop */ }
       });
@@ -143,13 +151,28 @@
         try {
           var dirType = readVtDir();                  // odczyt zanim wyczyścimy
           if (!e || !e.viewTransition) { clearVtDir(); return; } // brak VT → tylko sprzątanie
-          var de = doc.documentElement;
-          if (de && de.classList && de.classList.contains('vilda-auth-locked')) {
+          // Krok 4: auth-gate (ekran logowania) lub jakakolwiek otwarta nakładka →
+          // bez animacji. (Na świeżo wchodzącej stronie realnie wystąpi tu głównie
+          // auth-gate; pozostałe warstwy są jeszcze nieutworzone.)
+          if (swipeBlockedByOverlay()) {
             if (typeof e.viewTransition.skipTransition === 'function') e.viewTransition.skipTransition();
             clearVtDir();
             return;
           }
           if (doc.body && doc.body.classList) doc.body.classList.remove('js-loading');
+          // A1 (stały shell): domontuj chrome PRZED zdjęciem nowej strony, żeby
+          // nagłówek i sidebar były obecne i identyczne w obu zdjęciach VT.
+          // Inaczej (chrome wstrzykiwany dopiero w init() na DOMContentLoaded)
+          // nazwane grupy morfowałyby z pełnego chrome w pusty. Montaż jest
+          // idempotentny (guard data-vilda-chrome-mounted), więc późniejszy init()
+          // nie powtórzy go. Własny try/catch — błąd nie psuje reszty przejścia.
+          try {
+            mountHeader();
+            mountSidebar();
+            highlightActiveLink();
+            refreshUserChip();
+            refreshPatientChip();
+          } catch (_) { /* fallback: chrome dokończy się w init() */ }
           addVtType(e.viewTransition, dirType);
           clearVtDir();
         } catch (_) { clearVtDir(); }
