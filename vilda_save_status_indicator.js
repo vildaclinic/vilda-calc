@@ -116,18 +116,9 @@
     return null;
   }
 
-  function clcrHasValue(clcr) {
-    if (!clcr || typeof clcr !== 'object') return false;
-    return Object.keys(clcr).some(function (k) {
-      if (k === 'timestampISO' || k === 'timestamp' || k === 'version') return false;
-      var v = clcr[k];
-      if (v == null || v === '') return false;
-      if (typeof v === 'number') return isFinite(v) && v !== 0;
-      if (typeof v === 'boolean') return v === true;
-      if (typeof v === 'string') return v.trim().length > 0;
-      return true;
-    });
-  }
+  /* clcrHasValue() usunięto — clcr nie jest już samodzielnym sygnałem „są dane"
+     w isFormMostlyEmpty (patrz komentarz tam). readCanonicalClcr nadal zasila
+     kanoniczny fingerprint. */
 
   /**
    * Czy bieżąca strona ma pełny formularz pacjenta (główna/docpro), tj. czy
@@ -266,8 +257,14 @@
         if (main && global.hasMeaningfulMainSessionData(main)) return false;
       }
     } catch (_) {}
-    // 2) clcr (page-independent).
-    if (clcrHasValue(readCanonicalClcr())) return false;
+    // 2) clcr (klirens) NIE jest samodzielnym sygnałem „są dane pacjenta".
+    //    Sam wynik klirensu — bez imienia/pomiarów — nie jest możliwy do zapisania
+    //    jako karta pacjenta (VildaVault.savePatient wymaga imienia), więc nie może
+    //    wymuszać NEW_PATIENT. Wcześniej wejście na kalkulator klirensu zapisywało
+    //    migawkę sesji (metadane + inputs/summary), przez co po powrocie na inną
+    //    podstronę ikona fałszywie zmieniała się z hidden na new_patient.
+    //    clcr POZOSTAJE częścią kanonicznego fingerprintu (computeCanonicalFingerprint),
+    //    więc edycja klirensu u ZAŁADOWANEGO/zapisanego pacjenta nadal daje DIRTY.
     // 3) Fallback: bieżący DOM (główna przed autosave / headless).
     if (typeof global.collectUserData !== 'function') return true;
     try {
