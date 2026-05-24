@@ -1399,6 +1399,149 @@
     safeCreateIcons();
     scheduleIconRetry();
     initConsentBanner();
+    initSwipeNav();
+  }
+
+  // ============ NAWIGACJA GESTEM (swipe ←/→) — Faza 2 ============
+  // Samowystarczalny moduł. Założenia bezpieczeństwa (bez regresu):
+  //   - listenery PASYWNE i BEZ preventDefault → zero wpływu na przewijanie,
+  //   - nawigujemy dopiero na końcu gestu (pointerup/touchend),
+  //   - reagujemy tylko na wyraźnie poziomy, dostatecznie długi i szybki gest,
+  //   - szeroka lista wykluczeń (pas krawędziowy = rewir gestu systemowego,
+  //     pola formularzy, poziome scrollery, wykresy, modale/drawer),
+  //   - poza kolejnością sekcji i na jej końcach = no-op.
+  var SWIPE = {
+    EDGE_PX: 28,     // pas przy krawędzi zarezerwowany dla gestu systemowego (iOS/Android back)
+    MIN_RATIO: 2,    // |dx| musi co najmniej 2× przewyższać |dy|
+    MAX_MS: 600,     // dłuższy gest traktujemy jak scroll/drag, nie swipe
+    MIN_FRAC: 0.12,  // próg dystansu = 12% szerokości viewportu...
+    MIN_PX: 64       // ...ale nie mniej niż 64 px
+  };
+
+  // Kolejność sekcji = hrefy z grupy „Narzędzia" w MENU (jedno źródło prawdy).
+  function swipeOrder() {
+    var tools = null;
+    for (var i = 0; i < MENU.length; i++) {
+      if (MENU[i] && MENU[i].title === 'Narzędzia') { tools = MENU[i].items; break; }
+    }
+    var out = [];
+    if (tools) {
+      for (var j = 0; j < tools.length; j++) {
+        if (tools[j] && tools[j].href) out.push(tools[j].href);
+      }
+    }
+    return out;
+  }
+
+  // Czysta funkcja decyzyjna — testowalna bez DOM.
+  // Zwraca 'next' | 'prev' | null.
+  function decideSwipe(p) {
+    if (!p) return null;
+    var dx = p.dx, dy = p.dy, dt = p.dt, startX = p.startX, vw = p.viewportW || 0;
+    if (typeof dx !== 'number' || typeof dy !== 'number' || typeof dt !== 'number') return null;
+    if (!isFinite(dx) || !isFinite(dy) || !isFinite(dt)) return null;
+    if (dt > SWIPE.MAX_MS) return null;                                  // za wolno
+    if (startX < SWIPE.EDGE_PX || startX > vw - SWIPE.EDGE_PX) return null; // pas krawędziowy
+    var adx = Math.abs(dx), ady = Math.abs(dy);
+    var minDist = Math.max(SWIPE.MIN_PX, vw * SWIPE.MIN_FRAC);
+    if (adx < minDist) return null;                                     // za krótko
+    if (adx < ady * SWIPE.MIN_RATIO) return null;                       // za mało poziomo
+    return dx < 0 ? 'next' : 'prev';                                    // w lewo = dalej
+  }
+
+  // Czy gest startuje w miejscu, którego NIE wolno przejmować?
+  function swipeExcludedTarget(el) {
+    var n = el, hops = 0;
+    while (n && n.nodeType === 1 && hops < 40) {
+      var tag = (n.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'select' || tag === 'textarea' ||
+          tag === 'button' || tag === 'a' || tag === 'canvas' || tag === 'svg' ||
+          tag === 'video' || tag === 'iframe') return true;
+      try {
+        if (n.getAttribute && (n.getAttribute('role') === 'slider' ||
+            n.getAttribute('contenteditable') === 'true' ||
+            n.hasAttribute('data-no-swipe'))) return true;
+      } catch (_) {}
+      // Realnie przewijalny w poziomie kontener → zostaw go w spokoju.
+      try {
+        if ((n.scrollWidth - n.clientWidth) > 4 && global.getComputedStyle) {
+          var ovx = global.getComputedStyle(n).overflowX || '';
+          if (ovx === 'auto' || ovx === 'scroll') return true;
+        }
+      } catch (_) {}
+      n = n.parentNode;
+      hops++;
+    }
+    return false;
+  }
+
+  // Czy jest otwarta nakładka/menu, przy której swipe-nawigacja ma być wyłączona?
+  function swipeBlockedByOverlay() {
+    try {
+      var de = doc.documentElement, b = doc.body;
+      if (de && de.classList && de.classList.contains('vilda-auth-locked')) return true;
+      if (b && b.classList && b.classList.contains('chrome-drawer-open')) return true;
+      var root = doc.getElementById('vilda-auth-ui-root');
+      if (root && root.style && root.style.display && root.style.display !== 'none') return true;
+      if (doc.querySelector('.vilda-logout-overlay, .ww-onboarding-overlay.is-open, [aria-modal="true"]')) return true;
+    } catch (_) {}
+    return false;
+  }
+
+  function navigateSwipe(dir) {
+    var order = swipeOrder();
+    if (!order.length) return;
+    var cur = currentFile();
+    var idx = order.indexOf(cur);
+    if (idx < 0) return;                       // strona poza kolejnością → no-op
+    var target = (dir === 'next') ? order[idx + 1] : order[idx - 1];
+    if (!target || target === cur) return;     // koniec kolejności → no-op
+    try { global.location.assign(target); } catch (_) {}
+  }
+
+  function initSwipeNav() {
+    if (initSwipeNav._bound) return;
+    initSwipeNav._bound = true;
+    var sx = 0, sy = 0, st = 0, active = false;
+
+    function start(x, y, target) {
+      if (swipeExcludedTarget(target) || swipeBlockedByOverlay()) { active = false; return; }
+      sx = x; sy = y; st = Date.now(); active = true;
+    }
+    function finish(x, y) {
+      if (!active) return;
+      active = false;
+      var dir = decideSwipe({
+        dx: x - sx, dy: y - sy, dt: Date.now() - st, startX: sx,
+        viewportW: global.innerWidth || (doc.documentElement && doc.documentElement.clientWidth) || 0
+      });
+      if (dir) navigateSwipe(dir);
+    }
+
+    if (global.PointerEvent) {
+      doc.addEventListener('pointerdown', function (e) {
+        if (e.pointerType !== 'touch' || e.isPrimary === false) { active = false; return; }
+        start(e.clientX, e.clientY, e.target);
+      }, { passive: true });
+      doc.addEventListener('pointerup', function (e) {
+        if (e.pointerType !== 'touch') return;
+        finish(e.clientX, e.clientY);
+      }, { passive: true });
+      doc.addEventListener('pointercancel', function () { active = false; }, { passive: true });
+    } else {
+      doc.addEventListener('touchstart', function (e) {
+        if (!e.touches || e.touches.length !== 1) { active = false; return; } // multitouch → ignoruj
+        var t = e.touches[0];
+        start(t.clientX, t.clientY, e.target);
+      }, { passive: true });
+      doc.addEventListener('touchend', function (e) {
+        if (!active) return;
+        var t = (e.changedTouches && e.changedTouches[0]) || null;
+        if (!t) { active = false; return; }
+        finish(t.clientX, t.clientY);
+      }, { passive: true });
+      doc.addEventListener('touchcancel', function () { active = false; }, { passive: true });
+    }
   }
 
   function boot() {
@@ -1419,7 +1562,10 @@
     refreshSyncBtn: refreshSyncBtn,
     highlightActiveLink: function () { highlightActiveLink(); },
     showTip: showChromeTip,
-    MENU: MENU
+    MENU: MENU,
+    // Faza 2 — udostępnione do testów jednostkowych nawigacji gestem.
+    decideSwipe: decideSwipe,
+    swipeOrder: swipeOrder
   };
 
   boot();
