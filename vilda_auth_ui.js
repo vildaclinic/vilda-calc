@@ -195,6 +195,9 @@
       // flagę z sessionStorage przy nawigacji między podstronami — wtedy
       // dane wpisane przez gościa na poprzedniej stronie pozostają jego.
       if (!opts.skipReset) resetAppSessionState('enter-guest');
+      // Auth-gate: gość świadomie wchodzi do aplikacji → odsłoń interfejs
+      // (brama mogła być założona przez <head>, bo nie było sesji ani gościa).
+      unlockAppContent();
       // W rogu pokazujemy „Zaloguj się” — żeby gość mógł wyjść z trybu
       // anonimowego bez przeładowania strony.
       showLoginButtonForGuest();
@@ -465,6 +468,20 @@
     try { if (global.document) global.document.documentElement.classList.remove('vilda-logged-in'); } catch (_) {}
   }
 
+  // ============ AUTH-GATE (anti-flash) ============
+  // Klasa html.vilda-auth-locked chowa interfejs aplikacji (patrz CSS w <head>
+  // podstron), żeby przed pojawieniem się ekranu logowania oraz po wylogowaniu
+  // nie błyskała treść aplikacji. Bramę zakłada synchroniczny skrypt w <head>
+  // (gdy brak sesji i brak trybu gościa) oraz showStartupScreen()/onLock tutaj;
+  // zdejmuje ją onUnlock po autoryzacji. Na podstronach bez reguły CSS te wywołania
+  // są nieszkodliwe (brak efektu wizualnego).
+  function lockAppContent() {
+    try { if (global.document) global.document.documentElement.classList.add('vilda-auth-locked'); } catch (_) {}
+  }
+  function unlockAppContent() {
+    try { if (global.document) global.document.documentElement.classList.remove('vilda-auth-locked'); } catch (_) {}
+  }
+
   // ============ MOUNT ROOT ============
   function ensureRoot() {
     if (rootEl) return rootEl;
@@ -528,6 +545,10 @@
 
   // ============ DYSPOZYTOR EKRANU STARTOWEGO ============
   async function showStartupScreen() {
+    // Auth-gate: pokazujemy ekran logowania → interfejs aplikacji musi być
+    // schowany (przypadek brzegowy: klucz sesji istniał, ale odtworzenie padło,
+    // więc <head> mógł nie założyć bramy). Zakładamy ją zanim wyrenderujemy ekran.
+    lockAppContent();
     // Przerwij aktywne żądanie WebAuthn przed przejściem do listy użytkowników.
     // Bez tego stary pending navigator.credentials.get() blokuje nowe wywołania.
     abortPendingPasskey();
@@ -3468,6 +3489,11 @@
 
     try {
       getVault().onLock(function (reason) {
+        // Auth-gate: schowaj interfejs NATYCHMIAST, synchronicznie, zanim ruszy
+        // resetAppSessionState() i ewentualna nawigacja — inaczej po wylogowaniu
+        // stara treść aplikacji błyska zanim pojawi się ekran logowania. W gałęzi
+        // gościa (poniżej) zdejmujemy bramę, bo gość zostaje w aplikacji.
+        lockAppContent();
         hideLogoutButton();
 
         // WAŻNE: vault.lock() zeruje currentUserId PRZED wywołaniem notifyLock(),
@@ -3499,7 +3525,7 @@
             global.VildaProUi.refresh();
           }
         } catch (_) {}
-        if (isGuestMode()) return;
+        if (isGuestMode()) { unlockAppContent(); return; } // gość zostaje w aplikacji — bez bramy
         // Gdy konto zostało właśnie usunięte, ustawienia.html natychmiast
         // przekierowuje na index.html — nie otwieramy tu ekranu startowego,
         // żeby uniknąć błysku starych danych przed nawigacją.
@@ -3526,6 +3552,11 @@
         // PRZED wywołaniem onLock listenerów, więc bez własnego śledzenia
         // nie możemy odczytać userId w onLock.
         _trackedUserId = (payload && payload.userId) ? payload.userId : null;
+
+        // Auth-gate: vault odblokowany (logowanie LUB nawigacja/odtworzenie sesji)
+        // = aplikacja autoryzowana → odsłaniamy interfejs. Robimy to bezwarunkowo,
+        // zanim niżej nastąpi ewentualny wczesny return dla nawigacji.
+        unlockAppContent();
 
         // Zaktualizuj bramkę PRO — ale tylko gdy cache PRO już istnieje w localStorage.
         // Przypadek idle re-auth (vault auto-zablokował, user ponownie się loguje):
