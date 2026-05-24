@@ -129,6 +129,78 @@
       if (type && vt && vt.types && typeof vt.types.add === 'function') vt.types.add(type);
     } catch (_) {}
   }
+
+  // ── Cache kompletnego chrome dla „stałego shella" (VT) ──────────────────────
+  // Problem: Lucide ładuje się z `defer`, więc w chwili „zdjęcia" nowej strony
+  // (pagereveal, przed DOMContentLoaded) ikony nie są jeszcze wyrenderowane —
+  // nazwany nagłówek/sidebar morfowałby z pełnego w „bez ikon" = miganie.
+  // Rozwiązanie: po pełnym renderze (init, gdy Lucide już zadziałał) zapisujemy
+  // gotowy HTML nagłówka i sidebara (z PRAWDZIWYMI ikonami) do sessionStorage, a
+  // w pagereveal wstrzykujemy go jako tymczasowy „snapshot" przed zdjęciem VT.
+  // Dzięki temu zdjęcie jest kompletne → brak migania. Właściwy montaż w init()
+  // i tak przebuduje chrome (snapshot jest czyszczony w mountHeader).
+  var CHROME_CACHE_VERSION = '1';
+  var CHROME_CACHE_VER_KEY = 'vilda-chrome-cache-ver';
+  var CHROME_CACHE_HEADER_KEY = 'vilda-chrome-cache-header';
+  var CHROME_CACHE_SIDEBAR_KEY = 'vilda-chrome-cache-sidebar';
+
+  function cacheChrome() {
+    try {
+      if (!global.sessionStorage) return;
+      var header = findHeaderMount();
+      var aside = findSidebarMount();
+      var stored = false;
+      if (header && header.getAttribute('data-vilda-chrome-mounted') === '1') {
+        global.sessionStorage.setItem(CHROME_CACHE_HEADER_KEY, header.innerHTML); stored = true;
+      }
+      if (aside && aside.getAttribute('data-vilda-chrome-mounted') === '1') {
+        global.sessionStorage.setItem(CHROME_CACHE_SIDEBAR_KEY, aside.innerHTML); stored = true;
+      }
+      if (stored) global.sessionStorage.setItem(CHROME_CACHE_VER_KEY, CHROME_CACHE_VERSION);
+    } catch (_) {}
+  }
+
+  function restoreChromeFromCache() {
+    try {
+      if (!global.sessionStorage) return false;
+      if (global.sessionStorage.getItem(CHROME_CACHE_VER_KEY) !== CHROME_CACHE_VERSION) return false;
+      var cachedHeader = global.sessionStorage.getItem(CHROME_CACHE_HEADER_KEY);
+      var cachedSidebar = global.sessionStorage.getItem(CHROME_CACHE_SIDEBAR_KEY);
+      if (!cachedHeader && !cachedSidebar) return false;
+      var done = false;
+      var header = findHeaderMount();
+      if (header && cachedHeader && header.getAttribute('data-vilda-chrome-mounted') !== '1') {
+        header.innerHTML = cachedHeader;
+        header.setAttribute('data-vilda-chrome-snap', '1');   // tymczasowy — mountHeader go usunie
+        doc.body.classList.add('has-vilda-chrome');
+        done = true;
+      }
+      var aside = findSidebarMount();
+      if (aside && cachedSidebar && aside.getAttribute('data-vilda-chrome-mounted') !== '1') {
+        aside.classList.add('sidebar', 'sidebar-v2');
+        aside.innerHTML = cachedSidebar;                       // mountSidebar i tak przebuduje (innerHTML=)
+        done = true;
+      }
+      return done;
+    } catch (_) { return false; }
+  }
+
+  function clearChromeCache() {
+    try {
+      if (!global.sessionStorage) return;
+      global.sessionStorage.removeItem(CHROME_CACHE_VER_KEY);
+      global.sessionStorage.removeItem(CHROME_CACHE_HEADER_KEY);
+      global.sessionStorage.removeItem(CHROME_CACHE_SIDEBAR_KEY);
+    } catch (_) {}
+  }
+
+  // PII/higiena: czyść cache chrome przy resecie sesji (logowanie/wylogowanie/gość) —
+  // zapamiętany strip nagłówka może zawierać chip pacjenta.
+  try {
+    if (global.addEventListener) global.addEventListener('vilda:user-state-cleared', clearChromeCache);
+    if (doc.addEventListener) doc.addEventListener('vilda:user-state-cleared', clearChromeCache);
+  } catch (_) {}
+
   try {
     if (global.addEventListener) {
       // Strona wychodząca — oznacz typ na jej „zdjęciu".
@@ -160,18 +232,18 @@
             return;
           }
           if (doc.body && doc.body.classList) doc.body.classList.remove('js-loading');
-          // A1 (stały shell): domontuj chrome PRZED zdjęciem nowej strony, żeby
-          // nagłówek i sidebar były obecne i identyczne w obu zdjęciach VT.
-          // Inaczej (chrome wstrzykiwany dopiero w init() na DOMContentLoaded)
-          // nazwane grupy morfowałyby z pełnego chrome w pusty. Montaż jest
-          // idempotentny (guard data-vilda-chrome-mounted), więc późniejszy init()
-          // nie powtórzy go. Własny try/catch — błąd nie psuje reszty przejścia.
+          // Stały shell: zapewnij KOMPLETNY chrome (z ikonami) w „zdjęciu" nowej
+          // strony. Najpierw wstrzykujemy zapisany pełny HTML chrome z poprzedniego
+          // renderu (ma już prawdziwe ikony Lucide) → nazwane grupy VT nie migają.
+          // Gdy brak świeżego cache (np. pierwsze wejście w sesji), montujemy zwykle
+          // (ikony mogą dojść w init — jednorazowy efekt do czasu zbudowania cache).
+          // Właściwy montaż w init() i tak przebuduje chrome (snapshot jest tam czyszczony).
           try {
-            mountHeader();
-            mountSidebar();
+            if (!restoreChromeFromCache()) {
+              mountHeader();
+              mountSidebar();
+            }
             highlightActiveLink();
-            refreshUserChip();
-            refreshPatientChip();
           } catch (_) { /* fallback: chrome dokończy się w init() */ }
           addVtType(e.viewTransition, dirType);
           clearVtDir();
@@ -542,6 +614,15 @@
   function mountHeader() {
     var header = findHeaderMount();
     if (!header) return false;
+
+    // Usuń tymczasowy „snapshot" chrome wstrzyknięty na czas zdjęcia VT
+    // (restoreChromeFromCache), żeby właściwy montaż nie zostawił zdublowanego stripa.
+    if (header.getAttribute('data-vilda-chrome-snap') === '1' &&
+        header.getAttribute('data-vilda-chrome-mounted') !== '1') {
+      header.removeAttribute('data-vilda-chrome-snap');
+      var snapWrap = header.querySelector(':scope > [data-vilda-chrome-wrap]');
+      if (snapWrap && snapWrap.parentNode) snapWrap.parentNode.removeChild(snapWrap);
+    }
 
     // Nie nadpisujemy headera w całości, tylko dopinamy strip + drawer.
     // To pozwala zachować stare nawigacje (.main-nav) jeśli jeszcze są
@@ -1499,6 +1580,11 @@
     scheduleIconRetry();
     initConsentBanner();
     initSwipeNav();
+    // Stały shell (VT): zapamiętaj kompletny chrome (z ikonami) do wstrzyknięcia
+    // w „zdjęcie" następnej nawigacji. Lucide jest deferred — domykamy też na 'load',
+    // gdy ikony są na pewno gotowe.
+    cacheChrome();
+    try { if (global.addEventListener) global.addEventListener('load', cacheChrome, { once: true }); } catch (_) {}
   }
 
   // ============ NAWIGACJA GESTEM (swipe ←/→) — Faza 2 ============
