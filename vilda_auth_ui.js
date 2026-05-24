@@ -32,6 +32,12 @@
   const ROOT_ID = 'vilda-auth-ui-root';
   const IDLE_EVENTS = ['mousedown', 'keydown', 'touchstart', 'scroll', 'pointerdown'];
   const PWA_GUEST_FLAG = 'VildaGuestMode';
+  // „Ufam temu urządzeniu" — preferencja PER-URZĄDZENIE (localStorage tego komputera,
+  // NIE konto → nie synchronizuje się na inne urządzenia). Włączona = dłuższe okno
+  // bezczynności (7 dni) w obrębie OTWARTEJ karty. Sesja nadal żyje w sessionStorage,
+  // więc zamknięcie przeglądarki i tak wylogowuje — klucz NIGDY nie trafia na dysk.
+  const TRUSTED_DEVICE_KEY = 'vilda-trust-device-v1';
+  const TRUSTED_DEVICE_IDLE_MS = 7 * 24 * 60 * 60 * 1000; // 7 dni
 
   let booted = false;
   let rootEl = null;
@@ -763,8 +769,32 @@
       onclick: function () { pendingSetupOptions = null; showStartupScreen(); }
     });
 
+    const infoA = document.createElement('div');
+    infoA.style.cssText = 'margin:2px 0 12px;padding:10px 12px;background:#f5fafb;border:1px solid #d7e9ec;border-radius:12px;';
+    infoA.innerHTML = [
+      '<svg viewBox="0 0 320 104" width="100%" style="max-width:320px;display:block;margin:0 auto" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Dane są szyfrowane na Twoim urządzeniu; na serwer trafia tylko szyfrogram.">',
+        '<rect x="10" y="18" width="58" height="66" rx="8" fill="#ffffff" stroke="#00838d" stroke-width="2"/>',
+        '<rect x="17" y="26" width="44" height="42" rx="4" fill="#eef7f8"/>',
+        '<rect x="23" y="32" width="32" height="7" rx="2" fill="#00838d"/>',
+        '<rect x="23" y="44" width="32" height="4" rx="2" fill="#c9d6da"/>',
+        '<rect x="23" y="53" width="24" height="4" rx="2" fill="#c9d6da"/>',
+        '<text x="39" y="98" text-anchor="middle" font-size="9" fill="#5b6672">Urządzenie</text>',
+        '<line x1="74" y1="51" x2="120" y2="51" stroke="#00838d" stroke-width="2"/>',
+        '<polygon points="120,46 130,51 120,56" fill="#00838d"/>',
+        '<rect x="91" y="41" width="20" height="15" rx="3.5" fill="#ffffff" stroke="#00838d" stroke-width="2"/>',
+        '<path d="M95,41 v-4 a6,6 0 0 1 12,0 v4" fill="none" stroke="#00838d" stroke-width="2.4"/>',
+        '<text x="101" y="74" text-anchor="middle" font-size="8.5" fill="#00838d">szyfrowanie</text>',
+        '<g><circle cx="214" cy="54" r="18" fill="#cfe8eb"/><circle cx="242" cy="40" r="24" fill="#cfe8eb"/><circle cx="272" cy="54" r="18" fill="#cfe8eb"/><rect x="202" y="49" width="82" height="24" rx="12" fill="#cfe8eb"/></g>',
+        '<rect x="220" y="40" width="52" height="28" rx="6" fill="#ffffff" stroke="#b0d4d8" stroke-width="1.4"/>',
+        '<text x="227" y="53" font-size="9" font-family="monospace" fill="#8a93a0">a8F#9z⌗</text>',
+        '<text x="227" y="64" font-size="9" font-family="monospace" fill="#8a93a0">K2$mB7</text>',
+        '<text x="245" y="98" text-anchor="middle" font-size="9" fill="#5b6672">Serwer</text>',
+      '</svg>',
+      '<p style="margin:8px 0 0;font-size:0.8rem;line-height:1.4;color:#15323a;text-align:center;">Dane szyfrujemy <strong>na Twoim urządzeniu</strong> — na serwer trafia tylko szyfrogram. Klucz zostaje u Ciebie.</p>'
+    ].join('');
+
     open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
-      stepLabel, title, sub, labelInput, pw1,
+      stepLabel, title, sub, infoA, labelInput, pw1,
       el('div', { class: 'vilda-auth-meter-wrap' }, [meter, meterLabel]),
       pw2, errBox,
       el('div', { class: 'vilda-auth-actions' }, [back, next])
@@ -3464,11 +3494,38 @@
     idleHandlersBound = true;
   }
 
+  // ── „Ufam temu urządzeniu" — preferencja per-urządzenie ──────────────────────
+  function isTrustedDevice() {
+    try {
+      return !!(global.localStorage && global.localStorage.getItem(TRUSTED_DEVICE_KEY) === '1');
+    } catch (_) { return false; }
+  }
+
+  // Efektywne okno bezczynności: 7 dni gdy urządzenie zaufane, inaczej domyślne 20 min.
+  function effectiveIdleMs() {
+    const V = getVault();
+    const def = (V && typeof V.DEFAULT_IDLE_LOCK_MS === 'number') ? V.DEFAULT_IDLE_LOCK_MS : (20 * 60 * 1000);
+    return isTrustedDevice() ? TRUSTED_DEVICE_IDLE_MS : def;
+  }
+
+  // Ustawia preferencję i — jeśli odblokowane — natychmiast stosuje nowe okno.
+  function setTrustedDevice(on) {
+    try {
+      if (global.localStorage) {
+        if (on) global.localStorage.setItem(TRUSTED_DEVICE_KEY, '1');
+        else global.localStorage.removeItem(TRUSTED_DEVICE_KEY);
+      }
+    } catch (_) {}
+    const V = getVault();
+    try { if (V && V.isUnlocked()) V.startIdleTimer(effectiveIdleMs()); } catch (_) {}
+    return isTrustedDevice();
+  }
+
   function startIdleWatch() {
     const V = getVault();
     if (!V) return;
     bindIdleHandlers();
-    try { V.startIdleTimer(V.DEFAULT_IDLE_LOCK_MS); } catch (_) {}
+    try { V.startIdleTimer(effectiveIdleMs()); } catch (_) {}
   }
 
   function lockAndShowLogin(reason) {
@@ -4044,12 +4101,16 @@
     // ── Sekcja zapasowego kodu dostępu ─────────────────────────────────────────
     const codeSection = document.createElement('div');
     codeSection.style.cssText = [
-      'background:var(--surface-alt,#f0f4ff)',
-      'border:1px solid var(--border,#d0d5e8)',
+      'background:#f3fafb',
+      'border:2px solid #00838d',
       'border-radius:10px',
       'padding:0.9rem 1rem',
       'margin:0 0 0.5rem'
     ].join(';');
+
+    const codeTag = document.createElement('span');
+    codeTag.style.cssText = 'display:inline-block;font-size:0.75rem;font-weight:500;background:#e1f5ee;color:#0f6e56;border-radius:4px;padding:2px 8px;margin-bottom:0.55rem;';
+    codeTag.textContent = 'Konto zostaje na tym komputerze';
 
     const codeSectionTitle = document.createElement('div');
     codeSectionTitle.style.cssText = 'display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem;';
@@ -4132,6 +4193,7 @@
       if (e.key === 'Enter') submitBtn.click();
     });
 
+    codeSection.appendChild(codeTag);
     codeSection.appendChild(codeSectionTitle);
     codeSection.appendChild(codeSectionDesc);
     codeSection.appendChild(codeInput);
@@ -4139,19 +4201,6 @@
     codeSection.appendChild(pwInput);
     codeSection.appendChild(errBox);
     codeSection.appendChild(submitBtn);
-
-    codeSection.style.display = 'none';
-
-    const advancedToggle = el('button', {
-      class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle',
-      type: 'button',
-      text: 'Zaawansowane ▾'
-    });
-    advancedToggle.addEventListener('click', function () {
-      const expanded = codeSection.style.display !== 'none';
-      codeSection.style.display = expanded ? 'none' : '';
-      advancedToggle.textContent = expanded ? 'Zaawansowane ▾' : 'Zaawansowane ▴';
-    });
 
     const back = el('button', {
       class: 'vilda-auth-btn vilda-auth-btn-ghost',
@@ -4162,7 +4211,7 @@
 
     const children = [title, sub, qrSection];
     if (passkeySection) { children.push(cardSep); children.push(passkeySection); }
-    children.push(orDiv, advancedToggle, codeSection, back);
+    children.push(orDiv, codeSection, back);
     const wrapper = el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, children);
     open(wrapper);
   }
@@ -4576,7 +4625,10 @@
     isGuestMode: isGuestMode,
     exitGuestMode: exitGuestMode,
     setBusy: setBusy,
-    updateProBadge: updateProBadge
+    updateProBadge: updateProBadge,
+    isTrustedDevice: isTrustedDevice,
+    setTrustedDevice: setTrustedDevice,
+    TRUSTED_DEVICE_IDLE_MS: TRUSTED_DEVICE_IDLE_MS
   };
 
   global.VildaAuthUI = api;
