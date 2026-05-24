@@ -96,6 +96,30 @@
   var doc = global.document;
   if (!doc) return;
 
+  // ============ VIEW TRANSITIONS — most do treści (Opcja 1, Krok 2) ============
+  // pagereveal odpala się na WCHODZĄCEJ stronie tuż przed pierwszym malowaniem.
+  // Ten plik ładuje się synchronicznie w <head>, więc listener zdąży się zarejestrować.
+  // Cel: gdy trwa cross-document View Transition, „zdjęcie" nowej strony nie może być
+  // puste — .main-content bywa jeszcze ukryte przez klasę `js-loading`. Odsłaniamy je
+  // na czas zdjęcia. Gdy aktywny jest auth-gate (ekran logowania), pomijamy animację,
+  // żeby nie animować wjazdu w pustą/zalogowania stronę. Bez aktywnej VT (np. pierwsze
+  // wejście) handler nic nie robi — `js-loading` działa jak dotąd.
+  try {
+    if (global.addEventListener) {
+      global.addEventListener('pagereveal', function (e) {
+        try {
+          if (!e || !e.viewTransition) return;          // brak aktywnej VT → nic nie zmieniamy
+          var de = doc.documentElement;
+          if (de && de.classList && de.classList.contains('vilda-auth-locked')) {
+            if (typeof e.viewTransition.skipTransition === 'function') e.viewTransition.skipTransition();
+            return;
+          }
+          if (doc.body && doc.body.classList) doc.body.classList.remove('js-loading');
+        } catch (_) { /* noop */ }
+      });
+    }
+  } catch (_) { /* noop */ }
+
   var booted = false;
   var headerStripBound = false;
   var patientWatcherBound = false;

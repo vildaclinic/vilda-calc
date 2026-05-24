@@ -7943,6 +7943,37 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
   overscroll-behavior-x: contain;
 }
 
+/*
+ * View Transitions — płynne przejścia między podstronami (Opcja 1, Krok 1).
+ *
+ * Cross-document View Transitions: przeglądarka sama animuje przejście między
+ * osobnymi dokumentami HTML. To PROGRESYWNE ULEPSZENIE — tam gdzie brak wsparcia
+ * (np. Firefox), nawigacja jest natychmiastowa, dokładnie jak dotąd (zero regresu).
+ * `navigation: auto` obejmuje wszystkie nawigacje same-origin (swipe, menu, wstecz).
+ *
+ * Krok 2 (vilda_chrome.js, pagereveal) odsłania .main-content na czas „zdjęcia"
+ * wchodzącej strony i pomija animację, gdy aktywny jest auth-gate (ekran logowania).
+ */
+@view-transition { navigation: auto; }
+
+/* Subtelny cross-fade. Tylko gdy użytkownik nie prosił o redukcję ruchu. */
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 220ms;
+    animation-timing-function: cubic-bezier(.4, 0, .2, 1);
+  }
+}
+
+/* Redukcja ruchu: bez animacji — natychmiastowy swap. */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
 /* Header na stronie ustawień — sticky globalnie (ios26-v2.css), wyłączany tylko na mobile.
    Blok position:static usunięty. */
 
