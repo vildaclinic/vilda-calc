@@ -3559,19 +3559,32 @@
         showLogoutButton();
         startIdleWatch();
 
-        // ── Sprawdź czy sharedUserData istnieje w localStorage ─────────────────
-        // Jeśli tak, to onUnlock pochodzi z tryRestoreSession (nawigacja między
-        // podstronami) — sharedUserData jest nienaruszone i normalny restoreAll()
-        // z vildaAppOnReady obsłuży dane bez naszej ingerencji.
-        var sharedExists = false;
-        try {
-          var existingShared = global.localStorage && global.localStorage.getItem('sharedUserData');
-          sharedExists = !!(existingShared && existingShared !== 'null' && existingShared.length > 10);
-        } catch (_) {}
+        // ── Logowanie vs nawigacja/odtworzenie sesji ──────────────────────────
+        // Vault podaje trigger w payloadzie onUnlock:
+        //   • 'restore' → tryRestoreSession (nawigacja między podstronami lub
+        //     auto-przywrócenie sesji przy starcie) — dane bieżącej sesji są
+        //     nienaruszone, restoreAll() z vildaAppOnReady je obsłuży. NIE czyścimy.
+        //   • inny ('login'/passkey/recovery/QR/nowe konto/odtworzenie backupu) →
+        //     PRAWDZIWE logowanie. Nowy użytkownik musi zacząć od czysta — czyścimy
+        //     wszystkie dane z poprzedniej sesji (DOM + localStorage sharedUserData +
+        //     sessionStorage main/clcr/steroid) i dispatchujemy user-state-cleared,
+        //     dzięki czemu ikona pacjenta przechodzi w stan hidden (a nie new_patient).
+        // Fallback (starszy vault bez trigger): dawna heurystyka obecności sharedUserData.
+        var _trigger = (payload && payload.trigger) || null;
+        var _isNavigation;
+        if (_trigger) {
+          _isNavigation = (_trigger === 'restore');
+        } else {
+          var existingShared = null;
+          try {
+            existingShared = global.localStorage && global.localStorage.getItem('sharedUserData');
+          } catch (_) {}
+          _isNavigation = !!(existingShared && existingShared !== 'null' && existingShared.length > 10);
+        }
+        if (_isNavigation) return;
 
-        // Wczesny powrót dla tryRestoreSession (nawigacja między podstronami):
-        // sharedUserData istnieje → dane nienaruszone, vildaAppOnReady obsłuży je.
-        if (sharedExists) return;
+        // Prawdziwe logowanie — pełny reset stanu poprzedniej sesji.
+        resetAppSessionState('fresh-login');
 
         // ── Synchronizacja stanu PRO z serwerem w tle (warstwa 3) ─────────────
         // Dociera tu tylko przy prawdziwym logowaniu (hasło, passkey, biometria,

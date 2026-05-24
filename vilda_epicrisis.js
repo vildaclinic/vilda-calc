@@ -439,7 +439,7 @@
         bParts.push(wStr);
       }
       if (birth.birthLengthCm) {
-        let lStr = 'długość ' + birth.birthLengthCm + ' cm';
+        let lStr = 'długość ' + fmtN(birth.birthLengthCm) + ' cm';
         if (birth.birthLengthSds != null) {
           lStr += ' (' + sdsLabel(birth.birthLengthSds) + (srcShown ? '' : srcSuffix) + ')';
           srcShown = true;
@@ -451,11 +451,11 @@
       const isSga = (birth.birthWeightSds != null && birth.birthWeightSds < -2) ||
                     (birth.birthLengthSds  != null && birth.birthLengthSds  < -2);
       if (isSga) {
-        bp += ' Noworodek mały w stosunku do wieku ciążowego (SGA).';
-        if (birth.catchUp === 'yes') {
-          bp += ' Nadgonienie wzrostu do 4. roku życia potwierdzone.';
-        } else if (birth.catchUp === 'no') {
-          bp += ' Brak nadgonienia wzrostu do 4. roku życia — spełnione kryterium SGA bez catch-up.';
+        bp += ' Dziecko spełnia kryteria rozpoznania SGA (urodzeniowa masa i/lub długość ciała poniżej −2 SDS dla wieku ciążowego).';
+        if (birth.catchUp === 'no') {
+          bp += ' Bez nadgonienia wzrostu do 4. roku życia.';
+        } else if (birth.catchUp === 'yes') {
+          bp += ' Z nadgonieniem wzrostu do 4. roku życia.';
         }
       }
       secBirth = bp;
@@ -508,7 +508,7 @@
 
     const examSentences = [];
     if (measureParts.length) {
-      examSentences.push('W badaniu przedmiotowym przy przyjęciu: ' + measureParts.join(', ') + '.');
+      examSentences.push('W badaniu przedmiotowym przy przyjęciu stwierdzono: ' + measureParts.join(', ') + '.');
     }
 
     if (clinical.proportionality === 'proportional') {
@@ -541,7 +541,7 @@
       tannerParts.push('P' + clinical.tannerPubic);
     }
     if (tannerParts.length) {
-      examSentences.push('Stopień dojrzewania wg Tannera: ' + tannerParts.join(', ') + '.');
+      examSentences.push('Stopień dojrzewania wg skali Tannera oceniono na: ' + tannerParts.join(', ') + '.');
     }
 
     if (examSentences.length) {
@@ -600,7 +600,7 @@
     if ((bp && bp.value != null) || (rwt && rwt.value != null)) {
       const bpStr  = bp  && bp.value  != null ? fmt1(bp.value)  + ' cm' + (bp.error  ? ' (±' + fmt1(bp.error)  + ' cm)' : '') : null;
       const rwtStr = rwt && rwt.value != null ? fmt1(rwt.value) + ' cm' + (rwt.error ? ' (±' + fmt1(rwt.error) + ' cm)' : '') : null;
-      let predText = 'Na podstawie zgromadzonych informacji prognozowany wzrost ostateczny ';
+      let predText = 'Prognozowany wzrost ostateczny ';
       if (bpStr && rwtStr) {
         predText += 'metodą Bayley‑Pinneau wynosi ' + bpStr + ', a metodą RWT (Roche-Wainer-Thissen) ' + rwtStr + '.';
       } else if (bpStr) {
@@ -616,7 +616,7 @@
     const labParts = [];
 
     if (labs.igf1 != null) {
-      let igfStr = 'IGF‑1 ' + fmtN(labs.igf1) + ' ng/mL';
+      let igfStr = 'stężenie IGF‑1 ' + fmtN(labs.igf1) + ' ng/mL';
       /* Auto-ocena względem zakresu referencyjnego dla wieku/stadium Tannera
          (przelicznik jednostek laboratoryjnych). Brak SDS — klasyfikacja
          interwałowa; sformułowania ostrożne klinicznie. */
@@ -669,7 +669,7 @@
       labParts.push('odchylenia w biochemii krwi');
     }
     if (labParts.length) {
-      secLabs = 'W badaniach laboratoryjnych przeprowadzonych w szpitalu: ' + labParts.join('; ') + '.';
+      secLabs = 'W badaniach laboratoryjnych przeprowadzonych w szpitalu stwierdzono: ' + labParts.join('; ') + '.';
     }
 
     /* ── Testy stymulacyjne GH (składane w bloku laboratoryjnym) ────────── */
@@ -836,7 +836,7 @@
       } else {
         text = 'W trakcie hospitalizacji przeprowadzono pierwszy test stymulacji wydzielania hormonu wzrostu z ' +
           testNameInstrumental(t1.type) + ', w którym uzyskano szczytowe stężenie GH ' +
-          v1 + ' (norma powyżej 10 ng/mL). Wynik poniżej normy — konieczne jest uzupełnienie diagnostyki' +
+          v1 + ' (norma powyżej 10 ng/mL). Wynik znajduje się poniżej normy — konieczne jest uzupełnienie diagnostyki' +
           ' o drugi test stymulacyjny z innym preparatem.';
       }
 
