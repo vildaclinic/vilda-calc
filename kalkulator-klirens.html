@@ -3177,12 +3177,14 @@ const infoTexts = {
 
 // Po załadowaniu dokumentu dodaj elementy walidacyjne i ikony informacyjne
 document.addEventListener('DOMContentLoaded', () => {
-  // Initialize the globally exposed version state.  The default is the
-  // "basic" calculator; this value will be updated whenever the user
-  // clicks on one of the version buttons.  Other parts of the code
-  // (particularly the update() routine) consult window.currentVersion to
-  // decide whether to render professional-only metrics such as KT/V.
-  window.currentVersion = 'basic';
+  // Initialize the globally exposed version state.  Stan startowy to „brak
+  // wybranej wersji" (''), identyczny ze stanem po „Wyczyść wszystkie pola".
+  // Dzięki temu twarda wartość domyślna NIE jest utrwalana ani odtwarzana jak
+  // świadomy wybór użytkownika (co fałszywie otwierało wersję Podstawową po
+  // nawigacji). Obliczenia są nieczułe na tę zmianę, bo każdy konsument liczy
+  // efektywną wersję przez `window.currentVersion || 'basic'`. Wartość zmienia
+  // się dopiero, gdy użytkownik kliknie kafelkę wersji (applyVersion).
+  window.currentVersion = '';
   // Dodaj kontener na komunikat walidacyjny pod każdym polem liczbowym
   document.querySelectorAll('#clcrForm input[type="number"]').forEach(input => {
     const msg = document.createElement('div');
@@ -5805,7 +5807,11 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         if (typeof window !== 'undefined' && window.currentVersion) return String(window.currentVersion);
       } catch (_) {}
-      return 'basic';
+      // Brak realnego wyboru użytkownika → '' (a NIE twarde 'basic'). Funkcja jest
+      // używana wyłącznie do utrwalania/odtwarzania wersji (snapshot + resolve),
+      // więc pusty wynik = „nie zapamiętuj/nie narzucaj wersji". Efektywna wersja
+      // do obliczeń jest liczona osobno przez `window.currentVersion || 'basic'`.
+      return '';
     }
 
     function readClcrControlValue(el) {
@@ -6117,7 +6123,11 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         if (snapshot && snapshot.inputs && snapshot.inputs.ktvToggle === true) return 'pro';
       } catch (_) {}
-      return getSelectedClcrVersion() || 'basic';
+      // Snapshot nie zawiera realnej wersji i użytkownik nic nie wybrał → ''.
+      // applyClcrSessionSnapshot ma strażnika `if (targetVersion && setVersion)`,
+      // więc dla '' NIE narzuca żadnej wersji (pokazuje selektor) zamiast
+      // domyślnie otwierać Podstawową.
+      return getSelectedClcrVersion();
     }
 
     function applyClcrSessionSnapshot(data, options) {
