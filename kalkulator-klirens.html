@@ -6137,6 +6137,39 @@ document.addEventListener('DOMContentLoaded', () => {
       } catch (_) {}
 
       try {
+        // Pola tożsamości pacjenta (imię, wiek, płeć, masa, wzrost) są danymi
+        // WSPÓŁDZIELONYMI między podstronami przez sharedUserData (userData.js).
+        // Przy odtwarzaniu sesji z autosave (nawigacja między stronami) snapshot
+        // klirensu NIE może nadpisywać tych pól — w przeciwnym razie dane wpisane
+        // na innej podstronie (np. index.html) i zsynchronizowane do bieżącego
+        // formularza zostałyby skasowane (nieaktualną lub pustą) wartością ze
+        // starego snapshotu. Dlatego, gdy sharedUserData ma niepustą wartość dla
+        // danego pola tożsamości, traktujemy je jako źródło prawdy: trzymamy je
+        // poza vaultem wartości-wersji, pomijamy w pętli odtwarzania snapshotu i
+        // na końcu jawnie potwierdzamy w DOM. Wczytanie pliku JSON
+        // (source 'json-restore') NIE jest objęte tym wyjątkiem — tam snapshot
+        // jest świadomym źródłem prawdy.
+        const sharedIdentitySkip = {};
+        let sharedIdentityValues = null;
+        if (opts.source === 'autosave') {
+          try {
+            const _persistShared = getPersistenceAdapter();
+            const _sharedData = (_persistShared && typeof _persistShared.readShared === 'function')
+              ? (_persistShared.readShared({ ensurePersist: false }) || {})
+              : {};
+            const _idMap = { fullName: 'name', age: 'age', ageMonths: 'ageMonths', weight: 'weight', height: 'height', sex: 'sex' };
+            sharedIdentityValues = {};
+            Object.keys(_idMap).forEach(fieldId => {
+              const v = _sharedData[_idMap[fieldId]];
+              if (v != null && String(v).trim() !== '') {
+                sharedIdentitySkip[fieldId] = true;
+                sharedIdentityValues[fieldId] = String(v);
+              }
+            });
+            if (!Object.keys(sharedIdentityValues).length) sharedIdentityValues = null;
+          } catch (_) {}
+        }
+
         // Ustaw checkbox „ten sam pacjent” przed przełączeniem wersji, żeby applyVersion
         // nie wyczyścił pól, które mają zostać odtworzone z pełnego snapshotu.
         if (Object.prototype.hasOwnProperty.call(snapshot.inputs, 'samePatientMode')) {
@@ -6145,10 +6178,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-          initClcrVersionValueVault(
-            Object.assign({}, snapshot.preservedInputs || {}, snapshot.inputs || {}),
-            { preserve: opts.preserveAcrossVersions !== false }
-          );
+          // Seedujemy vault wartości-wersji BEZ współdzielonych pól tożsamości
+          // pacjenta — inaczej setVersion → restoreClcrVersionValues przywróciłoby
+          // nieaktualną wartość pacjenta ze starego snapshotu, zanim dotrzemy do
+          // jawnego potwierdzenia z sharedUserData.
+          const _vaultSeed = Object.assign({}, snapshot.preservedInputs || {}, snapshot.inputs || {});
+          Object.keys(sharedIdentitySkip).forEach(k => { delete _vaultSeed[k]; });
+          initClcrVersionValueVault(_vaultSeed, { preserve: opts.preserveAcrossVersions !== false });
         } catch (_) {}
 
         const targetVersion = resolveClcrSnapshotVersion(snapshot);
@@ -6160,11 +6196,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
         Object.keys(snapshot.inputs).forEach(key => {
           if (key === 'currentVersion') return;
+          if (sharedIdentitySkip[key]) return; // współdzielone dane pacjenta wygrywają nad snapshotem
           const el = document.getElementById(key) || (form.elements && typeof form.elements.namedItem === 'function' ? form.elements.namedItem(key) : null);
           if (!el) return;
           writeClcrControlValue(el, snapshot.inputs[key]);
           if (opts.dispatchEvents) dispatchClcrValueEvents(el);
         });
+
+        // Jawne potwierdzenie współdzielonych danych pacjenta (źródło prawdy =
+        // sharedUserData) po odtworzeniu snapshotu i przełączeniu wersji — na
+        // wypadek gdyby przełączenie wersji wyczyściło któreś z pól tożsamości.
+        if (sharedIdentityValues) {
+          Object.keys(sharedIdentityValues).forEach(fieldId => {
+            const el = document.getElementById(fieldId);
+            if (!el) return;
+            writeClcrControlValue(el, sharedIdentityValues[fieldId]);
+          });
+        }
 
         if (snapshot.selectedFormula) {
           const formulaEl = document.getElementById('formulaPicker');
