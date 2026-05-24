@@ -744,6 +744,145 @@
     }
   }
 
+  // ─── Rotacja tożsamości / rewokacja urządzeń (Faza 4) ────────────────────────
+
+  /**
+   * Zapełnia slot zaszyfrowanym blobem: POST /register; jeśli 409 (slot istnieje)
+   * → PUT /blob (bez If-Match — rotacja celowo zastępuje zawartość). Używane do
+   * zasilenia NOWEGO slotu istniejącym (już zaszyfrowanym) blobem przy rotacji.
+   *
+   * @returns {Promise<{ action:'registered'|'uploaded', etag:string|null }>}
+   */
+  async function uploadToSlot(slotId, authToken, authTokenHash, encBlob) {
+    var workerUrl = getWorkerUrl();
+    var regResp = await fetchWithTimeout(
+      workerUrl + '/v1/slots/' + slotId + '/register',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/octet-stream', 'X-Auth-Token-Hash': authTokenHash },
+        body: encBlob
+      }
+    );
+    if (regResp.status === 201) {
+      var regData = await regResp.json().catch(function () { return {}; });
+      return { action: 'registered', etag: regData.etag || null };
+    }
+    if (regResp.status === 409) {
+      var putResp = await fetchWithTimeout(
+        workerUrl + '/v1/slots/' + slotId + '/blob',
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/octet-stream', 'Authorization': 'Bearer ' + authToken },
+          body: encBlob
+        }
+      );
+      if (putResp.status === 200) {
+        var putData = await putResp.json().catch(function () { return {}; });
+        return { action: 'uploaded', etag: putData.etag || null };
+      }
+      throw syncError('VildaSync.uploadToSlot: błąd uploadu na istniejący slot (' + putResp.status + ').',
+        'UPLOAD_FAILED', { httpStatus: putResp.status });
+    }
+    throw syncError('VildaSync.uploadToSlot: błąd rejestracji slotu (' + regResp.status + ').',
+      'REGISTER_FAILED', { httpStatus: regResp.status });
+  }
+
+  /**
+   * Kasuje slot na serwerze danym authTokenem. 204 = usunięto; 401/404 = slot już
+   * nie istnieje (traktujemy jako sukces — idempotentne).
+   *
+   * @returns {Promise<{ action:'deleted'|'absent' }>}
+   */
+  async function deleteSlotWithMaterial(slotId, authToken) {
+    var resp = await fetchWithTimeout(
+      getWorkerUrl() + '/v1/slots/' + slotId,
+      { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + authToken } }
+    );
+    if (resp.status === 204) return { action: 'deleted' };
+    if (resp.status === 401 || resp.status === 404) return { action: 'absent' };
+    throw syncError('VildaSync.deleteSlotWithMaterial: błąd kasacji slotu (' + resp.status + ').',
+      'DELETE_FAILED', { httpStatus: resp.status });
+  }
+
+  /**
+   * "Wyloguj wszystkie urządzenia": rotuje tożsamość synchronizacji i przenosi
+   * dane na NOWY slot, kasując STARY.
+   *
+   * Kolejność (bezpieczna dla danych): najpierw ZAPEŁNIAMY nowy slot, dopiero
+   * potem KASUJEMY stary — przerwanie w połowie nigdy nie gubi danych (najwyżej
+   * zostaje osierocony stary slot, który następny push/rewokacja może skasować).
+   *
+   * Skutki:
+   *   • inne urządzenia trzymają stary SIS → ich authToken przestaje pasować
+   *     (stary slot skasowany) → tracą dostęp do synchronizacji,
+   *   • stary klucz odzyskiwania zostaje unieważniony (vault.rotateSyncIdentity),
+   *   • bieżące urządzenie otrzymuje NOWY klucz odzyskiwania (do pokazania userowi),
+   *   • DEK = master niezmieniony → dane lokalne i blob przeżywają.
+   *
+   * UWAGA (model zagrożeń): w aplikacji E2E lokalnej nie da się zdalnie wymazać
+   * IndexedDB innych urządzeń — one tracą jedynie dostęp do SYNCHRONIZACJI oraz
+   * stary klucz odzyskiwania. Lokalna sesja innego urządzenia działa do idle-locka.
+   *
+   * @param {string} password
+   * @returns {Promise<{ recoveryKey:string, oldSlotId:string, newSlotId:string, oldSlotRevoked:boolean }>}
+   */
+  async function revokeAllDevices(password) {
+    var vault = requireUnlockedVault();
+    if (typeof vault.rotateSyncIdentity !== 'function') {
+      throw syncError('VildaSync.revokeAllDevices: vault nie wspiera rotacji tożsamości.', 'NOT_SUPPORTED');
+    }
+    emit(syncStartListeners, { operation: 'revoke' });
+    try {
+      // 1) Materiał STAREGO slotu (przed rotacją).
+      var oldMat = await vault.getSyncMaterial();
+      var oldSlotId = oldMat.slotId;
+      var oldAuthToken = oldMat.authToken;
+
+      // 2) Rotacja LOKALNA: nowy SIS + nowy klucz odzyskiwania (bramka hasłem).
+      //    Rzuca przed jakimkolwiek dotknięciem serwera, jeśli hasło złe.
+      var rot = await vault.rotateSyncIdentity(password);
+
+      // 3) Materiał NOWEGO slotu (po rotacji). syncEncKey TEN SAM (z DEK).
+      var newMat = await vault.getSyncMaterial();
+      var newSlotId = newMat.slotId;
+
+      // 4) Zbuduj zaszyfrowany blob z bieżących danych.
+      var rawData = await vault.exportSyncPayload();
+      var plainBytes = new TextEncoder().encode(JSON.stringify(rawData));
+      var encBlob = await encryptBlob(plainBytes, newMat.syncEncKey);
+
+      // 5) Zapełnij NOWY slot (dane bezpieczne ZANIM skasujemy stary).
+      var upRes = await uploadToSlot(newSlotId, newMat.authToken, newMat.authTokenHash, encBlob);
+      var newState = loadSyncState(newSlotId) || {};
+      newState.registered = true;
+      newState.localEtag = upRes.etag || null;
+      newState.lastSyncAt = new Date().toISOString();
+      saveSyncState(newSlotId, newState);
+
+      // 6) Skasuj STARY slot (best-effort; idempotentne).
+      var oldRevoked = false;
+      try {
+        var delRes = await deleteSlotWithMaterial(oldSlotId, oldAuthToken);
+        oldRevoked = (delRes.action === 'deleted' || delRes.action === 'absent');
+      } catch (_) {
+        oldRevoked = false; // nowy slot już żyje; stary można skasować przy następnej rewokacji
+      }
+      clearSyncStateForSlot(oldSlotId);
+
+      var result = {
+        recoveryKey: rot.recoveryKey,
+        oldSlotId: oldSlotId,
+        newSlotId: newSlotId,
+        oldSlotRevoked: oldRevoked
+      };
+      emit(syncCompleteListeners, { operation: 'revoke', result: result });
+      return result;
+    } catch (e) {
+      emit(syncErrorListeners, { operation: 'revoke', error: e });
+      throw e;
+    }
+  }
+
   // ─── Rejestracja listenerów ──────────────────────────────────────────────────
 
   function onSyncStart(cb)    { if (typeof cb === 'function') syncStartListeners.push(cb); }
@@ -802,6 +941,19 @@
      * @returns {Promise<{ isNewDevice: boolean, lastModified: string|null }>}
      */
     probeNewDevice: probeNewDevice,
+
+    /**
+     * "Wyloguj wszystkie urządzenia": rotacja tożsamości sync + przeniesienie
+     * danych na nowy slot + kasacja starego + nowy klucz odzyskiwania.
+     * @returns {Promise<{ recoveryKey, oldSlotId, newSlotId, oldSlotRevoked }>}
+     */
+    revokeAllDevices: revokeAllDevices,
+
+    /** Zapełnia slot blobem (register-or-PUT). */
+    uploadToSlot: uploadToSlot,
+
+    /** Idempotentna kasacja slotu danym authTokenem. */
+    deleteSlotWithMaterial: deleteSlotWithMaterial,
 
     // Hooki testowe (routing stanu sync — ephemeral-aware).
     _loadSyncState: loadSyncState,
