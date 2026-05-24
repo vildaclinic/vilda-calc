@@ -798,7 +798,7 @@
     pendingSetupOptions.step = 2;
 
     const stepLabel = el('div', { class: 'vilda-auth-step', text: 'Krok 2 z 4' });
-    const title = el('h2', { class: 'vilda-auth-title', text: 'Twój klucz zapasowy' });
+    const title = el('h2', { class: 'vilda-auth-title', text: 'Twój klucz odzyskiwania' });
     const sub = el('p', {
       class: 'vilda-auth-subtitle',
       text: 'Zapisz go teraz — to jedyny sposób na odzyskanie konta, jeśli zapomnisz hasła. Możesz go skopiować lub pobrać jako plik.'
@@ -836,7 +836,7 @@
     });
     const confirmLabel = el('label', {
       class: 'vilda-auth-checkbox-label',
-      text: 'Zapisałem klucz zapasowy w bezpiecznym miejscu'
+      text: 'Zapisałem klucz odzyskiwania w bezpiecznym miejscu'
     });
     confirmLabel.setAttribute('for', confirmCheckboxId);
     const confirmRow = el('div', { class: 'vilda-auth-checkbox-row' }, [confirmCheckbox, confirmLabel]);
@@ -851,7 +851,7 @@
       onclick: async function () {
         showError(errBox, '');
         if (!confirmCheckbox.checked) {
-          showError(errBox, 'Zaznacz, że zapisałeś klucz zapasowy, zanim przejdziesz dalej.');
+          showError(errBox, 'Zaznacz, że zapisałeś klucz odzyskiwania, zanim przejdziesz dalej.');
           return;
         }
         setBusy(true);
@@ -942,7 +942,7 @@
       syncWarning = el('div', { class: 'vilda-auth-warning-banner' });
       syncWarning.appendChild(el('strong', { text: 'Aby zalogować się na innym urządzeniu' }));
       syncWarning.appendChild(global.document.createTextNode(
-        ', będziesz potrzebować kodu synchronizacji. Możesz go zobaczyć w Ustawieniach → Synchronizacja → Pokaż kod synchronizacji. Zapisz go razem z kluczem zapasowym.'
+        ', będziesz potrzebować zapasowego kodu dostępu. Możesz go zobaczyć w Ustawieniach → Synchronizacja → Pokaż zapasowy kod dostępu. Zapisz go razem z kluczem odzyskiwania.'
       ));
     }
 
@@ -3945,11 +3945,11 @@
     setTimeout(function () { try { pwInput.focus(); } catch (_) {} }, 30);
   }
 
-  // ============ EKRAN ODTWARZANIA Z KODU SYNCHRONIZACJI ============
+  // ============ EKRAN ODTWARZANIA Z ZAPASOWEGO KODU DOSTĘPU ============
 
   /**
-   * Ekran „Mam kod synchronizacji" — cross-device restore bez pliku .wiw.
-   * Użytkownik podaje kod (vsc1.…) + hasło → vault odblokowany z tym samym
+   * Ekran „Zapasowy kod dostępu" — cross-device restore bez pliku .wiw.
+   * Użytkownik podaje kod (vsc3.…) + hasło → vault odblokowany z tym samym
    * masterKey → ten sam slotId → interstitial „Znaleziono Twoje dane" pojawia
    * się automatycznie z vilda_sync_integration.js.
    */
@@ -4041,7 +4041,7 @@
     orDiv.style.cssText = 'display:flex;align-items:center;gap:0.6rem;margin:0.6rem 0;color:var(--text-muted,#888);font-size:0.82rem;';
     orDiv.innerHTML = '<hr style="flex:1;border:none;border-top:1px solid var(--border,#ddd)"><span>lub</span><hr style="flex:1;border:none;border-top:1px solid var(--border,#ddd)">';
 
-    // ── Sekcja kodu synchronizacji ────────────────────────────────────────────
+    // ── Sekcja zapasowego kodu dostępu ─────────────────────────────────────────
     const codeSection = document.createElement('div');
     codeSection.style.cssText = [
       'background:var(--surface-alt,#f0f4ff)',
@@ -4055,20 +4055,23 @@
     codeSectionTitle.style.cssText = 'display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem;';
     codeSectionTitle.innerHTML = [
       '<span style="font-size:1.1rem;">☁</span>',
-      '<strong style="font-size:0.95rem;">Kod synchronizacji</strong>',
+      '<strong style="font-size:0.95rem;">Zapasowy kod dostępu</strong>',
       '<span style="font-size:0.75rem;background:#6b7280;color:#fff;border-radius:4px;padding:1px 7px;margin-left:auto;">Bez telefonu</span>'
     ].join('');
 
     const codeSectionDesc = document.createElement('p');
     codeSectionDesc.style.cssText = 'margin:0 0 0.7rem;font-size:0.84rem;color:var(--text-secondary,#555);line-height:1.5;';
     codeSectionDesc.innerHTML = [
-      'Wklej kod wygenerowany w: telefon → <strong>Ustawienia → Synchronizacja</strong>',
-      ' → <strong>„☁ Pokaż kod synchronizacji"</strong> → Generuj.'
+      'Kod + hasło logują Twoje konto na tym urządzeniu i pobierają dane z serwera ',
+      '(nowy telefon, drugi komputer — nie tylko awaria). <strong>Warunek: na starym ',
+      'urządzeniu musi być włączona synchronizacja.</strong><br>',
+      'Kod wygenerujesz na starym urządzeniu w: <strong>Ustawienia → Synchronizacja</strong>',
+      ' → <strong>„☁ Pokaż zapasowy kod dostępu"</strong> → Generuj.'
     ].join('');
 
     const codeInput = el('textarea', {
       class: 'vilda-auth-input',
-      placeholder: 'vsc1.AbCd1234.XyZw5678.…',
+      placeholder: 'vsc3.600000.AbCd1234.XyZw5678.…',
       rows: '3',
       style: 'font-family:monospace;font-size:0.82rem;resize:vertical;min-height:68px;margin-bottom:0.5rem;'
     });
@@ -4084,7 +4087,7 @@
     const pwInput = el('input', {
       type: 'password',
       class: 'vilda-auth-input',
-      placeholder: 'Hasło ze starego urządzenia',
+      placeholder: 'Hasło ze starego konta',
       style: 'margin-bottom:0.5rem;'
     });
 
@@ -4108,7 +4111,7 @@
       const pw    = (pwInput.value    || '');
       const label = (labelInput.value || '').trim() || undefined;
 
-      if (!code) { showErr('Wklej kod synchronizacji.'); return; }
+      if (!code) { showErr('Wklej zapasowy kod dostępu.'); return; }
       if (!pw)   { showErr('Podaj hasło.'); return; }
 
       submitBtn.disabled = true;
