@@ -793,8 +793,16 @@
       '<p style="margin:8px 0 0;font-size:0.8rem;line-height:1.4;color:#15323a;text-align:center;">Dane szyfrujemy <strong>na Twoim urządzeniu</strong> — na serwer trafia tylko szyfrogram. Klucz zostaje u Ciebie.</p>'
     ].join('');
 
+    const safetyBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle vilda-auth-btn-small',
+      type: 'button',
+      text: 'Jak chronimy dane?',
+      onclick: function () { try { if (global.VildaDataSafety) global.VildaDataSafety.open(); } catch (_) {} }
+    });
+    safetyBtn.style.margin = '0 auto 6px';
+
     open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
-      stepLabel, title, sub, infoA, labelInput, pw1,
+      stepLabel, title, sub, infoA, safetyBtn, labelInput, pw1,
       el('div', { class: 'vilda-auth-meter-wrap' }, [meter, meterLabel]),
       pw2, errBox,
       el('div', { class: 'vilda-auth-actions' }, [back, next])
