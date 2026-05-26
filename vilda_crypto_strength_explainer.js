@@ -93,7 +93,7 @@
     '<div class="vcs-scene"><div class="vcs-art"><svg viewBox="0 0 300 180" xmlns="http://www.w3.org/2000/svg">' +
       '<g class="pop">' +
         '<rect x="44" y="52" width="212" height="74" rx="16" fill="#eef7f8" stroke="#bcdfe3" stroke-width="1.6"/>' +
-        '<text x="150" y="92" text-anchor="middle" font-size="30" font-weight="800" fill="#0f2b33">2²⁵⁶</text>' +
+        '<text x="150" y="92" text-anchor="middle" font-size="30" font-weight="800" fill="#0f2b33">2<tspan font-size="18" dy="-12">256</tspan></text>' +
         '<text x="150" y="114" text-anchor="middle" font-size="13" fill="#00838d" font-weight="700">≈ 10⁷⁷ możliwych kluczy</text>' +
       '</g>' +
       '<text class="pop2" x="150" y="146" text-anchor="middle" font-size="14" font-weight="800" fill="#00838d">Porównywalnie z liczbą atomów</text>' +
@@ -107,8 +107,12 @@
         '<clipPath id="vcsBotGlass"><path d="M116,154 L184,154 L150,110 Z"/></clipPath>' +
       '</defs>' +
       '<g class="pop">' +
-        '<rect x="78" y="12" width="144" height="28" rx="14" fill="#fbeef0" stroke="#d85a30" stroke-width="1.4"/>' +
-        '<text x="150" y="31" text-anchor="middle" font-size="13" font-weight="800" fill="#993c1d">10¹⁸ prób na sekundę</text>' +
+        '<rect x="46" y="6" width="208" height="40" rx="20" fill="#fbeef0" stroke="#d85a30" stroke-width="1.8"/>' +
+        '<foreignObject x="46" y="6" width="208" height="40">' +
+          '<div xmlns="http://www.w3.org/1999/xhtml" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-family:Inter,\'Segoe UI\',system-ui,-apple-system,sans-serif;font-size:17px;font-weight:800;color:#993c1d;">' +
+            '10<sup style="font-size:11px;line-height:0;margin-left:1px;margin-right:2px;">18</sup>prób na sekundę' +
+          '</div>' +
+        '</foreignObject>' +
       '</g>' +
       '<g class="pop2">' +
         '<rect x="112" y="62" width="76" height="4" rx="1.5" fill="#00838d"/>' +
@@ -170,7 +174,7 @@
         '<circle cx="180" cy="120" r="2.6" fill="#1d9e75"/>' +
         '<path d="M134,97 L147,110 L166,84" fill="none" stroke="#1d9e75" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>' +
       '</g>' +
-    '</svg></div><div class="vcs-num">Siła 6/6</div><h3>Mocne hasło = praktycznie nie do złamania</h3><p>Użyj długiego hasła albo kilku losowych słów — a Twoje dane będą bezpieczne praktycznie w nieskończoność.</p></div>';
+    '</svg></div><div class="vcs-num">Siła 6/6</div><h3>Mocne hasło = praktycznie nie do złamania</h3><p>Użyj długiego hasła albo kilku losowych słów — a Twoje dane będą bezpieczne na zawsze.</p></div>';
 
   var PANEL =
     '<div class="vcs-backdrop" data-close></div>' +
