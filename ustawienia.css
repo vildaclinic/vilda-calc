@@ -117,6 +117,10 @@
   overflow: hidden;
   /* Offset dla sticky nagłówka przy scrollIntoView / nawigacji hashowej */
   scroll-margin-top: calc(var(--chrome-strip-height, 64px) + 12px);
+  /* Container query: layout summary reaguje na szerokość samej karty, nie viewport.
+     Przy dwupanelowym układzie (sidebar + content) accordion może być węższy niż
+     viewport sugeruje — chipy z nowrap potrafią wypychać kolumnę tytułu. */
+  container-type: inline-size;
 }
 .settings-accordion[open] {
   border-color: rgba(0, 131, 141, 0.26);
@@ -187,6 +191,11 @@
   font-size: 0.82rem;
   font-weight: 600;
   white-space: nowrap;
+  /* Zapobiega temu, by szeroki chip (np. "Zsynchronizowano: przed chwilą")
+     wymuszał szerokość kolumny grid i zgniatał tytuł akordeonu. */
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .settings-chevron {
   width: 2.6rem;
@@ -659,7 +668,22 @@
 
 /* ============ RESPONSIVE ============ */
 
-/* Tablet szeroki: meta przesuwa się pod tytuł */
+/* Container queries — layout summary reaguje na własną szerokość karty.
+   To kluczowe, bo accordion w dwupanelowym układzie (sidebar 180px + 1fr content)
+   ma rzeczywistą szerokość mniejszą niż viewport. Gdy karta < 660px, chipy
+   spadają poniżej tytułu, nie zgniatając kolumny treści. */
+@container (max-width: 660px) {
+  .settings-accordion > summary {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+  .settings-accordion-meta {
+    grid-column: 2 / -1;
+    justify-content: flex-start;
+  }
+}
+
+/* Fallback dla starszych przeglądarek bez container queries — zachowujemy też
+   regułę viewport-based jako safety net. */
 @media (max-width: 980px) {
   .settings-accordion > summary {
     grid-template-columns: auto minmax(0, 1fr) auto;
