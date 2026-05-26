@@ -769,30 +769,6 @@
       onclick: function () { pendingSetupOptions = null; showStartupScreen(); }
     });
 
-    const infoA = document.createElement('div');
-    infoA.style.cssText = 'margin:2px 0 12px;padding:10px 12px;background:#f5fafb;border:1px solid #d7e9ec;border-radius:12px;';
-    infoA.innerHTML = [
-      '<svg viewBox="0 0 320 104" width="100%" style="max-width:320px;display:block;margin:0 auto" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Dane są szyfrowane na Twoim urządzeniu; na serwer trafia tylko szyfrogram.">',
-        '<rect x="10" y="18" width="58" height="66" rx="8" fill="#ffffff" stroke="#00838d" stroke-width="2"/>',
-        '<rect x="17" y="26" width="44" height="42" rx="4" fill="#eef7f8"/>',
-        '<rect x="23" y="32" width="32" height="7" rx="2" fill="#00838d"/>',
-        '<rect x="23" y="44" width="32" height="4" rx="2" fill="#c9d6da"/>',
-        '<rect x="23" y="53" width="24" height="4" rx="2" fill="#c9d6da"/>',
-        '<text x="39" y="98" text-anchor="middle" font-size="9" fill="#5b6672">Urządzenie</text>',
-        '<line x1="74" y1="51" x2="120" y2="51" stroke="#00838d" stroke-width="2"/>',
-        '<polygon points="120,46 130,51 120,56" fill="#00838d"/>',
-        '<rect x="91" y="41" width="20" height="15" rx="3.5" fill="#ffffff" stroke="#00838d" stroke-width="2"/>',
-        '<path d="M95,41 v-4 a6,6 0 0 1 12,0 v4" fill="none" stroke="#00838d" stroke-width="2.4"/>',
-        '<text x="101" y="74" text-anchor="middle" font-size="8.5" fill="#00838d">szyfrowanie</text>',
-        '<g><circle cx="214" cy="54" r="18" fill="#cfe8eb"/><circle cx="242" cy="40" r="24" fill="#cfe8eb"/><circle cx="272" cy="54" r="18" fill="#cfe8eb"/><rect x="202" y="49" width="82" height="24" rx="12" fill="#cfe8eb"/></g>',
-        '<rect x="220" y="40" width="52" height="28" rx="6" fill="#ffffff" stroke="#b0d4d8" stroke-width="1.4"/>',
-        '<text x="227" y="53" font-size="9" font-family="monospace" fill="#8a93a0">a8F#9z⌗</text>',
-        '<text x="227" y="64" font-size="9" font-family="monospace" fill="#8a93a0">K2$mB7</text>',
-        '<text x="245" y="98" text-anchor="middle" font-size="9" fill="#5b6672">Serwer</text>',
-      '</svg>',
-      '<p style="margin:8px 0 0;font-size:0.8rem;line-height:1.4;color:#15323a;text-align:center;">Dane szyfrujemy <strong>na Twoim urządzeniu</strong> — na serwer trafia tylko szyfrogram. Klucz zostaje u Ciebie.</p>'
-    ].join('');
-
     const safetyBtn = el('button', {
       class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle vilda-auth-btn-small',
       type: 'button',
@@ -813,7 +789,7 @@
     explainersRow.style.margin = '0 auto 6px';
 
     open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
-      stepLabel, title, sub, infoA, explainersRow, labelInput, pw1,
+      stepLabel, title, sub, explainersRow, labelInput, pw1,
       el('div', { class: 'vilda-auth-meter-wrap' }, [meter, meterLabel]),
       pw2, errBox,
       el('div', { class: 'vilda-auth-actions' }, [back, next])
