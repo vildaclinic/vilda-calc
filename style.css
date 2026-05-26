@@ -7922,8 +7922,12 @@ body.js-loading .main-content {
  *
  * Nakładka logowania (#vilda-auth-ui-root) i overlay wylogowania
  * (.vilda-logout-overlay) są spod reguły wyłączone — malują się normalnie.
+ * Explainery „Jak chronimy dane?" (.vds-overlay) i „Jak silne jest szyfrowanie?"
+ * (.vcs-overlay) też muszą być widoczne, bo otwiera się je z poziomu kreatora
+ * konta (auth jest wtedy locked) — bez tego klik buttona w kreatorze tylko dokleja
+ * niewidoczną nakładkę, która materializuje się dopiero po zalogowaniu.
  */
-html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overlay) {
+html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overlay):not(.vds-overlay):not(.vcs-overlay) {
   visibility: hidden !important;
 }
 

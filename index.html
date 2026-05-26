@@ -81,7 +81,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
 <!-- Zmieniamy nazwę pliku stylów na style_PWZ.css -->
 <link href="ios26-v2.css?v=12" rel="stylesheet">
-<link href="style.css?v=42" rel="stylesheet">
+<link href="style.css?v=43" rel="stylesheet">
 <link href="sidebar.css" rel="stylesheet">
 <link href="vilda_chrome.css?v=16" rel="stylesheet">
 <link href="vilda_auth_ui.css?v=28" rel="stylesheet">
@@ -216,7 +216,7 @@ html.vilda-pro-inactive:not(.vilda-logged-in) .vilda-pro-gate-banner--login { di
      (.vilda-logout-overlay) są spod tej reguły wyłączone, więc malują się
      normalnie na neutralnym tle. -->
 <style>
-html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overlay) {
+html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overlay):not(.vds-overlay):not(.vcs-overlay) {
   visibility: hidden !important;
 }
 </style>
@@ -1301,7 +1301,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
         Zmieniono przycisk rozwijający sekcję zaawansowanych obliczeń.  Przycisk
         otrzymuje klasę .advanced-growth-btn, a tekst został otoczony
         elementem <span> z dodatkowym napisem PRO w indeksie górnym.  Napisy są
-        stylowane w pliku style.css?v=42, aby nadać im biały kolor tła,
+        stylowane w pliku style.css?v=43, aby nadać im biały kolor tła,
         czarną czcionkę i fioletową ramkę.  Etykieta PRO w przycisku
         przyjmuje kolor fioletowy (#9900ff) i mniejszy rozmiar czcionki.
       -->
