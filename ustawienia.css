@@ -671,14 +671,22 @@
 /* Container queries — layout summary reaguje na własną szerokość karty.
    To kluczowe, bo accordion w dwupanelowym układzie (sidebar 180px + 1fr content)
    ma rzeczywistą szerokość mniejszą niż viewport. Gdy karta < 660px, chipy
-   spadają poniżej tytułu, nie zgniatając kolumny treści. */
+   spadają poniżej tytułu, nie zgniatając kolumny treści.
+   Explicit placement chevronu (col 3 row 1) — inaczej sparse auto-flow CSS Grid
+   wrzuca go pod chipami do row 3, niepotrzebnie zwiększając wysokość karty. */
 @container (max-width: 660px) {
   .settings-accordion > summary {
     grid-template-columns: auto minmax(0, 1fr) auto;
   }
   .settings-accordion-meta {
     grid-column: 2 / -1;
+    grid-row: 2;
     justify-content: flex-start;
+  }
+  .settings-chevron {
+    grid-column: 3;
+    grid-row: 1;
+    align-self: center;
   }
 }
 
@@ -690,7 +698,13 @@
   }
   .settings-accordion-meta {
     grid-column: 2 / -1;
+    grid-row: 2;
     justify-content: flex-start;
+  }
+  .settings-chevron {
+    grid-column: 3;
+    grid-row: 1;
+    align-self: center;
   }
 }
 
