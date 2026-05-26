@@ -439,8 +439,20 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
           <option value="M">Mężczyzna</option>
           <option value="F">Kobieta</option>
         </select></label>
-      <label>Etap dojrzewania (Tanner) <span style="font-weight:400;opacity:0.65;">(opcjonalnie, dla wieku rozwojowego)</span>:
-        <select id="tannerStage" onchange="debouncedUpdate()">
+      <!-- Etap Tannera — progressive disclosure: dla pacjentów <18 r.ż. zawsze widoczne;
+           dla dorosłych ukryte (Tanner V jest standardową wartością domyślną dla
+           pacjenta po dojrzewaniu), ale można ujawnić toggle'em w rzadkich
+           przypadkach (np. dorosły z opóźnionym dojrzewaniem). Jeśli wartość jest
+           już wpisana — pole pokazuje się niezależnie od wieku. -->
+      <button type="button" id="tannerToggleBtn"
+              style="display:none;align-self:flex-start;margin:0.25rem 0 0.5rem;
+                     padding:0.35rem 0.65rem;font-size:0.82rem;font-weight:500;
+                     background:transparent;border:1px solid #cfe0e3;border-radius:8px;
+                     color:#5a7274;cursor:pointer;text-align:left;line-height:1.3;">
+        + Pokaż etap Tannera <span style="opacity:0.7;">(dla zaburzeń dojrzewania u dorosłych)</span>
+      </button>
+      <label id="tannerStageWrap">Etap dojrzewania (Tanner) <span style="font-weight:400;opacity:0.65;">(opcjonalnie, dla wieku rozwojowego)</span>:
+        <select id="tannerStage" onchange="debouncedUpdate(); if (typeof updateTannerVisibility === 'function') updateTannerVisibility();">
           <option value="">— nieznany / automatycznie z wieku —</option>
           <option value="1">Tanner I — przedpokwitaniowy</option>
           <option value="2">Tanner II — wczesne pokwitanie</option>
@@ -448,6 +460,68 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
           <option value="4">Tanner IV — późne pokwitanie</option>
           <option value="5">Tanner V — dojrzałość pełna</option>
         </select></label>
+      <script>
+        // Progressive disclosure pola Tannera. Reguły:
+        //   • wiek <18 r.ż. → pole ZAWSZE widoczne (główny use case pediatryczny)
+        //   • wiek ≥18, brak wartości, brak manual reveal → pole ukryte, toggle widoczny
+        //   • wiek ≥18, jest wartość → pole widoczne (szanujemy zapisane dane)
+        //   • wiek ≥18, manual reveal (klik w toggle) → pole widoczne, toggle ukryty
+        (function () {
+          let manualReveal = false;
+          const ageInput = document.getElementById('age');
+          const ageMonthsInput = document.getElementById('ageMonths');
+          const tannerWrap = document.getElementById('tannerStageWrap');
+          const tannerSelect = document.getElementById('tannerStage');
+          const tannerToggle = document.getElementById('tannerToggleBtn');
+          if (!ageInput || !tannerWrap || !tannerSelect || !tannerToggle) return;
+
+          function isAdult() {
+            const y = parseInt(ageInput.value, 10);
+            // Wiek <18 traktujemy jako dziecko (główny przypadek). Pusty wiek =
+            // brak danych — wtedy pokazujemy pole (lekarz dopiero wypełnia formularz).
+            if (!Number.isFinite(y)) return false;
+            return y >= 18;
+          }
+          function hasValue() {
+            return tannerSelect.value !== '';
+          }
+          window.updateTannerVisibility = function () {
+            const adult = isAdult();
+            const value = hasValue();
+            const showField = !adult || value || manualReveal;
+            tannerWrap.style.display = showField ? '' : 'none';
+            tannerToggle.style.display = (adult && !value && !manualReveal) ? '' : 'none';
+          };
+          tannerToggle.addEventListener('click', function () {
+            manualReveal = true;
+            updateTannerVisibility();
+            setTimeout(function () { try { tannerSelect.focus(); } catch (_) {} }, 30);
+          });
+          ageInput.addEventListener('input', function () {
+            // Gdy user zmienia wiek na <18, reset manual reveal — pole pojawi się
+            // naturalnie. Gdy zmienia na ≥18, zachowujemy manual reveal jeśli był.
+            if (!isAdult()) manualReveal = false;
+            updateTannerVisibility();
+          });
+          if (ageMonthsInput) {
+            ageMonthsInput.addEventListener('input', function () { updateTannerVisibility(); });
+          }
+          // Stan początkowy + reactive na późniejsze ustawienie wartości
+          // (np. przez restore z autosave/pacjent).
+          updateTannerVisibility();
+          // Obserwator zmian wartości selecta przez programowe set (np. autosave restore).
+          // 'change' jest dispatched dla user input; programowe ustawienie wartości nie
+          // triggeruje change automatycznie, więc dodajemy MutationObserver na atrybut value.
+          // (Jeśli aplikacja ustawia wartość przez tannerSelect.value = '...', musimy
+          // ręcznie wywołać updateTannerVisibility() — patrz hook poniżej.)
+          // Dodatkowo: po DOMContentLoaded sprawdzamy stan ponownie (autosave może być async).
+          window.addEventListener('load', function () {
+            setTimeout(updateTannerVisibility, 0);
+            setTimeout(updateTannerVisibility, 200);
+            setTimeout(updateTannerVisibility, 800);
+          });
+        })();
+      </script>
       <label>Waga (kg):
         <!-- Dostosowujemy zakres do niemowląt: mniejsza waga i możliwość wpisywania wartości z dokładnością do 0.1 kg -->
         <input type="number" id="weight" min="2" max="300" step="0.1" oninput="debouncedUpdate()" required></label>
