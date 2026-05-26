@@ -59,7 +59,7 @@
   <link href="sidebar.css" rel="stylesheet">
   <link href="vilda_chrome.css?v=16" rel="stylesheet">
   <link href="vilda_auth_ui.css?v=28" rel="stylesheet">
-  <link href="ustawienia.css?v=7" rel="stylesheet">
+  <link href="ustawienia.css?v=8" rel="stylesheet">
 
 <!-- PRO-gate bootstrap — synchroniczny, bez migania.
      Ustawia klasę vilda-pro-active / vilda-pro-inactive na <html>
@@ -1131,34 +1131,44 @@ html.vilda-pro-active .pro-sync-note {
           </details>
         </div>
 
-        <!-- ⚠️ Strefa niebezpieczna — zawsze widoczna, poza akordeonami -->
+        <!-- ⚠️ Strefa niebezpieczna — akordeon (domyślnie zamknięty).
+             Zewnętrzny .settings-danger-zone zachowujemy bo JS (applyAuthState)
+             chowa całą sekcję po wylogowaniu poprzez tę klasę. -->
         <div class="settings-danger-zone">
-          <div class="settings-danger-zone-header">
-            <span class="settings-danger-zone-icon" aria-hidden="true"><i data-lucide="triangle-alert"></i></span>
-            <div class="settings-danger-zone-copy">
-              <h2 class="settings-danger-zone-title">Strefa niebezpieczna</h2>
-              <p class="settings-danger-zone-desc">Akcje poniżej są nieodwracalne i wpływają na dane konta. Postępuj ostrożnie.</p>
-            </div>
-          </div>
-          <div class="settings-control-grid">
-            <div class="settings-control-card settings-danger-card" id="removeUserCard">
-              <div class="settings-control-header">
-                <h3 class="settings-control-title">Usuń to konto z urządzenia</h3>
-                <span class="settings-tag settings-tag--danger">Nieodwracalne</span>
+          <details class="settings-accordion settings-accordion--danger" id="dangerZoneAccordion">
+            <summary>
+              <span class="settings-accordion-index settings-accordion-index--danger" aria-hidden="true"><i data-lucide="triangle-alert"></i></span>
+              <div class="settings-accordion-copy">
+                <h2 class="settings-accordion-title">Strefa niebezpieczna</h2>
+                <p class="settings-accordion-text">Akcje poniżej są nieodwracalne i wpływają na dane konta. Postępuj ostrożnie.</p>
               </div>
-              <p class="settings-control-desc">
-                Wszystkie dane pacjentów tego konta zostaną nieodwracalnie usunięte z tej przeglądarki.
-                Pliki kopii w OneDrive / na dysku pozostają nietknięte. Operacji NIE można cofnąć.
-              </p>
-              <input type="password" id="removeUserPwInput" class="vilda-auth-input settings-danger-input" placeholder="Wpisz hasło, aby potwierdzić">
-              <div class="settings-card-toggle-row">
-                <button type="button" id="removeUserBtn" class="vilda-auth-btn vilda-auth-btn-small settings-danger-btn">
-                  Usuń to konto
-                </button>
+              <div class="settings-accordion-meta">
+                <span class="settings-mini-chip settings-mini-chip--danger">Nieodwracalne</span>
               </div>
-              <p class="settings-inline-note settings-danger-status" id="removeUserStatus">&nbsp;</p>
+              <span class="settings-chevron" aria-hidden="true">⌄</span>
+            </summary>
+            <div class="settings-accordion-panel">
+              <div class="settings-panel-inner">
+                <div class="settings-control-card settings-danger-card" id="removeUserCard">
+                  <div class="settings-control-header">
+                    <h3 class="settings-control-title">Usuń to konto z urządzenia</h3>
+                    <span class="settings-tag settings-tag--danger">Nieodwracalne</span>
+                  </div>
+                  <p class="settings-control-desc">
+                    Wszystkie dane pacjentów tego konta zostaną nieodwracalnie usunięte z tej przeglądarki.
+                    Pliki kopii w OneDrive / na dysku pozostają nietknięte. Operacji NIE można cofnąć.
+                  </p>
+                  <input type="password" id="removeUserPwInput" class="vilda-auth-input settings-danger-input" placeholder="Wpisz hasło, aby potwierdzić">
+                  <div class="settings-card-toggle-row">
+                    <button type="button" id="removeUserBtn" class="vilda-auth-btn vilda-auth-btn-small settings-danger-btn">
+                      Usuń to konto
+                    </button>
+                  </div>
+                  <p class="settings-inline-note settings-danger-status" id="removeUserStatus">&nbsp;</p>
+                </div>
+              </div>
             </div>
-          </div>
+          </details>
         </div>
 
         </div><!-- /.settings-content -->
