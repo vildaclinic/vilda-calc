@@ -110,7 +110,7 @@
         '<rect x="46" y="6" width="208" height="40" rx="20" fill="#fbeef0" stroke="#d85a30" stroke-width="1.8"/>' +
         '<foreignObject x="46" y="6" width="208" height="40">' +
           '<div xmlns="http://www.w3.org/1999/xhtml" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-family:Inter,\'Segoe UI\',system-ui,-apple-system,sans-serif;font-size:17px;font-weight:800;color:#993c1d;">' +
-            '10<sup style="font-size:11px;line-height:0;margin-left:1px;margin-right:2px;">18</sup>prób na sekundę' +
+            '10<span style="font-size:11px;font-weight:800;position:relative;top:-7px;margin-left:1px;margin-right:3px;">18</span>prób na sekundę' +
           '</div>' +
         '</foreignObject>' +
       '</g>' +
