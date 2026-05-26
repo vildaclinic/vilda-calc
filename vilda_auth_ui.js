@@ -63,6 +63,72 @@
   // Kasowany przy pomyślnym logowaniu dowolną metodą.
   let _passkeyAutoFailed = new Set();
 
+  // ============ ADAPTIVE BACKOFF BIOMETRII ============
+  // Po N anulowaniach z rzędu (cross-session) wyłączamy automatyczne wywoływanie
+  // Face ID/Touch ID na ekranie logowania — przycisk biometryczny zostaje, ale
+  // user musi go kliknąć ręcznie. Stan trzymamy w localStorage per-userId; user
+  // może ręcznie przełączyć w Ustawieniach → Bezpieczeństwo.
+  // Po udanym logowaniu biometrią resetujemy licznik (ale NIE re-enable auto —
+  // to świadoma decyzja użytkownika z Ustawień).
+  const BIOMETRIC_AUTO_OFF_THRESHOLD = 2;
+  function _bioKey(prefix, uid) { return 'vilda:' + prefix + ':' + uid; }
+  function _safeLS() { try { return global.localStorage || null; } catch (_) { return null; } }
+  function getBiometricAutoTrigger(uid) {
+    if (!uid) return 'on';
+    const ls = _safeLS(); if (!ls) return 'on';
+    try { return ls.getItem(_bioKey('biometricAutoTrigger', uid)) === 'off' ? 'off' : 'on'; }
+    catch (_) { return 'on'; }
+  }
+  function setBiometricAutoTrigger(uid, value) {
+    if (!uid) return;
+    const ls = _safeLS(); if (!ls) return;
+    try { ls.setItem(_bioKey('biometricAutoTrigger', uid), value === 'off' ? 'off' : 'on'); } catch (_) {}
+  }
+  function getBiometricDismissCount(uid) {
+    if (!uid) return 0;
+    const ls = _safeLS(); if (!ls) return 0;
+    try {
+      const n = parseInt(ls.getItem(_bioKey('biometricDismissCount', uid)) || '0', 10);
+      return Number.isFinite(n) && n >= 0 ? n : 0;
+    } catch (_) { return 0; }
+  }
+  function setBiometricDismissCount(uid, n) {
+    if (!uid) return;
+    const ls = _safeLS(); if (!ls) return;
+    try { ls.setItem(_bioKey('biometricDismissCount', uid), String(Math.max(0, n | 0))); } catch (_) {}
+  }
+  function isBiometricAutoOffNoticePending(uid) {
+    if (!uid) return false;
+    const ls = _safeLS(); if (!ls) return false;
+    try { return ls.getItem(_bioKey('biometricAutoOffNotice', uid)) === '1'; }
+    catch (_) { return false; }
+  }
+  function setBiometricAutoOffNoticePending(uid, pending) {
+    if (!uid) return;
+    const ls = _safeLS(); if (!ls) return;
+    try {
+      if (pending) ls.setItem(_bioKey('biometricAutoOffNotice', uid), '1');
+      else ls.removeItem(_bioKey('biometricAutoOffNotice', uid));
+    } catch (_) {}
+  }
+  // Po anulowaniu biometrii (NotAllowedError): inkrementuj licznik; po N z rzędu
+  // wyłącz auto-trigger i ustaw flagę banneru na następny ekran logowania.
+  function recordBiometricDismissal(uid) {
+    if (!uid) return;
+    const n = getBiometricDismissCount(uid) + 1;
+    setBiometricDismissCount(uid, n);
+    if (n >= BIOMETRIC_AUTO_OFF_THRESHOLD && getBiometricAutoTrigger(uid) === 'on') {
+      setBiometricAutoTrigger(uid, 'off');
+      setBiometricAutoOffNoticePending(uid, true);
+    }
+  }
+  // Po udanym logowaniu biometrią: zeruj licznik. NIE reaktywuj auto-trigger —
+  // jeśli user w międzyczasie wyłączył ręcznie, szanujemy tę decyzję.
+  function recordBiometricSuccess(uid) {
+    if (!uid) return;
+    setBiometricDismissCount(uid, 0);
+  }
+
   // ============ PLATFORM DETECTION ============
   /**
    * Zwraca lokalną nazwę metody biometrycznej dla aktualnej platformy:
@@ -1148,6 +1214,7 @@
         try {
           await V.unlockWithPasskey(userId, null, _sig);
           _passkeyAutoFailed.delete(userId); // sukces — resetuj flagę failed
+          recordBiometricSuccess(userId); // zeruj persistent counter
           hide();
           startIdleWatch();
         } catch (e) {
@@ -1155,6 +1222,9 @@
             // Pokaż błąd tylko dla rzeczywistych problemów (nie abort)
             showError(errBox, e && e.message ? e.message : 'Logowanie biometryczne nie powiodło się.');
             logWarn('biometric-click', e && e.name ? e.name + ': ' + e.message : String(e));
+            // Anulowanie ręczne też liczy do adaptive backoff — jeśli user kliknął
+            // przycisk biometryczny i sam anulował, jest to sygnał "nie chcę".
+            if (e && e.name === 'NotAllowedError') recordBiometricDismissal(userId);
           }
         } finally {
           _passkeyAbortCtrl = null;
@@ -1212,7 +1282,20 @@
       onclick: function (ev) { ev.preventDefault(); showRecoveryFlowForUser(userId); }
     });
 
+    // Adaptive-backoff banner: pokaż jednorazowo gdy auto-trigger został właśnie
+    // automatycznie wyłączony (N anulowań z rzędu). Po pokazaniu kasujemy flagę
+    // żeby banner nie wracał na każdym kolejnym ekranie.
+    let autoOffBanner = null;
+    if (hasBiometric && isBiometricAutoOffNoticePending(userId)) {
+      autoOffBanner = el('div', { class: 'vilda-auth-banner', role: 'status' });
+      autoOffBanner.style.cssText = 'background:#f0f8f9;border:1px solid #cfe0e3;color:#0f2b33;padding:10px 12px;border-radius:10px;font-size:0.85rem;line-height:1.4;margin:6px 0 4px;';
+      autoOffBanner.innerHTML = 'Wyłączyliśmy automatyczne pytanie o ' + getBiometricLabel() +
+        '. Kliknij 🪪 obok, kiedy zechcesz — albo włącz z powrotem w <strong>Ustawienia → Bezpieczeństwo</strong>.';
+      setBiometricAutoOffNoticePending(userId, false);
+    }
+
     const screenChildren = [title, sub, banner];
+    if (autoOffBanner) screenChildren.push(autoOffBanner);
     if (biometricSection) screenChildren.push(biometricSection);
     screenChildren.push(pw, errBox,
       el('div', { class: 'vilda-auth-actions' }, [submit]),
@@ -1226,8 +1309,11 @@
     // Jeśli biometria dostępna — od razu uruchom Face ID/Touch ID, nie czekaj na klik.
     // Pomijamy auto-trigger jeśli: (a) opts.skipAutoPasskey, (b) poprzednia próba w tej
     // sesji nie powiodła się (_passkeyAutoFailed) — chroni przed cooldown przeglądarki
-    // po anulowaniu biometrii który powoduje wielosekundowe zamrożenie UI.
-    if (hasBiometric && !opts.skipAutoPasskey && !_passkeyAutoFailed.has(userId)) {
+    // po anulowaniu biometrii który powoduje wielosekundowe zamrożenie UI,
+    // (c) adaptive backoff (cross-session): po N anulowaniach z rzędu lub świadomym
+    // wyłączeniu w Ustawieniach biometricAutoTrigger=off → przycisk widoczny, klik ręcznie.
+    const autoTriggerPref = getBiometricAutoTrigger(userId);
+    if (hasBiometric && !opts.skipAutoPasskey && !_passkeyAutoFailed.has(userId) && autoTriggerPref === 'on') {
       setTimeout(async function () {
         abortPendingPasskey(); // anuluj ewentualny stary request z poprzedniego ekranu
         _passkeyAbortCtrl = new AbortController();
@@ -1237,6 +1323,7 @@
           showError(errBox, '');
           await V.unlockWithPasskey(userId, null, _sig);
           _passkeyAutoFailed.delete(userId); // sukces — resetuj flagę
+          recordBiometricSuccess(userId); // zeruj persistent counter
           hide();
           startIdleWatch();
         } catch (e) {
@@ -1247,6 +1334,8 @@
             }
             // Zablokuj auto-trigger na pozostałą część sesji — użytkownik może kliknąć ręcznie
             _passkeyAutoFailed.add(userId);
+            // Adaptive backoff: inkrementuj persistent counter; po N z rzędu wyłączamy auto
+            if (e && e.name === 'NotAllowedError') recordBiometricDismissal(userId);
             setBusy(false);
             try { pw.focus(); } catch (_) {}
           }
@@ -4623,7 +4712,12 @@
     updateProBadge: updateProBadge,
     isTrustedDevice: isTrustedDevice,
     setTrustedDevice: setTrustedDevice,
-    TRUSTED_DEVICE_IDLE_MS: TRUSTED_DEVICE_IDLE_MS
+    TRUSTED_DEVICE_IDLE_MS: TRUSTED_DEVICE_IDLE_MS,
+    getBiometricAutoTrigger: getBiometricAutoTrigger,
+    setBiometricAutoTrigger: setBiometricAutoTrigger,
+    getBiometricDismissCount: getBiometricDismissCount,
+    resetBiometricDismissCount: function (uid) { setBiometricDismissCount(uid, 0); },
+    getBiometricLabel: getBiometricLabel
   };
 
   global.VildaAuthUI = api;
