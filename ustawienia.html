@@ -147,7 +147,7 @@ html.vilda-pro-active .pro-sync-note {
 <script src="vilda_vault.js?v=26"></script>
 <script src="vilda_sync.js?v=5"></script>
 <script src="vilda_sync_integration.js?v=3"></script>
-<script src="vilda_auth_ui.js?v=76"></script>
+<script src="vilda_auth_ui.js?v=77"></script>
 <script src="vilda_data_safety_explainer.js?v=5"></script>
 <script src="vilda_crypto_strength_explainer.js?v=6"></script>
 <script src="vilda_pro_access.js?v=2"></script>
@@ -1109,6 +1109,18 @@ html.vilda-pro-active .pro-sync-note {
                       </button>
                     </div>
                     <p class="settings-inline-note" id="passkeyStatus" style="margin-top:10px;">&nbsp;</p>
+
+                    <div id="bioAutoTriggerRow" style="display:none;margin-top:14px;padding-top:12px;border-top:1px solid #e6eef0;">
+                      <div class="settings-card-toggle-row settings-backup-btn-row">
+                        <label class="settings-backup-checkbox-label">
+                          <input type="checkbox" id="bioAutoTriggerToggle" class="settings-backup-checkbox">
+                          <span>Pytaj automatycznie o <span id="bioAutoTriggerLabel">Face ID</span> przy logowaniu</span>
+                        </label>
+                      </div>
+                      <p class="settings-inline-note settings-backup-note" id="bioAutoTriggerStatus" style="margin-top:4px;">
+                        Gdy wyłączone, biometria jest dostępna przyciskiem na ekranie logowania, ale nie odpala się sama.
+                      </p>
+                    </div>
                   </div>
 
 
@@ -3120,6 +3132,43 @@ html.vilda-pro-active .pro-sync-note {
       const passkeyList = $('passkeyList');
       const addPasskeyBtn = $('addPasskeyBtn');
       const passkeyStatus = $('passkeyStatus');
+      const bioAutoTriggerRow = $('bioAutoTriggerRow');
+      const bioAutoTriggerToggle = $('bioAutoTriggerToggle');
+      const bioAutoTriggerLabel = $('bioAutoTriggerLabel');
+
+      // Refresh stanu przełącznika "Automatyczna biometria przy logowaniu" — pokazujemy
+      // tylko gdy user jest zalogowany i ma zarejestrowany passkey (inaczej toggle nie ma
+      // sensu). Stan czytamy z VildaAuthUI.getBiometricAutoTrigger(userId).
+      function refreshBioAutoTriggerRow(user, hasKeys) {
+        if (!bioAutoTriggerRow) return;
+        if (!user || !hasKeys || !window.VildaAuthUI || typeof window.VildaAuthUI.getBiometricAutoTrigger !== 'function') {
+          bioAutoTriggerRow.style.display = 'none';
+          return;
+        }
+        bioAutoTriggerRow.style.display = '';
+        if (bioAutoTriggerLabel && typeof window.VildaAuthUI.getBiometricLabel === 'function') {
+          bioAutoTriggerLabel.textContent = window.VildaAuthUI.getBiometricLabel();
+        }
+        const pref = window.VildaAuthUI.getBiometricAutoTrigger(user.userId);
+        if (bioAutoTriggerToggle) bioAutoTriggerToggle.checked = pref === 'on';
+      }
+
+      if (bioAutoTriggerToggle) {
+        bioAutoTriggerToggle.addEventListener('change', function () {
+          const V = window.VildaVault;
+          if (!V || !V.isUnlocked() || !window.VildaAuthUI) return;
+          const user = V.getCurrentUser();
+          if (!user) return;
+          const newVal = bioAutoTriggerToggle.checked ? 'on' : 'off';
+          try {
+            window.VildaAuthUI.setBiometricAutoTrigger(user.userId, newVal);
+            // Zerujemy licznik anulowań: świadoma decyzja czyści adaptive backoff.
+            if (typeof window.VildaAuthUI.resetBiometricDismissCount === 'function') {
+              window.VildaAuthUI.resetBiometricDismissCount(user.userId);
+            }
+          } catch (_) {}
+        });
+      }
 
       async function refreshPasskeySection() {
         const V = window.VildaVault;
@@ -3141,14 +3190,17 @@ html.vilda-pro-active .pro-sync-note {
         if (!V.isUnlocked()) {
           if (passkeyList) passkeyList.innerHTML = '<p class="settings-inline-note">Zaloguj się, aby zarządzać biometrią.</p>';
           if (addPasskeyBtn) addPasskeyBtn.disabled = true;
+          refreshBioAutoTriggerRow(null, false);
           return;
         }
         if (addPasskeyBtn) addPasskeyBtn.disabled = false;
 
         const user = V.getCurrentUser();
-        if (!user) return;
+        if (!user) { refreshBioAutoTriggerRow(null, false); return; }
         let keys = [];
         try { keys = await V.listPasskeys(user.userId); } catch (_) {}
+
+        refreshBioAutoTriggerRow(user, keys.length > 0);
 
         if (!passkeyList) return;
         if (keys.length === 0) {
