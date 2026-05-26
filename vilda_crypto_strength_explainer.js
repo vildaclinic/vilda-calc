@@ -22,7 +22,7 @@
   var reduce = !!(global.matchMedia && global.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
   var STYLE = [
-    '.vcs-overlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;',
+    '.vcs-overlay{position:fixed;inset:0;z-index:2000001;display:flex;align-items:center;justify-content:center;padding:16px;',
       "font-family:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;}",
     '.vcs-backdrop{position:absolute;inset:0;background:rgba(15,43,51,.55);}',
     '.vcs-panel{position:relative;background:#f4fafb;border-radius:20px;max-width:780px;width:100%;max-height:94vh;overflow:auto;padding:20px 20px 16px;box-shadow:0 20px 60px rgba(15,43,51,.32);}',
