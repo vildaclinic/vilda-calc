@@ -147,8 +147,9 @@ html.vilda-pro-active .pro-sync-note {
 <script src="vilda_vault.js?v=26"></script>
 <script src="vilda_sync.js?v=5"></script>
 <script src="vilda_sync_integration.js?v=3"></script>
-<script src="vilda_auth_ui.js?v=74"></script>
-<script src="vilda_data_safety_explainer.js?v=3"></script>
+<script src="vilda_auth_ui.js?v=75"></script>
+<script src="vilda_data_safety_explainer.js?v=4"></script>
+<script src="vilda_crypto_strength_explainer.js?v=1"></script>
 <script src="vilda_pro_access.js?v=2"></script>
 <script src="vilda_pro_ui.js?v=2"></script>
 <script src="vilda_file_export.js?v=4"></script>
@@ -708,8 +709,9 @@ html.vilda-pro-active .pro-sync-note {
                   </p>
                 </div>
 
-                <div style="text-align:center;margin:0 0 14px;">
+                <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:0 0 14px;">
                   <button type="button" id="dataSafetyBtn" class="vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small">Jak chronimy dane?</button>
+                  <button type="button" id="cryptoStrengthBtn" class="vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small">Jak silne jest szyfrowanie?</button>
                 </div>
 
                 <div class="settings-control-card settings-control-card--wide" id="syncControlCard">
@@ -3110,6 +3112,13 @@ html.vilda-pro-active .pro-sync-note {
       if (dataSafetyBtn) {
         dataSafetyBtn.addEventListener('click', function () {
           try { if (window.VildaDataSafety) window.VildaDataSafety.open(); } catch (_) {}
+        });
+      }
+
+      const cryptoStrengthBtn = $('cryptoStrengthBtn');
+      if (cryptoStrengthBtn) {
+        cryptoStrengthBtn.addEventListener('click', function () {
+          try { if (window.VildaCryptoStrength) window.VildaCryptoStrength.open(); } catch (_) {}
         });
       }
 

@@ -108,7 +108,7 @@
       '<g class="plain"><text x="150" y="86" text-anchor="middle" font-size="13" font-weight="700" fill="#0f2b33">Jan K., 8 lat</text><text x="150" y="108" text-anchor="middle" font-size="12" fill="#5a6b72">wzrost 128 cm · 26 kg</text></g>' +
       '<g class="cipher"><text x="150" y="86" text-anchor="middle" font-size="13" font-family="monospace" fill="#9aa6ad">a8F#9zK2x$Lq7</text><text x="150" y="108" text-anchor="middle" font-size="13" font-family="monospace" fill="#9aa6ad">mB7q0eLx#1ZpW</text></g>' +
       '<g class="closelock" transform="translate(150,44)" style="transform-origin:150px 44px"><rect x="-15" y="-2" width="30" height="22" rx="5" fill="#00838d"/><path d="M-9,-2 v-6 a9,9 0 0 1 18,0 v6" fill="none" stroke="#00838d" stroke-width="3.4"/><circle cx="0" cy="9" r="3" fill="#fff"/></g>' +
-      '</svg></div><div class="vds-num">Krok 4</div><h3>System szyfruje dane</h3><p>Czytelne dane stają się nieczytelnym szyfrogramem — Twoim kluczem.</p></div>' +
+      '</svg></div><div class="vds-num">Krok 4</div><h3>System szyfruje dane Twoim kluczem</h3><p>Czytelne dane stają się nieczytelnym szyfrogramem.</p></div>' +
 
     '<div class="vds-scene"><div class="vds-art"><svg viewBox="0 0 300 180" xmlns="http://www.w3.org/2000/svg">' +
       '<g class="pop"><rect x="120" y="12" width="60" height="22" rx="11" fill="#e1f5ee" stroke="#0f6e56" stroke-width="1.3"/>' +
