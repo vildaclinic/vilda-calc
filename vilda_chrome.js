@@ -1360,8 +1360,11 @@
     }
 
     // Przycisk „Pacjenci" — fallback na stronach bez custom-fixes.js.
-    // Na stronach z formularzem (applyLoadedData dostępne) przekazuje callback wczytujący.
-    // Na pozostałych stronach — tryb podglądu bez wczytywania.
+    // Tryb pracy:
+    //  • strona z formularzem (applyLoadedData dostępne) → wczytuje od razu;
+    //  • strona bez formularza (np. cukrzyca, steroidy, instrukcje) → zapisuje
+    //    patientId do sessionStorage i nawiguje do index.html, gdzie receiver
+    //    (processPendingPatientLoadIfReady poniżej) wczyta pacjenta po unlocku.
     var patientsBtn = doc.getElementById('patientsListBtnSidebar');
     if (patientsBtn) {
       patientsBtn.addEventListener('click', function (e) {
@@ -1377,16 +1380,86 @@
           showChromeTip(patientsBtn, 'Moduł pacjentów niedostępny — odśwież stronę.');
           return;
         }
-        // Na stronach z formularzem przekaż callback wczytujący dane.
         var canLoad = typeof global.applyLoadedData === 'function';
-        authUI.showPatientsList(canLoad ? function (payload) {
-          if (payload) {
-            try { global.applyLoadedData(payload); } catch (_) {}
+        // Zawsze przekazujemy callback — żeby przycisk „Wczytaj tego pacjenta"
+        // pojawił się w karcie pacjenta także na stronach bez formularza.
+        authUI.showPatientsList(function (payload, patientId) {
+          if (canLoad) {
+            if (payload) {
+              try { global.applyLoadedData(payload); } catch (_) {}
+            }
+            var vc = global.VildaChrome;
+            if (vc && typeof vc.refreshPatientChip === 'function') vc.refreshPatientChip();
+          } else {
+            // Load+nav: zapisz tylko patientId (opaque), nie payload (zawiera
+            // dane pacjenta). Vault zostanie zapytany ponownie po wczytaniu index.html.
+            if (patientId) {
+              try { global.sessionStorage.setItem('vilda:pendingPatientLoad', String(patientId)); } catch (_) {}
+            }
+            try { global.location.assign('index.html'); } catch (_) {}
           }
-          var vc = global.VildaChrome;
-          if (vc && typeof vc.refreshPatientChip === 'function') vc.refreshPatientChip();
-        } : null);
+        });
       });
+    }
+  }
+
+  // ============ PENDING PATIENT LOAD (cross-page navigation) ============
+  // Gdy przycisk „Pacjenci" na podstronie bez applyLoadedData wybiera pacjenta,
+  // zapisuje patientId w sessionStorage i nawiguje do index.html. Tu, po unlocku
+  // vault'a, sprawdzamy ten klucz i wczytujemy pacjenta z vault'a. Payload
+  // (dane pacjenta) NIE jest nigdy w sessionStorage — przechodzi tylko opaque ID.
+  var _pendingLoadDone = false;
+  function processPendingPatientLoadIfReady() {
+    if (_pendingLoadDone) return true;
+    var ss = null;
+    try { ss = global.sessionStorage; } catch (_) {}
+    if (!ss) { _pendingLoadDone = true; return true; }
+    var pid = null;
+    try { pid = ss.getItem('vilda:pendingPatientLoad'); } catch (_) {}
+    if (!pid) { _pendingLoadDone = true; return true; }
+    if (typeof global.applyLoadedData !== 'function') return false;
+    var V = global.VildaVault;
+    if (!V || typeof V.isUnlocked !== 'function' || !V.isUnlocked()) return false;
+    if (typeof V.getPatient !== 'function') return false;
+    // Wszystko gotowe — zdejmujemy klucz przed asynchroniczną operacją.
+    try { ss.removeItem('vilda:pendingPatientLoad'); } catch (_) {}
+    _pendingLoadDone = true;
+    V.getPatient(pid).then(function (patientFull) {
+      var snap = (patientFull && Array.isArray(patientFull.snapshots) && patientFull.snapshots.length)
+        ? patientFull.snapshots[0] : null;
+      if (!snap || !snap.payload) return;
+      try { global.applyLoadedData(snap.payload); } catch (_) {}
+      try {
+        if (typeof global.CustomEvent === 'function' && doc) {
+          doc.dispatchEvent(new global.CustomEvent('vilda:patient-loaded', {
+            detail: {
+              patientId: pid,
+              savedAtISO: snap.savedAtISO || null,
+              snapshotCount: (patientFull && patientFull.snapshotCount) || patientFull.snapshots.length || null,
+              name: (snap.payload && snap.payload.name) || null
+            }
+          }));
+        }
+      } catch (_) {}
+      var vc = global.VildaChrome;
+      if (vc && typeof vc.refreshPatientChip === 'function') vc.refreshPatientChip();
+    }).catch(function () {});
+    return true;
+  }
+  // Polling: próbujemy co 250ms przez maks. 12s. Pokrywa: deferred app.js
+  // (applyLoadedData definiowany późno), opóźniony auth restore, sync z vault'em.
+  var _pendingPollCount = 0;
+  function pollPendingLoad() {
+    if (processPendingPatientLoadIfReady()) return;
+    _pendingPollCount++;
+    if (_pendingPollCount < 48) global.setTimeout(pollPendingLoad, 250);
+  }
+  if (doc) {
+    doc.addEventListener('vilda:auth-hidden', function () { pollPendingLoad(); });
+    if (doc.readyState === 'loading') {
+      doc.addEventListener('DOMContentLoaded', function () { global.setTimeout(pollPendingLoad, 200); }, { once: true });
+    } else {
+      global.setTimeout(pollPendingLoad, 200);
     }
   }
 

@@ -2789,7 +2789,11 @@
             var msg = 'Zastąpisz dane pacjenta „' + patient.name + '”. Kontynuować?';
             if (!global.confirm(msg)) return;
           }
-          onPick(payload);
+          // Drugi argument: patientId — używany przez handler chrome do trybu
+          // load+nav (gdy bieżąca podstrona nie ma applyLoadedData, zapisujemy
+          // ID i nawigujemy do index.html, gdzie receiver w chrome.js wczytuje
+          // pacjenta z vault'a). Stare wywołania ignorujące 2. arg działają dalej.
+          onPick(payload, patientId);
           // ── Faza 4: dispatch event dla wskaźnika statusu zapisu ──
           // VildaSaveStatusIndicator nasłuchuje tego eventu, żeby od razu wejść
           // w stan SAVED z prawidłowym fingerprintem (zamiast czekać na pierwszą
