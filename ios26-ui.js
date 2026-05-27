@@ -41,7 +41,12 @@
   const PREF_KEY_SHOW_MOBILE_DOCK = 'showMobileDock';
   const PREF_KEY_SHOW_NAVIGATION_ARROW = 'showNavigationArrow';
   const EDUCATION_PAGE_PATH = 'materialy-edukacyjne.html';
-  const HOMA_IR_PAGE_PATH = 'homa-ir.html';
+  // LAB_UNITS_PAGE_PATH — strona widoczna w mobilnym docku. Reguła w
+  // shouldAllowRouteInHamburger() ukrywa tę pozycję z hamburgera gdy dock jest
+  // widoczny (żeby uniknąć duplikatu). Wymieniona z HOMA_IR_PAGE_PATH w ramach
+  // podmiany 5. slotu docka — HOMA-IR pozostaje dostępne w sidebarze + jako
+  // fallback dock entry gdy user faktycznie jest na homa-ir.html.
+  const LAB_UNITS_PAGE_PATH = 'przelicznik-jednostek.html';
   const EDUCATION_FULL_LABEL = 'Edu';
   const EDUCATION_COMPACT_LABEL = 'Edu';
   const MOBILE_TOP_NAV_LAYOUT_SIGNATURE = 'docpro.html|kalkulator-klirens.html|cukrzyca.html|steroidy.html|materialy-edukacyjne.html';
@@ -671,7 +676,7 @@
     { path: 'docpro.html', href: 'docpro.html', label: 'DocPro', icon: 'stethoscope' },
     { path: 'kalkulator-klirens.html', href: 'kalkulator-klirens.html', label: 'Klirens', icon: 'droplets' },
     { path: 'cukrzyca.html', href: 'cukrzyca.html', label: 'Cukrzyca', icon: 'syringe' },
-    { path: 'homa-ir.html', href: 'homa-ir.html', label: 'HOMA‑IR', icon: 'calculator' }
+    { path: 'przelicznik-jednostek.html', href: 'przelicznik-jednostek.html', label: 'Lab', fullLabel: 'Jednostki laboratoryjne', accessibleLabel: 'Jednostki laboratoryjne', forceCompactLabel: true, icon: 'flask-conical' }
   ];
   const SINGLE_COLUMN_TOP_NAV_ITEMS = [
     { path: 'docpro.html', href: 'docpro.html', label: 'DocPro', className: 'pro-link' },
@@ -691,6 +696,7 @@
     'index.html': { href: 'index.html', label: 'Start', icon: 'home' },
     'docpro.html': { href: 'docpro.html', label: 'DocPro', icon: 'stethoscope' },
     'homa-ir.html': { href: 'homa-ir.html', label: 'HOMA‑IR', icon: 'calculator' },
+    'przelicznik-jednostek.html': { href: 'przelicznik-jednostek.html', label: 'Jednostki laboratoryjne', icon: 'flask-conical' },
     'kalkulator-klirens.html': { href: 'kalkulator-klirens.html', label: 'Klirens', icon: 'droplets' },
     'cukrzyca.html': { href: 'cukrzyca.html', label: 'Cukrzyca', icon: 'syringe' },
     'steroidy.html': { href: 'steroidy.html', label: 'Steroidy', icon: 'pill' },
@@ -708,6 +714,7 @@ const NAVIGATION_REACHABILITY_ROUTES = [
   { path: 'kalkulator-klirens.html', href: 'kalkulator-klirens.html', label: 'Klirens', icon: 'droplets' },
   { path: 'cukrzyca.html', href: 'cukrzyca.html', label: 'Cukrzyca', icon: 'syringe' },
   { path: 'steroidy.html', href: 'steroidy.html', label: 'Steroidy', icon: 'pill' },
+  { path: 'przelicznik-jednostek.html', href: 'przelicznik-jednostek.html', label: 'Jednostki laboratoryjne', icon: 'flask-conical' },
   { path: EDUCATION_PAGE_PATH, href: EDUCATION_PAGE_PATH, label: EDUCATION_FULL_LABEL, icon: 'book-open' },
   { path: 'ustawienia.html', href: 'ustawienia.html', label: 'Ustawienia', icon: 'settings' }
   // instrukcja.html, o-aplikacji.html, kontakt.html — strony informacyjne dostępne przez stopkę;
@@ -1337,7 +1344,7 @@ function shouldAllowRouteInHamburger(routePath, reachabilityState = {}) {
   const normalized = normalizePath(routePath);
 
   if (normalized === EDUCATION_PAGE_PATH) return false;
-  if (normalized === HOMA_IR_PAGE_PATH) {
+  if (normalized === LAB_UNITS_PAGE_PATH) {
     return !reachabilityState.dockVisible;
   }
 
