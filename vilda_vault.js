@@ -906,6 +906,17 @@
       currentUserId = blob.userId;
       currentUserLabel = blob.label || (await getAdapter().getRegistryEntry(blob.userId) || {}).label || DEFAULT_LABEL;
       lockReason = null;
+      // Przywróć storageMode z registry — cache jest w RAM, więc po nawigacji
+      // między podstronami resetuje się do 'local'. Bez tego refreshCloudOnlyBadge
+      // i isCloudOnlyMode() zwracają false na każdej nowej stronie. To MUSI być
+      // PRZED establishSis (operacje per-user) i PRZED notifyUnlock (żeby
+      // listenery onUnlock widziały prawidłowy storageMode od razu).
+      try { _currentStorageModeCache = await getStorageMode(blob.userId); }
+      catch (_) { _currentStorageModeCache = STORAGE_MODE_LOCAL; }
+      // Cloud-only: w nowym kontekście strony adapter hybrid jest nieaktywny,
+      // mimo że sessionStorage marker może istnieć. Wymuś re-założenie adaptera.
+      // Idempotent — gdy mode='local', nic nie robi.
+      applyCloudOnlyAdapterIfNeeded();
       await establishSis({ ephemeral: ephemeral });
       // Odśwież TTL sesji — każda nawigacja przesuwa expiresAtISO do przodu,
       // więc aktywny użytkownik nie zostanie wylogowany podczas pracy.
