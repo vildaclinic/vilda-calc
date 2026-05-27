@@ -1225,6 +1225,49 @@ body.chrome-drawer-open { overflow: hidden; }
   50%       { opacity: 0.4; transform: scale(0.88); }
 }
 
+/* ── Tryb chmurowy — wariant sync btn (kółko wypełnione, biała chmura) ─────
+   Zamiast osobnego chipa „chmura" obok user chip, zmieniamy wygląd
+   istniejącego przycisku sync. Komunikacja jednym elementem zamiast dwóch:
+   user widzi „jestem w cloud-only" oraz „status sync teraz to X" w jednym
+   miejscu (kolor tła = mode/status, ikona = funkcja).                       */
+.chrome-sync-btn[data-cloud-only="true"] {
+  display: inline-flex;             /* widoczny nawet bez .is-enabled */
+  width: 28px;                      /* średnica = chip-avatar/chip-icon */
+  height: 28px;
+  border-radius: 50%;               /* kółko, zharmonizowane z avatarami */
+  background: var(--primary, #00838d);
+  color: #fff;
+}
+.chrome-sync-btn[data-cloud-only="true"]:hover {
+  background: #006c75;              /* nieco ciemniejszy turkus */
+  color: #fff;
+}
+/* Status w cloud-only przez tło — color jest „zarezerwowany" na ikonę białą */
+.chrome-sync-btn[data-cloud-only="true"][data-sync-state="syncing"] {
+  background: var(--primary, #00838d);
+  color: #fff;
+}
+.chrome-sync-btn[data-cloud-only="true"][data-sync-state="syncing"] svg {
+  animation: vildaSyncPulse 1.1s ease-in-out infinite;
+}
+.chrome-sync-btn[data-cloud-only="true"][data-sync-state="ok"] {
+  background: #16a34a;              /* zielony, biała ikona zostaje */
+  color: #fff;
+}
+.chrome-sync-btn[data-cloud-only="true"][data-sync-state="error"] {
+  background: #dc2626;              /* czerwony */
+  color: #fff;
+}
+/* Offline w cloud-only — pomarańczowy + ostrzegawczy pierścień */
+.chrome-sync-btn[data-cloud-only="true"][data-offline="true"] {
+  background: #b45309;
+  color: #fff;
+  box-shadow: 0 0 0 2px rgba(180, 83, 9, 0.25);
+}
+.chrome-sync-btn[data-cloud-only="true"][data-offline="true"]:hover {
+  background: #8a3d05;
+}
+
 /* ── Etykieta PRO w nagłówku ───────────────────────────────────────────────
    Dwa stany:
    [data-pro-state="active"]  — fioletowe tło, biały tekst „PRO"

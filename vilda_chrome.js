@@ -1114,36 +1114,46 @@
     return '';
   }
 
-  // ============ CLOUD-ONLY UI (badge + force-pull loading overlay) ============
-  // Mały badge „chmura" obok nazwy konta — sygnalizuje że ten user jest w trybie
-  // cloud-only (pacjenci tylko w chmurze, nic na dysku). Gdy przeglądarka jest
-  // offline, badge zmienia kolor na pomarańczowy i pokazuje „offline" — ostrzega
-  // że zapisy nie pójdą do chmury, a re-login będzie niemożliwy.
-  // Pełnoekranowy overlay pokazuje się podczas force-pull przy unlock.
+  // ============ CLOUD-ONLY UI (sync btn variant + force-pull overlay) ============
+  // Zamiast osobnego chipa „chmura" w nagłówku, w trybie cloud-only zmieniamy
+  // wygląd istniejącego przycisku synchronizacji (#vildaSyncBtn):
+  //   • tło wypełnione turkusem, biała chmura ze strzałką, kółko (jak avatar)
+  //   • offline → tło pomarańczowe + ostrzegawczy pierścień
+  //   • status sync (ok/error/syncing) zmienia tło (zachowane efekty)
+  // Komunikacja semantyczna jednym elementem zamiast dwóch (chip + sync btn).
   function refreshCloudOnlyBadge() {
-    var chip = doc.getElementById('vildaUserChip');
-    if (!chip) return;
-    var existing = chip.querySelector('.chrome-cloud-only-badge');
     var v = global.VildaVault;
     var active = !!(v && typeof v.isCloudOnlyMode === 'function' && v.isCloudOnlyMode());
-    if (!active) { if (existing) existing.remove(); return; }
-    var isOffline = (typeof navigator !== 'undefined' && navigator && navigator.onLine === false);
-    var badge = existing;
-    if (!badge) {
-      badge = doc.createElement('span');
-      badge.className = 'chrome-cloud-only-badge';
-      chip.appendChild(badge);
+
+    // Migracja: usuń legacy chipek jeśli został w DOM po starej wersji.
+    var chip = doc.getElementById('vildaUserChip');
+    if (chip) {
+      var legacy = chip.querySelector('.chrome-cloud-only-badge');
+      if (legacy) legacy.remove();
     }
+
+    var syncBtn = doc.getElementById('vildaSyncBtn');
+    if (!syncBtn) return;
+
+    if (!active) {
+      syncBtn.removeAttribute('data-cloud-only');
+      syncBtn.removeAttribute('data-offline');
+      // Przywróć domyślne aria/title (gdy user wylogował się z cloud-only).
+      syncBtn.setAttribute('title', 'Synchronizacja między urządzeniami');
+      syncBtn.setAttribute('aria-label', 'Status synchronizacji');
+      return;
+    }
+
+    var isOffline = (typeof navigator !== 'undefined' && navigator && navigator.onLine === false);
+    syncBtn.setAttribute('data-cloud-only', 'true');
     if (isOffline) {
-      badge.setAttribute('title', 'Tryb chmurowy + brak internetu. Zapisy nie trafią do chmury, a ponowne zalogowanie nie powiedzie się dopóki nie wrócisz online.');
-      badge.setAttribute('aria-label', 'Tryb chmurowy — offline');
-      badge.style.cssText = 'display:inline-flex;align-items:center;gap:4px;padding:2px 8px;margin-left:6px;font-size:0.72rem;font-weight:600;color:#854f0b;background:rgba(180,83,9,0.12);border:1px solid rgba(180,83,9,0.32);border-radius:999px;line-height:1.4;white-space:nowrap;';
-      badge.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19a4.5 4.5 0 1 0 0-9 4 4 0 0 0-7.9-1.6A4 4 0 0 0 5 18h12.5z"/><line x1="2" y1="2" x2="22" y2="22"/></svg><span>chmura · offline</span>';
+      syncBtn.setAttribute('data-offline', 'true');
+      syncBtn.setAttribute('title', 'Tryb chmurowy + brak internetu. Zapisy nie trafią do chmury, a ponowne zalogowanie nie powiedzie się dopóki nie wrócisz online.');
+      syncBtn.setAttribute('aria-label', 'Tryb chmurowy — offline');
     } else {
-      badge.setAttribute('title', 'Tryb chmurowy: dane pacjentów tylko w chmurze. Nic nie zostaje na dysku tego komputera.');
-      badge.setAttribute('aria-label', 'Tryb chmurowy aktywny');
-      badge.style.cssText = 'display:inline-flex;align-items:center;gap:4px;padding:2px 8px;margin-left:6px;font-size:0.72rem;font-weight:600;color:#00838d;background:rgba(0,131,141,0.1);border:1px solid rgba(0,131,141,0.25);border-radius:999px;line-height:1.4;white-space:nowrap;';
-      badge.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19a4.5 4.5 0 1 0 0-9 4 4 0 0 0-7.9-1.6A4 4 0 0 0 5 18h12.5z"/></svg><span>chmura</span>';
+      syncBtn.removeAttribute('data-offline');
+      syncBtn.setAttribute('title', 'Tryb chmurowy aktywny — dane pacjentów tylko w chmurze. Kliknij, żeby zsynchronizować.');
+      syncBtn.setAttribute('aria-label', 'Tryb chmurowy aktywny');
     }
   }
 
