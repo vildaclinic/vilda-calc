@@ -249,8 +249,8 @@
   function attachPasswordToggle(input) {
     const wrapper = el('div', { class: 'vilda-auth-pw-wrap' });
     wrapper.style.cssText = 'position: relative; display: block; margin: inherit;';
-    // Rezerwujemy miejsce na przycisk po prawej (40px).
-    input.style.paddingRight = '40px';
+    // Rezerwujemy miejsce na przycisk po prawej (44px = 40px szer. + 4px margines).
+    input.style.paddingRight = '44px';
     wrapper.appendChild(input);
 
     // Eye / eye-off SVG (lucide-style, stroke 2, currentColor #5b6672).
@@ -264,17 +264,22 @@
       'aria-pressed': 'false',
       title: 'Pokaż hasło'
     });
+    // Płaska ikona — bez tła, cienia, border-radius. Wysokość 24px (znacznie
+    // niższa niż input ≈47px), żeby focus/click nie ruszał layoutu pola hasła.
+    // Globalne button:hover/focus-visible w style.css są zneutralizowane
+    // przez reguły .vilda-auth-pw-toggle w vilda_auth_ui.css (!important).
     btn.style.cssText = [
-      'position: absolute; right: 4px; top: 50%; transform: translateY(-50%);',
-      'width: 32px; height: 32px;',
+      'position: absolute; right: 6px; top: 50%; transform: translateY(-50%);',
+      'width: 40px; height: 24px;',
       'display: flex; align-items: center; justify-content: center;',
-      'background: transparent; border: 0; padding: 0;',
-      'color: #5b6672; cursor: pointer; border-radius: 6px;',
-      'transition: background .15s ease, color .15s ease;'
+      'background: transparent; border: 0; padding: 0; border-radius: 0;',
+      'color: #5b6672; cursor: pointer;',
+      'transition: color .15s ease;'
     ].join('');
     btn.innerHTML = EYE_SVG;
-    btn.addEventListener('mouseenter', function () { btn.style.background = 'rgba(0,131,141,0.08)'; btn.style.color = '#00838d'; });
-    btn.addEventListener('mouseleave', function () { btn.style.background = 'transparent'; btn.style.color = '#5b6672'; });
+    // Tylko subtelna zmiana koloru ikony na hover — bez tła, bez ramki.
+    btn.addEventListener('mouseenter', function () { btn.style.color = '#00838d'; });
+    btn.addEventListener('mouseleave', function () { btn.style.color = '#5b6672'; });
     btn.addEventListener('click', function () {
       if (input.type === 'password') {
         input.type = 'text';

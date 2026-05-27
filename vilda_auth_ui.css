@@ -1632,3 +1632,26 @@ select.vilda-auth-input {
   letter-spacing: 0.01em;
   user-select: none;
 }
+
+/* ── Eye toggle (pokaż/ukryj hasło) ─────────────────────────────────────────────
+   Globalne reguły button:hover/focus-visible w style.css dodają każdemu
+   buttonowi transform:scale(1.02) + box-shadow + zmianę tła. Dla naszej
+   ikony oka — która ma być PŁASKA — musimy je zneutralizować !important.
+   Wysokość celowo niższa niż input (≈47px), żeby focus/click nie ruszał
+   layoutu pola hasła; szerokość lekko większa niż wysokość (touch-target). */
+.vilda-auth-pw-wrap .vilda-auth-pw-toggle,
+.vilda-auth-pw-wrap .vilda-auth-pw-toggle:hover,
+.vilda-auth-pw-wrap .vilda-auth-pw-toggle:focus,
+.vilda-auth-pw-wrap .vilda-auth-pw-toggle:focus-visible,
+.vilda-auth-pw-wrap .vilda-auth-pw-toggle:active {
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: translateY(-50%) !important;
+  border: 0 !important;
+  outline: none !important;
+}
+.vilda-auth-pw-wrap .vilda-auth-pw-toggle:focus-visible {
+  /* subtelny focus-ring dla a11y, ale w obrysie nie cieniem */
+  outline: 2px solid rgba(0, 131, 141, 0.35) !important;
+  outline-offset: -2px !important;
+}
