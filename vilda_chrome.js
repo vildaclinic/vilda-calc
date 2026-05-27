@@ -1114,6 +1114,123 @@
     return '';
   }
 
+  // ============ CLOUD-ONLY UI (badge + force-pull loading overlay) ============
+  // Mały badge „chmura" obok nazwy konta — sygnalizuje że ten user jest w trybie
+  // cloud-only (pacjenci tylko w chmurze, nic na dysku). Gdy przeglądarka jest
+  // offline, badge zmienia kolor na pomarańczowy i pokazuje „offline" — ostrzega
+  // że zapisy nie pójdą do chmury, a re-login będzie niemożliwy.
+  // Pełnoekranowy overlay pokazuje się podczas force-pull przy unlock.
+  function refreshCloudOnlyBadge() {
+    var chip = doc.getElementById('vildaUserChip');
+    if (!chip) return;
+    var existing = chip.querySelector('.chrome-cloud-only-badge');
+    var v = global.VildaVault;
+    var active = !!(v && typeof v.isCloudOnlyMode === 'function' && v.isCloudOnlyMode());
+    if (!active) { if (existing) existing.remove(); return; }
+    var isOffline = (typeof navigator !== 'undefined' && navigator && navigator.onLine === false);
+    var badge = existing;
+    if (!badge) {
+      badge = doc.createElement('span');
+      badge.className = 'chrome-cloud-only-badge';
+      chip.appendChild(badge);
+    }
+    if (isOffline) {
+      badge.setAttribute('title', 'Tryb chmurowy + brak internetu. Zapisy nie trafią do chmury, a ponowne zalogowanie nie powiedzie się dopóki nie wrócisz online.');
+      badge.setAttribute('aria-label', 'Tryb chmurowy — offline');
+      badge.style.cssText = 'display:inline-flex;align-items:center;gap:4px;padding:2px 8px;margin-left:6px;font-size:0.72rem;font-weight:600;color:#854f0b;background:rgba(180,83,9,0.12);border:1px solid rgba(180,83,9,0.32);border-radius:999px;line-height:1.4;white-space:nowrap;';
+      badge.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19a4.5 4.5 0 1 0 0-9 4 4 0 0 0-7.9-1.6A4 4 0 0 0 5 18h12.5z"/><line x1="2" y1="2" x2="22" y2="22"/></svg><span>chmura · offline</span>';
+    } else {
+      badge.setAttribute('title', 'Tryb chmurowy: dane pacjentów tylko w chmurze. Nic nie zostaje na dysku tego komputera.');
+      badge.setAttribute('aria-label', 'Tryb chmurowy aktywny');
+      badge.style.cssText = 'display:inline-flex;align-items:center;gap:4px;padding:2px 8px;margin-left:6px;font-size:0.72rem;font-weight:600;color:#00838d;background:rgba(0,131,141,0.1);border:1px solid rgba(0,131,141,0.25);border-radius:999px;line-height:1.4;white-space:nowrap;';
+      badge.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19a4.5 4.5 0 1 0 0-9 4 4 0 0 0-7.9-1.6A4 4 0 0 0 5 18h12.5z"/></svg><span>chmura</span>';
+    }
+  }
+
+  // Słuchacze online/offline — odświeżają wygląd chipa cloud-only żeby
+  // user widział że właśnie stracił/odzyskał połączenie.
+  var _cloudOnlyOnlineListenerBound = false;
+  function bindCloudOnlyOnlineListeners() {
+    if (_cloudOnlyOnlineListenerBound) return;
+    _cloudOnlyOnlineListenerBound = true;
+    try {
+      global.addEventListener && global.addEventListener('online', refreshCloudOnlyBadge);
+      global.addEventListener && global.addEventListener('offline', refreshCloudOnlyBadge);
+    } catch (_) {}
+  }
+
+  function installCloudOnlyOverlay() {
+    if (doc.getElementById('vildaCloudOnlyLoading')) return;
+    // Animacja spinnera — keyframe inline
+    if (!doc.getElementById('vilda-cloud-only-loading-style')) {
+      var s = doc.createElement('style');
+      s.id = 'vilda-cloud-only-loading-style';
+      s.textContent = '@keyframes vilda-co-spin{to{transform:rotate(360deg)}}';
+      (doc.head || doc.documentElement).appendChild(s);
+    }
+    var overlay = doc.createElement('div');
+    overlay.id = 'vildaCloudOnlyLoading';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:2000005;display:none;align-items:center;justify-content:center;background:rgba(15,43,51,0.65);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);padding:16px;font-family:Inter,"Segoe UI",system-ui,-apple-system,sans-serif;';
+    overlay.innerHTML =
+      '<div style="background:#fff;border-radius:18px;padding:28px 32px;max-width:400px;width:100%;text-align:center;box-shadow:0 18px 60px rgba(0,0,0,0.25);">' +
+        '<div id="vildaCloudOnlyLoadingSpinner" style="display:inline-block;width:44px;height:44px;border:4px solid #cfe8eb;border-top-color:#00838d;border-radius:50%;animation:vilda-co-spin 0.9s linear infinite;margin-bottom:16px;"></div>' +
+        '<div id="vildaCloudOnlyLoadingTitle" style="font-weight:700;font-size:18px;color:#0f2b33;margin-bottom:6px;">Synchronizacja z chmurą…</div>' +
+        '<div id="vildaCloudOnlyLoadingDesc" style="font-size:13.5px;color:#5b6672;line-height:1.5;">Pobieramy dane pacjentów. Tryb chmurowy nie trzyma nic na dysku tego komputera.</div>' +
+        '<div id="vildaCloudOnlyLoadingError" style="display:none;margin-top:14px;padding:10px 14px;background:#fef2f3;border:1px solid #f5b3bb;border-radius:10px;color:#9a213a;font-size:13px;text-align:left;line-height:1.45;"></div>' +
+        '<div id="vildaCloudOnlyLoadingActions" style="display:none;margin-top:18px;gap:10px;justify-content:center;flex-wrap:wrap;">' +
+          '<button type="button" id="vildaCloudOnlyRetry" style="padding:8px 18px;border:1px solid #00838d;border-radius:10px;background:#00838d;color:#fff;font-weight:600;font-size:13px;cursor:pointer;">Spróbuj ponownie</button>' +
+          '<button type="button" id="vildaCloudOnlyLogout" style="padding:8px 18px;border:1px solid #d7e9ec;border-radius:10px;background:#fff;color:#5b6672;font-weight:600;font-size:13px;cursor:pointer;">Wyloguj się</button>' +
+        '</div>' +
+      '</div>';
+    doc.body.appendChild(overlay);
+
+    function setLoadingState() {
+      overlay.querySelector('#vildaCloudOnlyLoadingSpinner').style.display = '';
+      overlay.querySelector('#vildaCloudOnlyLoadingTitle').textContent = 'Synchronizacja z chmurą…';
+      overlay.querySelector('#vildaCloudOnlyLoadingDesc').textContent = 'Pobieramy dane pacjentów. Tryb chmurowy nie trzyma nic na dysku tego komputera.';
+      overlay.querySelector('#vildaCloudOnlyLoadingError').style.display = 'none';
+      overlay.querySelector('#vildaCloudOnlyLoadingActions').style.display = 'none';
+      overlay.style.display = 'flex';
+    }
+    function setErrorState(detail) {
+      overlay.querySelector('#vildaCloudOnlyLoadingSpinner').style.display = 'none';
+      overlay.querySelector('#vildaCloudOnlyLoadingTitle').textContent = 'Nie udało się pobrać danych';
+      var desc = overlay.querySelector('#vildaCloudOnlyLoadingDesc');
+      var code = detail && detail.code;
+      if (code === 'CLOUD_ONLY_NO_SYNC') {
+        desc.textContent = 'Tryb chmurowy wymaga aktywnej synchronizacji.';
+      } else if (code === 'CLOUD_ONLY_NO_API') {
+        desc.textContent = 'Moduł synchronizacji niedostępny — odśwież stronę.';
+      } else {
+        desc.textContent = 'Sprawdź połączenie z internetem i spróbuj ponownie.';
+      }
+      var errBox = overlay.querySelector('#vildaCloudOnlyLoadingError');
+      errBox.textContent = (detail && detail.message) || 'Nieznany błąd.';
+      errBox.style.display = '';
+      overlay.querySelector('#vildaCloudOnlyLoadingActions').style.display = 'flex';
+      overlay.style.display = 'flex';
+    }
+    function hideOverlay() { overlay.style.display = 'none'; }
+
+    overlay.querySelector('#vildaCloudOnlyRetry').addEventListener('click', function () {
+      var VSI = global.VildaSyncIntegration;
+      if (!VSI || typeof VSI.forcePullForCloudOnly !== 'function') return;
+      setLoadingState();
+      VSI.forcePullForCloudOnly().then(function () { hideOverlay(); }).catch(function (err) {
+        setErrorState({ code: err && err.code, message: err && err.message });
+      });
+    });
+    overlay.querySelector('#vildaCloudOnlyLogout').addEventListener('click', function () {
+      try { if (global.VildaVault && typeof global.VildaVault.lock === 'function') global.VildaVault.lock('user'); } catch (_) {}
+      hideOverlay();
+    });
+
+    // Słuchacze eventów dispatchowanych przez vilda_sync_integration.js
+    doc.addEventListener('vilda:cloud-only-sync-pulling', setLoadingState);
+    doc.addEventListener('vilda:cloud-only-sync-complete', hideOverlay);
+    doc.addEventListener('vilda:cloud-only-sync-failed', function (e) { setErrorState(e && e.detail); });
+  }
+
   function refreshPatientChip() {
     var chip = doc.getElementById('vildaPatientChip');
     if (!chip) return;
@@ -1214,10 +1331,22 @@
       var v = global.VildaVault;
       if (!v) return false;
       vaultListenersBound = true;
-      if (typeof v.onUnlock       === 'function') v.onUnlock(refreshUserChip);
-      if (typeof v.onLock         === 'function') v.onLock(refreshUserChip);
+      if (typeof v.onUnlock       === 'function') {
+        v.onUnlock(refreshUserChip);
+        v.onUnlock(refreshCloudOnlyBadge);
+      }
+      if (typeof v.onLock         === 'function') {
+        v.onLock(refreshUserChip);
+        v.onLock(refreshCloudOnlyBadge);
+      }
       if (typeof v.onPatientSaved === 'function') v.onPatientSaved(refreshPatientChip);
       refreshUserChip();
+      refreshCloudOnlyBadge();
+      // Overlay loading dla force-pull cloud-only — instalujemy raz po bind vault.
+      try { installCloudOnlyOverlay(); } catch (_) {}
+      // Online/offline listeners — chip cloud-only przełącza wygląd gdy
+      // user traci/odzyskuje internet.
+      try { bindCloudOnlyOnlineListeners(); } catch (_) {}
       return true;
     }
 

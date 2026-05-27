@@ -88,6 +88,51 @@
   function getSync()  { return global.VildaSync  || null; }
   function getVault() { return global.VildaVault || null; }
 
+  // ─── Cloud-only force-pull: wymuszony sync przy unlock konta cloud-only ──
+  // Per-user IDB konta cloud-only jest in-memory (pusty po unlock), więc bez
+  // wymuszonego pull'a user zobaczy puste pole "Pacjenci". Zwraca Promise,
+  // który resolve'uje się gdy syncPull się skończył, lub odrzuca z `code`:
+  //   CLOUD_ONLY_NO_SYNC      — sync wyłączony (preferencja użytkownika)
+  //   CLOUD_ONLY_NO_API       — brak modułu VildaSync lub metody syncPull
+  //   CLOUD_ONLY_PULL_FAILED  — sieć / serwer / autoryzacja (szczegóły w error)
+  function forcePullForCloudOnly() {
+    return new Promise(function (resolve, reject) {
+      if (!isSyncEnabled()) {
+        const e = new Error('Tryb chmurowy wymaga włączonej synchronizacji. Włącz ją w Ustawieniach.');
+        e.code = 'CLOUD_ONLY_NO_SYNC';
+        reject(e);
+        return;
+      }
+      const S = getSync();
+      if (!S || typeof S.syncPull !== 'function') {
+        const e = new Error('Moduł synchronizacji niedostępny.');
+        e.code = 'CLOUD_ONLY_NO_API';
+        reject(e);
+        return;
+      }
+      // syncPull jest async — może rzucać błędem albo zwrócić result z błędem w środku.
+      Promise.resolve()
+        .then(function () { return S.syncPull(); })
+        .then(function (result) { resolve(result); })
+        .catch(function (err) {
+          // Wrap w error z naszym kodem, zachowując oryginalny błąd jako cause.
+          const wrapped = new Error((err && err.message) || 'Nie udało się pobrać danych z chmury.');
+          wrapped.code = 'CLOUD_ONLY_PULL_FAILED';
+          wrapped.cause = err;
+          reject(wrapped);
+        });
+    });
+  }
+  function dispatchCloudOnlySync(phase, detail) {
+    try {
+      if (typeof global.document !== 'undefined') {
+        global.document.dispatchEvent(new CustomEvent('vilda:cloud-only-sync-' + phase, {
+          detail: detail || null, bubbles: false
+        }));
+      }
+    } catch (_) {}
+  }
+
   // ─── Polling „na żywo": okresowy syncPull, by usunięcia (i edycje) z innych ──
   // urządzeń pojawiały się na otwartej karcie bez czekania na ponowne logowanie.
   function isEphemeralActive() {
@@ -199,7 +244,13 @@
     vaultBound = true;
 
     // onUnlock → (opcjonalnie: interstitial nowego urządzenia) → syncFull()
-    // z krótkim opóźnieniem żeby vault zdążył się w pełni zainicjować
+    // z krótkim opóźnieniem żeby vault zdążył się w pełni zainicjować.
+    //
+    // Specjalna ścieżka dla kont cloud-only: per-user IDB jest in-memory (pusty),
+    // więc UI bez pacjentów dopóki sync nie ściągnie ich z chmury. Zamiast
+    // niezablokowanego syncFull-w-tle, **wymuszamy** pull i dispatchujemy eventy
+    // dla UI ('vilda:cloud-only-sync-pulling/complete/failed'), żeby aplikacja
+    // mogła pokazać "Synchronizacja z chmurą…" i obsłużyć błąd (offline).
     if (typeof V.onUnlock === 'function') {
       V.onUnlock(function () {
         // Każdy nowy unlock resetuje flagę blokady
@@ -211,6 +262,22 @@
 
         var S = getSync();
         if (!S) return;
+
+        // Cloud-only force-pull: wymagane przed pokazaniem listy pacjentów.
+        // Pomijamy interstitial nowego urządzenia (cloud-only jest świadomą
+        // sesją na obcym komputerze, nie nowym urządzeniem do "claim'owania").
+        if (typeof V.isCloudOnlyMode === 'function' && V.isCloudOnlyMode()) {
+          dispatchCloudOnlySync('pulling', null);
+          forcePullForCloudOnly().then(function () {
+            dispatchCloudOnlySync('complete', null);
+          }).catch(function (err) {
+            dispatchCloudOnlySync('failed', {
+              code: (err && err.code) || 'CLOUD_ONLY_PULL_FAILED',
+              message: (err && err.message) || 'Nie udało się pobrać danych z chmury.'
+            });
+          });
+          return; // nie wykonuj klasycznego probeNewDevice / syncFull
+        }
 
         setTimeout(function () {
           if (syncBlockedUntilUnlock) return;
@@ -362,7 +429,12 @@
   global.VildaSyncIntegration = {
     __vildaSyncIntegration: true,
     isSyncEnabled:  isSyncEnabled,
-    setSyncEnabled: setSyncEnabled
+    setSyncEnabled: setSyncEnabled,
+    // Cloud-only — wymuszony pull przy unlock; rzuca błędem z `code`
+    // ('CLOUD_ONLY_NO_SYNC' | 'CLOUD_ONLY_NO_API' | 'CLOUD_ONLY_PULL_FAILED')
+    // jeśli się nie powiedzie. Wystawione publicznie dla testów i dla UI
+    // które chce ręcznie zaczać retry.
+    forcePullForCloudOnly: forcePullForCloudOnly
   };
 
 })(typeof window !== 'undefined' ? window : null);

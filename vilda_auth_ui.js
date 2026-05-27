@@ -777,6 +777,117 @@
     else renderSetupStep3();
   }
 
+  // ============ KARTA OPT-IN „TRYB CHMUROWY" ============
+  // Ładny, klikalny card komponent dla kreatora konta. Cała powierzchnia jest
+  // klikalna, toggle zmienia stan, etykieta i kolory dają wyraźny sygnał wybranej
+  // opcji. Inline styles — żeby działało wszędzie bez bumpa CSS i było spójne
+  // z resztą auth UI (turkusowa paleta marki).
+  // _isChecked()/_setChecked(b) na zwróconym elemencie wystawiają stan dla callera.
+  function buildCloudOnlyOptInCard() {
+    let checked = false;
+    // PRO gating — kreator nie zna jeszcze konta, więc sprawdzamy GLOBALNĄ
+    // (urządzeniową) dostępność PRO. Jeśli user nie ma PRO, karta jest wizualnie
+    // wyłączona z czytelnym hintem — kliknięcie nie zaznacza, tylko pokazuje info.
+    let proAvailable = false;
+    try { proAvailable = !!(global.VildaProAccess && global.VildaProAccess.hasAccess && global.VildaProAccess.hasAccess()); }
+    catch (_) { proAvailable = false; }
+    const card = el('button', {
+      type: 'button',
+      'aria-pressed': 'false',
+      'aria-label': 'Tryb chmurowy: pacjenci tylko w chmurze, bez kopii na dysku',
+      'aria-disabled': proAvailable ? 'false' : 'true'
+    });
+    card.style.cssText = [
+      'display:block;width:100%;text-align:left;cursor:pointer;font:inherit;color:inherit;',
+      'padding:14px 16px;margin:8px 0 0;',
+      'background:rgba(255,255,255,0.92);',
+      'border:2px solid #d7e9ec;border-radius:14px;',
+      'transition:border-color .18s ease, background .18s ease, box-shadow .18s ease;'
+    ].join('');
+
+    // Ikona chmury + kłódki (inline SVG, paleta turkusu marki)
+    const ICON_SVG = '<svg viewBox="0 0 32 32" width="36" height="36" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="display:block;">' +
+      '<path d="M9 21 C6 21 4 19 4 16.5 C4 14 6 12 8.5 12 C9 9 11.5 7 14.5 7 C17.5 7 20 9 20.5 12 C20.7 12 20.9 12 21 12 C23.8 12 26 14.2 26 17 C26 19.8 23.8 22 21 22 L9 21 Z" fill="#cfe8eb" stroke="#00838d" stroke-width="1.5" stroke-linejoin="round"/>' +
+      '<rect x="17" y="19" width="11" height="9" rx="2" fill="#00838d" stroke="#0f2b33" stroke-width="0.8"/>' +
+      '<path d="M19.5 19 v-2 a3,3 0 0 1 6,0 v2" fill="none" stroke="#0f2b33" stroke-width="1.4" stroke-linecap="round"/>' +
+      '<circle cx="22.5" cy="23.5" r="1.5" fill="#fff"/>' +
+      '<rect x="22" y="23.5" width="1" height="2.5" fill="#fff"/>' +
+    '</svg>';
+
+    // Iosowy toggle (pill + thumb), animowany CSS-em inline
+    const TOGGLE_HTML = '<span class="cloud-only-toggle" style="display:inline-flex;align-items:center;width:46px;height:26px;border-radius:999px;background:#e6eef0;border:1px solid #d7e9ec;transition:background .2s ease, border-color .2s ease;position:relative;flex:0 0 46px;">' +
+      '<span class="cloud-only-toggle-thumb" style="display:block;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.18);position:absolute;left:2px;top:1.5px;transition:left .2s ease;"></span>' +
+    '</span>';
+
+    card.innerHTML =
+      '<div style="display:flex;align-items:flex-start;gap:14px;">' +
+        '<div style="flex:0 0 auto;">' + ICON_SVG + '</div>' +
+        '<div style="flex:1 1 auto;min-width:0;">' +
+          '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px;">' +
+            '<div style="font-weight:700;font-size:1rem;color:#0f2b33;">Tryb chmurowy</div>' +
+            TOGGLE_HTML +
+          '</div>' +
+          '<div style="font-size:0.85rem;color:#5b6672;line-height:1.45;margin-bottom:8px;">' +
+            'Dane pacjentów synchronizują się <strong>tylko z chmurą</strong> — żadna kopia nie zostaje zapisana na dysku tego komputera.' +
+          '</div>' +
+          '<ul style="margin:0;padding:0 0 0 18px;font-size:0.78rem;color:#7d8a90;line-height:1.55;list-style-type:disc;">' +
+            '<li>Idealne na <strong>obcym komputerze</strong> (np. pokój badań w szpitalu)</li>' +
+            '<li>Wymaga aktywnej synchronizacji <strong>PRO</strong> oraz internetu przy każdym logowaniu</li>' +
+            '<li>Po wylogowaniu nie zostaje żadna kopia pacjentów — Twoje konto pamięta hasło, żebyś mógł zalogować się ponownie</li>' +
+            '<li>Możesz to wyłączyć później w <em>Ustawienia → Bezpieczeństwo</em></li>' +
+          '</ul>' +
+          (proAvailable ? '' : '<div class="cloud-only-pro-hint" style="margin-top:10px;padding:8px 10px;border-radius:10px;background:rgba(180,83,9,0.08);color:#854f0b;font-size:0.78rem;font-weight:500;display:flex;align-items:center;gap:6px;">⚠️ Wymaga aktywnego planu PRO. Możesz to włączyć później w Ustawieniach.</div>') +
+        '</div>' +
+      '</div>';
+
+    function updateVisual() {
+      const toggle = card.querySelector('.cloud-only-toggle');
+      const thumb = card.querySelector('.cloud-only-toggle-thumb');
+      if (!proAvailable) {
+        // Stan disabled: szary, kursor not-allowed, niezaznaczalny.
+        card.style.borderColor = '#e5e7eb';
+        card.style.background = 'rgba(245,245,245,0.65)';
+        card.style.boxShadow = '';
+        card.style.cursor = 'not-allowed';
+        card.style.opacity = '0.78';
+        card.setAttribute('aria-pressed', 'false');
+        if (toggle) { toggle.style.background = '#e6eef0'; toggle.style.borderColor = '#d7e9ec'; }
+        if (thumb) thumb.style.left = '2px';
+        return;
+      }
+      if (checked) {
+        card.style.borderColor = '#00838d';
+        card.style.background = 'linear-gradient(180deg, rgba(0,131,141,0.07) 0%, rgba(0,131,141,0.02) 100%)';
+        card.style.boxShadow = '0 4px 14px rgba(0,131,141,0.13)';
+        card.setAttribute('aria-pressed', 'true');
+        if (toggle) { toggle.style.background = '#00838d'; toggle.style.borderColor = '#00838d'; }
+        if (thumb) thumb.style.left = '23px';
+      } else {
+        card.style.borderColor = '#d7e9ec';
+        card.style.background = 'rgba(255,255,255,0.92)';
+        card.style.boxShadow = '';
+        card.setAttribute('aria-pressed', 'false');
+        if (toggle) { toggle.style.background = '#e6eef0'; toggle.style.borderColor = '#d7e9ec'; }
+        if (thumb) thumb.style.left = '2px';
+      }
+    }
+
+    card.addEventListener('click', function () {
+      if (!proAvailable) return;       // No-op gdy brak PRO — hint widoczny w karcie.
+      checked = !checked;
+      updateVisual();
+    });
+    card._isChecked = function () { return checked && proAvailable; };
+    card._setChecked = function (val) {
+      // Bez PRO nie pozwalamy nadać `true` — chronimy przed niespójnym opt-in.
+      checked = !!val && proAvailable;
+      updateVisual();
+    };
+    card._isProAvailable = function () { return proAvailable; };
+    updateVisual();
+    return card;
+  }
+
   function renderSetupStep1() {
     pendingSetupOptions = pendingSetupOptions || {};
     pendingSetupOptions.step = 1;
@@ -813,6 +924,10 @@
     }
     pw1.addEventListener('input', updateMeter);
 
+    // Karta opt-in „Tryb chmurowy" — preserveuje stan, gdy user wraca z kroku 2.
+    const cloudOnlyCard = buildCloudOnlyOptInCard();
+    if (pendingSetupOptions.storageMode === 'cloud-only') cloudOnlyCard._setChecked(true);
+
     const next = el('button', {
       class: 'vilda-auth-btn vilda-auth-btn-primary',
       type: 'button',
@@ -824,6 +939,8 @@
         pendingSetupOptions.password = pw1.value;
         pendingSetupOptions.label = labelInput.value.trim() || null;
         pendingSetupOptions.recoveryKey = (getCrypto() && getCrypto().generateRecoveryKey()) || null;
+        // storageMode: 'cloud-only' tylko gdy user świadomie kliknął — default 'local'
+        pendingSetupOptions.storageMode = cloudOnlyCard._isChecked() ? 'cloud-only' : 'local';
         renderSetupStep2();
       }
     });
@@ -857,7 +974,7 @@
     open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
       stepLabel, title, sub, explainersRow, labelInput, pw1,
       el('div', { class: 'vilda-auth-meter-wrap' }, [meter, meterLabel]),
-      pw2, errBox,
+      pw2, cloudOnlyCard, errBox,
       el('div', { class: 'vilda-auth-actions' }, [back, next])
     ]));
     setTimeout(function () { try { labelInput.focus(); } catch (_) {} }, 30);
@@ -950,7 +1067,12 @@
           const V = getVault();
           await V.createUser(opts.password, {
             label: opts.label,
-            recoveryKey: opts.recoveryKey
+            recoveryKey: opts.recoveryKey,
+            // storageMode: 'cloud-only' (jeśli user zaznaczył kartę opt-in
+            // w kroku 1) lub 'local' (domyślnie). Patrz vilda_vault.js
+            // STORAGE MODE — kontroluje czy per-user IndexedDB jest trwałe
+            // czy in-memory + sessionStorage.
+            storageMode: opts.storageMode || 'local'
           });
           renderSetupSyncStep();
         } catch (e) {
@@ -3589,10 +3711,41 @@
     } catch (_) { return false; }
   }
 
-  // Efektywne okno bezczynności: 7 dni gdy urządzenie zaufane, inaczej domyślne 20 min.
+  // Cloud-only: indywidualna preferencja idle (localStorage). Klucz globalny, bo
+  // dotyczy zachowania UI tej karty — nie tożsamości konta. Wartości whitelistowane.
+  const CLOUD_ONLY_IDLE_PREF_KEY = 'vilda-cloud-only-idle-ms';
+  const CLOUD_ONLY_IDLE_CHOICES_MS = [5 * 60 * 1000, 10 * 60 * 1000, 15 * 60 * 1000, 30 * 60 * 1000];
+  function getCloudOnlyIdlePref() {
+    try {
+      const raw = global.localStorage && global.localStorage.getItem(CLOUD_ONLY_IDLE_PREF_KEY);
+      const n = raw != null ? parseInt(raw, 10) : NaN;
+      if (CLOUD_ONLY_IDLE_CHOICES_MS.indexOf(n) >= 0) return n;
+    } catch (_) {}
+    return null;
+  }
+  function setCloudOnlyIdlePref(ms) {
+    const n = parseInt(ms, 10);
+    if (CLOUD_ONLY_IDLE_CHOICES_MS.indexOf(n) < 0) return false;
+    try { if (global.localStorage) global.localStorage.setItem(CLOUD_ONLY_IDLE_PREF_KEY, String(n)); } catch (_) {}
+    const V = getVault();
+    try { if (V && V.isUnlocked()) V.startIdleTimer(effectiveIdleMs()); } catch (_) {}
+    return true;
+  }
+
+  // Efektywne okno bezczynności:
+  //   • cloud-only → preferencja użytkownika lub 10 min default (NIGDY 7-dniowe trusted),
+  //     bo to scenariusz współdzielonego komputera w gabinecie szpitalnym.
+  //   • standardowo → 7 dni gdy „ufam temu urządzeniu", inaczej domyślne 20 min.
   function effectiveIdleMs() {
     const V = getVault();
     const def = (V && typeof V.DEFAULT_IDLE_LOCK_MS === 'number') ? V.DEFAULT_IDLE_LOCK_MS : (20 * 60 * 1000);
+    const cloudDef = (V && typeof V.CLOUD_ONLY_IDLE_LOCK_MS === 'number') ? V.CLOUD_ONLY_IDLE_LOCK_MS : (10 * 60 * 1000);
+    let isCloud = false;
+    try { isCloud = !!(V && V.isCloudOnlyMode && V.isCloudOnlyMode()); } catch (_) {}
+    if (isCloud) {
+      const pref = getCloudOnlyIdlePref();
+      return (typeof pref === 'number' && pref > 0) ? pref : cloudDef;
+    }
     return isTrustedDevice() ? TRUSTED_DEVICE_IDLE_MS : def;
   }
 
@@ -4717,6 +4870,10 @@
     isTrustedDevice: isTrustedDevice,
     setTrustedDevice: setTrustedDevice,
     TRUSTED_DEVICE_IDLE_MS: TRUSTED_DEVICE_IDLE_MS,
+    getCloudOnlyIdlePref: getCloudOnlyIdlePref,
+    setCloudOnlyIdlePref: setCloudOnlyIdlePref,
+    CLOUD_ONLY_IDLE_CHOICES_MS: CLOUD_ONLY_IDLE_CHOICES_MS,
+    effectiveIdleMs: effectiveIdleMs,
     getBiometricAutoTrigger: getBiometricAutoTrigger,
     setBiometricAutoTrigger: setBiometricAutoTrigger,
     getBiometricDismissCount: getBiometricDismissCount,
