@@ -777,116 +777,13 @@
     else renderSetupStep3();
   }
 
-  // ============ KARTA OPT-IN „TRYB CHMUROWY" ============
-  // Ładny, klikalny card komponent dla kreatora konta. Cała powierzchnia jest
-  // klikalna, toggle zmienia stan, etykieta i kolory dają wyraźny sygnał wybranej
-  // opcji. Inline styles — żeby działało wszędzie bez bumpa CSS i było spójne
-  // z resztą auth UI (turkusowa paleta marki).
-  // _isChecked()/_setChecked(b) na zwróconym elemencie wystawiają stan dla callera.
-  function buildCloudOnlyOptInCard() {
-    let checked = false;
-    // PRO gating — kreator nie zna jeszcze konta, więc sprawdzamy GLOBALNĄ
-    // (urządzeniową) dostępność PRO. Jeśli user nie ma PRO, karta jest wizualnie
-    // wyłączona z czytelnym hintem — kliknięcie nie zaznacza, tylko pokazuje info.
-    let proAvailable = false;
-    try { proAvailable = !!(global.VildaProAccess && global.VildaProAccess.hasAccess && global.VildaProAccess.hasAccess()); }
-    catch (_) { proAvailable = false; }
-    const card = el('button', {
-      type: 'button',
-      'aria-pressed': 'false',
-      'aria-label': 'Tryb chmurowy: pacjenci tylko w chmurze, bez kopii na dysku',
-      'aria-disabled': proAvailable ? 'false' : 'true'
-    });
-    card.style.cssText = [
-      'display:block;width:100%;text-align:left;cursor:pointer;font:inherit;color:inherit;',
-      'padding:14px 16px;margin:8px 0 0;',
-      'background:rgba(255,255,255,0.92);',
-      'border:2px solid #d7e9ec;border-radius:14px;',
-      'transition:border-color .18s ease, background .18s ease, box-shadow .18s ease;'
-    ].join('');
-
-    // Ikona chmury + kłódki (inline SVG, paleta turkusu marki)
-    const ICON_SVG = '<svg viewBox="0 0 32 32" width="36" height="36" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="display:block;">' +
-      '<path d="M9 21 C6 21 4 19 4 16.5 C4 14 6 12 8.5 12 C9 9 11.5 7 14.5 7 C17.5 7 20 9 20.5 12 C20.7 12 20.9 12 21 12 C23.8 12 26 14.2 26 17 C26 19.8 23.8 22 21 22 L9 21 Z" fill="#cfe8eb" stroke="#00838d" stroke-width="1.5" stroke-linejoin="round"/>' +
-      '<rect x="17" y="19" width="11" height="9" rx="2" fill="#00838d" stroke="#0f2b33" stroke-width="0.8"/>' +
-      '<path d="M19.5 19 v-2 a3,3 0 0 1 6,0 v2" fill="none" stroke="#0f2b33" stroke-width="1.4" stroke-linecap="round"/>' +
-      '<circle cx="22.5" cy="23.5" r="1.5" fill="#fff"/>' +
-      '<rect x="22" y="23.5" width="1" height="2.5" fill="#fff"/>' +
-    '</svg>';
-
-    // Iosowy toggle (pill + thumb), animowany CSS-em inline
-    const TOGGLE_HTML = '<span class="cloud-only-toggle" style="display:inline-flex;align-items:center;width:46px;height:26px;border-radius:999px;background:#e6eef0;border:1px solid #d7e9ec;transition:background .2s ease, border-color .2s ease;position:relative;flex:0 0 46px;">' +
-      '<span class="cloud-only-toggle-thumb" style="display:block;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.18);position:absolute;left:2px;top:1.5px;transition:left .2s ease;"></span>' +
-    '</span>';
-
-    card.innerHTML =
-      '<div style="display:flex;align-items:flex-start;gap:14px;">' +
-        '<div style="flex:0 0 auto;">' + ICON_SVG + '</div>' +
-        '<div style="flex:1 1 auto;min-width:0;">' +
-          '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px;">' +
-            '<div style="font-weight:700;font-size:1rem;color:#0f2b33;">Tryb chmurowy</div>' +
-            TOGGLE_HTML +
-          '</div>' +
-          '<div style="font-size:0.85rem;color:#5b6672;line-height:1.45;margin-bottom:8px;">' +
-            'Dane pacjentów synchronizują się <strong>tylko z chmurą</strong> — żadna kopia nie zostaje zapisana na dysku tego komputera.' +
-          '</div>' +
-          '<ul style="margin:0;padding:0 0 0 18px;font-size:0.78rem;color:#7d8a90;line-height:1.55;list-style-type:disc;">' +
-            '<li>Idealne na <strong>obcym komputerze</strong> (np. pokój badań w szpitalu)</li>' +
-            '<li>Wymaga aktywnej synchronizacji <strong>PRO</strong> oraz internetu przy każdym logowaniu</li>' +
-            '<li>Po wylogowaniu nie zostaje żadna kopia pacjentów — Twoje konto pamięta hasło, żebyś mógł zalogować się ponownie</li>' +
-            '<li>Możesz to wyłączyć później w <em>Ustawienia → Bezpieczeństwo</em></li>' +
-          '</ul>' +
-          (proAvailable ? '' : '<div class="cloud-only-pro-hint" style="margin-top:10px;padding:8px 10px;border-radius:10px;background:rgba(180,83,9,0.08);color:#854f0b;font-size:0.78rem;font-weight:500;display:flex;align-items:center;gap:6px;">⚠️ Wymaga aktywnego planu PRO. Możesz to włączyć później w Ustawieniach.</div>') +
-        '</div>' +
-      '</div>';
-
-    function updateVisual() {
-      const toggle = card.querySelector('.cloud-only-toggle');
-      const thumb = card.querySelector('.cloud-only-toggle-thumb');
-      if (!proAvailable) {
-        // Stan disabled: szary, kursor not-allowed, niezaznaczalny.
-        card.style.borderColor = '#e5e7eb';
-        card.style.background = 'rgba(245,245,245,0.65)';
-        card.style.boxShadow = '';
-        card.style.cursor = 'not-allowed';
-        card.style.opacity = '0.78';
-        card.setAttribute('aria-pressed', 'false');
-        if (toggle) { toggle.style.background = '#e6eef0'; toggle.style.borderColor = '#d7e9ec'; }
-        if (thumb) thumb.style.left = '2px';
-        return;
-      }
-      if (checked) {
-        card.style.borderColor = '#00838d';
-        card.style.background = 'linear-gradient(180deg, rgba(0,131,141,0.07) 0%, rgba(0,131,141,0.02) 100%)';
-        card.style.boxShadow = '0 4px 14px rgba(0,131,141,0.13)';
-        card.setAttribute('aria-pressed', 'true');
-        if (toggle) { toggle.style.background = '#00838d'; toggle.style.borderColor = '#00838d'; }
-        if (thumb) thumb.style.left = '23px';
-      } else {
-        card.style.borderColor = '#d7e9ec';
-        card.style.background = 'rgba(255,255,255,0.92)';
-        card.style.boxShadow = '';
-        card.setAttribute('aria-pressed', 'false');
-        if (toggle) { toggle.style.background = '#e6eef0'; toggle.style.borderColor = '#d7e9ec'; }
-        if (thumb) thumb.style.left = '2px';
-      }
-    }
-
-    card.addEventListener('click', function () {
-      if (!proAvailable) return;       // No-op gdy brak PRO — hint widoczny w karcie.
-      checked = !checked;
-      updateVisual();
-    });
-    card._isChecked = function () { return checked && proAvailable; };
-    card._setChecked = function (val) {
-      // Bez PRO nie pozwalamy nadać `true` — chronimy przed niespójnym opt-in.
-      checked = !!val && proAvailable;
-      updateVisual();
-    };
-    card._isProAvailable = function () { return proAvailable; };
-    updateVisual();
-    return card;
-  }
+  // UWAGA: funkcja buildCloudOnlyOptInCard USUNIĘTA w Kroku 15.
+  // Karta opt-in „Tryb chmurowy" nie ma już sensu w kreatorze nowego konta:
+  // • Brak slot'u w chmurze (nowe konto) → pierwsza sesja jest pusta
+  // • Mylący komunikat „konto pamięta hasło" przed założeniem konta
+  // • Brak local fallback recovery (.wiw backup) w cloud-only
+  // Cloud-only jest aktywowane runtime: Ustawienia (toggle) lub QR login na obcym
+  // komputerze z chooserem (showQRLoginScreen → completeQRLogin z storageMode).
 
   function renderSetupStep1() {
     pendingSetupOptions = pendingSetupOptions || {};
@@ -907,10 +804,32 @@
     });
     if (pendingSetupOptions.label) labelInput.value = pendingSetupOptions.label;
 
-    const pw1 = el('input', { type: 'password', class: 'vilda-auth-input', placeholder: 'Hasło (min. 8 znaków)' });
+    const pw1 = el('input', { type: 'password', class: 'vilda-auth-input', placeholder: 'Hasło (min. 12 znaków, 3 z 4 typów)' });
     const pw2 = el('input', { type: 'password', class: 'vilda-auth-input', placeholder: 'Powtórz hasło' });
     const errBox = el('div', { class: 'vilda-auth-error' });
     errBox.style.display = 'none';
+
+    // Przycisk „Zaproponuj silne hasło" — generuje passphrase, wypełnia oba pola.
+    // Ujawnia hasło na chwilę (zmiana type → text → password po 2s), żeby user
+    // mógł je zapamiętać/skopiować przed dalszym krokiem.
+    const generateBtn = el('button', {
+      type: 'button',
+      class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small vilda-auth-btn-subtle',
+      text: '🎲 Zaproponuj silne hasło'
+    });
+    generateBtn.style.cssText = 'margin: 4px 0 8px; font-size: 0.85rem;';
+    generateBtn.addEventListener('click', function () {
+      const V = getVault();
+      if (!V || typeof V.generateStrongPassword !== 'function') return;
+      const generated = V.generateStrongPassword();
+      pw1.value = generated;
+      pw2.value = generated;
+      // Ujawnij na 2s żeby user mógł zobaczyć i zapamiętać/skopiować.
+      pw1.type = 'text';
+      setTimeout(function () { try { pw1.type = 'password'; } catch (_) {} }, 2000);
+      updateMeter();
+      try { pw1.focus(); pw1.select(); } catch (_) {}
+    });
 
     const meterLabel = el('span', { class: 'vilda-auth-meter-label', text: '—' });
     const meterFill = el('div', { class: 'vilda-auth-meter-fill' });
@@ -924,9 +843,13 @@
     }
     pw1.addEventListener('input', updateMeter);
 
-    // Karta opt-in „Tryb chmurowy" — preserveuje stan, gdy user wraca z kroku 2.
-    const cloudOnlyCard = buildCloudOnlyOptInCard();
-    if (pendingSetupOptions.storageMode === 'cloud-only') cloudOnlyCard._setChecked(true);
+    // UWAGA: karta opt-in „Tryb chmurowy" USUNIĘTA z kreatora (Krok 15).
+    // Cloud-only ma sens TYLKO dla istniejących kont — przy zakładaniu nowego
+    // konta nie ma jeszcze slot'u w chmurze do zsynchronizowania. User chcący
+    // cloud-only powinien:
+    //   • założyć konto normalnie (local), potem włączyć cloud-only w Ustawieniach
+    //   • lub na obcym komputerze zalogować się QR-em i wybrać „Komputer w pracy"
+    //     w chooserze (tworzy konto z storageMode='cloud-only' przez completeQRLogin).
 
     const next = el('button', {
       class: 'vilda-auth-btn vilda-auth-btn-primary',
@@ -934,13 +857,25 @@
       text: 'Dalej',
       onclick: function () {
         showError(errBox, '');
-        if (pw1.value.length < 8) { showError(errBox, 'Hasło musi mieć minimum 8 znaków.'); return; }
+        // Policy check przez vault.validatePasswordStrength (12+ chars, 3+ typy, no blacklist).
+        const V = getVault();
+        if (V && typeof V.validatePasswordStrength === 'function') {
+          const r = V.validatePasswordStrength(pw1.value);
+          if (!r.ok) {
+            showError(errBox, r.message + (r.hint ? ' ' + r.hint : ''));
+            return;
+          }
+        } else {
+          // Fallback gdy vault niedostępny — minimalny length check.
+          if (pw1.value.length < 12) { showError(errBox, 'Hasło musi mieć minimum 12 znaków.'); return; }
+        }
         if (pw1.value !== pw2.value) { showError(errBox, 'Hasła nie są takie same.'); return; }
         pendingSetupOptions.password = pw1.value;
         pendingSetupOptions.label = labelInput.value.trim() || null;
         pendingSetupOptions.recoveryKey = (getCrypto() && getCrypto().generateRecoveryKey()) || null;
-        // storageMode: 'cloud-only' tylko gdy user świadomie kliknął — default 'local'
-        pendingSetupOptions.storageMode = cloudOnlyCard._isChecked() ? 'cloud-only' : 'local';
+        // Zawsze 'local' w kreatorze. Cloud-only ustawiane runtime (Ustawienia /
+        // logowanie z telefonu na obcym komputerze).
+        pendingSetupOptions.storageMode = 'local';
         renderSetupStep2();
       }
     });
@@ -972,9 +907,9 @@
     explainersRow.style.margin = '0 auto 6px';
 
     open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
-      stepLabel, title, sub, explainersRow, labelInput, pw1,
+      stepLabel, title, sub, explainersRow, labelInput, pw1, generateBtn,
       el('div', { class: 'vilda-auth-meter-wrap' }, [meter, meterLabel]),
-      pw2, cloudOnlyCard, errBox,
+      pw2, errBox,
       el('div', { class: 'vilda-auth-actions' }, [back, next])
     ]));
     setTimeout(function () { try { labelInput.focus(); } catch (_) {} }, 30);
@@ -1375,8 +1310,16 @@
         if (!pw.value) { showError(errBox, 'Wpisz hasło.'); return; }
         setBusy(true);
         try {
-          await V.unlockUser(userId, pw.value);
+          const result = await V.unlockUser(userId, pw.value);
           _passkeyAutoFailed.delete(userId); // sukces hasłem — resetuj flagę dla kolejnych sesji
+          // Krok 16.5 — Forced password reset gdy hasło nie spełnia aktualnej
+          // polityki (legacy 8-char konta lub w blacklist). Vault flagował to
+          // przez result.needsPasswordReset. Pokazujemy blokujący ekran przed
+          // wejściem do aplikacji.
+          if (result && result.needsPasswordReset) {
+            showForcedPasswordResetScreen(result.passwordPolicy);
+            return;
+          }
           // Pokaż propozycję biometrii po pierwszym zalogowaniu hasłem (jeśli stosowne)
           showPostLoginBiometricPrompt(userId);
           hide();
@@ -4403,6 +4346,119 @@
     open(wrapper);
   }
 
+  // ============ EKRAN WYMUSZONEJ ZMIANY HASŁA (Krok 16.5) ============
+  // Pokazywany po unlockUser gdy vault zwrócił needsPasswordReset:true.
+  // Stare konta z legacy 8-char hasłami muszą ustawić silne hasło zgodne
+  // z aktualną polityką przed wejściem do aplikacji.
+  //
+  // BLOKUJĄCY — bez przycisku „Wróć". Jedyne wyjścia:
+  //   • Ustawienie nowego hasła (resetPasswordWhileUnlocked) → aplikacja
+  //   • „Wyloguj" → vault.lock() + powrót do ekranu wyboru konta
+  function showForcedPasswordResetScreen(policyDetail) {
+    const V = getVault();
+    if (!V) return;
+
+    const title = el('h2', { class: 'vilda-auth-title', text: 'Twoje hasło wymaga zmiany' });
+    const sub = el('p', {
+      class: 'vilda-auth-subtitle',
+      text: 'Twoje obecne hasło nie spełnia naszych zaktualizowanych wymagań bezpieczeństwa. Ustaw silniejsze hasło, żeby kontynuować pracę.'
+    });
+
+    // Box informacyjny — co konkretnie jest nie tak
+    const policyBox = document.createElement('div');
+    policyBox.style.cssText = 'margin: 8px 0 14px; padding: 10px 12px; background: rgba(180,83,9,0.08); border-left: 3px solid #b45309; border-radius: 8px; font-size: 0.85rem; color: #854f0b; line-height: 1.5;';
+    const reasonText = (policyDetail && policyDetail.message)
+      ? policyDetail.message + (policyDetail.hint ? ' ' + policyDetail.hint : '')
+      : 'Hasło musi mieć minimum 12 znaków i zawierać co najmniej 3 z 4 typów znaków: małe litery, wielkie litery, cyfry, znaki specjalne.';
+    policyBox.innerHTML = '<strong>Dlaczego?</strong> ' + reasonText;
+
+    // Pola nowego hasła
+    const pw1 = el('input', {
+      type: 'password',
+      class: 'vilda-auth-input',
+      placeholder: 'Nowe hasło (min. 12 znaków, 3 z 4 typów)'
+    });
+    const pw2 = el('input', {
+      type: 'password',
+      class: 'vilda-auth-input',
+      placeholder: 'Powtórz nowe hasło'
+    });
+
+    // Przycisk „Zaproponuj silne hasło" — identyczna logika jak w kreatorze.
+    const generateBtn = el('button', {
+      type: 'button',
+      class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small vilda-auth-btn-subtle',
+      text: '🎲 Zaproponuj silne hasło'
+    });
+    generateBtn.style.cssText = 'margin: 4px 0 8px; font-size: 0.85rem;';
+    generateBtn.addEventListener('click', function () {
+      if (typeof V.generateStrongPassword !== 'function') return;
+      const generated = V.generateStrongPassword();
+      pw1.value = generated;
+      pw2.value = generated;
+      pw1.type = 'text';
+      setTimeout(function () { try { pw1.type = 'password'; } catch (_) {} }, 2000);
+      try { pw1.focus(); pw1.select(); } catch (_) {}
+    });
+
+    const errBox = el('div', { class: 'vilda-auth-error' });
+    errBox.style.display = 'none';
+    function showErr(msg) {
+      errBox.textContent = msg || '';
+      errBox.style.display = msg ? '' : 'none';
+    }
+
+    const submitBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-primary',
+      type: 'button',
+      text: 'Ustaw nowe hasło i kontynuuj'
+    });
+    submitBtn.addEventListener('click', async function () {
+      showErr('');
+      // Walidacja policy
+      if (typeof V.validatePasswordStrength === 'function') {
+        const r = V.validatePasswordStrength(pw1.value);
+        if (!r.ok) { showErr(r.message + (r.hint ? ' ' + r.hint : '')); return; }
+      } else if (pw1.value.length < 12) {
+        showErr('Hasło musi mieć minimum 12 znaków.'); return;
+      }
+      if (pw1.value !== pw2.value) { showErr('Hasła nie są takie same.'); return; }
+      submitBtn.disabled = true;
+      const orig = submitBtn.textContent;
+      submitBtn.textContent = 'Zmieniam…';
+      try {
+        // Hasło już zwalidowane wyżej → resetPasswordWhileUnlocked przejdzie.
+        // Używamy reset (nie changePassword), bo user nie musi podawać starego —
+        // jest już zalogowany, vault ma masterKey w RAM.
+        await V.resetPasswordWhileUnlocked(pw1.value);
+        hide();
+        startIdleWatch();
+      } catch (e) {
+        showErr(e && e.message ? e.message : 'Nie udało się zmienić hasła.');
+        submitBtn.disabled = false;
+        submitBtn.textContent = orig;
+      }
+    });
+    pw2.addEventListener('keydown', function (e) { if (e.key === 'Enter') submitBtn.click(); });
+
+    // „Wyloguj" — escape hatch, nie zmusza usera na siłę gdy nie chce ustawić
+    // nowego hasła teraz. Wraca do ekranu wyboru konta.
+    const logoutBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small',
+      type: 'button',
+      text: 'Wyloguj się — ustawię hasło później',
+      onclick: function () {
+        try { V.lock('user'); } catch (_) {}
+        showStartupScreen();
+      }
+    });
+
+    open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
+      title, sub, policyBox, pw1, generateBtn, pw2, errBox, submitBtn, logoutBtn
+    ]));
+    setTimeout(function () { try { pw1.focus(); } catch (_) {} }, 30);
+  }
+
   // ============ EKRAN ZAPASOWEGO KODU DOSTĘPU ============
   // Osobny ekran z formularzem — wcześniej był inline w showSyncCodeRestoreScreen.
   // Po Kroku 14 sekcja na entry-screen to mały kafelek; klik → ten ekran.
@@ -5300,6 +5356,7 @@
     showRestoreVaultFlow: showRestoreVaultFlow,
     showSyncCodeRestoreScreen: showSyncCodeRestoreScreen,
     showBackupCodeRestoreScreen: showBackupCodeRestoreScreen,
+    showForcedPasswordResetScreen: showForcedPasswordResetScreen,
     showQRLoginScreen: showQRLoginScreen,
     showPasskeyEphemeralLoginScreen: showPasskeyEphemeralLoginScreen,
     showLoginModeChooser: showLoginModeChooser,
