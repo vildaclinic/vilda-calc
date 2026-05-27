@@ -4281,84 +4281,92 @@
       text: 'Wybierz sposób logowania.'
     });
 
-    // ── Sekcja QR — wyróżniona karta (własny komputer) ────────────────────────
-    const qrSection = document.createElement('div');
-    qrSection.style.cssText = [
-      'border:2px solid #1d9e75',
-      'border-radius:10px',
-      'padding:0.9rem 1rem',
-      'margin:0 0 0.5rem'
-    ].join(';');
+    // ── Karty wyboru metody logowania (Wariant B) ─────────────────────────────
+    // Spójne z chooserem: kółko z lucide-style ikoną + tytuł + opis + tag w rogu.
+    // Cała karta jest klikalna (<button>) — tak samo jak kafelki w chooserze.
+    const ENTRY_ICON_QR = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+      + '<rect x="3" y="3" width="7" height="7" rx="1"/>'
+      + '<rect x="14" y="3" width="7" height="7" rx="1"/>'
+      + '<rect x="3" y="14" width="7" height="7" rx="1"/>'
+      + '<line x1="14" y1="14" x2="14" y2="17"/>'
+      + '<line x1="17" y1="14" x2="21" y2="14"/>'
+      + '<line x1="14" y1="21" x2="17" y2="21"/>'
+      + '<line x1="20" y1="17" x2="20" y2="21"/>'
+      + '</svg>';
+    const ENTRY_ICON_EYE_OFF = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+      + '<path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>'
+      + '<path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>'
+      + '<path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>'
+      + '<line x1="2" y1="2" x2="22" y2="22"/>'
+      + '</svg>';
 
-    const qrTag = document.createElement('span');
-    qrTag.style.cssText = 'display:inline-block;font-size:0.75rem;font-weight:500;background:#e1f5ee;color:#0f6e56;border-radius:4px;padding:2px 8px;margin-bottom:0.55rem;';
-    qrTag.textContent = 'Konto zostaje';
+    function buildEntryCard(cfg) {
+      const card = el('button', {
+        type: 'button',
+        class: 'vilda-auth-entry-card',
+        'data-method': cfg.method
+      });
+      card.style.cssText = [
+        'display:block;width:100%;text-align:left;cursor:pointer;font:inherit;color:inherit;',
+        'padding:14px 16px;margin:8px 0 0;',
+        'background:rgba(255,255,255,0.92);',
+        'border:2px solid #d7e9ec;border-radius:14px;',
+        'transition:border-color .18s ease, background .18s ease, box-shadow .18s ease, transform .12s ease;'
+      ].join('');
+      card.innerHTML =
+        '<div style="display:flex;align-items:flex-start;gap:14px;">' +
+          '<div style="flex:0 0 auto;width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#e2f1f2,#cfe9ec);display:flex;align-items:center;justify-content:center;color:#00838d;" aria-hidden="true">' +
+            cfg.iconSvg +
+          '</div>' +
+          '<div style="flex:1 1 auto;min-width:0;">' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px;">' +
+              '<div style="font-weight:700;font-size:1rem;color:#0f2b33;">' + cfg.title + '</div>' +
+              '<span style="font-size:0.7rem;font-weight:600;color:' + cfg.tagColor + ';background:' + cfg.tagBg + ';padding:2px 8px;border-radius:999px;white-space:nowrap;">' + cfg.tag + '</span>' +
+            '</div>' +
+            '<div style="font-size:0.85rem;color:#5b6672;line-height:1.45;">' + cfg.desc + '</div>' +
+          '</div>' +
+        '</div>';
+      card.addEventListener('mouseenter', function () {
+        card.style.borderColor = '#00838d';
+        card.style.transform = 'translateY(-1px)';
+        card.style.boxShadow = '0 6px 16px rgba(0,131,141,0.18)';
+      });
+      card.addEventListener('mouseleave', function () {
+        card.style.borderColor = '#d7e9ec';
+        card.style.transform = '';
+        card.style.boxShadow = '';
+      });
+      card.addEventListener('click', cfg.onClick);
+      return card;
+    }
 
-    const qrHead = document.createElement('div');
-    qrHead.style.cssText = 'display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem;';
-    qrHead.innerHTML = '<strong style="font-size:0.95rem;">Zaloguj przez kod QR</strong>';
-
-    const qrDesc = document.createElement('p');
-    qrDesc.style.cssText = 'margin:0 0 0.7rem;font-size:0.84rem;color:var(--text-secondary,#555);line-height:1.5;';
-    qrDesc.textContent = 'Zeskanuj telefonem kod QR i ustal hasło dla tego komputera. Następnym krokiem wybierzesz, czy pacjenci mają zostać na dysku, czy tylko w chmurze.';
-
-    const qrBtn = el('button', {
-      class: 'vilda-auth-btn vilda-auth-btn-primary vilda-auth-btn-small',
-      type: 'button',
-      text: 'Dalej →'
+    // QR card — sekcja „persistent" (konto zostaje). Chooser filtruje ephemeral
+    // (to osobna karta poniżej).
+    const qrSection = buildEntryCard({
+      method: 'qr',
+      iconSvg: ENTRY_ICON_QR,
+      title: 'Zaloguj przez kod QR',
+      desc: 'Zeskanuj telefonem i ustal hasło. W następnym kroku wybierzesz, czy pacjenci mają zostać na dysku, czy tylko w chmurze.',
+      tag: 'Konto zostaje',
+      tagColor: '#0f6e56',
+      tagBg: '#e1f5ee',
+      onClick: function () { showQRLoginScreen({ availableModes: ['local', 'cloud-only'] }); }
     });
-    // Sekcja „persistent" — chooser filtruje ephemeral (to osobna sekcja niżej).
-    qrBtn.addEventListener('click', function () {
-      showQRLoginScreen({ availableModes: ['local', 'cloud-only'] });
-    });
 
-    qrSection.appendChild(qrTag);
-    qrSection.appendChild(qrHead);
-    qrSection.appendChild(qrDesc);
-    qrSection.appendChild(qrBtn);
-
-    // ── Separator między kartami (cienka linia) ───────────────────────────────
-    const cardSep = document.createElement('div');
-    cardSep.style.cssText = 'height:1px;background:var(--border,#e5e7eb);margin:0.3rem 0 0.5rem;';
-
-    // ── Sekcja passkey — obcy/współdzielony komputer ──────────────────────────
+    // Ephemeral card — sekcja „jednorazowo" (nic nie zostaje). User świadomie
+    // wybrał obcy komputer → pomijamy chooser, prosto do ephemeral flow.
     let passkeySection = null;
     if (typeof V.unlockWithPasskeyEphemeral === 'function') {
-      passkeySection = document.createElement('div');
-      passkeySection.style.cssText = [
-        'border:1px solid var(--border,#d0d5e8)',
-        'border-radius:10px',
-        'padding:0.9rem 1rem',
-        'margin:0 0 0.5rem'
-      ].join(';');
-
-      const pkTag = document.createElement('span');
-      pkTag.style.cssText = 'display:inline-block;font-size:0.75rem;font-weight:500;background:#faeeda;color:#854f0b;border-radius:4px;padding:2px 8px;margin-bottom:0.55rem;';
-      pkTag.textContent = 'Nic nie zostaje po wylogowaniu';
-
-      const pkHead = document.createElement('div');
-      pkHead.style.cssText = 'display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem;';
-      pkHead.innerHTML = '<strong style="font-size:0.95rem;">Jednorazowe logowanie (obcy komputer)</strong>';
-
-      const pkDesc = document.createElement('p');
-      pkDesc.style.cssText = 'margin:0 0 0.7rem;font-size:0.84rem;color:var(--text-secondary,#555);line-height:1.5;';
-      pkDesc.textContent = 'Pracujesz na komputerze, który nie jest Twój? Po zakończeniu pracy żadne dane nie zostaną na tym komputerze.';
-
-      const passkeyBtn = el('button', {
-        class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small',
-        type: 'button',
-        text: 'Zaloguj jednorazowo'
+      passkeySection = buildEntryCard({
+        method: 'ephemeral',
+        iconSvg: ENTRY_ICON_EYE_OFF,
+        title: 'Zaloguj jednorazowo',
+        desc: 'Pracujesz na obcym komputerze? Po zakończeniu pracy nic nie zostanie.',
+        tag: 'Nic nie zostaje',
+        tagColor: '#854f0b',
+        tagBg: '#faeeda',
+        onClick: function () { showPasskeyEphemeralLoginScreen({ storageMode: 'ephemeral' }); }
       });
-      // User świadomie wybrał „obcy komputer" — pomijamy chooser, prosto do
-      // ephemeral flow (passkey-first, z fallbackiem do QR ephemeral wewnątrz).
-      passkeyBtn.addEventListener('click', function () {
-        showPasskeyEphemeralLoginScreen({ storageMode: 'ephemeral' });
-      });
-
-      passkeySection.appendChild(pkTag);
-      passkeySection.appendChild(pkHead);
-      passkeySection.appendChild(pkDesc);
-      passkeySection.appendChild(passkeyBtn);
     }
 
     // ── Separator "lub" przed sekcją zaawansowaną ─────────────────────────────
@@ -4478,7 +4486,7 @@
     });
 
     const children = [title, sub, qrSection];
-    if (passkeySection) { children.push(cardSep); children.push(passkeySection); }
+    if (passkeySection) { children.push(passkeySection); }
     children.push(orDiv, codeSection, back);
     const wrapper = el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, children);
     open(wrapper);
