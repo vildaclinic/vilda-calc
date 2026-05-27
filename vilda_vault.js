@@ -2956,20 +2956,12 @@
     } catch (_) { void _; }
   }
 
-  /**
-   * Logowanie passkey EFEMERYCZNE — na współdzielonym komputerze, bez śladu lokalnie.
-   * Przepływ:
-   *   1. setEphemeralMode(true) — adapter in-memory + uszczelnienie warstwy aplikacji.
-   *   2. POST /v1/passkey/challenge → challenge.
-   *   3. Asercja WebAuthn (PRF) z tym challenge (telefon przez hybrid).
-   *   4. POST /v1/passkey/:credentialId/unlock (asercja) → koperta.
-   *   5. PRF secret → klucz wrappujący → odszyfruj koperta → masterKeyBytes.
-   *   6. adoptMasterBytes → vault odblokowany w RAM (sessionStorage tylko klucz sesji).
-   *
-   * @param {{ credentialId?: string, signal?: AbortSignal }} [options]
-   * @returns {Promise<{ ok: true, ephemeral: true, credentialId, userId }>}
-   */
-  async function unlockWithPasskeyEphemeral(options) {
+  // Współdzielony helper: pobranie masterBytes przez passkey (telefon przez hybrid).
+  // Steps 0–5b z unlockWithPasskeyEphemeral — bez ŻADNEGO side-effectu (nie woła
+  // setEphemeralMode, nie tworzy adaptera, nie woła adoptMasterBytes). Używany przez:
+  //   • unlockWithPasskeyEphemeral — wrapuje w setEphemeralMode + adopcja do RAM,
+  //   • unlockWithPasskeyAndPersist — wrapuje w utworzenie wpisu registry + meta.
+  async function _acquirePasskeyMasterBytes(options) {
     const C = getCrypto();
     const opts = (options && typeof options === 'object') ? options : {};
 
@@ -2981,14 +2973,6 @@
       err.code = 'EPH_PRF_UNSUPPORTED';
       throw err;
     }
-
-    // 1. Świeży start NOWEJ sesji: usuń resztki veph: po poprzedniej sesji (np. po
-    //    awarii bez wylogowania) ZANIM utworzymy adapter — inaczej zhydratowałby
-    //    cudze/stare dane. Restore na nawigacji NIE woła purge, więc dane między
-    //    podstronami przetrwają (adapter hydratuje świeży stan tej sesji).
-    try { if (global.VildaPersistence && global.VildaPersistence.purgeEphemeralData) global.VildaPersistence.purgeEphemeralData(); } catch (_) { void _; }
-    // Tryb efemeryczny — adapter in-memory utrwalany do veph:, nic trwałego na dysk.
-    setEphemeralMode(true);
 
     const rpId = (typeof window !== 'undefined' && window.location && window.location.hostname) || 'localhost';
     const workerUrl = ((typeof window !== 'undefined' && window.VILDA_SYNC_WORKER_URL)
@@ -3052,12 +3036,6 @@
       const dataBytes = C.base64urlToBytes(koperta.encryptedMasterByPasskey.data);
       masterBytes = await C.decryptBytes(wrappingKey, ivBytes, dataBytes);
     } catch (e) {
-      // Diagnostyka: rozróżnij DWIE przyczyny tego samego objawu.
-      //  - wrapVersion < 2 (lub brak): koperta starsza, sprzed poprawki create→get —
-      //    mogła zostać owinięta sekretem PRF z create(); rozwiązanie = re-rejestracja.
-      //  - wrapVersion >= 2: koperta aktualna (owinięta PRF z get()), więc skoro sekret
-      //    PRF z logowania nie pasuje, to niespójność samego authenticatora — typowo
-      //    passkey Apple użyty LOKALNIE na Macu daje inny PRF niż przez telefon (hybrid).
       const wv = (koperta && typeof koperta.wrapVersion === 'number') ? koperta.wrapVersion : 1;
       const err = new Error('Nie udało się odszyfrować danych tym passkey.');
       err.code = 'EPH_DECRYPT_FAILED';
@@ -3077,8 +3055,8 @@
       throw err;
     }
 
-    // 5b. Inicjały (opcja C) — odszyfruj TYM SAMYM kluczem. Na współdzielonym ekranie
-    //     pokazujemy tylko inicjały zamiast pełnego nazwiska. Fallback: neutralna etykieta.
+    // 5b. Inicjały — odszyfruj tym samym kluczem. Pokazujemy tylko inicjały na
+    //     współdzielonym ekranie. Fallback: neutralna etykieta.
     let ephLabel = 'Konto (passkey)';
     try {
       if (koperta.encryptedInitials && koperta.encryptedInitials.iv && koperta.encryptedInitials.data) {
@@ -3090,20 +3068,120 @@
         const ini = new TextDecoder().decode(iniBytes).trim();
         if (ini) ephLabel = ini;
       }
-    } catch (_) { void _; /* brak/uszkodzone inicjały → etykieta neutralna */ }
+    } catch (_) { void _; }
+
+    return { masterBytes: masterBytes, credentialId: asrt.credentialId, ephLabel: ephLabel };
+  }
+
+  /**
+   * Logowanie passkey EFEMERYCZNE — na współdzielonym komputerze, bez śladu lokalnie.
+   * Przepływ:
+   *   1. setEphemeralMode(true) — adapter in-memory + uszczelnienie warstwy aplikacji.
+   *   2. POST /v1/passkey/challenge → challenge.
+   *   3. Asercja WebAuthn (PRF) z tym challenge (telefon przez hybrid).
+   *   4. POST /v1/passkey/:credentialId/unlock (asercja) → koperta.
+   *   5. PRF secret → klucz wrappujący → odszyfruj koperta → masterKeyBytes.
+   *   6. adoptMasterBytes → vault odblokowany w RAM (sessionStorage tylko klucz sesji).
+   *
+   * @param {{ credentialId?: string, signal?: AbortSignal }} [options]
+   * @returns {Promise<{ ok: true, ephemeral: true, credentialId, userId }>}
+   */
+  async function unlockWithPasskeyEphemeral(options) {
+    // 1. Świeży start NOWEJ sesji: usuń resztki veph: po poprzedniej sesji ZANIM
+    //    utworzymy adapter — inaczej zhydratowałby cudze/stare dane.
+    try { if (global.VildaPersistence && global.VildaPersistence.purgeEphemeralData) global.VildaPersistence.purgeEphemeralData(); } catch (_) { void _; }
+    // Tryb efemeryczny — adapter in-memory utrwalany do veph:, nic trwałego na dysk.
+    setEphemeralMode(true);
+
+    // 2–5. Pobierz masterBytes przez passkey (shared helper).
+    const acq = await _acquirePasskeyMasterBytes(options);
 
     // 6. Adopcja do RAM — bez zapisu meta na dysk (adapter in-memory).
-    const userId = 'eph:' + asrt.credentialId.slice(0, 32);
-    await adoptMasterBytes(masterBytes, userId, ephLabel);
+    const userId = 'eph:' + acq.credentialId.slice(0, 32);
+    await adoptMasterBytes(acq.masterBytes, userId, acq.ephLabel);
 
     // 7. Pobierz dane pacjentów z chmury do RAM. W trybie efemerycznym nic nie ma
-    //    lokalnie, a normalny pull po onUnlock jest bramkowany isSyncEnabled (na
-    //    współdzielonym komputerze sync nigdy nie był włączony) — więc pull MUSIMY
-    //    wymusić tutaj. syncPull działa z samego master key (getSyncMaterial), a
-    //    mergeSyncPayload scala tylko pacjentów (nie nadpisuje etykiety/inicjałów).
+    //    lokalnie, a normalny pull po onUnlock jest bramkowany isSyncEnabled — więc
+    //    musimy go wymusić tutaj.
     await ephemeralSyncPull();
 
-    return { ok: true, ephemeral: true, credentialId: asrt.credentialId, userId: userId };
+    return { ok: true, ephemeral: true, credentialId: acq.credentialId, userId: userId };
+  }
+
+  /**
+   * Logowanie passkey + utworzenie LOKALNEGO konta — telefon dostarcza biometrią
+   * masterKey, na tym komputerze tworzy się nowy wpis registry + meta (jak przy
+   * completeQRLogin), zabezpieczone hasłem przekazanym przez auth_ui. Pozwala na:
+   *   • storageMode = 'local' — pełna instalacja konta (kopia pacjentów lokalnie),
+   *   • storageMode = 'cloud-only' — konto persyst (hasło), pacjenci tylko w chmurze.
+   *
+   * @param {string} password — nowe hasło do zaszyfrowania mastera (min. MIN_PASSWORD_LENGTH).
+   * @param {{ credentialId?: string, signal?: AbortSignal, storageMode?: string, label?: string }} [options]
+   * @returns {Promise<{ userId, label, recoveryKey, storageMode }>}
+   */
+  async function unlockWithPasskeyAndPersist(password, options) {
+    if (isUnlocked()) {
+      throw new Error('VildaVault.unlockWithPasskeyAndPersist: vault musi być zablokowany.');
+    }
+    if (typeof password !== 'string' || password.length < MIN_PASSWORD_LENGTH) {
+      throw new Error('VildaVault.unlockWithPasskeyAndPersist: hasło musi mieć minimum ' + MIN_PASSWORD_LENGTH + ' znaków.');
+    }
+    const C = getCrypto();
+    const opts = (options && typeof options === 'object') ? options : {};
+
+    // Pobierz masterBytes przez passkey (shared helper z _ephemeral).
+    const acq = await _acquirePasskeyMasterBytes(opts);
+
+    // Utwórz lokalne konto (analogicznie do completeQRLogin):
+    const userId = generateUserId();
+    const iter = C.KDF_ITERATIONS;
+    const passwordSalt = C.generateSalt();
+    const recoverySalt = C.generateSalt();
+    const recoveryKey  = C.generateRecoveryKey();
+
+    const passwordWrappingKey = await C.deriveKey(password, passwordSalt, iter);
+    const encryptedByPassword = await C.encryptBytes(passwordWrappingKey, acq.masterBytes);
+    const recoveryWrappingKey = await C.deriveKeyFromRecoveryKey(recoveryKey, recoverySalt, iter);
+    const encryptedByRecovery = await C.encryptBytes(recoveryWrappingKey, acq.masterBytes);
+
+    let label = (typeof opts.label === 'string' && opts.label.trim().length) ? opts.label.trim() : '';
+    if (!label) label = acq.ephLabel || DEFAULT_LABEL;
+
+    const nowISO = new Date().toISOString();
+    const meta = {
+      schemaVersion: SCHEMA_VERSION,
+      createdAtISO: nowISO,
+      kdfName: C.KDF_NAME,
+      kdfHash: C.KDF_HASH,
+      kdfIterations: iter,
+      passwordSalt: C.bytesToBase64(passwordSalt),
+      recoverySalt:  C.bytesToBase64(recoverySalt),
+      encryptedMasterByPassword: {
+        iv:   C.bytesToBase64(encryptedByPassword.iv),
+        data: C.bytesToBase64(encryptedByPassword.data)
+      },
+      encryptedMasterByRecovery: {
+        iv:   C.bytesToBase64(encryptedByRecovery.iv),
+        data: C.bytesToBase64(encryptedByRecovery.data)
+      },
+      restoredFromPasskey: true,
+      needsPasswordReset: false
+    };
+
+    const storageMode = normalizeStorageMode(opts.storageMode);
+
+    await getAdapter().putUserMeta(userId, meta);
+    await getAdapter().putRegistryEntry({
+      userId: userId,
+      label: label,
+      createdAtISO: nowISO,
+      lastLoginAtISO: nowISO,
+      storageMode: storageMode
+    });
+
+    _currentStorageModeCache = storageMode;
+    await adoptMasterBytes(acq.masterBytes, userId, label);
+    return { userId: userId, label: label, recoveryKey: recoveryKey, storageMode: storageMode };
   }
 
   /**
@@ -3507,16 +3585,31 @@
       needsPasswordReset: !password
     };
 
+    // storageMode konta zakładanego z QR — domyślnie 'local' (zachowanie wsteczne).
+    // 'cloud-only' = scenariusz „komputer w pracy": konto persyst (hasło/recovery),
+    // ale per-user adapter idzie do memory; pacjenci tylko w chmurze.
+    const storageMode = normalizeStorageMode(opts.storageMode);
+
     await getAdapter().putUserMeta(userId, meta);
     await getAdapter().putRegistryEntry({
       userId: userId,
       label: label,
       createdAtISO: nowISO,
-      lastLoginAtISO: nowISO
+      lastLoginAtISO: nowISO,
+      storageMode: storageMode
     });
 
+    // Cache storageMode PRZED adoptMasterBytes (analogicznie jak w createUser).
+    // adoptMasterBytes znów go odczyta z registry, ale to defence-in-depth.
+    _currentStorageModeCache = storageMode;
     await adoptMasterBytes(masterBytes, userId, label);
-    return { userId: userId, label: label, recoveryKey: recoveryKey, needsPasswordReset: !password };
+    return {
+      userId: userId,
+      label: label,
+      recoveryKey: recoveryKey,
+      needsPasswordReset: !password,
+      storageMode: storageMode
+    };
   }
 
   /**
@@ -3720,6 +3813,7 @@
     registerPasskeyForRoaming: registerPasskeyForRoaming,
     unlockWithPasskey: unlockWithPasskey,
     unlockWithPasskeyEphemeral: unlockWithPasskeyEphemeral,
+    unlockWithPasskeyAndPersist: unlockWithPasskeyAndPersist,
     completeQRLoginEphemeral: completeQRLoginEphemeral,
     listPasskeys: listPasskeys,
     removePasskey: removePasskey,
