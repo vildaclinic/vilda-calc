@@ -4457,33 +4457,252 @@
     open(wrapper);
   }
 
-  // ============ EKRAN LOGOWANIA PASSKEY (efemeryczne / współdzielony komputer) ============
+  // ============ HELPER: synchroniczny check dostępności PRO ============
+  // Używany przez chooser oraz defensywne PRO guard'y w showQR/showPasskey,
+  // żeby cloud-only nie dało się uruchomić ścieżką programatyczną bez PRO
+  // (klikalne kafelki chooser'a są wizualnie disabled, ale samo wywołanie
+  // showQRLoginScreen({storageMode:'cloud-only'}) z konsoli i tak by przeszło).
+  function _hasProAccess() {
+    try {
+      return !!(global.VildaProAccess && global.VildaProAccess.hasAccess && global.VildaProAccess.hasAccess());
+    } catch (_) { return false; }
+  }
+
+  // ============ EKRAN WYBORU TRYBU LOGOWANIA TELEFONEM ============
 
   /**
-   * Ekran „Zaloguj passkey z telefonu" dla współdzielonego komputera.
-   * Uruchamia VildaVault.unlockWithPasskeyEphemeral() — telefon potwierdza biometrią,
-   * master key trafia do RAM, a po sesji nic nie zostaje na tym komputerze.
-   * Przy braku wsparcia PRF lub błędzie — proponuje fallback QR (też efemeryczny).
+   * Wspólny ekran „Jak zalogować na tym komputerze?" — 3 kafelki: local / cloud-only /
+   * ephemeral. Używany jako pierwszy krok przed QR LUB passkey flow z telefonu.
+   *
+   * Wymagania (decyzje user/D2/D3 Kroku 8):
+   *   • Cloud-only kafelek WYMAGA aktywnego PRO (gating jak w kreatorze/Ustawieniach).
+   *   • Cloud-only kafelek pokazuje warning gdy offline.
+   *   • Ephemeral pozostaje dostępny zawsze.
+   *
+   * @param {{
+   *   context: 'passkey' | 'qr',
+   *   onPick: (mode: 'local' | 'cloud-only' | 'ephemeral') => void,
+   *   onBack?: () => void
+   * }} options
    */
-  function showPasskeyEphemeralLoginScreen() {
+  function showLoginModeChooser(options) {
+    const opts = (options && typeof options === 'object') ? options : {};
+    const ctx = opts.context === 'passkey' ? 'passkey' : 'qr';
+    const onPick = (typeof opts.onPick === 'function') ? opts.onPick : function () {};
+    const onBack = (typeof opts.onBack === 'function') ? opts.onBack : showSyncCodeRestoreScreen;
+
+    // Walidacja PRO — synchroniczny snapshot z VildaProAccess.
+    const hasPro = _hasProAccess();
+
+    // Status offline — `navigator.onLine === false` (z falsy gdy brak API).
+    const isOffline = (typeof navigator !== 'undefined' && navigator && navigator.onLine === false);
+
+    const title = el('h2', { class: 'vilda-auth-title', text: 'Jak chcesz się zalogować?' });
+    const sub = el('p', {
+      class: 'vilda-auth-subtitle',
+      text: ctx === 'passkey'
+        ? 'Po potwierdzeniu na telefonie wybierz, ile danych zostawić na tym komputerze.'
+        : 'Po zeskanowaniu kodu QR wybierz, ile danych zostawić na tym komputerze.'
+    });
+
+    // ── Helpery do budowania kafelka ──
+    function buildModeCard(cfg) {
+      const card = el('button', {
+        type: 'button',
+        class: 'vilda-auth-mode-card',
+        'data-mode': cfg.mode,
+        'aria-pressed': 'false',
+        'aria-disabled': cfg.disabled ? 'true' : 'false'
+      });
+      card.style.cssText = [
+        'display:block;width:100%;text-align:left;cursor:' + (cfg.disabled ? 'not-allowed' : 'pointer') + ';',
+        'font:inherit;color:inherit;',
+        'padding:14px 16px;margin:8px 0 0;',
+        'background:' + (cfg.disabled ? 'rgba(245,245,245,0.65)' : 'rgba(255,255,255,0.92)') + ';',
+        'border:2px solid ' + (cfg.disabled ? '#e5e7eb' : '#d7e9ec') + ';border-radius:14px;',
+        'opacity:' + (cfg.disabled ? '0.78' : '1') + ';',
+        'transition:border-color .18s ease, background .18s ease, box-shadow .18s ease, transform .12s ease;'
+      ].join('');
+
+      card.innerHTML =
+        '<div style="display:flex;align-items:flex-start;gap:14px;">' +
+          '<div style="flex:0 0 auto;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:28px;line-height:1;">' +
+            cfg.emoji +
+          '</div>' +
+          '<div style="flex:1 1 auto;min-width:0;">' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px;">' +
+              '<div style="font-weight:700;font-size:1rem;color:#0f2b33;">' + cfg.title + '</div>' +
+              (cfg.tag ? '<span style="font-size:0.7rem;font-weight:600;color:' + cfg.tagColor + ';background:' + cfg.tagBg + ';padding:2px 8px;border-radius:999px;white-space:nowrap;">' + cfg.tag + '</span>' : '') +
+            '</div>' +
+            '<div style="font-size:0.85rem;color:#5b6672;line-height:1.45;margin-bottom:6px;">' + cfg.desc + '</div>' +
+            (cfg.hint ? '<div style="margin-top:8px;padding:7px 10px;border-radius:9px;background:' + (cfg.hintIsWarning ? 'rgba(180,83,9,0.08)' : 'rgba(0,131,141,0.06)') + ';color:' + (cfg.hintIsWarning ? '#854f0b' : '#00838d') + ';font-size:0.76rem;font-weight:500;">' + cfg.hint + '</div>' : '') +
+          '</div>' +
+        '</div>';
+
+      if (!cfg.disabled) {
+        card.addEventListener('mouseenter', function () {
+          card.style.borderColor = cfg.hoverBorder;
+          card.style.transform = 'translateY(-1px)';
+          card.style.boxShadow = '0 6px 16px ' + cfg.hoverShadow;
+        });
+        card.addEventListener('mouseleave', function () {
+          card.style.borderColor = '#d7e9ec';
+          card.style.transform = '';
+          card.style.boxShadow = '';
+        });
+        card.addEventListener('click', function () {
+          card.setAttribute('aria-pressed', 'true');
+          onPick(cfg.mode);
+        });
+      }
+      return card;
+    }
+
+    // ── 3 kafelki ──
+    const localCard = buildModeCard({
+      mode: 'local',
+      emoji: '🏠',
+      title: 'Komputer prywatny',
+      desc: 'Pełna instalacja konta z kopią pacjentów na dysku. Po wylogowaniu wszystko zostaje — szybki dostęp przy następnym logowaniu.',
+      hoverBorder: '#00838d',
+      hoverShadow: 'rgba(0,131,141,0.18)'
+    });
+
+    const cloudOnlyCard = buildModeCard({
+      mode: 'cloud-only',
+      emoji: '⛅',
+      title: 'Komputer w pracy',
+      tag: hasPro ? 'PRO' : 'wymaga PRO',
+      tagColor: hasPro ? '#00838d' : '#854f0b',
+      tagBg: hasPro ? 'rgba(0,131,141,0.12)' : 'rgba(180,83,9,0.12)',
+      desc: 'Konto pamięta hasło, ale dane pacjentów <strong>tylko w chmurze</strong> — nic nie zostaje na dysku. Możesz wrócić tu jutro i znów się zalogować.',
+      disabled: !hasPro,
+      hint: !hasPro
+        ? '⚠️ Wymaga aktywnego planu PRO.'
+        : (isOffline ? '⚠️ Brak internetu — konfiguracja zostanie, ale logowanie nie powiedzie się bez sieci.' : null),
+      hintIsWarning: !hasPro || isOffline,
+      hoverBorder: '#00838d',
+      hoverShadow: 'rgba(0,131,141,0.18)'
+    });
+
+    const ephemeralCard = buildModeCard({
+      mode: 'ephemeral',
+      emoji: '🚫',
+      title: 'Obcy komputer',
+      desc: 'Tylko ta sesja. <strong>Żadnych śladów</strong> — ani konta, ani kopii. Po zamknięciu zakładki nie da się tu więcej zalogować bez telefonu.',
+      hoverBorder: '#9a213a',
+      hoverShadow: 'rgba(154,33,58,0.16)'
+    });
+
+    const back = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost', type: 'button', text: '← Wróć',
+      onclick: onBack
+    });
+
+    open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
+      title, sub, localCard, cloudOnlyCard, ephemeralCard, back
+    ]));
+  }
+
+  // ============ EKRAN LOGOWANIA PASSKEY Z TELEFONU ============
+
+  /**
+   * Ekran „Zaloguj passkey z telefonu". Routing:
+   *   1. Brak opts.storageMode → pokaż showLoginModeChooser, po wyborze rekurencja.
+   *   2. opts.storageMode === 'ephemeral' → unlockWithPasskeyEphemeral (jak dotychczas).
+   *   3. opts.storageMode === 'local' | 'cloud-only' → formularz hasła + unlockWithPasskeyAndPersist.
+   *
+   * Nazwa funkcji historyczna (showPasskeyEphemeralLoginScreen) — pozostawiamy
+   * dla call-sites z głównego ekranu; faktyczny tryb decyduje opts.storageMode.
+   */
+  function showPasskeyEphemeralLoginScreen(options) {
     const V = getVault();
     if (!V || typeof V.unlockWithPasskeyEphemeral !== 'function') {
       showSyncCodeRestoreScreen();
       return;
     }
+    const opts = (options && typeof options === 'object') ? options : {};
 
-    const title = el('h2', { class: 'vilda-auth-title', text: 'Zaloguj passkey z telefonu' });
-    const sub = el('p', {
-      class: 'vilda-auth-subtitle',
-      text: 'Komputer współdzielony — po sesji nie zostanie na nim żadna kopia. Potwierdź logowanie na telefonie biometrią.'
-    });
+    // KROK 0: wybór trybu storage (chooser) — pełna analogia do showQRLoginScreen.
+    let mode = null;
+    if (opts.storageMode === 'local' || opts.storageMode === 'cloud-only' || opts.storageMode === 'ephemeral') {
+      mode = opts.storageMode;
+    }
+    if (mode === null) {
+      if (typeof showLoginModeChooser === 'function') {
+        showLoginModeChooser({
+          context: 'passkey',
+          onPick: function (pickedMode) { showPasskeyEphemeralLoginScreen({ storageMode: pickedMode }); },
+          onBack: function () { showSyncCodeRestoreScreen(); }
+        });
+        return;
+      }
+      // Defensywny fallback: ephemeral (najbezpieczniej).
+      mode = 'ephemeral';
+    }
+
+    // ── DEFENSIVE GUARD: cloud-only wymaga PRO (bypass-proof recheck) ────────
+    // Musi być PRZED `const persistMode = ...`, bo guard może downgrade'ować
+    // mode do 'ephemeral' — wtedy persistMode też się zmienia.
+    if (mode === 'cloud-only' && !_hasProAccess()) {
+      if (typeof showLoginModeChooser === 'function') {
+        showLoginModeChooser({
+          context: 'passkey',
+          onPick: function (pickedMode) { showPasskeyEphemeralLoginScreen({ storageMode: pickedMode }); },
+          onBack: function () { showSyncCodeRestoreScreen(); }
+        });
+        return;
+      }
+      // Bez chooser'a — fallback do ephemeral.
+      mode = 'ephemeral';
+    }
+
+    // Konto persystowane (local/cloud-only) wymaga nowej ścieżki vault.
+    const persistMode = (mode === 'local' || mode === 'cloud-only');
+    if (persistMode && typeof V.unlockWithPasskeyAndPersist !== 'function') {
+      // Vault za stary — pokaż chooser z hintem.
+      if (typeof showLoginModeChooser === 'function') {
+        showLoginModeChooser({
+          context: 'passkey',
+          onPick: function (pickedMode) { showPasskeyEphemeralLoginScreen({ storageMode: pickedMode }); },
+          onBack: function () { showSyncCodeRestoreScreen(); }
+        });
+        return;
+      }
+    }
+
+    // ── UI ekranu ─────────────────────────────────────────────────────────────
+    const titleText = (mode === 'ephemeral')
+      ? 'Zaloguj passkey (ta sesja)'
+      : (mode === 'cloud-only' ? 'Zaloguj passkey — tryb chmurowy' : 'Zaloguj passkey — pełne konto');
+    const subText = (function () {
+      if (mode === 'ephemeral')  return 'Po sesji nie zostanie na tym komputerze żadna kopia. Potwierdź logowanie biometrią na telefonie.';
+      if (mode === 'cloud-only') return 'Konto zostanie zapamiętane (hasło), ale dane pacjentów tylko w chmurze. Wpisz hasło, potem potwierdź biometrią na telefonie.';
+      return 'Konto i kopia pacjentów zostaną na tym komputerze. Wpisz hasło, potem potwierdź biometrią na telefonie.';
+    })();
+
+    const title = el('h2', { class: 'vilda-auth-title', text: titleText });
+    const sub = el('p', { class: 'vilda-auth-subtitle', text: subText });
 
     const errBox = el('div', { class: 'vilda-auth-error' });
     errBox.style.display = 'none';
     function showErr(msg) { errBox.textContent = msg || ''; errBox.style.display = msg ? '' : 'none'; }
 
+    // Pole hasła tylko dla local/cloud-only (ephemeral nie tworzy konta).
+    const pwIn = persistMode ? el('input', {
+      type: 'password',
+      class: 'vilda-auth-input',
+      placeholder: 'Nowe hasło (min. 8 znaków)',
+      autocomplete: 'new-password'
+    }) : null;
+    const pwHint = persistMode ? el('p', {
+      class: 'vilda-auth-hint',
+      text: 'To hasło będziesz wpisywać przy każdym kolejnym logowaniu na tym komputerze.'
+    }) : null;
+
     const startBtn = el('button', {
-      class: 'vilda-auth-btn vilda-auth-btn-primary', type: 'button', text: '📱 Zaloguj passkey z telefonu'
+      class: 'vilda-auth-btn vilda-auth-btn-primary', type: 'button',
+      text: persistMode ? '📱 Wpisałem hasło — potwierdź telefonem' : '📱 Zaloguj passkey z telefonu'
     });
 
     const qrFallbackBtn = el('button', {
@@ -4491,19 +4710,34 @@
       text: 'Nie działa? Zaloguj kodem QR'
     });
     qrFallbackBtn.style.display = 'none';
-    qrFallbackBtn.addEventListener('click', function () { showQRLoginScreen({ ephemeral: true }); });
+    qrFallbackBtn.addEventListener('click', function () {
+      // Fallback respektuje wybrany mode (zamiast wymuszać ephemeral jak dotychczas).
+      showQRLoginScreen({ storageMode: mode });
+    });
 
     let inProgress = false;
     startBtn.addEventListener('click', async function () {
       if (inProgress) return;
-      inProgress = true;
       showErr('');
+      // Walidacja hasła dla persist mode.
+      const password = pwIn ? (pwIn.value || '') : null;
+      if (persistMode) {
+        if (password.length < 8) {
+          showErr('Hasło musi mieć minimum 8 znaków.');
+          return;
+        }
+      }
+      inProgress = true;
       qrFallbackBtn.style.display = 'none';
       const orig = startBtn.textContent;
       startBtn.disabled = true;
       startBtn.textContent = 'Czekam na telefon…';
       try {
-        await V.unlockWithPasskeyEphemeral({});
+        if (persistMode) {
+          await V.unlockWithPasskeyAndPersist(password, { storageMode: mode });
+        } else {
+          await V.unlockWithPasskeyEphemeral({});
+        }
         hide(); // onUnlock w boot() przejmie dalej (render aplikacji)
       } catch (e) {
         const m = mapEphemeralLoginError(e);
@@ -4515,14 +4749,30 @@
       }
     });
 
+    if (pwIn) {
+      pwIn.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') startBtn.click(); });
+    }
+
     const back = el('button', {
       class: 'vilda-auth-btn vilda-auth-btn-ghost', type: 'button', text: '← Wróć',
-      onclick: function () { showSyncCodeRestoreScreen(); }
+      onclick: function () {
+        // Wracamy do chooser (nie do syncCodeRestore), by user mógł zmienić tryb.
+        if (typeof showLoginModeChooser === 'function') {
+          showLoginModeChooser({
+            context: 'passkey',
+            onPick: function (pickedMode) { showPasskeyEphemeralLoginScreen({ storageMode: pickedMode }); },
+            onBack: function () { showSyncCodeRestoreScreen(); }
+          });
+        } else {
+          showSyncCodeRestoreScreen();
+        }
+      }
     });
 
-    open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
-      title, sub, startBtn, errBox, qrFallbackBtn, back
-    ]));
+    const children = [title, sub];
+    if (pwIn) children.push(pwIn, pwHint);
+    children.push(startBtn, errBox, qrFallbackBtn, back);
+    open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, children));
   }
 
   // ============ EKRAN LOGOWANIA KODEM QR ============
@@ -4557,10 +4807,64 @@
     if (!V || typeof V.initiateQRLogin !== 'function') {
       return; // brak wsparcia
     }
-    // Tryb efemeryczny: po transferze adoptujemy master key do RAM (bez tworzenia
-    // lokalnego konta i bez nowego hasła) — fallback dla współdzielonego komputera.
-    const ephemeralMode = !!(options && options.ephemeral)
+    const opts = (options && typeof options === 'object') ? options : {};
+
+    // ── KROK 0: Wybór trybu storage (chooser) ────────────────────────────────
+    // Mapowanie wejść:
+    //   • opts.storageMode === 'local' | 'cloud-only' | 'ephemeral' → bezpośrednio
+    //   • opts.ephemeral === true (legacy) → mode = 'ephemeral' (zachowanie wsteczne)
+    //   • inaczej → pokaż chooser z 3 kafelkami, po wyborze rekursywne wywołanie
+    //     showQRLoginScreen({ storageMode: <wybór> }) startujące właściwy flow.
+    let mode = null;
+    if (opts.storageMode === 'local' || opts.storageMode === 'cloud-only' || opts.storageMode === 'ephemeral') {
+      mode = opts.storageMode;
+    } else if (opts.ephemeral === true) {
+      mode = 'ephemeral';
+    }
+    if (mode === null) {
+      // Pokaż chooser — po wyborze user trafia z powrotem do showQRLoginScreen.
+      if (typeof showLoginModeChooser === 'function') {
+        showLoginModeChooser({
+          context: 'qr',
+          onPick: function (pickedMode) { showQRLoginScreen({ storageMode: pickedMode }); },
+          onBack: function () { showSyncCodeRestoreScreen(); }
+        });
+        return;
+      }
+      // Fallback gdy chooser niedostępny — defaultuj na ephemeral (najbezpieczniej).
+      mode = 'ephemeral';
+    }
+    // Ephemeral mode wymaga wsparcia w vault (legacy guard).
+    const ephemeralMode = (mode === 'ephemeral')
       && typeof V.completeQRLoginEphemeral === 'function';
+    if (mode === 'ephemeral' && !ephemeralMode) {
+      // Vault nie wspiera ephemeral — wracamy do chooser, użytkownik wybierze co innego.
+      if (typeof showLoginModeChooser === 'function') {
+        showLoginModeChooser({
+          context: 'qr',
+          onPick: function (pickedMode) { showQRLoginScreen({ storageMode: pickedMode }); },
+          onBack: function () { showSyncCodeRestoreScreen(); }
+        });
+        return;
+      }
+    }
+
+    // ── DEFENSIVE GUARD: cloud-only wymaga PRO ───────────────────────────────
+    // Kafelki chooser'a są wizualnie disabled bez PRO, ale samo wywołanie
+    // showQRLoginScreen({storageMode:'cloud-only'}) z konsoli / programatycznie
+    // i tak by przeszło. Twarda recheck broni ten wektor.
+    if (mode === 'cloud-only' && !_hasProAccess()) {
+      if (typeof showLoginModeChooser === 'function') {
+        showLoginModeChooser({
+          context: 'qr',
+          onPick: function (pickedMode) { showQRLoginScreen({ storageMode: pickedMode }); },
+          onBack: function () { showSyncCodeRestoreScreen(); }
+        });
+        return;
+      }
+      // Bez chooser'a — fallback do ephemeral.
+      mode = 'ephemeral';
+    }
 
     // ── klucze sessionStorage ──
     const SS_PRIV  = 'vilda-qr-priv-v1';
@@ -4595,12 +4899,12 @@
       const savedPrivKey = privateKeyB64u;
       stopPolling();
       const title2 = el('h2', { class: 'vilda-auth-title', text: '✓ Prawie gotowe!' });
-      const sub2   = el('p',  {
-        class: 'vilda-auth-subtitle',
-        text:  ephemeralMode
-          ? 'Zaloguj się na tę sesję — po zamknięciu nic nie zostanie na tym komputerze.'
-          : 'Podaj hasło, aby zalogować się na tym urządzeniu.'
-      });
+      const sub2Text = (function () {
+        if (mode === 'ephemeral') return 'Zaloguj się na tę sesję — po zamknięciu nic nie zostanie na tym komputerze.';
+        if (mode === 'cloud-only') return 'Podaj hasło — konto zostanie zapamiętane, ale dane pacjentów tylko w chmurze.';
+        return 'Podaj hasło, aby zalogować się na tym urządzeniu.';
+      })();
+      const sub2 = el('p', { class: 'vilda-auth-subtitle', text: sub2Text });
       // W trybie efemerycznym hasło nie jest potrzebne (master key przyszedł transferem,
       // konto nie jest tworzone lokalnie).
       const pwIn = ephemeralMode ? null : el('input', {
@@ -4628,7 +4932,14 @@
           if (ephemeralMode) {
             await V.completeQRLoginEphemeral(savedPrivKey, encryptedPayload, transferredLabel);
           } else {
-            await V.completeQRLogin(savedPrivKey, encryptedPayload, { newPassword: password, label: transferredLabel });
+            // mode === 'local' lub 'cloud-only' — przekazujemy flagę do vault,
+            // który zapisze ją w registry. Po unlock adapter cloud-only zostanie
+            // automatycznie zastosowany (adoptMasterBytes → applyCloudOnlyAdapterIfNeeded).
+            await V.completeQRLogin(savedPrivKey, encryptedPayload, {
+              newPassword: password,
+              label: transferredLabel,
+              storageMode: mode
+            });
           }
           clearSessionKeys(); // defence-in-depth: usuń klucz prywatny jeśli stopPolling go nie wyczyścił
           hide();
@@ -4810,7 +5121,9 @@
           statusEl.textContent = '⏰ Kod wygasł. Wróć i wygeneruj nowy.';
           manualWrap.style.display = 'none'; // token nieaktualny — ukryj fallback ręczny
           back.textContent = 'Wygeneruj nowy kod';
-          back.onclick = function () { stopPolling(); showQRLoginScreen(); };
+          // Zachowaj wybrany mode przy regeneracji kodu — user nie musi ponownie
+          // wybierać trybu storage skoro już to zrobił.
+          back.onclick = function () { stopPolling(); showQRLoginScreen({ storageMode: mode }); };
         }
       }, 1000);
 
@@ -4860,6 +5173,7 @@
     showSyncCodeRestoreScreen: showSyncCodeRestoreScreen,
     showQRLoginScreen: showQRLoginScreen,
     showPasskeyEphemeralLoginScreen: showPasskeyEphemeralLoginScreen,
+    showLoginModeChooser: showLoginModeChooser,
     mapEphemeralLoginError: mapEphemeralLoginError,
     hide: hide,
     lockAndShowLogin: lockAndShowLogin,
