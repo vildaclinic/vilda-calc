@@ -84,7 +84,170 @@
   // gabinecie szpitalnym — szybkie auto-locki minimalizują ryzyko, że ktoś inny
   // dorwie się do otwartej sesji). User może dostosować w Ustawieniach.
   const CLOUD_ONLY_IDLE_LOCK_MS = 10 * 60 * 1000;
-  const MIN_PASSWORD_LENGTH = 8;
+  // ============ POLITYKA SIŁY HASŁA (Krok 16) ============
+  // Min. 12 znaków + co najmniej 3 z 4 typów znaków (małe/duże/cyfry/special)
+  // + blacklist 100 najpopularniejszych haseł. NIST SP 800-63B + adaptacja PL.
+  // Starsze konta z hasłem niespełniającym tej polityki dostaną flagę
+  // needsPasswordReset przy logowaniu (forced password reset flow).
+  const MIN_PASSWORD_LENGTH = 12;
+  const PASSWORD_REQUIRED_VARIETY_TYPES = 3;  // z 4 (małe/duże/cyfry/special)
+  const COMMON_PASSWORDS = new Set([
+    // Top globalne (z list breach data)
+    '123456', '123456789', '12345', '12345678', '111111', '1234567', '1234567890',
+    'qwerty', 'qwerty123', 'qwertyuiop', 'qwerty1234', '1q2w3e4r5t', '1qaz2wsx',
+    'password', 'password1', 'password12', 'password123', 'password1234', 'passw0rd',
+    'admin', 'admin123', 'admin1234', 'administrator',
+    'iloveyou', 'iloveyou1', 'letmein', 'welcome', 'welcome1', 'monkey', 'monkey123',
+    'dragon', 'dragon123', 'master', 'master123', 'shadow', 'football', 'baseball',
+    'superman', 'batman', 'michael', 'jennifer', 'sunshine', 'princess', 'starwars',
+    'computer', 'internet', 'whatever', 'zaq12wsx', 'asdfghjkl', 'qazwsxedc',
+    '000000', '0000000', '00000000', '000000000', '0000000000',
+    '987654321', '111111111', '123123123', '121212121', '101010101', '11111111',
+    'abcdefgh', 'abc12345', 'aaaaaaaa', 'aaaaaaaaa',
+    // PL — popularne polskie hasła medycznej/personalnej apki
+    'polska', 'polska123', 'polska1234', 'polonia123', 'warszawa', 'warszawa1',
+    'krakow123', 'gdansk123', 'polska1989',
+    'kowalski', 'kowalska', 'nowak', 'nowak123', 'anna1234', 'krystyna',
+    'magda1234', 'andrzej', 'andrzej123', 'lekarz', 'lekarz123', 'doktor',
+    'doktor123', 'gabinet', 'gabinet123', 'pacjent', 'pacjent123', 'medycyna',
+    'medycyna1', 'medyczne1', 'szpital', 'szpital123', 'chirurg',
+    'pediatra', 'pediatra1',
+    // App-specific (gdyby user był „kreatywny")
+    'vilda', 'vilda123', 'vilda1234', 'vildaapp', 'wagaiwzrost', 'wagaiwzrost1',
+    // Wzorce na klawiaturze
+    'asdfasdf', 'qweqweqwe', 'zxczxczxc', '!@#$%^&*()', 'qweasdzxc12',
+    // Daty
+    '20002000', '20102010', '20202020', '01011990', '11111990', '01012000',
+    // Inne klasyki
+    'changeme', 'changeme1', 'login123', 'pass1234', 'pass12345', 'temp1234',
+    // „Mocne wyglądające" ale popularne (przeszłyby variety check — to są
+    // klasyczne wzorce z leakowanych baz, np. RockYou, HaveIBeenPwned)
+    'p@ssw0rd1234', 'p@ssword1234', 'welcome123!@', 'qwerty123!@#',
+    'admin12345!', 'admin1234!@', 'monkey1234!@', 'dragon1234!@'
+  ]);
+
+  /**
+   * Sprawdza czy hasło spełnia politykę siły. Używane przez wszystkie miejsca
+   * tworzące/zmieniające hasło: createUser, changePassword, importSyncCode,
+   * completeQRLogin, unlockWithPasskeyAndPersist, resetPasswordWhileUnlocked.
+   * Dodatkowo unlockUser sprawdza po sukcesie i zwraca needsPasswordReset.
+   *
+   * @param {string} pw
+   * @returns {{ ok: true } | { ok: false, code: string, message: string, hint?: string }}
+   */
+  function validatePasswordStrength(pw) {
+    if (typeof pw !== 'string') {
+      return { ok: false, code: 'INVALID', message: 'Hasło musi być tekstem.' };
+    }
+    if (pw.length < MIN_PASSWORD_LENGTH) {
+      return {
+        ok: false,
+        code: 'TOO_SHORT',
+        message: 'Hasło musi mieć minimum ' + MIN_PASSWORD_LENGTH + ' znaków.',
+        hint: pw.length > 0 ? 'Brakuje ' + (MIN_PASSWORD_LENGTH - pw.length) + ' znaków.' : null
+      };
+    }
+    // Variety check — 3 z 4 typów
+    let types = 0;
+    const missing = [];
+    if (/[a-z]/.test(pw)) types++; else missing.push('małe litery');
+    if (/[A-Z]/.test(pw)) types++; else missing.push('wielkie litery');
+    if (/[0-9]/.test(pw)) types++; else missing.push('cyfry');
+    if (/[^a-zA-Z0-9]/.test(pw)) types++; else missing.push('znaki specjalne');
+    if (types < PASSWORD_REQUIRED_VARIETY_TYPES) {
+      return {
+        ok: false,
+        code: 'NO_VARIETY',
+        message: 'Hasło musi zawierać co najmniej ' + PASSWORD_REQUIRED_VARIETY_TYPES + ' z 4 typów znaków: małe litery, wielkie litery, cyfry, znaki specjalne.',
+        hint: 'Aktualnie ' + types + ' z 4. Dodaj: ' + missing.slice(0, PASSWORD_REQUIRED_VARIETY_TYPES - types).join(' lub ') + '.'
+      };
+    }
+    // Blacklist — case-insensitive
+    if (COMMON_PASSWORDS.has(pw.toLowerCase())) {
+      return {
+        ok: false,
+        code: 'BLACKLISTED',
+        message: 'To hasło jest zbyt popularne — łatwe do odgadnięcia. Wymyśl coś unikalnego.',
+        hint: 'Spróbuj 4 losowych słów połączonych myślnikami, np. „kawa-Drzewo-7-szpital!"'
+      };
+    }
+    return { ok: true };
+  }
+
+  // Private helper — rzuca Error z czytelnym komunikatem gdy hasło nie spełnia
+  // polityki. Używane przez funkcje TWORZĄCE/ZMIENIAJĄCE hasło. NIE używane
+  // przy weryfikacji istniejącego hasła (login, exportSyncCode, approveQRLogin),
+  // żeby starsze konta z legacy 8-char hasłami mogły się zalogować i dopiero
+  // wtedy zostały zmuszone do zmiany hasła (forced password reset flow).
+  function assertStrongPassword(password, contextLabel) {
+    const ctx = contextLabel || 'Hasło';
+    if (typeof password !== 'string') {
+      throw new Error(ctx + ' musi być tekstem.');
+    }
+    const r = validatePasswordStrength(password);
+    if (!r.ok) {
+      const err = new Error(ctx + ': ' + r.message + (r.hint ? ' ' + r.hint : ''));
+      err.code = r.code;
+      err.passwordPolicy = r;
+      throw err;
+    }
+  }
+
+  // ============ GENERATOR SILNEGO HASŁA (Substep 16.3) ============
+  // Pool polskich słów (krótkie, łatwe do zapamiętania). Generator składa
+  // hasło typu „kawa-Drzewo-7-szpital!" — 3 słowa rozdzielone myślnikami,
+  // jedno z wielką literą, dodatkowa cyfra i znak specjalny. ZAWSZE spełnia
+  // policy (length, variety, blacklist). Re-generuje jeśli losowo trafi
+  // na słabszy wzorzec.
+  const GEN_WORD_POOL = [
+    'kawa','drzewo','szpital','okno','dom','rower','gora','jablko','laptop','pomidor',
+    'klatka','ksiazka','strona','wiosna','noc','dzien','las','pole','klucz','lampa',
+    'stol','krzeslo','telefon','obraz','plot','rzeka','morze','chmura','sloce','ksiezyc',
+    'gwiazda','ogien','woda','ziemia','wiatr','sniec','deszcz','tecza','most','wieza',
+    'pociag','samolot','statek','rower','konj','pies','kotek','ptak','ryba','motyl',
+    'kwiat','liscie','trawa','grzyb','jagoda','wisnia','sliwka','gruszka','marchew','cebula',
+    'salata','pomelo','banan','ananas','melon','arbuz','agrest','malina','porzeczka','truskawka'
+  ];
+  const GEN_SPECIAL_CHARS = ['!', '?', '@', '#', '$', '*', '+', '&'];
+
+  // Cryptographically random integer in [0, max). Używa Web Crypto getRandomValues.
+  function _randInt(maxExclusive) {
+    if (!global.crypto || typeof global.crypto.getRandomValues !== 'function') {
+      // Fallback dla starych przeglądarek/Node bez webcrypto — Math.random
+      // wystarczy dla generatora hasła (nie używamy do crypto secrets).
+      return Math.floor(Math.random() * maxExclusive);
+    }
+    // Rejection sampling — unika modulo bias.
+    const buf = new Uint32Array(1);
+    const limit = Math.floor(0xFFFFFFFF / maxExclusive) * maxExclusive;
+    do { global.crypto.getRandomValues(buf); } while (buf[0] >= limit);
+    return buf[0] % maxExclusive;
+  }
+  function _pick(arr) { return arr[_randInt(arr.length)]; }
+  function _capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+  /**
+   * Generuje hasło typu „kawa-Drzewo-7-szpital!" — gwarantowanie zgodne
+   * z policy (12+ chars, 3+ typy, nie w blacklist). Maksymalnie 10 prób
+   * regeneracji (statystycznie wystarczy 1; re-gen tylko jeśli losowo
+   * trafimy na coś w blacklist).
+   * @returns {string}
+   */
+  function generateStrongPassword() {
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const w1 = _pick(GEN_WORD_POOL);
+      const w2 = _capitalize(_pick(GEN_WORD_POOL));
+      const w3 = _pick(GEN_WORD_POOL);
+      const digit = _randInt(10);
+      const special = _pick(GEN_SPECIAL_CHARS);
+      const candidate = w1 + '-' + w2 + '-' + digit + '-' + w3 + special;
+      if (validatePasswordStrength(candidate).ok) return candidate;
+    }
+    // Fallback — gdyby wszystkie 10 prób były w blacklist (mało prawdopodobne).
+    // Rozszerz pierwszy człon o kolejne słowo dla pewności variety + length.
+    return _pick(GEN_WORD_POOL) + '-' + _capitalize(_pick(GEN_WORD_POOL))
+      + '-' + _randInt(100) + '-' + _pick(GEN_WORD_POOL) + _pick(GEN_SPECIAL_CHARS);
+  }
   const DEFAULT_LABEL = 'Użytkownik';
   const SESSION_STORAGE_KEY = 'vilda-vault-session-v2';
   const EPHEMERAL_MARKER_KEY = 'vilda-ephemeral-session-v1';
@@ -966,9 +1129,7 @@
 
   // ============ TWORZENIE UŻYTKOWNIKA ============
   async function createUser(password, options) {
-    if (typeof password !== 'string' || password.length < MIN_PASSWORD_LENGTH) {
-      throw new Error('Hasło musi mieć co najmniej ' + MIN_PASSWORD_LENGTH + ' znaków.');
-    }
+    assertStrongPassword(password, 'Hasło');
     const C = getCrypto();
     const opts = (options && typeof options === 'object') ? options : {};
     const iter = (typeof opts.iterations === 'number' && opts.iterations > 0) ? opts.iterations : C.KDF_ITERATIONS;
@@ -1096,7 +1257,17 @@
     await adoptMasterBytes(masterBytes, userId, label);
     await getAdapter().updateRegistryEntry(userId, { lastLoginAtISO: new Date().toISOString() });
     recordLoginSuccess(userId);
-    return { userId: userId, label: label };
+    // Krok 16.4 — flagowanie słabych haseł.
+    // Sprawdzamy czy hasło którym właśnie się zalogowano spełnia AKTUALNĄ politykę
+    // (12+ chars, 3+ typy, no blacklist). Stare konta z 8-char hasłami otrzymują
+    // needsPasswordReset:true → auth_ui wymusi zmianę hasła przed wejściem.
+    const policy = validatePasswordStrength(password);
+    return {
+      userId: userId,
+      label: label,
+      needsPasswordReset: !policy.ok,
+      passwordPolicy: policy.ok ? null : policy
+    };
   }
 
   async function unlockUserWithRecoveryKey(userId, recoveryKey) {
@@ -1159,9 +1330,7 @@
     if (!isUnlocked()) {
       throw new Error('Zaloguj się, aby zmienić hasło.');
     }
-    if (typeof newPassword !== 'string' || newPassword.length < MIN_PASSWORD_LENGTH) {
-      throw new Error('Nowe hasło musi mieć co najmniej ' + MIN_PASSWORD_LENGTH + ' znaków.');
-    }
+    assertStrongPassword(newPassword, 'Nowe hasło');
     const C = getCrypto();
     const meta = await getAdapter().getUserMeta(currentUserId);
     const oldKey = await C.deriveKey(oldPassword, meta.passwordSalt, meta.kdfIterations);
@@ -1194,9 +1363,7 @@
     if (!isUnlocked() || !masterKeyBytes) {
       throw new Error('Zaloguj się przez klucz odzyskiwania przed resetem hasła.');
     }
-    if (typeof newPassword !== 'string' || newPassword.length < MIN_PASSWORD_LENGTH) {
-      throw new Error('Nowe hasło musi mieć co najmniej ' + MIN_PASSWORD_LENGTH + ' znaków.');
-    }
+    assertStrongPassword(newPassword, 'Nowe hasło');
     const C = getCrypto();
     const meta = await getAdapter().getUserMeta(currentUserId);
     const newSalt = C.generateSalt();
@@ -3134,9 +3301,7 @@
     if (isUnlocked()) {
       throw new Error('VildaVault.unlockWithPasskeyAndPersist: vault musi być zablokowany.');
     }
-    if (typeof password !== 'string' || password.length < MIN_PASSWORD_LENGTH) {
-      throw new Error('VildaVault.unlockWithPasskeyAndPersist: hasło musi mieć minimum ' + MIN_PASSWORD_LENGTH + ' znaków.');
-    }
+    assertStrongPassword(password, 'Hasło');
     const C = getCrypto();
     const opts = (options && typeof options === 'object') ? options : {};
 
@@ -3549,9 +3714,13 @@
     // Hasło = 'qr-imported' — placeholder. Użytkownik zmieni je w ustawieniach.
     // Lepsze podejście: auth_ui prosi o nowe hasło PRZED wywołaniem completeQRLogin.
     // Przekazujemy je jako options.newPassword.
-    const password = (typeof opts.newPassword === 'string' && opts.newPassword.length >= MIN_PASSWORD_LENGTH)
-      ? opts.newPassword
-      : null;
+    // Gdy newPassword jest podane, walidujemy strict (silne hasło). Pusty/brak → null
+    // (vault generuje randomowe hasło, user MUSI je zmienić po loginie).
+    let password = null;
+    if (typeof opts.newPassword === 'string' && opts.newPassword.length > 0) {
+      assertStrongPassword(opts.newPassword, 'Nowe hasło');
+      password = opts.newPassword;
+    }
 
     let encryptedByPassword = null;
     let passwordWrappingKey = null;
@@ -3770,6 +3939,9 @@
     DEFAULT_IDLE_LOCK_MS: DEFAULT_IDLE_LOCK_MS,
     CLOUD_ONLY_IDLE_LOCK_MS: CLOUD_ONLY_IDLE_LOCK_MS,
     MIN_PASSWORD_LENGTH: MIN_PASSWORD_LENGTH,
+    PASSWORD_REQUIRED_VARIETY_TYPES: PASSWORD_REQUIRED_VARIETY_TYPES,
+    validatePasswordStrength: validatePasswordStrength,
+    generateStrongPassword: generateStrongPassword,
     setStorageAdapter: setStorageAdapter,
     createInMemoryAdapter: createInMemoryAdapter,
     listUsers: listUsers,
