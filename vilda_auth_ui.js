@@ -4482,7 +4482,12 @@
    * @param {{
    *   context: 'passkey' | 'qr',
    *   onPick: (mode: 'local' | 'cloud-only' | 'ephemeral') => void,
-   *   onBack?: () => void
+   *   onBack?: () => void,
+   *   proGatingDeferred?: boolean  - gdy true (zalecane dla flow z telefonu na
+   *     OBCYM komputerze), kafelek cloud-only jest klikalny niezależnie od PRO
+   *     cache (bo na nowym urządzeniu nie znamy jeszcze userId, więc PRO check
+   *     zawsze by zwracał false). Subskrypcja zostanie zweryfikowana POST-unlock
+   *     (force-pull cloud-only → CLOUD_ONLY_NO_SYNC overlay jeśli brak sync/PRO).
    * }} options
    */
   function showLoginModeChooser(options) {
@@ -4490,9 +4495,13 @@
     const ctx = opts.context === 'passkey' ? 'passkey' : 'qr';
     const onPick = (typeof opts.onPick === 'function') ? opts.onPick : function () {};
     const onBack = (typeof opts.onBack === 'function') ? opts.onBack : showSyncCodeRestoreScreen;
+    const deferProGating = !!opts.proGatingDeferred;
 
     // Walidacja PRO — synchroniczny snapshot z VildaProAccess.
+    // W deferProGating ignorujemy hasPro przy disabled (bo na obcym komputerze
+    // cache jest pusty, hasPro=false dla każdego usera — to byłoby błędne).
     const hasPro = _hasProAccess();
+    const cloudOnlyDisabled = deferProGating ? false : !hasPro;
 
     // Status offline — `navigator.onLine === false` (z falsy gdy brak API).
     const isOffline = (typeof navigator !== 'undefined' && navigator && navigator.onLine === false);
@@ -4568,19 +4577,39 @@
       hoverShadow: 'rgba(0,131,141,0.18)'
     });
 
+    // Hint dla kafelka cloud-only — zależy od kontekstu:
+    //   • deferred + offline → ostrzeżenie offline (zalogujesz się, jak wróci sieć)
+    //   • deferred (online)  → info „PRO sprawdzimy po zalogowaniu"
+    //   • !deferred + !PRO   → klasyczny disabled hint
+    //   • !deferred + offline → ostrzeżenie offline
+    const cloudOnlyHint = (function () {
+      if (deferProGating) {
+        if (isOffline) return '⚠️ Brak internetu — logowanie cloud-only może się nie powieść.';
+        return 'ⓘ Sprawdzimy Twoją subskrypcję PRO po zalogowaniu.';
+      }
+      if (!hasPro) return '⚠️ Wymaga aktywnego planu PRO.';
+      if (isOffline) return '⚠️ Brak internetu — konfiguracja zostanie, ale logowanie nie powiedzie się bez sieci.';
+      return null;
+    })();
+    const cloudOnlyHintIsWarning = (function () {
+      if (deferProGating) return isOffline; // info bez warning gdy online
+      return !hasPro || isOffline;
+    })();
+    const cloudOnlyTagLabel = (deferProGating || hasPro) ? 'PRO' : 'wymaga PRO';
+    const cloudOnlyTagColor = (deferProGating || hasPro) ? '#00838d' : '#854f0b';
+    const cloudOnlyTagBg = (deferProGating || hasPro) ? 'rgba(0,131,141,0.12)' : 'rgba(180,83,9,0.12)';
+
     const cloudOnlyCard = buildModeCard({
       mode: 'cloud-only',
       emoji: '⛅',
       title: 'Komputer w pracy',
-      tag: hasPro ? 'PRO' : 'wymaga PRO',
-      tagColor: hasPro ? '#00838d' : '#854f0b',
-      tagBg: hasPro ? 'rgba(0,131,141,0.12)' : 'rgba(180,83,9,0.12)',
+      tag: cloudOnlyTagLabel,
+      tagColor: cloudOnlyTagColor,
+      tagBg: cloudOnlyTagBg,
       desc: 'Konto pamięta hasło, ale dane pacjentów <strong>tylko w chmurze</strong> — nic nie zostaje na dysku. Możesz wrócić tu jutro i znów się zalogować.',
-      disabled: !hasPro,
-      hint: !hasPro
-        ? '⚠️ Wymaga aktywnego planu PRO.'
-        : (isOffline ? '⚠️ Brak internetu — konfiguracja zostanie, ale logowanie nie powiedzie się bez sieci.' : null),
-      hintIsWarning: !hasPro || isOffline,
+      disabled: cloudOnlyDisabled,
+      hint: cloudOnlyHint,
+      hintIsWarning: cloudOnlyHintIsWarning,
       hoverBorder: '#00838d',
       hoverShadow: 'rgba(0,131,141,0.18)'
     });
@@ -4629,9 +4658,11 @@
       mode = opts.storageMode;
     }
     if (mode === null) {
+      // proGatingDeferred: PRO check przełożony do post-unlock (patrz showQRLoginScreen).
       if (typeof showLoginModeChooser === 'function') {
         showLoginModeChooser({
           context: 'passkey',
+          proGatingDeferred: true,
           onPick: function (pickedMode) { showPasskeyEphemeralLoginScreen({ storageMode: pickedMode }); },
           onBack: function () { showSyncCodeRestoreScreen(); }
         });
@@ -4641,21 +4672,9 @@
       mode = 'ephemeral';
     }
 
-    // ── DEFENSIVE GUARD: cloud-only wymaga PRO (bypass-proof recheck) ────────
-    // Musi być PRZED `const persistMode = ...`, bo guard może downgrade'ować
-    // mode do 'ephemeral' — wtedy persistMode też się zmienia.
-    if (mode === 'cloud-only' && !_hasProAccess()) {
-      if (typeof showLoginModeChooser === 'function') {
-        showLoginModeChooser({
-          context: 'passkey',
-          onPick: function (pickedMode) { showPasskeyEphemeralLoginScreen({ storageMode: pickedMode }); },
-          onBack: function () { showSyncCodeRestoreScreen(); }
-        });
-        return;
-      }
-      // Bez chooser'a — fallback do ephemeral.
-      mode = 'ephemeral';
-    }
+    // UWAGA: defensive PRO guard usunięty z phone-login (analogicznie do showQR).
+    // Na obcym komputerze localStorage cache PRO jest pusty — guard blokowałby
+    // każdego użytkownika z aktywnym PRO. Walidacja jest deferred do post-unlock.
 
     // Konto persystowane (local/cloud-only) wymaga nowej ścieżki vault.
     const persistMode = (mode === 'local' || mode === 'cloud-only');
@@ -4664,6 +4683,7 @@
       if (typeof showLoginModeChooser === 'function') {
         showLoginModeChooser({
           context: 'passkey',
+          proGatingDeferred: true,
           onPick: function (pickedMode) { showPasskeyEphemeralLoginScreen({ storageMode: pickedMode }); },
           onBack: function () { showSyncCodeRestoreScreen(); }
         });
@@ -4735,6 +4755,14 @@
       try {
         if (persistMode) {
           await V.unlockWithPasskeyAndPersist(password, { storageMode: mode });
+          // Cloud-only WYMAGA aktywnego sync — włączamy automatycznie
+          // (analogicznie do QR flow w showQRLoginScreen).
+          if (mode === 'cloud-only') {
+            try {
+              const SI = getSyncIntegration();
+              if (SI && typeof SI.setSyncEnabled === 'function') SI.setSyncEnabled(true);
+            } catch (_) { void _; }
+          }
         } else {
           await V.unlockWithPasskeyEphemeral({});
         }
@@ -4760,6 +4788,7 @@
         if (typeof showLoginModeChooser === 'function') {
           showLoginModeChooser({
             context: 'passkey',
+            proGatingDeferred: true,
             onPick: function (pickedMode) { showPasskeyEphemeralLoginScreen({ storageMode: pickedMode }); },
             onBack: function () { showSyncCodeRestoreScreen(); }
           });
@@ -4823,9 +4852,13 @@
     }
     if (mode === null) {
       // Pokaż chooser — po wyborze user trafia z powrotem do showQRLoginScreen.
+      // proGatingDeferred: na nowym/obcym komputerze nie znamy jeszcze userId,
+      // więc nie możemy sprawdzić PRO. Wybór waliduje się POST-unlock przez
+      // force-pull cloud-only (CLOUD_ONLY_NO_SYNC overlay jeśli brak sync/PRO).
       if (typeof showLoginModeChooser === 'function') {
         showLoginModeChooser({
           context: 'qr',
+          proGatingDeferred: true,
           onPick: function (pickedMode) { showQRLoginScreen({ storageMode: pickedMode }); },
           onBack: function () { showSyncCodeRestoreScreen(); }
         });
@@ -4842,6 +4875,7 @@
       if (typeof showLoginModeChooser === 'function') {
         showLoginModeChooser({
           context: 'qr',
+          proGatingDeferred: true,
           onPick: function (pickedMode) { showQRLoginScreen({ storageMode: pickedMode }); },
           onBack: function () { showSyncCodeRestoreScreen(); }
         });
@@ -4849,22 +4883,11 @@
       }
     }
 
-    // ── DEFENSIVE GUARD: cloud-only wymaga PRO ───────────────────────────────
-    // Kafelki chooser'a są wizualnie disabled bez PRO, ale samo wywołanie
-    // showQRLoginScreen({storageMode:'cloud-only'}) z konsoli / programatycznie
-    // i tak by przeszło. Twarda recheck broni ten wektor.
-    if (mode === 'cloud-only' && !_hasProAccess()) {
-      if (typeof showLoginModeChooser === 'function') {
-        showLoginModeChooser({
-          context: 'qr',
-          onPick: function (pickedMode) { showQRLoginScreen({ storageMode: pickedMode }); },
-          onBack: function () { showSyncCodeRestoreScreen(); }
-        });
-        return;
-      }
-      // Bez chooser'a — fallback do ephemeral.
-      mode = 'ephemeral';
-    }
+    // UWAGA: PRO check usunięty z phone-login flow. Powód: na obcym komputerze
+    // localStorage cache PRO jest pusty, więc _hasProAccess() zawsze zwraca false
+    // → blokowałoby cloud-only nawet dla user'ów z aktywnym PRO. Walidacja jest
+    // deferred do post-unlock: jeśli user wybierze cloud-only bez aktywnego PRO,
+    // force-pull rzuci CLOUD_ONLY_NO_SYNC i chrome overlay pokaże komunikat.
 
     // ── klucze sessionStorage ──
     const SS_PRIV  = 'vilda-qr-priv-v1';
@@ -4940,6 +4963,15 @@
               label: transferredLabel,
               storageMode: mode
             });
+            // Cloud-only WYMAGA aktywnego sync (force-pull przy każdym loginie).
+            // User logujący się z telefonu nieosobistego musi mieć sync od razu,
+            // inaczej force-pull rzuci CLOUD_ONLY_NO_SYNC. Włączamy automatycznie.
+            if (mode === 'cloud-only') {
+              try {
+                const SI = getSyncIntegration();
+                if (SI && typeof SI.setSyncEnabled === 'function') SI.setSyncEnabled(true);
+              } catch (_) { void _; }
+            }
           }
           clearSessionKeys(); // defence-in-depth: usuń klucz prywatny jeśli stopPolling go nie wyczyścił
           hide();
