@@ -4369,41 +4369,59 @@
       });
     }
 
-    // ── Separator "lub" przed sekcją zaawansowaną ─────────────────────────────
-    const orDiv = document.createElement('div');
-    orDiv.style.cssText = 'display:flex;align-items:center;gap:0.6rem;margin:0.6rem 0;color:var(--text-muted,#888);font-size:0.82rem;';
-    orDiv.innerHTML = '<hr style="flex:1;border:none;border-top:1px solid var(--border,#ddd)"><span>lub</span><hr style="flex:1;border:none;border-top:1px solid var(--border,#ddd)">';
+    // Backup code card — trzeci kafelek, klik prowadzi do osobnego ekranu
+    // z formularzem (showBackupCodeRestoreScreen). Tag „Bez telefonu" w kolorze
+    // szarym kontrastuje z zielonym/pomarańczowym tagiem powyżej.
+    const ENTRY_ICON_KEY = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+      + '<circle cx="8" cy="15" r="4"/>'
+      + '<line x1="10.85" y1="12.15" x2="19" y2="4"/>'
+      + '<line x1="18" y1="5" x2="20" y2="7"/>'
+      + '<line x1="15" y1="8" x2="17" y2="10"/>'
+      + '</svg>';
+    const backupCodeSection = buildEntryCard({
+      method: 'backup-code',
+      iconSvg: ENTRY_ICON_KEY,
+      title: 'Użyj zapasowego kodu',
+      desc: 'Masz zapasowy kod z poprzedniego urządzenia? Wklej go i podaj hasło, żeby zalogować się bez telefonu.',
+      tag: 'Bez telefonu',
+      tagColor: '#444441',
+      tagBg: '#f1efe8',
+      onClick: function () { showBackupCodeRestoreScreen(); }
+    });
 
-    // ── Sekcja zapasowego kodu dostępu ─────────────────────────────────────────
-    const codeSection = document.createElement('div');
-    codeSection.style.cssText = [
-      'background:#f3fafb',
-      'border:2px solid #00838d',
-      'border-radius:10px',
-      'padding:0.9rem 1rem',
-      'margin:0 0 0.5rem'
-    ].join(';');
+    const back = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost',
+      type: 'button',
+      text: '← Wróć',
+      onclick: function () { showStartupScreen(); }
+    });
 
-    const codeTag = document.createElement('span');
-    codeTag.style.cssText = 'display:inline-block;font-size:0.75rem;font-weight:500;background:#e1f5ee;color:#0f6e56;border-radius:4px;padding:2px 8px;margin-bottom:0.55rem;';
-    codeTag.textContent = 'Konto zostaje na tym komputerze';
+    const children = [title, sub, qrSection];
+    if (passkeySection) { children.push(passkeySection); }
+    children.push(backupCodeSection, back);
+    const wrapper = el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, children);
+    open(wrapper);
+  }
 
-    const codeSectionTitle = document.createElement('div');
-    codeSectionTitle.style.cssText = 'display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem;';
-    codeSectionTitle.innerHTML = [
-      '<span style="font-size:1.1rem;">☁</span>',
-      '<strong style="font-size:0.95rem;">Zapasowy kod dostępu</strong>',
-      '<span style="font-size:0.75rem;background:#6b7280;color:#fff;border-radius:4px;padding:1px 7px;margin-left:auto;">Bez telefonu</span>'
-    ].join('');
+  // ============ EKRAN ZAPASOWEGO KODU DOSTĘPU ============
+  // Osobny ekran z formularzem — wcześniej był inline w showSyncCodeRestoreScreen.
+  // Po Kroku 14 sekcja na entry-screen to mały kafelek; klik → ten ekran.
+  function showBackupCodeRestoreScreen() {
+    const V = getVault();
+    if (!V) return;
 
-    const codeSectionDesc = document.createElement('p');
-    codeSectionDesc.style.cssText = 'margin:0 0 0.7rem;font-size:0.84rem;color:var(--text-secondary,#555);line-height:1.5;';
-    codeSectionDesc.innerHTML = [
-      'Kod + hasło logują Twoje konto na tym urządzeniu i pobierają dane z serwera ',
-      '(nowy telefon, drugi komputer — nie tylko awaria). <strong>Warunek: na starym ',
-      'urządzeniu musi być włączona synchronizacja.</strong><br>',
-      'Kod wygenerujesz na starym urządzeniu w: <strong>Ustawienia → Synchronizacja</strong>',
-      ' → <strong>„☁ Pokaż zapasowy kod dostępu"</strong> → Generuj.'
+    const title = el('h2', { class: 'vilda-auth-title', text: 'Zapasowy kod dostępu' });
+    const sub = el('p', {
+      class: 'vilda-auth-subtitle',
+      text: 'Kod + hasło logują konto na tym urządzeniu i pobierają dane z chmury.'
+    });
+
+    const desc = document.createElement('p');
+    desc.style.cssText = 'margin:0 0 0.9rem;font-size:0.84rem;color:var(--text-secondary,#555);line-height:1.5;';
+    desc.innerHTML = [
+      '<strong>Warunek:</strong> na starym urządzeniu musi być włączona synchronizacja.<br>',
+      'Kod wygenerujesz tam w: <strong>Ustawienia → Synchronizacja</strong> → ',
+      '<strong>„☁ Pokaż zapasowy kod dostępu"</strong> → Generuj.'
     ].join('');
 
     const codeInput = el('textarea', {
@@ -4430,14 +4448,13 @@
 
     const errBox = el('div', { class: 'vilda-auth-error' });
     errBox.style.display = 'none';
-
     function showErr(msg) {
       errBox.textContent = msg || '';
       errBox.style.display = msg ? '' : 'none';
     }
 
     const submitBtn = el('button', {
-      class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small',
+      class: 'vilda-auth-btn vilda-auth-btn-primary',
       type: 'button',
       text: 'Odtwórz konto z kodem'
     });
@@ -4469,27 +4486,16 @@
       if (e.key === 'Enter') submitBtn.click();
     });
 
-    codeSection.appendChild(codeTag);
-    codeSection.appendChild(codeSectionTitle);
-    codeSection.appendChild(codeSectionDesc);
-    codeSection.appendChild(codeInput);
-    codeSection.appendChild(labelInput);
-    codeSection.appendChild(pwInput);
-    codeSection.appendChild(errBox);
-    codeSection.appendChild(submitBtn);
-
     const back = el('button', {
       class: 'vilda-auth-btn vilda-auth-btn-ghost',
       type: 'button',
       text: '← Wróć',
-      onclick: function () { showStartupScreen(); }
+      onclick: function () { showSyncCodeRestoreScreen(); }
     });
 
-    const children = [title, sub, qrSection];
-    if (passkeySection) { children.push(passkeySection); }
-    children.push(orDiv, codeSection, back);
-    const wrapper = el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, children);
-    open(wrapper);
+    open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
+      title, sub, desc, codeInput, labelInput, pwInput, errBox, submitBtn, back
+    ]));
   }
 
   // ============ HELPER: synchroniczny check dostępności PRO ============
@@ -5293,6 +5299,7 @@
     showMergeAccountFlow: showMergeAccountFlow,
     showRestoreVaultFlow: showRestoreVaultFlow,
     showSyncCodeRestoreScreen: showSyncCodeRestoreScreen,
+    showBackupCodeRestoreScreen: showBackupCodeRestoreScreen,
     showQRLoginScreen: showQRLoginScreen,
     showPasskeyEphemeralLoginScreen: showPasskeyEphemeralLoginScreen,
     showLoginModeChooser: showLoginModeChooser,
