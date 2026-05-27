@@ -237,6 +237,64 @@
     while (node && node.firstChild) node.removeChild(node.firstChild);
   }
 
+  // ============ HELPER: Toggle „Pokaż hasło" ============
+  // Owija pole hasła w wrapper z absolute-positioned przyciskiem (eye SVG)
+  // po prawej stronie. Klik toggle'uje input.type między 'password' i 'text'.
+  //
+  // Użycie:
+  //   const pwInput = el('input', { type: 'password', class: '...', placeholder: '...' });
+  //   const wrapped = attachPasswordToggle(pwInput);
+  //   children.push(wrapped);     // zamiast children.push(pwInput)
+  //   pwInput.value, pwInput.focus() — działa normalnie, bo to ten sam input.
+  function attachPasswordToggle(input) {
+    const wrapper = el('div', { class: 'vilda-auth-pw-wrap' });
+    wrapper.style.cssText = 'position: relative; display: block; margin: inherit;';
+    // Rezerwujemy miejsce na przycisk po prawej (40px).
+    input.style.paddingRight = '40px';
+    wrapper.appendChild(input);
+
+    // Eye / eye-off SVG (lucide-style, stroke 2, currentColor #5b6672).
+    const EYE_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+    const EYE_OFF_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>';
+
+    const btn = el('button', {
+      type: 'button',
+      class: 'vilda-auth-pw-toggle',
+      'aria-label': 'Pokaż hasło',
+      'aria-pressed': 'false',
+      title: 'Pokaż hasło'
+    });
+    btn.style.cssText = [
+      'position: absolute; right: 4px; top: 50%; transform: translateY(-50%);',
+      'width: 32px; height: 32px;',
+      'display: flex; align-items: center; justify-content: center;',
+      'background: transparent; border: 0; padding: 0;',
+      'color: #5b6672; cursor: pointer; border-radius: 6px;',
+      'transition: background .15s ease, color .15s ease;'
+    ].join('');
+    btn.innerHTML = EYE_SVG;
+    btn.addEventListener('mouseenter', function () { btn.style.background = 'rgba(0,131,141,0.08)'; btn.style.color = '#00838d'; });
+    btn.addEventListener('mouseleave', function () { btn.style.background = 'transparent'; btn.style.color = '#5b6672'; });
+    btn.addEventListener('click', function () {
+      if (input.type === 'password') {
+        input.type = 'text';
+        btn.innerHTML = EYE_OFF_SVG;
+        btn.setAttribute('aria-label', 'Ukryj hasło');
+        btn.setAttribute('aria-pressed', 'true');
+        btn.setAttribute('title', 'Ukryj hasło');
+      } else {
+        input.type = 'password';
+        btn.innerHTML = EYE_SVG;
+        btn.setAttribute('aria-label', 'Pokaż hasło');
+        btn.setAttribute('aria-pressed', 'false');
+        btn.setAttribute('title', 'Pokaż hasło');
+      }
+      try { input.focus(); } catch (_) {}
+    });
+    wrapper.appendChild(btn);
+    return wrapper;
+  }
+
   // Persistencja trybu gościa między podstronami: nawigacja nie powinna
   // wyrzucać niezalogowanego użytkownika do ekranu logowania. Trzymamy flagę
   // w sessionStorage, żeby przeżywała przejście między stronami, ale znikała
@@ -824,11 +882,11 @@
       const generated = V.generateStrongPassword();
       pw1.value = generated;
       pw2.value = generated;
-      // Ujawnij na 2s żeby user mógł zobaczyć i zapamiętać/skopiować.
-      pw1.type = 'text';
-      setTimeout(function () { try { pw1.type = 'password'; } catch (_) {} }, 2000);
+      // User ma teraz przycisk „pokaż hasło" obok pola — może sam ujawnić
+      // wygenerowane hasło żeby je zapamiętać/skopiować, bez auto-reveal'u
+      // który mógłby gryźć się ze stanem toggle'a.
       updateMeter();
-      try { pw1.focus(); pw1.select(); } catch (_) {}
+      try { pw1.focus(); } catch (_) {}
     });
 
     const meterLabel = el('span', { class: 'vilda-auth-meter-label', text: '—' });
@@ -907,9 +965,10 @@
     explainersRow.style.margin = '0 auto 6px';
 
     open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
-      stepLabel, title, sub, explainersRow, labelInput, pw1, generateBtn,
+      stepLabel, title, sub, explainersRow, labelInput,
+      attachPasswordToggle(pw1), generateBtn,
       el('div', { class: 'vilda-auth-meter-wrap' }, [meter, meterLabel]),
-      pw2, errBox,
+      attachPasswordToggle(pw2), errBox,
       el('div', { class: 'vilda-auth-actions' }, [back, next])
     ]));
     setTimeout(function () { try { labelInput.focus(); } catch (_) {} }, 30);
@@ -4396,9 +4455,8 @@
       const generated = V.generateStrongPassword();
       pw1.value = generated;
       pw2.value = generated;
-      pw1.type = 'text';
-      setTimeout(function () { try { pw1.type = 'password'; } catch (_) {} }, 2000);
-      try { pw1.focus(); pw1.select(); } catch (_) {}
+      // Brak auto-reveal — user ma toggle „pokaż hasło" obok pola.
+      try { pw1.focus(); } catch (_) {}
     });
 
     const errBox = el('div', { class: 'vilda-auth-error' });
@@ -4454,7 +4512,10 @@
     });
 
     open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
-      title, sub, policyBox, pw1, generateBtn, pw2, errBox, submitBtn, logoutBtn
+      title, sub, policyBox,
+      attachPasswordToggle(pw1), generateBtn,
+      attachPasswordToggle(pw2),
+      errBox, submitBtn, logoutBtn
     ]));
     setTimeout(function () { try { pw1.focus(); } catch (_) {} }, 30);
   }
