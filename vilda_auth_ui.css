@@ -178,6 +178,11 @@
   border: 1.5px solid #d6dde0;
   background: #ffffff;
   font-size: 16px;
+  /* Stała line-height — niektóre przeglądarki dają type="password" i type="text"
+     różne domyślne line-height (różnica ~2-3px). Po kliknięciu „pokaż hasło"
+     pole zmieniało wysokość. Explicit 1.5 = wysokość input zawsze 51px
+     (14*2 + 1.5*2 + 16*1.5 = 28 + 3 + 24 = 55px box-sizing:border-box). */
+  line-height: 1.5;
   font-family: inherit;
   color: #08202C;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
