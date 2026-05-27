@@ -4534,6 +4534,25 @@
         : 'Po zeskanowaniu kodu QR wybierz, ile danych zostawić na tym komputerze.'
     });
 
+    // ── Inline SVG ikony (lucide-style: stroke=2, currentColor) ──
+    // Pasują do estetyki chip-icon/chip-avatar w nagłówku aplikacji.
+    const ICON_HOUSE = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+      + '<path d="M3 9.5L12 3l9 6.5"/>'
+      + '<path d="M5 9v11h14V9"/>'
+      + '<rect x="10" y="13" width="4" height="7" fill="none"/>'
+      + '</svg>';
+    const ICON_CLOUD_UP = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+      + '<path d="M17.5 18a4.5 4.5 0 1 0 0-9 4 4 0 0 0-7.9-1.6A4 4 0 0 0 5 17h12.5z"/>'
+      + '<polyline points="12 16 12 12"/>'
+      + '<polyline points="10 14 12 12 14 14"/>'
+      + '</svg>';
+    const ICON_EYE_OFF = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+      + '<path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>'
+      + '<path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>'
+      + '<path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>'
+      + '<line x1="2" y1="2" x2="22" y2="22"/>'
+      + '</svg>';
+
     // ── Helpery do budowania kafelka ──
     function buildModeCard(cfg) {
       const card = el('button', {
@@ -4553,10 +4572,18 @@
         'transition:border-color .18s ease, background .18s ease, box-shadow .18s ease, transform .12s ease;'
       ].join('');
 
+      // Ikona w kółku — wariant A: gradient turkus (jak chip-avatar w headerze) +
+      // lucide-style SVG line-art (stroke 2, currentColor = #00838d). Spójne z
+      // resztą aplikacji, dyskretne, profesjonalne.
+      const iconWrapStyle = 'flex:0 0 auto;width:44px;height:44px;border-radius:50%;'
+        + 'background:linear-gradient(135deg,#e2f1f2,#cfe9ec);'
+        + 'display:flex;align-items:center;justify-content:center;'
+        + 'color:#00838d;';
+
       card.innerHTML =
-        '<div style="display:flex;align-items:flex-start;gap:14px;">' +
-          '<div style="flex:0 0 auto;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:28px;line-height:1;">' +
-            cfg.emoji +
+        '<div style="display:flex;align-items:center;gap:14px;">' +
+          '<div style="' + iconWrapStyle + '" aria-hidden="true">' +
+            (cfg.iconSvg || '') +
           '</div>' +
           '<div style="flex:1 1 auto;min-width:0;">' +
             '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px;">' +
@@ -4590,7 +4617,7 @@
     // ── 3 kafelki ──
     const localCard = buildModeCard({
       mode: 'local',
-      emoji: '🏠',
+      iconSvg: ICON_HOUSE,
       title: 'Komputer prywatny',
       desc: 'Pełna instalacja konta z kopią pacjentów na dysku. Po wylogowaniu wszystko zostaje — szybki dostęp przy następnym logowaniu.',
       hoverBorder: '#00838d',
@@ -4621,7 +4648,7 @@
 
     const cloudOnlyCard = buildModeCard({
       mode: 'cloud-only',
-      emoji: '⛅',
+      iconSvg: ICON_CLOUD_UP,
       title: 'Komputer w pracy',
       tag: cloudOnlyTagLabel,
       tagColor: cloudOnlyTagColor,
@@ -4636,7 +4663,7 @@
 
     const ephemeralCard = buildModeCard({
       mode: 'ephemeral',
-      emoji: '🚫',
+      iconSvg: ICON_EYE_OFF,
       title: 'Obcy komputer',
       desc: 'Tylko ta sesja. <strong>Żadnych śladów</strong> — ani konta, ani kopii. Po zamknięciu zakładki nie da się tu więcej zalogować bez telefonu.',
       hoverBorder: '#9a213a',
