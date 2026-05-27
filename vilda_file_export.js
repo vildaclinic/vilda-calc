@@ -295,11 +295,30 @@
     return { method: 'download', filename: filename };
   }
 
+  // ============ GUARD: CLOUD-ONLY MODE ============
+  // Konto z `storageMode: 'cloud-only'` świadomie nie pisze ŻADNYCH plików na
+  // lokalny dysk (synchronizacja z chmurą jest jedynym kanałem trwałości).
+  // Każdy export — automatyczny i ręczny — musi być w tym trybie zablokowany.
+  // Helper przygotowany na brak metody (legacy vault) — defensywnie zwraca false.
+  function isCurrentAccountCloudOnly() {
+    const V = getVault();
+    try {
+      return !!(V && typeof V.isCloudOnlyMode === 'function' && V.isCloudOnlyMode());
+    } catch (_) { return false; }
+  }
+
+  function makeCloudOnlyBlockError() {
+    const e = new Error('Konto cloud-only: kopie zapasowe są wyłączone. Dane synchronizują się tylko z chmurą.');
+    e.code = 'CLOUD_ONLY_NO_BACKUP';
+    return e;
+  }
+
   async function exportPatient(patientId, options) {
     const V = getVault();
     if (!V || !V.isUnlocked()) {
       throw new Error('VildaFileExport: zaloguj się przed eksportem.');
     }
+    if (isCurrentAccountCloudOnly()) throw makeCloudOnlyBlockError();
     const opts = options || {};
     const envelope = await V.exportPatientEnvelope(patientId);
     const shortHash = (typeof V.shortHashOfPatientId === 'function')
@@ -336,6 +355,7 @@
     if (!V || !V.isUnlocked()) {
       throw new Error('VildaFileExport: zaloguj się przed eksportem kopii konta.');
     }
+    if (isCurrentAccountCloudOnly()) throw makeCloudOnlyBlockError();
     const opts = options || {};
     const envelope = await V.exportVaultBackup();
     const user = V.getCurrentUser();
@@ -416,8 +436,14 @@
     const intervalMs = p.intervalMin * 60 * 1000;
     const sinceLastMs = lastTs ? (now - lastTs) : null;
     const nextDueMs = lastTs ? Math.max(0, lastTs + intervalMs - now) : 0;
+    // cloudOnly: gdy true → preferencja `enabled` może być cokolwiek, ale w praktyce
+    // backup się nie odpala (patrz tryAutoVaultBackup). UI pokazuje sekcję jako
+    // wyszarzoną z komunikatem „Niedostępne w trybie chmurowym".
+    const cloudOnly = isCurrentAccountCloudOnly();
     return {
       enabled: p.enabled,
+      effectivelyEnabled: p.enabled && !cloudOnly,
+      cloudOnly: cloudOnly,
       intervalMin: p.intervalMin,
       lastBackupAtISO: p.lastBackupAtISO,
       lastBackupFilename: p.lastBackupFilename,
@@ -431,6 +457,11 @@
   async function tryAutoVaultBackup(options) {
     const V = getVault();
     if (!V || !V.isUnlocked()) return { skipped: true, reason: 'locked' };
+    // Cloud-only: ZAWSZE pomijaj auto-backup, niezależnie od preferencji konta.
+    // Preference autoBackupEnabled może być true (zostało z czasu gdy konto było
+    // 'local'), ale w trybie cloud-only honoring tej preferencji = lokalny leak.
+    // opts.force NIE override'uje tej reguły — to świadomy wybór mode'a konta.
+    if (isCurrentAccountCloudOnly()) return { skipped: true, reason: 'cloud-only' };
     const opts = options || {};
     const user = V.getCurrentUser();
     const prefs = await getAutoBackupPrefs(user.userId);

@@ -140,19 +140,19 @@ html.vilda-pro-active .pro-sync-note {
 
   <script src="vilda_logger.js?v=2"></script>
 <script src="vilda_html.js?v=4"></script>
-<script src="vilda_persistence_adapter.js?v=11"></script>
+<script src="vilda_persistence_adapter.js?v=12"></script>
 <script src="vilda_session_bridge.js?v=1"></script>
 <script src="vilda_init.js?v=4"></script>
 <script src="vilda_crypto.js?v=11"></script>
-<script src="vilda_vault.js?v=26"></script>
-<script src="vilda_sync.js?v=5"></script>
-<script src="vilda_sync_integration.js?v=3"></script>
-<script src="vilda_auth_ui.js?v=78"></script>
+<script src="vilda_vault.js?v=28"></script>
+<script src="vilda_sync.js?v=6"></script>
+<script src="vilda_sync_integration.js?v=4"></script>
+<script src="vilda_auth_ui.js?v=80"></script>
 <script src="vilda_data_safety_explainer.js?v=5"></script>
 <script src="vilda_crypto_strength_explainer.js?v=6"></script>
 <script src="vilda_pro_access.js?v=2"></script>
 <script src="vilda_pro_ui.js?v=2"></script>
-<script src="vilda_file_export.js?v=4"></script>
+<script src="vilda_file_export.js?v=5"></script>
 <script src="vilda_deps.js?v=6"></script>
   
 <script>
@@ -191,7 +191,7 @@ html.vilda-pro-active .pro-sync-note {
   <!-- Ładujemy bibliotekę ikon Lucide do wyświetlania ikon w menu bocznym -->
   <script src="https://unpkg.com/lucide@1.14.0/dist/umd/lucide.min.js" integrity="sha384-jB6ZXxyEV94yzTxgLMvrwwNbn/pTTqwrMDI+v8FV5o5FnId/yn3DJwSdrDujU9A7" crossorigin="anonymous" defer></script>
   <script src="ios26-ui.js?v=19" defer></script>
-<script src="vilda_chrome.js?v=17"></script>
+<script src="vilda_chrome.js?v=19"></script>
 </head>
 <body class="js-loading liquid-ios26 page-settings has-sidebar">
   <header>
@@ -791,6 +791,44 @@ html.vilda-pro-active .pro-sync-note {
                     </div>
                   </details>
 
+                  <!-- ── Podsekcja: Tryb chmurowy (cloud-only storageMode) ── -->
+                  <div class="settings-backup-section" id="cloudOnlySection">
+                    <div class="settings-control-header">
+                      <h3 class="settings-control-title">Tryb chmurowy</h3>
+                      <span class="settings-tag" id="cloudOnlyStatusTag">—</span>
+                    </div>
+                    <p class="settings-control-desc">
+                      Dane pacjentów synchronizują się <strong>tylko z chmurą</strong> — nic nie zostaje na dysku tego komputera.
+                      Twoje konto pamięta hasło, więc możesz zalogować się ponownie. Idealne na obcym komputerze (np. pokój badań w szpitalu).
+                    </p>
+                    <div class="settings-card-toggle-row settings-backup-btn-row">
+                      <label class="settings-backup-checkbox-label">
+                        <input type="checkbox" id="cloudOnlyToggle" class="settings-backup-checkbox">
+                        Włącz tryb chmurowy dla tego konta
+                      </label>
+                    </div>
+                    <p class="settings-inline-note settings-backup-note" id="cloudOnlyStatus" style="margin-top:6px;">
+                      Wymaga aktywnej synchronizacji PRO oraz internetu przy każdym logowaniu.
+                    </p>
+                    <p class="settings-inline-note" id="cloudOnlyApplyHint"
+                       style="display:none;margin-top:4px;color:#854f0b;font-weight:500;">
+                      ⓘ Zmiana zacznie działać po następnym zalogowaniu.
+                    </p>
+
+                    <!-- Auto-lock dla trybu chmurowego (aktywne tylko gdy cloud-only włączony) -->
+                    <div id="cloudOnlyIdleRow" class="settings-card-toggle-row" style="margin-top:10px;align-items:center;gap:10px;display:none;flex-wrap:wrap;">
+                      <label for="cloudOnlyIdleSelect" style="font-size:0.9em;color:#374151;font-weight:500;">
+                        Auto-wylogowanie po bezczynności:
+                      </label>
+                      <select id="cloudOnlyIdleSelect" class="settings-control-select"
+                              style="padding:6px 10px;border-radius:8px;border:1px solid #d7e9ec;background:#fff;font-size:0.9em;">
+                        <option value="300000">5 minut</option>
+                        <option value="600000" selected>10 minut (domyślnie)</option>
+                        <option value="900000">15 minut</option>
+                        <option value="1800000">30 minut</option>
+                      </select>
+                    </div>
+                  </div>
                 </div><!-- /syncControlCard -->
               </div>
             </div>
@@ -2327,6 +2365,151 @@ html.vilda-pro-active .pro-sync-note {
       attachAutoBackupListeners();
       setTimeout(refreshAutoBackupSection, 250);
       setTimeout(refreshAutoBackupSection, 1500);
+
+      // ===== Tryb chmurowy (cloud-only storageMode) =====
+      // Toggle steruje per-konto flagą storageMode w registry. Zmiana wymaga
+      // re-loginu (świadoma decyzja — patrz vilda_vault.js Krok 1).
+      (function () {
+        const cloudOnlySection    = $('cloudOnlySection');
+        const cloudOnlyToggle     = $('cloudOnlyToggle');
+        const cloudOnlyStatusTag  = $('cloudOnlyStatusTag');
+        const cloudOnlyStatus     = $('cloudOnlyStatus');
+        const cloudOnlyApplyHint  = $('cloudOnlyApplyHint');
+        const cloudOnlyIdleRow    = $('cloudOnlyIdleRow');
+        const cloudOnlyIdleSelect = $('cloudOnlyIdleSelect');
+        let originalMode = null;
+
+        function refreshIdleRow(modeOrChecked) {
+          const isCloud = (typeof modeOrChecked === 'string') ? (modeOrChecked === 'cloud-only')
+                          : (typeof modeOrChecked === 'boolean') ? modeOrChecked
+                          : (cloudOnlyToggle && cloudOnlyToggle.checked);
+          if (cloudOnlyIdleRow) cloudOnlyIdleRow.style.display = isCloud ? '' : 'none';
+          if (cloudOnlyIdleSelect && window.VildaAuthUI && typeof window.VildaAuthUI.getCloudOnlyIdlePref === 'function') {
+            const pref = window.VildaAuthUI.getCloudOnlyIdlePref();
+            const def  = (window.VildaVault && typeof window.VildaVault.CLOUD_ONLY_IDLE_LOCK_MS === 'number')
+                          ? window.VildaVault.CLOUD_ONLY_IDLE_LOCK_MS : 600000;
+            cloudOnlyIdleSelect.value = String(pref || def);
+          }
+        }
+
+        if (cloudOnlyIdleSelect) {
+          cloudOnlyIdleSelect.addEventListener('change', function () {
+            const ms = parseInt(cloudOnlyIdleSelect.value, 10);
+            try {
+              if (window.VildaAuthUI && typeof window.VildaAuthUI.setCloudOnlyIdlePref === 'function') {
+                window.VildaAuthUI.setCloudOnlyIdlePref(ms);
+              }
+            } catch (_) {}
+          });
+        }
+
+        async function refreshCloudOnlySection() {
+          const V = window.VildaVault;
+          if (!cloudOnlySection || !cloudOnlyToggle) return;
+          if (!V || typeof V.getStorageMode !== 'function' || !V.isUnlocked || !V.isUnlocked()) {
+            cloudOnlySection.style.display = 'none';
+            return;
+          }
+          cloudOnlySection.style.display = '';
+          const user = V.getCurrentUser();
+          if (!user) { cloudOnlySection.style.display = 'none'; return; }
+          let mode = 'local';
+          try { mode = await V.getStorageMode(user.userId); } catch (_) {}
+          originalMode = mode;
+          cloudOnlyToggle.checked = (mode === 'cloud-only');
+          if (cloudOnlyStatusTag) {
+            cloudOnlyStatusTag.textContent = (mode === 'cloud-only') ? 'Włączony' : 'Wyłączony';
+            cloudOnlyStatusTag.style.background = (mode === 'cloud-only') ? 'rgba(0,131,141,0.12)' : '';
+            cloudOnlyStatusTag.style.color = (mode === 'cloud-only') ? '#00838d' : '';
+          }
+          if (cloudOnlyApplyHint) cloudOnlyApplyHint.style.display = 'none';
+          refreshIdleRow(mode);
+        }
+
+        if (cloudOnlyToggle) {
+          cloudOnlyToggle.addEventListener('change', async function () {
+            const V = window.VildaVault;
+            if (!V || typeof V.setStorageMode !== 'function' || !V.isUnlocked()) return;
+            const user = V.getCurrentUser();
+            if (!user) return;
+            const newMode = cloudOnlyToggle.checked ? 'cloud-only' : 'local';
+            // Walidacja: cloud-only wymaga aktywnej subskrypcji PRO + włączonej synchronizacji.
+            if (newMode === 'cloud-only') {
+              // 1) PRO subscription — synchroniczny check (snapshot z localStorage).
+              const hasPro = (function () {
+                try { return !!(window.VildaProAccess && window.VildaProAccess.hasAccess && window.VildaProAccess.hasAccess()); }
+                catch (_) { return false; }
+              })();
+              if (!hasPro) {
+                cloudOnlyToggle.checked = false;
+                if (cloudOnlyStatus) {
+                  cloudOnlyStatus.style.color = '#b45309';
+                  cloudOnlyStatus.textContent = '⚠️ Tryb chmurowy wymaga aktywnego planu PRO. Zobacz Subskrypcja.';
+                  setTimeout(function () {
+                    if (cloudOnlyStatus) { cloudOnlyStatus.style.color = ''; cloudOnlyStatus.textContent = 'Wymaga aktywnej synchronizacji PRO oraz internetu przy każdym logowaniu.'; }
+                  }, 6000);
+                }
+                return;
+              }
+              // 2) Synchronizacja włączona.
+              const syncEnabled = (function () {
+                try { return localStorage.getItem('vilda-sync-enabled-v1') === 'true'; }
+                catch (_) { return false; }
+              })();
+              if (!syncEnabled) {
+                cloudOnlyToggle.checked = false;
+                if (cloudOnlyStatus) {
+                  cloudOnlyStatus.style.color = '#b45309';
+                  cloudOnlyStatus.textContent = '⚠️ Włącz najpierw synchronizację (sekcja powyżej) — tryb chmurowy wymaga aktywnej synchronizacji PRO.';
+                  setTimeout(function () {
+                    if (cloudOnlyStatus) { cloudOnlyStatus.style.color = ''; cloudOnlyStatus.textContent = 'Wymaga aktywnej synchronizacji PRO oraz internetu przy każdym logowaniu.'; }
+                  }, 6000);
+                }
+                return;
+              }
+              // 3) Online (offline = ostrzeżenie ale dozwolone — preferencja jest per-konto,
+              // a force-pull i tak nastąpi przy następnym loginie).
+              if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                if (cloudOnlyStatus) {
+                  cloudOnlyStatus.style.color = '#b45309';
+                  cloudOnlyStatus.textContent = '⚠️ Jesteś offline. Tryb chmurowy ustawiony, ale wymaga internetu przy następnym logowaniu.';
+                  setTimeout(function () {
+                    if (cloudOnlyStatus) { cloudOnlyStatus.style.color = ''; cloudOnlyStatus.textContent = 'Wymaga aktywnej synchronizacji PRO oraz internetu przy każdym logowaniu.'; }
+                  }, 6000);
+                }
+              }
+            }
+            try {
+              await V.setStorageMode(user.userId, newMode);
+              if (cloudOnlyStatusTag) {
+                cloudOnlyStatusTag.textContent = (newMode === 'cloud-only') ? 'Włączony' : 'Wyłączony';
+                cloudOnlyStatusTag.style.background = (newMode === 'cloud-only') ? 'rgba(0,131,141,0.12)' : '';
+                cloudOnlyStatusTag.style.color = (newMode === 'cloud-only') ? '#00838d' : '';
+              }
+              // Pokaż hint jeśli zmiana różni się od stanu z unlocku (zmiana
+              // adaptera zacznie działać dopiero po re-loginie).
+              if (cloudOnlyApplyHint && newMode !== originalMode) {
+                cloudOnlyApplyHint.style.display = '';
+              } else if (cloudOnlyApplyHint) {
+                cloudOnlyApplyHint.style.display = 'none';
+              }
+              refreshIdleRow(newMode);
+            } catch (e) {
+              console.error('[ustawienia] setStorageMode failed:', e);
+              cloudOnlyToggle.checked = !cloudOnlyToggle.checked;
+            }
+          });
+        }
+
+        // Wpięcie w lifecycle vault
+        try {
+          const V = window.VildaVault;
+          if (V && typeof V.onUnlock === 'function') V.onUnlock(refreshCloudOnlySection);
+          if (V && typeof V.onLock === 'function') V.onLock(refreshCloudOnlySection);
+        } catch (_) {}
+        setTimeout(refreshCloudOnlySection, 250);
+        setTimeout(refreshCloudOnlySection, 1500);
+      })();
 
       // ===== Sekcja: Synchronizacja między urządzeniami =====
       (function () {

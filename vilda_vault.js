@@ -52,6 +52,27 @@
   const STORE_REGISTRY_USERS = 'users';
   const STORE_META = 'meta';
   const STORE_PATIENTS = 'patients';
+
+  // ============ STORAGE MODE (cloud-only mode) ============
+  // Każde konto ma w registry pole `storageMode`. Wartości:
+  //   'local'      — domyślnie. Per-user IndexedDB zapisuje się na dysku
+  //                  (snapshoty pacjentów, sharedUserData, preferencje modułów).
+  //   'cloud-only' — per-user dane trzymane TYLKO w pamięci sesji. Registry
+  //                  (meta konta, encrypted master key, passkey credentials)
+  //                  pozostaje na dysku — user może się zalogować hasłem ponownie
+  //                  z tego komputera. Dane pacjentów pochodzą wyłącznie z chmury
+  //                  (force-pull przy unlock). Wymaga aktywnej synchronizacji PRO.
+  //                  Use case: lekarz na komputerze w pokoju badań — szybki re-login
+  //                  hasłem, zero kopii pacjentów na dysku.
+  // Backward-compat: rekordy bez tego pola = 'local' (legacy konta utworzone przed
+  // wprowadzeniem flagi).
+  const STORAGE_MODE_LOCAL = 'local';
+  const STORAGE_MODE_CLOUD_ONLY = 'cloud-only';
+  const STORAGE_MODE_VALUES = [STORAGE_MODE_LOCAL, STORAGE_MODE_CLOUD_ONLY];
+  function normalizeStorageMode(value) {
+    if (typeof value !== 'string') return STORAGE_MODE_LOCAL;
+    return STORAGE_MODE_VALUES.indexOf(value) >= 0 ? value : STORAGE_MODE_LOCAL;
+  }
   const STORE_SNAPSHOTS = 'snapshots';
   const STORE_TOMBSTONES = 'tombstones';
   // GC znaczników usunięcia: po tym czasie tombstone jest przycinany (drobny, ale nie
@@ -59,6 +80,10 @@
   // dłużej niż to przy ponownej synchronizacji to skrajny przypadek.
   const TOMBSTONE_TTL_MS = 90 * 24 * 60 * 60 * 1000;
   const DEFAULT_IDLE_LOCK_MS = 20 * 60 * 1000;
+  // Cloud-only: krótszy domyślny timeout (scenariusz: współdzielony komputer w
+  // gabinecie szpitalnym — szybkie auto-locki minimalizują ryzyko, że ktoś inny
+  // dorwie się do otwartej sesji). User może dostosować w Ustawieniach.
+  const CLOUD_ONLY_IDLE_LOCK_MS = 10 * 60 * 1000;
   const MIN_PASSWORD_LENGTH = 8;
   const DEFAULT_LABEL = 'Użytkownik';
   const SESSION_STORAGE_KEY = 'vilda-vault-session-v2';
@@ -603,6 +628,117 @@
     storageAdapter = adapter || null;
   }
 
+  // ── Hybrid adapter: rejestr+meta na dysk, per-user w pamięci ─────────────
+  // Używany w trybie cloud-only: konto pamiętane lokalnie (encrypted master key
+  // w IDB → możliwy ponowny login hasłem), ale dane pacjentów (snapshoty,
+  // tombstones) trzymane TYLKO w pamięci sesji (z persystencją do sessionStorage
+  // pod `veph:` → przeżywa nawigację między podstronami, ginie z kartą).
+  // Per-user dane pochodzą z chmury — force-pull przy unlock napełnia pamięć.
+  function createHybridAdapter(realAdapter, memoryAdapter) {
+    return {
+      // ── Registry: trwały (IDB) — żeby user mógł zalogować się hasłem ponownie
+      listRegistry:        function () { return realAdapter.listRegistry(); },
+      getRegistryEntry:    function (uid) { return realAdapter.getRegistryEntry(uid); },
+      putRegistryEntry:    function (rec) { return realAdapter.putRegistryEntry(rec); },
+      updateRegistryEntry: function (uid, p) { return realAdapter.updateRegistryEntry(uid, p); },
+      removeRegistryEntry: function (uid) { return realAdapter.removeRegistryEntry(uid); },
+      // ── User meta: trwały (IDB) — zawiera encrypted master key wymagany do password unlock
+      getUserMeta:         function (uid) { return realAdapter.getUserMeta(uid); },
+      putUserMeta:         function (uid, rec) { return realAdapter.putUserMeta(uid, rec); },
+      deleteUserDatabase:  function (uid) { return realAdapter.deleteUserDatabase(uid); },
+      // ── Per-user dane: pamięć + sessionStorage (veph:) — chmura jest źródłem prawdy
+      listPatientsForUser:    function (uid) { return memoryAdapter.listPatientsForUser(uid); },
+      getPatientForUser:      function (uid, pid) { return memoryAdapter.getPatientForUser(uid, pid); },
+      putPatientForUser:      function (uid, rec) { return memoryAdapter.putPatientForUser(uid, rec); },
+      removePatientForUser:   function (uid, pid) { return memoryAdapter.removePatientForUser(uid, pid); },
+      listSnapshotsForUser:   function (uid, pid) { return memoryAdapter.listSnapshotsForUser(uid, pid); },
+      putSnapshotForUser:     function (uid, rec) { return memoryAdapter.putSnapshotForUser(uid, rec); },
+      removeSnapshotForUser:  function (uid, sid) { return memoryAdapter.removeSnapshotForUser(uid, sid); },
+      listTombstonesForUser:  function (uid) { return memoryAdapter.listTombstonesForUser(uid); },
+      putTombstoneForUser:    function (uid, rec) { return memoryAdapter.putTombstoneForUser(uid, rec); },
+      removeTombstoneForUser: function (uid, pid) { return memoryAdapter.removeTombstoneForUser(uid, pid); },
+      // Debug / introspekcja
+      _peek: function () {
+        return { mode: 'hybrid', realPeek: realAdapter._peek && realAdapter._peek(), memoryPeek: memoryAdapter._peek && memoryAdapter._peek() };
+      },
+      __vildaHybridAdapter: true
+    };
+  }
+
+  // ── Cloud-only mode lifecycle ────────────────────────────────────────────
+  // Stała persistKey dla in-memory adaptera per-user — analogicznie do
+  // EPHEMERAL_ADAPTER_KEY w trybie efemerycznym, ale rozróżniona, bo
+  // współistnieje z trwałym registry.
+  const CLOUD_ONLY_ADAPTER_KEY = 'veph:cloud-only:per-user-v1';
+  // Marker w sessionStorage — przeżywa nawigację między podstronami i sygnalizuje
+  // VildaPersistence (autodetect na innej podstronie) że jesteśmy w trybie cloud-only.
+  // Bez tego markera persistencja na lekkich podstronach pisałaby do localStorage
+  // zanim vault zdąży zainicjalizować swój storageMode (race condition).
+  const CLOUD_ONLY_MARKER_KEY = 'vilda-cloud-only-session-v1';
+  let _cloudOnlyAdapterActive = false;
+  // Stan registry-adaptera SPRZED założenia hybrydy — żeby przy lock przywrócić
+  // dokładnie ten sam adapter (a nie pozwolić getAdapter() utworzyć nowy).
+  let _cloudOnlySavedRealAdapter = null;
+
+  function applyCloudOnlyAdapterIfNeeded() {
+    // Niezależne od ephemeral mode — gdy oba aktywne, ephemeral wygrywa (wszystko
+    // w pamięci, bez trwałości). Cloud-only włącza się tylko gdy ephemeral OFF.
+    if (_ephemeralMode) return false;
+    if (_currentStorageModeCache !== STORAGE_MODE_CLOUD_ONLY) {
+      // Konto nie cloud-only — upewnij się że hybrid jest wyłączony
+      if (_cloudOnlyAdapterActive) tearDownCloudOnlyAdapter();
+      return false;
+    }
+    if (_cloudOnlyAdapterActive) return true; // już aktywny
+    // Zapamiętaj realny adapter (lub utwórz domyślny jeśli storageAdapter pusty)
+    const real = storageAdapter || getAdapter();
+    _cloudOnlySavedRealAdapter = real;
+    const memory = createInMemoryAdapter({ persistKey: CLOUD_ONLY_ADAPTER_KEY });
+    setStorageAdapter(createHybridAdapter(real, memory));
+    _cloudOnlyAdapterActive = true;
+    // Marker dla persistencji — analogicznie do EPHEMERAL_MARKER_KEY. Pozwala
+    // VildaPersistence wykryć tryb cloud-only na każdej kolejnej podstronie
+    // zanim vault zostanie zainicjalizowany.
+    try { if (global.sessionStorage) global.sessionStorage.setItem(CLOUD_ONLY_MARKER_KEY, '1'); } catch (_) {}
+    // Skoordynuj VildaPersistence — sharedUserData, sesje modułów i preferencje
+    // mają iść do sessionStorage (veph:), nie localStorage. To realizuje D2:
+    // "preferencje modułów → chmura via sharedUserData sync" (sync wciąga z chmury,
+    // RAM trzyma w trakcie sesji, nic nie zostaje na dysku).
+    try {
+      if (global.VildaPersistence && typeof global.VildaPersistence.setCloudOnlyMode === 'function') {
+        global.VildaPersistence.setCloudOnlyMode(true);
+      }
+    } catch (_) {}
+    return true;
+  }
+
+  function tearDownCloudOnlyAdapter() {
+    if (!_cloudOnlyAdapterActive) return;
+    // Przywróć IDB adapter sprzed założenia hybrydy. Jeśli go nie mamy
+    // (niespodziewany stan), kasujemy storageAdapter — getAdapter() utworzy nowy.
+    if (_cloudOnlySavedRealAdapter) setStorageAdapter(_cloudOnlySavedRealAdapter);
+    else setStorageAdapter(null);
+    _cloudOnlySavedRealAdapter = null;
+    _cloudOnlyAdapterActive = false;
+    // Skoordynuj VildaPersistence — wyłącz tryb cloud-only i wymuś purge veph:*
+    // (jeśli ephemeral też nieaktywny). Bez tego sharedUserData następnego usera
+    // w tej samej karcie byłby zhydratowany ze starego stanu cloud-only.
+    try {
+      if (global.VildaPersistence && typeof global.VildaPersistence.setCloudOnlyMode === 'function') {
+        global.VildaPersistence.setCloudOnlyMode(false);
+      }
+    } catch (_) {}
+    // Marker + adapter persistKey w sessionStorage — wyczyść jawnie, żeby nowa
+    // sesja na tej karcie zaczynała czysto.
+    try {
+      if (global.sessionStorage) {
+        global.sessionStorage.removeItem(CLOUD_ONLY_ADAPTER_KEY);
+        global.sessionStorage.removeItem(CLOUD_ONLY_MARKER_KEY);
+      }
+    } catch (_) {}
+  }
+  function isCloudOnlyAdapterActive() { return _cloudOnlyAdapterActive; }
+
   // ── Tryb efemeryczny (współdzielony komputer) ─────────────────────────────
   // Przełącza vault na adapter PAMIĘCIOWY (meta użytkownika + migawki pacjentów
   // NIE trafiają do IndexedDB) i koordynuje warstwę aplikacji (VildaPersistence),
@@ -863,10 +999,14 @@
       }
     };
 
+    // storageMode — patrz blok STORAGE MODE u góry pliku. Pobrane z options
+    // (kreator konta przekazuje wybór usera). Domyślnie 'local'.
+    const storageMode = normalizeStorageMode(opts.storageMode);
     await getAdapter().putUserMeta(userId, meta);
     await getAdapter().putRegistryEntry({
       userId: userId,
       label: label,
+      storageMode: storageMode,
       createdAtISO: nowISO,
       lastLoginAtISO: nowISO
     });
@@ -876,6 +1016,13 @@
     currentUserId = userId;
     currentUserLabel = label;
     lockReason = null;
+    // createUser nie idzie przez adoptMasterBytes (ma własną ścieżkę), więc cache
+    // storageMode trzeba ustawić ręcznie — wartość znana z registry właśnie zapisanego.
+    _currentStorageModeCache = storageMode;
+    // Cloud-only: zakładamy hybrid adapter przed establishSis() — analogicznie do
+    // adoptMasterBytes. Registry+meta już zapisane do IDB (linie wyżej, przed cache),
+    // od tej pory operacje per-user idą do pamięci.
+    applyCloudOnlyAdapterIfNeeded();
     zeroBytes(masterBytes);
     await establishSis();
     persistSession();
@@ -885,7 +1032,8 @@
       userId: userId,
       label: label,
       recoveryKey: recoveryKey,
-      iterations: iter
+      iterations: iter,
+      storageMode: storageMode
     };
   }
 
@@ -898,6 +1046,13 @@
     currentUserLabel = label;
     lockReason = null;
     zeroBytes(rawBytes);
+    // Cache storageMode aktualnego usera — używane przez synchroniczne gorące
+    // ścieżki (file-export guard, sync routing). Defensywny fallback do 'local'.
+    try { _currentStorageModeCache = await getStorageMode(userId); }
+    catch (_) { _currentStorageModeCache = STORAGE_MODE_LOCAL; }
+    // Cloud-only: zakładamy hybrid adapter (registry+meta → IDB, per-user → memory)
+    // PRZED establishSis(), żeby SIS i kolejne operacje per-user szły do pamięci.
+    applyCloudOnlyAdapterIfNeeded();
     await establishSis();
     persistSession();
     notifyUnlock();
@@ -975,11 +1130,16 @@
     currentUserId = null;
     currentUserLabel = null;
     lockReason = reason || 'manual';
+    // Reset cache storageMode — sync gettery zwracają 'local' gdy brak sesji.
+    _currentStorageModeCache = STORAGE_MODE_LOCAL;
     stopIdleTimer();
     clearPersistedSession();
     // Wyjście z trybu efemerycznego — usuwa marker, resetuje adapter do IndexedDB,
     // odznacza warstwę aplikacji. Po zablokowaniu nie zostaje nic z sesji efemerycznej.
     try { if (_ephemeralMode) setEphemeralMode(false); } catch (_) {}
+    // Wyjście z trybu cloud-only — przywróć oryginalny IDB adapter i wyczyść
+    // veph:cloud-only:* w sessionStorage (pacjenci w pamięci znikają z RAM-u).
+    try { tearDownCloudOnlyAdapter(); } catch (_) {}
     notifyLock(lockReason);
   }
 
@@ -3448,6 +3608,54 @@
     return { ok: true };
   }
 
+  // ============ STORAGE MODE — PUBLIC API ============
+  // Odczyt/zapis flagi storageMode konta. Wykorzystywane przez:
+  //   • kreator konta (createUser przyjmuje storageMode w options),
+  //   • Ustawienia → Bezpieczeństwo (toggle „Tryb chmurowy"),
+  //   • vault routing (per-user adapter in-memory dla cloud-only),
+  //   • sync integration (force-pull przy unlock dla cloud-only),
+  //   • file-export (guard auto-backup dla cloud-only).
+
+  // Zwraca storageMode konta o danym userId. Default 'local' dla legacy rekordów.
+  async function getStorageMode(userId) {
+    if (typeof userId !== 'string' || !userId.length) return STORAGE_MODE_LOCAL;
+    try {
+      const entry = await getAdapter().getRegistryEntry(userId);
+      return normalizeStorageMode(entry && entry.storageMode);
+    } catch (_) { return STORAGE_MODE_LOCAL; }
+  }
+
+  // Zmienia storageMode konta (np. po przełączeniu toggle w Ustawieniach).
+  // Wymaga: konto musi istnieć w registry. Mode normalizowany do legalnych wartości.
+  // Nie czyści lokalnych danych ani nie wymusza ponownego pobrania z chmury —
+  // to zadanie warstwy wyższej (UI Ustawień powinno: 1) wykonać export do chmury,
+  // 2) wymazać per-user IDB, 3) wywołać setStorageMode, 4) zalecić re-login).
+  async function setStorageMode(userId, mode) {
+    if (typeof userId !== 'string' || !userId.length) {
+      throw new Error('Nieprawidłowy userId.');
+    }
+    const normalized = normalizeStorageMode(mode);
+    const entry = await getAdapter().getRegistryEntry(userId);
+    if (!entry) throw new Error('Użytkownik nie istnieje.');
+    await getAdapter().updateRegistryEntry(userId, { storageMode: normalized });
+    // Jeśli zmieniamy mode aktualnie zalogowanego usera — odśwież cache.
+    if (currentUserId === userId) _currentStorageModeCache = normalized;
+    return { userId: userId, storageMode: normalized };
+  }
+
+  // Zwraca storageMode aktualnie zalogowanego użytkownika ('local' jeśli brak sesji).
+  async function getCurrentStorageMode() {
+    if (!currentUserId) return STORAGE_MODE_LOCAL;
+    return getStorageMode(currentUserId);
+  }
+
+  // Synchroniczna wersja — używana przez gorące ścieżki (file-export auto-backup
+  // guard, sync routing). Wymaga cached wartości — zapisanej przy unlocku.
+  // Cache jest invalidowany przy lock() / setStorageMode().
+  let _currentStorageModeCache = STORAGE_MODE_LOCAL;
+  function getCurrentStorageModeSync() { return _currentStorageModeCache; }
+  function isCloudOnlyMode() { return _currentStorageModeCache === STORAGE_MODE_CLOUD_ONLY; }
+
   const api = {
     __vildaVault: true,
     VERSION: VERSION,
@@ -3456,6 +3664,7 @@
     REGISTRY_DB_NAME: REGISTRY_DB_NAME,
     USER_DB_PREFIX: USER_DB_PREFIX,
     DEFAULT_IDLE_LOCK_MS: DEFAULT_IDLE_LOCK_MS,
+    CLOUD_ONLY_IDLE_LOCK_MS: CLOUD_ONLY_IDLE_LOCK_MS,
     MIN_PASSWORD_LENGTH: MIN_PASSWORD_LENGTH,
     setStorageAdapter: setStorageAdapter,
     createInMemoryAdapter: createInMemoryAdapter,
@@ -3522,7 +3731,18 @@
     // Tryb efemeryczny (współdzielony komputer) — nic trwałego lokalnie
     setEphemeralMode:  setEphemeralMode,
     isEphemeralMode:   isEphemeralMode,
-    setStorageAdapter: setStorageAdapter
+    setStorageAdapter: setStorageAdapter,
+    // Storage mode per-konto (cloud-only): zachowuje tożsamość konta w registry,
+    // ale dane pacjentów trzymane są tylko w pamięci sesji + chmurze. Patrz blok
+    // „STORAGE MODE" u góry pliku.
+    getStorageMode:            getStorageMode,
+    setStorageMode:            setStorageMode,
+    getCurrentStorageMode:     getCurrentStorageMode,
+    getCurrentStorageModeSync: getCurrentStorageModeSync,
+    isCloudOnlyMode:           isCloudOnlyMode,
+    isCloudOnlyAdapterActive:  isCloudOnlyAdapterActive,
+    STORAGE_MODE_LOCAL:        STORAGE_MODE_LOCAL,
+    STORAGE_MODE_CLOUD_ONLY:   STORAGE_MODE_CLOUD_ONLY
   };
 
   global.VildaVault = api;

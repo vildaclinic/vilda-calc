@@ -93,6 +93,17 @@
     return _ephLocal;
   }
 
+  // Cloud-only mode — analogiczne routing'owe semantics do ephemeral (wszystko do
+  // sessionStorage z prefiksem veph:), ALE registry konta dalej trwały na dysku
+  // (zob. vault.applyCloudOnlyAdapterIfNeeded). Oba flagi są niezależne; getStorage
+  // kieruje do shimu jeśli KTÓREKOLWIEK jest aktywne. Purge `veph:*` następuje
+  // tylko gdy oba zostały wyłączone.
+  let _cloudOnlyMode = false;
+
+  function isMemoryPersistenceActive() {
+    return _ephemeralMode || _cloudOnlyMode;
+  }
+
   function setEphemeralMode(on) {
     _ephemeralMode = !!on;
     // Porzuć cache shimów (re-odczyt sessionStorage przy następnym getStorage).
@@ -104,11 +115,24 @@
     // a dane MUSZĄ przetrwać między podstronami. Czyszczenie tutaj kasowałoby je za
     // każdym razem (reset aplikacji + powracający baner zgody GA). Świeży start nowej
     // sesji robi jawnie purgeEphemeralData() z funkcji logowania (restore tego nie woła).
-    if (!_ephemeralMode) purgeEphemeralSessionKeys();
+    if (!isMemoryPersistenceActive()) purgeEphemeralSessionKeys();
     return _ephemeralMode;
   }
 
   function isEphemeralMode() { return _ephemeralMode; }
+
+  function setCloudOnlyMode(on) {
+    _cloudOnlyMode = !!on;
+    // Porzuć cache shimów — kolejny getStorage stworzy fresh shim (te same `veph:`
+    // klucze co dla ephemeral mode, więc dane są wzajemnie czytelne — co świadomie
+    // chcemy, na wypadek nakładania się trybów lub niezsynchronizowanych setterów).
+    _ephLocal = null;
+    _ephSession = null;
+    // Purge tylko gdy oba flagi są wyłączone (zob. komentarz w setEphemeralMode).
+    if (!isMemoryPersistenceActive()) purgeEphemeralSessionKeys();
+    return _cloudOnlyMode;
+  }
+  function isCloudOnlyMode() { return _cloudOnlyMode; }
 
   // Auto-detekcja sesji efemerycznej NIEZALEŻNIE od vaultu. Marker w sessionStorage
   // (ustawiony przez logowanie efemeryczne na innej podstronie) przeżywa nawigację.
@@ -117,10 +141,14 @@
   // — bez tej detekcji warstwa trwałości pisałaby do localStorage zamiast veph:, przez
   // co zgoda GA „nie pamięta się" (baner wraca co stronę). Czytamy marker bezpośrednio,
   // bez czyszczenia (to NIE jest nowa sesja — to ta sama, kontynuowana między stronami).
-  (function autodetectEphemeral() {
+  // Analogicznie marker cloud-only: ustawiany przez vault.applyCloudOnlyAdapterIfNeeded
+  // i czyszczony w tearDownCloudOnlyAdapter, żeby persistencja wiedziała o trybie
+  // PRZED inicjalizacją vaultu.
+  (function autodetectMemoryPersistence() {
     try {
-      if (global.sessionStorage && global.sessionStorage.getItem('vilda-ephemeral-session-v1')) {
-        _ephemeralMode = true;
+      if (global.sessionStorage) {
+        if (global.sessionStorage.getItem('vilda-ephemeral-session-v1')) _ephemeralMode = true;
+        if (global.sessionStorage.getItem('vilda-cloud-only-session-v1')) _cloudOnlyMode = true;
       }
     } catch (_) { void _; }
   })();
@@ -262,9 +290,12 @@
 
   function getStorage(type) {
     const t = type === 'session' ? 'session' : 'local';
-    // Tryb efemeryczny: kieruj wszystko do sessionStorage (prefiks veph:) — nic do
-    // localStorage; dane przeżywają nawigację, znikają po zamknięciu karty/wylogowaniu.
-    if (_ephemeralMode) return getEphemeralStorage(t);
+    // Tryb efemeryczny LUB cloud-only: kieruj wszystko do sessionStorage (prefiks
+    // veph:) — nic do localStorage; dane przeżywają nawigację, znikają po zamknięciu
+    // karty/wylogowaniu. W cloud-only registry konta na dysku JEST (encrypted master
+    // key dla password unlocku), ale dane aplikacji (sharedUserData, preferencje
+    // modułów, sesje) trafiają wyłącznie do veph: i synchronizują się z chmurą.
+    if (isMemoryPersistenceActive()) return getEphemeralStorage(t);
     return storageAvailable(t);
   }
 
@@ -794,6 +825,9 @@
     PERSIST_KEY,
     setEphemeralMode,
     isEphemeralMode,
+    setCloudOnlyMode,
+    isCloudOnlyMode,
+    isMemoryPersistenceActive,
     purgeEphemeralData: purgeEphemeralSessionKeys,
     getStorage,
     safeParse,
