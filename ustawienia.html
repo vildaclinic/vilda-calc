@@ -147,7 +147,7 @@ html.vilda-pro-active .pro-sync-note {
 <script src="vilda_vault.js?v=34"></script>
 <script src="vilda_sync.js?v=6"></script>
 <script src="vilda_sync_integration.js?v=5"></script>
-<script src="vilda_auth_ui.js?v=95"></script>
+<script src="vilda_auth_ui.js?v=96"></script>
 <script src="vilda_data_safety_explainer.js?v=5"></script>
 <script src="vilda_crypto_strength_explainer.js?v=6"></script>
 <script src="vilda_pro_access.js?v=2"></script>
@@ -2650,7 +2650,7 @@ html.vilda-pro-active .pro-sync-note {
                 if (!ok) {
                   registerRoamingPasskeyBtn.disabled = true;
                   if (registerRoamingPasskeyTag) setText(registerRoamingPasskeyTag, 'niewspierane na tym urządzeniu');
-                  setText(registerRoamingPasskeyStatus, 'To urządzenie/przeglądarka nie obsługuje passkey z PRF. Dodaj passkey na urządzeniu, które to wspiera (np. telefon z Face ID/odciskiem).');
+                  setText(registerRoamingPasskeyStatus, 'To urządzenie/przeglądarka nie obsługuje logowania biometrią. Skonfiguruj logowanie telefonem na urządzeniu, które to wspiera (np. telefon z Face ID/odciskiem).');
                 }
               }).catch(function () {});
             }
@@ -2666,7 +2666,7 @@ html.vilda-pro-active .pro-sync-note {
               return;
             }
             if (!V.isUnlocked || !V.isUnlocked()) {
-              setText(registerRoamingPasskeyStatus, 'Zaloguj się, aby dodać passkey.');
+              setText(registerRoamingPasskeyStatus, 'Zaloguj się, aby skonfigurować logowanie telefonem.');
               return;
             }
             const orig = registerRoamingPasskeyBtn.textContent;
@@ -2675,16 +2675,16 @@ html.vilda-pro-active .pro-sync-note {
             setText(registerRoamingPasskeyStatus, '');
             try {
               const res = await V.registerPasskeyForRoaming();
-              setText(registerRoamingPasskeyStatus, '✓ Dodano passkey „' + (res && res.deviceLabel ? res.deviceLabel : 'urządzenie') + '". Możesz teraz logować się nim na współdzielonym komputerze.');
+              setText(registerRoamingPasskeyStatus, '✓ Skonfigurowano logowanie telefonem „' + (res && res.deviceLabel ? res.deviceLabel : 'urządzenie') + '". Możesz teraz logować się nim na współdzielonym komputerze.');
             } catch (e) {
               const code = e && e.code;
               let msg;
               if (code === 'ESCROW_UPLOAD_FAILED' || code === 'ESCROW_UPLOAD_REJECTED' || code === 'ESCROW_NO_SYNC') {
-                msg = 'Passkey utworzony, ale nie udało się zapisać go w chmurze — sprawdź internet i spróbuj ponownie.';
+                msg = 'Skonfigurowano lokalnie, ale nie udało się zapisać w chmurze — sprawdź internet i spróbuj ponownie.';
               } else if (e && e.name === 'NotAllowedError') {
                 msg = 'Rejestracja przerwana lub odrzucona.';
               } else {
-                msg = (e && e.message) ? e.message : 'Nie udało się dodać passkey.';
+                msg = (e && e.message) ? e.message : 'Nie udało się skonfigurować logowania telefonem.';
               }
               setText(registerRoamingPasskeyStatus, msg);
             } finally {
@@ -3416,11 +3416,11 @@ html.vilda-pro-active .pro-sync-note {
           delBtn.style.cssText = 'background:#fef2f3; color:#b00020; border-color:#b00020; min-width:64px; flex-shrink:0;';
           delBtn.textContent = 'Usuń';
           delBtn.addEventListener('click', async function () {
-            if (!confirm('Usunąć passkey „' + k.deviceLabel + '"? Biometryczne logowanie z tego urządzenia przestanie działać.')) return;
+            if (!confirm('Usunąć logowanie biometrią „' + k.deviceLabel + '"? Biometryczne logowanie z tego urządzenia przestanie działać.')) return;
             delBtn.disabled = true;
             try {
               await V.removePasskey(user.userId, k.credentialId);
-              setText(passkeyStatus, '✓ Passkey usunięty.');
+              setText(passkeyStatus, '✓ Logowanie biometrią usunięte.');
               refreshPasskeySection();
             } catch (e) {
               setText(passkeyStatus, 'Błąd: ' + (e && e.message ? e.message : e));

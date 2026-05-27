@@ -188,20 +188,20 @@
       return { message: 'Ta przeglądarka nie obsługuje logowania biometrycznego. Zaloguj się kodem QR — działa w każdej przeglądarce.', offerQrFallback: true };
     }
     if (code === 'EPH_NO_ENVELOPE') {
-      return { message: 'Ten passkey nie jest skonfigurowany do logowania na cudzym komputerze. Aby to włączyć, wejdź na swoim telefonie w: Ustawienia → Synchronizacja → Dodaj passkey do logowania zdalnego.', offerQrFallback: false };
+      return { message: 'Ten klucz biometryczny nie jest skonfigurowany do logowania na cudzym komputerze. Aby to włączyć, wejdź na swoim telefonie w: Ustawienia → Synchronizacja → Skonfiguruj logowanie telefonem.', offerQrFallback: false };
     }
     if (code === 'EPH_CHALLENGE_FAILED' || code === 'EPH_UNLOCK_NETWORK') {
       return { message: 'Nie można połączyć się z serwerem. Sprawdź połączenie z internetem i spróbuj ponownie.', offerQrFallback: false };
     }
     if (code === 'EPH_UNLOCK_REJECTED') {
-      return { message: 'Uwierzytelnienie odrzucone. Upewnij się, że używasz właściwego passkey (z telefonu, nie z tego komputera) i spróbuj ponownie.', offerQrFallback: true };
+      return { message: 'Uwierzytelnienie odrzucone. Upewnij się, że używasz biometrii ze swojego telefonu (nie z tego komputera) i spróbuj ponownie.', offerQrFallback: true };
     }
     if (code === 'EPH_DECRYPT_FAILED') {
       if (err && err.diagnostic === 'envelope-legacy-create-prf') {
-        return { message: 'Passkey wymaga aktualizacji. Na swoim telefonie wejdź w Ustawienia → Synchronizacja, usuń passkey i dodaj go ponownie, a potem zaloguj się jeszcze raz.', offerQrFallback: true };
+        return { message: 'Logowanie telefonem wymaga aktualizacji. Na swoim telefonie wejdź w Ustawienia → Synchronizacja, usuń je i skonfiguruj ponownie, a potem zaloguj się jeszcze raz.', offerQrFallback: true };
       }
       if (err && err.diagnostic === 'envelope-current-prf-mismatch') {
-        return { message: 'Wybrałeś passkey zapisany na tym komputerze — to nie zadziała na cudzym urządzeniu. Wybierz passkey ze swojego telefonu i potwierdź biometrią na nim.', offerQrFallback: true };
+        return { message: 'Wybrałeś biometrię tego komputera — to nie zadziała na cudzym urządzeniu. Wybierz biometrię swojego telefonu i potwierdź na nim.', offerQrFallback: true };
       }
       return { message: 'Nie udało się zweryfikować tożsamości. Spróbuj ponownie lub zaloguj się kodem QR.', offerQrFallback: true };
     }
@@ -4898,8 +4898,8 @@
 
     // ── UI ekranu ─────────────────────────────────────────────────────────────
     const titleText = (mode === 'ephemeral')
-      ? 'Zaloguj passkey (ta sesja)'
-      : (mode === 'cloud-only' ? 'Zaloguj passkey — tryb chmurowy' : 'Zaloguj passkey — pełne konto');
+      ? 'Zaloguj telefonem (ta sesja)'
+      : (mode === 'cloud-only' ? 'Zaloguj telefonem — tryb chmurowy' : 'Zaloguj telefonem — pełne konto');
     const subText = (function () {
       if (mode === 'ephemeral')  return 'Po sesji nie zostanie na tym komputerze żadna kopia. Potwierdź logowanie biometrią na telefonie.';
       if (mode === 'cloud-only') return 'Konto zostanie zapamiętane (hasło), ale dane pacjentów tylko w chmurze. Wpisz hasło, potem potwierdź biometrią na telefonie.';
@@ -4927,7 +4927,7 @@
 
     const startBtn = el('button', {
       class: 'vilda-auth-btn vilda-auth-btn-primary', type: 'button',
-      text: persistMode ? '📱 Wpisałem hasło — potwierdź telefonem' : '📱 Zaloguj passkey z telefonu'
+      text: persistMode ? '📱 Wpisałem hasło — potwierdź telefonem' : '📱 Zaloguj telefonem'
     });
 
     const qrFallbackBtn = el('button', {
