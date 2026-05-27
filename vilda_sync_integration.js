@@ -267,14 +267,20 @@
         // Pomijamy interstitial nowego urządzenia (cloud-only jest świadomą
         // sesją na obcym komputerze, nie nowym urządzeniem do "claim'owania").
         if (typeof V.isCloudOnlyMode === 'function' && V.isCloudOnlyMode()) {
+          // Sync btn animuje się dzięki vilda:sync-status-changed.
+          // Cloud-only-sync-* trzymane osobno dla precyzyjnego gating (chrome.js
+          // śledzi phase, auth_ui.showPatientsList czeka na complete).
           dispatchCloudOnlySync('pulling', null);
+          dispatch({ state: 'syncing' });
           forcePullForCloudOnly().then(function () {
             dispatchCloudOnlySync('complete', null);
+            dispatch({ state: 'ok' });
           }).catch(function (err) {
             dispatchCloudOnlySync('failed', {
               code: (err && err.code) || 'CLOUD_ONLY_PULL_FAILED',
               message: (err && err.message) || 'Nie udało się pobrać danych z chmury.'
             });
+            dispatch({ state: 'error' });
           });
           return; // nie wykonuj klasycznego probeNewDevice / syncFull
         }
