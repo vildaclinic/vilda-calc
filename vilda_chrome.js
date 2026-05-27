@@ -1169,13 +1169,53 @@
     } catch (_) {}
   }
 
+  // ── Cloud-only sync state machine + overlay/banner UI ────────────────────
+  // Po Kroku 9 sync cloud-only DZIAŁA W TLE — overlay NIE pokazuje się automatycznie
+  // przy logowaniu. Komunikacja stanu odbywa się przez:
+  //   1. animację sync btn (pulsująca chmura, kolor wg [data-sync-state])
+  //   2. discreet banner na dole ekranu w razie błędu (z opcjami retry/logout)
+  // Overlay pokazujemy ŚWIADOMIE w jednym przypadku: gdy user kliknie na listę
+  // pacjentów (showPatientsList) i sync jeszcze nie skończył — wtedy blokujemy
+  // dostęp do listy, bo lista byłaby pusta. Po complete overlay sam się ukrywa.
+  var _cloudOnlySyncPhase = 'idle';   // 'idle' | 'pulling' | 'complete' | 'failed'
+  var _cloudOnlySyncLastErr = null;
+  function getCloudOnlySyncPhase() { return _cloudOnlySyncPhase; }
+  function isCloudOnlySyncInProgress() { return _cloudOnlySyncPhase === 'pulling'; }
+
+  // Wait helper — resolves gdy sync skończy się (complete albo failed).
+  // Użyteczne dla gating: showPatientsList może await'ować przed renderem.
+  function waitForCloudOnlySync() {
+    return new Promise(function (resolve, reject) {
+      if (_cloudOnlySyncPhase === 'complete' || _cloudOnlySyncPhase === 'idle') {
+        resolve('complete'); return;
+      }
+      if (_cloudOnlySyncPhase === 'failed') {
+        reject(_cloudOnlySyncLastErr || new Error('cloud-only sync failed')); return;
+      }
+      function onComplete() { cleanup(); resolve('complete'); }
+      function onFailed(e) {
+        cleanup();
+        var d = e && e.detail;
+        var err = new Error((d && d.message) || 'cloud-only sync failed');
+        if (d && d.code) err.code = d.code;
+        reject(err);
+      }
+      function cleanup() {
+        doc.removeEventListener('vilda:cloud-only-sync-complete', onComplete);
+        doc.removeEventListener('vilda:cloud-only-sync-failed', onFailed);
+      }
+      doc.addEventListener('vilda:cloud-only-sync-complete', onComplete, { once: true });
+      doc.addEventListener('vilda:cloud-only-sync-failed', onFailed, { once: true });
+    });
+  }
+
   function installCloudOnlyOverlay() {
     if (doc.getElementById('vildaCloudOnlyLoading')) return;
     // Animacja spinnera — keyframe inline
     if (!doc.getElementById('vilda-cloud-only-loading-style')) {
       var s = doc.createElement('style');
       s.id = 'vilda-cloud-only-loading-style';
-      s.textContent = '@keyframes vilda-co-spin{to{transform:rotate(360deg)}}';
+      s.textContent = '@keyframes vilda-co-spin{to{transform:rotate(360deg)}}@keyframes vildaCoBannerIn{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}';
       (doc.head || doc.documentElement).appendChild(s);
     }
     var overlay = doc.createElement('div');
@@ -1235,10 +1275,68 @@
       hideOverlay();
     });
 
-    // Słuchacze eventów dispatchowanych przez vilda_sync_integration.js
-    doc.addEventListener('vilda:cloud-only-sync-pulling', setLoadingState);
-    doc.addEventListener('vilda:cloud-only-sync-complete', hideOverlay);
-    doc.addEventListener('vilda:cloud-only-sync-failed', function (e) { setErrorState(e && e.detail); });
+    // Eksport handlerów dla zewnętrznych callerów (auth_ui.showPatientsList)
+    overlay._showLoading = setLoadingState;
+    overlay._showError = setErrorState;
+    overlay._hide = hideOverlay;
+
+    // ── Discreet error banner — pokazywany w tle gdy sync padł w trakcie pracy
+    // (zamiast pełnoekranowego overlayu, który blokuje wszystko). Banner ma
+    // przycisk „Spróbuj ponownie" i „Pokaż szczegóły" (uruchamia overlay).
+    var banner = doc.createElement('div');
+    banner.id = 'vildaCloudOnlySyncBanner';
+    banner.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:2000004;display:none;align-items:center;gap:10px;padding:10px 14px;background:#fff;border:1px solid #f5b3bb;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.18);font-family:Inter,"Segoe UI",system-ui,-apple-system,sans-serif;font-size:13px;color:#9a213a;max-width:480px;animation:vildaCoBannerIn 0.25s ease-out;';
+    banner.innerHTML =
+      '<span style="font-size:18px;line-height:1;">⚠️</span>' +
+      '<span id="vildaCloudOnlySyncBannerText" style="flex:1 1 auto;line-height:1.4;color:#0f2b33;">Sync z chmurą nie powiódł się.</span>' +
+      '<button type="button" id="vildaCloudOnlySyncBannerRetry" style="padding:6px 12px;border:1px solid #00838d;border-radius:8px;background:#00838d;color:#fff;font-weight:600;font-size:12.5px;cursor:pointer;">Spróbuj ponownie</button>' +
+      '<button type="button" id="vildaCloudOnlySyncBannerDetails" style="padding:6px 12px;border:1px solid #d7e9ec;border-radius:8px;background:#fff;color:#5b6672;font-weight:500;font-size:12.5px;cursor:pointer;">Szczegóły</button>' +
+      '<button type="button" id="vildaCloudOnlySyncBannerClose" aria-label="Zamknij" style="padding:4px 8px;border:0;background:transparent;color:#5b6672;font-size:18px;line-height:1;cursor:pointer;">×</button>';
+    doc.body.appendChild(banner);
+
+    function showBanner(detail) {
+      var msg = (detail && detail.message) || 'Sync z chmurą nie powiódł się.';
+      banner.querySelector('#vildaCloudOnlySyncBannerText').textContent = msg;
+      banner.style.display = 'flex';
+    }
+    function hideBanner() { banner.style.display = 'none'; }
+    banner.querySelector('#vildaCloudOnlySyncBannerRetry').addEventListener('click', function () {
+      var VSI = global.VildaSyncIntegration;
+      if (!VSI || typeof VSI.forcePullForCloudOnly !== 'function') return;
+      hideBanner();
+      VSI.forcePullForCloudOnly().catch(function () { /* failed event again will re-show */ });
+    });
+    banner.querySelector('#vildaCloudOnlySyncBannerDetails').addEventListener('click', function () {
+      hideBanner();
+      setErrorState(_cloudOnlySyncLastErr || {});
+    });
+    banner.querySelector('#vildaCloudOnlySyncBannerClose').addEventListener('click', hideBanner);
+
+    // Słuchacze stanu — aktualizują phase + ewentualnie banner.
+    // ŻADEN listener nie pokazuje automatycznie overlay! Overlay tylko gdy
+    // user świadomie wywoła (retry z banneru, gating w showPatientsList).
+    doc.addEventListener('vilda:cloud-only-sync-pulling', function () {
+      _cloudOnlySyncPhase = 'pulling';
+      _cloudOnlySyncLastErr = null;
+      hideBanner(); // ewentualny stary banner zostaje schowany
+    });
+    doc.addEventListener('vilda:cloud-only-sync-complete', function () {
+      _cloudOnlySyncPhase = 'complete';
+      _cloudOnlySyncLastErr = null;
+      hideBanner();
+      // Jeśli overlay był widoczny (np. po retry z banneru) — ukryj go.
+      hideOverlay();
+    });
+    doc.addEventListener('vilda:cloud-only-sync-failed', function (e) {
+      _cloudOnlySyncPhase = 'failed';
+      _cloudOnlySyncLastErr = (e && e.detail) || {};
+      // Jeśli overlay otwarty — pokaż błąd w nim (priorytet); inaczej banner.
+      if (overlay.style.display === 'flex') {
+        setErrorState(_cloudOnlySyncLastErr);
+      } else {
+        showBanner(_cloudOnlySyncLastErr);
+      }
+    });
   }
 
   function refreshPatientChip() {
@@ -1874,7 +1972,20 @@
     MENU: MENU,
     // Faza 2 — udostępnione do testów jednostkowych nawigacji gestem.
     decideSwipe: decideSwipe,
-    swipeOrder: swipeOrder
+    swipeOrder: swipeOrder,
+    // Cloud-only sync state — używane przez auth_ui (gating list pacjentów)
+    // oraz testy.
+    getCloudOnlySyncPhase: getCloudOnlySyncPhase,
+    isCloudOnlySyncInProgress: isCloudOnlySyncInProgress,
+    waitForCloudOnlySync: waitForCloudOnlySync,
+    showCloudOnlySyncOverlay: function () {
+      var ov = doc.getElementById('vildaCloudOnlyLoading');
+      if (ov && typeof ov._showLoading === 'function') ov._showLoading();
+    },
+    hideCloudOnlySyncOverlay: function () {
+      var ov = doc.getElementById('vildaCloudOnlyLoading');
+      if (ov && typeof ov._hide === 'function') ov._hide();
+    }
   };
 
   boot();

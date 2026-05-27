@@ -3005,6 +3005,26 @@
     const V = getVault();
     if (!V || !V.isUnlocked()) return;
     const opts = options || {};
+
+    // Cloud-only: pacjenci ładowani z chmury w tle przy logowaniu. Jeśli sync
+    // jeszcze nie skończył gdy user wchodzi na listę, pokazujemy overlay
+    // (lista byłaby pusta). Po complete overlay znika sam → kontynuujemy render.
+    try {
+      const C = global.VildaChrome;
+      if (C && typeof C.isCloudOnlySyncInProgress === 'function' && C.isCloudOnlySyncInProgress()) {
+        if (typeof C.showCloudOnlySyncOverlay === 'function') C.showCloudOnlySyncOverlay();
+        try {
+          await C.waitForCloudOnlySync();
+          if (typeof C.hideCloudOnlySyncOverlay === 'function') C.hideCloudOnlySyncOverlay();
+        } catch (_) {
+          // Failed event — overlay przeszedł w error state (chrome.js obsługuje).
+          // Zostawiamy go widocznym, user zdecyduje (retry/logout). Przerywamy
+          // showPatientsList, bo lista i tak byłaby pusta.
+          return;
+        }
+      }
+    } catch (_) { void _; }
+
     let patients = [];
     try { patients = await V.listPatients(); } catch (e) { logError('listPatients', e); }
 
