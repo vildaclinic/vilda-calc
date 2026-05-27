@@ -4292,7 +4292,7 @@
 
     const qrTag = document.createElement('span');
     qrTag.style.cssText = 'display:inline-block;font-size:0.75rem;font-weight:500;background:#e1f5ee;color:#0f6e56;border-radius:4px;padding:2px 8px;margin-bottom:0.55rem;';
-    qrTag.textContent = 'Konto pamięta hasło';
+    qrTag.textContent = 'Konto zostaje';
 
     const qrHead = document.createElement('div');
     qrHead.style.cssText = 'display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem;';
@@ -4724,15 +4724,27 @@
     if (opts.storageMode === 'local' || opts.storageMode === 'cloud-only' || opts.storageMode === 'ephemeral') {
       mode = opts.storageMode;
     }
+    // Helper re-otwierający chooser z tymi samymi opcjami. Kluczowe: gdy user
+    // pójdzie z chooser do passkey-screen, a potem da „Wróć", chce wrócić
+    // do choosera (nie do entry-screen). Z kolei gdy user przyszedł z entry
+    // BEZ chooser'a (sekcja „Zaloguj jednorazowo" omija chooser), opts.onBack
+    // nie jest ustawione → passkey-screen domyślnie wraca do entry.
+    function _reopenPasskeyChooser() {
+      showLoginModeChooser({
+        context: 'passkey',
+        proGatingDeferred: true,
+        onPick: function (pickedMode) {
+          showPasskeyEphemeralLoginScreen({
+            storageMode: pickedMode,
+            onBack: _reopenPasskeyChooser
+          });
+        },
+        onBack: function () { showSyncCodeRestoreScreen(); }
+      });
+    }
     if (mode === null) {
-      // proGatingDeferred: PRO check przełożony do post-unlock (patrz showQRLoginScreen).
       if (typeof showLoginModeChooser === 'function') {
-        showLoginModeChooser({
-          context: 'passkey',
-          proGatingDeferred: true,
-          onPick: function (pickedMode) { showPasskeyEphemeralLoginScreen({ storageMode: pickedMode }); },
-          onBack: function () { showSyncCodeRestoreScreen(); }
-        });
+        _reopenPasskeyChooser();
         return;
       }
       // Defensywny fallback: ephemeral (najbezpieczniej).
@@ -4748,12 +4760,7 @@
     if (persistMode && typeof V.unlockWithPasskeyAndPersist !== 'function') {
       // Vault za stary — pokaż chooser z hintem.
       if (typeof showLoginModeChooser === 'function') {
-        showLoginModeChooser({
-          context: 'passkey',
-          proGatingDeferred: true,
-          onPick: function (pickedMode) { showPasskeyEphemeralLoginScreen({ storageMode: pickedMode }); },
-          onBack: function () { showSyncCodeRestoreScreen(); }
-        });
+        _reopenPasskeyChooser();
         return;
       }
     }
@@ -4851,14 +4858,14 @@
     const back = el('button', {
       class: 'vilda-auth-btn vilda-auth-btn-ghost', type: 'button', text: '← Wróć',
       onclick: function () {
-        // Wracamy do chooser (nie do syncCodeRestore), by user mógł zmienić tryb.
-        if (typeof showLoginModeChooser === 'function') {
-          showLoginModeChooser({
-            context: 'passkey',
-            proGatingDeferred: true,
-            onPick: function (pickedMode) { showPasskeyEphemeralLoginScreen({ storageMode: pickedMode }); },
-            onBack: function () { showSyncCodeRestoreScreen(); }
-          });
+        // Decyzja gdzie wraca „Wróć":
+        //   • opts.onBack jeśli podane (np. chooser przekazuje powrót do siebie)
+        //   • inaczej → entry-screen (showSyncCodeRestoreScreen)
+        // Wcześniej zawsze pokazywaliśmy chooser, co było mylące dla user'a który
+        // kliknął „Zaloguj jednorazowo" w entry-screen (omijając chooser): „Wróć"
+        // powinno wrócić tam skąd przyszedł, czyli do entry-screen.
+        if (typeof opts.onBack === 'function') {
+          opts.onBack();
         } else {
           showSyncCodeRestoreScreen();
         }
