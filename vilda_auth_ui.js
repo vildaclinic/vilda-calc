@@ -851,7 +851,7 @@
     const title = el('h2', { class: 'vilda-auth-title', text: 'Nowe konto' });
     const sub = el('p', {
       class: 'vilda-auth-subtitle',
-      text: 'Podaj swoje imię (np. „dr Kowalska”) i ustal hasło dostępu. Hasło min. 8 znaków, im dłuższe — tym lepiej.'
+      text: 'Podaj swoje imię (np. „dr Kowalska”) i ustal hasło dostępu. Hasło min. 12 znaków, co najmniej 3 z 4 typów: małe i wielkie litery, cyfry, znaki specjalne.'
     });
 
     const labelInput = el('input', {
@@ -1580,7 +1580,7 @@
       placeholder: 'XXXX-XXXX-XXXX-XXXX-XXXX-XXXX',
       autocomplete: 'off'
     });
-    const pw1 = el('input', { type: 'password', class: 'vilda-auth-input', placeholder: 'Nowe hasło (min. 8 znaków)' });
+    const pw1 = el('input', { type: 'password', class: 'vilda-auth-input', placeholder: 'Nowe hasło (min. 12 znaków, 3 z 4 typów)' });
     const pw2 = el('input', { type: 'password', class: 'vilda-auth-input', placeholder: 'Powtórz nowe hasło' });
     const errBox = el('div', { class: 'vilda-auth-error' });
     errBox.style.display = 'none';
@@ -4917,7 +4917,7 @@
     const pwIn = persistMode ? el('input', {
       type: 'password',
       class: 'vilda-auth-input',
-      placeholder: 'Nowe hasło (min. 8 znaków)',
+      placeholder: 'Nowe hasło (min. 12 znaków, 3 z 4 typów)',
       autocomplete: 'new-password'
     }) : null;
     const pwHint = persistMode ? el('p', {
