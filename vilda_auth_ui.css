@@ -170,7 +170,15 @@
 }
 
 /* --- POLA FORMULARZY --- */
-.vilda-auth-input {
+/* UWAGA na specyficzność: w style.css jest globalna reguła
+     input[type="number"], input[type="text"], select { padding: .45rem .65rem; border: 1px ... }
+   z selektorem `input[type="text"]` (specyficzność 0,1,1) — wyższa niż nasza
+   klasa (0,1,0). Bez podniesienia specyficzności po toggle „pokaż hasło"
+   (type='password' → type='text') pole hasła traciło padding 14px i kurczyło
+   się o ~14px. Dlatego reguła targetuje `input.vilda-auth-input` (0,1,1)
+   — pasuje specyfikacyjnie i wygrywa source-order (ten CSS ładowany po style.css). */
+.vilda-auth-input,
+input.vilda-auth-input {
   width: 100%;
   box-sizing: border-box;
   padding: 14px 16px;
@@ -179,9 +187,8 @@
   background: #ffffff;
   font-size: 16px;
   /* Stała line-height — niektóre przeglądarki dają type="password" i type="text"
-     różne domyślne line-height (różnica ~2-3px). Po kliknięciu „pokaż hasło"
-     pole zmieniało wysokość. Explicit 1.5 = wysokość input zawsze 51px
-     (14*2 + 1.5*2 + 16*1.5 = 28 + 3 + 24 = 55px box-sizing:border-box). */
+     różne domyślne line-height. Explicit 1.5 + powyższy padding = wysokość
+     box-sizing:border-box ≈ 55px (28 padding + 3 border + 24 content). */
   line-height: 1.5;
   font-family: inherit;
   color: #08202C;
