@@ -2973,6 +2973,29 @@
     });
   }
 
+  // ============ EVENT onPasskeyChanged (Substep D) ============
+  // Informuje po registerPasskey/removePasskey/registerPasskeyForRoaming, żeby
+  // VildaSyncIntegration wypushowała stan (passkey metadata + tombstones) do
+  // innych urządzeń. Bez tego eventu sync push nigdy nie był triggerowany po
+  // operacjach passkey — co powodowało że Mac registrował passkey lokalnie,
+  // ale iPhone w cloud-only nigdy nie dostawał update'u.
+  const onPasskeyChangedListeners = [];
+  function onPasskeyChanged(fn) {
+    if (typeof fn === 'function') onPasskeyChangedListeners.push(fn);
+  }
+  function notifyPasskeyChanged(info) {
+    onPasskeyChangedListeners.forEach(function (fn) {
+      try { fn(info); } catch (_) { /* listener errors swallowed */ }
+    });
+    // Best-effort direct push dla scenariuszy gdzie integration nie jest aktywna
+    // (np. ephemeral, brak sync_integration na podstronie). Cicho ignorujemy błąd.
+    try {
+      if (global.VildaSync && typeof global.VildaSync.syncPush === 'function') {
+        Promise.resolve(global.VildaSync.syncPush()).catch(function () {});
+      }
+    } catch (_) { void _; }
+  }
+
   // ============ AUTO-LOCK PO BEZCZYNNOŚCI ============
   function startIdleTimer(ms) {
     if (typeof ms === 'number' && ms > 0) idleTimeoutMs = ms;
@@ -3102,6 +3125,8 @@
     await getAdapter().putUserMeta(userId, { ...meta, passkeys });
     // D.1: aktualizuj passkeyCount w registry → user-picker pokaże badge "🔐 Touch ID".
     await _syncPasskeyCount(userId);
+    // Substep D fix: trigger sync push tak żeby inne urządzenia dostały passkey metadata.
+    notifyPasskeyChanged({ action: 'register', credentialId: credentialId });
 
     return { credentialId, deviceLabel: label };
   }
@@ -3198,6 +3223,8 @@
     await getAdapter().putUserMeta(userId, { ...meta, passkeys });
     // D.1: aktualizuj passkeyCount w registry → user-picker pokaże badge "🔐 Touch ID".
     await _syncPasskeyCount(userId);
+    // Substep D fix: trigger sync push.
+    notifyPasskeyChanged({ action: 'register-roaming', credentialId: credentialId });
 
     // 4. Upload koperty do escrow — Bearer authToken (dowód posiadania master key).
     let sync;
@@ -3685,7 +3712,15 @@
     return meta.passkeys.map(p => ({
       credentialId: p.credentialId,
       deviceLabel:  p.deviceLabel,
-      createdAtISO: p.createdAtISO
+      createdAtISO: p.createdAtISO,
+      // Substep D — dodatkowe pola żeby UI rozróżniało rodzaje passkey.
+      // roaming: cross-device (telefon przez QR), nie platform.
+      roaming:      p.roaming === true,
+      // isRemote: brak encryptedMasterByPasskey = passkey z innego device
+      // (przyszedł przez sync metadata, nie ma crypto material żeby tu odblokować).
+      // PRZED tym fixem UI sprawdzał `!k.encryptedMasterByPasskey`, ale to pole
+      // było stripowane TUTAJ → wszystko wyglądało jak remote (bug).
+      isRemote:     !p.encryptedMasterByPasskey
     }));
   }
 
@@ -3712,6 +3747,8 @@
     await getAdapter().putUserMeta(userId, { ...meta, passkeys: filtered, passkeyTombstones: existingTombs });
     // D.1: aktualizuj passkeyCount w registry — decrement po usunięciu passkey.
     await _syncPasskeyCount(userId);
+    // Substep D fix: trigger sync push tak żeby tombstone trafił do innych urządzeń.
+    notifyPasskeyChanged({ action: 'remove', credentialId: credentialId });
   }
 
   // ============ EKSPORT API ============
@@ -4268,6 +4305,7 @@
     shortHashOfPatientId: shortHashOfPatientId,
     onPatientSaved: onPatientSaved,
     onPatientDeleted: onPatientDeleted,
+    onPasskeyChanged: onPasskeyChanged,
     startIdleTimer: startIdleTimer,
     stopIdleTimer: stopIdleTimer,
     resetIdleTimer: resetIdleTimer,
