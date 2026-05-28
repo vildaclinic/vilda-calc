@@ -1180,7 +1180,12 @@
       label: label,
       storageMode: storageMode,
       createdAtISO: nowISO,
-      lastLoginAtISO: nowISO
+      lastLoginAtISO: nowISO,
+      // passkeyCount: liczba zarejestrowanych passkeys (Touch ID/Face ID/Windows Hello).
+      // Updatowany przez _syncPasskeyCount() w registerPasskey/registerPasskeyForRoaming/removePasskey.
+      // Używany przez user-picker w UI do pokazania badge'a „🔐 Touch ID" przy kontach z biometrią.
+      // Nie wpływa na flow auth — to tylko hint widoczności dla usera.
+      passkeyCount: 0
     });
 
     masterKey = await C.importMasterKeyFromBytes(masterBytes);
@@ -2884,6 +2889,28 @@
   // ============ WEBAUTHN PASSKEYS ============
 
   /**
+   * Synchronizuje pole `passkeyCount` w registry z aktualną liczbą passkeys w meta.
+   * Wołane po każdej operacji modyfikującej meta.passkeys (register/registerRoaming/remove).
+   * Failure mode: log error i kontynuuj — passkey-flow nie powinno się sypać przez
+   * niepowodzenie aktualizacji liczników widoczności w UI.
+   *
+   * @param {string} userId
+   * @returns {Promise<number>} faktyczna liczba passkeys po sync (0 jeśli brak meta)
+   */
+  async function _syncPasskeyCount(userId) {
+    try {
+      const meta = await getAdapter().getUserMeta(userId);
+      const count = (meta && Array.isArray(meta.passkeys)) ? meta.passkeys.length : 0;
+      await getAdapter().updateRegistryEntry(userId, { passkeyCount: count });
+      return count;
+    } catch (e) {
+      try { console.warn('[vault] _syncPasskeyCount failed for ' + userId + ':', e && e.message); } catch (_) {}
+      return -1;
+    }
+  }
+
+
+  /**
    * Czy urządzenie i przeglądarka obsługują WebAuthn PRF?
    * Deleguje do VildaCrypto.isPrfSupported().
    */
@@ -2908,10 +2935,36 @@
     const rpId = window.location.hostname || 'localhost';
     const label = deviceLabel || C.generateDeviceLabel();
 
-    // 1. Rejestracja passkey + odbiór PRF secret
-    const { credentialId, prfSecretBytes } = await C.createPasskeyAndGetPrfSecret(
-      userId, rpId, currentUserLabel
-    );
+    // Substep B: anti-duplicate. Pobierz istniejące credentialIds tego usera —
+    // browser z excludeCredentials zapobiegnie podwójnej rejestracji na tym
+    // samym authenticatorze (zwraca InvalidStateError). Cloud-only sync może
+    // też pomóc cross-device.
+    const existingMetaForExclude = await getAdapter().getUserMeta(userId);
+    const existingCredIds = (existingMetaForExclude && Array.isArray(existingMetaForExclude.passkeys))
+      ? existingMetaForExclude.passkeys.map(function (p) { return p.credentialId; }).filter(Boolean)
+      : [];
+
+    // 1. Rejestracja passkey + odbiór PRF secret.
+    // deviceLabel (label) jest też przekazywane do crypto — staje się częścią
+    // user.name w WebAuthn → widoczne jako "dr Maciej · MacBook" w Apple Passwords
+    // / Google Password Manager. Bez tego, klucze z różnych urządzeń wyglądały
+    // identycznie (po prostu "dr Maciej") i user nie wiedział który jest który.
+    let credentialId, prfSecretBytes;
+    try {
+      ({ credentialId, prfSecretBytes } = await C.createPasskeyAndGetPrfSecret(
+        userId, rpId, currentUserLabel, label, existingCredIds
+      ));
+    } catch (e) {
+      // InvalidStateError — passkey już istnieje na tym authenticatorze (excludeCredentials hit).
+      // Mapujemy na user-friendly komunikat z code, żeby UI w Ustawieniach mogło to ładnie
+      // wyświetlić zamiast generycznego "failed to create passkey".
+      if (e && e.name === 'InvalidStateError') {
+        const err = new Error('Na tym urządzeniu jest już zarejestrowana biometria dla tego konta.');
+        err.code = 'PASSKEY_ALREADY_EXISTS';
+        throw err;
+      }
+      throw e;
+    }
 
     // 2. Klucz wrappujący z PRF secret (HKDF-SHA256)
     const wrappingKey = await C.deriveKeyFromPrfSecret(prfSecretBytes);
@@ -2929,6 +2982,8 @@
       encryptedMasterByPasskey: encryptedMasterByPasskey
     });
     await getAdapter().putUserMeta(userId, { ...meta, passkeys });
+    // D.1: aktualizuj passkeyCount w registry → user-picker pokaże badge "🔐 Touch ID".
+    await _syncPasskeyCount(userId);
 
     return { credentialId, deviceLabel: label };
   }
@@ -2966,9 +3021,29 @@
     const rpId = (typeof window !== 'undefined' && window.location && window.location.hostname) || 'localhost';
     const label = deviceLabel || C.generateDeviceLabel();
 
+    // Substep B: anti-duplicate dla roaming. Tak samo jak w registerPasskey,
+    // listujemy istniejące credentialIds przed wywołaniem crypto.
+    const existingMetaForRoamExclude = await getAdapter().getUserMeta(userId);
+    const existingRoamCredIds = (existingMetaForRoamExclude && Array.isArray(existingMetaForRoamExclude.passkeys))
+      ? existingMetaForRoamExclude.passkeys.map(function (p) { return p.credentialId; }).filter(Boolean)
+      : [];
+
     // 1. Passkey roaming (bez wymuszania platform) + klucz publiczny.
-    const { credentialId, publicKeyRawB64u, prfInputB64u } =
-      await C.createRoamingPasskeyAndGetPrfSecret(userId, rpId, currentUserLabel);
+    // deviceLabel jest też przekazywane do crypto — Substep A: user.name w WebAuthn
+    // staje się "dr Maciej · iPhone" zamiast tylko "dr Maciej", co rozróżnia roaming
+    // klucze (np. telefonowe) od platform keys (Mac Touch ID) w OS password manager.
+    let credentialId, publicKeyRawB64u, prfInputB64u;
+    try {
+      ({ credentialId, publicKeyRawB64u, prfInputB64u } =
+        await C.createRoamingPasskeyAndGetPrfSecret(userId, rpId, currentUserLabel, label, existingRoamCredIds));
+    } catch (e) {
+      if (e && e.name === 'InvalidStateError') {
+        const err = new Error('Na tym urządzeniu jest już zarejestrowana biometria dla tego konta.');
+        err.code = 'PASSKEY_ALREADY_EXISTS';
+        throw err;
+      }
+      throw e;
+    }
 
     // 2. Sekret PRF pobierz przez get() (NIE z create) — PRF z create bywa niespójny
     //    z PRF z get() na części authenticatorów, co powodowało „nie udało się
@@ -3003,6 +3078,8 @@
       roaming:                  true
     });
     await getAdapter().putUserMeta(userId, { ...meta, passkeys });
+    // D.1: aktualizuj passkeyCount w registry → user-picker pokaże badge "🔐 Touch ID".
+    await _syncPasskeyCount(userId);
 
     // 4. Upload koperty do escrow — Bearer authToken (dowód posiadania master key).
     let sync;
@@ -3121,6 +3198,92 @@
     const label = (regEntry && regEntry.label) || 'Użytkownik';
     await adoptMasterBytes(masterBytes, userId, label);
     await getAdapter().updateRegistryEntry(userId, { lastLoginAtISO: new Date().toISOString() });
+  }
+
+  /**
+   * D.3 — Odblokuj vault przez conditional mediation (autofill UI dla passkey).
+   *
+   * Różnica względem unlockWithPasskey:
+   *   • caller NIE zna upfront userId — discovers go z userHandle w asercji
+   *   • przeglądarka pokazuje passkey w autofill UI (lub OS-level prompt) zamiast modal
+   *   • allowCredentials puste, mediation:'conditional'
+   *
+   * Flow:
+   *   1. crypto.getConditionalPasskeyAssertion() — wisi do user-pick (lub abort)
+   *   2. Dekoduj userHandleBytes → userId (string utf-8)
+   *   3. Znajdź meta tego usera, znajdź pasujący wpis passkey
+   *   4. Odszyfruj master key sekretem PRF
+   *   5. adoptMasterBytes + update lastLoginAtISO (jak unlockWithPasskey)
+   *
+   * Zwraca null gdy:
+   *   • conditional UI niewspierane (Chrome < 108, Safari < 16, itd.)
+   *   • signal abortowany przed userem
+   *   • user nie wybrał (zamknął autofill bez akcji)
+   *
+   * @param {AbortSignal} [signal]
+   * @returns {Promise<{userId: string, label: string} | null>}
+   */
+  async function unlockWithPasskeyConditional(signal) {
+    const C = getCrypto();
+    const rpId = (typeof window !== 'undefined' && window.location && window.location.hostname) || 'localhost';
+
+    // 1. Czekaj na user pick z autofill UI (lub null gdy brak wsparcia / abort)
+    const assertion = await C.getConditionalPasskeyAssertion(rpId, signal || null);
+    if (!assertion) return null;
+
+    // Guard: race condition jak w unlockWithPasskey — abort mógł nadejść między
+    // resolve credentials.get() a kontynuacją kodu.
+    if (signal && signal.aborted) {
+      const err = new Error('AbortError: conditional passkey aborted');
+      err.name = 'AbortError';
+      throw err;
+    }
+
+    // 2. userHandle (= userId zapisany w create) → string
+    let userId;
+    try {
+      userId = new TextDecoder().decode(assertion.userHandleBytes);
+    } catch (_) {
+      throw new Error('Conditional UI: nie udało się odkodować userHandle z asercji.');
+    }
+    if (!userId || typeof userId !== 'string') {
+      throw new Error('Conditional UI: pusty lub niepoprawny userHandle w asercji.');
+    }
+
+    // 3. Pobierz meta i znajdź pasujący wpis passkey
+    const meta = await getAdapter().getUserMeta(userId);
+    if (!meta || !Array.isArray(meta.passkeys) || !meta.passkeys.length) {
+      throw new Error('Konto wybrane przez autofill nie istnieje lub nie ma zarejestrowanej biometrii.');
+    }
+    const entry = meta.passkeys.find(p => p.credentialId === assertion.credentialId);
+    if (!entry) {
+      throw new Error('Wybrany passkey nie pasuje do żadnego wpisu w lokalnym koncie.');
+    }
+
+    // 4. Odszyfruj master key tym sekretem PRF
+    const wrappingKey = await C.deriveKeyFromPrfSecret(assertion.prfSecretBytes);
+    let masterBytes;
+    try {
+      masterBytes = await C.decryptBytes(
+        wrappingKey,
+        entry.encryptedMasterByPasskey.iv,
+        entry.encryptedMasterByPasskey.data
+      );
+    } catch (_) {
+      const wv = (entry && typeof entry.wrapVersion === 'number') ? entry.wrapVersion : 1;
+      const err = new Error('Nie udało się odblokować konta biometrią (conditional UI).');
+      err.code = 'PASSKEY_CONDITIONAL_DECRYPT_FAILED';
+      err.wrapVersion = wv;
+      throw err;
+    }
+
+    // 5. Adopcja master + update lastLoginAtISO (identycznie jak unlockWithPasskey)
+    const regEntry = await getAdapter().getRegistryEntry(userId);
+    const label = (regEntry && regEntry.label) || 'Użytkownik';
+    await adoptMasterBytes(masterBytes, userId, label);
+    await getAdapter().updateRegistryEntry(userId, { lastLoginAtISO: new Date().toISOString() });
+
+    return { userId: userId, label: label };
   }
 
   // Pobranie danych z chmury do RAM po zalogowaniu efemerycznym. Odporny na brak
@@ -3419,6 +3582,8 @@
     if (!meta || !Array.isArray(meta.passkeys)) return;
     const filtered = meta.passkeys.filter(p => p.credentialId !== credentialId);
     await getAdapter().putUserMeta(userId, { ...meta, passkeys: filtered });
+    // D.1: aktualizuj passkeyCount w registry — decrement po usunięciu passkey.
+    await _syncPasskeyCount(userId);
   }
 
   // ============ EKSPORT API ============
@@ -3995,6 +4160,7 @@
     registerPasskey: registerPasskey,
     registerPasskeyForRoaming: registerPasskeyForRoaming,
     unlockWithPasskey: unlockWithPasskey,
+    unlockWithPasskeyConditional: unlockWithPasskeyConditional,
     unlockWithPasskeyEphemeral: unlockWithPasskeyEphemeral,
     unlockWithPasskeyAndPersist: unlockWithPasskeyAndPersist,
     completeQRLoginEphemeral: completeQRLoginEphemeral,

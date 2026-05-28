@@ -143,11 +143,11 @@ html.vilda-pro-active .pro-sync-note {
 <script src="vilda_persistence_adapter.js?v=12"></script>
 <script src="vilda_session_bridge.js?v=1"></script>
 <script src="vilda_init.js?v=4"></script>
-<script src="vilda_crypto.js?v=12"></script>
-<script src="vilda_vault.js?v=36"></script>
+<script src="vilda_crypto.js?v=14"></script>
+<script src="vilda_vault.js?v=38"></script>
 <script src="vilda_sync.js?v=6"></script>
 <script src="vilda_sync_integration.js?v=5"></script>
-<script src="vilda_auth_ui.js?v=102"></script>
+<script src="vilda_auth_ui.js?v=103"></script>
 <script src="vilda_data_safety_explainer.js?v=5"></script>
 <script src="vilda_crypto_strength_explainer.js?v=6"></script>
 <script src="vilda_pro_access.js?v=2"></script>
@@ -1137,9 +1137,13 @@ html.vilda-pro-active .pro-sync-note {
                       <h3 class="settings-control-title">Logowanie biometryczne</h3>
                       <span class="settings-tag">Biometria</span>
                     </div>
-                    <p class="settings-control-desc">Face ID, Touch ID lub odcisk palca — zamiast hasła. Każde urządzenie rejestrujesz osobno.</p>
+                    <p class="settings-control-desc">
+                      Face ID, Touch ID lub odcisk palca — zamiast hasła.
+                      <strong>Każde urządzenie ma osobny klucz</strong> dla bezpieczeństwa.
+                      Jeśli zgubisz urządzenie, usuń je z listy poniżej żeby odebrać mu dostęp.
+                    </p>
                     <div id="passkeyList" style="margin-bottom:12px;">
-                      <!-- wypełniany przez JS -->
+                      <!-- wypełniany przez JS — lista urządzeń z biometrią + przyciski Usuń -->
                     </div>
                     <div class="settings-card-toggle-row" style="gap:10px; flex-wrap:wrap;">
                       <button type="button" id="addPasskeyBtn" class="vilda-auth-btn vilda-auth-btn-biometric vilda-auth-btn-small" style="display:none;">
@@ -3406,17 +3410,36 @@ html.vilda-pro-active .pro-sync-note {
             ? new Date(k.createdAtISO).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' })
             : '—';
           const row = document.createElement('div');
-          row.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 0; border-bottom:1px solid rgba(0,131,141,0.1);';
+          row.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px 0; border-bottom:1px solid rgba(0,131,141,0.1);';
           const info = document.createElement('div');
-          info.innerHTML = '<strong style="font-size:0.9rem;">' + escapeHtml(k.deviceLabel) + '</strong>'
-            + '<br><span style="font-size:0.78rem; color:#666;">dodano: ' + date + '</span>';
+          info.style.cssText = 'min-width:0; flex:1;';
+          // Substep C: roaming badge — rozróżnia passkey telefonowe (cross-device hybrid)
+          // od platform keys (Touch ID/Face ID/Windows Hello). Roaming = passkey który
+          // można użyć z telefonu na obcym komputerze przez QR.
+          const isRoaming = k.roaming === true;
+          const roamingBadge = isRoaming
+            ? '<span style="display:inline-block;margin-left:6px;padding:1px 7px;font-size:0.68rem;font-weight:600;color:#854f0b;background:#fef3e2;border-radius:999px;vertical-align:1px;">📱 Cross-device</span>'
+            : '';
+          info.innerHTML =
+            '<strong style="font-size:0.9rem;color:#0f2b33;">' + escapeHtml(k.deviceLabel) + '</strong>' + roamingBadge +
+            '<br><span style="font-size:0.78rem; color:#5b6672;">dodano: ' + date + '</span>';
           const delBtn = document.createElement('button');
           delBtn.type = 'button';
           delBtn.className = 'vilda-auth-btn vilda-auth-btn-small';
           delBtn.style.cssText = 'background:#fef2f3; color:#b00020; border-color:#b00020; min-width:64px; flex-shrink:0;';
           delBtn.textContent = 'Usuń';
           delBtn.addEventListener('click', async function () {
-            if (!confirm('Usunąć logowanie biometrią „' + k.deviceLabel + '"? Biometryczne logowanie z tego urządzenia przestanie działać.')) return;
+            // Substep C: ostrzeżenie dla ostatniego passkey — bez tego user może
+            // odruchowo usunąć ostatnią biometrię i potem dziwić się że nie ma
+            // przycisku Touch ID przy logowaniu. Pokazujemy explicit stronger warning.
+            const isLastKey = keys.length === 1;
+            const confirmMsg = isLastKey
+              ? 'To Twoja OSTATNIA biometria dla tego konta („' + k.deviceLabel + '"). ' +
+                'Po usunięciu będziesz logować się tylko hasłem na tym urządzeniu — ' +
+                'bez Touch ID / Face ID. Na pewno usunąć?'
+              : 'Usunąć logowanie biometrią „' + k.deviceLabel + '"? ' +
+                'Biometryczne logowanie z tego urządzenia przestanie działać.';
+            if (!confirm(confirmMsg)) return;
             delBtn.disabled = true;
             try {
               await V.removePasskey(user.userId, k.credentialId);

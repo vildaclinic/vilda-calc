@@ -522,11 +522,45 @@
    * @param {string} [userName] - wyświetlana nazwa użytkownika (opcjonalna)
    * @returns {Promise<{ credentialId: string, prfSecretBytes: Uint8Array }>}
    */
-  async function createPasskeyAndGetPrfSecret(userId, rpId, userName) {
+  /**
+   * Tworzy nowy passkey + zwraca PRF secret.
+   *
+   * @param {string} userId
+   * @param {string} rpId
+   * @param {string} userName - imię użytkownika (np. "dr Maciej")
+   * @param {string} [deviceLabel] - etykieta urządzenia (np. "MacBook · Safari 18").
+   *   Gdy podana, użyte do złożenia user.name = "dr Maciej · MacBook · Safari 18"
+   *   — Apple Passwords, Google Password Manager itp. pokażą tę nazwę. User
+   *   rozróżni klucze z różnych urządzeń (Mac vs iPhone) zamiast widzieć N×
+   *   identycznych wpisów "dr Maciej".
+   * @param {string[]} [existingCredentialIds] - lista base64url credentialIds
+   *   z meta.passkeys[]. Browser z excludeCredentials sprawdza czy któryś
+   *   istnieje na current authenticator — jeśli tak, odrzuca create() z
+   *   InvalidStateError. Zapobiega podwójnym rejestracjom dla tego samego
+   *   konta na tym samym device (Mac próbuje 2x). W cloud-only mode meta
+   *   sync z innego device też może pomóc cross-device (jeśli iCloud zsync'ował
+   *   passkey, iPhone widzi go jako istniejący).
+   */
+  async function createPasskeyAndGetPrfSecret(userId, rpId, userName, deviceLabel, existingCredentialIds) {
     // challenge musi być losowe — nie jest weryfikowane serwerowo, ale WebAuthn tego wymaga
     const challenge = crypto.getRandomValues(new Uint8Array(32));
     // userId w WebAuthn to Uint8Array
     const userIdBytes = new TextEncoder().encode(userId);
+
+    // Złożona nazwa: account + device. WebAuthn name max ~64 znaki — typowy
+    // "dr Maciej · MacBook · Safari 18" mieści się z zapasem (~30 znaków).
+    const baseName = userName || userId;
+    const composedName = deviceLabel ? (baseName + ' · ' + deviceLabel) : baseName;
+    const composedDisplay = deviceLabel ? (baseName + ' (' + deviceLabel + ')') : baseName;
+
+    // Substep B: anti-duplicate via excludeCredentials. Konwertujemy listę
+    // credentialIds (base64url string) na obiekty WebAuthn { type, id: ArrayBuffer }.
+    // Filtrujemy puste/falsy, ograniczamy do max 20 elementów (browser może odrzucić
+    // zbyt długą listę). Gdy lista pusta → empty array (równoważne brakowi pola).
+    const excludeCredentials = (Array.isArray(existingCredentialIds) ? existingCredentialIds : [])
+      .filter(function (id) { return typeof id === 'string' && id.length > 0; })
+      .slice(0, 20)
+      .map(function (id) { return { type: 'public-key', id: base64urlToBytes(id) }; });
 
     const cred = await navigator.credentials.create({
       publicKey: {
@@ -536,8 +570,8 @@
         },
         user: {
           id: userIdBytes,
-          name: userName || userId,
-          displayName: userName || userId
+          name: composedName,
+          displayName: composedDisplay
         },
         pubKeyCredParams: [
           { type: 'public-key', alg: -7  },   // ES256 (preferowany)
@@ -551,6 +585,7 @@
         },
         challenge: challenge,
         timeout: 60000,
+        excludeCredentials: excludeCredentials,
         extensions: {
           prf: {
             eval: { first: PRF_INPUT }
@@ -596,14 +631,27 @@
    *
    * @returns {Promise<{ credentialId, prfSecretBytes, publicKeyRawB64u, prfInputB64u }>}
    */
-  async function createRoamingPasskeyAndGetPrfSecret(userId, rpId, userName) {
+  async function createRoamingPasskeyAndGetPrfSecret(userId, rpId, userName, deviceLabel, existingCredentialIds) {
     const challenge = crypto.getRandomValues(new Uint8Array(32));
     const userIdBytes = new TextEncoder().encode(userId);
+
+    // Identyczna konwencja jak w createPasskeyAndGetPrfSecret — user.name zawiera
+    // device label żeby Apple Passwords / Google Password Manager rozróżniały
+    // klucze z różnych urządzeń (Mac vs iPhone vs iPad).
+    const baseName = userName || userId;
+    const composedName = deviceLabel ? (baseName + ' · ' + deviceLabel) : baseName;
+    const composedDisplay = deviceLabel ? (baseName + ' (' + deviceLabel + ')') : baseName;
+
+    // Substep B: anti-duplicate — identyczna logika jak w createPasskeyAndGetPrfSecret.
+    const excludeCredentials = (Array.isArray(existingCredentialIds) ? existingCredentialIds : [])
+      .filter(function (id) { return typeof id === 'string' && id.length > 0; })
+      .slice(0, 20)
+      .map(function (id) { return { type: 'public-key', id: base64urlToBytes(id) }; });
 
     const cred = await navigator.credentials.create({
       publicKey: {
         rp: { name: 'wagaiwzrost.pl', id: rpId },
-        user: { id: userIdBytes, name: userName || userId, displayName: userName || userId },
+        user: { id: userIdBytes, name: composedName, displayName: composedDisplay },
         pubKeyCredParams: [
           { type: 'public-key', alg: -7 }   // tylko ES256 — escrow weryfikuje wyłącznie P-256
         ],
@@ -615,6 +663,7 @@
         },
         challenge: challenge,
         timeout: 60000,
+        excludeCredentials: excludeCredentials,
         extensions: { prf: { eval: { first: PRF_INPUT } } }
       }
     });
@@ -699,6 +748,96 @@
     const prfSecretBytes = new Uint8Array(prfResults.first);
 
     return { credentialId: returnedCredId, prfSecretBytes };
+  }
+
+  /**
+   * Wykrywa wsparcie Conditional UI (autofill UI dla passkey) — WebAuthn Level 3.
+   * Chrome 108+, Safari 16+, Firefox 119+. Bez tego API conditional mediation
+   * po prostu nie pokazuje suggestions w autofill, więc fallback to brak działania
+   * a nie błąd.
+   *
+   * @returns {Promise<boolean>} true gdy przeglądarka wspiera mediation:'conditional'
+   */
+  async function isConditionalMediationSupported() {
+    if (typeof PublicKeyCredential === 'undefined') return false;
+    if (typeof PublicKeyCredential.isConditionalMediationAvailable !== 'function') return false;
+    try {
+      return await PublicKeyCredential.isConditionalMediationAvailable();
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /**
+   * Conditional mediation passkey assertion z PRF.
+   *
+   * Wywołanie navigator.credentials.get z mediation:'conditional' — przeglądarka
+   * NIE pokazuje modalu od razu. Promise wisi do momentu gdy user kliknie pole
+   * input z autocomplete="*webauthn*" i wybierze passkey z autofill suggestions
+   * (lub QuickType na iOS, OS-level prompt na macOS).
+   *
+   * Zwraca: credentialId + PRF secret + userHandle (= userId zapisany podczas
+   * createPasskeyAndGetPrfSecret). userHandle pozwala vault'owi zidentyfikować
+   * które konto user wybrał z autofill — bez wcześniejszej wiedzy w UI.
+   *
+   * UWAGA: Tylko jeden navigator.credentials.get() per origin może być aktywny.
+   * Caller MUSI abortować pending conditional gdy chce uruchomić full passkey
+   * dialog (np. ręczny klik biometrii) — inaczej drugi get() zwróci NotAllowedError.
+   *
+   * @param {string} rpId
+   * @param {AbortSignal} [signal] - WYMAGANE w praktyce do cleanup'u
+   * @returns {Promise<{credentialId: string, prfSecretBytes: Uint8Array, userHandleBytes: Uint8Array} | null>}
+   *          null gdy conditional UI niewspierane lub credentials.get zwrócił null
+   */
+  async function getConditionalPasskeyAssertion(rpId, signal) {
+    // Feature detection — fallback do null gdy brak wsparcia (caller decyduje co dalej)
+    const supported = await isConditionalMediationSupported();
+    if (!supported) return null;
+
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    const requestOptions = {
+      publicKey: {
+        rpId: rpId,
+        challenge: challenge,
+        // BEZ timeout — conditional mediation wisi do user action lub abort.
+        // Brak userVerification:'required' bo conditional UI często używa
+        // 'preferred' (system decides) — 'required' może blokować autofill suggestion.
+        userVerification: 'preferred',
+        allowCredentials: [], // discoverable — system pokazuje passkey z listy resident credentials
+        extensions: {
+          prf: { eval: { first: PRF_INPUT } }
+        }
+      },
+      mediation: 'conditional'
+    };
+    if (signal && typeof AbortSignal !== 'undefined' && signal instanceof AbortSignal) {
+      requestOptions.signal = signal;
+    }
+
+    let assertion;
+    try {
+      assertion = await navigator.credentials.get(requestOptions);
+    } catch (e) {
+      // AbortError — caller anulował (np. zmiana ekranu). Zwracamy null, nie błąd.
+      if (e && e.name === 'AbortError') return null;
+      throw e;
+    }
+    if (!assertion) return null;
+
+    const prfResults = assertion.getClientExtensionResults()?.prf?.results;
+    if (!prfResults?.first) {
+      throw new Error('Conditional UI: passkey bez PRF — nie da się odblokować vault.');
+    }
+    const userHandle = assertion.response && assertion.response.userHandle;
+    if (!userHandle) {
+      throw new Error('Conditional UI: brak userHandle w asercji — nie da się zidentyfikować konta.');
+    }
+
+    return {
+      credentialId:    bytesToBase64url(new Uint8Array(assertion.rawId)),
+      prfSecretBytes:  new Uint8Array(prfResults.first),
+      userHandleBytes: new Uint8Array(userHandle)
+    };
   }
 
   /**
@@ -1538,6 +1677,8 @@
     getPasskeyAssertionAndPrf: getPasskeyAssertionAndPrf,
     spkiP256ToRawB64u: spkiP256ToRawB64u,
     getPasskeyPrfSecret: getPasskeyPrfSecret,
+    isConditionalMediationSupported: isConditionalMediationSupported,
+    getConditionalPasskeyAssertion: getConditionalPasskeyAssertion,
     deriveKeyFromPrfSecret: deriveKeyFromPrfSecret,
     bytesToBase64url: bytesToBase64url,
     base64urlToBytes: base64urlToBytes,
