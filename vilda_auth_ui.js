@@ -57,6 +57,11 @@
   // Jeden kontroler na raz — abort() przed każdym nowym żądaniem eliminuje problem
   // "stale pending request" który blokuje kolejne wywołania przez do 60s i zamraża UI.
   let _passkeyAbortCtrl = null;
+  // D.3 — Conditional mediation (autofill UI). Osobny AbortController bo conditional
+  // get() wisi w tle (resolves dopiero gdy user wybierze passkey z autofill), a
+  // równolegle może działać auto-trigger D.2 z modal UI. Tylko jedno credentials.get()
+  // może być aktywne per origin — abort conditional PRZED start passkey modal.
+  let _conditionalAbortCtrl = null;
   // Per-sesja zbiór userId dla których auto-passkey już raz nie udał się (anulowanie,
   // cooldown przeglądarki po odrzuceniu Touch ID/Face ID). Chroni przed kolejnymi
   // automatycznymi próbami — użytkownik może kliknąć przycisk biometryczny ręcznie.
@@ -546,6 +551,23 @@
       _passkeyAbortCtrl = null;
       setBusy(false); // natychmiast odblokuj UI — nowy ekran musi być responsywny
     }
+    // D.3 — conditional też dzieli credentials.get() API per-origin. Każdy nowy
+    // passkey request (auto-trigger, ręczny klik) MUSI ubić conditional inaczej
+    // dostaje NotAllowedError. Centralizujemy lifecycle tutaj — wszystkie istniejące
+    // abortPendingPasskey() w showStartupScreen, lock, logout itp. automatycznie
+    // ubijają też conditional bez zmian w call-sites.
+    abortPendingConditional();
+  }
+
+  // D.3 — Abort conditional mediation. Wołane przez abortPendingPasskey (najczęściej).
+  // Bezpośrednie wołanie tylko gdy potrzebujemy ubić conditional bez ubijania passkey
+  // (np. nigdy w obecnym kodzie — zostawione publiczne dla przyszłych use-case).
+  // Bez setBusy(false) — conditional nigdy nie ustawia busy (działa w tle bez UI).
+  function abortPendingConditional() {
+    if (_conditionalAbortCtrl) {
+      try { _conditionalAbortCtrl.abort(); } catch (_) {}
+      _conditionalAbortCtrl = null;
+    }
   }
 
   // ── Overlay "Trwa wylogowywanie..." ──────────────────────────────────────
@@ -764,19 +786,37 @@
     });
 
     const userList = el('div', { class: 'vilda-auth-user-list' });
+    // D.1: badge biometrii. Czytamy passkeyCount z registry (zapisywany przez
+    // vault._syncPasskeyCount po register/remove). Tekst lokalizowany przez
+    // getBiometricLabel() — "Touch ID" / "Face ID / Touch ID" / "Windows Hello".
+    // Ikona kłódki zamknietej (lucide-style) sygnalizuje że konto można odblokować
+    // biometrią — działa jako visual cue zanim user kliknie kafelek.
+    const PASSKEY_BADGE_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-1px;margin-right:4px;"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
     users.forEach(function (u) {
       const lastSeen = u.lastLoginAtISO ? formatRelativeISO(u.lastLoginAtISO) : '';
+      const hasPasskey = typeof u.passkeyCount === 'number' && u.passkeyCount > 0;
+      const infoChildren = [
+        el('div', { class: 'vilda-auth-user-name', text: u.label || 'Konto bez nazwy' })
+      ];
+      if (hasPasskey) {
+        const badge = el('div', { class: 'vilda-auth-user-passkey-badge' });
+        // innerHTML — SVG ikona przed tekstem. textContent wstawiony osobno bo
+        // mieszanka SVG + tekst tylko przez innerHTML zachowa strukturę.
+        badge.innerHTML = PASSKEY_BADGE_SVG + getBiometricLabel();
+        infoChildren.push(badge);
+      }
+      if (lastSeen) {
+        infoChildren.push(el('div', { class: 'vilda-auth-user-meta', text: 'Ostatnio: ' + lastSeen }));
+      }
       const card = el('button', {
         class: 'vilda-auth-user-card',
         type: 'button',
-        title: 'Zaloguj jako ' + u.label,
+        title: 'Zaloguj jako ' + u.label + (hasPasskey ? ' (' + getBiometricLabel() + ' dostępny)' : ''),
+        'data-has-passkey': hasPasskey ? '1' : '0',
         onclick: function () { showLoginForUser(u.userId); }
       }, [
         el('div', { class: 'vilda-auth-user-avatar', text: (u.label || '?').charAt(0).toUpperCase() }),
-        el('div', { class: 'vilda-auth-user-info' }, [
-          el('div', { class: 'vilda-auth-user-name', text: u.label || 'Konto bez nazwy' }),
-          lastSeen ? el('div', { class: 'vilda-auth-user-meta', text: 'Ostatnio: ' + lastSeen }) : null
-        ]),
+        el('div', { class: 'vilda-auth-user-info' }, infoChildren),
         el('span', { class: 'vilda-auth-user-arrow', 'aria-hidden': 'true', text: '›' })
       ]);
       userList.appendChild(card);
@@ -1318,9 +1358,13 @@
     errBox.style.display = 'none';
 
     // ---- Sekcja biometryczna (widoczna tylko gdy mamy passkey) ----
+    // D.4: biometricBtn i cancelledBanner są w outer scope żeby retry-link z
+    // banneru mógł odpalić biometricBtn.click() — reuse pełnej logiki (abort,
+    // setBusy, _passkeyAbortCtrl, error handling) bez duplikacji.
     let biometricSection = null;
+    let biometricBtn = null;
     if (hasBiometric) {
-      const biometricBtn = el('button', {
+      biometricBtn = el('button', {
         class: 'vilda-auth-btn vilda-auth-btn-biometric',
         type: 'button',
         text: '🪪  ' + getBiometricLabel()
@@ -1336,6 +1380,8 @@
           await V.unlockWithPasskey(userId, null, _sig);
           _passkeyAutoFailed.delete(userId); // sukces — resetuj flagę failed
           recordBiometricSuccess(userId); // zeruj persistent counter
+          // D.4: ukryj banner anulowania po sukcesie — stan „anulowałeś" już nieaktualny.
+          if (cancelledBanner) cancelledBanner.style.display = 'none';
           hide();
           startIdleWatch();
         } catch (e) {
@@ -1345,7 +1391,14 @@
             logWarn('biometric-click', e && e.name ? e.name + ': ' + e.message : String(e));
             // Anulowanie ręczne też liczy do adaptive backoff — jeśli user kliknął
             // przycisk biometryczny i sam anulował, jest to sygnał "nie chcę".
-            if (e && e.name === 'NotAllowedError') recordBiometricDismissal(userId);
+            // ADAPTIVE BACKOFF FIX: każdy błąd (poza AbortError = my abortowaliśmy)
+            // liczy się — broader matching dla browser quirks.
+            if (e && e.name !== 'AbortError') {
+              recordBiometricDismissal(userId);
+              // D.4: ręczny klik biometric → anulowano → też pokaż banner z retry.
+              // Spójne UX z auto-trigger cancellation.
+              if (cancelledBanner) cancelledBanner.style.display = '';
+            }
           }
         } finally {
           _passkeyAbortCtrl = null;
@@ -1364,7 +1417,16 @@
     }
 
     // ---- Sekcja hasła (zawsze widoczna) ----
-    const pw = el('input', { type: 'password', class: 'vilda-auth-input', placeholder: 'Hasło' });
+    // D.3: autocomplete "current-password webauthn" — kluczowy tag dla conditional UI.
+    // Przeglądarka (Chrome 108+, Safari 16+, Firefox 119+) pokaże passkey w autofill
+    // dropdown gdy user kliknie pole. Bez tego tagu conditional mediation get() wisi
+    // ale autofill suggestions nie zawierają passkey.
+    const pw = el('input', {
+      type: 'password',
+      class: 'vilda-auth-input',
+      placeholder: 'Hasło',
+      autocomplete: 'current-password webauthn'
+    });
     const submit = el('button', {
       class: 'vilda-auth-btn vilda-auth-btn-primary',
       type: 'button',
@@ -1423,8 +1485,39 @@
       setBiometricAutoOffNoticePending(userId, false);
     }
 
+    // D.4 — banner po anulowaniu auto-trigger biometrii. Ukryty domyślnie,
+    // pokazywany w error handlerze gdy NotAllowedError (user anulował OS modal
+    // Touch ID/Face ID). Zawiera retry-link który ponawia biometric flow przez
+    // biometricBtn.click() — reuse istniejącej logiki bez duplikacji.
+    //
+    // Kolor amber (#fff7ed/#fbd5a8/#854f0b) — ostrzeżenie, nie błąd (nie czerwone,
+    // nie zielone). „Anulowałeś, nic się złego nie stało, masz opcję".
+    let cancelledBanner = null;
+    if (hasBiometric) {
+      cancelledBanner = el('div', { class: 'vilda-auth-banner vilda-auth-banner-cancelled', role: 'status' });
+      cancelledBanner.style.cssText = 'background:#fff7ed;border:1px solid #fbd5a8;color:#854f0b;padding:10px 12px;border-radius:10px;font-size:0.85rem;line-height:1.45;margin:6px 0 4px;display:none;';
+      const cancelMsg = el('span', { text: 'Anulowałeś logowanie ' + getBiometricLabel() + '. Wpisz hasło, albo ' });
+      const retryLink = el('a', {
+        class: 'vilda-auth-link',
+        href: '#',
+        text: 'spróbuj ponownie',
+        onclick: function (ev) {
+          ev.preventDefault();
+          if (cancelledBanner) cancelledBanner.style.display = 'none';
+          // Reuse istniejącej logiki klika biometric (abort, busy, error, success).
+          // biometricBtn.click() jest dostępne dzięki lift do outer scope wyżej.
+          if (biometricBtn) biometricBtn.click();
+        }
+      });
+      const cancelEnd = el('span', { text: '.' });
+      cancelledBanner.appendChild(cancelMsg);
+      cancelledBanner.appendChild(retryLink);
+      cancelledBanner.appendChild(cancelEnd);
+    }
+
     const screenChildren = [title, sub, banner];
     if (autoOffBanner) screenChildren.push(autoOffBanner);
+    if (cancelledBanner) screenChildren.push(cancelledBanner);
     if (biometricSection) screenChildren.push(biometricSection);
     screenChildren.push(pw, errBox,
       el('div', { class: 'vilda-auth-actions' }, [submit]),
@@ -1453,6 +1546,8 @@
           await V.unlockWithPasskey(userId, null, _sig);
           _passkeyAutoFailed.delete(userId); // sukces — resetuj flagę
           recordBiometricSuccess(userId); // zeruj persistent counter
+          // D.4: ukryj banner anulowania po sukcesie auto-trigger.
+          if (cancelledBanner) cancelledBanner.style.display = 'none';
           hide();
           startIdleWatch();
         } catch (e) {
@@ -1463,8 +1558,19 @@
             }
             // Zablokuj auto-trigger na pozostałą część sesji — użytkownik może kliknąć ręcznie
             _passkeyAutoFailed.add(userId);
-            // Adaptive backoff: inkrementuj persistent counter; po N z rzędu wyłączamy auto
-            if (e && e.name === 'NotAllowedError') recordBiometricDismissal(userId);
+            // Adaptive backoff: inkrementuj persistent counter; po N z rzędu wyłączamy auto.
+            // ADAPTIVE BACKOFF FIX: każdy błąd (NotAllowedError, InvalidStateError,
+            // TimeoutError, browser quirks) traktujemy jak dismissal — z punktu widzenia
+            // usera „biometria nie zadziałała, nie chcę żeby się znów pojawiała". Pomijamy
+            // tylko AbortError (= my sami abortowaliśmy via navigation/screen change).
+            if (e && e.name !== 'AbortError') {
+              recordBiometricDismissal(userId);
+              // D.4: pokaż kontekstowy banner z retry-link zamiast cicho focusować pole
+              // hasła. User wie co się stało („Anulowałeś Touch ID") i ma dwie opcje:
+              // wpisać hasło albo kliknąć „spróbuj ponownie" — bez nawigacji do innego
+              // ekranu. Banner ukrywany na success (w biometricBtn click handlerze).
+              if (cancelledBanner) cancelledBanner.style.display = '';
+            }
             setBusy(false);
             try { pw.focus(); } catch (_) {}
           }
@@ -1482,6 +1588,72 @@
       }, 100);
     } else {
       setTimeout(function () { try { pw.focus(); } catch (_) {} }, 30);
+    }
+
+    // D.3 — Conditional mediation w tle.
+    // Niezależne od auto-trigger D.2:
+    //   • auto-trigger pokazuje modal natychmiast (1 user, current account)
+    //   • conditional czeka pasywnie w autofill (każdy passkey z dowolnego konta)
+    // Tylko jeden navigator.credentials.get() per origin może być aktywny — jeśli
+    // auto-trigger D.2 wystartuje, wewnątrz wywołuje abortPendingPasskey() które
+    // ubija też conditional.
+    //
+    // ADAPTIVE BACKOFF FIX: gdy autoTriggerPref='off' (user 2x anulował lub
+    // wyłączył w Ustawieniach), NIE startujemy conditional. User powiedział
+    // „nie chcę biometrii" — autofill też nie powinno podpowiadać passkey.
+    // Inaczej user klika pole hasła, widzi passkey w autofill, klika go odruchowo,
+    // pojawia się modal Touch ID — z punktu widzenia usera „aplikacja nadal się narzuca".
+    if (autoTriggerPref === 'on') {
+      maybeStartConditionalMediation();
+    }
+  }
+
+  /**
+   * D.3 — Start conditional mediation w tle.
+   *
+   * Wywołanie wisi do user-pick z autofill (lub abort z nawigacji). Po sukcesie
+   * vault.unlockWithPasskeyConditional zwraca {userId, label}, my robimy hide()
+   * + startIdleWatch jak inne ścieżki unlock.
+   *
+   * Failure modes (wszystkie ciche — nie pokazujemy błędu, conditional jest UX
+   * dodatkiem, nie zastępuje password input):
+   *   • brak wsparcia conditional UI w przeglądarce → return null
+   *   • signal aborted → return null lub AbortError catch
+   *   • user nie wybrał z autofill → promise wisi do navigation/abort
+   *   • passkey wybrany ale userHandle nie pasuje do żadnego konta → log warning,
+   *     fallback do password input (user wciąż może wpisać hasło)
+   */
+  async function maybeStartConditionalMediation() {
+    const V = getVault();
+    if (!V || typeof V.unlockWithPasskeyConditional !== 'function') return;
+    // Defensywne: AbortController istnieje w przeglądarkach >2018, ale test smoke
+    // (mock VM context) i bardzo stare środowiska mogą go nie mieć — skip.
+    if (typeof AbortController === 'undefined') return;
+
+    abortPendingConditional();
+    _conditionalAbortCtrl = new AbortController();
+    const _sig = _conditionalAbortCtrl.signal;
+
+    try {
+      const result = await V.unlockWithPasskeyConditional(_sig);
+      if (_sig.aborted) return;
+      if (!result) return; // null = niewspierane lub user nie wybrał
+
+      // Sukces — identycznie jak D.2 auto-trigger po unlockWithPasskey
+      _passkeyAutoFailed.delete(result.userId);
+      recordBiometricSuccess(result.userId);
+      hide();
+      startIdleWatch();
+    } catch (e) {
+      if (_sig.aborted) return;
+      if (e && e.name === 'AbortError') return;
+      // Conditional fail jest cichy — nie pokazujemy w UI bo to background autofill.
+      // User wciąż ma password input + biometric button (D.2 auto-trigger osobno).
+      logWarn('conditional-passkey', e && e.message ? e.message : String(e));
+    } finally {
+      if (_conditionalAbortCtrl && _conditionalAbortCtrl.signal === _sig) {
+        _conditionalAbortCtrl = null;
+      }
     }
   }
 
