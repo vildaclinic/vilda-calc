@@ -2624,6 +2624,16 @@
       }
     } catch (_) { /* meta unavailable — wyślij puste */ }
 
+    // Substep E3 — cloud-synced user preferences. Każdy wpis: {value, updatedAtISO}.
+    // mergeSyncPayload na drugim device porówna timestamps i zastosuje LWW.
+    let userPreferences = {};
+    try {
+      const _userMetaForPrefs = await getAdapter().getUserMeta(currentUserId);
+      if (_userMetaForPrefs && typeof _userMetaForPrefs.userPreferences === 'object' && _userMetaForPrefs.userPreferences) {
+        userPreferences = _userMetaForPrefs.userPreferences;
+      }
+    } catch (_) { void _; }
+
     return {
       schemaVersion:      SCHEMA_VERSION,
       userId:             currentUserId,
@@ -2633,7 +2643,9 @@
       tombstones:         Array.isArray(tombstones) ? tombstones : [],
       // Substep D — additive fields, starsze klienty ignorują.
       passkeys:           passkeyMetadata,
-      passkeyTombstones:  passkeyTombstones
+      passkeyTombstones:  passkeyTombstones,
+      // Substep E3 — cloud-synced user preferences.
+      userPreferences:    userPreferences
     };
   }
 
@@ -2881,6 +2893,50 @@
       }
     } catch (_) { /* sync bez passkey merge — zachowanie wsteczne */ }
 
+    // Substep E3 — merge userPreferences z LWW (last-write-wins po timestamp).
+    // Dla każdej zdalnej preferencji nowszej od lokalnej:
+    //   1) Update meta.userPreferences[key] = remote entry
+    //   2) Apply do localStorage cache przez VildaPersistence.applyPreferenceFromCloud
+    //      (zapisuje do real localStorage BEZ triggera onPreferenceWrite callback —
+    //       zapobiega pętli push↔pull)
+    let updatedPreferenceCount = 0;
+    try {
+      const incomingPrefs = (rawData && typeof rawData.userPreferences === 'object' && rawData.userPreferences) || {};
+      const incomingKeys = Object.keys(incomingPrefs);
+      if (incomingKeys.length > 0) {
+        const localMetaForPrefs = await getAdapter().getUserMeta(currentUserId);
+        if (localMetaForPrefs) {
+          const localPrefs = (localMetaForPrefs.userPreferences && typeof localMetaForPrefs.userPreferences === 'object')
+            ? Object.assign({}, localMetaForPrefs.userPreferences)
+            : {};
+          let metaChanged = false;
+          for (let i = 0; i < incomingKeys.length; i++) {
+            const k = incomingKeys[i];
+            const remote = incomingPrefs[k];
+            if (!remote || typeof remote !== 'object' || !remote.updatedAtISO) continue;
+            const local = localPrefs[k];
+            // LWW: zdalna wartość wygrywa gdy lokalnej nie ma LUB zdalna jest nowsza.
+            if (!local || !local.updatedAtISO || remote.updatedAtISO > local.updatedAtISO) {
+              localPrefs[k] = { value: String(remote.value), updatedAtISO: remote.updatedAtISO };
+              metaChanged = true;
+              updatedPreferenceCount++;
+              // Apply do localStorage cache.
+              try {
+                if (global.VildaPersistence && typeof global.VildaPersistence.applyPreferenceFromCloud === 'function') {
+                  global.VildaPersistence.applyPreferenceFromCloud(k, remote.value);
+                }
+              } catch (_) { void _; }
+            }
+          }
+          if (metaChanged) {
+            await getAdapter().putUserMeta(currentUserId, Object.assign({}, localMetaForPrefs, {
+              userPreferences: localPrefs
+            }));
+          }
+        }
+      }
+    } catch (_) { /* sync bez preference merge — zachowanie wsteczne */ }
+
     return {
       mergedPatientCount,
       addedPatientCount,
@@ -2889,7 +2945,9 @@
       deletedPatientCount,
       // Substep D — informacja zwrotna o pasknigerge'u (do diagnostyki UI).
       addedPasskeyCount,
-      removedPasskeyCount
+      removedPasskeyCount,
+      // Substep E3 — informacja zwrotna o preference merge.
+      updatedPreferenceCount
     };
   }
 
@@ -2972,6 +3030,61 @@
       try { fn(info); } catch (_) { /* listener errors swallowed */ }
     });
   }
+
+  // ============ EVENT onPreferenceChanged (Substep E2) ============
+  // Informuje gdy preferencja oznaczona jako 'cloud-synced' zmienia się lokalnie.
+  // VildaSyncIntegration będzie używać tego eventu do debounced syncPush (E3).
+  // Bridge: VildaPersistence.onPreferenceWrite(callback) → notifyPreferenceChanged.
+  // W E2 sam event istnieje, ale syncPush jeszcze nie jest wired — to przyjdzie w E3.
+  const onPreferenceChangedListeners = [];
+  function onPreferenceChanged(fn) {
+    if (typeof fn === 'function') onPreferenceChangedListeners.push(fn);
+  }
+  function notifyPreferenceChanged(info) {
+    onPreferenceChangedListeners.forEach(function (fn) {
+      try { fn(info); } catch (_) { /* listener errors swallowed */ }
+    });
+  }
+
+  // Substep E3 — async helper aktualizujący meta.userPreferences. Wołany przez
+  // bridge przy każdej zmianie cloud-synced preferencji. meta.userPreferences ma
+  // shape: { [key]: { value: string, updatedAtISO: string } } — LWW timestamp
+  // pozwala mergeSyncPayload rozstrzygnąć konflikty między urządzeniami.
+  // No-op gdy vault zablokowany (preference change przed loginem → ignorujemy,
+  // bo nie wiemy któremu userowi przypisać).
+  async function _updatePreferenceMeta(key, value) {
+    try {
+      if (!isUnlocked() || !currentUserId) return null;
+      const meta = await getAdapter().getUserMeta(currentUserId);
+      if (!meta) return null;
+      const userPrefs = (meta && typeof meta.userPreferences === 'object' && meta.userPreferences) || {};
+      const nowISO = new Date().toISOString();
+      userPrefs[key] = { value: String(value), updatedAtISO: nowISO };
+      await getAdapter().putUserMeta(currentUserId, { ...meta, userPreferences: userPrefs });
+      return nowISO;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // Bridge: rejestracja listenera w persistence adapter. Wywoływane lazy żeby
+  // adapter był załadowany. Async kolejność: NAJPIERW update meta, POTEM notify
+  // listeners — gwarantuje że syncPush (debounced w integration) zobaczy świeży
+  // userPreferences z timestamp.
+  (function _wirePersistenceBridge() {
+    try {
+      if (global.VildaPersistence && typeof global.VildaPersistence.onPreferenceWrite === 'function') {
+        global.VildaPersistence.onPreferenceWrite(async function (info) {
+          if (!info || !info.key) return;
+          // 1) Update meta.userPreferences — wymagane PRZED notify, żeby
+          // exportSyncPayload (w syncPush) widziało nową wartość.
+          await _updatePreferenceMeta(info.key, info.value);
+          // 2) Notify listeners (vilda_sync_integration triggeruje debounced syncPush).
+          notifyPreferenceChanged(info);
+        });
+      }
+    } catch (_) { void _; }
+  })();
 
   // ============ EVENT onPasskeyChanged (Substep D) ============
   // Informuje po registerPasskey/removePasskey/registerPasskeyForRoaming, żeby
@@ -4306,6 +4419,7 @@
     onPatientSaved: onPatientSaved,
     onPatientDeleted: onPatientDeleted,
     onPasskeyChanged: onPasskeyChanged,
+    onPreferenceChanged: onPreferenceChanged,
     startIdleTimer: startIdleTimer,
     stopIdleTimer: stopIdleTimer,
     resetIdleTimer: resetIdleTimer,

@@ -404,6 +404,24 @@
       });
     }
 
+    // Substep E3 — onPreferenceChanged → debounced syncPush.
+    // Cloud-synced preferences (kolaps kart, view modes wykresów itp.) trafiają
+    // tu po zmianie lokalnej. DEBOUNCE_MS (długi) bo user może klikać kilka razy
+    // szybko (np. zmiana wielu kart) i nie chcemy spamić workera.
+    if (typeof V.onPreferenceChanged === 'function') {
+      V.onPreferenceChanged(function () {
+        if (!isSyncEnabled()) return;
+        if (syncBlockedUntilUnlock) return;
+        var S = getSync();
+        if (!S || typeof S.syncPush !== 'function') return;
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(function () {
+          if (syncBlockedUntilUnlock) return;
+          S.syncPush().catch(function () {});
+        }, DEBOUNCE_MS);
+      });
+    }
+
     // onLock → anuluj oczekujący debounce
     if (typeof V.onLock === 'function') {
       V.onLock(function () {

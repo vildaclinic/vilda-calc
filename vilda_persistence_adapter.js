@@ -197,24 +197,35 @@
     [MODULE_KEYS.DIABETES_MACRO_BT_DRAFT]: Object.freeze({ scope: 'diabetes', kind: 'data', storage: 'local' }),
     [MODULE_KEYS.DIABETES_DOSE_SETTINGS]: Object.freeze({ scope: 'diabetes', kind: 'data', storage: 'local' }),
     [MODULE_KEYS.DIABETES_DOSE_SETTINGS_LEGACY]: Object.freeze({ scope: 'diabetes', kind: 'data', storage: 'local', legacy: true }),
-    [MODULE_KEYS.PULSE_DURATION_MODE]: Object.freeze({ scope: 'ui', kind: 'preference', storage: 'local' }),
-    [MODULE_KEYS.PAL_SMOOTH_PASSES]: Object.freeze({ scope: 'ui', kind: 'preference', storage: 'local' }),
-    [MODULE_KEYS.CARD_VISIBILITY]: Object.freeze({ scope: 'ui', kind: 'preference', storage: 'local' }),
-    [MODULE_KEYS.CARD_COLLAPSE_STATE]: Object.freeze({ scope: 'ui', kind: 'preference', storage: 'local' }),
-    [MODULE_KEYS.PUBLICATION_CHARTS]: Object.freeze({ scope: 'ui', kind: 'preference', storage: 'local' }),
-    [MODULE_KEYS.CENTILE_CHART_LINE_STYLES]: Object.freeze({ scope: 'ui', kind: 'preference', storage: 'local' }),
-    [MODULE_KEYS.CENTILE_CHART_LINE_DEFAULTS_MIGRATION]: Object.freeze({ scope: 'ui', kind: 'technical', storage: 'local' }),
-    [MODULE_KEYS.DIET_MYTH_RECENT_IDS]: Object.freeze({ scope: 'diet', kind: 'technical', storage: 'local' }),
-    [MODULE_KEYS.ANALYTICS_CONSENT]: Object.freeze({ scope: 'analytics', kind: 'preference', storage: 'local' }),
-    [MODULE_KEYS.DARK_BG_LEVEL]: Object.freeze({ scope: 'appearance', kind: 'preference', storage: 'local' }),
-    [MODULE_KEYS.GLASS_LEVEL]: Object.freeze({ scope: 'appearance', kind: 'preference', storage: 'local' }),
-    [MODULE_KEYS.HIGH_CONTRAST_ENABLED]: Object.freeze({ scope: 'appearance', kind: 'preference', storage: 'local' }),
-    [MODULE_KEYS.HIGH_CONTRAST_LEVEL]: Object.freeze({ scope: 'appearance', kind: 'preference', storage: 'local' }),
-    [MODULE_KEYS.SHOW_MOBILE_DOCK]: Object.freeze({ scope: 'navigation', kind: 'preference', storage: 'local' }),
-    [MODULE_KEYS.SHOW_NAVIGATION_ARROW]: Object.freeze({ scope: 'navigation', kind: 'preference', storage: 'local' }),
-    [MODULE_KEYS.MOBILE_TOP_NAV_FONT_CACHE]: Object.freeze({ scope: 'navigation', kind: 'technical', storage: 'local' }),
+    // Substep E1 — reklasyfikacja device-level preferences jako 'local-persistent'.
+    // Te flagi NIE zawierają danych pacjenta i powinny przeżywać lock w cloud-only.
+    // Przed E1: storage:'local' → w cloud-only routed do veph: → ginie po lock →
+    // banner consent + Pomoc + theme + contrast pokazywały się przy każdym logowaniu.
+    [MODULE_KEYS.PULSE_DURATION_MODE]: Object.freeze({ scope: 'ui', kind: 'preference', storage: 'local-persistent' }),
+    [MODULE_KEYS.PAL_SMOOTH_PASSES]: Object.freeze({ scope: 'ui', kind: 'preference', storage: 'local-persistent' }),
+    // Substep E4 — user-level preferences re-klasyfikowane jako 'cloud-synced'.
+    // Te preferencje DOTYCZĄ konta (nie urządzenia) — kolaps kart, view mode wykresów,
+    // styl linii centyli, ostatnio pokazane mity dietetyczne. Powinny synchronizować
+    // się cross-device w trybie cloud-only (Mac → iPhone i odwrotnie).
+    // Przed E4: storage:'local' → w cloud-only routed do veph: → ginęły po lock + brak
+    // sync. Po E4: real localStorage + onPreferenceWrite emit → vault push do chmury →
+    // LWW merge na innym urządzeniu → applyPreferenceFromCloud.
+    [MODULE_KEYS.CARD_VISIBILITY]: Object.freeze({ scope: 'ui', kind: 'preference', storage: 'cloud-synced' }),
+    [MODULE_KEYS.CARD_COLLAPSE_STATE]: Object.freeze({ scope: 'ui', kind: 'preference', storage: 'cloud-synced' }),
+    [MODULE_KEYS.PUBLICATION_CHARTS]: Object.freeze({ scope: 'ui', kind: 'preference', storage: 'cloud-synced' }),
+    [MODULE_KEYS.CENTILE_CHART_LINE_STYLES]: Object.freeze({ scope: 'ui', kind: 'preference', storage: 'cloud-synced' }),
+    [MODULE_KEYS.CENTILE_CHART_LINE_DEFAULTS_MIGRATION]: Object.freeze({ scope: 'ui', kind: 'technical', storage: 'local-persistent' }),
+    [MODULE_KEYS.DIET_MYTH_RECENT_IDS]: Object.freeze({ scope: 'diet', kind: 'technical', storage: 'cloud-synced' }),
+    [MODULE_KEYS.ANALYTICS_CONSENT]: Object.freeze({ scope: 'analytics', kind: 'preference', storage: 'local-persistent' }),
+    [MODULE_KEYS.DARK_BG_LEVEL]: Object.freeze({ scope: 'appearance', kind: 'preference', storage: 'local-persistent' }),
+    [MODULE_KEYS.GLASS_LEVEL]: Object.freeze({ scope: 'appearance', kind: 'preference', storage: 'local-persistent' }),
+    [MODULE_KEYS.HIGH_CONTRAST_ENABLED]: Object.freeze({ scope: 'appearance', kind: 'preference', storage: 'local-persistent' }),
+    [MODULE_KEYS.HIGH_CONTRAST_LEVEL]: Object.freeze({ scope: 'appearance', kind: 'preference', storage: 'local-persistent' }),
+    [MODULE_KEYS.SHOW_MOBILE_DOCK]: Object.freeze({ scope: 'navigation', kind: 'preference', storage: 'local-persistent' }),
+    [MODULE_KEYS.SHOW_NAVIGATION_ARROW]: Object.freeze({ scope: 'navigation', kind: 'preference', storage: 'local-persistent' }),
+    [MODULE_KEYS.MOBILE_TOP_NAV_FONT_CACHE]: Object.freeze({ scope: 'navigation', kind: 'technical', storage: 'local-persistent' }),
     [MODULE_KEYS.WAGAIWZROST_STATE]: Object.freeze({ scope: 'ui', kind: 'technical', storage: 'local' }),
-    [MODULE_KEYS.GH_THERAPY_VIEW_MODE]: Object.freeze({ scope: 'gh', kind: 'preference', storage: 'local' })
+    [MODULE_KEYS.GH_THERAPY_VIEW_MODE]: Object.freeze({ scope: 'gh', kind: 'preference', storage: 'cloud-synced' })
   });
 
   const MODULE_KEY_ALIASES = Object.freeze({
@@ -289,12 +300,27 @@
   }
 
   function getStorage(type) {
+    // Substep E1 — nowy typ 'local-persistent' który ZAWSZE używa real localStorage,
+    // bypass cloud-only/ephemeral routing. Przeznaczony dla device-level preferences
+    // (consent banner, tutorial dismissals, theme, contrast itp.) które NIE zawierają
+    // danych pacjenta i powinny przeżywać lock w cloud-only mode.
+    //
+    // Bug naprawiony: przed E1 ANALYTICS_CONSENT i tutorial flags trafiały do veph:
+    // sessionStorage w cloud-only → znikały po lock → banner i Pomoc pokazywały się
+    // przy każdym logowaniu.
+    if (type === 'local-persistent') return storageAvailable('local');
+
+    // Substep E2 — 'cloud-synced' używa real localStorage jako cache (jak
+    // local-persistent), ALE pisanie dodatkowo wywołuje onPreferenceWrite callback,
+    // żeby vault mógł wysłać preferencje do chmury. User-level preferences (kolaps
+    // kart, view modes wykresów) — synchronizują się cross-device. Routing storage
+    // jest identyczny — różnica jest tylko w side-effect przy zapisie (writeModuleRaw).
+    if (type === 'cloud-synced') return storageAvailable('local');
+
     const t = type === 'session' ? 'session' : 'local';
-    // Tryb efemeryczny LUB cloud-only: kieruj wszystko do sessionStorage (prefiks
-    // veph:) — nic do localStorage; dane przeżywają nawigację, znikają po zamknięciu
-    // karty/wylogowaniu. W cloud-only registry konta na dysku JEST (encrypted master
-    // key dla password unlocku), ale dane aplikacji (sharedUserData, preferencje
-    // modułów, sesje) trafiają wyłącznie do veph: i synchronizują się z chmurą.
+    // Tryb efemeryczny LUB cloud-only: kieruj 'local' i 'session' do sessionStorage
+    // (prefiks veph:). UWAGA: 'local-persistent' i 'cloud-synced' są WYŻEJ (early
+    // return) — nie idą przez to routing nawet w cloud-only.
     if (isMemoryPersistenceActive()) return getEphemeralStorage(t);
     return storageAvailable(t);
   }
@@ -412,13 +438,39 @@
     return raw == null ? (fallback == null ? null : fallback) : raw;
   }
 
+  // ============ Substep E2 — Preference write listeners ============
+  // Kanał komunikacji do vault'a: gdy preferencja typu 'cloud-synced' się zmienia,
+  // wywołujemy zarejestrowane callbacki żeby vault mógł zsynchronizować z chmurą.
+  // _suppressEmit flag używana przez applyPreferenceFromCloud — gdy przychodzimy
+  // ze stroni vault'a (po sync pull), NIE chcemy emitować callback z powrotem
+  // (inaczej nieskończona pętla push↔pull).
+  const _preferenceWriteListeners = [];
+  let _suppressPreferenceWriteEmit = false;
+
+  function onPreferenceWrite(callback) {
+    if (typeof callback === 'function') _preferenceWriteListeners.push(callback);
+  }
+
+  function _emitPreferenceWrite(key, value, meta) {
+    if (_suppressPreferenceWriteEmit) return;
+    _preferenceWriteListeners.forEach(function (cb) {
+      try { cb({ key: key, value: value, meta: meta || null }); } catch (_) { void _; }
+    });
+  }
+
   function writeModuleRaw(keyOrAlias, value, options) {
     const opts = options || {};
     if (isClearInProgress() && opts.force !== true) return false;
     const key = normalizeModuleKey(keyOrAlias);
     if (!key) return false;
     const meta = getModuleKeyMeta(key);
-    return writeRaw(meta.storage || 'local', key, value);
+    const ok = writeRaw(meta.storage || 'local', key, value);
+    // Substep E2 — emit callback dla cloud-synced keys. Vault będzie nasłuchiwać
+    // (zarejestruje listener w startup) i triggerować syncPush.
+    if (ok && meta.storage === 'cloud-synced') {
+      _emitPreferenceWrite(key, String(value), meta);
+    }
+    return ok;
   }
 
   function readModuleJSON(keyOrAlias, fallback) {
@@ -434,7 +486,43 @@
     const key = normalizeModuleKey(keyOrAlias);
     if (!key) return false;
     const meta = getModuleKeyMeta(key);
-    return writeJSON(meta.storage || 'local', key, value);
+    const ok = writeJSON(meta.storage || 'local', key, value);
+    // Substep E2 — emit callback dla cloud-synced JSON keys.
+    if (ok && meta.storage === 'cloud-synced') {
+      try {
+        _emitPreferenceWrite(key, safeStringify(value, { storageType: 'cloud-synced', key }), meta);
+      } catch (_) { void _; }
+    }
+    return ok;
+  }
+
+  /**
+   * Substep E2 — applyPreferenceFromCloud(keyOrAlias, value)
+   *
+   * Aplikuje wartość preferencji z chmury (z sync pull) do localStorage cache
+   * BEZ wywoływania onPreferenceWrite callbacku. Dzięki temu vault może synchroni-
+   * zować zdalne zmiany bez ryzyka pętli (jeśli emit nadszedłby z powrotem, vault
+   * by go znów wysłał na worker — i tak ad infinitum).
+   *
+   * Działa TYLKO dla cloud-synced keys. Dla innych storage types — no-op (vault
+   * wysyła nam zdalnie wartości po sync pull, ale tylko cloud-synced są synchroni-
+   * zowane przez ten kanał).
+   *
+   * @param {string} keyOrAlias - module key lub alias
+   * @param {string} value - wartość jako string (zwykle JSON.stringify wyniku)
+   * @returns {boolean} true gdy zapisano
+   */
+  function applyPreferenceFromCloud(keyOrAlias, value) {
+    const key = normalizeModuleKey(keyOrAlias);
+    if (!key) return false;
+    const meta = getModuleKeyMeta(key);
+    if (meta.storage !== 'cloud-synced') return false;
+    _suppressPreferenceWriteEmit = true;
+    try {
+      return writeRaw('cloud-synced', key, value);
+    } finally {
+      _suppressPreferenceWriteEmit = false;
+    }
   }
 
 
@@ -816,6 +904,97 @@
     return true;
   }
 
+  // ============ Substep E5 — Migracja legacy ephemeral preferences ============
+  // Jednorazowa migracja przy load adaptera: dla kluczy, które po E1/E4 zostały
+  // re-klasyfikowane jako 'local-persistent' lub 'cloud-synced', przepisz wartości
+  // z veph:l:KEY (sessionStorage, ephemeral cloud-only routing) → localStorage[KEY]
+  // (real localStorage, persistent across lock).
+  //
+  // Powód: użytkownik mid-sesji w cloud-only, który zaktualizuje aplikację, miał
+  // ANALYTICS_CONSENT / CARD_VISIBILITY / etc. w veph:l:. Po update v15 te klucze
+  // są routowane do real localStorage — bez migracji UI pokazałby reset (banner
+  // GA wraca, kolaps kart resetuje się). Migracja zachowuje continuity UX.
+  //
+  // Semantyka:
+  //   • Idempotency: marker localStorage[__vilda_e5_migration_v1__]='1' — run-once.
+  //   • Konflikt: jeśli localStorage[KEY] już ma wartość → NIE nadpisuj (świeższa
+  //     wartość z innego device'a / cache wygrywa).
+  //   • Cleanup: po skopiowaniu (lub gdy konflikt) usuwamy veph:l:KEY ze stale
+  //     sessionStorage żeby uniknąć dezorientacji.
+  //   • Cloud sync: cloud nie ma jeszcze wpisów dla tych kluczy w userPreferences
+  //     (przed E3+E4 exportSyncPayload nie zawierał preferencji), więc mergeSync
+  //     nie nadpisze migrowanej wartości. Pierwszy user-initiated write po
+  //     migracji uruchomi onPreferenceWrite → vault → syncPush → cloud catch-up.
+  const E5_MIGRATION_FLAG = '__vilda_e5_migration_v1__';
+
+  function migrateLegacyEphemeralPreferences() {
+    try {
+      const ls = storageAvailable('local');
+      const ss = global.sessionStorage;
+      if (!ls || !ss) return { migrated: 0, skipped: 0, alreadyDone: false };
+      // Idempotency: jednorazowe uruchomienie per-device.
+      try { if (ls.getItem(E5_MIGRATION_FLAG)) return { migrated: 0, skipped: 0, alreadyDone: true }; } catch (_) { void _; }
+
+      let migrated = 0;
+      let skipped = 0;
+      const ephLocalPrefix = EPHEMERAL_PREFIX + 'l:'; // 'veph:l:'
+
+      Object.keys(MODULE_KEY_META).forEach(function (key) {
+        const meta = MODULE_KEY_META[key];
+        if (!meta) return;
+        // Migrujemy TYLKO klucze re-klasyfikowane w E1 ('local-persistent') i E4
+        // ('cloud-synced'). Klucze nadal 'local' pozostają tam gdzie były.
+        if (meta.storage !== 'local-persistent' && meta.storage !== 'cloud-synced') return;
+
+        const ephKey = ephLocalPrefix + key;
+        let ephValue = null;
+        try { ephValue = ss.getItem(ephKey); } catch (_) { void _; }
+        if (ephValue == null) return; // nic do migracji
+
+        // Konflikt: localStorage już ma wartość pod tym kluczem → zostaw, nie nadpisuj.
+        let existingLocal = null;
+        try { existingLocal = ls.getItem(key); } catch (_) { void _; }
+        if (existingLocal != null) {
+          skipped++;
+          try { ss.removeItem(ephKey); } catch (_) { void _; }
+          return;
+        }
+
+        // Skopiuj veph:l:KEY → localStorage[KEY] i usuń źródło ephemeral.
+        try {
+          ls.setItem(key, ephValue);
+          try { ss.removeItem(ephKey); } catch (_) { void _; }
+          migrated++;
+        } catch (_) {
+          skipped++;
+        }
+      });
+
+      // Ustaw marker — kolejne load'y adaptera nie powtórzą tej pracy.
+      try { ls.setItem(E5_MIGRATION_FLAG, '1'); } catch (_) { void _; }
+
+      if (migrated > 0) {
+        logPersistenceError(
+          'Migracja E5 ukończona: ' + migrated + ' kluczy ephemeral → localStorage' +
+          (skipped > 0 ? ' (pominięto ' + skipped + ' z powodu konfliktu)' : ''),
+          null,
+          { migrated: migrated, skipped: skipped }
+        );
+      }
+
+      return { migrated: migrated, skipped: skipped, alreadyDone: false };
+    } catch (error) {
+      logPersistenceError('Błąd migracji E5 (legacy ephemeral preferences)', error, null);
+      return { migrated: 0, skipped: 0, error: true };
+    }
+  }
+
+  // Uruchom migrację natychmiast — przed pierwszym readem aplikacji.
+  // Bezpieczne także w trybie cloud-only (zapisuje do REAL localStorage, nie veph:).
+  (function runE5MigrationOnAdapterLoad() {
+    migrateLegacyEphemeralPreferences();
+  })();
+
   const api = Object.freeze({
     __vildaPersistenceAdapter: true,
     version: VERSION,
@@ -852,6 +1031,13 @@
     writeBooleanPreference,
     readNumberPreference,
     writeNumberPreference,
+    // Substep E2 — cloud-synced API. Vault korzysta do nasłuchu zmian preferencji
+    // (onPreferenceWrite) i aplikowania zdalnych zmian po sync pull (applyPreferenceFromCloud).
+    onPreferenceWrite,
+    applyPreferenceFromCloud,
+    // Substep E5 — eksport migracji jako diagnostyczne API (run-once przez IIFE
+    // już się wykonało przy load adaptera; ponowne wywołanie jest no-op przez flag).
+    migrateLegacyEphemeralPreferences,
     clearModuleState,
     pauseAutosave,
     markClearInProgress,
