@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '0.9.763';
+const SW_VERSION = '0.9.768';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -120,6 +120,10 @@ const CORE_SHELL_URLS = [
   '/vilda_persistence_adapter.js?v=10',
   '/vilda_persistence_adapter.js?v=11',
   '/vilda_persistence_adapter.js?v=12',
+  '/vilda_persistence_adapter.js?v=13',
+  '/vilda_persistence_adapter.js?v=14',
+  '/vilda_persistence_adapter.js?v=15',
+  '/vilda_persistence_adapter.js?v=16',
   '/vilda_init.js',
   '/vilda_init.js?v=4',
   '/vilda_crypto.js',
@@ -167,6 +171,8 @@ const CORE_SHELL_URLS = [
   '/vilda_vault.js?v=38',
   '/vilda_vault.js?v=39',
   '/vilda_vault.js?v=40',
+  '/vilda_vault.js?v=41',
+  '/vilda_vault.js?v=42',
   '/vilda_auth_ui.js',
   '/vilda_auth_ui.js?v=16',
   '/vilda_auth_ui.js?v=17',
@@ -362,6 +368,7 @@ const CORE_SHELL_URLS = [
   '/ios26-ui.js?v=18',
   '/ios26-ui.js?v=19',
   '/tutorial.js?v=6',
+  '/tutorial.js?v=7',
   '/bp_module.js',
   '/bp_module.js?v=4',
   '/circumference_module.js',

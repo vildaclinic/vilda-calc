@@ -124,11 +124,16 @@
     }
   }
 
+  // Substep E1 — `lsGet/lsSet` używają 'local-persistent' zamiast 'local'. Tutorial
+  // flagi (wwOnboardingFirstSessionStarted, wwOnboardingLauncherHint itp.) NIE zawierają
+  // danych pacjenta i powinny przeżywać lock w cloud-only. Przed E1: w cloud-only
+  // routed do veph: sessionStorage → ginęły po lock → Pomoc pojawiała się przy każdym
+  // logowaniu. Po E1: zawsze real localStorage, niezależnie od trybu.
   function lsGet(key) {
     try {
       const persistence = getPersistence();
       return persistence && typeof persistence.readRaw === 'function'
-        ? persistence.readRaw('local', key)
+        ? persistence.readRaw('local-persistent', key)
         : null;
     } catch (_) {
       return null;
@@ -139,7 +144,7 @@
     try {
       const persistence = getPersistence();
       if (persistence && typeof persistence.writeRaw === 'function') {
-        persistence.writeRaw('local', key, value);
+        persistence.writeRaw('local-persistent', key, value);
       }
     } catch (_) {
     if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
@@ -1405,7 +1410,7 @@
           <div class="ww-welcome-head">
             <button type="button" class="ww-welcome-close ww-js-dismiss" aria-label="Zamknij">${svgClose}</button>
             <div class="ww-welcome-brand">
-              <img src="/pwa-icons/icon-192x192.png" alt="wagaiwzrost.pl" class="ww-welcome-logo">
+              <img src="" alt="" class="ww-welcome-logo">
               <span>wagaiwzrost.pl</span>
             </div>
             <h2 id="ww-onboarding-title" class="ww-welcome-title">Witaj w aplikacji</h2>
@@ -1516,6 +1521,13 @@
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape' && state.helpVisible) hideSheet();
     });
+
+    try {
+      const logoEl = overlay.querySelector('.ww-welcome-logo');
+      if (logoEl) {
+        logoEl.src = new URL('pwa-icons/icon-192x192.png', window.location.href).href;
+      }
+    } catch (_) {}
 
     state.overlay = overlay;
     state.sheet = overlay.querySelector('.ww-onboarding-sheet');
