@@ -385,6 +385,25 @@
       });
     }
 
+    // Substep D fix — onPasskeyChanged → szybki syncPush.
+    // Bez tego eventu meta.passkeys (i passkeyTombstones) aktualizowane lokalnie
+    // przez registerPasskey/removePasskey nigdy nie lądowały w workerze — inne
+    // urządzenia widziały tylko swoje lokalne passkey. DELETE_DEBOUNCE_MS bo
+    // passkey changes są rzadkie i ważne, chcemy szybkiej propagacji.
+    if (typeof V.onPasskeyChanged === 'function') {
+      V.onPasskeyChanged(function () {
+        if (!isSyncEnabled()) return;
+        if (syncBlockedUntilUnlock) return;
+        var S = getSync();
+        if (!S || typeof S.syncPush !== 'function') return;
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(function () {
+          if (syncBlockedUntilUnlock) return;
+          S.syncPush().catch(function () {});
+        }, DELETE_DEBOUNCE_MS);
+      });
+    }
+
     // onLock → anuluj oczekujący debounce
     if (typeof V.onLock === 'function') {
       V.onLock(function () {

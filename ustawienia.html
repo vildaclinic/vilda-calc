@@ -144,9 +144,9 @@ html.vilda-pro-active .pro-sync-note {
 <script src="vilda_session_bridge.js?v=1"></script>
 <script src="vilda_init.js?v=4"></script>
 <script src="vilda_crypto.js?v=14"></script>
-<script src="vilda_vault.js?v=39"></script>
+<script src="vilda_vault.js?v=40"></script>
 <script src="vilda_sync.js?v=6"></script>
-<script src="vilda_sync_integration.js?v=5"></script>
+<script src="vilda_sync_integration.js?v=6"></script>
 <script src="vilda_auth_ui.js?v=103"></script>
 <script src="vilda_data_safety_explainer.js?v=5"></script>
 <script src="vilda_crypto_strength_explainer.js?v=6"></script>
@@ -3412,9 +3412,16 @@ html.vilda-pro-active .pro-sync-note {
             ? new Date(k.createdAtISO).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' })
             : '—';
           const row = document.createElement('div');
-          row.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px 0; border-bottom:1px solid rgba(0,131,141,0.1);';
+          // Fix iPhone layout: flex-wrap NIE może wystąpić bo wtedy button odpływa,
+          // ale info MUSI mieć min-width:0 (default min-content) żeby nie pchać buttona.
+          // Padding + gap zostają. align-items:flex-start żeby przycisk nie centrował się
+          // przy długich opisach (remote hint dodaje wiele linii).
+          row.style.cssText = 'display:flex; align-items:flex-start; justify-content:space-between; gap:10px; padding:10px 0; border-bottom:1px solid rgba(0,131,141,0.1);';
           const info = document.createElement('div');
-          info.style.cssText = 'min-width:0; flex:1;';
+          // min-width:0 KRYTYCZNE: bez tego flex child rośnie do swojej naturalnej
+          // szerokości (suma min-content dzieci) i wypycha button. Z min-width:0
+          // child może się skurczyć poniżej swojego min-content.
+          info.style.cssText = 'min-width:0; flex:1 1 auto; word-wrap:break-word;';
           // Substep C: roaming badge — rozróżnia passkey telefonowe (cross-device hybrid)
           // od platform keys (Touch ID/Face ID/Windows Hello). Roaming = passkey który
           // można użyć z telefonu na obcym komputerze przez QR.
@@ -3423,10 +3430,12 @@ html.vilda-pro-active .pro-sync-note {
             ? '<span style="display:inline-block;margin-left:6px;padding:1px 7px;font-size:0.68rem;font-weight:600;color:#854f0b;background:#fef3e2;border-radius:999px;vertical-align:1px;">📱 Cross-device</span>'
             : '';
           // Substep D: remote passkey detection. Po sync metadata cross-device, lista
-          // zawiera też passkey z innych urządzeń (BEZ encryptedMasterByPasskey —
-          // bo to crypto material specyficzny dla tamtego device). User może je
-          // tylko usunąć (propaguje tombstone), nie może użyć do unlock tutaj.
-          const isRemote = !k.encryptedMasterByPasskey;
+          // zawiera też passkey z innych urządzeń (BEZ encryptedMasterByPasskey).
+          // User może je tylko usunąć (propaguje tombstone).
+          // FIX bug: listPasskeys teraz zwraca k.isRemote explicit field (wcześniej
+          // sprawdzało !k.encryptedMasterByPasskey ale to pole było stripowane → wszystko
+          // wyglądało jak remote).
+          const isRemote = k.isRemote === true;
           const remoteBadge = isRemote
             ? '<span style="display:inline-block;margin-left:6px;padding:1px 7px;font-size:0.68rem;font-weight:600;color:#1d4ed8;background:#dbeafe;border-radius:999px;vertical-align:1px;">🌐 Inne urządzenie</span>'
             : '';
@@ -3440,7 +3449,10 @@ html.vilda-pro-active .pro-sync-note {
           const delBtn = document.createElement('button');
           delBtn.type = 'button';
           delBtn.className = 'vilda-auth-btn vilda-auth-btn-small';
-          delBtn.style.cssText = 'background:#fef2f3; color:#b00020; border-color:#b00020; min-width:64px; flex-shrink:0;';
+          // Fix iPhone layout: !important na width/min-width żeby zbić globalne
+          // button { width: 100% } z style.css. flex:0 0 auto + explicit width:auto
+          // zapobiega rozciąganiu w wąskich viewportach.
+          delBtn.style.cssText = 'background:#fef2f3 !important; color:#b00020 !important; border-color:#b00020 !important; width:auto !important; min-width:64px !important; flex:0 0 auto !important; padding:6px 14px !important; align-self:flex-start;';
           delBtn.textContent = 'Usuń';
           delBtn.addEventListener('click', async function () {
             // Substep C: ostrzeżenie dla ostatniego passkey — bez tego user może
