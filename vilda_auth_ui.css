@@ -1645,6 +1645,22 @@ select.vilda-auth-input {
   user-select: none;
 }
 
+/* ── Badge biometrii w user-pickerze (D.1) ──────────────────────────────────────
+   Pokazywany pod nazwą konta jeśli registry ma passkeyCount > 0. Tekst pochodzi
+   z getBiometricLabel() — Touch ID / Face ID / Windows Hello / dane biometryczne.
+   Kolor turkusowy aby visual cue było widoczne ale dyskretne. Ikona kłódki
+   sygnalizuje że konto można odblokować bez wpisywania hasła. */
+.vilda-auth-user-passkey-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 2px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #00838d;
+  line-height: 1.3;
+  letter-spacing: 0.01em;
+}
+
 /* ── Eye toggle (pokaż/ukryj hasło) ─────────────────────────────────────────────
    Globalne reguły button:hover/focus-visible w style.css dodają każdemu
    buttonowi transform:scale(1.02) + box-shadow + zmianę tła. Dla naszej

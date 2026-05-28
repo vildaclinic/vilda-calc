@@ -1662,6 +1662,12 @@
    * Pokazuje się tylko raz (flaga w localStorage) i tylko gdy PRF jest wspierany
    * i użytkownik nie ma jeszcze żadnych passkeys.
    *
+   * FIX (2026-05-28): wcześniej był blok resetujący flagę gdy passkeys.length === 0
+   * (rzekomo żeby naprawić "stary buggy kod"). Konsekwencja: user klika "Nie teraz",
+   * przy następnym logowaniu hasłem flaga jest resetowana (bo nadal nie ma passkey),
+   * prompt pojawia się znowu — nieskończona pętla. Usunięto reset; flaga raz ustawiona
+   * zostaje na zawsze. User chcący włączyć biometrię używa Ustawienia → Bezpieczeństwo.
+   *
    * @param {string} userId
    */
   async function showPostLoginBiometricPrompt(userId) {
@@ -1669,6 +1675,11 @@
     if (!V) return;
 
     const flagKey = 'vilda:biometricPromptShown:' + userId;
+
+    // Krótka ścieżka: flaga już ustawiona → user widział prompt, szanujemy decyzję
+    // ("Nie teraz" = nie pytaj więcej automatycznie, włączy ręcznie w Ustawieniach
+    // gdy zechce).
+    if (localStorage.getItem(flagKey)) return;
 
     let prfOk = false;
     let passkeys = [];
@@ -1680,21 +1691,10 @@
     // Pokaż tylko gdy PRF dostępny i brak już zarejestrowanego passkey
     if (!prfOk || passkeys.length > 0) return;
 
-    // Jeśli PRF teraz działa ale flaga mogła być ustawiona zanim naprawiliśmy
-    // detekcję — sprawdź czy passkeys naprawdę są puste (już sprawdzone wyżej).
-    // Flaga blokuje ponowne pokazanie TYLKO gdy passkey już był zarejestrowany lub
-    // użytkownik świadomie wybrał "Nie teraz" przy działającym PRF.
-    // Czyścimy starą flagę jeśli brak passkeys — znaczy PRF wcześniej nie działał.
-    if (localStorage.getItem(flagKey) && passkeys.length === 0) {
-      // Flaga ustawiona, ale brak passkey — mogła być zapisana przez stary buggy kod.
-      // Reset żeby użytkownik mógł zobaczyć prompt.
-      localStorage.removeItem(flagKey);
-    }
-
-    // Sprawdź jeszcze raz po ewentualnym resecie flagi
-    if (localStorage.getItem(flagKey)) return;
-
-    // Oznacz jako pokazany — dopiero teraz, tuż przed renderowaniem
+    // Oznacz jako pokazany — dopiero teraz, tuż przed renderowaniem.
+    // Niezależnie od tego co user kliknie ("Tak, włącz" czy "Nie teraz"), flaga
+    // zostaje ustawiona i prompt nie wróci. Jeśli rejestracja passkey się nie powiedzie,
+    // user może spróbować ponownie z Ustawienia → Bezpieczeństwo.
     localStorage.setItem(flagKey, new Date().toISOString());
 
     const bioLabel = getBiometricLabel();
