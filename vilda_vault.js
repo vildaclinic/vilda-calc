@@ -2594,13 +2594,46 @@
       }
     } catch (_) { tombstones = []; }
 
+    // Substep D — passkey metadata sync cross-device.
+    // Wyciągamy z meta TYLKO publiczne fields: credentialId (jest publiczny),
+    // deviceLabel, createdAtISO, roaming. NIE szlemy: encryptedMasterByPasskey
+    // (device-specific crypto material), encryptedInitials, publicKeyB64u, wrapVersion.
+    // Inne urządzenia widzą metadata żeby pokazać w UI listę "wszystkie biometrie
+    // dla tego konta", ale NIE mogą odblokować vault używając remote passkey
+    // (brak crypto material). User może je tylko USUNĄĆ (tombstone propaguje się).
+    let passkeyMetadata = [];
+    let passkeyTombstones = [];
+    try {
+      const _userMeta = await getAdapter().getUserMeta(currentUserId);
+      if (_userMeta && Array.isArray(_userMeta.passkeys)) {
+        passkeyMetadata = _userMeta.passkeys.map(function (p) {
+          return {
+            credentialId: p.credentialId,
+            deviceLabel:  p.deviceLabel,
+            createdAtISO: p.createdAtISO,
+            roaming:      p.roaming === true
+          };
+        });
+      }
+      if (_userMeta && Array.isArray(_userMeta.passkeyTombstones)) {
+        // GC: przytnij stare tombstones przed wysłaniem (TTL jak dla patient tombstones).
+        const cutoffISO = new Date(Date.now() - TOMBSTONE_TTL_MS).toISOString();
+        passkeyTombstones = _userMeta.passkeyTombstones.filter(function (t) {
+          return t && t.credentialId && t.deletedAtISO && t.deletedAtISO >= cutoffISO;
+        });
+      }
+    } catch (_) { /* meta unavailable — wyślij puste */ }
+
     return {
-      schemaVersion:  SCHEMA_VERSION,
-      userId:         currentUserId,
-      label:          currentUserLabel,
-      exportedAtISO:  new Date().toISOString(),
-      patients:       fullPatients,
-      tombstones:     Array.isArray(tombstones) ? tombstones : []
+      schemaVersion:      SCHEMA_VERSION,
+      userId:             currentUserId,
+      label:              currentUserLabel,
+      exportedAtISO:      new Date().toISOString(),
+      patients:           fullPatients,
+      tombstones:         Array.isArray(tombstones) ? tombstones : [],
+      // Substep D — additive fields, starsze klienty ignorują.
+      passkeys:           passkeyMetadata,
+      passkeyTombstones:  passkeyTombstones
     };
   }
 
@@ -2766,12 +2799,97 @@
       }
     }
 
+    // Substep D — merge passkey metadata + tombstones.
+    // Strategia LWW (last-write-wins): tombstone z nowszym deletedAtISO bije
+    // local passkey entry. Brak edycji "modyfikuje" passkey, więc nie ma konfliktu
+    // analogicznego do patient editAt — passkeyTombstone zawsze wygrywa.
+    //
+    // Przyjmowane fields:
+    //   • incoming passkeys: { credentialId, deviceLabel, createdAtISO, roaming }
+    //   • incoming passkeyTombstones: { credentialId, deletedAtISO }
+    //
+    // Side effects na local meta.passkeys:
+    //   • Tombstone z payloadu → usuń matching local entry (włącznie z crypto material!)
+    //   • Remote passkey nie w local meta → dodaj BEZ encryptedMasterByPasskey
+    //     (UI rozpozna "remote" gdy brak tego pola)
+    //   • Local passkey który jest też remote → zostaw (z lokalnym crypto)
+    let addedPasskeyCount   = 0;
+    let removedPasskeyCount = 0;
+    try {
+      const incomingPasskeys = Array.isArray(rawData.passkeys) ? rawData.passkeys : [];
+      const incomingPkTombs  = Array.isArray(rawData.passkeyTombstones) ? rawData.passkeyTombstones : [];
+
+      const localMeta = await getAdapter().getUserMeta(currentUserId);
+      if (localMeta) {
+        let localPasskeys = Array.isArray(localMeta.passkeys) ? localMeta.passkeys.slice() : [];
+        let localTombs = Array.isArray(localMeta.passkeyTombstones) ? localMeta.passkeyTombstones.slice() : [];
+
+        // Merge tombstones — union, dedupe po credentialId, keep latest deletedAtISO.
+        const tombByCredId = Object.create(null);
+        localTombs.forEach(function (t) {
+          if (t && t.credentialId) tombByCredId[t.credentialId] = t.deletedAtISO || '';
+        });
+        incomingPkTombs.forEach(function (t) {
+          if (!t || !t.credentialId) return;
+          const cur = tombByCredId[t.credentialId] || '';
+          if (!cur || (t.deletedAtISO && t.deletedAtISO > cur)) {
+            tombByCredId[t.credentialId] = t.deletedAtISO || '';
+          }
+        });
+        // GC: przytnij stare tombstones (TTL).
+        const cutoffISO = new Date(Date.now() - TOMBSTONE_TTL_MS).toISOString();
+        const mergedTombs = [];
+        Object.keys(tombByCredId).forEach(function (cid) {
+          const iso = tombByCredId[cid];
+          if (iso && iso >= cutoffISO) mergedTombs.push({ credentialId: cid, deletedAtISO: iso });
+        });
+
+        // Apply tombstones: usuń lokalne passkey które mają tombstone.
+        const tombSet = new Set(mergedTombs.map(function (t) { return t.credentialId; }));
+        const beforeRemove = localPasskeys.length;
+        localPasskeys = localPasskeys.filter(function (p) { return !tombSet.has(p.credentialId); });
+        removedPasskeyCount = beforeRemove - localPasskeys.length;
+
+        // Add remote passkeys które nie są ani w local, ani tombstoned.
+        const localCredIds = new Set(localPasskeys.map(function (p) { return p.credentialId; }));
+        incomingPasskeys.forEach(function (rp) {
+          if (!rp || !rp.credentialId) return;
+          if (localCredIds.has(rp.credentialId)) return; // już mamy lokalny entry
+          if (tombSet.has(rp.credentialId)) return;       // tombstoned
+          // Dodaj jako remote entry — BEZ encryptedMasterByPasskey (nie mamy
+          // crypto material). UI rozpozna remote po typeof !== 'object' || !p.encryptedMasterByPasskey.
+          localPasskeys.push({
+            credentialId: rp.credentialId,
+            deviceLabel:  rp.deviceLabel || '(inne urządzenie)',
+            createdAtISO: rp.createdAtISO || new Date().toISOString(),
+            roaming:      rp.roaming === true
+            // Brak encryptedMasterByPasskey — to znaczy "remote, tylko metadata".
+          });
+          addedPasskeyCount++;
+        });
+
+        // Zapisz updated meta gdy cokolwiek się zmieniło.
+        if (addedPasskeyCount > 0 || removedPasskeyCount > 0 ||
+            mergedTombs.length !== (Array.isArray(localMeta.passkeyTombstones) ? localMeta.passkeyTombstones.length : 0)) {
+          await getAdapter().putUserMeta(currentUserId, Object.assign({}, localMeta, {
+            passkeys:          localPasskeys,
+            passkeyTombstones: mergedTombs
+          }));
+          // Sync passkeyCount w registry (D.1).
+          await _syncPasskeyCount(currentUserId);
+        }
+      }
+    } catch (_) { /* sync bez passkey merge — zachowanie wsteczne */ }
+
     return {
       mergedPatientCount,
       addedPatientCount,
       addedSnapshotCount,
       skippedSnapshotCount,
-      deletedPatientCount
+      deletedPatientCount,
+      // Substep D — informacja zwrotna o pasknigerge'u (do diagnostyki UI).
+      addedPasskeyCount,
+      removedPasskeyCount
     };
   }
 
@@ -3581,7 +3699,17 @@
     const meta = await getAdapter().getUserMeta(userId);
     if (!meta || !Array.isArray(meta.passkeys)) return;
     const filtered = meta.passkeys.filter(p => p.credentialId !== credentialId);
-    await getAdapter().putUserMeta(userId, { ...meta, passkeys: filtered });
+    // Substep D — passkey tombstone do propagacji usunięcia cross-device.
+    // Każde usunięcie zapisuje credentialId + deletedAtISO w meta.passkeyTombstones.
+    // Sync wysyła tombstones, inne urządzenia stosują je przy importSyncPayload.
+    // Dzięki temu: user usuwa passkey iPhone na Macu → iPhone przy następnym sync
+    // też skasuje tę biometrię (włącznie z encryptedMasterByPasskey).
+    const existingTombs = Array.isArray(meta.passkeyTombstones) ? meta.passkeyTombstones.slice() : [];
+    // Dodaj nowy tombstone (jeśli jeszcze nie ma dla tego credentialId).
+    if (!existingTombs.some(function (t) { return t && t.credentialId === credentialId; })) {
+      existingTombs.push({ credentialId: credentialId, deletedAtISO: new Date().toISOString() });
+    }
+    await getAdapter().putUserMeta(userId, { ...meta, passkeys: filtered, passkeyTombstones: existingTombs });
     // D.1: aktualizuj passkeyCount w registry — decrement po usunięciu passkey.
     await _syncPasskeyCount(userId);
   }
