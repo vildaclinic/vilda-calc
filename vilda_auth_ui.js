@@ -5136,15 +5136,18 @@
       startBtn.textContent = 'Czekam na telefon…';
       try {
         if (persistMode) {
-          await V.unlockWithPasskeyAndPersist(password, { storageMode: mode });
-          // Cloud-only WYMAGA aktywnego sync — włączamy automatycznie
-          // (analogicznie do QR flow w showQRLoginScreen).
+          // Cloud-only WYMAGA aktywnego sync — włączamy PRZED unlock'iem, żeby
+          // listener onUnlock w sync_integration (notifyUnlock fire'uje SYNC w środku
+          // adoptMasterBytes) zobaczył już ustawioną flagę. Inaczej forcePullForCloudOnly
+          // wystrzeli CLOUD_ONLY_NO_SYNC banner zanim setSyncEnabled zdąży się wywołać
+          // (race microtask order: rejection handler #1, await continuation #2).
           if (mode === 'cloud-only') {
             try {
               const SI = getSyncIntegration();
               if (SI && typeof SI.setSyncEnabled === 'function') SI.setSyncEnabled(true);
             } catch (_) { void _; }
           }
+          await V.unlockWithPasskeyAndPersist(password, { storageMode: mode });
         } else {
           await V.unlockWithPasskeyEphemeral({});
         }
@@ -5348,20 +5351,24 @@
             // mode === 'local' lub 'cloud-only' — przekazujemy flagę do vault,
             // który zapisze ją w registry. Po unlock adapter cloud-only zostanie
             // automatycznie zastosowany (adoptMasterBytes → applyCloudOnlyAdapterIfNeeded).
-            await V.completeQRLogin(savedPrivKey, encryptedPayload, {
-              newPassword: password,
-              label: transferredLabel,
-              storageMode: mode
-            });
+            //
             // Cloud-only WYMAGA aktywnego sync (force-pull przy każdym loginie).
-            // User logujący się z telefonu nieosobistego musi mieć sync od razu,
-            // inaczej force-pull rzuci CLOUD_ONLY_NO_SYNC. Włączamy automatycznie.
+            // Flagę sync ustawiamy PRZED unlock'iem — listener onUnlock w sync_integration
+            // strzela natychmiast (notifyUnlock fire'uje SYNC w środku adoptMasterBytes)
+            // i sprawdza isSyncEnabled(). Bez tej kolejności pojawiał się banner
+            // CLOUD_ONLY_NO_SYNC race condition (rejection handler #1, await continuation #2
+            // w microtask FIFO queue).
             if (mode === 'cloud-only') {
               try {
                 const SI = getSyncIntegration();
                 if (SI && typeof SI.setSyncEnabled === 'function') SI.setSyncEnabled(true);
               } catch (_) { void _; }
             }
+            await V.completeQRLogin(savedPrivKey, encryptedPayload, {
+              newPassword: password,
+              label: transferredLabel,
+              storageMode: mode
+            });
           }
           clearSessionKeys(); // defence-in-depth: usuń klucz prywatny jeśli stopPolling go nie wyczyścił
           hide();
