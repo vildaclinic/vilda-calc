@@ -422,6 +422,25 @@
       });
     }
 
+    // N2 — onNoteChanged → syncPush. Notatki (biblioteka szablonów lekarza)
+    // synchronizują się cross-device. action 'save' → DEBOUNCE_MS (user może
+    // edytować kilka razy), 'delete' → DELETE_DEBOUNCE_MS (szybka propagacja
+    // tombstone, znika „na żywo" na innych urządzeniach).
+    if (typeof V.onNoteChanged === 'function') {
+      V.onNoteChanged(function (info) {
+        if (!isSyncEnabled()) return;
+        if (syncBlockedUntilUnlock) return;
+        var S = getSync();
+        if (!S || typeof S.syncPush !== 'function') return;
+        var delay = (info && info.action === 'delete') ? DELETE_DEBOUNCE_MS : DEBOUNCE_MS;
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(function () {
+          if (syncBlockedUntilUnlock) return;
+          S.syncPush().catch(function () {});
+        }, delay);
+      });
+    }
+
     // onLock → anuluj oczekujący debounce
     if (typeof V.onLock === 'function') {
       V.onLock(function () {

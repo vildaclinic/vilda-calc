@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '0.9.769';
+const SW_VERSION = '0.9.773';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -173,6 +173,8 @@ const CORE_SHELL_URLS = [
   '/vilda_vault.js?v=40',
   '/vilda_vault.js?v=41',
   '/vilda_vault.js?v=42',
+  '/vilda_vault.js?v=43',
+  '/vilda_vault.js?v=44',
   '/vilda_auth_ui.js',
   '/vilda_auth_ui.js?v=16',
   '/vilda_auth_ui.js?v=17',
@@ -260,6 +262,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=19',
   '/vilda_chrome.js?v=20',
   '/vilda_chrome.js?v=21',
+  '/vilda_chrome.js?v=22',
   '/vilda_chrome.css?v=11',
   '/vilda_chrome.css?v=12',
   '/vilda_chrome.css?v=15',
@@ -368,6 +371,7 @@ const CORE_SHELL_URLS = [
   '/ios26-ui.js',
   '/ios26-ui.js?v=18',
   '/ios26-ui.js?v=19',
+  '/ios26-ui.js?v=20',
   '/tutorial.js?v=6',
   '/tutorial.js?v=7',
   '/bp_module.js',
@@ -407,7 +411,8 @@ const OPTIONAL_DOCUMENTS = [
   '/genotropin-instrukcja.html',
   '/ngenla-instrukcja.html',
   '/przelicznik-doposilkowy-instrukcja.html',
-  '/subskrypcja.html'
+  '/subskrypcja.html',
+  '/notatki.html'
 ];
 
 const OPTIONAL_ASSETS = [
