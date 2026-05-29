@@ -48,6 +48,13 @@
   // więc getCurrentUser() w onLock zawsze zwraca null. Śledzimy userId sami —
   // aktualizujemy w onUnlock, używamy w onLock, zerujemy po użyciu.
   let _trackedUserId = null;
+  // N8: analogicznie śledzimy isCloudOnlyMode() PRZED lock() — vault zeruje
+  // stan trybu zanim wywoła onLock, więc bez tego nie wiemy czy pokazać
+  // toast „Dane pacjentów usunięte z pamięci tego komputera" po wylogowaniu.
+  let _trackedCloudOnly = false;
+  // Klucz sessionStorage przekazujący flagę post-logout toast między
+  // sekwencją onLock → redirect do index.html → showStartupScreen().
+  const POST_LOGOUT_TOAST_KEY = 'vilda-post-logout-toast-v1';
   // Stan ostatniej próby synchronizacji PRO z serwerem (per-user).
   // Cooldown 30s obowiązuje tylko gdy TEN SAM userId loguje się ponownie szybko
   // (idle-lock + natychmiastowy re-login, wieloetapowy QR transfer itp.).
@@ -673,6 +680,23 @@
     const overlay = el('div', { class: 'vilda-auth-overlay' });
     const card = el('div', { class: 'vilda-auth-card', role: 'dialog', 'aria-modal': 'true' });
     card.appendChild(buildBrandHeader(opts));
+    // N8: post-logout toast — jeśli ostatnia sesja była cloud-only i user
+    // wylogował się (manual/idle), pokaż jednorazowy banner informujący
+    // że dane pacjentów zostały usunięte z pamięci komputera. Flaga zapisana
+    // przez onLock w sessionStorage, czyszczona po pierwszym renderze.
+    try {
+      if (global.sessionStorage && global.sessionStorage.getItem(POST_LOGOUT_TOAST_KEY) === '1') {
+        global.sessionStorage.removeItem(POST_LOGOUT_TOAST_KEY);
+        const toast = el('div', {
+          class: 'vilda-auth-post-logout-toast',
+          role: 'status',
+          'aria-live': 'polite',
+          style: 'margin:0 0 14px 0;padding:10px 14px;border-radius:10px;background:rgba(0,131,141,0.10);border:1px solid rgba(0,131,141,0.28);color:#0f5b63;font-size:13.5px;line-height:1.5;display:flex;gap:10px;align-items:flex-start;',
+          html: '<span aria-hidden="true" style="flex-shrink:0;font-size:16px;line-height:1;">🔒</span><span><strong>Wylogowano.</strong> Dane pacjentów zostały usunięte z pamięci tego komputera.</span>'
+        });
+        card.appendChild(toast);
+      }
+    } catch (_) {}
     card.appendChild(content);
     overlay.appendChild(card);
     rootEl.appendChild(overlay);
@@ -3998,6 +4022,18 @@
         // przechwyconego wcześniej w onUnlock.
         var lockedUserId = _trackedUserId;
         _trackedUserId = null; // zużyty — wyczyść niezależnie od wyniku
+        // N8: zapamiętaj czy sesja była w trybie cloud-only — używane do
+        // post-logout toast informującego, że dane pacjentów zostały usunięte
+        // z pamięci komputera. W lokalu nie ma takiej semantyki (dane na dysku).
+        var wasCloudOnly = _trackedCloudOnly;
+        _trackedCloudOnly = false;
+        if (wasCloudOnly && (reason === 'manual' || reason === 'idle')) {
+          try {
+            if (global.sessionStorage) {
+              global.sessionStorage.setItem(POST_LOGOUT_TOAST_KEY, '1');
+            }
+          } catch (_) {}
+        }
 
         // Wylogowanie/auto-lock = porzucenie tożsamości. Wyczyść stan aplikacji,
         // żeby kolejny user (lub gość) nie zobaczył danych poprzedniego.
@@ -4049,6 +4085,11 @@
         // PRZED wywołaniem onLock listenerów, więc bez własnego śledzenia
         // nie możemy odczytać userId w onLock.
         _trackedUserId = (payload && payload.userId) ? payload.userId : null;
+        // N8: capture trybu cloud-only PRZED lock() — używane do post-logout toast.
+        try {
+          var _vForCO = getVault();
+          _trackedCloudOnly = !!(_vForCO && _vForCO.isCloudOnlyMode && _vForCO.isCloudOnlyMode());
+        } catch (_) { _trackedCloudOnly = false; }
 
         // Auth-gate: vault odblokowany (logowanie LUB nawigacja/odtworzenie sesji)
         // = aplikacja autoryzowana → odsłaniamy interfejs. Robimy to bezwarunkowo,
@@ -4977,7 +5018,7 @@
       tag: cloudOnlyTagLabel,
       tagColor: cloudOnlyTagColor,
       tagBg: cloudOnlyTagBg,
-      desc: 'Konto pamięta hasło, ale dane pacjentów <strong>tylko w chmurze</strong> — nic nie zostaje na dysku. Możesz wrócić tu jutro i znów się zalogować.',
+      desc: 'Pracujesz na sprzęcie, który mogą obsługiwać też inni? Ten tryb chroni dane pacjentów: ich karty, parametry i pomiary istnieją <strong>tylko w chmurze</strong> i w pamięci Twojej sesji — nigdy nie zapisują się na dysku. Wylogowanie = zero śladów pacjentów na tym komputerze. Twoje konto, ustawienia i biblioteka notatek pamiętają się lokalnie (zaszyfrowane Twoim hasłem), żebyś nie czekał na pobranie ustawień.',
       disabled: cloudOnlyDisabled,
       hint: cloudOnlyHint,
       hintIsWarning: cloudOnlyHintIsWarning,

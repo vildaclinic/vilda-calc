@@ -144,10 +144,10 @@ html.vilda-pro-active .pro-sync-note {
 <script src="vilda_session_bridge.js?v=1"></script>
 <script src="vilda_init.js?v=4"></script>
 <script src="vilda_crypto.js?v=14"></script>
-<script src="vilda_vault.js?v=44"></script>
+<script src="vilda_vault.js?v=45"></script>
 <script src="vilda_sync.js?v=6"></script>
 <script src="vilda_sync_integration.js?v=8"></script>
-<script src="vilda_auth_ui.js?v=104"></script>
+<script src="vilda_auth_ui.js?v=105"></script>
 <script src="vilda_data_safety_explainer.js?v=5"></script>
 <script src="vilda_crypto_strength_explainer.js?v=6"></script>
 <script src="vilda_pro_access.js?v=2"></script>
@@ -191,7 +191,7 @@ html.vilda-pro-active .pro-sync-note {
   <!-- Ładujemy bibliotekę ikon Lucide do wyświetlania ikon w menu bocznym -->
   <script src="https://unpkg.com/lucide@1.14.0/dist/umd/lucide.min.js" integrity="sha384-jB6ZXxyEV94yzTxgLMvrwwNbn/pTTqwrMDI+v8FV5o5FnId/yn3DJwSdrDujU9A7" crossorigin="anonymous" defer></script>
   <script src="ios26-ui.js?v=20" defer></script>
-<script src="vilda_chrome.js?v=23"></script>
+<script src="vilda_chrome.js?v=24"></script>
 </head>
 <body class="js-loading liquid-ios26 page-settings has-sidebar">
   <header>
@@ -798,8 +798,13 @@ html.vilda-pro-active .pro-sync-note {
                       <span class="settings-tag" id="cloudOnlyStatusTag">—</span>
                     </div>
                     <p class="settings-control-desc">
-                      Dane pacjentów synchronizują się <strong>tylko z chmurą</strong> — nic nie zostaje na dysku tego komputera.
-                      Twoje konto pamięta hasło, więc możesz zalogować się ponownie. Idealne na obcym komputerze (np. pokój badań w szpitalu).
+                      W tym trybie wyraźnie rozdzielamy dwie rzeczy.
+                    </p>
+                    <p class="settings-control-desc">
+                      <strong>Dane pacjentów</strong> — całość ich dokumentacji medycznej — przechowywane są wyłącznie w chmurze. Na ten komputer pobierają się tylko podczas Twojej sesji (do pamięci RAM) i znikają z chwilą wylogowania. Nikt, kto usiądzie tu po Tobie, nie znajdzie ich na dysku.
+                    </p>
+                    <p class="settings-control-desc">
+                      <strong>Twoje konto, ustawienia i biblioteka notatek</strong> są zapisywane lokalnie, ale w pełni zaszyfrowane Twoim hasłem (PBKDF2&nbsp;+&nbsp;AES‑GCM). Bez Twojego hasła te dane są nieczytelne — nawet dla kogoś z fizycznym dostępem do komputera.
                     </p>
                     <div class="settings-card-toggle-row settings-backup-btn-row">
                       <label class="settings-backup-checkbox-label">
