@@ -172,7 +172,10 @@
 }
 .note-pin svg { width: 18px; height: 18px; stroke: currentColor; display: block; }
 .note-pin:hover { color: var(--primary, #00838d); transform: scale(1.08); }
-.note-pin.is-on { color: var(--primary, #00838d); background: #E1F5EE; }
+/* Pill aktywnego stanu — półprzezroczysty turkus, widoczny też na turkusowym
+   „szklanym" tle karty (czyste #E1F5EE zlewałoby się z tłem). !important bije
+   globalne button{background:var(--primary)}. */
+.note-pin.is-on { color: var(--primary, #00838d); background: rgba(0,131,141,0.16) !important; }
 .note-pin.is-on svg { stroke: var(--primary, #00838d); }
 .note-card__title { font-size: 1rem; font-weight: 600; color: var(--text, #0f2b33); margin: 0; word-break: break-word; }
 .note-card__body {
