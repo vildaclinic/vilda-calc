@@ -264,7 +264,7 @@
 
   <script src="https://unpkg.com/lucide@1.14.0/dist/umd/lucide.min.js" integrity="sha384-jB6ZXxyEV94yzTxgLMvrwwNbn/pTTqwrMDI+v8FV5o5FnId/yn3DJwSdrDujU9A7" crossorigin="anonymous" defer></script>
   <script src="ios26-ui.js?v=20" defer></script>
-<script src="vilda_chrome.js?v=22"></script>
+<script src="vilda_chrome.js?v=23"></script>
 </head>
 <body class="js-loading liquid-ios26 page-notes has-sidebar">
   <header></header>
@@ -383,10 +383,13 @@
   var CAT_LABEL = { badanie: 'Opis badania', zalecenia: 'Zalecenia', wywiad: 'Wywiad', wlasne: 'Własne' };
 
   function isUnlocked() { var v = V(); return !!(v && typeof v.isUnlocked === 'function' && v.isUnlocked()); }
+  // Notatki to funkcja PRO — dostęp tylko dla aktywnej subskrypcji.
+  function isPro() { return !!(window.VildaProAccess && typeof window.VildaProAccess.hasAccess === 'function' && window.VildaProAccess.hasAccess()); }
 
   async function reload() {
     var v = V();
     if (!isUnlocked()) { renderLocked(); return; }
+    if (!isPro()) { renderProUpsell(); return; }
     try {
       state.notes = await v.listNotes();
       state.loaded = true;
@@ -394,6 +397,24 @@
     } catch (e) {
       state.notes = [];
       render();
+    }
+  }
+
+  function renderProUpsell() {
+    byId('notesToolbar').style.display = 'none';
+    var pii = byId('notesPiiNotice'); if (pii) pii.style.display = 'none';
+    byId('notesContainer').innerHTML =
+      '<div class="notes-empty">' +
+      '<div class="notes-empty__icon">⭐</div>' +
+      '<p class="notes-empty__title">Notatki to funkcja Vilda PRO</p>' +
+      '<p class="notes-empty__desc">Twórz własną bibliotekę szablonów (opisy badań, zalecenia) ' +
+      'dostępną z każdego urządzenia po zalogowaniu. Aktywuj PRO, aby zacząć.</p>' +
+      '<div style="margin-top:1.1rem;">' +
+      '<a class="notes-btn-primary" style="text-decoration:none;" href="subskrypcja.html">' +
+      '<i data-lucide="zap"></i> Zobacz plan PRO</a></div>' +
+      '</div>';
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+      try { window.lucide.createIcons(); } catch (_) {}
     }
   }
 
@@ -417,6 +438,7 @@
 
   function render() {
     if (!isUnlocked()) { renderLocked(); return; }
+    if (!isPro()) { renderProUpsell(); return; }
     byId('notesToolbar').style.display = '';
     var list = filteredNotes();
     var container = byId('notesContainer');
@@ -595,7 +617,7 @@
   }
 
   function bind() {
-    byId('notesNewBtn').addEventListener('click', function () { if (isUnlocked()) openEditor(null); });
+    byId('notesNewBtn').addEventListener('click', function () { if (isUnlocked() && isPro()) openEditor(null); });
     byId('notesPiiClose').addEventListener('click', dismissPii);
     byId('noteEditorClose').addEventListener('click', closeEditor);
     byId('noteEditorCancel').addEventListener('click', closeEditor);
@@ -631,6 +653,8 @@
       if (typeof v.onLock === 'function') v.onLock(function () { state.notes = []; renderLocked(); });
       if (typeof v.onNoteChanged === 'function') v.onNoteChanged(function () { reload(); });
     }
+    // Zmiana statusu PRO (aktywacja/wygaśnięcie) → przerysuj (upsell ↔ notatki).
+    try { document.addEventListener('vildaProAccessChanged', function () { reload(); }); } catch (_) {}
   }
 
   function start() {

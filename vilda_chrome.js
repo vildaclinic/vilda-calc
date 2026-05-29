@@ -79,7 +79,7 @@
     {
       title: 'Konto',
       items: [
-        { href: 'notatki.html', label: 'Notatki', icon: 'file-text' },
+        { href: 'notatki.html', label: 'Notatki', icon: 'file-text', cls: 'pro-link' },
         { href: 'ustawienia.html', label: 'Ustawienia', icon: 'settings' }
       ]
     }
