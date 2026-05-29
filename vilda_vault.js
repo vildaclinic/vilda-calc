@@ -3627,14 +3627,23 @@
       ? existingMetaForExclude.passkeys.map(function (p) { return p.credentialId; }).filter(Boolean)
       : [];
 
-    // 1. Rejestracja passkey + odbiór PRF secret.
+    // 1. Rejestracja passkey + odbiór PRF secret z create.
     // deviceLabel (label) jest też przekazywane do crypto — staje się częścią
     // user.name w WebAuthn → widoczne jako "dr Maciej · MacBook" w Apple Passwords
     // / Google Password Manager. Bez tego, klucze z różnych urządzeń wyglądały
     // identycznie (po prostu "dr Maciej") i user nie wiedział który jest który.
-    let credentialId, prfSecretBytes;
+    //
+    // UWAGA (N9): PRF z create() jest niespójny z PRF z get() na części
+    // authenticatorów — m.in. iCloud Keychain potrafi dawać różne wartości
+    // na różnych urządzeniach Apple dla tego samego synced credentiala.
+    // Skutek: klucz wrappujący wyprowadzony z create-PRF działa na urządzeniu
+    // rejestracji, ale NIE działa cross-device (iPhone nie odszyfruje koperty
+    // zrobionej na Macu). Dlatego prfSecretBytes z create() IGNORUJEMY —
+    // używany jest tylko do potwierdzenia że PRF jest w ogóle wspierany.
+    // Stabilny PRF pobierany jest niżej osobnym wywołaniem get().
+    let credentialId;
     try {
-      ({ credentialId, prfSecretBytes } = await C.createPasskeyAndGetPrfSecret(
+      ({ credentialId } = await C.createPasskeyAndGetPrfSecret(
         userId, rpId, currentUserLabel, label, existingCredIds
       ));
     } catch (e) {
@@ -3649,20 +3658,33 @@
       throw e;
     }
 
-    // 2. Klucz wrappujący z PRF secret (HKDF-SHA256)
-    const wrappingKey = await C.deriveKeyFromPrfSecret(prfSecretBytes);
+    // 2. Stabilny PRF z get() — TEN sam mechanizm co przy logowaniu (unlockWithPasskey),
+    // dzięki czemu wrapping i unwrapping zawsze używają tego samego sekretu.
+    // Wymaga drugiego promptu biometrycznego po create — to znana niedogodność,
+    // ale jest niezbędna do cross-device unlock (Mac registracja → iPhone login).
+    // Bez sygnału abort: registracja powinna dokończyć się w jednym przepływie.
+    const { prfSecretBytes: stablePrfSecretBytes } = await C.getPasskeyPrfSecret(
+      credentialId, rpId, null
+    );
 
-    // 3. Zaszyfruj master key tym kluczem
+    // 3. Klucz wrappujący z STABILNEGO PRF secret (HKDF-SHA256)
+    const wrappingKey = await C.deriveKeyFromPrfSecret(stablePrfSecretBytes);
+
+    // 4. Zaszyfruj master key tym kluczem
     const encryptedMasterByPasskey = await C.encryptBytes(wrappingKey, masterKeyBytes);
 
-    // 4. Dopisz passkey do meta-rekordu
+    // 5. Dopisz passkey do meta-rekordu z wrapVersion: 2 (stabilny get-PRF wrapping)
     const meta = await getAdapter().getUserMeta(userId);
     const passkeys = Array.isArray(meta.passkeys) ? meta.passkeys : [];
     passkeys.push({
       credentialId:             credentialId,
       deviceLabel:              label,
       createdAtISO:             new Date().toISOString(),
-      encryptedMasterByPasskey: encryptedMasterByPasskey
+      encryptedMasterByPasskey: encryptedMasterByPasskey,
+      // wrapVersion 2 = klucz wrappujący wyprowadzony z PRF z get() (spójny
+      // z logowaniem i cross-device przez iCloud Keychain). Brak pola / 1 =
+      // starsza koperta sprzed N9 (potencjalnie create-PRF, fails cross-device).
+      wrapVersion:              2
     });
     await getAdapter().putUserMeta(userId, { ...meta, passkeys });
     // D.1: aktualizuj passkeyCount w registry → user-picker pokaże badge "🔐 Touch ID".
