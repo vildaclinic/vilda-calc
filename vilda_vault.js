@@ -927,15 +927,20 @@
       listTombstonesForUser:  function (uid) { return memoryAdapter.listTombstonesForUser(uid); },
       putTombstoneForUser:    function (uid, rec) { return memoryAdapter.putTombstoneForUser(uid, rec); },
       removeTombstoneForUser: function (uid, pid) { return memoryAdapter.removeTombstoneForUser(uid, pid); },
-      // ── Notatki (N1): per-user → pamięć (jak pacjenci). KLUCZOWE dla cloud-only —
-      // treść kliniczna szablonów NIE może lądować na dysku; chmura jest źródłem prawdy.
-      listNotesForUser:          function (uid) { return memoryAdapter.listNotesForUser(uid); },
-      getNoteForUser:            function (uid, nid) { return memoryAdapter.getNoteForUser(uid, nid); },
-      putNoteForUser:            function (uid, rec) { return memoryAdapter.putNoteForUser(uid, rec); },
-      removeNoteForUser:         function (uid, nid) { return memoryAdapter.removeNoteForUser(uid, nid); },
-      listNoteTombstonesForUser: function (uid) { return memoryAdapter.listNoteTombstonesForUser(uid); },
-      putNoteTombstoneForUser:   function (uid, rec) { return memoryAdapter.putNoteTombstoneForUser(uid, rec); },
-      removeNoteTombstoneForUser:function (uid, nid) { return memoryAdapter.removeNoteTombstoneForUser(uid, nid); },
+      // ── Notatki (N8): per-user → dysk (real). Notatki to dane KONTA lekarza
+      // (biblioteka szablonów), nie dane pacjentów. W trybie cloud-only zachowują
+      // się tak samo jak userPreferences w userMeta — szyfrowane master keyem,
+      // cache'owane lokalnie w IndexedDB, dostępne offline i natychmiast po
+      // ponownym logowaniu. INVARIANT cloud-only pozostaje nienaruszony dla
+      // DANYCH PACJENTÓW (patients/snapshots/tombstones pacjentów dalej idą do
+      // memoryAdapter — nigdy na dysk).
+      listNotesForUser:          function (uid) { return realAdapter.listNotesForUser(uid); },
+      getNoteForUser:            function (uid, nid) { return realAdapter.getNoteForUser(uid, nid); },
+      putNoteForUser:            function (uid, rec) { return realAdapter.putNoteForUser(uid, rec); },
+      removeNoteForUser:         function (uid, nid) { return realAdapter.removeNoteForUser(uid, nid); },
+      listNoteTombstonesForUser: function (uid) { return realAdapter.listNoteTombstonesForUser(uid); },
+      putNoteTombstoneForUser:   function (uid, rec) { return realAdapter.putNoteTombstoneForUser(uid, rec); },
+      removeNoteTombstoneForUser:function (uid, nid) { return realAdapter.removeNoteTombstoneForUser(uid, nid); },
       // Debug / introspekcja
       _peek: function () {
         return { mode: 'hybrid', realPeek: realAdapter._peek && realAdapter._peek(), memoryPeek: memoryAdapter._peek && memoryAdapter._peek() };
