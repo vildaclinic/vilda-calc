@@ -165,11 +165,14 @@
 .note-cat--wywiad    { background: #fff5e6; color: #b8730e; }
 .note-cat--wlasne    { background: #f1eefc; color: #6d4bc0; }
 .note-pin {
-  margin-left: auto; border: 0; background: transparent; cursor: pointer;
-  font-size: 1rem; color: #b8c7c9; padding: .1rem .25rem; transition: color .12s, transform .12s;
+  margin-left: auto; flex-shrink: 0; border: 0; background: transparent; cursor: pointer;
+  width: 32px; height: 32px; border-radius: 999px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: #9aa8aa; transition: color .12s, background .12s, transform .12s;
 }
-.note-pin:hover { transform: scale(1.15); }
-.note-pin.is-on { color: var(--primary, #00838d); }
+.note-pin svg { width: 18px; height: 18px; }
+.note-pin:hover { color: var(--primary, #00838d); transform: scale(1.08); }
+.note-pin.is-on { color: var(--primary, #00838d); background: #E1F5EE; }
 .note-card__title { font-size: 1rem; font-weight: 600; color: var(--text, #0f2b33); margin: 0; word-break: break-word; }
 .note-card__body {
   font-size: .86rem; color: var(--text-2, #5a7274); line-height: 1.5; margin: 0;
@@ -247,6 +250,22 @@
   .note-editor-overlay { align-items: stretch; justify-content: center; }
   .note-editor { width: 100%; }
   .notes-grid { grid-template-columns: 1fr; }
+  /* Globalny style.css ma @media(max-width:600px){ button{ width:100%; margin-top:.5rem } } —
+     rozpychał przyciski modułu (zwłaszcza „×" w bannerze PII → tekst łamał się po słowie).
+     Neutralizujemy to dla przycisków Notatek; layout flex sam dobiera szerokości. */
+  .notes-btn-primary, .notes-filter, .note-act, .note-btn-ghost,
+  .notes-pii__close, .note-editor__close {
+    width: auto !important;
+    margin-top: 0 !important;
+  }
+  /* Pin: okrągły przycisk-ikona o stałym rozmiarze (nie auto, nie 100%). */
+  .note-pin { width: 32px !important; height: 32px !important; margin-top: 0 !important; }
+  /* „Nowa notatka" w nagłówku — pełna szerokość czytelniejsza na wąskim ekranie. */
+  .notes-head { flex-direction: column; align-items: stretch; }
+  .notes-head .notes-btn-primary { width: 100% !important; justify-content: center; }
+  /* PII banner — pewny układ: ikona | tekst (rośnie) | × (stały, mały). */
+  .notes-pii { align-items: flex-start; }
+  .notes-pii__body { flex: 1 1 auto; min-width: 0; }
 }
 </style>
 
@@ -485,7 +504,8 @@
     pin.type = 'button';
     pin.className = 'note-pin' + (n.pinned ? ' is-on' : '');
     pin.title = n.pinned ? 'Odepnij' : 'Przypnij';
-    pin.textContent = n.pinned ? '📌' : '📍';
+    pin.setAttribute('aria-label', n.pinned ? 'Odepnij notatkę' : 'Przypnij notatkę');
+    pin.innerHTML = '<i data-lucide="pin"></i>';
     pin.addEventListener('click', function () { togglePin(n); });
     top.appendChild(pin);
     card.appendChild(top);
