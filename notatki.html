@@ -170,9 +170,10 @@
   display: inline-flex; align-items: center; justify-content: center;
   color: #9aa8aa; transition: color .12s, background .12s, transform .12s;
 }
-.note-pin svg { width: 18px; height: 18px; }
+.note-pin svg { width: 18px; height: 18px; stroke: currentColor; display: block; }
 .note-pin:hover { color: var(--primary, #00838d); transform: scale(1.08); }
 .note-pin.is-on { color: var(--primary, #00838d); background: #E1F5EE; }
+.note-pin.is-on svg { stroke: var(--primary, #00838d); }
 .note-card__title { font-size: 1rem; font-weight: 600; color: var(--text, #0f2b33); margin: 0; word-break: break-word; }
 .note-card__body {
   font-size: .86rem; color: var(--text-2, #5a7274); line-height: 1.5; margin: 0;
@@ -505,7 +506,7 @@
     pin.className = 'note-pin' + (n.pinned ? ' is-on' : '');
     pin.title = n.pinned ? 'Odepnij' : 'Przypnij';
     pin.setAttribute('aria-label', n.pinned ? 'Odepnij notatkę' : 'Przypnij notatkę');
-    pin.innerHTML = '<i data-lucide="pin"></i>';
+    pin.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg>';
     pin.addEventListener('click', function () { togglePin(n); });
     top.appendChild(pin);
     card.appendChild(top);
