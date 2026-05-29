@@ -634,6 +634,8 @@
   }
 
   function start() {
+    // Zdejmij js-loading — bez tego .main-content zostaje visibility:hidden (pusta strona).
+    try { document.body.classList.remove('js-loading'); } catch (_) {}
     bind();
     initPiiNotice();
     if (isUnlocked()) { reload(); }
