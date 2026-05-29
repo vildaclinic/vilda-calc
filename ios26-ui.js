@@ -701,6 +701,7 @@
     'cukrzyca.html': { href: 'cukrzyca.html', label: 'Cukrzyca', icon: 'syringe' },
     'steroidy.html': { href: 'steroidy.html', label: 'Steroidy', icon: 'pill' },
     'materialy-edukacyjne.html': { href: 'materialy-edukacyjne.html', label: EDUCATION_FULL_LABEL, icon: 'book-open' },
+    'notatki.html': { href: 'notatki.html', label: 'Notatki', icon: 'file-text' },
     'ustawienia.html': { href: 'ustawienia.html', label: 'Ustawienia', icon: 'settings' }
     // instrukcja.html, o-aplikacji.html, kontakt.html — strony informacyjne dostępne przez stopkę,
     // nie wymagają wymuszonego wpisu w sidebar/hamburger.
