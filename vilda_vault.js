@@ -3618,14 +3618,38 @@
     const rpId = window.location.hostname || 'localhost';
     const label = deviceLabel || C.generateDeviceLabel();
 
-    // Substep B: anti-duplicate. Pobierz istniejące credentialIds tego usera —
+    // Substep B + N10.1: anti-duplicate. Pobierz istniejące credentialIds tego usera —
     // browser z excludeCredentials zapobiegnie podwójnej rejestracji na tym
-    // samym authenticatorze (zwraca InvalidStateError). Cloud-only sync może
-    // też pomóc cross-device.
+    // samym authenticatorze (zwraca InvalidStateError).
+    //
+    // N10.1: Filtrujemy WYŁĄCZNIE local entries (z encryptedMasterByPasskey).
+    // Remote (zsynchronizowane przez cloud sync metadata) NIE są tu istotne —
+    // ich obecność w excludeCredentials prowadziłaby do fałszywego InvalidStateError
+    // na drugim urządzeniu Apple (iPhone) bo iCloud Keychain sync sprawia że
+    // Mac's credential jest WIDOCZNY w iPhone's Keychain. To wymaga osobnej
+    // ścieżki: adoptSyncedPasskey (N10.2) zamiast nowej rejestracji.
     const existingMetaForExclude = await getAdapter().getUserMeta(userId);
-    const existingCredIds = (existingMetaForExclude && Array.isArray(existingMetaForExclude.passkeys))
-      ? existingMetaForExclude.passkeys.map(function (p) { return p.credentialId; }).filter(Boolean)
+    const allPasskeys = (existingMetaForExclude && Array.isArray(existingMetaForExclude.passkeys))
+      ? existingMetaForExclude.passkeys
       : [];
+    const localPasskeys = allPasskeys.filter(function (p) {
+      // Lokalny = ma encryptedMasterByPasskey (potrafimy go odszyfrować PRF-em tego urządzenia).
+      return p && p.encryptedMasterByPasskey && p.encryptedMasterByPasskey.iv;
+    });
+    const remotePasskeys = allPasskeys.filter(function (p) {
+      return p && !p.encryptedMasterByPasskey;
+    });
+    // Jeśli WSZYSTKIE existing passkeys są remote-only (zsynchronizowane z innego
+    // urządzenia), nowa rejestracja na tym urządzeniu jest semantycznie błędna —
+    // userowi należy się ADOPCJA istniejącego credentiala, nie tworzenie duplikatu
+    // (i tak byłoby blokowane przez Apple iCloud Keychain anti-syndication).
+    if (localPasskeys.length === 0 && remotePasskeys.length > 0) {
+      const err = new Error('Masz już biometrię dla tego konta zsynchronizowaną z innego urządzenia (przez iCloud Keychain). Aktywuj ją na tym urządzeniu zamiast rejestrować nową.');
+      err.code = 'PASSKEY_NEEDS_ADOPTION';
+      err.adoptableCredentialIds = remotePasskeys.map(function (p) { return p.credentialId; });
+      throw err;
+    }
+    const existingCredIds = localPasskeys.map(function (p) { return p.credentialId; }).filter(Boolean);
 
     // 1. Rejestracja passkey + odbiór PRF secret z create.
     // deviceLabel (label) jest też przekazywane do crypto — staje się częścią
@@ -3693,6 +3717,125 @@
     notifyPasskeyChanged({ action: 'register', credentialId: credentialId });
 
     return { credentialId, deviceLabel: label };
+  }
+
+  /**
+   * N10.2 — Adopcja zsynchronizowanego passkey na BIEŻĄCYM urządzeniu.
+   *
+   * Use case (Apple iCloud Keychain):
+   *   1. Mac rejestruje Touch ID (registerPasskey) → meta.passkeys = [{M_CRED, encryptedMasterByPasskey}]
+   *   2. Mac syncuje metadata do chmury → cloud przechowuje { credentialId, deviceLabel, ... }
+   *      ale NIE encryptedMasterByPasskey (device-specific crypto material).
+   *   3. iPhone pulluje meta z chmury → meta.passkeys = [{M_CRED, brak encryptedMasterByPasskey}]
+   *   4. iPhone NIE może odblokować vault biometrią — brak crypto material lokalnie.
+   *   5. iCloud Keychain syncuje sam credential (klucz prywatny) na iPhone'a, ale Apple
+   *      PRF jest per-device-not-shared — Mac's encryptedMasterByPasskey jest nie do
+   *      odszyfrowania z iPhone's get-PRF.
+   *
+   * adoptSyncedPasskey rozwiązuje to: user (zalogowany hasłem na iPhonie) potwierdza
+   * adopcję → wywołujemy `getPasskeyPrfSecret(credentialId)` → iPhone's Face ID prompt →
+   * dostajemy iPhone's stabilny get-PRF → wrappujemy masterKeyBytes tym PRF →
+   * zapisujemy jako encryptedMasterByPasskey lokalnie w meta entry. Od teraz iPhone
+   * może odblokowywać vault biometrią używając TEGO SAMEGO credentiala co Mac
+   * (iCloud Keychain go widzi), ale ze SWOIM własnym wrappingiem.
+   *
+   * NIE syncujemy żadnej zmiany do chmury — encryptedMasterByPasskey JEST device-local.
+   *
+   * @param {string} credentialId  — base64url id passkey do adopcji
+   * @returns {Promise<{credentialId, deviceLabel, adoptedOnDeviceISO}>}
+   */
+  async function adoptSyncedPasskey(credentialId) {
+    const C = getCrypto();
+    if (!isUnlocked() || !masterKeyBytes) {
+      throw new Error('Zaloguj się hasłem przed aktywacją biometrii.');
+    }
+    if (typeof credentialId !== 'string' || !credentialId.length) {
+      throw new Error('adoptSyncedPasskey: brak credentialId.');
+    }
+    const userId = currentUserId;
+    const rpId = window.location.hostname || 'localhost';
+
+    const meta = await getAdapter().getUserMeta(userId);
+    if (!meta || !Array.isArray(meta.passkeys)) {
+      throw new Error('Brak metadanych użytkownika.');
+    }
+    const idx = meta.passkeys.findIndex(function (p) {
+      return p && p.credentialId === credentialId;
+    });
+    if (idx < 0) {
+      const err = new Error('adoptSyncedPasskey: passkey o tym credentialId nie istnieje w meta.');
+      err.code = 'PASSKEY_NOT_FOUND';
+      throw err;
+    }
+    const entry = meta.passkeys[idx];
+    if (entry.encryptedMasterByPasskey && entry.encryptedMasterByPasskey.iv) {
+      const err = new Error('Ten klucz biometryczny jest już aktywny na tym urządzeniu.');
+      err.code = 'PASSKEY_ALREADY_ADOPTED';
+      throw err;
+    }
+
+    // Pobierz stabilny get-PRF z TEGO urządzenia (Face ID/Touch ID prompt pojawi się tu).
+    // To ten sam mechanizm co unlockWithPasskey — gwarancja symetrii encrypt↔decrypt.
+    let stablePrfSecretBytes;
+    try {
+      ({ prfSecretBytes: stablePrfSecretBytes } = await C.getPasskeyPrfSecret(
+        credentialId, rpId, null
+      ));
+    } catch (e) {
+      // Mapowanie błędów na user-friendly UI:
+      if (e && e.name === 'NotAllowedError') {
+        const err = new Error('Aktywacja biometrii nie powiodła się — autoryzacja została anulowana lub nie powiodła się.');
+        err.code = 'ADOPT_NOT_ALLOWED';
+        throw err;
+      }
+      throw e;
+    }
+
+    const wrappingKey = await C.deriveKeyFromPrfSecret(stablePrfSecretBytes);
+    const encryptedMasterByPasskey = await C.encryptBytes(wrappingKey, masterKeyBytes);
+
+    // Update entry IN PLACE — dodaj crypto material + oznacz że adopcja zaszła.
+    // wrapVersion: 2 jest spójny z registerPasskey po N9 (stabilny get-PRF wrapping).
+    const updatedPasskeys = meta.passkeys.slice();
+    updatedPasskeys[idx] = Object.assign({}, entry, {
+      encryptedMasterByPasskey: encryptedMasterByPasskey,
+      wrapVersion: 2,
+      adoptedOnDeviceISO: new Date().toISOString()
+    });
+    await getAdapter().putUserMeta(userId, Object.assign({}, meta, { passkeys: updatedPasskeys }));
+
+    // _syncPasskeyCount NIE zmienia się (passkey count to liczba passkeyów w meta,
+    // a my nie dodaliśmy nowego ani nie usunęliśmy — tylko zaktualizowaliśmy entry).
+    // notifyPasskeyChanged NIE wołamy — adopcja jest device-local, nie zmienia
+    // metadanych widocznych w chmurze.
+
+    return {
+      credentialId: credentialId,
+      deviceLabel: entry.deviceLabel || '(klucz zsynchronizowany)',
+      adoptedOnDeviceISO: updatedPasskeys[idx].adoptedOnDeviceISO
+    };
+  }
+
+  /**
+   * N10.2 — Lista passkey'ów które są zsynchronizowane z innego urządzenia
+   * i NIE są jeszcze aktywne lokalnie (mogą być zaadoptowane).
+   * Używane przez post-login prompt w UI.
+   *
+   * @returns {Promise<Array<{credentialId, deviceLabel, createdAtISO}>>}
+   */
+  async function listAdoptablePasskeys() {
+    if (!isUnlocked()) return [];
+    const meta = await getAdapter().getUserMeta(currentUserId);
+    if (!meta || !Array.isArray(meta.passkeys)) return [];
+    return meta.passkeys
+      .filter(function (p) { return p && !p.encryptedMasterByPasskey; })
+      .map(function (p) {
+        return {
+          credentialId: p.credentialId,
+          deviceLabel:  p.deviceLabel || '(klucz zsynchronizowany)',
+          createdAtISO: p.createdAtISO
+        };
+      });
   }
 
   /**
@@ -3882,6 +4025,18 @@
     const entry = meta.passkeys.find(p => p.credentialId === returnedId);
     if (!entry) {
       throw new Error('Nieznany credentialId — biometria nie jest zarejestrowana dla tego konta.');
+    }
+
+    // N10.4: Detect remote-only entry (zsynchronizowany metadata, brak crypto material).
+    // Bez tego catch'a niżej krasz na entry.encryptedMasterByPasskey.iv (TypeError),
+    // który byłby zinterpretowany jako PASSKEY_DECRYPT_FAILED — mylące UX bo to nie
+    // jest decryption mismatch tylko BRAK encryptedMasterByPasskey w meta.
+    // PASSKEY_NOT_LOCAL kieruje UI do flow adopcji (N10.2 adoptSyncedPasskey).
+    if (!entry.encryptedMasterByPasskey || !entry.encryptedMasterByPasskey.iv) {
+      const err = new Error('Ten klucz biometryczny jest zsynchronizowany z innego urządzenia, ale nie został jeszcze aktywowany tutaj. Zaloguj się hasłem i aktywuj biometrię na tym urządzeniu.');
+      err.code = 'PASSKEY_NOT_LOCAL';
+      err.credentialId = returnedId;
+      throw err;
     }
 
     // 3. Wyprowaź klucz wrappujący i odszyfruj master key
@@ -4905,6 +5060,9 @@
     completeQRLoginEphemeral: completeQRLoginEphemeral,
     listPasskeys: listPasskeys,
     removePasskey: removePasskey,
+    // N10: adopcja zsynchronizowanego passkey na bieżącym urządzeniu
+    adoptSyncedPasskey: adoptSyncedPasskey,
+    listAdoptablePasskeys: listAdoptablePasskeys,
     // QR Transfer — logowanie kodem QR
     initiateQRLogin:   initiateQRLogin,
     pollQRLoginStatus: pollQRLoginStatus,

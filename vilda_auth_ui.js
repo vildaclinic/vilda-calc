@@ -1470,8 +1470,14 @@
             showForcedPasswordResetScreen(result.passwordPolicy);
             return;
           }
-          // Pokaż propozycję biometrii po pierwszym zalogowaniu hasłem (jeśli stosowne)
+          // Pokaż propozycję biometrii po pierwszym zalogowaniu hasłem (jeśli stosowne).
+          // N10.3: po istniejącym prompt'ie (oferuje rejestrację gdy brak passkeyów),
+          // sprawdzamy też adoption — gdy są passkeye, ale wyłącznie remote (synced
+          // z innego Apple urządzenia przez iCloud Keychain). Te dwa prompty są
+          // wzajemnie wykluczające w praktyce: pierwszy odpada gdy passkeys.length>0,
+          // drugi tylko wtedy gdy wszystkie są remote.
           showPostLoginBiometricPrompt(userId);
+          showPostLoginAdoptionPrompt(userId);
           hide();
           startIdleWatch();
         } catch (e) {
@@ -1755,6 +1761,89 @@
 
     overlay.appendChild(sheet);
     document.body.appendChild(overlay);
+  }
+
+  /**
+   * N10.3 — Prompt adopcji passkey zsynchronizowanego z innego urządzenia.
+   *
+   * Use case (Apple iCloud Keychain):
+   *   Mac: registerPasskey → meta.passkeys = [{M_CRED, encryptedMasterByPasskey}]
+   *   sync → cloud (bez encryptedMasterByPasskey)
+   *   iPhone: pull → meta.passkeys = [{M_CRED, brak encryptedMasterByPasskey}]
+   *   iPhone: zalogował się hasłem → ten prompt → "Aktywuj biometrię" → adoptSyncedPasskey()
+   *           → iPhone's get-PRF wrappuje master → meta.passkeys[0].encryptedMasterByPasskey
+   *           teraz istnieje LOKALNIE → Face ID login na iPhonie działa.
+   *
+   * Wykluczające z showPostLoginBiometricPrompt: tamten działa gdy passkeys.length===0,
+   * ten gdy passkeys.length>0 i wszystkie są remote.
+   */
+  async function showPostLoginAdoptionPrompt(userId) {
+    const V = getVault();
+    if (!V) return;
+    if (typeof V.listAdoptablePasskeys !== 'function') return; // starszy vault — pomijamy
+
+    const flagKey = 'vilda:adoptionPromptShown:' + userId;
+    if (localStorage.getItem(flagKey)) return;
+
+    let prfOk = false;
+    let adoptable = [];
+    try {
+      prfOk = await V.isPrfSupported();
+      if (prfOk) adoptable = await V.listAdoptablePasskeys();
+    } catch (_) { return; }
+
+    if (!prfOk || !adoptable.length) return;
+
+    // Oznacz jako pokazany — po wybraniu opcji (Aktywuj / Pominę) prompt nie wraca.
+    // User może aktywować ręcznie z Ustawienia → Bezpieczeństwo.
+    localStorage.setItem(flagKey, new Date().toISOString());
+
+    const bioLabel = getBiometricLabel();
+    // Bierzemy pierwszy adoptable (najczęstszy scenariusz: jeden iCloud Keychain credential).
+    const target = adoptable[0];
+
+    const overlay = el('div', { class: 'vilda-auth-overlay vilda-auth-overlay-sheet' });
+    const sheet = el('div', { class: 'vilda-auth-sheet' }, [
+      el('h3', { class: 'vilda-auth-sheet-title', text: 'Aktywuj ' + bioLabel + ' na tym urządzeniu?' }),
+      el('p', {
+        class: 'vilda-auth-sheet-body',
+        html: 'Wykryliśmy biometryczny klucz Twojego konta zsynchronizowany przez iCloud Keychain ' +
+              '(zarejestrowany jako <strong>' + escapeHtmlLocal(target.deviceLabel) + '</strong>). ' +
+              'Aby logować się tu jednym ' + bioLabel + ' musisz go aktywować — to wymaga jednego potwierdzenia biometrycznego.'
+      }),
+      el('div', { class: 'vilda-auth-sheet-actions' }, [
+        el('button', {
+          class: 'vilda-auth-btn vilda-auth-btn-primary',
+          type: 'button',
+          text: 'Aktywuj ' + bioLabel,
+          onclick: async function () {
+            overlay.remove();
+            try {
+              await V.adoptSyncedPasskey(target.credentialId);
+              // Sukces — kolejne logowania będą używać biometrii.
+            } catch (e) {
+              // Cicha obsługa — user może spróbować ponownie z Ustawienia → Bezpieczeństwo.
+              logError('adoptSyncedPasskey (prompt)', e);
+            }
+          }
+        }),
+        el('button', {
+          class: 'vilda-auth-btn vilda-auth-btn-ghost',
+          type: 'button',
+          text: 'Pominę teraz',
+          onclick: function () { overlay.remove(); }
+        })
+      ])
+    ]);
+
+    overlay.appendChild(sheet);
+    document.body.appendChild(overlay);
+  }
+
+  // Lokalny escape żeby nie zależeć od helpera ze setting'sów —
+  // używany przez prompt adopcji do bezpiecznego renderowania deviceLabel.
+  function escapeHtmlLocal(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
   // ============ ODZYSKIWANIE DOSTĘPU ============
@@ -5634,6 +5723,7 @@
     showSetupWizard: showSetupWizard,
     showLoginForUser: showLoginForUser,
     showPostLoginBiometricPrompt: showPostLoginBiometricPrompt,
+    showPostLoginAdoptionPrompt: showPostLoginAdoptionPrompt,
     showRecoveryFlowForUser: showRecoveryFlowForUser,
     showPatientsList: showPatientsList,
     showPatientCard: showPatientCard,

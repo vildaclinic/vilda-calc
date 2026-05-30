@@ -144,10 +144,10 @@ html.vilda-pro-active .pro-sync-note {
 <script src="vilda_session_bridge.js?v=1"></script>
 <script src="vilda_init.js?v=4"></script>
 <script src="vilda_crypto.js?v=14"></script>
-<script src="vilda_vault.js?v=46"></script>
+<script src="vilda_vault.js?v=47"></script>
 <script src="vilda_sync.js?v=6"></script>
 <script src="vilda_sync_integration.js?v=8"></script>
-<script src="vilda_auth_ui.js?v=105"></script>
+<script src="vilda_auth_ui.js?v=106"></script>
 <script src="vilda_data_safety_explainer.js?v=5"></script>
 <script src="vilda_crypto_strength_explainer.js?v=6"></script>
 <script src="vilda_pro_access.js?v=2"></script>
@@ -3444,20 +3444,58 @@ html.vilda-pro-active .pro-sync-note {
           const remoteBadge = isRemote
             ? '<span style="display:inline-block;margin-left:6px;padding:1px 7px;font-size:0.68rem;font-weight:600;color:#1d4ed8;background:#dbeafe;border-radius:999px;vertical-align:1px;">🌐 Inne urządzenie</span>'
             : '';
+          // N10.5: dla remote entries informujemy że można je aktywować lokalnie
+          // przez adoptSyncedPasskey (jeden Face ID/Touch ID prompt i lokalny wrapping).
           const remoteHint = isRemote
-            ? '<br><span style="font-size:0.74rem; color:#1d4ed8; font-style:italic;">Z innego urządzenia. Możesz usunąć, jeśli straciłeś dostęp.</span>'
+            ? '<br><span style="font-size:0.74rem; color:#1d4ed8; font-style:italic;">' +
+              'Zsynchronizowane z innego urządzenia. Możesz aktywować ten klucz tutaj ' +
+              '(do biometrycznego logowania), albo usunąć jeśli straciłeś dostęp.</span>'
             : '';
           info.innerHTML =
             '<strong style="font-size:0.9rem;color:#0f2b33;">' + escapeHtml(k.deviceLabel) + '</strong>' + roamingBadge + remoteBadge +
             '<br><span style="font-size:0.78rem; color:#5b6672;">dodano: ' + date + '</span>' +
             remoteHint;
+          // Kontener akcji — stack pionowy gdy więcej niż jeden przycisk (remote).
+          const actionsContainer = document.createElement('div');
+          actionsContainer.style.cssText = 'display:flex; flex-direction:column; gap:6px; flex:0 0 auto; align-self:flex-start;';
+
+          // N10.5: dla remote passkey → przycisk PRIMARY „Aktywuj na tym urządzeniu"
+          // przed (na górze) Usuń. Wywołuje adoptSyncedPasskey → Face ID prompt → lokalny wrap.
+          let adoptBtn = null;
+          if (isRemote && typeof V.adoptSyncedPasskey === 'function') {
+            adoptBtn = document.createElement('button');
+            adoptBtn.type = 'button';
+            adoptBtn.className = 'vilda-auth-btn vilda-auth-btn-small';
+            adoptBtn.style.cssText = 'background:#00838d !important; color:#fff !important; border-color:#00838d !important; width:auto !important; min-width:140px !important; flex:0 0 auto !important; padding:6px 14px !important; font-weight:600;';
+            adoptBtn.textContent = 'Aktywuj tutaj';
+            adoptBtn.addEventListener('click', async function () {
+              if (!V.isUnlocked()) {
+                setText(passkeyStatus, 'Najpierw zaloguj się hasłem.');
+                return;
+              }
+              adoptBtn.disabled = true;
+              if (delBtn) delBtn.disabled = true;
+              setText(passkeyStatus, 'Potwierdź biometrią — aktywuję klucz na tym urządzeniu…');
+              try {
+                await V.adoptSyncedPasskey(k.credentialId);
+                setText(passkeyStatus, '✓ Klucz aktywny — możesz teraz logować się biometrią.');
+                refreshPasskeySection();
+              } catch (e) {
+                setText(passkeyStatus, 'Błąd: ' + (e && e.message ? e.message : e));
+                adoptBtn.disabled = false;
+                if (delBtn) delBtn.disabled = false;
+              }
+            });
+            actionsContainer.appendChild(adoptBtn);
+          }
+
           const delBtn = document.createElement('button');
           delBtn.type = 'button';
           delBtn.className = 'vilda-auth-btn vilda-auth-btn-small';
           // Fix iPhone layout: !important na width/min-width żeby zbić globalne
           // button { width: 100% } z style.css. flex:0 0 auto + explicit width:auto
           // zapobiega rozciąganiu w wąskich viewportach.
-          delBtn.style.cssText = 'background:#fef2f3 !important; color:#b00020 !important; border-color:#b00020 !important; width:auto !important; min-width:64px !important; flex:0 0 auto !important; padding:6px 14px !important; align-self:flex-start;';
+          delBtn.style.cssText = 'background:#fef2f3 !important; color:#b00020 !important; border-color:#b00020 !important; width:auto !important; min-width:64px !important; flex:0 0 auto !important; padding:6px 14px !important;';
           delBtn.textContent = 'Usuń';
           delBtn.addEventListener('click', async function () {
             // Substep C: ostrzeżenie dla ostatniego passkey — bez tego user może
@@ -3472,6 +3510,7 @@ html.vilda-pro-active .pro-sync-note {
                 'Biometryczne logowanie z tego urządzenia przestanie działać.';
             if (!confirm(confirmMsg)) return;
             delBtn.disabled = true;
+            if (adoptBtn) adoptBtn.disabled = true;
             try {
               await V.removePasskey(user.userId, k.credentialId);
               setText(passkeyStatus, '✓ Logowanie biometrią usunięte.');
@@ -3479,10 +3518,13 @@ html.vilda-pro-active .pro-sync-note {
             } catch (e) {
               setText(passkeyStatus, 'Błąd: ' + (e && e.message ? e.message : e));
               delBtn.disabled = false;
+              if (adoptBtn) adoptBtn.disabled = false;
             }
           });
+          actionsContainer.appendChild(delBtn);
+
           row.appendChild(info);
-          row.appendChild(delBtn);
+          row.appendChild(actionsContainer);
           passkeyList.appendChild(row);
         });
       }
