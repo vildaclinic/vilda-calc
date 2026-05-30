@@ -1258,6 +1258,98 @@ body.chrome-drawer-open { overflow: hidden; }
   background: #dc2626;              /* czerwony */
   color: #fff;
 }
+
+/* ── R4: Przycisk reminderów (notatki kliniczne pacjentów due dziś/overdue) ──
+   Identyczny pattern wizualny co chrome-sync-btn — 30x30, lucide outline SVG,
+   border-radius 8px, hover z białym tłem 55% i turkusowym color.
+   Badge counter w prawym górnym rogu: czerwony gdy overdue, pomarańczowy gdy
+   tylko dziś. Hidden gdy patientCount=0 (atrybut hidden + data-count="0").    */
+.chrome-reminders-btn {
+  position: relative;               /* dla absolute badge */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--chrome-label-color, #6b7280);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+  font-family: inherit;
+}
+.chrome-reminders-btn[hidden] { display: none; }
+.chrome-reminders-btn:hover {
+  background: rgba(255, 255, 255, 0.55);
+  color: var(--primary, #00838d);
+}
+.chrome-reminders-btn:active { transform: scale(0.95); }
+.chrome-reminders-btn:focus-visible {
+  outline: 2px solid var(--primary, #00838d);
+  outline-offset: 2px;
+}
+
+/* Badge counter — kółko/pill z liczbą, w prawym górnym rogu ikony. */
+.chrome-reminders-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  background: #6b7280;              /* fallback szary — nadpisywany przez data-state */
+  border-radius: 999px;
+  border: 1.5px solid #fff;         /* biała obwódka separuje od ikony */
+  box-shadow: 0 1px 3px rgba(0, 40, 48, 0.15);
+  letter-spacing: -0.02em;
+  pointer-events: none;             /* klik wpada do button, nie do badge */
+}
+
+/* Stan: overdue (notatki z dueDate w przeszłości) — czerwony pilny */
+.chrome-reminders-btn[data-state="overdue"] {
+  color: #dc2626;                   /* czerwona ikona jako wzmocnienie sygnału */
+}
+.chrome-reminders-btn[data-state="overdue"] .chrome-reminders-badge {
+  background: #dc2626;
+}
+
+/* Stan: today (tylko dzisiejsze, brak overdue) — pomarańczowy łagodny */
+.chrome-reminders-btn[data-state="today"] {
+  color: var(--primary, #00838d);   /* turkus — neutralna informacja */
+}
+.chrome-reminders-btn[data-state="today"] .chrome-reminders-badge {
+  background: #d97706;              /* amber-600 — pilne ale nie alarmowe */
+}
+
+/* Subtelna animacja pulse 3× po wejściu w stan z notatkami due — przyciąga
+   wzrok przez moment, ale nie irytuje (kończy się szybko). Nadpisywana
+   przez prefers-reduced-motion. */
+.chrome-reminders-btn:not([hidden]):not([data-state="empty"]) .chrome-reminders-badge {
+  animation: vildaRemindersPulse 0.6s ease-out 3;
+}
+@keyframes vildaRemindersPulse {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chrome-reminders-btn .chrome-reminders-badge {
+    animation: none;
+  }
+}
+
+/* Mobile (wąskie viewporty) — chip zostaje widoczny, jego rozmiar nie zmienia
+   się — to malutka ikonka, nie zabiera krytycznego miejsca. */
 /* Offline w cloud-only — pomarańczowy + ostrzegawczy pierścień */
 .chrome-sync-btn[data-cloud-only="true"][data-offline="true"] {
   background: #b45309;

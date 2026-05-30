@@ -416,6 +416,19 @@
       '        <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>',
       '      </svg>',
       '    </a>',
+      // R4 — przycisk reminderów (notatki klinicznne pacjentów due dziś/overdue).
+      // Identyczny pattern wizualny co chrome-sync-btn (30x30, lucide outline SVG,
+      // border-radius 8px). Badge counter w prawym górnym rogu (czerwony=overdue,
+      // pomarańczowy=today). Hidden gdy count=0 (data-count="0"). Klik → modal force.
+      '    <button type="button" class="chrome-reminders-btn" id="vildaRemindersBtn"',
+      '       data-count="0" data-state="empty" hidden',
+      '       title="Brak przypomnień" aria-label="Brak przypomnień">',
+      '      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">',
+      '        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>',
+      '        <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+      '      </svg>',
+      '      <span class="chrome-reminders-badge" id="vildaRemindersBadge" aria-hidden="true">0</span>',
+      '    </button>',
       '    <div class="chrome-chip chrome-patient-chip is-empty" id="vildaPatientChip" aria-live="polite" role="button" tabindex="0" aria-haspopup="dialog" aria-expanded="false" title="Status zapisu — kliknij, aby zobaczyć legendę">',
       '      <span class="chip-icon" data-lucide="user-round" aria-hidden="true"></span>',
       '      <span class="chip-content">',
@@ -1431,6 +1444,112 @@
     refreshSyncBtn();
   }
 
+  // ============ R4 — REMINDER CHIP (notatki kliniczne pacjentów due) ============
+  // Pattern wizualny zgodny z chrome-sync-btn (30x30, lucide outline SVG).
+  // Live update przez V.onPatientNoteChanged. Klik → showRemindersModal force.
+
+  var _remindersRefreshDebounce = null;
+
+  /**
+   * Odśwież chip — pobierz aktualną listę due i zaktualizuj badge.
+   * Bezpieczne wywołanie wielokrotne (debounce 250ms).
+   */
+  function refreshRemindersBtn() {
+    clearTimeout(_remindersRefreshDebounce);
+    _remindersRefreshDebounce = setTimeout(function () {
+      _refreshRemindersBtnNow().catch(function () {});
+    }, 250);
+  }
+
+  async function _refreshRemindersBtnNow() {
+    var btn = doc.getElementById('vildaRemindersBtn');
+    if (!btn) return;
+    var badge = doc.getElementById('vildaRemindersBadge');
+    if (!badge) return;
+
+    var V = global.VildaVault;
+    // Nie zalogowany → ukryj.
+    if (!V || typeof V.isUnlocked !== 'function' || !V.isUnlocked()) {
+      btn.hidden = true;
+      btn.setAttribute('data-count', '0');
+      btn.setAttribute('data-state', 'empty');
+      btn.setAttribute('aria-label', 'Brak przypomnień');
+      btn.setAttribute('title', 'Brak przypomnień');
+      return;
+    }
+    if (typeof V.listPatientNotesDueByDate !== 'function') {
+      btn.hidden = true;
+      return;
+    }
+
+    var reminders = [];
+    try { reminders = await V.listPatientNotesDueByDate(); }
+    catch (_) { reminders = []; }
+
+    // Zlicz: pacjentów + notatek + czy są overdue (zmienia kolor badge).
+    var patientCount = reminders.length;
+    var noteCount = 0;
+    var hasOverdue = false;
+    var todayLocal = (function () {
+      var d = new Date();
+      return d.getFullYear() + '-'
+        + String(d.getMonth() + 1).padStart(2, '0') + '-'
+        + String(d.getDate()).padStart(2, '0');
+    })();
+    for (var i = 0; i < reminders.length; i++) {
+      var notes = reminders[i].notes || [];
+      noteCount += notes.length;
+      for (var j = 0; j < notes.length; j++) {
+        var due = notes[j].dueDateISO || '';
+        // overdue gdy dueDate < dzisiaj (lokalna). Porównanie YYYY-MM-DD jest lexykogr.
+        if (due && due.substring(0, 10) < todayLocal) { hasOverdue = true; break; }
+      }
+      if (hasOverdue) break;
+    }
+
+    if (patientCount === 0) {
+      btn.hidden = true;
+      btn.setAttribute('data-count', '0');
+      btn.setAttribute('data-state', 'empty');
+      btn.setAttribute('aria-label', 'Brak przypomnień');
+      btn.setAttribute('title', 'Brak przypomnień');
+      badge.textContent = '0';
+      return;
+    }
+
+    // Widoczny + badge update.
+    btn.hidden = false;
+    btn.setAttribute('data-count', String(patientCount));
+    btn.setAttribute('data-state', hasOverdue ? 'overdue' : 'today');
+    badge.textContent = patientCount > 9 ? '9+' : String(patientCount);
+
+    // a11y label z poprawną polską odmianą.
+    var pacjentowWord = (patientCount === 1) ? 'pacjent wymaga'
+      : (patientCount < 5 ? 'pacjentów wymaga' : 'pacjentów wymaga');
+    var label = patientCount + ' ' + pacjentowWord + ' uwagi (' + noteCount
+      + (noteCount === 1 ? ' notatka' : (noteCount < 5 ? ' notatki' : ' notatek')) + ')';
+    btn.setAttribute('aria-label', label);
+    btn.setAttribute('title', label);
+  }
+
+  /**
+   * Wpięcie: klik btn → otwórz modal force; live update na V.onPatientNoteChanged
+   * + on day change (jeśli user trzyma stronę otwartą przez północ).
+   */
+  function bindRemindersBtn() {
+    var btn = doc.getElementById('vildaRemindersBtn');
+    if (!btn) return;
+    btn.addEventListener('click', function (ev) {
+      if (ev && typeof ev.preventDefault === 'function') ev.preventDefault();
+      try {
+        var Ui = global.VildaAuthUI;
+        if (Ui && typeof Ui.maybeShowReminders === 'function') {
+          Ui.maybeShowReminders({ force: true }).catch(function () {});
+        }
+      } catch (_) {}
+    });
+  }
+
   // ============ EVENTY ============
   function bindAuthEvents() {
     var vaultListenersBound = false;
@@ -1443,14 +1562,24 @@
       if (typeof v.onUnlock       === 'function') {
         v.onUnlock(refreshUserChip);
         v.onUnlock(refreshCloudOnlyBadge);
+        // R4 — reminder chip refresh po unlock. Z opóźnieniem 3500ms żeby było po
+        // sync force-pull (3000ms) i pokrywało się z maybeShowReminders auto-trigger.
+        v.onUnlock(function () { setTimeout(refreshRemindersBtn, 3500); });
       }
       if (typeof v.onLock         === 'function') {
         v.onLock(refreshUserChip);
         v.onLock(refreshCloudOnlyBadge);
+        v.onLock(refreshRemindersBtn); // → patientCount=0 → hidden
       }
       if (typeof v.onPatientSaved === 'function') v.onPatientSaved(refreshPatientChip);
+      // R4 — real-time update chipu gdy notatka zmieniona (save/delete/complete/snooze).
+      if (typeof v.onPatientNoteChanged === 'function') {
+        v.onPatientNoteChanged(refreshRemindersBtn);
+      }
+      bindRemindersBtn();
       refreshUserChip();
       refreshCloudOnlyBadge();
+      refreshRemindersBtn();
       // Overlay loading dla force-pull cloud-only — instalujemy raz po bind vault.
       try { installCloudOnlyOverlay(); } catch (_) {}
       // Online/offline listeners — chip cloud-only przełącza wygląd gdy
@@ -1968,6 +2097,8 @@
     refreshUserChip: refreshUserChip,
     refreshPatientChip: refreshPatientChip,
     refreshSyncBtn: refreshSyncBtn,
+    // R4 — manual refresh chip (np. po external change reminderów).
+    refreshRemindersBtn: refreshRemindersBtn,
     highlightActiveLink: function () { highlightActiveLink(); },
     showTip: showChromeTip,
     MENU: MENU,
