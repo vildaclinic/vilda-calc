@@ -3580,6 +3580,16 @@
       : (age != null ? age * 12 : null);
 
     // ── Dane wzrostowe (sparkline + prędkość) ──
+    // Source of truth = `growthData.measurements[]` (tabela „Pomiary historyczne" z modułu
+    // Zaawansowane / Podstawowy moduł wzrastania). Tabela jest gwarantowanie aktualna —
+    // helper FIX A/B/C w applyLoadedData + saveUserData dorzuca aktualny pomiar przy każdym
+    // load i każdym save (UPDATE po ageMonths jeśli wpis dla tego wieku już istnieje).
+    //
+    // Faza 42c (synteza punktów ze WSZYSTKICH snapshotów payload.user) została USUNIĘTA —
+    // produkowała fałszywe duplikaty u pacjentów którzy kilkukrotnie kliknęli Zapisz z tymi
+    // samymi wartościami (3 snapshoty z h=123 → 3 fałszywe kółka na siatce). Po FIX A/B/C
+    // każda wizyta = jeden wpis w tabeli, siatka centylowa pokazuje dokładnie te same punkty
+    // co oś czasu Historia (vault.listPatientTimelineEvents).
     var measurements = (growthData.measurements || []).filter(function (m) {
       return m && m.height != null;
     });
@@ -3587,51 +3597,7 @@
     var isLosingGrowth = !!growthData.isLosingGrowth;
     var isSlowVelocity = !!growthData.isSlowVelocity;
 
-    // ── Faza 42c — dołączenie migawek wzrostu/wagi ze WSZYSTKICH snapshotów ──
-    // Z każdego historycznego snapshota wyciągamy user.{height, weight, age, ageMonths}
-    // (każdy zapis Karty pacjenta = jedna „wizyta") i dorzucamy do trajektorii.
-    // Dzięki temu wykres rośnie naturalnie z każdym zapisem, nawet jeśli user nie
-    // wpisuje ręcznie historycznych pomiarów do tabeli growthBasic.
-    allSnapshots.forEach(function (s) {
-      if (!s || !s.payload) return;
-      var su = s.payload.user || {};
-      var sAge       = su.age       != null ? parseInt(su.age, 10)       : null;
-      var sAgeMonths = su.ageMonths != null ? parseInt(su.ageMonths, 10) : null;
-      var sHeight    = su.height    != null ? parseFloat(su.height)      : null;
-      var sWeight    = su.weight    != null ? parseFloat(su.weight)      : null;
-      if (sAge == null || !isFinite(sAge)) return;
-      if (sHeight == null || !isFinite(sHeight) || sHeight <= 0) return;
-      // Konwencja: ageMonths jako TOTAL miesięcy
-      var totalMo = sAge * 12 + (sAgeMonths != null && isFinite(sAgeMonths) ? sAgeMonths : 0);
-      measurements.push({
-        ageYears:  totalMo / 12,
-        ageMonths: totalMo,
-        height:    sHeight,
-        weight:    (sWeight != null && isFinite(sWeight)) ? sWeight : null,
-        _fromSnapshot: true,
-        _snapshotAtISO: s.savedAtISO || null
-      });
-    });
-
-    // Deduplikacja po (totalMonths bucket + height precyzja 0.1cm + weight precyzja 0.1kg).
-    // Preferujemy wpisy NIE z snapshota (czyli z tabeli growthBasic) gdy są duplikaty.
-    measurements.sort(function (a, b) {
-      var fa = a._fromSnapshot ? 1 : 0;
-      var fb = b._fromSnapshot ? 1 : 0;
-      return fa - fb; // non-snapshot first
-    });
-    var _seen = Object.create(null);
-    measurements = measurements.filter(function (m) {
-      var totalMo = measurementAgeInMonths(m);
-      if (!isFinite(totalMo)) return false;
-      var key = Math.round(totalMo) + '|' +
-        (m.height != null ? Math.round(parseFloat(m.height) * 10) : '') + '|' +
-        (m.weight != null ? Math.round(parseFloat(m.weight) * 10) : '');
-      if (_seen[key]) return false;
-      _seen[key] = true;
-      return true;
-    });
-    // Posortuj końcowo po wieku rosnąco
+    // Defensywny sort po wieku ASC (tabela może być nieuporządkowana po sync merge).
     measurements.sort(function (a, b) {
       return measurementAgeInMonths(a) - measurementAgeInMonths(b);
     });
