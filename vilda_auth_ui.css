@@ -1051,6 +1051,28 @@ select.vilda-auth-input {
   border: 1px solid #e0eef0;
   border-radius: 12px;
   margin-bottom: 12px;
+  position: relative;
+}
+
+/* P5 — pill „✏ Edytuj" w prawym górnym rogu hero. Otwiera ekran edycji pacjenta. */
+.vilda-patient-hero-edit-pill {
+  position: absolute !important;
+  top: 8px;
+  right: 8px;
+  background: transparent !important;
+  color: #00838d !important;
+  border: 0.5px solid #b3dde0 !important;
+  width: auto !important;
+  min-width: 0 !important;
+  padding: 4px 12px !important;
+  font-size: 0.78rem !important;
+  font-weight: 600 !important;
+  border-radius: 999px !important;
+  flex: 0 0 auto !important;
+}
+.vilda-patient-hero-edit-pill:hover {
+  background: #e1f5ee !important;
+  border-color: #00838d !important;
 }
 .vilda-patient-hero-avatar {
   flex: 0 0 44px;
