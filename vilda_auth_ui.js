@@ -48,13 +48,10 @@
   // więc getCurrentUser() w onLock zawsze zwraca null. Śledzimy userId sami —
   // aktualizujemy w onUnlock, używamy w onLock, zerujemy po użyciu.
   let _trackedUserId = null;
-  // N8: analogicznie śledzimy isCloudOnlyMode() PRZED lock() — vault zeruje
-  // stan trybu zanim wywoła onLock, więc bez tego nie wiemy czy pokazać
-  // toast „Dane pacjentów usunięte z pamięci tego komputera" po wylogowaniu.
-  let _trackedCloudOnly = false;
-  // Klucz sessionStorage przekazujący flagę post-logout toast między
-  // sekwencją onLock → redirect do index.html → showStartupScreen().
-  const POST_LOGOUT_TOAST_KEY = 'vilda-post-logout-toast-v1';
+  // N11.2: usunięto _trackedCloudOnly + POST_LOGOUT_TOAST_KEY — toast
+  // „Dane pacjentów usunięte z pamięci" był UX clutter (powtarzanie tego co
+  // user już wie z wyboru trybu + chip topbar). Chip „Tryb chmurowy" + sekcja
+  // w Ustawieniach są stałymi punktami informacji.
   // Stan ostatniej próby synchronizacji PRO z serwerem (per-user).
   // Cooldown 30s obowiązuje tylko gdy TEN SAM userId loguje się ponownie szybko
   // (idle-lock + natychmiastowy re-login, wieloetapowy QR transfer itp.).
@@ -680,23 +677,9 @@
     const overlay = el('div', { class: 'vilda-auth-overlay' });
     const card = el('div', { class: 'vilda-auth-card', role: 'dialog', 'aria-modal': 'true' });
     card.appendChild(buildBrandHeader(opts));
-    // N8: post-logout toast — jeśli ostatnia sesja była cloud-only i user
-    // wylogował się (manual/idle), pokaż jednorazowy banner informujący
-    // że dane pacjentów zostały usunięte z pamięci komputera. Flaga zapisana
-    // przez onLock w sessionStorage, czyszczona po pierwszym renderze.
-    try {
-      if (global.sessionStorage && global.sessionStorage.getItem(POST_LOGOUT_TOAST_KEY) === '1') {
-        global.sessionStorage.removeItem(POST_LOGOUT_TOAST_KEY);
-        const toast = el('div', {
-          class: 'vilda-auth-post-logout-toast',
-          role: 'status',
-          'aria-live': 'polite',
-          style: 'margin:0 0 14px 0;padding:10px 14px;border-radius:10px;background:rgba(0,131,141,0.10);border:1px solid rgba(0,131,141,0.28);color:#0f5b63;font-size:13.5px;line-height:1.5;display:flex;gap:10px;align-items:flex-start;',
-          html: '<span aria-hidden="true" style="flex-shrink:0;font-size:16px;line-height:1;">🔒</span><span><strong>Wylogowano.</strong> Dane pacjentów zostały usunięte z pamięci tego komputera.</span>'
-        });
-        card.appendChild(toast);
-      }
-    } catch (_) {}
+    // N11.2: usunięto post-logout toast (cloud-only). Chip „Tryb chmurowy"
+    // w topbarze + sekcja Ustawienia → Synchronizacja są jedynymi miejscami
+    // gdzie komunikujemy semantykę trybu — passive + persistent, nie spam.
     card.appendChild(content);
     overlay.appendChild(card);
     rootEl.appendChild(overlay);
@@ -1365,7 +1348,19 @@
       prfOk = await V.isPrfSupported();
       if (prfOk) passkeys = await V.listPasskeys(userId);
     } catch (_) {}
-    const hasBiometric = prfOk && passkeys.length > 0;
+    // N11.1: rozróżnij LOCAL passkeys (mają encryptedMasterByPasskey → odszyfrują
+    // master key tego usera tym PRF na tym urządzeniu) od REMOTE (tylko metadata
+    // przyszło przez sync, brak crypto material — wymaga adopcji najpierw).
+    // Bez tego rozróżnienia auto-trigger Face ID na iPhonie odpalałby się dla
+    // remote-only klucza, prosił o biometrię i kończył błędem PASSKEY_NOT_LOCAL —
+    // czyli user widzi Face ID prompt, daje twarz, dostaje "to nie zadziałało".
+    const usablePasskeys = passkeys.filter(function (p) { return !p.isRemote; });
+    const hasBiometric = prfOk && usablePasskeys.length > 0;
+    // Stan przejściowy: są passkeye konta (badge w pickerze pokazuje "Touch ID"),
+    // ale na tym device wszystkie są remote-only. Zamiast oferować biometrię która
+    // niezawodnie padnie, kierujemy do logowania hasłem — po unlock pojawi się
+    // showPostLoginAdoptionPrompt z opcją aktywacji.
+    const hasOnlyRemotePasskeys = prfOk && passkeys.length > 0 && usablePasskeys.length === 0;
 
     const title = el('h2', { class: 'vilda-auth-title', text: user.label });
     const sub = el('p', {
@@ -1503,6 +1498,20 @@
       onclick: function (ev) { ev.preventDefault(); showRecoveryFlowForUser(userId); }
     });
 
+    // N11.1 — banner dla stanu „klucz zsynchronizowany ale nieaktywowany na tym
+    // urządzeniu" (typowo: iPhone po pierwszej synchronizacji z Macowego konta).
+    // Komunikat tłumaczy że user widzi „Touch ID" w pickerze, ale tu na razie
+    // musi wpisać hasło — po sukcesie pojawi się modal aktywacji biometrii.
+    let remoteOnlyHintBanner = null;
+    if (hasOnlyRemotePasskeys) {
+      remoteOnlyHintBanner = el('div', { class: 'vilda-auth-banner', role: 'status' });
+      remoteOnlyHintBanner.style.cssText = 'background:#eef6f8;border:1px solid #cfe8eb;color:#0f5b63;padding:11px 13px;border-radius:10px;font-size:0.86rem;line-height:1.5;margin:6px 0 8px;';
+      remoteOnlyHintBanner.innerHTML =
+        '<strong>Klucz biometryczny tego konta</strong> jest dostępny tu przez iCloud Keychain, ' +
+        'ale jeszcze go nie aktywowałeś na tym urządzeniu. ' +
+        'Zaloguj się hasłem — od razu po sukcesie zapytamy o aktywację ' + getBiometricLabel() + '.';
+    }
+
     // Adaptive-backoff banner: pokaż jednorazowo gdy auto-trigger został właśnie
     // automatycznie wyłączony (N anulowań z rzędu). Po pokazaniu kasujemy flagę
     // żeby banner nie wracał na każdym kolejnym ekranie.
@@ -1548,6 +1557,7 @@
     const screenChildren = [title, sub, banner];
     if (autoOffBanner) screenChildren.push(autoOffBanner);
     if (cancelledBanner) screenChildren.push(cancelledBanner);
+    if (remoteOnlyHintBanner) screenChildren.push(remoteOnlyHintBanner);
     if (biometricSection) screenChildren.push(biometricSection);
     screenChildren.push(pw, errBox,
       el('div', { class: 'vilda-auth-actions' }, [submit]),
@@ -4111,18 +4121,8 @@
         // przechwyconego wcześniej w onUnlock.
         var lockedUserId = _trackedUserId;
         _trackedUserId = null; // zużyty — wyczyść niezależnie od wyniku
-        // N8: zapamiętaj czy sesja była w trybie cloud-only — używane do
-        // post-logout toast informującego, że dane pacjentów zostały usunięte
-        // z pamięci komputera. W lokalu nie ma takiej semantyki (dane na dysku).
-        var wasCloudOnly = _trackedCloudOnly;
-        _trackedCloudOnly = false;
-        if (wasCloudOnly && (reason === 'manual' || reason === 'idle')) {
-          try {
-            if (global.sessionStorage) {
-              global.sessionStorage.setItem(POST_LOGOUT_TOAST_KEY, '1');
-            }
-          } catch (_) {}
-        }
+        // N11.2: usunięto tracking cloud-only + sessionStorage write — toast
+        // post-logout został wyeliminowany jako UX clutter.
 
         // Wylogowanie/auto-lock = porzucenie tożsamości. Wyczyść stan aplikacji,
         // żeby kolejny user (lub gość) nie zobaczył danych poprzedniego.
@@ -4174,11 +4174,7 @@
         // PRZED wywołaniem onLock listenerów, więc bez własnego śledzenia
         // nie możemy odczytać userId w onLock.
         _trackedUserId = (payload && payload.userId) ? payload.userId : null;
-        // N8: capture trybu cloud-only PRZED lock() — używane do post-logout toast.
-        try {
-          var _vForCO = getVault();
-          _trackedCloudOnly = !!(_vForCO && _vForCO.isCloudOnlyMode && _vForCO.isCloudOnlyMode());
-        } catch (_) { _trackedCloudOnly = false; }
+        // N11.2: usunięto _trackedCloudOnly capture (post-logout toast usunięty).
 
         // Auth-gate: vault odblokowany (logowanie LUB nawigacja/odtworzenie sesji)
         // = aplikacja autoryzowana → odsłaniamy interfejs. Robimy to bezwarunkowo,

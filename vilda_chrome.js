@@ -1226,7 +1226,7 @@
       '<div style="background:#fff;border-radius:18px;padding:28px 32px;max-width:400px;width:100%;text-align:center;box-shadow:0 18px 60px rgba(0,0,0,0.25);">' +
         '<div id="vildaCloudOnlyLoadingSpinner" style="display:inline-block;width:44px;height:44px;border:4px solid #cfe8eb;border-top-color:#00838d;border-radius:50%;animation:vilda-co-spin 0.9s linear infinite;margin-bottom:16px;"></div>' +
         '<div id="vildaCloudOnlyLoadingTitle" style="font-weight:700;font-size:18px;color:#0f2b33;margin-bottom:6px;">Synchronizacja z chmurą…</div>' +
-        '<div id="vildaCloudOnlyLoadingDesc" style="font-size:13.5px;color:#5b6672;line-height:1.5;">Pobieram dane pacjentów z chmury. Pozostaną w pamięci tylko podczas tej sesji.</div>' +
+        '<div id="vildaCloudOnlyLoadingDesc" style="font-size:13.5px;color:#5b6672;line-height:1.5;"></div>' +
         '<div id="vildaCloudOnlyLoadingError" style="display:none;margin-top:14px;padding:10px 14px;background:#fef2f3;border:1px solid #f5b3bb;border-radius:10px;color:#9a213a;font-size:13px;text-align:left;line-height:1.45;"></div>' +
         '<div id="vildaCloudOnlyLoadingActions" style="display:none;margin-top:18px;gap:10px;justify-content:center;flex-wrap:wrap;">' +
           '<button type="button" id="vildaCloudOnlyRetry" style="padding:8px 18px;border:1px solid #00838d;border-radius:10px;background:#00838d;color:#fff;font-weight:600;font-size:13px;cursor:pointer;">Spróbuj ponownie</button>' +
@@ -1238,7 +1238,7 @@
     function setLoadingState() {
       overlay.querySelector('#vildaCloudOnlyLoadingSpinner').style.display = '';
       overlay.querySelector('#vildaCloudOnlyLoadingTitle').textContent = 'Synchronizacja z chmurą…';
-      overlay.querySelector('#vildaCloudOnlyLoadingDesc').textContent = 'Pobieram dane pacjentów z chmury. Pozostaną w pamięci tylko podczas tej sesji.';
+      overlay.querySelector('#vildaCloudOnlyLoadingDesc').textContent = '';
       overlay.querySelector('#vildaCloudOnlyLoadingError').style.display = 'none';
       overlay.querySelector('#vildaCloudOnlyLoadingActions').style.display = 'none';
       overlay.style.display = 'flex';
