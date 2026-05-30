@@ -751,7 +751,11 @@
               snapshots: Array.from(db.snapshots.entries()),
               tombstones: Array.from((db.tombstones || new Map()).entries()),
               notes: Array.from((db.notes || new Map()).entries()),
-              noteTombstones: Array.from((db.noteTombstones || new Map()).entries())
+              noteTombstones: Array.from((db.noteTombstones || new Map()).entries()),
+              // P1-fix: patientNotes + patientNoteTombstones MUSZĄ być persistowane
+              // do sessionStorage w cloud-only/ephemeral — inaczej znikają po F5.
+              patientNotes: Array.from((db.patientNotes || new Map()).entries()),
+              patientNoteTombstones: Array.from((db.patientNoteTombstones || new Map()).entries())
             }];
           })
         };
@@ -775,7 +779,10 @@
                 snapshots: new Map(d.snapshots || []),
                 tombstones: new Map(d.tombstones || []),
                 notes: new Map(d.notes || []),
-                noteTombstones: new Map(d.noteTombstones || [])
+                noteTombstones: new Map(d.noteTombstones || []),
+                // P1-fix: hydratacja patientNotes z sessionStorage.
+                patientNotes: new Map(d.patientNotes || []),
+                patientNoteTombstones: new Map(d.patientNoteTombstones || [])
               });
             });
           }
