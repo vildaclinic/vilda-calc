@@ -2203,6 +2203,18 @@
     return d2.toISOString();
   }
 
+  // R1: completedAtISO — moment oznaczenia notatki jako "Wykonane". Null = pending.
+  // Akceptuje pełen ISO. NIE konwertuje YYYY-MM-DD (to znacznik czasu, nie data).
+  function normalizeCompletedAtISO(value) {
+    if (value == null || value === '') return null;
+    if (typeof value !== 'string') return null;
+    const t = value.trim();
+    if (!t) return null;
+    const d = new Date(t);
+    if (isNaN(d.getTime())) return null;
+    return d.toISOString();
+  }
+
   async function _decryptPatientNoteRecord(rec) {
     let content = { title: '', body: '' };
     try {
@@ -2218,6 +2230,8 @@
       body: typeof content.body === 'string' ? content.body : '',
       category: normalizePatientNoteCategory(rec.category),
       dueDateISO: rec.dueDateISO || null,
+      // R1: completedAtISO — null gdy pending (notatka wciąż w reminderach).
+      completedAtISO: rec.completedAtISO || null,
       createdAtISO: rec.createdAtISO || null,
       updatedAtISO: rec.updatedAtISO || null
     };
@@ -2248,10 +2262,19 @@
     let noteId = (typeof payload.id === 'string' && payload.id) ? payload.id : null;
     let isNew = false;
     let createdAtISO = null;
+    // R1: zachowaj existing.completedAtISO jeśli payload nie podał własnego.
+    // Edytor notatki (showPatientNoteEditor) NIE wysyła completedAtISO → zachowanie
+    // status "Wykonane" przeżywa zwykłą edycję treści. Tylko explicit complete/uncomplete
+    // wywołują savePatientNote z completedAtISO !== undefined.
+    let existingCompletedAtISO = null;
     if (noteId) {
       const existing = await getAdapter().getPatientNoteForUser(currentUserId, noteId);
-      if (existing) createdAtISO = existing.createdAtISO || null;
-      else isNew = true;
+      if (existing) {
+        createdAtISO = existing.createdAtISO || null;
+        existingCompletedAtISO = existing.completedAtISO || null;
+      } else {
+        isNew = true;
+      }
     } else {
       noteId = generateUuid();
       isNew = true;
@@ -2259,6 +2282,17 @@
 
     const nowISO = new Date().toISOString();
     if (!createdAtISO) createdAtISO = nowISO;
+
+    // R1: completedAtISO resolution:
+    //   undefined → zachowaj existing (lub null gdy isNew)
+    //   null/''   → wyczyść (uncomplete)
+    //   string    → ustaw (complete) — normalizujemy do pełnego ISO
+    let completedAtISO;
+    if (!Object.prototype.hasOwnProperty.call(payload, 'completedAtISO')) {
+      completedAtISO = existingCompletedAtISO;
+    } else {
+      completedAtISO = normalizeCompletedAtISO(payload.completedAtISO);
+    }
 
     const content = { title: title, body: body };
     const bodyCipher = await encryptPayloadForCurrentUser(content);
@@ -2268,6 +2302,7 @@
       bodyCipher: bodyCipher,
       category: category,
       dueDateISO: dueDateISO,
+      completedAtISO: completedAtISO,
       createdAtISO: createdAtISO,
       updatedAtISO: nowISO
     };
@@ -2357,6 +2392,166 @@
     if (bU > aU) return 1;
     if (bU < aU) return -1;
     return 0;
+  }
+
+  // ============ R1 — REMINDER SYSTEM HELPERS ============
+  // Trzy convenience wrappers nad savePatientNote dla akcji reminder modal'a.
+  // Każdy aktualizuje updatedAtISO → LWW sync propaguje zmianę cross-device.
+
+  /**
+   * Oznacz notatkę jako wykonaną. Notatka pozostaje w karcie pacjenta (jako
+   * greyed-out z badge "✓ wykonano DD.MM"), ale znika z reminderów.
+   * Odwracalne — patrz uncompletePatientNote.
+   */
+  async function completePatientNote(noteId) {
+    if (!isUnlocked()) throw new Error('Zaloguj się, by oznaczyć notatkę.');
+    if (typeof noteId !== 'string' || !noteId) throw new Error('completePatientNote: brak id.');
+    const existing = await getPatientNote(noteId);
+    if (!existing) throw new Error('completePatientNote: notatka nie istnieje.');
+    return savePatientNote({
+      id: existing.id,
+      patientId: existing.patientId,
+      title: existing.title,
+      body: existing.body,
+      category: existing.category,
+      dueDateISO: existing.dueDateISO,
+      completedAtISO: new Date().toISOString()
+    });
+  }
+
+  /**
+   * Cofnij oznaczenie "wykonane" — notatka wraca do reminderów.
+   */
+  async function uncompletePatientNote(noteId) {
+    if (!isUnlocked()) throw new Error('Zaloguj się, by cofnąć oznaczenie.');
+    if (typeof noteId !== 'string' || !noteId) throw new Error('uncompletePatientNote: brak id.');
+    const existing = await getPatientNote(noteId);
+    if (!existing) throw new Error('uncompletePatientNote: notatka nie istnieje.');
+    return savePatientNote({
+      id: existing.id,
+      patientId: existing.patientId,
+      title: existing.title,
+      body: existing.body,
+      category: existing.category,
+      dueDateISO: existing.dueDateISO,
+      completedAtISO: null
+    });
+  }
+
+  /**
+   * Przełóż termin przypomnienia notatki na nową datę. Akceptuje YYYY-MM-DD
+   * lub pełen ISO (przez normalizeDueDateISO).
+   */
+  async function snoozePatientNote(noteId, newDueDateISO) {
+    if (!isUnlocked()) throw new Error('Zaloguj się, by przełożyć przypomnienie.');
+    if (typeof noteId !== 'string' || !noteId) throw new Error('snoozePatientNote: brak id.');
+    const newDue = normalizeDueDateISO(newDueDateISO);
+    if (!newDue) throw new Error('snoozePatientNote: nieprawidłowa data.');
+    const existing = await getPatientNote(noteId);
+    if (!existing) throw new Error('snoozePatientNote: notatka nie istnieje.');
+    return savePatientNote({
+      id: existing.id,
+      patientId: existing.patientId,
+      title: existing.title,
+      body: existing.body,
+      category: existing.category,
+      dueDateISO: newDue,
+      // Przełożenie reseterruje "Wykonane" (gdyby przypadkowo zostało zaznaczone).
+      completedAtISO: null
+    });
+  }
+
+  /**
+   * R1 — query dla reminder modal'a. Zwraca pacjentów z aktywnymi notatkami
+   * (dueDateISO <= referenceISO && completedAtISO == null), pogrupowane.
+   *
+   * @param {string} [referenceISO] — domyślnie KONIEC dzisiejszego dnia w STREFIE LOKALNEJ
+   *   (żeby YYYY-MM-DD == today był uznany za "due dzisiaj" niezależnie od UTC offset).
+   *
+   * @returns {Promise<Array<{
+   *   patientId: string,
+   *   patientName: string,
+   *   notes: Array<DecryptedPatientNote>  // sorted: oldest dueDate first (overdue → today)
+   * }>>}
+   *   Lista posortowana: pacjent z najstarszą notatką (najbardziej overdue) na górze.
+   *   Tylko pacjenci, którzy mają ≥1 pending due note. Pacjenci usunięci (tombstone)
+   *   nie są zwracani — kaskadowo notatki też powinny być usunięte przy delete patient,
+   *   ale defensywnie filtrujemy: jeśli getPatient zwróci null → pomiń notatki.
+   */
+  async function listPatientNotesDueByDate(referenceISO) {
+    if (!isUnlocked()) throw new Error('Zaloguj się, by sprawdzić przypomnienia.');
+
+    // Domyślny reference: koniec dzisiejszego dnia w lokalnej strefie czasowej.
+    // Dlaczego "koniec dnia": jeśli dueDateISO = "2026-05-30T00:00:00.000Z" (UTC midnight)
+    // a user jest w PL (UTC+2), to "dzisiaj 30.05.2026" oznacza zakres
+    // [30.05 00:00 PL, 30.05 23:59:59 PL] = [29.05 22:00 UTC, 30.05 21:59 UTC].
+    // Notatka z dueDateISO = 30.05 00:00 UTC jest WEWNĄTRZ tego zakresu → dziś.
+    let cutoffISO;
+    if (referenceISO && typeof referenceISO === 'string') {
+      cutoffISO = referenceISO;
+    } else {
+      const now = new Date();
+      const endOfLocalDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      cutoffISO = endOfLocalDay.toISOString();
+    }
+
+    const allNotes = await listAllPatientNotes();
+    // Filter: tylko notatki z dueDate, nie wykonane, dueDate <= cutoff.
+    const pending = allNotes.filter(function (n) {
+      if (!n || !n.dueDateISO) return false;
+      if (n.completedAtISO) return false;
+      return n.dueDateISO <= cutoffISO;
+    });
+
+    if (!pending.length) return [];
+
+    // Group by patientId.
+    const grouped = new Map();
+    for (let i = 0; i < pending.length; i += 1) {
+      const note = pending[i];
+      if (!grouped.has(note.patientId)) grouped.set(note.patientId, []);
+      grouped.get(note.patientId).push(note);
+    }
+
+    // Resolve patient names + filter out usunieci pacjenci.
+    const out = [];
+    const patientIds = Array.from(grouped.keys());
+    for (let j = 0; j < patientIds.length; j += 1) {
+      const pid = patientIds[j];
+      let patientName = '(pacjent usunięty)';
+      let patientExists = true;
+      try {
+        const patient = await getPatient(pid);
+        if (patient && patient.header && typeof patient.header.name === 'string') {
+          patientName = patient.header.name;
+        } else if (!patient) {
+          patientExists = false;
+        }
+      } catch (_) {
+        patientExists = false;
+      }
+      if (!patientExists) continue;
+      const notes = grouped.get(pid);
+      notes.sort(function (a, b) {
+        const aD = a.dueDateISO || '';
+        const bD = b.dueDateISO || '';
+        if (aD < bD) return -1;
+        if (aD > bD) return 1;
+        return 0;
+      });
+      out.push({ patientId: pid, patientName: patientName, notes: notes });
+    }
+
+    // Sort: pacjent z NAJSTARSZĄ pending notatką pierwszy (najbardziej overdue).
+    out.sort(function (a, b) {
+      const aD = (a.notes[0] && a.notes[0].dueDateISO) || '';
+      const bD = (b.notes[0] && b.notes[0].dueDateISO) || '';
+      if (aD < bD) return -1;
+      if (aD > bD) return 1;
+      return 0;
+    });
+
+    return out;
   }
 
   async function removePatientNote(noteId) {
@@ -5544,6 +5739,11 @@
     removePatientNote: removePatientNote,
     onPatientNoteChanged: onPatientNoteChanged,
     PATIENT_NOTE_CATEGORIES: PATIENT_NOTE_CATEGORIES,
+    // R1 — Reminder system: akcje dla modal'a po-unlock + query "due today".
+    completePatientNote: completePatientNote,
+    uncompletePatientNote: uncompletePatientNote,
+    snoozePatientNote: snoozePatientNote,
+    listPatientNotesDueByDate: listPatientNotesDueByDate,
     startIdleTimer: startIdleTimer,
     stopIdleTimer: stopIdleTimer,
     resetIdleTimer: resetIdleTimer,

@@ -186,7 +186,10 @@
     SHOW_NAVIGATION_ARROW: 'showNavigationArrow',
     MOBILE_TOP_NAV_FONT_CACHE: 'mobileTopNavFontCache',
     WAGAIWZROST_STATE: 'wagaiwzrost_state',
-    GH_THERAPY_VIEW_MODE: 'ghTherapyViewMode'
+    GH_THERAPY_VIEW_MODE: 'ghTherapyViewMode',
+    // R3 — flag "ostatnio pokazany reminder modal" (lokalna data YYYY-MM-DD).
+    // Cloud-synced: jeśli user potwierdził rano na iPhone, na Macu wieczorem nie spam.
+    REMINDERS_LAST_SHOWN_DATE: 'remindersLastShownDate'
   });
 
   const MODULE_KEY_META = Object.freeze({
@@ -225,7 +228,11 @@
     [MODULE_KEYS.SHOW_NAVIGATION_ARROW]: Object.freeze({ scope: 'navigation', kind: 'preference', storage: 'local-persistent' }),
     [MODULE_KEYS.MOBILE_TOP_NAV_FONT_CACHE]: Object.freeze({ scope: 'navigation', kind: 'technical', storage: 'local-persistent' }),
     [MODULE_KEYS.WAGAIWZROST_STATE]: Object.freeze({ scope: 'ui', kind: 'technical', storage: 'local' }),
-    [MODULE_KEYS.GH_THERAPY_VIEW_MODE]: Object.freeze({ scope: 'gh', kind: 'preference', storage: 'cloud-synced' })
+    [MODULE_KEYS.GH_THERAPY_VIEW_MODE]: Object.freeze({ scope: 'gh', kind: 'preference', storage: 'cloud-synced' }),
+    // R3 — flag dnia ostatniego pokazania reminder modal'a. Cloud-synced cross-device:
+    // user na iPhone klika "Później" rano → flag = 2026-05-30 → na Macu wieczorem
+    // nie spam. Po LWW merge między urządzeniami flag synchronizuje się automatycznie.
+    [MODULE_KEYS.REMINDERS_LAST_SHOWN_DATE]: Object.freeze({ scope: 'reminders', kind: 'technical', storage: 'cloud-synced' })
   });
 
   const MODULE_KEY_ALIASES = Object.freeze({
@@ -274,7 +281,9 @@
     WAGAIWZROST_STATE: MODULE_KEYS.WAGAIWZROST_STATE,
     wagaiwzrost_state: MODULE_KEYS.WAGAIWZROST_STATE,
     GH_THERAPY_VIEW_MODE: MODULE_KEYS.GH_THERAPY_VIEW_MODE,
-    ghTherapyViewMode: MODULE_KEYS.GH_THERAPY_VIEW_MODE
+    ghTherapyViewMode: MODULE_KEYS.GH_THERAPY_VIEW_MODE,
+    REMINDERS_LAST_SHOWN_DATE: MODULE_KEYS.REMINDERS_LAST_SHOWN_DATE,
+    remindersLastShownDate: MODULE_KEYS.REMINDERS_LAST_SHOWN_DATE
   });
 
   function storageAvailable(type) {

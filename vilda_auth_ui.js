@@ -2995,6 +2995,463 @@
     try { bodyInput.focus(); } catch (_) {}
   }
 
+  // ============ R2 — REMINDER MODAL (PRZYPOMNIENIA PO ZALOGOWANIU) ============
+  /**
+   * Modal pokazywany po unlock vault'a — gdy są pacjenci z notatkami due dziś
+   * lub overdue. Zbudowany na bazie showPatientNoteEditor (ten sam pattern overlay'a).
+   *
+   * @param {Array<{patientId, patientName, notes[]}>} reminders — z V.listPatientNotesDueByDate()
+   * @param {object} [opts]
+   *   - onOpenPatient(patientId, noteId) — callback "Otwórz" (default: showPatientCard)
+   *   - onClose() — callback po zamknięciu (np. set "last-shown" flag)
+   *
+   * R3 wpięcie: vilda_auth_ui sam wywoła to po V.onUnlock — patrz `maybeShowReminders`.
+   */
+  function showRemindersModal(reminders, opts) {
+    if (!Array.isArray(reminders) || !reminders.length) {
+      if (opts && typeof opts.onClose === 'function') opts.onClose();
+      return null;
+    }
+
+    // Cleanup poprzednich overlay'ów (multi-trigger protection — np. szybkie kliki).
+    try {
+      var prevList = global.document.querySelectorAll('.vilda-reminders-modal-overlay');
+      if (prevList && prevList.length) {
+        for (var i = 0; i < prevList.length; i++) prevList[i].remove();
+      }
+    } catch (_) {}
+
+    var V = getVault();
+
+    // ── Helper: data względna PL dla badge'a terminu ──────────────────────
+    function fmtDueRel(dueISO) {
+      var meta = formatPatientNoteDueDate ? formatPatientNoteDueDate(dueISO) : null;
+      if (meta) return meta;
+      return { status: 'ok', label: dueISO || '' };
+    }
+
+    // ── Backdrop overlay (z-index nad rootEl, host=rootEl jak w Fix #2) ──
+    var overlay = el('div', {
+      class: 'vilda-auth-overlay vilda-auth-overlay-sheet vilda-reminders-modal-overlay',
+      style: 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000001;padding:20px;'
+    });
+
+    var sheet = el('div', {
+      class: 'vilda-auth-sheet vilda-reminders-modal-sheet',
+      style: 'background:#fff;border-radius:14px;padding:0;max-width:560px;width:100%;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;'
+    });
+
+    // ── Header: 🔔 N pacjentów wymaga uwagi ──────────────────────────────
+    var totalNotes = 0;
+    for (var k = 0; k < reminders.length; k++) totalNotes += reminders[k].notes.length;
+    var headerTitle = '🔔 Przypomnienia';
+    var headerSub = reminders.length === 1
+      ? '1 pacjent · ' + totalNotes + (totalNotes === 1 ? ' notatka' : (totalNotes < 5 ? ' notatki' : ' notatek'))
+      : reminders.length + ' pacjentów · ' + totalNotes + (totalNotes < 5 ? ' notatki' : ' notatek');
+
+    var header = el('div', {
+      style: 'padding:18px 20px 14px 20px;border-bottom:0.5px solid #d7e9ec;background:#f5fafb;'
+    });
+    header.appendChild(el('div', {
+      text: headerTitle,
+      style: 'font-size:1.05rem;font-weight:600;color:#0f2b33;margin-bottom:4px;'
+    }));
+    header.appendChild(el('div', {
+      text: headerSub,
+      style: 'font-size:0.82rem;color:#5b6672;'
+    }));
+    sheet.appendChild(header);
+
+    // ── Scrollowalna lista pacjentów + notatek ───────────────────────────
+    var listWrap = el('div', {
+      class: 'vilda-reminders-list',
+      style: 'flex:1 1 auto;overflow-y:auto;padding:8px 14px;display:flex;flex-direction:column;gap:14px;'
+    });
+    sheet.appendChild(listWrap);
+
+    // ── Footer: przycisk „Później" ────────────────────────────────────────
+    var footer = el('div', {
+      style: 'padding:14px 20px;border-top:0.5px solid #d7e9ec;display:flex;justify-content:flex-end;gap:8px;flex:0 0 auto;'
+    });
+    var laterBtn = el('button', {
+      type: 'button',
+      class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small',
+      style: 'background:transparent !important;color:#5b6672 !important;border:0.5px solid #d7e9ec !important;width:auto !important;padding:8px 16px !important;flex:0 0 auto !important;',
+      text: 'Później',
+      onclick: function () {
+        overlay.remove();
+        if (opts && typeof opts.onClose === 'function') opts.onClose();
+      }
+    });
+    footer.appendChild(laterBtn);
+    sheet.appendChild(footer);
+
+    overlay.appendChild(sheet);
+    var host = rootEl || global.document.body;
+    host.appendChild(overlay);
+
+    // ── Re-render listy po każdej akcji (zrobione/przełóż) ───────────────
+    // Po każdej akcji pobieramy SWIEŻY snapshot z vault'a (oryginalny reminders
+    // staje się nieaktualny po V.completePatientNote/snooze). Gdy pusty → close.
+    async function refreshList() {
+      var fresh = [];
+      try {
+        if (V && typeof V.listPatientNotesDueByDate === 'function') {
+          fresh = await V.listPatientNotesDueByDate();
+        }
+      } catch (e) { logError('refreshReminders', e); }
+      if (!fresh.length) {
+        overlay.remove();
+        if (opts && typeof opts.onClose === 'function') opts.onClose();
+        return;
+      }
+      buildList(fresh);
+    }
+
+    function buildList(items) {
+      clear(listWrap);
+      items.forEach(function (group) {
+        var card = el('div', {
+          class: 'vilda-reminders-patient-card',
+          style: 'background:#fff;border:0.5px solid #d7e9ec;border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:10px;'
+        });
+
+        // Patient header
+        card.appendChild(el('div', {
+          text: group.patientName,
+          style: 'font-weight:600;font-size:0.95rem;color:#0f2b33;'
+        }));
+
+        // Notatki w karcie pacjenta
+        group.notes.forEach(function (note) {
+          card.appendChild(buildNoteItem(group.patientId, note));
+        });
+
+        listWrap.appendChild(card);
+      });
+    }
+
+    function buildNoteItem(patientId, note) {
+      var wrap = el('div', {
+        style: 'background:#f5fafb;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;'
+      });
+
+      // Badges row: kategoria + due
+      var catMeta = (typeof PATIENT_NOTE_CATEGORY_LABELS === 'object' && PATIENT_NOTE_CATEGORY_LABELS[note.category])
+        || { label: note.category || 'Notatka', color: '#0F6E56', bg: '#E1F5EE' };
+      var dueMeta = fmtDueRel(note.dueDateISO);
+
+      var badges = el('div', { style: 'display:flex;align-items:center;gap:6px;flex-wrap:wrap;' });
+      badges.appendChild(el('span', {
+        text: catMeta.label,
+        style: 'display:inline-block;padding:2px 8px;font-size:0.72rem;font-weight:600;color:' + catMeta.color + ';background:' + catMeta.bg + ';border-radius:999px;'
+      }));
+      if (dueMeta) {
+        var dueBg, dueColor;
+        if (dueMeta.status === 'overdue') { dueBg = '#FCEBEB'; dueColor = '#A32D2D'; }
+        else if (dueMeta.status === 'soon') { dueBg = '#FAEEDA'; dueColor = '#854F0B'; }
+        else { dueBg = '#E1F5EE'; dueColor = '#0F6E56'; }
+        badges.appendChild(el('span', {
+          text: 'Termin: ' + dueMeta.label,
+          style: 'display:inline-block;padding:2px 8px;font-size:0.72rem;font-weight:600;color:' + dueColor + ';background:' + dueBg + ';border-radius:999px;'
+        }));
+      }
+      wrap.appendChild(badges);
+
+      // Tytuł (jeśli jest)
+      if (note.title) {
+        wrap.appendChild(el('div', {
+          text: note.title,
+          style: 'font-weight:600;font-size:0.92rem;color:#0f2b33;'
+        }));
+      }
+      // Body (truncate visually via CSS, full text dostępny w karcie pacjenta)
+      if (note.body) {
+        wrap.appendChild(el('div', {
+          text: note.body,
+          style: 'font-size:0.86rem;color:#374151;line-height:1.5;white-space:pre-wrap;word-wrap:break-word;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;'
+        }));
+      }
+
+      // Actions row
+      var actions = el('div', { style: 'display:flex;gap:6px;flex-wrap:wrap;margin-top:2px;' });
+
+      // [✓ Zrobione]
+      var doneBtn = el('button', {
+        type: 'button',
+        class: 'vilda-auth-btn vilda-auth-btn-small',
+        style: 'background:#E1F5EE !important;color:#0F6E56 !important;border:0.5px solid #b4dfd0 !important;width:auto !important;padding:5px 12px !important;font-size:0.78rem !important;font-weight:600;flex:0 0 auto !important;',
+        text: '✓ Zrobione',
+        onclick: async function () {
+          doneBtn.disabled = true;
+          try {
+            await V.completePatientNote(note.id);
+            await refreshList();
+          } catch (e) {
+            doneBtn.disabled = false;
+            logError('reminder-complete', e);
+            try { global.alert('Nie udało się oznaczyć: ' + (e && e.message ? e.message : e)); } catch (_) {}
+          }
+        }
+      });
+      actions.appendChild(doneBtn);
+
+      // [⏰ Przełóż ▼] — submenu
+      var snoozeBtn = el('button', {
+        type: 'button',
+        class: 'vilda-auth-btn vilda-auth-btn-small',
+        style: 'background:#FAEEDA !important;color:#854F0B !important;border:0.5px solid #e7c896 !important;width:auto !important;padding:5px 12px !important;font-size:0.78rem !important;font-weight:600;flex:0 0 auto !important;position:relative;',
+        text: '⏰ Przełóż ▾',
+        onclick: function (ev) {
+          if (ev && typeof ev.stopPropagation === 'function') ev.stopPropagation();
+          showSnoozeSubmenu(snoozeBtn, note.id);
+        }
+      });
+      actions.appendChild(snoozeBtn);
+
+      // [→ Otwórz]
+      var openBtn = el('button', {
+        type: 'button',
+        class: 'vilda-auth-btn vilda-auth-btn-small',
+        style: 'background:transparent !important;color:#00838d !important;border:0.5px solid #b3dde0 !important;width:auto !important;padding:5px 12px !important;font-size:0.78rem !important;font-weight:600;flex:0 0 auto !important;',
+        text: '→ Otwórz',
+        onclick: function () {
+          overlay.remove();
+          if (opts && typeof opts.onClose === 'function') opts.onClose();
+          // Per Q7: open patient card + auto-switch do tab Notatki.
+          // Lekki delay żeby overlay zdążył zniknąć przed renderem karty.
+          setTimeout(function () {
+            try {
+              if (opts && typeof opts.onOpenPatient === 'function') {
+                opts.onOpenPatient(patientId, note.id);
+              } else {
+                showPatientCard(patientId, null, { focusNoteId: note.id });
+              }
+            } catch (e) { logError('reminder-open', e); }
+          }, 50);
+        }
+      });
+      actions.appendChild(openBtn);
+
+      wrap.appendChild(actions);
+      return wrap;
+    }
+
+    // ── Submenu „Przełóż" — popover z 4 opcjami ──────────────────────────
+    function showSnoozeSubmenu(anchorBtn, noteId) {
+      // Cleanup poprzednich submenu (jedno na raz).
+      try {
+        var prevMenus = global.document.querySelectorAll('.vilda-reminders-snooze-menu');
+        for (var m = 0; m < prevMenus.length; m++) prevMenus[m].remove();
+      } catch (_) {}
+
+      var menu = el('div', {
+        class: 'vilda-reminders-snooze-menu',
+        style: 'position:absolute;background:#fff;border:0.5px solid #d7e9ec;border-radius:10px;box-shadow:0 8px 24px rgba(0,40,48,0.18);padding:6px;display:flex;flex-direction:column;gap:2px;z-index:1000002;min-width:180px;'
+      });
+
+      function addOpt(label, days) {
+        var opt = el('button', {
+          type: 'button',
+          style: 'background:transparent;border:none;text-align:left;padding:8px 12px;font-size:0.85rem;color:#0f2b33;cursor:pointer;border-radius:6px;font-family:inherit;',
+          text: label,
+          onclick: async function () {
+            menu.remove();
+            var target = new Date();
+            target.setDate(target.getDate() + days);
+            var yyyy = target.getFullYear();
+            var mm = String(target.getMonth() + 1).padStart(2, '0');
+            var dd = String(target.getDate()).padStart(2, '0');
+            try {
+              await V.snoozePatientNote(noteId, yyyy + '-' + mm + '-' + dd);
+              await refreshList();
+            } catch (e) {
+              logError('reminder-snooze', e);
+              try { global.alert('Nie udało się przełożyć: ' + (e && e.message ? e.message : e)); } catch (_) {}
+            }
+          }
+        });
+        opt.addEventListener('mouseover', function () { opt.style.background = '#f5fafb'; });
+        opt.addEventListener('mouseout', function () { opt.style.background = 'transparent'; });
+        menu.appendChild(opt);
+      }
+
+      addOpt('Jutro', 1);
+      addOpt('Pojutrze', 2);
+      addOpt('Za tydzień', 7);
+
+      // Separator
+      menu.appendChild(el('div', { style: 'height:1px;background:#d7e9ec;margin:4px 6px;' }));
+
+      // Custom date picker
+      var customWrap = el('div', { style: 'padding:6px 8px;display:flex;flex-direction:column;gap:6px;' });
+      customWrap.appendChild(el('div', {
+        text: 'Wybierz datę:',
+        style: 'font-size:0.78rem;color:#5b6672;font-weight:500;'
+      }));
+      var dateInput = el('input', {
+        type: 'date',
+        style: 'width:100%;height:32px;padding:0 8px;font-size:0.85rem;border:0.5px solid #d7e9ec;border-radius:6px;background:#fff;color:#0f2b33;'
+      });
+      // Domyślna wartość: jutro
+      var defaultDate = new Date();
+      defaultDate.setDate(defaultDate.getDate() + 1);
+      dateInput.value = defaultDate.getFullYear() + '-'
+        + String(defaultDate.getMonth() + 1).padStart(2, '0') + '-'
+        + String(defaultDate.getDate()).padStart(2, '0');
+      customWrap.appendChild(dateInput);
+      var confirmBtn = el('button', {
+        type: 'button',
+        class: 'vilda-auth-btn vilda-auth-btn-small',
+        style: 'background:#00838d !important;color:#fff !important;border-color:#00838d !important;width:100% !important;padding:6px !important;font-size:0.8rem !important;font-weight:600;',
+        text: 'Przełóż',
+        onclick: async function () {
+          if (!dateInput.value) return;
+          menu.remove();
+          try {
+            await V.snoozePatientNote(noteId, dateInput.value);
+            await refreshList();
+          } catch (e) {
+            logError('reminder-snooze-custom', e);
+            try { global.alert('Nie udało się przełożyć: ' + (e && e.message ? e.message : e)); } catch (_) {}
+          }
+        }
+      });
+      customWrap.appendChild(confirmBtn);
+      menu.appendChild(customWrap);
+
+      // Position menu pod anchorBtn (absolute w wrap'ie note item'a).
+      anchorBtn.parentNode.appendChild(menu);
+      // Po krótkiej chwili — pozycjonuj poniżej anchorBtn.
+      var rect = anchorBtn.getBoundingClientRect();
+      var parentRect = anchorBtn.parentNode.getBoundingClientRect();
+      menu.style.top = (rect.bottom - parentRect.top + 4) + 'px';
+      menu.style.left = (rect.left - parentRect.left) + 'px';
+
+      // Click-outside → close
+      setTimeout(function () {
+        function onDocClick(ev) {
+          if (!menu.contains(ev.target) && ev.target !== anchorBtn) {
+            menu.remove();
+            global.document.removeEventListener('click', onDocClick, true);
+          }
+        }
+        global.document.addEventListener('click', onDocClick, true);
+      }, 0);
+    }
+
+    // ── Pierwszy render ───────────────────────────────────────────────────
+    buildList(reminders);
+
+    return overlay;
+  }
+
+  // ============ R3 — AUTO-TRIGGER REMINDER MODAL'A PO UNLOCK ============
+  /**
+   * Pomocnik: lokalna data w formacie YYYY-MM-DD (Q8 — „dzisiaj" w mojej strefie).
+   */
+  function _todayLocalDateString() {
+    var d = new Date();
+    return d.getFullYear() + '-'
+      + String(d.getMonth() + 1).padStart(2, '0') + '-'
+      + String(d.getDate()).padStart(2, '0');
+  }
+
+  /**
+   * Czyta flag cloud-synced "ostatnio pokazany reminder modal" (data YYYY-MM-DD).
+   * Per Q1 (rekomendacja A): pokazuj raz dziennie, cloud-synced cross-device.
+   */
+  function _readRemindersLastShownDate() {
+    try {
+      var P = global.VildaPersistence;
+      if (!P || typeof P.readModuleRaw !== 'function') return null;
+      var raw = P.readModuleRaw('remindersLastShownDate', null);
+      return (typeof raw === 'string' && raw) ? raw : null;
+    } catch (_) { return null; }
+  }
+
+  /**
+   * Zapisuje flag — uruchamia cloud-synced propagation (E3 onPreferenceWrite →
+   * vault meta.userPreferences → syncPush → LWW na innych urządzeniach).
+   */
+  function _writeRemindersLastShownDate(dateStr) {
+    try {
+      var P = global.VildaPersistence;
+      if (!P || typeof P.writeModuleRaw !== 'function') return false;
+      P.writeModuleRaw('remindersLastShownDate', dateStr);
+      return true;
+    } catch (e) {
+      logError('writeRemindersLastShownDate', e);
+      return false;
+    }
+  }
+
+  /**
+   * Sprawdza czy są dziś pacjenci z notatkami due i jeśli flag != dzisiaj, pokazuje
+   * modal. Wywoływane przez bootstrap V.onUnlock z lekkim delayem (3000ms żeby
+   * po-login prompty — biometric/adoption/force-reset — zdążyły się zamknąć).
+   *
+   * @param {object} [options]
+   *   - force=true: ignoruj flag (dla manual triggera, np. klik chip w sidebar)
+   * @returns {Promise<boolean>} true gdy modal pokazany, false gdy skipped
+   */
+  async function maybeShowReminders(options) {
+    try {
+      var V = getVault();
+      if (!V || !V.isUnlocked()) return false;
+      if (typeof V.listPatientNotesDueByDate !== 'function') return false;
+
+      var force = !!(options && options.force);
+      var today = _todayLocalDateString();
+
+      // Per Q1 (A): raz dziennie cloud-synced.
+      if (!force) {
+        var lastShown = _readRemindersLastShownDate();
+        if (lastShown === today) return false; // już dziś pokazany — skip
+      }
+
+      var reminders = await V.listPatientNotesDueByDate();
+      if (!reminders || !reminders.length) {
+        // Nic do pokazania — nadal ustaw flag, żeby nie odpalać query co restart.
+        if (!force) _writeRemindersLastShownDate(today);
+        return false;
+      }
+
+      // Pokaż modal i ustaw flag PO zamknięciu.
+      showRemindersModal(reminders, {
+        onClose: function () {
+          _writeRemindersLastShownDate(today);
+        }
+      });
+      return true;
+    } catch (e) {
+      logError('maybeShowReminders', e);
+      return false;
+    }
+  }
+
+  // ── Wpięcie w post-unlock lifecycle ──────────────────────────────────────
+  // Bootstrap raz: rejestrujemy listener V.onUnlock, który z opóźnieniem 3s
+  // wywołuje maybeShowReminders. Opóźnienie daje przestrzeń innym promptom
+  // (showPostLoginBiometricPrompt, showPostLoginAdoptionPrompt, force-reset)
+  // żeby się otworzyły JAKO PIERWSZE. Reminder pokaże się PO ich zamknięciu
+  // (overlay sheet z marker class cleanup'uje stare instances).
+  var _remindersTriggerRegistered = false;
+  function _registerRemindersTrigger() {
+    if (_remindersTriggerRegistered) return;
+    var V = getVault();
+    if (!V || typeof V.onUnlock !== 'function') return;
+    V.onUnlock(function () {
+      // Lekki delay (3000ms) — daje czas na biometric/adoption/force-reset prompty.
+      // Te modały blokują UI overlay i mają wyższy priorytet wizualny. Reminder
+      // czeka jako ostatni w kolejce.
+      setTimeout(function () {
+        maybeShowReminders().catch(function () {});
+      }, 3000);
+    });
+    _remindersTriggerRegistered = true;
+  }
+
   // ============ KARTA INDYWIDUALNEGO PACJENTA ============
   /**
    * Otwiera szczegółową kartę pacjenta z jego statystykami i sparkline.
@@ -4638,6 +5095,14 @@
         showLogoutButton();
         startIdleWatch();
 
+        // R3 — auto-trigger reminder modal po unlock (raz na dzień, cloud-synced).
+        // Delay 3000ms: daje przestrzeń biometric/adoption prompt'om i loading
+        // overlay'om sync force-pull, żeby się zamknęły jako pierwsze. Reminder
+        // pokazuje się jako ostatni element w kolejce powitalnej.
+        setTimeout(function () {
+          maybeShowReminders().catch(function () {});
+        }, 3000);
+
         // ── Logowanie vs nawigacja/odtworzenie sesji ──────────────────────────
         // Vault podaje trigger w payloadzie onUnlock:
         //   • 'restore' → tryRestoreSession (nawigacja między podstronami lub
@@ -6135,6 +6600,10 @@
     showRecoveryFlowForUser: showRecoveryFlowForUser,
     showPatientsList: showPatientsList,
     showPatientCard: showPatientCard,
+    // R2: reminder modal po-unlock — pokazuje pacjentów z notatkami due dziś + overdue.
+    showRemindersModal: showRemindersModal,
+    // R3: auto-trigger po unlock (raz na dzień, cloud-synced flag). Manual: { force: true }.
+    maybeShowReminders: maybeShowReminders,
     showImportPatientsFlow: showImportPatientsFlow,
     showMergeAccountFlow: showMergeAccountFlow,
     showRestoreVaultFlow: showRestoreVaultFlow,
