@@ -2984,15 +2984,36 @@
     sheet.appendChild(actions);
 
     overlay.appendChild(sheet);
-    // P4-fix #2: appendChild do rootEl (jeśli istnieje) zamiast document.body —
-    // wtedy overlay jest w tym samym stacking context co karta pacjenta i
-    // automatycznie usuwa się przy hide() (clear(rootEl) czyści potomków).
-    // Fallback do body gdy auth UI nie jest aktywne (edge case).
-    var host = rootEl || global.document.body;
+    // P4-fix #3: host przepisuje na BODY gdy rootEl jest ukryty (display:none).
+    // Modal w środku display:none rodzica jest niewidoczny — nawet z position:fixed.
+    // rootEl jest hidden gdy user jest zalogowany i w aplikacji (auth UI niepotrzebne).
+    // Modal otwierany z karty pacjenta (showPatientCard wywołuje open() → rootEl block)
+    // → host=rootEl (dobry stacking). Modal otwierany ze stanu zalogowanego (np. R3 chip
+    // reminderów, R4 auto-trigger po unlock) → rootEl display:none → host=body.
+    var host = _chooseOverlayHost();
     host.appendChild(overlay);
 
     // Auto-focus na treści (najczęściej edytowane).
     try { bodyInput.focus(); } catch (_) {}
+  }
+
+  /**
+   * P4-fix #3: heurystyka wyboru hosta overlay'a.
+   * - rootEl widoczny (display:block) → użyj rootEl (modal w tym samym stacking
+   *   context co karta pacjenta; cleanup przy hide() automatyczny).
+   * - rootEl hidden lub brak → użyj document.body (modal działa w trybie
+   *   zalogowanym, gdy auth UI jest schowane).
+   */
+  function _chooseOverlayHost() {
+    if (!rootEl) return global.document.body;
+    var style = '';
+    try { style = (rootEl.style && rootEl.style.display) || ''; } catch (_) {}
+    // computed style fallback gdy inline style pusty.
+    if (!style && global.getComputedStyle) {
+      try { style = global.getComputedStyle(rootEl).display || ''; } catch (_) {}
+    }
+    if (style === 'none') return global.document.body;
+    return rootEl;
   }
 
   // ============ R2 — REMINDER MODAL (PRZYPOMNIENIA PO ZALOGOWANIU) ============
@@ -3087,7 +3108,8 @@
     sheet.appendChild(footer);
 
     overlay.appendChild(sheet);
-    var host = rootEl || global.document.body;
+    // P4-fix #3 (R4 dzwonek): host=body gdy rootEl hidden — patrz _chooseOverlayHost.
+    var host = _chooseOverlayHost();
     host.appendChild(overlay);
 
     // ── Re-render listy po każdej akcji (zrobione/przełóż) ───────────────
