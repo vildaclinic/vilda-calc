@@ -420,15 +420,12 @@
       // Identyczny pattern wizualny co chrome-sync-btn (30x30, lucide outline SVG,
       // border-radius 8px). Badge counter w prawym górnym rogu (czerwony=overdue,
       // pomarańczowy=today). Hidden gdy count=0 (data-count="0"). Klik → modal force.
-      '    <button type="button" class="chrome-reminders-btn" id="vildaRemindersBtn"',
-      '       data-count="0" data-state="empty" hidden',
-      '       title="Brak przypomnień" aria-label="Brak przypomnień">',
-      '      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">',
-      '        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>',
-      '        <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
-      '      </svg>',
-      '      <span class="chrome-reminders-badge" id="vildaRemindersBadge" aria-hidden="true">0</span>',
-      '    </button>',
+      // R4-fix flash: stan initial czytany SYNCHRONICZNIE z sessionStorage cache
+      // (vilda-reminders-count-v1) — gdy user nawigował z innej podstrony i miał
+      // remindery, chip pojawia się od razu w prawidłowym stanie. Bez tego cache'u
+      // chip "flashował" — najpierw hidden, potem po async refresh visible →
+      // pozostałe chipy w topbar przesuwały się przy każdej nawigacji.
+      _renderRemindersBtnHtml(),
       '    <div class="chrome-chip chrome-patient-chip is-empty" id="vildaPatientChip" aria-live="polite" role="button" tabindex="0" aria-haspopup="dialog" aria-expanded="false" title="Status zapisu — kliknij, aby zobaczyć legendę">',
       '      <span class="chip-icon" data-lucide="user-round" aria-hidden="true"></span>',
       '      <span class="chip-content">',
@@ -1449,6 +1446,61 @@
   // Live update przez V.onPatientNoteChanged. Klik → showRemindersModal force.
 
   var _remindersRefreshDebounce = null;
+  // R4-fix flash: cache w sessionStorage przeżywa nawigację między podstronami →
+  // chip renderuje się natychmiast w prawidłowym stanie przy każdej zmianie URL.
+  // Bez tego chip był „hidden" podczas mount + visible po async refresh → flash.
+  var REMINDERS_CACHE_KEY = 'vilda-reminders-count-v1';
+
+  function _readRemindersCache() {
+    try {
+      var raw = global.sessionStorage && global.sessionStorage.getItem(REMINDERS_CACHE_KEY);
+      if (!raw) return null;
+      var parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed.count !== 'number' || parsed.count < 0) return null;
+      return parsed;
+    } catch (_) { return null; }
+  }
+
+  function _writeRemindersCache(count, state) {
+    try {
+      if (!global.sessionStorage) return;
+      global.sessionStorage.setItem(REMINDERS_CACHE_KEY, JSON.stringify({
+        count: count, state: state, updatedAtISO: new Date().toISOString()
+      }));
+    } catch (_) {}
+  }
+
+  /**
+   * Synchroniczny render HTML chip'a — czyta sessionStorage cache. Wywoływane
+   * podczas generowania topbar (renderTopbarHTML). Gdy cache count>0, chip pojawia
+   * się od razu z prawidłowym stanem (brak flash przy nawigacji).
+   */
+  function _renderRemindersBtnHtml() {
+    var cache = _readRemindersCache();
+    if (cache && cache.count > 0) {
+      var displayCount = cache.count > 9 ? '9+' : String(cache.count);
+      var state = cache.state || 'today';
+      return '    <button type="button" class="chrome-reminders-btn" id="vildaRemindersBtn"'
+        + ' data-count="' + cache.count + '" data-state="' + state + '"'
+        + ' title="Przypomnienia" aria-label="Przypomnienia">'
+        + '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+        + '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>'
+        + '<path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>'
+        + '</svg>'
+        + '<span class="chrome-reminders-badge" id="vildaRemindersBadge" aria-hidden="true">' + displayCount + '</span>'
+        + '    </button>';
+    }
+    // Default — brak cache lub count=0: chip hidden.
+    return '    <button type="button" class="chrome-reminders-btn" id="vildaRemindersBtn"'
+      + ' data-count="0" data-state="empty" hidden'
+      + ' title="Brak przypomnień" aria-label="Brak przypomnień">'
+      + '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+      + '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>'
+      + '<path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>'
+      + '</svg>'
+      + '<span class="chrome-reminders-badge" id="vildaRemindersBadge" aria-hidden="true">0</span>'
+      + '    </button>';
+  }
 
   /**
    * Odśwież chip — pobierz aktualną listę due i zaktualizuj badge.
@@ -1468,13 +1520,15 @@
     if (!badge) return;
 
     var V = global.VildaVault;
-    // Nie zalogowany → ukryj.
+    // Nie zalogowany → ukryj. R4-fix flash: wyczyść cache, żeby po nawigacji
+    // pre-login chip nie pojawiał się chwilowo z stalką liczbą.
     if (!V || typeof V.isUnlocked !== 'function' || !V.isUnlocked()) {
       btn.hidden = true;
       btn.setAttribute('data-count', '0');
       btn.setAttribute('data-state', 'empty');
       btn.setAttribute('aria-label', 'Brak przypomnień');
       btn.setAttribute('title', 'Brak przypomnień');
+      _writeRemindersCache(0, 'empty');
       return;
     }
     if (typeof V.listPatientNotesDueByDate !== 'function') {
@@ -1514,14 +1568,20 @@
       btn.setAttribute('aria-label', 'Brak przypomnień');
       btn.setAttribute('title', 'Brak przypomnień');
       badge.textContent = '0';
+      // R4-fix flash: aktualizuj cache → następna nawigacja zna prawidłowy stan.
+      _writeRemindersCache(0, 'empty');
       return;
     }
 
     // Widoczny + badge update.
     btn.hidden = false;
+    var resolvedState = hasOverdue ? 'overdue' : 'today';
     btn.setAttribute('data-count', String(patientCount));
-    btn.setAttribute('data-state', hasOverdue ? 'overdue' : 'today');
+    btn.setAttribute('data-state', resolvedState);
     badge.textContent = patientCount > 9 ? '9+' : String(patientCount);
+    // R4-fix flash: zapisz cache po fetch → przy nawigacji topbar renderuje
+    // chip od razu w prawidłowym stanie (z _renderRemindersBtnHtml).
+    _writeRemindersCache(patientCount, resolvedState);
 
     // a11y label z poprawną polską odmianą.
     var pacjentowWord = (patientCount === 1) ? 'pacjent wymaga'
