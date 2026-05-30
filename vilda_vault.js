@@ -2561,6 +2561,192 @@
     return out;
   }
 
+  // ============ P5 — TIMELINE PACJENTA (agregator wydarzeń) ============
+  /**
+   * Zwraca chronologiczną listę wszystkich wydarzeń pacjenta posortowaną malejąco
+   * po dateISO (najnowsze pierwsze). Każde wydarzenie ma:
+   *   - type: 'measurement' | 'note' | 'observation' | 'lab' | 'medication' | 'gh-therapy'
+   *   - dateISO: timestamp wydarzenia (do sortowania i grupowania w UI)
+   *   - patientId
+   *   - oraz pola specyficzne dla typu (snapshotId+payload dla pomiaru, noteId+body dla notatki, etc.)
+   *
+   * MVP P5 — typy zaimplementowane z PRAWDZIWYMI danymi:
+   *   • measurement — ze snapshots pacjenta (height, weight, BMI, age)
+   *   • note — z patientNotes (P1-P4: kategoria, title, body, dueDate, completedAt)
+   *   • observation — automatycznie generowane (2 heurystyki: gap detection + growth slowdown)
+   *
+   * MVP P5 — typy FUTURE-PROOF (placeholdery, zwracają [] na razie):
+   *   • lab — wyniki badań laboratoryjnych (IGF-1, TSH, FT4) — wymaga dedykowanego modułu
+   *   • medication — leki (Euthyrox, inne) — wymaga dedykowanego modułu
+   *   • gh-therapy — terapie GH (GH_THERAPY_POINTS to obecnie storage:'local' globalny,
+   *     nie per-pacjent z timestampem; integracja wymaga reklasyfikacji storage)
+   *
+   * @param {string} patientId
+   * @returns {Promise<Array<TimelineEvent>>}
+   */
+  async function listPatientTimelineEvents(patientId) {
+    if (!isUnlocked()) throw new Error('Zaloguj się, by pobrać historię pacjenta.');
+    if (typeof patientId !== 'string' || !patientId.length) {
+      throw new Error('listPatientTimelineEvents: brak patientId.');
+    }
+
+    const events = [];
+
+    // ── 1) Pomiary ze snapshots ──────────────────────────────────────────
+    let patient = null;
+    try { patient = await getPatient(patientId); }
+    catch (_) { patient = null; }
+
+    if (patient && Array.isArray(patient.snapshots)) {
+      for (let i = 0; i < patient.snapshots.length; i += 1) {
+        const snap = patient.snapshots[i];
+        const p = (snap && snap.payload) || {};
+        const h = typeof p.height === 'number' ? p.height : null;
+        const w = typeof p.weight === 'number' ? p.weight : null;
+        let bmi = null;
+        if (h && w && h > 0) {
+          bmi = Math.round((w / Math.pow(h / 100, 2)) * 10) / 10;
+        }
+        events.push({
+          type: 'measurement',
+          dateISO: snap.savedAtISO,
+          patientId: patientId,
+          snapshotId: snap.snapshotId,
+          height: h,
+          weight: w,
+          bmi: bmi,
+          age: typeof p.age === 'number' ? p.age : null,
+          payload: p   // raw payload dla UI gdy potrzeba dodatkowych pól
+        });
+      }
+    }
+
+    // ── 2) Notatki kliniczne (P1-P4) ─────────────────────────────────────
+    let notes = [];
+    try { notes = await listPatientNotesForPatient(patientId); }
+    catch (_) { notes = []; }
+
+    for (let j = 0; j < notes.length; j += 1) {
+      const note = notes[j];
+      events.push({
+        type: 'note',
+        dateISO: note.createdAtISO || note.updatedAtISO || new Date().toISOString(),
+        patientId: patientId,
+        noteId: note.id,
+        category: note.category,
+        title: note.title,
+        body: note.body,
+        dueDateISO: note.dueDateISO,
+        completedAtISO: note.completedAtISO,
+        updatedAtISO: note.updatedAtISO
+      });
+    }
+
+    // ── 3) Auto-observations (proste heurystyki) ─────────────────────────
+    if (patient && Array.isArray(patient.snapshots)) {
+      const obs = _generateObservations(patient.snapshots, patientId);
+      for (let k = 0; k < obs.length; k += 1) events.push(obs[k]);
+    }
+
+    // ── 4) Future-proof typy — pusta tablica na MVP ─────────────────────
+    // Te calle są placeholderami: UI w timeline pokaże filter dla nich,
+    // ale wyniki są na razie puste. Gdy odpowiednie moduły zostaną dodane,
+    // wystarczy zaimplementować listLabResults / listMedications /
+    // listGHTherapyEvents poniżej i timeline automatycznie je włączy.
+    // (Świadomie nie throw — żeby UI mogło bezpiecznie wyświetlać filtry.)
+
+    // ── 5) Sortowanie: najnowsze pierwsze (DESC by dateISO) ─────────────
+    events.sort(function (a, b) {
+      const ai = a.dateISO || '';
+      const bi = b.dateISO || '';
+      if (ai > bi) return -1;
+      if (ai < bi) return 1;
+      return 0;
+    });
+
+    return events;
+  }
+
+  /**
+   * Generuje proste auto-observations bazujące na snapshots.
+   * MVP — 2 heurystyki:
+   *   1) Gap detection: brak pomiaru przez >180 dni → observation z datą NAJSTARSZEGO
+   *      następnego pomiaru ("Pierwszy pomiar po 7 mc przerwy").
+   *   2) Growth slowdown: prędkość wzrastania w ostatnim interwale jest <80% prędkości
+   *      poprzedniego interwału (i poprzednia była >0) → observation.
+   *
+   * UWAGA — to są pomocnicze "alerty" wizualne, NIE diagnoza medyczna. UI dorzuca
+   * disclaimer "Automatyczne wykrycie — zweryfikuj ręcznie".
+   */
+  function _generateObservations(snapshots, patientId) {
+    const out = [];
+    if (!Array.isArray(snapshots) || snapshots.length < 2) return out;
+
+    // snapshots już posortowane DESC po savedAtISO (przez getPatient).
+    // Iterujemy od najstarszego do najnowszego dla wykrywania gap'ów.
+    const chronological = snapshots.slice().reverse();
+    const MS_PER_DAY = 24 * 3600 * 1000;
+    const GAP_THRESHOLD_DAYS = 180;
+
+    // Gap detection: dla każdej pary kolejnych snapshots sprawdź odstęp.
+    for (let i = 1; i < chronological.length; i += 1) {
+      const prev = chronological[i - 1];
+      const curr = chronological[i];
+      if (!prev || !curr || !prev.savedAtISO || !curr.savedAtISO) continue;
+      const diffDays = Math.round(
+        (new Date(curr.savedAtISO).getTime() - new Date(prev.savedAtISO).getTime()) / MS_PER_DAY
+      );
+      if (diffDays >= GAP_THRESHOLD_DAYS) {
+        const months = Math.round(diffDays / 30);
+        out.push({
+          type: 'observation',
+          dateISO: curr.savedAtISO,
+          patientId: patientId,
+          observationType: 'measurement-gap',
+          title: 'Przerwa w pomiarach',
+          description: 'Pierwszy pomiar po ' + months + ' miesiącach przerwy (' + diffDays + ' dni).',
+          autoGenerated: true
+        });
+      }
+    }
+
+    // Growth slowdown: porównuje 2 prędkości wzrastania (3 ostatnie pomiary).
+    if (chronological.length >= 3) {
+      const recent = chronological.slice(-3); // [-3, -2, -1]
+      const a = recent[0], b = recent[1], c = recent[2];
+      const ha = a && a.payload && a.payload.height;
+      const hb = b && b.payload && b.payload.height;
+      const hc = c && c.payload && c.payload.height;
+      if (typeof ha === 'number' && typeof hb === 'number' && typeof hc === 'number'
+          && a.savedAtISO && b.savedAtISO && c.savedAtISO) {
+        const MS_PER_YEAR = 365.25 * MS_PER_DAY;
+        const span1 = (new Date(b.savedAtISO).getTime() - new Date(a.savedAtISO).getTime()) / MS_PER_YEAR;
+        const span2 = (new Date(c.savedAtISO).getTime() - new Date(b.savedAtISO).getTime()) / MS_PER_YEAR;
+        if (span1 > 0.05 && span2 > 0.05) {
+          const speed1 = (hb - ha) / span1; // cm/rok
+          const speed2 = (hc - hb) / span2;
+          if (speed1 > 1.0 && speed2 > 0 && speed2 < speed1 * 0.8) {
+            const dropPercent = Math.round((1 - speed2 / speed1) * 100);
+            out.push({
+              type: 'observation',
+              dateISO: c.savedAtISO,
+              patientId: patientId,
+              observationType: 'growth-slowdown',
+              title: 'Spowolnienie wzrastania',
+              description: 'Prędkość spadła o ' + dropPercent + '% (z ' + speed1.toFixed(1)
+                + ' do ' + speed2.toFixed(1) + ' cm/r).',
+              autoGenerated: true,
+              speedBefore: Math.round(speed1 * 10) / 10,
+              speedAfter: Math.round(speed2 * 10) / 10
+            });
+          }
+        }
+      }
+    }
+
+    return out;
+  }
+
   async function removePatientNote(noteId) {
     if (!isUnlocked()) throw new Error('Zaloguj się, by usunąć notatkę pacjenta.');
     if (typeof noteId !== 'string' || !noteId) throw new Error('removePatientNote: brak id.');
@@ -5751,6 +5937,8 @@
     uncompletePatientNote: uncompletePatientNote,
     snoozePatientNote: snoozePatientNote,
     listPatientNotesDueByDate: listPatientNotesDueByDate,
+    // P5 — Timeline pacjenta: agregator wszystkich wydarzeń chronologicznie.
+    listPatientTimelineEvents: listPatientTimelineEvents,
     startIdleTimer: startIdleTimer,
     stopIdleTimer: stopIdleTimer,
     resetIdleTimer: resetIdleTimer,

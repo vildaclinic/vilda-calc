@@ -3795,9 +3795,23 @@
       );
     }
 
+    // P5 — pill button „Edytuj" w prawym górnym rogu hero. Otwiera osobny
+    // ekran edycji (showPatientEditScreen). Tab Edycja został zastąpiony
+    // zakładką Historia (timeline), więc dostęp do formularza edycji idzie
+    // przez tę pill (jasne, łatwe do trafienia, nie zaśmieca tabBar).
+    var editPill = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-small vilda-patient-hero-edit-pill',
+      type: 'button',
+      text: '✏ Edytuj',
+      title: 'Edytuj dane pacjenta',
+      'aria-label': 'Edytuj dane pacjenta',
+      onclick: function () { showPatientEditScreen(patientId, onPick, listOptions); }
+    });
+
     var heroDiv = el('div', { class: 'vilda-patient-hero' }, [
       el('div', { class: avatarClasses, text: name.charAt(0).toUpperCase() }),
-      el('div', { class: 'vilda-patient-hero-info' }, heroInfoChildren)
+      el('div', { class: 'vilda-patient-hero-info' }, heroInfoChildren),
+      editPill
     ]);
 
     // ── ZAKŁADKI ──
@@ -3819,13 +3833,15 @@
       text: 'Notatki',
       'data-tab': 'notes'
     });
-    var tabEdit = el('button', {
+    // P5 — tab „Historia" zastępuje dawny tab „Edycja". Edycja jest dostępna
+    // przez pill „✏ Edytuj" w hero (osobny ekran showPatientEditScreen).
+    var tabTimeline = el('button', {
       class: 'vilda-patient-tab',
       type: 'button',
-      text: 'Edycja',
-      'data-tab': 'edit'
+      text: 'Historia',
+      'data-tab': 'timeline'
     });
-    var tabBar = el('div', { class: 'vilda-patient-tabs', role: 'tablist' }, [tabAntro, tabTraj, tabNotes, tabEdit]);
+    var tabBar = el('div', { class: 'vilda-patient-tabs', role: 'tablist' }, [tabAntro, tabTraj, tabNotes, tabTimeline]);
 
     // ── ZAKŁADKA „Status" — pogrupowane statystyki ──
     var antroContent = el('div', { class: 'vilda-patient-tab-content', 'data-tab': 'antro' });
@@ -3956,139 +3972,28 @@
       }
     }
 
-    // ── ZAKŁADKA „Edycja" — formularz danych pacjenta (Koncepcja 2) ──
-    // Edytuje pola nagłówka i pomiaru najnowszego snapshotu. Zapis tworzy nowy
-    // snapshot pod TYM SAMYM patientId (savePatient z patientId, dedup:false),
-    // więc nagłówek i wartości wyliczane (BMI/centyle/MPH) odświeżają się same.
-    var editContent = el('div', { class: 'vilda-patient-tab-content vilda-patient-tab-content--hidden', 'data-tab': 'edit' });
-    var _adv = payload.advanced || {};
-
-    function _editInput(val, attrs) {
-      var input = el('input', Object.assign({ class: 'vilda-auth-input', type: 'text', autocomplete: 'off', spellcheck: 'false' }, attrs || {}));
-      input.value = (val == null ? '' : String(val));
-      return input;
-    }
-    function _editField(labelText, control) {
-      return el('div', { style: 'display:block;' }, [
-        el('label', { class: 'vilda-patient-stat-label', style: 'display:block; margin-bottom:4px;', text: labelText }),
-        control
-      ]);
-    }
-    function _normSex(s) {
-      var v = (s == null ? '' : String(s)).trim().toLowerCase();
-      if (v === 'm' || v.indexOf('chło') === 0 || v === 'male' || v === 'boy') return 'M';
-      if (v === 'k' || v.indexOf('dziew') === 0 || v === 'female' || v === 'girl' || v === 'f') return 'K';
-      return '';
-    }
-
-    var efName  = _editInput(name === '(bez imienia)' ? '' : name, { placeholder: 'Imię i nazwisko', maxlength: '120' });
-    var efAge   = _editInput(age != null ? age : '',             { inputmode: 'numeric', placeholder: 'lata' });
-    var efAgeMo = _editInput(ageMonths != null ? ageMonths : '',  { inputmode: 'numeric', placeholder: 'miesiące (0–11)' });
-    var efSex   = el('select', { class: 'vilda-auth-input' }, [
-      el('option', { value: '',  text: '— wybierz —' }),
-      el('option', { value: 'M', text: 'chłopiec' }),
-      el('option', { value: 'K', text: 'dziewczynka' })
-    ]);
-    efSex.value = _normSex(sex);
-    var efHeight = _editInput(height != null ? height : '', { inputmode: 'decimal', placeholder: 'cm' });
-    var efWeight = _editInput(weight != null ? weight : '', { inputmode: 'decimal', placeholder: 'kg' });
-    var efMother = _editInput(_adv.motherHeight != null ? _adv.motherHeight : '', { inputmode: 'decimal', placeholder: 'cm' });
-    var efFather = _editInput(_adv.fatherHeight != null ? _adv.fatherHeight : '', { inputmode: 'decimal', placeholder: 'cm' });
-    var editErr  = el('div', { class: 'vilda-auth-error' });
-
-    editContent.appendChild(el('p', { class: 'vilda-patient-section-h', text: 'Dane pacjenta' }));
-    editContent.appendChild(el('div', { class: 'vilda-patient-stats-grid' }, [
-      _editField('Imię i nazwisko', efName),
-      _editField('Płeć', efSex),
-      _editField('Wiek (lata)', efAge),
-      _editField('Wiek (miesiące)', efAgeMo),
-      _editField('Wzrost (cm)', efHeight),
-      _editField('Masa ciała (kg)', efWeight)
-    ]));
-    editContent.appendChild(el('p', { class: 'vilda-patient-section-h vilda-patient-section-h--secondary', text: 'Wzrost rodziców (do MPH)' }));
-    editContent.appendChild(el('div', { class: 'vilda-patient-stats-grid' }, [
-      _editField('Wzrost matki (cm)', efMother),
-      _editField('Wzrost ojca (cm)', efFather)
-    ]));
-    editContent.appendChild(el('p', { class: 'vilda-patient-empty-msg', style: 'margin-top:6px;', text: 'Wartości wyliczane (BMI, centyle, MPH) odświeżą się automatycznie po zapisaniu. Zapis dodaje nowy wpis do historii pacjenta.' }));
-    editContent.appendChild(editErr);
-
-    function _setNumField(obj, key, raw) {
-      var s = (raw == null ? '' : String(raw)).trim().replace(',', '.');
-      if (s === '') { obj[key] = ''; return; }
-      var n = parseFloat(s);
-      obj[key] = isFinite(n) ? n : s;
-    }
-    function _resetEditForm() {
-      efName.value = name === '(bez imienia)' ? '' : name;
-      efSex.value = _normSex(sex);
-      efAge.value = age != null ? age : '';
-      efAgeMo.value = ageMonths != null ? ageMonths : '';
-      efHeight.value = height != null ? height : '';
-      efWeight.value = weight != null ? weight : '';
-      efMother.value = _adv.motherHeight != null ? _adv.motherHeight : '';
-      efFather.value = _adv.fatherHeight != null ? _adv.fatherHeight : '';
-      editErr.textContent = '';
-    }
-    async function _saveEdits() {
-      var newName = (efName.value || '').trim();
-      if (!newName) { editErr.textContent = 'Imię i nazwisko jest wymagane.'; try { efName.focus(); } catch (_) {} return; }
-      var edited;
-      try { edited = JSON.parse(JSON.stringify(payload)); }
-      catch (e) { editErr.textContent = 'Nie udało się przygotować danych do zapisu.'; return; }
-      edited.name = newName;
-      edited.user = edited.user || {};
-      _setNumField(edited.user, 'age', efAge.value);
-      _setNumField(edited.user, 'ageMonths', efAgeMo.value);
-      edited.user.sex = efSex.value || '';
-      _setNumField(edited.user, 'height', efHeight.value);
-      _setNumField(edited.user, 'weight', efWeight.value);
-      edited.advanced = edited.advanced || {};
-      _setNumField(edited.advanced, 'motherHeight', efMother.value);
-      _setNumField(edited.advanced, 'fatherHeight', efFather.value);
+    // ── ZAKŁADKA „Historia" (P5) — chronologiczny timeline wszystkich wydarzeń ──
+    // Zastąpiła dawną zakładkę „Edycja". Edycja danych pacjenta jest dostępna
+    // przez pill „✏ Edytuj" w hero (otwiera osobny ekran showPatientEditScreen).
+    // Timeline pokazuje pomiary + notatki + obserwacje + future-proof slots
+    // (wyniki badań, leki, terapie GH).
+    var timelineContent = el('div', { class: 'vilda-patient-tab-content vilda-patient-tab-content--hidden vilda-patient-timeline-section', 'data-tab': 'timeline' });
+    var _timelineRendered = false;
+    function reRenderTimeline() {
       try {
-        setBusy(true);
-        await V.savePatient(edited, { patientId: patientId, dedup: false });
-        setBusy(false);
-        showPatientCard(patientId, onPick, listOptions);
+        renderTimelineSection(timelineContent, patientId, reRenderTimeline);
       } catch (e) {
-        setBusy(false);
-        editErr.textContent = 'Nie udało się zapisać zmian.';
-        logError('showPatientCard saveEdits', e);
+        logError('renderTimelineSection', e);
       }
     }
-    async function _deletePatient() {
-      var label = (name && name !== '(bez imienia)') ? name : 'tego pacjenta';
-      if (!global.confirm('Usunąć pacjenta „' + label + '” wraz z całą historią wizyt? Tej operacji nie można cofnąć.')) return;
-      try {
-        setBusy(true);
-        await V.removePatient(patientId);
-        setBusy(false);
-        showPatientsList(onPick, listOptions);
-      } catch (e) {
-        setBusy(false);
-        editErr.textContent = 'Nie udało się usunąć pacjenta.';
-        logError('showPatientCard deletePatient', e);
-      }
-    }
-
-    // Układ A: równa para Przywróć/Zapisz (50/50 dzięki .vilda-auth-actions .vilda-auth-btn{flex:1}),
-    // a niżej, pod separatorem, dyskretne „Usuń pacjenta" (danger-outline, wyśrodkowane).
-    editContent.appendChild(el('div', { class: 'vilda-auth-actions' }, [
-      el('button', { class: 'vilda-auth-btn vilda-auth-btn-ghost', type: 'button', text: 'Przywróć', onclick: _resetEditForm }),
-      el('button', { class: 'vilda-auth-btn vilda-auth-btn-primary', type: 'button', text: 'Zapisz zmiany', onclick: _saveEdits })
-    ]));
-    editContent.appendChild(el('div', { class: 'vilda-patient-delete-row' }, [
-      el('button', { class: 'vilda-auth-btn vilda-patient-delete-btn', type: 'button', text: 'Usuń pacjenta', onclick: _deletePatient })
-    ]));
 
     // ── Przełączanie zakładek ──
     function switchTab(tabId) {
-      [tabAntro, tabTraj, tabNotes, tabEdit].forEach(function (t) {
+      [tabAntro, tabTraj, tabNotes, tabTimeline].forEach(function (t) {
         if (t.getAttribute('data-tab') === tabId) t.classList.add('vilda-patient-tab--active');
         else t.classList.remove('vilda-patient-tab--active');
       });
-      [antroContent, trajContent, notesContent, editContent].forEach(function (c) {
+      [antroContent, trajContent, notesContent, timelineContent].forEach(function (c) {
         if (c.getAttribute('data-tab') === tabId) c.classList.remove('vilda-patient-tab-content--hidden');
         else c.classList.add('vilda-patient-tab-content--hidden');
       });
@@ -4105,7 +4010,14 @@
         reRenderNotes();
       }
     });
-    tabEdit.addEventListener('click', function () { switchTab('edit'); });
+    tabTimeline.addEventListener('click', function () {
+      switchTab('timeline');
+      // P5: lazy mount timeline — render dopiero przy pierwszym wejściu.
+      if (!_timelineRendered) {
+        _timelineRendered = true;
+        reRenderTimeline();
+      }
+    });
 
     // ── Akcje ──
     var backBtn = el('button', {
@@ -4160,7 +4072,7 @@
       antroContent,
       trajContent,
       notesContent,
-      editContent,
+      timelineContent,
       el('div', { class: 'vilda-auth-actions vilda-patient-actions' },
         loadBtn ? [backBtn, loadBtn] : [backBtn]
       )
@@ -4174,6 +4086,446 @@
     }
 
     open(el('div', { class: 'vilda-auth-screen vilda-auth-patient-card' }, screenChildren), { noLogo: true });
+  }
+
+  // ============ P5 — EKRAN EDYCJI PACJENTA (osobny ekran) ============
+  /**
+   * Wydzielony z tab "Edycja" w showPatientCard. Otwierany pillem "✏ Edytuj"
+   * w hero karty pacjenta. Zawiera formularz danych pacjenta + akcje
+   * Przywróć/Zapisz/Usuń. Po zapisie wraca do showPatientCard.
+   */
+  async function showPatientEditScreen(patientId, onPick, listOptions) {
+    var V = getVault();
+    if (!V || !V.isUnlocked()) return;
+
+    open(el('div', { class: 'vilda-auth-screen vilda-auth-patient-card' }, [
+      el('h2', { class: 'vilda-auth-title', text: 'Edycja pacjenta' }),
+      el('p', { class: 'vilda-auth-subtitle', text: 'Wczytywanie danych…' })
+    ]), { noLogo: true });
+    setBusy(true);
+
+    var patientFull = null;
+    try { patientFull = await V.getPatient(patientId); }
+    catch (e) { logError('showPatientEditScreen getPatient', e); }
+    setBusy(false);
+
+    if (!patientFull || !patientFull.snapshots.length) {
+      open(el('div', { class: 'vilda-auth-screen' }, [
+        el('h2', { class: 'vilda-auth-title', text: 'Edycja pacjenta' }),
+        el('p', { class: 'vilda-auth-subtitle', text: 'Brak danych do edycji.' }),
+        el('div', { class: 'vilda-auth-actions' }, [
+          el('button', {
+            class: 'vilda-auth-btn vilda-auth-btn-ghost', type: 'button',
+            text: '← Wróć',
+            onclick: function () { showPatientCard(patientId, onPick, listOptions); }
+          })
+        ])
+      ]), { noLogo: true });
+      return;
+    }
+
+    var snap = patientFull.snapshots[0];
+    var payload = snap.payload || {};
+    var name = payload.name || '(bez imienia)';
+    var u = payload.user || {};
+    var age = u.age, ageMonths = u.ageMonths, sex = u.sex;
+    var height = u.height, weight = u.weight;
+    var _adv = payload.advanced || {};
+
+    function _editInput(val, attrs) {
+      var input = el('input', Object.assign({ class: 'vilda-auth-input', type: 'text', autocomplete: 'off', spellcheck: 'false' }, attrs || {}));
+      input.value = (val == null ? '' : String(val));
+      return input;
+    }
+    function _editField(labelText, control) {
+      return el('div', { style: 'display:block;' }, [
+        el('label', { class: 'vilda-patient-stat-label', style: 'display:block; margin-bottom:4px;', text: labelText }),
+        control
+      ]);
+    }
+    function _normSex(s) {
+      var v = (s == null ? '' : String(s)).trim().toLowerCase();
+      if (v === 'm' || v.indexOf('chło') === 0 || v === 'male' || v === 'boy') return 'M';
+      if (v === 'k' || v.indexOf('dziew') === 0 || v === 'female' || v === 'girl' || v === 'f') return 'K';
+      return '';
+    }
+
+    var efName  = _editInput(name === '(bez imienia)' ? '' : name, { placeholder: 'Imię i nazwisko', maxlength: '120' });
+    var efAge   = _editInput(age != null ? age : '',             { inputmode: 'numeric', placeholder: 'lata' });
+    var efAgeMo = _editInput(ageMonths != null ? ageMonths : '',  { inputmode: 'numeric', placeholder: 'miesiące (0–11)' });
+    var efSex   = el('select', { class: 'vilda-auth-input' }, [
+      el('option', { value: '',  text: '— wybierz —' }),
+      el('option', { value: 'M', text: 'chłopiec' }),
+      el('option', { value: 'K', text: 'dziewczynka' })
+    ]);
+    efSex.value = _normSex(sex);
+    var efHeight = _editInput(height != null ? height : '', { inputmode: 'decimal', placeholder: 'cm' });
+    var efWeight = _editInput(weight != null ? weight : '', { inputmode: 'decimal', placeholder: 'kg' });
+    var efMother = _editInput(_adv.motherHeight != null ? _adv.motherHeight : '', { inputmode: 'decimal', placeholder: 'cm' });
+    var efFather = _editInput(_adv.fatherHeight != null ? _adv.fatherHeight : '', { inputmode: 'decimal', placeholder: 'cm' });
+    var editErr  = el('div', { class: 'vilda-auth-error' });
+
+    function _setNumField(obj, key, raw) {
+      var s = (raw == null ? '' : String(raw)).trim().replace(',', '.');
+      if (s === '') { obj[key] = ''; return; }
+      var n = parseFloat(s);
+      obj[key] = isFinite(n) ? n : s;
+    }
+    function _resetEditForm() {
+      efName.value = name === '(bez imienia)' ? '' : name;
+      efSex.value = _normSex(sex);
+      efAge.value = age != null ? age : '';
+      efAgeMo.value = ageMonths != null ? ageMonths : '';
+      efHeight.value = height != null ? height : '';
+      efWeight.value = weight != null ? weight : '';
+      efMother.value = _adv.motherHeight != null ? _adv.motherHeight : '';
+      efFather.value = _adv.fatherHeight != null ? _adv.fatherHeight : '';
+      editErr.textContent = '';
+    }
+    async function _saveEdits() {
+      var newName = (efName.value || '').trim();
+      if (!newName) { editErr.textContent = 'Imię i nazwisko jest wymagane.'; try { efName.focus(); } catch (_) {} return; }
+      var edited;
+      try { edited = JSON.parse(JSON.stringify(payload)); }
+      catch (e) { editErr.textContent = 'Nie udało się przygotować danych do zapisu.'; return; }
+      edited.name = newName;
+      edited.user = edited.user || {};
+      _setNumField(edited.user, 'age', efAge.value);
+      _setNumField(edited.user, 'ageMonths', efAgeMo.value);
+      edited.user.sex = efSex.value || '';
+      _setNumField(edited.user, 'height', efHeight.value);
+      _setNumField(edited.user, 'weight', efWeight.value);
+      edited.advanced = edited.advanced || {};
+      _setNumField(edited.advanced, 'motherHeight', efMother.value);
+      _setNumField(edited.advanced, 'fatherHeight', efFather.value);
+      try {
+        setBusy(true);
+        await V.savePatient(edited, { patientId: patientId, dedup: false });
+        setBusy(false);
+        showPatientCard(patientId, onPick, listOptions);
+      } catch (e) {
+        setBusy(false);
+        editErr.textContent = 'Nie udało się zapisać zmian.';
+        logError('showPatientEditScreen saveEdits', e);
+      }
+    }
+    async function _deletePatient() {
+      var label = (name && name !== '(bez imienia)') ? name : 'tego pacjenta';
+      if (!global.confirm('Usunąć pacjenta „' + label + '” wraz z całą historią wizyt? Tej operacji nie można cofnąć.')) return;
+      try {
+        setBusy(true);
+        await V.removePatient(patientId);
+        setBusy(false);
+        showPatientsList(onPick, listOptions);
+      } catch (e) {
+        setBusy(false);
+        editErr.textContent = 'Nie udało się usunąć pacjenta.';
+        logError('showPatientEditScreen deletePatient', e);
+      }
+    }
+
+    var backBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost', type: 'button',
+      text: '← Wróć do karty pacjenta',
+      onclick: function () { showPatientCard(patientId, onPick, listOptions); }
+    });
+
+    var screen = el('div', { class: 'vilda-auth-screen vilda-auth-patient-card' }, [
+      el('h2', { class: 'vilda-auth-title', text: 'Edycja pacjenta' }),
+      el('p', { class: 'vilda-patient-section-h', text: 'Dane pacjenta' }),
+      el('div', { class: 'vilda-patient-stats-grid' }, [
+        _editField('Imię i nazwisko', efName),
+        _editField('Płeć', efSex),
+        _editField('Wiek (lata)', efAge),
+        _editField('Wiek (miesiące)', efAgeMo),
+        _editField('Wzrost (cm)', efHeight),
+        _editField('Masa ciała (kg)', efWeight)
+      ]),
+      el('p', { class: 'vilda-patient-section-h vilda-patient-section-h--secondary', text: 'Wzrost rodziców (do MPH)' }),
+      el('div', { class: 'vilda-patient-stats-grid' }, [
+        _editField('Wzrost matki (cm)', efMother),
+        _editField('Wzrost ojca (cm)', efFather)
+      ]),
+      el('p', { class: 'vilda-patient-empty-msg', style: 'margin-top:6px;', text: 'Wartości wyliczane (BMI, centyle, MPH) odświeżą się automatycznie po zapisaniu. Zapis dodaje nowy wpis do historii pacjenta.' }),
+      editErr,
+      el('div', { class: 'vilda-auth-actions' }, [
+        el('button', { class: 'vilda-auth-btn vilda-auth-btn-ghost', type: 'button', text: 'Przywróć', onclick: _resetEditForm }),
+        el('button', { class: 'vilda-auth-btn vilda-auth-btn-primary', type: 'button', text: 'Zapisz zmiany', onclick: _saveEdits })
+      ]),
+      el('div', { class: 'vilda-patient-delete-row' }, [
+        el('button', { class: 'vilda-auth-btn vilda-patient-delete-btn', type: 'button', text: 'Usuń pacjenta', onclick: _deletePatient })
+      ]),
+      el('div', { class: 'vilda-auth-actions vilda-patient-actions' }, [backBtn])
+    ]);
+
+    open(screen, { noLogo: true });
+  }
+
+  // ============ P5.4 — TIMELINE PACJENTA (UI wariant A: vertical oś + kropki) ============
+
+  // Mapowanie typu wydarzenia na metadata: kolor kropki, label, ikona/SVG.
+  var TIMELINE_TYPE_META = {
+    'measurement':  { label: 'Pomiar',      color: '#0F6E56', bg: '#E1F5EE' },
+    'note':         { label: 'Notatka',     color: '#854F0B', bg: '#FAEEDA' },
+    'observation':  { label: 'Obserwacja',  color: '#185FA5', bg: '#E6F1FB' },
+    'lab':          { label: 'Wynik',       color: '#534AB7', bg: '#EEEDFE' },
+    'medication':   { label: 'Lek',         color: '#A32D2D', bg: '#FCEBEB' },
+    'gh-therapy':   { label: 'Terapia GH',  color: '#0F6E56', bg: '#E1F5EE' }
+  };
+
+  var TIMELINE_FILTER_OPTIONS = [
+    { id: 'all',          label: 'Wszystko' },
+    { id: 'measurement',  label: 'Pomiar' },
+    { id: 'note',         label: 'Notatka' },
+    { id: 'observation',  label: 'Obserwacja' },
+    { id: 'lab',          label: 'Wynik' },
+    { id: 'medication',   label: 'Lek' },
+    { id: 'gh-therapy',   label: 'Terapia GH' }
+  ];
+
+  /**
+   * Formatuje dateISO w relatywny napis polski.
+   *   "dziś · 14:30" / "wczoraj" / "3 dni temu" / "12.05.2026"
+   */
+  function _formatTimelineDate(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    var now = new Date();
+    var todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    var dUTC = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+    var diffDays = Math.round((todayUTC - dUTC) / (24 * 3600 * 1000));
+    if (diffDays === 0) {
+      var hh = String(d.getHours()).padStart(2, '0');
+      var mm = String(d.getMinutes()).padStart(2, '0');
+      return 'dziś · ' + hh + ':' + mm;
+    }
+    if (diffDays === 1) return 'wczoraj';
+    if (diffDays > 1 && diffDays <= 14) return diffDays + ' dni temu';
+    var dd = String(d.getDate()).padStart(2, '0');
+    var mo = String(d.getMonth() + 1).padStart(2, '0');
+    var yyyy = d.getFullYear();
+    return dd + '.' + mo + '.' + yyyy;
+  }
+
+  /**
+   * Renderuje tag zdarzenia (badge typu + treść konkretnego typu).
+   */
+  function _renderTimelineEventBody(event) {
+    var bodyDiv = el('div', null);
+    if (event.type === 'measurement') {
+      var parts = [];
+      if (event.height != null) parts.push('Wzrost ' + event.height + ' cm');
+      if (event.weight != null) parts.push('Waga ' + event.weight + ' kg');
+      if (event.bmi != null) parts.push('BMI ' + event.bmi);
+      bodyDiv.appendChild(el('div', {
+        style: 'font-weight:600;font-size:0.92rem;color:#0f2b33;',
+        text: parts.join(' · ')
+      }));
+      if (event.age != null) {
+        bodyDiv.appendChild(el('div', {
+          style: 'font-size:0.78rem;color:#5b6672;margin-top:2px;',
+          text: 'Wiek: ' + event.age + ' lat'
+        }));
+      }
+    } else if (event.type === 'note') {
+      if (event.title) {
+        bodyDiv.appendChild(el('div', {
+          style: 'font-weight:600;font-size:0.92rem;color:#0f2b33;',
+          text: event.title
+        }));
+      }
+      if (event.body) {
+        bodyDiv.appendChild(el('div', {
+          style: 'font-size:0.86rem;color:#374151;line-height:1.5;margin-top:2px;white-space:pre-wrap;word-wrap:break-word;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;',
+          text: event.body
+        }));
+      }
+      if (event.completedAtISO) {
+        bodyDiv.appendChild(el('div', {
+          style: 'font-size:0.74rem;color:#0F6E56;margin-top:3px;',
+          text: '✓ Wykonano'
+        }));
+      }
+    } else if (event.type === 'observation') {
+      bodyDiv.appendChild(el('div', {
+        style: 'font-weight:600;font-size:0.92rem;color:#0f2b33;',
+        text: event.title || 'Obserwacja'
+      }));
+      if (event.description) {
+        bodyDiv.appendChild(el('div', {
+          style: 'font-size:0.86rem;color:#374151;line-height:1.5;margin-top:2px;',
+          text: event.description
+        }));
+      }
+      if (event.autoGenerated) {
+        bodyDiv.appendChild(el('div', {
+          style: 'font-size:0.7rem;color:#9aa8aa;margin-top:3px;font-style:italic;',
+          text: 'Automatyczne wykrycie — zweryfikuj ręcznie'
+        }));
+      }
+    }
+    return bodyDiv;
+  }
+
+  /**
+   * Główny renderer Timeline. Pobiera eventy z vault.listPatientTimelineEvents,
+   * pozwala filtrować po typie (sticky pill button row na górze), renderuje
+   * vertical timeline (pionowa oś + kolorowane kropki + karty zdarzeń).
+   *
+   * Klikalne wydarzenia:
+   *   • measurement → switchTab('traj') — przełącz na siatki centylowe
+   *   • note → switchTab('notes') — tab Notatki (P4)
+   *   • observation, lab, medication, gh-therapy — na razie tylko statyczne karty
+   *     (modal "Otwórz" w przyszłości po dodaniu dedykowanych modułów)
+   *
+   * @param {HTMLElement} container — div sekcji w karcie pacjenta
+   * @param {string} patientId
+   * @param {Function} reRender — callback do ponownego wywołania
+   */
+  async function renderTimelineSection(container, patientId, reRender) {
+    var V = getVault();
+    clear(container);
+    if (!V || typeof V.listPatientTimelineEvents !== 'function') {
+      container.appendChild(el('p', { class: 'vilda-patient-empty-msg', text: 'Historia pacjenta nie jest dostępna.' }));
+      return;
+    }
+
+    // Header z licznikiem + filtry
+    var headerWrap = el('div', { style: 'margin-bottom:12px;' });
+    headerWrap.appendChild(el('p', {
+      class: 'vilda-patient-section-h',
+      text: 'Historia pacjenta',
+      style: 'margin:0 0 8px 0;'
+    }));
+
+    // Filtry — sticky pill row (jak w notatki.html dla kategorii)
+    var filtersRow = el('div', {
+      class: 'vilda-patient-timeline-filters',
+      style: 'display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;'
+    });
+    var currentFilter = 'all';
+    var filterPills = [];
+    function refreshFilterUI() {
+      filterPills.forEach(function (p) {
+        if (p.opt.id === currentFilter) {
+          p.btn.style.background = '#00838d';
+          p.btn.style.color = '#fff';
+        } else {
+          p.btn.style.background = TIMELINE_TYPE_META[p.opt.id] ? TIMELINE_TYPE_META[p.opt.id].bg : '#f5fafb';
+          p.btn.style.color = TIMELINE_TYPE_META[p.opt.id] ? TIMELINE_TYPE_META[p.opt.id].color : '#5b6672';
+        }
+      });
+      rebuildList();
+    }
+    TIMELINE_FILTER_OPTIONS.forEach(function (opt) {
+      var meta = TIMELINE_TYPE_META[opt.id];
+      var btn = el('button', {
+        type: 'button',
+        text: opt.label,
+        style: 'border:none;padding:4px 10px;font-size:0.74rem;font-weight:600;border-radius:999px;cursor:pointer;font-family:inherit;'
+          + 'background:' + (opt.id === 'all' ? '#00838d' : (meta ? meta.bg : '#f5fafb')) + ';'
+          + 'color:' + (opt.id === 'all' ? '#fff' : (meta ? meta.color : '#5b6672')) + ';',
+        onclick: function () { currentFilter = opt.id; refreshFilterUI(); }
+      });
+      filterPills.push({ opt: opt, btn: btn });
+      filtersRow.appendChild(btn);
+    });
+    headerWrap.appendChild(filtersRow);
+    container.appendChild(headerWrap);
+
+    // Wczytanie eventów
+    var events = [];
+    try { events = await V.listPatientTimelineEvents(patientId); }
+    catch (e) { logError('listPatientTimelineEvents', e); }
+
+    // Container listy (vertical timeline z pionową osią)
+    var listWrap = el('div', { class: 'vilda-patient-timeline-list', style: 'position:relative;padding-left:28px;' });
+    // Pionowa linia osi
+    var axis = el('div', {
+      style: 'position:absolute;left:10px;top:4px;bottom:4px;width:2px;background:#d7e9ec;'
+    });
+    listWrap.appendChild(axis);
+    container.appendChild(listWrap);
+
+    function rebuildList() {
+      // Usuń wszystkie children listWrap poza axis (axis jest [0])
+      while (listWrap.childNodes.length > 1) listWrap.removeChild(listWrap.lastChild);
+
+      var filtered = events;
+      if (currentFilter !== 'all') {
+        filtered = events.filter(function (e) { return e.type === currentFilter; });
+      }
+
+      if (!filtered.length) {
+        listWrap.appendChild(el('p', {
+          class: 'vilda-patient-empty-msg',
+          text: currentFilter === 'all'
+            ? 'Brak wydarzeń w historii. Dodaj pomiar lub notatkę, aby zobaczyć timeline.'
+            : 'Brak wydarzeń tego typu.'
+        }));
+        return;
+      }
+
+      filtered.forEach(function (event) {
+        var meta = TIMELINE_TYPE_META[event.type] || { label: event.type, color: '#5b6672', bg: '#f5fafb' };
+
+        var wrapper = el('div', { style: 'position:relative;margin-bottom:14px;' });
+
+        // Kropka na osi — kolorowana wg typu
+        wrapper.appendChild(el('div', {
+          style: 'position:absolute;left:-22px;top:4px;width:14px;height:14px;border-radius:50%;'
+            + 'background:' + meta.color + ';border:2px solid #fff;box-shadow:0 0 0 1px ' + meta.color + ';'
+        }));
+
+        // Data nad kartą
+        wrapper.appendChild(el('div', {
+          style: 'font-size:0.7rem;color:#5b6672;font-weight:500;margin-bottom:3px;',
+          text: _formatTimelineDate(event.dateISO)
+        }));
+
+        // Karta zdarzenia
+        var card = el('div', {
+          style: 'background:#f5fafb;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;cursor:pointer;transition:background 0.15s;',
+          onmouseover: function () { card.style.background = '#ebf3f5'; },
+          onmouseout: function () { card.style.background = '#f5fafb'; },
+          onclick: function () { _handleTimelineEventClick(event); }
+        });
+
+        // Badge typu
+        card.appendChild(el('span', {
+          style: 'display:inline-block;padding:2px 8px;font-size:0.7rem;font-weight:600;color:'
+            + meta.color + ';background:' + meta.bg + ';border-radius:999px;align-self:flex-start;',
+          text: meta.label
+        }));
+
+        // Treść specyficzna dla typu
+        card.appendChild(_renderTimelineEventBody(event));
+
+        wrapper.appendChild(card);
+        listWrap.appendChild(wrapper);
+      });
+    }
+
+    function _handleTimelineEventClick(event) {
+      // Per Q4 — Pomiar → tab Siatki; Notatka → tab Notatki; reszta → placeholder modal.
+      try {
+        var screen = global.document.querySelector('.vilda-auth-patient-card');
+        if (event.type === 'measurement') {
+          var tab = screen && screen.querySelector('[data-tab="traj"]');
+          if (tab && typeof tab.click === 'function') tab.click();
+        } else if (event.type === 'note') {
+          var tabN = screen && screen.querySelector('button[data-tab="notes"]');
+          if (tabN && typeof tabN.click === 'function') tabN.click();
+        } else {
+          // observation/lab/medication/gh-therapy — placeholder
+          try { global.alert(event.title + (event.description ? '\n\n' + event.description : '')); } catch (_) {}
+        }
+      } catch (e) { logError('handleTimelineEventClick', e); }
+    }
+
+    rebuildList();
+    void reRender;
   }
 
   // ============ LISTA PACJENTÓW — helpers sortowania ============
@@ -6645,6 +6997,8 @@
     showRecoveryFlowForUser: showRecoveryFlowForUser,
     showPatientsList: showPatientsList,
     showPatientCard: showPatientCard,
+    // P5 — Edycja pacjenta jako osobny ekran (przed: tab w karcie).
+    showPatientEditScreen: showPatientEditScreen,
     // R2: reminder modal po-unlock — pokazuje pacjentów z notatkami due dziś + overdue.
     showRemindersModal: showRemindersModal,
     // R3: auto-trigger po unlock (raz na dzień, cloud-synced flag). Manual: { force: true }.
