@@ -3267,9 +3267,11 @@
         for (var m = 0; m < prevMenus.length; m++) prevMenus[m].remove();
       } catch (_) {}
 
+      // R2-fix: position:fixed z viewport coords zamiast absolute (parent actions
+      // nie ma position:relative, więc absolute uciekało do <html> w lewy górny róg).
       var menu = el('div', {
         class: 'vilda-reminders-snooze-menu',
-        style: 'position:absolute;background:#fff;border:0.5px solid #d7e9ec;border-radius:10px;box-shadow:0 8px 24px rgba(0,40,48,0.18);padding:6px;display:flex;flex-direction:column;gap:2px;z-index:1000002;min-width:180px;'
+        style: 'position:fixed;background:#fff;border:0.5px solid #d7e9ec;border-radius:10px;box-shadow:0 8px 24px rgba(0,40,48,0.18);padding:6px;display:flex;flex-direction:column;gap:2px;z-index:1000002;min-width:200px;'
       });
 
       function addOpt(label, days) {
@@ -3342,13 +3344,34 @@
       customWrap.appendChild(confirmBtn);
       menu.appendChild(customWrap);
 
-      // Position menu pod anchorBtn (absolute w wrap'ie note item'a).
-      anchorBtn.parentNode.appendChild(menu);
-      // Po krótkiej chwili — pozycjonuj poniżej anchorBtn.
+      // R2-fix: append do body (a nie parent actions) — pozycjonowanie fixed
+      // pracuje na viewport coords i nie wymaga relative parent. To gwarantuje że
+      // submenu pojawia się dokładnie pod przyciskiem niezależnie od stacking context.
+      global.document.body.appendChild(menu);
+
+      // Pozycjonuj poniżej anchorBtn. Trzeba poczekać 1 frame żeby menu miało
+      // realne wymiary (offsetWidth) — wtedy możemy go zmieścić w viewporcie.
       var rect = anchorBtn.getBoundingClientRect();
-      var parentRect = anchorBtn.parentNode.getBoundingClientRect();
-      menu.style.top = (rect.bottom - parentRect.top + 4) + 'px';
-      menu.style.left = (rect.left - parentRect.left) + 'px';
+      var menuWidth = menu.offsetWidth || 220; // estimate gdy 0 (pre-paint)
+      var menuHeight = menu.offsetHeight || 240;
+      var viewportW = global.innerWidth || global.document.documentElement.clientWidth;
+      var viewportH = global.innerHeight || global.document.documentElement.clientHeight;
+
+      // Domyślnie: tuż pod przyciskiem, wyrównane do lewej krawędzi przycisku.
+      var top = rect.bottom + 4;
+      var left = rect.left;
+
+      // Edge protection — gdy submenu wychodzi za prawą krawędź, dosuń do prawej.
+      if (left + menuWidth > viewportW - 8) {
+        left = Math.max(8, rect.right - menuWidth);
+      }
+      // Gdy wychodzi poniżej viewportu — pokaż NAD przyciskiem.
+      if (top + menuHeight > viewportH - 8) {
+        top = Math.max(8, rect.top - menuHeight - 4);
+      }
+
+      menu.style.top = top + 'px';
+      menu.style.left = left + 'px';
 
       // Click-outside → close
       setTimeout(function () {
