@@ -2222,6 +2222,21 @@
     return d.toISOString();
   }
 
+  // B1.0: linkedAgeMonths — opcjonalna kotwica notatki do wieku pacjenta w chwili
+  // wizyty (jeśli notatka powstała razem z wpisem pomiaru). Wartość: liczba > 0
+  // (wiek w pełnych miesiącach) lub null (notatka "wolna" — bez powiązania z pomiarem).
+  // Akceptujemy number i string (parsowany), zwracamy zaokrąglony int lub null.
+  // Zakres: 0 < value <= 1200 (do 100 lat — defensywnie).
+  function normalizeLinkedAgeMonths(value) {
+    if (value == null || value === '') return null;
+    var n = (typeof value === 'number') ? value : Number(value);
+    if (!isFinite(n)) return null;
+    n = Math.round(n);
+    if (n <= 0) return null;
+    if (n > 1200) return null;
+    return n;
+  }
+
   async function _decryptPatientNoteRecord(rec) {
     let content = { title: '', body: '' };
     try {
@@ -2239,6 +2254,9 @@
       dueDateISO: rec.dueDateISO || null,
       // R1: completedAtISO — null gdy pending (notatka wciąż w reminderach).
       completedAtISO: rec.completedAtISO || null,
+      // B1.0: linkedAgeMonths — wiek pacjenta przy wizycie (jeśli notatka powstała
+      // razem z wpisem pomiaru) lub null (notatka "wolna").
+      linkedAgeMonths: normalizeLinkedAgeMonths(rec.linkedAgeMonths),
       createdAtISO: rec.createdAtISO || null,
       updatedAtISO: rec.updatedAtISO || null
     };
@@ -2274,11 +2292,15 @@
     // status "Wykonane" przeżywa zwykłą edycję treści. Tylko explicit complete/uncomplete
     // wywołują savePatientNote z completedAtISO !== undefined.
     let existingCompletedAtISO = null;
+    // B1.0: analogicznie zachowaj existing.linkedAgeMonths gdy payload nie podał
+    // własnego — czysta edycja treści nie powinna zrywać kotwicy do wizyty.
+    let existingLinkedAgeMonths = null;
     if (noteId) {
       const existing = await getAdapter().getPatientNoteForUser(currentUserId, noteId);
       if (existing) {
         createdAtISO = existing.createdAtISO || null;
         existingCompletedAtISO = existing.completedAtISO || null;
+        existingLinkedAgeMonths = normalizeLinkedAgeMonths(existing.linkedAgeMonths);
       } else {
         isNew = true;
       }
@@ -2301,6 +2323,17 @@
       completedAtISO = normalizeCompletedAtISO(payload.completedAtISO);
     }
 
+    // B1.0: linkedAgeMonths resolution — analogicznie do completedAtISO:
+    //   undefined → zachowaj existing (czysta edycja treści przeżywa kotwicę)
+    //   null/''/0 → wyczyść kotwicę (notatka staje się "wolna")
+    //   number    → ustaw (kotwicz do wieku)
+    let linkedAgeMonths;
+    if (!Object.prototype.hasOwnProperty.call(payload, 'linkedAgeMonths')) {
+      linkedAgeMonths = existingLinkedAgeMonths;
+    } else {
+      linkedAgeMonths = normalizeLinkedAgeMonths(payload.linkedAgeMonths);
+    }
+
     const content = { title: title, body: body };
     const bodyCipher = await encryptPayloadForCurrentUser(content);
     const rec = {
@@ -2310,6 +2343,9 @@
       category: category,
       dueDateISO: dueDateISO,
       completedAtISO: completedAtISO,
+      // B1.0: plain-text meta (jak dueDateISO) — żeby timeline filter / sortowanie
+      // po wieku mogło działać bez deszyfrowania bodyCipher.
+      linkedAgeMonths: linkedAgeMonths,
       createdAtISO: createdAtISO,
       updatedAtISO: nowISO
     };
@@ -2422,7 +2458,9 @@
       body: existing.body,
       category: existing.category,
       dueDateISO: existing.dueDateISO,
-      completedAtISO: new Date().toISOString()
+      completedAtISO: new Date().toISOString(),
+      // B1.0: zachowaj kotwicę do wizyty przy oznaczaniu jako wykonane.
+      linkedAgeMonths: existing.linkedAgeMonths
     });
   }
 
@@ -2441,7 +2479,9 @@
       body: existing.body,
       category: existing.category,
       dueDateISO: existing.dueDateISO,
-      completedAtISO: null
+      completedAtISO: null,
+      // B1.0: zachowaj kotwicę do wizyty przy cofaniu wykonania.
+      linkedAgeMonths: existing.linkedAgeMonths
     });
   }
 
@@ -2464,7 +2504,9 @@
       category: existing.category,
       dueDateISO: newDue,
       // Przełożenie reseterruje "Wykonane" (gdyby przypadkowo zostało zaznaczone).
-      completedAtISO: null
+      completedAtISO: null,
+      // B1.0: zachowaj kotwicę do wizyty przy przekładaniu przypomnienia.
+      linkedAgeMonths: existing.linkedAgeMonths
     });
   }
 
@@ -2561,6 +2603,90 @@
     return out;
   }
 
+  // ============ B1.1 — HISTORIA POMIARÓW PER SNAPSHOT (helper) ============
+  /**
+   * Wyciąga historyczne wiersze pomiarowe z payloadu pojedynczego snapshotu.
+   *
+   * KONTEKST: pacjent w jednym snapshocie ma DWIE warstwy danych:
+   *   1) payload.user.* — AKTUALNY stan formularza (jeden zestaw height/weight/age)
+   *   2) payload.advanced.data.measurements[] / payload.growthBasic.data.measurements[]
+   *      — HISTORYCZNE wiersze pomiarów wpisywane do modułów wzrostowych
+   *      (każdy wiersz ma {ageYears, ageMonths, height, weight, [boneAgeYears]}
+   *      — bez daty kalendarzowej, kotwicą jest WIEK pacjenta przy pomiarze).
+   *
+   * Ten helper zwraca warstwę 2 — historyczne wiersze. Aktualny stan (warstwa 1)
+   * obsługuje wywołujący jako fallback gdy tablica historyczna jest pusta.
+   *
+   * ŹRÓDŁO: preferuje advanced (kompletne — z boneAgeYears używane w prognozach),
+   * fallback do growthBasic (lżejsze — tylko age/height/weight).
+   *
+   * NORMALIZACJA: każdy wiersz → {ageMonths, ageYears, height, weight, sex, boneAgeYears?}.
+   * Wiersze bez height I bez weight są wycinane (puste — brak pomiaru wzrostu/wagi).
+   * Sortowanie ASC po ageMonths.
+   *
+   * Pure function — bez side effects, bez vault state. Testowalne w izolacji.
+   *
+   * @param {object} snapshot — rekord snapshotu z polem .payload (po deszyfrowaniu)
+   * @returns {Array<{ageMonths:number, ageYears:number, height:?number, weight:?number, sex:?string, boneAgeYears?:number}>}
+   */
+  function _extractMeasurementHistory(snapshot) {
+    if (!snapshot || !snapshot.payload || typeof snapshot.payload !== 'object') return [];
+    var p = snapshot.payload;
+    var sex = (p.user && typeof p.user.sex === 'string' && p.user.sex) ? p.user.sex : null;
+
+    // Wybór źródła: advanced → growthBasic → brak.
+    var sourceRows = null;
+    var sourceName = null;
+    if (p.advanced && p.advanced.data && Array.isArray(p.advanced.data.measurements)
+        && p.advanced.data.measurements.length > 0) {
+      sourceRows = p.advanced.data.measurements;
+      sourceName = 'advanced';
+    } else if (p.growthBasic && p.growthBasic.data && Array.isArray(p.growthBasic.data.measurements)
+        && p.growthBasic.data.measurements.length > 0) {
+      sourceRows = p.growthBasic.data.measurements;
+      sourceName = 'growthBasic';
+    } else {
+      return [];
+    }
+    void sourceName; // diagnostyka (przyszłe użycie, jeśli będzie potrzeba)
+
+    var out = [];
+    for (var i = 0; i < sourceRows.length; i += 1) {
+      var row = sourceRows[i];
+      if (!row || typeof row !== 'object') continue;
+
+      // ageMonths preferowane; ageYears jako fallback.
+      var ageMonths = null;
+      if (typeof row.ageMonths === 'number' && isFinite(row.ageMonths)) {
+        ageMonths = Math.round(row.ageMonths);
+      } else if (typeof row.ageYears === 'number' && isFinite(row.ageYears)) {
+        ageMonths = Math.round(row.ageYears * 12);
+      }
+      if (ageMonths == null || ageMonths < 0) continue;
+
+      var height = (typeof row.height === 'number' && isFinite(row.height) && row.height > 0) ? row.height : null;
+      var weight = (typeof row.weight === 'number' && isFinite(row.weight) && row.weight > 0) ? row.weight : null;
+      // Wiersz bez ŻADNEGO pomiaru → wycinamy (puste).
+      if (height == null && weight == null) continue;
+
+      var entry = {
+        ageMonths: ageMonths,
+        ageYears: ageMonths / 12,
+        height: height,
+        weight: weight,
+        sex: sex
+      };
+      // boneAgeYears — tylko advanced ma to pole; growthBasic nie zbiera.
+      if (typeof row.boneAgeYears === 'number' && isFinite(row.boneAgeYears) && row.boneAgeYears > 0) {
+        entry.boneAgeYears = row.boneAgeYears;
+      }
+      out.push(entry);
+    }
+
+    out.sort(function (a, b) { return a.ageMonths - b.ageMonths; });
+    return out;
+  }
+
   // ============ P5 — TIMELINE PACJENTA (agregator wydarzeń) ============
   /**
    * Zwraca chronologiczną listę wszystkich wydarzeń pacjenta posortowaną malejąco
@@ -2598,64 +2724,107 @@
     catch (_) { patient = null; }
 
     if (patient && Array.isArray(patient.snapshots)) {
-      // Wartości pomiaru są w payload.user.*, NIE w payload bezpośrednio.
-      // To samo co showPatientCard używa: `var u = payload.user; var height = u.height`.
-      // Plus obliczamy prędkość wzrastania (cm/rok) z porównania z poprzednim
-      // (chronologicznie starszym) snapshotem — żeby UI mogło pokazać tempo bez
-      // dodatkowych zapytań.
-      // Helper: pomiary mogą być w payload.user.* (struktura kreatora aplikacji)
-      // ALBO w payload.* bezpośrednio (programmatic savePatient np. w testach).
-      // Najpierw user.*, fallback do root.
-      function _readMeasureField(p, key) {
-        if (p && p.user && typeof p.user[key] === 'number') return p.user[key];
-        if (p && typeof p[key] === 'number') return p[key];
-        return null;
-      }
-      function _readSex(p) {
-        if (p && p.user && p.user.sex) return p.user.sex;
-        if (p && p.sex) return p.sex;
-        return null;
-      }
+      // B1.2: Eventy `measurement` budowane są z TABLICY HISTORYCZNEJ wpisanej do
+      // modułów wzrostowych (advanced.data.measurements[] lub growthBasic.data.measurements[]),
+      // a NIE 1:1 z snapshotów vaultu. Powód: snapshot = sesja zapisu (kilka kliknięć
+      // „Zapisz" w jednej wizycie tworzy kilka snapshotów z TYM SAMYM aktualnym
+      // stanem), a wiersz historyczny = jedna wizyta z konkretnym wiekiem dziecka.
+      // Każdy wiersz historyczny ma {ageMonths, height, weight, ...} bez daty
+      // kalendarzowej — kotwicą jest WIEK pacjenta. Dlatego eventy measurement
+      // NIE MAJĄ dateISO ani snapshotId; mają ageMonths/ageYears jako swoją oś czasu.
 
-      const sortedChronological = patient.snapshots.slice().reverse(); // ASC chronologicznie
-      const speedByIdx = {};
-      for (let s = 1; s < sortedChronological.length; s += 1) {
-        const a = sortedChronological[s - 1];
-        const b = sortedChronological[s];
-        const ha = _readMeasureField(a && a.payload, 'height');
-        const hb = _readMeasureField(b && b.payload, 'height');
-        if (ha != null && hb != null && a.savedAtISO && b.savedAtISO && hb > ha) {
-          const spanYears = (new Date(b.savedAtISO).getTime() - new Date(a.savedAtISO).getTime())
-            / (365.25 * 24 * 3600 * 1000);
-          if (spanYears > 0.05) {
-            speedByIdx[b.snapshotId] = Math.round(((hb - ha) / spanYears) * 10) / 10;
-          }
+      // Dedup globalny po (ageMonths, height, weight) — z preferencją do wartości
+      // z NAJNOWSZEGO snapshotu (najświeższe poprawki tabeli wygrywają).
+      var snapshotsSortedDesc = patient.snapshots.slice().sort(function (a, b) {
+        var ai = (a && a.savedAtISO) || '';
+        var bi = (b && b.savedAtISO) || '';
+        if (ai > bi) return -1;
+        if (ai < bi) return 1;
+        return 0;
+      });
+
+      var dedupedByKey = new Map(); // key → first-seen row (z najnowszego snapshotu)
+      for (var si = 0; si < snapshotsSortedDesc.length; si += 1) {
+        var rows = _extractMeasurementHistory(snapshotsSortedDesc[si]);
+        for (var ri = 0; ri < rows.length; ri += 1) {
+          var r = rows[ri];
+          var key = r.ageMonths + '|'
+            + (r.height != null ? r.height.toFixed(2) : '_')
+            + '|' + (r.weight != null ? r.weight.toFixed(2) : '_');
+          if (!dedupedByKey.has(key)) dedupedByKey.set(key, r);
         }
       }
 
-      for (let i = 0; i < patient.snapshots.length; i += 1) {
-        const snap = patient.snapshots[i];
-        const p = (snap && snap.payload) || {};
-        const h = _readMeasureField(p, 'height');
-        const w = _readMeasureField(p, 'weight');
-        let bmi = null;
-        if (h && w && h > 0) {
-          bmi = Math.round((w / Math.pow(h / 100, 2)) * 10) / 10;
+      var measurements = Array.from(dedupedByKey.values())
+        .sort(function (a, b) { return a.ageMonths - b.ageMonths; }); // ASC dla growth velocity
+
+      // FALLBACK: pacjent bez tablicy historycznej (np. tylko jeden zrzut formularza
+      // przez kreator albo savePatient programmatic w testach) → emituj 1 event
+      // z aktualnego payload.user (lub root) najnowszego snapshotu.
+      if (measurements.length === 0 && snapshotsSortedDesc.length > 0) {
+        var latestSnap = snapshotsSortedDesc[0];
+        var p = (latestSnap && latestSnap.payload) || {};
+        function _readUserField(key) {
+          if (p && p.user && typeof p.user[key] === 'number' && isFinite(p.user[key])) return p.user[key];
+          if (p && typeof p[key] === 'number' && isFinite(p[key])) return p[key];
+          return null;
+        }
+        var fbHeight = _readUserField('height');
+        var fbWeight = _readUserField('weight');
+        var fbAgeMonths = _readUserField('ageMonths');
+        if (fbAgeMonths == null) {
+          var fbAgeYears = _readUserField('age');
+          if (fbAgeYears != null) fbAgeMonths = Math.round(fbAgeYears * 12);
+        }
+        // Tylko emit jeśli mamy WIEK + (height lub weight) — bez tego nie ma punktu.
+        if (fbAgeMonths != null && fbAgeMonths >= 0 && (fbHeight != null || fbWeight != null)) {
+          var fbSex = (p.user && p.user.sex) || p.sex || null;
+          measurements.push({
+            ageMonths: fbAgeMonths,
+            ageYears: fbAgeMonths / 12,
+            height: (fbHeight != null && fbHeight > 0) ? fbHeight : null,
+            weight: (fbWeight != null && fbWeight > 0) ? fbWeight : null,
+            sex: fbSex
+          });
+        }
+      }
+
+      // Growth velocity: liczona z różnicy wieków poprzedniego pomiaru chronologicznie
+      // po wieku (próg 0.25 roku = 3 miesiące). Wymaga rosnącego wzrostu.
+      var GROWTH_VELOCITY_MIN_SPAN_YEARS = 0.25;
+      for (var mi = 0; mi < measurements.length; mi += 1) {
+        var curr = measurements[mi];
+        var velocity = null;
+        if (mi > 0 && curr.height != null) {
+          // Znajdź poprzedni pomiar Z NIENULOWYM height (może być >1 wstecz).
+          for (var pj = mi - 1; pj >= 0; pj -= 1) {
+            var prev = measurements[pj];
+            if (prev.height == null) continue;
+            var spanYears = curr.ageYears - prev.ageYears;
+            if (spanYears > GROWTH_VELOCITY_MIN_SPAN_YEARS && curr.height > prev.height) {
+              velocity = Math.round(((curr.height - prev.height) / spanYears) * 10) / 10;
+            }
+            break;
+          }
+        }
+        var bmi = null;
+        if (curr.height != null && curr.weight != null && curr.height > 0) {
+          bmi = Math.round((curr.weight / Math.pow(curr.height / 100, 2)) * 10) / 10;
         }
         events.push({
           type: 'measurement',
-          dateISO: snap.savedAtISO,
           patientId: patientId,
-          snapshotId: snap.snapshotId,
-          height: h,
-          weight: w,
+          ageMonths: curr.ageMonths,
+          ageYears: curr.ageYears,
+          height: curr.height,
+          weight: curr.weight,
           bmi: bmi,
-          age: _readMeasureField(p, 'age'),
-          ageMonths: _readMeasureField(p, 'ageMonths'),
-          sex: _readSex(p),
-          // Prędkość wzrastania od poprzedniego pomiaru (cm/rok), null gdy 1. pomiar.
-          growthVelocity: speedByIdx[snap.snapshotId] != null ? speedByIdx[snap.snapshotId] : null,
-          payload: p   // raw payload dla UI gdy potrzeba dodatkowych pól
+          sex: curr.sex,
+          growthVelocity: velocity,
+          boneAgeYears: (typeof curr.boneAgeYears === 'number') ? curr.boneAgeYears : null
+          // NIE eksponujemy dateISO — measurement events kotwiczą się wiekiem.
+          // NIE eksponujemy snapshotId — niezależnie ile snapshotów było, pomiar
+          // jest jeden (deduplikacja powyżej).
         });
       }
     }
@@ -2677,13 +2846,25 @@
         body: note.body,
         dueDateISO: note.dueDateISO,
         completedAtISO: note.completedAtISO,
-        updatedAtISO: note.updatedAtISO
+        updatedAtISO: note.updatedAtISO,
+        // B1.3: linkedAgeMonths — wiek pacjenta przy wizycie (jeśli notatka powstała
+        // razem z wpisem pomiaru) lub null (notatka "wolna" — bez kotwicy do wieku).
+        // UI w B1.6 użyje tego pola żeby renderować kotwiczone notatki nad pomiarem
+        // o tym wieku, a wolne na samej górze osi czasu.
+        linkedAgeMonths: (typeof note.linkedAgeMonths === 'number' && note.linkedAgeMonths > 0)
+          ? note.linkedAgeMonths : null
       });
     }
 
     // ── 3) Auto-observations (proste heurystyki) ─────────────────────────
-    if (patient && Array.isArray(patient.snapshots)) {
-      const obs = _generateObservations(patient.snapshots, patientId);
+    // B1.4: observations są generowane z DEDUPOWANYCH measurement eventów po
+    // wieku (kotwica = ageMonths), a nie ze snapshotów po dacie zapisu. Powód:
+    // savedAtISO jest niemiarodajne (po imporcie zbiorczym wszystko ma tę samą
+    // datę → gap detection sypał false negatives), natomiast wiek pacjenta jest
+    // jednoznacznym wskaźnikiem przerwy między wizytami.
+    var measurementEventsForObs = events.filter(function (e) { return e.type === 'measurement'; });
+    if (measurementEventsForObs.length >= 2) {
+      var obs = _generateObservations(measurementEventsForObs, patientId);
       for (let k = 0; k < obs.length; k += 1) events.push(obs[k]);
     }
 
@@ -2694,89 +2875,109 @@
     // listGHTherapyEvents poniżej i timeline automatycznie je włączy.
     // (Świadomie nie throw — żeby UI mogło bezpiecznie wyświetlać filtry.)
 
-    // ── 5) Sortowanie: najnowsze pierwsze (DESC by dateISO) ─────────────
-    events.sort(function (a, b) {
-      const ai = a.dateISO || '';
-      const bi = b.dateISO || '';
+    // ── 5) Sortowanie B1.2: pomiary po WIEKU (DESC = najwyższy wiek na górze),
+    //     notatki/observations po DACIE (DESC = najnowsze na górze).
+    //     Dwa modele czasu — pomiary nie mają dateISO, kotwicą jest ageMonths;
+    //     reszta ma dateISO (createdAtISO notatki, savedAtISO snapshotu observation).
+    //     Strategia: rozdziel, posortuj osobno, połącz. UI w B1.6 zdecyduje
+    //     o ostatecznym układzie wizualnym (zwykle: notatki wolne → kotwiczone
+    //     pod pomiarami → puste sloty).
+    var measurementEvents = [];
+    var anchoredEvents = [];
+    for (var ei = 0; ei < events.length; ei += 1) {
+      if (events[ei].type === 'measurement') measurementEvents.push(events[ei]);
+      else anchoredEvents.push(events[ei]);
+    }
+    measurementEvents.sort(function (a, b) { return b.ageMonths - a.ageMonths; }); // DESC
+    anchoredEvents.sort(function (a, b) {
+      var ai = a.dateISO || '';
+      var bi = b.dateISO || '';
       if (ai > bi) return -1;
       if (ai < bi) return 1;
       return 0;
     });
-
-    return events;
+    // Konkatenacja: notatki/observations pierwsze (najnowsze), potem pomiary po wieku.
+    // UI w B1.6 zmieni układ na docelowy „wolne notatki → kotwiczone do pomiarów".
+    return anchoredEvents.concat(measurementEvents);
   }
 
   /**
-   * Generuje proste auto-observations bazujące na snapshots.
-   * MVP — 2 heurystyki:
-   *   1) Gap detection: brak pomiaru przez >180 dni → observation z datą NAJSTARSZEGO
-   *      następnego pomiaru ("Pierwszy pomiar po 7 mc przerwy").
-   *   2) Growth slowdown: prędkość wzrastania w ostatnim interwale jest <80% prędkości
-   *      poprzedniego interwału (i poprzednia była >0) → observation.
+   * Generuje proste auto-observations z dedupowanych measurement events.
+   * MVP — 2 heurystyki bazujące na WIEKU pacjenta:
+   *   1) Gap detection: różnica ageMonths > 12 między kolejnymi pomiarami →
+   *      observation z linkedAgeMonths = curr.ageMonths ("Pierwszy pomiar
+   *      po X miesiącach przerwy między wiekiem Y a Z").
+   *   2) Growth slowdown: prędkość wzrastania w ostatnim interwale (po wieku)
+   *      <80% prędkości poprzedniego interwału → observation z
+   *      linkedAgeMonths = ostatni.ageMonths.
+   *
+   * Wcześniej (P5) liczyło po savedAtISO snapshotów. Po B1.4 liczy po wieku —
+   * stąd działa poprawnie nawet dla pacjentów importowanych zbiorczo (gdzie
+   * wszystkie snapshoty mają tę samą datę zapisu, ale różne wieki wpisane do
+   * tablicy historycznej).
    *
    * UWAGA — to są pomocnicze "alerty" wizualne, NIE diagnoza medyczna. UI dorzuca
    * disclaimer "Automatyczne wykrycie — zweryfikuj ręcznie".
+   *
+   * @param {Array<{ageMonths, ageYears, height, ...}>} measurements — dedupowane
+   *        measurement events z listPatientTimelineEvents, SORTUJEMY ASC po wieku.
+   * @param {string} patientId
+   * @returns {Array<observation event>}
    */
-  function _generateObservations(snapshots, patientId) {
+  function _generateObservations(measurements, patientId) {
     const out = [];
-    if (!Array.isArray(snapshots) || snapshots.length < 2) return out;
+    if (!Array.isArray(measurements) || measurements.length < 2) return out;
 
-    // snapshots już posortowane DESC po savedAtISO (przez getPatient).
-    // Iterujemy od najstarszego do najnowszego dla wykrywania gap'ów.
-    const chronological = snapshots.slice().reverse();
-    const MS_PER_DAY = 24 * 3600 * 1000;
-    const GAP_THRESHOLD_DAYS = 180;
+    // Sortujemy ASC po ageMonths (defensive — wywołujący może podawać DESC).
+    var chronological = measurements.slice().sort(function (a, b) {
+      return a.ageMonths - b.ageMonths;
+    });
+    var GAP_THRESHOLD_MONTHS = 12;
 
-    // Gap detection: dla każdej pary kolejnych snapshots sprawdź odstęp.
+    // ── 1) Gap detection: różnica wieku > 12 mies. między kolejnymi pomiarami ──
     for (let i = 1; i < chronological.length; i += 1) {
       const prev = chronological[i - 1];
       const curr = chronological[i];
-      if (!prev || !curr || !prev.savedAtISO || !curr.savedAtISO) continue;
-      const diffDays = Math.round(
-        (new Date(curr.savedAtISO).getTime() - new Date(prev.savedAtISO).getTime()) / MS_PER_DAY
-      );
-      if (diffDays >= GAP_THRESHOLD_DAYS) {
-        const months = Math.round(diffDays / 30);
+      if (!prev || !curr) continue;
+      if (typeof prev.ageMonths !== 'number' || typeof curr.ageMonths !== 'number') continue;
+      const diffMonths = curr.ageMonths - prev.ageMonths;
+      if (diffMonths > GAP_THRESHOLD_MONTHS) {
         out.push({
           type: 'observation',
-          dateISO: curr.savedAtISO,
           patientId: patientId,
           observationType: 'measurement-gap',
           title: 'Przerwa w pomiarach',
-          description: 'Pierwszy pomiar po ' + months + ' miesiącach przerwy (' + diffDays + ' dni).',
-          autoGenerated: true
+          description: 'Pierwszy pomiar po ' + diffMonths + ' miesiącach przerwy (między wiekiem '
+            + _formatAgeForObs(prev.ageMonths) + ' a ' + _formatAgeForObs(curr.ageMonths) + ').',
+          autoGenerated: true,
+          // B1.4: kotwica do wieku — observation pojawia się przy pomiarze, który
+          // zakończył przerwę.
+          linkedAgeMonths: curr.ageMonths,
+          gapMonths: diffMonths
+          // NIE używamy dateISO — observation kotwiczona po wieku, jak measurement.
         });
       }
     }
 
-    // Growth slowdown: porównuje 2 prędkości wzrastania (3 ostatnie pomiary).
-    // FIX: pomiary mogą być w payload.user.height LUB w payload.height (zależnie
-    // od ścieżki zapisu — kreator vs. programmatic). Sprawdzamy obie lokalizacje.
-    function _readH(snap) {
-      if (!snap || !snap.payload) return null;
-      if (snap.payload.user && typeof snap.payload.user.height === 'number') return snap.payload.user.height;
-      if (typeof snap.payload.height === 'number') return snap.payload.height;
-      return null;
-    }
+    // ── 2) Growth slowdown: 3 ostatnie pomiary chronologicznie po wieku ──
+    // Liczymy 2 prędkości z różnic wieków, porównujemy. Wymaga rosnących wzrostów.
     if (chronological.length >= 3) {
-      const recent = chronological.slice(-3); // [-3, -2, -1]
+      const recent = chronological.slice(-3); // [a, b, c] ASC po wieku
       const a = recent[0], b = recent[1], c = recent[2];
-      const ha = _readH(a);
-      const hb = _readH(b);
-      const hc = _readH(c);
-      if (typeof ha === 'number' && typeof hb === 'number' && typeof hc === 'number'
-          && a.savedAtISO && b.savedAtISO && c.savedAtISO) {
-        const MS_PER_YEAR = 365.25 * MS_PER_DAY;
-        const span1 = (new Date(b.savedAtISO).getTime() - new Date(a.savedAtISO).getTime()) / MS_PER_YEAR;
-        const span2 = (new Date(c.savedAtISO).getTime() - new Date(b.savedAtISO).getTime()) / MS_PER_YEAR;
-        if (span1 > 0.05 && span2 > 0.05) {
+      const ha = (typeof a.height === 'number') ? a.height : null;
+      const hb = (typeof b.height === 'number') ? b.height : null;
+      const hc = (typeof c.height === 'number') ? c.height : null;
+      if (ha != null && hb != null && hc != null) {
+        const span1 = b.ageYears - a.ageYears;
+        const span2 = c.ageYears - b.ageYears;
+        // Próg 0.25 roku spójny z growth velocity w listPatientTimelineEvents.
+        if (span1 > 0.25 && span2 > 0.25 && hb > ha) {
           const speed1 = (hb - ha) / span1; // cm/rok
           const speed2 = (hc - hb) / span2;
           if (speed1 > 1.0 && speed2 > 0 && speed2 < speed1 * 0.8) {
             const dropPercent = Math.round((1 - speed2 / speed1) * 100);
             out.push({
               type: 'observation',
-              dateISO: c.savedAtISO,
               patientId: patientId,
               observationType: 'growth-slowdown',
               title: 'Spowolnienie wzrastania',
@@ -2784,7 +2985,9 @@
                 + ' do ' + speed2.toFixed(1) + ' cm/r).',
               autoGenerated: true,
               speedBefore: Math.round(speed1 * 10) / 10,
-              speedAfter: Math.round(speed2 * 10) / 10
+              speedAfter: Math.round(speed2 * 10) / 10,
+              // B1.4: kotwica do wieku — observation przy ostatnim pomiarze z trójki.
+              linkedAgeMonths: c.ageMonths
             });
           }
         }
@@ -2792,6 +2995,16 @@
     }
 
     return out;
+  }
+
+  // Helper: format wieku do opisów observations. Mini-version of UI _formatAge.
+  function _formatAgeForObs(ageMonths) {
+    if (typeof ageMonths !== 'number' || !isFinite(ageMonths) || ageMonths < 0) return '?';
+    if (ageMonths < 12) return ageMonths + ' mies.';
+    var years = Math.floor(ageMonths / 12);
+    var months = ageMonths % 12;
+    if (months === 0) return years + (years === 1 ? ' rok' : (years < 5 ? ' lata' : ' lat'));
+    return years + ' lat ' + months + ' mies.';
   }
 
   async function removePatientNote(noteId) {
@@ -4178,9 +4391,10 @@
 
     // P2 — Notatki kliniczne pacjenta: LWW per-rekord, identyczna semantyka jak N2.
     // Różnice względem biblioteki notes:
-    //   • patientId — plaintext metadata (zachowujemy przy zapisie)
-    //   • category   — plaintext metadata (poza encrypted content)
-    //   • dueDateISO — plaintext metadata (poza encrypted content)
+    //   • patientId       — plaintext metadata (zachowujemy przy zapisie)
+    //   • category        — plaintext metadata (poza encrypted content)
+    //   • dueDateISO      — plaintext metadata (poza encrypted content)
+    //   • linkedAgeMonths — plaintext metadata (B1.0 — kotwica do wieku wizyty)
     //   • encrypted content tylko { title, body }
     let addedPatientNoteCount = 0;
     let updatedPatientNoteCount = 0;
@@ -4239,6 +4453,10 @@
             bodyCipher: bodyCipher,
             category: normalizePatientNoteCategory(rpn.category),
             dueDateISO: normalizeDueDateISO(rpn.dueDateISO),
+            // B1.0: completedAtISO + linkedAgeMonths z payloadu sync (LWW
+            // newer wins — poprzedni check isNewer już to gwarantuje).
+            completedAtISO: normalizeCompletedAtISO(rpn.completedAtISO),
+            linkedAgeMonths: normalizeLinkedAgeMonths(rpn.linkedAgeMonths),
             createdAtISO: rpn.createdAtISO || rpn.updatedAtISO,
             updatedAtISO: rpn.updatedAtISO
           });
@@ -5986,6 +6204,16 @@
     listPatientNotesDueByDate: listPatientNotesDueByDate,
     // P5 — Timeline pacjenta: agregator wszystkich wydarzeń chronologicznie.
     listPatientTimelineEvents: listPatientTimelineEvents,
+    // B1.1 — pure-function helper (internal/test): wyciąga historyczne wiersze
+    // pomiarowe z payloadu pojedynczego snapshotu (advanced lub growthBasic).
+    // Eksport głównie do testowania w izolacji; produkcyjnie konsument to
+    // listPatientTimelineEvents (po B1.2 przepisaniu).
+    _extractMeasurementHistory: _extractMeasurementHistory,
+    // B1.4 — pure-function helper (internal/test): generuje observations
+    // (gap detection, growth slowdown) z DEDUPOWANYCH measurement events po wieku.
+    // Eksport głównie do testowania w izolacji; produkcyjnie konsument to
+    // listPatientTimelineEvents.
+    _generateObservations: _generateObservations,
     startIdleTimer: startIdleTimer,
     stopIdleTimer: stopIdleTimer,
     resetIdleTimer: resetIdleTimer,

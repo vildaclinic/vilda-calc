@@ -4309,6 +4309,33 @@
   }
 
   /**
+   * B1.6/B1.7 — formatuje wiek pacjenta z liczby miesięcy do napisu po polsku.
+   *   0 → "noworodek"
+   *   1..11 → "N mies."
+   *   12 → "1 rok"
+   *   13..23 → "1 rok N mies."
+   *   24..47 → "X lata" / "X lata N mies."
+   *   48+ → "X lat" / "X lat N mies."
+   * Używane jako kotwica chipów Pomiar (zamiast daty kalendarzowej) — historia
+   * pomiarów w pediatrii kotwiczy się wiekiem dziecka, nie datą wizyty.
+   */
+  function _formatAge(ageMonths) {
+    if (typeof ageMonths !== 'number' || !isFinite(ageMonths) || ageMonths < 0) return '';
+    var months = Math.round(ageMonths);
+    if (months === 0) return 'noworodek';
+    if (months < 12) return months + ' mies.';
+    var years = Math.floor(months / 12);
+    var remMonths = months - years * 12;
+    function yearWord(n) {
+      if (n === 1) return 'rok';
+      if (n >= 2 && n <= 4) return 'lata';
+      return 'lat';
+    }
+    if (remMonths === 0) return years + ' ' + yearWord(years);
+    return years + ' ' + yearWord(years) + ' ' + remMonths + ' mies.';
+  }
+
+  /**
    * Renderuje tag zdarzenia (badge typu + treść konkretnego typu).
    */
   function _renderTimelineEventBody(event) {
@@ -4331,10 +4358,12 @@
         }));
       }
       // Linia sub: BMI + prędkość wzrastania (cm/rok od poprzedniego pomiaru)
+      // B1.6: usunęliśmy "Wiek N lat" z sub-line — wiek pacjenta jest teraz
+      // w nagłówku chipa Pomiar (kotwica chronologiczna). Sub-line zostaje skoncentrowana
+      // na danych klinicznych (BMI + prędkość wzrastania).
       var subParts = [];
       if (event.bmi != null) subParts.push('BMI ' + event.bmi);
       if (event.growthVelocity != null) subParts.push('Prędkość ' + event.growthVelocity + ' cm/rok');
-      if (event.age != null) subParts.push('Wiek ' + event.age + ' lat');
       if (subParts.length) {
         bodyDiv.appendChild(el('div', {
           style: 'font-size:0.86rem;color:#374151;line-height:1.5;margin-top:2px;',
@@ -4461,63 +4490,159 @@
     listWrap.appendChild(axis);
     container.appendChild(listWrap);
 
+    // ── B1.6: Render pojedynczej karty event w pionowej osi ─────────────────
+    // Wydzielona z głównego rebuildList — używana przez warstwy 1 (wolne notatki),
+    // 2 (pomiary po wieku + kotwiczone notatki/obserwacje).
+    //
+    // headerText: tekst NAD chipem (data dla wolnych notatek; wiek dla pomiarów;
+    //   "Notatka z wizyty" / null dla kotwiczonych — kotwiczone są wewnątrz grupy
+    //   pomiaru, więc nie potrzebują własnego headera daty).
+    // dotIndent: 'normal' (lewa krawędź osi) lub 'nested' (lekko cofnięte
+    //   wewnątrz grupy pomiaru — pokazuje że to dziecko pomiaru).
+    function _renderTimelineCard(event, headerText, dotIndent) {
+      var meta = TIMELINE_TYPE_META[event.type] || { label: event.type, color: '#5b6672', bg: '#f5fafb' };
+      var wrapper = el('div', { style: 'position:relative;margin-bottom:' + (dotIndent === 'nested' ? '8px' : '14px') + ';' });
+
+      // Kropka na osi — kolor wg typu. Nested → mniejsza, lekko cofnięta w bok.
+      var dotSize = (dotIndent === 'nested') ? 10 : 14;
+      var dotLeft = (dotIndent === 'nested') ? -20 : -22;
+      var dotTop = (dotIndent === 'nested') ? 6 : 4;
+      wrapper.appendChild(el('div', {
+        style: 'position:absolute;left:' + dotLeft + 'px;top:' + dotTop + 'px;'
+          + 'width:' + dotSize + 'px;height:' + dotSize + 'px;border-radius:50%;'
+          + 'background:' + meta.color + ';border:2px solid #fff;box-shadow:0 0 0 1px ' + meta.color + ';'
+      }));
+
+      // Header tekst nad kartą (wiek lub data; opcjonalny)
+      if (headerText) {
+        wrapper.appendChild(el('div', {
+          style: 'font-size:0.7rem;color:#5b6672;font-weight:500;margin-bottom:3px;',
+          text: headerText
+        }));
+      }
+
+      var card = el('div', {
+        style: 'background:#f5fafb;border-radius:10px;padding:' + (dotIndent === 'nested' ? '8px 12px' : '10px 12px') + ';'
+          + 'display:flex;flex-direction:column;gap:6px;cursor:pointer;transition:background 0.15s;',
+        onmouseover: function () { card.style.background = '#ebf3f5'; },
+        onmouseout: function () { card.style.background = '#f5fafb'; },
+        onclick: function () { _handleTimelineEventClick(event); }
+      });
+
+      // Badge typu
+      card.appendChild(el('span', {
+        style: 'display:inline-block;padding:2px 8px;font-size:0.7rem;font-weight:600;color:'
+          + meta.color + ';background:' + meta.bg + ';border-radius:999px;align-self:flex-start;',
+        text: meta.label
+      }));
+
+      card.appendChild(_renderTimelineEventBody(event));
+      wrapper.appendChild(card);
+      return wrapper;
+    }
+
+    function _renderSectionHeader(text) {
+      return el('div', {
+        style: 'font-size:0.72rem;font-weight:600;color:#5b6672;text-transform:uppercase;'
+          + 'letter-spacing:0.05em;margin:18px 0 10px -28px;padding-left:28px;',
+        text: text
+      });
+    }
+
     function rebuildList() {
       // Usuń wszystkie children listWrap poza axis (axis jest [0])
       while (listWrap.childNodes.length > 1) listWrap.removeChild(listWrap.lastChild);
 
-      var filtered = events;
-      if (currentFilter !== 'all') {
-        filtered = events.filter(function (e) { return e.type === currentFilter; });
-      }
+      var f = currentFilter;
+      function filterAllows(t) { return f === 'all' || f === t; }
 
-      if (!filtered.length) {
+      // ── B1.6: Rozdziel eventy na 3 warstwy ────────────────────────────────
+      var measurements = events.filter(function (e) { return e.type === 'measurement'; });
+      var notes = events.filter(function (e) { return e.type === 'note'; });
+      var observations = events.filter(function (e) { return e.type === 'observation'; });
+
+      // Warstwa 1: wolne notatki (linkedAgeMonths == null) — DESC po dateISO.
+      // listPatientTimelineEvents już zwraca notatki w tej kolejności, więc
+      // wystarczy filter.
+      var freeNotes = notes.filter(function (n) { return n.linkedAgeMonths == null; });
+
+      // Warstwa 2: kotwiczone (notatki + observations z linkedAgeMonths) zindeksowane
+      // po ageMonths → renderowane NAD chipem Pomiar o tym samym wieku.
+      var anchoredByAge = Object.create(null);
+      function _addAnchored(evt) {
+        var key = evt.linkedAgeMonths;
+        if (key == null) return;
+        if (!anchoredByAge[key]) anchoredByAge[key] = [];
+        anchoredByAge[key].push(evt);
+      }
+      notes.forEach(function (n) { _addAnchored(n); });
+      observations.forEach(function (o) { _addAnchored(o); });
+
+      // Empty state — jeśli filter nic nie przepuszcza w żadnej warstwie.
+      var anchoredHasAnyVisible = Object.keys(anchoredByAge).some(function (k) {
+        return anchoredByAge[k].some(function (evt) { return filterAllows(evt.type); });
+      });
+      var hasContent =
+        (filterAllows('note') && freeNotes.length > 0) ||
+        (filterAllows('measurement') && measurements.length > 0) ||
+        anchoredHasAnyVisible;
+      if (!hasContent) {
         listWrap.appendChild(el('p', {
           class: 'vilda-patient-empty-msg',
-          text: currentFilter === 'all'
+          text: f === 'all'
             ? 'Brak wydarzeń w historii. Dodaj pomiar lub notatkę, aby zobaczyć timeline.'
             : 'Brak wydarzeń tego typu.'
         }));
         return;
       }
 
-      filtered.forEach(function (event) {
-        var meta = TIMELINE_TYPE_META[event.type] || { label: event.type, color: '#5b6672', bg: '#f5fafb' };
-
-        var wrapper = el('div', { style: 'position:relative;margin-bottom:14px;' });
-
-        // Kropka na osi — kolorowana wg typu
-        wrapper.appendChild(el('div', {
-          style: 'position:absolute;left:-22px;top:4px;width:14px;height:14px;border-radius:50%;'
-            + 'background:' + meta.color + ';border:2px solid #fff;box-shadow:0 0 0 1px ' + meta.color + ';'
-        }));
-
-        // Data nad kartą
-        wrapper.appendChild(el('div', {
-          style: 'font-size:0.7rem;color:#5b6672;font-weight:500;margin-bottom:3px;',
-          text: _formatTimelineDate(event.dateISO)
-        }));
-
-        // Karta zdarzenia
-        var card = el('div', {
-          style: 'background:#f5fafb;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;cursor:pointer;transition:background 0.15s;',
-          onmouseover: function () { card.style.background = '#ebf3f5'; },
-          onmouseout: function () { card.style.background = '#f5fafb'; },
-          onclick: function () { _handleTimelineEventClick(event); }
+      // ── Warstwa 1: Wolne notatki (góra osi) ───────────────────────────────
+      if (filterAllows('note') && freeNotes.length > 0) {
+        listWrap.appendChild(_renderSectionHeader('Notatki bez wizyty'));
+        freeNotes.forEach(function (n) {
+          listWrap.appendChild(_renderTimelineCard(n, _formatTimelineDate(n.dateISO), 'normal'));
         });
+      }
 
-        // Badge typu
-        card.appendChild(el('span', {
-          style: 'display:inline-block;padding:2px 8px;font-size:0.7rem;font-weight:600;color:'
-            + meta.color + ';background:' + meta.bg + ';border-radius:999px;align-self:flex-start;',
-          text: meta.label
-        }));
-
-        // Treść specyficzna dla typu
-        card.appendChild(_renderTimelineEventBody(event));
-
-        wrapper.appendChild(card);
-        listWrap.appendChild(wrapper);
-      });
+      // ── Warstwa 2: Historia pomiarów po wieku (DESC) ──────────────────────
+      // Każdy pomiar: pod nim kotwiczone notatki/obserwacje (jako "prelude wizyty"),
+      // potem chip Pomiar BIG. Kotwiczone events traktujemy jako część grupy pomiaru,
+      // więc nie pokazują się gdy filter wyłącza pomiary (poza filtrem typu samej notatki).
+      var hasMeasurementOrAnchoredVisible =
+        (filterAllows('measurement') && measurements.length > 0) || anchoredHasAnyVisible;
+      if (hasMeasurementOrAnchoredVisible) {
+        // Header sekcji tylko jeśli oba warstwy są obecne (żeby nie dublować
+        // wizualnie gdy są same wolne notatki).
+        if (freeNotes.length > 0 && filterAllows('note')) {
+          listWrap.appendChild(_renderSectionHeader('Historia pomiarów'));
+        }
+        measurements.forEach(function (m) {
+          var anchored = anchoredByAge[m.ageMonths] || [];
+          // Renderuj kotwiczone NAD pomiarem (jeśli filter pozwala na ich typ).
+          anchored.forEach(function (a) {
+            if (filterAllows(a.type)) {
+              listWrap.appendChild(_renderTimelineCard(a, null, 'nested'));
+            }
+          });
+          // Renderuj chip Pomiar BIG (jeśli filter pozwala).
+          if (filterAllows('measurement')) {
+            listWrap.appendChild(_renderTimelineCard(m, _formatAge(m.ageMonths), 'normal'));
+          }
+        });
+        // Kotwiczone z linkedAgeMonths który NIE pasuje do żadnego pomiaru (osierocone) —
+        // renderujemy na dole jako fallback, żeby nie znikały bez ostrzeżenia.
+        Object.keys(anchoredByAge).forEach(function (ageKey) {
+          var ageM = Number(ageKey);
+          var hasMatchingMeas = measurements.some(function (m) { return m.ageMonths === ageM; });
+          if (hasMatchingMeas) return;
+          anchoredByAge[ageKey].forEach(function (a) {
+            if (filterAllows(a.type)) {
+              listWrap.appendChild(_renderTimelineCard(a,
+                'Kotwica: wiek ' + _formatAge(ageM) + ' (brak pomiaru)', 'normal'));
+            }
+          });
+        });
+      }
     }
 
     function _handleTimelineEventClick(event) {
