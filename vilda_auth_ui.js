@@ -2698,12 +2698,18 @@
       type: 'button',
       style: 'background:#00838d !important; color:#fff !important; border-color:#00838d !important; width:auto !important; padding:6px 14px !important; font-weight:600; flex:0 0 auto !important;',
       text: '+ Dodaj notatkę',
-      onclick: function () {
-        showPatientNoteEditor({
-          patientId: patientId,
-          note: null,
-          onSaved: function () { if (typeof reRender === 'function') reRender(); }
-        });
+      onclick: function (ev) {
+        if (ev && typeof ev.preventDefault === 'function') ev.preventDefault();
+        try {
+          showPatientNoteEditor({
+            patientId: patientId,
+            note: null,
+            onSaved: function () { if (typeof reRender === 'function') reRender(); }
+          });
+        } catch (e) {
+          logError('showPatientNoteEditor[add]', e);
+          try { global.alert('Nie udało się otworzyć edytora notatki: ' + (e && e.message ? e.message : e)); } catch (_) {}
+        }
       }
     });
     headerRow.appendChild(headerLeft);
@@ -2822,14 +2828,33 @@
    */
   function showPatientNoteEditor(opts) {
     const V = getVault();
-    if (!V || typeof V.savePatientNote !== 'function') return;
+    if (!V || typeof V.savePatientNote !== 'function') {
+      // P4-fix: zamiast cichego return — pokaż jednoznaczny komunikat. To pomaga
+      // diagnozować problemy z cache (gdy SW serwuje stary vilda_vault.js bez
+      // API patient notes) lub gdy vault jest jeszcze locked.
+      try { global.alert('Notatki pacjenta są niedostępne. Spróbuj odświeżyć stronę (Ctrl+Shift+R) — może być stary cache.'); } catch (_) {}
+      return;
+    }
     const isEdit = !!(opts && opts.note && opts.note.id);
     const initial = (opts && opts.note) || {};
 
+    // P4-fix #2: defensywnie usuń wcześniejsze niezamknięte overlaye (multi-click).
+    // Bez tego wielokrotne kliknięcia „+ Dodaj notatkę" akumulują overlaye w DOM —
+    // niewidoczne pod rootEl, ale po hide() pokazują się wszystkie razem.
+    try {
+      var prev = global.document.querySelectorAll('.vilda-patient-note-editor-overlay');
+      if (prev && prev.length) {
+        for (var i = 0; i < prev.length; i++) prev[i].remove();
+      }
+    } catch (_) {}
+
     // Backdrop dla modalu — overlay na całość auth UI.
+    // P4-fix #2: z-index MUSI być WYŻSZY niż .vilda-auth-root (999999), inaczej
+    // overlay jest niewidoczny pod kartą pacjenta. Inline style przesłania klasę
+    // .vilda-auth-overlay-sheet (z-index:1000000), więc tutaj 1000001 explicit.
     const overlay = el('div', {
-      class: 'vilda-auth-overlay vilda-auth-overlay-sheet',
-      style: 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px;'
+      class: 'vilda-auth-overlay vilda-auth-overlay-sheet vilda-patient-note-editor-overlay',
+      style: 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000001;padding:20px;'
     });
 
     const sheet = el('div', {
@@ -2959,7 +2984,12 @@
     sheet.appendChild(actions);
 
     overlay.appendChild(sheet);
-    global.document.body.appendChild(overlay);
+    // P4-fix #2: appendChild do rootEl (jeśli istnieje) zamiast document.body —
+    // wtedy overlay jest w tym samym stacking context co karta pacjenta i
+    // automatycznie usuwa się przy hide() (clear(rootEl) czyści potomków).
+    // Fallback do body gdy auth UI nie jest aktywne (edge case).
+    var host = rootEl || global.document.body;
+    host.appendChild(overlay);
 
     // Auto-focus na treści (najczęściej edytowane).
     try { bodyInput.focus(); } catch (_) {}
@@ -3412,13 +3442,17 @@
     // 4 kategorie: followup (z dueDateISO), observation, treatment, wynik-badania.
     // Sortowanie: notatki z dueDateISO rosnąco po dueDate (overdue na górze),
     // potem reszta malejąco po updatedAtISO. Akcje: Dodaj, Edytuj, Usuń.
-    // Auto-refresh po V.onPatientNoteChanged (zarówno z UI jak i z sync).
+    // Render odbywa się dopiero przy pierwszym klik tabu („notes") — lazy mount.
+    // P4-fix: usunięto rekurencyjny anonymous handler (strict mode), używamy named function reRenderNotes.
     var notesContent = el('div', { class: 'vilda-patient-tab-content vilda-patient-tab-content--hidden vilda-patient-notes-section', 'data-tab': 'notes' });
-    var _patientNotesOff = renderPatientNotesSection(notesContent, patientId, function () {
-      // Po dodaniu/edycji/usunięciu — re-render sekcji w miejscu.
-      renderPatientNotesSection(notesContent, patientId, arguments.callee);
-    });
-    void _patientNotesOff; // listener offCleanup jest no-op (overlay zniknie z DOM przy hide)
+    var _notesRendered = false;
+    function reRenderNotes() {
+      try {
+        renderPatientNotesSection(notesContent, patientId, reRenderNotes);
+      } catch (e) {
+        logError('renderPatientNotesSection', e);
+      }
+    }
 
     // ── ZAKŁADKA „Edycja" — formularz danych pacjenta (Koncepcja 2) ──
     // Edytuje pola nagłówka i pomiaru najnowszego snapshotu. Zapis tworzy nowy
@@ -3559,7 +3593,16 @@
     }
     tabAntro.addEventListener('click', function () { switchTab('antro'); });
     tabTraj.addEventListener('click', function () { switchTab('traj'); });
-    tabNotes.addEventListener('click', function () { switchTab('notes'); });
+    tabNotes.addEventListener('click', function () {
+      switchTab('notes');
+      // Lazy mount — render dopiero przy pierwszym wejściu w tab. To eliminuje
+      // race condition gdy V.listPatientNotesForPatient nie jest jeszcze dostępne
+      // (np. mid-unlock w cloud-only) i daje czystszy lifecycle event listenerów.
+      if (!_notesRendered) {
+        _notesRendered = true;
+        reRenderNotes();
+      }
+    });
     tabEdit.addEventListener('click', function () { switchTab('edit'); });
 
     // ── Akcje ──
