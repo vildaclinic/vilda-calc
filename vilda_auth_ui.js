@@ -2616,6 +2616,355 @@
     return svg;
   }
 
+  // ============ NOTATKI KLINICZNE PACJENTA (P4 — sekcja w karcie) ============
+  // Mapowanie kategorii na human-readable label + kolor accent (Tailwind-friendly).
+  var PATIENT_NOTE_CATEGORY_LABELS = {
+    'followup':      { label: 'Kontrola',     color: '#854F0B', bg: '#FAEEDA' }, // amber
+    'observation':   { label: 'Obserwacja',   color: '#0F6E56', bg: '#E1F5EE' }, // teal
+    'treatment':     { label: 'Leczenie',     color: '#185FA5', bg: '#E6F1FB' }, // blue
+    'wynik-badania': { label: 'Wynik badania', color: '#534AB7', bg: '#EEEDFE' }  // purple
+  };
+
+  // Formatowanie dueDateISO → relatywne ("za 3 dni", "wczoraj", "30.11.2026").
+  // Plus klasa kolorystyczna w zależności od pilności: overdue / soon / ok.
+  function formatPatientNoteDueDate(isoStr) {
+    if (!isoStr) return null;
+    var due = new Date(isoStr);
+    if (isNaN(due.getTime())) return null;
+    var now = new Date();
+    var todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    var dueUTC = new Date(Date.UTC(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate()));
+    var diffDays = Math.round((dueUTC - todayUTC) / (24 * 60 * 60 * 1000));
+    var status, label;
+    if (diffDays < 0) {
+      status = 'overdue';
+      label = (diffDays === -1) ? 'wczoraj' : ((-diffDays) + ' dni temu');
+    } else if (diffDays === 0) {
+      status = 'soon';
+      label = 'dziś';
+    } else if (diffDays === 1) {
+      status = 'soon';
+      label = 'jutro';
+    } else if (diffDays <= 14) {
+      status = 'soon';
+      label = 'za ' + diffDays + ' dni';
+    } else {
+      status = 'ok';
+      // dd.mm.yyyy
+      var dd = String(due.getUTCDate()).padStart(2, '0');
+      var mm = String(due.getUTCMonth() + 1).padStart(2, '0');
+      var yyyy = due.getUTCFullYear();
+      label = dd + '.' + mm + '.' + yyyy;
+    }
+    return { status: status, label: label };
+  }
+
+  // Konwertuje ISO timestamp do YYYY-MM-DD (dla <input type="date">).
+  function isoToDateInputValue(isoStr) {
+    if (!isoStr) return '';
+    var d = new Date(isoStr);
+    if (isNaN(d.getTime())) return '';
+    var yyyy = d.getUTCFullYear();
+    var mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+    var dd = String(d.getUTCDate()).padStart(2, '0');
+    return yyyy + '-' + mm + '-' + dd;
+  }
+
+  /**
+   * Renderuje sekcję notatek klinicznych pacjenta w karcie.
+   * Wywoływana ponownie po każdej akcji (CRUD) — czyści container i odbudowuje.
+   * @param {HTMLElement} container — div który ma być wypełniony zawartością
+   * @param {string} patientId
+   * @param {Function} reRender — callback do ponownego wywołania (po save/delete)
+   */
+  async function renderPatientNotesSection(container, patientId, reRender) {
+    const V = getVault();
+    clear(container);
+    if (!V || typeof V.listPatientNotesForPatient !== 'function') {
+      container.appendChild(el('p', { class: 'vilda-patient-empty-msg', text: 'Notatki nie są dostępne.' }));
+      return;
+    }
+
+    // Header sekcji z przyciskiem „+ Dodaj notatkę".
+    const headerRow = el('div', {
+      class: 'vilda-patient-notes-header',
+      style: 'display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;'
+    });
+    const headerLeft = el('div', null, [
+      el('p', { class: 'vilda-patient-section-h', text: 'Notatki kliniczne', style: 'margin:0;' })
+    ]);
+    const addBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-small',
+      type: 'button',
+      style: 'background:#00838d !important; color:#fff !important; border-color:#00838d !important; width:auto !important; padding:6px 14px !important; font-weight:600; flex:0 0 auto !important;',
+      text: '+ Dodaj notatkę',
+      onclick: function () {
+        showPatientNoteEditor({
+          patientId: patientId,
+          note: null,
+          onSaved: function () { if (typeof reRender === 'function') reRender(); }
+        });
+      }
+    });
+    headerRow.appendChild(headerLeft);
+    headerRow.appendChild(addBtn);
+    container.appendChild(headerRow);
+
+    // Wczytanie notatek pacjenta.
+    let notes = [];
+    try { notes = await V.listPatientNotesForPatient(patientId); }
+    catch (e) { logError('listPatientNotesForPatient', e); }
+
+    if (!notes.length) {
+      container.appendChild(el('p', {
+        class: 'vilda-patient-empty-msg',
+        text: 'Brak notatek dla tego pacjenta. Kliknij „+ Dodaj notatkę", aby zapisać pierwszą obserwację, plan leczenia lub przypomnienie o kontroli.'
+      }));
+      return;
+    }
+
+    // Lista notatek.
+    const listDiv = el('div', { class: 'vilda-patient-notes-list', style: 'display:flex;flex-direction:column;gap:10px;' });
+    notes.forEach(function (n) {
+      const catMeta = PATIENT_NOTE_CATEGORY_LABELS[n.category] || PATIENT_NOTE_CATEGORY_LABELS.observation;
+      const dueMeta = formatPatientNoteDueDate(n.dueDateISO);
+
+      const card = el('div', {
+        class: 'vilda-patient-note-card',
+        style: 'background:#fff;border:0.5px solid #d7e9ec;border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;'
+      });
+
+      // Top row: kategoria badge + due-date badge + actions menu
+      const topRow = el('div', { style: 'display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;' });
+      const badges = el('div', { style: 'display:flex;align-items:center;gap:6px;flex-wrap:wrap;' });
+      badges.appendChild(el('span', {
+        text: catMeta.label,
+        style: 'display:inline-block;padding:2px 8px;font-size:0.72rem;font-weight:600;color:' + catMeta.color + ';background:' + catMeta.bg + ';border-radius:999px;'
+      }));
+      if (dueMeta) {
+        var dueBg, dueColor;
+        if (dueMeta.status === 'overdue') { dueBg = '#FCEBEB'; dueColor = '#A32D2D'; }
+        else if (dueMeta.status === 'soon') { dueBg = '#FAEEDA'; dueColor = '#854F0B'; }
+        else { dueBg = '#E1F5EE'; dueColor = '#0F6E56'; }
+        badges.appendChild(el('span', {
+          text: (dueMeta.status === 'overdue' ? 'Termin: ' : 'Termin: ') + dueMeta.label,
+          style: 'display:inline-block;padding:2px 8px;font-size:0.72rem;font-weight:600;color:' + dueColor + ';background:' + dueBg + ';border-radius:999px;'
+        }));
+      }
+      const actionsDiv = el('div', { style: 'display:flex;gap:4px;flex:0 0 auto;' });
+      const editBtn = el('button', {
+        type: 'button',
+        class: 'vilda-auth-btn vilda-auth-btn-small',
+        style: 'background:transparent !important;color:#5b6672 !important;border:0.5px solid #d7e9ec !important;width:auto !important;min-width:0 !important;padding:4px 10px !important;font-size:0.78rem !important;flex:0 0 auto !important;',
+        text: 'Edytuj',
+        onclick: function () {
+          showPatientNoteEditor({
+            patientId: patientId,
+            note: n,
+            onSaved: function () { if (typeof reRender === 'function') reRender(); }
+          });
+        }
+      });
+      const delBtn = el('button', {
+        type: 'button',
+        class: 'vilda-auth-btn vilda-auth-btn-small',
+        style: 'background:#fef2f3 !important;color:#b00020 !important;border:0.5px solid #f5b3bb !important;width:auto !important;min-width:0 !important;padding:4px 10px !important;font-size:0.78rem !important;flex:0 0 auto !important;',
+        text: 'Usuń',
+        onclick: async function () {
+          var label = (n.title || n.body || '').slice(0, 60);
+          if (!global.confirm('Usunąć notatkę „' + label + '"? Akcja propaguje się na inne urządzenia.')) return;
+          try {
+            await V.removePatientNote(n.id);
+            if (typeof reRender === 'function') reRender();
+          } catch (e) {
+            global.alert('Nie udało się usunąć notatki: ' + (e && e.message ? e.message : e));
+          }
+        }
+      });
+      actionsDiv.appendChild(editBtn);
+      actionsDiv.appendChild(delBtn);
+      topRow.appendChild(badges);
+      topRow.appendChild(actionsDiv);
+      card.appendChild(topRow);
+
+      // Tytuł (jeśli jest).
+      if (n.title) {
+        card.appendChild(el('div', {
+          text: n.title,
+          style: 'font-weight:600;font-size:0.95rem;color:#0f2b33;'
+        }));
+      }
+      // Body.
+      if (n.body) {
+        card.appendChild(el('div', {
+          text: n.body,
+          style: 'font-size:0.88rem;color:#374151;line-height:1.5;white-space:pre-wrap;word-wrap:break-word;'
+        }));
+      }
+
+      // Footer: data zapisu (relatywna).
+      const savedLabel = n.updatedAtISO ? ('Zapisano: ' + formatRelativeISO(n.updatedAtISO)) : '';
+      if (savedLabel) {
+        card.appendChild(el('div', {
+          text: savedLabel,
+          style: 'font-size:0.74rem;color:#9aa8aa;'
+        }));
+      }
+
+      listDiv.appendChild(card);
+    });
+    container.appendChild(listDiv);
+  }
+
+  /**
+   * Overlay edytora notatki klinicznej pacjenta — dodaj lub edytuj.
+   * @param {object} opts — { patientId, note?, onSaved?, onCancel? }
+   */
+  function showPatientNoteEditor(opts) {
+    const V = getVault();
+    if (!V || typeof V.savePatientNote !== 'function') return;
+    const isEdit = !!(opts && opts.note && opts.note.id);
+    const initial = (opts && opts.note) || {};
+
+    // Backdrop dla modalu — overlay na całość auth UI.
+    const overlay = el('div', {
+      class: 'vilda-auth-overlay vilda-auth-overlay-sheet',
+      style: 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px;'
+    });
+
+    const sheet = el('div', {
+      class: 'vilda-auth-sheet',
+      style: 'background:#fff;border-radius:14px;padding:18px 20px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;gap:12px;'
+    });
+
+    sheet.appendChild(el('h3', {
+      text: isEdit ? 'Edytuj notatkę' : 'Nowa notatka',
+      style: 'margin:0;font-size:1.05rem;font-weight:600;color:#0f2b33;'
+    }));
+
+    // Kategoria — dropdown.
+    const catWrap = el('div', null, [
+      el('label', { text: 'Kategoria', style: 'display:block;font-size:0.78rem;color:#5b6672;margin-bottom:4px;font-weight:500;' })
+    ]);
+    const catSelect = el('select', {
+      class: 'vilda-auth-input',
+      style: 'width:100%;height:38px;padding:0 10px;font-size:0.92rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;'
+    });
+    var cats = (V.PATIENT_NOTE_CATEGORIES || ['followup', 'observation', 'treatment', 'wynik-badania']);
+    cats.forEach(function (c) {
+      const labelMeta = PATIENT_NOTE_CATEGORY_LABELS[c] || { label: c };
+      const opt = el('option', { value: c, text: labelMeta.label });
+      if ((initial.category || 'observation') === c) opt.selected = true;
+      catSelect.appendChild(opt);
+    });
+    catWrap.appendChild(catSelect);
+    sheet.appendChild(catWrap);
+
+    // Tytuł.
+    const titleWrap = el('div', null, [
+      el('label', { text: 'Tytuł (opcjonalnie)', style: 'display:block;font-size:0.78rem;color:#5b6672;margin-bottom:4px;font-weight:500;' })
+    ]);
+    const titleInput = el('input', {
+      type: 'text',
+      class: 'vilda-auth-input',
+      placeholder: 'np. Wprowadzono Euthyrox',
+      style: 'width:100%;height:38px;padding:0 10px;font-size:0.92rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;'
+    });
+    titleInput.value = initial.title || '';
+    titleWrap.appendChild(titleInput);
+    sheet.appendChild(titleWrap);
+
+    // Treść.
+    const bodyWrap = el('div', null, [
+      el('label', { text: 'Treść', style: 'display:block;font-size:0.78rem;color:#5b6672;margin-bottom:4px;font-weight:500;' })
+    ]);
+    const bodyInput = el('textarea', {
+      class: 'vilda-auth-input',
+      placeholder: 'np. 25 µg 1×dz. Kontrola TSH za 6 mc.',
+      style: 'width:100%;min-height:120px;padding:10px;font-size:0.92rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;line-height:1.5;resize:vertical;font-family:inherit;'
+    });
+    bodyInput.value = initial.body || '';
+    bodyWrap.appendChild(bodyInput);
+    sheet.appendChild(bodyWrap);
+
+    // dueDateISO — pole opcjonalne, podpowiedź zmienia się gdy kategoria = followup.
+    const dueWrap = el('div', null, [
+      el('label', { class: 'pn-due-label', text: 'Przypomnienie (data)', style: 'display:block;font-size:0.78rem;color:#5b6672;margin-bottom:4px;font-weight:500;' })
+    ]);
+    const dueInput = el('input', {
+      type: 'date',
+      class: 'vilda-auth-input',
+      style: 'width:100%;height:38px;padding:0 10px;font-size:0.92rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;'
+    });
+    dueInput.value = isoToDateInputValue(initial.dueDateISO);
+    dueWrap.appendChild(dueInput);
+    const dueHint = el('p', {
+      style: 'font-size:0.72rem;color:#9aa8aa;margin:4px 0 0 0;line-height:1.4;',
+      text: 'Najlepiej ustawić dla kontroli — pojawi się jako przypomnienie z kolorem zależnym od pilności.'
+    });
+    dueWrap.appendChild(dueHint);
+    sheet.appendChild(dueWrap);
+
+    // Error box.
+    const errBox = el('div', {
+      style: 'color:#A32D2D;font-size:0.82rem;line-height:1.4;display:none;'
+    });
+    sheet.appendChild(errBox);
+
+    // Akcje (Anuluj + Zapisz).
+    const actions = el('div', {
+      style: 'display:flex;gap:8px;justify-content:flex-end;margin-top:4px;'
+    });
+    const cancelBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost',
+      type: 'button',
+      style: 'background:transparent !important;color:#5b6672 !important;border:0.5px solid #d7e9ec !important;width:auto !important;padding:8px 16px !important;flex:0 0 auto !important;',
+      text: 'Anuluj',
+      onclick: function () {
+        overlay.remove();
+        if (opts && typeof opts.onCancel === 'function') opts.onCancel();
+      }
+    });
+    const saveBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-primary',
+      type: 'button',
+      style: 'background:#00838d !important;color:#fff !important;border-color:#00838d !important;width:auto !important;padding:8px 18px !important;font-weight:600;flex:0 0 auto !important;',
+      text: isEdit ? 'Zapisz zmiany' : 'Dodaj notatkę',
+      onclick: async function () {
+        errBox.style.display = 'none';
+        saveBtn.disabled = true;
+        cancelBtn.disabled = true;
+        try {
+          const payload = {
+            patientId: opts.patientId,
+            title: titleInput.value || '',
+            body: bodyInput.value || '',
+            category: catSelect.value || 'observation',
+            dueDateISO: dueInput.value || null
+          };
+          if (isEdit) payload.id = initial.id;
+          await V.savePatientNote(payload);
+          overlay.remove();
+          if (opts && typeof opts.onSaved === 'function') opts.onSaved();
+        } catch (e) {
+          errBox.textContent = (e && e.message) ? e.message : 'Nie udało się zapisać notatki.';
+          errBox.style.display = 'block';
+          saveBtn.disabled = false;
+          cancelBtn.disabled = false;
+        }
+      }
+    });
+    actions.appendChild(cancelBtn);
+    actions.appendChild(saveBtn);
+    sheet.appendChild(actions);
+
+    overlay.appendChild(sheet);
+    global.document.body.appendChild(overlay);
+
+    // Auto-focus na treści (najczęściej edytowane).
+    try { bodyInput.focus(); } catch (_) {}
+  }
+
   // ============ KARTA INDYWIDUALNEGO PACJENTA ============
   /**
    * Otwiera szczegółową kartę pacjenta z jego statystykami i sparkline.
@@ -2932,13 +3281,19 @@
       text: 'Siatki centylowe',
       'data-tab': 'traj'
     });
+    var tabNotes = el('button', {
+      class: 'vilda-patient-tab',
+      type: 'button',
+      text: 'Notatki',
+      'data-tab': 'notes'
+    });
     var tabEdit = el('button', {
       class: 'vilda-patient-tab',
       type: 'button',
       text: 'Edycja',
       'data-tab': 'edit'
     });
-    var tabBar = el('div', { class: 'vilda-patient-tabs', role: 'tablist' }, [tabAntro, tabTraj, tabEdit]);
+    var tabBar = el('div', { class: 'vilda-patient-tabs', role: 'tablist' }, [tabAntro, tabTraj, tabNotes, tabEdit]);
 
     // ── ZAKŁADKA „Status" — pogrupowane statystyki ──
     var antroContent = el('div', { class: 'vilda-patient-tab-content', 'data-tab': 'antro' });
@@ -3052,6 +3407,18 @@
         : 'Brak wystarczających danych do wyświetlenia trajektorii. Wprowadź wzrost, wagę i wiek pacjenta.'
       }));
     }
+
+    // ── ZAKŁADKA „Notatki" (P4) — kliniczne notatki przypisane do pacjenta ──
+    // 4 kategorie: followup (z dueDateISO), observation, treatment, wynik-badania.
+    // Sortowanie: notatki z dueDateISO rosnąco po dueDate (overdue na górze),
+    // potem reszta malejąco po updatedAtISO. Akcje: Dodaj, Edytuj, Usuń.
+    // Auto-refresh po V.onPatientNoteChanged (zarówno z UI jak i z sync).
+    var notesContent = el('div', { class: 'vilda-patient-tab-content vilda-patient-tab-content--hidden vilda-patient-notes-section', 'data-tab': 'notes' });
+    var _patientNotesOff = renderPatientNotesSection(notesContent, patientId, function () {
+      // Po dodaniu/edycji/usunięciu — re-render sekcji w miejscu.
+      renderPatientNotesSection(notesContent, patientId, arguments.callee);
+    });
+    void _patientNotesOff; // listener offCleanup jest no-op (overlay zniknie z DOM przy hide)
 
     // ── ZAKŁADKA „Edycja" — formularz danych pacjenta (Koncepcja 2) ──
     // Edytuje pola nagłówka i pomiaru najnowszego snapshotu. Zapis tworzy nowy
@@ -3181,17 +3548,18 @@
 
     // ── Przełączanie zakładek ──
     function switchTab(tabId) {
-      [tabAntro, tabTraj, tabEdit].forEach(function (t) {
+      [tabAntro, tabTraj, tabNotes, tabEdit].forEach(function (t) {
         if (t.getAttribute('data-tab') === tabId) t.classList.add('vilda-patient-tab--active');
         else t.classList.remove('vilda-patient-tab--active');
       });
-      [antroContent, trajContent, editContent].forEach(function (c) {
+      [antroContent, trajContent, notesContent, editContent].forEach(function (c) {
         if (c.getAttribute('data-tab') === tabId) c.classList.remove('vilda-patient-tab-content--hidden');
         else c.classList.add('vilda-patient-tab-content--hidden');
       });
     }
     tabAntro.addEventListener('click', function () { switchTab('antro'); });
     tabTraj.addEventListener('click', function () { switchTab('traj'); });
+    tabNotes.addEventListener('click', function () { switchTab('notes'); });
     tabEdit.addEventListener('click', function () { switchTab('edit'); });
 
     // ── Akcje ──
@@ -3246,6 +3614,7 @@
       tabBar,
       antroContent,
       trajContent,
+      notesContent,
       editContent,
       el('div', { class: 'vilda-auth-actions vilda-patient-actions' },
         loadBtn ? [backBtn, loadBtn] : [backBtn]

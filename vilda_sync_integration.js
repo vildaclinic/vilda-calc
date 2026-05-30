@@ -441,6 +441,27 @@
       });
     }
 
+    // P2 — onPatientNoteChanged → syncPush. Notatki kliniczne pacjenta (followup,
+    // observation, treatment, wynik-badania) — analogicznie do onNoteChanged.
+    // Krytyczna różnica względem biblioteki notes: to są DANE PACJENTÓW (kliniczne
+    // adnotacje powiązane z konkretnym pacjentem). W cloud-only routowane do
+    // memory adaptera (P1.4), więc syncPush jest jedynym sposobem propagacji
+    // na drugie urządzenie. Bez tego eventu cross-device byłoby niemożliwe.
+    if (typeof V.onPatientNoteChanged === 'function') {
+      V.onPatientNoteChanged(function (info) {
+        if (!isSyncEnabled()) return;
+        if (syncBlockedUntilUnlock) return;
+        var S = getSync();
+        if (!S || typeof S.syncPush !== 'function') return;
+        var delay = (info && info.action === 'delete') ? DELETE_DEBOUNCE_MS : DEBOUNCE_MS;
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(function () {
+          if (syncBlockedUntilUnlock) return;
+          S.syncPush().catch(function () {});
+        }, delay);
+      });
+    }
+
     // onLock → anuluj oczekujący debounce
     if (typeof V.onLock === 'function') {
       V.onLock(function () {
