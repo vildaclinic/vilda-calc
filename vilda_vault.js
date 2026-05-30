@@ -2598,11 +2598,46 @@
     catch (_) { patient = null; }
 
     if (patient && Array.isArray(patient.snapshots)) {
+      // Wartości pomiaru są w payload.user.*, NIE w payload bezpośrednio.
+      // To samo co showPatientCard używa: `var u = payload.user; var height = u.height`.
+      // Plus obliczamy prędkość wzrastania (cm/rok) z porównania z poprzednim
+      // (chronologicznie starszym) snapshotem — żeby UI mogło pokazać tempo bez
+      // dodatkowych zapytań.
+      // Helper: pomiary mogą być w payload.user.* (struktura kreatora aplikacji)
+      // ALBO w payload.* bezpośrednio (programmatic savePatient np. w testach).
+      // Najpierw user.*, fallback do root.
+      function _readMeasureField(p, key) {
+        if (p && p.user && typeof p.user[key] === 'number') return p.user[key];
+        if (p && typeof p[key] === 'number') return p[key];
+        return null;
+      }
+      function _readSex(p) {
+        if (p && p.user && p.user.sex) return p.user.sex;
+        if (p && p.sex) return p.sex;
+        return null;
+      }
+
+      const sortedChronological = patient.snapshots.slice().reverse(); // ASC chronologicznie
+      const speedByIdx = {};
+      for (let s = 1; s < sortedChronological.length; s += 1) {
+        const a = sortedChronological[s - 1];
+        const b = sortedChronological[s];
+        const ha = _readMeasureField(a && a.payload, 'height');
+        const hb = _readMeasureField(b && b.payload, 'height');
+        if (ha != null && hb != null && a.savedAtISO && b.savedAtISO && hb > ha) {
+          const spanYears = (new Date(b.savedAtISO).getTime() - new Date(a.savedAtISO).getTime())
+            / (365.25 * 24 * 3600 * 1000);
+          if (spanYears > 0.05) {
+            speedByIdx[b.snapshotId] = Math.round(((hb - ha) / spanYears) * 10) / 10;
+          }
+        }
+      }
+
       for (let i = 0; i < patient.snapshots.length; i += 1) {
         const snap = patient.snapshots[i];
         const p = (snap && snap.payload) || {};
-        const h = typeof p.height === 'number' ? p.height : null;
-        const w = typeof p.weight === 'number' ? p.weight : null;
+        const h = _readMeasureField(p, 'height');
+        const w = _readMeasureField(p, 'weight');
         let bmi = null;
         if (h && w && h > 0) {
           bmi = Math.round((w / Math.pow(h / 100, 2)) * 10) / 10;
@@ -2615,7 +2650,11 @@
           height: h,
           weight: w,
           bmi: bmi,
-          age: typeof p.age === 'number' ? p.age : null,
+          age: _readMeasureField(p, 'age'),
+          ageMonths: _readMeasureField(p, 'ageMonths'),
+          sex: _readSex(p),
+          // Prędkość wzrastania od poprzedniego pomiaru (cm/rok), null gdy 1. pomiar.
+          growthVelocity: speedByIdx[snap.snapshotId] != null ? speedByIdx[snap.snapshotId] : null,
           payload: p   // raw payload dla UI gdy potrzeba dodatkowych pól
         });
       }
@@ -2711,12 +2750,20 @@
     }
 
     // Growth slowdown: porównuje 2 prędkości wzrastania (3 ostatnie pomiary).
+    // FIX: pomiary mogą być w payload.user.height LUB w payload.height (zależnie
+    // od ścieżki zapisu — kreator vs. programmatic). Sprawdzamy obie lokalizacje.
+    function _readH(snap) {
+      if (!snap || !snap.payload) return null;
+      if (snap.payload.user && typeof snap.payload.user.height === 'number') return snap.payload.user.height;
+      if (typeof snap.payload.height === 'number') return snap.payload.height;
+      return null;
+    }
     if (chronological.length >= 3) {
       const recent = chronological.slice(-3); // [-3, -2, -1]
       const a = recent[0], b = recent[1], c = recent[2];
-      const ha = a && a.payload && a.payload.height;
-      const hb = b && b.payload && b.payload.height;
-      const hc = c && c.payload && c.payload.height;
+      const ha = _readH(a);
+      const hb = _readH(b);
+      const hc = _readH(c);
       if (typeof ha === 'number' && typeof hb === 'number' && typeof hc === 'number'
           && a.savedAtISO && b.savedAtISO && c.savedAtISO) {
         const MS_PER_YEAR = 365.25 * MS_PER_DAY;

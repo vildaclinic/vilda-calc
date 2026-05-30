@@ -4314,18 +4314,31 @@
   function _renderTimelineEventBody(event) {
     var bodyDiv = el('div', null);
     if (event.type === 'measurement') {
-      var parts = [];
-      if (event.height != null) parts.push('Wzrost ' + event.height + ' cm');
-      if (event.weight != null) parts.push('Waga ' + event.weight + ' kg');
-      if (event.bmi != null) parts.push('BMI ' + event.bmi);
-      bodyDiv.appendChild(el('div', {
-        style: 'font-weight:600;font-size:0.92rem;color:#0f2b33;',
-        text: parts.join(' · ')
-      }));
-      if (event.age != null) {
+      // Linia główna: Wzrost + Waga (kluczowe dane antropometryczne)
+      var mainParts = [];
+      if (event.height != null) mainParts.push('Wzrost ' + event.height + ' cm');
+      if (event.weight != null) mainParts.push('Waga ' + event.weight + ' kg');
+      if (mainParts.length) {
         bodyDiv.appendChild(el('div', {
-          style: 'font-size:0.78rem;color:#5b6672;margin-top:2px;',
-          text: 'Wiek: ' + event.age + ' lat'
+          style: 'font-weight:600;font-size:0.92rem;color:#0f2b33;',
+          text: mainParts.join(' · ')
+        }));
+      } else {
+        // Sentinel: snapshot bez wzrostu/wagi (rzadko). Pokazujemy wprost.
+        bodyDiv.appendChild(el('div', {
+          style: 'font-weight:500;font-size:0.88rem;color:#9aa8aa;font-style:italic;',
+          text: 'Snapshot bez pomiarów antropometrycznych'
+        }));
+      }
+      // Linia sub: BMI + prędkość wzrastania (cm/rok od poprzedniego pomiaru)
+      var subParts = [];
+      if (event.bmi != null) subParts.push('BMI ' + event.bmi);
+      if (event.growthVelocity != null) subParts.push('Prędkość ' + event.growthVelocity + ' cm/rok');
+      if (event.age != null) subParts.push('Wiek ' + event.age + ' lat');
+      if (subParts.length) {
+        bodyDiv.appendChild(el('div', {
+          style: 'font-size:0.86rem;color:#374151;line-height:1.5;margin-top:2px;',
+          text: subParts.join(' · ')
         }));
       }
     } else if (event.type === 'note') {
