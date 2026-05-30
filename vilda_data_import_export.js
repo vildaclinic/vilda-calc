@@ -878,6 +878,14 @@
       return null;
     }
 
+    // FIX B: auto-dorzuć aktualny pomiar (data.user.{height,weight,age,ageMonths}) do
+    // data.advanced.data.measurements[] oraz data.growthBasic.data.measurements[] PRZED
+    // zapisem snapshotu w vault. Dzięki temu nawet pacjent zapisany jednorazowo (bez cyklu
+    // wczytaj→edytuj→zapisz) ma od razu wpis w obu tabelach, a Historia / siatka centylowa
+    // go widzi. Dedup po ageMonths (exact match) — duplikaty pomiarów tego samego wieku
+    // są pomijane (zachowany pierwszy wpis).
+    _ensureCurrentMeasurementInHistory(data);
+
     Promise.resolve()
       .then(function () { return vault.savePatient(data); })
       .then(function (result) {
@@ -2688,6 +2696,121 @@
   }
 
   // Pełne zastosowanie danych z importu JSON — wydzielone z app.js w kroku 8L-7c.
+  // ============ FIX A+B+C — auto-dorzucanie pomiaru do tabel historycznych ============
+  // Helper wspólny dla applyLoadedData() i saveUserData(). Mutuje przekazany `data`:
+  //
+  //   • Luka A — tworzy `data.advanced.data.measurements[]` jeśli go nie ma (puste struktury).
+  //     Wcześniej cały blok auto-dorzucania był pod warunkiem `if (data.advanced.data)` —
+  //     pacjenci którzy nigdy nie aktywowali modułu Zaawansowane nigdy nie dostawali wpisu.
+  //
+  //   • Luka B — wywoływane także przy `saveUserData()` PRZED `vault.savePatient(data)`.
+  //     Dzięki temu nowy pacjent zapisany jednorazowo (bez cyklu wczytaj→edytuj→zapisz) też
+  //     ma od razu wpis w tabeli, a Historia / siatka centylowa go widzi.
+  //
+  //   • Luka C — analogiczne dorzucanie do `data.growthBasic.data.measurements[]`. Wcześniej
+  //     tylko `advanced` było auto-uzupełniane.
+  //
+  // DEDUP: pierwszy wpis dla danego `ageMonths` wygrywa — jeśli tabela już zawiera wpis
+  // z tym samym wiekiem (exact match w pełnych miesiącach), nowy NIE jest dorzucany.
+  // To gwarantuje że wielokrotne kliknięcie „Zapisz" tego samego dnia nie produkuje
+  // duplikatów. Zachowanie spójne z istniejącą logiką w applyLoadedData (linia 2885 starej wersji).
+  //
+  // ŹRÓDŁO POMIARU: `data.user.{age, ageMonths, height, weight}` — bieżący stan formularza.
+  //   age       = pełne lata
+  //   ageMonths = DODATKOWE miesiące (NIE total)
+  //   total miesięcy = age * 12 + ageMonths
+  function _ensureCurrentMeasurementInHistory(data) {
+    if (!data || typeof data !== 'object') return;
+    var u = data.user || {};
+
+    var age = (typeof u.age === 'number' && Number.isFinite(u.age)) ? u.age : null;
+    var aPart = (typeof u.ageMonths === 'number' && Number.isFinite(u.ageMonths)) ? u.ageMonths : null;
+    var height = (typeof u.height === 'number' && Number.isFinite(u.height) && u.height > 0) ? u.height : null;
+    var weight = (typeof u.weight === 'number' && Number.isFinite(u.weight) && u.weight > 0) ? u.weight : null;
+
+    if (age === null && aPart === null) return;           // brak wieku → no-op
+    if (height === null && weight === null) return;       // brak pomiaru → no-op
+
+    var ageMonths, ageYears;
+    if (age !== null) {
+      var m = (aPart !== null) ? aPart : 0;
+      ageMonths = Math.round(age * 12 + m);
+      ageYears = age + (m / 12);
+    } else {
+      ageMonths = Math.round(aPart);
+      ageYears = aPart / 12;
+    }
+    if (!Number.isFinite(ageMonths) || ageMonths < 0) return;
+
+    // Opcjonalne meta z modułu Zaawansowane (boneAge + arrow comment) — kompatybilność
+    // ze starym blokiem 2851-2911 który też zbierał te pola.
+    var boneAgeYears = null;
+    if (data.advanced && typeof data.advanced.boneAgeYears === 'number' && Number.isFinite(data.advanced.boneAgeYears)) {
+      boneAgeYears = data.advanced.boneAgeYears;
+    } else if (data.advanced && data.advanced.data && typeof data.advanced.data.boneAgeMonths === 'number'
+        && Number.isFinite(data.advanced.data.boneAgeMonths)) {
+      boneAgeYears = data.advanced.data.boneAgeMonths / 12;
+    }
+    var advData = (data.advanced && data.advanced.data) ? data.advanced.data : null;
+    var arrowEnabled = !!(advData && advData.currentArrowEnabled);
+    var arrowComment = arrowEnabled && advData && typeof advData.currentArrowComment === 'string'
+      ? advData.currentArrowComment.trim()
+      : '';
+
+    function buildEntry() {
+      var e = {
+        ageYears: ageYears,
+        ageMonths: ageMonths,
+        height: height,
+        weight: weight
+      };
+      if (boneAgeYears !== null) e.boneAgeYears = boneAgeYears;
+      if (arrowEnabled) {
+        e.arrowEnabled = true;
+        e.arrowComment = arrowComment;
+      }
+      return e;
+    }
+
+    // Dedup: czy istnieje już wpis z tym samym ageMonths?
+    function findIndexForAge(arr) {
+      if (!Array.isArray(arr)) return -1;
+      for (var i = 0; i < arr.length; i += 1) {
+        var entry = arr[i];
+        if (!entry) continue;
+        var am = (typeof entry.ageMonths === 'number' && Number.isFinite(entry.ageMonths))
+          ? Math.round(entry.ageMonths)
+          : (typeof entry.ageYears === 'number' && Number.isFinite(entry.ageYears))
+          ? Math.round(entry.ageYears * 12)
+          : NaN;
+        if (Number.isFinite(am) && am === ageMonths) return i;
+      }
+      return -1;
+    }
+
+    function pushIfNew(arr) {
+      var idx = findIndexForAge(arr);
+      if (idx >= 0) return; // dedup — pierwszy wpis dla danego wieku wygrywa
+      arr.push(buildEntry());
+      arr.sort(function (a, b) {
+        var am = (typeof a.ageMonths === 'number') ? a.ageMonths : Math.round((a.ageYears || 0) * 12);
+        var bm = (typeof b.ageMonths === 'number') ? b.ageMonths : Math.round((b.ageYears || 0) * 12);
+        return am - bm;
+      });
+    }
+
+    // Luka A + C: zapewnij struktury data.advanced.data.measurements + data.growthBasic.data.measurements
+    if (!data.advanced || typeof data.advanced !== 'object') data.advanced = {};
+    if (!data.advanced.data || typeof data.advanced.data !== 'object') data.advanced.data = {};
+    if (!Array.isArray(data.advanced.data.measurements)) data.advanced.data.measurements = [];
+    pushIfNew(data.advanced.data.measurements);
+
+    if (!data.growthBasic || typeof data.growthBasic !== 'object') data.growthBasic = {};
+    if (!data.growthBasic.data || typeof data.growthBasic.data !== 'object') data.growthBasic.data = {};
+    if (!Array.isArray(data.growthBasic.data.measurements)) data.growthBasic.data.measurements = [];
+    pushIfNew(data.growthBasic.data.measurements);
+  }
+
   function applyLoadedData(data, options){
     const opts = (options && typeof options === 'object') ? options : {};
     const document = global.document || null;
@@ -2695,6 +2818,13 @@
       ? global.setTimeout.bind(global)
       : function fallbackImmediateTimeout(fn) { if (typeof fn === 'function') fn(); return 0; };
     if (!data || typeof data !== 'object') return false;
+
+    // FIX A+B+C: wywołane na samym początku, ZANIM cokolwiek skopiuje data.advanced.data
+    // do globalnego window.advancedGrowthData. Helper tworzy struktury jeśli brak (Luka A)
+    // oraz dorzuca aktualny pomiar do obu modułów (advanced + growthBasic — Luka C),
+    // z dedup po ageMonths. Po wywołaniu obie tablice measurements[] gwarantowanie zawierają
+    // wpis dla aktualnego stanu (chyba że brak height/weight/age).
+    _ensureCurrentMeasurementInHistory(data);
 
     const syncShared = resolveCallback(opts, 'syncSharedUserDataFromLoadedData', 'syncSharedUserDataFromLoadedData') || syncSharedUserDataFromLoadedData;
     const resolveFoodAlias = resolveCallback(opts, 'macroPracticeResolveFoodAliasKey', 'macroPracticeResolveFoodAliasKey') || function defaultResolveFoodAlias(key) { return key; };
@@ -2833,6 +2963,9 @@
         if (el) dispatchFieldEvent(el, eventType);
       });
 
+      // FIX A+B+C: _ensureCurrentMeasurementInHistory został wywołany na początku
+      // applyLoadedData (i już zmutował data.advanced.data.measurements + .growthBasic).
+      // Tu już tylko kopiujemy do globalu — pomiar bieżący jest w tablicy.
       if (data.advanced.data) {
         try {
           global.advancedGrowthData = cloneValue(data.advanced.data);
@@ -2846,68 +2979,6 @@
           }
         } catch (error) {
           logSwallowed('vilda_data_import_export:applyLoadedData:sanitize-advanced-measurements', error);
-        }
-
-        try {
-          const agd = global.advancedGrowthData;
-          if (agd && typeof agd === 'object') {
-            if (!Array.isArray(agd.measurements)) agd.measurements = [];
-            const u = data.user || {};
-            const adv = (data.advanced && data.advanced.data) ? data.advanced.data : null;
-            let ageMonthsLoaded = null;
-            let ageYearsLoaded = null;
-            const y = (typeof u.age === 'number' && Number.isFinite(u.age)) ? u.age : null;
-            const mPart = (typeof u.ageMonths === 'number' && Number.isFinite(u.ageMonths)) ? u.ageMonths : null;
-            if (y !== null) {
-              const mm = (mPart !== null) ? mPart : 0;
-              ageMonthsLoaded = Math.round((y * 12) + mm);
-              ageYearsLoaded = y + (mm / 12);
-            } else if (adv && typeof adv.currentAgeMonths === 'number' && Number.isFinite(adv.currentAgeMonths)) {
-              ageMonthsLoaded = Math.round(adv.currentAgeMonths);
-              ageYearsLoaded = ageMonthsLoaded / 12;
-            }
-            let heightLoaded = (typeof u.height === 'number' && Number.isFinite(u.height)) ? u.height : null;
-            let weightLoaded = (typeof u.weight === 'number' && Number.isFinite(u.weight)) ? u.weight : null;
-            if (heightLoaded === null && adv && typeof adv.currentHeight === 'number' && Number.isFinite(adv.currentHeight)) heightLoaded = adv.currentHeight;
-            if (weightLoaded === null && adv && typeof adv.currentWeight === 'number' && Number.isFinite(adv.currentWeight)) weightLoaded = adv.currentWeight;
-            let boneAgeYearsLoaded = null;
-            if (data.advanced && typeof data.advanced.boneAgeYears === 'number' && Number.isFinite(data.advanced.boneAgeYears)) {
-              boneAgeYearsLoaded = data.advanced.boneAgeYears;
-            } else if (adv && typeof adv.boneAgeMonths === 'number' && Number.isFinite(adv.boneAgeMonths)) {
-              boneAgeYearsLoaded = adv.boneAgeMonths / 12;
-            }
-            const arrowEnabledLoaded = !!(adv && adv.currentArrowEnabled);
-            const arrowCommentLoaded = arrowEnabledLoaded && adv && typeof adv.currentArrowComment === 'string'
-              ? adv.currentArrowComment.trim()
-              : '';
-            if (ageMonthsLoaded !== null && Number.isFinite(ageMonthsLoaded) && heightLoaded !== null && Number.isFinite(heightLoaded)) {
-              const ageM = Math.round(ageMonthsLoaded);
-              const exists = agd.measurements.some(function hasSameAgeMeasurement(m) {
-                const am = (typeof m.ageMonths === 'number' && Number.isFinite(m.ageMonths))
-                  ? Math.round(m.ageMonths)
-                  : (typeof m.ageYears === 'number' && Number.isFinite(m.ageYears)) ? Math.round(m.ageYears * 12) : NaN;
-                return Number.isFinite(am) && am === ageM;
-              });
-              if (!exists) {
-                agd.measurements.push({
-                  ageYears: (ageYearsLoaded !== null && Number.isFinite(ageYearsLoaded)) ? ageYearsLoaded : (ageM / 12),
-                  ageMonths: ageM,
-                  height: heightLoaded,
-                  weight: (weightLoaded !== null && Number.isFinite(weightLoaded)) ? weightLoaded : null,
-                  boneAgeYears: (boneAgeYearsLoaded !== null && Number.isFinite(boneAgeYearsLoaded)) ? boneAgeYearsLoaded : null,
-                  arrowEnabled: arrowEnabledLoaded,
-                  arrowComment: arrowCommentLoaded
-                });
-                agd.measurements.sort(function sortMeasurements(a, b) {
-                  const am = (typeof a.ageMonths === 'number') ? a.ageMonths : Math.round((a.ageYears || 0) * 12);
-                  const bm = (typeof b.ageMonths === 'number') ? b.ageMonths : Math.round((b.ageYears || 0) * 12);
-                  return am - bm;
-                });
-              }
-            }
-          }
-        } catch (error) {
-          logSwallowed('vilda_data_import_export:applyLoadedData:add-current-advanced-point', error);
         }
       }
     }
