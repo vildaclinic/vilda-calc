@@ -187,12 +187,20 @@
       return false;
     }
 
-    if (ssGet(STORAGE_KEYS.firstSessionActive) === 'true') {
-      return true;
-    }
-
+    // N12: HARD GATE dla returning user — `firstSessionStarted` w local-persistent
+    // (real localStorage) jest jedynym wiarygodnym źródłem prawdy o „user widział
+    // onboarding kiedykolwiek wcześniej". Sprawdzamy je PRZED `firstSessionActive`
+    // w session storage, bo to drugie bywa stale w cloud-only mode jeśli któryś
+    // edge case nie wyczyści veph:s:* przy lock (np. druga karta Vildy w tle
+    // utrzymuje veph: keys żywe; race między tutorial init a setCloudOnlyMode(false)).
+    // Po N12: returning user NIGDY nie zobaczy auto-pulsu Pomocy, niezależnie od
+    // śmieci w sessionStorage. Pierwsza wizyta na urządzeniu działa jak przedtem.
     if (lsGet(STORAGE_KEYS.firstSessionStarted) === 'true') {
       return false;
+    }
+
+    if (ssGet(STORAGE_KEYS.firstSessionActive) === 'true') {
+      return true;
     }
 
     lsSet(STORAGE_KEYS.firstSessionStarted, 'true');
