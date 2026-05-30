@@ -407,15 +407,10 @@
       // Przycisk statusu synchronizacji — widoczny tylko gdy sync włączony.
       // Klikniecie przenosi do sekcji sync w ustawieniach.
       // Stan ('syncing'|'ok'|'error') ustawiany przez vilda:sync-status-changed.
-      '    <a href="ustawienia.html#settings-section-sync"',
-      '       class="chrome-sync-btn" id="vildaSyncBtn"',
-      '       title="Synchronizacja między urządzeniami" aria-label="Status synchronizacji">',
-      '      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">',
-      '        <polyline points="16 16 12 12 8 16"/>',
-      '        <line x1="12" y1="12" x2="12" y2="21"/>',
-      '        <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>',
-      '      </svg>',
-      '    </a>',
+      // R4-fix flash (sync chip): render czyta synchronicznie localStorage sync-enabled
+      // + sessionStorage cloud-only marker → chip mountuje się od razu w prawidłowym
+      // stanie. Bez tego flash przy każdej nawigacji (jak reminders chip).
+      _renderSyncBtnHtml(),
       // R4 — przycisk reminderów (notatki klinicznne pacjentów due dziś/overdue).
       // Identyczny pattern wizualny co chrome-sync-btn (30x30, lucide outline SVG,
       // border-radius 8px). Badge counter w prawym górnym rogu (czerwony=overdue,
@@ -1439,6 +1434,72 @@
 
     // Odczytaj stan przy starcie (sync mógł być włączony w poprzedniej sesji)
     refreshSyncBtn();
+  }
+
+  // ============ R4-fix flash: SYNC BTN initial state z localStorage/sessionStorage ============
+  // Pattern: vilda_chrome.js generuje topbar HTML synchronicznie. Stan sync btn
+  // (włączony/wyłączony + cloud-only marker + online/offline) jest dostępny od
+  // razu z localStorage + sessionStorage — bez czekania na vault inicjalizację.
+  // Bez tego renderingu chip pojawiał się dopiero po refreshSyncBtn + refresh
+  // CloudOnlyBadge → flash przy każdej nawigacji.
+
+  var _CHROME_SYNC_ENABLED_KEY = 'vilda-sync-enabled-v1';
+  var _CHROME_CLOUD_ONLY_MARKER = 'vilda-cloud-only-session-v1';
+
+  function _readSyncEnabledFromStorage() {
+    try { return (global.localStorage && global.localStorage.getItem(_CHROME_SYNC_ENABLED_KEY) === 'true'); }
+    catch (_) { return false; }
+  }
+  function _readCloudOnlyMarkerFromStorage() {
+    try { return !!(global.sessionStorage && global.sessionStorage.getItem(_CHROME_CLOUD_ONLY_MARKER)); }
+    catch (_) { return false; }
+  }
+  function _isCurrentlyOffline() {
+    try { return (typeof navigator !== 'undefined' && navigator && navigator.onLine === false); }
+    catch (_) { return false; }
+  }
+
+  /**
+   * Synchroniczny render HTML sync btn — czyta storage flags i ustawia od razu:
+   *   - class .is-enabled gdy sync włączony (CSS: display:inline-flex)
+   *   - data-cloud-only="true" gdy cloud-only mode (CSS: kółko, biała ikona)
+   *   - data-offline="true" gdy offline w cloud-only (visual warning)
+   *   - title/aria-label dopasowane do stanu (dla a11y)
+   */
+  function _renderSyncBtnHtml() {
+    var syncEnabled = _readSyncEnabledFromStorage();
+    var cloudOnly = _readCloudOnlyMarkerFromStorage();
+    var offline = cloudOnly && _isCurrentlyOffline();
+
+    // cloud-only zawsze widoczny (display:inline-flex w CSS przez data-cloud-only).
+    // Standardowy sync btn widoczny tylko gdy is-enabled (CSS reguła).
+    var classes = 'chrome-sync-btn';
+    if (syncEnabled) classes += ' is-enabled';
+
+    var attrs = ' class="' + classes + '" id="vildaSyncBtn"';
+    if (cloudOnly) attrs += ' data-cloud-only="true"';
+    if (offline) attrs += ' data-offline="true"';
+
+    var title, ariaLabel;
+    if (cloudOnly && offline) {
+      title = 'Tryb chmurowy + brak internetu. Zapisy nie trafią do chmury, a ponowne zalogowanie nie powiedzie się dopóki nie wrócisz online.';
+      ariaLabel = 'Tryb chmurowy — offline';
+    } else if (cloudOnly) {
+      title = 'Tryb chmurowy aktywny — dane pacjentów tylko w chmurze. Kliknij, żeby zsynchronizować.';
+      ariaLabel = 'Tryb chmurowy aktywny';
+    } else {
+      title = 'Synchronizacja między urządzeniami';
+      ariaLabel = 'Status synchronizacji';
+    }
+    attrs += ' title="' + title + '" aria-label="' + ariaLabel + '"';
+
+    return '    <a href="ustawienia.html#settings-section-sync"' + attrs + '>'
+      + '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+      + '<polyline points="16 16 12 12 8 16"/>'
+      + '<line x1="12" y1="12" x2="12" y2="21"/>'
+      + '<path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>'
+      + '</svg>'
+      + '    </a>';
   }
 
   // ============ R4 — REMINDER CHIP (notatki kliniczne pacjentów due) ============
