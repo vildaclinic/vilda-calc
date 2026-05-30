@@ -1128,8 +1128,24 @@
   //   • status sync (ok/error/syncing) zmienia tło (zachowane efekty)
   // Komunikacja semantyczna jednym elementem zamiast dwóch (chip + sync btn).
   function refreshCloudOnlyBadge() {
+    // R4-fix flash (głębszy): czyta SYNCHRONICZNIE z sessionStorage marker zamiast
+    // czekać na vault.isCloudOnlyMode(). Vault wymaga async restoreSession żeby
+    // ustawić _currentStorageModeCache; w pierwszych ms po nawigacji isCloudOnlyMode()
+    // zwracał false → ten handler usuwał data-cloud-only → 50-200ms później onUnlock
+    // przywracał. To dawało wizualny flash (ikona przechodziła z kółka cloud-only na
+    // standardowy sync btn i z powrotem). Marker sessionStorage jest TRUE/FALSE
+    // SYNCHRONICZNIE od pierwszego frame'a → brak flash.
+    //
+    // Cross-check z vault: gdy vault zdążył już zrestorować i mówi explicit FALSE,
+    // marker jest "stale" → respekrujemy vault (np. logout w trakcie sesji).
+    var sessionMarker = _readCloudOnlyMarkerFromStorage();
     var v = global.VildaVault;
-    var active = !!(v && typeof v.isCloudOnlyMode === 'function' && v.isCloudOnlyMode());
+    var vaultExplicitFalse = (v
+      && typeof v.isCloudOnlyMode === 'function'
+      && typeof v.isUnlocked === 'function'
+      && v.isUnlocked()           // vault zainicjalizowany + user zalogowany
+      && !v.isCloudOnlyMode());   // vault explicit mówi: NIE cloud-only
+    var active = sessionMarker && !vaultExplicitFalse;
 
     // Migracja: usuń legacy chipek jeśli został w DOM po starej wersji.
     var chip = doc.getElementById('vildaUserChip');
