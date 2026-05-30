@@ -2755,13 +2755,20 @@
         }
       }
 
-      var measurements = Array.from(dedupedByKey.values())
-        .sort(function (a, b) { return a.ageMonths - b.ageMonths; }); // ASC dla growth velocity
-
-      // FALLBACK: pacjent bez tablicy historycznej (np. tylko jeden zrzut formularza
-      // przez kreator albo savePatient programmatic w testach) → emituj 1 event
-      // z aktualnego payload.user (lub root) najnowszego snapshotu.
-      if (measurements.length === 0 && snapshotsSortedDesc.length > 0) {
+      // ── Fix B1.6: ZAWSZE dorzuć aktualny payload.user.* z najnowszego snapshotu ──
+      // (NIE tylko gdy measurements puste — wcześniej była ta heurystyka, ale powodowała,
+      // że pacjenci mający historyczne wiersze w tabeli Zaawansowane + osobno aktualny
+      // pomiar w kreatorze widzieli tylko historyczne, bez bieżącej kontroli.)
+      // Dedup po kluczu (ageMonths, h, w) eliminuje duplikat gdy aktualny pomiar
+      // jest już w tabeli historycznej pod tym samym wiekiem.
+      //
+      // UWAGA — struktura wieku w payload.user (kreator):
+      //   user.age       = pełne LATA (np. 16)
+      //   user.ageMonths = DODATKOWE MIESIĄCE (np. 4) — NIE total
+      //   total miesięcy = age * 12 + ageMonths
+      // Bug rozwiązany: wcześniej brałem tylko user.ageMonths (4) → wyświetlało
+      // się "4 mies." zamiast "16 lat 4 mies." dla Domagała Paulina (16 lat 4 mies.).
+      if (snapshotsSortedDesc.length > 0) {
         var latestSnap = snapshotsSortedDesc[0];
         var p = (latestSnap && latestSnap.payload) || {};
         function _readUserField(key) {
@@ -2771,23 +2778,45 @@
         }
         var fbHeight = _readUserField('height');
         var fbWeight = _readUserField('weight');
-        var fbAgeMonths = _readUserField('ageMonths');
-        if (fbAgeMonths == null) {
-          var fbAgeYears = _readUserField('age');
-          if (fbAgeYears != null) fbAgeMonths = Math.round(fbAgeYears * 12);
+
+        // Złożenie wieku ze struktury kreatora (age=lata + ageMonths=dodatkowe miesiące).
+        var fbAgeYears = _readUserField('age');
+        var fbAgeExtraMonths = _readUserField('ageMonths');
+        var fbAgeMonths = null;
+        if (fbAgeYears != null) {
+          // Standard kreatora: lata + opcjonalne dodatkowe miesiące.
+          fbAgeMonths = Math.round(fbAgeYears * 12 + (fbAgeExtraMonths != null ? fbAgeExtraMonths : 0));
+        } else if (fbAgeExtraMonths != null) {
+          // Edge case (programmatic test): brak `age`, jest tylko `ageMonths` →
+          // traktujemy go jako total miesięcy.
+          fbAgeMonths = Math.round(fbAgeExtraMonths);
         }
-        // Tylko emit jeśli mamy WIEK + (height lub weight) — bez tego nie ma punktu.
+
+        // Emit tylko gdy mamy WIEK + (height lub weight) — bez tego nie ma punktu.
         if (fbAgeMonths != null && fbAgeMonths >= 0 && (fbHeight != null || fbWeight != null)) {
           var fbSex = (p.user && p.user.sex) || p.sex || null;
-          measurements.push({
-            ageMonths: fbAgeMonths,
-            ageYears: fbAgeMonths / 12,
-            height: (fbHeight != null && fbHeight > 0) ? fbHeight : null,
-            weight: (fbWeight != null && fbWeight > 0) ? fbWeight : null,
-            sex: fbSex
-          });
+          var fbHeightSafe = (fbHeight != null && fbHeight > 0) ? fbHeight : null;
+          var fbWeightSafe = (fbWeight != null && fbWeight > 0) ? fbWeight : null;
+          var fbKey = fbAgeMonths + '|'
+            + (fbHeightSafe != null ? fbHeightSafe.toFixed(2) : '_')
+            + '|' + (fbWeightSafe != null ? fbWeightSafe.toFixed(2) : '_');
+          // Dedup: jeśli historyczna tablica zawiera identyczny wpis dla tego wieku +
+          // tych samych wartości, nie dorzucamy duplikatu.
+          if (!dedupedByKey.has(fbKey)) {
+            dedupedByKey.set(fbKey, {
+              ageMonths: fbAgeMonths,
+              ageYears: fbAgeMonths / 12,
+              height: fbHeightSafe,
+              weight: fbWeightSafe,
+              sex: fbSex
+            });
+          }
         }
       }
+
+      // Rebuild measurements ASC po wieku (po dedup'ie + dorzuceniu aktualnego).
+      var measurements = Array.from(dedupedByKey.values())
+        .sort(function (a, b) { return a.ageMonths - b.ageMonths; });
 
       // Growth velocity: liczona z różnicy wieków poprzedniego pomiaru chronologicznie
       // po wieku (próg 0.25 roku = 3 miesiące). Wymaga rosnącego wzrostu.
