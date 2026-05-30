@@ -882,8 +882,8 @@
     // data.advanced.data.measurements[] oraz data.growthBasic.data.measurements[] PRZED
     // zapisem snapshotu w vault. Dzięki temu nawet pacjent zapisany jednorazowo (bez cyklu
     // wczytaj→edytuj→zapisz) ma od razu wpis w obu tabelach, a Historia / siatka centylowa
-    // go widzi. Dedup po ageMonths (exact match) — duplikaty pomiarów tego samego wieku
-    // są pomijane (zachowany pierwszy wpis).
+    // go widzi. Dedup po ageMonths z UPDATE — istniejący wpis dla tego wieku zostaje
+    // nadpisany aktualnymi wartościami (lekarz poprawia poprzedni błędny pomiar).
     _ensureCurrentMeasurementInHistory(data);
 
     Promise.resolve()
@@ -2710,10 +2710,12 @@
   //   • Luka C — analogiczne dorzucanie do `data.growthBasic.data.measurements[]`. Wcześniej
   //     tylko `advanced` było auto-uzupełniane.
   //
-  // DEDUP: pierwszy wpis dla danego `ageMonths` wygrywa — jeśli tabela już zawiera wpis
-  // z tym samym wiekiem (exact match w pełnych miesiącach), nowy NIE jest dorzucany.
-  // To gwarantuje że wielokrotne kliknięcie „Zapisz" tego samego dnia nie produkuje
-  // duplikatów. Zachowanie spójne z istniejącą logiką w applyLoadedData (linia 2885 starej wersji).
+  // DEDUP + UPDATE: jeden wpis na konkretny `ageMonths`. Jeśli wpis z tym samym wiekiem
+  // już istnieje, zostaje NADPISANY nowymi wartościami z payload.user (height/weight/
+  // boneAgeYears/arrow). To pokrywa scenariusz świadomej korekty pomiaru — lekarz
+  // wczytuje pacjenta, poprawia wagę/wzrost w tym samym wieku, zapisuje → tabela
+  // historyczna dostaje POPRAWNE wartości (nie zostaje przy starych błędnych).
+  // Duplikaty (dwa różne wpisy dla tego samego wieku) nadal są niemożliwe.
   //
   // ŹRÓDŁO POMIARU: `data.user.{age, ageMonths, height, weight}` — bieżący stan formularza.
   //   age       = pełne lata
@@ -2788,10 +2790,18 @@
       return -1;
     }
 
-    function pushIfNew(arr) {
+    function pushOrUpdate(arr) {
       var idx = findIndexForAge(arr);
-      if (idx >= 0) return; // dedup — pierwszy wpis dla danego wieku wygrywa
-      arr.push(buildEntry());
+      var entry = buildEntry();
+      if (idx >= 0) {
+        // UPDATE — istniejący wpis dla tego wieku zostaje nadpisany aktualnymi
+        // wartościami z payload.user. To pozwala lekarzowi poprawić błędny pomiar
+        // bez tworzenia duplikatu (drugi wpis dla tego samego wieku jest niemożliwy,
+        // ale wartości się zmieniają).
+        arr[idx] = entry;
+        return;
+      }
+      arr.push(entry);
       arr.sort(function (a, b) {
         var am = (typeof a.ageMonths === 'number') ? a.ageMonths : Math.round((a.ageYears || 0) * 12);
         var bm = (typeof b.ageMonths === 'number') ? b.ageMonths : Math.round((b.ageYears || 0) * 12);
@@ -2803,12 +2813,12 @@
     if (!data.advanced || typeof data.advanced !== 'object') data.advanced = {};
     if (!data.advanced.data || typeof data.advanced.data !== 'object') data.advanced.data = {};
     if (!Array.isArray(data.advanced.data.measurements)) data.advanced.data.measurements = [];
-    pushIfNew(data.advanced.data.measurements);
+    pushOrUpdate(data.advanced.data.measurements);
 
     if (!data.growthBasic || typeof data.growthBasic !== 'object') data.growthBasic = {};
     if (!data.growthBasic.data || typeof data.growthBasic.data !== 'object') data.growthBasic.data = {};
     if (!Array.isArray(data.growthBasic.data.measurements)) data.growthBasic.data.measurements = [];
-    pushIfNew(data.growthBasic.data.measurements);
+    pushOrUpdate(data.growthBasic.data.measurements);
   }
 
   function applyLoadedData(data, options){
