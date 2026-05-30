@@ -50,7 +50,7 @@
   //     szablonów lekarza (opisy badań, zalecenia). Per-user, E2EE (treść w noteCipher).
   // Migracja w onupgradeneeded jest addytywna — istniejące store'y (meta/patients/
   // snapshots/tombstones) i ich dane pozostają nietknięte.
-  const USER_DB_VERSION = 3;
+  const USER_DB_VERSION = 4;
   const STORE_REGISTRY_USERS = 'users';
   const STORE_META = 'meta';
   const STORE_PATIENTS = 'patients';
@@ -81,6 +81,13 @@
   // master keyem (noteCipher). noteTombstones niosą tylko {id, deletedAtISO} (bez treści).
   const STORE_NOTES = 'notes';
   const STORE_NOTE_TOMBSTONES = 'noteTombstones';
+  // Moduł Pacjenci — Notatki kliniczne (P1) — notatki PRZYPISANE do konkretnego
+  // pacjenta (różnie od STORE_NOTES który jest biblioteką szablonów). Kategorie:
+  // followup (z dueDateISO — przypomnienia), observation, treatment, wynik-badania.
+  // Treść szyfrowana master keyem (bodyCipher), tombstones jak dla notes.
+  // W cloud-only mode routowane do MEMORY (jak pacjenci) — nigdy nie lądują na dysku.
+  const STORE_PATIENT_NOTES = 'patientNotes';
+  const STORE_PATIENT_NOTE_TOMBSTONES = 'patientNoteTombstones';
   // GC znaczników usunięcia: po tym czasie tombstone jest przycinany (drobny, ale nie
   // może rosnąć w nieskończoność). 90 dni to bezpieczne okno — urządzenie offline
   // dłużej niż to przy ponownej synchronizacji to skrajny przypadek.
@@ -471,6 +478,16 @@
           if (!db.objectStoreNames.contains(STORE_NOTE_TOMBSTONES)) {
             db.createObjectStore(STORE_NOTE_TOMBSTONES, { keyPath: 'id' });
           }
+          // v4 — Notatki kliniczne pacjenta (P1). Addytywnie; istniejące
+          // store'y nietknięte. Index byPatient pozwala szybko wyciągnąć
+          // wszystkie notatki konkretnego pacjenta bez pełnego scanu.
+          if (!db.objectStoreNames.contains(STORE_PATIENT_NOTES)) {
+            const pn = db.createObjectStore(STORE_PATIENT_NOTES, { keyPath: 'id' });
+            pn.createIndex('byPatient', 'patientId', { unique: false });
+          }
+          if (!db.objectStoreNames.contains(STORE_PATIENT_NOTE_TOMBSTONES)) {
+            db.createObjectStore(STORE_PATIENT_NOTE_TOMBSTONES, { keyPath: 'id' });
+          }
         };
         req.onsuccess = function () {
           userDbConnections.set(userId, req.result);
@@ -649,6 +666,47 @@
         const store = db.transaction(STORE_NOTE_TOMBSTONES, 'readwrite').objectStore(STORE_NOTE_TOMBSTONES);
         await reqToPromise(store.delete(noteId));
         return true;
+      },
+      // --- notatki kliniczne pacjenta (moduł Pacjenci — P1) ---
+      async listPatientNotesForUser(userId) {
+        const db = await openUser(userId);
+        const store = db.transaction(STORE_PATIENT_NOTES, 'readonly').objectStore(STORE_PATIENT_NOTES);
+        return reqToPromise(store.getAll());
+      },
+      async getPatientNoteForUser(userId, noteId) {
+        const db = await openUser(userId);
+        const store = db.transaction(STORE_PATIENT_NOTES, 'readonly').objectStore(STORE_PATIENT_NOTES);
+        return reqToPromise(store.get(noteId));
+      },
+      async putPatientNoteForUser(userId, record) {
+        const db = await openUser(userId);
+        const store = db.transaction(STORE_PATIENT_NOTES, 'readwrite').objectStore(STORE_PATIENT_NOTES);
+        await reqToPromise(store.put(record));
+        return record;
+      },
+      async removePatientNoteForUser(userId, noteId) {
+        const db = await openUser(userId);
+        const store = db.transaction(STORE_PATIENT_NOTES, 'readwrite').objectStore(STORE_PATIENT_NOTES);
+        await reqToPromise(store.delete(noteId));
+        return true;
+      },
+      async listPatientNoteTombstonesForUser(userId) {
+        const db = await openUser(userId);
+        const store = db.transaction(STORE_PATIENT_NOTE_TOMBSTONES, 'readonly').objectStore(STORE_PATIENT_NOTE_TOMBSTONES);
+        return reqToPromise(store.getAll());
+      },
+      async putPatientNoteTombstoneForUser(userId, record) {
+        const db = await openUser(userId);
+        const store = db.transaction(STORE_PATIENT_NOTE_TOMBSTONES, 'readwrite').objectStore(STORE_PATIENT_NOTE_TOMBSTONES);
+        const rec = { id: record.id, deletedAtISO: record.deletedAtISO };
+        await reqToPromise(store.put(rec));
+        return rec;
+      },
+      async removePatientNoteTombstoneForUser(userId, noteId) {
+        const db = await openUser(userId);
+        const store = db.transaction(STORE_PATIENT_NOTE_TOMBSTONES, 'readwrite').objectStore(STORE_PATIENT_NOTE_TOMBSTONES);
+        await reqToPromise(store.delete(noteId));
+        return true;
       }
     };
   }
@@ -668,12 +726,14 @@
 
     function ensureUserDb(userId) {
       if (!userDbs.has(userId)) {
-        userDbs.set(userId, { meta: null, patients: new Map(), snapshots: new Map(), tombstones: new Map(), notes: new Map(), noteTombstones: new Map() });
+        userDbs.set(userId, { meta: null, patients: new Map(), snapshots: new Map(), tombstones: new Map(), notes: new Map(), noteTombstones: new Map(), patientNotes: new Map(), patientNoteTombstones: new Map() });
       }
       const db = userDbs.get(userId);
       if (!db.tombstones) db.tombstones = new Map(); // dla wpisów zhydratowanych ze starego stanu
       if (!db.notes) db.notes = new Map();           // Notatki (N1) — wpisy ze starego stanu
       if (!db.noteTombstones) db.noteTombstones = new Map();
+      if (!db.patientNotes) db.patientNotes = new Map(); // Notatki kliniczne pacjenta (P1) — ze starego stanu
+      if (!db.patientNoteTombstones) db.patientNoteTombstones = new Map();
       return db;
     }
 
@@ -875,6 +935,53 @@
         persistNow();
         return true;
       },
+      // --- notatki kliniczne pacjenta (moduł Pacjenci — P1) ---
+      async listPatientNotesForUser(userId) {
+        if (!userDbs.has(userId)) return [];
+        const db = userDbs.get(userId);
+        if (!db.patientNotes) return [];
+        return Array.from(db.patientNotes.values()).map(function (r) { return Object.assign({}, r); });
+      },
+      async getPatientNoteForUser(userId, noteId) {
+        if (!userDbs.has(userId)) return undefined;
+        const db = userDbs.get(userId);
+        if (!db.patientNotes) return undefined;
+        const n = db.patientNotes.get(noteId);
+        return n ? Object.assign({}, n) : undefined;
+      },
+      async putPatientNoteForUser(userId, record) {
+        const db = ensureUserDb(userId);
+        db.patientNotes.set(record.id, Object.assign({}, record));
+        persistNow();
+        return record;
+      },
+      async removePatientNoteForUser(userId, noteId) {
+        if (!userDbs.has(userId)) return true;
+        const db = userDbs.get(userId);
+        if (db.patientNotes) db.patientNotes.delete(noteId);
+        persistNow();
+        return true;
+      },
+      async listPatientNoteTombstonesForUser(userId) {
+        if (!userDbs.has(userId)) return [];
+        const db = userDbs.get(userId);
+        if (!db.patientNoteTombstones) return [];
+        return Array.from(db.patientNoteTombstones.values()).map(function (r) { return Object.assign({}, r); });
+      },
+      async putPatientNoteTombstoneForUser(userId, record) {
+        const db = ensureUserDb(userId);
+        const rec = { id: record.id, deletedAtISO: record.deletedAtISO };
+        db.patientNoteTombstones.set(rec.id, rec);
+        persistNow();
+        return rec;
+      },
+      async removePatientNoteTombstoneForUser(userId, noteId) {
+        if (!userDbs.has(userId)) return true;
+        const db = userDbs.get(userId);
+        if (db.patientNoteTombstones) db.patientNoteTombstones.delete(noteId);
+        persistNow();
+        return true;
+      },
       _peek: function () {
         return {
           registry: Array.from(registry.values()).map(function (r) { return Object.assign({}, r); }),
@@ -941,6 +1048,18 @@
       listNoteTombstonesForUser: function (uid) { return realAdapter.listNoteTombstonesForUser(uid); },
       putNoteTombstoneForUser:   function (uid, rec) { return realAdapter.putNoteTombstoneForUser(uid, rec); },
       removeNoteTombstoneForUser:function (uid, nid) { return realAdapter.removeNoteTombstoneForUser(uid, nid); },
+      // ── Notatki kliniczne pacjenta (P1): per-user → pamięć (jak pacjenci).
+      // KLUCZOWE dla cloud-only — to są dane PACJENTÓW (kliniczne adnotacje
+      // lekarza powiązane z konkretnym pacjentem), nie biblioteka szablonów konta.
+      // Inwariant prywatności: jak patientsForUser, snapshotsForUser i tombstones
+      // pacjentów — wszystko TYLKO w pamięci, NIGDY na dysku w cloud-only mode.
+      listPatientNotesForUser:          function (uid) { return memoryAdapter.listPatientNotesForUser(uid); },
+      getPatientNoteForUser:            function (uid, nid) { return memoryAdapter.getPatientNoteForUser(uid, nid); },
+      putPatientNoteForUser:            function (uid, rec) { return memoryAdapter.putPatientNoteForUser(uid, rec); },
+      removePatientNoteForUser:         function (uid, nid) { return memoryAdapter.removePatientNoteForUser(uid, nid); },
+      listPatientNoteTombstonesForUser: function (uid) { return memoryAdapter.listPatientNoteTombstonesForUser(uid); },
+      putPatientNoteTombstoneForUser:   function (uid, rec) { return memoryAdapter.putPatientNoteTombstoneForUser(uid, rec); },
+      removePatientNoteTombstoneForUser:function (uid, nid) { return memoryAdapter.removePatientNoteTombstoneForUser(uid, nid); },
       // Debug / introspekcja
       _peek: function () {
         return { mode: 'hybrid', realPeek: realAdapter._peek && realAdapter._peek(), memoryPeek: memoryAdapter._peek && memoryAdapter._peek() };
@@ -2042,6 +2161,240 @@
     return true;
   }
 
+  // ============ NOTATKI KLINICZNE PACJENTA (P1) ============
+  // Notatki PRZYPISANE do konkretnego pacjenta (różnie od STORE_NOTES, który
+  // jest biblioteką szablonów konta lekarza). Cztery kategorie:
+  //   • followup       — przypomnienie z dueDateISO (np. "za 6 mc redukcja Euthyroxu")
+  //   • observation    — obserwacja kliniczna bez deadline
+  //   • treatment      — adnotacja leczenia (preparat, dawka, plan)
+  //   • wynik-badania  — wynik labu / obrazówki / konsultacji
+  //
+  // dueDateISO jest opcjonalne dla wszystkich (followup zwykle ma, reszta sporadycznie).
+  // Treść (title + body) szyfrowana master keyem (bodyCipher). Metadanych w plain:
+  // patientId (niezbędne do listowania per-pacjent), category, dueDateISO, timestampy.
+  //
+  // Cloud-only: routowane do MEMORY (jak pacjenci). Inwariant: dane wrażliwe
+  // pacjenta NIGDY na dysku w cloud-only — także te w postaci notatek lekarza.
+
+  const PATIENT_NOTE_CATEGORIES = ['followup', 'observation', 'treatment', 'wynik-badania'];
+  const PATIENT_NOTE_CATEGORY_DEFAULT = 'observation';
+
+  function normalizePatientNoteCategory(value) {
+    if (typeof value !== 'string') return PATIENT_NOTE_CATEGORY_DEFAULT;
+    const v = value.trim();
+    return PATIENT_NOTE_CATEGORIES.indexOf(v) >= 0 ? v : PATIENT_NOTE_CATEGORY_DEFAULT;
+  }
+
+  // Walidacja dueDateISO — opcjonalnie. Akceptuje YYYY-MM-DD (date) lub pełen ISO.
+  // Zwraca normalized ISO (UTC midnight dla date-only) lub null gdy invalid/empty.
+  function normalizeDueDateISO(value) {
+    if (value == null || value === '') return null;
+    if (typeof value !== 'string') return null;
+    const t = value.trim();
+    if (!t) return null;
+    // YYYY-MM-DD → UTC midnight ISO
+    if (/^\d{4}-\d{2}-\d{2}$/.test(t)) {
+      const d = new Date(t + 'T00:00:00.000Z');
+      return isNaN(d.getTime()) ? null : d.toISOString();
+    }
+    // Pełny ISO — sprawdź poprawność
+    const d2 = new Date(t);
+    if (isNaN(d2.getTime())) return null;
+    return d2.toISOString();
+  }
+
+  async function _decryptPatientNoteRecord(rec) {
+    let content = { title: '', body: '' };
+    try {
+      const dec = await decryptPayloadForCurrentUser(rec.bodyCipher.iv, rec.bodyCipher.data);
+      if (dec && typeof dec === 'object') content = dec;
+    } catch (_) {
+      content = { title: '(błąd odczytu)', body: '' };
+    }
+    return {
+      id: rec.id,
+      patientId: rec.patientId,
+      title: typeof content.title === 'string' ? content.title : '',
+      body: typeof content.body === 'string' ? content.body : '',
+      category: normalizePatientNoteCategory(rec.category),
+      dueDateISO: rec.dueDateISO || null,
+      createdAtISO: rec.createdAtISO || null,
+      updatedAtISO: rec.updatedAtISO || null
+    };
+  }
+
+  /**
+   * Zapisuje notatkę kliniczną przypisaną do pacjenta.
+   * @param {object} payload — { id?, patientId, title, body, category, dueDateISO? }
+   * @param {object} [options] — rezerwa na przyszłość
+   * @returns {Promise<{id, isNew, updatedAtISO}>}
+   */
+  async function savePatientNote(payload, options) {
+    if (!isUnlocked()) throw new Error('Zaloguj się, by zapisać notatkę pacjenta.');
+    if (!payload || typeof payload !== 'object') throw new Error('savePatientNote: brak payloadu.');
+    void options;
+
+    if (typeof payload.patientId !== 'string' || !payload.patientId.length) {
+      throw new Error('savePatientNote: brak patientId.');
+    }
+
+    const title = sanitizeNoteText(typeof payload.title === 'string' ? payload.title : '').trim();
+    const body = sanitizeNoteText(typeof payload.body === 'string' ? payload.body : '');
+    if (!title && !body) throw new Error('savePatientNote: notatka musi mieć tytuł lub treść.');
+
+    const category = normalizePatientNoteCategory(payload.category);
+    const dueDateISO = normalizeDueDateISO(payload.dueDateISO);
+
+    let noteId = (typeof payload.id === 'string' && payload.id) ? payload.id : null;
+    let isNew = false;
+    let createdAtISO = null;
+    if (noteId) {
+      const existing = await getAdapter().getPatientNoteForUser(currentUserId, noteId);
+      if (existing) createdAtISO = existing.createdAtISO || null;
+      else isNew = true;
+    } else {
+      noteId = generateUuid();
+      isNew = true;
+    }
+
+    const nowISO = new Date().toISOString();
+    if (!createdAtISO) createdAtISO = nowISO;
+
+    const content = { title: title, body: body };
+    const bodyCipher = await encryptPayloadForCurrentUser(content);
+    const rec = {
+      id: noteId,
+      patientId: payload.patientId,
+      bodyCipher: bodyCipher,
+      category: category,
+      dueDateISO: dueDateISO,
+      createdAtISO: createdAtISO,
+      updatedAtISO: nowISO
+    };
+    await getAdapter().putPatientNoteForUser(currentUserId, rec);
+
+    // Zapis = notatka żyje → zdejmij ewentualny tombstone (resurrect przez edycję).
+    try {
+      const _adp = getAdapter();
+      if (_adp && typeof _adp.removePatientNoteTombstoneForUser === 'function') {
+        await _adp.removePatientNoteTombstoneForUser(currentUserId, noteId);
+      }
+    } catch (_) { /* nie blokuj zapisu */ }
+
+    const result = { id: noteId, isNew: isNew, updatedAtISO: nowISO };
+    notifyPatientNoteChanged({ id: noteId, patientId: payload.patientId, action: 'save' });
+
+    // Tryb EFEMERYCZNY: best-effort push (jak removeNote).
+    try {
+      if (_ephemeralMode && global.VildaSync && typeof global.VildaSync.syncPush === 'function') {
+        Promise.resolve(global.VildaSync.syncPush()).catch(function () {});
+      }
+    } catch (_) { void _; }
+
+    return result;
+  }
+
+  async function getPatientNote(noteId) {
+    if (!isUnlocked()) throw new Error('Zaloguj się, by pobrać notatkę pacjenta.');
+    const rec = await getAdapter().getPatientNoteForUser(currentUserId, noteId);
+    if (!rec) return null;
+    return _decryptPatientNoteRecord(rec);
+  }
+
+  /**
+   * Lista notatek konkretnego pacjenta — posortowane:
+   *   1) followup z najbliższym dueDateISO na górze (overdue też tu — najwyżej)
+   *   2) pozostałe sortowane malejąco po updatedAtISO
+   */
+  async function listPatientNotesForPatient(patientId) {
+    if (!isUnlocked()) throw new Error('Zaloguj się, by wyświetlić notatki pacjenta.');
+    if (typeof patientId !== 'string' || !patientId.length) {
+      throw new Error('listPatientNotesForPatient: brak patientId.');
+    }
+    const records = await getAdapter().listPatientNotesForUser(currentUserId);
+    const filtered = records.filter(function (r) { return r && r.patientId === patientId; });
+    const out = [];
+    for (let i = 0; i < filtered.length; i += 1) {
+      out.push(await _decryptPatientNoteRecord(filtered[i]));
+    }
+    out.sort(_compareForListing);
+    return out;
+  }
+
+  /**
+   * Wszystkie notatki użytkownika (cross-patient) — dla globalnego dashboardu
+   * przypomnień. Każda notatka zachowuje patientId + (po stronie UI dołożymy
+   * label pacjenta z osobnego listPatients).
+   */
+  async function listAllPatientNotes() {
+    if (!isUnlocked()) throw new Error('Zaloguj się, by wyświetlić notatki pacjentów.');
+    const records = await getAdapter().listPatientNotesForUser(currentUserId);
+    const out = [];
+    for (let i = 0; i < records.length; i += 1) {
+      out.push(await _decryptPatientNoteRecord(records[i]));
+    }
+    out.sort(_compareForListing);
+    return out;
+  }
+
+  // Wspólne sortowanie dla obu list:
+  //   • notatki z dueDateISO (active reminders) — najpierw, rosnąco wg dueDate
+  //   • notatki bez dueDateISO — niżej, malejąco wg updatedAtISO
+  function _compareForListing(a, b) {
+    const aDue = a.dueDateISO || '';
+    const bDue = b.dueDateISO || '';
+    if (aDue && bDue) {
+      if (aDue < bDue) return -1;
+      if (aDue > bDue) return 1;
+    } else if (aDue && !bDue) {
+      return -1;
+    } else if (!aDue && bDue) {
+      return 1;
+    }
+    // Tiebreaker / no-due section: malejąco po updatedAtISO
+    const aU = a.updatedAtISO || a.createdAtISO || '';
+    const bU = b.updatedAtISO || b.createdAtISO || '';
+    if (bU > aU) return 1;
+    if (bU < aU) return -1;
+    return 0;
+  }
+
+  async function removePatientNote(noteId) {
+    if (!isUnlocked()) throw new Error('Zaloguj się, by usunąć notatkę pacjenta.');
+    if (typeof noteId !== 'string' || !noteId) throw new Error('removePatientNote: brak id.');
+
+    // Pobierz patientId PRZED usunięciem (do notifyPatientNoteChanged i sync).
+    let patientIdForEvent = null;
+    try {
+      const existing = await getAdapter().getPatientNoteForUser(currentUserId, noteId);
+      if (existing) patientIdForEvent = existing.patientId || null;
+    } catch (_) { /* fallthrough */ }
+
+    await getAdapter().removePatientNoteForUser(currentUserId, noteId);
+
+    // Tombstone — by usunięcie rozeszło się na inne urządzenia (sync — P2 niżej).
+    try {
+      const _adp = getAdapter();
+      if (_adp && typeof _adp.putPatientNoteTombstoneForUser === 'function') {
+        await _adp.putPatientNoteTombstoneForUser(currentUserId, {
+          id: noteId,
+          deletedAtISO: new Date().toISOString()
+        });
+      }
+    } catch (_) { /* nie blokuj usunięcia */ }
+
+    notifyPatientNoteChanged({ id: noteId, patientId: patientIdForEvent, action: 'delete' });
+
+    // Tryb EFEMERYCZNY: best-effort push.
+    try {
+      if (_ephemeralMode && global.VildaSync && typeof global.VildaSync.syncPush === 'function') {
+        Promise.resolve(global.VildaSync.syncPush()).catch(function () {});
+      }
+    } catch (_) { void _; }
+
+    return true;
+  }
+
   // ============ EKSPORT PACJENTA DO KOPERTY .vilda ============
   // Buduje self-contained envelope JSON z całą historią pacjenta zaszyfrowaną
   // master keyem aktualnego usera. wrappedMasterKey w pliku pozwala odbiorcy
@@ -2952,21 +3305,60 @@
       }
     } catch (_) { notes = []; noteTombstones = []; }
 
+    // P2 — Notatki kliniczne pacjenta: eksport ODSZYFROWANYCH rekordów (jak biblioteka N2).
+    // Cały blob sync jest szyfrowany sync materiałem przez vilda_sync.js przed wysyłką.
+    // Każda notatka niesie updatedAtISO → mergeSyncPayload robi LWW per-rekord.
+    // patientId jest plaintext metadata (potrzebny do filtrowania bez deszyfracji full payloadu).
+    // patientNoteTombstones (id+deletedAtISO) propagują usunięcia. Pola addytywne —
+    // starszy klient ignoruje, nowszy czytający stary blob przyjmuje [].
+    let patientNotes = [];
+    let patientNoteTombstones = [];
+    try {
+      const _adp = getAdapter();
+      if (_adp && typeof _adp.listPatientNotesForUser === 'function') {
+        const pnRaw = await _adp.listPatientNotesForUser(currentUserId);
+        for (let n = 0; n < pnRaw.length; n += 1) {
+          const decoded = await _decryptPatientNoteRecord(pnRaw[n]);
+          patientNotes.push(decoded);
+        }
+      }
+      if (_adp && typeof _adp.listPatientNoteTombstonesForUser === 'function') {
+        patientNoteTombstones = await _adp.listPatientNoteTombstonesForUser(currentUserId);
+        // GC: przytnij stare tombstones (TTL jak dla pacjentów / N2).
+        if (typeof _adp.removePatientNoteTombstoneForUser === 'function' && patientNoteTombstones.length) {
+          const cutoffISO = new Date(Date.now() - TOMBSTONE_TTL_MS).toISOString();
+          const kept = [];
+          for (let t = 0; t < patientNoteTombstones.length; t += 1) {
+            const ts = patientNoteTombstones[t];
+            if (ts && ts.deletedAtISO && ts.deletedAtISO < cutoffISO) {
+              await _adp.removePatientNoteTombstoneForUser(currentUserId, ts.id);
+            } else {
+              kept.push(ts);
+            }
+          }
+          patientNoteTombstones = kept;
+        }
+      }
+    } catch (_) { patientNotes = []; patientNoteTombstones = []; }
+
     return {
-      schemaVersion:      SCHEMA_VERSION,
-      userId:             currentUserId,
-      label:              currentUserLabel,
-      exportedAtISO:      new Date().toISOString(),
-      patients:           fullPatients,
-      tombstones:         Array.isArray(tombstones) ? tombstones : [],
+      schemaVersion:           SCHEMA_VERSION,
+      userId:                  currentUserId,
+      label:                   currentUserLabel,
+      exportedAtISO:           new Date().toISOString(),
+      patients:                fullPatients,
+      tombstones:              Array.isArray(tombstones) ? tombstones : [],
       // Substep D — additive fields, starsze klienty ignorują.
-      passkeys:           passkeyMetadata,
-      passkeyTombstones:  passkeyTombstones,
+      passkeys:                passkeyMetadata,
+      passkeyTombstones:       passkeyTombstones,
       // Substep E3 — cloud-synced user preferences.
-      userPreferences:    userPreferences,
+      userPreferences:         userPreferences,
       // N2 — Notatki (biblioteka szablonów lekarza).
-      notes:              Array.isArray(notes) ? notes : [],
-      noteTombstones:     Array.isArray(noteTombstones) ? noteTombstones : []
+      notes:                   Array.isArray(notes) ? notes : [],
+      noteTombstones:          Array.isArray(noteTombstones) ? noteTombstones : [],
+      // P2 — Notatki kliniczne pacjenta (z dueDateISO dla followup).
+      patientNotes:            Array.isArray(patientNotes) ? patientNotes : [],
+      patientNoteTombstones:   Array.isArray(patientNoteTombstones) ? patientNoteTombstones : []
     };
   }
 
@@ -3349,6 +3741,99 @@
       }
     } catch (_) { /* sync bez note merge — zachowanie wsteczne */ }
 
+    // P2 — Notatki kliniczne pacjenta: LWW per-rekord, identyczna semantyka jak N2.
+    // Różnice względem biblioteki notes:
+    //   • patientId — plaintext metadata (zachowujemy przy zapisie)
+    //   • category   — plaintext metadata (poza encrypted content)
+    //   • dueDateISO — plaintext metadata (poza encrypted content)
+    //   • encrypted content tylko { title, body }
+    let addedPatientNoteCount = 0;
+    let updatedPatientNoteCount = 0;
+    let deletedPatientNoteCount = 0;
+    try {
+      const _pna = getAdapter();
+      const _pnSupported = _pna
+        && typeof _pna.listPatientNotesForUser === 'function'
+        && typeof _pna.putPatientNoteForUser === 'function'
+        && typeof _pna.removePatientNoteForUser === 'function';
+      if (_pnSupported) {
+        const incomingPn = Array.isArray(rawData.patientNotes) ? rawData.patientNotes : [];
+        const incomingPnTombs = Array.isArray(rawData.patientNoteTombstones) ? rawData.patientNoteTombstones : [];
+        const localPnRaw = await _pna.listPatientNotesForUser(currentUserId);
+        const localPnTombs = (typeof _pna.listPatientNoteTombstonesForUser === 'function')
+          ? (await _pna.listPatientNoteTombstonesForUser(currentUserId)) : [];
+
+        // updatedAtISO lokalnych notatek (plaintext na rekordzie — bez deszyfrowania).
+        const localPnById = Object.create(null);
+        localPnRaw.forEach(function (r) { if (r && r.id) localPnById[r.id] = r; });
+
+        const pnDeleteAt = Object.create(null);
+        function _pnDel(id, iso) { if (!id || !iso) return; if (!pnDeleteAt[id] || iso > pnDeleteAt[id]) pnDeleteAt[id] = iso; }
+        incomingPnTombs.forEach(function (t) { if (t) _pnDel(t.id, t.deletedAtISO); });
+        localPnTombs.forEach(function (t) { if (t) _pnDel(t.id, t.deletedAtISO); });
+
+        const pnEditAt = Object.create(null);
+        function _pnEdit(id, iso) { if (!id || !iso) return; if (!pnEditAt[id] || iso > pnEditAt[id]) pnEditAt[id] = iso; }
+        localPnRaw.forEach(function (r) { if (r) _pnEdit(r.id, r.updatedAtISO); });
+        incomingPn.forEach(function (n) { if (n) _pnEdit(n.id, n.updatedAtISO); });
+
+        const pnDeletedIds = new Set();
+        Object.keys(pnDeleteAt).forEach(function (id) {
+          const ed = pnEditAt[id] || null;
+          if (!ed || pnDeleteAt[id] >= ed) pnDeletedIds.add(id);
+        });
+
+        // Scal żywe notatki przychodzące.
+        for (let i = 0; i < incomingPn.length; i += 1) {
+          const rpn = incomingPn[i];
+          if (!rpn || !rpn.id || !rpn.updatedAtISO) continue;
+          if (pnDeletedIds.has(rpn.id)) continue; // usunięta nowszym tombstonem
+          if (typeof rpn.patientId !== 'string' || !rpn.patientId.length) continue; // bez pacjenta odrzucamy
+          const local = localPnById[rpn.id];
+          const isNewer = !local || !local.updatedAtISO || rpn.updatedAtISO > local.updatedAtISO;
+          if (!isNewer) continue;
+          // Sanityzacja defensywna + normalizacja kategorii/dueDate.
+          const content = {
+            title: sanitizeNoteText(typeof rpn.title === 'string' ? rpn.title : ''),
+            body: sanitizeNoteText(typeof rpn.body === 'string' ? rpn.body : '')
+          };
+          const bodyCipher = await encryptPayloadForCurrentUser(content);
+          await _pna.putPatientNoteForUser(currentUserId, {
+            id: rpn.id,
+            patientId: rpn.patientId,
+            bodyCipher: bodyCipher,
+            category: normalizePatientNoteCategory(rpn.category),
+            dueDateISO: normalizeDueDateISO(rpn.dueDateISO),
+            createdAtISO: rpn.createdAtISO || rpn.updatedAtISO,
+            updatedAtISO: rpn.updatedAtISO
+          });
+          if (local) updatedPatientNoteCount++; else addedPatientNoteCount++;
+        }
+
+        // Zastosuj tombstones: usuń lokalne dane + utrwal znacznik (propagacja dalej).
+        if (typeof _pna.putPatientNoteTombstoneForUser === 'function') {
+          const _delList = Array.from(pnDeletedIds);
+          for (let d = 0; d < _delList.length; d += 1) {
+            const id = _delList[d];
+            if (localPnById[id]) {
+              await _pna.removePatientNoteForUser(currentUserId, id);
+              deletedPatientNoteCount++;
+            }
+            await _pna.putPatientNoteTombstoneForUser(currentUserId, { id: id, deletedAtISO: pnDeleteAt[id] });
+          }
+          // Przedawnione tombstones lokalne (notatka ożyła nowszą edycją) — zdejmij.
+          if (typeof _pna.removePatientNoteTombstoneForUser === 'function') {
+            for (let k = 0; k < localPnTombs.length; k += 1) {
+              const lt = localPnTombs[k];
+              if (lt && lt.id && !pnDeletedIds.has(lt.id)) {
+                await _pna.removePatientNoteTombstoneForUser(currentUserId, lt.id);
+              }
+            }
+          }
+        }
+      }
+    } catch (_) { /* sync bez patient note merge — zachowanie wsteczne */ }
+
     return {
       mergedPatientCount,
       addedPatientCount,
@@ -3363,7 +3848,11 @@
       // N2 — informacja zwrotna o note merge.
       addedNoteCount,
       updatedNoteCount,
-      deletedNoteCount
+      deletedNoteCount,
+      // P2 — informacja zwrotna o patient note merge.
+      addedPatientNoteCount,
+      updatedPatientNoteCount,
+      deletedPatientNoteCount
     };
   }
 
@@ -3456,6 +3945,19 @@
   }
   function notifyNoteChanged(info) {
     onNoteChangedListeners.forEach(function (fn) {
+      try { fn(info); } catch (_) { /* listener errors swallowed */ }
+    });
+  }
+
+  // ============ EVENT onPatientNoteChanged (moduł Pacjenci — P1) ============
+  // Analogiczny do onNoteChanged, ale dla notatek klinicznych powiązanych z pacjentem.
+  // Sync (P2) będzie nasłuchiwać na ten event i wysyłać debounced push do chmury.
+  const onPatientNoteChangedListeners = [];
+  function onPatientNoteChanged(fn) {
+    if (typeof fn === 'function') onPatientNoteChangedListeners.push(fn);
+  }
+  function notifyPatientNoteChanged(info) {
+    onPatientNoteChangedListeners.forEach(function (fn) {
       try { fn(info); } catch (_) { /* listener errors swallowed */ }
     });
   }
@@ -5034,6 +5536,14 @@
     onNoteChanged: onNoteChanged,
     NOTE_CATEGORIES: NOTE_CATEGORIES,
     sanitizeNoteText: sanitizeNoteText,
+    // Moduł Pacjenci — Notatki kliniczne pacjenta (P1).
+    savePatientNote: savePatientNote,
+    getPatientNote: getPatientNote,
+    listPatientNotesForPatient: listPatientNotesForPatient,
+    listAllPatientNotes: listAllPatientNotes,
+    removePatientNote: removePatientNote,
+    onPatientNoteChanged: onPatientNoteChanged,
+    PATIENT_NOTE_CATEGORIES: PATIENT_NOTE_CATEGORIES,
     startIdleTimer: startIdleTimer,
     stopIdleTimer: stopIdleTimer,
     resetIdleTimer: resetIdleTimer,
