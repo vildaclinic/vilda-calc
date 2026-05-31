@@ -7878,6 +7878,13 @@
     showPatientCard: showPatientCard,
     // P5 — Edycja pacjenta jako osobny ekran (przed: tab w karcie).
     showPatientEditScreen: showPatientEditScreen,
+    // B1.8 / FIX — Edytor notatki pacjenta. Funkcja istniała od P4, ale była
+    // używana TYLKO wewnętrznie (z karty pacjenta). B1.8 dodał wywołanie z
+    // sidebar handlera w custom-fixes.js, który potrzebuje globalnego dostępu
+    // przez window.VildaAuthUI. Bez tego eksportu klik „Dodaj notatkę do wizyty"
+    // pokazywał tip „Moduł notatek niedostępny — odśwież stronę". Smoke
+    // visit_note_button_smoke nie sprawdzał eksportu — ślepy spot.
+    showPatientNoteEditor: showPatientNoteEditor,
     // P6.3 — Modal „+ Nowy pomiar" (wariant A). Wywoływany z pilla w hero karty
     // pacjenta i z sidebar (P6.4 `quickMeasureBtnSidebar`).
     showQuickMeasureModal: showQuickMeasureModal,
