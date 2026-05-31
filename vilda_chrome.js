@@ -54,6 +54,19 @@
           tip: 'Aby zapisać dane, wprowadź imię, wiek, wzrost i wagę.'
         },
         {
+          // B1.8: nowy przycisk dodający notatkę kotwiczoną do wieku aktualnej wizyty.
+          // Handler w custom-fixes.js — czyta age+height+weight z głównego formularza
+          // i wywołuje VildaAuthUI.showPatientNoteEditor z suggestLinkedAge=totalMo.
+          // Wymaga zalogowania + wczytanego pacjenta + wpisanego wieku.
+          id: 'addVisitNoteBtnSidebar',
+          label: 'Dodaj notatkę do wizyty',
+          icon: 'sticky-note',
+          role: 'button',
+          authOnly: true,
+          ariaDisabled: true,
+          tip: 'Wczytaj pacjenta i wpisz wiek + wzrost/wagę, aby dodać notatkę powiązaną z tą wizytą.'
+        },
+        {
           id: 'patientsListBtnSidebar',
           label: 'Pacjenci',
           icon: 'users',

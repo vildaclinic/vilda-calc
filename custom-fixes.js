@@ -774,6 +774,7 @@ function vildaCustomHasHtmlContent(element) {
   function syncSidebarMenuState() {
     var headerSave  = document.getElementById('saveDataBtn');
     var sidebarSave = document.getElementById('saveDataBtnSidebar');
+    var sidebarAddNote = document.getElementById('addVisitNoteBtnSidebar');
     var loggedIn    = isVaultUnlocked();
 
     // Dla niezalogowanych przycisk Zapisz jest zawsze wyszarzony.
@@ -788,17 +789,41 @@ function vildaCustomHasHtmlContent(element) {
         sidebarSave.removeAttribute('aria-disabled');
       }
     }
+
+    // B1.8: „Dodaj notatkę do wizyty" — aktywne tylko gdy zalogowany + jest wczytany
+    // pacjent + wpisany wiek + (height lub weight). Bez wczytanego pacjenta nie ma
+    // patientId do kotwicy. Bez wieku/pomiaru nie ma czego kotwiczyć.
+    if (sidebarAddNote) {
+      var patientId = window._vildaCurrentPatientId || null;
+      var ageEl = document.getElementById('age');
+      var ageMonthsEl = document.getElementById('ageMonths');
+      var heightEl = document.getElementById('height');
+      var weightEl = document.getElementById('weight');
+      var hasAge = !!((ageEl && ageEl.value) || (ageMonthsEl && ageMonthsEl.value));
+      var hasMeasurement = !!((heightEl && parseFloat(heightEl.value) > 0)
+        || (weightEl && parseFloat(weightEl.value) > 0));
+      var canAddNote = loggedIn && !!patientId && hasAge && hasMeasurement;
+      if (canAddNote) {
+        sidebarAddNote.removeAttribute('disabled');
+        sidebarAddNote.removeAttribute('aria-disabled');
+      } else {
+        sidebarAddNote.setAttribute('disabled', '');
+        sidebarAddNote.setAttribute('aria-disabled', 'true');
+      }
+    }
   }
 
   function initSidebarMenu() {
     var sidebarSave     = document.getElementById('saveDataBtnSidebar');
     var sidebarPatients = document.getElementById('patientsListBtnSidebar');
+    var sidebarAddNote  = document.getElementById('addVisitNoteBtnSidebar');
     var headerSave      = document.getElementById('saveDataBtn');
 
     // Sygnalizuj vilda_chrome.js, że custom-fixes przejmuje obsługę kliknięć.
     // Bazowy handler z vilda_chrome sprawdza ten flag i oddaje kontrolę.
     if (sidebarSave)     sidebarSave._cfBound = true;
     if (sidebarPatients) sidebarPatients._cfBound = true;
+    if (sidebarAddNote)  sidebarAddNote._cfBound = true;
 
     // Na starcie wyrównaj stan disabled z przyciskami w menu hamburgera
     syncSidebarMenuState();
@@ -877,6 +902,81 @@ function vildaCustomHasHtmlContent(element) {
         } : null);
       });
     }
+
+    // B1.8: DODAJ NOTATKĘ DO WIZYTY — przycisk w sidebarze pod „Zapisz dane".
+    // Aktywuje się tylko gdy:
+    //   1) Vault odblokowany
+    //   2) Wczytany pacjent (znamy patientId — przez event vilda:patient-loaded)
+    //   3) Wpisany wiek (age lub ageMonths) + (height lub weight)
+    // Klik → otwiera showPatientNoteEditor z suggestLinkedAge = pełny wiek w miesiącach,
+    // co pokazuje checkbox „Powiąż z bieżącą wizytą (wiek: X)" domyślnie zaznaczony.
+    if (sidebarAddNote) {
+      sidebarAddNote.addEventListener('click', function (e) {
+        e.preventDefault();
+
+        if (!isVaultUnlocked()) {
+          showTip(sidebarAddNote, 'Zaloguj się, aby dodawać notatki do wizyt.');
+          return;
+        }
+
+        var patientId = window._vildaCurrentPatientId || null;
+        if (!patientId) {
+          showTip(sidebarAddNote, 'Najpierw wczytaj pacjenta z listy „Pacjenci".');
+          return;
+        }
+
+        // Czytaj wiek + pomiar z formularza (te same pola co saveUserData).
+        var ageEl = document.getElementById('age');
+        var ageMonthsEl = document.getElementById('ageMonths');
+        var heightEl = document.getElementById('height');
+        var weightEl = document.getElementById('weight');
+        var ageVal = ageEl ? parseInt(ageEl.value, 10) : NaN;
+        var ageMonthsVal = ageMonthsEl ? parseInt(ageMonthsEl.value, 10) : NaN;
+        var heightVal = heightEl ? parseFloat(heightEl.value) : NaN;
+        var weightVal = weightEl ? parseFloat(weightEl.value) : NaN;
+        var hasAge = isFinite(ageVal) || isFinite(ageMonthsVal);
+        var hasMeasurement = (isFinite(heightVal) && heightVal > 0) || (isFinite(weightVal) && weightVal > 0);
+
+        if (!hasAge || !hasMeasurement) {
+          showTip(sidebarAddNote, 'Wpisz wiek + wzrost lub wagę, aby kotwiczyć notatkę do wizyty.');
+          return;
+        }
+
+        // Złożenie wieku: age * 12 + ageMonths (te same reguły co FIX A/B/C w vilda_data_import_export.js).
+        var totalAgeMonths = 0;
+        if (isFinite(ageVal)) totalAgeMonths += ageVal * 12;
+        if (isFinite(ageMonthsVal)) totalAgeMonths += ageMonthsVal;
+        if (totalAgeMonths <= 0) {
+          showTip(sidebarAddNote, 'Nieprawidłowy wiek pacjenta.');
+          return;
+        }
+
+        var authUI = window.VildaAuthUI;
+        if (!authUI || typeof authUI.showPatientNoteEditor !== 'function') {
+          showTip(sidebarAddNote, 'Moduł notatek niedostępny — odśwież stronę.');
+          return;
+        }
+
+        authUI.showPatientNoteEditor({
+          patientId: patientId,
+          note: null,
+          suggestLinkedAge: totalAgeMonths
+        });
+      });
+    }
+
+    // B1.8: nasłuchuj eventu vilda:patient-loaded żeby zachować patientId aktualnie
+    // wczytanego pacjenta. Event jest dispatchowany w vilda_auth_ui.js przy „Wczytaj
+    // tego pacjenta" oraz w innych ścieżkach load. Bez tego stanu sidebarAddNote nie
+    // miałby skąd wziąć patientId (bo formularz nie zna ID — tylko nazwę).
+    document.addEventListener('vilda:patient-loaded', function (e) {
+      try {
+        var pid = e && e.detail && e.detail.patientId;
+        if (typeof pid === 'string' && pid) {
+          window._vildaCurrentPatientId = pid;
+        }
+      } catch (_) {}
+    });
 
     // Za każdym razem, gdy użytkownik edytuje dane wejściowe, logika w app.js
     // zmienia stan disabled przycisków w hamburgerze.  Tutaj tylko to
