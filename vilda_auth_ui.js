@@ -5300,6 +5300,90 @@
       });
     }
 
+    // B2 — Format daty utworzenia dla chipa kotwiczonej notatki (prawy górny róg).
+    // Konwencja PL: DD-MM-RRRR. Zwraca '' dla null/nieprawidłowych dat.
+    function _formatDateDDMMYYYY(iso) {
+      if (!iso) return '';
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) return '';
+      var pad = function (n) { return n < 10 ? '0' + n : String(n); };
+      return pad(d.getDate()) + '-' + pad(d.getMonth() + 1) + '-' + d.getFullYear();
+    }
+
+    // B2 (Wariant 1) — Karta kotwiczonej notatki z L-łącznikiem + wcięciem.
+    // Wstawiana PO chipie Pomiar dla tego samego wieku. Visualnie „dziecko"
+    // pomiaru: wcięta o 28px w prawo (poza standardową osią), SVG L-connector
+    // łączy lewą krawędź notatki z lewą krawędzią pomiaru powyżej.
+    // Data createdAtISO w prawym górnym rogu (format DD-MM-RRRR).
+    //
+    // event: typowo 'note' lub 'observation' z linkedAgeMonths != null.
+    function _renderAnchoredCard(event) {
+      var meta = TIMELINE_TYPE_META[event.type] || { label: event.type, color: '#5b6672', bg: '#f5fafb' };
+
+      // Wrapper: relative do absolutnie pozycjonowanego SVG L-connector.
+      // padding-left 36px = 8px ramienia poziomego L + 28px standardowego wcięcia osi.
+      // margin-left 28px = przesunięcie chipa w prawo poza oś (tabulator).
+      var wrapper = el('div', {
+        style: 'position:relative;margin-bottom:14px;margin-left:28px;padding-left:36px;'
+      });
+
+      // SVG L-connector: zaczyna się od lewej krawędzi (gdzie była kropka)
+      // i zagina w prawo do lewej krawędzi karty notatki.
+      // Stroke w kolorze typu (kasztanowy dla notatki, niebieski dla obserwacji).
+      var svgL = global.document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svgL.setAttribute('width', '36');
+      svgL.setAttribute('height', '24');
+      svgL.setAttribute('viewBox', '0 0 36 24');
+      svgL.setAttribute('aria-hidden', 'true');
+      svgL.style.position = 'absolute';
+      svgL.style.left = '0';
+      svgL.style.top = '-6px';
+      svgL.style.pointerEvents = 'none';
+      var pathL = global.document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      pathL.setAttribute('d', 'M 4 0 L 4 14 Q 4 18 8 18 L 36 18');
+      pathL.setAttribute('stroke', meta.color);
+      pathL.setAttribute('stroke-width', '1.2');
+      pathL.setAttribute('fill', 'none');
+      pathL.setAttribute('stroke-linecap', 'round');
+      svgL.appendChild(pathL);
+      wrapper.appendChild(svgL);
+
+      // Karta notatki — klikalna (otwiera tab Notatki przez _handleTimelineEventClick).
+      var card = el('div', {
+        style: 'background:#f5fafb;border-radius:10px;padding:10px 12px;'
+          + 'display:flex;flex-direction:column;gap:6px;cursor:pointer;'
+          + 'transition:background 0.15s;position:relative;',
+        onmouseover: function () { card.style.background = '#ebf3f5'; },
+        onmouseout: function () { card.style.background = '#f5fafb'; },
+        onclick: function () { _handleTimelineEventClick(event); }
+      });
+
+      // Górny rząd: badge typu (lewy) + data utworzenia (prawy).
+      // Data tylko gdy event ma dateISO (note: createdAtISO; observation: brak,
+      // bo to wydarzenia generowane automatycznie po wieku — wtedy nie pokazujemy).
+      var topRow = el('div', {
+        style: 'display:flex;justify-content:space-between;align-items:flex-start;gap:8px;'
+      });
+      topRow.appendChild(el('span', {
+        style: 'display:inline-block;padding:2px 8px;font-size:0.7rem;font-weight:600;color:'
+          + meta.color + ';background:' + meta.bg + ';border-radius:999px;',
+        text: meta.label
+      }));
+      var dateStr = _formatDateDDMMYYYY(event.dateISO);
+      if (dateStr) {
+        topRow.appendChild(el('span', {
+          style: 'font-size:0.72rem;color:#9aa8aa;white-space:nowrap;',
+          text: dateStr
+        }));
+      }
+      card.appendChild(topRow);
+
+      // Body karty (tytuł + treść / obserwacja).
+      card.appendChild(_renderTimelineEventBody(event));
+      wrapper.appendChild(card);
+      return wrapper;
+    }
+
     function rebuildList() {
       // Usuń wszystkie children listWrap poza axis (axis jest [0])
       while (listWrap.childNodes.length > 1) listWrap.removeChild(listWrap.lastChild);
@@ -5369,16 +5453,18 @@
         }
         measurements.forEach(function (m) {
           var anchored = anchoredByAge[m.ageMonths] || [];
-          // Renderuj kotwiczone NAD pomiarem (jeśli filter pozwala na ich typ).
-          anchored.forEach(function (a) {
-            if (filterAllows(a.type)) {
-              listWrap.appendChild(_renderTimelineCard(a, null, 'nested'));
-            }
-          });
-          // Renderuj chip Pomiar BIG (jeśli filter pozwala).
+          // B2 (Wariant 1): kolejność zmieniona — najpierw chip Pomiar BIG
+          // (header z wiekiem na górze), POD spodem kotwiczone notatki/obserwacje
+          // wcięte w prawo + L-łącznik. Wizualnie pokazuje że notatki SĄ
+          // dzieckiem pomiaru (a nie chaotycznie nad nim).
           if (filterAllows('measurement')) {
             listWrap.appendChild(_renderTimelineCard(m, _formatAge(m.ageMonths), 'normal'));
           }
+          anchored.forEach(function (a) {
+            if (filterAllows(a.type)) {
+              listWrap.appendChild(_renderAnchoredCard(a));
+            }
+          });
         });
         // Kotwiczone z linkedAgeMonths który NIE pasuje do żadnego pomiaru (osierocone) —
         // renderujemy na dole jako fallback, żeby nie znikały bez ostrzeżenia.
