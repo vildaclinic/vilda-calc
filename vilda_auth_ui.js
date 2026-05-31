@@ -1989,7 +1989,10 @@
         const lbl = (parsedMeta && parsedMeta.label) ? parsedMeta.label : '(bez nazwy)';
         const pCount = parsedMeta && typeof parsedMeta.patientCount === 'number' ? parsedMeta.patientCount : '?';
         const sCount = parsedMeta && typeof parsedMeta.snapshotCount === 'number' ? parsedMeta.snapshotCount : '?';
-        fileLabel.textContent = '✓ Pełna kopia konta „' + lbl + '" — pacjenci: ' + pCount + ', wpisów z wizyt: ' + sCount;
+        // B1.10: zmiana copy — snapshotCount to liczba zapisów vaulta, nie liczba wizyt
+        // pacjenta. Te dwa modele czasu w aplikacji (data zapisu vs wiek pacjenta) były
+        // mylone. Tutaj jesteśmy w kontekście kopii zapasowej konta — mówimy „zapisów".
+        fileLabel.textContent = '✓ Pełna kopia konta „' + lbl + '" — pacjenci: ' + pCount + ', zapisów: ' + sCount;
         pwInput.style.display = '';
         labelInput.style.display = '';
         submit.style.display = '';
@@ -2071,7 +2074,8 @@
           reportBox.appendChild(el('br'));
           reportBox.appendChild(global.document.createTextNode('Nazwa: ' + result.label));
           reportBox.appendChild(el('br'));
-          reportBox.appendChild(global.document.createTextNode('Pacjenci: ' + result.patientCount + ' · wpisów z wizyt: ' + result.snapshotCount));
+          // B1.10: „wpisów z wizyt" → „zapisów" (kontekst: backup konta, snapshoty vault).
+          reportBox.appendChild(global.document.createTextNode('Pacjenci: ' + result.patientCount + ' · zapisów: ' + result.snapshotCount));
           if (result.newRecoveryKey) {
             reportBox.appendChild(el('br'));
             reportBox.appendChild(el('br'));
@@ -2930,6 +2934,53 @@
     dueWrap.appendChild(dueHint);
     sheet.appendChild(dueWrap);
 
+    // B1.8: opcjonalny checkbox „Powiąż z bieżącą wizytą" — pokazywany gdy edytor
+    // został wywołany z głównego kreatora pacjenta (przez przycisk „+ Dodaj notatkę
+    // do wizyty" w sidebarze) i jest dostępny aktualny wiek pacjenta z formularza.
+    // Jeśli zaznaczony — notatka dostaje linkedAgeMonths i pojawia się na osi czasu
+    // Historia kotwiczona pod chipem Pomiar tego wieku. Jeśli odznaczony lub brak
+    // suggestLinkedAge — notatka leci jako wolna (linkedAgeMonths: null).
+    //
+    // Dla edycji istniejącej notatki: jeśli ma już linkedAgeMonths, używamy go jako
+    // suggestLinkedAge (checkbox pokazuje aktualną kotwicę z możliwością odpięcia).
+    var suggestLinkedAge = null;
+    if (opts && typeof opts.suggestLinkedAge === 'number' && isFinite(opts.suggestLinkedAge)
+        && opts.suggestLinkedAge > 0) {
+      suggestLinkedAge = Math.round(opts.suggestLinkedAge);
+    } else if (isEdit && typeof initial.linkedAgeMonths === 'number' && initial.linkedAgeMonths > 0) {
+      // Edycja istniejącej notatki która już ma kotwicę — pokazujemy checkbox
+      // żeby user mógł ją odpiąć (lub zostawić).
+      suggestLinkedAge = Math.round(initial.linkedAgeMonths);
+    }
+    var linkedAgeCheckbox = null;
+    if (suggestLinkedAge !== null) {
+      var linkedWrap = el('div', {
+        style: 'display:flex;align-items:flex-start;gap:8px;padding:10px 12px;background:#f5fafb;border-radius:8px;'
+      });
+      linkedAgeCheckbox = el('input', {
+        type: 'checkbox',
+        style: 'flex:0 0 auto;margin-top:2px;cursor:pointer;width:16px;height:16px;'
+      });
+      linkedAgeCheckbox.checked = true; // domyślnie zaznaczony
+      var linkedLabel = el('label', {
+        style: 'flex:1;font-size:0.84rem;color:#0f2b33;cursor:pointer;line-height:1.4;'
+      });
+      linkedLabel.appendChild(global.document.createTextNode('Powiąż z bieżącą wizytą '));
+      linkedLabel.appendChild(el('strong', {
+        text: '(wiek: ' + _formatAge(suggestLinkedAge) + ')',
+        style: 'font-weight:600;color:#0F6E56;'
+      }));
+      var linkedHint = el('div', {
+        style: 'font-size:0.72rem;color:#5b6672;margin-top:2px;line-height:1.4;',
+        text: 'Notatka pojawi się na osi czasu Historia obok tego pomiaru.'
+      });
+      linkedLabel.appendChild(linkedHint);
+      linkedLabel.addEventListener('click', function () { linkedAgeCheckbox.checked = !linkedAgeCheckbox.checked; });
+      linkedWrap.appendChild(linkedAgeCheckbox);
+      linkedWrap.appendChild(linkedLabel);
+      sheet.appendChild(linkedWrap);
+    }
+
     // Error box.
     const errBox = el('div', {
       style: 'color:#A32D2D;font-size:0.82rem;line-height:1.4;display:none;'
@@ -2968,6 +3019,14 @@
             dueDateISO: dueInput.value || null
           };
           if (isEdit) payload.id = initial.id;
+          // B1.8: linkedAgeMonths — przekaż explicit gdy checkbox był pokazany.
+          //   • checkbox zaznaczony → suggestLinkedAge (kotwica do wieku wizyty)
+          //   • checkbox odznaczony → null (wyczyść kotwicę, notatka staje się wolna)
+          //   • checkbox nie pokazany (brak suggestLinkedAge) → NIE podajemy pola
+          //     (vault zachowa istniejące — przy edycji ważne, przy nowej = null)
+          if (linkedAgeCheckbox !== null) {
+            payload.linkedAgeMonths = linkedAgeCheckbox.checked ? suggestLinkedAge : null;
+          }
           await V.savePatientNote(payload);
           overlay.remove();
           if (opts && typeof opts.onSaved === 'function') opts.onSaved();
@@ -4177,7 +4236,8 @@
     }
     async function _deletePatient() {
       var label = (name && name !== '(bez imienia)') ? name : 'tego pacjenta';
-      if (!global.confirm('Usunąć pacjenta „' + label + '” wraz z całą historią wizyt? Tej operacji nie można cofnąć.')) return;
+      // B1.10: „historią wizyt" → „historią pomiarów i notatek" (precyzyjniej).
+      if (!global.confirm('Usunąć pacjenta „' + label + '” wraz z całą historią pomiarów i notatek? Tej operacji nie można cofnąć.')) return;
       try {
         setBusy(true);
         await V.removePatient(patientId);
@@ -4738,15 +4798,20 @@
     // Wydzielona jako funkcja, żeby można ją wywołać ponownie po zmianie sortowania.
     function buildCard(p) {
       const headerName = (p.header && p.header.name) ? p.header.name : '(bez imienia)';
-      const lastSeen = p.lastSavedAtISO ? formatRelativeISO(p.lastSavedAtISO) : '';
-      const ageStr = (p.header && p.header.age != null) ? (p.header.age + ' lat') : '';
+      // B1.9: Usuwamy „Zapisano: 3 tyg. temu" i „1 wpis" — ta meta odnosiła się do
+      // snapshotów vault (data zapisu w bazie), a nie do wizyt/pomiarów pacjenta.
+      // Lista pacjentów ma teraz tylko wiek pacjenta (formatowany _formatAge) + płeć.
+      // Sortowanie po lastSavedAtISO DESC zostaje jako default (ostatnio aktywni
+      // pierwsi), ale sama data nie jest pokazywana użytkownikowi.
+      const hAge = (p.header && typeof p.header.age === 'number' && isFinite(p.header.age)) ? p.header.age : null;
+      const hAgeM = (p.header && typeof p.header.ageMonths === 'number' && isFinite(p.header.ageMonths)) ? p.header.ageMonths : null;
+      let ageStr = '';
+      if (hAge !== null || hAgeM !== null) {
+        const totalMo = (hAge !== null ? hAge * 12 : 0) + (hAgeM !== null ? hAgeM : 0);
+        ageStr = _formatAge(totalMo);
+      }
       const sexStr = (p.header && p.header.sex) ? p.header.sex : '';
-      const meta = [
-        lastSeen ? 'Zapisano: ' + lastSeen : '',
-        p.snapshotCount ? p.snapshotCount + (p.snapshotCount === 1 ? ' wpis' : ' wpisów') : '',
-        ageStr,
-        sexStr
-      ].filter(function (x) { return x && x.length; }).join(' · ');
+      const meta = [ageStr, sexStr].filter(function (x) { return x && x.length; }).join(' · ');
 
       const card = el('button', {
         class: 'vilda-auth-user-card',
@@ -5176,7 +5241,9 @@
                 })
               ]),
               el('div', { class: 'vilda-auth-import-card-meta',
-                text: pCount + ' pacj. · ' + sCount + ' wizyt' + (expAt ? ' · eksport: ' + expAt : '') }),
+                // B1.10: „wizyt" → „zapisów" — snapshotCount to liczba zapisów vaulta,
+                // nie liczba wizyt pacjentów.
+                text: pCount + ' pacj. · ' + sCount + ' zapisów' + (expAt ? ' · eksport: ' + expAt : '') }),
               el('div', { class: 'vilda-auth-import-card-filename', text: entry.file.name })
             ]),
             el('div', { class: 'vilda-auth-import-card-check' }, [mergeBtn])
@@ -5337,7 +5404,8 @@
       const lines = [
         'Nowych pacjentów: ' + summary.addedPatients,
         'Zaktualizowanych (merge): ' + summary.mergedPatients,
-        'Nowych wpisów z wizyt: ' + summary.addedSnapshots,
+        // B1.10: „Nowych wpisów z wizyt" → „Nowych zapisów" (import legacy plików).
+        'Nowych zapisów: ' + summary.addedSnapshots,
         'Pominiętych (już istniały): ' + summary.skippedSnapshots
       ];
       if (summary.legacyImported > 0) {
@@ -5743,7 +5811,8 @@
     const title = el('h2', { class: 'vilda-auth-title', text: 'Scal kopię konta' });
     const sub   = el('p', {
       class: 'vilda-auth-subtitle',
-      text: 'Podaj hasło do tej kopii. Aplikacja sprawdzi, które wizyty już masz, i doda tylko brakujące — bez usuwania ani nadpisywania istniejących danych.'
+      // B1.10: „wizyty" → „zapisy" — kontekst: scalanie kopii vaulta z aktualnymi danymi.
+      text: 'Podaj hasło do tej kopii. Aplikacja sprawdzi, które zapisy już masz, i doda tylko brakujące — bez usuwania ani nadpisywania istniejących danych.'
     });
 
     const fileInfo = el('div', {
@@ -5816,7 +5885,8 @@
         if (plan.mergePatients.length > 0) {
           previewBox.appendChild(el('div', {
             style: 'font-weight:600; color:#00838d; margin:10px 0 6px; font-size:0.83rem; text-transform:uppercase; letter-spacing:0.05em;',
-            text:  'Pacjenci do uzupełnienia wizyt (' + plan.mergePatients.length + ')'
+            // B1.10: „uzupełnienia wizyt" → „uzupełnienia zapisów".
+            text:  'Pacjenci do uzupełnienia zapisów (' + plan.mergePatients.length + ')'
           }));
           plan.mergePatients.forEach(function (p) {
             const noNew = p.newSnapshotCount === 0;
@@ -5827,7 +5897,7 @@
               el('span', {
                 style: 'font-size:0.78rem; color:' + (noNew ? '#bbb' : '#00838d') + '; white-space:nowrap; margin-left:12px;',
                 text: noNew
-                  ? 'brak nowych (wszystkie wizyty już są)'
+                  ? 'brak nowych (wszystkie zapisy już są)'
                   : (p.currentSnapshotCount + ' + ' + p.newSnapshotCount + ' nowych = ' + (p.currentSnapshotCount + p.newSnapshotCount))
               })
             ]);
@@ -5848,7 +5918,8 @@
               el('span', { text: p.name }),
               el('span', {
                 style: 'font-size:0.78rem; color:#00838d; white-space:nowrap; margin-left:12px;',
-                text:  p.snapshotCount + ' ' + (p.snapshotCount === 1 ? 'wizyta' : 'wizyty/wizyt')
+                // B1.10: „wizyta/wizyty" → „zapis/zapisy/zapisów".
+                text:  p.snapshotCount + ' ' + (p.snapshotCount === 1 ? 'zapis' : 'zapisów')
               })
             ]);
             previewBox.appendChild(row);
@@ -5857,7 +5928,7 @@
 
         // Podsumowanie
         const summaryParts = [];
-        if (plan.totalNewSnapshots > 0)   summaryParts.push(plan.totalNewSnapshots + ' nowych wizyt zostanie dodanych');
+        if (plan.totalNewSnapshots > 0)   summaryParts.push(plan.totalNewSnapshots + ' nowych zapisów zostanie dodanych');
         if (plan.totalNewSnapshots === 0)  summaryParts.push('Brak nowych danych — wszystko już masz');
         if (plan.addPatients.length > 0)   summaryParts.push(plan.addPatients.length + ' nowych pacjentów');
 
@@ -5870,7 +5941,7 @@
 
         if (plan.totalNewSnapshots > 0 || plan.addPatients.length > 0) {
           mergeBtn.style.display = '';
-          mergeBtn.textContent   = 'Scal teraz (' + plan.totalNewSnapshots + ' nowych wizyt' +
+          mergeBtn.textContent   = 'Scal teraz (' + plan.totalNewSnapshots + ' nowych zapisów' +
             (plan.addPatients.length > 0 ? ', ' + plan.addPatients.length + ' nowych pacjentów' : '') + ')';
         } else {
           mergeBtn.style.display = 'none';
@@ -5903,9 +5974,9 @@
         if (result.addedPatientCount > 0)
           lines.push('➕ Dodano ' + result.addedPatientCount + ' nowych pacjentów');
         if (result.mergedPatientCount > 0)
-          lines.push('🔀 Uzupełniono wizyty u ' + result.mergedPatientCount + ' pacjentów');
+          lines.push('🔀 Uzupełniono zapisy u ' + result.mergedPatientCount + ' pacjentów');
         if (result.addedSnapshotCount > 0)
-          lines.push('✓ Łącznie dodano ' + result.addedSnapshotCount + ' wizyt');
+          lines.push('✓ Łącznie dodano ' + result.addedSnapshotCount + ' zapisów');
         if (result.skippedSnapshotCount > 0)
           lines.push('↩ Pominięto ' + result.skippedSnapshotCount + ' duplikatów (już były w Twoim koncie)');
         if (result.addedSnapshotCount === 0 && result.addedPatientCount === 0)
