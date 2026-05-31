@@ -4862,6 +4862,27 @@
           }
           setBusy(false);
           overlay.remove();
+
+          // P6.3/P6.4 FIX — synchronizuj formularz głównego kalkulatora z nowym
+          // payloadem. Bez tego po Nowy pomiar formularz w tle ZOSTAJE ze starymi
+          // wartościami i kolejne kliknięcie „Zapisz dane" (odruchowe lub myśląc
+          // że trzeba dopisać pacjenta) tworzy NOWY SNAPSHOT ze STAREGO formularza
+          // jako najnowszy — Status pokazuje stare, Historia oba pomiary.
+          //
+          // Na podstronach z formularzem (index/docpro/kalkulator-klirens) global
+          // applyLoadedData jest dostępne — wywołujemy. Na pozostałych podstronach
+          // (notatki/subskrypcja/ustawienia) ta funkcja nie istnieje — try/catch
+          // chroni przed exception, modal i tak zamknął się prawidłowo.
+          //
+          // Dla hero pill P6.3 (z karty pacjenta) ta synchronizacja też jest
+          // bezpieczna — formularz w tle (jeśli istnieje) dostaje świeże dane,
+          // a karta pacjenta i tak rerenderuje się przez onSaved.
+          try {
+            if (typeof global.applyLoadedData === 'function') {
+              global.applyLoadedData(edited);
+            }
+          } catch (e) { logError('showQuickMeasureModal applyLoadedData sync', e); }
+
           if (typeof opts.onSaved === 'function') opts.onSaved();
         } catch (e) {
           setBusy(false);
