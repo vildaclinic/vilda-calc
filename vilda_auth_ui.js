@@ -5255,6 +5255,25 @@
           }
         });
       }));
+      // B2.1 — Dodaj notatkę do tej wizyty (kotwiczoną wiekiem tego pomiaru).
+      // Wykorzystuje istniejący showPatientNoteEditor z suggestLinkedAge =
+      // event.ageMonths, więc edytor pokazuje checkbox „Powiąż z bieżącą wizytą
+      // (wiek X)" zaznaczony domyślnie. Notatka po zapisie pojawi się w
+      // zakładce Historia jako kotwiczona pod chipem Pomiar (L-connector).
+      menu.appendChild(makeItem('📝 Dodaj notatkę', function () {
+        if (typeof showPatientNoteEditor !== 'function') {
+          try { global.alert('Edytor notatki niedostępny — odśwież stronę.'); } catch (_) {}
+          return;
+        }
+        showPatientNoteEditor({
+          patientId: event.patientId,
+          note: null,
+          suggestLinkedAge: event.ageMonths,
+          onSaved: function () {
+            showPatientCard(event.patientId);
+          }
+        });
+      }));
       menu.appendChild(makeItem('🗑 Usuń pomiar', function () {
         var ageLabel = _formatAge(event.ageMonths) || ('wiek ' + event.ageMonths + ' mies.');
         if (!global.confirm('Usunąć pomiar (' + ageLabel + ')? Tej operacji nie można cofnąć.')) return;
