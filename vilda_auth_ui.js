@@ -5552,6 +5552,63 @@
     headerWrap.appendChild(filtersRow);
     container.appendChild(headerWrap);
 
+    // B3.5 — Jednorazowy dymek wyjaśniający nowy układ Historii po wdrożeniu B3.
+    // Pokazywany tylko przy pierwszym wejściu w zakładkę (per-urządzenie, przez
+    // localStorage flag). Po kliknięciu „×" lub „Rozumiem" znika i już nie wraca.
+    //
+    // Lekarz po deploy B3 zobaczy: pomiary i notatki w jednej osi czasu zamiast
+    // 3-warstwowego układu (notatki bez wizyty / pomiary). Dymek tłumaczy gdzie
+    // teraz są luźne notatki (zakładka Notatki, sekcja „Notatki ogólne").
+    var B3_HISTORY_TOOLTIP_KEY = 'vilda:b3-history-tooltip-seen';
+    var tooltipSeen = false;
+    try {
+      if (global.localStorage) {
+        tooltipSeen = global.localStorage.getItem(B3_HISTORY_TOOLTIP_KEY) === '1';
+      }
+    } catch (_) {}
+    if (!tooltipSeen) {
+      var tooltipBox = el('div', {
+        class: 'vilda-b3-history-tooltip',
+        style: 'display:flex;align-items:flex-start;gap:10px;padding:12px 14px;margin-bottom:14px;'
+          + 'background:#eef6ff;border:0.5px solid #cde0f5;border-radius:10px;'
+          + 'color:#1a4a7a;font-size:0.86rem;line-height:1.5;'
+      });
+      // Info icon (Tabler ti-info-circle outline)
+      var infoIcon = el('span', {
+        style: 'flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;'
+          + 'width:20px;height:20px;color:#1a4a7a;margin-top:1px;'
+      });
+      infoIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" '
+        + 'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+        + '<circle cx="12" cy="12" r="9"/><path d="M12 8h.01"/><path d="M11 12h1v4h1"/></svg>';
+      tooltipBox.appendChild(infoIcon);
+
+      var tooltipText = el('div', { style: 'flex:1;' });
+      tooltipText.innerHTML = '<strong>Historia to oś czasu zdarzeń klinicznych</strong> — pomiary, '
+        + 'włączenie leków, wyniki badań. Luźne notatki znajdziesz w zakładce '
+        + '<strong>Notatki</strong>, sekcja „Notatki ogólne".';
+      tooltipBox.appendChild(tooltipText);
+
+      function _dismissTooltip() {
+        try {
+          if (global.localStorage) global.localStorage.setItem(B3_HISTORY_TOOLTIP_KEY, '1');
+        } catch (_) {}
+        if (tooltipBox.parentNode) tooltipBox.parentNode.removeChild(tooltipBox);
+      }
+
+      var dismissBtn = el('button', {
+        type: 'button',
+        'aria-label': 'Zamknij',
+        title: 'Zamknij (już nie pokazuj)',
+        style: 'flex:0 0 auto;background:transparent;border:0;color:#1a4a7a;font-size:1.1rem;'
+          + 'font-weight:600;cursor:pointer;padding:0 4px;line-height:1;align-self:flex-start;',
+        text: '×',
+        onclick: _dismissTooltip
+      });
+      tooltipBox.appendChild(dismissBtn);
+      container.appendChild(tooltipBox);
+    }
+
     // Wczytanie eventów
     var events = [];
     try { events = await V.listPatientTimelineEvents(patientId); }
