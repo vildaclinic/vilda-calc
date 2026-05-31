@@ -2690,12 +2690,14 @@
     }
 
     // Header sekcji z przyciskiem „+ Dodaj notatkę".
+    // B3.3: główny tytuł zmieniony z „Notatki kliniczne" na neutralne „Notatki",
+    // bo poniżej rozdzielamy je na sub-sekcje (Notatki ogólne + Notatki kliniczne).
     const headerRow = el('div', {
       class: 'vilda-patient-notes-header',
       style: 'display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;'
     });
     const headerLeft = el('div', null, [
-      el('p', { class: 'vilda-patient-section-h', text: 'Notatki kliniczne', style: 'margin:0;' })
+      el('p', { class: 'vilda-patient-section-h', text: 'Notatki', style: 'margin:0;' })
     ]);
     const addBtn = el('button', {
       class: 'vilda-auth-btn vilda-auth-btn-small',
@@ -2733,9 +2735,36 @@
       return;
     }
 
-    // Lista notatek.
-    const listDiv = el('div', { class: 'vilda-patient-notes-list', style: 'display:flex;flex-direction:column;gap:10px;' });
-    notes.forEach(function (n) {
+    // ── B3.3: rozdzielenie notatek na 2 grupy (decyzja B3 #5) ───────────
+    //   • Notatki ogólne — bez kotwicy wiekowej I bez daty zdarzenia
+    //     (luźne obserwacje typu „Pacjent nie lubi mówić o rodzicach").
+    //     Sortowane DESC po updatedAtISO (najświeższe pierwsze).
+    //   • Notatki kliniczne — z linkedAgeMonths LUB z clinicalDateISO.
+    //     Sortowane DESC po dacie zdarzenia (clinicalDateISO jeśli jest,
+    //     inaczej updatedAtISO jako fallback).
+    function _isGeneralNote(n) {
+      return (n.linkedAgeMonths == null) && !n.clinicalDateISO;
+    }
+    var generalNotes = notes.filter(_isGeneralNote)
+      .sort(function (a, b) {
+        var av = a.updatedAtISO || '';
+        var bv = b.updatedAtISO || '';
+        if (av > bv) return -1;
+        if (av < bv) return 1;
+        return 0;
+      });
+    var clinicalNotes = notes.filter(function (n) { return !_isGeneralNote(n); })
+      .sort(function (a, b) {
+        var av = a.clinicalDateISO || a.updatedAtISO || '';
+        var bv = b.clinicalDateISO || b.updatedAtISO || '';
+        if (av > bv) return -1;
+        if (av < bv) return 1;
+        return 0;
+      });
+
+    // Helper: render pojedynczej karty notatki. Wspólny dla obu sekcji,
+    // żeby uniknąć duplikacji ~80 linii kodu.
+    function _renderPatientNoteCard(n) {
       const catMeta = PATIENT_NOTE_CATEGORY_LABELS[n.category] || PATIENT_NOTE_CATEGORY_LABELS.observation;
       const dueMeta = formatPatientNoteDueDate(n.dueDateISO);
 
@@ -2821,9 +2850,61 @@
         }));
       }
 
-      listDiv.appendChild(card);
-    });
-    container.appendChild(listDiv);
+      return card;
+    }
+
+    // Helper: header sub-sekcji z ikoną + tekstem + counter pill.
+    function _renderSubSectionHeader(iconSvg, text, count) {
+      var wrap = el('div', {
+        class: 'vilda-patient-notes-subheader',
+        style: 'display:flex;align-items:center;gap:8px;margin:6px 0 10px;'
+      });
+      if (iconSvg) {
+        var iconWrap = el('span', {
+          style: 'display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;color:#5b6672;flex:0 0 auto;'
+        });
+        iconWrap.innerHTML = iconSvg;
+        wrap.appendChild(iconWrap);
+      }
+      wrap.appendChild(el('span', {
+        text: text,
+        style: 'font-size:0.78rem;font-weight:600;color:#5b6672;text-transform:uppercase;letter-spacing:0.05em;'
+      }));
+      wrap.appendChild(el('span', {
+        text: String(count),
+        style: 'display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:18px;padding:0 6px;'
+          + 'background:#e8eff1;color:#5b6672;font-size:0.7rem;font-weight:600;border-radius:999px;'
+      }));
+      return wrap;
+    }
+
+    // Ikona dymka (Tabler outline ti-message-dots) — inline SVG dla sekcji ogólnej.
+    var MESSAGE_DOTS_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20l1.3 -3.9a9 8 0 1 1 3.4 2.9l-4.7 1"/><path d="M12 12l0 .01"/><path d="M8 12l0 .01"/><path d="M16 12l0 .01"/></svg>';
+    // Ikona stetoskopu (Tabler ti-stethoscope) — dla sekcji klinicznej.
+    var STETHOSCOPE_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h-1a2 2 0 0 0 -2 2v3.5h0a5.5 5.5 0 0 0 11 0v-3.5a2 2 0 0 0 -2 -2h-1"/><path d="M8 15a6 6 0 1 0 12 0v-3"/><circle cx="20" cy="10" r="2"/></svg>';
+
+    // Sekcja „Notatki ogólne" — subtelny szary tło (#f5fafb wg planu), ikona dymka.
+    if (generalNotes.length > 0) {
+      var generalWrap = el('div', {
+        class: 'vilda-patient-notes-general-section',
+        style: 'background:#f5fafb;border:0.5px solid #e0eef0;border-radius:12px;padding:10px 12px 12px;margin-bottom:14px;'
+      });
+      generalWrap.appendChild(_renderSubSectionHeader(MESSAGE_DOTS_SVG, 'Notatki ogólne', generalNotes.length));
+      var generalList = el('div', { style: 'display:flex;flex-direction:column;gap:8px;' });
+      generalNotes.forEach(function (n) { generalList.appendChild(_renderPatientNoteCard(n)); });
+      generalWrap.appendChild(generalList);
+      container.appendChild(generalWrap);
+    }
+
+    // Sekcja „Notatki kliniczne" — bez szarego tła, header z ikoną stetoskopu.
+    if (clinicalNotes.length > 0) {
+      var clinicalWrap = el('div', { class: 'vilda-patient-notes-clinical-section' });
+      clinicalWrap.appendChild(_renderSubSectionHeader(STETHOSCOPE_SVG, 'Notatki kliniczne', clinicalNotes.length));
+      var clinicalList = el('div', { class: 'vilda-patient-notes-list', style: 'display:flex;flex-direction:column;gap:10px;' });
+      clinicalNotes.forEach(function (n) { clinicalList.appendChild(_renderPatientNoteCard(n)); });
+      clinicalWrap.appendChild(clinicalList);
+      container.appendChild(clinicalWrap);
+    }
   }
 
   /**
@@ -2889,6 +2970,202 @@
     catWrap.appendChild(catSelect);
     sheet.appendChild(catWrap);
 
+    // B3.1: Szablon notatki — dropdown z 5 opcjami (decyzja B3 #2).
+    // Wybór szablonu robi 2 rzeczy:
+    //   • ustawia kategorię automatycznie (treatment / wynik-badania)
+    //   • pokazuje pola strukturalne (medication.{name,dose,previousDose} albo
+    //     labResult.{test,value,norm}) odpowiednie dla szablonu
+    // „Bez szablonu" pozostawia user'owi swobodę — tylko tytuł + treść.
+    // Detekcja stanu początkowego (edycja istniejącej notatki):
+    var initialTemplate = 'none';
+    if (isEdit && initial.medication && initial.medication.action) {
+      if (initial.medication.action === 'start') initialTemplate = 'med-start';
+      else if (initial.medication.action === 'change') initialTemplate = 'med-change';
+      else if (initial.medication.action === 'stop') initialTemplate = 'med-stop';
+    } else if (isEdit && initial.labResult && (initial.labResult.test || initial.labResult.value)) {
+      initialTemplate = 'lab';
+    }
+
+    var tplWrap = el('div', null, [
+      el('label', { text: 'Szablon', style: 'display:block;font-size:0.78rem;color:#5b6672;margin-bottom:4px;font-weight:500;' })
+    ]);
+    var tplSelect = el('select', {
+      class: 'vilda-auth-input b3-template-select',
+      style: 'width:100%;height:38px;padding:0 10px;font-size:0.92rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;'
+    });
+    var TEMPLATES = [
+      { value: 'none',       label: 'Bez szablonu' },
+      { value: 'med-start',  label: 'Włączono lek' },
+      { value: 'med-change', label: 'Zmieniono dawkę leku' },
+      { value: 'med-stop',   label: 'Zakończono leczenie' },
+      { value: 'lab',        label: 'Wynik badania' }
+    ];
+    TEMPLATES.forEach(function (t) {
+      var opt = el('option', { value: t.value, text: t.label });
+      if (t.value === initialTemplate) opt.selected = true;
+      tplSelect.appendChild(opt);
+    });
+    tplWrap.appendChild(tplSelect);
+    var tplHint = el('p', {
+      style: 'font-size:0.72rem;color:#9aa8aa;margin:4px 0 0 0;line-height:1.4;',
+      text: 'Szablon zapisze lek / wynik w sposób umożliwiający filtrowanie w przyszłości.'
+    });
+    tplWrap.appendChild(tplHint);
+    sheet.appendChild(tplWrap);
+
+    // ── Sekcja strukturalna: medication (start/change/stop) ────────────
+    // Pokazuje pola name + dose; dla 'change' dodatkowo previousDose.
+    // Auto-suggest (B3 #A1) — datalist HTML5 wypełniany asynchronicznie po
+    // otwarciu edytora przez listMedicationNamesForCurrentUser().
+    var medSection = el('div', {
+      class: 'b3-med-section',
+      style: 'display:none;flex-direction:column;gap:8px;padding:10px 12px;background:#fff8ee;border:0.5px solid #f0e0c8;border-radius:8px;'
+    });
+    var medHeader = el('div', {
+      style: 'font-size:0.74rem;color:#7a5a1a;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;',
+      text: 'Lek'
+    });
+    medSection.appendChild(medHeader);
+
+    var medDatalistId = 'b3-med-names-' + Date.now();
+    var medDatalist = el('datalist', { id: medDatalistId });
+    medSection.appendChild(medDatalist);
+
+    var medNameWrap = el('div', null, [
+      el('label', { text: 'Nazwa leku', style: 'display:block;font-size:0.74rem;color:#5b6672;margin-bottom:3px;' })
+    ]);
+    var medNameInput = el('input', {
+      type: 'text',
+      class: 'vilda-auth-input b3-med-name',
+      list: medDatalistId,
+      placeholder: 'np. Euthyrox, Letrox, Genotropin',
+      style: 'width:100%;height:36px;padding:0 10px;font-size:0.9rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;'
+    });
+    medNameInput.value = (initial.medication && initial.medication.name) || '';
+    medNameWrap.appendChild(medNameInput);
+    medSection.appendChild(medNameWrap);
+
+    // previousDose — pokazywane tylko dla 'med-change'
+    var medPrevWrap = el('div', { class: 'b3-med-prev-wrap', style: 'display:none;' }, [
+      el('label', { text: 'Poprzednia dawka', style: 'display:block;font-size:0.74rem;color:#5b6672;margin-bottom:3px;' })
+    ]);
+    var medPrevInput = el('input', {
+      type: 'text',
+      class: 'vilda-auth-input b3-med-previous-dose',
+      placeholder: 'np. 25 µg 1×dz.',
+      style: 'width:100%;height:36px;padding:0 10px;font-size:0.9rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;'
+    });
+    medPrevInput.value = (initial.medication && initial.medication.previousDose) || '';
+    medPrevWrap.appendChild(medPrevInput);
+    medSection.appendChild(medPrevWrap);
+
+    var medDoseWrap = el('div', { class: 'b3-med-dose-wrap' }, [
+      el('label', { class: 'b3-med-dose-label', text: 'Dawka', style: 'display:block;font-size:0.74rem;color:#5b6672;margin-bottom:3px;' })
+    ]);
+    var medDoseInput = el('input', {
+      type: 'text',
+      class: 'vilda-auth-input b3-med-dose',
+      placeholder: 'np. 50 µg 1×dz.',
+      style: 'width:100%;height:36px;padding:0 10px;font-size:0.9rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;'
+    });
+    medDoseInput.value = (initial.medication && initial.medication.dose) || '';
+    medDoseWrap.appendChild(medDoseInput);
+    medSection.appendChild(medDoseWrap);
+
+    sheet.appendChild(medSection);
+
+    // ── Sekcja strukturalna: labResult ─────────────────────────────────
+    var labSection = el('div', {
+      class: 'b3-lab-section',
+      style: 'display:none;flex-direction:column;gap:8px;padding:10px 12px;background:#eef6ff;border:0.5px solid #cde0f5;border-radius:8px;'
+    });
+    var labHeader = el('div', {
+      style: 'font-size:0.74rem;color:#1a4a7a;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;',
+      text: 'Wynik badania'
+    });
+    labSection.appendChild(labHeader);
+
+    var labDatalistId = 'b3-lab-names-' + Date.now();
+    var labDatalist = el('datalist', { id: labDatalistId });
+    labSection.appendChild(labDatalist);
+
+    var labTestWrap = el('div', null, [
+      el('label', { text: 'Badanie', style: 'display:block;font-size:0.74rem;color:#5b6672;margin-bottom:3px;' })
+    ]);
+    var labTestInput = el('input', {
+      type: 'text',
+      class: 'vilda-auth-input b3-lab-test',
+      list: labDatalistId,
+      placeholder: 'np. TSH, fT4, IGF-1',
+      style: 'width:100%;height:36px;padding:0 10px;font-size:0.9rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;'
+    });
+    labTestInput.value = (initial.labResult && initial.labResult.test) || '';
+    labTestWrap.appendChild(labTestInput);
+    labSection.appendChild(labTestWrap);
+
+    var labValueWrap = el('div', null, [
+      el('label', { text: 'Wartość', style: 'display:block;font-size:0.74rem;color:#5b6672;margin-bottom:3px;' })
+    ]);
+    var labValueInput = el('input', {
+      type: 'text',
+      class: 'vilda-auth-input b3-lab-value',
+      placeholder: 'np. 2,5 mIU/L',
+      style: 'width:100%;height:36px;padding:0 10px;font-size:0.9rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;'
+    });
+    labValueInput.value = (initial.labResult && initial.labResult.value) || '';
+    labValueWrap.appendChild(labValueInput);
+    labSection.appendChild(labValueWrap);
+
+    var labNormWrap = el('div', null, [
+      el('label', { text: 'Norma (opcjonalnie)', style: 'display:block;font-size:0.74rem;color:#5b6672;margin-bottom:3px;' })
+    ]);
+    var labNormInput = el('input', {
+      type: 'text',
+      class: 'vilda-auth-input b3-lab-norm',
+      placeholder: 'np. 0,4-4,2 mIU/L',
+      style: 'width:100%;height:36px;padding:0 10px;font-size:0.9rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;'
+    });
+    labNormInput.value = (initial.labResult && initial.labResult.norm) || '';
+    labNormWrap.appendChild(labNormInput);
+    labSection.appendChild(labNormWrap);
+
+    sheet.appendChild(labSection);
+
+    // Reaktywność szablonu — pokazuj odpowiednią sekcję, ustaw kategorię.
+    // Etykietę „Dawka" dla 'med-change' zmieniamy na „Nowa dawka" (bo jest też previousDose).
+    function syncTemplateVisibility() {
+      var tpl = tplSelect.value;
+      var isMed = tpl === 'med-start' || tpl === 'med-change' || tpl === 'med-stop';
+      var isLab = tpl === 'lab';
+      medSection.style.display = isMed ? 'flex' : 'none';
+      labSection.style.display = isLab ? 'flex' : 'none';
+      medPrevWrap.style.display = tpl === 'med-change' ? 'block' : 'none';
+      medDoseWrap.style.display = (tpl === 'med-start' || tpl === 'med-change') ? 'block' : 'none';
+      var doseLabel = medDoseWrap.querySelector('.b3-med-dose-label');
+      if (doseLabel) doseLabel.textContent = tpl === 'med-change' ? 'Nowa dawka' : 'Dawka';
+      // Auto-set kategoria dla szablonów strukturalnych.
+      if (isMed) catSelect.value = 'treatment';
+      else if (isLab) catSelect.value = 'wynik-badania';
+    }
+    tplSelect.addEventListener('change', syncTemplateVisibility);
+    syncTemplateVisibility();
+
+    // Auto-suggest — wypełniamy datalist asynchronicznie po otwarciu edytora.
+    // Jeśli vault zwróci błąd (lock / stale cache), zostawiamy puste — input
+    // nadal działa jako wolne pole tekstowe.
+    if (typeof V.listMedicationNamesForCurrentUser === 'function') {
+      V.listMedicationNamesForCurrentUser().then(function (names) {
+        if (!Array.isArray(names)) return;
+        names.forEach(function (n) { medDatalist.appendChild(el('option', { value: n })); });
+      }).catch(function () {});
+    }
+    if (typeof V.listLabTestNamesForCurrentUser === 'function') {
+      V.listLabTestNamesForCurrentUser().then(function (tests) {
+        if (!Array.isArray(tests)) return;
+        tests.forEach(function (t) { labDatalist.appendChild(el('option', { value: t })); });
+      }).catch(function () {});
+    }
+
     // Tytuł.
     const titleWrap = el('div', null, [
       el('label', { text: 'Tytuł (opcjonalnie)', style: 'display:block;font-size:0.78rem;color:#5b6672;margin-bottom:4px;font-weight:500;' })
@@ -2934,52 +3211,123 @@
     dueWrap.appendChild(dueHint);
     sheet.appendChild(dueWrap);
 
-    // B1.8: opcjonalny checkbox „Powiąż z bieżącą wizytą" — pokazywany gdy edytor
-    // został wywołany z głównego kreatora pacjenta (przez przycisk „+ Dodaj notatkę
-    // do wizyty" w sidebarze) i jest dostępny aktualny wiek pacjenta z formularza.
-    // Jeśli zaznaczony — notatka dostaje linkedAgeMonths i pojawia się na osi czasu
-    // Historia kotwiczona pod chipem Pomiar tego wieku. Jeśli odznaczony lub brak
-    // suggestLinkedAge — notatka leci jako wolna (linkedAgeMonths: null).
+    // B3.1: powiązanie notatki z osią czasu — radio group z 3 wzajemnie wykluczającymi
+    // opcjami (decyzja B3 #6, zastępuje wcześniejszy checkbox z B1.8):
+    //   (1) Notatka ogólna — bez kotwicy, bez daty zdarzenia (idzie do zakładki Notatki,
+    //       sekcja „Notatki ogólne" — B3.3)
+    //   (2) Powiąż z wizytą (wiek pacjenta) — kotwica linkedAgeMonths, dostępne tylko
+    //       gdy suggestLinkedAge != null (edytor wywołany z kreatora głównego lub
+    //       edytujemy notatkę która już ma kotwicę)
+    //   (3) Wpisz datę zdarzenia — pole type=date → clinicalDateISO (B3.0); notatka
+    //       wpasuje się chronologicznie w Historię.
     //
-    // Dla edycji istniejącej notatki: jeśli ma już linkedAgeMonths, używamy go jako
-    // suggestLinkedAge (checkbox pokazuje aktualną kotwicę z możliwością odpięcia).
+    // Stan początkowy:
+    //   • Nowa notatka, brak suggestLinkedAge → (1) ogólna domyślnie
+    //   • Nowa notatka, jest suggestLinkedAge → (2) powiąż z wizytą domyślnie
+    //   • Edycja notatki z linkedAgeMonths → (2) powiąż z wizytą
+    //   • Edycja notatki z clinicalDateISO → (3) data zdarzenia, pole wypełnione
+    //   • Edycja notatki ogólnej (oba null) → (1) ogólna
     var suggestLinkedAge = null;
     if (opts && typeof opts.suggestLinkedAge === 'number' && isFinite(opts.suggestLinkedAge)
         && opts.suggestLinkedAge > 0) {
       suggestLinkedAge = Math.round(opts.suggestLinkedAge);
     } else if (isEdit && typeof initial.linkedAgeMonths === 'number' && initial.linkedAgeMonths > 0) {
-      // Edycja istniejącej notatki która już ma kotwicę — pokazujemy checkbox
-      // żeby user mógł ją odpiąć (lub zostawić).
       suggestLinkedAge = Math.round(initial.linkedAgeMonths);
     }
-    var linkedAgeCheckbox = null;
+
+    // Wybierz początkowo zaznaczone radio na podstawie stanu notatki.
+    var initialAnchorMode;
+    if (isEdit && initial.clinicalDateISO) initialAnchorMode = 'date';
+    else if (isEdit && typeof initial.linkedAgeMonths === 'number' && initial.linkedAgeMonths > 0) initialAnchorMode = 'visit';
+    else if (suggestLinkedAge !== null) initialAnchorMode = 'visit';
+    else initialAnchorMode = 'general';
+
+    var anchorWrap = el('div', {
+      class: 'b3-anchor-group',
+      style: 'display:flex;flex-direction:column;gap:8px;padding:12px;background:#f5fafb;border-radius:10px;border:0.5px solid #d7e9ec;'
+    });
+    var anchorHeader = el('div', {
+      style: 'font-size:0.78rem;color:#5b6672;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;',
+      text: 'Powiązanie z osią czasu'
+    });
+    anchorWrap.appendChild(anchorHeader);
+
+    // Radio (1) — Notatka ogólna
+    var radioGeneralWrap = el('label', { class: 'b3-anchor-option', style: 'display:flex;align-items:flex-start;gap:8px;cursor:pointer;' });
+    var radioGeneral = el('input', { type: 'radio', name: 'b3-anchor', value: 'general', style: 'flex:0 0 auto;margin-top:2px;cursor:pointer;width:16px;height:16px;accent-color:#00838d;' });
+    radioGeneral.checked = initialAnchorMode === 'general';
+    var radioGeneralText = el('div', { style: 'flex:1;font-size:0.86rem;color:#0f2b33;line-height:1.4;' }, [
+      el('div', { text: 'Notatka ogólna', style: 'font-weight:500;' }),
+      el('div', { text: 'Pojawi się w zakładce Notatki, nie w Historii.', style: 'font-size:0.74rem;color:#9aa8aa;margin-top:2px;' })
+    ]);
+    radioGeneralWrap.appendChild(radioGeneral);
+    radioGeneralWrap.appendChild(radioGeneralText);
+    anchorWrap.appendChild(radioGeneralWrap);
+
+    // B3.3: hint pod radio „Notatka ogólna" — pokazywany TYLKO gdy general jest aktywna.
+    // Wyjaśnia że notatka ogólna nie wpadnie do osi czasu Historii i zachęca do
+    // wyboru wizyty lub daty zdarzenia, jeśli to ma być wpis kliniczny.
+    var generalHint = el('div', {
+      class: 'b3-general-hint',
+      style: 'font-size:0.74rem;color:#7a5a1a;background:#fff8ee;border:0.5px solid #f0e0c8;'
+        + 'border-radius:6px;padding:6px 8px;margin:-2px 0 0 24px;line-height:1.4;display:none;'
+    });
+    generalHint.innerHTML = '💡 Notatki ogólne nie pojawiają się w Historii. '
+      + 'Aby notatka pojawiła się w Historii, wybierz <strong>wizytę</strong> lub <strong>datę zdarzenia</strong>.';
+    anchorWrap.appendChild(generalHint);
+
+    // Radio (2) — Powiąż z wizytą (tylko gdy mamy suggestLinkedAge)
+    var radioVisit = null;
     if (suggestLinkedAge !== null) {
-      var linkedWrap = el('div', {
-        style: 'display:flex;align-items:flex-start;gap:8px;padding:10px 12px;background:#f5fafb;border-radius:8px;'
-      });
-      linkedAgeCheckbox = el('input', {
-        type: 'checkbox',
-        style: 'flex:0 0 auto;margin-top:2px;cursor:pointer;width:16px;height:16px;'
-      });
-      linkedAgeCheckbox.checked = true; // domyślnie zaznaczony
-      var linkedLabel = el('label', {
-        style: 'flex:1;font-size:0.84rem;color:#0f2b33;cursor:pointer;line-height:1.4;'
-      });
-      linkedLabel.appendChild(global.document.createTextNode('Powiąż z bieżącą wizytą '));
-      linkedLabel.appendChild(el('strong', {
-        text: '(wiek: ' + _formatAge(suggestLinkedAge) + ')',
-        style: 'font-weight:600;color:#0F6E56;'
-      }));
-      var linkedHint = el('div', {
-        style: 'font-size:0.72rem;color:#5b6672;margin-top:2px;line-height:1.4;',
-        text: 'Notatka pojawi się na osi czasu Historia obok tego pomiaru.'
-      });
-      linkedLabel.appendChild(linkedHint);
-      linkedLabel.addEventListener('click', function () { linkedAgeCheckbox.checked = !linkedAgeCheckbox.checked; });
-      linkedWrap.appendChild(linkedAgeCheckbox);
-      linkedWrap.appendChild(linkedLabel);
-      sheet.appendChild(linkedWrap);
+      var radioVisitWrap = el('label', { class: 'b3-anchor-option', style: 'display:flex;align-items:flex-start;gap:8px;cursor:pointer;' });
+      radioVisit = el('input', { type: 'radio', name: 'b3-anchor', value: 'visit', style: 'flex:0 0 auto;margin-top:2px;cursor:pointer;width:16px;height:16px;accent-color:#00838d;' });
+      radioVisit.checked = initialAnchorMode === 'visit';
+      var radioVisitText = el('div', { style: 'flex:1;font-size:0.86rem;color:#0f2b33;line-height:1.4;' });
+      var visitMain = el('div', { style: 'font-weight:500;' });
+      visitMain.appendChild(global.document.createTextNode('Powiąż z wizytą '));
+      visitMain.appendChild(el('strong', { text: '(wiek: ' + _formatAge(suggestLinkedAge) + ')', style: 'font-weight:600;color:#0F6E56;' }));
+      radioVisitText.appendChild(visitMain);
+      radioVisitText.appendChild(el('div', { text: 'Pojawi się w Historii pod chipem Pomiar.', style: 'font-size:0.74rem;color:#9aa8aa;margin-top:2px;' }));
+      radioVisitWrap.appendChild(radioVisit);
+      radioVisitWrap.appendChild(radioVisitText);
+      anchorWrap.appendChild(radioVisitWrap);
     }
+
+    // Radio (3) — Wpisz datę zdarzenia
+    var radioDateWrap = el('label', { class: 'b3-anchor-option', style: 'display:flex;align-items:flex-start;gap:8px;cursor:pointer;' });
+    var radioDate = el('input', { type: 'radio', name: 'b3-anchor', value: 'date', style: 'flex:0 0 auto;margin-top:2px;cursor:pointer;width:16px;height:16px;accent-color:#00838d;' });
+    radioDate.checked = initialAnchorMode === 'date';
+    var radioDateText = el('div', { style: 'flex:1;font-size:0.86rem;color:#0f2b33;line-height:1.4;' }, [
+      el('div', { text: 'Wpisz datę zdarzenia', style: 'font-weight:500;' }),
+      el('div', { text: 'Notatka wpasuje się chronologicznie w Historii.', style: 'font-size:0.74rem;color:#9aa8aa;margin-top:2px;' })
+    ]);
+    var clinicalDateInput = el('input', {
+      type: 'date',
+      class: 'vilda-auth-input b3-clinical-date',
+      style: 'width:100%;height:34px;padding:0 10px;font-size:0.9rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;margin-top:6px;display:none;'
+    });
+    clinicalDateInput.value = initial.clinicalDateISO || '';
+    radioDateText.appendChild(clinicalDateInput);
+    radioDateWrap.appendChild(radioDate);
+    radioDateWrap.appendChild(radioDateText);
+    anchorWrap.appendChild(radioDateWrap);
+
+    // Reaktywność — pokazuj date input tylko gdy radio (3) aktywne, hint tylko
+    // gdy radio (1) „ogólna" aktywne (B3.3).
+    function syncAnchorVisibility() {
+      clinicalDateInput.style.display = radioDate.checked ? 'block' : 'none';
+      generalHint.style.display = radioGeneral.checked ? 'block' : 'none';
+    }
+    radioGeneral.addEventListener('change', syncAnchorVisibility);
+    if (radioVisit) radioVisit.addEventListener('change', syncAnchorVisibility);
+    radioDate.addEventListener('change', syncAnchorVisibility);
+    // Klik w pole daty automatycznie zaznacza radio (3) — wygodniej.
+    clinicalDateInput.addEventListener('focus', function () {
+      if (!radioDate.checked) { radioDate.checked = true; syncAnchorVisibility(); }
+    });
+    syncAnchorVisibility();
+
+    sheet.appendChild(anchorWrap);
 
     // Error box.
     const errBox = el('div', {
@@ -3019,14 +3367,58 @@
             dueDateISO: dueInput.value || null
           };
           if (isEdit) payload.id = initial.id;
-          // B1.8: linkedAgeMonths — przekaż explicit gdy checkbox był pokazany.
-          //   • checkbox zaznaczony → suggestLinkedAge (kotwica do wieku wizyty)
-          //   • checkbox odznaczony → null (wyczyść kotwicę, notatka staje się wolna)
-          //   • checkbox nie pokazany (brak suggestLinkedAge) → NIE podajemy pola
-          //     (vault zachowa istniejące — przy edycji ważne, przy nowej = null)
-          if (linkedAgeCheckbox !== null) {
-            payload.linkedAgeMonths = linkedAgeCheckbox.checked ? suggestLinkedAge : null;
+
+          // B3.1: powiązanie z osią czasu na podstawie radio group.
+          //   • general → linkedAgeMonths=null, clinicalDateISO=null (notatka ogólna)
+          //   • visit   → linkedAgeMonths=suggestLinkedAge, clinicalDateISO=null
+          //   • date    → linkedAgeMonths=null, clinicalDateISO=<input>
+          // Przy edycji ZAWSZE wysyłamy explicit (3 stany: visit/date/general), więc
+          // vault wyczyści drugie pole — radio jest mutually exclusive.
+          var anchor = 'general';
+          if (radioVisit && radioVisit.checked) anchor = 'visit';
+          else if (radioDate.checked) anchor = 'date';
+          if (anchor === 'visit') {
+            payload.linkedAgeMonths = suggestLinkedAge;
+            payload.clinicalDateISO = null;
+          } else if (anchor === 'date') {
+            payload.linkedAgeMonths = null;
+            payload.clinicalDateISO = clinicalDateInput.value || null;
+          } else {
+            payload.linkedAgeMonths = null;
+            payload.clinicalDateISO = null;
           }
+
+          // B3.1: pola strukturalne na podstawie wybranego szablonu.
+          //   • med-start / med-change / med-stop → buduj obiekt medication
+          //   • lab → buduj obiekt labResult
+          //   • none → wyzeruj oba (przy edycji vault wyczyści pola)
+          var tpl = tplSelect.value;
+          if (tpl === 'med-start' || tpl === 'med-change' || tpl === 'med-stop') {
+            var actionMap = { 'med-start': 'start', 'med-change': 'change', 'med-stop': 'stop' };
+            var med = { action: actionMap[tpl] };
+            var medName = (medNameInput.value || '').trim();
+            if (medName) med.name = medName;
+            var medDose = (medDoseInput.value || '').trim();
+            if (medDose && (tpl === 'med-start' || tpl === 'med-change')) med.dose = medDose;
+            var medPrev = (medPrevInput.value || '').trim();
+            if (medPrev && tpl === 'med-change') med.previousDose = medPrev;
+            payload.medication = med;
+            payload.labResult = null;
+          } else if (tpl === 'lab') {
+            var lab = {};
+            var labTest = (labTestInput.value || '').trim();
+            if (labTest) lab.test = labTest;
+            var labValue = (labValueInput.value || '').trim();
+            if (labValue) lab.value = labValue;
+            var labNorm = (labNormInput.value || '').trim();
+            if (labNorm) lab.norm = labNorm;
+            payload.medication = null;
+            payload.labResult = (lab.test || lab.value) ? lab : null;
+          } else {
+            payload.medication = null;
+            payload.labResult = null;
+          }
+
           await V.savePatientNote(payload);
           overlay.remove();
           if (opts && typeof opts.onSaved === 'function') opts.onSaved();
@@ -5018,11 +5410,48 @@
         }));
       }
     } else if (event.type === 'note') {
+      // B3.2f: strukturalny render dla notatek z medication / labResult.
+      // Jeśli notatka ma pole strukturalne — pokazujemy dedykowaną linię
+      // (Lek: NAZWA — Dawka: X (akcja) / TEST: WARTOŚĆ (norma: ...)). Tytuł
+      // notatki pozostaje jako label nad strukturalną linią. Body (wolny tekst)
+      // pokazujemy zawsze, jako ewentualny komentarz lekarza pod strukturą.
       if (event.title) {
         bodyDiv.appendChild(el('div', {
           style: 'font-weight:600;font-size:0.92rem;color:#0f2b33;',
           text: event.title
         }));
+      }
+      if (event.medication && event.medication.action) {
+        var medLine = el('div', {
+          style: 'display:flex;align-items:center;gap:6px;margin-top:4px;'
+            + 'padding:4px 8px;background:#fff8ee;border:0.5px solid #f0e0c8;'
+            + 'border-radius:6px;font-size:0.84rem;color:#7a5a1a;'
+        });
+        medLine.appendChild(el('span', { text: '💊', style: 'font-size:0.95rem;' }));
+        var medParts = [];
+        if (event.medication.name) medParts.push(event.medication.name);
+        if (event.medication.dose) medParts.push(event.medication.dose);
+        var actionLabel = { start: 'włączony', change: 'zmiana dawki', stop: 'zakończony' }[event.medication.action] || event.medication.action;
+        medParts.push('(' + actionLabel + ')');
+        if (event.medication.previousDose && event.medication.action === 'change') {
+          medParts.push('· z ' + event.medication.previousDose);
+        }
+        medLine.appendChild(el('span', { text: medParts.join(' '), style: 'flex:1;' }));
+        bodyDiv.appendChild(medLine);
+      }
+      if (event.labResult && (event.labResult.test || event.labResult.value)) {
+        var labLine = el('div', {
+          style: 'display:flex;align-items:center;gap:6px;margin-top:4px;'
+            + 'padding:4px 8px;background:#eef6ff;border:0.5px solid #cde0f5;'
+            + 'border-radius:6px;font-size:0.84rem;color:#1a4a7a;'
+        });
+        labLine.appendChild(el('span', { text: '🧪', style: 'font-size:0.95rem;' }));
+        var labParts = [];
+        if (event.labResult.test) labParts.push(event.labResult.test + ':');
+        if (event.labResult.value) labParts.push(event.labResult.value);
+        if (event.labResult.norm) labParts.push('(norma: ' + event.labResult.norm + ')');
+        labLine.appendChild(el('span', { text: labParts.join(' '), style: 'flex:1;' }));
+        bodyDiv.appendChild(labLine);
       }
       if (event.body) {
         bodyDiv.appendChild(el('div', {
@@ -5377,9 +5806,11 @@
         onclick: function () { _handleTimelineEventClick(event); }
       });
 
-      // Górny rząd: badge typu (lewy) + data utworzenia (prawy).
-      // Data tylko gdy event ma dateISO (note: createdAtISO; observation: brak,
-      // bo to wydarzenia generowane automatycznie po wieku — wtedy nie pokazujemy).
+      // Górny rząd: badge typu (lewy) + data (prawy).
+      // B3.2e: gdy notatka jest kotwiczona (linkedAgeMonths) ALE też ma datę
+      // zdarzenia klinicznego (clinicalDateISO) — pokazujemy clinicalDateISO,
+      // nie createdAtISO. Bez clinicalDateISO — fallback do dateISO (czyli
+      // createdAtISO przez vault'owy fallback w `dateISO`).
       var topRow = el('div', {
         style: 'display:flex;justify-content:space-between;align-items:flex-start;gap:8px;'
       });
@@ -5388,7 +5819,13 @@
           + meta.color + ';background:' + meta.bg + ';border-radius:999px;',
         text: meta.label
       }));
-      var dateStr = _formatDateDDMMYYYY(event.dateISO);
+      var dateStr;
+      if (event.clinicalDateISO) {
+        // clinicalDateISO to 'YYYY-MM-DD' — dorzucamy time żeby parser działał.
+        dateStr = _formatDateDDMMYYYY(event.clinicalDateISO + 'T00:00:00.000Z');
+      } else {
+        dateStr = _formatDateDDMMYYYY(event.dateISO);
+      }
       if (dateStr) {
         topRow.appendChild(el('span', {
           style: 'font-size:0.72rem;color:#9aa8aa;white-space:nowrap;',
@@ -5410,18 +5847,24 @@
       var f = currentFilter;
       function filterAllows(t) { return f === 'all' || f === t; }
 
-      // ── B1.6: Rozdziel eventy na 3 warstwy ────────────────────────────────
+      // ── B3.2: Mixed chronological timeline ────────────────────────────────
+      // Architektura po B3.2 — jeden chronologiczny ciąg zdarzeń klinicznych:
+      //   • Pomiary kotwiczone wiekiem (chip „WIEK · DATA SAVE") — sortowane po
+      //     savedAtISO (proxy daty wizyty z najstarszego snapshota)
+      //   • Notatki z clinicalDateISO bez linkedAgeMonths (chip „Wpis kliniczny
+      //     DATA") — sortowane po clinicalDateISO
+      //   • Kotwiczone notatki/observations (linkedAgeMonths != null) renderowane
+      //     POD chipem Pomiar o tym samym wieku (L-connector z B2 — niezmienione)
+      //   • Notatki ogólne (linkedAgeMonths=null, clinicalDateISO=null) USUNIĘTE
+      //     z Historii — pojawią się w zakładce Notatki w sekcji „Notatki ogólne"
+      //     (B3.3, ten plan)
       var measurements = events.filter(function (e) { return e.type === 'measurement'; });
       var notes = events.filter(function (e) { return e.type === 'note'; });
       var observations = events.filter(function (e) { return e.type === 'observation'; });
 
-      // Warstwa 1: wolne notatki (linkedAgeMonths == null) — DESC po dateISO.
-      // listPatientTimelineEvents już zwraca notatki w tej kolejności, więc
-      // wystarczy filter.
-      var freeNotes = notes.filter(function (n) { return n.linkedAgeMonths == null; });
-
-      // Warstwa 2: kotwiczone (notatki + observations z linkedAgeMonths) zindeksowane
-      // po ageMonths → renderowane NAD chipem Pomiar o tym samym wieku.
+      // Kotwiczone events (zindeksowane po ageMonths) — renderowane POD chipem
+      // Pomiar o tym wieku (zachowanie z B2). NIE są w głównym chronologicznym
+      // sortowaniu — należą do swojego pomiaru.
       var anchoredByAge = Object.create(null);
       function _addAnchored(evt) {
         var key = evt.linkedAgeMonths;
@@ -5429,76 +5872,100 @@
         if (!anchoredByAge[key]) anchoredByAge[key] = [];
         anchoredByAge[key].push(evt);
       }
-      notes.forEach(function (n) { _addAnchored(n); });
+      notes.forEach(function (n) { if (n.linkedAgeMonths != null) _addAnchored(n); });
       observations.forEach(function (o) { _addAnchored(o); });
 
-      // Empty state — jeśli filter nic nie przepuszcza w żadnej warstwie.
+      // Notatki z clinicalDateISO ALE bez linkedAgeMonths — wchodzą do mixed listy
+      // jako pełnoprawne chronologiczne wydarzenia (chip „Wpis kliniczny").
+      var clinicalDatedNotes = notes.filter(function (n) {
+        return n.linkedAgeMonths == null && n.clinicalDateISO;
+      });
+
+      // Mixed kolekcja: pomiary + clinical-dated notes, sortowane DESC po dacie.
+      // Dla pomiaru bierzemy savedAtISO (B3.2 vault dodało to pole — proxy daty
+      // wizyty z najstarszego snapshota). Dla notatki — clinicalDateISO (z
+      // T00:00:00.000Z normalizacją, którą zrobił vault w `dateISO`).
+      var mixedItems = [];
+      measurements.forEach(function (m) {
+        if (filterAllows('measurement')) {
+          mixedItems.push({
+            kind: 'measurement',
+            event: m,
+            sortISO: m.savedAtISO || ''
+          });
+        }
+      });
+      clinicalDatedNotes.forEach(function (n) {
+        if (filterAllows('note')) {
+          mixedItems.push({
+            kind: 'clinical-note',
+            event: n,
+            sortISO: n.dateISO || n.clinicalDateISO || ''
+          });
+        }
+      });
+      mixedItems.sort(function (a, b) {
+        if (a.sortISO > b.sortISO) return -1;
+        if (a.sortISO < b.sortISO) return 1;
+        return 0;
+      });
+
+      // Empty state — gdy mixed lista + osierocone kotwice są puste w obecnym filtrze.
       var anchoredHasAnyVisible = Object.keys(anchoredByAge).some(function (k) {
         return anchoredByAge[k].some(function (evt) { return filterAllows(evt.type); });
       });
-      var hasContent =
-        (filterAllows('note') && freeNotes.length > 0) ||
-        (filterAllows('measurement') && measurements.length > 0) ||
-        anchoredHasAnyVisible;
-      if (!hasContent) {
+      if (mixedItems.length === 0 && !anchoredHasAnyVisible) {
         listWrap.appendChild(el('p', {
           class: 'vilda-patient-empty-msg',
           text: f === 'all'
-            ? 'Brak wydarzeń w historii. Dodaj pomiar lub notatkę, aby zobaczyć timeline.'
+            ? 'Brak wydarzeń w historii. Dodaj pomiar lub notatkę z datą zdarzenia, aby zobaczyć timeline.'
             : 'Brak wydarzeń tego typu.'
         }));
         return;
       }
 
-      // ── Warstwa 1: Wolne notatki (góra osi) ───────────────────────────────
-      if (filterAllows('note') && freeNotes.length > 0) {
-        listWrap.appendChild(_renderSectionHeader('Notatki bez wizyty'));
-        freeNotes.forEach(function (n) {
-          listWrap.appendChild(_renderTimelineCard(n, _formatTimelineDate(n.dateISO), 'normal'));
-        });
-      }
-
-      // ── Warstwa 2: Historia pomiarów po wieku (DESC) ──────────────────────
-      // Każdy pomiar: pod nim kotwiczone notatki/obserwacje (jako "prelude wizyty"),
-      // potem chip Pomiar BIG. Kotwiczone events traktujemy jako część grupy pomiaru,
-      // więc nie pokazują się gdy filter wyłącza pomiary (poza filtrem typu samej notatki).
-      var hasMeasurementOrAnchoredVisible =
-        (filterAllows('measurement') && measurements.length > 0) || anchoredHasAnyVisible;
-      if (hasMeasurementOrAnchoredVisible) {
-        // Header sekcji tylko jeśli oba warstwy są obecne (żeby nie dublować
-        // wizualnie gdy są same wolne notatki).
-        if (freeNotes.length > 0 && filterAllows('note')) {
-          listWrap.appendChild(_renderSectionHeader('Historia pomiarów'));
-        }
-        measurements.forEach(function (m) {
+      // Render mixed timeline. Dla każdego pomiaru — od razu pod chipem rzucamy
+      // kotwiczone notatki/obserwacje (jak po B2 — L-connector + indent).
+      mixedItems.forEach(function (item) {
+        if (item.kind === 'measurement') {
+          var m = item.event;
+          // Nagłówek chipa Pomiar: WIEK + DATA (savedAtISO sformatowana DD-MM-RRRR).
+          // Bez daty — sam wiek (legacy/safety-net).
+          var header = _formatAge(m.ageMonths);
+          var dateStr = _formatDateDDMMYYYY(m.savedAtISO);
+          if (dateStr) header += ' · ' + dateStr;
+          listWrap.appendChild(_renderTimelineCard(m, header, 'normal'));
+          // Pod chipem — kotwiczone notatki/observations dla tego wieku.
           var anchored = anchoredByAge[m.ageMonths] || [];
-          // B2 (Wariant 1): kolejność zmieniona — najpierw chip Pomiar BIG
-          // (header z wiekiem na górze), POD spodem kotwiczone notatki/obserwacje
-          // wcięte w prawo + L-łącznik. Wizualnie pokazuje że notatki SĄ
-          // dzieckiem pomiaru (a nie chaotycznie nad nim).
-          if (filterAllows('measurement')) {
-            listWrap.appendChild(_renderTimelineCard(m, _formatAge(m.ageMonths), 'normal'));
-          }
           anchored.forEach(function (a) {
             if (filterAllows(a.type)) {
               listWrap.appendChild(_renderAnchoredCard(a));
             }
           });
+        } else if (item.kind === 'clinical-note') {
+          // Notatka z clinicalDateISO bez kotwicy wiekowej — chip „Wpis kliniczny
+          // DATA". DOB-resolved wiek pacjenta na tę datę dorzucimy w przyszłości
+          // (wymaga DOB pacjenta — pomijamy dla MVP).
+          var n = item.event;
+          var clinDate = _formatDateDDMMYYYY(n.clinicalDateISO + (n.clinicalDateISO && n.clinicalDateISO.length === 10 ? 'T00:00:00.000Z' : ''));
+          var clinHeader = 'Wpis kliniczny' + (clinDate ? ' · ' + clinDate : '');
+          listWrap.appendChild(_renderTimelineCard(n, clinHeader, 'normal'));
+        }
+      });
+
+      // Osierocone kotwice (linkedAgeMonths != null ale brak pasującego pomiaru) —
+      // renderujemy na dole jako fallback, żeby nie znikały bez ostrzeżenia.
+      Object.keys(anchoredByAge).forEach(function (ageKey) {
+        var ageM = Number(ageKey);
+        var hasMatchingMeas = measurements.some(function (m) { return m.ageMonths === ageM; });
+        if (hasMatchingMeas) return;
+        anchoredByAge[ageKey].forEach(function (a) {
+          if (filterAllows(a.type)) {
+            listWrap.appendChild(_renderTimelineCard(a,
+              'Kotwica: wiek ' + _formatAge(ageM) + ' (brak pomiaru)', 'normal'));
+          }
         });
-        // Kotwiczone z linkedAgeMonths który NIE pasuje do żadnego pomiaru (osierocone) —
-        // renderujemy na dole jako fallback, żeby nie znikały bez ostrzeżenia.
-        Object.keys(anchoredByAge).forEach(function (ageKey) {
-          var ageM = Number(ageKey);
-          var hasMatchingMeas = measurements.some(function (m) { return m.ageMonths === ageM; });
-          if (hasMatchingMeas) return;
-          anchoredByAge[ageKey].forEach(function (a) {
-            if (filterAllows(a.type)) {
-              listWrap.appendChild(_renderTimelineCard(a,
-                'Kotwica: wiek ' + _formatAge(ageM) + ' (brak pomiaru)', 'normal'));
-            }
-          });
-        });
-      }
+      });
     }
 
     function _handleTimelineEventClick(event) {

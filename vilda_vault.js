@@ -2588,6 +2588,77 @@
     return n;
   }
 
+  // B3.0 — data zdarzenia klinicznego (np. „włączono lek 12-03-2024"). NIE
+  // mylić z createdAtISO (data wpisania notatki). Format: YYYY-MM-DD (sama data
+  // bez godziny — decyzja produktowa B3 #1). Zakres: [1900-01-01, dziś+1rok].
+  // Dlaczego dziś+rok: tolerujemy follow-up („termin kontroli 10-01-2026")
+  // zapisany jako data zdarzenia, ale nie pozwalamy daty zbyt dalekiej.
+  function sanitizeClinicalDateISO(raw) {
+    if (raw == null) return null;
+    if (typeof raw !== 'string') return null;
+    var s = raw.trim();
+    if (s === '') return null;
+    var m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (!m) return null;
+    var yyyy = parseInt(m[1], 10);
+    var mm = parseInt(m[2], 10);
+    var dd = parseInt(m[3], 10);
+    if (yyyy < 1900 || yyyy > 2999) return null;
+    if (mm < 1 || mm > 12) return null;
+    if (dd < 1 || dd > 31) return null;
+    var d = new Date(Date.UTC(yyyy, mm - 1, dd));
+    if (isNaN(d.getTime())) return null;
+    if (d.getUTCFullYear() !== yyyy || d.getUTCMonth() !== mm - 1 || d.getUTCDate() !== dd) return null;
+    // Górna granica: dziś + 365 dni (rok do przodu — tolerancja follow-up).
+    var maxFuture = new Date(Date.now() + 365 * 24 * 3600 * 1000);
+    var maxUTC = new Date(Date.UTC(maxFuture.getUTCFullYear(), maxFuture.getUTCMonth(), maxFuture.getUTCDate()));
+    if (d.getTime() > maxUTC.getTime()) return null;
+    var pad = function (n) { return n < 10 ? '0' + n : String(n); };
+    return yyyy + '-' + pad(mm) + '-' + pad(dd);
+  }
+
+  // B3.0 — strukturalne pole „lek" w notatce klinicznej (gdy lekarz użył
+  // szablonu „Włączono lek" / „Zmieniono dawkę" / „Zakończono leczenie").
+  // Decyzja produktowa B3 #A1: name jako wolny string (z auto-suggest po stronie
+  // UI). Decyzja B3 #B1: dose jako wolny string (bez parsowania na liczbę+jednostkę).
+  // Walidacja: trim + clamp długości. Wszystkie pola opcjonalne — gdy lekarz
+  // wybrał szablon ale wszystko pozostawił puste, zwracamy null (nie wymuszamy).
+  function sanitizeMedication(value) {
+    if (!value || typeof value !== 'object') return null;
+    var ACTIONS = ['start', 'change', 'stop'];
+    var name = (typeof value.name === 'string') ? sanitizeNoteText(value.name).trim().substring(0, 200) : '';
+    var dose = (typeof value.dose === 'string') ? sanitizeNoteText(value.dose).trim().substring(0, 120) : '';
+    var actionRaw = (typeof value.action === 'string') ? value.action.trim().toLowerCase() : '';
+    var action = ACTIONS.indexOf(actionRaw) >= 0 ? actionRaw : null;
+    var previousDose = (typeof value.previousDose === 'string')
+      ? sanitizeNoteText(value.previousDose).trim().substring(0, 120) : '';
+    // Pole obowiązkowe: action (start/change/stop). Bez prawidłowej akcji nie ma
+    // zdarzenia klinicznego — sama nazwa leku bez akcji to tylko etykieta. Gdy
+    // lekarz nie wybrał akcji albo wpisał nieznaną, traktujemy jak brak medication.
+    if (!action) return null;
+    var out = {};
+    if (name) out.name = name;
+    if (dose) out.dose = dose;
+    if (action) out.action = action;
+    if (previousDose && action === 'change') out.previousDose = previousDose;
+    return out;
+  }
+
+  // B3.0 — strukturalne pole „wynik badania" w notatce klinicznej (gdy lekarz
+  // użył szablonu „Wynik badania"). Wszystkie pola wolne stringi z trim+clamp.
+  function sanitizeLabResult(value) {
+    if (!value || typeof value !== 'object') return null;
+    var test = (typeof value.test === 'string') ? sanitizeNoteText(value.test).trim().substring(0, 120) : '';
+    var val = (typeof value.value === 'string') ? sanitizeNoteText(value.value).trim().substring(0, 120) : '';
+    var norm = (typeof value.norm === 'string') ? sanitizeNoteText(value.norm).trim().substring(0, 200) : '';
+    if (!test && !val) return null;
+    var out = {};
+    if (test) out.test = test;
+    if (val) out.value = val;
+    if (norm) out.norm = norm;
+    return out;
+  }
+
   async function _decryptPatientNoteRecord(rec) {
     let content = { title: '', body: '' };
     try {
@@ -2608,6 +2679,15 @@
       // B1.0: linkedAgeMonths — wiek pacjenta przy wizycie (jeśli notatka powstała
       // razem z wpisem pomiaru) lub null (notatka "wolna").
       linkedAgeMonths: normalizeLinkedAgeMonths(rec.linkedAgeMonths),
+      // B3.0: clinicalDateISO — data zdarzenia klinicznego (np. „włączono lek
+      // 12-03-2024"). NIE mylić z createdAtISO (data wpisania notatki).
+      // Null = notatka nie jest przypisana do konkretnej daty zdarzenia.
+      clinicalDateISO: sanitizeClinicalDateISO(rec.clinicalDateISO),
+      // B3.0: medication — strukturalne pole leku ({name, dose, action, previousDose?}).
+      // Null gdy notatka nie dotyczy leku (zwykła notatka obserwacyjna).
+      medication: sanitizeMedication(rec.medication),
+      // B3.0: labResult — strukturalne pole wyniku badania ({test, value, norm?}).
+      labResult: sanitizeLabResult(rec.labResult),
       createdAtISO: rec.createdAtISO || null,
       updatedAtISO: rec.updatedAtISO || null
     };
@@ -2646,12 +2726,19 @@
     // B1.0: analogicznie zachowaj existing.linkedAgeMonths gdy payload nie podał
     // własnego — czysta edycja treści nie powinna zrywać kotwicy do wizyty.
     let existingLinkedAgeMonths = null;
+    // B3.0: analogicznie zachowaj clinicalDateISO + medication + labResult.
+    let existingClinicalDateISO = null;
+    let existingMedication = null;
+    let existingLabResult = null;
     if (noteId) {
       const existing = await getAdapter().getPatientNoteForUser(currentUserId, noteId);
       if (existing) {
         createdAtISO = existing.createdAtISO || null;
         existingCompletedAtISO = existing.completedAtISO || null;
         existingLinkedAgeMonths = normalizeLinkedAgeMonths(existing.linkedAgeMonths);
+        existingClinicalDateISO = sanitizeClinicalDateISO(existing.clinicalDateISO);
+        existingMedication = sanitizeMedication(existing.medication);
+        existingLabResult = sanitizeLabResult(existing.labResult);
       } else {
         isNew = true;
       }
@@ -2685,6 +2772,34 @@
       linkedAgeMonths = normalizeLinkedAgeMonths(payload.linkedAgeMonths);
     }
 
+    // B3.0: clinicalDateISO resolution — analogicznie:
+    //   undefined → zachowaj existing
+    //   null/''   → wyczyść (notatka traci datę zdarzenia)
+    //   'YYYY-MM-DD' → ustaw
+    let clinicalDateISO;
+    if (!Object.prototype.hasOwnProperty.call(payload, 'clinicalDateISO')) {
+      clinicalDateISO = existingClinicalDateISO;
+    } else {
+      clinicalDateISO = sanitizeClinicalDateISO(payload.clinicalDateISO);
+    }
+
+    // B3.0: medication / labResult resolution — analogicznie:
+    //   undefined → zachowaj existing (czysta edycja treści zachowuje strukturalne pola)
+    //   null/{}   → wyczyść (sanityzator zwraca null gdy obiekt pusty/niesensowny)
+    //   object    → sanityzuj i ustaw
+    let medication;
+    if (!Object.prototype.hasOwnProperty.call(payload, 'medication')) {
+      medication = existingMedication;
+    } else {
+      medication = sanitizeMedication(payload.medication);
+    }
+    let labResult;
+    if (!Object.prototype.hasOwnProperty.call(payload, 'labResult')) {
+      labResult = existingLabResult;
+    } else {
+      labResult = sanitizeLabResult(payload.labResult);
+    }
+
     const content = { title: title, body: body };
     const bodyCipher = await encryptPayloadForCurrentUser(content);
     const rec = {
@@ -2697,6 +2812,13 @@
       // B1.0: plain-text meta (jak dueDateISO) — żeby timeline filter / sortowanie
       // po wieku mogło działać bez deszyfrowania bodyCipher.
       linkedAgeMonths: linkedAgeMonths,
+      // B3.0: plain-text meta dla mixed timeline (sort po dacie zdarzenia).
+      // null = notatka nie ma daty zdarzenia → fallback do createdAtISO.
+      clinicalDateISO: clinicalDateISO,
+      // B3.0: strukturalne pola dla filtrowania/wyszukiwania (np. „pokaż wszystkie
+      // notatki z Euthyrox"). Plain-text — sync LWW przejdzie razem z resztą rec.
+      medication: medication,
+      labResult: labResult,
       createdAtISO: createdAtISO,
       updatedAtISO: nowISO
     };
@@ -2764,6 +2886,38 @@
     }
     out.sort(_compareForListing);
     return out;
+  }
+
+  // B3.0 — Lista unikalnych nazw leków z wszystkich notatek użytkownika.
+  // Używana przez edytor notatki (B3.1) do auto-suggest w polu „Lek"
+  // (HTML5 <datalist>, decyzja produktowa B3 #A1 — user-defined + auto-suggest).
+  // Czyta plain-text meta `medication.name` (NIE deszyfruje bodyCipher), więc szybko.
+  // Sortuje alfabetycznie (datalist nie sortuje — sortujemy tu by lekarz dostał
+  // czyste sugestie).
+  async function listMedicationNamesForCurrentUser() {
+    if (!isUnlocked()) throw new Error('Zaloguj się, by pobrać sugestie leków.');
+    const records = await getAdapter().listPatientNotesForUser(currentUserId);
+    const seen = new Set();
+    for (let i = 0; i < records.length; i += 1) {
+      const r = records[i];
+      const med = sanitizeMedication(r && r.medication);
+      if (med && med.name) seen.add(med.name);
+    }
+    return Array.from(seen).sort(function (a, b) { return a.localeCompare(b, 'pl'); });
+  }
+
+  // B3.0 — Analogicznie dla `labResult.test`. Używana przez edytor notatki
+  // (B3.1) — szablon „Wynik badania" w polu „Badanie".
+  async function listLabTestNamesForCurrentUser() {
+    if (!isUnlocked()) throw new Error('Zaloguj się, by pobrać sugestie badań.');
+    const records = await getAdapter().listPatientNotesForUser(currentUserId);
+    const seen = new Set();
+    for (let i = 0; i < records.length; i += 1) {
+      const r = records[i];
+      const lab = sanitizeLabResult(r && r.labResult);
+      if (lab && lab.test) seen.add(lab.test);
+    }
+    return Array.from(seen).sort(function (a, b) { return a.localeCompare(b, 'pl'); });
   }
 
   // Wspólne sortowanie dla obu list:
@@ -3095,8 +3249,10 @@
       });
 
       var dedupedByKey = new Map(); // key → first-seen row (z najnowszego snapshotu)
+      var oldestSavedAtByKey = new Map(); // B3.2 — key → savedAtISO NAJSTARSZEGO snapshota
       for (var si = 0; si < snapshotsSortedDesc.length; si += 1) {
         var snapForMeasure = snapshotsSortedDesc[si];
+        var snapSavedAt = (snapForMeasure && snapForMeasure.savedAtISO) || null;
         var rows = _extractMeasurementHistory(snapForMeasure);
         for (var ri = 0; ri < rows.length; ri += 1) {
           var r = rows[ri];
@@ -3111,6 +3267,16 @@
             // jedna kropka na siatce = jeden chip w timeline = jeden snapshot.
             r._snapshotId = (snapForMeasure && snapForMeasure.snapshotId) || null;
             dedupedByKey.set(key, r);
+          }
+          // B3.2 — savedAtISO NAJSTARSZEGO snapshota dla tego pomiaru (najlepszy
+          // dostępny proxy daty pierwotnego wpisu; późniejsze edycje nie cofają tej
+          // daty wstecz). Walking DESC → każda kolejna iteracja widzi STARSZY snapshot,
+          // więc nadpisujemy bezwarunkowo, by ostateczna wartość była z najstarszego.
+          if (snapSavedAt) {
+            var existing = oldestSavedAtByKey.get(key);
+            if (!existing || snapSavedAt < existing) {
+              oldestSavedAtByKey.set(key, snapSavedAt);
+            }
           }
         }
       }
@@ -3182,6 +3348,21 @@
         if (curr.height != null && curr.weight != null && curr.height > 0) {
           bmi = Math.round((curr.weight / Math.pow(curr.height / 100, 2)) * 10) / 10;
         }
+        // B3.2 — savedAtISO: najstarsza data zapisu jakiegokolwiek snapshota
+        // zawierającego ten pomiar (proxy daty wizyty). UI w B3.2 wykorzystuje
+        // do mixed chronological timeline (pomiary + notatki z clinicalDateISO
+        // w jednej kolekcji DESC po dacie). Dla pomiaru z safety-net fallback
+        // (`_fallback` key) — savedAtISO najnowszego snapshota.
+        var measureSavedAt = null;
+        var measureKey = curr.ageMonths + '|'
+          + (curr.height != null ? curr.height.toFixed(2) : '_')
+          + '|' + (curr.weight != null ? curr.weight.toFixed(2) : '_');
+        if (oldestSavedAtByKey.has(measureKey)) {
+          measureSavedAt = oldestSavedAtByKey.get(measureKey);
+        } else if (snapshotsSortedDesc.length > 0 && snapshotsSortedDesc[0]) {
+          measureSavedAt = snapshotsSortedDesc[0].savedAtISO || null;
+        }
+
         events.push({
           type: 'measurement',
           patientId: patientId,
@@ -3197,8 +3378,11 @@
           // gdy pomiar pochodzi z safety-net fallback (`_fallback` key, gdy tabele
           // measurements były puste) lub gdy snapshot nie ma snapshotId (legacy
           // testowe payloady). UI sprawdza !== null przed pokazaniem menu Edytuj.
-          snapshotId: (typeof curr._snapshotId === 'string' && curr._snapshotId) ? curr._snapshotId : null
-          // NIE eksponujemy dateISO — measurement events kotwiczą się wiekiem.
+          snapshotId: (typeof curr._snapshotId === 'string' && curr._snapshotId) ? curr._snapshotId : null,
+          // B3.2 — savedAtISO proxy daty wizyty (oldest snapshot's savedAtISO).
+          // Pomiary nadal NIE mają dateISO (kotwica = wiek), ale savedAtISO pozwala
+          // UI w B3.2 sortować mixed chronologicznie z notatkami.
+          savedAtISO: measureSavedAt
         });
       }
     }
@@ -3212,7 +3396,13 @@
       const note = notes[j];
       events.push({
         type: 'note',
-        dateISO: note.createdAtISO || note.updatedAtISO || new Date().toISOString(),
+        // B3.0: dateISO bierze z priorytetem clinicalDateISO (data zdarzenia
+        // klinicznego — „kiedy włączono lek"), fallback do createdAtISO (data
+        // wpisania notatki). UI w B3.2 użyje tego do mixed chronological sort.
+        // Format clinicalDateISO to 'YYYY-MM-DD', więc rozszerzamy do 'YYYY-MM-DDT00:00:00.000Z'
+        // żeby porównanie stringów z createdAtISO (pełnym ISO) działało poprawnie.
+        dateISO: (note.clinicalDateISO ? note.clinicalDateISO + 'T00:00:00.000Z' : null)
+          || note.createdAtISO || note.updatedAtISO || new Date().toISOString(),
         patientId: patientId,
         noteId: note.id,
         category: note.category,
@@ -3226,7 +3416,14 @@
         // UI w B1.6 użyje tego pola żeby renderować kotwiczone notatki nad pomiarem
         // o tym wieku, a wolne na samej górze osi czasu.
         linkedAgeMonths: (typeof note.linkedAgeMonths === 'number' && note.linkedAgeMonths > 0)
-          ? note.linkedAgeMonths : null
+          ? note.linkedAgeMonths : null,
+        // B3.0: clinicalDateISO — data zdarzenia klinicznego (np. „włączono lek
+        // 12-03-2024"). Null gdy notatka nie ma daty zdarzenia (zwykła obserwacja).
+        clinicalDateISO: note.clinicalDateISO || null,
+        // B3.0: strukturalne pola lek + wynik badania (do filtrowania/wyszukiwania
+        // w B3.2 — np. „pokaż wszystkie notatki z Euthyrox").
+        medication: note.medication || null,
+        labResult: note.labResult || null
       });
     }
 
@@ -6573,6 +6770,14 @@
     savePatientNote: savePatientNote,
     getPatientNote: getPatientNote,
     listPatientNotesForPatient: listPatientNotesForPatient,
+    // B3.0 — sanityzatory pól notatki klinicznej (do testów / external usage).
+    sanitizeClinicalDateISO: sanitizeClinicalDateISO,
+    sanitizeMedication: sanitizeMedication,
+    sanitizeLabResult: sanitizeLabResult,
+    // B3.0 — listy unikalnych nazw leków / badań dla auto-suggest w edytorze
+    // notatki (B3.1). User-defined, decyzja produktowa A1.
+    listMedicationNamesForCurrentUser: listMedicationNamesForCurrentUser,
+    listLabTestNamesForCurrentUser: listLabTestNamesForCurrentUser,
     listAllPatientNotes: listAllPatientNotes,
     removePatientNote: removePatientNote,
     onPatientNoteChanged: onPatientNoteChanged,
