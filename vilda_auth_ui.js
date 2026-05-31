@@ -4474,6 +4474,20 @@
       } catch (e) {
         logError('renderPatientNotesSection', e);
       }
+      // B3-fix post-deploy: zapis/usunięcie notatki ZMIENIA też dane Historii
+      // (mixed timeline z B3.2, kotwiczone notatki z B2). Bez invalidate'owania
+      // _timelineRendered, Historia tab pokazywała stare dane do refresh strony.
+      // Fix: jeśli Historia była renderowana → re-render od razu gdy aktywny tab,
+      // inaczej reset flag żeby następna wizyta wymusiła fresh fetch.
+      if (_timelineRendered) {
+        var isTimelineActive = false;
+        try { isTimelineActive = tabTimeline.classList.contains('vilda-patient-tab--active'); } catch (_) {}
+        if (isTimelineActive) {
+          reRenderTimeline();
+        } else {
+          _timelineRendered = false;
+        }
+      }
     }
 
     // ── ZAKŁADKA „Historia" (P5) — chronologiczny timeline wszystkich wydarzeń ──

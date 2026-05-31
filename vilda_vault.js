@@ -5028,6 +5028,15 @@
             // newer wins — poprzedni check isNewer już to gwarantuje).
             completedAtISO: normalizeCompletedAtISO(rpn.completedAtISO),
             linkedAgeMonths: normalizeLinkedAgeMonths(rpn.linkedAgeMonths),
+            // B3.0 fix (post-deploy): strukturalne pola kliniczne (clinicalDateISO,
+            // medication, labResult) MUSZĄ przeżyć round-trip sync. Wcześniej rec
+            // był odbudowywany bez nich → drugie urządzenie (i własna nasłuchowa
+            // pętla push→pull) gubiła medication/labResult/clinicalDateISO.
+            // Sanitizery zwracają null gdy pole nieobecne — bezpieczne dla pre-B3
+            // sync payloadów (legacy notatki bez tych pól dalej działają).
+            clinicalDateISO: sanitizeClinicalDateISO(rpn.clinicalDateISO),
+            medication: sanitizeMedication(rpn.medication),
+            labResult: sanitizeLabResult(rpn.labResult),
             createdAtISO: rpn.createdAtISO || rpn.updatedAtISO,
             updatedAtISO: rpn.updatedAtISO
           });
