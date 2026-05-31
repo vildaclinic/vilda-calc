@@ -1074,6 +1074,29 @@ select.vilda-auth-input {
   background: #e1f5ee !important;
   border-color: #00838d !important;
 }
+/* P6.3 — pill „+ Nowy pomiar" obok edit pilla. Edit jest na top:8px,
+ * Nowy pomiar idzie poniżej (top:42px), oba w prawej kolumnie hero.
+ * Primary turkusowy CTA — to najczęstsza akcja w karcie pacjenta. */
+.vilda-patient-hero-new-measure-pill {
+  position: absolute !important;
+  top: 42px;
+  right: 8px;
+  background: #00838d !important;
+  color: #fff !important;
+  border: 0.5px solid #00838d !important;
+  width: auto !important;
+  min-width: 0 !important;
+  padding: 5px 14px !important;
+  font-size: 0.82rem !important;
+  font-weight: 600 !important;
+  border-radius: 999px !important;
+  flex: 0 0 auto !important;
+  cursor: pointer;
+}
+.vilda-patient-hero-new-measure-pill:hover {
+  background: #006670 !important;
+  border-color: #006670 !important;
+}
 .vilda-patient-hero-avatar {
   flex: 0 0 44px;
   width: 44px;

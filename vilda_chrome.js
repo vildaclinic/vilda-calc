@@ -67,6 +67,20 @@
           tip: 'Wczytaj pacjenta i wpisz wiek + wzrost/wagę, aby dodać notatkę powiązaną z tą wizytą.'
         },
         {
+          // P6.4: szybki pomiar (waga + wzrost) — otwiera modal showQuickMeasureModal
+          // dla aktualnie wczytanego pacjenta. W przeciwieństwie do B1.8 (notatka),
+          // nie wymaga już wpisanego pomiaru — to JEST funkcja wpisywania pomiaru.
+          // Wymaga jedynie zalogowania + wczytanego pacjenta (z bazy lub przed
+          // zapisaniem).
+          id: 'quickMeasureBtnSidebar',
+          label: 'Nowy pomiar',
+          icon: 'plus-circle',
+          role: 'button',
+          authOnly: true,
+          ariaDisabled: true,
+          tip: 'Wczytaj pacjenta, aby dodać nowy pomiar (waga, wzrost).'
+        },
+        {
           id: 'patientsListBtnSidebar',
           label: 'Pacjenci',
           icon: 'users',

@@ -4122,6 +4122,12 @@
     getFinalAudit,
     getApiSurfaceStatus,
     dumpFinalAudit,
+    // P6.3 — eksport helpera FIX A/B/C. Modal „+ Nowy pomiar" w karcie pacjenta
+    // klonuje payload poprzedniego snapshota i nadpisuje pola pomiaru — chcemy
+    // żeby `growthBasic.data.measurements[]` był spójny z tym, co robi
+    // applyLoadedData/saveUserData. Eksport pozwala wywołać tę samą logikę
+    // bez powielania.
+    _ensureCurrentMeasurementInHistory,
     versionInfo: () => ({ version: VERSION })
   };
 
