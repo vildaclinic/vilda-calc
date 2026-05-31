@@ -1789,6 +1789,167 @@
     return JSON.parse(text);
   }
 
+  // ─── P6.0 — Helpery dla daty urodzenia pacjenta (DOB) ────────────────────
+  // DOB jest OPCJONALNE. Gdy pacjent ma dobISO, aplikacja liczy wiek z DOB
+  // na bieżąco. Gdy nie ma — aplikacja używa wieku wpisanego ręcznie przez
+  // lekarza (legacy: payload.user.age + ageMonths). Zero przymusu migracji.
+  //
+  // Format: YYYY-MM-DD (ISO 8601 date-only, np. '2018-01-12').
+  // Zakres: 1900-01-01 ≤ dobISO ≤ dziś. Nieprawidłowy format → null.
+
+  /**
+   * Sanityzuje string DOB do formatu YYYY-MM-DD.
+   * Akceptuje: 'YYYY-MM-DD', 'YYYY-M-D', null, ''.
+   * Zwraca: 'YYYY-MM-DD' (pad MM/DD zerami) jeśli prawidłowe, inaczej null.
+   * Walidacje: regex, parsowalność do Date, zakres [1900-01-01, dziś],
+   * dni-w-miesiącu (Date('2018-02-30') → 'Mar 02' → odrzucamy).
+   */
+  function sanitizeDobISO(raw) {
+    if (raw == null) return null;
+    if (typeof raw !== 'string') return null;
+    const s = raw.trim();
+    if (s === '') return null;
+    const m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (!m) return null;
+    const yyyy = parseInt(m[1], 10);
+    const mm = parseInt(m[2], 10);
+    const dd = parseInt(m[3], 10);
+    if (yyyy < 1900 || yyyy > 2999) return null;
+    if (mm < 1 || mm > 12) return null;
+    if (dd < 1 || dd > 31) return null;
+    // Round-trip przez Date — wykrywa np. 2018-02-30 (przejście na marzec)
+    const d = new Date(Date.UTC(yyyy, mm - 1, dd));
+    if (isNaN(d.getTime())) return null;
+    if (d.getUTCFullYear() !== yyyy || d.getUTCMonth() !== mm - 1 || d.getUTCDate() !== dd) return null;
+    // Nie z przyszłości (porównanie po dniu w UTC — bez godzin/stref)
+    const now = new Date();
+    const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    if (d.getTime() > todayUTC.getTime()) return null;
+    // Format wyjściowy zawsze z padowaniem (np. '2018-01-12')
+    const pad = function (n) { return n < 10 ? '0' + n : String(n); };
+    return yyyy + '-' + pad(mm) + '-' + pad(dd);
+  }
+
+  /**
+   * Oblicza wiek pacjenta na podstawie DOB i opcjonalnej daty "na kiedy".
+   *
+   * @param {string} dobISO — sanityzowana data urodzenia ('YYYY-MM-DD')
+   * @param {string|Date} [asOf] — data odniesienia (default: dziś).
+   *                               Może być ISO string lub obiekt Date.
+   * @returns {{years:number, ageMonths:number, totalMonths:number}|null}
+   *   years: pełne lata
+   *   ageMonths: pełne miesiące PO ostatnich urodzinach (0–11), zgodnie z konwencją
+   *              payload.user.ageMonths (= dodatkowe miesiące, nie suma)
+   *   totalMonths: years*12 + ageMonths (do obliczeń centylowych)
+   *
+   * Zwraca null gdy dobISO nieprawidłowe lub asOf < dobISO.
+   */
+  function calcAgeFromDOB(dobISO, asOf) {
+    const safe = sanitizeDobISO(dobISO);
+    if (!safe) return null;
+    const m = safe.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    const birth = new Date(Date.UTC(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10)));
+
+    let asOfDate;
+    if (asOf instanceof Date) {
+      asOfDate = asOf;
+    } else if (typeof asOf === 'string' && asOf) {
+      asOfDate = new Date(asOf);
+      if (isNaN(asOfDate.getTime())) asOfDate = new Date();
+    } else {
+      asOfDate = new Date();
+    }
+    // Normalizujemy do UTC-midnight, by uniknąć błędów stref/godziny
+    const asOfUTC = new Date(Date.UTC(asOfDate.getUTCFullYear(), asOfDate.getUTCMonth(), asOfDate.getUTCDate()));
+
+    if (asOfUTC.getTime() < birth.getTime()) return null;
+
+    let years = asOfUTC.getUTCFullYear() - birth.getUTCFullYear();
+    let months = asOfUTC.getUTCMonth() - birth.getUTCMonth();
+    let days = asOfUTC.getUTCDate() - birth.getUTCDate();
+    if (days < 0) {
+      months -= 1;
+      // doliczamy dni z poprzedniego miesiąca — nieistotne dla wieku w miesiącach,
+      // ale walidujemy znak miesięcy
+    }
+    if (months < 0) {
+      years -= 1;
+      months += 12;
+    }
+    const totalMonths = years * 12 + months;
+    return { years: years, ageMonths: months, totalMonths: totalMonths };
+  }
+
+  /**
+   * Zwraca aktualny wiek pacjenta wg priorytetu:
+   *   1) Jeśli payload.user.dobISO jest prawidłowe → liczy z DOB na asOf
+   *      (domyślnie: dziś).
+   *   2) Inaczej → fallback do payload.user.age + payload.user.ageMonths.
+   *
+   * To centralny resolver dla całej aplikacji — wszystkie miejsca pokazujące
+   * wiek pacjenta powinny przez niego przechodzić, żeby DOB i legacy działały
+   * spójnie (i żeby przejście na DOB nie wymagało aktualizacji wielu callsites).
+   *
+   * @param {Object} payload — payload pacjenta z snapshota
+   * @param {string|Date} [asOf] — opcjonalnie, data referencyjna (default: dziś)
+   * @returns {{years:number, ageMonths:number, totalMonths:number, source:'dob'|'legacy'|'none'}}
+   */
+  function resolvePatientAge(payload, asOf) {
+    const user = (payload && payload.user) || {};
+    if (user.dobISO) {
+      const fromDob = calcAgeFromDOB(user.dobISO, asOf);
+      if (fromDob) return Object.assign({}, fromDob, { source: 'dob' });
+    }
+    const yearsRaw = user.age != null ? parseInt(user.age, 10) : null;
+    const monthsRaw = user.ageMonths != null ? parseInt(user.ageMonths, 10) : null;
+    const years = (yearsRaw != null && isFinite(yearsRaw) && yearsRaw >= 0) ? yearsRaw : null;
+    const months = (monthsRaw != null && isFinite(monthsRaw) && monthsRaw >= 0) ? monthsRaw : null;
+    if (years == null && months == null) {
+      return { years: 0, ageMonths: 0, totalMonths: 0, source: 'none' };
+    }
+    const y = years != null ? years : 0;
+    const m = months != null ? months : 0;
+    return { years: y, ageMonths: m, totalMonths: y * 12 + m, source: 'legacy' };
+  }
+
+  /**
+   * P6.1 — Helpery konwersji DOB między STORAGE (ISO 8601 'YYYY-MM-DD') a
+   * DISPLAY (polski format 'DD-MM-RRRR'). Storage zostaje ISO bo to standard
+   * międzynarodowy, sortowalny stringiem, kompatybilny z new Date() i JSON.
+   * Display jest PL, bo to co lekarz wpisuje i widzi.
+   */
+
+  /**
+   * Formatuje ISO DOB ('YYYY-MM-DD') do polskiego display ('DD-MM-RRRR').
+   * Zwraca '' gdy null / nieprawidłowe (do bezpiecznego ustawienia input.value).
+   */
+  function formatDobForDisplay(isoOrNull) {
+    const safe = sanitizeDobISO(isoOrNull);
+    if (!safe) return '';
+    const m = safe.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return '';
+    return m[3] + '-' + m[2] + '-' + m[1];
+  }
+
+  /**
+   * Parsuje polski display DOB ('DD-MM-RRRR' lub 'DD.MM.RRRR' lub 'DD/MM/RRRR')
+   * do ISO ('YYYY-MM-DD') używanego w storage. Toleruje 1-cyfrowe DD/MM
+   * (np. '5-1-2018'). Zwraca null gdy nieprawidłowe (przejdzie też przez
+   * sanitizeDobISO, więc waliduje też zakres i wartości).
+   */
+  function parseDobFromDisplay(displayStr) {
+    if (typeof displayStr !== 'string') return null;
+    const s = displayStr.trim();
+    if (s === '') return null;
+    // Akceptujemy separatory: -, ., / (najczęstsze w PL)
+    const m = s.match(/^(\d{1,2})[-./](\d{1,2})[-./](\d{4})$/);
+    if (!m) return null;
+    const dd = m[1].length === 1 ? '0' + m[1] : m[1];
+    const mm = m[2].length === 1 ? '0' + m[2] : m[2];
+    const yyyy = m[3];
+    return sanitizeDobISO(yyyy + '-' + mm + '-' + dd);
+  }
+
   function extractHeaderFromPayload(payload) {
     // Wyciągamy minimalny nagłówek z surowego payloadu collectUserData()
     const name = (payload && typeof payload.name === 'string' && payload.name.trim()) ? payload.name.trim() : null;
@@ -1796,7 +1957,11 @@
     const ageMonths = payload && payload.user && payload.user.ageMonths != null ? payload.user.ageMonths : null;
     const sex = payload && payload.user && payload.user.sex ? payload.user.sex : null;
     const timestampISO = payload && payload.timestampISO ? payload.timestampISO : new Date().toISOString();
-    return { name: name, age: age, ageMonths: ageMonths, sex: sex, timestampISO: timestampISO };
+    // P6.0 — DOB w nagłówku, by lista pacjentów (showPatientsList → buildCard)
+    // mogła pokazać wiek liczony z DOB bez deszyfrowania pełnego payloadu.
+    // null gdy brak lub niesanityzowalne — UI ma fallback do age/ageMonths.
+    const dobISO = sanitizeDobISO(payload && payload.user && payload.user.dobISO);
+    return { name: name, age: age, ageMonths: ageMonths, sex: sex, dobISO: dobISO, timestampISO: timestampISO };
   }
 
   function pickPatientIdFromPayload(payload) {
@@ -1860,6 +2025,21 @@
     if (!isUnlocked()) throw new Error('Zaloguj się, by zapisać pacjenta.');
     if (!payload || typeof payload !== 'object') throw new Error('savePatient: brak payloadu.');
     const opts = (options && typeof options === 'object') ? options : {};
+
+    // P6.0 — sanityzuj DOB w samym payloadzie ZANIM go zaszyfrujemy.
+    // extractHeaderFromPayload poniżej i tak waliduje przy odczycie nagłówka,
+    // ale chcemy żeby payload również trzymał czystą wartość (albo brak), bo
+    // _decryptSnapshot wraca to wprost do showPatientCard / showQuickMeasureModal.
+    if (payload.user && typeof payload.user === 'object') {
+      const cleanDob = sanitizeDobISO(payload.user.dobISO);
+      if (cleanDob) {
+        payload.user.dobISO = cleanDob;
+      } else if ('dobISO' in payload.user) {
+        // Nieprawidłowa wartość → usuwamy pole (best-effort, bez błędu).
+        delete payload.user.dobISO;
+      }
+    }
+
     const header = extractHeaderFromPayload(payload);
     if (!header.name) throw new Error('savePatient: brak imienia pacjenta w payloadzie.');
 
@@ -1968,6 +2148,177 @@
     const patient = await getPatient(patientId);
     if (!patient || !patient.snapshots.length) return null;
     return patient.snapshots[0]; // już posortowane malejąco po dacie
+  }
+
+  /**
+   * P6.6a — Edit-in-place dla konkretnego snapshota pacjenta.
+   *
+   * Klient (modal „Nowy pomiar" w trybie 'edit') koryguje istniejący snapshot
+   * bez tworzenia drugiego: zaszyfrowany payload jest podmieniany pod tym samym
+   * snapshotId, więc historia pacjenta liczy tyle samo wpisów, ale wartości
+   * zostały zaktualizowane. Sync (LWW po savedAtISO) zauważy zmianę, bo
+   * aktualizujemy też savedAtISO.
+   *
+   * Reguły:
+   *   • payload.user.dobISO jest sanityzowane analogicznie jak w savePatient
+   *   • headerCipher jest re-szyfrowany (bo payload.name, age, sex mogły się zmienić)
+   *   • patientRec.lastSavedAtISO jest aktualizowany na czas update
+   *   • snapshotCount NIE rośnie (to UPDATE, nie INSERT)
+   *
+   * @param {string} patientId
+   * @param {string} snapshotId — ID istniejącego snapshota (z patient.snapshots[*])
+   * @param {Object} newPayload — pełny nowy payload (klonowany z poprzedniego + edycje)
+   * @returns {Promise<{patientId, snapshotId, header, savedAtISO}>}
+   * @throws gdy vault zablokowany, brak patientId/snapshotId, snapshot nie istnieje
+   */
+  async function updateSnapshotPayload(patientId, snapshotId, newPayload) {
+    if (!isUnlocked()) throw new Error('Zaloguj się, by zaktualizować pomiar.');
+    if (typeof patientId !== 'string' || !patientId) throw new Error('updateSnapshotPayload: brak patientId.');
+    if (typeof snapshotId !== 'string' || !snapshotId) throw new Error('updateSnapshotPayload: brak snapshotId.');
+    if (!newPayload || typeof newPayload !== 'object') throw new Error('updateSnapshotPayload: brak payloadu.');
+
+    // Sanityzacja DOB (zgodność z savePatient).
+    if (newPayload.user && typeof newPayload.user === 'object') {
+      const cleanDob = sanitizeDobISO(newPayload.user.dobISO);
+      if (cleanDob) {
+        newPayload.user.dobISO = cleanDob;
+      } else if ('dobISO' in newPayload.user) {
+        delete newPayload.user.dobISO;
+      }
+    }
+
+    // Sprawdź czy snapshot istnieje (defensive — bez tego putSnapshotForUser
+    // upsertuje, więc UPDATE może niezauważenie utworzyć nowy snapshot).
+    const existingSnaps = await getAdapter().listSnapshotsForUser(currentUserId, patientId);
+    const existingSnap = existingSnaps.find(function (s) { return s.snapshotId === snapshotId; });
+    if (!existingSnap) {
+      throw new Error('updateSnapshotPayload: snapshot ' + snapshotId + ' nie istnieje dla pacjenta.');
+    }
+
+    // Re-szyfruj payload + headerCipher (nagłówek mógł się zmienić, np. wiek).
+    const header = extractHeaderFromPayload(newPayload);
+    if (!header.name) throw new Error('updateSnapshotPayload: brak imienia pacjenta w payloadzie.');
+    const newPayloadCipher = await encryptPayloadForCurrentUser(newPayload);
+    const newHeaderCipher = await encryptPayloadForCurrentUser(header);
+    const nowISO = new Date().toISOString();
+
+    // Podmiana snapshota pod tym samym snapshotId (putSnapshotForUser to upsert
+    // po snapshotId — w adapterze IDB jest to `put`, w memory tablica jest
+    // szukana po snapshotId i nadpisywana).
+    await getAdapter().putSnapshotForUser(currentUserId, {
+      snapshotId: snapshotId,
+      patientId: patientId,
+      savedAtISO: nowISO,
+      payloadCipher: newPayloadCipher
+    });
+
+    // Patient record — nagłówek + lastSavedAtISO. snapshotCount BEZ ZMIAN
+    // (UPDATE, nie INSERT). createdAtISO zachowany.
+    const existingPatient = await getAdapter().getPatientForUser(currentUserId, patientId);
+    if (existingPatient) {
+      await getAdapter().putPatientForUser(currentUserId, {
+        patientId: patientId,
+        headerCipher: newHeaderCipher,
+        createdAtISO: existingPatient.createdAtISO || nowISO,
+        lastSavedAtISO: nowISO,
+        snapshotCount: existingPatient.snapshotCount || existingSnaps.length
+      });
+    }
+
+    const result = {
+      patientId: patientId,
+      snapshotId: snapshotId,
+      header: header,
+      savedAtISO: nowISO,
+      shortHash: shortHashOfPatientId(patientId),
+      isUpdate: true
+    };
+    notifyPatientSaved(result);
+    return result;
+  }
+
+  /**
+   * P6.6a — Usuwa konkretny snapshot pacjenta.
+   *
+   * Jeśli to ostatni snapshot pacjenta, rzucamy błąd — pacjent bez snapshotów
+   * jest niespójny (UI by się rozpadł, listPatientTimelineEvents zwróciłby
+   * pustą historię mimo że pacjent istnieje). Lekarz, który chce „cofnąć"
+   * całego pacjenta po jednym snapshocie, powinien użyć removePatient.
+   *
+   * Po usunięciu patientRec.snapshotCount jest dekrementowany; lastSavedAtISO
+   * jest ustawiane na savedAtISO najnowszego pozostałego snapshota
+   * (przepisujemy headerCipher z payloadu tego snapshota, by lista pacjentów
+   * pokazywała aktualny nagłówek).
+   *
+   * @param {string} patientId
+   * @param {string} snapshotId
+   * @returns {Promise<{patientId, snapshotId, remainingSnapshotCount}>}
+   * @throws gdy vault zablokowany, snapshot nie istnieje, lub byłby to ostatni snapshot
+   */
+  async function deleteSnapshot(patientId, snapshotId) {
+    if (!isUnlocked()) throw new Error('Zaloguj się, by usunąć pomiar.');
+    if (typeof patientId !== 'string' || !patientId) throw new Error('deleteSnapshot: brak patientId.');
+    if (typeof snapshotId !== 'string' || !snapshotId) throw new Error('deleteSnapshot: brak snapshotId.');
+
+    const allSnaps = await getAdapter().listSnapshotsForUser(currentUserId, patientId);
+    const targetSnap = allSnaps.find(function (s) { return s.snapshotId === snapshotId; });
+    if (!targetSnap) {
+      throw new Error('deleteSnapshot: snapshot ' + snapshotId + ' nie istnieje dla pacjenta.');
+    }
+    if (allSnaps.length <= 1) {
+      throw new Error('deleteSnapshot: nie można usunąć ostatniego snapshota pacjenta — użyj removePatient.');
+    }
+
+    // Usuń snapshot z bazy.
+    await getAdapter().removeSnapshotForUser(currentUserId, snapshotId);
+
+    // Po usunięciu — odczytaj pozostałe snapshoty i zaktualizuj nagłówek
+    // pacjenta na najnowszy z nich. lastSavedAtISO też z najnowszego.
+    const remainingSnaps = await getAdapter().listSnapshotsForUser(currentUserId, patientId);
+    if (remainingSnaps.length === 0) {
+      // Defensive — nie powinno się zdarzyć (sprawdziliśmy length>1 wyżej),
+      // ale jeśli ktoś manipulował DB równolegle, zrób pełne removePatient.
+      try { await removePatient(patientId); } catch (_) {}
+      return { patientId: patientId, snapshotId: snapshotId, remainingSnapshotCount: 0 };
+    }
+    remainingSnaps.sort(function (a, b) {
+      if (a.savedAtISO > b.savedAtISO) return -1;
+      if (a.savedAtISO < b.savedAtISO) return 1;
+      return 0;
+    });
+    const newest = remainingSnaps[0];
+    let newestPayload = null;
+    try { newestPayload = await decryptPayloadForCurrentUser(newest.payloadCipher.iv, newest.payloadCipher.data); }
+    catch (_) { newestPayload = null; }
+    const newHeader = newestPayload ? extractHeaderFromPayload(newestPayload) : null;
+    const existingPatient = await getAdapter().getPatientForUser(currentUserId, patientId);
+    if (existingPatient) {
+      const headerCipher = newHeader ? await encryptPayloadForCurrentUser(newHeader) : existingPatient.headerCipher;
+      await getAdapter().putPatientForUser(currentUserId, {
+        patientId: patientId,
+        headerCipher: headerCipher,
+        createdAtISO: existingPatient.createdAtISO,
+        lastSavedAtISO: newest.savedAtISO,
+        snapshotCount: remainingSnaps.length
+      });
+    }
+
+    // Powiadom subskrybentów — używamy notifyPatientSaved (sync mechanism
+    // i tak wypchnie cały aktualny stan pacjenta). Nie tworzymy tombstone'a
+    // dla snapshota — sync porównuje listy snapshotów i sam zauważy brak.
+    notifyPatientSaved({
+      patientId: patientId,
+      snapshotId: null,
+      isSnapshotDelete: true,
+      remainingSnapshotCount: remainingSnaps.length,
+      savedAtISO: newest.savedAtISO
+    });
+
+    return {
+      patientId: patientId,
+      snapshotId: snapshotId,
+      remainingSnapshotCount: remainingSnaps.length
+    };
   }
 
   async function removePatient(patientId) {
@@ -2745,13 +3096,22 @@
 
       var dedupedByKey = new Map(); // key → first-seen row (z najnowszego snapshotu)
       for (var si = 0; si < snapshotsSortedDesc.length; si += 1) {
-        var rows = _extractMeasurementHistory(snapshotsSortedDesc[si]);
+        var snapForMeasure = snapshotsSortedDesc[si];
+        var rows = _extractMeasurementHistory(snapForMeasure);
         for (var ri = 0; ri < rows.length; ri += 1) {
           var r = rows[ri];
           var key = r.ageMonths + '|'
             + (r.height != null ? r.height.toFixed(2) : '_')
             + '|' + (r.weight != null ? r.weight.toFixed(2) : '_');
-          if (!dedupedByKey.has(key)) dedupedByKey.set(key, r);
+          if (!dedupedByKey.has(key)) {
+            // P6.6 — przypinamy snapshotId NAJNOWSZEGO snapshota, w którym wystąpił
+            // ten pomiar. To pozwala UI w karcie pacjenta otworzyć modal w trybie
+            // edit ('Popraw pomiar') i wywołać updateSnapshotPayload dla konkretnego
+            // snapshota. Pomiar nadal jest dedupowany po (ageMonths, h, w), więc
+            // jedna kropka na siatce = jeden chip w timeline = jeden snapshot.
+            r._snapshotId = (snapForMeasure && snapForMeasure.snapshotId) || null;
+            dedupedByKey.set(key, r);
+          }
         }
       }
 
@@ -2832,10 +3192,13 @@
           bmi: bmi,
           sex: curr.sex,
           growthVelocity: velocity,
-          boneAgeYears: (typeof curr.boneAgeYears === 'number') ? curr.boneAgeYears : null
+          boneAgeYears: (typeof curr.boneAgeYears === 'number') ? curr.boneAgeYears : null,
+          // P6.6 — snapshotId NAJNOWSZEGO snapshota dla tego pomiaru. Może być null
+          // gdy pomiar pochodzi z safety-net fallback (`_fallback` key, gdy tabele
+          // measurements były puste) lub gdy snapshot nie ma snapshotId (legacy
+          // testowe payloady). UI sprawdza !== null przed pokazaniem menu Edytuj.
+          snapshotId: (typeof curr._snapshotId === 'string' && curr._snapshotId) ? curr._snapshotId : null
           // NIE eksponujemy dateISO — measurement events kotwiczą się wiekiem.
-          // NIE eksponujemy snapshotId — niezależnie ile snapshotów było, pomiar
-          // jest jeden (deduplikacja powyżej).
         });
       }
     }
@@ -6178,6 +6541,12 @@
     savePatient: savePatient,
     getPatient: getPatient,
     getLatestSnapshot: getLatestSnapshot,
+    // P6.6a — Edit-in-place dla snapshota (korekta mistypes z timeline,
+    // bez tworzenia drugiego snapshota dla tego samego wieku).
+    updateSnapshotPayload: updateSnapshotPayload,
+    // P6.6a — usunięcie konkretnego snapshota (nie pacjenta). Nie pozwala
+    // usunąć ostatniego snapshota — wtedy trzeba użyć removePatient.
+    deleteSnapshot: deleteSnapshot,
     removePatient: removePatient,
     getCurrentUserStats: getCurrentUserStats,
     exportPatientEnvelope: exportPatientEnvelope,
@@ -6225,6 +6594,18 @@
     // Eksport głównie do testowania w izolacji; produkcyjnie konsument to
     // listPatientTimelineEvents.
     _generateObservations: _generateObservations,
+    // P6.0 — Helpery DOB. Opcjonalne pole payload.user.dobISO pozwala
+    // aplikacji liczyć aktualny wiek pacjenta z daty urodzenia (precyzyjnie),
+    // zamiast wieku wpisanego ręcznie przez lekarza. Wszystko opcjonalne —
+    // pacjenci bez DOB działają tak jak dotąd (fallback do user.age/ageMonths).
+    sanitizeDobISO: sanitizeDobISO,
+    calcAgeFromDOB: calcAgeFromDOB,
+    resolvePatientAge: resolvePatientAge,
+    // P6.1 — Konwertery DISPLAY ↔ STORAGE dla DOB. Storage jest ISO 8601
+    // (YYYY-MM-DD, międzynarodowe), display PL (DD-MM-RRRR — to co lekarz
+    // wpisuje i widzi w UI).
+    formatDobForDisplay: formatDobForDisplay,
+    parseDobFromDisplay: parseDobFromDisplay,
     startIdleTimer: startIdleTimer,
     stopIdleTimer: stopIdleTimer,
     resetIdleTimer: resetIdleTimer,

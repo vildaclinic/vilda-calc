@@ -3634,9 +3634,42 @@
     var weight    = user.weight != null ? parseFloat(user.weight) : null;
 
     // totalAgeMonths = pełny wiek w miesiącach do obliczeń centylowych
-    var totalAgeMonths = (age != null && ageMonths != null)
+    // P6.2 — Wiek z DOB (jeśli pacjent ma) liczony NA DZIŚ ma priorytet nad
+    // wiekiem zapisanym w snapshot.user.age (= wiek w dniu pomiaru). To pozwala
+    // pokazać aktualny wiek pacjenta i przeliczyć centyle "jak na dzisiaj"
+    // gdy ostatni zapis jest sprzed kilku miesięcy.
+    //
+    // Logika:
+    //   1) snapshotTotalAgeMonths — wiek z payloadu (zawsze, jako fallback i baseline)
+    //   2) dobTotalAgeMonths — wiek liczony z DOB na dziś (gdy DOB jest)
+    //   3) resolvedTotal — używany wszędzie do obliczeń (DOB jeśli jest, inaczej snapshot)
+    //   4) recalculatedToday — true gdy diff > 3 mies. (wtedy w kafelkach
+    //      dodajemy sub "przeliczono na dziś · ostatni pomiar: ...")
+    var snapshotTotalAgeMonths = (age != null && ageMonths != null)
       ? (age * 12 + ageMonths)
       : (age != null ? age * 12 : null);
+    var dobResolvedAge = null;
+    if (user.dobISO && typeof V.calcAgeFromDOB === 'function') {
+      dobResolvedAge = V.calcAgeFromDOB(user.dobISO);
+    }
+    var totalAgeMonths = (dobResolvedAge && isFinite(dobResolvedAge.totalMonths))
+      ? dobResolvedAge.totalMonths
+      : snapshotTotalAgeMonths;
+    var recalculatedToday = false;
+    if (dobResolvedAge && snapshotTotalAgeMonths != null
+        && Math.abs(dobResolvedAge.totalMonths - snapshotTotalAgeMonths) > 3) {
+      recalculatedToday = true;
+    }
+    // Display data ostatniego pomiaru (do subscriptu "przeliczono na dziś · ostatni pomiar: ...")
+    var lastMeasureDisplay = '';
+    if (recalculatedToday && (snap.savedAtISO || snap.lastSavedAtISO)) {
+      var _lmISO = snap.savedAtISO || snap.lastSavedAtISO;
+      var _lmD = new Date(_lmISO);
+      if (!isNaN(_lmD.getTime())) {
+        var _pad = function (n) { return n < 10 ? '0' + n : String(n); };
+        lastMeasureDisplay = _pad(_lmD.getDate()) + '-' + _pad(_lmD.getMonth() + 1) + '-' + _lmD.getFullYear();
+      }
+    }
 
     // ── Dane wzrostowe (sparkline + prędkość) ──
     // Source of truth = `growthData.measurements[]` (tabela „Pomiary historyczne" z modułu
@@ -3764,7 +3797,12 @@
     }
 
     // ── Buduj kafelkę statystyki ──
-    function statEl(label, value, sub, status) {
+    // P6.2 — Dodany opcjonalny parametr `subAlt` (5.) — drobna szara linia pod
+    // sub, używana do oznaczenia "przeliczono na dziś · ostatni pomiar: ..."
+    // gdy centyl został przeliczony na bieżący wiek z DOB, a snapshot jest
+    // sprzed >3 miesięcy. Lekarz widzi, że wartość kafelka pochodzi z innego
+    // (starszego) pomiaru niż dzisiejsza data.
+    function statEl(label, value, sub, status, subAlt) {
       var cls = 'vilda-patient-stat';
       if (status === 'alert')   cls += ' vilda-patient-stat--alert';
       else if (status === 'improve') cls += ' vilda-patient-stat--improve';
@@ -3778,6 +3816,13 @@
           ? 'vilda-patient-stat-extra' : 'vilda-patient-stat-sub';
         children.push(el('div', { class: subCls, text: sub }));
       }
+      if (subAlt) {
+        children.push(el('div', {
+          class: 'vilda-patient-stat-sub-alt',
+          style: 'font-size:0.72rem; color:#7a8788; font-style:italic; margin-top:2px;',
+          text: subAlt
+        }));
+      }
       return el('div', { class: cls }, children);
     }
 
@@ -3790,8 +3835,13 @@
     // (Pomiar / Wzrastanie i genetyka) i budowane wewnątrz zakładki „Status".
 
     // ── Faza 42 — KONCEPCJA C: kompaktowy hero + zakładki Status / Siatki centylowe ──
+    // P6.2 — Wiek w hero używa DOB-resolved totalAgeMonths (jeśli pacjent ma DOB).
+    // Bez DOB: pokazujemy wiek z snapshota (legacy zachowanie). Format przez _formatAge.
     var ageStr = '';
-    if (age != null) {
+    if (typeof totalAgeMonths === 'number' && isFinite(totalAgeMonths) && totalAgeMonths >= 0) {
+      ageStr = _formatAge(totalAgeMonths);
+    } else if (age != null) {
+      // Defensywny fallback (gdyby resolver zwrócił null/NaN, czego nie powinien)
       ageStr = age + ' lat';
       if (ageMonths != null && ageMonths > 0) {
         ageStr += ' i ' + ageMonths + (ageMonths === 1 ? ' miesiąc' : ageMonths < 5 ? ' miesiące' : ' miesięcy');
@@ -3800,6 +3850,11 @@
     var headerMeta = [ageStr, sex].filter(Boolean).join(' · ');
     var lastSavedStr = (snap.savedAtISO || snap.lastSavedAtISO)
       ? formatRelativeISO(snap.savedAtISO || snap.lastSavedAtISO) : '';
+    // P6.2 — Sub-line "ur. DD-MM-RRRR" pod meta (tylko gdy pacjent ma DOB)
+    var dobDisplayHero = '';
+    if (user.dobISO && typeof V.formatDobForDisplay === 'function') {
+      dobDisplayHero = V.formatDobForDisplay(user.dobISO);
+    }
 
     // ── HERO kompaktowy ──
     var statusInfo = buildBmiStatusInfo(bmi, bmiPerc, isAdult);
@@ -3810,6 +3865,7 @@
       el('div', { class: 'vilda-patient-hero-name', text: name })
     ];
     if (headerMeta) heroInfoChildren.push(el('div', { class: 'vilda-patient-hero-meta', text: headerMeta }));
+    if (dobDisplayHero) heroInfoChildren.push(el('div', { class: 'vilda-patient-hero-meta vilda-patient-hero-meta--small', text: 'ur. ' + dobDisplayHero }));
     if (lastSavedStr) heroInfoChildren.push(el('div', { class: 'vilda-patient-hero-meta vilda-patient-hero-meta--small', text: 'Ostatni wpis: ' + lastSavedStr }));
     if (statusInfo) {
       heroInfoChildren.push(
@@ -3833,9 +3889,32 @@
       onclick: function () { showPatientEditScreen(patientId, onPick, listOptions); }
     });
 
+    // P6.3 — pill „+ Nowy pomiar" jako prominent primary CTA w hero. Otwiera
+    // modal `showQuickMeasureModal` (wariant A), który klonuje payload poprzedni
+    // i tworzy nowy snapshot z aktualną wagą/wzrostem. Pill jest pod editem
+    // (oba absolute top-right, edit wyżej, nowy pomiar niżej z większym
+    // marginesem — przez CSS `.vilda-patient-hero-new-measure-pill`).
+    var newMeasurePill = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-small vilda-patient-hero-new-measure-pill',
+      type: 'button',
+      text: '+ Nowy pomiar',
+      title: 'Dodaj nowy pomiar (waga, wzrost)',
+      'aria-label': 'Dodaj nowy pomiar',
+      onclick: function () {
+        showQuickMeasureModal(patientId, {
+          onSaved: function () {
+            // Po zapisie — przerenderuj kartę pacjenta od zera, by pokazać
+            // nowy chip Pomiar w Historia + zaktualizowane kafelki Status.
+            showPatientCard(patientId, onPick, listOptions);
+          }
+        });
+      }
+    });
+
     var heroDiv = el('div', { class: 'vilda-patient-hero' }, [
       el('div', { class: avatarClasses, text: name.charAt(0).toUpperCase() }),
       el('div', { class: 'vilda-patient-hero-info' }, heroInfoChildren),
+      newMeasurePill,
       editPill
     ]);
 
@@ -3871,26 +3950,34 @@
     // ── ZAKŁADKA „Status" — pogrupowane statystyki ──
     var antroContent = el('div', { class: 'vilda-patient-tab-content', 'data-tab': 'antro' });
 
+    // P6.2 — subAlt dla kafelków Pomiar: gdy diff DOB-resolved vs snapshot > 3 mies.,
+    // dodajemy linię "przeliczono na dziś · ostatni pomiar: DD-MM-RRRR" pod sub.
+    // To uczciwa informacja: kafelek pokazuje centyl liczony na BIEŻĄCY wiek
+    // pacjenta (z DOB), ale wartości waga/wzrost pochodzą z poprzedniego pomiaru.
+    var recalcSubAlt = null;
+    if (recalculatedToday) {
+      recalcSubAlt = 'przeliczono na dziś · ostatni pomiar: ' + (lastMeasureDisplay || '?');
+    }
     // Grupa: Pomiar (Wzrost / Waga / BMI / Cole)
     var pomiarStats = [];
     if (height != null) {
       var hStatus2 = classify('height', height, heightPerc);
       var hSub2 = heightPerc != null ? fmtCentyl(heightPerc) : null;
-      pomiarStats.push(statEl('Wzrost', fmtNum(height) + ' cm', hSub2, hStatus2));
+      pomiarStats.push(statEl('Wzrost', fmtNum(height) + ' cm', hSub2, hStatus2, recalcSubAlt));
     }
     if (weight != null) {
       var wStatus2 = classify('weight', weight, weightPerc);
       var wSub2 = weightPerc != null ? fmtCentyl(weightPerc) : null;
-      pomiarStats.push(statEl('Waga', fmtNum(weight) + ' kg', wSub2, wStatus2));
+      pomiarStats.push(statEl('Waga', fmtNum(weight) + ' kg', wSub2, wStatus2, recalcSubAlt));
     }
     if (bmi != null) {
       var bmiStatus2 = classify('bmi', bmi, bmiPerc);
       var bmiSub2 = bmiPerc != null ? fmtCentyl(bmiPerc) : null;
-      pomiarStats.push(statEl('BMI', fmtNum(bmi), bmiSub2, bmiStatus2));
+      pomiarStats.push(statEl('BMI', fmtNum(bmi), bmiSub2, bmiStatus2, recalcSubAlt));
     }
     if (cole != null) {
       var coleStatus2 = classify('cole', cole, null);
-      pomiarStats.push(statEl("Wskaźnik Cole'a", fmtNum(cole) + '%', null, coleStatus2));
+      pomiarStats.push(statEl("Wskaźnik Cole'a", fmtNum(cole) + '%', null, coleStatus2, recalcSubAlt));
     }
     if (pomiarStats.length > 0) {
       antroContent.appendChild(el('p', { class: 'vilda-patient-section-h', text: 'Pomiar' }));
@@ -4155,6 +4242,10 @@
     var u = payload.user || {};
     var age = u.age, ageMonths = u.ageMonths, sex = u.sex;
     var height = u.height, weight = u.weight;
+    // P6.1 — DOB jako opcjonalne pole. Storage zostaje ISO (YYYY-MM-DD),
+    // display jest PL (DD-MM-RRRR). Helpery V.formatDobForDisplay /
+    // V.parseDobFromDisplay robią konwersję.
+    var dobISO = (u.dobISO && typeof V.sanitizeDobISO === 'function') ? V.sanitizeDobISO(u.dobISO) : null;
     var _adv = payload.advanced || {};
 
     function _editInput(val, attrs) {
@@ -4176,6 +4267,19 @@
     }
 
     var efName  = _editInput(name === '(bez imienia)' ? '' : name, { placeholder: 'Imię i nazwisko', maxlength: '120' });
+    // P6.1 — Data urodzenia (DOB) — opcjonalna, polski format display.
+    // Type=text z maską numeryczną, max długość 10 znaków (DD-MM-RRRR).
+    var dobDisplay = (typeof V.formatDobForDisplay === 'function') ? V.formatDobForDisplay(dobISO) : '';
+    var efDob = _editInput(dobDisplay, {
+      inputmode: 'numeric',
+      placeholder: 'DD-MM-RRRR (opcjonalnie)',
+      maxlength: '10',
+      autocomplete: 'bday'
+    });
+    var efDobErr = el('div', {
+      class: 'vilda-patient-empty-msg',
+      style: 'color:#b71c1c; font-size:0.78rem; margin-top:3px; min-height:1em;'
+    });
     var efAge   = _editInput(age != null ? age : '',             { inputmode: 'numeric', placeholder: 'lata' });
     var efAgeMo = _editInput(ageMonths != null ? ageMonths : '',  { inputmode: 'numeric', placeholder: 'miesiące (0–11)' });
     var efSex   = el('select', { class: 'vilda-auth-input' }, [
@@ -4196,9 +4300,47 @@
       var n = parseFloat(s);
       obj[key] = isFinite(n) ? n : s;
     }
+
+    // P6.1 — Helper reaktywności DOB.
+    // Czyta pole efDob (format PL), próbuje sparsować. Jeśli puste → pola Wiek
+    // wracają jako edytowalne (legacy, lekarz wpisuje wiek ręcznie). Jeśli
+    // wypełnione i poprawne → liczy wiek z DOB i wpisuje do efAge/efAgeMo,
+    // które stają się read-only. Jeśli wypełnione ale nieprawidłowe → pokazuje
+    // błąd, pola Wiek pozostają edytowalne (lekarz nadal może zapisać legacy).
+    function _updateAgeFieldsFromDob() {
+      var raw = (efDob.value || '').trim();
+      if (raw === '') {
+        efAge.readOnly = false;
+        efAgeMo.readOnly = false;
+        efDobErr.textContent = '';
+        return;
+      }
+      var iso = (typeof V.parseDobFromDisplay === 'function') ? V.parseDobFromDisplay(raw) : null;
+      if (!iso) {
+        efDobErr.textContent = 'Nieprawidłowa data. Format: DD-MM-RRRR (np. 12-01-2018).';
+        // Pola Wiek zostają edytowalne — lekarz nadal może zapisać legacy.
+        efAge.readOnly = false;
+        efAgeMo.readOnly = false;
+        return;
+      }
+      var resolved = V.calcAgeFromDOB(iso);
+      if (!resolved) {
+        efDobErr.textContent = 'Data nie pozwala obliczyć wieku.';
+        efAge.readOnly = false;
+        efAgeMo.readOnly = false;
+        return;
+      }
+      efDobErr.textContent = '';
+      efAge.value = String(resolved.years);
+      efAgeMo.value = String(resolved.ageMonths);
+      efAge.readOnly = true;
+      efAgeMo.readOnly = true;
+    }
+
     function _resetEditForm() {
       efName.value = name === '(bez imienia)' ? '' : name;
       efSex.value = _normSex(sex);
+      efDob.value = dobDisplay;
       efAge.value = age != null ? age : '';
       efAgeMo.value = ageMonths != null ? ageMonths : '';
       efHeight.value = height != null ? height : '';
@@ -4206,15 +4348,43 @@
       efMother.value = _adv.motherHeight != null ? _adv.motherHeight : '';
       efFather.value = _adv.fatherHeight != null ? _adv.fatherHeight : '';
       editErr.textContent = '';
+      efDobErr.textContent = '';
+      // Po reset — przelicz stan read-only pól Wiek (DOB może być puste/wypełnione).
+      _updateAgeFieldsFromDob();
     }
     async function _saveEdits() {
       var newName = (efName.value || '').trim();
       if (!newName) { editErr.textContent = 'Imię i nazwisko jest wymagane.'; try { efName.focus(); } catch (_) {} return; }
+      // P6.1 — DOB ma priorytet nad wpisanym wiekiem. Wprowadzona wartość musi być
+      // poprawna ALBO pusta. Jeśli lekarz wpisał coś nieprawidłowego, nie pozwalamy
+      // zapisać (lepiej kazać poprawić niż zapisać śmieci jako wiek manual).
+      var rawDob = (efDob.value || '').trim();
+      var parsedDobISO = null;
+      if (rawDob !== '') {
+        parsedDobISO = (typeof V.parseDobFromDisplay === 'function') ? V.parseDobFromDisplay(rawDob) : null;
+        if (!parsedDobISO) {
+          editErr.textContent = 'Nieprawidłowa data urodzenia. Użyj formatu DD-MM-RRRR (np. 12-01-2018) lub zostaw puste.';
+          try { efDob.focus(); } catch (_) {}
+          return;
+        }
+      }
       var edited;
       try { edited = JSON.parse(JSON.stringify(payload)); }
       catch (e) { editErr.textContent = 'Nie udało się przygotować danych do zapisu.'; return; }
       edited.name = newName;
       edited.user = edited.user || {};
+      // P6.1 — DOB do payloadu (sanityzowane, lub usunięte jeśli puste).
+      // savePatient i tak ponownie sanityzuje (defensive), ale ustawiamy tu
+      // już czystą wartość, by aplikacja widziała ten sam stan co serializacja.
+      if (parsedDobISO) {
+        edited.user.dobISO = parsedDobISO;
+      } else if ('dobISO' in edited.user) {
+        delete edited.user.dobISO;
+      }
+      // P6.1 — Wiek: zawsze zapisujemy. Gdy DOB jest, używamy wartości
+      // wyliczonej (efAge/efAgeMo zostały już zaktualizowane przez listener);
+      // gdy DOB nie ma, używamy wartości wpisanej ręcznie. Konwencja:
+      // user.age = pełne lata, user.ageMonths = dodatkowe miesiące (0-11).
       _setNumField(edited.user, 'age', efAge.value);
       _setNumField(edited.user, 'ageMonths', efAgeMo.value);
       edited.user.sex = efSex.value || '';
@@ -4256,12 +4426,33 @@
       onclick: function () { showPatientCard(patientId, onPick, listOptions); }
     });
 
+    // P6.1 — Pole DOB jako osobna komórka grida (przed polami Wiek), z disclaimerem
+    // i komunikatem walidacyjnym pod spodem. Komórka zajmuje wiele kolumn (zachowanie
+    // gridu domyślnie + wpięcie diva z input + hint + error w jednym slocie).
+    var efDobCell = el('div', { style: 'display:block;' }, [
+      el('label', { class: 'vilda-patient-stat-label', style: 'display:block; margin-bottom:4px;', text: 'Data urodzenia' }),
+      efDob,
+      el('div', {
+        class: 'vilda-patient-empty-msg',
+        style: 'font-size:0.74rem; margin-top:3px; color:#6a7a7c;',
+        text: 'Opcjonalnie. Wypełnij, by aplikacja automatycznie liczyła wiek przy kolejnych pomiarach.'
+      }),
+      efDobErr
+    ]);
+
+    // P6.1 — Listener na pole DOB: po każdej zmianie przelicz wiek (lub zwolnij pola).
+    efDob.addEventListener('input', _updateAgeFieldsFromDob);
+    efDob.addEventListener('blur', _updateAgeFieldsFromDob);
+    // Initial state — jeśli pacjent ma już DOB, ustaw pola Wiek od razu w tryb read-only.
+    _updateAgeFieldsFromDob();
+
     var screen = el('div', { class: 'vilda-auth-screen vilda-auth-patient-card' }, [
       el('h2', { class: 'vilda-auth-title', text: 'Edycja pacjenta' }),
       el('p', { class: 'vilda-patient-section-h', text: 'Dane pacjenta' }),
       el('div', { class: 'vilda-patient-stats-grid' }, [
         _editField('Imię i nazwisko', efName),
         _editField('Płeć', efSex),
+        efDobCell,
         _editField('Wiek (lata)', efAge),
         _editField('Wiek (miesiące)', efAgeMo),
         _editField('Wzrost (cm)', efHeight),
@@ -4285,6 +4476,415 @@
     ]);
 
     open(screen, { noLogo: true });
+  }
+
+  // ============ P6.3 — MODAL „+ NOWY POMIAR" (wariant A, mode='new') ============
+  /**
+   * Modal do szybkiego dodania nowego pomiaru pacjenta (waga + wzrost + opcjonalnie
+   * data pomiaru wstecznie). Klonuje pełny payload poprzedniego snapshota, nadpisuje
+   * pola pomiaru, wywołuje _ensureCurrentMeasurementInHistory (FIX A/B/C) by
+   * dorzucić wpis do measurements[], i zapisuje przez V.savePatient (nowy snapshot).
+   *
+   * Wariant A (modal overlay) — wybrany po B1, bo zakładka Historia w karcie
+   * pacjenta już daje pełny kontekst trajektorii (nie potrzebujemy in-line history
+   * w modalu jak w mockupie wariantu B).
+   *
+   * Mode 'new' (P6.3): klonuje najnowszy snapshot, tworzy nowy.
+   * Mode 'edit' (P6.6): TODO — będzie edycja konkretnego snapshota in-place.
+   *
+   * opts:
+   *   - mode: 'new' (default) | 'edit' (P6.6)
+   *   - onSaved: function() — wywołane po zapisie (rerender karty pacjenta)
+   *   - onCancel: function() — wywołane przy Anuluj (opcjonalne)
+   */
+  async function showQuickMeasureModal(patientId, opts) {
+    opts = opts || {};
+    // P6.6b — Tryby modala:
+    //   • 'new' (default) — tworzy nowy snapshot przez V.savePatient
+    //   • 'edit' — koryguje istniejący snapshot in-place przez V.updateSnapshotPayload.
+    //     Wymaga opts.snapshotId.
+    var mode = (opts.mode === 'edit') ? 'edit' : 'new';
+    var editSnapshotId = (mode === 'edit' && typeof opts.snapshotId === 'string') ? opts.snapshotId : null;
+
+    var V = getVault();
+    if (!V || !V.isUnlocked()) {
+      try { global.alert('Modal nowego pomiaru wymaga zalogowanego konta lekarza.'); } catch (_) {}
+      return;
+    }
+    if (typeof V.savePatient !== 'function') {
+      try { global.alert('Funkcja savePatient niedostępna — odśwież stronę (Ctrl+Shift+R).'); } catch (_) {}
+      return;
+    }
+    if (mode === 'edit' && typeof V.updateSnapshotPayload !== 'function') {
+      try { global.alert('Funkcja edit-in-place niedostępna — odśwież stronę (Ctrl+Shift+R).'); } catch (_) {}
+      return;
+    }
+    if (mode === 'edit' && !editSnapshotId) {
+      try { global.alert('Brak snapshotId — nie można edytować.'); } catch (_) {}
+      return;
+    }
+
+    // Wczytaj pacjenta — najnowszy snapshot jako baseline (mode='new')
+    // albo konkretny snapshot po snapshotId (mode='edit').
+    var patientFull = null;
+    try { patientFull = await V.getPatient(patientId); }
+    catch (e) { logError('showQuickMeasureModal getPatient', e); return; }
+    if (!patientFull || !patientFull.snapshots || !patientFull.snapshots.length) {
+      try { global.alert('Brak danych pacjenta — nie można dodać pomiaru.'); } catch (_) {}
+      return;
+    }
+
+    var snap;
+    if (mode === 'edit') {
+      snap = patientFull.snapshots.find(function (s) { return s.snapshotId === editSnapshotId; });
+      if (!snap) {
+        try { global.alert('Nie znaleziono pomiaru do edycji (snapshotId: ' + editSnapshotId + ').'); } catch (_) {}
+        return;
+      }
+    } else {
+      snap = patientFull.snapshots[0]; // najnowszy (sortowane malejąco po savedAtISO)
+    }
+    var prevPayload = snap.payload || {};
+    var prevUser = prevPayload.user || {};
+    var dobISO = (prevUser.dobISO && typeof V.sanitizeDobISO === 'function')
+      ? V.sanitizeDobISO(prevUser.dobISO) : null;
+    var prevHeight = (typeof prevUser.height === 'number' && isFinite(prevUser.height)) ? prevUser.height : null;
+    var prevWeight = (typeof prevUser.weight === 'number' && isFinite(prevUser.weight)) ? prevUser.weight : null;
+    var prevAgeYears = (typeof prevUser.age === 'number' && isFinite(prevUser.age)) ? prevUser.age : null;
+    var prevAgeMonths = (typeof prevUser.ageMonths === 'number' && isFinite(prevUser.ageMonths)) ? prevUser.ageMonths : null;
+    var prevSex = prevUser.sex || '';
+    var prevName = prevPayload.name || '(bez imienia)';
+
+    // Defensywnie usuń poprzednie niezamknięte overlaye (multi-click).
+    try {
+      var existingOverlays = global.document.querySelectorAll('.vilda-quick-measure-overlay');
+      for (var i = 0; i < existingOverlays.length; i += 1) existingOverlays[i].remove();
+    } catch (_) {}
+
+    var overlay = el('div', {
+      class: 'vilda-auth-overlay vilda-auth-overlay-sheet vilda-quick-measure-overlay',
+      style: 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000001;padding:20px;'
+    });
+
+    var sheet = el('div', {
+      class: 'vilda-auth-sheet',
+      style: 'background:#fff;border-radius:14px;padding:18px 20px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;gap:12px;'
+    });
+
+    // Header — różny copy dla 'new' vs 'edit'.
+    sheet.appendChild(el('h3', {
+      text: (mode === 'edit') ? '✏ Popraw pomiar' : '+ Nowy pomiar',
+      style: 'margin:0;font-size:1.05rem;font-weight:600;color:#0f2b33;'
+    }));
+    sheet.appendChild(el('p', {
+      text: (mode === 'edit')
+        ? 'Pacjent: ' + prevName + '. Korekta nadpisze istniejący pomiar bez tworzenia drugiego wpisu.'
+        : 'Pacjent: ' + prevName + '. Wpisz wagę i wzrost. BMI policzy się automatycznie.',
+      style: 'margin:0;font-size:0.82rem;color:#5b6672;line-height:1.4;'
+    }));
+
+    // Helper — pojedynczy input w grid'owym labelu.
+    function _row(labelText, inputEl, hint) {
+      var wrap = el('div', null, [
+        el('label', { text: labelText, style: 'display:block;font-size:0.78rem;color:#5b6672;margin-bottom:4px;font-weight:500;' }),
+        inputEl
+      ]);
+      if (hint) {
+        wrap.appendChild(el('div', {
+          style: 'font-size:0.72rem;color:#9aa8aa;margin-top:3px;line-height:1.4;',
+          text: hint
+        }));
+      }
+      return wrap;
+    }
+
+    function _input(attrs) {
+      return el('input', Object.assign({
+        class: 'vilda-auth-input',
+        style: 'width:100%;height:38px;padding:0 10px;font-size:0.92rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;',
+        autocomplete: 'off'
+      }, attrs || {}));
+    }
+
+    // Data pomiaru — default dziś (mode='new') albo savedAtISO snapshota (mode='edit').
+    var todayISO = new Date().toISOString().substring(0, 10);
+    var initialDate = todayISO;
+    if (mode === 'edit') {
+      var sISO = snap.savedAtISO || '';
+      if (sISO && sISO.length >= 10) initialDate = sISO.substring(0, 10);
+    }
+    var dateInput = _input({ type: 'date', value: initialDate });
+    sheet.appendChild(_row('Data pomiaru', dateInput,
+      (mode === 'edit')
+        ? 'Pomiar został pierwotnie zapisany w tym dniu. Możesz skorygować datę.'
+        : 'Domyślnie dzisiaj. Możesz wpisać starszą datę, jeśli dodajesz pomiar wstecznie.'));
+
+    // 2-kolumnowy grid: Wzrost + Waga.
+    var hwRow = el('div', { style: 'display:grid;grid-template-columns:1fr 1fr;gap:10px;' });
+    var heightInput = _input({ type: 'text', inputmode: 'decimal', placeholder: prevHeight != null ? String(prevHeight) : 'cm' });
+    var weightInput = _input({ type: 'text', inputmode: 'decimal', placeholder: prevWeight != null ? String(prevWeight) : 'kg' });
+    hwRow.appendChild(_row('Wzrost (cm)', heightInput));
+    hwRow.appendChild(_row('Waga (kg)', weightInput));
+    sheet.appendChild(hwRow);
+
+    // BMI (read-only auto).
+    var bmiDisplay = el('div', {
+      style: 'background:#f5fafb;border:0.5px solid #d7e9ec;border-radius:8px;padding:8px 10px;font-size:0.92rem;color:#0f2b33;font-weight:500;min-height:38px;display:flex;align-items:center;',
+      text: 'BMI: —'
+    });
+    sheet.appendChild(bmiDisplay);
+
+    // Wiek — z DOB (read-only display) ALBO pola input (gdy brak DOB).
+    var ageDisplayBox = null;     // gdy DOB jest
+    var ageYearsInput = null;     // gdy brak DOB
+    var ageMonthsInput = null;
+    var ageSection = el('div');
+    if (dobISO) {
+      ageDisplayBox = el('div', {
+        style: 'background:#f5fafb;border:0.5px solid #d7e9ec;border-radius:8px;padding:8px 10px;font-size:0.92rem;color:#0f2b33;font-weight:500;min-height:38px;display:flex;align-items:center;',
+        text: 'Wiek: —'
+      });
+      ageSection.appendChild(_row('Wiek (auto z daty urodzenia)', ageDisplayBox,
+        'Liczony z DOB i daty pomiaru. Aby zmienić — usuń DOB w „Edytuj" karty pacjenta.'));
+    } else {
+      var ageGrid = el('div', { style: 'display:grid;grid-template-columns:1fr 1fr;gap:10px;' });
+      ageYearsInput = _input({ type: 'text', inputmode: 'numeric', placeholder: 'lata' });
+      ageMonthsInput = _input({ type: 'text', inputmode: 'numeric', placeholder: 'miesiące (0-11)' });
+      // Prefill z poprzedniego snapshota — lekarz koryguje jeśli minęło dużo czasu.
+      if (prevAgeYears != null) ageYearsInput.value = String(prevAgeYears);
+      if (prevAgeMonths != null) ageMonthsInput.value = String(prevAgeMonths);
+      ageGrid.appendChild(_row('Wiek (lata)', ageYearsInput));
+      ageGrid.appendChild(_row('Wiek (miesiące, 0-11)', ageMonthsInput));
+      ageSection.appendChild(ageGrid);
+    }
+    sheet.appendChild(ageSection);
+
+    // Collapsible „💡 Wpisz datę urodzenia" — tylko gdy DOB jest PUSTE.
+    var dobCollapseToggle = null;
+    var dobInput = null;
+    var dobErrBox = null;
+    if (!dobISO) {
+      dobCollapseToggle = el('button', {
+        type: 'button',
+        style: 'background:transparent;border:0;color:#00838d;text-align:left;padding:6px 0;font-size:0.82rem;cursor:pointer;text-decoration:underline;align-self:flex-start;',
+        text: '💡 Wpisz datę urodzenia, by w przyszłości nie pytać o wiek'
+      });
+      sheet.appendChild(dobCollapseToggle);
+      var dobCollapseBox = el('div', { style: 'display:none;' });
+      dobInput = _input({ type: 'text', inputmode: 'numeric', maxlength: '10', placeholder: 'DD-MM-RRRR', autocomplete: 'bday' });
+      dobErrBox = el('div', { style: 'color:#A32D2D;font-size:0.78rem;margin-top:4px;min-height:1em;' });
+      dobCollapseBox.appendChild(_row('Data urodzenia (opcjonalnie)', dobInput,
+        'Aplikacja będzie automatycznie liczyć wiek przy kolejnych pomiarach.'));
+      dobCollapseBox.appendChild(dobErrBox);
+      sheet.appendChild(dobCollapseBox);
+      dobCollapseToggle.addEventListener('click', function () {
+        var isOpen = dobCollapseBox.style.display !== 'none';
+        dobCollapseBox.style.display = isOpen ? 'none' : 'block';
+        dobCollapseToggle.textContent = isOpen
+          ? '💡 Wpisz datę urodzenia, by w przyszłości nie pytać o wiek'
+          : '▼ Schowaj pole daty urodzenia';
+      });
+    }
+
+    // Live delta sub-line (Δ waga · Δ wzrost · BMI centyl).
+    var deltaLine = el('div', {
+      style: 'font-size:0.82rem;color:#0F6E56;line-height:1.4;min-height:1.2em;font-weight:500;'
+    });
+    sheet.appendChild(deltaLine);
+
+    // Error box.
+    var errBox = el('div', {
+      style: 'color:#A32D2D;font-size:0.82rem;line-height:1.4;display:none;'
+    });
+    sheet.appendChild(errBox);
+
+    // ── Recompute (live, na każdy input) ──────────────────────────────────
+    function _parseNum(s) {
+      var v = (s == null ? '' : String(s)).trim().replace(',', '.');
+      if (v === '') return null;
+      var n = parseFloat(v);
+      return isFinite(n) ? n : null;
+    }
+    function _recompute() {
+      var h = _parseNum(heightInput.value);
+      var w = _parseNum(weightInput.value);
+      // BMI
+      var bmi = (h != null && w != null && h > 0) ? (w / Math.pow(h / 100, 2)) : null;
+      bmiDisplay.textContent = bmi != null ? 'BMI: ' + bmi.toFixed(1).replace('.', ',') : 'BMI: —';
+      // Wiek (gdy DOB)
+      if (dobISO && ageDisplayBox) {
+        var resolved = (typeof V.calcAgeFromDOB === 'function') ? V.calcAgeFromDOB(dobISO, dateInput.value || todayISO) : null;
+        ageDisplayBox.textContent = resolved
+          ? 'Wiek: ' + _formatAge(resolved.totalMonths)
+          : 'Wiek: — (data pomiaru przed DOB)';
+      }
+      // Delta vs poprzedni pomiar
+      var dParts = [];
+      if (h != null && prevHeight != null) {
+        var dH = h - prevHeight;
+        dParts.push('Δ wzrost ' + (dH >= 0 ? '+' : '') + dH.toFixed(1).replace('.', ',') + ' cm');
+      }
+      if (w != null && prevWeight != null) {
+        var dW = w - prevWeight;
+        dParts.push('Δ waga ' + (dW >= 0 ? '+' : '') + dW.toFixed(1).replace('.', ',') + ' kg');
+      }
+      deltaLine.textContent = dParts.length ? dParts.join(' · ') : '';
+    }
+    [heightInput, weightInput, dateInput].forEach(function (i) {
+      i.addEventListener('input', _recompute);
+      i.addEventListener('change', _recompute);
+    });
+    _recompute();
+
+    // ── Akcje ─────────────────────────────────────────────────────────────
+    var cancelBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost',
+      type: 'button',
+      style: 'background:transparent !important;color:#5b6672 !important;border:0.5px solid #d7e9ec !important;width:auto !important;padding:8px 16px !important;flex:0 0 auto !important;',
+      text: 'Anuluj',
+      onclick: function () {
+        overlay.remove();
+        if (typeof opts.onCancel === 'function') opts.onCancel();
+      }
+    });
+    var saveBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-primary',
+      type: 'button',
+      style: 'background:#00838d !important;color:#fff !important;border-color:#00838d !important;width:auto !important;padding:8px 18px !important;font-weight:600;flex:0 0 auto !important;',
+      text: (mode === 'edit') ? 'Zapisz korektę' : 'Zapisz pomiar',
+      onclick: async function () {
+        errBox.style.display = 'none';
+        errBox.textContent = '';
+        if (dobErrBox) dobErrBox.textContent = '';
+
+        // ── Walidacja ────
+        var h = _parseNum(heightInput.value);
+        var w = _parseNum(weightInput.value);
+        if (h == null || h <= 0) {
+          errBox.textContent = 'Podaj wzrost w cm (np. 122).';
+          errBox.style.display = 'block';
+          try { heightInput.focus(); } catch (_) {}
+          return;
+        }
+        if (w == null || w <= 0) {
+          errBox.textContent = 'Podaj wagę w kg (np. 25.3).';
+          errBox.style.display = 'block';
+          try { weightInput.focus(); } catch (_) {}
+          return;
+        }
+
+        // Data pomiaru — czytamy z input (format YYYY-MM-DD, type=date).
+        var measureDateISO = (dateInput.value && dateInput.value.length === 10) ? dateInput.value : todayISO;
+
+        // Wiek — z DOB albo z pól manual.
+        var newAgeYears = null, newAgeMonths = null;
+        if (dobISO) {
+          var resolved = (typeof V.calcAgeFromDOB === 'function') ? V.calcAgeFromDOB(dobISO, measureDateISO) : null;
+          if (!resolved) {
+            errBox.textContent = 'Data pomiaru jest wcześniejsza niż data urodzenia — sprawdź daty.';
+            errBox.style.display = 'block';
+            return;
+          }
+          newAgeYears = resolved.years;
+          newAgeMonths = resolved.ageMonths;
+        } else {
+          newAgeYears = _parseNum(ageYearsInput && ageYearsInput.value);
+          newAgeMonths = _parseNum(ageMonthsInput && ageMonthsInput.value);
+          if (newAgeYears == null && newAgeMonths == null) {
+            errBox.textContent = 'Podaj wiek pacjenta — lata lub miesiące.';
+            errBox.style.display = 'block';
+            return;
+          }
+          if (newAgeYears == null) newAgeYears = 0;
+          if (newAgeMonths == null) newAgeMonths = 0;
+        }
+
+        // Opcjonalne DOB z collapsible.
+        var newDobISO = null;
+        if (!dobISO && dobInput && (dobInput.value || '').trim() !== '') {
+          newDobISO = (typeof V.parseDobFromDisplay === 'function') ? V.parseDobFromDisplay(dobInput.value) : null;
+          if (!newDobISO) {
+            if (dobErrBox) dobErrBox.textContent = 'Nieprawidłowa data urodzenia. Format DD-MM-RRRR (np. 12-01-2018).';
+            try { dobInput.focus(); } catch (_) {}
+            return;
+          }
+        }
+
+        // ── Klonuj payload i nadpisz pola pomiaru ────
+        var edited;
+        try { edited = JSON.parse(JSON.stringify(prevPayload)); }
+        catch (e) {
+          errBox.textContent = 'Nie udało się przygotować danych.';
+          errBox.style.display = 'block';
+          return;
+        }
+        if (!edited.user || typeof edited.user !== 'object') edited.user = {};
+        edited.user.height = h;
+        edited.user.weight = w;
+        edited.user.age = newAgeYears;
+        edited.user.ageMonths = newAgeMonths;
+        if (newDobISO) {
+          edited.user.dobISO = newDobISO;
+        }
+        // timestampISO — używamy daty pomiaru (z pola), nie dziś. Format ISO:
+        // jeśli measureDateISO to dziś → użyj pełnego ISO (z godziną); inaczej
+        // konstruujemy z YYYY-MM-DD + południe UTC (defensywnie, nie ma godziny pomiaru).
+        if (measureDateISO === todayISO) {
+          edited.timestampISO = new Date().toISOString();
+        } else {
+          edited.timestampISO = measureDateISO + 'T12:00:00.000Z';
+        }
+
+        // ── FIX A/B/C — dorzuć pomiar do measurements[] (UPDATE-by-ageMonths) ────
+        try {
+          var imp = global.VildaDataImportExport;
+          if (imp && typeof imp._ensureCurrentMeasurementInHistory === 'function') {
+            imp._ensureCurrentMeasurementInHistory(edited);
+          }
+          // Jeśli helper niedostępny — fallback. measurements[] zostanie też
+          // zaktualizowany przy następnym applyLoadedData/saveUserData. Nie blokujemy
+          // zapisu pomiaru jeśli helpera nie ma.
+        } catch (e) {
+          logError('showQuickMeasureModal _ensureCurrentMeasurementInHistory', e);
+        }
+
+        // ── Zapis ────
+        // mode='new' → V.savePatient tworzy nowy snapshot
+        // mode='edit' → V.updateSnapshotPayload podmienia istniejący snapshot in-place
+        saveBtn.disabled = true;
+        cancelBtn.disabled = true;
+        try {
+          setBusy(true);
+          if (mode === 'edit') {
+            await V.updateSnapshotPayload(patientId, editSnapshotId, edited);
+          } else {
+            await V.savePatient(edited, { patientId: patientId, dedup: false });
+          }
+          setBusy(false);
+          overlay.remove();
+          if (typeof opts.onSaved === 'function') opts.onSaved();
+        } catch (e) {
+          setBusy(false);
+          saveBtn.disabled = false;
+          cancelBtn.disabled = false;
+          errBox.textContent = (mode === 'edit')
+            ? 'Nie udało się zapisać korekty pomiaru.'
+            : 'Nie udało się zapisać pomiaru.';
+          errBox.style.display = 'block';
+          logError('showQuickMeasureModal ' + (mode === 'edit' ? 'updateSnapshotPayload' : 'savePatient'), e);
+        }
+      }
+    });
+    var actions = el('div', {
+      style: 'display:flex;gap:8px;justify-content:flex-end;margin-top:4px;'
+    });
+    actions.appendChild(cancelBtn);
+    actions.appendChild(saveBtn);
+    sheet.appendChild(actions);
+
+    overlay.appendChild(sheet);
+    global.document.body.appendChild(overlay);
+    try { heightInput.focus(); } catch (_) {}
   }
 
   // ============ P5.4 — TIMELINE PACJENTA (UI wariant A: vertical oś + kropki) ============
@@ -4549,7 +5149,7 @@
 
       var card = el('div', {
         style: 'background:#f5fafb;border-radius:10px;padding:' + (dotIndent === 'nested' ? '8px 12px' : '10px 12px') + ';'
-          + 'display:flex;flex-direction:column;gap:6px;cursor:pointer;transition:background 0.15s;',
+          + 'display:flex;flex-direction:column;gap:6px;cursor:pointer;transition:background 0.15s;position:relative;',
         onmouseover: function () { card.style.background = '#ebf3f5'; },
         onmouseout: function () { card.style.background = '#f5fafb'; },
         onclick: function () { _handleTimelineEventClick(event); }
@@ -4563,8 +5163,112 @@
       }));
 
       card.appendChild(_renderTimelineEventBody(event));
+
+      // P6.6c — Menu „⋮" w prawym górnym rogu chipa Pomiar. Otwiera proste menu
+      // z akcjami Edytuj i Usuń. Dostępne tylko dla measurement events które mają
+      // snapshotId (czyli realnie wskazują konkretny snapshot w vault).
+      if (event.type === 'measurement' && typeof event.snapshotId === 'string' && event.snapshotId) {
+        var menuBtn = el('button', {
+          type: 'button',
+          'aria-label': 'Akcje dla pomiaru',
+          title: 'Akcje',
+          style: 'position:absolute;top:6px;right:8px;background:transparent;border:0;'
+            + 'color:#5b6672;font-size:1.1rem;font-weight:700;padding:2px 8px;cursor:pointer;'
+            + 'line-height:1;border-radius:6px;',
+          text: '⋮',
+          onmouseover: function () { menuBtn.style.background = 'rgba(0,131,141,0.1)'; menuBtn.style.color = '#00838d'; },
+          onmouseout: function () { menuBtn.style.background = 'transparent'; menuBtn.style.color = '#5b6672'; },
+          onclick: function (e) {
+            e.stopPropagation();
+            _openMeasurementActionMenu(event, menuBtn);
+          }
+        });
+        card.appendChild(menuBtn);
+      }
+
       wrapper.appendChild(card);
       return wrapper;
+    }
+
+    // P6.6c — Mini popup menu „Edytuj / Usuń" przy chipie Pomiar.
+    function _openMeasurementActionMenu(event, anchorBtn) {
+      // Defensywnie usuń poprzednie menu (jednoczesne otwarcia).
+      try {
+        var prev = global.document.querySelectorAll('.vilda-timeline-measure-menu');
+        for (var i = 0; i < prev.length; i += 1) prev[i].remove();
+      } catch (_) {}
+
+      var menu = el('div', {
+        class: 'vilda-timeline-measure-menu',
+        style: 'position:absolute;top:32px;right:8px;background:#fff;'
+          + 'border:0.5px solid #d7e9ec;border-radius:10px;'
+          + 'box-shadow:0 4px 14px rgba(0,0,0,0.12);padding:4px;z-index:1000002;'
+          + 'display:flex;flex-direction:column;gap:2px;min-width:140px;'
+      });
+
+      function makeItem(label, onAction, danger) {
+        return el('button', {
+          type: 'button',
+          style: 'background:transparent;border:0;text-align:left;'
+            + 'padding:8px 12px;font-size:0.86rem;cursor:pointer;border-radius:6px;'
+            + 'color:' + (danger ? '#A32D2D' : '#0f2b33') + ';',
+          text: label,
+          onmouseover: function (e) { e.currentTarget.style.background = danger ? '#fceaea' : '#f5fafb'; },
+          onmouseout: function (e) { e.currentTarget.style.background = 'transparent'; },
+          onclick: function (e) {
+            e.stopPropagation();
+            menu.remove();
+            onAction();
+          }
+        });
+      }
+
+      menu.appendChild(makeItem('✏ Edytuj', function () {
+        // Otwórz modal w trybie 'edit' dla konkretnego snapshota.
+        showQuickMeasureModal(event.patientId, {
+          mode: 'edit',
+          snapshotId: event.snapshotId,
+          onSaved: function () {
+            // Po zapisie — przerenderuj kartę pacjenta (timeline + status + siatka).
+            showPatientCard(event.patientId);
+          }
+        });
+      }));
+      menu.appendChild(makeItem('🗑 Usuń pomiar', function () {
+        var ageLabel = _formatAge(event.ageMonths) || ('wiek ' + event.ageMonths + ' mies.');
+        if (!global.confirm('Usunąć pomiar (' + ageLabel + ')? Tej operacji nie można cofnąć.')) return;
+        var V = getVault();
+        if (!V || typeof V.deleteSnapshot !== 'function') {
+          try { global.alert('Funkcja usuwania pomiaru niedostępna — odśwież stronę.'); } catch (_) {}
+          return;
+        }
+        V.deleteSnapshot(event.patientId, event.snapshotId).then(function () {
+          showPatientCard(event.patientId);
+        }).catch(function (err) {
+          logError('deleteSnapshot from timeline', err);
+          try {
+            global.alert((err && err.message)
+              ? err.message
+              : 'Nie udało się usunąć pomiaru.');
+          } catch (_) {}
+        });
+      }, true));
+
+      // Menu zamyka się przy kliknięciu poza nim.
+      var closeOnOutside = function (ev) {
+        if (menu.contains(ev.target) || (anchorBtn && anchorBtn.contains(ev.target))) return;
+        menu.remove();
+        global.document.removeEventListener('click', closeOnOutside, true);
+      };
+      // Defer registration o jedną mikrozadanie, by nie złapać bieżącego kliku.
+      setTimeout(function () {
+        global.document.addEventListener('click', closeOnOutside, true);
+      }, 0);
+
+      // Menu pozycjonowane absolutnie wewnątrz karty — anchorBtn.parentNode to .card.
+      if (anchorBtn && anchorBtn.parentNode) {
+        anchorBtn.parentNode.appendChild(menu);
+      }
     }
 
     function _renderSectionHeader(text) {
@@ -7174,6 +7878,9 @@
     showPatientCard: showPatientCard,
     // P5 — Edycja pacjenta jako osobny ekran (przed: tab w karcie).
     showPatientEditScreen: showPatientEditScreen,
+    // P6.3 — Modal „+ Nowy pomiar" (wariant A). Wywoływany z pilla w hero karty
+    // pacjenta i z sidebar (P6.4 `quickMeasureBtnSidebar`).
+    showQuickMeasureModal: showQuickMeasureModal,
     // R2: reminder modal po-unlock — pokazuje pacjentów z notatkami due dziś + overdue.
     showRemindersModal: showRemindersModal,
     // R3: auto-trigger po unlock (raz na dzień, cloud-synced flag). Manual: { force: true }.

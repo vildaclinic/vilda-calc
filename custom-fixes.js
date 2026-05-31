@@ -775,6 +775,7 @@ function vildaCustomHasHtmlContent(element) {
     var headerSave  = document.getElementById('saveDataBtn');
     var sidebarSave = document.getElementById('saveDataBtnSidebar');
     var sidebarAddNote = document.getElementById('addVisitNoteBtnSidebar');
+    var sidebarQuickMeasure = document.getElementById('quickMeasureBtnSidebar');
     var loggedIn    = isVaultUnlocked();
 
     // Dla niezalogowanych przycisk Zapisz jest zawsze wyszarzony.
@@ -811,19 +812,37 @@ function vildaCustomHasHtmlContent(element) {
         sidebarAddNote.setAttribute('aria-disabled', 'true');
       }
     }
+
+    // P6.4: „Nowy pomiar" — aktywne gdy zalogowany + wczytany pacjent.
+    // W przeciwieństwie do B1.8 nie wymaga wpisanego wieku/pomiaru — to JEST
+    // funkcja wpisywania pomiaru (modal sam pobiera DOB i prefilluje pola
+    // poprzedniego pomiaru z snapshota pacjenta w vault).
+    if (sidebarQuickMeasure) {
+      var qmPatientId = window._vildaCurrentPatientId || null;
+      var canMeasure = loggedIn && !!qmPatientId;
+      if (canMeasure) {
+        sidebarQuickMeasure.removeAttribute('disabled');
+        sidebarQuickMeasure.removeAttribute('aria-disabled');
+      } else {
+        sidebarQuickMeasure.setAttribute('disabled', '');
+        sidebarQuickMeasure.setAttribute('aria-disabled', 'true');
+      }
+    }
   }
 
   function initSidebarMenu() {
-    var sidebarSave     = document.getElementById('saveDataBtnSidebar');
-    var sidebarPatients = document.getElementById('patientsListBtnSidebar');
-    var sidebarAddNote  = document.getElementById('addVisitNoteBtnSidebar');
-    var headerSave      = document.getElementById('saveDataBtn');
+    var sidebarSave         = document.getElementById('saveDataBtnSidebar');
+    var sidebarPatients     = document.getElementById('patientsListBtnSidebar');
+    var sidebarAddNote      = document.getElementById('addVisitNoteBtnSidebar');
+    var sidebarQuickMeasure = document.getElementById('quickMeasureBtnSidebar');
+    var headerSave          = document.getElementById('saveDataBtn');
 
     // Sygnalizuj vilda_chrome.js, że custom-fixes przejmuje obsługę kliknięć.
     // Bazowy handler z vilda_chrome sprawdza ten flag i oddaje kontrolę.
-    if (sidebarSave)     sidebarSave._cfBound = true;
-    if (sidebarPatients) sidebarPatients._cfBound = true;
-    if (sidebarAddNote)  sidebarAddNote._cfBound = true;
+    if (sidebarSave)         sidebarSave._cfBound = true;
+    if (sidebarPatients)     sidebarPatients._cfBound = true;
+    if (sidebarAddNote)      sidebarAddNote._cfBound = true;
+    if (sidebarQuickMeasure) sidebarQuickMeasure._cfBound = true;
 
     // Na starcie wyrównaj stan disabled z przyciskami w menu hamburgera
     syncSidebarMenuState();
@@ -961,6 +980,56 @@ function vildaCustomHasHtmlContent(element) {
           patientId: patientId,
           note: null,
           suggestLinkedAge: totalAgeMonths
+        });
+      });
+    }
+
+    // P6.4: NOWY POMIAR — przycisk w sidebarze pod „Dodaj notatkę do wizyty".
+    // Aktywuje się gdy:
+    //   1) Vault odblokowany
+    //   2) Wczytany pacjent (znamy patientId — przez event vilda:patient-loaded)
+    // Klik → otwiera VildaAuthUI.showQuickMeasureModal(patientId, { onSaved }).
+    // Modal sam pobiera DOB i prefilluje pola z najnowszego snapshota pacjenta —
+    // nie trzeba wcześniej wpisywać wieku/pomiaru w formularzu głównym (inaczej
+    // niż B1.8 dla notatki, która kotwiczyła się wiekiem z form).
+    if (sidebarQuickMeasure) {
+      sidebarQuickMeasure.addEventListener('click', function (e) {
+        e.preventDefault();
+
+        if (!isVaultUnlocked()) {
+          showTip(sidebarQuickMeasure, 'Zaloguj się, aby dodawać pomiary.');
+          return;
+        }
+
+        var patientId = window._vildaCurrentPatientId || null;
+        if (!patientId) {
+          showTip(sidebarQuickMeasure, 'Najpierw wczytaj pacjenta z listy „Pacjenci".');
+          return;
+        }
+
+        var authUI = window.VildaAuthUI;
+        if (!authUI || typeof authUI.showQuickMeasureModal !== 'function') {
+          showTip(sidebarQuickMeasure, 'Moduł nowego pomiaru niedostępny — odśwież stronę.');
+          return;
+        }
+
+        authUI.showQuickMeasureModal(patientId, {
+          onSaved: function () {
+            // Po zapisie modal sam się zamyka. Tutaj możemy odświeżyć wskaźnik
+            // statusu zapisu i syncSidebarMenuState (w razie zmian stanu pomiaru).
+            try { syncSidebarMenuState(); } catch (_) {}
+            // Dispatchujemy vilda:patient-loaded żeby moduły nasłuchujące (chip
+            // pacjenta, save status indicator) odświeżyły swój stan z świeżymi
+            // metadanymi snapshota. Re-emitujemy ten sam patientId — chip
+            // pacjenta nie zmienia tożsamości, tylko ostatnio zapisaną wartość.
+            try {
+              if (typeof window.CustomEvent === 'function' && document) {
+                document.dispatchEvent(new window.CustomEvent('vilda:patient-loaded', {
+                  detail: { patientId: patientId, source: 'quick-measure' }
+                }));
+              }
+            } catch (_) {}
+          }
         });
       });
     }
