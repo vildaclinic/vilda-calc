@@ -5829,9 +5829,10 @@
       card.appendChild(_renderTimelineEventBody(event));
 
       // P6.6c — Menu „⋮" w prawym górnym rogu chipa Pomiar. Otwiera proste menu
-      // z akcjami Edytuj i Usuń. Dostępne tylko dla measurement events które mają
-      // snapshotId (czyli realnie wskazują konkretny snapshot w vault).
-      if (event.type === 'measurement' && typeof event.snapshotId === 'string' && event.snapshotId) {
+      // z akcjami Edytuj i Usuń (gdy event ma snapshotId) lub samą opcję
+      // „Edytuj w kalkulatorze" (I2: gdy snapshotId brak — pomiar wirtualny
+      // z payload.user.measurementHistory / advanced.data.measurements).
+      if (event.type === 'measurement') {
         var menuBtn = el('button', {
           type: 'button',
           'aria-label': 'Akcje dla pomiaru',
@@ -5852,6 +5853,46 @@
 
       wrapper.appendChild(card);
       return wrapper;
+    }
+
+    // I2 — Helper nawigacji do tabeli „Historyczne pomiary" w głównym
+    // kalkulatorze. Pomiary wpisane w „Zaawansowane obliczenia wzrostowe" są
+    // wirtualne (bez snapshotId), więc nie da się ich edytować w karcie
+    // pacjenta. Ten helper:
+    //   1) Zamyka kartę pacjenta (hide overlay)
+    //   2) Jeśli aktualna strona ma elementy #toggleAdvancedGrowth +
+    //      #advancedGrowthSection — rozwija sekcję i scrolluje do niej.
+    //   3) Inaczej — ustawia sessionStorage flagi (vilda:pendingPatientLoad +
+    //      vilda:postLoadScroll) i nawiguje do index.html. Chrome.js po
+    //      unlocku wykonuje to samo (rozwija + scrolluje).
+    function _navigateToHistoricalMeasurements(patientId) {
+      try { hide(); } catch (_) {}
+
+      function performInPageScroll() {
+        var toggleBtn = global.document.getElementById('toggleAdvancedGrowth');
+        var section = global.document.getElementById('advancedGrowthSection');
+        if (!toggleBtn || !section) return false;
+        // Rozwiń sekcję jeśli zwinięta (display:none lub style nieustawiony).
+        var disp = '';
+        try { disp = (section.style && section.style.display) || ''; } catch (_) {}
+        if (disp === '' || disp === 'none') {
+          try { toggleBtn.click(); } catch (_) {}
+        }
+        try { section.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {}
+        return true;
+      }
+
+      // Spróbuj in-place (jesteśmy już na index.html).
+      if (performInPageScroll()) return;
+
+      // Inaczej: set flagi + nawiguj.
+      try {
+        if (global.sessionStorage) {
+          if (patientId) global.sessionStorage.setItem('vilda:pendingPatientLoad', patientId);
+          global.sessionStorage.setItem('vilda:postLoadScroll', 'advancedGrowth');
+        }
+      } catch (_) {}
+      try { global.location.assign('index.html'); } catch (_) {}
     }
 
     // P6.6c — Mini popup menu „Edytuj / Usuń" przy chipie Pomiar.
@@ -5885,6 +5926,32 @@
             onAction();
           }
         });
+      }
+
+      // I2: pomiary historyczne (z payload.user.measurementHistory /
+      // advanced.data.measurements) są wirtualne — nie mają fizycznego
+      // snapshotId w vault. Dla nich edycja jest w głównym kalkulatorze
+      // (tabela „Historyczne pomiary"). Pokazujemy jeden item — „Edytuj
+      // w kalkulatorze" — który zamyka kartę i otwiera kalkulator z
+      // rozwiniętą sekcją Zaawansowane obliczenia wzrostowe.
+      var hasSnapshotId = typeof event.snapshotId === 'string' && event.snapshotId;
+      if (!hasSnapshotId) {
+        menu.appendChild(makeItem('✏ Edytuj w kalkulatorze', function () {
+          _navigateToHistoricalMeasurements(event.patientId);
+        }));
+        try { global.document.body.appendChild(menu); } catch (_) {}
+        try { anchorBtn.parentNode.appendChild(menu); } catch (_) {}
+        // Menu zamyka się przy kliknięciu poza nim.
+        setTimeout(function () {
+          function offClick(ev) {
+            if (!menu.contains(ev.target)) {
+              menu.remove();
+              global.document.removeEventListener('click', offClick);
+            }
+          }
+          global.document.addEventListener('click', offClick);
+        }, 0);
+        return;
       }
 
       menu.appendChild(makeItem('✏ Edytuj', function () {
@@ -6196,8 +6263,23 @@
         }
       });
       mixedItems.sort(function (a, b) {
+        // Primary: sortISO DESC (data wydarzenia — najnowsza na górze).
         if (a.sortISO > b.sortISO) return -1;
         if (a.sortISO < b.sortISO) return 1;
+        // I1 tie-breaker: gdy daty równe (typowo: pomiar historyczny + aktualny
+        // zapisane w tej samej sesji), sortuj po WIEKU pacjenta DESC. Większy
+        // ageMonths = pomiar zrobiony później biologicznie → na górze. Bez
+        // tego sortowanie zwracało 0 → niedeterministyczna kolejność, pomiar
+        // 12y1m wyświetlał się nad 12y6m.
+        // Dla notatek anchored — fallback na linkedAgeMonths.
+        var aAge = (a.event && typeof a.event.ageMonths === 'number') ? a.event.ageMonths
+                 : (a.event && typeof a.event.linkedAgeMonths === 'number') ? a.event.linkedAgeMonths
+                 : -1;
+        var bAge = (b.event && typeof b.event.ageMonths === 'number') ? b.event.ageMonths
+                 : (b.event && typeof b.event.linkedAgeMonths === 'number') ? b.event.linkedAgeMonths
+                 : -1;
+        if (aAge > bAge) return -1;
+        if (aAge < bAge) return 1;
         return 0;
       });
 
