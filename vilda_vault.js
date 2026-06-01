@@ -3377,18 +3377,19 @@
         }
       }
 
-      // FIX A/B/C deploy: po wdrożeniu auto-dorzucania w applyLoadedData + saveUserData,
-      // tabele `payload.advanced.data.measurements[]` i `payload.growthBasic.data.measurements[]`
-      // są zawsze wypełnione (zawierają aktualny pomiar + historyczne). Vault NIE potrzebuje
-      // już fallback do payload.user.* — `_extractMeasurementHistory` per snapshot załatwia
-      // wszystko. Iteracja po wszystkich snapshotach z payload.user (cofnięty "Fix #2 B1.6")
-      // produkowała fałszywe duplikaty z snapshotów które miały te same wartości user.* przy
-      // każdym kliknięciu Zapisz — replikowała błąd Fazy 42c siatki centylowej.
+      // K1: po wycofaniu FIX A/B/C tabele `payload.advanced.data.measurements[]`
+      // trzymają TYLKO świadomie dodane historyczne wpisy — bez aktualnego
+      // pomiaru. Aktualny pomiar żyje w `payload.user.{height,weight,age,ageMonths}`.
       //
-      // SAFETY NET: pojedynczy fallback do najnowszego payload.user.* (gdy tabele puste —
-      // np. dla pacjentów importowanych z .wiw zapisanych przed FIX A/B/C). Dedup po
-      // (ageMonths, h, w) zapobiega duplikatom gdy aktualny pomiar już jest w tabeli.
-      if (dedupedByKey.size === 0 && snapshotsSortedDesc.length > 0) {
+      // Vault MUSI sam zsyntetyzować chip dla aktualnego pomiaru — czytamy te
+      // pola z najnowszego snapshota i dorzucamy do dedupedByKey jeśli klucz
+      // (ageMonths, height, weight) jeszcze nie istnieje. Działa BEZWARUNKOWO
+      // (nie tylko gdy tabela pusta — bo po K1 aktualny pomiar nigdy nie wpadnie
+      // do tabeli automatycznie).
+      //
+      // Stare snapshoty (przed K1, z FIX A/B/C) mogą mieć aktualny pomiar
+      // w tabeli — dedup po kluczu zapobiega podwójnej widoczności.
+      if (snapshotsSortedDesc.length > 0) {
         var latestSnap = snapshotsSortedDesc[0];
         var p = (latestSnap && latestSnap.payload) || {};
         function _readUserField(key) {
@@ -3408,13 +3409,31 @@
         }
         if (fbAgeMonths != null && fbAgeMonths >= 0 && (fbHeight != null || fbWeight != null)) {
           var fbSex = (p.user && p.user.sex) || p.sex || null;
-          dedupedByKey.set('_fallback', {
-            ageMonths: fbAgeMonths,
-            ageYears: fbAgeMonths / 12,
-            height: (fbHeight != null && fbHeight > 0) ? fbHeight : null,
-            weight: (fbWeight != null && fbWeight > 0) ? fbWeight : null,
-            sex: fbSex
-          });
+          var fbH = (fbHeight != null && fbHeight > 0) ? fbHeight : null;
+          var fbW = (fbWeight != null && fbWeight > 0) ? fbWeight : null;
+          // K1: klucz po (ageMonths, height, weight) — taki sam jak dla historycznych.
+          // Jeśli stary snapshot miał aktualny pomiar w tabeli (przed K1), klucze
+          // się spotykają i dedup zapobiega podwójnej widoczności.
+          var fbKey = fbAgeMonths + '|'
+            + (fbH != null ? fbH.toFixed(2) : '_')
+            + '|' + (fbW != null ? fbW.toFixed(2) : '_');
+          if (!dedupedByKey.has(fbKey)) {
+            // Aktualny pomiar pochodzi z najnowszego snapshota — pinujemy jego
+            // snapshotId (dla edit/delete w karcie pacjenta).
+            var entry = {
+              ageMonths: fbAgeMonths,
+              ageYears: fbAgeMonths / 12,
+              height: fbH,
+              weight: fbW,
+              sex: fbSex
+            };
+            entry._snapshotId = (latestSnap && latestSnap.snapshotId) || null;
+            dedupedByKey.set(fbKey, entry);
+            // savedAtISO dla aktualnego pomiaru — z najnowszego snapshota.
+            if (latestSnap && latestSnap.savedAtISO) {
+              oldestSavedAtByKey.set(fbKey, latestSnap.savedAtISO);
+            }
+          }
         }
       }
 
