@@ -140,7 +140,7 @@ html.vilda-pro-active .pro-sync-note {
 
   <script src="vilda_logger.js?v=2"></script>
 <script src="vilda_html.js?v=4"></script>
-<script src="vilda_persistence_adapter.js?v=17"></script>
+<script src="vilda_persistence_adapter.js?v=18"></script>
 <script src="vilda_session_bridge.js?v=1"></script>
 <script src="vilda_init.js?v=4"></script>
 <script src="vilda_crypto.js?v=14"></script>
@@ -471,6 +471,50 @@ html.vilda-pro-active .pro-sync-note {
                     <label class="settings-range-row" for="palSmoothPassSettings">
                       <input type="range" id="palSmoothPassSettings" min="0" max="12" step="1" value="12">
                       <span id="palSmoothPassSettingsValue" class="settings-range-value">12</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <details class="settings-accordion" id="settings-section-chart-visibility">
+            <summary>
+              <span class="settings-accordion-index" aria-hidden="true"><i data-lucide="eye"></i></span>
+              <div class="settings-accordion-copy">
+                <h2 class="settings-accordion-title">Widoczność elementów siatek centylowych</h2>
+                <p class="settings-accordion-text">Ukryj etykiety wartości przy ostatnim pomiarze lub linie odniesienia kanału centylowego — przydatne gdy brakuje miejsca.</p>
+              </div>
+              <div class="settings-accordion-meta">
+                <span class="settings-mini-chip">3 przełączniki</span>
+              </div>
+              <span class="settings-chevron" aria-hidden="true">⌄</span>
+            </summary>
+            <div class="settings-accordion-panel">
+              <div class="settings-panel-inner">
+                <p class="settings-section-note">
+                  Zmiany działają na wszystkich siatkach centylowych aplikacji (siatki Palczewskiej, OLAF, infantów oraz w DocPro). Po zmianie wygeneruj siatkę ponownie, aby zobaczyć efekt.
+                </p>
+                <div class="settings-grid">
+                  <div class="setting-item">
+                    <span>Pokaż etykietę wartości przy ostatnim pomiarze wzrostu (cm)</span>
+                    <label class="switch">
+                      <input type="checkbox" id="centileShowHeightLabelToggle" checked>
+                      <span class="slider"></span>
+                    </label>
+                  </div>
+                  <div class="setting-item">
+                    <span>Pokaż etykietę wartości przy ostatnim pomiarze wagi (kg)</span>
+                    <label class="switch">
+                      <input type="checkbox" id="centileShowWeightLabelToggle" checked>
+                      <span class="slider"></span>
+                    </label>
+                  </div>
+                  <div class="setting-item">
+                    <span>Pokaż linie odniesienia kanału centylowego (przerywane linie + wartości na osi Y)</span>
+                    <label class="switch">
+                      <input type="checkbox" id="centileShowBandReferenceToggle" checked>
+                      <span class="slider"></span>
                     </label>
                   </div>
                 </div>
@@ -2011,6 +2055,51 @@ html.vilda-pro-active .pro-sync-note {
     document.addEventListener('DOMContentLoaded', function() {
       document.body.classList.remove('js-loading');
     });
+  </script>
+
+  <script>
+  // === E1: Widoczność elementów siatek centylowych ===
+  // 3 togglee w „Widoczność elementów siatek centylowych" — etykieta wartości
+  // wzrostu, etykieta wartości wagi, linie odniesienia kanału centylowego.
+  // Wszystkie persistowane w VildaPersistence (local-persistent).
+  (function () {
+    'use strict';
+    var TOGGLES = [
+      { id: 'centileShowHeightLabelToggle', key: 'CENTILE_SHOW_HEIGHT_LABEL' },
+      { id: 'centileShowWeightLabelToggle', key: 'CENTILE_SHOW_WEIGHT_LABEL' },
+      { id: 'centileShowBandReferenceToggle', key: 'CENTILE_SHOW_BAND_REFERENCE' }
+    ];
+    function readFlag(key) {
+      try {
+        var p = window.VildaPersistence;
+        if (!p || typeof p.readPreferenceRaw !== 'function') return null;
+        return p.readPreferenceRaw(key, null);
+      } catch (_) { return null; }
+    }
+    function writeFlag(key, valueBool) {
+      try {
+        var p = window.VildaPersistence;
+        if (!p || typeof p.writePreferenceRaw !== 'function') return;
+        p.writePreferenceRaw(key, valueBool ? 'true' : 'false', { force: true });
+      } catch (_) {}
+    }
+    document.addEventListener('DOMContentLoaded', function () {
+      TOGGLES.forEach(function (cfg) {
+        var el = document.getElementById(cfg.id);
+        if (!el) return;
+        // Hydratacja: jeśli zapisana wartość 'false' → odznacz, 'true' lub brak → włączone (domyślnie).
+        var stored = readFlag(cfg.key);
+        if (stored === 'false' || stored === false) {
+          el.checked = false;
+        } else {
+          el.checked = true; // domyślnie wszystkie elementy widoczne
+        }
+        el.addEventListener('change', function () {
+          writeFlag(cfg.key, el.checked);
+        });
+      });
+    });
+  })();
   </script>
 
   <script>
