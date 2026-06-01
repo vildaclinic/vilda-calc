@@ -2883,6 +2883,22 @@
     // Ikona stetoskopu (Tabler ti-stethoscope) — dla sekcji klinicznej.
     var STETHOSCOPE_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h-1a2 2 0 0 0 -2 2v3.5h0a5.5 5.5 0 0 0 11 0v-3.5a2 2 0 0 0 -2 -2h-1"/><path d="M8 15a6 6 0 1 0 12 0v-3"/><circle cx="20" cy="10" r="2"/></svg>';
 
+    // B-fix UX (post-B3): wewnętrzny scroll dla obu sub-sekcji notatek.
+    // Header z „+Dodaj notatkę" zostaje NAD scrollem (zawsze widoczny, akcja
+    // dostępna bez scrollowania w górę). Lista wpisów scrolluje się wewnętrznie.
+    // Wysokość dynamiczna do viewportu z capem 720px (na dużych monitorach lista
+    // nie rozrasta się ponad sens) i floorem 280px (na małych ekranach minimalna
+    // czytelna wysokość ~3 wpisy). Scrollbar stylizowany subtelnie (tylko gdy hover
+    // na desktop, zawsze widoczny na touch — domyślne zachowanie OS).
+    var notesScrollWrap = el('div', {
+      class: 'vilda-patient-notes-scroll',
+      style: 'max-height:min(calc(100vh - 320px), 720px);min-height:280px;'
+        + 'overflow-y:auto;overflow-x:hidden;'
+        + 'padding-right:4px;'  // pad pod scrollbar (uniknij skoku layoutu)
+        + '-webkit-overflow-scrolling:touch;'  // momentum scroll na iOS
+        + 'scrollbar-gutter:stable;'  // rezerwa miejsca na scrollbar — brak skoków
+    });
+
     // Sekcja „Notatki ogólne" — subtelny szary tło (#f5fafb wg planu), ikona dymka.
     if (generalNotes.length > 0) {
       var generalWrap = el('div', {
@@ -2893,7 +2909,7 @@
       var generalList = el('div', { style: 'display:flex;flex-direction:column;gap:8px;' });
       generalNotes.forEach(function (n) { generalList.appendChild(_renderPatientNoteCard(n)); });
       generalWrap.appendChild(generalList);
-      container.appendChild(generalWrap);
+      notesScrollWrap.appendChild(generalWrap);
     }
 
     // Sekcja „Notatki kliniczne" — bez szarego tła, header z ikoną stetoskopu.
@@ -2903,8 +2919,10 @@
       var clinicalList = el('div', { class: 'vilda-patient-notes-list', style: 'display:flex;flex-direction:column;gap:10px;' });
       clinicalNotes.forEach(function (n) { clinicalList.appendChild(_renderPatientNoteCard(n)); });
       clinicalWrap.appendChild(clinicalList);
-      container.appendChild(clinicalWrap);
+      notesScrollWrap.appendChild(clinicalWrap);
     }
+
+    container.appendChild(notesScrollWrap);
   }
 
   /**
@@ -5629,7 +5647,21 @@
     catch (e) { logError('listPatientTimelineEvents', e); }
 
     // Container listy (vertical timeline z pionową osią)
-    var listWrap = el('div', { class: 'vilda-patient-timeline-list', style: 'position:relative;padding-left:28px;' });
+    // B-fix UX (post-B3): wewnętrzny scroll dla mixed timeline. Header (tytuł +
+    // pill filtrów + tooltip B3.5) zostaje NAD scrollem — filtry zawsze widoczne,
+    // user może filtrować bez scrollowania w górę. Same eventy scrollują się
+    // wewnętrznie. Wymiary identyczne jak w Notatkach (spójność UX). Padding-left
+    // przesunięty z listWrap na wewnętrzny wrapper żeby pionowa oś (axis) zaczynała
+    // się od krawędzi scroll containera, nie od miejsca padding-left=28px.
+    var listWrap = el('div', {
+      class: 'vilda-patient-timeline-list',
+      style: 'position:relative;padding-left:28px;'
+        + 'max-height:min(calc(100vh - 320px), 720px);min-height:280px;'
+        + 'overflow-y:auto;overflow-x:hidden;'
+        + 'padding-right:4px;'
+        + '-webkit-overflow-scrolling:touch;'
+        + 'scrollbar-gutter:stable;'
+    });
     // Pionowa linia osi
     var axis = el('div', {
       style: 'position:absolute;left:10px;top:4px;bottom:4px;width:2px;background:#d7e9ec;'
