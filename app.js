@@ -8958,15 +8958,17 @@ function handleAdvancedMeasurementRowRemove(row){
     }
   }
 
-  // J1: usunięcie wiersza historycznego to czysta operacja DOM/danych — żaden
-  // natywny `input` ani `change` event nie leci. vilda_save_status_indicator
-  // nasłuchuje globalnie tych eventów (capture phase) i bez tego nie wykryje
-  // zmiany — chip pozostawał SAVED mimo że formularz jest DIRTY. Syntetyczny
-  // `input` z bubbles=true odpala debouncedOnFormChange → po 400ms recompute
-  // fingerprint → DIRTY. Te same względy dla handleIntakeHistoryRowRemove.
+  // J1-fix: usunięcie wiersza historycznego to operacja DOM/danych bez
+  // user-trusted input/change. Save status indicator filtruje syntetyczne
+  // `new Event(...)` przez `ev.isTrusted === false` (chroni rebuild formularza
+  // podczas restore/nawigacji przed fałszywym DIRTY), więc poprzedni dispatch
+  // nie działał. Publiczny hook notifyExternalChange omija filtr isTrusted,
+  // ale dalej honoruje flagi __vildaPersistRestoring / __vildaPersistPauseUntil.
+  // To samo dla handleIntakeHistoryRowRemove.
   try {
-    if (typeof Event === 'function' && document) {
-      document.dispatchEvent(new Event('input', { bubbles: true }));
+    if (typeof window !== 'undefined' && window.VildaSaveStatusIndicator
+        && typeof window.VildaSaveStatusIndicator.notifyExternalChange === 'function') {
+      window.VildaSaveStatusIndicator.notifyExternalChange('adv-row-removed');
     }
   } catch (_) {}
 
@@ -9005,12 +9007,13 @@ function handleIntakeHistoryRowRemove(row){
     }
   }
 
-  // J1: notify save_status_indicator — patrz komentarz w
-  // handleAdvancedMeasurementRowRemove. row.remove() + recalc nie emituje
-  // natywnego `input`/`change`, więc indykator nie wykryje zmiany bez tego.
+  // J1-fix: notify save_status_indicator — patrz komentarz w
+  // handleAdvancedMeasurementRowRemove. Wywołanie publicznego API zamiast
+  // syntetycznego eventu, bo ten ostatni jest filtrowany przez isTrusted check.
   try {
-    if (typeof Event === 'function' && document) {
-      document.dispatchEvent(new Event('input', { bubbles: true }));
+    if (typeof window !== 'undefined' && window.VildaSaveStatusIndicator
+        && typeof window.VildaSaveStatusIndicator.notifyExternalChange === 'function') {
+      window.VildaSaveStatusIndicator.notifyExternalChange('intake-row-removed');
     }
   } catch (_) {}
 

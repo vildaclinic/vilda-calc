@@ -770,6 +770,23 @@
     getLastSavedAtISO: function () { return _lastSavedAtISO; },
     getLastSnapshotCount: function () { return _lastSnapshotCount; },
     getLastPatientName: function () { return _lastPatientName; },
+    // J1-fix: publiczny hook dla wewnętrznych operacji DOM (np. usunięcie wiersza
+    // historycznego w Zaawansowanych obliczeniach), które NIE emitują
+    // user-trusted input/change. debouncedOnFormChange odrzuca syntetyczne
+    // `new Event(...)` przez ev.isTrusted===false (chroni przed fałszywym DIRTY
+    // podczas restore/nawigacji). Ta metoda omija tę ścieżkę — bezpośrednio
+    // schedule'uje onFormChange, ale dalej respektuje flagi restore (jak natywny
+    // listener), więc rebuild formularza nie powoduje regresu.
+    // Argument `reason` jest tylko informacyjny (do diagnostyki) — semantycznie
+    // każde wywołanie jest „realna zmiana po stronie usera".
+    notifyExternalChange: function notifyExternalChange(reason) {
+      try {
+        if (global.__vildaPersistRestoring === true) return;
+        if (Date.now() < Number(global.__vildaPersistPauseUntil || 0)) return;
+      } catch (_) {}
+      if (_debounceTimer) clearTimeout(_debounceTimer);
+      _debounceTimer = setTimeout(onFormChange, 400);
+    },
     // Test hooks
     _onFormChange: onFormChange,
     _debouncedOnFormChange: debouncedOnFormChange,
