@@ -1171,7 +1171,10 @@ select.vilda-auth-input {
 .vilda-patient-tabs {
   display: flex;
   gap: 1rem;
-  border-bottom: 1px solid #e0eef0;
+  /* B-fix UX: usunięto border-bottom — zakładki Pacjenci są pill-style (każda ma
+     własne tło/border w trybie iOS26 chrome), więc dodatkowa pozioma linia pod
+     nimi była wizualnym noise'em. Aktywna zakładka nadal wyraźnie oznaczona
+     przez .vilda-patient-tab--active (kolor + własny border-bottom na tabie). */
   margin-bottom: 14px;
 }
 .vilda-patient-tab {
