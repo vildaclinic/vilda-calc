@@ -885,6 +885,20 @@
     // wpisy historyczne. Vault listPatientTimelineEvents generuje chip dla
     // pomiaru aktualnego z payload.user (bezwarunkowy fallback).
 
+    // K1-v2: MIGRATION — pacjent z zaśmieconym snapshotem (PRE-K1) zostanie
+    // trwale wyczyszczony przy NASTĘPNYM Zapisz dane. collectUserData() czyta
+    // measurements z window.advancedGrowthData / window.basicGrowthData. Jeżeli
+    // applyLoadedData/restoreLoadedState wcześniej zfiltrowały te tablice (po
+    // K1-v2 helper), to data już jest czyste — ale wykonujemy filter
+    // POWTÓRNIE jako defense in depth (np. user mógł kliknąć Zapisz przed
+    // wczytaniem pacjenta, lub jakiś inny path mógł zaśmiecić w międzyczasie).
+    try { _stripCurrentFromPayloadMeasurements(data); }
+    catch (_) {
+      if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+        globalThis.vildaLogSwallowedCatch('vilda_data_import_export', _, { module: 'saveUserData:k1v2-strip' });
+      }
+    }
+
     Promise.resolve()
       .then(function () { return vault.savePatient(data); })
       .then(function (result) {
@@ -2742,6 +2756,71 @@
   //   age       = pełne lata
   //   ageMonths = DODATKOWE miesiące (NIE total)
   //   total miesięcy = age * 12 + ageMonths
+
+  // ─── K1-v2: helper czyszczący zaśmiecone tabele historyczne ────────────────
+  // Stare snapshoty (PRE-K1, sprzed wycofania FIX A/B/C) wstrzykiwały aktualny
+  // pomiar do `advanced.data.measurements[]` i `growthBasic.data.measurements[]`
+  // przy każdym Zapisz. Po K1 wstrzykiwanie zostało usunięte, ale ZASOBY w vault
+  // pozostają zaśmiecone. Restore z `lastLoadedData` przepisuje to do
+  // window.advancedGrowthData → bieżący pomiar pojawia się w sekcji historycznej.
+  //
+  // Filter usuwa wpisy duplikujące current measurement, dedup po:
+  //   ageMonths === user.totalAgeMonths (tolerancja 0)
+  //   AND height ≈ user.height (tolerancja 0.05 cm)
+  //   AND weight ≈ user.weight (tolerancja 0.05 kg)
+  //
+  // Migration efekt: gdy `saveUserData` przefiltruje payload przed
+  // `vault.savePatient`, NOWY snapshot zostaje zapisany bez zaśmiecenia.
+  // Po jednym Zapisz pacjent jest trwale czysty w vault.
+  function _filterCurrentFromMeasurements(measurements, user) {
+    if (!Array.isArray(measurements) || measurements.length === 0) return measurements || [];
+    if (!user || typeof user !== 'object') return measurements;
+    var uAge = (typeof user.age === 'number' && Number.isFinite(user.age)) ? user.age : null;
+    var uAgeMonths = (typeof user.ageMonths === 'number' && Number.isFinite(user.ageMonths)) ? user.ageMonths : null;
+    var uHeight = (typeof user.height === 'number' && Number.isFinite(user.height) && user.height > 0) ? user.height : null;
+    var uWeight = (typeof user.weight === 'number' && Number.isFinite(user.weight) && user.weight > 0) ? user.weight : null;
+    // Brak wieku LUB brak pomiaru → nic do filtrowania (nic nie pasuje).
+    if ((uAge === null && uAgeMonths === null) || (uHeight === null && uWeight === null)) {
+      return measurements;
+    }
+    var uTotal;
+    if (uAge !== null) {
+      uTotal = Math.round(uAge * 12 + (uAgeMonths !== null ? uAgeMonths : 0));
+    } else {
+      uTotal = Math.round(uAgeMonths);
+    }
+    if (!Number.isFinite(uTotal) || uTotal < 0) return measurements;
+    var TOL = 0.05;
+    return measurements.filter(function (m) {
+      if (!m || typeof m !== 'object') return true; // zostaw obce wpisy
+      var mTotal = (typeof m.ageMonths === 'number' && Number.isFinite(m.ageMonths))
+        ? Math.round(m.ageMonths)
+        : (typeof m.ageYears === 'number' && Number.isFinite(m.ageYears))
+        ? Math.round(m.ageYears * 12)
+        : NaN;
+      if (mTotal !== uTotal) return true; // inny wiek → zostaw
+      var mH = (typeof m.height === 'number') ? m.height : null;
+      var mW = (typeof m.weight === 'number') ? m.weight : null;
+      var heightMatches = (uHeight !== null && mH !== null && Math.abs(mH - uHeight) <= TOL)
+        || (uHeight === null && mH === null);
+      var weightMatches = (uWeight !== null && mW !== null && Math.abs(mW - uWeight) <= TOL)
+        || (uWeight === null && mW === null);
+      // Tylko gdy wszystko się zgadza (ageMonths + height + weight) → wycina jako duplikat current
+      return !(heightMatches && weightMatches);
+    });
+  }
+  function _stripCurrentFromPayloadMeasurements(data) {
+    if (!data || typeof data !== 'object') return;
+    var u = data.user || null;
+    if (!u) return;
+    if (data.advanced && data.advanced.data && Array.isArray(data.advanced.data.measurements)) {
+      data.advanced.data.measurements = _filterCurrentFromMeasurements(data.advanced.data.measurements, u);
+    }
+    if (data.growthBasic && data.growthBasic.data && Array.isArray(data.growthBasic.data.measurements)) {
+      data.growthBasic.data.measurements = _filterCurrentFromMeasurements(data.growthBasic.data.measurements, u);
+    }
+  }
+
   function _ensureCurrentMeasurementInHistory(data) {
     if (!data || typeof data !== 'object') return;
     var u = data.user || {};
@@ -2858,6 +2937,14 @@
     // generuje chip dla pomiaru aktualnego z payload.user (bezwarunkowo).
     // Helper _ensureCurrentMeasurementInHistory zostaje wyexportowany (regresja
     // API), ale nie jest już wywoływany tutaj.
+
+    // K1-v2: stare snapshoty (PRE-K1) mają wstrzyknięty current measurement do
+    // measurements[]. Filtrujemy IN-PLACE przed clonem do lastLoadedData i przed
+    // hydracją do window.advancedGrowthData. Bez tego restoreLoadedState
+    // (Odtwórz zapisany stan) zobaczy zaśmiecone dane i wstrzyknie current
+    // pomiar do sekcji historycznej w UI.
+    try { _stripCurrentFromPayloadMeasurements(data); }
+    catch (error) { logSwallowed('vilda_data_import_export:applyLoadedData:k1v2-strip', error); }
 
     const syncShared = resolveCallback(opts, 'syncSharedUserDataFromLoadedData', 'syncSharedUserDataFromLoadedData') || syncSharedUserDataFromLoadedData;
     const resolveFoodAlias = resolveCallback(opts, 'macroPracticeResolveFoodAliasKey', 'macroPracticeResolveFoodAliasKey') || function defaultResolveFoodAlias(key) { return key; };
@@ -3494,6 +3581,16 @@
         setFieldValueSilently(document.getElementById('advName'), name, { disabled: true });
         setFieldValueSilently(document.getElementById('basicGrowthName'), name, { disabled: true });
         setFieldValueSilently(document.getElementById('fullName'), name, { disabled: true });
+      }
+
+      // K1-v2: defense in depth — gdyby lastLoadedData siedział w pamięci z PRE-K1
+      // sesji (cache w window.lastLoadedData), przefiltruj ponownie przed
+      // hydrate'em do window.advancedGrowthData / window.basicGrowthData.
+      try { _stripCurrentFromPayloadMeasurements(data); }
+      catch (_) {
+        if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+          globalThis.vildaLogSwallowedCatch('vilda_data_import_export', _, { module: 'restoreLoadedState:k1v2-strip' });
+        }
       }
 
       if (data.user) {
