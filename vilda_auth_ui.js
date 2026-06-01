@@ -5631,7 +5631,14 @@
       class: 'vilda-patient-timeline-filters',
       style: 'display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;'
     });
-    var currentFilter = 'all';
+    // L1 — multi-select toggle pills.
+    // State: activeFilters = Set kategorii NOTATEK które są aktywne ('measurement',
+    // 'treatment', 'observation', 'wynik-badania', 'followup'). Pusty zbiór =
+    // „Wszystko" świeci się = pokaż wszystkie eventy. Klik konkretnej kategorii
+    // toggluje ją w secie (nie deselectuje innych). Klik „Wszystko" robi reset
+    // (activeFilters.clear()). filterAllowsEvent: pusty set → true; inaczej OR
+    // po wszystkich aktywnych kategoriach.
+    var activeFilters = new Set();
     var filterPills = [];
 
     // F1 — Helper: zwraca paletę pill filtra W STANIE NIEAKTYWNYM.
@@ -5665,10 +5672,23 @@
     }
     function refreshFilterUI() {
       filterPills.forEach(function (p) {
-        if (p.opt.id === currentFilter) {
-          _applyPillStyle(p.btn, '#00838d', '#fff');
+        var isAll = (p.opt.id === 'all');
+        // L1: „Wszystko" aktywne gdy activeFilters.size === 0 (pusty set).
+        // Inna kategoria aktywna gdy w secie. Pill aktywny: ciemny kolor swojej
+        // palety (zamiast jednolitego teal jak przed L1) — daje jasny wizualny
+        // sygnał której kategorii filtr przynależy.
+        var isActive = isAll ? (activeFilters.size === 0) : activeFilters.has(p.opt.id);
+        var pal = _filterPillPalette(p.opt.id);
+        if (isActive) {
+          if (isAll) {
+            _applyPillStyle(p.btn, '#00838d', '#fff');
+          } else {
+            // Aktywny pill kategorii: użyj jej własnego ciemnego koloru (pal.color)
+            // jako tła, biały tekst. Dzięki temu Leczenie świeci się niebiesko,
+            // Wynik fioletowo, etc. — łatwo rozpoznać które filtry aktywne.
+            _applyPillStyle(p.btn, pal.color, '#fff');
+          }
         } else {
-          var pal = _filterPillPalette(p.opt.id);
           _applyPillStyle(p.btn, pal.bg, pal.color);
         }
       });
@@ -5676,16 +5696,30 @@
     }
     TIMELINE_FILTER_OPTIONS.forEach(function (opt) {
       var pal = _filterPillPalette(opt.id);
-      var isActive = (opt.id === currentFilter);
+      var isAllInit = (opt.id === 'all');
+      var isActiveInit = isAllInit; // przy starcie tylko „Wszystko" aktywne
       var btn = el('button', {
         type: 'button',
         text: opt.label,
         style: 'border:none !important;padding:4px 10px;font-size:0.74rem;font-weight:600;border-radius:999px !important;cursor:pointer;font-family:inherit;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;box-shadow:none !important;',
-        onclick: function () { currentFilter = opt.id; refreshFilterUI(); }
+        onclick: function () {
+          // L1 — multi-select toggle:
+          //   • „Wszystko" → reset (clear), wszystkie inne wygaszone
+          //   • Inna kategoria → toggle (jeśli była w secie, usuń; inaczej dodaj)
+          //     — pozostałe aktywne kategorie zostają
+          if (opt.id === 'all') {
+            activeFilters.clear();
+          } else if (activeFilters.has(opt.id)) {
+            activeFilters.delete(opt.id);
+          } else {
+            activeFilters.add(opt.id);
+          }
+          refreshFilterUI();
+        }
       });
       // F1-fix: kolory ustawiamy przez setProperty('important') żeby pokonać
       // .liquid-ios26 button { background:...!important } z ios26-v2.css.
-      _applyPillStyle(btn, isActive ? '#00838d' : pal.bg, isActive ? '#fff' : pal.color);
+      _applyPillStyle(btn, isActiveInit ? '#00838d' : pal.bg, isActiveInit ? '#fff' : pal.color);
       filterPills.push({ opt: opt, btn: btn });
       filtersRow.appendChild(btn);
     });
@@ -6130,11 +6164,30 @@
       // Usuń wszystkie children listWrap poza axis (axis jest [0])
       while (listWrap.childNodes.length > 1) listWrap.removeChild(listWrap.lastChild);
 
-      var f = currentFilter;
-      // F1: filter używa eventMatchesFilter — notatki rozdzielają się po
-      // _deriveNoteFilterCategory (treatment/wynik-badania/observation/followup),
-      // a nie po `event.type === 'note'` (catch-all, usunięty).
-      function filterAllowsEvent(evt) { return eventMatchesFilter(evt, f); }
+      // L1 — filtr OR po activeFilters. Pusty set = pokaż wszystko (równoważne
+      // staremu currentFilter='all'). Inaczej event spełnia filtr jeśli pasuje
+      // do JAKIEGOKOLWIEK z aktywnych identyfikatorów. Implementacja: kategorię
+      // eventu derive'ujemy z eventMatchesFilter(evt, filterId) — używamy
+      // istniejącej F1 logiki, tylko z OR po wielu filtrach.
+      // f zachowany jako legacy alias dla branchy poniżej (isCategoryFilter
+      // sprawdza single-filter cat — po L1 wciąż ważne gdy aktywna dokładnie
+      // jedna kategoria-not-measurement).
+      function filterAllowsEvent(evt) {
+        if (activeFilters.size === 0) return true; // „Wszystko"
+        var ids = Array.from(activeFilters);
+        return ids.some(function (id) { return eventMatchesFilter(evt, id); });
+      }
+      // Pojedyncza aktywna kategoria notatek = "category-only mode" (uproszczona
+      // lista standalone). Multi-aktywny ze wszystkimi kategoriami notatek
+      // ALBO measurement+kategoria = mieszany flow (mixedItems + anchored).
+      var singleNoteCategoryFilter = null;
+      if (activeFilters.size === 1) {
+        var only = Array.from(activeFilters)[0];
+        if (only !== 'all' && only !== 'measurement') singleNoteCategoryFilter = only;
+      }
+      var f = activeFilters.size === 0 ? 'all'
+            : activeFilters.size === 1 ? Array.from(activeFilters)[0]
+            : 'all'; // multi → traktuj jak 'all' dla branch logic poniżej
 
       // ── B3.2: Mixed chronological timeline ────────────────────────────────
       // Architektura po B3.2 — jeden chronologiczny ciąg zdarzeń klinicznych:
@@ -6158,7 +6211,12 @@
       // Pomiar — gdy filtr ukrywa pomiary (np. 'treatment'), kotwiczone notatki znikały.
       // Naprawa: pomijamy logikę kotwicy gdy filtr to konkretna kategoria, co przy okazji
       // upraszcza wizualnie listę (sama treść, bez chipów Pomiar które i tak są odfiltrowane).
-      var isCategoryFilter = (f !== 'all' && f !== 'measurement');
+      // L1: category-only mode aktywny TYLKO gdy w secie jest dokładnie jedna
+      // kategoria-not-measurement. Dla multi-select (np. Leczenie+Wynik) używamy
+      // standardowego mixedItems flow (pokazujemy pomiary i pasujące notatki
+      // kotwiczone). Standalone-list mode nadal sensowny tylko dla pojedynczej
+      // wybranej kategorii — wtedy notatki są na osi czasu bez chipów Pomiar.
+      var isCategoryFilter = (singleNoteCategoryFilter !== null);
       if (isCategoryFilter) {
         var categoryItems = [];
         notes.forEach(function (n) {
