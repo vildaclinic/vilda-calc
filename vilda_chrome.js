@@ -2217,7 +2217,18 @@
       if (de && de.classList && de.classList.contains('vilda-auth-locked')) return true;
       if (b && b.classList && b.classList.contains('chrome-drawer-open')) return true;
       var root = doc.getElementById('vilda-auth-ui-root');
-      if (root && root.style && root.style.display && root.style.display !== 'none') return true;
+      if (root) {
+        // G1: najpierw inline style.display (najszybsze, najczęstszy stan po
+        // open() / hide()). Gdy inline pusty (np. element wstawiony do DOM
+        // bez open(), albo stylowany czysto CSS-em) — fallback na
+        // getComputedStyle, żeby nie przepuścić gestu przez „niewidoczny" warunek.
+        var disp = '';
+        try { disp = (root.style && root.style.display) || ''; } catch (_) {}
+        if (!disp && global.getComputedStyle) {
+          try { disp = global.getComputedStyle(root).display || ''; } catch (_) {}
+        }
+        if (disp && disp !== 'none') return true;
+      }
       if (doc.querySelector('.vilda-logout-overlay, .ww-onboarding-overlay.is-open, [aria-modal="true"]')) return true;
     } catch (_) {}
     return false;

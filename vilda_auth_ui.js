@@ -648,9 +648,19 @@
     if (rootEl) return rootEl;
     if (!global.document || !global.document.body) return null;
     const existing = global.document.getElementById(ROOT_ID);
-    if (existing) { rootEl = existing; return rootEl; }
+    if (existing) {
+      // G1: gwarancja blokady gestu swipe-nawigacji (vilda_chrome.js
+      // swipeExcludedTarget) — gest startujący wewnątrz karty pacjenta nie
+      // może przejść do następnej strony, nawet gdy CSS display chwilowo pusty.
+      try { existing.setAttribute('data-no-swipe', 'true'); } catch (_) {}
+      rootEl = existing;
+      return rootEl;
+    }
     rootEl = el('div', { id: ROOT_ID, class: 'vilda-auth-root', 'aria-live': 'polite' });
     rootEl.style.display = 'none';
+    // G1: patrz wyżej — atrybut musi być na rootEl niezależnie czy stworzony
+    // świeżo, czy wzięty z DOM przez getElementById.
+    try { rootEl.setAttribute('data-no-swipe', 'true'); } catch (_) {}
     global.document.body.appendChild(rootEl);
     return rootEl;
   }
