@@ -175,7 +175,7 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 
 <script src="vilda_logger.js?v=2"></script>
 <script src="vilda_html.js?v=4"></script>
-<script src="vilda_persistence_adapter.js?v=17"></script>
+<script src="vilda_persistence_adapter.js?v=18"></script>
 <script src="vilda_session_bridge.js?v=1"></script>
 <script src="vilda_init.js?v=4"></script>
 <script src="vilda_crypto.js?v=14"></script>
@@ -3795,6 +3795,45 @@ if (typeof window !== 'undefined') {
   window.getCentileChartLineStyles = getCentileChartLineStyles;
 }
 
+/* E1 — Hydratacja globalnych flag widoczności elementów siatek centylowych.
+ * Identyczne flagi jak w index.html — wspólny standard dla całej aplikacji.
+ * Spec: VildaPersistence keys CENTILE_SHOW_*. Domyślnie wszystko widoczne.
+ */
+function _docproReadCentileVisFlag(key, fallback) {
+  try {
+    if (typeof window === 'undefined' || !window.VildaPersistence) return fallback;
+    const raw = window.VildaPersistence.readPreferenceRaw(key, null);
+    if (raw === 'true' || raw === true) return true;
+    if (raw === 'false' || raw === false) return false;
+    return fallback;
+  } catch (_) { return fallback; }
+}
+function refreshCentileVisibilityFlags() {
+  if (typeof window === 'undefined') return;
+  window.centileShowHeightValueLabel = _docproReadCentileVisFlag('CENTILE_SHOW_HEIGHT_LABEL', true);
+  window.centileShowWeightValueLabel = _docproReadCentileVisFlag('CENTILE_SHOW_WEIGHT_LABEL', true);
+  window.centileShowBandReference   = _docproReadCentileVisFlag('CENTILE_SHOW_BAND_REFERENCE', true);
+}
+if (typeof window !== 'undefined') {
+  refreshCentileVisibilityFlags();
+  window.refreshCentileVisibilityFlags = refreshCentileVisibilityFlags;
+  try { document.addEventListener('DOMContentLoaded', refreshCentileVisibilityFlags); } catch (_) {}
+}
+function isCentileCurrentPointLabelVisible(units) {
+  if (typeof window === 'undefined') return true;
+  if (units === 'cm') return window.centileShowHeightValueLabel !== false;
+  if (units === 'kg') return window.centileShowWeightValueLabel !== false;
+  return true;
+}
+function isCentileBandReferenceVisible() {
+  if (typeof window === 'undefined') return true;
+  return window.centileShowBandReference !== false;
+}
+if (typeof window !== 'undefined') {
+  window.isCentileCurrentPointLabelVisible = isCentileCurrentPointLabelVisible;
+  window.isCentileBandReferenceVisible = isCentileBandReferenceVisible;
+}
+
 /* Rysuje pojedynczy wykres siatki centylowej. */
 function drawCentileGrid(ctx, cfg) {
   const { x, y, w, h, curves, minY, maxY, userVal, userAgeMonths, title, units, percentiles, highlightBandIdx, cutoffVal, minX, maxX } = cfg;
@@ -3909,8 +3948,11 @@ function drawCentileGrid(ctx, cfg) {
     // Poziome linie na wartościach 18 r.ż. (216 mies.) – przez całą szerokość siatki.
     // Wyznacz indeks w tablicach wartości, przesuwając o minXVal.  Jeżeli zakres
     // osi X nie obejmuje 18 lat (216 mies.), pomijamy te linie.
+    // E1: linie odniesienia kanału centylowego — respektuj flagę globalną.
+    const _showBandRef_dp = (typeof window !== 'undefined' && typeof window.isCentileBandReferenceVisible === 'function')
+      ? window.isCentileBandReferenceVisible() : true;
     const idx18 = 216 - minXVal;
-    if (maxXVal >= 216 && idx18 >= 0 && idx18 < n) {
+    if (_showBandRef_dp && maxXVal >= 216 && idx18 >= 0 && idx18 < n) {
       const v1 = valsA[idx18];
       const v2 = valsB[idx18];
       const valLow18 = Math.min(v1, v2);
@@ -4060,13 +4102,19 @@ function drawCentileGrid(ctx, cfg) {
     ctx.arc(pxU, pyU, 10, 0, 2 * Math.PI);
     ctx.fill();
     ctx.stroke();
-    ctx.font = '33px sans-serif';
-    ctx.fillStyle = '#000000';
-    ctx.textAlign = pxU > px + pw / 2 ? 'right' : 'left';
-    ctx.textBaseline = 'bottom';
-    const lbl = userVal.toFixed(1) + ' ' + units;
-    const labelX = pxU > px + pw / 2 ? pxU - 12 : pxU + 12;
-    ctx.fillText(lbl, labelX, pyU - 12);
+    // E1 — etykieta wartości przy bieżącym pomiarze respektuje flagi globalne
+    // (osobne dla cm = wzrost, kg = waga). Toggle w ustawieniach.
+    const _showCurLbl_dp = (typeof window !== 'undefined' && typeof window.isCentileCurrentPointLabelVisible === 'function')
+      ? window.isCentileCurrentPointLabelVisible(units) : true;
+    if (_showCurLbl_dp) {
+      ctx.font = '33px sans-serif';
+      ctx.fillStyle = '#000000';
+      ctx.textAlign = pxU > px + pw / 2 ? 'right' : 'left';
+      ctx.textBaseline = 'bottom';
+      const lbl = userVal.toFixed(1) + ' ' + units;
+      const labelX = pxU > px + pw / 2 ? pxU - 12 : pxU + 12;
+      ctx.fillText(lbl, labelX, pyU - 12);
+    }
   }
   ctx.restore();
 }

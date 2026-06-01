@@ -176,6 +176,11 @@
     PUBLICATION_CHARTS: 'publicationCharts',
     CENTILE_CHART_LINE_STYLES: 'centileChartLineStyles',
     CENTILE_CHART_LINE_DEFAULTS_MIGRATION: 'centileChartLineStylesDefaults_v6',
+    // E1 — toggle'e widoczności elementów siatek centylowych. Domyślnie WSZYSTKIE
+    // pokazujemy (true), użytkownik może wyłączyć w „Techniczny panel siatek centylowych".
+    CENTILE_SHOW_HEIGHT_LABEL: 'centileShowHeightLabel',
+    CENTILE_SHOW_WEIGHT_LABEL: 'centileShowWeightLabel',
+    CENTILE_SHOW_BAND_REFERENCE: 'centileShowBandReference',
     DIET_MYTH_RECENT_IDS: 'dietRecommendationsRecentMythsV1',
     ANALYTICS_CONSENT: 'analyticsConsent',
     DARK_BG_LEVEL: 'darkBgLevel',
@@ -218,6 +223,13 @@
     [MODULE_KEYS.PUBLICATION_CHARTS]: Object.freeze({ scope: 'ui', kind: 'preference', storage: 'cloud-synced' }),
     [MODULE_KEYS.CENTILE_CHART_LINE_STYLES]: Object.freeze({ scope: 'ui', kind: 'preference', storage: 'cloud-synced' }),
     [MODULE_KEYS.CENTILE_CHART_LINE_DEFAULTS_MIGRATION]: Object.freeze({ scope: 'ui', kind: 'technical', storage: 'local-persistent' }),
+    // Centile chart element visibility — per-device preferencja (tak jak inne
+    // UI preferences typu DARK_BG_LEVEL/HIGH_CONTRAST). 'local-persistent' żeby
+    // przeżyło lock/restart, ale per-device — nie chcemy syncować bo różne
+    // urządzenia mogą mieć różną szerokość ekranu i potrzeby UI.
+    [MODULE_KEYS.CENTILE_SHOW_HEIGHT_LABEL]: Object.freeze({ scope: 'ui', kind: 'preference', storage: 'local-persistent' }),
+    [MODULE_KEYS.CENTILE_SHOW_WEIGHT_LABEL]: Object.freeze({ scope: 'ui', kind: 'preference', storage: 'local-persistent' }),
+    [MODULE_KEYS.CENTILE_SHOW_BAND_REFERENCE]: Object.freeze({ scope: 'ui', kind: 'preference', storage: 'local-persistent' }),
     [MODULE_KEYS.DIET_MYTH_RECENT_IDS]: Object.freeze({ scope: 'diet', kind: 'technical', storage: 'cloud-synced' }),
     [MODULE_KEYS.ANALYTICS_CONSENT]: Object.freeze({ scope: 'analytics', kind: 'preference', storage: 'local-persistent' }),
     [MODULE_KEYS.DARK_BG_LEVEL]: Object.freeze({ scope: 'appearance', kind: 'preference', storage: 'local-persistent' }),
@@ -260,6 +272,12 @@
     centileChartLineStyles: MODULE_KEYS.CENTILE_CHART_LINE_STYLES,
     CENTILE_CHART_LINE_DEFAULTS_MIGRATION: MODULE_KEYS.CENTILE_CHART_LINE_DEFAULTS_MIGRATION,
     centileChartLineStylesDefaults_v6: MODULE_KEYS.CENTILE_CHART_LINE_DEFAULTS_MIGRATION,
+    CENTILE_SHOW_HEIGHT_LABEL: MODULE_KEYS.CENTILE_SHOW_HEIGHT_LABEL,
+    centileShowHeightLabel: MODULE_KEYS.CENTILE_SHOW_HEIGHT_LABEL,
+    CENTILE_SHOW_WEIGHT_LABEL: MODULE_KEYS.CENTILE_SHOW_WEIGHT_LABEL,
+    centileShowWeightLabel: MODULE_KEYS.CENTILE_SHOW_WEIGHT_LABEL,
+    CENTILE_SHOW_BAND_REFERENCE: MODULE_KEYS.CENTILE_SHOW_BAND_REFERENCE,
+    centileShowBandReference: MODULE_KEYS.CENTILE_SHOW_BAND_REFERENCE,
     DIET_MYTH_RECENT_IDS: MODULE_KEYS.DIET_MYTH_RECENT_IDS,
     dietRecommendationsRecentMythsV1: MODULE_KEYS.DIET_MYTH_RECENT_IDS,
     ANALYTICS_CONSENT: MODULE_KEYS.ANALYTICS_CONSENT,
