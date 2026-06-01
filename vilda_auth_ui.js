@@ -5618,15 +5618,21 @@
       return { bg: '#f5fafb', color: '#5b6672' };
     }
 
+    // F1-fix: ios26-v2.css ma `.liquid-ios26 button { background:...!important; color:#111!important }`
+    // który nadpisuje inline `style="background:..."`. Bez !important pill'e wychodzą
+    // semi-przezroczyste białe z czarnym tekstem niezależnie od typu. Musimy
+    // używać setProperty z 'important' albo wpinać !important w inline string.
+    function _applyPillStyle(btn, bg, color) {
+      btn.style.setProperty('background', bg, 'important');
+      btn.style.setProperty('color', color, 'important');
+    }
     function refreshFilterUI() {
       filterPills.forEach(function (p) {
         if (p.opt.id === currentFilter) {
-          p.btn.style.background = '#00838d';
-          p.btn.style.color = '#fff';
+          _applyPillStyle(p.btn, '#00838d', '#fff');
         } else {
           var pal = _filterPillPalette(p.opt.id);
-          p.btn.style.background = pal.bg;
-          p.btn.style.color = pal.color;
+          _applyPillStyle(p.btn, pal.bg, pal.color);
         }
       });
       rebuildList();
@@ -5637,11 +5643,12 @@
       var btn = el('button', {
         type: 'button',
         text: opt.label,
-        style: 'border:none;padding:4px 10px;font-size:0.74rem;font-weight:600;border-radius:999px;cursor:pointer;font-family:inherit;'
-          + 'background:' + (isActive ? '#00838d' : pal.bg) + ';'
-          + 'color:' + (isActive ? '#fff' : pal.color) + ';',
+        style: 'border:none !important;padding:4px 10px;font-size:0.74rem;font-weight:600;border-radius:999px !important;cursor:pointer;font-family:inherit;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;box-shadow:none !important;',
         onclick: function () { currentFilter = opt.id; refreshFilterUI(); }
       });
+      // F1-fix: kolory ustawiamy przez setProperty('important') żeby pokonać
+      // .liquid-ios26 button { background:...!important } z ios26-v2.css.
+      _applyPillStyle(btn, isActive ? '#00838d' : pal.bg, isActive ? '#fff' : pal.color);
       filterPills.push({ opt: opt, btn: btn });
       filtersRow.appendChild(btn);
     });
