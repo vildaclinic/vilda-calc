@@ -610,7 +610,22 @@
       }
 
       // 6. Scalaj z lokalnym vaultem
-      var mergeResult = await vault.mergeSyncPayload(rawData);
+      // C3: progress callback — emituje event 'vilda:vault-merge-progress' co
+      // iteracja pacjenta. Defensywny try/catch w środku callbacka (vault'owy
+      // _emitProgress też ma try/catch — double-safe). Jeśli vault nie obsługuje
+      // 2-go param (starsza wersja), Promise i tak działa, callback po prostu
+      // nie wywołany.
+      var mergeResult = await vault.mergeSyncPayload(rawData, {
+        onProgress: function (info) {
+          try {
+            if (typeof global.document !== 'undefined' && global.document.dispatchEvent) {
+              global.document.dispatchEvent(new CustomEvent('vilda:vault-merge-progress', {
+                detail: info, bubbles: false
+              }));
+            }
+          } catch (_) {}
+        }
+      });
 
       // 7. Zapisz nowy ETag
       var serverEtag  = parseETag(blobResp.headers.get('ETag')) || statusData.etag;
