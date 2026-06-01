@@ -894,6 +894,28 @@
           ? 'Zapisano nowego pacjenta: ' + name + '.'
           : 'Zapisano (snapshot ' + (result && result.snapshotCount) + ') dla ' + name + '.';
         callTooltip(saveBtnEl, msg, opts);
+
+        // H2: dispatch „vilda:patient-loaded" po pomyślnym zapisie. Ten sam event
+        // dispatchowany jest po „Wczytaj tego pacjenta" w karcie pacjenta — listener
+        // w custom-fixes.js zapamiętuje patientId w window._vildaCurrentPatientId,
+        // co aktywuje sidebar „Dodaj notatkę do wizyty". Bez tego user musi po
+        // zapisie wchodzić w Pacjenci → wybierać → Wczytaj, żeby button się odblokował.
+        // Pokrywa scenariusze: nowy pacjent zapisany od zera, zaktualizowany pomiar
+        // istniejącego pacjenta z formularza, dedup po imieniu+wieku.
+        try {
+          if (result && result.patientId && typeof global.CustomEvent === 'function' && global.document) {
+            global.document.dispatchEvent(new global.CustomEvent('vilda:patient-loaded', {
+              detail: {
+                patientId: result.patientId,
+                savedAtISO: (result && result.savedAtISO) || null,
+                snapshotCount: (result && result.snapshotCount) || null,
+                name: name
+              }
+            }));
+          }
+        } catch (eventErr) {
+          logSwallowed('vilda_data_import_export:saveUserData:dispatch-patient-loaded', eventErr);
+        }
       })
       .catch(function (e) {
         logSwallowed('vilda_data_import_export:saveUserData:vault', e);
