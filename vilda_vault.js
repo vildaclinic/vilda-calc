@@ -737,7 +737,31 @@
       return db;
     }
 
-    function persistNow() {
+    // D1: Debounced persistNow.
+    //
+    // Problem: w trybie cloud-only mergeSyncPayload robi setki sequencyjnych
+    // `await put*` — przed D1 każdy put wywoływał persistNow() = pełny JSON.stringify
+    // całego state + sessionStorage.setItem. Dla 100+ pacjentów × 5 snapshotów
+    // = ~600 puts × O(state) string ifyzacja = O(N²) i blokowanie main thread
+    // (hipoteza R1 z incydentu C2-rollback). Plus: pełne flushe per write to
+    // niepotrzebny I/O — i tak interesuje nas tylko końcowy state.
+    //
+    // Fix: persistNow() ustawia flag _persistScheduled i schedule'uje
+    // setTimeout(0). Wszystkie kolejne wywołania persistNow() w tej samej
+    // macrotask są no-op'em (flag już ustawiony). Po skończeniu wszystkich
+    // synchronous awaitów event loop wykonuje timer → 1 _persistNowSync()
+    // = 1 stringify całego state = O(state). Redukcja O(N²) → O(N).
+    //
+    // Inwarianty:
+    //   - hydratacja (czytanie z sessionStorage przy starcie) nie zmieniona
+    //   - adapter bez persistKey: setTimeout w ogóle nie scheduluje (early return)
+    //   - flushPersist() — eksplicytny sync flush dla beforeunload/pagehide
+    //     gdy chcemy mieć pewność że stan trafił do sessionStorage przed
+    //     unload (krytyczne dla nawigacji między podstronami — cloud-only/ephemeral
+    //     używa veph: w sessionStorage żeby pacjenci PRZEŻYLI przeładowanie strony)
+    let _persistScheduled = false;
+
+    function _persistNowSync() {
       if (!persistKey) return;
       try {
         if (typeof global.sessionStorage === 'undefined' || !global.sessionStorage) return;
@@ -760,6 +784,50 @@
           })
         };
         global.sessionStorage.setItem(persistKey, JSON.stringify(state));
+      } catch (_) { void _; }
+    }
+
+    function persistNow() {
+      if (!persistKey) return;
+      if (_persistScheduled) return; // już zaplanowany — collapse
+      _persistScheduled = true;
+      try {
+        // setTimeout(0) zamiast queueMicrotask — microtask wykonałby się
+        // pomiędzy iteracjami `for { await put() }` (każdy await jest microtask
+        // checkpoint), więc nie zbatchowałby. setTimeout odpala dopiero gdy
+        // event loop opuści current macrotask, czyli PO całej pętli.
+        global.setTimeout(function () {
+          _persistScheduled = false;
+          _persistNowSync();
+        }, 0);
+      } catch (_) {
+        // Fallback (gdy setTimeout niedostępne, np. wyłączone w jakimś sandboxie):
+        // wykonaj sync — utrata batching, ale poprawność zachowana.
+        _persistScheduled = false;
+        _persistNowSync();
+      }
+    }
+
+    // Sync flush dla beforeunload/pagehide — gdy strona się unload'uje, nie
+    // mamy gwarancji że scheduled setTimeout zdąży się odpalić. Wywołanie
+    // tej metody NATYCHMIAST flushuje pending state do sessionStorage.
+    // Idempotent: gdy nie ma pending, no-op.
+    function flushPersist() {
+      if (!_persistScheduled) return;
+      _persistScheduled = false;
+      _persistNowSync();
+    }
+
+    // Auto-register beforeunload/pagehide listeners — best-effort, tylko gdy
+    // jesteśmy w środowisku z `window`. Bez tego scheduled persist może
+    // zostać porzucony przy nawigacji między podstronami w cloud-only/ephemeral
+    // → pacjenci wpisani w ciągu ostatniej sekundy mogą zniknąć po F5.
+    if (persistKey) {
+      try {
+        if (typeof global.window !== 'undefined' && typeof global.window.addEventListener === 'function') {
+          global.window.addEventListener('beforeunload', flushPersist);
+          global.window.addEventListener('pagehide', flushPersist);
+        }
       } catch (_) { void _; }
     }
 
@@ -791,6 +859,10 @@
     }
 
     return {
+      // D1: explicit sync flush dla beforeunload/pagehide oraz dla testów
+      // które chcą natychmiast zobaczyć state w sessionStorage bez czekania
+      // na macrotask flush.
+      flushPersist: flushPersist,
       async listRegistry() {
         return Array.from(registry.values()).map(function (r) { return Object.assign({}, r); });
       },
