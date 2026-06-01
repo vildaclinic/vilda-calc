@@ -4735,11 +4735,23 @@
       if (!ed || deleteAt[id] >= ed) deletedIds.add(id);
     });
 
-    // C2 ROLLBACK (post-deploy): próba parallel encrypt złamała listę pacjentów
-    // w cloud-only (empty state mimo 100+ pacjentów w chmurze). Wracamy do
-    // sekwencyjnego encrypt+put żeby user mógł korzystać z aplikacji. Spowrotem
-    // wolniej (5-15s dla 100+ pacjentów) ale POPRAWNE. TODO: zdiagnozować race
-    // condition w parallel encrypt z in-memory adapterem cloud-only.
+    // D2 — Parallel encrypt PER pacjent (header + valid snapshots).
+    //
+    // Refaktor po incydencie C2 (parallel cross-patient encrypt złamał listę
+    // pacjentów). Tym razem ograniczamy parallel do POJEDYNCZEGO pacjenta:
+    // jego header + wszystkie snapshoty szyfrujemy równolegle przez
+    // Promise.all, ale puts (modyfikujące adapter — shared state) wykonujemy
+    // SEKWENCYJNIE. Dzięki temu:
+    //   - currentPatientIds.has() i currentSnaps są spójne między iteracjami
+    //   - persistNow (D1) batchuje pomiędzy puts jak dotąd
+    //   - SubtleCrypto operacje są wątkowo-bezpieczne (masterKey jest read-only
+    //     od momentu unlock — żadnego shared mutable state w encrypt)
+    //   - Speedup ~M-krotny (M = średnia liczba snapshotów per pacjent)
+    //
+    // Failure semantyka: jeśli któryś encrypt rzuci wyjątkiem, Promise.all
+    // odrzuca → mergeSyncPayload rzuca → caller (syncPull) łapie i emituje
+    // 'failed' event. Stan w adapterze pozostaje ostatnim spójnym z pętli
+    // (pacjenci z poprzednich iteracji są wpisani; bieżący pacjent — nie).
     for (let i = 0; i < sourcePatients.length; i++) {
       // C3: emit progress co iteracja (NA POCZĄTKU iteracji żeby UI widział
       // realtime postęp, a nie tylko po skończeniu). current = i+1 (1-based
@@ -4750,28 +4762,38 @@
       if (!sp || !sp.patientId || !sp.header) continue;
       if (deletedIds.has(sp.patientId)) continue; // usunięty (nowszy znacznik) — nie dodawaj
 
-      const backupSnapshots = Array.isArray(sp.snapshots) ? sp.snapshots : [];
-      const headerCipher    = await encryptPayloadForCurrentUser(sp.header);
+      // Pre-filtr valid snapshots (z snapshotId) — tylko te zostaną zaszyfrowane.
+      // Indeksy w validSnapshots[] odpowiadają indeksom w snapshotCiphers[].
+      const validSnapshots = (Array.isArray(sp.snapshots) ? sp.snapshots : [])
+        .filter(function (s) { return s && s.snapshotId; });
+
+      // D2 PARALLEL: header + wszystkie valid snapshots równolegle.
+      const headerPromise    = encryptPayloadForCurrentUser(sp.header);
+      const snapshotPromises = validSnapshots.map(function (s) {
+        return encryptPayloadForCurrentUser(s.payload || {});
+      });
+      const allCiphers     = await Promise.all([headerPromise].concat(snapshotPromises));
+      const headerCipher   = allCiphers[0];
+      const snapshotCiphers = allCiphers.slice(1); // length === validSnapshots.length
 
       if (currentPatientIds.has(sp.patientId)) {
         // ── SCALANIE: pacjent istnieje — dorzuć brakujące snapshoty ──────────
+        // Puts SEKWENCYJNE (modyfikują adapter — currentSnapIds spójne).
         const currentSnaps   = await getAdapter().listSnapshotsForUser(currentUserId, sp.patientId);
         const currentSnapIds = new Set(currentSnaps.map(function (s) { return s.snapshotId; }));
 
         let addedForThisPatient = 0;
-        for (let j = 0; j < backupSnapshots.length; j++) {
-          const s = backupSnapshots[j];
-          if (!s || !s.snapshotId) continue;
+        for (let j = 0; j < validSnapshots.length; j++) {
+          const s = validSnapshots[j];
           if (currentSnapIds.has(s.snapshotId)) {
             skippedSnapshotCount++;
             continue;
           }
-          const payloadCipher = await encryptPayloadForCurrentUser(s.payload || {});
           await getAdapter().putSnapshotForUser(currentUserId, {
             snapshotId:    s.snapshotId,
             patientId:     sp.patientId,
             savedAtISO:    s.savedAtISO || nowISO,
-            payloadCipher: payloadCipher
+            payloadCipher: snapshotCiphers[j]
           });
           addedForThisPatient++;
           addedSnapshotCount++;
@@ -4795,15 +4817,14 @@
 
       } else {
         // ── DODAWANIE: nowy pacjent — cała historia ───────────────────────────
-        for (let j = 0; j < backupSnapshots.length; j++) {
-          const s = backupSnapshots[j];
-          if (!s || !s.snapshotId) continue;
-          const payloadCipher = await encryptPayloadForCurrentUser(s.payload || {});
+        // Puts SEKWENCYJNE (zachowanie kolejności wpisów + invariant adaptera).
+        for (let j = 0; j < validSnapshots.length; j++) {
+          const s = validSnapshots[j];
           await getAdapter().putSnapshotForUser(currentUserId, {
             snapshotId:    s.snapshotId,
             patientId:     sp.patientId,
             savedAtISO:    s.savedAtISO || nowISO,
-            payloadCipher: payloadCipher
+            payloadCipher: snapshotCiphers[j]
           });
           addedSnapshotCount++;
         }
@@ -4812,7 +4833,7 @@
           headerCipher:   headerCipher,
           createdAtISO:   sp.createdAtISO   || nowISO,
           lastSavedAtISO: sp.lastSavedAtISO || nowISO,
-          snapshotCount:  backupSnapshots.length
+          snapshotCount:  validSnapshots.length
         });
         addedPatientCount++;
       }
