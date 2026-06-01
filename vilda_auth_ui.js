@@ -4091,20 +4091,44 @@
       }
     }
 
-    // ── Dane wzrostowe (sparkline + prędkość) ──
-    // Source of truth = `growthData.measurements[]` (tabela „Pomiary historyczne" z modułu
-    // Zaawansowane / Podstawowy moduł wzrastania). Tabela jest gwarantowanie aktualna —
-    // helper FIX A/B/C w applyLoadedData + saveUserData dorzuca aktualny pomiar przy każdym
-    // load i każdym save (UPDATE po ageMonths jeśli wpis dla tego wieku już istnieje).
+    // ── Dane wzrostowe (sparkline + prędkość) — FIX-CENTYLE v2 ──
+    // Źródło prawdy zmienione z `growthData.measurements[]` (latest snapshot)
+    // na ten sam helper, którego używa zakładka Historia:
+    // `V.listPatientTimelineEvents(patientId)`.
     //
-    // Faza 42c (synteza punktów ze WSZYSTKICH snapshotów payload.user) została USUNIĘTA —
-    // produkowała fałszywe duplikaty u pacjentów którzy kilkukrotnie kliknęli Zapisz z tymi
-    // samymi wartościami (3 snapshoty z h=123 → 3 fałszywe kółka na siatce). Po FIX A/B/C
-    // każda wizyta = jeden wpis w tabeli, siatka centylowa pokazuje dokładnie te same punkty
-    // co oś czasu Historia (vault.listPatientTimelineEvents).
-    var measurements = (growthData.measurements || []).filter(function (m) {
-      return m && m.height != null;
-    });
+    // Przyczyna: dla pacjentów których kilka ostatnich snapshotów to były tylko
+    // edycje (np. modal „+ Nowy pomiar" P6.3 zapisywał measurement do timeline
+    // bez aktualizacji `growthBasic.data.measurements[]`), latestSnapshot zawierał
+    // stary `measurements[]` (zaśmiecony PRE-K1 lub niezsynchronizowany). Sekcja
+    // „Siatki centylowe" pokazywała „Brak wystarczających danych" mimo że Hero/
+    // Historia widziały pełną listę pomiarów.
+    //
+    // listPatientTimelineEvents (po B1.2 + J2 + K1) iteruje po WSZYSTKICH
+    // snapshotach, dedupuje po (ageMonths, height, weight) i synthesizuje
+    // aktualny pomiar z payload.user. Siatki widzą dokładnie te same punkty
+    // co Hero/Historia → spójność karty pacjenta dla starych pacjentów.
+    var measurements = [];
+    try {
+      var timelineEvents = await V.listPatientTimelineEvents(patientId);
+      measurements = (timelineEvents || [])
+        .filter(function (ev) { return ev && ev.type === 'measurement' && ev.height != null; })
+        .map(function (ev) {
+          return {
+            ageMonths: ev.ageMonths,
+            ageYears: (typeof ev.ageYears === 'number') ? ev.ageYears : (ev.ageMonths / 12),
+            height: ev.height,
+            weight: ev.weight,
+            sex: ev.sex || sex,
+            boneAgeYears: ev.boneAgeYears
+          };
+        });
+    } catch (e) {
+      logError('showPatientCard listPatientTimelineEvents for charts', e);
+      // Fallback do starej ścieżki — gdyby vault API zmieniło sygnaturę.
+      measurements = (growthData.measurements || []).filter(function (m) {
+        return m && m.height != null;
+      });
+    }
     var growthVelocity = growthData.growthVelocity != null ? growthData.growthVelocity : null;
     var isLosingGrowth = !!growthData.isLosingGrowth;
     var isSlowVelocity = !!growthData.isSlowVelocity;
