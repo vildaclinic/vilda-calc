@@ -120,20 +120,17 @@
   // (registered/etag/lastSyncAt) NIE trafia na dysk współdzielonego komputera.
   // Fallback (gdy VildaPersistence niedostępne): realny localStorage jak dotąd.
   //
-  // C1 fix (post-B3): zmiana 'local' → 'local-persistent' (zob. komentarz w
-  // syncStateStorage). Bez tego ETag ginął w cloud-only po lock/reload — KAŻDE
-  // kolejne odpalenie aplikacji robiło pełny blob download mimo niezmiennych
-  // danych (5-15s opóźnienia dla vaultów z 100+ pacjentów). ETag NIE jest
-  // sekretem (publiczny version marker, jak HTTP ETag) — bezpiecznie trzymać
-  // w real localStorage. Dane sync (snapshoty, notatki) wciąż chronione przez
-  // vault encryption i nigdy nie opuszczają memory adaptera w cloud-only.
+  // C1 ROLLBACK (post-deploy): próba zmiany na 'local-persistent' złamała
+  // listę pacjentów w cloud-only (empty state po unlock mimo 100+ pacjentów
+  // w chmurze). Hipoteza: pierwszy unlock po deploy zaczynał ze stanem
+  // registered=false (bo localStorage pusty), probe zwracał coś nieoczekiwanego.
+  // Wracamy do oryginalnego routingu — TODO: zdiagnozować i podejść do problemu
+  // ETag persistent inaczej (np. read-old veph: + write-new localStorage migration).
   function syncStateStorage() {
     try {
       var P = global.VildaPersistence;
       if (P && typeof P.getStorage === 'function') {
-        // 'local-persistent' bypassuje cloud-only/ephemeral shim (zob.
-        // vilda_persistence_adapter.js linia 311) → ZAWSZE real localStorage.
-        var s = P.getStorage('local-persistent');
+        var s = P.getStorage('local');
         if (s) return s;
       }
     } catch (_) {}

@@ -4648,30 +4648,25 @@
       if (!ed || deleteAt[id] >= ed) deletedIds.add(id);
     });
 
-    // C2 (post-B3): pętla pacjentów ZOSTAJE sekwencyjna (potrzeba ordering dla
-    // tombstone'ów + adapter state mutation per-patient), ale wewnątrz każdego
-    // pacjenta encrypt snapshotów + headera robimy RÓWNOLEGLE przez Promise.all.
-    // Web Crypto API faktycznie zrównolegla operacje na osobnych workerach.
-    // Dla 100 pacjentów × 10 snapshotów = 1000 ops × 5-15ms — sekwencyjnie to
-    // 5-15s; równolegle 1-3s (4-8× speedup empirycznie).
-    //
-    // Put adapter zostaje sekwencyjny — dla in-memory cloud-only to Map.set
-    // (instant, nic nie zyska), a IDB serializuje transakcje wewnętrznie tak
-    // czy inaczej. Encrypt dominuje czas, tam jest realna oszczędność.
+    // C2 ROLLBACK (post-deploy): próba parallel encrypt złamała listę pacjentów
+    // w cloud-only (empty state mimo 100+ pacjentów w chmurze). Wracamy do
+    // sekwencyjnego encrypt+put żeby user mógł korzystać z aplikacji. Spowrotem
+    // wolniej (5-15s dla 100+ pacjentów) ale POPRAWNE. TODO: zdiagnozować race
+    // condition w parallel encrypt z in-memory adapterem cloud-only.
     for (let i = 0; i < sourcePatients.length; i++) {
       const sp = sourcePatients[i];
       if (!sp || !sp.patientId || !sp.header) continue;
       if (deletedIds.has(sp.patientId)) continue; // usunięty (nowszy znacznik) — nie dodawaj
 
       const backupSnapshots = Array.isArray(sp.snapshots) ? sp.snapshots : [];
+      const headerCipher    = await encryptPayloadForCurrentUser(sp.header);
 
       if (currentPatientIds.has(sp.patientId)) {
         // ── SCALANIE: pacjent istnieje — dorzuć brakujące snapshoty ──────────
         const currentSnaps   = await getAdapter().listSnapshotsForUser(currentUserId, sp.patientId);
         const currentSnapIds = new Set(currentSnaps.map(function (s) { return s.snapshotId; }));
 
-        // C2: identyfikuj nowe (do dodania) i pomijane (już istnieją).
-        const toAdd = [];
+        let addedForThisPatient = 0;
         for (let j = 0; j < backupSnapshots.length; j++) {
           const s = backupSnapshots[j];
           if (!s || !s.snapshotId) continue;
@@ -4679,28 +4674,12 @@
             skippedSnapshotCount++;
             continue;
           }
-          toAdd.push(s);
-        }
-
-        // C2: encrypt header + nowe snapshoty RÓWNOLEGLE.
-        const headerCipherPromise = encryptPayloadForCurrentUser(sp.header);
-        const snapCipherPromises = toAdd.map(function (s) {
-          return encryptPayloadForCurrentUser(s.payload || {});
-        });
-        const [headerCipher, snapCiphers] = await Promise.all([
-          headerCipherPromise,
-          Promise.all(snapCipherPromises)
-        ]);
-
-        // Put sekwencyjnie (ordering nie krytyczny, ale clearer).
-        let addedForThisPatient = 0;
-        for (let j = 0; j < toAdd.length; j++) {
-          const s = toAdd[j];
+          const payloadCipher = await encryptPayloadForCurrentUser(s.payload || {});
           await getAdapter().putSnapshotForUser(currentUserId, {
             snapshotId:    s.snapshotId,
             patientId:     sp.patientId,
             savedAtISO:    s.savedAtISO || nowISO,
-            payloadCipher: snapCiphers[j]
+            payloadCipher: payloadCipher
           });
           addedForThisPatient++;
           addedSnapshotCount++;
@@ -4724,24 +4703,15 @@
 
       } else {
         // ── DODAWANIE: nowy pacjent — cała historia ───────────────────────────
-        // C2: encrypt header + WSZYSTKIE snapshoty równolegle.
-        const validSnaps = backupSnapshots.filter(function (s) { return s && s.snapshotId; });
-        const newHeaderCipherPromise = encryptPayloadForCurrentUser(sp.header);
-        const newSnapCipherPromises = validSnaps.map(function (s) {
-          return encryptPayloadForCurrentUser(s.payload || {});
-        });
-        const [headerCipher, snapCiphers] = await Promise.all([
-          newHeaderCipherPromise,
-          Promise.all(newSnapCipherPromises)
-        ]);
-
-        for (let j = 0; j < validSnaps.length; j++) {
-          const s = validSnaps[j];
+        for (let j = 0; j < backupSnapshots.length; j++) {
+          const s = backupSnapshots[j];
+          if (!s || !s.snapshotId) continue;
+          const payloadCipher = await encryptPayloadForCurrentUser(s.payload || {});
           await getAdapter().putSnapshotForUser(currentUserId, {
             snapshotId:    s.snapshotId,
             patientId:     sp.patientId,
             savedAtISO:    s.savedAtISO || nowISO,
-            payloadCipher: snapCiphers[j]
+            payloadCipher: payloadCipher
           });
           addedSnapshotCount++;
         }
@@ -4945,15 +4915,12 @@
           if (!ed || nDeleteAt[id] >= ed) nDeletedIds.add(id);
         });
 
-        // C2: filtruj żywe + nowsze (sync), encrypt RÓWNOLEGLE (Promise.all),
-        // put sekwencyjnie. Dla biblioteki notes (zwykle 10-100 wpisów per
-        // lekarz), parallel encrypt daje wymierny speedup gdy całe sync wraca
-        // freshly (np. pierwsze logowanie na nowym device).
-        const applicableNotes = [];
+        // C2 ROLLBACK: sequential encrypt+put (stary, sprawdzony wzorzec).
+        // Scal żywe notatki przychodzące.
         for (let i = 0; i < incomingNotes.length; i += 1) {
           const rn = incomingNotes[i];
           if (!rn || !rn.id || !rn.updatedAtISO) continue;
-          if (nDeletedIds.has(rn.id)) continue;
+          if (nDeletedIds.has(rn.id)) continue; // usunięta nowszym tombstonem
           const local = localById[rn.id];
           const isNewer = !local || !local.updatedAtISO || rn.updatedAtISO > local.updatedAtISO;
           if (!isNewer) continue;
@@ -4965,22 +4932,14 @@
             pinned: rn.pinned === true,
             order: Number.isFinite(rn.order) ? rn.order : 0
           };
-          applicableNotes.push({ rn: rn, content: content, isNew: !local });
-        }
-        // C2: parallel encrypt.
-        const noteCiphers = await Promise.all(applicableNotes.map(function (a) {
-          return encryptPayloadForCurrentUser(a.content);
-        }));
-        // Sequential put — order nie ma znaczenia, ale clearer.
-        for (let i = 0; i < applicableNotes.length; i += 1) {
-          const a = applicableNotes[i];
+          const noteCipher = await encryptPayloadForCurrentUser(content);
           await _na.putNoteForUser(currentUserId, {
-            id: a.rn.id,
-            noteCipher: noteCiphers[i],
-            createdAtISO: a.rn.createdAtISO || a.rn.updatedAtISO,
-            updatedAtISO: a.rn.updatedAtISO
+            id: rn.id,
+            noteCipher: noteCipher,
+            createdAtISO: rn.createdAtISO || rn.updatedAtISO,
+            updatedAtISO: rn.updatedAtISO
           });
-          if (a.isNew) addedNoteCount++; else updatedNoteCount++;
+          if (local) updatedNoteCount++; else addedNoteCount++;
         }
 
         // Zastosuj tombstones: usuń lokalne dane + utrwal znacznik (propagacja dalej).
@@ -5050,36 +5009,26 @@
           if (!ed || pnDeleteAt[id] >= ed) pnDeletedIds.add(id);
         });
 
-        // C2: filtruj applicable (sync), encrypt RÓWNOLEGLE, put sekwencyjnie.
-        // Dla pacjentów z 100+ notatkami (kliniczna historia długoterminowa)
-        // pierwszy sync może mieć ich >1000 — parallel encrypt to wymierna oszczędność.
-        const applicablePn = [];
+        // C2 ROLLBACK: sequential encrypt+put.
+        // Scal żywe notatki przychodzące.
         for (let i = 0; i < incomingPn.length; i += 1) {
           const rpn = incomingPn[i];
           if (!rpn || !rpn.id || !rpn.updatedAtISO) continue;
-          if (pnDeletedIds.has(rpn.id)) continue;
-          if (typeof rpn.patientId !== 'string' || !rpn.patientId.length) continue;
+          if (pnDeletedIds.has(rpn.id)) continue; // usunięta nowszym tombstonem
+          if (typeof rpn.patientId !== 'string' || !rpn.patientId.length) continue; // bez pacjenta odrzucamy
           const local = localPnById[rpn.id];
           const isNewer = !local || !local.updatedAtISO || rpn.updatedAtISO > local.updatedAtISO;
           if (!isNewer) continue;
+          // Sanityzacja defensywna + normalizacja kategorii/dueDate.
           const content = {
             title: sanitizeNoteText(typeof rpn.title === 'string' ? rpn.title : ''),
             body: sanitizeNoteText(typeof rpn.body === 'string' ? rpn.body : '')
           };
-          applicablePn.push({ rpn: rpn, content: content, isNew: !local });
-        }
-        // C2: parallel encrypt.
-        const pnBodyCiphers = await Promise.all(applicablePn.map(function (a) {
-          return encryptPayloadForCurrentUser(a.content);
-        }));
-        // Sequential put.
-        for (let i = 0; i < applicablePn.length; i += 1) {
-          const a = applicablePn[i];
-          const rpn = a.rpn;
+          const bodyCipher = await encryptPayloadForCurrentUser(content);
           await _pna.putPatientNoteForUser(currentUserId, {
             id: rpn.id,
             patientId: rpn.patientId,
-            bodyCipher: pnBodyCiphers[i],
+            bodyCipher: bodyCipher,
             category: normalizePatientNoteCategory(rpn.category),
             dueDateISO: normalizeDueDateISO(rpn.dueDateISO),
             // B1.0: completedAtISO + linkedAgeMonths z payloadu sync (LWW
@@ -5098,7 +5047,7 @@
             createdAtISO: rpn.createdAtISO || rpn.updatedAtISO,
             updatedAtISO: rpn.updatedAtISO
           });
-          if (a.isNew) addedPatientNoteCount++; else updatedPatientNoteCount++;
+          if (local) updatedPatientNoteCount++; else addedPatientNoteCount++;
         }
 
         // Zastosuj tombstones: usuń lokalne dane + utrwal znacznik (propagacja dalej).
