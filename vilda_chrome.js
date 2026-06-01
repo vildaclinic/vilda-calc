@@ -1266,6 +1266,20 @@
         '<div id="vildaCloudOnlyLoadingSpinner" style="display:inline-block;width:44px;height:44px;border:4px solid #cfe8eb;border-top-color:#00838d;border-radius:50%;animation:vilda-co-spin 0.9s linear infinite;margin-bottom:16px;"></div>' +
         '<div id="vildaCloudOnlyLoadingTitle" style="font-weight:700;font-size:18px;color:#0f2b33;margin-bottom:6px;">Synchronizacja z chmurą…</div>' +
         '<div id="vildaCloudOnlyLoadingDesc" style="font-size:13.5px;color:#5b6672;line-height:1.5;"></div>' +
+        // C3: pasek progresu + counter + procent (wariant A). Ukryty na starcie —
+        // pojawia się po pierwszym vilda:vault-merge-progress event z phase='patients'.
+        // Dla 1-go unlock dnia z dużym vaultem (100+ pacjentów) user zobaczy „Pobrano
+        // X z Y" i % zamiast czystego spinnera. Dla małych vaultów merge kończy się
+        // tak szybko że pasek może się nie pokazać — to OK, sam spinner wystarczy.
+        '<div id="vildaCloudOnlyLoadingProgress" style="display:none;margin-top:14px;">' +
+          '<div style="background:#e8eff1;height:8px;border-radius:999px;overflow:hidden;margin-bottom:8px;">' +
+            '<div id="vildaCloudOnlyProgressBar" style="background:#00838d;height:100%;width:0%;border-radius:999px;transition:width 0.2s ease;"></div>' +
+          '</div>' +
+          '<div style="display:flex;justify-content:space-between;font-size:12.5px;color:#5b6672;">' +
+            '<span id="vildaCloudOnlyProgressCounter">Pobrano <strong style="color:#0f2b33;">0</strong> z 0</span>' +
+            '<span id="vildaCloudOnlyProgressPercent"><strong style="color:#00838d;">0%</strong></span>' +
+          '</div>' +
+        '</div>' +
         '<div id="vildaCloudOnlyLoadingError" style="display:none;margin-top:14px;padding:10px 14px;background:#fef2f3;border:1px solid #f5b3bb;border-radius:10px;color:#9a213a;font-size:13px;text-align:left;line-height:1.45;"></div>' +
         '<div id="vildaCloudOnlyLoadingActions" style="display:none;margin-top:18px;gap:10px;justify-content:center;flex-wrap:wrap;">' +
           '<button type="button" id="vildaCloudOnlyRetry" style="padding:8px 18px;border:1px solid #00838d;border-radius:10px;background:#00838d;color:#fff;font-weight:600;font-size:13px;cursor:pointer;">Spróbuj ponownie</button>' +
@@ -1280,8 +1294,47 @@
       overlay.querySelector('#vildaCloudOnlyLoadingDesc').textContent = '';
       overlay.querySelector('#vildaCloudOnlyLoadingError').style.display = 'none';
       overlay.querySelector('#vildaCloudOnlyLoadingActions').style.display = 'none';
+      // C3: reset progress UI przy każdym nowym sync (retry).
+      var progBlock = overlay.querySelector('#vildaCloudOnlyLoadingProgress');
+      if (progBlock) progBlock.style.display = 'none';
+      var progBar = overlay.querySelector('#vildaCloudOnlyProgressBar');
+      if (progBar) progBar.style.width = '0%';
       overlay.style.display = 'flex';
     }
+    // C3: aktualizacja progress UI z eventów vilda:vault-merge-progress.
+    // Pokazuje pasek + counter „X z Y" + procent. Wariant A z mockupu C3.
+    function setProgressState(info) {
+      if (!info || typeof info !== 'object') return;
+      var current = (typeof info.current === 'number' && info.current >= 0) ? info.current : 0;
+      var total = (typeof info.total === 'number' && info.total > 0) ? info.total : 0;
+      var phase = info.phase || 'patients';
+      if (total <= 0) return; // pusty sync — nie pokazuj paska
+      // 'done' — ukryj pasek (overlay schowa się przez complete event)
+      if (phase === 'done') {
+        var progBlock0 = overlay.querySelector('#vildaCloudOnlyLoadingProgress');
+        if (progBlock0) progBlock0.style.display = 'none';
+        return;
+      }
+      var pct = Math.min(100, Math.max(0, Math.round((current / total) * 100)));
+      var progBlock = overlay.querySelector('#vildaCloudOnlyLoadingProgress');
+      var progBar = overlay.querySelector('#vildaCloudOnlyProgressBar');
+      var progCounter = overlay.querySelector('#vildaCloudOnlyProgressCounter');
+      var progPct = overlay.querySelector('#vildaCloudOnlyProgressPercent');
+      if (progBlock) progBlock.style.display = 'block';
+      if (progBar) progBar.style.width = pct + '%';
+      if (progCounter) {
+        progCounter.innerHTML = 'Pobrano <strong style="color:#0f2b33;">' + current + '</strong> z ' + total;
+      }
+      if (progPct) {
+        progPct.innerHTML = '<strong style="color:#00838d;">' + pct + '%</strong>';
+      }
+    }
+    // C3: listener na vilda:vault-merge-progress (emitowane z vilda_sync.js
+    // syncPull → vault.mergeSyncPayload onProgress callback). Try/catch w środku
+    // bo nawet jeśli detail jest malformed, nie chcemy crashować overlay'a.
+    doc.addEventListener('vilda:vault-merge-progress', function (ev) {
+      try { setProgressState(ev && ev.detail); } catch (_) {}
+    });
     function setErrorState(detail) {
       overlay.querySelector('#vildaCloudOnlyLoadingSpinner').style.display = 'none';
       overlay.querySelector('#vildaCloudOnlyLoadingTitle').textContent = 'Nie udało się pobrać danych';

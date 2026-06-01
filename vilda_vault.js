@@ -4592,9 +4592,13 @@
    *   • patientId nie istnieje → pacjent dodawany z pełną historią
    *
    * @param {object} rawData  — wynik exportSyncPayload() z innego urządzenia
+   * @param {object} [options] — { onProgress?: function({ phase, current, total }) }
+   *   C3: onProgress wywoływane co iteracja głównej pętli pacjentów (i raz na
+   *   początku, raz na końcu) z phase ∈ {'patients-start','patients','done'}.
+   *   Callback try/catch'owany defensywnie — błąd w callbacku nie psuje merge.
    * @returns {Promise<{ mergedPatientCount, addedPatientCount, addedSnapshotCount, skippedSnapshotCount }>}
    */
-  async function mergeSyncPayload(rawData) {
+  async function mergeSyncPayload(rawData, options) {
     if (!isUnlocked()) {
       throw new Error('VildaVault.mergeSyncPayload: vault nie jest odblokowany.');
     }
@@ -4602,9 +4606,20 @@
       throw new Error('VildaVault.mergeSyncPayload: nieprawidłowy format danych.');
     }
 
+    // C3: progress callback (opcjonalny). Defensywny wrapper — błąd w callbacku
+    // NIE może popsuć merge'a. Wywoływany sync (nie await).
+    const _onProgress = (options && typeof options.onProgress === 'function') ? options.onProgress : null;
+    function _emitProgress(phase, current, total) {
+      if (!_onProgress) return;
+      try { _onProgress({ phase: phase, current: current, total: total }); } catch (_) {}
+    }
+
     const sourcePatients = Array.isArray(rawData.patients) ? rawData.patients : [];
     const currentPatientsRaw = await getAdapter().listPatientsForUser(currentUserId);
     const currentPatientIds  = new Set(currentPatientsRaw.map(function (p) { return p.patientId; }));
+
+    // C3: emit "starting patients merge" event przed iteracją głównej pętli.
+    _emitProgress('patients-start', 0, sourcePatients.length);
 
     const nowISO = new Date().toISOString();
     let mergedPatientCount   = 0;
@@ -4654,6 +4669,11 @@
     // wolniej (5-15s dla 100+ pacjentów) ale POPRAWNE. TODO: zdiagnozować race
     // condition w parallel encrypt z in-memory adapterem cloud-only.
     for (let i = 0; i < sourcePatients.length; i++) {
+      // C3: emit progress co iteracja (NA POCZĄTKU iteracji żeby UI widział
+      // realtime postęp, a nie tylko po skończeniu). current = i+1 (1-based
+      // żeby pokazać "27 z 105" zamiast "26 z 105" gdy zaczynamy 27-go pacjenta).
+      _emitProgress('patients', i + 1, sourcePatients.length);
+
       const sp = sourcePatients[i];
       if (!sp || !sp.patientId || !sp.header) continue;
       if (deletedIds.has(sp.patientId)) continue; // usunięty (nowszy znacznik) — nie dodawaj
@@ -5073,6 +5093,9 @@
         }
       }
     } catch (_) { /* sync bez patient note merge — zachowanie wsteczne */ }
+
+    // C3: emit "done" — UI overlay schowa się po tym event'cie.
+    _emitProgress('done', sourcePatients.length, sourcePatients.length);
 
     return {
       mergedPatientCount,
