@@ -921,6 +921,18 @@ function vildaCustomHasHtmlContent(element) {
       sidebarAddNote.addEventListener('click', function (e) {
         e.preventDefault();
 
+        // H1: <a> ignoruje atrybut `disabled` (JS-level), więc handler odpalał się
+        // nawet gdy syncSidebarMenuState wyszarzył button. Najpierw sprawdzamy
+        // stan disabled / aria-disabled — jeśli ustawiony, pokaż tooltip z MENU
+        // (data-tip). To spójne z UX innych disabled items w sidebarze.
+        if (sidebarAddNote.hasAttribute('disabled') ||
+            sidebarAddNote.getAttribute('aria-disabled') === 'true') {
+          var tip = sidebarAddNote.getAttribute('data-tip') ||
+            'Aby dodać notatkę do wizyty, najpierw wczytaj pacjenta z listy „Pacjenci" lub zapisz nowego pacjenta („Zapisz dane"). Notatka kotwiczy się do konkretnej osoby w bazie.';
+          showTip(sidebarAddNote, tip);
+          return;
+        }
+
         if (!isVaultUnlocked()) {
           showTip(sidebarAddNote, 'Zaloguj się, aby dodawać notatki do wizyt.');
           return;
@@ -928,7 +940,10 @@ function vildaCustomHasHtmlContent(element) {
 
         var patientId = window._vildaCurrentPatientId || null;
         if (!patientId) {
-          showTip(sidebarAddNote, 'Najpierw wczytaj pacjenta z listy „Pacjenci".');
+          // Fallback gdy handler odpalił się mimo enabled state (race-condition
+          // np. syncSidebarMenuState jeszcze nie zdążyło wyszarzyć). Komunikat
+          // dwuścieżkowy: wczytaj pacjenta z listy LUB zapisz dane jako nowego.
+          showTip(sidebarAddNote, 'Aby dodać notatkę do wizyty, najpierw wczytaj pacjenta z listy „Pacjenci" lub zapisz nowego pacjenta („Zapisz dane"). Notatka kotwiczy się do konkretnej osoby w bazie.');
           return;
         }
 
@@ -1001,10 +1016,24 @@ function vildaCustomHasHtmlContent(element) {
       var v = window.VildaVault;
       if (!v) return false;
       if (typeof v.onUnlock === 'function') v.onUnlock(syncSidebarMenuState);
-      if (typeof v.onLock   === 'function') v.onLock(syncSidebarMenuState);
+      if (typeof v.onLock   === 'function') {
+        v.onLock(function () {
+          // H1: cross-session leak guard — bez tego patientId z poprzedniej
+          // sesji „przeżywał" lock i mylił sidebar w nowej sesji innego usera.
+          try { window._vildaCurrentPatientId = null; } catch (_) {}
+          syncSidebarMenuState();
+        });
+      }
       syncSidebarMenuState();
       return true;
     }
+    // H1: drugi punkt czyszczenia — vilda:user-state-cleared dispatchowany przez
+    // auth_ui przy reset stanu (np. cloud-only logout, removeUser). Pokrywa
+    // przypadek gdy vault.onLock nie odpali (state cleared bez lock'a).
+    document.addEventListener('vilda:user-state-cleared', function () {
+      try { window._vildaCurrentPatientId = null; } catch (_) {}
+      try { syncSidebarMenuState(); } catch (_) {}
+    });
     if (!tryBindVaultSync()) {
       var attempts = 0;
       var vaultSyncTimer = setInterval(function () {
