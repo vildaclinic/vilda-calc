@@ -5603,11 +5603,17 @@
     var currentFilter = 'all';
     var filterPills = [];
 
-    // F1 — Helper: zwraca paletę pill filtra. Dla filtrów-kategorii notatek
-    // (treatment, wynik-badania, followup, observation) używa PATIENT_NOTE_CATEGORY_LABELS,
-    // dla 'measurement' używa TIMELINE_TYPE_META. „Wszystko" ma własny teal.
+    // F1 — Helper: zwraca paletę pill filtra W STANIE NIEAKTYWNYM.
+    // Aktywny stan ('#00838d' teal + biały tekst) jest obsługiwany osobno
+    // w refreshFilterUI — nie tutaj. Inaczej 'all' wyglądałoby aktywne nawet
+    // gdy aktywny jest inny filtr (bug F1-fix2: dwa pill'e wyglądały aktywne).
+    //
+    // Nieaktywne stany:
+    //   • 'all'         → neutralny szary
+    //   • 'measurement' → light green z TIMELINE_TYPE_META
+    //   • kategorie     → light kolor z PATIENT_NOTE_CATEGORY_LABELS (spójność z Notatkami)
     function _filterPillPalette(filterId) {
-      if (filterId === 'all') return { bg: '#00838d', color: '#fff' };
+      if (filterId === 'all') return { bg: '#f5fafb', color: '#5b6672' };
       if (filterId === 'measurement') {
         var mm = TIMELINE_TYPE_META.measurement;
         return mm ? { bg: mm.bg, color: mm.color } : { bg: '#f5fafb', color: '#5b6672' };
@@ -6042,6 +6048,73 @@
       var measurements = events.filter(function (e) { return e.type === 'measurement'; });
       var notes = events.filter(function (e) { return e.type === 'note'; });
       var observations = events.filter(function (e) { return e.type === 'observation'; });
+
+      // F1-fix2: gdy aktywny filtr to kategoria notatki (nie 'all', nie 'measurement'),
+      // pomijamy mixed timeline z pomiarami i kotwicami. Renderujemy WSZYSTKIE notatki +
+      // observations pasujące do kategorii jako standalone karty na chronologicznej osi.
+      // Powód: notatki kotwiczone pod pomiarem są renderowane TYLKO po wyświetleniu chipa
+      // Pomiar — gdy filtr ukrywa pomiary (np. 'treatment'), kotwiczone notatki znikały.
+      // Naprawa: pomijamy logikę kotwicy gdy filtr to konkretna kategoria, co przy okazji
+      // upraszcza wizualnie listę (sama treść, bez chipów Pomiar które i tak są odfiltrowane).
+      var isCategoryFilter = (f !== 'all' && f !== 'measurement');
+      if (isCategoryFilter) {
+        var categoryItems = [];
+        notes.forEach(function (n) {
+          if (!filterAllowsEvent(n)) return;
+          categoryItems.push({
+            event: n,
+            // Priorytet sortowania: clinicalDateISO > dateISO > updatedAtISO
+            sortISO: n.clinicalDateISO
+              ? (n.clinicalDateISO.length === 10 ? n.clinicalDateISO + 'T00:00:00.000Z' : n.clinicalDateISO)
+              : (n.dateISO || n.updatedAtISO || '')
+          });
+        });
+        observations.forEach(function (o) {
+          if (!filterAllowsEvent(o)) return;
+          categoryItems.push({ event: o, sortISO: o.dateISO || '' });
+        });
+        categoryItems.sort(function (a, b) {
+          if (a.sortISO > b.sortISO) return -1;
+          if (a.sortISO < b.sortISO) return 1;
+          return 0;
+        });
+
+        if (categoryItems.length === 0) {
+          listWrap.appendChild(el('p', {
+            class: 'vilda-patient-empty-msg',
+            text: 'Brak wpisów w wybranej kategorii.'
+          }));
+          return;
+        }
+
+        categoryItems.forEach(function (item) {
+          var ev = item.event;
+          var header;
+          if (ev.linkedAgeMonths != null) {
+            // Notatka kotwiczona wiekiem — pokaż wiek + ewentualnie datę zdarzenia
+            header = _formatAge(ev.linkedAgeMonths);
+            var dateStrAnchored = _formatDateDDMMYYYY(
+              ev.clinicalDateISO
+                ? (ev.clinicalDateISO.length === 10 ? ev.clinicalDateISO + 'T00:00:00.000Z' : ev.clinicalDateISO)
+                : ev.dateISO
+            );
+            if (dateStrAnchored) header += ' · ' + dateStrAnchored;
+          } else if (ev.clinicalDateISO) {
+            // Wpis kliniczny z datą zdarzenia
+            var clinDate = _formatDateDDMMYYYY(
+              ev.clinicalDateISO.length === 10
+                ? ev.clinicalDateISO + 'T00:00:00.000Z'
+                : ev.clinicalDateISO
+            );
+            header = clinDate || '';
+          } else {
+            // Fallback — tylko data zapisu/utworzenia
+            header = _formatDateDDMMYYYY(ev.dateISO) || '';
+          }
+          listWrap.appendChild(_renderTimelineCard(ev, header, 'normal'));
+        });
+        return;
+      }
 
       // Kotwiczone events (zindeksowane po ageMonths) — renderowane POD chipem
       // Pomiar o tym wieku (zachowanie z B2). NIE są w głównym chronologicznym
