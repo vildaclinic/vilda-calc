@@ -3983,7 +3983,7 @@
    * @param {Function|null} onPick — callback do wczytania danych (null = viewOnly)
    * @param {object} listOptions  — opcje przekazywane z powrotem do showPatientsList
    */
-  async function showPatientCard(patientId, onPick, listOptions) {
+  async function showPatientCard(patientId, onPick, listOptions, opts) {
     var V = getVault();
     if (!V || !V.isUnlocked()) return;
 
@@ -4564,6 +4564,27 @@
         reRenderTimeline();
       }
     });
+
+    // G2: zachowanie kontekstu po sub-akcjach (Edytuj pomiar, Dodaj notatkę,
+    // Usuń pomiar z chipa w Historii). Sub-akcje re-renderują kartę przez
+    // showPatientCard(patientId, …, …, { activeTab: 'timeline' }), żeby nie
+    // wyrzucić użytkownika z Historii do Statusu. Lazy-mount musi być
+    // wymuszony zanim switchTab pokaże content (Notatki/Timeline renderują
+    // się leniwie). Walidacja whitelisty chroni przed brzydkimi inputami.
+    if (opts && opts.activeTab) {
+      if (opts.activeTab === 'notes' && !_notesRendered) {
+        _notesRendered = true;
+        try { reRenderNotes(); } catch (e) { logError('showPatientCard restore notes', e); }
+      }
+      if (opts.activeTab === 'timeline' && !_timelineRendered) {
+        _timelineRendered = true;
+        try { reRenderTimeline(); } catch (e) { logError('showPatientCard restore timeline', e); }
+      }
+      if (opts.activeTab === 'antro' || opts.activeTab === 'traj' ||
+          opts.activeTab === 'notes' || opts.activeTab === 'timeline') {
+        try { switchTab(opts.activeTab); } catch (e) { logError('showPatientCard restore switchTab', e); }
+      }
+    }
 
     // ── Akcje ──
     var backBtn = el('button', {
@@ -5873,7 +5894,8 @@
           snapshotId: event.snapshotId,
           onSaved: function () {
             // Po zapisie — przerenderuj kartę pacjenta (timeline + status + siatka).
-            showPatientCard(event.patientId);
+            // G2: restore Historia (chip Pomiar pochodzi z Historii) zamiast Status.
+            showPatientCard(event.patientId, null, null, { activeTab: 'timeline' });
           }
         });
       }));
@@ -5892,7 +5914,9 @@
           note: null,
           suggestLinkedAge: event.ageMonths,
           onSaved: function () {
-            showPatientCard(event.patientId);
+            // G2: notatka dodana z Historii (kotwiczona do tego pomiaru) →
+            // re-render karty pacjenta z aktywnym tabem Historia.
+            showPatientCard(event.patientId, null, null, { activeTab: 'timeline' });
           }
         });
       }));
@@ -5905,7 +5929,8 @@
           return;
         }
         V.deleteSnapshot(event.patientId, event.snapshotId).then(function () {
-          showPatientCard(event.patientId);
+          // G2: po usunięciu pomiaru z Historii — wróć do Historii (nie Status).
+          showPatientCard(event.patientId, null, null, { activeTab: 'timeline' });
         }).catch(function (err) {
           logError('deleteSnapshot from timeline', err);
           try {
