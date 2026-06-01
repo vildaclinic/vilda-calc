@@ -3310,8 +3310,16 @@
       // kalendarzowej — kotwicą jest WIEK pacjenta. Dlatego eventy measurement
       // NIE MAJĄ dateISO ani snapshotId; mają ageMonths/ageYears jako swoją oś czasu.
 
-      // Dedup globalny po (ageMonths, height, weight) — z preferencją do wartości
-      // z NAJNOWSZEGO snapshotu (najświeższe poprawki tabeli wygrywają).
+      // J2 — source-of-truth = NAJNOWSZY snapshot.
+      //
+      // Bug przed J2: iteracja po WSZYSTKICH snapshotach z dedup „first-seen wins"
+      // powodowała że wpisy historyczne usunięte przez usera w UI „zmartwychwstawały",
+      // bo żyły dalej w starszych snapshotach (append-only model). Po J2 source-rows
+      // (lista pomiarów historycznych) pochodzi WYŁĄCZNIE z snapshots[0] —
+      // najnowszego zapisu. Iteracja po pozostałych snapshotach służy TYLKO do
+      // wyliczenia `oldestSavedAtByKey` (data pierwotnego wpisu, najlepszy proxy
+      // dla „kiedy ten pomiar pierwszy raz pojawił się w bazie"). To zachowuje
+      // historię dat (B3.2) bez generowania duchów usuniętych wpisów.
       var snapshotsSortedDesc = patient.snapshots.slice().sort(function (a, b) {
         var ai = (a && a.savedAtISO) || '';
         var bi = (b && b.savedAtISO) || '';
@@ -3320,35 +3328,51 @@
         return 0;
       });
 
-      var dedupedByKey = new Map(); // key → first-seen row (z najnowszego snapshotu)
-      var oldestSavedAtByKey = new Map(); // B3.2 — key → savedAtISO NAJSTARSZEGO snapshota
-      for (var si = 0; si < snapshotsSortedDesc.length; si += 1) {
+      var dedupedByKey = new Map(); // key → row (TYLKO z najnowszego snapshotu)
+      var oldestSavedAtByKey = new Map(); // B3.2 — key → savedAtISO NAJSTARSZEGO snapshota gdzie pomiar żył
+
+      // Krok 1: source-rows z snapshots[0] (najnowszy). To jest jedyne źródło
+      // listy pomiarów historycznych — co nie ma tu, nie istnieje.
+      var latestSnapshot = snapshotsSortedDesc[0] || null;
+      var latestSavedAt = (latestSnapshot && latestSnapshot.savedAtISO) || null;
+      var latestRows = _extractMeasurementHistory(snapshotsSortedDesc[0]);
+      for (var lri = 0; lri < latestRows.length; lri += 1) {
+        var lr = latestRows[lri];
+        var lkey = lr.ageMonths + '|'
+          + (lr.height != null ? lr.height.toFixed(2) : '_')
+          + '|' + (lr.weight != null ? lr.weight.toFixed(2) : '_');
+        if (!dedupedByKey.has(lkey)) {
+          // P6.6 — przypinamy snapshotId najnowszego snapshota, w którym wystąpił
+          // ten pomiar (czyli właśnie latestSnapshot). Pozwala UI otworzyć modal
+          // edit + updateSnapshotPayload dla konkretnego snapshota.
+          lr._snapshotId = (latestSnapshot && latestSnapshot.snapshotId) || null;
+          dedupedByKey.set(lkey, lr);
+        }
+        // Inicjalizuj oldestSavedAtByKey wartością z najnowszego snapshota;
+        // następna pętla zaktualizuje na rzeczywiście NAJSTARSZY dla tego klucza.
+        if (latestSavedAt) {
+          oldestSavedAtByKey.set(lkey, latestSavedAt);
+        }
+      }
+
+      // Krok 2: iteruj po WSZYSTKICH snapshotach (DESC) tylko po to, żeby
+      // znaleźć NAJSTARSZY savedAtISO dla każdego klucza obecnego w dedup'ie.
+      // NIE dodajemy rows do dedupedByKey — to byłby „resurrection bug".
+      for (var si = 1; si < snapshotsSortedDesc.length; si += 1) {
         var snapForMeasure = snapshotsSortedDesc[si];
         var snapSavedAt = (snapForMeasure && snapForMeasure.savedAtISO) || null;
-        var rows = _extractMeasurementHistory(snapForMeasure);
-        for (var ri = 0; ri < rows.length; ri += 1) {
-          var r = rows[ri];
-          var key = r.ageMonths + '|'
-            + (r.height != null ? r.height.toFixed(2) : '_')
-            + '|' + (r.weight != null ? r.weight.toFixed(2) : '_');
-          if (!dedupedByKey.has(key)) {
-            // P6.6 — przypinamy snapshotId NAJNOWSZEGO snapshota, w którym wystąpił
-            // ten pomiar. To pozwala UI w karcie pacjenta otworzyć modal w trybie
-            // edit ('Popraw pomiar') i wywołać updateSnapshotPayload dla konkretnego
-            // snapshota. Pomiar nadal jest dedupowany po (ageMonths, h, w), więc
-            // jedna kropka na siatce = jeden chip w timeline = jeden snapshot.
-            r._snapshotId = (snapForMeasure && snapForMeasure.snapshotId) || null;
-            dedupedByKey.set(key, r);
-          }
-          // B3.2 — savedAtISO NAJSTARSZEGO snapshota dla tego pomiaru (najlepszy
-          // dostępny proxy daty pierwotnego wpisu; późniejsze edycje nie cofają tej
-          // daty wstecz). Walking DESC → każda kolejna iteracja widzi STARSZY snapshot,
-          // więc nadpisujemy bezwarunkowo, by ostateczna wartość była z najstarszego.
-          if (snapSavedAt) {
-            var existing = oldestSavedAtByKey.get(key);
-            if (!existing || snapSavedAt < existing) {
-              oldestSavedAtByKey.set(key, snapSavedAt);
-            }
+        if (!snapSavedAt) continue;
+        var historicalRows = _extractMeasurementHistory(snapForMeasure);
+        for (var hri = 0; hri < historicalRows.length; hri += 1) {
+          var hr = historicalRows[hri];
+          var hkey = hr.ageMonths + '|'
+            + (hr.height != null ? hr.height.toFixed(2) : '_')
+            + '|' + (hr.weight != null ? hr.weight.toFixed(2) : '_');
+          // Tylko dla kluczy obecnych w final list (latest snapshot).
+          if (!dedupedByKey.has(hkey)) continue;
+          var existingDate = oldestSavedAtByKey.get(hkey);
+          if (!existingDate || snapSavedAt < existingDate) {
+            oldestSavedAtByKey.set(hkey, snapSavedAt);
           }
         }
       }
