@@ -115,23 +115,46 @@
     return SYNC_STATE_KEY_PREFIX + ':' + slotId;
   }
 
-  // Storage stanu sync — ephemeral-aware. W trybie efemerycznym
-  // VildaPersistence.getStorage('local') zwraca shim PAMIĘCIOWY, więc stan sync
-  // (registered/etag/lastSyncAt) NIE trafia na dysk współdzielonego komputera.
-  // Fallback (gdy VildaPersistence niedostępne): realny localStorage jak dotąd.
+  // D3 — Conditional routing stanu sync (cloud-only vs local).
   //
-  // C1 ROLLBACK (post-deploy): próba zmiany na 'local-persistent' złamała
-  // listę pacjentów w cloud-only (empty state po unlock mimo 100+ pacjentów
-  // w chmurze). Hipoteza: pierwszy unlock po deploy zaczynał ze stanem
-  // registered=false (bo localStorage pusty), probe zwracał coś nieoczekiwanego.
-  // Wracamy do oryginalnego routingu — TODO: zdiagnozować i podejść do problemu
-  // ETag persistent inaczej (np. read-old veph: + write-new localStorage migration).
+  // Po incydencie C1 (pusty patient list w cloud-only mimo 100+ w chmurze)
+  // dokładny root cause został zidentyfikowany: ETag-match branch w syncPull
+  // zwracał 'up-to-date' bez pobrania bloba, podczas gdy in-memory adapter
+  // cloud-only był pusty po każdym unlock → UI widział pusto.
+  //
+  // Fix routing (warstwa 1):
+  //   • cloud-only mode → state idzie do sessionStorage shim (`veph:`) przez
+  //     VildaPersistence.getStorage('local'). State GINIE razem z sesją —
+  //     każdy unlock zaczyna z registered=false, localEtag=null → branch
+  //     "Scenariusz nowego urządzenia" (probe + adopt + full pull). Privacy
+  //     invariant zachowany: stan sync nigdy nie trafia na dysk w cloud-only.
+  //
+  //   • local mode → state idzie do real localStorage przez
+  //     VildaPersistence.getStorage('local-persistent'). ETag PRZEŻYWA restart
+  //     sesji — następny unlock skipuje pobranie bloba jeśli ETag matched
+  //     (oszczędność ~1s, użyteczne dla local users z dużymi vault'ami).
+  //
+  // Self-heal (warstwa 2) — patrz syncPull. Defense-in-depth: gdy adapter
+  // jest pusty mimo registered+ETag (edge case'y, regresje), syncPull
+  // resetuje localEtag i wymusza full pull.
   function syncStateStorage() {
     try {
+      var V = global.VildaVault;
+      var isCloudOnly = !!(V && typeof V.isCloudOnlyMode === 'function' && V.isCloudOnlyMode());
       var P = global.VildaPersistence;
+      if (isCloudOnly) {
+        // Cloud-only: shim 'local' → veph: w sessionStorage, ginie z sesją
+        if (P && typeof P.getStorage === 'function') {
+          var sCO = P.getStorage('local');
+          if (sCO) return sCO;
+        }
+        // Fallback: bezpośrednio sessionStorage (bez VildaPersistence)
+        return global.sessionStorage || null;
+      }
+      // Local mode: real localStorage, persistuje między sesjami
       if (P && typeof P.getStorage === 'function') {
-        var s = P.getStorage('local');
-        if (s) return s;
+        var sLocal = P.getStorage('local-persistent');
+        if (sLocal) return sLocal;
       }
     } catch (_) {}
     return global.localStorage || null;
@@ -238,6 +261,22 @@
       throw syncError('VildaSync: vault nie jest odblokowany. Zaloguj się przed synchronizacją.', 'VAULT_LOCKED');
     }
     return vault;
+  }
+
+  // D3 self-heal helper: czy lokalny vault adapter jest pusty (0 pacjentów)?
+  // Używany w syncPull do wymuszenia full pulla gdy state mówi "zsynchronizowany"
+  // ale adapter w rzeczywistości nie ma danych (cloud-only po unlock, lub
+  // wyczyszczony IDB w trybie local). Defensywny try/catch — gdy listPatients
+  // rzuca, zwracamy false (nie modyfikujemy zachowania).
+  async function isVaultAdapterEmpty() {
+    try {
+      var V = global.VildaVault;
+      if (!V || typeof V.listPatients !== 'function') return false;
+      var patients = await V.listPatients();
+      return Array.isArray(patients) && patients.length === 0;
+    } catch (_) {
+      return false;
+    }
   }
 
   // ─── Eventy ────────────────────────────────────────────────────────────────
@@ -543,11 +582,24 @@
         var statusData = await statusResp.json();
       }
 
-      // 2. ETag się nie zmienił — brak potrzeby pobierania bloba
+      // D3 self-heal (warstwa 2): zanim pominiemy pobranie bloba na podstawie
+      // ETag-match, upewnij się że lokalny adapter MA dane. Edge case'y:
+      //   - regresja routingu syncStateStorage (np. ETag wszedł do real localStorage
+      //     mimo cloud-only mode)
+      //   - user wyczyścił IDB ręcznie ale localStorage został
+      //   - przyszłe zmiany w storageMode które rozspójniły stan
+      // Gdy adapter pusty + state mówi że jest zsynchronizowany → wymuś full pull.
       if (state.localEtag && state.localEtag === statusData.etag) {
-        var upToDateResult = { action: 'up-to-date', etag: statusData.etag };
-        emit(syncCompleteListeners, { operation: 'pull', result: upToDateResult });
-        return upToDateResult;
+        var adapterEmpty = await isVaultAdapterEmpty();
+        if (adapterEmpty) {
+          // adapter pusty mimo localEtag — reset i pobierz blob
+          state.localEtag = null;
+          // (state nie zapisujemy jeszcze — saveSyncState wykona się po merge)
+        } else {
+          var upToDateResult = { action: 'up-to-date', etag: statusData.etag };
+          emit(syncCompleteListeners, { operation: 'pull', result: upToDateResult });
+          return upToDateResult;
+        }
       }
 
       // 3. Pobierz blob z warunkowym GET (If-None-Match)
