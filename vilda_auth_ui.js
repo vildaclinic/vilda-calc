@@ -5344,15 +5344,61 @@
     'gh-therapy':   { label: 'Terapia GH',  color: '#0F6E56', bg: '#E1F5EE' }
   };
 
+  // F1 — Filtry Historii zsynchronizowane z PATIENT_NOTE_CATEGORY_LABELS.
+  // Lekarz w Notatkach widzi 4 kategorie: Kontrola/Obserwacja/Leczenie/Wynik badania.
+  // W Historii dodajemy Pomiar (event measurement) + powyższe 4 kategorie + Wszystko.
+  // Usunięte:
+  //   • 'note' (catch-all śmietnik — każda notatka teraz ląduje pod swoją kategorią)
+  //   • 'lab' / 'medication' (placeholdery future-proof, notatki ze structural fields
+  //     trafiają teraz do 'wynik-badania' / 'treatment' przez _deriveNoteFilterCategory)
+  //   • 'gh-therapy' (placeholder bez modułu — wraca gdy moduł powstanie)
   var TIMELINE_FILTER_OPTIONS = [
-    { id: 'all',          label: 'Wszystko' },
-    { id: 'measurement',  label: 'Pomiar' },
-    { id: 'note',         label: 'Notatka' },
-    { id: 'observation',  label: 'Obserwacja' },
-    { id: 'lab',          label: 'Wynik' },
-    { id: 'medication',   label: 'Lek' },
-    { id: 'gh-therapy',   label: 'Terapia GH' }
+    { id: 'all',           label: 'Wszystko' },
+    { id: 'measurement',   label: 'Pomiar' },
+    { id: 'observation',   label: 'Obserwacja' },
+    { id: 'treatment',     label: 'Leczenie' },
+    { id: 'wynik-badania', label: 'Wynik badania' },
+    { id: 'followup',      label: 'Kontrola' }
   ];
+
+  // F1 — Wyprowadza „kategorię filtra" z notatki klinicznej:
+  // priorytet structural fields B3 (medication/labResult) > category > default.
+  // Zwraca jeden z: 'treatment' | 'wynik-badania' | 'observation' | 'followup'.
+  // Używane przez eventMatchesFilter (filtrowanie listy) i _resolveEventMeta (badge/kolor).
+  function _deriveNoteFilterCategory(noteEvent) {
+    if (!noteEvent) return 'observation';
+    if (noteEvent.medication) return 'treatment';
+    if (noteEvent.labResult) return 'wynik-badania';
+    if (noteEvent.category && PATIENT_NOTE_CATEGORY_LABELS[noteEvent.category]) {
+      return noteEvent.category;
+    }
+    return 'observation';
+  }
+
+  // F1 — Decyduje czy event pasuje do bieżącego filtra. Notatki rozdzielają się
+  // po kategorii (treatment/wynik-badania/observation/followup); auto-generated
+  // 'observation' events trafiają pod filtr 'observation' razem z notatkami obs.
+  function eventMatchesFilter(evt, filterId) {
+    if (!evt) return false;
+    if (filterId === 'all') return true;
+    if (evt.type === 'measurement') return filterId === 'measurement';
+    if (evt.type === 'observation') return filterId === 'observation';
+    if (evt.type === 'note') return filterId === _deriveNoteFilterCategory(evt);
+    return false;
+  }
+
+  // F1 — Zwraca meta { label, color, bg } dla badge'a w timeline.
+  // Dla notatek używa palety PATIENT_NOTE_CATEGORY_LABELS (spójność z Notatkami),
+  // dla measurement/observation auto — TIMELINE_TYPE_META.
+  function _resolveEventMeta(evt) {
+    if (!evt) return { label: '?', color: '#5b6672', bg: '#f5fafb' };
+    if (evt.type === 'note') {
+      var cat = _deriveNoteFilterCategory(evt);
+      var pcat = PATIENT_NOTE_CATEGORY_LABELS[cat];
+      if (pcat) return { label: pcat.label, color: pcat.color, bg: pcat.bg };
+    }
+    return TIMELINE_TYPE_META[evt.type] || { label: evt.type, color: '#5b6672', bg: '#f5fafb' };
+  }
 
   /**
    * Formatuje dateISO w relatywny napis polski.
@@ -5556,26 +5602,44 @@
     });
     var currentFilter = 'all';
     var filterPills = [];
+
+    // F1 — Helper: zwraca paletę pill filtra. Dla filtrów-kategorii notatek
+    // (treatment, wynik-badania, followup, observation) używa PATIENT_NOTE_CATEGORY_LABELS,
+    // dla 'measurement' używa TIMELINE_TYPE_META. „Wszystko" ma własny teal.
+    function _filterPillPalette(filterId) {
+      if (filterId === 'all') return { bg: '#00838d', color: '#fff' };
+      if (filterId === 'measurement') {
+        var mm = TIMELINE_TYPE_META.measurement;
+        return mm ? { bg: mm.bg, color: mm.color } : { bg: '#f5fafb', color: '#5b6672' };
+      }
+      // observation / treatment / wynik-badania / followup → paleta z Notatek (spójność)
+      var pcat = PATIENT_NOTE_CATEGORY_LABELS[filterId];
+      if (pcat) return { bg: pcat.bg, color: pcat.color };
+      return { bg: '#f5fafb', color: '#5b6672' };
+    }
+
     function refreshFilterUI() {
       filterPills.forEach(function (p) {
         if (p.opt.id === currentFilter) {
           p.btn.style.background = '#00838d';
           p.btn.style.color = '#fff';
         } else {
-          p.btn.style.background = TIMELINE_TYPE_META[p.opt.id] ? TIMELINE_TYPE_META[p.opt.id].bg : '#f5fafb';
-          p.btn.style.color = TIMELINE_TYPE_META[p.opt.id] ? TIMELINE_TYPE_META[p.opt.id].color : '#5b6672';
+          var pal = _filterPillPalette(p.opt.id);
+          p.btn.style.background = pal.bg;
+          p.btn.style.color = pal.color;
         }
       });
       rebuildList();
     }
     TIMELINE_FILTER_OPTIONS.forEach(function (opt) {
-      var meta = TIMELINE_TYPE_META[opt.id];
+      var pal = _filterPillPalette(opt.id);
+      var isActive = (opt.id === currentFilter);
       var btn = el('button', {
         type: 'button',
         text: opt.label,
         style: 'border:none;padding:4px 10px;font-size:0.74rem;font-weight:600;border-radius:999px;cursor:pointer;font-family:inherit;'
-          + 'background:' + (opt.id === 'all' ? '#00838d' : (meta ? meta.bg : '#f5fafb')) + ';'
-          + 'color:' + (opt.id === 'all' ? '#fff' : (meta ? meta.color : '#5b6672')) + ';',
+          + 'background:' + (isActive ? '#00838d' : pal.bg) + ';'
+          + 'color:' + (isActive ? '#fff' : pal.color) + ';',
         onclick: function () { currentFilter = opt.id; refreshFilterUI(); }
       });
       filterPills.push({ opt: opt, btn: btn });
@@ -5679,7 +5743,10 @@
     // dotIndent: 'normal' (lewa krawędź osi) lub 'nested' (lekko cofnięte
     //   wewnątrz grupy pomiaru — pokazuje że to dziecko pomiaru).
     function _renderTimelineCard(event, headerText, dotIndent) {
-      var meta = TIMELINE_TYPE_META[event.type] || { label: event.type, color: '#5b6672', bg: '#f5fafb' };
+      // F1: meta z _resolveEventMeta — dla notatek paleta z PATIENT_NOTE_CATEGORY_LABELS
+      // (spójność z zakładką Notatki). Notatka kategorii „Leczenie" → niebieski badge
+      // i niebieska kropka na osi, identycznie jak w Notatkach.
+      var meta = _resolveEventMeta(event);
       var wrapper = el('div', { style: 'position:relative;margin-bottom:' + (dotIndent === 'nested' ? '8px' : '14px') + ';' });
 
       // Kropka na osi — kolor wg typu. Nested → mniejsza, lekko cofnięta w bok.
@@ -5869,7 +5936,8 @@
     //
     // event: typowo 'note' lub 'observation' z linkedAgeMonths != null.
     function _renderAnchoredCard(event) {
-      var meta = TIMELINE_TYPE_META[event.type] || { label: event.type, color: '#5b6672', bg: '#f5fafb' };
+      // F1: meta z _resolveEventMeta (paleta wg kategorii notatki — patrz _renderTimelineCard).
+      var meta = _resolveEventMeta(event);
 
       // Wrapper: relative do absolutnie pozycjonowanego SVG L-connector.
       // padding-left 36px = 8px ramienia poziomego L + 28px standardowego wcięcia osi.
@@ -5948,7 +6016,10 @@
       while (listWrap.childNodes.length > 1) listWrap.removeChild(listWrap.lastChild);
 
       var f = currentFilter;
-      function filterAllows(t) { return f === 'all' || f === t; }
+      // F1: filter używa eventMatchesFilter — notatki rozdzielają się po
+      // _deriveNoteFilterCategory (treatment/wynik-badania/observation/followup),
+      // a nie po `event.type === 'note'` (catch-all, usunięty).
+      function filterAllowsEvent(evt) { return eventMatchesFilter(evt, f); }
 
       // ── B3.2: Mixed chronological timeline ────────────────────────────────
       // Architektura po B3.2 — jeden chronologiczny ciąg zdarzeń klinicznych:
@@ -5990,7 +6061,7 @@
       // T00:00:00.000Z normalizacją, którą zrobił vault w `dateISO`).
       var mixedItems = [];
       measurements.forEach(function (m) {
-        if (filterAllows('measurement')) {
+        if (filterAllowsEvent(m)) {
           mixedItems.push({
             kind: 'measurement',
             event: m,
@@ -5999,7 +6070,9 @@
         }
       });
       clinicalDatedNotes.forEach(function (n) {
-        if (filterAllows('note')) {
+        // F1: notatka clinical-dated trafia do filtra wg derived kategorii
+        // (treatment / wynik-badania / observation / followup) — nie do generycznego 'note'.
+        if (filterAllowsEvent(n)) {
           mixedItems.push({
             kind: 'clinical-note',
             event: n,
@@ -6015,7 +6088,7 @@
 
       // Empty state — gdy mixed lista + osierocone kotwice są puste w obecnym filtrze.
       var anchoredHasAnyVisible = Object.keys(anchoredByAge).some(function (k) {
-        return anchoredByAge[k].some(function (evt) { return filterAllows(evt.type); });
+        return anchoredByAge[k].some(function (evt) { return filterAllowsEvent(evt); });
       });
       if (mixedItems.length === 0 && !anchoredHasAnyVisible) {
         listWrap.appendChild(el('p', {
@@ -6041,7 +6114,7 @@
           // Pod chipem — kotwiczone notatki/observations dla tego wieku.
           var anchored = anchoredByAge[m.ageMonths] || [];
           anchored.forEach(function (a) {
-            if (filterAllows(a.type)) {
+            if (filterAllowsEvent(a)) {
               listWrap.appendChild(_renderAnchoredCard(a));
             }
           });
@@ -6063,7 +6136,7 @@
         var hasMatchingMeas = measurements.some(function (m) { return m.ageMonths === ageM; });
         if (hasMatchingMeas) return;
         anchoredByAge[ageKey].forEach(function (a) {
-          if (filterAllows(a.type)) {
+          if (filterAllowsEvent(a)) {
             listWrap.appendChild(_renderTimelineCard(a,
               'Kotwica: wiek ' + _formatAge(ageM) + ' (brak pomiaru)', 'normal'));
           }
