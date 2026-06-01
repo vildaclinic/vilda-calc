@@ -8957,6 +8957,19 @@ function handleAdvancedMeasurementRowRemove(row){
       globalThis.vildaLogSwallowedCatch('app.js', _, { line: 30128 });
     }
   }
+
+  // J1: usunięcie wiersza historycznego to czysta operacja DOM/danych — żaden
+  // natywny `input` ani `change` event nie leci. vilda_save_status_indicator
+  // nasłuchuje globalnie tych eventów (capture phase) i bez tego nie wykryje
+  // zmiany — chip pozostawał SAVED mimo że formularz jest DIRTY. Syntetyczny
+  // `input` z bubbles=true odpala debouncedOnFormChange → po 400ms recompute
+  // fingerprint → DIRTY. Te same względy dla handleIntakeHistoryRowRemove.
+  try {
+    if (typeof Event === 'function' && document) {
+      document.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  } catch (_) {}
+
   return true;
 
   });
@@ -8991,6 +9004,16 @@ function handleIntakeHistoryRowRemove(row){
       globalThis.vildaLogSwallowedCatch('app.js', _, { line: 30151 });
     }
   }
+
+  // J1: notify save_status_indicator — patrz komentarz w
+  // handleAdvancedMeasurementRowRemove. row.remove() + recalc nie emituje
+  // natywnego `input`/`change`, więc indykator nie wykryje zmiany bez tego.
+  try {
+    if (typeof Event === 'function' && document) {
+      document.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  } catch (_) {}
+
   return true;
 
   });
