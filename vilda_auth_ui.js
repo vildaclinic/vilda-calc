@@ -6231,55 +6231,43 @@
       notes.forEach(function (n) { if (n.linkedAgeMonths != null) _addAnchored(n); });
       observations.forEach(function (o) { _addAnchored(o); });
 
-      // Notatki z clinicalDateISO ALE bez linkedAgeMonths — wchodzą do mixed listy
-      // jako pełnoprawne chronologiczne wydarzenia (chip „Wpis kliniczny").
-      var clinicalDatedNotes = notes.filter(function (n) {
-        return n.linkedAgeMonths == null && n.clinicalDateISO;
-      });
-
-      // Mixed kolekcja: pomiary + clinical-dated notes, sortowane DESC po dacie.
-      // Dla pomiaru bierzemy savedAtISO (B3.2 vault dodało to pole — proxy daty
-      // wizyty z najstarszego snapshota). Dla notatki — clinicalDateISO (z
-      // T00:00:00.000Z normalizacją, którą zrobił vault w `dateISO`).
+      // J3 — Historia = tylko pomiary biologiczne (oś czasu wieku pacjenta).
+      //
+      // Decyzja semantyczna: Historia pokazuje WYŁĄCZNIE pomiary historyczne
+      // posortowane po ageMonths DESC (wiek pacjenta w momencie pomiaru).
+      // Kotwiczone notatki (linkedAgeMonths != null) renderowane są pod swoim
+      // chipem Pomiar (anchoredByAge, niżej). Luźne notatki kliniczne
+      // (clinicalDateISO bez kotwicy) NIE pojawiają się w Historii — są
+      // widoczne w zakładce Notatki, sub-sekcja „Notatki kliniczne".
+      //
+      // Powód: data zapisu (savedAtISO) to metadane operacyjne, nie chronologia
+      // biologiczna. Sortowanie po savedAtISO powodowało że nowo dodany pomiar
+      // (np. 6y2m, wpisany dziś) wskakiwał nad istniejący starszy biologicznie
+      // (np. 12y1m, wpisany 2 miesiące temu) — bo dzisiaj > 2 miesiące temu.
+      // Dla pomiarów naturalną osią czasu jest wiek pacjenta.
       var mixedItems = [];
       measurements.forEach(function (m) {
         if (filterAllowsEvent(m)) {
           mixedItems.push({
             kind: 'measurement',
             event: m,
+            // sortISO zostaje dla informacji (chip pokazuje datę zapisu),
+            // ale sortowanie używa ageMonths jako primary.
             sortISO: m.savedAtISO || ''
           });
         }
       });
-      clinicalDatedNotes.forEach(function (n) {
-        // F1: notatka clinical-dated trafia do filtra wg derived kategorii
-        // (treatment / wynik-badania / observation / followup) — nie do generycznego 'note'.
-        if (filterAllowsEvent(n)) {
-          mixedItems.push({
-            kind: 'clinical-note',
-            event: n,
-            sortISO: n.dateISO || n.clinicalDateISO || ''
-          });
-        }
-      });
       mixedItems.sort(function (a, b) {
-        // Primary: sortISO DESC (data wydarzenia — najnowsza na górze).
-        if (a.sortISO > b.sortISO) return -1;
-        if (a.sortISO < b.sortISO) return 1;
-        // I1 tie-breaker: gdy daty równe (typowo: pomiar historyczny + aktualny
-        // zapisane w tej samej sesji), sortuj po WIEKU pacjenta DESC. Większy
-        // ageMonths = pomiar zrobiony później biologicznie → na górze. Bez
-        // tego sortowanie zwracało 0 → niedeterministyczna kolejność, pomiar
-        // 12y1m wyświetlał się nad 12y6m.
-        // Dla notatek anchored — fallback na linkedAgeMonths.
-        var aAge = (a.event && typeof a.event.ageMonths === 'number') ? a.event.ageMonths
-                 : (a.event && typeof a.event.linkedAgeMonths === 'number') ? a.event.linkedAgeMonths
-                 : -1;
-        var bAge = (b.event && typeof b.event.ageMonths === 'number') ? b.event.ageMonths
-                 : (b.event && typeof b.event.linkedAgeMonths === 'number') ? b.event.linkedAgeMonths
-                 : -1;
+        // J3 PRIMARY: ageMonths DESC. Większy wiek = nowszy biologicznie = wyżej.
+        var aAge = (a.event && typeof a.event.ageMonths === 'number') ? a.event.ageMonths : -1;
+        var bAge = (b.event && typeof b.event.ageMonths === 'number') ? b.event.ageMonths : -1;
         if (aAge > bAge) return -1;
         if (aAge < bAge) return 1;
+        // Tie-breaker (rzadki: dwa pomiary o tym samym wieku): sortISO DESC,
+        // żeby nowszy zapis był wyżej. To po prostu deterministyczna kolejność
+        // dla edge case'ów — nie wpływa na semantykę biologiczną.
+        if (a.sortISO > b.sortISO) return -1;
+        if (a.sortISO < b.sortISO) return 1;
         return 0;
       });
 
