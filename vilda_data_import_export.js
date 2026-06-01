@@ -878,13 +878,12 @@
       return null;
     }
 
-    // FIX B: auto-dorzuć aktualny pomiar (data.user.{height,weight,age,ageMonths}) do
-    // data.advanced.data.measurements[] oraz data.growthBasic.data.measurements[] PRZED
-    // zapisem snapshotu w vault. Dzięki temu nawet pacjent zapisany jednorazowo (bez cyklu
-    // wczytaj→edytuj→zapisz) ma od razu wpis w obu tabelach, a Historia / siatka centylowa
-    // go widzi. Dedup po ageMonths z UPDATE — istniejący wpis dla tego wieku zostaje
-    // nadpisany aktualnymi wartościami (lekarz poprawia poprzedni błędny pomiar).
-    _ensureCurrentMeasurementInHistory(data);
+    // K1: wycofano automatyczne wstrzykiwanie aktualnego pomiaru do tabeli
+    // historycznej (FIX A/B/C). Patrz komentarz w applyLoadedData. Snapshot
+    // zapisany w vault będzie miał aktualny pomiar TYLKO w `payload.user.{*}`,
+    // a `payload.advanced.data.measurements` trzyma TYLKO świadomie dodane
+    // wpisy historyczne. Vault listPatientTimelineEvents generuje chip dla
+    // pomiaru aktualnego z payload.user (bezwarunkowy fallback).
 
     Promise.resolve()
       .then(function () { return vault.savePatient(data); })
@@ -2851,12 +2850,14 @@
       : function fallbackImmediateTimeout(fn) { if (typeof fn === 'function') fn(); return 0; };
     if (!data || typeof data !== 'object') return false;
 
-    // FIX A+B+C: wywołane na samym początku, ZANIM cokolwiek skopiuje data.advanced.data
-    // do globalnego window.advancedGrowthData. Helper tworzy struktury jeśli brak (Luka A)
-    // oraz dorzuca aktualny pomiar do obu modułów (advanced + growthBasic — Luka C),
-    // z dedup po ageMonths. Po wywołaniu obie tablice measurements[] gwarantowanie zawierają
-    // wpis dla aktualnego stanu (chyba że brak height/weight/age).
-    _ensureCurrentMeasurementInHistory(data);
+    // K1: wycofano automatyczne wstrzykiwanie aktualnego pomiaru do tabeli
+    // historycznej (FIX A/B/C). Powodowało duplikat — pomiar żył jednocześnie
+    // w formularzu głównym (data.user) i w tabeli „Historyczne pomiary"
+    // (data.advanced.data.measurements). Po K1 tabela historyczna trzyma TYLKO
+    // wpisy świadomie dodane przez usera. Vault listPatientTimelineEvents sam
+    // generuje chip dla pomiaru aktualnego z payload.user (bezwarunkowo).
+    // Helper _ensureCurrentMeasurementInHistory zostaje wyexportowany (regresja
+    // API), ale nie jest już wywoływany tutaj.
 
     const syncShared = resolveCallback(opts, 'syncSharedUserDataFromLoadedData', 'syncSharedUserDataFromLoadedData') || syncSharedUserDataFromLoadedData;
     const resolveFoodAlias = resolveCallback(opts, 'macroPracticeResolveFoodAliasKey', 'macroPracticeResolveFoodAliasKey') || function defaultResolveFoodAlias(key) { return key; };
