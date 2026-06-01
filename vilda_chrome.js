@@ -2018,6 +2018,30 @@
       } catch (_) {}
       var vc = global.VildaChrome;
       if (vc && typeof vc.refreshPatientChip === 'function') vc.refreshPatientChip();
+
+      // I2: po wczytaniu pacjenta sprawdź czy karta pacjenta prosiła o scroll
+      // do sekcji „Zaawansowane obliczenia wzrostowe" (edycja historycznego
+      // pomiaru). applyLoadedData jest synchroniczny, ale renderowanie sekcji
+      // może być deferred (vilda_advanced_growth.js, applyLoadedData wewn.
+      // logika). Setdeout 300ms żeby dać czas DOM-owi.
+      try {
+        var scrollFlag = ss.getItem('vilda:postLoadScroll');
+        if (scrollFlag === 'advancedGrowth') {
+          ss.removeItem('vilda:postLoadScroll');
+          setTimeout(function () {
+            var toggleBtn = doc.getElementById('toggleAdvancedGrowth');
+            var section = doc.getElementById('advancedGrowthSection');
+            if (!section) return;
+            // Rozwiń sekcję jeśli zwinięta.
+            var disp = '';
+            try { disp = (section.style && section.style.display) || ''; } catch (_) {}
+            if ((disp === '' || disp === 'none') && toggleBtn) {
+              try { toggleBtn.click(); } catch (_) {}
+            }
+            try { section.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {}
+          }, 300);
+        }
+      } catch (_) {}
     }).catch(function () {});
     return true;
   }
