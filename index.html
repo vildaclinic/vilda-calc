@@ -4123,6 +4123,7 @@ const pw = 2480, ph = 3508;
   ctx.fillText('vildaclinic.pl', 120, footerY);
   ctx.restore();
   const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
+  if (typeof window !== 'undefined' && typeof window.vildaEnsurePdfLibraries === 'function') { try { await window.vildaEnsurePdfLibraries(); } catch (e) {} } // PERF: lazy jsPDF
   const jsPDF = (typeof window !== 'undefined' && typeof window.vildaRequireFunction === 'function')
     ? window.vildaRequireFunction('jspdf.jsPDF', { moduleName: 'inline-pdf-export' })
     : (window.jspdf && typeof window.jspdf.jsPDF === 'function' ? window.jspdf.jsPDF : null);
@@ -5441,6 +5442,7 @@ async function generateCentileChart() {
 
     const adv = window.advancedGrowthData || null;
     const { minAll, maxAll } = collectAllAgesMonths(ageMonths, adv);
+    if (typeof window !== 'undefined' && typeof window.vildaEnsurePdfLibraries === 'function') { try { await window.vildaEnsurePdfLibraries(); } catch (e) {} } // PERF: lazy jsPDF
     const jsPDF = (typeof window !== 'undefined' && typeof window.vildaRequireFunction === 'function')
     ? window.vildaRequireFunction('jspdf.jsPDF', { moduleName: 'inline-pdf-export' })
     : (window.jspdf && typeof window.jspdf.jsPDF === 'function' ? window.jspdf.jsPDF : null);
@@ -5658,7 +5660,7 @@ async function generateCentileChart() {
     }
     return findHighlightBandLocal(userVal, curves, percentiles, mIdx);
   }
-  function generateDsCentileChart(){
+  async function generateDsCentileChart(){
     const ageEl    = document.getElementById('age');
     const ageMEl   = document.getElementById('ageMonths');
     const sexEl    = document.getElementById('sex');
@@ -5741,6 +5743,7 @@ async function generateCentileChart() {
     ctx.fillText('vildaclinic.pl', 120, dsFooterY);
     ctx.restore();
     const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
+    if (typeof window !== 'undefined' && typeof window.vildaEnsurePdfLibraries === 'function') { try { await window.vildaEnsurePdfLibraries(); } catch (e) {} } // PERF: lazy jsPDF
     const jsPDF = (typeof window !== 'undefined' && typeof window.vildaRequireFunction === 'function')
     ? window.vildaRequireFunction('jspdf.jsPDF', { moduleName: 'inline-pdf-export' })
     : (window.jspdf && typeof window.jspdf.jsPDF === 'function' ? window.jspdf.jsPDF : null);
@@ -7243,9 +7246,10 @@ async function generateCentileChart() {
       }
     }
 
-    function openPalczewskaCanvasesPdf(canvases) {
+    async function openPalczewskaCanvasesPdf(canvases) {
       const pages = Array.isArray(canvases) ? canvases.filter(Boolean) : [];
       if (!pages.length) return;
+      if (typeof window !== 'undefined' && typeof window.vildaEnsurePdfLibraries === 'function') { try { await window.vildaEnsurePdfLibraries(); } catch (e) {} } // PERF: lazy jsPDF
       const jsPDF = (typeof window !== 'undefined' && typeof window.vildaRequireFunction === 'function')
     ? window.vildaRequireFunction('jspdf.jsPDF', { moduleName: 'inline-pdf-export' })
     : (window.jspdf && typeof window.jspdf.jsPDF === 'function' ? window.jspdf.jsPDF : null);
@@ -7391,7 +7395,7 @@ async function generateCentileChart() {
         return;
       }
 
-      openPalczewskaCanvasesPdf(canvases);
+      await openPalczewskaCanvasesPdf(canvases);
     }
 
     // Zarejestruj obsługę przycisków generowania siatek.
