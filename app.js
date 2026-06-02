@@ -8928,8 +8928,60 @@ function _pairAdvancedAndIntakeRowsByOrder(options){
   });
 }
 
+// J1-FINAL: wspólne side-effecty save-state dla usuwania wierszy historycznych.
+// MUSZĄ działać niezależnie od tego, czy usunięcie wykonał adapter
+// (window.VildaAdvancedGrowth — ścieżka przeglądarki) czy inline fallback
+// (sandbox/headless). _callAdvIntakeHelper deleguje do adaptera, gdy ten istnieje,
+// więc te efekty NIE mogą być zaszyte w closurze fallback (martwej w runtime).
+function _syncAdvancedGrowthMeasurementsFromDom(srcLabel){
+  // EXPLICIT sync window.advancedGrowthData.measurements z DOM. collectUserData
+  // (które autosave woła) czyta measurements z global.advancedGrowthData (cached
+  // array), NIE z DOM rows. calculateGrowthAdvanced aktualizuje
+  // window.advancedGrowthData o wyniki obliczeń (z-scores), ale NIE o measurements
+  // w tej samej strukturze. Bez tego sessionStorage dostaje stary main session →
+  // fingerprint compare nie widzi zmiany → indykator zostaje SAVED.
+  try {
+    if (typeof collectAdvancedMeasurements === 'function'
+        && typeof window !== 'undefined'
+        && window.advancedGrowthData && typeof window.advancedGrowthData === 'object') {
+      var freshRows = collectAdvancedMeasurements(false) || [];
+      window.advancedGrowthData.measurements = freshRows.map(function (r) {
+        var entry = {
+          ageYears: r.ageYears,
+          ageMonths: r.ageMonths,
+          height: r.height,
+          weight: r.weight
+        };
+        if (r.boneAgeYears != null) entry.boneAgeYears = r.boneAgeYears;
+        if (r.arrowEnabled) {
+          entry.arrowEnabled = true;
+          entry.arrowComment = r.arrowComment || '';
+        }
+        if (r.ghSync) entry.ghSync = true;
+        if (r.ghId) entry.ghId = String(r.ghId);
+        return entry;
+      });
+    }
+  } catch (_) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('app.js', _, { module: '_syncAdvancedGrowthMeasurementsFromDom', src: srcLabel || '' });
+    }
+  }
+}
+
+function _notifyAdvIntakeHistoryMutated(reason){
+  // notify save_status_indicator — flush sessionStorage + force fingerprint
+  // compare (omijając __vildaPersist* guards które blokowały post-restore actions).
+  try {
+    if (typeof window !== 'undefined' && window.VildaSaveStatusIndicator
+        && typeof window.VildaSaveStatusIndicator.notifyExternalChange === 'function') {
+      window.VildaSaveStatusIndicator.notifyExternalChange(reason);
+    }
+  } catch (_) {}
+}
+
 function handleAdvancedMeasurementRowRemove(row){
-  return _callAdvIntakeHelper('handleAdvancedIntakeAdvancedMeasurementRowRemove', [row, _getAdvIntakeHandlerOptions()], () => {
+  const _advRemoved = _callAdvIntakeHelper('handleAdvancedIntakeAdvancedMeasurementRowRemove', [row, _getAdvIntakeHandlerOptions()], () => {
   if (!row || _isProtectedAdvancedHistoryRow(row)) {
     _refreshAdvIntakeRowUi();
     return false;
@@ -8958,59 +9010,25 @@ function handleAdvancedMeasurementRowRemove(row){
     }
   }
 
-  // J1-v6: EXPLICIT sync window.advancedGrowthData.measurements z DOM PRZED
-  // notifyExternalChange. collectUserData (które autosave woła) czyta
-  // measurements z global.advancedGrowthData (cached array), NIE z DOM rows.
-  // calculateGrowthAdvanced wywołane wyżej AKTUALIZUJE window.advancedGrowthData,
-  // ale jego payload zawiera wyniki obliczeń (z-scores, percentyle), NIE
-  // measurements w identycznej strukturze. Bez tego explicit sync sessionStorage
-  // dostaje stary main session → fingerprint compare nie widzi zmiany →
-  // indykator zostaje SAVED.
-  try {
-    if (typeof collectAdvancedMeasurements === 'function'
-        && typeof window !== 'undefined'
-        && window.advancedGrowthData && typeof window.advancedGrowthData === 'object') {
-      var freshRows = collectAdvancedMeasurements(false) || [];
-      window.advancedGrowthData.measurements = freshRows.map(function (r) {
-        var entry = {
-          ageYears: r.ageYears,
-          ageMonths: r.ageMonths,
-          height: r.height,
-          weight: r.weight
-        };
-        if (r.boneAgeYears != null) entry.boneAgeYears = r.boneAgeYears;
-        if (r.arrowEnabled) {
-          entry.arrowEnabled = true;
-          entry.arrowComment = r.arrowComment || '';
-        }
-        if (r.ghSync) entry.ghSync = true;
-        if (r.ghId) entry.ghId = String(r.ghId);
-        return entry;
-      });
-    }
-  } catch (_) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', _, { module: 'handleAdvancedMeasurementRowRemove:sync-cache' });
-    }
-  }
-
-  // J1-fix/v5: notify save_status_indicator — flush sessionStorage + force
-  // fingerprint compare (omijając __vildaPersist* guards które blokowały
-  // post-restore user actions).
-  try {
-    if (typeof window !== 'undefined' && window.VildaSaveStatusIndicator
-        && typeof window.VildaSaveStatusIndicator.notifyExternalChange === 'function') {
-      window.VildaSaveStatusIndicator.notifyExternalChange('adv-row-removed');
-    }
-  } catch (_) {}
-
   return true;
 
   });
+
+  // J1-FINAL: side-effecty save-state PO powrocie z _callAdvIntakeHelper —
+  // bezwarunkowo, niezależnie czy usunięcie wykonał adapter (przeglądarka) czy
+  // fallback (sandbox). Wcześniej (J1-fix..v7) siedziały WEWNĄTRZ closury
+  // fallback, której runtime z załadowanym adapterem NIGDY nie wykonuje — stąd
+  // „smoke green / runtime broken" przez 7 iteracji. Odpalamy tylko gdy realnie
+  // usunięto wiersz (helper zwrócił true; false = protected/locked).
+  if (_advRemoved === true) {
+    _syncAdvancedGrowthMeasurementsFromDom('handleAdvancedMeasurementRowRemove');
+    _notifyAdvIntakeHistoryMutated('adv-row-removed');
+  }
+  return _advRemoved;
 }
 
 function handleIntakeHistoryRowRemove(row){
-  return _callAdvIntakeHelper('handleAdvancedIntakeHistoryRowRemove', [row, _getAdvIntakeHandlerOptions()], () => {
+  const _intakeRemoved = _callAdvIntakeHelper('handleAdvancedIntakeHistoryRowRemove', [row, _getAdvIntakeHandlerOptions()], () => {
   if (!row || row.dataset.locked === 'true' || _isProtectedIntakeHistoryRow(row)) {
     _refreshAdvIntakeRowUi();
     return false;
@@ -9039,41 +9057,18 @@ function handleIntakeHistoryRowRemove(row){
     }
   }
 
-  // J1-v6: EXPLICIT sync window.intakeHistory + window.advancedGrowthData z DOM
-  // PRZED notifyExternalChange. handleIntakeHistoryRowRemove usuwa też twin
-  // wiersz w advanced przez _findAdvRowBySyncId, więc oba cached arrays
-  // muszą być zsynchronizowane.
-  try {
-    if (typeof collectAdvancedMeasurements === 'function'
-        && typeof window !== 'undefined'
-        && window.advancedGrowthData && typeof window.advancedGrowthData === 'object') {
-      var freshAdv = collectAdvancedMeasurements(false) || [];
-      window.advancedGrowthData.measurements = freshAdv.map(function (r) {
-        var entry = { ageYears: r.ageYears, ageMonths: r.ageMonths, height: r.height, weight: r.weight };
-        if (r.boneAgeYears != null) entry.boneAgeYears = r.boneAgeYears;
-        if (r.arrowEnabled) { entry.arrowEnabled = true; entry.arrowComment = r.arrowComment || ''; }
-        if (r.ghSync) entry.ghSync = true;
-        if (r.ghId) entry.ghId = String(r.ghId);
-        return entry;
-      });
-    }
-  } catch (_) {
-    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
-      globalThis.vildaLogSwallowedCatch('app.js', _, { module: 'handleIntakeHistoryRowRemove:sync-cache' });
-    }
-  }
-
-  // J1-fix/v5: notify save_status_indicator — flush + force fingerprint compare.
-  try {
-    if (typeof window !== 'undefined' && window.VildaSaveStatusIndicator
-        && typeof window.VildaSaveStatusIndicator.notifyExternalChange === 'function') {
-      window.VildaSaveStatusIndicator.notifyExternalChange('intake-row-removed');
-    }
-  } catch (_) {}
-
   return true;
 
   });
+
+  // J1-FINAL: side-effecty save-state PO powrocie z _callAdvIntakeHelper —
+  // bezwarunkowo (adapter lub fallback). handleIntakeHistoryRowRemove usuwa też
+  // twin w advanced, więc cached array też wymaga synchronizacji.
+  if (_intakeRemoved === true) {
+    _syncAdvancedGrowthMeasurementsFromDom('handleIntakeHistoryRowRemove');
+    _notifyAdvIntakeHistoryMutated('intake-row-removed');
+  }
+  return _intakeRemoved;
 }
 
 function handleAdvancedMeasurementAdd(){
