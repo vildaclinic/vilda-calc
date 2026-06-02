@@ -1084,11 +1084,12 @@ select.vilda-auth-input {
   background: #e1f5ee !important;
   border-color: #00838d !important;
 }
-/* Pill „+ Nowy pomiar" — primary turkusowy CTA (najczęstsza akcja). */
+/* Pill „+ Nowy pomiar" — identyczny styl jak „Edytuj" (outline turkusowy),
+ * żeby nie był zbyt mocnym akcentem w nagłówku (decyzja UX). */
 .vilda-patient-hero-new-measure-pill {
-  background: #00838d !important;
-  color: #fff !important;
-  border: 1px solid #00838d !important;
+  background: #fff !important;
+  color: #00838d !important;
+  border: 1px solid #bcdfe2 !important;
   width: auto !important;
   min-width: 0 !important;
   padding: 12px 18px !important;
@@ -1100,8 +1101,8 @@ select.vilda-auth-input {
   white-space: nowrap;
 }
 .vilda-patient-hero-new-measure-pill:hover {
-  background: #006670 !important;
-  border-color: #006670 !important;
+  background: #e1f5ee !important;
+  border-color: #00838d !important;
 }
 .vilda-patient-hero-info {
   min-width: 0;
@@ -1208,17 +1209,17 @@ select.vilda-auth-input {
   border-color: #00838d !important;
 }
 .liquid-ios26 .vilda-patient-hero-new-measure-pill {
-  background: #00838d !important;
-  color: #fff !important;
-  border: 1px solid #00838d !important;
+  background: #fff !important;
+  color: #00838d !important;
+  border: 1px solid #bcdfe2 !important;
   border-radius: 12px !important;
   box-shadow: none !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
 .liquid-ios26 .vilda-patient-hero-new-measure-pill:hover {
-  background: #006670 !important;
-  border-color: #006670 !important;
+  background: #e1f5ee !important;
+  border-color: #00838d !important;
 }
 .liquid-ios26 .vilda-patient-tab {
   background: transparent !important;
