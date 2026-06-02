@@ -2119,12 +2119,23 @@
       gtag('consent', 'update', { analytics_storage: 'denied' });
     }
 
+    // PERF: ładowanie gtag.js (~300 ms parse/exec, third-party) odłożone z
+    // krytycznej ścieżki startu do load+idle (analytics odpala chwilę później).
+    function _vildaDeferGA(fn) {
+      function go() {
+        var ric = global.requestIdleCallback || function (cb) { return setTimeout(cb, 1); };
+        try { ric(fn, { timeout: 3000 }); } catch (_) { setTimeout(fn, 1); }
+      }
+      if (doc.readyState === 'complete') go();
+      else global.addEventListener('load', go, { once: true });
+    }
+
     // --- podjęta wcześniej decyzja ---
     var consent = readConsent();
     if (!consent) {
       bannerEl.style.display = 'block';
     } else if (consent === 'granted') {
-      loadGA();
+      _vildaDeferGA(loadGA);
     } else {
       denyGA();
     }

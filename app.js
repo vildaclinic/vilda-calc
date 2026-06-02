@@ -13102,11 +13102,23 @@ function shouldSuggestWHR(ageY, sex, bmiVal, bmiPercentile, coleCat){
     });
   }
 
+  // PERF: ładowanie gtag.js (~300 ms parse/exec, third-party) odłożone z
+  // krytycznej ścieżki startu do load+idle. Analytics i tak się odpala chwilę
+  // po załadowaniu strony — bez wpływu na pomiar, a wątek główny wolny na start.
+  function _vildaDeferGA(fn) {
+    function go() {
+      var ric = window.requestIdleCallback || function (cb) { return setTimeout(cb, 1); };
+      try { ric(fn, { timeout: 3000 }); } catch (_) { setTimeout(fn, 1); }
+    }
+    if (document.readyState === 'complete') go();
+    else window.addEventListener('load', go, { once: true });
+  }
+
   if (!consent) {
     // Użytkownik jeszcze nie podjął decyzji — pokaż baner
     banner.style.display = 'block';
   } else if (consent === 'granted') {
-    loadGA();
+    _vildaDeferGA(loadGA);
   } else {
     denyGA();
   }
