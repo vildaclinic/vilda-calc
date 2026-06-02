@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '0.9.878';
+const SW_VERSION = '0.9.880';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -404,7 +404,7 @@ const CORE_SHELL_URLS = [
   '/vilda_growth_reference_data.js',
   '/vilda_growth_reference_data.js?v=1',
   '/vilda_professional_module.js',
-  '/vilda_professional_module.js?v=1',
+  '/vilda_professional_module.js?v=2',
   '/vilda_persist_runtime.js',
   '/vilda_persist_runtime.js?v=2',
   '/vilda_persist_runtime.js?v=3',
@@ -540,7 +540,6 @@ const OPTIONAL_ASSETS = [
   '/klirens.xlsx',
   '/zscore_przyklad_palczewska.xlsx',
   '/zscore_przyklad_olaf.xlsx',
-  '/Bad Cat.json',
   '/macro_examples_dictionary_pl.json',
   '/macro_ui_copy_pl.json',
   '/micronorms_norms.json',
