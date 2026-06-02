@@ -2572,12 +2572,9 @@
     });
 
     defineModuleDeps('regression-smoke-suite', [
-      { path: 'VildaSmokeTests', type: 'object', source: 'vilda_smoke_tests.js', script: 'vilda_smoke_tests.js' },
-      { path: 'VildaSmokeTests.runRegressionSuite', type: 'function', source: 'vilda_smoke_tests.js', script: 'vilda_smoke_tests.js' },
-      { path: 'VildaSmokeTests.getManifest', type: 'function', source: 'vilda_smoke_tests.js', script: 'vilda_smoke_tests.js' },
-      { path: 'VildaSmokeTests.getSnapshot', type: 'function', source: 'vilda_smoke_tests.js', script: 'vilda_smoke_tests.js' },
-      { path: 'vildaRunSmokeRegressionSuite', type: 'function', source: 'vilda_smoke_tests.js alias', script: 'vilda_smoke_tests.js' },
-      { path: 'vildaGetSmokeRegressionSuiteSnapshot', type: 'function', source: 'vilda_smoke_tests.js alias', script: 'vilda_smoke_tests.js' },
+      // PERF: vilda_smoke_tests.js (kod testowy) usunięty z bundla produkcyjnego —
+      // 6 kontraktów VildaSmokeTests/aliasy zdjęte, bo moduł nie jest już ładowany
+      // w przeglądarce. Suite regresyjny uruchamiamy w Node (tools/), nie u użytkownika.
       { path: 'VildaEstimatedIntake.buildEstimatedIntakeCalculationModel', type: 'function', source: 'vilda_estimated_intake.js pure model', script: 'vilda_estimated_intake.js' },
       { path: 'vildaGetEstimatedIntakeAuditSnapshot', type: 'function', source: 'app.js estimated intake audit', script: 'app.js' },
       { path: 'vildaGetEstimatedIntakeCalcSeamSnapshot', type: 'function', source: 'app.js calc seam audit', script: 'app.js' },

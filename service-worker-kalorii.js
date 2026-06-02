@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '0.9.873';
+const SW_VERSION = '0.9.874';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -373,6 +373,7 @@ const CORE_SHELL_URLS = [
   '/vilda_file_export.js?v=5',
   '/vilda_deps.js',
   '/vilda_deps.js?v=87',
+  '/vilda_deps.js?v=88',
   '/vilda_update_hooks.js',
   '/vilda_update_hooks.js?v=7',
   '/vilda_centile_chart_header.js',
@@ -430,8 +431,6 @@ const CORE_SHELL_URLS = [
   '/app.js?v=179',
   '/vilda_save_status_indicator.js',
   '/vilda_save_status_indicator.js?v=17',
-  '/vilda_smoke_tests.js',
-  '/vilda_smoke_tests.js?v=48',
   '/vilda_diet_recommendations.js',
   '/vilda_diet_recommendations.js?v=2',
   '/vilda_patient_report.js',
