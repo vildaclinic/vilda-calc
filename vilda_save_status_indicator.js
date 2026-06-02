@@ -364,18 +364,14 @@
 
   // ── Event handlers ─────────────────────────────────────────────
 
-  function onFormChange() {
+  // J1-v4: wspólna implementacja fingerprint compare → DIRTY/SAVED.
+  // Wyciągnięta z onFormChange, żeby forceFormChange (publiczny hook dla user
+  // actions takich jak usuń wiersz historyczny) mogła ominąć
+  // __vildaPersist* guardy bez duplikowania całej logiki.
+  function _evaluateFingerprintAgainstReference() {
     if (_state === STATES.SAVING) return;
     if (global.VildaGuestMode === true) return;
     if (!_vaultUnlocked) return;
-    // GUARD: ignoruj zmiany pól wywołane PROGRAMOWO przez restore/nawigację
-    // (vilda_persist_runtime ustawia __vildaPersistRestoring / __vildaPersistPauseUntil
-    // na czas odbudowy formularza). To NIE są edycje użytkownika — bez tego guardu
-    // odtworzenie formularza po wczytaniu/nawigacji fałszywie ustawiałoby DIRTY.
-    try {
-      if (global.__vildaPersistRestoring === true) return;
-      if (Date.now() < Number(global.__vildaPersistPauseUntil || 0)) return;
-    } catch (_) {}
     if (_state === STATES.HIDDEN) {
       if (!isFormMostlyEmpty()) {
         clearRef(); // nowy pacjent od zera — porzuć ewentualną nieaktualną referencję
@@ -391,9 +387,6 @@
       }
       return;
     }
-    // Mamy baseline (zapisany/wczytany pacjent). Porównanie fingerprintu z baseline
-    // jest miarodajne TYLKO na tej samej stronie (te same pola DOM). Wynik zapisujemy
-    // w TRWAŁEJ fladze _dirty, którą nawigacja odczyta bez ponownego porównania.
     var current = computeCanonicalFingerprint();
     if (current === null) return;
     if (current === _referenceFingerprint) {
@@ -403,6 +396,34 @@
       if (!_dirty) { _dirty = true; persistRef(); }
       if (_state !== STATES.DIRTY) transition(STATES.DIRTY);
     }
+  }
+
+  // J1-v4: WERSJA DLA USER ACTIONS — bez __vildaPersist* guards.
+  // Wywoływana przez setTimeout w notifyExternalChange. Argument działania
+  // niezależnie od post-restore pauzy autosave (która istnieje wyłącznie po
+  // to, żeby blokować debouncedOnFormChange — listener na natywnych input/
+  // change events generowane przez rebuild formularza). Operacja użytkownika
+  // (np. klik X przy wierszu historycznym 1-3s po wczytaniu pacjenta) MUSI
+  // przejść do DIRTY natychmiast.
+  function forceFormChange() {
+    _evaluateFingerprintAgainstReference();
+  }
+
+  function onFormChange() {
+    // GUARD: ignoruj zmiany pól wywołane PROGRAMOWO przez restore/nawigację
+    // (vilda_persist_runtime ustawia __vildaPersistRestoring / __vildaPersistPauseUntil
+    // na czas odbudowy formularza). To NIE są edycje użytkownika — bez tego guardu
+    // odtworzenie formularza po wczytaniu/nawigacji fałszywie ustawiałoby DIRTY.
+    //
+    // J1-v4: te guardy działają DLA NATYWNYCH eventów input/change (które
+    // mogą lecieć podczas rebuild formularza po restore). User actions
+    // (handle*RowRemove → notifyExternalChange → forceFormChange) omijają
+    // tę ścieżkę, bo są semantycznie nie-programatyczne.
+    try {
+      if (global.__vildaPersistRestoring === true) return;
+      if (Date.now() < Number(global.__vildaPersistPauseUntil || 0)) return;
+    } catch (_) {}
+    _evaluateFingerprintAgainstReference();
   }
 
   function debouncedOnFormChange(ev) {
@@ -792,7 +813,11 @@
         if (global.__vildaPersistRestoring === true) return;
       } catch (_) {}
       if (_debounceTimer) clearTimeout(_debounceTimer);
-      _debounceTimer = setTimeout(onFormChange, 400);
+      // J1-v4: wywołuje forceFormChange (BEZ __vildaPersist* guards), bo
+      // notifyExternalChange jest publicznym API dla user actions. Wcześniej
+      // schedulowanie onFormChange miało ten sam bug — guardy w onFormChange
+      // blokowały po debounce gdy pauza była wciąż aktywna.
+      _debounceTimer = setTimeout(forceFormChange, 400);
     },
     // Test hooks
     _onFormChange: onFormChange,
