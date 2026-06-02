@@ -6201,14 +6201,16 @@
         var ids = Array.from(activeFilters);
         return ids.some(function (id) { return eventMatchesFilter(evt, id); });
       }
-      // Pojedyncza aktywna kategoria notatek = "category-only mode" (uproszczona
-      // lista standalone). Multi-aktywny ze wszystkimi kategoriami notatek
-      // ALBO measurement+kategoria = mieszany flow (mixedItems + anchored).
-      var singleNoteCategoryFilter = null;
-      if (activeFilters.size === 1) {
-        var only = Array.from(activeFilters)[0];
-        if (only !== 'all' && only !== 'measurement') singleNoteCategoryFilter = only;
-      }
+      // Tryb "category-only" (standalone lista notatek na osi czasu, bez chipów
+      // Pomiar). Aktywny gdy zbiór filtrów to SAME kategorie notatek (≥1) i NIE
+      // zawiera 'measurement'. Wcześniej (L1) bramka brzmiała `size === 1`, przez
+      // co dwie kategorie notatek bez Pomiaru (np. Leczenie+Wynik, Kontrola+Wynik)
+      // wpadały w mixedItems flow → ten flow renderuje notatki TYLKO pod chipem
+      // Pomiar, a skoro 'measurement' nie był aktywny, chipów nie było → pusta
+      // lista. Branch standalone (niżej) i tak obsługuje wiele kategorii przez
+      // filterAllowsEvent (OR), więc wystarczy poszerzyć bramkę.
+      // (activeFilters NIGDY nie zawiera 'all' — wybór „Wszystko" czyści zbiór.)
+      var noteOnlyFilterMode = activeFilters.size >= 1 && !activeFilters.has('measurement');
       var f = activeFilters.size === 0 ? 'all'
             : activeFilters.size === 1 ? Array.from(activeFilters)[0]
             : 'all'; // multi → traktuj jak 'all' dla branch logic poniżej
@@ -6240,7 +6242,7 @@
       // standardowego mixedItems flow (pokazujemy pomiary i pasujące notatki
       // kotwiczone). Standalone-list mode nadal sensowny tylko dla pojedynczej
       // wybranej kategorii — wtedy notatki są na osi czasu bez chipów Pomiar.
-      var isCategoryFilter = (singleNoteCategoryFilter !== null);
+      var isCategoryFilter = noteOnlyFilterMode;
       if (isCategoryFilter) {
         var categoryItems = [];
         notes.forEach(function (n) {
@@ -6385,15 +6387,14 @@
               listWrap.appendChild(_renderAnchoredCard(a));
             }
           });
-        } else if (item.kind === 'clinical-note') {
-          // Notatka z clinicalDateISO bez kotwicy wiekowej — chip „Wpis kliniczny
-          // DATA". DOB-resolved wiek pacjenta na tę datę dorzucimy w przyszłości
-          // (wymaga DOB pacjenta — pomijamy dla MVP).
-          var n = item.event;
-          var clinDate = _formatDateDDMMYYYY(n.clinicalDateISO + (n.clinicalDateISO && n.clinicalDateISO.length === 10 ? 'T00:00:00.000Z' : ''));
-          var clinHeader = 'Wpis kliniczny' + (clinDate ? ' · ' + clinDate : '');
-          listWrap.appendChild(_renderTimelineCard(n, clinHeader, 'normal'));
         }
+        // Opcja A (J3): mixedItems zawiera WYŁĄCZNIE pomiary (kind:'measurement') —
+        // jedyny mixedItems.push wstawia 'measurement'. Notatki luźne kliniczne
+        // (clinicalDateISO bez kotwicy) NIE są na głównej osi: widać je w zakładce
+        // Notatki („Notatki kliniczne") oraz w Historii po wybraniu ich kategorii
+        // (gałąź standalone wyżej). Dawna gałąź 'clinical-note' (mixed timeline z
+        // B3.2) została usunięta — po J3 nic nie produkowało tego rodzaju, była
+        // martwym kodem mylącym przy czytaniu (sugerowała render, który nie zachodził).
       });
 
       // Osierocone kotwice (linkedAgeMonths != null ale brak pasującego pomiaru) —
