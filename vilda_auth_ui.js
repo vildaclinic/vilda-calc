@@ -4312,25 +4312,17 @@
       dobDisplayHero = V.formatDobForDisplay(user.dobISO);
     }
 
-    // ── HERO kompaktowy ──
-    var statusInfo = buildBmiStatusInfo(bmi, bmiPerc, isAdult);
-    var avatarClasses = 'vilda-patient-hero-avatar';
-    if (statusInfo) avatarClasses += ' vilda-patient-hero-avatar--' + statusInfo.cls;
-
+    // ── HERO kompaktowy (wariant 1: bez awatara, bez statusu BMI) ──
+    // Awatar-kółko z inicjałem usunięty; tożsamość niesie sam nagłówek +
+    // turkusowy akcent boczny karty (CSS .vilda-patient-hero). Chip statusu BMI
+    // też usunięty — kafelki Status są już kolorowane percentylem i od razu
+    // wskazują problemy, więc chip był redundantny i zabierał miejsce.
     var heroInfoChildren = [
       el('div', { class: 'vilda-patient-hero-name', text: name })
     ];
     if (headerMeta) heroInfoChildren.push(el('div', { class: 'vilda-patient-hero-meta', text: headerMeta }));
     if (dobDisplayHero) heroInfoChildren.push(el('div', { class: 'vilda-patient-hero-meta vilda-patient-hero-meta--small', text: 'ur. ' + dobDisplayHero }));
     if (lastSavedStr) heroInfoChildren.push(el('div', { class: 'vilda-patient-hero-meta vilda-patient-hero-meta--small', text: 'Ostatni wpis: ' + lastSavedStr }));
-    if (statusInfo) {
-      heroInfoChildren.push(
-        el('span', {
-          class: 'vilda-patient-status-pill vilda-patient-status-pill--' + statusInfo.cls,
-          text: statusInfo.label
-        })
-      );
-    }
 
     // P5 — pill button „Edytuj" w prawym górnym rogu hero. Otwiera osobny
     // ekran edycji (showPatientEditScreen). Tab Edycja został zastąpiony
@@ -4368,29 +4360,41 @@
     });
 
     var heroDiv = el('div', { class: 'vilda-patient-hero' }, [
-      el('div', { class: avatarClasses, text: name.charAt(0).toUpperCase() }),
       el('div', { class: 'vilda-patient-hero-info' }, heroInfoChildren),
-      newMeasurePill,
-      editPill
+      el('div', { class: 'vilda-patient-hero-actions' }, [editPill, newMeasurePill])
     ]);
 
-    // ── ZAKŁADKI ──
+    // ── ZAKŁADKI (segmentowany przełącznik z ikonami — wariant 1) ──
+    // Ikony jako inline SVG (stroke=currentColor) — brak zależności od webfontu.
+    // Aktywna zakładka wypełniona turkusem (CSS .vilda-patient-tab--active).
+    function _tabSvg(paths) {
+      return '<svg class="vilda-patient-tab-ico" width="15" height="15" viewBox="0 0 24 24" '
+        + 'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" '
+        + 'stroke-linejoin="round" aria-hidden="true">' + paths + '</svg>';
+    }
+    function _tabHtml(svgPaths, label) {
+      return _tabSvg(svgPaths) + '<span class="vilda-patient-tab-lbl">' + label + '</span>';
+    }
+    var _ICO_STATUS = '<path d="M3 12h4l2 6 4-12 2 6h6"/>';
+    var _ICO_TRAJ   = '<path d="M4 4v16h16"/><path d="M7 15l4-4 3 2 5-6"/>';
+    var _ICO_NOTES  = '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/>';
+    var _ICO_HIST   = '<path d="M3 4v5h5"/><path d="M3.5 9a9 9 0 1 1-1 4"/><path d="M12 8v4l3 2"/>';
     var tabAntro = el('button', {
       class: 'vilda-patient-tab vilda-patient-tab--active',
       type: 'button',
-      text: 'Status',
+      html: _tabHtml(_ICO_STATUS, 'Status'),
       'data-tab': 'antro'
     });
     var tabTraj = el('button', {
       class: 'vilda-patient-tab',
       type: 'button',
-      text: 'Siatki centylowe',
+      html: _tabHtml(_ICO_TRAJ, 'Siatki centylowe'),
       'data-tab': 'traj'
     });
     var tabNotes = el('button', {
       class: 'vilda-patient-tab',
       type: 'button',
-      text: 'Notatki',
+      html: _tabHtml(_ICO_NOTES, 'Notatki'),
       'data-tab': 'notes'
     });
     // P5 — tab „Historia" zastępuje dawny tab „Edycja". Edycja jest dostępna
@@ -4398,7 +4402,7 @@
     var tabTimeline = el('button', {
       class: 'vilda-patient-tab',
       type: 'button',
-      text: 'Historia',
+      html: _tabHtml(_ICO_HIST, 'Historia'),
       'data-tab': 'timeline'
     });
     var tabBar = el('div', { class: 'vilda-patient-tabs', role: 'tablist' }, [tabAntro, tabTraj, tabNotes, tabTimeline]);

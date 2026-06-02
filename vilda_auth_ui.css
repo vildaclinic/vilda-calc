@@ -1042,89 +1042,66 @@ select.vilda-auth-input {
    centylowa BMI z trajektorią pomiarów pacjenta. Mobile-first. */
 
 /* Hero kompaktowy */
+/* Wariant 1 — hero bez awatara, z lewym turkusowym akcentem. Przyciski akcji
+ * (Edytuj + Nowy pomiar) w jednym rzędzie po prawej (in-flow, nie absolute). */
 .vilda-patient-hero {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  background: #f5fafb;
-  border: 1px solid #e0eef0;
+  gap: 14px;
+  padding: 14px 16px;
+  background: #fff;
+  border: 0.5px solid #d7e9ec;
+  border-left: 4px solid #00838d;
   border-radius: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
   position: relative;
 }
 
-/* P5 — pill „✏ Edytuj" w prawym górnym rogu hero. Otwiera ekran edycji pacjenta. */
+/* Kontener przycisków akcji po prawej stronie hero. */
+.vilda-patient-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+/* Pill „✏ Edytuj" — wariant outline (sekundarny). */
 .vilda-patient-hero-edit-pill {
-  position: absolute !important;
-  top: 8px;
-  right: 8px;
-  background: transparent !important;
+  background: #fff !important;
   color: #00838d !important;
-  border: 0.5px solid #b3dde0 !important;
+  border: 1px solid #bcdfe2 !important;
   width: auto !important;
   min-width: 0 !important;
-  padding: 4px 12px !important;
-  font-size: 0.78rem !important;
-  font-weight: 600 !important;
-  border-radius: 999px !important;
+  padding: 8px 14px !important;
+  font-size: 0.82rem !important;
+  font-weight: 500 !important;
+  border-radius: 10px !important;
   flex: 0 0 auto !important;
+  white-space: nowrap;
 }
 .vilda-patient-hero-edit-pill:hover {
   background: #e1f5ee !important;
   border-color: #00838d !important;
 }
-/* P6.3 — pill „+ Nowy pomiar" obok edit pilla. Edit jest na top:8px,
- * Nowy pomiar idzie poniżej (top:42px), oba w prawej kolumnie hero.
- * Primary turkusowy CTA — to najczęstsza akcja w karcie pacjenta. */
+/* Pill „+ Nowy pomiar" — primary turkusowy CTA (najczęstsza akcja). */
 .vilda-patient-hero-new-measure-pill {
-  position: absolute !important;
-  top: 42px;
-  right: 8px;
   background: #00838d !important;
   color: #fff !important;
-  border: 0.5px solid #00838d !important;
+  border: 1px solid #00838d !important;
   width: auto !important;
   min-width: 0 !important;
-  padding: 5px 14px !important;
+  padding: 8px 14px !important;
   font-size: 0.82rem !important;
-  font-weight: 600 !important;
-  border-radius: 999px !important;
+  font-weight: 500 !important;
+  border-radius: 10px !important;
   flex: 0 0 auto !important;
   cursor: pointer;
+  white-space: nowrap;
 }
 .vilda-patient-hero-new-measure-pill:hover {
   background: #006670 !important;
   border-color: #006670 !important;
-}
-.vilda-patient-hero-avatar {
-  flex: 0 0 44px;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: #00838d;
-  color: #fff;
-  font-size: 19px;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid transparent;
-}
-.vilda-patient-hero-avatar--ok {
-  background: rgba(0,131,141,0.10);
-  color: #00636b;
-  border-color: #00838d;
-}
-.vilda-patient-hero-avatar--improve {
-  background: rgba(199,93,0,0.10);
-  color: #a04700;
-  border-color: #c75d00;
-}
-.vilda-patient-hero-avatar--alert {
-  background: rgba(198,40,40,0.10);
-  color: #b71c1c;
-  border-color: #b71c1c;
 }
 .vilda-patient-hero-info {
   min-width: 0;
@@ -1168,39 +1145,47 @@ select.vilda-auth-input {
 .vilda-patient-status-pill--alert   { background: #b71c1c; }
 
 /* Tab-switcher */
+/* Wariant 1 — segmentowany przełącznik: jeden biały kontener z 4 segmentami,
+ * aktywny wypełniony turkusem. box-shadow:none !important neutralizuje
+ * ewentualny globalny „glass" na <button>. */
 .vilda-patient-tabs {
   display: flex;
-  gap: 1rem;
-  /* B-fix UX: usunięto border-bottom — zakładki Pacjenci są pill-style (każda ma
-     własne tło/border w trybie iOS26 chrome), więc dodatkowa pozioma linia pod
-     nimi była wizualnym noise'em. Aktywna zakładka nadal wyraźnie oznaczona
-     przez .vilda-patient-tab--active (kolor + własny border-bottom na tabie). */
-  margin-bottom: 14px;
+  gap: 4px;
+  background: #fff;
+  border: 0.5px solid #d7e9ec;
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 16px;
 }
 .vilda-patient-tab {
   flex: 1;
-  padding: 10px 4px;
-  background: transparent;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  color: #5a7274;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 6px;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: 9px;
+  color: #3a4a52;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: color 0.12s ease, border-color 0.12s ease;
+  transition: background 0.12s ease, color 0.12s ease;
   -webkit-tap-highlight-color: transparent;
 }
-/* Faza 42g — gwarantowana przerwa 1rem między tabami nawet w trybie liquid-ios26
-   (gdzie button ma własny background + border + box-shadow). Używamy margin-left
-   na drugim tabie (sąsiednim) — działa we wszystkich przeglądarkach, niezależnie
-   od supportu flex `gap`, i przebija się przez efekty szklanej kapsuły. */
 .vilda-patient-tab + .vilda-patient-tab {
-  margin-left: 1rem;
+  margin-left: 0;
 }
-.vilda-patient-tab:hover { color: #00838d; }
-.vilda-patient-tab--active {
+.vilda-patient-tab-ico { flex: 0 0 auto; }
+.vilda-patient-tab:hover:not(.vilda-patient-tab--active) {
+  background: #eef5f6 !important;
   color: #00838d;
-  border-bottom-color: #00838d;
+}
+.vilda-patient-tab--active {
+  background: #00838d !important;
+  color: #fff !important;
 }
 .vilda-patient-tab-content {
   animation: fadeIn 0.12s ease;
@@ -1302,12 +1287,17 @@ select.vilda-auth-input {
 
 /* Mobile (≤ 480px) — gęściej */
 @media (max-width: 480px) {
-  .vilda-patient-hero { padding: 8px 10px; gap: 10px; }
-  .vilda-patient-hero-avatar { flex: 0 0 40px; width: 40px; height: 40px; font-size: 17px; }
+  /* Hero zawija się: przyciski akcji spadają do drugiego rzędu pod danymi. */
+  .vilda-patient-hero { padding: 12px 12px; gap: 10px; flex-wrap: wrap; }
+  .vilda-patient-hero-actions { width: 100%; margin-left: 0; }
+  .vilda-patient-hero-edit-pill,
+  .vilda-patient-hero-new-measure-pill { flex: 1 1 0 !important; text-align: center; justify-content: center; }
   .vilda-patient-hero-name { font-size: 14px; }
   .vilda-patient-hero-meta { font-size: 11px; }
   .vilda-patient-stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .vilda-patient-tab { padding: 9px 4px; font-size: 12px; }
+  /* Segmenty wąskie — ukrywamy ikony, zostawiamy etykiety (czytelność > ozdoba). */
+  .vilda-patient-tab { padding: 8px 3px; font-size: 11px; gap: 0; }
+  .vilda-patient-tab-ico { display: none; }
   .vilda-patient-chart-wrap { padding: 6px 2px 4px; }
   .vilda-patient-chart-legend { font-size: 10px; gap: 10px; }
 }
