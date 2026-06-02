@@ -8958,13 +8958,45 @@ function handleAdvancedMeasurementRowRemove(row){
     }
   }
 
-  // J1-fix: usunięcie wiersza historycznego to operacja DOM/danych bez
-  // user-trusted input/change. Save status indicator filtruje syntetyczne
-  // `new Event(...)` przez `ev.isTrusted === false` (chroni rebuild formularza
-  // podczas restore/nawigacji przed fałszywym DIRTY), więc poprzedni dispatch
-  // nie działał. Publiczny hook notifyExternalChange omija filtr isTrusted,
-  // ale dalej honoruje flagi __vildaPersistRestoring / __vildaPersistPauseUntil.
-  // To samo dla handleIntakeHistoryRowRemove.
+  // J1-v6: EXPLICIT sync window.advancedGrowthData.measurements z DOM PRZED
+  // notifyExternalChange. collectUserData (które autosave woła) czyta
+  // measurements z global.advancedGrowthData (cached array), NIE z DOM rows.
+  // calculateGrowthAdvanced wywołane wyżej AKTUALIZUJE window.advancedGrowthData,
+  // ale jego payload zawiera wyniki obliczeń (z-scores, percentyle), NIE
+  // measurements w identycznej strukturze. Bez tego explicit sync sessionStorage
+  // dostaje stary main session → fingerprint compare nie widzi zmiany →
+  // indykator zostaje SAVED.
+  try {
+    if (typeof collectAdvancedMeasurements === 'function'
+        && typeof window !== 'undefined'
+        && window.advancedGrowthData && typeof window.advancedGrowthData === 'object') {
+      var freshRows = collectAdvancedMeasurements(false) || [];
+      window.advancedGrowthData.measurements = freshRows.map(function (r) {
+        var entry = {
+          ageYears: r.ageYears,
+          ageMonths: r.ageMonths,
+          height: r.height,
+          weight: r.weight
+        };
+        if (r.boneAgeYears != null) entry.boneAgeYears = r.boneAgeYears;
+        if (r.arrowEnabled) {
+          entry.arrowEnabled = true;
+          entry.arrowComment = r.arrowComment || '';
+        }
+        if (r.ghSync) entry.ghSync = true;
+        if (r.ghId) entry.ghId = String(r.ghId);
+        return entry;
+      });
+    }
+  } catch (_) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('app.js', _, { module: 'handleAdvancedMeasurementRowRemove:sync-cache' });
+    }
+  }
+
+  // J1-fix/v5: notify save_status_indicator — flush sessionStorage + force
+  // fingerprint compare (omijając __vildaPersist* guards które blokowały
+  // post-restore user actions).
   try {
     if (typeof window !== 'undefined' && window.VildaSaveStatusIndicator
         && typeof window.VildaSaveStatusIndicator.notifyExternalChange === 'function') {
@@ -9007,9 +9039,31 @@ function handleIntakeHistoryRowRemove(row){
     }
   }
 
-  // J1-fix: notify save_status_indicator — patrz komentarz w
-  // handleAdvancedMeasurementRowRemove. Wywołanie publicznego API zamiast
-  // syntetycznego eventu, bo ten ostatni jest filtrowany przez isTrusted check.
+  // J1-v6: EXPLICIT sync window.intakeHistory + window.advancedGrowthData z DOM
+  // PRZED notifyExternalChange. handleIntakeHistoryRowRemove usuwa też twin
+  // wiersz w advanced przez _findAdvRowBySyncId, więc oba cached arrays
+  // muszą być zsynchronizowane.
+  try {
+    if (typeof collectAdvancedMeasurements === 'function'
+        && typeof window !== 'undefined'
+        && window.advancedGrowthData && typeof window.advancedGrowthData === 'object') {
+      var freshAdv = collectAdvancedMeasurements(false) || [];
+      window.advancedGrowthData.measurements = freshAdv.map(function (r) {
+        var entry = { ageYears: r.ageYears, ageMonths: r.ageMonths, height: r.height, weight: r.weight };
+        if (r.boneAgeYears != null) entry.boneAgeYears = r.boneAgeYears;
+        if (r.arrowEnabled) { entry.arrowEnabled = true; entry.arrowComment = r.arrowComment || ''; }
+        if (r.ghSync) entry.ghSync = true;
+        if (r.ghId) entry.ghId = String(r.ghId);
+        return entry;
+      });
+    }
+  } catch (_) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('app.js', _, { module: 'handleIntakeHistoryRowRemove:sync-cache' });
+    }
+  }
+
+  // J1-fix/v5: notify save_status_indicator — flush + force fingerprint compare.
   try {
     if (typeof window !== 'undefined' && window.VildaSaveStatusIndicator
         && typeof window.VildaSaveStatusIndicator.notifyExternalChange === 'function') {
