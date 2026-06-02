@@ -4322,7 +4322,9 @@
     ];
     if (headerMeta) heroInfoChildren.push(el('div', { class: 'vilda-patient-hero-meta', text: headerMeta }));
     if (dobDisplayHero) heroInfoChildren.push(el('div', { class: 'vilda-patient-hero-meta vilda-patient-hero-meta--small', text: 'ur. ' + dobDisplayHero }));
-    if (lastSavedStr) heroInfoChildren.push(el('div', { class: 'vilda-patient-hero-meta vilda-patient-hero-meta--small', text: 'Ostatni wpis: ' + lastSavedStr }));
+    // „Ostatni wpis: …" usunięty z nagłówka (Propozycja 1) — zwalnia miejsce na
+    // większe imię/nazwisko; ta informacja jest dostępna w zakładce Historia.
+    void lastSavedStr;
 
     // P5 — pill button „Edytuj" w prawym górnym rogu hero. Otwiera osobny
     // ekran edycji (showPatientEditScreen). Tab Edycja został zastąpiony
@@ -4368,7 +4370,7 @@
     // Ikony jako inline SVG (stroke=currentColor) — brak zależności od webfontu.
     // Aktywna zakładka wypełniona turkusem (CSS .vilda-patient-tab--active).
     function _tabSvg(paths) {
-      return '<svg class="vilda-patient-tab-ico" width="15" height="15" viewBox="0 0 24 24" '
+      return '<svg class="vilda-patient-tab-ico" width="18" height="18" viewBox="0 0 24 24" '
         + 'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" '
         + 'stroke-linejoin="round" aria-hidden="true">' + paths + '</svg>';
     }

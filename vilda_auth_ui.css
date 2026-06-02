@@ -1047,13 +1047,13 @@ select.vilda-auth-input {
 .vilda-patient-hero {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 14px 16px;
+  gap: 16px;
+  padding: 18px 20px;
   background: #fff;
   border: 0.5px solid #d7e9ec;
-  border-left: 4px solid #00838d;
-  border-radius: 12px;
-  margin-bottom: 14px;
+  border-left: 5px solid #00838d;
+  border-radius: 14px;
+  margin-bottom: 16px;
   position: relative;
 }
 
@@ -1073,10 +1073,10 @@ select.vilda-auth-input {
   border: 1px solid #bcdfe2 !important;
   width: auto !important;
   min-width: 0 !important;
-  padding: 8px 14px !important;
-  font-size: 0.82rem !important;
+  padding: 12px 18px !important;
+  font-size: 16px !important;
   font-weight: 500 !important;
-  border-radius: 10px !important;
+  border-radius: 12px !important;
   flex: 0 0 auto !important;
   white-space: nowrap;
 }
@@ -1091,10 +1091,10 @@ select.vilda-auth-input {
   border: 1px solid #00838d !important;
   width: auto !important;
   min-width: 0 !important;
-  padding: 8px 14px !important;
-  font-size: 0.82rem !important;
+  padding: 12px 18px !important;
+  font-size: 16px !important;
   font-weight: 500 !important;
-  border-radius: 10px !important;
+  border-radius: 12px !important;
   flex: 0 0 auto !important;
   cursor: pointer;
   white-space: nowrap;
@@ -1108,22 +1108,22 @@ select.vilda-auth-input {
   flex: 1;
 }
 .vilda-patient-hero-name {
-  font-size: 15px;
+  font-size: 24px;
   font-weight: 600;
   color: #08202C;
-  line-height: 1.2;
+  line-height: 1.15;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .vilda-patient-hero-meta {
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 500;
   color: #2e4a54;
-  margin-top: 2px;
+  margin-top: 5px;
   line-height: 1.3;
 }
 .vilda-patient-hero-meta--small {
-  font-size: 11px;
+  font-size: 13px;
   color: #5a7274;
   font-weight: 400;
 }
@@ -1150,26 +1150,26 @@ select.vilda-auth-input {
  * ewentualny globalny „glass" na <button>. */
 .vilda-patient-tabs {
   display: flex;
-  gap: 4px;
+  gap: 5px;
   background: #fff;
   border: 0.5px solid #d7e9ec;
-  border-radius: 12px;
-  padding: 4px;
-  margin-bottom: 16px;
+  border-radius: 14px;
+  padding: 5px;
+  margin-bottom: 18px;
 }
 .vilda-patient-tab {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 9px 6px;
+  gap: 7px;
+  padding: 13px 6px;
   background: transparent !important;
   border: 0 !important;
   box-shadow: none !important;
-  border-radius: 9px;
+  border-radius: 10px;
   color: #3a4a52;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 500;
   cursor: pointer;
   transition: background 0.12s ease, color 0.12s ease;
@@ -1198,7 +1198,7 @@ select.vilda-auth-input {
   background: #fff !important;
   color: #00838d !important;
   border: 1px solid #bcdfe2 !important;
-  border-radius: 10px !important;
+  border-radius: 12px !important;
   box-shadow: none !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
@@ -1211,7 +1211,7 @@ select.vilda-auth-input {
   background: #00838d !important;
   color: #fff !important;
   border: 1px solid #00838d !important;
-  border-radius: 10px !important;
+  border-radius: 12px !important;
   box-shadow: none !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
@@ -1223,7 +1223,7 @@ select.vilda-auth-input {
 .liquid-ios26 .vilda-patient-tab {
   background: transparent !important;
   border: 0 !important;
-  border-radius: 9px !important;
+  border-radius: 10px !important;
   box-shadow: none !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
@@ -1338,15 +1338,16 @@ select.vilda-auth-input {
 /* Mobile (≤ 480px) — gęściej */
 @media (max-width: 480px) {
   /* Hero zawija się: przyciski akcji spadają do drugiego rzędu pod danymi. */
-  .vilda-patient-hero { padding: 12px 12px; gap: 10px; flex-wrap: wrap; }
-  .vilda-patient-hero-actions { width: 100%; margin-left: 0; }
+  .vilda-patient-hero { padding: 16px 16px; gap: 12px; flex-wrap: wrap; }
+  .vilda-patient-hero-actions { width: 100%; margin-left: 0; gap: 10px; }
   .vilda-patient-hero-edit-pill,
   .vilda-patient-hero-new-measure-pill { flex: 1 1 0 !important; text-align: center; justify-content: center; }
-  .vilda-patient-hero-name { font-size: 14px; }
-  .vilda-patient-hero-meta { font-size: 11px; }
+  .vilda-patient-hero-name { font-size: 20px; }
+  .vilda-patient-hero-meta { font-size: 14px; }
   .vilda-patient-stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  /* Segmenty wąskie — ukrywamy ikony, zostawiamy etykiety (czytelność > ozdoba). */
-  .vilda-patient-tab { padding: 8px 3px; font-size: 11px; gap: 0; }
+  /* Segmenty wąskie — czcionka NIE spada poniżej 16px (brak auto-zoomu iOS);
+     ukrywamy ikony i pozwalamy etykietom zawijać (czytelność > jednoliniowość). */
+  .vilda-patient-tab { padding: 10px 4px; font-size: 16px; gap: 0; line-height: 1.15; white-space: normal; }
   .vilda-patient-tab-ico { display: none; }
   .vilda-patient-chart-wrap { padding: 6px 2px 4px; }
   .vilda-patient-chart-legend { font-size: 10px; gap: 10px; }
