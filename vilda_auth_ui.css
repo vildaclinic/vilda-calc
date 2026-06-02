@@ -1187,6 +1187,56 @@ select.vilda-auth-input {
   background: #00838d !important;
   color: #fff !important;
 }
+
+/* ── Neutralizacja iOS26 „liquid glass" na nagłówku karty pacjenta ──
+ * `.liquid-ios26 button { … !important }` (ios26-v2.css) ma specyficzność
+ * (0,1,1) i przebijało nasze płaskie style (0,1,0): przyciski i zakładki
+ * dostawały szklane białe tło + cień + blur + radius 14px. Prefiksujemy
+ * selektory `.liquid-ios26` → (0,2,0) > (0,1,1) i gasimy glass, żeby wariant 1
+ * był PŁASKI (Edytuj outline, Nowy pomiar = pełny turkus, aktywna zakładka = turkus). */
+.liquid-ios26 .vilda-patient-hero-edit-pill {
+  background: #fff !important;
+  color: #00838d !important;
+  border: 1px solid #bcdfe2 !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.liquid-ios26 .vilda-patient-hero-edit-pill:hover {
+  background: #e1f5ee !important;
+  border-color: #00838d !important;
+}
+.liquid-ios26 .vilda-patient-hero-new-measure-pill {
+  background: #00838d !important;
+  color: #fff !important;
+  border: 1px solid #00838d !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.liquid-ios26 .vilda-patient-hero-new-measure-pill:hover {
+  background: #006670 !important;
+  border-color: #006670 !important;
+}
+.liquid-ios26 .vilda-patient-tab {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 9px !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  color: #3a4a52 !important;
+}
+.liquid-ios26 .vilda-patient-tab:hover:not(.vilda-patient-tab--active) {
+  background: #eef5f6 !important;
+  color: #00838d !important;
+}
+.liquid-ios26 .vilda-patient-tab--active {
+  background: #00838d !important;
+  color: #fff !important;
+}
 .vilda-patient-tab-content {
   animation: fadeIn 0.12s ease;
 }
