@@ -1705,7 +1705,16 @@
 
   function saveMainSessionNow(options) {
     const opts = getMainSessionOptions(options);
-    if (!hasMainSessionStorage(opts) || isMainSessionAutosavePaused(opts)) return false;
+    // J1-v7: `force=true` omija isMainSessionAutosavePaused (pauseUntil) ale
+    // NIE omija isClearInProgress/restoreInProgress (te są fundamentalne
+    // dla atomowości restore/clear). Force jest używane WYŁĄCZNIE przez
+    // VildaSaveStatusIndicator.flushMainSessionIfFullForm — które jest
+    // wywoływane z forceFormChange (user action po row.remove). Pauza
+    // autosave 1.6-2.5s po Restore blokowała tu legitymne user actions
+    // (klik X przy historycznym pomiarze 1-3s po wczytaniu pacjenta).
+    const force = !!(opts && opts.force);
+    if (!hasMainSessionStorage(opts)) return false;
+    if (!force && isMainSessionAutosavePaused(opts)) return false;
     try {
       if (mainSessionTimer) {
         clearTimeout(mainSessionTimer);

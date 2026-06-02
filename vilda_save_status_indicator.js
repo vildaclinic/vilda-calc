@@ -145,7 +145,10 @@
   function flushMainSessionIfFullForm() {
     if (typeof global.saveMainSessionNow !== 'function') return;
     if (!isFullFormPage()) return;
-    try { global.saveMainSessionNow(); } catch (_) {}
+    // J1-v7: force=true omija isMainSessionAutosavePaused (pauseUntil w przyszłości
+    // 1.6-2.5s po Restore). To wywołanie jest z forceFormChange (user action),
+    // nie z autosave debouncer'a — pauza nie ma tu zastosowania semantycznego.
+    try { global.saveMainSessionNow({ force: true }); } catch (_) {}
   }
 
   /**
