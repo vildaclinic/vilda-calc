@@ -770,19 +770,26 @@
     getLastSavedAtISO: function () { return _lastSavedAtISO; },
     getLastSnapshotCount: function () { return _lastSnapshotCount; },
     getLastPatientName: function () { return _lastPatientName; },
-    // J1-fix: publiczny hook dla wewnętrznych operacji DOM (np. usunięcie wiersza
-    // historycznego w Zaawansowanych obliczeniach), które NIE emitują
+    // J1-fix v2: publiczny hook dla wewnętrznych operacji DOM (np. usunięcie
+    // wiersza historycznego w Zaawansowanych obliczeniach), które NIE emitują
     // user-trusted input/change. debouncedOnFormChange odrzuca syntetyczne
     // `new Event(...)` przez ev.isTrusted===false (chroni przed fałszywym DIRTY
     // podczas restore/nawigacji). Ta metoda omija tę ścieżkę — bezpośrednio
-    // schedule'uje onFormChange, ale dalej respektuje flagi restore (jak natywny
-    // listener), więc rebuild formularza nie powoduje regresu.
+    // schedule'uje onFormChange.
+    //
+    // J1-v3 fix: zostaje TYLKO __vildaPersistRestoring guard (sync flag,
+    // mikroskopijne okno gdy restore aktywnie trwa — user nie kliknie X
+    // w tym czasie). __vildaPersistPauseUntil USUNIĘTO — to długie okno
+    // (1.6-2.5s po Restore) blokowało legitymne user actions: typowy flow
+    // „wczytaj pacjenta → kliknij X przy historycznym pomiarze (w ciągu 1-3s)"
+    // sprawiał że notifyExternalChange wpadało w guard i nie schedule'owało
+    // onFormChange → indykator zostawał SAVED zamiast przejść do DIRTY.
+    //
     // Argument `reason` jest tylko informacyjny (do diagnostyki) — semantycznie
     // każde wywołanie jest „realna zmiana po stronie usera".
     notifyExternalChange: function notifyExternalChange(reason) {
       try {
         if (global.__vildaPersistRestoring === true) return;
-        if (Date.now() < Number(global.__vildaPersistPauseUntil || 0)) return;
       } catch (_) {}
       if (_debounceTimer) clearTimeout(_debounceTimer);
       _debounceTimer = setTimeout(onFormChange, 400);
