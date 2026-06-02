@@ -258,7 +258,6 @@ html.vilda-pro-active   #proGateBanner { display: none; }
   <link rel="icon" type="image/png" sizes="144x144" href="/pwa-icons/icon-144x144.png">
   <link rel="icon" type="image/png" sizes="512x512" href="/pwa-icons/icon-512x512.png">
     <!-- Lottie player script for showing animations (used in Z‑score batch loading overlay) -->
-    <script src="https://unpkg.com/@lottiefiles/lottie-player@2.0.12/dist/lottie-player.js" integrity="sha384-i8zT4p4C0XG4mPhfz0zuffZpppP8NjlttNsP6srEdEBatwZkcYUBoQtAW7sfKEp2" crossorigin="anonymous" defer></script>
   <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -774,7 +773,16 @@ html.vilda-pro-active   #proGateBanner { display: none; }
           background-color: rgba(255, 255, 255, 0.8);
           z-index: 20000;
         }
-      
+        /* PERF: lekki spinner CSS zamiast biblioteki Lottie (~75 KB + ~560 ms eval).
+           Overlay jest tylko kosmetyczny (2 s „przetwarzanie"). */
+        #zscoreLoadingOverlay .vilda-zspin {
+          width: 56px; height: 56px; border-radius: 50%;
+          border: 5px solid rgba(0,131,141,0.2);
+          border-top-color: #00838d;
+          animation: vildaZspin 0.9s linear infinite;
+        }
+        @keyframes vildaZspin { to { transform: rotate(360deg); } }
+
         /* === Leczenie nadciśnienia: przywróć klasyczne wypunktowania (sidebar.css resetuje <ul>) === */
         #hypertensionCard ul {
           display: block;
@@ -3514,11 +3522,13 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <script src="vilda_anorexia_risk.js?v=1"></script>
 <!-- Palczewska centile data (weight, height, BMI) for 0–18 years. Loaded before app.js so it attaches centileData to window. -->
 <script src="centile_data.js" defer></script>
-<!-- Biblioteka XLSX do obsługi plików Excel.  Ładowana przed app.js, aby
-     obiekt globalny XLSX był dostępny podczas inicjowania aplikacji. -->
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous"></script>
+<!-- PERF: biblioteka XLSX (SheetJS) NIE jest już ładowana synchronicznie tutaj.
+     Była potrzebna wyłącznie do wsadowego importu/eksportu Z-score (rzadka akcja),
+     a blokowała start strony przy każdej wizycie. Teraz ładowana leniwie z CDN
+     dopiero przy pierwszym uruchomieniu tej akcji — patrz vildaEnsureXlsxLibrary()
+     w vilda_professional_module.js (URL + SRI: xlsx@0.18.5 / sha384-vtjasy…). -->
 <script src="vilda_growth_reference_data.js?v=1"></script>
-<script src="vilda_professional_module.js?v=1"></script>
+<script src="vilda_professional_module.js?v=2"></script>
 <script src="vilda_persist_runtime.js?v=4"></script>
 <script src="vilda_summary_cards.js?v=3"></script>
 <script src="vilda_diet_plan_ui.js?v=1"></script>
@@ -6552,11 +6562,8 @@ async function generateCentileChart() {
          accompanying JSON file (bad_cat.json) and rendered via the Lottie
          player. -->
     <div id="zscoreLoadingOverlay">
-      <!-- The animation is loaded from the original JSON file "Bad Cat.json".
-           Spaces are automatically encoded by the browser when fetching the file. -->
-      <lottie-player id="zscoreAnimation" src="Bad Cat.json" background="transparent"
-                     speed="1" style="width: 200px; height: 200px;" loop autoplay>
-      </lottie-player>
+      <!-- PERF: Lottie ("Bad Cat.json") usunięte — zastąpione lekkim spinnerem CSS. -->
+      <div class="vilda-zspin" role="status" aria-label="Przetwarzanie…"></div>
     </div>
 
   <!-- Modal: definicje pojęć (TNM/R/DxWBS) — umieszczony bezpośrednio w <body>,
