@@ -398,14 +398,25 @@
     }
   }
 
-  // J1-v4: WERSJA DLA USER ACTIONS — bez __vildaPersist* guards.
+  // J1-v4/v5: WERSJA DLA USER ACTIONS — bez __vildaPersist* guards.
   // Wywoływana przez setTimeout w notifyExternalChange. Argument działania
   // niezależnie od post-restore pauzy autosave (która istnieje wyłącznie po
   // to, żeby blokować debouncedOnFormChange — listener na natywnych input/
   // change events generowane przez rebuild formularza). Operacja użytkownika
   // (np. klik X przy wierszu historycznym 1-3s po wczytaniu pacjenta) MUSI
   // przejść do DIRTY natychmiast.
+  //
+  // J1-v5: KLUCZOWE — flush main session do sessionStorage PRZED fingerprint
+  // compare. Operacje typu „usuń wiersz historyczny" (row.remove()) NIE
+  // generują natywnego input/change event → autosave w vilda_persist_runtime
+  // NIE jest triggered → sessionStorage zachowuje STARY main session z
+  // usuwanym wierszem. computeCanonicalFingerprint czyta z sessionStorage
+  // (readMainSession), więc bez flushu zwraca TEN SAM fingerprint co
+  // referenceFingerprint → state zostaje SAVED mimo że user usunął dane.
+  // flushMainSessionIfFullForm() wywołuje saveMainSessionNow który
+  // synchronicznie zaktualizuje sessionStorage z bieżącego DOM.
   function forceFormChange() {
+    flushMainSessionIfFullForm();
     _evaluateFingerprintAgainstReference();
   }
 
