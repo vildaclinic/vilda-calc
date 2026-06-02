@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '0.9.880';
+const SW_VERSION = '0.9.881';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -374,7 +374,7 @@ const CORE_SHELL_URLS = [
   '/vilda_file_export.js?v=5',
   '/vilda_deps.js',
   '/vilda_deps.js?v=87',
-  '/vilda_deps.js?v=88',
+  '/vilda_deps.js?v=89',
   '/vilda_update_hooks.js',
   '/vilda_update_hooks.js?v=7',
   '/vilda_centile_chart_header.js',
@@ -398,7 +398,7 @@ const CORE_SHELL_URLS = [
   '/vilda_data_import_export.js?v=22',
   '/vilda_data_import_export.js?v=25',
   '/vilda_advanced_growth.js',
-  '/vilda_advanced_growth.js?v=15',
+  '/vilda_advanced_growth.js?v=16',
   '/vilda_estimated_intake.js',
   '/vilda_estimated_intake.js?v=3',
   '/vilda_growth_reference_data.js',
@@ -430,13 +430,13 @@ const CORE_SHELL_URLS = [
   '/app.js?v=175',
   '/app.js?v=178',
   '/app.js?v=179',
-  '/app.js?v=180',
+  '/app.js?v=181',
   '/vilda_save_status_indicator.js',
   '/vilda_save_status_indicator.js?v=17',
   '/vilda_diet_recommendations.js',
-  '/vilda_diet_recommendations.js?v=2',
+  '/vilda_diet_recommendations.js?v=3',
   '/vilda_patient_report.js',
-  '/vilda_patient_report.js?v=3',
+  '/vilda_patient_report.js?v=4',
   '/nutrition_norms.js',
   '/nutrition_norms.js?v=41',
   '/nutrition_micros.js',
@@ -470,7 +470,7 @@ const CORE_SHELL_URLS = [
   '/bp_module.js',
   '/bp_module.js?v=4',
   '/circumference_module.js',
-  '/circumference_module.js?v=12',
+  '/circumference_module.js?v=13',
   '/respiratory_module.js',
   '/respiratory_module.js?v=3',
   '/sga_intergrowth_data.js',
