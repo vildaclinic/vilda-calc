@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vilda — pomiarówka wydajności</title>
+<style>
+  :root{ --teal:#00838d; --ink:#0f2b33; --muted:#5b6672; --bd:#d7e9ec; --bg:#eef5f6; }
+  *{ box-sizing:border-box; }
+  body{ font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; color:var(--ink); margin:0; background:#fff; line-height:1.5; }
+  .wrap{ max-width:820px; margin:0 auto; padding:28px 20px 60px; }
+  h1{ font-size:26px; font-weight:600; margin:0 0 4px; }
+  h2{ font-size:18px; font-weight:600; margin:28px 0 10px; color:var(--teal); }
+  p{ margin:8px 0; }
+  .card{ background:var(--bg); border:1px solid var(--bd); border-radius:14px; padding:16px 18px; margin:12px 0; }
+  ol{ margin:8px 0 8px 18px; } li{ margin:6px 0; }
+  code{ background:#f3f7f8; padding:1px 6px; border-radius:6px; font-size:0.92em; }
+  textarea{ width:100%; height:120px; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px; border:1px solid var(--bd); border-radius:10px; padding:10px; resize:vertical; }
+  .btn{ background:var(--teal); color:#fff; border:0; border-radius:10px; padding:10px 16px; font-size:15px; font-weight:500; cursor:pointer; }
+  .btn.sec{ background:#fff; color:var(--teal); border:1px solid #bcdfe2; }
+  .bm{ display:inline-block; background:#fff; color:var(--teal); border:1px dashed var(--teal); border-radius:10px; padding:10px 16px; font-weight:600; text-decoration:none; }
+  .grid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; align-items:end; }
+  .grid label{ font-size:13px; color:var(--muted); display:block; }
+  .grid input{ width:100%; padding:8px 10px; border:1px solid var(--bd); border-radius:8px; font-size:15px; }
+  .res{ margin-top:12px; font-size:15px; }
+  .res b{ font-size:18px; }
+  .good{ color:#0f6e56; } .bad{ color:#b71c1c; } .neutral{ color:var(--muted); }
+  .note{ font-size:13px; color:var(--muted); }
+  .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:10px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Pomiarówka wydajności Vilda</h1>
+  <p class="note">Mierzy realne metryki ładowania (FCP, DOMContentLoaded, Load, domInteractive) dowolnej podstrony aplikacji — także starej wersji na GitHub, bez jej edytowania. Zapisuje serię prób i pokazuje medianę.</p>
+
+  <h2>Krok 1 — zainstaluj pomiarkę</h2>
+  <div class="card">
+    <p><b>Opcja A (zalecana): bookmarklet.</b> Przeciągnij poniższy przycisk na pasek zakładek przeglądarki:</p>
+    <p class="row"><a id="bm" class="bm" href="#">▶ Vilda PERF</a></p>
+    <p class="note">Potem na stronie aplikacji kliknij tę zakładkę — pojawi się nakładka z liczbami.</p>
+    <p style="margin-top:14px;"><b>Opcja B: wklej do konsoli.</b> Skopiuj i wklej w DevTools → Console na stronie aplikacji:</p>
+    <textarea id="snippet" readonly></textarea>
+    <p class="row"><button class="btn sec" id="copyBtn">Kopiuj snippet</button> <span id="copyMsg" class="note"></span></p>
+  </div>
+
+  <h2>Krok 2 — zmierz (stara, potem nowa)</h2>
+  <div class="card">
+    <ol>
+      <li>Otwórz aplikację w oknie <b>Incognito</b> (świeży Service Worker i cache).</li>
+      <li>Załaduj podstronę (np. <code>index.html</code>) <b>dwa razy</b> — drugie ładowanie to realny „warm" stan.</li>
+      <li>Po każdym ładowaniu kliknij <b>▶ Vilda PERF</b> (lub wklej snippet). Powtórz, żeby uzbierać <b>≥3 próby</b> — nakładka pokaże <b>medianę</b>.</li>
+      <li>Zanotuj medianę <code>FCP</code>, <code>DCL</code>, <code>Load</code> (przycisk „Kopiuj" w nakładce kopiuje jedną linię).</li>
+      <li>Zrób to samo dla <b>starej</b> i <b>nowej</b> wersji, na <b>tym samym sprzęcie</b> (najlepiej tym wolnym). „Reset" w nakładce czyści serię między wersjami/podstronami.</li>
+    </ol>
+  </div>
+
+  <h2>Krok 3 — porównaj</h2>
+  <div class="card">
+    <p class="note">Wklej mediany (ms) ze starej i nowej wersji:</p>
+    <div class="grid">
+      <div></div><div style="text-align:center;font-weight:600;color:var(--muted)">STARA (ms)</div><div style="text-align:center;font-weight:600;color:var(--muted)">NOWA (ms)</div>
+      <label>FCP</label><input id="oFcp" type="number" inputmode="numeric"><input id="nFcp" type="number" inputmode="numeric">
+      <label>DCL</label><input id="oDcl" type="number" inputmode="numeric"><input id="nDcl" type="number" inputmode="numeric">
+      <label>Load</label><input id="oLoad" type="number" inputmode="numeric"><input id="nLoad" type="number" inputmode="numeric">
+    </div>
+    <p class="row" style="margin-top:14px;"><button class="btn" id="calcBtn">Policz różnicę</button></p>
+    <div id="result" class="res"></div>
+  </div>
+
+  <p class="note">Uwaga: jeśli bookmarklet nie zadziała (CSP strony blokuje <code>javascript:</code>), użyj opcji B (konsola). <code>Load=0</code> oznacza, że kliknięto przed zakończeniem ładowania — kliknij ponownie. Mierz zawsze ten sam tryb (warm) i ten sam sprzęt.</p>
+</div>
+
+<script>
+(function(){
+  // ── Kod pomiarki (wstrzykiwany na stronę aplikacji) ──
+  var PROBE = function(){
+    try{
+      var nav = (performance.getEntriesByType('navigation')||[])[0] || {};
+      var paint = performance.getEntriesByType('paint') || [];
+      function pt(n){ var e = paint.filter(function(p){return p.name===n;})[0]; return e ? e.startTime : 0; }
+      var run = {
+        ttfb: Math.round(nav.responseStart||0),
+        fp:   Math.round(pt('first-paint')),
+        fcp:  Math.round(pt('first-contentful-paint')),
+        domInteractive: Math.round(nav.domInteractive||0),
+        dcl:  Math.round(nav.domContentLoadedEventEnd||0),
+        load: Math.round(nav.loadEventEnd||0),
+        scripts: document.querySelectorAll('script[src]').length
+      };
+      var key = '__vildaPerfRuns__' + location.pathname;
+      var runs = []; try{ runs = JSON.parse(localStorage.getItem(key)||'[]'); }catch(e){}
+      runs.push(run); localStorage.setItem(key, JSON.stringify(runs));
+      function med(f){ var a = runs.map(f).sort(function(x,y){return x-y;}); return a[Math.floor(a.length/2)]; }
+      var M = { fcp:med(function(r){return r.fcp;}), dcl:med(function(r){return r.dcl;}), load:med(function(r){return r.load;}), domInteractive:med(function(r){return r.domInteractive;}) };
+      var line = location.pathname+' | prób:'+runs.length+' | mediana FCP:'+M.fcp+' DCL:'+M.dcl+' Load:'+M.load+' domInteractive:'+M.domInteractive+' (TTFB:'+run.ttfb+', scripts:'+run.scripts+')';
+      var old = document.getElementById('__vildaPerfBox'); if(old) old.remove();
+      var box = document.createElement('div'); box.id='__vildaPerfBox';
+      box.style.cssText='position:fixed;z-index:2147483647;right:12px;bottom:12px;max-width:340px;background:#0f2b33;color:#eaf6f7;font:13px/1.5 system-ui,sans-serif;padding:12px 14px;border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.35);';
+      box.innerHTML='<div style="font-weight:600;margin-bottom:6px;color:#5dcaa5">Vilda PERF · '+runs.length+' prób</div>'+
+        '<div>FCP: <b>'+M.fcp+'</b> ms · DCL: <b>'+M.dcl+'</b> ms</div>'+
+        '<div>Load: <b>'+M.load+'</b> ms · domInteractive: '+M.domInteractive+' ms</div>'+
+        '<div style="opacity:.7;margin-top:4px">ten run → FCP '+run.fcp+' / DCL '+run.dcl+' / Load '+run.load+' · scripts '+run.scripts+'</div>'+
+        '<div style="margin-top:8px;display:flex;gap:8px"><button id="__vpCopy" style="flex:1;background:#00838d;color:#fff;border:0;border-radius:8px;padding:6px;cursor:pointer">Kopiuj</button>'+
+        '<button id="__vpReset" style="background:#1b3a42;color:#eaf6f7;border:0;border-radius:8px;padding:6px 10px;cursor:pointer">Reset</button>'+
+        '<button id="__vpClose" style="background:#1b3a42;color:#eaf6f7;border:0;border-radius:8px;padding:6px 10px;cursor:pointer">×</button></div>';
+      document.body.appendChild(box);
+      document.getElementById('__vpCopy').onclick=function(){ try{ navigator.clipboard.writeText(line); this.textContent='Skopiowano'; }catch(e){ prompt('Skopiuj:', line); } };
+      document.getElementById('__vpReset').onclick=function(){ localStorage.removeItem(key); box.remove(); };
+      document.getElementById('__vpClose').onclick=function(){ box.remove(); };
+      try{ console.table(runs); console.log('Mediana:', M); }catch(e){}
+    }catch(e){ alert('Vilda PERF błąd: '+e); }
+  };
+
+  var body = '('+PROBE.toString()+')();';
+  var bookmarklet = 'javascript:' + encodeURIComponent(body);
+  document.getElementById('bm').setAttribute('href', bookmarklet);
+  document.getElementById('snippet').value = body;
+
+  document.getElementById('copyBtn').onclick = function(){
+    var ta = document.getElementById('snippet'); ta.select();
+    try{ navigator.clipboard.writeText(ta.value); }catch(e){ document.execCommand('copy'); }
+    document.getElementById('copyMsg').textContent = 'Skopiowano — wklej w Console na stronie aplikacji.';
+  };
+
+  document.getElementById('calcBtn').onclick = function(){
+    function v(id){ return Number(document.getElementById(id).value)||0; }
+    var pairs = [['FCP','oFcp','nFcp'],['DCL','oDcl','nDcl'],['Load','oLoad','nLoad']];
+    var out = '';
+    pairs.forEach(function(p){
+      var o=v(p[1]), n=v(p[2]);
+      if(!o || !n){ out += '<div class="neutral">'+p[0]+': uzupełnij obie wartości</div>'; return; }
+      var d = n - o; var pct = Math.round((d/o)*1000)/10;
+      var cls = d < 0 ? 'good' : (d > 0 ? 'bad' : 'neutral');
+      var sign = d < 0 ? '' : '+';
+      out += '<div class="'+cls+'">'+p[0]+': '+o+' → '+n+' ms · <b>'+sign+pct+'%</b> ('+sign+d+' ms)</div>';
+    });
+    document.getElementById('result').innerHTML = out;
+  };
+})();
+</script>
+</body>
+</html>

@@ -3509,11 +3509,11 @@ html.vilda-pro-active   #proGateBanner { display: none; }
 <!-- === PATCH 2025‑07‑01 – Small 50 and full time animation === -->
 
 <!-- Load Down syndrome growth tables before app.js; these define DS datasets as global variables -->
-<script src="ds_lms.js"></script>
+<script src="ds_lms.js" defer></script>
 <script src="vilda_down_syndrome.js?v=1"></script>
 <script src="vilda_anorexia_risk.js?v=1"></script>
 <!-- Palczewska centile data (weight, height, BMI) for 0–18 years. Loaded before app.js so it attaches centileData to window. -->
-<script src="centile_data.js"></script>
+<script src="centile_data.js" defer></script>
 <!-- Biblioteka XLSX do obsługi plików Excel.  Ładowana przed app.js, aby
      obiekt globalny XLSX był dostępny podczas inicjowania aplikacji. -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous"></script>

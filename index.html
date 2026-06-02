@@ -1740,15 +1740,15 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <!-- === PATCH 2025‑07‑01 – Small 50 and full time animation === -->
 
 <!-- Load Down syndrome growth tables before app.js; these define DS datasets as global variables -->
-<script src="ds_lms.js"></script>
+<script src="ds_lms.js" defer></script>
 <script src="vilda_down_syndrome.js?v=1"></script>
 <script src="vilda_anorexia_risk.js?v=1"></script>
 <!-- Palczewska centile data (weight, height, BMI) for 0–18 years. Loaded before app.js so it attaches centileData to window. -->
-<script src="centile_data.js"></script>
+<script src="centile_data.js" defer></script>
 <!-- Bayley-Pinneau stage 1 dataset for the advanced height prediction module. Loaded before app.js so future modules can access window.bayleyPinneauData. -->
-<script src="bayley_pinneau_data.js"></script>
+<script src="bayley_pinneau_data.js" defer></script>
 <!-- Roche-Wainer-Thissen (RWT) dataset for the advanced height prediction module. -->
-<script src="rwt_data.js"></script>
+<script src="rwt_data.js" defer></script>
 <!-- Reinehr 2019 CDGP-specific dataset for boys with retarded bone age. -->
 <script src="reinehr_cdgp_data.js"></script>
 <script src="advanced_growth_kowd.js?v=2"></script>
