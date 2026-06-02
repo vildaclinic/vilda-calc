@@ -74,7 +74,7 @@
 <script src="vilda_data_safety_explainer.js?v=5"></script>
 <script src="vilda_crypto_strength_explainer.js?v=6"></script>
 <script src="vilda_file_export.js?v=5"></script>
-<script src="vilda_deps.js?v=88"></script>
+<script src="vilda_deps.js?v=89"></script>
 <script src="vilda_update_hooks.js?v=7"></script>
 <script src="vilda_centile_chart_header.js?v=1"></script>
 <script src="vilda_gh_therapy_resource_audit.js?v=31" defer></script>
@@ -85,7 +85,7 @@
 <script src="vilda_food_summary.js?v=2"></script>
 <script src="vilda_data_import_export.js?v=25"></script>
 <script src="vilda_save_status_indicator.js?v=17"></script>
-<script src="vilda_advanced_growth.js?v=15"></script>
+<script src="vilda_advanced_growth.js?v=16"></script>
 <script src="vilda_estimated_intake.js?v=3"></script>
 <script src="vilda_update_prep.js?v=62" defer></script>
     
@@ -1611,8 +1611,9 @@ input[type="submit"]:focus-visible {
 
 <!-- 2. BIBLIOTEKI -->
 <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js" integrity="sha384-QOLV4jDrHYFU/0mHkVIR8QkZgRISiTcaqHqMGcW7LZ5/DGKTJWGwVFCh5knANMvj" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H" crossorigin="anonymous"></script>
+<!-- PERF: jsPDF + html2canvas NIE są już ładowane synchronicznie (blokowały render).
+     Ładowane leniwie z CDN dopiero przy eksporcie PDF — patrz VildaDeps.ensurePdfLibraries()
+     w vilda_deps.js (jspdf@2.5.1 + html2canvas@1.4.1, te same URL-e i SRI co dawniej). -->
     <!-- Biblioteka do generowania plików DOCX. Jeśli z jakiegoś powodu nie zostanie załadowana (np. brak internetu), skrypt wykorzysta prosty fallback HTML/RTF. -->
     <script src="https://cdn.jsdelivr.net/npm/docx@7.7.0/build/index.js" integrity="sha384-w/LllGhZ3w+q1yFNKaoeSozJlt4DKDgPzR/QqsYJ/de7QdUKPayy2iETdCFxEscy" crossorigin="anonymous"></script>
 <script src="vilda_chrome.js?v=36"></script>
@@ -4462,6 +4463,8 @@ function showClcrDependencyNotice(resultOrModule, message) {
 $('downloadPDF').addEventListener('click', async () => {
   // Upewnij się, że wartości są aktualne
   if (typeof update === 'function') update();
+  // PERF: jsPDF + html2canvas ładowane leniwie dopiero przy eksporcie PDF
+  if (typeof window !== 'undefined' && typeof window.vildaEnsurePdfLibraries === 'function') { try { await window.vildaEnsurePdfLibraries(); } catch (e) {} }
   if (typeof window !== 'undefined' && window.VildaDeps && typeof window.VildaDeps.checkModuleDeps === 'function') {
     const depsReady = window.VildaDeps.checkModuleDeps('clcr-pdf-export', { silent: true });
     if (depsReady && depsReady.ok === false) {
@@ -6397,9 +6400,9 @@ document.addEventListener('DOMContentLoaded', () => {
 <script src="vilda_estimated_intake_runtime.js?v=1"></script>
 <script src="vilda_estimated_intake_input_model.js?v=1"></script>
 <script src="vilda_estimated_intake_dom_mount.js?v=1"></script>
-<script src="app.js?v=180" defer></script>
-<script src="vilda_diet_recommendations.js?v=2" defer></script>
-<script src="vilda_patient_report.js?v=3" defer></script>
+<script src="app.js?v=181" defer></script>
+<script src="vilda_diet_recommendations.js?v=3" defer></script>
+<script src="vilda_patient_report.js?v=4" defer></script>
 <script src="custom-fixes.js?v=23" defer></script>
 <!-- Skrypt obsługujący tryb agregowania wyników dla tego samego pacjenta.  -->
 <script defer>
