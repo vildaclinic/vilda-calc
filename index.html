@@ -81,10 +81,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
 <!-- Zmieniamy nazwę pliku stylów na style_PWZ.css -->
 <link href="ios26-v2.css?v=12" rel="stylesheet">
-<link href="style.css?v=42" rel="stylesheet">
+<link href="style.css?v=43" rel="stylesheet">
 <link href="sidebar.css" rel="stylesheet">
-<link href="vilda_chrome.css?v=16" rel="stylesheet">
-<link href="vilda_auth_ui.css?v=28" rel="stylesheet">
+<link href="vilda_chrome.css?v=18" rel="stylesheet">
+<link href="vilda_auth_ui.css?v=39" rel="stylesheet">
 <link href="vilda_save_status_indicator.css?v=4" rel="stylesheet">
 <link href="vilda_obesity_banner.css?v=3" rel="stylesheet">
 
@@ -216,7 +216,7 @@ html.vilda-pro-inactive:not(.vilda-logged-in) .vilda-pro-gate-banner--login { di
      (.vilda-logout-overlay) są spod tej reguły wyłączone, więc malują się
      normalnie na neutralnym tle. -->
 <style>
-html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overlay) {
+html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overlay):not(.vds-overlay):not(.vcs-overlay) {
   visibility: hidden !important;
 }
 </style>
@@ -235,31 +235,31 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 
 <script src="vilda_logger.js?v=2"></script>
 <script src="vilda_html.js?v=4"></script>
-<script src="vilda_persistence_adapter.js?v=11"></script>
+<script src="vilda_persistence_adapter.js?v=18"></script>
 <script src="vilda_session_bridge.js?v=1"></script>
 <script src="vilda_init.js?v=4"></script>
-<script src="vilda_crypto.js?v=11"></script>
-<script src="vilda_vault.js?v=26"></script>
-<script src="vilda_sync.js?v=5"></script>
-<script src="vilda_sync_integration.js?v=3"></script>
-<script src="vilda_auth_ui.js?v=75"></script>
-<script src="vilda_data_safety_explainer.js?v=4"></script>
-<script src="vilda_crypto_strength_explainer.js?v=1"></script>
+<script src="vilda_crypto.js?v=14"></script>
+<script src="vilda_vault.js?v=74"></script>
+<script src="vilda_sync.js?v=10"></script>
+<script src="vilda_sync_integration.js?v=9"></script>
+<script src="vilda_auth_ui.js?v=149"></script>
+<script src="vilda_data_safety_explainer.js?v=5"></script>
+<script src="vilda_crypto_strength_explainer.js?v=6"></script>
 <script src="vilda_pro_access.js?v=2"></script>
 <script src="vilda_pro_ui.js?v=2"></script>
-<script src="vilda_file_export.js?v=4"></script>
-<script src="vilda_deps.js?v=87"></script>
+<script src="vilda_file_export.js?v=5"></script>
+<script src="vilda_deps.js?v=89"></script>
 <script src="vilda_update_hooks.js?v=7"></script>
 <script src="vilda_centile_chart_header.js?v=1"></script>
-<script src="vilda_gh_therapy_resource_audit.js?v=31"></script>
+<script src="vilda_gh_therapy_resource_audit.js?v=31" defer></script>
 <script src="vilda_app_helpers.js?v=2"></script>
 <script src="vilda_food_data.js?v=1"></script>
 <script src="vilda_macro_practice.js?v=2"></script>
 <script src="vilda_activity_burn.js?v=1"></script>
 <script src="vilda_food_summary.js?v=2"></script>
-<script src="vilda_data_import_export.js?v=18"></script>
-<script src="vilda_save_status_indicator.js?v=12"></script>
-<script src="vilda_advanced_growth.js?v=15"></script>
+<script src="vilda_data_import_export.js?v=25"></script>
+<script src="vilda_save_status_indicator.js?v=17"></script>
+<script src="vilda_advanced_growth.js?v=16"></script>
 <!-- Przelicznik jednostek laboratoryjnych — dane + silnik. Wystawia
      window.LabUnitConverter (z metodą evaluate) używany przez generator
      epikryzy do automatycznej oceny IGF-1 wg normy dla wieku/stadium Tannera.
@@ -303,8 +303,9 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
   }
 })();
 </script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H" crossorigin="anonymous"></script>
+<!-- PERF: jsPDF + html2canvas NIE są już ładowane synchronicznie (blokowały render).
+     Ładowane leniwie z CDN dopiero przy eksporcie PDF — patrz VildaDeps.ensurePdfLibraries()
+     w vilda_deps.js (jspdf@2.5.1 + html2canvas@1.4.1, te same URL-e i SRI co dawniej). -->
 <script src="https://unpkg.com/lucide@1.14.0/dist/umd/lucide.min.js" integrity="sha384-jB6ZXxyEV94yzTxgLMvrwwNbn/pTTqwrMDI+v8FV5o5FnId/yn3DJwSdrDujU9A7" crossorigin="anonymous" defer></script>
 
   <!-- Progressive Web App meta tags and manifest -->
@@ -391,12 +392,12 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
         ]
       }
       </script>
-<script src="vilda_chrome.js?v=16"></script>
+<script src="vilda_chrome.js?v=36"></script>
 </head>
 <!-- Dodajemy klasę "liquid-ios26" bezpośrednio na element <body>,
      aby motyw Liquid Glass był stosowany od samego początku ładowania strony.
      Dzięki temu unikamy krótkiego błysku podstawowych stylów zanim skrypt
-     ios26-ui.js?v=18 dołączy klasę dynamicznie. -->
+     ios26-ui.js?v=20 dołączy klasę dynamicznie. -->
 <body class="js-loading liquid-ios26 has-sidebar">
 
 <header>
@@ -439,8 +440,20 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
           <option value="M">Mężczyzna</option>
           <option value="F">Kobieta</option>
         </select></label>
-      <label>Etap dojrzewania (Tanner) <span style="font-weight:400;opacity:0.65;">(opcjonalnie, dla wieku rozwojowego)</span>:
-        <select id="tannerStage" onchange="debouncedUpdate()">
+      <!-- Etap Tannera — progressive disclosure: dla pacjentów <18 r.ż. zawsze widoczne;
+           dla dorosłych ukryte (Tanner V jest standardową wartością domyślną dla
+           pacjenta po dojrzewaniu), ale można ujawnić toggle'em w rzadkich
+           przypadkach (np. dorosły z opóźnionym dojrzewaniem). Jeśli wartość jest
+           już wpisana — pole pokazuje się niezależnie od wieku. -->
+      <button type="button" id="tannerToggleBtn"
+              style="display:none;align-self:flex-start;margin:0.25rem 0 0.5rem;
+                     padding:0.35rem 0.65rem;font-size:0.82rem;font-weight:500;
+                     background:transparent;border:1px solid #cfe0e3;border-radius:8px;
+                     color:#5a7274;cursor:pointer;text-align:left;line-height:1.3;">
+        + Pokaż etap Tannera <span style="opacity:0.7;">(dla zaburzeń dojrzewania u dorosłych)</span>
+      </button>
+      <label id="tannerStageWrap">Etap dojrzewania (Tanner) <span style="font-weight:400;opacity:0.65;">(opcjonalnie, dla wieku rozwojowego)</span>:
+        <select id="tannerStage" onchange="debouncedUpdate(); if (typeof updateTannerVisibility === 'function') updateTannerVisibility();">
           <option value="">— nieznany / automatycznie z wieku —</option>
           <option value="1">Tanner I — przedpokwitaniowy</option>
           <option value="2">Tanner II — wczesne pokwitanie</option>
@@ -448,6 +461,68 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
           <option value="4">Tanner IV — późne pokwitanie</option>
           <option value="5">Tanner V — dojrzałość pełna</option>
         </select></label>
+      <script>
+        // Progressive disclosure pola Tannera. Reguły:
+        //   • wiek <18 r.ż. → pole ZAWSZE widoczne (główny use case pediatryczny)
+        //   • wiek ≥18, brak wartości, brak manual reveal → pole ukryte, toggle widoczny
+        //   • wiek ≥18, jest wartość → pole widoczne (szanujemy zapisane dane)
+        //   • wiek ≥18, manual reveal (klik w toggle) → pole widoczne, toggle ukryty
+        (function () {
+          let manualReveal = false;
+          const ageInput = document.getElementById('age');
+          const ageMonthsInput = document.getElementById('ageMonths');
+          const tannerWrap = document.getElementById('tannerStageWrap');
+          const tannerSelect = document.getElementById('tannerStage');
+          const tannerToggle = document.getElementById('tannerToggleBtn');
+          if (!ageInput || !tannerWrap || !tannerSelect || !tannerToggle) return;
+
+          function isAdult() {
+            const y = parseInt(ageInput.value, 10);
+            // Wiek <18 traktujemy jako dziecko (główny przypadek). Pusty wiek =
+            // brak danych — wtedy pokazujemy pole (lekarz dopiero wypełnia formularz).
+            if (!Number.isFinite(y)) return false;
+            return y >= 18;
+          }
+          function hasValue() {
+            return tannerSelect.value !== '';
+          }
+          window.updateTannerVisibility = function () {
+            const adult = isAdult();
+            const value = hasValue();
+            const showField = !adult || value || manualReveal;
+            tannerWrap.style.display = showField ? '' : 'none';
+            tannerToggle.style.display = (adult && !value && !manualReveal) ? '' : 'none';
+          };
+          tannerToggle.addEventListener('click', function () {
+            manualReveal = true;
+            updateTannerVisibility();
+            setTimeout(function () { try { tannerSelect.focus(); } catch (_) {} }, 30);
+          });
+          ageInput.addEventListener('input', function () {
+            // Gdy user zmienia wiek na <18, reset manual reveal — pole pojawi się
+            // naturalnie. Gdy zmienia na ≥18, zachowujemy manual reveal jeśli był.
+            if (!isAdult()) manualReveal = false;
+            updateTannerVisibility();
+          });
+          if (ageMonthsInput) {
+            ageMonthsInput.addEventListener('input', function () { updateTannerVisibility(); });
+          }
+          // Stan początkowy + reactive na późniejsze ustawienie wartości
+          // (np. przez restore z autosave/pacjent).
+          updateTannerVisibility();
+          // Obserwator zmian wartości selecta przez programowe set (np. autosave restore).
+          // 'change' jest dispatched dla user input; programowe ustawienie wartości nie
+          // triggeruje change automatycznie, więc dodajemy MutationObserver na atrybut value.
+          // (Jeśli aplikacja ustawia wartość przez tannerSelect.value = '...', musimy
+          // ręcznie wywołać updateTannerVisibility() — patrz hook poniżej.)
+          // Dodatkowo: po DOMContentLoaded sprawdzamy stan ponownie (autosave może być async).
+          window.addEventListener('load', function () {
+            setTimeout(updateTannerVisibility, 0);
+            setTimeout(updateTannerVisibility, 200);
+            setTimeout(updateTannerVisibility, 800);
+          });
+        })();
+      </script>
       <label>Waga (kg):
         <!-- Dostosowujemy zakres do niemowląt: mniejsza waga i możliwość wpisywania wartości z dokładnością do 0.1 kg -->
         <input type="number" id="weight" min="2" max="300" step="0.1" oninput="debouncedUpdate()" required></label>
@@ -1301,7 +1376,7 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
         Zmieniono przycisk rozwijający sekcję zaawansowanych obliczeń.  Przycisk
         otrzymuje klasę .advanced-growth-btn, a tekst został otoczony
         elementem <span> z dodatkowym napisem PRO w indeksie górnym.  Napisy są
-        stylowane w pliku style.css?v=42, aby nadać im biały kolor tła,
+        stylowane w pliku style.css?v=43, aby nadać im biały kolor tła,
         czarną czcionkę i fioletową ramkę.  Etykieta PRO w przycisku
         przyjmuje kolor fioletowy (#9900ff) i mniejszy rozmiar czcionki.
       -->
@@ -1666,15 +1741,15 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <!-- === PATCH 2025‑07‑01 – Small 50 and full time animation === -->
 
 <!-- Load Down syndrome growth tables before app.js; these define DS datasets as global variables -->
-<script src="ds_lms.js"></script>
+<script src="ds_lms.js" defer></script>
 <script src="vilda_down_syndrome.js?v=1"></script>
 <script src="vilda_anorexia_risk.js?v=1"></script>
 <!-- Palczewska centile data (weight, height, BMI) for 0–18 years. Loaded before app.js so it attaches centileData to window. -->
-<script src="centile_data.js"></script>
+<script src="centile_data.js" defer></script>
 <!-- Bayley-Pinneau stage 1 dataset for the advanced height prediction module. Loaded before app.js so future modules can access window.bayleyPinneauData. -->
-<script src="bayley_pinneau_data.js"></script>
+<script src="bayley_pinneau_data.js" defer></script>
 <!-- Roche-Wainer-Thissen (RWT) dataset for the advanced height prediction module. -->
-<script src="rwt_data.js"></script>
+<script src="rwt_data.js" defer></script>
 <!-- Reinehr 2019 CDGP-specific dataset for boys with retarded bone age. -->
 <script src="reinehr_cdgp_data.js"></script>
 <script src="advanced_growth_kowd.js?v=2"></script>
@@ -1684,18 +1759,17 @@ html.vilda-auth-locked body > *:not(#vilda-auth-ui-root):not(.vilda-logout-overl
 <script src="vitalSigns.js"></script>
 <script src="adult_vitals.js?v=5" defer></script>
 <script src="vilda_growth_reference_data.js?v=1"></script>
-<script src="vilda_professional_module.js?v=1"></script>
+<script src="vilda_professional_module.js?v=2"></script>
 <script src="vilda_persist_runtime.js?v=4"></script>
-<script src="vilda_summary_cards.js?v=2"></script>
+<script src="vilda_summary_cards.js?v=3"></script>
 <script src="vilda_diet_plan_ui.js?v=1"></script>
 <script src="vilda_estimated_intake_ui.js?v=1"></script>
 <script src="vilda_estimated_intake_runtime.js?v=1"></script>
 <script src="vilda_estimated_intake_input_model.js?v=1"></script>
 <script src="vilda_estimated_intake_dom_mount.js?v=1"></script>
-<script src="app.js?v=175" defer></script>
-<script src="vilda_smoke_tests.js?v=48" defer></script>
-<script src="vilda_diet_recommendations.js?v=2" defer></script>
-<script src="vilda_patient_report.js?v=3" defer></script>
+<script src="app.js?v=181" defer></script>
+<script src="vilda_diet_recommendations.js?v=3" defer></script>
+<script src="vilda_patient_report.js?v=4" defer></script>
 <script src="nutrition_norms.js?v=41" defer></script>
 <script src="nutrition_micros.js?v=25" defer></script>
 
@@ -2134,6 +2208,53 @@ if (typeof window !== 'undefined') {
   window.getCentileChartLineStyles = getCentileChartLineStyles;
 }
 
+/* E1 — Globalne flagi widoczności elementów siatek centylowych.
+ * Persystowane w VildaPersistence (local-persistent). Domyślnie WSZYSTKO widoczne.
+ * Ustawienia w „Techniczny panel siatek centylowych" → „Widoczność elementów".
+ * Działają na WSZYSTKICH siatkach (Palczewska 1-18, OLAF 3-18, infant 0-3),
+ * w trybie standardowym i publikacyjnym (DocPro też).
+ */
+function readCentileVisibilityFlag(key, fallback) {
+  try {
+    if (typeof window === 'undefined' || !window.VildaPersistence) return fallback;
+    const raw = window.VildaPersistence.readPreferenceRaw(key, null);
+    if (raw === 'true' || raw === true) return true;
+    if (raw === 'false' || raw === false) return false;
+    return fallback;
+  } catch (_) { return fallback; }
+}
+function refreshCentileVisibilityFlags() {
+  if (typeof window === 'undefined') return;
+  window.centileShowHeightValueLabel = readCentileVisibilityFlag('CENTILE_SHOW_HEIGHT_LABEL', true);
+  window.centileShowWeightValueLabel = readCentileVisibilityFlag('CENTILE_SHOW_WEIGHT_LABEL', true);
+  window.centileShowBandReference   = readCentileVisibilityFlag('CENTILE_SHOW_BAND_REFERENCE', true);
+}
+if (typeof window !== 'undefined') {
+  // Inicjalizacja od razu (sync read z localStorage). Re-fetch po DOMContentLoaded
+  // żeby pokryć przypadek gdy VildaPersistence dosłownie nie był jeszcze załadowany.
+  refreshCentileVisibilityFlags();
+  window.refreshCentileVisibilityFlags = refreshCentileVisibilityFlags;
+  try {
+    document.addEventListener('DOMContentLoaded', refreshCentileVisibilityFlags);
+  } catch (_) { /* środowiska bez document */ }
+}
+// Helper: czy etykieta wartości przy bieżącym pomiarze ma być rysowana?
+// Decyzja na bazie 'units' (cm/kg) — bo to drawCentileCurrentPoint widzi.
+function isCentileCurrentPointLabelVisible(units) {
+  if (typeof window === 'undefined') return true;
+  if (units === 'cm') return window.centileShowHeightValueLabel !== false;
+  if (units === 'kg') return window.centileShowWeightValueLabel !== false;
+  return true; // inne jednostki — domyślnie pokazuj
+}
+function isCentileBandReferenceVisible() {
+  if (typeof window === 'undefined') return true;
+  return window.centileShowBandReference !== false;
+}
+if (typeof window !== 'undefined') {
+  window.isCentileCurrentPointLabelVisible = isCentileCurrentPointLabelVisible;
+  window.isCentileBandReferenceVisible = isCentileBandReferenceVisible;
+}
+
 /* Rysuje pojedynczy wykres siatki centylowej. */
 function drawRoundedRectPath(ctx, x, y, w, h, r) {
   const radius = Math.max(0, Math.min(r || 0, Math.min(w, h) / 2));
@@ -2382,30 +2503,38 @@ function drawCentileCurrentPoint(ctx, cfg) {
   ctx.arc(pxU, pyU, pointRadius, 0, 2 * Math.PI);
   ctx.fill();
   ctx.stroke();
-  const lbl = `${userVal.toFixed(1).replace('.', ',')} ${units}`;
-  if (theme.currentPointLabelMode === 'pill') {
-    ctx.font = 'bold 32px sans-serif';
-    const tmpWidth = ctx.measureText(lbl).width + 36;
-    const preferRight = pxU <= plot.px + plot.pw * 0.62;
-    let boxX = preferRight ? pxU + 18 : pxU - 18 - tmpWidth;
-    let boxY = pyU - 72;
-    if (boxY < plot.py + 12) boxY = pyU + 18;
-    boxX = Math.max(plot.px + 12, Math.min(boxX, plot.px + plot.pw - tmpWidth - 12));
-    drawCentileValuePill(ctx, lbl, boxX, boxY, {
-      font: 'bold 32px sans-serif',
-      fillStyle: theme.currentPointLabelBg,
-      strokeStyle: theme.currentPointLabelStroke,
-      textColor: theme.currentPointLabelText,
-      radius: 18,
-      height: 56
-    });
-  } else {
-    ctx.font = '33px sans-serif';
-    ctx.fillStyle = theme.currentPointLabelText || '#000000';
-    ctx.textAlign = pxU > plot.px + plot.pw / 2 ? 'right' : 'left';
-    ctx.textBaseline = 'bottom';
-    const labelX = pxU > plot.px + plot.pw / 2 ? pxU - 12 : pxU + 12;
-    ctx.fillText(lbl, labelX, pyU - 12);
+  // E1 — etykieta wartości (np. "165,2 cm") rysowana tylko gdy użytkownik
+  // jej nie wyłączył w „Techniczny panel siatek centylowych → Widoczność".
+  // Decyzja na bazie 'units' (cm = wzrost, kg = waga, osobne togglee).
+  const showCurrentLabel = (typeof window !== 'undefined' && typeof window.isCentileCurrentPointLabelVisible === 'function')
+    ? window.isCentileCurrentPointLabelVisible(units)
+    : true;
+  if (showCurrentLabel) {
+    const lbl = `${userVal.toFixed(1).replace('.', ',')} ${units}`;
+    if (theme.currentPointLabelMode === 'pill') {
+      ctx.font = 'bold 32px sans-serif';
+      const tmpWidth = ctx.measureText(lbl).width + 36;
+      const preferRight = pxU <= plot.px + plot.pw * 0.62;
+      let boxX = preferRight ? pxU + 18 : pxU - 18 - tmpWidth;
+      let boxY = pyU - 72;
+      if (boxY < plot.py + 12) boxY = pyU + 18;
+      boxX = Math.max(plot.px + 12, Math.min(boxX, plot.px + plot.pw - tmpWidth - 12));
+      drawCentileValuePill(ctx, lbl, boxX, boxY, {
+        font: 'bold 32px sans-serif',
+        fillStyle: theme.currentPointLabelBg,
+        strokeStyle: theme.currentPointLabelStroke,
+        textColor: theme.currentPointLabelText,
+        radius: 18,
+        height: 56
+      });
+    } else {
+      ctx.font = '33px sans-serif';
+      ctx.fillStyle = theme.currentPointLabelText || '#000000';
+      ctx.textAlign = pxU > plot.px + plot.pw / 2 ? 'right' : 'left';
+      ctx.textBaseline = 'bottom';
+      const labelX = pxU > plot.px + plot.pw / 2 ? pxU - 12 : pxU + 12;
+      ctx.fillText(lbl, labelX, pyU - 12);
+    }
   }
   ctx.restore();
   return { x: pxU, y: pyU };
@@ -3268,8 +3397,14 @@ function drawCentileGrid(ctx, cfg) {
       ctx.restore();
     }
 
+    // E1 — linie odniesienia kanału centylowego (przerywane linie na 18 r.ż. +
+    // etykiety wartości "X cm (Y c)"). Rysowane tylko gdy użytkownik ich
+    // nie wyłączył w „Techniczny panel siatek centylowych → Widoczność".
+    const showBandRef = (typeof window !== 'undefined' && typeof window.isCentileBandReferenceVisible === 'function')
+      ? window.isCentileBandReferenceVisible()
+      : true;
     const idx18 = 216 - minXVal;
-    if (maxXVal >= 216 && idx18 >= 0 && idx18 < n) {
+    if (showBandRef && maxXVal >= 216 && idx18 >= 0 && idx18 < n) {
       const v1 = valsA[idx18];
       const v2 = valsB[idx18];
       const valLow18 = Math.min(v1, v2);
@@ -5627,9 +5762,9 @@ async function generateCentileChart() {
 </script>
 <!-- Liquid iOS26 UI script: applies glassmorphism and micro‑interactions. The version query
      string busts the service worker cache so updated code is loaded immediately. -->
-<script src="ios26-ui.js?v=18" defer></script>
+<script src="ios26-ui.js?v=20" defer></script>
 <!-- Guided tutorial for first‑time users -->
-<script src="tutorial.js?v=6" defer></script>
+<script src="tutorial.js?v=8" defer></script>
 
 <!-- Moduł ciśnienia krwi: oblicza percentyle ciśnienia na podstawie wieku,
      wzrostu, płci oraz wprowadzonych wartości skurczowych i rozkurczowych.
@@ -5652,7 +5787,7 @@ async function generateCentileChart() {
      Skrypt powinien być ładowany po module ciśnienia krwi oraz po danych INTERGROWTH-21st,
      aby mieć dostęp do funkcji pomocniczych jak applyPulse i do referencji noworodkowych.
      Określenie defer gwarantuje, że skrypt uruchomi się po załadowaniu struktury DOM. -->
-<script src="circumference_module.js?v=12" defer></script>
+<script src="circumference_module.js?v=13" defer></script>
 
 <!-- Moduł liczby oddechów. Ładowany po module ciśnienia krwi i obwodów, aby
      móc korzystać z funkcji pomocniczych z app.js (np. getAgeDecimal).
@@ -6039,7 +6174,7 @@ async function generateCentileChart() {
        przełączaniu trybu wyników na wąskich ekranach.
        Plik custom-fixes.js implementuje te funkcje poprzez
        obserwację DOM i modyfikację scrollIntoView. -->
-  <script src="custom-fixes.js?v=19" defer></script>
+  <script src="custom-fixes.js?v=23" defer></script>
 
   <!-- Dynamic repositioning of Cole and Advanced Growth cards on mobile/desktop
        views.  This script adjusts the DOM order of these elements only in
