@@ -324,17 +324,24 @@
     // Ustal, czy mamy do czynienia z osobą pełnoletnią (wiek >= 18 lat).
     const isAdult = (ageMonths != null && (ageMonths / 12) >= 18);
     if (!isAdult) {
-      // Klasyfikacja wzrostu: poniżej 3. lub powyżej 97. centyla – czerwony alert
-      if (heightPerc != null && (heightPerc < 3 || heightPerc > 97)) {
-        heightClass = ' status-alert';
+      // Klasyfikacja wzrostu/wagi — spójna z główną kartą „Podsumowanie wyników"
+      // (custom-fixes.js → getCentileState):
+      //   <3 || >97  → status-alert   (czerwony)
+      //   <10 || >90 → status-improve (pomarańczowy „borderline")
+      //   10–90      → brak klasy      (turkus)
+      // Wcześniej brakowało dolnego pasma 3–10 dla wagi oraz całego pasma
+      // ostrzegawczego dla wzrostu → waga np. na 8. centylu fałszywie świeciła turkus.
+      if (heightPerc != null) {
+        if (heightPerc < 3 || heightPerc > 97) {
+          heightClass = ' status-alert';
+        } else if (heightPerc < 10 || heightPerc > 90) {
+          heightClass = ' status-improve';
+        }
       }
-      // Klasyfikacja wagi u dzieci: dostosuj progi ostrzegawcze.
-      // Jeżeli percentyl masy ciała znajduje się poza skrajnymi wartościami (<3 lub >97) — użyj koloru ostrzegawczego (czerwony).
-      // Dodatkowo, jeśli mieści się w przedziale 90–97 centyl, zastosuj kolor ostrzegawczy umiarkowany (ciemny pomarańczowy).
       if (weightPerc != null) {
-        if (weightPerc >= 97 || weightPerc < 3) {
+        if (weightPerc < 3 || weightPerc > 97) {
           weightClass = ' status-alert';
-        } else if (weightPerc >= 90) {
+        } else if (weightPerc < 10 || weightPerc > 90) {
           weightClass = ' status-improve';
         }
       }

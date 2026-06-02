@@ -4220,8 +4220,20 @@
     // ── Klasyfikacja kolorów (spójna z vilda_summary_cards.js) ──
     function classify(type, val, perc) {
       if (!isAdult) {
-        if (type === 'height') return (perc != null && (perc < 3 || perc > 97)) ? 'alert' : null;
-        if (type === 'weight') return (perc != null) ? (perc >= 97 || perc < 3 ? 'alert' : perc >= 90 ? 'improve' : null) : null;
+        // Spójne z głównym „Podsumowaniem wyników" (custom-fixes.js → getCentileState):
+        //   <3 || >97  → alert   (czerwony)
+        //   <10 || >90 → improve (pomarańczowy „borderline")
+        //   10–90      → null    (turkus)
+        // Waga/wzrost — symetryczne pasma percentyla (wcześniej brakowało dolnego
+        // pasma 3–10 → waga np. na 8. centylu fałszywie świeciła na turkus).
+        if (type === 'height' || type === 'weight') {
+          if (perc == null) return null;
+          if (perc < 3 || perc > 97) return 'alert';
+          if (perc < 10 || perc > 90) return 'improve';
+          return null;
+        }
+        // BMI — KLINICZNE progi for-age (85 nadwaga, 97 otyłość), świadomie inne
+        // niż symetryczne 90/97 z getCentileState (wariant A — czułość nadwagi).
         if (type === 'bmi')    return (perc != null) ? (perc >= 97 || perc < 3 ? 'alert' : perc >= 85 ? 'improve' : null) : null;
         if (type === 'cole')   return (val != null)  ? (val < 90 || val >= 120 ? 'alert' : val > 110 ? 'improve' : null) : null;
       } else {
