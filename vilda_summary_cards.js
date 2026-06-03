@@ -227,7 +227,13 @@
       } catch(_){}
     };
     document.addEventListener('vilda:auth-hidden', _restorePrevSummaryFromSession);
-    document.addEventListener('vilda:state-restored', _restorePrevSummaryFromSession);
+    // FIX regresu (2026-06-03): 'vilda:state-restored' wysyła WYŁĄCZNIE ścieżka
+    // „Odtwórz zapis" (vilda_data_import_export). To znaczy: użytkownik OGLĄDA
+    // odtworzony zapis, nie wpisuje nowego pomiaru → karta porównania ma być
+    // UKRYTA (oryginalne UX sprzed reload-survival) i nie wracać po reloadzie.
+    // Wcześniej ten listener RENDEROWAŁ kartę — przez co „Odtwórz zapis"
+    // wskrzeszał ją wbrew projektowi.
+    document.addEventListener('vilda:state-restored', function () { _hidePrevSummaryCard(); });
     if (document.readyState !== 'loading') setTimeout(_restorePrevSummaryFromSession, 0);
     else document.addEventListener('DOMContentLoaded', function(){ setTimeout(_restorePrevSummaryFromSession, 0); });
   }
