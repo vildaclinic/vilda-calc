@@ -3632,6 +3632,8 @@
           showPatientsList(_navCtx.onPick, _navCtx.listOptions, true);
         } else if (loc.screen === 'card') {
           showPatientCard(loc.patientId, _navCtx.onPick, _navCtx.listOptions, { activeTab: loc.tab, _navRestore: true });
+        } else if (loc.screen === 'edit') {
+          showPatientEditScreen(loc.patientId, _navCtx.onPick, _navCtx.listOptions, true);
         }
       } catch (err) { try { logError('nav popstate render', err); } catch (_) {} }
     });
@@ -3642,15 +3644,41 @@
       var cur = _navState();
       // Dedup: nie dubluj identycznej lokacji (np. ponowny klik w tę samą zakładkę).
       if (cur && cur.screen === loc.screen && cur.patientId === loc.patientId && cur.tab === loc.tab) return;
+      // Głębokość w naszym stosie + głębokość najbliższego wpisu LISTY pod nami.
+      // Dzięki temu „Wróć do listy" może skoczyć history.go() PROSTO na listę
+      // (a nie o 1 krok), niezależnie ile zakładek user przeklikał.
+      loc.depth = (cur && typeof cur.depth === 'number' ? cur.depth : 0) + 1;
+      loc.listDepth = (loc.screen === 'list')
+        ? loc.depth
+        : (cur && typeof cur.listDepth === 'number' ? cur.listDepth : null);
       global.history.pushState({ vildaNav: loc }, '');
     } catch (_) {}
   }
   function _navReplace(loc) {
-    try { _navInstall(); global.history.replaceState({ vildaNav: loc }, ''); } catch (_) {}
+    try {
+      _navInstall();
+      var cur = _navState();
+      if (cur) { loc.depth = cur.depth; loc.listDepth = cur.listDepth; }
+      global.history.replaceState({ vildaNav: loc }, '');
+    } catch (_) {}
   }
-  // Wstecz w nakładce z przycisków („Wróć do listy"/„Anuluj") = ten sam tor co gest.
+  // Wstecz w nakładce z przycisku „Anuluj" = ten sam tor co gest (1 krok).
   function _navBack() {
     try { global.history.back(); } catch (_) {}
+  }
+  // „Wróć do listy" — ZAWSZE ląduje na liście: skok w historii prosto do wpisu
+  // listy (popstate wyrenderuje listę). Gdy listy nie ma w stosie (np. karta
+  // otwarta z przypomnień/deep-link) → fallback renderuje listę jako krok naprzód.
+  function _navBackToList(fallback) {
+    try {
+      var cur = _navState();
+      if (cur && typeof cur.depth === 'number' && typeof cur.listDepth === 'number' &&
+          cur.listDepth >= 1 && cur.listDepth < cur.depth) {
+        global.history.go(cur.listDepth - cur.depth);
+        return;
+      }
+    } catch (_) {}
+    try { if (typeof fallback === 'function') fallback(); } catch (_) {}
   }
 
   // ============ R2 — REMINDER MODAL (PRZYPOMNIENIA PO ZALOGOWANIU) ============
@@ -4810,7 +4838,7 @@
     var backBtn = el('button', {
       class: 'vilda-auth-btn vilda-auth-btn-ghost', type: 'button',
       text: '← Wróć do listy',
-      onclick: function () { if (_navState()) { _navBack(); } else { showPatientsList(onPick, listOptions); } }
+      onclick: function () { _navBackToList(function () { showPatientsList(onPick, listOptions); }); }
     });
 
     var loadBtn = null;
@@ -4881,7 +4909,7 @@
    * w hero karty pacjenta. Zawiera formularz danych pacjenta + akcje
    * Przywróć/Zapisz/Usuń. Po zapisie wraca do showPatientCard.
    */
-  async function showPatientEditScreen(patientId, onPick, listOptions) {
+  async function showPatientEditScreen(patientId, onPick, listOptions, _navRestore) {
     var V = getVault();
     if (!V || !V.isUnlocked()) return;
 
@@ -4910,6 +4938,14 @@
       ]), { noLogo: true });
       return;
     }
+
+    // ── Historia nawigacji: ekran Edytuj = krok DO PRZODU. Dzięki temu swipe
+    // wstecz z edycji wraca na KARTĘ edytowanego pacjenta (wpis pod spodem),
+    // a nie na listę. Render z popstate (_navRestore) nie dokłada wpisu. ──
+    _navInstall();
+    _navCtx.onPick = onPick;
+    _navCtx.listOptions = listOptions;
+    if (!_navRestore) _navPushForward({ screen: 'edit', patientId: patientId });
 
     var snap = patientFull.snapshots[0];
     var payload = snap.payload || {};
@@ -5111,7 +5147,11 @@
         setBusy(true);
         await V.savePatient(edited, { patientId: patientId, dedup: false });
         setBusy(false);
-        showPatientCard(patientId, onPick, listOptions);
+        // Powrót na kartę torem historii (konsumuje wpis {edit}); karta i tak
+        // re-fetchuje dane, więc pokaże świeżo zapisane wartości.
+        var _cur = _navState();
+        if (_cur && _cur.screen === 'edit') { _navBack(); }
+        else { showPatientCard(patientId, onPick, listOptions); }
       } catch (e) {
         setBusy(false);
         editErr.textContent = 'Nie udało się zapisać zmian.';
@@ -5126,7 +5166,10 @@
         setBusy(true);
         await V.removePatient(patientId);
         setBusy(false);
-        showPatientsList(onPick, listOptions);
+        // Pacjent usunięty → jego karta/edycja w stosie są nieaktualne. Skok
+        // prosto do wpisu LISTY (popstate wyrenderuje świeżą listę bez pacjenta);
+        // fallback renderuje listę jako krok naprzód, gdy listy nie ma w stosie.
+        _navBackToList(function () { showPatientsList(onPick, listOptions); });
       } catch (e) {
         setBusy(false);
         editErr.textContent = 'Nie udało się usunąć pacjenta.';
@@ -5137,7 +5180,7 @@
     var backBtn = el('button', {
       class: 'vilda-auth-btn vilda-auth-btn-ghost', type: 'button',
       text: '← Wróć do karty pacjenta',
-      onclick: function () { showPatientCard(patientId, onPick, listOptions); }
+      onclick: function () { var c = _navState(); if (c && c.screen === 'edit') { _navBack(); } else { showPatientCard(patientId, onPick, listOptions); } }
     });
 
     // P6.1 — Pole DOB jako osobna komórka grida (przed polami Wiek), z disclaimerem
