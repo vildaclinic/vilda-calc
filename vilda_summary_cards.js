@@ -148,6 +148,12 @@
       if (c) c.style.display = 'none';
     } catch(_){}
     try { window.prevMeasurementInfo = null; } catch(_){}
+    // FIX regresu (2026-06-03): schowanie karty = koniec kontekstu porównania,
+    // więc klucz reload-survival MUSI zniknąć razem z kartą. Bez tego np. po
+    // wczytaniu pacjenta BEZ historii (dyspozytor chowa kartę) klucz zostawał
+    // i po przeładowaniu wracała karta POPRZEDNIEGO pacjenta. Udany render
+    // i tak zapisze klucz na nowo.
+    try { window.sessionStorage.removeItem('vildaPrevSummaryPid'); } catch(_){}
     // Karta znikła → wróć do pojedynczej karty „Podsumowania wyników".
     try {
       if (typeof window.updateProfessionalSummaryCard === 'function') {
@@ -192,11 +198,16 @@
     window.__vildaPrevSummaryBound = true;
     document.addEventListener('vilda:patient-loaded', function(e){ __renderPrevSummary(e && e.detail && e.detail.patientId); });
     document.addEventListener('vilda:measurement-changed', function(e){ __renderPrevSummary(e && e.detail && e.detail.patientId); });
-    document.addEventListener('vilda:user-state-cleared', function(){
-      _hidePrevSummaryCard();
-      // Sesja wyczyszczona/wylogowanie → karta NIE ma wracać po kolejnym reloadzie.
-      try { window.sessionStorage.removeItem('vildaPrevSummaryPid'); } catch(_){}
-    });
+    // FIX (2026-06-03): nadawcy 'vilda:user-state-cleared' (userData.js,
+    // vilda_persist_runtime.js, vilda_persistence_adapter.js) wysyłają event przez
+    // window.dispatchEvent(...), a event z window NIE dociera do listenera na
+    // document — więc dotychczasowy listener był MARTWY (wylogowanie/„Wyczyść
+    // wszystkie pola" nie chowały karty tą drogą i nie zdejmowały klucza
+    // reload-survival). Rejestrujemy na OBU obiektach; _hidePrevSummaryCard
+    // usuwa też klucz sessionStorage.
+    var _onUserStateCleared = function(){ _hidePrevSummaryCard(); };
+    document.addEventListener('vilda:user-state-cleared', _onUserStateCleared);
+    window.addEventListener('vilda:user-state-cleared', _onUserStateCleared);
     // ── Reload-survival karty „Ostatni pomiar" (decyzja UX 2026-06-03) ──────────
     // Karta służy porównaniu nowego pomiaru z historycznym i ma przeżywać
     // przeładowanie strony (oba scenariusze: tuż po „Wczytaj → Nowy pomiar" oraz
