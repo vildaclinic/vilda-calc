@@ -148,6 +148,12 @@
       if (c) c.style.display = 'none';
     } catch(_){}
     try { window.prevMeasurementInfo = null; } catch(_){}
+    // Karta znikła → wróć do pojedynczej karty „Podsumowania wyników".
+    try {
+      if (typeof window.updateProfessionalSummaryCard === 'function') {
+        window.updateProfessionalSummaryCard();
+      }
+    } catch(_){}
   }
   function __renderPrevSummary(patientIdFromEvent){
     // Fix (wyścig): kartę odświeżają zdarzenia patient-loaded / measurement-changed.
@@ -599,6 +605,15 @@
     wrap.style.display = 'block';
     card.style.display = 'block';
     toggle.style.display = 'none';
+    // Po pokazaniu karty przelicz układ „Podsumowania wyników" (split na dwie
+    // symetryczne połówki). KRYTYCZNE po reloadzie: podsumowanie renderuje się
+    // z autosave formularza ZANIM karta „Ostatni pomiar" wróci (czeka na unlock
+    // vaulta) — bez tego przeliczenia zostawała jedna duża karta pod spodem.
+    try {
+      if (typeof window.updateProfessionalSummaryCard === 'function') {
+        window.updateProfessionalSummaryCard();
+      }
+    } catch(_){}
     // Oznacz, że podsumowanie poprzedniego pomiaru zostało poprawnie załadowane.
     // Dzięki temu będziemy mogli decydować, czy karta powinna być wyświetlana
     // podczas modyfikacji formularza – karta ma się pojawiać tylko po wczytaniu
@@ -2854,16 +2869,25 @@ function handleMetabolicSummaryClick(event) {
         });
         return;
       }
-      // Oblicz wysokości obu kart
+      // FIX (2026-06-03): najpierw RESET wysokości, potem pomiar NATURALNYCH
+      // wysokości. Wcześniej pomiar szedł po już sklampowanych kartach
+      // (height/maxHeight z poprzedniego wywołania), więc przycisk „Raport PDF
+      // dla pacjenta" doklejany PO pierwszym wyrównaniu nie mieścił się, a
+      // overflowY:auto włączał wewnętrzny scroll w prawej połówce. Wyrównujemy
+      // wyłącznie min-height (bez height/maxHeight/overflow) — symetria połówek
+      // zostaje, a treść (w tym przycisk PDF) nigdy nie jest przycinana.
+      [leftCard, rightCard].forEach((c) => {
+        c.style.height = '';
+        c.style.minHeight = '';
+        c.style.maxHeight = '';
+        c.style.overflowY = '';
+      });
       const hLeft  = leftCard.getBoundingClientRect().height;
       const hRight = rightCard.getBoundingClientRect().height;
       const maxH   = Math.max(hLeft || 0, hRight || 0);
       if (maxH > 0) {
         [leftCard, rightCard].forEach((c) => {
-          c.style.height = maxH + 'px';
           c.style.minHeight = maxH + 'px';
-          c.style.maxHeight = maxH + 'px';
-          c.style.overflowY = 'auto';
         });
       }
     } catch (_) {
