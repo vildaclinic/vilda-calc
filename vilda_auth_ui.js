@@ -1,11 +1,9343 @@
-(function(n){"use strict";if(!n||n.VildaAuthUI&&n.VildaAuthUI.__vildaAuthUI)return;const qa="2.6.5",Xa="8R-15",ra="vilda-auth-ui-root",Ja=["mousedown","keydown","touchstart","scroll","pointerdown"],Bt="VildaGuestMode",Oe="vilda-trust-device-v1",sa=10080*60*1e3;let la=!1,ut=null,ve=!1,yt=null,xt=null,da=!1,me=null,_e={userId:null,at:0},Et=null,Dt=null,Gt=new Set;const $a=2;function Rt(e,a){return"vilda:"+e+":"+a}function qt(){try{return n.localStorage||null}catch{return null}}function Te(e){if(!e)return"on";const a=qt();if(!a)return"on";try{return a.getItem(Rt("biometricAutoTrigger",e))==="off"?"off":"on"}catch{return"on"}}function ca(e,a){if(!e)return;const i=qt();if(i)try{i.setItem(Rt("biometricAutoTrigger",e),a==="off"?"off":"on")}catch{}}function ua(e){if(!e)return 0;const a=qt();if(!a)return 0;try{const i=parseInt(a.getItem(Rt("biometricDismissCount",e))||"0",10);return Number.isFinite(i)&&i>=0?i:0}catch{return 0}}function Fe(e,a){if(!e)return;const i=qt();if(i)try{i.setItem(Rt("biometricDismissCount",e),String(Math.max(0,a|0)))}catch{}}function tn(e){if(!e)return!1;const a=qt();if(!a)return!1;try{return a.getItem(Rt("biometricAutoOffNotice",e))==="1"}catch{return!1}}function pa(e,a){if(!e)return;const i=qt();if(i)try{a?i.setItem(Rt("biometricAutoOffNotice",e),"1"):i.removeItem(Rt("biometricAutoOffNotice",e))}catch{}}function ha(e){if(!e)return;const a=ua(e)+1;Fe(e,a),a>=$a&&Te(e)==="on"&&(ca(e,"off"),pa(e,!0))}function Ne(e){e&&Fe(e,0)}function Pt(){var e=(navigator.userAgent||"").toLowerCase(),a=(navigator.userAgentData&&navigator.userAgentData.platform||navigator.platform||"").toLowerCase();return/macintosh|mac os x/.test(e)&&!/iphone|ipad/.test(e)?"Touch ID":/iphone|ipad|ipod/.test(e)?"Face ID / Touch ID":/windows/.test(e)||/win/.test(a)?"Windows Hello":"dane biometryczne"}function oe(){return n.VildaCrypto||null}function rt(){return n.VildaVault||null}function be(){return n.VildaSyncIntegration||null}function Wt(e){if(typeof n.vildaLogAppWarn=="function")try{n.vildaLogAppWarn("vilda_auth_ui",e);return}catch{}n.console&&typeof n.console.warn=="function"&&n.console.warn("[VildaAuthUI] "+e)}function ot(e,a){if(typeof n.vildaLogAppError=="function")try{n.vildaLogAppError("vilda_auth_ui",e,a);return}catch{}n.console&&typeof n.console.error=="function"&&n.console.error("[VildaAuthUI] "+e,a)}function fa(e){const a=e&&e.code;return a==="EPH_PRF_UNSUPPORTED"?{message:"Ta przegl\u0105darka nie obs\u0142uguje logowania biometrycznego. Zaloguj si\u0119 kodem QR \u2014 dzia\u0142a w ka\u017Cdej przegl\u0105darce.",offerQrFallback:!0}:a==="EPH_NO_ENVELOPE"?{message:"Ten klucz biometryczny nie jest skonfigurowany do logowania na cudzym komputerze. Aby to w\u0142\u0105czy\u0107, wejd\u017A na swoim telefonie w: Ustawienia \u2192 Synchronizacja \u2192 Skonfiguruj logowanie telefonem.",offerQrFallback:!1}:a==="EPH_CHALLENGE_FAILED"||a==="EPH_UNLOCK_NETWORK"?{message:"Nie mo\u017Cna po\u0142\u0105czy\u0107 si\u0119 z serwerem. Sprawd\u017A po\u0142\u0105czenie z internetem i spr\xF3buj ponownie.",offerQrFallback:!1}:a==="EPH_UNLOCK_REJECTED"?{message:"Uwierzytelnienie odrzucone. Upewnij si\u0119, \u017Ce u\u017Cywasz biometrii ze swojego telefonu (nie z tego komputera) i spr\xF3buj ponownie.",offerQrFallback:!0}:a==="EPH_DECRYPT_FAILED"?e&&e.diagnostic==="envelope-legacy-create-prf"?{message:"Logowanie telefonem wymaga aktualizacji. Na swoim telefonie wejd\u017A w Ustawienia \u2192 Synchronizacja, usu\u0144 je i skonfiguruj ponownie, a potem zaloguj si\u0119 jeszcze raz.",offerQrFallback:!0}:e&&e.diagnostic==="envelope-current-prf-mismatch"?{message:"Wybra\u0142e\u015B biometri\u0119 tego komputera \u2014 to nie zadzia\u0142a na cudzym urz\u0105dzeniu. Wybierz biometri\u0119 swojego telefonu i potwierd\u017A na nim.",offerQrFallback:!0}:{message:"Nie uda\u0142o si\u0119 zweryfikowa\u0107 to\u017Csamo\u015Bci. Spr\xF3buj ponownie lub zaloguj si\u0119 kodem QR.",offerQrFallback:!0}:e&&e.name==="AbortError"?{message:"Logowanie anulowane.",offerQrFallback:!1}:{message:e&&e.message?e.message:"Logowanie nie powiod\u0142o si\u0119. Spr\xF3buj ponownie lub u\u017Cyj kodu QR.",offerQrFallback:!0}}function t(e,a,i){const o=n.document.createElement(e);return a&&Object.keys(a).forEach(function(r){r==="class"?o.className=a[r]:r==="text"?o.textContent=a[r]:r==="html"?o.innerHTML=a[r]:r.indexOf("on")===0&&typeof a[r]=="function"?o.addEventListener(r.substring(2),a[r]):o.setAttribute(r,a[r])}),i&&(Array.isArray(i)?i:[i]).forEach(function(s){s!=null&&(typeof s=="string"?o.appendChild(n.document.createTextNode(s)):o.appendChild(s))}),o}function re(e){for(;e&&e.firstChild;)e.removeChild(e.firstChild)}function ge(e){const a=t("div",{class:"vilda-auth-pw-wrap"});a.style.cssText="position: relative; display: block; margin: inherit;",e.style.paddingRight="44px",a.appendChild(e);const i='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',o='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>',r=t("button",{type:"button",class:"vilda-auth-pw-toggle","aria-label":"Poka\u017C has\u0142o","aria-pressed":"false",title:"Poka\u017C has\u0142o"});return r.style.cssText=["position: absolute; right: 6px; top: 50%; transform: translateY(-50%);","width: 40px; height: 24px;","display: flex; align-items: center; justify-content: center;","background: transparent; border: 0; padding: 0; border-radius: 0;","color: #5b6672; cursor: pointer;","transition: color .15s ease;"].join(""),r.innerHTML=i,r.addEventListener("mouseenter",function(){r.style.color="#00838d"}),r.addEventListener("mouseleave",function(){r.style.color="#5b6672"}),r.addEventListener("click",function(){e.type==="password"?(e.type="text",r.innerHTML=o,r.setAttribute("aria-label","Ukryj has\u0142o"),r.setAttribute("aria-pressed","true"),r.setAttribute("title","Ukryj has\u0142o")):(e.type="password",r.innerHTML=i,r.setAttribute("aria-label","Poka\u017C has\u0142o"),r.setAttribute("aria-pressed","false"),r.setAttribute("title","Poka\u017C has\u0142o"));try{e.focus()}catch{}}),a.appendChild(r),a}function Be(e){try{if(!n.sessionStorage)return;e?n.sessionStorage.setItem(Bt,"1"):n.sessionStorage.removeItem(Bt)}catch{}}function en(){try{return n.sessionStorage?n.sessionStorage.getItem(Bt)==="1":!1}catch{return!1}}function Xt(e,a){n[Bt]=!!e,Be(!!e);var i=a&&typeof a=="object"?a:{};if(e)i.skipReset||se("enter-guest"),We(),ln();else{var o=rt();o&&typeof o.isUnlocked=="function"&&o.isUnlocked()?ma():ke()}try{const r=new n.CustomEvent("vilda:guest-mode-changed",{detail:{guest:!!e}});n.document.dispatchEvent(r)}catch{}}function Re(){return!!n[Bt]}function an(){Xt(!1),kt()}function dt(e,a){e&&(e.textContent=a||"",e.style.display=a?"block":"none")}function st(e){ut&&(e?ut.setAttribute("data-busy","1"):ut.removeAttribute("data-busy"))}function se(e){try{typeof n.clearAllData=="function"?n.clearAllData():n.VildaDataImportExport&&typeof n.VildaDataImportExport.clearAllData=="function"&&n.VildaDataImportExport.clearAllData()}catch(r){ot("resetAppSessionState ("+(e||"")+")",r)}try{n.VildaPersistence&&typeof n.VildaPersistence.writePreferenceRaw=="function"&&n.VildaPersistence.writePreferenceRaw("LAB_CONV_SUBSTANCE","")}catch(r){ot("resetAppSessionState:lab-conv-substance ("+(e||"")+")",r)}try{var a=n.document&&n.document.getElementById("miniSummaryContent");a&&(a.innerHTML="");var i=n.document&&n.document.getElementById("miniSummary");i&&(i.style.display="none");var o=i&&typeof i.closest=="function"?i.closest(".decor-sidebar"):n.document&&n.document.querySelector(".desktop-layout .decor-sidebar");o&&o.classList.remove("decor-sidebar--has-content")}catch{}}function Ut(e){if(!e)return"";try{const a=new Date(e).getTime();if(!isFinite(a))return"";const i=Date.now()-a,o=Math.round(i/6e4);if(o<1)return"przed chwil\u0105";if(o<60)return o+" min temu";const r=Math.round(o/60);if(r<24)return r+" godz. temu";const s=Math.round(r/24);if(s<7)return s+(s===1?" dzie\u0144 temu":" dni temu");const d=Math.round(s/7);return d<5?d+(d===1?" tydzie\u0144 temu":" tyg. temu"):new Date(e).toLocaleDateString("pl-PL")}catch{return""}}function nn(){return yt||(!n.document||!n.document.body?null:(yt=t("button",{type:"button",class:"vilda-auth-logout"}),yt.style.display="none",n.document.body.appendChild(yt),yt))}function ya(e){if(nn(),!yt)return;const a=yt.cloneNode(!1);yt.parentNode&&yt.parentNode.replaceChild(a,yt),yt=a,e==="logout"?(yt.title="Zablokuj aplikacj\u0119 i wr\xF3\u0107 do listy u\u017Cytkownik\xF3w",yt.appendChild(t("span",{class:"vilda-auth-logout-icon","aria-hidden":"true",text:"\u23FB"})),yt.appendChild(t("span",{text:"Wyloguj si\u0119"})),yt.addEventListener("click",function(){rn(),xe();const i=rt();if(i)try{i.lock("manual")}catch{}}),yt.style.display="flex"):e==="login"?(yt.title="Zaloguj si\u0119 lub prze\u0142\u0105cz na inne konto",yt.appendChild(t("span",{class:"vilda-auth-logout-icon","aria-hidden":"true",text:"\u2192"})),yt.appendChild(t("span",{text:"Zaloguj si\u0119"})),yt.addEventListener("click",function(){n[Bt]=!1,Be(!1),se("exit-guest-via-corner"),ke(),kt()}),yt.style.display="flex"):yt.style.display="none"}function we(){try{var e=n.document&&n.document.getElementById("vildaProBadge");if(!e)return;var a=n.VildaProAccess&&typeof n.VildaProAccess.hasAccess=="function"&&n.VildaProAccess.hasAccess();e.style.display="inline-flex",a?(e.setAttribute("data-pro-state","active"),e.textContent="PRO"):(e.setAttribute("data-pro-state","upgrade"),e.textContent="\u2191 PRO")}catch{}}function on(){try{var e=n.document&&n.document.getElementById("vildaProBadge");if(!e)return;e.style.display="none",e.removeAttribute("data-pro-state")}catch{}}function xe(){if(Et){try{Et.abort()}catch{}Et=null,st(!1)}va()}function va(){if(Dt){try{Dt.abort()}catch{}Dt=null}}let Ht=null;function rn(){if(!(Ht||!n.document))try{var e=n.document.createElement("div");e.className="vilda-logout-overlay",e.setAttribute("role","status"),e.setAttribute("aria-live","polite"),e.setAttribute("aria-label","Trwa wylogowywanie");var a=n.document.createElement("div");a.className="vilda-logout-overlay__spinner",a.setAttribute("aria-hidden","true");var i=n.document.createElement("div");i.className="vilda-logout-overlay__label",i.textContent="Trwa wylogowywanie\u2026",e.appendChild(a),e.appendChild(i),n.document.body.appendChild(e),Ht=e}catch{}}function sn(){if(Ht){try{Ht.parentNode&&Ht.parentNode.removeChild(Ht)}catch{}Ht=null}}function ma(){ya("logout"),we();try{n.document&&n.document.documentElement.classList.add("vilda-logged-in")}catch{}}function ln(){ya("login")}function ke(){yt&&(yt.style.display="none")}function dn(){ke(),on();try{n.document&&n.document.documentElement.classList.remove("vilda-logged-in")}catch{}}function ba(){try{n.document&&n.document.documentElement.classList.add("vilda-auth-locked")}catch{}}function We(){try{n.document&&n.document.documentElement.classList.remove("vilda-auth-locked")}catch{}}function ga(){if(ut)return ut;if(!n.document||!n.document.body)return null;const e=n.document.getElementById(ra);if(e){try{e.setAttribute("data-no-swipe","true")}catch{}return ut=e,ut}ut=t("div",{id:ra,class:"vilda-auth-root","aria-live":"polite"}),ut.style.display="none";try{ut.setAttribute("data-no-swipe","true")}catch{}return n.document.body.appendChild(ut),ut}function cn(e){const a=e||{},i=t("h1",{class:"vilda-auth-brand-name",text:"wagaiwzrost.pl"}),o=t("p",{class:"vilda-auth-brand-tag",text:"Vilda Clinic"});if(a.noLogo)return t("div",{class:"vilda-auth-brand"},[i,o]);const r=t("img",{class:"vilda-auth-logo",src:"logo_vilda.jpeg",alt:"Waga i wzrost \u2014 Vilda Clinic"});return t("div",{class:"vilda-auth-brand"},[r,i,o])}function ft(e,a){if(ga(),!ut)return;re(ut);const i=t("div",{class:"vilda-auth-overlay"}),o=t("div",{class:"vilda-auth-card",role:"dialog","aria-modal":"true"});o.appendChild(cn(a)),o.appendChild(e),i.appendChild(o),ut.appendChild(i),ut.style.display="block",ve||(Pa(),ve=!0)}function mt(){if(ut){ut.style.display="none",ve&&(Ma(),ve=!1),ut.removeAttribute("data-busy"),re(ut);try{n.__vildaAuthHidden=!0}catch{}try{n.document&&typeof n.CustomEvent=="function"&&n.document.dispatchEvent(new n.CustomEvent("vilda:auth-hidden"))}catch{}}}async function kt(){ba(),xe();const e=rt();if(!e){Wt("VildaVault niedost\u0119pny \u2014 pomijam ekran startowy.");return}se("show-startup"),ke();let a=[];try{a=await e.listUsers()}catch(i){ot("listUsers",i)}sn(),a.length===0?wa():xa(a)}function wa(){const e=t("h2",{class:"vilda-auth-title",text:"Witamy"}),a=t("p",{class:"vilda-auth-subtitle",text:"Aby zapisywa\u0107 dane pacjent\xF3w, skonfiguruj swoje konto. Aplikacja zaszyfruje i lokalnie przechowa dane na tym urz\u0105dzeniu."}),i=t("div",{class:"vilda-auth-buttons"});i.style.display="none",i.appendChild(t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle",type:"button",text:"Odtw\xF3rz konto z pliku kopii (.wiw)",onclick:function(){Ke()}}));const o=t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle",type:"button",text:"Opcje dodatkowe \u25BE"});o.addEventListener("click",function(){const s=i.style.display!=="none";i.style.display=s?"none":"",o.textContent=s?"Opcje dodatkowe \u25BE":"Opcje dodatkowe \u25B4"});const r=t("div",{class:"vilda-auth-buttons"});r.appendChild(t("button",{class:"vilda-auth-btn vilda-auth-btn-primary",type:"button",text:"Za\u0142\xF3\u017C konto",onclick:function(){ze()}})),r.appendChild(t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost",type:"button",text:"Loguj\u0119 si\u0119 na nowym lub obcym komputerze",onclick:function(){At()}})),r.appendChild(t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle",type:"button",text:"Korzystaj bez logowania",onclick:function(){Xt(!0),mt()}})),r.appendChild(o),ft(t("div",{class:"vilda-auth-screen vilda-auth-startup"},[e,a,r,i]))}function xa(e){const a=t("h2",{class:"vilda-auth-title",text:"Kto si\u0119 loguje?"}),i=t("p",{class:"vilda-auth-subtitle",text:"Wybierz konto, aby kontynuowa\u0107."}),o=t("div",{class:"vilda-auth-user-list"}),r='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-1px;margin-right:4px;"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';e.forEach(function(f){const m=f.lastLoginAtISO?Ut(f.lastLoginAtISO):"",k=typeof f.passkeyCount=="number"&&f.passkeyCount>0,w=[t("div",{class:"vilda-auth-user-name",text:f.label||"Konto bez nazwy"})];if(k){const C=t("div",{class:"vilda-auth-user-passkey-badge"});C.innerHTML=r+Pt(),w.push(C)}m&&w.push(t("div",{class:"vilda-auth-user-meta",text:"Ostatnio: "+m}));const h=t("button",{class:"vilda-auth-user-card",type:"button",title:"Zaloguj jako "+f.label+(k?" ("+Pt()+" dost\u0119pny)":""),"data-has-passkey":k?"1":"0",onclick:function(){Ve(f.userId)}},[t("div",{class:"vilda-auth-user-avatar",text:(f.label||"?").charAt(0).toUpperCase()}),t("div",{class:"vilda-auth-user-info"},w),t("span",{class:"vilda-auth-user-arrow","aria-hidden":"true",text:"\u203A"})]);o.appendChild(h)});const s=t("div",{class:"vilda-auth-buttons"});s.style.display="none",s.appendChild(t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost",type:"button",text:"+ Dodaj nowego u\u017Cytkownika",onclick:function(){ze()}})),s.appendChild(t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle",type:"button",text:"Odtw\xF3rz konto z pliku kopii (.wiw)",onclick:function(){Ke()}}));const d=t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle",type:"button",text:"Opcje dodatkowe \u25BE"});d.addEventListener("click",function(){const f=s.style.display!=="none";s.style.display=f?"none":"",d.textContent=f?"Opcje dodatkowe \u25BE":"Opcje dodatkowe \u25B4"});const p=t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost",type:"button",text:"Loguj\u0119 si\u0119 na nowym lub obcym komputerze",onclick:function(){At()}}),l=t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle",type:"button",text:"Korzystaj bez logowania",onclick:function(){Xt(!0),mt()}});ft(t("div",{class:"vilda-auth-screen vilda-auth-picker"},[a,i,o,t("div",{class:"vilda-auth-buttons"},[p,l,d]),s]))}function ze(e){xt=xt||{step:1};const a=typeof e=="number"?e:xt.step;a===1?Ue():a===2?ka():He()}function Ue(){xt=xt||{},xt.step=1;const e=t("div",{class:"vilda-auth-step",text:"Krok 1 z 4"}),a=t("h2",{class:"vilda-auth-title",text:"Nowe konto"}),i=t("p",{class:"vilda-auth-subtitle",text:"Podaj swoje imi\u0119 (np. \u201Edr Kowalska\u201D) i ustal has\u0142o dost\u0119pu. Has\u0142o min. 12 znak\xF3w, co najmniej 3 z 4 typ\xF3w: ma\u0142e i wielkie litery, cyfry, znaki specjalne."}),o=t("input",{type:"text",class:"vilda-auth-input",placeholder:"Twoje imi\u0119 (np. dr Kowalska)",maxlength:"60"});xt.label&&(o.value=xt.label);const r=t("input",{type:"password",class:"vilda-auth-input",placeholder:"Has\u0142o (min. 12 znak\xF3w, 3 z 4 typ\xF3w)"}),s=t("input",{type:"password",class:"vilda-auth-input",placeholder:"Powt\xF3rz has\u0142o"}),d=t("div",{class:"vilda-auth-error"});d.style.display="none";const p=t("button",{type:"button",class:"vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small vilda-auth-btn-subtle",text:"\u{1F3B2} Zaproponuj silne has\u0142o"});p.style.cssText="margin: 4px 0 8px; font-size: 0.85rem;",p.addEventListener("click",function(){const E=rt();if(!E||typeof E.generateStrongPassword!="function")return;const N=E.generateStrongPassword();r.value=N,s.value=N,k();try{r.focus()}catch{}});const l=t("span",{class:"vilda-auth-meter-label",text:"\u2014"}),f=t("div",{class:"vilda-auth-meter-fill"}),m=t("div",{class:"vilda-auth-meter"},[f]);function k(){const E=un(r.value);f.style.width=E.percent+"%",f.setAttribute("data-strength",E.label),l.textContent=r.value?"Si\u0142a has\u0142a: "+E.labelPl:"\u2014"}r.addEventListener("input",k);const w=t("button",{class:"vilda-auth-btn vilda-auth-btn-primary",type:"button",text:"Dalej",onclick:function(){dt(d,"");const E=rt();if(E&&typeof E.validatePasswordStrength=="function"){const N=E.validatePasswordStrength(r.value);if(!N.ok){dt(d,N.message+(N.hint?" "+N.hint:""));return}}else if(r.value.length<12){dt(d,"Has\u0142o musi mie\u0107 minimum 12 znak\xF3w.");return}if(r.value!==s.value){dt(d,"Has\u0142a nie s\u0105 takie same.");return}xt.password=r.value,xt.label=o.value.trim()||null,xt.recoveryKey=oe()&&oe().generateRecoveryKey()||null,xt.storageMode="local",ka()}}),h=t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost",type:"button",text:"Anuluj",onclick:function(){xt=null,kt()}}),C=t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle vilda-auth-btn-small",type:"button",text:"Jak chronimy dane?",onclick:function(){try{n.VildaDataSafety&&n.VildaDataSafety.open()}catch{}}}),y=t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle vilda-auth-btn-small",type:"button",text:"Jak silne jest szyfrowanie?",onclick:function(){try{n.VildaCryptoStrength&&n.VildaCryptoStrength.open()}catch{}}}),j=t("div",{class:"vilda-auth-explainers"},[C,y]);j.style.display="flex",j.style.flexWrap="wrap",j.style.gap="8px",j.style.justifyContent="center",j.style.margin="0 auto 6px",ft(t("div",{class:"vilda-auth-screen vilda-auth-setup"},[e,a,i,j,o,ge(r),p,t("div",{class:"vilda-auth-meter-wrap"},[m,l]),ge(s),d,t("div",{class:"vilda-auth-actions"},[h,w])])),setTimeout(function(){try{o.focus()}catch{}},30)}function un(e){if(!e)return{percent:0,label:"none",labelPl:"\u2014"};let a=0;e.length>=8&&(a+=1),e.length>=12&&(a+=1),/[a-z]/.test(e)&&/[A-Z]/.test(e)&&(a+=1),/[0-9]/.test(e)&&(a+=1),/[^A-Za-z0-9]/.test(e)&&(a+=1),e.length>=16&&(a+=1);const i=[{percent:10,label:"very-weak",labelPl:"bardzo s\u0142aba"},{percent:25,label:"weak",labelPl:"s\u0142aba"},{percent:45,label:"fair",labelPl:"\u015Brednia"},{percent:65,label:"good",labelPl:"dobra"},{percent:85,label:"strong",labelPl:"silna"},{percent:100,label:"very-strong",labelPl:"bardzo silna"}];return i[Math.min(a,i.length-1)]}function ka(){const e=xt;if(!e||!e.password||!e.recoveryKey){Ue();return}xt.step=2;const a=t("div",{class:"vilda-auth-step",text:"Krok 2 z 4"}),i=t("h2",{class:"vilda-auth-title",text:"Tw\xF3j klucz odzyskiwania"}),o=t("p",{class:"vilda-auth-subtitle",text:"Zapisz go teraz \u2014 to jedyny spos\xF3b na odzyskanie konta, je\u015Bli zapomnisz has\u0142a. Mo\u017Cesz go skopiowa\u0107 lub pobra\u0107 jako plik."}),r=t("div",{class:"vilda-auth-recovery-key",text:e.recoveryKey}),s=t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small",type:"button",text:"Skopiuj do schowka",onclick:async function(){try{n.navigator&&n.navigator.clipboard&&(await n.navigator.clipboard.writeText(e.recoveryKey),s.textContent="Skopiowane \u2713",setTimeout(function(){s.textContent="Skopiuj do schowka"},2e3))}catch(y){Wt("clipboard write failed: "+y)}}}),d=t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small",type:"button",text:"Pobierz jako plik TXT",onclick:function(){hn(e.recoveryKey,e.label)}}),p=t("div",{class:"vilda-auth-tools"},[s,d]),l="vilda-confirm-key-"+Date.now(),f=t("input",{type:"checkbox",id:l}),m=t("label",{class:"vilda-auth-checkbox-label",text:"Zapisa\u0142em klucz odzyskiwania w bezpiecznym miejscu"});m.setAttribute("for",l);const k=t("div",{class:"vilda-auth-checkbox-row"},[f,m]),w=t("div",{class:"vilda-auth-error"});w.style.display="none";const h=t("button",{class:"vilda-auth-btn vilda-auth-btn-primary",type:"button",text:"Dalej",onclick:async function(){if(dt(w,""),!f.checked){dt(w,"Zaznacz, \u017Ce zapisa\u0142e\u015B klucz odzyskiwania, zanim przejdziesz dalej.");return}st(!0);try{await rt().createUser(e.password,{label:e.label,recoveryKey:e.recoveryKey,storageMode:e.storageMode||"local"}),pn()}catch(y){ot("createUser failed",y),dt(w,y&&y.message?y.message:"Nie uda\u0142o si\u0119 utworzy\u0107 konta.")}finally{st(!1)}}}),C=t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost",type:"button",text:"Wstecz",onclick:function(){Ue()}});ft(t("div",{class:"vilda-auth-screen vilda-auth-setup"},[a,i,o,r,p,k,w,t("div",{class:"vilda-auth-actions"},[C,h])]))}function pn(){const e=t("div",{class:"vilda-auth-step",text:"Krok 3 z 4"}),a=t("h2",{class:"vilda-auth-title",text:"Korzystasz z kilku urz\u0105dze\u0144?"}),i=t("p",{class:"vilda-auth-subtitle",text:"Je\u015Bli u\u017Cywasz aplikacji na kilku komputerach lub chcesz mie\u0107 kopi\u0119 danych w chmurze \u2014 w\u0142\u0105cz synchronizacj\u0119. Dane s\u0105 szyfrowane po Twojej stronie, serwer nigdy nie widzi danych pacjent\xF3w. Mo\u017Cesz to zmieni\u0107 w ka\u017Cdej chwili w Ustawieniach."}),o=t("button",{class:"vilda-auth-btn vilda-auth-btn-primary",type:"button",text:"Tak, w\u0142\u0105cz synchronizacj\u0119"}),r=t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost",type:"button",text:"Nie, tylko to urz\u0105dzenie"});o.addEventListener("click",function(){const s=be();s&&typeof s.setSyncEnabled=="function"&&s.setSyncEnabled(!0),He()}),r.addEventListener("click",function(){He()}),ft(t("div",{class:"vilda-auth-screen vilda-auth-setup"},[e,a,i,t("div",{class:"vilda-auth-actions vilda-auth-actions-center"},[o,r])]))}function He(){xt=null;const e=t("div",{class:"vilda-auth-step",text:"Krok 4 z 4"}),a=t("div",{class:"vilda-auth-success-check",text:"\u2713"}),i=t("h2",{class:"vilda-auth-title",text:"Wszystko gotowe"}),o=be(),r=!!(o&&typeof o.isSyncEnabled=="function"&&o.isSyncEnabled()),s=t("p",{class:"vilda-auth-subtitle",text:r?"Konto skonfigurowane, synchronizacja w\u0142\u0105czona. Mo\u017Cesz zapisywa\u0107 dane pacjent\xF3w. Po 20 minutach bezczynno\u015Bci zostaniesz automatycznie wylogowany.":"Konto skonfigurowane i odblokowane. Mo\u017Cesz zapisywa\u0107 dane pacjent\xF3w. Synchronizacj\u0119 mo\u017Cesz w\u0142\u0105czy\u0107 w Ustawieniach. Po 20 minutach bezczynno\u015Bci zostaniesz automatycznie wylogowany."});let d=null;r&&(d=t("div",{class:"vilda-auth-warning-banner"}),d.appendChild(t("strong",{text:"Aby zalogowa\u0107 si\u0119 na innym urz\u0105dzeniu"})),d.appendChild(n.document.createTextNode(", b\u0119dziesz potrzebowa\u0107 zapasowego kodu dost\u0119pu. Mo\u017Cesz go zobaczy\u0107 w Ustawieniach \u2192 Synchronizacja \u2192 Poka\u017C zapasowy kod dost\u0119pu. Zapisz go razem z kluczem odzyskiwania.")));const p=n.VildaFileExport,l=!!(p&&p.SUPPORTS_FSA),f=t("div",{class:"vilda-auth-info"});f.appendChild(t("div",{style:"font-weight:600; color:#08202C; margin-bottom:6px;",text:"Kopie zapasowe pacjent\xF3w"})),f.appendChild(t("p",{class:"vilda-auth-side-note",style:"margin:0 0 4px 0;",text:l?"Mo\u017Cesz teraz wybra\u0107 folder, do kt\xF3rego aplikacja b\u0119dzie automatycznie zapisywa\u0107 zaszyfrowane pliki .vilda po ka\u017Cdej wizycie. Polecane: folder w OneDrive, iCloud Drive lub na Pulpicie \u2014 wtedy kopie synchronizuj\u0105 si\u0119 w chmurze.":"W tej przegl\u0105darce pliki kopii zapasowych b\u0119d\u0105 zawsze trafia\u0142y do folderu Pobrane (Safari, Firefox i przegl\u0105darki mobilne nie wspieraj\u0105 wyboru w\u0142asnego folderu)."}));let m=null,k=null;l&&(m=t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small",type:"button",text:"Wybierz folder kopii zapasowych",onclick:async function(){if(!p)return;m.disabled=!0;const j=m.textContent;m.textContent="Wybieranie folderu\u2026";try{const E=await p.setFolderForCurrentUser();k.textContent="\u2713 Folder kopii: "+(E&&E.name?E.name:"(wybrany)"),m.textContent="Zmie\u0144 folder kopii"}catch(E){E&&E.name!=="AbortError"?k.textContent="Nie uda\u0142o si\u0119 wybra\u0107 folderu.":k.textContent="Folder kopii: nie wybrany",m.textContent=j}finally{m.disabled=!1}}}),f.appendChild(t("div",{class:"vilda-auth-section-action"},[m])),k=t("p",{class:"vilda-auth-side-note",style:"text-align:center; margin:0 0 4px 0;",text:"Folder kopii: nie wybrany"}),f.appendChild(k),f.appendChild(t("p",{class:"vilda-auth-side-note",style:"text-align:center; margin:0;",text:'Mo\u017Cesz to pomin\u0105\u0107 i ustawi\u0107 p\xF3\u017Aniej w aplikacji w sekcji \u201EUstawienia \u2192 Kopie zapasowe pacjent\xF3w".'})));const w=t("div",{class:"vilda-auth-info"});w.appendChild(t("div",{style:"font-weight:600; color:#08202C; margin-bottom:6px;",text:"Masz ju\u017C zapisan\u0105 baz\u0119 pacjent\xF3w?"})),w.appendChild(t("p",{class:"vilda-auth-side-note",style:"margin:0 0 4px 0;",text:"Je\u015Bli masz wcze\u015Bniejsze pliki kopii (.wiw lub starsze .vilda \u2014 np. z innego urz\u0105dzenia, OneDrive lub iCloud), mo\u017Cesz je teraz wczyta\u0107 do swojego nowego konta. Aplikacja poprosi o has\u0142o, kt\xF3rym te pliki by\u0142y zaszyfrowane."}));const h=t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small",type:"button",text:"Wczytaj kopie pacjent\xF3w teraz",onclick:function(){Se(null,{fromSetup:!0})}});w.appendChild(t("div",{class:"vilda-auth-section-action"},[h])),w.appendChild(t("p",{class:"vilda-auth-side-note",style:"text-align:center; margin:0;",text:'Mo\u017Cesz te\u017C pomin\u0105\u0107 ten krok i zaimportowa\u0107 pliki p\xF3\u017Aniej przez \u201EWczytaj dane \u2192 Importuj kopie pacjent\xF3w".'}));const C=t("button",{class:"vilda-auth-btn vilda-auth-btn-primary",type:"button",text:"Przejd\u017A do aplikacji",onclick:function(){mt(),St()}}),y=[e,a,i,s];d&&y.push(d),y.push(f,w,t("div",{class:"vilda-auth-actions vilda-auth-actions-center"},[C])),ft(t("div",{class:"vilda-auth-screen vilda-auth-setup"},y))}function hn(e,a){try{const i=a?"Konto: "+a+`
-`:"",o=`Klucz odzyskiwania wagaiwzrost.pl
-Wygenerowano: `+new Date().toISOString()+`
-`+i+`
-`+e+`
+/*
+ * Vilda Auth UI v2.0.0 — multi-user
+ *
+ * Etap 8R-3b: warstwa UI dopasowana do multi-user vaultu (vilda_vault.js v2).
+ * Obsługuje:
+ *   - automatyczny restore sesji z sessionStorage (logowanie przeżywa
+ *     nawigację między podstronami index.html → docpro.html → klirens itd.,
+ *     ale znika po zamknięciu karty),
+ *   - ekran „Witamy” gdy na urządzeniu nie ma jeszcze żadnych kont,
+ *   - ekran wyboru użytkownika („Kto się loguje?”) gdy konta istnieją,
+ *   - ekran logowania konkretnego użytkownika (tytuł = imię/etykieta),
+ *   - kreator dodawania nowego użytkownika (3 kroki),
+ *   - flow odzyskiwania dostępu kluczem (z linku przy konkretnym koncie),
+ *   - automatyczny ekran logowania po wygaśnięciu sesji,
+ *   - flagę window.VildaGuestMode dla pozostałych modułów,
+ *   - przycisk „Wyloguj się” w rogu aplikacji widoczny gdy vault otwarty.
+ *
+ * Brand header: logo + turkusowy napis „wagaiwzrost.pl” + tagline „Vilda Clinic”.
+ * (Tytuł „wagaiwzrost.pl” jako duży h1 ekranu został usunięty — był redundantny
+ * z subtelnym napisem pod logiem.)
+ */
+(function (global) {
+  'use strict';
 
-UWAGA: Ten klucz pozwala odzyska\u0107 dost\u0119p do danych pacjent\xF3w w razie zapomnienia has\u0142a.
-Trzymaj go w bezpiecznym miejscu (sejf, mened\u017Cer hase\u0142). Bez niego i bez has\u0142a utracisz wszystkie zapisane dane.
-`,r=new n.Blob([o],{type:"text/plain;charset=utf-8"}),s=(n.URL||n.webkitURL).createObjectURL(r),d=n.document.createElement("a");d.href=s,d.download="klucz-odzyskiwania-wagaiwzrost.txt",n.document.body.appendChild(d),d.click(),setTimeout(function(){try{(n.URL||n.webkitURL).revokeObjectURL(s)}catch{}try{d.parentNode&&d.parentNode.removeChild(d)}catch{}},0)}catch(i){ot("downloadRecoveryKeyFile",i)}}async function Ve(e,a){const i=rt();if(!i)return;const o=a||{};let r=null;try{r=(await i.listUsers()).find(function(W){return W.userId===e})}catch(I){ot("listUsers",I)}if(!r){await kt();return}let s=[],d=!1;try{d=await i.isPrfSupported(),d&&(s=await i.listPasskeys(e))}catch{}const p=s.filter(function(I){return!I.isRemote}),l=d&&p.length>0,f=d&&s.length>0&&p.length===0,m=t("h2",{class:"vilda-auth-title",text:r.label}),k=t("p",{class:"vilda-auth-subtitle",text:l?"Odblokuj dane pacjent\xF3w.":"Wpisz has\u0142o, aby odblokowa\u0107 dane pacjent\xF3w."}),w=o.message?t("div",{class:"vilda-auth-banner",text:o.message}):null,h=t("div",{class:"vilda-auth-error"});h.style.display="none";let C=null,y=null;if(l){y=t("button",{class:"vilda-auth-btn vilda-auth-btn-biometric",type:"button",text:"\u{1FAAA}  "+Pt()}),y.addEventListener("click",async function(){dt(h,""),xe(),Et=new AbortController;const W=Et.signal;st(!0);try{await i.unlockWithPasskey(e,null,W),Gt.delete(e),Ne(e),v&&(v.style.display="none"),mt(),St()}catch(b){W.aborted||(dt(h,b&&b.message?b.message:"Logowanie biometryczne nie powiod\u0142o si\u0119."),Wt("biometric-click",b&&b.name?b.name+": "+b.message:String(b)),b&&b.name!=="AbortError"&&(ha(e),v&&(v.style.display="")))}finally{Et=null,W.aborted||st(!1)}});const I=t("div",{class:"vilda-auth-divider"},[t("span",{text:"lub"})]);C=t("div",{class:"vilda-auth-biometric-section"},[t("div",{class:"vilda-auth-actions"},[y]),I])}const j=t("input",{type:"password",class:"vilda-auth-input",placeholder:"Has\u0142o",autocomplete:"current-password webauthn"}),E=t("button",{class:"vilda-auth-btn vilda-auth-btn-primary",type:"button",text:"Zaloguj si\u0119",onclick:async function(){if(dt(h,""),!j.value){dt(h,"Wpisz has\u0142o.");return}st(!0);try{const I=await i.unlockUser(e,j.value);if(Gt.delete(e),I&&I.needsPasswordReset){Za(I.passwordPolicy);return}za(e),Ca(e),mt(),St()}catch(I){dt(h,I&&I.message?I.message:"Nie uda\u0142o si\u0119 zalogowa\u0107.")}finally{st(!1)}}});j.addEventListener("keydown",function(I){I.key==="Enter"&&E.click()});const N=t("a",{class:"vilda-auth-link",href:"#",text:"\u2190 Wybierz inne konto",onclick:function(I){I.preventDefault(),kt()}}),T=t("a",{class:"vilda-auth-link vilda-auth-link-muted",href:"#",text:"Zapomnia\u0142em has\u0142a",onclick:function(I){I.preventDefault(),Sa(e)}});let c=null;f&&(c=t("div",{class:"vilda-auth-banner",role:"status"}),c.style.cssText="background:#eef6f8;border:1px solid #cfe8eb;color:#0f5b63;padding:11px 13px;border-radius:10px;font-size:0.86rem;line-height:1.5;margin:6px 0 8px;",c.innerHTML="<strong>Klucz biometryczny tego konta</strong> jest dost\u0119pny tu przez iCloud Keychain, ale jeszcze go nie aktywowa\u0142e\u015B na tym urz\u0105dzeniu. Zaloguj si\u0119 has\u0142em \u2014 od razu po sukcesie zapytamy o aktywacj\u0119 "+Pt()+".");let x=null;l&&tn(e)&&(x=t("div",{class:"vilda-auth-banner",role:"status"}),x.style.cssText="background:#f0f8f9;border:1px solid #cfe0e3;color:#0f2b33;padding:10px 12px;border-radius:10px;font-size:0.85rem;line-height:1.4;margin:6px 0 4px;",x.innerHTML="Wy\u0142\u0105czyli\u015Bmy automatyczne pytanie o "+Pt()+". Kliknij \u{1FAAA} obok, kiedy zechcesz \u2014 albo w\u0142\u0105cz z powrotem w <strong>Ustawienia \u2192 Bezpiecze\u0144stwo</strong>.",pa(e,!1));let v=null;if(l){v=t("div",{class:"vilda-auth-banner vilda-auth-banner-cancelled",role:"status"}),v.style.cssText="background:#fff7ed;border:1px solid #fbd5a8;color:#854f0b;padding:10px 12px;border-radius:10px;font-size:0.85rem;line-height:1.45;margin:6px 0 4px;display:none;";const I=t("span",{text:"Anulowa\u0142e\u015B logowanie "+Pt()+". Wpisz has\u0142o, albo "}),W=t("a",{class:"vilda-auth-link",href:"#",text:"spr\xF3buj ponownie",onclick:function(L){L.preventDefault(),v&&(v.style.display="none"),y&&y.click()}}),b=t("span",{text:"."});v.appendChild(I),v.appendChild(W),v.appendChild(b)}const g=[m,k,w];x&&g.push(x),v&&g.push(v),c&&g.push(c),C&&g.push(C),g.push(j,h,t("div",{class:"vilda-auth-actions"},[E]),t("div",{class:"vilda-auth-links"},[N]),t("div",{class:"vilda-auth-links"},[T]));const S=t("div",{class:"vilda-auth-screen vilda-auth-login"},g);ft(S);const _=Te(e);l&&!o.skipAutoPasskey&&!Gt.has(e)&&_==="on"?setTimeout(async function(){xe(),Et=new AbortController;const I=Et.signal;try{st(!0),dt(h,""),await i.unlockWithPasskey(e,null,I),Gt.delete(e),Ne(e),v&&(v.style.display="none"),mt(),St()}catch(W){if(!I.aborted){W&&W.name!=="NotAllowedError"&&Wt("auto-passkey",W&&W.name?W.name+": "+W.message:String(W)),Gt.add(e),W&&W.name!=="AbortError"&&(ha(e),v&&(v.style.display="")),st(!1);try{j.focus()}catch{}}}finally{Et=null,I.aborted||st(!1)}},100):setTimeout(function(){try{j.focus()}catch{}},30),_==="on"&&fn()}async function fn(){const e=rt();if(!e||typeof e.unlockWithPasskeyConditional!="function"||typeof AbortController>"u")return;va(),Dt=new AbortController;const a=Dt.signal;try{const i=await e.unlockWithPasskeyConditional(a);if(a.aborted||!i)return;Gt.delete(i.userId),Ne(i.userId),mt(),St()}catch(i){if(a.aborted||i&&i.name==="AbortError")return;Wt("conditional-passkey",i&&i.message?i.message:String(i))}finally{Dt&&Dt.signal===a&&(Dt=null)}}async function za(e){const a=rt();if(!a)return;const i="vilda:biometricPromptShown:"+e;if(localStorage.getItem(i))return;let o=!1,r=[];try{o=await a.isPrfSupported(),o&&(r=await a.listPasskeys(e))}catch{return}if(!o||r.length>0)return;localStorage.setItem(i,new Date().toISOString());const s=Pt(),d=t("div",{class:"vilda-auth-overlay vilda-auth-overlay-sheet"}),p=t("div",{class:"vilda-auth-sheet"},[t("h3",{class:"vilda-auth-sheet-title",text:"Chcesz logowa\u0107 si\u0119 przez "+s+"?"}),t("p",{class:"vilda-auth-sheet-body",text:"Nast\u0119pnym razem jeden dotyk wystarczy \u2014 bez wpisywania has\u0142a."}),t("div",{class:"vilda-auth-sheet-actions"},[t("button",{class:"vilda-auth-btn vilda-auth-btn-primary",type:"button",text:"Tak, w\u0142\u0105cz "+s,onclick:async function(){d.remove();try{await a.registerPasskey()}catch(l){ot("registerPasskey (prompt)",l)}}}),t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost",type:"button",text:"Nie teraz",onclick:function(){d.remove()}})])]);d.appendChild(p),document.body.appendChild(d)}async function Ca(e){const a=rt();if(!a||typeof a.listAdoptablePasskeys!="function")return;const i="vilda:adoptionPromptShown:"+e;if(localStorage.getItem(i))return;let o=!1,r=[];try{o=await a.isPrfSupported(),o&&(r=await a.listAdoptablePasskeys())}catch{return}if(!o||!r.length)return;localStorage.setItem(i,new Date().toISOString());const s=Pt(),d=r[0],p=t("div",{class:"vilda-auth-overlay vilda-auth-overlay-sheet"}),l=t("div",{class:"vilda-auth-sheet"},[t("h3",{class:"vilda-auth-sheet-title",text:"Aktywuj "+s+" na tym urz\u0105dzeniu?"}),t("p",{class:"vilda-auth-sheet-body",html:"Wykryli\u015Bmy biometryczny klucz Twojego konta zsynchronizowany przez iCloud Keychain (zarejestrowany jako <strong>"+yn(d.deviceLabel)+"</strong>). Aby logowa\u0107 si\u0119 tu jednym "+s+" musisz go aktywowa\u0107 \u2014 to wymaga jednego potwierdzenia biometrycznego."}),t("div",{class:"vilda-auth-sheet-actions"},[t("button",{class:"vilda-auth-btn vilda-auth-btn-primary",type:"button",text:"Aktywuj "+s,onclick:async function(){p.remove();try{await a.adoptSyncedPasskey(d.credentialId)}catch(f){ot("adoptSyncedPasskey (prompt)",f)}}}),t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost",type:"button",text:"Pomin\u0119 teraz",onclick:function(){p.remove()}})])]);p.appendChild(l),document.body.appendChild(p)}function yn(e){return String(e).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}async function Sa(e){const a=rt(),i=oe();if(!a||!i)return;let o=null;try{o=(await a.listUsers()).find(function(h){return h.userId===e})}catch(w){ot("listUsers",w)}if(!o){await kt();return}const r=t("h2",{class:"vilda-auth-title",text:"Odzyskaj dost\u0119p"}),s=t("p",{class:"vilda-auth-subtitle",text:"Konto: \u201E"+o.label+"\u201D. Wpisz klucz odzyskiwania (24 znaki w 6 grupach po 4) i ustaw nowe has\u0142o."}),d=t("input",{type:"text",class:"vilda-auth-input vilda-auth-recovery-input",placeholder:"XXXX-XXXX-XXXX-XXXX-XXXX-XXXX",autocomplete:"off"}),p=t("input",{type:"password",class:"vilda-auth-input",placeholder:"Nowe has\u0142o (min. 12 znak\xF3w, 3 z 4 typ\xF3w)"}),l=t("input",{type:"password",class:"vilda-auth-input",placeholder:"Powt\xF3rz nowe has\u0142o"}),f=t("div",{class:"vilda-auth-error"});f.style.display="none";const m=t("button",{class:"vilda-auth-btn vilda-auth-btn-primary",type:"button",text:"Odblokuj i ustaw nowe has\u0142o",onclick:async function(){if(dt(f,""),!i.isValidRecoveryKeyShape(d.value)){dt(f,"Klucz odzyskiwania ma nieprawid\u0142owy format.");return}if(p.value.length<8){dt(f,"Nowe has\u0142o musi mie\u0107 minimum 8 znak\xF3w.");return}if(p.value!==l.value){dt(f,"Has\u0142a nie s\u0105 takie same.");return}st(!0);try{await a.unlockUserWithRecoveryKey(e,d.value),await a.resetPasswordWhileUnlocked(p.value),mt(),St()}catch(w){dt(f,w&&w.message?w.message:"Nie uda\u0142o si\u0119 odzyska\u0107 dost\u0119pu.")}finally{st(!1)}}}),k=t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost",type:"button",text:"Wstecz",onclick:function(){Ve(e)}});ft(t("div",{class:"vilda-auth-screen vilda-auth-recovery"},[r,s,d,p,l,f,t("div",{class:"vilda-auth-actions"},[k,m])])),setTimeout(function(){try{d.focus()}catch{}},30)}function Ke(){const e=rt(),a=oe();if(!e||!a)return;const i=t("h2",{class:"vilda-auth-title",text:"Odtw\xF3rz konto z kopii"}),o=t("p",{class:"vilda-auth-subtitle",text:"Wybierz plik z pe\u0142n\u0105 kopi\u0105 Twojego konta (np. wagaiwzrost_konto_<imi\u0119>.wiw) i podaj has\u0142o, kt\xF3rym by\u0142 zaszyfrowany. Aplikacja odtworzy identyczne konto razem z ca\u0142\u0105 histori\u0105 pacjent\xF3w."}),r=t("input",{type:"file",accept:"*/*",style:"display:none;"}),s=t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small",type:"button",text:"Wybierz plik kopii konta",onclick:function(){r.click()}}),d=t("p",{class:"vilda-auth-side-note",style:"text-align:center; margin:0 0 8px 0;",text:"Plik nie wybrany"}),p=t("input",{type:"password",class:"vilda-auth-input",placeholder:"Has\u0142o ze starego konta"}),l=t("input",{type:"text",class:"vilda-auth-input",placeholder:"Nazwa konta w aplikacji (opcjonalnie, np. dr Kowalska)",maxlength:"60"}),f=t("div",{class:"vilda-auth-error"});f.style.display="none";const m=t("div",{class:"vilda-auth-info",style:"display:none; text-align:left;"});let k=null,w=null,h=null,C=function(v,g){if(h=v,v==="vault-backup"){const S=g&&g.label?g.label:"(bez nazwy)",_=g&&typeof g.patientCount=="number"?g.patientCount:"?",I=g&&typeof g.snapshotCount=="number"?g.snapshotCount:"?";d.textContent="\u2713 Pe\u0142na kopia konta \u201E"+S+'" \u2014 pacjenci: '+_+", zapis\xF3w: "+I,p.style.display="",l.style.display="",j.style.display="",dt(f,""),y&&(y.style.display="none")}else v==="patient"?(d.textContent="Wybrany plik to kopia pojedynczego pacjenta",p.style.display="none",l.style.display="none",j.style.display="none",dt(f,""),y&&(y.style.display="block")):(d.textContent="Plik nie wybrany",p.style.display="",l.style.display="",j.style.display="",y&&(y.style.display="none"))},y=null;r.addEventListener("change",async function(v){const g=v.target.files&&v.target.files[0];if(g)try{const S=new n.FileReader;S.onload=function(){k=S.result,w=g.name;try{const _=a.parseEnvelope(k);C(_.kind,_.metadata)}catch{h=null,d.textContent="Wybrany plik: "+g.name,dt(f,"Plik nie wygl\u0105da na kopi\u0119 z aplikacji wagaiwzrost.pl."),y&&(y.style.display="none")}},S.onerror=function(){dt(f,"Nie uda\u0142o si\u0119 odczyta\u0107 pliku.")},S.readAsText(g,"utf-8")}catch(S){dt(f,"B\u0142\u0105d odczytu pliku: "+(S&&S.message?S.message:S))}finally{r.value=""}});const j=t("button",{class:"vilda-auth-btn vilda-auth-btn-primary",type:"button",text:"Odtw\xF3rz konto",onclick:async function(){if(dt(f,""),!k){dt(f,"Wybierz plik kopii konta.");return}if(!p.value||p.value.length<1){dt(f,"Wpisz has\u0142o ze starego konta.");return}st(!0);try{const v={};l.value&&l.value.trim()&&(v.label=l.value.trim());const g=await e.restoreVaultBackup(k,p.value,v);for(;m.firstChild;)m.removeChild(m.firstChild);if(m.style.display="block",m.appendChild(t("strong",{text:"Konto odtworzone"})),m.appendChild(t("br")),m.appendChild(n.document.createTextNode("Nazwa: "+g.label)),m.appendChild(t("br")),m.appendChild(n.document.createTextNode("Pacjenci: "+g.patientCount+" \xB7 zapis\xF3w: "+g.snapshotCount)),g.newRecoveryKey){m.appendChild(t("br")),m.appendChild(t("br"));const S=t("strong",{text:"UWAGA: Backup nie zawiera\u0142 klucza odzyskiwania."});m.appendChild(S),m.appendChild(t("br")),m.appendChild(n.document.createTextNode("Aplikacja wygenerowa\u0142a nowy klucz odzyskiwania dla tego konta. Zapisz go bezpiecznie:")),m.appendChild(t("br"));const _=t("code",{style:"display:block; padding:8px; background:#f5fafb; border-radius:8px; margin-top:6px; word-break:break-all;",text:g.newRecoveryKey});m.appendChild(_)}j.style.display="none",E.textContent="Przejd\u017A do aplikacji",E.onclick=function(){mt(),St()}}catch(v){dt(f,v&&v.message?v.message:"Nie uda\u0142o si\u0119 odtworzy\u0107 konta.")}finally{st(!1)}}}),E=t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost",type:"button",text:"Wstecz",onclick:function(){kt()}});y=t("div",{class:"vilda-auth-info",style:"display:none; text-align:left;"}),y.appendChild(t("strong",{text:"To kopia pojedynczego pacjenta"})),y.appendChild(t("br")),y.appendChild(n.document.createTextNode('Funkcja \u201EOdtw\xF3rz konto z pe\u0142nej kopii" wymaga pliku z ca\u0142ym kontem (nazwa zaczyna si\u0119 od \u201Ewagaiwzrost_konto_\u2026"). Wybrany plik (\u201E'));const N=t("em",{text:""});y.appendChild(N),y.appendChild(n.document.createTextNode('") to kopia jednego pacjenta z konta \u017Ar\xF3d\u0142owego.')),y.appendChild(t("br")),y.appendChild(t("br")),y.appendChild(n.document.createTextNode("Je\u015Bli masz tylko pliki pacjent\xF3w, mo\u017Cesz odzyska\u0107 dane w dw\xF3ch krokach:"));const T=t("ol",{style:"margin:6px 0 12px 18px; padding:0; line-height:1.6;"});T.appendChild(t("li",{text:"Skonfiguruj nowe konto (z dowolnym has\u0142em)."})),T.appendChild(t("li",{text:'W krokie 3 kreatora kliknij \u201EWczytaj kopie pacjent\xF3w teraz" i wpisz has\u0142o ze starego konta.'})),y.appendChild(T);const c=t("button",{class:"vilda-auth-btn vilda-auth-btn-primary vilda-auth-btn-small",type:"button",text:"Skonfiguruj nowe konto",onclick:function(){ze()}});y.appendChild(t("div",{class:"vilda-auth-section-action",style:"margin-top:6px;"},[c]));const x=C;C=function(v,g){N&&(N.textContent=w||""),x(v,g)},ft(t("div",{class:"vilda-auth-screen vilda-auth-restore"},[i,o,t("div",{class:"vilda-auth-section-action"},[s]),d,y,p,l,f,m,r,t("div",{class:"vilda-auth-actions"},[E,j])])),setTimeout(function(){try{p.focus()}catch{}},30)}function vn(e,a,i,o){if(!isFinite(e)||!isFinite(a)||!isFinite(i))return NaN;if(Math.abs(e)<1e-6)return a*Math.exp(i*o);var r=1+e*i*o;return r<=0?NaN:a*Math.pow(r,1/e)}function le(e){return e?e.ageMonths!=null&&isFinite(e.ageMonths)?Number(e.ageMonths):e.ageYears!=null&&isFinite(e.ageYears)?Number(e.ageYears)*12:NaN:NaN}function ja(e){if(!e||e.length===0)return"";if(e.length===1)return"M "+e[0].x.toFixed(1)+","+e[0].y.toFixed(1);if(e.length===2)return"M "+e[0].x.toFixed(1)+","+e[0].y.toFixed(1)+" L "+e[1].x.toFixed(1)+","+e[1].y.toFixed(1);for(var a="M "+e[0].x.toFixed(1)+","+e[0].y.toFixed(1),i=0;i<e.length-1;i++){var o=e[i-1]||e[i],r=e[i],s=e[i+1],d=e[i+2]||e[i+1],p=r.x+(s.x-o.x)/6,l=r.y+(s.y-o.y)/6,f=s.x-(d.x-r.x)/6,m=s.y-(d.y-r.y)/6;a+=" C "+p.toFixed(1)+","+l.toFixed(1)+" "+f.toFixed(1)+","+m.toFixed(1)+" "+s.x.toFixed(1)+","+s.y.toFixed(1)}return a}function qn(e,a,i){return i?e==null||!isFinite(e)?null:e>=40?{label:"Oty\u0142o\u015B\u0107 III\xB0",cls:"alert"}:e>=35?{label:"Oty\u0142o\u015B\u0107 II\xB0",cls:"alert"}:e>=30?{label:"Oty\u0142o\u015B\u0107 I\xB0",cls:"alert"}:e>=25?{label:"Nadwaga",cls:"improve"}:e<18.5?{label:"Niedowaga",cls:"alert"}:{label:"Norma BMI",cls:"ok"}:a==null||!isFinite(a)?null:a>=99?{label:"Oty\u0142o\u015B\u0107 ci\u0119\u017Cka",cls:"alert"}:a>=95?{label:"Oty\u0142o\u015B\u0107",cls:"alert"}:a>=85?{label:"Nadwaga",cls:"improve"}:a<3?{label:"Niedowaga",cls:"alert"}:{label:"Norma BMI",cls:"ok"}}function Ce(e,a,i,o,r){if(o==null||o>216)return null;var s;if(e==="bmi")s={title:"BMI",unit:"kg/m\xB2",minAgeAllowed:24,yAxisStep:4,yMinClamp:10,sampleStep:12,smoothWindow:2,normalizeSex:function(M){var z=(M||"").toLowerCase();return z==="m"||z==="ch"||z==="ch\u0142opiec"||z==="male"?"M":"K"},getLms:function(M,z){if(typeof n.getLMS!="function")return null;var F=typeof this.normalizeSex=="function"?this.normalizeSex(M):M;return n.getLMS(F,z)},extractValue:function(M){var z=parseFloat(M.height),F=parseFloat(M.weight);return!isFinite(z)||!isFinite(F)||z<=0?null:F/Math.pow(z/100,2)}};else if(e==="height")s={title:"Wzrost",unit:"cm",minAgeAllowed:0,yAxisStep:10,yMinClamp:40,sampleStep:3,smoothWindow:0,normalizeSex:function(M){var z=(M||"").toLowerCase();return z==="m"||z==="ch"||z==="ch\u0142opiec"||z==="male"?"M":"K"},getLms:function(M,z){if(typeof n.getChildLMS!="function")return null;var F=typeof this.normalizeSex=="function"?this.normalizeSex(M):M;return n.getChildLMS(F,z/12,"HT")},extractValue:function(M){var z=parseFloat(M.height);return isFinite(z)&&z>0?z:null}};else if(e==="weight")s={title:"Waga",unit:"kg",minAgeAllowed:0,yAxisStep:5,yMinClamp:2,sampleStep:3,smoothWindow:0,normalizeSex:function(M){var z=(M||"").toLowerCase();return z==="m"||z==="ch"||z==="ch\u0142opiec"||z==="male"?"M":"K"},getLms:function(M,z){if(typeof n.getChildLMS!="function")return null;var F=typeof this.normalizeSex=="function"?this.normalizeSex(M):M;return n.getChildLMS(F,z/12,"WT")},extractValue:function(M){var z=parseFloat(M.weight);return isFinite(z)&&z>0?z:null}};else return null;var d="http://www.w3.org/2000/svg",p=[];if((a||[]).forEach(function(M){if(M){var z=le(M);isFinite(z)&&p.push(z)}}),isFinite(o)&&p.push(o),p.length===0)return null;var l=Math.min.apply(null,p),f=Math.max.apply(null,p),m=Math.max(s.minAgeAllowed,Math.floor((l-12)/12)*12),k=Math.min(216,Math.ceil((f+12)/12)*12);k-m<36&&(k=Math.min(216,m+36));for(var w=[{z:-1.881,label:"3",color:"#9FE1CB"},{z:-1.282,label:"10",color:"#5DCAA5"},{z:0,label:"50",color:"#0F6E56"},{z:1.282,label:"90",color:"#5DCAA5"},{z:1.881,label:"97",color:"#9FE1CB"}],h=w.map(function(){return[]}),C=1/0,y=-1/0,j=s.sampleStep&&s.sampleStep>0?s.sampleStep:3,E=m;E<=k;E+=j){var N=s.getLms(i,E);N&&w.forEach(function(M,z){var F=vn(N[0],N[1],N[2],M.z);isFinite(F)&&h[z].push({age:E,val:F})})}var T=s.smoothWindow&&s.smoothWindow>0?s.smoothWindow:0;if(T>0&&(h=h.map(function(M){if(M.length<3)return M;for(var z=[],F=0;F<M.length;F++){for(var J=Math.max(0,F-T),X=Math.min(M.length-1,F+T),tt=0,ht=0,vt=J;vt<=X;vt++)tt+=M[vt].val,ht++;z.push({age:M[F].age,val:tt/ht})}return z})),h.forEach(function(M){M.forEach(function(z){z.val<C&&(C=z.val),z.val>y&&(y=z.val)})}),!isFinite(C)||!isFinite(y))return null;var c=[];if((a||[]).forEach(function(M){if(M){var z=le(M);if(!(!isFinite(z)||z<m||z>k)){var F=s.extractValue(M);F==null||!isFinite(F)||c.push({age:z,val:F})}}}),r!=null&&isFinite(r)){r<C&&(C=r),r>y&&(y=r);var x=c.some(function(M){return Math.abs(M.age-o)<1&&Math.abs(M.val-r)<.05});!x&&o>=m&&o<=k&&c.push({age:o,val:r})}c.forEach(function(M){M.val<C&&(C=M.val),M.val>y&&(y=M.val)}),c.sort(function(M,z){return M.age-z.age});var v=(y-C)*.06;C=Math.max(s.yMinClamp,C-v),y=y+v;var g=360,S=220,_=32,I=22,W=10,b=24,L=g-_-I,O=S-W-b;function u(M){return _+(M-m)/(k-m)*L}function B(M){return W+(1-(M-C)/(y-C))*O}var A=n.document.createElementNS(d,"svg");A.setAttribute("viewBox","0 0 "+g+" "+S),A.setAttribute("class","vilda-patient-chart"),A.setAttribute("aria-label","Siatka centylowa "+s.title);for(var Q=Math.ceil(m/12)*12,G=Q;G<=k;G+=24){var it=u(G),H=n.document.createElementNS(d,"line");H.setAttribute("x1",it),H.setAttribute("x2",it),H.setAttribute("y1",W),H.setAttribute("y2",S-b),H.setAttribute("stroke","#e8eef0"),H.setAttribute("stroke-width","0.5"),A.appendChild(H);var R=n.document.createElementNS(d,"text");R.setAttribute("x",it),R.setAttribute("y",S-b+13),R.setAttribute("text-anchor","middle"),R.setAttribute("font-size","10"),R.setAttribute("fill","#5a7274"),R.textContent=String(Math.round(G/12)),A.appendChild(R)}for(var V=s.yAxisStep,et=Math.ceil(C/V)*V,q=et;q<=y;q+=V){var ct=B(q),D=n.document.createElementNS(d,"line");D.setAttribute("x1",_),D.setAttribute("x2",g-I),D.setAttribute("y1",ct),D.setAttribute("y2",ct),D.setAttribute("stroke","#e8eef0"),D.setAttribute("stroke-width","0.5"),A.appendChild(D);var P=n.document.createElementNS(d,"text");P.setAttribute("x",_-4),P.setAttribute("y",ct+3),P.setAttribute("text-anchor","end"),P.setAttribute("font-size","10"),P.setAttribute("fill","#5a7274"),P.textContent=String(q),A.appendChild(P)}var K=n.document.createElementNS(d,"line");K.setAttribute("x1",_),K.setAttribute("x2",g-I),K.setAttribute("y1",S-b),K.setAttribute("y2",S-b),K.setAttribute("stroke","#08202C"),K.setAttribute("stroke-width","0.8"),A.appendChild(K);var Y=n.document.createElementNS(d,"line");if(Y.setAttribute("x1",_),Y.setAttribute("x2",_),Y.setAttribute("y1",W),Y.setAttribute("y2",S-b),Y.setAttribute("stroke","#08202C"),Y.setAttribute("stroke-width","0.8"),A.appendChild(Y),w.forEach(function(M,z){if(!(h[z].length<2)){var F=h[z].map(function(vt){return{x:u(vt.age),y:B(vt.val)}}),J=ja(F),X=n.document.createElementNS(d,"path");X.setAttribute("d",J),X.setAttribute("fill","none"),X.setAttribute("stroke",M.color),X.setAttribute("stroke-width",M.label==="50"?"1.6":"1"),X.setAttribute("stroke-linecap","round"),X.setAttribute("stroke-linejoin","round"),A.appendChild(X);var tt=h[z][h[z].length-1],ht=n.document.createElementNS(d,"text");ht.setAttribute("x",u(tt.age)+2),ht.setAttribute("y",B(tt.val)+3),ht.setAttribute("font-size","9"),ht.setAttribute("fill",M.label==="50"?"#0F6E56":"#3a7062"),ht.textContent=M.label+"c",A.appendChild(ht)}}),c.length>=2){var Z=c.map(function(M){return{x:u(M.age),y:B(M.val)}}),$=ja(Z),at=n.document.createElementNS(d,"path");at.setAttribute("d",$),at.setAttribute("fill","none"),at.setAttribute("stroke","#b71c1c"),at.setAttribute("stroke-width","1.8"),at.setAttribute("opacity","0.75"),at.setAttribute("stroke-linecap","round"),at.setAttribute("stroke-linejoin","round"),A.appendChild(at)}return c.forEach(function(M,z){var F=z===c.length-1,J=n.document.createElementNS(d,"circle");J.setAttribute("cx",u(M.age).toFixed(1)),J.setAttribute("cy",B(M.val).toFixed(1)),J.setAttribute("r",F?"5":"3"),J.setAttribute("fill",F?"#b71c1c":"#fff"),J.setAttribute("stroke","#b71c1c"),J.setAttribute("stroke-width",F?"2":"1.5"),A.appendChild(J)}),A}function Xn(e,a,i,o){return Ce("bmi",e,a,i,o)}function Jn(e){if(!e||e.length<2)return null;for(var a="http://www.w3.org/2000/svg",i=[],o=0;o<e.length;o++){var r=e[o];if(!(!r||r.height==null)){var s=le(r),d=parseFloat(r.height);isFinite(s)&&isFinite(d)&&i.push({age:s,height:d})}}if(i.length<2)return null;var p=280,l=64,f=8,m=i[0].age,k=i[i.length-1].age,w=i.map(function(S){return S.height}),h=Math.min.apply(null,w),C=Math.max.apply(null,w),y=k-m||1,j=C-h||1;function E(S){return f+(S-m)/y*(p-2*f)}function N(S){return l-f-(S-h)/j*(l-2*f)}var T=i.map(function(S){return E(S.age).toFixed(1)+","+N(S.height).toFixed(1)}).join(" "),c=n.document.createElementNS(a,"svg");c.setAttribute("viewBox","0 0 "+p+" "+l),c.setAttribute("width",p),c.setAttribute("height",l),c.setAttribute("class","vilda-patient-sparkline"),c.setAttribute("aria-hidden","true");var x=n.document.createElementNS(a,"polyline");x.setAttribute("points",T),x.setAttribute("fill","none"),x.setAttribute("stroke","#00838d"),x.setAttribute("stroke-width","2.5"),x.setAttribute("stroke-linecap","round"),x.setAttribute("stroke-linejoin","round"),c.appendChild(x);for(var v=0;v<i.length;v++){var g=n.document.createElementNS(a,"circle");g.setAttribute("cx",E(i[v].age).toFixed(1)),g.setAttribute("cy",N(i[v].height).toFixed(1)),g.setAttribute("r",v===i.length-1?"5":"3"),g.setAttribute("fill","#00838d"),g.setAttribute("stroke","#ffffff"),g.setAttribute("stroke-width","1.5"),c.appendChild(g)}return c}var Ot={followup:{label:"Kontrola",color:"#854F0B",bg:"#FAEEDA"},observation:{label:"Obserwacja",color:"#0F6E56",bg:"#E1F5EE"},treatment:{label:"Leczenie",color:"#185FA5",bg:"#E6F1FB"},"wynik-badania":{label:"Wynik badania",color:"#534AB7",bg:"#EEEDFE"}};function Ze(e){if(!e)return null;var a=new Date(e);if(isNaN(a.getTime()))return null;var i=new Date,o=new Date(Date.UTC(i.getUTCFullYear(),i.getUTCMonth(),i.getUTCDate())),r=new Date(Date.UTC(a.getUTCFullYear(),a.getUTCMonth(),a.getUTCDate())),s=Math.round((r-o)/(1440*60*1e3)),d,p;if(s<0)d="overdue",p=s===-1?"wczoraj":-s+" dni temu";else if(s===0)d="soon",p="dzi\u015B";else if(s===1)d="soon",p="jutro";else if(s<=14)d="soon",p="za "+s+" dni";else{d="ok";var l=String(a.getUTCDate()).padStart(2,"0"),f=String(a.getUTCMonth()+1).padStart(2,"0"),m=a.getUTCFullYear();p=l+"."+f+"."+m}return{status:d,label:p}}function mn(e){if(!e)return"";var a=new Date(e);if(isNaN(a.getTime()))return"";var i=a.getUTCFullYear(),o=String(a.getUTCMonth()+1).padStart(2,"0"),r=String(a.getUTCDate()).padStart(2,"0");return i+"-"+o+"-"+r}async function bn(e,a,i){const o=rt();if(re(e),!o||typeof o.listPatientNotesForPatient!="function"){e.appendChild(t("p",{class:"vilda-patient-empty-msg",text:"Notatki nie s\u0105 dost\u0119pne."}));return}const r=t("div",{class:"vilda-patient-notes-header",style:"display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;"}),s=t("div",null,[t("p",{class:"vilda-patient-section-h",text:"Notatki",style:"margin:0;"})]),d=t("button",{class:"vilda-auth-btn vilda-auth-btn-small",type:"button",style:"background:#00838d !important; color:#fff !important; border-color:#00838d !important; width:auto !important; padding:6px 14px !important; font-weight:600; flex:0 0 auto !important;",text:"+ Dodaj notatk\u0119",onclick:function(c){c&&typeof c.preventDefault=="function"&&c.preventDefault();try{de({patientId:a,note:null,onSaved:function(){typeof i=="function"&&i()}})}catch(x){ot("showPatientNoteEditor[add]",x);try{n.alert("Nie uda\u0142o si\u0119 otworzy\u0107 edytora notatki: "+(x&&x.message?x.message:x))}catch{}}}});r.appendChild(s),r.appendChild(d),e.appendChild(r);let p=[];try{p=await o.listPatientNotesForPatient(a)}catch(c){ot("listPatientNotesForPatient",c)}if(!p.length){e.appendChild(t("p",{class:"vilda-patient-empty-msg",text:'Brak notatek dla tego pacjenta. Kliknij \u201E+ Dodaj notatk\u0119", aby zapisa\u0107 pierwsz\u0105 obserwacj\u0119, plan leczenia lub przypomnienie o kontroli.'}));return}function l(c){return c.linkedAgeMonths==null&&!c.clinicalDateISO}var f=p.filter(l).sort(function(c,x){var v=c.updatedAtISO||"",g=x.updatedAtISO||"";return v>g?-1:v<g?1:0}),m=p.filter(function(c){return!l(c)}).sort(function(c,x){var v=c.clinicalDateISO||c.updatedAtISO||"",g=x.clinicalDateISO||x.updatedAtISO||"";return v>g?-1:v<g?1:0});function k(c){const x=Ot[c.category]||Ot.observation,v=Ze(c.dueDateISO),g=t("div",{class:"vilda-patient-note-card",style:"background:#fff;border:0.5px solid #d7e9ec;border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;"}),S=t("div",{style:"display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;"}),_=t("div",{style:"display:flex;align-items:center;gap:6px;flex-wrap:wrap;"});if(_.appendChild(t("span",{text:x.label,style:"display:inline-block;padding:2px 8px;font-size:0.72rem;font-weight:600;color:"+x.color+";background:"+x.bg+";border-radius:999px;"})),v){var I,W;v.status==="overdue"?(I="#FCEBEB",W="#A32D2D"):v.status==="soon"?(I="#FAEEDA",W="#854F0B"):(I="#E1F5EE",W="#0F6E56"),_.appendChild(t("span",{text:(v.status==="overdue","Termin: "+v.label),style:"display:inline-block;padding:2px 8px;font-size:0.72rem;font-weight:600;color:"+W+";background:"+I+";border-radius:999px;"}))}const b=t("div",{style:"display:flex;gap:4px;flex:0 0 auto;"}),L=t("button",{type:"button",class:"vilda-auth-btn vilda-auth-btn-small",style:"background:transparent !important;color:#5b6672 !important;border:0.5px solid #d7e9ec !important;width:auto !important;min-width:0 !important;padding:4px 10px !important;font-size:0.78rem !important;flex:0 0 auto !important;",text:"Edytuj",onclick:function(){de({patientId:a,note:c,onSaved:function(){typeof i=="function"&&i()}})}}),O=t("button",{type:"button",class:"vilda-auth-btn vilda-auth-btn-small",style:"background:#fef2f3 !important;color:#b00020 !important;border:0.5px solid #f5b3bb !important;width:auto !important;min-width:0 !important;padding:4px 10px !important;font-size:0.78rem !important;flex:0 0 auto !important;",text:"Usu\u0144",onclick:async function(){var B=(c.title||c.body||"").slice(0,60);if(n.confirm("Usun\u0105\u0107 notatk\u0119 \u201E"+B+'"? Akcja propaguje si\u0119 na inne urz\u0105dzenia.'))try{await o.removePatientNote(c.id),typeof i=="function"&&i()}catch(A){n.alert("Nie uda\u0142o si\u0119 usun\u0105\u0107 notatki: "+(A&&A.message?A.message:A))}}});b.appendChild(L),b.appendChild(O),S.appendChild(_),S.appendChild(b),g.appendChild(S),c.title&&g.appendChild(t("div",{text:c.title,style:"font-weight:600;font-size:0.95rem;color:#0f2b33;"})),c.body&&g.appendChild(t("div",{text:c.body,style:"font-size:0.88rem;color:#374151;line-height:1.5;white-space:pre-wrap;word-wrap:break-word;"}));const u=c.updatedAtISO?"Zapisano: "+Ut(c.updatedAtISO):"";return u&&g.appendChild(t("div",{text:u,style:"font-size:0.74rem;color:#9aa8aa;"})),g}function w(c,x,v){var g=t("div",{class:"vilda-patient-notes-subheader",style:"display:flex;align-items:center;gap:8px;margin:6px 0 10px;"});if(c){var S=t("span",{style:"display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;color:#5b6672;flex:0 0 auto;"});S.innerHTML=c,g.appendChild(S)}return g.appendChild(t("span",{text:x,style:"font-size:0.78rem;font-weight:600;color:#5b6672;text-transform:uppercase;letter-spacing:0.05em;"})),g.appendChild(t("span",{text:String(v),style:"display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:18px;padding:0 6px;background:#e8eff1;color:#5b6672;font-size:0.7rem;font-weight:600;border-radius:999px;"})),g}var h='<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20l1.3 -3.9a9 8 0 1 1 3.4 2.9l-4.7 1"/><path d="M12 12l0 .01"/><path d="M8 12l0 .01"/><path d="M16 12l0 .01"/></svg>',C='<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h-1a2 2 0 0 0 -2 2v3.5h0a5.5 5.5 0 0 0 11 0v-3.5a2 2 0 0 0 -2 -2h-1"/><path d="M8 15a6 6 0 1 0 12 0v-3"/><circle cx="20" cy="10" r="2"/></svg>',y=t("div",{class:"vilda-patient-notes-scroll",style:"max-height:min(calc(100vh - 320px), 720px);min-height:280px;overflow-y:auto;overflow-x:hidden;padding-right:4px;-webkit-overflow-scrolling:touch;scrollbar-gutter:stable;"});if(f.length>0){var j=t("div",{class:"vilda-patient-notes-general-section",style:"background:#f5fafb;border:0.5px solid #e0eef0;border-radius:12px;padding:10px 12px 12px;margin-bottom:14px;"});j.appendChild(w(h,"Notatki og\xF3lne",f.length));var E=t("div",{style:"display:flex;flex-direction:column;gap:8px;"});f.forEach(function(c){E.appendChild(k(c))}),j.appendChild(E),y.appendChild(j)}if(m.length>0){var N=t("div",{class:"vilda-patient-notes-clinical-section"});N.appendChild(w(C,"Notatki kliniczne",m.length));var T=t("div",{class:"vilda-patient-notes-list",style:"display:flex;flex-direction:column;gap:10px;"});m.forEach(function(c){T.appendChild(k(c))}),N.appendChild(T),y.appendChild(N)}e.appendChild(y)}function de(e){const a=rt();if(!a||typeof a.savePatientNote!="function"){try{n.alert("Notatki pacjenta s\u0105 niedost\u0119pne. Spr\xF3buj od\u015Bwie\u017Cy\u0107 stron\u0119 (Ctrl+Shift+R) \u2014 mo\u017Ce by\u0107 stary cache.")}catch{}return}const i=!!(e&&e.note&&e.note.id),o=e&&e.note||{};try{var r=n.document.querySelectorAll(".vilda-patient-note-editor-overlay");if(r&&r.length)for(var s=0;s<r.length;s++)r[s].remove()}catch{}const d=t("div",{class:"vilda-auth-overlay vilda-auth-overlay-sheet vilda-patient-note-editor-overlay",style:"position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000001;padding:20px;"}),p=t("div",{class:"vilda-auth-sheet",style:"background:#fff;border-radius:14px;padding:18px 20px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;gap:12px;"});p.appendChild(t("h3",{text:i?"Edytuj notatk\u0119":"Nowa notatka",style:"margin:0;font-size:1.05rem;font-weight:600;color:#0f2b33;"}));const l=t("div",null,[t("label",{text:"Kategoria",style:"display:block;font-size:0.78rem;color:#5b6672;margin-bottom:4px;font-weight:500;"})]),f=t("select",{class:"vilda-auth-input",style:"width:100%;height:38px;padding:0 10px;font-size:0.92rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;"});var m=a.PATIENT_NOTE_CATEGORIES||["followup","observation","treatment","wynik-badania"];m.forEach(function(lt){const bt=Ot[lt]||{label:lt},It=t("option",{value:lt,text:bt.label});(o.category||"observation")===lt&&(It.selected=!0),f.appendChild(It)}),l.appendChild(f),p.appendChild(l);var k="none";i&&o.medication&&o.medication.action?o.medication.action==="start"?k="med-start":o.medication.action==="change"?k="med-change":o.medication.action==="stop"&&(k="med-stop"):i&&o.labResult&&(o.labResult.test||o.labResult.value)&&(k="lab");var w=t("div",null,[t("label",{text:"Szablon",style:"display:block;font-size:0.78rem;color:#5b6672;margin-bottom:4px;font-weight:500;"})]),h=t("select",{class:"vilda-auth-input b3-template-select",style:"width:100%;height:38px;padding:0 10px;font-size:0.92rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;"}),C=[{value:"none",label:"Bez szablonu"},{value:"med-start",label:"W\u0142\u0105czono lek"},{value:"med-change",label:"Zmieniono dawk\u0119 leku"},{value:"med-stop",label:"Zako\u0144czono leczenie"},{value:"lab",label:"Wynik badania"}];C.forEach(function(lt){var bt=t("option",{value:lt.value,text:lt.label});lt.value===k&&(bt.selected=!0),h.appendChild(bt)}),w.appendChild(h);var y=t("p",{style:"font-size:0.72rem;color:#9aa8aa;margin:4px 0 0 0;line-height:1.4;",text:"Szablon zapisze lek / wynik w spos\xF3b umo\u017Cliwiaj\u0105cy filtrowanie w przysz\u0142o\u015Bci."});w.appendChild(y),p.appendChild(w);var j=t("div",{class:"b3-med-section",style:"display:none;flex-direction:column;gap:8px;padding:10px 12px;background:#fff8ee;border:0.5px solid #f0e0c8;border-radius:8px;"}),E=t("div",{style:"font-size:0.74rem;color:#7a5a1a;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;",text:"Lek"});j.appendChild(E);var N="b3-med-names-"+Date.now(),T=t("datalist",{id:N});j.appendChild(T);var c=t("div",null,[t("label",{text:"Nazwa leku",style:"display:block;font-size:0.74rem;color:#5b6672;margin-bottom:3px;"})]),x=t("input",{type:"text",class:"vilda-auth-input b3-med-name",list:N,placeholder:"np. Euthyrox, Letrox, Genotropin",style:"width:100%;height:36px;padding:0 10px;font-size:0.9rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;"});x.value=o.medication&&o.medication.name||"",c.appendChild(x),j.appendChild(c);var v=t("div",{class:"b3-med-prev-wrap",style:"display:none;"},[t("label",{text:"Poprzednia dawka",style:"display:block;font-size:0.74rem;color:#5b6672;margin-bottom:3px;"})]),g=t("input",{type:"text",class:"vilda-auth-input b3-med-previous-dose",placeholder:"np. 25 \xB5g 1\xD7dz.",style:"width:100%;height:36px;padding:0 10px;font-size:0.9rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;"});g.value=o.medication&&o.medication.previousDose||"",v.appendChild(g),j.appendChild(v);var S=t("div",{class:"b3-med-dose-wrap"},[t("label",{class:"b3-med-dose-label",text:"Dawka",style:"display:block;font-size:0.74rem;color:#5b6672;margin-bottom:3px;"})]),_=t("input",{type:"text",class:"vilda-auth-input b3-med-dose",placeholder:"np. 50 \xB5g 1\xD7dz.",style:"width:100%;height:36px;padding:0 10px;font-size:0.9rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;"});_.value=o.medication&&o.medication.dose||"",S.appendChild(_),j.appendChild(S),p.appendChild(j);var I=t("div",{class:"b3-lab-section",style:"display:none;flex-direction:column;gap:8px;padding:10px 12px;background:#eef6ff;border:0.5px solid #cde0f5;border-radius:8px;"}),W=t("div",{style:"font-size:0.74rem;color:#1a4a7a;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;",text:"Wynik badania"});I.appendChild(W);var b="b3-lab-names-"+Date.now(),L=t("datalist",{id:b});I.appendChild(L);var O=t("div",null,[t("label",{text:"Badanie",style:"display:block;font-size:0.74rem;color:#5b6672;margin-bottom:3px;"})]),u=t("input",{type:"text",class:"vilda-auth-input b3-lab-test",list:b,placeholder:"np. TSH, fT4, IGF-1",style:"width:100%;height:36px;padding:0 10px;font-size:0.9rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;"});u.value=o.labResult&&o.labResult.test||"",O.appendChild(u),I.appendChild(O);var B=t("div",null,[t("label",{text:"Warto\u015B\u0107",style:"display:block;font-size:0.74rem;color:#5b6672;margin-bottom:3px;"})]),A=t("input",{type:"text",class:"vilda-auth-input b3-lab-value",placeholder:"np. 2,5 mIU/L",style:"width:100%;height:36px;padding:0 10px;font-size:0.9rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;"});A.value=o.labResult&&o.labResult.value||"",B.appendChild(A),I.appendChild(B);var Q=t("div",null,[t("label",{text:"Norma (opcjonalnie)",style:"display:block;font-size:0.74rem;color:#5b6672;margin-bottom:3px;"})]),G=t("input",{type:"text",class:"vilda-auth-input b3-lab-norm",placeholder:"np. 0,4-4,2 mIU/L",style:"width:100%;height:36px;padding:0 10px;font-size:0.9rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;"});G.value=o.labResult&&o.labResult.norm||"",Q.appendChild(G),I.appendChild(Q),p.appendChild(I);function it(){var lt=h.value,bt=lt==="med-start"||lt==="med-change"||lt==="med-stop",It=lt==="lab";j.style.display=bt?"flex":"none",I.style.display=It?"flex":"none",v.style.display=lt==="med-change"?"block":"none",S.style.display=lt==="med-start"||lt==="med-change"?"block":"none";var Lt=S.querySelector(".b3-med-dose-label");Lt&&(Lt.textContent=lt==="med-change"?"Nowa dawka":"Dawka"),bt?f.value="treatment":It&&(f.value="wynik-badania")}h.addEventListener("change",it),it(),typeof a.listMedicationNamesForCurrentUser=="function"&&a.listMedicationNamesForCurrentUser().then(function(lt){Array.isArray(lt)&&lt.forEach(function(bt){T.appendChild(t("option",{value:bt}))})}).catch(function(){}),typeof a.listLabTestNamesForCurrentUser=="function"&&a.listLabTestNamesForCurrentUser().then(function(lt){Array.isArray(lt)&&lt.forEach(function(bt){L.appendChild(t("option",{value:bt}))})}).catch(function(){});const H=t("div",null,[t("label",{text:"Tytu\u0142 (opcjonalnie)",style:"display:block;font-size:0.78rem;color:#5b6672;margin-bottom:4px;font-weight:500;"})]),R=t("input",{type:"text",class:"vilda-auth-input",placeholder:"np. Wprowadzono Euthyrox",style:"width:100%;height:38px;padding:0 10px;font-size:0.92rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;"});R.value=o.title||"",H.appendChild(R),p.appendChild(H);const V=t("div",null,[t("label",{text:"Tre\u015B\u0107",style:"display:block;font-size:0.78rem;color:#5b6672;margin-bottom:4px;font-weight:500;"})]),et=t("textarea",{class:"vilda-auth-input",placeholder:"np. 25 \xB5g 1\xD7dz. Kontrola TSH za 6 mc.",style:"width:100%;min-height:120px;padding:10px;font-size:0.92rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;line-height:1.5;resize:vertical;font-family:inherit;"});et.value=o.body||"",V.appendChild(et),p.appendChild(V);const q=t("div",null,[t("label",{class:"pn-due-label",text:"Przypomnienie (data)",style:"display:block;font-size:0.78rem;color:#5b6672;margin-bottom:4px;font-weight:500;"})]),ct=t("input",{type:"date",class:"vilda-auth-input",style:"width:100%;height:38px;padding:0 10px;font-size:0.92rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;"});ct.value=mn(o.dueDateISO),q.appendChild(ct);const D=t("p",{style:"font-size:0.72rem;color:#9aa8aa;margin:4px 0 0 0;line-height:1.4;",text:"Najlepiej ustawi\u0107 dla kontroli \u2014 pojawi si\u0119 jako przypomnienie z kolorem zale\u017Cnym od pilno\u015Bci."});q.appendChild(D),p.appendChild(q);var P=null;e&&typeof e.suggestLinkedAge=="number"&&isFinite(e.suggestLinkedAge)&&e.suggestLinkedAge>0?P=Math.round(e.suggestLinkedAge):i&&typeof o.linkedAgeMonths=="number"&&o.linkedAgeMonths>0&&(P=Math.round(o.linkedAgeMonths));var K;i&&o.clinicalDateISO?K="date":i&&typeof o.linkedAgeMonths=="number"&&o.linkedAgeMonths>0||P!==null?K="visit":K="general";var Y=t("div",{class:"b3-anchor-group",style:"display:flex;flex-direction:column;gap:8px;padding:12px;background:#f5fafb;border-radius:10px;border:0.5px solid #d7e9ec;"}),Z=t("div",{style:"font-size:0.78rem;color:#5b6672;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;",text:"Powi\u0105zanie z osi\u0105 czasu"});Y.appendChild(Z);var $=t("label",{class:"b3-anchor-option",style:"display:flex;align-items:flex-start;gap:8px;cursor:pointer;"}),at=t("input",{type:"radio",name:"b3-anchor",value:"general",style:"flex:0 0 auto;margin-top:2px;cursor:pointer;width:16px;height:16px;accent-color:#00838d;"});at.checked=K==="general";var M=t("div",{style:"flex:1;font-size:0.86rem;color:#0f2b33;line-height:1.4;"},[t("div",{text:"Notatka og\xF3lna",style:"font-weight:500;"}),t("div",{text:"Pojawi si\u0119 w zak\u0142adce Notatki, nie w Historii.",style:"font-size:0.74rem;color:#9aa8aa;margin-top:2px;"})]);$.appendChild(at),$.appendChild(M),Y.appendChild($);var z=t("div",{class:"b3-general-hint",style:"font-size:0.74rem;color:#7a5a1a;background:#fff8ee;border:0.5px solid #f0e0c8;border-radius:6px;padding:6px 8px;margin:-2px 0 0 24px;line-height:1.4;display:none;"});z.innerHTML="\u{1F4A1} Notatki og\xF3lne nie pojawiaj\u0105 si\u0119 w Historii. Aby notatka pojawi\u0142a si\u0119 w Historii, wybierz <strong>wizyt\u0119</strong> lub <strong>dat\u0119 zdarzenia</strong>.",Y.appendChild(z);var F=null;if(P!==null){var J=t("label",{class:"b3-anchor-option",style:"display:flex;align-items:flex-start;gap:8px;cursor:pointer;"});F=t("input",{type:"radio",name:"b3-anchor",value:"visit",style:"flex:0 0 auto;margin-top:2px;cursor:pointer;width:16px;height:16px;accent-color:#00838d;"}),F.checked=K==="visit";var X=t("div",{style:"flex:1;font-size:0.86rem;color:#0f2b33;line-height:1.4;"}),tt=t("div",{style:"font-weight:500;"});tt.appendChild(n.document.createTextNode("Powi\u0105\u017C z wizyt\u0105 ")),tt.appendChild(t("strong",{text:"(wiek: "+_t(P)+")",style:"font-weight:600;color:#0F6E56;"})),X.appendChild(tt),X.appendChild(t("div",{text:"Pojawi si\u0119 w Historii pod chipem Pomiar.",style:"font-size:0.74rem;color:#9aa8aa;margin-top:2px;"})),J.appendChild(F),J.appendChild(X),Y.appendChild(J)}var ht=t("label",{class:"b3-anchor-option",style:"display:flex;align-items:flex-start;gap:8px;cursor:pointer;"}),vt=t("input",{type:"radio",name:"b3-anchor",value:"date",style:"flex:0 0 auto;margin-top:2px;cursor:pointer;width:16px;height:16px;accent-color:#00838d;"});vt.checked=K==="date";var Ct=t("div",{style:"flex:1;font-size:0.86rem;color:#0f2b33;line-height:1.4;"},[t("div",{text:"Wpisz dat\u0119 zdarzenia",style:"font-weight:500;"}),t("div",{text:"Notatka wpasuje si\u0119 chronologicznie w Historii.",style:"font-size:0.74rem;color:#9aa8aa;margin-top:2px;"})]),wt=t("input",{type:"date",class:"vilda-auth-input b3-clinical-date",style:"width:100%;height:34px;padding:0 10px;font-size:0.9rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;margin-top:6px;display:none;"});wt.value=o.clinicalDateISO||"",Ct.appendChild(wt),ht.appendChild(vt),ht.appendChild(Ct),Y.appendChild(ht);function pt(){wt.style.display=vt.checked?"block":"none",z.style.display=at.checked?"block":"none"}at.addEventListener("change",pt),F&&F.addEventListener("change",pt),vt.addEventListener("change",pt),wt.addEventListener("focus",function(){vt.checked||(vt.checked=!0,pt())}),pt(),p.appendChild(Y);const Mt=t("div",{style:"color:#A32D2D;font-size:0.82rem;line-height:1.4;display:none;"});p.appendChild(Mt);const $t=t("div",{style:"display:flex;gap:8px;justify-content:flex-end;margin-top:4px;"}),pe=t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost",type:"button",style:"background:transparent !important;color:#5b6672 !important;border:0.5px solid #d7e9ec !important;width:auto !important;padding:8px 16px !important;flex:0 0 auto !important;",text:"Anuluj",onclick:function(){d.remove(),e&&typeof e.onCancel=="function"&&e.onCancel()}}),Vt=t("button",{class:"vilda-auth-btn vilda-auth-btn-primary",type:"button",style:"background:#00838d !important;color:#fff !important;border-color:#00838d !important;width:auto !important;padding:8px 18px !important;font-weight:600;flex:0 0 auto !important;",text:i?"Zapisz zmiany":"Dodaj notatk\u0119",onclick:async function(){Mt.style.display="none",Vt.disabled=!0,pe.disabled=!0;try{const gt={patientId:e.patientId,title:R.value||"",body:et.value||"",category:f.value||"observation",dueDateISO:ct.value||null};i&&(gt.id=o.id);var lt="general";F&&F.checked?lt="visit":vt.checked&&(lt="date"),lt==="visit"?(gt.linkedAgeMonths=P,gt.clinicalDateISO=null):lt==="date"?(gt.linkedAgeMonths=null,gt.clinicalDateISO=wt.value||null):(gt.linkedAgeMonths=null,gt.clinicalDateISO=null);var bt=h.value;if(bt==="med-start"||bt==="med-change"||bt==="med-stop"){var It={"med-start":"start","med-change":"change","med-stop":"stop"},Lt={action:It[bt]},Kt=(x.value||"").trim();Kt&&(Lt.name=Kt);var Ae=(_.value||"").trim();Ae&&(bt==="med-start"||bt==="med-change")&&(Lt.dose=Ae);var Ee=(g.value||"").trim();Ee&&bt==="med-change"&&(Lt.previousDose=Ee),gt.medication=Lt,gt.labResult=null}else if(bt==="lab"){var Ft={},Pe=(u.value||"").trim();Pe&&(Ft.test=Pe);var te=(A.value||"").trim();te&&(Ft.value=te);var ee=(G.value||"").trim();ee&&(Ft.norm=ee),gt.medication=null,gt.labResult=Ft.test||Ft.value?Ft:null}else gt.medication=null,gt.labResult=null;await a.savePatientNote(gt),d.remove(),e&&typeof e.onSaved=="function"&&e.onSaved()}catch(gt){Mt.textContent=gt&&gt.message?gt.message:"Nie uda\u0142o si\u0119 zapisa\u0107 notatki.",Mt.style.display="block",Vt.disabled=!1,pe.disabled=!1}}});$t.appendChild(pe),$t.appendChild(Vt),p.appendChild($t),d.appendChild(p);var he=Aa();he.appendChild(d),Ia(d);try{et.focus()}catch{}}function Aa(){if(!ut)return n.document.body;var e="";try{e=ut.style&&ut.style.display||""}catch{}if(!e&&n.getComputedStyle)try{e=n.getComputedStyle(ut).display||""}catch{}return e==="none"?n.document.body:ut}var ce=0,Ea="";function Pa(){if(ce===0)try{var e=n.document&&n.document.body;Ea=e?e.style.overflow:"",e&&(e.style.overflow="hidden")}catch{}ce+=1}function Ma(){if(ce>0&&(ce-=1),ce===0)try{var e=n.document&&n.document.body;e&&(e.style.overflow=Ea)}catch{}}function Ia(e){Pa();var a=null,i=!1;try{ut&&ut.style&&n.getComputedStyle&&n.getComputedStyle(ut).display!=="none"&&(a=ut.style.overflow,ut.style.overflow="hidden",i=!0)}catch{}var o=!1;function r(){if(!o&&(o=!0,Ma(),i))try{ut.style.overflow=a||""}catch{}}try{var s=e&&e.parentNode||n.document.body;if(typeof n.MutationObserver=="function"&&s){var d=new n.MutationObserver(function(){var p=e&&e.isConnected!==!1&&e.parentNode;if(!p){r();try{d.disconnect()}catch{}}});d.observe(s,{childList:!0})}}catch{}return r}function La(e,a){if(!Array.isArray(e)||!e.length)return a&&typeof a.onClose=="function"&&a.onClose(),null;try{var i=n.document.querySelectorAll(".vilda-reminders-modal-overlay");if(i&&i.length)for(var o=0;o<i.length;o++)i[o].remove()}catch{}var r=rt();function s(x){var v=Ze?Ze(x):null;return v||{status:"ok",label:x||""}}for(var d=t("div",{class:"vilda-auth-overlay vilda-auth-overlay-sheet vilda-reminders-modal-overlay",style:"position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000001;padding:20px;"}),p=t("div",{class:"vilda-auth-sheet vilda-reminders-modal-sheet",style:"background:#fff;border-radius:14px;padding:0;max-width:560px;width:100%;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;"}),l=0,f=0;f<e.length;f++)l+=e[f].notes.length;var m="\u{1F514} Przypomnienia",k=e.length===1?"1 pacjent \xB7 "+l+(l===1?" notatka":l<5?" notatki":" notatek"):e.length+" pacjent\xF3w \xB7 "+l+(l<5?" notatki":" notatek"),w=t("div",{style:"padding:18px 20px 14px 20px;border-bottom:0.5px solid #d7e9ec;background:#f5fafb;"});w.appendChild(t("div",{text:m,style:"font-size:1.05rem;font-weight:600;color:#0f2b33;margin-bottom:4px;"})),w.appendChild(t("div",{text:k,style:"font-size:0.82rem;color:#5b6672;"})),p.appendChild(w);var h=t("div",{class:"vilda-reminders-list",style:"flex:1 1 auto;overflow-y:auto;padding:8px 14px;display:flex;flex-direction:column;gap:14px;"});p.appendChild(h);var C=t("div",{style:"padding:14px 20px;border-top:0.5px solid #d7e9ec;display:flex;justify-content:flex-end;gap:8px;flex:0 0 auto;"}),y=t("button",{type:"button",class:"vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small",style:"background:transparent !important;color:#5b6672 !important;border:0.5px solid #d7e9ec !important;width:auto !important;padding:8px 16px !important;flex:0 0 auto !important;",text:"P\xF3\u017Aniej",onclick:function(){d.remove(),a&&typeof a.onClose=="function"&&a.onClose()}});C.appendChild(y),p.appendChild(C),d.appendChild(p);var j=Aa();j.appendChild(d);async function E(){var x=[];try{r&&typeof r.listPatientNotesDueByDate=="function"&&(x=await r.listPatientNotesDueByDate())}catch(v){ot("refreshReminders",v)}if(!x.length){d.remove(),a&&typeof a.onClose=="function"&&a.onClose();return}N(x)}function N(x){re(h),x.forEach(function(v){var g=t("div",{class:"vilda-reminders-patient-card",style:"background:#fff;border:0.5px solid #d7e9ec;border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:10px;"});g.appendChild(t("div",{text:v.patientName,style:"font-weight:600;font-size:0.95rem;color:#0f2b33;"})),v.notes.forEach(function(S){g.appendChild(T(v.patientId,S))}),h.appendChild(g)})}function T(x,v){var g=t("div",{style:"background:#f5fafb;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;"}),S=typeof Ot=="object"&&Ot[v.category]||{label:v.category||"Notatka",color:"#0F6E56",bg:"#E1F5EE"},_=s(v.dueDateISO),I=t("div",{style:"display:flex;align-items:center;gap:6px;flex-wrap:wrap;"});if(I.appendChild(t("span",{text:S.label,style:"display:inline-block;padding:2px 8px;font-size:0.72rem;font-weight:600;color:"+S.color+";background:"+S.bg+";border-radius:999px;"})),_){var W,b;_.status==="overdue"?(W="#FCEBEB",b="#A32D2D"):_.status==="soon"?(W="#FAEEDA",b="#854F0B"):(W="#E1F5EE",b="#0F6E56"),I.appendChild(t("span",{text:"Termin: "+_.label,style:"display:inline-block;padding:2px 8px;font-size:0.72rem;font-weight:600;color:"+b+";background:"+W+";border-radius:999px;"}))}g.appendChild(I),v.title&&g.appendChild(t("div",{text:v.title,style:"font-weight:600;font-size:0.92rem;color:#0f2b33;"})),v.body&&g.appendChild(t("div",{text:v.body,style:"font-size:0.86rem;color:#374151;line-height:1.5;white-space:pre-wrap;word-wrap:break-word;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;"}));var L=t("div",{style:"display:flex;gap:6px;flex-wrap:wrap;margin-top:2px;"}),O=t("button",{type:"button",class:"vilda-auth-btn vilda-auth-btn-small",style:"background:#E1F5EE !important;color:#0F6E56 !important;border:0.5px solid #b4dfd0 !important;width:auto !important;padding:5px 12px !important;font-size:0.78rem !important;font-weight:600;flex:0 0 auto !important;",text:"\u2713 Zrobione",onclick:async function(){O.disabled=!0;try{await r.completePatientNote(v.id),await E()}catch(A){O.disabled=!1,ot("reminder-complete",A);try{n.alert("Nie uda\u0142o si\u0119 oznaczy\u0107: "+(A&&A.message?A.message:A))}catch{}}}});L.appendChild(O);var u=t("button",{type:"button",class:"vilda-auth-btn vilda-auth-btn-small",style:"background:#FAEEDA !important;color:#854F0B !important;border:0.5px solid #e7c896 !important;width:auto !important;padding:5px 12px !important;font-size:0.78rem !important;font-weight:600;flex:0 0 auto !important;position:relative;",text:"\u23F0 Prze\u0142\xF3\u017C \u25BE",onclick:function(A){A&&typeof A.stopPropagation=="function"&&A.stopPropagation(),c(u,v.id)}});L.appendChild(u);var B=t("button",{type:"button",class:"vilda-auth-btn vilda-auth-btn-small",style:"background:transparent !important;color:#00838d !important;border:0.5px solid #b3dde0 !important;width:auto !important;padding:5px 12px !important;font-size:0.78rem !important;font-weight:600;flex:0 0 auto !important;",text:"\u2192 Otw\xF3rz",onclick:function(){d.remove(),a&&typeof a.onClose=="function"&&a.onClose(),setTimeout(function(){try{a&&typeof a.onOpenPatient=="function"?a.onOpenPatient(x,v.id):jt(x,null,{focusNoteId:v.id})}catch(A){ot("reminder-open",A)}},50)}});return L.appendChild(B),g.appendChild(L),g}function c(x,v){try{for(var g=n.document.querySelectorAll(".vilda-reminders-snooze-menu"),S=0;S<g.length;S++)g[S].remove()}catch{}var _=t("div",{class:"vilda-reminders-snooze-menu",style:"position:fixed;background:#fff;border:0.5px solid #d7e9ec;border-radius:10px;box-shadow:0 8px 24px rgba(0,40,48,0.18);padding:6px;display:flex;flex-direction:column;gap:2px;z-index:1000002;min-width:200px;"});function I(R,V){var et=t("button",{type:"button",style:"background:transparent;border:none;text-align:left;padding:8px 12px;font-size:0.85rem;color:#0f2b33;cursor:pointer;border-radius:6px;font-family:inherit;",text:R,onclick:async function(){_.remove();var q=new Date;q.setDate(q.getDate()+V);var ct=q.getFullYear(),D=String(q.getMonth()+1).padStart(2,"0"),P=String(q.getDate()).padStart(2,"0");try{await r.snoozePatientNote(v,ct+"-"+D+"-"+P),await E()}catch(K){ot("reminder-snooze",K);try{n.alert("Nie uda\u0142o si\u0119 prze\u0142o\u017Cy\u0107: "+(K&&K.message?K.message:K))}catch{}}}});et.addEventListener("mouseover",function(){et.style.background="#f5fafb"}),et.addEventListener("mouseout",function(){et.style.background="transparent"}),_.appendChild(et)}I("Jutro",1),I("Pojutrze",2),I("Za tydzie\u0144",7),_.appendChild(t("div",{style:"height:1px;background:#d7e9ec;margin:4px 6px;"}));var W=t("div",{style:"padding:6px 8px;display:flex;flex-direction:column;gap:6px;"});W.appendChild(t("div",{text:"Wybierz dat\u0119:",style:"font-size:0.78rem;color:#5b6672;font-weight:500;"}));var b=t("input",{type:"date",style:"width:100%;height:32px;padding:0 8px;font-size:0.85rem;border:0.5px solid #d7e9ec;border-radius:6px;background:#fff;color:#0f2b33;"}),L=new Date;L.setDate(L.getDate()+1),b.value=L.getFullYear()+"-"+String(L.getMonth()+1).padStart(2,"0")+"-"+String(L.getDate()).padStart(2,"0"),W.appendChild(b);var O=t("button",{type:"button",class:"vilda-auth-btn vilda-auth-btn-small",style:"background:#00838d !important;color:#fff !important;border-color:#00838d !important;width:100% !important;padding:6px !important;font-size:0.8rem !important;font-weight:600;",text:"Prze\u0142\xF3\u017C",onclick:async function(){if(b.value){_.remove();try{await r.snoozePatientNote(v,b.value),await E()}catch(R){ot("reminder-snooze-custom",R);try{n.alert("Nie uda\u0142o si\u0119 prze\u0142o\u017Cy\u0107: "+(R&&R.message?R.message:R))}catch{}}}}});W.appendChild(O),_.appendChild(W),n.document.body.appendChild(_);var u=x.getBoundingClientRect(),B=_.offsetWidth||220,A=_.offsetHeight||240,Q=n.innerWidth||n.document.documentElement.clientWidth,G=n.innerHeight||n.document.documentElement.clientHeight,it=u.bottom+4,H=u.left;H+B>Q-8&&(H=Math.max(8,u.right-B)),it+A>G-8&&(it=Math.max(8,u.top-A-4)),_.style.top=it+"px",_.style.left=H+"px",setTimeout(function(){function R(V){!_.contains(V.target)&&V.target!==x&&(_.remove(),n.document.removeEventListener("click",R,!0))}n.document.addEventListener("click",R,!0)},0)}return N(e),d}function gn(){var e=new Date;return e.getFullYear()+"-"+String(e.getMonth()+1).padStart(2,"0")+"-"+String(e.getDate()).padStart(2,"0")}function wn(){try{var e=n.VildaPersistence;if(!e||typeof e.readModuleRaw!="function")return null;var a=e.readModuleRaw("remindersLastShownDate",null);return typeof a=="string"&&a?a:null}catch{return null}}function Da(e){try{var a=n.VildaPersistence;return!a||typeof a.writeModuleRaw!="function"?!1:(a.writeModuleRaw("remindersLastShownDate",e),!0)}catch(i){return ot("writeRemindersLastShownDate",i),!1}}async function Ye(e){try{var a=rt();if(!a||!a.isUnlocked()||typeof a.listPatientNotesDueByDate!="function")return!1;var i=!!(e&&e.force),o=gn();if(!i){var r=wn();if(r===o)return!1}var s=await a.listPatientNotesDueByDate();return!s||!s.length?(i||Da(o),!1):(La(s,{onClose:function(){Da(o)}}),!0)}catch(d){return ot("maybeShowReminders",d),!1}}var Oa=!1;function $n(){if(!Oa){var e=rt();!e||typeof e.onUnlock!="function"||(e.onUnlock(function(){setTimeout(function(){Ye().catch(function(){})},3e3)}),Oa=!0)}}async function jt(e,a,i,o){var r=rt();if(!r||!r.isUnlocked())return;ft(t("div",{class:"vilda-auth-screen vilda-auth-patient-card"},[t("h2",{class:"vilda-auth-title",text:"Karta pacjenta"}),t("p",{class:"vilda-auth-subtitle",text:"Wczytywanie danych\u2026"})]),{noLogo:!0}),st(!0);var s=null;try{s=await r.getPatient(e)}catch(U){ot("showPatientCard getPatient",U)}st(!1);var d=s&&Array.isArray(s.snapshots)?s.snapshots:[],p=d.length?d[0]:null;if(!p||!p.payload){ft(t("div",{class:"vilda-auth-screen vilda-auth-patient-card"},[t("h2",{class:"vilda-auth-title",text:"Karta pacjenta"}),t("p",{class:"vilda-auth-subtitle",text:"Nie uda\u0142o si\u0119 wczyta\u0107 danych pacjenta."}),t("div",{class:"vilda-auth-actions"},[t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost",type:"button",text:"\u2190 Wr\xF3\u0107 do listy",onclick:function(){ue(a,i)}})])]),{noLogo:!0});return}var l=p.payload,f=typeof n.bmiSource<"u"?n.bmiSource:null,m=!1;try{var k=l.zscore&&l.zscore.dataSource?String(l.zscore.dataSource).toUpperCase():null;k&&/^(OLAF|WHO|PALCZEWSKA)$/.test(k)&&(n.bmiSource=k,m=!0)}catch{}var w=l.user||{},h=l.advanced||{},C=l.growthBasic||{},y=C.data||{},j=l.name||"(bez imienia)",E=w.age!=null?parseInt(w.age,10):null,N=w.ageMonths!=null?parseInt(w.ageMonths,10):null,T=w.sex||"",c=w.height!=null?parseFloat(w.height):null,x=w.weight!=null?parseFloat(w.weight):null,v=E!=null&&N!=null?E*12+N:E!=null?E*12:null,g=null;w.dobISO&&typeof r.calcAgeFromDOB=="function"&&(g=r.calcAgeFromDOB(w.dobISO));var S=g&&isFinite(g.totalMonths)?g.totalMonths:v,_=!1;g&&v!=null&&Math.abs(g.totalMonths-v)>3&&(_=!0);var I="";if(_&&(p.savedAtISO||p.lastSavedAtISO)){var W=p.savedAtISO||p.lastSavedAtISO,b=new Date(W);if(!isNaN(b.getTime())){var L=function(U){return U<10?"0"+U:String(U)};I=L(b.getDate())+"-"+L(b.getMonth()+1)+"-"+b.getFullYear()}}var O=[];try{var u=await r.listPatientTimelineEvents(e);O=(u||[]).filter(function(U){return U&&U.type==="measurement"&&U.height!=null}).map(function(U){return{ageMonths:U.ageMonths,ageYears:typeof U.ageYears=="number"?U.ageYears:U.ageMonths/12,height:U.height,weight:U.weight,sex:U.sex||T,boneAgeYears:U.boneAgeYears}})}catch(U){ot("showPatientCard listPatientTimelineEvents for charts",U),O=(y.measurements||[]).filter(function(nt){return nt&&nt.height!=null})}var B=y.growthVelocity!=null?y.growthVelocity:null,A=!!y.isLosingGrowth,Q=!!y.isSlowVelocity;O.sort(function(U,nt){return le(U)-le(nt)});var G=null;c!=null&&x!=null&&c>0&&(G=x/Math.pow(c/100,2));var it=null,H=null,R=null,V=S!=null&&S>=216,et=T,q=S!=null&&isFinite(S)?S/12:E;try{if(!V&&q!=null&&isFinite(q)&&typeof calcPercentileStats=="function"){if(c!=null){var ct=calcPercentileStats(c,et,q,"HT");ct&&ct.percentile!=null&&(it=ct.percentile)}if(x!=null){var D=calcPercentileStats(x,et,q,"WT");D&&D.percentile!=null&&(H=D.percentile)}}if(!V&&G!=null&&S!=null&&typeof bmiPercentileChild=="function"){var P=bmiPercentileChild(G,et,S);P!=null&&(R=P)}}catch{}var K=null;try{if(!V&&G!=null&&S!=null&&typeof getLMS=="function"){var Y=getLMS(et,Math.round(S));Y&&Y.M&&(K=G/Y.M*100)}}catch{}var Z=l.zscore||{},$=typeof Z.dataSource=="string"&&Z.dataSource?Z.dataSource.toUpperCase():null,at=$==="PALCZEWSKA"?"Palczewska":$==="WHO"?"WHO":$==="OLAF"?"OLAF":null,M=h.motherHeight?parseFloat(h.motherHeight):null,z=h.fatherHeight?parseFloat(h.fatherHeight):null,F=null,J=null;if(M&&z&&isFinite(M)&&isFinite(z)){var X=T.toLowerCase();X==="m"||X==="ch"||X==="ch\u0142opiec"||X==="male"?F=(M+z+13)/2:(X==="k"||X==="dz"||X==="dziewczynka"||X==="female"||X==="f")&&(F=(M+z-13)/2)}if(F!=null)try{if($==="PALCZEWSKA"&&typeof calcPercentileStatsPal=="function"){var tt=calcPercentileStatsPal(F,T,18,"HT");tt&&tt.percentile!=null&&(J=tt.percentile)}else if(typeof calcPercentileStats=="function"){var ht=calcPercentileStats(F,T,18,"HT");ht&&ht.percentile!=null&&(J=ht.percentile)}}catch{}function vt(U,nt,zt){if(V){if(U==="bmi")return nt!=null?nt>=30||nt<18.5?"alert":nt>=25?"improve":null:null;if(U==="cole")return nt!=null?nt<90||nt>=120?"alert":nt>110?"improve":null:null}else{if(U==="height"||U==="weight")return zt==null?null:zt<3||zt>97?"alert":zt<10||zt>90?"improve":null;if(U==="bmi")return zt!=null?zt>=97||zt<3?"alert":zt>=85?"improve":null:null;if(U==="cole")return nt!=null?nt<90||nt>=120?"alert":nt>110?"improve":null:null}return null}function Ct(U){if(U==null||!isFinite(U))return"";var nt=Math.round(U);return nt<1?"<1. centyl":nt>99?">99. centyl":nt+". centyl"}function wt(U,nt,zt,ie,Ga){var De="vilda-patient-stat";ie==="alert"?De+=" vilda-patient-stat--alert":ie==="improve"?De+=" vilda-patient-stat--improve":nt&&nt!=="\u2014"&&(De+=" vilda-patient-stat--ok");var oa=[t("div",{class:"vilda-patient-stat-label",text:U}),t("div",{class:"vilda-patient-stat-value",text:nt||"\u2014"})];if(zt){var Gn=ie==="alert"||ie==="improve"?"vilda-patient-stat-extra":"vilda-patient-stat-sub";oa.push(t("div",{class:Gn,text:zt}))}return Ga&&oa.push(t("div",{class:"vilda-patient-stat-sub-alt",style:"font-size:0.72rem; color:#7a8788; font-style:italic; margin-top:2px;",text:Ga})),t("div",{class:De},oa)}function pt(U,nt){return U==null||!isFinite(U)?null:U.toFixed(nt??1).replace(".",",")}var Mt="";typeof S=="number"&&isFinite(S)&&S>=0?Mt=_t(S):E!=null&&(Mt=E+" lat",N!=null&&N>0&&(Mt+=" i "+N+(N===1?" miesi\u0105c":N<5?" miesi\u0105ce":" miesi\u0119cy")));var $t=[Mt,T].filter(Boolean).join(" \xB7 "),pe=p.savedAtISO||p.lastSavedAtISO?Ut(p.savedAtISO||p.lastSavedAtISO):"",Vt="";w.dobISO&&typeof r.formatDobForDisplay=="function"&&(Vt=r.formatDobForDisplay(w.dobISO));var he=[t("div",{class:"vilda-patient-hero-name",text:j})];$t&&he.push(t("div",{class:"vilda-patient-hero-meta",text:$t})),Vt&&he.push(t("div",{class:"vilda-patient-hero-meta vilda-patient-hero-meta--small",text:"ur. "+Vt}));var lt=t("button",{class:"vilda-auth-btn vilda-auth-btn-small vilda-patient-hero-edit-pill",type:"button",text:"\u270F Edytuj",title:"Edytuj dane pacjenta","aria-label":"Edytuj dane pacjenta",onclick:function(){_a(e,a,i)}}),bt=t("button",{class:"vilda-auth-btn vilda-auth-btn-small vilda-patient-hero-new-measure-pill",type:"button",text:"+ Nowy pomiar",title:"Dodaj nowy pomiar (waga, wzrost)","aria-label":"Dodaj nowy pomiar",onclick:function(){Qe(e,{onSaved:function(){jt(e,a,i)}})}}),It=t("div",{class:"vilda-patient-hero"},[t("div",{class:"vilda-patient-hero-info"},he),t("div",{class:"vilda-patient-hero-actions"},[lt,bt])]);function Lt(U){return'<svg class="vilda-patient-tab-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+U+"</svg>"}function Kt(U,nt){return Lt(U)+'<span class="vilda-patient-tab-lbl">'+nt+"</span>"}var Ae='<path d="M3 12h4l2 6 4-12 2 6h6"/>',Ee='<path d="M4 4v16h16"/><path d="M7 15l4-4 3 2 5-6"/>',Ft='<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/>',Pe='<path d="M3 4v5h5"/><path d="M3.5 9a9 9 0 1 1-1 4"/><path d="M12 8v4l3 2"/>',te=t("button",{class:"vilda-patient-tab vilda-patient-tab--active",type:"button",html:Kt(Ae,"Status"),"data-tab":"antro"}),ee=t("button",{class:"vilda-patient-tab",type:"button",html:Kt(Ee,"Siatki centylowe"),"data-tab":"traj"}),gt=t("button",{class:"vilda-patient-tab",type:"button",html:Kt(Ft,"Notatki"),"data-tab":"notes"}),Me=t("button",{class:"vilda-patient-tab",type:"button",html:Kt(Pe,"Historia"),"data-tab":"timeline"}),On=t("div",{class:"vilda-patient-tabs",role:"tablist"},[te,ee,gt,Me]),Zt=t("div",{class:"vilda-patient-tab-content","data-tab":"antro"}),fe=null;_&&(fe="przeliczono na dzi\u015B \xB7 ostatni pomiar: "+(I||"?"));var Yt=[];if(c!=null){var _n=vt("height",c,it),Tn=it!=null?Ct(it):null;Yt.push(wt("Wzrost",pt(c)+" cm",Tn,_n,fe))}if(x!=null){var Fn=vt("weight",x,H),Nn=H!=null?Ct(H):null;Yt.push(wt("Waga",pt(x)+" kg",Nn,Fn,fe))}if(G!=null){var Bn=vt("bmi",G,R),Rn=R!=null?Ct(R):null;Yt.push(wt("BMI",pt(G),Rn,Bn,fe))}if(K!=null){var Wn=vt("cole",K,null);Yt.push(wt("Wska\u017Anik Cole'a",pt(K)+"%",null,Wn,fe))}Yt.length>0&&(Zt.appendChild(t("p",{class:"vilda-patient-section-h",text:"Pomiar"})),Zt.appendChild(t("div",{class:"vilda-patient-stats-grid"},Yt)));var ae=[];if(B!=null){var Un=A?"\u26A0 zahamowanie wzrostu":Q?"\u26A0 wolna pr\u0119dko\u015B\u0107":null,Hn=A||Q?"improve":null;ae.push(wt("Pr\u0119dko\u015B\u0107 wzrastania",pt(B)+" cm/rok",Un,Hn))}if(F!=null){var Vn=J!=null?Ct(J):null;ae.push(wt("MPH",pt(F)+" cm",Vn,null))}at&&ae.push(wt("Siatki centylowe",at,null,null)),ae.length>0&&(Zt.appendChild(t("p",{class:"vilda-patient-section-h vilda-patient-section-h--secondary",text:"Wzrastanie i genetyka rodzinna"})),Zt.appendChild(t("div",{class:"vilda-patient-stats-grid"},ae))),Yt.length===0&&ae.length===0&&Zt.appendChild(t("p",{class:"vilda-patient-empty-msg",text:"Brak danych do wy\u015Bwietlenia."}));var Qt=t("div",{class:"vilda-patient-tab-content vilda-patient-tab-content--hidden","data-tab":"traj"});function $e(U,nt,zt){if(!nt)return!1;var ie="vilda-patient-section-h"+(zt?"":" vilda-patient-section-h--secondary");return Qt.appendChild(t("p",{class:ie,text:U})),Qt.appendChild(t("div",{class:"vilda-patient-chart-wrap"},[nt])),!0}var Nt=0;if(!V&&O.length>0){var ta=at?" \xB7 "+at:"";try{var Kn=Ce("height",O,et,S,c);$e("Siatka centylowa wzrostu"+ta,Kn,Nt===0)&&Nt++}catch(U){ot("buildPercentileChart(height)",U)}try{var Zn=Ce("weight",O,et,S,x);$e("Siatka centylowa wagi"+ta,Zn,Nt===0)&&Nt++}catch(U){ot("buildPercentileChart(weight)",U)}try{var Yn=Ce("bmi",O,et,S,G);$e("Siatka centylowa BMI"+ta,Yn,Nt===0)&&Nt++}catch(U){ot("buildPercentileChart(bmi)",U)}}Nt>0&&(Qt.appendChild(t("div",{class:"vilda-patient-chart-legend"},[t("span",{class:"vilda-patient-legend-item"},[t("span",{class:"vilda-patient-legend-line",style:"background:#0F6E56;"}),t("span",{text:" percentyle 3/10/50/90/97"})]),t("span",{class:"vilda-patient-legend-item"},[t("span",{class:"vilda-patient-legend-dot",style:"background:#b71c1c;"}),t("span",{text:" pomiary pacjenta"})])])),Qt.appendChild(t("p",{class:"vilda-patient-chart-disclaimer",text:"Podgl\u0105d \u2014 siatki uproszczone (5 linii percentylowych), s\u0142u\u017C\u0105 do oceny trajektorii. Pe\u0142ne siatki dost\u0119pne w g\u0142\xF3wnym module wzrastania."}))),Nt===0&&Qt.appendChild(t("p",{class:"vilda-patient-empty-msg",text:V?"Siatki centylowe dost\u0119pne tylko dla dzieci i m\u0142odzie\u017Cy (< 18 lat).":"Brak wystarczaj\u0105cych danych do wy\u015Bwietlenia trajektorii. Wprowad\u017A wzrost, wag\u0119 i wiek pacjenta."}));var ea=t("div",{class:"vilda-patient-tab-content vilda-patient-tab-content--hidden vilda-patient-notes-section","data-tab":"notes"}),Ie=!1;function aa(){try{bn(ea,e,aa)}catch(nt){ot("renderPatientNotesSection",nt)}if(ne){var U=!1;try{U=Me.classList.contains("vilda-patient-tab--active")}catch{}U?Le():ne=!1}}var na=t("div",{class:"vilda-patient-tab-content vilda-patient-tab-content--hidden vilda-patient-timeline-section","data-tab":"timeline"}),ne=!1;function Le(){try{zn(na,e,Le,a,i)}catch(U){ot("renderTimelineSection",U)}}function ye(U){[te,ee,gt,Me].forEach(function(nt){nt.getAttribute("data-tab")===U?nt.classList.add("vilda-patient-tab--active"):nt.classList.remove("vilda-patient-tab--active")}),[Zt,Qt,ea,na].forEach(function(nt){nt.getAttribute("data-tab")===U?nt.classList.remove("vilda-patient-tab-content--hidden"):nt.classList.add("vilda-patient-tab-content--hidden")})}if(te.addEventListener("click",function(){ye("antro")}),ee.addEventListener("click",function(){ye("traj")}),gt.addEventListener("click",function(){ye("notes"),Ie||(Ie=!0,aa())}),Me.addEventListener("click",function(){ye("timeline"),ne||(ne=!0,Le())}),o&&o.activeTab){if(o.activeTab==="notes"&&!Ie){Ie=!0;try{aa()}catch(U){ot("showPatientCard restore notes",U)}}if(o.activeTab==="timeline"&&!ne){ne=!0;try{Le()}catch(U){ot("showPatientCard restore timeline",U)}}if(o.activeTab==="antro"||o.activeTab==="traj"||o.activeTab==="notes"||o.activeTab==="timeline")try{ye(o.activeTab)}catch(U){ot("showPatientCard restore switchTab",U)}}var Qa=t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost",type:"button",text:"\u2190 Wr\xF3\u0107 do listy",onclick:function(){ue(a,i)}}),ia=null;typeof a=="function"&&(ia=t("button",{class:"vilda-auth-btn vilda-auth-btn-primary",type:"button",text:"Wczytaj tego pacjenta",onclick:function(){var U=n.VildaSession&&typeof n.VildaSession.getPatient=="function"?n.VildaSession.getPatient():null;if(U&&U.source==="form"){var nt="Zast\u0105pisz dane pacjenta \u201E"+U.name+"\u201D. Kontynuowa\u0107?";if(!n.confirm(nt))return}a(l,e);try{typeof n.CustomEvent=="function"&&n.document&&n.document.dispatchEvent(new n.CustomEvent("vilda:patient-loaded",{detail:{patientId:e,savedAtISO:p&&p.savedAtISO||null,snapshotCount:s&&s.snapshotCount||d.length||null,name:l&&l.name||null}}))}catch{}mt()}}));var Qn=[t("h2",{class:"vilda-auth-title",text:"Karta pacjenta"}),It,On,Zt,Qt,ea,na,t("div",{class:"vilda-auth-actions vilda-patient-actions"},ia?[Qa,ia]:[Qa])];if(m)try{n.bmiSource=f}catch{}ft(t("div",{class:"vilda-auth-screen vilda-auth-patient-card"},Qn),{noLogo:!0})}async function _a(e,a,i){var o=rt();if(!o||!o.isUnlocked())return;ft(t("div",{class:"vilda-auth-screen vilda-auth-patient-card"},[t("h2",{class:"vilda-auth-title",text:"Edycja pacjenta"}),t("p",{class:"vilda-auth-subtitle",text:"Wczytywanie danych\u2026"})]),{noLogo:!0}),st(!0);var r=null;try{r=await o.getPatient(e)}catch(z){ot("showPatientEditScreen getPatient",z)}if(st(!1),!r||!r.snapshots.length){ft(t("div",{class:"vilda-auth-screen"},[t("h2",{class:"vilda-auth-title",text:"Edycja pacjenta"}),t("p",{class:"vilda-auth-subtitle",text:"Brak danych do edycji."}),t("div",{class:"vilda-auth-actions"},[t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost",type:"button",text:"\u2190 Wr\xF3\u0107",onclick:function(){jt(e,a,i)}})])]),{noLogo:!0});return}var s=r.snapshots[0],d=s.payload||{},p=d.name||"(bez imienia)",l=d.user||{},f=l.age,m=l.ageMonths,k=l.sex,w=l.height,h=l.weight,C=l.dobISO&&typeof o.sanitizeDobISO=="function"?o.sanitizeDobISO(l.dobISO):null,y=d.advanced||{};function j(z,F){var J=t("input",Object.assign({class:"vilda-auth-input",type:"text",autocomplete:"off",spellcheck:"false"},F||{}));return J.value=z==null?"":String(z),J}function E(z,F){return t("div",{style:"display:block;"},[t("label",{class:"vilda-patient-stat-label",style:"display:block; margin-bottom:4px;",text:z}),F])}function N(z){var F=(z==null?"":String(z)).trim().toLowerCase();return F==="m"||F.indexOf("ch\u0142o")===0||F==="male"||F==="boy"?"M":F==="k"||F.indexOf("dziew")===0||F==="female"||F==="girl"||F==="f"?"K":""}var T=j(p==="(bez imienia)"?"":p,{placeholder:"Imi\u0119 i nazwisko",maxlength:"120"}),c=typeof o.formatDobForDisplay=="function"?o.formatDobForDisplay(C):"",x=j(c,{inputmode:"numeric",placeholder:"DD-MM-RRRR (opcjonalnie)",maxlength:"10",autocomplete:"bday"}),v=t("div",{class:"vilda-dob-err"}),g=j(f??"",{inputmode:"numeric",placeholder:"lata"}),S=j(m??"",{inputmode:"numeric",placeholder:"miesi\u0105ce (0\u201311)"}),_=t("select",{class:"vilda-auth-input"},[t("option",{value:"",text:"\u2014 wybierz \u2014"}),t("option",{value:"M",text:"ch\u0142opiec"}),t("option",{value:"K",text:"dziewczynka"})]);_.value=N(k);var I=j(w??"",{inputmode:"decimal",placeholder:"cm"}),W=j(h??"",{inputmode:"decimal",placeholder:"kg"}),b=j(y.motherHeight!=null?y.motherHeight:"",{inputmode:"decimal",placeholder:"cm"}),L=j(y.fatherHeight!=null?y.fatherHeight:"",{inputmode:"decimal",placeholder:"cm"}),O=d.perinatal&&typeof d.perinatal=="object"?d.perinatal:{},u=j(O.gestationalWeeks!=null?O.gestationalWeeks:"",{inputmode:"numeric",placeholder:"tyg. (22\u201343)"}),B=j(O.gestationalDays!=null?O.gestationalDays:"",{inputmode:"numeric",placeholder:"dni (0\u20136)"}),A=j(O.birthWeightG!=null?O.birthWeightG:"",{inputmode:"numeric",placeholder:"g"}),Q=j(O.birthLengthCm!=null?O.birthLengthCm:"",{inputmode:"decimal",placeholder:"cm"}),G=j(O.birthHeadCircCm!=null?O.birthHeadCircCm:"",{inputmode:"decimal",placeholder:"cm"}),it=j(O.gravidity!=null?O.gravidity:"",{inputmode:"numeric",placeholder:"nr"}),H=j(O.parity!=null?O.parity:"",{inputmode:"numeric",placeholder:"nr"}),R=t("div",{class:"vilda-auth-error"});function V(z,F,J){var X=(J==null?"":String(J)).trim().replace(",",".");if(X===""){z[F]="";return}var tt=parseFloat(X);z[F]=isFinite(tt)?tt:X}function et(){var z=(x.value||"").trim();if(z===""){g.readOnly=!1,S.readOnly=!1,v.textContent="";return}var F=typeof o.parseDobFromDisplay=="function"?o.parseDobFromDisplay(z):null;if(!F){v.textContent="Nieprawid\u0142owa data. Format: DD-MM-RRRR (np. 12-01-2018).",g.readOnly=!1,S.readOnly=!1;return}var J=o.calcAgeFromDOB(F);if(!J){v.textContent="Data nie pozwala obliczy\u0107 wieku.",g.readOnly=!1,S.readOnly=!1;return}v.textContent="",g.value=String(J.years),S.value=String(J.ageMonths),g.readOnly=!0,S.readOnly=!0}function q(){T.value=p==="(bez imienia)"?"":p,_.value=N(k),x.value=c,g.value=f??"",S.value=m??"",I.value=w??"",W.value=h??"",b.value=y.motherHeight!=null?y.motherHeight:"",L.value=y.fatherHeight!=null?y.fatherHeight:"",R.textContent="",v.textContent="",et()}async function ct(){var z=(T.value||"").trim();if(!z){R.textContent="Imi\u0119 i nazwisko jest wymagane.";try{T.focus()}catch{}return}var F=(x.value||"").trim(),J=null;if(F!==""&&(J=typeof o.parseDobFromDisplay=="function"?o.parseDobFromDisplay(F):null,!J)){R.textContent="Nieprawid\u0142owa data urodzenia. U\u017Cyj formatu DD-MM-RRRR (np. 12-01-2018) lub zostaw puste.";try{x.focus()}catch{}return}var X;try{X=JSON.parse(JSON.stringify(d))}catch{R.textContent="Nie uda\u0142o si\u0119 przygotowa\u0107 danych do zapisu.";return}X.name=z,X.user=X.user||{},J?X.user.dobISO=J:"dobISO"in X.user&&delete X.user.dobISO,V(X.user,"age",g.value),V(X.user,"ageMonths",S.value),X.user.sex=_.value||"",V(X.user,"height",I.value),V(X.user,"weight",W.value),X.advanced=X.advanced||{},V(X.advanced,"motherHeight",b.value),V(X.advanced,"fatherHeight",L.value),(function(){var tt={};function ht(vt,Ct){var wt=(Ct==null?"":String(Ct)).trim().replace(",",".");if(wt!==""){var pt=parseFloat(wt);isFinite(pt)&&(tt[vt]=pt)}}ht("gestationalWeeks",u.value),ht("gestationalDays",B.value),ht("birthWeightG",A.value),ht("birthLengthCm",Q.value),ht("birthHeadCircCm",G.value),ht("gravidity",it.value),ht("parity",H.value),O.birthWeightSds!=null&&(tt.birthWeightSds=O.birthWeightSds),O.birthLengthSds!=null&&(tt.birthLengthSds=O.birthLengthSds),O.sdsSourceLabel&&(tt.sdsSourceLabel=O.sdsSourceLabel),O.catchUp&&(tt.catchUp=O.catchUp),Object.keys(tt).length?X.perinatal=tt:"perinatal"in X&&delete X.perinatal})();try{st(!0),await o.savePatient(X,{patientId:e,dedup:!1}),st(!1),jt(e,a,i)}catch(tt){st(!1),R.textContent="Nie uda\u0142o si\u0119 zapisa\u0107 zmian.",ot("showPatientEditScreen saveEdits",tt)}}async function D(){var z=p&&p!=="(bez imienia)"?p:"tego pacjenta";if(n.confirm("Usun\u0105\u0107 pacjenta \u201E"+z+"\u201D wraz z ca\u0142\u0105 histori\u0105 pomiar\xF3w i notatek? Tej operacji nie mo\u017Cna cofn\u0105\u0107."))try{st(!0),await o.removePatient(e),st(!1),ue(a,i)}catch(F){st(!1),R.textContent="Nie uda\u0142o si\u0119 usun\u0105\u0107 pacjenta.",ot("showPatientEditScreen deletePatient",F)}}var P=t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost",type:"button",text:"\u2190 Wr\xF3\u0107 do karty pacjenta",onclick:function(){jt(e,a,i)}}),K='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',Y=t("button",{type:"button",class:"vilda-dob-info-btn","aria-label":"Informacja o polu data urodzenia","aria-expanded":"false",html:K}),Z=t("div",{class:"vilda-dob-pop",role:"tooltip",text:"Opcjonalnie. Wype\u0142nij, by aplikacja automatycznie liczy\u0142a wiek przy kolejnych pomiarach."});Z.style.display="none";var $=t("div",{class:"vilda-dob-field"},[x,Z,v]),at=t("div",{style:"display:block;"},[t("div",{class:"vilda-dob-label-row"},[t("label",{class:"vilda-patient-stat-label",text:"Data urodzenia"}),Y]),$]);(function(){function z(){Z.style.display="block",Y.setAttribute("aria-expanded","true")}function F(){Z.style.display="none",Y.setAttribute("aria-expanded","false")}Y.addEventListener("click",function(J){J.preventDefault(),J.stopPropagation(),Z.style.display==="none"?z():F()}),Y.addEventListener("mouseenter",z),at.addEventListener("mouseleave",F),n.document.addEventListener("click",function(J){at.contains(J.target)||F()})})(),x.addEventListener("input",et),x.addEventListener("blur",et),et();var M=t("div",{class:"vilda-auth-screen vilda-auth-patient-card"},[t("h2",{class:"vilda-auth-title",text:"Edycja pacjenta"}),t("p",{class:"vilda-patient-section-h",text:"Dane pacjenta"}),t("div",{class:"vilda-patient-stats-grid"},[E("Imi\u0119 i nazwisko",T),E("P\u0142e\u0107",_),at]),t("p",{class:"vilda-patient-section-h vilda-patient-section-h--secondary",text:"Dane oko\u0142oporodowe"}),t("div",{class:"vilda-patient-stats-grid"},[E("Wiek ci\u0105\u017Cowy (tyg.)",u),E("Wiek ci\u0105\u017Cowy (dni)",B),E("Masa urodzeniowa (g)",A),E("D\u0142ugo\u015B\u0107 urodzeniowa (cm)",Q),E("Obw\xF3d g\u0142owy (cm)",G),E("Kt\xF3ra ci\u0105\u017Ca",it),E("Kt\xF3ry por\xF3d",H)]),t("p",{class:"vilda-patient-section-h vilda-patient-section-h--secondary",text:"Wzrost rodzic\xF3w (do MPH)"}),t("div",{class:"vilda-patient-stats-grid"},[E("Wzrost matki (cm)",b),E("Wzrost ojca (cm)",L)]),t("p",{class:"vilda-patient-empty-msg",style:"margin-top:6px;",text:'Dane sta\u0142e pacjenta. Pomiary (wzrost, masa, wiek) dodajesz przez \u201ENowy pomiar"; korekta ostatniego \u2014 w zak\u0142adce Historia. Dane oko\u0142oporodowe zasilaj\u0105 modu\u0142 SGA i epikryz\u0119.'}),R,t("div",{class:"vilda-auth-actions"},[t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost",type:"button",text:"Przywr\xF3\u0107",onclick:q}),t("button",{class:"vilda-auth-btn vilda-auth-btn-primary",type:"button",text:"Zapisz zmiany",onclick:ct})]),t("div",{class:"vilda-patient-delete-row"},[t("button",{class:"vilda-auth-btn vilda-patient-delete-btn",type:"button",text:"Usu\u0144 pacjenta",onclick:D})]),t("div",{class:"vilda-auth-actions vilda-patient-actions"},[P])]);ft(M,{noLogo:!0})}async function Qe(e,a){a=a||{};var i=a.mode==="edit"?"edit":"new",o=i==="edit"&&typeof a.snapshotId=="string"?a.snapshotId:null,r=rt();if(!r||!r.isUnlocked()){try{n.alert("Modal nowego pomiaru wymaga zalogowanego konta lekarza.")}catch{}return}if(typeof r.savePatient!="function"){try{n.alert("Funkcja savePatient niedost\u0119pna \u2014 od\u015Bwie\u017C stron\u0119 (Ctrl+Shift+R).")}catch{}return}if(i==="edit"&&typeof r.updateSnapshotPayload!="function"){try{n.alert("Funkcja edit-in-place niedost\u0119pna \u2014 od\u015Bwie\u017C stron\u0119 (Ctrl+Shift+R).")}catch{}return}if(i==="edit"&&!o){try{n.alert("Brak snapshotId \u2014 nie mo\u017Cna edytowa\u0107.")}catch{}return}var s=null;try{s=await r.getPatient(e)}catch(Z){ot("showQuickMeasureModal getPatient",Z);return}if(!s||!s.snapshots||!s.snapshots.length){try{n.alert("Brak danych pacjenta \u2014 nie mo\u017Cna doda\u0107 pomiaru.")}catch{}return}var d;if(i==="edit"){if(d=s.snapshots.find(function(Z){return Z.snapshotId===o}),!d){try{n.alert("Nie znaleziono pomiaru do edycji (snapshotId: "+o+").")}catch{}return}}else d=s.snapshots[0];var p=d.payload||{},l=p.user||{},f=l.dobISO&&typeof r.sanitizeDobISO=="function"?r.sanitizeDobISO(l.dobISO):null,m=typeof l.height=="number"&&isFinite(l.height)?l.height:null,k=typeof l.weight=="number"&&isFinite(l.weight)?l.weight:null,w=typeof l.age=="number"&&isFinite(l.age)?l.age:null,h=typeof l.ageMonths=="number"&&isFinite(l.ageMonths)?l.ageMonths:null,C=l.sex||"",y=p.name||"(bez imienia)";if(i==="edit"&&a.rowValues&&typeof a.rowValues=="object"){var j=a.rowValues;typeof j.height=="number"&&isFinite(j.height)&&(m=j.height),typeof j.weight=="number"&&isFinite(j.weight)&&(k=j.weight),typeof j.ageMonths=="number"&&isFinite(j.ageMonths)&&(w=Math.floor(j.ageMonths/12),h=j.ageMonths%12)}try{for(var E=n.document.querySelectorAll(".vilda-quick-measure-overlay"),N=0;N<E.length;N+=1)E[N].remove()}catch{}var T=t("div",{class:"vilda-auth-overlay vilda-auth-overlay-sheet vilda-quick-measure-overlay",style:"position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000001;padding:20px;"}),c=t("div",{class:"vilda-auth-sheet",style:"background:#fff;border-radius:14px;padding:18px 20px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;gap:12px;"});c.appendChild(t("h3",{text:i==="edit"?"\u270F Popraw pomiar":"+ Nowy pomiar",style:"margin:0;font-size:1.05rem;font-weight:600;color:#0f2b33;"})),c.appendChild(t("p",{text:i==="edit"?"Pacjent: "+y+". Korekta nadpisze istniej\u0105cy pomiar bez tworzenia drugiego wpisu.":"Pacjent: "+y+". Wpisz wag\u0119 i wzrost. BMI policzy si\u0119 automatycznie.",style:"margin:0;font-size:0.82rem;color:#5b6672;line-height:1.4;"}));function x(Z,$,at){var M=t("div",null,[t("label",{text:Z,style:"display:block;font-size:0.78rem;color:#5b6672;margin-bottom:4px;font-weight:500;"}),$]);return at&&M.appendChild(t("div",{style:"font-size:0.72rem;color:#9aa8aa;margin-top:3px;line-height:1.4;",text:at})),M}function v(Z){return t("input",Object.assign({class:"vilda-auth-input",style:"width:100%;height:38px;padding:0 10px;font-size:0.92rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;",autocomplete:"off"},Z||{}))}var g=new Date().toISOString().substring(0,10),S=g;if(i==="edit"){var _=d.savedAtISO||"";_&&_.length>=10&&(S=_.substring(0,10))}var I=v({type:"date",value:S});c.appendChild(x("Data pomiaru",I,i==="edit"?"Pomiar zosta\u0142 pierwotnie zapisany w tym dniu. Mo\u017Cesz skorygowa\u0107 dat\u0119.":"Domy\u015Blnie dzisiaj. Mo\u017Cesz wpisa\u0107 starsz\u0105 dat\u0119, je\u015Bli dodajesz pomiar wstecznie."));var W=t("div",{style:"display:grid;grid-template-columns:1fr 1fr;gap:10px;"}),b=v({type:"text",inputmode:"decimal",placeholder:m!=null?String(m):"cm"}),L=v({type:"text",inputmode:"decimal",placeholder:k!=null?String(k):"kg"});W.appendChild(x("Wzrost (cm)",b)),W.appendChild(x("Waga (kg)",L)),c.appendChild(W);var O=t("div",{style:"background:#f5fafb;border:0.5px solid #d7e9ec;border-radius:8px;padding:8px 10px;font-size:0.92rem;color:#0f2b33;font-weight:500;min-height:38px;display:flex;align-items:center;",text:"BMI: \u2014"});c.appendChild(O);var u=null,B=null,A=null,Q=t("div");if(f)u=t("div",{style:"background:#f5fafb;border:0.5px solid #d7e9ec;border-radius:8px;padding:8px 10px;font-size:0.92rem;color:#0f2b33;font-weight:500;min-height:38px;display:flex;align-items:center;",text:"Wiek: \u2014"}),Q.appendChild(x("Wiek (auto z daty urodzenia)",u,'Liczony z DOB i daty pomiaru. Aby zmieni\u0107 \u2014 usu\u0144 DOB w \u201EEdytuj" karty pacjenta.'));else{var G=t("div",{style:"display:grid;grid-template-columns:1fr 1fr;gap:10px;"});B=v({type:"text",inputmode:"numeric",placeholder:"lata"}),A=v({type:"text",inputmode:"numeric",placeholder:"miesi\u0105ce (0-11)"}),w!=null&&(B.value=String(w)),h!=null&&(A.value=String(h)),G.appendChild(x("Wiek (lata)",B)),G.appendChild(x("Wiek (miesi\u0105ce, 0-11)",A)),Q.appendChild(G)}c.appendChild(Q);var it=null,H=null,R=null;if(!f){it=t("button",{type:"button",style:"background:transparent;border:0;color:#00838d;text-align:left;padding:6px 0;font-size:0.82rem;cursor:pointer;text-decoration:underline;align-self:flex-start;",text:"\u{1F4A1} Wpisz dat\u0119 urodzenia, by w przysz\u0142o\u015Bci nie pyta\u0107 o wiek"}),c.appendChild(it);var V=t("div",{style:"display:none;"});H=v({type:"text",inputmode:"numeric",maxlength:"10",placeholder:"DD-MM-RRRR",autocomplete:"bday"}),R=t("div",{style:"color:#A32D2D;font-size:0.78rem;margin-top:4px;min-height:1em;"}),V.appendChild(x("Data urodzenia (opcjonalnie)",H,"Aplikacja b\u0119dzie automatycznie liczy\u0107 wiek przy kolejnych pomiarach.")),V.appendChild(R),c.appendChild(V),it.addEventListener("click",function(){var Z=V.style.display!=="none";V.style.display=Z?"none":"block",it.textContent=Z?"\u{1F4A1} Wpisz dat\u0119 urodzenia, by w przysz\u0142o\u015Bci nie pyta\u0107 o wiek":"\u25BC Schowaj pole daty urodzenia"})}var et=t("div",{style:"font-size:0.82rem;color:#0F6E56;line-height:1.4;min-height:1.2em;font-weight:500;"});c.appendChild(et);var q=t("div",{style:"color:#A32D2D;font-size:0.82rem;line-height:1.4;display:none;"});c.appendChild(q);function ct(Z){var $=(Z==null?"":String(Z)).trim().replace(",",".");if($==="")return null;var at=parseFloat($);return isFinite(at)?at:null}function D(){var Z=ct(b.value),$=ct(L.value),at=Z!=null&&$!=null&&Z>0?$/Math.pow(Z/100,2):null;if(O.textContent=at!=null?"BMI: "+at.toFixed(1).replace(".",","):"BMI: \u2014",f&&u){var M=typeof r.calcAgeFromDOB=="function"?r.calcAgeFromDOB(f,I.value||g):null;u.textContent=M?"Wiek: "+_t(M.totalMonths):"Wiek: \u2014 (data pomiaru przed DOB)"}var z=[];if(Z!=null&&m!=null){var F=Z-m;z.push("\u0394 wzrost "+(F>=0?"+":"")+F.toFixed(1).replace(".",",")+" cm")}if($!=null&&k!=null){var J=$-k;z.push("\u0394 waga "+(J>=0?"+":"")+J.toFixed(1).replace(".",",")+" kg")}et.textContent=z.length?z.join(" \xB7 "):""}[b,L,I].forEach(function(Z){Z.addEventListener("input",D),Z.addEventListener("change",D)}),D();var P=t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost",type:"button",style:"background:transparent !important;color:#5b6672 !important;border:0.5px solid #d7e9ec !important;width:auto !important;padding:8px 16px !important;flex:0 0 auto !important;",text:"Anuluj",onclick:function(){T.remove(),typeof a.onCancel=="function"&&a.onCancel()}}),K=t("button",{class:"vilda-auth-btn vilda-auth-btn-primary",type:"button",style:"background:#00838d !important;color:#fff !important;border-color:#00838d !important;width:auto !important;padding:8px 18px !important;font-weight:600;flex:0 0 auto !important;",text:i==="edit"?"Zapisz korekt\u0119":"Zapisz pomiar",onclick:async function(){q.style.display="none",q.textContent="",R&&(R.textContent="");var Z=ct(b.value),$=ct(L.value);if(Z==null||Z<=0){q.textContent="Podaj wzrost w cm (np. 122).",q.style.display="block";try{b.focus()}catch{}return}if($==null||$<=0){q.textContent="Podaj wag\u0119 w kg (np. 25.3).",q.style.display="block";try{L.focus()}catch{}return}var at=I.value&&I.value.length===10?I.value:g,M=null,z=null;if(f){var F=typeof r.calcAgeFromDOB=="function"?r.calcAgeFromDOB(f,at):null;if(!F){q.textContent="Data pomiaru jest wcze\u015Bniejsza ni\u017C data urodzenia \u2014 sprawd\u017A daty.",q.style.display="block";return}M=F.years,z=F.ageMonths}else{if(M=ct(B&&B.value),z=ct(A&&A.value),M==null&&z==null){q.textContent="Podaj wiek pacjenta \u2014 lata lub miesi\u0105ce.",q.style.display="block";return}M==null&&(M=0),z==null&&(z=0)}var J=null;if(!f&&H&&(H.value||"").trim()!==""&&(J=typeof r.parseDobFromDisplay=="function"?r.parseDobFromDisplay(H.value):null,!J)){R&&(R.textContent="Nieprawid\u0142owa data urodzenia. Format DD-MM-RRRR (np. 12-01-2018).");try{H.focus()}catch{}return}if(i==="edit"&&a.rowRef&&typeof r.updateMeasurementRow=="function"){var X=Math.round((M||0)*12+(z||0));K.disabled=!0,P.disabled=!0;try{st(!0),await r.updateMeasurementRow(e,a.rowRef,{ageMonths:X,height:Z,weight:$}),st(!1),T.remove();try{n.document.dispatchEvent(new n.CustomEvent("vilda:measurement-changed",{detail:{patientId:e,action:"edit-row"}}))}catch{}typeof a.onSaved=="function"&&a.onSaved()}catch(pt){st(!1),K.disabled=!1,P.disabled=!1,q.textContent="Nie uda\u0142o si\u0119 zapisa\u0107 korekty pomiaru.",q.style.display="block",ot("showQuickMeasureModal updateMeasurementRow",pt)}return}var tt;try{tt=JSON.parse(JSON.stringify(p))}catch{q.textContent="Nie uda\u0142o si\u0119 przygotowa\u0107 danych.",q.style.display="block";return}(!tt.user||typeof tt.user!="object")&&(tt.user={}),tt.user.height=Z,tt.user.weight=$,tt.user.age=M,tt.user.ageMonths=z,J&&(tt.user.dobISO=J),at===g?tt.timestampISO=new Date().toISOString():tt.timestampISO=at+"T12:00:00.000Z";try{var ht=n.VildaDataImportExport;ht&&typeof ht._ensureCurrentMeasurementInHistory=="function"&&ht._ensureCurrentMeasurementInHistory(tt)}catch(pt){ot("showQuickMeasureModal _ensureCurrentMeasurementInHistory",pt)}K.disabled=!0,P.disabled=!0;var vt=!0;if(i==="edit")try{var Ct=await r.getPatient(e),wt=Ct&&Ct.snapshots||[];vt=!!(wt.length&&wt[0]&&wt[0].snapshotId===o)}catch{vt=!1}try{st(!0),i==="edit"?await r.updateSnapshotPayload(e,o,tt):await r.savePatient(tt,{patientId:e,dedup:!1}),st(!1),T.remove();try{(i!=="edit"||vt)&&typeof n.applyLoadedData=="function"&&n.applyLoadedData(tt)}catch(pt){ot("showQuickMeasureModal applyLoadedData sync",pt)}try{n.document.dispatchEvent(new n.CustomEvent("vilda:measurement-changed",{detail:{patientId:e,action:i==="edit"?"edit":"add"}}))}catch{}typeof a.onSaved=="function"&&a.onSaved()}catch(pt){st(!1),K.disabled=!1,P.disabled=!1,q.textContent=i==="edit"?"Nie uda\u0142o si\u0119 zapisa\u0107 korekty pomiaru.":"Nie uda\u0142o si\u0119 zapisa\u0107 pomiaru.",q.style.display="block",ot("showQuickMeasureModal "+(i==="edit"?"updateSnapshotPayload":"savePatient"),pt)}}}),Y=t("div",{style:"display:flex;gap:8px;justify-content:flex-end;margin-top:4px;"});Y.appendChild(P),Y.appendChild(K),c.appendChild(Y),T.appendChild(c),n.document.body.appendChild(T),Ia(T);try{b.focus()}catch{}}var Ta={measurement:{label:"Pomiar",color:"#0F6E56",bg:"#E1F5EE"},note:{label:"Notatka",color:"#854F0B",bg:"#FAEEDA"},observation:{label:"Obserwacja",color:"#185FA5",bg:"#E6F1FB"},lab:{label:"Wynik",color:"#534AB7",bg:"#EEEDFE"},medication:{label:"Lek",color:"#A32D2D",bg:"#FCEBEB"},"gh-therapy":{label:"Terapia GH",color:"#0F6E56",bg:"#E1F5EE"}},xn=[{id:"all",label:"Wszystko"},{id:"measurement",label:"Pomiar"},{id:"observation",label:"Obserwacja"},{id:"treatment",label:"Leczenie"},{id:"wynik-badania",label:"Wynik badania"},{id:"followup",label:"Kontrola"}];function Fa(e){return e?e.medication?"treatment":e.labResult?"wynik-badania":e.category&&Ot[e.category]?e.category:"observation":"observation"}function kn(e,a){return e?a==="all"?!0:e.type==="measurement"?a==="measurement":e.type==="observation"?a==="observation":e.type==="note"?a===Fa(e):!1:!1}function Na(e){if(!e)return{label:"?",color:"#5b6672",bg:"#f5fafb"};if(e.type==="note"){var a=Fa(e),i=Ot[a];if(i)return{label:i.label,color:i.color,bg:i.bg}}return Ta[e.type]||{label:e.type,color:"#5b6672",bg:"#f5fafb"}}function ti(e){if(!e)return"";var a=new Date(e);if(isNaN(a.getTime()))return e;var i=new Date,o=new Date(Date.UTC(i.getUTCFullYear(),i.getUTCMonth(),i.getUTCDate())),r=new Date(Date.UTC(a.getUTCFullYear(),a.getUTCMonth(),a.getUTCDate())),s=Math.round((o-r)/(24*3600*1e3));if(s===0){var d=String(a.getHours()).padStart(2,"0"),p=String(a.getMinutes()).padStart(2,"0");return"dzi\u015B \xB7 "+d+":"+p}if(s===1)return"wczoraj";if(s>1&&s<=14)return s+" dni temu";var l=String(a.getDate()).padStart(2,"0"),f=String(a.getMonth()+1).padStart(2,"0"),m=a.getFullYear();return l+"."+f+"."+m}function _t(e){if(typeof e!="number"||!isFinite(e)||e<0)return"";var a=Math.round(e);if(a===0)return"noworodek";if(a<12)return a+" mies.";var i=Math.floor(a/12),o=a-i*12;function r(s){return s===1?"rok":s>=2&&s<=4?"lata":"lat"}return o===0?i+" "+r(i):i+" "+r(i)+" "+o+" mies."}function Ba(e){var a=t("div",null);if(e.type==="measurement"){var i=[];e.height!=null&&i.push("Wzrost "+e.height+" cm"),e.weight!=null&&i.push("Waga "+e.weight+" kg"),i.length?a.appendChild(t("div",{style:"font-weight:600;font-size:0.92rem;color:#0f2b33;",text:i.join(" \xB7 ")})):a.appendChild(t("div",{style:"font-weight:500;font-size:0.88rem;color:#9aa8aa;font-style:italic;",text:"Snapshot bez pomiar\xF3w antropometrycznych"}));var o=[];e.bmi!=null&&o.push("BMI "+e.bmi),e.growthVelocity!=null&&o.push("Pr\u0119dko\u015B\u0107 "+e.growthVelocity+" cm/rok"),o.length&&a.appendChild(t("div",{style:"font-size:0.86rem;color:#374151;line-height:1.5;margin-top:2px;",text:o.join(" \xB7 ")}))}else if(e.type==="note"){if(e.title&&a.appendChild(t("div",{style:"font-weight:600;font-size:0.92rem;color:#0f2b33;",text:e.title})),e.medication&&e.medication.action){var r=t("div",{style:"display:flex;align-items:center;gap:6px;margin-top:4px;padding:4px 8px;background:#fff8ee;border:0.5px solid #f0e0c8;border-radius:6px;font-size:0.84rem;color:#7a5a1a;"});r.appendChild(t("span",{text:"\u{1F48A}",style:"font-size:0.95rem;"}));var s=[];e.medication.name&&s.push(e.medication.name),e.medication.dose&&s.push(e.medication.dose);var d={start:"w\u0142\u0105czony",change:"zmiana dawki",stop:"zako\u0144czony"}[e.medication.action]||e.medication.action;s.push("("+d+")"),e.medication.previousDose&&e.medication.action==="change"&&s.push("\xB7 z "+e.medication.previousDose),r.appendChild(t("span",{text:s.join(" "),style:"flex:1;"})),a.appendChild(r)}if(e.labResult&&(e.labResult.test||e.labResult.value)){var p=t("div",{style:"display:flex;align-items:center;gap:6px;margin-top:4px;padding:4px 8px;background:#eef6ff;border:0.5px solid #cde0f5;border-radius:6px;font-size:0.84rem;color:#1a4a7a;"});p.appendChild(t("span",{text:"\u{1F9EA}",style:"font-size:0.95rem;"}));var l=[];e.labResult.test&&l.push(e.labResult.test+":"),e.labResult.value&&l.push(e.labResult.value),e.labResult.norm&&l.push("(norma: "+e.labResult.norm+")"),p.appendChild(t("span",{text:l.join(" "),style:"flex:1;"})),a.appendChild(p)}e.body&&a.appendChild(t("div",{style:"font-size:0.86rem;color:#374151;line-height:1.5;margin-top:2px;white-space:pre-wrap;word-wrap:break-word;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;",text:e.body})),e.completedAtISO&&a.appendChild(t("div",{style:"font-size:0.74rem;color:#0F6E56;margin-top:3px;",text:"\u2713 Wykonano"}))}else e.type==="observation"&&(a.appendChild(t("div",{style:"font-weight:600;font-size:0.92rem;color:#0f2b33;",text:e.title||"Obserwacja"})),e.description&&a.appendChild(t("div",{style:"font-size:0.86rem;color:#374151;line-height:1.5;margin-top:2px;",text:e.description})),e.autoGenerated&&a.appendChild(t("div",{style:"font-size:0.7rem;color:#9aa8aa;margin-top:3px;font-style:italic;",text:"Automatyczne wykrycie \u2014 zweryfikuj r\u0119cznie"})));return a}async function zn(e,a,i,o,r){var s=rt();if(re(e),!s||typeof s.listPatientTimelineEvents!="function"){e.appendChild(t("p",{class:"vilda-patient-empty-msg",text:"Historia pacjenta nie jest dost\u0119pna."}));return}var d=t("div",{style:"margin-bottom:12px;"});d.appendChild(t("p",{class:"vilda-patient-section-h",text:"Historia pacjenta",style:"margin:0 0 8px 0;"}));var p=t("div",{class:"vilda-patient-timeline-filters",style:"display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;"}),l=new Set,f=[];function m(u){if(u==="all")return{bg:"#f5fafb",color:"#5b6672"};if(u==="measurement"){var B=Ta.measurement;return B?{bg:B.bg,color:B.color}:{bg:"#f5fafb",color:"#5b6672"}}var A=Ot[u];return A?{bg:A.bg,color:A.color}:{bg:"#f5fafb",color:"#5b6672"}}function k(u,B,A){u.style.setProperty("background",B,"important"),u.style.setProperty("color",A,"important")}function w(){f.forEach(function(u){var B=u.opt.id==="all",A=B?l.size===0:l.has(u.opt.id),Q=m(u.opt.id);A?B?k(u.btn,"#00838d","#fff"):k(u.btn,Q.color,"#fff"):k(u.btn,Q.bg,Q.color)}),L()}xn.forEach(function(u){var B=m(u.id),A=u.id==="all",Q=A,G=t("button",{type:"button",text:u.label,style:"border:none !important;padding:4px 10px;font-size:0.74rem;font-weight:600;border-radius:999px !important;cursor:pointer;font-family:inherit;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;box-shadow:none !important;",onclick:function(){u.id==="all"?l.clear():l.has(u.id)?l.delete(u.id):l.add(u.id),w()}});k(G,Q?"#00838d":B.bg,Q?"#fff":B.color),f.push({opt:u,btn:G}),p.appendChild(G)}),d.appendChild(p),e.appendChild(d);var h="vilda:b3-history-tooltip-seen",C=!1;try{n.localStorage&&(C=n.localStorage.getItem(h)==="1")}catch{}if(!C){let u=function(){try{n.localStorage&&n.localStorage.setItem(h,"1")}catch{}y.parentNode&&y.parentNode.removeChild(y)};var y=t("div",{class:"vilda-b3-history-tooltip",style:"display:flex;align-items:flex-start;gap:10px;padding:12px 14px;margin-bottom:14px;background:#eef6ff;border:0.5px solid #cde0f5;border-radius:10px;color:#1a4a7a;font-size:0.86rem;line-height:1.5;"}),j=t("span",{style:"flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;color:#1a4a7a;margin-top:1px;"});j.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01"/><path d="M11 12h1v4h1"/></svg>',y.appendChild(j);var E=t("div",{style:"flex:1;"});E.innerHTML='<strong>Historia to o\u015B czasu zdarze\u0144 klinicznych</strong> \u2014 pomiary, w\u0142\u0105czenie lek\xF3w, wyniki bada\u0144. Lu\u017Ane notatki znajdziesz w zak\u0142adce <strong>Notatki</strong>, sekcja \u201ENotatki og\xF3lne".',y.appendChild(E);var N=t("button",{type:"button","aria-label":"Zamknij",title:"Zamknij (ju\u017C nie pokazuj)",style:"flex:0 0 auto;background:transparent;border:0;color:#1a4a7a;font-size:1.1rem;font-weight:600;cursor:pointer;padding:0 4px;line-height:1;align-self:flex-start;",text:"\xD7",onclick:u});y.appendChild(N),e.appendChild(y)}var T=[];try{T=await s.listPatientTimelineEvents(a)}catch(u){ot("listPatientTimelineEvents",u)}var c=t("div",{class:"vilda-patient-timeline-list",style:"position:relative;padding-left:28px;max-height:min(calc(100vh - 320px), 720px);min-height:280px;overflow-y:auto;overflow-x:hidden;padding-right:4px;-webkit-overflow-scrolling:touch;scrollbar-gutter:stable;"}),x=t("div",{style:"position:absolute;left:10px;top:4px;bottom:4px;width:2px;background:#d7e9ec;"});c.appendChild(x),e.appendChild(c);function v(u,B,A){var Q=Na(u),G=t("div",{style:"position:relative;margin-bottom:"+(A==="nested"?"8px":"14px")+";"}),it=A==="nested"?10:14,H=A==="nested"?-20:-22,R=A==="nested"?6:4;G.appendChild(t("div",{style:"position:absolute;left:"+H+"px;top:"+R+"px;width:"+it+"px;height:"+it+"px;border-radius:50%;background:"+Q.color+";border:2px solid #fff;box-shadow:0 0 0 1px "+Q.color+";"})),B&&G.appendChild(t("div",{style:"font-size:0.7rem;color:#5b6672;font-weight:500;margin-bottom:3px;",text:B}));var V=t("div",{style:"background:#f5fafb;border-radius:10px;padding:"+(A==="nested"?"8px 12px":"10px 12px")+";display:flex;flex-direction:column;gap:6px;cursor:pointer;transition:background 0.15s;position:relative;",onmouseover:function(){V.style.background="#ebf3f5"},onmouseout:function(){V.style.background="#f5fafb"},onclick:function(){O(u)}});if(V.appendChild(t("span",{style:"display:inline-block;padding:2px 8px;font-size:0.7rem;font-weight:600;color:"+Q.color+";background:"+Q.bg+";border-radius:999px;align-self:flex-start;",text:Q.label})),V.appendChild(Ba(u)),u.type==="measurement"){var et=t("button",{type:"button","aria-label":"Akcje dla pomiaru",title:"Akcje",style:"position:absolute;top:6px;right:8px;background:transparent;border:0;color:#5b6672;font-size:1.1rem;font-weight:700;padding:2px 8px;cursor:pointer;line-height:1;border-radius:6px;",text:"\u22EE",onmouseover:function(){et.style.background="rgba(0,131,141,0.1)",et.style.color="#00838d"},onmouseout:function(){et.style.background="transparent",et.style.color="#5b6672"},onclick:function(q){q.stopPropagation(),S(u,et)}});V.appendChild(et)}return G.appendChild(V),G}function g(u){try{mt()}catch{}function B(){var A=n.document.getElementById("toggleAdvancedGrowth"),Q=n.document.getElementById("advancedGrowthSection");if(!A||!Q)return!1;var G="";try{G=Q.style&&Q.style.display||""}catch{}if(G===""||G==="none")try{A.click()}catch{}try{Q.scrollIntoView({behavior:"smooth",block:"start"})}catch{}return!0}if(!B()){try{n.sessionStorage&&(u&&n.sessionStorage.setItem("vilda:pendingPatientLoad",u),n.sessionStorage.setItem("vilda:postLoadScroll","advancedGrowth"))}catch{}try{n.location.assign("index.html")}catch{}}}function S(u,B){try{for(var A=n.document.querySelectorAll(".vilda-timeline-measure-menu"),Q=0;Q<A.length;Q+=1)A[Q].remove()}catch{}var G='<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>',it='<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>',H='<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>',R=t("div",{class:"vilda-timeline-measure-menu",style:"position:fixed;top:0;left:0;background:#fff;border:1.5px solid #e0e8eb;border-radius:14px;box-shadow:0 8px 28px rgba(0,60,80,0.13);overflow:hidden;z-index:1000002;min-width:210px;"});function V(P,K){try{n.document.body.appendChild(P)}catch{return}try{var Y=K.getBoundingClientRect(),Z=n.innerWidth||n.document.documentElement.clientWidth||360,$=n.innerHeight||n.document.documentElement.clientHeight||640,at=P.offsetWidth||210,M=P.offsetHeight||0,z=Math.round(Y.right-at);z+at>Z-8&&(z=Z-8-at),z<8&&(z=8);var F=Math.round(Y.bottom+4);if(F+M>$-8){var J=Math.round(Y.top-M-4);F=J>=8?J:Math.max(8,$-8-M)}P.style.left=z+"px",P.style.top=F+"px"}catch{}var X=function(){try{P.remove()}catch{}try{n.removeEventListener("scroll",X,!0)}catch{}try{n.removeEventListener("resize",X,!0)}catch{}};try{n.addEventListener("scroll",X,!0),n.addEventListener("resize",X,!0)}catch{}}function et(P,K,Y,Z){var $=t("span",{html:P,style:"display:inline-flex;width:28px;height:28px;border-radius:8px;align-items:center;justify-content:center;flex:0 0 auto;background:"+(Z?"#fceaea":"#e1f5ee")+";color:"+(Z?"#A32D2D":"#00838d")+";"});return t("button",{type:"button",class:Z?"is-danger":"",style:"display:flex;align-items:center;gap:12px;width:100%;padding:11px 14px;background:#fff;border:0;border-bottom:1px solid #f0f4f5;text-align:left;font-size:15px;font-family:inherit;cursor:pointer;color:"+(Z?"#A32D2D":"#0f2b33")+";",onmouseover:function(at){at.currentTarget.style.background=Z?"#fceaea":"#f5fafb"},onmouseout:function(at){at.currentTarget.style.background="#fff"},onclick:function(at){at.stopPropagation(),R.remove(),Y()}},[$,K])}function q(){try{R.lastElementChild&&(R.lastElementChild.style.borderBottom="none")}catch{}}var ct=typeof u.snapshotId=="string"&&u.snapshotId;if(!ct){R.appendChild(et(G,"Edytuj w kalkulatorze",function(){g(u.patientId)})),q(),V(R,B),setTimeout(function(){function P(K){R.contains(K.target)||(R.remove(),n.document.removeEventListener("click",P))}n.document.addEventListener("click",P)},0);return}R.appendChild(et(G,"Edytuj",function(){Qe(u.patientId,{mode:"edit",snapshotId:u.snapshotId,rowRef:{uid:u.uid||null,key:u.rowKey||null},rowValues:{ageMonths:u.ageMonths,height:u.height,weight:u.weight},onSaved:function(){jt(u.patientId,o,r,{activeTab:"timeline"})}})})),R.appendChild(et(it,"Dodaj notatk\u0119",function(){if(typeof de!="function"){try{n.alert("Edytor notatki niedost\u0119pny \u2014 od\u015Bwie\u017C stron\u0119.")}catch{}return}de({patientId:u.patientId,note:null,suggestLinkedAge:u.ageMonths,onSaved:function(){jt(u.patientId,o,r,{activeTab:"timeline"})}})})),R.appendChild(et(H,"Usu\u0144 pomiar",function(){var P=_t(u.ageMonths)||"wiek "+u.ageMonths+" mies.";if(n.confirm("Usun\u0105\u0107 pomiar ("+P+")? Tej operacji nie mo\u017Cna cofn\u0105\u0107.")){var K=rt();if(!K||typeof K.deleteMeasurementRow!="function"){try{n.alert("Funkcja usuwania pomiaru niedost\u0119pna \u2014 od\u015Bwie\u017C stron\u0119.")}catch{}return}K.deleteMeasurementRow(u.patientId,{uid:u.uid||null,key:u.rowKey||null}).then(function(){try{n.document.dispatchEvent(new n.CustomEvent("vilda:measurement-changed",{detail:{patientId:u.patientId,action:"delete"}}))}catch{}jt(u.patientId,o,r,{activeTab:"timeline"})}).catch(function(Y){ot("deleteSnapshot from timeline",Y);try{n.alert(Y&&Y.message?Y.message:"Nie uda\u0142o si\u0119 usun\u0105\u0107 pomiaru.")}catch{}})}},!0)),q();var D=function(P){R.contains(P.target)||B&&B.contains(P.target)||(R.remove(),n.document.removeEventListener("click",D,!0))};setTimeout(function(){n.document.addEventListener("click",D,!0)},0),V(R,B)}function _(u){return t("div",{style:"font-size:0.72rem;font-weight:600;color:#5b6672;text-transform:uppercase;letter-spacing:0.05em;margin:18px 0 10px -28px;padding-left:28px;",text:u})}function I(u){if(!u)return"";var B=new Date(u);if(isNaN(B.getTime()))return"";var A=function(Q){return Q<10?"0"+Q:String(Q)};return A(B.getDate())+"-"+A(B.getMonth()+1)+"-"+B.getFullYear()}function W(u){var B=Na(u),A=t("div",{style:"position:relative;margin-bottom:14px;margin-left:28px;padding-left:36px;"}),Q=n.document.createElementNS("http://www.w3.org/2000/svg","svg");Q.setAttribute("width","36"),Q.setAttribute("height","24"),Q.setAttribute("viewBox","0 0 36 24"),Q.setAttribute("aria-hidden","true"),Q.style.position="absolute",Q.style.left="0",Q.style.top="-6px",Q.style.pointerEvents="none";var G=n.document.createElementNS("http://www.w3.org/2000/svg","path");G.setAttribute("d","M 4 0 L 4 14 Q 4 18 8 18 L 36 18"),G.setAttribute("stroke",B.color),G.setAttribute("stroke-width","1.2"),G.setAttribute("fill","none"),G.setAttribute("stroke-linecap","round"),Q.appendChild(G),A.appendChild(Q);var it=t("div",{style:"background:#f5fafb;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;cursor:pointer;transition:background 0.15s;position:relative;",onmouseover:function(){it.style.background="#ebf3f5"},onmouseout:function(){it.style.background="#f5fafb"},onclick:function(){O(u)}}),H=t("div",{style:"display:flex;justify-content:space-between;align-items:flex-start;gap:8px;"});H.appendChild(t("span",{style:"display:inline-block;padding:2px 8px;font-size:0.7rem;font-weight:600;color:"+B.color+";background:"+B.bg+";border-radius:999px;",text:B.label}));var R;return u.clinicalDateISO?R=I(u.clinicalDateISO+"T00:00:00.000Z"):R=I(u.dateISO),R&&H.appendChild(t("span",{style:"font-size:0.72rem;color:#9aa8aa;white-space:nowrap;",text:R})),it.appendChild(H),it.appendChild(Ba(u)),A.appendChild(it),A}function b(u){var B=t("div",{style:"position:relative;margin-bottom:14px;"});B.appendChild(t("div",{style:"position:absolute;left:-22px;top:4px;width:14px;height:14px;border-radius:50%;background:#fff;border:2px dashed #c2ccce;box-shadow:0 0 0 1px #fff;"})),B.appendChild(t("div",{style:"font-size:0.7rem;color:#9aa8aa;font-weight:500;margin-bottom:3px;",text:"Wiek "+_t(u)}));var A=t("div",{style:"background:#f3f5f6;border:1px dashed #cdd6d8;border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;"});return A.appendChild(t("span",{style:"display:inline-block;padding:2px 8px;font-size:0.7rem;font-weight:600;color:#9aa8aa;background:#e8edee;border-radius:999px;",text:"Pomiar usuni\u0119ty"})),A.appendChild(t("span",{style:"font-size:0.82rem;color:#9aa8aa;",text:"Notatka zachowana \u2014 pomiar dla tego wieku zosta\u0142 usuni\u0119ty."})),B.appendChild(A),B}function L(){for(;c.childNodes.length>1;)c.removeChild(c.lastChild);function u(D){if(l.size===0)return!0;var P=Array.from(l);return P.some(function(K){return kn(D,K)})}var B=l.size>=1&&!l.has("measurement"),A=l.size===0?"all":l.size===1?Array.from(l)[0]:"all",Q=T.filter(function(D){return D.type==="measurement"}),G=T.filter(function(D){return D.type==="note"}),it=T.filter(function(D){return D.type==="observation"}),H=B;if(H){var R=[];if(G.forEach(function(D){u(D)&&R.push({event:D,sortISO:D.clinicalDateISO?D.clinicalDateISO.length===10?D.clinicalDateISO+"T00:00:00.000Z":D.clinicalDateISO:D.dateISO||D.updatedAtISO||""})}),it.forEach(function(D){u(D)&&R.push({event:D,sortISO:D.dateISO||""})}),R.sort(function(D,P){return D.sortISO>P.sortISO?-1:D.sortISO<P.sortISO?1:0}),R.length===0){c.appendChild(t("p",{class:"vilda-patient-empty-msg",text:"Brak wpis\xF3w w wybranej kategorii."}));return}R.forEach(function(D){var P=D.event,K;if(P.linkedAgeMonths!=null){K=_t(P.linkedAgeMonths);var Y=I(P.clinicalDateISO?P.clinicalDateISO.length===10?P.clinicalDateISO+"T00:00:00.000Z":P.clinicalDateISO:P.dateISO);Y&&(K+=" \xB7 "+Y)}else if(P.clinicalDateISO){var Z=I(P.clinicalDateISO.length===10?P.clinicalDateISO+"T00:00:00.000Z":P.clinicalDateISO);K=Z||""}else K=I(P.dateISO)||"";c.appendChild(v(P,K,"normal"))});return}var V=Object.create(null);function et(D){var P=D.linkedAgeMonths;P!=null&&(V[P]||(V[P]=[]),V[P].push(D))}G.forEach(function(D){D.linkedAgeMonths!=null&&et(D)}),it.forEach(function(D){et(D)});var q=[];Q.forEach(function(D){u(D)&&q.push({kind:"measurement",event:D,sortISO:D.savedAtISO||""})}),Object.keys(V).forEach(function(D){var P=Number(D),K=Q.some(function(Z){return Z.ageMonths===P});if(!K){var Y=V[D].some(function(Z){return u(Z)});Y&&q.push({kind:"orphan-anchor",event:{ageMonths:P},sortISO:""})}}),q.sort(function(D,P){var K=D.event&&typeof D.event.ageMonths=="number"?D.event.ageMonths:-1,Y=P.event&&typeof P.event.ageMonths=="number"?P.event.ageMonths:-1;return K>Y?-1:K<Y?1:D.sortISO>P.sortISO?-1:D.sortISO<P.sortISO?1:0});var ct=Object.keys(V).some(function(D){return V[D].some(function(P){return u(P)})});if(q.length===0&&!ct){c.appendChild(t("p",{class:"vilda-patient-empty-msg",text:A==="all"?"Brak wydarze\u0144 w historii. Dodaj pomiar lub notatk\u0119 z dat\u0105 zdarzenia, aby zobaczy\u0107 timeline.":"Brak wydarze\u0144 tego typu."}));return}q.forEach(function(D){if(D.kind==="measurement"){var P=D.event,K=_t(P.ageMonths),Y=I(P.savedAtISO);Y&&(K+=" \xB7 "+Y),c.appendChild(v(P,K,"normal"));var Z=V[P.ageMonths]||[];Z.forEach(function(M){u(M)&&c.appendChild(W(M))})}else if(D.kind==="orphan-anchor"){var $=D.event.ageMonths;c.appendChild(b($));var at=V[$]||[];at.forEach(function(M){u(M)&&c.appendChild(W(M))})}})}function O(u){try{var B=n.document.querySelector(".vilda-auth-patient-card");if(u.type==="measurement"){var A=B&&B.querySelector('[data-tab="traj"]');A&&typeof A.click=="function"&&A.click()}else if(u.type==="note"){var Q=B&&B.querySelector('button[data-tab="notes"]');Q&&typeof Q.click=="function"&&Q.click()}else try{n.alert(u.title+(u.description?`
+  if (!global) return;
+  if (global.VildaAuthUI && global.VildaAuthUI.__vildaAuthUI) {
+    return;
+  }
 
-`+u.description:""))}catch{}}catch(G){ot("handleTimelineEventClick",G)}}L()}var Ra="vilda:patients-sort",Cn=[{id:"recent-desc",label:"Ostatnio zapisany",sub:"od najnowszego"},{id:"name-asc",label:"Imi\u0119 A \u2192 Z",sub:null},{id:"name-desc",label:"Imi\u0119 Z \u2192 A",sub:null}];function Sn(){try{return n.localStorage&&n.localStorage.getItem(Ra)||"recent-desc"}catch{return"recent-desc"}}function jn(e){try{n.localStorage&&n.localStorage.setItem(Ra,e)}catch{}}function Wa(e,a){const i=e.slice();return a==="name-asc"?i.sort(function(o,r){const s=(o.header&&o.header.name||"").toLowerCase(),d=(r.header&&r.header.name||"").toLowerCase();return s<d?-1:s>d?1:0}):a==="name-desc"?i.sort(function(o,r){const s=(o.header&&o.header.name||"").toLowerCase(),d=(r.header&&r.header.name||"").toLowerCase();return s>d?-1:s<d?1:0}):a==="visits-desc"?i.sort(function(o,r){return(r.snapshotCount||0)-(o.snapshotCount||0)}):i.sort(function(o,r){const s=o.lastSavedAtISO?Date.parse(o.lastSavedAtISO):0;return((r.lastSavedAtISO?Date.parse(r.lastSavedAtISO):0)||0)-(s||0)}),i}async function ue(e,a){const i=rt();if(!i||!i.isUnlocked())return;const o=a||{};try{const c=n.VildaChrome;if(c&&typeof c.isCloudOnlySyncInProgress=="function"&&c.isCloudOnlySyncInProgress()){typeof c.showCloudOnlySyncOverlay=="function"&&c.showCloudOnlySyncOverlay();try{await c.waitForCloudOnlySync(),typeof c.hideCloudOnlySyncOverlay=="function"&&c.hideCloudOnlySyncOverlay()}catch{return}}}catch(c){}let r=[];try{r=await i.listPatients()}catch(c){ot("listPatients",c)}let s=Sn();r=Wa(r,s);const d=t("h2",{class:"vilda-auth-title",text:"Pacjenci"}),p=t("p",{class:"vilda-auth-subtitle",text:r.length===0?"Nie masz jeszcze zapisanych pacjent\xF3w. Wpisz dane w aplikacji i kliknij \u201EZapisz dane\u201D.":"Kliknij pacjenta, aby zobaczy\u0107 jego kart\u0119. \u0141\u0105cznie: "+r.length+(r.length===1?" pacjent.":" pacjent\xF3w.")});let l=null,f=null;r.length>0&&(l=t("input",{class:"vilda-auth-search-input",type:"search",placeholder:"Szukaj pacjenta po imieniu lub nazwisku\u2026",autocomplete:"off",spellcheck:"false"}),f=t("div",{class:"vilda-auth-search-counter"}));const m=t("div",{class:"vilda-auth-user-list vilda-auth-patients-scroll"}),k=t("div",{class:"vilda-auth-search-empty",text:"Brak pasuj\u0105cych pacjent\xF3w."});k.hidden=!0,m.appendChild(k);const w=[];function h(c){const x=c.header&&c.header.name?c.header.name:"(bez imienia)",v=c.header&&typeof c.header.age=="number"&&isFinite(c.header.age)?c.header.age:null,g=c.header&&typeof c.header.ageMonths=="number"&&isFinite(c.header.ageMonths)?c.header.ageMonths:null;let S="";if(v!==null||g!==null){const b=(v!==null?v*12:0)+(g!==null?g:0);S=_t(b)}const _=c.header&&c.header.sex?c.header.sex:"",I=[S,_].filter(function(b){return b&&b.length}).join(" \xB7 "),W=t("button",{class:"vilda-auth-user-card",type:"button",title:"Zobacz kart\u0119: "+x,onclick:function(){jt(c.patientId,e,o)}},[t("div",{class:"vilda-auth-user-avatar",text:x.charAt(0).toUpperCase()}),t("div",{class:"vilda-auth-user-info"},[t("div",{class:"vilda-auth-user-name",text:x}),I?t("div",{class:"vilda-auth-user-meta",text:I}):null]),t("span",{class:"vilda-auth-user-arrow","aria-hidden":"true",text:"\u203A"})]);m.appendChild(W),w.push({card:W,key:Ua(x)})}r.forEach(h);function C(c){f&&(f.textContent=c===r.length?"":"Pokazano "+c+" z "+r.length)}function y(){if(!l)return;const c=Ua(l.value||"");let x=0;w.forEach(function(v){const g=!c||v.key.indexOf(c)!==-1;v.card.hidden=!g,g&&x++}),k.hidden=x!==0,C(x)}l&&(l.addEventListener("input",y),l.addEventListener("keydown",function(c){c&&c.key==="Escape"&&l.value&&(c.stopPropagation(),l.value="",y())}),setTimeout(function(){try{l.focus()}catch{}},60));let j=null;if(r.length>0){let v=function(){c.hidden=!0,g.classList.remove("vilda-auth-sort-btn--open"),x&&(n.document.removeEventListener("click",x,!0),x=null)};const c=t("div",{class:"vilda-auth-sort-dropdown"});c.hidden=!0;let x=null;Cn.forEach(function(S){const _=t("button",{type:"button",class:"vilda-auth-sort-option"+(S.id===s?" vilda-auth-sort-option--active":"")},[t("span",{class:"vilda-auth-sort-option-label",text:S.label}),S.sub?t("span",{class:"vilda-auth-sort-option-sub",text:S.sub}):null]);_.addEventListener("click",function(){if(S.id===s){v();return}s=S.id,jn(S.id),c.querySelectorAll(".vilda-auth-sort-option").forEach(function(W){W.classList.toggle("vilda-auth-sort-option--active",W===_)});const I=Wa(r,s);m.innerHTML="",m.appendChild(k),w.length=0,I.forEach(h),y(),m.scrollTop=0,v()}),c.appendChild(_)});const g=t("button",{type:"button",class:"vilda-auth-sort-btn",title:"Zmie\u0144 sortowanie"});g.addEventListener("click",function(S){if(S.stopPropagation(),!c.hidden){v();return}c.hidden=!1,g.classList.add("vilda-auth-sort-btn--open"),setTimeout(function(){x=function(_){!c.contains(_.target)&&_.target!==g&&v()},n.document.addEventListener("click",x,!0)},0)}),j=t("div",{class:"vilda-auth-sort-wrap"},[g,c])}const E=t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost",type:"button",text:"Importuj kopie pacjent\xF3w",onclick:function(){Se(e)}}),N=t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost",type:"button",text:"Anuluj",onclick:function(){mt()}}),T=[d,p];l&&T.push(t("div",{class:"vilda-auth-search-wrap"},[l,j,f])),T.push(m),T.push(t("div",{class:"vilda-auth-actions"},[N,E])),ft(t("div",{class:"vilda-auth-screen vilda-auth-patients"},T),{noLogo:!0})}function Ua(e){if(!e)return"";var a=String(e).toLowerCase();try{a=a.normalize("NFD").replace(/[\u0300-\u036f]/g,"")}catch{}return a.replace(/ł/g,"l")}function Se(e,a){const o=!!(a||{}).fromSetup,r=rt();if(!r||!r.isUnlocked())return;const s=t("h2",{class:"vilda-auth-title",text:"Importuj kopie pacjent\xF3w"}),d=t("p",{class:"vilda-auth-subtitle",text:"Wybierz pliki kopii zapasowych pacjent\xF3w. Aplikacja odczyta nag\u0142\xF3wki, a Ty zdecydujesz, kt\xF3re konta zaimportowa\u0107 do swojego vaultu. Je\u015Bli pliki pochodz\u0105 ze starego konta \u2014 podaj has\u0142o, kt\xF3rym by\u0142y zaszyfrowane."}),p=t("input",{type:"file",accept:"*/*",multiple:"multiple",style:"display:none;"}),l=t("input",{type:"password",class:"vilda-auth-input",placeholder:"Has\u0142o ze starego konta (je\u015Bli inne ni\u017C obecne)",autocomplete:"off"}),f=t("button",{class:"vilda-auth-btn vilda-auth-btn-primary",type:"button",text:"Wybierz pliki kopii (.wiw)",onclick:function(){p.click()}}),m=t("span",{text:""}),k=t("a",{href:"#",text:"Zaznacz wszystkie"}),w=t("a",{href:"#",text:"Odznacz wszystkie"});k.addEventListener("click",function(b){b.preventDefault(),v(!0)}),w.addEventListener("click",function(b){b.preventDefault(),v(!1)});const h=t("div",{class:"vilda-auth-import-toolbar","data-hidden":"1"},[m,t("div",{class:"vilda-auth-import-toolbar-actions"},[k,w])]),C=t("div",{class:"vilda-auth-import-list"}),y=t("div",{class:"vilda-auth-info",style:"display:none; text-align:left;"}),j=t("div",{class:"vilda-auth-error vilda-auth-error-stable","data-empty":"1"}),E=t("button",{class:"vilda-auth-btn vilda-auth-btn-primary",type:"button",text:"Importuj wszystko"});E.disabled=!0;const N=t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost",type:"button",text:o?"Pomi\u0144 import":"Wstecz",onclick:function(){o?(mt(),St()):kt()}});let T=[];function c(){for(;C.firstChild;)C.removeChild(C.firstChild)}function x(b){b?(j.textContent=b,j.removeAttribute("data-empty")):(j.textContent="",j.setAttribute("data-empty","1"))}function v(b){let L=!1;T.forEach(function(O){O.preview&&O.preview.header&&O.willImport!==b&&(O.willImport=b,O._checkbox&&(O._checkbox.checked=b),L=!0)}),L&&g()}function g(){const b=T.filter(function(O){return O.preview&&O.preview.header}).length,L=T.filter(function(O){return O.willImport}).length;if(E.disabled=L===0,b===0){E.textContent="Importuj zaznaczone",h.setAttribute("data-hidden","1");return}h.removeAttribute("data-hidden"),m.textContent="Wybrane: "+L+" z "+b+(b!==T.length?" (pliki bez has\u0142a pomini\u0119to)":""),L===b?E.textContent=b===1?"Importuj":"Importuj wszystko ("+b+")":E.textContent="Importuj zaznaczone ("+L+")",L===b?k.setAttribute("aria-disabled","true"):k.removeAttribute("aria-disabled"),L===0?w.setAttribute("aria-disabled","true"):w.removeAttribute("aria-disabled")}async function S(b){return new Promise(function(L,O){const u=new n.FileReader;u.onload=function(){L(u.result)},u.onerror=function(){O(u.error)},u.readAsText(b,"utf-8")})}let _=0;async function I(){const b=++_,L=n.document,O=L&&L.activeElement===l,u=O&&l.selectionStart!=null?l.selectionStart:null,B=C.scrollTop;if(x(""),y.style.display="none",E.disabled=!0,T.length===0){if(c(),h.style.display="none",O)try{l.focus()}catch{}return}const A=l.value||"";let Q=!1,G=!1;for(let H=0;H<T.length;H+=1){const R=T[H];let V=null,et=null,q=!1,ct=null;try{const D=JSON.parse(R.text);r.looksLikeLegacyPayload&&r.looksLikeLegacyPayload(D)&&(q=!0,ct=D,V={header:{name:D.name,age:D.user&&D.user.age,ageMonths:D.user&&D.user.ageMonths,sex:D.user&&D.user.sex,timestampISO:D.timestampISO||null},metadata:{legacy:!0,version:D.version||"pre-szyfrowanie"},needsPassword:!1,methodUsed:"legacy-json"})}catch{}if(!q){let D=null;try{const P=n.VildaCrypto;if(P&&P.parseEnvelope){const K=P.parseEnvelope(R.text);D=K.kind||null,D==="vault-backup"&&(R.isVaultBackup=!0,R.vaultBackupMeta=K.metadata||{})}}catch{}if(!R.isVaultBackup)try{V=await r.previewPatientEnvelope(R.text,A)}catch(P){et=P&&P.message?P.message:String(P)}}R.preview=V,R.errMsg=et,R.isLegacy=q,R.legacyPayload=ct,V&&V.header&&(Q=!0),V&&V.needsPassword&&(G=!0)}if(b!==_)return;const it=L.createDocumentFragment();for(T.forEach(function(H,R){if(H.isVaultBackup){const $=H.vaultBackupMeta||{},at=$.label||"Kopia konta",M=$.patientCount!=null?$.patientCount:"?",z=$.snapshotCount!=null?$.snapshotCount:"?",F=$.exportedAtISO?Ut($.exportedAtISO):"",J=t("button",{class:"vilda-auth-btn vilda-auth-btn-primary vilda-auth-btn-small",type:"button",text:"Scal z moim kontem \u2192"});J.addEventListener("click",function(){Ka(H.text,H.file.name)});const X=t("div",{class:"vilda-auth-import-card vilda-auth-import-card-backup"},[t("div",{class:"vilda-auth-import-card-avatar",text:"\u{1F5C2}",style:"font-size:1.4rem;"}),t("div",{class:"vilda-auth-import-card-info"},[t("div",{class:"vilda-auth-import-card-name"},[t("span",{text:at}),t("span",{style:"margin-left:8px; font-size:0.72rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#00838d; background:rgba(0,131,141,0.1); padding:1px 7px; border-radius:20px;",text:"KOPIA KONTA"})]),t("div",{class:"vilda-auth-import-card-meta",text:M+" pacj. \xB7 "+z+" zapis\xF3w"+(F?" \xB7 eksport: "+F:"")}),t("div",{class:"vilda-auth-import-card-filename",text:H.file.name})]),t("div",{class:"vilda-auth-import-card-check"},[J])]);it.appendChild(X);return}const V=!!(H.preview&&H.preview.header),et=V?H.preview.header.name:null,q=V&&H.preview.header.age!=null?H.preview.header.age+" lat":"",ct=V&&H.preview.header.sex?H.preview.header.sex:"",D=V&&H.preview.metadata&&H.preview.metadata.exportedAtISO?Ut(H.preview.metadata.exportedAtISO):"",P=V&&H.preview.header.timestampISO?Ut(H.preview.header.timestampISO):"";let K;if(V){const $=[];H.isLegacy&&$.push("plik z poprzedniej wersji (niezaszyfrowany .json)"),q&&$.push(q),ct&&$.push(ct),D?$.push("eksport: "+D):P&&$.push("zapisano: "+P),K=$.join(" \xB7 ")}else H.preview&&H.preview.needsPassword?K="plik chroniony has\u0142em \u2014 wpisz has\u0142o powy\u017Cej":K=H.errMsg||"b\u0142\u0105d odczytu";const Y=t("input",{type:"checkbox"});Y.checked=V,Y.disabled=!V,Y.addEventListener("change",function(){H.willImport=!!Y.checked,g()}),H.willImport=Y.checked,H._checkbox=Y;const Z=t("div",{class:"vilda-auth-import-card","data-disabled":V?"":"1",onclick:function($){!V||$.target===Y||(Y.checked=!Y.checked,H.willImport=!!Y.checked)}},[t("div",{class:"vilda-auth-import-card-avatar",text:(et||"?").charAt(0).toUpperCase()}),t("div",{class:"vilda-auth-import-card-info"},[t("div",{class:"vilda-auth-import-card-name",text:et||"(plik chroniony has\u0142em)"}),K?t("div",{class:"vilda-auth-import-card-meta",text:K}):null,t("div",{class:"vilda-auth-import-card-filename",text:H.file.name})]),t("div",{class:"vilda-auth-import-card-check"},[Y])]);it.appendChild(Z)});C.firstChild;)C.removeChild(C.firstChild);if(C.appendChild(it),g(),C.scrollTop=B,O)try{l.focus(),u!=null&&typeof l.setSelectionRange=="function"&&l.setSelectionRange(u,u)}catch{}}p.addEventListener("change",async function(b){const L=b.target.files||[];if(L.length){st(!0);try{T=[];for(let O=0;O<L.length;O+=1){const u=L[O],B=await S(u);T.push({file:u,text:B,preview:null,willImport:!1,errMsg:null})}await I()}catch(O){x("B\u0142\u0105d odczytu plik\xF3w: "+(O&&O.message?O.message:O))}finally{st(!1),p.value=""}}});let W=null;l.addEventListener("input",function(){W&&n.clearTimeout(W),W=n.setTimeout(function(){I()},350)}),E.addEventListener("click",async function(){x("");const b=T.filter(function(u){return u.willImport&&u.preview&&u.preview.header});if(b.length===0){x("Nie zaznaczono \u017Cadnego pliku do importu.");return}st(!0);const L={addedPatients:0,mergedPatients:0,addedSnapshots:0,skippedSnapshots:0,legacyImported:0,errors:[]};try{for(let u=0;u<b.length;u+=1){const B=b[u];try{if(B.isLegacy&&B.legacyPayload)(await r.importLegacyJsonPatient(B.legacyPayload)).isNew?L.addedPatients+=1:L.mergedPatients+=1,L.addedSnapshots+=1,L.legacyImported+=1;else{const A=await r.importPatientFromEnvelope(B.text,l.value||"");A.isNew?L.addedPatients+=1:L.mergedPatients+=1,L.addedSnapshots+=A.addedSnapshots,L.skippedSnapshots+=A.skippedSnapshots}}catch(A){L.errors.push({file:B.file.name,message:A&&A.message||String(A)})}}}finally{st(!1)}for(;y.firstChild;)y.removeChild(y.firstChild);y.style.display="block";const O=["Nowych pacjent\xF3w: "+L.addedPatients,"Zaktualizowanych (merge): "+L.mergedPatients,"Nowych zapis\xF3w: "+L.addedSnapshots,"Pomini\u0119tych (ju\u017C istnia\u0142y): "+L.skippedSnapshots];L.legacyImported>0&&O.push("W tym ze starszych plik\xF3w .json (sprzed szyfrowania): "+L.legacyImported),L.errors.length&&O.push("B\u0142\u0119dy: "+L.errors.length),y.appendChild(t("strong",{text:"Import zako\u0144czony"})),y.appendChild(t("br")),O.forEach(function(u){y.appendChild(n.document.createTextNode(u)),y.appendChild(t("br"))}),L.errors.forEach(function(u){y.appendChild(t("div",{class:"vilda-auth-error",style:"margin-top:6px;",text:u.file+": "+u.message}))}),E.disabled=!0,E.textContent="Import zako\u0144czony",h.style.display="none",o?(N.textContent="Przejd\u017A do aplikacji",N.onclick=function(){mt(),St()}):(N.textContent="Wr\xF3\u0107 do listy pacjent\xF3w",N.onclick=function(){ue(e)})}),ft(t("div",{class:"vilda-auth-screen vilda-auth-import"},[s,d,t("div",{class:"vilda-auth-section-action"},[f]),l,h,C,j,y,p,t("div",{class:"vilda-auth-actions"},[N,E])]))}function An(){if(da||!n.document)return;const e=rt();if(!e)return;const a=function(){try{e.resetIdleTimer()}catch{}};Ja.forEach(function(i){try{n.document.addEventListener(i,a,{passive:!0})}catch{}}),da=!0}function Ge(){try{return!!(n.localStorage&&n.localStorage.getItem(Oe)==="1")}catch{return!1}}const Ha="vilda-cloud-only-idle-ms",qe=[300*1e3,600*1e3,900*1e3,1800*1e3,3600*1e3,480*60*1e3,1440*60*1e3,10080*60*1e3];function Va(){try{const e=n.localStorage&&n.localStorage.getItem(Ha),a=e!=null?parseInt(e,10):NaN;if(qe.indexOf(a)>=0)return a}catch{}return null}function En(e){const a=parseInt(e,10);if(qe.indexOf(a)<0)return!1;try{n.localStorage&&n.localStorage.setItem(Ha,String(a))}catch{}const i=rt();try{i&&i.isUnlocked()&&i.startIdleTimer(je())}catch{}return!0}function je(){const e=rt(),a=e&&typeof e.DEFAULT_IDLE_LOCK_MS=="number"?e.DEFAULT_IDLE_LOCK_MS:1200*1e3,i=e&&typeof e.CLOUD_ONLY_IDLE_LOCK_MS=="number"?e.CLOUD_ONLY_IDLE_LOCK_MS:600*1e3;let o=!1;try{o=!!(e&&e.isCloudOnlyMode&&e.isCloudOnlyMode())}catch{}if(o){const r=Va();return typeof r=="number"&&r>0?r:i}return Ge()?sa:a}function Pn(e){try{n.localStorage&&(e?n.localStorage.setItem(Oe,"1"):n.localStorage.removeItem(Oe))}catch{}const a=rt();try{a&&a.isUnlocked()&&a.startIdleTimer(je())}catch{}return Ge()}function St(){const e=rt();if(e){An();try{e.startIdleTimer(je())}catch{}}}function Mn(e){const a=rt();if(a)try{a.lock(e||"manual")}catch{}}async function Xe(){if(la)return;if(la=!0,!rt()||!oe()){Wt("boot: brak VildaVault/VildaCrypto, pomijam UI.");return}ga();try{rt().onLock(function(a){ba(),dn();var i=me;me=null;try{se("on-lock")}catch{}try{(a==="manual"||a==="user-removed")&&i&&n.VildaProAccess&&typeof n.VildaProAccess.invalidateCache=="function"&&n.VildaProAccess.invalidateCache(i)}catch{}try{n.VildaProUi&&typeof n.VildaProUi.refresh=="function"&&n.VildaProUi.refresh()}catch{}if(Re()){We();return}if(a!=="user-removed"){try{if(a==="manual"||a==="idle"){var o=n.location;if(o&&o.pathname&&!o.pathname.endsWith("index.html")&&o.pathname!=="/"){o.replace("index.html");return}}}catch{}kt()}}),rt().onUnlock(function(a){me=a&&a.userId?a.userId:null,We();try{var i=n.VildaProAccess&&typeof n.VildaProAccess.hasAccess=="function"&&n.VildaProAccess.hasAccess();if(n.VildaProUi&&typeof n.VildaProUi.refresh=="function"&&(i||!n.VildaProAccess)&&n.VildaProUi.refresh(),i&&n.document){var o=typeof n.VildaProAccess.getSnapshot=="function"?n.VildaProAccess.getSnapshot():null;n.document.dispatchEvent(new CustomEvent("vildaProAccessChanged",{bubbles:!1,detail:{plan:o&&o.plan||"pro",validUntil:o&&o.validUntil||null}}))}}catch{}we(),Re()&&(n[Bt]=!1,Be(!1)),ma(),St(),setTimeout(function(){Ye().catch(function(){})},3e3);var r=a&&a.trigger||null,s;if(r)s=r==="restore";else{var d=null;try{d=n.localStorage&&n.localStorage.getItem("sharedUserData")}catch{}s=!!(d&&d!=="null"&&d.length>10)}if(!s){se("fresh-login");try{var p=n.VildaProAccess,l=rt(),f=Date.now(),m=me,k=_e.userId!==m||f-_e.at>3e4;p&&!p.hasAccess()&&l&&typeof l.isUnlocked=="function"&&l.isUnlocked()&&typeof l.getSyncMaterial=="function"&&k&&(_e={userId:m,at:f},(async function(){try{var w=await l.getSyncMaterial(),h=(n.VILDA_SYNC_WORKER_URL||"https://vilda-sync.maciej-4b9.workers.dev").replace(/\/$/,""),C=await fetch(h+"/v1/slots/"+w.slotId+"/trial",{method:"GET",headers:{Authorization:"Bearer "+w.authToken}});if(C.ok){var y;try{y=await C.json()}catch{return}if(y&&y.plan==="pro"&&y.validUntil){var j=n.VildaProAccess;if(j&&typeof j.setPlan=="function"){j.setPlan(y.plan,y.validUntil,y.activatedAt||null);try{n.VildaProUi&&typeof n.VildaProUi.refresh=="function"&&n.VildaProUi.refresh(),we()}catch{}}}}}catch{}})())}catch{}}})}catch(a){ot("boot: listenery",a)}try{typeof n.addEventListener=="function"&&n.addEventListener("vilda:user-state-cleared",function(){try{n.localStorage&&n.localStorage.removeItem("_vildaSnapRestore")}catch{}})}catch{}let e=!1;try{e=await rt().tryRestoreSession()}catch(a){ot("tryRestoreSession",a)}if(e){Xt(!1),mt();return}if(en()){Xt(!0,{skipReset:!0}),mt();return}Xt(!1),await kt()}function Ka(e,a){const i=rt();if(!i||!i.isUnlocked())return;const o=t("h2",{class:"vilda-auth-title",text:"Scal kopi\u0119 konta"}),r=t("p",{class:"vilda-auth-subtitle",text:"Podaj has\u0142o do tej kopii. Aplikacja sprawdzi, kt\xF3re zapisy ju\u017C masz, i doda tylko brakuj\u0105ce \u2014 bez usuwania ani nadpisywania istniej\u0105cych danych."}),s=t("div",{class:"vilda-auth-info",style:"font-size:0.82rem; color:#4a6670; margin-bottom:4px;",text:a?"Plik: "+a:""}),d=t("input",{type:"password",class:"vilda-auth-input",placeholder:"Has\u0142o do tej kopii konta",autocomplete:"off"}),p=t("div",{class:"vilda-auth-error"});p.style.display="none";const l=t("div",{class:"vilda-auth-info",style:"display:none; text-align:left;"}),f=t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost",type:"button",text:"Sprawd\u017A co zostanie scalone"}),m=t("button",{class:"vilda-auth-btn vilda-auth-btn-primary",type:"button",text:"Scal teraz"});m.style.display="none";const k=t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost",type:"button",text:"Wstecz",onclick:function(){Se(null)}}),w=t("div",{class:"vilda-auth-info",style:"display:none; text-align:left;"});f.addEventListener("click",async function(){if(dt(p,""),l.style.display="none",m.style.display="none",!d.value){dt(p,"Wpisz has\u0142o do tej kopii konta.");return}st(!0),f.disabled=!0;try{const h=await i.previewVaultBackupMerge(e,d.value);for(;l.firstChild;)l.removeChild(l.firstChild);const C=h.backupExportedAtISO?Ut(h.backupExportedAtISO):"";l.appendChild(t("div",{style:"font-weight:700; color:#002830; margin-bottom:10px; font-size:0.95rem;",text:"Kopia konta: \u201E"+h.backupLabel+'"'+(C?" \xB7 "+C:"")})),h.mergePatients.length>0&&(l.appendChild(t("div",{style:"font-weight:600; color:#00838d; margin:10px 0 6px; font-size:0.83rem; text-transform:uppercase; letter-spacing:0.05em;",text:"Pacjenci do uzupe\u0142nienia zapis\xF3w ("+h.mergePatients.length+")"})),h.mergePatients.forEach(function(j){const E=j.newSnapshotCount===0,N=t("div",{style:"display:flex; justify-content:space-between; align-items:baseline; padding:4px 0; border-bottom:1px solid rgba(0,131,141,0.08); font-size:0.85rem; color:"+(E?"#999":"#002830")+";"},[t("span",{text:j.name}),t("span",{style:"font-size:0.78rem; color:"+(E?"#bbb":"#00838d")+"; white-space:nowrap; margin-left:12px;",text:E?"brak nowych (wszystkie zapisy ju\u017C s\u0105)":j.currentSnapshotCount+" + "+j.newSnapshotCount+" nowych = "+(j.currentSnapshotCount+j.newSnapshotCount)})]);l.appendChild(N)})),h.addPatients.length>0&&(l.appendChild(t("div",{style:"font-weight:600; color:#00838d; margin:14px 0 6px; font-size:0.83rem; text-transform:uppercase; letter-spacing:0.05em;",text:"Nowi pacjenci do dodania ("+h.addPatients.length+")"})),h.addPatients.forEach(function(j){const E=t("div",{style:"display:flex; justify-content:space-between; align-items:baseline; padding:4px 0; border-bottom:1px solid rgba(0,131,141,0.08); font-size:0.85rem; color:#002830;"},[t("span",{text:j.name}),t("span",{style:"font-size:0.78rem; color:#00838d; white-space:nowrap; margin-left:12px;",text:j.snapshotCount+" "+(j.snapshotCount===1?"zapis":"zapis\xF3w")})]);l.appendChild(E)}));const y=[];h.totalNewSnapshots>0&&y.push(h.totalNewSnapshots+" nowych zapis\xF3w zostanie dodanych"),h.totalNewSnapshots===0&&y.push("Brak nowych danych \u2014 wszystko ju\u017C masz"),h.addPatients.length>0&&y.push(h.addPatients.length+" nowych pacjent\xF3w"),l.appendChild(t("div",{style:"margin-top:14px; padding:10px 12px; background:rgba(0,131,141,0.06); border-radius:10px; font-size:0.87rem; color:#002830; font-weight:600;",text:y.join(" \xB7 ")})),l.style.display="block",h.totalNewSnapshots>0||h.addPatients.length>0?(m.style.display="",m.textContent="Scal teraz ("+h.totalNewSnapshots+" nowych zapis\xF3w"+(h.addPatients.length>0?", "+h.addPatients.length+" nowych pacjent\xF3w":"")+")"):m.style.display="none"}catch(h){dt(p,h&&h.message?h.message:"Nie uda\u0142o si\u0119 odczyta\u0107 kopii.")}finally{st(!1),f.disabled=!1}}),m.addEventListener("click",async function(){dt(p,""),st(!0),m.disabled=!0,f.disabled=!0,d.disabled=!0;try{const h=await i.mergeVaultBackup(e,d.value);for(l.style.display="none",m.style.display="none",w.style.display="block";w.firstChild;)w.removeChild(w.firstChild);const C=[];h.addedPatientCount>0&&C.push("\u2795 Dodano "+h.addedPatientCount+" nowych pacjent\xF3w"),h.mergedPatientCount>0&&C.push("\u{1F500} Uzupe\u0142niono zapisy u "+h.mergedPatientCount+" pacjent\xF3w"),h.addedSnapshotCount>0&&C.push("\u2713 \u0141\u0105cznie dodano "+h.addedSnapshotCount+" zapis\xF3w"),h.skippedSnapshotCount>0&&C.push("\u21A9 Pomini\u0119to "+h.skippedSnapshotCount+" duplikat\xF3w (ju\u017C by\u0142y w Twoim koncie)"),h.addedSnapshotCount===0&&h.addedPatientCount===0&&C.push("Brak zmian \u2014 wszystkie dane z tej kopii ju\u017C by\u0142y w Twoim koncie."),C.forEach(function(y){w.appendChild(t("p",{style:"margin:4px 0; font-size:0.88rem;",text:y}))}),k.textContent="Gotowe",k.className="vilda-auth-btn vilda-auth-btn-primary",k.onclick=function(){mt(),St()}}catch(h){dt(p,h&&h.message?h.message:"Scalanie nie powiod\u0142o si\u0119."),m.disabled=!1,f.disabled=!1,d.disabled=!1}finally{st(!1)}}),d.addEventListener("keydown",function(h){h.key==="Enter"&&f.click()}),ft(t("div",{class:"vilda-auth-screen vilda-auth-merge"},[o,r,s,d,p,t("div",{class:"vilda-auth-actions"},[f]),l,t("div",{class:"vilda-auth-actions",style:"margin-top:8px;"},[m]),w,t("div",{class:"vilda-auth-actions",style:"margin-top:4px;"},[k])])),setTimeout(function(){try{d.focus()}catch{}},30)}function At(){const e=rt();if(!e)return;const a=t("h2",{class:"vilda-auth-title",text:"Logowanie z innego urz\u0105dzenia"}),i=t("p",{class:"vilda-auth-subtitle",text:"Wybierz spos\xF3b logowania."}),o='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><line x1="14" y1="14" x2="14" y2="17"/><line x1="17" y1="14" x2="21" y2="14"/><line x1="14" y1="21" x2="17" y2="21"/><line x1="20" y1="17" x2="20" y2="21"/></svg>',r='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>';function s(h){const C=t("button",{type:"button",class:"vilda-auth-entry-card","data-method":h.method});return C.style.cssText=["display:block;width:100%;text-align:left;cursor:pointer;font:inherit;color:inherit;","padding:14px 16px;margin:8px 0 0;","background:rgba(255,255,255,0.92);","border:2px solid #d7e9ec;border-radius:14px;","transition:border-color .18s ease, background .18s ease, box-shadow .18s ease, transform .12s ease;"].join(""),C.innerHTML='<div style="display:flex;align-items:flex-start;gap:14px;"><div style="flex:0 0 auto;width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#e2f1f2,#cfe9ec);display:flex;align-items:center;justify-content:center;color:#00838d;" aria-hidden="true">'+h.iconSvg+'</div><div style="flex:1 1 auto;min-width:0;"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px;"><div style="font-weight:700;font-size:1rem;color:#0f2b33;">'+h.title+'</div><span style="font-size:0.7rem;font-weight:600;color:'+h.tagColor+";background:"+h.tagBg+';padding:2px 8px;border-radius:999px;white-space:nowrap;">'+h.tag+'</span></div><div style="font-size:0.85rem;color:#5b6672;line-height:1.45;">'+h.desc+"</div></div></div>",C.addEventListener("mouseenter",function(){C.style.borderColor="#00838d",C.style.transform="translateY(-1px)",C.style.boxShadow="0 6px 16px rgba(0,131,141,0.18)"}),C.addEventListener("mouseleave",function(){C.style.borderColor="#d7e9ec",C.style.transform="",C.style.boxShadow=""}),C.addEventListener("click",h.onClick),C}const d=s({method:"qr",iconSvg:o,title:"Zaloguj przez kod QR",desc:"Zeskanuj telefonem i ustal has\u0142o. W nast\u0119pnym kroku wybierzesz, czy pacjenci maj\u0105 zosta\u0107 na dysku, czy tylko w chmurze.",tag:"Konto zostaje",tagColor:"#0f6e56",tagBg:"#e1f5ee",onClick:function(){Jt({availableModes:["local","cloud-only"]})}});let p=null;typeof e.unlockWithPasskeyEphemeral=="function"&&(p=s({method:"ephemeral",iconSvg:r,title:"Zaloguj jednorazowo",desc:"Pracujesz na obcym komputerze? Po zako\u0144czeniu pracy nic nie zostanie.",tag:"Nic nie zostaje",tagColor:"#854f0b",tagBg:"#faeeda",onClick:function(){Je({storageMode:"ephemeral"})}}));const f=s({method:"backup-code",iconSvg:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><line x1="10.85" y1="12.15" x2="19" y2="4"/><line x1="18" y1="5" x2="20" y2="7"/><line x1="15" y1="8" x2="17" y2="10"/></svg>',title:"U\u017Cyj zapasowego kodu",desc:"Masz zapasowy kod z poprzedniego urz\u0105dzenia? Wklej go i podaj has\u0142o, \u017Ceby zalogowa\u0107 si\u0119 bez telefonu.",tag:"Bez telefonu",tagColor:"#444441",tagBg:"#f1efe8",onClick:function(){Ya()}}),m=t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost",type:"button",text:"\u2190 Wr\xF3\u0107",onclick:function(){kt()}}),k=[a,i,d];p&&k.push(p),k.push(f,m);const w=t("div",{class:"vilda-auth-screen vilda-auth-setup"},k);ft(w)}function Za(e){const a=rt();if(!a)return;const i=t("h2",{class:"vilda-auth-title",text:"Twoje has\u0142o wymaga zmiany"}),o=t("p",{class:"vilda-auth-subtitle",text:"Twoje obecne has\u0142o nie spe\u0142nia naszych zaktualizowanych wymaga\u0144 bezpiecze\u0144stwa. Ustaw silniejsze has\u0142o, \u017Ceby kontynuowa\u0107 prac\u0119."}),r=document.createElement("div");r.style.cssText="margin: 8px 0 14px; padding: 10px 12px; background: rgba(180,83,9,0.08); border-left: 3px solid #b45309; border-radius: 8px; font-size: 0.85rem; color: #854f0b; line-height: 1.5;";const s=e&&e.message?e.message+(e.hint?" "+e.hint:""):"Has\u0142o musi mie\u0107 minimum 12 znak\xF3w i zawiera\u0107 co najmniej 3 z 4 typ\xF3w znak\xF3w: ma\u0142e litery, wielkie litery, cyfry, znaki specjalne.";r.innerHTML="<strong>Dlaczego?</strong> "+s;const d=t("input",{type:"password",class:"vilda-auth-input",placeholder:"Nowe has\u0142o (min. 12 znak\xF3w, 3 z 4 typ\xF3w)"}),p=t("input",{type:"password",class:"vilda-auth-input",placeholder:"Powt\xF3rz nowe has\u0142o"}),l=t("button",{type:"button",class:"vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small vilda-auth-btn-subtle",text:"\u{1F3B2} Zaproponuj silne has\u0142o"});l.style.cssText="margin: 4px 0 8px; font-size: 0.85rem;",l.addEventListener("click",function(){if(typeof a.generateStrongPassword!="function")return;const h=a.generateStrongPassword();d.value=h,p.value=h;try{d.focus()}catch{}});const f=t("div",{class:"vilda-auth-error"});f.style.display="none";function m(h){f.textContent=h||"",f.style.display=h?"":"none"}const k=t("button",{class:"vilda-auth-btn vilda-auth-btn-primary",type:"button",text:"Ustaw nowe has\u0142o i kontynuuj"});k.addEventListener("click",async function(){if(m(""),typeof a.validatePasswordStrength=="function"){const C=a.validatePasswordStrength(d.value);if(!C.ok){m(C.message+(C.hint?" "+C.hint:""));return}}else if(d.value.length<12){m("Has\u0142o musi mie\u0107 minimum 12 znak\xF3w.");return}if(d.value!==p.value){m("Has\u0142a nie s\u0105 takie same.");return}k.disabled=!0;const h=k.textContent;k.textContent="Zmieniam\u2026";try{await a.resetPasswordWhileUnlocked(d.value),mt(),St()}catch(C){m(C&&C.message?C.message:"Nie uda\u0142o si\u0119 zmieni\u0107 has\u0142a."),k.disabled=!1,k.textContent=h}}),p.addEventListener("keydown",function(h){h.key==="Enter"&&k.click()});const w=t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small",type:"button",text:"Wyloguj si\u0119 \u2014 ustawi\u0119 has\u0142o p\xF3\u017Aniej",onclick:function(){try{a.lock("user")}catch{}kt()}});ft(t("div",{class:"vilda-auth-screen vilda-auth-setup"},[i,o,r,ge(d),l,ge(p),f,k,w])),setTimeout(function(){try{d.focus()}catch{}},30)}function Ya(){const e=rt();if(!e)return;const a=t("h2",{class:"vilda-auth-title",text:"Zapasowy kod dost\u0119pu"}),i=t("p",{class:"vilda-auth-subtitle",text:"Kod + has\u0142o loguj\u0105 konto na tym urz\u0105dzeniu i pobieraj\u0105 dane z chmury."}),o=document.createElement("p");o.style.cssText="margin:0 0 0.9rem;font-size:0.84rem;color:var(--text-secondary,#555);line-height:1.5;",o.innerHTML=["<strong>Warunek:</strong> na starym urz\u0105dzeniu musi by\u0107 w\u0142\u0105czona synchronizacja.<br>","Kod wygenerujesz tam w: <strong>Ustawienia \u2192 Synchronizacja</strong> \u2192 ",'<strong>\u201E\u2601 Poka\u017C zapasowy kod dost\u0119pu"</strong> \u2192 Generuj.'].join("");const r=t("textarea",{class:"vilda-auth-input",placeholder:"vsc3.600000.AbCd1234.XyZw5678.\u2026",rows:"3",style:"font-family:monospace;font-size:0.82rem;resize:vertical;min-height:68px;margin-bottom:0.5rem;"}),s=t("input",{type:"text",class:"vilda-auth-input",placeholder:"Nazwa konta (opcjonalnie, np. dr Kowalska)",maxlength:"60",style:"margin-bottom:0.5rem;"}),d=t("input",{type:"password",class:"vilda-auth-input",placeholder:"Has\u0142o ze starego konta",style:"margin-bottom:0.5rem;"}),p=t("div",{class:"vilda-auth-error"});p.style.display="none";function l(k){p.textContent=k||"",p.style.display=k?"":"none"}const f=t("button",{class:"vilda-auth-btn vilda-auth-btn-primary",type:"button",text:"Odtw\xF3rz konto z kodem"});f.addEventListener("click",async function(){l("");const k=(r.value||"").trim(),w=d.value||"",h=(s.value||"").trim()||void 0;if(!k){l("Wklej zapasowy kod dost\u0119pu.");return}if(!w){l("Podaj has\u0142o.");return}f.disabled=!0;const C=f.textContent;f.textContent="Odtwarzanie\u2026";try{await e.importSyncCode(k,w,{label:h}),mt()}catch(y){l(y&&y.message?y.message:"B\u0142\u0105d odtwarzania. Sprawd\u017A kod i has\u0142o."),f.disabled=!1,f.textContent=C}}),d.addEventListener("keydown",function(k){k.key==="Enter"&&f.click()});const m=t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost",type:"button",text:"\u2190 Wr\xF3\u0107",onclick:function(){At()}});ft(t("div",{class:"vilda-auth-screen vilda-auth-setup"},[a,i,o,r,s,d,p,f,m]))}function In(){try{return!!(n.VildaProAccess&&n.VildaProAccess.hasAccess&&n.VildaProAccess.hasAccess())}catch{return!1}}function Tt(e){const a=e&&typeof e=="object"?e:{},i=a.context==="passkey"?"passkey":"qr",o=typeof a.onPick=="function"?a.onPick:function(){},r=typeof a.onBack=="function"?a.onBack:At,s=!!a.proGatingDeferred,d=["local","cloud-only","ephemeral"],p=Array.isArray(a.availableModes)?a.availableModes.filter(function(b){return d.indexOf(b)>=0}):d;function l(b){return p.indexOf(b)>=0}const f=In(),m=s?!1:!f,k=typeof navigator<"u"&&navigator&&navigator.onLine===!1,w=t("h2",{class:"vilda-auth-title",text:"Jak chcesz si\u0119 zalogowa\u0107?"}),h=t("p",{class:"vilda-auth-subtitle",text:i==="passkey"?"Po potwierdzeniu na telefonie wybierz, ile danych zostawi\u0107 na tym komputerze.":"Po zeskanowaniu kodu QR wybierz, ile danych zostawi\u0107 na tym komputerze."}),C='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5"/><path d="M5 9v11h14V9"/><rect x="10" y="13" width="4" height="7" fill="none"/></svg>',y='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 18a4.5 4.5 0 1 0 0-9 4 4 0 0 0-7.9-1.6A4 4 0 0 0 5 17h12.5z"/><polyline points="12 16 12 12"/><polyline points="10 14 12 12 14 14"/></svg>',j='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>';function E(b){const L=t("button",{type:"button",class:"vilda-auth-mode-card","data-mode":b.mode,"aria-pressed":"false","aria-disabled":b.disabled?"true":"false"});L.style.cssText=["display:block;width:100%;text-align:left;cursor:"+(b.disabled?"not-allowed":"pointer")+";","font:inherit;color:inherit;","padding:14px 16px;margin:8px 0 0;","background:"+(b.disabled?"rgba(245,245,245,0.65)":"rgba(255,255,255,0.92)")+";","border:2px solid "+(b.disabled?"#e5e7eb":"#d7e9ec")+";border-radius:14px;","opacity:"+(b.disabled?"0.78":"1")+";","transition:border-color .18s ease, background .18s ease, box-shadow .18s ease, transform .12s ease;"].join("");const O="flex:0 0 auto;width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#e2f1f2,#cfe9ec);display:flex;align-items:center;justify-content:center;color:#00838d;";return L.innerHTML='<div style="display:flex;align-items:center;gap:14px;"><div style="'+O+'" aria-hidden="true">'+(b.iconSvg||"")+'</div><div style="flex:1 1 auto;min-width:0;"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px;"><div style="font-weight:700;font-size:1rem;color:#0f2b33;">'+b.title+"</div>"+(b.tag?'<span style="font-size:0.7rem;font-weight:600;color:'+b.tagColor+";background:"+b.tagBg+';padding:2px 8px;border-radius:999px;white-space:nowrap;">'+b.tag+"</span>":"")+'</div><div style="font-size:0.85rem;color:#5b6672;line-height:1.45;margin-bottom:6px;">'+b.desc+"</div>"+(b.hint?'<div style="margin-top:8px;padding:7px 10px;border-radius:9px;background:'+(b.hintIsWarning?"rgba(180,83,9,0.08)":"rgba(0,131,141,0.06)")+";color:"+(b.hintIsWarning?"#854f0b":"#00838d")+';font-size:0.76rem;font-weight:500;">'+b.hint+"</div>":"")+"</div></div>",b.disabled||(L.addEventListener("mouseenter",function(){L.style.borderColor=b.hoverBorder,L.style.transform="translateY(-1px)",L.style.boxShadow="0 6px 16px "+b.hoverShadow}),L.addEventListener("mouseleave",function(){L.style.borderColor="#d7e9ec",L.style.transform="",L.style.boxShadow=""}),L.addEventListener("click",function(){L.setAttribute("aria-pressed","true"),o(b.mode)})),L}const N=l("local")?E({mode:"local",iconSvg:C,title:"Komputer prywatny",desc:"Pe\u0142na instalacja konta z kopi\u0105 pacjent\xF3w na dysku. Po wylogowaniu wszystko zostaje \u2014 szybki dost\u0119p przy nast\u0119pnym logowaniu.",hoverBorder:"#00838d",hoverShadow:"rgba(0,131,141,0.18)"}):null,T=(function(){return s?k?"\u26A0\uFE0F Brak internetu \u2014 logowanie cloud-only mo\u017Ce si\u0119 nie powie\u015B\u0107.":"\u24D8 Sprawdzimy Twoj\u0105 subskrypcj\u0119 PRO po zalogowaniu.":f?k?"\u26A0\uFE0F Brak internetu \u2014 konfiguracja zostanie, ale logowanie nie powiedzie si\u0119 bez sieci.":null:"\u26A0\uFE0F Wymaga aktywnego planu PRO."})(),c=(function(){return s?k:!f||k})(),x=s||f?"PRO":"wymaga PRO",v=s||f?"#00838d":"#854f0b",g=s||f?"rgba(0,131,141,0.12)":"rgba(180,83,9,0.12)",S=l("cloud-only")?E({mode:"cloud-only",iconSvg:y,title:"Komputer w pracy",tag:x,tagColor:v,tagBg:g,desc:"Pracujesz na sprz\u0119cie, kt\xF3ry mog\u0105 obs\u0142ugiwa\u0107 te\u017C inni? Ten tryb chroni dane pacjent\xF3w: ich karty, parametry i pomiary istniej\u0105 <strong>tylko w chmurze</strong> i w pami\u0119ci Twojej sesji \u2014 nigdy nie zapisuj\u0105 si\u0119 na dysku. Wylogowanie = zero \u015Blad\xF3w pacjent\xF3w na tym komputerze. Twoje konto, ustawienia i biblioteka notatek pami\u0119taj\u0105 si\u0119 lokalnie (zaszyfrowane Twoim has\u0142em), \u017Ceby\u015B nie czeka\u0142 na pobranie ustawie\u0144.",disabled:m,hint:T,hintIsWarning:c,hoverBorder:"#00838d",hoverShadow:"rgba(0,131,141,0.18)"}):null,_=l("ephemeral")?E({mode:"ephemeral",iconSvg:j,title:"Obcy komputer",desc:"Tylko ta sesja. <strong>\u017Badnych \u015Blad\xF3w</strong> \u2014 ani konta, ani kopii. Po zamkni\u0119ciu zak\u0142adki nie da si\u0119 tu wi\u0119cej zalogowa\u0107 bez telefonu.",hoverBorder:"#9a213a",hoverShadow:"rgba(154,33,58,0.16)"}):null,I=t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost",type:"button",text:"\u2190 Wr\xF3\u0107",onclick:r}),W=[w,h];N&&W.push(N),S&&W.push(S),_&&W.push(_),W.push(I),ft(t("div",{class:"vilda-auth-screen vilda-auth-setup"},W))}function Je(e){const a=rt();if(!a||typeof a.unlockWithPasskeyEphemeral!="function"){At();return}const i=e&&typeof e=="object"?e:{};let o=null;(i.storageMode==="local"||i.storageMode==="cloud-only"||i.storageMode==="ephemeral")&&(o=i.storageMode);function r(){Tt({context:"passkey",proGatingDeferred:!0,onPick:function(T){Je({storageMode:T,onBack:r})},onBack:function(){At()}})}if(o===null){if(typeof Tt=="function"){r();return}o="ephemeral"}const s=o==="local"||o==="cloud-only";if(s&&typeof a.unlockWithPasskeyAndPersist!="function"&&typeof Tt=="function"){r();return}const d=o==="ephemeral"?"Zaloguj telefonem (ta sesja)":o==="cloud-only"?"Zaloguj telefonem \u2014 tryb chmurowy":"Zaloguj telefonem \u2014 pe\u0142ne konto",p=(function(){return o==="ephemeral"?"Po sesji nie zostanie na tym komputerze \u017Cadna kopia. Potwierd\u017A logowanie biometri\u0105 na telefonie.":o==="cloud-only"?"Konto zostanie zapami\u0119tane (has\u0142o), ale dane pacjent\xF3w tylko w chmurze. Wpisz has\u0142o, potem potwierd\u017A biometri\u0105 na telefonie.":"Konto i kopia pacjent\xF3w zostan\u0105 na tym komputerze. Wpisz has\u0142o, potem potwierd\u017A biometri\u0105 na telefonie."})(),l=t("h2",{class:"vilda-auth-title",text:d}),f=t("p",{class:"vilda-auth-subtitle",text:p}),m=t("div",{class:"vilda-auth-error"});m.style.display="none";function k(T){m.textContent=T||"",m.style.display=T?"":"none"}const w=s?t("input",{type:"password",class:"vilda-auth-input",placeholder:"Nowe has\u0142o (min. 12 znak\xF3w, 3 z 4 typ\xF3w)",autocomplete:"new-password"}):null,h=s?t("p",{class:"vilda-auth-hint",text:"To has\u0142o b\u0119dziesz wpisywa\u0107 przy ka\u017Cdym kolejnym logowaniu na tym komputerze."}):null,C=t("button",{class:"vilda-auth-btn vilda-auth-btn-primary",type:"button",text:s?"\u{1F4F1} Wpisa\u0142em has\u0142o \u2014 potwierd\u017A telefonem":"\u{1F4F1} Zaloguj telefonem"}),y=t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small",type:"button",text:"Nie dzia\u0142a? Zaloguj kodem QR"});y.style.display="none",y.addEventListener("click",function(){Jt({storageMode:o})});let j=!1;C.addEventListener("click",async function(){if(j)return;k("");const T=w?w.value||"":null;if(s&&T.length<8){k("Has\u0142o musi mie\u0107 minimum 8 znak\xF3w.");return}j=!0,y.style.display="none";const c=C.textContent;C.disabled=!0,C.textContent="Czekam na telefon\u2026";try{if(s){if(o==="cloud-only")try{const x=be();x&&typeof x.setSyncEnabled=="function"&&x.setSyncEnabled(!0)}catch(x){}await a.unlockWithPasskeyAndPersist(T,{storageMode:o})}else await a.unlockWithPasskeyEphemeral({});mt()}catch(x){const v=fa(x);k(v.message),v.offerQrFallback&&(y.style.display=""),j=!1,C.disabled=!1,C.textContent=c}}),w&&w.addEventListener("keydown",function(T){T.key==="Enter"&&C.click()});const E=t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost",type:"button",text:"\u2190 Wr\xF3\u0107",onclick:function(){typeof i.onBack=="function"?i.onBack():At()}}),N=[l,f];w&&N.push(w,h),N.push(C,m,y,E),ft(t("div",{class:"vilda-auth-screen vilda-auth-setup"},N))}function Ln(){return new Promise(function(e,a){if(typeof QRCode<"u"){e();return}const i=n.document.createElement("script");i.src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js",i.integrity="sha384-3zSEDfvllQohrq0PHL1fOXJuC_jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2_bMnU",i.crossOrigin="anonymous",i.onload=e,i.onerror=function(){a(new Error("Nie uda\u0142o si\u0119 za\u0142adowa\u0107 biblioteki QR."))},n.document.head.appendChild(i)})}function Jt(e){const a=rt();if(!a||typeof a.initiateQRLogin!="function")return;const i=e&&typeof e=="object"?e:{};let o=null;i.storageMode==="local"||i.storageMode==="cloud-only"||i.storageMode==="ephemeral"?o=i.storageMode:i.ephemeral===!0&&(o="ephemeral");const r=Array.isArray(i.availableModes)?i.availableModes:null;if(o===null){if(typeof Tt=="function"){const N={context:"qr",proGatingDeferred:!0,onPick:function(T){Jt({storageMode:T})},onBack:function(){At()}};r&&(N.availableModes=r),Tt(N);return}o="ephemeral"}const s=o==="ephemeral"&&typeof a.completeQRLoginEphemeral=="function";if(o==="ephemeral"&&!s&&typeof Tt=="function"){const N={context:"qr",proGatingDeferred:!0,onPick:function(T){Jt({storageMode:T})},onBack:function(){At()}};r&&(N.availableModes=r),Tt(N);return}const d="vilda-qr-priv-v1",p="vilda-qr-token-v1";let l=null,f=null,m=120,k=null,w=null,h=!1;function C(){try{n.sessionStorage&&(n.sessionStorage.removeItem(d),n.sessionStorage.removeItem(p))}catch{}k=null}function y(){l&&(clearInterval(l),l=null),f&&(clearInterval(f),f=null),C()}function j(N){const T=N&&N.encryptedPayload?N.encryptedPayload:N,c=N&&N.label?N.label:null,x=k;y();const v=t("h2",{class:"vilda-auth-title",text:"\u2713 Prawie gotowe!"}),S=t("p",{class:"vilda-auth-subtitle",text:(function(){return o==="ephemeral"?"Zaloguj si\u0119 na t\u0119 sesj\u0119 \u2014 po zamkni\u0119ciu nic nie zostanie na tym komputerze.":o==="cloud-only"?"Podaj has\u0142o \u2014 konto zostanie zapami\u0119tane, ale dane pacjent\xF3w tylko w chmurze.":"Podaj has\u0142o, aby zalogowa\u0107 si\u0119 na tym urz\u0105dzeniu."})()}),_=s?null:t("input",{type:"password",class:"vilda-auth-input",placeholder:"Twoje has\u0142o"}),I=t("div",{class:"vilda-auth-error"});I.style.display="none";const W=t("button",{class:"vilda-auth-btn vilda-auth-btn-primary",type:"button",text:s?"Zaloguj (ta sesja)":"Zaloguj si\u0119"});W.addEventListener("click",async function(){if(h)return;I.style.display="none";const L=_?_.value:null;if(!s&&!L){I.textContent="Podaj has\u0142o.",I.style.display="";return}h=!0,W.disabled=!0,W.textContent="Loguj\u0119\u2026";try{if(s)await a.completeQRLoginEphemeral(x,T,c);else{if(o==="cloud-only")try{const O=be();O&&typeof O.setSyncEnabled=="function"&&O.setSyncEnabled(!0)}catch(O){}await a.completeQRLogin(x,T,{newPassword:L,label:c,storageMode:o})}C(),mt()}catch(O){h=!1,I.textContent=O&&O.message?O.message:"B\u0142\u0105d logowania. Sprawd\u017A has\u0142o.",I.style.display="",W.disabled=!1,W.textContent=s?"Zaloguj (ta sesja)":"Zaloguj si\u0119"}}),_&&_.addEventListener("keydown",function(L){L.key==="Enter"&&W.click()});const b=[v,S];_&&b.push(_),b.push(I,W),ft(t("div",{class:"vilda-auth-screen vilda-auth-setup"},b)),_&&setTimeout(function(){try{_.focus()}catch{}},30)}async function E(){const N=t("div",{class:"vilda-auth-screen vilda-auth-setup"},[t("h2",{class:"vilda-auth-title",text:"Logowanie przez QR"}),t("p",{class:"vilda-auth-subtitle",text:"Generuj\u0119 kod QR\u2026"})]);ft(N);try{await Ln()}catch{ft(t("div",{class:"vilda-auth-screen vilda-auth-setup"},[t("h2",{class:"vilda-auth-title",text:"Logowanie przez QR"}),t("p",{class:"vilda-auth-error",text:"Nie uda\u0142o si\u0119 za\u0142adowa\u0107 biblioteki QR. Sprawd\u017A po\u0142\u0105czenie z internetem."}),t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost",type:"button",text:"\u2190 Wr\xF3\u0107",onclick:function(){kt()}})]));return}let T;try{T=await a.initiateQRLogin()}catch(u){ft(t("div",{class:"vilda-auth-screen vilda-auth-setup"},[t("h2",{class:"vilda-auth-title",text:"Logowanie przez QR"}),t("p",{class:"vilda-auth-error",text:u&&u.message||"B\u0142\u0105d generowania kodu QR."}),t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost",type:"button",text:"\u2190 Wr\xF3\u0107",onclick:function(){kt()}})]));return}k=T.privateKeyB64u,w=T.transferToken,m=T.expiresIn||120;try{n.sessionStorage&&(n.sessionStorage.setItem(d,k),n.sessionStorage.setItem(p,w))}catch{}const c=t("h2",{class:"vilda-auth-title",text:"Zaloguj si\u0119 przez QR"}),x=t("p",{class:"vilda-auth-subtitle",text:'Na zalogowanym urz\u0105dzeniu (np. telefonie) otw\xF3rz Ustawienia \u2192 \u201EZatwierd\u017A logowanie QR" i zeskanuj ten kod.'}),v=t("div",{style:"display:flex;justify-content:center;margin:12px 0;"}),g=t("div",{style:"background:#fff;padding:12px;border-radius:12px;display:inline-block;box-shadow:0 2px 12px rgba(0,0,0,.10);"});v.appendChild(g);const S=t("p",{class:"vilda-auth-side-note",style:"text-align:center;margin:4px 0;",text:"Kod wa\u017Cny przez "+m+" sekund"}),_=t("p",{class:"vilda-auth-side-note",style:"text-align:center;margin:4px 0;color:#00838d;",text:"Czekam na zatwierdzenie przez telefon\u2026"}),I=t("div",{style:"font-family:monospace;font-size:0.82rem;word-break:break-all;user-select:all;-webkit-user-select:all;text-align:center;background:rgba(0,0,0,.05);border-radius:8px;padding:8px 10px;margin:0 auto 12px;max-width:280px;display:none;",text:w}),W=t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small",type:"button",text:"Kopiuj token",style:"display:none;margin:0 auto;",onclick:async function(){try{n.navigator&&n.navigator.clipboard&&(await n.navigator.clipboard.writeText(w),W.textContent="Skopiowano \u2713",setTimeout(function(){W.textContent="Kopiuj token"},2e3))}catch(u){Wt("clipboard write failed: "+u)}}}),b=t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle",type:"button",text:"Drugie urz\u0105dzenie nie ma kamery? \u25BE",style:"display:block;margin:10px auto 0;font-size:0.82rem;"});b.addEventListener("click",function(){const u=I.style.display!=="none";I.style.display=u?"none":"",W.style.display=u?"none":"block",b.textContent=u?"Drugie urz\u0105dzenie nie ma kamery? \u25BE":"Drugie urz\u0105dzenie nie ma kamery? \u25B4"});const L=t("div",{style:"margin:4px 0 0;text-align:center;"},[b,I,W]),O=t("button",{class:"vilda-auth-btn vilda-auth-btn-ghost",type:"button",text:"\u2190 Wr\xF3\u0107",onclick:function(){y(),kt()}});ft(t("div",{class:"vilda-auth-screen vilda-auth-setup"},[c,x,v,S,L,_,t("div",{class:"vilda-auth-actions"},[O])]));try{new QRCode(g,{text:T.qrData,width:200,height:200,colorDark:"#00464d",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.M})}catch(u){_.textContent="B\u0142\u0105d generowania QR: "+(u.message||u);return}f=setInterval(function(){m--,S.textContent="Kod wa\u017Cny przez "+m+" sekund",m<=0&&(y(),_.textContent="\u23F0 Kod wygas\u0142. Wr\xF3\u0107 i wygeneruj nowy.",L.style.display="none",O.textContent="Wygeneruj nowy kod",O.onclick=function(){y(),Jt({storageMode:o})})},1e3),l=setInterval(async function(){if(!(!w||m<=0))try{const u=await a.pollQRLoginStatus(w);if(!l)return;u&&(clearInterval(l),l=null,clearInterval(f),f=null,_.textContent="\u2713 Zatwierdzono!",setTimeout(function(){j(u)},300))}catch{}},1e3)}E()}const Dn={__vildaAuthUI:!0,VERSION:qa,STEP:Xa,boot:Xe,showStartupScreen:kt,showEmptyStartupScreen:wa,showUserPicker:xa,showSetupWizard:ze,showLoginForUser:Ve,showPostLoginBiometricPrompt:za,showPostLoginAdoptionPrompt:Ca,showRecoveryFlowForUser:Sa,showPatientsList:ue,showPatientCard:jt,showPatientEditScreen:_a,showPatientNoteEditor:de,showQuickMeasureModal:Qe,showRemindersModal:La,maybeShowReminders:Ye,showImportPatientsFlow:Se,showMergeAccountFlow:Ka,showRestoreVaultFlow:Ke,showSyncCodeRestoreScreen:At,showBackupCodeRestoreScreen:Ya,showForcedPasswordResetScreen:Za,showQRLoginScreen:Jt,showPasskeyEphemeralLoginScreen:Je,showLoginModeChooser:Tt,mapEphemeralLoginError:fa,hide:mt,lockAndShowLogin:Mn,isGuestMode:Re,exitGuestMode:an,setBusy:st,updateProBadge:we,isTrustedDevice:Ge,setTrustedDevice:Pn,TRUSTED_DEVICE_IDLE_MS:sa,getCloudOnlyIdlePref:Va,setCloudOnlyIdlePref:En,CLOUD_ONLY_IDLE_CHOICES_MS:qe,effectiveIdleMs:je,getBiometricAutoTrigger:Te,setBiometricAutoTrigger:ca,getBiometricDismissCount:ua,resetBiometricDismissCount:function(e){Fe(e,0)},getBiometricLabel:Pt};if(n.VildaAuthUI=Dn,n.document)if(n.document.readyState==="loading")n.document.addEventListener("DOMContentLoaded",function(){Xe()},{once:!0});else try{Xe()}catch(e){ot("autostart boot",e)}})(typeof window<"u"?window:typeof globalThis<"u"?globalThis:null);
+  const VERSION = '2.6.5';
+  const STEP = '8R-15';
+  const ROOT_ID = 'vilda-auth-ui-root';
+  const IDLE_EVENTS = ['mousedown', 'keydown', 'touchstart', 'scroll', 'pointerdown'];
+  const PWA_GUEST_FLAG = 'VildaGuestMode';
+  // „Ufam temu urządzeniu" — preferencja PER-URZĄDZENIE (localStorage tego komputera,
+  // NIE konto → nie synchronizuje się na inne urządzenia). Włączona = dłuższe okno
+  // bezczynności (7 dni) w obrębie OTWARTEJ karty. Sesja nadal żyje w sessionStorage,
+  // więc zamknięcie przeglądarki i tak wylogowuje — klucz NIGDY nie trafia na dysk.
+  const TRUSTED_DEVICE_KEY = 'vilda-trust-device-v1';
+  const TRUSTED_DEVICE_IDLE_MS = 7 * 24 * 60 * 60 * 1000; // 7 dni
+
+  let booted = false;
+  let rootEl = null;
+  let _authRootBgLocked = false; // czy nakładka .vilda-auth-root trzyma blokadę scrolla body
+  let logoutBtnEl = null;
+  let pendingSetupOptions = null;
+  let idleHandlersBound = false;
+  // UWAGA: vilda_vault.lock() zeruje currentUserId PRZED wywołaniem notifyLock(),
+  // więc getCurrentUser() w onLock zawsze zwraca null. Śledzimy userId sami —
+  // aktualizujemy w onUnlock, używamy w onLock, zerujemy po użyciu.
+  let _trackedUserId = null;
+  // N11.2: usunięto _trackedCloudOnly + POST_LOGOUT_TOAST_KEY — toast
+  // „Dane pacjentów usunięte z pamięci" był UX clutter (powtarzanie tego co
+  // user już wie z wyboru trybu + chip topbar). Chip „Tryb chmurowy" + sekcja
+  // w Ustawieniach są stałymi punktami informacji.
+  // Stan ostatniej próby synchronizacji PRO z serwerem (per-user).
+  // Cooldown 30s obowiązuje tylko gdy TEN SAM userId loguje się ponownie szybko
+  // (idle-lock + natychmiastowy re-login, wieloetapowy QR transfer itp.).
+  // Inny userId → cooldown ignorowany, sync zawsze startuje.
+  let _proSyncLastAt = { userId: null, at: 0 };
+  // AbortController dla aktywnego żądania WebAuthn (navigator.credentials.get).
+  // Jeden kontroler na raz — abort() przed każdym nowym żądaniem eliminuje problem
+  // "stale pending request" który blokuje kolejne wywołania przez do 60s i zamraża UI.
+  let _passkeyAbortCtrl = null;
+  // D.3 — Conditional mediation (autofill UI). Osobny AbortController bo conditional
+  // get() wisi w tle (resolves dopiero gdy user wybierze passkey z autofill), a
+  // równolegle może działać auto-trigger D.2 z modal UI. Tylko jedno credentials.get()
+  // może być aktywne per origin — abort conditional PRZED start passkey modal.
+  let _conditionalAbortCtrl = null;
+  // Per-sesja zbiór userId dla których auto-passkey już raz nie udał się (anulowanie,
+  // cooldown przeglądarki po odrzuceniu Touch ID/Face ID). Chroni przed kolejnymi
+  // automatycznymi próbami — użytkownik może kliknąć przycisk biometryczny ręcznie.
+  // Kasowany przy pomyślnym logowaniu dowolną metodą.
+  let _passkeyAutoFailed = new Set();
+
+  // ============ ADAPTIVE BACKOFF BIOMETRII ============
+  // Po N anulowaniach z rzędu (cross-session) wyłączamy automatyczne wywoływanie
+  // Face ID/Touch ID na ekranie logowania — przycisk biometryczny zostaje, ale
+  // user musi go kliknąć ręcznie. Stan trzymamy w localStorage per-userId; user
+  // może ręcznie przełączyć w Ustawieniach → Bezpieczeństwo.
+  // Po udanym logowaniu biometrią resetujemy licznik (ale NIE re-enable auto —
+  // to świadoma decyzja użytkownika z Ustawień).
+  const BIOMETRIC_AUTO_OFF_THRESHOLD = 2;
+  function _bioKey(prefix, uid) { return 'vilda:' + prefix + ':' + uid; }
+  function _safeLS() { try { return global.localStorage || null; } catch (_) { return null; } }
+  function getBiometricAutoTrigger(uid) {
+    if (!uid) return 'on';
+    const ls = _safeLS(); if (!ls) return 'on';
+    try { return ls.getItem(_bioKey('biometricAutoTrigger', uid)) === 'off' ? 'off' : 'on'; }
+    catch (_) { return 'on'; }
+  }
+  function setBiometricAutoTrigger(uid, value) {
+    if (!uid) return;
+    const ls = _safeLS(); if (!ls) return;
+    try { ls.setItem(_bioKey('biometricAutoTrigger', uid), value === 'off' ? 'off' : 'on'); } catch (_) {}
+  }
+  function getBiometricDismissCount(uid) {
+    if (!uid) return 0;
+    const ls = _safeLS(); if (!ls) return 0;
+    try {
+      const n = parseInt(ls.getItem(_bioKey('biometricDismissCount', uid)) || '0', 10);
+      return Number.isFinite(n) && n >= 0 ? n : 0;
+    } catch (_) { return 0; }
+  }
+  function setBiometricDismissCount(uid, n) {
+    if (!uid) return;
+    const ls = _safeLS(); if (!ls) return;
+    try { ls.setItem(_bioKey('biometricDismissCount', uid), String(Math.max(0, n | 0))); } catch (_) {}
+  }
+  function isBiometricAutoOffNoticePending(uid) {
+    if (!uid) return false;
+    const ls = _safeLS(); if (!ls) return false;
+    try { return ls.getItem(_bioKey('biometricAutoOffNotice', uid)) === '1'; }
+    catch (_) { return false; }
+  }
+  function setBiometricAutoOffNoticePending(uid, pending) {
+    if (!uid) return;
+    const ls = _safeLS(); if (!ls) return;
+    try {
+      if (pending) ls.setItem(_bioKey('biometricAutoOffNotice', uid), '1');
+      else ls.removeItem(_bioKey('biometricAutoOffNotice', uid));
+    } catch (_) {}
+  }
+  // Po anulowaniu biometrii (NotAllowedError): inkrementuj licznik; po N z rzędu
+  // wyłącz auto-trigger i ustaw flagę banneru na następny ekran logowania.
+  function recordBiometricDismissal(uid) {
+    if (!uid) return;
+    const n = getBiometricDismissCount(uid) + 1;
+    setBiometricDismissCount(uid, n);
+    if (n >= BIOMETRIC_AUTO_OFF_THRESHOLD && getBiometricAutoTrigger(uid) === 'on') {
+      setBiometricAutoTrigger(uid, 'off');
+      setBiometricAutoOffNoticePending(uid, true);
+    }
+  }
+  // Po udanym logowaniu biometrią: zeruj licznik. NIE reaktywuj auto-trigger —
+  // jeśli user w międzyczasie wyłączył ręcznie, szanujemy tę decyzję.
+  function recordBiometricSuccess(uid) {
+    if (!uid) return;
+    setBiometricDismissCount(uid, 0);
+  }
+
+  // ============ PLATFORM DETECTION ============
+  /**
+   * Zwraca lokalną nazwę metody biometrycznej dla aktualnej platformy:
+   *   macOS          → "Touch ID"
+   *   iOS / iPadOS   → "Face ID / Touch ID"
+   *   Windows        → "Windows Hello"
+   *   Android / inne → "dane biometryczne"
+   */
+  function getBiometricLabel() {
+    var ua = (navigator.userAgent || '').toLowerCase();
+    var platform = ((navigator.userAgentData && navigator.userAgentData.platform) ||
+                    navigator.platform || '').toLowerCase();
+
+    // macOS — Touch ID (MacBook z Touch Bar / Magic Keyboard z Touch ID)
+    if (/macintosh|mac os x/.test(ua) && !/iphone|ipad/.test(ua)) {
+      return 'Touch ID';
+    }
+    // iOS / iPadOS — mogą mieć Face ID lub Touch ID zależnie od modelu,
+    // nie da się tego niezawodnie odróżnić w przeglądarce bez dodatkowych API
+    if (/iphone|ipad|ipod/.test(ua)) {
+      return 'Face ID / Touch ID';
+    }
+    // Windows Hello
+    if (/windows/.test(ua) || /win/.test(platform)) {
+      return 'Windows Hello';
+    }
+    // Android i pozostałe
+    return 'dane biometryczne';
+  }
+
+  // ============ UTIL ============
+  function getCrypto() { return global.VildaCrypto || null; }
+  function getVault() { return global.VildaVault || null; }
+  function getSyncIntegration() { return global.VildaSyncIntegration || null; }
+  function logWarn(msg) {
+    if (typeof global.vildaLogAppWarn === 'function') {
+      try { global.vildaLogAppWarn('vilda_auth_ui', msg); return; } catch (_) {}
+    }
+    if (global.console && typeof global.console.warn === 'function') {
+      global.console.warn('[VildaAuthUI] ' + msg);
+    }
+  }
+  function logError(msg, err) {
+    if (typeof global.vildaLogAppError === 'function') {
+      try { global.vildaLogAppError('vilda_auth_ui', msg, err); return; } catch (_) {}
+    }
+    if (global.console && typeof global.console.error === 'function') {
+      global.console.error('[VildaAuthUI] ' + msg, err);
+    }
+  }
+
+  // Mapuje błąd logowania passkey efemerycznego na komunikat dla użytkownika
+  // + decyzję, czy proponować fallback QR. Pure — testowalne bez DOM.
+  function mapEphemeralLoginError(err) {
+    const code = err && err.code;
+    if (code === 'EPH_PRF_UNSUPPORTED') {
+      return { message: 'Ta przeglądarka nie obsługuje logowania biometrycznego. Zaloguj się kodem QR — działa w każdej przeglądarce.', offerQrFallback: true };
+    }
+    if (code === 'EPH_NO_ENVELOPE') {
+      return { message: 'Ten klucz biometryczny nie jest skonfigurowany do logowania na cudzym komputerze. Aby to włączyć, wejdź na swoim telefonie w: Ustawienia → Synchronizacja → Skonfiguruj logowanie telefonem.', offerQrFallback: false };
+    }
+    if (code === 'EPH_CHALLENGE_FAILED' || code === 'EPH_UNLOCK_NETWORK') {
+      return { message: 'Nie można połączyć się z serwerem. Sprawdź połączenie z internetem i spróbuj ponownie.', offerQrFallback: false };
+    }
+    if (code === 'EPH_UNLOCK_REJECTED') {
+      return { message: 'Uwierzytelnienie odrzucone. Upewnij się, że używasz biometrii ze swojego telefonu (nie z tego komputera) i spróbuj ponownie.', offerQrFallback: true };
+    }
+    if (code === 'EPH_DECRYPT_FAILED') {
+      if (err && err.diagnostic === 'envelope-legacy-create-prf') {
+        return { message: 'Logowanie telefonem wymaga aktualizacji. Na swoim telefonie wejdź w Ustawienia → Synchronizacja, usuń je i skonfiguruj ponownie, a potem zaloguj się jeszcze raz.', offerQrFallback: true };
+      }
+      if (err && err.diagnostic === 'envelope-current-prf-mismatch') {
+        return { message: 'Wybrałeś biometrię tego komputera — to nie zadziała na cudzym urządzeniu. Wybierz biometrię swojego telefonu i potwierdź na nim.', offerQrFallback: true };
+      }
+      return { message: 'Nie udało się zweryfikować tożsamości. Spróbuj ponownie lub zaloguj się kodem QR.', offerQrFallback: true };
+    }
+    if (err && err.name === 'AbortError') {
+      return { message: 'Logowanie anulowane.', offerQrFallback: false };
+    }
+    return { message: (err && err.message) ? err.message : 'Logowanie nie powiodło się. Spróbuj ponownie lub użyj kodu QR.', offerQrFallback: true };
+  }
+
+  function el(tag, attrs, children) {
+    const node = global.document.createElement(tag);
+    if (attrs) {
+      Object.keys(attrs).forEach(function (k) {
+        if (k === 'class') node.className = attrs[k];
+        else if (k === 'text') node.textContent = attrs[k];
+        else if (k === 'html') node.innerHTML = attrs[k];
+        else if (k.indexOf('on') === 0 && typeof attrs[k] === 'function') node.addEventListener(k.substring(2), attrs[k]);
+        else node.setAttribute(k, attrs[k]);
+      });
+    }
+    if (children) {
+      const list = Array.isArray(children) ? children : [children];
+      list.forEach(function (c) {
+        if (c == null) return;
+        if (typeof c === 'string') node.appendChild(global.document.createTextNode(c));
+        else node.appendChild(c);
+      });
+    }
+    return node;
+  }
+
+  function clear(node) {
+    while (node && node.firstChild) node.removeChild(node.firstChild);
+  }
+
+  // ============ HELPER: Toggle „Pokaż hasło" ============
+  // Owija pole hasła w wrapper z absolute-positioned przyciskiem (eye SVG)
+  // po prawej stronie. Klik toggle'uje input.type między 'password' i 'text'.
+  //
+  // Użycie:
+  //   const pwInput = el('input', { type: 'password', class: '...', placeholder: '...' });
+  //   const wrapped = attachPasswordToggle(pwInput);
+  //   children.push(wrapped);     // zamiast children.push(pwInput)
+  //   pwInput.value, pwInput.focus() — działa normalnie, bo to ten sam input.
+  function attachPasswordToggle(input) {
+    const wrapper = el('div', { class: 'vilda-auth-pw-wrap' });
+    wrapper.style.cssText = 'position: relative; display: block; margin: inherit;';
+    // Rezerwujemy miejsce na przycisk po prawej (44px = 40px szer. + 4px margines).
+    input.style.paddingRight = '44px';
+    wrapper.appendChild(input);
+
+    // Eye / eye-off SVG (lucide-style, stroke 2, currentColor #5b6672).
+    const EYE_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+    const EYE_OFF_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>';
+
+    const btn = el('button', {
+      type: 'button',
+      class: 'vilda-auth-pw-toggle',
+      'aria-label': 'Pokaż hasło',
+      'aria-pressed': 'false',
+      title: 'Pokaż hasło'
+    });
+    // Płaska ikona — bez tła, cienia, border-radius. Wysokość 24px (znacznie
+    // niższa niż input ≈47px), żeby focus/click nie ruszał layoutu pola hasła.
+    // Globalne button:hover/focus-visible w style.css są zneutralizowane
+    // przez reguły .vilda-auth-pw-toggle w vilda_auth_ui.css (!important).
+    btn.style.cssText = [
+      'position: absolute; right: 6px; top: 50%; transform: translateY(-50%);',
+      'width: 40px; height: 24px;',
+      'display: flex; align-items: center; justify-content: center;',
+      'background: transparent; border: 0; padding: 0; border-radius: 0;',
+      'color: #5b6672; cursor: pointer;',
+      'transition: color .15s ease;'
+    ].join('');
+    btn.innerHTML = EYE_SVG;
+    // Tylko subtelna zmiana koloru ikony na hover — bez tła, bez ramki.
+    btn.addEventListener('mouseenter', function () { btn.style.color = '#00838d'; });
+    btn.addEventListener('mouseleave', function () { btn.style.color = '#5b6672'; });
+    btn.addEventListener('click', function () {
+      if (input.type === 'password') {
+        input.type = 'text';
+        btn.innerHTML = EYE_OFF_SVG;
+        btn.setAttribute('aria-label', 'Ukryj hasło');
+        btn.setAttribute('aria-pressed', 'true');
+        btn.setAttribute('title', 'Ukryj hasło');
+      } else {
+        input.type = 'password';
+        btn.innerHTML = EYE_SVG;
+        btn.setAttribute('aria-label', 'Pokaż hasło');
+        btn.setAttribute('aria-pressed', 'false');
+        btn.setAttribute('title', 'Pokaż hasło');
+      }
+      try { input.focus(); } catch (_) {}
+    });
+    wrapper.appendChild(btn);
+    return wrapper;
+  }
+
+  // Persistencja trybu gościa między podstronami: nawigacja nie powinna
+  // wyrzucać niezalogowanego użytkownika do ekranu logowania. Trzymamy flagę
+  // w sessionStorage, żeby przeżywała przejście między stronami, ale znikała
+  // po zamknięciu karty — analogicznie do mechanizmu sesji zalogowanej.
+  function persistGuestFlag(flag) {
+    try {
+      if (!global.sessionStorage) return;
+      if (flag) global.sessionStorage.setItem(PWA_GUEST_FLAG, '1');
+      else global.sessionStorage.removeItem(PWA_GUEST_FLAG);
+    } catch (_) { /* sessionStorage może być zablokowany w prywatnym trybie */ }
+  }
+
+  function readPersistedGuestFlag() {
+    try {
+      if (!global.sessionStorage) return false;
+      return global.sessionStorage.getItem(PWA_GUEST_FLAG) === '1';
+    } catch (_) { return false; }
+  }
+
+  function setGuestMode(flag, options) {
+    global[PWA_GUEST_FLAG] = !!flag;
+    persistGuestFlag(!!flag);
+    var opts = (options && typeof options === 'object') ? options : {};
+    if (flag) {
+      // Wejście w tryb gościa = nowa tożsamość anonimowa. Wyczyść wszystko,
+      // co pozostało po poprzednim użytkowniku (autosave w localStorage,
+      // wartości pól, globalne struktury). Pomijamy reset jeśli przywracamy
+      // flagę z sessionStorage przy nawigacji między podstronami — wtedy
+      // dane wpisane przez gościa na poprzedniej stronie pozostają jego.
+      if (!opts.skipReset) resetAppSessionState('enter-guest');
+      // Auth-gate: gość świadomie wchodzi do aplikacji → odsłoń interfejs
+      // (brama mogła być założona przez <head>, bo nie było sesji ani gościa).
+      unlockAppContent();
+      // W rogu pokazujemy „Zaloguj się” — żeby gość mógł wyjść z trybu
+      // anonimowego bez przeładowania strony.
+      showLoginButtonForGuest();
+    } else {
+      // Wyjście z trybu gościa. UWAGA: nie chowaj bezwarunkowo corner-btn — przy
+      // przywróceniu sesji (boot→tryRestoreSession→onUnlock pokazał „Wyloguj się")
+      // wołane jest setGuestMode(false); ślepy hideCornerBtn() ukrywał wtedy przycisk
+      // wylogowania na każdej podstronie po nawigacji. Gdy vault jest odblokowany
+      // (użytkownik zalogowany) → pokaż „Wyloguj się”; w innym wypadku schowaj.
+      var _vGuestExit = getVault();
+      if (_vGuestExit && typeof _vGuestExit.isUnlocked === 'function' && _vGuestExit.isUnlocked()) {
+        showLogoutButton();
+      } else {
+        hideCornerBtn();
+      }
+    }
+    try {
+      const evt = new global.CustomEvent('vilda:guest-mode-changed', { detail: { guest: !!flag } });
+      global.document.dispatchEvent(evt);
+    } catch (_) {}
+  }
+
+  function isGuestMode() { return !!global[PWA_GUEST_FLAG]; }
+
+  function exitGuestMode() {
+    setGuestMode(false);
+    showStartupScreen();
+  }
+
+  function showError(node, msg) {
+    if (!node) return;
+    node.textContent = msg || '';
+    node.style.display = msg ? 'block' : 'none';
+  }
+
+  function setBusy(flag) {
+    if (!rootEl) return;
+    if (flag) rootEl.setAttribute('data-busy', '1');
+    else rootEl.removeAttribute('data-busy');
+  }
+
+  // Pełny reset DOM/persistencji aplikacji przy każdej zmianie tożsamości
+  // (lock → start screen, wybór trybu gościa, restart bez przywróconej sesji).
+  // Gwarantuje, że gość nie zobaczy danych po byłym zalogowanym, ani user B
+  // nie zobaczy danych usera A. clearAllData() to istniejąca funkcja
+  // VildaDataImportExport czyszcząca pola formularzy + localStorage + globale.
+  function resetAppSessionState(reason) {
+    try {
+      if (typeof global.clearAllData === 'function') {
+        global.clearAllData();
+      } else if (global.VildaDataImportExport && typeof global.VildaDataImportExport.clearAllData === 'function') {
+        global.VildaDataImportExport.clearAllData();
+      }
+    } catch (e) {
+      logError('resetAppSessionState (' + (reason || '') + ')', e);
+    }
+    // Selektor „Substancja" w przeliczniku jednostek to PREFERENCJA urządzenia
+    // (LAB_CONV_SUBSTANCE) — clearAllData jej NIE czyści (preferencje są celowo
+    // zachowywane). Przy resecie sesji (logowanie, wylogowanie, gość, ekran startowy)
+    // czyścimy ją, aby po zalogowaniu pole „Substancja" startowało puste, zgodnie
+    // z zasadą „świeża sesja = puste formularze". W trakcie sesji (nawigacja między
+    // podstronami) resetAppSessionState NIE jest wołane, więc wybór jest pamiętany.
+    try {
+      if (global.VildaPersistence && typeof global.VildaPersistence.writePreferenceRaw === 'function') {
+        global.VildaPersistence.writePreferenceRaw('LAB_CONV_SUBSTANCE', '');
+      }
+    } catch (e2) {
+      logError('resetAppSessionState:lab-conv-substance (' + (reason || '') + ')', e2);
+    }
+    // BEZPIECZEŃSTWO DANYCH: natychmiast wyczyść mini-summary w decor-sidebarze.
+    // clearAllData() czyści pola formularza synchronicznie, ale odświeżenie
+    // mini-summary (updateMiniSummary) dzieje się asynchronicznie przez setTimeout
+    // w dispatchResetFieldEventsAfterClear. Gdy hide() usuwa nakładkę auth,
+    // decor-sidebar jest już widoczny, zanim async timer zdąży wyczyścić HTML —
+    // stare dane pacjenta poprzedniej sesji byłyby krótko (lub trwale) widoczne
+    // dla nowego użytkownika (gość, inny lekarz). To naruszenie danych w kontekście
+    // medycznym — dlatego czyścimy DOM synchronicznie tutaj, niezależnie od timera.
+    try {
+      var _miniContent = global.document && global.document.getElementById('miniSummaryContent');
+      if (_miniContent) _miniContent.innerHTML = '';
+      var _miniEl = global.document && global.document.getElementById('miniSummary');
+      if (_miniEl) _miniEl.style.display = 'none';
+      // Usuń też klasę wizualną z kontenera — bez tego decor-sidebar zostałby
+      // widoczny jako puste pudełko mimo braku contentu (sidebar.css wymaga klasy
+      // decor-sidebar--has-content żeby pokazać tło/cień/padding).
+      var _decorEl = _miniEl && (typeof _miniEl.closest === 'function')
+        ? _miniEl.closest('.decor-sidebar')
+        : (global.document && global.document.querySelector('.desktop-layout .decor-sidebar'));
+      if (_decorEl) _decorEl.classList.remove('decor-sidebar--has-content');
+    } catch (_) { /* nie blokuj resetu jeśli DOM niedostępny */ }
+  }
+
+  function formatRelativeISO(iso) {
+    if (!iso) return '';
+    try {
+      const t = new Date(iso).getTime();
+      if (!isFinite(t)) return '';
+      const diff = Date.now() - t;
+      const min = Math.round(diff / 60000);
+      if (min < 1) return 'przed chwilą';
+      if (min < 60) return min + ' min temu';
+      const hours = Math.round(min / 60);
+      if (hours < 24) return hours + ' godz. temu';
+      const days = Math.round(hours / 24);
+      if (days < 7) return days + (days === 1 ? ' dzień temu' : ' dni temu');
+      const weeks = Math.round(days / 7);
+      if (weeks < 5) return weeks + (weeks === 1 ? ' tydzień temu' : ' tyg. temu');
+      return new Date(iso).toLocaleDateString('pl-PL');
+    } catch (_) { return ''; }
+  }
+
+  // ============ PRZYCISK W ROGU APLIKACJI ============
+  // Jeden element DOM, dwa tryby:
+  //   - 'logout' (zalogowany) → „⏻ Wyloguj się” → V.lock('manual'),
+  //   - 'login'  (tryb gościa) → „→ Zaloguj się” → wyjście z trybu gościa
+  //                              + reset stanu + ekran wyboru tożsamości.
+  function ensureCornerBtn() {
+    if (logoutBtnEl) return logoutBtnEl;
+    if (!global.document || !global.document.body) return null;
+    logoutBtnEl = el('button', { type: 'button', class: 'vilda-auth-logout' });
+    logoutBtnEl.style.display = 'none';
+    global.document.body.appendChild(logoutBtnEl);
+    return logoutBtnEl;
+  }
+
+  function rebuildCornerBtn(mode) {
+    ensureCornerBtn();
+    if (!logoutBtnEl) return;
+    // klonujemy bez deep żeby skasować poprzednie listenery
+    const fresh = logoutBtnEl.cloneNode(false);
+    if (logoutBtnEl.parentNode) logoutBtnEl.parentNode.replaceChild(fresh, logoutBtnEl);
+    logoutBtnEl = fresh;
+
+    if (mode === 'logout') {
+      logoutBtnEl.title = 'Zablokuj aplikację i wróć do listy użytkowników';
+      logoutBtnEl.appendChild(el('span', { class: 'vilda-auth-logout-icon', 'aria-hidden': 'true', text: '⏻' }));
+      logoutBtnEl.appendChild(el('span', { text: 'Wyloguj się' }));
+      logoutBtnEl.addEventListener('click', function () {
+        // Pokaż overlay natychmiast — blokuje UI podczas całego async teardownu
+        // (abort passkey, resetAppSessionState, nawigacja lub ekran startowy).
+        showLogoutOverlay();
+        // Przerwij aktywne żądanie WebAuthn natychmiast — przed lock(), żeby zminimalizować
+        // okno race condition (biometria zdąży się rozwiązać między abort a lock).
+        // Bez tego abort następuje dopiero wewnątrz showStartupScreen(), co jest za późno
+        // i w ogóle pomija ścieżkę dla podstron (location.replace → return bez abort).
+        abortPendingPasskey();
+        const V = getVault();
+        if (V) { try { V.lock('manual'); } catch (_) {} }
+      });
+      logoutBtnEl.style.display = 'flex';
+    } else if (mode === 'login') {
+      logoutBtnEl.title = 'Zaloguj się lub przełącz na inne konto';
+      logoutBtnEl.appendChild(el('span', { class: 'vilda-auth-logout-icon', 'aria-hidden': 'true', text: '→' }));
+      logoutBtnEl.appendChild(el('span', { text: 'Zaloguj się' }));
+      logoutBtnEl.addEventListener('click', function () {
+        // Wyjście z trybu gościa: czyścimy flagę bezpośrednio (NIE przez
+        // setGuestMode(false), bo w setGuestMode jest event), kasujemy stan
+        // aplikacji i pokazujemy ekran wyboru tożsamości. Trzeba też usunąć
+        // utrwaloną wersję z sessionStorage, inaczej kolejna nawigacja
+        // przywróci tryb gościa.
+        global[PWA_GUEST_FLAG] = false;
+        persistGuestFlag(false);
+        resetAppSessionState('exit-guest-via-corner');
+        hideCornerBtn();
+        showStartupScreen();
+      });
+      logoutBtnEl.style.display = 'flex';
+    } else {
+      logoutBtnEl.style.display = 'none';
+    }
+  }
+
+  // ── Etykieta PRO w nagłówku ─────────────────────────────────────────────
+  // Aktualizuje #vildaProBadge (renderowany przez vilda_chrome.js):
+  //   VildaProAccess.hasAccess() → "active" (fiolet)
+  //   zalogowany, brak PRO       → "upgrade" (turkus „↑ PRO")
+  //   wylogowany                 → ukryty
+  function updateProBadge() {
+    try {
+      var badge = global.document && global.document.getElementById('vildaProBadge');
+      if (!badge) return;
+      var hasPro = global.VildaProAccess &&
+                   typeof global.VildaProAccess.hasAccess === 'function' &&
+                   global.VildaProAccess.hasAccess();
+      badge.style.display = 'inline-flex';
+      if (hasPro) {
+        badge.setAttribute('data-pro-state', 'active');
+        badge.textContent = 'PRO';
+      } else {
+        badge.setAttribute('data-pro-state', 'upgrade');
+        badge.textContent = '↑ PRO';
+      }
+    } catch (_) {}
+  }
+
+  function hideProBadge() {
+    try {
+      var badge = global.document && global.document.getElementById('vildaProBadge');
+      if (!badge) return;
+      badge.style.display = 'none';
+      badge.removeAttribute('data-pro-state');
+    } catch (_) {}
+  }
+
+  // Przerywa aktywne żądanie WebAuthn jeśli istnieje i natychmiast zwalnia UI
+  // (setBusy(false)) zanim wyrenderuje się nowy ekran. Bez tego stary pending
+  // navigator.credentials.get() żyje do 20s i może blokować nowe wywołania.
+  function abortPendingPasskey() {
+    if (_passkeyAbortCtrl) {
+      try { _passkeyAbortCtrl.abort(); } catch (_) {}
+      _passkeyAbortCtrl = null;
+      setBusy(false); // natychmiast odblokuj UI — nowy ekran musi być responsywny
+    }
+    // D.3 — conditional też dzieli credentials.get() API per-origin. Każdy nowy
+    // passkey request (auto-trigger, ręczny klik) MUSI ubić conditional inaczej
+    // dostaje NotAllowedError. Centralizujemy lifecycle tutaj — wszystkie istniejące
+    // abortPendingPasskey() w showStartupScreen, lock, logout itp. automatycznie
+    // ubijają też conditional bez zmian w call-sites.
+    abortPendingConditional();
+  }
+
+  // D.3 — Abort conditional mediation. Wołane przez abortPendingPasskey (najczęściej).
+  // Bezpośrednie wołanie tylko gdy potrzebujemy ubić conditional bez ubijania passkey
+  // (np. nigdy w obecnym kodzie — zostawione publiczne dla przyszłych use-case).
+  // Bez setBusy(false) — conditional nigdy nie ustawia busy (działa w tle bez UI).
+  function abortPendingConditional() {
+    if (_conditionalAbortCtrl) {
+      try { _conditionalAbortCtrl.abort(); } catch (_) {}
+      _conditionalAbortCtrl = null;
+    }
+  }
+
+  // ── Overlay "Trwa wylogowywanie..." ──────────────────────────────────────
+  // Pojawia się synchronicznie przy kliknięciu logout — natychmiast blokuje UI
+  // podczas asynchronicznego teardownu (abort passkey, resetAppSessionState,
+  // nawigacja lub renderowanie ekranu startowego). Szczególnie ważne gdy:
+  //   a) systemowy dialog biometryczny nie zamyka się od razu po abort(),
+  //   b) starsze Safari nie obsługuje AbortSignal w credentials.get() (timeout 20s),
+  //   c) aplikacja jest na podstronie i musi przeładować index.html.
+  // Zdejmowany przez hideLogoutOverlay() wywołane przez showStartupScreen()
+  // (tuż przed wyrenderowaniem ekranu startowego) lub przez onLock→location.replace
+  // (nowa strona montuje się od zera).
+  let _logoutOverlayEl = null;
+
+  function showLogoutOverlay() {
+    if (_logoutOverlayEl || !global.document) return; // idempotentne
+    try {
+      var overlay = global.document.createElement('div');
+      overlay.className = 'vilda-logout-overlay';
+      overlay.setAttribute('role', 'status');
+      overlay.setAttribute('aria-live', 'polite');
+      overlay.setAttribute('aria-label', 'Trwa wylogowywanie');
+
+      var spinner = global.document.createElement('div');
+      spinner.className = 'vilda-logout-overlay__spinner';
+      spinner.setAttribute('aria-hidden', 'true');
+
+      var label = global.document.createElement('div');
+      label.className = 'vilda-logout-overlay__label';
+      label.textContent = 'Trwa wylogowywanie…';
+
+      overlay.appendChild(spinner);
+      overlay.appendChild(label);
+      global.document.body.appendChild(overlay);
+      _logoutOverlayEl = overlay;
+    } catch (_) { /* nie blokuj logout jeśli DOM niedostępny */ }
+  }
+
+  function hideLogoutOverlay() {
+    if (!_logoutOverlayEl) return;
+    try { _logoutOverlayEl.parentNode && _logoutOverlayEl.parentNode.removeChild(_logoutOverlayEl); } catch (_) {}
+    _logoutOverlayEl = null;
+  }
+
+  function showLogoutButton() {
+    rebuildCornerBtn('logout');
+    updateProBadge();
+    try { if (global.document) global.document.documentElement.classList.add('vilda-logged-in'); } catch (_) {}
+  }
+  function showLoginButtonForGuest() { rebuildCornerBtn('login'); }
+  function hideCornerBtn() { if (logoutBtnEl) logoutBtnEl.style.display = 'none'; }
+  function hideLogoutButton() {
+    hideCornerBtn();
+    hideProBadge();
+    try { if (global.document) global.document.documentElement.classList.remove('vilda-logged-in'); } catch (_) {}
+  }
+
+  // ============ AUTH-GATE (anti-flash) ============
+  // Klasa html.vilda-auth-locked chowa interfejs aplikacji (patrz CSS w <head>
+  // podstron), żeby przed pojawieniem się ekranu logowania oraz po wylogowaniu
+  // nie błyskała treść aplikacji. Bramę zakłada synchroniczny skrypt w <head>
+  // (gdy brak sesji i brak trybu gościa) oraz showStartupScreen()/onLock tutaj;
+  // zdejmuje ją onUnlock po autoryzacji. Na podstronach bez reguły CSS te wywołania
+  // są nieszkodliwe (brak efektu wizualnego).
+  function lockAppContent() {
+    try { if (global.document) global.document.documentElement.classList.add('vilda-auth-locked'); } catch (_) {}
+  }
+  function unlockAppContent() {
+    try { if (global.document) global.document.documentElement.classList.remove('vilda-auth-locked'); } catch (_) {}
+  }
+
+  // ============ MOUNT ROOT ============
+  function ensureRoot() {
+    if (rootEl) return rootEl;
+    if (!global.document || !global.document.body) return null;
+    const existing = global.document.getElementById(ROOT_ID);
+    if (existing) {
+      // G1: gwarancja blokady gestu swipe-nawigacji (vilda_chrome.js
+      // swipeExcludedTarget) — gest startujący wewnątrz karty pacjenta nie
+      // może przejść do następnej strony, nawet gdy CSS display chwilowo pusty.
+      try { existing.setAttribute('data-no-swipe', 'true'); } catch (_) {}
+      rootEl = existing;
+      return rootEl;
+    }
+    rootEl = el('div', { id: ROOT_ID, class: 'vilda-auth-root', 'aria-live': 'polite' });
+    rootEl.style.display = 'none';
+    // G1: patrz wyżej — atrybut musi być na rootEl niezależnie czy stworzony
+    // świeżo, czy wzięty z DOM przez getElementById.
+    try { rootEl.setAttribute('data-no-swipe', 'true'); } catch (_) {}
+    global.document.body.appendChild(rootEl);
+    return rootEl;
+  }
+
+  function buildBrandHeader(opts) {
+    const options = opts || {};
+    const name = el('h1', { class: 'vilda-auth-brand-name', text: 'wagaiwzrost.pl' });
+    const tag = el('p', { class: 'vilda-auth-brand-tag', text: 'Vilda Clinic' });
+    if (options.noLogo) {
+      return el('div', { class: 'vilda-auth-brand' }, [name, tag]);
+    }
+    const logo = el('img', {
+      class: 'vilda-auth-logo',
+      src: 'logo_vilda.jpeg',
+      alt: 'Waga i wzrost — Vilda Clinic'
+    });
+    return el('div', { class: 'vilda-auth-brand' }, [logo, name, tag]);
+  }
+
+  function open(content, opts) {
+    ensureRoot();
+    if (!rootEl) return;
+    clear(rootEl);
+    const overlay = el('div', { class: 'vilda-auth-overlay' });
+    const card = el('div', { class: 'vilda-auth-card', role: 'dialog', 'aria-modal': 'true' });
+    card.appendChild(buildBrandHeader(opts));
+    // N11.2: usunięto post-logout toast (cloud-only). Chip „Tryb chmurowy"
+    // w topbarze + sekcja Ustawienia → Synchronizacja są jedynymi miejscami
+    // gdzie komunikujemy semantykę trybu — passive + persistent, nie spam.
+    card.appendChild(content);
+    overlay.appendChild(card);
+    rootEl.appendChild(overlay);
+    rootEl.style.display = 'block';
+    // Nakładka (karta pacjenta / lista / ekrany auth) widoczna → zablokuj scroll
+    // body, by strona pod fixed-overlayem nie przewijała się i nie „prześwitywała".
+    // Flaga chroni przed wielokrotnym acquire przy kolejnych open() (re-render).
+    if (!_authRootBgLocked) { _bgLockAcquire(); _authRootBgLocked = true; }
+  }
+
+  function hide() {
+    if (!rootEl) return;
+    rootEl.style.display = 'none';
+    // Nakładka schowana → zwolnij blokadę scrolla body (ref-count).
+    if (_authRootBgLocked) { _bgLockRelease(); _authRootBgLocked = false; }
+    // Zawsze czyść data-busy przy chowaniu auth UI — obrona przed wyciekiem stanu
+    // busy do następnego otwarcia overlay. Bez tego pointer-events:none (CSS) zostaje
+    // na karcie gdy rootEl jest pokazywany ponownie (showPatientsList, showStartupScreen),
+    // co sprawia że UI wygląda na zamrożone mimo że JS działa.
+    rootEl.removeAttribute('data-busy');
+    clear(rootEl);
+    // Sygnalizuj że auth UI zostało schowane — użytkownik jest już w aplikacji
+    // (zalogowany, tryb gościa, lub przywrócona sesja). Używane przez custom-fixes.js
+    // do opóźnienia initMiniSummary() aż do tego momentu, by uniknąć pokazania
+    // mini-summary z danymi poprzedniej sesji zanim pojawi się nakładka logowania.
+    try { global.__vildaAuthHidden = true; } catch (_) {}
+    try {
+      if (global.document && typeof global.CustomEvent === 'function') {
+        global.document.dispatchEvent(new global.CustomEvent('vilda:auth-hidden'));
+      }
+    } catch (_) {}
+  }
+
+  // ============ DYSPOZYTOR EKRANU STARTOWEGO ============
+  async function showStartupScreen() {
+    // Auth-gate: pokazujemy ekran logowania → interfejs aplikacji musi być
+    // schowany (przypadek brzegowy: klucz sesji istniał, ale odtworzenie padło,
+    // więc <head> mógł nie założyć bramy). Zakładamy ją zanim wyrenderujemy ekran.
+    lockAppContent();
+    // Przerwij aktywne żądanie WebAuthn przed przejściem do listy użytkowników.
+    // Bez tego stary pending navigator.credentials.get() blokuje nowe wywołania.
+    abortPendingPasskey();
+    const V = getVault();
+    if (!V) { logWarn('VildaVault niedostępny — pomijam ekran startowy.'); return; }
+    // ekran startowy ZAWSZE = świeży stan tożsamości; przy okazji upewniamy się,
+    // że nie zalega autosave z poprzedniej sesji ani guesta.
+    resetAppSessionState('show-startup');
+    hideCornerBtn();
+    let users = [];
+    try { users = await V.listUsers(); } catch (e) { logError('listUsers', e); }
+    // Zdejmij overlay "Trwa wylogowywanie..." — dane gotowe, zaraz pokazujemy ekran.
+    hideLogoutOverlay();
+    if (users.length === 0) showEmptyStartupScreen();
+    else showUserPicker(users);
+  }
+
+  // ============ EKRAN „BRAK UŻYTKOWNIKÓW” ============
+  function showEmptyStartupScreen() {
+    const title = el('h2', { class: 'vilda-auth-title', text: 'Witamy' });
+    const subtitle = el('p', {
+      class: 'vilda-auth-subtitle',
+      text: 'Aby zapisywać dane pacjentów, skonfiguruj swoje konto. Aplikacja zaszyfruje i lokalnie przechowa dane na tym urządzeniu.'
+    });
+
+    // ── Opcje dodatkowe (zwijane) ─────────────────────────────────────────────
+    const extraPanel = el('div', { class: 'vilda-auth-buttons' });
+    extraPanel.style.display = 'none';
+
+    extraPanel.appendChild(el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle',
+      type: 'button',
+      text: 'Odtwórz konto z pliku kopii (.wiw)',
+      onclick: function () { showRestoreVaultFlow(); }
+    }));
+
+    const toggleBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle',
+      type: 'button',
+      text: 'Opcje dodatkowe ▾'
+    });
+    toggleBtn.addEventListener('click', function () {
+      const expanded = extraPanel.style.display !== 'none';
+      extraPanel.style.display = expanded ? 'none' : '';
+      toggleBtn.textContent = expanded ? 'Opcje dodatkowe ▾' : 'Opcje dodatkowe ▴';
+    });
+
+    const mainButtons = el('div', { class: 'vilda-auth-buttons' });
+    mainButtons.appendChild(el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-primary',
+      type: 'button',
+      text: 'Załóż konto',
+      onclick: function () { showSetupWizard(); }
+    }));
+    mainButtons.appendChild(el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost',
+      type: 'button',
+      text: 'Loguję się na nowym lub obcym komputerze',
+      onclick: function () { showSyncCodeRestoreScreen(); }
+    }));
+    mainButtons.appendChild(el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle',
+      type: 'button',
+      text: 'Korzystaj bez logowania',
+      onclick: function () { setGuestMode(true); hide(); }
+    }));
+    mainButtons.appendChild(toggleBtn);
+
+    open(el('div', { class: 'vilda-auth-screen vilda-auth-startup' }, [title, subtitle, mainButtons, extraPanel]));
+  }
+
+  // ============ EKRAN WYBORU UŻYTKOWNIKA ============
+  function showUserPicker(users) {
+    const title = el('h2', { class: 'vilda-auth-title', text: 'Kto się loguje?' });
+    const subtitle = el('p', {
+      class: 'vilda-auth-subtitle',
+      text: 'Wybierz konto, aby kontynuować.'
+    });
+
+    const userList = el('div', { class: 'vilda-auth-user-list' });
+    // D.1: badge biometrii. Czytamy passkeyCount z registry (zapisywany przez
+    // vault._syncPasskeyCount po register/remove). Tekst lokalizowany przez
+    // getBiometricLabel() — "Touch ID" / "Face ID / Touch ID" / "Windows Hello".
+    // Ikona kłódki zamknietej (lucide-style) sygnalizuje że konto można odblokować
+    // biometrią — działa jako visual cue zanim user kliknie kafelek.
+    const PASSKEY_BADGE_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-1px;margin-right:4px;"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+    users.forEach(function (u) {
+      const lastSeen = u.lastLoginAtISO ? formatRelativeISO(u.lastLoginAtISO) : '';
+      const hasPasskey = typeof u.passkeyCount === 'number' && u.passkeyCount > 0;
+      const infoChildren = [
+        el('div', { class: 'vilda-auth-user-name', text: u.label || 'Konto bez nazwy' })
+      ];
+      if (hasPasskey) {
+        const badge = el('div', { class: 'vilda-auth-user-passkey-badge' });
+        // innerHTML — SVG ikona przed tekstem. textContent wstawiony osobno bo
+        // mieszanka SVG + tekst tylko przez innerHTML zachowa strukturę.
+        badge.innerHTML = PASSKEY_BADGE_SVG + getBiometricLabel();
+        infoChildren.push(badge);
+      }
+      if (lastSeen) {
+        infoChildren.push(el('div', { class: 'vilda-auth-user-meta', text: 'Ostatnio: ' + lastSeen }));
+      }
+      const card = el('button', {
+        class: 'vilda-auth-user-card',
+        type: 'button',
+        title: 'Zaloguj jako ' + u.label + (hasPasskey ? ' (' + getBiometricLabel() + ' dostępny)' : ''),
+        'data-has-passkey': hasPasskey ? '1' : '0',
+        onclick: function () { showLoginForUser(u.userId); }
+      }, [
+        el('div', { class: 'vilda-auth-user-avatar', text: (u.label || '?').charAt(0).toUpperCase() }),
+        el('div', { class: 'vilda-auth-user-info' }, infoChildren),
+        el('span', { class: 'vilda-auth-user-arrow', 'aria-hidden': 'true', text: '›' })
+      ]);
+      userList.appendChild(card);
+    });
+
+    // ── Opcje dodatkowe (zwijane) ─────────────────────────────────────────────
+    const extraPanel = el('div', { class: 'vilda-auth-buttons' });
+    extraPanel.style.display = 'none';
+
+    extraPanel.appendChild(el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost',
+      type: 'button',
+      text: '+ Dodaj nowego użytkownika',
+      onclick: function () { showSetupWizard(); }
+    }));
+    extraPanel.appendChild(el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle',
+      type: 'button',
+      text: 'Odtwórz konto z pliku kopii (.wiw)',
+      onclick: function () { showRestoreVaultFlow(); }
+    }));
+
+    const toggleBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle',
+      type: 'button',
+      text: 'Opcje dodatkowe ▾'
+    });
+    toggleBtn.addEventListener('click', function () {
+      const expanded = extraPanel.style.display !== 'none';
+      extraPanel.style.display = expanded ? 'none' : '';
+      toggleBtn.textContent = expanded ? 'Opcje dodatkowe ▾' : 'Opcje dodatkowe ▴';
+    });
+
+    const newDeviceBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost',
+      type: 'button',
+      text: 'Loguję się na nowym lub obcym komputerze',
+      onclick: function () { showSyncCodeRestoreScreen(); }
+    });
+
+    const guestBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle',
+      type: 'button',
+      text: 'Korzystaj bez logowania',
+      onclick: function () { setGuestMode(true); hide(); }
+    });
+
+    open(el('div', { class: 'vilda-auth-screen vilda-auth-picker' }, [
+      title, subtitle, userList,
+      el('div', { class: 'vilda-auth-buttons' }, [newDeviceBtn, guestBtn, toggleBtn]),
+      extraPanel
+    ]));
+  }
+
+  // ============ KREATOR KONFIGURACJI NOWEGO UŻYTKOWNIKA ============
+  function showSetupWizard(initialStep) {
+    pendingSetupOptions = pendingSetupOptions || { step: 1 };
+    const stepNum = (typeof initialStep === 'number') ? initialStep : pendingSetupOptions.step;
+    if (stepNum === 1) renderSetupStep1();
+    else if (stepNum === 2) renderSetupStep2();
+    else renderSetupStep3();
+  }
+
+  // UWAGA: funkcja buildCloudOnlyOptInCard USUNIĘTA w Kroku 15.
+  // Karta opt-in „Tryb chmurowy" nie ma już sensu w kreatorze nowego konta:
+  // • Brak slot'u w chmurze (nowe konto) → pierwsza sesja jest pusta
+  // • Mylący komunikat „konto pamięta hasło" przed założeniem konta
+  // • Brak local fallback recovery (.wiw backup) w cloud-only
+  // Cloud-only jest aktywowane runtime: Ustawienia (toggle) lub QR login na obcym
+  // komputerze z chooserem (showQRLoginScreen → completeQRLogin z storageMode).
+
+  function renderSetupStep1() {
+    pendingSetupOptions = pendingSetupOptions || {};
+    pendingSetupOptions.step = 1;
+
+    const stepLabel = el('div', { class: 'vilda-auth-step', text: 'Krok 1 z 4' });
+    const title = el('h2', { class: 'vilda-auth-title', text: 'Nowe konto' });
+    const sub = el('p', {
+      class: 'vilda-auth-subtitle',
+      text: 'Podaj swoje imię (np. „dr Kowalska”) i ustal hasło dostępu. Hasło min. 12 znaków, co najmniej 3 z 4 typów: małe i wielkie litery, cyfry, znaki specjalne.'
+    });
+
+    const labelInput = el('input', {
+      type: 'text',
+      class: 'vilda-auth-input',
+      placeholder: 'Twoje imię (np. dr Kowalska)',
+      maxlength: '60'
+    });
+    if (pendingSetupOptions.label) labelInput.value = pendingSetupOptions.label;
+
+    const pw1 = el('input', { type: 'password', class: 'vilda-auth-input', placeholder: 'Hasło (min. 12 znaków, 3 z 4 typów)' });
+    const pw2 = el('input', { type: 'password', class: 'vilda-auth-input', placeholder: 'Powtórz hasło' });
+    const errBox = el('div', { class: 'vilda-auth-error' });
+    errBox.style.display = 'none';
+
+    // Przycisk „Zaproponuj silne hasło" — generuje passphrase, wypełnia oba pola.
+    // Ujawnia hasło na chwilę (zmiana type → text → password po 2s), żeby user
+    // mógł je zapamiętać/skopiować przed dalszym krokiem.
+    const generateBtn = el('button', {
+      type: 'button',
+      class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small vilda-auth-btn-subtle',
+      text: '🎲 Zaproponuj silne hasło'
+    });
+    generateBtn.style.cssText = 'margin: 4px 0 8px; font-size: 0.85rem;';
+    generateBtn.addEventListener('click', function () {
+      const V = getVault();
+      if (!V || typeof V.generateStrongPassword !== 'function') return;
+      const generated = V.generateStrongPassword();
+      pw1.value = generated;
+      pw2.value = generated;
+      // User ma teraz przycisk „pokaż hasło" obok pola — może sam ujawnić
+      // wygenerowane hasło żeby je zapamiętać/skopiować, bez auto-reveal'u
+      // który mógłby gryźć się ze stanem toggle'a.
+      updateMeter();
+      try { pw1.focus(); } catch (_) {}
+    });
+
+    const meterLabel = el('span', { class: 'vilda-auth-meter-label', text: '—' });
+    const meterFill = el('div', { class: 'vilda-auth-meter-fill' });
+    const meter = el('div', { class: 'vilda-auth-meter' }, [meterFill]);
+
+    function updateMeter() {
+      const s = passwordStrength(pw1.value);
+      meterFill.style.width = s.percent + '%';
+      meterFill.setAttribute('data-strength', s.label);
+      meterLabel.textContent = pw1.value ? ('Siła hasła: ' + s.labelPl) : '—';
+    }
+    pw1.addEventListener('input', updateMeter);
+
+    // UWAGA: karta opt-in „Tryb chmurowy" USUNIĘTA z kreatora (Krok 15).
+    // Cloud-only ma sens TYLKO dla istniejących kont — przy zakładaniu nowego
+    // konta nie ma jeszcze slot'u w chmurze do zsynchronizowania. User chcący
+    // cloud-only powinien:
+    //   • założyć konto normalnie (local), potem włączyć cloud-only w Ustawieniach
+    //   • lub na obcym komputerze zalogować się QR-em i wybrać „Komputer w pracy"
+    //     w chooserze (tworzy konto z storageMode='cloud-only' przez completeQRLogin).
+
+    const next = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-primary',
+      type: 'button',
+      text: 'Dalej',
+      onclick: function () {
+        showError(errBox, '');
+        // Policy check przez vault.validatePasswordStrength (12+ chars, 3+ typy, no blacklist).
+        const V = getVault();
+        if (V && typeof V.validatePasswordStrength === 'function') {
+          const r = V.validatePasswordStrength(pw1.value);
+          if (!r.ok) {
+            showError(errBox, r.message + (r.hint ? ' ' + r.hint : ''));
+            return;
+          }
+        } else {
+          // Fallback gdy vault niedostępny — minimalny length check.
+          if (pw1.value.length < 12) { showError(errBox, 'Hasło musi mieć minimum 12 znaków.'); return; }
+        }
+        if (pw1.value !== pw2.value) { showError(errBox, 'Hasła nie są takie same.'); return; }
+        pendingSetupOptions.password = pw1.value;
+        pendingSetupOptions.label = labelInput.value.trim() || null;
+        pendingSetupOptions.recoveryKey = (getCrypto() && getCrypto().generateRecoveryKey()) || null;
+        // Zawsze 'local' w kreatorze. Cloud-only ustawiane runtime (Ustawienia /
+        // logowanie z telefonu na obcym komputerze).
+        pendingSetupOptions.storageMode = 'local';
+        renderSetupStep2();
+      }
+    });
+
+    const back = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost',
+      type: 'button',
+      text: 'Anuluj',
+      onclick: function () { pendingSetupOptions = null; showStartupScreen(); }
+    });
+
+    const safetyBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle vilda-auth-btn-small',
+      type: 'button',
+      text: 'Jak chronimy dane?',
+      onclick: function () { try { if (global.VildaDataSafety) global.VildaDataSafety.open(); } catch (_) {} }
+    });
+    const strengthBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle vilda-auth-btn-small',
+      type: 'button',
+      text: 'Jak silne jest szyfrowanie?',
+      onclick: function () { try { if (global.VildaCryptoStrength) global.VildaCryptoStrength.open(); } catch (_) {} }
+    });
+    const explainersRow = el('div', { class: 'vilda-auth-explainers' }, [safetyBtn, strengthBtn]);
+    explainersRow.style.display = 'flex';
+    explainersRow.style.flexWrap = 'wrap';
+    explainersRow.style.gap = '8px';
+    explainersRow.style.justifyContent = 'center';
+    explainersRow.style.margin = '0 auto 6px';
+
+    open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
+      stepLabel, title, sub, explainersRow, labelInput,
+      attachPasswordToggle(pw1), generateBtn,
+      el('div', { class: 'vilda-auth-meter-wrap' }, [meter, meterLabel]),
+      attachPasswordToggle(pw2), errBox,
+      el('div', { class: 'vilda-auth-actions' }, [back, next])
+    ]));
+    setTimeout(function () { try { labelInput.focus(); } catch (_) {} }, 30);
+  }
+
+  function passwordStrength(pw) {
+    if (!pw) return { percent: 0, label: 'none', labelPl: '—' };
+    let score = 0;
+    if (pw.length >= 8) score += 1;
+    if (pw.length >= 12) score += 1;
+    if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) score += 1;
+    if (/[0-9]/.test(pw)) score += 1;
+    if (/[^A-Za-z0-9]/.test(pw)) score += 1;
+    if (pw.length >= 16) score += 1;
+    const map = [
+      { percent: 10, label: 'very-weak', labelPl: 'bardzo słaba' },
+      { percent: 25, label: 'weak', labelPl: 'słaba' },
+      { percent: 45, label: 'fair', labelPl: 'średnia' },
+      { percent: 65, label: 'good', labelPl: 'dobra' },
+      { percent: 85, label: 'strong', labelPl: 'silna' },
+      { percent: 100, label: 'very-strong', labelPl: 'bardzo silna' }
+    ];
+    return map[Math.min(score, map.length - 1)];
+  }
+
+  function renderSetupStep2() {
+    const opts = pendingSetupOptions;
+    if (!opts || !opts.password || !opts.recoveryKey) { renderSetupStep1(); return; }
+    pendingSetupOptions.step = 2;
+
+    const stepLabel = el('div', { class: 'vilda-auth-step', text: 'Krok 2 z 4' });
+    const title = el('h2', { class: 'vilda-auth-title', text: 'Twój klucz odzyskiwania' });
+    const sub = el('p', {
+      class: 'vilda-auth-subtitle',
+      text: 'Zapisz go teraz — to jedyny sposób na odzyskanie konta, jeśli zapomnisz hasła. Możesz go skopiować lub pobrać jako plik.'
+    });
+    const keyBox = el('div', { class: 'vilda-auth-recovery-key', text: opts.recoveryKey });
+
+    const copyBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small',
+      type: 'button',
+      text: 'Skopiuj do schowka',
+      onclick: async function () {
+        try {
+          if (global.navigator && global.navigator.clipboard) {
+            await global.navigator.clipboard.writeText(opts.recoveryKey);
+            copyBtn.textContent = 'Skopiowane ✓';
+            setTimeout(function () { copyBtn.textContent = 'Skopiuj do schowka'; }, 2000);
+          }
+        } catch (e) { logWarn('clipboard write failed: ' + e); }
+      }
+    });
+
+    const downloadBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small',
+      type: 'button',
+      text: 'Pobierz jako plik TXT',
+      onclick: function () { downloadRecoveryKeyFile(opts.recoveryKey, opts.label); }
+    });
+
+    const tools = el('div', { class: 'vilda-auth-tools' }, [copyBtn, downloadBtn]);
+
+    const confirmCheckboxId = 'vilda-confirm-key-' + Date.now();
+    const confirmCheckbox = el('input', {
+      type: 'checkbox',
+      id: confirmCheckboxId
+    });
+    const confirmLabel = el('label', {
+      class: 'vilda-auth-checkbox-label',
+      text: 'Zapisałem klucz odzyskiwania w bezpiecznym miejscu'
+    });
+    confirmLabel.setAttribute('for', confirmCheckboxId);
+    const confirmRow = el('div', { class: 'vilda-auth-checkbox-row' }, [confirmCheckbox, confirmLabel]);
+
+    const errBox = el('div', { class: 'vilda-auth-error' });
+    errBox.style.display = 'none';
+
+    const next = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-primary',
+      type: 'button',
+      text: 'Dalej',
+      onclick: async function () {
+        showError(errBox, '');
+        if (!confirmCheckbox.checked) {
+          showError(errBox, 'Zaznacz, że zapisałeś klucz odzyskiwania, zanim przejdziesz dalej.');
+          return;
+        }
+        setBusy(true);
+        try {
+          const V = getVault();
+          await V.createUser(opts.password, {
+            label: opts.label,
+            recoveryKey: opts.recoveryKey,
+            // storageMode: 'cloud-only' (jeśli user zaznaczył kartę opt-in
+            // w kroku 1) lub 'local' (domyślnie). Patrz vilda_vault.js
+            // STORAGE MODE — kontroluje czy per-user IndexedDB jest trwałe
+            // czy in-memory + sessionStorage.
+            storageMode: opts.storageMode || 'local'
+          });
+          renderSetupSyncStep();
+        } catch (e) {
+          logError('createUser failed', e);
+          showError(errBox, e && e.message ? e.message : 'Nie udało się utworzyć konta.');
+        } finally {
+          setBusy(false);
+        }
+      }
+    });
+
+    const back = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost',
+      type: 'button',
+      text: 'Wstecz',
+      onclick: function () { renderSetupStep1(); }
+    });
+
+    open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
+      stepLabel, title, sub, keyBox, tools, confirmRow, errBox,
+      el('div', { class: 'vilda-auth-actions' }, [back, next])
+    ]));
+  }
+
+  // ─── Krok 3 z 4: pytanie o synchronizację ────────────────────────────────────
+  function renderSetupSyncStep() {
+    const stepLabel = el('div', { class: 'vilda-auth-step', text: 'Krok 3 z 4' });
+    const title = el('h2', { class: 'vilda-auth-title', text: 'Korzystasz z kilku urządzeń?' });
+    const sub = el('p', {
+      class: 'vilda-auth-subtitle',
+      text: 'Jeśli używasz aplikacji na kilku komputerach lub chcesz mieć kopię danych w chmurze — włącz synchronizację. Dane są szyfrowane po Twojej stronie, serwer nigdy nie widzi danych pacjentów. Możesz to zmienić w każdej chwili w Ustawieniach.'
+    });
+
+    const yesBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-primary',
+      type: 'button',
+      text: 'Tak, włącz synchronizację'
+    });
+    const noBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost',
+      type: 'button',
+      text: 'Nie, tylko to urządzenie'
+    });
+
+    yesBtn.addEventListener('click', function () {
+      const SI = getSyncIntegration();
+      if (SI && typeof SI.setSyncEnabled === 'function') {
+        SI.setSyncEnabled(true);
+      }
+      renderSetupStep3();
+    });
+
+    noBtn.addEventListener('click', function () {
+      renderSetupStep3();
+    });
+
+    open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
+      stepLabel, title, sub,
+      el('div', { class: 'vilda-auth-actions vilda-auth-actions-center' }, [yesBtn, noBtn])
+    ]));
+  }
+
+  function renderSetupStep3() {
+    pendingSetupOptions = null;
+
+    const stepLabel = el('div', { class: 'vilda-auth-step', text: 'Krok 4 z 4' });
+    const check = el('div', { class: 'vilda-auth-success-check', text: '✓' });
+    const title = el('h2', { class: 'vilda-auth-title', text: 'Wszystko gotowe' });
+    const SI = getSyncIntegration();
+    const syncOn = !!(SI && typeof SI.isSyncEnabled === 'function' && SI.isSyncEnabled());
+    const sub = el('p', {
+      class: 'vilda-auth-subtitle',
+      text: syncOn
+        ? 'Konto skonfigurowane, synchronizacja włączona. Możesz zapisywać dane pacjentów. Po 20 minutach bezczynności zostaniesz automatycznie wylogowany.'
+        : 'Konto skonfigurowane i odblokowane. Możesz zapisywać dane pacjentów. Synchronizację możesz włączyć w Ustawieniach. Po 20 minutach bezczynności zostaniesz automatycznie wylogowany.'
+    });
+
+    let syncWarning = null;
+    if (syncOn) {
+      syncWarning = el('div', { class: 'vilda-auth-warning-banner' });
+      syncWarning.appendChild(el('strong', { text: 'Aby zalogować się na innym urządzeniu' }));
+      syncWarning.appendChild(global.document.createTextNode(
+        ', będziesz potrzebować zapasowego kodu dostępu. Możesz go zobaczyć w Ustawieniach → Synchronizacja → Pokaż zapasowy kod dostępu. Zapisz go razem z kluczem odzyskiwania.'
+      ));
+    }
+
+    // Sekcja kopii zapasowych — tytuł + opis NAD przyciskiem, przycisk
+    // wyśrodkowany, status folderu i krótka adnotacja POD.
+    const FE = global.VildaFileExport;
+    const supportsFsa = !!(FE && FE.SUPPORTS_FSA);
+    const backupSection = el('div', { class: 'vilda-auth-info' });
+    backupSection.appendChild(el('div', {
+      style: 'font-weight:600; color:#08202C; margin-bottom:6px;',
+      text: 'Kopie zapasowe pacjentów'
+    }));
+    backupSection.appendChild(el('p', {
+      class: 'vilda-auth-side-note',
+      style: 'margin:0 0 4px 0;',
+      text: supportsFsa
+        ? 'Możesz teraz wybrać folder, do którego aplikacja będzie automatycznie zapisywać zaszyfrowane pliki .vilda po każdej wizycie. Polecane: folder w OneDrive, iCloud Drive lub na Pulpicie — wtedy kopie synchronizują się w chmurze.'
+        : 'W tej przeglądarce pliki kopii zapasowych będą zawsze trafiały do folderu Pobrane (Safari, Firefox i przeglądarki mobilne nie wspierają wyboru własnego folderu).'
+    }));
+
+    let chooseFolderBtn = null;
+    let folderStatus = null;
+    if (supportsFsa) {
+      chooseFolderBtn = el('button', {
+        class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small',
+        type: 'button',
+        text: 'Wybierz folder kopii zapasowych',
+        onclick: async function () {
+          if (!FE) return;
+          chooseFolderBtn.disabled = true;
+          const originalText = chooseFolderBtn.textContent;
+          chooseFolderBtn.textContent = 'Wybieranie folderu…';
+          try {
+            const info = await FE.setFolderForCurrentUser();
+            folderStatus.textContent = '✓ Folder kopii: ' + (info && info.name ? info.name : '(wybrany)');
+            chooseFolderBtn.textContent = 'Zmień folder kopii';
+          } catch (err) {
+            if (err && err.name !== 'AbortError') {
+              folderStatus.textContent = 'Nie udało się wybrać folderu.';
+            } else {
+              folderStatus.textContent = 'Folder kopii: nie wybrany';
+            }
+            chooseFolderBtn.textContent = originalText;
+          } finally {
+            chooseFolderBtn.disabled = false;
+          }
+        }
+      });
+      backupSection.appendChild(el('div', { class: 'vilda-auth-section-action' }, [chooseFolderBtn]));
+
+      folderStatus = el('p', {
+        class: 'vilda-auth-side-note',
+        style: 'text-align:center; margin:0 0 4px 0;',
+        text: 'Folder kopii: nie wybrany'
+      });
+      backupSection.appendChild(folderStatus);
+
+      backupSection.appendChild(el('p', {
+        class: 'vilda-auth-side-note',
+        style: 'text-align:center; margin:0;',
+        text: 'Możesz to pominąć i ustawić później w aplikacji w sekcji „Ustawienia → Kopie zapasowe pacjentów".'
+      }));
+    }
+
+    // Sekcja recovery — opcja wczytania wcześniejszych plików .vilda. Pomocna gdy
+    // user przesiada się na nowe urządzenie / po wyczyszczeniu przeglądarki.
+    const importSection = el('div', { class: 'vilda-auth-info' });
+    importSection.appendChild(el('div', {
+      style: 'font-weight:600; color:#08202C; margin-bottom:6px;',
+      text: 'Masz już zapisaną bazę pacjentów?'
+    }));
+    importSection.appendChild(el('p', {
+      class: 'vilda-auth-side-note',
+      style: 'margin:0 0 4px 0;',
+      text: 'Jeśli masz wcześniejsze pliki kopii (.wiw lub starsze .vilda — np. z innego urządzenia, OneDrive lub iCloud), możesz je teraz wczytać do swojego nowego konta. Aplikacja poprosi o hasło, którym te pliki były zaszyfrowane.'
+    }));
+    const importNowBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small',
+      type: 'button',
+      text: 'Wczytaj kopie pacjentów teraz',
+      onclick: function () {
+        showImportPatientsFlow(null, { fromSetup: true });
+      }
+    });
+    importSection.appendChild(el('div', { class: 'vilda-auth-section-action' }, [importNowBtn]));
+    importSection.appendChild(el('p', {
+      class: 'vilda-auth-side-note',
+      style: 'text-align:center; margin:0;',
+      text: 'Możesz też pominąć ten krok i zaimportować pliki później przez „Wczytaj dane → Importuj kopie pacjentów".'
+    }));
+
+    const done = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-primary',
+      type: 'button',
+      text: 'Przejdź do aplikacji',
+      onclick: function () { hide(); startIdleWatch(); }
+    });
+    const screenChildren = [stepLabel, check, title, sub];
+    if (syncWarning) screenChildren.push(syncWarning);
+    screenChildren.push(backupSection, importSection,
+      el('div', { class: 'vilda-auth-actions vilda-auth-actions-center' }, [done]));
+    open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, screenChildren));
+  }
+
+  function downloadRecoveryKeyFile(rk, label) {
+    try {
+      const ownerLine = label ? ('Konto: ' + label + '\n') : '';
+      const text = 'Klucz odzyskiwania wagaiwzrost.pl\n' +
+        'Wygenerowano: ' + new Date().toISOString() + '\n' +
+        ownerLine + '\n' +
+        rk + '\n\n' +
+        'UWAGA: Ten klucz pozwala odzyskać dostęp do danych pacjentów w razie zapomnienia hasła.\n' +
+        'Trzymaj go w bezpiecznym miejscu (sejf, menedżer haseł). Bez niego i bez hasła utracisz wszystkie zapisane dane.\n';
+      const blob = new global.Blob([text], { type: 'text/plain;charset=utf-8' });
+      const url = (global.URL || global.webkitURL).createObjectURL(blob);
+      const a = global.document.createElement('a');
+      a.href = url;
+      a.download = 'klucz-odzyskiwania-wagaiwzrost.txt';
+      global.document.body.appendChild(a);
+      a.click();
+      setTimeout(function () {
+        try { (global.URL || global.webkitURL).revokeObjectURL(url); } catch (_) {}
+        try { if (a.parentNode) a.parentNode.removeChild(a); } catch (_) {}
+      }, 0);
+    } catch (e) { logError('downloadRecoveryKeyFile', e); }
+  }
+
+  // ============ LOGIN KONKRETNEGO UŻYTKOWNIKA ============
+  async function showLoginForUser(userId, options) {
+    const V = getVault();
+    if (!V) return;
+    const opts = options || {};
+    let user = null;
+    try {
+      const users = await V.listUsers();
+      user = users.find(function (u) { return u.userId === userId; });
+    } catch (e) { logError('listUsers', e); }
+    if (!user) { await showStartupScreen(); return; }
+
+    // Sprawdź czy możemy zaproponować logowanie biometryczne
+    let passkeys = [];
+    let prfOk = false;
+    try {
+      prfOk = await V.isPrfSupported();
+      if (prfOk) passkeys = await V.listPasskeys(userId);
+    } catch (_) {}
+    // N11.1: rozróżnij LOCAL passkeys (mają encryptedMasterByPasskey → odszyfrują
+    // master key tego usera tym PRF na tym urządzeniu) od REMOTE (tylko metadata
+    // przyszło przez sync, brak crypto material — wymaga adopcji najpierw).
+    // Bez tego rozróżnienia auto-trigger Face ID na iPhonie odpalałby się dla
+    // remote-only klucza, prosił o biometrię i kończył błędem PASSKEY_NOT_LOCAL —
+    // czyli user widzi Face ID prompt, daje twarz, dostaje "to nie zadziałało".
+    const usablePasskeys = passkeys.filter(function (p) { return !p.isRemote; });
+    const hasBiometric = prfOk && usablePasskeys.length > 0;
+    // Stan przejściowy: są passkeye konta (badge w pickerze pokazuje "Touch ID"),
+    // ale na tym device wszystkie są remote-only. Zamiast oferować biometrię która
+    // niezawodnie padnie, kierujemy do logowania hasłem — po unlock pojawi się
+    // showPostLoginAdoptionPrompt z opcją aktywacji.
+    const hasOnlyRemotePasskeys = prfOk && passkeys.length > 0 && usablePasskeys.length === 0;
+
+    const title = el('h2', { class: 'vilda-auth-title', text: user.label });
+    const sub = el('p', {
+      class: 'vilda-auth-subtitle',
+      text: hasBiometric
+        ? 'Odblokuj dane pacjentów.'
+        : 'Wpisz hasło, aby odblokować dane pacjentów.'
+    });
+    const banner = opts.message
+      ? el('div', { class: 'vilda-auth-banner', text: opts.message })
+      : null;
+
+    const errBox = el('div', { class: 'vilda-auth-error' });
+    errBox.style.display = 'none';
+
+    // ---- Sekcja biometryczna (widoczna tylko gdy mamy passkey) ----
+    // D.4: biometricBtn i cancelledBanner są w outer scope żeby retry-link z
+    // banneru mógł odpalić biometricBtn.click() — reuse pełnej logiki (abort,
+    // setBusy, _passkeyAbortCtrl, error handling) bez duplikacji.
+    let biometricSection = null;
+    let biometricBtn = null;
+    if (hasBiometric) {
+      biometricBtn = el('button', {
+        class: 'vilda-auth-btn vilda-auth-btn-biometric',
+        type: 'button',
+        text: '🪪  ' + getBiometricLabel()
+      });
+      biometricBtn.addEventListener('click', async function () {
+        showError(errBox, '');
+        // Przerwij ewentualny poprzedni pending request przed nowym
+        abortPendingPasskey();
+        _passkeyAbortCtrl = new AbortController();
+        const _sig = _passkeyAbortCtrl.signal;
+        setBusy(true);
+        try {
+          await V.unlockWithPasskey(userId, null, _sig);
+          _passkeyAutoFailed.delete(userId); // sukces — resetuj flagę failed
+          recordBiometricSuccess(userId); // zeruj persistent counter
+          // D.4: ukryj banner anulowania po sukcesie — stan „anulowałeś" już nieaktualny.
+          if (cancelledBanner) cancelledBanner.style.display = 'none';
+          hide();
+          startIdleWatch();
+        } catch (e) {
+          if (!_sig.aborted) {
+            // Pokaż błąd tylko dla rzeczywistych problemów (nie abort)
+            showError(errBox, e && e.message ? e.message : 'Logowanie biometryczne nie powiodło się.');
+            logWarn('biometric-click', e && e.name ? e.name + ': ' + e.message : String(e));
+            // Anulowanie ręczne też liczy do adaptive backoff — jeśli user kliknął
+            // przycisk biometryczny i sam anulował, jest to sygnał "nie chcę".
+            // ADAPTIVE BACKOFF FIX: każdy błąd (poza AbortError = my abortowaliśmy)
+            // liczy się — broader matching dla browser quirks.
+            if (e && e.name !== 'AbortError') {
+              recordBiometricDismissal(userId);
+              // D.4: ręczny klik biometric → anulowano → też pokaż banner z retry.
+              // Spójne UX z auto-trigger cancellation.
+              if (cancelledBanner) cancelledBanner.style.display = '';
+            }
+          }
+        } finally {
+          _passkeyAbortCtrl = null;
+          if (!_sig.aborted) setBusy(false);
+        }
+      });
+
+      const divider = el('div', { class: 'vilda-auth-divider' }, [
+        el('span', { text: 'lub' })
+      ]);
+
+      biometricSection = el('div', { class: 'vilda-auth-biometric-section' }, [
+        el('div', { class: 'vilda-auth-actions' }, [biometricBtn]),
+        divider
+      ]);
+    }
+
+    // ---- Sekcja hasła (zawsze widoczna) ----
+    // D.3: autocomplete "current-password webauthn" — kluczowy tag dla conditional UI.
+    // Przeglądarka (Chrome 108+, Safari 16+, Firefox 119+) pokaże passkey w autofill
+    // dropdown gdy user kliknie pole. Bez tego tagu conditional mediation get() wisi
+    // ale autofill suggestions nie zawierają passkey.
+    const pw = el('input', {
+      type: 'password',
+      class: 'vilda-auth-input',
+      placeholder: 'Hasło',
+      autocomplete: 'current-password webauthn'
+    });
+    const submit = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-primary',
+      type: 'button',
+      text: 'Zaloguj się',
+      onclick: async function () {
+        showError(errBox, '');
+        if (!pw.value) { showError(errBox, 'Wpisz hasło.'); return; }
+        setBusy(true);
+        try {
+          const result = await V.unlockUser(userId, pw.value);
+          _passkeyAutoFailed.delete(userId); // sukces hasłem — resetuj flagę dla kolejnych sesji
+          // Krok 16.5 — Forced password reset gdy hasło nie spełnia aktualnej
+          // polityki (legacy 8-char konta lub w blacklist). Vault flagował to
+          // przez result.needsPasswordReset. Pokazujemy blokujący ekran przed
+          // wejściem do aplikacji.
+          if (result && result.needsPasswordReset) {
+            showForcedPasswordResetScreen(result.passwordPolicy);
+            return;
+          }
+          // Pokaż propozycję biometrii po pierwszym zalogowaniu hasłem (jeśli stosowne).
+          // N10.3: po istniejącym prompt'ie (oferuje rejestrację gdy brak passkeyów),
+          // sprawdzamy też adoption — gdy są passkeye, ale wyłącznie remote (synced
+          // z innego Apple urządzenia przez iCloud Keychain). Te dwa prompty są
+          // wzajemnie wykluczające w praktyce: pierwszy odpada gdy passkeys.length>0,
+          // drugi tylko wtedy gdy wszystkie są remote.
+          showPostLoginBiometricPrompt(userId);
+          showPostLoginAdoptionPrompt(userId);
+          hide();
+          startIdleWatch();
+        } catch (e) {
+          showError(errBox, e && e.message ? e.message : 'Nie udało się zalogować.');
+        } finally {
+          setBusy(false);
+        }
+      }
+    });
+    pw.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') submit.click(); });
+
+    const backToList = el('a', {
+      class: 'vilda-auth-link',
+      href: '#',
+      text: '← Wybierz inne konto',
+      onclick: function (ev) { ev.preventDefault(); showStartupScreen(); }
+    });
+
+    const forgot = el('a', {
+      class: 'vilda-auth-link vilda-auth-link-muted',
+      href: '#',
+      text: 'Zapomniałem hasła',
+      onclick: function (ev) { ev.preventDefault(); showRecoveryFlowForUser(userId); }
+    });
+
+    // N11.1 — banner dla stanu „klucz zsynchronizowany ale nieaktywowany na tym
+    // urządzeniu" (typowo: iPhone po pierwszej synchronizacji z Macowego konta).
+    // Komunikat tłumaczy że user widzi „Touch ID" w pickerze, ale tu na razie
+    // musi wpisać hasło — po sukcesie pojawi się modal aktywacji biometrii.
+    let remoteOnlyHintBanner = null;
+    if (hasOnlyRemotePasskeys) {
+      remoteOnlyHintBanner = el('div', { class: 'vilda-auth-banner', role: 'status' });
+      remoteOnlyHintBanner.style.cssText = 'background:#eef6f8;border:1px solid #cfe8eb;color:#0f5b63;padding:11px 13px;border-radius:10px;font-size:0.86rem;line-height:1.5;margin:6px 0 8px;';
+      remoteOnlyHintBanner.innerHTML =
+        '<strong>Klucz biometryczny tego konta</strong> jest dostępny tu przez iCloud Keychain, ' +
+        'ale jeszcze go nie aktywowałeś na tym urządzeniu. ' +
+        'Zaloguj się hasłem — od razu po sukcesie zapytamy o aktywację ' + getBiometricLabel() + '.';
+    }
+
+    // Adaptive-backoff banner: pokaż jednorazowo gdy auto-trigger został właśnie
+    // automatycznie wyłączony (N anulowań z rzędu). Po pokazaniu kasujemy flagę
+    // żeby banner nie wracał na każdym kolejnym ekranie.
+    let autoOffBanner = null;
+    if (hasBiometric && isBiometricAutoOffNoticePending(userId)) {
+      autoOffBanner = el('div', { class: 'vilda-auth-banner', role: 'status' });
+      autoOffBanner.style.cssText = 'background:#f0f8f9;border:1px solid #cfe0e3;color:#0f2b33;padding:10px 12px;border-radius:10px;font-size:0.85rem;line-height:1.4;margin:6px 0 4px;';
+      autoOffBanner.innerHTML = 'Wyłączyliśmy automatyczne pytanie o ' + getBiometricLabel() +
+        '. Kliknij 🪪 obok, kiedy zechcesz — albo włącz z powrotem w <strong>Ustawienia → Bezpieczeństwo</strong>.';
+      setBiometricAutoOffNoticePending(userId, false);
+    }
+
+    // D.4 — banner po anulowaniu auto-trigger biometrii. Ukryty domyślnie,
+    // pokazywany w error handlerze gdy NotAllowedError (user anulował OS modal
+    // Touch ID/Face ID). Zawiera retry-link który ponawia biometric flow przez
+    // biometricBtn.click() — reuse istniejącej logiki bez duplikacji.
+    //
+    // Kolor amber (#fff7ed/#fbd5a8/#854f0b) — ostrzeżenie, nie błąd (nie czerwone,
+    // nie zielone). „Anulowałeś, nic się złego nie stało, masz opcję".
+    let cancelledBanner = null;
+    if (hasBiometric) {
+      cancelledBanner = el('div', { class: 'vilda-auth-banner vilda-auth-banner-cancelled', role: 'status' });
+      cancelledBanner.style.cssText = 'background:#fff7ed;border:1px solid #fbd5a8;color:#854f0b;padding:10px 12px;border-radius:10px;font-size:0.85rem;line-height:1.45;margin:6px 0 4px;display:none;';
+      const cancelMsg = el('span', { text: 'Anulowałeś logowanie ' + getBiometricLabel() + '. Wpisz hasło, albo ' });
+      const retryLink = el('a', {
+        class: 'vilda-auth-link',
+        href: '#',
+        text: 'spróbuj ponownie',
+        onclick: function (ev) {
+          ev.preventDefault();
+          if (cancelledBanner) cancelledBanner.style.display = 'none';
+          // Reuse istniejącej logiki klika biometric (abort, busy, error, success).
+          // biometricBtn.click() jest dostępne dzięki lift do outer scope wyżej.
+          if (biometricBtn) biometricBtn.click();
+        }
+      });
+      const cancelEnd = el('span', { text: '.' });
+      cancelledBanner.appendChild(cancelMsg);
+      cancelledBanner.appendChild(retryLink);
+      cancelledBanner.appendChild(cancelEnd);
+    }
+
+    const screenChildren = [title, sub, banner];
+    if (autoOffBanner) screenChildren.push(autoOffBanner);
+    if (cancelledBanner) screenChildren.push(cancelledBanner);
+    if (remoteOnlyHintBanner) screenChildren.push(remoteOnlyHintBanner);
+    if (biometricSection) screenChildren.push(biometricSection);
+    screenChildren.push(pw, errBox,
+      el('div', { class: 'vilda-auth-actions' }, [submit]),
+      el('div', { class: 'vilda-auth-links' }, [backToList]),
+      el('div', { class: 'vilda-auth-links' }, [forgot])
+    );
+
+    const screen = el('div', { class: 'vilda-auth-screen vilda-auth-login' }, screenChildren);
+    open(screen);
+
+    // Jeśli biometria dostępna — od razu uruchom Face ID/Touch ID, nie czekaj na klik.
+    // Pomijamy auto-trigger jeśli: (a) opts.skipAutoPasskey, (b) poprzednia próba w tej
+    // sesji nie powiodła się (_passkeyAutoFailed) — chroni przed cooldown przeglądarki
+    // po anulowaniu biometrii który powoduje wielosekundowe zamrożenie UI,
+    // (c) adaptive backoff (cross-session): po N anulowaniach z rzędu lub świadomym
+    // wyłączeniu w Ustawieniach biometricAutoTrigger=off → przycisk widoczny, klik ręcznie.
+    const autoTriggerPref = getBiometricAutoTrigger(userId);
+    if (hasBiometric && !opts.skipAutoPasskey && !_passkeyAutoFailed.has(userId) && autoTriggerPref === 'on') {
+      setTimeout(async function () {
+        abortPendingPasskey(); // anuluj ewentualny stary request z poprzedniego ekranu
+        _passkeyAbortCtrl = new AbortController();
+        const _sig = _passkeyAbortCtrl.signal;
+        try {
+          setBusy(true);
+          showError(errBox, '');
+          await V.unlockWithPasskey(userId, null, _sig);
+          _passkeyAutoFailed.delete(userId); // sukces — resetuj flagę
+          recordBiometricSuccess(userId); // zeruj persistent counter
+          // D.4: ukryj banner anulowania po sukcesie auto-trigger.
+          if (cancelledBanner) cancelledBanner.style.display = 'none';
+          hide();
+          startIdleWatch();
+        } catch (e) {
+          if (!_sig.aborted) {
+            // Nie logujemy NotAllowedError z anulowania — to normalne zachowanie użytkownika
+            if (e && e.name !== 'NotAllowedError') {
+              logWarn('auto-passkey', e && e.name ? e.name + ': ' + e.message : String(e));
+            }
+            // Zablokuj auto-trigger na pozostałą część sesji — użytkownik może kliknąć ręcznie
+            _passkeyAutoFailed.add(userId);
+            // Adaptive backoff: inkrementuj persistent counter; po N z rzędu wyłączamy auto.
+            // ADAPTIVE BACKOFF FIX: każdy błąd (NotAllowedError, InvalidStateError,
+            // TimeoutError, browser quirks) traktujemy jak dismissal — z punktu widzenia
+            // usera „biometria nie zadziałała, nie chcę żeby się znów pojawiała". Pomijamy
+            // tylko AbortError (= my sami abortowaliśmy via navigation/screen change).
+            if (e && e.name !== 'AbortError') {
+              recordBiometricDismissal(userId);
+              // D.4: pokaż kontekstowy banner z retry-link zamiast cicho focusować pole
+              // hasła. User wie co się stało („Anulowałeś Touch ID") i ma dwie opcje:
+              // wpisać hasło albo kliknąć „spróbuj ponownie" — bez nawigacji do innego
+              // ekranu. Banner ukrywany na success (w biometricBtn click handlerze).
+              if (cancelledBanner) cancelledBanner.style.display = '';
+            }
+            setBusy(false);
+            try { pw.focus(); } catch (_) {}
+          }
+          // jeśli _sig.aborted: abortPendingPasskey() już wywołało setBusy(false)
+        } finally {
+          _passkeyAbortCtrl = null;
+          // Symetria z ręcznym kliknięciem biometrii: zawsze czyść busy w finally.
+          // Na ścieżce sukcesu setBusy(false) nie było wołane — bez tego data-busy="1"
+          // zostaje na rootEl i przy kolejnym open() karta ma pointer-events:none (CSS),
+          // co sprawia że UI (lista pacjentów, ekran startowy po logout) wygląda na zamrożone.
+          // Gdy aborted: abortPendingPasskey() już wywołało setBusy(false) — removeAttribute
+          // na elemencie który już go nie ma jest bezpieczne (no-op).
+          if (!_sig.aborted) setBusy(false);
+        }
+      }, 100);
+    } else {
+      setTimeout(function () { try { pw.focus(); } catch (_) {} }, 30);
+    }
+
+    // D.3 — Conditional mediation w tle.
+    // Niezależne od auto-trigger D.2:
+    //   • auto-trigger pokazuje modal natychmiast (1 user, current account)
+    //   • conditional czeka pasywnie w autofill (każdy passkey z dowolnego konta)
+    // Tylko jeden navigator.credentials.get() per origin może być aktywny — jeśli
+    // auto-trigger D.2 wystartuje, wewnątrz wywołuje abortPendingPasskey() które
+    // ubija też conditional.
+    //
+    // ADAPTIVE BACKOFF FIX: gdy autoTriggerPref='off' (user 2x anulował lub
+    // wyłączył w Ustawieniach), NIE startujemy conditional. User powiedział
+    // „nie chcę biometrii" — autofill też nie powinno podpowiadać passkey.
+    // Inaczej user klika pole hasła, widzi passkey w autofill, klika go odruchowo,
+    // pojawia się modal Touch ID — z punktu widzenia usera „aplikacja nadal się narzuca".
+    if (autoTriggerPref === 'on') {
+      maybeStartConditionalMediation();
+    }
+  }
+
+  /**
+   * D.3 — Start conditional mediation w tle.
+   *
+   * Wywołanie wisi do user-pick z autofill (lub abort z nawigacji). Po sukcesie
+   * vault.unlockWithPasskeyConditional zwraca {userId, label}, my robimy hide()
+   * + startIdleWatch jak inne ścieżki unlock.
+   *
+   * Failure modes (wszystkie ciche — nie pokazujemy błędu, conditional jest UX
+   * dodatkiem, nie zastępuje password input):
+   *   • brak wsparcia conditional UI w przeglądarce → return null
+   *   • signal aborted → return null lub AbortError catch
+   *   • user nie wybrał z autofill → promise wisi do navigation/abort
+   *   • passkey wybrany ale userHandle nie pasuje do żadnego konta → log warning,
+   *     fallback do password input (user wciąż może wpisać hasło)
+   */
+  async function maybeStartConditionalMediation() {
+    const V = getVault();
+    if (!V || typeof V.unlockWithPasskeyConditional !== 'function') return;
+    // Defensywne: AbortController istnieje w przeglądarkach >2018, ale test smoke
+    // (mock VM context) i bardzo stare środowiska mogą go nie mieć — skip.
+    if (typeof AbortController === 'undefined') return;
+
+    abortPendingConditional();
+    _conditionalAbortCtrl = new AbortController();
+    const _sig = _conditionalAbortCtrl.signal;
+
+    try {
+      const result = await V.unlockWithPasskeyConditional(_sig);
+      if (_sig.aborted) return;
+      if (!result) return; // null = niewspierane lub user nie wybrał
+
+      // Sukces — identycznie jak D.2 auto-trigger po unlockWithPasskey
+      _passkeyAutoFailed.delete(result.userId);
+      recordBiometricSuccess(result.userId);
+      hide();
+      startIdleWatch();
+    } catch (e) {
+      if (_sig.aborted) return;
+      if (e && e.name === 'AbortError') return;
+      // Conditional fail jest cichy — nie pokazujemy w UI bo to background autofill.
+      // User wciąż ma password input + biometric button (D.2 auto-trigger osobno).
+      logWarn('conditional-passkey', e && e.message ? e.message : String(e));
+    } finally {
+      if (_conditionalAbortCtrl && _conditionalAbortCtrl.signal === _sig) {
+        _conditionalAbortCtrl = null;
+      }
+    }
+  }
+
+  /**
+   * Wyświetla jednorazową propozycję włączenia biometrii po zalogowaniu hasłem.
+   * Pokazuje się tylko raz (flaga w localStorage) i tylko gdy PRF jest wspierany
+   * i użytkownik nie ma jeszcze żadnych passkeys.
+   *
+   * FIX (2026-05-28): wcześniej był blok resetujący flagę gdy passkeys.length === 0
+   * (rzekomo żeby naprawić "stary buggy kod"). Konsekwencja: user klika "Nie teraz",
+   * przy następnym logowaniu hasłem flaga jest resetowana (bo nadal nie ma passkey),
+   * prompt pojawia się znowu — nieskończona pętla. Usunięto reset; flaga raz ustawiona
+   * zostaje na zawsze. User chcący włączyć biometrię używa Ustawienia → Bezpieczeństwo.
+   *
+   * @param {string} userId
+   */
+  async function showPostLoginBiometricPrompt(userId) {
+    const V = getVault();
+    if (!V) return;
+
+    const flagKey = 'vilda:biometricPromptShown:' + userId;
+
+    // Krótka ścieżka: flaga już ustawiona → user widział prompt, szanujemy decyzję
+    // ("Nie teraz" = nie pytaj więcej automatycznie, włączy ręcznie w Ustawieniach
+    // gdy zechce).
+    if (localStorage.getItem(flagKey)) return;
+
+    let prfOk = false;
+    let passkeys = [];
+    try {
+      prfOk = await V.isPrfSupported();
+      if (prfOk) passkeys = await V.listPasskeys(userId);
+    } catch (_) { return; }
+
+    // Pokaż tylko gdy PRF dostępny i brak już zarejestrowanego passkey
+    if (!prfOk || passkeys.length > 0) return;
+
+    // Oznacz jako pokazany — dopiero teraz, tuż przed renderowaniem.
+    // Niezależnie od tego co user kliknie ("Tak, włącz" czy "Nie teraz"), flaga
+    // zostaje ustawiona i prompt nie wróci. Jeśli rejestracja passkey się nie powiedzie,
+    // user może spróbować ponownie z Ustawienia → Bezpieczeństwo.
+    localStorage.setItem(flagKey, new Date().toISOString());
+
+    const bioLabel = getBiometricLabel();
+    const overlay = el('div', { class: 'vilda-auth-overlay vilda-auth-overlay-sheet' });
+    const sheet = el('div', { class: 'vilda-auth-sheet' }, [
+      el('h3', { class: 'vilda-auth-sheet-title', text: 'Chcesz logować się przez ' + bioLabel + '?' }),
+      el('p', {
+        class: 'vilda-auth-sheet-body',
+        text: 'Następnym razem jeden dotyk wystarczy — bez wpisywania hasła.'
+      }),
+      el('div', { class: 'vilda-auth-sheet-actions' }, [
+        el('button', {
+          class: 'vilda-auth-btn vilda-auth-btn-primary',
+          type: 'button',
+          text: 'Tak, włącz ' + bioLabel,
+          onclick: async function () {
+            overlay.remove();
+            try {
+              await V.registerPasskey();
+            } catch (e) {
+              // Cicha obsługa — użytkownik może to zawsze zrobić w ustawieniach
+              logError('registerPasskey (prompt)', e);
+            }
+          }
+        }),
+        el('button', {
+          class: 'vilda-auth-btn vilda-auth-btn-ghost',
+          type: 'button',
+          text: 'Nie teraz',
+          onclick: function () { overlay.remove(); }
+        })
+      ])
+    ]);
+
+    overlay.appendChild(sheet);
+    document.body.appendChild(overlay);
+  }
+
+  /**
+   * N10.3 — Prompt adopcji passkey zsynchronizowanego z innego urządzenia.
+   *
+   * Use case (Apple iCloud Keychain):
+   *   Mac: registerPasskey → meta.passkeys = [{M_CRED, encryptedMasterByPasskey}]
+   *   sync → cloud (bez encryptedMasterByPasskey)
+   *   iPhone: pull → meta.passkeys = [{M_CRED, brak encryptedMasterByPasskey}]
+   *   iPhone: zalogował się hasłem → ten prompt → "Aktywuj biometrię" → adoptSyncedPasskey()
+   *           → iPhone's get-PRF wrappuje master → meta.passkeys[0].encryptedMasterByPasskey
+   *           teraz istnieje LOKALNIE → Face ID login na iPhonie działa.
+   *
+   * Wykluczające z showPostLoginBiometricPrompt: tamten działa gdy passkeys.length===0,
+   * ten gdy passkeys.length>0 i wszystkie są remote.
+   */
+  async function showPostLoginAdoptionPrompt(userId) {
+    const V = getVault();
+    if (!V) return;
+    if (typeof V.listAdoptablePasskeys !== 'function') return; // starszy vault — pomijamy
+
+    const flagKey = 'vilda:adoptionPromptShown:' + userId;
+    if (localStorage.getItem(flagKey)) return;
+
+    let prfOk = false;
+    let adoptable = [];
+    try {
+      prfOk = await V.isPrfSupported();
+      if (prfOk) adoptable = await V.listAdoptablePasskeys();
+    } catch (_) { return; }
+
+    if (!prfOk || !adoptable.length) return;
+
+    // Oznacz jako pokazany — po wybraniu opcji (Aktywuj / Pominę) prompt nie wraca.
+    // User może aktywować ręcznie z Ustawienia → Bezpieczeństwo.
+    localStorage.setItem(flagKey, new Date().toISOString());
+
+    const bioLabel = getBiometricLabel();
+    // Bierzemy pierwszy adoptable (najczęstszy scenariusz: jeden iCloud Keychain credential).
+    const target = adoptable[0];
+
+    const overlay = el('div', { class: 'vilda-auth-overlay vilda-auth-overlay-sheet' });
+    const sheet = el('div', { class: 'vilda-auth-sheet' }, [
+      el('h3', { class: 'vilda-auth-sheet-title', text: 'Aktywuj ' + bioLabel + ' na tym urządzeniu?' }),
+      el('p', {
+        class: 'vilda-auth-sheet-body',
+        html: 'Wykryliśmy biometryczny klucz Twojego konta zsynchronizowany przez iCloud Keychain ' +
+              '(zarejestrowany jako <strong>' + escapeHtmlLocal(target.deviceLabel) + '</strong>). ' +
+              'Aby logować się tu jednym ' + bioLabel + ' musisz go aktywować — to wymaga jednego potwierdzenia biometrycznego.'
+      }),
+      el('div', { class: 'vilda-auth-sheet-actions' }, [
+        el('button', {
+          class: 'vilda-auth-btn vilda-auth-btn-primary',
+          type: 'button',
+          text: 'Aktywuj ' + bioLabel,
+          onclick: async function () {
+            overlay.remove();
+            try {
+              await V.adoptSyncedPasskey(target.credentialId);
+              // Sukces — kolejne logowania będą używać biometrii.
+            } catch (e) {
+              // Cicha obsługa — user może spróbować ponownie z Ustawienia → Bezpieczeństwo.
+              logError('adoptSyncedPasskey (prompt)', e);
+            }
+          }
+        }),
+        el('button', {
+          class: 'vilda-auth-btn vilda-auth-btn-ghost',
+          type: 'button',
+          text: 'Pominę teraz',
+          onclick: function () { overlay.remove(); }
+        })
+      ])
+    ]);
+
+    overlay.appendChild(sheet);
+    document.body.appendChild(overlay);
+  }
+
+  // Lokalny escape żeby nie zależeć od helpera ze setting'sów —
+  // używany przez prompt adopcji do bezpiecznego renderowania deviceLabel.
+  function escapeHtmlLocal(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ============ ODZYSKIWANIE DOSTĘPU ============
+  async function showRecoveryFlowForUser(userId) {
+    const V = getVault();
+    const C = getCrypto();
+    if (!V || !C) return;
+    let user = null;
+    try {
+      const users = await V.listUsers();
+      user = users.find(function (u) { return u.userId === userId; });
+    } catch (e) { logError('listUsers', e); }
+    if (!user) { await showStartupScreen(); return; }
+
+    const title = el('h2', { class: 'vilda-auth-title', text: 'Odzyskaj dostęp' });
+    const sub = el('p', {
+      class: 'vilda-auth-subtitle',
+      text: 'Konto: „' + user.label + '”. Wpisz klucz odzyskiwania (24 znaki w 6 grupach po 4) i ustaw nowe hasło.'
+    });
+
+    const rkInput = el('input', {
+      type: 'text',
+      class: 'vilda-auth-input vilda-auth-recovery-input',
+      placeholder: 'XXXX-XXXX-XXXX-XXXX-XXXX-XXXX',
+      autocomplete: 'off'
+    });
+    const pw1 = el('input', { type: 'password', class: 'vilda-auth-input', placeholder: 'Nowe hasło (min. 12 znaków, 3 z 4 typów)' });
+    const pw2 = el('input', { type: 'password', class: 'vilda-auth-input', placeholder: 'Powtórz nowe hasło' });
+    const errBox = el('div', { class: 'vilda-auth-error' });
+    errBox.style.display = 'none';
+
+    const submit = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-primary',
+      type: 'button',
+      text: 'Odblokuj i ustaw nowe hasło',
+      onclick: async function () {
+        showError(errBox, '');
+        if (!C.isValidRecoveryKeyShape(rkInput.value)) {
+          showError(errBox, 'Klucz odzyskiwania ma nieprawidłowy format.');
+          return;
+        }
+        if (pw1.value.length < 8) {
+          showError(errBox, 'Nowe hasło musi mieć minimum 8 znaków.');
+          return;
+        }
+        if (pw1.value !== pw2.value) {
+          showError(errBox, 'Hasła nie są takie same.');
+          return;
+        }
+        setBusy(true);
+        try {
+          await V.unlockUserWithRecoveryKey(userId, rkInput.value);
+          await V.resetPasswordWhileUnlocked(pw1.value);
+          hide();
+          startIdleWatch();
+        } catch (e) {
+          showError(errBox, e && e.message ? e.message : 'Nie udało się odzyskać dostępu.');
+        } finally {
+          setBusy(false);
+        }
+      }
+    });
+
+    const back = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost',
+      type: 'button',
+      text: 'Wstecz',
+      onclick: function () { showLoginForUser(userId); }
+    });
+
+    open(el('div', { class: 'vilda-auth-screen vilda-auth-recovery' }, [
+      title, sub, rkInput, pw1, pw2, errBox,
+      el('div', { class: 'vilda-auth-actions' }, [back, submit])
+    ]));
+    setTimeout(function () { try { rkInput.focus(); } catch (_) {} }, 30);
+  }
+
+  // ============ ODTWARZANIE Z PEŁNEJ KOPII VAULTU ============
+  // Restore tworzy nowe konto z TYM SAMYM master keyem co backup. Po
+  // zakończonym restore aplikacja jest automatycznie odblokowana — user
+  // przechodzi prosto do swoich danych.
+  function showRestoreVaultFlow() {
+    const V = getVault();
+    const C = getCrypto();
+    if (!V || !C) return;
+
+    const title = el('h2', { class: 'vilda-auth-title', text: 'Odtwórz konto z kopii' });
+    const sub = el('p', {
+      class: 'vilda-auth-subtitle',
+      text: 'Wybierz plik z pełną kopią Twojego konta (np. wagaiwzrost_konto_<imię>.wiw) i podaj hasło, którym był zaszyfrowany. Aplikacja odtworzy identyczne konto razem z całą historią pacjentów.'
+    });
+
+    const fileInput = el('input', {
+      type: 'file',
+      accept: '*/*', // iOS nie obsługuje .wiw/.vilda bez UTI — accept=* pokazuje wszystkie pliki
+      style: 'display:none;'
+    });
+
+    const pickBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small',
+      type: 'button',
+      text: 'Wybierz plik kopii konta',
+      onclick: function () { fileInput.click(); }
+    });
+
+    const fileLabel = el('p', {
+      class: 'vilda-auth-side-note',
+      style: 'text-align:center; margin:0 0 8px 0;',
+      text: 'Plik nie wybrany'
+    });
+
+    const pwInput = el('input', { type: 'password', class: 'vilda-auth-input', placeholder: 'Hasło ze starego konta' });
+    const labelInput = el('input', {
+      type: 'text',
+      class: 'vilda-auth-input',
+      placeholder: 'Nazwa konta w aplikacji (opcjonalnie, np. dr Kowalska)',
+      maxlength: '60'
+    });
+
+    const errBox = el('div', { class: 'vilda-auth-error' });
+    errBox.style.display = 'none';
+
+    const reportBox = el('div', { class: 'vilda-auth-info', style: 'display:none; text-align:left;' });
+
+    let pickedFileText = null;
+    let pickedFilename = null;
+    let pickedKind = null; // 'vault-backup' | 'patient' | null
+
+    let applyPickedKind = function (kind, parsedMeta) {
+      pickedKind = kind;
+      if (kind === 'vault-backup') {
+        // standardowy flow — pokazujemy pole hasła, label, przycisk Odtwórz
+        const lbl = (parsedMeta && parsedMeta.label) ? parsedMeta.label : '(bez nazwy)';
+        const pCount = parsedMeta && typeof parsedMeta.patientCount === 'number' ? parsedMeta.patientCount : '?';
+        const sCount = parsedMeta && typeof parsedMeta.snapshotCount === 'number' ? parsedMeta.snapshotCount : '?';
+        // B1.10: zmiana copy — snapshotCount to liczba zapisów vaulta, nie liczba wizyt
+        // pacjenta. Te dwa modele czasu w aplikacji (data zapisu vs wiek pacjenta) były
+        // mylone. Tutaj jesteśmy w kontekście kopii zapasowej konta — mówimy „zapisów".
+        fileLabel.textContent = '✓ Pełna kopia konta „' + lbl + '" — pacjenci: ' + pCount + ', zapisów: ' + sCount;
+        pwInput.style.display = '';
+        labelInput.style.display = '';
+        submit.style.display = '';
+        showError(errBox, '');
+        if (wrongKindHint) wrongKindHint.style.display = 'none';
+      } else if (kind === 'patient') {
+        // ZŁY TYP — to plik per-pacjent. Pokazujemy zwięzły komunikat
+        // + propozycję alternatywnej ścieżki, ukrywamy pola.
+        fileLabel.textContent = 'Wybrany plik to kopia pojedynczego pacjenta';
+        pwInput.style.display = 'none';
+        labelInput.style.display = 'none';
+        submit.style.display = 'none';
+        showError(errBox, '');
+        if (wrongKindHint) wrongKindHint.style.display = 'block';
+      } else {
+        fileLabel.textContent = 'Plik nie wybrany';
+        pwInput.style.display = '';
+        labelInput.style.display = '';
+        submit.style.display = '';
+        if (wrongKindHint) wrongKindHint.style.display = 'none';
+      }
+    };
+
+    let wrongKindHint = null; // utworzony niżej
+
+    fileInput.addEventListener('change', async function (ev) {
+      const f = ev.target.files && ev.target.files[0];
+      if (!f) return;
+      try {
+        const reader = new global.FileReader();
+        reader.onload = function () {
+          pickedFileText = reader.result;
+          pickedFilename = f.name;
+          // próba parsowania envelope, żeby od razu rozpoznać typ
+          try {
+            const parsed = C.parseEnvelope(pickedFileText);
+            applyPickedKind(parsed.kind, parsed.metadata);
+          } catch (parseErr) {
+            pickedKind = null;
+            fileLabel.textContent = 'Wybrany plik: ' + f.name;
+            showError(errBox, 'Plik nie wygląda na kopię z aplikacji wagaiwzrost.pl.');
+            if (wrongKindHint) wrongKindHint.style.display = 'none';
+          }
+        };
+        reader.onerror = function () {
+          showError(errBox, 'Nie udało się odczytać pliku.');
+        };
+        reader.readAsText(f, 'utf-8');
+      } catch (e) {
+        showError(errBox, 'Błąd odczytu pliku: ' + (e && e.message ? e.message : e));
+      } finally {
+        fileInput.value = '';
+      }
+    });
+
+    const submit = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-primary',
+      type: 'button',
+      text: 'Odtwórz konto',
+      onclick: async function () {
+        showError(errBox, '');
+        if (!pickedFileText) {
+          showError(errBox, 'Wybierz plik kopii konta.');
+          return;
+        }
+        if (!pwInput.value || pwInput.value.length < 1) {
+          showError(errBox, 'Wpisz hasło ze starego konta.');
+          return;
+        }
+        setBusy(true);
+        try {
+          const opts = {};
+          if (labelInput.value && labelInput.value.trim()) opts.label = labelInput.value.trim();
+          const result = await V.restoreVaultBackup(pickedFileText, pwInput.value, opts);
+          // Sukces — pokaż raport i przycisk "Przejdź do aplikacji"
+          while (reportBox.firstChild) reportBox.removeChild(reportBox.firstChild);
+          reportBox.style.display = 'block';
+          reportBox.appendChild(el('strong', { text: 'Konto odtworzone' }));
+          reportBox.appendChild(el('br'));
+          reportBox.appendChild(global.document.createTextNode('Nazwa: ' + result.label));
+          reportBox.appendChild(el('br'));
+          // B1.10: „wpisów z wizyt" → „zapisów" (kontekst: backup konta, snapshoty vault).
+          reportBox.appendChild(global.document.createTextNode('Pacjenci: ' + result.patientCount + ' · zapisów: ' + result.snapshotCount));
+          if (result.newRecoveryKey) {
+            reportBox.appendChild(el('br'));
+            reportBox.appendChild(el('br'));
+            const warn = el('strong', { text: 'UWAGA: Backup nie zawierał klucza odzyskiwania.' });
+            reportBox.appendChild(warn);
+            reportBox.appendChild(el('br'));
+            reportBox.appendChild(global.document.createTextNode('Aplikacja wygenerowała nowy klucz odzyskiwania dla tego konta. Zapisz go bezpiecznie:'));
+            reportBox.appendChild(el('br'));
+            const keyEl = el('code', { style: 'display:block; padding:8px; background:#f5fafb; border-radius:8px; margin-top:6px; word-break:break-all;', text: result.newRecoveryKey });
+            reportBox.appendChild(keyEl);
+          }
+
+          submit.style.display = 'none';
+          back.textContent = 'Przejdź do aplikacji';
+          back.onclick = function () { hide(); startIdleWatch(); };
+        } catch (e) {
+          showError(errBox, e && e.message ? e.message : 'Nie udało się odtworzyć konta.');
+        } finally {
+          setBusy(false);
+        }
+      }
+    });
+
+    const back = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost',
+      type: 'button',
+      text: 'Wstecz',
+      onclick: function () { showStartupScreen(); }
+    });
+
+    // Panel informacyjny gdy user wybrał plik per-pacjent zamiast pełnej kopii konta.
+    wrongKindHint = el('div', { class: 'vilda-auth-info', style: 'display:none; text-align:left;' });
+    wrongKindHint.appendChild(el('strong', { text: 'To kopia pojedynczego pacjenta' }));
+    wrongKindHint.appendChild(el('br'));
+    wrongKindHint.appendChild(global.document.createTextNode('Funkcja „Odtwórz konto z pełnej kopii" wymaga pliku z całym kontem (nazwa zaczyna się od „wagaiwzrost_konto_…"). Wybrany plik („' ));
+    const fnameEl = el('em', { text: '' });
+    wrongKindHint.appendChild(fnameEl);
+    wrongKindHint.appendChild(global.document.createTextNode('") to kopia jednego pacjenta z konta źródłowego.'));
+    wrongKindHint.appendChild(el('br'));
+    wrongKindHint.appendChild(el('br'));
+    wrongKindHint.appendChild(global.document.createTextNode('Jeśli masz tylko pliki pacjentów, możesz odzyskać dane w dwóch krokach:'));
+    const stepsList = el('ol', { style: 'margin:6px 0 12px 18px; padding:0; line-height:1.6;' });
+    stepsList.appendChild(el('li', { text: 'Skonfiguruj nowe konto (z dowolnym hasłem).' }));
+    stepsList.appendChild(el('li', { text: 'W krokie 3 kreatora kliknij „Wczytaj kopie pacjentów teraz" i wpisz hasło ze starego konta.' }));
+    wrongKindHint.appendChild(stepsList);
+    const setupRedirectBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-primary vilda-auth-btn-small',
+      type: 'button',
+      text: 'Skonfiguruj nowe konto',
+      onclick: function () { showSetupWizard(); }
+    });
+    wrongKindHint.appendChild(el('div', { class: 'vilda-auth-section-action', style: 'margin-top:6px;' }, [setupRedirectBtn]));
+
+    // gdy parsujemy plik z kind=patient, wpiszemy nazwę pliku do <em>
+    const origApplyPickedKind = applyPickedKind;
+    applyPickedKind = function (kind, parsedMeta) {
+      if (fnameEl) fnameEl.textContent = pickedFilename || '';
+      origApplyPickedKind(kind, parsedMeta);
+    };
+
+    open(el('div', { class: 'vilda-auth-screen vilda-auth-restore' }, [
+      title, sub,
+      el('div', { class: 'vilda-auth-section-action' }, [pickBtn]),
+      fileLabel,
+      wrongKindHint,
+      pwInput,
+      labelInput,
+      errBox,
+      reportBox,
+      fileInput,
+      el('div', { class: 'vilda-auth-actions' }, [back, submit])
+    ]));
+    setTimeout(function () { try { pwInput.focus(); } catch (_) {} }, 30);
+  }
+
+  // ============ SPARKLINE WZROSTU ============
+  // ============ HELPERY DLA KARTY PACJENTA (Faza 42 — koncepcja C) ============
+
+  /**
+   * Faza 42: inwersja formuły LMS — z parametrów L, M, S oblicza wartość
+   * (BMI / wzrost / waga) dla zadanego z-score (np. -1.881 dla 3. centyla).
+   */
+  function valueAtZ(L, M, S, z) {
+    if (!isFinite(L) || !isFinite(M) || !isFinite(S)) return NaN;
+    if (Math.abs(L) < 1e-6) return M * Math.exp(S * z);
+    var base = 1 + L * S * z;
+    if (base <= 0) return NaN;
+    return M * Math.pow(base, 1 / L);
+  }
+
+  /**
+   * Faza 42c: kanoniczny odczyt wieku z obiektu pomiaru.
+   * UWAGA: `growth-basic-module.js` zapisuje JEDNOCZEŚNIE:
+   *   - `ageYears` jako ułamkowe lata (np. 8.5)
+   *   - `ageMonths` jako TOTAL miesięcy (np. 102), NIE jako część miesiącową
+   * Wcześniejsza formuła `ageYears*12 + ageMonths` dawała dublowanie (8.5*12+102=204).
+   * Tu preferujemy `ageMonths` (jeśli istnieje) jako TOTAL; fallback do `ageYears*12`.
+   * Akceptujemy też migawki ze snapshotów historycznych zapisane jako `{ageMonths: total}`.
+   */
+  function measurementAgeInMonths(m) {
+    if (!m) return NaN;
+    if (m.ageMonths != null && isFinite(m.ageMonths)) return Number(m.ageMonths);
+    if (m.ageYears != null && isFinite(m.ageYears)) return Number(m.ageYears) * 12;
+    return NaN;
+  }
+
+  /**
+   * Faza 42b: konwertuje tablicę punktów {x, y} na ścieżkę SVG z gładkimi
+   * krzywymi Béziera (Catmull-Rom przez 4 sąsiednie punkty). Daje
+   * naturalnie wyglądające siatki centylowe bez „kantów" polyline.
+   */
+  function pointsToSmoothPath(pts) {
+    if (!pts || pts.length === 0) return '';
+    if (pts.length === 1) return 'M ' + pts[0].x.toFixed(1) + ',' + pts[0].y.toFixed(1);
+    if (pts.length === 2) {
+      return 'M ' + pts[0].x.toFixed(1) + ',' + pts[0].y.toFixed(1) +
+             ' L ' + pts[1].x.toFixed(1) + ',' + pts[1].y.toFixed(1);
+    }
+    var d = 'M ' + pts[0].x.toFixed(1) + ',' + pts[0].y.toFixed(1);
+    for (var i = 0; i < pts.length - 1; i++) {
+      var p0 = pts[i - 1] || pts[i];
+      var p1 = pts[i];
+      var p2 = pts[i + 1];
+      var p3 = pts[i + 2] || pts[i + 1];
+      var c1x = p1.x + (p2.x - p0.x) / 6;
+      var c1y = p1.y + (p2.y - p0.y) / 6;
+      var c2x = p2.x - (p3.x - p1.x) / 6;
+      var c2y = p2.y - (p3.y - p1.y) / 6;
+      d += ' C ' + c1x.toFixed(1) + ',' + c1y.toFixed(1) +
+           ' '  + c2x.toFixed(1) + ',' + c2y.toFixed(1) +
+           ' '  + p2.x.toFixed(1) + ',' + p2.y.toFixed(1);
+    }
+    return d;
+  }
+
+  /**
+   * Faza 42: zwraca info o statusie BMI pacjenta — label i klasę CSS (ok/improve/alert).
+   * Dla dzieci używa percentyla BMI; dla dorosłych — bezwzględnej wartości BMI.
+   */
+  function buildBmiStatusInfo(bmi, bmiPerc, isAdult) {
+    if (isAdult) {
+      if (bmi == null || !isFinite(bmi)) return null;
+      if (bmi >= 40)    return { label: 'Otyłość III°', cls: 'alert' };
+      if (bmi >= 35)    return { label: 'Otyłość II°',  cls: 'alert' };
+      if (bmi >= 30)    return { label: 'Otyłość I°',   cls: 'alert' };
+      if (bmi >= 25)    return { label: 'Nadwaga',      cls: 'improve' };
+      if (bmi < 18.5)   return { label: 'Niedowaga',    cls: 'alert' };
+      return                  { label: 'Norma BMI',     cls: 'ok' };
+    }
+    if (bmiPerc == null || !isFinite(bmiPerc)) return null;
+    if (bmiPerc >= 99) return { label: 'Otyłość ciężka', cls: 'alert' };
+    if (bmiPerc >= 95) return { label: 'Otyłość',        cls: 'alert' };
+    if (bmiPerc >= 85) return { label: 'Nadwaga',        cls: 'improve' };
+    if (bmiPerc < 3)   return { label: 'Niedowaga',      cls: 'alert' };
+    return                   { label: 'Norma BMI',      cls: 'ok' };
+  }
+
+  /**
+   * Faza 42b: generyczny builder siatki centylowej (BMI / wzrost / waga)
+   * z wygładzonymi krzywymi (Catmull-Rom) i trajektorią pomiarów pacjenta.
+   * Dla dorosłych (≥18 lat) zwraca null. Linie 3/10/50/90/97 percentyl.
+   * @param {string} type — 'bmi' | 'height' | 'weight'
+   * @param {Array}  measurements — [{ageYears, ageMonths, height, weight}, …]
+   * @param {string} sexForCalc — M/K/chłopiec/dziewczynka
+   * @param {number} currentAgeMonths — wiek bieżący (total months)
+   * @param {number} currentValue — bieżąca wartość metryki (BMI/cm/kg)
+   * @returns {SVGElement|null}
+   */
+  function buildPercentileChart(type, measurements, sexForCalc, currentAgeMonths, currentValue) {
+    if (currentAgeMonths == null) return null;
+    if (currentAgeMonths > 216) return null; // dorosły — brak siatki
+
+    // ── Konfiguracja per typ ──
+    var typeConfig;
+    if (type === 'bmi') {
+      typeConfig = {
+        title: 'BMI',
+        unit: 'kg/m²',
+        minAgeAllowed: 24,
+        yAxisStep: 4,
+        yMinClamp: 10,
+        sampleStep: 12,    // Faza 42d: rzadziej dla BMI (co rok) — krzywe gładsze
+        smoothWindow: 2,   // 5-punktowy moving average eliminuje szum LMS
+        normalizeSex: function (s) {
+          var sl = (s || '').toLowerCase();
+          if (sl === 'm' || sl === 'ch' || sl === 'chłopiec' || sl === 'male') return 'M';
+          return 'K';
+        },
+        getLms: function (sex, months) {
+          if (typeof global.getLMS !== 'function') return null;
+          var nSex = (typeof this.normalizeSex === 'function') ? this.normalizeSex(sex) : sex;
+          return global.getLMS(nSex, months);
+        },
+        extractValue: function (m) {
+          var h = parseFloat(m.height), w = parseFloat(m.weight);
+          if (!isFinite(h) || !isFinite(w) || h <= 0) return null;
+          return w / Math.pow(h / 100, 2);
+        }
+      };
+    } else if (type === 'height') {
+      typeConfig = {
+        title: 'Wzrost',
+        unit: 'cm',
+        minAgeAllowed: 0,
+        yAxisStep: 10,
+        yMinClamp: 40,
+        sampleStep: 3,
+        smoothWindow: 0,
+        normalizeSex: function (s) {
+          var sl = (s || '').toLowerCase();
+          if (sl === 'm' || sl === 'ch' || sl === 'chłopiec' || sl === 'male') return 'M';
+          return 'K';
+        },
+        getLms: function (sex, months) {
+          if (typeof global.getChildLMS !== 'function') return null;
+          var nSex = (typeof this.normalizeSex === 'function') ? this.normalizeSex(sex) : sex;
+          return global.getChildLMS(nSex, months / 12, 'HT');
+        },
+        extractValue: function (m) {
+          var v = parseFloat(m.height);
+          return (isFinite(v) && v > 0) ? v : null;
+        }
+      };
+    } else if (type === 'weight') {
+      typeConfig = {
+        title: 'Waga',
+        unit: 'kg',
+        minAgeAllowed: 0,
+        yAxisStep: 5,
+        yMinClamp: 2,
+        sampleStep: 3,
+        smoothWindow: 0,
+        normalizeSex: function (s) {
+          var sl = (s || '').toLowerCase();
+          if (sl === 'm' || sl === 'ch' || sl === 'chłopiec' || sl === 'male') return 'M';
+          return 'K';
+        },
+        getLms: function (sex, months) {
+          if (typeof global.getChildLMS !== 'function') return null;
+          var nSex = (typeof this.normalizeSex === 'function') ? this.normalizeSex(sex) : sex;
+          return global.getChildLMS(nSex, months / 12, 'WT');
+        },
+        extractValue: function (m) {
+          var v = parseFloat(m.weight);
+          return (isFinite(v) && v > 0) ? v : null;
+        }
+      };
+    } else {
+      return null;
+    }
+
+    var svgNS = 'http://www.w3.org/2000/svg';
+
+    // ── Zakres wieku z pomiarów ──
+    var ages = [];
+    (measurements || []).forEach(function (m) {
+      if (!m) return;
+      var ageMo = measurementAgeInMonths(m);
+      if (isFinite(ageMo)) ages.push(ageMo);
+    });
+    if (isFinite(currentAgeMonths)) ages.push(currentAgeMonths);
+    if (ages.length === 0) return null;
+
+    var minAgeM = Math.min.apply(null, ages);
+    var maxAgeM = Math.max.apply(null, ages);
+    var ageStart = Math.max(typeConfig.minAgeAllowed, Math.floor((minAgeM - 12) / 12) * 12);
+    var ageEnd   = Math.min(216, Math.ceil((maxAgeM + 12) / 12) * 12);
+    if (ageEnd - ageStart < 36) ageEnd = Math.min(216, ageStart + 36);
+
+    // ── Próbkowanie krzywych centylowych ──
+    var Z_VALUES = [
+      { z: -1.881, label: '3',  color: '#9FE1CB' },
+      { z: -1.282, label: '10', color: '#5DCAA5' },
+      { z:  0,     label: '50', color: '#0F6E56' },
+      { z:  1.282, label: '90', color: '#5DCAA5' },
+      { z:  1.881, label: '97', color: '#9FE1CB' }
+    ];
+    var curves = Z_VALUES.map(function () { return []; });
+    var minVal = Infinity, maxVal = -Infinity;
+
+    var step = (typeConfig.sampleStep && typeConfig.sampleStep > 0) ? typeConfig.sampleStep : 3;
+    for (var mAge = ageStart; mAge <= ageEnd; mAge += step) {
+      var lms = typeConfig.getLms(sexForCalc, mAge);
+      if (!lms) continue;
+      Z_VALUES.forEach(function (zv, idx) {
+        var val = valueAtZ(lms[0], lms[1], lms[2], zv.z);
+        if (isFinite(val)) {
+          curves[idx].push({ age: mAge, val: val });
+        }
+      });
+    }
+
+    // Faza 42d — moving average smoothing dla krzywych percentyli (głównie BMI).
+    // Eliminuje miesięczne wahania w tabelach LMS i artefakty na granicy WHO/OLAF.
+    var sw = (typeConfig.smoothWindow && typeConfig.smoothWindow > 0) ? typeConfig.smoothWindow : 0;
+    if (sw > 0) {
+      curves = curves.map(function (curve) {
+        if (curve.length < 3) return curve;
+        var smoothed = [];
+        for (var i = 0; i < curve.length; i++) {
+          var lo = Math.max(0, i - sw);
+          var hi = Math.min(curve.length - 1, i + sw);
+          var sum = 0, count = 0;
+          for (var j = lo; j <= hi; j++) { sum += curve[j].val; count++; }
+          smoothed.push({ age: curve[i].age, val: sum / count });
+        }
+        return smoothed;
+      });
+    }
+
+    // Po smoothingu — aktualny zakres min/max
+    curves.forEach(function (curve) {
+      curve.forEach(function (p) {
+        if (p.val < minVal) minVal = p.val;
+        if (p.val > maxVal) maxVal = p.val;
+      });
+    });
+    if (!isFinite(minVal) || !isFinite(maxVal)) return null;
+
+    // ── Trajektoria pomiarów pacjenta ──
+    var trajectory = [];
+    (measurements || []).forEach(function (meas) {
+      if (!meas) return;
+      var ageMo = measurementAgeInMonths(meas);
+      if (!isFinite(ageMo) || ageMo < ageStart || ageMo > ageEnd) return;
+      var v = typeConfig.extractValue(meas);
+      if (v == null || !isFinite(v)) return;
+      trajectory.push({ age: ageMo, val: v });
+    });
+    if (currentValue != null && isFinite(currentValue)) {
+      if (currentValue < minVal) minVal = currentValue;
+      if (currentValue > maxVal) maxVal = currentValue;
+      var inTraj = trajectory.some(function (p) {
+        return Math.abs(p.age - currentAgeMonths) < 1 && Math.abs(p.val - currentValue) < 0.05;
+      });
+      if (!inTraj && currentAgeMonths >= ageStart && currentAgeMonths <= ageEnd) {
+        trajectory.push({ age: currentAgeMonths, val: currentValue });
+      }
+    }
+    trajectory.forEach(function (p) {
+      if (p.val < minVal) minVal = p.val;
+      if (p.val > maxVal) maxVal = p.val;
+    });
+    trajectory.sort(function (a, b) { return a.age - b.age; });
+
+    // ── Pad Y range ──
+    var rangePad = (maxVal - minVal) * 0.06;
+    minVal = Math.max(typeConfig.yMinClamp, minVal - rangePad);
+    maxVal = maxVal + rangePad;
+
+    // ── Geometria SVG ──
+    var W = 360, H = 220;
+    var PAD_L = 32, PAD_R = 22, PAD_T = 10, PAD_B = 24;
+    var chartW = W - PAD_L - PAD_R;
+    var chartH = H - PAD_T - PAD_B;
+
+    function toX(ageM) { return PAD_L + (ageM - ageStart) / (ageEnd - ageStart) * chartW; }
+    function toY(v)    { return PAD_T + (1 - (v - minVal) / (maxVal - minVal)) * chartH; }
+
+    var svg = global.document.createElementNS(svgNS, 'svg');
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    svg.setAttribute('class', 'vilda-patient-chart');
+    svg.setAttribute('aria-label', 'Siatka centylowa ' + typeConfig.title);
+
+    // ── Grid X (co 2 lata) + etykiety ──
+    var startY = Math.ceil(ageStart / 12) * 12;
+    for (var ag = startY; ag <= ageEnd; ag += 24) {
+      var xg = toX(ag);
+      var gx = global.document.createElementNS(svgNS, 'line');
+      gx.setAttribute('x1', xg); gx.setAttribute('x2', xg);
+      gx.setAttribute('y1', PAD_T); gx.setAttribute('y2', H - PAD_B);
+      gx.setAttribute('stroke', '#e8eef0'); gx.setAttribute('stroke-width', '0.5');
+      svg.appendChild(gx);
+
+      var xLbl = global.document.createElementNS(svgNS, 'text');
+      xLbl.setAttribute('x', xg); xLbl.setAttribute('y', H - PAD_B + 13);
+      xLbl.setAttribute('text-anchor', 'middle');
+      xLbl.setAttribute('font-size', '10'); xLbl.setAttribute('fill', '#5a7274');
+      xLbl.textContent = String(Math.round(ag / 12));
+      svg.appendChild(xLbl);
+    }
+
+    // ── Grid Y + etykiety ──
+    var yStep = typeConfig.yAxisStep;
+    var yStart = Math.ceil(minVal / yStep) * yStep;
+    for (var b = yStart; b <= maxVal; b += yStep) {
+      var yg = toY(b);
+      var gy = global.document.createElementNS(svgNS, 'line');
+      gy.setAttribute('x1', PAD_L); gy.setAttribute('x2', W - PAD_R);
+      gy.setAttribute('y1', yg); gy.setAttribute('y2', yg);
+      gy.setAttribute('stroke', '#e8eef0'); gy.setAttribute('stroke-width', '0.5');
+      svg.appendChild(gy);
+
+      var yLbl = global.document.createElementNS(svgNS, 'text');
+      yLbl.setAttribute('x', PAD_L - 4); yLbl.setAttribute('y', yg + 3);
+      yLbl.setAttribute('text-anchor', 'end');
+      yLbl.setAttribute('font-size', '10'); yLbl.setAttribute('fill', '#5a7274');
+      yLbl.textContent = String(b);
+      svg.appendChild(yLbl);
+    }
+
+    // ── Osie ──
+    var axisX = global.document.createElementNS(svgNS, 'line');
+    axisX.setAttribute('x1', PAD_L); axisX.setAttribute('x2', W - PAD_R);
+    axisX.setAttribute('y1', H - PAD_B); axisX.setAttribute('y2', H - PAD_B);
+    axisX.setAttribute('stroke', '#08202C'); axisX.setAttribute('stroke-width', '0.8');
+    svg.appendChild(axisX);
+
+    var axisY = global.document.createElementNS(svgNS, 'line');
+    axisY.setAttribute('x1', PAD_L); axisY.setAttribute('x2', PAD_L);
+    axisY.setAttribute('y1', PAD_T); axisY.setAttribute('y2', H - PAD_B);
+    axisY.setAttribute('stroke', '#08202C'); axisY.setAttribute('stroke-width', '0.8');
+    svg.appendChild(axisY);
+
+    // ── Krzywe percentyli (gładkie Bézier) + etykiety końca ──
+    Z_VALUES.forEach(function (zv, idx) {
+      if (curves[idx].length < 2) return;
+      var screenPts = curves[idx].map(function (p) {
+        return { x: toX(p.age), y: toY(p.val) };
+      });
+      var d = pointsToSmoothPath(screenPts);
+      var path = global.document.createElementNS(svgNS, 'path');
+      path.setAttribute('d', d);
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke', zv.color);
+      path.setAttribute('stroke-width', zv.label === '50' ? '1.6' : '1');
+      path.setAttribute('stroke-linecap', 'round');
+      path.setAttribute('stroke-linejoin', 'round');
+      svg.appendChild(path);
+
+      var lastPt = curves[idx][curves[idx].length - 1];
+      var endLbl = global.document.createElementNS(svgNS, 'text');
+      endLbl.setAttribute('x', toX(lastPt.age) + 2);
+      endLbl.setAttribute('y', toY(lastPt.val) + 3);
+      endLbl.setAttribute('font-size', '9');
+      endLbl.setAttribute('fill', zv.label === '50' ? '#0F6E56' : '#3a7062');
+      endLbl.textContent = zv.label + 'c';
+      svg.appendChild(endLbl);
+    });
+
+    // ── Trajektoria pacjenta — gładka linia ──
+    if (trajectory.length >= 2) {
+      var trajScreenPts = trajectory.map(function (p) {
+        return { x: toX(p.age), y: toY(p.val) };
+      });
+      var dTraj = pointsToSmoothPath(trajScreenPts);
+      var trajPath = global.document.createElementNS(svgNS, 'path');
+      trajPath.setAttribute('d', dTraj);
+      trajPath.setAttribute('fill', 'none');
+      trajPath.setAttribute('stroke', '#b71c1c');
+      trajPath.setAttribute('stroke-width', '1.8');
+      trajPath.setAttribute('opacity', '0.75');
+      trajPath.setAttribute('stroke-linecap', 'round');
+      trajPath.setAttribute('stroke-linejoin', 'round');
+      svg.appendChild(trajPath);
+    }
+
+    // ── Trajektoria pacjenta — kropki ──
+    trajectory.forEach(function (p, idx) {
+      var isLast = idx === trajectory.length - 1;
+      var c = global.document.createElementNS(svgNS, 'circle');
+      c.setAttribute('cx', toX(p.age).toFixed(1));
+      c.setAttribute('cy', toY(p.val).toFixed(1));
+      c.setAttribute('r', isLast ? '5' : '3');
+      c.setAttribute('fill', isLast ? '#b71c1c' : '#fff');
+      c.setAttribute('stroke', '#b71c1c');
+      c.setAttribute('stroke-width', isLast ? '2' : '1.5');
+      svg.appendChild(c);
+    });
+
+    return svg;
+  }
+
+  /**
+   * Faza 42 (zachowane dla wstecznej kompatybilności) — opakowuje generyczny
+   * builder dla typu 'bmi'. Może być usunięte gdy nic z zewnątrz nie woła.
+   */
+  function buildBmiPercentileChart(measurements, sexForCalc, currentAgeMonths, currentBmi) {
+    return buildPercentileChart('bmi', measurements, sexForCalc, currentAgeMonths, currentBmi);
+  }
+
+  /**
+   * Buduje miniaturowy wykres SVG wzrostu w czasie z tablicy measurements.
+   * Każdy pomiar: { ageYears, ageMonths, height, weight }.
+   * Zwraca element SVG lub null gdy za mało danych (< 2 punktów).
+   */
+  function buildHeightSparkline(measurements) {
+    if (!measurements || measurements.length < 2) return null;
+    var svgNS = 'http://www.w3.org/2000/svg';
+
+    var points = [];
+    for (var i = 0; i < measurements.length; i++) {
+      var m = measurements[i];
+      if (!m || m.height == null) continue;
+      var ageMo = measurementAgeInMonths(m);
+      var h = parseFloat(m.height);
+      if (isFinite(ageMo) && isFinite(h)) points.push({ age: ageMo, height: h });
+    }
+    if (points.length < 2) return null;
+
+    var W = 280, H = 64, PAD = 8;
+    var minAge = points[0].age, maxAge = points[points.length - 1].age;
+    var heights = points.map(function (p) { return p.height; });
+    var minH = Math.min.apply(null, heights);
+    var maxH = Math.max.apply(null, heights);
+    var rangeAge = maxAge - minAge || 1;
+    var rangeH   = maxH - minH || 1;
+
+    function toX(age) { return PAD + (age - minAge) / rangeAge * (W - 2 * PAD); }
+    function toY(h)   { return H - PAD - (h - minH) / rangeH * (H - 2 * PAD); }
+
+    var polylinePoints = points.map(function (p) {
+      return toX(p.age).toFixed(1) + ',' + toY(p.height).toFixed(1);
+    }).join(' ');
+
+    var svg = global.document.createElementNS(svgNS, 'svg');
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    svg.setAttribute('width', W);
+    svg.setAttribute('height', H);
+    svg.setAttribute('class', 'vilda-patient-sparkline');
+    svg.setAttribute('aria-hidden', 'true');
+
+    var polyline = global.document.createElementNS(svgNS, 'polyline');
+    polyline.setAttribute('points', polylinePoints);
+    polyline.setAttribute('fill', 'none');
+    polyline.setAttribute('stroke', '#00838d');
+    polyline.setAttribute('stroke-width', '2.5');
+    polyline.setAttribute('stroke-linecap', 'round');
+    polyline.setAttribute('stroke-linejoin', 'round');
+    svg.appendChild(polyline);
+
+    for (var j = 0; j < points.length; j++) {
+      var circle = global.document.createElementNS(svgNS, 'circle');
+      circle.setAttribute('cx', toX(points[j].age).toFixed(1));
+      circle.setAttribute('cy', toY(points[j].height).toFixed(1));
+      circle.setAttribute('r', j === points.length - 1 ? '5' : '3');
+      circle.setAttribute('fill', '#00838d');
+      circle.setAttribute('stroke', '#ffffff');
+      circle.setAttribute('stroke-width', '1.5');
+      svg.appendChild(circle);
+    }
+    return svg;
+  }
+
+  // ============ NOTATKI KLINICZNE PACJENTA (P4 — sekcja w karcie) ============
+  // Mapowanie kategorii na human-readable label + kolor accent (Tailwind-friendly).
+  var PATIENT_NOTE_CATEGORY_LABELS = {
+    'followup':      { label: 'Kontrola',     color: '#854F0B', bg: '#FAEEDA' }, // amber
+    'observation':   { label: 'Obserwacja',   color: '#0F6E56', bg: '#E1F5EE' }, // teal
+    'treatment':     { label: 'Leczenie',     color: '#185FA5', bg: '#E6F1FB' }, // blue
+    'wynik-badania': { label: 'Wynik badania', color: '#534AB7', bg: '#EEEDFE' }  // purple
+  };
+
+  // Formatowanie dueDateISO → relatywne ("za 3 dni", "wczoraj", "30.11.2026").
+  // Plus klasa kolorystyczna w zależności od pilności: overdue / soon / ok.
+  function formatPatientNoteDueDate(isoStr) {
+    if (!isoStr) return null;
+    var due = new Date(isoStr);
+    if (isNaN(due.getTime())) return null;
+    var now = new Date();
+    var todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    var dueUTC = new Date(Date.UTC(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate()));
+    var diffDays = Math.round((dueUTC - todayUTC) / (24 * 60 * 60 * 1000));
+    var status, label;
+    if (diffDays < 0) {
+      status = 'overdue';
+      label = (diffDays === -1) ? 'wczoraj' : ((-diffDays) + ' dni temu');
+    } else if (diffDays === 0) {
+      status = 'soon';
+      label = 'dziś';
+    } else if (diffDays === 1) {
+      status = 'soon';
+      label = 'jutro';
+    } else if (diffDays <= 14) {
+      status = 'soon';
+      label = 'za ' + diffDays + ' dni';
+    } else {
+      status = 'ok';
+      // dd.mm.yyyy
+      var dd = String(due.getUTCDate()).padStart(2, '0');
+      var mm = String(due.getUTCMonth() + 1).padStart(2, '0');
+      var yyyy = due.getUTCFullYear();
+      label = dd + '.' + mm + '.' + yyyy;
+    }
+    return { status: status, label: label };
+  }
+
+  // Konwertuje ISO timestamp do YYYY-MM-DD (dla <input type="date">).
+  function isoToDateInputValue(isoStr) {
+    if (!isoStr) return '';
+    var d = new Date(isoStr);
+    if (isNaN(d.getTime())) return '';
+    var yyyy = d.getUTCFullYear();
+    var mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+    var dd = String(d.getUTCDate()).padStart(2, '0');
+    return yyyy + '-' + mm + '-' + dd;
+  }
+
+  /**
+   * Renderuje sekcję notatek klinicznych pacjenta w karcie.
+   * Wywoływana ponownie po każdej akcji (CRUD) — czyści container i odbudowuje.
+   * @param {HTMLElement} container — div który ma być wypełniony zawartością
+   * @param {string} patientId
+   * @param {Function} reRender — callback do ponownego wywołania (po save/delete)
+   */
+  async function renderPatientNotesSection(container, patientId, reRender) {
+    const V = getVault();
+    clear(container);
+    if (!V || typeof V.listPatientNotesForPatient !== 'function') {
+      container.appendChild(el('p', { class: 'vilda-patient-empty-msg', text: 'Notatki nie są dostępne.' }));
+      return;
+    }
+
+    // Header sekcji z przyciskiem „+ Dodaj notatkę".
+    // B3.3: główny tytuł zmieniony z „Notatki kliniczne" na neutralne „Notatki",
+    // bo poniżej rozdzielamy je na sub-sekcje (Notatki ogólne + Notatki kliniczne).
+    const headerRow = el('div', {
+      class: 'vilda-patient-notes-header',
+      style: 'display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;'
+    });
+    const headerLeft = el('div', null, [
+      el('p', { class: 'vilda-patient-section-h', text: 'Notatki', style: 'margin:0;' })
+    ]);
+    const addBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-small',
+      type: 'button',
+      style: 'background:#00838d !important; color:#fff !important; border-color:#00838d !important; width:auto !important; padding:6px 14px !important; font-weight:600; flex:0 0 auto !important;',
+      text: '+ Dodaj notatkę',
+      onclick: function (ev) {
+        if (ev && typeof ev.preventDefault === 'function') ev.preventDefault();
+        try {
+          showPatientNoteEditor({
+            patientId: patientId,
+            note: null,
+            onSaved: function () { if (typeof reRender === 'function') reRender(); }
+          });
+        } catch (e) {
+          logError('showPatientNoteEditor[add]', e);
+          try { global.alert('Nie udało się otworzyć edytora notatki: ' + (e && e.message ? e.message : e)); } catch (_) {}
+        }
+      }
+    });
+    headerRow.appendChild(headerLeft);
+    headerRow.appendChild(addBtn);
+    container.appendChild(headerRow);
+
+    // Wczytanie notatek pacjenta.
+    let notes = [];
+    try { notes = await V.listPatientNotesForPatient(patientId); }
+    catch (e) { logError('listPatientNotesForPatient', e); }
+
+    if (!notes.length) {
+      container.appendChild(el('p', {
+        class: 'vilda-patient-empty-msg',
+        text: 'Brak notatek dla tego pacjenta. Kliknij „+ Dodaj notatkę", aby zapisać pierwszą obserwację, plan leczenia lub przypomnienie o kontroli.'
+      }));
+      return;
+    }
+
+    // ── B3.3: rozdzielenie notatek na 2 grupy (decyzja B3 #5) ───────────
+    //   • Notatki ogólne — bez kotwicy wiekowej I bez daty zdarzenia
+    //     (luźne obserwacje typu „Pacjent nie lubi mówić o rodzicach").
+    //     Sortowane DESC po updatedAtISO (najświeższe pierwsze).
+    //   • Notatki kliniczne — z linkedAgeMonths LUB z clinicalDateISO.
+    //     Sortowane DESC po dacie zdarzenia (clinicalDateISO jeśli jest,
+    //     inaczej updatedAtISO jako fallback).
+    function _isGeneralNote(n) {
+      return (n.linkedAgeMonths == null) && !n.clinicalDateISO;
+    }
+    var generalNotes = notes.filter(_isGeneralNote)
+      .sort(function (a, b) {
+        var av = a.updatedAtISO || '';
+        var bv = b.updatedAtISO || '';
+        if (av > bv) return -1;
+        if (av < bv) return 1;
+        return 0;
+      });
+    var clinicalNotes = notes.filter(function (n) { return !_isGeneralNote(n); })
+      .sort(function (a, b) {
+        var av = a.clinicalDateISO || a.updatedAtISO || '';
+        var bv = b.clinicalDateISO || b.updatedAtISO || '';
+        if (av > bv) return -1;
+        if (av < bv) return 1;
+        return 0;
+      });
+
+    // Helper: render pojedynczej karty notatki. Wspólny dla obu sekcji,
+    // żeby uniknąć duplikacji ~80 linii kodu.
+    function _renderPatientNoteCard(n) {
+      const catMeta = PATIENT_NOTE_CATEGORY_LABELS[n.category] || PATIENT_NOTE_CATEGORY_LABELS.observation;
+      const dueMeta = formatPatientNoteDueDate(n.dueDateISO);
+
+      const card = el('div', {
+        class: 'vilda-patient-note-card',
+        style: 'background:#fff;border:0.5px solid #d7e9ec;border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;'
+      });
+
+      // Top row: kategoria badge + due-date badge + actions menu
+      const topRow = el('div', { style: 'display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;' });
+      const badges = el('div', { style: 'display:flex;align-items:center;gap:6px;flex-wrap:wrap;' });
+      badges.appendChild(el('span', {
+        text: catMeta.label,
+        style: 'display:inline-block;padding:2px 8px;font-size:0.72rem;font-weight:600;color:' + catMeta.color + ';background:' + catMeta.bg + ';border-radius:999px;'
+      }));
+      if (dueMeta) {
+        var dueBg, dueColor;
+        if (dueMeta.status === 'overdue') { dueBg = '#FCEBEB'; dueColor = '#A32D2D'; }
+        else if (dueMeta.status === 'soon') { dueBg = '#FAEEDA'; dueColor = '#854F0B'; }
+        else { dueBg = '#E1F5EE'; dueColor = '#0F6E56'; }
+        badges.appendChild(el('span', {
+          text: (dueMeta.status === 'overdue' ? 'Termin: ' : 'Termin: ') + dueMeta.label,
+          style: 'display:inline-block;padding:2px 8px;font-size:0.72rem;font-weight:600;color:' + dueColor + ';background:' + dueBg + ';border-radius:999px;'
+        }));
+      }
+      const actionsDiv = el('div', { style: 'display:flex;gap:4px;flex:0 0 auto;' });
+      const editBtn = el('button', {
+        type: 'button',
+        class: 'vilda-auth-btn vilda-auth-btn-small',
+        style: 'background:transparent !important;color:#5b6672 !important;border:0.5px solid #d7e9ec !important;width:auto !important;min-width:0 !important;padding:4px 10px !important;font-size:0.78rem !important;flex:0 0 auto !important;',
+        text: 'Edytuj',
+        onclick: function () {
+          showPatientNoteEditor({
+            patientId: patientId,
+            note: n,
+            onSaved: function () { if (typeof reRender === 'function') reRender(); }
+          });
+        }
+      });
+      const delBtn = el('button', {
+        type: 'button',
+        class: 'vilda-auth-btn vilda-auth-btn-small',
+        style: 'background:#fef2f3 !important;color:#b00020 !important;border:0.5px solid #f5b3bb !important;width:auto !important;min-width:0 !important;padding:4px 10px !important;font-size:0.78rem !important;flex:0 0 auto !important;',
+        text: 'Usuń',
+        onclick: async function () {
+          var label = (n.title || n.body || '').slice(0, 60);
+          if (!global.confirm('Usunąć notatkę „' + label + '"? Akcja propaguje się na inne urządzenia.')) return;
+          try {
+            await V.removePatientNote(n.id);
+            if (typeof reRender === 'function') reRender();
+          } catch (e) {
+            global.alert('Nie udało się usunąć notatki: ' + (e && e.message ? e.message : e));
+          }
+        }
+      });
+      actionsDiv.appendChild(editBtn);
+      actionsDiv.appendChild(delBtn);
+      topRow.appendChild(badges);
+      topRow.appendChild(actionsDiv);
+      card.appendChild(topRow);
+
+      // Tytuł (jeśli jest).
+      if (n.title) {
+        card.appendChild(el('div', {
+          text: n.title,
+          style: 'font-weight:600;font-size:0.95rem;color:#0f2b33;'
+        }));
+      }
+      // Body.
+      if (n.body) {
+        card.appendChild(el('div', {
+          text: n.body,
+          style: 'font-size:0.88rem;color:#374151;line-height:1.5;white-space:pre-wrap;word-wrap:break-word;'
+        }));
+      }
+
+      // Footer: data zapisu (relatywna).
+      const savedLabel = n.updatedAtISO ? ('Zapisano: ' + formatRelativeISO(n.updatedAtISO)) : '';
+      if (savedLabel) {
+        card.appendChild(el('div', {
+          text: savedLabel,
+          style: 'font-size:0.74rem;color:#9aa8aa;'
+        }));
+      }
+
+      return card;
+    }
+
+    // Helper: header sub-sekcji z ikoną + tekstem + counter pill.
+    function _renderSubSectionHeader(iconSvg, text, count) {
+      var wrap = el('div', {
+        class: 'vilda-patient-notes-subheader',
+        style: 'display:flex;align-items:center;gap:8px;margin:6px 0 10px;'
+      });
+      if (iconSvg) {
+        var iconWrap = el('span', {
+          style: 'display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;color:#5b6672;flex:0 0 auto;'
+        });
+        iconWrap.innerHTML = iconSvg;
+        wrap.appendChild(iconWrap);
+      }
+      wrap.appendChild(el('span', {
+        text: text,
+        style: 'font-size:0.78rem;font-weight:600;color:#5b6672;text-transform:uppercase;letter-spacing:0.05em;'
+      }));
+      wrap.appendChild(el('span', {
+        text: String(count),
+        style: 'display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:18px;padding:0 6px;'
+          + 'background:#e8eff1;color:#5b6672;font-size:0.7rem;font-weight:600;border-radius:999px;'
+      }));
+      return wrap;
+    }
+
+    // Ikona dymka (Tabler outline ti-message-dots) — inline SVG dla sekcji ogólnej.
+    var MESSAGE_DOTS_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20l1.3 -3.9a9 8 0 1 1 3.4 2.9l-4.7 1"/><path d="M12 12l0 .01"/><path d="M8 12l0 .01"/><path d="M16 12l0 .01"/></svg>';
+    // Ikona stetoskopu (Tabler ti-stethoscope) — dla sekcji klinicznej.
+    var STETHOSCOPE_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h-1a2 2 0 0 0 -2 2v3.5h0a5.5 5.5 0 0 0 11 0v-3.5a2 2 0 0 0 -2 -2h-1"/><path d="M8 15a6 6 0 1 0 12 0v-3"/><circle cx="20" cy="10" r="2"/></svg>';
+
+    // B-fix UX (post-B3): wewnętrzny scroll dla obu sub-sekcji notatek.
+    // Header z „+Dodaj notatkę" zostaje NAD scrollem (zawsze widoczny, akcja
+    // dostępna bez scrollowania w górę). Lista wpisów scrolluje się wewnętrznie.
+    // Wysokość dynamiczna do viewportu z capem 720px (na dużych monitorach lista
+    // nie rozrasta się ponad sens) i floorem 280px (na małych ekranach minimalna
+    // czytelna wysokość ~3 wpisy). Scrollbar stylizowany subtelnie (tylko gdy hover
+    // na desktop, zawsze widoczny na touch — domyślne zachowanie OS).
+    var notesScrollWrap = el('div', {
+      class: 'vilda-patient-notes-scroll',
+      style: 'max-height:min(calc(100vh - 320px), 720px);min-height:280px;'
+        + 'overflow-y:auto;overflow-x:hidden;'
+        + 'padding-right:4px;'  // pad pod scrollbar (uniknij skoku layoutu)
+        + '-webkit-overflow-scrolling:touch;'  // momentum scroll na iOS
+        + 'scrollbar-gutter:stable;'  // rezerwa miejsca na scrollbar — brak skoków
+    });
+
+    // Sekcja „Notatki ogólne" — subtelny szary tło (#f5fafb wg planu), ikona dymka.
+    if (generalNotes.length > 0) {
+      var generalWrap = el('div', {
+        class: 'vilda-patient-notes-general-section',
+        style: 'background:#f5fafb;border:0.5px solid #e0eef0;border-radius:12px;padding:10px 12px 12px;margin-bottom:14px;'
+      });
+      generalWrap.appendChild(_renderSubSectionHeader(MESSAGE_DOTS_SVG, 'Notatki ogólne', generalNotes.length));
+      var generalList = el('div', { style: 'display:flex;flex-direction:column;gap:8px;' });
+      generalNotes.forEach(function (n) { generalList.appendChild(_renderPatientNoteCard(n)); });
+      generalWrap.appendChild(generalList);
+      notesScrollWrap.appendChild(generalWrap);
+    }
+
+    // Sekcja „Notatki kliniczne" — bez szarego tła, header z ikoną stetoskopu.
+    if (clinicalNotes.length > 0) {
+      var clinicalWrap = el('div', { class: 'vilda-patient-notes-clinical-section' });
+      clinicalWrap.appendChild(_renderSubSectionHeader(STETHOSCOPE_SVG, 'Notatki kliniczne', clinicalNotes.length));
+      var clinicalList = el('div', { class: 'vilda-patient-notes-list', style: 'display:flex;flex-direction:column;gap:10px;' });
+      clinicalNotes.forEach(function (n) { clinicalList.appendChild(_renderPatientNoteCard(n)); });
+      clinicalWrap.appendChild(clinicalList);
+      notesScrollWrap.appendChild(clinicalWrap);
+    }
+
+    container.appendChild(notesScrollWrap);
+  }
+
+  /**
+   * Overlay edytora notatki klinicznej pacjenta — dodaj lub edytuj.
+   * @param {object} opts — { patientId, note?, onSaved?, onCancel? }
+   */
+  function showPatientNoteEditor(opts) {
+    const V = getVault();
+    if (!V || typeof V.savePatientNote !== 'function') {
+      // P4-fix: zamiast cichego return — pokaż jednoznaczny komunikat. To pomaga
+      // diagnozować problemy z cache (gdy SW serwuje stary vilda_vault.js bez
+      // API patient notes) lub gdy vault jest jeszcze locked.
+      try { global.alert('Notatki pacjenta są niedostępne. Spróbuj odświeżyć stronę (Ctrl+Shift+R) — może być stary cache.'); } catch (_) {}
+      return;
+    }
+    const isEdit = !!(opts && opts.note && opts.note.id);
+    const initial = (opts && opts.note) || {};
+
+    // P4-fix #2: defensywnie usuń wcześniejsze niezamknięte overlaye (multi-click).
+    // Bez tego wielokrotne kliknięcia „+ Dodaj notatkę" akumulują overlaye w DOM —
+    // niewidoczne pod rootEl, ale po hide() pokazują się wszystkie razem.
+    try {
+      var prev = global.document.querySelectorAll('.vilda-patient-note-editor-overlay');
+      if (prev && prev.length) {
+        for (var i = 0; i < prev.length; i++) prev[i].remove();
+      }
+    } catch (_) {}
+
+    // Backdrop dla modalu — overlay na całość auth UI.
+    // P4-fix #2: z-index MUSI być WYŻSZY niż .vilda-auth-root (999999), inaczej
+    // overlay jest niewidoczny pod kartą pacjenta. Inline style przesłania klasę
+    // .vilda-auth-overlay-sheet (z-index:1000000), więc tutaj 1000001 explicit.
+    const overlay = el('div', {
+      class: 'vilda-auth-overlay vilda-auth-overlay-sheet vilda-patient-note-editor-overlay',
+      style: 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000001;padding:20px;'
+    });
+
+    const sheet = el('div', {
+      class: 'vilda-auth-sheet',
+      style: 'background:#fff;border-radius:14px;padding:18px 20px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:12px;'
+    });
+
+    sheet.appendChild(el('h3', {
+      text: isEdit ? 'Edytuj notatkę' : 'Nowa notatka',
+      style: 'margin:0;font-size:1.05rem;font-weight:600;color:#0f2b33;'
+    }));
+
+    // Kategoria — dropdown.
+    const catWrap = el('div', null, [
+      el('label', { text: 'Kategoria', style: 'display:block;font-size:0.78rem;color:#5b6672;margin-bottom:4px;font-weight:500;' })
+    ]);
+    const catSelect = el('select', {
+      class: 'vilda-auth-input',
+      style: 'width:100%;height:38px;padding:0 10px;font-size:0.92rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;'
+    });
+    var cats = (V.PATIENT_NOTE_CATEGORIES || ['followup', 'observation', 'treatment', 'wynik-badania']);
+    cats.forEach(function (c) {
+      const labelMeta = PATIENT_NOTE_CATEGORY_LABELS[c] || { label: c };
+      const opt = el('option', { value: c, text: labelMeta.label });
+      if ((initial.category || 'observation') === c) opt.selected = true;
+      catSelect.appendChild(opt);
+    });
+    catWrap.appendChild(catSelect);
+    sheet.appendChild(catWrap);
+
+    // B3.1: Szablon notatki — dropdown z 5 opcjami (decyzja B3 #2).
+    // Wybór szablonu robi 2 rzeczy:
+    //   • ustawia kategorię automatycznie (treatment / wynik-badania)
+    //   • pokazuje pola strukturalne (medication.{name,dose,previousDose} albo
+    //     labResult.{test,value,norm}) odpowiednie dla szablonu
+    // „Bez szablonu" pozostawia user'owi swobodę — tylko tytuł + treść.
+    // Detekcja stanu początkowego (edycja istniejącej notatki):
+    var initialTemplate = 'none';
+    if (isEdit && initial.medication && initial.medication.action) {
+      if (initial.medication.action === 'start') initialTemplate = 'med-start';
+      else if (initial.medication.action === 'change') initialTemplate = 'med-change';
+      else if (initial.medication.action === 'stop') initialTemplate = 'med-stop';
+    } else if (isEdit && initial.labResult && (initial.labResult.test || initial.labResult.value)) {
+      initialTemplate = 'lab';
+    }
+
+    var tplWrap = el('div', null, [
+      el('label', { text: 'Szablon', style: 'display:block;font-size:0.78rem;color:#5b6672;margin-bottom:4px;font-weight:500;' })
+    ]);
+    var tplSelect = el('select', {
+      class: 'vilda-auth-input b3-template-select',
+      style: 'width:100%;height:38px;padding:0 10px;font-size:0.92rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;'
+    });
+    var TEMPLATES = [
+      { value: 'none',       label: 'Bez szablonu' },
+      { value: 'med-start',  label: 'Włączono lek' },
+      { value: 'med-change', label: 'Zmieniono dawkę leku' },
+      { value: 'med-stop',   label: 'Zakończono leczenie' },
+      { value: 'lab',        label: 'Wynik badania' }
+    ];
+    TEMPLATES.forEach(function (t) {
+      var opt = el('option', { value: t.value, text: t.label });
+      if (t.value === initialTemplate) opt.selected = true;
+      tplSelect.appendChild(opt);
+    });
+    tplWrap.appendChild(tplSelect);
+    var tplHint = el('p', {
+      style: 'font-size:0.72rem;color:#9aa8aa;margin:4px 0 0 0;line-height:1.4;',
+      text: 'Szablon zapisze lek / wynik w sposób umożliwiający filtrowanie w przyszłości.'
+    });
+    tplWrap.appendChild(tplHint);
+    sheet.appendChild(tplWrap);
+
+    // ── Sekcja strukturalna: medication (start/change/stop) ────────────
+    // Pokazuje pola name + dose; dla 'change' dodatkowo previousDose.
+    // Auto-suggest (B3 #A1) — datalist HTML5 wypełniany asynchronicznie po
+    // otwarciu edytora przez listMedicationNamesForCurrentUser().
+    var medSection = el('div', {
+      class: 'b3-med-section',
+      style: 'display:none;flex-direction:column;gap:8px;padding:10px 12px;background:#fff8ee;border:0.5px solid #f0e0c8;border-radius:8px;'
+    });
+    var medHeader = el('div', {
+      style: 'font-size:0.74rem;color:#7a5a1a;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;',
+      text: 'Lek'
+    });
+    medSection.appendChild(medHeader);
+
+    var medDatalistId = 'b3-med-names-' + Date.now();
+    var medDatalist = el('datalist', { id: medDatalistId });
+    medSection.appendChild(medDatalist);
+
+    var medNameWrap = el('div', null, [
+      el('label', { text: 'Nazwa leku', style: 'display:block;font-size:0.74rem;color:#5b6672;margin-bottom:3px;' })
+    ]);
+    var medNameInput = el('input', {
+      type: 'text',
+      class: 'vilda-auth-input b3-med-name',
+      list: medDatalistId,
+      placeholder: 'np. Euthyrox, Letrox, Genotropin',
+      style: 'width:100%;height:36px;padding:0 10px;font-size:0.9rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;'
+    });
+    medNameInput.value = (initial.medication && initial.medication.name) || '';
+    medNameWrap.appendChild(medNameInput);
+    medSection.appendChild(medNameWrap);
+
+    // previousDose — pokazywane tylko dla 'med-change'
+    var medPrevWrap = el('div', { class: 'b3-med-prev-wrap', style: 'display:none;' }, [
+      el('label', { text: 'Poprzednia dawka', style: 'display:block;font-size:0.74rem;color:#5b6672;margin-bottom:3px;' })
+    ]);
+    var medPrevInput = el('input', {
+      type: 'text',
+      class: 'vilda-auth-input b3-med-previous-dose',
+      placeholder: 'np. 25 µg 1×dz.',
+      style: 'width:100%;height:36px;padding:0 10px;font-size:0.9rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;'
+    });
+    medPrevInput.value = (initial.medication && initial.medication.previousDose) || '';
+    medPrevWrap.appendChild(medPrevInput);
+    medSection.appendChild(medPrevWrap);
+
+    var medDoseWrap = el('div', { class: 'b3-med-dose-wrap' }, [
+      el('label', { class: 'b3-med-dose-label', text: 'Dawka', style: 'display:block;font-size:0.74rem;color:#5b6672;margin-bottom:3px;' })
+    ]);
+    var medDoseInput = el('input', {
+      type: 'text',
+      class: 'vilda-auth-input b3-med-dose',
+      placeholder: 'np. 50 µg 1×dz.',
+      style: 'width:100%;height:36px;padding:0 10px;font-size:0.9rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;'
+    });
+    medDoseInput.value = (initial.medication && initial.medication.dose) || '';
+    medDoseWrap.appendChild(medDoseInput);
+    medSection.appendChild(medDoseWrap);
+
+    sheet.appendChild(medSection);
+
+    // ── Sekcja strukturalna: labResult ─────────────────────────────────
+    var labSection = el('div', {
+      class: 'b3-lab-section',
+      style: 'display:none;flex-direction:column;gap:8px;padding:10px 12px;background:#eef6ff;border:0.5px solid #cde0f5;border-radius:8px;'
+    });
+    var labHeader = el('div', {
+      style: 'font-size:0.74rem;color:#1a4a7a;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;',
+      text: 'Wynik badania'
+    });
+    labSection.appendChild(labHeader);
+
+    var labDatalistId = 'b3-lab-names-' + Date.now();
+    var labDatalist = el('datalist', { id: labDatalistId });
+    labSection.appendChild(labDatalist);
+
+    var labTestWrap = el('div', null, [
+      el('label', { text: 'Badanie', style: 'display:block;font-size:0.74rem;color:#5b6672;margin-bottom:3px;' })
+    ]);
+    var labTestInput = el('input', {
+      type: 'text',
+      class: 'vilda-auth-input b3-lab-test',
+      list: labDatalistId,
+      placeholder: 'np. TSH, fT4, IGF-1',
+      style: 'width:100%;height:36px;padding:0 10px;font-size:0.9rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;'
+    });
+    labTestInput.value = (initial.labResult && initial.labResult.test) || '';
+    labTestWrap.appendChild(labTestInput);
+    labSection.appendChild(labTestWrap);
+
+    var labValueWrap = el('div', null, [
+      el('label', { text: 'Wartość', style: 'display:block;font-size:0.74rem;color:#5b6672;margin-bottom:3px;' })
+    ]);
+    var labValueInput = el('input', {
+      type: 'text',
+      class: 'vilda-auth-input b3-lab-value',
+      placeholder: 'np. 2,5 mIU/L',
+      style: 'width:100%;height:36px;padding:0 10px;font-size:0.9rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;'
+    });
+    labValueInput.value = (initial.labResult && initial.labResult.value) || '';
+    labValueWrap.appendChild(labValueInput);
+    labSection.appendChild(labValueWrap);
+
+    var labNormWrap = el('div', null, [
+      el('label', { text: 'Norma (opcjonalnie)', style: 'display:block;font-size:0.74rem;color:#5b6672;margin-bottom:3px;' })
+    ]);
+    var labNormInput = el('input', {
+      type: 'text',
+      class: 'vilda-auth-input b3-lab-norm',
+      placeholder: 'np. 0,4-4,2 mIU/L',
+      style: 'width:100%;height:36px;padding:0 10px;font-size:0.9rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;'
+    });
+    labNormInput.value = (initial.labResult && initial.labResult.norm) || '';
+    labNormWrap.appendChild(labNormInput);
+    labSection.appendChild(labNormWrap);
+
+    sheet.appendChild(labSection);
+
+    // Reaktywność szablonu — pokazuj odpowiednią sekcję, ustaw kategorię.
+    // Etykietę „Dawka" dla 'med-change' zmieniamy na „Nowa dawka" (bo jest też previousDose).
+    function syncTemplateVisibility() {
+      var tpl = tplSelect.value;
+      var isMed = tpl === 'med-start' || tpl === 'med-change' || tpl === 'med-stop';
+      var isLab = tpl === 'lab';
+      medSection.style.display = isMed ? 'flex' : 'none';
+      labSection.style.display = isLab ? 'flex' : 'none';
+      medPrevWrap.style.display = tpl === 'med-change' ? 'block' : 'none';
+      medDoseWrap.style.display = (tpl === 'med-start' || tpl === 'med-change') ? 'block' : 'none';
+      var doseLabel = medDoseWrap.querySelector('.b3-med-dose-label');
+      if (doseLabel) doseLabel.textContent = tpl === 'med-change' ? 'Nowa dawka' : 'Dawka';
+      // Auto-set kategoria dla szablonów strukturalnych.
+      if (isMed) catSelect.value = 'treatment';
+      else if (isLab) catSelect.value = 'wynik-badania';
+    }
+    tplSelect.addEventListener('change', syncTemplateVisibility);
+    syncTemplateVisibility();
+
+    // Auto-suggest — wypełniamy datalist asynchronicznie po otwarciu edytora.
+    // Jeśli vault zwróci błąd (lock / stale cache), zostawiamy puste — input
+    // nadal działa jako wolne pole tekstowe.
+    if (typeof V.listMedicationNamesForCurrentUser === 'function') {
+      V.listMedicationNamesForCurrentUser().then(function (names) {
+        if (!Array.isArray(names)) return;
+        names.forEach(function (n) { medDatalist.appendChild(el('option', { value: n })); });
+      }).catch(function () {});
+    }
+    if (typeof V.listLabTestNamesForCurrentUser === 'function') {
+      V.listLabTestNamesForCurrentUser().then(function (tests) {
+        if (!Array.isArray(tests)) return;
+        tests.forEach(function (t) { labDatalist.appendChild(el('option', { value: t })); });
+      }).catch(function () {});
+    }
+
+    // Tytuł.
+    const titleWrap = el('div', null, [
+      el('label', { text: 'Tytuł (opcjonalnie)', style: 'display:block;font-size:0.78rem;color:#5b6672;margin-bottom:4px;font-weight:500;' })
+    ]);
+    const titleInput = el('input', {
+      type: 'text',
+      class: 'vilda-auth-input',
+      placeholder: 'np. Wprowadzono Euthyrox',
+      style: 'width:100%;height:38px;padding:0 10px;font-size:0.92rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;'
+    });
+    titleInput.value = initial.title || '';
+    titleWrap.appendChild(titleInput);
+    sheet.appendChild(titleWrap);
+
+    // Treść.
+    const bodyWrap = el('div', null, [
+      el('label', { text: 'Treść', style: 'display:block;font-size:0.78rem;color:#5b6672;margin-bottom:4px;font-weight:500;' })
+    ]);
+    const bodyInput = el('textarea', {
+      class: 'vilda-auth-input',
+      placeholder: 'np. 25 µg 1×dz. Kontrola TSH za 6 mc.',
+      style: 'width:100%;min-height:120px;padding:10px;font-size:0.92rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;line-height:1.5;resize:vertical;font-family:inherit;'
+    });
+    bodyInput.value = initial.body || '';
+    bodyWrap.appendChild(bodyInput);
+    sheet.appendChild(bodyWrap);
+
+    // dueDateISO — pole opcjonalne, podpowiedź zmienia się gdy kategoria = followup.
+    const dueWrap = el('div', null, [
+      el('label', { class: 'pn-due-label', text: 'Przypomnienie (data)', style: 'display:block;font-size:0.78rem;color:#5b6672;margin-bottom:4px;font-weight:500;' })
+    ]);
+    const dueInput = el('input', {
+      type: 'date',
+      class: 'vilda-auth-input',
+      style: 'width:100%;height:38px;padding:0 10px;font-size:0.92rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;'
+    });
+    dueInput.value = isoToDateInputValue(initial.dueDateISO);
+    dueWrap.appendChild(dueInput);
+    const dueHint = el('p', {
+      style: 'font-size:0.72rem;color:#9aa8aa;margin:4px 0 0 0;line-height:1.4;',
+      text: 'Najlepiej ustawić dla kontroli — pojawi się jako przypomnienie z kolorem zależnym od pilności.'
+    });
+    dueWrap.appendChild(dueHint);
+    sheet.appendChild(dueWrap);
+
+    // B3.1: powiązanie notatki z osią czasu — radio group z 3 wzajemnie wykluczającymi
+    // opcjami (decyzja B3 #6, zastępuje wcześniejszy checkbox z B1.8):
+    //   (1) Notatka ogólna — bez kotwicy, bez daty zdarzenia (idzie do zakładki Notatki,
+    //       sekcja „Notatki ogólne" — B3.3)
+    //   (2) Powiąż z wizytą (wiek pacjenta) — kotwica linkedAgeMonths, dostępne tylko
+    //       gdy suggestLinkedAge != null (edytor wywołany z kreatora głównego lub
+    //       edytujemy notatkę która już ma kotwicę)
+    //   (3) Wpisz datę zdarzenia — pole type=date → clinicalDateISO (B3.0); notatka
+    //       wpasuje się chronologicznie w Historię.
+    //
+    // Stan początkowy:
+    //   • Nowa notatka, brak suggestLinkedAge → (1) ogólna domyślnie
+    //   • Nowa notatka, jest suggestLinkedAge → (2) powiąż z wizytą domyślnie
+    //   • Edycja notatki z linkedAgeMonths → (2) powiąż z wizytą
+    //   • Edycja notatki z clinicalDateISO → (3) data zdarzenia, pole wypełnione
+    //   • Edycja notatki ogólnej (oba null) → (1) ogólna
+    var suggestLinkedAge = null;
+    if (opts && typeof opts.suggestLinkedAge === 'number' && isFinite(opts.suggestLinkedAge)
+        && opts.suggestLinkedAge > 0) {
+      suggestLinkedAge = Math.round(opts.suggestLinkedAge);
+    } else if (isEdit && typeof initial.linkedAgeMonths === 'number' && initial.linkedAgeMonths > 0) {
+      suggestLinkedAge = Math.round(initial.linkedAgeMonths);
+    }
+
+    // Wybierz początkowo zaznaczone radio na podstawie stanu notatki.
+    var initialAnchorMode;
+    if (isEdit && initial.clinicalDateISO) initialAnchorMode = 'date';
+    else if (isEdit && typeof initial.linkedAgeMonths === 'number' && initial.linkedAgeMonths > 0) initialAnchorMode = 'visit';
+    else if (suggestLinkedAge !== null) initialAnchorMode = 'visit';
+    else initialAnchorMode = 'general';
+
+    var anchorWrap = el('div', {
+      class: 'b3-anchor-group',
+      style: 'display:flex;flex-direction:column;gap:8px;padding:12px;background:#f5fafb;border-radius:10px;border:0.5px solid #d7e9ec;'
+    });
+    var anchorHeader = el('div', {
+      style: 'font-size:0.78rem;color:#5b6672;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;',
+      text: 'Powiązanie z osią czasu'
+    });
+    anchorWrap.appendChild(anchorHeader);
+
+    // Radio (1) — Notatka ogólna
+    var radioGeneralWrap = el('label', { class: 'b3-anchor-option', style: 'display:flex;align-items:flex-start;gap:8px;cursor:pointer;' });
+    var radioGeneral = el('input', { type: 'radio', name: 'b3-anchor', value: 'general', style: 'flex:0 0 auto;margin-top:2px;cursor:pointer;width:16px;height:16px;accent-color:#00838d;' });
+    radioGeneral.checked = initialAnchorMode === 'general';
+    var radioGeneralText = el('div', { style: 'flex:1;font-size:0.86rem;color:#0f2b33;line-height:1.4;' }, [
+      el('div', { text: 'Notatka ogólna', style: 'font-weight:500;' }),
+      el('div', { text: 'Pojawi się w zakładce Notatki, nie w Historii.', style: 'font-size:0.74rem;color:#9aa8aa;margin-top:2px;' })
+    ]);
+    radioGeneralWrap.appendChild(radioGeneral);
+    radioGeneralWrap.appendChild(radioGeneralText);
+    anchorWrap.appendChild(radioGeneralWrap);
+
+    // B3.3: hint pod radio „Notatka ogólna" — pokazywany TYLKO gdy general jest aktywna.
+    // Wyjaśnia że notatka ogólna nie wpadnie do osi czasu Historii i zachęca do
+    // wyboru wizyty lub daty zdarzenia, jeśli to ma być wpis kliniczny.
+    var generalHint = el('div', {
+      class: 'b3-general-hint',
+      style: 'font-size:0.74rem;color:#7a5a1a;background:#fff8ee;border:0.5px solid #f0e0c8;'
+        + 'border-radius:6px;padding:6px 8px;margin:-2px 0 0 24px;line-height:1.4;display:none;'
+    });
+    generalHint.innerHTML = '💡 Notatki ogólne nie pojawiają się w Historii. '
+      + 'Aby notatka pojawiła się w Historii, wybierz <strong>wizytę</strong> lub <strong>datę zdarzenia</strong>.';
+    anchorWrap.appendChild(generalHint);
+
+    // Radio (2) — Powiąż z wizytą (tylko gdy mamy suggestLinkedAge)
+    var radioVisit = null;
+    if (suggestLinkedAge !== null) {
+      var radioVisitWrap = el('label', { class: 'b3-anchor-option', style: 'display:flex;align-items:flex-start;gap:8px;cursor:pointer;' });
+      radioVisit = el('input', { type: 'radio', name: 'b3-anchor', value: 'visit', style: 'flex:0 0 auto;margin-top:2px;cursor:pointer;width:16px;height:16px;accent-color:#00838d;' });
+      radioVisit.checked = initialAnchorMode === 'visit';
+      var radioVisitText = el('div', { style: 'flex:1;font-size:0.86rem;color:#0f2b33;line-height:1.4;' });
+      var visitMain = el('div', { style: 'font-weight:500;' });
+      visitMain.appendChild(global.document.createTextNode('Powiąż z wizytą '));
+      visitMain.appendChild(el('strong', { text: '(wiek: ' + _formatAge(suggestLinkedAge) + ')', style: 'font-weight:600;color:#0F6E56;' }));
+      radioVisitText.appendChild(visitMain);
+      radioVisitText.appendChild(el('div', { text: 'Pojawi się w Historii pod chipem Pomiar.', style: 'font-size:0.74rem;color:#9aa8aa;margin-top:2px;' }));
+      radioVisitWrap.appendChild(radioVisit);
+      radioVisitWrap.appendChild(radioVisitText);
+      anchorWrap.appendChild(radioVisitWrap);
+    }
+
+    // Radio (3) — Wpisz datę zdarzenia
+    var radioDateWrap = el('label', { class: 'b3-anchor-option', style: 'display:flex;align-items:flex-start;gap:8px;cursor:pointer;' });
+    var radioDate = el('input', { type: 'radio', name: 'b3-anchor', value: 'date', style: 'flex:0 0 auto;margin-top:2px;cursor:pointer;width:16px;height:16px;accent-color:#00838d;' });
+    radioDate.checked = initialAnchorMode === 'date';
+    var radioDateText = el('div', { style: 'flex:1;font-size:0.86rem;color:#0f2b33;line-height:1.4;' }, [
+      el('div', { text: 'Wpisz datę zdarzenia', style: 'font-weight:500;' }),
+      el('div', { text: 'Notatka wpasuje się chronologicznie w Historii.', style: 'font-size:0.74rem;color:#9aa8aa;margin-top:2px;' })
+    ]);
+    var clinicalDateInput = el('input', {
+      type: 'date',
+      class: 'vilda-auth-input b3-clinical-date',
+      style: 'width:100%;height:34px;padding:0 10px;font-size:0.9rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;margin-top:6px;display:none;'
+    });
+    clinicalDateInput.value = initial.clinicalDateISO || '';
+    radioDateText.appendChild(clinicalDateInput);
+    radioDateWrap.appendChild(radioDate);
+    radioDateWrap.appendChild(radioDateText);
+    anchorWrap.appendChild(radioDateWrap);
+
+    // Reaktywność — pokazuj date input tylko gdy radio (3) aktywne, hint tylko
+    // gdy radio (1) „ogólna" aktywne (B3.3).
+    function syncAnchorVisibility() {
+      clinicalDateInput.style.display = radioDate.checked ? 'block' : 'none';
+      generalHint.style.display = radioGeneral.checked ? 'block' : 'none';
+    }
+    radioGeneral.addEventListener('change', syncAnchorVisibility);
+    if (radioVisit) radioVisit.addEventListener('change', syncAnchorVisibility);
+    radioDate.addEventListener('change', syncAnchorVisibility);
+    // Klik w pole daty automatycznie zaznacza radio (3) — wygodniej.
+    clinicalDateInput.addEventListener('focus', function () {
+      if (!radioDate.checked) { radioDate.checked = true; syncAnchorVisibility(); }
+    });
+    syncAnchorVisibility();
+
+    sheet.appendChild(anchorWrap);
+
+    // Error box.
+    const errBox = el('div', {
+      style: 'color:#A32D2D;font-size:0.82rem;line-height:1.4;display:none;'
+    });
+    sheet.appendChild(errBox);
+
+    // Akcje (Anuluj + Zapisz).
+    const actions = el('div', {
+      style: 'display:flex;gap:8px;justify-content:flex-end;margin-top:4px;'
+    });
+    const cancelBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost',
+      type: 'button',
+      style: 'background:transparent !important;color:#5b6672 !important;border:0.5px solid #d7e9ec !important;width:auto !important;padding:8px 16px !important;flex:0 0 auto !important;',
+      text: 'Anuluj',
+      onclick: function () {
+        overlay.remove();
+        if (opts && typeof opts.onCancel === 'function') opts.onCancel();
+      }
+    });
+    const saveBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-primary',
+      type: 'button',
+      style: 'background:#00838d !important;color:#fff !important;border-color:#00838d !important;width:auto !important;padding:8px 18px !important;font-weight:600;flex:0 0 auto !important;',
+      text: isEdit ? 'Zapisz zmiany' : 'Dodaj notatkę',
+      onclick: async function () {
+        errBox.style.display = 'none';
+        saveBtn.disabled = true;
+        cancelBtn.disabled = true;
+        try {
+          const payload = {
+            patientId: opts.patientId,
+            title: titleInput.value || '',
+            body: bodyInput.value || '',
+            category: catSelect.value || 'observation',
+            dueDateISO: dueInput.value || null
+          };
+          if (isEdit) payload.id = initial.id;
+
+          // B3.1: powiązanie z osią czasu na podstawie radio group.
+          //   • general → linkedAgeMonths=null, clinicalDateISO=null (notatka ogólna)
+          //   • visit   → linkedAgeMonths=suggestLinkedAge, clinicalDateISO=null
+          //   • date    → linkedAgeMonths=null, clinicalDateISO=<input>
+          // Przy edycji ZAWSZE wysyłamy explicit (3 stany: visit/date/general), więc
+          // vault wyczyści drugie pole — radio jest mutually exclusive.
+          var anchor = 'general';
+          if (radioVisit && radioVisit.checked) anchor = 'visit';
+          else if (radioDate.checked) anchor = 'date';
+          if (anchor === 'visit') {
+            payload.linkedAgeMonths = suggestLinkedAge;
+            payload.clinicalDateISO = null;
+          } else if (anchor === 'date') {
+            payload.linkedAgeMonths = null;
+            payload.clinicalDateISO = clinicalDateInput.value || null;
+          } else {
+            payload.linkedAgeMonths = null;
+            payload.clinicalDateISO = null;
+          }
+
+          // B3.1: pola strukturalne na podstawie wybranego szablonu.
+          //   • med-start / med-change / med-stop → buduj obiekt medication
+          //   • lab → buduj obiekt labResult
+          //   • none → wyzeruj oba (przy edycji vault wyczyści pola)
+          var tpl = tplSelect.value;
+          if (tpl === 'med-start' || tpl === 'med-change' || tpl === 'med-stop') {
+            var actionMap = { 'med-start': 'start', 'med-change': 'change', 'med-stop': 'stop' };
+            var med = { action: actionMap[tpl] };
+            var medName = (medNameInput.value || '').trim();
+            if (medName) med.name = medName;
+            var medDose = (medDoseInput.value || '').trim();
+            if (medDose && (tpl === 'med-start' || tpl === 'med-change')) med.dose = medDose;
+            var medPrev = (medPrevInput.value || '').trim();
+            if (medPrev && tpl === 'med-change') med.previousDose = medPrev;
+            payload.medication = med;
+            payload.labResult = null;
+          } else if (tpl === 'lab') {
+            var lab = {};
+            var labTest = (labTestInput.value || '').trim();
+            if (labTest) lab.test = labTest;
+            var labValue = (labValueInput.value || '').trim();
+            if (labValue) lab.value = labValue;
+            var labNorm = (labNormInput.value || '').trim();
+            if (labNorm) lab.norm = labNorm;
+            payload.medication = null;
+            payload.labResult = (lab.test || lab.value) ? lab : null;
+          } else {
+            payload.medication = null;
+            payload.labResult = null;
+          }
+
+          await V.savePatientNote(payload);
+          overlay.remove();
+          if (opts && typeof opts.onSaved === 'function') opts.onSaved();
+        } catch (e) {
+          errBox.textContent = (e && e.message) ? e.message : 'Nie udało się zapisać notatki.';
+          errBox.style.display = 'block';
+          saveBtn.disabled = false;
+          cancelBtn.disabled = false;
+        }
+      }
+    });
+    actions.appendChild(cancelBtn);
+    actions.appendChild(saveBtn);
+    sheet.appendChild(actions);
+
+    overlay.appendChild(sheet);
+    // P4-fix #3: host przepisuje na BODY gdy rootEl jest ukryty (display:none).
+    // Modal w środku display:none rodzica jest niewidoczny — nawet z position:fixed.
+    // rootEl jest hidden gdy user jest zalogowany i w aplikacji (auth UI niepotrzebne).
+    // Modal otwierany z karty pacjenta (showPatientCard wywołuje open() → rootEl block)
+    // → host=rootEl (dobry stacking). Modal otwierany ze stanu zalogowanego (np. R3 chip
+    // reminderów, R4 auto-trigger po unlock) → rootEl display:none → host=body.
+    var host = _chooseOverlayHost();
+    host.appendChild(overlay);
+    // Mobile: zablokuj scroll tła, by modal nie „pływał" (auto-unlock po zamknięciu).
+    _lockBackgroundScrollUntilRemoved(overlay);
+
+    // Auto-focus na treści (najczęściej edytowane).
+    try { bodyInput.focus(); } catch (_) {}
+  }
+
+  /**
+   * P4-fix #3: heurystyka wyboru hosta overlay'a.
+   * - rootEl widoczny (display:block) → użyj rootEl (modal w tym samym stacking
+   *   context co karta pacjenta; cleanup przy hide() automatyczny).
+   * - rootEl hidden lub brak → użyj document.body (modal działa w trybie
+   *   zalogowanym, gdy auth UI jest schowane).
+   */
+  function _chooseOverlayHost() {
+    if (!rootEl) return global.document.body;
+    var style = '';
+    try { style = (rootEl.style && rootEl.style.display) || ''; } catch (_) {}
+    // computed style fallback gdy inline style pusty.
+    if (!style && global.getComputedStyle) {
+      try { style = global.getComputedStyle(rootEl).display || ''; } catch (_) {}
+    }
+    if (style === 'none') return global.document.body;
+    return rootEl;
+  }
+
+  // ── Blokada przewijania TŁA gdy widoczna nakładka auth (karta/lista) lub modal ──
+  // DIAGNOZA NA ŻYWO (2026-06-03): karta pacjenta to .vilda-auth-root (position:fixed,
+  // mieści się w 697px → SAM NIE przewija), a pod spodem <body> jest scrollerem
+  // (scrollH ~5897). Bez blokady body przewijanie nad kartą przewija stronę pod
+  // spodem → „prześwit" strony głównej. overscroll-behavior na .vilda-auth-root nie
+  // pomagał, bo to NIE on jest scrollerem. Lekarstwo: zablokować scroll <body> na
+  // czas widoczności nakładki/modala. Ref-count obsługuje zagnieżdżenie (karta +
+  // modal na wierzchu) — odblokowujemy dopiero po zamknięciu ostatniej warstwy.
+  var _bgLockCount = 0;
+  var _bgLockPrevBodyOverflow = '';
+  function _bgLockAcquire() {
+    if (_bgLockCount === 0) {
+      try {
+        var b = global.document && global.document.body;
+        _bgLockPrevBodyOverflow = b ? b.style.overflow : '';
+        if (b) b.style.overflow = 'hidden';
+      } catch (_) {}
+    }
+    _bgLockCount += 1;
+  }
+  function _bgLockRelease() {
+    if (_bgLockCount > 0) _bgLockCount -= 1;
+    if (_bgLockCount === 0) {
+      try {
+        var b = global.document && global.document.body;
+        if (b) b.style.overflow = _bgLockPrevBodyOverflow;
+      } catch (_) {}
+    }
+  }
+  // Modal arkuszowy: zablokuj body (ref-count) + dodatkowo zamroź scroll karty
+  // pod spodem (rootEl), jeśli jest widoczna, by nie przewijała się za modalem.
+  // AUTO-release gdy overlay zniknie z DOM (Anuluj/Zapisz/tło/Escape/cleanup).
+  function _lockBackgroundScrollUntilRemoved(overlay) {
+    _bgLockAcquire();
+    var rootPrevOverflow = null, rootLocked = false;
+    try {
+      if (rootEl && rootEl.style && global.getComputedStyle &&
+          global.getComputedStyle(rootEl).display !== 'none') {
+        rootPrevOverflow = rootEl.style.overflow;
+        rootEl.style.overflow = 'hidden';
+        rootLocked = true;
+      }
+    } catch (_) {}
+    var released = false;
+    function release() {
+      if (released) return;
+      released = true;
+      _bgLockRelease();
+      if (rootLocked) { try { rootEl.style.overflow = rootPrevOverflow || ''; } catch (_) {} }
+    }
+    try {
+      var host = (overlay && overlay.parentNode) || global.document.body;
+      if (typeof global.MutationObserver === 'function' && host) {
+        var obs = new global.MutationObserver(function () {
+          var stillThere = overlay && (overlay.isConnected !== false) && overlay.parentNode;
+          if (!stillThere) { release(); try { obs.disconnect(); } catch (_) {} }
+        });
+        obs.observe(host, { childList: true });
+      }
+    } catch (_) {}
+    return release;
+  }
+
+  // ============ R2 — REMINDER MODAL (PRZYPOMNIENIA PO ZALOGOWANIU) ============
+  /**
+   * Modal pokazywany po unlock vault'a — gdy są pacjenci z notatkami due dziś
+   * lub overdue. Zbudowany na bazie showPatientNoteEditor (ten sam pattern overlay'a).
+   *
+   * @param {Array<{patientId, patientName, notes[]}>} reminders — z V.listPatientNotesDueByDate()
+   * @param {object} [opts]
+   *   - onOpenPatient(patientId, noteId) — callback "Otwórz" (default: showPatientCard)
+   *   - onClose() — callback po zamknięciu (np. set "last-shown" flag)
+   *
+   * R3 wpięcie: vilda_auth_ui sam wywoła to po V.onUnlock — patrz `maybeShowReminders`.
+   */
+  function showRemindersModal(reminders, opts) {
+    if (!Array.isArray(reminders) || !reminders.length) {
+      if (opts && typeof opts.onClose === 'function') opts.onClose();
+      return null;
+    }
+
+    // Cleanup poprzednich overlay'ów (multi-trigger protection — np. szybkie kliki).
+    try {
+      var prevList = global.document.querySelectorAll('.vilda-reminders-modal-overlay');
+      if (prevList && prevList.length) {
+        for (var i = 0; i < prevList.length; i++) prevList[i].remove();
+      }
+    } catch (_) {}
+
+    var V = getVault();
+
+    // ── Helper: data względna PL dla badge'a terminu ──────────────────────
+    function fmtDueRel(dueISO) {
+      var meta = formatPatientNoteDueDate ? formatPatientNoteDueDate(dueISO) : null;
+      if (meta) return meta;
+      return { status: 'ok', label: dueISO || '' };
+    }
+
+    // ── Backdrop overlay (z-index nad rootEl, host=rootEl jak w Fix #2) ──
+    var overlay = el('div', {
+      class: 'vilda-auth-overlay vilda-auth-overlay-sheet vilda-reminders-modal-overlay',
+      style: 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000001;padding:20px;'
+    });
+
+    var sheet = el('div', {
+      class: 'vilda-auth-sheet vilda-reminders-modal-sheet',
+      style: 'background:#fff;border-radius:14px;padding:0;max-width:560px;width:100%;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;'
+    });
+
+    // ── Header: 🔔 N pacjentów wymaga uwagi ──────────────────────────────
+    var totalNotes = 0;
+    for (var k = 0; k < reminders.length; k++) totalNotes += reminders[k].notes.length;
+    var headerTitle = '🔔 Przypomnienia';
+    var headerSub = reminders.length === 1
+      ? '1 pacjent · ' + totalNotes + (totalNotes === 1 ? ' notatka' : (totalNotes < 5 ? ' notatki' : ' notatek'))
+      : reminders.length + ' pacjentów · ' + totalNotes + (totalNotes < 5 ? ' notatki' : ' notatek');
+
+    var header = el('div', {
+      style: 'padding:18px 20px 14px 20px;border-bottom:0.5px solid #d7e9ec;background:#f5fafb;'
+    });
+    header.appendChild(el('div', {
+      text: headerTitle,
+      style: 'font-size:1.05rem;font-weight:600;color:#0f2b33;margin-bottom:4px;'
+    }));
+    header.appendChild(el('div', {
+      text: headerSub,
+      style: 'font-size:0.82rem;color:#5b6672;'
+    }));
+    sheet.appendChild(header);
+
+    // ── Scrollowalna lista pacjentów + notatek ───────────────────────────
+    var listWrap = el('div', {
+      class: 'vilda-reminders-list',
+      style: 'flex:1 1 auto;overflow-y:auto;padding:8px 14px;display:flex;flex-direction:column;gap:14px;'
+    });
+    sheet.appendChild(listWrap);
+
+    // ── Footer: przycisk „Później" ────────────────────────────────────────
+    var footer = el('div', {
+      style: 'padding:14px 20px;border-top:0.5px solid #d7e9ec;display:flex;justify-content:flex-end;gap:8px;flex:0 0 auto;'
+    });
+    var laterBtn = el('button', {
+      type: 'button',
+      class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small',
+      style: 'background:transparent !important;color:#5b6672 !important;border:0.5px solid #d7e9ec !important;width:auto !important;padding:8px 16px !important;flex:0 0 auto !important;',
+      text: 'Później',
+      onclick: function () {
+        overlay.remove();
+        if (opts && typeof opts.onClose === 'function') opts.onClose();
+      }
+    });
+    footer.appendChild(laterBtn);
+    sheet.appendChild(footer);
+
+    overlay.appendChild(sheet);
+    // P4-fix #3 (R4 dzwonek): host=body gdy rootEl hidden — patrz _chooseOverlayHost.
+    var host = _chooseOverlayHost();
+    host.appendChild(overlay);
+
+    // ── Re-render listy po każdej akcji (zrobione/przełóż) ───────────────
+    // Po każdej akcji pobieramy SWIEŻY snapshot z vault'a (oryginalny reminders
+    // staje się nieaktualny po V.completePatientNote/snooze). Gdy pusty → close.
+    async function refreshList() {
+      var fresh = [];
+      try {
+        if (V && typeof V.listPatientNotesDueByDate === 'function') {
+          fresh = await V.listPatientNotesDueByDate();
+        }
+      } catch (e) { logError('refreshReminders', e); }
+      if (!fresh.length) {
+        overlay.remove();
+        if (opts && typeof opts.onClose === 'function') opts.onClose();
+        return;
+      }
+      buildList(fresh);
+    }
+
+    function buildList(items) {
+      clear(listWrap);
+      items.forEach(function (group) {
+        var card = el('div', {
+          class: 'vilda-reminders-patient-card',
+          style: 'background:#fff;border:0.5px solid #d7e9ec;border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:10px;'
+        });
+
+        // Patient header
+        card.appendChild(el('div', {
+          text: group.patientName,
+          style: 'font-weight:600;font-size:0.95rem;color:#0f2b33;'
+        }));
+
+        // Notatki w karcie pacjenta
+        group.notes.forEach(function (note) {
+          card.appendChild(buildNoteItem(group.patientId, note));
+        });
+
+        listWrap.appendChild(card);
+      });
+    }
+
+    function buildNoteItem(patientId, note) {
+      var wrap = el('div', {
+        style: 'background:#f5fafb;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;'
+      });
+
+      // Badges row: kategoria + due
+      var catMeta = (typeof PATIENT_NOTE_CATEGORY_LABELS === 'object' && PATIENT_NOTE_CATEGORY_LABELS[note.category])
+        || { label: note.category || 'Notatka', color: '#0F6E56', bg: '#E1F5EE' };
+      var dueMeta = fmtDueRel(note.dueDateISO);
+
+      var badges = el('div', { style: 'display:flex;align-items:center;gap:6px;flex-wrap:wrap;' });
+      badges.appendChild(el('span', {
+        text: catMeta.label,
+        style: 'display:inline-block;padding:2px 8px;font-size:0.72rem;font-weight:600;color:' + catMeta.color + ';background:' + catMeta.bg + ';border-radius:999px;'
+      }));
+      if (dueMeta) {
+        var dueBg, dueColor;
+        if (dueMeta.status === 'overdue') { dueBg = '#FCEBEB'; dueColor = '#A32D2D'; }
+        else if (dueMeta.status === 'soon') { dueBg = '#FAEEDA'; dueColor = '#854F0B'; }
+        else { dueBg = '#E1F5EE'; dueColor = '#0F6E56'; }
+        badges.appendChild(el('span', {
+          text: 'Termin: ' + dueMeta.label,
+          style: 'display:inline-block;padding:2px 8px;font-size:0.72rem;font-weight:600;color:' + dueColor + ';background:' + dueBg + ';border-radius:999px;'
+        }));
+      }
+      wrap.appendChild(badges);
+
+      // Tytuł (jeśli jest)
+      if (note.title) {
+        wrap.appendChild(el('div', {
+          text: note.title,
+          style: 'font-weight:600;font-size:0.92rem;color:#0f2b33;'
+        }));
+      }
+      // Body (truncate visually via CSS, full text dostępny w karcie pacjenta)
+      if (note.body) {
+        wrap.appendChild(el('div', {
+          text: note.body,
+          style: 'font-size:0.86rem;color:#374151;line-height:1.5;white-space:pre-wrap;word-wrap:break-word;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;'
+        }));
+      }
+
+      // Actions row
+      var actions = el('div', { style: 'display:flex;gap:6px;flex-wrap:wrap;margin-top:2px;' });
+
+      // [✓ Zrobione]
+      var doneBtn = el('button', {
+        type: 'button',
+        class: 'vilda-auth-btn vilda-auth-btn-small',
+        style: 'background:#E1F5EE !important;color:#0F6E56 !important;border:0.5px solid #b4dfd0 !important;width:auto !important;padding:5px 12px !important;font-size:0.78rem !important;font-weight:600;flex:0 0 auto !important;',
+        text: '✓ Zrobione',
+        onclick: async function () {
+          doneBtn.disabled = true;
+          try {
+            await V.completePatientNote(note.id);
+            await refreshList();
+          } catch (e) {
+            doneBtn.disabled = false;
+            logError('reminder-complete', e);
+            try { global.alert('Nie udało się oznaczyć: ' + (e && e.message ? e.message : e)); } catch (_) {}
+          }
+        }
+      });
+      actions.appendChild(doneBtn);
+
+      // [⏰ Przełóż ▼] — submenu
+      var snoozeBtn = el('button', {
+        type: 'button',
+        class: 'vilda-auth-btn vilda-auth-btn-small',
+        style: 'background:#FAEEDA !important;color:#854F0B !important;border:0.5px solid #e7c896 !important;width:auto !important;padding:5px 12px !important;font-size:0.78rem !important;font-weight:600;flex:0 0 auto !important;position:relative;',
+        text: '⏰ Przełóż ▾',
+        onclick: function (ev) {
+          if (ev && typeof ev.stopPropagation === 'function') ev.stopPropagation();
+          showSnoozeSubmenu(snoozeBtn, note.id);
+        }
+      });
+      actions.appendChild(snoozeBtn);
+
+      // [→ Otwórz]
+      var openBtn = el('button', {
+        type: 'button',
+        class: 'vilda-auth-btn vilda-auth-btn-small',
+        style: 'background:transparent !important;color:#00838d !important;border:0.5px solid #b3dde0 !important;width:auto !important;padding:5px 12px !important;font-size:0.78rem !important;font-weight:600;flex:0 0 auto !important;',
+        text: '→ Otwórz',
+        onclick: function () {
+          overlay.remove();
+          if (opts && typeof opts.onClose === 'function') opts.onClose();
+          // Per Q7: open patient card + auto-switch do tab Notatki.
+          // Lekki delay żeby overlay zdążył zniknąć przed renderem karty.
+          setTimeout(function () {
+            try {
+              if (opts && typeof opts.onOpenPatient === 'function') {
+                opts.onOpenPatient(patientId, note.id);
+              } else {
+                showPatientCard(patientId, null, { focusNoteId: note.id });
+              }
+            } catch (e) { logError('reminder-open', e); }
+          }, 50);
+        }
+      });
+      actions.appendChild(openBtn);
+
+      wrap.appendChild(actions);
+      return wrap;
+    }
+
+    // ── Submenu „Przełóż" — popover z 4 opcjami ──────────────────────────
+    function showSnoozeSubmenu(anchorBtn, noteId) {
+      // Cleanup poprzednich submenu (jedno na raz).
+      try {
+        var prevMenus = global.document.querySelectorAll('.vilda-reminders-snooze-menu');
+        for (var m = 0; m < prevMenus.length; m++) prevMenus[m].remove();
+      } catch (_) {}
+
+      // R2-fix: position:fixed z viewport coords zamiast absolute (parent actions
+      // nie ma position:relative, więc absolute uciekało do <html> w lewy górny róg).
+      var menu = el('div', {
+        class: 'vilda-reminders-snooze-menu',
+        style: 'position:fixed;background:#fff;border:0.5px solid #d7e9ec;border-radius:10px;box-shadow:0 8px 24px rgba(0,40,48,0.18);padding:6px;display:flex;flex-direction:column;gap:2px;z-index:1000002;min-width:200px;'
+      });
+
+      function addOpt(label, days) {
+        var opt = el('button', {
+          type: 'button',
+          style: 'background:transparent;border:none;text-align:left;padding:8px 12px;font-size:0.85rem;color:#0f2b33;cursor:pointer;border-radius:6px;font-family:inherit;',
+          text: label,
+          onclick: async function () {
+            menu.remove();
+            var target = new Date();
+            target.setDate(target.getDate() + days);
+            var yyyy = target.getFullYear();
+            var mm = String(target.getMonth() + 1).padStart(2, '0');
+            var dd = String(target.getDate()).padStart(2, '0');
+            try {
+              await V.snoozePatientNote(noteId, yyyy + '-' + mm + '-' + dd);
+              await refreshList();
+            } catch (e) {
+              logError('reminder-snooze', e);
+              try { global.alert('Nie udało się przełożyć: ' + (e && e.message ? e.message : e)); } catch (_) {}
+            }
+          }
+        });
+        opt.addEventListener('mouseover', function () { opt.style.background = '#f5fafb'; });
+        opt.addEventListener('mouseout', function () { opt.style.background = 'transparent'; });
+        menu.appendChild(opt);
+      }
+
+      addOpt('Jutro', 1);
+      addOpt('Pojutrze', 2);
+      addOpt('Za tydzień', 7);
+
+      // Separator
+      menu.appendChild(el('div', { style: 'height:1px;background:#d7e9ec;margin:4px 6px;' }));
+
+      // Custom date picker
+      var customWrap = el('div', { style: 'padding:6px 8px;display:flex;flex-direction:column;gap:6px;' });
+      customWrap.appendChild(el('div', {
+        text: 'Wybierz datę:',
+        style: 'font-size:0.78rem;color:#5b6672;font-weight:500;'
+      }));
+      var dateInput = el('input', {
+        type: 'date',
+        style: 'width:100%;height:32px;padding:0 8px;font-size:0.85rem;border:0.5px solid #d7e9ec;border-radius:6px;background:#fff;color:#0f2b33;'
+      });
+      // Domyślna wartość: jutro
+      var defaultDate = new Date();
+      defaultDate.setDate(defaultDate.getDate() + 1);
+      dateInput.value = defaultDate.getFullYear() + '-'
+        + String(defaultDate.getMonth() + 1).padStart(2, '0') + '-'
+        + String(defaultDate.getDate()).padStart(2, '0');
+      customWrap.appendChild(dateInput);
+      var confirmBtn = el('button', {
+        type: 'button',
+        class: 'vilda-auth-btn vilda-auth-btn-small',
+        style: 'background:#00838d !important;color:#fff !important;border-color:#00838d !important;width:100% !important;padding:6px !important;font-size:0.8rem !important;font-weight:600;',
+        text: 'Przełóż',
+        onclick: async function () {
+          if (!dateInput.value) return;
+          menu.remove();
+          try {
+            await V.snoozePatientNote(noteId, dateInput.value);
+            await refreshList();
+          } catch (e) {
+            logError('reminder-snooze-custom', e);
+            try { global.alert('Nie udało się przełożyć: ' + (e && e.message ? e.message : e)); } catch (_) {}
+          }
+        }
+      });
+      customWrap.appendChild(confirmBtn);
+      menu.appendChild(customWrap);
+
+      // R2-fix: append do body (a nie parent actions) — pozycjonowanie fixed
+      // pracuje na viewport coords i nie wymaga relative parent. To gwarantuje że
+      // submenu pojawia się dokładnie pod przyciskiem niezależnie od stacking context.
+      global.document.body.appendChild(menu);
+
+      // Pozycjonuj poniżej anchorBtn. Trzeba poczekać 1 frame żeby menu miało
+      // realne wymiary (offsetWidth) — wtedy możemy go zmieścić w viewporcie.
+      var rect = anchorBtn.getBoundingClientRect();
+      var menuWidth = menu.offsetWidth || 220; // estimate gdy 0 (pre-paint)
+      var menuHeight = menu.offsetHeight || 240;
+      var viewportW = global.innerWidth || global.document.documentElement.clientWidth;
+      var viewportH = global.innerHeight || global.document.documentElement.clientHeight;
+
+      // Domyślnie: tuż pod przyciskiem, wyrównane do lewej krawędzi przycisku.
+      var top = rect.bottom + 4;
+      var left = rect.left;
+
+      // Edge protection — gdy submenu wychodzi za prawą krawędź, dosuń do prawej.
+      if (left + menuWidth > viewportW - 8) {
+        left = Math.max(8, rect.right - menuWidth);
+      }
+      // Gdy wychodzi poniżej viewportu — pokaż NAD przyciskiem.
+      if (top + menuHeight > viewportH - 8) {
+        top = Math.max(8, rect.top - menuHeight - 4);
+      }
+
+      menu.style.top = top + 'px';
+      menu.style.left = left + 'px';
+
+      // Click-outside → close
+      setTimeout(function () {
+        function onDocClick(ev) {
+          if (!menu.contains(ev.target) && ev.target !== anchorBtn) {
+            menu.remove();
+            global.document.removeEventListener('click', onDocClick, true);
+          }
+        }
+        global.document.addEventListener('click', onDocClick, true);
+      }, 0);
+    }
+
+    // ── Pierwszy render ───────────────────────────────────────────────────
+    buildList(reminders);
+
+    return overlay;
+  }
+
+  // ============ R3 — AUTO-TRIGGER REMINDER MODAL'A PO UNLOCK ============
+  /**
+   * Pomocnik: lokalna data w formacie YYYY-MM-DD (Q8 — „dzisiaj" w mojej strefie).
+   */
+  function _todayLocalDateString() {
+    var d = new Date();
+    return d.getFullYear() + '-'
+      + String(d.getMonth() + 1).padStart(2, '0') + '-'
+      + String(d.getDate()).padStart(2, '0');
+  }
+
+  /**
+   * Czyta flag cloud-synced "ostatnio pokazany reminder modal" (data YYYY-MM-DD).
+   * Per Q1 (rekomendacja A): pokazuj raz dziennie, cloud-synced cross-device.
+   */
+  function _readRemindersLastShownDate() {
+    try {
+      var P = global.VildaPersistence;
+      if (!P || typeof P.readModuleRaw !== 'function') return null;
+      var raw = P.readModuleRaw('remindersLastShownDate', null);
+      return (typeof raw === 'string' && raw) ? raw : null;
+    } catch (_) { return null; }
+  }
+
+  /**
+   * Zapisuje flag — uruchamia cloud-synced propagation (E3 onPreferenceWrite →
+   * vault meta.userPreferences → syncPush → LWW na innych urządzeniach).
+   */
+  function _writeRemindersLastShownDate(dateStr) {
+    try {
+      var P = global.VildaPersistence;
+      if (!P || typeof P.writeModuleRaw !== 'function') return false;
+      P.writeModuleRaw('remindersLastShownDate', dateStr);
+      return true;
+    } catch (e) {
+      logError('writeRemindersLastShownDate', e);
+      return false;
+    }
+  }
+
+  /**
+   * Sprawdza czy są dziś pacjenci z notatkami due i jeśli flag != dzisiaj, pokazuje
+   * modal. Wywoływane przez bootstrap V.onUnlock z lekkim delayem (3000ms żeby
+   * po-login prompty — biometric/adoption/force-reset — zdążyły się zamknąć).
+   *
+   * @param {object} [options]
+   *   - force=true: ignoruj flag (dla manual triggera, np. klik chip w sidebar)
+   * @returns {Promise<boolean>} true gdy modal pokazany, false gdy skipped
+   */
+  async function maybeShowReminders(options) {
+    try {
+      var V = getVault();
+      if (!V || !V.isUnlocked()) return false;
+      if (typeof V.listPatientNotesDueByDate !== 'function') return false;
+
+      var force = !!(options && options.force);
+      var today = _todayLocalDateString();
+
+      // Per Q1 (A): raz dziennie cloud-synced.
+      if (!force) {
+        var lastShown = _readRemindersLastShownDate();
+        if (lastShown === today) return false; // już dziś pokazany — skip
+      }
+
+      var reminders = await V.listPatientNotesDueByDate();
+      if (!reminders || !reminders.length) {
+        // Nic do pokazania — nadal ustaw flag, żeby nie odpalać query co restart.
+        if (!force) _writeRemindersLastShownDate(today);
+        return false;
+      }
+
+      // Pokaż modal i ustaw flag PO zamknięciu.
+      showRemindersModal(reminders, {
+        onClose: function () {
+          _writeRemindersLastShownDate(today);
+        }
+      });
+      return true;
+    } catch (e) {
+      logError('maybeShowReminders', e);
+      return false;
+    }
+  }
+
+  // ── Wpięcie w post-unlock lifecycle ──────────────────────────────────────
+  // Bootstrap raz: rejestrujemy listener V.onUnlock, który z opóźnieniem 3s
+  // wywołuje maybeShowReminders. Opóźnienie daje przestrzeń innym promptom
+  // (showPostLoginBiometricPrompt, showPostLoginAdoptionPrompt, force-reset)
+  // żeby się otworzyły JAKO PIERWSZE. Reminder pokaże się PO ich zamknięciu
+  // (overlay sheet z marker class cleanup'uje stare instances).
+  var _remindersTriggerRegistered = false;
+  function _registerRemindersTrigger() {
+    if (_remindersTriggerRegistered) return;
+    var V = getVault();
+    if (!V || typeof V.onUnlock !== 'function') return;
+    V.onUnlock(function () {
+      // Lekki delay (3000ms) — daje czas na biometric/adoption/force-reset prompty.
+      // Te modały blokują UI overlay i mają wyższy priorytet wizualny. Reminder
+      // czeka jako ostatni w kolejce.
+      setTimeout(function () {
+        maybeShowReminders().catch(function () {});
+      }, 3000);
+    });
+    _remindersTriggerRegistered = true;
+  }
+
+  // ============ KARTA INDYWIDUALNEGO PACJENTA ============
+  /**
+   * Otwiera szczegółową kartę pacjenta z jego statystykami i sparkline.
+   * @param {string} patientId   — ID z listPatients()
+   * @param {Function|null} onPick — callback do wczytania danych (null = viewOnly)
+   * @param {object} listOptions  — opcje przekazywane z powrotem do showPatientsList
+   */
+  async function showPatientCard(patientId, onPick, listOptions, opts) {
+    var V = getVault();
+    if (!V || !V.isUnlocked()) return;
+
+    // Pokaż skeleton ładowania
+    open(el('div', { class: 'vilda-auth-screen vilda-auth-patient-card' }, [
+      el('h2', { class: 'vilda-auth-title', text: 'Karta pacjenta' }),
+      el('p', { class: 'vilda-auth-subtitle', text: 'Wczytywanie danych…' })
+    ]), { noLogo: true });
+    setBusy(true);
+
+    // Faza 42c — ładujemy pełny rekord pacjenta (wszystkie snapshoty), żeby zbudować
+    // trajektorię z całej historii zapisów, a nie tylko z najnowszego snapshota.
+    var patientFull = null;
+    try { patientFull = await V.getPatient(patientId); }
+    catch (e) { logError('showPatientCard getPatient', e); }
+    setBusy(false);
+
+    var allSnapshots = (patientFull && Array.isArray(patientFull.snapshots)) ? patientFull.snapshots : [];
+    var snap = allSnapshots.length ? allSnapshots[0] : null; // najnowszy (sortowane malejąco po dacie)
+
+    if (!snap || !snap.payload) {
+      open(el('div', { class: 'vilda-auth-screen vilda-auth-patient-card' }, [
+        el('h2', { class: 'vilda-auth-title', text: 'Karta pacjenta' }),
+        el('p', { class: 'vilda-auth-subtitle', text: 'Nie udało się wczytać danych pacjenta.' }),
+        el('div', { class: 'vilda-auth-actions' }, [
+          el('button', { class: 'vilda-auth-btn vilda-auth-btn-ghost', type: 'button',
+            text: '← Wróć do listy',
+            onclick: function () { showPatientsList(onPick, listOptions); }
+          })
+        ])
+      ]), { noLogo: true });
+      return;
+    }
+
+    var payload = snap.payload;
+
+    // ── Faza 42f — tymczasowe przełączenie globalnego bmiSource ──
+    // Wszystkie funkcje obliczeniowe (calcPercentileStats, bmiPercentileChild)
+    // i LMS-gettery (getChildLMS, getLMS) w głębi sprawdzają window.bmiSource,
+    // żeby wybrać OLAF / WHO / Palczewska. W kalkulatorze głównym ustawia to
+    // suwak; Karta pacjenta sama z siebie tego nie wie, więc używała wartości
+    // globalnej (zwykle OLAF defaultu) i ignorowała preferencję pacjenta.
+    // Tutaj odczytujemy zapisaną siatkę z payload.zscore.dataSource i
+    // ustawiamy bmiSource na ten sam okres. Przywracamy przed `open(...)`,
+    // żeby nie wpłynąć na resztę aplikacji.
+    var _origBmiSource = (typeof global.bmiSource !== 'undefined') ? global.bmiSource : null;
+    var _bmiSourceOverridden = false;
+    try {
+      var _pds = (payload.zscore && payload.zscore.dataSource)
+        ? String(payload.zscore.dataSource).toUpperCase() : null;
+      if (_pds && /^(OLAF|WHO|PALCZEWSKA)$/.test(_pds)) {
+        global.bmiSource = _pds;
+        _bmiSourceOverridden = true;
+      }
+    } catch (_) {}
+
+    // ── Dane z formularza (struktura collectUserData) ──
+    var user      = payload.user     || {};
+    var advanced  = payload.advanced || {};
+    var growthRoot = payload.growthBasic || {};
+    var growthData = growthRoot.data     || {};
+
+    var name      = payload.name || '(bez imienia)';
+    var age       = user.age       != null ? parseInt(user.age, 10)       : null;
+    var ageMonths = user.ageMonths != null ? parseInt(user.ageMonths, 10) : null;
+    var sex       = user.sex || '';
+    var height    = user.height != null ? parseFloat(user.height) : null;
+    var weight    = user.weight != null ? parseFloat(user.weight) : null;
+
+    // totalAgeMonths = pełny wiek w miesiącach do obliczeń centylowych
+    // P6.2 — Wiek z DOB (jeśli pacjent ma) liczony NA DZIŚ ma priorytet nad
+    // wiekiem zapisanym w snapshot.user.age (= wiek w dniu pomiaru). To pozwala
+    // pokazać aktualny wiek pacjenta i przeliczyć centyle "jak na dzisiaj"
+    // gdy ostatni zapis jest sprzed kilku miesięcy.
+    //
+    // Logika:
+    //   1) snapshotTotalAgeMonths — wiek z payloadu (zawsze, jako fallback i baseline)
+    //   2) dobTotalAgeMonths — wiek liczony z DOB na dziś (gdy DOB jest)
+    //   3) resolvedTotal — używany wszędzie do obliczeń (DOB jeśli jest, inaczej snapshot)
+    //   4) recalculatedToday — true gdy diff > 3 mies. (wtedy w kafelkach
+    //      dodajemy sub "przeliczono na dziś · ostatni pomiar: ...")
+    var snapshotTotalAgeMonths = (age != null && ageMonths != null)
+      ? (age * 12 + ageMonths)
+      : (age != null ? age * 12 : null);
+    var dobResolvedAge = null;
+    if (user.dobISO && typeof V.calcAgeFromDOB === 'function') {
+      dobResolvedAge = V.calcAgeFromDOB(user.dobISO);
+    }
+    var totalAgeMonths = (dobResolvedAge && isFinite(dobResolvedAge.totalMonths))
+      ? dobResolvedAge.totalMonths
+      : snapshotTotalAgeMonths;
+    var recalculatedToday = false;
+    if (dobResolvedAge && snapshotTotalAgeMonths != null
+        && Math.abs(dobResolvedAge.totalMonths - snapshotTotalAgeMonths) > 3) {
+      recalculatedToday = true;
+    }
+    // Display data ostatniego pomiaru (do subscriptu "przeliczono na dziś · ostatni pomiar: ...")
+    var lastMeasureDisplay = '';
+    if (recalculatedToday && (snap.savedAtISO || snap.lastSavedAtISO)) {
+      var _lmISO = snap.savedAtISO || snap.lastSavedAtISO;
+      var _lmD = new Date(_lmISO);
+      if (!isNaN(_lmD.getTime())) {
+        var _pad = function (n) { return n < 10 ? '0' + n : String(n); };
+        lastMeasureDisplay = _pad(_lmD.getDate()) + '-' + _pad(_lmD.getMonth() + 1) + '-' + _lmD.getFullYear();
+      }
+    }
+
+    // ── Dane wzrostowe (sparkline + prędkość) — FIX-CENTYLE v2 ──
+    // Źródło prawdy zmienione z `growthData.measurements[]` (latest snapshot)
+    // na ten sam helper, którego używa zakładka Historia:
+    // `V.listPatientTimelineEvents(patientId)`.
+    //
+    // Przyczyna: dla pacjentów których kilka ostatnich snapshotów to były tylko
+    // edycje (np. modal „+ Nowy pomiar" P6.3 zapisywał measurement do timeline
+    // bez aktualizacji `growthBasic.data.measurements[]`), latestSnapshot zawierał
+    // stary `measurements[]` (zaśmiecony PRE-K1 lub niezsynchronizowany). Sekcja
+    // „Siatki centylowe" pokazywała „Brak wystarczających danych" mimo że Hero/
+    // Historia widziały pełną listę pomiarów.
+    //
+    // listPatientTimelineEvents (po B1.2 + J2 + K1) iteruje po WSZYSTKICH
+    // snapshotach, dedupuje po (ageMonths, height, weight) i synthesizuje
+    // aktualny pomiar z payload.user. Siatki widzą dokładnie te same punkty
+    // co Hero/Historia → spójność karty pacjenta dla starych pacjentów.
+    var measurements = [];
+    try {
+      var timelineEvents = await V.listPatientTimelineEvents(patientId);
+      measurements = (timelineEvents || [])
+        .filter(function (ev) { return ev && ev.type === 'measurement' && ev.height != null; })
+        .map(function (ev) {
+          return {
+            ageMonths: ev.ageMonths,
+            ageYears: (typeof ev.ageYears === 'number') ? ev.ageYears : (ev.ageMonths / 12),
+            height: ev.height,
+            weight: ev.weight,
+            sex: ev.sex || sex,
+            boneAgeYears: ev.boneAgeYears
+          };
+        });
+    } catch (e) {
+      logError('showPatientCard listPatientTimelineEvents for charts', e);
+      // Fallback do starej ścieżki — gdyby vault API zmieniło sygnaturę.
+      measurements = (growthData.measurements || []).filter(function (m) {
+        return m && m.height != null;
+      });
+    }
+    var growthVelocity = growthData.growthVelocity != null ? growthData.growthVelocity : null;
+    var isLosingGrowth = !!growthData.isLosingGrowth;
+    var isSlowVelocity = !!growthData.isSlowVelocity;
+
+    // Defensywny sort po wieku ASC (tabela może być nieuporządkowana po sync merge).
+    measurements.sort(function (a, b) {
+      return measurementAgeInMonths(a) - measurementAgeInMonths(b);
+    });
+
+    // ── BMI ──
+    var bmi = null;
+    if (height != null && weight != null && height > 0) {
+      bmi = weight / Math.pow(height / 100, 2);
+    }
+
+    // ── Centyle — używaj globalnych funkcji aplikacji gdy dostępne ──
+    var heightPerc = null, weightPerc = null, bmiPerc = null;
+    var isAdult = (totalAgeMonths != null && totalAgeMonths >= 216); // 18 lat
+    var sexForCalc = sex; // M/K lub chłopiec/dziewczynka — funkcje obsługują oba formaty
+    // Faza 42e — używaj pełnego wieku w ułamkowych latach (z miesiącami), żeby
+    // percentyl w kafelku był spójny z pozycją kropki na wykresie. Wcześniejsza
+    // wersja używała `age` (samo całe lata) — co zawyżało percentyl np. o 10
+    // punktów u dziecka kilka miesięcy po urodzinach.
+    var ageForStats = (totalAgeMonths != null && isFinite(totalAgeMonths))
+      ? (totalAgeMonths / 12)
+      : age;
+    try {
+      if (!isAdult && ageForStats != null && isFinite(ageForStats) && typeof calcPercentileStats === 'function') {
+        if (height != null) {
+          var sH = calcPercentileStats(height, sexForCalc, ageForStats, 'HT');
+          if (sH && sH.percentile != null) heightPerc = sH.percentile;
+        }
+        if (weight != null) {
+          var sW = calcPercentileStats(weight, sexForCalc, ageForStats, 'WT');
+          if (sW && sW.percentile != null) weightPerc = sW.percentile;
+        }
+      }
+      if (!isAdult && bmi != null && totalAgeMonths != null && typeof bmiPercentileChild === 'function') {
+        var bp = bmiPercentileChild(bmi, sexForCalc, totalAgeMonths);
+        if (bp != null) bmiPerc = bp;
+      }
+    } catch (_) {}
+
+    // ── Wskaźnik Cole'a (tylko dzieci, wymaga LMS) ──
+    var cole = null;
+    try {
+      if (!isAdult && bmi != null && totalAgeMonths != null && typeof getLMS === 'function') {
+        var lms = getLMS(sexForCalc, Math.round(totalAgeMonths));
+        if (lms && lms.M) {
+          cole = (bmi / lms.M) * 100;
+        }
+      }
+    } catch (_) {}
+
+    // ── Źródło danych centylowych ──
+    var zscore = payload.zscore || {};
+    var dataSource = (typeof zscore.dataSource === 'string' && zscore.dataSource)
+      ? zscore.dataSource.toUpperCase() : null;
+    var dataSourceLabel = dataSource === 'PALCZEWSKA' ? 'Palczewska'
+      : dataSource === 'WHO' ? 'WHO' : dataSource === 'OLAF' ? 'OLAF' : null;
+
+    // ── MPH (Mid-Parental Height) ──
+    var motherH = advanced.motherHeight ? parseFloat(advanced.motherHeight) : null;
+    var fatherH = advanced.fatherHeight ? parseFloat(advanced.fatherHeight) : null;
+    var mph = null;
+    var mphPerc = null;
+    if (motherH && fatherH && isFinite(motherH) && isFinite(fatherH)) {
+      var sexL = sex.toLowerCase();
+      if (sexL === 'm' || sexL === 'ch' || sexL === 'chłopiec' || sexL === 'male') {
+        mph = (motherH + fatherH + 13) / 2;
+      } else if (sexL === 'k' || sexL === 'dz' || sexL === 'dziewczynka' || sexL === 'female' ||
+                 sexL === 'f') {
+        mph = (motherH + fatherH - 13) / 2;
+      }
+    }
+    // Centyl MPH — wzrost docelowy oceniamy na siatce w wieku 18 lat
+    if (mph != null) {
+      try {
+        if (dataSource === 'PALCZEWSKA' && typeof calcPercentileStatsPal === 'function') {
+          var mphS = calcPercentileStatsPal(mph, sex, 18, 'HT');
+          if (mphS && mphS.percentile != null) mphPerc = mphS.percentile;
+        } else if (typeof calcPercentileStats === 'function') {
+          var mphS2 = calcPercentileStats(mph, sex, 18, 'HT');
+          if (mphS2 && mphS2.percentile != null) mphPerc = mphS2.percentile;
+        }
+      } catch (_) {}
+    }
+
+    // ── Klasyfikacja kolorów (spójna z vilda_summary_cards.js) ──
+    function classify(type, val, perc) {
+      if (!isAdult) {
+        // Spójne z głównym „Podsumowaniem wyników" (custom-fixes.js → getCentileState):
+        //   <3 || >97  → alert   (czerwony)
+        //   <10 || >90 → improve (pomarańczowy „borderline")
+        //   10–90      → null    (turkus)
+        // Waga/wzrost — symetryczne pasma percentyla (wcześniej brakowało dolnego
+        // pasma 3–10 → waga np. na 8. centylu fałszywie świeciła na turkus).
+        if (type === 'height' || type === 'weight') {
+          if (perc == null) return null;
+          if (perc < 3 || perc > 97) return 'alert';
+          if (perc < 10 || perc > 90) return 'improve';
+          return null;
+        }
+        // BMI — KLINICZNE progi for-age (85 nadwaga, 97 otyłość), świadomie inne
+        // niż symetryczne 90/97 z getCentileState (wariant A — czułość nadwagi).
+        if (type === 'bmi')    return (perc != null) ? (perc >= 97 || perc < 3 ? 'alert' : perc >= 85 ? 'improve' : null) : null;
+        if (type === 'cole')   return (val != null)  ? (val < 90 || val >= 120 ? 'alert' : val > 110 ? 'improve' : null) : null;
+      } else {
+        if (type === 'bmi')  return (val != null) ? (val >= 30 || val < 18.5 ? 'alert' : val >= 25 ? 'improve' : null) : null;
+        if (type === 'cole') return (val != null) ? (val < 90 || val >= 120 ? 'alert' : val > 110 ? 'improve' : null) : null;
+      }
+      return null;
+    }
+
+    // ── Formatowanie centyla ──
+    function fmtCentyl(p) {
+      if (p == null || !isFinite(p)) return '';
+      var r = Math.round(p);
+      if (r < 1)  return '<1. centyl';
+      if (r > 99) return '>99. centyl';
+      return r + '. centyl';
+    }
+
+    // ── Buduj kafelkę statystyki ──
+    // P6.2 — Dodany opcjonalny parametr `subAlt` (5.) — drobna szara linia pod
+    // sub, używana do oznaczenia "przeliczono na dziś · ostatni pomiar: ..."
+    // gdy centyl został przeliczony na bieżący wiek z DOB, a snapshot jest
+    // sprzed >3 miesięcy. Lekarz widzi, że wartość kafelka pochodzi z innego
+    // (starszego) pomiaru niż dzisiejsza data.
+    function statEl(label, value, sub, status, subAlt) {
+      var cls = 'vilda-patient-stat';
+      if (status === 'alert')   cls += ' vilda-patient-stat--alert';
+      else if (status === 'improve') cls += ' vilda-patient-stat--improve';
+      else if (value && value !== '—') cls += ' vilda-patient-stat--ok';
+      var children = [
+        el('div', { class: 'vilda-patient-stat-label', text: label }),
+        el('div', { class: 'vilda-patient-stat-value', text: value || '—' })
+      ];
+      if (sub) {
+        var subCls = (status === 'alert' || status === 'improve')
+          ? 'vilda-patient-stat-extra' : 'vilda-patient-stat-sub';
+        children.push(el('div', { class: subCls, text: sub }));
+      }
+      if (subAlt) {
+        children.push(el('div', {
+          class: 'vilda-patient-stat-sub-alt',
+          style: 'font-size:0.72rem; color:#7a8788; font-style:italic; margin-top:2px;',
+          text: subAlt
+        }));
+      }
+      return el('div', { class: cls }, children);
+    }
+
+    function fmtNum(n, dec) {
+      if (n == null || !isFinite(n)) return null;
+      return n.toFixed(dec != null ? dec : 1).replace('.', ',');
+    }
+
+    // Faza 42 — usunięto stary płaski statsChildren; statystyki są teraz pogrupowane
+    // (Pomiar / Wzrastanie i genetyka) i budowane wewnątrz zakładki „Status".
+
+    // ── Faza 42 — KONCEPCJA C: kompaktowy hero + zakładki Status / Siatki centylowe ──
+    // P6.2 — Wiek w hero używa DOB-resolved totalAgeMonths (jeśli pacjent ma DOB).
+    // Bez DOB: pokazujemy wiek z snapshota (legacy zachowanie). Format przez _formatAge.
+    var ageStr = '';
+    if (typeof totalAgeMonths === 'number' && isFinite(totalAgeMonths) && totalAgeMonths >= 0) {
+      ageStr = _formatAge(totalAgeMonths);
+    } else if (age != null) {
+      // Defensywny fallback (gdyby resolver zwrócił null/NaN, czego nie powinien)
+      ageStr = age + ' lat';
+      if (ageMonths != null && ageMonths > 0) {
+        ageStr += ' i ' + ageMonths + (ageMonths === 1 ? ' miesiąc' : ageMonths < 5 ? ' miesiące' : ' miesięcy');
+      }
+    }
+    var headerMeta = [ageStr, sex].filter(Boolean).join(' · ');
+    var lastSavedStr = (snap.savedAtISO || snap.lastSavedAtISO)
+      ? formatRelativeISO(snap.savedAtISO || snap.lastSavedAtISO) : '';
+    // P6.2 — Sub-line "ur. DD-MM-RRRR" pod meta (tylko gdy pacjent ma DOB)
+    var dobDisplayHero = '';
+    if (user.dobISO && typeof V.formatDobForDisplay === 'function') {
+      dobDisplayHero = V.formatDobForDisplay(user.dobISO);
+    }
+
+    // ── HERO kompaktowy (wariant 1: bez awatara, bez statusu BMI) ──
+    // Awatar-kółko z inicjałem usunięty; tożsamość niesie sam nagłówek +
+    // turkusowy akcent boczny karty (CSS .vilda-patient-hero). Chip statusu BMI
+    // też usunięty — kafelki Status są już kolorowane percentylem i od razu
+    // wskazują problemy, więc chip był redundantny i zabierał miejsce.
+    var heroInfoChildren = [
+      el('div', { class: 'vilda-patient-hero-name', text: name })
+    ];
+    if (headerMeta) heroInfoChildren.push(el('div', { class: 'vilda-patient-hero-meta', text: headerMeta }));
+    if (dobDisplayHero) heroInfoChildren.push(el('div', { class: 'vilda-patient-hero-meta vilda-patient-hero-meta--small', text: 'ur. ' + dobDisplayHero }));
+    // „Ostatni wpis: …" usunięty z nagłówka (Propozycja 1) — zwalnia miejsce na
+    // większe imię/nazwisko; ta informacja jest dostępna w zakładce Historia.
+    void lastSavedStr;
+
+    // P5 — pill button „Edytuj" w prawym górnym rogu hero. Otwiera osobny
+    // ekran edycji (showPatientEditScreen). Tab Edycja został zastąpiony
+    // zakładką Historia (timeline), więc dostęp do formularza edycji idzie
+    // przez tę pill (jasne, łatwe do trafienia, nie zaśmieca tabBar).
+    var editPill = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-small vilda-patient-hero-edit-pill',
+      type: 'button',
+      text: '✏ Edytuj',
+      title: 'Edytuj dane pacjenta',
+      'aria-label': 'Edytuj dane pacjenta',
+      onclick: function () { showPatientEditScreen(patientId, onPick, listOptions); }
+    });
+
+    // P6.3 — pill „+ Nowy pomiar" jako prominent primary CTA w hero. Otwiera
+    // modal `showQuickMeasureModal` (wariant A), który klonuje payload poprzedni
+    // i tworzy nowy snapshot z aktualną wagą/wzrostem. Pill jest pod editem
+    // (oba absolute top-right, edit wyżej, nowy pomiar niżej z większym
+    // marginesem — przez CSS `.vilda-patient-hero-new-measure-pill`).
+    var newMeasurePill = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-small vilda-patient-hero-new-measure-pill',
+      type: 'button',
+      text: '+ Nowy pomiar',
+      title: 'Dodaj nowy pomiar (waga, wzrost)',
+      'aria-label': 'Dodaj nowy pomiar',
+      onclick: function () {
+        showQuickMeasureModal(patientId, {
+          onSaved: function () {
+            // Po zapisie — przerenderuj kartę pacjenta od zera, by pokazać
+            // nowy chip Pomiar w Historia + zaktualizowane kafelki Status.
+            showPatientCard(patientId, onPick, listOptions);
+          }
+        });
+      }
+    });
+
+    var heroDiv = el('div', { class: 'vilda-patient-hero' }, [
+      el('div', { class: 'vilda-patient-hero-info' }, heroInfoChildren),
+      el('div', { class: 'vilda-patient-hero-actions' }, [editPill, newMeasurePill])
+    ]);
+
+    // ── ZAKŁADKI (segmentowany przełącznik z ikonami — wariant 1) ──
+    // Ikony jako inline SVG (stroke=currentColor) — brak zależności od webfontu.
+    // Aktywna zakładka wypełniona turkusem (CSS .vilda-patient-tab--active).
+    function _tabSvg(paths) {
+      return '<svg class="vilda-patient-tab-ico" width="18" height="18" viewBox="0 0 24 24" '
+        + 'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" '
+        + 'stroke-linejoin="round" aria-hidden="true">' + paths + '</svg>';
+    }
+    function _tabHtml(svgPaths, label) {
+      return _tabSvg(svgPaths) + '<span class="vilda-patient-tab-lbl">' + label + '</span>';
+    }
+    var _ICO_STATUS = '<path d="M3 12h4l2 6 4-12 2 6h6"/>';
+    var _ICO_TRAJ   = '<path d="M4 4v16h16"/><path d="M7 15l4-4 3 2 5-6"/>';
+    var _ICO_NOTES  = '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/>';
+    var _ICO_HIST   = '<path d="M3 4v5h5"/><path d="M3.5 9a9 9 0 1 1-1 4"/><path d="M12 8v4l3 2"/>';
+    var tabAntro = el('button', {
+      class: 'vilda-patient-tab vilda-patient-tab--active',
+      type: 'button',
+      html: _tabHtml(_ICO_STATUS, 'Status'),
+      'data-tab': 'antro'
+    });
+    var tabTraj = el('button', {
+      class: 'vilda-patient-tab',
+      type: 'button',
+      html: _tabHtml(_ICO_TRAJ, 'Siatki centylowe'),
+      'data-tab': 'traj'
+    });
+    var tabNotes = el('button', {
+      class: 'vilda-patient-tab',
+      type: 'button',
+      html: _tabHtml(_ICO_NOTES, 'Notatki'),
+      'data-tab': 'notes'
+    });
+    // P5 — tab „Historia" zastępuje dawny tab „Edycja". Edycja jest dostępna
+    // przez pill „✏ Edytuj" w hero (osobny ekran showPatientEditScreen).
+    var tabTimeline = el('button', {
+      class: 'vilda-patient-tab',
+      type: 'button',
+      html: _tabHtml(_ICO_HIST, 'Historia'),
+      'data-tab': 'timeline'
+    });
+    var tabBar = el('div', { class: 'vilda-patient-tabs', role: 'tablist' }, [tabAntro, tabTraj, tabNotes, tabTimeline]);
+
+    // ── ZAKŁADKA „Status" — pogrupowane statystyki ──
+    var antroContent = el('div', { class: 'vilda-patient-tab-content', 'data-tab': 'antro' });
+
+    // P6.2 — subAlt dla kafelków Pomiar: gdy diff DOB-resolved vs snapshot > 3 mies.,
+    // dodajemy linię "przeliczono na dziś · ostatni pomiar: DD-MM-RRRR" pod sub.
+    // To uczciwa informacja: kafelek pokazuje centyl liczony na BIEŻĄCY wiek
+    // pacjenta (z DOB), ale wartości waga/wzrost pochodzą z poprzedniego pomiaru.
+    var recalcSubAlt = null;
+    if (recalculatedToday) {
+      recalcSubAlt = 'przeliczono na dziś · ostatni pomiar: ' + (lastMeasureDisplay || '?');
+    }
+    // Grupa: Pomiar (Wzrost / Waga / BMI / Cole)
+    var pomiarStats = [];
+    if (height != null) {
+      var hStatus2 = classify('height', height, heightPerc);
+      var hSub2 = heightPerc != null ? fmtCentyl(heightPerc) : null;
+      pomiarStats.push(statEl('Wzrost', fmtNum(height) + ' cm', hSub2, hStatus2, recalcSubAlt));
+    }
+    if (weight != null) {
+      var wStatus2 = classify('weight', weight, weightPerc);
+      var wSub2 = weightPerc != null ? fmtCentyl(weightPerc) : null;
+      pomiarStats.push(statEl('Waga', fmtNum(weight) + ' kg', wSub2, wStatus2, recalcSubAlt));
+    }
+    if (bmi != null) {
+      var bmiStatus2 = classify('bmi', bmi, bmiPerc);
+      var bmiSub2 = bmiPerc != null ? fmtCentyl(bmiPerc) : null;
+      pomiarStats.push(statEl('BMI', fmtNum(bmi), bmiSub2, bmiStatus2, recalcSubAlt));
+    }
+    if (cole != null) {
+      var coleStatus2 = classify('cole', cole, null);
+      pomiarStats.push(statEl("Wskaźnik Cole'a", fmtNum(cole) + '%', null, coleStatus2, recalcSubAlt));
+    }
+    if (pomiarStats.length > 0) {
+      antroContent.appendChild(el('p', { class: 'vilda-patient-section-h', text: 'Pomiar' }));
+      antroContent.appendChild(el('div', { class: 'vilda-patient-stats-grid' }, pomiarStats));
+    }
+
+    // Grupa: Wzrastanie i genetyka rodzinna (Prędkość / MPH / Siatki)
+    var growthStats = [];
+    if (growthVelocity != null) {
+      var velWarn = isLosingGrowth ? '⚠ zahamowanie wzrostu'
+        : isSlowVelocity          ? '⚠ wolna prędkość'      : null;
+      var velStatus = (isLosingGrowth || isSlowVelocity) ? 'improve' : null;
+      growthStats.push(statEl('Prędkość wzrastania', fmtNum(growthVelocity) + ' cm/rok', velWarn, velStatus));
+    }
+    if (mph != null) {
+      var mphSub2 = mphPerc != null ? fmtCentyl(mphPerc) : null;
+      growthStats.push(statEl('MPH', fmtNum(mph) + ' cm', mphSub2, null));
+    }
+    if (dataSourceLabel) growthStats.push(statEl('Siatki centylowe', dataSourceLabel, null, null));
+    if (growthStats.length > 0) {
+      antroContent.appendChild(el('p', { class: 'vilda-patient-section-h vilda-patient-section-h--secondary', text: 'Wzrastanie i genetyka rodzinna' }));
+      antroContent.appendChild(el('div', { class: 'vilda-patient-stats-grid' }, growthStats));
+    }
+
+    if (pomiarStats.length === 0 && growthStats.length === 0) {
+      antroContent.appendChild(el('p', { class: 'vilda-patient-empty-msg', text: 'Brak danych do wyświetlenia.' }));
+    }
+
+    // ── ZAKŁADKA „Siatki centylowe" — wzrost/waga/BMI ──
+    var trajContent = el('div', { class: 'vilda-patient-tab-content vilda-patient-tab-content--hidden', 'data-tab': 'traj' });
+
+    // Helper — buduje sekcję wykresu (heading + chart wrap + legenda); zwraca count
+    function appendChartSection(label, chartElem, isFirst) {
+      if (!chartElem) return false;
+      var hClass = 'vilda-patient-section-h' + (isFirst ? '' : ' vilda-patient-section-h--secondary');
+      trajContent.appendChild(el('p', { class: hClass, text: label }));
+      trajContent.appendChild(el('div', { class: 'vilda-patient-chart-wrap' }, [chartElem]));
+      return true;
+    }
+
+    var chartsBuilt = 0;
+    if (!isAdult && measurements.length > 0) {
+      var srcSuffix = dataSourceLabel ? ' · ' + dataSourceLabel : '';
+
+      // 1) Wzrost (OLAF/WHO Hybrid)
+      try {
+        var heightChart = buildPercentileChart('height', measurements, sexForCalc, totalAgeMonths, height);
+        if (appendChartSection('Siatka centylowa wzrostu' + srcSuffix, heightChart, chartsBuilt === 0)) chartsBuilt++;
+      } catch (e) { logError('buildPercentileChart(height)', e); }
+
+      // 2) Waga (OLAF/WHO Hybrid)
+      try {
+        var weightChart = buildPercentileChart('weight', measurements, sexForCalc, totalAgeMonths, weight);
+        if (appendChartSection('Siatka centylowa wagi' + srcSuffix, weightChart, chartsBuilt === 0)) chartsBuilt++;
+      } catch (e) { logError('buildPercentileChart(weight)', e); }
+
+      // 3) BMI (OLAF lub WHO 5-19)
+      try {
+        var bmiChart = buildPercentileChart('bmi', measurements, sexForCalc, totalAgeMonths, bmi);
+        if (appendChartSection('Siatka centylowa BMI' + srcSuffix, bmiChart, chartsBuilt === 0)) chartsBuilt++;
+      } catch (e) { logError('buildPercentileChart(bmi)', e); }
+    }
+
+    // Legenda — wspólna dla wszystkich wykresów
+    if (chartsBuilt > 0) {
+      trajContent.appendChild(
+        el('div', { class: 'vilda-patient-chart-legend' }, [
+          el('span', { class: 'vilda-patient-legend-item' }, [
+            el('span', { class: 'vilda-patient-legend-line', style: 'background:#0F6E56;' }),
+            el('span', { text: ' percentyle 3/10/50/90/97' })
+          ]),
+          el('span', { class: 'vilda-patient-legend-item' }, [
+            el('span', { class: 'vilda-patient-legend-dot', style: 'background:#b71c1c;' }),
+            el('span', { text: ' pomiary pacjenta' })
+          ])
+        ])
+      );
+      trajContent.appendChild(
+        el('p', { class: 'vilda-patient-chart-disclaimer', text: 'Podgląd — siatki uproszczone (5 linii percentylowych), służą do oceny trajektorii. Pełne siatki dostępne w głównym module wzrastania.' })
+      );
+    }
+
+    // Fallback gdy nic się nie zbudowało
+    if (chartsBuilt === 0) {
+      trajContent.appendChild(el('p', { class: 'vilda-patient-empty-msg', text: isAdult
+        ? 'Siatki centylowe dostępne tylko dla dzieci i młodzieży (< 18 lat).'
+        : 'Brak wystarczających danych do wyświetlenia trajektorii. Wprowadź wzrost, wagę i wiek pacjenta.'
+      }));
+    }
+
+    // ── ZAKŁADKA „Notatki" (P4) — kliniczne notatki przypisane do pacjenta ──
+    // 4 kategorie: followup (z dueDateISO), observation, treatment, wynik-badania.
+    // Sortowanie: notatki z dueDateISO rosnąco po dueDate (overdue na górze),
+    // potem reszta malejąco po updatedAtISO. Akcje: Dodaj, Edytuj, Usuń.
+    // Render odbywa się dopiero przy pierwszym klik tabu („notes") — lazy mount.
+    // P4-fix: usunięto rekurencyjny anonymous handler (strict mode), używamy named function reRenderNotes.
+    var notesContent = el('div', { class: 'vilda-patient-tab-content vilda-patient-tab-content--hidden vilda-patient-notes-section', 'data-tab': 'notes' });
+    var _notesRendered = false;
+    function reRenderNotes() {
+      try {
+        renderPatientNotesSection(notesContent, patientId, reRenderNotes);
+      } catch (e) {
+        logError('renderPatientNotesSection', e);
+      }
+      // B3-fix post-deploy: zapis/usunięcie notatki ZMIENIA też dane Historii
+      // (mixed timeline z B3.2, kotwiczone notatki z B2). Bez invalidate'owania
+      // _timelineRendered, Historia tab pokazywała stare dane do refresh strony.
+      // Fix: jeśli Historia była renderowana → re-render od razu gdy aktywny tab,
+      // inaczej reset flag żeby następna wizyta wymusiła fresh fetch.
+      if (_timelineRendered) {
+        var isTimelineActive = false;
+        try { isTimelineActive = tabTimeline.classList.contains('vilda-patient-tab--active'); } catch (_) {}
+        if (isTimelineActive) {
+          reRenderTimeline();
+        } else {
+          _timelineRendered = false;
+        }
+      }
+    }
+
+    // ── ZAKŁADKA „Historia" (P5) — chronologiczny timeline wszystkich wydarzeń ──
+    // Zastąpiła dawną zakładkę „Edycja". Edycja danych pacjenta jest dostępna
+    // przez pill „✏ Edytuj" w hero (otwiera osobny ekran showPatientEditScreen).
+    // Timeline pokazuje pomiary + notatki + obserwacje + future-proof slots
+    // (wyniki badań, leki, terapie GH).
+    var timelineContent = el('div', { class: 'vilda-patient-tab-content vilda-patient-tab-content--hidden vilda-patient-timeline-section', 'data-tab': 'timeline' });
+    var _timelineRendered = false;
+    function reRenderTimeline() {
+      try {
+        renderTimelineSection(timelineContent, patientId, reRenderTimeline, onPick, listOptions);
+      } catch (e) {
+        logError('renderTimelineSection', e);
+      }
+    }
+
+    // ── Przełączanie zakładek ──
+    function switchTab(tabId) {
+      [tabAntro, tabTraj, tabNotes, tabTimeline].forEach(function (t) {
+        if (t.getAttribute('data-tab') === tabId) t.classList.add('vilda-patient-tab--active');
+        else t.classList.remove('vilda-patient-tab--active');
+      });
+      [antroContent, trajContent, notesContent, timelineContent].forEach(function (c) {
+        if (c.getAttribute('data-tab') === tabId) c.classList.remove('vilda-patient-tab-content--hidden');
+        else c.classList.add('vilda-patient-tab-content--hidden');
+      });
+    }
+    tabAntro.addEventListener('click', function () { switchTab('antro'); });
+    tabTraj.addEventListener('click', function () { switchTab('traj'); });
+    tabNotes.addEventListener('click', function () {
+      switchTab('notes');
+      // Lazy mount — render dopiero przy pierwszym wejściu w tab. To eliminuje
+      // race condition gdy V.listPatientNotesForPatient nie jest jeszcze dostępne
+      // (np. mid-unlock w cloud-only) i daje czystszy lifecycle event listenerów.
+      if (!_notesRendered) {
+        _notesRendered = true;
+        reRenderNotes();
+      }
+    });
+    tabTimeline.addEventListener('click', function () {
+      switchTab('timeline');
+      // P5: lazy mount timeline — render dopiero przy pierwszym wejściu.
+      if (!_timelineRendered) {
+        _timelineRendered = true;
+        reRenderTimeline();
+      }
+    });
+
+    // G2: zachowanie kontekstu po sub-akcjach (Edytuj pomiar, Dodaj notatkę,
+    // Usuń pomiar z chipa w Historii). Sub-akcje re-renderują kartę przez
+    // showPatientCard(patientId, …, …, { activeTab: 'timeline' }), żeby nie
+    // wyrzucić użytkownika z Historii do Statusu. Lazy-mount musi być
+    // wymuszony zanim switchTab pokaże content (Notatki/Timeline renderują
+    // się leniwie). Walidacja whitelisty chroni przed brzydkimi inputami.
+    if (opts && opts.activeTab) {
+      if (opts.activeTab === 'notes' && !_notesRendered) {
+        _notesRendered = true;
+        try { reRenderNotes(); } catch (e) { logError('showPatientCard restore notes', e); }
+      }
+      if (opts.activeTab === 'timeline' && !_timelineRendered) {
+        _timelineRendered = true;
+        try { reRenderTimeline(); } catch (e) { logError('showPatientCard restore timeline', e); }
+      }
+      if (opts.activeTab === 'antro' || opts.activeTab === 'traj' ||
+          opts.activeTab === 'notes' || opts.activeTab === 'timeline') {
+        try { switchTab(opts.activeTab); } catch (e) { logError('showPatientCard restore switchTab', e); }
+      }
+    }
+
+    // ── Akcje ──
+    var backBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost', type: 'button',
+      text: '← Wróć do listy',
+      onclick: function () { showPatientsList(onPick, listOptions); }
+    });
+
+    var loadBtn = null;
+    if (typeof onPick === 'function') {
+      loadBtn = el('button', {
+        class: 'vilda-auth-btn vilda-auth-btn-primary', type: 'button',
+        text: 'Wczytaj tego pacjenta',
+        onclick: function () {
+          var patient = global.VildaSession && typeof global.VildaSession.getPatient === 'function'
+            ? global.VildaSession.getPatient() : null;
+          if (patient && patient.source === 'form') {
+            var msg = 'Zastąpisz dane pacjenta „' + patient.name + '”. Kontynuować?';
+            if (!global.confirm(msg)) return;
+          }
+          // Drugi argument: patientId — używany przez handler chrome do trybu
+          // load+nav (gdy bieżąca podstrona nie ma applyLoadedData, zapisujemy
+          // ID i nawigujemy do index.html, gdzie receiver w chrome.js wczytuje
+          // pacjenta z vault'a). Stare wywołania ignorujące 2. arg działają dalej.
+          onPick(payload, patientId);
+          // ── Faza 4: dispatch event dla wskaźnika statusu zapisu ──
+          // VildaSaveStatusIndicator nasłuchuje tego eventu, żeby od razu wejść
+          // w stan SAVED z prawidłowym fingerprintem (zamiast czekać na pierwszą
+          // zmianę formularza i błędnie zaczynać od NEW_PATIENT lub DIRTY).
+          try {
+            if (typeof global.CustomEvent === 'function' && global.document) {
+              global.document.dispatchEvent(new global.CustomEvent('vilda:patient-loaded', {
+                detail: {
+                  patientId: patientId,
+                  savedAtISO: (snap && snap.savedAtISO) || null,
+                  snapshotCount: (patientFull && patientFull.snapshotCount) || allSnapshots.length || null,
+                  name: (payload && payload.name) || null
+                }
+              }));
+            }
+          } catch (_) { /* fail-silent — nie blokuj wczytania pacjenta */ }
+          hide();
+        }
+      });
+    }
+
+    // ── Złożenie ekranu ──
+    var screenChildren = [
+      el('h2', { class: 'vilda-auth-title', text: 'Karta pacjenta' }),
+      heroDiv,
+      tabBar,
+      antroContent,
+      trajContent,
+      notesContent,
+      timelineContent,
+      el('div', { class: 'vilda-auth-actions vilda-patient-actions' },
+        loadBtn ? [backBtn, loadBtn] : [backBtn]
+      )
+    ];
+
+    // ── Faza 42f — przywrócenie oryginalnego bmiSource przed pokazaniem karty ──
+    // Wykres jest już zbudowany w pamięci (SVG nie odczytuje bmiSource przy
+    // wyświetlaniu), więc restore jest bezpieczny i nie zaburza wyglądu karty.
+    if (_bmiSourceOverridden) {
+      try { global.bmiSource = _origBmiSource; } catch (_) {}
+    }
+
+    open(el('div', { class: 'vilda-auth-screen vilda-auth-patient-card' }, screenChildren), { noLogo: true });
+  }
+
+  // ============ P5 — EKRAN EDYCJI PACJENTA (osobny ekran) ============
+  /**
+   * Wydzielony z tab "Edycja" w showPatientCard. Otwierany pillem "✏ Edytuj"
+   * w hero karty pacjenta. Zawiera formularz danych pacjenta + akcje
+   * Przywróć/Zapisz/Usuń. Po zapisie wraca do showPatientCard.
+   */
+  async function showPatientEditScreen(patientId, onPick, listOptions) {
+    var V = getVault();
+    if (!V || !V.isUnlocked()) return;
+
+    open(el('div', { class: 'vilda-auth-screen vilda-auth-patient-card' }, [
+      el('h2', { class: 'vilda-auth-title', text: 'Edycja pacjenta' }),
+      el('p', { class: 'vilda-auth-subtitle', text: 'Wczytywanie danych…' })
+    ]), { noLogo: true });
+    setBusy(true);
+
+    var patientFull = null;
+    try { patientFull = await V.getPatient(patientId); }
+    catch (e) { logError('showPatientEditScreen getPatient', e); }
+    setBusy(false);
+
+    if (!patientFull || !patientFull.snapshots.length) {
+      open(el('div', { class: 'vilda-auth-screen' }, [
+        el('h2', { class: 'vilda-auth-title', text: 'Edycja pacjenta' }),
+        el('p', { class: 'vilda-auth-subtitle', text: 'Brak danych do edycji.' }),
+        el('div', { class: 'vilda-auth-actions' }, [
+          el('button', {
+            class: 'vilda-auth-btn vilda-auth-btn-ghost', type: 'button',
+            text: '← Wróć',
+            onclick: function () { showPatientCard(patientId, onPick, listOptions); }
+          })
+        ])
+      ]), { noLogo: true });
+      return;
+    }
+
+    var snap = patientFull.snapshots[0];
+    var payload = snap.payload || {};
+    var name = payload.name || '(bez imienia)';
+    var u = payload.user || {};
+    var age = u.age, ageMonths = u.ageMonths, sex = u.sex;
+    var height = u.height, weight = u.weight;
+    // P6.1 — DOB jako opcjonalne pole. Storage zostaje ISO (YYYY-MM-DD),
+    // display jest PL (DD-MM-RRRR). Helpery V.formatDobForDisplay /
+    // V.parseDobFromDisplay robią konwersję.
+    var dobISO = (u.dobISO && typeof V.sanitizeDobISO === 'function') ? V.sanitizeDobISO(u.dobISO) : null;
+    var _adv = payload.advanced || {};
+
+    function _editInput(val, attrs) {
+      var input = el('input', Object.assign({ class: 'vilda-auth-input', type: 'text', autocomplete: 'off', spellcheck: 'false' }, attrs || {}));
+      input.value = (val == null ? '' : String(val));
+      return input;
+    }
+    function _editField(labelText, control) {
+      return el('div', { style: 'display:block;' }, [
+        el('label', { class: 'vilda-patient-stat-label', style: 'display:block; margin-bottom:4px;', text: labelText }),
+        control
+      ]);
+    }
+    function _normSex(s) {
+      var v = (s == null ? '' : String(s)).trim().toLowerCase();
+      if (v === 'm' || v.indexOf('chło') === 0 || v === 'male' || v === 'boy') return 'M';
+      if (v === 'k' || v.indexOf('dziew') === 0 || v === 'female' || v === 'girl' || v === 'f') return 'K';
+      return '';
+    }
+
+    var efName  = _editInput(name === '(bez imienia)' ? '' : name, { placeholder: 'Imię i nazwisko', maxlength: '120' });
+    // P6.1 — Data urodzenia (DOB) — opcjonalna, polski format display.
+    // Type=text z maską numeryczną, max długość 10 znaków (DD-MM-RRRR).
+    var dobDisplay = (typeof V.formatDobForDisplay === 'function') ? V.formatDobForDisplay(dobISO) : '';
+    var efDob = _editInput(dobDisplay, {
+      inputmode: 'numeric',
+      placeholder: 'DD-MM-RRRR (opcjonalnie)',
+      maxlength: '10',
+      autocomplete: 'bday'
+    });
+    // P6.1b — komunikat błędu DOB: zwykły czerwony tekst (NIE kafelek „pustego stanu").
+    // Pusty (.vilda-dob-err:empty) → display:none, więc nie zajmuje miejsca i nie tworzy
+    // przerwy między wierszami formularza.
+    var efDobErr = el('div', { class: 'vilda-dob-err' });
+    var efAge   = _editInput(age != null ? age : '',             { inputmode: 'numeric', placeholder: 'lata' });
+    var efAgeMo = _editInput(ageMonths != null ? ageMonths : '',  { inputmode: 'numeric', placeholder: 'miesiące (0–11)' });
+    var efSex   = el('select', { class: 'vilda-auth-input' }, [
+      el('option', { value: '',  text: '— wybierz —' }),
+      el('option', { value: 'M', text: 'chłopiec' }),
+      el('option', { value: 'K', text: 'dziewczynka' })
+    ]);
+    efSex.value = _normSex(sex);
+    var efHeight = _editInput(height != null ? height : '', { inputmode: 'decimal', placeholder: 'cm' });
+    var efWeight = _editInput(weight != null ? weight : '', { inputmode: 'decimal', placeholder: 'kg' });
+    var efMother = _editInput(_adv.motherHeight != null ? _adv.motherHeight : '', { inputmode: 'decimal', placeholder: 'cm' });
+    var efFather = _editInput(_adv.fatherHeight != null ? _adv.fatherHeight : '', { inputmode: 'decimal', placeholder: 'cm' });
+
+    // P7 — Dane okołoporodowe (stałe). Jedno źródło prawdy: payload.perinatal.
+    // Nazwy pól zgodne z epikryzą (sa.birth): gestationalWeeks/gestationalDays,
+    // birthWeightG, birthLengthCm, birthHeadCircCm, gravidity, parity. Z tego bloku
+    // prefillowany jest moduł SGA (docpro) i wywiad okołoporodowy w epikryzie.
+    var _peri = (payload.perinatal && typeof payload.perinatal === 'object') ? payload.perinatal : {};
+    var efGaW  = _editInput(_peri.gestationalWeeks != null ? _peri.gestationalWeeks : '', { inputmode: 'numeric', placeholder: 'tyg. (22–43)' });
+    var efGaD  = _editInput(_peri.gestationalDays  != null ? _peri.gestationalDays  : '', { inputmode: 'numeric', placeholder: 'dni (0–6)' });
+    var efBW   = _editInput(_peri.birthWeightG     != null ? _peri.birthWeightG     : '', { inputmode: 'numeric', placeholder: 'g' });
+    var efBL   = _editInput(_peri.birthLengthCm    != null ? _peri.birthLengthCm    : '', { inputmode: 'decimal', placeholder: 'cm' });
+    var efBHC  = _editInput(_peri.birthHeadCircCm  != null ? _peri.birthHeadCircCm  : '', { inputmode: 'decimal', placeholder: 'cm' });
+    var efGrav = _editInput(_peri.gravidity        != null ? _peri.gravidity        : '', { inputmode: 'numeric', placeholder: 'nr' });
+    var efPar  = _editInput(_peri.parity           != null ? _peri.parity           : '', { inputmode: 'numeric', placeholder: 'nr' });
+    var editErr  = el('div', { class: 'vilda-auth-error' });
+
+    function _setNumField(obj, key, raw) {
+      var s = (raw == null ? '' : String(raw)).trim().replace(',', '.');
+      if (s === '') { obj[key] = ''; return; }
+      var n = parseFloat(s);
+      obj[key] = isFinite(n) ? n : s;
+    }
+
+    // P6.1 — Helper reaktywności DOB.
+    // Czyta pole efDob (format PL), próbuje sparsować. Jeśli puste → pola Wiek
+    // wracają jako edytowalne (legacy, lekarz wpisuje wiek ręcznie). Jeśli
+    // wypełnione i poprawne → liczy wiek z DOB i wpisuje do efAge/efAgeMo,
+    // które stają się read-only. Jeśli wypełnione ale nieprawidłowe → pokazuje
+    // błąd, pola Wiek pozostają edytowalne (lekarz nadal może zapisać legacy).
+    function _updateAgeFieldsFromDob() {
+      var raw = (efDob.value || '').trim();
+      if (raw === '') {
+        efAge.readOnly = false;
+        efAgeMo.readOnly = false;
+        efDobErr.textContent = '';
+        return;
+      }
+      var iso = (typeof V.parseDobFromDisplay === 'function') ? V.parseDobFromDisplay(raw) : null;
+      if (!iso) {
+        efDobErr.textContent = 'Nieprawidłowa data. Format: DD-MM-RRRR (np. 12-01-2018).';
+        // Pola Wiek zostają edytowalne — lekarz nadal może zapisać legacy.
+        efAge.readOnly = false;
+        efAgeMo.readOnly = false;
+        return;
+      }
+      var resolved = V.calcAgeFromDOB(iso);
+      if (!resolved) {
+        efDobErr.textContent = 'Data nie pozwala obliczyć wieku.';
+        efAge.readOnly = false;
+        efAgeMo.readOnly = false;
+        return;
+      }
+      efDobErr.textContent = '';
+      efAge.value = String(resolved.years);
+      efAgeMo.value = String(resolved.ageMonths);
+      efAge.readOnly = true;
+      efAgeMo.readOnly = true;
+    }
+
+    function _resetEditForm() {
+      efName.value = name === '(bez imienia)' ? '' : name;
+      efSex.value = _normSex(sex);
+      efDob.value = dobDisplay;
+      efAge.value = age != null ? age : '';
+      efAgeMo.value = ageMonths != null ? ageMonths : '';
+      efHeight.value = height != null ? height : '';
+      efWeight.value = weight != null ? weight : '';
+      efMother.value = _adv.motherHeight != null ? _adv.motherHeight : '';
+      efFather.value = _adv.fatherHeight != null ? _adv.fatherHeight : '';
+      editErr.textContent = '';
+      efDobErr.textContent = '';
+      // Po reset — przelicz stan read-only pól Wiek (DOB może być puste/wypełnione).
+      _updateAgeFieldsFromDob();
+    }
+    async function _saveEdits() {
+      var newName = (efName.value || '').trim();
+      if (!newName) { editErr.textContent = 'Imię i nazwisko jest wymagane.'; try { efName.focus(); } catch (_) {} return; }
+      // P6.1 — DOB ma priorytet nad wpisanym wiekiem. Wprowadzona wartość musi być
+      // poprawna ALBO pusta. Jeśli lekarz wpisał coś nieprawidłowego, nie pozwalamy
+      // zapisać (lepiej kazać poprawić niż zapisać śmieci jako wiek manual).
+      var rawDob = (efDob.value || '').trim();
+      var parsedDobISO = null;
+      if (rawDob !== '') {
+        parsedDobISO = (typeof V.parseDobFromDisplay === 'function') ? V.parseDobFromDisplay(rawDob) : null;
+        if (!parsedDobISO) {
+          editErr.textContent = 'Nieprawidłowa data urodzenia. Użyj formatu DD-MM-RRRR (np. 12-01-2018) lub zostaw puste.';
+          try { efDob.focus(); } catch (_) {}
+          return;
+        }
+      }
+      var edited;
+      try { edited = JSON.parse(JSON.stringify(payload)); }
+      catch (e) { editErr.textContent = 'Nie udało się przygotować danych do zapisu.'; return; }
+      edited.name = newName;
+      edited.user = edited.user || {};
+      // P6.1 — DOB do payloadu (sanityzowane, lub usunięte jeśli puste).
+      // savePatient i tak ponownie sanityzuje (defensive), ale ustawiamy tu
+      // już czystą wartość, by aplikacja widziała ten sam stan co serializacja.
+      if (parsedDobISO) {
+        edited.user.dobISO = parsedDobISO;
+      } else if ('dobISO' in edited.user) {
+        delete edited.user.dobISO;
+      }
+      // P6.1 — Wiek: zawsze zapisujemy. Gdy DOB jest, używamy wartości
+      // wyliczonej (efAge/efAgeMo zostały już zaktualizowane przez listener);
+      // gdy DOB nie ma, używamy wartości wpisanej ręcznie. Konwencja:
+      // user.age = pełne lata, user.ageMonths = dodatkowe miesiące (0-11).
+      _setNumField(edited.user, 'age', efAge.value);
+      _setNumField(edited.user, 'ageMonths', efAgeMo.value);
+      edited.user.sex = efSex.value || '';
+      _setNumField(edited.user, 'height', efHeight.value);
+      _setNumField(edited.user, 'weight', efWeight.value);
+      edited.advanced = edited.advanced || {};
+      _setNumField(edited.advanced, 'motherHeight', efMother.value);
+      _setNumField(edited.advanced, 'fatherHeight', efFather.value);
+
+      // P7 — Dane okołoporodowe → payload.perinatal (jedno źródło prawdy).
+      // Tylko pola wypełnione; puste pomijamy (opcjonalność, zgodność wstecz).
+      (function () {
+        var peri = {};
+        function setNum(key, raw) {
+          var s = (raw == null ? '' : String(raw)).trim().replace(',', '.');
+          if (s === '') return;
+          var n = parseFloat(s);
+          if (isFinite(n)) peri[key] = n;
+        }
+        setNum('gestationalWeeks', efGaW.value);
+        setNum('gestationalDays', efGaD.value);
+        setNum('birthWeightG', efBW.value);
+        setNum('birthLengthCm', efBL.value);
+        setNum('birthHeadCircCm', efBHC.value);
+        setNum('gravidity', efGrav.value);
+        setNum('parity', efPar.value);
+        // Zachowaj cache wyliczeń SDS z poprzedniego zapisu (uzupełniany przez SGA).
+        if (_peri.birthWeightSds != null) peri.birthWeightSds = _peri.birthWeightSds;
+        if (_peri.birthLengthSds != null) peri.birthLengthSds = _peri.birthLengthSds;
+        if (_peri.sdsSourceLabel) peri.sdsSourceLabel = _peri.sdsSourceLabel;
+        if (_peri.catchUp) peri.catchUp = _peri.catchUp;
+        if (Object.keys(peri).length) edited.perinatal = peri;
+        else if ('perinatal' in edited) delete edited.perinatal;
+      })();
+      try {
+        setBusy(true);
+        await V.savePatient(edited, { patientId: patientId, dedup: false });
+        setBusy(false);
+        showPatientCard(patientId, onPick, listOptions);
+      } catch (e) {
+        setBusy(false);
+        editErr.textContent = 'Nie udało się zapisać zmian.';
+        logError('showPatientEditScreen saveEdits', e);
+      }
+    }
+    async function _deletePatient() {
+      var label = (name && name !== '(bez imienia)') ? name : 'tego pacjenta';
+      // B1.10: „historią wizyt" → „historią pomiarów i notatek" (precyzyjniej).
+      if (!global.confirm('Usunąć pacjenta „' + label + '” wraz z całą historią pomiarów i notatek? Tej operacji nie można cofnąć.')) return;
+      try {
+        setBusy(true);
+        await V.removePatient(patientId);
+        setBusy(false);
+        showPatientsList(onPick, listOptions);
+      } catch (e) {
+        setBusy(false);
+        editErr.textContent = 'Nie udało się usunąć pacjenta.';
+        logError('showPatientEditScreen deletePatient', e);
+      }
+    }
+
+    var backBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost', type: 'button',
+      text: '← Wróć do karty pacjenta',
+      onclick: function () { showPatientCard(patientId, onPick, listOptions); }
+    });
+
+    // P6.1 — Pole DOB jako osobna komórka grida (przed polami Wiek), z disclaimerem
+    // i komunikatem walidacyjnym pod spodem. Komórka zajmuje wiele kolumn (zachowanie
+    // gridu domyślnie + wpięcie diva z input + hint + error w jednym slocie).
+    // P6.1c — Cała podpowiedź schowana pod ikoną „i" obok etykiety. Popover jest
+    // pozycjonowany ABSOLUTNIE (pływa NAD treścią, nie zajmuje miejsca w layoucie),
+    // więc komórka DOB ma tę samą wysokość co sąsiednie i nie ma przerwy między
+    // wierszami (Wiek/Wzrost/Masa siadają tuż pod spodem). Dymek: hover (desktop)
+    // + klik/tap (mobile), zamykany kliknięciem poza nim.
+    var ICON_INFO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
+    var dobInfoBtn = el('button', {
+      type: 'button', class: 'vilda-dob-info-btn',
+      'aria-label': 'Informacja o polu data urodzenia',
+      'aria-expanded': 'false',
+      html: ICON_INFO
+    });
+    var dobPop = el('div', {
+      class: 'vilda-dob-pop', role: 'tooltip',
+      text: 'Opcjonalnie. Wypełnij, by aplikacja automatycznie liczyła wiek przy kolejnych pomiarach.'
+    });
+    dobPop.style.display = 'none';
+    var dobField = el('div', { class: 'vilda-dob-field' }, [efDob, dobPop, efDobErr]);
+    var efDobCell = el('div', { style: 'display:block;' }, [
+      el('div', { class: 'vilda-dob-label-row' }, [
+        el('label', { class: 'vilda-patient-stat-label', text: 'Data urodzenia' }),
+        dobInfoBtn
+      ]),
+      dobField
+    ]);
+    (function () {
+      function show() { dobPop.style.display = 'block'; dobInfoBtn.setAttribute('aria-expanded', 'true'); }
+      function hide() { dobPop.style.display = 'none'; dobInfoBtn.setAttribute('aria-expanded', 'false'); }
+      dobInfoBtn.addEventListener('click', function (e) {
+        e.preventDefault(); e.stopPropagation();
+        if (dobPop.style.display === 'none') show(); else hide();
+      });
+      dobInfoBtn.addEventListener('mouseenter', show);
+      efDobCell.addEventListener('mouseleave', hide);
+      // Klik poza komórką zamyka dymek (dotyk). Listener czyszczony nie jest —
+      // ekran edycji jest krótkotrwały i przerenderowywany przy każdym wejściu.
+      global.document.addEventListener('click', function (e) {
+        if (!efDobCell.contains(e.target)) hide();
+      });
+    })();
+
+    // P6.1 — Listener na pole DOB: po każdej zmianie przelicz wiek (lub zwolnij pola).
+    efDob.addEventListener('input', _updateAgeFieldsFromDob);
+    efDob.addEventListener('blur', _updateAgeFieldsFromDob);
+    // Initial state — jeśli pacjent ma już DOB, ustaw pola Wiek od razu w tryb read-only.
+    _updateAgeFieldsFromDob();
+
+    var screen = el('div', { class: 'vilda-auth-screen vilda-auth-patient-card' }, [
+      el('h2', { class: 'vilda-auth-title', text: 'Edycja pacjenta' }),
+      el('p', { class: 'vilda-patient-section-h', text: 'Dane pacjenta' }),
+      el('div', { class: 'vilda-patient-stats-grid' }, [
+        _editField('Imię i nazwisko', efName),
+        _editField('Płeć', efSex),
+        efDobCell
+      ]),
+      el('p', { class: 'vilda-patient-section-h vilda-patient-section-h--secondary', text: 'Dane okołoporodowe' }),
+      el('div', { class: 'vilda-patient-stats-grid' }, [
+        _editField('Wiek ciążowy (tyg.)', efGaW),
+        _editField('Wiek ciążowy (dni)', efGaD),
+        _editField('Masa urodzeniowa (g)', efBW),
+        _editField('Długość urodzeniowa (cm)', efBL),
+        _editField('Obwód głowy (cm)', efBHC),
+        _editField('Która ciąża', efGrav),
+        _editField('Który poród', efPar)
+      ]),
+      el('p', { class: 'vilda-patient-section-h vilda-patient-section-h--secondary', text: 'Wzrost rodziców (do MPH)' }),
+      el('div', { class: 'vilda-patient-stats-grid' }, [
+        _editField('Wzrost matki (cm)', efMother),
+        _editField('Wzrost ojca (cm)', efFather)
+      ]),
+      el('p', { class: 'vilda-patient-empty-msg', style: 'margin-top:6px;', text: 'Dane stałe pacjenta. Pomiary (wzrost, masa, wiek) dodajesz przez „Nowy pomiar"; korekta ostatniego — w zakładce Historia. Dane okołoporodowe zasilają moduł SGA i epikryzę.' }),
+      editErr,
+      el('div', { class: 'vilda-auth-actions' }, [
+        el('button', { class: 'vilda-auth-btn vilda-auth-btn-ghost', type: 'button', text: 'Przywróć', onclick: _resetEditForm }),
+        el('button', { class: 'vilda-auth-btn vilda-auth-btn-primary', type: 'button', text: 'Zapisz zmiany', onclick: _saveEdits })
+      ]),
+      el('div', { class: 'vilda-patient-delete-row' }, [
+        el('button', { class: 'vilda-auth-btn vilda-patient-delete-btn', type: 'button', text: 'Usuń pacjenta', onclick: _deletePatient })
+      ]),
+      el('div', { class: 'vilda-auth-actions vilda-patient-actions' }, [backBtn])
+    ]);
+
+    open(screen, { noLogo: true });
+  }
+
+  // ============ P6.3 — MODAL „+ NOWY POMIAR" (wariant A, mode='new') ============
+  /**
+   * Modal do szybkiego dodania nowego pomiaru pacjenta (waga + wzrost + opcjonalnie
+   * data pomiaru wstecznie). Klonuje pełny payload poprzedniego snapshota, nadpisuje
+   * pola pomiaru, wywołuje _ensureCurrentMeasurementInHistory (FIX A/B/C) by
+   * dorzucić wpis do measurements[], i zapisuje przez V.savePatient (nowy snapshot).
+   *
+   * Wariant A (modal overlay) — wybrany po B1, bo zakładka Historia w karcie
+   * pacjenta już daje pełny kontekst trajektorii (nie potrzebujemy in-line history
+   * w modalu jak w mockupie wariantu B).
+   *
+   * Mode 'new' (P6.3): klonuje najnowszy snapshot, tworzy nowy.
+   * Mode 'edit' (P6.6): TODO — będzie edycja konkretnego snapshota in-place.
+   *
+   * opts:
+   *   - mode: 'new' (default) | 'edit' (P6.6)
+   *   - onSaved: function() — wywołane po zapisie (rerender karty pacjenta)
+   *   - onCancel: function() — wywołane przy Anuluj (opcjonalne)
+   */
+  async function showQuickMeasureModal(patientId, opts) {
+    opts = opts || {};
+    // P6.6b — Tryby modala:
+    //   • 'new' (default) — tworzy nowy snapshot przez V.savePatient
+    //   • 'edit' — koryguje istniejący snapshot in-place przez V.updateSnapshotPayload.
+    //     Wymaga opts.snapshotId.
+    var mode = (opts.mode === 'edit') ? 'edit' : 'new';
+    var editSnapshotId = (mode === 'edit' && typeof opts.snapshotId === 'string') ? opts.snapshotId : null;
+
+    var V = getVault();
+    if (!V || !V.isUnlocked()) {
+      try { global.alert('Modal nowego pomiaru wymaga zalogowanego konta lekarza.'); } catch (_) {}
+      return;
+    }
+    if (typeof V.savePatient !== 'function') {
+      try { global.alert('Funkcja savePatient niedostępna — odśwież stronę (Ctrl+Shift+R).'); } catch (_) {}
+      return;
+    }
+    if (mode === 'edit' && typeof V.updateSnapshotPayload !== 'function') {
+      try { global.alert('Funkcja edit-in-place niedostępna — odśwież stronę (Ctrl+Shift+R).'); } catch (_) {}
+      return;
+    }
+    if (mode === 'edit' && !editSnapshotId) {
+      try { global.alert('Brak snapshotId — nie można edytować.'); } catch (_) {}
+      return;
+    }
+
+    // Wczytaj pacjenta — najnowszy snapshot jako baseline (mode='new')
+    // albo konkretny snapshot po snapshotId (mode='edit').
+    var patientFull = null;
+    try { patientFull = await V.getPatient(patientId); }
+    catch (e) { logError('showQuickMeasureModal getPatient', e); return; }
+    if (!patientFull || !patientFull.snapshots || !patientFull.snapshots.length) {
+      try { global.alert('Brak danych pacjenta — nie można dodać pomiaru.'); } catch (_) {}
+      return;
+    }
+
+    var snap;
+    if (mode === 'edit') {
+      snap = patientFull.snapshots.find(function (s) { return s.snapshotId === editSnapshotId; });
+      if (!snap) {
+        try { global.alert('Nie znaleziono pomiaru do edycji (snapshotId: ' + editSnapshotId + ').'); } catch (_) {}
+        return;
+      }
+    } else {
+      snap = patientFull.snapshots[0]; // najnowszy (sortowane malejąco po savedAtISO)
+    }
+    var prevPayload = snap.payload || {};
+    var prevUser = prevPayload.user || {};
+    var dobISO = (prevUser.dobISO && typeof V.sanitizeDobISO === 'function')
+      ? V.sanitizeDobISO(prevUser.dobISO) : null;
+    var prevHeight = (typeof prevUser.height === 'number' && isFinite(prevUser.height)) ? prevUser.height : null;
+    var prevWeight = (typeof prevUser.weight === 'number' && isFinite(prevUser.weight)) ? prevUser.weight : null;
+    var prevAgeYears = (typeof prevUser.age === 'number' && isFinite(prevUser.age)) ? prevUser.age : null;
+    var prevAgeMonths = (typeof prevUser.ageMonths === 'number' && isFinite(prevUser.ageMonths)) ? prevUser.ageMonths : null;
+    var prevSex = prevUser.sex || '';
+    var prevName = prevPayload.name || '(bez imienia)';
+
+    // P7-edit: edycja KONKRETNEGO wiersza Historii — prefill z wartości klikniętego
+    // punktu (a NIE z user.* = najnowszego pomiaru). opts.rowValues niesie wiek/wzrost/masę wiersza.
+    if (mode === 'edit' && opts.rowValues && typeof opts.rowValues === 'object') {
+      var _rv = opts.rowValues;
+      if (typeof _rv.height === 'number' && isFinite(_rv.height)) prevHeight = _rv.height;
+      if (typeof _rv.weight === 'number' && isFinite(_rv.weight)) prevWeight = _rv.weight;
+      if (typeof _rv.ageMonths === 'number' && isFinite(_rv.ageMonths)) {
+        prevAgeYears = Math.floor(_rv.ageMonths / 12);
+        prevAgeMonths = _rv.ageMonths % 12;
+      }
+    }
+
+    // Defensywnie usuń poprzednie niezamknięte overlaye (multi-click).
+    try {
+      var existingOverlays = global.document.querySelectorAll('.vilda-quick-measure-overlay');
+      for (var i = 0; i < existingOverlays.length; i += 1) existingOverlays[i].remove();
+    } catch (_) {}
+
+    var overlay = el('div', {
+      class: 'vilda-auth-overlay vilda-auth-overlay-sheet vilda-quick-measure-overlay',
+      style: 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000001;padding:20px;'
+    });
+
+    var sheet = el('div', {
+      class: 'vilda-auth-sheet',
+      style: 'background:#fff;border-radius:14px;padding:18px 20px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:12px;'
+    });
+
+    // Header — różny copy dla 'new' vs 'edit'.
+    sheet.appendChild(el('h3', {
+      text: (mode === 'edit') ? '✏ Popraw pomiar' : '+ Nowy pomiar',
+      style: 'margin:0;font-size:1.05rem;font-weight:600;color:#0f2b33;'
+    }));
+    sheet.appendChild(el('p', {
+      text: (mode === 'edit')
+        ? 'Pacjent: ' + prevName + '. Korekta nadpisze istniejący pomiar bez tworzenia drugiego wpisu.'
+        : 'Pacjent: ' + prevName + '. Wpisz wagę i wzrost. BMI policzy się automatycznie.',
+      style: 'margin:0;font-size:0.82rem;color:#5b6672;line-height:1.4;'
+    }));
+
+    // Helper — pojedynczy input w grid'owym labelu.
+    function _row(labelText, inputEl, hint) {
+      var wrap = el('div', null, [
+        el('label', { text: labelText, style: 'display:block;font-size:0.78rem;color:#5b6672;margin-bottom:4px;font-weight:500;' }),
+        inputEl
+      ]);
+      if (hint) {
+        wrap.appendChild(el('div', {
+          style: 'font-size:0.72rem;color:#9aa8aa;margin-top:3px;line-height:1.4;',
+          text: hint
+        }));
+      }
+      return wrap;
+    }
+
+    function _input(attrs) {
+      return el('input', Object.assign({
+        class: 'vilda-auth-input',
+        style: 'width:100%;height:38px;padding:0 10px;font-size:0.92rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;',
+        autocomplete: 'off'
+      }, attrs || {}));
+    }
+
+    // Data pomiaru — default dziś (mode='new') albo savedAtISO snapshota (mode='edit').
+    var todayISO = new Date().toISOString().substring(0, 10);
+    var initialDate = todayISO;
+    if (mode === 'edit') {
+      var sISO = snap.savedAtISO || '';
+      if (sISO && sISO.length >= 10) initialDate = sISO.substring(0, 10);
+    }
+    var dateInput = _input({ type: 'date', value: initialDate });
+    sheet.appendChild(_row('Data pomiaru', dateInput,
+      (mode === 'edit')
+        ? 'Pomiar został pierwotnie zapisany w tym dniu. Możesz skorygować datę.'
+        : 'Domyślnie dzisiaj. Możesz wpisać starszą datę, jeśli dodajesz pomiar wstecznie.'));
+
+    // 2-kolumnowy grid: Wzrost + Waga.
+    var hwRow = el('div', { style: 'display:grid;grid-template-columns:1fr 1fr;gap:10px;' });
+    var heightInput = _input({ type: 'text', inputmode: 'decimal', placeholder: prevHeight != null ? String(prevHeight) : 'cm' });
+    var weightInput = _input({ type: 'text', inputmode: 'decimal', placeholder: prevWeight != null ? String(prevWeight) : 'kg' });
+    hwRow.appendChild(_row('Wzrost (cm)', heightInput));
+    hwRow.appendChild(_row('Waga (kg)', weightInput));
+    sheet.appendChild(hwRow);
+
+    // BMI (read-only auto).
+    var bmiDisplay = el('div', {
+      style: 'background:#f5fafb;border:0.5px solid #d7e9ec;border-radius:8px;padding:8px 10px;font-size:0.92rem;color:#0f2b33;font-weight:500;min-height:38px;display:flex;align-items:center;',
+      text: 'BMI: —'
+    });
+    sheet.appendChild(bmiDisplay);
+
+    // Wiek — z DOB (read-only display) ALBO pola input (gdy brak DOB).
+    var ageDisplayBox = null;     // gdy DOB jest
+    var ageYearsInput = null;     // gdy brak DOB
+    var ageMonthsInput = null;
+    var ageSection = el('div');
+    if (dobISO) {
+      ageDisplayBox = el('div', {
+        style: 'background:#f5fafb;border:0.5px solid #d7e9ec;border-radius:8px;padding:8px 10px;font-size:0.92rem;color:#0f2b33;font-weight:500;min-height:38px;display:flex;align-items:center;',
+        text: 'Wiek: —'
+      });
+      ageSection.appendChild(_row('Wiek (auto z daty urodzenia)', ageDisplayBox,
+        'Liczony z DOB i daty pomiaru. Aby zmienić — usuń DOB w „Edytuj" karty pacjenta.'));
+    } else {
+      var ageGrid = el('div', { style: 'display:grid;grid-template-columns:1fr 1fr;gap:10px;' });
+      ageYearsInput = _input({ type: 'text', inputmode: 'numeric', placeholder: 'lata' });
+      ageMonthsInput = _input({ type: 'text', inputmode: 'numeric', placeholder: 'miesiące (0-11)' });
+      // Prefill z poprzedniego snapshota — lekarz koryguje jeśli minęło dużo czasu.
+      if (prevAgeYears != null) ageYearsInput.value = String(prevAgeYears);
+      if (prevAgeMonths != null) ageMonthsInput.value = String(prevAgeMonths);
+      ageGrid.appendChild(_row('Wiek (lata)', ageYearsInput));
+      ageGrid.appendChild(_row('Wiek (miesiące, 0-11)', ageMonthsInput));
+      ageSection.appendChild(ageGrid);
+    }
+    sheet.appendChild(ageSection);
+
+    // Collapsible „💡 Wpisz datę urodzenia" — tylko gdy DOB jest PUSTE.
+    var dobCollapseToggle = null;
+    var dobInput = null;
+    var dobErrBox = null;
+    if (!dobISO) {
+      dobCollapseToggle = el('button', {
+        type: 'button',
+        style: 'background:transparent;border:0;color:#00838d;text-align:left;padding:6px 0;font-size:0.82rem;cursor:pointer;text-decoration:underline;align-self:flex-start;',
+        text: '💡 Wpisz datę urodzenia, by w przyszłości nie pytać o wiek'
+      });
+      sheet.appendChild(dobCollapseToggle);
+      var dobCollapseBox = el('div', { style: 'display:none;' });
+      dobInput = _input({ type: 'text', inputmode: 'numeric', maxlength: '10', placeholder: 'DD-MM-RRRR', autocomplete: 'bday' });
+      dobErrBox = el('div', { style: 'color:#A32D2D;font-size:0.78rem;margin-top:4px;min-height:1em;' });
+      dobCollapseBox.appendChild(_row('Data urodzenia (opcjonalnie)', dobInput,
+        'Aplikacja będzie automatycznie liczyć wiek przy kolejnych pomiarach.'));
+      dobCollapseBox.appendChild(dobErrBox);
+      sheet.appendChild(dobCollapseBox);
+      dobCollapseToggle.addEventListener('click', function () {
+        var isOpen = dobCollapseBox.style.display !== 'none';
+        dobCollapseBox.style.display = isOpen ? 'none' : 'block';
+        dobCollapseToggle.textContent = isOpen
+          ? '💡 Wpisz datę urodzenia, by w przyszłości nie pytać o wiek'
+          : '▼ Schowaj pole daty urodzenia';
+      });
+    }
+
+    // Live delta sub-line (Δ waga · Δ wzrost · BMI centyl).
+    var deltaLine = el('div', {
+      style: 'font-size:0.82rem;color:#0F6E56;line-height:1.4;min-height:1.2em;font-weight:500;'
+    });
+    sheet.appendChild(deltaLine);
+
+    // Error box.
+    var errBox = el('div', {
+      style: 'color:#A32D2D;font-size:0.82rem;line-height:1.4;display:none;'
+    });
+    sheet.appendChild(errBox);
+
+    // ── Recompute (live, na każdy input) ──────────────────────────────────
+    function _parseNum(s) {
+      var v = (s == null ? '' : String(s)).trim().replace(',', '.');
+      if (v === '') return null;
+      var n = parseFloat(v);
+      return isFinite(n) ? n : null;
+    }
+    function _recompute() {
+      var h = _parseNum(heightInput.value);
+      var w = _parseNum(weightInput.value);
+      // BMI
+      var bmi = (h != null && w != null && h > 0) ? (w / Math.pow(h / 100, 2)) : null;
+      bmiDisplay.textContent = bmi != null ? 'BMI: ' + bmi.toFixed(1).replace('.', ',') : 'BMI: —';
+      // Wiek (gdy DOB)
+      if (dobISO && ageDisplayBox) {
+        var resolved = (typeof V.calcAgeFromDOB === 'function') ? V.calcAgeFromDOB(dobISO, dateInput.value || todayISO) : null;
+        ageDisplayBox.textContent = resolved
+          ? 'Wiek: ' + _formatAge(resolved.totalMonths)
+          : 'Wiek: — (data pomiaru przed DOB)';
+      }
+      // Delta vs poprzedni pomiar
+      var dParts = [];
+      if (h != null && prevHeight != null) {
+        var dH = h - prevHeight;
+        dParts.push('Δ wzrost ' + (dH >= 0 ? '+' : '') + dH.toFixed(1).replace('.', ',') + ' cm');
+      }
+      if (w != null && prevWeight != null) {
+        var dW = w - prevWeight;
+        dParts.push('Δ waga ' + (dW >= 0 ? '+' : '') + dW.toFixed(1).replace('.', ',') + ' kg');
+      }
+      deltaLine.textContent = dParts.length ? dParts.join(' · ') : '';
+    }
+    [heightInput, weightInput, dateInput].forEach(function (i) {
+      i.addEventListener('input', _recompute);
+      i.addEventListener('change', _recompute);
+    });
+    _recompute();
+
+    // ── Akcje ─────────────────────────────────────────────────────────────
+    var cancelBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost',
+      type: 'button',
+      style: 'background:transparent !important;color:#5b6672 !important;border:0.5px solid #d7e9ec !important;width:auto !important;padding:8px 16px !important;flex:0 0 auto !important;',
+      text: 'Anuluj',
+      onclick: function () {
+        overlay.remove();
+        if (typeof opts.onCancel === 'function') opts.onCancel();
+      }
+    });
+    var saveBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-primary',
+      type: 'button',
+      style: 'background:#00838d !important;color:#fff !important;border-color:#00838d !important;width:auto !important;padding:8px 18px !important;font-weight:600;flex:0 0 auto !important;',
+      text: (mode === 'edit') ? 'Zapisz korektę' : 'Zapisz pomiar',
+      onclick: async function () {
+        errBox.style.display = 'none';
+        errBox.textContent = '';
+        if (dobErrBox) dobErrBox.textContent = '';
+
+        // ── Walidacja ────
+        var h = _parseNum(heightInput.value);
+        var w = _parseNum(weightInput.value);
+        if (h == null || h <= 0) {
+          errBox.textContent = 'Podaj wzrost w cm (np. 122).';
+          errBox.style.display = 'block';
+          try { heightInput.focus(); } catch (_) {}
+          return;
+        }
+        if (w == null || w <= 0) {
+          errBox.textContent = 'Podaj wagę w kg (np. 25.3).';
+          errBox.style.display = 'block';
+          try { weightInput.focus(); } catch (_) {}
+          return;
+        }
+
+        // Data pomiaru — czytamy z input (format YYYY-MM-DD, type=date).
+        var measureDateISO = (dateInput.value && dateInput.value.length === 10) ? dateInput.value : todayISO;
+
+        // Wiek — z DOB albo z pól manual.
+        var newAgeYears = null, newAgeMonths = null;
+        if (dobISO) {
+          var resolved = (typeof V.calcAgeFromDOB === 'function') ? V.calcAgeFromDOB(dobISO, measureDateISO) : null;
+          if (!resolved) {
+            errBox.textContent = 'Data pomiaru jest wcześniejsza niż data urodzenia — sprawdź daty.';
+            errBox.style.display = 'block';
+            return;
+          }
+          newAgeYears = resolved.years;
+          newAgeMonths = resolved.ageMonths;
+        } else {
+          newAgeYears = _parseNum(ageYearsInput && ageYearsInput.value);
+          newAgeMonths = _parseNum(ageMonthsInput && ageMonthsInput.value);
+          if (newAgeYears == null && newAgeMonths == null) {
+            errBox.textContent = 'Podaj wiek pacjenta — lata lub miesiące.';
+            errBox.style.display = 'block';
+            return;
+          }
+          if (newAgeYears == null) newAgeYears = 0;
+          if (newAgeMonths == null) newAgeMonths = 0;
+        }
+
+        // Opcjonalne DOB z collapsible.
+        var newDobISO = null;
+        if (!dobISO && dobInput && (dobInput.value || '').trim() !== '') {
+          newDobISO = (typeof V.parseDobFromDisplay === 'function') ? V.parseDobFromDisplay(dobInput.value) : null;
+          if (!newDobISO) {
+            if (dobErrBox) dobErrBox.textContent = 'Nieprawidłowa data urodzenia. Format DD-MM-RRRR (np. 12-01-2018).';
+            try { dobInput.focus(); } catch (_) {}
+            return;
+          }
+        }
+
+        // ── P7-edit: edycja KONKRETNEGO wiersza Historii (z menu ⋮) ────
+        // Aktualizujemy wiersz po uid/kluczu w najnowszym snapshocie (vault sam
+        // synchronizuje user.* gdy to bieżący pomiar). NIE dotykamy formularza
+        // kalkulatora (brak applyLoadedData) — to edycja punktu w Historii.
+        if (mode === 'edit' && opts.rowRef && typeof V.updateMeasurementRow === 'function') {
+          var _rowAgeMonths = Math.round((newAgeYears || 0) * 12 + (newAgeMonths || 0));
+          saveBtn.disabled = true;
+          cancelBtn.disabled = true;
+          try {
+            setBusy(true);
+            await V.updateMeasurementRow(patientId, opts.rowRef, { ageMonths: _rowAgeMonths, height: h, weight: w });
+            setBusy(false);
+            overlay.remove();
+            try {
+              global.document.dispatchEvent(new global.CustomEvent('vilda:measurement-changed', {
+                detail: { patientId: patientId, action: 'edit-row' }
+              }));
+            } catch (_) {}
+            // Re-render karty pacjenta (Historia + Status + siatka). onSaved
+            // woła showPatientCard z poprawnym onPick/listOptions (teraz dostępne
+            // w renderTimelineSection) — wcześniejszy ReferenceError już nie wywala
+            // przebudowy, więc Historia odświeża się od razu po korekcie.
+            if (typeof opts.onSaved === 'function') opts.onSaved();
+          } catch (e) {
+            setBusy(false);
+            saveBtn.disabled = false;
+            cancelBtn.disabled = false;
+            errBox.textContent = 'Nie udało się zapisać korekty pomiaru.';
+            errBox.style.display = 'block';
+            logError('showQuickMeasureModal updateMeasurementRow', e);
+          }
+          return;
+        }
+
+        // ── Klonuj payload i nadpisz pola pomiaru ────
+        var edited;
+        try { edited = JSON.parse(JSON.stringify(prevPayload)); }
+        catch (e) {
+          errBox.textContent = 'Nie udało się przygotować danych.';
+          errBox.style.display = 'block';
+          return;
+        }
+        if (!edited.user || typeof edited.user !== 'object') edited.user = {};
+        edited.user.height = h;
+        edited.user.weight = w;
+        edited.user.age = newAgeYears;
+        edited.user.ageMonths = newAgeMonths;
+        if (newDobISO) {
+          edited.user.dobISO = newDobISO;
+        }
+        // timestampISO — używamy daty pomiaru (z pola), nie dziś. Format ISO:
+        // jeśli measureDateISO to dziś → użyj pełnego ISO (z godziną); inaczej
+        // konstruujemy z YYYY-MM-DD + południe UTC (defensywnie, nie ma godziny pomiaru).
+        if (measureDateISO === todayISO) {
+          edited.timestampISO = new Date().toISOString();
+        } else {
+          edited.timestampISO = measureDateISO + 'T12:00:00.000Z';
+        }
+
+        // ── FIX A/B/C — dorzuć pomiar do measurements[] (UPDATE-by-ageMonths) ────
+        try {
+          var imp = global.VildaDataImportExport;
+          if (imp && typeof imp._ensureCurrentMeasurementInHistory === 'function') {
+            imp._ensureCurrentMeasurementInHistory(edited);
+          }
+          // Jeśli helper niedostępny — fallback. measurements[] zostanie też
+          // zaktualizowany przy następnym applyLoadedData/saveUserData. Nie blokujemy
+          // zapisu pomiaru jeśli helpera nie ma.
+        } catch (e) {
+          logError('showQuickMeasureModal _ensureCurrentMeasurementInHistory', e);
+        }
+
+        // ── Zapis ────
+        // mode='new' → V.savePatient tworzy nowy snapshot
+        // mode='edit' → V.updateSnapshotPayload podmienia istniejący snapshot in-place
+        saveBtn.disabled = true;
+        cancelBtn.disabled = true;
+        // P-fix: czy edytowany pomiar jest NAJNOWSZY? Sprawdzamy PRZED zapisem,
+        // bo updateSnapshotPayload podbija savedAtISO. Tylko dla najnowszego (lub
+        // nowego pomiaru) synchronizujemy formularz kalkulatora — edycja STAREGO
+        // wpisu nie przejmuje kontekstu kalkulatora danymi sprzed lat.
+        var _editIsLatest = true;
+        if (mode === 'edit') {
+          try {
+            var _pfBefore = await V.getPatient(patientId);
+            var _snapsBefore = (_pfBefore && _pfBefore.snapshots) || [];
+            _editIsLatest = !!(_snapsBefore.length && _snapsBefore[0] && _snapsBefore[0].snapshotId === editSnapshotId);
+          } catch (_) { _editIsLatest = false; }
+        }
+        try {
+          setBusy(true);
+          if (mode === 'edit') {
+            await V.updateSnapshotPayload(patientId, editSnapshotId, edited);
+          } else {
+            await V.savePatient(edited, { patientId: patientId, dedup: false });
+          }
+          setBusy(false);
+          overlay.remove();
+
+          // P6.3/P6.4 FIX — synchronizuj formularz głównego kalkulatora z nowym
+          // payloadem. Bez tego po Nowy pomiar formularz w tle ZOSTAJE ze starymi
+          // wartościami i kolejne kliknięcie „Zapisz dane" (odruchowe lub myśląc
+          // że trzeba dopisać pacjenta) tworzy NOWY SNAPSHOT ze STAREGO formularza
+          // jako najnowszy — Status pokazuje stare, Historia oba pomiary.
+          //
+          // Na podstronach z formularzem (index/docpro/kalkulator-klirens) global
+          // applyLoadedData jest dostępne — wywołujemy. Na pozostałych podstronach
+          // (notatki/subskrypcja/ustawienia) ta funkcja nie istnieje — try/catch
+          // chroni przed exception, modal i tak zamknął się prawidłowo.
+          //
+          // Dla hero pill P6.3 (z karty pacjenta) ta synchronizacja też jest
+          // bezpieczna — formularz w tle (jeśli istnieje) dostaje świeże dane,
+          // a karta pacjenta i tak rerenderuje się przez onSaved.
+          try {
+            if ((mode !== 'edit' || _editIsLatest) && typeof global.applyLoadedData === 'function') {
+              global.applyLoadedData(edited);
+            }
+          } catch (e) { logError('showQuickMeasureModal applyLoadedData sync', e); }
+
+          // Sygnał dla karty „Ostatni pomiar" (i innych): zmienił się zbiór
+          // pomiarów pacjenta → przelicz n-1 z osi snapshotów vault.
+          try {
+            global.document.dispatchEvent(new global.CustomEvent('vilda:measurement-changed', {
+              detail: { patientId: patientId, action: (mode === 'edit') ? 'edit' : 'add' }
+            }));
+          } catch (_) {}
+
+          if (typeof opts.onSaved === 'function') opts.onSaved();
+        } catch (e) {
+          setBusy(false);
+          saveBtn.disabled = false;
+          cancelBtn.disabled = false;
+          errBox.textContent = (mode === 'edit')
+            ? 'Nie udało się zapisać korekty pomiaru.'
+            : 'Nie udało się zapisać pomiaru.';
+          errBox.style.display = 'block';
+          logError('showQuickMeasureModal ' + (mode === 'edit' ? 'updateSnapshotPayload' : 'savePatient'), e);
+        }
+      }
+    });
+    var actions = el('div', {
+      style: 'display:flex;gap:8px;justify-content:flex-end;margin-top:4px;'
+    });
+    actions.appendChild(cancelBtn);
+    actions.appendChild(saveBtn);
+    sheet.appendChild(actions);
+
+    overlay.appendChild(sheet);
+    global.document.body.appendChild(overlay);
+    // Mobile: zablokuj scroll tła, by modal nie „pływał" (auto-unlock po zamknięciu).
+    _lockBackgroundScrollUntilRemoved(overlay);
+    try { heightInput.focus(); } catch (_) {}
+  }
+
+  // ============ P5.4 — TIMELINE PACJENTA (UI wariant A: vertical oś + kropki) ============
+
+  // Mapowanie typu wydarzenia na metadata: kolor kropki, label, ikona/SVG.
+  var TIMELINE_TYPE_META = {
+    'measurement':  { label: 'Pomiar',      color: '#0F6E56', bg: '#E1F5EE' },
+    'note':         { label: 'Notatka',     color: '#854F0B', bg: '#FAEEDA' },
+    'observation':  { label: 'Obserwacja',  color: '#185FA5', bg: '#E6F1FB' },
+    'lab':          { label: 'Wynik',       color: '#534AB7', bg: '#EEEDFE' },
+    'medication':   { label: 'Lek',         color: '#A32D2D', bg: '#FCEBEB' },
+    'gh-therapy':   { label: 'Terapia GH',  color: '#0F6E56', bg: '#E1F5EE' }
+  };
+
+  // F1 — Filtry Historii zsynchronizowane z PATIENT_NOTE_CATEGORY_LABELS.
+  // Lekarz w Notatkach widzi 4 kategorie: Kontrola/Obserwacja/Leczenie/Wynik badania.
+  // W Historii dodajemy Pomiar (event measurement) + powyższe 4 kategorie + Wszystko.
+  // Usunięte:
+  //   • 'note' (catch-all śmietnik — każda notatka teraz ląduje pod swoją kategorią)
+  //   • 'lab' / 'medication' (placeholdery future-proof, notatki ze structural fields
+  //     trafiają teraz do 'wynik-badania' / 'treatment' przez _deriveNoteFilterCategory)
+  //   • 'gh-therapy' (placeholder bez modułu — wraca gdy moduł powstanie)
+  var TIMELINE_FILTER_OPTIONS = [
+    { id: 'all',           label: 'Wszystko' },
+    { id: 'measurement',   label: 'Pomiar' },
+    { id: 'observation',   label: 'Obserwacja' },
+    { id: 'treatment',     label: 'Leczenie' },
+    { id: 'wynik-badania', label: 'Wynik badania' },
+    { id: 'followup',      label: 'Kontrola' }
+  ];
+
+  // F1 — Wyprowadza „kategorię filtra" z notatki klinicznej:
+  // priorytet structural fields B3 (medication/labResult) > category > default.
+  // Zwraca jeden z: 'treatment' | 'wynik-badania' | 'observation' | 'followup'.
+  // Używane przez eventMatchesFilter (filtrowanie listy) i _resolveEventMeta (badge/kolor).
+  function _deriveNoteFilterCategory(noteEvent) {
+    if (!noteEvent) return 'observation';
+    if (noteEvent.medication) return 'treatment';
+    if (noteEvent.labResult) return 'wynik-badania';
+    if (noteEvent.category && PATIENT_NOTE_CATEGORY_LABELS[noteEvent.category]) {
+      return noteEvent.category;
+    }
+    return 'observation';
+  }
+
+  // F1 — Decyduje czy event pasuje do bieżącego filtra. Notatki rozdzielają się
+  // po kategorii (treatment/wynik-badania/observation/followup); auto-generated
+  // 'observation' events trafiają pod filtr 'observation' razem z notatkami obs.
+  function eventMatchesFilter(evt, filterId) {
+    if (!evt) return false;
+    if (filterId === 'all') return true;
+    if (evt.type === 'measurement') return filterId === 'measurement';
+    if (evt.type === 'observation') return filterId === 'observation';
+    if (evt.type === 'note') return filterId === _deriveNoteFilterCategory(evt);
+    return false;
+  }
+
+  // F1 — Zwraca meta { label, color, bg } dla badge'a w timeline.
+  // Dla notatek używa palety PATIENT_NOTE_CATEGORY_LABELS (spójność z Notatkami),
+  // dla measurement/observation auto — TIMELINE_TYPE_META.
+  function _resolveEventMeta(evt) {
+    if (!evt) return { label: '?', color: '#5b6672', bg: '#f5fafb' };
+    if (evt.type === 'note') {
+      var cat = _deriveNoteFilterCategory(evt);
+      var pcat = PATIENT_NOTE_CATEGORY_LABELS[cat];
+      if (pcat) return { label: pcat.label, color: pcat.color, bg: pcat.bg };
+    }
+    return TIMELINE_TYPE_META[evt.type] || { label: evt.type, color: '#5b6672', bg: '#f5fafb' };
+  }
+
+  /**
+   * Formatuje dateISO w relatywny napis polski.
+   *   "dziś · 14:30" / "wczoraj" / "3 dni temu" / "12.05.2026"
+   */
+  function _formatTimelineDate(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    var now = new Date();
+    var todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    var dUTC = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+    var diffDays = Math.round((todayUTC - dUTC) / (24 * 3600 * 1000));
+    if (diffDays === 0) {
+      var hh = String(d.getHours()).padStart(2, '0');
+      var mm = String(d.getMinutes()).padStart(2, '0');
+      return 'dziś · ' + hh + ':' + mm;
+    }
+    if (diffDays === 1) return 'wczoraj';
+    if (diffDays > 1 && diffDays <= 14) return diffDays + ' dni temu';
+    var dd = String(d.getDate()).padStart(2, '0');
+    var mo = String(d.getMonth() + 1).padStart(2, '0');
+    var yyyy = d.getFullYear();
+    return dd + '.' + mo + '.' + yyyy;
+  }
+
+  /**
+   * B1.6/B1.7 — formatuje wiek pacjenta z liczby miesięcy do napisu po polsku.
+   *   0 → "noworodek"
+   *   1..11 → "N mies."
+   *   12 → "1 rok"
+   *   13..23 → "1 rok N mies."
+   *   24..47 → "X lata" / "X lata N mies."
+   *   48+ → "X lat" / "X lat N mies."
+   * Używane jako kotwica chipów Pomiar (zamiast daty kalendarzowej) — historia
+   * pomiarów w pediatrii kotwiczy się wiekiem dziecka, nie datą wizyty.
+   */
+  function _formatAge(ageMonths) {
+    if (typeof ageMonths !== 'number' || !isFinite(ageMonths) || ageMonths < 0) return '';
+    var months = Math.round(ageMonths);
+    if (months === 0) return 'noworodek';
+    if (months < 12) return months + ' mies.';
+    var years = Math.floor(months / 12);
+    var remMonths = months - years * 12;
+    function yearWord(n) {
+      if (n === 1) return 'rok';
+      if (n >= 2 && n <= 4) return 'lata';
+      return 'lat';
+    }
+    if (remMonths === 0) return years + ' ' + yearWord(years);
+    return years + ' ' + yearWord(years) + ' ' + remMonths + ' mies.';
+  }
+
+  /**
+   * Renderuje tag zdarzenia (badge typu + treść konkretnego typu).
+   */
+  function _renderTimelineEventBody(event) {
+    var bodyDiv = el('div', null);
+    if (event.type === 'measurement') {
+      // Linia główna: Wzrost + Waga (kluczowe dane antropometryczne)
+      var mainParts = [];
+      if (event.height != null) mainParts.push('Wzrost ' + event.height + ' cm');
+      if (event.weight != null) mainParts.push('Waga ' + event.weight + ' kg');
+      if (mainParts.length) {
+        bodyDiv.appendChild(el('div', {
+          style: 'font-weight:600;font-size:0.92rem;color:#0f2b33;',
+          text: mainParts.join(' · ')
+        }));
+      } else {
+        // Sentinel: snapshot bez wzrostu/wagi (rzadko). Pokazujemy wprost.
+        bodyDiv.appendChild(el('div', {
+          style: 'font-weight:500;font-size:0.88rem;color:#9aa8aa;font-style:italic;',
+          text: 'Snapshot bez pomiarów antropometrycznych'
+        }));
+      }
+      // Linia sub: BMI + prędkość wzrastania (cm/rok od poprzedniego pomiaru)
+      // B1.6: usunęliśmy "Wiek N lat" z sub-line — wiek pacjenta jest teraz
+      // w nagłówku chipa Pomiar (kotwica chronologiczna). Sub-line zostaje skoncentrowana
+      // na danych klinicznych (BMI + prędkość wzrastania).
+      var subParts = [];
+      if (event.bmi != null) subParts.push('BMI ' + event.bmi);
+      if (event.growthVelocity != null) subParts.push('Prędkość ' + event.growthVelocity + ' cm/rok');
+      if (subParts.length) {
+        bodyDiv.appendChild(el('div', {
+          style: 'font-size:0.86rem;color:#374151;line-height:1.5;margin-top:2px;',
+          text: subParts.join(' · ')
+        }));
+      }
+    } else if (event.type === 'note') {
+      // B3.2f: strukturalny render dla notatek z medication / labResult.
+      // Jeśli notatka ma pole strukturalne — pokazujemy dedykowaną linię
+      // (Lek: NAZWA — Dawka: X (akcja) / TEST: WARTOŚĆ (norma: ...)). Tytuł
+      // notatki pozostaje jako label nad strukturalną linią. Body (wolny tekst)
+      // pokazujemy zawsze, jako ewentualny komentarz lekarza pod strukturą.
+      if (event.title) {
+        bodyDiv.appendChild(el('div', {
+          style: 'font-weight:600;font-size:0.92rem;color:#0f2b33;',
+          text: event.title
+        }));
+      }
+      if (event.medication && event.medication.action) {
+        var medLine = el('div', {
+          style: 'display:flex;align-items:center;gap:6px;margin-top:4px;'
+            + 'padding:4px 8px;background:#fff8ee;border:0.5px solid #f0e0c8;'
+            + 'border-radius:6px;font-size:0.84rem;color:#7a5a1a;'
+        });
+        medLine.appendChild(el('span', { text: '💊', style: 'font-size:0.95rem;' }));
+        var medParts = [];
+        if (event.medication.name) medParts.push(event.medication.name);
+        if (event.medication.dose) medParts.push(event.medication.dose);
+        var actionLabel = { start: 'włączony', change: 'zmiana dawki', stop: 'zakończony' }[event.medication.action] || event.medication.action;
+        medParts.push('(' + actionLabel + ')');
+        if (event.medication.previousDose && event.medication.action === 'change') {
+          medParts.push('· z ' + event.medication.previousDose);
+        }
+        medLine.appendChild(el('span', { text: medParts.join(' '), style: 'flex:1;' }));
+        bodyDiv.appendChild(medLine);
+      }
+      if (event.labResult && (event.labResult.test || event.labResult.value)) {
+        var labLine = el('div', {
+          style: 'display:flex;align-items:center;gap:6px;margin-top:4px;'
+            + 'padding:4px 8px;background:#eef6ff;border:0.5px solid #cde0f5;'
+            + 'border-radius:6px;font-size:0.84rem;color:#1a4a7a;'
+        });
+        labLine.appendChild(el('span', { text: '🧪', style: 'font-size:0.95rem;' }));
+        var labParts = [];
+        if (event.labResult.test) labParts.push(event.labResult.test + ':');
+        if (event.labResult.value) labParts.push(event.labResult.value);
+        if (event.labResult.norm) labParts.push('(norma: ' + event.labResult.norm + ')');
+        labLine.appendChild(el('span', { text: labParts.join(' '), style: 'flex:1;' }));
+        bodyDiv.appendChild(labLine);
+      }
+      if (event.body) {
+        bodyDiv.appendChild(el('div', {
+          style: 'font-size:0.86rem;color:#374151;line-height:1.5;margin-top:2px;white-space:pre-wrap;word-wrap:break-word;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;',
+          text: event.body
+        }));
+      }
+      if (event.completedAtISO) {
+        bodyDiv.appendChild(el('div', {
+          style: 'font-size:0.74rem;color:#0F6E56;margin-top:3px;',
+          text: '✓ Wykonano'
+        }));
+      }
+    } else if (event.type === 'observation') {
+      bodyDiv.appendChild(el('div', {
+        style: 'font-weight:600;font-size:0.92rem;color:#0f2b33;',
+        text: event.title || 'Obserwacja'
+      }));
+      if (event.description) {
+        bodyDiv.appendChild(el('div', {
+          style: 'font-size:0.86rem;color:#374151;line-height:1.5;margin-top:2px;',
+          text: event.description
+        }));
+      }
+      if (event.autoGenerated) {
+        bodyDiv.appendChild(el('div', {
+          style: 'font-size:0.7rem;color:#9aa8aa;margin-top:3px;font-style:italic;',
+          text: 'Automatyczne wykrycie — zweryfikuj ręcznie'
+        }));
+      }
+    }
+    return bodyDiv;
+  }
+
+  /**
+   * Główny renderer Timeline. Pobiera eventy z vault.listPatientTimelineEvents,
+   * pozwala filtrować po typie (sticky pill button row na górze), renderuje
+   * vertical timeline (pionowa oś + kolorowane kropki + karty zdarzeń).
+   *
+   * Klikalne wydarzenia:
+   *   • measurement → switchTab('traj') — przełącz na siatki centylowe
+   *   • note → switchTab('notes') — tab Notatki (P4)
+   *   • observation, lab, medication, gh-therapy — na razie tylko statyczne karty
+   *     (modal "Otwórz" w przyszłości po dodaniu dedykowanych modułów)
+   *
+   * @param {HTMLElement} container — div sekcji w karcie pacjenta
+   * @param {string} patientId
+   * @param {Function} reRender — callback do ponownego wywołania
+   */
+  async function renderTimelineSection(container, patientId, reRender, onPick, listOptions) {
+    // onPick/listOptions PRZEKAZYWANE jawnie z showPatientCard przez reRenderTimeline.
+    // To funkcja MODUŁOWA (nie zagnieżdżona w showPatientCard), więc NIE domyka się
+    // nad jego zmiennymi — bez tych parametrów menu ⋮ (Edytuj/Usuń) odwoływało się
+    // do nieistniejących onPick/listOptions → ReferenceError → przebudowa karty się
+    // wywalała i Historia nie odświeżała się po korekcie.
+    var V = getVault();
+    clear(container);
+    if (!V || typeof V.listPatientTimelineEvents !== 'function') {
+      container.appendChild(el('p', { class: 'vilda-patient-empty-msg', text: 'Historia pacjenta nie jest dostępna.' }));
+      return;
+    }
+
+    // Header z licznikiem + filtry
+    var headerWrap = el('div', { style: 'margin-bottom:12px;' });
+    headerWrap.appendChild(el('p', {
+      class: 'vilda-patient-section-h',
+      text: 'Historia pacjenta',
+      style: 'margin:0 0 8px 0;'
+    }));
+
+    // Filtry — sticky pill row (jak w notatki.html dla kategorii)
+    var filtersRow = el('div', {
+      class: 'vilda-patient-timeline-filters',
+      style: 'display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;'
+    });
+    // L1 — multi-select toggle pills.
+    // State: activeFilters = Set kategorii NOTATEK które są aktywne ('measurement',
+    // 'treatment', 'observation', 'wynik-badania', 'followup'). Pusty zbiór =
+    // „Wszystko" świeci się = pokaż wszystkie eventy. Klik konkretnej kategorii
+    // toggluje ją w secie (nie deselectuje innych). Klik „Wszystko" robi reset
+    // (activeFilters.clear()). filterAllowsEvent: pusty set → true; inaczej OR
+    // po wszystkich aktywnych kategoriach.
+    var activeFilters = new Set();
+    var filterPills = [];
+
+    // F1 — Helper: zwraca paletę pill filtra W STANIE NIEAKTYWNYM.
+    // Aktywny stan ('#00838d' teal + biały tekst) jest obsługiwany osobno
+    // w refreshFilterUI — nie tutaj. Inaczej 'all' wyglądałoby aktywne nawet
+    // gdy aktywny jest inny filtr (bug F1-fix2: dwa pill'e wyglądały aktywne).
+    //
+    // Nieaktywne stany:
+    //   • 'all'         → neutralny szary
+    //   • 'measurement' → light green z TIMELINE_TYPE_META
+    //   • kategorie     → light kolor z PATIENT_NOTE_CATEGORY_LABELS (spójność z Notatkami)
+    function _filterPillPalette(filterId) {
+      if (filterId === 'all') return { bg: '#f5fafb', color: '#5b6672' };
+      if (filterId === 'measurement') {
+        var mm = TIMELINE_TYPE_META.measurement;
+        return mm ? { bg: mm.bg, color: mm.color } : { bg: '#f5fafb', color: '#5b6672' };
+      }
+      // observation / treatment / wynik-badania / followup → paleta z Notatek (spójność)
+      var pcat = PATIENT_NOTE_CATEGORY_LABELS[filterId];
+      if (pcat) return { bg: pcat.bg, color: pcat.color };
+      return { bg: '#f5fafb', color: '#5b6672' };
+    }
+
+    // F1-fix: ios26-v2.css ma `.liquid-ios26 button { background:...!important; color:#111!important }`
+    // który nadpisuje inline `style="background:..."`. Bez !important pill'e wychodzą
+    // semi-przezroczyste białe z czarnym tekstem niezależnie od typu. Musimy
+    // używać setProperty z 'important' albo wpinać !important w inline string.
+    function _applyPillStyle(btn, bg, color) {
+      btn.style.setProperty('background', bg, 'important');
+      btn.style.setProperty('color', color, 'important');
+    }
+    function refreshFilterUI() {
+      filterPills.forEach(function (p) {
+        var isAll = (p.opt.id === 'all');
+        // L1: „Wszystko" aktywne gdy activeFilters.size === 0 (pusty set).
+        // Inna kategoria aktywna gdy w secie. Pill aktywny: ciemny kolor swojej
+        // palety (zamiast jednolitego teal jak przed L1) — daje jasny wizualny
+        // sygnał której kategorii filtr przynależy.
+        var isActive = isAll ? (activeFilters.size === 0) : activeFilters.has(p.opt.id);
+        var pal = _filterPillPalette(p.opt.id);
+        if (isActive) {
+          if (isAll) {
+            _applyPillStyle(p.btn, '#00838d', '#fff');
+          } else {
+            // Aktywny pill kategorii: użyj jej własnego ciemnego koloru (pal.color)
+            // jako tła, biały tekst. Dzięki temu Leczenie świeci się niebiesko,
+            // Wynik fioletowo, etc. — łatwo rozpoznać które filtry aktywne.
+            _applyPillStyle(p.btn, pal.color, '#fff');
+          }
+        } else {
+          _applyPillStyle(p.btn, pal.bg, pal.color);
+        }
+      });
+      rebuildList();
+    }
+    TIMELINE_FILTER_OPTIONS.forEach(function (opt) {
+      var pal = _filterPillPalette(opt.id);
+      var isAllInit = (opt.id === 'all');
+      var isActiveInit = isAllInit; // przy starcie tylko „Wszystko" aktywne
+      var btn = el('button', {
+        type: 'button',
+        text: opt.label,
+        style: 'border:none !important;padding:4px 10px;font-size:0.74rem;font-weight:600;border-radius:999px !important;cursor:pointer;font-family:inherit;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;box-shadow:none !important;',
+        onclick: function () {
+          // L1 — multi-select toggle:
+          //   • „Wszystko" → reset (clear), wszystkie inne wygaszone
+          //   • Inna kategoria → toggle (jeśli była w secie, usuń; inaczej dodaj)
+          //     — pozostałe aktywne kategorie zostają
+          if (opt.id === 'all') {
+            activeFilters.clear();
+          } else if (activeFilters.has(opt.id)) {
+            activeFilters.delete(opt.id);
+          } else {
+            activeFilters.add(opt.id);
+          }
+          refreshFilterUI();
+        }
+      });
+      // F1-fix: kolory ustawiamy przez setProperty('important') żeby pokonać
+      // .liquid-ios26 button { background:...!important } z ios26-v2.css.
+      _applyPillStyle(btn, isActiveInit ? '#00838d' : pal.bg, isActiveInit ? '#fff' : pal.color);
+      filterPills.push({ opt: opt, btn: btn });
+      filtersRow.appendChild(btn);
+    });
+    headerWrap.appendChild(filtersRow);
+    container.appendChild(headerWrap);
+
+    // B3.5 — Jednorazowy dymek wyjaśniający nowy układ Historii po wdrożeniu B3.
+    // Pokazywany tylko przy pierwszym wejściu w zakładkę (per-urządzenie, przez
+    // localStorage flag). Po kliknięciu „×" lub „Rozumiem" znika i już nie wraca.
+    //
+    // Lekarz po deploy B3 zobaczy: pomiary i notatki w jednej osi czasu zamiast
+    // 3-warstwowego układu (notatki bez wizyty / pomiary). Dymek tłumaczy gdzie
+    // teraz są luźne notatki (zakładka Notatki, sekcja „Notatki ogólne").
+    var B3_HISTORY_TOOLTIP_KEY = 'vilda:b3-history-tooltip-seen';
+    var tooltipSeen = false;
+    try {
+      if (global.localStorage) {
+        tooltipSeen = global.localStorage.getItem(B3_HISTORY_TOOLTIP_KEY) === '1';
+      }
+    } catch (_) {}
+    if (!tooltipSeen) {
+      var tooltipBox = el('div', {
+        class: 'vilda-b3-history-tooltip',
+        style: 'display:flex;align-items:flex-start;gap:10px;padding:12px 14px;margin-bottom:14px;'
+          + 'background:#eef6ff;border:0.5px solid #cde0f5;border-radius:10px;'
+          + 'color:#1a4a7a;font-size:0.86rem;line-height:1.5;'
+      });
+      // Info icon (Tabler ti-info-circle outline)
+      var infoIcon = el('span', {
+        style: 'flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;'
+          + 'width:20px;height:20px;color:#1a4a7a;margin-top:1px;'
+      });
+      infoIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" '
+        + 'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+        + '<circle cx="12" cy="12" r="9"/><path d="M12 8h.01"/><path d="M11 12h1v4h1"/></svg>';
+      tooltipBox.appendChild(infoIcon);
+
+      var tooltipText = el('div', { style: 'flex:1;' });
+      tooltipText.innerHTML = '<strong>Historia to oś czasu zdarzeń klinicznych</strong> — pomiary, '
+        + 'włączenie leków, wyniki badań. Luźne notatki znajdziesz w zakładce '
+        + '<strong>Notatki</strong>, sekcja „Notatki ogólne".';
+      tooltipBox.appendChild(tooltipText);
+
+      function _dismissTooltip() {
+        try {
+          if (global.localStorage) global.localStorage.setItem(B3_HISTORY_TOOLTIP_KEY, '1');
+        } catch (_) {}
+        if (tooltipBox.parentNode) tooltipBox.parentNode.removeChild(tooltipBox);
+      }
+
+      var dismissBtn = el('button', {
+        type: 'button',
+        'aria-label': 'Zamknij',
+        title: 'Zamknij (już nie pokazuj)',
+        style: 'flex:0 0 auto;background:transparent;border:0;color:#1a4a7a;font-size:1.1rem;'
+          + 'font-weight:600;cursor:pointer;padding:0 4px;line-height:1;align-self:flex-start;',
+        text: '×',
+        onclick: _dismissTooltip
+      });
+      tooltipBox.appendChild(dismissBtn);
+      container.appendChild(tooltipBox);
+    }
+
+    // Wczytanie eventów
+    var events = [];
+    try { events = await V.listPatientTimelineEvents(patientId); }
+    catch (e) { logError('listPatientTimelineEvents', e); }
+
+    // Container listy (vertical timeline z pionową osią)
+    // B-fix UX (post-B3): wewnętrzny scroll dla mixed timeline. Header (tytuł +
+    // pill filtrów + tooltip B3.5) zostaje NAD scrollem — filtry zawsze widoczne,
+    // user może filtrować bez scrollowania w górę. Same eventy scrollują się
+    // wewnętrznie. Wymiary identyczne jak w Notatkach (spójność UX). Padding-left
+    // przesunięty z listWrap na wewnętrzny wrapper żeby pionowa oś (axis) zaczynała
+    // się od krawędzi scroll containera, nie od miejsca padding-left=28px.
+    var listWrap = el('div', {
+      class: 'vilda-patient-timeline-list',
+      style: 'position:relative;padding-left:28px;'
+        + 'max-height:min(calc(100vh - 320px), 720px);min-height:280px;'
+        + 'overflow-y:auto;overflow-x:hidden;'
+        + 'padding-right:4px;'
+        + '-webkit-overflow-scrolling:touch;'
+        + 'scrollbar-gutter:stable;'
+    });
+    // Pionowa linia osi
+    var axis = el('div', {
+      style: 'position:absolute;left:10px;top:4px;bottom:4px;width:2px;background:#d7e9ec;'
+    });
+    listWrap.appendChild(axis);
+    container.appendChild(listWrap);
+
+    // ── B1.6: Render pojedynczej karty event w pionowej osi ─────────────────
+    // Wydzielona z głównego rebuildList — używana przez warstwy 1 (wolne notatki),
+    // 2 (pomiary po wieku + kotwiczone notatki/obserwacje).
+    //
+    // headerText: tekst NAD chipem (data dla wolnych notatek; wiek dla pomiarów;
+    //   "Notatka z wizyty" / null dla kotwiczonych — kotwiczone są wewnątrz grupy
+    //   pomiaru, więc nie potrzebują własnego headera daty).
+    // dotIndent: 'normal' (lewa krawędź osi) lub 'nested' (lekko cofnięte
+    //   wewnątrz grupy pomiaru — pokazuje że to dziecko pomiaru).
+    function _renderTimelineCard(event, headerText, dotIndent) {
+      // F1: meta z _resolveEventMeta — dla notatek paleta z PATIENT_NOTE_CATEGORY_LABELS
+      // (spójność z zakładką Notatki). Notatka kategorii „Leczenie" → niebieski badge
+      // i niebieska kropka na osi, identycznie jak w Notatkach.
+      var meta = _resolveEventMeta(event);
+      var wrapper = el('div', { style: 'position:relative;margin-bottom:' + (dotIndent === 'nested' ? '8px' : '14px') + ';' });
+
+      // Kropka na osi — kolor wg typu. Nested → mniejsza, lekko cofnięta w bok.
+      var dotSize = (dotIndent === 'nested') ? 10 : 14;
+      var dotLeft = (dotIndent === 'nested') ? -20 : -22;
+      var dotTop = (dotIndent === 'nested') ? 6 : 4;
+      wrapper.appendChild(el('div', {
+        style: 'position:absolute;left:' + dotLeft + 'px;top:' + dotTop + 'px;'
+          + 'width:' + dotSize + 'px;height:' + dotSize + 'px;border-radius:50%;'
+          + 'background:' + meta.color + ';border:2px solid #fff;box-shadow:0 0 0 1px ' + meta.color + ';'
+      }));
+
+      // Header tekst nad kartą (wiek lub data; opcjonalny)
+      if (headerText) {
+        wrapper.appendChild(el('div', {
+          style: 'font-size:0.7rem;color:#5b6672;font-weight:500;margin-bottom:3px;',
+          text: headerText
+        }));
+      }
+
+      var card = el('div', {
+        style: 'background:#f5fafb;border-radius:10px;padding:' + (dotIndent === 'nested' ? '8px 12px' : '10px 12px') + ';'
+          + 'display:flex;flex-direction:column;gap:6px;cursor:pointer;transition:background 0.15s;position:relative;',
+        onmouseover: function () { card.style.background = '#ebf3f5'; },
+        onmouseout: function () { card.style.background = '#f5fafb'; },
+        onclick: function () { _handleTimelineEventClick(event); }
+      });
+
+      // Badge typu
+      card.appendChild(el('span', {
+        style: 'display:inline-block;padding:2px 8px;font-size:0.7rem;font-weight:600;color:'
+          + meta.color + ';background:' + meta.bg + ';border-radius:999px;align-self:flex-start;',
+        text: meta.label
+      }));
+
+      card.appendChild(_renderTimelineEventBody(event));
+
+      // P6.6c — Menu „⋮" w prawym górnym rogu chipa Pomiar. Otwiera proste menu
+      // z akcjami Edytuj i Usuń (gdy event ma snapshotId) lub samą opcję
+      // „Edytuj w kalkulatorze" (I2: gdy snapshotId brak — pomiar wirtualny
+      // z payload.user.measurementHistory / advanced.data.measurements).
+      if (event.type === 'measurement') {
+        var menuBtn = el('button', {
+          type: 'button',
+          'aria-label': 'Akcje dla pomiaru',
+          title: 'Akcje',
+          style: 'position:absolute;top:6px;right:8px;background:transparent;border:0;'
+            + 'color:#5b6672;font-size:1.1rem;font-weight:700;padding:2px 8px;cursor:pointer;'
+            + 'line-height:1;border-radius:6px;',
+          text: '⋮',
+          onmouseover: function () { menuBtn.style.background = 'rgba(0,131,141,0.1)'; menuBtn.style.color = '#00838d'; },
+          onmouseout: function () { menuBtn.style.background = 'transparent'; menuBtn.style.color = '#5b6672'; },
+          onclick: function (e) {
+            e.stopPropagation();
+            _openMeasurementActionMenu(event, menuBtn);
+          }
+        });
+        card.appendChild(menuBtn);
+      }
+
+      wrapper.appendChild(card);
+      return wrapper;
+    }
+
+    // I2 — Helper nawigacji do tabeli „Historyczne pomiary" w głównym
+    // kalkulatorze. Pomiary wpisane w „Zaawansowane obliczenia wzrostowe" są
+    // wirtualne (bez snapshotId), więc nie da się ich edytować w karcie
+    // pacjenta. Ten helper:
+    //   1) Zamyka kartę pacjenta (hide overlay)
+    //   2) Jeśli aktualna strona ma elementy #toggleAdvancedGrowth +
+    //      #advancedGrowthSection — rozwija sekcję i scrolluje do niej.
+    //   3) Inaczej — ustawia sessionStorage flagi (vilda:pendingPatientLoad +
+    //      vilda:postLoadScroll) i nawiguje do index.html. Chrome.js po
+    //      unlocku wykonuje to samo (rozwija + scrolluje).
+    function _navigateToHistoricalMeasurements(patientId) {
+      try { hide(); } catch (_) {}
+
+      function performInPageScroll() {
+        var toggleBtn = global.document.getElementById('toggleAdvancedGrowth');
+        var section = global.document.getElementById('advancedGrowthSection');
+        if (!toggleBtn || !section) return false;
+        // Rozwiń sekcję jeśli zwinięta (display:none lub style nieustawiony).
+        var disp = '';
+        try { disp = (section.style && section.style.display) || ''; } catch (_) {}
+        if (disp === '' || disp === 'none') {
+          try { toggleBtn.click(); } catch (_) {}
+        }
+        try { section.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {}
+        return true;
+      }
+
+      // Spróbuj in-place (jesteśmy już na index.html).
+      if (performInPageScroll()) return;
+
+      // Inaczej: set flagi + nawiguj.
+      try {
+        if (global.sessionStorage) {
+          if (patientId) global.sessionStorage.setItem('vilda:pendingPatientLoad', patientId);
+          global.sessionStorage.setItem('vilda:postLoadScroll', 'advancedGrowth');
+        }
+      } catch (_) {}
+      try { global.location.assign('index.html'); } catch (_) {}
+    }
+
+    // P6.6c — Mini popup menu „Edytuj / Usuń" przy chipie Pomiar.
+    function _openMeasurementActionMenu(event, anchorBtn) {
+      // Defensywnie usuń poprzednie menu (jednoczesne otwarcia).
+      try {
+        var prev = global.document.querySelectorAll('.vilda-timeline-measure-menu');
+        for (var i = 0; i < prev.length; i += 1) prev[i].remove();
+      } catch (_) {}
+
+      // Ikony liniowe (stroke=currentColor) — spójne z resztą apki, zamiast emoji.
+      var ICON_EDIT = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>';
+      var ICON_NOTE = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>';
+      var ICON_TRASH = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
+
+      // Shell jak .vilda-auth-sort-dropdown (radius 14, obwódka 1.5px, turkusowy
+      // cień, overflow hidden); wiersze pełnej szerokości z hairline-dzielnikami.
+      var menu = el('div', {
+        class: 'vilda-timeline-measure-menu',
+        // Fix: montujemy na document.body z position:fixed (pozycja liczona z rect
+        // przycisku), żeby menu NIE było obcinane przez overflow przodków ani nie
+        // chowało się pod inne elementy gdy chip jest na dole listy. Pozycję i
+        // ewentualny flip w górę ustawia _mountMeasureMenu po dodaniu do DOM.
+        style: 'position:fixed;top:0;left:0;background:#fff;'
+          + 'border:1.5px solid #e0e8eb;border-radius:14px;'
+          + 'box-shadow:0 8px 28px rgba(0,60,80,0.13);overflow:hidden;'
+          + 'z-index:1000002;min-width:210px;'
+      });
+
+      // Montaż menu na body + pozycjonowanie fixed względem przycisku ⋮.
+      function _mountMeasureMenu(menuEl, btn) {
+        try { global.document.body.appendChild(menuEl); } catch (_) { return; }
+        try {
+          var r = btn.getBoundingClientRect();
+          var vw = global.innerWidth || global.document.documentElement.clientWidth || 360;
+          var vh = global.innerHeight || global.document.documentElement.clientHeight || 640;
+          var mw = menuEl.offsetWidth || 210;
+          var mh = menuEl.offsetHeight || 0;
+          var left = Math.round(r.right - mw);          // prawa krawędź menu = prawa krawędź przycisku
+          if (left + mw > vw - 8) left = vw - 8 - mw;
+          if (left < 8) left = 8;
+          var top = Math.round(r.bottom + 4);           // domyślnie pod przyciskiem
+          if (top + mh > vh - 8) {                       // brak miejsca w dół → otwórz w górę
+            var up = Math.round(r.top - mh - 4);
+            top = (up >= 8) ? up : Math.max(8, vh - 8 - mh);
+          }
+          menuEl.style.left = left + 'px';
+          menuEl.style.top = top + 'px';
+        } catch (_) {}
+        // Menu fixed odkleja się przy scrollu/resize — zamykamy je wtedy.
+        var onScrollResize = function () {
+          try { menuEl.remove(); } catch (_) {}
+          try { global.removeEventListener('scroll', onScrollResize, true); } catch (_) {}
+          try { global.removeEventListener('resize', onScrollResize, true); } catch (_) {}
+        };
+        try {
+          global.addEventListener('scroll', onScrollResize, true);
+          global.addEventListener('resize', onScrollResize, true);
+        } catch (_) {}
+      }
+
+      // Propozycja B — ikona w turkusowym kafelku + etykieta. „danger" → czerwień
+      // (tekst, ikona) + czerwony kafelek. Bez emoji.
+      function makeItem(iconSvg, label, onAction, danger) {
+        var chip = el('span', {
+          html: iconSvg,
+          style: 'display:inline-flex;width:28px;height:28px;border-radius:8px;'
+            + 'align-items:center;justify-content:center;flex:0 0 auto;'
+            + 'background:' + (danger ? '#fceaea' : '#e1f5ee') + ';'
+            + 'color:' + (danger ? '#A32D2D' : '#00838d') + ';'
+        });
+        return el('button', {
+          type: 'button',
+          class: danger ? 'is-danger' : '',
+          style: 'display:flex;align-items:center;gap:12px;width:100%;'
+            + 'padding:11px 14px;background:#fff;border:0;'
+            + 'border-bottom:1px solid #f0f4f5;text-align:left;'
+            + 'font-size:15px;font-family:inherit;cursor:pointer;'
+            + 'color:' + (danger ? '#A32D2D' : '#0f2b33') + ';',
+          onmouseover: function (e) { e.currentTarget.style.background = danger ? '#fceaea' : '#f5fafb'; },
+          onmouseout: function (e) { e.currentTarget.style.background = '#fff'; },
+          onclick: function (e) {
+            e.stopPropagation();
+            menu.remove();
+            onAction();
+          }
+        }, [chip, label]);
+      }
+      // Usuwa dolny dzielnik z ostatniego wiersza menu (estetyka, jak :last-child).
+      function stripLastDivider() {
+        try { if (menu.lastElementChild) menu.lastElementChild.style.borderBottom = 'none'; } catch (_) {}
+      }
+
+      // I2: pomiary historyczne (z payload.user.measurementHistory /
+      // advanced.data.measurements) są wirtualne — nie mają fizycznego
+      // snapshotId w vault. Dla nich edycja jest w głównym kalkulatorze
+      // (tabela „Historyczne pomiary"). Pokazujemy jeden item — „Edytuj
+      // w kalkulatorze" — który zamyka kartę i otwiera kalkulator z
+      // rozwiniętą sekcją Zaawansowane obliczenia wzrostowe.
+      var hasSnapshotId = typeof event.snapshotId === 'string' && event.snapshotId;
+      if (!hasSnapshotId) {
+        menu.appendChild(makeItem(ICON_EDIT, 'Edytuj w kalkulatorze', function () {
+          _navigateToHistoricalMeasurements(event.patientId);
+        }));
+        stripLastDivider();
+        _mountMeasureMenu(menu, anchorBtn);
+        // Menu zamyka się przy kliknięciu poza nim.
+        setTimeout(function () {
+          function offClick(ev) {
+            if (!menu.contains(ev.target)) {
+              menu.remove();
+              global.document.removeEventListener('click', offClick);
+            }
+          }
+          global.document.addEventListener('click', offClick);
+        }, 0);
+        return;
+      }
+
+      menu.appendChild(makeItem(ICON_EDIT, 'Edytuj', function () {
+        // P7-edit: edytujemy KONKRETNY wiersz Historii (po uid/kluczu), nie snapshot.
+        // snapshotId zostaje tylko jako kontekst prefilla (płeć/DOB/nazwa z najnowszego).
+        showQuickMeasureModal(event.patientId, {
+          mode: 'edit',
+          snapshotId: event.snapshotId,
+          rowRef: { uid: event.uid || null, key: event.rowKey || null },
+          rowValues: { ageMonths: event.ageMonths, height: event.height, weight: event.weight },
+          onSaved: function () {
+            // Po zapisie — przerenderuj kartę pacjenta (timeline + status + siatka).
+            // G2: restore Historia (chip Pomiar pochodzi z Historii) zamiast Status.
+            // Fix: zachowujemy onPick + listOptions (z zasięgu showPatientCard), żeby
+            // po rerenderze NIE zniknął przycisk „Wczytaj tego pacjenta" (powstaje
+            // tylko gdy onPick jest funkcją). Wcześniej przekazywane null gasiło go.
+            showPatientCard(event.patientId, onPick, listOptions, { activeTab: 'timeline' });
+          }
+        });
+      }));
+      // B2.1 — Dodaj notatkę do tej wizyty (kotwiczoną wiekiem tego pomiaru).
+      // Wykorzystuje istniejący showPatientNoteEditor z suggestLinkedAge =
+      // event.ageMonths, więc edytor pokazuje checkbox „Powiąż z bieżącą wizytą
+      // (wiek X)" zaznaczony domyślnie. Notatka po zapisie pojawi się w
+      // zakładce Historia jako kotwiczona pod chipem Pomiar (L-connector).
+      menu.appendChild(makeItem(ICON_NOTE, 'Dodaj notatkę', function () {
+        if (typeof showPatientNoteEditor !== 'function') {
+          try { global.alert('Edytor notatki niedostępny — odśwież stronę.'); } catch (_) {}
+          return;
+        }
+        showPatientNoteEditor({
+          patientId: event.patientId,
+          note: null,
+          suggestLinkedAge: event.ageMonths,
+          onSaved: function () {
+            // G2: notatka dodana z Historii (kotwiczona do tego pomiaru) →
+            // re-render karty pacjenta z aktywnym tabem Historia.
+            // Fix: zachowujemy onPick + listOptions, by nie zniknął „Wczytaj tego pacjenta".
+            showPatientCard(event.patientId, onPick, listOptions, { activeTab: 'timeline' });
+          }
+        });
+      }));
+      menu.appendChild(makeItem(ICON_TRASH, 'Usuń pomiar', function () {
+        var ageLabel = _formatAge(event.ageMonths) || ('wiek ' + event.ageMonths + ' mies.');
+        if (!global.confirm('Usunąć pomiar (' + ageLabel + ')? Tej operacji nie można cofnąć.')) return;
+        var V = getVault();
+        if (!V || typeof V.deleteMeasurementRow !== 'function') {
+          try { global.alert('Funkcja usuwania pomiaru niedostępna — odśwież stronę.'); } catch (_) {}
+          return;
+        }
+        // P7-edit: usuwamy KONKRETNY wiersz Historii (po uid/kluczu), NIE cały snapshot.
+        V.deleteMeasurementRow(event.patientId, { uid: event.uid || null, key: event.rowKey || null }).then(function () {
+          // Sygnał dla karty „Ostatni pomiar": zbiór pomiarów się zmienił.
+          try {
+            global.document.dispatchEvent(new global.CustomEvent('vilda:measurement-changed', {
+              detail: { patientId: event.patientId, action: 'delete' }
+            }));
+          } catch (_) {}
+          // G2: po usunięciu pomiaru z Historii — wróć do Historii (nie Status).
+          // Fix: zachowujemy onPick + listOptions (z zasięgu showPatientCard), żeby
+          // po rerenderze NIE zniknął przycisk „Wczytaj tego pacjenta" (powstaje
+          // tylko gdy onPick jest funkcją). Wcześniej przekazywane null gasiło go.
+          showPatientCard(event.patientId, onPick, listOptions, { activeTab: 'timeline' });
+        }).catch(function (err) {
+          logError('deleteSnapshot from timeline', err);
+          try {
+            global.alert((err && err.message)
+              ? err.message
+              : 'Nie udało się usunąć pomiaru.');
+          } catch (_) {}
+        });
+      }, true));
+      stripLastDivider();
+
+      // Menu zamyka się przy kliknięciu poza nim.
+      var closeOnOutside = function (ev) {
+        if (menu.contains(ev.target) || (anchorBtn && anchorBtn.contains(ev.target))) return;
+        menu.remove();
+        global.document.removeEventListener('click', closeOnOutside, true);
+      };
+      // Defer registration o jedną mikrozadanie, by nie złapać bieżącego kliku.
+      setTimeout(function () {
+        global.document.addEventListener('click', closeOnOutside, true);
+      }, 0);
+
+      // Menu montowane na body z position:fixed (patrz _mountMeasureMenu) — nie
+      // jest obcinane przez overflow przodków i nie chowa się na dole listy.
+      _mountMeasureMenu(menu, anchorBtn);
+    }
+
+    function _renderSectionHeader(text) {
+      return el('div', {
+        style: 'font-size:0.72rem;font-weight:600;color:#5b6672;text-transform:uppercase;'
+          + 'letter-spacing:0.05em;margin:18px 0 10px -28px;padding-left:28px;',
+        text: text
+      });
+    }
+
+    // B2 — Format daty utworzenia dla chipa kotwiczonej notatki (prawy górny róg).
+    // Konwencja PL: DD-MM-RRRR. Zwraca '' dla null/nieprawidłowych dat.
+    function _formatDateDDMMYYYY(iso) {
+      if (!iso) return '';
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) return '';
+      var pad = function (n) { return n < 10 ? '0' + n : String(n); };
+      return pad(d.getDate()) + '-' + pad(d.getMonth() + 1) + '-' + d.getFullYear();
+    }
+
+    // B2 (Wariant 1) — Karta kotwiczonej notatki z L-łącznikiem + wcięciem.
+    // Wstawiana PO chipie Pomiar dla tego samego wieku. Visualnie „dziecko"
+    // pomiaru: wcięta o 28px w prawo (poza standardową osią), SVG L-connector
+    // łączy lewą krawędź notatki z lewą krawędzią pomiaru powyżej.
+    // Data createdAtISO w prawym górnym rogu (format DD-MM-RRRR).
+    //
+    // event: typowo 'note' lub 'observation' z linkedAgeMonths != null.
+    function _renderAnchoredCard(event) {
+      // F1: meta z _resolveEventMeta (paleta wg kategorii notatki — patrz _renderTimelineCard).
+      var meta = _resolveEventMeta(event);
+
+      // Wrapper: relative do absolutnie pozycjonowanego SVG L-connector.
+      // padding-left 36px = 8px ramienia poziomego L + 28px standardowego wcięcia osi.
+      // margin-left 28px = przesunięcie chipa w prawo poza oś (tabulator).
+      var wrapper = el('div', {
+        style: 'position:relative;margin-bottom:14px;margin-left:28px;padding-left:36px;'
+      });
+
+      // SVG L-connector: zaczyna się od lewej krawędzi (gdzie była kropka)
+      // i zagina w prawo do lewej krawędzi karty notatki.
+      // Stroke w kolorze typu (kasztanowy dla notatki, niebieski dla obserwacji).
+      var svgL = global.document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svgL.setAttribute('width', '36');
+      svgL.setAttribute('height', '24');
+      svgL.setAttribute('viewBox', '0 0 36 24');
+      svgL.setAttribute('aria-hidden', 'true');
+      svgL.style.position = 'absolute';
+      svgL.style.left = '0';
+      svgL.style.top = '-6px';
+      svgL.style.pointerEvents = 'none';
+      var pathL = global.document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      pathL.setAttribute('d', 'M 4 0 L 4 14 Q 4 18 8 18 L 36 18');
+      pathL.setAttribute('stroke', meta.color);
+      pathL.setAttribute('stroke-width', '1.2');
+      pathL.setAttribute('fill', 'none');
+      pathL.setAttribute('stroke-linecap', 'round');
+      svgL.appendChild(pathL);
+      wrapper.appendChild(svgL);
+
+      // Karta notatki — klikalna (otwiera tab Notatki przez _handleTimelineEventClick).
+      var card = el('div', {
+        style: 'background:#f5fafb;border-radius:10px;padding:10px 12px;'
+          + 'display:flex;flex-direction:column;gap:6px;cursor:pointer;'
+          + 'transition:background 0.15s;position:relative;',
+        onmouseover: function () { card.style.background = '#ebf3f5'; },
+        onmouseout: function () { card.style.background = '#f5fafb'; },
+        onclick: function () { _handleTimelineEventClick(event); }
+      });
+
+      // Górny rząd: badge typu (lewy) + data (prawy).
+      // B3.2e: gdy notatka jest kotwiczona (linkedAgeMonths) ALE też ma datę
+      // zdarzenia klinicznego (clinicalDateISO) — pokazujemy clinicalDateISO,
+      // nie createdAtISO. Bez clinicalDateISO — fallback do dateISO (czyli
+      // createdAtISO przez vault'owy fallback w `dateISO`).
+      var topRow = el('div', {
+        style: 'display:flex;justify-content:space-between;align-items:flex-start;gap:8px;'
+      });
+      topRow.appendChild(el('span', {
+        style: 'display:inline-block;padding:2px 8px;font-size:0.7rem;font-weight:600;color:'
+          + meta.color + ';background:' + meta.bg + ';border-radius:999px;',
+        text: meta.label
+      }));
+      var dateStr;
+      if (event.clinicalDateISO) {
+        // clinicalDateISO to 'YYYY-MM-DD' — dorzucamy time żeby parser działał.
+        dateStr = _formatDateDDMMYYYY(event.clinicalDateISO + 'T00:00:00.000Z');
+      } else {
+        dateStr = _formatDateDDMMYYYY(event.dateISO);
+      }
+      if (dateStr) {
+        topRow.appendChild(el('span', {
+          style: 'font-size:0.72rem;color:#9aa8aa;white-space:nowrap;',
+          text: dateStr
+        }));
+      }
+      card.appendChild(topRow);
+
+      // Body karty (tytuł + treść / obserwacja).
+      card.appendChild(_renderTimelineEventBody(event));
+      wrapper.appendChild(card);
+      return wrapper;
+    }
+
+    // A (decyzja 2026-06-03) — placeholder „Pomiar usunięty".
+    // Gdy pomiar o danym wieku zostanie usunięty, kotwiczona do niego notatka
+    // (linkedAgeMonths) NIE może spadać na dół osi. Renderujemy wyszarzony chip
+    // w miejscu wiekowym usuniętego pomiaru; pod nim (jak zwykle) idą kotwiczone
+    // notatki przez _renderAnchoredCard (L-connector + wcięcie). Dzięki temu
+    // notatka zachowuje pozycję na osi i nie powstaje rozjazd „notatka na dole
+    // obok dużo starszego wieku".
+    function _renderRemovedMeasurementPlaceholder(ageM) {
+      var wrapper = el('div', { style: 'position:relative;margin-bottom:14px;' });
+      // Kropka na osi — pusta, szara, przerywana (pomiar nie istnieje).
+      wrapper.appendChild(el('div', {
+        style: 'position:absolute;left:-22px;top:4px;width:14px;height:14px;border-radius:50%;'
+          + 'background:#fff;border:2px dashed #c2ccce;box-shadow:0 0 0 1px #fff;'
+      }));
+      // Nagłówek wieku (jak nad chipem Pomiar, tylko wyszarzony).
+      wrapper.appendChild(el('div', {
+        style: 'font-size:0.7rem;color:#9aa8aa;font-weight:500;margin-bottom:3px;',
+        text: 'Wiek ' + _formatAge(ageM)
+      }));
+      var card = el('div', {
+        style: 'background:#f3f5f6;border:1px dashed #cdd6d8;border-radius:10px;'
+          + 'padding:8px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;'
+      });
+      card.appendChild(el('span', {
+        style: 'display:inline-block;padding:2px 8px;font-size:0.7rem;font-weight:600;'
+          + 'color:#9aa8aa;background:#e8edee;border-radius:999px;',
+        text: 'Pomiar usunięty'
+      }));
+      card.appendChild(el('span', {
+        style: 'font-size:0.82rem;color:#9aa8aa;',
+        text: 'Notatka zachowana — pomiar dla tego wieku został usunięty.'
+      }));
+      wrapper.appendChild(card);
+      return wrapper;
+    }
+
+    function rebuildList() {
+      // Usuń wszystkie children listWrap poza axis (axis jest [0])
+      while (listWrap.childNodes.length > 1) listWrap.removeChild(listWrap.lastChild);
+
+      // L1 — filtr OR po activeFilters. Pusty set = pokaż wszystko (równoważne
+      // staremu currentFilter='all'). Inaczej event spełnia filtr jeśli pasuje
+      // do JAKIEGOKOLWIEK z aktywnych identyfikatorów. Implementacja: kategorię
+      // eventu derive'ujemy z eventMatchesFilter(evt, filterId) — używamy
+      // istniejącej F1 logiki, tylko z OR po wielu filtrach.
+      // f zachowany jako legacy alias dla branchy poniżej (isCategoryFilter
+      // sprawdza single-filter cat — po L1 wciąż ważne gdy aktywna dokładnie
+      // jedna kategoria-not-measurement).
+      function filterAllowsEvent(evt) {
+        if (activeFilters.size === 0) return true; // „Wszystko"
+        var ids = Array.from(activeFilters);
+        return ids.some(function (id) { return eventMatchesFilter(evt, id); });
+      }
+      // Tryb "category-only" (standalone lista notatek na osi czasu, bez chipów
+      // Pomiar). Aktywny gdy zbiór filtrów to SAME kategorie notatek (≥1) i NIE
+      // zawiera 'measurement'. Wcześniej (L1) bramka brzmiała `size === 1`, przez
+      // co dwie kategorie notatek bez Pomiaru (np. Leczenie+Wynik, Kontrola+Wynik)
+      // wpadały w mixedItems flow → ten flow renderuje notatki TYLKO pod chipem
+      // Pomiar, a skoro 'measurement' nie był aktywny, chipów nie było → pusta
+      // lista. Branch standalone (niżej) i tak obsługuje wiele kategorii przez
+      // filterAllowsEvent (OR), więc wystarczy poszerzyć bramkę.
+      // (activeFilters NIGDY nie zawiera 'all' — wybór „Wszystko" czyści zbiór.)
+      var noteOnlyFilterMode = activeFilters.size >= 1 && !activeFilters.has('measurement');
+      var f = activeFilters.size === 0 ? 'all'
+            : activeFilters.size === 1 ? Array.from(activeFilters)[0]
+            : 'all'; // multi → traktuj jak 'all' dla branch logic poniżej
+
+      // ── B3.2: Mixed chronological timeline ────────────────────────────────
+      // Architektura po B3.2 — jeden chronologiczny ciąg zdarzeń klinicznych:
+      //   • Pomiary kotwiczone wiekiem (chip „WIEK · DATA SAVE") — sortowane po
+      //     savedAtISO (proxy daty wizyty z najstarszego snapshota)
+      //   • Notatki z clinicalDateISO bez linkedAgeMonths (chip „Wpis kliniczny
+      //     DATA") — sortowane po clinicalDateISO
+      //   • Kotwiczone notatki/observations (linkedAgeMonths != null) renderowane
+      //     POD chipem Pomiar o tym samym wieku (L-connector z B2 — niezmienione)
+      //   • Notatki ogólne (linkedAgeMonths=null, clinicalDateISO=null) USUNIĘTE
+      //     z Historii — pojawią się w zakładce Notatki w sekcji „Notatki ogólne"
+      //     (B3.3, ten plan)
+      var measurements = events.filter(function (e) { return e.type === 'measurement'; });
+      var notes = events.filter(function (e) { return e.type === 'note'; });
+      var observations = events.filter(function (e) { return e.type === 'observation'; });
+
+      // F1-fix2: gdy aktywny filtr to kategoria notatki (nie 'all', nie 'measurement'),
+      // pomijamy mixed timeline z pomiarami i kotwicami. Renderujemy WSZYSTKIE notatki +
+      // observations pasujące do kategorii jako standalone karty na chronologicznej osi.
+      // Powód: notatki kotwiczone pod pomiarem są renderowane TYLKO po wyświetleniu chipa
+      // Pomiar — gdy filtr ukrywa pomiary (np. 'treatment'), kotwiczone notatki znikały.
+      // Naprawa: pomijamy logikę kotwicy gdy filtr to konkretna kategoria, co przy okazji
+      // upraszcza wizualnie listę (sama treść, bez chipów Pomiar które i tak są odfiltrowane).
+      // L1: category-only mode aktywny TYLKO gdy w secie jest dokładnie jedna
+      // kategoria-not-measurement. Dla multi-select (np. Leczenie+Wynik) używamy
+      // standardowego mixedItems flow (pokazujemy pomiary i pasujące notatki
+      // kotwiczone). Standalone-list mode nadal sensowny tylko dla pojedynczej
+      // wybranej kategorii — wtedy notatki są na osi czasu bez chipów Pomiar.
+      var isCategoryFilter = noteOnlyFilterMode;
+      if (isCategoryFilter) {
+        var categoryItems = [];
+        notes.forEach(function (n) {
+          if (!filterAllowsEvent(n)) return;
+          categoryItems.push({
+            event: n,
+            // Priorytet sortowania: clinicalDateISO > dateISO > updatedAtISO
+            sortISO: n.clinicalDateISO
+              ? (n.clinicalDateISO.length === 10 ? n.clinicalDateISO + 'T00:00:00.000Z' : n.clinicalDateISO)
+              : (n.dateISO || n.updatedAtISO || '')
+          });
+        });
+        observations.forEach(function (o) {
+          if (!filterAllowsEvent(o)) return;
+          categoryItems.push({ event: o, sortISO: o.dateISO || '' });
+        });
+        categoryItems.sort(function (a, b) {
+          if (a.sortISO > b.sortISO) return -1;
+          if (a.sortISO < b.sortISO) return 1;
+          return 0;
+        });
+
+        if (categoryItems.length === 0) {
+          listWrap.appendChild(el('p', {
+            class: 'vilda-patient-empty-msg',
+            text: 'Brak wpisów w wybranej kategorii.'
+          }));
+          return;
+        }
+
+        categoryItems.forEach(function (item) {
+          var ev = item.event;
+          var header;
+          if (ev.linkedAgeMonths != null) {
+            // Notatka kotwiczona wiekiem — pokaż wiek + ewentualnie datę zdarzenia
+            header = _formatAge(ev.linkedAgeMonths);
+            var dateStrAnchored = _formatDateDDMMYYYY(
+              ev.clinicalDateISO
+                ? (ev.clinicalDateISO.length === 10 ? ev.clinicalDateISO + 'T00:00:00.000Z' : ev.clinicalDateISO)
+                : ev.dateISO
+            );
+            if (dateStrAnchored) header += ' · ' + dateStrAnchored;
+          } else if (ev.clinicalDateISO) {
+            // Wpis kliniczny z datą zdarzenia
+            var clinDate = _formatDateDDMMYYYY(
+              ev.clinicalDateISO.length === 10
+                ? ev.clinicalDateISO + 'T00:00:00.000Z'
+                : ev.clinicalDateISO
+            );
+            header = clinDate || '';
+          } else {
+            // Fallback — tylko data zapisu/utworzenia
+            header = _formatDateDDMMYYYY(ev.dateISO) || '';
+          }
+          listWrap.appendChild(_renderTimelineCard(ev, header, 'normal'));
+        });
+        return;
+      }
+
+      // Kotwiczone events (zindeksowane po ageMonths) — renderowane POD chipem
+      // Pomiar o tym wieku (zachowanie z B2). NIE są w głównym chronologicznym
+      // sortowaniu — należą do swojego pomiaru.
+      var anchoredByAge = Object.create(null);
+      function _addAnchored(evt) {
+        var key = evt.linkedAgeMonths;
+        if (key == null) return;
+        if (!anchoredByAge[key]) anchoredByAge[key] = [];
+        anchoredByAge[key].push(evt);
+      }
+      notes.forEach(function (n) { if (n.linkedAgeMonths != null) _addAnchored(n); });
+      observations.forEach(function (o) { _addAnchored(o); });
+
+      // J3 — Historia = tylko pomiary biologiczne (oś czasu wieku pacjenta).
+      //
+      // Decyzja semantyczna: Historia pokazuje WYŁĄCZNIE pomiary historyczne
+      // posortowane po ageMonths DESC (wiek pacjenta w momencie pomiaru).
+      // Kotwiczone notatki (linkedAgeMonths != null) renderowane są pod swoim
+      // chipem Pomiar (anchoredByAge, niżej). Luźne notatki kliniczne
+      // (clinicalDateISO bez kotwicy) NIE pojawiają się w Historii — są
+      // widoczne w zakładce Notatki, sub-sekcja „Notatki kliniczne".
+      //
+      // Powód: data zapisu (savedAtISO) to metadane operacyjne, nie chronologia
+      // biologiczna. Sortowanie po savedAtISO powodowało że nowo dodany pomiar
+      // (np. 6y2m, wpisany dziś) wskakiwał nad istniejący starszy biologicznie
+      // (np. 12y1m, wpisany 2 miesiące temu) — bo dzisiaj > 2 miesiące temu.
+      // Dla pomiarów naturalną osią czasu jest wiek pacjenta.
+      var mixedItems = [];
+      measurements.forEach(function (m) {
+        if (filterAllowsEvent(m)) {
+          mixedItems.push({
+            kind: 'measurement',
+            event: m,
+            // sortISO zostaje dla informacji (chip pokazuje datę zapisu),
+            // ale sortowanie używa ageMonths jako primary.
+            sortISO: m.savedAtISO || ''
+          });
+        }
+      });
+      // A (decyzja 2026-06-03) — osierocone kotwice WPINANE W OŚ wg wieku.
+      // Notatka z linkedAgeMonths, której pomiar usunięto, dostaje tu syntetyczny
+      // slot (kind:'orphan-anchor') o tym samym ageMonths, więc trafia w prawidłową
+      // pozycję sortu (DESC po wieku) — zamiast spadać na dół listy. Wstawiamy
+      // tylko gdy istnieje co najmniej jedna kotwiczona notatka widoczna w filtrze.
+      Object.keys(anchoredByAge).forEach(function (ageKey) {
+        var ageM = Number(ageKey);
+        var hasMatchingMeas = measurements.some(function (m) { return m.ageMonths === ageM; });
+        if (hasMatchingMeas) return;
+        var anyVisible = anchoredByAge[ageKey].some(function (evt) { return filterAllowsEvent(evt); });
+        if (!anyVisible) return;
+        mixedItems.push({ kind: 'orphan-anchor', event: { ageMonths: ageM }, sortISO: '' });
+      });
+
+      mixedItems.sort(function (a, b) {
+        // J3 PRIMARY: ageMonths DESC. Większy wiek = nowszy biologicznie = wyżej.
+        var aAge = (a.event && typeof a.event.ageMonths === 'number') ? a.event.ageMonths : -1;
+        var bAge = (b.event && typeof b.event.ageMonths === 'number') ? b.event.ageMonths : -1;
+        if (aAge > bAge) return -1;
+        if (aAge < bAge) return 1;
+        // Tie-breaker (rzadki: dwa pomiary o tym samym wieku): sortISO DESC,
+        // żeby nowszy zapis był wyżej. To po prostu deterministyczna kolejność
+        // dla edge case'ów — nie wpływa na semantykę biologiczną.
+        if (a.sortISO > b.sortISO) return -1;
+        if (a.sortISO < b.sortISO) return 1;
+        return 0;
+      });
+
+      // Empty state — gdy mixed lista + osierocone kotwice są puste w obecnym filtrze.
+      var anchoredHasAnyVisible = Object.keys(anchoredByAge).some(function (k) {
+        return anchoredByAge[k].some(function (evt) { return filterAllowsEvent(evt); });
+      });
+      if (mixedItems.length === 0 && !anchoredHasAnyVisible) {
+        listWrap.appendChild(el('p', {
+          class: 'vilda-patient-empty-msg',
+          text: f === 'all'
+            ? 'Brak wydarzeń w historii. Dodaj pomiar lub notatkę z datą zdarzenia, aby zobaczyć timeline.'
+            : 'Brak wydarzeń tego typu.'
+        }));
+        return;
+      }
+
+      // Render mixed timeline. Dla każdego pomiaru — od razu pod chipem rzucamy
+      // kotwiczone notatki/obserwacje (jak po B2 — L-connector + indent).
+      mixedItems.forEach(function (item) {
+        if (item.kind === 'measurement') {
+          var m = item.event;
+          // Nagłówek chipa Pomiar: WIEK + DATA (savedAtISO sformatowana DD-MM-RRRR).
+          // Bez daty — sam wiek (legacy/safety-net).
+          var header = _formatAge(m.ageMonths);
+          var dateStr = _formatDateDDMMYYYY(m.savedAtISO);
+          if (dateStr) header += ' · ' + dateStr;
+          listWrap.appendChild(_renderTimelineCard(m, header, 'normal'));
+          // Pod chipem — kotwiczone notatki/observations dla tego wieku.
+          var anchored = anchoredByAge[m.ageMonths] || [];
+          anchored.forEach(function (a) {
+            if (filterAllowsEvent(a)) {
+              listWrap.appendChild(_renderAnchoredCard(a));
+            }
+          });
+        } else if (item.kind === 'orphan-anchor') {
+          // A: usunięty pomiar — wyszarzony placeholder w pozycji wiekowej,
+          // pod nim kotwiczone notatki (te same _renderAnchoredCard co pod pomiarem).
+          var om = item.event.ageMonths;
+          listWrap.appendChild(_renderRemovedMeasurementPlaceholder(om));
+          var orphanAnchored = anchoredByAge[om] || [];
+          orphanAnchored.forEach(function (a) {
+            if (filterAllowsEvent(a)) {
+              listWrap.appendChild(_renderAnchoredCard(a));
+            }
+          });
+        }
+        // Opcja A (J3): mixedItems zawiera WYŁĄCZNIE pomiary (kind:'measurement') —
+        // jedyny mixedItems.push wstawia 'measurement'. Notatki luźne kliniczne
+        // (clinicalDateISO bez kotwicy) NIE są na głównej osi: widać je w zakładce
+        // Notatki („Notatki kliniczne") oraz w Historii po wybraniu ich kategorii
+        // (gałąź standalone wyżej). Dawna gałąź 'clinical-note' (mixed timeline z
+        // B3.2) została usunięta — po J3 nic nie produkowało tego rodzaju, była
+        // martwym kodem mylącym przy czytaniu (sugerowała render, który nie zachodził).
+      });
+
+      // (A 2026-06-03) Dawny dolny dump osieroconych kotwic USUNIĘTY — teraz
+      // wpinają się w oś wg wieku przez mixedItems (kind:'orphan-anchor', wyżej).
+    }
+
+    function _handleTimelineEventClick(event) {
+      // Per Q4 — Pomiar → tab Siatki; Notatka → tab Notatki; reszta → placeholder modal.
+      try {
+        var screen = global.document.querySelector('.vilda-auth-patient-card');
+        if (event.type === 'measurement') {
+          var tab = screen && screen.querySelector('[data-tab="traj"]');
+          if (tab && typeof tab.click === 'function') tab.click();
+        } else if (event.type === 'note') {
+          var tabN = screen && screen.querySelector('button[data-tab="notes"]');
+          if (tabN && typeof tabN.click === 'function') tabN.click();
+        } else {
+          // observation/lab/medication/gh-therapy — placeholder
+          try { global.alert(event.title + (event.description ? '\n\n' + event.description : '')); } catch (_) {}
+        }
+      } catch (e) { logError('handleTimelineEventClick', e); }
+    }
+
+    rebuildList();
+    void reRender;
+  }
+
+  // ============ LISTA PACJENTÓW — helpers sortowania ============
+
+  var _PSORT_KEY = 'vilda:patients-sort';
+  var _PSORT_OPTIONS = [
+    { id: 'recent-desc', label: 'Ostatnio zapisany',  sub: 'od najnowszego' },
+    { id: 'name-asc',    label: 'Imię A → Z',         sub: null },
+    { id: 'name-desc',   label: 'Imię Z → A',         sub: null }
+  ];
+  function _readPSort() {
+    try { return (global.localStorage && global.localStorage.getItem(_PSORT_KEY)) || 'recent-desc'; } catch (_) { return 'recent-desc'; }
+  }
+  function _writePSort(id) {
+    try { if (global.localStorage) global.localStorage.setItem(_PSORT_KEY, id); } catch (_) {}
+  }
+  function _applyPSort(arr, id) {
+    const a = arr.slice();
+    if (id === 'name-asc') {
+      a.sort(function (x, y) {
+        const nx = ((x.header && x.header.name) || '').toLowerCase();
+        const ny = ((y.header && y.header.name) || '').toLowerCase();
+        return nx < ny ? -1 : nx > ny ? 1 : 0;
+      });
+    } else if (id === 'name-desc') {
+      a.sort(function (x, y) {
+        const nx = ((x.header && x.header.name) || '').toLowerCase();
+        const ny = ((y.header && y.header.name) || '').toLowerCase();
+        return nx > ny ? -1 : nx < ny ? 1 : 0;
+      });
+    } else if (id === 'visits-desc') {
+      a.sort(function (x, y) { return ((y.snapshotCount || 0) - (x.snapshotCount || 0)); });
+    } else { // recent-desc (domyślne)
+      a.sort(function (x, y) {
+        const tx = x.lastSavedAtISO ? Date.parse(x.lastSavedAtISO) : 0;
+        const ty = y.lastSavedAtISO ? Date.parse(y.lastSavedAtISO) : 0;
+        return (ty || 0) - (tx || 0);
+      });
+    }
+    return a;
+  }
+
+  // ============ LISTA PACJENTÓW ============
+  async function showPatientsList(onPick, options) {
+    const V = getVault();
+    if (!V || !V.isUnlocked()) return;
+    const opts = options || {};
+
+    // Cloud-only: pacjenci ładowani z chmury w tle przy logowaniu. Jeśli sync
+    // jeszcze nie skończył gdy user wchodzi na listę, pokazujemy overlay
+    // (lista byłaby pusta). Po complete overlay znika sam → kontynuujemy render.
+    try {
+      const C = global.VildaChrome;
+      if (C && typeof C.isCloudOnlySyncInProgress === 'function' && C.isCloudOnlySyncInProgress()) {
+        if (typeof C.showCloudOnlySyncOverlay === 'function') C.showCloudOnlySyncOverlay();
+        try {
+          await C.waitForCloudOnlySync();
+          if (typeof C.hideCloudOnlySyncOverlay === 'function') C.hideCloudOnlySyncOverlay();
+        } catch (_) {
+          // Failed event — overlay przeszedł w error state (chrome.js obsługuje).
+          // Zostawiamy go widocznym, user zdecyduje (retry/logout). Przerywamy
+          // showPatientsList, bo lista i tak byłaby pusta.
+          return;
+        }
+      }
+    } catch (_) { void _; }
+
+    let patients = [];
+    try { patients = await V.listPatients(); } catch (e) { logError('listPatients', e); }
+
+    let currentSort = _readPSort();
+    patients = _applyPSort(patients, currentSort);
+
+    const title = el('h2', { class: 'vilda-auth-title', text: 'Pacjenci' });
+    const sub = el('p', {
+      class: 'vilda-auth-subtitle',
+      text: patients.length === 0
+        ? 'Nie masz jeszcze zapisanych pacjentów. Wpisz dane w aplikacji i kliknij „Zapisz dane”.'
+        : 'Kliknij pacjenta, aby zobaczyć jego kartę. Łącznie: ' + patients.length + (patients.length === 1 ? ' pacjent.' : ' pacjentów.')
+    });
+
+    // Pole wyszukiwarki — pokazujemy tylko gdy są jakiekolwiek dane do filtrowania.
+    let searchInput = null;
+    let resultsCounter = null;
+    if (patients.length > 0) {
+      searchInput = el('input', {
+        class: 'vilda-auth-search-input',
+        type: 'search',
+        placeholder: 'Szukaj pacjenta po imieniu lub nazwisku…',
+        autocomplete: 'off',
+        spellcheck: 'false'
+      });
+      resultsCounter = el('div', { class: 'vilda-auth-search-counter' });
+    }
+
+    // Scrollowalny kontener listy — max ~3 karty widocznych, reszta pod scrollem.
+    const list = el('div', { class: 'vilda-auth-user-list vilda-auth-patients-scroll' });
+    const emptyResult = el('div', { class: 'vilda-auth-search-empty', text: 'Brak pasujących pacjentów.' });
+    emptyResult.hidden = true;
+    list.appendChild(emptyResult);
+
+    // Trzymamy referencje do par (card, normalizedName) dla szybkiego filtrowania.
+    const cards = [];
+
+    // Buduje kartę pacjenta i dodaje ją do listy + tablicy cards.
+    // Wydzielona jako funkcja, żeby można ją wywołać ponownie po zmianie sortowania.
+    function buildCard(p) {
+      const headerName = (p.header && p.header.name) ? p.header.name : '(bez imienia)';
+      // B1.9: Usuwamy „Zapisano: 3 tyg. temu" i „1 wpis" — ta meta odnosiła się do
+      // snapshotów vault (data zapisu w bazie), a nie do wizyt/pomiarów pacjenta.
+      // Lista pacjentów ma teraz tylko wiek pacjenta (formatowany _formatAge) + płeć.
+      // Sortowanie po lastSavedAtISO DESC zostaje jako default (ostatnio aktywni
+      // pierwsi), ale sama data nie jest pokazywana użytkownikowi.
+      const hAge = (p.header && typeof p.header.age === 'number' && isFinite(p.header.age)) ? p.header.age : null;
+      const hAgeM = (p.header && typeof p.header.ageMonths === 'number' && isFinite(p.header.ageMonths)) ? p.header.ageMonths : null;
+      let ageStr = '';
+      if (hAge !== null || hAgeM !== null) {
+        const totalMo = (hAge !== null ? hAge * 12 : 0) + (hAgeM !== null ? hAgeM : 0);
+        ageStr = _formatAge(totalMo);
+      }
+      const sexStr = (p.header && p.header.sex) ? p.header.sex : '';
+      const meta = [ageStr, sexStr].filter(function (x) { return x && x.length; }).join(' · ');
+
+      const card = el('button', {
+        class: 'vilda-auth-user-card',
+        type: 'button',
+        title: 'Zobacz kartę: ' + headerName,
+        onclick: function () { showPatientCard(p.patientId, onPick, opts); }
+      }, [
+        el('div', { class: 'vilda-auth-user-avatar', text: headerName.charAt(0).toUpperCase() }),
+        el('div', { class: 'vilda-auth-user-info' }, [
+          el('div', { class: 'vilda-auth-user-name', text: headerName }),
+          meta ? el('div', { class: 'vilda-auth-user-meta', text: meta }) : null
+        ]),
+        el('span', { class: 'vilda-auth-user-arrow', 'aria-hidden': 'true', text: '›' })
+      ]);
+      list.appendChild(card);
+      cards.push({ card: card, key: normalizeForSearch(headerName) });
+    }
+
+    patients.forEach(buildCard);
+
+    function updateCounter(visibleCount) {
+      if (!resultsCounter) return;
+      resultsCounter.textContent = visibleCount === patients.length
+        ? ''
+        : 'Pokazano ' + visibleCount + ' z ' + patients.length;
+    }
+
+    function applyFilter() {
+      if (!searchInput) return;
+      const q = normalizeForSearch(searchInput.value || '');
+      let visible = 0;
+      cards.forEach(function (entry) {
+        const match = !q || entry.key.indexOf(q) !== -1;
+        entry.card.hidden = !match;
+        if (match) visible++;
+      });
+      emptyResult.hidden = visible !== 0;
+      updateCounter(visible);
+    }
+
+    if (searchInput) {
+      searchInput.addEventListener('input', applyFilter);
+      // Esc czyści pole bez zamykania całego ekranu.
+      searchInput.addEventListener('keydown', function (e) {
+        if (e && e.key === 'Escape' && searchInput.value) {
+          e.stopPropagation();
+          searchInput.value = '';
+          applyFilter();
+        }
+      });
+      // Auto-fokus po otwarciu — szybkie wpisanie nazwiska bez klikania w pole.
+      setTimeout(function () { try { searchInput.focus(); } catch (_) {} }, 60);
+    }
+
+    // ── Ikonka sortowania w wierszu z wyszukiwarką (tylko gdy są pacjenci) ──────
+    let sortWrap = null;
+    if (patients.length > 0) {
+      const sortDropdown = el('div', { class: 'vilda-auth-sort-dropdown' });
+      sortDropdown.hidden = true;
+      let _outsideListener = null;
+
+      function closeSortDropdown() {
+        sortDropdown.hidden = true;
+        sortBtn.classList.remove('vilda-auth-sort-btn--open');
+        if (_outsideListener) {
+          global.document.removeEventListener('click', _outsideListener, true);
+          _outsideListener = null;
+        }
+      }
+
+      _PSORT_OPTIONS.forEach(function (opt) {
+        const optEl = el('button', {
+          type: 'button',
+          class: 'vilda-auth-sort-option' + (opt.id === currentSort ? ' vilda-auth-sort-option--active' : '')
+        }, [
+          el('span', { class: 'vilda-auth-sort-option-label', text: opt.label }),
+          opt.sub ? el('span', { class: 'vilda-auth-sort-option-sub', text: opt.sub }) : null
+        ]);
+        optEl.addEventListener('click', function () {
+          if (opt.id === currentSort) { closeSortDropdown(); return; }
+          currentSort = opt.id;
+          _writePSort(opt.id);
+          // Zaktualizuj wizualny stan aktywnej opcji
+          sortDropdown.querySelectorAll('.vilda-auth-sort-option').forEach(function (o) {
+            o.classList.toggle('vilda-auth-sort-option--active', o === optEl);
+          });
+          // Przetasuj i odbuduj karty
+          const sorted = _applyPSort(patients, currentSort);
+          list.innerHTML = '';
+          list.appendChild(emptyResult);
+          cards.length = 0;
+          sorted.forEach(buildCard);
+          applyFilter();
+          list.scrollTop = 0;
+          closeSortDropdown();
+        });
+        sortDropdown.appendChild(optEl);
+      });
+
+      const sortBtn = el('button', {
+        type: 'button',
+        class: 'vilda-auth-sort-btn',
+        title: 'Zmień sortowanie'
+      });
+      sortBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (!sortDropdown.hidden) { closeSortDropdown(); return; }
+        sortDropdown.hidden = false;
+        sortBtn.classList.add('vilda-auth-sort-btn--open');
+        // Zamknij przy kliknięciu poza elementem (defer o jeden tick)
+        setTimeout(function () {
+          _outsideListener = function (ev) {
+            if (!sortDropdown.contains(ev.target) && ev.target !== sortBtn) {
+              closeSortDropdown();
+            }
+          };
+          global.document.addEventListener('click', _outsideListener, true);
+        }, 0);
+      });
+
+      sortWrap = el('div', { class: 'vilda-auth-sort-wrap' }, [sortBtn, sortDropdown]);
+    }
+
+    const importBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost',
+      type: 'button',
+      text: 'Importuj kopie pacjentów',
+      onclick: function () { showImportPatientsFlow(onPick); }
+    });
+
+    const cancel = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost',
+      type: 'button',
+      text: 'Anuluj',
+      onclick: function () { hide(); }
+    });
+
+    const children = [title, sub];
+    if (searchInput) {
+      children.push(el('div', { class: 'vilda-auth-search-wrap' }, [searchInput, sortWrap, resultsCounter]));
+    }
+    children.push(list);
+    children.push(el('div', { class: 'vilda-auth-actions' }, [cancel, importBtn]));
+
+    open(el('div', { class: 'vilda-auth-screen vilda-auth-patients' }, children), { noLogo: true });
+  }
+
+  // Normalizuje string do filtrowania: lowercase + usunięcie polskich diakrytyków,
+  // żeby "anna" znalazła "Anna", "aŃka" itd. niezależnie od ogonków.
+  function normalizeForSearch(s) {
+    if (!s) return '';
+    var str = String(s).toLowerCase();
+    try { str = str.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (_) {}
+    // ł → l (NFD nie ma rozkładu dla ł)
+    return str.replace(/ł/g, 'l');
+  }
+
+  // ============ IMPORT PLIKÓW .vilda ============
+  // Ścieżka recovery: użytkownik wczyta zaszyfrowane pliki kopii zapasowych
+  // i zaimportuje pacjentów do swojego aktualnego konta. Pliki mogą pochodzić
+  // z TEGO samego konta (deszyfracja transparentna) albo ze STAREGO konta
+  // (potrzebne hasło, którym plik został wygenerowany).
+  function showImportPatientsFlow(onPickAfterImport, options) {
+    const opts = options || {};
+    const fromSetup = !!opts.fromSetup;
+    const V = getVault();
+    if (!V || !V.isUnlocked()) return;
+
+    const title = el('h2', { class: 'vilda-auth-title', text: 'Importuj kopie pacjentów' });
+    const sub = el('p', {
+      class: 'vilda-auth-subtitle',
+      text: 'Wybierz pliki kopii zapasowych pacjentów. Aplikacja odczyta nagłówki, a Ty zdecydujesz, które konta zaimportować do swojego vaultu. Jeśli pliki pochodzą ze starego konta — podaj hasło, którym były zaszyfrowane.'
+    });
+
+    const fileInput = el('input', {
+      type: 'file',
+      // Akceptujemy:
+      //   .wiw — nowe pliki kopii pacjentów (zaszyfrowane envelope)
+      //   .vilda — wczesne testy (zaszyfrowane envelope, wsteczna kompatybilność)
+      //   .json — płaskie pliki sprzed wprowadzenia szyfrowania (legacy)
+      accept: '*/*', // iOS nie obsługuje .wiw/.vilda bez UTI — accept=* pokazuje wszystkie pliki
+      multiple: 'multiple',
+      style: 'display:none;'
+    });
+
+    const pwInput = el('input', {
+      type: 'password',
+      class: 'vilda-auth-input',
+      placeholder: 'Hasło ze starego konta (jeśli inne niż obecne)',
+      autocomplete: 'off'
+    });
+
+    const pickBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-primary',
+      type: 'button',
+      text: 'Wybierz pliki kopii (.wiw)',
+      onclick: function () { fileInput.click(); }
+    });
+
+    // Toolbar nad listą: licznik + zaznacz/odznacz wszystkie
+    const countLabel = el('span', { text: '' });
+    const selectAllLink = el('a', { href: '#', text: 'Zaznacz wszystkie' });
+    const deselectAllLink = el('a', { href: '#', text: 'Odznacz wszystkie' });
+    selectAllLink.addEventListener('click', function (ev) { ev.preventDefault(); selectAllFiles(true); });
+    deselectAllLink.addEventListener('click', function (ev) { ev.preventDefault(); selectAllFiles(false); });
+    // Toolbar trzymamy zawsze w layoucie — sterowanie przez data-hidden + visibility,
+    // żeby pojawienie się/zniknięcie nie powodowało reflowu strony.
+    const toolbar = el('div', { class: 'vilda-auth-import-toolbar', 'data-hidden': '1' }, [
+      countLabel,
+      el('div', { class: 'vilda-auth-import-toolbar-actions' }, [selectAllLink, deselectAllLink])
+    ]);
+
+    const previewBox = el('div', { class: 'vilda-auth-import-list' });
+    const reportBox = el('div', { class: 'vilda-auth-info', style: 'display:none; text-align:left;' });
+    // errBox z stałą rezerwacją miejsca — gdy pusty, schowany przez visibility (nie reflow)
+    const errBox = el('div', { class: 'vilda-auth-error vilda-auth-error-stable', 'data-empty': '1' });
+
+    const importBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-primary',
+      type: 'button',
+      text: 'Importuj wszystko'
+    });
+    importBtn.disabled = true;
+
+    const back = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost',
+      type: 'button',
+      text: fromSetup ? 'Pomiń import' : 'Wstecz',
+      onclick: function () {
+        if (fromSetup) { hide(); startIdleWatch(); }
+        else { showStartupScreen(); }
+      }
+    });
+
+    let selectedFiles = []; // [{file, text, preview, willImport}]
+
+    function clearPreview() { while (previewBox.firstChild) previewBox.removeChild(previewBox.firstChild); }
+
+    function setErr(msg) {
+      if (msg) {
+        errBox.textContent = msg;
+        errBox.removeAttribute('data-empty');
+      } else {
+        errBox.textContent = '';
+        errBox.setAttribute('data-empty', '1');
+      }
+    }
+
+    function selectAllFiles(flag) {
+      let changed = false;
+      selectedFiles.forEach(function (entry) {
+        const ok = !!(entry.preview && entry.preview.header);
+        if (ok && entry.willImport !== flag) {
+          entry.willImport = flag;
+          if (entry._checkbox) entry._checkbox.checked = flag;
+          changed = true;
+        }
+      });
+      if (changed) updateImportButton();
+    }
+
+    function updateImportButton() {
+      const okCount = selectedFiles.filter(function (e) { return e.preview && e.preview.header; }).length;
+      const selectedCount = selectedFiles.filter(function (e) { return e.willImport; }).length;
+      importBtn.disabled = selectedCount === 0;
+      if (okCount === 0) {
+        importBtn.textContent = 'Importuj zaznaczone';
+        toolbar.setAttribute('data-hidden', '1');
+        return;
+      }
+      toolbar.removeAttribute('data-hidden');
+      countLabel.textContent = 'Wybrane: ' + selectedCount + ' z ' + okCount + (okCount !== selectedFiles.length ? (' (pliki bez hasła pominięto)') : '');
+      // dynamiczny tekst przycisku
+      if (selectedCount === okCount) {
+        importBtn.textContent = okCount === 1 ? 'Importuj' : ('Importuj wszystko (' + okCount + ')');
+      } else {
+        importBtn.textContent = 'Importuj zaznaczone (' + selectedCount + ')';
+      }
+      // disable/enable links
+      if (selectedCount === okCount) {
+        selectAllLink.setAttribute('aria-disabled', 'true');
+      } else {
+        selectAllLink.removeAttribute('aria-disabled');
+      }
+      if (selectedCount === 0) {
+        deselectAllLink.setAttribute('aria-disabled', 'true');
+      } else {
+        deselectAllLink.removeAttribute('aria-disabled');
+      }
+    }
+
+    async function readFileAsText(file) {
+      return new Promise(function (resolve, reject) {
+        const reader = new global.FileReader();
+        reader.onload = function () { resolve(reader.result); };
+        reader.onerror = function () { reject(reader.error); };
+        reader.readAsText(file, 'utf-8');
+      });
+    }
+
+    // Marker bieżącej operacji refreshPreview — żeby anulować nakładające się
+    // wywołania (debounce hasła może wystrzelić nowe wywołanie zanim poprzednie
+    // skończy await PBKDF2 dla wszystkich plików).
+    let refreshSeq = 0;
+
+    async function refreshPreview() {
+      const mySeq = ++refreshSeq;
+
+      // zachowanie fokusu i pozycji kursora w polu hasła + scrollu listy
+      const doc = global.document;
+      const wasPwFocused = doc && doc.activeElement === pwInput;
+      const cursorPos = wasPwFocused && pwInput.selectionStart != null ? pwInput.selectionStart : null;
+      const scrollTopBefore = previewBox.scrollTop;
+
+      setErr('');
+      reportBox.style.display = 'none';
+      importBtn.disabled = true;
+
+      if (selectedFiles.length === 0) {
+        clearPreview();
+        toolbar.style.display = 'none';
+        if (wasPwFocused) { try { pwInput.focus(); } catch (_) {} }
+        return;
+      }
+      const password = pwInput.value || '';
+
+      // 1) Asynchronicznie zbieramy preview do każdego entry — NIE rusznamy
+      //    na razie zawartości previewBox (lista zostaje stara aż gotowe).
+      let anyOk = false;
+      let anyNeedsPwd = false;
+      for (let i = 0; i < selectedFiles.length; i += 1) {
+        const entry = selectedFiles[i];
+        let preview = null;
+        let errMsg = null;
+        let isLegacy = false;
+        let legacyPayload = null;
+
+        // Najpierw sprawdzamy czy to PŁASKI JSON (sprzed wprowadzenia
+        // szyfrowania). Taki plik jest niezaszyfrowany — odczytujemy
+        // bezpośrednio bez hasła.
+        try {
+          const parsed = JSON.parse(entry.text);
+          if (V.looksLikeLegacyPayload && V.looksLikeLegacyPayload(parsed)) {
+            isLegacy = true;
+            legacyPayload = parsed;
+            preview = {
+              header: {
+                name: parsed.name,
+                age: parsed.user && parsed.user.age,
+                ageMonths: parsed.user && parsed.user.ageMonths,
+                sex: parsed.user && parsed.user.sex,
+                timestampISO: parsed.timestampISO || null
+              },
+              metadata: { legacy: true, version: parsed.version || 'pre-szyfrowanie' },
+              needsPassword: false,
+              methodUsed: 'legacy-json'
+            };
+          }
+        } catch (_) { /* nie JSON / nie legacy — spróbujemy envelope */ }
+
+        if (!isLegacy) {
+          // Sprawdź czy to vault-backup zanim wywołamy previewPatientEnvelope
+          // (które rzuciłoby błąd dla kind=vault-backup).
+          let detectedKind = null;
+          try {
+            const C = global.VildaCrypto;
+            if (C && C.parseEnvelope) {
+              const env = C.parseEnvelope(entry.text);
+              detectedKind = env.kind || null;
+              if (detectedKind === 'vault-backup') {
+                entry.isVaultBackup = true;
+                entry.vaultBackupMeta = env.metadata || {};
+              }
+            }
+          } catch (_) {}
+
+          if (!entry.isVaultBackup) {
+            try {
+              preview = await V.previewPatientEnvelope(entry.text, password);
+            } catch (e) {
+              errMsg = e && e.message ? e.message : String(e);
+            }
+          }
+        }
+
+        entry.preview = preview;
+        entry.errMsg = errMsg;
+        entry.isLegacy = isLegacy;
+        entry.legacyPayload = legacyPayload;
+        if (preview && preview.header) anyOk = true;
+        if (preview && preview.needsPassword) anyNeedsPwd = true;
+      }
+
+      // 2) Jeżeli w międzyczasie wystartował nowy refresh (user wpisał kolejny
+      //    znak), przerywamy — niech ten nowszy zaktualizuje DOM. Bez tego
+      //    nakładające się asynchroniczne wątki czyściłyby listę naprzemiennie.
+      if (mySeq !== refreshSeq) return;
+
+      // 3) Buduj wszystkie karty w DocumentFragment, NIE w previewBox.
+      const fragment = doc.createDocumentFragment();
+      selectedFiles.forEach(function (entry, idx) {
+        // ── Specjalna karta dla pliku vault-backup ──────────────────────────
+        if (entry.isVaultBackup) {
+          const meta      = entry.vaultBackupMeta || {};
+          const backupLbl = meta.label || 'Kopia konta';
+          const pCount    = meta.patientCount != null ? meta.patientCount : '?';
+          const sCount    = meta.snapshotCount != null ? meta.snapshotCount : '?';
+          const expAt     = meta.exportedAtISO ? formatRelativeISO(meta.exportedAtISO) : '';
+
+          const mergeBtn = el('button', {
+            class: 'vilda-auth-btn vilda-auth-btn-primary vilda-auth-btn-small',
+            type:  'button',
+            text:  'Scal z moim kontem →'
+          });
+          mergeBtn.addEventListener('click', function () {
+            showMergeAccountFlow(entry.text, entry.file.name);
+          });
+
+          const card = el('div', { class: 'vilda-auth-import-card vilda-auth-import-card-backup' }, [
+            el('div', { class: 'vilda-auth-import-card-avatar', text: '🗂', style: 'font-size:1.4rem;' }),
+            el('div', { class: 'vilda-auth-import-card-info' }, [
+              el('div', { class: 'vilda-auth-import-card-name' }, [
+                el('span', { text: backupLbl }),
+                el('span', {
+                  style: 'margin-left:8px; font-size:0.72rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#00838d; background:rgba(0,131,141,0.1); padding:1px 7px; border-radius:20px;',
+                  text: 'KOPIA KONTA'
+                })
+              ]),
+              el('div', { class: 'vilda-auth-import-card-meta',
+                // B1.10: „wizyt" → „zapisów" — snapshotCount to liczba zapisów vaulta,
+                // nie liczba wizyt pacjentów.
+                text: pCount + ' pacj. · ' + sCount + ' zapisów' + (expAt ? ' · eksport: ' + expAt : '') }),
+              el('div', { class: 'vilda-auth-import-card-filename', text: entry.file.name })
+            ]),
+            el('div', { class: 'vilda-auth-import-card-check' }, [mergeBtn])
+          ]);
+          fragment.appendChild(card);
+          return; // nie budujemy standardowej karty dla tego wpisu
+        }
+
+        const ok = !!(entry.preview && entry.preview.header);
+        const headerName = ok ? entry.preview.header.name : null;
+        const ageStr = ok && entry.preview.header.age != null ? (entry.preview.header.age + ' lat') : '';
+        const sexStr = ok && entry.preview.header.sex ? entry.preview.header.sex : '';
+        const exportedAt = ok && entry.preview.metadata && entry.preview.metadata.exportedAtISO
+          ? formatRelativeISO(entry.preview.metadata.exportedAtISO)
+          : '';
+        const savedAt = ok && entry.preview.header.timestampISO
+          ? formatRelativeISO(entry.preview.header.timestampISO)
+          : '';
+
+        let metaText;
+        if (ok) {
+          const parts = [];
+          if (entry.isLegacy) parts.push('plik z poprzedniej wersji (niezaszyfrowany .json)');
+          if (ageStr) parts.push(ageStr);
+          if (sexStr) parts.push(sexStr);
+          if (exportedAt) parts.push('eksport: ' + exportedAt);
+          else if (savedAt) parts.push('zapisano: ' + savedAt);
+          metaText = parts.join(' · ');
+        } else if (entry.preview && entry.preview.needsPassword) {
+          metaText = 'plik chroniony hasłem — wpisz hasło powyżej';
+        } else {
+          metaText = entry.errMsg || 'błąd odczytu';
+        }
+
+        const checkbox = el('input', { type: 'checkbox' });
+        checkbox.checked = ok;
+        checkbox.disabled = !ok;
+        checkbox.addEventListener('change', function () {
+          entry.willImport = !!checkbox.checked;
+          updateImportButton();
+        });
+        entry.willImport = checkbox.checked;
+        entry._checkbox = checkbox;
+
+        const card = el('div', {
+          class: 'vilda-auth-import-card',
+          'data-disabled': ok ? '' : '1',
+          onclick: function (ev) {
+            // klik gdziekolwiek na karcie (poza checkboxem) zaznacza/odznacza
+            if (!ok || ev.target === checkbox) return;
+            checkbox.checked = !checkbox.checked;
+            entry.willImport = !!checkbox.checked;
+          }
+        }, [
+          el('div', { class: 'vilda-auth-import-card-avatar', text: (headerName || '?').charAt(0).toUpperCase() }),
+          el('div', { class: 'vilda-auth-import-card-info' }, [
+            el('div', { class: 'vilda-auth-import-card-name', text: headerName || '(plik chroniony hasłem)' }),
+            metaText ? el('div', { class: 'vilda-auth-import-card-meta', text: metaText }) : null,
+            el('div', { class: 'vilda-auth-import-card-filename', text: entry.file.name })
+          ]),
+          el('div', { class: 'vilda-auth-import-card-check' }, [checkbox])
+        ]);
+        fragment.appendChild(card);
+      });
+
+      // 4) Atomic swap — jednym razem podmieniamy zawartość previewBox.
+      //    Brak okresu „pusta lista przed gotowymi kartami" → brak skoku layoutu.
+      while (previewBox.firstChild) previewBox.removeChild(previewBox.firstChild);
+      previewBox.appendChild(fragment);
+
+      updateImportButton();
+      // Globalny komunikat „Niektóre pliki są chronione hasłem" usunięty:
+      // pojawiał się i znikał przy każdym debounce hasła, powodując skoki
+      // viewportu. Per-karta w meta jest wystarczająco czytelne („plik
+      // chroniony hasłem — wpisz hasło powyżej").
+
+      // przywróć scroll i fokus pwInput
+      previewBox.scrollTop = scrollTopBefore;
+      if (wasPwFocused) {
+        try {
+          pwInput.focus();
+          if (cursorPos != null && typeof pwInput.setSelectionRange === 'function') {
+            pwInput.setSelectionRange(cursorPos, cursorPos);
+          }
+        } catch (_) {}
+      }
+    }
+
+    fileInput.addEventListener('change', async function (ev) {
+      const fileList = ev.target.files || [];
+      if (!fileList.length) return;
+      setBusy(true);
+      try {
+        selectedFiles = [];
+        for (let i = 0; i < fileList.length; i += 1) {
+          const f = fileList[i];
+          const text = await readFileAsText(f);
+          selectedFiles.push({ file: f, text: text, preview: null, willImport: false, errMsg: null });
+        }
+        await refreshPreview();
+      } catch (e) {
+        setErr('Błąd odczytu plików: ' + (e && e.message ? e.message : e));
+      } finally {
+        setBusy(false);
+        fileInput.value = '';
+      }
+    });
+
+    let pwChangeTimer = null;
+    pwInput.addEventListener('input', function () {
+      if (pwChangeTimer) global.clearTimeout(pwChangeTimer);
+      pwChangeTimer = global.setTimeout(function () { refreshPreview(); }, 350);
+    });
+
+    importBtn.addEventListener('click', async function () {
+      setErr('');
+      const toImport = selectedFiles.filter(function (e) { return e.willImport && e.preview && e.preview.header; });
+      if (toImport.length === 0) {
+        setErr('Nie zaznaczono żadnego pliku do importu.');
+        return;
+      }
+      setBusy(true);
+      const summary = {
+        addedPatients: 0,
+        mergedPatients: 0,
+        addedSnapshots: 0,
+        skippedSnapshots: 0,
+        legacyImported: 0,
+        errors: []
+      };
+      try {
+        for (let i = 0; i < toImport.length; i += 1) {
+          const entry = toImport[i];
+          try {
+            if (entry.isLegacy && entry.legacyPayload) {
+              // Stary płaski JSON — savePatient sam zrobi dedup po imieniu+wieku.
+              const result = await V.importLegacyJsonPatient(entry.legacyPayload);
+              if (result.isNew) summary.addedPatients += 1; else summary.mergedPatients += 1;
+              summary.addedSnapshots += 1; // savePatient zawsze dodaje 1 nowy snapshot
+              summary.legacyImported += 1;
+            } else {
+              const result = await V.importPatientFromEnvelope(entry.text, pwInput.value || '');
+              if (result.isNew) summary.addedPatients += 1; else summary.mergedPatients += 1;
+              summary.addedSnapshots += result.addedSnapshots;
+              summary.skippedSnapshots += result.skippedSnapshots;
+            }
+          } catch (e) {
+            summary.errors.push({ file: entry.file.name, message: (e && e.message) || String(e) });
+          }
+        }
+      } finally {
+        setBusy(false);
+      }
+
+      // Pokaż raport
+      while (reportBox.firstChild) reportBox.removeChild(reportBox.firstChild);
+      reportBox.style.display = 'block';
+      const lines = [
+        'Nowych pacjentów: ' + summary.addedPatients,
+        'Zaktualizowanych (merge): ' + summary.mergedPatients,
+        // B1.10: „Nowych wpisów z wizyt" → „Nowych zapisów" (import legacy plików).
+        'Nowych zapisów: ' + summary.addedSnapshots,
+        'Pominiętych (już istniały): ' + summary.skippedSnapshots
+      ];
+      if (summary.legacyImported > 0) {
+        lines.push('W tym ze starszych plików .json (sprzed szyfrowania): ' + summary.legacyImported);
+      }
+      if (summary.errors.length) {
+        lines.push('Błędy: ' + summary.errors.length);
+      }
+      reportBox.appendChild(el('strong', { text: 'Import zakończony' }));
+      reportBox.appendChild(el('br'));
+      lines.forEach(function (line) {
+        reportBox.appendChild(global.document.createTextNode(line));
+        reportBox.appendChild(el('br'));
+      });
+      summary.errors.forEach(function (e) {
+        reportBox.appendChild(el('div', { class: 'vilda-auth-error', style: 'margin-top:6px;', text: e.file + ': ' + e.message }));
+      });
+
+      // import zakończony — wyłącz przycisk, schowaj toolbar i listę
+      importBtn.disabled = true;
+      importBtn.textContent = 'Import zakończony';
+      toolbar.style.display = 'none';
+      if (fromSetup) {
+        back.textContent = 'Przejdź do aplikacji';
+        back.onclick = function () { hide(); startIdleWatch(); };
+      } else {
+        back.textContent = 'Wróć do listy pacjentów';
+        back.onclick = function () { showPatientsList(onPickAfterImport); };
+      }
+    });
+
+    open(el('div', { class: 'vilda-auth-screen vilda-auth-import' }, [
+      title, sub,
+      el('div', { class: 'vilda-auth-section-action' }, [pickBtn]),
+      pwInput,
+      toolbar,
+      previewBox,
+      errBox,
+      reportBox,
+      fileInput,
+      el('div', { class: 'vilda-auth-actions' }, [back, importBtn])
+    ]));
+  }
+
+  // ============ AUTO-LOCK ============
+  function bindIdleHandlers() {
+    if (idleHandlersBound || !global.document) return;
+    const V = getVault();
+    if (!V) return;
+    const handler = function () {
+      try { V.resetIdleTimer(); } catch (_) {}
+    };
+    IDLE_EVENTS.forEach(function (evName) {
+      try { global.document.addEventListener(evName, handler, { passive: true }); } catch (_) {}
+    });
+    idleHandlersBound = true;
+  }
+
+  // ── „Ufam temu urządzeniu" — preferencja per-urządzenie ──────────────────────
+  function isTrustedDevice() {
+    try {
+      return !!(global.localStorage && global.localStorage.getItem(TRUSTED_DEVICE_KEY) === '1');
+    } catch (_) { return false; }
+  }
+
+  // Cloud-only: indywidualna preferencja idle (localStorage). Klucz PER-URZĄDZENIE
+  // (nie synchronizuje się na inne kopie konta) — to świadoma decyzja: telefon/tablet
+  // prywatne mogą mieć długie okno, a współdzielony komputer w gabinecie krótkie,
+  // bez ryzyka „zarażenia" jednego ustawienia drugim. Wartości whitelistowane.
+  //
+  // Krótkie okna (5–30 min) = sprzęt współdzielony. Długie (1 h–7 dni) = prywatne
+  // urządzenie — użytkownik wybiera je jawnie na tym konkretnym urządzeniu.
+  const CLOUD_ONLY_IDLE_PREF_KEY = 'vilda-cloud-only-idle-ms';
+  const CLOUD_ONLY_IDLE_CHOICES_MS = [5 * 60 * 1000, 10 * 60 * 1000, 15 * 60 * 1000, 30 * 60 * 1000, 60 * 60 * 1000, 8 * 60 * 60 * 1000, 24 * 60 * 60 * 1000, 7 * 24 * 60 * 60 * 1000];
+  function getCloudOnlyIdlePref() {
+    try {
+      const raw = global.localStorage && global.localStorage.getItem(CLOUD_ONLY_IDLE_PREF_KEY);
+      const n = raw != null ? parseInt(raw, 10) : NaN;
+      if (CLOUD_ONLY_IDLE_CHOICES_MS.indexOf(n) >= 0) return n;
+    } catch (_) {}
+    return null;
+  }
+  function setCloudOnlyIdlePref(ms) {
+    const n = parseInt(ms, 10);
+    if (CLOUD_ONLY_IDLE_CHOICES_MS.indexOf(n) < 0) return false;
+    try { if (global.localStorage) global.localStorage.setItem(CLOUD_ONLY_IDLE_PREF_KEY, String(n)); } catch (_) {}
+    const V = getVault();
+    try { if (V && V.isUnlocked()) V.startIdleTimer(effectiveIdleMs()); } catch (_) {}
+    return true;
+  }
+
+  // Efektywne okno bezczynności:
+  //   • cloud-only → preferencja PER-URZĄDZENIE z selecta (5 min–7 dni) lub 10 min
+  //     default gdy nic nie wybrano. Flaga „ufam temu urządzeniu" (tryb lokalny) jest
+  //     tu nadal ignorowana — w chmurze rolę „zaufania" pełni właśnie ten select,
+  //     ustawiany jawnie na danym urządzeniu (telefon/tablet prywatny = długie okno;
+  //     współdzielony komputer = krótkie/domyślne).
+  //   • standardowo → 7 dni gdy „ufam temu urządzeniu", inaczej domyślne 20 min.
+  function effectiveIdleMs() {
+    const V = getVault();
+    const def = (V && typeof V.DEFAULT_IDLE_LOCK_MS === 'number') ? V.DEFAULT_IDLE_LOCK_MS : (20 * 60 * 1000);
+    const cloudDef = (V && typeof V.CLOUD_ONLY_IDLE_LOCK_MS === 'number') ? V.CLOUD_ONLY_IDLE_LOCK_MS : (10 * 60 * 1000);
+    let isCloud = false;
+    try { isCloud = !!(V && V.isCloudOnlyMode && V.isCloudOnlyMode()); } catch (_) {}
+    if (isCloud) {
+      const pref = getCloudOnlyIdlePref();
+      return (typeof pref === 'number' && pref > 0) ? pref : cloudDef;
+    }
+    return isTrustedDevice() ? TRUSTED_DEVICE_IDLE_MS : def;
+  }
+
+  // Ustawia preferencję i — jeśli odblokowane — natychmiast stosuje nowe okno.
+  function setTrustedDevice(on) {
+    try {
+      if (global.localStorage) {
+        if (on) global.localStorage.setItem(TRUSTED_DEVICE_KEY, '1');
+        else global.localStorage.removeItem(TRUSTED_DEVICE_KEY);
+      }
+    } catch (_) {}
+    const V = getVault();
+    try { if (V && V.isUnlocked()) V.startIdleTimer(effectiveIdleMs()); } catch (_) {}
+    return isTrustedDevice();
+  }
+
+  function startIdleWatch() {
+    const V = getVault();
+    if (!V) return;
+    bindIdleHandlers();
+    try { V.startIdleTimer(effectiveIdleMs()); } catch (_) {}
+  }
+
+  function lockAndShowLogin(reason) {
+    const V = getVault();
+    if (V) { try { V.lock(reason || 'manual'); } catch (_) {} }
+    // onLock listener wywoła showStartupScreen, więc nic więcej nie robimy
+  }
+
+  // ============ BOOT ============
+  async function boot() {
+    if (booted) return;
+    booted = true;
+    if (!getVault() || !getCrypto()) {
+      logWarn('boot: brak VildaVault/VildaCrypto, pomijam UI.');
+      return;
+    }
+    ensureRoot();
+
+    try {
+      getVault().onLock(function (reason) {
+        // Auth-gate: schowaj interfejs NATYCHMIAST, synchronicznie, zanim ruszy
+        // resetAppSessionState() i ewentualna nawigacja — inaczej po wylogowaniu
+        // stara treść aplikacji błyska zanim pojawi się ekran logowania. W gałęzi
+        // gościa (poniżej) zdejmujemy bramę, bo gość zostaje w aplikacji.
+        lockAppContent();
+        hideLogoutButton();
+
+        // WAŻNE: vault.lock() zeruje currentUserId PRZED wywołaniem notifyLock(),
+        // więc getCurrentUser() tu zawsze zwraca null. Używamy _trackedUserId
+        // przechwyconego wcześniej w onUnlock.
+        var lockedUserId = _trackedUserId;
+        _trackedUserId = null; // zużyty — wyczyść niezależnie od wyniku
+        // N11.2: usunięto tracking cloud-only + sessionStorage write — toast
+        // post-logout został wyeliminowany jako UX clutter.
+
+        // Wylogowanie/auto-lock = porzucenie tożsamości. Wyczyść stan aplikacji,
+        // żeby kolejny user (lub gość) nie zobaczył danych poprzedniego.
+        try {
+          resetAppSessionState('on-lock');
+        } catch (_) {}
+        // Kasuj lokalny cache PRO wylogowanego użytkownika (obrona wgłębna, warstwa 2).
+        // lockedUserId jest niezbędny — vault.lock() wyczyścił currentUserId
+        // i sessionStorage PRZED wywołaniem onLock, więc getCurrentUserIdSync()
+        // zwróciłby null.
+        try {
+          if ((reason === 'manual' || reason === 'user-removed') &&
+              lockedUserId &&
+              global.VildaProAccess && typeof global.VildaProAccess.invalidateCache === 'function') {
+            global.VildaProAccess.invalidateCache(lockedUserId);
+          }
+        } catch (_) {}
+        // Zaktualizuj bramkę PRO — vault zablokowany, sessionStorage wyczyszczone,
+        // więc refresh() poprawnie ustawi vilda-pro-inactive na <html>.
+        try {
+          if (global.VildaProUi && typeof global.VildaProUi.refresh === 'function') {
+            global.VildaProUi.refresh();
+          }
+        } catch (_) {}
+        if (isGuestMode()) { unlockAppContent(); return; } // gość zostaje w aplikacji — bez bramy
+        // Gdy konto zostało właśnie usunięte, ustawienia.html natychmiast
+        // przekierowuje na index.html — nie otwieramy tu ekranu startowego,
+        // żeby uniknąć błysku starych danych przed nawigacją.
+        if (reason === 'user-removed') return;
+        // Ekran logowania zawsze pojawia się nad index.html, nie nad podstroną.
+        // Logout = pełna izolacja — po wylogowaniu (manual) lub wygaśnięciu sesji (idle)
+        // wracamy do strony głównej, żeby następny użytkownik zaczynał od zera.
+        try {
+          if (reason === 'manual' || reason === 'idle') {
+            var _loc = global.location;
+            if (_loc && _loc.pathname &&
+                !_loc.pathname.endsWith('index.html') &&
+                _loc.pathname !== '/') {
+              _loc.replace('index.html');
+              return; // index.html załaduje auth UI samodzielnie
+            }
+          }
+        } catch (_) {}
+        // po każdym innym rodzaju blokady (lub gdy już jesteśmy na index.html) — ekran startowy
+        showStartupScreen();
+      });
+      getVault().onUnlock(function (payload) {
+        // Zapamiętaj userId zalogowanego użytkownika — vault.lock() zeruje go
+        // PRZED wywołaniem onLock listenerów, więc bez własnego śledzenia
+        // nie możemy odczytać userId w onLock.
+        _trackedUserId = (payload && payload.userId) ? payload.userId : null;
+        // N11.2: usunięto _trackedCloudOnly capture (post-logout toast usunięty).
+
+        // Auth-gate: vault odblokowany (logowanie LUB nawigacja/odtworzenie sesji)
+        // = aplikacja autoryzowana → odsłaniamy interfejs. Robimy to bezwarunkowo,
+        // zanim niżej nastąpi ewentualny wczesny return dla nawigacji.
+        unlockAppContent();
+
+        // Zaktualizuj bramkę PRO — ale tylko gdy cache PRO już istnieje w localStorage.
+        // Przypadek idle re-auth (vault auto-zablokował, user ponownie się loguje):
+        //   cache ważny → refresh() od razu pokaże PRO bez żadnego flash.
+        // Przypadek świeżego logowania po manual logout (warstwa 2 wyczyściła cache):
+        //   hasAccess()=false → pomijamy, bo onLock już ustawił inactive przy wylogowaniu.
+        //   PRO zostanie odświeżone przez sync w tle (warstwa 3) → 2b wywoła refresh()
+        //   po sukcesie fetch — bez zbędnego "brak PRO" między logowaniem a synciem.
+        try {
+          var _hasLocalPro = global.VildaProAccess &&
+                             typeof global.VildaProAccess.hasAccess === 'function' &&
+                             global.VildaProAccess.hasAccess();
+          if (global.VildaProUi && typeof global.VildaProUi.refresh === 'function') {
+            if (_hasLocalPro || !global.VildaProAccess) {
+              global.VildaProUi.refresh();
+            }
+          }
+          // Gdy PRO potwierdzone z lokalnego cache → odpal vildaProAccessChanged
+          // żeby app.js auto-włączył tryb profesjonalny przy każdym logowaniu.
+          // (Ścieżka serwera odpala setPlan → vildaProAccessChanged osobno;
+          //  ta gałąź obsługuje przypadek gdy cache jest ważny i serwer jest pomijany.)
+          if (_hasLocalPro && global.document) {
+            var _proSnap = (typeof global.VildaProAccess.getSnapshot === 'function')
+              ? global.VildaProAccess.getSnapshot() : null;
+            global.document.dispatchEvent(new CustomEvent('vildaProAccessChanged', {
+              bubbles: false,
+              detail: {
+                plan:       (_proSnap && _proSnap.plan)       || 'pro',
+                validUntil: (_proSnap && _proSnap.validUntil) || null
+              }
+            }));
+          }
+        } catch (_) {}
+        // 2c: badge synchroniczny z wczesnym refresh — jeśli mamy cache PRO,
+        // od razu pokaż fioletowe „PRO" bez czekania na async sync z serwerem.
+        updateProBadge();
+
+        // Logowanie zawsze unieważnia tryb gościa — także gdy user wszedł
+        // wcześniej jako gość, a potem zalogował się przez przycisk w rogu.
+        if (isGuestMode()) {
+          global[PWA_GUEST_FLAG] = false;
+          persistGuestFlag(false);
+        }
+        showLogoutButton();
+        startIdleWatch();
+
+        // R3 — auto-trigger reminder modal po unlock (raz na dzień, cloud-synced).
+        // Delay 3000ms: daje przestrzeń biometric/adoption prompt'om i loading
+        // overlay'om sync force-pull, żeby się zamknęły jako pierwsze. Reminder
+        // pokazuje się jako ostatni element w kolejce powitalnej.
+        setTimeout(function () {
+          maybeShowReminders().catch(function () {});
+        }, 3000);
+
+        // ── Logowanie vs nawigacja/odtworzenie sesji ──────────────────────────
+        // Vault podaje trigger w payloadzie onUnlock:
+        //   • 'restore' → tryRestoreSession (nawigacja między podstronami lub
+        //     auto-przywrócenie sesji przy starcie) — dane bieżącej sesji są
+        //     nienaruszone, restoreAll() z vildaAppOnReady je obsłuży. NIE czyścimy.
+        //   • inny ('login'/passkey/recovery/QR/nowe konto/odtworzenie backupu) →
+        //     PRAWDZIWE logowanie. Nowy użytkownik musi zacząć od czysta — czyścimy
+        //     wszystkie dane z poprzedniej sesji (DOM + localStorage sharedUserData +
+        //     sessionStorage main/clcr/steroid) i dispatchujemy user-state-cleared,
+        //     dzięki czemu ikona pacjenta przechodzi w stan hidden (a nie new_patient).
+        // Fallback (starszy vault bez trigger): dawna heurystyka obecności sharedUserData.
+        var _trigger = (payload && payload.trigger) || null;
+        var _isNavigation;
+        if (_trigger) {
+          _isNavigation = (_trigger === 'restore');
+        } else {
+          var existingShared = null;
+          try {
+            existingShared = global.localStorage && global.localStorage.getItem('sharedUserData');
+          } catch (_) {}
+          _isNavigation = !!(existingShared && existingShared !== 'null' && existingShared.length > 10);
+        }
+        if (_isNavigation) return;
+
+        // Prawdziwe logowanie — pełny reset stanu poprzedniej sesji.
+        resetAppSessionState('fresh-login');
+
+        // ── Synchronizacja stanu PRO z serwerem w tle (warstwa 3) ─────────────
+        // Dociera tu tylko przy prawdziwym logowaniu (hasło, passkey, biometria,
+        // QR, nowe konto) — tryRestoreSession (nawigacja) zawróciło wcześniej.
+        // Odpytujemy serwer tylko gdy brak aktywnego lokalnego cache — czyli po
+        // manual logout (warstwa 2 wyczyściła cache) lub na nowym urządzeniu.
+        // Fire-and-forget: nie blokuje UI, ciche błędy (offline, 404, 401).
+        try {
+          var _proAccess = global.VildaProAccess;
+          var _proVault  = getVault();
+          var _proNow    = Date.now();
+          // Cooldown per-user: ten sam userId w ciągu 30s → pomiń (idle re-login, QR).
+          // Inny userId → zawsze odpytaj serwer, ignoruj cooldown poprzednika.
+          var _proSyncUserId = _trackedUserId;
+          var _proCooldownOk = (_proSyncLastAt.userId !== _proSyncUserId) ||
+                               ((_proNow - _proSyncLastAt.at) > 30000);
+          if (_proAccess && !_proAccess.hasAccess() &&
+              _proVault && typeof _proVault.isUnlocked === 'function' && _proVault.isUnlocked() &&
+              typeof _proVault.getSyncMaterial === 'function' &&
+              _proCooldownOk) {
+            _proSyncLastAt = { userId: _proSyncUserId, at: _proNow };
+            (async function () {
+              try {
+                var _sm = await _proVault.getSyncMaterial();
+                var _base = (global.VILDA_SYNC_WORKER_URL || 'https://vilda-sync.maciej-4b9.workers.dev')
+                              .replace(/\/$/, '');
+                var _resp = await fetch(
+                  _base + '/v1/slots/' + _sm.slotId + '/trial',
+                  { method: 'GET', headers: { 'Authorization': 'Bearer ' + _sm.authToken } }
+                );
+                if (_resp.ok) {
+                  var _d;
+                  try { _d = await _resp.json(); } catch (_) { return; }
+                  if (_d && _d.plan === 'pro' && _d.validUntil) {
+                    var _pa = global.VildaProAccess;
+                    if (_pa && typeof _pa.setPlan === 'function') {
+                      _pa.setPlan(_d.plan, _d.validUntil, _d.activatedAt || null);
+                      // setPlan odpala 'vildaProAccessChanged' → VildaProUi nasłuchuje.
+                      // Bezpośrednie refresh() jako obrona wgłębna — na wypadek gdy
+                      // event nie dotrze (race przy init, brak listenera na tej stronie).
+                      try {
+                        if (global.VildaProUi && typeof global.VildaProUi.refresh === 'function') {
+                          global.VildaProUi.refresh();
+                        }
+                        // 2b: po udanym sync z serwerem badge przełącza się na „PRO"
+                        updateProBadge();
+                      } catch (_) {}
+                    }
+                  }
+                }
+                // 404 = brak triala (nowy użytkownik) — cicho ignorujemy
+                // 401 = slot niezarejestrowany — cicho ignorujemy
+              } catch (_) { /* błąd sieci lub offline — nie wpływa na działanie */ }
+            })();
+          }
+        } catch (_) {}
+
+      });
+    } catch (e) { logError('boot: listenery', e); }
+
+    // Usuń stary _vildaSnapRestore jeśli użytkownik jawnie czyści dane
+    // lub jeśli pozostał w localStorage z poprzedniej wersji aplikacji.
+    try {
+      if (typeof global.addEventListener === 'function') {
+        global.addEventListener('vilda:user-state-cleared', function () {
+          try {
+            if (global.localStorage) global.localStorage.removeItem('_vildaSnapRestore');
+          } catch (_) {}
+        });
+      }
+    } catch (_) {}
+
+    // Najpierw spróbuj przywrócić sesję zalogowanego użytkownika z sessionStorage —
+    // nawigacja między podstronami nie powinna wymagać ponownego logowania.
+    let restored = false;
+    try { restored = await getVault().tryRestoreSession(); } catch (e) { logError('tryRestoreSession', e); }
+    if (restored) {
+      // sesja wczytana, hide() i UI pozostaje ukryte — onUnlock listener już się
+      // odpalił i pokazał przycisk wyloguj się oraz uruchomił idle timer.
+      setGuestMode(false);
+      hide();
+      return;
+    }
+
+    // Jeśli na poprzedniej podstronie użytkownik wybrał „Kontynuuj jako gość",
+    // przywróćmy ten tryb zamiast pokazywać znów ekran logowania.
+    if (readPersistedGuestFlag()) {
+      setGuestMode(true, { skipReset: true });
+      hide();
+      return;
+    }
+
+    setGuestMode(false);
+    await showStartupScreen();
+  }
+
+  // ============ SCALANIE VAULT-BACKUP ============
+
+  /**
+   * Ekran scalania kopii całego konta z bieżącym kontem.
+   * Otwiera się gdy użytkownik wybierze plik vault-backup w imporcie pacjentów
+   * lub wywoła bezpośrednio.
+   *
+   * @param {string} fileText  - zawartość pliku .wiw (vault-backup)
+   * @param {string} [fileName] - oryginalna nazwa pliku (do wyświetlenia)
+   */
+  function showMergeAccountFlow(fileText, fileName) {
+    const V = getVault();
+    if (!V || !V.isUnlocked()) return;
+
+    const title = el('h2', { class: 'vilda-auth-title', text: 'Scal kopię konta' });
+    const sub   = el('p', {
+      class: 'vilda-auth-subtitle',
+      // B1.10: „wizyty" → „zapisy" — kontekst: scalanie kopii vaulta z aktualnymi danymi.
+      text: 'Podaj hasło do tej kopii. Aplikacja sprawdzi, które zapisy już masz, i doda tylko brakujące — bez usuwania ani nadpisywania istniejących danych.'
+    });
+
+    const fileInfo = el('div', {
+      class: 'vilda-auth-info',
+      style: 'font-size:0.82rem; color:#4a6670; margin-bottom:4px;',
+      text: fileName ? ('Plik: ' + fileName) : ''
+    });
+
+    const pwInput = el('input', {
+      type:         'password',
+      class:        'vilda-auth-input',
+      placeholder:  'Hasło do tej kopii konta',
+      autocomplete: 'off'
+    });
+
+    const errBox = el('div', { class: 'vilda-auth-error' });
+    errBox.style.display = 'none';
+
+    // Sekcja podglądu — wypełniana po wpisaniu hasła
+    const previewBox = el('div', { class: 'vilda-auth-info', style: 'display:none; text-align:left;' });
+
+    // Przycisk podglądu
+    const previewBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost',
+      type:  'button',
+      text:  'Sprawdź co zostanie scalone'
+    });
+
+    // Przycisk wykonania scalania — początkowo ukryty
+    const mergeBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-primary',
+      type:  'button',
+      text:  'Scal teraz'
+    });
+    mergeBtn.style.display = 'none';
+
+    const back = el('button', {
+      class:   'vilda-auth-btn vilda-auth-btn-ghost',
+      type:    'button',
+      text:    'Wstecz',
+      onclick: function () { showImportPatientsFlow(null); }
+    });
+
+    // Wyniki po scaleniu
+    const reportBox = el('div', { class: 'vilda-auth-info', style: 'display:none; text-align:left;' });
+
+    // ---- Podgląd ----
+    previewBtn.addEventListener('click', async function () {
+      showError(errBox, '');
+      previewBox.style.display = 'none';
+      mergeBtn.style.display   = 'none';
+      if (!pwInput.value) { showError(errBox, 'Wpisz hasło do tej kopii konta.'); return; }
+      setBusy(true);
+      previewBtn.disabled = true;
+      try {
+        const plan = await V.previewVaultBackupMerge(fileText, pwInput.value);
+
+        // Buduj podgląd
+        while (previewBox.firstChild) previewBox.removeChild(previewBox.firstChild);
+
+        const backupDateStr = plan.backupExportedAtISO
+          ? formatRelativeISO(plan.backupExportedAtISO) : '';
+
+        previewBox.appendChild(el('div', {
+          style: 'font-weight:700; color:#002830; margin-bottom:10px; font-size:0.95rem;',
+          text:  'Kopia konta: „' + plan.backupLabel + '"' + (backupDateStr ? ' · ' + backupDateStr : '')
+        }));
+
+        // Scalenie (wspólni pacjenci)
+        if (plan.mergePatients.length > 0) {
+          previewBox.appendChild(el('div', {
+            style: 'font-weight:600; color:#00838d; margin:10px 0 6px; font-size:0.83rem; text-transform:uppercase; letter-spacing:0.05em;',
+            // B1.10: „uzupełnienia wizyt" → „uzupełnienia zapisów".
+            text:  'Pacjenci do uzupełnienia zapisów (' + plan.mergePatients.length + ')'
+          }));
+          plan.mergePatients.forEach(function (p) {
+            const noNew = p.newSnapshotCount === 0;
+            const row = el('div', {
+              style: 'display:flex; justify-content:space-between; align-items:baseline; padding:4px 0; border-bottom:1px solid rgba(0,131,141,0.08); font-size:0.85rem; color:' + (noNew ? '#999' : '#002830') + ';'
+            }, [
+              el('span', { text: p.name }),
+              el('span', {
+                style: 'font-size:0.78rem; color:' + (noNew ? '#bbb' : '#00838d') + '; white-space:nowrap; margin-left:12px;',
+                text: noNew
+                  ? 'brak nowych (wszystkie zapisy już są)'
+                  : (p.currentSnapshotCount + ' + ' + p.newSnapshotCount + ' nowych = ' + (p.currentSnapshotCount + p.newSnapshotCount))
+              })
+            ]);
+            previewBox.appendChild(row);
+          });
+        }
+
+        // Nowi pacjenci
+        if (plan.addPatients.length > 0) {
+          previewBox.appendChild(el('div', {
+            style: 'font-weight:600; color:#00838d; margin:14px 0 6px; font-size:0.83rem; text-transform:uppercase; letter-spacing:0.05em;',
+            text:  'Nowi pacjenci do dodania (' + plan.addPatients.length + ')'
+          }));
+          plan.addPatients.forEach(function (p) {
+            const row = el('div', {
+              style: 'display:flex; justify-content:space-between; align-items:baseline; padding:4px 0; border-bottom:1px solid rgba(0,131,141,0.08); font-size:0.85rem; color:#002830;'
+            }, [
+              el('span', { text: p.name }),
+              el('span', {
+                style: 'font-size:0.78rem; color:#00838d; white-space:nowrap; margin-left:12px;',
+                // B1.10: „wizyta/wizyty" → „zapis/zapisy/zapisów".
+                text:  p.snapshotCount + ' ' + (p.snapshotCount === 1 ? 'zapis' : 'zapisów')
+              })
+            ]);
+            previewBox.appendChild(row);
+          });
+        }
+
+        // Podsumowanie
+        const summaryParts = [];
+        if (plan.totalNewSnapshots > 0)   summaryParts.push(plan.totalNewSnapshots + ' nowych zapisów zostanie dodanych');
+        if (plan.totalNewSnapshots === 0)  summaryParts.push('Brak nowych danych — wszystko już masz');
+        if (plan.addPatients.length > 0)   summaryParts.push(plan.addPatients.length + ' nowych pacjentów');
+
+        previewBox.appendChild(el('div', {
+          style: 'margin-top:14px; padding:10px 12px; background:rgba(0,131,141,0.06); border-radius:10px; font-size:0.87rem; color:#002830; font-weight:600;',
+          text:  summaryParts.join(' · ')
+        }));
+
+        previewBox.style.display = 'block';
+
+        if (plan.totalNewSnapshots > 0 || plan.addPatients.length > 0) {
+          mergeBtn.style.display = '';
+          mergeBtn.textContent   = 'Scal teraz (' + plan.totalNewSnapshots + ' nowych zapisów' +
+            (plan.addPatients.length > 0 ? ', ' + plan.addPatients.length + ' nowych pacjentów' : '') + ')';
+        } else {
+          mergeBtn.style.display = 'none';
+        }
+
+      } catch (e) {
+        showError(errBox, e && e.message ? e.message : 'Nie udało się odczytać kopii.');
+      } finally {
+        setBusy(false);
+        previewBtn.disabled = false;
+      }
+    });
+
+    // ---- Scalanie ----
+    mergeBtn.addEventListener('click', async function () {
+      showError(errBox, '');
+      setBusy(true);
+      mergeBtn.disabled    = true;
+      previewBtn.disabled  = true;
+      pwInput.disabled     = true;
+      try {
+        const result = await V.mergeVaultBackup(fileText, pwInput.value);
+
+        previewBox.style.display = 'none';
+        mergeBtn.style.display   = 'none';
+        reportBox.style.display  = 'block';
+        while (reportBox.firstChild) reportBox.removeChild(reportBox.firstChild);
+
+        const lines = [];
+        if (result.addedPatientCount > 0)
+          lines.push('➕ Dodano ' + result.addedPatientCount + ' nowych pacjentów');
+        if (result.mergedPatientCount > 0)
+          lines.push('🔀 Uzupełniono zapisy u ' + result.mergedPatientCount + ' pacjentów');
+        if (result.addedSnapshotCount > 0)
+          lines.push('✓ Łącznie dodano ' + result.addedSnapshotCount + ' zapisów');
+        if (result.skippedSnapshotCount > 0)
+          lines.push('↩ Pominięto ' + result.skippedSnapshotCount + ' duplikatów (już były w Twoim koncie)');
+        if (result.addedSnapshotCount === 0 && result.addedPatientCount === 0)
+          lines.push('Brak zmian — wszystkie dane z tej kopii już były w Twoim koncie.');
+
+        lines.forEach(function (line) {
+          reportBox.appendChild(el('p', { style: 'margin:4px 0; font-size:0.88rem;', text: line }));
+        });
+
+        // Zmień przycisk Wstecz na "Gotowe"
+        back.textContent = 'Gotowe';
+        back.className   = 'vilda-auth-btn vilda-auth-btn-primary';
+        back.onclick     = function () { hide(); startIdleWatch(); };
+
+      } catch (e) {
+        showError(errBox, e && e.message ? e.message : 'Scalanie nie powiodło się.');
+        mergeBtn.disabled   = false;
+        previewBtn.disabled = false;
+        pwInput.disabled    = false;
+      } finally {
+        setBusy(false);
+      }
+    });
+
+    pwInput.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter') previewBtn.click();
+    });
+
+    open(el('div', { class: 'vilda-auth-screen vilda-auth-merge' }, [
+      title, sub, fileInfo, pwInput, errBox,
+      el('div', { class: 'vilda-auth-actions' }, [previewBtn]),
+      previewBox,
+      el('div', { class: 'vilda-auth-actions', style: 'margin-top:8px;' }, [mergeBtn]),
+      reportBox,
+      el('div', { class: 'vilda-auth-actions', style: 'margin-top:4px;' }, [back])
+    ]));
+
+    setTimeout(function () { try { pwInput.focus(); } catch (_) {} }, 30);
+  }
+
+  // ============ EKRAN ODTWARZANIA Z ZAPASOWEGO KODU DOSTĘPU ============
+
+  /**
+   * Ekran „Zapasowy kod dostępu" — cross-device restore bez pliku .wiw.
+   * Użytkownik podaje kod (vsc3.…) + hasło → vault odblokowany z tym samym
+   * masterKey → ten sam slotId → interstitial „Znaleziono Twoje dane" pojawia
+   * się automatycznie z vilda_sync_integration.js.
+   */
+  function showSyncCodeRestoreScreen() {
+    const V = getVault();
+    if (!V) return;
+
+    const title = el('h2', { class: 'vilda-auth-title', text: 'Logowanie z innego urządzenia' });
+    const sub = el('p', {
+      class: 'vilda-auth-subtitle',
+      text: 'Wybierz sposób logowania.'
+    });
+
+    // ── Karty wyboru metody logowania (Wariant B) ─────────────────────────────
+    // Spójne z chooserem: kółko z lucide-style ikoną + tytuł + opis + tag w rogu.
+    // Cała karta jest klikalna (<button>) — tak samo jak kafelki w chooserze.
+    const ENTRY_ICON_QR = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+      + '<rect x="3" y="3" width="7" height="7" rx="1"/>'
+      + '<rect x="14" y="3" width="7" height="7" rx="1"/>'
+      + '<rect x="3" y="14" width="7" height="7" rx="1"/>'
+      + '<line x1="14" y1="14" x2="14" y2="17"/>'
+      + '<line x1="17" y1="14" x2="21" y2="14"/>'
+      + '<line x1="14" y1="21" x2="17" y2="21"/>'
+      + '<line x1="20" y1="17" x2="20" y2="21"/>'
+      + '</svg>';
+    const ENTRY_ICON_EYE_OFF = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+      + '<path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>'
+      + '<path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>'
+      + '<path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>'
+      + '<line x1="2" y1="2" x2="22" y2="22"/>'
+      + '</svg>';
+
+    function buildEntryCard(cfg) {
+      const card = el('button', {
+        type: 'button',
+        class: 'vilda-auth-entry-card',
+        'data-method': cfg.method
+      });
+      card.style.cssText = [
+        'display:block;width:100%;text-align:left;cursor:pointer;font:inherit;color:inherit;',
+        'padding:14px 16px;margin:8px 0 0;',
+        'background:rgba(255,255,255,0.92);',
+        'border:2px solid #d7e9ec;border-radius:14px;',
+        'transition:border-color .18s ease, background .18s ease, box-shadow .18s ease, transform .12s ease;'
+      ].join('');
+      card.innerHTML =
+        '<div style="display:flex;align-items:flex-start;gap:14px;">' +
+          '<div style="flex:0 0 auto;width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#e2f1f2,#cfe9ec);display:flex;align-items:center;justify-content:center;color:#00838d;" aria-hidden="true">' +
+            cfg.iconSvg +
+          '</div>' +
+          '<div style="flex:1 1 auto;min-width:0;">' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px;">' +
+              '<div style="font-weight:700;font-size:1rem;color:#0f2b33;">' + cfg.title + '</div>' +
+              '<span style="font-size:0.7rem;font-weight:600;color:' + cfg.tagColor + ';background:' + cfg.tagBg + ';padding:2px 8px;border-radius:999px;white-space:nowrap;">' + cfg.tag + '</span>' +
+            '</div>' +
+            '<div style="font-size:0.85rem;color:#5b6672;line-height:1.45;">' + cfg.desc + '</div>' +
+          '</div>' +
+        '</div>';
+      card.addEventListener('mouseenter', function () {
+        card.style.borderColor = '#00838d';
+        card.style.transform = 'translateY(-1px)';
+        card.style.boxShadow = '0 6px 16px rgba(0,131,141,0.18)';
+      });
+      card.addEventListener('mouseleave', function () {
+        card.style.borderColor = '#d7e9ec';
+        card.style.transform = '';
+        card.style.boxShadow = '';
+      });
+      card.addEventListener('click', cfg.onClick);
+      return card;
+    }
+
+    // QR card — sekcja „persistent" (konto zostaje). Chooser filtruje ephemeral
+    // (to osobna karta poniżej).
+    const qrSection = buildEntryCard({
+      method: 'qr',
+      iconSvg: ENTRY_ICON_QR,
+      title: 'Zaloguj przez kod QR',
+      desc: 'Zeskanuj telefonem i ustal hasło. W następnym kroku wybierzesz, czy pacjenci mają zostać na dysku, czy tylko w chmurze.',
+      tag: 'Konto zostaje',
+      tagColor: '#0f6e56',
+      tagBg: '#e1f5ee',
+      onClick: function () { showQRLoginScreen({ availableModes: ['local', 'cloud-only'] }); }
+    });
+
+    // Ephemeral card — sekcja „jednorazowo" (nic nie zostaje). User świadomie
+    // wybrał obcy komputer → pomijamy chooser, prosto do ephemeral flow.
+    let passkeySection = null;
+    if (typeof V.unlockWithPasskeyEphemeral === 'function') {
+      passkeySection = buildEntryCard({
+        method: 'ephemeral',
+        iconSvg: ENTRY_ICON_EYE_OFF,
+        title: 'Zaloguj jednorazowo',
+        desc: 'Pracujesz na obcym komputerze? Po zakończeniu pracy nic nie zostanie.',
+        tag: 'Nic nie zostaje',
+        tagColor: '#854f0b',
+        tagBg: '#faeeda',
+        onClick: function () { showPasskeyEphemeralLoginScreen({ storageMode: 'ephemeral' }); }
+      });
+    }
+
+    // Backup code card — trzeci kafelek, klik prowadzi do osobnego ekranu
+    // z formularzem (showBackupCodeRestoreScreen). Tag „Bez telefonu" w kolorze
+    // szarym kontrastuje z zielonym/pomarańczowym tagiem powyżej.
+    const ENTRY_ICON_KEY = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+      + '<circle cx="8" cy="15" r="4"/>'
+      + '<line x1="10.85" y1="12.15" x2="19" y2="4"/>'
+      + '<line x1="18" y1="5" x2="20" y2="7"/>'
+      + '<line x1="15" y1="8" x2="17" y2="10"/>'
+      + '</svg>';
+    const backupCodeSection = buildEntryCard({
+      method: 'backup-code',
+      iconSvg: ENTRY_ICON_KEY,
+      title: 'Użyj zapasowego kodu',
+      desc: 'Masz zapasowy kod z poprzedniego urządzenia? Wklej go i podaj hasło, żeby zalogować się bez telefonu.',
+      tag: 'Bez telefonu',
+      tagColor: '#444441',
+      tagBg: '#f1efe8',
+      onClick: function () { showBackupCodeRestoreScreen(); }
+    });
+
+    const back = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost',
+      type: 'button',
+      text: '← Wróć',
+      onclick: function () { showStartupScreen(); }
+    });
+
+    const children = [title, sub, qrSection];
+    if (passkeySection) { children.push(passkeySection); }
+    children.push(backupCodeSection, back);
+    const wrapper = el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, children);
+    open(wrapper);
+  }
+
+  // ============ EKRAN WYMUSZONEJ ZMIANY HASŁA (Krok 16.5) ============
+  // Pokazywany po unlockUser gdy vault zwrócił needsPasswordReset:true.
+  // Stare konta z legacy 8-char hasłami muszą ustawić silne hasło zgodne
+  // z aktualną polityką przed wejściem do aplikacji.
+  //
+  // BLOKUJĄCY — bez przycisku „Wróć". Jedyne wyjścia:
+  //   • Ustawienie nowego hasła (resetPasswordWhileUnlocked) → aplikacja
+  //   • „Wyloguj" → vault.lock() + powrót do ekranu wyboru konta
+  function showForcedPasswordResetScreen(policyDetail) {
+    const V = getVault();
+    if (!V) return;
+
+    const title = el('h2', { class: 'vilda-auth-title', text: 'Twoje hasło wymaga zmiany' });
+    const sub = el('p', {
+      class: 'vilda-auth-subtitle',
+      text: 'Twoje obecne hasło nie spełnia naszych zaktualizowanych wymagań bezpieczeństwa. Ustaw silniejsze hasło, żeby kontynuować pracę.'
+    });
+
+    // Box informacyjny — co konkretnie jest nie tak
+    const policyBox = document.createElement('div');
+    policyBox.style.cssText = 'margin: 8px 0 14px; padding: 10px 12px; background: rgba(180,83,9,0.08); border-left: 3px solid #b45309; border-radius: 8px; font-size: 0.85rem; color: #854f0b; line-height: 1.5;';
+    const reasonText = (policyDetail && policyDetail.message)
+      ? policyDetail.message + (policyDetail.hint ? ' ' + policyDetail.hint : '')
+      : 'Hasło musi mieć minimum 12 znaków i zawierać co najmniej 3 z 4 typów znaków: małe litery, wielkie litery, cyfry, znaki specjalne.';
+    policyBox.innerHTML = '<strong>Dlaczego?</strong> ' + reasonText;
+
+    // Pola nowego hasła
+    const pw1 = el('input', {
+      type: 'password',
+      class: 'vilda-auth-input',
+      placeholder: 'Nowe hasło (min. 12 znaków, 3 z 4 typów)'
+    });
+    const pw2 = el('input', {
+      type: 'password',
+      class: 'vilda-auth-input',
+      placeholder: 'Powtórz nowe hasło'
+    });
+
+    // Przycisk „Zaproponuj silne hasło" — identyczna logika jak w kreatorze.
+    const generateBtn = el('button', {
+      type: 'button',
+      class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small vilda-auth-btn-subtle',
+      text: '🎲 Zaproponuj silne hasło'
+    });
+    generateBtn.style.cssText = 'margin: 4px 0 8px; font-size: 0.85rem;';
+    generateBtn.addEventListener('click', function () {
+      if (typeof V.generateStrongPassword !== 'function') return;
+      const generated = V.generateStrongPassword();
+      pw1.value = generated;
+      pw2.value = generated;
+      // Brak auto-reveal — user ma toggle „pokaż hasło" obok pola.
+      try { pw1.focus(); } catch (_) {}
+    });
+
+    const errBox = el('div', { class: 'vilda-auth-error' });
+    errBox.style.display = 'none';
+    function showErr(msg) {
+      errBox.textContent = msg || '';
+      errBox.style.display = msg ? '' : 'none';
+    }
+
+    const submitBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-primary',
+      type: 'button',
+      text: 'Ustaw nowe hasło i kontynuuj'
+    });
+    submitBtn.addEventListener('click', async function () {
+      showErr('');
+      // Walidacja policy
+      if (typeof V.validatePasswordStrength === 'function') {
+        const r = V.validatePasswordStrength(pw1.value);
+        if (!r.ok) { showErr(r.message + (r.hint ? ' ' + r.hint : '')); return; }
+      } else if (pw1.value.length < 12) {
+        showErr('Hasło musi mieć minimum 12 znaków.'); return;
+      }
+      if (pw1.value !== pw2.value) { showErr('Hasła nie są takie same.'); return; }
+      submitBtn.disabled = true;
+      const orig = submitBtn.textContent;
+      submitBtn.textContent = 'Zmieniam…';
+      try {
+        // Hasło już zwalidowane wyżej → resetPasswordWhileUnlocked przejdzie.
+        // Używamy reset (nie changePassword), bo user nie musi podawać starego —
+        // jest już zalogowany, vault ma masterKey w RAM.
+        await V.resetPasswordWhileUnlocked(pw1.value);
+        hide();
+        startIdleWatch();
+      } catch (e) {
+        showErr(e && e.message ? e.message : 'Nie udało się zmienić hasła.');
+        submitBtn.disabled = false;
+        submitBtn.textContent = orig;
+      }
+    });
+    pw2.addEventListener('keydown', function (e) { if (e.key === 'Enter') submitBtn.click(); });
+
+    // „Wyloguj" — escape hatch, nie zmusza usera na siłę gdy nie chce ustawić
+    // nowego hasła teraz. Wraca do ekranu wyboru konta.
+    const logoutBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small',
+      type: 'button',
+      text: 'Wyloguj się — ustawię hasło później',
+      onclick: function () {
+        try { V.lock('user'); } catch (_) {}
+        showStartupScreen();
+      }
+    });
+
+    open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
+      title, sub, policyBox,
+      attachPasswordToggle(pw1), generateBtn,
+      attachPasswordToggle(pw2),
+      errBox, submitBtn, logoutBtn
+    ]));
+    setTimeout(function () { try { pw1.focus(); } catch (_) {} }, 30);
+  }
+
+  // ============ EKRAN ZAPASOWEGO KODU DOSTĘPU ============
+  // Osobny ekran z formularzem — wcześniej był inline w showSyncCodeRestoreScreen.
+  // Po Kroku 14 sekcja na entry-screen to mały kafelek; klik → ten ekran.
+  function showBackupCodeRestoreScreen() {
+    const V = getVault();
+    if (!V) return;
+
+    const title = el('h2', { class: 'vilda-auth-title', text: 'Zapasowy kod dostępu' });
+    const sub = el('p', {
+      class: 'vilda-auth-subtitle',
+      text: 'Kod + hasło logują konto na tym urządzeniu i pobierają dane z chmury.'
+    });
+
+    const desc = document.createElement('p');
+    desc.style.cssText = 'margin:0 0 0.9rem;font-size:0.84rem;color:var(--text-secondary,#555);line-height:1.5;';
+    desc.innerHTML = [
+      '<strong>Warunek:</strong> na starym urządzeniu musi być włączona synchronizacja.<br>',
+      'Kod wygenerujesz tam w: <strong>Ustawienia → Synchronizacja</strong> → ',
+      '<strong>„☁ Pokaż zapasowy kod dostępu"</strong> → Generuj.'
+    ].join('');
+
+    const codeInput = el('textarea', {
+      class: 'vilda-auth-input',
+      placeholder: 'vsc3.600000.AbCd1234.XyZw5678.…',
+      rows: '3',
+      style: 'font-family:monospace;font-size:0.82rem;resize:vertical;min-height:68px;margin-bottom:0.5rem;'
+    });
+
+    const labelInput = el('input', {
+      type: 'text',
+      class: 'vilda-auth-input',
+      placeholder: 'Nazwa konta (opcjonalnie, np. dr Kowalska)',
+      maxlength: '60',
+      style: 'margin-bottom:0.5rem;'
+    });
+
+    const pwInput = el('input', {
+      type: 'password',
+      class: 'vilda-auth-input',
+      placeholder: 'Hasło ze starego konta',
+      style: 'margin-bottom:0.5rem;'
+    });
+
+    const errBox = el('div', { class: 'vilda-auth-error' });
+    errBox.style.display = 'none';
+    function showErr(msg) {
+      errBox.textContent = msg || '';
+      errBox.style.display = msg ? '' : 'none';
+    }
+
+    const submitBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-primary',
+      type: 'button',
+      text: 'Odtwórz konto z kodem'
+    });
+
+    submitBtn.addEventListener('click', async function () {
+      showErr('');
+      const code  = (codeInput.value  || '').trim();
+      const pw    = (pwInput.value    || '');
+      const label = (labelInput.value || '').trim() || undefined;
+
+      if (!code) { showErr('Wklej zapasowy kod dostępu.'); return; }
+      if (!pw)   { showErr('Podaj hasło.'); return; }
+
+      submitBtn.disabled = true;
+      const origText = submitBtn.textContent;
+      submitBtn.textContent = 'Odtwarzanie…';
+
+      try {
+        await V.importSyncCode(code, pw, { label: label });
+        hide();
+      } catch (e) {
+        showErr(e && e.message ? e.message : 'Błąd odtwarzania. Sprawdź kod i hasło.');
+        submitBtn.disabled = false;
+        submitBtn.textContent = origText;
+      }
+    });
+
+    pwInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') submitBtn.click();
+    });
+
+    const back = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost',
+      type: 'button',
+      text: '← Wróć',
+      onclick: function () { showSyncCodeRestoreScreen(); }
+    });
+
+    open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
+      title, sub, desc, codeInput, labelInput, pwInput, errBox, submitBtn, back
+    ]));
+  }
+
+  // ============ HELPER: synchroniczny check dostępności PRO ============
+  // Używany przez chooser oraz defensywne PRO guard'y w showQR/showPasskey,
+  // żeby cloud-only nie dało się uruchomić ścieżką programatyczną bez PRO
+  // (klikalne kafelki chooser'a są wizualnie disabled, ale samo wywołanie
+  // showQRLoginScreen({storageMode:'cloud-only'}) z konsoli i tak by przeszło).
+  function _hasProAccess() {
+    try {
+      return !!(global.VildaProAccess && global.VildaProAccess.hasAccess && global.VildaProAccess.hasAccess());
+    } catch (_) { return false; }
+  }
+
+  // ============ EKRAN WYBORU TRYBU LOGOWANIA TELEFONEM ============
+
+  /**
+   * Wspólny ekran „Jak zalogować na tym komputerze?" — 3 kafelki: local / cloud-only /
+   * ephemeral. Używany jako pierwszy krok przed QR LUB passkey flow z telefonu.
+   *
+   * Wymagania (decyzje user/D2/D3 Kroku 8):
+   *   • Cloud-only kafelek WYMAGA aktywnego PRO (gating jak w kreatorze/Ustawieniach).
+   *   • Cloud-only kafelek pokazuje warning gdy offline.
+   *   • Ephemeral pozostaje dostępny zawsze.
+   *
+   * @param {{
+   *   context: 'passkey' | 'qr',
+   *   onPick: (mode: 'local' | 'cloud-only' | 'ephemeral') => void,
+   *   onBack?: () => void,
+   *   proGatingDeferred?: boolean  - gdy true (zalecane dla flow z telefonu na
+   *     OBCYM komputerze), kafelek cloud-only jest klikalny niezależnie od PRO
+   *     cache (bo na nowym urządzeniu nie znamy jeszcze userId, więc PRO check
+   *     zawsze by zwracał false). Subskrypcja zostanie zweryfikowana POST-unlock
+   *     (force-pull cloud-only → CLOUD_ONLY_NO_SYNC overlay jeśli brak sync/PRO).
+   *   availableModes?: Array<'local'|'cloud-only'|'ephemeral'> - filtr listy kafelków.
+   *     Default = wszystkie 3. Entry-screen sekcja „persistent" przekazuje
+   *     ['local','cloud-only'] (bez ephemeral — to osobna sekcja na entry-screen).
+   * }} options
+   */
+  function showLoginModeChooser(options) {
+    const opts = (options && typeof options === 'object') ? options : {};
+    const ctx = opts.context === 'passkey' ? 'passkey' : 'qr';
+    const onPick = (typeof opts.onPick === 'function') ? opts.onPick : function () {};
+    const onBack = (typeof opts.onBack === 'function') ? opts.onBack : showSyncCodeRestoreScreen;
+    const deferProGating = !!opts.proGatingDeferred;
+    // availableModes — whitelist filtrowania kafelków. Default = wszystkie 3.
+    const ALL_MODES = ['local', 'cloud-only', 'ephemeral'];
+    const wantedModes = Array.isArray(opts.availableModes)
+      ? opts.availableModes.filter(function (m) { return ALL_MODES.indexOf(m) >= 0; })
+      : ALL_MODES;
+    function modeAvailable(m) { return wantedModes.indexOf(m) >= 0; }
+
+    // Walidacja PRO — synchroniczny snapshot z VildaProAccess.
+    // W deferProGating ignorujemy hasPro przy disabled (bo na obcym komputerze
+    // cache jest pusty, hasPro=false dla każdego usera — to byłoby błędne).
+    const hasPro = _hasProAccess();
+    const cloudOnlyDisabled = deferProGating ? false : !hasPro;
+
+    // Status offline — `navigator.onLine === false` (z falsy gdy brak API).
+    const isOffline = (typeof navigator !== 'undefined' && navigator && navigator.onLine === false);
+
+    const title = el('h2', { class: 'vilda-auth-title', text: 'Jak chcesz się zalogować?' });
+    const sub = el('p', {
+      class: 'vilda-auth-subtitle',
+      text: ctx === 'passkey'
+        ? 'Po potwierdzeniu na telefonie wybierz, ile danych zostawić na tym komputerze.'
+        : 'Po zeskanowaniu kodu QR wybierz, ile danych zostawić na tym komputerze.'
+    });
+
+    // ── Inline SVG ikony (lucide-style: stroke=2, currentColor) ──
+    // Pasują do estetyki chip-icon/chip-avatar w nagłówku aplikacji.
+    const ICON_HOUSE = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+      + '<path d="M3 9.5L12 3l9 6.5"/>'
+      + '<path d="M5 9v11h14V9"/>'
+      + '<rect x="10" y="13" width="4" height="7" fill="none"/>'
+      + '</svg>';
+    const ICON_CLOUD_UP = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+      + '<path d="M17.5 18a4.5 4.5 0 1 0 0-9 4 4 0 0 0-7.9-1.6A4 4 0 0 0 5 17h12.5z"/>'
+      + '<polyline points="12 16 12 12"/>'
+      + '<polyline points="10 14 12 12 14 14"/>'
+      + '</svg>';
+    const ICON_EYE_OFF = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+      + '<path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>'
+      + '<path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>'
+      + '<path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>'
+      + '<line x1="2" y1="2" x2="22" y2="22"/>'
+      + '</svg>';
+
+    // ── Helpery do budowania kafelka ──
+    function buildModeCard(cfg) {
+      const card = el('button', {
+        type: 'button',
+        class: 'vilda-auth-mode-card',
+        'data-mode': cfg.mode,
+        'aria-pressed': 'false',
+        'aria-disabled': cfg.disabled ? 'true' : 'false'
+      });
+      card.style.cssText = [
+        'display:block;width:100%;text-align:left;cursor:' + (cfg.disabled ? 'not-allowed' : 'pointer') + ';',
+        'font:inherit;color:inherit;',
+        'padding:14px 16px;margin:8px 0 0;',
+        'background:' + (cfg.disabled ? 'rgba(245,245,245,0.65)' : 'rgba(255,255,255,0.92)') + ';',
+        'border:2px solid ' + (cfg.disabled ? '#e5e7eb' : '#d7e9ec') + ';border-radius:14px;',
+        'opacity:' + (cfg.disabled ? '0.78' : '1') + ';',
+        'transition:border-color .18s ease, background .18s ease, box-shadow .18s ease, transform .12s ease;'
+      ].join('');
+
+      // Ikona w kółku — wariant A: gradient turkus (jak chip-avatar w headerze) +
+      // lucide-style SVG line-art (stroke 2, currentColor = #00838d). Spójne z
+      // resztą aplikacji, dyskretne, profesjonalne.
+      const iconWrapStyle = 'flex:0 0 auto;width:44px;height:44px;border-radius:50%;'
+        + 'background:linear-gradient(135deg,#e2f1f2,#cfe9ec);'
+        + 'display:flex;align-items:center;justify-content:center;'
+        + 'color:#00838d;';
+
+      card.innerHTML =
+        '<div style="display:flex;align-items:center;gap:14px;">' +
+          '<div style="' + iconWrapStyle + '" aria-hidden="true">' +
+            (cfg.iconSvg || '') +
+          '</div>' +
+          '<div style="flex:1 1 auto;min-width:0;">' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px;">' +
+              '<div style="font-weight:700;font-size:1rem;color:#0f2b33;">' + cfg.title + '</div>' +
+              (cfg.tag ? '<span style="font-size:0.7rem;font-weight:600;color:' + cfg.tagColor + ';background:' + cfg.tagBg + ';padding:2px 8px;border-radius:999px;white-space:nowrap;">' + cfg.tag + '</span>' : '') +
+            '</div>' +
+            '<div style="font-size:0.85rem;color:#5b6672;line-height:1.45;margin-bottom:6px;">' + cfg.desc + '</div>' +
+            (cfg.hint ? '<div style="margin-top:8px;padding:7px 10px;border-radius:9px;background:' + (cfg.hintIsWarning ? 'rgba(180,83,9,0.08)' : 'rgba(0,131,141,0.06)') + ';color:' + (cfg.hintIsWarning ? '#854f0b' : '#00838d') + ';font-size:0.76rem;font-weight:500;">' + cfg.hint + '</div>' : '') +
+          '</div>' +
+        '</div>';
+
+      if (!cfg.disabled) {
+        card.addEventListener('mouseenter', function () {
+          card.style.borderColor = cfg.hoverBorder;
+          card.style.transform = 'translateY(-1px)';
+          card.style.boxShadow = '0 6px 16px ' + cfg.hoverShadow;
+        });
+        card.addEventListener('mouseleave', function () {
+          card.style.borderColor = '#d7e9ec';
+          card.style.transform = '';
+          card.style.boxShadow = '';
+        });
+        card.addEventListener('click', function () {
+          card.setAttribute('aria-pressed', 'true');
+          onPick(cfg.mode);
+        });
+      }
+      return card;
+    }
+
+    // ── Kafelki (rendrowane tylko dla trybów w wantedModes) ──
+    const localCard = modeAvailable('local') ? buildModeCard({
+      mode: 'local',
+      iconSvg: ICON_HOUSE,
+      title: 'Komputer prywatny',
+      desc: 'Pełna instalacja konta z kopią pacjentów na dysku. Po wylogowaniu wszystko zostaje — szybki dostęp przy następnym logowaniu.',
+      hoverBorder: '#00838d',
+      hoverShadow: 'rgba(0,131,141,0.18)'
+    }) : null;
+
+    // Hint dla kafelka cloud-only — zależy od kontekstu:
+    //   • deferred + offline → ostrzeżenie offline (zalogujesz się, jak wróci sieć)
+    //   • deferred (online)  → info „PRO sprawdzimy po zalogowaniu"
+    //   • !deferred + !PRO   → klasyczny disabled hint
+    //   • !deferred + offline → ostrzeżenie offline
+    const cloudOnlyHint = (function () {
+      if (deferProGating) {
+        if (isOffline) return '⚠️ Brak internetu — logowanie cloud-only może się nie powieść.';
+        return 'ⓘ Sprawdzimy Twoją subskrypcję PRO po zalogowaniu.';
+      }
+      if (!hasPro) return '⚠️ Wymaga aktywnego planu PRO.';
+      if (isOffline) return '⚠️ Brak internetu — konfiguracja zostanie, ale logowanie nie powiedzie się bez sieci.';
+      return null;
+    })();
+    const cloudOnlyHintIsWarning = (function () {
+      if (deferProGating) return isOffline; // info bez warning gdy online
+      return !hasPro || isOffline;
+    })();
+    const cloudOnlyTagLabel = (deferProGating || hasPro) ? 'PRO' : 'wymaga PRO';
+    const cloudOnlyTagColor = (deferProGating || hasPro) ? '#00838d' : '#854f0b';
+    const cloudOnlyTagBg = (deferProGating || hasPro) ? 'rgba(0,131,141,0.12)' : 'rgba(180,83,9,0.12)';
+
+    const cloudOnlyCard = modeAvailable('cloud-only') ? buildModeCard({
+      mode: 'cloud-only',
+      iconSvg: ICON_CLOUD_UP,
+      title: 'Komputer w pracy',
+      tag: cloudOnlyTagLabel,
+      tagColor: cloudOnlyTagColor,
+      tagBg: cloudOnlyTagBg,
+      desc: 'Pracujesz na sprzęcie, który mogą obsługiwać też inni? Ten tryb chroni dane pacjentów: ich karty, parametry i pomiary istnieją <strong>tylko w chmurze</strong> i w pamięci Twojej sesji — nigdy nie zapisują się na dysku. Wylogowanie = zero śladów pacjentów na tym komputerze. Twoje konto, ustawienia i biblioteka notatek pamiętają się lokalnie (zaszyfrowane Twoim hasłem), żebyś nie czekał na pobranie ustawień.',
+      disabled: cloudOnlyDisabled,
+      hint: cloudOnlyHint,
+      hintIsWarning: cloudOnlyHintIsWarning,
+      hoverBorder: '#00838d',
+      hoverShadow: 'rgba(0,131,141,0.18)'
+    }) : null;
+
+    const ephemeralCard = modeAvailable('ephemeral') ? buildModeCard({
+      mode: 'ephemeral',
+      iconSvg: ICON_EYE_OFF,
+      title: 'Obcy komputer',
+      desc: 'Tylko ta sesja. <strong>Żadnych śladów</strong> — ani konta, ani kopii. Po zamknięciu zakładki nie da się tu więcej zalogować bez telefonu.',
+      hoverBorder: '#9a213a',
+      hoverShadow: 'rgba(154,33,58,0.16)'
+    }) : null;
+
+    const back = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost', type: 'button', text: '← Wróć',
+      onclick: onBack
+    });
+
+    // Dynamiczna lista dzieci — pomijamy null'e (kafelki nieobjęte availableModes).
+    const children = [title, sub];
+    if (localCard) children.push(localCard);
+    if (cloudOnlyCard) children.push(cloudOnlyCard);
+    if (ephemeralCard) children.push(ephemeralCard);
+    children.push(back);
+    open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, children));
+  }
+
+  // ============ EKRAN LOGOWANIA PASSKEY Z TELEFONU ============
+
+  /**
+   * Ekran „Zaloguj passkey z telefonu". Routing:
+   *   1. Brak opts.storageMode → pokaż showLoginModeChooser, po wyborze rekurencja.
+   *   2. opts.storageMode === 'ephemeral' → unlockWithPasskeyEphemeral (jak dotychczas).
+   *   3. opts.storageMode === 'local' | 'cloud-only' → formularz hasła + unlockWithPasskeyAndPersist.
+   *
+   * Nazwa funkcji historyczna (showPasskeyEphemeralLoginScreen) — pozostawiamy
+   * dla call-sites z głównego ekranu; faktyczny tryb decyduje opts.storageMode.
+   */
+  function showPasskeyEphemeralLoginScreen(options) {
+    const V = getVault();
+    if (!V || typeof V.unlockWithPasskeyEphemeral !== 'function') {
+      showSyncCodeRestoreScreen();
+      return;
+    }
+    const opts = (options && typeof options === 'object') ? options : {};
+
+    // KROK 0: wybór trybu storage (chooser) — pełna analogia do showQRLoginScreen.
+    let mode = null;
+    if (opts.storageMode === 'local' || opts.storageMode === 'cloud-only' || opts.storageMode === 'ephemeral') {
+      mode = opts.storageMode;
+    }
+    // Helper re-otwierający chooser z tymi samymi opcjami. Kluczowe: gdy user
+    // pójdzie z chooser do passkey-screen, a potem da „Wróć", chce wrócić
+    // do choosera (nie do entry-screen). Z kolei gdy user przyszedł z entry
+    // BEZ chooser'a (sekcja „Zaloguj jednorazowo" omija chooser), opts.onBack
+    // nie jest ustawione → passkey-screen domyślnie wraca do entry.
+    function _reopenPasskeyChooser() {
+      showLoginModeChooser({
+        context: 'passkey',
+        proGatingDeferred: true,
+        onPick: function (pickedMode) {
+          showPasskeyEphemeralLoginScreen({
+            storageMode: pickedMode,
+            onBack: _reopenPasskeyChooser
+          });
+        },
+        onBack: function () { showSyncCodeRestoreScreen(); }
+      });
+    }
+    if (mode === null) {
+      if (typeof showLoginModeChooser === 'function') {
+        _reopenPasskeyChooser();
+        return;
+      }
+      // Defensywny fallback: ephemeral (najbezpieczniej).
+      mode = 'ephemeral';
+    }
+
+    // UWAGA: defensive PRO guard usunięty z phone-login (analogicznie do showQR).
+    // Na obcym komputerze localStorage cache PRO jest pusty — guard blokowałby
+    // każdego użytkownika z aktywnym PRO. Walidacja jest deferred do post-unlock.
+
+    // Konto persystowane (local/cloud-only) wymaga nowej ścieżki vault.
+    const persistMode = (mode === 'local' || mode === 'cloud-only');
+    if (persistMode && typeof V.unlockWithPasskeyAndPersist !== 'function') {
+      // Vault za stary — pokaż chooser z hintem.
+      if (typeof showLoginModeChooser === 'function') {
+        _reopenPasskeyChooser();
+        return;
+      }
+    }
+
+    // ── UI ekranu ─────────────────────────────────────────────────────────────
+    const titleText = (mode === 'ephemeral')
+      ? 'Zaloguj telefonem (ta sesja)'
+      : (mode === 'cloud-only' ? 'Zaloguj telefonem — tryb chmurowy' : 'Zaloguj telefonem — pełne konto');
+    const subText = (function () {
+      if (mode === 'ephemeral')  return 'Po sesji nie zostanie na tym komputerze żadna kopia. Potwierdź logowanie biometrią na telefonie.';
+      if (mode === 'cloud-only') return 'Konto zostanie zapamiętane (hasło), ale dane pacjentów tylko w chmurze. Wpisz hasło, potem potwierdź biometrią na telefonie.';
+      return 'Konto i kopia pacjentów zostaną na tym komputerze. Wpisz hasło, potem potwierdź biometrią na telefonie.';
+    })();
+
+    const title = el('h2', { class: 'vilda-auth-title', text: titleText });
+    const sub = el('p', { class: 'vilda-auth-subtitle', text: subText });
+
+    const errBox = el('div', { class: 'vilda-auth-error' });
+    errBox.style.display = 'none';
+    function showErr(msg) { errBox.textContent = msg || ''; errBox.style.display = msg ? '' : 'none'; }
+
+    // Pole hasła tylko dla local/cloud-only (ephemeral nie tworzy konta).
+    const pwIn = persistMode ? el('input', {
+      type: 'password',
+      class: 'vilda-auth-input',
+      placeholder: 'Nowe hasło (min. 12 znaków, 3 z 4 typów)',
+      autocomplete: 'new-password'
+    }) : null;
+    const pwHint = persistMode ? el('p', {
+      class: 'vilda-auth-hint',
+      text: 'To hasło będziesz wpisywać przy każdym kolejnym logowaniu na tym komputerze.'
+    }) : null;
+
+    const startBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-primary', type: 'button',
+      text: persistMode ? '📱 Wpisałem hasło — potwierdź telefonem' : '📱 Zaloguj telefonem'
+    });
+
+    const qrFallbackBtn = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small', type: 'button',
+      text: 'Nie działa? Zaloguj kodem QR'
+    });
+    qrFallbackBtn.style.display = 'none';
+    qrFallbackBtn.addEventListener('click', function () {
+      // Fallback respektuje wybrany mode (zamiast wymuszać ephemeral jak dotychczas).
+      showQRLoginScreen({ storageMode: mode });
+    });
+
+    let inProgress = false;
+    startBtn.addEventListener('click', async function () {
+      if (inProgress) return;
+      showErr('');
+      // Walidacja hasła dla persist mode.
+      const password = pwIn ? (pwIn.value || '') : null;
+      if (persistMode) {
+        if (password.length < 8) {
+          showErr('Hasło musi mieć minimum 8 znaków.');
+          return;
+        }
+      }
+      inProgress = true;
+      qrFallbackBtn.style.display = 'none';
+      const orig = startBtn.textContent;
+      startBtn.disabled = true;
+      startBtn.textContent = 'Czekam na telefon…';
+      try {
+        if (persistMode) {
+          // Cloud-only WYMAGA aktywnego sync — włączamy PRZED unlock'iem, żeby
+          // listener onUnlock w sync_integration (notifyUnlock fire'uje SYNC w środku
+          // adoptMasterBytes) zobaczył już ustawioną flagę. Inaczej forcePullForCloudOnly
+          // wystrzeli CLOUD_ONLY_NO_SYNC banner zanim setSyncEnabled zdąży się wywołać
+          // (race microtask order: rejection handler #1, await continuation #2).
+          if (mode === 'cloud-only') {
+            try {
+              const SI = getSyncIntegration();
+              if (SI && typeof SI.setSyncEnabled === 'function') SI.setSyncEnabled(true);
+            } catch (_) { void _; }
+          }
+          await V.unlockWithPasskeyAndPersist(password, { storageMode: mode });
+        } else {
+          await V.unlockWithPasskeyEphemeral({});
+        }
+        hide(); // onUnlock w boot() przejmie dalej (render aplikacji)
+      } catch (e) {
+        const m = mapEphemeralLoginError(e);
+        showErr(m.message);
+        if (m.offerQrFallback) qrFallbackBtn.style.display = '';
+        inProgress = false;
+        startBtn.disabled = false;
+        startBtn.textContent = orig;
+      }
+    });
+
+    if (pwIn) {
+      pwIn.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') startBtn.click(); });
+    }
+
+    const back = el('button', {
+      class: 'vilda-auth-btn vilda-auth-btn-ghost', type: 'button', text: '← Wróć',
+      onclick: function () {
+        // Decyzja gdzie wraca „Wróć":
+        //   • opts.onBack jeśli podane (np. chooser przekazuje powrót do siebie)
+        //   • inaczej → entry-screen (showSyncCodeRestoreScreen)
+        // Wcześniej zawsze pokazywaliśmy chooser, co było mylące dla user'a który
+        // kliknął „Zaloguj jednorazowo" w entry-screen (omijając chooser): „Wróć"
+        // powinno wrócić tam skąd przyszedł, czyli do entry-screen.
+        if (typeof opts.onBack === 'function') {
+          opts.onBack();
+        } else {
+          showSyncCodeRestoreScreen();
+        }
+      }
+    });
+
+    const children = [title, sub];
+    if (pwIn) children.push(pwIn, pwHint);
+    children.push(startBtn, errBox, qrFallbackBtn, back);
+    open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, children));
+  }
+
+  // ============ EKRAN LOGOWANIA KODEM QR ============
+
+  /**
+   * Ładuje bibliotekę QRCode.js z CDN (jednorazowo, lazy).
+   * @returns {Promise<void>}
+   */
+  function loadQRCodeLib() {
+    return new Promise(function (resolve, reject) {
+      if (typeof QRCode !== 'undefined') { resolve(); return; }
+      const s = global.document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+      // SRI — chroni przed podmianą pliku po stronie CDN (supply-chain attack)
+      s.integrity = 'sha384-3zSEDfvllQohrq0PHL1fOXJuC_jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2_bMnU';
+      s.crossOrigin = 'anonymous';
+      s.onload  = resolve;
+      s.onerror = function () { reject(new Error('Nie udało się załadować biblioteki QR.')); };
+      global.document.head.appendChild(s);
+    });
+  }
+
+  /**
+   * Ekran „Zaloguj się przez QR" — strona komputera (nowego urządzenia).
+   *
+   * Faza 1: wyświetla QR + odlicza 120s + polling.
+   * Faza 2 (po zatwierdzeniu przez telefon): prosi o hasło i nazwę konta,
+   *          tworzy lokalne konto z przeniesionym masterKey.
+   */
+  function showQRLoginScreen(options) {
+    const V = getVault();
+    if (!V || typeof V.initiateQRLogin !== 'function') {
+      return; // brak wsparcia
+    }
+    const opts = (options && typeof options === 'object') ? options : {};
+
+    // ── KROK 0: Wybór trybu storage (chooser) ────────────────────────────────
+    // Mapowanie wejść:
+    //   • opts.storageMode === 'local' | 'cloud-only' | 'ephemeral' → bezpośrednio
+    //   • opts.ephemeral === true (legacy) → mode = 'ephemeral' (zachowanie wsteczne)
+    //   • inaczej → pokaż chooser z 3 kafelkami, po wyborze rekursywne wywołanie
+    //     showQRLoginScreen({ storageMode: <wybór> }) startujące właściwy flow.
+    let mode = null;
+    if (opts.storageMode === 'local' || opts.storageMode === 'cloud-only' || opts.storageMode === 'ephemeral') {
+      mode = opts.storageMode;
+    } else if (opts.ephemeral === true) {
+      mode = 'ephemeral';
+    }
+    // availableModes — opcjonalny filtr listy kafelków (propagowany z entry-screen).
+    // Gdy entry-screen sekcja „persistent" wywołuje QR → chooser pokazuje tylko
+    // ['local','cloud-only'] (ephemeral jest osobną sekcją na entry-screen).
+    const availableModes = Array.isArray(opts.availableModes) ? opts.availableModes : null;
+    if (mode === null) {
+      // Pokaż chooser — po wyborze user trafia z powrotem do showQRLoginScreen.
+      // proGatingDeferred: na nowym/obcym komputerze nie znamy jeszcze userId,
+      // więc nie możemy sprawdzić PRO. Wybór waliduje się POST-unlock przez
+      // force-pull cloud-only (CLOUD_ONLY_NO_SYNC overlay jeśli brak sync/PRO).
+      if (typeof showLoginModeChooser === 'function') {
+        const chooserOpts = {
+          context: 'qr',
+          proGatingDeferred: true,
+          onPick: function (pickedMode) { showQRLoginScreen({ storageMode: pickedMode }); },
+          onBack: function () { showSyncCodeRestoreScreen(); }
+        };
+        if (availableModes) chooserOpts.availableModes = availableModes;
+        showLoginModeChooser(chooserOpts);
+        return;
+      }
+      // Fallback gdy chooser niedostępny — defaultuj na ephemeral (najbezpieczniej).
+      mode = 'ephemeral';
+    }
+    // Ephemeral mode wymaga wsparcia w vault (legacy guard).
+    const ephemeralMode = (mode === 'ephemeral')
+      && typeof V.completeQRLoginEphemeral === 'function';
+    if (mode === 'ephemeral' && !ephemeralMode) {
+      // Vault nie wspiera ephemeral — wracamy do chooser, użytkownik wybierze co innego.
+      if (typeof showLoginModeChooser === 'function') {
+        const chooserOpts2 = {
+          context: 'qr',
+          proGatingDeferred: true,
+          onPick: function (pickedMode) { showQRLoginScreen({ storageMode: pickedMode }); },
+          onBack: function () { showSyncCodeRestoreScreen(); }
+        };
+        if (availableModes) chooserOpts2.availableModes = availableModes;
+        showLoginModeChooser(chooserOpts2);
+        return;
+      }
+    }
+
+    // UWAGA: PRO check usunięty z phone-login flow. Powód: na obcym komputerze
+    // localStorage cache PRO jest pusty, więc _hasProAccess() zawsze zwraca false
+    // → blokowałoby cloud-only nawet dla user'ów z aktywnym PRO. Walidacja jest
+    // deferred do post-unlock: jeśli user wybierze cloud-only bez aktywnego PRO,
+    // force-pull rzuci CLOUD_ONLY_NO_SYNC i chrome overlay pokaże komunikat.
+
+    // ── klucze sessionStorage ──
+    const SS_PRIV  = 'vilda-qr-priv-v1';
+    const SS_TOKEN = 'vilda-qr-token-v1';
+
+    let pollTimer       = null;
+    let countdown       = null;
+    let timeLeft        = 120;
+    let privateKeyB64u  = null;
+    let transferToken   = null;
+    let completeInProgress = false; // mutex: blokuje wielokrotne wywołanie completeQRLogin
+
+    function clearSessionKeys() {
+      try { if (global.sessionStorage) { global.sessionStorage.removeItem(SS_PRIV); global.sessionStorage.removeItem(SS_TOKEN); } } catch(_) {}
+      privateKeyB64u = null; // wymaż z pamięci
+    }
+
+    function stopPolling() {
+      if (pollTimer)   { clearInterval(pollTimer);   pollTimer  = null; }
+      if (countdown)   { clearInterval(countdown);   countdown  = null; }
+      clearSessionKeys();
+    }
+
+    // ── Faza 2: podaj hasło aby ukończyć logowanie ──
+    function showPhase2(result) {
+      // result = { encryptedPayload, label } zwrócone przez pollQRLoginStatus
+      const encryptedPayload = result && result.encryptedPayload ? result.encryptedPayload : result;
+      const transferredLabel = result && result.label ? result.label : null;
+
+      // Zachowaj klucz prywatny PRZED stopPolling() — ta funkcja wywołuje
+      // clearSessionKeys() → privateKeyB64u = null, a my potrzebujemy go w finishBtn.
+      const savedPrivKey = privateKeyB64u;
+      stopPolling();
+      const title2 = el('h2', { class: 'vilda-auth-title', text: '✓ Prawie gotowe!' });
+      const sub2Text = (function () {
+        if (mode === 'ephemeral') return 'Zaloguj się na tę sesję — po zamknięciu nic nie zostanie na tym komputerze.';
+        if (mode === 'cloud-only') return 'Podaj hasło — konto zostanie zapamiętane, ale dane pacjentów tylko w chmurze.';
+        return 'Podaj hasło, aby zalogować się na tym urządzeniu.';
+      })();
+      const sub2 = el('p', { class: 'vilda-auth-subtitle', text: sub2Text });
+      // W trybie efemerycznym hasło nie jest potrzebne (master key przyszedł transferem,
+      // konto nie jest tworzone lokalnie).
+      const pwIn = ephemeralMode ? null : el('input', {
+        type: 'password', class: 'vilda-auth-input',
+        placeholder: 'Twoje hasło'
+      });
+      const errBox2 = el('div', { class: 'vilda-auth-error' });
+      errBox2.style.display = 'none';
+
+      const finishBtn = el('button', {
+        class: 'vilda-auth-btn vilda-auth-btn-primary', type: 'button',
+        text: ephemeralMode ? 'Zaloguj (ta sesja)' : 'Zaloguj się'
+      });
+
+      finishBtn.addEventListener('click', async function () {
+        if (completeInProgress) return; // mutex — blokuj równoległe wywołania
+        errBox2.style.display = 'none';
+        const password = pwIn ? pwIn.value : null;
+        if (!ephemeralMode && !password) { errBox2.textContent = 'Podaj hasło.'; errBox2.style.display = ''; return; }
+
+        completeInProgress = true;
+        finishBtn.disabled = true;
+        finishBtn.textContent = 'Loguję…';
+        try {
+          if (ephemeralMode) {
+            await V.completeQRLoginEphemeral(savedPrivKey, encryptedPayload, transferredLabel);
+          } else {
+            // mode === 'local' lub 'cloud-only' — przekazujemy flagę do vault,
+            // który zapisze ją w registry. Po unlock adapter cloud-only zostanie
+            // automatycznie zastosowany (adoptMasterBytes → applyCloudOnlyAdapterIfNeeded).
+            //
+            // Cloud-only WYMAGA aktywnego sync (force-pull przy każdym loginie).
+            // Flagę sync ustawiamy PRZED unlock'iem — listener onUnlock w sync_integration
+            // strzela natychmiast (notifyUnlock fire'uje SYNC w środku adoptMasterBytes)
+            // i sprawdza isSyncEnabled(). Bez tej kolejności pojawiał się banner
+            // CLOUD_ONLY_NO_SYNC race condition (rejection handler #1, await continuation #2
+            // w microtask FIFO queue).
+            if (mode === 'cloud-only') {
+              try {
+                const SI = getSyncIntegration();
+                if (SI && typeof SI.setSyncEnabled === 'function') SI.setSyncEnabled(true);
+              } catch (_) { void _; }
+            }
+            await V.completeQRLogin(savedPrivKey, encryptedPayload, {
+              newPassword: password,
+              label: transferredLabel,
+              storageMode: mode
+            });
+          }
+          clearSessionKeys(); // defence-in-depth: usuń klucz prywatny jeśli stopPolling go nie wyczyścił
+          hide();
+          // onUnlock w boot() uruchomi interstitial sync automatycznie
+        } catch (e) {
+          completeInProgress = false; // zwolnij mutex tylko przy błędzie
+          errBox2.textContent = (e && e.message) ? e.message : 'Błąd logowania. Sprawdź hasło.';
+          errBox2.style.display = '';
+          finishBtn.disabled = false;
+          finishBtn.textContent = ephemeralMode ? 'Zaloguj (ta sesja)' : 'Zaloguj się';
+        }
+      });
+
+      if (pwIn) pwIn.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') finishBtn.click(); });
+
+      const phase2Children = [title2, sub2];
+      if (pwIn) phase2Children.push(pwIn);
+      phase2Children.push(errBox2, finishBtn);
+      open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, phase2Children));
+      if (pwIn) setTimeout(function () { try { pwIn.focus(); } catch(_) {} }, 30);
+    }
+
+    // ── Faza 1: wyświetl QR ──
+    async function showPhase1() {
+      // skeleton podczas inicjalizacji
+      const loadingDiv = el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
+        el('h2', { class: 'vilda-auth-title', text: 'Logowanie przez QR' }),
+        el('p',  { class: 'vilda-auth-subtitle', text: 'Generuję kod QR…' })
+      ]);
+      open(loadingDiv);
+
+      // Załaduj bibliotekę QR
+      try {
+        await loadQRCodeLib();
+      } catch (e) {
+        open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
+          el('h2', { class: 'vilda-auth-title', text: 'Logowanie przez QR' }),
+          el('p',  { class: 'vilda-auth-error', text: 'Nie udało się załadować biblioteki QR. Sprawdź połączenie z internetem.' }),
+          el('button', { class: 'vilda-auth-btn vilda-auth-btn-ghost', type: 'button', text: '← Wróć',
+            onclick: function () { showStartupScreen(); }
+          })
+        ]));
+        return;
+      }
+
+      // Inicjuj sesję QR
+      let initResult;
+      try {
+        initResult = await V.initiateQRLogin();
+      } catch (e) {
+        open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
+          el('h2', { class: 'vilda-auth-title', text: 'Logowanie przez QR' }),
+          el('p',  { class: 'vilda-auth-error', text: (e && e.message) || 'Błąd generowania kodu QR.' }),
+          el('button', { class: 'vilda-auth-btn vilda-auth-btn-ghost', type: 'button', text: '← Wróć',
+            onclick: function () { showStartupScreen(); }
+          })
+        ]));
+        return;
+      }
+
+      privateKeyB64u = initResult.privateKeyB64u;
+      transferToken  = initResult.transferToken;
+      timeLeft       = initResult.expiresIn || 120;
+
+      // Zapamiętaj w sessionStorage (na wypadek odświeżenia strony)
+      try {
+        if (global.sessionStorage) {
+          global.sessionStorage.setItem(SS_PRIV,  privateKeyB64u);
+          global.sessionStorage.setItem(SS_TOKEN, transferToken);
+        }
+      } catch(_) {}
+
+      // ── Zbuduj UI ──
+      const title = el('h2', { class: 'vilda-auth-title', text: 'Zaloguj się przez QR' });
+      const sub   = el('p',  {
+        class: 'vilda-auth-subtitle',
+        text:  'Na zalogowanym urządzeniu (np. telefonie) otwórz Ustawienia → „Zatwierdź logowanie QR" i zeskanuj ten kod.'
+      });
+
+      // Kontener QR kodu
+      const qrWrap = el('div', {
+        style: 'display:flex;justify-content:center;margin:12px 0;'
+      });
+      const qrInner = el('div', {
+        style: 'background:#fff;padding:12px;border-radius:12px;display:inline-block;box-shadow:0 2px 12px rgba(0,0,0,.10);'
+      });
+      qrWrap.appendChild(qrInner);
+
+      // Licznik czasu
+      const timerEl = el('p', {
+        class: 'vilda-auth-side-note',
+        style: 'text-align:center;margin:4px 0;',
+        text:  'Kod ważny przez ' + timeLeft + ' sekund'
+      });
+
+      // Status
+      const statusEl = el('p', {
+        class: 'vilda-auth-side-note',
+        style: 'text-align:center;margin:4px 0;color:#00838d;',
+        text:  'Czekam na zatwierdzenie przez telefon…'
+      });
+
+      // ── Fallback ręczny: token jako tekst ──
+      // Gdy urządzenie skanujące (to już zalogowane) nie ma kamery, użytkownik
+      // może skopiować ten token i wkleić go ręcznie w polu „wklej token QR
+      // ręcznie" w Ustawieniach → „Zatwierdź logowanie QR". Token NIE jest
+      // sekretem sam w sobie — bez klucza prywatnego tego urządzenia jest
+      // bezużyteczny (patrz SYNC-QR.md, model bezpieczeństwa).
+      const tokenBox = el('div', {
+        style: 'font-family:monospace;font-size:0.82rem;word-break:break-all;' +
+               'user-select:all;-webkit-user-select:all;text-align:center;' +
+               'background:rgba(0,0,0,.05);border-radius:8px;padding:8px 10px;' +
+               'margin:0 auto 12px;max-width:280px;display:none;',
+        text:  transferToken
+      });
+      const copyTokenBtn = el('button', {
+        class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-small',
+        type:  'button',
+        text:  'Kopiuj token',
+        style: 'display:none;margin:0 auto;',
+        onclick: async function () {
+          try {
+            if (global.navigator && global.navigator.clipboard) {
+              await global.navigator.clipboard.writeText(transferToken);
+              copyTokenBtn.textContent = 'Skopiowano ✓';
+              setTimeout(function () { copyTokenBtn.textContent = 'Kopiuj token'; }, 2000);
+            }
+          } catch (e) { logWarn('clipboard write failed: ' + e); }
+        }
+      });
+      const noCameraToggle = el('button', {
+        class: 'vilda-auth-btn vilda-auth-btn-ghost vilda-auth-btn-subtle',
+        type:  'button',
+        text:  'Drugie urządzenie nie ma kamery? ▾',
+        style: 'display:block;margin:10px auto 0;font-size:0.82rem;'
+      });
+      noCameraToggle.addEventListener('click', function () {
+        const expanded = tokenBox.style.display !== 'none';
+        tokenBox.style.display    = expanded ? 'none' : '';
+        copyTokenBtn.style.display = expanded ? 'none' : 'block';
+        noCameraToggle.textContent = expanded
+          ? 'Drugie urządzenie nie ma kamery? ▾'
+          : 'Drugie urządzenie nie ma kamery? ▴';
+      });
+      const manualWrap = el('div', { style: 'margin:4px 0 0;text-align:center;' }, [noCameraToggle, tokenBox, copyTokenBtn]);
+
+      const back = el('button', {
+        class: 'vilda-auth-btn vilda-auth-btn-ghost', type: 'button', text: '← Wróć',
+        onclick: function () { stopPolling(); showStartupScreen(); }
+      });
+
+      open(el('div', { class: 'vilda-auth-screen vilda-auth-setup' }, [
+        title, sub, qrWrap, timerEl, manualWrap, statusEl,
+        el('div', { class: 'vilda-auth-actions' }, [back])
+      ]));
+
+      // Wygeneruj QR kod
+      try {
+        /* global QRCode */
+        new QRCode(qrInner, {
+          text:         initResult.qrData,
+          width:        200,
+          height:       200,
+          colorDark:    '#00464d',
+          colorLight:   '#ffffff',
+          correctLevel: QRCode.CorrectLevel.M
+        });
+      } catch(e) {
+        statusEl.textContent = 'Błąd generowania QR: ' + (e.message || e);
+        return;
+      }
+
+      // Odliczanie
+      countdown = setInterval(function () {
+        timeLeft--;
+        timerEl.textContent = 'Kod ważny przez ' + timeLeft + ' sekund';
+        if (timeLeft <= 0) {
+          stopPolling();
+          statusEl.textContent = '⏰ Kod wygasł. Wróć i wygeneruj nowy.';
+          manualWrap.style.display = 'none'; // token nieaktualny — ukryj fallback ręczny
+          back.textContent = 'Wygeneruj nowy kod';
+          // Zachowaj wybrany mode przy regeneracji kodu — user nie musi ponownie
+          // wybierać trybu storage skoro już to zrobił.
+          back.onclick = function () { stopPolling(); showQRLoginScreen({ storageMode: mode }); };
+        }
+      }, 1000);
+
+      // Polling co 1s
+      // UWAGA: callback jest async — jeśli żądanie sieciowe trwa >1s, dwa ticki
+      // mogą być jednocześnie „w locie". Po każdym await sprawdzamy czy pollTimer
+      // nie został już wyczyszczony przez równoległy tick (który obsłużył payload
+      // jako pierwszy). Bez tego sprawdzenia drugi tick też wołałby showPhase2,
+      // ale po tym jak pierwszy zdążył wywołać stopPolling() → privateKeyB64u = null.
+      pollTimer = setInterval(async function () {
+        if (!transferToken || timeLeft <= 0) return;
+        try {
+          const payload = await V.pollQRLoginStatus(transferToken);
+          // Sprawdź po await — inny równoległy tick mógł już obsłużyć payload
+          if (!pollTimer) return;
+          if (payload) {
+            clearInterval(pollTimer); pollTimer = null;
+            clearInterval(countdown); countdown = null;
+            statusEl.textContent = '✓ Zatwierdzono!';
+            setTimeout(function () { showPhase2(payload); }, 300);
+          }
+        } catch(_) { /* sieć — spróbujemy za 1s */ }
+      }, 1000);
+    }
+
+    showPhase1();
+  }
+
+  // ============ EKSPORT API ============
+  const api = {
+    __vildaAuthUI: true,
+    VERSION: VERSION,
+    STEP: STEP,
+    boot: boot,
+    showStartupScreen: showStartupScreen,
+    showEmptyStartupScreen: showEmptyStartupScreen,
+    showUserPicker: showUserPicker,
+    showSetupWizard: showSetupWizard,
+    showLoginForUser: showLoginForUser,
+    showPostLoginBiometricPrompt: showPostLoginBiometricPrompt,
+    showPostLoginAdoptionPrompt: showPostLoginAdoptionPrompt,
+    showRecoveryFlowForUser: showRecoveryFlowForUser,
+    showPatientsList: showPatientsList,
+    showPatientCard: showPatientCard,
+    // P5 — Edycja pacjenta jako osobny ekran (przed: tab w karcie).
+    showPatientEditScreen: showPatientEditScreen,
+    // B1.8 / FIX — Edytor notatki pacjenta. Funkcja istniała od P4, ale była
+    // używana TYLKO wewnętrznie (z karty pacjenta). B1.8 dodał wywołanie z
+    // sidebar handlera w custom-fixes.js, który potrzebuje globalnego dostępu
+    // przez window.VildaAuthUI. Bez tego eksportu klik „Dodaj notatkę do wizyty"
+    // pokazywał tip „Moduł notatek niedostępny — odśwież stronę". Smoke
+    // visit_note_button_smoke nie sprawdzał eksportu — ślepy spot.
+    showPatientNoteEditor: showPatientNoteEditor,
+    // P6.3 — Modal „+ Nowy pomiar" (wariant A). Wywoływany z pilla w hero karty
+    // pacjenta i z sidebar (P6.4 `quickMeasureBtnSidebar`).
+    showQuickMeasureModal: showQuickMeasureModal,
+    // R2: reminder modal po-unlock — pokazuje pacjentów z notatkami due dziś + overdue.
+    showRemindersModal: showRemindersModal,
+    // R3: auto-trigger po unlock (raz na dzień, cloud-synced flag). Manual: { force: true }.
+    maybeShowReminders: maybeShowReminders,
+    showImportPatientsFlow: showImportPatientsFlow,
+    showMergeAccountFlow: showMergeAccountFlow,
+    showRestoreVaultFlow: showRestoreVaultFlow,
+    showSyncCodeRestoreScreen: showSyncCodeRestoreScreen,
+    showBackupCodeRestoreScreen: showBackupCodeRestoreScreen,
+    showForcedPasswordResetScreen: showForcedPasswordResetScreen,
+    showQRLoginScreen: showQRLoginScreen,
+    showPasskeyEphemeralLoginScreen: showPasskeyEphemeralLoginScreen,
+    showLoginModeChooser: showLoginModeChooser,
+    mapEphemeralLoginError: mapEphemeralLoginError,
+    hide: hide,
+    lockAndShowLogin: lockAndShowLogin,
+    isGuestMode: isGuestMode,
+    exitGuestMode: exitGuestMode,
+    setBusy: setBusy,
+    updateProBadge: updateProBadge,
+    isTrustedDevice: isTrustedDevice,
+    setTrustedDevice: setTrustedDevice,
+    TRUSTED_DEVICE_IDLE_MS: TRUSTED_DEVICE_IDLE_MS,
+    getCloudOnlyIdlePref: getCloudOnlyIdlePref,
+    setCloudOnlyIdlePref: setCloudOnlyIdlePref,
+    CLOUD_ONLY_IDLE_CHOICES_MS: CLOUD_ONLY_IDLE_CHOICES_MS,
+    effectiveIdleMs: effectiveIdleMs,
+    getBiometricAutoTrigger: getBiometricAutoTrigger,
+    setBiometricAutoTrigger: setBiometricAutoTrigger,
+    getBiometricDismissCount: getBiometricDismissCount,
+    resetBiometricDismissCount: function (uid) { setBiometricDismissCount(uid, 0); },
+    getBiometricLabel: getBiometricLabel
+  };
+
+  global.VildaAuthUI = api;
+
+  // automatyczny bootstrap po DOMContentLoaded
+  if (global.document) {
+    if (global.document.readyState === 'loading') {
+      global.document.addEventListener('DOMContentLoaded', function () { boot(); }, { once: true });
+    } else {
+      try { boot(); } catch (e) { logError('autostart boot', e); }
+    }
+  }
+})(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : null));
