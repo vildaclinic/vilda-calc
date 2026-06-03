@@ -3594,6 +3594,65 @@
     } catch (_) {}
   }
 
+  // ============ NAWIGACJA WSTECZ W NAKŁADCE (karta pacjenta + lista) — HISTORIA ============
+  // Cel: gest „wstecz"/„w przód" (swipe touchpad/iOS) oraz przycisk wstecz przeglądarki
+  // cofają/przewijają po ŚCIEŻCE w nakładce (zakładka→zakładka→lista→zamknięcie nakładki)
+  // ZAMIAST jednym ruchem opuszczać całą stronę.
+  //
+  // Model render-from-state: każda nawigacja DO PRZODU (wejście na listę, wybór pacjenta,
+  // zmiana zakładki) dokłada realny wpis historii (pushState z lokacją). Natywny gest/
+  // przycisk wstecz → popstate → renderujemy POPRZEDNIĄ lokację z event.state (bez wyjścia
+  // z dokumentu). Cofnięcie poza nasz stos (state bez vildaNav) przy widocznej nakładce →
+  // zamykamy ją (powrót do apki głównej). Gest w przód = history.forward → popstate z
+  // lokacją „do przodu" → też renderujemy. Re-rendery karty po sub-akcjach (Edytuj pomiar/
+  // notatkę) NIE dokładają wpisu (replaceState, ten sam patientId). _navRestore=true →
+  // render pochodzi z popstate i NIE pushuje (funkcje są async, więc flaga jawna, nie czas).
+  var _navInstalled = false;
+  var _navCtx = { onPick: null, listOptions: null };
+  var _navCurPatientId = null;
+  function _navState() {
+    try { return (global.history && global.history.state && global.history.state.vildaNav) || null; } catch (_) { return null; }
+  }
+  function _navInstall() {
+    if (_navInstalled || !global.addEventListener) return;
+    _navInstalled = true;
+    global.addEventListener('popstate', function (e) {
+      var loc = (e && e.state && e.state.vildaNav) || null;
+      if (!loc) {
+        // Cofnięto poza nasz stos. Zamykamy nakładkę TYLKO gdy pokazuje listę/kartę
+        // pacjenta (nie ekrany logowania/setup, które też żyją w rootEl).
+        try {
+          if (rootEl && rootEl.style && rootEl.style.display !== 'none' &&
+              rootEl.querySelector('.vilda-auth-patients, .vilda-auth-patient-card')) hide();
+        } catch (_) {}
+        return;
+      }
+      try {
+        if (loc.screen === 'list') {
+          showPatientsList(_navCtx.onPick, _navCtx.listOptions, true);
+        } else if (loc.screen === 'card') {
+          showPatientCard(loc.patientId, _navCtx.onPick, _navCtx.listOptions, { activeTab: loc.tab, _navRestore: true });
+        }
+      } catch (err) { try { logError('nav popstate render', err); } catch (_) {} }
+    });
+  }
+  function _navPushForward(loc) {
+    try {
+      _navInstall();
+      var cur = _navState();
+      // Dedup: nie dubluj identycznej lokacji (np. ponowny klik w tę samą zakładkę).
+      if (cur && cur.screen === loc.screen && cur.patientId === loc.patientId && cur.tab === loc.tab) return;
+      global.history.pushState({ vildaNav: loc }, '');
+    } catch (_) {}
+  }
+  function _navReplace(loc) {
+    try { _navInstall(); global.history.replaceState({ vildaNav: loc }, ''); } catch (_) {}
+  }
+  // Wstecz w nakładce z przycisków („Wróć do listy"/„Anuluj") = ten sam tor co gest.
+  function _navBack() {
+    try { global.history.back(); } catch (_) {}
+  }
+
   // ============ R2 — REMINDER MODAL (PRZYPOMNIENIA PO ZALOGOWANIU) ============
   /**
    * Modal pokazywany po unlock vault'a — gdy są pacjenci z notatkami due dziś
@@ -4685,10 +4744,11 @@
         else c.classList.add('vilda-patient-tab-content--hidden');
       });
     }
-    tabAntro.addEventListener('click', function () { switchTab('antro'); });
-    tabTraj.addEventListener('click', function () { switchTab('traj'); });
+    tabAntro.addEventListener('click', function () { switchTab('antro'); _navPushForward({ screen: 'card', patientId: patientId, tab: 'antro' }); });
+    tabTraj.addEventListener('click', function () { switchTab('traj'); _navPushForward({ screen: 'card', patientId: patientId, tab: 'traj' }); });
     tabNotes.addEventListener('click', function () {
       switchTab('notes');
+      _navPushForward({ screen: 'card', patientId: patientId, tab: 'notes' });
       // Lazy mount — render dopiero przy pierwszym wejściu w tab. To eliminuje
       // race condition gdy V.listPatientNotesForPatient nie jest jeszcze dostępne
       // (np. mid-unlock w cloud-only) i daje czystszy lifecycle event listenerów.
@@ -4699,6 +4759,7 @@
     });
     tabTimeline.addEventListener('click', function () {
       switchTab('timeline');
+      _navPushForward({ screen: 'card', patientId: patientId, tab: 'timeline' });
       // P5: lazy mount timeline — render dopiero przy pierwszym wejściu.
       if (!_timelineRendered) {
         _timelineRendered = true;
@@ -4727,11 +4788,29 @@
       }
     }
 
+    // ── Historia nawigacji: zarejestruj kartę (gest/przycisk wstecz cofa po ścieżce).
+    // Nowy pacjent (pick z listy/timeline/przypomnień) → push; re-render tej samej
+    // karty po sub-akcji (Edytuj pomiar/notatkę) → replace (bez nowego wpisu);
+    // render z popstate (opts._navRestore) → nic (cofanie nie dokłada wpisów).
+    _navInstall();
+    _navCtx.onPick = onPick;
+    _navCtx.listOptions = listOptions;
+    if (!(opts && opts._navRestore)) {
+      var _navLoc = { screen: 'card', patientId: patientId, tab: (opts && opts.activeTab) || 'antro' };
+      var _navCur = _navState();
+      if (_navCurPatientId === patientId && _navCur && _navCur.screen === 'card' && _navCur.patientId === patientId) {
+        _navReplace(_navLoc);
+      } else {
+        _navPushForward(_navLoc);
+      }
+    }
+    _navCurPatientId = patientId;
+
     // ── Akcje ──
     var backBtn = el('button', {
       class: 'vilda-auth-btn vilda-auth-btn-ghost', type: 'button',
       text: '← Wróć do listy',
-      onclick: function () { showPatientsList(onPick, listOptions); }
+      onclick: function () { if (_navState()) { _navBack(); } else { showPatientsList(onPick, listOptions); } }
     });
 
     var loadBtn = null;
@@ -6866,10 +6945,18 @@
   }
 
   // ============ LISTA PACJENTÓW ============
-  async function showPatientsList(onPick, options) {
+  async function showPatientsList(onPick, options, _navRestore) {
     const V = getVault();
     if (!V || !V.isUnlocked()) return;
     const opts = options || {};
+
+    // ── Historia nawigacji: wejście na listę = krok DO PRZODU (chyba że render
+    // z popstate: _navRestore=true → bez push, bo to cofanie/przewijanie). ──
+    _navInstall();
+    _navCtx.onPick = onPick;
+    _navCtx.listOptions = options || null;
+    _navCurPatientId = null; // po liście następna karta to „nowa" → nowy wpis historii
+    if (!_navRestore) _navPushForward({ screen: 'list' });
 
     // Cloud-only: pacjenci ładowani z chmury w tle przy logowaniu. Jeśli sync
     // jeszcze nie skończył gdy user wchodzi na listę, pokazujemy overlay
@@ -7079,7 +7166,9 @@
       class: 'vilda-auth-btn vilda-auth-btn-ghost',
       type: 'button',
       text: 'Anuluj',
-      onclick: function () { hide(); }
+      // Wstecz tym samym torem co gest (konsumuje wpis {list} z historii);
+      // fallback hide() gdy historia nie ma naszego stanu.
+      onclick: function () { if (_navState()) { _navBack(); } else { hide(); } }
     });
 
     const children = [title, sub];
