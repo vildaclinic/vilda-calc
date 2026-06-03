@@ -3480,6 +3480,8 @@
     host.appendChild(overlay);
     // Mobile: zablokuj scroll tła, by modal nie „pływał" (auto-unlock po zamknięciu).
     _lockBackgroundScrollUntilRemoved(overlay);
+    _blockBackdropTouchScroll(overlay, sheet);
+    _preventIosFocusZoom(sheet);
 
     // Auto-focus na treści (najczęściej edytowane).
     try { bodyInput.focus(); } catch (_) {}
@@ -3565,6 +3567,31 @@
       }
     } catch (_) {}
     return release;
+  }
+
+  // iOS: pola formularza o font-size < 16px wymuszają auto-zoom viewportu przy
+  // fokusie (także przy auto-focusie zaraz po otwarciu modala). Ustawiamy 16px na
+  // polach wewnątrz arkusza TYLKO na mobile (desktop zostaje kompaktowy 0.92rem).
+  // Wołać PRZED .focus(), inaczej zoom zdąży się odpalić.
+  function _preventIosFocusZoom(container) {
+    try {
+      if (!global.matchMedia || !global.matchMedia('(max-width: 600px)').matches) return;
+      var fields = container.querySelectorAll('input, textarea, select');
+      for (var i = 0; i < fields.length; i += 1) { fields[i].style.fontSize = '16px'; }
+    } catch (_) {}
+  }
+  // iOS: <body> jest scrollerem, a overflow:hidden bywa ignorowane dla dotyku, więc
+  // tło przewija się pod modalem — zwłaszcza gdy palec trafi w backdrop / krawędź
+  // ekranu (margines wokół arkusza). Blokujemy scroll dla dotyków POZA arkuszem;
+  // dotyk wewnątrz arkusza działa normalnie (arkusz: overflow-y:auto +
+  // overscroll-behavior:contain). NIE ruszamy stylów body (brak ryzyka skoku scrolla).
+  // Listener znika z DOM razem z overlayem — bez osobnego cleanupu.
+  function _blockBackdropTouchScroll(overlay, sheet) {
+    try {
+      overlay.addEventListener('touchmove', function (e) {
+        try { if (!sheet.contains(e.target)) e.preventDefault(); } catch (_) {}
+      }, { passive: false });
+    } catch (_) {}
   }
 
   // ============ R2 — REMINDER MODAL (PRZYPOMNIENIA PO ZALOGOWANIU) ============
@@ -5617,6 +5644,8 @@
     global.document.body.appendChild(overlay);
     // Mobile: zablokuj scroll tła, by modal nie „pływał" (auto-unlock po zamknięciu).
     _lockBackgroundScrollUntilRemoved(overlay);
+    _blockBackdropTouchScroll(overlay, sheet);
+    _preventIosFocusZoom(sheet);
     try { heightInput.focus(); } catch (_) {}
   }
 
