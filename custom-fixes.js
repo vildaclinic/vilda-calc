@@ -1,4 +1,425 @@
-(function(s){"use strict";if(s){if(typeof s.vildaSafeInit!="function"){const O=Object.create(null);s.vildaSafeInit=function(i,I,o){const d=String(i||"anonymous-init");if(!((o||{}).once!==!1&&O[d])){O[d]=!0;try{return typeof I=="function"?I():void 0}catch(b){s.console&&typeof s.console.warn=="function"&&s.console.warn("[custom-fixes:init] "+d+" failed",b);return}}}}typeof s.vildaOnReady!="function"&&(s.vildaOnReady=function(O,i,I){const o=function(){return s.vildaSafeInit(O,i,I)};if(!s.document||s.document.readyState!=="loading")return o();s.document.addEventListener("DOMContentLoaded",o,{once:!0})})}})(typeof window<"u"?window:this);function vildaCustomSetTrustedHtml(s,O,i){if(!s)return!1;const I=O==null?"":String(O);try{return typeof window<"u"&&window.VildaHtml&&typeof window.VildaHtml.setTrustedHtml=="function"?window.VildaHtml.setTrustedHtml(s,I,{context:i||"custom-fixes"}):(s.textContent=I,!0)}catch(o){return typeof globalThis<"u"&&typeof globalThis.vildaLogSwallowedCatch=="function"&&globalThis.vildaLogSwallowedCatch("custom-fixes.js",o,{helper:"setTrustedHtml",context:i||""}),!1}}function vildaCustomClearHtml(s){if(!s)return!1;try{return typeof window<"u"&&window.VildaHtml&&typeof window.VildaHtml.clearHtml=="function"?window.VildaHtml.clearHtml(s):(s.textContent="",!0)}catch(O){return typeof globalThis<"u"&&typeof globalThis.vildaLogSwallowedCatch=="function"&&globalThis.vildaLogSwallowedCatch("custom-fixes.js",O,{helper:"clearHtml"}),!1}}function vildaCustomHasHtmlContent(s){if(!s)return!1;try{return typeof window<"u"&&window.VildaHtml&&typeof window.VildaHtml.hasHtmlContent=="function"?window.VildaHtml.hasHtmlContent(s):!!String(s.textContent||"").trim()}catch(O){return typeof globalThis<"u"&&typeof globalThis.vildaLogSwallowedCatch=="function"&&globalThis.vildaLogSwallowedCatch("custom-fixes.js",O,{helper:"hasHtmlContent"}),!1}}(function(){"use strict";function s(){if(window.innerWidth>=700)return;const b=document.getElementById("currentSummaryCardLeft"),x=document.getElementById("currentSummaryCardRight");if(!b||!x||b.dataset.merged==="true")return;const r=b.querySelector(".summary-content"),h=x.querySelector(".summary-content");if(r&&h)for(;h.firstChild;)r.appendChild(h.firstChild);x.remove(),b.dataset.merged="true"}function O(){window.innerWidth<700?Element.prototype._vildaOrigScrollIntoView||(Element.prototype._vildaOrigScrollIntoView=Element.prototype.scrollIntoView,Element.prototype.scrollIntoView=function(){}):window.innerWidth>=992?Element.prototype._vildaOrigScrollIntoView||(Element.prototype._vildaOrigScrollIntoView=Element.prototype.scrollIntoView,Element.prototype.scrollIntoView=function(b){var x=this,r=b,h=r&&typeof r=="object"&&r.block?r.block:"start";setTimeout(function(){try{if(h==="start"){var k=document.querySelector("header"),g=k?k.getBoundingClientRect().height:64,m=x.getBoundingClientRect();window.scrollTo({top:Math.round(m.top+window.pageYOffset-g-12),behavior:r&&r.behavior||"smooth"})}else Element.prototype._vildaOrigScrollIntoView.call(x,r)}catch{}},100)}):Element.prototype._vildaOrigScrollIntoView&&(Element.prototype.scrollIntoView=Element.prototype._vildaOrigScrollIntoView,delete Element.prototype._vildaOrigScrollIntoView)}window.vildaSafeInit("custom-fixes:summary-card-observer",function(){typeof MutationObserver<"u"&&document.documentElement&&new MutationObserver(s).observe(document.documentElement,{childList:!0,subtree:!0}),window.addEventListener("resize",s)}),window.vildaOnReady("custom-fixes:merge-summary-cards",s),window.vildaSafeInit("custom-fixes:auto-scroll-toggle",function(){O(),window.addEventListener("resize",O)});function i(){try{var b=document.getElementById("infoMessages"),x=document.querySelector("fieldset.user-card"),r=document.getElementById("errorBox"),h=document.getElementById("compareInstruction");if(!b||!x)return;var k=!1;if(r){var g=window.getComputedStyle(r);k=g.display!=="none"&&r.innerText.trim().length>0}var m=!1;if(h){var z=window.getComputedStyle(h);m=z.display!=="none"&&h.innerText.trim().length>0}if(!k&&!m){b.style.display="none",b.style.minHeight="";return}if(b.style.display="",k&&m&&window.innerWidth>=700){var c=x.offsetHeight;c&&c>0?b.style.minHeight=c+"px":b.style.minHeight=""}else b.style.minHeight=""}catch(C){typeof globalThis<"u"&&typeof globalThis.vildaLogSwallowedCatch=="function"&&globalThis.vildaLogSwallowedCatch("custom-fixes.js",C,{line:186})}}function I(){var b=document.getElementById("errorBox"),x=document.getElementById("compareInstruction"),r={childList:!0,subtree:!0,attributes:!0,characterData:!0};if(b){var h=new MutationObserver(i);h.observe(b,r)}if(x){var k=new MutationObserver(i);k.observe(x,r)}}window.vildaOnReady("custom-fixes:info-card-height",function(){i(),I()}),window.vildaSafeInit("custom-fixes:info-card-resize-listener",function(){window.addEventListener("resize",i)}),(function(){const r=[0,1,2,3];function h(m,z,c,C){const p=parseInt(m,10);return isNaN(p)?C:Math.min(c,Math.max(z,p))}function k(m,z){if(m==null||m==="")return z;const c=String(m).trim().toLowerCase();return["1","true","yes","on"].includes(c)?!0:["0","false","no","off"].includes(c)?!1:z}function g(){try{const m=document.body;if(!m)return;let z=0,c=0,C=0;try{const p=typeof window<"u"?window.VildaPersistence:null,M=p&&typeof p.readPreferenceRaw=="function"?function(W,Z){return p.readPreferenceRaw(W,Z)}:function(W,Z){return Z},K=M("DARK_BG_LEVEL",null);K!==null&&(z=h(K,0,2,0));const q=M("GLASS_LEVEL",null);q!==null&&(c=h(q,0,4,0));const J=k(M("HIGH_CONTRAST_ENABLED",null),!1),te=h(M("HIGH_CONTRAST_LEVEL",null),1,3,2);C=J?te:0}catch(p){typeof globalThis<"u"&&typeof globalThis.vildaLogSwallowedCatch=="function"&&globalThis.vildaLogSwallowedCatch("custom-fixes.js",p,{line:266})}z>0&&m.classList.remove("professional-bg"),m.classList.remove("dark-bg-level-0","dark-bg-level-1","dark-bg-level-2"),m.classList.remove("glass-level-0","glass-level-1","glass-level-2","glass-level-3","glass-level-4"),m.classList.remove(...r.map(p=>"high-contrast-level-"+p)),m.classList.add("dark-bg-level-"+z),m.classList.add("glass-level-"+c),m.classList.add("high-contrast-level-"+C)}catch(m){typeof globalThis<"u"&&typeof globalThis.vildaLogSwallowedCatch=="function"&&globalThis.vildaLogSwallowedCatch("custom-fixes.js",m,{line:279})}}if(typeof window<"u")try{window.applyThemeCustom=g}catch(m){typeof globalThis<"u"&&typeof globalThis.vildaLogSwallowedCatch=="function"&&globalThis.vildaLogSwallowedCatch("custom-fixes.js",m,{line:285})}window.vildaOnReady("custom-fixes:apply-theme-custom",g)})();function o(){if(!document.getElementById("shortcutStyleInjected")){var b=document.createElement("style");b.id="shortcutStyleInjected",b.textContent=`
+(function (global) {
+  'use strict';
+  if (!global) return;
+  if (typeof global.vildaSafeInit !== 'function') {
+    const fallbackRegistry = Object.create(null);
+    global.vildaSafeInit = function (name, fn, options) {
+      const key = String(name || 'anonymous-init');
+      const opts = options || {};
+      if (opts.once !== false && fallbackRegistry[key]) return undefined;
+      fallbackRegistry[key] = true;
+      try {
+        return typeof fn === 'function' ? fn() : undefined;
+      } catch (error) {
+        if (global.console && typeof global.console.warn === 'function') {
+          global.console.warn('[custom-fixes:init] ' + key + ' failed', error);
+        }
+        return undefined;
+      }
+    };
+  }
+  if (typeof global.vildaOnReady !== 'function') {
+    global.vildaOnReady = function (name, fn, options) {
+      const run = function () {
+        return global.vildaSafeInit(name, fn, options);
+      };
+      if (!global.document || global.document.readyState !== 'loading') {
+        return run();
+      }
+      global.document.addEventListener('DOMContentLoaded', run, { once: true });
+      return undefined;
+    };
+  }
+})(typeof window !== 'undefined' ? window : this);
+
+
+function vildaCustomSetTrustedHtml(element, markup, context) {
+  if (!element) return false;
+  const html = markup == null ? '' : String(markup);
+  try {
+    if (typeof window !== 'undefined' && window.VildaHtml && typeof window.VildaHtml.setTrustedHtml === 'function') {
+      return window.VildaHtml.setTrustedHtml(element, html, { context: context || 'custom-fixes' });
+    }
+    element.textContent = html;
+    return true;
+  } catch (_) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', _, { helper: 'setTrustedHtml', context: context || '' });
+    }
+    return false;
+  }
+}
+
+function vildaCustomClearHtml(element) {
+  if (!element) return false;
+  try {
+    if (typeof window !== 'undefined' && window.VildaHtml && typeof window.VildaHtml.clearHtml === 'function') return window.VildaHtml.clearHtml(element);
+    element.textContent = '';
+    return true;
+  } catch (_) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', _, { helper: 'clearHtml' });
+    }
+    return false;
+  }
+}
+
+function vildaCustomHasHtmlContent(element) {
+  if (!element) return false;
+  try {
+    if (typeof window !== 'undefined' && window.VildaHtml && typeof window.VildaHtml.hasHtmlContent === 'function') return window.VildaHtml.hasHtmlContent(element);
+    return !!String(element.textContent || '').trim();
+  } catch (_) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', _, { helper: 'hasHtmlContent' });
+    }
+    return false;
+  }
+}
+
+
+
+
+
+
+
+
+
+// This script contains custom fixes for the Waga i wzrost application.
+//
+// 1. In single‑column (mobile) view the metabolic summary is split into
+//    two cards (“currentSummaryCardLeft” and “currentSummaryCardRight”).  On
+//    narrow screens we merge the content of the right card into the left
+//    card and remove the right card entirely.  This ensures that the
+//    summary appears as a single card with combined content.  Merging
+//    happens once per render and is re‑attempted whenever the DOM
+//    changes or the window is resized.
+//
+// 2. The application automatically scrolls certain elements into view
+//    when switching between standard and professional result modes.  On
+//    mobile devices this behaviour can be jarring.  We disable
+//    scrollIntoView calls globally while the viewport is narrower than
+//    700 px by overriding Element.prototype.scrollIntoView.  The
+//    original implementation is restored when the viewport widens again.
+
+(function() {
+  'use strict';
+
+  /**
+   * Merge the right summary card into the left one on small screens.
+   * If the cards are not present or the viewport is wide, the
+   * function does nothing.  Once merged the left card is marked
+   * via a data attribute to avoid repeated work.
+   */
+  function mergeSummaryCards() {
+    // Only merge in single‑column layout
+    if (window.innerWidth >= 700) return;
+    const leftCard  = document.getElementById('currentSummaryCardLeft');
+    const rightCard = document.getElementById('currentSummaryCardRight');
+    if (!leftCard || !rightCard) return;
+    // Skip if already merged
+    if (leftCard.dataset.merged === 'true') return;
+    const leftContent  = leftCard.querySelector('.summary-content');
+    const rightContent = rightCard.querySelector('.summary-content');
+    if (leftContent && rightContent) {
+      // Move all child nodes from rightContent into leftContent
+      while (rightContent.firstChild) {
+        leftContent.appendChild(rightContent.firstChild);
+      }
+    }
+    // FIX (2026-06-03): przycisk „Raport PDF dla pacjenta" (.current-summary-actions)
+    // jest doklejany do PRAWEJ karty jako jej bezpośrednie dziecko (POZA
+    // .summary-content), więc scalanie samej treści go pomijało, a rightCard.remove()
+    // usuwał go z DOM → w układzie jednokolumnowym karta „Podsumowanie wyników"
+    // zostawała bez przycisku PDF. Przenieś akcje do scalonej karty przed usunięciem.
+    const rightActions = rightCard.querySelector('.current-summary-actions');
+    if (rightActions) {
+      leftCard.appendChild(rightActions);
+    }
+    // Remove the right card from the DOM
+    rightCard.remove();
+    // Mark as merged to avoid repeating
+    leftCard.dataset.merged = 'true';
+  }
+
+  /**
+   * Disable or restore scrollIntoView based on viewport width.
+   *
+   * Narrow screens (<700 px):
+   *   scrollIntoView → no-op, aby zapobiec automatycznemu scrollowaniu
+   *   przy przełączaniu trybu wyników.
+   *
+   * Desktop (≥992 px):
+   *   scrollIntoView → wrappowany w setTimeout(fn, 50 ms), co daje
+   *   przeglądarce czas na przeliczenie layoutu po poprzedzających
+   *   zmianach DOM (np. el.open = true w akordeonach ustawień lub
+   *   toggle kart na głównej).  Bez tego delay scroll trafia w złe
+   *   miejsce, bo element nie zdążył jeszcze rozwinąć się w DOM.
+   *   Wartość 50 ms jest niezauważalna dla użytkownika, a wystarczająca
+   *   dla pełnego reflow.  Skróty mini-summary mają własny setTimeout
+   *   (150–200 ms), więc dodatkowe 50 ms jest dla nich nieistotne.
+   *
+   * Tablet (700–991 px):
+   *   Header nie jest sticky → oryginalne scrollIntoView bez zmian.
+   */
+  function toggleAutoScrollDisable() {
+    if (window.innerWidth < 700) {
+      // Mobile: no-op
+      if (!Element.prototype._vildaOrigScrollIntoView) {
+        Element.prototype._vildaOrigScrollIntoView = Element.prototype.scrollIntoView;
+        Element.prototype.scrollIntoView = function() {
+          // Intentionally do nothing on small screens
+        };
+      }
+    } else if (window.innerWidth >= 992) {
+      // Desktop: sticky header aktywny — kompensuj offset nagłówka dla block:'start'.
+      // Sam setTimeout(fn, 50) nie wystarczył, bo scrollIntoView nie respektuje
+      // scroll-padding-top w Safari — teraz używamy window.scrollTo z ręcznym offsetem.
+      if (!Element.prototype._vildaOrigScrollIntoView) {
+        Element.prototype._vildaOrigScrollIntoView = Element.prototype.scrollIntoView;
+        Element.prototype.scrollIntoView = function(opts) {
+          var el = this;
+          var options = opts;
+          // Ustal block: jeśli opts to boolean lub brak block, traktuj jako 'start'
+          var block = (options && typeof options === 'object' && options.block)
+            ? options.block : 'start';
+          setTimeout(function() {
+            try {
+              if (block === 'start') {
+                // Ręczny offset — działa we wszystkich przeglądarkach
+                var header  = document.querySelector('header');
+                var headerH = header ? header.getBoundingClientRect().height : 64;
+                var rect    = el.getBoundingClientRect();
+                window.scrollTo({
+                  top: Math.round(rect.top + window.pageYOffset - headerH - 12),
+                  behavior: (options && options.behavior) || 'smooth'
+                });
+              } else {
+                // block:'center', 'end', 'nearest' — nagłówek nie blokuje, użyj natywnego
+                Element.prototype._vildaOrigScrollIntoView.call(el, options);
+              }
+            } catch (e) { /* ignoruj błędy scrollowania */ }
+          }, 100);
+        };
+      }
+    } else {
+      // Tablet (700–991 px): header nie jest sticky, przywróć oryginał
+      if (Element.prototype._vildaOrigScrollIntoView) {
+        Element.prototype.scrollIntoView = Element.prototype._vildaOrigScrollIntoView;
+        delete Element.prototype._vildaOrigScrollIntoView;
+      }
+    }
+  }
+
+  // Observe the DOM for summary card insertion and attempt merging.
+  window.vildaSafeInit('custom-fixes:summary-card-observer', function () {
+    if (typeof MutationObserver !== 'undefined' && document.documentElement) {
+      const observer = new MutationObserver(mergeSummaryCards);
+      observer.observe(document.documentElement, { childList: true, subtree: true });
+    }
+    window.addEventListener('resize', mergeSummaryCards);
+  });
+
+  // Merge on resize and after DOM is ready.
+  window.vildaOnReady('custom-fixes:merge-summary-cards', mergeSummaryCards);
+
+  // Disable scrollIntoView on mobile and restore on wider screens.
+  window.vildaSafeInit('custom-fixes:auto-scroll-toggle', function () {
+    toggleAutoScrollDisable();
+    window.addEventListener('resize', toggleAutoScrollDisable);
+  });
+
+  /**
+   * === Dostosowanie wysokości karty komunikatów (infoMessages) ===
+   *
+   * W prawej kolumnie formularza znajdują się dwa komunikaty (#errorBox i
+   * #compareInstruction) wyświetlane we wspólnej karcie (#infoMessages) z klasą
+   * .info-card.  Aby układ w widoku dwukolumnowym był symetryczny względem karty
+   * „Dane użytkownika”, wysokość karty komunikatów powinna dorównywać wysokości
+   * karty użytkownika, ale tylko wtedy, gdy oba komunikaty są widoczne.
+   * Gdy choć jeden z nich jest ukryty, karta powinna naturalnie dopasować
+   * wysokość do zawartości.  Funkcja updateInfoCardHeight() ustawia minimalną
+   * wysokość karty komunikatów na podstawie aktualnej wysokości karty
+   * użytkownika.  Funkcja observeInfoMessageChanges() obserwuje zmiany w
+   * komunikatach, aby reagować na ich pojawianie się lub ukrywanie.
+   */
+  function updateInfoCardHeight() {
+    try {
+      var infoCard = document.getElementById('infoMessages');
+      var userCard = document.querySelector('fieldset.user-card');
+      var errorBox = document.getElementById('errorBox');
+      var compareInstr = document.getElementById('compareInstruction');
+      if (!infoCard || !userCard) return;
+      // Determine visibility and content of errorBox and compareInstruction
+      var errorVisible = false;
+      if (errorBox) {
+        var style = window.getComputedStyle(errorBox);
+        errorVisible = (style.display !== 'none') && errorBox.innerText.trim().length > 0;
+      }
+      var compareVisible = false;
+      if (compareInstr) {
+        var style2 = window.getComputedStyle(compareInstr);
+        compareVisible = (style2.display !== 'none') && compareInstr.innerText.trim().length > 0;
+      }
+      // Jeśli żaden z komunikatów nie jest widoczny, ukryj całą kartę
+      if (!errorVisible && !compareVisible) {
+        infoCard.style.display   = 'none';
+        infoCard.style.minHeight = '';
+        return;
+      }
+      // W przeciwnym wypadku pokaż kartę.  Domyślnie pozwalamy, aby wysokość karty
+      // wynikała z jej zawartości.  Tylko w układzie dwukolumnowym (≥700 px)
+      // oraz gdy oba komunikaty są widoczne, wyrównujemy wysokość z kartą
+      // „Dane użytkownika”.  W widoku mobilnym (<700 px) karta nie jest
+      // sztucznie wydłużana, co zapobiega nadmiernemu przewijaniu.
+      infoCard.style.display = '';
+      if (errorVisible && compareVisible && window.innerWidth >= 700) {
+        var ucHeight = userCard.offsetHeight;
+        if (ucHeight && ucHeight > 0) {
+          infoCard.style.minHeight = ucHeight + 'px';
+        } else {
+          infoCard.style.minHeight = '';
+        }
+      } else {
+        // W innych przypadkach (tylko jeden komunikat lub układ jednokolumnowy)
+        // pozwól karcie dopasować się do zawartości.
+        infoCard.style.minHeight = '';
+      }
+    } catch (_) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', _, { line: 186 });
+    }
+  }
+  }
+
+  function observeInfoMessageChanges() {
+    var err = document.getElementById('errorBox');
+    var ci  = document.getElementById('compareInstruction');
+    var config = { childList: true, subtree: true, attributes: true, characterData: true };
+    if (err) {
+      var observer1 = new MutationObserver(updateInfoCardHeight);
+      observer1.observe(err, config);
+    }
+    if (ci) {
+      var observer2 = new MutationObserver(updateInfoCardHeight);
+      observer2.observe(ci, config);
+    }
+  }
+
+  // Initialise height adjustment when document is ready.
+  window.vildaOnReady('custom-fixes:info-card-height', function () {
+    updateInfoCardHeight();
+    observeInfoMessageChanges();
+  });
+  // Update height on window resize.
+  window.vildaSafeInit('custom-fixes:info-card-resize-listener', function () {
+    window.addEventListener('resize', updateInfoCardHeight);
+  });
+
+  /**
+   * === Motyw aplikacji: ciemne tło, płynne szkło i wysoki kontrast ===
+   *
+   * Użytkownik może wybrać stopień przyciemnienia tła (0–2), poziom
+   * kontrastu kart Liquid Glass (0–4) oraz dodatkowy tryb wysokiego
+   * kontrastu (0–3). Ustawienia są zapisywane w localStorage pod
+   * kluczami 'darkBgLevel', 'glassLevel', 'highContrastEnabled'
+   * i 'highContrastLevel'. Funkcja applyThemeCustom() odczytuje te
+   * wartości i dodaje odpowiednie klasy do elementu <body>:
+   * dark-bg-level-0/1/2, glass-level-0/1/2/3/4 oraz
+   * high-contrast-level-0/1/2/3.
+   */
+  (function() {
+    const MAX_DARK_LEVEL = 2;
+    const MAX_GLASS_LEVEL = 4;
+    const HIGH_CONTRAST_LEVELS = [0, 1, 2, 3];
+
+    function normalizeLevel(rawValue, min, max, fallback) {
+      const parsed = parseInt(rawValue, 10);
+      return !isNaN(parsed) ? Math.min(max, Math.max(min, parsed)) : fallback;
+    }
+
+    function normalizeBoolean(rawValue, fallback) {
+      if (rawValue === null || rawValue === undefined || rawValue === '') return fallback;
+      const normalized = String(rawValue).trim().toLowerCase();
+      if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
+      if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
+      return fallback;
+    }
+
+    function applyThemeCustom() {
+      try {
+        const bodyEl = document.body;
+        if (!bodyEl) return;
+        let darkLevel = 0;
+        let glassLevel = 0;
+        let highContrastLevel = 0;
+        try {
+          const persistence = (typeof window !== 'undefined') ? window.VildaPersistence : null;
+          const readPref = persistence && typeof persistence.readPreferenceRaw === 'function'
+            ? function(key, fallback) { return persistence.readPreferenceRaw(key, fallback); }
+            : function(_key, fallback) { return fallback; };
+          const d = readPref('DARK_BG_LEVEL', null);
+          if (d !== null) {
+            darkLevel = normalizeLevel(d, 0, MAX_DARK_LEVEL, 0);
+          }
+          const g = readPref('GLASS_LEVEL', null);
+          if (g !== null) {
+            glassLevel = normalizeLevel(g, 0, MAX_GLASS_LEVEL, 0);
+          }
+          const contrastEnabled = normalizeBoolean(readPref('HIGH_CONTRAST_ENABLED', null), false);
+          const contrastIntensity = normalizeLevel(readPref('HIGH_CONTRAST_LEVEL', null), 1, 3, 2);
+          highContrastLevel = contrastEnabled ? contrastIntensity : 0;
+        } catch (_) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', _, { line: 266 });
+    }
+  }
+        // Usuń przyciemnienie trybu profesjonalnego, jeśli użytkownik wybrał ciemniejsze tło
+        if (darkLevel > 0) {
+          bodyEl.classList.remove('professional-bg');
+        }
+        // Usuń istniejące klasy ciemnego tła, płynnego szkła i wysokiego kontrastu
+        bodyEl.classList.remove('dark-bg-level-0', 'dark-bg-level-1', 'dark-bg-level-2');
+        bodyEl.classList.remove('glass-level-0', 'glass-level-1', 'glass-level-2', 'glass-level-3', 'glass-level-4');
+        bodyEl.classList.remove(...HIGH_CONTRAST_LEVELS.map((level) => 'high-contrast-level-' + level));
+        // Dodaj nowe klasy
+        bodyEl.classList.add('dark-bg-level-' + darkLevel);
+        bodyEl.classList.add('glass-level-' + glassLevel);
+        bodyEl.classList.add('high-contrast-level-' + highContrastLevel);
+      } catch (e) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', e, { line: 279 });
+    }
+  }
+    }
+    // Udostępnij funkcję globalnie, aby wywoływać ją z innych skryptów
+    if (typeof window !== 'undefined') {
+      try { window.applyThemeCustom = applyThemeCustom; } catch (_) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', _, { line: 285 });
+    }
+  }
+    }
+    // Automatycznie zastosuj ustawienia po załadowaniu dokumentu
+    window.vildaOnReady('custom-fixes:apply-theme-custom', applyThemeCustom);
+  })();
+
+  /**
+   * Inject styles for the custom shortcut dropdown.  The Liquid Glass
+   * theme (ios26-v2.css) loads after sidebar.css and may override the
+   * appearance of our dropdown.  By adding a <style> tag at runtime
+   * after all CSS has loaded, we ensure these rules have the highest
+   * specificity and are applied even under Liquid Glass.  The styles
+   * increase the height of the dropdown, enlarge padding and line height
+   * on each option, and ensure long titles wrap instead of being
+   * truncated.  This function is idempotent; it will only insert the
+   * styles once.
+   */
+  function injectShortcutStyles() {
+    if (document.getElementById('shortcutStyleInjected')) return;
+    var style = document.createElement('style');
+    style.id = 'shortcutStyleInjected';
+    style.textContent = `
       .mini-summary .shortcut-dropdown {
         max-height: 24rem !important;
       }
@@ -11,4 +432,3441 @@
         text-overflow: unset !important;
         overflow: visible !important;
       }
-    `,document.head.appendChild(b)}}function d(b,x){if(window.innerWidth<700)return;const r=document.getElementById(b),h=document.getElementById(x);if(!r||!h)return;const k=Array.from(r.querySelectorAll(".gh-test-card")),g=Array.from(h.querySelectorAll(".gh-test-card")),m=k.concat(g),z=m.length;if(!z)return;const c=Math.floor(z/2),C=z-c;vildaCustomClearHtml(r),vildaCustomClearHtml(h),m.forEach(p=>{p.style.flex="",p.style.flexGrow="",p.style.flexShrink="",p.style.flexBasis=""}),m.forEach((p,M)=>{M<c?r.appendChild(p):h.appendChild(p),p.style.flex="0 0 auto"}),r.style.paddingBottom="0",h.style.paddingBottom="0",r.style.height="auto",h.style.height="auto",requestAnimationFrame(()=>{const p=r.getBoundingClientRect().height,M=h.getBoundingClientRect().height;p<M?(r.style.paddingBottom=`${M-p}px`,h.style.paddingBottom="0"):M<p&&(h.style.paddingBottom=`${p-M}px`,r.style.paddingBottom="0")})}function y(){d("ghTestsLeft","ghTestsRight"),d("ogttTestsLeft","ogttTestsRight"),d("acthTestsLeft","acthTestsRight")}window.vildaOnReady("custom-fixes:adjust-test-cards",y),window.vildaSafeInit("custom-fixes:test-card-resize-listener",function(){window.addEventListener("resize",y)}),["toggleGhTests","toggleOgttTests","toggleActhTests"].forEach(b=>{const x=document.getElementById(b);x&&x.addEventListener("click",function(){setTimeout(y,0)})})})(),(function(){"use strict";let s=null;function O(){}window.vildaOnReady("custom-fixes:igf-endo-reposition-listeners",function(){const i=document.getElementById("toggleIgfTests"),I=document.getElementById("toggleEndoTests");i&&i.addEventListener("click",function(){requestAnimationFrame(()=>{const o=document.getElementById("ghIgfTherapyCard");o&&o.style.display!=="none"&&(s="igf")})},!1),I&&I.addEventListener("click",function(){requestAnimationFrame(()=>{const o=document.getElementById("ghButtonWrapper");o&&o.style.display!=="none"&&(s="endo")})},!1),window.addEventListener("resize",O)}),window.vildaOnReady("custom-fixes:zscore-toggle-override",function(){const i=document.getElementById("toggleZscore");i&&i.addEventListener("click",function(I){I.stopPropagation(),I.stopImmediatePropagation();const o=document.getElementById("zscoreCard");o&&o.style.display!=="none"&&o.style.display!==""?(o&&(o.style.display="none"),this.classList.remove("active-toggle")):(o&&(o.style.display="block"),this.classList.add("active-toggle"));try{typeof adjustTestButtonWidths=="function"&&requestAnimationFrame(()=>adjustTestButtonWidths())}catch(y){typeof globalThis<"u"&&typeof globalThis.vildaLogSwallowedCatch=="function"&&globalThis.vildaLogSwallowedCatch("custom-fixes.js",y,{line:606})}},!0)})})(),(function(){function s(){try{var O=document.getElementById("scrollTopBtn");O&&(O.style.display="flex")}catch(i){typeof globalThis<"u"&&typeof globalThis.vildaLogSwallowedCatch=="function"&&globalThis.vildaLogSwallowedCatch("custom-fixes.js",i,{line:629})}}window.vildaOnReady("custom-fixes:show-scroll-top-button",s)})(),(function(){function s(o,d){if(typeof showTooltip=="function")try{showTooltip(o,d);return}catch{}var y=window.VildaChrome;if(y&&typeof y.showTip=="function")try{y.showTip(o,d);return}catch{}typeof alert=="function"&&alert(d)}function O(){var o=window.VildaSession;if(o&&typeof o.isLoggedIn=="function")return o.isLoggedIn();var d=window.VildaAuthUI;if(d&&typeof d.isGuestMode=="function"&&d.isGuestMode())return!1;var y=window.VildaVault;return!!(y&&typeof y.isUnlocked=="function"&&y.isUnlocked())}function i(){var o=document.getElementById("saveDataBtn"),d=document.getElementById("saveDataBtnSidebar"),y=document.getElementById("addVisitNoteBtnSidebar"),b=O();if(d){var x=!b||o&&(o.disabled||o.hasAttribute("disabled"));x?(d.setAttribute("disabled",""),d.setAttribute("aria-disabled","true")):(d.removeAttribute("disabled"),d.removeAttribute("aria-disabled"))}if(y){var r=window._vildaCurrentPatientId||null,h=document.getElementById("age"),k=document.getElementById("ageMonths"),g=document.getElementById("height"),m=document.getElementById("weight"),z=!!(h&&h.value||k&&k.value),c=!!(g&&parseFloat(g.value)>0||m&&parseFloat(m.value)>0),C=b&&!!r&&z&&c;C?(y.removeAttribute("disabled"),y.removeAttribute("aria-disabled")):(y.setAttribute("disabled",""),y.setAttribute("aria-disabled","true"))}}function I(){var o=document.getElementById("saveDataBtnSidebar"),d=document.getElementById("patientsListBtnSidebar"),y=document.getElementById("addVisitNoteBtnSidebar"),b=document.getElementById("saveDataBtn");o&&(o._cfBound=!0),d&&(d._cfBound=!0),y&&(y._cfBound=!0),i(),o&&o.addEventListener("click",function(c){if(c.preventDefault(),!O()){var C=window.VildaSession&&window.VildaSession.TOOLTIPS.saveData.notLoggedIn||"Zapisywanie danych jest zarezerwowane dla zalogowanych u\u017Cytkownik\xF3w.";s(o,C);return}if(o.hasAttribute("disabled")){var p=b&&(b.getAttribute("data-tip")||b.getAttribute("title"))||o.getAttribute("data-tip")||"Aby zapisa\u0107 dane, uzupe\u0142nij wymagane pola.";s(o,p);return}if(window.vildaExport&&typeof window.vildaExport.saveUserData=="function"){var M=window.showTooltip;window.showTooltip=function(q,J){window.showTooltip=M,s(o,J)};try{window.vildaExport.saveUserData()}catch(K){throw window.showTooltip=M,K}i()}}),d&&d.addEventListener("click",function(c){if(c.preventDefault(),!O()){s(d,window.VildaSession&&window.VildaSession.TOOLTIPS.patients.notLoggedIn||"Zaloguj si\u0119, aby przegl\u0105da\u0107 baz\u0119 pacjent\xF3w.");return}var C=window.VildaAuthUI;if(!C||typeof C.showPatientsList!="function"){s(d,window.VildaSession&&window.VildaSession.TOOLTIPS.patients.unavailable||"Modu\u0142 pacjent\xF3w niedost\u0119pny \u2014 od\u015Bwie\u017C stron\u0119.");return}var p=typeof window.applyLoadedData=="function";C.showPatientsList(p?function(M){if(M&&typeof window.applyLoadedData=="function")try{window.applyLoadedData(M)}catch{}window.VildaChrome&&typeof window.VildaChrome.refreshPatientChip=="function"&&window.VildaChrome.refreshPatientChip()}:null)}),y&&y.addEventListener("click",function(c){if(c.preventDefault(),y.hasAttribute("disabled")||y.getAttribute("aria-disabled")==="true"){var C=y.getAttribute("data-tip")||'Aby doda\u0107 notatk\u0119 do wizyty, najpierw wczytaj pacjenta z listy \u201EPacjenci" lub zapisz nowego pacjenta (\u201EZapisz dane"). Notatka kotwiczy si\u0119 do konkretnej osoby w bazie.';s(y,C);return}if(!O()){s(y,"Zaloguj si\u0119, aby dodawa\u0107 notatki do wizyt.");return}var p=window._vildaCurrentPatientId||null;if(!p){s(y,'Aby doda\u0107 notatk\u0119 do wizyty, najpierw wczytaj pacjenta z listy \u201EPacjenci" lub zapisz nowego pacjenta (\u201EZapisz dane"). Notatka kotwiczy si\u0119 do konkretnej osoby w bazie.');return}var M=document.getElementById("age"),K=document.getElementById("ageMonths"),q=document.getElementById("height"),J=document.getElementById("weight"),te=M?parseInt(M.value,10):NaN,W=K?parseInt(K.value,10):NaN,Z=q?parseFloat(q.value):NaN,ne=J?parseFloat(J.value):NaN,ge=isFinite(te)||isFinite(W),we=isFinite(Z)&&Z>0||isFinite(ne)&&ne>0;if(!ge||!we){s(y,"Wpisz wiek + wzrost lub wag\u0119, aby kotwiczy\u0107 notatk\u0119 do wizyty.");return}var se=0;if(isFinite(te)&&(se+=te*12),isFinite(W)&&(se+=W),se<=0){s(y,"Nieprawid\u0142owy wiek pacjenta.");return}var be=window.VildaAuthUI;if(!be||typeof be.showPatientNoteEditor!="function"){s(y,"Modu\u0142 notatek niedost\u0119pny \u2014 od\u015Bwie\u017C stron\u0119.");return}be.showPatientNoteEditor({patientId:p,note:null,suggestLinkedAge:se})}),document.addEventListener("vilda:patient-loaded",function(c){try{var C=c&&c.detail&&c.detail.patientId;typeof C=="string"&&C&&(window._vildaCurrentPatientId=C)}catch{}});function x(c){return String(c??"").replace(/[&<>"']/g,function(C){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[C]})}var r=null;function h(){try{var c=document.getElementById("vildaLoadChoiceModal");c&&c.parentNode&&c.parentNode.removeChild(c),r&&(document.removeEventListener("keydown",r,!0),r=null)}catch{}}function k(c){try{var C=document.getElementById("restoreStateBtn"),p=document.getElementById("prevSummaryWrap");if(!C||!p)return;var M=C.style&&C.style.display&&C.style.display!=="none";if(!M)return;h(),C.style.display="none";var K=c&&c.name||window.lastLoadedData&&window.lastLoadedData.name||"",q=document.createElement("div");q.id="vildaLoadChoiceModal",q.setAttribute("role","dialog"),q.setAttribute("aria-modal","true"),q.setAttribute("aria-label","Co chcesz zrobi\u0107 z wczytanym pacjentem"),q.style.cssText="position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;padding:20px;",q.innerHTML='<div style="background:#fff;border-radius:16px;max-width:360px;width:100%;padding:22px 22px 18px;box-shadow:0 12px 40px rgba(0,60,80,0.25);"><h3 style="margin:0;font-size:18px;font-weight:600;color:#0f2b33;text-align:center;">Co chcesz zrobi\u0107?</h3>'+(K?'<p style="margin:6px 0 0;font-size:13px;color:#00838d;text-align:center;">'+x(K)+"</p>":"")+'<div style="display:flex;flex-direction:column;gap:10px;margin-top:18px;"><button type="button" id="vildaLcmNew" style="width:100%;background:#00838d !important;border:0 !important;color:#fff !important;border-radius:10px !important;padding:13px 16px;cursor:pointer;font-size:15px;font-weight:600;box-shadow:none !important;backdrop-filter:none !important;">Nowy pomiar</button><button type="button" id="vildaLcmRestore" style="width:100%;background:#fff !important;border:1px solid #00838d !important;color:#00838d !important;border-radius:10px !important;padding:13px 16px;cursor:pointer;font-size:15px;font-weight:600;box-shadow:none !important;backdrop-filter:none !important;">Odtw\xF3rz zapis</button></div></div>',document.body.appendChild(q);var J=q.querySelector("#vildaLcmNew"),te=q.querySelector("#vildaLcmRestore");J&&J.addEventListener("click",function(){h()}),te&&te.addEventListener("click",function(){h();var W=null,Z=!1;try{typeof window.confirm=="function"&&(W=window.confirm,window.confirm=function(){return!0},Z=!0)}catch{}try{var ne=document.getElementById("restoreStateBtn");ne&&typeof ne.click=="function"?(ne.style.display="inline-block",ne.click()):typeof window.restoreLoadedState=="function"&&window.restoreLoadedState()}catch{}finally{if(Z)try{window.confirm=W}catch{}}}),q.addEventListener("mousedown",function(W){if(W.target===q){h();try{C.style.display="inline-block"}catch{}}}),r=function(W){if(W.key==="Escape"||W.keyCode===27){h();try{C.style.display="inline-block"}catch{}}},document.addEventListener("keydown",r,!0);try{J&&typeof J.focus=="function"&&J.focus()}catch{}}catch{}}document.addEventListener("vilda:patient-loaded",function(c){try{setTimeout(function(){k(c&&c.detail)},0)}catch{}}),document.addEventListener("vilda:user-state-cleared",h),document.addEventListener("vilda:state-restored",h),["input","change"].forEach(function(c){document.addEventListener(c,i,!0)});function g(){var c=window.VildaVault;return c?(typeof c.onUnlock=="function"&&c.onUnlock(i),typeof c.onLock=="function"&&c.onLock(function(){try{window._vildaCurrentPatientId=null}catch{}i()}),i(),!0):!1}if(document.addEventListener("vilda:user-state-cleared",function(){try{window._vildaCurrentPatientId=null}catch{}try{i()}catch{}}),!g())var m=0,z=setInterval(function(){(g()||++m>=100)&&clearInterval(z)},100);document.addEventListener("vilda:guest-mode-changed",i)}window.vildaOnReady("custom-fixes:sidebar-menu",I)})(),(function(){function s(i){if(!i)return"/";var I=i.indexOf("?");I!==-1&&(i=i.slice(0,I));var o=i.indexOf("#");return o!==-1&&(i=i.slice(0,o)),i==="/index.html"?"/":(i.length>1&&i.endsWith("/")&&(i=i.slice(0,-1)),i)}function O(){var i=document.querySelectorAll(".sidebar-nav a[href]");if(i.length){var I=s(window.location.pathname||"/");i.forEach(function(o){var d=o.getAttribute("href");if(d&&!(d.indexOf("http")===0||d.indexOf("mailto:")===0)){var y=s(d);y===I?(o.classList.add("is-active"),o.setAttribute("aria-current","page")):(o.classList.remove("is-active"),o.removeAttribute("aria-current"))}})}}window.vildaOnReady("custom-fixes:active-sidebar-link-basic",O)})(),(function(){"use strict";function s(i){if(!i)return"index";var I=i.indexOf("?");I!==-1&&(i=i.slice(0,I));var o=i.indexOf("#");o!==-1&&(i=i.slice(0,o)),i.length>1&&i.endsWith("/")&&(i=i.slice(0,-1));var d=i.lastIndexOf("/");return d!==-1&&(i=i.slice(d+1)),i===""||i.toLowerCase()==="index.html"?"index":(i.toLowerCase().endsWith(".html")&&(i=i.slice(0,-5)),i.toLowerCase())}function O(){var i=document.querySelectorAll(".sidebar-nav a[href]");if(i.length){var I=s(window.location.pathname||"/");i.forEach(function(o){var d=o.getAttribute("href");if(d&&o.getAttribute("role")!=="button"&&!(d==="#"||d.charAt(0)==="#")&&!(/^(https?:)?\/\//i.test(d)||d.indexOf("mailto:")===0)){var y=s(d);y===I?(o.classList.add("is-active"),o.setAttribute("aria-current","page")):(o.classList.remove("is-active"),o.removeAttribute("aria-current"))}})}}window.vildaOnReady("custom-fixes:active-sidebar-link-normalized",O)})(),(function(){"use strict";function s(e){return typeof window<"u"&&window.VildaHtml&&typeof window.VildaHtml.escapeHtml=="function"?window.VildaHtml.escapeHtml(arguments[0]):String(e).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;")}function O(e,t,n,a,u){try{var f=!1;typeof OLAF_DATA_MIN_AGE<"u"?f=u==="PALCZEWSKA"||u==="OLAF"&&n<OLAF_DATA_MIN_AGE:f=u==="PALCZEWSKA";var l;if(f&&typeof calcPercentileStatsPal=="function"?l=calcPercentileStatsPal(e,t,n,a):typeof calcPercentileStats=="function"&&(l=calcPercentileStats(e,t,n,a)),l&&typeof l.percentile=="number")return l.percentile}catch(v){typeof globalThis<"u"&&typeof globalThis.vildaLogSwallowedCatch=="function"&&globalThis.vildaLogSwallowedCatch("custom-fixes.js",v,{line:967})}return null}function i(e){if(e==null||isNaN(e))return"";if(typeof formatCentile=="function"&&typeof centylWord=="function"){var t=formatCentile(e),n=centylWord(t),a=t.replace(/&lt;/g,"<").replace(/&gt;/g,">");return a+" "+n}var u=Math.round(e);return u+" centyl"}function I(e,t){return e==null||isNaN(e)||t>=18?"":e<3||e>97?" status-alert":""}function o(e,t){return e==null||isNaN(e)||t>=18?"neutral":e<3||e>97?"alert":e<10||e>90?"borderline":"normal"}function d(){var e=document.getElementById("miniSummary");if(e){var t=document.getElementById("name"),n=t?t.value.trim():"",a=document.getElementById("age"),u=document.getElementById("ageMonths"),f=document.getElementById("weight"),l=document.getElementById("height"),v=document.getElementById("sex"),S=v?v.value:"M",T=0,L=0,_=0;if(a||u){var j=a&&parseFloat(a.value)||0,A=u&&parseFloat(u.value)||0;_=Math.max(0,Math.min(11,A)),L=Math.floor(j),T=L+_/12}var w=f&&parseFloat(f.value)||0,B=l&&parseFloat(l.value)||0,P=document.querySelector('input[name="dataSource"]:checked'),N=P?P.value:typeof bmiSource<"u"?bmiSource:"OLAF",D=null,H=null,ae="",V="",G=typeof window<"u"&&typeof window.vildaGetMainAnthroValidationSnapshot=="function"?window.vildaGetMainAnthroValidationSnapshot():null,R=G?G.complete:(a?String(a.value||"").trim()!=="":!1)&&T>=0&&w>0&&B>0;R&&(D=O(w,S,T,"WT",N),H=O(B,S,T,"HT",N),ae=I(D,T),V=I(H,T));var X="";if(L>0||_>0){var Y;L===1?Y="rok":L%10>=2&&L%10<=4&&(L%100<10||L%100>=20)?Y="lata":Y="lat";var F=Math.round(_),$;F===1?$="miesi\u0105c":F>=2&&F<=4?$="miesi\u0105ce":$="miesi\u0119cy",X=L+" "+Y,F>0&&(X+=" i "+F+" "+$)}var Q=null,ie=null,le="";if(w>0&&B>0){if(Q=w/Math.pow(B/100,2),R&&T>0&&T<18)try{typeof bmiPercentileChild=="function"&&(ie=bmiPercentileChild(Q,S,Math.round(T*12)))}catch(xe){typeof globalThis<"u"&&typeof globalThis.vildaLogSwallowedCatch=="function"&&globalThis.vildaLogSwallowedCatch("custom-fixes.js",xe,{line:1201})}le=ie!=null?i(ie):""}var me=D!=null?i(D):"",ve=H!=null?i(H):"",oe="";X&&(oe+='<div class="ms-patient-chip"><div class="ms-avatar-wiek">Wiek</div><span class="ms-patient-age">'+s(X)+"</span></div>");var ee="";if(w>0){var Ee=o(D,T),ke=me?'<div class="ms-chip-badge">'+me+"</div>":"";ee+='<div class="ms-chip ms-chip--'+Ee+'"><div class="ms-chip-icon">W</div><div class="ms-chip-main"><span class="ms-chip-label">Waga</span><span class="ms-chip-value">'+s(w.toFixed(1).replace(".",","))+"&thinsp;kg</span></div>"+ke+"</div>"}if(B>0){var Ce=o(H,T),Ve=ve?'<div class="ms-chip-badge">'+ve+"</div>":"";ee+='<div class="ms-chip ms-chip--'+Ce+'"><div class="ms-chip-icon">H</div><div class="ms-chip-main"><span class="ms-chip-label">Wzrost</span><span class="ms-chip-value">'+s(B.toFixed(1).replace(".",","))+"&thinsp;cm</span></div>"+Ve+"</div>"}if(Q!=null){var Te=o(ie,T),_e=le?'<div class="ms-chip-badge">'+le+"</div>":"";ee+='<div class="ms-chip ms-chip--'+Te+'"><div class="ms-chip-icon">B</div><div class="ms-chip-main"><span class="ms-chip-label">BMI</span><span class="ms-chip-value">'+s(Q.toFixed(1).replace(".",","))+"</span></div>"+_e+"</div>"}if(w>0&&B>0){var ce=Math.sqrt(B*w/3600);if(!isNaN(ce)){var he=ce.toFixed(2).replace(".",",")+"\u2009m\xB2";ee+='<div class="ms-chip ms-chip--neutral"><div class="ms-chip-icon">S</div><div class="ms-chip-main"><span class="ms-chip-label">Pow. cia\u0142a</span><span class="ms-chip-value">'+s(he)+"</span></div></div>"}}ee&&(oe+='<div class="ms-chips">'+ee+"</div>");var ye=document.getElementById("miniSummaryContent");ye?vildaCustomSetTrustedHtml(ye,oe,"custom-fixes:mini-summary-content"):vildaCustomSetTrustedHtml(e,oe,"custom-fixes:mini-summary");var ue=oe.length>0,re=typeof e.closest=="function"?e.closest(".decor-sidebar"):document.querySelector(".desktop-layout .decor-sidebar");if(ue)e.style.display="block",re&&re.classList.add("decor-sidebar--has-content");else{var Be=window.location.pathname||"",Ae=Be.substring(Be.lastIndexOf("/")+1)||"";if(Ae==="steroidy.html"){var Le=!1,E=document.getElementById("steroidSummary");E&&E.parentElement===e&&(Le=!0),Le?re&&re.classList.add("decor-sidebar--has-content"):(e.style.display="none",re&&re.classList.remove("decor-sidebar--has-content"))}else e.style.display="none",re&&re.classList.remove("decor-sidebar--has-content")}try{var U=e&&e.style?e.style.display:"";if(e&&U==="none"){var fe=window.location.pathname||"",He=fe.substring(fe.lastIndexOf("/")+1)||"";if(He==="steroidy.html"){var de=document.getElementById("steroidSummary");if(de&&de.parentElement===e)if(typeof window.positionSteroidSummary=="function")window.positionSteroidSummary();else{var pe=document.querySelector(".desktop-layout .sidebar"),Ie=document.querySelector(".desktop-layout .decor-sidebar"),Ne=!1;if(Ie){var Pe=window.getComputedStyle(Ie);Ne=Pe&&Pe.display!=="none"}if(Ne&&Ie)de.parentElement!==Ie&&Ie.appendChild(de);else if(pe){var Oe=document.getElementById("miniSummary");Oe&&Oe.parentElement===pe?(de.parentElement!==pe||de.nextSibling!==Oe)&&pe.insertBefore(de,Oe):de.parentElement!==pe&&pe.appendChild(de)}}}}}catch(xe){typeof globalThis<"u"&&typeof globalThis.vildaLogSwallowedCatch=="function"&&globalThis.vildaLogSwallowedCatch("custom-fixes.js",xe,{line:1192})}try{typeof Se=="function"&&Se()}catch(xe){typeof globalThis<"u"&&typeof globalThis.vildaLogSwallowedCatch=="function"&&globalThis.vildaLogSwallowedCatch("custom-fixes.js",xe,{line:1204})}}}function y(){try{var e=document.getElementById("miniSummary");if(!e)return;var t=typeof e.closest=="function"?e.closest(".decor-sidebar"):document.querySelector(".desktop-layout .decor-sidebar");t&&t.classList.remove("decor-sidebar--has-content"),e.parentElement&&e.parentElement.removeChild(e)}catch(n){typeof globalThis<"u"&&typeof globalThis.vildaLogSwallowedCatch=="function"&&globalThis.vildaLogSwallowedCatch("custom-fixes.js",n,{fn:"teardownMiniSummary"})}}function b(){try{var e=typeof window<"u"?window.VildaProAccess:null,t=e&&typeof e.hasAccess=="function"&&e.hasAccess();t?r():y()}catch(n){typeof globalThis<"u"&&typeof globalThis.vildaLogSwallowedCatch=="function"&&globalThis.vildaLogSwallowedCatch("custom-fixes.js",n,{fn:"handleProAccessChange"})}}function x(){try{y(),r();try{c(),p()}catch{}}catch(e){typeof globalThis<"u"&&typeof globalThis.vildaLogSwallowedCatch=="function"&&globalThis.vildaLogSwallowedCatch("custom-fixes.js",e,{fn:"handleSessionChanged"})}}function r(){var e=typeof window<"u"?window.VildaProAccess:null;if(!e||typeof e.hasAccess!="function"||!e.hasAccess()){document.getElementById("miniSummary")&&y();return}if(!(window.innerWidth<1400)){var t=document.querySelector(".desktop-layout .decor-sidebar");if(t&&!document.getElementById("miniSummary")){var n=document.createElement("div");n.id="miniSummary",n.className="mini-summary",t.appendChild(n);var a=document.createElement("div");a.id="miniSummaryContent",n.appendChild(a);var u=document.createElement("div");u.id="miniShortcutsContainer",u.className="mini-shortcuts",n.appendChild(u);var f=window.location.pathname||"",l=f.substring(f.lastIndexOf("/")+1)||"";if(l==="steroidy.html")u.style.display="none";else try{Re()}catch(A){typeof globalThis<"u"&&typeof globalThis.vildaLogSwallowedCatch=="function"&&globalThis.vildaLogSwallowedCatch("custom-fixes.js",A,{fn:"initShortcuts"})}d();var v=window.location.pathname||"",S=v.substring(v.lastIndexOf("/")+1)||"";if(S==="steroidy.html"){var T=document.getElementById("steroidSummary"),L=document.getElementById("miniSummary");T&&L&&T.parentElement!==L&&L.appendChild(T)}var _=["name","age","ageMonths","weight","height","sex"];_.forEach(function(A){var w=document.getElementById(A);w&&(w.addEventListener("input",d),w.addEventListener("change",d))});var j=document.querySelectorAll('input[name="dataSource"]');j.forEach(function(A){A.addEventListener("change",d)}),window.addEventListener("resize",function(){var A=document.getElementById("miniSummary");window.innerWidth<1400?A&&(A.style.display="none"):A?d():r()})}}}var h=3,k=[],g=3,m=[];function z(){var e=Z();return"vilda-shortcuts:"+(e||"")+":steroidy.html"}function c(){var e=z();m=[];try{var t=typeof window<"u"?window.VildaPersistence:null,n=t&&typeof t.readPreferenceJSON=="function"?t.readPreferenceJSON(e,[]):[];Array.isArray(n)&&(m=n)}catch{m=[]}}function C(){try{var e=z(),t=typeof window<"u"?window.VildaPersistence:null;t&&typeof t.writePreferenceJSON=="function"&&t.writePreferenceJSON(e,m||[],{force:!0})}catch(n){typeof globalThis<"u"&&typeof globalThis.vildaLogSwallowedCatch=="function"&&globalThis.vildaLogSwallowedCatch("custom-fixes.js",n,{line:1437})}}function p(){var e=document.getElementById("steroidShortcutList"),t=document.getElementById("addSteroidShortcutBtn");if(!(!e||!t)){vildaCustomClearHtml(e),m.forEach(function(f){var l=f.src,v=f.tgt,S=typeof getDrug=="function"?getDrug(l):null,T=typeof getDrug=="function"?getDrug(v):null,L=S?S.label:l,_=T?T.label:v,j="z "+L+" na "+_,A=document.createElement("div");A.className="shortcut-row";var w=document.createElement("div");w.className="shortcut-link",w.textContent=j,w.addEventListener("click",function(P){K(f)});var B=document.createElement("button");B.type="button",B.className="shortcut-remove",B.textContent="\xD7",B.addEventListener("click",function(P){P.stopPropagation(),M(f.id)}),A.appendChild(w),A.appendChild(B),e.appendChild(A)});var n=e.children.length;n>=g?t.style.display="none":t.style.display="";try{var a=document.getElementById("steroidSummary");if(a){var u=a.querySelector(".shortcut-info");u&&(n>=g?u.style.display="none":u.style.display="")}}catch(f){typeof globalThis<"u"&&typeof globalThis.vildaLogSwallowedCatch=="function"&&globalThis.vildaLogSwallowedCatch("custom-fixes.js",f,{line:1516})}}}function M(e){m=m.filter(function(t){return t.id!==e}),C(),p()}function K(e){if(e){var t=e.src,n=e.tgt,a=document.querySelectorAll(".dose-row");if(!a||a.length===0){var u=document.getElementById("addDoseBtn");u&&u.click(),a=document.querySelectorAll(".dose-row")}var f=document.querySelector("select.srcDrug");f&&(f.value=t,f.dispatchEvent(new Event("change",{bubbles:!0})));var l=document.getElementById("targetDrug");l&&setTimeout(function(){l.value=n,l.dispatchEvent(new Event("change",{bubbles:!0}))},50);var v=document.getElementById("calcForm");v&&v.scrollIntoView({behavior:"smooth",block:"start"})}}function q(){var e=document.getElementById("steroidSummary"),t=document.getElementById("addSteroidShortcutBtn");if(!e||!t||document.getElementById("steroidPairPanel"))return;var n=document.createElement("div");n.id="steroidPairPanel",n.className="steroid-dropdown";var a=document.createElement("div");a.className="pair-row";var u=document.createElement("label");u.textContent="Steryd \u017Ar\xF3d\u0142owy",u.setAttribute("for","selectSrcDrug");var f=document.createElement("select");f.id="selectSrcDrug",f.style.width="100%",a.appendChild(u),a.appendChild(f);var l=document.createElement("div");l.className="pair-row";var v=document.createElement("label");v.textContent="Steryd docelowy",v.setAttribute("for","selectTgtDrug");var S=document.createElement("select");S.id="selectTgtDrug",S.style.width="100%",l.appendChild(v),l.appendChild(S);function T(w,B){if(vildaCustomClearHtml(w),!(typeof DRUGS>"u")){var P={};DRUGS.forEach(function(N){if(!(B&&N.group!==B)){if(!P[N.group]){var D=document.createElement("optgroup");D.label=N.group,P[N.group]=D}var H=document.createElement("option");H.value=N.id,H.textContent=N.label,P[N.group].appendChild(H)}}),Object.values(P).forEach(function(N){w.appendChild(N)})}}T(f,null),f.addEventListener("change",function(){var w=f.value,B=typeof getDrug=="function"&&getDrug(w)?getDrug(w).group:null;T(S,B),S.options.length>0&&(S.selectedIndex=0)}),f.dispatchEvent(new Event("change"));var L=document.createElement("div");L.className="pair-actions";var _=document.createElement("button");_.type="button",_.className="add-row confirm-pair",_.textContent="Dodaj",_.addEventListener("click",function(){var w=f.value,B=S.value;if(!(!w||!B)){var P=w+"|"+B,N=m.some(function(H){return H.id===P});!N&&m.length<g&&(m.push({id:P,src:w,tgt:B}),C(),p()),n&&n.parentElement&&n.parentElement.removeChild(n);try{var D=m.length;D>=g?t.style.display="none":t.style.display=""}catch{t.style.display=m.length>=g?"none":""}document.removeEventListener("click",A,!0)}});var j=document.createElement("button");j.type="button",j.className="add-row cancel-pair",j.textContent="Anuluj",j.addEventListener("click",function(){n&&n.parentElement&&n.parentElement.removeChild(n);try{var w=m.length;w>=g?t.style.display="none":t.style.display=""}catch{t.style.display=m.length>=g?"none":""}document.removeEventListener("click",A,!0)}),L.appendChild(_),L.appendChild(j),n.appendChild(a),n.appendChild(l),n.appendChild(L),e.insertBefore(n,t.nextSibling),t.style.display="none";function A(w){if(!n||!n.parentElement){document.removeEventListener("click",A,!0);return}if(!n.contains(w.target)&&w.target!==t){n.parentElement&&n.parentElement.removeChild(n);try{var B=m.length;B>=g?t.style.display="none":t.style.display=""}catch{t.style.display=m.length>=g?"none":""}document.removeEventListener("click",A,!0)}}setTimeout(function(){document.addEventListener("click",A,!0)},0)}function J(){var e=window.location.pathname,t=e.substring(e.lastIndexOf("/")+1);if(t!=="steroidy.html"||window.innerWidth<992)return;var n=document.querySelector(".desktop-layout .sidebar");if(!n||document.getElementById("steroidSummary"))return;var a=document.createElement("div");a.id="steroidSummary",a.className="steroid-summary";var u=document.createElement("div");u.className="shortcut-info",u.textContent="Mo\u017Cna doda\u0107 maksymalnie 3 skr\xF3ty. Skr\xF3ty pozwalaj\u0105 szybko ustawi\u0107 przeliczenia steryd\xF3w (\u017Ar\xF3d\u0142owy \u2192 docelowy).",a.appendChild(u);var f=document.createElement("div");f.id="steroidShortcutList",f.className="steroid-shortcuts",a.appendChild(f);var l=document.createElement("button");l.type="button",l.id="addSteroidShortcutBtn",l.className="add-shortcut-btn",l.textContent="Dodaj skr\xF3t",l.addEventListener("click",q),a.appendChild(l);var v=n.querySelector(".sidebar-nav");v&&v.parentElement===n?v.parentElement.appendChild(a):n.appendChild(a),c(),p();function S(){var T=document.getElementById("steroidSummary");if(T){var L=document.querySelector(".desktop-layout .decor-sidebar"),_=document.querySelector(".desktop-layout .sidebar"),j=!1;if(L){var A=window.getComputedStyle(L);j=A&&A.display!=="none"}if(j&&L)T.parentElement!==L&&L.appendChild(T);else if(_){var w=_.querySelector("[data-vilda-chrome-extras]")||_,B=document.getElementById("miniSummary");B&&B.parentElement===w?(T.parentElement!==w||T.nextSibling!==B)&&w.insertBefore(T,B):T.parentElement!==w&&w.appendChild(T)}}}S(),window.addEventListener("resize",S),window.positionSteroidSummary=S}function te(){var e="steroidAutoToast",t=document.getElementById(e);t||(t=document.createElement("div"),t.id=e,t.className="auto-toast",t.style.position="fixed",t.style.top="1rem",t.style.left="50%",t.style.transform="translateX(-50%)",t.style.bottom="",t.style.right="",t.style.zIndex="9999",t.style.background="var(--card)",t.style.border="1px solid #d0dede",t.style.padding="0.5rem 1rem",t.style.borderRadius="var(--radius)",t.style.boxShadow="var(--shadow)",t.style.fontSize="0.9rem",t.style.color="#000",t.style.pointerEvents="none",document.body.appendChild(t)),t.textContent="Wynik zosta\u0142 zaktualizowany",t.style.opacity="1",t.style.transition="",setTimeout(function(){t&&(t.style.transition="opacity 0.5s",t.style.opacity="0")},2500)}function W(){var e=window.location.pathname,t=e.substring(e.lastIndexOf("/")+1);if(t!=="steroidy.html")return;var n=document.getElementById("calcForm");if(!n)return;var a=n.querySelector('button[type="submit"]');a&&(a.style.display="none");var u=null;function f(){u&&clearTimeout(u),u=setTimeout(function(){try{var l=new Event("submit",{bubbles:!0,cancelable:!0});n.dispatchEvent(l);var v=document.getElementById("results");v&&v.style.display!=="none"&&te()}catch(S){typeof globalThis<"u"&&typeof globalThis.vildaLogSwallowedCatch=="function"&&globalThis.vildaLogSwallowedCatch("custom-fixes.js",S,{line:1932})}},400)}n.addEventListener("input",f,!0),n.addEventListener("change",f,!0)}function Z(){try{var e=typeof window<"u"?window.VildaVault:null;if(e&&typeof e.getCurrentUser=="function"){var t=e.getCurrentUser();if(t&&t.userId)return String(t.userId)}}catch{}try{var n=typeof window<"u"&&window.sessionStorage?window.sessionStorage.getItem("vilda-vault-session-v2"):null;if(n){var a=JSON.parse(n);if(a&&a.userId)return String(a.userId)}}catch{}return null}function ne(){var e=window.location.pathname,t=e.substring(e.lastIndexOf("/")+1)||"index.html",n=Z();return"vilda-shortcuts:"+(n||"")+":"+t}function ge(){var e=ne();try{var t=typeof window<"u"?window.VildaPersistence:null,n=t&&typeof t.readPreferenceJSON=="function"?t.readPreferenceJSON(e,[]):[];Array.isArray(n)&&(k=n)}catch(a){typeof globalThis<"u"&&typeof globalThis.vildaLogSwallowedCatch=="function"&&globalThis.vildaLogSwallowedCatch("custom-fixes.js",a,{line:1961})}}function we(){var e=ne();try{var t=typeof window<"u"?window.VildaPersistence:null;t&&typeof t.writePreferenceJSON=="function"&&t.writePreferenceJSON(e,k,{force:!0})}catch(n){typeof globalThis<"u"&&typeof globalThis.vildaLogSwallowedCatch=="function"&&globalThis.vildaLogSwallowedCatch("custom-fixes.js",n,{line:1974})}}function se(){var e=[],t=window.location.pathname,n=t.substring(t.lastIndexOf("/")+1)||"index.html";function a(V){if(!V)return null;for(var G={\u0105:"a",\u0107:"c",\u0119:"e",\u0142:"l",\u0144:"n",\u00F3:"o",\u015B:"s",\u017C:"z",\u017A:"z",\u0104:"a",\u0106:"c",\u0118:"e",\u0141:"l",\u0143:"n",\u00D3:"o",\u015A:"s",\u017B:"z",\u0179:"z"},R="",X=0;X<V.length;X++){var Y=V[X];R+=G[Y]||Y}return R=R.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,""),R||null}var u;if(n==="kalkulator-klirens.html")try{var f=[],l=null;if(Array.isArray(window.ALL_FORMS_SORTED)&&window.ALL_FORMS_SORTED.length?l=window.ALL_FORMS_SORTED:Array.isArray(window.FORMULAS)&&window.FORMULAS.length&&(l=window.FORMULAS),l){var v=l.slice().sort(function(V,G){return(V.label||"").localeCompare(G.label||"","pl",{sensitivity:"base"})});v.forEach(function(V){V&&V.id&&V.label&&f.push({id:V.id,title:V.label})})}else{var S=document.getElementById("formulaPicker");if(S&&S.options){for(var T=[],L=0;L<S.options.length;L++){var _=S.options[L],j=_.value,A=_.textContent||_.innerText;j&&!_.disabled&&A&&T.push({id:j,title:A.trim()})}T.sort(function(V,G){return(V.title||"").localeCompare(G.title||"","pl",{sensitivity:"base"})}),f=T}}return f}catch{return[]}if(n==="docpro.html"){u=Array.from(document.querySelectorAll(".gh-test-card"));var w=[],B=document.getElementById("bisphosCard");B&&w.push(B);var P=document.getElementById("obesityCard");P&&w.push(P);var N=document.getElementById("zscoreCard");N&&w.push(N);var D=document.getElementById("antibioticTherapyCard");if(!D){D=document.createElement("div"),D.id="antibioticTherapyCard";var H=document.createElement("strong");H.textContent="Antybiotykoterapia",D.appendChild(H)}w.push(D);var ae=document.getElementById("toggleIgfTests");ae&&w.push(ae),u=u.concat(w)}else u=Array.from(document.querySelectorAll(".card, .plan-card, .result-card"));return u.forEach(function(V){if(!(V.closest&&V.closest(".sidebar"))&&!(n==="docpro.html"&&V.id&&/summarycard/i.test(V.id))){var G=V.querySelector?V.querySelector("h1, h2, h3, h4, h5"):null;!G&&n==="docpro.html"&&(G=V.querySelector?V.querySelector("strong"):null);var R="";if(G){var X=G.cloneNode(!0),Y=X.querySelectorAll("span.subhead");Y.forEach(function(me){me.parentNode.removeChild(me)}),R=X.textContent.trim()}else V.tagName&&V.tagName.toLowerCase()==="button"?R=V.textContent.trim():V.id==="antibioticTherapyCard"&&(R="Antybiotykoterapia");if(R){var F=V.id;if(!F){var $=a(R);if(!$)return;for(var Q=$,ie=1;document.getElementById(Q);)Q=$+"-"+ie,ie++;V.id=Q,F=Q}if(!(n==="docpro.html"&&F==="professionalModule")){if(n==="index.html"){var le=["Ostatni pomiar","Podsumowanie wynik\xF3w","Modu\u0142 profesjonalny","Wybrana dieta"];if(le.indexOf(R)!==-1)return;if(F==="circCard"){e.push({id:"toggleCircSection",title:R});return}if(F==="nutritionNormsCard"){e.push({id:"toggleNutritionNormsCard",title:R});return}if(F==="nutritionMicrosCard"){e.push({id:"toggleNutritionMicrosCard",title:R});return}if(F==="foodCard"){e.push({id:"toggleFoodCard",title:R});return}F==="timesCard"?R="Spalanie kalorii":F==="totalCard"&&(R="\u0141\u0105czna kaloryczno\u015B\u0107")}e.push({id:F,title:R})}}}}),e}function be(e){if(e==="antibioticTherapyCard")return"toggleAbxTherapy";if(e==="zscoreCard")return"toggleZscore";if(e==="bisphosCard")return"toggleBisphos";if(e==="obesityCard")return"toggleObesityTherapy";if(e==="circCard"||e==="obwod-glowy-i-klatki-piersiowej")return"toggleCircSection";if(e==="nutritionNormsCard"||e==="normy-zywieniowe-bialko-tluszcz-weglowodany")return"toggleNutritionNormsCard";if(e==="nutritionMicrosCard"||e==="normy-zywieniowe-witaminy-i-skladniki-mineralne")return"toggleNutritionMicrosCard";if(e==="foodCard"||e==="kalorie-posilkow-i-czas-spalania")return"toggleFoodCard";if(/^toggle/.test(e))return null;var t=[],n=e.replace(/[-_](.)/g,function(v,S){return S.toUpperCase()}),a=n.charAt(0).toUpperCase()+n.slice(1);t.push("toggle"+a),["Card","Form","Section","Container","Box"].forEach(function(v){if(a.endsWith(v)){var S=a.slice(0,-v.length);S&&(t.push("toggle"+S),t.push("toggle"+S+"Card"))}}),t.push("toggle"+a+"Card");for(var u=0;u<t.length;u++){var f=t[u],l=document.getElementById(f);if(l&&l.tagName.toLowerCase()==="button")return f}return null}function je(e){var t=document.getElementById(e),n=window.location.pathname,a=n.substring(n.lastIndexOf("/")+1)||"index.html";if(!t&&a==="kalkulator-klirens.html")try{var u=null;if(Array.isArray(window.ALL_FORMS_SORTED)&&window.ALL_FORMS_SORTED.length?u=window.ALL_FORMS_SORTED:Array.isArray(window.FORMULAS)&&window.FORMULAS.length&&(u=window.FORMULAS),u){var f=u.find(function(E){return E&&E.id===e});if(f){if(typeof window.selectClcrFormula=="function")try{window.selectClcrFormula(f.id);return}catch(E){typeof globalThis<"u"&&typeof globalThis.vildaLogSwallowedCatch=="function"&&globalThis.vildaLogSwallowedCatch("custom-fixes.js",E,{line:2342})}var l=f.version||"basic";f.id==="KTV"&&(l="pro");var v=!1;if(typeof window.applyVersion=="function")try{window.applyVersion(l),v=!0}catch{v=!1}if(!v)try{typeof window.setVersion=="function"&&(window.setVersion(l),v=!0)}catch{v=!1}if(!v){var S=document.querySelector('.version-option[data-version="'+l+'"]');if(S&&!S.classList.contains("selected"))try{S.click(),v=!0}catch(E){typeof globalThis<"u"&&typeof globalThis.vildaLogSwallowedCatch=="function"&&globalThis.vildaLogSwallowedCatch("custom-fixes.js",E,{line:2374})}}if(f.id==="KTV"){var T=document.getElementById("ktvToggle");T&&!T.checked&&(T.checked=!0)}setTimeout(function(){try{typeof window.highlightFields=="function"&&window.highlightFields(f,!0)}catch(E){typeof globalThis<"u"&&typeof globalThis.vildaLogSwallowedCatch=="function"&&globalThis.vildaLogSwallowedCatch("custom-fixes.js",E,{line:2390})}},100);return}}}catch(E){typeof globalThis<"u"&&typeof globalThis.vildaLogSwallowedCatch=="function"&&globalThis.vildaLogSwallowedCatch("custom-fixes.js",E,{line:2395})}if(t){if(e==="downSyndromeCard"){var L=document.getElementById("downSyndromeSection");L&&L.style.display==="none"&&(L.style.display="block");var _=document.getElementById("downSyndromeCard"),j=document.getElementById("toggleDownSyndrome");if(_&&j){var A=window.getComputedStyle(_),w=A.display==="none"||_.offsetHeight===0;w&&j.click(),setTimeout(function(){try{_.scrollIntoView({behavior:"smooth",block:"start"})}catch{_.scrollIntoView(!0)}},150)}return}{var B=(e||"").toLowerCase(),P=!1;if((e==="circCard"||e==="obwod-glowy-i-klatki-piersiowej"||e==="toggleCircSection")&&(P=!0),!P&&(B.indexOf("circ")!==-1||B.indexOf("obwod")!==-1)&&(P=!0),P){var N=document.getElementById("toggleCircSection");if(N){try{N.scrollIntoView({behavior:"smooth",block:"start"})}catch{N.scrollIntoView(!0)}N.click()}setTimeout(function(){var E=document.getElementById("circCard");if(E)try{E.scrollIntoView({behavior:"smooth",block:"start"})}catch{E.scrollIntoView(!0)}else if(N)try{N.scrollIntoView({behavior:"smooth",block:"start"})}catch{N.scrollIntoView(!0)}},200);return}}{var D=(e||"").toLowerCase(),H=!1;if((e==="nutritionNormsCard"||e==="toggleNutritionNormsCard"||e==="normy-zywieniowe-bialko-tluszcz-weglowodany")&&(H=!0),!H&&D.indexOf("nutritionnorms")!==-1&&(H=!0),!H&&D.indexOf("normy-zywieniowe")!==-1&&(D.indexOf("bialko")!==-1||D.indexOf("tluszcz")!==-1||D.indexOf("weglowod")!==-1)&&(H=!0),H){var ae=document.getElementById("toggleNutritionNormsCard"),V=document.getElementById("nutritionNormsCard"),G=document.getElementById("nutritionNormsSection");if(G&&(G.style.display=""),ae){try{ae.scrollIntoView({behavior:"smooth",block:"start"})}catch{ae.scrollIntoView(!0)}var R=!0;if(V)try{var X=window.getComputedStyle(V);R=X.display==="none"||V.offsetHeight===0}catch{R=!0}R&&ae.click()}setTimeout(function(){var E=document.getElementById("nutritionNormsCard"),U=document.getElementById("toggleNutritionNormsCard");if(E)try{E.scrollIntoView({behavior:"smooth",block:"start"})}catch{E.scrollIntoView(!0)}else if(U)try{U.scrollIntoView({behavior:"smooth",block:"start"})}catch{U.scrollIntoView(!0)}},200);return}}{var Y=(e||"").toLowerCase(),F=!1;if((e==="nutritionMicrosCard"||e==="toggleNutritionMicrosCard"||e==="normy-zywieniowe-witaminy-i-skladniki-mineralne")&&(F=!0),!F&&(Y.indexOf("nutritionmicros")!==-1||Y.indexOf("witaminy")!==-1||Y.indexOf("skladniki-mineralne")!==-1)&&(F=!0),F){var $=document.getElementById("toggleNutritionMicrosCard"),Q=document.getElementById("nutritionMicrosCard"),ie=document.getElementById("nutritionMicrosSection");if(ie&&(ie.style.display=""),$){try{$.scrollIntoView({behavior:"smooth",block:"start"})}catch{$.scrollIntoView(!0)}var le=!0;if(Q)try{var me=window.getComputedStyle(Q);le=me.display==="none"||Q.offsetHeight===0}catch{le=!0}le&&$.click()}setTimeout(function(){var E=document.getElementById("nutritionMicrosCard"),U=document.getElementById("toggleNutritionMicrosCard");if(E)try{E.scrollIntoView({behavior:"smooth",block:"start"})}catch{E.scrollIntoView(!0)}else if(U)try{U.scrollIntoView({behavior:"smooth",block:"start"})}catch{U.scrollIntoView(!0)}},200);return}}{var ve=(e||"").toLowerCase(),oe=!1;if((e==="foodCard"||e==="toggleFoodCard"||e==="kalorie-posilkow-i-czas-spalania")&&(oe=!0),!oe&&(ve.indexOf("foodcard")!==-1||ve.indexOf("kalorie")!==-1&&(ve.indexOf("posilk")!==-1||ve.indexOf("spalania")!==-1))&&(oe=!0),oe){var ee=document.getElementById("toggleFoodCard"),Ee=document.getElementById("foodCard"),ke=document.getElementById("foodSection");if(ke&&(ke.style.display=""),ee){try{ee.scrollIntoView({behavior:"smooth",block:"start"})}catch{ee.scrollIntoView(!0)}var Ce=!0;if(Ee)try{var Ve=window.getComputedStyle(Ee);Ce=Ve.display==="none"||Ee.offsetHeight===0}catch{Ce=!0}Ce&&ee.click()}setTimeout(function(){var E=document.getElementById("foodCard"),U=document.getElementById("toggleFoodCard");if(E)try{E.scrollIntoView({behavior:"smooth",block:"start"})}catch{E.scrollIntoView(!0)}else if(U)try{U.scrollIntoView({behavior:"smooth",block:"start"})}catch{U.scrollIntoView(!0)}},200);return}}if(t.tagName&&t.tagName.toLowerCase()==="button"){try{t.scrollIntoView({behavior:"smooth",block:"start"})}catch{t.scrollIntoView(!0)}t.click(),e==="toggleCircSection"?setTimeout(function(){var E=document.getElementById("circCard");if(E)try{E.scrollIntoView({behavior:"smooth",block:"start"})}catch{E.scrollIntoView(!0)}else try{t.scrollIntoView({behavior:"smooth",block:"start"})}catch{t.scrollIntoView(!0)}},200):setTimeout(function(){try{t.scrollIntoView({behavior:"smooth",block:"start"})}catch{t.scrollIntoView(!0)}},100);return}var Te=window.location.pathname,_e=Te.substring(Te.lastIndexOf("/")+1)||"index.html";if(_e==="docpro.html"&&t.classList.contains("gh-test-card")){var ce=document.getElementById("toggleEndoTests");(ce&&ce.offsetParent===null||ce)&&ce.click();for(var he=null,ye=t.parentElement;ye;){var ue=ye.id;if(ue==="ghTestsLeft"||ue==="ghTestsRight"){he=document.getElementById("toggleGhTests");break}if(ue==="ogttTestsLeft"||ue==="ogttTestsRight"){he=document.getElementById("toggleOgttTests");break}if(ue==="acthTestsLeft"||ue==="acthTestsRight"){he=document.getElementById("toggleActhTests");break}ye=ye.parentElement}he&&he.click()}var re=window.getComputedStyle(t),Be=re.display==="none"||t.offsetHeight===0;if(Be){var Ae=be(e);if(Ae){var Le=document.getElementById(Ae);Le&&Le.click()}}setTimeout(function(){try{t.scrollIntoView({behavior:"smooth",block:"start"})}catch{t.scrollIntoView(!0)}},150)}}function Se(){var e=document.getElementById("shortcutList");if(e){vildaCustomClearHtml(e);var t=se(),n={};t.forEach(function(L){n[L.id]=L});var a=0;try{var u=document.getElementById("age"),f=document.getElementById("ageMonths"),l=u&&parseFloat(u.value)||0,v=f&&parseFloat(f.value)||0;a=l+v/12}catch{a=0}k.forEach(function(L){var _=n[L]||{id:L,title:L},j=document.createElement("div");j.className="shortcut-row";var A=document.createElement("button");A.type="button",A.className="shortcut-link",A.textContent=_.title;var w=!1;(L==="wflCard"||_.title&&_.title.toLowerCase().includes("wfl"))&&(w=!0);var B;w&&a>2&&(A.classList.add("disabled-shortcut"),B="Ta pozycja jest dost\u0119pna tylko przy wieku u\u017Cytkownika poni\u017Cej 2 lat",A.title=B,j.title=B),j.appendChild(A);var P=document.createElement("button");P.type="button",P.className="shortcut-remove",P.setAttribute("aria-label","Usu\u0144 skr\xF3t"),P.textContent="\xD7",P.addEventListener("click",function(N){N.stopPropagation(),Me(L)}),j.appendChild(P),j.addEventListener("click",function(N){if(!(N.target&&N.target.classList.contains("shortcut-remove"))){var D=document.getElementById("miniShortcutsContainer");D&&D.classList.contains("is-editing")||w&&a>2||je(L)}}),e.appendChild(j)});var S=document.getElementById("miniShortcutsContainer");if(S&&S.classList.contains("is-editing")&&k.length>=h){var T=document.getElementById("shortcutDropdown");T&&T.parentElement.removeChild(T)}}}function Me(e){var t=k.indexOf(e);t>=0&&(k.splice(t,1),we(),Se())}function De(e){e&&(k.indexOf(e)>=0||k.length>=h||(k.push(e),we(),Se()))}function ze(){var e=document.getElementById("miniShortcutsContainer");if(e&&e.classList.contains("is-editing")&&!(k.length>=h)){var t=document.getElementById("shortcutDropdown");t&&t.parentElement.removeChild(t);var n=[];try{n=se()}catch{n=[]}var a=n.filter(function(l){return k.indexOf(l.id)===-1});if(a.length){var u=document.createElement("div");u.id="shortcutDropdown",u.className="shortcut-dropdown",u.style.background="#ffffff",u.style.backdropFilter="none",u.style.webkitBackdropFilter="none",a.forEach(function(l){var v=document.createElement("div");v.className="shortcut-option",v.textContent=l.title,v.dataset.id=l.id,v.style.whiteSpace="normal",v.style.wordBreak="break-word",v.addEventListener("click",function(){typeof f=="function"&&document.removeEventListener("click",f,!0);var S=document.getElementById("shortcutDropdown");S&&S.parentElement.removeChild(S),De(l.id),e.classList.contains("is-editing")&&k.length<h&&ze()}),u.appendChild(v)}),e.appendChild(u);var f;f=function(l){var v=document.getElementById("shortcutDropdown");if(!v){document.removeEventListener("click",f,!0);return}if(!v.contains(l.target)){var S=document.getElementById("editShortcutsBtn");S&&l.target===S||(v.parentElement.removeChild(v),document.removeEventListener("click",f,!0))}},setTimeout(function(){document.addEventListener("click",f,!0)},0)}}}function Re(){var e=document.getElementById("miniShortcutsContainer");if(e){var t=document.createElement("div");t.className="shortcut-info",t.textContent="Skr\xF3ty",e.appendChild(t);var n=document.createElement("div");n.id="shortcutList",e.appendChild(n);var a=document.createElement("button");a.type="button",a.id="editShortcutsBtn",a.className="add-shortcut-btn shortcut-edit-btn",a.textContent="Edytuj",a.addEventListener("click",function(){var l=e.classList.toggle("is-editing");if(a.textContent=l?"Gotowe":"Edytuj",l)ze();else{var v=document.getElementById("shortcutDropdown");v&&v.parentElement.removeChild(v)}}),e.appendChild(a),ge();try{var u=se(),f=u.map(function(l){return l.id});k=k.filter(function(l){return f.indexOf(l)!==-1}),we()}catch(l){typeof globalThis<"u"&&typeof globalThis.vildaLogSwallowedCatch=="function"&&globalThis.vildaLogSwallowedCatch("custom-fixes.js",l,{line:3054})}try{Se()}catch(l){typeof globalThis<"u"&&typeof globalThis.vildaLogSwallowedCatch=="function"&&globalThis.vildaLogSwallowedCatch("custom-fixes.js",l,{fn:"renderShortcuts-in-initShortcuts"})}}}window.vildaOnReady("custom-fixes:mini-summary",function(){function e(){r(),document.addEventListener("vildaProAccessChanged",b),document.addEventListener("vilda:session-changed",x)}if(window.__vildaAuthHidden){e();return}document.addEventListener("vilda:auth-hidden",function t(){document.removeEventListener("vilda:auth-hidden",t),e()})}),window.vildaOnReady("custom-fixes:steroid-shortcuts",J),window.vildaOnReady("custom-fixes:steroid-auto-calc",W)})(),(function(){if(typeof window>"u")return;var s=window.location.pathname||"";if(s.indexOf("kalkulator-klirens")===-1)return;var O="vildaClcrSessionV1",i=["fullName","age","ageMonths","weight","height","sex"];function I(x){if(!x)return 0;try{var r=Date.parse(x);return isNaN(r)?0:r}catch{return 0}}function o(x){try{var r=x&&x._vildaPersist;return r?I(r.updatedAtISO):0}catch{return 0}}function d(){try{var x=window.VildaPersistence;if(x&&typeof x.readClcrSession=="function"){var r=x.readClcrSession();if(r&&r.savedAtISO)return I(r.savedAtISO)}}catch{}try{var h=window.sessionStorage&&window.sessionStorage.getItem(O);if(h){var k=JSON.parse(h);if(k&&k.savedAtISO)return I(k.savedAtISO)}}catch{}return 0}function y(){try{var x=window.VildaPersistence;if(!x||typeof x.readShared!="function")return;var r=x.readShared({ensurePersist:!1});if(!r)return;var h=o(r),k=d();if(h<=k)return;var g={fullName:r.name,age:r.age!=null?String(r.age):"",ageMonths:r.ageMonths!=null?String(r.ageMonths):"",weight:r.weight!=null?String(r.weight):"",height:r.height!=null?String(r.height):"",sex:r.sex||""},m=!1;if(i.forEach(function(c){var C=g[c];if(!(C==null||C==="")){var p=document.getElementById(c);if(!(!p||p.value===C)){p.value=C,m=!0;try{p.dispatchEvent(new Event("input",{bubbles:!0}))}catch{}try{p.dispatchEvent(new Event("change",{bubbles:!0}))}catch{}}}}),m){if(typeof window.clcrUpdate=="function")try{window.clcrUpdate()}catch{}else if(typeof window.update=="function")try{window.update()}catch{}var z=window.VildaChrome;if(z&&typeof z.refreshPatientChip=="function")try{z.refreshPatientChip()}catch{}}}catch{}}function b(){setTimeout(y,50)}document.readyState==="loading"?document.addEventListener("DOMContentLoaded",b):b()})(),(function(){if(typeof window>"u")return;var s=window.location.pathname||"";if(s.indexOf("homa-ir")===-1)return;var O={M:"boy",F:"girl"},i={1:"pre",2:"pub",3:"pub",4:"pub",5:"full"};function I(){try{var o=window.VildaPersistence;if(!o||typeof o.readShared!="function")return;var d=o.readShared({ensurePersist:!1});if(!d)return;var y=d.age!=null?parseInt(d.age,10):null,b=O[d.sex]||"",x=y!=null&&!isNaN(y)&&y>=1&&y<=18;if(!x)return;var r=!1,h=document.getElementById("groupToggle"),k=document.getElementById("childFields");if(h&&!h.checked){h.checked=!0,k&&(k.style.maxHeight="400px");try{h.dispatchEvent(new Event("change",{bubbles:!0}))}catch{}r=!0}var g=document.getElementById("age");if(g&&!g.value){g.value=String(y);try{g.dispatchEvent(new Event("input",{bubbles:!0}))}catch{}r=!0}var m=document.getElementById("sex");if(m&&b&&!m.value){m.value=b;try{m.dispatchEvent(new Event("change",{bubbles:!0}))}catch{}r=!0}var z=document.getElementById("stage"),c=d.tannerStage!=null?String(d.tannerStage).trim():"",C=c?i[c]:"";if(z&&C&&!z.value){z.value=C;try{z.dispatchEvent(new Event("change",{bubbles:!0}))}catch{}r=!0}if(r&&typeof window.computeHoma=="function")try{window.computeHoma(!0)}catch{}}catch{}}document.readyState==="loading"?document.addEventListener("DOMContentLoaded",I):I()})();
+    `;
+    document.head.appendChild(style);
+  }
+
+  /**
+   * Distribute test cards between two column containers so that the overall
+   * heights of the columns remain equal.  The function collects all
+   * descendant elements with the `.gh-test-card` class from both
+   * containers, then splits them into two groups.  If there is an odd
+   * number of cards, the left column receives the smaller half (⌊n/2⌋)
+   * while the right column receives the remainder.  Each card's flex
+   * settings are recalculated so that the total flex-grow values of
+   * both columns match.  For example, with five cards the left column
+   * will contain two cards each with flex-grow 3, and the right column
+   * three cards each with flex-grow 2 (2 × 3 = 3 × 2 = 6).  On narrower
+   * screens (<700 px) the distribution is skipped entirely and the
+   * original order of cards remains unchanged.
+   *
+   * @param {string} leftId  The ID of the left column container.
+   * @param {string} rightId The ID of the right column container.
+   */
+  function distributeTestCards(leftId, rightId) {
+    // Only apply the distribution logic on larger screens (two‑column layout).
+    if (window.innerWidth < 700) {
+      return;
+    }
+    const leftContainer  = document.getElementById(leftId);
+    const rightContainer = document.getElementById(rightId);
+    if (!leftContainer || !rightContainer) return;
+
+    // Gather all test cards from both containers in their current order.
+    const leftCards  = Array.from(leftContainer.querySelectorAll('.gh-test-card'));
+    const rightCards = Array.from(rightContainer.querySelectorAll('.gh-test-card'));
+    const allCards   = leftCards.concat(rightCards);
+    const total      = allCards.length;
+    if (!total) return;
+
+    // Determine how many cards should go into each column.  We put the
+    // smaller half into the left column to keep the difference in card
+    // counts at most one.  The remainder goes to the right column.
+    const leftCount  = Math.floor(total / 2);
+    const rightCount = total - leftCount;
+
+    // Clear existing children so that we can re‑append cards in the new order.
+    vildaCustomClearHtml(leftContainer);
+    vildaCustomClearHtml(rightContainer);
+
+    // Reset any inline flex styles from previous runs.  Without this the
+    // flex values or paddings could accumulate when the user resizes the window.
+    allCards.forEach(card => {
+      card.style.flex      = '';
+      card.style.flexGrow  = '';
+      card.style.flexShrink = '';
+      card.style.flexBasis = '';
+    });
+
+    // Append cards to the left and right containers based on the computed
+    // distribution.  Preserve the original ordering of cards.
+    allCards.forEach((card, index) => {
+      if (index < leftCount) {
+        leftContainer.appendChild(card);
+      } else {
+        rightContainer.appendChild(card);
+      }
+      // Override flex settings so each card keeps its natural height.  This
+      // prevents CSS rules (which assign flex-grow to cards) from stretching
+      // them.  Using 0 0 auto stops growth and shrinkage and lets content
+      // determine the height of the card.
+      card.style.flex = '0 0 auto';
+    });
+
+    // Do not assign flex-grow to cards.  Keep their natural height.
+    // Instead, equalise column heights by adding padding to the shorter column.
+    // First reset any padding applied previously.
+    leftContainer.style.paddingBottom  = '0';
+    rightContainer.style.paddingBottom = '0';
+
+    // Override any height:100% declarations coming from CSS.  Using
+    // auto allows the container to shrink-wrap its content and rely on
+    // padding-bottom (added below) to equalise column heights without
+    // introducing empty space inside cards.
+    leftContainer.style.height  = 'auto';
+    rightContainer.style.height = 'auto';
+
+    // Use requestAnimationFrame to ensure DOM has reflowed before measuring.
+    requestAnimationFrame(() => {
+      const leftHeight  = leftContainer.getBoundingClientRect().height;
+      const rightHeight = rightContainer.getBoundingClientRect().height;
+      if (leftHeight < rightHeight) {
+        leftContainer.style.paddingBottom  = `${rightHeight - leftHeight}px`;
+        rightContainer.style.paddingBottom = '0';
+      } else if (rightHeight < leftHeight) {
+        rightContainer.style.paddingBottom = `${leftHeight - rightHeight}px`;
+        leftContainer.style.paddingBottom  = '0';
+      }
+    });
+  }
+
+  /**
+   * Adjust the layout of all available test groups.  This helper simply
+   * calls distributeTestCards on each pair of column containers.  It can
+   * be invoked after the DOM is ready, after a test list is toggled, or
+   * whenever the window is resized.
+   */
+  function adjustAllTestCards() {
+    distributeTestCards('ghTestsLeft',   'ghTestsRight');
+    distributeTestCards('ogttTestsLeft', 'ogttTestsRight');
+    distributeTestCards('acthTestsLeft', 'acthTestsRight');
+  }
+
+  // Run the distribution once the DOM has loaded.  Using DOMContentLoaded
+  // ensures that the test containers exist before we attempt to modify
+  // them.  We also run it on resize events to handle dynamic changes
+  // between mobile and desktop layouts.
+  window.vildaOnReady('custom-fixes:adjust-test-cards', adjustAllTestCards);
+  window.vildaSafeInit('custom-fixes:test-card-resize-listener', function () {
+    window.addEventListener('resize', adjustAllTestCards);
+  });
+
+  // Hook into test toggle buttons so that whenever a list of tests is
+  // shown or hidden, the cards are redistributed.  Because the DOM
+  // updates (showing/hiding of containers) occur within the same tick of
+  // the event loop, we schedule the redistribution via setTimeout with
+  // a zero delay.  This ensures that our logic runs after the active
+  // classes are applied and new elements have been inserted.
+  ['toggleGhTests', 'toggleOgttTests', 'toggleActhTests'].forEach(btnId => {
+    const btn = document.getElementById(btnId);
+    if (btn) {
+      btn.addEventListener('click', function() {
+        setTimeout(adjustAllTestCards, 0);
+      });
+    }
+  });
+})();
+
+/*
+ * === Custom repositioning and Z‑score toggle behaviour (2026‑01‑23) ===
+ *
+ * The following IIFE implements two enhancements for the DocPro page:
+ *
+ * 1. Dynamic ordering of the IGF therapy button and card relative to the
+ *    endocrine tests.  When the user opens the IGF therapy card and
+ *    subsequently toggles the endocrine test list, the IGF elements
+ *    should be pushed below the endocrine controls.  Conversely, if the
+ *    endocrine list is already open and the user then opens the IGF
+ *    therapy card, the IGF elements should appear above the endocrine
+ *    controls.  This logic preserves the natural flow of the interface
+ *    while respecting the order in which the user expands sections.
+ *
+ * 2. A lightweight override for the Z‑score button.  The stock handler in
+ *    app.js collapses other modules (e.g. antibiotic therapy, endocrine
+ *    tests) and removes the active state from the IGF button whenever
+ *    the Z‑score card is toggled.  According to the specification, the
+ *    Z‑score button should only toggle its own card without affecting
+ *    other sections.  We intercept the click in the capture phase,
+ *    perform a simple show/hide of the Z‑score card, and prevent the
+ *    propagation of the original handler.
+ */
+(function(){
+  'use strict';
+  // Tracks which section was opened most recently ('igf' or 'endo').
+  let lastOpenedSection = null;
+
+  /**
+   * Recalculate the order of the IGF therapy button/card and the endocrine
+   * test controls based on the current visibility state and the last
+   * section opened.  On desktop (≥700 px), flexbox order values are
+   * adjusted so that the IGF elements either appear before or after the
+   * endocrine controls.  In mobile layouts the ordering is left to the
+   * natural DOM flow.
+   */
+  function repositionIgfAndEndo(){
+    // reposition disabled to prevent layout shifts
+    return;
+    const igfCard        = document.getElementById('ghIgfTherapyCard');
+    const igfButtonWrap  = document.getElementById('igfButtonWrapper');
+    const endoButtonWrap = document.getElementById('endoButtonWrapper');
+    const ghBtnWrap      = document.getElementById('ghButtonWrapper');
+    const ogttBtnWrap    = document.getElementById('ogttButtonWrapper');
+    const acthBtnWrap    = document.getElementById('acthButtonWrapper');
+    const testWrappers   = [ghBtnWrap, ogttBtnWrap, acthBtnWrap];
+    const subPanels = [
+      document.getElementById('ghTestsLeft'), document.getElementById('ghTestsRight'),
+      document.getElementById('ogttTestsLeft'), document.getElementById('ogttTestsRight'),
+      document.getElementById('acthTestsLeft'), document.getElementById('acthTestsRight')
+    ];
+    // Determine visibility: IGF card is visible if it exists and its display is not 'none'.
+    const igfVisible  = igfCard && igfCard.style.display !== 'none';
+    // The endocrine list is considered visible if the GH button wrapper is displayed (not 'none').
+    const endoVisible = ghBtnWrap && ghBtnWrap.style.display !== 'none';
+    // Reset any custom order values.  Clearing the style.order property
+    // restores the values defined in CSS (via docpro styles).  Doing
+    // this up front avoids accumulation of multiple order assignments.
+    if (igfButtonWrap)  igfButtonWrap.style.order  = '';
+    if (igfCard)        igfCard.style.order        = '';
+    if (endoButtonWrap) endoButtonWrap.style.order = '';
+    testWrappers.forEach(el => { if (el) el.style.order = ''; });
+    subPanels.forEach(el => { if (el) el.style.order = ''; });
+    // Only adjust order on desktop screens; in the mobile view elements
+    // naturally flow vertically.
+    if (window.innerWidth < 700) return;
+    // Apply conditional ordering only when both sections are open.
+    if (igfVisible && endoVisible) {
+      if (lastOpenedSection === 'endo') {
+        // IGF card was already open and the user expanded the endocrine list.
+        // Push the IGF button and card below the endocrine controls by
+        // assigning a higher order.  Endocrine elements retain their
+        // original order values (0 for the button, 1 for the test wrappers).
+        if (igfButtonWrap)  igfButtonWrap.style.order  = '2';
+        if (igfCard)        igfCard.style.order        = '2';
+        if (endoButtonWrap) endoButtonWrap.style.order = '0';
+        testWrappers.forEach(el => { if (el) el.style.order = '1'; });
+        subPanels.forEach(el => { if (el) el.style.order = '1'; });
+      } else if (lastOpenedSection === 'igf') {
+        // Endocrine list was open and the user opened the IGF card.  Bring
+        // the IGF button and card to the top (order -1) and push all
+        // endocrine buttons and panels downward by setting their order to 2.
+        if (igfButtonWrap)  igfButtonWrap.style.order  = '-1';
+        if (igfCard)        igfCard.style.order        = '-1';
+        if (endoButtonWrap) endoButtonWrap.style.order = '2';
+        testWrappers.forEach(el => { if (el) el.style.order = '2'; });
+        subPanels.forEach(el => { if (el) el.style.order = '2'; });
+      }
+    }
+  }
+
+  // Set up listeners after the DOM is fully parsed.
+  window.vildaOnReady('custom-fixes:igf-endo-reposition-listeners', function () {
+    const igfToggleBtn  = document.getElementById('toggleIgfTests');
+    const endoToggleBtn = document.getElementById('toggleEndoTests');
+    // When the IGF button is clicked, update lastOpenedSection if the
+    // therapy card becomes visible and then reposition elements.
+    if (igfToggleBtn) {
+      igfToggleBtn.addEventListener('click', function(){
+        requestAnimationFrame(() => {
+          const card = document.getElementById('ghIgfTherapyCard');
+          const visible = card && card.style.display !== 'none';
+          if (visible) {
+            lastOpenedSection = 'igf';
+          }
+          repositionIgfAndEndo();
+        });
+      }, false);
+    }
+    // Similarly for the endocrine list button.
+    if (endoToggleBtn) {
+      endoToggleBtn.addEventListener('click', function(){
+        requestAnimationFrame(() => {
+          const ghWrap = document.getElementById('ghButtonWrapper');
+          const visible = ghWrap && ghWrap.style.display !== 'none';
+          if (visible) {
+            lastOpenedSection = 'endo';
+          }
+          repositionIgfAndEndo();
+        });
+      }, false);
+    }
+    // Reapply positioning on window resize to accommodate layout changes.
+    window.addEventListener('resize', repositionIgfAndEndo);
+  });
+
+  // Override Z‑score toggle behaviour.  Capture the click event so the
+  // default handler in app.js does not execute.  Our handler simply
+  // toggles the visibility of the Z‑score card and updates the active
+  // state on the button.  It deliberately avoids hiding other sections
+  // or removing active states on unrelated buttons.
+  window.vildaOnReady('custom-fixes:zscore-toggle-override', function () {
+    const zBtn = document.getElementById('toggleZscore');
+    if (!zBtn) return;
+    zBtn.addEventListener('click', function(ev){
+      // Stop other click handlers on this element from executing
+      ev.stopPropagation();
+      ev.stopImmediatePropagation();
+      const zCard = document.getElementById('zscoreCard');
+      const isVisible = zCard && zCard.style.display !== 'none' && zCard.style.display !== '';
+      if (isVisible) {
+        if (zCard) zCard.style.display = 'none';
+        this.classList.remove('active-toggle');
+      } else {
+        if (zCard) zCard.style.display = 'block';
+        this.classList.add('active-toggle');
+      }
+      // Ensure button widths stay consistent after toggling
+      try {
+        if (typeof adjustTestButtonWidths === 'function') {
+          requestAnimationFrame(() => adjustTestButtonWidths());
+        }
+      } catch (_) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', _, { line: 606 });
+    }
+  }
+    }, true);
+  });
+})();
+
+//
+// === Uwidocznienie przycisku „powrót na górę” w każdym trybie ===
+//
+// W oryginalnym projekcie przycisk przewijania na górę (#scrollTopBtn)
+// był ukrywany na szerokich ekranach za pomocą reguł CSS.  Aby
+// zapewnić jego dostępność we wszystkich układach (nie tylko w
+// jednokolumnowym), wymuszamy ustawienie stylu `display` na "flex" po
+// załadowaniu dokumentu.  Dzięki temu przycisk będzie widoczny bez
+// konieczności modyfikowania HTML lub interweniowania w inne skrypty.
+// Uruchamiamy tę logikę w oddzielnej samowywołującej się funkcji, aby
+// uniknąć zanieczyszczania globalnego zasięgu.
+(function() {
+  function showScrollTopBtn() {
+    try {
+      var btn = document.getElementById('scrollTopBtn');
+      if (btn) {
+        btn.style.display = 'flex';
+      }
+    } catch (e) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', e, { line: 629 });
+    }
+  }
+  }
+  window.vildaOnReady('custom-fixes:show-scroll-top-button', showScrollTopBtn);
+})();
+// ---------------------------------------------------------------------------
+// Obsługa przycisków „Zapisz dane” i „Wczytaj dane” w bocznym sidebarze
+// (desktop).  Wykorzystujemy istniejącą logikę z app.js poprzez
+// window.vildaExport, ale nie modyfikujemy samego app.js.
+(function () {
+  // Wyświetl tooltip: app.js showTooltip → VildaChrome.showTip → alert() (ostateczność).
+  function showTip(target, msg) {
+    if (typeof showTooltip === 'function') { try { showTooltip(target, msg); return; } catch (_) {} }
+    var vc = window.VildaChrome;
+    if (vc && typeof vc.showTip === 'function') { try { vc.showTip(target, msg); return; } catch (_) {} }
+    if (typeof alert === 'function') alert(msg);
+  }
+
+  function isVaultUnlocked() {
+    // Deleguj do VildaSession — jedno źródło prawdy dla całej aplikacji.
+    // VildaSession.isLoggedIn() sprawdza VildaVault gdy dostępny,
+    // w przeciwnym razie odpada do sessionStorage (działa na każdej stronie).
+    var vs = window.VildaSession;
+    if (vs && typeof vs.isLoggedIn === 'function') return vs.isLoggedIn();
+    // Safety-net gdy vilda_session_bridge.js nie załadowany (nie powinno się zdarzyć).
+    var auth = window.VildaAuthUI;
+    if (auth && typeof auth.isGuestMode === 'function' && auth.isGuestMode()) return false;
+    var v = window.VildaVault;
+    return !!(v && typeof v.isUnlocked === 'function' && v.isUnlocked());
+  }
+
+  function syncSidebarMenuState() {
+    var headerSave  = document.getElementById('saveDataBtn');
+    var sidebarSave = document.getElementById('saveDataBtnSidebar');
+    var sidebarAddNote = document.getElementById('addVisitNoteBtnSidebar');
+    // Revert P6.4: usunięto sidebarQuickMeasure — item quickMeasureBtnSidebar
+    // zniknął z vilda_chrome.js (duplikował formularz główny).
+    var loggedIn    = isVaultUnlocked();
+
+    // Dla niezalogowanych przycisk Zapisz jest zawsze wyszarzony.
+    // Dla zalogowanych — kopiujemy stan z przycisku nagłówkowego (jeśli istnieje).
+    if (sidebarSave) {
+      var saveDisabled = !loggedIn || (headerSave && (headerSave.disabled || headerSave.hasAttribute('disabled')));
+      if (saveDisabled) {
+        sidebarSave.setAttribute('disabled', '');
+        sidebarSave.setAttribute('aria-disabled', 'true');
+      } else {
+        sidebarSave.removeAttribute('disabled');
+        sidebarSave.removeAttribute('aria-disabled');
+      }
+    }
+
+    // B1.8: „Dodaj notatkę do wizyty" — aktywne tylko gdy zalogowany + jest wczytany
+    // pacjent + wpisany wiek + (height lub weight). Bez wczytanego pacjenta nie ma
+    // patientId do kotwicy. Bez wieku/pomiaru nie ma czego kotwiczyć.
+    if (sidebarAddNote) {
+      var patientId = window._vildaCurrentPatientId || null;
+      var ageEl = document.getElementById('age');
+      var ageMonthsEl = document.getElementById('ageMonths');
+      var heightEl = document.getElementById('height');
+      var weightEl = document.getElementById('weight');
+      var hasAge = !!((ageEl && ageEl.value) || (ageMonthsEl && ageMonthsEl.value));
+      var hasMeasurement = !!((heightEl && parseFloat(heightEl.value) > 0)
+        || (weightEl && parseFloat(weightEl.value) > 0));
+      var canAddNote = loggedIn && !!patientId && hasAge && hasMeasurement;
+      if (canAddNote) {
+        sidebarAddNote.removeAttribute('disabled');
+        sidebarAddNote.removeAttribute('aria-disabled');
+      } else {
+        sidebarAddNote.setAttribute('disabled', '');
+        sidebarAddNote.setAttribute('aria-disabled', 'true');
+      }
+    }
+
+    // Revert P6.4: usunięto gating dla sidebarQuickMeasure — item zniknął
+    // z menu sidebar w vilda_chrome.js (duplikował formularz główny).
+  }
+
+  function initSidebarMenu() {
+    var sidebarSave     = document.getElementById('saveDataBtnSidebar');
+    var sidebarPatients = document.getElementById('patientsListBtnSidebar');
+    var sidebarAddNote  = document.getElementById('addVisitNoteBtnSidebar');
+    // Revert P6.4: usunięto sidebarQuickMeasure — item quickMeasureBtnSidebar
+    // zniknął z menu (duplikował formularz główny).
+    var headerSave      = document.getElementById('saveDataBtn');
+
+    // Sygnalizuj vilda_chrome.js, że custom-fixes przejmuje obsługę kliknięć.
+    // Bazowy handler z vilda_chrome sprawdza ten flag i oddaje kontrolę.
+    if (sidebarSave)     sidebarSave._cfBound = true;
+    if (sidebarPatients) sidebarPatients._cfBound = true;
+    if (sidebarAddNote)  sidebarAddNote._cfBound = true;
+
+    // Na starcie wyrównaj stan disabled z przyciskami w menu hamburgera
+    syncSidebarMenuState();
+
+    // ZAPISZ DANE (proxy do window.vildaExport.saveUserData)
+    if (sidebarSave) {
+      sidebarSave.addEventListener('click', function (e) {
+        e.preventDefault();
+
+        if (!isVaultUnlocked()) {
+          var msg = (window.VildaSession && window.VildaSession.TOOLTIPS.saveData.notLoggedIn) || 'Zapisywanie danych jest zarezerwowane dla zalogowanych użytkowników.';
+          showTip(sidebarSave, msg);
+          return;
+        }
+
+        // Przycisk wyszarzony z innego powodu (np. brak wymaganych pól)
+        if (sidebarSave.hasAttribute('disabled')) {
+          var msg2 =
+            (headerSave && (headerSave.getAttribute('data-tip') || headerSave.getAttribute('title'))) ||
+            sidebarSave.getAttribute('data-tip') ||
+            'Aby zapisać dane, uzupełnij wymagane pola.';
+          showTip(sidebarSave, msg2);
+          return;
+        }
+
+        if (window.vildaExport && typeof window.vildaExport.saveUserData === 'function') {
+          // app.js zawsze przekazuje window.showTooltip do dataIo.saveUserData —
+          // nasze opts są ignorowane przez wrapper. Tymczasowo podmieniamy
+          // window.showTooltip na one-shot interceptor: przy pierwszym wywołaniu
+          // (sync dla błędów walidacji, async dla sukcesu) przekierowuje tooltip
+          // na przycisk sidebar, a potem przywraca oryginał.
+          var _origShowTooltip = window.showTooltip;
+          window.showTooltip = function _sidebarSaveTip(target, msg) {
+            window.showTooltip = _origShowTooltip; // przywróć natychmiast po pierwszym wywołaniu
+            showTip(sidebarSave, msg);
+          };
+          try {
+            window.vildaExport.saveUserData();
+          } catch (err) {
+            window.showTooltip = _origShowTooltip; // przywróć też przy wyjątku
+            throw err;
+          }
+          syncSidebarMenuState();
+        }
+      });
+    }
+
+    // PACJENCI — otwiera bazę pacjentów.
+    // Na stronach z formularzem (applyLoadedData dostępne) przekazuje callback
+    // wczytujący — karta pacjenta pokaże przycisk „Wczytaj tego pacjenta”.
+    // Na pozostałych stronach — tryb podglądu bez wczytywania.
+    if (sidebarPatients) {
+      sidebarPatients.addEventListener('click', function (e) {
+        e.preventDefault();
+
+        if (!isVaultUnlocked()) {
+          showTip(sidebarPatients, (window.VildaSession && window.VildaSession.TOOLTIPS.patients.notLoggedIn) || 'Zaloguj się, aby przeglądać bazę pacjentów.');
+          return;
+        }
+
+        var authUI = window.VildaAuthUI;
+        if (!authUI || typeof authUI.showPatientsList !== 'function') {
+          showTip(sidebarPatients, (window.VildaSession && window.VildaSession.TOOLTIPS.patients.unavailable) || 'Moduł pacjentów niedostępny — odśwież stronę.');
+          return;
+        }
+
+        // Callback do wczytania danych — dostępny tylko na stronach z formularzem.
+        var canLoad = typeof window.applyLoadedData === 'function';
+        authUI.showPatientsList(canLoad ? function (payload) {
+          if (payload && typeof window.applyLoadedData === 'function') {
+            try { window.applyLoadedData(payload); } catch (_) {}
+          }
+          if (window.VildaChrome && typeof window.VildaChrome.refreshPatientChip === 'function') {
+            window.VildaChrome.refreshPatientChip();
+          }
+        } : null);
+      });
+    }
+
+    // B1.8: DODAJ NOTATKĘ DO WIZYTY — przycisk w sidebarze pod „Zapisz dane".
+    // Aktywuje się tylko gdy:
+    //   1) Vault odblokowany
+    //   2) Wczytany pacjent (znamy patientId — przez event vilda:patient-loaded)
+    //   3) Wpisany wiek (age lub ageMonths) + (height lub weight)
+    // Klik → otwiera showPatientNoteEditor z suggestLinkedAge = pełny wiek w miesiącach,
+    // co pokazuje checkbox „Powiąż z bieżącą wizytą (wiek: X)" domyślnie zaznaczony.
+    if (sidebarAddNote) {
+      sidebarAddNote.addEventListener('click', function (e) {
+        e.preventDefault();
+
+        // H1: <a> ignoruje atrybut `disabled` (JS-level), więc handler odpalał się
+        // nawet gdy syncSidebarMenuState wyszarzył button. Najpierw sprawdzamy
+        // stan disabled / aria-disabled — jeśli ustawiony, pokaż tooltip z MENU
+        // (data-tip). To spójne z UX innych disabled items w sidebarze.
+        if (sidebarAddNote.hasAttribute('disabled') ||
+            sidebarAddNote.getAttribute('aria-disabled') === 'true') {
+          var tip = sidebarAddNote.getAttribute('data-tip') ||
+            'Aby dodać notatkę do wizyty, najpierw wczytaj pacjenta z listy „Pacjenci" lub zapisz nowego pacjenta („Zapisz dane"). Notatka kotwiczy się do konkretnej osoby w bazie.';
+          showTip(sidebarAddNote, tip);
+          return;
+        }
+
+        if (!isVaultUnlocked()) {
+          showTip(sidebarAddNote, 'Zaloguj się, aby dodawać notatki do wizyt.');
+          return;
+        }
+
+        var patientId = window._vildaCurrentPatientId || null;
+        if (!patientId) {
+          // Fallback gdy handler odpalił się mimo enabled state (race-condition
+          // np. syncSidebarMenuState jeszcze nie zdążyło wyszarzyć). Komunikat
+          // dwuścieżkowy: wczytaj pacjenta z listy LUB zapisz dane jako nowego.
+          showTip(sidebarAddNote, 'Aby dodać notatkę do wizyty, najpierw wczytaj pacjenta z listy „Pacjenci" lub zapisz nowego pacjenta („Zapisz dane"). Notatka kotwiczy się do konkretnej osoby w bazie.');
+          return;
+        }
+
+        // Czytaj wiek + pomiar z formularza (te same pola co saveUserData).
+        var ageEl = document.getElementById('age');
+        var ageMonthsEl = document.getElementById('ageMonths');
+        var heightEl = document.getElementById('height');
+        var weightEl = document.getElementById('weight');
+        var ageVal = ageEl ? parseInt(ageEl.value, 10) : NaN;
+        var ageMonthsVal = ageMonthsEl ? parseInt(ageMonthsEl.value, 10) : NaN;
+        var heightVal = heightEl ? parseFloat(heightEl.value) : NaN;
+        var weightVal = weightEl ? parseFloat(weightEl.value) : NaN;
+        var hasAge = isFinite(ageVal) || isFinite(ageMonthsVal);
+        var hasMeasurement = (isFinite(heightVal) && heightVal > 0) || (isFinite(weightVal) && weightVal > 0);
+
+        if (!hasAge || !hasMeasurement) {
+          showTip(sidebarAddNote, 'Wpisz wiek + wzrost lub wagę, aby kotwiczyć notatkę do wizyty.');
+          return;
+        }
+
+        // Złożenie wieku: age * 12 + ageMonths (te same reguły co FIX A/B/C w vilda_data_import_export.js).
+        var totalAgeMonths = 0;
+        if (isFinite(ageVal)) totalAgeMonths += ageVal * 12;
+        if (isFinite(ageMonthsVal)) totalAgeMonths += ageMonthsVal;
+        if (totalAgeMonths <= 0) {
+          showTip(sidebarAddNote, 'Nieprawidłowy wiek pacjenta.');
+          return;
+        }
+
+        var authUI = window.VildaAuthUI;
+        if (!authUI || typeof authUI.showPatientNoteEditor !== 'function') {
+          showTip(sidebarAddNote, 'Moduł notatek niedostępny — odśwież stronę.');
+          return;
+        }
+
+        authUI.showPatientNoteEditor({
+          patientId: patientId,
+          note: null,
+          suggestLinkedAge: totalAgeMonths
+        });
+      });
+    }
+
+    // Revert P6.4: usunięto handler kliku dla sidebarQuickMeasure — item
+    // zniknął z menu (duplikował formularz główny). Hero pill „+ Nowy pomiar"
+    // w karcie pacjenta (showPatientCard) zostaje — tam ma osobny sens UX.
+
+    // B1.8: nasłuchuj eventu vilda:patient-loaded żeby zachować patientId aktualnie
+    // wczytanego pacjenta. Event jest dispatchowany w vilda_auth_ui.js przy „Wczytaj
+    // tego pacjenta" oraz w innych ścieżkach load. Bez tego stanu sidebarAddNote nie
+    // miałby skąd wziąć patientId (bo formularz nie zna ID — tylko nazwę).
+    document.addEventListener('vilda:patient-loaded', function (e) {
+      try {
+        var pid = e && e.detail && e.detail.patientId;
+        if (typeof pid === 'string' && pid) {
+          window._vildaCurrentPatientId = pid;
+        }
+      } catch (_) {}
+    });
+
+    // ── Wariant A (UX, 2026-06-03): modal wyboru po wczytaniu pacjenta ─────────
+    // Po „Wczytaj tego pacjenta" pokazujemy blokujący modal „Co chcesz zrobić?"
+    // z dwiema opcjami: „Nowy pomiar" (wpisz świeże dane; karta „Ostatni pomiar"
+    // służy do porównania) oraz „Odtwórz zapis" (restoreLoadedState). BEZ daty.
+    //
+    // Bramka (precyzja): TYLKO gdy #restoreStateBtn jest widoczny (dzieje się
+    // wyłącznie po wczytaniu pacjenta przez applyLoadedData → showRestoreButton;
+    // po ZAPISIE pozostaje ukryty) ORAZ gdy strona ma kartę #prevSummaryWrap
+    // (index/docpro; kalkulator klirensu jej nie ma → modal się nie pokazuje).
+    function _vildaEscapeHtml(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+    var _vildaLcmKeyHandler = null;
+    function _vildaRemoveLoadChoiceModal() {
+      try {
+        var m = document.getElementById('vildaLoadChoiceModal');
+        if (m && m.parentNode) m.parentNode.removeChild(m);
+        if (_vildaLcmKeyHandler) {
+          document.removeEventListener('keydown', _vildaLcmKeyHandler, true);
+          _vildaLcmKeyHandler = null;
+        }
+      } catch (_) {}
+    }
+    function _vildaShowLoadChoiceModal(detail) {
+      try {
+        var restoreBtn = document.getElementById('restoreStateBtn');
+        var prevWrap = document.getElementById('prevSummaryWrap');
+        if (!restoreBtn || !prevWrap) return;
+        var vis = restoreBtn.style && restoreBtn.style.display && restoreBtn.style.display !== 'none';
+        if (!vis) return;
+
+        _vildaRemoveLoadChoiceModal();
+        // Goły przycisk chowamy na czas modala (modal go zastępuje).
+        restoreBtn.style.display = 'none';
+
+        var name = (detail && detail.name) || (window.lastLoadedData && window.lastLoadedData.name) || '';
+
+        var overlay = document.createElement('div');
+        overlay.id = 'vildaLoadChoiceModal';
+        overlay.setAttribute('role', 'dialog');
+        overlay.setAttribute('aria-modal', 'true');
+        overlay.setAttribute('aria-label', 'Co chcesz zrobić z wczytanym pacjentem');
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.45);'
+          + 'display:flex;align-items:center;justify-content:center;padding:20px;';
+        overlay.innerHTML =
+          '<div style="background:#fff;border-radius:16px;max-width:360px;width:100%;padding:22px 22px 18px;box-shadow:0 12px 40px rgba(0,60,80,0.25);">'
+          + '<h3 style="margin:0;font-size:18px;font-weight:600;color:#0f2b33;text-align:center;">Co chcesz zrobić?</h3>'
+          + (name ? '<p style="margin:6px 0 0;font-size:13px;color:#00838d;text-align:center;">' + _vildaEscapeHtml(name) + '</p>' : '')
+          + '<div style="display:flex;flex-direction:column;gap:10px;margin-top:18px;">'
+          + '<button type="button" id="vildaLcmNew" style="width:100%;background:#00838d !important;border:0 !important;color:#fff !important;border-radius:10px !important;padding:13px 16px;cursor:pointer;font-size:15px;font-weight:600;box-shadow:none !important;backdrop-filter:none !important;">Nowy pomiar</button>'
+          + '<button type="button" id="vildaLcmRestore" style="width:100%;background:#fff !important;border:1px solid #00838d !important;color:#00838d !important;border-radius:10px !important;padding:13px 16px;cursor:pointer;font-size:15px;font-weight:600;box-shadow:none !important;backdrop-filter:none !important;">Odtwórz zapis</button>'
+          + '</div>'
+          + '</div>';
+        document.body.appendChild(overlay);
+
+        var btnNew = overlay.querySelector('#vildaLcmNew');
+        var btnRestore = overlay.querySelector('#vildaLcmRestore');
+
+        // Nowy pomiar → zamknij; formularz po wczytaniu jest pusty, karta
+        // „Ostatni pomiar" zostaje do porównania. Goły przycisk NIE wraca.
+        if (btnNew) btnNew.addEventListener('click', function () { _vildaRemoveLoadChoiceModal(); });
+        // Odtwórz zapis → klikamy REALNY #restoreStateBtn. To dokładny odpowiednik
+        // ręcznego kliknięcia: jego handler (initRestoreStateButton) niesie pełny
+        // zestaw callbacków (debouncedUpdate, addFoodRow, calculate…), których
+        // bezargumentowe window.restoreLoadedState() nie ma → wtedy nic widocznego
+        // się nie działo. .click() działa też na ukrytym elemencie.
+        //
+        // UWAGA o zasięgu: ta IIFE (od ~752) NIE ma parametru `global` (główna IIFE
+        // z `global` zamyka się w ~33). Używamy więc `window.` — `global.` rzucałoby
+        // ReferenceError (łapany przez catch), przez co podmiana confirm nigdy się
+        // nie wykonywała i dialog i tak się pokazywał.
+        if (btnRestore) btnRestore.addEventListener('click', function () {
+          _vildaRemoveLoadChoiceModal();
+          // Świadomy wybór „Odtwórz zapis" zaraz po wczytaniu — nie ma ręcznych
+          // edycji do stracenia, więc tłumimy confirm „Masz wprowadzone nowe dane…"
+          // (restoreLoadedState pokazuje go gdy anyDataEntered()===true). Tłumimy
+          // TYLKO na czas tego jednego kliknięcia (restoreLoadedState jest sync),
+          // potem przywracamy oryginalny confirm — ochrona przy ręcznym przycisku
+          // i innych ścieżkach pozostaje nietknięta.
+          var origConfirm = null;
+          var patched = false;
+          try {
+            if (typeof window.confirm === 'function') {
+              origConfirm = window.confirm;
+              window.confirm = function () { return true; };
+              patched = true;
+            }
+          } catch (_) {}
+          try {
+            var rb = document.getElementById('restoreStateBtn');
+            if (rb && typeof rb.click === 'function') {
+              rb.style.display = 'inline-block';
+              rb.click();
+            } else if (typeof window.restoreLoadedState === 'function') {
+              window.restoreLoadedState();
+            }
+          } catch (_) {}
+          finally {
+            if (patched) { try { window.confirm = origConfirm; } catch (_) {} }
+          }
+        });
+        // Klik w tło lub Escape → zamknij i PRZYWRÓĆ goły przycisk (decyzja później).
+        overlay.addEventListener('mousedown', function (ev) {
+          if (ev.target === overlay) {
+            _vildaRemoveLoadChoiceModal();
+            try { restoreBtn.style.display = 'inline-block'; } catch (_) {}
+          }
+        });
+        _vildaLcmKeyHandler = function (ev) {
+          if (ev.key === 'Escape' || ev.keyCode === 27) {
+            _vildaRemoveLoadChoiceModal();
+            try { restoreBtn.style.display = 'inline-block'; } catch (_) {}
+          }
+        };
+        document.addEventListener('keydown', _vildaLcmKeyHandler, true);
+        try { if (btnNew && typeof btnNew.focus === 'function') btnNew.focus(); } catch (_) {}
+      } catch (_) {}
+    }
+    document.addEventListener('vilda:patient-loaded', function (e) {
+      // Defer o tick — applyLoadedData (sync) zdąży pokazać #restoreStateBtn.
+      try { setTimeout(function () { _vildaShowLoadChoiceModal(e && e.detail); }, 0); } catch (_) {}
+    });
+    document.addEventListener('vilda:user-state-cleared', _vildaRemoveLoadChoiceModal);
+    document.addEventListener('vilda:state-restored', _vildaRemoveLoadChoiceModal);
+
+    // Za każdym razem, gdy użytkownik edytuje dane wejściowe, logika w app.js
+    // zmienia stan disabled przycisków w hamburgerze.  Tutaj tylko to
+    // „podglądamy” i kopiujemy do sidebara.
+    ['input', 'change'].forEach(function (evtName) {
+      document.addEventListener(evtName, syncSidebarMenuState, true);
+    });
+
+    // Aktualizuj stan przycisków przy logowaniu i wylogowaniu.
+    function tryBindVaultSync() {
+      var v = window.VildaVault;
+      if (!v) return false;
+      if (typeof v.onUnlock === 'function') v.onUnlock(syncSidebarMenuState);
+      if (typeof v.onLock   === 'function') {
+        v.onLock(function () {
+          // H1: cross-session leak guard — bez tego patientId z poprzedniej
+          // sesji „przeżywał" lock i mylił sidebar w nowej sesji innego usera.
+          try { window._vildaCurrentPatientId = null; } catch (_) {}
+          syncSidebarMenuState();
+        });
+      }
+      syncSidebarMenuState();
+      return true;
+    }
+    // H1: drugi punkt czyszczenia — vilda:user-state-cleared dispatchowany przez
+    // auth_ui przy reset stanu (np. cloud-only logout, removeUser). Pokrywa
+    // przypadek gdy vault.onLock nie odpali (state cleared bez lock'a).
+    document.addEventListener('vilda:user-state-cleared', function () {
+      try { window._vildaCurrentPatientId = null; } catch (_) {}
+      try { syncSidebarMenuState(); } catch (_) {}
+    });
+    if (!tryBindVaultSync()) {
+      var attempts = 0;
+      var vaultSyncTimer = setInterval(function () {
+        if (tryBindVaultSync() || ++attempts >= 100) clearInterval(vaultSyncTimer);
+      }, 100);
+    }
+
+    // setGuestMode(true/false) nie woła vault.lock() — reagujemy na własny event.
+    document.addEventListener('vilda:guest-mode-changed', syncSidebarMenuState);
+  }
+
+  window.vildaOnReady('custom-fixes:sidebar-menu', initSidebarMenu);
+})();
+// ---------------------------------------------------------------------------
+// Wyróżnianie aktywnej pozycji w bocznym sidebarze
+(function () {
+  function normalizePath(path) {
+    if (!path) return '/';
+
+    // Utnij query string i hash
+    var qIndex = path.indexOf('?');
+    if (qIndex !== -1) path = path.slice(0, qIndex);
+    var hashIndex = path.indexOf('#');
+    if (hashIndex !== -1) path = path.slice(0, hashIndex);
+
+    // /index.html traktujemy jak /
+    if (path === '/index.html') return '/';
+
+    // Usuń końcowy slash (oprócz samego "/")
+    if (path.length > 1 && path.endsWith('/')) {
+      path = path.slice(0, -1);
+    }
+    return path;
+  }
+
+  function markActiveSidebarLink() {
+    var links = document.querySelectorAll('.sidebar-nav a[href]');
+    if (!links.length) return;
+
+    var current = normalizePath(window.location.pathname || '/');
+
+    links.forEach(function (link) {
+      var href = link.getAttribute('href');
+      if (!href) return;
+
+      // Odpuść zewnętrzne linki typu https://..., mailto:
+      if (href.indexOf('http') === 0 || href.indexOf('mailto:') === 0) return;
+
+      var normalizedHref = normalizePath(href);
+
+      if (normalizedHref === current) {
+        link.classList.add('is-active');
+        link.setAttribute('aria-current', 'page');
+      } else {
+        link.classList.remove('is-active');
+        link.removeAttribute('aria-current');
+      }
+    });
+  }
+
+  window.vildaOnReady('custom-fixes:active-sidebar-link-basic', markActiveSidebarLink);
+})();
+// ---------------------------------------------------------------------------
+// Wyróżnianie aktywnej pozycji w bocznym sidebarze
+(function () {
+  'use strict';
+
+  function normalizePath(path) {
+    if (!path) return 'index';
+  
+    // Utnij query string i hash
+    var qIndex = path.indexOf('?');
+    if (qIndex !== -1) path = path.slice(0, qIndex);
+    var hashIndex = path.indexOf('#');
+    if (hashIndex !== -1) path = path.slice(0, hashIndex);
+  
+    // Usuń końcowy slash, np. "/docpro/" -> "/docpro"
+    if (path.length > 1 && path.endsWith('/')) {
+      path = path.slice(0, -1);
+    }
+  
+    // Weź tylko ostatni segment po "/" – ignorujemy katalogi
+    var lastSlash = path.lastIndexOf('/');
+    if (lastSlash !== -1) {
+      path = path.slice(lastSlash + 1); // "docpro.html" albo "docpro"
+    }
+  
+    // Pusta ścieżka lub index.html = strona główna
+    if (path === '' || path.toLowerCase() === 'index.html') {
+      return 'index';
+    }
+  
+    // Obetnij rozszerzenie .html
+    if (path.toLowerCase().endsWith('.html')) {
+      path = path.slice(0, -5);
+    }
+  
+    // Porównujemy bez rozróżniania wielkości liter
+    return path.toLowerCase();
+  }
+
+  function markActiveSidebarLink() {
+    var links = document.querySelectorAll('.sidebar-nav a[href]');
+    if (!links.length) return;
+
+    var current = normalizePath(window.location.pathname || '/');
+
+    links.forEach(function (link) {
+      var href = link.getAttribute('href');
+      if (!href) return;
+
+      // Pseudo‑przyciski (Zapisz/Wczytaj) – nie zaznaczamy
+      if (link.getAttribute('role') === 'button') {
+        return;
+      }
+
+      // Linki kotwicowe typu "#sekcja" – też pomijamy
+      if (href === '#' || href.charAt(0) === '#') {
+        return;
+      }
+
+      // Linki zewnętrzne: https://..., //..., mailto:
+      if (/^(https?:)?\/\//i.test(href) || href.indexOf('mailto:') === 0) {
+        return;
+      }
+
+      var normalizedHref = normalizePath(href);
+
+      if (normalizedHref === current) {
+        link.classList.add('is-active');
+        link.setAttribute('aria-current', 'page');
+      } else {
+        link.classList.remove('is-active');
+        link.removeAttribute('aria-current');
+      }
+    });
+  }
+
+  window.vildaOnReady('custom-fixes:active-sidebar-link-normalized', markActiveSidebarLink);
+})();
+
+// ---------------------------------------------------------------------------
+// Mini summary in the sidebar
+//
+// The sidebar contains a vertical menu. When the user scrolls down and the
+// entire menu disappears from view (i.e. the last menu item is no longer
+// visible in the viewport), we display a compact summary of the entered
+// personal data (name, age, weight, height and body surface area).  The
+// summary disappears again as soon as any menu item reappears on screen.
+//
+// The summary follows the same colouring rules for weight and height as the
+// main "Podsumowanie wyników" card: values in the extreme percentiles (below
+// the 3rd or above the 97th percentile for children) are coloured red via the
+// `status‑alert` class, while values within the normal range remain in the
+// default colour.  The percentile (centyl) for weight and height is shown
+// alongside the numeric value, and updates dynamically when the user edits
+// their inputs or changes the centile data source (Palczewska/OLAF/WHO).
+(function(){
+  'use strict';
+
+  /**
+   * Escape HTML special characters to prevent XSS when inserting user input.
+   *
+   * @param {string} str Input string
+   * @returns {string} Escaped string
+   */
+  function escapeHtml(str) {
+    if (typeof window !== 'undefined' && window.VildaHtml && typeof window.VildaHtml.escapeHtml === 'function') {
+      return window.VildaHtml.escapeHtml(arguments[0]);
+    }
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  /**
+   * Compute the percentile for a given value using the appropriate data source.
+   * For Palczewska and OLAF (<3 years) we use calcPercentileStatsPal; otherwise
+   * calcPercentileStats.  Returns the raw percentile (0–100) or null if
+   * unavailable.
+   *
+   * @param {number} value  The measurement (weight or height)
+   * @param {string} sex    'M' or 'F'
+   * @param {number} age    Age in decimal years
+   * @param {string} param  'WT' for weight or 'HT' for height
+   * @param {string} src    Selected data source ('PALCZEWSKA', 'OLAF' or 'WHO')
+   * @returns {number|null}
+   */
+  function computePercentile(value, sex, age, param, src) {
+    // Make sure required globals exist before calling them.
+    try {
+      // Decide whether to use Palczewska tables.  For OLAF we fall back to
+      // Palczewska below the minimum age (3 years).  Age can be fractional.
+      var usePal = false;
+      if (typeof OLAF_DATA_MIN_AGE !== 'undefined') {
+        usePal = (src === 'PALCZEWSKA') || (src === 'OLAF' && age < OLAF_DATA_MIN_AGE);
+      } else {
+        // If the constant is missing, default to using Palczewska for Palczewska source only.
+        usePal = (src === 'PALCZEWSKA');
+      }
+      var stats;
+      if (usePal && typeof calcPercentileStatsPal === 'function') {
+        stats = calcPercentileStatsPal(value, sex, age, param);
+      } else if (typeof calcPercentileStats === 'function') {
+        stats = calcPercentileStats(value, sex, age, param);
+      }
+      if (stats && typeof stats.percentile === 'number') {
+        return stats.percentile;
+      }
+    } catch (e) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', e, { line: 967 });
+    }
+  }
+    return null;
+  }
+
+  /**
+   * Format a percentile as a string with an appropriate word (centyl/centyla).
+   * Uses the global formatCentile and centylWord helpers if available; falls
+   * back to a simple rounding otherwise.  Returned string contains HTML
+   * entities (&lt; or &gt;) where necessary.
+   *
+   * @param {number|null} p Percentile (0–100)
+   * @returns {string} e.g. "37 centyl", "&lt;1 centyla", "&gt;100 centyla"
+   */
+  function formatCentileDisplay(p) {
+    if (p == null || isNaN(p)) return '';
+    if (typeof formatCentile === 'function' && typeof centylWord === 'function') {
+      var raw = formatCentile(p);
+      var word = centylWord(raw);
+      // Replace entities for display
+      var txt = raw.replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+      return txt + ' ' + word;
+    }
+    // Fallback: round to nearest integer and append 'centyl'
+    var rounded = Math.round(p);
+    return rounded + ' centyl';
+  }
+
+  /**
+   * Determine the CSS class for a percentile value in children.  If the
+   * percentile is outside the 3–97 range we return ' status-alert';
+   * otherwise an empty string.  For adults we return an empty string.
+   *
+   * @param {number|null} p   Percentile
+   * @param {number} age      Age in decimal years
+   * @returns {string}
+   */
+  function getStatusClass(p, age) {
+    if (p == null || isNaN(p)) return '';
+    if (age >= 18) return '';
+    if (p < 3 || p > 97) return ' status-alert';
+    return '';
+  }
+
+  /**
+   * Return a chip state string for the new chip-stack mini-summary design.
+   * States: 'normal' (10–90c, teal), 'borderline' (3–10c / 90–97c, orange),
+   * 'alert' (<3c / >97c, red), 'neutral' (adult or no centile data).
+   *
+   * @param {number|null} p   Percentile (0–100)
+   * @param {number} ageYrs   Age in decimal years
+   * @returns {'normal'|'borderline'|'alert'|'neutral'}
+   */
+  function getCentileState(p, ageYrs) {
+    if (p == null || isNaN(p) || ageYrs >= 18) return 'neutral';
+    if (p < 3 || p > 97) return 'alert';
+    if (p < 10 || p > 90) return 'borderline';
+    return 'normal';
+  }
+
+  /**
+   * Build the content of the mini summary and update its visibility.
+   */
+  function updateMiniSummary() {
+    var mini = document.getElementById('miniSummary');
+    if (!mini) return;
+
+    // Read inputs
+    var nameEl   = document.getElementById('name');
+    var nameVal  = nameEl ? nameEl.value.trim() : '';
+    var yearsEl  = document.getElementById('age');
+    var monthsEl = document.getElementById('ageMonths');
+    var weightEl = document.getElementById('weight');
+    var heightEl = document.getElementById('height');
+    var sexEl    = document.getElementById('sex');
+    var sexVal   = sexEl ? sexEl.value : 'M';
+
+    // Numeric values
+    var ageYears  = 0;
+    var yrs = 0, mos = 0;
+    if (yearsEl || monthsEl) {
+      var years  = yearsEl ? parseFloat(yearsEl.value)  || 0 : 0;
+      var months = monthsEl ? parseFloat(monthsEl.value) || 0 : 0;
+      // Limit months to [0,11]
+      mos = Math.max(0, Math.min(11, months));
+      yrs = Math.floor(years);
+      ageYears = yrs + mos / 12;
+    }
+    var weightVal = weightEl ? parseFloat(weightEl.value) || 0 : 0;
+    var heightVal = heightEl ? parseFloat(heightEl.value) || 0 : 0;
+
+    // Determine selected data source from radio buttons; fall back to OLAF
+    var dsEl = document.querySelector('input[name="dataSource"]:checked');
+    var srcVal = dsEl ? dsEl.value : (typeof bmiSource !== 'undefined' ? bmiSource : 'OLAF');
+
+    // Compute percentiles and status classes only if basic data are present
+    var weightPerc = null;
+    var heightPerc = null;
+    var weightClass = '';
+    var heightClass = '';
+    var anthroValidation = (typeof window !== 'undefined' && typeof window.vildaGetMainAnthroValidationSnapshot === 'function')
+      ? window.vildaGetMainAnthroValidationSnapshot()
+      : null;
+    var hasCompleteAnthro = anthroValidation
+      ? anthroValidation.complete
+      : ((yearsEl ? String(yearsEl.value || '').trim() !== '' : false) && ageYears >= 0 && weightVal > 0 && heightVal > 0);
+    if (hasCompleteAnthro) {
+      weightPerc = computePercentile(weightVal, sexVal, ageYears, 'WT', srcVal);
+      heightPerc = computePercentile(heightVal, sexVal, ageYears, 'HT', srcVal);
+      weightClass = getStatusClass(weightPerc, ageYears);
+      heightClass = getStatusClass(heightPerc, ageYears);
+    }
+
+    // Format age string (e.g. "3 lata i 5 miesięcy") with full Polish declension
+    var ageStr = '';
+    if (yrs > 0 || mos > 0) {
+      var yearWord;
+      if (yrs === 1) {
+        yearWord = 'rok';
+      } else if (yrs % 10 >= 2 && yrs % 10 <= 4 && (yrs % 100 < 10 || yrs % 100 >= 20)) {
+        yearWord = 'lata';
+      } else {
+        yearWord = 'lat';
+      }
+      // If months are non‑integer (due to input) round to nearest integer
+      var mosInt = Math.round(mos);
+      // Full Polish declension for months (0-11 range in this context):
+      //   1 → miesiąc, 2-4 → miesiące, 5-21 → miesięcy
+      var monthWord;
+      if (mosInt === 1) {
+        monthWord = 'miesiąc';
+      } else if (mosInt >= 2 && mosInt <= 4) {
+        monthWord = 'miesiące';
+      } else {
+        monthWord = 'miesięcy';
+      }
+      ageStr = yrs + ' ' + yearWord;
+      if (mosInt > 0) {
+        ageStr += ' i ' + mosInt + ' ' + monthWord;
+      }
+    }
+
+    // Compute BMI and BMI percentile for chip-stack display
+    var bmiVal = null, bmiPerc = null, bmiPercStr = '';
+    if (weightVal > 0 && heightVal > 0) {
+      bmiVal = weightVal / Math.pow(heightVal / 100, 2);
+      if (hasCompleteAnthro && ageYears > 0 && ageYears < 18) {
+        try {
+          if (typeof bmiPercentileChild === 'function') {
+            bmiPerc = bmiPercentileChild(bmiVal, sexVal, Math.round(ageYears * 12));
+          }
+        } catch (eBmi) {
+          if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+            globalThis.vildaLogSwallowedCatch('custom-fixes.js', eBmi, { line: 1201 });
+          }
+        }
+      }
+      bmiPercStr = (bmiPerc != null) ? formatCentileDisplay(bmiPerc) : '';
+    }
+
+    // Format percentile strings
+    var weightPercStr = (weightPerc != null) ? formatCentileDisplay(weightPerc) : '';
+    var heightPercStr = (heightPerc != null) ? formatCentileDisplay(heightPerc) : '';
+
+    // -----------------------------------------------------------------------
+    // Build chip-stack HTML for the new decor-sidebar mini-summary design.
+    // Three states based on centile thresholds:
+    //   normal     (10–90c): teal     #00838d
+    //   borderline (3–10 / 90–97c): orange #c75d00
+    //   alert      (<3 / >97c):     red    #c62828
+    //   neutral    (adult or no centile): muted gray
+    // -----------------------------------------------------------------------
+
+    var chipHtml = '';
+
+    // Patient chip — pokazywany gdy znamy wiek.  Etykieta "Wiek" w kółku
+    // zastępuje poprzednie inicjały; cały chip jest wyśrodkowany.
+    if (ageStr) {
+      chipHtml += '<div class="ms-patient-chip">'
+        + '<div class="ms-avatar-wiek">Wiek</div>'
+        + '<span class="ms-patient-age">' + escapeHtml(ageStr) + '</span>'
+        + '</div>';
+    }
+
+    // Metric chips — weight, height, BMI
+    var metricsHtml = '';
+    if (weightVal > 0) {
+      var wState = getCentileState(weightPerc, ageYears);
+      var wBadge = weightPercStr
+        ? '<div class="ms-chip-badge">' + weightPercStr + '</div>'
+        : '';
+      metricsHtml += '<div class="ms-chip ms-chip--' + wState + '">'
+        + '<div class="ms-chip-icon">W</div>'
+        + '<div class="ms-chip-main">'
+        + '<span class="ms-chip-label">Waga</span>'
+        + '<span class="ms-chip-value">' + escapeHtml(weightVal.toFixed(1).replace('.', ',')) + '&thinsp;kg</span>'
+        + '</div>'
+        + wBadge + '</div>';
+    }
+    if (heightVal > 0) {
+      var hState = getCentileState(heightPerc, ageYears);
+      var hBadge = heightPercStr
+        ? '<div class="ms-chip-badge">' + heightPercStr + '</div>'
+        : '';
+      metricsHtml += '<div class="ms-chip ms-chip--' + hState + '">'
+        + '<div class="ms-chip-icon">H</div>'
+        + '<div class="ms-chip-main">'
+        + '<span class="ms-chip-label">Wzrost</span>'
+        + '<span class="ms-chip-value">' + escapeHtml(heightVal.toFixed(1).replace('.', ',')) + '&thinsp;cm</span>'
+        + '</div>'
+        + hBadge + '</div>';
+    }
+    if (bmiVal != null) {
+      var bState = getCentileState(bmiPerc, ageYears);
+      var bBadge = bmiPercStr
+        ? '<div class="ms-chip-badge">' + bmiPercStr + '</div>'
+        : '';
+      metricsHtml += '<div class="ms-chip ms-chip--' + bState + '">'
+        + '<div class="ms-chip-icon">B</div>'
+        + '<div class="ms-chip-main">'
+        + '<span class="ms-chip-label">BMI</span>'
+        + '<span class="ms-chip-value">' + escapeHtml(bmiVal.toFixed(1).replace('.', ',')) + '</span>'
+        + '</div>'
+        + bBadge + '</div>';
+    }
+    // BSA chip (Mosteller) — zawsze neutral, brak centyli
+    if (weightVal > 0 && heightVal > 0) {
+      var bsaVal = Math.sqrt((heightVal * weightVal) / 3600);
+      if (!isNaN(bsaVal)) {
+        var bsaStr = bsaVal.toFixed(2).replace('.', ',') + ' m²';
+        metricsHtml += '<div class="ms-chip ms-chip--neutral">'
+          + '<div class="ms-chip-icon">S</div>'
+          + '<div class="ms-chip-main">'
+          + '<span class="ms-chip-label">Pow. ciała</span>'
+          + '<span class="ms-chip-value">' + escapeHtml(bsaStr) + '</span>'
+          + '</div>'
+          + '</div>';
+      }
+    }
+    if (metricsHtml) {
+      chipHtml += '<div class="ms-chips">' + metricsHtml + '</div>';
+    }
+
+    // Update inner HTML of the content container if present; otherwise update the mini summary itself
+    var contentDiv = document.getElementById('miniSummaryContent');
+    if (contentDiv) {
+      vildaCustomSetTrustedHtml(contentDiv, chipHtml, 'custom-fixes:mini-summary-content');
+    } else {
+      vildaCustomSetTrustedHtml(mini, chipHtml, 'custom-fixes:mini-summary');
+    }
+
+    // Kontrola widoczności mini-summary i wizualnego stylu decor-sidebar.
+    // Wcześniej widoczność była kontrolowana przez IntersectionObserver,
+    // który został usunięty. Teraz zarządzamy nią tu bezpośrednio:
+    // - hasContent=true  → pokazuj mini (display:block) + aktywuj styl sidebar
+    // - hasContent=false → ukryj mini (display:none)  + dezaktywuj styl sidebar
+    // Klasa decor-sidebar--has-content steruje wizualnym stylem (tło, cień,
+    // padding) w sidebar.css — bez niej sidebar jest przezroczystym kontenerem.
+    // hasContent: true if the patient chip or any metric chip was rendered
+    var hasContent = chipHtml.length > 0;
+    var decorEl = (typeof mini.closest === 'function')
+      ? mini.closest('.decor-sidebar')
+      : document.querySelector('.desktop-layout .decor-sidebar');
+
+    if (hasContent) {
+      mini.style.display = 'block';
+      if (decorEl) decorEl.classList.add('decor-sidebar--has-content');
+    } else {
+      // Na steroidy.html: jeśli skróty sterydowe są wewnątrz mini-summary,
+      // pozostaw mini widoczne (ma własną zawartość mimo braku danych pacjenta).
+      var p = window.location.pathname || '';
+      var fname = p.substring(p.lastIndexOf('/') + 1) || '';
+      if (fname === 'steroidy.html') {
+        var steroidInMini = false;
+        var ster = document.getElementById('steroidSummary');
+        if (ster && ster.parentElement === mini) {
+          steroidInMini = true;
+        }
+        if (!steroidInMini) {
+          mini.style.display = 'none';
+          if (decorEl) decorEl.classList.remove('decor-sidebar--has-content');
+        } else {
+          // Skróty sterydowe są w mini — sidebar powinien być widoczny
+          if (decorEl) decorEl.classList.add('decor-sidebar--has-content');
+        }
+      } else {
+        mini.style.display = 'none';
+        if (decorEl) decorEl.classList.remove('decor-sidebar--has-content');
+      }
+    }
+
+    // If the mini summary has been hidden (display: none) but the steroid
+    // shortcut container is still inside it, move the steroid shortcuts
+    // back to the appropriate sidebar.  Without this additional check,
+    // there are edge cases where the IntersectionObserver may not fire
+    // when scrolling back to the top of the page, leaving the steroid
+    // shortcuts stuck inside a hidden mini summary.  This ensures the
+    // shortcuts remain visible once the navigation menu reappears.
+    try {
+      var miniStyle = mini && mini.style ? mini.style.display : '';
+      if (mini && miniStyle === 'none') {
+        var pathname = window.location.pathname || '';
+        var fnameFix = pathname.substring(pathname.lastIndexOf('/') + 1) || '';
+        if (fnameFix === 'steroidy.html') {
+          var sterEl = document.getElementById('steroidSummary');
+          if (sterEl && sterEl.parentElement === mini) {
+            if (typeof window.positionSteroidSummary === 'function') {
+              window.positionSteroidSummary();
+            } else {
+              // Fallback positioning (duplicate of logic in IntersectionObserver)
+              var lSide = document.querySelector('.desktop-layout .sidebar');
+              var dSide = document.querySelector('.desktop-layout .decor-sidebar');
+              var dVis = false;
+              if (dSide) {
+                var ds = window.getComputedStyle(dSide);
+                dVis = ds && ds.display !== 'none';
+              }
+              if (dVis && dSide) {
+                if (sterEl.parentElement !== dSide) {
+                  dSide.appendChild(sterEl);
+                }
+              } else if (lSide) {
+                var miniRef = document.getElementById('miniSummary');
+                if (miniRef && miniRef.parentElement === lSide) {
+                  if (sterEl.parentElement !== lSide || sterEl.nextSibling !== miniRef) {
+                    lSide.insertBefore(sterEl, miniRef);
+                  }
+                } else {
+                  if (sterEl.parentElement !== lSide) {
+                    lSide.appendChild(sterEl);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (errReposition) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', errReposition, { line: 1192 });
+    }
+  }
+
+    // Re-render shortcuts to ensure that WFL availability reflects the current age.
+    // Without this, the disabled/enabled state of the WFL shortcut would not
+    // update when the user changes age or months.  Only call if the
+    // renderShortcuts function exists (it will be defined after initShortcuts).
+    try {
+      if (typeof renderShortcuts === 'function') {
+        renderShortcuts();
+      }
+    } catch (ex) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', ex, { line: 1204 });
+    }
+  }
+  }
+
+  /**
+   * Usuwa mini-summary z DOM i dezaktywuje wizualny styl decor-sidebar.
+   * Wywoływana gdy plan PRO wygasa lub użytkownik wylogowuje się.
+   */
+  function teardownMiniSummary() {
+    try {
+      var mini = document.getElementById('miniSummary');
+      if (!mini) return;
+      var decorEl = (typeof mini.closest === 'function')
+        ? mini.closest('.decor-sidebar')
+        : document.querySelector('.desktop-layout .decor-sidebar');
+      if (decorEl) decorEl.classList.remove('decor-sidebar--has-content');
+      if (mini.parentElement) mini.parentElement.removeChild(mini);
+    } catch (ex) {
+      if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+        globalThis.vildaLogSwallowedCatch('custom-fixes.js', ex, { fn: 'teardownMiniSummary' });
+      }
+    }
+  }
+
+  /**
+   * Wywoływana przez 'vildaProAccessChanged' — plan PRO aktywowany lub wygasł.
+   * Nie zakłada zmiany userId, więc NIE robi teardown gdy PRO jest aktywne.
+   */
+  function handleProAccessChange() {
+    try {
+      var proAccess = (typeof window !== 'undefined') ? window.VildaProAccess : null;
+      var hasPro = proAccess && typeof proAccess.hasAccess === 'function' && proAccess.hasAccess();
+      if (hasPro) {
+        initMiniSummary(); // idempotentna — early return jeśli już istnieje
+      } else {
+        teardownMiniSummary();
+      }
+    } catch (ex) {
+      if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+        globalThis.vildaLogSwallowedCatch('custom-fixes.js', ex, { fn: 'handleProAccessChange' });
+      }
+    }
+  }
+
+  /**
+   * Wywoływana przez 'vilda:session-changed' — inny użytkownik zalogował się
+   * (lub wylogowanie). Zawsze robi pełny teardown + reinit, żeby skróty
+   * poprzedniego użytkownika nie były widoczne dla nowego.
+   * Dotyczy też skrótów sterydowych — przeładowuje je dla nowego userId.
+   */
+  function handleSessionChanged() {
+    try {
+      // Mini-summary: teardown bezwarunkowo (inny userId = inne skróty),
+      // potem initMiniSummary sprawdzi PRO i ewentualnie odbuduje element.
+      teardownMiniSummary();
+      initMiniSummary();
+
+      // Skróty sterydowe: przeładuj z nowego slotu storage dla nowego userId.
+      // renderSteroidShortcuts() odczytuje z aktualnego steroidShortcuts[].
+      try {
+        loadSteroidShortcuts();
+        renderSteroidShortcuts();
+      } catch (_) {}
+    } catch (ex) {
+      if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+        globalThis.vildaLogSwallowedCatch('custom-fixes.js', ex, { fn: 'handleSessionChanged' });
+      }
+    }
+  }
+
+  /**
+   * Initialise the mini summary and attach observers.
+   *
+   * Etap "decor-sidebar mount": mini-summary i shortcuty montujemy w prawym
+   * ozdobnym sidebarze (decor-sidebar), który jest widoczny tylko od 1400px
+   * w górę. Dzięki temu lewe menu (sidebar-v2) jest sticky i czyste, a
+   * podsumowanie pacjenta + skróty mają własną kolumnę po prawej. Na ekranach
+   * < 1400px decor-sidebar jest ukryty, więc rezygnujemy z mini-summary
+   * (bez fallbacku — zgodnie z decyzją UX z 2025-05).
+   */
+  function initMiniSummary() {
+    // Mini-summary dostępne tylko dla aktywnych użytkowników planu PRO.
+    // hasAccess() jest synchroniczne — bezpiecznie wywołać tutaj.
+    var proAccess = (typeof window !== 'undefined') ? window.VildaProAccess : null;
+    if (!proAccess || typeof proAccess.hasAccess !== 'function' || !proAccess.hasAccess()) {
+      // Jeśli element już istnieje (np. plan właśnie wygasł), usuń go.
+      if (document.getElementById('miniSummary')) teardownMiniSummary();
+      return;
+    }
+    // Pokazuj tylko gdy widoczny jest decor-sidebar (>=1400px)
+    if (window.innerWidth < 1400) return;
+    var decor = document.querySelector('.desktop-layout .decor-sidebar');
+    if (!decor) return;
+    // Avoid duplicate summary
+    if (document.getElementById('miniSummary')) return;
+    // Tworzymy element bez ustawiania display — CSS .mini-summary ma domyślnie
+    // display:none. updateMiniSummary() pokaże element (display:block) dopiero
+    // gdy będą dane pacjenta. Wcześniejsze mini.style.display = 'block' przy
+    // tworzeniu elementu powodowało widoczne puste pole z paddingiem/borderem
+    // zanim updateMiniSummary() zdążyło element ukryć.
+    var mini = document.createElement('div');
+    mini.id = 'miniSummary';
+    mini.className = 'mini-summary';
+    decor.appendChild(mini);
+    // Create subcontainers for summary content and shortcuts
+    var contentDiv = document.createElement('div');
+    contentDiv.id = 'miniSummaryContent';
+    mini.appendChild(contentDiv);
+    var shortcutsDiv = document.createElement('div');
+    shortcutsDiv.id = 'miniShortcutsContainer';
+    shortcutsDiv.className = 'mini-shortcuts';
+    mini.appendChild(shortcutsDiv);
+    // Determine current page
+    var path = window.location.pathname || '';
+    var fileName = path.substring(path.lastIndexOf('/') + 1) || '';
+    // On the steroid calculator page we do not use generic card shortcuts in
+    // the mini summary.  Hide the shortcuts container and skip
+    // initialising the shortcuts UI.  The steroid summary UI handles its
+    // own shortcuts separately, and the generic mini-shortcuts would
+    // duplicate them when the mini summary becomes visible.
+    if (fileName === 'steroidy.html') {
+      shortcutsDiv.style.display = 'none';
+    } else {
+      // Initialise generic shortcuts UI for other pages
+      try {
+        initShortcuts();
+      } catch (ex) {
+        if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+          globalThis.vildaLogSwallowedCatch('custom-fixes.js', ex, { fn: 'initShortcuts' });
+        }
+      }
+    }
+    // Update contents initially. Mini-summary jest teraz zawsze widoczne w
+    // decor-sidebarze (>=1400px) — wcześniejszy IntersectionObserver na ostatniej
+    // pozycji menu został wycięty, bo przy sticky menu lewy sidebar jest zawsze
+    // w viewporcie i obserwator nigdy by nie odsłonił panelu.
+    updateMiniSummary();
+
+    // Na podstronie steroidy.html steroid-summary trafia bezpośrednio do
+    // mini-summary, żeby skróty sterydowe scrollowały razem z podsumowaniem
+    // pacjenta (zachowanie spójne z innymi podstronami).
+    var pathStr = window.location.pathname || '';
+    var fileSeg = pathStr.substring(pathStr.lastIndexOf('/') + 1) || '';
+    if (fileSeg === 'steroidy.html') {
+      var steroidEl = document.getElementById('steroidSummary');
+      var miniRef = document.getElementById('miniSummary');
+      if (steroidEl && miniRef && steroidEl.parentElement !== miniRef) {
+        miniRef.appendChild(steroidEl);
+      }
+    }
+    // Listen to input changes on relevant fields
+    var fields = ['name','age','ageMonths','weight','height','sex'];
+    fields.forEach(function(id){
+      var el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('input', updateMiniSummary);
+        el.addEventListener('change', updateMiniSummary);
+      }
+    });
+    // Listen for changes to data source radios
+    var dsRadios = document.querySelectorAll('input[name="dataSource"]');
+    dsRadios.forEach(function(rad) {
+      rad.addEventListener('change', updateMiniSummary);
+    });
+    // Resize: gdy użytkownik zwęzi okno poniżej 1400px decor-sidebar znika,
+    // więc i mini-summary chowamy. Po powrocie do >=1400px próbujemy zamontować
+    // ponownie (initMiniSummary jest idempotentne — wczesny return na duplikacie).
+    window.addEventListener('resize', function(){
+      var miniEl = document.getElementById('miniSummary');
+      if (window.innerWidth < 1400) {
+        if (miniEl) miniEl.style.display = 'none';
+      } else {
+        if (miniEl) {
+          // Nie ustawiamy display:block bezwarunkowo — updateMiniSummary()
+          // samo zdecyduje: pokaże (block) jeśli są dane, ukryje (none) jeśli nie.
+          updateMiniSummary();
+        } else {
+          // Ponowna próba mountu (gdy decor-sidebar pojawił się dopiero teraz)
+          initMiniSummary();
+        }
+      }
+    });
+  }
+
+  /**
+   * Shortcuts module for mini summary
+   *
+   * Allows the user to add up to three shortcuts to cards on the page.  Each
+   * shortcut scrolls to its associated card and expands it if hidden.  The
+   * shortcuts are stored in localStorage using a key based on the current
+   * page filename (e.g. "shortcuts-index.html").  The list of available
+   * cards is generated at runtime by scanning for elements with classes
+   * ``card``, ``plan-card`` or ``result-card`` that have an ID and a
+   * heading (h1–h4).  Cards that reside within the sidebar are ignored.
+   */
+  var shortcutMax = 3;
+  var currentShortcuts = [];
+
+  // ---- Steroid shortcuts (steroidy.html) ----
+  // Number of steroid shortcut pairs allowed
+  var steroidShortcutMax = 3;
+  // Array of steroid shortcut objects: { id: 'src|tgt', src: 'id1', tgt: 'id2' }
+  var steroidShortcuts = [];
+
+  /**
+   * Return the localStorage key for steroid shortcuts.  This key is
+   * specific to the steroide page and independent of other pages.
+   */
+  function getSteroidShortcutStorageKey() {
+    var uid = getCurrentUserIdForStorage();
+    return 'vilda-shortcuts:' + (uid || '') + ':steroidy.html';
+  }
+
+  /**
+   * Load steroid shortcuts from localStorage.  Populates the
+   * `steroidShortcuts` array.  If parsing fails, resets to an empty
+   * array.
+   */
+  function loadSteroidShortcuts() {
+    var key = getSteroidShortcutStorageKey();
+    steroidShortcuts = [];
+    try {
+      var persistence = (typeof window !== 'undefined') ? window.VildaPersistence : null;
+      var arr = persistence && typeof persistence.readPreferenceJSON === 'function'
+        ? persistence.readPreferenceJSON(key, [])
+        : [];
+      if (Array.isArray(arr)) {
+        steroidShortcuts = arr;
+      }
+    } catch (ex) {
+      steroidShortcuts = [];
+    }
+  }
+
+  /**
+   * Save the current steroid shortcuts to localStorage.
+   */
+  function saveSteroidShortcuts() {
+    try {
+      var key = getSteroidShortcutStorageKey();
+      var persistence = (typeof window !== 'undefined') ? window.VildaPersistence : null;
+      if (persistence && typeof persistence.writePreferenceJSON === 'function') {
+        persistence.writePreferenceJSON(key, steroidShortcuts || [], { force: true });
+      }
+    } catch (ex) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', ex, { line: 1437 });
+    }
+  }
+  }
+
+  /**
+   * Render the steroid shortcuts list UI.  Creates rows for each
+   * shortcut and attaches click and remove handlers.  Shows or hides
+   * the Add button depending on remaining capacity.
+   */
+  function renderSteroidShortcuts() {
+    var list = document.getElementById('steroidShortcutList');
+    var addBtn = document.getElementById('addSteroidShortcutBtn');
+    if (!list || !addBtn) return;
+    vildaCustomClearHtml(list);
+    // Render each stored pair
+    steroidShortcuts.forEach(function(pair) {
+      var srcId = pair.src;
+      var tgtId = pair.tgt;
+      var srcDrug = (typeof getDrug === 'function') ? getDrug(srcId) : null;
+      var tgtDrug = (typeof getDrug === 'function') ? getDrug(tgtId) : null;
+      var srcLabel = srcDrug ? srcDrug.label : srcId;
+      var tgtLabel = tgtDrug ? tgtDrug.label : tgtId;
+      // Format the title as “z [src] na [tgt]”
+      var title = 'z ' + srcLabel + ' na ' + tgtLabel;
+      var row = document.createElement('div');
+      row.className = 'shortcut-row';
+      var link = document.createElement('div');
+      link.className = 'shortcut-link';
+      link.textContent = title;
+      link.addEventListener('click', function(ev) {
+        applySteroidShortcut(pair);
+      });
+      var remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'shortcut-remove';
+      remove.textContent = '×';
+      remove.addEventListener('click', function(ev) {
+        // Prevent link click when removing
+        ev.stopPropagation();
+        removeSteroidShortcut(pair.id);
+      });
+      row.appendChild(link);
+      row.appendChild(remove);
+      list.appendChild(row);
+    });
+    // Show or hide the add button based on capacity.  Use the number of
+    // rendered rows rather than the raw array length to ensure the
+    // button hides whenever the maximum has been reached.  This guards
+    // against cases where duplicate pairs are not added but still
+    // appear as distinct rows.
+    var rowCount = list.children.length;
+    if (rowCount >= steroidShortcutMax) {
+      // Hide the add button once maximum shortcuts is reached.  Use
+      // inline style to avoid interference from theme styles.
+      addBtn.style.display = 'none';
+    } else {
+      // Reset display to default to show the button again when
+      // shortcuts are removed.
+      addBtn.style.display = '';
+    }
+    // Also update the visibility of the informational text about
+    // maximum shortcuts.  When the user has selected the maximum
+    // number of shortcuts, hide the info label so the UI remains
+    // uncluttered.  When fewer than the maximum shortcuts exist,
+    // restore the label.  This works regardless of whether the
+    // steroid summary is positioned in the left or right sidebar.
+    try {
+      var summaryContainer = document.getElementById('steroidSummary');
+      if (summaryContainer) {
+        var infoElem = summaryContainer.querySelector('.shortcut-info');
+        if (infoElem) {
+          if (rowCount >= steroidShortcutMax) {
+            infoElem.style.display = 'none';
+          } else {
+            infoElem.style.display = '';
+          }
+        }
+      }
+    } catch (err) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', err, { line: 1516 });
+    }
+  }
+  }
+
+  /**
+   * Remove a steroid shortcut by its id.  Updates storage and re-renders.
+   * @param {string} id Pair identifier (format: src|tgt)
+   */
+  function removeSteroidShortcut(id) {
+    steroidShortcuts = steroidShortcuts.filter(function(pair) {
+      return pair.id !== id;
+    });
+    saveSteroidShortcuts();
+    renderSteroidShortcuts();
+  }
+
+  /**
+   * Apply a steroid shortcut: set the first source select and target
+   * select to the pair values, trigger associated events, and scroll
+   * the form into view.  If no dose rows exist, one will be added.
+   * @param {Object} pair Shortcut object with src and tgt properties
+   */
+  function applySteroidShortcut(pair) {
+    if (!pair) return;
+    var srcId = pair.src;
+    var tgtId = pair.tgt;
+    // Ensure at least one dose row exists.  If none, click the add button
+    var rows = document.querySelectorAll('.dose-row');
+    if (!rows || rows.length === 0) {
+      var addBtn = document.getElementById('addDoseBtn');
+      if (addBtn) addBtn.click();
+      rows = document.querySelectorAll('.dose-row');
+    }
+    var firstSel = document.querySelector('select.srcDrug');
+    if (firstSel) {
+      // Set the value and dispatch change to trigger group filtering
+      firstSel.value = srcId;
+      firstSel.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    var tgtSel = document.getElementById('targetDrug');
+    if (tgtSel) {
+      // After group filter runs, set the target value.  Delay slightly to
+      // allow updateGroupFilters() to repopulate the target list.
+      setTimeout(function() {
+        tgtSel.value = tgtId;
+        tgtSel.dispatchEvent(new Event('change', { bubbles: true }));
+      }, 50);
+    }
+    // Scroll to the form to ensure the user sees the changes
+    var form = document.getElementById('calcForm');
+    if (form) {
+      form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  /**
+   * Show the pair selection panel for creating a new steroid shortcut.
+   * This panel contains two select boxes: source and target.  The
+   * target list is dynamically filtered based on the group of the
+   * selected source.  Confirming adds a new shortcut, while Cancel
+   * closes the panel.  Clicking outside the panel also closes it.
+   */
+  function showSteroidPairSelect() {
+    var container = document.getElementById('steroidSummary');
+    var addBtn = document.getElementById('addSteroidShortcutBtn');
+    if (!container || !addBtn) return;
+    // Prevent multiple panels
+    if (document.getElementById('steroidPairPanel')) return;
+    // Create panel
+    var panel = document.createElement('div');
+    panel.id = 'steroidPairPanel';
+    panel.className = 'steroid-dropdown';
+    // Row for source selection
+    var row1 = document.createElement('div');
+    row1.className = 'pair-row';
+    var lbl1 = document.createElement('label');
+    lbl1.textContent = 'Steryd źródłowy';
+    lbl1.setAttribute('for', 'selectSrcDrug');
+    var selSrc = document.createElement('select');
+    selSrc.id = 'selectSrcDrug';
+    selSrc.style.width = '100%';
+    row1.appendChild(lbl1);
+    row1.appendChild(selSrc);
+    // Row for target selection
+    var row2 = document.createElement('div');
+    row2.className = 'pair-row';
+    var lbl2 = document.createElement('label');
+    lbl2.textContent = 'Steryd docelowy';
+    lbl2.setAttribute('for', 'selectTgtDrug');
+    var selTgt = document.createElement('select');
+    selTgt.id = 'selectTgtDrug';
+    selTgt.style.width = '100%';
+    row2.appendChild(lbl2);
+    row2.appendChild(selTgt);
+    // Populate source list with all drugs (grouped)
+    function buildOptions(sel, filterGroup) {
+      vildaCustomClearHtml(sel);
+      if (typeof DRUGS === 'undefined') return;
+      var groups = {};
+      DRUGS.forEach(function(d) {
+        if (filterGroup && d.group !== filterGroup) return;
+        if (!groups[d.group]) {
+          var optg = document.createElement('optgroup');
+          optg.label = d.group;
+          groups[d.group] = optg;
+        }
+        var o = document.createElement('option');
+        o.value = d.id;
+        o.textContent = d.label;
+        groups[d.group].appendChild(o);
+      });
+      Object.values(groups).forEach(function(g) { sel.appendChild(g); });
+    }
+    buildOptions(selSrc, null);
+    // When source changes, populate target from same group
+    selSrc.addEventListener('change', function() {
+      var src = selSrc.value;
+      var grp = (typeof getDrug === 'function' && getDrug(src)) ? getDrug(src).group : null;
+      buildOptions(selTgt, grp);
+      // Select first available target by default
+      if (selTgt.options.length > 0) {
+        selTgt.selectedIndex = 0;
+      }
+    });
+    // Trigger initial target population
+    selSrc.dispatchEvent(new Event('change'));
+    // Action buttons
+    var actions = document.createElement('div');
+    actions.className = 'pair-actions';
+    var confirm = document.createElement('button');
+    confirm.type = 'button';
+    confirm.className = 'add-row confirm-pair';
+    confirm.textContent = 'Dodaj';
+    confirm.addEventListener('click', function() {
+      var src = selSrc.value;
+      var tgt = selTgt.value;
+      if (!src || !tgt) return;
+      // Compose id and ensure uniqueness
+      var id = src + '|' + tgt;
+      var exists = steroidShortcuts.some(function(p) { return p.id === id; });
+      // Only add the shortcut if it doesn't already exist and the limit has not been reached
+      if (!exists && steroidShortcuts.length < steroidShortcutMax) {
+        steroidShortcuts.push({ id: id, src: src, tgt: tgt });
+        saveSteroidShortcuts();
+        // Render shortcuts to update the UI, including hiding the info label when needed
+        renderSteroidShortcuts();
+      }
+      // Close the selection panel
+      if (panel && panel.parentElement) panel.parentElement.removeChild(panel);
+      // After closing, decide whether the add button should be shown or hidden based on current shortcuts
+      try {
+        var count = steroidShortcuts.length;
+        if (count >= steroidShortcutMax) {
+          addBtn.style.display = 'none';
+        } else {
+          addBtn.style.display = '';
+        }
+      } catch (e) {
+        // Fallback: hide the add button if limit reached
+        addBtn.style.display = (steroidShortcuts.length >= steroidShortcutMax) ? 'none' : '';
+      }
+      // Remove the outside click handler now that the panel is closed
+      document.removeEventListener('click', outsideClick, true);
+    });
+    var cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'add-row cancel-pair';
+    cancel.textContent = 'Anuluj';
+    cancel.addEventListener('click', function() {
+      // Simply close the panel without adding a new shortcut
+      if (panel && panel.parentElement) panel.parentElement.removeChild(panel);
+      // Show or hide the add button based on current number of shortcuts
+      try {
+        var count = steroidShortcuts.length;
+        if (count >= steroidShortcutMax) {
+          addBtn.style.display = 'none';
+        } else {
+          addBtn.style.display = '';
+        }
+      } catch (e) {
+        // Fallback to using the raw array length
+        addBtn.style.display = (steroidShortcuts.length >= steroidShortcutMax) ? 'none' : '';
+      }
+      // Clean up the outside click handler
+      document.removeEventListener('click', outsideClick, true);
+    });
+    actions.appendChild(confirm);
+    actions.appendChild(cancel);
+    // Assemble panel
+    panel.appendChild(row1);
+    panel.appendChild(row2);
+    panel.appendChild(actions);
+    container.insertBefore(panel, addBtn.nextSibling);
+    // Hide add button while panel is open
+    addBtn.style.display = 'none';
+    // Outside click handler to close panel
+    function outsideClick(ev) {
+      // If the panel is already removed, unregister this handler
+      if (!panel || !panel.parentElement) {
+        document.removeEventListener('click', outsideClick, true);
+        return;
+      }
+      // Ignore clicks inside the panel
+      if (panel.contains(ev.target)) return;
+      // Ignore clicks on the add button (it may still be hidden but protect against fast clicks)
+      if (ev.target === addBtn) return;
+      // Remove the panel
+      if (panel.parentElement) panel.parentElement.removeChild(panel);
+      // After closing due to outside click, update the add button visibility based on current shortcuts
+      try {
+        var count = steroidShortcuts.length;
+        if (count >= steroidShortcutMax) {
+          addBtn.style.display = 'none';
+        } else {
+          addBtn.style.display = '';
+        }
+      } catch (e) {
+        // Fallback: hide or show button depending on raw array length
+        addBtn.style.display = (steroidShortcuts.length >= steroidShortcutMax) ? 'none' : '';
+      }
+      // Remove this event listener
+      document.removeEventListener('click', outsideClick, true);
+    }
+    setTimeout(function() {
+      document.addEventListener('click', outsideClick, true);
+    }, 0);
+  }
+
+  /**
+   * Initialise steroid shortcuts.  This function runs only on
+   * steroide.html when the screen is sufficiently wide for the
+   * sidebar.  It creates the shortcut container below the menu,
+   * loads stored pairs and renders them.
+   */
+  function initSteroidShortcuts() {
+    // Only apply on steroide page
+    var path = window.location.pathname;
+    var file = path.substring(path.lastIndexOf('/') + 1);
+    if (file !== 'steroidy.html') return;
+    // Only show on desktop
+    if (window.innerWidth < 992) return;
+    var sidebar = document.querySelector('.desktop-layout .sidebar');
+    if (!sidebar) return;
+    // Avoid duplicates
+    if (document.getElementById('steroidSummary')) return;
+    // Create container
+    var container = document.createElement('div');
+    container.id = 'steroidSummary';
+    container.className = 'steroid-summary';
+    // Info text
+    var info = document.createElement('div');
+    info.className = 'shortcut-info';
+    info.textContent = 'Można dodać maksymalnie 3 skróty. Skróty pozwalają szybko ustawić przeliczenia sterydów (źródłowy → docelowy).';
+    container.appendChild(info);
+    // List container
+    var list = document.createElement('div');
+    list.id = 'steroidShortcutList';
+    list.className = 'steroid-shortcuts';
+    container.appendChild(list);
+    // Add button
+    var addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.id = 'addSteroidShortcutBtn';
+    addBtn.className = 'add-shortcut-btn';
+    addBtn.textContent = 'Dodaj skrót';
+    addBtn.addEventListener('click', showSteroidPairSelect);
+    container.appendChild(addBtn);
+    // Append after sidebar nav
+    var nav = sidebar.querySelector('.sidebar-nav');
+    if (nav && nav.parentElement === sidebar) {
+      nav.parentElement.appendChild(container);
+    } else {
+      sidebar.appendChild(container);
+    }
+    // Load and render shortcuts
+    loadSteroidShortcuts();
+    renderSteroidShortcuts();
+
+    // Position the steroid summary in the appropriate sidebar (left or right).
+    function positionSteroidSummary() {
+      var cont = document.getElementById('steroidSummary');
+      if (!cont) return;
+      // Right decorative sidebar (visible on very wide screens)
+      var decor = document.querySelector('.desktop-layout .decor-sidebar');
+      // Left sidebar (primary navigation)
+      var side = document.querySelector('.desktop-layout .sidebar');
+      // Determine if the right sidebar is visible via CSS display property
+      var decorVisible = false;
+      if (decor) {
+        var style = window.getComputedStyle(decor);
+        decorVisible = style && style.display !== 'none';
+      }
+      if (decorVisible && decor) {
+        // Move to right sidebar if not already there
+        if (cont.parentElement !== decor) {
+          decor.appendChild(cont);
+        }
+      } else {
+        // Otherwise attach to left sidebar.
+        // W nowym vilda_chrome layout sidebar ma kontener .sidebar-extras
+        // przeznaczony na dodatkowe karty (mini-summary, steroid-summary).
+        // Wstawiamy tam, żeby nie nakładać się na nawigację.
+        if (side) {
+          var extrasEl = side.querySelector('[data-vilda-chrome-extras]') || side;
+          var miniEl = document.getElementById('miniSummary');
+          if (miniEl && miniEl.parentElement === extrasEl) {
+            if (cont.parentElement !== extrasEl || cont.nextSibling !== miniEl) {
+              extrasEl.insertBefore(cont, miniEl);
+            }
+          } else {
+            if (cont.parentElement !== extrasEl) {
+              extrasEl.appendChild(cont);
+            }
+          }
+        }
+      }
+    }
+    // Call once to position initially
+    positionSteroidSummary();
+    // Reposition on resize events
+    window.addEventListener('resize', positionSteroidSummary);
+
+    // Expose the positioning function globally so it can be invoked
+    // from the IntersectionObserver callback in initMiniSummary.  The
+    // steroid page requires moving the shortcut container between
+    // different parents (decor sidebar, left sidebar) depending on
+    // screen width and navigation visibility.  Attaching the
+    // function to window avoids repeated duplication of the logic.
+    window.positionSteroidSummary = positionSteroidSummary;
+  }
+
+  /**
+   * Show a temporary notification indicating that the steroid
+   * calculation results have been refreshed automatically.  A small
+   * toast appears in the bottom-right corner of the viewport and
+   * fades out after a short delay.  If a toast already exists, its
+   * message and opacity are reset.  Styling is applied inline to
+   * avoid reliance on external CSS files and to ensure the toast
+   * remains visible regardless of the current theme (e.g. Liquid Glass).
+   */
+  function showAutoCalcNotification() {
+    var id = 'steroidAutoToast';
+    var toast = document.getElementById(id);
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = id;
+      toast.className = 'auto-toast';
+      // Base positioning: fixed in the horizontal centre near the top of the viewport with high z‑index.
+      toast.style.position = 'fixed';
+      // Position the toast 1rem from the top and centre it horizontally.
+      toast.style.top = '1rem';
+      toast.style.left = '50%';
+      toast.style.transform = 'translateX(-50%)';
+      // Clear any previous bottom/right positioning (applied on first creation) to avoid conflicts.
+      toast.style.bottom = '';
+      toast.style.right = '';
+      toast.style.zIndex = '9999';
+      // Visual appearance similar to other cards
+      toast.style.background = 'var(--card)';
+      toast.style.border = '1px solid #d0dede';
+      toast.style.padding = '0.5rem 1rem';
+      toast.style.borderRadius = 'var(--radius)';
+      toast.style.boxShadow = 'var(--shadow)';
+      toast.style.fontSize = '0.9rem';
+      toast.style.color = '#000';
+      // Disable interactions to avoid intercepting clicks
+      toast.style.pointerEvents = 'none';
+      document.body.appendChild(toast);
+    }
+    // Reset message and opacity
+    toast.textContent = 'Wynik został zaktualizowany';
+    toast.style.opacity = '1';
+    toast.style.transition = '';
+    // Schedule fade out after a delay
+    setTimeout(function() {
+      if (!toast) return;
+      toast.style.transition = 'opacity 0.5s';
+      toast.style.opacity = '0';
+    }, 2500);
+  }
+
+  /**
+   * Initialise automatic recalculation for the steroid calculator.  On
+   * the steroide page, attach input and change listeners to the
+   * calculation form.  After any change, schedule the form to be
+   * submitted automatically after a short delay.  When the form
+   * submission is dispatched, a non-blocking notification toast is
+   * displayed to inform the user that the result has been updated.
+   */
+  function initSteroidAutoCalc() {
+    var path = window.location.pathname;
+    var file = path.substring(path.lastIndexOf('/') + 1);
+    if (file !== 'steroidy.html') return;
+    var form = document.getElementById('calcForm');
+    if (!form) return;
+    // Hide the manual submit button on the steroid calculator since auto
+    // recalculation is enabled.  We select the submit button by type
+    // within the calculation form and hide it.  This is done only on
+    // steroide.html.
+    var submitBtn = form.querySelector('button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.style.display = 'none';
+    }
+    var timer = null;
+    function schedule() {
+      // Clear any pending timer
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(function() {
+        // Attempt to dispatch submit event and show notification
+        try {
+          var ev = new Event('submit', { bubbles: true, cancelable: true });
+          form.dispatchEvent(ev);
+          // Show toast only if results section is visible (i.e. calculation succeeded)
+          var resultsSec = document.getElementById('results');
+          if (resultsSec && resultsSec.style.display !== 'none') {
+            showAutoCalcNotification();
+          }
+        } catch (e) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', e, { line: 1932 });
+    }
+  }
+      }, 400);
+    }
+    // Attach listeners to capture user input
+    // Use capture phase to ensure we catch events before other handlers
+    form.addEventListener('input', schedule, true);
+    form.addEventListener('change', schedule, true);
+  }
+
+  /**
+   * Zwraca userId aktualnie zalogowanego użytkownika (synchronicznie).
+   * Ten sam wzorzec co getCurrentUserIdSync() w vilda_pro_access.js.
+   * Zwraca null gdy brak zalogowanego użytkownika (gość, vault zablokowany).
+   */
+  function getCurrentUserIdForStorage() {
+    try {
+      var vault = (typeof window !== 'undefined') ? window.VildaVault : null;
+      if (vault && typeof vault.getCurrentUser === 'function') {
+        var cu = vault.getCurrentUser();
+        if (cu && cu.userId) return String(cu.userId);
+      }
+    } catch (_) {}
+    try {
+      var raw = (typeof window !== 'undefined' && window.sessionStorage)
+        ? window.sessionStorage.getItem('vilda-vault-session-v2')
+        : null;
+      if (raw) {
+        var data = JSON.parse(raw);
+        if (data && data.userId) return String(data.userId);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  // Determine the localStorage key for the current page.
+  // Klucz zawiera userId — każdy użytkownik ma własny slot w localStorage.
+  function getShortcutStorageKey() {
+    var path = window.location.pathname;
+    var file = path.substring(path.lastIndexOf('/') + 1) || 'index.html';
+    var uid = getCurrentUserIdForStorage();
+    return 'vilda-shortcuts:' + (uid || '') + ':' + file;
+  }
+
+  // Load shortcuts from localStorage
+  function loadShortcuts() {
+    var key = getShortcutStorageKey();
+    try {
+      var persistence = (typeof window !== 'undefined') ? window.VildaPersistence : null;
+      var arr = persistence && typeof persistence.readPreferenceJSON === 'function'
+        ? persistence.readPreferenceJSON(key, [])
+        : [];
+      if (Array.isArray(arr)) {
+        currentShortcuts = arr;
+      }
+    } catch (e) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', e, { line: 1961 });
+    }
+  }
+  }
+
+  // Save shortcuts to localStorage
+  function saveShortcuts() {
+    var key = getShortcutStorageKey();
+    try {
+      var persistence = (typeof window !== 'undefined') ? window.VildaPersistence : null;
+      if (persistence && typeof persistence.writePreferenceJSON === 'function') {
+        persistence.writePreferenceJSON(key, currentShortcuts, { force: true });
+      }
+    } catch (e) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', e, { line: 1974 });
+    }
+  }
+  }
+
+  // Compute available cards for shortcuts.  Each entry has an id and a title.
+  // The list of cards is filtered per page to avoid offering shortcuts to
+  // elements that are irrelevant on the current subpage.  On DocPro the
+  // general result cards from the home page are hidden via CSS but still
+  // present in the DOM.  Those should not appear in the dropdown.  We also
+  // assign stable IDs to cards that lack one (e.g. GH test cards) using a
+  // slugified version of their title.  This ensures that saved shortcuts
+  // remain valid across reloads.  For DocPro we also treat <strong> tags
+  // inside GH/OGTT/ACTH cards as headings.
+  function computeAvailableCards() {
+    var results = [];
+    // Determine current file name (e.g. index.html, docpro.html).  If the
+    // pathname ends with a slash (e.g. index), default to index.html.
+    var path = window.location.pathname;
+    var file = path.substring(path.lastIndexOf('/') + 1) || 'index.html';
+
+    // Helper to slugify a string into a safe identifier.  Converts to
+    // lowercase, replaces Polish diacritics with ASCII equivalents, and
+    // replaces any non‑alphanumeric characters with dashes.  Leading and
+    // trailing dashes are trimmed.  If the slug is empty, returns null.
+    function slugify(str) {
+      if (!str) return null;
+      var map = {
+        'ą':'a','ć':'c','ę':'e','ł':'l','ń':'n','ó':'o','ś':'s','ż':'z','ź':'z',
+        'Ą':'a','Ć':'c','Ę':'e','Ł':'l','Ń':'n','Ó':'o','Ś':'s','Ż':'z','Ź':'z'
+      };
+      var slug = '';
+      for (var i = 0; i < str.length; i++) {
+        var ch = str[i];
+        slug += map[ch] || ch;
+      }
+      slug = slug
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        // Trim leading/trailing dashes
+        .replace(/^-+|-+$/g, '');
+      return slug || null;
+    }
+
+    // Determine which elements to inspect for headings.  By default we
+    // include all cards/plan/result elements.  On the DocPro page we
+    // restrict the list to GH/OGTT/ACTH test cards and the top‐level
+    // professional module card.  This prevents shortcuts from being
+    // created to general BMI/BMR/WFL cards that are irrelevant on
+    // DocPro.
+    var nodes;
+    // When on the kidney clearance calculator page, build shortcuts from
+    // the list of supported formulas rather than scanning DOM cards.  The
+    // calculator defines a global array ALL_FORMS_SORTED (populated by
+    // populateFormulaPicker) containing objects with id and label fields.  We
+    // include every formula regardless of version, sorted alphabetically by
+    // label.  Clicking a shortcut will highlight the required input fields
+    // for that formula instead of scrolling to a DOM element.
+    if (file === 'kalkulator-klirens.html') {
+      try {
+        var list = [];
+        // Prefer the globally sorted list if available; fall back to
+        // FORMULAS if exported globally.  Both contain objects with
+        // id (formula id) and label (human‑readable name) properties.
+        var source = null;
+        if (Array.isArray(window.ALL_FORMS_SORTED) && window.ALL_FORMS_SORTED.length) {
+          source = window.ALL_FORMS_SORTED;
+        } else if (Array.isArray(window.FORMULAS) && window.FORMULAS.length) {
+          source = window.FORMULAS;
+        }
+        if (source) {
+          // Sort the formulas by label using Polish locale to match the
+          // application's alphabetical ordering.
+          var sorted = source.slice().sort(function(a, b) {
+            return (a.label || '').localeCompare(b.label || '', 'pl', { sensitivity: 'base' });
+          });
+          sorted.forEach(function(f) {
+            if (f && f.id && f.label) {
+              list.push({ id: f.id, title: f.label });
+            }
+          });
+        } else {
+          // Fallback: extract options from the formula picker if available.
+          var picker = document.getElementById('formulaPicker');
+          if (picker && picker.options) {
+            var opts = [];
+            for (var i = 0; i < picker.options.length; i++) {
+              var opt = picker.options[i];
+              var val = opt.value;
+              var text = opt.textContent || opt.innerText;
+              if (val && !opt.disabled && text) {
+                opts.push({ id: val, title: text.trim() });
+              }
+            }
+            // Sort extracted options alphabetically
+            opts.sort(function(a, b) {
+              return (a.title || '').localeCompare(b.title || '', 'pl', { sensitivity: 'base' });
+            });
+            list = opts;
+          }
+        }
+        return list;
+      } catch (e) {
+        // In case of error (e.g. formulas not yet loaded), fall back to an empty list
+        return [];
+      }
+    }
+    if (file === 'docpro.html') {
+      // On the DocPro page we offer shortcuts to endocrine test cards as well as
+      // specific therapy/calculator modules.  We intentionally exclude the
+      // overarching professional module card ("Moduł profesjonalny") and other
+      // general results from the home page.  Start with all GH/OGTT/ACTH test
+      // cards.  These cards are created in the DOM at page load but are
+      // hidden until the appropriate toggle is clicked.
+      nodes = Array.from(document.querySelectorAll('.gh-test-card'));
+      // Next, manually add the IDs of additional modules.  Each module has a
+      // hidden card and/or a toggle button; we add the card IDs so that
+      // shortcuts scroll to the associated content.  The corresponding
+      // toggles will be handled in gotoCard via findToggleForCard.
+      var extras = [];
+      // Bisphosphonate therapy card
+      var bis = document.getElementById('bisphosCard');
+      if (bis) extras.push(bis);
+      // Obesity therapy card (placeholder)
+      var obesity = document.getElementById('obesityCard');
+      if (obesity) extras.push(obesity);
+      // Z‑score calculator card (batch mode)
+      var zs = document.getElementById('zscoreCard');
+      if (zs) extras.push(zs);
+      // Antibiotic therapy card (may be injected later; still push a stub
+      // placeholder node with the expected ID so that the dropdown lists it).
+      var abx = document.getElementById('antibioticTherapyCard');
+      if (!abx) {
+        // Create a dummy element to carry the ID and title; it will not be
+        // appended to the DOM but allows slug generation to proceed.  A
+        // heading property is added below.
+        abx = document.createElement('div');
+        abx.id = 'antibioticTherapyCard';
+        var strong = document.createElement('strong');
+        strong.textContent = 'Antybiotykoterapia';
+        abx.appendChild(strong);
+      }
+      extras.push(abx);
+      // IGF therapy is represented by a toggle button rather than a card.  We
+      // include the button itself in the list so that users can create a
+      // shortcut to the treatment section.  The title is derived below.
+      var igfBtn = document.getElementById('toggleIgfTests');
+      if (igfBtn) extras.push(igfBtn);
+      nodes = nodes.concat(extras);
+    } else {
+      // For other pages include all cards/plan/result elements.  This covers
+      // index.html and other potential pages.  Cards inside the sidebar are
+      // ignored below.
+      nodes = Array.from(document.querySelectorAll('.card, .plan-card, .result-card'));
+    }
+    nodes.forEach(function(node) {
+      // Skip anything inside the sidebar
+      if (node.closest && node.closest('.sidebar')) return;
+      // For DocPro, ignore nodes that are general summary cards (prev/current)
+      if (file === 'docpro.html') {
+        if (node.id && /summarycard/i.test(node.id)) return;
+      }
+      // Determine a heading.  For standard cards use h1–h5; for DocPro test
+      // cards and our extra modules, allow <strong> or use the element's
+      // own textContent if it is a button.  This yields titles for
+      // buttons like toggleIgfTests.
+      var heading = node.querySelector ? node.querySelector('h1, h2, h3, h4, h5') : null;
+      if (!heading && file === 'docpro.html') {
+        heading = node.querySelector ? node.querySelector('strong') : null;
+      }
+      var title = '';
+      if (heading) {
+        // Use textContent but trim any nested subtitles.  The subhead is
+        // wrapped in a span with class "subhead", so we exclude its
+        // text when building the title.  If there are no spans, use
+        // the full textContent.
+        var cloned = heading.cloneNode(true);
+        // Remove any span.subhead children to avoid including the
+        // explanatory parentheses in the title.  This allows us to
+        // create concise titles like "Spalanie kalorii" instead of
+        // "Spalanie kalorii (czyli ile czasu …)".
+        var subheads = cloned.querySelectorAll('span.subhead');
+        subheads.forEach(function(el) { el.parentNode.removeChild(el); });
+        title = cloned.textContent.trim();
+      } else if (node.tagName && node.tagName.toLowerCase() === 'button') {
+        title = node.textContent.trim();
+      } else if (node.id === 'antibioticTherapyCard') {
+        title = 'Antybiotykoterapia';
+      }
+      if (!title) return;
+      var id = node.id;
+      // If the node lacks an id, generate a stable slug based on the title
+      if (!id) {
+        var slug = slugify(title);
+        if (!slug) return;
+        var candidate = slug;
+        var counter = 1;
+        while (document.getElementById(candidate)) {
+          candidate = slug + '-' + counter;
+          counter++;
+        }
+        node.id = candidate;
+        id = candidate;
+      }
+      // Skip the professionalModule on DocPro (user request)
+      if (file === 'docpro.html' && id === 'professionalModule') return;
+
+      // On index.html exclude certain cards that should not appear as shortcuts.
+      if (file === 'index.html') {
+        var excludedTitles = [
+          'Ostatni pomiar',
+          'Podsumowanie wyników',
+          'Moduł profesjonalny',
+          'Wybrana dieta'
+        ];
+        // Exclude by title match (case‑sensitive) or by id if known
+        if (excludedTitles.indexOf(title) !== -1) {
+          return;
+        }
+        // Special case: for the "Obwód głowy i klatki piersiowej" module use the toggle
+        // button id as the target rather than the hidden card id.  This ensures that
+        // the shortcut scrolls to the button and expands the card via a simple
+        // click.  It also avoids storing the hidden card id in localStorage,
+        // which would require custom handling to reveal the section.
+        if (id === 'circCard') {
+          results.push({ id: 'toggleCircSection', title: title });
+          return;
+        }
+        // Special case: for the macronutrient nutrition norms card use the
+        // toggle button id as the target, mirroring the circumference module.
+        // The card itself is intentionally hidden until the user clicks the
+        // trigger button.
+        if (id === 'nutritionNormsCard') {
+          results.push({ id: 'toggleNutritionNormsCard', title: title });
+          return;
+        }
+        // Special case: for the micronutrient nutrition norms card use the
+        // toggle button id as the target, mirroring the circumference module.
+        // The card itself is intentionally hidden until the user clicks the
+        // trigger button.
+        if (id === 'nutritionMicrosCard') {
+          results.push({ id: 'toggleNutritionMicrosCard', title: title });
+          return;
+        }
+        // Special case: for the unified food card use the toggle button id,
+        // because the actual card is hidden until the user opens it.
+        if (id === 'foodCard') {
+          results.push({ id: 'toggleFoodCard', title: title });
+          return;
+        }
+
+        // Special case: shorten long titles for calorie cards.  The
+        // "timesCard" displays calorie-burning times with a subhead
+        // explaining the meaning, and "totalCard" shows total caloric
+        // intake with a subhead.  For the shortcuts menu we use
+        // concise labels without parentheses as requested by the user.
+        if (id === 'timesCard') {
+          title = 'Spalanie kalorii';
+        } else if (id === 'totalCard') {
+          title = 'Łączna kaloryczność';
+        }
+      }
+      results.push({ id: id, title: title });
+    });
+    return results;
+  }
+
+  // Attempt to find a toggle button for a given card.  Many cards are
+  // controlled by a button whose id begins with "toggle" followed by
+  // a variant of the card id (e.g. toggleIntakeCard toggles #intakeCard).
+  function findToggleForCard(cardId) {
+    // Special mappings for DocPro modules that do not follow the standard
+    // naming convention.  These buttons control cards whose IDs are
+    // unrelated to their toggles.
+    if (cardId === 'antibioticTherapyCard') {
+      return 'toggleAbxTherapy';
+    }
+    if (cardId === 'zscoreCard') {
+      return 'toggleZscore';
+    }
+    if (cardId === 'bisphosCard') {
+      return 'toggleBisphos';
+    }
+    if (cardId === 'obesityCard') {
+      return 'toggleObesityTherapy';
+    }
+    // Special mapping for the head/chest circumference card on the home page.
+    // The card id circCard is controlled by toggleCircSection rather than
+    // following the naming convention.  Without this mapping the shortcut
+    // would not expand the card when selected.  We support both the actual
+    // element ID (circCard) and its slugified form (obwod-glowy-i-klatki-piersiowej)
+    // in case the node lacks an id and a slug was generated.
+    if (cardId === 'circCard' || cardId === 'obwod-glowy-i-klatki-piersiowej') {
+      return 'toggleCircSection';
+    }
+    if (cardId === 'nutritionNormsCard' || cardId === 'normy-zywieniowe-bialko-tluszcz-weglowodany') {
+      return 'toggleNutritionNormsCard';
+    }
+    if (cardId === 'nutritionMicrosCard' || cardId === 'normy-zywieniowe-witaminy-i-skladniki-mineralne') {
+      return 'toggleNutritionMicrosCard';
+    }
+    if (cardId === 'foodCard' || cardId === 'kalorie-posilkow-i-czas-spalania') {
+      return 'toggleFoodCard';
+    }
+    // If a user saved a shortcut directly to a toggle button (e.g. toggleIgfTests),
+    // we treat the element itself as the activator and do not attempt to find
+    // another toggle.  In such cases we return null to signal that gotoCard
+    // should handle it specially.
+    if (/^toggle/.test(cardId)) {
+      return null;
+    }
+
+    var candidates = [];
+    // Convert kebab-case to camelCase and capitalise first letter
+    var camel = cardId.replace(/[-_](.)/g, function(_, ch) { return ch.toUpperCase(); });
+    var base = camel.charAt(0).toUpperCase() + camel.slice(1);
+    // Try direct match (toggle + Base)
+    candidates.push('toggle' + base);
+    // If base ends with common suffixes, try without them
+    ['Card', 'Form', 'Section', 'Container', 'Box'].forEach(function(suffix) {
+      if (base.endsWith(suffix)) {
+        var trimmed = base.slice(0, -suffix.length);
+        if (trimmed) {
+          candidates.push('toggle' + trimmed);
+          candidates.push('toggle' + trimmed + 'Card');
+        }
+      }
+    });
+    // Also try toggle + base + 'Card'
+    candidates.push('toggle' + base + 'Card');
+    for (var i = 0; i < candidates.length; i++) {
+      var id = candidates[i];
+      var btn = document.getElementById(id);
+      if (btn && btn.tagName.toLowerCase() === 'button') {
+        return id;
+      }
+    }
+    return null;
+  }
+
+  // Scroll to the specified card and expand it if hidden
+  function gotoCard(cardId) {
+    var el = document.getElementById(cardId);
+    // Detect the current page to support formula shortcuts on the creatinine clearance calculator.
+    var pathname = window.location.pathname;
+    var fileName = pathname.substring(pathname.lastIndexOf('/') + 1) || 'index.html';
+    // On the klirens calculator page the "cardId" may refer to a formula rather than a DOM element.
+    // If no element exists with the given id and the page matches, attempt to highlight the
+    // corresponding formula fields.  The formula definitions are available in
+    // window.ALL_FORMS_SORTED (preferred) or window.FORMULAS.  We set the
+    // calculator version accordingly and then call highlightFields to mark
+    // required inputs.  For the KT/V formula we also enable the advanced
+    // KT/V fields toggle.
+    if (!el && fileName === 'kalkulator-klirens.html') {
+      try {
+        var list2 = null;
+        if (Array.isArray(window.ALL_FORMS_SORTED) && window.ALL_FORMS_SORTED.length) {
+          list2 = window.ALL_FORMS_SORTED;
+        } else if (Array.isArray(window.FORMULAS) && window.FORMULAS.length) {
+          list2 = window.FORMULAS;
+        }
+        if (list2) {
+          var formula = list2.find(function(f) { return f && f.id === cardId; });
+          if (formula) {
+            if (typeof window.selectClcrFormula === 'function') {
+              try {
+                window.selectClcrFormula(formula.id);
+                return;
+              } catch (_) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', _, { line: 2342 });
+    }
+  }
+            }
+            // Determine target version (basic, advanced, spot or pro) and apply it.
+            var targetVer = formula.version || 'basic';
+            // Special handling for KT/V: always require pro version and enable
+            // advanced KT/V fields via ktvToggle.
+            if (formula.id === 'KTV') {
+              targetVer = 'pro';
+            }
+            var applied = false;
+            // Attempt to apply the version via applyVersion if available.
+            if (typeof window.applyVersion === 'function') {
+              try {
+                window.applyVersion(targetVer);
+                applied = true;
+              } catch (er) {
+                applied = false;
+              }
+            }
+            if (!applied) {
+              try {
+                if (typeof window.setVersion === 'function') {
+                  window.setVersion(targetVer);
+                  applied = true;
+                }
+              } catch (er2) {
+                applied = false;
+              }
+            }
+            if (!applied) {
+              var btnVers = document.querySelector('.version-option[data-version="' + targetVer + '"]');
+              if (btnVers && !btnVers.classList.contains('selected')) {
+                try { btnVers.click(); applied = true; } catch (_) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', _, { line: 2374 });
+    }
+  }
+              }
+            }
+            // For KT/V formulas ensure the KT/V advanced toggle is enabled.
+            if (formula.id === 'KTV') {
+              var advToggle = document.getElementById('ktvToggle');
+              if (advToggle && !advToggle.checked) {
+                advToggle.checked = true;
+              }
+            }
+            // Highlight required fields after a short delay to allow UI to update.
+            setTimeout(function() {
+              try {
+                if (typeof window.highlightFields === 'function') {
+                  window.highlightFields(formula, true);
+                }
+              } catch (er3) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', er3, { line: 2390 });
+    }
+  }
+            }, 100);
+            return;
+          }
+        }
+      } catch (er0) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', er0, { line: 2395 });
+    }
+  }
+    }
+    if (!el) return;
+    // Special handling for Down Syndrome calculations on the home page.  The
+    // Down Syndrome section is entirely hidden by default (both the
+    // wrapper and the card).  When navigating via a shortcut we need
+    // to ensure that the wrapper is shown and the card expanded before
+    // scrolling.  Without this, clicking the shortcut does nothing.
+    if (cardId === 'downSyndromeCard') {
+      // Ensure the containing section is visible
+      var dsSection = document.getElementById('downSyndromeSection');
+      if (dsSection && dsSection.style.display === 'none') {
+        dsSection.style.display = 'block';
+      }
+      // Expand the card if hidden by clicking its toggle button
+      var dsCard = document.getElementById('downSyndromeCard');
+      var toggleDs = document.getElementById('toggleDownSyndrome');
+      if (dsCard && toggleDs) {
+        var styleDs = window.getComputedStyle(dsCard);
+        var hiddenDs = (styleDs.display === 'none' || dsCard.offsetHeight === 0);
+        if (hiddenDs) {
+          toggleDs.click();
+        }
+        // Scroll to the card after expansion
+        setTimeout(function() {
+          try {
+            dsCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          } catch (e) {
+            dsCard.scrollIntoView(true);
+          }
+        }, 150);
+      }
+      return;
+    }
+
+    // Special handling for the head/chest circumference module on the home page.
+    // The module is hidden by default and controlled by a custom toggle button
+    // (toggleCircSection).  Regardless of whether the card ID, slug or toggle
+    // itself was saved as the shortcut, we perform the same expansion and
+    // scroll logic.  This check catches cardId equal to circCard, its slug,
+    // the toggle ID directly, or any id containing "obwod" or "circ".
+    {
+      var lcId = (cardId || '').toLowerCase();
+      var isCircModule = false;
+      if (cardId === 'circCard' || cardId === 'obwod-glowy-i-klatki-piersiowej' || cardId === 'toggleCircSection') {
+        isCircModule = true;
+      }
+      // Additional fuzzy matching: if the id itself contains fragments like
+      // "circ" or "obwod", treat it as the circumference module.  This
+      // ensures that even unknown ids or slugs created from the title
+      // correctly activate the module.
+      if (!isCircModule && (lcId.indexOf('circ') !== -1 || lcId.indexOf('obwod') !== -1)) {
+        isCircModule = true;
+      }
+      if (isCircModule) {
+        var circToggle2 = document.getElementById('toggleCircSection');
+        // Scroll to toggle first
+        if (circToggle2) {
+          try {
+            circToggle2.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          } catch (e) {
+            circToggle2.scrollIntoView(true);
+          }
+          // Click toggle to reveal the card
+          circToggle2.click();
+        }
+        // After toggling, scroll to the card
+        setTimeout(function() {
+          var cardEl2 = document.getElementById('circCard');
+          if (cardEl2) {
+            try {
+              cardEl2.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (e3) {
+              cardEl2.scrollIntoView(true);
+            }
+          } else if (circToggle2) {
+            try {
+              circToggle2.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (e4) {
+              circToggle2.scrollIntoView(true);
+            }
+          }
+        }, 200);
+        return;
+      }
+    }
+    // Special handling for the macronutrient nutrition norms card on the home page.
+    // The card is hidden by default and controlled by toggleNutritionNormsCard.
+    {
+      var lcNutritionNormsId = (cardId || '').toLowerCase();
+      var isNutritionNormsModule = false;
+      if (cardId === 'nutritionNormsCard' || cardId === 'toggleNutritionNormsCard' || cardId === 'normy-zywieniowe-bialko-tluszcz-weglowodany') {
+        isNutritionNormsModule = true;
+      }
+      if (!isNutritionNormsModule && lcNutritionNormsId.indexOf('nutritionnorms') !== -1) {
+        isNutritionNormsModule = true;
+      }
+      if (!isNutritionNormsModule && lcNutritionNormsId.indexOf('normy-zywieniowe') !== -1 && (lcNutritionNormsId.indexOf('bialko') !== -1 || lcNutritionNormsId.indexOf('tluszcz') !== -1 || lcNutritionNormsId.indexOf('weglowod') !== -1)) {
+        isNutritionNormsModule = true;
+      }
+      if (isNutritionNormsModule) {
+        var normsToggle = document.getElementById('toggleNutritionNormsCard');
+        var normsCard = document.getElementById('nutritionNormsCard');
+        var normsSection = document.getElementById('nutritionNormsSection');
+        if (normsSection) normsSection.style.display = '';
+        if (normsToggle) {
+          try {
+            normsToggle.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          } catch (e5n) {
+            normsToggle.scrollIntoView(true);
+          }
+          var isHiddenNorms = true;
+          if (normsCard) {
+            try {
+              var normsStyle = window.getComputedStyle(normsCard);
+              isHiddenNorms = (normsStyle.display === 'none' || normsCard.offsetHeight === 0);
+            } catch (e6n) {
+              isHiddenNorms = true;
+            }
+          }
+          if (isHiddenNorms) normsToggle.click();
+        }
+        setTimeout(function() {
+          var targetNormsCard = document.getElementById('nutritionNormsCard');
+          var targetNormsToggle = document.getElementById('toggleNutritionNormsCard');
+          if (targetNormsCard) {
+            try {
+              targetNormsCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (e7n) {
+              targetNormsCard.scrollIntoView(true);
+            }
+          } else if (targetNormsToggle) {
+            try {
+              targetNormsToggle.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (e8n) {
+              targetNormsToggle.scrollIntoView(true);
+            }
+          }
+        }, 200);
+        return;
+      }
+    }
+
+    // Special handling for the micronutrient nutrition norms card on the home page.
+    // The card is hidden by default and controlled by toggleNutritionMicrosCard.
+    {
+      var lcMicrosId = (cardId || '').toLowerCase();
+      var isMicrosModule = false;
+      if (cardId === 'nutritionMicrosCard' || cardId === 'toggleNutritionMicrosCard' || cardId === 'normy-zywieniowe-witaminy-i-skladniki-mineralne') {
+        isMicrosModule = true;
+      }
+      if (!isMicrosModule && (lcMicrosId.indexOf('nutritionmicros') !== -1 || lcMicrosId.indexOf('witaminy') !== -1 || lcMicrosId.indexOf('skladniki-mineralne') !== -1)) {
+        isMicrosModule = true;
+      }
+      if (isMicrosModule) {
+        var microsToggle = document.getElementById('toggleNutritionMicrosCard');
+        var microsCard = document.getElementById('nutritionMicrosCard');
+        var microsSection = document.getElementById('nutritionMicrosSection');
+        if (microsSection) microsSection.style.display = '';
+        if (microsToggle) {
+          try {
+            microsToggle.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          } catch (e5) {
+            microsToggle.scrollIntoView(true);
+          }
+          var isHiddenMicros = true;
+          if (microsCard) {
+            try {
+              var microsStyle = window.getComputedStyle(microsCard);
+              isHiddenMicros = (microsStyle.display === 'none' || microsCard.offsetHeight === 0);
+            } catch (e6) {
+              isHiddenMicros = true;
+            }
+          }
+          if (isHiddenMicros) microsToggle.click();
+        }
+        setTimeout(function() {
+          var targetMicrosCard = document.getElementById('nutritionMicrosCard');
+          var targetMicrosToggle = document.getElementById('toggleNutritionMicrosCard');
+          if (targetMicrosCard) {
+            try {
+              targetMicrosCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (e7) {
+              targetMicrosCard.scrollIntoView(true);
+            }
+          } else if (targetMicrosToggle) {
+            try {
+              targetMicrosToggle.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (e8) {
+              targetMicrosToggle.scrollIntoView(true);
+            }
+          }
+        }, 200);
+        return;
+      }
+    }
+
+
+    // Special handling for the unified food card on the home page.
+    // The card is hidden by default and controlled by toggleFoodCard.
+    {
+      var lcFoodId = (cardId || '').toLowerCase();
+      var isFoodModule = false;
+      if (cardId === 'foodCard' || cardId === 'toggleFoodCard' || cardId === 'kalorie-posilkow-i-czas-spalania') {
+        isFoodModule = true;
+      }
+      if (!isFoodModule && (lcFoodId.indexOf('foodcard') !== -1 || (lcFoodId.indexOf('kalorie') !== -1 && (lcFoodId.indexOf('posilk') !== -1 || lcFoodId.indexOf('spalania') !== -1)))) {
+        isFoodModule = true;
+      }
+      if (isFoodModule) {
+        var foodToggle = document.getElementById('toggleFoodCard');
+        var foodCard = document.getElementById('foodCard');
+        var foodSection = document.getElementById('foodSection');
+        if (foodSection) foodSection.style.display = '';
+        if (foodToggle) {
+          try {
+            foodToggle.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          } catch (e5f) {
+            foodToggle.scrollIntoView(true);
+          }
+          var isHiddenFood = true;
+          if (foodCard) {
+            try {
+              var foodStyle = window.getComputedStyle(foodCard);
+              isHiddenFood = (foodStyle.display === 'none' || foodCard.offsetHeight === 0);
+            } catch (e6f) {
+              isHiddenFood = true;
+            }
+          }
+          if (isHiddenFood) foodToggle.click();
+        }
+        setTimeout(function() {
+          var targetFoodCard = document.getElementById('foodCard');
+          var targetFoodToggle = document.getElementById('toggleFoodCard');
+          if (targetFoodCard) {
+            try {
+              targetFoodCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (e7f) {
+              targetFoodCard.scrollIntoView(true);
+            }
+          } else if (targetFoodToggle) {
+            try {
+              targetFoodToggle.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (e8f) {
+              targetFoodToggle.scrollIntoView(true);
+            }
+          }
+        }, 200);
+        return;
+      }
+    }
+
+    // If the target element is a button, simply click it and scroll to it.
+    // Special case: if the button is the circumference toggle, also scroll
+    // to the associated card after expansion.  This ensures that the user
+    // lands on the content rather than the button itself.
+    if (el.tagName && el.tagName.toLowerCase() === 'button') {
+      // For buttons, scroll to the button before clicking so that it is visible
+      try {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (e) {
+        el.scrollIntoView(true);
+      }
+      // Click the toggle to reveal its associated card/section
+      el.click();
+      // Determine if this is the circumference toggle
+      if (cardId === 'toggleCircSection') {
+        // After a short delay, scroll to the actual circumference card if it exists;
+        // otherwise scroll back to the toggle.  The delay gives the UI time to expand.
+        setTimeout(function() {
+          var circCardEl2 = document.getElementById('circCard');
+          if (circCardEl2) {
+            try {
+              circCardEl2.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (err) {
+              circCardEl2.scrollIntoView(true);
+            }
+          } else {
+            try {
+              el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (e) {
+              el.scrollIntoView(true);
+            }
+          }
+        }, 200);
+      } else {
+        // For other buttons, simply ensure the button remains in view after click
+        setTimeout(function() {
+          try {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          } catch (e) {
+            el.scrollIntoView(true);
+          }
+        }, 100);
+      }
+      return;
+    }
+    // On the DocPro page, test cards reside inside nested lists.  If the
+    // destination is a GH/OGTT/ACTH test card we need to ensure that the
+    // relevant toggle buttons are activated before scrolling.  We also
+    // open the general endocrine tests section.  Determine the group by
+    // checking the card's ancestors.  Use try/catch to guard against
+    // missing wrappers.
+    var path = window.location.pathname;
+    var file = path.substring(path.lastIndexOf('/') + 1) || 'index.html';
+    if (file === 'docpro.html' && el.classList.contains('gh-test-card')) {
+      // Ensure the endocrine tests section is visible
+      var endoBtn = document.getElementById('toggleEndoTests');
+      if (endoBtn && endoBtn.offsetParent === null) {
+        // The wrapper might be hidden; still click to attempt to open
+        endoBtn.click();
+      } else if (endoBtn) {
+        endoBtn.click();
+      }
+      // Determine specific group (GH, OGTT, ACTH) by examining parent id
+      var groupBtn = null;
+      var parent = el.parentElement;
+      while (parent) {
+        var pid = parent.id;
+        if (pid === 'ghTestsLeft' || pid === 'ghTestsRight') {
+          groupBtn = document.getElementById('toggleGhTests');
+          break;
+        }
+        if (pid === 'ogttTestsLeft' || pid === 'ogttTestsRight') {
+          groupBtn = document.getElementById('toggleOgttTests');
+          break;
+        }
+        if (pid === 'acthTestsLeft' || pid === 'acthTestsRight') {
+          groupBtn = document.getElementById('toggleActhTests');
+          break;
+        }
+        parent = parent.parentElement;
+      }
+      if (groupBtn) {
+        groupBtn.click();
+      }
+    }
+    // Expand the card if hidden by clicking its toggle.  For special
+    // mappings the toggle ID may be provided via findToggleForCard.
+    var style = window.getComputedStyle(el);
+    var hidden = (style.display === 'none' || el.offsetHeight === 0);
+    if (hidden) {
+      var toggleId = findToggleForCard(cardId);
+      if (toggleId) {
+        var btn2 = document.getElementById(toggleId);
+        if (btn2) {
+          btn2.click();
+        }
+      }
+    }
+    // Scroll after a small delay to allow expansion
+    setTimeout(function() {
+      try {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (e) {
+        el.scrollIntoView(true);
+      }
+    }, 150);
+  }
+
+  // Render the list of current shortcuts in the UI
+  function renderShortcuts() {
+    var listEl = document.getElementById('shortcutList');
+    if (!listEl) return;
+    // Clear current items
+    vildaCustomClearHtml(listEl);
+    // Build map of available cards for title lookup
+    var avail = computeAvailableCards();
+    var lookup = {};
+    avail.forEach(function(item) {
+      lookup[item.id] = item;
+    });
+    // Read current age in years to determine WFL availability
+    var ageYears = 0;
+    try {
+      var yearsEl  = document.getElementById('age');
+      var monthsEl = document.getElementById('ageMonths');
+      var yrs = yearsEl ? parseFloat(yearsEl.value) || 0 : 0;
+      var mos = monthsEl ? parseFloat(monthsEl.value) || 0 : 0;
+      ageYears = yrs + (mos / 12);
+    } catch (ex) {
+      ageYears = 0;
+    }
+    // Create each shortcut
+    currentShortcuts.forEach(function(cid) {
+      var info = lookup[cid] || { id: cid, title: cid };
+      var row = document.createElement('div');
+      row.className = 'shortcut-row';
+      // Shortcut link
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'shortcut-link';
+      btn.textContent = info.title;
+      // Determine if this shortcut should be disabled (WFL over age > 2)
+      var isWfl = false;
+      if (cid === 'wflCard' || (info.title && info.title.toLowerCase().includes('wfl'))) {
+        isWfl = true;
+      }
+      var tooltipText;
+      if (isWfl && ageYears > 2) {
+        // Mark as disabled: grey text and provide a tooltip.  Do not attach a
+        // click handler so that clicking does nothing, but leave pointer
+        // events enabled so the browser can display the title tooltip on hover.
+        btn.classList.add('disabled-shortcut');
+        tooltipText = 'Ta pozycja jest dostępna tylko przy wieku użytkownika poniżej 2 lat';
+        // Apply the tooltip to both the button and its row container.  Some
+        // browsers may not show the title when hovering over nested flex
+        // elements; duplicating it on the row improves reliability.
+        btn.title = tooltipText;
+        row.title = tooltipText;
+      }
+      row.appendChild(btn);
+      // Remove button (always active)
+      var remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'shortcut-remove';
+      remove.setAttribute('aria-label', 'Usuń skrót');
+      remove.textContent = '×';
+      remove.addEventListener('click', function(e) {
+        e.stopPropagation();
+        removeShortcut(cid);
+      });
+      row.appendChild(remove);
+      // Attach a single click handler to the row rather than only the label.
+      // This makes the entire row clickable except for the remove button.  When
+      // the shortcut is disabled, clicking the row does nothing.  When
+      // active, it navigates to the associated card.
+      row.addEventListener('click', function(e) {
+        // Ignore clicks on the remove button
+        if (e.target && e.target.classList.contains('shortcut-remove')) {
+          return;
+        }
+        // Nie nawiguj gdy aktywny tryb edycji
+        var cont = document.getElementById('miniShortcutsContainer');
+        if (cont && cont.classList.contains('is-editing')) {
+          return;
+        }
+        if (isWfl && ageYears > 2) {
+          // Disabled: do nothing
+          return;
+        }
+        gotoCard(cid);
+      });
+      listEl.appendChild(row);
+    });
+    // Jeśli jesteśmy w trybie edycji i osiągnęliśmy limit skrótów,
+    // zamknij dropdown (brak wolnych slotów).
+    var editCont2 = document.getElementById('miniShortcutsContainer');
+    if (editCont2 && editCont2.classList.contains('is-editing') && currentShortcuts.length >= shortcutMax) {
+      var dropEl = document.getElementById('shortcutDropdown');
+      if (dropEl) dropEl.parentElement.removeChild(dropEl);
+    }
+  }
+
+  // Remove a shortcut and update storage
+  function removeShortcut(cardId) {
+    var idx = currentShortcuts.indexOf(cardId);
+    if (idx >= 0) {
+      currentShortcuts.splice(idx, 1);
+      saveShortcuts();
+      renderShortcuts();
+    }
+  }
+
+  // Add a new shortcut
+  function addShortcut(cardId) {
+    if (!cardId) return;
+    if (currentShortcuts.indexOf(cardId) >= 0) return;
+    if (currentShortcuts.length >= shortcutMax) return;
+    currentShortcuts.push(cardId);
+    saveShortcuts();
+    renderShortcuts();
+  }
+
+  // Pokaż listę dostępnych skrótów do dodania (wywoływana przez “Edytuj”).
+  // Nie zależy od przycisku “Dodaj skrót” — działa w kontekście trybu edycji.
+  // Po wyborze pozycji odświeża się sama, jeśli są jeszcze wolne sloty i tryb
+  // edycji jest aktywny.  Zamknięcie przez klik poza dropdown NIE wyłącza
+  // trybu edycji — to robi tylko przycisk “Gotowe”.
+  function showShortcutSelect() {
+    var container = document.getElementById('miniShortcutsContainer');
+    if (!container) return;
+    // Nie pokazuj jeśli tryb edycji nieaktywny lub osiągnięto limit
+    if (!container.classList.contains('is-editing')) return;
+    if (currentShortcuts.length >= shortcutMax) return;
+
+    // Usuń istniejący dropdown
+    var existingDropdown = document.getElementById('shortcutDropdown');
+    if (existingDropdown) existingDropdown.parentElement.removeChild(existingDropdown);
+
+    // Dostępne pozycje (jeszcze nie dodane)
+    var list = [];
+    try { list = computeAvailableCards(); } catch (ex) { list = []; }
+    var options = list.filter(function(item) {
+      return currentShortcuts.indexOf(item.id) === -1;
+    });
+    if (!options.length) return;
+
+    // Zbuduj dropdown
+    var dd = document.createElement('div');
+    dd.id = 'shortcutDropdown';
+    dd.className = 'shortcut-dropdown';
+    dd.style.background = '#ffffff';
+    dd.style.backdropFilter = 'none';
+    dd.style.webkitBackdropFilter = 'none';
+
+    options.forEach(function(item) {
+      var optDiv = document.createElement('div');
+      optDiv.className = 'shortcut-option';
+      optDiv.textContent = item.title;
+      optDiv.dataset.id = item.id;
+      optDiv.style.whiteSpace = 'normal';
+      optDiv.style.wordBreak = 'break-word';
+      optDiv.addEventListener('click', function() {
+        if (typeof outsideClickHandler === 'function') {
+          document.removeEventListener('click', outsideClickHandler, true);
+        }
+        var drop = document.getElementById('shortcutDropdown');
+        if (drop) drop.parentElement.removeChild(drop);
+        addShortcut(item.id);
+        // Jeśli tryb edycji nadal aktywny i są wolne sloty — odśwież listę
+        if (container.classList.contains('is-editing') && currentShortcuts.length < shortcutMax) {
+          showShortcutSelect();
+        }
+      });
+      dd.appendChild(optDiv);
+    });
+
+    // Wstaw dropdown na końcu kontenera (za przyciskiem “Gotowe”)
+    container.appendChild(dd);
+
+    // Klik poza dropdown — tylko zamknij listę, nie wychodź z trybu edycji
+    var outsideClickHandler;
+    outsideClickHandler = function(ev) {
+      var drop = document.getElementById('shortcutDropdown');
+      if (!drop) {
+        document.removeEventListener('click', outsideClickHandler, true);
+        return;
+      }
+      if (drop.contains(ev.target)) return;
+      var editBtnEl = document.getElementById('editShortcutsBtn');
+      if (editBtnEl && ev.target === editBtnEl) return;
+      drop.parentElement.removeChild(drop);
+      document.removeEventListener('click', outsideClickHandler, true);
+    };
+    setTimeout(function() {
+      document.addEventListener('click', outsideClickHandler, true);
+    }, 0);
+  }
+
+  // Initialise shortcut UI
+  function initShortcuts() {
+    var container = document.getElementById('miniShortcutsContainer');
+    if (!container) return;
+    // Nagłówek sekcji "Skróty"
+    var info = document.createElement('div');
+    info.className = 'shortcut-info';
+    info.textContent = 'Skróty';
+    container.appendChild(info);
+
+    // Lista skrótów
+    var list = document.createElement('div');
+    list.id = 'shortcutList';
+    container.appendChild(list);
+
+    // Jeden przycisk "Edytuj" / "Gotowe":
+    // - wejście w tryb edycji: pojawia się ×, otwiera się lista dostępnych
+    //   skrótów do dodania (showShortcutSelect).
+    // - "Gotowe": wyjście z trybu edycji, zamknięcie dropdownu.
+    var editBtn = document.createElement('button');
+    editBtn.type = 'button';
+    editBtn.id = 'editShortcutsBtn';
+    editBtn.className = 'add-shortcut-btn shortcut-edit-btn';
+    editBtn.textContent = 'Edytuj';
+    editBtn.addEventListener('click', function() {
+      var editing = container.classList.toggle('is-editing');
+      editBtn.textContent = editing ? 'Gotowe' : 'Edytuj';
+      if (editing) {
+        // Otwórz listę dostępnych skrótów od razu po wejściu w tryb edycji
+        showShortcutSelect();
+      } else {
+        // Wyjście: zamknij dropdown jeśli otwarty
+        var drop = document.getElementById('shortcutDropdown');
+        if (drop) drop.parentElement.removeChild(drop);
+      }
+    });
+    container.appendChild(editBtn);
+    // Load from storage
+    loadShortcuts();
+    // Remove any shortcuts whose cards are no longer available (e.g. filtered
+    // out on specific pages).  This prevents outdated shortcuts (such as
+    // summary cards or professional module links) from lingering in the UI.
+    try {
+      var availList = computeAvailableCards();
+      var availIds = availList.map(function(item) { return item.id; });
+      currentShortcuts = currentShortcuts.filter(function(cid) {
+        return availIds.indexOf(cid) !== -1;
+      });
+      saveShortcuts();
+    } catch (ex) {
+    if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+      globalThis.vildaLogSwallowedCatch('custom-fixes.js', ex, { line: 3054 });
+    }
+  }
+    // Render the list
+    try {
+      renderShortcuts();
+    } catch (ex) {
+      if (typeof globalThis !== 'undefined' && typeof globalThis.vildaLogSwallowedCatch === 'function') {
+        globalThis.vildaLogSwallowedCatch('custom-fixes.js', ex, { fn: 'renderShortcuts-in-initShortcuts' });
+      }
+    }
+  }
+
+  // initMiniSummary() musi być uruchomione DOPIERO gdy auth UI zostanie schowane
+  // (użytkownik jest zalogowany / wybrał tryb gościa / sesja przywrócona).
+  //
+  // Problem: userData.js (defer, linia 1646 index.html) uruchamia się przed
+  // custom-fixes.js (defer, linia 5966) i synchronicznie wypełnia pola formularza
+  // danymi z localStorage. Gdybyśmy wywołali initMiniSummary() od razu,
+  // updateMiniSummary() znalazłby dane w polach i pokazał mini-summary
+  // (display:block + klasa decor-sidebar--has-content) jako widoczna biała ramka
+  // zanim boot() w vilda_auth_ui.js zdążył pokazać nakładkę logowania.
+  //
+  // Rozwiązanie: czekamy na zdarzenie 'vilda:auth-hidden' wysyłane przez
+  // funkcję hide() w vilda_auth_ui.js we wszystkich ścieżkach zakończenia auth:
+  //   - tryRestoreSession() → hide()
+  //   - "Korzystaj bez logowania" → setGuestMode(true) → hide()
+  //   - logowanie hasłem/passkey → onUnlock → hide()
+  //
+  // Flaga __vildaAuthHidden obsługuje edge case gdy hide() zostało wywołane
+  // zanim ten listener zdążył się zarejestrować (np. błyskawiczne przywrócenie sesji).
+  window.vildaOnReady('custom-fixes:mini-summary', function () {
+    // Pomocnik: uruchamia initMiniSummary (PRO check wewnątrz) i rejestruje
+    // listenery reagujące na zmiany stanu PRO oraz sesji (wylogowanie / zmiana konta).
+    function doInit() {
+      initMiniSummary();
+      // Aktywacja / dezaktywacja planu PRO (ten sam użytkownik)
+      document.addEventListener('vildaProAccessChanged', handleProAccessChange);
+      // Zmiana zalogowanego użytkownika — teardown + reinit z nowym userId
+      document.addEventListener('vilda:session-changed', handleSessionChanged);
+    }
+
+    if (window.__vildaAuthHidden) {
+      doInit();
+      return;
+    }
+    document.addEventListener('vilda:auth-hidden', function onAuthHidden() {
+      document.removeEventListener('vilda:auth-hidden', onAuthHidden);
+      doInit();
+    });
+  });
+  window.vildaOnReady('custom-fixes:steroid-shortcuts', initSteroidShortcuts);
+  window.vildaOnReady('custom-fixes:steroid-auto-calc', initSteroidAutoCalc);
+})();
+// ---------------------------------------------------------------------------
+// Synchronizacja danych pacjenta z index.html → kalkulator-klirens.html
+//
+// Problem: userData.js (defer) poprawnie ładuje sharedUserData → wstawia pola
+// pacjenta do formularza klirens. Następnie restoreClcrSession() (setTimeout 0ms
+// w DOMContentLoaded klirens) nadpisuje te pola starą sesją z sessionStorage.
+//
+// Rozwiązanie: po restoreClcrSession (timeout 50ms > 0ms) sprawdzamy czy
+// sharedUserData.updatedAtISO jest nowszy niż savedAtISO sesji klirens.
+// Jeśli tak — nadpisujemy pola pacjenta świeżymi wartościami ze shared storage.
+// Dzięki temu wczytanie pacjenta z vaulta zawsze propaguje się do klirens.
+(function () {
+  // Działa tylko na stronie klirens
+  if (typeof window === 'undefined') return;
+  var path = window.location.pathname || '';
+  if (path.indexOf('kalkulator-klirens') === -1) return;
+
+  var CLCR_SESSION_KEY = 'vildaClcrSessionV1';
+  var PATIENT_FIELDS = ['fullName', 'age', 'ageMonths', 'weight', 'height', 'sex'];
+
+  function isoToMs(iso) {
+    if (!iso) return 0;
+    try { var t = Date.parse(iso); return isNaN(t) ? 0 : t; } catch (_) { return 0; }
+  }
+
+  function getSharedUpdatedAt(shared) {
+    try {
+      var p = shared && shared['_vildaPersist'];
+      return p ? isoToMs(p.updatedAtISO) : 0;
+    } catch (_) { return 0; }
+  }
+
+  function getClcrSessionSavedAt() {
+    // Próbuj VildaPersistence (sessionStorage wrapper) i bezpośrednio sessionStorage
+    try {
+      var pers = window.VildaPersistence;
+      if (pers && typeof pers.readClcrSession === 'function') {
+        var sess = pers.readClcrSession();
+        if (sess && sess.savedAtISO) return isoToMs(sess.savedAtISO);
+      }
+    } catch (_) {}
+    try {
+      var raw = window.sessionStorage && window.sessionStorage.getItem(CLCR_SESSION_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && parsed.savedAtISO) return isoToMs(parsed.savedAtISO);
+      }
+    } catch (_) {}
+    return 0;
+  }
+
+  function reapplySharedPatient() {
+    try {
+      var pers = window.VildaPersistence;
+      if (!pers || typeof pers.readShared !== 'function') return;
+
+      var shared = pers.readShared({ ensurePersist: false });
+      if (!shared) return;
+
+      var sharedAt  = getSharedUpdatedAt(shared);
+      var sessionAt = getClcrSessionSavedAt();
+
+      // Stosuj tylko gdy sharedUserData jest nowszy od zapisu sesji klirens.
+      // Gwarantuje to, że wczytanie pacjenta z vaulta wygra ze starą sesją,
+      // ale ręczne edycje na klirens (nowsza sesja) nie są nadpisywane.
+      if (sharedAt <= sessionAt) return;
+
+      var keyMap = {
+        fullName:  shared.name,
+        age:       shared.age      != null ? String(shared.age)      : '',
+        ageMonths: shared.ageMonths != null ? String(shared.ageMonths) : '',
+        weight:    shared.weight   != null ? String(shared.weight)   : '',
+        height:    shared.height   != null ? String(shared.height)   : '',
+        sex:       shared.sex      || ''
+      };
+
+      var changed = false;
+      PATIENT_FIELDS.forEach(function (id) {
+        var val = keyMap[id];
+        if (val == null || val === '') return;
+        var el = document.getElementById(id);
+        if (!el || el.value === val) return;
+        el.value = val;
+        changed = true;
+        try { el.dispatchEvent(new Event('input',  { bubbles: true })); } catch (_) {}
+        try { el.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+      });
+
+      if (changed) {
+        // Odśwież obliczenia klirens po wstawieniu danych pacjenta
+        if (typeof window.clcrUpdate === 'function') {
+          try { window.clcrUpdate(); } catch (_) {}
+        } else if (typeof window.update === 'function') {
+          try { window.update(); } catch (_) {}
+        }
+        // Odśwież chip pacjenta w headerze (VildaChrome)
+        var vc = window.VildaChrome;
+        if (vc && typeof vc.refreshPatientChip === 'function') {
+          try { vc.refreshPatientChip(); } catch (_) {}
+        }
+      }
+    } catch (_) {}
+  }
+
+  // Uruchamiamy po DOMContentLoaded z opóźnieniem 50ms — dłuższym niż
+  // setTimeout(restoreClcrSession, 0) w kodzie klirens, dzięki czemu
+  // nasze re-apply działa po zakończeniu session restore.
+  function scheduleReapply() {
+    setTimeout(reapplySharedPatient, 50);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', scheduleReapply);
+  } else {
+    scheduleReapply();
+  }
+})();
+// ---------------------------------------------------------------------------
+// Synchronizacja danych pacjenta ze shared storage → formularz HOMA-IR
+//
+// Synchronizacja JEDNOSTRONNA (read-only):
+//   - czytamy sharedUserData z VildaPersistence (zapisanego przez inne strony)
+//   - wypełniamy pola HOMA tylko przy pustych wartościach
+//   - NIGDY nie zapisujemy wartości z formularza HOMA z powrotem do shared
+//
+// Dlaczego nie używamy userData.js:
+//   HOMA używa wartości 'boy'/'girl' dla #sex, podczas gdy shared przechowuje
+//   'M'/'F'. Gdyby userData.js działał dwukierunkowo, zapisałby 'boy'/'girl'
+//   do sharedUserData i zepsuł synchronizację na wszystkich pozostałych stronach.
+//
+// Co synchronizujemy:
+//   shared.age (liczba) → #age (tylko jeśli ≤ 18)
+//   shared.sex ('M'/'F') → #sex ('boy'/'girl')
+//   shared.tannerStage (1–5) → #stage ('pre'/'pub'/'full')
+//   [pochodna] age ≤ 18  → #groupToggle (checked) + #childFields (visible)
+//
+// Co pomijamy: #glucose, #insulin — to dane pomiarowe HOMA, nie pacjenta.
+(function () {
+  if (typeof window === 'undefined') return;
+  var path = window.location.pathname || '';
+  if (path.indexOf('homa-ir') === -1) return;
+
+  // Mapowanie płci: format shared → format HOMA
+  var SEX_MAP = { M: 'boy', F: 'girl' };
+  // Mapowanie etapu dojrzewania: Tanner 1–5 → HOMA 3 grupy.
+  // Tanner II–IV trafiają do "pub" (pokwitanie), V do "full" (plateau dojrzałości).
+  var TANNER_MAP = { '1': 'pre', '2': 'pub', '3': 'pub', '4': 'pub', '5': 'full' };
+
+  function applySharedPatientToHoma() {
+    try {
+      var pers = window.VildaPersistence;
+      if (!pers || typeof pers.readShared !== 'function') return;
+
+      var shared = pers.readShared({ ensurePersist: false });
+      if (!shared) return;
+
+      var sharedAge = shared.age != null ? parseInt(shared.age, 10) : null;
+      var homaSex   = SEX_MAP[shared.sex] || '';  // 'M'→'boy', 'F'→'girl'
+
+      // Synchronizacja dotyczy WYŁĄCZNIE trybu dziecięcego (wiek 1–18 lat).
+      // Dla dorosłych pacjentów formularz pozostaje pusty — lekarz uzupełnia ręcznie.
+      var isChild = sharedAge != null && !isNaN(sharedAge) && sharedAge >= 1 && sharedAge <= 18;
+      if (!isChild) return;
+
+      var changed = false;
+
+      // 1. Włącz tryb „Dziecko" (groupToggle + rozwinięcie childFields)
+      var toggle     = document.getElementById('groupToggle');
+      var childFields = document.getElementById('childFields');
+      if (toggle && !toggle.checked) {
+        toggle.checked = true;
+        if (childFields) childFields.style.maxHeight = '400px';
+        // Dispatch zmiany, żeby HOMA zaktualizował wewnętrzny stan UI
+        try { toggle.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+        changed = true;
+      }
+
+      // 2. Ustaw wiek — tylko gdy pole jest puste (nie nadpisujemy ręcznych wpisów)
+      var ageEl = document.getElementById('age');
+      if (ageEl && !ageEl.value) {
+        ageEl.value = String(sharedAge);
+        try { ageEl.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
+        changed = true;
+      }
+
+      // 3. Ustaw płeć z konwersją M/F → boy/girl — tylko gdy pole jest puste
+      var sexEl = document.getElementById('sex');
+      if (sexEl && homaSex && !sexEl.value) {
+        sexEl.value = homaSex;
+        try { sexEl.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+        changed = true;
+      }
+
+      // 4. Ustaw etap dojrzewania z konwersją Tanner 1–5 → pre/pub/full —
+      //    tylko gdy pole jest puste, żeby nie nadpisywać ręcznego wyboru.
+      var stageEl = document.getElementById('stage');
+      var sharedTanner = shared.tannerStage != null ? String(shared.tannerStage).trim() : '';
+      var mappedStage = sharedTanner ? TANNER_MAP[sharedTanner] : '';
+      if (stageEl && mappedStage && !stageEl.value) {
+        stageEl.value = mappedStage;
+        try { stageEl.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+        changed = true;
+      }
+
+      // 5. Przelicz HOMA jeśli wypełniono jakiekolwiek pole pacjenta
+      if (changed && typeof window.computeHoma === 'function') {
+        try { window.computeHoma(true); } catch (_) {}
+      }
+    } catch (_) {}
+  }
+
+  // HOMA nie ma mechanizmu session restore (w odróżnieniu od klirens),
+  // więc można uruchomić synchronizację bezpośrednio przy DOMContentLoaded.
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', applySharedPatientToHoma);
+  } else {
+    applySharedPatientToHoma();
+  }
+})();
