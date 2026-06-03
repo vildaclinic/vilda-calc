@@ -2974,7 +2974,7 @@
     // .vilda-auth-overlay-sheet (z-index:1000000), więc tutaj 1000001 explicit.
     const overlay = el('div', {
       class: 'vilda-auth-overlay vilda-auth-overlay-sheet vilda-patient-note-editor-overlay',
-      style: 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000001;padding:20px;'
+      style: 'position:fixed;inset:0;height:100dvh;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000001;padding:20px;box-sizing:border-box;'
     });
 
     const sheet = el('div', {
@@ -5219,7 +5219,7 @@
 
     var overlay = el('div', {
       class: 'vilda-auth-overlay vilda-auth-overlay-sheet vilda-quick-measure-overlay',
-      style: 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000001;padding:20px;'
+      style: 'position:fixed;inset:0;height:100dvh;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000001;padding:20px;box-sizing:border-box;'
     });
 
     var sheet = el('div', {
