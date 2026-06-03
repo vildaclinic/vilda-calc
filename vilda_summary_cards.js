@@ -140,7 +140,16 @@
   // pacjenta z vault lub jest < 2 pomiarów — karta się chowa. Wszystkie ścieżki
   // (applyLoadedData, vilda:patient-loaded, vilda:measurement-changed) wołają tę
   // funkcję; argument `data` jest IGNOROWANY — źródłem prawdy jest vault.
-  function _hidePrevSummaryCard(){
+  // GŁĘBOKA ANALIZA (2026-06-03): klucz reload-survival może być czyszczony
+  // WYŁĄCZNIE przy DEFINITYWNYM końcu kontekstu porównania (opts.clearKey=true):
+  //   • werdykt z eventu z pewnym pid (pacjent bez historii → karta nie dotyczy),
+  //   • wylogowanie/„Wyczyść wszystkie pola" (user-state-cleared),
+  //   • ręczne „Odtwórz zapis" (state-restored).
+  // Hide'y PRZEJŚCIOWE — brak pid, vault zamknięty, nieudany/pusty fetch tuż po
+  // unlocku gdy cloud-sync jeszcze nie dostarczył pacjentów — NIE czyszczą klucza.
+  // Poprzednia wersja czyściła przy KAŻDYM hide i takie przejściowe wywołanie
+  // przy boocie kasowało klucz zanim restore zdążył zadziałać (survival martwy).
+  function _hidePrevSummaryCard(opts){
     try {
       var w = document.getElementById('prevSummaryWrap');
       var c = document.getElementById('prevSummaryCard');
@@ -148,12 +157,9 @@
       if (c) c.style.display = 'none';
     } catch(_){}
     try { window.prevMeasurementInfo = null; } catch(_){}
-    // FIX regresu (2026-06-03): schowanie karty = koniec kontekstu porównania,
-    // więc klucz reload-survival MUSI zniknąć razem z kartą. Bez tego np. po
-    // wczytaniu pacjenta BEZ historii (dyspozytor chowa kartę) klucz zostawał
-    // i po przeładowaniu wracała karta POPRZEDNIEGO pacjenta. Udany render
-    // i tak zapisze klucz na nowo.
-    try { window.sessionStorage.removeItem('vildaPrevSummaryPid'); } catch(_){}
+    if (opts && opts.clearKey) {
+      try { window.sessionStorage.removeItem('vildaPrevSummaryPid'); } catch(_){}
+    }
     // Karta znikła → wróć do pojedynczej karty „Podsumowania wyników".
     try {
       if (typeof window.updateProfessionalSummaryCard === 'function') {
@@ -161,7 +167,7 @@
       }
     } catch(_){}
   }
-  function __renderPrevSummary(patientIdFromEvent){
+  function __renderPrevSummary(patientIdFromEvent, _fromRestore){
     // Fix (wyścig): kartę odświeżają zdarzenia patient-loaded / measurement-changed.
     // window._vildaCurrentPatientId ustawia INNY listener (custom-fixes.js) na tym
     // samym evencie — bez gwarancji kolejności, więc tu bywało jeszcze null i karta
@@ -177,20 +183,25 @@
     var V = window.VildaVault;
     if (!pid || !V || typeof V.isUnlocked !== 'function' || !V.isUnlocked() ||
         typeof V.getPatient !== 'function') {
+      // Przejściowe (brak pid / vault zamknięty) → NIE czyść klucza.
       _hidePrevSummaryCard();
       return;
     }
     V.getPatient(pid).then(function(pf){
       var snaps = (pf && Array.isArray(pf.snapshots)) ? pf.snapshots : [];
       // snapshots[0] = najnowszy, [1] = poprzedni (n-1). Brak n-1 → chowamy.
-      if (snaps.length < 2 || !snaps[1] || !snaps[1].payload) { _hidePrevSummaryCard(); return; }
+      // Werdykt jest DEFINITYWNY tylko gdy wywołanie przyszło z eventu (pid pewny,
+      // vault gotowy) → wtedy czyścimy klucz (np. pacjent bez historii nie może
+      // zostawić klucza poprzedniego). Z restore (boot) brak n-1 bywa wyścigiem
+      // z cloud-sync → klucz zostaje, ponowimy przy kolejnym triggerze.
+      if (snaps.length < 2 || !snaps[1] || !snaps[1].payload) { _hidePrevSummaryCard({ clearKey: !_fromRestore }); return; }
       _renderPrevSummaryFromPayload(snaps[1].payload);
       // Reload-survival: utrwal pid (sessionStorage = per karta przeglądarki).
       // Po przeładowaniu strony przywrócimy kartę ze ŚWIEŻYMI danymi z vaulta.
       try { window.sessionStorage.setItem('vildaPrevSummaryPid', pid); } catch(_){}
       try { window.prevMeasurementInfo = __pickLastMeasurement(snaps[1].payload); } catch(_){}
       try { if (typeof window.updatePrevSummaryDiff === 'function') window.updatePrevSummaryDiff(); } catch(_){}
-    }).catch(function(){ _hidePrevSummaryCard(); });
+    }).catch(function(){ _hidePrevSummaryCard(); }); // błąd fetchu = przejściowy → bez clearKey
   }
   // Nasłuch: odśwież kartę przy wczytaniu pacjenta i każdej zmianie pomiarów;
   // schowaj przy wyczyszczeniu sesji/wylogowaniu.
@@ -205,7 +216,7 @@
     // wszystkie pola" nie chowały karty tą drogą i nie zdejmowały klucza
     // reload-survival). Rejestrujemy na OBU obiektach; _hidePrevSummaryCard
     // usuwa też klucz sessionStorage.
-    var _onUserStateCleared = function(){ _hidePrevSummaryCard(); };
+    var _onUserStateCleared = function(){ _hidePrevSummaryCard({ clearKey: true }); };
     document.addEventListener('vilda:user-state-cleared', _onUserStateCleared);
     window.addEventListener('vilda:user-state-cleared', _onUserStateCleared);
     // ── Reload-survival karty „Ostatni pomiar" (decyzja UX 2026-06-03) ──────────
@@ -223,7 +234,7 @@
         if (!pid) return;
         var V = window.VildaVault;
         if (!V || typeof V.isUnlocked !== 'function' || !V.isUnlocked()) return; // ponowimy na auth-hidden
-        __renderPrevSummary(pid);
+        __renderPrevSummary(pid, true); // _fromRestore=true: hide'y NIE czyszczą klucza
       } catch(_){}
     };
     document.addEventListener('vilda:auth-hidden', _restorePrevSummaryFromSession);
@@ -233,7 +244,12 @@
     // UKRYTA (oryginalne UX sprzed reload-survival) i nie wracać po reloadzie.
     // Wcześniej ten listener RENDEROWAŁ kartę — przez co „Odtwórz zapis"
     // wskrzeszał ją wbrew projektowi.
-    document.addEventListener('vilda:state-restored', function () { _hidePrevSummaryCard(); });
+    document.addEventListener('vilda:state-restored', function () { _hidePrevSummaryCard({ clearKey: true }); });
+    // Retry: po unlocku w trybie cloud-only pacjenci dosypują się asynchronicznie —
+    // pierwszy restore mógł trafić w pustkę. Idempotentny ponów na zmianie statusu
+    // synchronizacji (nadawca może użyć window lub document → nasłuch na obu).
+    document.addEventListener('vilda:sync-status-changed', _restorePrevSummaryFromSession);
+    window.addEventListener('vilda:sync-status-changed', _restorePrevSummaryFromSession);
     if (document.readyState !== 'loading') setTimeout(_restorePrevSummaryFromSession, 0);
     else document.addEventListener('DOMContentLoaded', function(){ setTimeout(_restorePrevSummaryFromSession, 0); });
   }
