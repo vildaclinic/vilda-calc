@@ -250,6 +250,37 @@
     // synchronizacji (nadawca może użyć window lub document → nasłuch na obu).
     document.addEventListener('vilda:sync-status-changed', _restorePrevSummaryFromSession);
     window.addEventListener('vilda:sync-status-changed', _restorePrevSummaryFromSession);
+    // ── Natychmiastowe wyrównanie pary karta „Ostatni pomiar" ↔ formularz ──────
+    // Formularz DORASTA asynchronicznie po wczytaniu pacjenta (debounced
+    // przeliczenia, pola warunkowe), więc jednorazowy pomiar przy renderze karty
+    // bywał za wczesny, a korekta przychodziła dopiero z późniejszych wywołań
+    // (kilkusekundowy lag widoczny dla użytkownika). ResizeObserver na fieldsecie
+    // formularza wyrównuje od razu przy KAŻDEJ zmianie jego wysokości
+    // (rAF-throttle; brak pętli: adjust zmienia wysokość KARTY, nie formularza).
+    try {
+      if (typeof ResizeObserver === 'function') {
+        var _prevHeightRaf = 0;
+        var _schedulePrevHeight = function(){
+          if (_prevHeightRaf) return;
+          var raf = window.requestAnimationFrame || function(f){ return setTimeout(f, 16); };
+          _prevHeightRaf = raf(function(){
+            _prevHeightRaf = 0;
+            try { if (typeof window.adjustPrevSummaryHeight === 'function') window.adjustPrevSummaryHeight(); } catch(_){}
+          });
+        };
+        var _bindFormResizeObs = function(){
+          try {
+            var formEl = document.getElementById('calcForm');
+            var fs = formEl ? formEl.getElementsByTagName('fieldset')[0] : null;
+            if (!fs || fs.__vildaPrevHeightObserved) return;
+            fs.__vildaPrevHeightObserved = true;
+            new ResizeObserver(_schedulePrevHeight).observe(fs);
+          } catch(_){}
+        };
+        if (document.readyState !== 'loading') _bindFormResizeObs();
+        else document.addEventListener('DOMContentLoaded', _bindFormResizeObs);
+      }
+    } catch(_){}
     if (document.readyState !== 'loading') setTimeout(_restorePrevSummaryFromSession, 0);
     else document.addEventListener('DOMContentLoaded', function(){ setTimeout(_restorePrevSummaryFromSession, 0); });
   }
