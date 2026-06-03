@@ -149,7 +149,7 @@ html.vilda-pro-active .pro-sync-note {
 <script src="vilda_vault.js?v=76"></script>
 <script src="vilda_sync.js?v=10"></script>
 <script src="vilda_sync_integration.js?v=9"></script>
-<script src="vilda_auth_ui.js?v=157"></script>
+<script src="vilda_auth_ui.js?v=158"></script>
 <script src="vilda_data_safety_explainer.js?v=5"></script>
 <script src="vilda_crypto_strength_explainer.js?v=6"></script>
 <script src="vilda_pro_access.js?v=2"></script>
@@ -873,12 +873,23 @@ html.vilda-pro-active .pro-sync-note {
                       </label>
                       <select id="cloudOnlyIdleSelect" class="settings-control-select"
                               style="padding:6px 10px;border-radius:8px;border:1px solid #d7e9ec;background:#fff;font-size:0.9em;">
-                        <option value="300000">5 minut</option>
-                        <option value="600000" selected>10 minut (domyślnie)</option>
-                        <option value="900000">15 minut</option>
-                        <option value="1800000">30 minut</option>
+                        <optgroup label="Sprzęt współdzielony (gabinet, dyżurka)">
+                          <option value="300000">5 minut</option>
+                          <option value="600000" selected>10 minut (domyślnie)</option>
+                          <option value="900000">15 minut</option>
+                          <option value="1800000">30 minut</option>
+                        </optgroup>
+                        <optgroup label="Prywatne urządzenie (telefon, tablet, własny laptop)">
+                          <option value="3600000">1 godzina</option>
+                          <option value="28800000">8 godzin</option>
+                          <option value="86400000">24 godziny</option>
+                          <option value="604800000">7 dni</option>
+                        </optgroup>
                       </select>
                     </div>
+                    <p class="settings-inline-note" style="margin-top:6px;">
+                      Dotyczy <strong>tylko tego urządzenia</strong> (nie synchronizuje się). Długie okna (godziny/dni) wybieraj wyłącznie na <strong>prywatnym</strong> sprzęcie — nie na współdzielonym. Zamknięcie przeglądarki i tak wylogowuje.
+                    </p>
                   </div>
                 </div><!-- /syncControlCard -->
               </div>
@@ -3368,6 +3379,18 @@ html.vilda-pro-active .pro-sync-note {
 
       if (trustDeviceToggle) {
         const AUI = window.VildaAuthUI;
+        const trustDeviceCard = $('trustDeviceCard');
+        // Tryb chmurowy ma PIERWSZEŃSTWO nad zaufaniem 7-dniowym: effectiveIdleMs()
+        // w chmurze zwraca „Auto-wylogowanie po bezczynności" (sekcja Synchronizacja)
+        // i całkowicie ignoruje flagę „ufam urządzeniu". Żeby UI nie był mylący,
+        // w trybie chmurowym kartę zostawiamy widoczną, ale WYSZARZONĄ i zablokowaną
+        // z wyjaśnieniem (zamiast obiecywać 7 dni, które i tak nie zadziałają).
+        const isCloudMode = function () {
+          try {
+            const V = window.VildaVault;
+            return !!(V && typeof V.isCloudOnlyMode === 'function' && V.isCloudOnlyMode());
+          } catch (_) { return false; }
+        };
         const refreshTrustStatus = function () {
           const on = !!(AUI && typeof AUI.isTrustedDevice === 'function' && AUI.isTrustedDevice());
           trustDeviceToggle.checked = on;
@@ -3378,6 +3401,15 @@ html.vilda-pro-active .pro-sync-note {
         if (!AUI || typeof AUI.setTrustedDevice !== 'function') {
           trustDeviceToggle.disabled = true;
           setText(trustDeviceStatus, 'Ta opcja wymaga nowszej wersji aplikacji.');
+        } else if (isCloudMode()) {
+          // Wyszarzenie + blokada + wyjaśnienie (chmura wygrywa).
+          if (trustDeviceCard) {
+            trustDeviceCard.style.opacity = '0.55';
+            trustDeviceCard.style.pointerEvents = 'none';
+          }
+          trustDeviceToggle.disabled = true;
+          trustDeviceToggle.checked = false;
+          setText(trustDeviceStatus, 'Nieaktywne w trybie chmurowym. Obowiązuje „Auto-wylogowanie po bezczynności" ustawione w sekcji Synchronizacja — to ustawienie ma pierwszeństwo (bezpieczeństwo na współdzielonym sprzęcie).');
         } else {
           refreshTrustStatus();
           trustDeviceToggle.addEventListener('change', function () {
