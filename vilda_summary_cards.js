@@ -614,6 +614,14 @@
         window.updateProfessionalSummaryCard();
       }
     } catch(_){}
+    // Wyrównaj wysokość karty „Ostatni pomiar" z kartą formularza OD RAZU po
+    // pokazaniu karty (po „Wczytaj pacjenta"), a nie dopiero gdy użytkownik
+    // wpisze dane i pierwsze przeliczenie podsumowania ją wywoła.
+    try {
+      if (typeof window.adjustPrevSummaryHeight === 'function') {
+        window.adjustPrevSummaryHeight();
+      }
+    } catch(_){}
     // Oznacz, że podsumowanie poprzedniego pomiaru zostało poprawnie załadowane.
     // Dzięki temu będziemy mogli decydować, czy karta powinna być wyświetlana
     // podczas modyfikacji formularza – karta ma się pojawiać tylko po wczytaniu
