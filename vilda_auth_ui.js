@@ -45,6 +45,14 @@
   let logoutBtnEl = null;
   let pendingSetupOptions = null;
   let idleHandlersBound = false;
+  let visibilityIdleGuardBound = false;
+  // Znacznik OSTATNIEJ aktywności użytkownika (wall-clock). Używany przez
+  // strażnika visibilitychange/pageshow: timery w kartach w tle są dławione /
+  // wstrzymywane (mobile, bfcache), więc po powrocie do karty porównujemy
+  // realny zegar z efektywnym oknem i — gdy przekroczone — blokujemy OD RAZU,
+  // zanim spóźniony setTimeout zdąży strzelić. Strażnik może blokadę tylko
+  // PRZYSPIESZYĆ, nigdy opóźnić.
+  let _lastActivityAtMs = Date.now();
   // UWAGA: vilda_vault.lock() zeruje currentUserId PRZED wywołaniem notifyLock(),
   // więc getCurrentUser() w onLock zawsze zwraca null. Śledzimy userId sami —
   // aktualizujemy w onUnlock, używamy w onLock, zerujemy po użyciu.
@@ -7735,12 +7743,49 @@
     const V = getVault();
     if (!V) return;
     const handler = function () {
+      _lastActivityAtMs = Date.now();
       try { V.resetIdleTimer(); } catch (_) {}
+      // Aktywność przesuwa też TTL sesji w sessionStorage (dławione w vaulcie
+      // do 1 zapisu/min; no-op gdy zablokowany). Bez tego TTL liczył się od
+      // logowania/nawigacji i F5 po >20 min AKTYWNEJ pracy wylogowywał.
+      try {
+        if (typeof V.refreshPersistedSession === 'function') V.refreshPersistedSession();
+      } catch (_) {}
     };
     IDLE_EVENTS.forEach(function (evName) {
       try { global.document.addEventListener(evName, handler, { passive: true }); } catch (_) {}
     });
     idleHandlersBound = true;
+  }
+
+  // Strażnik powrotu do karty: przeglądarki dławią/wstrzymują timery kart w tle
+  // (Chrome intensive throttling, iOS zamraża JS, bfcache pauzuje stronę), więc
+  // sam setTimeout nie gwarantuje blokady na czas. Po powrocie (visibilitychange
+  // →visible oraz pageshow z bfcache) porównujemy zegar ścienny z efektywnym
+  // oknem i przekroczenie blokuje natychmiast — stare dane nie migną.
+  function checkIdleOnReturn() {
+    const V = getVault();
+    if (!V || typeof V.isUnlocked !== 'function' || !V.isUnlocked()) return;
+    if ((Date.now() - _lastActivityAtMs) > effectiveIdleMs()) {
+      try { V.lock('idle'); } catch (_) {}
+    }
+  }
+
+  function bindVisibilityIdleGuard() {
+    if (visibilityIdleGuardBound || !global.document) return;
+    try {
+      global.document.addEventListener('visibilitychange', function () {
+        if (global.document.visibilityState === 'visible') checkIdleOnReturn();
+      });
+    } catch (_) {}
+    try {
+      // pageshow z persisted=true = wskrzeszenie z bfcache — vault wraca
+      // odblokowany w pamięci, timery były zapauzowane. Sprawdzamy zegar.
+      global.addEventListener('pageshow', function (e) {
+        if (e && e.persisted) checkIdleOnReturn();
+      });
+    } catch (_) {}
+    visibilityIdleGuardBound = true;
   }
 
   // ── „Ufam temu urządzeniu" — preferencja per-urządzenie ──────────────────────
@@ -7772,7 +7817,14 @@
     if (CLOUD_ONLY_IDLE_CHOICES_MS.indexOf(n) < 0) return false;
     try { if (global.localStorage) global.localStorage.setItem(CLOUD_ONLY_IDLE_PREF_KEY, String(n)); } catch (_) {}
     const V = getVault();
-    try { if (V && V.isUnlocked()) V.startIdleTimer(effectiveIdleMs()); } catch (_) {}
+    try {
+      if (V && V.isUnlocked()) {
+        V.startIdleTimer(effectiveIdleMs());
+        // Nowe okno (zwłaszcza KRÓTSZE — sprzęt współdzielony) ma obowiązywać
+        // w TTL sesji od razu, nie dopiero przy następnej nawigacji.
+        if (typeof V.refreshPersistedSession === 'function') V.refreshPersistedSession(true);
+      }
+    } catch (_) {}
     return true;
   }
 
@@ -7805,7 +7857,14 @@
       }
     } catch (_) {}
     const V = getVault();
-    try { if (V && V.isUnlocked()) V.startIdleTimer(effectiveIdleMs()); } catch (_) {}
+    try {
+      if (V && V.isUnlocked()) {
+        V.startIdleTimer(effectiveIdleMs());
+        // Wyłączenie zaufania = powrót do 20 min — TTL sesji w sessionStorage
+        // też ma się skrócić natychmiast (bezpieczeństwo > wygoda).
+        if (typeof V.refreshPersistedSession === 'function') V.refreshPersistedSession(true);
+      }
+    } catch (_) {}
     return isTrustedDevice();
   }
 
@@ -7813,6 +7872,9 @@
     const V = getVault();
     if (!V) return;
     bindIdleHandlers();
+    bindVisibilityIdleGuard();
+    // Start nadzoru = punkt odniesienia bezczynności (unlock to gest usera).
+    _lastActivityAtMs = Date.now();
     try { V.startIdleTimer(effectiveIdleMs()); } catch (_) {}
   }
 
@@ -7830,6 +7892,16 @@
       logWarn('boot: brak VildaVault/VildaCrypto, pomijam UI.');
       return;
     }
+    // MUSI być PRZED tryRestoreSession: vault liczy TTL sesji (expiresAtISO)
+    // w persistSession() wołanym wewnątrz restore — bez providera użyłby
+    // surowego idleTimeoutMs (= sztywne 20 min w świeżym kontekście strony),
+    // ignorując „Auto-wylogowanie po bezczynności" i „Ufam temu urządzeniu".
+    try {
+      const V0 = getVault();
+      if (typeof V0.setIdleConfigProvider === 'function') {
+        V0.setIdleConfigProvider(effectiveIdleMs);
+      }
+    } catch (_) {}
     ensureRoot();
 
     try {
