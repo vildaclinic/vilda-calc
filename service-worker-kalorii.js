@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '0.9.937';
+const SW_VERSION = '0.9.938';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -338,6 +338,7 @@ const CORE_SHELL_URLS = [
   '/vilda_auth_ui.js?v=169',
   '/vilda_auth_ui.js?v=170',
   '/vilda_auth_ui.js?v=171',
+  '/vilda_auth_ui.js?v=172',
   '/vilda_chrome.js?v=8',
   '/vilda_chrome.js?v=11',
   '/vilda_chrome.js?v=12',
@@ -364,6 +365,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=34',
   '/vilda_chrome.js?v=35',
   '/vilda_chrome.js?v=36',
+  '/vilda_chrome.js?v=37',
   '/vilda_chrome.css?v=11',
   '/vilda_chrome.css?v=12',
   '/vilda_chrome.css?v=15',
@@ -431,6 +433,7 @@ const CORE_SHELL_URLS = [
   '/vilda_data_import_export.js?v=21',
   '/vilda_data_import_export.js?v=22',
   '/vilda_data_import_export.js?v=25',
+  '/vilda_data_import_export.js?v=26',
   '/vilda_advanced_growth.js',
   '/vilda_advanced_growth.js?v=16',
   '/vilda_estimated_intake.js',
@@ -444,6 +447,7 @@ const CORE_SHELL_URLS = [
   '/vilda_persist_runtime.js?v=3',
   '/vilda_persist_runtime.js?v=4',
   '/vilda_persist_runtime.js?v=5',
+  '/vilda_persist_runtime.js?v=6',
   '/vilda_summary_cards.js',
   '/vilda_summary_cards.js?v=2',
   '/vilda_summary_cards.js?v=3',
@@ -457,6 +461,7 @@ const CORE_SHELL_URLS = [
   '/vilda_summary_cards.js?v=11',
   '/vilda_summary_cards.js?v=12',
   '/vilda_summary_cards.js?v=13',
+  '/vilda_summary_cards.js?v=14',
   '/vilda_diet_plan_ui.js',
   '/vilda_diet_plan_ui.js?v=1',
   '/vilda_estimated_intake_ui.js',
