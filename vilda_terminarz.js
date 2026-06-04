@@ -26,7 +26,7 @@
 (function (global) {
   'use strict';
 
-  var VERSION = '1.3.0';
+  var VERSION = '1.3.2';
   var doc = global.document;
   if (!doc) return;
 
@@ -242,7 +242,13 @@
     + '.tz-modal h3{margin:0;font-size:1.05rem;font-weight:600;color:#0f2b33;}'
     + '.tz-modal label{display:block;font-size:0.78rem;color:#5b6672;margin-bottom:4px;font-weight:500;}'
     + '.tz-modal input[type="text"],.tz-modal input[type="date"]{width:100%;height:38px;padding:0 10px;font-size:0.92rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;box-sizing:border-box;}'
-    + '.tz-nt-list{border:0.5px solid #d7e9ec;border-radius:8px;max-height:158px;overflow-y:auto;margin-top:5px;}'
+    /* Combobox pacjenta: lista NIE jest widoczna od razu i NIE wydłuża modala —
+     * dropdown absolute NAD kolejnymi polami (z-index), pokazywany po fokusie. */
+    + '.tz-nt-combo{position:relative;}'
+    + '.tz-nt-list{display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:40;'
+    + 'background:#fff;border:0.5px solid #d7e9ec;border-radius:8px;max-height:158px;overflow-y:auto;'
+    + 'box-shadow:0 10px 30px rgba(0,60,80,0.18);}'
+    + '.tz-nt-list.is-open{display:block;}'
     + '.tz-nt-item{padding:7px 10px;font-size:0.88rem;cursor:pointer;color:#0f2b33;}'
     + '.tz-nt-item:hover{background:#f2fafb;}'
     + '.tz-nt-item.is-sel{background:#e6f5f6;color:#00606a;font-weight:600;}'
@@ -327,6 +333,9 @@
     + '.tz-cell__add{display:none !important;}'
     + '.tz-modal-overlay{align-items:flex-end;padding:0;}'
     + '.tz-modal{max-width:none;border-radius:14px 14px 0 0;max-height:86vh;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px));}'
+    /* iOS: pole z font-size <16px wywołuje auto-zoom przy fokusie — na mobile
+     * KAŻDE pole modalu ma >=16px (wzorzec _preventIosFocusZoom z auth UI). */
+    + '.tz-modal input[type="text"],.tz-modal input[type="date"]{font-size:16px !important;height:42px;}'
     + '}';
 
   function injectCss() {
@@ -494,8 +503,10 @@
       + '<div class="tz-modal" role="dialog" aria-modal="true" aria-label="Nowy termin">'
       + '<h3>Nowy termin</h3>'
       + '<div><label for="tzNtSearch">Pacjent</label>'
+      + '<div class="tz-nt-combo">'
       + '<input type="text" id="tzNtSearch" autocomplete="off" placeholder="Szukaj pacjenta…">'
-      + '<div class="tz-nt-list" id="tzNtList"><div class="tz-nt-empty">Wczytuję pacjentów…</div></div></div>'
+      + '<div class="tz-nt-list" id="tzNtList"><div class="tz-nt-empty">Wczytuję pacjentów…</div></div>'
+      + '</div></div>'
       + '<div><label for="tzNtTitle">Tytuł</label>'
       + '<input type="text" id="tzNtTitle" autocomplete="off" value="Wizyta kontrolna"></div>'
       + '<div><label>Kategoria</label><div class="tz-ntcats" id="tzNtCats">'
@@ -526,6 +537,11 @@
 
     function showErr(msg) { errEl.textContent = msg; errEl.style.display = 'block'; }
     function clearErr() { errEl.textContent = ''; errEl.style.display = 'none'; }
+    // Dropdown: lista NIE jest widoczna od razu (otwiera ją fokus/wpisywanie)
+    // i NIE wydłuża modala — absolute nad kolejnymi polami (patrz CSS .tz-nt-list).
+    function openList() { listEl.classList.add('is-open'); }
+    function closeList() { listEl.classList.remove('is-open'); }
+    function isListOpen() { return listEl.classList.contains('is-open'); }
 
     function renderList() {
       if (!allPatients) return;
@@ -548,12 +564,15 @@
       var items = listEl.querySelectorAll('.tz-nt-item');
       for (var j = 0; j < items.length; j += 1) {
         (function (it) {
-          it.addEventListener('click', function () {
+          // mousedown (nie click): wybór MUSI wyprzedzić blur inputa — przy click
+          // blur zdążyłby schować listę zanim klik dotrze do elementu.
+          it.addEventListener('mousedown', function (ev) {
+            ev.preventDefault();
             selPid = it.getAttribute('data-pid');
             selName = it.getAttribute('data-name');
             searchEl.value = selName;
             clearErr();
-            renderList();
+            closeList();
           });
         })(items[j]);
       }
@@ -575,7 +594,10 @@
       // Edycja tekstu unieważnia wybór, jeśli przestał pasować.
       if (selName && searchEl.value !== selName) { selPid = null; selName = null; }
       renderList();
+      openList();
     });
+    searchEl.addEventListener('focus', function () { renderList(); openList(); });
+    searchEl.addEventListener('blur', function () { closeList(); });
 
     var catBtns = overlay.querySelectorAll('.tz-ntcat[data-cat]');
     for (var cb = 0; cb < catBtns.length; cb += 1) {
@@ -632,11 +654,17 @@
     overlay.querySelector('#tzNtCancel').addEventListener('click', closeNewTermModal);
     overlay.addEventListener('click', function (ev) { if (ev.target === overlay) closeNewTermModal(); });
     doc.addEventListener('keydown', function onEsc(ev) {
-      if (ev.key === 'Escape') { closeNewTermModal(); doc.removeEventListener('keydown', onEsc); }
+      if (ev.key !== 'Escape') return;
+      if (!doc.getElementById('tzNewTermOverlay')) { doc.removeEventListener('keydown', onEsc); return; }
+      // Escape najpierw zamyka dropdown pacjenta, dopiero drugi — cały modal.
+      if (isListOpen()) { closeList(); return; }
+      closeNewTermModal();
+      doc.removeEventListener('keydown', onEsc);
     });
 
     doc.body.appendChild(overlay);
-    try { searchEl.focus(); } catch (_) {}
+    // BEZ autofokusu: fokus otwiera dropdown pacjenta (ma być schowany do czasu
+    // interakcji), a na mobile wystrzeliwałby klawiaturę przy każdym otwarciu.
   }
 
   function closePostponeMenus() {
