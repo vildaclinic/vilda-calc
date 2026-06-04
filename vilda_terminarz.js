@@ -26,7 +26,7 @@
 (function (global) {
   'use strict';
 
-  var VERSION = '1.3.2';
+  var VERSION = '1.4.0';
   var doc = global.document;
   if (!doc) return;
 
@@ -142,14 +142,13 @@
     + '.terminarz-locked__icon{font-size:2rem;margin-bottom:8px;}'
     + '.terminarz-locked__title{font-weight:600;color:#0f2b33;margin:0 0 4px;}'
     + '.terminarz-locked__desc{margin:0;font-size:0.9rem;}'
-    + '.tz-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:6px 0 14px;}'
-    + '.tz-head h1{margin:0;font-size:1.4rem;color:#0f2b33;}'
-    + '.tz-head__sub{margin:2px 0 0;font-size:0.82rem;color:#5b6672;}'
-    + '.tz-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0 0 12px;}'
-    + '.tz-nav{display:flex;align-items:center;gap:6px;}'
+    + '.tz-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;}'
+    + '.tz-topbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0 14px;}'
+    + '.tz-topbar__sp{flex:1 1 auto;}'
+    + '.tz-nav{display:flex;align-items:center;gap:6px;min-width:0;}'
     + '.tz-nav button{border:0.5px solid #d7e9ec;background:#fff;border-radius:10px;padding:8px 14px;cursor:pointer;font-size:0.95rem;color:#0f2b33;font-weight:600;}'
     + '.tz-nav button:hover{background:#f2fafb;}'
-    + '.tz-nav .tz-month-label{min-width:170px;text-align:center;font-weight:600;color:#0f2b33;font-size:1.02rem;}'
+    + '.tz-title{font-weight:700;color:#0f2b33;font-size:1.3rem;line-height:1.2;text-align:center;padding:0 4px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}'
     + '.tz-switch{display:flex;border:0.5px solid #d7e9ec;border-radius:10px;overflow:hidden;}'
     + '.tz-switch button{border:0;background:#fff;padding:8px 14px;font-size:0.85rem;color:#5b6672;cursor:pointer;font-weight:600;}'
     + '.tz-switch button.is-active{background:#00838d;color:#fff;}'
@@ -269,7 +268,11 @@
     + '.tz-holiday-line{background:#fef2f2;border:0.5px solid #fecaca;color:#991b1b;border-radius:10px;padding:8px 12px;font-size:0.82rem;font-weight:600;margin:0 0 10px;}'
     + '@media (max-width:700px){.tz-cell{min-height:58px;padding:4px;}.tz-grid .tz-chip{display:none;}.tz-cell__holiday{display:none;}'
     + '.tz-cell__dots{display:flex;gap:2px;margin-top:3px;flex-wrap:wrap;}'
-    + '.tz-nav .tz-month-label{min-width:120px;font-size:0.92rem;}}'
+    + '.tz-nav{width:100%;justify-content:center;}'
+    + '.tz-title{font-size:1.05rem;}'
+    + '.tz-topbar__sp{display:none;}'
+    + '.tz-switch{width:100%;}'
+    + '.tz-switch button{flex:1 1 0;}}'
     + '.tz-cell__dots{display:flex;gap:3px;margin-top:4px;flex-wrap:wrap;}'
     + '.tz-dot{width:7px;height:7px;border-radius:50%;background:#00838d;display:inline-block;}'
     + '.tz-dot.tz-cat-treatment{background:#7c5cd6;}.tz-dot.tz-cat-observation{background:#0ea5e9;}.tz-dot.tz-cat-wynik{background:#b45309;}.tz-dot.is-done{opacity:0.4;}'
@@ -771,22 +774,25 @@
   }
 
   function headerHtml() {
+    // H2 (decyzja UX 2026-06-05): miesiąc/tydzień/dzień JEST tytułem strony —
+    // jedna linia: ‹ tytuł › Dziś · przełącznik · + Nowy termin. Bez podtytułu;
+    // nazwę strony niesie sidebar, a dla czytników ekranu ukryty <h1>.
     var prevLbl = state.view === 'month' ? 'Poprzedni miesiąc' : (state.view === 'week' ? 'Poprzedni tydzień' : 'Poprzedni dzień');
     var nextLbl = state.view === 'month' ? 'Następny miesiąc' : (state.view === 'week' ? 'Następny tydzień' : 'Następny dzień');
     return ''
-      + '<div class="tz-head">'
-      + '<div><h1>Terminarz kliniczny</h1>'
-      + '<p class="tz-head__sub">Kontrole i zadania per pacjent — z notatek z terminem. To nie jest kalendarz wizyt.</p></div>'
+      + '<h1 class="tz-sr">Terminarz kliniczny</h1>'
+      + '<div class="tz-topbar">'
+      + '<div class="tz-nav">'
+      + '<button type="button" id="tzPrev" aria-label="' + prevLbl + '">‹</button>'
+      + '<span class="tz-title">' + esc(navLabel()) + '</span>'
+      + '<button type="button" id="tzNext" aria-label="' + nextLbl + '">›</button>'
+      + '<button type="button" id="tzToday">Dziś</button>'
+      + '</div>'
+      + '<span class="tz-topbar__sp"></span>'
       + '<div class="tz-switch" role="tablist" aria-label="Widok terminarza">'
       + '<button type="button" data-view="month" class="' + (state.view === 'month' ? 'is-active' : '') + '">Miesiąc</button>'
       + '<button type="button" data-view="week" class="' + (state.view === 'week' ? 'is-active' : '') + '">Tydzień</button>'
       + '<button type="button" data-view="day" class="' + (state.view === 'day' ? 'is-active' : '') + '">Dzień</button>'
-      + '</div></div>'
-      + '<div class="tz-bar"><div class="tz-nav">'
-      + '<button type="button" id="tzPrev" aria-label="' + prevLbl + '">‹</button>'
-      + '<span class="tz-month-label">' + esc(navLabel()) + '</span>'
-      + '<button type="button" id="tzNext" aria-label="' + nextLbl + '">›</button>'
-      + '<button type="button" id="tzToday">Dziś</button>'
       + '</div>'
       + '<button type="button" id="tzAddBtn" class="tz-add-btn">+ Nowy termin</button>'
       + '</div>';
