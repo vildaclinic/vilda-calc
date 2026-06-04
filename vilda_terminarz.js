@@ -26,7 +26,7 @@
 (function (global) {
   'use strict';
 
-  var VERSION = '1.1.0';
+  var VERSION = '1.1.1';
   var doc = global.document;
   if (!doc) return;
 
@@ -180,7 +180,33 @@
     + '.tz-nav .tz-month-label{min-width:120px;font-size:0.92rem;}}'
     + '.tz-cell__dots{display:flex;gap:3px;margin-top:4px;flex-wrap:wrap;}'
     + '.tz-dot{width:7px;height:7px;border-radius:50%;background:#00838d;display:inline-block;}'
-    + '.tz-dot.tz-cat-treatment{background:#7c5cd6;}.tz-dot.tz-cat-observation{background:#0ea5e9;}.tz-dot.tz-cat-wynik{background:#b45309;}.tz-dot.is-done{opacity:0.4;}';
+    + '.tz-dot.tz-cat-treatment{background:#7c5cd6;}.tz-dot.tz-cat-observation{background:#0ea5e9;}.tz-dot.tz-cat-wynik{background:#b45309;}.tz-dot.is-done{opacity:0.4;}'
+    /* ── KONTRA Liquid iOS26 (ios26-v2.css): `.liquid-ios26 button{...!important}`
+     * maluje WSZYSTKIE przyciski na szklane kapsułki (bg/border/radius/shadow/
+     * backdrop z !important). Wyższa specyficzność + !important przywraca projekt
+     * terminarza. Menu „Przełóż" wisi na <body> — stąd osobny selektor bez shell. ── */
+    + '.liquid-ios26 .terminarz-shell .tz-nav button,'
+    + '.liquid-ios26 .terminarz-shell .tz-actions button,'
+    + '.liquid-ios26 .terminarz-shell .tz-card__open,'
+    + '.liquid-ios26 .terminarz-shell .tz-day-panel h2 button,'
+    + '.liquid-ios26 .tz-postpone-menu button{'
+    + 'background:#fff !important;border:0.5px solid #d7e9ec !important;color:#0f2b33 !important;'
+    + 'border-radius:10px !important;box-shadow:none !important;'
+    + 'backdrop-filter:none !important;-webkit-backdrop-filter:none !important;transition:background-color 120ms ease !important;}'
+    + '.liquid-ios26 .terminarz-shell .tz-nav button:hover,'
+    + '.liquid-ios26 .terminarz-shell .tz-actions button:hover,'
+    + '.liquid-ios26 .terminarz-shell .tz-card__open:hover,'
+    + '.liquid-ios26 .tz-postpone-menu button:hover{background:#f2fafb !important;}'
+    + '.liquid-ios26 .terminarz-shell .tz-actions button{border-radius:8px !important;}'
+    + '.liquid-ios26 .terminarz-shell .tz-actions .tz-done-btn{border-color:#00838d !important;color:#00838d !important;}'
+    + '.liquid-ios26 .terminarz-shell .tz-card__open,'
+    + '.liquid-ios26 .terminarz-shell .tz-day-panel h2 button{border-radius:8px !important;color:#00838d !important;}'
+    + '.liquid-ios26 .tz-postpone-menu button{border:0 !important;border-radius:7px !important;text-align:left !important;}'
+    + '.liquid-ios26 .terminarz-shell .tz-switch button{'
+    + 'background:#fff !important;border:0 !important;border-radius:0 !important;color:#5b6672 !important;'
+    + 'box-shadow:none !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;}'
+    + '.liquid-ios26 .terminarz-shell .tz-switch button.is-active{background:#00838d !important;color:#fff !important;}'
+    + '.liquid-ios26 .terminarz-shell .tz-switch button:not(.is-active):hover{background:#f2fafb !important;}';
 
   function injectCss() {
     if (doc.getElementById('vildaTerminarzCss')) return;
