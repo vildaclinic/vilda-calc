@@ -26,7 +26,7 @@
 (function (global) {
   'use strict';
 
-  var VERSION = '1.4.1';
+  var VERSION = '1.4.2';
   var doc = global.document;
   if (!doc) return;
 
@@ -149,6 +149,7 @@
     + '.tz-nav button{border:0.5px solid #d7e9ec;background:#fff;border-radius:10px;padding:8px 14px;cursor:pointer;font-size:0.95rem;color:#0f2b33;font-weight:600;}'
     + '.tz-nav button:hover{background:#f2fafb;}'
     + '.tz-title{font-weight:700;color:#0f2b33;font-size:1.3rem;line-height:1.2;text-align:left;padding:0 0 0 8px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}'
+    + '.tz-today-m{display:none;}'
     + '.tz-switch{display:flex;border:0.5px solid #d7e9ec;border-radius:10px;overflow:hidden;}'
     + '.tz-switch button{border:0;background:#fff;padding:8px 14px;font-size:0.85rem;color:#5b6672;cursor:pointer;font-weight:600;}'
     + '.tz-switch button.is-active{background:#00838d;color:#fff;}'
@@ -268,10 +269,16 @@
     + '.tz-holiday-line{background:#fef2f2;border:0.5px solid #fecaca;color:#991b1b;border-radius:10px;padding:8px 12px;font-size:0.82rem;font-weight:600;margin:0 0 10px;}'
     + '@media (max-width:700px){.tz-cell{min-height:58px;padding:4px;}.tz-grid .tz-chip{display:none;}.tz-cell__holiday{display:none;}'
     + '.tz-cell__dots{display:flex;gap:2px;margin-top:3px;flex-wrap:wrap;}'
-    + '.tz-nav{width:100%;justify-content:flex-start;}'
-    + '.tz-title{font-size:1.05rem;flex:1 1 auto;}'
+    /* M2 (2026-06-05): linia 1 = ‹ tytuł › rozsunięte do KRAWĘDZI (strzałki w
+     * stałych punktach, tytuł pełny i wyśrodkowany); linia 2 = Dziś + przełącznik. */
+    + '.tz-nav{width:100%;justify-content:space-between;}'
+    + '.tz-nav #tzToday{display:none;}'
+    + '.tz-nav #tzPrev{order:1;}'
+    + '.tz-title{order:2;flex:1 1 auto;text-align:center;font-size:1.05rem;padding:0 6px;}'
+    + '.tz-nav #tzNext{order:3;}'
+    + '.tz-today-m{display:inline-flex;align-items:center;}'
     + '.tz-topbar__sp{display:none;}'
-    + '.tz-switch{width:100%;}'
+    + '.tz-switch{flex:1 1 auto;width:auto;}'
     + '.tz-switch button{flex:1 1 0;}}'
     + '.tz-cell__dots{display:flex;gap:3px;margin-top:4px;flex-wrap:wrap;}'
     + '.tz-dot{width:7px;height:7px;border-radius:50%;background:#00838d;display:inline-block;}'
@@ -281,13 +288,18 @@
      * backdrop z !important). Wyższa specyficzność + !important przywraca projekt
      * terminarza. Menu „Przełóż" wisi na <body> — stąd osobny selektor bez shell. ── */
     + '.liquid-ios26 .terminarz-shell .tz-nav button,'
+    + '.liquid-ios26 .terminarz-shell .tz-today-m,'
     + '.liquid-ios26 .terminarz-shell .tz-actions button,'
     + '.liquid-ios26 .terminarz-shell .tz-card__open,'
     + '.liquid-ios26 .terminarz-shell .tz-day-panel h2 button,'
     + '.liquid-ios26 .tz-postpone-menu button{'
     + 'background:#fff !important;border:0.5px solid #d7e9ec !important;color:#0f2b33 !important;'
     + 'border-radius:10px !important;box-shadow:none !important;'
+    /* width/flex: globalne reguły mobile rozciągają <button> na całą linię —
+     * to ścisnęło tytuł do „C…”. Przyciski nav mają sztywny rozmiar treści. */
+    + 'width:auto !important;flex:0 0 auto !important;'
     + 'backdrop-filter:none !important;-webkit-backdrop-filter:none !important;transition:background-color 120ms ease !important;}'
+    + '.liquid-ios26 .terminarz-shell .tz-today-m{padding:8px 14px !important;font-size:0.95rem !important;font-weight:600 !important;cursor:pointer;}'
     + '.liquid-ios26 .terminarz-shell .tz-nav button:hover,'
     + '.liquid-ios26 .terminarz-shell .tz-actions button:hover,'
     + '.liquid-ios26 .terminarz-shell .tz-card__open:hover,'
@@ -792,6 +804,10 @@
       + '<span class="tz-title">' + esc(navLabel()) + '</span>'
       + '</div>'
       + '<span class="tz-topbar__sp"></span>'
+      // M2 mobile: „Dziś" w linii przełącznika (w pierwszej linii zostają tylko
+      // ‹ tytuł › rozsunięte do krawędzi). Na desktopie ukryty — tam działa
+      // tzToday w .tz-nav.
+      + '<button type="button" id="tzTodayM" class="tz-today-m">Dziś</button>'
       + '<div class="tz-switch" role="tablist" aria-label="Widok terminarza">'
       + '<button type="button" data-view="month" class="' + (state.view === 'month' ? 'is-active' : '') + '">Miesiąc</button>'
       + '<button type="button" data-view="week" class="' + (state.view === 'week' ? 'is-active' : '') + '">Tydzień</button>'
@@ -1048,11 +1064,14 @@
     var tdy = doc.getElementById('tzToday');
     if (prev) prev.addEventListener('click', function () { shiftAnchor(-1); });
     if (next) next.addEventListener('click', function () { shiftAnchor(1); });
-    if (tdy) tdy.addEventListener('click', function () {
+    var goToday = function () {
       state.anchorISO = todayISO();
       state.selectedISO = todayISO();
       refresh();
-    });
+    };
+    if (tdy) tdy.addEventListener('click', goToday);
+    var tdyM = doc.getElementById('tzTodayM');
+    if (tdyM) tdyM.addEventListener('click', goToday);
     var oh = doc.getElementById('tzOverdueHead');
     if (oh) oh.addEventListener('click', function () {
       var box = doc.getElementById('tzOverdue');
