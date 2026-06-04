@@ -788,16 +788,56 @@ function vildaCustomHasHtmlContent(element) {
     // zniknął z vilda_chrome.js (duplikował formularz główny).
     var loggedIn    = isVaultUnlocked();
 
-    // Dla niezalogowanych przycisk Zapisz jest zawsze wyszarzony.
-    // Dla zalogowanych — kopiujemy stan z przycisku nagłówkowego (jeśli istnieje).
+    // ── „Zapisz dane" — CENTRALNY, żywy warunek (UX 2026-06-04) ─────────────────
+    // Dotąd: nagłówkowego #saveDataBtn nikt nigdy nie wyszarzał, a sidebar tylko
+    // lustrzył jego (martwy) stan — więc dla zalogowanych przyciski wyglądały na
+    // aktywne nawet przy pustym formularzu, a porażkę user odkrywał dopiero po
+    // kliknięciu. Teraz liczymy DOKŁADNIE te same wymagania, które waliduje
+    // saveUserData (wiek + waga + wzrost, potem imię, login) i stosujemy do OBU
+    // przycisków. Wzorzec soft-disabled: szary + aria-disabled + data-tip z tym
+    // samym komunikatem co walidacja; klik nadal działa i pokazuje tooltip.
+    var saveReason = null; // null = zapis możliwy
+    try {
+      var svNameEl = document.getElementById('name');
+      var svAgeEl = document.getElementById('age');
+      var svAgeMoEl = document.getElementById('ageMonths');
+      var svWeightEl = document.getElementById('weight');
+      var svHeightEl = document.getElementById('height');
+      var svAv = svAgeEl ? parseFloat(svAgeEl.value) : NaN;
+      var svMv = svAgeMoEl ? parseFloat(svAgeMoEl.value) : NaN;
+      var svAgeOk = (isFinite(svAv) && svAv >= 0) || (isFinite(svMv) && svMv >= 0);
+      var svWOk = !!(svWeightEl && isFinite(parseFloat(svWeightEl.value)) && parseFloat(svWeightEl.value) > 0);
+      var svHOk = !!(svHeightEl && isFinite(parseFloat(svHeightEl.value)) && parseFloat(svHeightEl.value) > 0);
+      var svNOk = !!(svNameEl && svNameEl.value && svNameEl.value.trim().length);
+      if (!loggedIn) saveReason = 'Zaloguj się, aby zapisywać dane pacjentów.';
+      else if (!(svAgeOk && svWOk && svHOk)) saveReason = 'Uzupełnij: wiek, wagę i wzrost przed zapisem.';
+      else if (!svNOk) saveReason = 'Podaj „Imię i Nazwisko” przed zapisem.';
+    } catch (_) { saveReason = null; }
+
     if (sidebarSave) {
-      var saveDisabled = !loggedIn || (headerSave && (headerSave.disabled || headerSave.hasAttribute('disabled')));
-      if (saveDisabled) {
+      if (saveReason) {
         sidebarSave.setAttribute('disabled', '');
         sidebarSave.setAttribute('aria-disabled', 'true');
+        sidebarSave.setAttribute('data-tip', saveReason);
       } else {
         sidebarSave.removeAttribute('disabled');
         sidebarSave.removeAttribute('aria-disabled');
+        sidebarSave.removeAttribute('data-tip');
+      }
+    }
+    if (headerSave) {
+      // CELOWO bez natywnego `disabled` — <button disabled> nie emituje kliknięć,
+      // a klik MA działać (saveUserData pokaże tooltip z konkretnym powodem).
+      if (saveReason) {
+        headerSave.setAttribute('aria-disabled', 'true');
+        headerSave.classList.add('vilda-save-soft-disabled');
+        headerSave.setAttribute('data-tip', saveReason);
+        headerSave.setAttribute('title', saveReason);
+      } else {
+        headerSave.removeAttribute('aria-disabled');
+        headerSave.classList.remove('vilda-save-soft-disabled');
+        headerSave.removeAttribute('data-tip');
+        headerSave.removeAttribute('title');
       }
     }
 
@@ -840,6 +880,17 @@ function vildaCustomHasHtmlContent(element) {
     if (sidebarSave)     sidebarSave._cfBound = true;
     if (sidebarPatients) sidebarPatients._cfBound = true;
     if (sidebarAddNote)  sidebarAddNote._cfBound = true;
+
+    // Styl soft-disabled dla nagłówkowego „Zapisz dane" (bez natywnego disabled,
+    // żeby klik dalej działał i tooltip wyjaśniał powód).
+    try {
+      if (!document.getElementById('vildaSaveSoftDisabledCss')) {
+        var svSt = document.createElement('style');
+        svSt.id = 'vildaSaveSoftDisabledCss';
+        svSt.textContent = '.vilda-save-soft-disabled{opacity:.55 !important;filter:grayscale(35%);cursor:not-allowed !important;}';
+        document.head.appendChild(svSt);
+      }
+    } catch (_) {}
 
     // Na starcie wyrównaj stan disabled z przyciskami w menu hamburgera
     syncSidebarMenuState();
