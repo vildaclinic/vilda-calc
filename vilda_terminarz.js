@@ -26,7 +26,7 @@
 (function (global) {
   'use strict';
 
-  var VERSION = '1.4.0';
+  var VERSION = '1.4.1';
   var doc = global.document;
   if (!doc) return;
 
@@ -148,7 +148,7 @@
     + '.tz-nav{display:flex;align-items:center;gap:6px;min-width:0;}'
     + '.tz-nav button{border:0.5px solid #d7e9ec;background:#fff;border-radius:10px;padding:8px 14px;cursor:pointer;font-size:0.95rem;color:#0f2b33;font-weight:600;}'
     + '.tz-nav button:hover{background:#f2fafb;}'
-    + '.tz-title{font-weight:700;color:#0f2b33;font-size:1.3rem;line-height:1.2;text-align:center;padding:0 4px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}'
+    + '.tz-title{font-weight:700;color:#0f2b33;font-size:1.3rem;line-height:1.2;text-align:left;padding:0 0 0 8px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}'
     + '.tz-switch{display:flex;border:0.5px solid #d7e9ec;border-radius:10px;overflow:hidden;}'
     + '.tz-switch button{border:0;background:#fff;padding:8px 14px;font-size:0.85rem;color:#5b6672;cursor:pointer;font-weight:600;}'
     + '.tz-switch button.is-active{background:#00838d;color:#fff;}'
@@ -268,8 +268,8 @@
     + '.tz-holiday-line{background:#fef2f2;border:0.5px solid #fecaca;color:#991b1b;border-radius:10px;padding:8px 12px;font-size:0.82rem;font-weight:600;margin:0 0 10px;}'
     + '@media (max-width:700px){.tz-cell{min-height:58px;padding:4px;}.tz-grid .tz-chip{display:none;}.tz-cell__holiday{display:none;}'
     + '.tz-cell__dots{display:flex;gap:2px;margin-top:3px;flex-wrap:wrap;}'
-    + '.tz-nav{width:100%;justify-content:center;}'
-    + '.tz-title{font-size:1.05rem;}'
+    + '.tz-nav{width:100%;justify-content:flex-start;}'
+    + '.tz-title{font-size:1.05rem;flex:1 1 auto;}'
     + '.tz-topbar__sp{display:none;}'
     + '.tz-switch{width:100%;}'
     + '.tz-switch button{flex:1 1 0;}}'
@@ -782,11 +782,14 @@
     return ''
       + '<h1 class="tz-sr">Terminarz kliniczny</h1>'
       + '<div class="tz-topbar">'
+      // Strzałki OBOK SIEBIE przed tytułem (wzorzec Google Calendar): zmienna
+      // długość etykiety (Czerwiec/Październik, zakresy tygodnia, pełne daty
+      // dnia) nie może przesuwać przycisków pod kursorem przy przewijaniu.
       + '<div class="tz-nav">'
       + '<button type="button" id="tzPrev" aria-label="' + prevLbl + '">‹</button>'
-      + '<span class="tz-title">' + esc(navLabel()) + '</span>'
       + '<button type="button" id="tzNext" aria-label="' + nextLbl + '">›</button>'
       + '<button type="button" id="tzToday">Dziś</button>'
+      + '<span class="tz-title">' + esc(navLabel()) + '</span>'
       + '</div>'
       + '<span class="tz-topbar__sp"></span>'
       + '<div class="tz-switch" role="tablist" aria-label="Widok terminarza">'
