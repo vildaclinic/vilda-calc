@@ -26,7 +26,7 @@
 (function (global) {
   'use strict';
 
-  var VERSION = '1.1.1';
+  var VERSION = '1.2.0';
   var doc = global.document;
   if (!doc) return;
 
@@ -39,6 +39,59 @@
   var CAT_LABEL = { followup: 'Kontrola', observation: 'Obserwacja', treatment: 'Leczenie', 'wynik-badania': 'Wynik badania' };
   var CAT_CLASS = { followup: 'tz-cat-followup', observation: 'tz-cat-observation', treatment: 'tz-cat-treatment', 'wynik-badania': 'tz-cat-wynik' };
   var VIEW_KEY = 'vilda-terminarz-view-v1'; // flaga UI (bez treści medycznej)
+
+  // ── Święta państwowe PL (dni ustawowo wolne od pracy) — liczone LOKALNIE ────
+  // Stałe + ruchome od Wielkanocy (algorytm Meeusa/Jonesa/Butchera). Wigilia
+  // (24.12) ustawowo wolna od 2025 r. (ustawa z 6.12.2024). Czysta arytmetyka
+  // dat — zero sieci, zero magazynów, zero danych medycznych.
+  var _holidayCache = {};
+  function easterSunday(y) {
+    var a = y % 19;
+    var b = Math.floor(y / 100);
+    var c = y % 100;
+    var d = Math.floor(b / 4);
+    var e = b % 4;
+    var f = Math.floor((b + 8) / 25);
+    var g = Math.floor((b - f + 1) / 3);
+    var h = (19 * a + b - d - g + 15) % 30;
+    var i = Math.floor(c / 4);
+    var k = c % 4;
+    var l = (32 + 2 * e + 2 * i - h - k) % 7;
+    var m = Math.floor((a + 11 * h + 22 * l) / 451);
+    var month = Math.floor((h + l - 7 * m + 114) / 31); // 3=marzec, 4=kwiecień
+    var day = ((h + l - 7 * m + 114) % 31) + 1;
+    return new Date(y, month - 1, day);
+  }
+  function plHolidaysForYear(y) {
+    if (_holidayCache[y]) return _holidayCache[y];
+    var map = {};
+    function put(d, name) { map[dayISO(d)] = name; }
+    function fromEaster(days) {
+      var e0 = easterSunday(y);
+      return new Date(e0.getFullYear(), e0.getMonth(), e0.getDate() + days);
+    }
+    put(new Date(y, 0, 1), 'Nowy Rok');
+    put(new Date(y, 0, 6), 'Trzech Króli');
+    put(fromEaster(0), 'Wielkanoc');
+    put(fromEaster(1), 'Poniedziałek Wielkanocny');
+    put(fromEaster(49), 'Zielone Świątki');
+    put(fromEaster(60), 'Boże Ciało');
+    put(new Date(y, 4, 1), 'Święto Pracy');
+    put(new Date(y, 4, 3), 'Konstytucji 3 Maja');
+    put(new Date(y, 7, 15), 'Wniebowzięcie NMP');
+    put(new Date(y, 10, 1), 'Wszystkich Świętych');
+    put(new Date(y, 10, 11), 'Święto Niepodległości');
+    if (y >= 2025) put(new Date(y, 11, 24), 'Wigilia');
+    put(new Date(y, 11, 25), 'Boże Narodzenie');
+    put(new Date(y, 11, 26), '2. dzień Świąt');
+    _holidayCache[y] = map;
+    return map;
+  }
+  function holidayName(iso) {
+    var y = parseInt(String(iso || '').slice(0, 4), 10);
+    if (!isFinite(y)) return null;
+    return plHolidaysForYear(y)[String(iso).slice(0, 10)] || null;
+  }
 
   var state = {
     inited: false,
@@ -175,7 +228,16 @@
     + '.tz-card__open{border:0.5px solid #d7e9ec;background:#fff;border-radius:8px;padding:4px 10px;font-size:0.74rem;cursor:pointer;color:#00838d;font-weight:600;flex:0 0 auto;}'
     + '.tz-card__open:hover{background:#f2fafb;}'
     + '.tz-card .tz-row{padding:7px 0;}'
-    + '@media (max-width:700px){.tz-cell{min-height:58px;padding:4px;}.tz-grid .tz-chip{display:none;}'
+    /* ── Święta państwowe: czerwone oznaczenia w trzech widokach ── */
+    + '.tz-cell.is-holiday .tz-cell__num{color:#b91c1c;}'
+    + '.tz-cell.is-today.is-holiday .tz-cell__num{color:#fff;}'
+    + '.tz-cell__holiday{display:block;font-size:0.62rem;color:#b91c1c;font-weight:600;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}'
+    + '.tz-wcol.is-holiday .tz-wcol__num{color:#b91c1c;}'
+    + '.tz-wcol.is-today.is-holiday .tz-wcol__num{color:#fff;}'
+    + '.tz-wcol__holiday{font-size:0.66rem;color:#b91c1c;font-weight:600;padding:1px 2px 0;line-height:1.15;}'
+    + '.tz-holiday-inline{color:#b91c1c;font-weight:600;font-size:0.78rem;}'
+    + '.tz-holiday-line{background:#fef2f2;border:0.5px solid #fecaca;color:#991b1b;border-radius:10px;padding:8px 12px;font-size:0.82rem;font-weight:600;margin:0 0 10px;}'
+    + '@media (max-width:700px){.tz-cell{min-height:58px;padding:4px;}.tz-grid .tz-chip{display:none;}.tz-cell__holiday{display:none;}'
     + '.tz-cell__dots{display:flex;gap:2px;margin-top:3px;flex-wrap:wrap;}'
     + '.tz-nav .tz-month-label{min-width:120px;font-size:0.92rem;}}'
     + '.tz-cell__dots{display:flex;gap:3px;margin-top:4px;flex-wrap:wrap;}'
@@ -488,9 +550,12 @@
       var iso = dayISO(d);
       var inMonth = d.getMonth() === month;
       var items = state.notesByDay[iso] || [];
+      var hol = holidayName(iso);
       var cls = 'tz-cell' + (inMonth ? '' : ' is-other') + (iso === tISO ? ' is-today' : '')
-        + (iso === state.selectedISO ? ' is-selected' : '');
-      html += '<div class="' + cls + '" data-day="' + iso + '"><span class="tz-cell__num">' + d.getDate() + '</span>';
+        + (iso === state.selectedISO ? ' is-selected' : '') + (hol ? ' is-holiday' : '');
+      html += '<div class="' + cls + '" data-day="' + iso + '"' + (hol ? ' title="' + esc(hol) + '"' : '') + '>'
+        + '<span class="tz-cell__num">' + d.getDate() + '</span>';
+      if (hol) html += '<span class="tz-cell__holiday">' + esc(hol) + '</span>';
       if (items.length) {
         // Desktop: do 2 chipów + „+N"; mobile (CSS): kropki.
         for (var c = 0; c < Math.min(items.length, 2); c += 1) {
@@ -513,7 +578,9 @@
     var tISO2 = todayISO();
     var sel = state.selectedISO || tISO2;
     var dayItems = state.notesByDay[sel] || [];
-    html += '<div class="tz-day-panel"><h2><span>' + esc(plDate(sel)) + (sel === tISO2 ? ' (dziś)' : '') + '</span>'
+    var selHol = holidayName(sel);
+    html += '<div class="tz-day-panel"><h2><span>' + esc(plDate(sel)) + (sel === tISO2 ? ' (dziś)' : '')
+      + (selHol ? ' · <span class="tz-holiday-inline">' + esc(selHol) + '</span>' : '') + '</span>'
       + '<button type="button" id="tzOpenDayView" data-day="' + esc(sel) + '">Otwórz widok dnia →</button></h2>';
     if (!dayItems.length) {
       html += '<div class="tz-empty">Brak terminów tego dnia. Dodaj „follow-up" z karty pacjenta (Notatki → termin).</div>';
@@ -541,10 +608,12 @@
     weekDays().forEach(function (d, idx) {
       var iso = dayISO(d);
       var items = state.notesByDay[iso] || [];
-      html += '<div class="tz-wcol' + (iso === tISO ? ' is-today' : '') + '">'
-        + '<div class="tz-wcol__head" data-goto-day="' + iso + '">' + WEEKDAYS[idx]
+      var hol = holidayName(iso);
+      html += '<div class="tz-wcol' + (iso === tISO ? ' is-today' : '') + (hol ? ' is-holiday' : '') + '">'
+        + '<div class="tz-wcol__head" data-goto-day="' + iso + '"' + (hol ? ' title="' + esc(hol) + '"' : '') + '>' + WEEKDAYS[idx]
         + '<span class="tz-wcol__num">' + d.getDate() + '</span></div>'
         + '<div class="tz-wcol__body" data-goto-day="' + iso + '">';
+      if (hol) html += '<span class="tz-wcol__holiday">' + esc(hol) + '</span>';
       items.forEach(function (n) {
         html += '<span class="tz-chip ' + (CAT_CLASS[n.category] || '') + (n.completedAtISO ? ' is-done' : '') + '">'
           + esc((n.patientName || '').split(' ')[0] || '') + ' · ' + esc(n.title || '') + '</span>';
@@ -563,14 +632,17 @@
     weekDays().forEach(function (d, idx) {
       var iso = dayISO(d);
       var items = state.notesByDay[iso] || [];
+      var hol = holidayName(iso);
       var label = WEEKDAYS_FULL[idx] + ' ' + d.getDate() + '.' + pad(d.getMonth() + 1);
       if (!items.length) {
-        html += '<div class="tz-agenda__empty">' + esc(label) + (iso === tISO ? ' (dziś)' : '') + ' — brak terminów</div>';
+        html += '<div class="tz-agenda__empty">' + esc(label) + (iso === tISO ? ' (dziś)' : '')
+          + (hol ? ' · <span class="tz-holiday-inline">' + esc(hol) + '</span>' : '') + ' — brak terminów</div>';
         return;
       }
       html += '<div class="tz-agenda__dayh">'
         + (iso === tISO ? '<span class="tz-badge--today">dziś</span>' : '')
         + '<span>' + esc(label) + '</span>'
+        + (hol ? '<span class="tz-holiday-inline">· ' + esc(hol) + '</span>' : '')
         + '<span style="color:#9aa8aa;font-weight:400;font-size:0.76rem;">· ' + items.length + '</span></div>';
       items.forEach(function (n) { lookup[n.id] = n; html += noteRowHtml(n, {}); });
     });
@@ -590,10 +662,15 @@
     return { pending: pending, done: done, overdue: overdue };
   }
 
+  function dayHolidayLineHtml() {
+    var hol = holidayName(state.anchorISO);
+    return hol ? '<div class="tz-holiday-line">★ ' + esc(hol) + ' — dzień ustawowo wolny od pracy</div>' : '';
+  }
+
   function dayChecklistHtml(lookup) {
     // D1: checklista zaległe → dziś → wykonane.
     var s = daySplit();
-    var html = '<div class="tz-day-panel">';
+    var html = dayHolidayLineHtml() + '<div class="tz-day-panel">';
     if (s.overdue.length) {
       html += '<div class="tz-sec-h is-overdue">Zaległe · ' + s.overdue.length + '</div>';
       s.overdue.forEach(function (n) { lookup[n.id] = n; html += noteRowHtml(n, { withDate: true, overdue: true }); });
@@ -624,12 +701,12 @@
   function dayCardsHtml(lookup) {
     // D2: karty per pacjent; zaległe (tylko dziś) jako bursztynowe karty na czele.
     var s = daySplit();
-    var html = '';
+    var html = dayHolidayLineHtml();
     var groups = [];
     groupByPatient(s.overdue).forEach(function (g) { g._overdue = true; groups.push(g); });
     groupByPatient(s.pending.concat(s.done)).forEach(function (g) { groups.push(g); });
     if (!groups.length) {
-      return '<div class="tz-day-panel"><div class="tz-empty">Brak terminów tego dnia. Dodaj „follow-up" z karty pacjenta (🔔 Przypomnij).</div></div>';
+      return html + '<div class="tz-day-panel"><div class="tz-empty">Brak terminów tego dnia. Dodaj „follow-up" z karty pacjenta (🔔 Przypomnij).</div></div>';
     }
     html += '<div class="tz-cards">';
     groups.forEach(function (g) {
