@@ -1,1 +1,469 @@
-(function(v){"use strict";var q="1.0.0",d=v.document;if(!d)return;var W=["Stycze\u0144","Luty","Marzec","Kwiecie\u0144","Maj","Czerwiec","Lipiec","Sierpie\u0144","Wrzesie\u0144","Pa\u017Adziernik","Listopad","Grudzie\u0144"],K=["Pn","Wt","\u015Ar","Cz","Pt","So","Nd"],Z={followup:"Kontrola",observation:"Obserwacja",treatment:"Leczenie","wynik-badania":"Wynik badania"},N={followup:"tz-cat-followup",observation:"tz-cat-observation",treatment:"tz-cat-treatment","wynik-badania":"tz-cat-wynik"},o={inited:!1,year:null,month:null,selectedISO:null,notesByDay:{},overdue:[],loading:!1};function m(){return v.VildaVault||null}function w(){var t=m();return!!(t&&typeof t.isUnlocked=="function"&&t.isUnlocked())}function L(t){return t<10?"0"+t:String(t)}function x(t){return t.getFullYear()+"-"+L(t.getMonth()+1)+"-"+L(t.getDate())}function k(){return x(new Date)}function I(t){return t&&t.dueDateISO?String(t.dueDateISO).slice(0,10):null}function z(t){return String(t??"").replace(/[&<>"']/g,function(e){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[e]})}function A(t){var e=String(t||"").match(/^(\d{4})-(\d{2})-(\d{2})/);return e?e[3]+"."+e[2]+"."+e[1]:""}var G=".terminarz-shell{max-width:980px;margin:0 auto;padding:8px 0 40px;}.terminarz-locked{text-align:center;padding:64px 16px;color:#5b6672;}.terminarz-locked__icon{font-size:2rem;margin-bottom:8px;}.terminarz-locked__title{font-weight:600;color:#0f2b33;margin:0 0 4px;}.terminarz-locked__desc{margin:0;font-size:0.9rem;}.tz-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:6px 0 14px;}.tz-head h1{margin:0;font-size:1.4rem;color:#0f2b33;}.tz-head__sub{margin:2px 0 0;font-size:0.82rem;color:#5b6672;}.tz-nav{display:flex;align-items:center;gap:6px;}.tz-nav button{border:0.5px solid #d7e9ec;background:#fff;border-radius:10px;padding:8px 14px;cursor:pointer;font-size:0.95rem;color:#0f2b33;font-weight:600;}.tz-nav button:hover{background:#f2fafb;}.tz-nav .tz-month-label{min-width:170px;text-align:center;font-weight:600;color:#0f2b33;font-size:1.02rem;}.tz-overdue{background:#fff7ed;border:1px solid #fdba74;border-radius:12px;padding:10px 14px;margin:0 0 14px;}.tz-overdue__head{display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;font-weight:600;color:#9a3412;}.tz-overdue__list{margin:8px 0 0;display:none;}.tz-overdue.is-open .tz-overdue__list{display:block;}.tz-grid{background:#fff;border:0.5px solid #d7e9ec;border-radius:14px;overflow:hidden;}.tz-grid__week,{display:grid;}.tz-grid__head{display:grid;grid-template-columns:repeat(7,1fr);background:#f2fafb;border-bottom:0.5px solid #d7e9ec;}.tz-grid__head div{padding:8px 6px;text-align:center;font-size:0.75rem;font-weight:600;color:#5b6672;text-transform:uppercase;letter-spacing:0.04em;}.tz-grid__body{display:grid;grid-template-columns:repeat(7,1fr);}.tz-cell{min-height:92px;border-bottom:0.5px solid #e7f1f3;border-right:0.5px solid #e7f1f3;padding:6px;cursor:pointer;position:relative;background:#fff;transition:background .12s;}.tz-cell:nth-child(7n){border-right:0;}.tz-cell:hover{background:#f7fcfd;}.tz-cell.is-other{background:#fafcfc;color:#9aa8aa;}.tz-cell.is-selected{background:#e6f5f6;box-shadow:inset 0 0 0 2px #00838d;border-radius:8px;}.tz-cell__num{font-size:0.82rem;font-weight:600;color:#0f2b33;display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;border-radius:12px;}.tz-cell.is-other .tz-cell__num{color:#9aa8aa;}.tz-cell.is-today .tz-cell__num{background:#00838d;color:#fff;}.tz-chip{display:block;margin-top:3px;font-size:0.7rem;line-height:1.25;padding:2px 6px;border-radius:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#0f2b33;background:#eef6f7;border-left:3px solid #00838d;}.tz-chip.is-done{opacity:0.55;text-decoration:line-through;}.tz-chip.tz-cat-treatment{border-left-color:#7c5cd6;}.tz-chip.tz-cat-observation{border-left-color:#0ea5e9;}.tz-chip.tz-cat-wynik{border-left-color:#b45309;}.tz-chip--more{background:transparent;border-left:0;color:#5b6672;font-weight:600;}.tz-day-panel{margin-top:14px;background:#fff;border:0.5px solid #d7e9ec;border-radius:14px;padding:14px 16px;}.tz-day-panel h2{margin:0 0 10px;font-size:1.02rem;color:#0f2b33;}.tz-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:0.5px solid #eef4f5;}.tz-row:last-child{border-bottom:0;}.tz-row.is-done .tz-row__title{ text-decoration:line-through;opacity:0.6;}.tz-row__main{min-width:0;}.tz-row__patient{font-weight:600;color:#00838d;font-size:0.88rem;}.tz-row__title{color:#0f2b33;font-size:0.92rem;margin-top:1px;word-break:break-word;}.tz-row__meta{font-size:0.75rem;color:#5b6672;margin-top:2px;}.tz-badge{display:inline-block;font-size:0.68rem;font-weight:600;padding:1px 7px;border-radius:8px;background:#eef6f7;color:#00606a;margin-right:6px;}.tz-actions{display:flex;gap:6px;flex:0 0 auto;flex-wrap:wrap;justify-content:flex-end;}.tz-actions button{border:0.5px solid #d7e9ec;background:#fff;border-radius:8px;padding:5px 9px;font-size:0.78rem;cursor:pointer;color:#0f2b33;}.tz-actions button:hover{background:#f2fafb;}.tz-actions .tz-done-btn{border-color:#00838d;color:#00838d;font-weight:600;}.tz-empty{color:#5b6672;font-size:0.88rem;padding:6px 0;}.tz-postpone-menu{position:absolute;z-index:50;background:#fff;border:0.5px solid #d7e9ec;border-radius:10px;box-shadow:0 8px 28px rgba(0,60,80,0.18);padding:4px;}.tz-postpone-menu button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:7px 12px;border-radius:7px;cursor:pointer;font-size:0.85rem;color:#0f2b33;}.tz-postpone-menu button:hover{background:#f2fafb;}@media (max-width:700px){.tz-cell{min-height:58px;padding:4px;}.tz-chip{display:none;}.tz-cell__dots{display:flex;gap:2px;margin-top:3px;flex-wrap:wrap;}.tz-nav .tz-month-label{min-width:120px;font-size:0.92rem;}}.tz-cell__dots{display:flex;gap:3px;margin-top:4px;flex-wrap:wrap;}.tz-dot{width:7px;height:7px;border-radius:50%;background:#00838d;display:inline-block;}.tz-dot.tz-cat-treatment{background:#7c5cd6;}.tz-dot.tz-cat-observation{background:#0ea5e9;}.tz-dot.tz-cat-wynik{background:#b45309;}.tz-dot.is-done{opacity:0.4;}";function Q(){if(!d.getElementById("vildaTerminarzCss")){var t=d.createElement("style");t.id="vildaTerminarzCss",t.textContent=G,d.head.appendChild(t)}}function M(t,e){var a=new Date(t,e,1),n=(a.getDay()+6)%7,r=new Date(t,e,1-n),i=new Date(r.getFullYear(),r.getMonth(),r.getDate()+41);return{start:r,end:i}}function X(){var t=m();if(!t||typeof t.listPatientNotesInRange!="function")return Promise.resolve();var e=M(o.year,o.month);o.loading=!0;var a=x(e.start),n=x(e.end)+"T23:59:59.999Z",r=typeof t.listPatientNotesDueByDate=="function"?t.listPatientNotesDueByDate(new Date(new Date().setHours(0,0,0,-1)).toISOString()):Promise.resolve([]);return Promise.all([t.listPatientNotesInRange(a,n),r]).then(function(i){for(var p=i[0]||[],c={},f=0;f<p.length;f+=1){var s=I(p[f]);s&&(c[s]||(c[s]=[]),c[s].push(p[f]))}o.notesByDay=c;var g=[];(i[1]||[]).forEach(function(h){(h.notes||[]).forEach(function(y){g.push(Object.assign({},y,{patientName:h.patientName}))})}),o.overdue=g,o.loading=!1}).catch(function(){o.loading=!1})}function D(t){return{id:t.id,patientId:t.patientId,title:t.title||"",body:t.body||"",category:t.category,dueDateISO:t.dueDateISO||null}}function J(t){var e=m();if(!e)return Promise.resolve();var a=D(t);return a.completedAtISO=new Date().toISOString(),e.savePatientNote(a).then(u).catch(function(n){try{v.alert("Nie uda\u0142o si\u0119 oznaczy\u0107 jako wykonane: "+(n&&n.message||""))}catch{}})}function $(t){var e=m();if(!e)return Promise.resolve();var a=D(t);return a.completedAtISO=null,e.savePatientNote(a).then(u).catch(function(n){try{v.alert("Nie uda\u0142o si\u0119 cofn\u0105\u0107: "+(n&&n.message||""))}catch{}})}function tt(t,e){var a=m();if(!a)return Promise.resolve();var n=I(t)||k(),r=new Date(n+"T12:00:00"),i=new Date(r.getFullYear(),r.getMonth(),r.getDate()+e),p=D(t);return p.dueDateISO=x(i),a.savePatientNote(p).then(u).catch(function(c){try{v.alert("Nie uda\u0142o si\u0119 prze\u0142o\u017Cy\u0107: "+(c&&c.message||""))}catch{}})}function et(t){var e=v.VildaAuthUI;if(!e||typeof e.showPatientNoteEditor!="function"){try{v.alert("Edytor notatki niedost\u0119pny \u2014 od\u015Bwie\u017C stron\u0119.")}catch{}return}e.showPatientNoteEditor({patientId:t.patientId,note:t,onSaved:function(){u()}})}function E(){for(var t=d.querySelectorAll(".tz-postpone-menu"),e=0;e<t.length;e+=1)t[e].remove()}function nt(t,e){E();var a=d.createElement("div");a.className="tz-postpone-menu",[["+1 tydzie\u0144",7],["+1 miesi\u0105c",30],["+3 miesi\u0105ce",91],["+6 miesi\u0119cy",182]].forEach(function(r){var i=d.createElement("button");i.type="button",i.textContent=r[0],i.addEventListener("click",function(){E(),tt(e,r[1])}),a.appendChild(i)});var n=t.getBoundingClientRect();a.style.left=Math.max(8,n.left+v.scrollX-40)+"px",a.style.top=n.bottom+v.scrollY+4+"px",d.body.appendChild(a),setTimeout(function(){d.addEventListener("click",function r(i){a.contains(i.target)||(E(),d.removeEventListener("click",r,!0))},!0)},0)}function C(){return d.getElementById("terminarzRoot")}function B(t,e){var a=!!t.completedAtISO,n=Z[t.category]||t.category||"";return'<div class="tz-row'+(a?" is-done":"")+'" data-note-id="'+z(t.id)+'"><div class="tz-row__main"><div class="tz-row__patient">'+z(t.patientName||"")+'</div><div class="tz-row__title">'+z(t.title||t.body||"(bez tytu\u0142u)")+'</div><div class="tz-row__meta"><span class="tz-badge">'+z(n)+"</span>"+(e?"termin: "+z(A(I(t))):"")+(a?" \xB7 wykonane":"")+'</div></div><div class="tz-actions">'+(a?'<button type="button" data-act="undone">\u21BA Cofnij</button>':'<button type="button" class="tz-done-btn" data-act="done">\u2713 Wykonane</button><button type="button" data-act="postpone">\u21BB Prze\u0142\xF3\u017C</button>')+'<button type="button" data-act="edit">\u270E Edytuj</button></div></div>'}function at(t,e){for(var a=t.querySelectorAll(".tz-row"),n=0;n<a.length;n+=1)(function(r){var i=e[r.getAttribute("data-note-id")];if(i)for(var p=r.querySelectorAll("button[data-act]"),c=0;c<p.length;c+=1)(function(f){f.addEventListener("click",function(s){s.stopPropagation();var g=f.getAttribute("data-act");g==="done"?J(i):g==="undone"?$(i):g==="postpone"?nt(f,i):g==="edit"&&et(i)})})(p[c])})(a[n])}function b(){var t=C();if(t){if(!w()){ot(t);return}var e=k(),a={},n='<div class="tz-head"><div><h1>Terminarz kliniczny</h1><p class="tz-head__sub">Kontrole i zadania per pacjent \u2014 z notatek z terminem. To nie jest kalendarz wizyt.</p></div><div class="tz-nav"><button type="button" id="tzPrev" aria-label="Poprzedni miesi\u0105c">\u2039</button><span class="tz-month-label">'+W[o.month]+" "+o.year+'</span><button type="button" id="tzNext" aria-label="Nast\u0119pny miesi\u0105c">\u203A</button><button type="button" id="tzToday">Dzi\u015B</button></div></div>';o.overdue.length&&(n+='<div class="tz-overdue" id="tzOverdue"><div class="tz-overdue__head" id="tzOverdueHead"><span>\u26A0 Zaleg\u0142e: '+o.overdue.length+(o.overdue.length===1?" termin":o.overdue.length<5?" terminy":" termin\xF3w")+'</span><span>\u25BE</span></div><div class="tz-overdue__list">',o.overdue.forEach(function(l){a[l.id]=l,n+=B(l,!0)}),n+="</div></div>");var r=M(o.year,o.month);n+='<div class="tz-grid"><div class="tz-grid__head">',K.forEach(function(l){n+="<div>"+l+"</div>"}),n+='</div><div class="tz-grid__body">';for(var i=0;i<42;i+=1){var p=new Date(r.start.getFullYear(),r.start.getMonth(),r.start.getDate()+i),c=x(p),f=p.getMonth()===o.month,s=o.notesByDay[c]||[],g="tz-cell"+(f?"":" is-other")+(c===e?" is-today":"")+(c===o.selectedISO?" is-selected":"");if(n+='<div class="'+g+'" data-day="'+c+'"><span class="tz-cell__num">'+p.getDate()+"</span>",s.length){for(var h=0;h<Math.min(s.length,2);h+=1){var y=s[h];n+='<span class="tz-chip '+(N[y.category]||"")+(y.completedAtISO?" is-done":"")+'">'+z((y.patientName||"").split(" ")[0]||"")+" \xB7 "+z(y.title||"")+"</span>"}s.length>2&&(n+='<span class="tz-chip tz-chip--more">+'+(s.length-2)+"</span>"),n+='<span class="tz-cell__dots">';for(var S=0;S<Math.min(s.length,4);S+=1)n+='<span class="tz-dot '+(N[s[S].category]||"")+(s[S].completedAtISO?" is-done":"")+'"></span>';n+="</span>"}n+="</div>"}n+="</div></div>";var O=o.selectedISO||e,V=o.notesByDay[O]||[];n+='<div class="tz-day-panel"><h2>'+z(A(O))+(O===e?" (dzi\u015B)":"")+"</h2>",V.length?V.forEach(function(l){a[l.id]=l,n+=B(l,!1)}):n+='<div class="tz-empty">Brak termin\xF3w tego dnia. Dodaj \u201Efollow-up" z karty pacjenta (Notatki \u2192 termin).</div>',n+="</div>",t.innerHTML=n;var R=d.getElementById("tzPrev"),Y=d.getElementById("tzNext"),H=d.getElementById("tzToday");R&&R.addEventListener("click",function(){T(-1)}),Y&&Y.addEventListener("click",function(){T(1)}),H&&H.addEventListener("click",function(){var l=new Date;o.year=l.getFullYear(),o.month=l.getMonth(),o.selectedISO=k(),u()});var U=d.getElementById("tzOverdueHead");U&&U.addEventListener("click",function(){var l=d.getElementById("tzOverdue");l&&l.classList.toggle("is-open")});for(var F=t.querySelectorAll(".tz-cell"),P=0;P<F.length;P+=1)(function(l){l.addEventListener("click",function(){o.selectedISO=l.getAttribute("data-day"),b()})})(F[P]);at(t,a)}}function ot(t){t.innerHTML='<div class="terminarz-locked"><div class="terminarz-locked__icon">\u{1F512}</div><p class="terminarz-locked__title">Zaloguj si\u0119, aby zobaczy\u0107 terminarz</p><p class="terminarz-locked__desc">Terminy kontroli s\u0105 zaszyfrowane i dost\u0119pne tylko po odblokowaniu konta.</p></div>'}function T(t){var e=o.month+t,a=o.year;e<0&&(e=11,a-=1),e>11&&(e=0,a+=1),o.year=a,o.month=e,u()}var _=!1;function u(){if(!w()){b();return}_||(_=!0,X().then(function(){_=!1,b()}).catch(function(){_=!1,b()}))}function rt(){if(!o.inited){o.inited=!0,Q();var t=new Date;o.year=t.getFullYear(),o.month=t.getMonth(),o.selectedISO=k();var e=m();e&&(typeof e.onUnlock=="function"&&e.onUnlock(function(){u()}),typeof e.onLock=="function"&&e.onLock(function(){b()}),typeof e.onPatientNoteChanged=="function"&&e.onPatientNoteChanged(function(){u()})),d.addEventListener("vilda:auth-hidden",function(){u()}),w()?u():b();var a=0,n=setInterval(function(){a+=1,w()?(clearInterval(n),u()):a>40&&clearInterval(n)},250)}}function j(){C()&&rt()}d.readyState==="loading"?d.addEventListener("DOMContentLoaded",j):j(),v.VildaTerminarz={version:q,refresh:u}})(typeof window<"u"?window:this);
+/* ==========================================================================
+ * vilda_terminarz.js — Terminarz kliniczny (Cykl A, 2026-06-04)
+ *
+ * Prywatny follow-up lekarza: siatka MIESIĘCZNA z notatek pacjentów z terminem
+ * (dueDateISO) + pas „Zaległe" + panel wybranego dnia z akcjami. To NIE jest
+ * kalendarz wizyt/booking — wyłącznie zadania kliniczne lekarza.
+ *
+ * Dane: VildaVault.listPatientNotesInRange(from,to) (siatka, także wykonane)
+ * oraz listPatientNotesDueByDate (pas zaległych — pending z terminem < dziś).
+ * Akcje: ✓ Wykonane / ↺ Cofnij (savePatientNote z completedAtISO — vault robi
+ * merge-by-id, hasOwnProperty: ISO ustawia, null czyści, brak pola zachowuje),
+ * ↻ Przełóż (+1 tydz./+1 mies./+3 mies. → dueDateISO), ✎ Edytuj (istniejący
+ * VildaAuthUI.showPatientNoteEditor). Live-refresh: V.onPatientNoteChanged.
+ *
+ * BEZPIECZEŃSTWO DANYCH MEDYCZNYCH: terminy + nazwiska liczone lokalnie po
+ * odszyfrowaniu vaulta; moduł niczego nie zapisuje poza notatkami w vaultcie
+ * (żadnych nowych magazynów, zero plaintextu poza pamięcią strony).
+ * ========================================================================== */
+(function (global) {
+  'use strict';
+
+  var VERSION = '1.0.1';
+  var doc = global.document;
+  if (!doc) return;
+
+  var MONTHS = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec',
+    'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
+  var WEEKDAYS = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
+  var CAT_LABEL = { followup: 'Kontrola', observation: 'Obserwacja', treatment: 'Leczenie', 'wynik-badania': 'Wynik badania' };
+  var CAT_CLASS = { followup: 'tz-cat-followup', observation: 'tz-cat-observation', treatment: 'tz-cat-treatment', 'wynik-badania': 'tz-cat-wynik' };
+
+  var state = {
+    inited: false,
+    year: null,
+    month: null,           // 0-11
+    selectedISO: null,     // YYYY-MM-DD
+    notesByDay: {},        // YYYY-MM-DD -> [note+patientName]
+    overdue: [],           // płaska lista pending z terminem < dziś
+    loading: false
+  };
+
+  function getVault() { return global.VildaVault || null; }
+  function unlocked() {
+    var V = getVault();
+    return !!(V && typeof V.isUnlocked === 'function' && V.isUnlocked());
+  }
+  function pad(n) { return n < 10 ? '0' + n : String(n); }
+  function dayISO(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function todayISO() { return dayISO(new Date()); }
+  function noteDayISO(n) { return (n && n.dueDateISO) ? String(n.dueDateISO).slice(0, 10) : null; }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function plDate(iso) {
+    var m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return m ? (m[3] + '.' + m[2] + '.' + m[1]) : '';
+  }
+
+  // ── CSS (wstrzykiwane raz — bez dotykania plików .css) ─────────────────────
+  var CSS = ''
+    + '.terminarz-shell{max-width:980px;margin:0 auto;padding:8px 0 40px;}'
+    + '.terminarz-locked{text-align:center;padding:64px 16px;color:#5b6672;}'
+    + '.terminarz-locked__icon{font-size:2rem;margin-bottom:8px;}'
+    + '.terminarz-locked__title{font-weight:600;color:#0f2b33;margin:0 0 4px;}'
+    + '.terminarz-locked__desc{margin:0;font-size:0.9rem;}'
+    + '.tz-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:6px 0 14px;}'
+    + '.tz-head h1{margin:0;font-size:1.4rem;color:#0f2b33;}'
+    + '.tz-head__sub{margin:2px 0 0;font-size:0.82rem;color:#5b6672;}'
+    + '.tz-nav{display:flex;align-items:center;gap:6px;}'
+    + '.tz-nav button{border:0.5px solid #d7e9ec;background:#fff;border-radius:10px;padding:8px 14px;cursor:pointer;font-size:0.95rem;color:#0f2b33;font-weight:600;}'
+    + '.tz-nav button:hover{background:#f2fafb;}'
+    + '.tz-nav .tz-month-label{min-width:170px;text-align:center;font-weight:600;color:#0f2b33;font-size:1.02rem;}'
+    + '.tz-overdue{background:#fff7ed;border:1px solid #fdba74;border-radius:12px;padding:10px 14px;margin:0 0 14px;}'
+    + '.tz-overdue__head{display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;font-weight:600;color:#9a3412;}'
+    + '.tz-overdue__list{margin:8px 0 0;display:none;}'
+    + '.tz-overdue.is-open .tz-overdue__list{display:block;}'
+    + '.tz-grid{background:#fff;border:0.5px solid #d7e9ec;border-radius:14px;overflow:hidden;}'
+    + '.tz-grid__week,{display:grid;}'
+    + '.tz-grid__head{display:grid;grid-template-columns:repeat(7,1fr);background:#f2fafb;border-bottom:0.5px solid #d7e9ec;}'
+    + '.tz-grid__head div{padding:8px 6px;text-align:center;font-size:0.75rem;font-weight:600;color:#5b6672;text-transform:uppercase;letter-spacing:0.04em;}'
+    + '.tz-grid__body{display:grid;grid-template-columns:repeat(7,1fr);}'
+    + '.tz-cell{min-height:92px;border-bottom:0.5px solid #e7f1f3;border-right:0.5px solid #e7f1f3;padding:6px;cursor:pointer;position:relative;background:#fff;transition:background .12s;}'
+    + '.tz-cell:nth-child(7n){border-right:0;}'
+    + '.tz-cell:hover{background:#f7fcfd;}'
+    + '.tz-cell.is-other{background:#fafcfc;color:#9aa8aa;}'
+    + '.tz-cell.is-selected{background:#e6f5f6;box-shadow:inset 0 0 0 2px #00838d;border-radius:8px;}'
+    + '.tz-cell__num{font-size:0.82rem;font-weight:600;color:#0f2b33;display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;border-radius:12px;}'
+    + '.tz-cell.is-other .tz-cell__num{color:#9aa8aa;}'
+    + '.tz-cell.is-today .tz-cell__num{background:#00838d;color:#fff;}'
+    + '.tz-chip{display:block;margin-top:3px;font-size:0.7rem;line-height:1.25;padding:2px 6px;border-radius:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#0f2b33;background:#eef6f7;border-left:3px solid #00838d;}'
+    + '.tz-chip.is-done{opacity:0.55;text-decoration:line-through;}'
+    + '.tz-chip.tz-cat-treatment{border-left-color:#7c5cd6;}'
+    + '.tz-chip.tz-cat-observation{border-left-color:#0ea5e9;}'
+    + '.tz-chip.tz-cat-wynik{border-left-color:#b45309;}'
+    + '.tz-chip--more{background:transparent;border-left:0;color:#5b6672;font-weight:600;}'
+    + '.tz-day-panel{margin-top:14px;background:#fff;border:0.5px solid #d7e9ec;border-radius:14px;padding:14px 16px;}'
+    + '.tz-day-panel h2{margin:0 0 10px;font-size:1.02rem;color:#0f2b33;}'
+    + '.tz-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:0.5px solid #eef4f5;}'
+    + '.tz-row:last-child{border-bottom:0;}'
+    + '.tz-row.is-done .tz-row__title{ text-decoration:line-through;opacity:0.6;}'
+    + '.tz-row__main{min-width:0;}'
+    + '.tz-row__patient{font-weight:600;color:#00838d;font-size:0.88rem;}'
+    + '.tz-row__title{color:#0f2b33;font-size:0.92rem;margin-top:1px;word-break:break-word;}'
+    + '.tz-row__meta{font-size:0.75rem;color:#5b6672;margin-top:2px;}'
+    + '.tz-badge{display:inline-block;font-size:0.68rem;font-weight:600;padding:1px 7px;border-radius:8px;background:#eef6f7;color:#00606a;margin-right:6px;}'
+    + '.tz-actions{display:flex;gap:6px;flex:0 0 auto;flex-wrap:wrap;justify-content:flex-end;}'
+    + '.tz-actions button{border:0.5px solid #d7e9ec;background:#fff;border-radius:8px;padding:5px 9px;font-size:0.78rem;cursor:pointer;color:#0f2b33;}'
+    + '.tz-actions button:hover{background:#f2fafb;}'
+    + '.tz-actions .tz-done-btn{border-color:#00838d;color:#00838d;font-weight:600;}'
+    + '.tz-empty{color:#5b6672;font-size:0.88rem;padding:6px 0;}'
+    + '.tz-postpone-menu{position:absolute;z-index:50;background:#fff;border:0.5px solid #d7e9ec;border-radius:10px;box-shadow:0 8px 28px rgba(0,60,80,0.18);padding:4px;}'
+    + '.tz-postpone-menu button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:7px 12px;border-radius:7px;cursor:pointer;font-size:0.85rem;color:#0f2b33;}'
+    + '.tz-postpone-menu button:hover{background:#f2fafb;}'
+    + '@media (max-width:700px){.tz-cell{min-height:58px;padding:4px;}.tz-chip{display:none;}'
+    + '.tz-cell__dots{display:flex;gap:2px;margin-top:3px;flex-wrap:wrap;}'
+    + '.tz-nav .tz-month-label{min-width:120px;font-size:0.92rem;}}'
+    + '.tz-cell__dots{display:flex;gap:3px;margin-top:4px;flex-wrap:wrap;}'
+    + '.tz-dot{width:7px;height:7px;border-radius:50%;background:#00838d;display:inline-block;}'
+    + '.tz-dot.tz-cat-treatment{background:#7c5cd6;}.tz-dot.tz-cat-observation{background:#0ea5e9;}.tz-dot.tz-cat-wynik{background:#b45309;}.tz-dot.is-done{opacity:0.4;}';
+
+  function injectCss() {
+    if (doc.getElementById('vildaTerminarzCss')) return;
+    var st = doc.createElement('style');
+    st.id = 'vildaTerminarzCss';
+    st.textContent = CSS;
+    doc.head.appendChild(st);
+  }
+
+  // ── Dane ────────────────────────────────────────────────────────────────────
+  function gridRange(year, month) {
+    // Siatka pn-nd: od poniedziałku tygodnia z 1. dniem miesiąca, 6 tygodni (42 dni).
+    var first = new Date(year, month, 1);
+    var offset = (first.getDay() + 6) % 7; // pon=0
+    var start = new Date(year, month, 1 - offset);
+    var end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 41);
+    return { start: start, end: end };
+  }
+
+  function loadMonth() {
+    var V = getVault();
+    if (!V || typeof V.listPatientNotesInRange !== 'function') return Promise.resolve();
+    var r = gridRange(state.year, state.month);
+    state.loading = true;
+    var fromISO = dayISO(r.start);
+    var toISO = dayISO(r.end) + 'T23:59:59.999Z';
+    var pOverdue = (typeof V.listPatientNotesDueByDate === 'function')
+      // Zaległe = pending z terminem PRZED dzisiejszym dniem (koniec wczoraj).
+      ? V.listPatientNotesDueByDate(new Date(new Date().setHours(0, 0, 0, -1)).toISOString())
+      : Promise.resolve([]);
+    return Promise.all([V.listPatientNotesInRange(fromISO, toISO), pOverdue])
+      .then(function (res) {
+        var flat = res[0] || [];
+        var byDay = {};
+        for (var i = 0; i < flat.length; i += 1) {
+          var k = noteDayISO(flat[i]);
+          if (!k) continue;
+          if (!byDay[k]) byDay[k] = [];
+          byDay[k].push(flat[i]);
+        }
+        state.notesByDay = byDay;
+        // Spłaszcz zaległe (DueByDate grupuje per pacjent).
+        var od = [];
+        (res[1] || []).forEach(function (g) {
+          (g.notes || []).forEach(function (n) {
+            od.push(Object.assign({}, n, { patientName: g.patientName }));
+          });
+        });
+        state.overdue = od;
+        state.loading = false;
+      })
+      .catch(function () { state.loading = false; });
+  }
+
+  // ── Akcje ───────────────────────────────────────────────────────────────────
+  function corePayload(note) {
+    // savePatientNote wymaga patientId + title/body; merge-by-id zachowuje resztę
+    // (linkedAge, clinicalDate, medication, labResult) — przekazujemy tylko core.
+    return {
+      id: note.id,
+      patientId: note.patientId,
+      title: note.title || '',
+      body: note.body || '',
+      category: note.category,
+      dueDateISO: note.dueDateISO || null
+    };
+  }
+  function markDone(note) {
+    var V = getVault();
+    if (!V) return Promise.resolve();
+    var p = corePayload(note);
+    p.completedAtISO = new Date().toISOString();
+    return V.savePatientNote(p).then(refresh).catch(function (e) {
+      try { global.alert('Nie udało się oznaczyć jako wykonane: ' + (e && e.message || '')); } catch (_) {}
+    });
+  }
+  function markUndone(note) {
+    var V = getVault();
+    if (!V) return Promise.resolve();
+    var p = corePayload(note);
+    p.completedAtISO = null; // hasOwnProperty → vault czyści znacznik
+    return V.savePatientNote(p).then(refresh).catch(function (e) {
+      try { global.alert('Nie udało się cofnąć: ' + (e && e.message || '')); } catch (_) {}
+    });
+  }
+  function postpone(note, days) {
+    var V = getVault();
+    if (!V) return Promise.resolve();
+    var base = noteDayISO(note) || todayISO();
+    var b = new Date(base + 'T12:00:00');
+    var nd = new Date(b.getFullYear(), b.getMonth(), b.getDate() + days);
+    var p = corePayload(note);
+    p.dueDateISO = dayISO(nd);
+    return V.savePatientNote(p).then(refresh).catch(function (e) {
+      try { global.alert('Nie udało się przełożyć: ' + (e && e.message || '')); } catch (_) {}
+    });
+  }
+  function editNote(note) {
+    var AUI = global.VildaAuthUI;
+    if (!AUI || typeof AUI.showPatientNoteEditor !== 'function') {
+      try { global.alert('Edytor notatki niedostępny — odśwież stronę.'); } catch (_) {}
+      return;
+    }
+    AUI.showPatientNoteEditor({ patientId: note.patientId, note: note, onSaved: function () { refresh(); } });
+  }
+  function closePostponeMenus() {
+    var ms = doc.querySelectorAll('.tz-postpone-menu');
+    for (var i = 0; i < ms.length; i += 1) ms[i].remove();
+  }
+  function showPostponeMenu(anchorBtn, note) {
+    closePostponeMenus();
+    var menu = doc.createElement('div');
+    menu.className = 'tz-postpone-menu';
+    [['+1 tydzień', 7], ['+1 miesiąc', 30], ['+3 miesiące', 91], ['+6 miesięcy', 182]].forEach(function (opt) {
+      var b = doc.createElement('button');
+      b.type = 'button';
+      b.textContent = opt[0];
+      b.addEventListener('click', function () { closePostponeMenus(); postpone(note, opt[1]); });
+      menu.appendChild(b);
+    });
+    var rect = anchorBtn.getBoundingClientRect();
+    menu.style.left = Math.max(8, rect.left + global.scrollX - 40) + 'px';
+    menu.style.top = (rect.bottom + global.scrollY + 4) + 'px';
+    doc.body.appendChild(menu);
+    setTimeout(function () {
+      doc.addEventListener('click', function onOut(ev) {
+        if (!menu.contains(ev.target)) { closePostponeMenus(); doc.removeEventListener('click', onOut, true); }
+      }, true);
+    }, 0);
+  }
+
+  // ── Render ──────────────────────────────────────────────────────────────────
+  function root() { return doc.getElementById('terminarzRoot'); }
+
+  function noteRowHtml(n, withDate) {
+    var done = !!n.completedAtISO;
+    var cat = CAT_LABEL[n.category] || n.category || '';
+    return ''
+      + '<div class="tz-row' + (done ? ' is-done' : '') + '" data-note-id="' + esc(n.id) + '">'
+      + '<div class="tz-row__main">'
+      + '<div class="tz-row__patient">' + esc(n.patientName || '') + '</div>'
+      + '<div class="tz-row__title">' + esc(n.title || n.body || '(bez tytułu)') + '</div>'
+      + '<div class="tz-row__meta"><span class="tz-badge">' + esc(cat) + '</span>'
+      + (withDate ? ('termin: ' + esc(plDate(noteDayISO(n)))) : '')
+      + (done ? ' · wykonane' : '') + '</div>'
+      + '</div>'
+      + '<div class="tz-actions">'
+      + (done
+        ? '<button type="button" data-act="undone">↺ Cofnij</button>'
+        : '<button type="button" class="tz-done-btn" data-act="done">✓ Wykonane</button>'
+          + '<button type="button" data-act="postpone">↻ Przełóż</button>')
+      + '<button type="button" data-act="edit">✎ Edytuj</button>'
+      + '</div>'
+      + '</div>';
+  }
+
+  function bindRowActions(container, lookup) {
+    var rows = container.querySelectorAll('.tz-row');
+    for (var i = 0; i < rows.length; i += 1) {
+      (function (row) {
+        var note = lookup[row.getAttribute('data-note-id')];
+        if (!note) return;
+        var btns = row.querySelectorAll('button[data-act]');
+        for (var j = 0; j < btns.length; j += 1) {
+          (function (btn) {
+            btn.addEventListener('click', function (ev) {
+              ev.stopPropagation();
+              var act = btn.getAttribute('data-act');
+              if (act === 'done') markDone(note);
+              else if (act === 'undone') markUndone(note);
+              else if (act === 'postpone') showPostponeMenu(btn, note);
+              else if (act === 'edit') editNote(note);
+            });
+          })(btns[j]);
+        }
+      })(rows[i]);
+    }
+  }
+
+  function render() {
+    var el = root();
+    if (!el) return;
+    if (!unlocked()) { renderLocked(el); return; }
+
+    var tISO = todayISO();
+    var lookup = {};
+    var html = ''
+      + '<div class="tz-head">'
+      + '<div><h1>Terminarz kliniczny</h1>'
+      + '<p class="tz-head__sub">Kontrole i zadania per pacjent — z notatek z terminem. To nie jest kalendarz wizyt.</p></div>'
+      + '<div class="tz-nav">'
+      + '<button type="button" id="tzPrev" aria-label="Poprzedni miesiąc">‹</button>'
+      + '<span class="tz-month-label">' + MONTHS[state.month] + ' ' + state.year + '</span>'
+      + '<button type="button" id="tzNext" aria-label="Następny miesiąc">›</button>'
+      + '<button type="button" id="tzToday">Dziś</button>'
+      + '</div></div>';
+
+    // Pas zaległych.
+    if (state.overdue.length) {
+      html += '<div class="tz-overdue" id="tzOverdue">'
+        + '<div class="tz-overdue__head" id="tzOverdueHead"><span>⚠ Zaległe: ' + state.overdue.length
+        + (state.overdue.length === 1 ? ' termin' : (state.overdue.length < 5 ? ' terminy' : ' terminów'))
+        + '</span><span>▾</span></div>'
+        + '<div class="tz-overdue__list">';
+      state.overdue.forEach(function (n) { lookup[n.id] = n; html += noteRowHtml(n, true); });
+      html += '</div></div>';
+    }
+
+    // Siatka.
+    var r = gridRange(state.year, state.month);
+    html += '<div class="tz-grid"><div class="tz-grid__head">';
+    WEEKDAYS.forEach(function (w) { html += '<div>' + w + '</div>'; });
+    html += '</div><div class="tz-grid__body">';
+    for (var i = 0; i < 42; i += 1) {
+      var d = new Date(r.start.getFullYear(), r.start.getMonth(), r.start.getDate() + i);
+      var iso = dayISO(d);
+      var inMonth = d.getMonth() === state.month;
+      var items = state.notesByDay[iso] || [];
+      var cls = 'tz-cell' + (inMonth ? '' : ' is-other') + (iso === tISO ? ' is-today' : '')
+        + (iso === state.selectedISO ? ' is-selected' : '');
+      html += '<div class="' + cls + '" data-day="' + iso + '"><span class="tz-cell__num">' + d.getDate() + '</span>';
+      if (items.length) {
+        // Desktop: do 2 chipów + „+N"; mobile (CSS): kropki.
+        for (var c = 0; c < Math.min(items.length, 2); c += 1) {
+          var n2 = items[c];
+          html += '<span class="tz-chip ' + (CAT_CLASS[n2.category] || '') + (n2.completedAtISO ? ' is-done' : '') + '">'
+            + esc((n2.patientName || '').split(' ')[0] || '') + ' · ' + esc(n2.title || '') + '</span>';
+        }
+        if (items.length > 2) html += '<span class="tz-chip tz-chip--more">+' + (items.length - 2) + '</span>';
+        html += '<span class="tz-cell__dots">';
+        for (var dgt = 0; dgt < Math.min(items.length, 4); dgt += 1) {
+          html += '<span class="tz-dot ' + (CAT_CLASS[items[dgt].category] || '') + (items[dgt].completedAtISO ? ' is-done' : '') + '"></span>';
+        }
+        html += '</span>';
+      }
+      html += '</div>';
+    }
+    html += '</div></div>';
+
+    // Panel wybranego dnia.
+    var sel = state.selectedISO || tISO;
+    var dayItems = state.notesByDay[sel] || [];
+    html += '<div class="tz-day-panel"><h2>' + esc(plDate(sel)) + (sel === tISO ? ' (dziś)' : '') + '</h2>';
+    if (!dayItems.length) {
+      html += '<div class="tz-empty">Brak terminów tego dnia. Dodaj „follow-up" z karty pacjenta (Notatki → termin).</div>';
+    } else {
+      dayItems.forEach(function (n) { lookup[n.id] = n; html += noteRowHtml(n, false); });
+    }
+    html += '</div>';
+
+    el.innerHTML = html;
+
+    // Zdarzenia.
+    var prev = doc.getElementById('tzPrev');
+    var next = doc.getElementById('tzNext');
+    var tdy = doc.getElementById('tzToday');
+    if (prev) prev.addEventListener('click', function () { shiftMonth(-1); });
+    if (next) next.addEventListener('click', function () { shiftMonth(1); });
+    if (tdy) tdy.addEventListener('click', function () {
+      var now = new Date();
+      state.year = now.getFullYear(); state.month = now.getMonth(); state.selectedISO = todayISO();
+      refresh();
+    });
+    var oh = doc.getElementById('tzOverdueHead');
+    if (oh) oh.addEventListener('click', function () {
+      var box = doc.getElementById('tzOverdue');
+      if (box) box.classList.toggle('is-open');
+    });
+    var cells = el.querySelectorAll('.tz-cell');
+    for (var ci = 0; ci < cells.length; ci += 1) {
+      (function (cell) {
+        cell.addEventListener('click', function () {
+          state.selectedISO = cell.getAttribute('data-day');
+          render(); // dane już w pamięci — sam re-render
+        });
+      })(cells[ci]);
+    }
+    bindRowActions(el, lookup);
+  }
+
+  function renderLocked(el) {
+    el.innerHTML = ''
+      + '<div class="terminarz-locked">'
+      + '<div class="terminarz-locked__icon">🔒</div>'
+      + '<p class="terminarz-locked__title">Zaloguj się, aby zobaczyć terminarz</p>'
+      + '<p class="terminarz-locked__desc">Terminy kontroli są zaszyfrowane i dostępne tylko po odblokowaniu konta.</p>'
+      + '</div>';
+  }
+
+  function shiftMonth(delta) {
+    var m = state.month + delta;
+    var y = state.year;
+    if (m < 0) { m = 11; y -= 1; }
+    if (m > 11) { m = 0; y += 1; }
+    state.year = y; state.month = m;
+    refresh();
+  }
+
+  var _refreshQueued = false;
+  function refresh() {
+    if (!unlocked()) { render(); return; }
+    if (_refreshQueued) return;
+    _refreshQueued = true;
+    loadMonth().then(function () { _refreshQueued = false; render(); })
+      .catch(function () { _refreshQueued = false; render(); });
+  }
+
+  // ── Boot (wzorzec strony notatek: poll + onUnlock/onLock + auth-hidden) ─────
+  function init() {
+    if (state.inited) return;
+    state.inited = true;
+    injectCss();
+    var now = new Date();
+    state.year = now.getFullYear();
+    state.month = now.getMonth();
+    state.selectedISO = todayISO();
+
+    var V = getVault();
+    if (V) {
+      if (typeof V.onUnlock === 'function') V.onUnlock(function () { refresh(); });
+      if (typeof V.onLock === 'function') V.onLock(function () { render(); });
+      if (typeof V.onPatientNoteChanged === 'function') {
+        V.onPatientNoteChanged(function () { refresh(); });
+      }
+    }
+    doc.addEventListener('vilda:auth-hidden', function () { refresh(); });
+    if (unlocked()) refresh(); else render();
+    // Vault mógł nie być gotowy przy DOMContentLoaded — krótki poll jak na notatkach.
+    var tries = 0;
+    var t = setInterval(function () {
+      tries += 1;
+      if (unlocked()) { clearInterval(t); refresh(); }
+      else if (tries > 40) { clearInterval(t); }
+    }, 250);
+  }
+
+  function start() {
+    if (!root()) return; // moduł ładowany tylko na terminarz.html
+    // Zdejmij js-loading — bez tego .main-content zostaje visibility:hidden
+    // (pusta strona). Wzorzec stron z własnym bootem (notatki.html).
+    try { doc.body.classList.remove('js-loading'); } catch (_) { /* noop */ }
+    init();
+  }
+  if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', start);
+  else start();
+
+  global.VildaTerminarz = { version: VERSION, refresh: refresh };
+})(typeof window !== 'undefined' ? window : this);
