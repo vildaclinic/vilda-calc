@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '0.9.934';
+const SW_VERSION = '0.9.935';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -583,6 +583,7 @@ const OPTIONAL_ASSETS = [
   '/sga_birth_module.js',
   '/sga_birth_module.js?v=7',
   '/sga_birth_module.js?v=8',
+  '/sga_birth_module.js?v=9',
   '/docpro_state_persist.js',
   '/docpro_state_persist.js?v=4',
   '/lab_units_data.js',
