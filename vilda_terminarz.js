@@ -26,7 +26,7 @@
 (function (global) {
   'use strict';
 
-  var VERSION = '1.2.0';
+  var VERSION = '1.3.0';
   var doc = global.document;
   if (!doc) return;
 
@@ -228,6 +228,30 @@
     + '.tz-card__open{border:0.5px solid #d7e9ec;background:#fff;border-radius:8px;padding:4px 10px;font-size:0.74rem;cursor:pointer;color:#00838d;font-weight:600;flex:0 0 auto;}'
     + '.tz-card__open:hover{background:#f2fafb;}'
     + '.tz-card .tz-row{padding:7px 0;}'
+    /* ── Cykl D: dodawanie terminów (przycisk, FAB, plusy, modal) ── */
+    + '.tz-add-btn{font-weight:600;}'
+    + '.tz-fab{display:none;}'
+    + '.tz-cell__add{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:6px;display:none;align-items:center;justify-content:center;font-size:1rem;line-height:1;cursor:pointer;padding:0;}'
+    + '.tz-cell:hover .tz-cell__add{display:flex;}'
+    + '.tz-wcol__add{margin-left:5px;width:20px;height:20px;border-radius:6px;display:none;align-items:center;justify-content:center;font-size:0.95rem;line-height:1;cursor:pointer;padding:0;vertical-align:middle;}'
+    + '.tz-wcol:hover .tz-wcol__add{display:inline-flex;}'
+    + '.tz-agenda__add{margin-left:auto;width:24px;height:24px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;font-size:1rem;line-height:1;cursor:pointer;padding:0;flex:0 0 auto;}'
+    + '.tz-agenda__empty{display:flex;align-items:center;gap:8px;}'
+    + '.tz-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000001;padding:20px;box-sizing:border-box;}'
+    + '.tz-modal{background:#fff;border-radius:14px;padding:18px 20px;max-width:420px;width:100%;max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px;box-sizing:border-box;}'
+    + '.tz-modal h3{margin:0;font-size:1.05rem;font-weight:600;color:#0f2b33;}'
+    + '.tz-modal label{display:block;font-size:0.78rem;color:#5b6672;margin-bottom:4px;font-weight:500;}'
+    + '.tz-modal input[type="text"],.tz-modal input[type="date"]{width:100%;height:38px;padding:0 10px;font-size:0.92rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;box-sizing:border-box;}'
+    + '.tz-nt-list{border:0.5px solid #d7e9ec;border-radius:8px;max-height:158px;overflow-y:auto;margin-top:5px;}'
+    + '.tz-nt-item{padding:7px 10px;font-size:0.88rem;cursor:pointer;color:#0f2b33;}'
+    + '.tz-nt-item:hover{background:#f2fafb;}'
+    + '.tz-nt-item.is-sel{background:#e6f5f6;color:#00606a;font-weight:600;}'
+    + '.tz-nt-empty{padding:8px 10px;font-size:0.8rem;color:#9aa8aa;}'
+    + '.tz-ntcats{display:flex;gap:6px;flex-wrap:wrap;}'
+    + '.tz-nt-daterow{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}'
+    + '.tz-nt-daterow input[type="date"]{width:auto;flex:0 0 auto;}'
+    + '.tz-modal__err{color:#A32D2D;font-size:0.8rem;line-height:1.4;display:none;}'
+    + '.tz-modal__actions{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-top:4px;}'
     /* ── Święta państwowe: czerwone oznaczenia w trzech widokach ── */
     + '.tz-cell.is-holiday .tz-cell__num{color:#b91c1c;}'
     + '.tz-cell.is-today.is-holiday .tz-cell__num{color:#fff;}'
@@ -268,7 +292,42 @@
     + 'background:#fff !important;border:0 !important;border-radius:0 !important;color:#5b6672 !important;'
     + 'box-shadow:none !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;}'
     + '.liquid-ios26 .terminarz-shell .tz-switch button.is-active{background:#00838d !important;color:#fff !important;}'
-    + '.liquid-ios26 .terminarz-shell .tz-switch button:not(.is-active):hover{background:#f2fafb !important;}';
+    + '.liquid-ios26 .terminarz-shell .tz-switch button:not(.is-active):hover{background:#f2fafb !important;}'
+    /* ── Cykl D: kontry liquid dla nowych kontrolek (przyciski, FAB, plusy, modal) ── */
+    + '.liquid-ios26 .terminarz-shell .tz-add-btn{'
+    + 'background:#00838d !important;color:#fff !important;border:0.5px solid #00838d !important;'
+    + 'border-radius:10px !important;box-shadow:none !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;padding:8px 14px !important;}'
+    + '.liquid-ios26 .terminarz-shell .tz-add-btn:hover{background:#006f78 !important;}'
+    + '.liquid-ios26 .terminarz-shell .tz-fab{'
+    + 'background:#00838d !important;color:#fff !important;border:0 !important;border-radius:50% !important;'
+    + 'box-shadow:0 6px 18px rgba(0,96,106,0.35) !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;}'
+    + '.liquid-ios26 .terminarz-shell .tz-cell__add,'
+    + '.liquid-ios26 .terminarz-shell .tz-wcol__add,'
+    + '.liquid-ios26 .terminarz-shell .tz-agenda__add{'
+    + 'background:#e6f5f6 !important;color:#00606a !important;border:0.5px solid #bfdfe3 !important;'
+    + 'border-radius:6px !important;box-shadow:none !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;font-weight:600 !important;}'
+    + '.liquid-ios26 .tz-modal button{'
+    + 'background:#fff !important;border:0.5px solid #d7e9ec !important;color:#0f2b33 !important;'
+    + 'border-radius:9px !important;box-shadow:none !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;padding:8px 14px !important;font-size:0.85rem !important;}'
+    + '.liquid-ios26 .tz-modal button:hover{background:#f2fafb !important;}'
+    + '.liquid-ios26 .tz-modal .tz-ntcat{border-radius:999px !important;padding:5px 12px !important;color:#5b6672 !important;font-size:0.8rem !important;}'
+    + '.liquid-ios26 .tz-modal .tz-ntcat.is-on{background:#e6f5f6 !important;color:#00606a !important;border-color:#5DCAA5 !important;font-weight:600 !important;}'
+    + '.liquid-ios26 .tz-modal .tz-nt-save{background:#00838d !important;color:#fff !important;border-color:#00838d !important;font-weight:600 !important;}'
+    + '.liquid-ios26 .tz-modal .tz-nt-save:hover{background:#006f78 !important;}'
+    + '.liquid-ios26 .tz-modal .tz-link-btn{background:transparent !important;border:0 !important;color:#00838d !important;'
+    + 'text-decoration:underline !important;padding:0 !important;margin-right:auto !important;box-shadow:none !important;font-size:0.8rem !important;}'
+    + '.liquid-ios26 .tz-modal input[type="text"],.liquid-ios26 .tz-modal input[type="date"]{'
+    + 'background:#fff !important;border:0.5px solid #d7e9ec !important;color:#0f2b33 !important;'
+    + 'border-radius:8px !important;box-shadow:none !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;}'
+    /* Mobile: FAB widoczny, arkusz od dołu, plusy w komórkach miesiąca zbędne. */
+    + '@media (max-width:700px){'
+    + '.tz-add-btn{display:none;}'
+    + '.terminarz-shell .tz-fab{display:flex;position:fixed;right:16px;bottom:calc(18px + env(safe-area-inset-bottom,0px));'
+    + 'width:54px;height:54px;align-items:center;justify-content:center;font-size:1.7rem;z-index:900;cursor:pointer;}'
+    + '.tz-cell__add{display:none !important;}'
+    + '.tz-modal-overlay{align-items:flex-end;padding:0;}'
+    + '.tz-modal{max-width:none;border-radius:14px 14px 0 0;max-height:86vh;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px));}'
+    + '}';
 
   function injectCss() {
     if (doc.getElementById('vildaTerminarzCss')) return;
@@ -401,6 +460,185 @@
     }
     AUI.showPatientCard(patientId, null, { focusNoteId: noteId || null });
   }
+  // ── Cykl D (2026-06-05): szybki modal „Nowy termin" (P1+P2) ────────────────
+  // Jedno wejście danych: V.savePatientNote (notatka z dueDateISO — E2E jak
+  // wszystkie notatki). Picker pacjenta z V.listPatients() (odszyfrowane
+  // nagłówki, sort po świeżości). Prefill daty z kontekstu („+" przy dniu).
+  function defaultAddISO() {
+    if (state.view === 'day') return state.anchorISO;
+    if (state.view === 'month') return state.selectedISO || todayISO();
+    return todayISO();
+  }
+  function closeNewTermModal() {
+    var o = doc.getElementById('tzNewTermOverlay');
+    if (o) o.remove();
+  }
+  function showNewTermModal(prefillISO) {
+    if (!unlocked()) return;
+    var V = getVault();
+    if (!V || typeof V.savePatientNote !== 'function' || typeof V.listPatients !== 'function') {
+      try { global.alert('Dodawanie terminów niedostępne — odśwież stronę (Ctrl+Shift+R).'); } catch (_) {}
+      return;
+    }
+    closeNewTermModal();
+    var selPid = null;
+    var selName = null;
+    var selCat = 'followup';
+    var allPatients = null; // [{patientId, name}]
+
+    var overlay = doc.createElement('div');
+    overlay.id = 'tzNewTermOverlay';
+    overlay.className = 'tz-modal-overlay';
+    var initISO = (typeof prefillISO === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(prefillISO)) ? prefillISO : todayISO();
+    overlay.innerHTML = ''
+      + '<div class="tz-modal" role="dialog" aria-modal="true" aria-label="Nowy termin">'
+      + '<h3>Nowy termin</h3>'
+      + '<div><label for="tzNtSearch">Pacjent</label>'
+      + '<input type="text" id="tzNtSearch" autocomplete="off" placeholder="Szukaj pacjenta…">'
+      + '<div class="tz-nt-list" id="tzNtList"><div class="tz-nt-empty">Wczytuję pacjentów…</div></div></div>'
+      + '<div><label for="tzNtTitle">Tytuł</label>'
+      + '<input type="text" id="tzNtTitle" autocomplete="off" value="Wizyta kontrolna"></div>'
+      + '<div><label>Kategoria</label><div class="tz-ntcats" id="tzNtCats">'
+      + '<button type="button" class="tz-ntcat is-on" data-cat="followup">Kontrola</button>'
+      + '<button type="button" class="tz-ntcat" data-cat="wynik-badania">Wynik badania</button>'
+      + '<button type="button" class="tz-ntcat" data-cat="treatment">Leczenie</button>'
+      + '<button type="button" class="tz-ntcat" data-cat="observation">Obserwacja</button>'
+      + '</div></div>'
+      + '<div><label for="tzNtDate">Termin</label>'
+      + '<div class="tz-nt-daterow"><input type="date" id="tzNtDate" value="' + esc(initISO) + '">'
+      + '<button type="button" class="tz-ntcat" data-plus-days="7">+1 tydz.</button>'
+      + '<button type="button" class="tz-ntcat" data-plus-days="30">+1 mies.</button>'
+      + '<button type="button" class="tz-ntcat" data-plus-days="91">+3 mies.</button>'
+      + '</div></div>'
+      + '<div class="tz-modal__err" id="tzNtErr"></div>'
+      + '<div class="tz-modal__actions">'
+      + '<button type="button" class="tz-link-btn" id="tzNtFull">Pełny edytor →</button>'
+      + '<button type="button" id="tzNtCancel">Anuluj</button>'
+      + '<button type="button" class="tz-nt-save" id="tzNtSave">Zapisz termin</button>'
+      + '</div></div>';
+
+    var searchEl = overlay.querySelector('#tzNtSearch');
+    var listEl = overlay.querySelector('#tzNtList');
+    var titleEl = overlay.querySelector('#tzNtTitle');
+    var dateEl = overlay.querySelector('#tzNtDate');
+    var errEl = overlay.querySelector('#tzNtErr');
+    var saveBtn = overlay.querySelector('#tzNtSave');
+
+    function showErr(msg) { errEl.textContent = msg; errEl.style.display = 'block'; }
+    function clearErr() { errEl.textContent = ''; errEl.style.display = 'none'; }
+
+    function renderList() {
+      if (!allPatients) return;
+      var q = (searchEl.value || '').trim().toLowerCase();
+      var hits = [];
+      for (var i = 0; i < allPatients.length; i += 1) {
+        var p = allPatients[i];
+        if (!q || p.name.toLowerCase().indexOf(q) >= 0) hits.push(p);
+        if (hits.length >= 30) break;
+      }
+      if (!hits.length) {
+        listEl.innerHTML = '<div class="tz-nt-empty">' + (allPatients.length ? 'Brak pacjenta dla „' + esc(q) + '”.' : 'Brak pacjentów — zapisz pierwszego w aplikacji.') + '</div>';
+        return;
+      }
+      var h = '';
+      hits.forEach(function (p) {
+        h += '<div class="tz-nt-item' + (p.patientId === selPid ? ' is-sel' : '') + '" data-pid="' + esc(p.patientId) + '" data-name="' + esc(p.name) + '">' + esc(p.name) + '</div>';
+      });
+      listEl.innerHTML = h;
+      var items = listEl.querySelectorAll('.tz-nt-item');
+      for (var j = 0; j < items.length; j += 1) {
+        (function (it) {
+          it.addEventListener('click', function () {
+            selPid = it.getAttribute('data-pid');
+            selName = it.getAttribute('data-name');
+            searchEl.value = selName;
+            clearErr();
+            renderList();
+          });
+        })(items[j]);
+      }
+    }
+
+    V.listPatients().then(function (records) {
+      allPatients = (records || []).map(function (r) {
+        return {
+          patientId: r.patientId,
+          name: (r.header && typeof r.header.name === 'string' && r.header.name) ? r.header.name : '(bez imienia)'
+        };
+      });
+      renderList();
+    }).catch(function () {
+      listEl.innerHTML = '<div class="tz-nt-empty">Nie udało się wczytać listy pacjentów.</div>';
+    });
+
+    searchEl.addEventListener('input', function () {
+      // Edycja tekstu unieważnia wybór, jeśli przestał pasować.
+      if (selName && searchEl.value !== selName) { selPid = null; selName = null; }
+      renderList();
+    });
+
+    var catBtns = overlay.querySelectorAll('.tz-ntcat[data-cat]');
+    for (var cb = 0; cb < catBtns.length; cb += 1) {
+      (function (btn) {
+        btn.addEventListener('click', function () {
+          selCat = btn.getAttribute('data-cat');
+          for (var x = 0; x < catBtns.length; x += 1) catBtns[x].classList.remove('is-on');
+          btn.classList.add('is-on');
+        });
+      })(catBtns[cb]);
+    }
+    var plusBtns = overlay.querySelectorAll('[data-plus-days]');
+    for (var pb = 0; pb < plusBtns.length; pb += 1) {
+      (function (btn) {
+        btn.addEventListener('click', function () {
+          var days = parseInt(btn.getAttribute('data-plus-days'), 10) || 0;
+          var t = new Date();
+          dateEl.value = dayISO(new Date(t.getFullYear(), t.getMonth(), t.getDate() + days));
+        });
+      })(plusBtns[pb]);
+    }
+
+    function validate() {
+      clearErr();
+      if (!selPid) { showErr('Wybierz pacjenta z listy.'); try { searchEl.focus(); } catch (_) {} return null; }
+      var title = (titleEl.value || '').trim();
+      if (!title) { showErr('Podaj tytuł terminu (np. „Kontrola wzrostu”).'); try { titleEl.focus(); } catch (_) {} return null; }
+      var dISO = dateEl.value || '';
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dISO)) { showErr('Podaj datę terminu.'); try { dateEl.focus(); } catch (_) {} return null; }
+      return { title: title, dISO: dISO };
+    }
+
+    saveBtn.addEventListener('click', function () {
+      var v = validate();
+      if (!v) return;
+      saveBtn.disabled = true;
+      V.savePatientNote({ patientId: selPid, title: v.title, category: selCat, dueDateISO: v.dISO })
+        .then(function () { closeNewTermModal(); refresh(); })
+        .catch(function (e) {
+          saveBtn.disabled = false;
+          showErr('Nie udało się zapisać terminu: ' + (e && e.message || ''));
+        });
+    });
+
+    overlay.querySelector('#tzNtFull').addEventListener('click', function () {
+      // Furtka P3: pełny edytor notatki z prefillm (note BEZ id = nowa notatka).
+      var AUI = global.VildaAuthUI;
+      if (!selPid) { showErr('Najpierw wybierz pacjenta z listy.'); return; }
+      if (!AUI || typeof AUI.showPatientNoteEditor !== 'function') { showErr('Pełny edytor niedostępny — odśwież stronę.'); return; }
+      var draft = { title: (titleEl.value || '').trim(), category: selCat, dueDateISO: (dateEl.value || null) };
+      closeNewTermModal();
+      AUI.showPatientNoteEditor({ patientId: selPid, note: draft, onSaved: function () { refresh(); } });
+    });
+    overlay.querySelector('#tzNtCancel').addEventListener('click', closeNewTermModal);
+    overlay.addEventListener('click', function (ev) { if (ev.target === overlay) closeNewTermModal(); });
+    doc.addEventListener('keydown', function onEsc(ev) {
+      if (ev.key === 'Escape') { closeNewTermModal(); doc.removeEventListener('keydown', onEsc); }
+    });
+
+    doc.body.appendChild(overlay);
+    try { searchEl.focus(); } catch (_) {}
+  }
+
   function closePostponeMenus() {
     var ms = doc.querySelectorAll('.tz-postpone-menu');
     for (var i = 0; i < ms.length; i += 1) ms[i].remove();
@@ -521,7 +759,9 @@
       + '<span class="tz-month-label">' + esc(navLabel()) + '</span>'
       + '<button type="button" id="tzNext" aria-label="' + nextLbl + '">›</button>'
       + '<button type="button" id="tzToday">Dziś</button>'
-      + '</div></div>';
+      + '</div>'
+      + '<button type="button" id="tzAddBtn" class="tz-add-btn">+ Nowy termin</button>'
+      + '</div>';
   }
 
   function overdueStripHtml(lookup) {
@@ -554,7 +794,8 @@
       var cls = 'tz-cell' + (inMonth ? '' : ' is-other') + (iso === tISO ? ' is-today' : '')
         + (iso === state.selectedISO ? ' is-selected' : '') + (hol ? ' is-holiday' : '');
       html += '<div class="' + cls + '" data-day="' + iso + '"' + (hol ? ' title="' + esc(hol) + '"' : '') + '>'
-        + '<span class="tz-cell__num">' + d.getDate() + '</span>';
+        + '<span class="tz-cell__num">' + d.getDate() + '</span>'
+        + '<button type="button" class="tz-cell__add" data-add-day="' + iso + '" aria-label="Dodaj termin ' + iso + '">+</button>';
       if (hol) html += '<span class="tz-cell__holiday">' + esc(hol) + '</span>';
       if (items.length) {
         // Desktop: do 2 chipów + „+N"; mobile (CSS): kropki.
@@ -581,7 +822,9 @@
     var selHol = holidayName(sel);
     html += '<div class="tz-day-panel"><h2><span>' + esc(plDate(sel)) + (sel === tISO2 ? ' (dziś)' : '')
       + (selHol ? ' · <span class="tz-holiday-inline">' + esc(selHol) + '</span>' : '') + '</span>'
-      + '<button type="button" id="tzOpenDayView" data-day="' + esc(sel) + '">Otwórz widok dnia →</button></h2>';
+      + '<span style="display:flex;gap:6px;flex-wrap:wrap;">'
+      + '<button type="button" data-add-day="' + esc(sel) + '">+ Dodaj termin</button>'
+      + '<button type="button" id="tzOpenDayView" data-day="' + esc(sel) + '">Otwórz widok dnia →</button></span></h2>';
     if (!dayItems.length) {
       html += '<div class="tz-empty">Brak terminów tego dnia. Dodaj „follow-up" z karty pacjenta (Notatki → termin).</div>';
     } else {
@@ -611,7 +854,8 @@
       var hol = holidayName(iso);
       html += '<div class="tz-wcol' + (iso === tISO ? ' is-today' : '') + (hol ? ' is-holiday' : '') + '">'
         + '<div class="tz-wcol__head" data-goto-day="' + iso + '"' + (hol ? ' title="' + esc(hol) + '"' : '') + '>' + WEEKDAYS[idx]
-        + '<span class="tz-wcol__num">' + d.getDate() + '</span></div>'
+        + '<span class="tz-wcol__num">' + d.getDate() + '</span>'
+        + '<button type="button" class="tz-wcol__add" data-add-day="' + iso + '" aria-label="Dodaj termin ' + iso + '">+</button></div>'
         + '<div class="tz-wcol__body" data-goto-day="' + iso + '">';
       if (hol) html += '<span class="tz-wcol__holiday">' + esc(hol) + '</span>';
       items.forEach(function (n) {
@@ -634,16 +878,17 @@
       var items = state.notesByDay[iso] || [];
       var hol = holidayName(iso);
       var label = WEEKDAYS_FULL[idx] + ' ' + d.getDate() + '.' + pad(d.getMonth() + 1);
+      var addBtn = '<button type="button" class="tz-agenda__add" data-add-day="' + iso + '" aria-label="Dodaj termin ' + iso + '">+</button>';
       if (!items.length) {
-        html += '<div class="tz-agenda__empty">' + esc(label) + (iso === tISO ? ' (dziś)' : '')
-          + (hol ? ' · <span class="tz-holiday-inline">' + esc(hol) + '</span>' : '') + ' — brak terminów</div>';
+        html += '<div class="tz-agenda__empty"><span>' + esc(label) + (iso === tISO ? ' (dziś)' : '')
+          + (hol ? ' · <span class="tz-holiday-inline">' + esc(hol) + '</span>' : '') + ' — brak terminów</span>' + addBtn + '</div>';
         return;
       }
       html += '<div class="tz-agenda__dayh">'
         + (iso === tISO ? '<span class="tz-badge--today">dziś</span>' : '')
         + '<span>' + esc(label) + '</span>'
         + (hol ? '<span class="tz-holiday-inline">· ' + esc(hol) + '</span>' : '')
-        + '<span style="color:#9aa8aa;font-weight:400;font-size:0.76rem;">· ' + items.length + '</span></div>';
+        + '<span style="color:#9aa8aa;font-weight:400;font-size:0.76rem;">· ' + items.length + '</span>' + addBtn + '</div>';
       items.forEach(function (n) { lookup[n.id] = n; html += noteRowHtml(n, {}); });
     });
     html += '</div>';
@@ -748,6 +993,9 @@
       html += monthBodyHtml(lookup);
     }
 
+    // Cykl D: FAB „+" (tylko mobile — CSS) — globalne dodawanie terminu.
+    html += '<button type="button" id="tzFab" class="tz-fab" aria-label="Nowy termin">+</button>';
+
     el.innerHTML = html;
 
     // Zdarzenia: przełącznik widoku.
@@ -797,6 +1045,22 @@
           setView('day');
         });
       })(gotos[gi]);
+    }
+    // Cykl D: dodawanie terminów — globalny przycisk + FAB + „+" przy dniach.
+    // stopPropagation: plusy żyją WEWNĄTRZ klikalnych komórek (select dnia) i
+    // nagłówków kolumn (goto-day) — klik plusa nie może odpalić rodzica.
+    var addBtn = doc.getElementById('tzAddBtn');
+    if (addBtn) addBtn.addEventListener('click', function () { showNewTermModal(defaultAddISO()); });
+    var fab = doc.getElementById('tzFab');
+    if (fab) fab.addEventListener('click', function () { showNewTermModal(defaultAddISO()); });
+    var adders = el.querySelectorAll('[data-add-day]');
+    for (var ai = 0; ai < adders.length; ai += 1) {
+      (function (a) {
+        a.addEventListener('click', function (ev) {
+          ev.stopPropagation();
+          showNewTermModal(a.getAttribute('data-add-day'));
+        });
+      })(adders[ai]);
     }
     bindRowActions(el, lookup);
   }
