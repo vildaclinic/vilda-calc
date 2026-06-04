@@ -1009,9 +1009,24 @@ function vildaCustomHasHtmlContent(element) {
         var pid = e && e.detail && e.detail.patientId;
         if (typeof pid === 'string' && pid) {
           window._vildaCurrentPatientId = pid;
+          // Reload-survival (2026-06-04): pid tylko w pamięci ginął przy
+          // przeładowaniu i „Dodaj notatkę do wizyty" zostawało wyszarzone mimo
+          // odtworzonego formularza. Utrwalamy per-kartę (sessionStorage);
+          // czyszczenie symetrycznie w onLock + user-state-cleared.
+          try { window.sessionStorage.setItem('vildaCurrentPatientId', pid); } catch (_) {}
+          try { syncSidebarMenuState(); } catch (_) {}
         }
       } catch (_) {}
     });
+    // Boot-restore: po reloadzie przywróć pid z sessionStorage (formularz wraca
+    // z autosave, vault odblokuje się za chwilę — onUnlock zrobi syncSidebarMenuState
+    // i przycisk aktywuje się sam, gdy loggedIn + wiek + pomiar będą spełnione).
+    try {
+      if (!window._vildaCurrentPatientId && window.sessionStorage) {
+        var _bootPid = window.sessionStorage.getItem('vildaCurrentPatientId');
+        if (typeof _bootPid === 'string' && _bootPid) window._vildaCurrentPatientId = _bootPid;
+      }
+    } catch (_) {}
 
     // ── Wariant A (UX, 2026-06-03): modal wyboru po wczytaniu pacjenta ─────────
     // Po „Wczytaj tego pacjenta" pokazujemy blokujący modal „Co chcesz zrobić?"
@@ -1157,6 +1172,7 @@ function vildaCustomHasHtmlContent(element) {
           // H1: cross-session leak guard — bez tego patientId z poprzedniej
           // sesji „przeżywał" lock i mylił sidebar w nowej sesji innego usera.
           try { window._vildaCurrentPatientId = null; } catch (_) {}
+          try { window.sessionStorage.removeItem('vildaCurrentPatientId'); } catch (_) {}
           syncSidebarMenuState();
         });
       }
@@ -1166,10 +1182,15 @@ function vildaCustomHasHtmlContent(element) {
     // H1: drugi punkt czyszczenia — vilda:user-state-cleared dispatchowany przez
     // auth_ui przy reset stanu (np. cloud-only logout, removeUser). Pokrywa
     // przypadek gdy vault.onLock nie odpali (state cleared bez lock'a).
-    document.addEventListener('vilda:user-state-cleared', function () {
+    // Nadawcy user-state-cleared dispatchują na WINDOW (userData/persist/adapter),
+    // więc nasłuch na OBU obiektach (event z window nie dociera do document).
+    var _onUserClearedSidebar = function () {
       try { window._vildaCurrentPatientId = null; } catch (_) {}
+      try { window.sessionStorage.removeItem('vildaCurrentPatientId'); } catch (_) {}
       try { syncSidebarMenuState(); } catch (_) {}
-    });
+    };
+    document.addEventListener('vilda:user-state-cleared', _onUserClearedSidebar);
+    window.addEventListener('vilda:user-state-cleared', _onUserClearedSidebar);
     if (!tryBindVaultSync()) {
       var attempts = 0;
       var vaultSyncTimer = setInterval(function () {
