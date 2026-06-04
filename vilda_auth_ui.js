@@ -3680,6 +3680,19 @@
     } catch (_) {}
     try { if (typeof fallback === 'function') fallback(); } catch (_) {}
   }
+  // „Strona główna" — opuszcza nakładkę JEDNYM krokiem niezależnie od głębokości:
+  // skok w historii POD cały nasz stos (popstate z pustym stanem chowa nakładkę
+  // i konsumuje wszystkie wpisy — wstecz z apki głównej nie wróci do listy/karty).
+  function _navExitOverlay(fallback) {
+    try {
+      var cur = _navState();
+      if (cur && typeof cur.depth === 'number' && cur.depth >= 1) {
+        global.history.go(-cur.depth);
+        return;
+      }
+    } catch (_) {}
+    try { if (typeof fallback === 'function') { fallback(); } else { hide(); } } catch (_) {}
+  }
 
   // ============ R2 — REMINDER MODAL (PRZYPOMNIENIA PO ZALOGOWANIU) ============
   /**
@@ -7208,10 +7221,11 @@
     const cancel = el('button', {
       class: 'vilda-auth-btn vilda-auth-btn-ghost',
       type: 'button',
-      text: 'Anuluj',
-      // Wstecz tym samym torem co gest (konsumuje wpis {list} z historii);
-      // fallback hide() gdy historia nie ma naszego stanu.
-      onclick: function () { if (_navState()) { _navBack(); } else { hide(); } }
+      // UX (2026-06-04): zamiast „Anuluj" — jednoznaczne „Strona główna",
+      // które ZAWSZE prowadzi do apki głównej (skok pod cały stos historii
+      // nakładki, więc gest wstecz nie wróci potem do listy); fallback hide().
+      text: 'Strona główna',
+      onclick: function () { _navExitOverlay(function () { hide(); }); }
     });
 
     const children = [title, sub];
