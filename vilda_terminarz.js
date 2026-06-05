@@ -26,7 +26,7 @@
 (function (global) {
   'use strict';
 
-  var VERSION = '1.6.0';
+  var VERSION = '1.7.0';
   var doc = global.document;
   if (!doc) return;
 
@@ -98,6 +98,7 @@
     view: 'month',         // 'month' | 'week' | 'day'
     anchorISO: null,       // YYYY-MM-DD — kotwica nawigacji (mies./tydz./dzień)
     selectedISO: null,     // YYYY-MM-DD — zaznaczony dzień w siatce miesiąca
+    splitISO: null,        // YYYY-MM-DD — dzień ROZCIĘCIA siatki (dwuklik, desktop)
     notesByDay: {},        // YYYY-MM-DD -> [note+patientName]
     overdue: [],           // płaska lista pending z terminem < dziś
     loading: false
@@ -258,6 +259,23 @@
     + '.tz-nt-daterow input[type="date"]{width:auto;flex:0 0 auto;}'
     + '.tz-modal__err{color:#A32D2D;font-size:0.8rem;line-height:1.4;display:none;}'
     + '.tz-modal__actions{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-top:4px;}'
+    /* ── Rozcięcie R1: panel dnia wrośnięty w siatkę (dwuklik, desktop) ── */
+    + '.tz-split{grid-column:1 / -1;background:#fff;border-top:0.5px solid #bfdfe3;border-bottom:0.5px solid #e7f1f3;'
+    + 'overflow:hidden;max-height:0;opacity:0;transition:max-height .3s ease,opacity .25s ease;}'
+    + '.tz-split.is-open{max-height:640px;opacity:1;}'
+    + '.tz-split__inner{padding:12px 16px 14px;}'
+    + '.tz-split__head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:4px;}'
+    + '.tz-split__title{font-weight:600;color:#0f2b33;font-size:0.95rem;}'
+    + '.tz-split__btns{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}'
+    + '.tz-split__btns button{border:0.5px solid #d7e9ec;background:#fff;border-radius:8px;padding:5px 10px;font-size:0.78rem;cursor:pointer;color:#00838d;font-weight:600;}'
+    + '.tz-split__btns button:hover{background:#f2fafb;}'
+    + '#tzSplitClose{color:#5b6672;font-size:0.95rem;line-height:1;padding:5px 9px;}'
+    /* Caret na KOMÓRCE (panel ma overflow:hidden — tu się nie przytnie):
+     * biały romb z obwódką, tip w górę, mostek komórka→panel. */
+    + '.tz-cell.is-split{background:#e6f5f6;}'
+    + '.tz-cell.is-split::after{content:"";position:absolute;left:50%;bottom:-7px;width:12px;height:12px;'
+    + 'background:#fff;border-left:0.5px solid #bfdfe3;border-top:0.5px solid #bfdfe3;'
+    + 'transform:translateX(-50%) rotate(45deg);z-index:3;}'
     /* ── Święta państwowe: czerwone oznaczenia w trzech widokach ── */
     + '.tz-cell.is-holiday .tz-cell__num{color:#b91c1c;}'
     + '.tz-cell.is-today.is-holiday .tz-cell__num{color:#fff;}'
@@ -340,9 +358,18 @@
     + '.liquid-ios26 .tz-modal input[type="text"],.liquid-ios26 .tz-modal input[type="date"]{'
     + 'background:#fff !important;border:0.5px solid #d7e9ec !important;color:#0f2b33 !important;'
     + 'border-radius:8px !important;box-shadow:none !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;}'
+    /* Kontra liquid dla przycisków rozcięcia (theme: button{...!important}). */
+    + '.liquid-ios26 .terminarz-shell .tz-split__btns button{'
+    + 'background:#fff !important;border:0.5px solid #d7e9ec !important;color:#00838d !important;'
+    + 'border-radius:8px !important;padding:5px 10px !important;font-size:0.78rem !important;font-weight:600 !important;'
+    + 'box-shadow:none !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;width:auto !important;flex:0 0 auto !important;}'
+    + '.liquid-ios26 .terminarz-shell .tz-split__btns button:hover{background:#f2fafb !important;}'
+    + '.liquid-ios26 .terminarz-shell #tzSplitClose{color:#5b6672 !important;}'
     /* Mobile: FAB widoczny, arkusz od dołu, plusy w komórkach miesiąca zbędne. */
     + '@media (max-width:700px){'
     + '.tz-add-btn{display:none;}'
+    + '.tz-split{display:none;}'
+    + '.tz-cell.is-split::after{display:none;}'
     + '.terminarz-shell .tz-fab{display:flex;position:fixed;right:16px;bottom:calc(18px + env(safe-area-inset-bottom,0px));'
     + 'width:54px;height:54px;align-items:center;justify-content:center;font-size:1.7rem;z-index:900;cursor:pointer;}'
     + '.tz-cell__add{display:none !important;}'
@@ -840,12 +867,67 @@
     return html;
   }
 
+  // ── ROZCIĘCIE SIATKI R1 (2026-06-05): dwuklik dnia na desktopie ─────────────
+  // Panel dnia „wrośnięty" w siatkę ZA wierszem tygodnia klikniętego dnia
+  // (grid-column:1/-1 → własny wiersz na całą szerokość). Górne tygodnie stoją,
+  // dolne zjeżdżają płynnie (animacja max-height). Strzałka-caret żyje jako
+  // ::after KLIKNIĘTEJ KOMÓRKI (panel ma overflow:hidden na czas animacji —
+  // caret w panelu byłby przycięty). Dwuklik wykrywany RĘCZNIE w handlerze
+  // klika (dwa kliki w tę samą komórkę <350 ms) — natywny dblclick ginie, bo
+  // pierwszy klik re-renderuje siatkę i podmienia element pod kursorem.
+  var _splitAnim = false;          // true = panel właśnie otwarty → animuj wjazd
+  var _lastCellClick = { iso: null, t: 0 };
+  function toggleSplit(iso) {
+    if (state.splitISO === iso) { closeSplit(true); return; }
+    state.splitISO = iso;
+    state.selectedISO = iso;
+    _splitAnim = true;
+    render();
+  }
+  function closeSplit(animated) {
+    if (!state.splitISO) return;
+    var p = doc.querySelector('.tz-split');
+    if (!p || !animated) {
+      state.splitISO = null;
+      if (p) render();
+      return;
+    }
+    p.classList.remove('is-open');
+    setTimeout(function () { state.splitISO = null; render(); }, 320);
+  }
+  function splitPanelHtml(lookup) {
+    var iso = state.splitISO;
+    var items = state.notesByDay[iso] || [];
+    var d = parseISO(iso);
+    var wd = WEEKDAYS_FULL[(d.getDay() + 6) % 7];
+    var hol = holidayName(iso);
+    var head = wd + ', ' + d.getDate() + ' ' + MONTHS_GEN[d.getMonth()]
+      + ' · ' + items.length + (items.length === 1 ? ' termin' : (items.length > 0 && items.length < 5 ? ' terminy' : ' terminów'));
+    var html = '<div class="tz-split"><div class="tz-split__inner">'
+      + '<div class="tz-split__head">'
+      + '<span class="tz-split__title">' + esc(head)
+      + (hol ? ' · <span class="tz-holiday-inline">' + esc(hol) + '</span>' : '') + '</span>'
+      + '<span class="tz-split__btns">'
+      + '<button type="button" data-add-day="' + esc(iso) + '">+ Dodaj termin</button>'
+      + '<button type="button" id="tzSplitOpenDay" data-day="' + esc(iso) + '">Widok dnia →</button>'
+      + '<button type="button" id="tzSplitClose" aria-label="Zamknij panel dnia">×</button>'
+      + '</span></div>';
+    if (!items.length) {
+      html += '<div class="tz-empty">Brak terminów tego dnia.</div>';
+    } else {
+      items.forEach(function (n) { lookup[n.id] = n; html += noteRowHtml(n, {}); });
+    }
+    html += '</div></div>';
+    return html;
+  }
+
   // ── Render: MIESIĄC (Cykl A — bez zmian funkcjonalnych) ─────────────────────
   function monthBodyHtml(lookup) {
     var tISO = todayISO();
     var a = parseISO(state.anchorISO);
     var month = a.getMonth();
     var r = gridRange(a.getFullYear(), month);
+    var _splitWeekEnd = -1; // indeks ostatniej komórki tygodnia z rozcięciem
     var html = '<div class="tz-grid"><div class="tz-grid__head">';
     WEEKDAYS.forEach(function (w) { html += '<div>' + w + '</div>'; });
     html += '</div><div class="tz-grid__body">';
@@ -855,8 +937,10 @@
       var inMonth = d.getMonth() === month;
       var items = state.notesByDay[iso] || [];
       var hol = holidayName(iso);
+      var isSplit = (iso === state.splitISO);
       var cls = 'tz-cell' + (inMonth ? '' : ' is-other') + (iso === tISO ? ' is-today' : '')
-        + (iso === state.selectedISO ? ' is-selected' : '') + (hol ? ' is-holiday' : '');
+        + (iso === state.selectedISO ? ' is-selected' : '') + (hol ? ' is-holiday' : '')
+        + (isSplit ? ' is-split' : '');
       html += '<div class="' + cls + '" data-day="' + iso + '"' + (hol ? ' title="' + esc(hol) + '"' : '') + '>'
         + '<span class="tz-cell__num">' + d.getDate() + '</span>'
         + '<button type="button" class="tz-cell__add" data-add-day="' + iso + '" aria-label="Dodaj termin ' + iso + '">+</button>';
@@ -876,6 +960,10 @@
         html += '</span>';
       }
       html += '</div>';
+      // ROZCIĘCIE R1: panel dnia ZA wierszem tygodnia z dwukliniętym dniem
+      // (grid-column:1/-1 = własny pełnoszerokościowy wiersz siatki).
+      if (isSplit) _splitWeekEnd = i - (i % 7) + 6;
+      if (_splitWeekEnd === i && state.splitISO) html += splitPanelHtml(lookup);
     }
     html += '</div></div>';
 
@@ -1094,10 +1182,44 @@
     for (var ci = 0; ci < cells.length; ci += 1) {
       (function (cell) {
         cell.addEventListener('click', function () {
-          state.selectedISO = cell.getAttribute('data-day');
+          var iso = cell.getAttribute('data-day');
+          var now = Date.now();
+          // Dwuklik (desktop): dwa kliki w TĘ SAMĄ komórkę <350 ms → rozcięcie
+          // siatki. Ręczna detekcja — natywny dblclick ginie po re-renderze
+          // z pierwszego klika (element pod kursorem jest podmieniany).
+          if (!isMobile() && _lastCellClick.iso === iso && (now - _lastCellClick.t) < 350) {
+            _lastCellClick = { iso: null, t: 0 };
+            toggleSplit(iso);
+            return;
+          }
+          _lastCellClick = { iso: iso, t: now };
+          state.selectedISO = iso;
           render(); // dane już w pamięci — sam re-render
         });
       })(cells[ci]);
+    }
+    // Rozcięcie R1: zamknięcie (×), przejście do widoku dnia, animacja wjazdu.
+    var spClose = doc.getElementById('tzSplitClose');
+    if (spClose) spClose.addEventListener('click', function () { closeSplit(true); });
+    var spDay = doc.getElementById('tzSplitOpenDay');
+    if (spDay) spDay.addEventListener('click', function () {
+      state.anchorISO = spDay.getAttribute('data-day') || todayISO();
+      setView('day');
+    });
+    var spPanel = el.querySelector('.tz-split');
+    if (spPanel) {
+      if (_splitAnim) {
+        _splitAnim = false;
+        // Start z max-height:0 (CSS) → klasa w następnej klatce = płynny wjazd.
+        global.requestAnimationFrame(function () {
+          global.requestAnimationFrame(function () { spPanel.classList.add('is-open'); });
+        });
+      } else {
+        // Re-render przy otwartym panelu (np. ✓ Wykonane) — bez ponownej animacji.
+        spPanel.style.transition = 'none';
+        spPanel.classList.add('is-open');
+        global.requestAnimationFrame(function () { spPanel.style.transition = ''; });
+      }
     }
     var odv = doc.getElementById('tzOpenDayView');
     if (odv) odv.addEventListener('click', function () {
@@ -1145,6 +1267,7 @@
   function setView(view) {
     if (view !== 'month' && view !== 'week' && view !== 'day') view = 'month';
     state.view = view;
+    state.splitISO = null; // zmiana widoku zamyka rozcięcie siatki
     try { global.localStorage.setItem(VIEW_KEY, view); } catch (_) { /* flaga UI — opcjonalna */ }
     // Zmiana widoku z UI = krok ŚCIEŻKI → wpis historii (gest wstecz cofnie).
     _tzNavPush();
@@ -1152,6 +1275,7 @@
   }
 
   function shiftAnchor(delta) {
+    state.splitISO = null; // przewinięcie okresu zamyka rozcięcie (dzień poza siatką)
     var a = parseISO(state.anchorISO);
     if (state.view === 'week') {
       state.anchorISO = dayISO(new Date(a.getFullYear(), a.getMonth(), a.getDate() + delta * 7));
@@ -1301,6 +1425,12 @@
       }
     }
     doc.addEventListener('vilda:auth-hidden', function () { refresh(); });
+    // Esc zamyka rozcięcie siatki (gdy nie ma nad nim modalu — ten ma własny Esc).
+    doc.addEventListener('keydown', function (ev) {
+      if (ev.key !== 'Escape' || !state.splitISO) return;
+      if (doc.getElementById('tzNewTermOverlay')) return;
+      closeSplit(true);
+    });
     // Cykl C: zmiana breakpointu (obrót telefonu, zmiana okna) → re-render
     // właściwego wariantu (W1↔W2, D1↔D2). Dane są te same — bez ponownego fetchu.
     if (_mq) {
