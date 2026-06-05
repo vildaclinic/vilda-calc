@@ -26,7 +26,7 @@
 (function (global) {
   'use strict';
 
-  var VERSION = '2.9.0';
+  var VERSION = '2.9.1';
   var doc = global.document;
   if (!doc) return;
 
@@ -209,10 +209,11 @@
     + '.tz-overdue__list{margin:8px 0 0;display:none;}'
     + '.tz-overdue.is-open .tz-overdue__list{display:block;}'
     + '.tz-grid{background:#fff;border:0.5px solid #d7e9ec;border-radius:14px;overflow:hidden;}'
-    + '.tz-grid__head{display:grid;grid-template-columns:repeat(7,1fr);background:#f2fafb;border-bottom:0.5px solid #d7e9ec;}'
+    + '.tz-grid__head{display:grid;grid-template-columns:repeat(7,1fr);background:#f2fafb;border-bottom:1px solid #b9d2d6;}'
     + '.tz-grid__head div{padding:8px 6px;text-align:center;font-size:0.75rem;font-weight:600;color:#5b6672;text-transform:uppercase;letter-spacing:0.04em;}'
+    + '.tz-grid__head div.is-wknd{background:#DEE7F1;color:#0C447C;}'
     + '.tz-grid__body{display:grid;grid-template-columns:repeat(7,1fr);}'
-    + '.tz-cell{min-height:92px;border-bottom:0.5px solid #e7f1f3;border-right:0.5px solid #e7f1f3;padding:6px;cursor:pointer;position:relative;background:#fff;transition:background .12s;}'
+    + '.tz-cell{min-height:92px;border-bottom:1px solid #c9dde0;border-right:1px solid #c9dde0;padding:6px;cursor:pointer;position:relative;background:#fff;transition:background .12s;}'
     + '.tz-cell:nth-child(7n){border-right:0;}'
     + '.tz-cell:hover{background:#f7fcfd;}'
     + '.tz-cell.is-other{background:#fafcfc;color:#9aa8aa;}'
@@ -220,11 +221,11 @@
     + '.tz-cell__num{font-size:0.82rem;font-weight:600;color:#0f2b33;display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;border-radius:12px;}'
     + '.tz-cell.is-other .tz-cell__num{color:#9aa8aa;}'
     + '.tz-cell.is-today .tz-cell__num{background:#00838d;color:#fff;}'
-    + '.tz-chip{display:block;margin-top:3px;font-size:0.7rem;line-height:1.25;padding:2px 6px;border-radius:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#0f2b33;background:#eef6f7;border-left:3px solid #00838d;}'
-    + '.tz-chip.is-done{opacity:0.55;text-decoration:line-through;}'
-    + '.tz-chip.tz-cat-treatment{border-left-color:#7c5cd6;}'
-    + '.tz-chip.tz-cat-observation{border-left-color:#0ea5e9;}'
-    + '.tz-chip.tz-cat-wynik{border-left-color:#b45309;}'
+    + '.tz-chip{display:block;margin-top:3px;font-size:0.7rem;line-height:1.25;padding:2px 6px;border-radius:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#085041;background:#E1F5EE;border-left:3px solid #0F6E56;}'
+    + '.tz-chip.is-done{background:#f0f3f4;border-left-color:#9aa8aa;color:#9aa8aa;text-decoration:line-through;}'
+    + '.tz-chip.tz-cat-treatment{border-left-color:#7c5cd6;background:#EEEDFE;color:#3C3489;}'
+    + '.tz-chip.tz-cat-observation{border-left-color:#0ea5e9;background:#E6F1FB;color:#0C447C;}'
+    + '.tz-chip.tz-cat-wynik{border-left-color:#b45309;background:#FAEEDA;color:#633806;}'
     + '.tz-chip--more{background:transparent;border-left:0;color:#5b6672;font-weight:600;}'
     + '.tz-day-panel{margin-top:14px;background:#fff;border:0.5px solid #d7e9ec;border-radius:14px;padding:14px 16px;}'
     + '.tz-day-panel h2{margin:0 0 10px;font-size:1.02rem;color:#0f2b33;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}'
@@ -269,14 +270,15 @@
     + '.tz-wx__dh{padding:7px 6px;text-align:center;font-size:0.75rem;font-weight:600;color:#5b6672;cursor:pointer;border-left:0.5px solid #e7f1f3;}'
     + '.tz-wx__dh:hover{background:#e9f5f6;}'
     + '.tz-wx__dh.is-today .tz-wcol__num{background:#00838d;color:#fff;}'
-    + '.tz-wx__dh.is-holiday .tz-wcol__num{color:#b91c1c;}'
+    + '.tz-wx__dh.is-holiday .tz-wcol__num{color:#A32D2D;}'
     + '.tz-wx__dh.is-today.is-holiday .tz-wcol__num{color:#fff;}'
     + '.tz-wx__all{background:#fbfdfe;}'
     + '.tz-wx__bodyrel{position:relative;}'
     + '.tz-wx__bodyrel .tz-wx__row{height:60px;box-sizing:border-box;}'
     + '.tz-wx__cell{border-left:1px solid #d6e6e9;}'
     + '.tz-wx__cell.is-wknd,.tz-wb-free.is-wknd{background:#EDF2F8;}'
-    + '.tz-wx__dh.is-wknd{background:#DEE7F1;}'
+    + '.tz-wx__dh.is-wknd{background:#DEE7F1;color:#0C447C;}'
+    + '.tz-wx__dh.is-holiday{background:#FCEBEB;color:#A32D2D;}'
     + '.tz-cell.is-wknd{background:#EDF2F8;}'
     + '.tz-cell.is-wknd.is-other{background:#F3F6FA;}'
     + '.tz-wx__cell--all{cursor:pointer;min-height:34px;padding:3px;display:flex;flex-direction:column;gap:3px;}'
@@ -1694,7 +1696,7 @@
     var r = gridRange(a.getFullYear(), month);
     var _splitWeekEnd = -1; // indeks ostatniej komórki tygodnia z rozcięciem
     var html = '<div class="tz-grid"><div class="tz-grid__head">';
-    WEEKDAYS.forEach(function (w) { html += '<div>' + w + '</div>'; });
+    WEEKDAYS.forEach(function (w, wi) { html += '<div' + (wi >= 5 ? ' class="is-wknd"' : '') + '>' + w + '</div>'; });
     html += '</div><div class="tz-grid__body">';
     for (var i = 0; i < 42; i += 1) {
       var d = new Date(r.start.getFullYear(), r.start.getMonth(), r.start.getDate() + i);
