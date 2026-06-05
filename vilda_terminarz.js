@@ -26,7 +26,7 @@
 (function (global) {
   'use strict';
 
-  var VERSION = '1.4.2';
+  var VERSION = '1.6.0';
   var doc = global.document;
   if (!doc) return;
 
@@ -496,6 +496,15 @@
   function closeNewTermModal() {
     var o = doc.getElementById('tzNewTermOverlay');
     if (o) o.remove();
+    // Modal miał wpis historii (pushState przy otwarciu) — ręczne zamknięcie
+    // (Anuluj/tło/Zapisz) zdejmuje go history.back(), żeby stos został spójny.
+    // _tzNavModalGuard: zamknięcie wywołane Z popstate nie cofa drugi raz.
+    if (o && !_tzNavModalGuard) {
+      var cur = _tzNavState();
+      if (cur && cur.modal) {
+        try { global.history.back(); } catch (_) { /* noop */ }
+      }
+    }
   }
   function showNewTermModal(prefillISO) {
     if (!unlocked()) return;
@@ -678,6 +687,8 @@
     });
 
     doc.body.appendChild(overlay);
+    // Modal = krok ścieżki: wpis historii (gest wstecz zamyka modal, nie stronę).
+    _tzNavPush({ modal: 1 });
     // BEZ autofokusu: fokus otwiera dropdown pacjenta (ma być schowany do czasu
     // interakcji), a na mobile wystrzeliwałby klawiaturę przy każdym otwarciu.
   }
@@ -1067,6 +1078,7 @@
     var goToday = function () {
       state.anchorISO = todayISO();
       state.selectedISO = todayISO();
+      _tzNavReplace();
       refresh();
     };
     if (tdy) tdy.addEventListener('click', goToday);
@@ -1134,6 +1146,8 @@
     if (view !== 'month' && view !== 'week' && view !== 'day') view = 'month';
     state.view = view;
     try { global.localStorage.setItem(VIEW_KEY, view); } catch (_) { /* flaga UI — opcjonalna */ }
+    // Zmiana widoku z UI = krok ŚCIEŻKI → wpis historii (gest wstecz cofnie).
+    _tzNavPush();
     refresh();
   }
 
@@ -1147,6 +1161,8 @@
       // Miesiąc: kotwica na 1. dzień miesiąca docelowego (31→luty bez przeskoku).
       state.anchorISO = dayISO(new Date(a.getFullYear(), a.getMonth() + delta, 1));
     }
+    // Przewijanie okresów NIE zaśmieca historii — aktualizujemy bieżący wpis.
+    _tzNavReplace();
     refresh();
   }
 
@@ -1157,6 +1173,105 @@
     _refreshQueued = true;
     loadData().then(function () { _refreshQueued = false; render(); })
       .catch(function () { _refreshQueued = false; render(); });
+  }
+
+  // ── NAWIGACJA WSTECZ (2026-06-05): historia jak w karcie pacjenta ───────────
+  // Cel: gest/przycisk „wstecz" cofa po ŚCIEŻCE terminarza (modal → widok →
+  // poprzedni widok → … → wyjście ze strony) zamiast jednym ruchem opuszczać
+  // aplikację. Model render-from-state (wzorzec _navInstall z auth UI):
+  //  • zmiana WIDOKU z UI (przełącznik, drill-down dnia) → pushState({tzNav}),
+  //  • otwarcie modalu „Nowy termin" → pushState({tzNav:{…,modal:1}}); ręczne
+  //    zamknięcie = history.back() (stos spójny), wstecz zamyka modal,
+  //  • strzałki/swipe/Dziś → replaceState (przewijanie nie zaśmieca historii),
+  //  • popstate z obcym stanem (np. vildaNav karty pacjenta otwartej z widoku
+  //    dnia) → NIE ruszamy widoku; bazowy wpis strony dostaje tzNav przez
+  //    replaceState przy starcie. Gest „w przód" na stan z modal=1 nie
+  //    re-otwiera modalu — flaga jest zdejmowana replaceState.
+  var _tzNavReady = false;
+  var _tzNavModalGuard = false;
+  function _tzNavLoc(extra) {
+    return Object.assign({ view: state.view, anchor: state.anchorISO, sel: state.selectedISO }, extra || {});
+  }
+  function _tzNavState() {
+    try { return (global.history && global.history.state && global.history.state.tzNav) || null; } catch (_) { return null; }
+  }
+  function _tzNavInstall() {
+    if (_tzNavReady || !global.addEventListener || !global.history) return;
+    _tzNavReady = true;
+    try { global.history.replaceState({ tzNav: _tzNavLoc() }, ''); } catch (_) { /* noop */ }
+    global.addEventListener('popstate', function (e) {
+      var t = (e && e.state && e.state.tzNav) || null;
+      if (!t) return; // obcy/pusty stan — widoku terminarza nie ruszamy
+      if (t.modal) {
+        // Wstecz/w przód wylądował na wpisie modalu — nie re-otwieramy go,
+        // zdejmujemy flagę (wpis staje się zwykłym stanem widoku).
+        try { global.history.replaceState({ tzNav: _tzNavLoc() }, ''); } catch (_) { /* noop */ }
+        return;
+      }
+      // Gest wstecz przy otwartym modalu → zamknij modal (bez podwójnego back).
+      _tzNavModalGuard = true;
+      try { closeNewTermModal(); } catch (_) { /* noop */ }
+      _tzNavModalGuard = false;
+      state.view = (t.view === 'week' || t.view === 'day') ? t.view : 'month';
+      state.anchorISO = /^\d{4}-\d{2}-\d{2}$/.test(t.anchor || '') ? t.anchor : todayISO();
+      if (typeof t.sel === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(t.sel)) state.selectedISO = t.sel;
+      try { global.localStorage.setItem(VIEW_KEY, state.view); } catch (_) { /* noop */ }
+      refresh();
+    });
+  }
+  function _tzNavPush(extra) {
+    try {
+      _tzNavInstall();
+      var cur = _tzNavState();
+      var loc = _tzNavLoc(extra);
+      // Dedup: ponowny klik w aktywny widok nie dubluje wpisu.
+      if (cur && cur.view === loc.view && cur.anchor === loc.anchor && !!cur.modal === !!loc.modal) return;
+      global.history.pushState({ tzNav: loc }, '');
+    } catch (_) { /* noop */ }
+  }
+  function _tzNavReplace() {
+    try {
+      _tzNavInstall();
+      global.history.replaceState({ tzNav: _tzNavLoc() }, '');
+    } catch (_) { /* noop */ }
+  }
+
+  // ── Swipe (2026-06-05): poziomy gest dotykowy przewija mies./tydz./dzień ────
+  // Touch-only (desktop z myszą nieobjęty; tablet/telefon działa niezależnie od
+  // szerokości). Bezpieczniki: 24px martwej strefy przy krawędziach (gest
+  // „wstecz" przeglądarki na iOS), ruch wyraźnie POZIOMY (|dx| ≥ 48px i
+  // |dx| > 1.5·|dy| — pionowy scroll nietknięty), pojedynczy palec (pinch-zoom
+  // ignorowany), limit czasu gestu. Listenery passive — zero preventDefault.
+  // Modale (Nowy termin, edytor notatki, menu Przełóż) żyją na <body> POZA
+  // rootem, więc gesty w nich nie przewijają kalendarza.
+  function bindSwipe(el) {
+    if (el.__tzSwipeBound) return;
+    el.__tzSwipeBound = true;
+    var sx = 0, sy = 0, st = 0, active = false;
+    var EDGE = 24;
+    var MIN_DX = 48;
+    var MAX_DT = 600;
+    el.addEventListener('touchstart', function (ev) {
+      if (!ev.touches || ev.touches.length !== 1) { active = false; return; }
+      var t = ev.touches[0];
+      var vw = global.innerWidth || doc.documentElement.clientWidth || 0;
+      if (t.clientX < EDGE || t.clientX > vw - EDGE) { active = false; return; }
+      sx = t.clientX; sy = t.clientY; st = Date.now(); active = true;
+    }, { passive: true });
+    el.addEventListener('touchend', function (ev) {
+      if (!active) return;
+      active = false;
+      if (!unlocked()) return;
+      var t = ev.changedTouches && ev.changedTouches[0];
+      if (!t) return;
+      var dx = t.clientX - sx;
+      var dy = t.clientY - sy;
+      if (Date.now() - st > MAX_DT) return;
+      if (Math.abs(dx) < MIN_DX || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      // Swipe w LEWO = następny okres (kartkowanie do przodu), w PRAWO = poprzedni.
+      shiftAnchor(dx < 0 ? 1 : -1);
+    }, { passive: true });
+    el.addEventListener('touchcancel', function () { active = false; }, { passive: true });
   }
 
   // ── Boot (wzorzec strony notatek: poll + onUnlock/onLock + auth-hidden) ─────
@@ -1170,6 +1285,12 @@
       var saved = global.localStorage.getItem(VIEW_KEY);
       if (saved === 'week' || saved === 'day' || saved === 'month') state.view = saved;
     } catch (_) { /* noop */ }
+    // Historia: bazowy wpis strony dostaje tzNav (replaceState) + listener
+    // popstate — PO odtworzeniu widoku z localStorage, żeby baza była zgodna.
+    _tzNavInstall();
+    // Swipe na rootcie — element trwały (render podmienia tylko innerHTML),
+    // więc wiążemy RAZ; gest działa we wszystkich widokach.
+    try { bindSwipe(root()); } catch (_) { /* noop */ }
 
     var V = getVault();
     if (V) {
