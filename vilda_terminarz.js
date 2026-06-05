@@ -26,7 +26,7 @@
 (function (global) {
   'use strict';
 
-  var VERSION = '3.1.2';
+  var VERSION = '3.2.0';
   var doc = global.document;
   if (!doc) return;
 
@@ -305,7 +305,7 @@
     + '.tz-wx__dropind span{position:absolute;top:1px;left:4px;font-size:0.66rem;font-weight:700;'
     + 'color:#00606a;background:#fff;border-radius:4px;padding:0 4px;}'
     + '.tz-wx__cell--all.is-drop{background:#d9f1f3;box-shadow:inset 0 0 0 2px #00838d;}'
-    + '.tz-hours .tz-hcard,.tz-hours .tz-hcard *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}'
+    + '.tz-day-panel .tz-hcard,.tz-day-panel .tz-hcard *,.tz-day-panel .tz-row,.tz-day-panel .tz-row *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}'
     + '.tz-noselect,.tz-noselect *{-webkit-user-select:none !important;user-select:none !important;-webkit-touch-callout:none !important;}'
     + '.tz-hcard.is-drag-src{opacity:0.35;}'
     + '.tz-hslot.is-drop-row{background:#e6f6f7;box-shadow:inset 0 0 0 2px #00838d;border-radius:8px;}'
@@ -1155,7 +1155,7 @@
       if (_weekPop.el.contains(t)) return; // wnętrze popovera działa normalnie
       var menu = t && t.closest ? t.closest('.tz-postpone-menu') : null;
       if (menu) return; // submenu „Przełóż" nad popoverem
-      var otherBlock = t && t.closest ? t.closest('.tz-wb[data-note-id]') : null;
+      var otherBlock = t && t.closest ? t.closest('.tz-wb[data-note-id],.tz-hcard[data-note-id],.tz-row[data-note-id]') : null;
       var sameBlock = otherBlock && _weekPop.blockEl && (otherBlock === _weekPop.blockEl);
       closeWeekPopover();
       if (otherBlock && !sameBlock) return; // pozwól otworzyć nowy jednym klikiem
@@ -1471,14 +1471,17 @@
   }
   function bindDayDrag(container, lookup) {
     var hours = container.querySelector('.tz-hours');
-    if (!hours || hours.__tzDragBound) return;
-    hours.__tzDragBound = true;
-    hours.addEventListener('pointerdown', function (ev) {
+    if (!hours) return; // tylko widoki dnia (mobile L2 / desktop oś)
+    var panel = hours.closest('.tz-day-panel') || hours;
+    if (panel.__tzDragBound) return;
+    panel.__tzDragBound = true;
+    panel.addEventListener('pointerdown', function (ev) {
       if (_hdrag || _drag) return;
       if (ev.button !== undefined && ev.button !== 0) return;
-      var card = ev.target && ev.target.closest ? ev.target.closest('.tz-hcard[data-note-id]') : null;
+      var card = ev.target && ev.target.closest
+        ? ev.target.closest('.tz-hcard[data-note-id],.tz-row--dnd[data-note-id]') : null;
       if (!card) return;
-      if (ev.target.closest('.tz-actions')) return; // ✓/⋮ działają bez chwytu
+      if (ev.target.closest('.tz-actions') || ev.target.closest('button')) return; // akcje bez chwytu
       var note = lookup[card.getAttribute('data-note-id')];
       if (!note) return;
       _hdrag = { note: note, card: card, hours: hours, pid: ev.pointerId,
@@ -1568,7 +1571,7 @@
       + '<div class="tz-swipe-wrap">'
       + '<div class="tz-swipe-bg" data-swipe-del="' + esc(n.id) + '">🗑 Usuń</div>'
       + '<div class="tz-row' + (done ? ' is-done' : '') + (opts.overdue ? ' is-overdue' : '')
-      + (opts.compact ? ' tz-row--c' : '') + '" data-note-id="' + esc(n.id) + '">'
+      + (opts.compact ? ' tz-row--c' : '') + (opts.dnd ? ' tz-row--dnd' : '') + '" data-note-id="' + esc(n.id) + '">'
       + mainHtml
       + '<div class="tz-actions">'
       + (opts.compact
@@ -1750,6 +1753,27 @@
       })(wblocks[wb]);
     }
     bindWeekDrag(container, lookup); // DnD: chwyt myszą / long-press na tablecie
+    // POPOVER w DNIU (mobile): tap w kartę/wiersz = scalona karta szczegółów
+    // (jak klik bloku w tygodniu na desktopie). Przyciski akcji bez zmian.
+    if (isMobile()) {
+      var dayPanelHours = container.querySelector('.tz-hours');
+      var dayPanel = dayPanelHours ? (dayPanelHours.closest('.tz-day-panel') || dayPanelHours) : null;
+      if (dayPanel && !dayPanel.__tzTapPop) {
+        dayPanel.__tzTapPop = true;
+        dayPanel.addEventListener('click', function (ev) {
+          var el = ev.target && ev.target.closest
+            ? ev.target.closest('.tz-hcard[data-note-id],.tz-row[data-note-id]') : null;
+          if (!el) return;
+          if (ev.target.closest('button') || ev.target.closest('.tz-actions')) return;
+          var wrap2 = el.closest ? el.closest('.tz-swipe-wrap') : null;
+          if (wrap2 && wrap2.classList.contains('is-open-swipe')) return; // uchylony wiersz
+          var note = lookup[el.getAttribute('data-note-id')];
+          if (!note) return;
+          ev.stopPropagation();
+          showWeekPopover(el, note);
+        });
+      }
+    }
     bindDayDrag(container, lookup);  // DnD dnia (mobile): long-press na karcie osi
     // S3: chip sugestii „Oś czasu →" + zamknięcie osi + klik wpisu osi → dzień.
     var tls = container.querySelectorAll('[data-timeline-pid]');
@@ -2291,7 +2315,7 @@
     var allDay = all.filter(function (n) { return !n.dueTime; });
     if (allDay.length) {
       html += '<div class="tz-sec-h">Cały dzień · ' + allDay.length + '</div>';
-      allDay.forEach(function (n) { lookup[n.id] = n; html += noteRowHtml(n, { compact: true, metaLine: true }); });
+      allDay.forEach(function (n) { lookup[n.id] = n; html += noteRowHtml(n, { compact: true, metaLine: true, dnd: true }); });
     }
     if (!timed.length && !allDay.length) {
       html += '<div class="tz-empty">Brak terminów. Dodaj „follow-up" z karty pacjenta (🔔 Przypomnij) albo tapnij wolny slot poniżej.</div>';
@@ -2859,6 +2883,7 @@
       if (_openSwipeRow && _openSwipeRow !== row) _closeOpenSwipeRow();
       sx = ev.touches[0].clientX; sy = ev.touches[0].clientY; dx = 0; taken = false;
       onMove = function (mv) {
+        if ((_hdrag && _hdrag.active) || (_drag && _drag.active)) { cleanup(); return; } // DnD aktywny
         if (!row || !mv.touches || mv.touches.length !== 1) return;
         var mdx = mv.touches[0].clientX - sx;
         var mdy = mv.touches[0].clientY - sy;
