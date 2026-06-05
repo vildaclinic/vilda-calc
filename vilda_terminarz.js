@@ -26,7 +26,7 @@
 (function (global) {
   'use strict';
 
-  var VERSION = '1.9.1';
+  var VERSION = '2.0.0';
   var doc = global.document;
   if (!doc) return;
 
@@ -104,6 +104,10 @@
     searchOpen: false,     // SEARCH: pasek wyszukiwania widoczny
     searchQ: '',           // SEARCH: bieżące zapytanie
     searchResults: [],     // SEARCH: wyniki z V.searchPatientNotes
+    searchPatients: [],    // SEARCH: sugestie pacjentów Z BAZY pasujących do zapytania
+    searchTlPid: null,     // S3: pacjent osi czasu (null = lista wyników)
+    searchTlName: null,    // S3: nazwisko pacjenta osi czasu
+    searchTlEvents: [],    // S3: wydarzenia pacjenta (notatki z dueDateISO)
     loading: false
   };
 
@@ -160,6 +164,28 @@
     + '.tz-searchbar input{flex:1;height:40px;padding:0 12px;font-size:0.95rem;border:0.5px solid #d7e9ec;border-radius:10px;background:#fff;color:#0f2b33;box-sizing:border-box;}'
     + '.tz-searchbar button{flex:0 0 auto;}'
     + '.tz-ext-mark{display:inline-block;font-size:0.62rem;font-weight:600;color:#5b6672;background:#eef4f5;border-radius:6px;padding:1px 6px;vertical-align:1px;}'
+    /* ── S2: nagłówki dat w wynikach ── */
+    + '.tz-dhead{font-size:0.85rem;font-weight:600;color:#0f2b33;background:#f2fafb;border-radius:8px;padding:6px 12px;margin:12px 0 2px;}'
+    + '.tz-dhead__rel{color:#0F6E56;font-weight:600;font-size:0.78rem;}'
+    /* ── S3: chip sugestii pacjenta z bazy ── */
+    + '.tz-sugg{display:flex;align-items:center;gap:9px;border:0.5px solid #5DCAA5;background:#F0FAF7;border-radius:10px;padding:8px 12px;margin:0 0 8px;}'
+    + '.tz-sugg__name{font-weight:600;color:#0f2b33;font-size:0.9rem;}'
+    + '.tz-sugg__sub{font-size:0.74rem;color:#5b6672;}'
+    + '.tz-sugg__sp{flex:1;}'
+    /* ── S3: oś czasu pacjenta ── */
+    + '.tz-tlhead{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;}'
+    + '.tz-tlhead__name{font-weight:600;color:#0f2b33;font-size:0.98rem;flex:1;min-width:0;}'
+    + '.tz-tl{margin-left:6px;padding-left:18px;border-left:2px solid #9FE1CB;}'
+    + '.tz-tl__item{position:relative;padding:0 0 14px;cursor:pointer;}'
+    + '.tz-tl__item:hover .tz-tl__title{color:#00606a;}'
+    + '.tz-tl__dot{position:absolute;left:-23.5px;top:4px;width:9px;height:9px;border-radius:50%;background:#00838d;}'
+    + '.tz-tl__dot.tz-cat-treatment{background:#7c5cd6;}.tz-tl__dot.tz-cat-observation{background:#0ea5e9;}.tz-tl__dot.tz-cat-wynik{background:#b45309;}'
+    + '.tz-tl__dot.is-done-dot{background:#9aa8aa;}'
+    + '.tz-tl__meta{font-size:0.75rem;color:#5b6672;}'
+    + '.tz-tl__title{font-size:0.92rem;color:#0f2b33;margin-top:1px;}'
+    + '.tz-tl__title.is-done{text-decoration:line-through;opacity:0.6;}'
+    + '.tz-tl__today{position:relative;padding:2px 0 14px;}'
+    + '.tz-tl__today span{position:absolute;left:-34px;top:0;background:#0F6E56;color:#fff;font-size:0.62rem;font-weight:700;border-radius:8px;padding:2px 8px;letter-spacing:0.04em;}'
     + '.tz-switch{display:flex;border:0.5px solid #d7e9ec;border-radius:10px;overflow:hidden;}'
     + '.tz-switch button{border:0;background:#fff;padding:8px 14px;font-size:0.85rem;color:#5b6672;cursor:pointer;font-weight:600;}'
     + '.tz-switch button.is-active{background:#00838d;color:#fff;}'
@@ -328,6 +354,14 @@
     + 'width:auto !important;flex:0 0 auto !important;'
     + 'backdrop-filter:none !important;-webkit-backdrop-filter:none !important;transition:background-color 120ms ease !important;}'
     + '.liquid-ios26 .terminarz-shell .tz-today-m{padding:8px 14px !important;font-size:0.95rem !important;font-weight:600 !important;cursor:pointer;}'
+    /* S3: przycisk „Oś czasu →" + × osi (kontra liquid). */
+    + '.liquid-ios26 .terminarz-shell .tz-sugg__btn,'
+    + '.liquid-ios26 .terminarz-shell #tzTlClose{'
+    + 'background:#fff !important;border:0.5px solid #5DCAA5 !important;color:#085041 !important;'
+    + 'border-radius:8px !important;padding:5px 12px !important;font-size:0.8rem !important;font-weight:600 !important;'
+    + 'box-shadow:none !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;width:auto !important;flex:0 0 auto !important;}'
+    + '.liquid-ios26 .terminarz-shell #tzTlClose{border-color:#d7e9ec !important;color:#5b6672 !important;}'
+    + '.liquid-ios26 .terminarz-shell .tz-sugg__btn:hover{background:#e6f5f6 !important;}'
     /* SEARCH: lupa (kapsułka jak nav) + × paska + input (theme szkli input[text]). */
     + '.liquid-ios26 .terminarz-shell .tz-search-btn,'
     + '.liquid-ios26 .terminarz-shell .tz-searchbar button{'
@@ -819,15 +853,55 @@
       + (done ? ' · wykonane' : '') + '</div>'
       + '</div>'
       + '<div class="tz-actions">'
-      + (done
-        ? '<button type="button" data-act="undone">↺ Cofnij</button>'
-        : '<button type="button" class="tz-done-btn" data-act="done">✓ Wykonane</button>'
-          + '<button type="button" data-act="postpone">↻ Przełóż</button>')
-      + '<button type="button" data-act="edit">✎ Edytuj</button>'
-      // SEARCH: skok do dnia wydarzenia (czyści wyszukiwanie, otwiera widok Dzień).
-      + (opts.gotoDay ? '<button type="button" data-act="goto">→ dzień</button>' : '')
+      + (opts.compact
+        // KOMPAKT (mobile, wyniki wyszukiwania): ✓/↺ + menu ⋮ — pełne przyciski
+        // zgniatały kolumnę tytułu do łamania słów co znak.
+        ? ((done
+          ? '<button type="button" data-act="undone" aria-label="Cofnij wykonanie">↺</button>'
+          : '<button type="button" class="tz-done-btn" data-act="done" aria-label="Oznacz wykonane">✓</button>')
+          + '<button type="button" data-act="more" aria-label="Więcej akcji">⋮</button>')
+        : ((done
+          ? '<button type="button" data-act="undone">↺ Cofnij</button>'
+          : '<button type="button" class="tz-done-btn" data-act="done">✓ Wykonane</button>'
+            + '<button type="button" data-act="postpone">↻ Przełóż</button>')
+          + '<button type="button" data-act="edit">✎ Edytuj</button>'
+          // SEARCH: skok do dnia wydarzenia (czyści wyszukiwanie, otwiera widok Dzień).
+          + (opts.gotoDay ? '<button type="button" data-act="goto">→ dzień</button>' : '')))
       + '</div>'
       + '</div>';
+  }
+
+  // Skok do dnia wydarzenia — wspólny dla akcji „→ dzień", menu ⋮ i osi czasu.
+  function gotoNoteDay(iso) {
+    state.anchorISO = iso || todayISO();
+    state.searchOpen = false;
+    setView('day'); // setView czyści resztę stanu wyszukiwania
+  }
+  // KOMPAKT: menu „Więcej" (⋮) — Przełóż / Edytuj / → dzień.
+  function showMoreMenu(anchorBtn, note) {
+    closePostponeMenus();
+    var menu = doc.createElement('div');
+    menu.className = 'tz-postpone-menu';
+    var optsList = [];
+    if (!note.completedAtISO) optsList.push(['↻ Przełóż', function () { showPostponeMenu(anchorBtn, note); }]);
+    optsList.push(['✎ Edytuj', function () { editNote(note); }]);
+    optsList.push(['→ dzień', function () { gotoNoteDay(noteDayISO(note)); }]);
+    optsList.forEach(function (opt) {
+      var b = doc.createElement('button');
+      b.type = 'button';
+      b.textContent = opt[0];
+      b.addEventListener('click', function () { closePostponeMenus(); opt[1](); });
+      menu.appendChild(b);
+    });
+    var rect = anchorBtn.getBoundingClientRect();
+    menu.style.left = Math.max(8, rect.left + global.scrollX - 120) + 'px';
+    menu.style.top = (rect.bottom + global.scrollY + 4) + 'px';
+    doc.body.appendChild(menu);
+    setTimeout(function () {
+      doc.addEventListener('click', function onOut(ev) {
+        if (!menu.contains(ev.target)) { closePostponeMenus(); doc.removeEventListener('click', onOut, true); }
+      }, true);
+    }, 0);
   }
 
   function bindRowActions(container, lookup) {
@@ -846,12 +920,8 @@
               else if (act === 'undone') markUndone(note);
               else if (act === 'postpone') showPostponeMenu(btn, note);
               else if (act === 'edit') editNote(note);
-              else if (act === 'goto') {
-                state.anchorISO = noteDayISO(note) || todayISO();
-                state.searchOpen = false;
-                state.searchQ = '';
-                setView('day');
-              }
+              else if (act === 'more') showMoreMenu(btn, note);
+              else if (act === 'goto') gotoNoteDay(noteDayISO(note));
             });
           })(btns[j]);
         }
@@ -866,6 +936,27 @@
           openPatientCard(btn.getAttribute('data-open-patient'), btn.getAttribute('data-focus-note') || null);
         });
       })(opens[k]);
+    }
+    // S3: chip sugestii „Oś czasu →" + zamknięcie osi + klik wpisu osi → dzień.
+    var tls = container.querySelectorAll('[data-timeline-pid]');
+    for (var t = 0; t < tls.length; t += 1) {
+      (function (btn) {
+        btn.addEventListener('click', function (ev) {
+          ev.stopPropagation();
+          openSearchTimeline(btn.getAttribute('data-timeline-pid'), btn.getAttribute('data-timeline-name') || '');
+        });
+      })(tls[t]);
+    }
+    var tlClose = container.querySelector('#tzTlClose');
+    if (tlClose) tlClose.addEventListener('click', function () {
+      state.searchTlPid = null; state.searchTlName = null; state.searchTlEvents = [];
+      _swapSearchResultsBox();
+    });
+    var tlItems = container.querySelectorAll('.tz-tl__item[data-goto-day]');
+    for (var ti = 0; ti < tlItems.length; ti += 1) {
+      (function (it) {
+        it.addEventListener('click', function () { gotoNoteDay(it.getAttribute('data-goto-day')); });
+      })(tlItems[ti]);
     }
   }
 
@@ -930,7 +1021,77 @@
 
   // ── SEARCH (2026-06-05): wyniki wyszukiwania zamiast siatki ─────────────────
   function _searchActive() { return state.searchOpen && state.searchQ.trim().length >= 2; }
+  // Fold jak w vaultcie (lokalna kopia — funkcja vaulta jest prywatna).
+  function _fold(s) {
+    s = String(s || '').toLowerCase();
+    try { s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (_) { /* noop */ }
+    return s.replace(/ł/g, 'l');
+  }
+  // Etykieta względna terminu („dziś", „za 6 dni", „3 mies. temu").
+  function relDayLabel(iso) {
+    var t = parseISO(todayISO());
+    var d = parseISO(iso);
+    var diff = Math.round((d - t) / 86400000);
+    if (diff === 0) return 'dziś';
+    if (diff === 1) return 'jutro';
+    if (diff === -1) return 'wczoraj';
+    if (diff > 1 && diff <= 45) return 'za ' + diff + ' dni';
+    if (diff > 45) return 'za ' + Math.round(diff / 30.44) + ' mies.';
+    if (diff < -1 && diff >= -45) return Math.abs(diff) + ' dni temu';
+    return Math.round(Math.abs(diff) / 30.44) + ' mies. temu';
+  }
+  function _dateHeadHtml(iso) {
+    var d = parseISO(iso);
+    var wd = WEEKDAYS_FULL[(d.getDay() + 6) % 7];
+    var hol = holidayName(iso);
+    return '<div class="tz-dhead">' + esc(wd + ', ' + d.getDate() + ' ' + MONTHS_GEN[d.getMonth()] + ' ' + d.getFullYear())
+      + ' <span class="tz-dhead__rel">· ' + esc(relDayLabel(iso)) + '</span>'
+      + (hol ? ' <span class="tz-holiday-inline">· ' + esc(hol) + '</span>' : '') + '</div>';
+  }
+
+  // S3: oś czasu pacjenta z bazy — wszystkie jego wydarzenia chronologicznie
+  // ze znacznikiem DZIŚ między minionymi a nadchodzącymi. Klik wpisu → dzień.
+  function searchTimelineHtml(lookup) {
+    var ev = state.searchTlEvents || [];
+    var html = '<div class="tz-day-panel" id="tzSearchResults">'
+      + '<div class="tz-tlhead">'
+      + '<span class="tz-card__ava">' + esc(initials(state.searchTlName)) + '</span>'
+      + '<span class="tz-tlhead__name">' + esc(state.searchTlName || '') + '</span>'
+      + '<button type="button" class="tz-card__open" data-open-patient="' + esc(state.searchTlPid) + '" data-focus-note="">Karta pacjenta</button>'
+      + '<button type="button" id="tzTlClose" aria-label="Zamknij oś czasu">×</button>'
+      + '</div>';
+    if (!ev.length) {
+      html += '<div class="tz-empty">Brak wydarzeń w terminarzu dla tego pacjenta. Dodaj termin przyciskiem „+ Nowy termin”.</div></div>';
+      return html;
+    }
+    var tISO = todayISO();
+    var sorted = ev.slice().sort(function (a, b) { return (noteDayISO(a) || '') < (noteDayISO(b) || '') ? -1 : 1; });
+    html += '<div class="tz-tl">';
+    var todayInserted = false;
+    for (var i = 0; i < sorted.length; i += 1) {
+      var n = sorted[i];
+      var iso = noteDayISO(n);
+      if (!todayInserted && iso >= tISO) {
+        html += '<div class="tz-tl__today"><span>DZIŚ</span></div>';
+        todayInserted = true;
+      }
+      lookup[n.id] = n;
+      var done = !!n.completedAtISO;
+      html += '<div class="tz-tl__item" data-goto-day="' + esc(iso) + '">'
+        + '<span class="tz-tl__dot ' + (done ? 'is-done-dot' : (CAT_CLASS[n.category] || '')) + '"></span>'
+        + '<div class="tz-tl__meta">' + esc(plDate(iso)) + ' · ' + esc(done ? 'wykonane' : relDayLabel(iso)) + '</div>'
+        + '<div class="tz-tl__title' + (done ? ' is-done' : '') + '">' + esc(n.title || n.body || '(bez tytułu)')
+        + ' <span class="tz-badge">' + esc(CAT_LABEL[n.category] || n.category || '') + '</span></div>'
+        + '</div>';
+    }
+    if (!todayInserted) html += '<div class="tz-tl__today"><span>DZIŚ</span></div>';
+    html += '</div></div>';
+    return html;
+  }
+
   function searchResultsHtml(lookup) {
+    // S3 aktywne → oś czasu zamiast listy wyników.
+    if (state.searchTlPid) return searchTimelineHtml(lookup);
     var res = state.searchResults || [];
     var q = state.searchQ.trim();
     var html = '<div class="tz-day-panel" id="tzSearchResults">';
@@ -941,24 +1102,46 @@
       html += '<div class="tz-empty">Wpisz co najmniej 2 znaki, aby przeszukać terminarz (pacjent, osoba, tytuł, treść).</div></div>';
       return html;
     }
+    // Chip sugestii: pacjenci Z BAZY pasujący do zapytania → przycisk Oś czasu.
+    (state.searchPatients || []).forEach(function (p) {
+      html += '<div class="tz-sugg">'
+        + '<span class="tz-card__ava">' + esc(initials(p.name)) + '</span>'
+        + '<span class="tz-sugg__name">' + esc(p.name) + '</span>'
+        + '<span class="tz-sugg__sub">pacjent w bazie</span>'
+        + '<span class="tz-sugg__sp"></span>'
+        + '<button type="button" class="tz-sugg__btn" data-timeline-pid="' + esc(p.patientId) + '" data-timeline-name="' + esc(p.name) + '">Oś czasu →</button>'
+        + '</div>';
+    });
     if (!res.length) {
       html += '<div class="tz-empty">Brak wydarzeń dla „' + esc(q) + '”. Szukamy po pacjencie, osobie spoza bazy, tytule i treści.</div>';
       html += '</div>';
       return html;
     }
+    // S2 (decyzja UX 2026-06-05): grupowanie po DACIE z nagłówkami sekcji
+    // (pełny dzień tygodnia + etykieta względna „za X dni"). Nadchodzące dni
+    // rosnąco, potem minione malejąco. Mobile: kompaktowe akcje ✓ + ⋮.
     var tISO = todayISO();
-    var upcoming = [], past = [];
-    res.forEach(function (n) { (noteDayISO(n) >= tISO ? upcoming : past).push(n); });
-    upcoming.sort(function (a, b) { return (a.dueDateISO || '') < (b.dueDateISO || '') ? -1 : 1; });
+    var byDay = {};
+    var futureDays = [], pastDays = [];
+    res.forEach(function (n) {
+      var iso = noteDayISO(n);
+      if (!byDay[iso]) {
+        byDay[iso] = [];
+        (iso >= tISO ? futureDays : pastDays).push(iso);
+      }
+      byDay[iso].push(n);
+    });
+    futureDays.sort();
+    pastDays.sort(function (a, b) { return a < b ? 1 : -1; });
+    var compact = isMobile();
     html += '<div class="tz-sec-h">Wyniki dla „' + esc(q) + '” · ' + res.length + '</div>';
-    if (upcoming.length) {
-      html += '<div class="tz-sec-h">Nadchodzące · ' + upcoming.length + '</div>';
-      upcoming.forEach(function (n) { lookup[n.id] = n; html += noteRowHtml(n, { withDate: true, gotoDay: true }); });
-    }
-    if (past.length) {
-      html += '<div class="tz-sec-h is-done">Minione · ' + past.length + '</div>';
-      past.forEach(function (n) { lookup[n.id] = n; html += noteRowHtml(n, { withDate: true, gotoDay: true }); });
-    }
+    futureDays.concat(pastDays).forEach(function (iso) {
+      html += _dateHeadHtml(iso);
+      byDay[iso].forEach(function (n) {
+        lookup[n.id] = n;
+        html += noteRowHtml(n, { gotoDay: !compact, compact: compact });
+      });
+    });
     html += '</div>';
     return html;
   }
@@ -1363,7 +1546,8 @@
     var sBtn = doc.getElementById('tzSearchBtn');
     if (sBtn) sBtn.addEventListener('click', function () {
       state.searchOpen = !state.searchOpen;
-      if (!state.searchOpen) { state.searchQ = ''; state.searchResults = []; }
+      if (!state.searchOpen) { _resetSearchState(); }
+      else { _ensurePatCache(); }
       render();
       if (state.searchOpen) { try { doc.getElementById('tzSearchInput').focus(); } catch (_) {} }
     });
@@ -1377,14 +1561,14 @@
       sInput.addEventListener('keydown', function (ev) {
         if (ev.key === 'Escape') {
           ev.stopPropagation();
-          state.searchOpen = false; state.searchQ = ''; state.searchResults = [];
+          state.searchOpen = false; _resetSearchState();
           render();
         }
       });
     }
     var sClear = doc.getElementById('tzSearchClear');
     if (sClear) sClear.addEventListener('click', function () {
-      state.searchOpen = false; state.searchQ = ''; state.searchResults = [];
+      state.searchOpen = false; _resetSearchState();
       render();
     });
 
@@ -1420,7 +1604,7 @@
     if (view !== 'month' && view !== 'week' && view !== 'day') view = 'month';
     state.view = view;
     state.splitISO = null; // zmiana widoku zamyka rozcięcie siatki
-    state.searchOpen = false; state.searchQ = ''; state.searchResults = []; // i wyszukiwanie
+    state.searchOpen = false; _resetSearchState(); // i wyszukiwanie (z osią czasu)
     try { global.localStorage.setItem(VIEW_KEY, view); } catch (_) { /* flaga UI — opcjonalna */ }
     // Zmiana widoku z UI = krok ŚCIEŻKI → wpis historii (gest wstecz cofnie).
     _tzNavPush();
@@ -1463,19 +1647,64 @@
     var fresh = doc.getElementById('tzSearchResults');
     if (fresh) bindRowActions(fresh, lookup);
   }
+  // Pełne czyszczenie stanu wyszukiwania (zamknięcie paska / zmiana widoku).
+  function _resetSearchState() {
+    state.searchQ = '';
+    state.searchResults = [];
+    state.searchPatients = [];
+    state.searchTlPid = null;
+    state.searchTlName = null;
+    state.searchTlEvents = [];
+    _patCache = null; // świeże nagłówki przy następnym otwarciu
+  }
+  // Cache nagłówków pacjentów na czas sesji wyszukiwania (sugestie chipów) —
+  // jedno listPatients na otwarcie paska zamiast deszyfracji przy każdej literze.
+  var _patCache = null;
+  function _ensurePatCache() {
+    var V = getVault();
+    if (_patCache || !V || typeof V.listPatients !== 'function') return Promise.resolve();
+    return V.listPatients().then(function (records) {
+      _patCache = (records || []).map(function (r) {
+        return { patientId: r.patientId, name: (r.header && typeof r.header.name === 'string' && r.header.name) ? r.header.name : '(bez imienia)' };
+      });
+    }).catch(function () { _patCache = []; });
+  }
+  function _matchPatients(q) {
+    var fq = _fold(q);
+    var hits = [];
+    (_patCache || []).forEach(function (p) {
+      if (_fold(p.name).indexOf(fq) >= 0) hits.push(p);
+    });
+    return hits.slice(0, 3);
+  }
+  function openSearchTimeline(pid, name) {
+    var V = getVault();
+    state.searchTlPid = pid;
+    state.searchTlName = name;
+    state.searchTlEvents = [];
+    if (!V || typeof V.listPatientNotesForPatient !== 'function') { _swapSearchResultsBox(); return; }
+    V.listPatientNotesForPatient(pid).then(function (notes) {
+      state.searchTlEvents = (notes || []).filter(function (n) { return n && n.dueDateISO; });
+      _swapSearchResultsBox();
+    }).catch(function () { _swapSearchResultsBox(); });
+  }
   function runSearch() {
     if (!state.searchOpen) return;
     var V = getVault();
     var q = state.searchQ.trim();
+    // Nowe zapytanie zamyka oś czasu (wracamy do listy wyników).
+    state.searchTlPid = null; state.searchTlName = null; state.searchTlEvents = [];
     if (q.length < 2 || !V || typeof V.searchPatientNotes !== 'function') {
       state.searchResults = [];
+      state.searchPatients = [];
       _swapSearchResultsBox();
       return;
     }
-    V.searchPatientNotes(q).then(function (res) {
-      state.searchResults = res || [];
+    Promise.all([V.searchPatientNotes(q), _ensurePatCache()]).then(function (res) {
+      state.searchResults = res[0] || [];
+      state.searchPatients = _matchPatients(q);
       _swapSearchResultsBox();
-    }).catch(function () { state.searchResults = []; _swapSearchResultsBox(); });
+    }).catch(function () { state.searchResults = []; state.searchPatients = []; _swapSearchResultsBox(); });
   }
 
   var _refreshQueued = false;
@@ -1492,6 +1721,16 @@
           return V.searchPatientNotes(state.searchQ.trim())
             .then(function (res) { state.searchResults = res || []; })
             .catch(function () { /* zostaw stare wyniki */ });
+        });
+      }
+      // S3: oś czasu też musi odzwierciedlić zmiany (✓/przełóż z menu ⋮).
+      if (state.searchTlPid && V && typeof V.listPatientNotesForPatient === 'function') {
+        chain = chain.then(function () {
+          return V.listPatientNotesForPatient(state.searchTlPid)
+            .then(function (notes) {
+              state.searchTlEvents = (notes || []).filter(function (n) { return n && n.dueDateISO; });
+            })
+            .catch(function () { /* zostaw stare */ });
         });
       }
     }
