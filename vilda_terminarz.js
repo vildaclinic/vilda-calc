@@ -26,7 +26,7 @@
 (function (global) {
   'use strict';
 
-  var VERSION = '2.0.0';
+  var VERSION = '2.0.1';
   var doc = global.document;
   if (!doc) return;
 
@@ -105,6 +105,8 @@
     searchQ: '',           // SEARCH: bieżące zapytanie
     searchResults: [],     // SEARCH: wyniki z V.searchPatientNotes
     searchPatients: [],    // SEARCH: sugestie pacjentów Z BAZY pasujących do zapytania
+    searchSelPid: null,    // SEARCH: wybrany pacjent = FILTR wyników (klik w pasek chipa)
+    searchSelName: null,   // SEARCH: nazwisko wybranego pacjenta
     searchTlPid: null,     // S3: pacjent osi czasu (null = lista wyników)
     searchTlName: null,    // S3: nazwisko pacjenta osi czasu
     searchTlEvents: [],    // S3: wydarzenia pacjenta (notatki z dueDateISO)
@@ -169,6 +171,9 @@
     + '.tz-dhead__rel{color:#0F6E56;font-weight:600;font-size:0.78rem;}'
     /* ── S3: chip sugestii pacjenta z bazy ── */
     + '.tz-sugg{display:flex;align-items:center;gap:9px;border:0.5px solid #5DCAA5;background:#F0FAF7;border-radius:10px;padding:8px 12px;margin:0 0 8px;}'
+    + '.tz-sugg[data-select-pid]{cursor:pointer;}'
+    + '.tz-sugg[data-select-pid]:hover{background:#e6f5f6;}'
+    + '.tz-sugg.is-sel{background:#e6f5f6;border-color:#0F6E56;box-shadow:inset 0 0 0 1px #0F6E56;}'
     + '.tz-sugg__name{font-weight:600;color:#0f2b33;font-size:0.9rem;}'
     + '.tz-sugg__sub{font-size:0.74rem;color:#5b6672;}'
     + '.tz-sugg__sp{flex:1;}'
@@ -937,6 +942,23 @@
         });
       })(opens[k]);
     }
+    // FILTR PACJENTA: klik w pasek chipa = zawęź wyniki; × = pokaż wszystkie.
+    var sels = container.querySelectorAll('.tz-sugg[data-select-pid]');
+    for (var sl = 0; sl < sels.length; sl += 1) {
+      (function (bar) {
+        bar.addEventListener('click', function () {
+          state.searchSelPid = bar.getAttribute('data-select-pid');
+          state.searchSelName = bar.getAttribute('data-select-name') || '';
+          _swapSearchResultsBox();
+        });
+      })(sels[sl]);
+    }
+    var clearSel = container.querySelector('[data-clear-sel]');
+    if (clearSel) clearSel.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      state.searchSelPid = null; state.searchSelName = null;
+      _swapSearchResultsBox();
+    });
     // S3: chip sugestii „Oś czasu →" + zamknięcie osi + klik wpisu osi → dzień.
     var tls = container.querySelectorAll('[data-timeline-pid]');
     for (var t = 0; t < tls.length; t += 1) {
@@ -1102,18 +1124,35 @@
       html += '<div class="tz-empty">Wpisz co najmniej 2 znaki, aby przeszukać terminarz (pacjent, osoba, tytuł, treść).</div></div>';
       return html;
     }
-    // Chip sugestii: pacjenci Z BAZY pasujący do zapytania → przycisk Oś czasu.
-    (state.searchPatients || []).forEach(function (p) {
-      html += '<div class="tz-sugg">'
-        + '<span class="tz-card__ava">' + esc(initials(p.name)) + '</span>'
-        + '<span class="tz-sugg__name">' + esc(p.name) + '</span>'
-        + '<span class="tz-sugg__sub">pacjent w bazie</span>'
+    // FILTR PACJENTA (decyzja UX 2026-06-05): klik w PASEK chipa wybiera
+    // pacjenta — wyniki zawężają się do jego wydarzeń; × zdejmuje filtr.
+    // „Oś czasu →" działa niezależnie (stopPropagation w bindzie przycisku).
+    if (state.searchSelPid) {
+      html += '<div class="tz-sugg is-sel">'
+        + '<span class="tz-card__ava">' + esc(initials(state.searchSelName)) + '</span>'
+        + '<span class="tz-sugg__name">' + esc(state.searchSelName || '') + '</span>'
+        + '<span class="tz-sugg__sub">tylko wyniki tego pacjenta</span>'
         + '<span class="tz-sugg__sp"></span>'
-        + '<button type="button" class="tz-sugg__btn" data-timeline-pid="' + esc(p.patientId) + '" data-timeline-name="' + esc(p.name) + '">Oś czasu →</button>'
+        + '<button type="button" class="tz-sugg__btn" data-timeline-pid="' + esc(state.searchSelPid) + '" data-timeline-name="' + esc(state.searchSelName || '') + '">Oś czasu →</button>'
+        + '<button type="button" class="tz-sugg__btn" data-clear-sel="1" aria-label="Pokaż wszystkie wyniki">×</button>'
         + '</div>';
-    });
+      res = res.filter(function (n) { return n.patientId === state.searchSelPid; });
+    } else {
+      // Chip sugestii: pacjenci Z BAZY pasujący do zapytania.
+      (state.searchPatients || []).forEach(function (p) {
+        html += '<div class="tz-sugg" data-select-pid="' + esc(p.patientId) + '" data-select-name="' + esc(p.name) + '" role="button" tabindex="0">'
+          + '<span class="tz-card__ava">' + esc(initials(p.name)) + '</span>'
+          + '<span class="tz-sugg__name">' + esc(p.name) + '</span>'
+          + '<span class="tz-sugg__sub">pacjent w bazie</span>'
+          + '<span class="tz-sugg__sp"></span>'
+          + '<button type="button" class="tz-sugg__btn" data-timeline-pid="' + esc(p.patientId) + '" data-timeline-name="' + esc(p.name) + '">Oś czasu →</button>'
+          + '</div>';
+      });
+    }
     if (!res.length) {
-      html += '<div class="tz-empty">Brak wydarzeń dla „' + esc(q) + '”. Szukamy po pacjencie, osobie spoza bazy, tytule i treści.</div>';
+      html += '<div class="tz-empty">' + (state.searchSelPid
+        ? 'Brak wydarzeń tego pacjenta dla „' + esc(q) + '”.'
+        : 'Brak wydarzeń dla „' + esc(q) + '”. Szukamy po pacjencie, osobie spoza bazy, tytule i treści.') + '</div>';
       html += '</div>';
       return html;
     }
@@ -1134,7 +1173,8 @@
     futureDays.sort();
     pastDays.sort(function (a, b) { return a < b ? 1 : -1; });
     var compact = isMobile();
-    html += '<div class="tz-sec-h">Wyniki dla „' + esc(q) + '” · ' + res.length + '</div>';
+    html += '<div class="tz-sec-h">Wyniki dla „' + esc(q) + '”'
+      + (state.searchSelPid ? (' — ' + esc(state.searchSelName || '')) : '') + ' · ' + res.length + '</div>';
     futureDays.concat(pastDays).forEach(function (iso) {
       html += _dateHeadHtml(iso);
       byDay[iso].forEach(function (n) {
@@ -1652,6 +1692,8 @@
     state.searchQ = '';
     state.searchResults = [];
     state.searchPatients = [];
+    state.searchSelPid = null;
+    state.searchSelName = null;
     state.searchTlPid = null;
     state.searchTlName = null;
     state.searchTlEvents = [];
@@ -1692,8 +1734,9 @@
     if (!state.searchOpen) return;
     var V = getVault();
     var q = state.searchQ.trim();
-    // Nowe zapytanie zamyka oś czasu (wracamy do listy wyników).
+    // Nowe zapytanie zamyka oś czasu i zdejmuje filtr pacjenta (świeża lista).
     state.searchTlPid = null; state.searchTlName = null; state.searchTlEvents = [];
+    state.searchSelPid = null; state.searchSelName = null;
     if (q.length < 2 || !V || typeof V.searchPatientNotes !== 'function') {
       state.searchResults = [];
       state.searchPatients = [];
