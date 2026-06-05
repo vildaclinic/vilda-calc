@@ -18,7 +18,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '0.9.967';
+const SW_VERSION = '0.9.968';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -553,6 +553,7 @@ const CORE_SHELL_URLS = [
   '/ios26-ui.js?v=19',
   '/ios26-ui.js?v=20',
   '/ios26-ui.js?v=21',
+  '/ios26-ui.js?v=22',
   '/tutorial.js?v=6',
   '/tutorial.js?v=7',
   '/tutorial.js?v=8',
@@ -700,6 +701,25 @@ const SHELL_PATHS = new Set(
     .filter(Boolean)
 );
 
+// ── PWA-SUBPATH (2026-06-05): aplikacja na GitHub Pages żyje pod /vilda-calc/,
+// a cały SW (precache, klucze cache, DOCUMENT_PATHS) myśli w przestrzeni „/x".
+// Most: wejściowe pathname requestów są OD-skopowane do przestrzeni aplikacji
+// (unscopePathname: '/vilda-calc/app.js' → '/app.js'), a wychodzące fetche
+// precache DO-skopowane do realnego URL-a (scopeHref: '/app.js?v=1' →
+// https://host/vilda-calc/app.js?v=1). Na hostingu z roota SCOPE_PATH==='/'
+// i obie funkcje są neutralne — zero zmiany zachowania lokalnie.
+const SCOPE_BASE = new URL('./', self.location);
+const SCOPE_PATH = SCOPE_BASE.pathname;
+function unscopePathname(pathname) {
+  if (SCOPE_PATH !== '/' && typeof pathname === 'string' && pathname.startsWith(SCOPE_PATH)) {
+    return '/' + pathname.slice(SCOPE_PATH.length);
+  }
+  return pathname;
+}
+function scopeHref(appUrl) {
+  return new URL(String(appUrl).replace(/^\//, ''), SCOPE_BASE).href;
+}
+
 function toURL(input) {
   try {
     return typeof input === 'string'
@@ -722,7 +742,8 @@ function isSameOrigin(input) {
 
 function getPathname(input) {
   const url = toURL(input);
-  return url ? url.pathname : '';
+  // PWA-SUBPATH: porównania działają w przestrzeni aplikacji („/x").
+  return url ? unscopePathname(url.pathname) : '';
 }
 
 function normalizeNavigationPath(pathname) {
@@ -820,7 +841,7 @@ function getShellCacheKeyFromStaticUrl(input) {
   const url = toURL(input);
   if (!url) return null;
 
-  const pathname = url.pathname;
+  const pathname = unscopePathname(url.pathname); // PWA-SUBPATH
   if (!SHELL_PATHS.has(pathname)) return null;
 
   // Dla zasobów statycznych z query stringiem (np. app.js?v=100) kluczem cache
@@ -835,7 +856,7 @@ function getShellCacheKeyFromRequest(request) {
   const url = toURL(request);
   if (!url) return null;
 
-  const pathname = url.pathname;
+  const pathname = unscopePathname(url.pathname); // PWA-SUBPATH
 
   if (isNavigationRequest(request)) {
     const normalizedPath = normalizeNavigationPath(pathname);
@@ -849,7 +870,7 @@ function getNavigationCacheKeyFromResponse(request, response) {
   if (!isSameOrigin(request)) return null;
 
   const responseUrl = toURL(response?.url || request.url);
-  const pathname = responseUrl ? responseUrl.pathname : getPathname(request);
+  const pathname = responseUrl ? unscopePathname(responseUrl.pathname) : getPathname(request); // PWA-SUBPATH
   const normalizedPath = normalizeNavigationPath(pathname);
 
   if (DOCUMENT_PATHS.has(normalizedPath)) return normalizedPath;
@@ -1104,7 +1125,8 @@ async function updateRuntimeFromNetwork(request) {
 
 async function fetchAndStorePrecacheUrl(url, { required = false } = {}) {
   const cache = await caches.open(SHELL_CACHE);
-  const request = new Request(url, { cache: 'reload', redirect: 'follow' });
+  // PWA-SUBPATH: fetch pod realny URL w zasięgu SW; klucz cache zostaje w „/x".
+  const request = new Request(scopeHref(url), { cache: 'reload', redirect: 'follow' });
   const response = await fetch(request);
   const pathname = getPathname(url);
   const cacheKey = DOCUMENT_PATHS.has(pathname)
